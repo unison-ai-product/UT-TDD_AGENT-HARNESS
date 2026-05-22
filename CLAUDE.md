@@ -10,6 +10,7 @@ Claude Code はこの repo では次を正本として扱う。
 4. `docs/governance/ut-tdd-agent-harness-concept_v3.0.md`
 5. `docs/governance/ut-tdd-agent-harness-requirements_v1.1.md`
 6. `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md`
+7. `docs/migration/helix-to-ut-tdd-cutover-strategy.md`
 
 `docs/archive/`、`vendor/helix-source/`、`.helix/`、移植前の `.claude/agents` / `.claude/hooks` は正本ではない。HELIX は移植元であり、社内版 UT-TDD の runtime command は `helix` ではなく `ut-tdd` とする。
 
