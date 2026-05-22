@@ -9,9 +9,10 @@
 - `docs/governance/ut-tdd-agent-harness-concept_v3.0.md` — 社内展開向け構想書
 - `docs/governance/ut-tdd-agent-harness-requirements_v1.1.md` — 要件定義・受入条件
 - `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` — HELIX 移植元からの切り出し計画
+- `docs/governance/README.md` — governance 配下の正本 / 参照 / archive 境界
 - `docs/migration/helix-source-inventory.md` — HELIX source snapshot 棚卸し
 
-`vendor/helix-source/` は移植元 snapshot であり、UT-TDD Agent Harness の正本ではない。productizing 作業では vendor を直接編集せず、UT-TDD 所有パスへコピーしてから名称・前提・Windows 対応を差し替える。
+`docs/archive/` と `vendor/helix-source/` は正本ではない。`vendor/helix-source/` は移植元 snapshot であり、productizing 作業では vendor を直接編集せず、UT-TDD 所有パスへコピーしてから名称・前提・Windows 対応を差し替える。
 
 ## Session Start
 
