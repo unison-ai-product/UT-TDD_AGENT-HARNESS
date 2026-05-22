@@ -24,3 +24,11 @@ credentials.json
 
 # HELIX runtime state
 .helix/
+
+# Python bytecode (generated)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PLAN frontmatter runtime lock (W1 cross-platform lock impl)
+docs/plans/*.lock
