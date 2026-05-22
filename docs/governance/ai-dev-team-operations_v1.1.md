@@ -1,4 +1,7 @@
 ﻿
+> Status: Reference only. UT-TDD Agent Harness の受入条件、runtime 導線、実装優先度の正本ではない。
+> Current as of: 2026-05-22.
+
 AI駆動開発チーム
 
 運用ルール書

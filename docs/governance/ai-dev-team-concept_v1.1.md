@@ -1,4 +1,7 @@
 ﻿
+> Status: Reference only. UT-TDD Agent Harness の正本は `docs/governance/README.md` に記載された現行文書とする。
+> Current as of: 2026-05-22.
+
 AI駆動開発
 
 チーム構想書

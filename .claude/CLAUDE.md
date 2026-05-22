@@ -1,10 +1,20 @@
 # Claude Code Runtime Policy — UT-TDD Agent Harness
 
+## Active Runtime Boundary
+
+この repo の Claude Code runtime は UT-TDD Agent Harness として扱う。HELIX 由来の hook / subagent / memory は移植元素材であり、正本 runtime として直接使わない。
+
+現時点の `.claude/settings.json` は意図的に `hooks: {}` の安全設定にしている。UT-TDD 用 hook が package-local command として実装されるまでは、個人 workspace の `ai-dev-kit-vscode` や `helix-*` を呼ぶ hook を有効化しない。
+
+Claude Code が参照する優先順位は `../CLAUDE.md` -> 本ファイル -> `../docs/governance/README.md`。`../docs/archive/` と `../vendor/helix-source/` は historical / migration material であり、現在の受入条件や実行導線の正本ではない。
+
 このファイルは Claude Code の runtime / hook 方針を定義する。プロジェクト文脈は `../CLAUDE.md`、Codex 向け規則は `../AGENTS.md` を正本にする。
 
-## UT-TDD Hooks
+## Target UT-TDD Hooks
 
-`.claude/settings.json` で有効化する hook は、最終的に package-local な UT-TDD コマンドを呼び出す。
+以下は UT-TDD hook 実装後に有効化する目標形である。現時点の `.claude/settings.json` は `hooks: {}` のため、これらは自動実行されない。
+
+有効化する hook は、最終的に package-local な UT-TDD コマンドを呼び出す。
 
 Claude Code 単体でも動くように、hook は `ut-tdd status` の mode を参照する。Codex が無い場合は `claude-only` として動作し、Codex 委譲や `team run` は要求しない。
 

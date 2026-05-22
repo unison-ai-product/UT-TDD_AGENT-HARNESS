@@ -1,5 +1,18 @@
 # UT-TDD Agent Harness
 
+## Claude Code Read Order
+
+Claude Code はこの repo では次を正本として扱う。
+
+1. `CLAUDE.md`
+2. `.claude/CLAUDE.md`
+3. `docs/governance/README.md`
+4. `docs/governance/ut-tdd-agent-harness-concept_v3.0.md`
+5. `docs/governance/ut-tdd-agent-harness-requirements_v1.1.md`
+6. `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md`
+
+`docs/archive/`、`vendor/helix-source/`、`.helix/`、移植前の `.claude/agents` / `.claude/hooks` は正本ではない。HELIX は移植元であり、社内版 UT-TDD の runtime command は `helix` ではなく `ut-tdd` とする。
+
 ## 概要
 
 UT-TDD Agent Harness は、AI 実装エージェントを社内開発チームで安全に使うための検証・開発基盤である。HELIX は移植元の個人プロジェクトであり、この repo では `vendor/helix-source/` に snapshot として隔離する。
