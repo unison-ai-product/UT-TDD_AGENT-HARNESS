@@ -1,0 +1,10 @@
+#!/bin/bash
+# DEPRECATED: このパスは後方互換のため残されています。
+# 新しい参照は cli/libexec/helix-check-claudemd を使ってください。
+# 将来のリリースで削除される可能性があります。
+set -e
+REAL_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [[ -z "${HELIX_SUPPRESS_LEGACY_WARN:-}" ]]; then
+  echo "[helix] warn: cli/helix-check-claudemd は deprecated。cli/libexec/helix-check-claudemd を参照してください (HELIX_SUPPRESS_LEGACY_WARN=1 で抑止)" >&2
+fi
+exec "$REAL_DIR/libexec/helix-check-claudemd" "$@"

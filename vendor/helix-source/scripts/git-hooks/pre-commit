@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# HELIX pre-commit hook
+# GAP-034: staged された D-API/D-CONTRACT/D-DB 変更に対して drift-check を実行
+# Sec-5: staged blob を対象に secret 混入を fail-close で検知
+
+OPENAI_PATTERN='sk-[A-Za-z0-9]{20,}'
+ANTHROPIC_PATTERN='sk-ant-[A-Za-z0-9-]{50,}'
+GITHUB_PAT_PATTERN='gh''p_[A-Za-z0-9]{30,}'
+GITHUB_SECRET_PATTERN='gh''s_[A-Za-z0-9]{30,}'
+SLACK_BOT_PATTERN='xo''xb-[A-Za-z0-9-]{40,}'
+AWS_ACCESS_KEY_PATTERN='AKIA[A-Z0-9]{16}'
+BEARER_PATTERN='Bearer [A-Za-z0-9._-]{30,}'
+PRIVATE_KEY_PATTERN='-----BE''GIN [A-Z ]*PRIVATE KEY-----'
+SECRET_REGEX="${OPENAI_PATTERN}|${ANTHROPIC_PATTERN}|${GITHUB_PAT_PATTERN}|${GITHUB_SECRET_PATTERN}|${SLACK_BOT_PATTERN}|${AWS_ACCESS_KEY_PATTERN}|${BEARER_PATTERN}|${PRIVATE_KEY_PATTERN}"
+
+found_secret=0
+
+mask_match() {
+  local match="$1"
+  printf '%s***' "${match:0:4}"
+}
+
+report_secret() {
+  local file="$1"
+  local line_no="$2"
+  local line="$3"
+  local match=""
+
+  while IFS= read -r match; do
+    [[ -z "$match" ]] && continue
+    if [[ $found_secret -eq 0 ]]; then
+      echo "[helix pre-commit] blocked: staged changes contain potential secrets:"
+    fi
+    printf '  %s:%s: %s\n' "$file" "$line_no" "$(mask_match "$match")"
+    found_secret=1
+  done < <(printf '%s\n' "$line" | LC_ALL=C grep -Eao -- "$SECRET_REGEX" || true)
+}
+
+scan_staged_file() {
+  local file="$1"
+  local hit=""
+  local line_no=""
+  local line=""
+
+  if ! git cat-file -e ":$file" 2>/dev/null; then
+    return 0
+  fi
+
+  while IFS= read -r hit; do
+    line_no=${hit%%:*}
+    line=${hit#*:}
+    report_secret "$file" "$line_no" "$line"
+  done < <(git show ":$file" | LC_ALL=C grep -a -nE -- "$SECRET_REGEX" || true)
+}
+
+run_secret_scan() {
+  local file=""
+
+  while IFS= read -r -d '' file; do
+    scan_staged_file "$file"
+  done < <(git diff --cached --name-only -z --diff-filter=ACMR)
+
+  if [[ $found_secret -ne 0 ]]; then
+    echo "Review the staged content and use 'git commit --no-verify' only after explicit approval."
+    exit 1
+  fi
+}
+
+run_drift_check() {
+  local helix_cmd=""
+  local helix_drift_check=""
+  local changed=""
+  local drift_rc=0
+  local file=""
+
+  if [[ -x "$HOME/ai-dev-kit-vscode/cli/helix" ]]; then
+    helix_cmd="$HOME/ai-dev-kit-vscode/cli/helix"
+  elif command -v helix >/dev/null 2>&1; then
+    helix_cmd="helix"
+  elif [[ -x "$HOME/ai-dev-kit-vscode/cli/helix-drift-check" ]]; then
+    helix_drift_check="$HOME/ai-dev-kit-vscode/cli/helix-drift-check"
+  elif [[ -x "/usr/local/bin/helix-drift-check" ]]; then
+    helix_drift_check="/usr/local/bin/helix-drift-check"
+  fi
+
+  if [[ -z "$helix_cmd" && -z "$helix_drift_check" ]]; then
+    return 0
+  fi
+
+  changed=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -E '^(D-API|D-CONTRACT|D-DB|docs/D-API|docs/D-CONTRACT|docs/D-DB)/' || true)
+  if [[ -z "$changed" ]]; then
+    return 0
+  fi
+
+  echo "[helix pre-commit] design file changes detected — running drift-check..."
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    echo ""
+    echo "--- drift-check: $file ---"
+    if [[ -n "$helix_cmd" ]]; then
+      "$helix_cmd" drift-check "$file" || drift_rc=1
+    elif ! "$helix_drift_check" "$file"; then
+      drift_rc=1
+    fi
+  done <<< "$changed"
+
+  if [[ $drift_rc -ne 0 ]]; then
+    echo ""
+    echo "[helix pre-commit] WARN: drift-check reported advisories. Commit continues after review."
+  fi
+}
+
+run_skip_annotation_lint() {
+  local staged_python_files=""
+  local lint_rc=0
+  local file=""
+
+  staged_python_files=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -E '\.py$' || true)
+  if [[ -z "$staged_python_files" ]]; then
+    return 0
+  fi
+
+  echo "[helix pre-commit] skip annotation lint on staged python files..."
+  while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    python3 -m cli.lib.skip_annotation_linter --path "$file" --strict || lint_rc=1
+  done <<< "$staged_python_files"
+
+  if [[ $lint_rc -ne 0 ]]; then
+    echo ""
+    echo "[helix pre-commit] blocked: skip annotation lint failed"
+    exit 1
+  fi
+}
+
+run_secret_scan
+run_drift_check
+run_skip_annotation_lint
+
+exit 0

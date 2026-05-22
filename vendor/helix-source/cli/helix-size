@@ -1,0 +1,692 @@
+#!/bin/bash
+set -euo pipefail
+
+# helix-size: タスクサイジング + フェーズスキップ自動判定
+# Usage: helix-size [--files N] [--lines N] [--api] [--db] [--ui] [--type TYPE] [--drive DRIVE]
+
+source "$(cd "$(dirname "$0")" && pwd)/lib/helix-common.sh"
+
+# --- 引数パース ---
+FILES=0
+LINES=0
+HAS_API=false
+HAS_DB=false
+HAS_UI=false
+FORCE_AGENT=false
+FORCE_LARGE=false
+UNCERTAIN=false
+TASK_TYPE=""
+DRIVE=""
+DRIVE_SET=false
+FILES_SET=false
+LINES_SET=false
+JSON_OUTPUT=false
+RISK_FLAGS_RAW=""
+RISK_FLAGS_SET=false
+RISK_FLAGS=()
+
+require_opt_arg() {
+  local opt_name="$1"
+  if [[ $# -lt 2 || -z "${2:-}" || "${2:-}" == --* ]]; then
+    echo "エラー: $opt_name には値が必要です" >&2
+    exit "$EXIT_INPUT_ERROR"
+  fi
+}
+
+resolve_common_defs_file() {
+  if [[ -f "$HELIX_DIR/rules/common-defs.yaml" ]]; then
+    echo "$HELIX_DIR/rules/common-defs.yaml"
+    return 0
+  fi
+  if [[ -f "$SCRIPT_DIR/templates/rules/common-defs.yaml" ]]; then
+    echo "$SCRIPT_DIR/templates/rules/common-defs.yaml"
+    return 0
+  fi
+  echo ""
+}
+
+load_valid_risk_flags() {
+  local defs_file="$1"
+  if [[ -z "$defs_file" || ! -f "$defs_file" ]]; then
+    return 1
+  fi
+  python3 "$YAML_PARSER" dump "$defs_file" 2>/dev/null | python3 -c '
+import json
+import sys
+
+data = json.load(sys.stdin)
+risk_flags = data.get("risk_flags", {})
+if isinstance(risk_flags, dict):
+    for key in risk_flags.keys():
+        if isinstance(key, str) and key:
+            print(key)
+' 2>/dev/null
+}
+
+join_csv() {
+  local IFS=","
+  echo "$*"
+}
+
+update_matrix_size_and_risk_flags() {
+  local size="$1"
+  local matrix_file="$HELIX_DIR/matrix.yaml"
+  [[ -f "$matrix_file" && -f "$YAML_PARSER" ]] || return 0
+
+  python3 "$YAML_PARSER" write "$matrix_file" "project.size" "$size" 2>/dev/null || true
+
+  if [[ "$RISK_FLAGS_SET" != true ]]; then
+    if [[ "$JSON_OUTPUT" != true ]]; then
+      echo "matrix.yaml 更新: project.size=$size"
+    fi
+    return 0
+  fi
+
+  local feature_info feature_id feature_count
+  feature_info=$(python3 "$YAML_PARSER" dump "$matrix_file" 2>/dev/null | python3 -c '
+import json
+import sys
+
+data = json.load(sys.stdin)
+features = data.get("features", {})
+if not isinstance(features, dict) or not features:
+    print("\t0")
+    raise SystemExit(0)
+
+keys = list(features.keys())
+print(f"{keys[0]}\t{len(keys)}")
+' 2>/dev/null || echo $'\t0')
+  feature_id="${feature_info%%$'\t'*}"
+  feature_count="${feature_info##*$'\t'}"
+
+  if [[ -z "$feature_id" ]]; then
+    echo "WARN: matrix.yaml に feature がないため risk_flags の記録をスキップしました" >&2
+    if [[ "$JSON_OUTPUT" != true ]]; then
+      echo "matrix.yaml 更新: project.size=$size"
+    fi
+    return 0
+  fi
+
+  if [[ "${feature_count:-0}" -gt 1 ]]; then
+    echo "WARN: feature が複数あるため先頭 feature '$feature_id' に risk_flags を記録します" >&2
+  fi
+
+  local current_flags merged_flags risk_csv
+  risk_csv=$(join_csv "${RISK_FLAGS[@]}")
+  current_flags=$(python3 "$YAML_PARSER" read "$matrix_file" "features.${feature_id}.risk_flags" 2>/dev/null || echo "[]")
+  merged_flags=$(python3 - "$current_flags" "$risk_csv" <<'PY'
+import ast
+import sys
+
+raw_existing = sys.argv[1]
+raw_new = sys.argv[2]
+
+existing = []
+try:
+    parsed = ast.literal_eval(raw_existing)
+    if isinstance(parsed, list):
+        for item in parsed:
+            if isinstance(item, str) and item:
+                existing.append(item)
+except Exception:
+    pass
+
+for item in [x.strip() for x in raw_new.split(",") if x.strip()]:
+    if item not in existing:
+        existing.append(item)
+
+print("[" + ", ".join(existing) + "]")
+PY
+)
+  python3 "$YAML_PARSER" write "$matrix_file" "features.${feature_id}.risk_flags" "$merged_flags" 2>/dev/null || true
+  if [[ "$JSON_OUTPUT" != true ]]; then
+    echo "matrix.yaml 更新: project.size=$size, features.$feature_id.risk_flags=${merged_flags}"
+  fi
+}
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --files)
+      require_opt_arg "$1" "${2-}"
+      FILES="$2"
+      FILES_SET=true
+      shift 2
+      ;;
+    --lines)
+      require_opt_arg "$1" "${2-}"
+      LINES="$2"
+      LINES_SET=true
+      shift 2
+      ;;
+    --api)       HAS_API=true; shift ;;
+    --db)        HAS_DB=true; shift ;;
+    --ui)        HAS_UI=true; shift ;;
+    --agent)
+      FORCE_AGENT=true
+      DRIVE="agent"
+      DRIVE_SET=true
+      shift
+      ;;
+    --large)
+      FORCE_LARGE=true
+      shift
+      ;;
+    --uncertain) UNCERTAIN=true; shift ;;
+    --type)
+      require_opt_arg "$1" "${2-}"
+      TASK_TYPE="$2"
+      shift 2
+      ;;
+    --drive)
+      require_opt_arg "$1" "${2-}"
+      DRIVE="$2"
+      DRIVE_SET=true
+      shift 2
+      ;;
+    --risk-flag)
+      require_opt_arg "$1" "${2-}"
+      RISK_FLAGS_RAW="$2"
+      shift 2
+      ;;
+    --json) JSON_OUTPUT=true; shift ;;
+    --help|-h)
+      echo "Usage: helix size [options]"
+      echo ""
+      echo "Options:"
+      echo "  --files N     変更ファイル数"
+      echo "  --lines N     変更行数"
+      echo "  --api         API変更あり"
+      echo "  --db          DB変更あり"
+      echo "  --ui          UI変更あり"
+      echo "  --agent       エージェント駆動（--drive agent の短縮形）"
+      echo "  --large       大規模案件として扱う（agent では 2 段設計推奨）"
+      echo "  --uncertain   要件不確実 (仮説検証が必要) → scrum (検証駆動) を推奨"
+      echo "  --type TYPE   タスク種別:"
+      echo "                  bugfix, refactor, new-feature, ui-change, doc, new-module"
+      echo "  --drive DRIVE 駆動タイプ (デフォルト: be):"
+      echo "                  be    バックエンド駆動 — API/ロジック起点"
+      echo "                  fe    フロントエンド駆動 — デザイン/UX起点"
+      echo "                  db    データベース駆動 — スキーマ/データモデル起点"
+      echo "                  fullstack フルスタック駆動 — BE+FE同時起点"
+      echo "                  agent エージェント駆動 — ツール/プロンプト起点"
+      echo "  --risk-flag FLAGS   リスクフラグ（カンマ区切り）:"
+      echo "                  auth,payment,pii,external_api,data_migration,infra"
+      echo "  --json        JSON形式で出力"
+      echo ""
+      echo "Example:"
+      echo "  helix size --files 5 --lines 200 --api --ui --type new-feature --drive be"
+      echo "  helix size --files 8 --lines 300 --ui --type new-feature --drive fe"
+      echo "  helix size --files 5 --lines 200 --db --type new-module --drive db"
+      echo "  helix size --files 6 --lines 220 --api --ui --type new-feature --drive fullstack"
+      echo "  helix size --files 3 --lines 150 --api --type new-feature --drive agent"
+      exit "$EXIT_SUCCESS"
+      ;;
+    *) echo "エラー: 不明なオプションです: $1" >&2; exit "$EXIT_INPUT_ERROR" ;;
+  esac
+done
+
+if [[ "$FORCE_LARGE" != true && ( "$FILES_SET" != true || "$LINES_SET" != true ) ]]; then
+  echo "エラー: 必須オプション --files と --lines を指定してください" >&2
+  exit "$EXIT_INPUT_ERROR"
+fi
+
+if [[ -n "$RISK_FLAGS_RAW" ]]; then
+  defs_file=$(resolve_common_defs_file)
+  valid_flags_nl=$(load_valid_risk_flags "$defs_file" || true)
+  if [[ -z "$valid_flags_nl" ]]; then
+    valid_flags_nl=$'auth\npayment\npii\nexternal_api\ndata_migration\ninfra'
+  fi
+
+  IFS=',' read -r -a risk_candidates <<< "$RISK_FLAGS_RAW"
+  for risk_flag in "${risk_candidates[@]}"; do
+    risk_flag="${risk_flag// /}"
+    [[ -n "$risk_flag" ]] || continue
+    if ! printf '%s\n' "$valid_flags_nl" | grep -qx "$risk_flag"; then
+      echo "エラー: 無効な --risk-flag 値です: '$risk_flag'" >&2
+      echo "許可値: $(printf '%s\n' "$valid_flags_nl" | paste -sd, -)" >&2
+      exit "$EXIT_INPUT_ERROR"
+    fi
+    if [[ " ${RISK_FLAGS[*]} " != *" $risk_flag "* ]]; then
+      RISK_FLAGS+=("$risk_flag")
+      RISK_FLAGS_SET=true
+    fi
+  done
+fi
+
+if [[ "$DRIVE_SET" != true && -f "$CONFIG_FILE" && -f "$YAML_PARSER" ]]; then
+  DRIVE=$(python3 "$YAML_PARSER" read "$CONFIG_FILE" default_drive 2>/dev/null || echo "")
+  if [[ -n "$DRIVE" ]]; then
+    DRIVE_SET=true
+  fi
+fi
+
+if [[ "$DRIVE_SET" != true ]]; then
+  if [[ "$UNCERTAIN" == true ]]; then
+    DRIVE="scrum"
+    echo "[drive-auto] 判定: scrum (要件不確実 → 検証駆動)" >&2
+    echo "[drive-auto] → helix scrum init で仮説検証から開始してください" >&2
+    echo "[drive-auto] → 確定後に helix size --ui/--api/--db で再サイジング" >&2
+  elif [[ "$HAS_UI" == true && ( "$HAS_API" == true || "$HAS_DB" == true ) ]]; then
+    DRIVE="fullstack"
+    echo "[drive-auto] 判定: fullstack (--ui あり, --api/--db あり)" >&2
+  elif [[ "$HAS_UI" == true ]]; then
+    DRIVE="fe"
+    echo "[drive-auto] 判定: fe (--ui あり, API/DB なし)" >&2
+  elif [[ "$HAS_API" == true || "$HAS_DB" == true ]]; then
+    DRIVE="be"
+    echo "[drive-auto] 判定: be (--api または --db あり)" >&2
+  else
+    DRIVE="be"
+    echo "[drive-auto] 判定: be (UI/API/DB なし, 既定値)" >&2
+  fi
+fi
+DRIVE="${DRIVE:-be}"
+
+# --- 駆動タイプバリデーション ---
+case "$DRIVE" in
+  be|fe|db|fullstack|agent|scrum) ;;
+  *) echo "エラー: 無効な --drive 値です: '$DRIVE'（be, fe, db, fullstack, agent, scrum を指定してください）" >&2; exit "$EXIT_INPUT_ERROR" ;;
+esac
+
+if [[ "$FORCE_LARGE" == true ]]; then
+  if [[ "$DRIVE" != "agent" ]]; then
+    echo "エラー: --large は --agent または --drive agent と組み合わせてください" >&2
+    exit "$EXIT_INPUT_ERROR"
+  fi
+  FILES=11
+  LINES=501
+  FILES_SET=true
+  LINES_SET=true
+fi
+
+if [[ "$FORCE_AGENT" == true && "$FORCE_LARGE" == true ]]; then
+  echo "[agent-large] 2 段設計推奨: D-AGENT-INFRA と D-AGENT-EXEC を分離してください" >&2
+fi
+
+# --- サイジング ---
+size_from_files() {
+  if [[ $FILES -le 3 ]]; then echo "S"
+  elif [[ $FILES -le 10 ]]; then echo "M"
+  else echo "L"
+  fi
+}
+
+# --- scrum (検証駆動) 専用分岐: Forward HELIX のフェーズ進行は行わない ---
+if [[ "$DRIVE" == "scrum" ]]; then
+  _SIZE_SCRUM=$(size_from_files)
+  if [[ "$RISK_FLAGS_SET" == true ]]; then
+    FINAL_SIZE="L"
+    echo "警告: risk_flags 指定のため L 昇格" >&2
+    _SIZE_SCRUM="$FINAL_SIZE"
+  fi
+  if [[ "$JSON_OUTPUT" == true ]]; then
+    printf '{"size": "%s", "drive": "scrum", "mode": "scrum", "phases": []}\n' "$_SIZE_SCRUM"
+  else
+    echo "=== タスクサイジング結果 ==="
+    echo "サイズ:       $_SIZE_SCRUM"
+    echo "駆動タイプ:   scrum (検証駆動)"
+    echo ""
+    echo "要件不確実性が高いため Phase S (検証駆動) を推奨します。"
+    echo "仮説検証サイクルで要件を確定してから Forward HELIX に移行してください。"
+    echo ""
+    echo "=== 次のステップ ==="
+    echo "  1. helix scrum init"
+    echo "  2. helix scrum backlog add --id H001 --title '仮説' --question '検証内容' --acceptance '成功条件'"
+    echo "  3. helix scrum plan --goal 'ゴール' --hypotheses H001"
+    echo "  4. helix scrum poc --hypothesis H001 で PoC 実装"
+    echo "  5. helix scrum verify で全検証スクリプト実行"
+    echo "  6. helix scrum decide --hypothesis H001 --confirmed で仮説確定"
+    echo "  7. 確定後に helix size --ui/--api/--db で再サイジング → Forward HELIX へ"
+  fi
+  if [[ -f "$HELIX_DIR/phase.yaml" && -f "$YAML_PARSER" ]]; then
+    python3 "$YAML_PARSER" write "$HELIX_DIR/phase.yaml" "sprint.drive" "scrum" 2>/dev/null || true
+    python3 "$YAML_PARSER" write "$HELIX_DIR/phase.yaml" "current_mode" "scrum" 2>/dev/null || true
+  fi
+  update_matrix_size_and_risk_flags "$_SIZE_SCRUM"
+  exit "$EXIT_SUCCESS"
+fi
+
+size_from_lines() {
+  if [[ $LINES -le 100 ]]; then echo "S"
+  elif [[ $LINES -le 500 ]]; then echo "M"
+  else echo "L"
+  fi
+}
+
+size_from_api_db() {
+  if [[ "$HAS_API" == true && "$HAS_DB" == true ]]; then echo "L"
+  elif [[ "$HAS_API" == true || "$HAS_DB" == true ]]; then echo "M"
+  else echo "S"
+  fi
+}
+
+max_size() {
+  local sizes=("$@")
+  for s in "${sizes[@]}"; do
+    [[ "$s" == "L" ]] && echo "L" && return
+  done
+  for s in "${sizes[@]}"; do
+    [[ "$s" == "M" ]] && echo "M" && return
+  done
+  echo "S"
+}
+
+FILE_SIZE=$(size_from_files)
+LINE_SIZE=$(size_from_lines)
+API_DB_SIZE=$(size_from_api_db)
+FINAL_SIZE=$(max_size "$FILE_SIZE" "$LINE_SIZE" "$API_DB_SIZE")
+
+if [[ "$RISK_FLAGS_SET" == true ]]; then
+  if [[ "$FINAL_SIZE" != "L" ]]; then
+    echo "警告: risk_flags 指定のため L 昇格" >&2
+  else
+    echo "警告: risk_flags 指定のため L 昇格" >&2
+  fi
+  FINAL_SIZE="L"
+fi
+
+# --- 駆動タイプ別 L2〜L5 の内容記述 ---
+L2_DESC="" ; L3_DESC="" ; L4_DESC="" ; L5_DESC=""
+G2_DESC="" ; G3_DESC=""
+
+case "$DRIVE" in
+  be)
+    L2_DESC="API設計・アーキテクチャ・ADR"
+    L3_DESC="API契約 + DB設計 + 工程表"
+    L4_DESC="ロジック → API → FE"
+    L5_DESC="表示確認（薄い）"
+    G2_DESC="API設計凍結"
+    G3_DESC="API/Schema Freeze"
+    ;;
+  fe)
+    L2_DESC="Visual方針・コンポーネント設計・デザインシステム"
+    L3_DESC="コンポーネントツリー + Props設計 + 工程表"
+    L4_DESC="コンポーネント → スタイル → API繋ぎ込み"
+    L5_DESC="デザイン駆動レビュー（厚い）"
+    G2_DESC="Visual設計凍結"
+    G3_DESC="Component Contract Freeze"
+    ;;
+  db)
+    L2_DESC="ER図・スキーマ設計・データフロー"
+    L3_DESC="マイグレーション設計 + API契約 + 工程表"
+    L4_DESC="スキーマ → CRUD → API → FE"
+    L5_DESC="管理画面確認（薄い）"
+    G2_DESC="スキーマ凍結"
+    G3_DESC="Migration Freeze"
+    ;;
+  fullstack)
+    L2_DESC="BE方針 + FE方針 + 接続契約方針（同時策定）"
+    L3_DESC="D-API + D-UI + D-CONTRACT + D-DB + D-STATE + 工程表"
+    L4_DESC="Phase A: BE Sprint ∥ FE Sprint → Phase B: L4.5結合"
+    L5_DESC="標準（結合後にVisual Refinement）"
+    G2_DESC="接続契約方針凍結（BE+FE+Contract三点セット）"
+    G3_DESC="API/Schema/UI/Contract 全凍結"
+    ;;
+  agent)
+    if [[ "$FINAL_SIZE" == "L" ]]; then
+      L2_DESC="2 段設計: runtime/state/orchestrator/observability + tool/prompt/decision tree"
+      L3_DESC="D-AGENT-INFRA + D-AGENT-EXEC + 統合テスト設計 + 工程表"
+    else
+      L2_DESC="ツール定義・プロンプト設計・オーケストレーション"
+      L3_DESC="ツール契約 + 統合テスト設計 + 工程表"
+    fi
+    L4_DESC="ツール → オーケストレーション → UI"
+    L5_DESC="会話UI/デモ確認"
+    G2_DESC="ツール定義凍結"
+    G3_DESC="Tool Contract Freeze"
+    ;;
+esac
+
+# --- フェーズスキップ決定 ---
+PHASES=()
+SKIPPED=()
+NOTES=""
+
+api_or_db=$([[ "$HAS_API" == true || "$HAS_DB" == true ]] && echo true || echo false)
+
+# 駆動タイプで L5 の要否判定を変える
+# BE/DB: UI有りのときだけ L5
+# FE: 常に L5（FE駆動の核心）
+# fullstack: 常に L5（結合後 Visual Refinement が必須）
+# Agent: 常に L5（会話UI/デモ確認）
+needs_l5() {
+  case "$DRIVE" in
+    fe)    echo true ;;
+    fullstack) echo true ;;
+    be|db) [[ "$HAS_UI" == true ]] && echo true || echo false ;;
+    agent) echo true ;;
+  esac
+}
+
+L5_NEEDED=$(needs_l5)
+
+case "$FINAL_SIZE" in
+  S)
+    case "$TASK_TYPE" in
+      bugfix|refactor|doc)
+        PHASES=("L4")
+        SKIPPED=("L1" "L2" "L3" "L5" "L6" "L7" "L8")
+        ;;
+      ui-change)
+        PHASES=("L2" "L3" "L4" "L5" "L6")
+        SKIPPED=("L1" "L7" "L8")
+        ;;
+      new-feature|new-module|"")
+        # 新機能/新モジュールは S でも L1（要件定義）を飛ばさない
+        if [[ "$L5_NEEDED" == true ]]; then
+          PHASES=("L1" "L2" "L3" "L4" "L5" "L6")
+          SKIPPED=("L7" "L8")
+        else
+          PHASES=("L1" "L2" "L3" "L4" "L6")
+          SKIPPED=("L5" "L7" "L8")
+        fi
+        ;;
+      *)
+        PHASES=("L4")
+        SKIPPED=("L1" "L2" "L3" "L5" "L6" "L7" "L8")
+        ;;
+    esac
+    NOTES="S案件の L1/L3 は最小版: 目的+受入条件+タスクリスト"
+    ;;
+  M)
+    if [[ "$TASK_TYPE" == "new-module" ]]; then
+      if [[ "$L5_NEEDED" == true ]]; then
+        PHASES=("L1" "L2" "L3" "L4" "L5" "L6" "L7" "L8")
+        SKIPPED=()
+      else
+        PHASES=("L1" "L2" "L3" "L4" "L6" "L7" "L8")
+        SKIPPED=("L5")
+      fi
+    elif [[ "$api_or_db" == true && "$L5_NEEDED" == true ]]; then
+      PHASES=("L1" "L2" "L3" "L4" "L5" "L6" "L7" "L8")
+      SKIPPED=()
+    elif [[ "$api_or_db" == true && "$L5_NEEDED" != true ]]; then
+      # API/DB 変更あり → L1 必須（要件定義を飛ばさない）
+      PHASES=("L1" "L2" "L3" "L4" "L6" "L7" "L8")
+      SKIPPED=("L5")
+    elif [[ "$api_or_db" != true && "$L5_NEEDED" == true ]]; then
+      PHASES=("L1" "L2" "L3" "L4" "L5" "L6" "L7" "L8")
+      SKIPPED=()
+      NOTES="G1.5/G1R skip可、G3会議省略可"
+    else
+      # API/DB 変更なしでも新機能なら L1 必須
+      if [[ "$TASK_TYPE" == "new-feature" || "$TASK_TYPE" == "new-module" ]]; then
+        PHASES=("L1" "L2" "L3" "L4" "L6" "L7" "L8")
+        SKIPPED=("L5")
+      else
+        PHASES=("L2" "L3" "L4" "L6" "L7" "L8")
+        SKIPPED=("L1" "L5")
+      fi
+    fi
+    ;;
+  L)
+    if [[ "$L5_NEEDED" == true ]]; then
+      PHASES=("L1" "L2" "L3" "L4" "L5" "L6" "L7" "L8")
+      SKIPPED=()
+    else
+      PHASES=("L1" "L2" "L3" "L4" "L6" "L7" "L8")
+      SKIPPED=("L5")
+      NOTES="L5/G5 skip"
+    fi
+    ;;
+esac
+
+# --- 駆動タイプ固有の補足 ---
+case "$DRIVE" in
+  fe)
+    NOTES="${NOTES:+$NOTES / }L5はデザイン駆動レビュー（厚い）。L4はコンポーネント→スタイル→API繋ぎの順"
+    ;;
+  db)
+    NOTES="${NOTES:+$NOTES / }L2はER/スキーマ起点。L4はスキーマ→CRUD→API→FEの順"
+    ;;
+  fullstack)
+    NOTES="${NOTES:+$NOTES / }L4はPhase A（BE/FE並行）→Phase B（L4.5結合）。L5は常に必要"
+    ;;
+  agent)
+    NOTES="${NOTES:+$NOTES / }L2はツール/プロンプト設計起点。L5は会話UI/デモ確認"
+    if [[ "$FINAL_SIZE" == "L" ]]; then
+      NOTES="${NOTES:+$NOTES / }2 段設計推奨: D-AGENT-INFRA と D-AGENT-EXEC を分離"
+    fi
+    ;;
+esac
+
+if [[ "$JSON_OUTPUT" != true ]]; then
+  # --- 出力 ---
+  echo "=== タスクサイジング結果 ==="
+  echo ""
+  echo "サイズ:     $FINAL_SIZE"
+  echo "  ファイル数: $FILES → $FILE_SIZE"
+  echo "  変更行数:   $LINES → $LINE_SIZE"
+  echo "  API/DB:     $API_DB_SIZE (api=$HAS_API, db=$HAS_DB)"
+  echo ""
+  echo "駆動タイプ: $DRIVE"
+  echo "  L2: $L2_DESC"
+  echo "  L3: $L3_DESC"
+  echo "  L4: $L4_DESC"
+  echo "  L5: $L5_DESC"
+  echo "  G2: $G2_DESC"
+  echo "  G3: $G3_DESC"
+  echo ""
+  echo "推奨フェーズ: ${PHASES[*]}"
+  if [[ ${#SKIPPED[@]} -gt 0 ]]; then
+    echo "スキップ:     ${SKIPPED[*]}"
+  fi
+  if [[ -n "$NOTES" ]]; then
+    echo "備考:         $NOTES"
+  fi
+
+  if [[ " ${PHASES[*]} " == *" L1 "* ]]; then
+    echo ""
+    echo "L1 要件定義テンプレート:"
+    echo "  docs/features/<name>/D-REQ-F/requirements.md  — 機能要件"
+    echo "  docs/features/<name>/D-REQ-NF/nfr.md          — 非機能要件"
+    echo "  docs/features/<name>/D-ACC/acceptance.md      — 受入条件"
+    echo ""
+    echo "  helix matrix add-feature <name> --drive $DRIVE で追加してください"
+  fi
+
+  echo ""
+  echo "タスク種別:   ${TASK_TYPE:-未指定}"
+  echo "UI変更:       $HAS_UI"
+fi
+
+FIRST_PHASE="${PHASES[0]:-L1}"
+
+# phase.yaml への反映
+if [[ -f "$HELIX_DIR/phase.yaml" ]]; then
+  YP="$SCRIPT_DIR/lib/yaml_parser.py"
+  if [[ -f "$YP" ]]; then
+    # current_phase を設定（L1 から開始、フェーズスキップ時は最初の有効フェーズ）
+    python3 "$YP" write "$HELIX_DIR/phase.yaml" "current_phase" "$FIRST_PHASE" 2>/dev/null || true
+    # drive を設定
+    python3 "$YP" write "$HELIX_DIR/phase.yaml" "sprint.drive" "$DRIVE" 2>/dev/null || true
+    if [[ "$JSON_OUTPUT" != true ]]; then
+      echo ""
+      echo "phase.yaml 更新: current_phase=$FIRST_PHASE, drive=$DRIVE"
+    fi
+  fi
+fi
+
+update_matrix_size_and_risk_flags "$FINAL_SIZE"
+
+# --- 設計テンプレート自動生成 ---
+DOC_TEMPLATES="$SCRIPT_DIR/templates/docs"
+if [[ -d "$DOC_TEMPLATES" ]]; then
+  for phase in "${PHASES[@]}"; do
+    case "$phase" in
+      L1)
+        mkdir -p "$PROJECT_ROOT/docs/requirements"
+        if [[ "$JSON_OUTPUT" != true ]]; then
+          cp -n "$DOC_TEMPLATES/L1-requirements.md" "$PROJECT_ROOT/docs/requirements/" 2>/dev/null && echo "L1 要件定義テンプレート: docs/requirements/L1-requirements.md" || true
+        else
+          cp -n "$DOC_TEMPLATES/L1-requirements.md" "$PROJECT_ROOT/docs/requirements/" 2>/dev/null || true
+        fi
+        ;;
+      L2)
+        mkdir -p "$PROJECT_ROOT/docs/design"
+        if [[ "$JSON_OUTPUT" != true ]]; then
+          cp -n "$DOC_TEMPLATES/L2-design.md" "$PROJECT_ROOT/docs/design/" 2>/dev/null && echo "L2 基本設計テンプレート: docs/design/L2-design.md" || true
+        else
+          cp -n "$DOC_TEMPLATES/L2-design.md" "$PROJECT_ROOT/docs/design/" 2>/dev/null || true
+        fi
+        ;;
+      L3)
+        mkdir -p "$PROJECT_ROOT/docs/design"
+        if [[ "$JSON_OUTPUT" != true ]]; then
+          cp -n "$DOC_TEMPLATES/L3-detailed-design.md" "$PROJECT_ROOT/docs/design/" 2>/dev/null && echo "L3 詳細設計テンプレート: docs/design/L3-detailed-design.md" || true
+          cp -n "$DOC_TEMPLATES/L3-schedule-wbs.md" "$PROJECT_ROOT/docs/design/" 2>/dev/null && echo "L3 工程表テンプレート: docs/design/L3-schedule-wbs.md" || true
+        else
+          cp -n "$DOC_TEMPLATES/L3-detailed-design.md" "$PROJECT_ROOT/docs/design/" 2>/dev/null || true
+          cp -n "$DOC_TEMPLATES/L3-schedule-wbs.md" "$PROJECT_ROOT/docs/design/" 2>/dev/null || true
+        fi
+        ;;
+      L4)
+        # 駆動タイプ別 L4 スプリントガイドをコピー
+        L4_GUIDE=""
+        case "$DRIVE" in
+          be)        L4_GUIDE="L4-be-sprint-guide.md" ;;
+          fe)        L4_GUIDE="L4-fe-sprint-guide.md" ;;
+          db)        L4_GUIDE="L4-db-sprint-guide.md" ;;
+          fullstack) L4_GUIDE="L4-fullstack-sprint-guide.md" ;;
+          agent)     L4_GUIDE="L4-agent-sprint-guide.md" ;;
+        esac
+        if [[ -n "$L4_GUIDE" && -f "$DOC_TEMPLATES/$L4_GUIDE" ]]; then
+          mkdir -p "$PROJECT_ROOT/docs/sprint"
+          if [[ "$JSON_OUTPUT" != true ]]; then
+            cp -n "$DOC_TEMPLATES/$L4_GUIDE" "$PROJECT_ROOT/docs/sprint/" 2>/dev/null && echo "L4 スプリントガイド ($DRIVE): docs/sprint/$L4_GUIDE" || true
+          else
+            cp -n "$DOC_TEMPLATES/$L4_GUIDE" "$PROJECT_ROOT/docs/sprint/" 2>/dev/null || true
+          fi
+        fi
+        ;;
+      L5)
+        mkdir -p "$PROJECT_ROOT/docs/design"
+        if [[ "$JSON_OUTPUT" != true ]]; then
+          cp -n "$DOC_TEMPLATES/L5-visual-design.md" "$PROJECT_ROOT/docs/design/" 2>/dev/null && echo "L5 Visual Design テンプレート: docs/design/L5-visual-design.md" || true
+        else
+          cp -n "$DOC_TEMPLATES/L5-visual-design.md" "$PROJECT_ROOT/docs/design/" 2>/dev/null || true
+        fi
+        ;;
+    esac
+  done
+fi
+
+if [[ "$JSON_OUTPUT" == true ]]; then
+  PHASES_NL="$(printf '%s\n' "${PHASES[@]}")"
+  FINAL_SIZE="$FINAL_SIZE" DRIVE="$DRIVE" PHASES_NL="$PHASES_NL" python3 - <<'PY'
+import json
+import os
+
+phases = [line for line in os.environ.get("PHASES_NL", "").splitlines() if line]
+print(
+    json.dumps(
+        {
+            "size": os.environ.get("FINAL_SIZE", ""),
+            "phases": phases,
+            "drive": os.environ.get("DRIVE", ""),
+        },
+        ensure_ascii=False,
+    )
+)
+PY
+fi

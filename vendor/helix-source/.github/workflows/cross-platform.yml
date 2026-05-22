@@ -1,0 +1,122 @@
+name: Cross Platform Harness
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+      - 'improvements/**'
+  workflow_dispatch:
+
+env:
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: '1'
+
+jobs:
+  harness:
+    name: harness/${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Normalize HELIX paths
+        run: |
+          {
+            echo "HELIX_HOME=$(pwd)"
+            echo "HELIX_PROJECT_ROOT=$(pwd)"
+          } >> "$GITHUB_ENV"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Normalize shell tools
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/bin"
+          if ! command -v python3 >/dev/null 2>&1; then
+            cat > "$HOME/bin/python3" <<'SH'
+#!/usr/bin/env bash
+exec python "$@"
+SH
+            chmod +x "$HOME/bin/python3"
+            echo "$HOME/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/bin:$PATH"
+          fi
+          python3 --version
+          git --version
+          node --version
+          npm --version
+
+      - name: Configure Git for tests
+        run: |
+          git config --global user.email "ci@example.com"
+          git config --global user.name "GitHub Actions CI"
+          git config --global core.autocrlf false
+          git config --global core.safecrlf false
+
+      - name: Install system test dependencies
+        run: |
+          set -euo pipefail
+          case "${RUNNER_OS}" in
+            Linux)
+              sudo apt-get update
+              sudo apt-get install -y sqlite3 ripgrep
+              ;;
+            Windows)
+              choco.exe install sqlite ripgrep -y --no-progress
+              ;;
+          esac
+
+      - name: Install Python test dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pytest
+          if [ -f requirements-dev.txt ]; then
+            python3 -m pip install -r requirements-dev.txt
+          fi
+
+      - name: Initialize HELIX workspace
+        run: |
+          HELIX_SKIP_HOOK_INSTALL=1 ./cli/helix init --project-name ci-harness --force
+
+      - name: Syntax checks
+        run: |
+          python3 -m py_compile cli/lib/push_gate.py
+          bash -n cli/helix-test cli/tests/*.bats
+
+      - name: Doctor
+        run: |
+          ./cli/helix doctor --cleanup-stale-locks
+
+      - name: Pytest harness
+        run: |
+          python3 -m pytest cli/lib/tests/ -q --tb=short
+
+      - name: Bats harness
+        run: |
+          npx -y bats --version
+          npx -y bats cli/tests/*.bats

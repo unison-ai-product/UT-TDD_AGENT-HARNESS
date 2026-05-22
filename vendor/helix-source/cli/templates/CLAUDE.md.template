@@ -1,0 +1,75 @@
+<!-- helix_template_version: 5 -->
+<!-- HELIX-MANAGED-START -->
+# プロジェクト名
+
+@~/ai-dev-kit-vscode/skills/SKILL_MAP.md
+@~/ai-dev-kit-vscode/helix/HELIX_CORE.md
+@~/ai-dev-kit-vscode/helix/CODEX_TL_MODE.md
+
+## 概要
+このプロジェクトの目的を一文で書く。
+
+## 技術スタック
+- Frontend:
+- Backend:
+- DB:
+- インフラ:
+- テスト:
+
+## アーキテクチャ
+主要コンポーネントと責務を書く。
+
+- `src/`:
+- `tests/`:
+- `docs/`:
+- `.helix/`: HELIX runtime state。通常は手編集しない。
+
+## コーディング規約
+- 実装前に対象ファイルを Read し、既存パターンへ合わせる。
+- 命名、フォーマット、エラー処理、テスト配置は既存コードを正本にする。
+- テストなしの完了宣言は禁止。
+- Codex / Claude Code は API 直叩きではなく、契約プラン + CLI / hook を HELIX が管理する対象として扱う。
+
+## ディレクトリ構造
+```text
+src/
+tests/
+docs/
+.helix/
+```
+
+## コマンド
+- 初期化: `helix init`
+- 状態確認: `helix status`
+- タスクサイジング: `helix size --files <N> --lines <N> --type <type> --drive <drive>`
+- 計画: `helix plan draft --title "..."`
+- ゲート検証: `helix gate <G0.5|G2|G3|G4|G5|G6|G7>`
+- Sprint: `helix sprint status`
+- テスト: `helix test`
+- Codex 委譲: `helix codex --role <role> --task "..."`
+- Claude Code prompt 生成: `helix claude --role <role> --task "..." --dry-run`
+
+## 禁止事項
+- API key、secret、PII、credential を rules / docs / examples に書かない。
+- 認証、認可、決済、PII、ライセンス、本番影響、destructive data operation は人間確認なしに仕様確定しない。
+- 外部 provider SDK や認証情報を前提にした fallback を HELIX の通常導線として追加しない。
+- `.helix/` runtime state、`.claude/settings.local.json`、`.codex` などのローカル副産物をドキュメント目的で追跡対象にしない。
+
+## HELIX ワークフロー
+- タスク受領時は `~/ai-dev-kit-vscode/helix/HELIX_CORE.md`、`~/ai-dev-kit-vscode/skills/SKILL_MAP.md`、`~/ai-dev-kit-vscode/helix/CODEX_TL_MODE.md` を確認する。
+- Forward: `size` -> `plan` -> `matrix` -> `gate` -> `sprint` -> `test`
+- Reverse: `reverse <type> R0` -> `R1` -> `R2` -> `R3` -> `R4` -> `rgc`
+- Scrum: `scrum init` -> `backlog` -> `plan` -> `poc` -> `verify` -> `decide`
+- Interrupt: 実装中の設計ギャップや要件変更は `helix interrupt` で IIP / CC として扱う。
+- Handover: `.helix/handover/CURRENT.json` がある場合は `helix handover status --json` を確認し、stale でなければ `CURRENT.md` の Next Action に従う。
+- AI harness: `plan` / `task` の文脈を `codex` / `claude` / `team` / `review` / `handover` で管理する。
+
+## 指示ファイル
+- Claude Code project context: `CLAUDE.md`
+- Claude Code runtime / hook policy: `.claude/CLAUDE.md`
+- Codex CLI project rules: `AGENTS.md`
+- 個人差分: `CLAUDE.local.md` / `AGENTS.override.md`
+
+詳細は `docs/commands/index.md` と `docs/commands/ai-harness.md` を参照。
+<!-- HELIX-MANAGED-END -->
+

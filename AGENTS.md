@@ -1,0 +1,84 @@
+# Codex CLI — UT-TDD Agent Harness
+
+このファイルは Codex CLI 向けの project rules。Claude Code 側の project context は `CLAUDE.md`、Claude runtime / hook の詳細は `.claude/CLAUDE.md` を参照する。
+
+## Core Reads
+
+タスク受領時は必ず以下を Read してフローに従う。
+
+- `docs/governance/ut-tdd-agent-harness-concept_v3.0.md` — 社内展開向け構想書
+- `docs/governance/ut-tdd-agent-harness-requirements_v1.1.md` — 要件定義・受入条件
+- `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` — HELIX 移植元からの切り出し計画
+- `docs/migration/helix-source-inventory.md` — HELIX source snapshot 棚卸し
+
+`vendor/helix-source/` は移植元 snapshot であり、UT-TDD Agent Harness の正本ではない。productizing 作業では vendor を直接編集せず、UT-TDD 所有パスへコピーしてから名称・前提・Windows 対応を差し替える。
+
+## Session Start
+
+1. 上記 Core Reads が存在するか確認する。
+2. `.ut-tdd/handover/CURRENT.json` が存在する場合は、内容を確認して stale でない Next Action に従う。
+3. `.helix/` が存在しても HELIX runtime state として扱い、UT-TDD 正本 state にはしない。
+4. handover がなければ通常開始し、「OK: UT-TDD セッション初期化完了」と宣言する。
+
+## TL Driven Mode
+
+Codex CLI 単体利用時は TL（テックリード）として自律動作する。
+
+- 設計、技術的難易度評価、実装、レビュー、テスト、検証を一気通貫で進める。
+- 実装前に対象ファイルを Read し、既存構造・命名・テスト配置へ合わせる。
+- ゲート判定は変更規模に応じて行い、結果を final で簡潔に示す。
+- 不明点、本番影響、認証、認可、決済、PII、ライセンス、外部 API / infrastructure / env 変更は人間に確認する。
+
+## UT-TDD Workflow
+
+- Forward: `plan` -> `pair-freeze` -> `implement` -> `trace-freeze` -> `review` -> `accept`
+- Reverse: `reverse <type> R0` -> `R1` -> `R2` -> `R3` -> `R4` -> Forward 合流
+- Scrum / PoC: `S0 backlog` -> `S1 plan` -> `S2 poc` -> `S3 verify` -> `S4 decide`
+- Additive change: 既存設計を破壊せず `add-design` / `add-impl` として差分を積む。
+- Handover: セッションや担当をまたぐ場合は `.ut-tdd/handover/` を正本にする。
+
+## Codex / Claude Code Harness
+
+Codex と Claude Code は API 直叩きではなく、契約プラン + ローカル CLI / hook を UT-TDD Agent Harness が管理する対象。片方だけの環境でも `ut-tdd status` が mode を判定し、単体実行できる範囲を明示する。
+
+将来の正本コマンド:
+
+- Codex 実行: `ut-tdd codex --role <role> --task "..."`
+- Claude Code prompt 生成: `ut-tdd claude --role <role> --task "..." --dry-run`
+- 複数 role 委譲: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
+- タスク判定: `ut-tdd task classify --text "..."` / `ut-tdd task estimate --plan <path>`
+- skill 推挙: `ut-tdd skill suggest --plan <path>`
+- 差分レビュー: `ut-tdd review --uncommitted`
+- 引継ぎ: `ut-tdd handover status --json`
+- 状態確認: `ut-tdd status --json` (`standalone` / `claude-only` / `codex-only` / `hybrid`)
+
+複数 AI を使える場合は、判断と実行を分ける。設計判断・G2/G3/G4 レビュー・R4 合流判定は、現在作業している AI とは別系統の `frontier-reviewer` に依頼する。実装・テスト追加・文書整形は `worker` に委譲し、軽量分類や要約は `fast-checker` に寄せる。同一 `runtime + model` が作成と承認を兼ねる構成は避ける。
+
+現時点で未移植の機能は `vendor/helix-source/` から参照してよいが、`helix` コマンドを社内版の正本導線として記述しない。
+
+## Skills
+
+- triggers 該当時は該当スキルの `SKILL.md` だけを Read する。
+- 全スキル一括読み込みは禁止。
+- skill 内の `references/` は skill ディレクトリからの相対パスで解決する。
+- HELIX 由来 skill は移植元として扱い、UT-TDD 正本化時に名称・前提・対象 OS を確認する。
+
+## Editing Rules
+
+- 実装前に必ず対象ファイルを Read する。
+- 既存コードの構造、命名、テスト配置へ合わせる。
+- 既存の未コミット変更はユーザー作業として扱い、巻き戻さない。
+- secret、PII、credential を docs / rules / examples に書かない。
+- `vendor/helix-source/` は原則 read-only。移植時は UT-TDD 所有パスへコピーして編集する。
+
+## Test Rules
+
+- Docs 変更: `rg` で旧前提（WSL2 必須、HELIX 正本表現、個人絶対パス）を確認する。
+- Bash 変更: `bash -n <changed-script>`
+- PowerShell 変更: `powershell -NoProfile -ExecutionPolicy Bypass -File <changed-script>`
+- Python 変更: `python -m py_compile <changed-file>` または対象 pytest
+- CLI / hook 変更: Linux/macOS POSIX shell と Windows PowerShell の両方で smoke test する。Windows 側で Git Bash bridge が必要な hook は bridge 経由も確認する。
+
+## Local Overrides
+
+個人差分は `AGENTS.override.md` に書く。`AGENTS.override.md` は Git 追跡しない。

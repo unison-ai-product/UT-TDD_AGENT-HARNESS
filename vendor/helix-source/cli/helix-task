@@ -1,0 +1,835 @@
+#!/bin/bash
+set -euo pipefail
+
+# helix-task: HELIX タスクオペレーティングシステム
+# Usage: helix task <catalog|plan|run|status> [args...]
+
+source "$(cd "$(dirname "$0")" && pwd)/lib/helix-common.sh"
+YP="$SCRIPT_DIR/lib/yaml_parser.py"
+PROJECT_CATALOG="$HELIX_DIR/task-catalog.yaml"
+CATALOG="$HELIX_HOME/cli/templates/task-catalog.yaml"
+if [[ -f "$PROJECT_CATALOG" ]]; then
+  CATALOG="$PROJECT_CATALOG"
+fi
+TASK_PLAN="$HELIX_DIR/task-plan.yaml"
+HELIX_CODEX="$SCRIPT_DIR/helix-codex"
+DB_PY="$SCRIPT_DIR/lib/helix_db.py"
+DB_PATH="$HELIX_DIR/helix.db"
+REDACTION_PY="$SCRIPT_DIR/lib/redaction.py"
+
+CMD="${1:-help}"
+shift 2>/dev/null || true
+
+resolve_model_for_role() {
+  local role="$1"
+  local role_conf="$SCRIPT_DIR/roles/${role}.conf"
+  local model=""
+
+  if [[ -f "$role_conf" ]]; then
+    model=$(grep '^codex_model=' "$role_conf" | head -n1 | cut -d= -f2)
+  fi
+
+  if [[ -z "$model" ]]; then
+    model="unknown-model"
+  fi
+
+  echo "$model"
+}
+
+# ============================
+# catalog: タスクカタログ表示
+# ============================
+cmd_catalog() {
+  local filter="${1:-}"
+
+  HELIX_TASK_CATALOG="$CATALOG" HELIX_TASK_FILTER="$filter" python3 - <<'PY' 2>/dev/null
+import os
+import re
+import sys
+
+cats = {}
+current_cat = None
+current_task = None
+tasks = {}
+
+with open(os.environ["HELIX_TASK_CATALOG"], encoding="utf-8") as f:
+    for line in f:
+        line = line.rstrip()
+        if not line or line.lstrip().startswith('#'):
+            continue
+        # カテゴリ
+        m = re.match(r'^(\w[\w-]*):\s*$', line)
+        if m:
+            name = m.group(1)
+            if name not in ('name','input','output','role','estimate','depends','skill'):
+                current_cat = name
+                cats[current_cat] = []
+                continue
+        # タスク
+        m = re.match(r'  ([\w-]+):\s*$', line)
+        if m and current_cat:
+            current_task = m.group(1)
+            tasks[current_task] = {'cat': current_cat}
+            cats[current_cat].append(current_task)
+            continue
+        # フィールド
+        if current_task:
+            m = re.match(r'    (\w+):\s*(.+)', line)
+            if m:
+                tasks[current_task][m.group(1)] = m.group(2).strip('\"')
+
+filt = os.environ.get("HELIX_TASK_FILTER", "")
+print('=== HELIX Task Catalog ===')
+print()
+for cat, task_ids in cats.items():
+    if filt and filt != cat and not any(filt in t for t in task_ids):
+        continue
+    print(f'[{cat}] ({len(task_ids)} tasks)')
+    for tid in task_ids:
+        t = tasks[tid]
+        name = t.get('name', tid)
+        role = t.get('role', '?')
+        est = t.get('estimate', '?')
+        print(f'  {tid:<30s} {role:<12s} ~{est}min  {name}')
+    print()
+print(f'Total: {sum(len(v) for v in cats.values())} tasks / {len(cats)} categories')
+PY
+}
+
+# ============================
+# plan: タスクプラン作成
+# ============================
+cmd_plan() {
+  local goal="" task_ids=()
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --goal) goal="$2"; shift 2 ;;
+      --tasks) IFS=',' read -ra task_ids <<< "$2"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+
+  if [[ -z "$goal" || ${#task_ids[@]} -eq 0 ]]; then
+    echo "Usage: helix task plan --goal '...' --tasks 'research-library,design-api,implement-api,...'" >&2
+    exit "$EXIT_INPUT_ERROR"
+  fi
+
+  mkdir -p "$HELIX_DIR"
+  local selected_tasks_input=""
+  if [[ ${#task_ids[@]} -gt 0 ]]; then
+    selected_tasks_input=$(printf '%s\n' "${task_ids[@]}")
+  fi
+
+  # タスクプランを生成
+  HELIX_TASK_CATALOG="$CATALOG" \
+  HELIX_TASK_PLAN="$TASK_PLAN" \
+  HELIX_PLAN_GOAL="$goal" \
+  HELIX_SELECTED_TASKS="$selected_tasks_input" \
+  python3 - <<'PY' 2>/dev/null
+import json
+import os
+import re
+import sys
+from datetime import date
+
+# カタログ読み込み
+cats = {}
+current_cat = None
+current_task = None
+tasks = {}
+
+with open(os.environ["HELIX_TASK_CATALOG"], encoding="utf-8") as f:
+    for line in f:
+        line = line.rstrip()
+        if not line or line.lstrip().startswith('#'):
+            continue
+        m = re.match(r'^(\w[\w-]*):\s*$', line)
+        if m:
+            name = m.group(1)
+            if name not in ('name','input','output','role','estimate','depends','skill'):
+                current_cat = name
+                cats[current_cat] = []
+                continue
+        m = re.match(r'  ([\w-]+):\s*$', line)
+        if m and current_cat:
+            current_task = m.group(1)
+            tasks[current_task] = {'cat': current_cat}
+            cats[current_cat].append(current_task)
+            continue
+        if current_task:
+            m = re.match(r'    (\w+):\s*(.+)', line)
+            if m:
+                val = m.group(2).strip('\"')
+                tasks[current_task][m.group(1)] = val
+
+# タスクプラン生成
+selected = [t.strip() for t in os.environ.get("HELIX_SELECTED_TASKS", "").splitlines() if t.strip()]
+goal = os.environ["HELIX_PLAN_GOAL"]
+task_plan_path = os.environ["HELIX_TASK_PLAN"]
+plan_tasks = []
+total_estimate = 0
+
+for i, tid in enumerate(selected, 1):
+    t = tasks.get(tid, {})
+    est = int(t.get('estimate', 0))
+    total_estimate += est
+    plan_tasks.append({
+        'id': f'T{i:03d}',
+        'task': tid,
+        'name': t.get('name', tid),
+        'role': t.get('role', '?'),
+        'estimate': est,
+        'status': 'pending',
+        'skill': t.get('skill', ''),
+    })
+
+# YAML 出力
+lines = [
+    f'# Task Plan — {date.today()}',
+    f'goal: \"{goal}\"',
+    f'total_estimate: {total_estimate}',
+    f'status: active',
+    f'tasks:',
+]
+for t in plan_tasks:
+    lines.append(f'  {t["id"]}:')
+    lines.append(f'    task: {t["task"]}')
+    lines.append(f'    name: "{t["name"]}"')
+    lines.append(f'    role: {t["role"]}')
+    lines.append(f'    estimate: {t["estimate"]}')
+    lines.append(f'    status: pending')
+    lines.append(f'    skill: {t["skill"]}')
+
+with open(task_plan_path, 'w', encoding='utf-8') as f:
+    f.write('\n'.join(lines) + '\n')
+
+print(f'=== Task Plan: {goal} ===')
+print()
+print(f'Total: {len(plan_tasks)} tasks, ~{total_estimate} min')
+print()
+for t in plan_tasks:
+    print(f'  {t["id"]} [{t["role"]:<12s}] ~{t["estimate"]:>3d}min  {t["name"]}')
+print()
+print(f'Saved: {task_plan_path}')
+PY
+
+  # === タスク選択を DB に記録 ===
+  if [[ -f "$DB_PATH" ]]; then
+    local plan_id
+    plan_id="plan-$(date '+%Y%m%d-%H%M%S')"
+    local all_tasks
+    all_tasks=$(HELIX_TASK_CATALOG="$CATALOG" python3 - <<'PY' 2>/dev/null
+import json
+import os
+import re
+tasks = []
+current_cat = None
+with open(os.environ["HELIX_TASK_CATALOG"], encoding="utf-8") as f:
+    for line in f:
+        m = re.match(r'  ([\w-]+):\s*$', line.rstrip())
+        if m:
+            name = m.group(1)
+            if name not in ('name','role','estimate','skill','actions'):
+                tasks.append(name)
+print(json.dumps(tasks))
+PY
+)
+
+    python3 "$DB_PY" record-selection "$DB_PATH" "$(HELIX_PLAN_ID="$plan_id" HELIX_PLAN_GOAL="$goal" HELIX_SELECTED_TASKS="$selected_tasks_input" HELIX_AVAILABLE_TASKS_JSON="$all_tasks" python3 - <<'PY' 2>/dev/null
+import json
+import os
+
+available_tasks = json.loads(os.environ["HELIX_AVAILABLE_TASKS_JSON"])
+selected_tasks = [t.strip() for t in os.environ.get("HELIX_SELECTED_TASKS", "").splitlines() if t.strip()]
+print(json.dumps({
+    'plan_id': os.environ["HELIX_PLAN_ID"],
+    'plan_goal': os.environ["HELIX_PLAN_GOAL"],
+    'selected_tasks': selected_tasks,
+    'available_tasks': available_tasks,
+}))
+PY
+)" 2>/dev/null
+
+    local sel_id
+    sel_id=$(HELIX_SCRIPT_LIB="$SCRIPT_DIR/lib" HELIX_DB_PATH_VALUE="$DB_PATH" python3 - <<'PY' 2>/dev/null
+import os
+import sys
+sys.path.insert(0, os.environ["HELIX_SCRIPT_LIB"])
+import helix_db
+conn = helix_db.get_connection(os.environ["HELIX_DB_PATH_VALUE"])
+row = conn.execute('SELECT id FROM task_selections ORDER BY id DESC LIMIT 1').fetchone()
+print(row[0] if row else '')
+conn.close()
+PY
+)
+
+    echo ""
+    echo "[helix-task] タスク選択を DB に記録 (selection #$sel_id)"
+
+    # === TL レビュー自動発火 ===
+    echo "[helix-task] TL レビューを実行中..."
+    echo ""
+
+    local review_prompt="タスクプランレビュー:
+
+ゴール: $goal
+選択タスク: ${task_ids[*]}
+
+以下の観点でレビューせよ:
+1. タスクの過不足（足りないタスクはないか、不要なタスクはないか）
+2. タスクの順序（依存関係が正しいか）
+3. ロール割当（適切なロールか）
+4. リスク（セキュリティレビューや検証が抜けていないか）
+
+結果を判定(approved/rejected)とともに、追加すべきタスク・削除すべきタスクの提案を返せ。"
+
+    set +e
+    local review_result
+    review_result=$("$HELIX_CODEX" --role tl --task "$review_prompt" 2>&1)
+    set -e
+
+    # レビュー結果をDB に記録
+    local review_status="approved"
+    echo "$review_result" | grep -qi "reject\|不足\|追加すべき\|missing" && review_status="revised"
+    local review_excerpt
+    review_excerpt=$(printf '%s' "$review_result" | tail -20 | head -c 500)
+
+    python3 "$DB_PY" update-review "$DB_PATH" "$(HELIX_SELECTION_ID="$sel_id" HELIX_REVIEW_STATUS="$review_status" HELIX_REVIEW_RESULT="$review_excerpt" python3 - <<'PY' 2>/dev/null
+import json
+import os
+
+selection_id = os.environ.get("HELIX_SELECTION_ID", "").strip()
+print(json.dumps({
+    'selection_id': int(selection_id) if selection_id else None,
+    'review_status': os.environ["HELIX_REVIEW_STATUS"],
+    'review_result': os.environ["HELIX_REVIEW_RESULT"],
+    'review_suggestions': '',
+}))
+PY
+)" 2>/dev/null
+
+    echo ""
+    echo "[helix-task] TL レビュー: $review_status"
+    if [[ "$review_status" == "revised" ]]; then
+      echo "[helix-task] TL から修正提案があります。内容を確認してください。"
+    fi
+    echo ""
+  fi
+
+  echo "Next: helix task run"
+}
+
+# ============================
+# run: 次のタスクを実行
+# ============================
+cmd_run() {
+  if [[ ! -f "$TASK_PLAN" ]]; then
+    echo "Error: タスクプランがありません。'helix task plan' で作成してください。" >&2
+    exit "$EXIT_PREREQ_ERROR"
+  fi
+
+  # 次の pending タスクを取得
+  local next_task
+  next_task=$(HELIX_TASK_PLAN="$TASK_PLAN" python3 - <<'PY' 2>/dev/null
+import os
+import re
+current_id = None
+current_task = None
+current_role = None
+current_name = None
+current_skill = None
+
+with open(os.environ["HELIX_TASK_PLAN"], encoding="utf-8") as f:
+    for line in f:
+        line = line.rstrip()
+        m = re.match(r'  (T\d+):', line)
+        if m:
+            current_id = m.group(1)
+            continue
+        if current_id:
+            m = re.match(r'    (\w+):\s*(.+)', line)
+            if m:
+                key, val = m.group(1), m.group(2).strip('\"')
+                if key == 'task': current_task = val
+                elif key == 'role': current_role = val
+                elif key == 'name': current_name = val
+                elif key == 'skill': current_skill = val
+                elif key == 'status' and val == 'pending':
+                    print(f'{current_id}|{current_task}|{current_role}|{current_name}|{current_skill}')
+                    exit()
+PY
+)
+
+  if [[ -z "$next_task" ]]; then
+    echo "=== All tasks completed ==="
+    exit 0
+  fi
+
+  IFS='|' read -r tid task_type role name skill <<< "$next_task"
+
+  echo "=== $tid: $name ==="
+  echo "Task: $task_type"
+  echo "Role: $role"
+  echo "Skill: $skill"
+  local model
+  model="$(resolve_model_for_role "$role")"
+  echo "[helix-task] 委譲: $role ($model)"
+  echo ""
+
+  # ステータスを running に
+  python3 "$YP" write "$TASK_PLAN" "tasks.${tid}.status" running 2>/dev/null
+
+  # DB 記録（DB がある場合）
+  local db_run_id=""
+  if [[ -f "$DB_PATH" ]]; then
+    local plan_goal
+    plan_goal=$(python3 "$YP" read "$TASK_PLAN" goal 2>/dev/null || echo "")
+    db_run_id=$(python3 "$DB_PY" record-task "$DB_PATH" "$(HELIX_TASK_ID="$tid" HELIX_TASK_TYPE="$task_type" HELIX_PLAN_GOAL="$plan_goal" HELIX_TASK_ROLE="$role" python3 - <<'PY' 2>/dev/null
+import json
+import os
+
+print(json.dumps({
+    'task_id': os.environ["HELIX_TASK_ID"],
+    'task_type': os.environ["HELIX_TASK_TYPE"],
+    'plan_goal': os.environ["HELIX_PLAN_GOAL"],
+    'role': os.environ["HELIX_TASK_ROLE"],
+    'status': 'running',
+}))
+PY
+)" 2>/dev/null || echo "")
+  fi
+
+  # ログディレクトリ
+  local LOG_DIR="$HELIX_DIR/task-logs"
+  mkdir -p "$LOG_DIR"
+  local LOG_FILE="$LOG_DIR/${tid}-${task_type}.log"
+  local task_status="completed"
+  local delegate_exit=0
+
+  # ロールに応じて実行（出力をログに保存）
+  if [[ "$task_type" == "review-visual" ]]; then
+    # ビジュアルレビュー: スクショを Claude に読ませる
+    echo "[helix-task] ビジュアルレビュー実行"
+    echo ""
+
+    local VISUAL_CHECK_DIR="$HELIX_DIR/visual-checks"
+    local screenshots=()
+    for ss_dir in "$VISUAL_CHECK_DIR"/*-screenshots/; do
+      [[ -d "$ss_dir" ]] || continue
+      for img in "$ss_dir"*.png; do
+        [[ -f "$img" ]] && screenshots+=("$img")
+      done
+    done
+
+    if [[ ${#screenshots[@]} -eq 0 ]]; then
+      echo "[helix-task] スクリーンショットが見つかりません" | tee "$LOG_FILE"
+      echo "  先に UI タスクを実行してスクショを撮影してください"
+    else
+      echo "  レビュー対象: ${#screenshots[@]} 枚"
+      for ss in "${screenshots[@]}"; do
+        echo "    $(basename "$ss")"
+      done
+      echo ""
+
+      # Claude に画像を読ませてレビュー（Read ツールは画像対応）
+      local review_prompt="ビジュアルレビュー:
+
+以下のスクリーンショットを確認し、UIデザインの品質をレビューせよ。
+
+スクリーンショット:"
+      for ss in "${screenshots[@]}"; do
+        review_prompt+="
+- $ss"
+      done
+      review_prompt+="
+
+レビュー観点:
+1. レイアウトの崩れ・意図しない余白
+2. テキストの切れ・はみ出し
+3. 配色の一貫性（ベース/メイン/アクセントの比率）
+4. フォントサイズ・ウェイトの適切さ
+5. ボタン・入力フィールドのサイズ・タップ領域
+6. コントラスト比（アクセシビリティ）
+7. desktop/tablet/mobile 間の一貫性
+
+各スクリーンショットを Read して目視確認し、指摘事項を出力せよ。
+指摘がなければ「問題なし」と明記。
+最後に判定: approved / needs-fix を出力。"
+
+      echo "[helix-task] PMO Sonnet でスクショレビューを実行してください:"
+      echo ""
+      echo "  helix claude --role pmo --model sonnet --task-file \"$LOG_FILE\" --execute"
+      echo ""
+      echo "$review_prompt" > "$LOG_FILE"
+
+      # 確認記録を更新
+      for check_md in "$VISUAL_CHECK_DIR"/*.md; do
+        [[ -f "$check_md" ]] || continue
+        if grep -q "判定: pending" "$check_md" 2>/dev/null; then
+          sed -i 's/判定: pending/判定: reviewing/' "$check_md"
+        fi
+      done
+      echo "[helix-task] 確認記録を reviewing に更新"
+      echo "  → レビュー結果に基づき approved / needs-fix に変更してください"
+      echo "[agent-delegation] helix claude --role pmo --model sonnet --task-file $LOG_FILE --execute" > "$LOG_FILE"
+    fi
+  else
+    echo "[helix-task] helix codex --role $role に委譲"
+    set +e
+    local old_pipefail
+    if [[ -o pipefail ]]; then
+      old_pipefail=1
+    else
+      old_pipefail=0
+      set -o pipefail
+    fi
+    "$HELIX_CODEX" --role "$role" --task "$name" 2>&1 | python3 "$REDACTION_PY" --stream | tee "$LOG_FILE"
+    delegate_exit=$?
+    [[ "$old_pipefail" == "0" ]] && set +o pipefail
+    set -e
+    if [[ "$delegate_exit" -ne 0 ]]; then
+      task_status="failed"
+    fi
+  fi
+
+  # UI 系タスクの目視確認チェック
+  local UI_TASKS="implement-ui-component implement-style design-ui"
+  local needs_visual_check=false
+  for ui_task in $UI_TASKS; do
+    [[ "$task_type" == "$ui_task" ]] && needs_visual_check=true
+  done
+
+  if [[ "$needs_visual_check" == true ]]; then
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  UI 目視確認が必要です"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    local VISUAL_CHECK_DIR="$HELIX_DIR/visual-checks"
+    local SCREENSHOT_DIR="$VISUAL_CHECK_DIR/${tid}-screenshots"
+    mkdir -p "$SCREENSHOT_DIR"
+    local check_file="$VISUAL_CHECK_DIR/${tid}-${task_type}.md"
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  UI 目視確認が必要です"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "  スクリーンショットを撮影して以下に保存してください:"
+    echo "    $SCREENSHOT_DIR/"
+    echo ""
+    echo "  必須スクリーンショット:"
+    echo "    desktop.png   — デスクトップ表示 (1280px+)"
+    echo "    tablet.png    — タブレット表示 (768px)"
+    echo "    mobile.png    — モバイル表示 (375px)"
+    echo ""
+    echo "  任意:"
+    echo "    dark.png      — ダークモード"
+    echo "    hover.png     — ホバー/インタラクション状態"
+    echo "    error.png     — エラー状態"
+    echo ""
+    echo "  撮影方法:"
+    echo "    ブラウザ DevTools → Toggle device → Screenshot"
+    echo "    または: npx playwright screenshot --url http://localhost:3000 --path $SCREENSHOT_DIR/desktop.png"
+    echo ""
+
+    cat > "$check_file" << VCHECK
+# UI 目視確認: $tid — $name
+# Date: $(date '+%Y-%m-%d %H:%M')
+
+## スクリーンショット
+- desktop.png: [ ] 撮影済み
+- tablet.png:  [ ] 撮影済み
+- mobile.png:  [ ] 撮影済み
+
+## 確認結果
+- [ ] デザインカンプとの一致
+- [ ] レスポンシブ崩れなし
+- [ ] デザイントークン準拠（色・フォント・余白）
+- [ ] アクセシビリティ（コントラスト・フォーカス）
+
+## 指摘事項
+-
+
+## 判定: pending
+VCHECK
+
+    echo "  確認記録: $check_file"
+    echo "  → スクリーンショット 3 枚 + 判定を approved に変更で G5 通過可能"
+    echo ""
+  fi
+
+  # ステータス更新
+  python3 "$YP" write "$TASK_PLAN" "tasks.${tid}.status" "$task_status" 2>/dev/null
+
+  # DB 更新
+  if [[ -f "$DB_PATH" && -n "$db_run_id" ]]; then
+    HELIX_SCRIPT_LIB="$SCRIPT_DIR/lib" \
+    HELIX_DB_PATH_VALUE="$DB_PATH" \
+    HELIX_TASK_STATUS="$task_status" \
+    HELIX_LOG_FILE="$LOG_FILE" \
+    HELIX_DB_RUN_ID="$db_run_id" \
+    python3 - <<'PY' 2>/dev/null || true
+from datetime import datetime
+import os
+import sys
+sys.path.insert(0, os.environ["HELIX_SCRIPT_LIB"])
+import helix_db
+conn = helix_db.get_connection(os.environ["HELIX_DB_PATH_VALUE"])
+conn.execute('UPDATE task_runs SET status=?, completed_at=?, output_log=? WHERE id=?',
+    (
+        os.environ["HELIX_TASK_STATUS"],
+        datetime.now().isoformat(),
+        os.environ["HELIX_LOG_FILE"],
+        int(os.environ["HELIX_DB_RUN_ID"]),
+    ))
+conn.commit()
+conn.close()
+PY
+  fi
+
+  if [[ "$task_status" == "failed" ]]; then
+    echo ""
+    echo "[helix-task] $tid 失敗。ログ: $LOG_FILE"
+    echo "[helix-task] codex 委譲コマンドが失敗したため status=failed を記録しました"
+    return 1
+  fi
+
+  echo ""
+  echo "[helix-task] タスク完了。'helix learn' で成功パターンを記録できます。"
+  echo "[helix-task] $tid 完了。ログ: $LOG_FILE"
+  echo "[helix-task] 'helix task observe $tid' で品質検証"
+  echo "[helix-task] 'helix task run' で次のタスクを実行"
+}
+
+# ============================
+# status: タスクプラン状態表示
+# ============================
+cmd_status() {
+  if [[ ! -f "$TASK_PLAN" ]]; then
+    echo "タスクプランがありません。" >&2
+    exit "$EXIT_PREREQ_ERROR"
+  fi
+
+  HELIX_TASK_PLAN="$TASK_PLAN" python3 - <<'PY' 2>/dev/null
+import os
+import re
+
+goal = ''
+total = 0
+tasks = []
+current = {}
+
+with open(os.environ["HELIX_TASK_PLAN"], encoding="utf-8") as f:
+    for line in f:
+        line = line.rstrip()
+        m = re.match(r'goal:\s*\"?(.+?)\"?\s*$', line)
+        if m: goal = m.group(1)
+        m = re.match(r'  (T\d+):', line)
+        if m:
+            if current: tasks.append(current)
+            current = {'id': m.group(1)}
+            continue
+        if current:
+            m = re.match(r'    (\w+):\s*(.+)', line)
+            if m:
+                current[m.group(1)] = m.group(2).strip('\"')
+    if current: tasks.append(current)
+
+done = sum(1 for t in tasks if t.get('status') == 'completed')
+running = sum(1 for t in tasks if t.get('status') == 'running')
+pending = sum(1 for t in tasks if t.get('status') == 'pending')
+total_est = sum(int(t.get('estimate', 0)) for t in tasks)
+
+print(f'=== Task Plan: {goal} ===')
+print(f'Progress: {done}/{len(tasks)} completed, {running} running, {pending} pending')
+print(f'Estimate: ~{total_est} min')
+print()
+for t in tasks:
+    status = t.get('status', '?')
+    icon = {'completed':'✓', 'running':'→', 'pending':' '}.get(status, '?')
+    role = t.get('role', '?')
+    name = t.get('name', t.get('task', '?'))
+    est = t.get('estimate', '?')
+    print(f'  {icon} {t["id"]} [{role:<12s}] ~{est:>3s}min  {name}')
+PY
+}
+
+# ============================
+# observe: タスク実行結果の品質検証
+# ============================
+cmd_observe() {
+  local target="${1:-all}"
+  local LOG_DIR="$HELIX_DIR/task-logs"
+  local ACTION_TYPES="$HELIX_HOME/cli/templates/action-types.yaml"
+
+  if [[ ! -d "$LOG_DIR" ]]; then
+    echo "ログなし。'helix task run' でタスクを実行してください。" >&2
+    exit "$EXIT_PREREQ_ERROR"
+  fi
+
+  HELIX_ACTION_TYPES="$ACTION_TYPES" \
+  HELIX_TASK_CATALOG="$CATALOG" \
+  HELIX_LOG_DIR="$LOG_DIR" \
+  HELIX_OBSERVE_TARGET="$target" \
+  python3 - <<'PY' 2>/dev/null
+import os
+import re
+import sys
+
+# アクション型のオブザーバールール読み込み
+action_rules = {}
+current_type = None
+current_keywords = []
+with open(os.environ["HELIX_ACTION_TYPES"], encoding="utf-8") as f:
+    for line in f:
+        line = line.rstrip()
+        if not line or line.lstrip().startswith('#'):
+            continue
+        m = re.match(r'^([\w-]+):\s*$', line)
+        if m:
+            if current_type and current_keywords:
+                action_rules[current_type] = current_keywords
+            current_type = m.group(1)
+            current_keywords = []
+            continue
+        m = re.match(r'\s+expect_keywords:\s*\[(.+)\]', line)
+        if m and current_type:
+            current_keywords = [k.strip().strip('\"') for k in m.group(1).split(',')]
+    if current_type and current_keywords:
+        action_rules[current_type] = current_keywords
+
+# タスクカタログからアクション列読み込み
+task_actions = {}
+current_task = None
+with open(os.environ["HELIX_TASK_CATALOG"], encoding="utf-8") as f:
+    for line in f:
+        line = line.rstrip()
+        m = re.match(r'  ([\w-]+):\s*$', line)
+        if m:
+            name = m.group(1)
+            if name not in ('name','role','estimate','skill','actions'):
+                current_task = name
+                task_actions[current_task] = []
+                continue
+        if current_task and '{ type:' in line:
+            m = re.search(r'type:\s*([\w-]+)', line)
+            dm = re.search(r'desc:\s*\"?(.+?)\"?\s*\}', line)
+            if m:
+                task_actions[current_task].append({
+                    'type': m.group(1),
+                    'desc': dm.group(1) if dm else ''
+                })
+
+# ログファイルを検証
+log_dir = os.environ["HELIX_LOG_DIR"]
+target = os.environ.get("HELIX_OBSERVE_TARGET", "all")
+total_actions = 0
+passed_actions = 0
+failed_actions = 0
+results = []
+
+for log_file in sorted(os.listdir(log_dir)):
+    if not log_file.endswith('.log'):
+        continue
+    tid = log_file.split('-')[0]
+    task_type = '-'.join(log_file.split('-')[1:]).replace('.log', '')
+
+    if target != 'all' and target != tid:
+        continue
+
+    log_path = os.path.join(log_dir, log_file)
+    log_content = open(log_path).read()
+
+    actions = task_actions.get(task_type, [])
+    if not actions:
+        results.append((tid, task_type, 'SKIP', 'No actions defined', []))
+        continue
+
+    action_results = []
+    task_pass = 0
+    task_fail = 0
+
+    for action in actions:
+        atype = action['type']
+        desc = action['desc']
+        keywords = action_rules.get(atype, [])
+
+        if not keywords:
+            action_results.append(('—', atype, desc, 'no rules'))
+            continue
+
+        matched = any(kw.lower() in log_content.lower() for kw in keywords)
+        total_actions += 1
+        if matched:
+            passed_actions += 1
+            task_pass += 1
+            action_results.append(('✓', atype, desc, ''))
+        else:
+            failed_actions += 1
+            task_fail += 1
+            action_results.append(('✗', atype, desc, f'expected: {keywords[:3]}'))
+
+    status = 'PASS' if task_fail == 0 else f'FAIL ({task_fail} actions)'
+    results.append((tid, task_type, status, f'{task_pass}/{task_pass+task_fail}', action_results))
+
+# 出力
+print('=== Task Observation Report ===')
+print()
+for tid, task_type, status, summary, action_results in results:
+    icon = '✓' if 'PASS' in status else ('—' if 'SKIP' in status else '✗')
+    print(f'{icon} {tid} {task_type}: {status} ({summary})')
+    if action_results and 'FAIL' in status:
+        for aicon, atype, desc, note in action_results:
+            if aicon == '✗':
+                print(f'    {aicon} [{atype}] {desc}')
+                if note:
+                    print(f'      → {note}')
+    print()
+
+print(f'=== Summary: {passed_actions}/{total_actions} actions passed, {failed_actions} failed ===')
+if failed_actions > 0:
+    sys.exit(1)
+PY
+}
+
+# ============================
+# メインディスパッチ
+# ============================
+case "$CMD" in
+  catalog) cmd_catalog "$@" ;;
+  plan)    cmd_plan "$@" ;;
+  run)     cmd_run "$@" ;;
+  observe) cmd_observe "$@" ;;
+  status)  cmd_status "$@" ;;
+  help|-h|--help)
+    cat <<'USAGE'
+Usage: helix task <command> [args...]
+
+HELIX Task Operating System — タスク駆動開発
+
+Commands:
+  catalog [filter]    タスクカタログ表示（63タスク/12カテゴリ）
+  plan               タスクプラン作成
+                      --goal "ゴール" --tasks "task1,task2,..."
+  run                次の pending タスクを実行（Codex or サブエージェントに委譲）
+  status             タスクプラン進捗表示
+
+Flow:
+  1. PM が catalog からタスクを選択
+  2. plan でタスク表を作成
+  3. run で順次実行（自動ロール割当+スキル注入）
+  4. status で進捗確認
+
+Example:
+  helix task catalog review           # review 系タスク一覧
+  helix task plan --goal "認証機能" \
+    --tasks "research-library,document-adr,design-api,contract-api,implement-api,implement-test,review-security,verify-unit"
+  helix task run                       # T001 から順次実行
+USAGE
+    ;;
+  *)
+    echo "Error: Unknown command '$CMD'" >&2
+    exit "$EXIT_INPUT_ERROR"
+    ;;
+esac
