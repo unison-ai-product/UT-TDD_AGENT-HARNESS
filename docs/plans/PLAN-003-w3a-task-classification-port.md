@@ -4,9 +4,10 @@ title: "PLAN-003: W3a task classification port (effort + type + dispatcher)"
 kind: impl
 layer: L4
 drive: be
-status: confirmed
+status: completed
 created: 2026-05-22
 confirmed_at: 2026-05-22
+completed_at: 2026-05-22
 owner: PM (Opus)
 agent_slots:
   - role: po
@@ -173,27 +174,70 @@ W3a 範囲外として明示 carry:
 
 scope 改訂: generates から `task/dispatcher.py` + test 削除、`task/orchestration.py` + test 追加
 
+### Sprint .2-.6 実装結果 (2026-05-22 session 2)
+
+| Sprint | 内容 | 結果 |
+|---|---|---|
+| .2 | `src/ut_tdd/task/` package + 3 module skeleton | `__init__.py` + `effort.py` + `classifier.py` + `orchestration.py` 作成、py_compile clean |
+| .3 | §7.2 JSON contract + size 3 軸 max + PERT + capability class escalation | 実装 1 パスで完遂 (skeleton-then-rewrite 二段は単一エージェント運用で非効率と判断、Sprint .2/.3 統合) |
+| .4 | test rewrite (§7.2 contract 全網羅) | test_task_effort.py 31 / test_task_classifier.py 56 / test_task_orchestration.py 42 = 129 件追加 |
+| .5 | pytest 全回帰 | **288 PASS** (W1 124 + W2 35 + W3a 129)、所要 0.75s |
+| .6 | prompt template port + dogfood | `docs/templates/prompts/effort-classify.md` 作成、PLAN-001/002/003 dogfood (下表) |
+
+#### Sprint .5 修正 1 件 (in-place)
+
+- XL escalation `_XL_PATTERNS` の `\b` 配置で「新規モジュール」が Japanese 単独 alt として未マッチ → `\b英単語\b | 日本語alt` 形式に分離。Python regex の `\b` は ASCII word-char 境界しか見ないため、Japanese 単独 keyword は `\b` 外へ。
+
+#### Sprint .6 dogfood 結果 (PLAN-001/002/003 を classify + estimate + orchestration に投入)
+
+| PLAN | kind | drive | size | complexity | confidence | risk_factor | buffered_hours | capability_class |
+|---|---|---|---|---|---|---|---|---|
+| PLAN-001 | impl | be | M | high | 1.00 | 1.2 (cross-platform) | 15.6 | worker |
+| PLAN-002 | impl | be | M | medium | 1.00 | 1.0 | 6.5 | worker |
+| PLAN-003 | impl | be | null (軸入力なし) | medium | 0.90 | 1.0 | 7.8 | worker |
+
+PLAN-003 で size=null になるのは §7.2 想定外 path (3 軸 (files/lines/api+db) すべて入力なし)。CLI binding (W6) で `--files` / `--lines` / `--diff` から自動取得する設計とし、本 W3a ではエンジン側の null 扱いを許容 (carry note 明示)。
+
 ### Sprint .7 code-reviewer 所見
 
-(Sprint .7 で追記)
+総合判定: **APPROVE_WITH_MINOR**。Critical 0 / Important 4 / Minor 4。
+
+#### in-place fix 済 (Important 3 件 + Minor 1 件)
+
+| ID | 内容 | 修正 |
+|---|---|---|
+| Important [1] | `_size_from_files` / `_size_from_lines` に XS 生成パスが無く §7.2 table の XS バケット (1 file / docs typo / small config) を engine が出力できない | `_size_from_files(1) → XS`、`_size_from_lines(<=20) → XS` 追加。api+db axis は `api or db` の時のみ寄与 (False+False で default S 加算しない) するよう厳密化、files=1 単独で XS を返す semantic を確保 |
+| Important [3] | `score_task` の size hint が XL / XS 未対応で `score_task(size="XL")` が L と同点補正にしかならず XL が過小見積もりになる可能性 | `size == "XL" → max(total, 10)` / `"XS" → min(total, 3)` を追加 |
+| Important [4] (誤検知) | reviewer は「`_BUG_FIX_RE` 等の Japanese alt が `\b` 内 (vendor 流) で残っている」と指摘したが、当該箇所は最初から `\b(ascii)\b | japanese` 形式で正しい。vendor 側のみ broken。設計意図を明示する comment を追加 |
+| Minor [M1] | `orchestration.py:129` Rule 5 コメントの `research` 列挙が実装と不整合 (research は Rule 7 fast-checker) | コメントから `research` を除き Rule 7 routing を注記 |
+
+#### test 追加 (5 件、Important [1][2][3] 確認)
+
+- `test_size_files_only_XS` / `test_size_lines_only_XS` (Important [1] 確認)
+- `test_xl_escalation_only_promotes_L` (XS/S 不昇格、Important [1] 派生)
+- `test_classify_task_poc_with_scrum_drive_via_frontmatter` (Important [2] frontmatter で scrum drive 指定)
+- `test_score_task_size_XL_lifts_floor_to_10` / `test_score_task_size_XS_caps_to_3` (Important [3] 確認)
+
+pytest 全回帰: **293 PASS** (W1 124 + W2 35 + W3a 134、129+5)、所要 0.93s。
+
+#### carry (PLAN-003 後段)
+
+- **Minor [M2]**: `_recommended_gates` で使う `G3.8` の出典 (gate-policy.md §X 参照) を docstring 追記 → PLAN-003-e として carry (W6 ut-tdd doctor / gate 整理で gate-policy.md UT-TDD 化と合わせて反映)
+- **Minor [M3]**: `__init__.py.__all__` から `score_task` / `map_to_complexity` の internal helper を外す → 利用実態を W3b 接続後に判断、本 W3a では public 維持
+- **Minor [M4]**: `sys.path.insert` を conftest.py に集約 → W1/W2 と同方式で統一済、pyproject.toml に src layout 追加するタイミング (W6 doctor 整理時) で carry → PLAN-003-f
 
 ### W3a 範囲外 carry
 
 - **PLAN-003-b**: `ut-tdd task classify --diff origin/main...HEAD` の git diff parse path (CLI binding 時に実装)
 - **PLAN-003-c**: vendor `task_dispatcher.py` (automation allowlist execution = helix:command/shell:script/http:webhook 3 種を allowlist で実行する infra) の UT-TDD への port 評価。本 W3a の §7.2 orchestration 連携とは別物
+- **PLAN-003-d**: size=null 出力時 (3 軸すべて軸入力なし) を CLI binding (W6) で `--files` / `--lines` / `--diff` から自動取得する設計に統合
+- **PLAN-003-e**: `classifier._recommended_gates` の `G3.8` 出典 (gate-policy.md UT-TDD 化) を docstring に明示 (Sprint .7 Minor [M2])
+- **PLAN-003-f**: `sys.path.insert` を conftest.py に集約 (Sprint .7 Minor [M4]、pyproject.toml src layout 追加時に W6 で統合)
 - **PLAN-004 (W3b)**: skill_catalog + skill_classifier + skill_recommender port (~46 KB vendor、LLM 委譲経路を含む)
 - **W6 連携**: `ut-tdd task classify` / `ut-tdd task estimate` CLI binding 統合 (W6 doctor / runtime detection)
 - **PLAN-CODEX-FIX**: Codex Windows AppContainer sandbox 8009001d (W3a 進行中も Opus 直接実装 fallback、W3b で LLM 委譲を本格化する前に解消必要)
 
-### Sprint .2-.8 次 session 引継ぎ (2026-05-22 session boundary)
+### Sprint .2-.8 引継ぎ完了 (2026-05-22 session 2)
 
-本 session は Sprint .1 (vendor 解析 + scope 改訂) で終了。残り Sprint .2-.8 は次 session で実施:
-- Sprint .2 skeleton: `src/ut_tdd/task/` package + 3 module skeleton
-- Sprint .3 rewrite: §7.2 JSON contract + size 3 軸 max + PERT + capability class escalation
-- Sprint .4 test rewrite
-- Sprint .5 pytest 全回帰
-- Sprint .6 prompt template port + dogfood
-- Sprint .7 code-reviewer
-- Sprint .8 commit (W3a 完了 commit、本 Sprint .1 commit とは別)
-
-handover doc: `docs/handover/SESSION-2026-05-22-handover.md` 参照
+Sprint .1 commit 後の session 2 (本 session) で Sprint .2 〜 Sprint .8 を完遂。
+ステータス: `status: completed` 候補 (Sprint .8 commit 完了時点で `confirmed → completed` 遷移)。
