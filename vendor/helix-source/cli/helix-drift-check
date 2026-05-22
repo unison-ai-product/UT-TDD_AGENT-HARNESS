@@ -1,0 +1,257 @@
+#!/bin/bash
+if [[ "${BASH_VERSINFO[0]:-0}" -lt 4 ]]; then
+  echo "エラー: helix-drift-check は bash 4 以上が必要です (現 ${BASH_VERSION:-unknown})" >&2
+  echo "macOS の場合: brew install bash && シェルを /opt/homebrew/bin/bash に変更" >&2
+  exit 1
+fi
+set -euo pipefail
+
+# helix-drift-check: 設計ドキュメントと実装の契約ドリフト検知
+# PostToolUse hook からバックグラウンド発火される
+# D-API 変更 → helix gate-api-check を実行
+# D-CONTRACT 変更 → Pact/OpenAPI 形式確認・契約名の実装突合
+# D-DB 変更 → CREATE TABLE 文と SQLite 実スキーマの差分検知
+# Usage: helix-drift-check <changed-file-path>
+
+source "$(cd "$(dirname "$0")" && pwd)/lib/helix-common.sh"
+
+case "${1:-}" in
+  --help|-h)
+    echo "使い方: helix drift-check <変更ファイルパス>"
+    echo ""
+    echo "設計ドキュメント変更時に契約ドリフトを検知します。"
+    echo "D-API → helix gate-api-check 実行"
+    echo "D-CONTRACT → Pact/OpenAPI 形式確認 + 契約名→実装突合"
+    echo "D-DB → CREATE TABLE 文と SQLite 実スキーマの差分検知"
+    exit 0
+    ;;
+esac
+
+CHANGED_FILE="${1:-}"
+[[ -z "$CHANGED_FILE" ]] && exit 0
+[[ ! -d "$HELIX_DIR" ]] && exit 0
+
+REL_PATH="${CHANGED_FILE#"$PROJECT_ROOT/"}"
+PHASE_FILE="$HELIX_DIR/phase.yaml"
+PHASE_GUARD="$SCRIPT_DIR/lib/phase_guard.py"
+RUNTIME_INDEX_FILE="$HELIX_DIR/runtime/index.json"
+DB_DIFF_PY="$SCRIPT_DIR/lib/drift_db_diff.py"
+
+# D-API ファイル変更 → helix gate-api-check をバックグラウンドで実行
+if [[ "$REL_PATH" =~ D-API/ ]]; then
+  if [[ -x "$SCRIPT_DIR/helix-gate-api-check" ]]; then
+    echo "[helix-drift] D-API 変更検出: $REL_PATH → API 契約チェック実行中..."
+    nohup "$SCRIPT_DIR/helix-gate-api-check" > "${TMPDIR:-/tmp}/helix-drift-api-$(date +%s).log" 2>&1 &
+    echo "[helix-drift] バックグラウンドで API 契約チェックを起動 (PID=$!)"
+  else
+    echo "[helix-drift] D-API 変更検出: $REL_PATH （helix gate-api-check 未設置のためスキップ）"
+  fi
+
+  # DB 記録
+  if [[ -f "$DB_PATH" ]]; then
+    HELIX_DB_PATH="$DB_PATH" python3 "$DB_PY" insert hook_events \
+      "{\"event_type\":\"drift_check_api\",\"file\":\"$REL_PATH\",\"result\":\"triggered\"}" 2>/dev/null || true
+  fi
+
+# D-CONTRACT ファイル変更 → 契約ファイル存在と実装突合（簡易）
+elif [[ "$REL_PATH" =~ D-CONTRACT/ ]]; then
+  echo "[helix-drift] D-CONTRACT 変更検出: $REL_PATH"
+
+  contract_result="ok"
+  warnings=()
+
+  # 1. 契約ファイルのサイズチェック（空ファイル検知）
+  if [[ -f "$CHANGED_FILE" ]]; then
+    size=$(wc -c < "$CHANGED_FILE")
+    if [[ $size -lt 10 ]]; then
+      warnings+=("契約ファイルが空/極小（${size} bytes）")
+      contract_result="warn"
+    fi
+  fi
+
+  # 2. Pact/OpenAPI 形式なら必須フィールド確認
+  if [[ "$CHANGED_FILE" =~ \.(json|yaml|yml)$ ]] && [[ -f "$CHANGED_FILE" ]]; then
+    if grep -qE "(provider|consumer|interactions|paths|openapi|swagger)" "$CHANGED_FILE" 2>/dev/null; then
+      echo "[helix-drift] 契約形式を検出: Pact/OpenAPI"
+    else
+      warnings+=("Pact/OpenAPI 形式を検出できず — 契約の網羅性を手動確認")
+      contract_result="warn"
+    fi
+  fi
+
+  # 3. 対応する実装ファイルの存在確認
+  contract_name=$(basename "$CHANGED_FILE" | sed 's/\.[^.]*$//')
+  if [[ -n "$contract_name" ]]; then
+    impl_count=$(grep -rl "$contract_name" "$PROJECT_ROOT" --include="*.py" --include="*.ts" --include="*.js" --include="*.go" 2>/dev/null | grep -v "D-CONTRACT" | wc -l)
+    if [[ $impl_count -eq 0 ]]; then
+      warnings+=("契約名「$contract_name」に対応する実装が見つかりません")
+      contract_result="warn"
+    fi
+  fi
+
+  if [[ ${#warnings[@]} -gt 0 ]]; then
+    for w in "${warnings[@]}"; do
+      echo "[helix-drift] WARN: $w"
+    done
+    echo "[helix-drift] 推奨: helix gate G4 で詳細検証を実行"
+  else
+    echo "[helix-drift] ✓ 契約ドリフト検知: 問題なし（簡易チェック）"
+  fi
+
+  if [[ -f "$DB_PATH" ]]; then
+    HELIX_DB_PATH="$DB_PATH" python3 "$DB_PY" insert hook_events \
+      "{\"event_type\":\"drift_check_contract\",\"file\":\"$REL_PATH\",\"result\":\"$contract_result\"}" 2>/dev/null || true
+  fi
+
+# D-DB ファイル変更 → スキーマ設計書と実DBの差分検知
+elif [[ "$REL_PATH" =~ D-DB/ ]]; then
+  echo "[helix-drift] D-DB 変更検出: $REL_PATH"
+
+  db_result="ok"
+  warnings=()
+  declare -A warn_kind_counts=()
+  table_names=""
+
+  # 1. スキーマ設計書サイズチェック
+  if [[ -f "$CHANGED_FILE" ]]; then
+    size=$(wc -c < "$CHANGED_FILE")
+    if [[ $size -lt 10 ]]; then
+      warnings+=("スキーマ設計書が空/極小（${size} bytes）")
+      db_result="warn"
+    fi
+  fi
+
+  # 2. CREATE TABLE 文の存在確認（簡易）
+  if [[ -f "$CHANGED_FILE" ]]; then
+    if grep -qiE "CREATE[[:space:]]+TABLE" "$CHANGED_FILE" 2>/dev/null; then
+      # テーブル名を抽出
+      table_names=$(grep -oiE "CREATE[[:space:]]+TABLE[[:space:]]+(IF[[:space:]]+NOT[[:space:]]+EXISTS[[:space:]]+)?[a-zA-Z_][a-zA-Z0-9_]*" "$CHANGED_FILE" 2>/dev/null | sed -E 's/.*[[:space:]]([a-zA-Z_][a-zA-Z0-9_]*)$/\1/' | sort -u || true)
+    else
+      warnings+=("CREATE TABLE 文が見つかりません — ER 図のみの可能性")
+    fi
+  fi
+
+  # 3. 実 DB + sqlite3 が利用可能な場合に詳細差分検知
+  if [[ -f "$DB_PATH" ]] && command -v sqlite3 >/dev/null 2>&1; then
+    if [[ -f "$DB_DIFF_PY" ]]; then
+      while IFS= read -r diff_line; do
+        [[ -z "$diff_line" ]] && continue
+
+        if [[ "$diff_line" =~ ^RESULT\|(.+)$ ]]; then
+          diff_result="${BASH_REMATCH[1]}"
+          [[ "$diff_result" == "warn" ]] && db_result="warn"
+          continue
+        fi
+
+        if [[ "$diff_line" =~ ^WARN\|([^|]+)\|(.+)$ ]]; then
+          warn_kind="${BASH_REMATCH[1]}"
+          warn_body="${BASH_REMATCH[2]}"
+          warnings+=("[$warn_kind] $warn_body")
+          warn_kind_counts["$warn_kind"]=$(( ${warn_kind_counts["$warn_kind"]:-0} + 1 ))
+          db_result="warn"
+          continue
+        fi
+
+        if [[ "$diff_line" =~ ^ERROR\|([^|]+)\|(.+)$ ]]; then
+          err_code="${BASH_REMATCH[1]}"
+          err_body="${BASH_REMATCH[2]}"
+          warnings+=("[schema-drift] DB 差分チェック失敗 (${err_code}): ${err_body}")
+          warn_kind_counts["schema-drift"]=$(( ${warn_kind_counts["schema-drift"]:-0} + 1 ))
+          db_result="error"
+        fi
+      done < <(python3 "$DB_DIFF_PY" --doc "$CHANGED_FILE" --db "$DB_PATH" 2>/dev/null || true)
+    else
+      warnings+=("[schema-drift] DB 差分スクリプトが見つかりません: $DB_DIFF_PY")
+      warn_kind_counts["schema-drift"]=$(( ${warn_kind_counts["schema-drift"]:-0} + 1 ))
+      db_result="error"
+    fi
+  else
+    # 互換維持: sqlite3 or DB 不在時は従来どおり簡易チェックのみ
+    if [[ -f "$DB_PATH" ]] && [[ -n "$table_names" ]]; then
+      for table in $table_names; do
+        :
+      done
+    fi
+  fi
+
+  if [[ ${#warnings[@]} -gt 0 ]]; then
+    for w in "${warnings[@]}"; do
+      echo "[helix-drift] WARN: $w"
+    done
+    echo "[helix-drift] 推奨: マイグレーション実施 or helix gate G4 で詳細検証"
+  else
+    echo "[helix-drift] ✓ DB スキーマドリフト検知: 問題なし（簡易チェック）"
+  fi
+
+  if [[ -f "$DB_PATH" ]]; then
+    HELIX_DB_PATH="$DB_PATH" python3 "$DB_PY" insert hook_events \
+      "{\"event_type\":\"drift_check_db\",\"file\":\"$REL_PATH\",\"result\":\"$db_result\"}" 2>/dev/null || true
+
+    if [[ ${#warn_kind_counts[@]} -gt 0 ]]; then
+      for kind in "${!warn_kind_counts[@]}"; do
+        safe_kind="${kind//-/_}"
+        HELIX_DB_PATH="$DB_PATH" python3 "$DB_PY" insert hook_events \
+          "{\"event_type\":\"drift_check_db_${safe_kind}\",\"file\":\"$REL_PATH\",\"result\":\"warn\"}" 2>/dev/null || true
+      done
+    fi
+  fi
+
+else
+  # 汎用 D-XXX 成果物（既存の特化分岐に該当しないもの）を検出
+  if [[ "$REL_PATH" =~ (D-[A-Z][A-Z0-9-]*/) ]]; then
+    deliverable_path="${BASH_REMATCH[1]}"
+    if [[ "$deliverable_path" =~ ^D-[A-Z][A-Z0-9-]*/$ ]]; then
+      deliverable_id="${deliverable_path%/}"
+      index_file="$PROJECT_ROOT/.helix/index.json"
+
+      if [[ ! -f "$index_file" ]]; then
+        echo "[drift-check] WARN: missing index.json at $index_file" >&2
+        exit 0
+      fi
+
+      deliverable_meta=$(python3 -c '
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as f:
+        data = json.load(f)
+    deliverables = data.get("deliverables")
+    if deliverables is None:
+        deliverables = (data.get("rules") or {}).get("deliverables") or []
+    target_id = sys.argv[2]
+    for d in deliverables:
+        if d.get("id") == target_id:
+            print(json.dumps(d, separators=(",", ":"), ensure_ascii=False))
+            sys.exit(0)
+except Exception:
+    pass
+' "$index_file" "$deliverable_id" 2>/dev/null || true)
+
+      if [[ -n "$deliverable_meta" ]]; then
+        echo "[drift-check] generic deliverable change: $deliverable_id at $REL_PATH" >&2
+        generic_result="recorded"
+
+        if [[ -f "$PHASE_FILE" && -f "$PHASE_GUARD" ]]; then
+          guard_args=(--phase-file "$PHASE_FILE" --file "$REL_PATH")
+          [[ -f "$RUNTIME_INDEX_FILE" ]] && guard_args+=(--index "$RUNTIME_INDEX_FILE")
+          guard_output=""
+          if ! guard_output=$(python3 "$PHASE_GUARD" "${guard_args[@]}" 2>&1); then
+            [[ -n "$guard_output" ]] && echo "$guard_output" >&2
+            echo "[drift-check] WARN: frozen deliverable update detected: $deliverable_id at $REL_PATH" >&2
+            generic_result="warn"
+          fi
+        fi
+
+        if [[ -f "$DB_PATH" ]]; then
+          HELIX_DB_PATH="$DB_PATH" python3 "$DB_PY" insert hook_events \
+            "{\"event_type\":\"drift_check_generic\",\"file\":\"$REL_PATH\",\"result\":\"$generic_result\"}" 2>/dev/null || true
+        fi
+      else
+        echo "[drift-check] unknown deliverable: $deliverable_id at $REL_PATH" >&2
+        if [[ -f "$DB_PATH" ]]; then
+          HELIX_DB_PATH="$DB_PATH" python3 "$DB_PY" insert hook_events \
+            "{\"event_type\":\"drift_check_unknown\",\"file\":\"$REL_PATH\",\"result\":\"unknown\"}" 2>/dev/null || true
+        fi
+      fi
+    fi
+  fi
+fi

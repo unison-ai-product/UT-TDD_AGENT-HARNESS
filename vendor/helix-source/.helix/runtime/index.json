@@ -1,0 +1,2429 @@
+{
+  "_meta": {
+    "generated_at": "2026-05-12T01:39:09+00:00",
+    "generator": "cli/lib/matrix_compiler.py",
+    "contract": "top-level keys that start with '_' must be ignored by consumers"
+  },
+  "project": {
+    "size": "L",
+    "default_drive": "be",
+    "roots": {
+      "docs_root": "docs",
+      "src_root": "src"
+    },
+    "ruleset_version": "1.0"
+  },
+  "features": {},
+  "waivers": [],
+  "rules": {
+    "catalog_version": "v1",
+    "deliverables": [
+      {
+        "id": "D-REQ-F",
+        "name": "機能要件一覧",
+        "layer": "L1",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-REQ-F"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "目的",
+                "インスコープ",
+                "アウトスコープ",
+                "機能要件"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "機能要件の網羅性とスコープ境界"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G1"
+        ]
+      },
+      {
+        "id": "D-REQ-NF",
+        "name": "非機能要件",
+        "layer": "L1",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-REQ-NF"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "可用性",
+                "セキュリティ",
+                "性能",
+                "運用保守性"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "NFR の測定可能性と受入可能性"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G1"
+        ]
+      },
+      {
+        "id": "D-ACC",
+        "name": "受入条件",
+        "layer": "L1",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-ACC"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "シナリオ",
+                "期待結果",
+                "判定基準"
+              ]
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G1"
+        ]
+      },
+      {
+        "id": "D-RES",
+        "name": "事前調査レポート",
+        "layer": "L1",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-RES"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "調査対象",
+                "一次ソース",
+                "採用理由",
+                "不採用理由"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "一次ソース優先と open blocker の有無"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G1R",
+          "G3"
+        ]
+      },
+      {
+        "id": "D-ARCH",
+        "name": "アーキテクチャ設計",
+        "layer": "L2",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-ARCH"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "概要",
+                "コンテキスト",
+                "責務境界",
+                "運用方針"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "境界設計、依存方向、運用前提"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G2"
+        ]
+      },
+      {
+        "id": "D-ADR",
+        "name": "Architecture Decision Record",
+        "layer": "L2",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-ADR"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "Context",
+                "Decision",
+                "Consequences",
+                "Alternatives"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "決定理由、代替案、後戻りコスト"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G2"
+        ]
+      },
+      {
+        "id": "D-THREAT",
+        "name": "脅威モデル",
+        "layer": "L2",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-THREAT"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "資産",
+                "信頼境界",
+                "攻撃面",
+                "緩和策"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "security",
+              "focus": "STRIDE と権限境界の欠落検出"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G2"
+        ]
+      },
+      {
+        "id": "D-VIS-ARCH",
+        "name": "Visual アーキテクチャ",
+        "layer": "L2",
+        "drives": [
+          "fe"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-VIS-ARCH"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "情報設計",
+                "コンポーネント境界",
+                "デザイントークン",
+                "レスポンシブ方針"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "UI 構造と契約境界"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G2"
+        ]
+      },
+      {
+        "id": "D-DATA-ARCH",
+        "name": "データアーキテクチャ",
+        "layer": "L2",
+        "drives": [
+          "db"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-DATA-ARCH"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "データフロー",
+                "永続化境界",
+                "一貫性要件",
+                "バックアップ方針"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "整合性境界とデータ責務"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G2"
+        ]
+      },
+      {
+        "id": "D-ORCH-ARCH",
+        "name": "オーケストレーション設計",
+        "layer": "L2",
+        "drives": [
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-ORCH-ARCH"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "ツール境界",
+                "ルーティング",
+                "フォールバック",
+                "観測性"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "状態遷移、失敗時挙動、可逆性"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G2"
+        ]
+      },
+      {
+        "id": "D-API",
+        "name": "API 契約",
+        "layer": "L3",
+        "drives": [
+          "be"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-API"
+            }
+          },
+          {
+            "type": "schema_validate",
+            "params": {
+              "schema": "openapi-3.1",
+              "advisory_only": true
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "I/O 整合、エラーコード、破壊的変更"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-DB",
+        "name": "DB 設計",
+        "layer": "L3",
+        "drives": [
+          "be",
+          "db"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-DB"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "エンティティ",
+                "制約",
+                "インデックス",
+                "変更影響"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "整合性、マイグレーション可逆性、権限境界"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-MIG-PLAN",
+        "name": "マイグレーション計画",
+        "layer": "L3",
+        "drives": [
+          "be",
+          "db"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-MIG-PLAN"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "前提",
+                "手順",
+                "ロールバック",
+                "リハーサル"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "部分失敗時の復旧計画"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-DEP",
+        "name": "依存関係マップ",
+        "layer": "L3",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-DEP"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "内部依存",
+                "外部依存",
+                "外部サービス",
+                "障害時影響"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "循環依存、単一障害点、ライセンス/脆弱性リスク"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-TEST",
+        "name": "テスト設計",
+        "layer": "L3",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-TEST"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "対象",
+                "正常系",
+                "異常系",
+                "境界値",
+                "回帰範囲"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "クリティカルパスと異常系の網羅性"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-PLAN",
+        "name": "工程表",
+        "layer": "L3",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-PLAN"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "タスク",
+                "依存",
+                "担当",
+                "環境",
+                "ロールバック準備"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "依存順序と凍結条件の整合"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-UI",
+        "name": "UI 仕様",
+        "layer": "L3",
+        "drives": [
+          "fe"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-UI"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "画面一覧",
+                "状態",
+                "バリデーション",
+                "アクセシビリティ"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "UI 契約とコンポーネント責務"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-CONTRACT",
+        "name": "接続契約",
+        "layer": "L3",
+        "drives": [
+          "fullstack"
+        ],
+        "scopes": [
+          "feature",
+          "shared"
+        ],
+        "validators": [
+          {
+            "type": "exists"
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "エンドポイント",
+                "認証",
+                "エラー形式",
+                "状態境界"
+              ]
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-STATE",
+        "name": "状態設計",
+        "layer": "L3",
+        "drives": [
+          "fe"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-STATE"
+            }
+          },
+          {
+            "type": "schema_validate",
+            "params": {
+              "schema": "state-model-v1",
+              "advisory_only": true
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "状態遷移、排他、エラー復帰"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-API-CONS",
+        "name": "API 利用契約",
+        "layer": "L3",
+        "drives": [
+          "fe"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-API-CONS"
+            }
+          },
+          {
+            "type": "schema_validate",
+            "params": {
+              "schema": "client-contract-v1",
+              "advisory_only": true
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "フロント/バック契約の整合"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-DATA-ACCESS",
+        "name": "データアクセス設計",
+        "layer": "L3",
+        "drives": [
+          "db"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-DATA-ACCESS"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "アクセスパターン",
+                "排他制御",
+                "性能前提",
+                "権限制御"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "クエリ特性と整合性崩壊リスク"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-TOOL",
+        "name": "ツール契約",
+        "layer": "L3",
+        "drives": [
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-TOOL"
+            }
+          },
+          {
+            "type": "schema_validate",
+            "params": {
+              "schema": "tool-contract-v1",
+              "advisory_only": true
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "入出力、失敗モード、権限制約"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-PROMPT",
+        "name": "プロンプト契約",
+        "layer": "L3",
+        "drives": [
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-PROMPT"
+            }
+          },
+          {
+            "type": "schema_validate",
+            "params": {
+              "schema": "prompt-contract-v1",
+              "advisory_only": true
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "安全境界、禁止事項、期待出力"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-EVAL-PLAN",
+        "name": "評価計画",
+        "layer": "L3",
+        "drives": [
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-EVAL-PLAN"
+            }
+          },
+          {
+            "type": "schema_validate",
+            "params": {
+              "schema": "eval-plan-v1",
+              "advisory_only": true
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "評価軸、失敗許容、再現手順"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G3"
+        ]
+      },
+      {
+        "id": "D-IMPL",
+        "name": "実装成果物",
+        "layer": "L4",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-IMPL"
+            }
+          },
+          {
+            "type": "cmd",
+            "params": {
+              "profile": "build-test-smoke",
+              "advisory_only": true
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "設計逸脱、未接続コード、エラーハンドリング欠落"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G4"
+        ]
+      },
+      {
+        "id": "D-MIG",
+        "name": "マイグレーション成果物",
+        "layer": "L4",
+        "drives": [
+          "be",
+          "db"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-MIG"
+            }
+          },
+          {
+            "type": "cmd",
+            "params": {
+              "profile": "migration-dry-run",
+              "advisory_only": true
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "冪等性、ロールバック可否、データ損失リスク"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G4"
+        ]
+      },
+      {
+        "id": "D-CONFIG",
+        "name": "設定成果物",
+        "layer": "L4",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-CONFIG"
+            }
+          },
+          {
+            "type": "schema_validate",
+            "params": {
+              "schema": "config-manifest-v1",
+              "advisory_only": true
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "security",
+              "focus": "secret 境界、環境差分、危険な既定値"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G4"
+        ]
+      },
+      {
+        "id": "D-VIS",
+        "name": "Visual Refinement",
+        "layer": "L5",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-VIS"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "差分要約",
+                "デザイントークン",
+                "レスポンシブ",
+                "未解決事項"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "V0/V1/V2 判定と契約影響"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G5"
+        ]
+      },
+      {
+        "id": "D-A11Y",
+        "name": "アクセシビリティ設計",
+        "layer": "L5",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-A11Y"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "対象画面",
+                "キーボード操作",
+                "ラベル",
+                "コントラスト"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "アクセシビリティ要件の抜け漏れ"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G5"
+        ]
+      },
+      {
+        "id": "D-UX-SIGNOFF",
+        "name": "UX サインオフ",
+        "layer": "L5",
+        "drives": [
+          "fe"
+        ],
+        "scopes": [
+          "feature"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-UX-SIGNOFF"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "レビュー対象",
+                "判定",
+                "指摘",
+                "承認者"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "UX 期待変更の有無と残課題"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G5"
+        ]
+      },
+      {
+        "id": "D-DEMO",
+        "name": "デモ成果物",
+        "layer": "L5",
+        "drives": [
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-DEMO"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "シナリオ",
+                "前提",
+                "成功条件",
+                "観測ポイント"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "デモと契約の整合"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G5"
+        ]
+      },
+      {
+        "id": "D-E2E",
+        "name": "E2E 検証",
+        "layer": "L6",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-E2E"
+            }
+          },
+          {
+            "type": "cmd",
+            "params": {
+              "profile": "e2e",
+              "advisory_only": true
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "クリティカルパスと失敗時観測性"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G6"
+        ]
+      },
+      {
+        "id": "D-PERF",
+        "name": "性能検証",
+        "layer": "L6",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-PERF"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "シナリオ",
+                "閾値",
+                "結果",
+                "ボトルネック"
+              ]
+            }
+          },
+          {
+            "type": "cmd",
+            "params": {
+              "profile": "perf-smoke",
+              "advisory_only": true
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G6"
+        ]
+      },
+      {
+        "id": "D-SECV",
+        "name": "セキュリティ検証",
+        "layer": "L6",
+        "drives": [
+          "be",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-SECV"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "攻撃面",
+                "検証手順",
+                "結果",
+                "残余リスク"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "security",
+              "focus": "OWASP Top 10 と権限境界の検証"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G6"
+        ]
+      },
+      {
+        "id": "D-OPS",
+        "name": "運用準備",
+        "layer": "L6",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-OPS"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "運用手順",
+                "アラート",
+                "復旧手順",
+                "連絡先"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "運用 readiness と rollback 導線"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G6"
+        ]
+      },
+      {
+        "id": "D-A11Y-VERIFY",
+        "name": "アクセシビリティ検証",
+        "layer": "L6",
+        "drives": [
+          "fe"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-A11Y-VERIFY"
+            }
+          },
+          {
+            "type": "cmd",
+            "params": {
+              "profile": "a11y-audit",
+              "advisory_only": true
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "設計との差分と blocking issue"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G6"
+        ]
+      },
+      {
+        "id": "D-DATA-VERIFY",
+        "name": "データ検証",
+        "layer": "L6",
+        "drives": [
+          "db"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-DATA-VERIFY"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "検証対象",
+                "整合条件",
+                "差分",
+                "復旧方針"
+              ]
+            }
+          },
+          {
+            "type": "cmd",
+            "params": {
+              "profile": "data-verification",
+              "advisory_only": true
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G6"
+        ]
+      },
+      {
+        "id": "D-EVAL",
+        "name": "評価結果",
+        "layer": "L6",
+        "drives": [
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-EVAL"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "評価軸",
+                "ベースライン",
+                "結果",
+                "改善点"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "評価再現性と受入妥当性"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G6"
+        ]
+      },
+      {
+        "id": "D-DEPLOY",
+        "name": "デプロイ成果物",
+        "layer": "L7",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-DEPLOY"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "対象環境",
+                "手順",
+                "rollback",
+                "health_check"
+              ]
+            }
+          },
+          {
+            "type": "cmd",
+            "params": {
+              "profile": "deploy-readiness",
+              "advisory_only": true
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G7"
+        ]
+      },
+      {
+        "id": "D-RELNOTE",
+        "name": "リリースノート",
+        "layer": "L7",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-RELNOTE"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "変更概要",
+                "影響範囲",
+                "既知リスク",
+                "連絡先"
+              ]
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G7"
+        ]
+      },
+      {
+        "id": "D-OBS",
+        "name": "監視・可観測性成果物",
+        "layer": "L7",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-OBS"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "SLI/SLO",
+                "ダッシュボード",
+                "アラート",
+                "ログ方針"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "検知粒度と復旧支援の十分性"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "G7"
+        ]
+      },
+      {
+        "id": "D-UAT",
+        "name": "UAT 成果物",
+        "layer": "L8",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-UAT"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "シナリオ",
+                "判定",
+                "未解決事項",
+                "承認者"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "L1 受入条件とのトレース"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "L8"
+        ]
+      },
+      {
+        "id": "D-HANDOVER",
+        "name": "引継ぎ成果物",
+        "layer": "L8",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature",
+          "shared",
+          "platform"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-HANDOVER"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "対象",
+                "運用窓口",
+                "手順",
+                "残課題"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "運用引継ぎの欠落確認"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "L8"
+        ]
+      },
+      {
+        "id": "D-RETRO",
+        "name": "レトロスペクティブ",
+        "layer": "L8",
+        "drives": [
+          "be",
+          "fe",
+          "db",
+          "agent"
+        ],
+        "scopes": [
+          "feature"
+        ],
+        "validators": [
+          {
+            "type": "exists",
+            "params": {
+              "path_ref": "D-RETRO"
+            }
+          },
+          {
+            "type": "heading_check",
+            "params": {
+              "required": [
+                "Context",
+                "What Went Well",
+                "Problems",
+                "Try",
+                "Owner"
+              ]
+            }
+          },
+          {
+            "type": "ai_review",
+            "params": {
+              "role": "tl",
+              "focus": "G2/G4/L8 の学習が行動項目まで落ちているか"
+            }
+          }
+        ],
+        "gate_ownership": [
+          "L8"
+        ]
+      }
+    ],
+    "roots": {
+      "docs_root": "docs",
+      "src_root": "src",
+      "infra_root": "infra",
+      "state_root": ".helix/state",
+      "runtime_root": ".helix/runtime"
+    },
+    "scope_templates": {
+      "feature": {
+        "docs_scope_root": "{docs_root}/features/{scope_id}",
+        "src_scope_root": "{src_root}/features/{scope_id}",
+        "deliverable_dirs": {
+          "docs": "{docs_scope_root}/{deliverable_id}",
+          "src": "{src_scope_root}/{deliverable_id}"
+        }
+      },
+      "shared": {
+        "docs_scope_root": "{docs_root}/shared/{scope_id}",
+        "src_scope_root": "{src_root}/shared/{scope_id}",
+        "deliverable_dirs": {
+          "docs": "{docs_scope_root}/{deliverable_id}",
+          "src": "{src_scope_root}/{deliverable_id}"
+        }
+      },
+      "platform": {
+        "docs_scope_root": "{docs_root}/platform/{scope_id}",
+        "src_scope_root": "{src_root}/platform/{scope_id}",
+        "alternate_src_scope_roots": [
+          "{infra_root}/{scope_id}"
+        ],
+        "deliverable_dirs": {
+          "docs": "{docs_scope_root}/{deliverable_id}",
+          "src": "{src_scope_root}/{deliverable_id}"
+        }
+      }
+    },
+    "path_mapping": {
+      "D-REQ-F": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-REQ-F/requirements.md"
+      },
+      "D-REQ-NF": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-REQ-NF/nfr.md"
+      },
+      "D-ACC": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-ACC/acceptance.md"
+      },
+      "D-RES": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-RES/research.md"
+      },
+      "D-ARCH": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-ARCH/architecture.md"
+      },
+      "D-ADR": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-ADR/adr.md"
+      },
+      "D-THREAT": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-THREAT/threat-model.md"
+      },
+      "D-VIS-ARCH": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-VIS-ARCH/visual-architecture.md"
+      },
+      "D-DATA-ARCH": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-DATA-ARCH/data-architecture.md"
+      },
+      "D-ORCH-ARCH": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-ORCH-ARCH/orchestration-architecture.md"
+      },
+      "D-API": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-API/api-contract.yaml",
+        "allowed_extensions": [
+          "yaml",
+          "yml",
+          "json"
+        ]
+      },
+      "D-CONTRACT": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-CONTRACT/contract.yaml",
+        "allowed_extensions": [
+          "yaml",
+          "yml",
+          "json"
+        ]
+      },
+      "D-DB": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-DB/db-schema.md"
+      },
+      "D-MIG-PLAN": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-MIG-PLAN/migration-plan.md"
+      },
+      "D-DEP": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-DEP/dependency-map.md"
+      },
+      "D-TEST": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-TEST/test-design.md"
+      },
+      "D-PLAN": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-PLAN/implementation-plan.md"
+      },
+      "D-UI": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-UI/ui-spec.md"
+      },
+      "D-STATE": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-STATE/state-model.yaml",
+        "allowed_extensions": [
+          "yaml",
+          "yml",
+          "json"
+        ]
+      },
+      "D-API-CONS": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-API-CONS/api-consumption.yaml",
+        "allowed_extensions": [
+          "yaml",
+          "yml",
+          "json"
+        ]
+      },
+      "D-DATA-ACCESS": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-DATA-ACCESS/data-access.md"
+      },
+      "D-TOOL": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-TOOL/tool-contract.yaml",
+        "allowed_extensions": [
+          "yaml",
+          "yml",
+          "json"
+        ]
+      },
+      "D-PROMPT": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-PROMPT/prompt-contract.yaml",
+        "allowed_extensions": [
+          "yaml",
+          "yml",
+          "json"
+        ]
+      },
+      "D-EVAL-PLAN": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-EVAL-PLAN/evaluation-plan.yaml",
+        "allowed_extensions": [
+          "yaml",
+          "yml",
+          "json"
+        ]
+      },
+      "D-IMPL": {
+        "root": "src",
+        "primary_path": "{src_scope_root}/D-IMPL/{filename}",
+        "default_filenames": [
+          "manifest.json"
+        ],
+        "capture_globs": [
+          "{src_scope_root}/D-IMPL/**/*"
+        ],
+        "alternate_paths": [
+          "{infra_root}/{scope_id}/D-IMPL/{filename}"
+        ]
+      },
+      "D-MIG": {
+        "root": "src",
+        "primary_path": "{src_scope_root}/D-MIG/{filename}",
+        "default_filenames": [
+          "manifest.json"
+        ],
+        "capture_globs": [
+          "{src_scope_root}/D-MIG/**/*",
+          "{infra_root}/{scope_id}/D-MIG/**/*"
+        ]
+      },
+      "D-CONFIG": {
+        "root": "src",
+        "primary_path": "{src_scope_root}/D-CONFIG/{filename}",
+        "default_filenames": [
+          "config.example.yaml"
+        ],
+        "capture_globs": [
+          "{src_scope_root}/D-CONFIG/**/*",
+          "{infra_root}/{scope_id}/D-CONFIG/**/*"
+        ]
+      },
+      "D-VIS": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-VIS/visual-review.md"
+      },
+      "D-A11Y": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-A11Y/accessibility-design.md"
+      },
+      "D-UX-SIGNOFF": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-UX-SIGNOFF/ux-signoff.md"
+      },
+      "D-DEMO": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-DEMO/demo-script.md"
+      },
+      "D-E2E": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-E2E/e2e-report.md"
+      },
+      "D-PERF": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-PERF/performance-report.md"
+      },
+      "D-SECV": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-SECV/security-verification.md"
+      },
+      "D-OPS": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-OPS/operations-readiness.md"
+      },
+      "D-A11Y-VERIFY": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-A11Y-VERIFY/accessibility-report.md"
+      },
+      "D-DATA-VERIFY": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-DATA-VERIFY/data-verification.md"
+      },
+      "D-EVAL": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-EVAL/evaluation-report.md"
+      },
+      "D-DEPLOY": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-DEPLOY/deploy-manifest.md",
+        "alternate_paths": [
+          "{infra_root}/{scope_id}/D-DEPLOY/{filename}"
+        ]
+      },
+      "D-RELNOTE": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-RELNOTE/release-notes.md"
+      },
+      "D-OBS": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-OBS/observability.md",
+        "alternate_paths": [
+          "{infra_root}/{scope_id}/D-OBS/{filename}"
+        ]
+      },
+      "D-UAT": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-UAT/uat-report.md"
+      },
+      "D-HANDOVER": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-HANDOVER/handover.md"
+      },
+      "D-RETRO": {
+        "root": "docs",
+        "primary_path": "{docs_scope_root}/D-RETRO/retro.md"
+      }
+    },
+    "gate_ownership": {
+      "D-REQ-F": [
+        "G1"
+      ],
+      "D-REQ-NF": [
+        "G1"
+      ],
+      "D-ACC": [
+        "G1"
+      ],
+      "D-RES": [
+        "G1R",
+        "G3"
+      ],
+      "D-ARCH": [
+        "G2"
+      ],
+      "D-ADR": [
+        "G2"
+      ],
+      "D-THREAT": [
+        "G2"
+      ],
+      "D-VIS-ARCH": [
+        "G2"
+      ],
+      "D-DATA-ARCH": [
+        "G2"
+      ],
+      "D-ORCH-ARCH": [
+        "G2"
+      ],
+      "D-API": [
+        "G3"
+      ],
+      "D-DB": [
+        "G3"
+      ],
+      "D-MIG-PLAN": [
+        "G3"
+      ],
+      "D-DEP": [
+        "G3"
+      ],
+      "D-TEST": [
+        "G3"
+      ],
+      "D-PLAN": [
+        "G3"
+      ],
+      "D-UI": [
+        "G3"
+      ],
+      "D-CONTRACT": [
+        "G3"
+      ],
+      "D-STATE": [
+        "G3"
+      ],
+      "D-API-CONS": [
+        "G3"
+      ],
+      "D-DATA-ACCESS": [
+        "G3"
+      ],
+      "D-TOOL": [
+        "G3"
+      ],
+      "D-PROMPT": [
+        "G3"
+      ],
+      "D-EVAL-PLAN": [
+        "G3"
+      ],
+      "D-IMPL": [
+        "G4"
+      ],
+      "D-MIG": [
+        "G4"
+      ],
+      "D-CONFIG": [
+        "G4"
+      ],
+      "D-VIS": [
+        "G5"
+      ],
+      "D-A11Y": [
+        "G5"
+      ],
+      "D-UX-SIGNOFF": [
+        "G5"
+      ],
+      "D-DEMO": [
+        "G5"
+      ],
+      "D-E2E": [
+        "G6"
+      ],
+      "D-PERF": [
+        "G6"
+      ],
+      "D-SECV": [
+        "G6"
+      ],
+      "D-OPS": [
+        "G6"
+      ],
+      "D-A11Y-VERIFY": [
+        "G6"
+      ],
+      "D-DATA-VERIFY": [
+        "G6"
+      ],
+      "D-EVAL": [
+        "G6"
+      ],
+      "D-DEPLOY": [
+        "G7"
+      ],
+      "D-RELNOTE": [
+        "G7"
+      ],
+      "D-OBS": [
+        "G7"
+      ],
+      "D-UAT": [
+        "L8"
+      ],
+      "D-HANDOVER": [
+        "L8"
+      ],
+      "D-RETRO": [
+        "L8"
+      ]
+    },
+    "naming": {
+      "feature_id": {
+        "style": "kebab-case",
+        "regex": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+        "max_length": 48,
+        "examples_valid": [
+          "user-auth",
+          "payment",
+          "identity-common",
+          "observability-core"
+        ],
+        "examples_invalid": [
+          "UserAuth",
+          "payment_v2",
+          "shared/common",
+          "auth."
+        ]
+      },
+      "deliverable_id": {
+        "style": "D-{CATEGORY}",
+        "regex": "^D-[A-Z0-9]+(?:-[A-Z0-9]+)*$",
+        "examples_valid": [
+          "D-ARCH",
+          "D-MIG-PLAN",
+          "D-A11Y-VERIFY"
+        ],
+        "examples_invalid": [
+          "d-arch",
+          "D_arch",
+          "ARCH",
+          "D-arch"
+        ]
+      },
+      "file_naming": {
+        "docs": {
+          "style": "lower-kebab-case",
+          "regex": "^[a-z0-9]+(?:-[a-z0-9]+)*\\.(md|ya?ml|json)$",
+          "examples": [
+            "requirements.md",
+            "api-contract.yaml",
+            "threat-model.md"
+          ]
+        },
+        "runtime": {
+          "style": "fixed-name",
+          "allowed": [
+            "deliverables.json",
+            "index.json"
+          ]
+        },
+        "src": {
+          "style": "stack-conventional within deliverable directory",
+          "regex": "^[A-Za-z0-9._-]+$",
+          "note": "ディレクトリ名は deliverable ID を維持し、内側のファイル名だけ言語/フレームワーク慣習に従う"
+        }
+      },
+      "path_regex": {
+        "docs_scope": "^docs/(features|shared|platform)/[a-z][a-z0-9]*(?:-[a-z0-9]+)*/D-[A-Z0-9]+(?:-[A-Z0-9]+)*/[a-z0-9]+(?:-[a-z0-9]+)*\\.(md|ya?ml|json)$",
+        "src_scope": "^src/(features|shared|platform)/[a-z][a-z0-9]*(?:-[a-z0-9]+)*/D-[A-Z0-9]+(?:-[A-Z0-9]+)*/[^/]+$",
+        "infra_scope": "^infra/[a-z][a-z0-9]*(?:-[a-z0-9]+)*/D-[A-Z0-9]+(?:-[A-Z0-9]+)*/[^/]+$",
+        "state_file": "^\\.helix/state/deliverables\\.json$",
+        "runtime_index": "^\\.helix/runtime/index\\.json$"
+      }
+    },
+    "common_defs": {
+      "nfr_categories": [
+        "availability",
+        "security",
+        "performance",
+        "operability",
+        "maintainability",
+        "reliability",
+        "observability",
+        "scalability",
+        "compliance"
+      ],
+      "risk_flags": {
+        "auth": {
+          "description": "認証・認可・資格情報・セッション境界に影響する変更",
+          "forces_gates": [
+            "G2",
+            "G4"
+          ]
+        },
+        "payment": {
+          "description": "課金・決済・返金・請求に影響する変更",
+          "forces_gates": [
+            "G2",
+            "G4",
+            "G6"
+          ]
+        },
+        "pii": {
+          "description": "個人情報の収集・保存・転送・表示に影響する変更",
+          "forces_gates": [
+            "G2",
+            "G6"
+          ]
+        },
+        "external_api": {
+          "description": "外部 API / SaaS との連携追加または変更",
+          "forces_gates": [
+            "G1R",
+            "G3",
+            "G6"
+          ]
+        },
+        "data_migration": {
+          "description": "データ移行・再計算・破壊的変更を伴う変更",
+          "forces_gates": [
+            "G3",
+            "G4",
+            "G6"
+          ]
+        },
+        "infra": {
+          "description": "ネットワーク・ランタイム・デプロイ基盤の変更",
+          "forces_gates": [
+            "G2",
+            "G6",
+            "G7"
+          ]
+        }
+      },
+      "status_vocab": {
+        "pending": "未着手",
+        "in_progress": "進行中",
+        "done": "完了",
+        "waived": "例外承認により完了扱い",
+        "not_applicable": "適用外",
+        "partial": "一部充足だが gate 通過条件未達"
+      },
+      "glossary": {
+        "matrix_yaml": "人間が編集する不変 spec。成果物の適用対象と必須性を宣言する",
+        "runtime_state": ".helix/state/deliverables.json。status や検証時刻などの可変状態を保持する",
+        "deliverable_catalog": "Deliverable Catalog v1。利用可能な成果物 ID と gate 所有を定義する規約",
+        "scope_instance": "feature/shared/platform の各 ID 単位。Phase 1 では features.<id> 配下で表現する",
+        "waiver": "適用対象だが例外承認する宣言。reason と approved_by を必須とする",
+        "advisory_mode": "不足や不整合を警告するが、Phase 1 ではゲートをブロックしない運用"
+      }
+    }
+  }
+}

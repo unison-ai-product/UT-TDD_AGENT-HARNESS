@@ -1,0 +1,27 @@
+{
+  "name": "review-team",
+  "strategy": "parallel",
+  "members": [
+    {
+      "role": "qa",
+      "engine": "codex",
+      "exit_code": 0,
+      "status": "completed",
+      "output": "odex\n[helix-codex] plan-only guard: auto-detected plan/review task -> sandbox=read-only, full-auto=off\n[codex-thinking] resolved thinking=high source=role-default role=qa sprint= agent=\n[helix-codex] role=qa model=gpt-5.5 thinking=high sandbox=read-only full_auto= skills=common/testing workflow/verification workflow/quality-lv5 common/performance tools/ai-coding docs=cli/ROLE_MAP.md cli/schemas/review-output.schema.json\n[helix-codex] WARNING: summary marker missing, falling back to last 30 lines"
+    },
+    {
+      "role": "tl",
+      "engine": "codex",
+      "exit_code": 0,
+      "status": "completed",
+      "output": "mock codex\n[helix-codex] plan-only guard: auto-detected plan/review task -> sandbox=read-only, full-auto=off\n[codex-thinking] resolved thinking=high source=role-default role=tl sprint= agent=\n[helix-codex] role=tl model=gpt-5.5 thinking=high sandbox=read-only full_auto= skills=common/code-review tools/ai-coding docs=cli/ROLE_MAP.md\n[helix-codex] WARNING: summary marker missing, falling back to last 30 lines"
+    },
+    {
+      "role": "security",
+      "engine": "codex",
+      "exit_code": 0,
+      "status": "completed",
+      "output": "plan-only guard: auto-detected plan/review task -> sandbox=read-only, full-auto=off\n[codex-thinking] resolved thinking=xhigh source=role-default role=security sprint= agent=\n[helix-codex] role=security model=gpt-5.4 thinking=xhigh sandbox=read-only full_auto= skills=common/security workflow/compliance workflow/adversarial-review docs=cli/ROLE_MAP.md cli/schemas/review-output.schema.json cli/prompts/adversarial-review.md\n[helix-codex] WARNING: summary marker missing, falling back to last 30 lines"
+    }
+  ]
+}

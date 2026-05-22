@@ -1,0 +1,182 @@
+#!/bin/bash
+set -euo pipefail
+
+# helix: HELIX CLI 統一エントリポイント
+# Usage: helix <subcommand> [args...]
+
+source "$(cd "$(dirname "$0")" && pwd)/lib/helix-common.sh"
+
+CMD="${1:-help}"
+shift 2>/dev/null || true
+
+case "$CMD" in
+  init)     exec "$SCRIPT_DIR/helix-init" "$@" ;;
+  codex)    exec "$SCRIPT_DIR/helix-codex" "$@" ;;
+  claude)   exec "$SCRIPT_DIR/helix-claude" "$@" ;;
+  team)     exec "$SCRIPT_DIR/helix-team" "$@" ;;
+  gate)     exec "$SCRIPT_DIR/helix-gate" "$@" ;;
+  gate-api-check) exec "$SCRIPT_DIR/helix-gate-api-check" "$@" ;;
+  size)     exec "$SCRIPT_DIR/helix-size" "$@" ;;
+  sprint)   exec "$SCRIPT_DIR/helix-sprint" "$@" ;;
+  entry)    exec "$SCRIPT_DIR/helix-entry" "$@" ;;
+  pr)       exec "$SCRIPT_DIR/helix-pr" "$@" ;;
+  reverse)  exec "$SCRIPT_DIR/helix-reverse" "$@" ;;
+  mode)     exec "$SCRIPT_DIR/helix-mode" "$@" ;;
+  dashboard) exec "$SCRIPT_DIR/helix-dashboard" "$@" ;;
+  builder)  exec "$SCRIPT_DIR/helix-builder" "$@" ;;
+  task)     exec "$SCRIPT_DIR/helix-task" "$@" ;;
+  log)      exec "$SCRIPT_DIR/helix-log" "$@" ;;
+  hook)     exec "$SCRIPT_DIR/helix-hook" "$@" ;;
+  check-claudemd) exec "$SCRIPT_DIR/helix-check-claudemd" "$@" ;;
+  context)  exec "$SCRIPT_DIR/helix-context" "$@" ;;
+  debug)    exec "$SCRIPT_DIR/helix-debug" "$@" ;;
+  verify-all) exec "$SCRIPT_DIR/helix-verify-all" "$@" ;;
+  verify-agent) exec "$SCRIPT_DIR/helix-verify-agent" "$@" ;;
+  vmodel)   exec "$SCRIPT_DIR/helix-vmodel" "$@" ;;
+  push)     exec "$SCRIPT_DIR/helix-push" "$@" ;;
+  innovation) exec "$SCRIPT_DIR/helix-innovation" "$@" ;;
+  scrum)    exec "$SCRIPT_DIR/helix-scrum" "$@" ;;
+  matrix)   exec "$SCRIPT_DIR/helix-matrix" "$@" ;;
+  plan)     exec "$SCRIPT_DIR/helix-plan" "$@" ;;
+  research) exec "$SCRIPT_DIR/helix-research" "$@" ;;
+  meta-phase) exec "$SCRIPT_DIR/helix-meta-phase" "$@" ;;
+  readiness) exec "$SCRIPT_DIR/helix-readiness" "$@" ;;
+  interrupt) exec "$SCRIPT_DIR/helix-interrupt" "$@" ;;
+  handover) exec "$SCRIPT_DIR/helix-handover" "$@" ;;
+  budget)    exec "$SCRIPT_DIR/helix-budget" "$@" ;;
+  scheduler) exec "$SCRIPT_DIR/helix-scheduler" "$@" ;;
+  job)       exec "$SCRIPT_DIR/helix-job" "$@" ;;
+  lock)      exec "$SCRIPT_DIR/helix-lock" "$@" ;;
+  setup)     exec "$SCRIPT_DIR/helix-setup" "$@" ;;
+  observe)   exec "$SCRIPT_DIR/helix-observe" "$@" ;;
+  audit)     exec "$SCRIPT_DIR/helix-audit" "$@" ;;
+  recipe)   exec "$SCRIPT_DIR/helix-recipe" "$@" ;;
+  learn)
+    if [[ -z "${HELIX_SUPPRESS_LEGACY_WARN:-}" ]]; then
+      echo "[helix] warn: 'helix learn' は deprecated。'helix recipe learn' を使用してください (2 release cycles 後に削除予定、HELIX_SUPPRESS_LEGACY_WARN=1 で抑止)" >&2
+    fi
+    exec "$SCRIPT_DIR/helix-learn" "$@"
+    ;;
+  promote)
+    if [[ -z "${HELIX_SUPPRESS_LEGACY_WARN:-}" ]]; then
+      echo "[helix] warn: 'helix promote' は deprecated。'helix recipe promote' を使用してください (2 release cycles 後に削除予定、HELIX_SUPPRESS_LEGACY_WARN=1 で抑止)" >&2
+    fi
+    exec "$SCRIPT_DIR/helix-promote" "$@"
+    ;;
+  discover)
+    if [[ -z "${HELIX_SUPPRESS_LEGACY_WARN:-}" ]]; then
+      echo "[helix] warn: 'helix discover' は deprecated。'helix recipe discover' を使用してください (2 release cycles 後に削除予定、HELIX_SUPPRESS_LEGACY_WARN=1 で抑止)" >&2
+    fi
+    exec "$SCRIPT_DIR/helix-discover" "$@"
+    ;;
+  skill)    exec "$SCRIPT_DIR/helix-skill" "$@" ;;
+  code)     exec "$SCRIPT_DIR/helix-code" "$@" ;;
+  asset)    exec "$SCRIPT_DIR/helix-asset" "$@" ;;
+  bench)    exec "$SCRIPT_DIR/helix-bench" "$@" ;;
+  status)   exec "$SCRIPT_DIR/helix-status" "$@" ;;
+  test)     exec "$SCRIPT_DIR/helix-test" "$@" ;;
+  test-debug) exec "$SCRIPT_DIR/helix-test-debug" "$@" ;;
+  retro)    exec "$SCRIPT_DIR/helix-retro" "$@" ;;
+  debt)     exec "$SCRIPT_DIR/helix-debt" "$@" ;;
+  bats-cleanup) exec "$SCRIPT_DIR/helix-bats-cleanup" "$@" ;;
+  review)   exec "$SCRIPT_DIR/helix-review" "$@" ;;
+  advise)   exec "$SCRIPT_DIR/helix-advise" "$@" ;;
+  drift-check) exec "$SCRIPT_DIR/helix-drift-check" "$@" ;;
+  session-start) exec "$SCRIPT_DIR/helix-session-start" "$@" ;;
+  session-summary) exec "$SCRIPT_DIR/helix-session-summary" "$@" ;;
+  doctor)   exec "$SCRIPT_DIR/helix-doctor" "$@" ;;
+  db)       exec "$SCRIPT_DIR/helix-db" "$@" ;;
+  migrate)  exec "$SCRIPT_DIR/helix-migrate" "$@" ;;
+  commands) exec "$SCRIPT_DIR/helix-commands" "$@" ;;
+  help|-h|--help)
+    cat <<'USAGE'
+使い方: helix <コマンド>
+
+Commands:
+HELIX 全体管理:
+  init        プロジェクト初期化
+  status      プロジェクト状態表示
+  dashboard   主要状態の静的 snapshot 表示
+  mode        forward / reverse / scrum 切替
+  doctor      環境診断・修復
+  db          dev 限定 DB rollback drill ツール
+  migrate     .helix/ テンプレ追従 (--dry-run/--yes/--rollback)
+  commands    コマンド route/help/docs と主要 workflow 連携契約の同期検証
+  setup       初期化検証・修復
+  test        セルフテスト
+  test-debug  デバッグ有効セルフテスト
+  debug       デバッグツール
+  bench       プロジェクトメトリクス表示
+
+HELIX プロジェクト管理:
+  size        タスクサイジング
+  plan        設計計画
+  research    L1-L3 向けの調査テーマ生成と dry-run
+  meta-phase  PLAN-006 L1 メタ工程の pattern 契約検証
+  matrix      成果物マトリクス管理
+  gate        ゲート自動検証
+  gate-api-check API エンドポイント整合チェック
+  vmodel      V-model semantics 表示・検証 (drive/layer/test/pair)
+  push        6 ゲート機械検証 + git push 自動許可
+  readiness   readiness exit 判定 / deferred-finding 操作
+  innovation  PdM Tech/Marketing 翻案 + 統合 (G0.5 前後)
+  sprint      L4 マイクロスプリント
+  task        タスクオペレーティングシステム
+  interrupt   IIP/CC 中断・復帰管理
+  handover    Opus/Codex handover 管理
+  pr          PR 自動生成 + 6 ゲート機械検証 (--gate / --auto-merge)
+  retro       レトロスペクティブ
+  debt        技術負債管理
+  bats-cleanup バッチ実行用一時ディレクトリ監査
+  drift-check 契約ドリフト検知
+
+Codex / Claude Code 管理 harness:
+  codex       Codex への role/task 委譲
+  claude      Claude Code 用 plan/task prompt 生成
+  advise      判断に迷ったとき Opus に相談する
+  team        エージェントチーム実行
+  review      Codex 自動レビュー
+  skill       スキル検索・参照
+  budget      Claude/Codex 予算管理・モデル推奨
+  hook        PostToolUse hook
+  check-claudemd PreToolUse hook
+  context     context / memory guardrail check
+  session-start SessionStart hook
+  session-summary Stop hook
+
+Reverse / Scrum / 検証:
+  reverse     リバース HELIX
+  scrum       検証駆動開発
+  verify-all  全レイヤー検証
+  verify-agent 検証ツール harvest / design / PLAN drift cross-check
+
+学習・再利用:
+  log         ログ・評価システム
+  recipe      成功パターン学習 (learn/promote/discover/list)
+  learn       成功パターン学習 (deprecated: helix recipe learn)
+  promote     レシピ昇格 (deprecated: helix recipe promote)
+  discover    パターン検索 (deprecated: helix recipe discover)
+  builder     成果物ビルダー
+  code        コードインデックス検索/重複検出/統計
+  asset       画像 asset preset 生成
+  entry       entries/links 中央 DB の CRUD + N 軸 coverage (PLAN-027)
+  audit       A1 audit decisions 同期・検証
+
+補助・運用:
+  scheduler   定期実行スケジュール管理
+  job         非同期ジョブキュー管理
+  lock        DB lock 管理
+  observe     イベント・メトリクス観測
+
+Environment:
+  HELIX_HOME    HELIX インストールディレクトリ (default: ~/ai-dev-kit-vscode)
+
+Run 'helix <command> --help' for command-specific help.
+USAGE
+    ;;
+  *)
+    echo "エラー: 不明なコマンド '$CMD'" >&2
+    echo "利用可能なコマンドは 'helix help' で確認してください" >&2
+    exit 1
+    ;;
+esac

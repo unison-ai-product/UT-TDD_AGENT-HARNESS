@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import hashlib
+import sys
+from pathlib import Path
+from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+LIB_DIR = SCRIPT_DIR / "lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.append(str(LIB_DIR))
+
+from builders.history import BuilderHistory
+from global_store import search_global
+from learning_engine import list_recipes
+from paths import project_root as resolve_project_root
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="helix discover",
+        description="local/global recipe から類似候補を検索する",
+    )
+    parser.add_argument("--query", default="", help="検索キーワード")
+    parser.add_argument("--limit", type=int, default=10, help="表示件数")
+    return parser.parse_args()
+
+
+def _project_id(project_root: Path) -> str:
+    digest = hashlib.sha1(str(project_root).encode("utf-8")).hexdigest()[:8]
+    return f"{project_root.name}-{digest}"
+
+
+def _local_candidates(project_root: Path) -> list[dict[str, Any]]:
+    recipes = list_recipes(str(project_root))
+    candidates: list[dict[str, Any]] = []
+    project_id = _project_id(project_root)
+
+    for recipe in recipes:
+        payload = dict(recipe)
+        payload["source_scope"] = "local"
+        payload["source_path"] = str(recipe.get("_path", ""))
+        payload["project_id"] = project_id
+        candidates.append(payload)
+
+    return candidates
+
+
+def _global_candidates(query: str, limit: int) -> list[dict[str, Any]]:
+    rows = search_global(query=query, limit=max(20, int(limit) * 5))
+    candidates: list[dict[str, Any]] = []
+
+    for row in rows:
+        context = row.get("context", {}) if isinstance(row.get("context"), dict) else {}
+        tags = row.get("tags", []) if isinstance(row.get("tags"), list) else []
+
+        payload = {
+            "recipe_id": row.get("recipe_id", ""),
+            "pattern_key": row.get("pattern_key", ""),
+            "classification": {
+                "builder_type": row.get("builder_type", ""),
+                "task_type": context.get("task_type", ""),
+                "tags": tags,
+            },
+            "tags": tags,
+            "quality_score_mean": row.get("quality_score_mean", 0.0),
+            "metrics": {"quality_score": row.get("quality_score_mean", 0.0)},
+            "source_scope": "global",
+            "source_path": row.get("global_path", ""),
+            "project_id": row.get("project_id", "") or context.get("project_id", ""),
+            "context": context,
+            "verification": row.get("verification", {}) if isinstance(row.get("verification"), dict) else {},
+        }
+        candidates.append(payload)
+
+    return candidates
+
+
+def _dedupe(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+
+    for item in candidates:
+        recipe_id = str(item.get("recipe_id", ""))
+        project_id = str(item.get("project_id", "")).strip() or str(item.get("source_scope", ""))
+        key = (recipe_id, project_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(item)
+
+    return merged
+
+
+def _to_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def _verification_summary(item: dict[str, Any]) -> tuple[str, str, str]:
+    verification = item.get("verification", {}) if isinstance(item.get("verification"), dict) else {}
+    tests = verification.get("tests", {}) if isinstance(verification.get("tests"), dict) else {}
+    contracts = verification.get("contracts", {}) if isinstance(verification.get("contracts"), dict) else {}
+    quality = verification.get("quality", {}) if isinstance(verification.get("quality"), dict) else {}
+
+    passed = _to_int(tests.get("passed", 0), 0)
+    total = _to_int(tests.get("total", 0), 0)
+    tests_summary = f"{passed}/{total}"
+
+    schema_valid = contracts.get("schema_valid")
+    contracts_summary = "OK" if schema_valid is True else ("NG" if schema_valid is False else "-")
+
+    lint_errors = _to_int(quality.get("lint_errors", -1), -1)
+    security_issues = _to_int(quality.get("security_issues", -1), -1)
+    textlint_errors = _to_int(quality.get("textlint_errors", -1), -1)
+    if lint_errors == 0 and security_issues in (0, -1) and textlint_errors in (0, -1):
+        quality_summary = "clean"
+    elif lint_errors > 0:
+        quality_summary = f"lint:{lint_errors}"
+    elif security_issues > 0:
+        quality_summary = f"security:{security_issues}"
+    elif textlint_errors > 0:
+        quality_summary = f"textlint:{textlint_errors}"
+    else:
+        quality_summary = "unknown"
+
+    return tests_summary, contracts_summary, quality_summary
+
+
+def main() -> int:
+    args = _parse_args()
+    project_root = resolve_project_root()
+
+    local_items = _local_candidates(project_root)
+    global_items = _global_candidates(query=args.query, limit=max(10, int(args.limit)))
+
+    combined = _dedupe(local_items + global_items)
+    scored = BuilderHistory.search_recipe_candidates(
+        query=args.query,
+        candidates=combined,
+        limit=max(1, int(args.limit)),
+    )
+
+    print("=== helix discover ===")
+    print(f"query: {args.query or '(empty)'}")
+    print(f"source: local={len(local_items)} / global={len(global_items)}")
+
+    if not scored:
+        print("結果なし")
+        print("  ヒント: 'helix learn --all' で成功パターンを先に記録してください")
+        return 0
+
+    print("results:")
+    for item in scored:
+        tests_summary, contracts_summary, quality_summary = _verification_summary(item)
+        score_value = round(float(item.get("_score", 0.0) or 0.0))
+        classification = item.get("classification", {}) if isinstance(item.get("classification"), dict) else {}
+        task_label = str(classification.get("task_type", "")).strip() or str(item.get("pattern_key", ""))
+        print(
+            "  {recipe}  {task}  score:{score}  tests:{tests}  contracts:{contracts}  quality:{quality}".format(
+                recipe=str(item.get("recipe_id", "")),
+                task=task_label,
+                score=int(score_value),
+                tests=tests_summary,
+                contracts=contracts_summary,
+                quality=quality_summary,
+            )
+        )
+        print(f"      scope={str(item.get('source_scope', ''))}")
+        source_path = str(item.get("source_path", "")).strip()
+        if source_path:
+            print(f"      path={source_path}")
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

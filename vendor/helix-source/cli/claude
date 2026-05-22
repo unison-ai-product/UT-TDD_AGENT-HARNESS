@@ -1,0 +1,111 @@
+#!/bin/bash
+set -euo pipefail
+
+# claude shim: HELIX 配下で raw `claude` を止め、`helix claude` に寄せる。
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+resolve_real_claude() {
+  local candidate
+  local candidate_real
+  local self_real
+  self_real="$(realpath -m "$0")"
+
+  # Explicit override
+  if [[ -n "${HELIX_CLAUDE_BIN:-}" && -x "$HELIX_CLAUDE_BIN" ]]; then
+    echo "$HELIX_CLAUDE_BIN"
+    return 0
+  fi
+
+  while IFS= read -r candidate; do
+    [[ -z "$candidate" ]] && continue
+    candidate_real="$(realpath -m "$candidate")"
+    [[ "$candidate_real" == "$self_real" ]] && continue
+    [[ "$candidate_real" == "$SCRIPT_DIR/claude" ]] && continue
+    if [[ -x "$candidate_real" ]]; then
+      echo "$candidate_real"
+      return 0
+    fi
+  done < <(type -P -a claude 2>/dev/null || true)
+
+  if [[ -x "$HOME/.npm-global/bin/claude" ]]; then
+    echo "$HOME/.npm-global/bin/claude"
+    return 0
+  fi
+
+  # Windows native Claude Code (AppData) — pick highest version
+  local appdata_root="${APPDATA:-$HOME/AppData/Roaming}"
+  # APPDATA may use Windows-style backslashes when invoked from cmd
+  appdata_root="${appdata_root//\\//}"
+  if [[ -d "$appdata_root/Claude/claude-code" ]]; then
+    local latest
+    latest="$(
+      find "$appdata_root/Claude/claude-code" -mindepth 2 -maxdepth 2 -name claude.exe -type f 2>/dev/null \
+        | sort -V \
+        | while IFS= read -r candidate; do
+            [[ -x "$candidate" ]] && printf '%s\n' "$candidate"
+          done \
+        | tail -n 1
+    )"
+    if [[ -n "$latest" ]]; then
+      echo "$latest"
+      return 0
+    fi
+  fi
+
+  # VSCode extension bundled claude.exe — pick highest version
+  local vscode_ext="$HOME/.vscode/extensions"
+  if [[ -d "$vscode_ext" ]]; then
+    local latest_vscode
+    latest_vscode="$(
+      find "$vscode_ext" -path '*/resources/native-binary/claude.exe' -type f 2>/dev/null \
+        | sort -V \
+        | while IFS= read -r candidate; do
+            [[ -x "$candidate" ]] && printf '%s\n' "$candidate"
+          done \
+        | tail -n 1
+    )"
+    if [[ -n "$latest_vscode" ]]; then
+      echo "$latest_vscode"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+if [[ "${HELIX_CLAUDE_INTERNAL:-0}" != "1" ]]; then
+  raw_claude_reason="${HELIX_RAW_CLAUDE_REASON:-}"
+  if [[ "${HELIX_ALLOW_RAW_CLAUDE:-0}" == "1" && -n "${raw_claude_reason//[[:space:]]/}" ]]; then
+    real_claude="$(resolve_real_claude || true)"
+    if [[ -z "$real_claude" ]]; then
+      echo "エラー: 実体の claude バイナリが見つかりません" >&2
+      exit 127
+    fi
+    exec "$real_claude" "$@"
+  fi
+
+  if [[ "${HELIX_ALLOW_RAW_CLAUDE:-0}" != "1" ]]; then
+    echo "[helix] raw claude is blocked. Use 'helix claude --role <role> ...' instead." >&2
+    exit 64
+  fi
+
+  cat >&2 <<'EOF'
+エラー: raw `claude` は HELIX discipline が効かないためブロックしました。
+
+代わりに以下を使用してください:
+  helix claude --role <role> --task "..." --dry-run
+
+どうしても raw Claude が必要な場合のみ、理由を evidence に残した上で:
+  HELIX_ALLOW_RAW_CLAUDE=1 HELIX_RAW_CLAUDE_REASON=<理由> claude ...
+EOF
+  exit 2
+fi
+
+real_claude="$(resolve_real_claude || true)"
+if [[ -z "$real_claude" ]]; then
+  echo "エラー: 実体の claude バイナリが見つかりません" >&2
+  exit 127
+fi
+
+exec "$real_claude" "$@"

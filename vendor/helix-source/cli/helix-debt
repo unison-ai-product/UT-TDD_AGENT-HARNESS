@@ -1,0 +1,257 @@
+#!/bin/bash
+set -euo pipefail
+# helix-debt: 技術負債台帳管理
+# Usage: helix debt <list|add|resolve>
+
+source "$(cd "$(dirname "$0")" && pwd)/lib/helix-common.sh"
+REGISTER="$HELIX_DIR/debt-register.yaml"
+
+case "${1:-help}" in
+  --help|-h|help)
+    echo "使い方: helix debt <list|add|resolve>"
+    echo ""
+    echo "サブコマンド:"
+    echo "  list                          負債一覧"
+    echo "  add --title \"...\" [--priority <high|medium|low>] [--source <file>] [--id <文字列>]"
+    echo "      [--category <文字列>] [--impact <high|medium|low>] [--effort <文字列>]"
+    echo "      [--owner <文字列>] [--target-sprint <文字列>]"
+    echo "  resolve --id <ID>             解決済みにする"
+    exit 0
+    ;;
+  list)
+    if [[ ! -f "$REGISTER" ]]; then
+      echo "技術負債台帳なし。helix debt add で追加してください。"
+      exit 0
+    fi
+    echo "=== 技術負債台帳 ==="
+    grep -E "^  - id:|^    title:|^    priority:|^    status:" "$REGISTER" 2>/dev/null | paste - - - - | \
+      sed 's/  - id: //;s/    title: //;s/    priority: //;s/    status: //' | \
+      while IFS=$'\t' read -r id title priority status; do
+        marker="  "
+        [[ "$status" == *"resolved"* ]] && marker="✓ "
+        echo "$marker#$id $priority $title"
+      done
+    ;;
+  add)
+    shift
+    TITLE=""
+    PRIORITY="medium"
+    SOURCE=""
+    EXPLICIT_ID=""
+    CATEGORY="general"
+    IMPACT="medium"
+    EFFORT="M"
+    OWNER="未定"
+    TARGET_SPRINT=""
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --title)
+          TITLE="$2"
+          shift 2
+          ;;
+        --priority)
+          PRIORITY="$2"
+          shift 2
+          ;;
+        --source)
+          SOURCE="$2"
+          shift 2
+          ;;
+        --id)
+          EXPLICIT_ID="$2"
+          shift 2
+          ;;
+        --category)
+          CATEGORY="$2"
+          shift 2
+          ;;
+        --impact)
+          IMPACT="$2"
+          shift 2
+          ;;
+        --effort)
+          EFFORT="$2"
+          shift 2
+          ;;
+        --owner)
+          OWNER="$2"
+          shift 2
+          ;;
+        --target-sprint)
+          TARGET_SPRINT="$2"
+          shift 2
+          ;;
+        *)
+          echo "エラー: 不明なオプション: $1" >&2
+          exit 1
+          ;;
+      esac
+    done
+
+    if [[ -z "$TITLE" ]]; then
+      echo "エラー: --title は必須です" >&2
+      exit 1
+    fi
+    case "$PRIORITY" in
+      high|medium|low) ;;
+      *)
+        echo "エラー: --priority は high|medium|low のいずれかを指定してください" >&2
+        exit 1
+        ;;
+    esac
+    case "$IMPACT" in
+      high|medium|low) ;;
+      *)
+        echo "エラー: --impact は high|medium|low のいずれかを指定してください" >&2
+        exit 1
+        ;;
+    esac
+
+    mkdir -p "$HELIX_DIR"
+    if ! TITLE="$TITLE" PRIORITY="$PRIORITY" SOURCE="$SOURCE" EXPLICIT_ID="$EXPLICIT_ID" CATEGORY="$CATEGORY" IMPACT="$IMPACT" EFFORT="$EFFORT" OWNER="$OWNER" TARGET_SPRINT="$TARGET_SPRINT" REGISTER="$REGISTER" python3 - << 'PY'
+import os
+import re
+import sys
+from datetime import datetime
+
+register = os.environ["REGISTER"]
+title = os.environ["TITLE"]
+priority = os.environ["PRIORITY"]
+source = os.environ["SOURCE"]
+explicit_id = os.environ["EXPLICIT_ID"]
+category = os.environ["CATEGORY"]
+impact = os.environ["IMPACT"]
+effort = os.environ["EFFORT"]
+owner = os.environ["OWNER"]
+target_sprint = os.environ["TARGET_SPRINT"]
+
+if os.path.exists(register):
+    lines = open(register, encoding="utf-8").read().splitlines()
+    if not lines:
+        lines = ["items:"]
+else:
+    lines = ["items:"]
+
+id_re = re.compile(r"^\s*-\s+id:\s*(.+?)\s*$")
+existing_ids = []
+for line in lines:
+    m = id_re.match(line)
+    if not m:
+        continue
+    value = m.group(1).strip()
+    if value.startswith('"') and value.endswith('"') and len(value) >= 2:
+        value = value[1:-1]
+    existing_ids.append(value)
+
+if explicit_id:
+    if explicit_id in existing_ids:
+        print(f"[skip] id={explicit_id} は登録済み", file=sys.stderr)
+        raise SystemExit(0)
+    new_id = explicit_id
+else:
+    numeric_ids = [int(v) for v in existing_ids if re.fullmatch(r"\d+", v)]
+    new_id = str((max(numeric_ids) if numeric_ids else 0) + 1)
+
+def esc(text: str) -> str:
+    return text.replace("\\", "\\\\").replace('"', '\\"')
+
+created_at = datetime.now().isoformat()
+block = [
+    f"  - id: {new_id}",
+    f'    title: "{esc(title)}"',
+    f"    priority: {priority}",
+    f'    category: "{esc(category)}"',
+    f"    impact: {impact}",
+    f'    effort: "{esc(effort)}"',
+    f'    owner: "{esc(owner)}"',
+    f'    target_sprint: "{esc(target_sprint)}"',
+    f'    source: "{esc(source)}"',
+    "    status: open",
+    f'    created_at: "{created_at}"',
+    '    resolved_at: ""',
+]
+
+if lines and lines[-1].strip() == "":
+    lines = lines[:-1]
+lines.extend(block)
+with open(register, "w", encoding="utf-8") as f:
+    f.write("\n".join(lines) + "\n")
+
+print(f"追加: #{new_id} {priority} {title}")
+PY
+    then
+      exit 1
+    fi
+    ;;
+  resolve)
+    shift
+    [[ "${1:-}" == "--id" ]] && shift
+    ID="${1:-}"
+    if [[ -z "$ID" ]]; then
+      echo "エラー: --id は必須です" >&2
+      exit 1
+    fi
+
+    if [[ ! -f "$REGISTER" ]]; then
+      echo "エラー: ID $ID が見つかりません" >&2
+      exit 1
+    fi
+
+    ID="$ID" REGISTER="$REGISTER" python3 - << 'PY'
+import os
+import re
+import sys
+from datetime import datetime
+
+target_id = os.environ["ID"]
+register = os.environ["REGISTER"]
+
+lines = open(register, encoding="utf-8").read().splitlines()
+id_re = re.compile(r"^(\s*)-\s+id:\s*(.+?)\s*$")
+
+def normalize(value: str) -> str:
+    value = value.strip()
+    if value.startswith('"') and value.endswith('"') and len(value) >= 2:
+        return value[1:-1]
+    return value
+
+found = False
+active = False
+for i, line in enumerate(lines):
+    m = id_re.match(line)
+    if m:
+        current_id = normalize(m.group(2))
+        active = current_id == target_id
+        if active:
+            found = True
+        continue
+    if not active:
+        continue
+    if re.match(r"^\s*status:\s*", line):
+        indent = re.match(r"^(\s*)", line).group(1)
+        lines[i] = f"{indent}status: resolved"
+    elif re.match(r'^\s*resolved_at:\s*""\s*$', line):
+        indent = re.match(r"^(\s*)", line).group(1)
+        lines[i] = f'{indent}resolved_at: "{datetime.now().isoformat()}"'
+        break
+
+if not found:
+    raise SystemExit(2)
+
+with open(register, "w", encoding="utf-8") as f:
+    f.write("\n".join(lines) + "\n")
+PY
+    rc=$?
+    if [[ "$rc" -ne 0 ]]; then
+      if [[ "$rc" -eq 2 ]]; then
+        echo "エラー: ID $ID が見つかりません" >&2
+      fi
+      exit 1
+    fi
+    echo "解決: #$ID"
+    ;;
+  *)
+    echo "エラー: 不明なサブコマンド: $1" >&2
+    exit 1
+    ;;
+esac

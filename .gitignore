@@ -1,0 +1,28 @@
+CLAUDE.local.md
+AGENTS.override.md
+.claude/settings.local.json
+.claude/agent-memory/
+.claude/scheduled_tasks.lock
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+
+# UT-TDD runtime state
+.ut-tdd/audit/failure_log.jsonl
+.ut-tdd/audit/escalation_state.json
+.ut-tdd/cache/*
+!.ut-tdd/cache/.gitkeep
+.ut-tdd/state/*
+!.ut-tdd/state/.gitkeep
+.ut-tdd/adapters/local*.yaml
+.ut-tdd/teams/local*.yaml
+
+# HELIX runtime state
+.helix/helix.db
+.helix/audit/
+.helix/cache/
+.helix/locks/
+.helix/tasks/
+.helix/tmp/

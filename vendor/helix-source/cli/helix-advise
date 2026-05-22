@@ -1,0 +1,161 @@
+#!/bin/bash
+set -euo pipefail
+# helix-advise: 判断に迷ったとき Opus に相談する
+# Usage: helix advise "<question>" [--context <file>...] [--execute] [--dry-run]
+
+source "$(cd "$(dirname "$0")" && pwd)/lib/helix-common.sh"
+
+QUESTION=""
+CONTEXT_FILES=()
+EXECUTE=false
+DRY_RUN=false
+MODEL="claude-opus-4-7"
+TIMEOUT=120
+
+usage() {
+  cat <<'USAGE'
+使い方: helix advise "<question>" [options]
+
+判断に迷ったとき Opus に相談します。
+プロジェクト状態（phase/gate/git log）を自動収集してコンテキストに含めます。
+
+Options:
+  --context <file>    追加コンテキストファイル（複数指定可）
+  --execute           Opus を実行して回答を得る（default: dry-run）
+  --dry-run           プロンプトを表示するだけ
+  --model <id>        モデル変更（default: claude-opus-4-7）
+  --timeout <sec>     実行タイムアウト（default: 120）
+
+Examples:
+  helix advise "RG3 を承認すべきか。R4 の GAP が未解消のまま Forward に進んでよいか"
+  helix advise "この CSS 変更は安全か" --context frontend/static/workspace.css --execute
+USAGE
+}
+
+# --- 引数パース ---
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --context)  CONTEXT_FILES+=("${2:-}"); shift 2 ;;
+    --execute)  EXECUTE=true; shift ;;
+    --dry-run)  DRY_RUN=true; shift ;;
+    --model)    MODEL="${2:-}"; shift 2 ;;
+    --timeout)  TIMEOUT="${2:-120}"; shift 2 ;;
+    --help|-h)  usage; exit 0 ;;
+    -*)         echo "エラー: 不明なオプション: $1" >&2; exit 1 ;;
+    *)
+      if [[ -z "$QUESTION" ]]; then
+        QUESTION="$1"
+      else
+        echo "エラー: 質問は1つだけ指定してください" >&2; exit 1
+      fi
+      shift ;;
+  esac
+done
+
+if [[ -z "$QUESTION" ]]; then
+  echo "エラー: 質問を指定してください" >&2
+  echo "例: helix advise \"RG3 を承認すべきか\"" >&2
+  exit 1
+fi
+
+if [[ "$DRY_RUN" == false && "$EXECUTE" == false ]]; then
+  DRY_RUN=true  # デフォルトは dry-run
+fi
+
+# --- コンテキスト収集 ---
+phase_section=""
+if [[ -f "$PROJECT_ROOT/.helix/phase.yaml" ]]; then
+  phase_raw="$(head -80 "$PROJECT_ROOT/.helix/phase.yaml" 2>/dev/null || true)"
+  phase_section="## 現在のフェーズ状態 (.helix/phase.yaml 冒頭)
+\`\`\`yaml
+$phase_raw
+\`\`\`"
+fi
+
+git_log=""
+if git -C "$PROJECT_ROOT" rev-parse --git-dir &>/dev/null 2>&1; then
+  git_log="$(git -C "$PROJECT_ROOT" log --oneline -10 2>/dev/null || true)"
+fi
+git_section=""
+if [[ -n "$git_log" ]]; then
+  git_section="## 直近のコミット履歴
+\`\`\`
+$git_log
+\`\`\`"
+fi
+
+context_section=""
+for f in "${CONTEXT_FILES[@]}"; do
+  if [[ -f "$f" ]]; then
+    content="$(head -200 "$f" 2>/dev/null || true)"
+    context_section+="
+## 追加コンテキスト: $f
+\`\`\`
+$content
+\`\`\`"
+  else
+    echo "[helix-advise] warn: ファイルが見つかりません: $f" >&2
+  fi
+done
+
+# --- プロンプト構築 ---
+PROMPT="あなたはシニアアーキテクトです。以下の状況について判断を求められています。
+根拠を示した上で、明確にどうすべきか答えてください。
+不確かな場合はその旨も述べてください。
+
+## 相談内容
+${QUESTION}
+
+${phase_section}
+
+${git_section}
+${context_section}
+
+## 回答形式
+- **判断**: （どうすべきか1行で）
+- **根拠**: （なぜそう判断するか）
+- **リスク**: （懸念点があれば）
+- **代替案**: （他の選択肢があれば）"
+
+# --- 実行 or 表示 ---
+if [[ "$DRY_RUN" == true ]]; then
+  echo "=== helix advise (dry-run) ==="
+  echo "モデル: $MODEL"
+  echo "質問: $QUESTION"
+  echo ""
+  echo "--- 生成プロンプト ---"
+  echo "$PROMPT"
+  echo "---"
+  echo ""
+  echo "--execute を付けると Opus が回答します:"
+  echo "  helix advise \"$QUESTION\" --execute"
+  exit 0
+fi
+
+# --execute
+log_dir="$PROJECT_ROOT/.helix/cache/advise"
+mkdir -p "$log_dir"
+ts="$(date +%Y%m%dT%H%M%S)"
+log_file="$log_dir/${ts}.log"
+
+echo "[helix-advise] Opus ($MODEL) に相談中..." >&2
+
+set +e
+HELIX_CLAUDE_INTERNAL=1 timeout "$TIMEOUT" \
+  "$SCRIPT_DIR/claude" --print \
+  --model "$MODEL" \
+  --permission-mode default \
+  -p "$PROMPT" \
+  > "$log_file" 2>&1
+status=$?
+set -e
+
+if [[ $status -eq 0 ]]; then
+  cat "$log_file"
+  echo "" >&2
+  echo "[helix-advise] ログ: ${log_file#$PROJECT_ROOT/}" >&2
+else
+  echo "[helix-advise] エラー (exit=$status):" >&2
+  cat "$log_file" >&2
+fi
+exit $status

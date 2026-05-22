@@ -1,0 +1,462 @@
+#!/bin/bash
+set -euo pipefail
+
+# helix-pr: ゲート結果から PR テンプレート自動生成
+# Usage: helix-pr [--dry-run] [--base main] [--title "title"]
+
+source "$(cd "$(dirname "$0")" && pwd)/lib/helix-common.sh"
+YAML_PARSER="$SCRIPT_DIR/lib/yaml_parser.py"
+PHASE_FILE="$HELIX_DIR/phase.yaml"
+MATRIX_FILE="$HELIX_DIR/matrix.yaml"
+
+# --- 引数パース ---
+DRY_RUN=false
+GATE=false
+AUTO_MERGE=false
+BASE="main"
+TITLE=""
+BODY_OVERRIDE=""
+REQUIRE_GATES_RAW=""
+FORCE=false
+AUTOMATION_RUN_ID=""
+
+record_automation_run() {
+  local trigger_source="$1"
+  local run_kind="$2"
+  local metadata_json="$3"
+  local run_id=""
+
+  if ! run_id="$(
+    HELIX_AUTOMATION_LIB_DIR="$SCRIPT_DIR/lib" \
+    HELIX_AUTOMATION_TRIGGER_SOURCE="$trigger_source" \
+    HELIX_AUTOMATION_RUN_KIND="$run_kind" \
+    HELIX_AUTOMATION_METADATA_JSON="$metadata_json" \
+    HELIX_PROJECT_ROOT="$PROJECT_ROOT" \
+    python3 - <<'PY' 2>/dev/null
+import json
+import os
+import sys
+
+sys.path.insert(0, os.environ.get("HELIX_HOME") or os.path.dirname(os.path.dirname(os.environ["HELIX_AUTOMATION_LIB_DIR"])))
+from cli.lib import compatibility_adapter, helix_db
+
+metadata_raw = os.environ.get("HELIX_AUTOMATION_METADATA_JSON", "").strip()
+metadata = json.loads(metadata_raw) if metadata_raw else None
+with compatibility_adapter.write_connection(helix_db.resolve_default_db_path()) as conn:
+    run_id = helix_db.insert_automation_run(
+        conn,
+        os.environ["HELIX_AUTOMATION_TRIGGER_SOURCE"],
+        os.environ["HELIX_AUTOMATION_RUN_KIND"],
+        metadata,
+    )
+print(run_id)
+PY
+  )"; then
+    echo "WARN: automation_runs start failed for ${trigger_source}" >&2
+    return 1
+  fi
+
+  AUTOMATION_RUN_ID="$run_id"
+}
+
+finalize_automation_run() {
+  local exit_status="${1:-0}"
+  local final_status="completed"
+  local error_text=""
+
+  [[ -n "$AUTOMATION_RUN_ID" ]] || return 0
+  if [[ "$exit_status" -ne 0 ]]; then
+    final_status="failed"
+    error_text="helix-pr exited with status ${exit_status}"
+  fi
+
+  if ! HELIX_AUTOMATION_LIB_DIR="$SCRIPT_DIR/lib" \
+    HELIX_AUTOMATION_RUN_ID="$AUTOMATION_RUN_ID" \
+    HELIX_AUTOMATION_STATUS="$final_status" \
+    HELIX_AUTOMATION_ERROR="$error_text" \
+    HELIX_PROJECT_ROOT="$PROJECT_ROOT" \
+    python3 - <<'PY' 2>/dev/null
+import os
+import sys
+
+sys.path.insert(0, os.environ.get("HELIX_HOME") or os.path.dirname(os.path.dirname(os.environ["HELIX_AUTOMATION_LIB_DIR"])))
+from cli.lib import compatibility_adapter, helix_db
+
+error = os.environ.get("HELIX_AUTOMATION_ERROR", "").strip() or None
+with compatibility_adapter.write_connection(helix_db.resolve_default_db_path()) as conn:
+    helix_db.complete_automation_run(
+        conn,
+        int(os.environ["HELIX_AUTOMATION_RUN_ID"]),
+        os.environ["HELIX_AUTOMATION_STATUS"],
+        error,
+    )
+PY
+  then
+    echo "WARN: automation_runs completion failed for helix-pr" >&2
+  fi
+}
+
+require_opt_arg() {
+  local opt_name="$1"
+  if [[ $# -lt 2 || -z "${2:-}" || "${2:-}" == --* ]]; then
+    echo "Error: $opt_name requires a value" >&2
+    exit 2
+  fi
+}
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --dry-run) DRY_RUN=true; shift ;;
+    --gate) GATE=true; shift ;;
+    --auto-merge) AUTO_MERGE=true; shift ;;
+    --base)
+      require_opt_arg "$1" "${2-}"
+      BASE="$2"
+      shift 2
+      ;;
+    --title)
+      require_opt_arg "$1" "${2-}"
+      TITLE="$2"
+      shift 2
+      ;;
+    --body)
+      require_opt_arg "$1" "${2-}"
+      BODY_OVERRIDE="$2"
+      shift 2
+      ;;
+    --require-gates)
+      require_opt_arg "$1" "${2-}"
+      REQUIRE_GATES_RAW="$2"
+      shift 2
+      ;;
+    --force) FORCE=true; shift ;;
+    --help|-h)
+      echo "Usage: helix pr [--dry-run] [--gate] [--auto-merge] [--base main] [--title \"title\"] [--body \"body\"] [--require-gates G4,G6] [--force]"
+      echo ""
+      echo "Options:"
+      echo "  --dry-run      PR を作成せずに実行（--gate 併用時は検証のみ）"
+      echo "  --gate         push gate の 6 ゲート検証を実行してから PR を作成"
+      echo "  --auto-merge   --gate 成功後に gh pr merge --squash を実行"
+      echo "  --base     ベースブランチ (default: main)"
+      echo "  --title    PR タイトル"
+      echo "  --body         PR 本文を明示指定（未指定時は自動生成）"
+      echo "  --require-gates G4,G6  必須ゲートを明示指定（デフォルト判定を上書き）"
+      echo "  --force    ゲート未通過でも警告表示で続行"
+      exit 0
+      ;;
+    *) echo "Error: Unknown option: $1" >&2; exit 2 ;;
+  esac
+done
+
+if [[ "$AUTO_MERGE" == true && "$GATE" != true ]]; then
+  echo "Error: --auto-merge requires --gate" >&2
+  exit 2
+fi
+
+automation_metadata="$(
+  HELIX_AUTOMATION_BASE="$BASE" \
+  HELIX_AUTOMATION_DRY_RUN="$DRY_RUN" \
+  HELIX_AUTOMATION_GATE="$GATE" \
+  HELIX_AUTOMATION_AUTO_MERGE="$AUTO_MERGE" \
+  HELIX_AUTOMATION_FORCE="$FORCE" \
+  python3 - <<'PY'
+import json
+import os
+
+print(json.dumps({
+    "base": os.environ["HELIX_AUTOMATION_BASE"],
+    "dry_run": os.environ["HELIX_AUTOMATION_DRY_RUN"] == "true",
+    "gate": os.environ["HELIX_AUTOMATION_GATE"] == "true",
+    "auto_merge": os.environ["HELIX_AUTOMATION_AUTO_MERGE"] == "true",
+    "force": os.environ["HELIX_AUTOMATION_FORCE"] == "true",
+}, ensure_ascii=False, sort_keys=True))
+PY
+)"
+record_automation_run "helix-pr" "pr" "$automation_metadata" || true
+trap 'finalize_automation_run "$?"' EXIT
+export HELIX_AUTOMATION_RUN_ID="$AUTOMATION_RUN_ID"
+
+project_size=""
+if [[ -f "$MATRIX_FILE" ]]; then
+  project_size=$(python3 "$YAML_PARSER" read "$MATRIX_FILE" "project.size" 2>/dev/null || echo "")
+fi
+project_size="${project_size:-L}"
+
+required_gates=()
+if [[ -n "$REQUIRE_GATES_RAW" ]]; then
+  IFS=',' read -r -a required_candidates <<< "$REQUIRE_GATES_RAW"
+  for gate in "${required_candidates[@]}"; do
+    gate="${gate// /}"
+    [[ -n "$gate" ]] || continue
+    if [[ ! "$gate" =~ ^G(0\.5|1|1R|1\.5|[2-7])$ ]]; then
+      echo "Error: invalid gate in --require-gates: $gate" >&2
+      exit 2
+    fi
+    if [[ " ${required_gates[*]} " != *" $gate "* ]]; then
+      required_gates+=("$gate")
+    fi
+  done
+else
+  if [[ "$project_size" == "S" ]]; then
+    required_gates=("G4")
+  else
+    required_gates=("G6")
+  fi
+fi
+
+run_gate_validation() {
+  local module_path="$SCRIPT_DIR/lib/push_gate.py"
+  local base_branch="$BASE"
+  local rc=0
+
+  if python3 - "$module_path" "$base_branch" <<'PY'
+from __future__ import annotations
+
+import inspect
+import importlib.util
+import pathlib
+import sys
+import traceback
+
+module_path = pathlib.Path(sys.argv[1])
+base_branch = sys.argv[2]
+if not module_path.exists():
+    print(f"WARN: gate module not found, skipping validation: {module_path}", file=sys.stderr)
+    raise SystemExit(10)
+
+spec = importlib.util.spec_from_file_location("push_gate", module_path)
+if spec is None or spec.loader is None:
+    print(f"WARN: gate module loader unavailable, skipping validation: {module_path}", file=sys.stderr)
+    raise SystemExit(10)
+
+module = importlib.util.module_from_spec(spec)
+try:
+    spec.loader.exec_module(module)
+except Exception as exc:  # pragma: no cover - exercised via subprocess
+    print(f"WARN: failed to import push_gate, skipping validation: {exc}", file=sys.stderr)
+    raise SystemExit(10)
+
+run_all_gates = getattr(module, "run_all_gates", None)
+if not callable(run_all_gates):
+    print("WARN: push_gate.run_all_gates is unavailable, skipping validation", file=sys.stderr)
+    raise SystemExit(10)
+
+try:
+    kwargs = {}
+    params = inspect.signature(run_all_gates).parameters
+    if "execute" in params:
+        kwargs["execute"] = False
+    if "remote" in params:
+        kwargs["remote"] = "origin"
+    if "branch" in params:
+        kwargs["branch"] = base_branch
+    result = run_all_gates(**kwargs)
+except SystemExit as exc:
+    code = exc.code if isinstance(exc.code, int) else 1
+    raise SystemExit(code)
+except Exception:  # pragma: no cover - exercised via subprocess
+    traceback.print_exc(file=sys.stderr)
+    raise SystemExit(1)
+
+if result is None:
+    raise SystemExit(0)
+if isinstance(result, bool):
+    raise SystemExit(0 if result else 1)
+if isinstance(result, int):
+    raise SystemExit(result)
+if isinstance(result, dict):
+    raise SystemExit(0 if bool(result.get("ok")) else 1)
+
+raise SystemExit(0)
+PY
+  then
+    rc=0
+  else
+    rc=$?
+  fi
+
+  case "$rc" in
+    0)
+      echo "Gate validation: passed"
+      return 0
+      ;;
+    10)
+      echo "警告: push gate 検証をスキップしました" >&2
+      return 0
+      ;;
+    *)
+      echo "Error: gate validation failed" >&2
+      return 1
+      ;;
+  esac
+}
+
+if [[ "$GATE" == true ]]; then
+  run_gate_validation || exit 1
+elif [[ ! -f "$PHASE_FILE" ]]; then
+  if [[ "$FORCE" == true ]]; then
+    echo "警告: phase.yaml が見つからないためゲート状態の確認をスキップします (--force)" >&2
+  else
+    echo "エラー: phase.yaml が見つからないためゲート状態を確認できません。--force でバイパスできます。" >&2
+    exit 1
+  fi
+else
+  unmet=()
+  for gate in "${required_gates[@]}"; do
+    status=$(python3 "$YAML_PARSER" read "$PHASE_FILE" "gates.${gate}.status" 2>/dev/null || echo "pending")
+    if [[ "$status" != "passed" ]]; then
+      unmet+=("${gate}:${status:-pending}")
+    fi
+  done
+
+  if [[ ${#unmet[@]} -gt 0 ]]; then
+    if [[ "$FORCE" == true ]]; then
+      echo "警告: 必須ゲート未通過ですが --force により継続します: ${unmet[*]}" >&2
+    else
+      echo "エラー: 必須ゲート未通過: ${unmet[*]}" >&2
+      echo "ヒント: --require-gates で条件を明示、または --force で警告付きバイパス可能です。" >&2
+      exit 1
+    fi
+  fi
+fi
+
+# --- ブランチ情報 ---
+BRANCH=$(git -C "$PROJECT_ROOT" branch --show-current 2>/dev/null || echo "unknown")
+if [[ -z "$TITLE" ]]; then
+  TITLE="$BRANCH"
+fi
+
+# --- Conventional Commits からリリースノート生成 ---
+append_release_section() {
+  local heading="$1"
+  local body="$2"
+  local output="$3"
+  [[ -z "$body" ]] && return 0
+
+  printf "### %s\n" "$heading" >> "$output"
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    printf -- "- %s\n" "$line" >> "$output"
+  done <<< "$body"
+  printf "\n" >> "$output"
+}
+
+generate_release_notes() {
+  local base_branch="${1:-main}"
+  local tmp
+  tmp=$(mktemp /tmp/helix-pr-notes-XXXXXX)
+
+  local feats fixes docs
+  feats=$(git -C "$PROJECT_ROOT" log "$base_branch"..HEAD --oneline --grep='^feat' 2>/dev/null || true)
+  fixes=$(git -C "$PROJECT_ROOT" log "$base_branch"..HEAD --oneline --grep='^fix' 2>/dev/null || true)
+  docs=$(git -C "$PROJECT_ROOT" log "$base_branch"..HEAD --oneline --grep='^docs' 2>/dev/null || true)
+
+  append_release_section "新機能" "$feats" "$tmp"
+  append_release_section "バグ修正" "$fixes" "$tmp"
+  append_release_section "ドキュメント" "$docs" "$tmp"
+
+  if [[ ! -s "$tmp" ]]; then
+    echo "（Conventional Commits の feat/fix/docs は検出されませんでした）"
+  else
+    cat "$tmp"
+  fi
+  rm -f "$tmp"
+}
+
+# --- Summary（コミットから） ---
+COMMITS=$(git -C "$PROJECT_ROOT" log --oneline "$BASE..HEAD" 2>/dev/null || echo "(no commits)")
+RELEASE_NOTES=$(generate_release_notes "$BASE")
+
+# --- Changes ---
+DIFF_STAT=$(git -C "$PROJECT_ROOT" diff --stat "$BASE..HEAD" 2>/dev/null || echo "(no diff)")
+
+# --- Gate Results ---
+GATE_TABLE=""
+if [[ -f "$PHASE_FILE" ]]; then
+  PHASE_JSON=$(python3 "$YAML_PARSER" dump "$PHASE_FILE" 2>/dev/null || echo "{}")
+  GATE_TABLE=$(echo "$PHASE_JSON" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+gates = d.get('gates', {})
+lines = ['| Gate | Status | Date |', '|------|--------|------|']
+for g in ['G1', 'G1.5', 'G1R', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7']:
+    v = gates.get(g, {})
+    s = v.get('status', 'pending') if isinstance(v, dict) else 'pending'
+    dt = v.get('date', '—') if isinstance(v, dict) else '—'
+    if s != 'pending':
+        lines.append(f'| {g} | {s} | {dt} |')
+print('\n'.join(lines))
+" 2>/dev/null)
+fi
+
+# --- Sprint Status ---
+SPRINT_STATUS=""
+if [[ -f "$PHASE_FILE" ]]; then
+  sprint_step=$(echo "$PHASE_JSON" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+print(d.get('sprint', {}).get('current_step', '') or 'N/A')
+" 2>/dev/null || echo "N/A")
+  if [[ "$sprint_step" != "N/A" ]]; then
+    SPRINT_STATUS="Sprint: $sprint_step"
+  fi
+fi
+
+# --- PR Body 構築 ---
+GENERATED_BODY="## Summary
+
+$(echo "$COMMITS" | head -20)
+
+## Release Notes
+
+$RELEASE_NOTES
+
+## Gate Results
+
+$(printf "$GATE_TABLE")
+
+${SPRINT_STATUS:+## Sprint Status
+$SPRINT_STATUS
+}
+## Changes
+
+\`\`\`
+$(echo "$DIFF_STAT" | head -30)
+\`\`\`
+
+## Test Plan
+- [ ] 静的チェック通過（lint, type check）
+- [ ] ユニットテスト通過
+- [ ] 手動確認完了
+
+---
+Generated by \`helix pr\`"
+
+BODY="$GENERATED_BODY"
+if [[ -n "$BODY_OVERRIDE" ]]; then
+  BODY="$BODY_OVERRIDE"
+fi
+
+# --- 実行 ---
+if [[ "$DRY_RUN" == true ]]; then
+  if [[ "$GATE" == true ]]; then
+    echo "Gate validation completed (dry-run); PR creation skipped."
+  else
+    echo "=== PR Preview ==="
+    echo "Title: $TITLE"
+    echo "Base:  $BASE"
+    echo "Branch: $BRANCH"
+    echo ""
+    echo "$BODY"
+  fi
+else
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "Error: gh (GitHub CLI) not found" >&2
+    echo "Use --dry-run to output markdown instead" >&2
+    exit 1
+  fi
+  gh pr create --title "$TITLE" --body "$BODY" --base "$BASE" || exit 1
+  if [[ "$AUTO_MERGE" == true ]]; then
+    gh pr merge --squash || exit 1
+  fi
+fi
