@@ -29,7 +29,7 @@ dependencies:
   blocks: []
 related_adr: []
 related_docs:
-  - docs/governance/ut-tdd-agent-harness-requirements_v1.1.md
+  - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
 ---
 
 ## §0 PLAN
@@ -89,4 +89,4 @@ related_docs:
 
 - 関連 PLAN: (依存 / 後続 PLAN を列挙)
 - 関連 ADR: (採用判断 ADR があれば列挙)
-- 参照 docs: `docs/governance/ut-tdd-agent-harness-requirements_v1.1.md`
+- 参照 docs: `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md`

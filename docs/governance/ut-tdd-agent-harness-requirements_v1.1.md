@@ -1,5 +1,7 @@
 # UT-TDD-agent-harness 要件定義書
 
+> **⚠️ Superseded (2026-05-27)**: 本書は **`ut-tdd-agent-harness-requirements_v1.2.md` に置き換えられた旧版**。現行正本ではない。v1.2 で L0-L14 + W-model / 9-mode / 配線要件 / 実装言語 = TypeScript (ADR-001) を反映。参照は v1.2 を使うこと。本書は履歴として残置。
+
 - **Version**: 1.1
 - **対応構想書**: `ut-tdd-agent-harness-concept_v3.0.md`
 - **位置付け**: 要件定義 (L1-L2 受入条件層)

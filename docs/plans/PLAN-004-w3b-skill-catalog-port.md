@@ -4,7 +4,7 @@ title: "PLAN-004: W3b-A skill catalog port (rule-based catalog + §7.2 skill sug
 kind: impl
 layer: L4
 drive: be
-status: confirmed
+status: archived
 created: 2026-05-22
 confirmed_at: 2026-05-22
 owner: PM (Opus)

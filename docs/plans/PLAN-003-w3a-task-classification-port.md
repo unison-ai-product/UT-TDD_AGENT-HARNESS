@@ -4,7 +4,7 @@ title: "PLAN-003: W3a task classification port (effort + type + dispatcher)"
 kind: impl
 layer: L4
 drive: be
-status: completed
+status: archived
 created: 2026-05-22
 confirmed_at: 2026-05-22
 completed_at: 2026-05-22

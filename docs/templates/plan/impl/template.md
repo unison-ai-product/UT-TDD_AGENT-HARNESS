@@ -2,7 +2,7 @@
 plan_id: PLAN-NNN-impl-slug
 title: "PLAN-NNN: (実装タイトル placeholder)"
 kind: impl
-layer: L4
+layer: L7
 drive: be
 status: draft
 created: 2026-MM-DD
@@ -17,19 +17,20 @@ agent_slots:
   - role: qa
     slot_label: "QA — テスト戦略・品質判定"
 generates:
-  - artifact_path: src/ut_tdd/<module>.py
-    artifact_type: python_module
-  - artifact_path: src/ut_tdd/tests/test_<module>.py
+  - artifact_path: src/<module>.ts
+    artifact_type: source_module
+  - artifact_path: tests/<module>.test.ts
     artifact_type: test_code
-  - artifact_path: docs/v2/L4-test-design/PLAN-NNN-unit-test-design.md
+  - artifact_path: docs/test-design/PLAN-NNN-unit-test-design.md
     artifact_type: test_design
 dependencies:
   parent: null
   requires: []
   blocks: []
-related_adr: []
+related_adr:
+  - docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
 related_docs:
-  - docs/governance/ut-tdd-agent-harness-requirements_v1.1.md
+  - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
 ---
 
 ## §0 PLAN
@@ -64,7 +65,7 @@ related_docs:
 
 ### Step 5: 機械チェック
 
-- `python3 -m py_compile`、shellcheck / markdownlint / yamllint、関連 lint・静的検査を実行し結果を記録。
+- `tsc --noEmit` (型チェック)、`eslint` / shellcheck / markdownlint / yamllint、関連 lint・静的検査を実行し結果を記録。
 
 ### Step 6: テスト
 
@@ -82,7 +83,7 @@ related_docs:
 
 - [ ] Step 1〜8 のすべてが該当 section に存在
 - [ ] `generates` に対応する実装ファイルとテストファイルが存在
-- [ ] py_compile + pytest 全 PASS
+- [ ] `tsc --noEmit` + `vitest` 全 PASS
 - [ ] 関連設計 PLAN への双方向 trace が明示済み
 - [ ] frontmatter `kind == impl`、§0〜§5 完備
 
@@ -90,4 +91,4 @@ related_docs:
 
 - 関連 PLAN: (依存 / 後続 PLAN を列挙)
 - 関連 ADR: (採用判断 ADR があれば列挙)
-- 参照 docs: `docs/governance/ut-tdd-agent-harness-requirements_v1.1.md`、`docs/migration/helix-to-ut-tdd-cutover-strategy.md`
+- 参照 docs: `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md`、`docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
