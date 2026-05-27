@@ -39,3 +39,16 @@ dist/
 *.tsbuildinfo
 coverage/
 .vitest/
+
+# OS / editor junk (Windows / macOS / Linux クロスプラットフォーム team)
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.swp
+*~
+
+# debug logs
+*-debug.log
+npm-debug.log*
+bun-debug.log*
+# 注: .vscode/ は共有設定 (settings.json / extensions.json) を commit したい場合があるため意図的に未 ignore (team 判断)
