@@ -40,7 +40,7 @@ flowchart LR
     D --> E[Phase E 検出ガードレール + 自動化]
     E --> F[Phase F 可視化]
     F --> G[Phase G FE 弱点強化]
-    G --> H[Phase H AI Harness Runtime Bridge]
+    G --> H[Phase H Agent Transformation]
     H --> I[Phase I Legacy Import]
     I --> J[Phase J dogfood]
     J -->|feedback| B
@@ -603,7 +603,7 @@ graph LR
 - `mock→promoted` の append-only を固定。
 - FE の functional_freeze を本線化。
 
-### 8.2 AI Harness Runtime Bridge (Phase H)
+### 8.2 Agent Transformation (Phase H)
 
 - BaseAgent 統一 interface。
 - LLM router 集約。
@@ -662,7 +662,7 @@ flowchart TB
   end
   subgraph Deriv[派生]
     G1[FE 強化]
-    H1[AI Harness Runtime Bridge]
+    H1[Agent Transformation]
     I1[Legacy Import]
   end
 
