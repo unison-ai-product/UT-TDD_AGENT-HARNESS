@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-NNN-impl-slug
-title: "PLAN-NNN: (実装タイトル placeholder)"
+plan_id: PLAN-L7-NN-impl-slug   # §1.10 A: PLAN-<layer>-<NN>-<slug>。impl は layer L7
+title: "PLAN-L7-NN: (実装タイトル placeholder)"
 kind: impl
 layer: L7
 drive: be

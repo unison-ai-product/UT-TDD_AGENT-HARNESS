@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-NNN-design-slug
-title: "PLAN-NNN: (設計タイトル placeholder)"
+plan_id: PLAN-L2-NN-design-slug   # §1.10 A: PLAN-<layer>-<NN>-<slug>。layer は frontmatter layer と一致 (L2-L6 設計)
+title: "PLAN-L2-NN: (設計タイトル placeholder)"
 kind: design
 layer: L2
 drive: be
