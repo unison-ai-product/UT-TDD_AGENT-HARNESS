@@ -25,10 +25,17 @@ credentials.json
 # HELIX runtime state
 .helix/
 
-# Python bytecode (generated)
+# Python bytecode (旧 W1-W3a port の残骸。ADR-001 で TS rebuild、念のため残置)
 __pycache__/
 *.py[cod]
 *$py.class
 
 # PLAN frontmatter runtime lock (W1 cross-platform lock impl)
 docs/plans/*.lock
+
+# Node / TypeScript (UT-TDD harness core, ADR-001)
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+.vitest/

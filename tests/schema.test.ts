@@ -1,0 +1,50 @@
+import { describe, it, expect } from "vitest";
+import {
+  VALID_LAYERS,
+  VALID_KINDS,
+  VALID_ORCHESTRATION_MODES,
+  kindSchema,
+  recommendedCommandV1Schema,
+  W_MODEL_PAIRS,
+} from "../src/schema";
+
+describe("schema (zod single source, ADR-001 / requirements_v1.2 §1)", () => {
+  it("L0-L14 + cross = 16 layers", () => {
+    expect(VALID_LAYERS).toHaveLength(16);
+    expect(VALID_LAYERS).toContain("L14");
+    expect(VALID_LAYERS).toContain("cross");
+  });
+
+  it("11 kinds; zod rejects unknown", () => {
+    expect(VALID_KINDS).toHaveLength(11);
+    expect(kindSchema.safeParse("impl").success).toBe(true);
+    expect(kindSchema.safeParse("nope").success).toBe(false);
+  });
+
+  it("5 orchestration modes", () => {
+    expect(VALID_ORCHESTRATION_MODES).toHaveLength(5);
+    expect(VALID_ORCHESTRATION_MODES).toContain("claude_judge_codex_impl");
+  });
+
+  it("W-model pairs L6<->L7 / L1<->L14", () => {
+    expect(W_MODEL_PAIRS["L6"]).toBe("L7");
+    expect(W_MODEL_PAIRS["L1"]).toBe("L14");
+  });
+
+  it("RecommendedCommandV1 rejects helix command, accepts ut-tdd", () => {
+    expect(
+      recommendedCommandV1Schema.safeParse({
+        schema_version: "v1",
+        command: "helix plan draft",
+        safety: {},
+      }).success,
+    ).toBe(false);
+    expect(
+      recommendedCommandV1Schema.safeParse({
+        schema_version: "v1",
+        command: "ut-tdd plan draft",
+        safety: {},
+      }).success,
+    ).toBe(true);
+  });
+});
