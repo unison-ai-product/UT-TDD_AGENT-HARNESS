@@ -1546,6 +1546,8 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 
 ## 9.1 ディレクトリ構造 + Phase 別必須種別 (R-C6 / R-C7 fix で 3 種別に分類)
 
+> **配置ルールの canonical 正本は `docs/governance/repository-structure.md`**（ツリー + 配置ルール + 命名 + 境界 + 禁止事項）。本 §9.1 は **Phase 0 の存在チェック（A/B/G 種別）** に特化する。両者が食い違う場合は repository-structure.md を構成の正、本 §9.1 を Phase 0 受入の正とする。
+
 凡例:
 - **A**: Phase 0-A 完了時に必須
 - **B**: Phase 0-B 完了時に追加必須
