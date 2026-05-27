@@ -1,0 +1,30 @@
+{
+  "name": "ut-tdd",
+  "version": "0.1.0",
+  "description": "UT-TDD Agent Harness — AI 実装エージェントをチーム開発で安全に使う検証・開発基盤 (TypeScript core, ADR-001)",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "ut-tdd": "./dist/ut-tdd"
+  },
+  "engines": {
+    "bun": ">=1.3"
+  },
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "build": "bun build src/cli.ts --compile --outfile dist/ut-tdd",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "yaml": "^2.5.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.2"
+  }
+}

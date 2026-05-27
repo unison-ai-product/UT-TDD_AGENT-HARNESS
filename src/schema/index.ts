@@ -1,0 +1,146 @@
+/**
+ * UT-TDD schema 単一正本 (ADR-001 / requirements_v1.2 §1, §7.8).
+ * zod を single source とし、実行時検証 + 型推論を 1 本化する (enum drift を型で抑止)。
+ * 最終同期: requirements v1.2 §1.2-§1.8 / §7.8.4
+ */
+import { z } from "zod";
+
+/** §1.3 VALID_KINDS (11 種) */
+export const VALID_KINDS = [
+  "impl",
+  "design",
+  "poc",
+  "reverse",
+  "add-design",
+  "add-impl",
+  "refactor",
+  "retrofit",
+  "recovery",
+  "troubleshoot",
+  "research",
+] as const;
+export const kindSchema = z.enum(VALID_KINDS);
+export type Kind = z.infer<typeof kindSchema>;
+
+/** §1.4 VALID_LAYERS (16 種 = V2 L0-L14 + cross、W-model) */
+export const VALID_LAYERS = [
+  "L0", // 企画
+  "L1", // 要求定義 (業務要求) ↔ L14
+  "L2", // 画面設計 ↔ L10
+  "L3", // 要件定義 (FR+AC) ↔ L12
+  "L4", // 基本設計 ↔ L9
+  "L5", // 詳細設計 ↔ L8
+  "L6", // 機能設計 ↔ L7
+  "L7", // 実装スプリント
+  "L8", // 結合テスト
+  "L9", // 総合テスト
+  "L10", // UX 磨き
+  "L11", // 総合レビュー + UAT
+  "L12", // デプロイ + 受入
+  "L13", // デプロイ後検証
+  "L14", // 運用検証 + 改善
+  "cross", // 横断 PLAN
+] as const;
+export const layerSchema = z.enum(VALID_LAYERS);
+export type Layer = z.infer<typeof layerSchema>;
+
+/** W-model 左右ペア (左=設計, 右=実施) */
+export const W_MODEL_PAIRS: Record<string, string> = {
+  L1: "L14",
+  L2: "L10",
+  L3: "L12",
+  L4: "L9",
+  L5: "L8",
+  L6: "L7",
+};
+
+/** §1.6 VALID_DRIVES (9 種) */
+export const VALID_DRIVES = [
+  "be",
+  "fe",
+  "fullstack",
+  "db",
+  "agent",
+  "scrum",
+  "reverse",
+  "poc",
+  "troubleshoot",
+] as const;
+export const driveSchema = z.enum(VALID_DRIVES);
+export type Drive = z.infer<typeof driveSchema>;
+
+/** §1.2 VALID_STATUSES (4 種) */
+export const VALID_STATUSES = ["draft", "confirmed", "completed", "archived"] as const;
+export const statusSchema = z.enum(VALID_STATUSES);
+export type Status = z.infer<typeof statusSchema>;
+
+/** §1.8 VALID_ROLES (7 種) */
+export const VALID_ROLES = ["po", "tl", "qa", "aim", "uiux", "se", "docs"] as const;
+export const roleSchema = z.enum(VALID_ROLES);
+export type Role = z.infer<typeof roleSchema>;
+
+/** §1.5 VALID_WORKFLOW_PHASES (10 種、Scrum / Reverse) */
+export const VALID_WORKFLOW_PHASES = [
+  "S0",
+  "S1",
+  "S2",
+  "S3",
+  "S4",
+  "R0",
+  "R1",
+  "R2",
+  "R3",
+  "R4",
+] as const;
+export const workflowPhaseSchema = z.enum(VALID_WORKFLOW_PHASES);
+export type WorkflowPhase = z.infer<typeof workflowPhaseSchema>;
+
+/**
+ * §1.7 VALID_ARTIFACT_TYPES (19 種、test_design / test_code 分離済)。
+ * TODO(scaffold): requirements_v1.2 §1.7 全 19 種と突合して完成させる。
+ * 現時点は既知分のみ (python_module → source_module 改名済、ADR-001)。
+ */
+export const VALID_ARTIFACT_TYPES = [
+  "design_doc",
+  "adr_snapshot",
+  "skill_doc",
+  "markdown_doc",
+  "doc_update",
+  "source_module",
+  "script",
+  "cli_extension",
+  "template",
+  "test_design",
+  "test_code",
+  "hook",
+  "schema_migration",
+  "config",
+] as const;
+export const artifactTypeSchema = z.enum(VALID_ARTIFACT_TYPES);
+export type ArtifactType = z.infer<typeof artifactTypeSchema>;
+
+/** §7.8.4 VALID_ORCHESTRATION_MODES (5 種、drive×layer 注入) */
+export const VALID_ORCHESTRATION_MODES = [
+  "pm_lead",
+  "claude_judge",
+  "claude_judge_codex_impl",
+  "codex_impl_qa_verify",
+  "claude_design_impl",
+] as const;
+export const orchestrationModeSchema = z.enum(VALID_ORCHESTRATION_MODES);
+export type OrchestrationMode = z.infer<typeof orchestrationModeSchema>;
+
+/** §7.8.3 mode→command 機械契約 RecommendedCommandV1 */
+export const recommendedCommandV1Schema = z.object({
+  schema_version: z.literal("v1"),
+  command: z.string().refine((c) => c.startsWith("ut-tdd"), {
+    message: "command は ut-tdd 始まりのみ許可 (helix を含めば不可、ADR-001 / §7.8.2)",
+  }),
+  args: z.record(z.string(), z.unknown()).default({}),
+  safety: z.object({
+    auto_apply: z.boolean().default(false),
+    requires_human_approval: z.boolean().default(false),
+    requires_preflight: z.boolean().default(false),
+  }),
+});
+export type RecommendedCommandV1 = z.infer<typeof recommendedCommandV1Schema>;
