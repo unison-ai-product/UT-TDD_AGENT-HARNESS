@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  VALID_LAYERS,
-  VALID_KINDS,
-  VALID_ORCHESTRATION_MODES,
   kindSchema,
   recommendedCommandV1Schema,
+  VALID_KINDS,
+  VALID_LAYERS,
+  VALID_ORCHESTRATION_MODES,
   W_MODEL_PAIRS,
 } from "../src/schema";
 

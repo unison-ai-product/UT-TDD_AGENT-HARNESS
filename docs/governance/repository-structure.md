@@ -124,3 +124,15 @@ UT-TDD-agent-harness/
 - `vendor/helix-source/` を直接編集しない（移植は UT-TDD 所有パスへ概念から再実装）。
 - `.ut-tdd/` runtime state を docs 目的で Git 追跡しない。
 - 日本語ファイル名を使わない。
+
+## 8. config 最小化方針 (root の散らかり防止)
+
+JS/TS は「1 ツール = 1 設定ファイル」で root に config が溜まりやすい。**フォルダに隠す**のはツールが root を探すため不可（壊れる）。代わりに **ツールを減らす + package.json に集約** で抑える。
+
+- **root config の下限**（避けられない）: `package.json` / `tsconfig.json` / `bun.lock`。
+- **lint + format = Biome 1 枚 (`biome.json`)**。**eslint + prettier を別々に足さない**（plugin/ignore で 4-6 枚に増えるのを防ぐ）。`bun run lint` / `bun run format`。
+- **test = vitest（設定ファイル 0、デフォルト動作）**。`vitest.config.ts` は本当に必要になった時だけ作る。
+- commitlint 等 **config-in-package.json 対応**のツールは package.json のキーに入れ、新規 dotfile を作らない。
+- **新ツール導入時の判断順**: ① 既存ツール (Biome / Bun / tsc) で代替できるか → ② package.json に同居できるか → ③ どうしても単独 config が要るか。①②で済むなら root に新ファイルを増やさない。
+
+→ root config は **`package.json` / `tsconfig.json` / `bun.lock` / `biome.json` の 4 枚で頭打ち**に保つ。

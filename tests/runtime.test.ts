@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { detectMode } from "../src/runtime/detect";
 
 describe("detectMode (requirements_v1.2 §7.1)", () => {
