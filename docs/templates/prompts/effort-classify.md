@@ -1,9 +1,9 @@
 # UT-TDD task classify + estimate prompt (LLM 委譲用、§7.2 準拠)
 
-> 移植元: vendor/helix-source/cli/templates/prompts/effort-classify.md (PLAN-003 W3a port)
-> 仕様: docs/governance/ut-tdd-agent-harness-requirements_v1.1.md §7.1 / §7.2
+> 移植元: vendor/helix-source/cli/templates/prompts/effort-classify.md (概念参照。旧 PLAN-003 W3a の Python port は ADR-001 (TS 再実装) で superseded)
+> 仕様: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md §7.1 / §7.2
 > rule-based path のみで判定不能 (confidence < 0.7 or boundary) の場合に LLM 委譲する。
-> 通常は src/ut_tdd/task/classifier.py + effort.py の rule-based path が正本。
+> 通常は src/task/classifier.ts + effort.ts (TS) の rule-based path が正本。
 
 ## 入力
 
@@ -83,7 +83,7 @@ buffered = expected * risk_factor、story_points = Fibonacci(buffered_hours)
     "complexity": "low|medium|high|xhigh",
     "split_required": false,
     "recommended_path": "...",
-    "recommended_gates": ["G3", "G4"],
+    "recommended_gates": ["G6", "G7"],
     "confidence": 0.82,
     "reasons": ["..."]
   },
@@ -107,6 +107,6 @@ buffered = expected * risk_factor、story_points = Fibonacci(buffered_hours)
 ## UT-TDD 注記
 
 - 本 prompt の LLM 委譲経路は **W3a (PLAN-003) 未配線**。skill_recommender + LLM dispatcher と統合する W3b (PLAN-004) で配線する。
-- rule-based path (src/ut_tdd/task/) のみで判定不能なケース (confidence < 0.7、境界 score、要件曖昧) の fallback として、本テンプレートを LLM に投げる想定。
+- rule-based path (src/task/、TS) のみで判定不能なケース (confidence < 0.7、境界 score、要件曖昧) の fallback として、本テンプレートを LLM に投げる想定。
 - 直接 `helix codex` / Codex SDK を呼ばず、UT-TDD harness 経由で委譲する (HELIX-style provider SDK fallback は §禁止事項)。
 - model 名 (gpt-X / claude-X) は本書では明示しない。capability class (frontier-reviewer / worker / fast-checker) で抽象化し、実モデル名は `.ut-tdd/teams/*.yaml` の local override に閉じ込める。

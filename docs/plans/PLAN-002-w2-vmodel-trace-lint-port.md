@@ -4,7 +4,7 @@ title: "PLAN-002: W2 V-model trace lint port (vmodel_loader / vmodel_lint / temp
 kind: impl
 layer: L4
 drive: be
-status: confirmed
+status: archived
 created: 2026-05-22
 confirmed_at: 2026-05-22
 owner: PM (Opus)

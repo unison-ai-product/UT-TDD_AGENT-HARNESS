@@ -6,12 +6,13 @@
 
 Claude Code / Codex / human reviewer は、通常タスクでは次の順に読む。
 
-1. `ut-tdd-agent-harness-concept_v3.0.md`
-2. `ut-tdd-agent-harness-requirements_v1.1.md`
+1. `ut-tdd-agent-harness-concept_v3.1.md`
+2. `ut-tdd-agent-harness-requirements_v1.2.md`
 3. `ut-tdd-agent-harness-extraction-plan_v0.1.md`
-4. `../migration/helix-to-ut-tdd-cutover-strategy.md`
+4. `../adr/ADR-001-ut-tdd-harness-redesign-and-language.md` (再設計方針 + 実装言語 = TypeScript)
 5. `../migration/helix-source-inventory.md`
-6. `../migration/helix-porting-map.md`
+
+> **ADR-001 連動**: 実装は **HELIX 概念のみ取り込み + TypeScript で全面再実装**。`../migration/helix-porting-map.md` と `helix-to-ut-tdd-cutover-strategy.md` の **Python code-port 部分は superseded**。これらは HELIX 能力インベントリ / 移行思想の参考として残置し、code-port 計画としては使わない (PLAN-001..004 も同様に superseded)。
 
 ## Reference Only
 

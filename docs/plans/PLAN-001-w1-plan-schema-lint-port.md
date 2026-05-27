@@ -4,7 +4,7 @@ title: "PLAN-001: W1 — PLAN schema and lint port"
 kind: impl
 layer: L4
 drive: be
-status: confirmed
+status: archived
 created: 2026-05-22
 owner: "PM (Opus)"
 agent_slots:

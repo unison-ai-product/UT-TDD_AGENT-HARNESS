@@ -1,5 +1,7 @@
 # UT-TDD-agent-harness 構想書
 
+> **⚠️ Superseded (2026-05-27)**: 本書は **`ut-tdd-agent-harness-concept_v3.1.md` に置き換えられた旧版**。現行正本ではない。v3.1 で V2 (L0-L14 + W-model) / 9-mode / 配線 / 実装言語 = TypeScript (ADR-001) を反映。参照は v3.1 を使うこと。本書は履歴として残置。
+
 - **Version**: 3.0
 - **位置付け**: 構想書 (L1 概念層) / 要件定義書は別ファイル
 - **対応構想書**: AI駆動開発チーム構想書 v1.1

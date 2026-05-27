@@ -1,8 +1,10 @@
 # HELIX → UT-TDD Cutover Strategy
 
 Date: 2026-05-22
-Status: draft（PLAN-001 起票時に確立）
+Status: draft（PLAN-001 起票時に確立）/ **partly superseded by ADR-001 (2026-05-27)**
 Owner: PM (Opus) + PO (ユーザー)
+
+> **Superseded in part (ADR-001)**: 3 層モデル・wave・swap-and-verify の **移行思想は引き続き有効**。ただし「HELIX の Python code を `src/ut_tdd/` へ port」する **code-port 部分は superseded** — 実装は **TypeScript で全面再実装**し、HELIX は概念参照のみとする (`vendor/helix-source/` のコードは port しない)。正本は `../adr/ADR-001-ut-tdd-harness-redesign-and-language.md`。
 
 ## 目的
 

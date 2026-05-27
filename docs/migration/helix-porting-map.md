@@ -1,5 +1,7 @@
 # HELIX to UT-TDD Porting Map
 
+> **Superseded (ADR-001, 2026-05-27)**: 本 map は HELIX Python コードの file 単位 port 計画だが、実装方針が **TypeScript で全面再実装 (HELIX は概念のみ取り込み)** に変更されたため、**code-port 計画としては superseded**。本書は **HELIX 能力インベントリ / TS 再実装時の機能参照**として残置する。既存の `src/ut_tdd/*.py` (W1-W3a port) も TS 再実装で置換予定。正本は `../adr/ADR-001-ut-tdd-harness-redesign-and-language.md` / `concept_v3.1` / `requirements_v1.2`。
+
 ## Purpose
 
 This document is the execution map for turning the HELIX snapshot into UT-TDD-owned assets.
