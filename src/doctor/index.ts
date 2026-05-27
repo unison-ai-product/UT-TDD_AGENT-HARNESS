@@ -1,6 +1,7 @@
 /** 統合検証 doctor (requirements_v1.2 §7 / §7.8.5). scaffold stub — 検出器は後続 PLAN。 */
-import { detectMode } from "../runtime/detect";
+
 import type { LintResult } from "../plan/lint";
+import { detectMode } from "../runtime/detect";
 
 export function runDoctor(): LintResult {
   const d = detectMode();

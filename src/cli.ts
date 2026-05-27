@@ -5,10 +5,10 @@
  * 現状は scaffold: status / doctor は最小実装、plan/vmodel lint は stub。
  */
 import { Command } from "commander";
-import { detectMode } from "./runtime/detect";
-import { lintPlan } from "./plan/lint";
-import { lintVmodel } from "./vmodel/lint";
 import { runDoctor } from "./doctor";
+import { lintPlan } from "./plan/lint";
+import { detectMode } from "./runtime/detect";
+import { lintVmodel } from "./vmodel/lint";
 
 const program = new Command();
 program

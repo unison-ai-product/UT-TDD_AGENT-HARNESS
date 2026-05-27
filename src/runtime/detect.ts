@@ -52,5 +52,12 @@ export function detectMode(): RuntimeDetection {
   (claude ? available : missing).push("claude");
   (codex ? available : missing).push("codex");
 
-  return { mode, claude, codex, currentRuntime, availableRuntimes: available, missingRuntimes: missing };
+  return {
+    mode,
+    claude,
+    codex,
+    currentRuntime,
+    availableRuntimes: available,
+    missingRuntimes: missing,
+  };
 }
