@@ -1,3 +1,5 @@
+> **⚠️ SUPERSEDED by `SESSION-2026-05-27b-handover.md`** (同日 2 回目の session: 企画書整理 + `kind=charter`/G0.5 新設 + L0 骨組み)。本書の §2 Next Action は 27b §2 に更新済み。背景 (TS pivot) は引き続き有効。
+
 # Session Handover — 2026-05-27 (V2 取り込み + TS 全面再設計へ pivot)
 
 > 目的: HELIX V2 の工程・モード・配線をチーム開発向けに governance へ取り込み、実装言語を TypeScript に確定して TS scaffold まで到達した、その引き継ぎ。

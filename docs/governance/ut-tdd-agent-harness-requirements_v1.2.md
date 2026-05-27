@@ -56,7 +56,7 @@ PLAN ドキュメントの YAML frontmatter は **機械検証可能な必須フ
 ---
 plan_id: PLAN-NNN-slug                       # 形式: PLAN-\d{3}(-[a-z0-9-]+)? または PLAN-MM-\d{3}
 title: "PLAN-NNN: タイトル"
-kind: impl                                    # §1.3 の 11 種から
+kind: impl                                    # §1.3 の 12 種から
 layer: L7                                      # §1.4 の 16 種 (L0-L14 + cross) から。impl は L7 実装スプリント
 drive: be                                     # §1.6 の 9 種から
 status: draft                                 # §1.2 の VALID_STATUSES から
@@ -156,21 +156,24 @@ dependencies:
 | `rejected` | 仮説却下、本実装しない | PLAN を `status=archived` に遷移 |
 | `pivot` | 仮説修正、別方向で再検証 | 新規 `poc` kind PLAN を起票 (旧 PLAN は `archived`) |
 
-## 1.3 VALID_KINDS (11 種)
+## 1.3 VALID_KINDS (12 種)
 
 | kind | 用途 | 主な layer | 経路 |
 |------|------|------------|------|
-| `design` | 設計 doc 起票 (D-API / D-DB / D-CONTRACT 等) | L1-L3 | 経路 1 |
-| `impl` | 機能実装 (L4 Sprint) | L4 | 経路 1 |
+| `charter` | 企画書起票 (背景 / 目的 / スコープ / ROI / KGI・KPI / risk)。L0 起点・`parent_design` 不要 (root) | L0 | 経路 1 前段 |
+| `design` | 設計 / 定義 doc 起票 (業務要求 / 要件 FR+AC / D-API / D-DB / D-CONTRACT 等) | L1-L6 | 経路 1 |
+| `impl` | 機能実装 (L7 Sprint) | L7 | 経路 1 |
 | `poc` | 仮説検証 (Scrum S0-S4) | cross | 経路 2 |
 | `reverse` | 設計復元 (Reverse R0-R4) | cross | 経路 2 |
-| `add-design` | 既存設計への追補 | L2-L3 | 経路 3 |
-| `add-impl` | 既存実装への機能追加 | L4 | 経路 3 |
-| `refactor` | 機能変更なし内部改善 | L4 | 補助 |
-| `retrofit` | 既存規約への合わせ込み | L4 | 補助 |
+| `add-design` | 既存設計への追補 | L3-L6 | 経路 3 |
+| `add-impl` | 既存実装への機能追加 | L7 | 経路 3 |
+| `refactor` | 機能変更なし内部改善 | L7 | 補助 |
+| `retrofit` | 既存規約への合わせ込み | L7 | 補助 |
 | `recovery` | session 断絶・認識ずれからの再開 | cross | 補助 1 |
-| `troubleshoot` | バグ解析・障害対応 | L4 / L7 | 補助 1 |
-| `research` | 技術調査 doc | L1-L2 | 経路 1 前段 |
+| `troubleshoot` | バグ解析・障害対応 | L7 | 補助 1 |
+| `research` | 技術調査 doc | L1-L4 | 経路 1 前段 |
+
+> **主な layer 列**は §1.4 L0-L14 scheme に準拠 (旧 v1.1 番号から remap 済)。実装系 kind (impl / add-impl / refactor / retrofit / troubleshoot) は **L7 実装スプリント**。`charter` は L0 企画専用で、G0.5 企画突合 (§2.1.1) を経て `design` kind の L1 業務要求へ接続する。
 
 ## 1.4 VALID_LAYERS (16 種 = V2 L0-L14 + cross、v1.2 で L0-L14 + W-model 採用)
 
@@ -218,7 +221,7 @@ validator は `(kind, workflow_phase)` ペアが本表に存在しなければ f
 
 ### 9 種
 
-| drive | 用途 | L5 (Visual Refinement) 要否 |
+| drive | 用途 | L10 (UX 磨き) 要否 |
 |-------|------|----------------------------|
 | `be` | バックエンド / API / ロジック中心 | UI 変更時のみ |
 | `fe` | UI / モック駆動 | **常に必要** |
@@ -234,6 +237,7 @@ validator は `(kind, workflow_phase)` ペアが本表に存在しなければ f
 
 | kind | 許可 drive |
 |------|-----------|
+| `charter` | `be / fe / fullstack / db / agent` (企画段階で想定する drive を宣言) |
 | `design` | `be / fe / fullstack / db / agent` |
 | `impl` | `be / fe / fullstack / db / agent` |
 | `poc` | `scrum / poc` |
@@ -292,6 +296,7 @@ validator は以下条件を fail-close 検証:
 
 | 条件 | 必須 role |
 |------|-----------|
+| `kind=charter` または `layer=L0` (企画) | **`po` 必須** (+ G0.5 で `frontier-reviewer` review、§2.1.1) |
 | `kind in [design, impl, add-design, add-impl]` の任意 PLAN | **`tl` 必須** |
 | `kind=impl / add-impl` の L7 PLAN | **`qa` 追加必須** |
 | `kind=poc / recovery / troubleshoot` の任意 PLAN | **`aim` 必須** |
@@ -334,7 +339,7 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
 
 #### B. enum 検証
 
-- [ ] `kind` ∈ §1.3 VALID_KINDS (11 種) — 違反 → exit 1
+- [ ] `kind` ∈ §1.3 VALID_KINDS (12 種) — 違反 → exit 1
 - [ ] `layer` ∈ §1.4 VALID_LAYERS (16 種、`cross` 含む) — 違反 → exit 1
 - [ ] `drive` ∈ §1.6 VALID_DRIVES (9 種) — 違反 → exit 1
 - [ ] `status` ∈ §1.2 VALID_STATUSES (4 種) — 違反 → exit 1
@@ -378,6 +383,16 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
 | ② 実装コード | `src/...` | `source_module` / `script` / `cli_extension` 等 | 言語標準 |
 | ③ テスト設計 | `docs/test-design/<feature>/<name>-test-design.md` | `test_design` | 例: `D-API-audit-test-design.md` |
 | ④ テストコード | `tests/...` | `test_code` | 例: `test_audit.py` |
+
+## 2.1.1 G0.5 企画突合 fail-close (L0 企画書 ⇒ L1 業務要求)
+
+`kind=charter` の L0 企画書を凍結し L1 要求定義へ進む前に G0.5 を適用する。W-model freeze (§2.2) の前段に位置し、企画意図が L1 業務要求へ漏れなく落ちているかを突合する。
+
+| ゲート | 突合対象 | fail-close 条件 |
+|--------|----------|------------------|
+| **G0.5** 企画突合 | L0 ① 企画書 (背景 / 目的 / スコープ / ROI / KGI・KPI / risk) ⇒ L1 ① 業務要求 (BR-*/NFR-*) | 次のいずれかで fail: ① 企画書が欠落、または必須項目 (背景・目的・スコープ・成功条件) 不在 / ② 企画書の各項目が L1 業務要求へ trace されていない (未反映項目あり) / ③ `frontier-reviewer` の adversarial review 未実施 (単一 AI 時は §7.8.7.1 専門サブエージェント review で代替。それも未実施 → fail) |
+
+`ut-tdd gate G0.5` は `ut-tdd status` の `mode` を読み、判断ゲートとして §7.8.7 のレビュー必須ルールを適用する (frontier-reviewer 不在の単一 AI mode では専門サブエージェント review を hard 必須とし、cross-agent 不在を `next_action` に明示記録)。
 
 ## 2.2 3 段階 freeze の fail-close 条件
 
@@ -686,14 +701,14 @@ add-* 完了時、既存 PLAN との双方向 reference を更新:
 
 # §6 補助 2: GitHub 統制要件
 
-## 6.1 ブランチタイプ × kind の対応 (R-C5 fix で全 11 kind 網羅)
+## 6.1 ブランチタイプ × kind の対応 (R-C5 fix で全 12 kind 網羅)
 
 `branch-kind-check` (§7.4) が PR 起票時に prefix と PLAN kind の整合を機械検証する。
 
 | ブランチ prefix | 対応 kind | 用途 |
 |----------------|-----------|------|
 | `feature/*` | `impl` | 通常実装 (経路 1) |
-| `design/*` | `design` (R-C5 fix) | 設計 doc 起票 (経路 1) |
+| `design/*` | `design` / `charter` (R-C5 fix) | 設計 doc・L0 企画書起票 (経路 1 / 前段) |
 | `research/*` | `research` (R-C5 fix) | 技術調査 (経路 1 前段) |
 | `poc/*` | `poc` | 仮説検証 (経路 2 Scrum) |
 | `reverse/*` | `reverse` | 設計復元 (経路 2 Reverse) |
@@ -1603,26 +1618,19 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 ├── tests/                                        # A (vitest、*.test.ts)
 ├── package.json                                  # A (Node/Bun 依存 + scripts)
 ├── tsconfig.json                                 # A (strict)
-├── scripts/
-│   ├── ut-tdd                                    # A
+├── scripts/                                        # A (薄い OS entrypoint + installer のみ。core logic 不可 / ADR-001 / repository-structure.md §1)
+│   ├── ut-tdd                                    # A (POSIX / Git Bash)
 │   ├── ut-tdd.ps1                                # A (Windows PowerShell entrypoint)
-│   ├── ut-tdd-plan-lint.sh                       # A
-│   ├── ut-tdd-vmodel-lint.sh                     # A
-│   ├── ut-tdd-doctor.sh                          # A
-│   ├── ut-tdd-gate.sh                            # A
 │   ├── install-hooks.sh                          # A
 │   ├── install-hooks.ps1                         # A (Windows PowerShell hook installer)
-│   ├── setup-branch-protection.sh                # A (実行は 0-B)
-│   ├── check-escalation-level.sh                 # A
-│   ├── check-escalation-stale.sh                 # A
-│   ├── log-failure.sh                            # A
-│   ├── package.json                              # A (Node/Bun 依存 + scripts)
-│   └── tsconfig.json                             # A (TypeScript strict)
+│   └── setup-branch-protection.sh                # A (一回限り ops、実行は 0-B)
 ├── workflows/                                    # A (構想書 §8 補助 3 層 2 設計仕様書)
 │   └── *.yaml                                    # G
 └── harness/                                      # A (構想書 §8 補助 3 層 3 設計仕様書)
     └── *.yaml                                    # G
 ```
+
+> **scripts/ 整流 (ADR-001)**: `plan lint` / `vmodel lint` / `doctor` / `gate` / escalation / failure log の各機能は個別 `.sh` ではなく compiled `ut-tdd` の**サブコマンド** (TS core、§7.1) として実装する。`scripts/` には OS entrypoint (`ut-tdd` / `ut-tdd.ps1`) と installer / 一回限り ops のみを置く。TS 依存・config は **root の `package.json` / `tsconfig.json` に集約**し、`scripts/` 配下に重複させない (repository-structure.md §8)。
 
 ## 9.2 受入条件 (構造)
 
@@ -1717,7 +1725,7 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 |---|---|
 | **VALID_STATUSES** | frontmatter `status` の enum: draft / confirmed / completed / archived |
 | **VALID_DECISION_OUTCOMES** | frontmatter `decision_outcome` の enum: confirmed / rejected / pivot (kind=poc + workflow_phase=S4 のみ) |
-| **VALID_KINDS** | frontmatter `kind` の enum (11 種、§1.3) |
+| **VALID_KINDS** | frontmatter `kind` の enum (12 種、§1.3) |
 | **VALID_LAYERS** | frontmatter `layer` の enum (16 種、§1.4) |
 | **VALID_WORKFLOW_PHASES** | frontmatter `workflow_phase` の enum (10 種、§1.5) |
 | **VALID_DRIVES** | frontmatter `drive` の enum (9 種、§1.6) |

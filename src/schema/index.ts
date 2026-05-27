@@ -5,8 +5,9 @@
  */
 import { z } from "zod";
 
-/** §1.3 VALID_KINDS (11 種) */
+/** §1.3 VALID_KINDS (12 種) */
 export const VALID_KINDS = [
+  "charter",
   "impl",
   "design",
   "poc",
@@ -97,8 +98,7 @@ export type WorkflowPhase = z.infer<typeof workflowPhaseSchema>;
 
 /**
  * §1.7 VALID_ARTIFACT_TYPES (19 種、test_design / test_code 分離済)。
- * TODO(scaffold): requirements_v1.2 §1.7 全 19 種と突合して完成させる。
- * 現時点は既知分のみ (python_module → source_module 改名済、ADR-001)。
+ * requirements_v1.2 §1.7 全 19 種と突合済 (python_module → source_module 改名、ADR-001)。
  */
 export const VALID_ARTIFACT_TYPES = [
   "design_doc",
@@ -115,6 +115,11 @@ export const VALID_ARTIFACT_TYPES = [
   "hook",
   "schema_migration",
   "config",
+  "yaml_config",
+  "json_config",
+  "workflow_config",
+  "github_config",
+  "other",
 ] as const;
 export const artifactTypeSchema = z.enum(VALID_ARTIFACT_TYPES);
 export type ArtifactType = z.infer<typeof artifactTypeSchema>;
