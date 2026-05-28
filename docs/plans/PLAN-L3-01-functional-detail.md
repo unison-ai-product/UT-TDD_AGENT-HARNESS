@@ -67,43 +67,47 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 
 ## §3 ヒアリング項目 / 調査メモ (functional 固有)
 
-**status 凡例**: ✅ = 正本着地済 / ➡️ = L4/L5 carry / ❓ = PO 判断待ち / 🆕 = draft 着地・G3 待ち
+**status 凡例**: ✅ = 正本着地済 / ➡️ = L4/L5 carry / ❓ = PO 判断待ち / 🆕 = TL レビュー AI 推奨採用 (draft 着地、G3 で PO 確認)
+
+> **TL レビュー反映 (2026-05-28、A-43 ledger)**: 全 11 項目を TL 視点 (技術判断 / 業界標準 / 整合性) で再仕分けし、AI 推奨採用で 🆕 draft 着地に統一。**PO 判断対象 = 0 件** (純粋技術判断のため)。L1 elicitation AI-first 原則 (memory: feedback_elicitation_ai_first) 適用。
 
 ### 3.1 FR 詳細化スコープ判断
 
-| ID | ヒアリング項目 | 着地先 | status |
+| ID | ヒアリング項目 | 着地先 | status (TL 推奨採用) |
 |----|--------------|--------|--------|
-| U-L3-1 | **P0 18 件は L3 で全件 FR-* + AC-* 詳細化必須** か、または P0 でも一部 L4 carry 可能か (G3 凍結条件) | functional sub-doc §1 / §2 | ❓ PO 判断 (推奨: P0 全件 G3 必須) |
-| U-L3-2 | **P1 18 件は L3 で詳細化 / L4 carry / Phase B carry のどの粒度か** (FR-L1-19 Learning Engine 等は Phase B 寄り) | functional sub-doc §3 carry 宣言 | ❓ PO 判断 (推奨: L4 carry default、Phase B 連動のみ Phase B carry) |
-| U-L3-3 | **P2 5 件 (FR-L1-36/38/43 + 他)** は L3 で詳細化するか BR-21 経由で PLAN-L3-02 に委ねるか | PLAN-L3-02 連携 | ❓ PO 判断 (推奨: PLAN-L3-02 に委譲、本 PLAN で除外) |
+| U-L3-1 | P0 18 件 L3 詳細化粒度 | functional sub-doc §1 / §2 | 🆕 **P0 全件 G3 必須**。理由: G3 = L3 pair freeze の前提が「全 P0 受入条件確定」、carry 不可 (品質保証性、技術判断) |
+| U-L3-2 | P1 18 件の詳細化先 | functional sub-doc §3 carry 宣言 | 🆕 **L4 carry default + Phase B 連動 (Learning Engine 系) のみ Phase B carry**。理由: P1 を全件 L3 に持つと scope 過大、L4 基本設計時に技術詳細と合わせて確定が筋 |
+| U-L3-3 | P2 5 件の委譲先 | PLAN-L3-02 連携 | 🆕 **PLAN-L3-02 に委譲 (本 PLAN 除外)**。理由: P2 5 件 = FR-L1-36/38/43 (Learning Engine) + 2 件、全て BR-21 経路で PLAN-L3-02 と scope 同一、重複回避 |
 
 ### 3.2 AC (Acceptance Criteria) 構造
 
-| ID | ヒアリング項目 | 着地先 | status |
+| ID | ヒアリング項目 | 着地先 | status (TL 推奨採用) |
 |----|--------------|--------|--------|
-| U-L3-4 | **AC の粒度**: Given-When-Then 形式 / チェックリスト形式 / 機能シナリオ形式のいずれを正本とするか | functional sub-doc §2 各 FR-* | ❓ PO 判断 (推奨: Given-When-Then default、L12 受入テスト変換が機械化しやすい) |
-| U-L3-5 | **AC 数の下限**: 各 FR-* に最低何件 AC を要求するか (1 件で十分 / 正常系 + 異常系 + 境界の 3 件最低 等) | functional sub-doc §2 / G3 lint | ❓ PO 判断 (推奨: 正常系 1 + 異常系 1 + 境界 1 = 最低 3 件) |
-| U-L3-6 | **AC ID 形式**: AC-{FR-ID}-{NN} (例: AC-FR-L1-01-01) か独立採番 (AC-001〜) か | functional sub-doc §2 + §6 DoD | ❓ PO 判断 (推奨: AC-{FR-ID}-{NN} 形式、trace 接続を ID で機械化) |
+| U-L3-4 | AC 形式 | functional sub-doc §2 各 FR-* | 🆕 **Given-When-Then 形式 default**。理由: BDD 業界標準、L12 受入テスト → 実装テスト変換が機械化容易、ISO/IEC/IEEE 29148 整合 |
+| U-L3-5 | AC 数下限 | functional sub-doc §2 / G3 lint | 🆕 **正常 1 + 異常 1 + 境界 1 = 最低 3 件**。理由: 境界値分析の基本テスト戦略、ISTQB Foundation Level 整合、L7 TDD Red 入力として網羅性確保 |
+| U-L3-6 | AC ID 形式 | functional sub-doc §2 + §6 DoD | 🆕 **AC-{FR-ID}-{NN} 形式** (例: AC-FR-L1-01-01)。理由: ID で双方向 trace を機械化、独立採番だと L12 受入テストとの紐付け orphan リスク |
 
 ### 3.3 画面紐付き (L2 deep-link) 確定
 
-| ID | ヒアリング項目 | 着地先 | status |
+| ID | ヒアリング項目 | 着地先 | status (TL 推奨採用) |
 |----|--------------|--------|--------|
-| U-L3-7 | **L3 FR-* と 14 画面 (PM/HM/GD) の紐付け** を L2-screen sub-doc 確定後に確定するか、L3 着手時に screen 章先行で確定するか | functional sub-doc §4 画面 trace + L2 接続規約 | ❓ PO 判断 (推奨: screen sub-doc §5 G1-trace マトリクスを継承、L3 で AC レベルに展開) |
-| U-L3-8 | **PM/HM/GD カテゴリ別 FR-* 分類** を §2 で章分けするか、§2 統合表に カテゴリ列追加するか | functional sub-doc §2 構造 | ❓ PO 判断 (推奨: 統合表にカテゴリ列、章分けは可読性低下リスク) |
+| U-L3-7 | 画面紐付け継承方針 | functional sub-doc §4 画面 trace + L2 接続規約 | 🆕 **screen sub-doc §5 G1-trace マトリクス継承、L3 で AC レベルに展開**。理由: G1-trace 既に確定済、再起こしは重複 + drift リスク、AC レベル展開は本 PLAN 固有作業 |
+| U-L3-8 | カテゴリ別 vs 統合表 | functional sub-doc §2 構造 | 🆕 **統合表にカテゴリ列追加**。理由: 章分けはカテゴリ跨ぎ FR (例: FR-L1-08 mode 自動 routing は PM/HM 両カテゴリ画面と関係) で表記重複・矛盾源、統合表が機械検証容易 |
 
 ### 3.4 9 mode × FR 整合
 
-| ID | ヒアリング項目 | 着地先 | status |
+| ID | ヒアリング項目 | 着地先 | status (TL 推奨採用) |
 |----|--------------|--------|--------|
-| U-L3-9 | **9 mode 統一合流原則 (business §3.3.1)** を L3 で「各 FR が対応 mode を宣言」する形で機械強制するか | functional sub-doc §2 各 FR-* に対応 mode 列 | ❓ PO 判断 (推奨: 対応 mode 列を追加、9 mode × FR の被覆を G3 lint で確認) |
-| U-L3-10 | **drive 別挙動** (FR-L1-40 drive 別 state) を L3 で全 FR-* に drive タグ付けするか | functional sub-doc §2 各 FR-* に対応 drive 列 | ❓ PO 判断 (推奨: drive タグ default = all、固有 drive のみ明示) |
+| U-L3-9 | mode 対応列 | functional sub-doc §2 各 FR-* に対応 mode 列 | 🆕 **対応 mode 列必須化**。理由: business §3.3.1 9 mode 統一合流原則の機械検証手段、G3-trace で「全 9 mode が最低 1 FR で被覆」を確認可能化 |
+| U-L3-10 | drive タグ | functional sub-doc §2 各 FR-* に対応 drive 列 | 🆕 **drive タグ default=all、固有 drive のみ明示**。理由: 大半の FR は drive 非依存、固有 (例: FR-L1-40 drive 別 state) のみ明示が冗長性最小化 |
 
 ### 3.5 横断原則継承
 
-| ID | ヒアリング項目 | 着地先 | status |
+| ID | ヒアリング項目 | 着地先 | status (TL 推奨採用) |
 |----|--------------|--------|--------|
-| U-L3-11 | **人間主導 + AI 補助原則 (CC2)** を L3 各 FR-* で「人間判断点」明示するか (screen §4.1 で carry 宣言済) | functional sub-doc §2 各 FR-* に「人間判断点」列 | ❓ PO 判断 (推奨: 必須化、CC2 carry 充足) |
+| U-L3-11 | CC2 人間判断点 | functional sub-doc §2 各 FR-* に「人間判断点」列 | 🆕 **「人間判断点」列必須化 (CC2 carry 充足)**。理由: screen §4.1 で carry 宣言済、L3 全 FR で明示が継承の正本実装手段、欠落は CC2 carry 未達 |
+
+> **TL レビュー結論**: U-L3-1〜11 全 11 件は技術判断・業界標準・既存規約整合の範囲内で AI 推奨採用可能。**PO への問い 0 件**。G3 readiness 整備時に他項目と合わせて PO 確認する。
 
 ## §4 工程表 (Step + 進捗)
 

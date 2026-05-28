@@ -64,32 +64,34 @@ PLAN-L3-01 (FR 一般詳細化) とスコープを分離し、本 PLAN は **Lea
 
 ## §3 ヒアリング項目 / 調査メモ (BR-21 固有)
 
-**status 凡例**: ✅ / ➡️ Phase B carry / ❓ PO 判断待ち / 🆕 draft
+**status 凡例**: ✅ / ➡️ Phase B carry / ❓ PO 判断待ち / 🆕 TL レビュー AI 推奨採用 (draft 着地、G3 で PO 確認)
+
+> **TL レビュー反映 (2026-05-28、A-43 ledger)**: 全 10 項目を TL 視点で再仕分け。**PO 判断対象 = 1 件 (U-BR21-9)** のみ (Phase B 着手条件はビジネススコープ判断のため PO 必須)。他 9 件は技術判断・既存規約整合で AI 推奨採用 🆕 draft 着地。
 
 ### 3.1 BR-21 評価サイクル設計
 
-| ID | ヒアリング項目 | 着地先 | status |
+| ID | ヒアリング項目 | 着地先 | status (TL 推奨採用) |
 |----|--------------|--------|--------|
-| U-BR21-1 | **評価対象**: PLAN 単位 / sprint 単位 / FR 単位 / model 単位 / skill 単位 のいずれを正本評価単位とするか (複数並行可) | business-detail §1 | ❓ PO 判断 (推奨: PLAN 単位を default、補助で skill / model 単位) |
-| U-BR21-2 | **評価指標**: 成功率 / コスト効率 (token / cost) / 所要時間 / 再実行回数 / fail-close 発火率 のうち必須はどれか | business-detail §2 | ❓ PO 判断 (推奨: 5 指標全部、KPI D-07 と整合) |
-| U-BR21-3 | **改善サイクル頻度**: 日次 / 週次 / sprint 末 / 任意のいずれを default とするか | business-detail §3 | ❓ PO 判断 (推奨: sprint 末 + 任意手動、telemetry コスト最小化) |
-| U-BR21-4 | **改善アクション**: skill / model 推奨アルゴリズム更新 / detector ルール更新 / PLAN テンプレ更新 のどれを自動化対象とするか (人間承認必須範囲) | business-detail §4 | ❓ PO 判断 (推奨: 全件「人間承認必須」、CC2 人間主導原則と整合) |
+| U-BR21-1 | 評価対象単位 | business-detail §1 | 🆕 **PLAN 単位 default + 補助で skill / model 単位**。理由: PLAN = harness の最小遂行単位、PLAN 評価が KPI D-07 (AI 委譲時間率) と直結、skill/model は補助計測 |
+| U-BR21-2 | 評価指標 | business-detail §2 | 🆕 **5 指標全部** (成功率 / token cost / 所要時間 / 再実行回数 / fail-close 発火率)。理由: KPI D-07 + D-02 + D-04 + D-06 と integrated、欠けると改善ループが半端 |
+| U-BR21-3 | 改善サイクル頻度 | business-detail §3 | 🆕 **sprint 末 + 任意手動**。理由: 日次は telemetry cost 過大 (NFR-16 軽量原則違反)、週次は agile sprint と非同期、sprint 末が KPI 計測周期と整合 |
+| U-BR21-4 | 改善アクション自動化範囲 | business-detail §4 | 🆕 **全件「人間承認必須」**。理由: CC2 人間主導原則 + NFR-14 human-as-residue 整合、自動化は AI 暴走源、PO の S-03 例外権でのみ自動化許可 |
 
 ### 3.2 HM-08 画面連動
 
-| ID | ヒアリング項目 | 着地先 | status |
+| ID | ヒアリング項目 | 着地先 | status (TL 推奨採用) |
 |----|--------------|--------|--------|
-| U-BR21-5 | **HM-08 データソース**: invocation_log / detector_runs / gate_runs / plan_registry のどれを正本入力とするか | business-detail §5 / HM-08 連動 | ❓ PO 判断 (推奨: 4 ソース全件統合) |
-| U-BR21-6 | **HM-08 表示頻度**: 30 秒ポーリング (S2=b 整合) で十分か、それとも sprint 末バッチ集計か | business-detail §5 | ❓ PO 判断 (推奨: 集計済データを 30 秒ポーリング表示) |
-| U-BR21-7 | **AI 指示 copy UI**: HM-08 で「改善 PLAN 起票テキスト」を copy 生成するか (CC2 人間主導原則整合) | business-detail §5 / HM-08 操作要素 | ❓ PO 判断 (推奨: 必須、copy-paste UI で人間判断点を保持) |
+| U-BR21-5 | HM-08 データソース | business-detail §5 / HM-08 連動 | 🆕 **4 ソース全件統合** (invocation_log / detector_runs / gate_runs / plan_registry)。理由: 単一ソースだと評価指標 5 件全件カバー不能、4 ソース統合で必要十分 |
+| U-BR21-6 | HM-08 表示頻度 | business-detail §5 | 🆕 **集計済データを 30 秒ポーリング表示**。理由: S2=b (全画面 30 秒ポーリング既決) 整合、生計算は cost 過大、集計バッチ + ポーリングが現実解 |
+| U-BR21-7 | AI 指示 copy UI 必須化 | business-detail §5 / HM-08 操作要素 | 🆕 **必須化**。理由: CC2 horizontal 原則 (screen §3.1 横断原則・全 14 画面適用)、HM-08 のみ例外化する根拠なし |
 
 ### 3.3 Phase B carry 範囲確定
 
 | ID | ヒアリング項目 | 着地先 | status |
 |----|--------------|--------|--------|
-| U-BR21-8 | **Phase A スコープ**: BR-21 を Phase A で「宣言のみ + 計測準備」とするか、それとも「PLAN 単位の最小評価」まで実装するか | business-detail §6 carry | ❓ PO 判断 (推奨: Phase A = 宣言のみ + HM-08 placeholder、実装は Phase B) |
-| U-BR21-9 | **Phase B 着手条件**: 何を満たせば Phase B (Learning Engine 本実装) に進めるか (Phase A 完了 / KPI D-07 ≥ 70% 達成 / PLAN 件数閾値等) | business-detail §6 carry | ❓ PO 判断 (推奨: Phase A G14 通過 + KPI D-07 直近 1 sprint ≥ 50% 達成、KPI 目標値超過は不要) |
-| U-BR21-10 | **telemetry default**: BR-21 計測 telemetry は default off (opt-in) で良いか、それとも default on (audit log と同じ扱い) か | business-detail §6 / NFR-16 連動 | ❓ PO 判断 (推奨: PLAN 評価 = default on / model evaluation = opt-in、PII redaction 必須) |
+| U-BR21-8 | Phase A スコープ | business-detail §6 carry | 🆕 **Phase A = 宣言のみ + HM-08 placeholder、実装は Phase B**。理由: Phase A scope を MVP に絞る既存方針 (NFR-07 MVP なし整合)、評価ロジック本実装は Phase B telemetry 整備後 |
+| **U-BR21-9** | **Phase B 着手条件** (KPI D-07 + G14 + sprint 数等) | business-detail §6 carry | **❓ PO 判断必須** — Phase B 着手 = ビジネススコープ判断 / 投資判断のため PO 専決。TL 推奨案: **(a) Phase A G14 通過 + KPI D-07 直近 1 sprint ≥ 50% 達成** (推奨) / (b) KPI D-07 目標値 ≥ 70% 達成必須 / (c) sprint 数しきい値 (例: 6 sprint 経過) |
+| U-BR21-10 | telemetry default on/off | business-detail §6 / NFR-16 連動 | 🆕 **PLAN 評価 = default on / model evaluation = opt-in、PII redaction 必須**。理由: PLAN 評価は KPI 計測の必須インフラ (offに すると D-07 計測不能)、model evaluation は実験的要素で opt-in、PII redaction は NFR-09/14 整合 |
 
 ## §4 工程表 (Step + 進捗)
 
