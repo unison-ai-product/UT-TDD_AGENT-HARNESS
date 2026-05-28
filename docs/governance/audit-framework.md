@@ -406,6 +406,33 @@ GHA が行うこと:
 
 役割分離: **HELIX = 開発・監査 / GitHub Actions = 検問・執行**
 
+### 14.1 発火単位 = feature & 3 点漏れ巻取り (PO declared 2026-05-28)
+
+GHA の発火単位は **機能 (feature)**。PR ごとに以下のフローで発火する:
+
+1. PR の変更ファイル一覧を取得
+2. `docs/features/*.md` 全件の frontmatter `layers.*.related_paths` と changed-files を照合
+3. **match した feature 一覧 = 当該 PR の affected features**
+4. 各 affected feature について 3 点 (doc / code / tests) の変更有無を集計
+5. **3 点漏れ (= 機能変更だが doc / test / code のいずれかが未更新)** を検知して PR Gate でブロック (§11 状態判定に従う)
+6. 全 affected feature が全 Gate pass なら Merge Gate へ → 4-tier 判定 → safe なら auto-merge
+
+```
+PR 変更ファイル
+   ↓
+related_paths 照合 → affected features を特定
+   ↓
+各 feature の 3 点 (doc / code / tests) 変更を集計
+   ↓
+漏れ検知 (機能変更だが 3 点のいずれか不足) → block + report
+   ↓
+全 feature pass → Merge Gate → 4-tier 判定 → safe なら auto-merge
+```
+
+- **多 feature affect** (1 PR ↔ N features) は許容するが、各 feature について個別に 3 点一致を検証する
+- **機能一覧 (feature inventory) の存在が GHA 発火の前提**: `docs/features/` が空 = GHA 発火対象なし = どんな PR も unknown 扱いで block
+- **unknown ファイル** (どの feature の related_paths にも match しない変更) は §13 ブロック条件「unknown ファイルあり」で block (= 機能未登録の変更を許さない)
+
 ## 15. Revert方針
 
 基本: revert ではなく **PR ブロックを優先**。
@@ -445,3 +472,45 @@ revert 検討条件 (main 混入後):
 - 危険変更の自動マージを防ぐ
 - 人間が見るべき PR だけを人間に回す
 - safe な PR だけを自動で流す
+
+## 17. 自動化 + AI レビュー の補完機構 (PO declared 2026-05-28)
+
+各 Gate は **自動化 (機械処理)** と **AI レビュー (文脈判断)** の 2 層で実装する。両者は補完関係: 機械可能なものは自動化に倒し、文脈判断が必須なものは AI review に振り分ける。
+
+### 17.1 Gate 別 machine / AI 分解
+
+| Gate | 機械処理 (automation) | AI レビュー (文脈判断) |
+| --- | --- | --- |
+| **Document** | frontmatter 必須項目存在 (feature_id / version / risk / auto_merge / layers / related_paths / required_tests) / product.md・requirements.md・architecture.md 存在 / 機能変更 PR で該当 feature md 更新存在 | (基本不要、機械で十分) |
+| **Domain** | 用語登録 (glossary) との一致 / feature 間依存宣言の整合 | 用語 / 責務 / 境界 / データの業務概念整合 (§5.1-5.4 すべて AI 主) |
+| **Test** | feature_id 紐づけ / required_tests とテスト名対応 / pass-fail / skipped 検出 | テストカバレッジの適切性 / 重要パス網羅判断 |
+| **Implementation** | related_paths 内収束 / TODO/FIXME に理由コメント (正規表現) / 想定外ファイル変更 (paths diff) | 仕様外挙動 / 責務分離の質的判断 / 一時実装の検出 |
+| **Coding Rule** | Lint / Typecheck / 静的解析 / 命名パターン / import 構造 / 禁止パターン (secrets / .env / GHA 設定 等) | レイヤー責務の質的判断 / エラーハンドリング適切性 / 型設計の妥当性 |
+| **PR** | 必須レポート存在 / 3 点セット集合判定 (changed-files scope) / rollback-plan 存在 | レポート内容の妥当性総合判断 |
+| **Merge** | risk + change scope + gate 結果のロジックで safe / caution / danger / unknown 機械分類 | caution / danger ケースの review 判断 (TL / 人間) |
+
+### 17.2 運用原則
+
+- **機械処理は fail-close** で出力 (exit code + structured report)
+- **AI レビューは structured report** に「判定 + 根拠 + 推奨アクション」を残す
+- **GHA は両方を読み**、最終 merge 判定を行う
+- **AI が判定不能 (= unknown) なら fail-close** (人間レビューへ降ろす)
+- **machine だけで safe 判定できる PR は AI レビューをスキップ可能** (cost 最適化、cache 利用)
+- machine / AI の分担は Gate 設計時に確定し、`docs/coding-rules.md` や `risk-policy.yaml` で外部化する (調整可能)
+
+### 17.3 dev-local + CI 二重実行 (editor return loop)
+
+同じ check 論理を 2 箇所で実行する (single source of truth、dev/CI 同一バイナリ)。
+
+| 実行場所 | 役割 | trigger |
+| --- | --- | --- |
+| **dev-local** (editor / CLI) | advisory + 早期検出 | エディタ内 hook (PostToolUse on Edit/Write/MultiEdit) / `git pre-commit` / `git pre-push` / `ut-tdd audit` 明示呼び出し |
+| **CI (GHA)** | guardrail (executory) | PR open / sync / required status checks → safe なら GitHub native auto-merge |
+
+運用原則:
+- **single source of truth**: check 論理は `src/` (TypeScript core) に 1 本実装、CLI (`ut-tdd audit`) で呼び出す。dev-local も CI も同じバイナリ/モジュールを実行 (= NFR-09 rule parity の本体)。
+- **dev-local = advisory**: 警告は出すが基本ブロックしない (commit-msg 等の例外を除く)。executory は CI 側で。
+- **fail-fast loop**: CI で fail なら GHA は PR を blocked にし、**同一 report** (artifact + PR comment) を提示 → エディタ (Claude Code / 開発者) が同じ report を読んで修正 → 再 push の高速ループ。
+- **同一 report 形式**: dev-local 出力と CI artifact が 1:1 (フィールド名 / status / severity)。エディタ AI agent は report を構造化解釈して self-修正できる。
+- **scope-aware**: dev-local は速度優先で changed-files の影響 feature だけ check 可能、CI は全量。
+- AI レビュー層 (§17.1) も二重実行する: dev-local は subagent (pmo-sonnet / code-reviewer 等) を `Agent` tool で呼び、CI は同じ判定ロジックを GHA 上で実行 (将来は workflow から Anthropic API 直叩き等)。AI 出力も report 統一。
