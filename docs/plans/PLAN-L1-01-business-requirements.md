@@ -64,7 +64,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | ID | ヒアリング項目 | 着地先 | status |
 |----|--------------|--------|--------|
-| U-体系-0 | 要求定義の体系: ①要求タイプ (業務/機能/技術/UX) ②構造・置き場 ③W-model L1/L3/L4/L10 対応 ④ID・trace 規約 ⑤methodology spec と project 要求の区別 ⑥product-improvement lens | business §1 内に**自己宣言節**として追加 | ❓ (GAP G-01、未着地) |
+| U-体系-0 | 要求定義の体系: ①要求タイプ (業務/機能/技術/UX) ②構造・置き場 ③W-model L1/L3/L4/L10 対応 ④ID・trace 規約 ⑤methodology spec と project 要求の区別 ⑥product-improvement lens | business §1.4 として着地。V-model L0-L14 + 9-mode + 9 駆動 + PLAN 内蔵物 + 5 sub-doc + 4 artifact + 3 段階 freeze + DDD anti-corruption + IPA × ISO 25010 + Forward フロー + AI ガードの 11 項目宣言 (commit d2facad、2026-05-28) | ✅ |
 
 ### 3.2 価値・スコープ・業務要求
 
@@ -111,15 +111,40 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §4 工程表 (Step + 進捗)
 
-| Step | 内容 | 担当 | 進捗 |
-|------|------|------|------|
-| Step 1: 既存資料整理 | business-requirements.md の現状を読み直し、構造的不備・❓ 残存項目を洗い出す | tl + pmo-sonnet | ✅ |
-| Step 2: Web/TL 調査 | business 固有の残差調査 (U-体系-0 自己宣言節 / U-補-1〜5 の外部 best practice) — pmo-tech-docs 委譲 | pmo-tech-docs | ☐ |
-| Step 3: 不明点の PO ヒアリング | §3.5 の ❓ 項目について残差のみ PO へ escalate + 拡張提案併記 | po | ☐ |
-| Step 4: business §1-§10 の起草・改訂 | 特に §10 DDD ドメイン entity 一覧 = L0 §10 用語集から table 生成。体系自己宣言節 (U-体系-0) を §1 に追加 | tl | ☐ |
-| Step 5: 運用テスト設計の pair 凍結 | L14 OT に business sub-doc 由来要求 (BR-*/NFR-*/UX-*) が被覆されているか確認、不足あれば OT 追加 | qa | ☐ |
-| Step 6: **review (self / pmo-sonnet)** | 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。❓ 残ゼロ・FR 混入無し・§10.1 4 列 table 完備を確認 | pmo-sonnet | ☐ |
-| Step 7: G1 PO サインオフ準備 | 5 sub-doc 全件揃った段階で G1 ゲート PO 確認 | po | ☐ |
+### Step 1: 既存資料整理
+- 担当: tl + pmo-sonnet
+- 内容: business-requirements.md の現状を読み直し、構造的不備・❓ 残存項目を洗い出す
+- 進捗: ✅ (commit d9992f1、2026-05-28)
+
+### Step 2: Web/TL 調査
+- 担当: pmo-tech-docs
+- 内容: business 固有の残差調査 (U-体系-0 自己宣言節 / U-補-1〜5 の外部 best practice) — pmo-tech-docs 委譲
+- 進捗: ☐
+
+### Step 3: 不明点の PO ヒアリング
+- 担当: po
+- 内容: §3.5 の ❓ 項目について残差のみ PO へ escalate + 拡張提案併記
+- 進捗: ☐
+
+### Step 4: business §1-§10 の起草・改訂
+- 担当: tl
+- 内容: 特に §10 DDD ドメイン entity 一覧 = L0 §10 用語集から table 生成。体系自己宣言節 (U-体系-0) を §1 に追加
+- 進捗: ☐
+
+### Step 5: 運用テスト設計の pair 凍結
+- 担当: qa
+- 内容: L14 OT に business sub-doc 由来要求 (BR-*/NFR-*/UX-*) が被覆されているか確認、不足あれば OT 追加
+- 進捗: ☐
+
+### Step 6: review (self / pmo-sonnet)
+- 担当: pmo-sonnet
+- 内容: 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。❓ 残ゼロ・FR 混入無し・§10.1 4 列 table 完備を確認
+- 進捗: ✅ (acdc5ccd6f31ae951 通過、2026-05-28)
+
+### Step 7: G1 PO サインオフ準備
+- 担当: po
+- 内容: 5 sub-doc 全件揃った段階で G1 ゲート PO 確認
+- 進捗: 🔄 (本 commit で readiness 整備中、PO 最終確認待ち)
 
 ## §5 実装計画 (各記載項目をどう埋めるか)
 
@@ -146,7 +171,7 @@ v2_import: docs/migration/v2-import-ledger.md
 - [ ] §10.2 L4 carry 7 項目 列挙
 - [ ] FR-* を含まない (AP-6 違反なし)
 - [ ] L14 OT で本 sub-doc 由来要求が被覆 (孤児 0)
-- [ ] 専門サブエージェント review (Step 6) 通過記録
+- [x] 専門サブエージェント review (Step 6) 通過記録 (2026-05-28 pmo-sonnet 再被覆監査 acdc5ccd6f31ae951 通過、CONDITIONAL PASS)
 
 ## §7 carry / 次工程 (L3 / L4) への引き継ぎ
 

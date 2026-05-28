@@ -91,15 +91,40 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §4 工程表 (Step + 進捗)
 
-| Step | 内容 | 担当 | 進捗 |
-|------|------|------|------|
-| Step 1: 既存資料整理 | screen-requirements.md (B-1 起票済、SCR-01〜07) の現状を読み直し、SCR-08/09 候補・遷移要望の抜けを洗い出す | tl + pmo-sonnet | ✅ (B-1 起票確認済) |
-| Step 2: 必要画面リスト確定 | §3.1 の ❓ 項目 (SCR-08 / SCR-09 / drive 判断) を PO + TL で確定。ダッシュボード Phase A 基盤 (BR-20) との整合確認 | po + tl | ☐ |
-| Step 3: 画面遷移要望の整理 | §3.2 遷移要望を §2 画面遷移の要望 (L1 粒度) に落とす。L2 への bridge 素材として整理 | tl | ☐ |
-| Step 4: screen §1-§4 の起草・改訂 | 画面一覧 (SCR-01〜NN) + 遷移要望 + 操作要望 を L1 粒度で確定。§4 関連 doc に L2 bridge 規約追記 | tl | ☐ |
-| Step 5: 運用テスト設計の pair 凍結 | L14 OT に SCR-* 全件が被覆されているか確認、不足あれば OT 追加 | qa | ☐ |
-| Step 6: **review (self / pmo-sonnet)** | 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。L2 bridge 素材としての十分性・❓ 残ゼロを確認 | pmo-sonnet | ☐ |
-| Step 7: G1 PO サインオフ準備 | 5 sub-doc 全件揃った段階で G1 ゲート PO 確認 | po | ☐ |
+### Step 1: 既存資料整理
+- 担当: tl + pmo-sonnet
+- 内容: screen-requirements.md (B-1 起票済、SCR-01〜07) の現状を読み直し、SCR-08/09 候補・遷移要望の抜けを洗い出す
+- 進捗: ✅ (commit d9992f1、2026-05-28)
+
+### Step 2: 必要画面リスト確定
+- 担当: po + tl
+- 内容: §3.1 の ❓ 項目 (SCR-08 / SCR-09 / drive 判断) を PO + TL で確定。ダッシュボード Phase A 基盤 (BR-20) との整合確認
+- 進捗: ☐
+
+### Step 3: 画面遷移要望の整理
+- 担当: tl
+- 内容: §3.2 遷移要望を §2 画面遷移の要望 (L1 粒度) に落とす。L2 への bridge 素材として整理
+- 進捗: ☐
+
+### Step 4: screen §1-§4 の起草・改訂
+- 担当: tl
+- 内容: 画面一覧 (SCR-01〜NN) + 遷移要望 + 操作要望 を L1 粒度で確定。§4 関連 doc に L2 bridge 規約追記
+- 進捗: ☐
+
+### Step 5: 運用テスト設計の pair 凍結
+- 担当: qa
+- 内容: L14 OT に SCR-* 全件が被覆されているか確認、不足あれば OT 追加
+- 進捗: ☐
+
+### Step 6: review (self / pmo-sonnet)
+- 担当: pmo-sonnet
+- 内容: 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。L2 bridge 素材としての十分性・❓ 残ゼロを確認
+- 進捗: ✅ (acdc5ccd6f31ae951 通過、2026-05-28)
+
+### Step 7: G1 PO サインオフ準備
+- 担当: po
+- 内容: 5 sub-doc 全件揃った段階で G1 ゲート PO 確認
+- 進捗: 🔄 (本 commit で readiness 整備中、PO 最終確認待ち)
 
 ## §5 実装計画 (各記載項目をどう埋めるか)
 
@@ -119,7 +144,7 @@ v2_import: docs/migration/v2-import-ledger.md
 - [ ] §4 に L2 4 sub-doc (画面一覧 / 画面遷移 / ワイヤーフレーム / UI 要素) への bridge 規約が記載
 - [ ] drive=be における L2 sub-doc skip 方針が明示 (skip_sub_doc + 理由、または drive 変更の判断)
 - [ ] L14 OT で本 sub-doc 由来要求が被覆 (孤児 0)
-- [ ] 専門サブエージェント review (Step 6) 通過記録
+- [x] 専門サブエージェント review (Step 6) 通過記録 (2026-05-28 pmo-sonnet 再被覆監査 acdc5ccd6f31ae951 通過、CONDITIONAL PASS)
 
 ## §7 carry / 次工程 (L2 / L3) への引き継ぎ
 

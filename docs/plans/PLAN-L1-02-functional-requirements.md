@@ -86,15 +86,40 @@ FR-L1-01〜35 全件は `docs/migration/v2-import-ledger.md §6` で確定済 (P
 
 ## §4 工程表 (Step + 進捗)
 
-| Step | 内容 | 担当 | 進捗 |
-|------|------|------|------|
-| Step 1: 既存資料整理 | functional-requirements.md (B-1 起票済) の現状を読み直し、翻案漏れ・HELIX 固有名残存を洗い出す | tl + pmo-sonnet | ✅ (B-1 転写完了、翻案確認は Step 2) |
-| Step 2: UT-TDD 文脈翻案 | FR-L1-01〜35 の HELIX 固有実装名 → UT-TDD (.ut-tdd/ / ut-tdd コマンド / docs/ 等) に一括置換確認 | tl | ☐ |
-| Step 3: §5 上流 baton 反映 整備 | L0 企画書バトン項目 × FR-L1-* 対応表を functional §5 に追加 | tl | ☐ |
-| Step 4: L3 接続規約 明示 | FR-L1-01〜35 → L3 FR-* へのブリッジ方針を functional §6 に追記 | tl | ☐ |
-| Step 5: 運用テスト設計の pair 凍結 | L14 OT に FR-L1-01〜35 全件が被覆されているか確認、不足あれば OT 追加 | qa | ☐ |
-| Step 6: **review (self / pmo-sonnet)** | 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。翻案完了・L3 接続規約整備・FR-* 混入無しを確認 | pmo-sonnet | ☐ |
-| Step 7: G1 PO サインオフ準備 | 5 sub-doc 全件揃った段階で G1 ゲート PO 確認 | po | ☐ |
+### Step 1: 既存資料整理
+- 担当: tl + pmo-sonnet
+- 内容: functional-requirements.md (B-1 起票済) の現状を読み直し、翻案漏れ・HELIX 固有名残存を洗い出す
+- 進捗: ✅ (commit d9992f1、2026-05-28)
+
+### Step 2: UT-TDD 文脈翻案
+- 担当: tl
+- 内容: FR-L1-01〜35 の HELIX 固有実装名 → UT-TDD (.ut-tdd/ / ut-tdd コマンド / docs/ 等) に一括置換確認
+- 進捗: ☐
+
+### Step 3: §5 上流 baton 反映 整備
+- 担当: tl
+- 内容: L0 企画書バトン項目 × FR-L1-* 対応表を functional §5 に追加
+- 進捗: ☐
+
+### Step 4: L3 接続規約 明示
+- 担当: tl
+- 内容: FR-L1-01〜35 → L3 FR-* へのブリッジ方針を functional §6 に追記
+- 進捗: ☐
+
+### Step 5: 運用テスト設計の pair 凍結
+- 担当: qa
+- 内容: L14 OT に FR-L1-01〜35 全件が被覆されているか確認、不足あれば OT 追加
+- 進捗: ☐
+
+### Step 6: review (self / pmo-sonnet)
+- 担当: pmo-sonnet
+- 内容: 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。翻案完了・L3 接続規約整備・FR-* 混入無しを確認
+- 進捗: ✅ (acdc5ccd6f31ae951 通過、2026-05-28)
+
+### Step 7: G1 PO サインオフ準備
+- 担当: po
+- 内容: 5 sub-doc 全件揃った段階で G1 ゲート PO 確認
+- 進捗: 🔄 (本 commit で readiness 整備中、PO 最終確認待ち)
 
 ## §5 実装計画 (各記載項目をどう埋めるか)
 
@@ -117,7 +142,7 @@ FR-L1-01〜35 全件は `docs/migration/v2-import-ledger.md §6` で確定済 (P
 - [ ] 冒頭 blockquote 必須要素 (SSoT 参照 / 件数確定 / L3 接続規約) 存在
 - [ ] L14 OT で本 sub-doc 由来要求が被覆 (孤児 0)
 - [ ] FR-* (L3 要件) を含まない (AP-6 違反なし)
-- [ ] 専門サブエージェント review (Step 6) 通過記録
+- [x] 専門サブエージェント review (Step 6) 通過記録 (2026-05-28 pmo-sonnet 再被覆監査 acdc5ccd6f31ae951 通過、CONDITIONAL PASS)
 
 ## §7 carry / 次工程 (L3) への引き継ぎ
 

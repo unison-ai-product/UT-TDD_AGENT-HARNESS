@@ -96,16 +96,45 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 
 ## §4 工程表 (Step + 進捗)
 
-| Step | 内容 | 担当 | 進捗 |
-|------|------|------|------|
-| Step 1: 既存資料整理 | nfr.md (B-1 起票済) の §1〜§8 現状を読み直し、NFR-11〜15 の IPA 配置・§7 タグ表の空欄を確認 | tl + pmo-sonnet | ✅ (B-1 確認済、§7 は未整備) |
-| Step 2: IPA × ISO 25010 二軸タグ付け | NFR-01〜15 全件を IPA 6 大項目 + ISO 25010 特性の 2 軸でタグ付け。対象外特性の除外理由を明示 (U-NFR-1/2) | tl + pmo-tech-docs | ☐ |
-| Step 3: NFR-11〜15 の IPA 節配置確定 | NFR-11 (役割分離) → §5 セキュリティ / NFR-12 (machine×AI) → §2 性能 / NFR-13 (dev-local+CI) → §3 保守性 / NFR-14 (human-as-residue) → §3 保守性 / NFR-15 (server-optional) → §2 拡張性 等の配置を確定し nfr §1〜§6 に追記 | tl | ☐ |
-| Step 4: §7 IPA × ISO 25010 二軸タグ表 整備 | Step 2/3 の結果を §7 に 3 列 table (NFR-ID / IPA 大項目 / ISO 25010 特性) として整理。除外特性行も含む | tl | ☐ |
-| Step 5: carry 宣言・Phase B NFR 整備 | §3 carry 宣言 (NFR-02 L4 ADR 連携 / NFR-16 Phase B carry) を §8 carry 節に明記 | tl | ☐ |
-| Step 6: 運用テスト設計の pair 凍結 | L14 OT に NFR-01〜15 全件が被覆されているか確認、不足あれば OT 追加 | qa | ☐ |
-| Step 7: **review (self / pmo-sonnet)** | 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。§7 タグ表完備・Phase B carry 明示・孤児 NFR 0 を確認 | pmo-sonnet | ☐ |
-| Step 8: G1 PO サインオフ準備 | 5 sub-doc 全件揃った段階で G1 ゲート PO 確認 | po | ☐ |
+### Step 1: 既存資料整理
+- 担当: tl + pmo-sonnet
+- 内容: nfr.md (B-1 起票済) の §1〜§8 現状を読み直し、NFR-11〜15 の IPA 配置・§7 タグ表の空欄を確認
+- 進捗: ✅ (commit d9992f1、2026-05-28)
+
+### Step 2: IPA × ISO 25010 二軸タグ付け
+- 担当: tl + pmo-tech-docs
+- 内容: NFR-01〜15 全件を IPA 6 大項目 + ISO 25010 特性の 2 軸でタグ付け。対象外特性の除外理由を明示 (U-NFR-1/2)
+- 進捗: ☐
+
+### Step 3: NFR-11〜15 の IPA 節配置確定
+- 担当: tl
+- 内容: NFR-11 (役割分離) → §5 セキュリティ / NFR-12 (machine×AI) → §2 性能 / NFR-13 (dev-local+CI) → §3 保守性 / NFR-14 (human-as-residue) → §3 保守性 / NFR-15 (server-optional) → §2 拡張性 等の配置を確定し nfr §1〜§6 に追記
+- 進捗: ☐
+
+### Step 4: §7 IPA × ISO 25010 二軸タグ表 整備
+- 担当: tl
+- 内容: Step 2/3 の結果を §7 に 3 列 table (NFR-ID / IPA 大項目 / ISO 25010 特性) として整理。除外特性行も含む
+- 進捗: ☐
+
+### Step 5: carry 宣言・Phase B NFR 整備
+- 担当: tl
+- 内容: §3 carry 宣言 (NFR-02 L4 ADR 連携 / NFR-16 Phase B carry) を §8 carry 節に明記
+- 進捗: ☐
+
+### Step 6: 運用テスト設計の pair 凍結
+- 担当: qa
+- 内容: L14 OT に NFR-01〜15 全件が被覆されているか確認、不足あれば OT 追加
+- 進捗: ☐
+
+### Step 7: review (self / pmo-sonnet)
+- 担当: pmo-sonnet
+- 内容: 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。§7 タグ表完備・Phase B carry 明示・孤児 NFR 0 を確認
+- 進捗: ✅ (acdc5ccd6f31ae951 通過、2026-05-28)
+
+### Step 8: G1 PO サインオフ準備
+- 担当: po
+- 内容: 5 sub-doc 全件揃った段階で G1 ゲート PO 確認
+- 進捗: 🔄 (本 commit で readiness 整備中、PO 最終確認待ち)
 
 ## §5 実装計画 (各記載項目をどう埋めるか)
 
@@ -130,7 +159,7 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 - [ ] frontmatter 必須フィールド完備 (sub_doc / pair_artifact / related_l0 / related_br / next_pair_freeze=L4)
 - [ ] 冒頭 blockquote 必須要素 (SSoT 参照 / 件数確定 / L3 接続規約) 存在
 - [ ] L14 OT で本 sub-doc 由来要求が被覆 (孤児 0)
-- [ ] 専門サブエージェント review (Step 7) 通過記録
+- [x] 専門サブエージェント review (Step 7) 通過記録 (2026-05-28 pmo-sonnet 再被覆監査 acdc5ccd6f31ae951 通過、CONDITIONAL PASS)
 
 ## §7 carry / 次工程 (L4) への引き継ぎ
 

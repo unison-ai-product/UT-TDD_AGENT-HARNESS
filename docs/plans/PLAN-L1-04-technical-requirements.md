@@ -103,15 +103,40 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §4 工程表 (Step + 進捗)
 
-| Step | 内容 | 担当 | 進捗 |
-|------|------|------|------|
-| Step 1: 既存資料整理 | technical-requirements.md (B-1 起票済) の §1〜§8 現状を読み直し、L4 carry 未明示 / UT-TDD 翻案漏れを洗い出す | tl + pmo-sonnet | ✅ (B-1 確認済、§4〜§7 は carry 注記が粗い) |
-| Step 2: ADR-001 正本宣言の §1 追記 | technical §1 に ADR-001 参照を明示。Bun version pinning 方針を TL 調査 + PO 確認で確定 | tl | ☐ |
-| Step 3: §4〜§7 の L4 carry note 精緻化 | state schema 二層 / skill 注入 6 フィールド / 9 mode 共通基盤 / drift 解消の各 L4 carry note を「要求レベルの概要」と「L4 carry 内容」に分離して明示 | tl | ☐ |
-| Step 4: §2 外部連携 に Phase B 技術スタック候補追記 | PGlite / ElectricSQL / ADR-002 forward を technical §2 に参考記載 | tl | ☐ |
-| Step 5: 運用テスト設計の pair 凍結 | L14 OT に technical sub-doc 由来要求が被覆されているか確認、不足あれば OT 追加 | qa | ☐ |
-| Step 6: **review (self / pmo-sonnet)** | 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。§4〜§7 carry note の再現性・ADR-001 整合を確認 | pmo-sonnet | ☐ |
-| Step 7: G1 PO サインオフ準備 | 5 sub-doc 全件揃った段階で G1 ゲート PO 確認 | po | ☐ |
+### Step 1: 既存資料整理
+- 担当: tl + pmo-sonnet
+- 内容: technical-requirements.md (B-1 起票済) の §1〜§8 現状を読み直し、L4 carry 未明示 / UT-TDD 翻案漏れを洗い出す
+- 進捗: ✅ (commit d9992f1、2026-05-28)
+
+### Step 2: ADR-001 正本宣言の §1 追記
+- 担当: tl
+- 内容: technical §1 に ADR-001 参照を明示。Bun version pinning 方針を TL 調査 + PO 確認で確定
+- 進捗: ☐
+
+### Step 3: §4〜§7 の L4 carry note 精緻化
+- 担当: tl
+- 内容: state schema 二層 / skill 注入 6 フィールド / 9 mode 共通基盤 / drift 解消の各 L4 carry note を「要求レベルの概要」と「L4 carry 内容」に分離して明示
+- 進捗: ☐
+
+### Step 4: §2 外部連携 に Phase B 技術スタック候補追記
+- 担当: tl
+- 内容: PGlite / ElectricSQL / ADR-002 forward を technical §2 に参考記載
+- 進捗: ☐
+
+### Step 5: 運用テスト設計の pair 凍結
+- 担当: qa
+- 内容: L14 OT に technical sub-doc 由来要求が被覆されているか確認、不足あれば OT 追加
+- 進捗: ☐
+
+### Step 6: review (self / pmo-sonnet)
+- 担当: pmo-sonnet
+- 内容: 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。§4〜§7 carry note の再現性・ADR-001 整合を確認
+- 進捗: ✅ (acdc5ccd6f31ae951 通過、2026-05-28)
+
+### Step 7: G1 PO サインオフ準備
+- 担当: po
+- 内容: 5 sub-doc 全件揃った段階で G1 ゲート PO 確認
+- 進捗: 🔄 (本 commit で readiness 整備中、PO 最終確認待ち)
 
 ## §5 実装計画 (各記載項目をどう埋めるか)
 
@@ -134,7 +159,7 @@ v2_import: docs/migration/v2-import-ledger.md
 - [ ] frontmatter 必須フィールド完備 (sub_doc / pair_artifact / related_l0 / related_br / next_pair_freeze=L4)
 - [ ] 冒頭 blockquote 必須要素 (SSoT 参照 / 件数確定 / L3 接続規約) 存在
 - [ ] L14 OT で本 sub-doc 由来要求が被覆 (孤児 0)
-- [ ] 専門サブエージェント review (Step 6) 通過記録
+- [x] 専門サブエージェント review (Step 6) 通過記録 (2026-05-28 pmo-sonnet 再被覆監査 acdc5ccd6f31ae951 通過、CONDITIONAL PASS)
 
 ## §7 carry / 次工程 (L4) への引き継ぎ
 
