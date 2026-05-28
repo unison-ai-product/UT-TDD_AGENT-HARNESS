@@ -93,8 +93,29 @@ updated: 2026-05-28
 | **AT-FR-45-01** | AC-FR-45-01 (doc-reviewer 召喚正常系) | `ut-tdd review --uncommitted --reviewer doc-reviewer` → `.ut-tdd/audit/doc-reviews/<timestamp>.json` 記録 / pass → 次工程許可 / exit 0 | vitest review test |
 | **AT-FR-45-02** | AC-FR-45-02 (未召喚で G3 fail-close) | doc-reviewer 未召喚 + `ut-tdd gate G3` → fail-close error / next_action 提示 / exit 1 | vitest gate + review test |
 | **AT-FR-45-03** | AC-FR-45-03 (PO bypass) | `UT_TDD_DOC_REVIEWER_BYPASS=1` + 理由 → bypass + audit / D-08 集計 / exit 0 | vitest gate + audit test |
+| **AT-FR-23-01** | (A-50 workflow core) AC-FR-23-01 (Scrum fullback 正常系) | confirmed PoC → `ut-tdd reverse --type fullback` → F0-F4.json 生成 / Forward L3 routing | vitest reverse + scrum test |
+| **AT-FR-23-02** | AC-FR-23-02 (rejected で fullback 試行) | rejected PoC で fullback → fail-close error | vitest reverse test |
+| **AT-FR-23-03** | AC-FR-23-03 (複数 PoC 同時 fullback) | 3 件並列 → 優先度順逐次実行 / 全件成功 | vitest reverse batch test |
+| **AT-FR-24-01** | (A-50 workflow core) AC-FR-24-01 (Add-feature 正常系) | `ut-tdd plan draft --kind add-impl --parent` → PLAN 生成 + dependencies.parent 設定 | vitest plan + add-feature test |
+| **AT-FR-24-02** | AC-FR-24-02 (parent なし) | add-impl + parent 未指定 → schema fail / exit 1 | vitest schema test (既存カバー拡張) |
+| **AT-FR-24-03** | AC-FR-24-03 (parent archived) | parent archived → warn / 起票続行可 | vitest plan test |
+| **AT-FR-25-01** | (A-50 workflow core) AC-FR-25-01 (Refactor 振る舞い不変正常) | 既存 test 緑維持 + axis-11 regression pass | vitest sprint + regression test |
+| **AT-FR-25-02** | AC-FR-25-02 (既存 test 破壊) | refactor 後 test fail → fail-close error | vitest sprint test |
+| **AT-FR-25-03** | AC-FR-25-03 (test 保護網薄い) | coverage < 60% → warn / 続行可 | vitest sprint test |
+| **AT-FR-26-01** | (A-50 workflow core) AC-FR-26-01 (Retrofit matrix 正常) | retrofit-matrix.yaml 生成 + 段階 config + G4 通過 | vitest retrofit + gate test |
+| **AT-FR-26-02** | AC-FR-26-02 (matrix 欠落) | matrix 未生成で G4 → fail-close error | vitest gate test |
+| **AT-FR-26-03** | AC-FR-26-03 (段階 rollback) | `ut-tdd cutover --to <previous-stage>` → 前段階 config 復帰 + audit | vitest cutover test |
+| **AT-FR-27-01** | (A-50 workflow core) AC-FR-27-01 (Research ADR 正常) | research-memo + ADR draft / generates=adr_snapshot 自動 | vitest research test |
+| **AT-FR-27-02** | AC-FR-27-02 (generates 欠落) | research + generates なし → fail-close | vitest schema test |
+| **AT-FR-27-03** | AC-FR-27-03 (ADR 候補なし) | research-memo のみで完了 / status=completed / audit | vitest research test |
+| **AT-FR-29-01** | (A-50 workflow core) AC-FR-29-01 (L2 画面設計起票) | `ut-tdd plan draft --layer L2 --sub-doc screen-list` → 起票 + 14 画面 baton 確認 | vitest plan + L2 test |
+| **AT-FR-29-02** | AC-FR-29-02 (G1 未通過で L2) | G1 未通過 + L2 PLAN 起票 → fail-close W-model 順序違反 | vitest gate + plan test |
+| **AT-FR-29-03** | AC-FR-29-03 (wireframe 外部依頼) | 外部成果物戻り → 要件 back-propagation (G1-trace 再検証) → L10 へ | vitest L2 + back-prop test (carry placeholder) |
+| **AT-FR-30-01** | (A-50 workflow core) AC-FR-30-01 (L10 token SSOT) | L9 G9 通過後 + L10 起票 → tokens.yaml 生成 + a11y script | vitest plan + L10 test |
+| **AT-FR-30-02** | AC-FR-30-02 (token 二重定義) | color.primary 衝突 → fail-close | vitest token lint test |
+| **AT-FR-30-03** | AC-FR-30-03 (a11y warn 多発) | WCAG warn ≥10 → 集約レポート + 通過許可 | vitest a11y test |
 
-> **AT-FR 合計 = 54 + 4 (A-47 補完: FR-09-04 + FR-45-01〜03) = 58 件** (A-49: FR-19 → FR-45 リネーム、ID 衝突解消)。一部 (AC-FR-10-03 UI / AC-FR-17-* GHA workflow) は L4 carry 想定 (L4 で実装後に L12 AT として lift)。
+> **AT-FR 合計 = 58 + 21 (A-50 workflow core: FR-23/24/25/26/27/29/30 × 3 AC) = 79 件** (A-49: FR-19 → FR-45 / A-50: workflow core 7 FR L3 詳細化)。一部 (AC-FR-10-03 UI / AC-FR-17-* GHA workflow / AC-FR-29-03 back-propagation) は L4 carry 想定 (L4 で実装後に L12 AT として lift)。
 
 ### §1.2 business-detail sub-doc 由来 AT (BR-21 + HM-08 + FR-BR21-36/38/43)
 

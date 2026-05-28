@@ -50,6 +50,13 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 | FR-16 | FR-L1-16 | PM-03 / HM-06 | Incident | troubleshoot / all | hotfix 緊急判断 (PO 専属) / postmortem 確定 (TL/PO) |
 | FR-17 | FR-L1-17 | PM-03 / HM-07 | 全 mode | all | CI fail 時の修正 vs 再実行判断 (TL) |
 | FR-18 | FR-L1-18 | HM-07 / PM-04 | 全 mode | all | doctor 検出結果の優先度トリアージ (TL/運用者) |
+| FR-23 | FR-L1-23 (workflow core、A-50) | PM-02 (Scrum 工程) | Scrum (主) / Forward 合流 | scrum / all | fullback 起動判断 (TL) / decision_outcome confirmed 承認 (PO) |
+| FR-24 | FR-L1-24 (workflow core、A-50) | PM-02 (Add-feature) | Add-feature (主) | all | parent PLAN 選定 (TL) / 影響範囲承認 (PO/TL) |
+| FR-25 | FR-L1-25 (workflow core、A-50) | PM-02 (Refactor) / HM-07 | Refactor (主) | all | refactor 範囲承認 (TL) / regression 結果判断 |
+| FR-26 | FR-L1-26 (workflow core、A-50) | PM-02 (Retrofit) | Retrofit (主) | all | retrofit-matrix 承認 (TL) / 段階 rollback 判断 (PO) |
+| FR-27 | FR-L1-27 (workflow core、A-50) | GD-01 (ADR) / PM-02 | Research (主) | all | ADR 採用判断 (PO/TL) / generates skip 判断 |
+| FR-29 | FR-L1-29 (workflow core、A-50) | PM-02 (L2 工程) | screen-design (専門) | fe / fullstack / all | L2 sub-doc 起票判断 (TL) / wireframe 外部依頼 (PO) |
+| FR-30 | FR-L1-30 (workflow core、A-50) | PM-02 (L10 工程) | frontend-design (専門) | fe / fullstack | token SSOT 承認 (TL/uiux) / a11y warn 受容判断 (PO) |
 | FR-45 | FR-L1-45 (BR-08 派生、A-49 back-propagation) | PM-03 / HM-05 | 全 mode (大規模 doc 改定 trigger) | all | doc-reviewer 召喚判断 / bypass (PO 専属 S-03) |
 
 ---
@@ -486,6 +493,174 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 
 ---
 
+### FR-23: Scrum → V モデル昇華ワークフロー (workflow core、A-50 PO 指摘で carry→詳細化)
+
+- **L1 上流**: FR-L1-23
+- **入力**: スプリント完成インクリメント (kind=poc with workflow_phase=S0〜S4)
+- **出力**: F0-F4 成果物、Reverse fullback 経由で V モデル各工程 doc 追補
+- **振る舞い**: Scrum sprint 完了時に `ut-tdd reverse --type fullback` 自動起動 → R0-R4 を経て Forward L1/L3/L4-L6/L8-L9 へ統合
+
+#### AC-FR-23-01 (正常系)
+- **Given**: kind=poc / workflow_phase=S4 / decision_outcome=confirmed の PLAN 完了
+- **When**: `ut-tdd reverse --type fullback --from-poc <plan-id>`
+- **Then**: F0-F4 成果物が `.ut-tdd/reverse/F{0..4}.json` 生成 / Forward L3 合流 routing 提示 / 終了コード 0
+
+#### AC-FR-23-02 (異常系: confirmed 以外で fullback 試行)
+- **Given**: decision_outcome=rejected の PoC PLAN
+- **When**: `ut-tdd reverse --type fullback`
+- **Then**: fail-close `Error: fullback は decision_outcome=confirmed のみ許可 (rejected/pivot は不可)` / 終了コード 1
+
+#### AC-FR-23-03 (境界系: 複数 PoC 同時 fullback)
+- **Given**: 同時に 3 件の confirmed PoC が存在
+- **When**: `ut-tdd reverse --type fullback --batch`
+- **Then**: 各 PoC 個別に F0-F4 生成 / 優先度順 (PLAN-id 昇順) で逐次実行 / 全件成功で終了コード 0
+
+---
+
+### FR-24: Add-feature ワークフロー (workflow core、A-50)
+
+- **L1 上流**: FR-L1-24
+- **入力**: 既存 PLAN、追加要求
+- **出力**: add-design / add-impl PLAN、影響範囲差分追補ドキュメント
+- **振る舞い**: kind=add-design/add-impl で frontmatter.dependencies.parent 必須 (§1.10 E)、既存 PLAN への requires 接続を機械検証
+
+#### AC-FR-24-01 (正常系)
+- **Given**: 既存 PLAN-040 (kind=design) に追加機能を実装
+- **When**: `ut-tdd plan draft --kind add-impl --parent PLAN-040 --title "X 機能追加"`
+- **Then**: PLAN-NNN (kind=add-impl) 生成 / frontmatter.dependencies.parent = PLAN-040 / 影響範囲差分 doc 追補生成
+
+#### AC-FR-24-02 (異常系: parent なし)
+- **Given**: parent 未指定で add-impl PLAN 起票試行
+- **When**: schema 検証
+- **Then**: fail-close `Error: kind=add-* は dependencies.parent 必須 (§1.10 E)` / 終了コード 1
+
+#### AC-FR-24-03 (境界系: parent が archived)
+- **Given**: parent=PLAN-040 が status=archived
+- **When**: add-impl 起票
+- **Then**: warn `Warning: parent PLAN-040 は archived (差分追補対象として再活性化推奨)` / 起票続行可
+
+---
+
+### FR-25: Refactor ワークフロー (workflow core、A-50、振る舞い不変ガード)
+
+- **L1 上流**: FR-L1-25
+- **入力**: 対象コード、既存テスト (保護網)
+- **出力**: refactor PLAN、module、テスト緑確認結果 (axis-11 regression 機械検証)
+- **振る舞い**: kind=refactor、振る舞い不変を axis-11 regression で機械検証、G7 通過後 Forward 復帰
+
+#### AC-FR-25-01 (正常系)
+- **Given**: 既存 src/X.ts (test 保護網あり) を refactor、kind=refactor PLAN 起票
+- **When**: `ut-tdd sprint check --regression-only`
+- **Then**: 既存 test 全件 green 維持確認 / axis-11 regression pass / 振る舞い不変 audit 記録
+
+#### AC-FR-25-02 (異常系: 既存テスト fail)
+- **Given**: refactor 後に既存 test 1 件 fail
+- **When**: sprint check
+- **Then**: fail-close `Error: refactor で既存 test 破壊 (振る舞い不変違反、FR-25)` / 終了コード 1
+
+#### AC-FR-25-03 (境界系: test 保護網が薄い)
+- **Given**: refactor 対象 module の test coverage < 60%
+- **When**: refactor PLAN 起票
+- **Then**: warn `Warning: test 保護網が薄い (coverage 60% 未満、refactor リスク高)` / 起票続行可 / next_action `先に test 補強 PLAN 起票推奨`
+
+---
+
+### FR-26: Retrofit ワークフロー (workflow core、A-50、段階移行)
+
+- **L1 上流**: FR-L1-26
+- **入力**: 移行対象構造・依存
+- **出力**: retrofit-matrix、config、回帰テスト結果
+- **振る舞い**: kind=retrofit、影響評価 retrofit-matrix 必須生成、段階 config 更新で L4-L7 段階移行
+
+#### AC-FR-26-01 (正常系)
+- **Given**: 既存構造 A を構造 B へ段階移行
+- **When**: `ut-tdd plan draft --kind retrofit --target-structure B`
+- **Then**: retrofit-matrix.yaml 生成 (影響: 依存 / インターフェース / テスト 3 軸) / 段階 config 提示 / G4 通過
+
+#### AC-FR-26-02 (異常系: retrofit-matrix 欠落)
+- **Given**: retrofit PLAN で matrix 未生成のまま G4 試行
+- **When**: G4 ゲート
+- **Then**: fail-close `Error: kind=retrofit は retrofit-matrix.yaml 必須 (FR-26)` / 終了コード 1
+
+#### AC-FR-26-03 (境界系: 段階移行中の rollback)
+- **Given**: 段階 2 / 4 で問題発覚、rollback 要請
+- **When**: `ut-tdd cutover --to <previous-stage>`
+- **Then**: 前段階 config に戻す / rollback 履歴 audit 記録 / Forward 復帰
+
+---
+
+### FR-27: Research ワークフロー (workflow core、A-50、ADR 生成)
+
+- **L1 上流**: FR-L1-27
+- **入力**: 調査課題、選択肢・制約
+- **出力**: research-memo、ADR (architecture decision record)
+- **振る舞い**: kind=research、generates=adr_snapshot 必須、ADR 生成後 L4 基本設計に合流
+
+#### AC-FR-27-01 (正常系)
+- **Given**: 技術選定調査を kind=research で起票
+- **When**: `ut-tdd plan draft --kind research --topic "X library 選定"`
+- **Then**: research-memo.md 生成 / 比較評価 + ADR draft / generates=adr_snapshot 自動設定
+
+#### AC-FR-27-02 (異常系: generates 欠落)
+- **Given**: kind=research で generates 未設定
+- **When**: G3 ゲート (research → L4 合流前)
+- **Then**: fail-close `Error: kind=research は generates=adr_snapshot 必須 (FR-27)` / 終了コード 1
+
+#### AC-FR-27-03 (境界系: ADR 候補なし)
+- **Given**: research の結論「既存案で十分、新規 ADR 不要」
+- **When**: research close
+- **Then**: ADR ではなく research-memo のみで完了 / status=completed / decision_outcome=rejected 同等 audit / 終了コード 0
+
+---
+
+### FR-29: 画面設計ワークフロー (L2、workflow core、A-50)
+
+- **L1 上流**: FR-L1-29
+- **入力**: L1 要求定義 (画面要求 14 件、business / functional)
+- **出力**: L2 成果物 (screen-list / screen-flow / ui-element / wireframe)、G2 モック凍結証跡
+- **振る舞い**: `ut-tdd plan draft --layer L2 --sub-doc screen` で 4 sub-doc 起票、Low-Fi default、High-Fi はケース別 (harness 内 OR 外部依頼、A-40 整合)
+
+#### AC-FR-29-01 (正常系)
+- **Given**: L1 G1 PASS 後、L2 画面設計起票
+- **When**: `ut-tdd plan draft --kind design --layer L2 --sub-doc screen-list`
+- **Then**: `docs/design/harness/L2-screen/screen-list.md` 起票 / 14 画面 (PM/HM/GD) baton 引継ぎ確認
+
+#### AC-FR-29-02 (異常系: L1 未 PASS で L2 着手)
+- **Given**: G1 未通過状態で L2 PLAN 起票試行
+- **When**: G2 ゲート
+- **Then**: fail-close `Error: G1 未通過、L2 着手不可 (W-model 順序遵守)` / 終了コード 1
+
+#### AC-FR-29-03 (境界系: wireframe 外部依頼)
+- **Given**: PLAN-L2-03 wireframe で外部依頼選択 (Figma / Excalidraw 等)
+- **When**: 外部成果物が戻る → harness レビュー
+- **Then**: L1 screen / business / functional と照合 / 不整合あれば **要件 back-propagation** (G1-trace 再検証必須、A-40 整合) / L10 UX refinement へ
+
+---
+
+### FR-30: フロントデザイン UX ワークフロー (L10、workflow core、A-50)
+
+- **L1 上流**: FR-L1-30
+- **入力**: L9 総合テスト結果、L2 ワイヤーフレーム、デザイントークン候補
+- **出力**: L10 成果物、デザイントークン SSOT、a11y チェック結果、ビジュアル回帰結果
+- **振る舞い**: L10 UX 磨きで visual design → token SSOT → a11y → visual regression → L11 引き渡し
+
+#### AC-FR-30-01 (正常系)
+- **Given**: L9 G9 通過後、L10 UX 起票
+- **When**: `ut-tdd plan draft --layer L10 --sub-doc visual-design`
+- **Then**: デザイントークン SSOT (`docs/design/harness/L10-ux/tokens.yaml`) 生成 / a11y チェック script 配置 / 終了コード 0
+
+#### AC-FR-30-02 (異常系: token 二重定義)
+- **Given**: L10 で既存 token 名と衝突 (例: `color.primary` 重複)
+- **When**: token SSOT lint
+- **Then**: fail-close `Error: token 名衝突 (color.primary は既定義、FR-30)` / 終了コード 1
+
+#### AC-FR-30-03 (境界系: a11y warn 多発)
+- **Given**: WCAG 2.1 AA チェックで warn 10 件以上
+- **When**: G10 ゲート (UX 磨き完了確認)
+- **Then**: warn 集約レポート出力 / 通過は許可 (warn は block しない) / next_action `critical 操作の keyboard 操作対応優先`
+
+---
+
 ### FR-45: doc-reviewer 必須召喚 (BR-08 派生、L1 FR-L1-45 と 1:1 対応、A-47 → A-49 back-propagation)
 
 - **L1 上流**: BR-08 (doc 品質の継続レビュー) → FR-L1-45 (L3 back-propagation で L1 追加)
@@ -517,31 +692,29 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 |-------|--------|---------|------|
 | FR-L1-19 (Learning Engine) | P1 | Phase B carry | telemetry 整備後の本実装 |
 | FR-L1-20 (観測・計測層) | P1 | L4 carry + Phase B 拡張 | invocation_log / accuracy_score 等の集計アーキは L4 / Phase B telemetry は別途 |
-| FR-L1-21〜35 (FE detector / Scrum / Add-feature / Refactor / Retrofit / Research / W 2 段 / 画面設計 / フロントUX / コンテキスト / フォルダ / 棚卸し / 穴管理 / 整備可視化) | P1 / P2 | L4 carry | 詳細仕様は L4 基本設計と合わせて確定 |
+| **FR-L1-23/24/25/26/27/29/30 (Scrum/Add-feature/Refactor/Retrofit/Research/画面設計/フロントUX)** | **P1** | **L3 直接詳細化 (A-50、workflow core = harness ガードレール)** | **PO 指摘「ワークフローがガードレールだからハーネスとしてのコア」**: L4 carry にすると harness の核心価値を外す。L3 で FR-23/24/25/26/27/29/30 + AC 21 件 + AT 21 件で詳細化 |
+| FR-L1-21/22 (FE detector / 観点 W 字ゲート) | P1 | L4 carry | detector 詳細仕様は L4 基本設計 |
+| FR-L1-28 (W 2 段設計 Phase 1+2 agent 昇華) | P1 | L4 carry | drive=agent 拡張は L4 carry |
+| FR-L1-31〜35 (コンテキスト / フォルダ / 棚卸し / 穴管理 / 整備可視化) | P2 | L4 carry | 整備系は L4 / Phase B carry |
 | FR-L1-37/39/40/41/42/44 (model 推挙 / 難易度 / drive 別 state / drive 自動判定 / provider 引継ぎ / onboarding) | P1 | L4 carry | drive 軸拡張は L4 データ設計連動 / onboarding は L4 設計連動 |
 | FR-L1-36/38/43 (skill 評価 / model 評価 / PoC 計測) | P2 | **PLAN-L3-02 (business-detail.md) に委譲** | BR-21 経路で扱う (重複回避) |
 
-### §3.1 P1 13 件 carry 明示 note (A-47 カバレッジ補完、L4 PLAN 起票時の必須参照)
+### §3.1 P1 残 carry 明示 note (A-47 + A-50、L4 PLAN 起票時の必須参照)
 
-pmo-sonnet カバレッジ matrix (A-47) で「carry 暗黙」と判定された P1 13 件を L4 carry として明示宣言:
+A-50 で workflow core 7 件 (FR-L1-23/24/25/26/27/29/30) を L3 直接詳細化 (FR-23〜30) に格上げしたため、残 P1 carry は以下:
 
 | FR-L1-ID | L4 carry 先 | 受入条件 placeholder (L4 PLAN で詳細化) |
 |----------|------------|--------------------------------------|
-| FR-L1-23 (Scrum→V昇華) | PLAN-L4-NN-mode-scrum | Scrum sprint 完了時に Reverse fullback で V モデル各工程 doc 追補生成 |
-| FR-L1-24 (Add-feature) | PLAN-L4-NN-mode-add-feature | kind=add-design/add-impl で requires 接続、影響範囲差分追補生成 |
-| FR-L1-25 (Refactor) | PLAN-L4-NN-mode-refactor | kind=refactor、axis-11 regression 機械検証で振る舞い不変確認 |
-| FR-L1-26 (Retrofit) | PLAN-L4-NN-mode-retrofit | retrofit-matrix 影響評価、段階 config 更新 + 回帰テスト |
-| FR-L1-27 (Research) | PLAN-L4-NN-mode-research | kind=research、generates=ADR 必須 |
+| FR-L1-21 (テスト観点 W 字ゲート) | PLAN-L4-NN-test-perspective-gate | 設計項目へのテスト観点抜け検出 + レベル間重複検出 (static fail-close) |
+| FR-L1-22 (FE detector 5 軸) | PLAN-L4-NN-fe-detector | mock-promotion / design-token-drift / a11y-regression / visual-regression / state-transition-drift |
 | FR-L1-28 (W 2 段設計) | PLAN-L4-NN-w2-stage | Phase 1 (一般) + Phase 2 (agent 昇華) を L10 合流、drive=agent 追加 |
-| FR-L1-29 (画面設計 L2) | PLAN-L4-NN-mode-screen-design | L2 IA → 画面一覧 → 遷移 → Low/High-Fi → ユーザビリティ |
-| FR-L1-30 (フロントUX L10) | PLAN-L4-NN-mode-frontend-design | L10 ビジュアル → デザイントークン SSOT → a11y → ビジュアル回帰 |
 | FR-L1-37 (model 推挙) | PLAN-L4-NN-model-suggestion | task × drive × L 別の model + reasoning effort 動的選定 |
 | FR-L1-39 (タスク難易度) | PLAN-L4-NN-task-complexity | 規模 / 依存 / 不確実性 × drive 別スコアリング |
 | FR-L1-42 (provider 引継ぎ) | PLAN-L4-NN-provider-handover | Claude ↔ Codex の context+PLAN+budget 連携渡し |
 | FR-L1-44 (onboarding) | PLAN-L4-NN-onboarding | 既存 repo への harness baseline 確立、`.ut-tdd/` 初期 baseline |
-| FR-L1-31/32 (P2 コンテキスト/フォルダ) | PLAN-L4-NN-folder-context | フォルダ構成 + コンテキスト管理 |
+| FR-L1-31〜35 (P2 コンテキスト/フォルダ/棚卸し/穴管理/整備可視化) | PLAN-L4-NN-infra-readiness | 整備系、Phase B carry 含む |
 
-> **明示化の目的**: pmo-sonnet matrix A-47 で「carry 暗黙 → L4 起票者が依存漏れリスク」と指摘されたため、本表で carry 先と受入条件 placeholder を明示し、G4 fail-close を予防する。
+> **A-50 で 6 件削減** (FR-L1-23/24/25/26/27/29/30 = workflow core 7 件を L3 詳細化に格上げ、carry 13 → 8 件に削減)。残 8 件は workflow core ではないため L4 carry を維持。
 
 ### §3.2 UX-01 (3 バランス価値体験) AC + AT 追加 (C-01 補完)
 
@@ -577,7 +750,7 @@ screen §5 G1-trace マトリクスを継承し、L3 FR-* × 14 画面 (PM/HM/GD
 
 §2 表の「対応 mode」「対応 drive」「人間判断点」列で全 FR-* に明示済み。**CC2 (人間主導 + AI 補助原則) carry 充足**: 全 18 FR で人間判断点が明示され、AI 単独自動化に依存しない設計。
 
-### §5.1 9 mode 被覆確認
+### §5.1 9 mode 被覆確認 (A-50 で全 9 mode 直接被覆達成)
 
 | mode | 被覆 FR | 備考 |
 |------|--------|------|
@@ -586,12 +759,15 @@ screen §5 G1-trace マトリクスを継承し、L3 FR-* × 14 画面 (PM/HM/GD
 | Discovery | FR-15 (専用) / FR-08 (自動起動) | S0-S4 + 仮説判定 |
 | Incident | FR-16 (専用) / FR-08 / FR-10 | 緊急 hotfix + Recovery |
 | Recovery | FR-10 (専用) / FR-08 | 暴走収束 |
-| Refactor | FR-08 (自動起動) | 振る舞い不変 (L4 carry FR-L1-25 連動) |
-| Retrofit | FR-08 (自動起動) | 影響評価 (L4 carry FR-L1-26 連動) |
-| Add-feature | (L4 carry FR-L1-24) | 差分追補 |
-| Scrum | (L4 carry FR-L1-23) | インクリメント → V モデル昇華 |
+| **Refactor** | **FR-25 (専用、A-50)** / FR-08 (自動起動) | axis-11 regression 振る舞い不変機械検証 |
+| **Retrofit** | **FR-26 (専用、A-50)** / FR-08 (自動起動) | retrofit-matrix 影響評価 + 段階移行 |
+| **Add-feature** | **FR-24 (専用、A-50)** | parent PLAN requires 接続、差分追補 |
+| **Scrum** | **FR-23 (専用、A-50)** | inkrement → reverse fullback → V モデル昇華 |
+| **screen-design (L2 専門)** | **FR-29 (専用、A-50)** | L2 IA → 画面一覧 → 遷移 → wireframe |
+| **frontend-design (L10 専門)** | **FR-30 (専用、A-50)** | visual → token SSOT → a11y → visual regression |
+| Research | **FR-27 (専用、A-50)** | kind=research、generates=ADR |
 
-> P0 18 件で 9 mode のうち 6 mode (Forward / Reverse / Discovery / Incident / Recovery / 自動起動 routing) を直接被覆。Refactor / Retrofit / Add-feature / Scrum は L4 carry の FR-L1-24/25/26 で詳細化。
+> **9 mode + 工程専門 2 = 11 mode 全件 L3 で直接被覆達成 (A-50)**。PO 指摘「ワークフローがガードレールだからハーネスとしてのコア」反映、L4 carry → L3 直接詳細化に格上げ。
 
 ### §5.2 drive 軸被覆確認
 

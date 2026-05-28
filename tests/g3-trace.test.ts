@@ -26,22 +26,24 @@ describe("G3-trace coverage (機能一覧 + ドメイン整合の機械検証)",
     expect(frL1.has("FR-L1-45")).toBe(true);
   });
 
-  it("L3 FR-* (P0 18 件 + FR-45 doc-reviewer A-49 = 19 件) 全件抽出", () => {
+  it("L3 FR-* (P0 18 + FR-45 + workflow core FR-23/24/25/26/27/29/30 = 26 件) 全件抽出", () => {
     const l3Fr = extractL3FrIds(docs.l3Functional);
-    expect(l3Fr.size).toBeGreaterThanOrEqual(19);
+    expect(l3Fr.size).toBeGreaterThanOrEqual(26);
     expect(l3Fr.has("FR-45")).toBe(true);
+    expect(l3Fr.has("FR-23")).toBe(true);
+    expect(l3Fr.has("FR-30")).toBe(true);
   });
 
-  it("L3 AC-* (FR-* × 3 + BR-21 派生 + UX-01 補完) 全件抽出", () => {
+  it("L3 AC-* (FR × 3 + workflow core 21 + BR-21 + UX-01 = 81+ 件) 全件抽出", () => {
     const ac = extractAcIds(docs.l3Functional, docs.l3BusinessDetail);
-    // FR-01〜18 × 3 = 54 + FR-19 × 3 = 3 + FR-BR21-* + UX-01 = 60+
-    expect(ac.size).toBeGreaterThanOrEqual(54);
+    // FR-01〜18 × 3 = 54 + FR-45 × 3 + FR-23/24/25/26/27/29/30 × 3 = 21 + BR-21 + UX-01 = 81+
+    expect(ac.size).toBeGreaterThanOrEqual(75);
   });
 
-  it("L12 AT-* 全件抽出 (Phase A 即実装 + carry placeholder)", () => {
+  it("L12 AT-* 全件抽出 (Phase A 即実装 + carry placeholder + A-50 workflow core 21 件追加)", () => {
     const at = extractAtIds(docs.l12AcceptanceTest);
-    // AT-FR 54+ + AT-BR21 15+ + AT-NFR 18+ + 補完 = 90+
-    expect(at.size).toBeGreaterThanOrEqual(80);
+    // AT-FR 79+ + AT-BR21 15+ + AT-NFR 18+ + 補完 = 110+
+    expect(at.size).toBeGreaterThanOrEqual(100);
   });
 
   it("L1 NFR 14 件 (NFR-09/10 欠番) が正しく定義", () => {
