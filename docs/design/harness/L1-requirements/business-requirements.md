@@ -261,7 +261,19 @@ UT-TDD Agent Harness の運用原則として、**画面・hook・gate のすべ
 
 ### §10.2 L4 carry
 
-集約境界 / 値オブジェクト / entity ID 規約 / ライフサイクル / 不変条件 / 集約間整合性 は L4 データ設計 sub-doc で確定する。`ut-tdd doctor check_business_entity_coverage` による entity ↔ schema / CLI 整合検出も L4 設計時に実装設計する。
+業務 entity §10.1 の以下構造要素は L4 データ設計 sub-doc で確定する (Minor 5 G1 readiness v8 で機械検証可能化、箇条書き化 2026-05-28):
+
+| carry 項目 | 役割 | L4 着地先 |
+|----------|------|---------|
+| **集約境界** (Aggregate Root) | entity 集約の責任範囲確定 | L4 データ設計 §1 |
+| **値オブジェクト** (Value Object) | identity 不要の不変構造 | L4 データ設計 §2 |
+| **entity ID 規約** | ID 形式・採番ルール (例: PLAN-NNN-slug) | L4 データ設計 §3 |
+| **ライフサイクル** | entity の生成 / 状態遷移 / 削除規約 | L4 データ設計 §4 |
+| **不変条件** (Invariants) | entity が常に満たすべき制約 | L4 データ設計 §5 |
+| **集約間整合性** | aggregate 跨ぎの一貫性ルール | L4 データ設計 §6 |
+| **entity ↔ schema / CLI 整合検出** | `ut-tdd doctor check_business_entity_coverage` の実装設計 | L4 データ設計 §7 + L4 CLI 設計 |
+
+検証: 各 carry 項目は L4 PLAN (PLAN-L4-04 データ設計) 起票時に `dependencies.requires` で本 sub-doc を列挙し、`ut-tdd plan lint` (sub_doc=business 時) で entity 独自定義禁止 (L0 §10 用語集との 1:1 対応) を機械検証する。
 
 ### §10.3 SSoT 参照
 

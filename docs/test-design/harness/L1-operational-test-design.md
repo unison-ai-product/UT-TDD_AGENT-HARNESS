@@ -23,7 +23,7 @@
 | **OT-04** | BR-04 | PoC / 検証成果が契約化を経てから本実装に合流し、契約なしの本実装直行が防がれる | PoC→main 直行が物理 block、契約経由のみ合流 |
 | **OT-05** | BR-05 | PLAN を phase-aware ID で起票し、規約違反 (ID 形式 / phase 不整合 / 必須 frontmatter 欠落) が lint で検知される | 規約違反 PLAN が lint で非ゼロ終了 |
 | **OT-06** | BR-06 / UX-02 | 複数プロダクト / 案件の工程表・進捗がダッシュボードで横断的に可視化され、詰まり・フェーズが把握できる | 複数案件の進捗が 1 ビューで把握可能 (実現アーキは L2/L4) |
-| **OT-07** | BR-07 | 上流 ID 追加 commit に下流対応 ID が無ければ fail-close / 回帰の量的劣化を検知 / 上流→下流 trace 切れを検知 (3 軸。具体指標は L3 送り) | デグレ 3 軸のいずれかが該当する試行を機械検知・block |
+| **OT-07** | BR-07 | 上流 ID 追加 commit に下流対応 ID が無ければ fail-close / 回帰の量的劣化を検知 / 上流→下流 trace 切れを検知 (3 軸) — **観測タイミング**: L14 運用観測 (commit hook + CI gate 経由) / **具体指標 (3 軸の数値しきい値)**: L3 AC で確定 (§0 量閉じ原則、Minor 3 G1 readiness v8 で観測タイミング区分明示 2026-05-28) | デグレ 3 軸のいずれかが該当する試行を機械検知・block |
 | **OT-08** | BR-08 | 大規模 doc 改定・gate evidence 提出・pair freeze の前に doc-reviewer が召喚され、品質観点 (整合/網羅/一貫/明確) が検査される | 該当タイミングで doc-reviewer 召喚 coverage が監査される |
 | **OT-09** | NFR-01 | harness の主要コマンド・hook が Windows / macOS / Linux で**ネイティブ動作**する (bash/python3 等の環境依存に阻まれない) | 全 OS 第一級で主要経路が動作 (例: subagent guard は bun で環境非依存動作) |
 | **OT-10** | NFR-03 / NFR-04 | standalone / claude-only / codex-only / hybrid の各 mode で動作し、統制対象 repo の言語に依存せず回る | 4 mode × 複数言語 repo で基本フローが成立 |

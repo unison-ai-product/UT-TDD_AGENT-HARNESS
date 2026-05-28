@@ -96,6 +96,37 @@ export const VALID_WORKFLOW_PHASES = [
 export const workflowPhaseSchema = z.enum(VALID_WORKFLOW_PHASES);
 export type WorkflowPhase = z.infer<typeof workflowPhaseSchema>;
 
+/** §1.2.2 VALID_DECISION_OUTCOMES (kind=poc + workflow_phase=S4 専用、3 種) */
+export const VALID_DECISION_OUTCOMES = ["confirmed", "rejected", "pivot"] as const;
+export const decisionOutcomeSchema = z.enum(VALID_DECISION_OUTCOMES);
+export type DecisionOutcome = z.infer<typeof decisionOutcomeSchema>;
+
+/** §3.3 VALID_REVERSE_TYPES (kind=reverse の confirmed_reverse_type、5 種) */
+export const VALID_REVERSE_TYPES = [
+  "code",
+  "design",
+  "upgrade",
+  "normalization",
+  "fullback",
+] as const;
+export const reverseTypeSchema = z.enum(VALID_REVERSE_TYPES);
+export type ReverseType = z.infer<typeof reverseTypeSchema>;
+
+/** §3.4 VALID_FORWARD_ROUTING (kind=reverse + R4 の forward_routing、5 種) */
+export const VALID_FORWARD_ROUTING = ["L1", "L3", "L4", "L5", "gap-only"] as const;
+export const forwardRoutingSchema = z.enum(VALID_FORWARD_ROUTING);
+export type ForwardRouting = z.infer<typeof forwardRoutingSchema>;
+
+/** §3.4 VALID_PROMOTION_STRATEGIES (kind=reverse + R4 の promotion_strategy、4 種) */
+export const VALID_PROMOTION_STRATEGIES = [
+  "reuse-as-is",
+  "reuse-with-hardening",
+  "redesign",
+  "discard",
+] as const;
+export const promotionStrategySchema = z.enum(VALID_PROMOTION_STRATEGIES);
+export type PromotionStrategy = z.infer<typeof promotionStrategySchema>;
+
 /**
  * §1.7 VALID_ARTIFACT_TYPES (19 種、test_design / test_code 分離済)。
  * requirements_v1.2 §1.7 全 19 種と突合済 (python_module → source_module 改名、ADR-001)。

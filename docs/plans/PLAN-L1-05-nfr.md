@@ -101,6 +101,8 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 
 ## §4 工程表 (Step + 進捗)
 
+> **Step 数差異の注記 (G1 readiness v8 / Minor 2 整理 2026-05-28)**: 本 PLAN は Step 1〜8 = 8 step 構成。他 4 PLAN (PLAN-L1-01〜04) は Step 7 完了で readiness 整備に集約合流するのに対し、本 PLAN は §0 で「§7 IPA × ISO 25010 二軸表の精緻化と Phase B telemetry NFR (NFR-16 候補) 整理」を主作業として宣言しているため、Step 8 = G1 PO サインオフ準備を明示 step として保持する (集約 commit で他 PLAN と合流するが、本 PLAN 単体での readiness 確定責務を残す)。業務影響なし。
+
 ### Step 1: 既存資料整理
 - 担当: tl + pmo-sonnet
 - 内容: nfr.md (B-1 起票済) の §1〜§8 現状を読み直し、NFR-11〜15 の IPA 配置・§7 タグ表の空欄を確認
