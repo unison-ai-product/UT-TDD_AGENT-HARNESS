@@ -188,3 +188,10 @@ PO 承認のもと、5 sub-doc をそれぞれ解像度アップ。本 ledger §
 | **A-32** | **drive 別 state 区画 (FR-L1-40) + AI provider 引継ぎ (FR-L1-42) technical 追記** (9 mode 統一合流原則段落 + onboarding bootstrap 行追加) | technical-requirements.md §4-§7 |
 
 > 参照 commit: Step 1 並列更新 (2026-05-28)
+
+| # | 採択項目 | 反映先 |
+|---|---|---|
+| **A-33** | **画面要求 3 カテゴリ Bounded Context 分離 (PM/HM/GD)** (2026-05-28): PO 指摘「プロジェクト管理と UT ハーネス管理の画面分離 + 静的ガイドカテゴリ」を受け、SCR-NN 体系廃止・PM-NN / HM-NN / GD-NN に再採番。プロジェクト運用画面 (PM) / ハーネス管理・健全性画面 (HM) / ガイド・ドキュメント (GD) の 3 BC に分離 | `docs/design/harness/L1-requirements/screen-requirements.md` §1 画面一覧・採番体系 |
+| **A-34** | **PM 画面群 V-model 駆動再設計** (2026-05-28): 「機能内容は PM の主題ではない」採用、PM 画面は進捗・担当・詰まり 3 軸に絞る。PM-01 プロジェクト俯瞰ダッシュボード = 4 階層プルダウン (俯瞰/工程/割当/詳細)、PM-02 工程ビュー = L0-L14 テンプレート駆動 (機能内容除外)、PM-03 Gate + 詰まり要因ビュー (横断)、PM-04 Trace ビュー + W-pair 統合、PM-05 Handover ビュー | `docs/design/harness/L1-requirements/screen-requirements.md` §PM 画面群 |
+| **A-35** | **HM 拡張 8 画面化** (2026-05-28): 旧 SCR-04 Audit → HM-05、旧 SCR-05 Recovery → HM-06、旧 SCR-11 Doctor → HM-07 に再 ID。新規 5 画面追加: HM-01 機能一覧 (FR-L1 41 件 × implementation_status) / HM-02 カバレッジヒートマップ (観点 8 × 軸 5 = 40 通り) / HM-03 配線図 (動的、hook/provider/drive エラー赤表示、前回 doc 化専用判断を撤回し画面化採用) / HM-04 DB 閲覧 (state 整合性チェック付き、前回 CLI 専用判断を撤回し画面化採用) / HM-08 AI 効果データ + Learning Engine (BR-21 L3 carry、旧 SCR-14 AI 効果データを HM に統合再採番) | `docs/design/harness/L1-requirements/screen-requirements.md` §HM 画面群 |
+| **A-36** | **GD カテゴリ新設 + §3 横断原則 4 件追加** (2026-05-28): 静的ガイド専用カテゴリとして GD-01 ガイド/ドキュメント統合ビュー (左サイドナビ切替 7 カテゴリ: Troubleshooting / Architecture / Onboarding / Tutorial / CLI / FAQ / Changelog) を新設。§3 横断原則に 4 件追加: 人間主導 + AI 補助 (S-01「AI は UI 操作なし」整合) / 全画面で詳細データテーブル必須 (サマリのみ画面 0 件) / AI 指示 copy UI 全画面配置 / 問題箇所視覚化 (正常/警告/失敗 = 🟢/🟡/🔴 色分け、HM-03/04 + PM-03 で動作確認対象) | `docs/design/harness/L1-requirements/screen-requirements.md` §GD 画面群 / §3 横断原則 |

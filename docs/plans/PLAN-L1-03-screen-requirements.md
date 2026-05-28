@@ -1,6 +1,6 @@
 ---
 plan_id: PLAN-L1-03-screen-requirements
-title: "PLAN-L1-03: 画面要求 起票工程"
+title: "PLAN-L1-03: 画面要求 起票工程 (v3: 14 画面 PM/HM/GD 全面再編)"
 kind: design
 layer: L1
 sub_doc: screen
@@ -30,148 +30,185 @@ dependencies:
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
-# PLAN-L1-03: 画面要求 起票工程
+# PLAN-L1-03: 画面要求 起票工程 (v3)
 
 > **正本宣言**: 本 PLAN は **中間準備ドシエ** (ヒアリング項目・調査メモ・工程表)。
-> **本 PLAN が産出する正本 doc**: `docs/design/harness/L1-requirements/screen-requirements.md` (上記 frontmatter generates 参照)。
+> **本 PLAN が産出する正本 doc**: `docs/design/harness/L1-requirements/screen-requirements.md` (上記 frontmatter generates 参照、337 行、14 画面 PM/HM/GD 確定)。
 > **W-model pair**: L1 画面要求 sub-doc ↔ L14 運用テスト設計 1 doc。本 PLAN 完了時に G1 pair freeze の対象。
 
 ## §0 本 PLAN の役割
 
-本 PLAN は `画面要求 (screen)` sub-doc を v2 HELIX-workflows 正本 §1-§4 構造で起票する工程を管理する。中間準備 + 工程表 + 実装計画を内蔵し、進捗を追跡可能にする。
+本 PLAN は `画面要求 (screen)` sub-doc を **3 カテゴリ Bounded Context (PM / HM / GD) 14 画面構成** で起票する工程を管理する。中間準備 + 工程表 + 実装計画を内蔵。
 
-**注意**: L1 画面要求は「業務要求視点の必要画面列挙」のみ。UI の具体化 (レイアウト / ワイヤーフレーム / UI 要素) は L2 画面設計 4 sub-doc (画面一覧 / 画面遷移 / ワイヤーフレーム / UI 要素) に委ねる。
+**v3 改訂内容 (2026-05-28、PO 凍結前追加ヒアリング 全件承認)**:
+- 旧 SCR-NN 体系廃止 → PM-NN (5 件) / HM-NN (8 件) / GD-NN (1 件) = **14 画面**
+- 3 カテゴリ Bounded Context 分離 (PM = 案件遂行 / HM = harness 改善 / GD = 静的ガイド)
+- PM 画面群 V-model 駆動再設計 (PM-01 4 階層プルダウン: 俯瞰 / 工程 / 割当 / 詳細)
+- §3 表示要望に 4 横断原則追加 (人間主導 + AI 補助 / 詳細データテーブル必須 / AI 指示 copy-paste / 問題箇所視覚化)
 
-**drive=be 注記**: harness core は be 駆動。L2 画面設計 sub-doc は drive=be では skip 可 (frontmatter `skip_sub_doc` で理由明示)。ただし L1 画面要求は「どの画面が業務上必要か」の業務要求であり、skip 対象ではない。ダッシュボード (SCR-01) は BR-06 の実現手段として業務要求に含まれる。
+**注意**: L1 画面要求は「業務要求視点の必要画面列挙 + データ表示要望」。UI 具体化 (レイアウト / ワイヤーフレーム / UI 要素) は L2 画面設計 4 sub-doc に委ねる。
+
+**drive=be 注記**: harness core は be 駆動。dashboard は be の付属 UI として扱う。L2 sub-doc は `skip_sub_doc: true` + 理由明示で skip 可。ただし L1 画面要求は「どの画面が業務上必要か」の業務要求であり skip 対象ではない。
 
 ## §1 入力 (上流からの baton)
 
 - L0 企画書: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
 - v2 HELIX-workflows 正本: `vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md`
-- 上流 baton (business): `docs/design/harness/L1-requirements/business-requirements.md` (BR-06 ダッシュボード / UX-02 チーム連携 / UX-03 DX 戦術)
-- 上流 baton (functional): `docs/design/harness/L1-requirements/functional-requirements.md` (FR-L1-20 観測・計測層 / FR-L1-29 画面設計 WF / FR-L1-30 フロントデザイン UX WF)
-- 画面候補 (B-1 起票済): `docs/design/harness/L1-requirements/screen-requirements.md` (SCR-01〜07 現状)
+- 上流 baton (business): `docs/design/harness/L1-requirements/business-requirements.md` (BR-06 ダッシュボード / UX-02 チーム連携 / UX-03 DX 戦術 / **§3.3.2 人間主導 + AI 補助原則 (CC2)** / **§10.3.1 3 カテゴリ Bounded Context (X1=a)**)
+- 上流 baton (functional): `docs/design/harness/L1-requirements/functional-requirements.md` (FR-L1-20 観測層 / FR-L1-29 画面設計 WF / FR-L1-30 フロントデザイン UX WF / FR-L1-33 資産棚卸 / FR-L1-34 穴管理 / FR-L1-35 整備状況可視化 / FR-L1-44 onboarding)
+- PO 追加ヒアリング承認記録: `docs/handover/G1-readiness-report-2026-05-28.md` v3 (V1-CC3 全件 AI 推奨採用)
 
 ## §2 出力 (本 PLAN で確定)
 
-- 正本 doc: `docs/design/harness/L1-requirements/screen-requirements.md` (frontmatter generates)
-- 量閉じ: 全 SCR-* が L14 OT に被覆されていること
+- 正本 doc: `docs/design/harness/L1-requirements/screen-requirements.md` (frontmatter generates、337 行、14 画面)
+- 量閉じ: 全 PM/HM/GD-NN (14 画面) が L14 OT で被覆 (OT-15/25/32〜44 で網羅、孤児 0)
 
-## §3 ヒアリング項目 / 調査メモ (screen 固有)
+## §3 ヒアリング項目 / 調査メモ (screen 固有、v3 全件 ✅ 確定済)
 
-**status 凡例**: ✅ = 正本着地済 / ➡️ = L2 forward / ❓ = PO 判断待ち / 🆕 = draft 着地・G1 待ち
+**status 凡例**: ✅ = 正本着地済 / ➡️ = L2 forward / ❓ = PO 判断待ち (本 v3 で全件解消)
 
-### 3.1 必要画面リスト確定
+### 3.1 14 画面リスト確定 (PO 承認済 2026-05-28、全件 AI 推奨採用)
 
-| ID | ヒアリング項目 | 着地先 | status |
-|----|--------------|--------|--------|
-| U-画-1 | ダッシュボード (SCR-01): 工程表・進捗・詰まり・フェーズを横断可視化。BR-06 / UX-02 / FR-L1-20 / BR-20 (工程管理 DB Phase A 基盤) | §1 画面一覧 SCR-01 | ✅ (B-1 起票済) |
-| U-画-2 | PLAN ビュー (SCR-02): 単一 PLAN 詳細 (工程表 / 実装計画 / generates / requires / status) | §1 SCR-02 | ✅ |
-| U-画-3 | Gate 判定ビュー (SCR-03): ゲート通過状況・fail 理由 + next_action 表示。UX-03 DX 戦術の核心 | §1 SCR-03 | ✅ |
-| U-画-4 | Audit ビュー (SCR-04): AI 実行ログ・逸脱警告・budget 使用状況・agent guard 判定履歴。FR-L1-09/20 | §1 SCR-04 | ✅ |
-| U-画-5 | Recovery ビュー (SCR-05): 暴走状態ログ・再開ポイント・認識訂正履歴・cutover ロールバック。FR-L1-10 | §1 SCR-05 | ✅ |
-| U-画-6 | handover ビュー (SCR-06): CURRENT.json の可視化・引き継ぎ状態確認 | §1 SCR-06 | ✅ |
-| U-画-7 | Mode 遷移ビュー (SCR-07): 9-mode 遷移・現在 mode・mode 切替トリガー一覧。FR-L1-08 | §1 SCR-07 | ✅ |
-| U-画-8 | Feature 管理ビュー: `docs/features/F-NNN.md` 一覧・3 点セット整合状態 (BR-13 / BR-16 7-Gate pipeline 結果)。PO declared 2026-05-28 | §1 SCR-08 (SCR-01 ダッシュボードと統合) | ✅ (PO 承認済 2026-05-28。SCR-08 = ダッシュボード統合 tab として確定。独立ビューは L3 forward) |
-| U-画-9 | DR/NFR ビュー: NFR 充足状況・SLO 達成率・IPA グレード一覧。NFR-01〜15 | §1 SCR-01 tab (ダッシュボード統合) | ✅ (PO 承認済 2026-05-28。SCR-09 は設置せず SCR-01 の NFR tab として扱う。独立 SCR は drive=be では不要) |
-| U-画-11 | 運用者ロール管理ビュー: PO/PM/TL/SE/PE 責務境界表示 + agent guard 判定履歴 (BR-21 / FR-L1-44 対応) | §1 SCR-11 新規 | ✅ (PO 承認済 2026-05-28) |
+#### PM (5 画面) — V-model 駆動、案件遂行
 
-### 3.2 画面遷移・操作要望 (L1 粒度)
+| ID | 画面 | 採用根拠 | status |
+|---|---|---|---|
+| **PM-01** | プロジェクト俯瞰ダッシュボード (4 階層プルダウン: 俯瞰 / 工程 / 割当 / 詳細) | Y1=a + AA3=a + S4=a 採用、V-model 駆動 | ✅ |
+| **PM-02** | 工程ビュー (L0-L14 共通テンプレート、進捗・担当・詰まり 3 軸) | Y1=a + Y2=a + AA2=a 採用、機能内容除外 | ✅ |
+| **PM-03** | Gate + 詰まり要因ビュー (gate fail + drift + handover stale + 暴走シグナル 横断) | Y1=a 採用、トラブル要因横断 | ✅ |
+| **PM-04** | Trace ビュー (4 artifact + W-model pair 統合) | Y1=a + AA4=a 採用、W-pair 独立画面削除 | ✅ |
+| **PM-05** | Handover ビュー (セッション継続) | 既存維持 (旧 SCR-06、S6=a auto 表示) | ✅ |
 
-| ID | ヒアリング項目 | status |
-|----|--------------|--------|
-| U-画-遷移-1 | SCR-01 ダッシュボードが起点。PLAN クリック → SCR-02、Gate クリック → SCR-03、Audit クリック → SCR-04 遷移 | ✅ (PO 承認済 2026-05-28。L1 粒度遷移確定。遷移図詳細は L2 forward) |
-| U-画-遷移-2 | CLI (`ut-tdd status`) との二重運用: CLI 出力と画面の情報 parity | ✅ (PO 承認済 2026-05-28。NFR-01 cross-platform + FR-L1-20 observability で担保) |
-| U-画-遷移-3 | SCR-04 Audit ビュー → SCR-11 運用者ロール管理ビューへの遷移 (agent guard 判定詳細閲覧) | ✅ (PO 承認済 2026-05-28) |
-| U-画-遷移-4 | SCR-01 ダッシュボード → SCR-06 handover ビューへの遷移 (CURRENT.json 確認) | ✅ (PO 承認済 2026-05-28) |
-| U-画-遷移-5 | SCR-01 → SCR-07 Mode 遷移ビュー → 9 mode 切替 → SCR-01 に戻る | ✅ (PO 承認済 2026-05-28) |
-| U-画-遷移-6 | SCR-02 PLAN ビュー → SCR-05 Recovery ビュー (PLAN fail 時) | ✅ (PO 承認済 2026-05-28) |
+#### HM (8 画面) — 機能可視化 + 改善ループ + 学び
 
-#### 3.2a SCR 詳細化 (PO 承認済 2026-05-28)
+| ID | 画面 | 採用根拠 | status |
+|---|---|---|---|
+| **HM-01** | 機能一覧ビュー (FR-L1 41 件 × implementation_status) | W1=a + AA1=a 採用、FR-L1-33/34/35 直接実装 | ✅ |
+| **HM-02** | カバレッジヒートマップビュー (観点 8 × 軸 5) | Z1=a + Z2=b 採用、弱点診断 | ✅ |
+| **HM-03** | 配線図ビュー (動的、エラー赤表示) | **CC1=a 採用 (前回 doc 化判断撤回)**、問題箇所視覚化 | ✅ |
+| **HM-04** | データベース閲覧ビュー (整合性チェック付き) | **CC1=a 採用 (前回 CLI 専用判断撤回)**、state 異常検知 | ✅ |
+| **HM-05** | Audit / 実行ログビュー (skill 注入タブ統合) | 旧 SCR-04 + S8=b 採用 | ✅ |
+| **HM-06** | Recovery ビュー (CLI ロールバックコピー S5=b) | 旧 SCR-05 維持 | ✅ |
+| **HM-07** | Doctor 結果ビュー | 旧 SCR-11 維持 | ✅ |
+| **HM-08** | AI 効果データ + Learning Engine ビュー (BR-21 連動) | V3=a 採用、L3 carry | ✅ |
 
-| SCR-ID | 詳細追加 | status |
-|--------|---------|--------|
-| SCR-01 | ダッシュボード: KPI D-01〜D-09 表示エリア + NFR tab + Feature 整合 tab (SCR-08 統合) | ✅ |
-| SCR-04 | Audit ビュー: agent guard bypass 記録 (UT_TDD_ALLOW_RAW_AGENT=1 使用履歴) を表示 | ✅ |
-| SCR-07 | Mode 遷移ビュー: Add-feature 例外 mode の plan-freeze スキップ表示 (FR-L1-42) | ✅ |
-| SCR-11 | 運用者ロール管理ビュー (新規): PO/PM/TL/SE/PE 責務境界 + agent guard 許可リスト状態 + bypass 履歴 (BR-21 / FR-L1-44 対応) | ✅ |
+#### GD (1 画面) — 静的ガイド
 
-### 3.3 PO 承認済 (旧 PO 判断待ち → 2026-05-28 確定)
+| ID | 画面 | 採用根拠 | status |
+|---|---|---|---|
+| **GD-01** | ガイド/ドキュメント統合ビュー (左サイドナビ 7 カテゴリ: Troubleshooting / Architecture / Onboarding / Tutorial / CLI / FAQ / Changelog) | BB1=a + BB2=a + BB3=b 採用 (Learning Engine 半自動更新は Phase B carry) | ✅ |
 
-| ID | ヒアリング項目 | 確定内容 | status |
-|----|--------------|---------|--------|
-| U-画-PO-1 | SCR-08 (Feature 管理ビュー) を L1 scope に含めるか | SCR-08 = SCR-01 ダッシュボード統合 tab として L1 scope に含める。独立ビュー化は L3 forward | ✅ (PO 承認済 2026-05-28) |
-| U-画-PO-2 | drive=be で L2 画面設計 skip 理由の明示方針 | ダッシュボードは be の付属 UI として扱う。L2 sub-doc は `skip_sub_doc: true` + 理由明示。drive は be のまま維持 | ✅ (PO 承認済 2026-05-28) |
+### 3.2 画面遷移 (6 シナリオ確定、PO 承認済 2026-05-28)
+
+| ID | シナリオ | status |
+|----|---------|--------|
+| シナリオ 1 | Forward 通常進行 (PM-01 → PM-02 → PM-03 → PM-01) | ✅ |
+| シナリオ 2 | Gate fail 時 next_action (PM-03 → PM-02 → PM-04 → HM-07) | ✅ |
+| シナリオ 3 | Incident (PM-01 → HM-06 Recovery → HM-05 Audit → PM-01) | ✅ |
+| シナリオ 4 | セッション再開 Handover (PM-05 auto → PM-02 → PM-03) | ✅ |
+| シナリオ 5 | Recovery 収束後 (HM-06 → PM-01 → PM-02 → PM-03) | ✅ |
+| シナリオ 6 | Discovery S0→S4 (PM-01 → PM-02 → HM-05 → PM-03 → PM-01) | ✅ |
+| **追加** | 3 カテゴリ間 deep-link (例: PM-03 → HM-05 → GD-01 Troubleshooting → AI 指示 copy → 修正) | ✅ (CC2 採用) |
+
+### 3.3 §3 横断原則 4 件追加確定 (CC2/CC3 採用、PO 承認済 2026-05-28)
+
+| 原則 | status |
+|------|--------|
+| 人間主導 + AI 補助原則 (CC2、business §3.3.2 と整合) | ✅ |
+| 詳細データテーブル必須 (CC3、サマリのみ画面禁止) | ✅ |
+| AI への指示テキスト copy-paste UI (自動修正ボタン排除) | ✅ |
+| 問題箇所視覚化 (HM-03/04 + PM-03 で 🟢/🟡/🔴 色分け) | ✅ |
+
+### 3.4 既存採用済 §3 要望 (前 commit b0d0fbf で確定、維持)
+
+S2=b 30 秒ポーリング / S3=b PLAN ビュー パース構造化 / S5=b Recovery CLI コピー / S6=a Handover auto 表示 / S9=a Desktop 専用 / Q30 light のみ / Q31 日本語固定 / Q32 WCAG 2.1 AA 意識 - 全件 ✅
 
 ## §4 工程表 (Step + 進捗)
 
 ### Step 1: 既存資料整理
 - 担当: tl + pmo-sonnet
-- 内容: screen-requirements.md (B-1 起票済、SCR-01〜07) の現状を読み直し、SCR-08/09 候補・遷移要望の抜けを洗い出す
+- 内容: screen-requirements.md (B-1 起票済 7 画面) の現状確認
 - 進捗: ✅ (commit d9992f1、2026-05-28)
 
-### Step 2: 必要画面リスト確定
+### Step 2: 必要画面リスト確定 (v3 で 14 画面化)
 - 担当: po + tl
-- 内容: §3.1 の ❓ 項目 (SCR-08 / SCR-09 / drive 判断) を PO + TL で確定。ダッシュボード Phase A 基盤 (BR-20) との整合確認
-- 進捗: ☐
+- 内容: PO 追加ヒアリング V1-CC3 全件承認受領 → PM/HM/GD 14 画面確定
+- 進捗: ✅ (2026-05-28、subagent 4 並列起案 + PO 承認)
 
 ### Step 3: 画面遷移要望の整理
 - 担当: tl
-- 内容: §3.2 遷移要望を §2 画面遷移の要望 (L1 粒度) に落とす。L2 への bridge 素材として整理
-- 進捗: ☐
+- 内容: 6 シナリオ + 3 カテゴリ間 deep-link を screen §2 に反映
+- 進捗: ✅ (Step A subagent ac2517e7、2026-05-28)
 
-### Step 4: screen §1-§4 の起草・改訂
+### Step 4: screen §1-§6 起草・改訂 (v3 全面再編)
 - 担当: tl
-- 内容: 画面一覧 (SCR-01〜NN) + 遷移要望 + 操作要望 を L1 粒度で確定。§4 関連 doc に L2 bridge 規約追記
-- 進捗: ☐
+- 内容: 14 画面詳細化 + 横断原則 4 件 + Bounded Context 宣言 + ペルソナ 3 種
+- 進捗: ✅ (Step A subagent、202→337 行、2026-05-28)
 
 ### Step 5: 運用テスト設計の pair 凍結
 - 担当: qa
-- 内容: L14 OT に SCR-* 全件が被覆されているか確認、不足あれば OT 追加
-- 進捗: ☐
+- 内容: L14 OT で 14 画面被覆 (OT-15/25/32〜44 で網羅、孤児 0)
+- 進捗: ✅ (Step C subagent a008e781、OT-44 件確定、2026-05-28)
 
 ### Step 6: review (self / pmo-sonnet)
 - 担当: pmo-sonnet
-- 内容: 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。L2 bridge 素材としての十分性・❓ 残ゼロを確認
-- 進捗: ✅ (acdc5ccd6f31ae951 通過、2026-05-28)
+- 内容: 専門サブエージェント review 必須
+- 進捗: ✅ (acdc5ccd 通過 + 追加 4 subagent ad3c4989/aba43aef/a39bf4b8/ae9d79db、2026-05-28)
 
 ### Step 7: G1 PO サインオフ準備
 - 担当: po
-- 内容: 5 sub-doc 全件揃った段階で G1 ゲート PO 確認
-- 進捗: 🔄 (本 commit で readiness 整備中、PO 最終確認待ち)
+- 内容: 14 画面確定 + 4 横断原則確定 + 3 カテゴリ Bounded Context 確定
+- 進捗: ✅ (v3 全件 PO 承認 2026-05-28、G1 readiness v3 起票へ)
 
 ## §5 実装計画 (各記載項目をどう埋めるか)
 
-| 節 | 情報源 | 方法 |
-|----|--------|------|
-| §1 画面一覧 | B-1 起票済 SCR-01〜07 + §3.1 確定分 | SCR-NN 表 (画面 ID / 画面名 / 主要目的 / 対応 BR/FR) に SCR-08/09 を追加または除外 |
-| §2 画面遷移の要望 | §3.2 遷移要望 + concept §2.5 9-mode 遷移 | SCR-01 起点の遷移パターン (L1 粒度)。具体的な遷移図は L2 に委ねる旨を明記 |
-| §3 表示・操作への要望 | UX-03 DX 戦術 + UX-02 チーム連携 + FR-L1-20 observability | 各画面の「業務要求としての表示粒度・操作要望」を L1 レベルで列挙 |
-| §4 関連 doc | L2 4 sub-doc へのブリッジ規約 | L2 PLAN-L2-01〜04 が本 sub-doc を入力とする接続規約。drive=be の L2 skip 方針も明記 |
+| 節 | 情報源 | 確定状態 |
+|----|--------|---------|
+| §1 画面一覧 (3 カテゴリ別) | §3.1 14 画面リスト | ✅ §1.PM/HM/GD 各サブセクションで詳細化済 |
+| §2 画面遷移シナリオ | §3.2 6 シナリオ + 3 カテゴリ間 deep-link | ✅ |
+| §3 表示・操作要望 (4 横断原則 + 既存 8 要望) | §3.3 + §3.4 | ✅ §3.1 横断原則 / §3.2 既存維持 |
+| §4 L2 carry 規約 | L2 PLAN-L2-01〜04 (14 画面被覆) | ✅ |
+| §5 ペルソナ (3 ペルソナ × 3 カテゴリ整合) | PO / harness 運用者 / 新規参画者 | ✅ |
+| §6 Bounded Context 宣言 (新規) | DDD 整合、SCR-NN → PM/HM/GD-NN 移行注記 | ✅ |
 
 ## §6 DoD (Definition of Done)
 
-- [ ] screen-requirements.md が必須 § 全件含む (§1〜§4)
-- [x] §1 画面一覧が SCR-NN 全件を含む (7 画面確定: SCR-01〜07 + SCR-08 統合 + SCR-11 新規。PO 承認済 2026-05-28)
-- [ ] frontmatter 必須フィールド完備 (sub_doc / pair_artifact / related_l0 / related_br / next_pair_freeze)
-- [ ] 冒頭 blockquote 必須要素 (SSoT 参照 / 件数確定 7 画面 / L3 接続規約) 存在
-- [ ] §4 に L2 4 sub-doc (画面一覧 / 画面遷移 / ワイヤーフレーム / UI 要素) への bridge 規約が記載
-- [x] drive=be における L2 sub-doc skip 方針が明示 (skip_sub_doc: true + 理由「ダッシュボードは be 付属 UI」確定。PO 承認済 2026-05-28)
-- [ ] L14 OT で本 sub-doc 由来要求が被覆 (孤児 0)
-- [x] 専門サブエージェント review (Step 6) 通過記録 (2026-05-28 pmo-sonnet 再被覆監査 acdc5ccd6f31ae951 通過、CONDITIONAL PASS)
-- [x] G1 readiness: status = ready-for-G1-signoff (PO サインオフ準備完了。§3 全件 ✅/➡️ 確定済、7 画面 + 6 遷移確定)
+- [x] screen-requirements.md が必須 § 全件含む (§1〜§6)
+- [x] §1 画面一覧が 14 画面全件 (PM 5 + HM 8 + GD 1) を含む
+- [x] frontmatter 必須フィールド完備
+- [x] 冒頭 blockquote 必須要素 (SSoT 参照 / 件数確定 14 画面 / L3 接続規約) 存在
+- [x] §4 に L2 4 sub-doc bridge 規約 (14 画面ベース)
+- [x] §3 4 横断原則が記載 (人間主導 / 詳細データテーブル / AI 指示 copy / 問題箇所視覚化)
+- [x] §6 Bounded Context 宣言 (PM/HM/GD)
+- [x] L14 OT で 14 画面被覆 (孤児 0、OT-15/25/32〜44)
+- [x] 専門サブエージェント review 通過 (acdc5ccd + 4 追加 subagent、2026-05-28)
+- [x] **G1 readiness: status = ready-for-G1-signoff** (v3 確定、14 画面 + 4 横断原則 + Bounded Context 全件 PO 承認済 2026-05-28)
 
 ## §7 carry / 次工程 (L2 / L3) への引き継ぎ
 
-**確定済 (carry から除外)**:
-- SCR-08 scope 判断: SCR-01 ダッシュボード統合 tab として確定。carry 終了
-- SCR-09 判断: SCR-01 NFR tab として統合確定。carry 終了
-- drive=be L2 skip 方針: skip_sub_doc: true + 理由明示で確定。carry 終了
-- 画面遷移 6 件 (U-画-遷移-1〜6): L1 粒度確定。carry 終了
-- SCR-11 新規: PO 承認済 2026-05-28。carry 終了
+**確定済 (carry から除外、本 v3 で解消)**:
+- 14 画面構成 (PM 5 / HM 8 / GD 1): 全件 PO 承認済
+- 3 カテゴリ Bounded Context (PM/HM/GD): X1=a 採用済
+- 4 横断原則 (人間主導 / 詳細データテーブル / AI 指示 copy / 問題箇所視覚化): CC2/CC3 採用済
+- PM-01 4 階層プルダウン (俯瞰 / 工程 / 割当 / 詳細): AA3=a 採用済
+- PM-02 工程ビュー (進捗・担当・詰まり 3 軸、機能内容除外): AA2=a 採用済
+- HM-03 配線図 + HM-04 DB 閲覧 再採用: CC1=a 採用済
+- GD-01 統合 1 画面 (左サイドナビ 7 カテゴリ): BB1/BB2=a 採用済
 
 **L2 forward carry (継続)**:
-- **各 SCR の wireframe lift (L2)**: SCR-01〜07 + SCR-11 の wireframe は L2 画面設計 sub-doc で詳細化。PLAN-L2-01〜04 が本 sub-doc を `dependencies.requires` に列挙
-- **SCR-08 独立ビュー化判断 (L3)**: dashboard tab では不足の場合 L3 screen forward で独立 SCR 化を検討
-- **Phase B ダッシュボード拡張**: ADR-002 (2 層分離) 確定後、SCR-01 仕様拡張として L3/L4 forward
-- **L3 PLAN 接続規約**: PLAN-L3-xx-screen-requirement (起票される場合) は本 sub-doc 全件を `dependencies.requires` に列挙する
+- **各画面 wireframe lift (L2)**: 14 画面の wireframe は L2 画面設計 sub-doc で詳細化
+  - PM-01 4 階層プルダウン UI 詳細
+  - HM-02 heat map UI (観点 × 軸 切替 UI)
+  - HM-03 動的配線図 UI (色分け + クリック詳細)
+  - HM-04 DB 閲覧 (整合性チェック表示)
+  - GD-01 左サイドナビ + 全文検索 UI
+- **画面遷移詳細**: 3 カテゴリ間 deep-link の URL 設計 (PM-NN / HM-NN / GD-NN/<category> 規約)
+- **PLAN-L2-01〜04 接続規約**: 本 sub-doc 全 14 画面を `dependencies.requires` に列挙
+
+**L3 forward carry**:
+- HM-08 AI 効果データビュー (BR-21 連動、FR-L1-36/38/43 の L3 詳細化と連動)
+- GD-01 Learning Engine 半自動更新 (BB3=b、Phase B carry)
+- 「人間主導 + AI 補助」原則を L3 全機能要件で「人間判断点」明示 (CC2 carry)
+
+**L4 carry**:
+- 14 画面の実装方式 (フレームワーク選定、Tauri / Electron / 純 Web 等) は L4 ADR で確定

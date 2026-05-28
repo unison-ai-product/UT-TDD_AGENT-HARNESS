@@ -131,6 +131,18 @@ Forward / Research を除く 7 mode (Reverse / Discovery / Refactor / Retrofit /
 
 > **Add-feature 例外**: Add-feature は既存 PLAN への差分追補が設計思想であり、Reverse closure を必須としない。Reverse は「前段 option」として使用可能だが、強制ではない (根拠: HELIX add-feature-workflow.md §基本フロー / concept §2.5 既宣言)。UT-TDD では本原則として明示記述する。
 
+### §3.3.2 人間主導 + AI 補助原則 (CC2 / PO 承認 2026-05-28)
+
+UT-TDD Agent Harness の運用原則として、**画面・hook・gate のすべては人間 (PO / 運用者) の判断補助のために設計**する。AI 単独自動化に依存せず、人間が異常検知・問題箇所特定・修正判断を主導する設計思想を貫く。
+
+- **AI = 補助者**: AI は実装・文書起草・レビューを担うが、最終判断 (gate サインオフ / 修正方針 / リソース割当) は人間が下す
+- **画面 = 人間の判断補助**: 画面はサマリだけでなく **詳細データテーブル** を提供し、人間が目視で異常検知できる粒度を維持 (screen §3.1 横断原則 [[CC3]])
+- **AI への指示は copy-paste UI で生成**: 自動修正ボタンではなく、人間が AI に貼り付けて指示するテキストを生成する設計 (画面 §3.1 [[CC2]])
+- **AI は UI 操作なし** (S-01): Claude Code / Codex は CLI 経由のみで harness と連携する
+- **整合**: BR-02 (複数人チーム role 境界) / BR-08 (doc-reviewer 必須召喚) / NFR-14 (human-as-residue 原則) と整合
+
+本原則は L3 / L4 設計層への forward carry とし、全機能設計で「人間判断点」を明示する。
+
 ## §4 ステークホルダー
 
 | ステークホルダー | 関心事 | 関与フェーズ | gate サインオフ権 | 権限 (S-04) |
@@ -254,9 +266,21 @@ Forward / Research を除く 7 mode (Reverse / Discovery / Refactor / Retrofit /
 ### §10.3 SSoT 参照
 
 - ユビキタス言語: L0 `docs/governance/ut-tdd-agent-harness-concept_v3.1.md §10 用語集`
-- Bounded Context: L0 §2.5 9-mode ecosystem
+- Bounded Context: L0 §2.5 9-mode ecosystem **+ 画面要求 3 カテゴリ Bounded Context (PM / HM / GD、X1=a 採用 2026-05-28)**
 - 業界標準整合: L0 §11 参考文献
 - entity 独自定義禁止: `ut-tdd plan lint` (sub_doc=business 時) で機械検証
+
+### §10.3.1 画面要求 3 カテゴリ Bounded Context (X1=a / PO 承認 2026-05-28)
+
+画面要求は以下 3 カテゴリで bounded context を分離する (DDD 整合、screen sub-doc §6 と整合):
+
+| カテゴリ | 性質 | 主ペルソナ | データ源 |
+|---------|------|----------|---------|
+| **PM** (Project Management) | 動的 (案件遂行) | PO | `.ut-tdd/` runtime state (plan/gate/phase/handover/trace) |
+| **HM** (Harness Management) | 動的 (harness 改善) | harness 運用者 | `.ut-tdd/` audit/event (invocation_log/failure_log/detector_runs) |
+| **GD** (Guide & Docs) | 静的 (知識ベース) | 新規参画者 + 全ペルソナ参照 | `docs/` markdown 配下 |
+
+カテゴリ間 deep-link は許容するが、各カテゴリの責務 (entity / 用語 / state 参照範囲) は混在させない。詳細は screen sub-doc §6 参照。
 
 ### §10.4 skill / detector entity 参照注記 (B9=c)
 
