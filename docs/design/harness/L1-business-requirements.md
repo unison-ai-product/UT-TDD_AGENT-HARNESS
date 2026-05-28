@@ -62,7 +62,7 @@
 - **並列オーケストレーション (→ L3 FR)**: タスク依存分解 → 最大 8 スロット並列ディスパッチ + 稼働チェック。現状は `.claude/CLAUDE.md` の散文ポリシー + PM 手作業のみ (機械実装なし)。concept §2.6 配線 / requirements §7.8 に連結 (v2 import ledger F-1、PO 判断 = L3 要求化のみ 2026-05-28)。
 - **技術設計 (→ L4)**: 配布形態 (plugin / skill MCP 化) / ダッシュボード UI 実装技術 / **サーバー + V-model 管理 DB + リアルタイム更新 + multi-project 横断**のアーキテクチャ / 更新性の実現方式。
 - ⚠️ **整合課題 (要 L2 解決)**: BR-06 (サーバー / DB / リアルタイム / 複数プロダクト横断ダッシュボード) は concept の「軽量・interpreter 不要・外部依存避け」(§8.1) と緊張する。**L1 では要求として確定**し、規模・実現方式・現行ファイルベース state との整合は L2/L4 に委ねる (詳細アーキ分析は L2 entry の検討事項)。
-- **③ 運用テスト設計** (W-model L1↔L14 pair): `../test-design/harness/L1-operational-test-design.md` (**予定・未作成**、PLAN-L1-01 Step 5)。
+- **③ 運用テスト設計** (W-model L1↔L14 pair): `../test-design/harness/L1-operational-test-design.md` (**作成済** OT-01〜13、全 BR を量閉じ被覆、PLAN-L1-01 Step 5)。G1 で ① ⇔ ③ pair freeze。
 
 ## 6. trace サマリ (L0 → L1)
 
