@@ -1,6 +1,6 @@
 ---
 doc_id: G1-readiness-report-2026-05-28
-title: "L1 G1 readiness report — PO サインオフ最終判断材料 (v5: G1-trace sub-gate 新設、業務 ⇔ 画面 ⇔ 機能 双方向 trace 機械強制)"
+title: "L1 G1 readiness report — PO サインオフ最終判断材料 (v6: L2-screen フォルダ新設 + wireframe PO 外部吸収方針確定)"
 status: ready-for-PO-final-signoff
 created: 2026-05-28
 updated: 2026-05-28
@@ -11,9 +11,13 @@ related_audit: |
   Phase 3 ac2517e7 + a008e781 (Step A screen 14 画面再編 + Step C ledger/OT 再採番)
 ---
 
-# L1 G1 readiness report (2026-05-28、v5 最終版)
+# L1 G1 readiness report (2026-05-28、v6 最終版)
 
 > **判定**: **PASS** (Critical 0 / Important 0 / Minor 5 任意 carry)
+> **本 v6 で追加**: L2-screen フォルダ新設 + wireframe PO 外部吸収方針確定 (PO 指示「L2 のフォルダ作っておいてこっちでモック吸収する」)
+>   - `docs/design/harness/L2-screen/` 新設 (README + 4 sub-doc placeholder)
+>   - wireframe.md status=skip-with-external-absorption (High-Fi モック = PO 外部、Low-Fi のみ harness 内)
+>   - concept §3.7 注記追加 / PLAN-L1-03 §7 / screen §4 / ledger A-39 整合
 > **本 v5 で追加された新機能**: G1-trace sub-gate 新設 (PO 指摘「本来は要求と画面要求を照らし合わせるゲートがいるな」)
 >   - G1 内 sub-gate 3 段化: G1-content / G1-pair / **G1-trace (NEW)**
 >   - 機械検証ルール R1-R4: BR/UX → 画面 (12 件 block) / 画面 → BR/UX/FR-L1 (14 画面 block) / FR-L1 P0 → 画面 (18 件 block、P1-P2 warn) / screen requires 整合 (warn)
@@ -163,7 +167,8 @@ cdd6598 G1 audit Critical 4 件修正
 b0d0fbf Step 1+2: 5 sub-doc + 5 PLAN + ledger + L14 OT 更新 (PO 追加ヒアリング 32 問反映、G1 readiness v2)
 991b65f Step A/B/C: 画面要求 14 画面 PM/HM/GD 全面再編 + §3 横断原則 4 件 + 3 カテゴリ Bounded Context (G1 readiness v3)
 d9ce15f L2 skip 撤回 (concept §3.7 修正 + ledger A-37 + 整合修正、G1 readiness v4)
-<本commit> G1-trace sub-gate 新設 (concept §3.3.1 + requirements §1.10.H + screen §5 trace マトリクス + functional 対応画面列 + OT-45 + ledger A-38、G1 readiness v5)
+f96ad44 G1-trace sub-gate 新設 (concept §3.3.1 + requirements §1.10.H + screen §5 trace マトリクス + functional 対応画面列 + OT-45 + ledger A-38、G1 readiness v5)
+<本commit> L2-screen フォルダ新設 + wireframe PO 外部吸収方針 (README + 4 placeholder + concept §3.7 注記 + ledger A-39、G1 readiness v6)
 ```
 
 合計 14 commit、L1 G1 readiness v3 整備完了。
