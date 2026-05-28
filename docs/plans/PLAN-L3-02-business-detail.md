@@ -66,7 +66,7 @@ PLAN-L3-01 (FR 一般詳細化) とスコープを分離し、本 PLAN は **Lea
 
 **status 凡例**: ✅ / ➡️ Phase B carry / ❓ PO 判断待ち / 🆕 TL レビュー AI 推奨採用 (draft 着地、G3 で PO 確認)
 
-> **TL レビュー反映 (2026-05-28、A-43 ledger)**: 全 10 項目を TL 視点で再仕分け。**PO 判断対象 = 1 件 (U-BR21-9)** のみ (Phase B 着手条件はビジネススコープ判断のため PO 必須)。他 9 件は技術判断・既存規約整合で AI 推奨採用 🆕 draft 着地。
+> **TL レビュー反映 (2026-05-28、A-43 ledger + A-44 PO 直問 0 化)**: 全 10 項目を TL 視点で再仕分け、A-44 で U-BR21-9 も AI 採用に格上げ。**PO 判断対象 = 0 件**。全 10 件 AI 推奨採用 🆕 draft 着地、G3 readiness 整備時に他項目と合わせて PO 確認。
 
 ### 3.1 BR-21 評価サイクル設計
 
@@ -90,7 +90,7 @@ PLAN-L3-01 (FR 一般詳細化) とスコープを分離し、本 PLAN は **Lea
 | ID | ヒアリング項目 | 着地先 | status |
 |----|--------------|--------|--------|
 | U-BR21-8 | Phase A スコープ | business-detail §6 carry | 🆕 **Phase A = 宣言のみ + HM-08 placeholder、実装は Phase B**。理由: Phase A scope を MVP に絞る既存方針 (NFR-07 MVP なし整合)、評価ロジック本実装は Phase B telemetry 整備後 |
-| **U-BR21-9** | **Phase B 着手条件** (KPI D-07 + G14 + sprint 数等) | business-detail §6 carry | **❓ PO 判断必須** — Phase B 着手 = ビジネススコープ判断 / 投資判断のため PO 専決。TL 推奨案: **(a) Phase A G14 通過 + KPI D-07 直近 1 sprint ≥ 50% 達成** (推奨) / (b) KPI D-07 目標値 ≥ 70% 達成必須 / (c) sprint 数しきい値 (例: 6 sprint 経過) |
+| U-BR21-9 | Phase B 着手条件 | business-detail §6 carry | 🆕 **Phase A G14 通過 + KPI D-07 直近 1 sprint ≥ 50% 達成 を AND 条件で採用** (A-44 ledger、PO 指摘「TL/AI で決めれる範囲なら振るな」反映)。理由: Phase A G14 通過 = workflow 標準完了点 (技術判断) / KPI D-07 ≥ 50% = MVP scope で AI 委譲が機能している証明 (KPI D-07 目標値 ≥ 70% の手前、Phase A 完了時点の妥当値)、両条件 AND で投資判断ではなく工程整合判断。PO が後続で目標値を引き上げたい場合は L4/Phase B 着手 PLAN で再調整可能 |
 | U-BR21-10 | telemetry default on/off | business-detail §6 / NFR-16 連動 | 🆕 **PLAN 評価 = default on / model evaluation = opt-in、PII redaction 必須**。理由: PLAN 評価は KPI 計測の必須インフラ (offに すると D-07 計測不能)、model evaluation は実験的要素で opt-in、PII redaction は NFR-09/14 整合 |
 
 ## §4 工程表 (Step + 進捗)
