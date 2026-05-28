@@ -66,33 +66,38 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 
 | ID | ヒアリング項目 | 着地先 | status |
 |----|--------------|--------|--------|
-| U-NFR-1 | ISO 25010 対象外特性: **機能適合性 (Functional Suitability)** の除外理由 — UT-TDD では機能要求は FR-L1-* / BR-* で扱い、NFR で再定義しない (二重記述回避) | §7 除外行に `除外理由: 機能要求 (FR-L1-*/BR-*) で扱うため NFR 重複禁止 (AP-6 類似)` | ❓ (除外理由の文言確定要) |
-| U-NFR-2 | ISO 25010 対象外特性: **使用性 (Usability / Interaction Capability)** の除外理由 — UX-* で扱い、NFR での再定義は不要か | §7 除外行に除外理由を明示。UX-* が存在する場合は「UX-* sub-doc で扱うため」 | ❓ (除外か UX-03 DX 戦術で代替か確定要) |
-| U-NFR-3 | IPA × ISO 25010 の全 NFR-ID タグ付け: NFR-01〜15 を IPA 大項目 + ISO 25010 特性の 2 軸にタグ付けする作業 | §7 二軸タグ表 | ❓ (TL + pmo-sonnet で実施) |
+| U-NFR-1 | ISO 25010 対象外特性: **機能適合性 (Functional Suitability)** の除外理由 — UT-TDD では機能要求は FR-L1-* / BR-* で扱い、NFR で再定義しない (二重記述回避) | §7 除外行に `除外理由: 機能要求 (FR-L1-*/BR-*) で扱うため NFR 重複禁止 (AP-6 類似)` | ✅ (PO 承認済み 2026-05-28、nfr §7 対象外特性表に明記) |
+| U-NFR-2 | ISO 25010 対象外特性: **使用性 (Usability / Interaction Capability)** の除外理由 — UX-* で扱い、NFR での再定義は不要か | §7 除外行に除外理由を明示。UX-* が存在する場合は「UX-* sub-doc で扱うため」 | ✅ (PO 承認済み 2026-05-28、UX-* sub-doc で扱うため除外、nfr §7 注記済) |
+| U-NFR-3 | IPA × ISO 25010 の全 NFR-ID タグ付け: NFR-01〜16 を IPA 大項目 + ISO 25010 特性の 2 軸にタグ付けする作業 | §7 二軸タグ表 | ✅ (PO 承認済み 2026-05-28、nfr §7 13 行完備 + NFR-16 追加) |
 
-### 3.2 Phase B telemetry NFR の追加 (NFR-16 候補)
+### 3.2 Phase B telemetry NFR carry
 
 | ID | ヒアリング項目 | 着地先 | status |
 |----|--------------|--------|--------|
-| U-NFR-4 | **NFR-16 候補: telemetry default off (opt-in 3 レベル: off / local-only / sync)** — Phase B 開始時に確定。L1 では carry として記録するか | §3.8 (PLAN-L1-01) Phase B carry に記録済。nfr §8 carry 宣言に追記 | ➡️ L3 NFR forward (Phase B 開始時) |
-| U-NFR-5 | **NFR-16b 候補: PII redaction** — telemetry で prompt 本文を除外する要求。OTel GenAI semconv `invoke_agent` span の除外フィールド | §8 carry + L3 NFR forward | ➡️ L3 NFR forward |
-| U-NFR-6 | **telemetry 同意 default** (Anthropic opt-in / Copilot opt-out の選択) — privacy 方針 (D-1) | Phase B PO 残差。L1 では blocking しない | ➡️ Phase B PO 確認 |
+| U-NFR-4 | **Phase B telemetry: default off (opt-in 3 レベル: off / local-only / sync)** — Phase B 開始時に確定 | nfr §6 carry note 記載済、L3 NFR forward | ➡️ L3 NFR forward (Phase B 開始時) |
+| U-NFR-5 | **PII redaction** — telemetry で prompt 本文を除外する要求。OTel GenAI semconv `invoke_agent` span 除外 | nfr §6 carry note 記載済、L3/L4 carry | ➡️ L3/L4 NFR forward |
+| U-NFR-6 | **telemetry 同意 default** (Anthropic opt-in / Copilot opt-out の選択) — privacy 方針 (D-1) | Phase B PO 残差。L1 blocking しない | ➡️ Phase B PO 確認 |
 
 ### 3.3 NFR-02 (更新性) の L4 ADR 連携
 
 | ID | ヒアリング項目 | 着地先 | status |
 |----|--------------|--------|--------|
-| U-NFR-7 | NFR-02 更新性 (npm 配布 / repo template / 社内共有) の実現方式は L4 ADR で確定する旨を §3 carry 宣言に明示 | nfr §3 carry 宣言追記 | ❓ (carry 宣言の文言確定) |
+| U-NFR-7 | NFR-02 更新性 (npm 配布 / repo template / 社内共有) の実現方式は L4 ADR で確定する旨を §3 carry 宣言に明示 | nfr §3 carry 宣言追記 | ✅ (PO 承認済み 2026-05-28、nfr §3 carry 宣言に明記済) |
 
-### 3.4 既存 NFR の確認・精緻化
+### 3.4 既存 + 新規 NFR の確認・精緻化
 
 | ID | 確認項目 | status |
 |----|---------|--------|
-| NFR-01〜06 | B-1 起票済。IPA 大項目への分類 + ISO 25010 タグ付け要 | 🆕 §7 タグ付け待ち |
-| NFR-07〜08 | B-1 起票済 (NFR-07 MVP なし / NFR-08 implementation_status 必須) | 🆕 §7 タグ付け待ち |
-| NFR-09 | rule parity (U-補-3) — Claude/Codex 同一判定。確定済か確認 | ❓ (U-補-3 PO 判断待ち、連動) |
-| NFR-11〜14 | PO declared 2026-05-28 (GHA audit framework)。nfr §5 セキュリティ / §2 性能・拡張性 等への配置確認 | 🆕 IPA 分類待ち |
-| NFR-15 | PO declared 2026-05-28 (server-optional)。nfr §2 性能・拡張性 配置確認 | 🆕 IPA 分類待ち |
+| NFR-01〜06 | B-1 起票済。IPA 大項目への分類 + ISO 25010 タグ付け済 | ✅ (nfr §1〜§6 配置完了 + §7 タグ完備) |
+| NFR-07〜08 | B-1 起票済 (NFR-07 MVP なし / NFR-08 implementation_status 必須) | ✅ (nfr §2/§3 配置完了 + §7 タグ完備) |
+| NFR-09 | rule parity (U-補-3) — Claude/Codex 同一判定。U-補-3 PO 判断連動 | ➡️ (U-補-3 PO 判断連動、欠番のまま L3 carry) |
+| NFR-11〜14 | PO declared 2026-05-28 (GHA audit framework + dev-local+CI + human-as-residue)。IPA 分類完了 | ✅ (nfr §3/§5 配置完了 + §7 タグ完備) |
+| NFR-15 | PO declared 2026-05-28 (server-optional)。IPA 性能・拡張性配置完了 | ✅ (nfr §2 配置完了 + §7 タグ完備) |
+| **NFR-16** | **新規 (2026-05-28、F1=b 採用)**: onboarding 互換性 (FR-L1-44 連動)、既存プロジェクトへの段階導入時 block 回避 | ✅ (nfr §1 可用性配置 + §6/§7 タグ完備、NFR-14 件確定) |
+| NFR-13 注記強化 | **gate 通過率 ≥90% (KPI D-02、B5=b)** を運用目標、`.ut-tdd/gate_runs` で計測 | ✅ (nfr §3 NFR-13 注記追記済) |
+| NFR-14 注記強化 | **gate fail-close 例外権 = PO のみ + audit 記録 (S-03/B6=b)**、bypass 件数 0 を KPI D-06 で計測 | ✅ (nfr §3 NFR-14 注記追記済) |
+| NFR-15 注記強化 | **Claude ↔ Codex provider 間 handover (FR-L1-42、F5=a)** で多 provider 拡張は将来対応 (現状 Claude+Codex のみ) | ✅ (nfr §2 NFR-15 注記追記済) |
+| agent guard bypass | **`UT_TDD_ALLOW_RAW_AGENT=1`: PO 明示承認 + audit ログ記録必須 (B6=b、F6=a)** | ✅ (nfr §5 セキュリティ表に追加済) |
 
 ## §4 工程表 (Step + 進捗)
 
@@ -103,28 +108,28 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 
 ### Step 2: IPA × ISO 25010 二軸タグ付け
 - 担当: tl + pmo-tech-docs
-- 内容: NFR-01〜15 全件を IPA 6 大項目 + ISO 25010 特性の 2 軸でタグ付け。対象外特性の除外理由を明示 (U-NFR-1/2)
-- 進捗: ☐
+- 内容: NFR-01〜16 全件を IPA 6 大項目 + ISO 25010 特性の 2 軸でタグ付け。対象外特性の除外理由を明示 (U-NFR-1/2)
+- 進捗: ✅ (nfr §7 14 行完備、commit cdd6598 / Step 1-D 2026-05-28)
 
-### Step 3: NFR-11〜15 の IPA 節配置確定
+### Step 3: NFR-11〜16 の IPA 節配置確定
 - 担当: tl
-- 内容: NFR-11 (役割分離) → §5 セキュリティ / NFR-12 (machine×AI) → §2 性能 / NFR-13 (dev-local+CI) → §3 保守性 / NFR-14 (human-as-residue) → §3 保守性 / NFR-15 (server-optional) → §2 拡張性 等の配置を確定し nfr §1〜§6 に追記
-- 進捗: ☐
+- 内容: NFR-11 (役割分離) → §5 セキュリティ / NFR-12 (machine×AI) → §2 性能 / NFR-13 (dev-local+CI) → §3 保守性 / NFR-14 (human-as-residue) → §3 保守性 / NFR-15 (server-optional) → §2 拡張性 / NFR-16 (onboarding 互換性) → §1 可用性 等の配置を確定し nfr §1〜§6 に追記
+- 進捗: ✅ (Step 1-D 2026-05-28、NFR-16 追加 + NFR-13/14/15 注記強化)
 
 ### Step 4: §7 IPA × ISO 25010 二軸タグ表 整備
 - 担当: tl
 - 内容: Step 2/3 の結果を §7 に 3 列 table (NFR-ID / IPA 大項目 / ISO 25010 特性) として整理。除外特性行も含む
-- 進捗: ☐
+- 進捗: ✅ (NFR-14 件確定、NFR-16 = 可用性 / Compatibility + Portability)
 
 ### Step 5: carry 宣言・Phase B NFR 整備
 - 担当: tl
-- 内容: §3 carry 宣言 (NFR-02 L4 ADR 連携 / NFR-16 Phase B carry) を §8 carry 節に明記
-- 進捗: ☐
+- 内容: §3 carry 宣言 (NFR-02 L4 ADR 連携 / Phase B telemetry carry) を §6 carry 節に明記
+- 進捗: ✅ (nfr §3 carry 宣言 + §6 carry note 完備)
 
 ### Step 6: 運用テスト設計の pair 凍結
 - 担当: qa
-- 内容: L14 OT に NFR-01〜15 全件が被覆されているか確認、不足あれば OT 追加
-- 進捗: ☐
+- 内容: L14 OT に NFR-01〜16 全件が被覆されているか確認、不足あれば OT 追加
+- 進捗: ✅ (OT-29/30/31 で NFR-16/13/14 被覆、L14 OT 31 件確定、Step 2-D 2026-05-28)
 
 ### Step 7: review (self / pmo-sonnet)
 - 担当: pmo-sonnet
@@ -151,15 +156,16 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 
 ## §6 DoD (Definition of Done)
 
-- [ ] nfr.md が必須 § 全件含む (§1〜§8)
-- [ ] §7 IPA × ISO 25010 二軸タグ表が NFR-01〜15 全件を含む (3 列 table 完備)
-- [ ] §7 に対象外特性 (機能適合性 / 使用性) の除外理由が明示されている
-- [ ] NFR-11〜15 (PO declared) が §1〜§6 の適切な IPA 節に配置されている
-- [ ] §3 carry 宣言に NFR-02 L4 ADR 連携 + 排泄系契約 L3 forward が明記されている
-- [ ] frontmatter 必須フィールド完備 (sub_doc / pair_artifact / related_l0 / related_br / next_pair_freeze=L4)
-- [ ] 冒頭 blockquote 必須要素 (SSoT 参照 / 件数確定 / L3 接続規約) 存在
-- [ ] L14 OT で本 sub-doc 由来要求が被覆 (孤児 0)
-- [x] 専門サブエージェント review (Step 7) 通過記録 (2026-05-28 pmo-sonnet 再被覆監査 acdc5ccd6f31ae951 通過、CONDITIONAL PASS)
+- [x] nfr.md が必須 § 全件含む (§1〜§8)
+- [x] §7 IPA × ISO 25010 二軸タグ表が NFR-01〜16 全件を含む (3 列 table 14 行完備)
+- [x] §7 に対象外特性 (機能適合性 / 使用性) の除外理由が明示されている
+- [x] NFR-11〜16 (PO declared + 新規) が §1〜§6 の適切な IPA 節に配置されている
+- [x] §3 carry 宣言に NFR-02 L4 ADR 連携 + 排泄系契約 L3 forward が明記されている
+- [x] frontmatter 必須フィールド完備 (sub_doc / pair_artifact / related_l0 / related_br / next_pair_freeze=L4)
+- [x] 冒頭 blockquote 必須要素 (SSoT 参照 / 件数確定 NFR-14 件 / L4 接続規約) 存在
+- [x] L14 OT で本 sub-doc 由来要求が被覆 (孤児 0、OT-29/30/31 で NFR-16/13/14 被覆)
+- [x] 専門サブエージェント review (Step 7) 通過記録 (2026-05-28 pmo-sonnet 再被覆監査 acdc5ccd6f31ae951 通過、CONDITIONAL → PASS)
+- [x] **PO サインオフ準備完了** (G1 readiness ready-for-G1-signoff、2026-05-28 全 NFR PO 承認済み)
 
 ## §7 carry / 次工程 (L4) への引き継ぎ
 

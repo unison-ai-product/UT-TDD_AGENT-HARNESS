@@ -70,6 +70,7 @@ UX 要求 (UX-01〜03):
 | **NFR 体系** | IPA 非機能要求グレード 2018 6 大項目 + ISO 25010 二軸タグ | nfr §6 / nfr §7 |
 | **Forward フロー** | `plan → pair-freeze → implement → trace-freeze → review → accept` | concept §3.1 / §3.2 |
 | **AI ガード** | subagent guard (PreToolUse Agent、許可リスト 15 / model 明示 / override 禁止、fail-close) | `.claude/CLAUDE.md` Guard Rules / `.claude/hooks/agent-guard.ts` |
+| **MVP 業務最重要 3 要素** (B10=a 採用) | V-model + Forward フロー / 4 artifact + 3 段階 freeze / AI ガード | B10=a PO 承認 2026-05-28 |
 
 本宣言節は U-体系-0 (体系自己宣言、PLAN-L1-01 §3.1 ヒアリング項目由来) の確定版。本書以降の L1 5 sub-doc は本体系を前提として記述する。
 
@@ -101,17 +102,17 @@ Forward フロー: `plan → pair-freeze → implement → trace-freeze → revi
 
 ### §3.2 9 mode 分岐
 
-| mode | 入口 | 主要工程 |
-|------|------|----------|
-| Forward | L0 企画書 | L0→L14 全工程 (主線) |
-| Reverse | 既存コード/設計文書 | R0→R4→Forward 合流 |
-| Discovery (PoC) | 仮説 | S0→S4→Forward 合流 |
-| Incident | 本番障害 | 緊急 hotfix→V モデル昇華 |
-| Add-feature | 既存 PLAN | add-design/add-impl で requires 接続 |
-| Refactor | 対象コード | kind=refactor、振る舞い不変機械検証 |
-| Retrofit | 移行対象構造 | retrofit-matrix + 段階移行 |
-| Research | 調査課題 | kind=research、generates=ADR |
-| Scrum | スプリント | インクリメント→V モデル昇華 |
+| mode | 入口 | 主要工程 | Forward 合流点 |
+|------|------|----------|---------------|
+| Forward | L0 企画書 | L0→L14 全工程 (主線) | — (主線) |
+| Reverse | 既存コード/設計文書 | R0→R4→Forward 合流 | R4 routing → RGC → fullback → Forward L0-L14 |
+| Discovery (PoC) | 仮説 | S0→S4→Forward 合流 | S4 decide → Forward L3 機能要件 合流点 |
+| Incident | 本番障害 | 緊急 hotfix→V モデル昇華 | hotfix 収束後 → Forward 対応 L (L3/L4) へ昇華 |
+| Add-feature | 既存 PLAN | add-design/add-impl で requires 接続 | Forward 差分追補が設計思想 (Reverse は前段 option) |
+| Refactor | 対象コード | kind=refactor、振る舞い不変機械検証 | L7/G7 で振る舞い不変確認後 Forward 復帰 |
+| Retrofit | 移行対象構造 | retrofit-matrix + 段階移行 | L4-L7 段階移行後 → Forward L7 以降合流 |
+| Research | 調査課題 | kind=research、generates=ADR | ADR generate 後 → ADR 参照点 (L4 基本設計) へ合流 |
+| Scrum | スプリント | インクリメント→V モデル昇華 | インクリメント収束後 → Reverse closure 機構経由 → Forward L0-L14 昇華 |
 
 ### §3.3 cross-cutting 横断機構
 
@@ -124,14 +125,22 @@ V-model 全工程を横断する 4 機構 (FR-L1-11 参照):
 | **drift-check** | 週次 detector 起動 | 設計⇔実装の乖離レポート生成 |
 | **readiness** | 後工程着手前 | 前工程成果物の充足度確認、PLAN 先送り判定 |
 
+### §3.3.1 9 mode 統一合流原則 (B10=a / PO 承認 2026-05-28)
+
+Forward / Research を除く 7 mode (Reverse / Discovery / Refactor / Retrofit / Recovery / Scrum / Incident) は、収束時に **Reverse の closure mechanism** (R4 routing / RGC / fullback) を再利用して Forward L0-L14 へ合流する。これにより全 mode の「終わり方」を統一し、Forward 以外の成果物が V-model の外に放置されることを防ぐ。
+
+> **Add-feature 例外**: Add-feature は既存 PLAN への差分追補が設計思想であり、Reverse closure を必須としない。Reverse は「前段 option」として使用可能だが、強制ではない (根拠: HELIX add-feature-workflow.md §基本フロー / concept §2.5 既宣言)。UT-TDD では本原則として明示記述する。
+
 ## §4 ステークホルダー
 
-| ステークホルダー | 関心事 | 関与フェーズ |
-|------------------|--------|-------------|
-| PO (ユーザー) | スコープ・受入・最終承認 | 全フェーズ (G1/G3/G7/G11 サインオフ) |
-| 開発チーム | 実装・テスト・レビュー | L4-L11 |
-| AI エージェント (Claude / Codex) | 実装・文書起草・レビュー | L4-L9 (harness 委譲対象) |
-| harness 運用者 | 基盤導入・更新・保守 | 全フェーズ |
+| ステークホルダー | 関心事 | 関与フェーズ | gate サインオフ権 | 権限 (S-04) |
+|------------------|--------|-------------|-----------------|------------|
+| PO (ユーザー) | スコープ・受入・最終承認 | 全フェーズ | G1 / G3 / G7 / G11 (S-02) | gate override 例外権 (S-03) / PLAN 削除 / merge 権 (S-05) |
+| TL (Tech Lead) | 技術品質・設計判断 | L3-L9 | G4 / G5 / G6 (S-02) | merge 権 (S-05) / 設計 ADR 承認 |
+| 開発チーム | 実装・テスト・レビュー | L4-L11 | — | PR 作成・レビュー |
+| AI エージェント (Claude / Codex) | 実装・文書起草・レビュー | L4-L9 (harness 委譲対象) | — (commit 禁止) | CLI 経由のみ / `.ut-tdd/` 直接編集不可 (S-01) |
+| harness 運用者 | 基盤導入・hook 有効化・state 管理 | 全フェーズ | — (gate サインオフ禁止) | `.ut-tdd/` state 直接編集 / hook 有効化 (S-04)。PLAN 削除禁止 |
+| 外部ステークホルダー | 進捗確認 | 参照のみ | — | read-only (S-02) |
 
 ## §5 現状課題 → あるべき姿
 
@@ -154,6 +163,20 @@ V-model 全工程を横断する 4 機構 (FR-L1-11 参照):
 - **技術選定・技術制約**: technical sub-doc / L4 ADR
 - **NFR グレード値**: nfr sub-doc / L3 NFR グレード
 - **実装方式**: L4-L6 設計層
+
+## §6.5 業務 KPI 定義 (D-01〜D-09、PO 承認 2026-05-28)
+
+| KPI ID | KPI 名 | 計測式 | 目標値 | 計測場所 |
+|--------|--------|--------|--------|---------|
+| **D-01** | PLAN 起票数/sprint | sprint 期間中に起票された PLAN 件数 | ≥ 1 件/sprint | `.ut-tdd/plan_registry/` / `ut-tdd plan list` |
+| **D-02** | gate 通過率 | gate pass 件数 / gate 総実行件数 × 100 | ≥ 90 % | `.ut-tdd/gate_runs/` / `ut-tdd gate log` |
+| **D-03** | W-model 順序遵守違反 | 前工程未完了で後工程着手した検知件数 | 0 件 | `ut-tdd doctor` / `ut-tdd plan lint` |
+| **D-04** | 回帰検出率 | テストで検出した回帰件数 / 回帰発生総件数 × 100 | ≥ 80 % | CI gate / `ut-tdd trace` |
+| **D-05** | 4 artifact trace 整合率 | trace 整合 PLAN 件数 / 全 PLAN 件数 × 100 | ≥ 95 % | `ut-tdd trace check` / `.ut-tdd/artifact/trace/` |
+| **D-06** | agent guard bypass 件数 | `UT_TDD_ALLOW_RAW_AGENT=1` 実行件数 (audit 記録) | 0 件 目標 (PO 承認時のみ許容) | `.ut-tdd/audit/` / agent-guard log |
+| **D-07** | AI 委譲時間率 | AI 委譲タスク工数 / 総開発工数 × 100 | ≥ 70 % | PLAN `drive:` 集計 / `ut-tdd status` |
+| **D-08** | gate override 件数/sprint | PO による gate fail-close 例外行使件数 | ≤ 2 件/sprint | `.ut-tdd/audit/` / gate override log |
+| **D-09** | handover 引継ぎ成功率 | next_action 実行成功件数 / handover 総件数 × 100 | ≥ 95 % | `.ut-tdd/handover/` / `ut-tdd handover log` |
 
 ## §7 L14 運用テスト pair 対応表
 
@@ -195,6 +218,15 @@ V-model 全工程を横断する 4 機構 (FR-L1-11 参照):
 | BR-06 ダッシュボード機能仕様 | L3 FR / L4 | 実装アーキは L2/L4 |
 | 並列オーケストレーション機械実装 | L3 FR | F-1 (import-ledger §2) |
 | 配布形態 (plugin / MCP 化) | L4 ADR | NFR-02 下流 |
+| B1: チーム規模 2-5 名 + AI スロット 3 の具体 provisioning 方式 | L3 FR / L4 | NFR-05 / GitHub 権限正本連結 |
+| B2: gate サインオフ権限の機械強制実装 (PO G1/G3/G7/G11 / TL G4/G5/G6) | L3 FR | FR-L1-05 下流 |
+| B3: PoC 打ち切り条件の実装 (2 sprint 強制 OR rejected 判定ロジック) | L3 FR / L4 | Discovery ワークフロー機構 |
+| B6: bypass 条件の audit 記録実装 (`UT_TDD_ALLOW_RAW_AGENT=1` + PO 承認 flow) | L3 FR | agent guard 下流 |
+| B7: handover 30 日 archive + 90 日削除 の自動化実装 | L3 FR / L4 | `ut-tdd handover` subcommand |
+| B8: リアルタイム遅延 5 分以内の実装 (gate fail 即時 / ダッシュボード更新) | L3 FR / L4 NFR | NFR-15 carry |
+| B9: skill / detector entity 参照注記の FR 詳細化 (FR-L1-12/08/18) | L3 FR | §10.4 参照注記 → FR 詳細化 |
+| BR-21: FR-L1-36/38/43 の詳細仕様 (AI 実行品質評価・改善サイクル) | L3 FR | Phase B、§11 carry |
+| 9 mode 統一合流シナリオの具体フロー (各 mode の closure 手順・RGC 設計) | L3 FR / L4 | §3.3.1 原則 → 機構設計 |
 
 ## §10 業務 entity 列挙 (DDD)
 
@@ -225,3 +257,42 @@ V-model 全工程を横断する 4 機構 (FR-L1-11 参照):
 - Bounded Context: L0 §2.5 9-mode ecosystem
 - 業界標準整合: L0 §11 参考文献
 - entity 独自定義禁止: `ut-tdd plan lint` (sub_doc=business 時) で機械検証
+
+### §10.4 skill / detector entity 参照注記 (B9=c)
+
+業務 entity §10.1 への entity 追加はしない (B9=c 採用)。skill / detector は以下の FR により機能要件として定義される:
+
+| 概念 | entity 追加 | 参照先 FR |
+|------|------------|---------|
+| skill (SKILL_MAP / スキル推奨) | 追加なし | FR-L1-12 (skill 評価・推奨) |
+| detector (drift / degrade 検出器) | 追加なし | FR-L1-08 (drift 検知) / FR-L1-18 (trace 整合検出) |
+
+L3 FR sub-doc で FR-L1-12/08/18 の詳細仕様を確定する際に、skill / detector の構造要素が必要な場合は L4 データ設計 sub-doc で値オブジェクトとして扱う (entity 昇格の要否は L4 判断)。
+
+## §11 BR-21 AI 実行成果の継続評価と改善サイクル
+
+| 属性 | 値 |
+|------|-----|
+| **ID** | BR-21 |
+| **優先度** | P2 (Phase B 中心) |
+| **実装フェーズ** | Phase B (UT-TDD 独自 runtime 整備後) |
+| **L3 carry** | FR-L1-36 / FR-L1-38 / FR-L1-43 の詳細化を L3 FR sub-doc へ forward carry |
+| **PO 承認** | 2026-05-28 (F2=a 採用) |
+
+### §11.1 業務目標
+
+UT-TDD Agent Harness が AI 実行品質を自律的に評価・改善するサイクルを持つ。個別 AI 委譲の成否を蓄積・分析し、skill 推奨精度・model 選択基準・PoC 成功率を継続的に向上させる。これにより、チームが AI 委譲を繰り返すほど harness が賢くなる「学習する基盤」を実現する。
+
+### §11.2 構成要素 (L3 FR 詳細化予定)
+
+| FR ID | 概要 | Phase |
+|-------|------|-------|
+| **FR-L1-36** | skill 評価: 各 PLAN の skill 推奨精度を計測し、推奨 → 実用 ↔ 乖離を記録・フィードバック | Phase B |
+| **FR-L1-38** | model 評価: AI 委譲時の model 選択結果と成果品質を対応付け、model 選択ガイダンスを改善 | Phase B |
+| **FR-L1-43** | PoC 計測: Discovery ワークフローの仮説→契約化成功率・打ち切り判定精度を計測し PoC 設計を改善 | Phase B |
+
+### §11.3 業務的根拠
+
+- AI 委譲の品質は一回限りの設定で固定されず、実行ログから継続改善が必要 (concept §2.1.2.1 / requirements §7.8.7)
+- D-07 (AI 委譲時間率 ≥ 70 %) を達成・維持するには、委譲品質の可視化と改善ループが不可欠
+- skill / detector entity 参照注記 (§10.4) と連動し、FR-L1-12/08/18 の実績データを評価入力とする

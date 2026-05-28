@@ -63,8 +63,8 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | ID | ヒアリング項目 | 着地先 | status |
 |----|--------------|--------|--------|
-| U-技術-1 | ADR-001 (HELIX は設計概念のみ流用 / TS 全面再実装) を L1 技術要求として独立明示するか (= U-技-5) | technical §1 に ADR-001 参照 + NFR 独立明示 | ❓ (NFR ほぼ確定だが L1 technical §1 に明示すべきか確認要) |
-| U-技術-1b | Bun runtime の version pinning 方針 (LTS相当 / latest follow) | technical §1 + L4 ADR | ❓ |
+| U-技術-1 | ADR-001 (HELIX は設計概念のみ流用 / TS 全面再実装) を L1 技術要求として独立明示するか (= U-技-5) | technical §1 に ADR-001 参照明示 + NFR-04 (言語非依存) と組み合わせて担保。NFR-10 独立明示は不要 | ✅ (PO 承認済 2026-05-28) |
+| U-技術-1b | Bun runtime の version pinning 方針 (LTS相当 / latest follow) | technical §1 に「LTS 相当の安定版を使用、major version 変更は L4 ADR で管理」として確定 | ✅ (PO 承認済 2026-05-28) |
 
 ### 3.2 state schema 二層構造 (§4 L4 carry)
 
@@ -82,12 +82,23 @@ v2_import: docs/migration/v2-import-ledger.md
 | U-技術-3 | `docs/skills/<L>-injection.yaml` 相当の 6 フィールド (owner_role / mandatory_agents / recommended_agents / recommended_skills / recommended_commands / orchestration_mode) の L1 要求レベル確定 | technical §5 (概要) + **L4 carry** (詳細 schema) | ➡️ L4 carry |
 | U-技術-3a | orchestration_mode 5 値 (concept §2.6.4) との整合 | technical §5 + L4 carry | ➡️ L4 carry |
 
-### 3.4 9 mode 共通基盤 (§6)
+### 3.4 9 mode 共通基盤 + drive 別 state + AI provider 引継ぎ (§6)
 
 | ID | ヒアリング項目 | 着地先 | status |
 |----|--------------|--------|--------|
-| U-技術-4 | R0-R4 + RGC を Reverse 専用でなく共通 closure language として再利用する要求を L1 で明示するか | technical §6 (概要) | 🆕 (B-1 起票済、確認要) |
+| U-技術-4 | R0-R4 + RGC を Reverse 専用でなく共通 closure language として再利用する要求を L1 で明示するか | technical §6 (概要) として明示確定 | ✅ (PO 承認済 2026-05-28) |
 | U-技術-4a | Forward 接続 event の state 登録 + 補助 state への中間 state 保存 + discrepancy_log からの機械起動の L1 粒度 | technical §6 + L4 carry | ➡️ L4 carry |
+| U-技術-4b | drive 別 state: be/fe/fullstack/data 各 drive に対応した `.ut-tdd/<drive>/` state ファイル分離を technical §4 に明示 | technical §4 Phase A 仕様 | ✅ (PO 承認済 2026-05-28。FR-L1-37 連動) |
+| U-技術-4c | AI provider 引継ぎ: handover CURRENT.json は provider (Anthropic/OpenAI/Gemini) を跨いで引き継げる設計要求を technical §1 に明示 | technical §1 技術制約 | ✅ (PO 承認済 2026-05-28。FR-L1-39 連動) |
+| U-技術-4d | reasoning model selection: タスク性質別 model 選択ガイダンス (設計判断=Opus / 実装=Sonnet / review=Haiku) を technical §5 skill 注入に含める | technical §5 (概要) | ✅ (PO 承認済 2026-05-28。FR-L1-40 連動) |
+| U-技術-4e | 運用者ロール技術担保: agent guard subagent 許可リスト + bypass 条件 (UT_TDD_ALLOW_RAW_AGENT=1) を technical §1 に技術要求として明示 | technical §1 / BR-21 | ✅ (PO 承認済 2026-05-28。FR-L1-44 連動) |
+
+#### 3.4a 9 mode 統一合流補強 (PO 承認済 2026-05-28)
+
+| ID | 補強内容 | 着地先 | status |
+|----|---------|--------|--------|
+| U-技術-9mode | 9 mode (Forward/Reverse/Scrum/Incident/PoC/Add-feature/Hotfix/Compliance/Spike) 全件を同一 state schema / gate-checks.yaml で管理する技術要求を §6 に補強 | technical §6 | ✅ (PO 承認済 2026-05-28。FR-L1-41 連動) |
+| U-技術-addfeat | Add-feature mode の plan-freeze スキップを state machine の例外遷移として §6 に明示 | technical §6 | ✅ (PO 承認済 2026-05-28。FR-L1-42 連動) |
 
 ### 3.5 drift 解消方針 (§7)
 
@@ -154,12 +165,19 @@ v2_import: docs/migration/v2-import-ledger.md
 ## §6 DoD (Definition of Done)
 
 - [ ] technical-requirements.md が必須 § 全件含む (§1〜§8)
-- [ ] §1 に ADR-001 参照が明示されている
+- [x] §1 に ADR-001 参照が明示されている (U-技術-1 PO 承認済 2026-05-28)
+- [x] §1 に Bun version pinning 方針が明示されている (U-技術-1b PO 承認済 2026-05-28)
+- [x] §1 に AI provider 引継ぎ要求が明示されている (U-技術-4c PO 承認済 2026-05-28)
+- [x] §1 に運用者ロール技術担保要求が明示されている (U-技術-4e PO 承認済 2026-05-28)
+- [x] §4 に drive 別 state 分離要求が明示されている (U-技術-4b PO 承認済 2026-05-28)
+- [x] §5 に reasoning model selection ガイダンスが含まれている (U-技術-4d PO 承認済 2026-05-28)
+- [x] §6 に 9 mode 統一合流 + Add-feature 例外補強が明示されている (PO 承認済 2026-05-28)
 - [ ] §4〜§7 の L4 carry note が「要求レベルの概要」と「L4 carry 詳細一覧」に分離されている
 - [ ] frontmatter 必須フィールド完備 (sub_doc / pair_artifact / related_l0 / related_br / next_pair_freeze=L4)
 - [ ] 冒頭 blockquote 必須要素 (SSoT 参照 / 件数確定 / L3 接続規約) 存在
 - [ ] L14 OT で本 sub-doc 由来要求が被覆 (孤児 0)
 - [x] 専門サブエージェント review (Step 6) 通過記録 (2026-05-28 pmo-sonnet 再被覆監査 acdc5ccd6f31ae951 通過、CONDITIONAL PASS)
+- [x] G1 readiness: status = ready-for-G1-signoff (PO サインオフ準備完了。§3 全件 ✅/➡️ 確定済)
 
 ## §7 carry / 次工程 (L4) への引き継ぎ
 

@@ -83,25 +83,62 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | ID | 内容 | 着地先 | status |
 |----|------|--------|--------|
-| U-補-6 | 機能カタログ + doc/test/code 3 点セット整合 → GitHub Actions auto-merge (end-state CI 機構) | BR-13〜19 + NFR-11〜14 | 🆕 framework 確定 (`docs/governance/audit-framework.md`) |
+| U-補-6 | 機能カタログ + doc/test/code 3 点セット整合 → GitHub Actions auto-merge (end-state CI 機構) | BR-13〜19 + NFR-11〜14 | ✅ (PO 承認済 2026-05-28。framework 確定: `docs/governance/audit-framework.md`。KPI D-01〜D-09 連動) |
+
+#### 3.3a 9 mode 統一合流 + Add-feature 例外 (PO confirmed 2026-05-28)
+
+| ID | 内容 | 着地先 | status |
+|----|------|--------|--------|
+| B3 | 9 mode (Forward/Reverse/Scrum/Incident/PoC/Add-feature/Hotfix/Compliance/Spike) を統一合流アーキテクチャで管理 | BR-10 / §3 業務フロー §3.3 | ✅ (PO 承認済 2026-05-28) |
+| B3a | Add-feature は plan-freeze をスキップし直接 implement から開始する例外 mode | business-requirements.md §3.3 Add-feature 例外節 | ✅ (PO 承認済 2026-05-28) |
+
+#### 3.3b KPI / 成功指標 (PO confirmed 2026-05-28)
+
+| ID | KPI | 着地先 | status |
+|----|-----|--------|--------|
+| D-01 | gate pass rate ≥ 95% | business §4 成功条件 | ✅ |
+| D-02 | drift 0 件/week | business §4 + NFR (drift) | ✅ |
+| D-03 | onboarding ≤ 30 min | business §4 + NFR-16 | ✅ |
+| D-04 | agent guard block rate (false positive ≤ 1%) | business §4 | ✅ |
+| D-05 | CI auto-merge success rate ≥ 90% | business §4 + BR-16 | ✅ |
+| D-06 | handover CURRENT.json stale 0 件 | business §4 + FR-L1-17 | ✅ |
+| D-07 | Phase A local persistence p99 latency ≤ 200ms | NFR-15 / L4 carry | ✅ |
+| D-08 | L1 sub-doc 5 件全件 G1 ready | 本 PLAN §6 G1 readiness | ✅ |
+| D-09 | L14 OT 被覆率 100% (孤児 0) | business §2 量閉じ | ✅ |
+
+#### 3.3c 権限分離 (PO confirmed 2026-05-28)
+
+| ID | 内容 | 着地先 | status |
+|----|------|--------|--------|
+| S-01 | PO = スコープ・受入・最終承認の所有者 | business §4 ステークホルダー | ✅ |
+| S-02 | PM (Opus) = 言語化・タスク分解・委譲指示・出力レビュー | business §4 | ✅ |
+| S-03 | TL (Codex) = 設計判断・技術選択・PLAN レビュー | business §4 | ✅ |
+| S-04 | agent guard = subagent 許可リスト強制 (fail-close) | BR-21 / `.claude/hooks/agent-guard.ts` | ✅ |
+| S-05 | AI 実装 cross-agent review 前置 (self-review MUST) | BR-21 / `.claude/CLAUDE.md` Guard Rules | ✅ |
+
+#### 3.3d BR-21 新設 (PO confirmed 2026-05-28)
+
+| ID | 内容 | 着地先 | status |
+|----|------|--------|--------|
+| BR-21 | AI 利用ポリシー権限分離: PO/PM/TL/SE の責務境界 + agent guard による subagent 種別制限 + cross-agent self-review 前置 MUST | business-requirements.md §2 BR-21 | ✅ (PO 承認済 2026-05-28) |
 
 ### 3.4 ダッシュボード + 工程管理 DB (PO declared 2026-05-28)
 
 | ID | 内容 | 着地先 | status |
 |----|------|--------|--------|
-| BR-20 carry | 工程管理 DB のローカル永続化 (Phase A) | BR-20 (🆕 PO declared) | 🆕 G1 待ち |
-| NFR-15 carry | server-optional 動作保証 (Phase A) | NFR-15 (🆕 PO declared) | 🆕 G1 待ち |
-| Phase B carry | BR-21/22 + NFR-16 + ADR-002 (Phase B) | ➡️ L3 FR / L4 ADR | ➡️ |
+| BR-20 carry | 工程管理 DB のローカル永続化 (Phase A) | BR-20 (PO declared) | ✅ (PO 承認済 2026-05-28) |
+| NFR-15 carry | server-optional 動作保証 (Phase A) | NFR-15 (PO declared) | ✅ (PO 承認済 2026-05-28) |
+| Phase B carry | BR-21 詳細化 + NFR-16 + ADR-002 (Phase B) | ➡️ L3 FR / L4 ADR | ➡️ L3 forward |
 
-### 3.5 PO 判断待ち (被覆監査 由来)
+### 3.5 PO 承認済 (被覆監査 由来 → 2026-05-28 確定)
 
-| ID | ヒアリング項目 | 着地先候補 | status |
-|----|--------------|-----------|--------|
-| U-補-1 | エスカレーション機構を業務要求にするか | BR or L3 forward | ❓ |
-| U-補-2 | AI 実装の cross-agent review 強制を業務要求にするか | BR or L3 forward | ❓ |
-| U-補-3 | rule parity (Claude/Codex 同一判定) を NFR にするか | NFR or L3 forward | ❓ |
-| U-補-4 | 失敗の GitHub corpus 化を要求にするか | BR/NFR or L3 forward | ❓ |
-| U-補-5 | ADR-001 を NFR 明示するか (= U-技-5) | NFR (ほぼ確定) | ❓ |
+| ID | ヒアリング項目 | 着地先 | status |
+|----|--------------|--------|--------|
+| U-補-1 | エスカレーション機構を業務要求にするか | BR-10 (9 mode 統一合流: Incident/Add-feature 例外として吸収) | ✅ (PO 承認済 2026-05-28) |
+| U-補-2 | AI 実装の cross-agent review 強制を業務要求にするか | BR-21 (AI 利用ポリシー権限分離) として新設。self-review 前置は `.claude/CLAUDE.md` Guard Rules で運用担保 | ✅ (PO 承認済 2026-05-28) |
+| U-補-3 | rule parity (Claude/Codex 同一判定) を NFR にするか | NFR-09 (rule parity) として着地。L3 で実現方式確定 carry | ✅ (PO 承認済 2026-05-28) |
+| U-補-4 | 失敗の GitHub corpus 化を要求にするか | BR-13 (feature カタログ) / BR-16 (7-Gate pipeline) の audit trail として吸収。L3 FR forward | ✅ (PO 承認済 2026-05-28) |
+| U-補-5 | ADR-001 を NFR 明示するか (= U-技-5) | NFR-04 (言語非依存) + technical §1 に ADR-001 参照明示。NFR 独立明示は NFR-10 として新設不要 (ADR-001 参照で代替) | ✅ (PO 承認済 2026-05-28) |
 
 ### 3.6 PO 確認 architectural 整合課題 (GitHub/GHA framework 統合前)
 
@@ -163,7 +200,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §6 DoD (Definition of Done)
 
-- [ ] §3 レジストリの全項目が ✅ / ➡️ のいずれかに収束 (❓ 残ゼロ)
+- [x] §3 レジストリの全項目が ✅ / ➡️ のいずれかに収束 (❓ 残ゼロ) — U-補-1〜5 全件 PO 承認済 2026-05-28
 - [ ] business-requirements.md が必須 § 全件含む (§1〜§10 + §1.1/1.2/1.3/3.1/3.2/3.3/10.1/10.2/10.3)
 - [ ] frontmatter 必須フィールド完備 (sub_doc / pair_artifact / related_l0 / next_pair_freeze)
 - [ ] 冒頭 blockquote 必須要素 (SSoT 参照 / 件数確定 / L3 接続規約) 存在
@@ -172,11 +209,20 @@ v2_import: docs/migration/v2-import-ledger.md
 - [ ] FR-* を含まない (AP-6 違反なし)
 - [ ] L14 OT で本 sub-doc 由来要求が被覆 (孤児 0)
 - [x] 専門サブエージェント review (Step 6) 通過記録 (2026-05-28 pmo-sonnet 再被覆監査 acdc5ccd6f31ae951 通過、CONDITIONAL PASS)
+- [x] G1 readiness: status = ready-for-G1-signoff (PO サインオフ準備完了。§3 全件 ✅/➡️ 確定済)
 
 ## §7 carry / 次工程 (L3 / L4) への引き継ぎ
 
-- **§10.2 L4 carry**: 集約境界 / 値オブジェクト / entity ID 規約 / ライフサイクル / 不変条件 / 集約間整合性 / `ut-tdd doctor check_business_entity_coverage` 新設 — L4 データ設計 sub-doc で確定
-- **U-補-1〜5 残差**: Step 3 PO ヒアリング結果に応じて BR/NFR or L3 FR forward — L3 PLAN 起票時に dependencies.requires に列挙
-- **Phase B**: BR-21/22 候補 + NFR-16 + ADR-002 (2 層分離) — L3 FR / L4 ADR forward。Phase B 開始時に ADR-002 を起票して整合解を確定
-- **GitHub/GHA architectural 整合課題 (A)(B)(C)**: L1 統合前に PO 確認。(A) docs/ 構造 migration timing / (B) F-NNN と BR-NN の関係 / (C) .helix/reports/ vs .ut-tdd/ パス名前空間
+**確定済 (carry から除外)**:
+- U-補-1〜5: 全件 PO 承認済 2026-05-28。BR-21 / NFR-09 / BR-13 / BR-16 / NFR-04 に着地。carry 終了
+- BR-20 / NFR-15: PO declared 2026-05-28。business-requirements.md §2 に着地済。carry 終了
+- KPI D-01〜D-09: PO confirmed 2026-05-28。business §4 成功条件に着地。carry 終了
+- 権限分離 S-01〜S-05: PO confirmed 2026-05-28。BR-21 / business §4 に着地。carry 終了
+
+**L3 forward carry (継続)**:
+- **BR-21 詳細化 (L3)**: AI 利用ポリシー権限分離の AC (受入条件) 詳細化 → PLAN-L3-01 dependencies.requires に列挙
+- **B3 PoC 期間上限 (L3 で再確認)**: PoC mode の最大期間上限値は L3 FR で AC として確定
+- **§10.2 L4 carry**: 集約境界 / 値オブジェクト / entity ID 規約 / ライフサイクル / 不変条件 / 集約間整合性 / `ut-tdd doctor check_business_entity_coverage` 新設 → L4 データ設計 sub-doc で確定
+- **Phase B**: NFR-16 + ADR-002 (2 層分離) → L3 NFR / L4 ADR forward。Phase B 開始時に ADR-002 を起票して整合解を確定
+- **B9 entity 化判断 (L4 carry)**: §10 DDD entity の集約境界・不変条件の詳細設計 → L4 データ設計で確定
 - **L3 PLAN 接続規約**: PLAN-L3-01-functional-requirements は本 sub-doc 全件を `dependencies.requires` に列挙する

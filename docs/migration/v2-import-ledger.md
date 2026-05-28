@@ -128,14 +128,29 @@ PO 指示「V モデルとモデル駆動を全部同じにしろ」を受け、
 | FR-L1-33 | 既存資産棚卸し・充足度マッピング (コマンド / スキル / detector / template / state / hook / docs / tests の網羅確認) | asset-mapping | リポジトリ全資産 | 充足度レポート、不足項目リスト | P2 |
 | FR-L1-34 | スキル・コマンド穴の優先順位管理 (vmodel-semantics 注入セット定義 / ut-tdd recover / ut-tdd route / retrofit skill 等) | integration-map | 穴リスト、設計確定済み仕様 | 優先順位付き実装タスクリスト | P2 |
 | FR-L1-35 | 基盤整備状況の可視化 (実装済み / 設計済み・実装未 / 未設計の 3 区分で検証・テスト・検出基盤を一覧表示) | infra-readiness | 各機構の実装状況 | 整備状況一覧 (区分付き) | P2 |
+| FR-L1-37 | model 推挙 (タスク性質・drive・コスト制約から最適 AI model を推薦し、agent 呼び出し前に候補提示) | learning-engine / layer-context-injection | タスク種別・drive・NFR-12 budget 制約 | model 推薦リスト (理由付き)、agent 呼び出し時の model 候補 | P1 |
+| FR-L1-39 | タスク難易度推定 (PLAN 内容・drive・依存 skill から難易度スコアを算出し、委譲先 [Codex PE/SE/TL] を自動選定) | layer-context-injection / automation-gate-map | PLAN frontmatter・依存 FR・drive 種別 | 難易度スコア・委譲先推奨・所要時間見積 | P1 |
+| FR-L1-40 | drive 別 state 区画 (be/fe/db/agent 等 9 drive ごとに `.ut-tdd/state/<drive>/` を分離管理し、区画跨ぎ汚染を skip_sub_doc で機械防止) | db-integration / db-auto-registration | drive 種別・PLAN frontmatter | drive 別 state ディレクトリ・skip_sub_doc 強制レポート | P1 |
+| FR-L1-41 | drive 自動判定 (リポジトリ構成・PLAN 内容・ファイル拡張子から drive を推定し、frontmatter 未指定時の補完と不整合検出を行う) | db-integration / automation-gate-map | リポジトリ構成・PLAN 本文・拡張子一覧 | drive 推定結果・補完提案・不整合警告 | P1 |
+| FR-L1-42 | AI provider 引継ぎ (Claude ↔ Codex セッション切替時に handover.CURRENT.json を経由して context・PLAN 状態・audit ログを引き継ぐ) | continuous-run-context-management / recovery-workflow | handover.CURRENT.json・PLAN registry・audit log | provider 切替後の context 連続性・作業継続可否レポート | P1 |
+| FR-L1-44 | 途中導入 onboarding workflow (既存リポジトリへ UT-TDD を段階導入する際、baseline PLAN を自動生成し skip_sub_doc で欠損 sub-doc を機械強制回避しつつ段階整備する) | PO directed 2026-05-28 / retrofit-workflow | 既存 repo 構成・有無 sub-doc 一覧 | baseline PLAN セット・skip_sub_doc 設定・onboarding 進捗ダッシュボード | P1 |
+| *(L3 carry)* | **FR-L1-36 (skill 評価) / FR-L1-38 (model 評価) / FR-L1-43 (PoC 計測)** — BR-21「AI 実行成果評価」経由で L3 以降に forward。L1 では BR-21 の宣言 carry として存在し OT-18 で確認のみ | — | — | — | P2 |
 
 ### §6.1 取り込み判断 (UT-TDD 文脈での翻案)
 
 - HELIX 固有実装名 (`helix.db` / `helix-doctor` / `helix-recover` 等) は UT-TDD 文脈で `.ut-tdd/` state / `ut-tdd doctor` 等に置換
 - HELIX-workflows の axis-* detector 番号体系 (axis-09 / axis-11 / axis-15-19 等) は UT-TDD では別系統として再採番
 - P0 18 件は L1 機能要求 sub-doc の §1 機能一覧で確定、L3 で FR-* (機能要件) に詳細化
-- P1 12 件は L1 sub-doc で要求として宣言、L3/L4 で実装方式を ADR 化
-- P2 5 件は L1 §5 forward に記載 (L3-L4 carry、運用整備系)
+- P1 12 件 (HELIX-workflows 由来) + **P1 6 件 (PO directed 2026-05-28 新規)** = P1 計 18 件は L1 sub-doc で要求として宣言、L3/L4 で実装方式を ADR 化
+- P2 5 件 (HELIX-workflows 由来) は L1 §5 forward に記載 (L3-L4 carry、運用整備系)
+
+**出典カテゴリ区分 (A-28〜A-32 由来の新規 FR/NFR/BR は以下カテゴリで追跡)**:
+
+| 出典カテゴリ | 対象 ID | 根拠 |
+|---|---|---|
+| HELIX-workflows 正本由来 | FR-L1-01〜35 | `helix-process/` 47 doc 全件 Read (agentId: af1dfb471e21882c8) |
+| PO directed (2026-05-28) | FR-L1-37 / FR-L1-39 / FR-L1-40 / FR-L1-41 / FR-L1-42 / FR-L1-44 / NFR-16 / BR-21 | PO 判断 + Step 1 sub-doc 詳細化 session。HELIX-workflows に対応 doc なし、UT-TDD 固有追加 |
+| L3 forward carry (BR-21 経由) | FR-L1-36 / FR-L1-38 / FR-L1-43 | BR-21「AI 実行成果評価」の下流 FR 候補。L1 では宣言のみ、L3 で FR-* 詳細化 |
 
 ### 5.2 派生 doc 再編 (next commit、本 ledger に予告)
 
@@ -156,3 +171,20 @@ UT-TDD concept §3 / requirements §1.4 はすでに **V2 L0-L14 + W-model + pai
 ### 5.4 9 駆動の確認
 
 UT-TDD requirements §1.6 が定義する 9 駆動 (be/fe/fullstack/db/agent/scrum/reverse/poc/troubleshoot) は v2 HELIX SKILL_MAP の主要 4 (be/fe/scrum/fullstack) + エッジ 2 (db/agent) と整合 (poc/reverse/troubleshoot は経路 2/補助 1 専用)。**駆動 enum 自体の変更不要**、§3.7 挙動表を追加するのみで v2 取り込み完了。
+
+### 5.5 sub-doc 解像度上げ (2026-05-28 Step 1 — 5 sub-doc 詳細化・新規追加)
+
+PO 承認のもと、5 sub-doc をそれぞれ解像度アップ。本 ledger §5 に A-25〜A-32 として記録する。
+
+| # | 採択項目 | 反映先 |
+|---|---|---|
+| **A-25** | **screen sub-doc 解像度上げ** (S1-S10 採用、SCR 7 画面確定: SCR-01〜07/11、SCR-08 統合、SCR-11 doctor 結果ビュー新規、各 SCR 情報要素/操作要素/更新頻度/状態種別 詳細化、6 遷移シナリオ [Recovery 復帰 + Discovery 追加]) | `docs/design/harness/L1-requirements/screen-requirements.md` |
+| **A-26** | **business sub-doc 解像度上げ** (B1-B10 採用、§6.5 業務 KPI D-01〜D-09 表新設、§10.4 skill/detector 参照注記追加) | `docs/design/harness/L1-requirements/business-requirements.md` |
+| **A-27** | **新規 BR-21「AI 実行成果の継続評価と改善サイクル」** (P2、Phase B 中心。FR-L1-36/38/43 の L3 carry pair 起点。F2=a 採用) | business-requirements.md §1 / §7 pair 表 |
+| **A-28** | **新規 FR-L1-37/39/40/41/42 (5 件、全 P1)** (FR-L1-37: model 推挙 / FR-L1-39: タスク難易度推定 / FR-L1-40: drive 別 state 区画 / FR-L1-41: drive 自動判定 / FR-L1-42: provider 引継ぎ。F1=b 採用) | functional-requirements.md §1 / 本 ledger §6 |
+| **A-29** | **新規 FR-L1-44 (途中導入 onboarding workflow)** (P1。論点2 採用 = baseline 段階作成 + skip_sub_doc 機械強制) | functional-requirements.md §1 / 本 ledger §6 |
+| **A-30** | **§3.3 cross-cutting に「9 mode 統一合流原則」追記 + Add-feature 例外注記** (論点1 採用: Scrum/PoC/Reverse は V モデル昇華で収束。Add-feature のみ例外的差分追補) | business-requirements.md §3.3 |
+| **A-31** | **新規 NFR-16「onboarding 互換性」** (FR-L1-44 連動、P2。NFR 件数 14 件確定) | nfr.md §1 |
+| **A-32** | **drive 別 state 区画 (FR-L1-40) + AI provider 引継ぎ (FR-L1-42) technical 追記** (9 mode 統一合流原則段落 + onboarding bootstrap 行追加) | technical-requirements.md §4-§7 |
+
+> 参照 commit: Step 1 並列更新 (2026-05-28)
