@@ -375,6 +375,64 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
 - **validator 同期方針**: VALID_* は `src/schema/*.ts` の **zod enum/literal を単一正本**として定義し本書 §1 表と整合させる (型推論 + 実行時検証を 1 本化、enum drift を型で抑止)。drift 検知のため schema 冒頭に「最終同期: requirements vM.N §1.X」コメントを必須化、`ut-tdd doctor` が本書の更新日と schema のコメントを比較し 30 日以上乖離なら warning。
 - **将来移行**: 将来的に enum を YAML schema ファイル (`docs/governance/schema/frontmatter-schema.yaml`) に切り出して両者が読み込む構造にする (個別 PLAN-XXX で詳細設計)。
 
+#### G. L 別 sub-doc 構造 (v1.2 で V2 HELIX-workflows 正本採用、構想書 §3.1.2.1 / §3.1.3.1)
+
+V2 HELIX-workflows 正本では L1-L6 設計層が sub-doc 分割を持つ。`kind=design` の PLAN は単一 sub-doc を generates し、複数関心を 1 PLAN に混在させない (構想書 §3.5 AP-11/AP-12)。
+
+##### G.1 sub-doc 種別 enum
+
+```text
+VALID_SUB_DOCS = {
+  L1: ["business", "functional", "screen", "technical", "nfr"],                          # 5 種
+  L2: ["screen-list", "screen-flow", "wireframe", "ui-element"],                          # 4 種
+  L3: ["business-requirement", "functional-requirement", "nfr-grade"],                    # 3 種
+  L4: ["architecture", "function", "screen", "data", "external-if"],                      # 5 種
+  L5: ["internal-processing", "module-decomposition", "physical-data", "if-detail"],      # 4 種
+  L6: ["function-spec", "class-design", "edge-case"],                                     # 3 種
+}
+```
+
+PLAN ID 命名は `PLAN-L<N>-<NN>-<sub-doc-slug>` (例: `PLAN-L1-03-screen-requirements`、`PLAN-L4-02-function`)。NN は layer × sub-doc を跨いだ通し連番 (sub-doc が決まれば slug で識別可)。
+
+##### G.2 frontmatter フィールド追加
+
+```yaml
+sub_doc: business                            # §G.1 の sub-doc 種別。kind=design + layer in [L1-L6] で必須
+skip_sub_doc: []                             # 当該 PLAN で扱わない sub-doc + 理由を列挙 (drive 不適合等)
+  # 例:
+  # - sub_doc: screen
+  #   reason: "BE-only drive, no UI"
+```
+
+##### G.3 機械検証条件 (validator が fail-close)
+
+- [ ] `kind=design + layer in [L1, L2, L3, L4, L5, L6]` → `sub_doc` 必須 (欠落 → exit 1)
+- [ ] `sub_doc` ∈ §G.1 VALID_SUB_DOCS[layer] (層に存在しない sub-doc 値 → exit 1)
+- [ ] 同一 layer + sub_doc の 2 重起票 (status ∉ archived のもの) → exit 1
+- [ ] `generates[].artifact_path` が `docs/design/<area>/L<N>-requirements/<sub-doc-slug>.md` (L1) / `docs/design/<area>/L<N>-<layer-name>/<sub-doc-slug>.md` (L2-L6) の規約に従う (規約外 path → exit 1)
+- [ ] `skip_sub_doc[].reason` 文字列が 10 文字以上 (空文字・null・ダミー → exit 1)
+- [ ] **drive × sub_doc 整合** (構想書 §3.7 駆動別 L2-L14 挙動表):
+  - `drive=be` で `layer=L2` の sub-doc を `skip_sub_doc` 無しで持つ → P1 warning (UI 不在のはずなので skip 推奨)
+  - `drive=fe` で `layer in [L2, L10]` の sub-doc を skip → exit 1 (FE 駆動の核心)
+  - `drive=fullstack` で `layer in [L2, L10]` の sub-doc を skip → exit 1
+  - `drive=agent` で `layer in [L2, L10]` の sub-doc を skip → exit 1 (会話 UI 必須)
+
+##### G.4 PLAN 本文構造 (構想書 §3.6 PLAN 内蔵物原則)
+
+- [ ] PLAN 本文に **§工程表 (Step + 進捗)** + **§実装計画** の両セクションが存在 (欠落 → exit 1)
+- [ ] §工程表 に **review Step (self / pmo-sonnet / tl-advisor のいずれか)** が固定 Step として含まれる (欠落 → exit 1)
+- [ ] §工程表 の Step は header `### Step <N>: <タイトル>` 形式 (機械検証可能)
+- [ ] §実装計画 に各記載項目の情報源 (Web/TL 調査 / PO ヒアリング / 自動生成 / 既存資料) が明記される
+
+##### G.5 v1.2 以前の単一統合 PLAN との後方互換
+
+v1.1 以前に `PLAN-L1-01-business-requirements` 1 件で L1 全要求を扱っていた PLAN は、以下のいずれかで v1.2 整合化:
+
+- (a) 内容を 5 sub-doc に分割し、新規 4 PLAN (functional / screen / technical / nfr) を起票、旧 PLAN は business sub-doc に絞り直し
+- (b) 旧 PLAN を `status: archived` に遷移し、5 sub-doc 全件を新規起票
+
+validator は移行期間中 (v1.2 reception session 内)、`sub_doc` 不在の旧 PLAN を warning とし、`status=archived` で除外可。
+
 ---
 
 # §2 V-model 4 artifact 工程要件

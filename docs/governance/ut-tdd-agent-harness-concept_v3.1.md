@@ -493,9 +493,39 @@ L0 は「リポジトリ初期化」ではなく **企画工程**。企画書 PL
 
 V2 は要件を二段に分ける。**L1 = 業務要求 (BR-* / NFR-*) のみ** (FR を書かない)、**L3 = システム機能要件 (FR-*) + 受入条件 (AC-*)** で、FR-* は L1 の BR-* から双方向 trace する。チーム: L1 は po 主体 (業務要求まで)、L3 は tl 主体 (FR+AC 確定)。G1 を業務要求ゲート、G3 を FR+AC ゲートとして人間サインオフを分離する。
 
+### 3.1.2.1 L1 sub-doc 構造 (V2 HELIX-workflows 5 PLAN 正本)
+
+V2 HELIX-workflows 正本 (`vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md`) は **L1 を 1 doc にまとめず 5 sub-doc に分割**する (PLAN は機能=doc 単位で起票)。UT-TDD はこれを正本として採用する:
+
+| sub-doc (5 種) | 主な記載内容 (HELIX-workflows 原文) | PLAN 命名 (UT-TDD) |
+|----------------|------------------------------------|--------------------|
+| **業務要求** | 目的・背景 (WHY/WHAT/WHO) / 対象業務一覧 / 業務フロー / ステークホルダー / 現状課題 → あるべき姿 | `PLAN-L1-01-business-requirements` |
+| **機能要求** | 機能一覧 / 利用シナリオ (ユースケース) / 操作とデータの流れ / 入出力 | `PLAN-L1-02-functional-requirements` |
+| **画面要求** | 画面一覧 / 画面遷移の要望 / 表示・操作への要望 (具体的画面設計は L2) | `PLAN-L1-03-screen-requirements` |
+| **技術要求** | 採用技術・技術制約 / 外部連携・インターフェース要望 / 既存システム制約 | `PLAN-L1-04-technical-requirements` |
+| **非機能要求** | 可用性 / 性能・拡張性 / 運用・保守性 / 移行性 / セキュリティ / システム環境・エコロジー (**IPA 非機能要求グレード 6 大項目に準拠**) | `PLAN-L1-05-nfr` |
+
+> **L1 機能要求 ≠ L3 機能要件**: L1 機能要求 (FR-L1-*) は「ユーザー視点で何の機能を望むか」= **要求**、L3 機能要件 (FR-*) は「システムが満たすべき仕様 + AC」= **要件**。L1 の 5 sub-doc は L3 で確定される FR-*/AC-* の **入力**であり別物。
+> **L1 = 1 PLAN にまとめる旧運用は誤り** (§3.5 AP-11)。
+> L1 全 sub-doc ↔ L14 運用テスト設計 1 doc の pair (G1↔L14、W-model)。
+
 ### 3.1.3 設計の 3 段分割 (L4 基本 / L5 詳細 / L6 機能)
 
 V2 は設計を **L4 基本設計 (外部設計: アーキ/ADR)** → **L5 詳細設計 (内部設計: D-API/D-DB/D-CONTRACT、API/Schema Freeze)** → **L6 機能設計 (関数 signature・エッジケース + WBS)** の 3 段に分け、それぞれ G4/G5/G6 で独立凍結する。旧 UT-TDD の L2 全体設計 / L3 詳細 / L3.5 機能はこの L4 / L5 / L6 に remap される。
+
+### 3.1.3.1 L2-L6 sub-doc 構造 (V2 HELIX-workflows 正本)
+
+各設計層も sub-doc 分割を取る (V2 HELIX-workflows 各 process doc の正本抽出セクションから転写):
+
+| layer | sub-doc 構造 (HELIX-workflows 正本) | 数 |
+|-------|------------------------------------|-----|
+| **L2 画面設計** | 画面一覧 (画面 ID・各画面の役割) / 画面遷移 (遷移図・条件・イベント) / ワイヤーフレーム (各画面のレイアウト・情報配置) / UI 要素 (主要 UI コンポーネント・入力/表示/操作要素) | 4 |
+| **L3 要件定義** | 業務要件 (業務フロー確定版・業務ルール・対象業務範囲) / 機能要件 (機能一覧確定版・機能仕様・入出力定義) / 非機能要件 (IPA 非機能要求グレードのグレード値で確定) | 3 |
+| **L4 基本設計** | 方式設計 (システム構成・アーキ・技術スタック) / 機能設計 (機能構成・機能間連携) / 画面設計 (画面レイアウト確定・画面項目定義) / データ設計 (論理データモデル・テーブル概要・ER 図) / 外部 IF 設計 (外部システム連携・API 概要) | 5 |
+| **L5 詳細設計** | 内部処理設計 (モジュール内部処理・処理フロー) / モジュール分割 (モジュール構成・責務分担) / 物理データ設計 (物理テーブル・インデックス戦略) / IF 詳細設計 (入出力詳細・エラー処理) | 4 |
+| **L6 機能設計** | 関数仕様 (関数/メソッド仕様・引数・戻り値) / クラス設計 (クラス構成・責務) / エッジケース (境界値・例外・エラー処理パターン) | 3 |
+
+各 sub-doc は単独 PLAN で起票 (PLAN 命名: `PLAN-L<N>-<NN>-<sub-doc-slug>`)。drive 不適合 sub-doc (例: be 駆動なら L2 画面設計の sub-doc 群を skip) は **skip 理由を PLAN frontmatter `skip_sub_doc:` に明記**することで省略可。drive 別の skip/必須は §3.7 駆動別 L2-L11 挙動表を正本とする。
 
 ### 3.1.4 L7 実装スプリントの 7 ステップ (3 点レビュー)
 
@@ -551,6 +581,64 @@ L7 実装完了後に QA が追加する **regression / exploratory / edge-case*
 | AP-8 | 逆ピラミッド (① + ② はあるが ③ + ④ が無い) | 「テストも書いた」と称し ③ テスト設計 doc を欠く |
 | AP-9 | 重複実装 / 機能被り | 既存に同等機能があるのに再実装する (着手前の `ut-tdd code find` 流用確認を怠る。被りは Add-feature / Refactor へ回す) |
 | AP-10 | 依存関係違反 | 呼び出し/import グラフに orphan・cycle・missing、またはレイヤリング違反を生む (機能単位レビューで検出) |
+| AP-11 | L1 を 1 PLAN / 1 doc にまとめる | V2 HELIX-workflows 正本では L1 = 5 sub-doc (業務/機能/画面/技術/非機能、§3.1.2.1)。1 doc 統合は要求の関心混在で再番号化リスク |
+| AP-12 | L2-L6 sub-doc 構造を持たない設計 PLAN | V2 HELIX-workflows 正本では L2=4 / L3=3 / L4=5 / L5=4 / L6=3 sub-doc (§3.1.3.1)。複数関心を 1 PLAN に混在させる起票は禁止 |
+| AP-13 | PLAN に工程表 + 実装計画が内蔵されていない | V2 HELIX-workflows 正本では PLAN = 機能 (doc) 単位で工程表 + 実装計画を内蔵 (§3.6)。本文 0 行・成果物 declare のみの PLAN は無効 |
+
+## 3.6 PLAN 内蔵物原則 (V2 HELIX-workflows 共通)
+
+V2 HELIX-workflows 正本に従い、**PLAN は機能 (=ドキュメント) 単位で起票し、以下 2 要素を内蔵する**:
+
+| 内蔵要素 | 内容 |
+|----------|------|
+| **工程表 (作成手順 + 進捗)** | そのドキュメントを完成させる手順 (例: 参考調査 Web 検索 → 既存資料整理 → ドラフト → TL レビュー → 確定) と各手順の進捗 (`☐ / 🔄 / ✅`) |
+| **実装計画** | 記載項目をどう埋めるかの計画 (情報源 / Web/TL 調査が必要か / 人間 PO ヒアリングが必要か / 自動生成可能か 等) |
+
+PLAN 本文は「ヒアリング項目・メモ・調査結果」の **中間準備ドシエ**であり、**正本 doc (上記 sub-doc) とは別文書**。正本 doc は PLAN §0 の `generates` で declare する成果物。
+
+工程表 Step には **review (self / pmo-sonnet / tl-advisor) を必ず固定 Step として組み込む** (self-review 前置原則と整合、`.claude/CLAUDE.md` Guard Rules)。
+
+## 3.7 駆動別 L2-L14 挙動表 (V2 HELIX SKILL_MAP 正本 + V2 process L 番号 remap)
+
+各 drive (be / fe / fullstack / db / agent) で L2-L14 の中身とゲート判定が変わる。**正本は `vendor/helix-source/skills/SKILL_MAP.md §駆動タイプ別 L2〜L11`** を V2 process docs (`vendor/helix-source/docs/v2/process/L00-L14`) の L 番号に remap して転写したもの:
+
+| フェーズ | be | fe | db | fullstack | agent |
+|---------|----|----|----|-----------|----|
+| **L2 画面設計** | (UI 不在で skip / 軽量) | **モック駆動設計** (方針 + token + `mock.html` + `state-events.md`) | (UI 不在で skip / 軽量) | BE 方針 + FE 方針 (**mock 含**) + 接続契約方針 (同時策定) | 会話 UI モック / プロンプト UI 設計 |
+| **L3 要件定義** | API 契約 + DB + 工程表 | TL が `state-events.md` から **API 契約導出** + DB + 工程表 | マイグレーション + API 契約 + 工程表 | D-API + D-UI + D-CONTRACT + D-DB + D-STATE + **mock** + 工程表 | ツール契約 + 統合要件 + 工程表 |
+| **L4 基本設計** | アーキ・API 方針・ADR | mock 凍結後のアーキ反映 + Contract | ER 図・スキーマ方針 | BE 方針 + FE 方針 + Contract 三点凍結 | ツール定義・オーケストレーション方針 |
+| **L5 詳細設計** | D-API / D-DB / D-CONTRACT | mock→API 契約導出 + D-API/D-DB | D-DB 中心 + D-API | 全 D-* + mock | ツール契約詳細 + state-events |
+| **L6 機能設計** | 関数 signature | コンポーネント仕様 + 関数 signature | CRUD 関数 + マイグレーション | 全領域 | ツール関数 + プロンプトテンプレ |
+| **L7 実装順** | ロジック → API → FE | BE (契約 base) ∥ FE (**モック → 本実装昇格**) → 統合 | スキーマ → CRUD → API → FE | Phase A: BE Sprint ∥ FE Sprint (**mock 起点**) → Phase B: L5/L8 結合 | ツール → オーケストレーション → UI |
+| **L10 UX 磨き** | 薄い (表示確認) | **厚い** (デザイン駆動) | 薄い (管理画面確認) | 標準 (結合後に Visual Refinement) | 会話 UI / デモ確認 |
+| **L13 デプロイ後検証** | 標準 | 標準 | 薄い | 標準 | 薄い |
+| **L14 運用検証** | 標準 | 標準 | 薄い | 標準 | 標準 |
+| **G2 凍結** | (UI なしなら skip 可) | **モック凍結** (UX 承認) | (UI なしなら skip 可) | 接続契約方針凍結 (BE + FE + Contract 三点セット) | 会話 UI モック凍結 |
+| **G5 着手** (API/Schema Freeze) | API/Schema Freeze | **モック + API/Schema Freeze** | Migration Freeze | API/Schema/UI/Contract 全凍結 | Tool Contract Freeze |
+
+### L10 (UX 磨き) 要否 (drive 別)
+
+| drive | L10 必要条件 |
+|-------|-------------|
+| be | UI を持つ場合のみ (be 単独 BE-only なら skip) |
+| fe | **常に必要** (FE 駆動の核心) |
+| db | UI を持つ場合のみ |
+| fullstack | **常に必要** (結合後の Visual Refinement) |
+| agent | **常に必要** (会話 UI / デモ) |
+
+### L2 sub-doc skip ルール (drive 別)
+
+| drive | L2 sub-doc 4 種 (画面一覧/遷移/ワイヤー/UI 要素) の扱い |
+|-------|-------------------------------------------------------|
+| be (BE-only) | 全 skip 可 (frontmatter `skip_sub_doc: ["L2-*"]` + 理由 `"BE-only, no UI"`) |
+| fe | 全必須 |
+| db (UI 無し) | 全 skip 可 |
+| fullstack | 全必須 |
+| agent | 全必須 (会話 UI を要素として扱う) |
+
+L4 画面設計、L5 物理データ設計 等の sub-doc skip も同様に drive で判定 (PLAN frontmatter `skip_sub_doc:` で明示)。
+
+> 注: SKILL_MAP では L9-L11 が「デプロイ検証 / 観測 / 運用学習」だったが、UT-TDD は V2 process docs を正本として L9=総合テスト / L10=UX 磨き / L11=総合レビュー+UAT / L12=デプロイ+受入 / L13=デプロイ後検証 / L14=運用検証 を採用。本表は SKILL_MAP の挙動を V2 process L 番号に合わせて remap している。
 
 ---
 
