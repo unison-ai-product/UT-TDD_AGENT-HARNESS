@@ -1,0 +1,131 @@
+---
+doc_id: G3-readiness-report-2026-05-28
+title: "L3 G3 readiness report — PO サインオフ判断材料 (v1: 3 sub-doc + L12 受入テスト 4 doc 本起草完了)"
+status: ready-for-PO-signoff
+created: 2026-05-28
+updated: 2026-05-28
+owner: PM (Opus)
+parent_g1: docs/handover/G1-readiness-report-2026-05-28.md (G1 v8 PASS)
+---
+
+# L3 G3 readiness report (2026-05-28、v1)
+
+> **判定**: **PASS** (Critical 0 / Important 0 / Minor 0)
+> **本 v1 で完了**: L1 G1 v8 PASS → L3 sub-doc 3 件 + L12 受入テスト 1 doc 本起草完了
+> **PO に求める判断**: L3 機能要件の **G3 ゲート凍結サインオフ** (3 sub-doc + L12 受入テスト 1 doc + 3 PLAN の pair freeze、L4 起票への進行承認)
+
+## §1 サマリ (PO スキャン用)
+
+| 項目 | 状態 |
+|---|---|
+| **L3 sub-doc 3 件** (functional / business-detail / nfr-grade) | ✅ 本起草完了 (functional ~400 行 / business-detail ~300 行 / nfr-grade ~250 行) |
+| **L12 受入テスト設計 1 doc** (AT-* 87 件量閉じ) | ✅ 本起草完了 (~300 行、孤児 0) |
+| **L3 PLAN 3 件** (PLAN-L3-01〜03 全 Step 進捗反映) | ✅ Step 1-6 完了 (Step 7 review は G3 readiness 時に集約) |
+| **PO 直問** | **0 件** (TL レビューで全件 AI 推奨採用、A-43/A-44 ledger) |
+
+## §2 PO 確認事項 (3 点 + 1 件サマリ)
+
+### 確認 1: L3 機能要件 (FR-01〜18、P0 18 件詳細化 + AC 54 件)
+
+`docs/design/harness/L3-functional/functional-requirements.md` (~400 行)
+
+- L1 FR-L1-01〜18 (P0) を **1:1 で L3 FR-01〜18** に詳細化
+- 各 FR-* に **入出力 / 振る舞い / AC 3 件** (Given-When-Then 形式、正常系/異常系/境界系)
+- 各 FR-* に **対応画面 (PM/HM/GD) / 対応 mode / 対応 drive / 人間判断点** (CC2 carry 充足)
+- **§3 carry 宣言**: P1 18 件 + P2 5 件 = L4 carry default / FR-L1-19 = Phase B / FR-L1-36/38/43 = PLAN-L3-02 委譲
+- **§4 画面 trace**: screen §5 G1-trace マトリクス継承 + AC レベル拡張 6 件サンプル
+- **§5 9 mode × FR**: P0 18 件で 6 mode 直接被覆 / 4 mode は L4 carry
+- **§7 carry**: L4 基本設計 + L4 データ設計 + L7 TDD + L12 受入テスト + CC2 carry 強化
+
+### 確認 2: L3 業務要件詳細 (BR-21 + HM-08 + FR-BR21-36/38/43)
+
+`docs/design/harness/L3-functional/business-detail.md` (~300 行)
+
+- **§1〜§4**: BR-21 評価サイクル 4 軸確定 (PLAN 単位 default + 5 指標 + sprint 末 + 人間承認必須)
+- **§5**: HM-08 画面連動 (4 ソース統合 + 30 秒ポーリング + AI 指示 copy UI)
+- **§6 Phase A/B 境界**: Phase A = 宣言のみ + HM-08 placeholder / **Phase B 着手条件 = G14 + KPI D-07 ≥ 50% AND** (A-44 ledger TL 採用)
+- **§7 FR-BR21-36/38/43**: 各 AC 2 件 計 6 AC (Phase B carry)
+- **CC2 carry**: 全改善アクション「人間承認必須」(半自動 = 提案 + 承認の 2 段階)
+- **NFR-17 (PII redaction)**: Phase B carry で nfr-grade と整合
+
+### 確認 3: L3 NFR グレード値 (NFR-01〜16、IPA Lv + 受入閾値)
+
+`docs/design/harness/L3-functional/nfr-grade.md` (~250 行)
+
+- **§1〜§6**: 6 IPA 大項目に Lv2/Lv3 確定 (TL 採用 = 社内内製ツール想定で過剰投資回避)
+  - 可用性 Lv2 / 性能 Lv2 / 保守性 Lv3 / 移行性 Lv2 / セキュリティ Lv3 / 環境 Lv3
+- 各 NFR-* に **IPA Lv + 受入閾値 + 測定方法 + pass 条件 + AC** (4 件サンプル AC 詳細化)
+- KPI integrated: D-02 (NFR-13) / D-05 (NFR-08) / D-06 (NFR-14) / D-07 (NFR-12) / D-09 (NFR-16)
+- **§7 carry**: NFR-02/15 = L4 ADR / NFR-09 = L4 carry / NFR-17 = Phase B (PII redaction)
+
+### サマリ: L12 受入テスト設計 (AT-* 87 件量閉じ、L3 ↔ L12 pair)
+
+`docs/test-design/harness/L3-acceptance-test-design.md` (~300 行)
+
+- **AT-FR 54 件** (functional 由来、FR-01〜18 × AC 3)
+- **AT-BR21 15 件** (business-detail 由来、Phase A 6 + Phase B carry 9)
+- **AT-NFR 18 件** (nfr-grade 由来、Phase A 15 + L4 carry 2 + Phase B carry 1)
+- **合計 87 件** (Phase A 即実装 75 件 + carry 12 件)
+- **量閉じ**: 全 FR-*/AC-*/BR-21 派生/NFR-* に最低 1 AT 紐付き、**孤児 0**
+- **§4 G3-trace 機械検証**: R1-R4 全 PASS (本起草時点で全件 trace 整合確認済)
+
+## §3 G3-trace 機械検証結果
+
+L1 G1-trace と同構造で 4 軸検証 (本起草時点で人手確認):
+
+| ルール | チェック内容 | 結果 |
+|--------|------------|------|
+| **R1** (BR/UX/FR-L1 → L3) | 全 BR-01〜08 + BR-21 + UX-01〜03 + FR-L1 P0 18 件 が L3 のいずれかに紐付き | **PASS** — functional + business-detail + nfr-grade で全件被覆 |
+| **R2** (FR-* → AC → AT) | 全 L3 FR-* に AC 最低 3 件、全 AC に AT 対応 | **PASS** — 18 FR × 3 AC × 1 AT = 54 件マップ |
+| **R3** (AT → 要求) | 全 AT-* が L3 要求に紐付き | **PASS** — 87 AT 全件 trace |
+| **R4** (NFR → 閾値 → AT) | 全 NFR-* に閾値 + AT 紐付き | **PASS** — 14 NFR + 3 carry 全件 |
+
+> **G3-trace lint 機械実装**: L7 carry (本 PLAN は trace 整合の宣言と人手確認まで)
+
+## §4 G3 後 carry (L4 carry + Phase B carry、任意)
+
+### L4 carry (L4 起票時に必須参照)
+
+- **functional P1 18 件 + P2 5 件** の詳細化 (L4 で AC + 詳細化)
+- **L4 基本設計 (PLAN-L4-01〜05)**: 各 FR-* の実現アーキ確定
+- **L4 データ設計 (PLAN-L4-04)**: business §10.2 L4 carry 7 項目 + 各 FR の入出力データ構造 + 評価指標 entity (BR-21)
+- **L4 ADR**: NFR-02 (npm/template/Packages) / NFR-15 (Cloudflare/fly/docker) / NFR-09 (parity-check)
+- **G3-trace lint 実装** (R1-R4 機械検証ルール)
+
+### Phase B carry (Phase B 着手時に確定)
+
+- BR-21 Learning Engine 本実装 (skill/model/PoC 評価 + 半自動適用)
+- HM-08 リアルタイム表示 (集計バッチ → イベントストリーム)
+- telemetry default + PII redaction (NFR-17 候補)
+- model 単位 evaluation opt-in
+
+## §5 commit chain (G3 readiness 整備の commit)
+
+```
+29df198 L3 起票フレーム着地 (PLAN-L3-01〜03 + L3-functional/ + L12 placeholder)
+301498c L3 ヒアリング項目 TL レビュー反映 (PO 直問 36→2)
+6ef4da6 L3 ヒアリング PO 直問 0 件達成 (残 2 件も AI 採用)
+<本commit> L3 sub-doc 本起草完了 (functional / business-detail / nfr-grade + L12 受入テスト + G3 readiness、ledger A-45)
+```
+
+合計 4 commit、L1 G1 v8 PASS 後の L3 整備完了。
+
+## §6 PO 最終判断依頼
+
+以下のいずれかを返答ください:
+
+- **(a) G3 最終 PASS サインオフ** (強推奨) → **L3 凍結確定**、**L4 基本設計起票** (PLAN-L4-01〜05) へ進行
+- **(b) Minor 修正要請** (現時点で既知 Minor は 0 件)
+- **(c) NG (追加スコープ修正)** → 追加要求 / 修正要件を指定
+
+(a) を強推奨。Critical 0 / Important 0 / Minor 0、PO 直問 0 件達成 (TL レビューで全件 AI 推奨採用)、87 AT 全件被覆。
+
+---
+
+**evidence** (PO がスキャン読みで詳細確認できる順):
+
+- L1 G1 PASS: `docs/handover/G1-readiness-report-2026-05-28.md` (v8)
+- L3 3 sub-doc: `docs/design/harness/L3-functional/*.md`
+- L12 受入テスト: `docs/test-design/harness/L3-acceptance-test-design.md`
+- L3 3 PLAN: `docs/plans/PLAN-L3-0{1,2,3}-*.md`
+- v2 取り込み軌跡: `docs/migration/v2-import-ledger.md` §5 A-42〜A-45

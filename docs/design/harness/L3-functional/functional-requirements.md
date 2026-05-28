@@ -1,7 +1,7 @@
 ---
 layer: L3
 sub_doc: functional
-status: placeholder
+status: draft
 pair_artifact: docs/test-design/harness/L3-acceptance-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -10,28 +10,566 @@ related_l1_screen: docs/design/harness/L1-requirements/screen-requirements.md
 next_pair_freeze: L12
 v2_import: docs/migration/v2-import-ledger.md
 created: 2026-05-28
+updated: 2026-05-28
 ---
 
-# L3 機能要件 (functional) — placeholder
+> **SSoT 参照**: ユビキタス言語 = L0 概念層 §10 用語集 / Bounded Context = L0 §2.5 (9-mode) + screen sub-doc §6 (PM/HM/GD 3 カテゴリ) / 業界標準整合 = ISO/IEC/IEEE 29148 (要件記述) + BDD Given-When-Then (AC 形式) + ISTQB Foundation Level (境界値分析)。
+> **件数確定**: L3 FR は **18 件 (P0、L1 FR-L1-01〜18 と 1:1 対応)**。P1 18 件 + P2 5 件は L4 carry (PLAN-L3-01 §3 U-L3-2 TL 推奨採用)。BR-21 経路 (FR-L1-36/38/43 + 関連 P2) は business-detail.md 担当 (重複回避)。
+> **AC 件数**: 全 FR で AC 最低 3 件 (正常 / 異常 / 境界)、計 54+ AC を予定。**人間判断点 列必須** (CC2 carry)。
+> **L12 接続規約**: `next_pair_freeze: L12`。L12 受入テスト設計は本 sub-doc の全 AC を AT-* で被覆 (孤児 AC = 0)。
 
-> **status**: placeholder。PLAN-L3-01-functional-detail で本起票する。
+# UT-TDD Agent Harness — L3 機能要件 (functional)
 
-## 本起票時の構造 (PLAN-L3-01 §5 実装計画に対応)
+## §1 目的・背景
 
-| § | 内容 | 入力 |
-|---|------|------|
-| §1 | 目的・背景 (L3 詳細化目的、L1 baton 継承宣言) | L1 functional §1 |
-| §2 | FR-* + AC-* 一覧 (本体、P0 18 件先行) | L1 FR-L1 41 件 + screen §5 trace |
-| §3 | carry 宣言 (P1/P2 L4/Phase B carry) | U-L3-2 / U-L3-3 確定 |
-| §4 | 画面 trace (L2 deep-link、PM/HM/GD カテゴリ別) | screen §5 G1-trace + L2-screen |
-| §5 | 9 mode × FR 整合 + drive タグ + 人間判断点 (CC2 carry) | business §3.3.1 + §3.3.2 |
-| §6 | 関連 doc | L1 5 sub-doc + L2-screen + L12 |
-| §7 | carry / 次工程 (L4) | L4 carry list |
+L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) を L3 機能要件 (FR-*、システム視点の「何を満たすべきか」) に詳細化する sub-doc。各 FR に **入出力 / 振る舞い / 受入条件 (AC)** を確定し、L7 実装スプリント (TDD Red) の入力として機械検証可能な粒度に整える。
 
-## L1 → L3 trace (継承)
+スコープ: **P0 18 件 (FR-L1-01〜18) の詳細化のみ**。P1 18 件は L4 基本設計で carry (PLAN-L3-01 §3 U-L3-2)、P2 5 件は PLAN-L3-02 (business-detail) に委譲。
 
-L1 FR-L1-01〜44 (41 件) 全件を L3 FR-* + AC-* に詳細化する (孤児 L1 FR = 0)。screen §5 G1-trace マトリクスを継承し、AC レベルで画面紐付きを展開する。
+## §2 FR-* + AC-* 一覧 (本体)
 
-## CC2 carry (人間主導 + AI 補助原則)
+### 表形式: FR-* 概要 + 対応軸
 
-screen §4.1 で carry 宣言した CC2 を L3 全 FR-* で「**人間判断点**」列として強制する (各 FR の AC に「人間承認必須」マーカーを付与可能)。
+| FR-ID | L1 FR-L1 | カテゴリ画面 | 対応 mode | 対応 drive | 人間判断点 |
+|-------|----------|-------------|-----------|-----------|----------|
+| FR-01 | FR-L1-01 | PM-02 / PM-01 | Forward (主) / 全 mode | all | PLAN 起票時の kind / drive 選定 (PO/TL) |
+| FR-02 | FR-L1-02 | PM-02 (L7) / HM-07 | Forward | all (be/fe/fullstack 中心) | TDD Red のテスト観点承認 (TL) |
+| FR-03 | FR-L1-03 | PM-04 / HM-07 | Forward / Reverse | all | trace 抜け検出時の修正方針 (TL/PO) |
+| FR-04 | FR-L1-04 | PM-02 / HM-01 | 全 mode | all | kind 不明時の選定 (TL) |
+| FR-05 | FR-L1-05 | PM-03 / HM-07 | 全 mode | all | gate fail 時の bypass / 修正判断 (PO の S-03) |
+| FR-06 | FR-L1-06 | HM-04 / HM-01 | 全 mode | all (drive 別区画 = FR-L1-40 連動) | state 不整合検出時の手動修正 (運用者) |
+| FR-07 | FR-L1-07 | HM-04 / HM-03 | 全 mode | all | hook 発火失敗時の手動再実行 (運用者) |
+| FR-08 | FR-L1-08 | PM-01 / HM-03 | Discovery / Recovery / Reverse / Refactor 自動起動 | all | mode 自動 routing の上書き判断 (PO/TL) |
+| FR-09 | FR-L1-09 | HM-05 / HM-03 | 全 mode | agent (主) / all | bypass 承認 (PO 専属 S-03) / budget 上限変更 (PO) |
+| FR-10 | FR-L1-10 | HM-06 / PM-03 | Recovery (主) / Incident | all | 再開ポイント選定 (PO/TL) / ロールバック実行 (運用者) |
+| FR-11 | FR-L1-11 | PM-03 / HM-07 | 全 mode 横断 | all | interrupt 発生時の優先度判断 (PO) / debt 返済 PLAN 採用 (TL) |
+| FR-12 | FR-L1-12 | HM-05 / HM-02 | 全 mode | all (drive 別 skill 選定) | skill 推奨 override (TL) |
+| FR-13 | FR-L1-13 | PM-01 / PM-02 | Forward | all | gate サインオフ (G1/G3/G7/G11 = PO / G4-G6 = TL) |
+| FR-14 | FR-L1-14 | PM-02 / HM-07 | Reverse | reverse / all | R4 routing 先選定 (L1/L3/L4/L5/gap-only) (TL) / promotion strategy (PO/TL) |
+| FR-15 | FR-L1-15 | PM-02 / HM-05 | Discovery | poc / all | 仮説起票 (PO) / S4 decide (PO 専属) |
+| FR-16 | FR-L1-16 | PM-03 / HM-06 | Incident | troubleshoot / all | hotfix 緊急判断 (PO 専属) / postmortem 確定 (TL/PO) |
+| FR-17 | FR-L1-17 | PM-03 / HM-07 | 全 mode | all | CI fail 時の修正 vs 再実行判断 (TL) |
+| FR-18 | FR-L1-18 | HM-07 / PM-04 | 全 mode | all | doctor 検出結果の優先度トリアージ (TL/運用者) |
+
+---
+
+### FR-01: V字モデル全工程の PLAN 起票・進捗管理
+
+- **L1 上流**: FR-L1-01
+- **入力**: 工程 (L0-L14)、機能名、kind (charter/design/impl/poc/reverse/...)、drive、記載項目
+- **出力**: PLAN ファイル (`docs/plans/PLAN-NNN-slug.md`、frontmatter + §工程表 + §実装計画 内蔵) / plan_registry エントリ
+- **振る舞い**: `ut-tdd plan draft` 起動 → frontmatter 必須 fields 自動補完 → §0-§7 構造起票 → registry 自動登録 (FR-07 連動)
+
+#### AC-FR-01-01 (正常系)
+- **Given**: ユーザーが `ut-tdd plan draft --title "新機能X" --kind design --layer L3 --drive be` を実行
+- **When**: コマンドが完了
+- **Then**: `docs/plans/PLAN-NNN-新機能X.md` が生成 / frontmatter (plan_id / title / kind / layer / drive / status / agent_slots / generates / dependencies) 全件入力済 / `.ut-tdd/plan_registry/` に登録 / 終了コード 0
+
+#### AC-FR-01-02 (異常系)
+- **Given**: 既に同一 plan_id (`PLAN-005-X`) のファイルが存在
+- **When**: 同じ ID で `ut-tdd plan draft` を再実行
+- **Then**: fail-close で `Error: plan_id PLAN-005-X already exists` 出力 / 既存ファイル変更なし / next_action: `--plan-id <別ID> を指定するか、ut-tdd plan delete PLAN-005-X 後に再実行` / 終了コード 1
+
+#### AC-FR-01-03 (境界系)
+- **Given**: kind=charter で layer ≠ L0 を指定 (§1.1 排他制約違反)
+- **When**: `ut-tdd plan draft --kind charter --layer L4` 実行
+- **Then**: schema 検証 fail / `Error: kind=charter は layer=L0 のみ (§1.3)` 出力 / PLAN 生成されず / 終了コード 1
+
+---
+
+### FR-02: TDD 強制フロー (テストファースト順序)
+
+- **L1 上流**: FR-L1-02
+- **入力**: L6 機能設計 (関数仕様 / クラス設計 / エッジケース)
+- **出力**: テストコード (Red 状態) → 本体実装 (Green) → refactor の 3 段階記録
+- **振る舞い**: `ut-tdd sprint start` で L7 実装入り → Red テスト未存在で本体実装試行 → fail-close で block
+
+#### AC-FR-02-01 (正常系)
+- **Given**: L6 機能設計確定 + Red テスト先行作成 (test ファイルあり、コミット済)
+- **When**: 本体実装ファイル commit
+- **Then**: `ut-tdd sprint check` が Red→Green 順序を確認 / TDD trace に Red commit ID → Green commit ID 記録 / pass
+
+#### AC-FR-02-02 (異常系)
+- **Given**: 本体実装ファイルだけ存在、対応 test ファイル無し
+- **When**: `ut-tdd gate G7` 実行
+- **Then**: fail-close `Error: 本体実装 src/X.ts に対応する Red テストが見つからない (TDD 違反、FR-02 / FR-L1-02)` / next_action: `tests/X.test.ts を Red 状態で先行作成してください` / 終了コード 1
+
+#### AC-FR-02-03 (境界系)
+- **Given**: Red テスト存在、本体実装空 (関数 stub のみ)、テスト pass 可能 (assertion 緩い)
+- **When**: `ut-tdd sprint check`
+- **Then**: warn `Warning: Red テストが緑のままです (assertion 不十分の可能性、AC 観点抜け確認)` / fail-close せず継続可 / 修正は人間判断
+
+---
+
+### FR-03: V字双方向 trace (設計 ⇔ テスト設計 4 artifact pair)
+
+- **L1 上流**: FR-L1-03
+- **入力**: 設計 PLAN + テスト設計 PLAN
+- **出力**: trace 整合レポート (`.ut-tdd/artifact/trace/`) / 抜け漏れ検出ログ
+- **振る舞い**: `ut-tdd trace check` で 4 artifact (設計 / 実装 / テスト設計 / テストコード) の双方向 12 directed edge を全件照合
+
+#### AC-FR-03-01 (正常系)
+- **Given**: PLAN-005 が generates: 設計 doc + 実装 + テスト設計 + テストコード 4 artifact 全件指定
+- **When**: `ut-tdd trace check --plan PLAN-005`
+- **Then**: 4 artifact 全件存在確認 / 双方向 ID 照合 pass / レポート出力 `trace integrity: PASS (12/12 edges)`
+
+#### AC-FR-03-02 (異常系)
+- **Given**: PLAN-005 設計 doc あり、対応テスト設計欠落
+- **When**: `ut-tdd trace check`
+- **Then**: fail-close `Error: PLAN-005 で設計 doc → テスト設計の trace 断絶` / next_action: `pair_artifact フィールド確認、テスト設計 PLAN 追加起票` / 終了コード 1
+
+#### AC-FR-03-03 (境界系)
+- **Given**: PLAN-005 が pair_artifact のみ宣言、generates なし (片方向のみ)
+- **When**: `ut-tdd trace check`
+- **Then**: warn `Warning: generates 未宣言、L7 実装前に補完推奨` / fail-close せず / 終了コード 0
+
+---
+
+### FR-04: PLAN kind による逸脱記録・ドキュメント生成計画
+
+- **L1 上流**: FR-L1-04
+- **入力**: モード種別、成果物パス、依存 PLAN
+- **出力**: kind 付き PLAN レコード、generates 宣言、requires/blocks 依存グラフ
+- **振る舞い**: PLAN frontmatter の kind enum (12 種) 検証 / generates / requires / blocks の循環依存検出
+
+#### AC-FR-04-01 (正常系)
+- **Given**: PLAN-005 が kind=design / generates: [design_doc] / requires: [PLAN-001-charter]
+- **When**: `ut-tdd plan lint PLAN-005`
+- **Then**: kind enum pass / 依存 PLAN-001 存在確認 / 循環依存なし / lint pass
+
+#### AC-FR-04-02 (異常系)
+- **Given**: PLAN-005 requires: [PLAN-005] (自己依存)
+- **When**: `ut-tdd plan lint`
+- **Then**: fail-close `Error: 循環依存検出 PLAN-005 → PLAN-005` / 終了コード 1
+
+#### AC-FR-04-03 (境界系)
+- **Given**: kind=impl (L7) で parent_design 未指定
+- **When**: `ut-tdd plan lint`
+- **Then**: schema 検証 fail `Error: kind=impl (L7) は parent_design 必須 (§1.1.parent_design)` / 終了コード 1
+
+---
+
+### FR-05: 決定論的 static ゲート (fail-close、AI 不要)
+
+- **L1 上流**: FR-L1-05
+- **入力**: 工程 (gate-id)、成果物、数値品質指標
+- **出力**: pass/fail 判定、ゲート証跡 (`.ut-tdd/phase.yaml` + `.ut-tdd/gate_runs/`)
+- **振る舞い**: `ut-tdd gate <G-ID>` で `docs/governance/gate-checks.yaml` をロード → 全 check を決定論的に実行 (AI 呼ばない) → pass/fail 判定 + 証跡記録
+
+#### AC-FR-05-01 (正常系)
+- **Given**: G3 ゲート全 check pass 条件満たす (5 sub-doc 全件存在 + L14 OT 量閉じ + trace 整合)
+- **When**: `ut-tdd gate G3`
+- **Then**: pass / `.ut-tdd/phase.yaml` の G3 status = passed / 証跡 `.ut-tdd/gate_runs/G3-<timestamp>.json` 生成 / 終了コード 0
+
+#### AC-FR-05-02 (異常系)
+- **Given**: G3 で trace 整合 fail (孤児 FR-L1 = 3 件)
+- **When**: `ut-tdd gate G3`
+- **Then**: fail-close `Error: G3-trace fail: 孤児 FR-L1 3 件 (FR-L1-XX, FR-L1-YY, FR-L1-ZZ)` / next_action `screen §5 trace マトリクス更新` / 終了コード 1
+
+#### AC-FR-05-03 (境界系)
+- **Given**: PO が `UT_TDD_GATE_BYPASS=1` 環境変数で bypass 試行 (S-03 例外権行使)
+- **When**: `ut-tdd gate G3`
+- **Then**: bypass 警告 + audit 記録 `.ut-tdd/audit/gate-bypass-<timestamp>.json` (PO ID + 理由必須) / phase.yaml は bypassed 状態 / KPI D-08 集計対象 / 終了コード 0 (bypass 成功)
+
+---
+
+### FR-06: V モデル本線 state 一元管理
+
+- **L1 上流**: FR-L1-06 (drive 別区画 = FR-L1-40 連動)
+- **入力**: PLAN / コード / テスト / カバレッジ
+- **出力**: `.ut-tdd/` 配下 6 種 state (plan_registry / code_catalog / contract_registry / skill_catalog / gate_runs / artifact)
+- **振る舞い**: drive 別区画 (`.ut-tdd/drive/<be|fe|...>/`) で state 隔離 / skip_sub_doc 機械強制
+
+#### AC-FR-06-01 (正常系)
+- **Given**: PLAN-005 (drive=be) を起票
+- **When**: state 自動登録 (FR-07 hook 発火)
+- **Then**: `.ut-tdd/drive/be/plan_registry/PLAN-005.json` 生成 / `.ut-tdd/drive/fe/` には登録されない / 区画隔離 pass
+
+#### AC-FR-06-02 (異常系)
+- **Given**: 手動で `.ut-tdd/drive/be/plan_registry/PLAN-005.json` を `.ut-tdd/drive/fe/` に複製 (区画跨ぎ汚染)
+- **When**: `ut-tdd doctor`
+- **Then**: fail-close `Error: drive 区画跨ぎ検出: PLAN-005 (drive=be) が drive/fe にも存在` / 終了コード 1
+
+#### AC-FR-06-03 (境界系)
+- **Given**: PLAN-005 frontmatter で `skip_sub_doc: ["L2-wireframe"]` 指定 (concept §3.7 整合)
+- **When**: G2 ゲート実行
+- **Then**: L2-wireframe 不在を許容 / G2 pass / audit に skip 理由記録
+
+---
+
+### FR-07: state 自動登録 (5 イベント hook)
+
+- **L1 上流**: FR-L1-07
+- **入力**: hook イベント (PLAN 起票 / コード変更 / Codex 実行 / ゲート通過 / 停止)
+- **出力**: state 自動更新、手動登録漏れ排除
+- **振る舞い**: `.ut-tdd/hooks/` 配下に 5 種 hook (TS、bun 実行) を実装 / Claude Code/git/Codex 経由でイベント捕捉
+
+#### AC-FR-07-01 (正常系)
+- **Given**: 開発者が `git commit` で src/X.ts 変更
+- **When**: PostCommit hook 発火
+- **Then**: `.ut-tdd/code_catalog/` に src/X.ts エントリ追加 / 関連 PLAN 検索 + `last_modified` 更新 / hook 終了コード 0
+
+#### AC-FR-07-02 (異常系)
+- **Given**: hook 実行中に書込み失敗 (`.ut-tdd/` permission denied)
+- **When**: hook 続行
+- **Then**: fail-close `Error: state 自動登録失敗 (.ut-tdd/code_catalog/ 書込み不可)` / 元 git commit は成功扱い (post-hook のため) / next_action `chmod 確認、ut-tdd doctor で整合性チェック` / hook 終了コード 2 (warn 通知)
+
+#### AC-FR-07-03 (境界系)
+- **Given**: 5 hook のうち 1 つが未実装状態 (placeholder)
+- **When**: 該当イベント発火
+- **Then**: skip + audit `hook event Y skipped (not implemented)` / 他 hook は正常動作 / 終了コード 0
+
+---
+
+### FR-08: 検出 → モード自動ルーティング
+
+- **L1 上流**: FR-L1-08 (drive 自動判定 = FR-L1-41 を入力)
+- **入力**: 検出シグナル (drift / 劣化 / 暴走 / 障害 / drive 判定結果)
+- **出力**: モード発動トリガー、対応 kind PLAN 自動起票
+- **振る舞い**: `ut-tdd doctor` 検出結果 → `mode-routing.yaml` ルックアップ → Recovery / Incident / Reverse / Refactor のいずれかを自動 routing
+
+#### AC-FR-08-01 (正常系)
+- **Given**: drift 検出 (設計 doc 変更後 7 日経過、対応 test 設計未更新)
+- **When**: `ut-tdd doctor` 実行
+- **Then**: Reverse mode 自動 routing 提案 / `ut-tdd plan draft --kind reverse --workflow-phase R0` 候補 next_action 出力
+
+#### AC-FR-08-02 (異常系)
+- **Given**: 複数シグナル同時検出 (drift + 劣化 + 暴走)
+- **When**: `ut-tdd doctor`
+- **Then**: 優先度ルール (Incident > Recovery > Reverse > Refactor) で Recovery routing / 他シグナルは warn として記録
+
+#### AC-FR-08-03 (境界系)
+- **Given**: 検出シグナル無し、PO が手動で `ut-tdd route --mode reverse` 強制
+- **When**: 強制実行
+- **Then**: warn `Warning: 検出シグナル無しで手動 mode 切替 (S-03 PO override 扱い)` + audit 記録 / routing 実行
+
+---
+
+### FR-09: AI エージェントガード (agent_mandatory 監査 + budget + lock)
+
+- **L1 上流**: FR-L1-09
+- **入力**: AI 操作ログ、役割定義 (agent_slots)、budget 上限
+- **出力**: 逸脱警告 / 停止 / audit ログ
+- **振る舞い**: `.claude/hooks/agent-guard.ts` (既存実装、PreToolUse Agent) で許可リスト 15 件 + model 明示 + override 禁止を fail-close
+
+#### AC-FR-09-01 (正常系)
+- **Given**: Claude Code が `Agent({subagent_type: "pmo-sonnet", model: "sonnet"})` 呼び出し
+- **When**: agent-guard 検証
+- **Then**: 許可リスト pass / model 明示 pass / opus override なし / 終了コード 0 / audit `.ut-tdd/audit/agent-invocations/` 記録
+
+#### AC-FR-09-02 (異常系)
+- **Given**: Claude Code が許可リスト外の `Agent({subagent_type: "be-api"})` 呼び出し
+- **When**: agent-guard 検証
+- **Then**: fail-close `Error: subagent be-api は許可リスト 15 件外 (CLAUDE.md Subagent Guard)` / Agent 起動 block / 終了コード 2
+
+#### AC-FR-09-03 (境界系)
+- **Given**: `UT_TDD_ALLOW_RAW_AGENT=1` 環境変数で bypass 試行 (PO 専属 S-03)
+- **When**: 同じ呼び出し
+- **Then**: warn + audit `bypass used by PO (reason: ...)` 記録必須 / KPI D-06 集計対象 / Agent 起動許可 / 終了コード 0
+
+---
+
+### FR-10: Recovery 収束フロー
+
+- **L1 上流**: FR-L1-10
+- **入力**: 暴走状態ログ、PLAN 履歴
+- **出力**: recovery-log (再開ポイント、認識訂正履歴) + `ut-tdd cutover` ロールバックコマンド
+- **振る舞い**: HM-06 Recovery ビューに CLI ロールバックコマンドコピー UI (S5=b、UI 直接実行なし)
+
+#### AC-FR-10-01 (正常系)
+- **Given**: AI 暴走検出 (5 連続 gate fail + budget 超過)
+- **When**: Recovery mode 自動起動
+- **Then**: 最終正常 gate を再開ポイント候補として提示 / `ut-tdd cutover --to <gate-id>` CLI コマンド生成 / クリップボードコピー UI 提供
+
+#### AC-FR-10-02 (異常系)
+- **Given**: 再開ポイント候補なし (全 gate fail 履歴)
+- **When**: Recovery mode 起動
+- **Then**: warn `Warning: 再開ポイント候補なし。初期化推奨` / next_action `ut-tdd reset --to-charter (PO 専属確認)`
+
+#### AC-FR-10-03 (境界系)
+- **Given**: PO が UI からロールバック実行ボタンを誤クリック (S5=b 違反試行)
+- **When**: UI 操作
+- **Then**: UI に「ロールバックは CLI 実行のみ。コマンドコピー後ターミナルで実行」表示 / 直接実行不可
+
+---
+
+### FR-11: 横断 4 機構 (interrupt / debt / drift-check / readiness)
+
+- **L1 上流**: FR-L1-11
+- **入力**: 割り込みイベント / 負債台帳 / drift 検出 / 後工程 readiness 判定
+- **出力**: sprint interrupted / debt-register / 乖離レポート / PLAN 先送り判定
+- **振る舞い**: 4 機構が独立 PLAN として並列起動可能 (cross-cutting)、現工程を block しない
+
+#### AC-FR-11-01 (正常系)
+- **Given**: L4 設計中に PO が緊急バグ修正を interrupt 要請
+- **When**: `ut-tdd interrupt --reason "P0 bug" --pause-plan PLAN-040`
+- **Then**: PLAN-040 status=interrupted / 新規 PLAN-041 (kind=troubleshoot) 起票 / PLAN-040 復帰時の context handover 保存
+
+#### AC-FR-11-02 (異常系)
+- **Given**: 既に interrupted 状態の PLAN を再度 interrupt 試行
+- **When**: `ut-tdd interrupt --pause-plan PLAN-040`
+- **Then**: fail-close `Error: PLAN-040 はすでに interrupted` / next_action `ut-tdd resume PLAN-040 を先に実行`
+
+#### AC-FR-11-03 (境界系)
+- **Given**: debt-register に 30 件以上累積 (閾値超過、readiness check 該当)
+- **When**: 後工程 PLAN 起票試行
+- **Then**: readiness warn `Warning: debt 30 件超過。返済 PLAN 推奨` / 起票続行可 / 起票は block しない
+
+---
+
+### FR-12: L 単位文脈注入 (skill / workflow / agent / command / orchestration)
+
+- **L1 上流**: FR-L1-12 (工程別スキル推挙 = FR-L1-37 連動)
+- **入力**: L 種別、`docs/skills/<L>-injection.yaml`
+- **出力**: AI の選択空間限定、迷い排除
+- **振る舞い**: PLAN frontmatter から L 自動判定 → 該当 yaml 読み込み → 5 要素を AI コンテキストに注入
+
+#### AC-FR-12-01 (正常系)
+- **Given**: PLAN-005 (layer=L3) 着手
+- **When**: `ut-tdd skill suggest --plan PLAN-005`
+- **Then**: `docs/skills/L3-injection.yaml` ロード / 推奨 skill 5 件 (例: requirements-elicitation / ac-design / ...) 提示 / 選定根拠ログ付き
+
+#### AC-FR-12-02 (異常系)
+- **Given**: L3-injection.yaml 未整備 (file 不在)
+- **When**: skill suggest
+- **Then**: fail-close `Error: L3-injection.yaml 不在` / next_action `skill 定義を起票してください`
+
+#### AC-FR-12-03 (境界系)
+- **Given**: PLAN-005 frontmatter で skill override 指定 (`skill_override: ["custom-skill"]`)
+- **When**: skill suggest
+- **Then**: 推奨 skill より override 優先 / TL 承認 audit 必須 (人間判断点)
+
+---
+
+### FR-13: Forward ワークフロー (L0→L14 順行)
+
+- **L1 上流**: FR-L1-13
+- **入力**: 各工程 gate 通過条件
+- **出力**: 工程進行 + ゲート証跡
+- **振る舞い**: `ut-tdd status` で現 phase 表示 / `ut-tdd next` で次工程候補提示
+
+#### AC-FR-13-01 (正常系)
+- **Given**: 現 phase = L3、G3 pass
+- **When**: `ut-tdd next`
+- **Then**: 次工程 = L4 (基本設計) 提示 / 推奨 PLAN 起票コマンド出力 / phase.yaml 更新
+
+#### AC-FR-13-02 (異常系)
+- **Given**: G3 未通過状態で L4 PLAN 起票試行
+- **When**: `ut-tdd plan draft --layer L4`
+- **Then**: fail-close `Error: G3 未通過、L4 着手不可 (W-model 順序遵守)` / next_action `ut-tdd gate G3 実行`
+
+#### AC-FR-13-03 (境界系)
+- **Given**: L3 段階で並行して L7 troubleshoot PLAN 起票 (Incident mode、kind=troubleshoot)
+- **When**: 起票
+- **Then**: 許可 (Incident 例外) / L7 影響範囲を audit / L3 主線は中断しない
+
+---
+
+### FR-14: Reverse ワークフロー (5 type、R0-R4 + RGC)
+
+- **L1 上流**: FR-L1-14 (onboarding context = FR-L1-44 前段)
+- **入力**: 既存コード / 設計文書 / 依存
+- **出力**: Rn 成果物 (evidence / contracts / as-is-design / gap-register / routing)
+- **振る舞い**: `ut-tdd reverse --type <code|design|upgrade|normalization|fullback>` 起動 → R0→R4 順次実行 → R4 で Forward 合流 routing
+
+#### AC-FR-14-01 (正常系)
+- **Given**: 既存 src/ コード 1000 行に Reverse 適用
+- **When**: `ut-tdd reverse --type code` → R0 (evidence) 完了
+- **Then**: `.ut-tdd/reverse/R0-evidence.json` 生成 / 検出された関数 / クラス / 依存リスト記録 / 次 step R1 案内
+
+#### AC-FR-14-02 (異常系)
+- **Given**: confirmed_reverse_type 未指定で R PLAN 起票
+- **When**: schema 検証
+- **Then**: fail-close `Error: kind=reverse は confirmed_reverse_type 必須 (§3.3)` / 終了コード 1
+
+#### AC-FR-14-03 (境界系)
+- **Given**: R4 routing 先 = `gap-only` (Forward 合流せず gap 記録のみ)
+- **When**: R4 完了
+- **Then**: `.ut-tdd/reverse/R4-routing.json` に gap-only 記録 / Forward 起動なし / gap-register に追加
+
+---
+
+### FR-15: Discovery ワークフロー (仮説 → PoC → verify → decide)
+
+- **L1 上流**: FR-L1-15
+- **入力**: 仮説定義、verify script
+- **出力**: poc PLAN / verify script / decision_outcome (confirmed / rejected / pivot)
+- **振る舞い**: S0-S4 順次実行 / S4 で decision_outcome 必須 / confirmed → Forward L3 合流
+
+#### AC-FR-15-01 (正常系)
+- **Given**: 仮説「Tauri が Electron より bundle size 50% 小」を S0 起票
+- **When**: S2 PoC 実装 + S3 verify (実測)
+- **Then**: verify script 実行結果 (`tauri-bundle.json` 等) 記録 / S4 で `decision_outcome: confirmed` 設定可能
+
+#### AC-FR-15-02 (異常系)
+- **Given**: S4 で decision_outcome 未指定
+- **When**: schema 検証
+- **Then**: fail-close `Error: kind=poc + S4 は decision_outcome 必須 (§1.1)` / 終了コード 1
+
+#### AC-FR-15-03 (境界系)
+- **Given**: S4 で decision_outcome=pivot (仮説変更)
+- **When**: 確定
+- **Then**: 旧仮説 PLAN archive / 新仮説 PLAN 自動起票案内 / Forward 合流なし
+
+---
+
+### FR-16: Incident ワークフロー (本番障害)
+
+- **L1 上流**: FR-L1-16 (Reverse fullback で V モデル昇華)
+- **入力**: 本番障害アラート / SLO 逸脱
+- **出力**: troubleshoot / recovery PLAN / postmortem / L14 フィードバック
+- **振る舞い**: 緊急 hotfix → 即リリース → 収束後 Reverse fullback で V モデル昇華
+
+#### AC-FR-16-01 (正常系)
+- **Given**: 本番 SLO 逸脱検出 (例: error rate > 5%)
+- **When**: `ut-tdd incident open --severity P0`
+- **Then**: kind=troubleshoot PLAN 自動起票 / 通常 gate 順序 bypass 許可 (PO 自動承認 S-03 + audit) / hotfix 経路提示
+
+#### AC-FR-16-02 (異常系)
+- **Given**: Incident 開放後 hotfix 未実装で 24h 経過
+- **When**: `ut-tdd doctor`
+- **Then**: warn `Warning: Incident PLAN-XXX 未収束 24h 超 (postmortem 要起票)` / next_action 提示
+
+#### AC-FR-16-03 (境界系)
+- **Given**: 複数 Incident 同時オープン (P0 + P1)
+- **When**: 並列管理
+- **Then**: P0 優先 routing / P1 は queue / audit に同時オープン記録
+
+---
+
+### FR-17: CI/PR 連携 (ローカル証跡 → CI 検証 → branch protection)
+
+- **L1 上流**: FR-L1-17
+- **入力**: ゲート証跡、push イベント
+- **出力**: PR 許可 / 拒否、CI チェック結果
+- **振る舞い**: GitHub Actions で `ut-tdd gate <G-ID>` 再実行 → ローカル証跡と照合 → branch protection 連動
+
+#### AC-FR-17-01 (正常系)
+- **Given**: ローカルで G7 pass、push
+- **When**: GHA workflow `.github/workflows/ut-tdd-gate.yml` 起動
+- **Then**: CI 側 G7 再実行 pass / branch protection check pass / PR merge 可
+
+#### AC-FR-17-02 (異常系)
+- **Given**: ローカル G7 pass、CI G7 fail (環境差異)
+- **When**: PR
+- **Then**: PR block / CI 側 fail 詳細を `.ut-tdd/audit/ci-divergence/` に記録 / next_action `ローカル環境差異調査 (NFR-13 dev-local+CI 整合)`
+
+#### AC-FR-17-03 (境界系)
+- **Given**: hotfix branch (Incident mode) で CI 全 gate skip 要請
+- **When**: PR
+- **Then**: workflow が Incident PLAN 存在を確認 / G7 のみ pass 必須、他 gate skip 許可 / audit 記録
+
+---
+
+### FR-18: 横断検出 (ut-tdd doctor 一括集約)
+
+- **L1 上流**: FR-L1-18
+- **入力**: 全 detector 実行結果
+- **出力**: 横断検出レポート、モードルーティング先
+- **振る舞い**: `ut-tdd doctor` で依存漏れ / 契約漏れ / 接続欠損 / デグレ を全件集約 → HM-07 Doctor 結果ビューに表示
+
+#### AC-FR-18-01 (正常系)
+- **Given**: 全 detector 実装済、検出 0 件
+- **When**: `ut-tdd doctor`
+- **Then**: HM-07 ビューに `All clean (0 detections)` 表示 / 終了コード 0 / audit に実行記録
+
+#### AC-FR-18-02 (異常系)
+- **Given**: detector 5 件、検出 3 件 (error: 1 / warn: 2)
+- **When**: `ut-tdd doctor`
+- **Then**: HM-07 ビューに 3 件分類表示 (severity 別) / each 検出に next_action 提示 / error 1 件で終了コード 1
+
+#### AC-FR-18-03 (境界系)
+- **Given**: detector 1 件が timeout (例: trace check 巨大 repo で 30s 超)
+- **When**: `ut-tdd doctor --timeout 30s`
+- **Then**: 該当 detector のみ skip + warn `detector X timeout (30s)` / 他 detector 結果は集約 / next_action `--timeout 拡大 or detector tuning`
+
+---
+
+## §3 carry 宣言 (P1 / P2 / Phase B)
+
+| FR-L1 | 優先度 | carry 先 | 理由 |
+|-------|--------|---------|------|
+| FR-L1-19 (Learning Engine) | P1 | Phase B carry | telemetry 整備後の本実装 |
+| FR-L1-20 (観測・計測層) | P1 | L4 carry + Phase B 拡張 | invocation_log / accuracy_score 等の集計アーキは L4 / Phase B telemetry は別途 |
+| FR-L1-21〜35 (FE detector / Scrum / Add-feature / Refactor / Retrofit / Research / W 2 段 / 画面設計 / フロントUX / コンテキスト / フォルダ / 棚卸し / 穴管理 / 整備可視化) | P1 / P2 | L4 carry | 詳細仕様は L4 基本設計と合わせて確定 |
+| FR-L1-37/39/40/41/42/44 (model 推挙 / 難易度 / drive 別 state / drive 自動判定 / provider 引継ぎ / onboarding) | P1 | L4 carry | drive 軸拡張は L4 データ設計連動 / onboarding は L4 設計連動 |
+| FR-L1-36/38/43 (skill 評価 / model 評価 / PoC 計測) | P2 | **PLAN-L3-02 (business-detail.md) に委譲** | BR-21 経路で扱う (重複回避) |
+
+## §4 画面 trace (L2 deep-link、screen §5 G1-trace 継承)
+
+screen §5 G1-trace マトリクスを継承し、L3 FR-* × 14 画面 (PM/HM/GD) の trace を AC レベルに展開する。
+
+**継承元**: `docs/design/harness/L1-requirements/screen-requirements.md` §5.3 (FR-L1 P0 ⇔ 画面 trace)
+
+**L3 拡張**: 各 FR-* の AC-* について、画面紐付き必要時に AT-* (L12 受入テスト) で画面 lift 確認を pair 化する (L12 受入テスト設計担当)。
+
+| FR-ID | 主画面 (継承) | AC レベル画面拡張 |
+|-------|-------------|---------------|
+| FR-01 | PM-02 / PM-01 | AC-FR-01-01 → PM-02 起票画面 lift / AC-FR-01-02 → エラーメッセージ表示 |
+| FR-03 | PM-04 / HM-07 | AC-FR-03-01 → PM-04 trace ビュー / AC-FR-03-02 → HM-07 Doctor 結果 |
+| FR-05 | PM-03 / HM-07 | AC-FR-05-01 → PM-03 Gate 判定 / AC-FR-05-03 → HM-05 audit log |
+| FR-09 | HM-05 / HM-03 | AC-FR-09-01〜03 → HM-05 agent guard audit ログ表示 |
+| FR-10 | HM-06 / PM-03 | AC-FR-10-01 → HM-06 CLI ロールバックコマンドコピー UI / S5=b 整合 |
+| FR-18 | HM-07 / PM-04 | AC-FR-18-01〜03 → HM-07 Doctor 結果ビュー、severity 別表示 |
+
+(残 12 FR の AC レベル拡張は L2-screen 本起票 + L12 AT-* 起票時に確定)
+
+## §5 9 mode × FR 整合 + drive タグ + 人間判断点 (CC2 carry)
+
+§2 表の「対応 mode」「対応 drive」「人間判断点」列で全 FR-* に明示済み。**CC2 (人間主導 + AI 補助原則) carry 充足**: 全 18 FR で人間判断点が明示され、AI 単独自動化に依存しない設計。
+
+### §5.1 9 mode 被覆確認
+
+| mode | 被覆 FR | 備考 |
+|------|--------|------|
+| Forward | FR-01 / FR-02 / FR-13 | 主線 mode、L0-L14 主要 FR |
+| Reverse | FR-14 (専用) / FR-03 | R0-R4 + RGC + trace 検証 |
+| Discovery | FR-15 (専用) / FR-08 (自動起動) | S0-S4 + 仮説判定 |
+| Incident | FR-16 (専用) / FR-08 / FR-10 | 緊急 hotfix + Recovery |
+| Recovery | FR-10 (専用) / FR-08 | 暴走収束 |
+| Refactor | FR-08 (自動起動) | 振る舞い不変 (L4 carry FR-L1-25 連動) |
+| Retrofit | FR-08 (自動起動) | 影響評価 (L4 carry FR-L1-26 連動) |
+| Add-feature | (L4 carry FR-L1-24) | 差分追補 |
+| Scrum | (L4 carry FR-L1-23) | インクリメント → V モデル昇華 |
+
+> P0 18 件で 9 mode のうち 6 mode (Forward / Reverse / Discovery / Incident / Recovery / 自動起動 routing) を直接被覆。Refactor / Retrofit / Add-feature / Scrum は L4 carry の FR-L1-24/25/26 で詳細化。
+
+### §5.2 drive 軸被覆確認
+
+全 FR で drive=all (汎用) を default とし、drive 固有要件は以下のみ:
+- FR-09 (AI ガード): drive=agent 主、他 drive でも適用
+- FR-06 (state 一元管理): drive 別区画 (FR-L1-40 連動、L4 carry)
+
+### §5.3 人間判断点全件サマリ
+
+| 判断点種別 | 該当 FR | 主担当 |
+|-----------|--------|--------|
+| gate サインオフ | FR-05 / FR-13 | PO (G1/G3/G7/G11) / TL (G4-G6) |
+| bypass / override | FR-05 / FR-09 / FR-16 | PO 専属 (S-03) |
+| 修正方針判断 | FR-03 / FR-10 / FR-17 / FR-18 | TL / 運用者 |
+| 起票 / 仕様判断 | FR-01 / FR-04 / FR-14 / FR-15 | PO / TL |
+| optional 確認 | FR-02 / FR-06 / FR-07 / FR-11 / FR-12 | TL / 運用者 |
+
+## §6 関連 doc
+
+- L1 機能要求 (上流): `docs/design/harness/L1-requirements/functional-requirements.md`
+- L1 業務要求 (上流): `docs/design/harness/L1-requirements/business-requirements.md`
+- L1 画面要求 (上流、§5 trace 継承): `docs/design/harness/L1-requirements/screen-requirements.md`
+- L1 NFR (上流): `docs/design/harness/L1-requirements/nfr.md`
+- L2-screen (deep-link 接続): `docs/design/harness/L2-screen/`
+- L3 business-detail (BR-21 経路): `docs/design/harness/L3-functional/business-detail.md`
+- L3 nfr-grade (NFR 閾値): `docs/design/harness/L3-functional/nfr-grade.md`
+- L12 受入テスト設計 (W pair): `docs/test-design/harness/L3-acceptance-test-design.md`
+- L0 概念層: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
+- PLAN: `docs/plans/PLAN-L3-01-functional-detail.md`
+
+## §7 carry / 次工程 (L4) への引き継ぎ
+
+- **L4 基本設計 (PLAN-L4-01〜05)**:
+  - 各 FR-* の実現アーキ (state schema / CLI コマンド設計 / hook 実装方式) は L4 基本設計で確定
+  - P1 18 件 + P2 5 件は L4 で AC + 詳細化 (本 PLAN は P0 のみ)
+- **L4 データ設計 (PLAN-L4-04)**: business §10.2 L4 carry 表 7 項目 (集約境界 / 値オブジェクト等) + 各 FR の入出力データ構造を L4 で確定
+- **L7 実装スプリント**: 各 AC-* を TDD Red の入力として使用。Given-When-Then 形式を vitest describe-it に直接変換可能
+- **L12 受入テスト設計**: 全 54+ AC-* を AT-* で被覆 (孤児 0)。本 sub-doc 完成後に L12 担当 sub-doc 本起草
+- **G3 lint 実装** (`ut-tdd plan lint --gate G3-trace`): R1 (BR/UX/FR-L1 → L3) / R2 (FR-* → AC → AT) / R3 (AT → 要求) / R4 (NFR → 閾値 → AT) を L7 で実装
+- **CC2 carry 強化**: L4 / L5 / L6 設計で「人間判断点」明示を継承 (各設計 layer に対応列追加)

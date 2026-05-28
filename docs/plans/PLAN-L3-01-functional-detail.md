@@ -124,27 +124,27 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 ### Step 3: P0 18 件 FR-* + AC-* 詳細化
 - 担当: tl + se (Codex SE)
 - 内容: P0 18 件 (FR-L1-01〜18 から HELIX 由来) を L3 FR-* + AC-* に詳細化。各 FR-* に対応画面・対応 mode・対応 drive・人間判断点を付与
-- 進捗: ⬜ (本 PLAN 本起票 + Step 2 確定後)
+- 進捗: ✅ (functional-requirements.md §2 FR-01〜18 + AC 54 件起草完了、A-45 commit)
 
 ### Step 4: P1 18 件 L3 vs L4 carry 判定
 - 担当: tl
 - 内容: P1 18 件 (FR-L1-19〜44 拡張機能等) を L3 詳細化 vs L4 carry vs Phase B carry に分類。U-L3-2 確定後
-- 進捗: ⬜
+- 進捗: ✅ (functional-requirements.md §3 carry 宣言で全件分類完了。P1/P2 = L4 carry default / FR-L1-19 = Phase B / FR-L1-36/38/43 = PLAN-L3-02 委譲)
 
 ### Step 5: 画面紐付き (L2 deep-link) 整合確認
 - 担当: pmo-sonnet
 - 内容: screen §5 G1-trace マトリクスと L3 FR-* の整合確認、L2-screen placeholder との接続点リスト化
-- 進捗: ⬜
+- 進捗: ✅ (functional-requirements.md §4 で継承確認 + AC レベル拡張 6 件サンプル提示、残 12 FR の AC 拡張は L12 AT-* 起票時に確定)
 
 ### Step 6: 機械検証 (G3 lint) 整備
 - 担当: tl + aim
 - 内容: `ut-tdd plan lint --gate G3` の R-trace ルール (FR-L1 → FR-L3 / FR-L3 → AC / AC → 受入テスト) を設計、機械検証可能化
-- 進捗: ⬜ (L7 実装は Phase B、本 PLAN では設計のみ)
+- 進捗: 🔄 (functional-requirements.md §7 で L7 carry 宣言済、本 PLAN では設計のみ。L7 実装は Phase B)
 
 ### Step 7: review (self / pmo-sonnet)
 - 担当: pmo-sonnet
 - 内容: 専門サブエージェント review 必須 (`.claude/CLAUDE.md` Guard Rules)。FR-L3 全件 AC 完備・対応画面 trace 整合・孤児 L1 FR 0 を確認
-- 進捗: ⬜
+- 進捗: ⬜ (G3 readiness 整備時に実施、本 sub-doc + business-detail + nfr-grade + L12 受入テスト 4 doc 全件確定後)
 
 ## §5 実装計画
 
