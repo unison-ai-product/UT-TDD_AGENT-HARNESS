@@ -22,7 +22,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | NFR-ID | 非機能要求 | 詳細 |
 |--------|-----------|------|
 | **NFR-01** | **cross-platform native** — Windows / macOS / Linux を全て第一級サポート | Windows = PowerShell entrypoint / macOS・Linux = bash entrypoint。WSL2 は任意互換環境 (必須外)。Git Bash 依存は局所化。**handover 保持期間 30 日 archive + 90 日削除 (B7=a)** で長期 stability 担保 |
-| **NFR-06** | **fail-close** — gate / lint は安全側に倒し、silent pass を許さない | subagent guard: blockOnFailure=true / gate-checks.yaml: exit 2 on fail / stdin 読取失敗も block |
+| **NFR-06** | **fail-close** — gate / lint は安全側に倒し、silent pass を許さない。**FE detector 5 軸決定論性適用** (A-52 audit I-03): drive=fe 時は fe-detector-spec.md の 5 軸 (mock-promotion / design-token-drift / a11y-regression / visual-regression / state-transition-drift、axis-15〜19) の pass 証跡を必須化し fail-close 対象とする (FR-L1-22 連動) | subagent guard: blockOnFailure=true / gate-checks.yaml: exit 2 on fail / stdin 読取失敗も block / FE detector 5 軸 fail-close (drive=fe 時、fe-detector-spec.md) |
 | **NFR-16** | **onboarding 互換性** — 既存プロジェクトへの途中導入時、既存 docs / コード / state の不整合を block せず段階移行 | FR-L1-44 連動。既存資産を harness state に段階的に取り込み、初回 import でプロジェクトを止めない |
 
 ## §2 性能・拡張性
@@ -30,7 +30,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | NFR-ID | 非機能要求 | 詳細 |
 |--------|-----------|------|
 | **NFR-07** | **実務で機能する完成度** — 部分 MVP でなく、成功条件 5 つを総合的に満たして初めて価値 (MVP は存在しない) | 成功条件: ① L0-L14 通し実行 / ② 複数人 team gate 回転 / ③ AI 委譲で回帰なし / ④ ダッシュボード進捗可視 / ⑤ PoC 契約化合流 |
-| **NFR-12** | **machine × AI 2 層補完機構** — Gate 判定・lint・detector は機械 (決定論的 static check) が一次、AI レビューが二次補完。両者の責務境界を明示し silent pass を防ぐ | concept §audit-framework §17 / FR-L1-05 (static gate) + FR-L1-19/20 (Learning Engine + 観測) で 2 層運用 |
+| **NFR-12** | **machine × AI 2 層補完機構** — Gate 判定・lint・detector は機械 (決定論的 static check) が一次、AI レビューが二次補完。両者の責務境界を明示し silent pass を防ぐ。**課金モード制約** (A-52 audit C-02): subscription / API credit の使い分けを harness が管理し、**サブスク内継続動作を default** とする (continuous-run-context-management.md §課金の制約、2026/6/15 Agent SDK クレジット分離対応)。context 0.70 閾値到達時の handover → fresh 再起動は NFR-15 server-optional と整合 | concept §audit-framework §17 / FR-L1-05 (static gate) + FR-L1-19/20 (Learning Engine + 観測) で 2 層運用 / continuous-run-context-management.md (課金・context 閾値) |
 | **NFR-15** | **server-optional 拡張** — Phase A (local DB + local dashboard) は server 不要、Phase B で server sync を opt-in 追加可能。harness core は local-first を維持し server を必須条件にしない | dashboard Phase A 必須 / Phase B 拡張 (BR-20 / FR-L1-20 / L3-L4 carry、PGlite + ElectricSQL ADR-002 候補)。**Claude ↔ Codex provider 間 handover** (FR-L1-42、F5=a) で多 provider 拡張は将来対応 (現状 Claude+Codex のみ) |
 
 ## §3 運用・保守性
@@ -42,12 +42,13 @@ v2_import: docs/migration/v2-import-ledger.md
 | **NFR-02** | **更新性第一 (updatability)** — harness 本体・skill 等の更新 / 保守が容易であること (実現手段 = plugin / skill MCP 化 等は L4 ADR 送り) | 工程別 skill 注入機構 (FR-L1-12) + PLAN 内蔵物原則 (§3.6) で skill 更新を局所化 |
 | **NFR-05** | **GitHub を CI / 証跡 / 権限の正本**とする (具体実現手段は L3/L5 で確定) | GHA ワークフロー / branch protection / PR 許可を UT-TDD 証跡の正本とする。FR-L1-17 CI/PR 連携 |
 | **NFR-08** | **実装宣言の真実性** — 設計 doc が主張する CLI / file / schema field に実装状態列 (installed / partial / not-implemented) を必須化し、机上の「実装済」宣言を禁止する | v2 BR-09 翻案。L3 以降の全設計 doc に `implementation_status` 列を必須化 (forward carry: `docs/migration/v2-import-ledger.md §2 F-6`) |
-| **NFR-13** | **dev-local + CI 二重実行 (editor return loop)** — 同一 lint/gate を dev-local (editor PreToolUse / pre-commit) と CI (GHA harness-check) の両方で実行し、editor で fail なら commit 前に局所修正 loop に戻す | concept §audit-framework §17.3 / FR-L1-17 (CI/PR) + `.claude/hooks/agent-guard.ts` (PreToolUse) の 2 段運用。**gate 通過率 ≥90% (KPI D-02、B5=b)** を運用目標、`.ut-tdd/gate_runs` で計測 |
-| **NFR-14** | **human-as-residue 原則** — 機械チェック (machine) と AI レビュー (NFR-12) で潰せない判断のみを人間 (PO) に escalate。silent pass を避ける反面、人間の判断負荷も極小化 | concept §audit-framework §17.4 / 全 gate で machine → AI → human の優先順、判断要点 + 根拠 + 推奨アクション を構造化提示。**gate fail-close 例外権 = PO のみ + audit 記録 (S-03/B6=b)**、bypass 件数 0 を KPI D-06 で計測 |
+| **NFR-13** | **dev-local + CI 二重実行 (editor return loop)** — 同一 lint/gate を dev-local (editor PreToolUse / pre-commit) と CI (GHA harness-check) の両方で実行し、editor で fail なら commit 前に局所修正 loop に戻す。**機械検出目標** (A-52 audit I-01/I-02): cross-detection 全 axis (依存漏れ / 契約漏れ / 接続欠損 / デグレ) **0 件維持** + test-perspective-gate W字観点 (抜け / 重複) **0 件維持** を gate 通過条件に含む (cross-detection.md / test-perspective-gate.md 由来) | concept §audit-framework §17.3 / FR-L1-17 (CI/PR) + `.claude/hooks/agent-guard.ts` (PreToolUse) の 2 段運用。**gate 通過率 ≥90% (KPI D-02、B5=b)** を運用目標、`.ut-tdd/gate_runs` で計測 / cross-detection.md / test-perspective-gate.md |
+| **NFR-14** | **human-as-residue 原則** — 機械チェック (machine) と AI レビュー (NFR-12) で潰せない判断のみを人間 (PO) に escalate。silent pass を避ける反面、人間の判断負荷も極小化。**Recovery 収束 audit trail** (A-52 audit I-04): Recovery モード発動時、stop-hook が認識訂正履歴を自動 dump し audit trail (`.ut-tdd/recovery_log/`) に収める (recovery-workflow.md §基本フロー、収束時間 SLO は L3 NFR-grade で確定) | concept §audit-framework §17.4 / 全 gate で machine → AI → human の優先順、判断要点 + 根拠 + 推奨アクション を構造化提示。**gate fail-close 例外権 = PO のみ + audit 記録 (S-03/B6=b)**、bypass 件数 0 を KPI D-06 で計測 / recovery-workflow.md (認識訂正履歴) |
 
 **排泄系契約としての位置付け**:
 - **doc-reviewer 必須召喚** (BR-08): 大規模 doc 改定・gate evidence 提出・pair freeze の前に必須。pmo-sonnet とは責務分離した doc 品質専用 reviewer。
 - **4 artifact trace** (BR-07 / FR-L1-03): 設計 ⇔ テスト設計 ⇔ 実装 ⇔ テストコードの 4 artifact pair 確認を機械強制。trace 切れ = デグレ候補。
+- **observability KPI ループ (A-52 audit C-01、L1 親 NFR 宣言)**: observability-metrics の品質指標 (accuracy_score / invocation_log 網羅率 / recipe 適用精度 / skill_rating 推薦精度改善率) は **NFR-12 machine×AI 2 層** の派生として、L3 nfr-grade §7.4.1 D-10〜D-17 KPI 拡張候補 (DORA 4+1 / SPACE Satisfaction) の L1 親 NFR carry 元と位置付ける (L1 は概念宣言、数値は L3 nfr-grade で確定)。
 
 ## §4 移行性
 
@@ -104,7 +105,7 @@ Phase B の server sync + telemetry (PII redaction / GDPR / audit trail 等) は
 | NFR-07 | 性能・拡張性 | Functional Suitability (Functional Completeness) |
 | NFR-08 | 運用・保守性 | Maintainability (Analysability / Testability) |
 | NFR-11 | セキュリティ | Security (Authenticity / Accountability) / Maintainability (Modularity) |
-| NFR-12 | 性能・拡張性 | Reliability (Maturity) / Maintainability (Analysability) |
+| NFR-12 | 性能・拡張性 | Reliability (Maturity) / Maintainability (Analysability) / **Performance Efficiency (Resource Utilization)** (A-52 audit 軸 2、observability KPI ループ + 課金モード制約由来) |
 | NFR-13 | 運用・保守性 | Maintainability (Testability / Analysability) / Reliability (Availability) |
 | NFR-14 | 運用・保守性 | Usability (Operability) — human oversight 側面 / Maintainability (Analysability) |
 | NFR-15 | 性能・拡張性 | Portability (Adaptability) / Maintainability (Modularity) |

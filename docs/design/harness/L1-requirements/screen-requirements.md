@@ -55,8 +55,8 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | 観点 | 内容 |
 |------|------|
-| **対応 BR/UX/FR-L1** | BR-01 / BR-04 / FR-L1-01 / FR-L1-02 / FR-L1-04 / FR-L1-13 / FR-L1-14 / FR-L1-15 / FR-L1-29 |
-| **情報要素** | 未完了 sub-doc 一覧 / stale PLAN list / 担当 AI スロット / carry 件数 / 工程別進捗率 / 詰まり案件一覧。機能内容の詳細は PLAN ビュー (HM-01 経由) link で参照 |
+| **対応 BR/UX/FR-L1** | BR-01 / BR-04 / FR-L1-01 / FR-L1-02 / FR-L1-04 / FR-L1-13 / FR-L1-14 / FR-L1-15 / FR-L1-23 / FR-L1-29 |
+| **情報要素** | 未完了 sub-doc 一覧 / stale PLAN list / 担当 AI スロット / carry 件数 / 工程別進捗率 / 詰まり案件一覧。機能内容の詳細は PLAN ビュー (HM-01 経由) link で参照。**Scrum S-phase ステート carry** (A-52 audit I-03、L3 carry): drive=scrum 案件は S0 backlog / S1 plan / S2 PoC / S3 verify / S4 decide のステート遷移を 1 行ずつ表示 (FR-L1-23 fullback F0-F4 generates との接続) — UI 具体は L2 で確定 |
 | **操作要素** | PLAN 行クリック → PM-03 Gate ビュー遷移 / carry 詳細展開 / 担当 AI スロット確認 |
 | **更新頻度** | 30 秒ポーリング (S2=b)、工程変化時に即時 |
 | **状態種別** | 正常 / stale あり (黄) / gate blocked (赤) / pair freeze 済 / trace freeze 済 |
@@ -68,7 +68,7 @@ v2_import: docs/migration/v2-import-ledger.md
 |------|------|
 | **対応 BR/UX/FR-L1** | BR-02 / BR-05 / UX-03 / FR-L1-05 / FR-L1-11 / FR-L1-16 / FR-L1-17 |
 | **情報要素** | gate ID / 判定結果 (pass/fail/bypass) / 証跡一覧 (artifact リンク) / fail 理由テキスト / next_action (1 アクション明示) / サインオフ者 (PO/TL) / bypass 承認記録リンク。**発生中トラブル横断**: 種別 / 検出時刻 / 影響範囲 / next_action (gate fail + drift + handover stale + 暴走シグナルを一覧化) |
-| **操作要素** | next_action テキストコピー / 証跡ファイル参照リンク / AI 指示テキスト生成 (copy-paste 用) / HM-05 Audit ログ参照遷移 / PM-01 ダッシュボード戻り |
+| **操作要素** | next_action テキストコピー / 証跡ファイル参照リンク / AI 指示テキスト生成 (copy-paste 用) / HM-05 Audit ログ参照遷移 / PM-01 ダッシュボード戻り / **interrupt 発動・resume CLI テキストコピー** (A-52 audit C-01、cross-cutting-mechanisms.md 4 機構の operate 経路、`ut-tdd interrupt` / `ut-tdd interrupt resume` CLI コマンド文字列をワンクリックコピー、実際の発動は CLI 側で受付。UI 直接発動禁止 S5=b と整合) |
 | **更新頻度** | gate 実行直後に即時表示 (B8: gate fail 即時) / 30 秒ポーリング (S2=b) |
 | **状態種別** | pass (緑) / fail (赤、next_action 強調) / bypass (黄、audit 記録必須) / pending (未判定) |
 | **色分け必須** | 正常/警告/失敗を即視認 (緑/黄/赤、CC3 詳細データテーブル必須・問題箇所視覚化) |
@@ -140,7 +140,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | 観点 | 内容 |
 |------|------|
 | **対応 BR/UX/FR-L1** | BR-03 / FR-L1-07 / FR-L1-08 / FR-L1-40 / FR-L1-42 |
-| **情報要素** | 静的アーキ図 (コンポーネント・接続線) + **動的エラー赤表示**: hook 発火失敗 / AI provider 接続失敗 / 9 drive 区画状態。接続線詳細テーブル: 起点 / 終点 / 状態 / 最終チェック時刻 |
+| **情報要素** | 静的アーキ図 (コンポーネント・接続線) + **動的エラー赤表示**: hook 発火失敗 / AI provider 接続失敗 / 9 drive 区画状態。接続線詳細テーブル: 起点 / 終点 / 状態 / 最終チェック時刻。**detection-routing モード遷移可視化 carry** (A-52 audit I-01、L3 carry): detection-routing.md 4 象限 (drift / 劣化 / 暴走 / 障害) → モード発動 (Recovery / Incident / Reverse / Refactor) の動的経路を矢印表示、現在 active な遷移を強調 (FR-L1-08 連動) — UI 具体は L2 で確定 |
 | **操作要素** | 接続線クリック → 詳細表示 / エラー箇所ハイライト / GD-01 Architecture ドキュメント参照リンク |
 | **更新頻度** | 30 秒ポーリング (S2=b)、hook 発火失敗時は即時反映 |
 | **状態種別** | 正常 (緑) / 警告 (黄) / 障害 (赤) / 未接続 (灰) |
@@ -164,7 +164,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | 観点 | 内容 |
 |------|------|
 | **対応 BR/UX/FR-L1** | BR-02 / BR-03 / BR-08 / FR-L1-09 / FR-L1-12 / FR-L1-20 |
-| **情報要素** | invocation_log 全列: date / model / role / task / result / token / cost。agent guard 判定履歴 (allow/block/bypass) / budget 使用量 / 逸脱警告一覧 / bypass 承認記録。**skill 注入タブ** (S8=b): 推奨 skill 一覧・FR-L1-12 |
+| **情報要素** | invocation_log 全列: date / model / role / task / result / token / cost。agent guard 判定履歴 (allow/block/bypass) / budget 使用量 / 逸脱警告一覧 / bypass 承認記録。**skill 注入タブ** (S8=b): 推奨 skill 一覧・FR-L1-12。**hook 発火ログタブ carry** (A-52 audit I-02、L3 carry): db-auto-registration.md 5 hook (PLAN 起票 / コード変更 / Codex 実行 / ゲート通過 / 停止) の発火成否・自動登録結果・未登録エラーを別タブで一覧表示 (observability-metrics.md action_logs 由来、FR-L1-07/20 連動) — UI 具体は L2 で確定 |
 | **操作要素** | フィルタ (日付/agent/result) / skill 注入タブ切替 / bypass 詳細展開 / PM-03 Gate ビュー参照遷移 |
 | **更新頻度** | 30 秒ポーリング (S2=b) |
 | **状態種別** | 正常 / bypass 使用中 (黄警告) / guard block 多発 (赤警告) / 空 |
