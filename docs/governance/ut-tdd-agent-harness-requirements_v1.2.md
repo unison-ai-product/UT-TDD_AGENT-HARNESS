@@ -402,7 +402,13 @@ skip_sub_doc: []                             # 当該 PLAN で扱わない sub-d
   # 例:
   # - sub_doc: screen
   #   reason: "BE-only drive, no UI"
+pair_artifact: docs/test-design/<area>/L14-operational-test-design.md   # W-model pair 相手 (L1 sub-doc は L14、L3 sub-doc は L12 等)
+related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md         # L0 概念層への parent_doc reference (anti-corruption layer)
+related_br: docs/design/<area>/L1-requirements/business-requirements.md  # NFR / 技術要求 sub-doc のみ、業務要求への relate
+next_pair_freeze: L3                                                     # L1 業務/機能 = L3 / L1 技術/NFR = L4 / L4-L6 = 対応する右腕 L
 ```
+
+`pair_artifact` / `related_l0` は L1-L6 全 sub-doc で必須、`related_br` は L1 nfr/technical sub-doc + L4-L6 全 sub-doc で必須、`next_pair_freeze` は v1.2 で全 design PLAN 必須。
 
 ##### G.3 機械検証条件 (validator が fail-close)
 
@@ -432,6 +438,40 @@ v1.1 以前に `PLAN-L1-01-business-requirements` 1 件で L1 全要求を扱っ
 - (b) 旧 PLAN を `status: archived` に遷移し、5 sub-doc 全件を新規起票
 
 validator は移行期間中 (v1.2 reception session 内)、`sub_doc` 不在の旧 PLAN を warning とし、`status=archived` で除外可。
+
+##### G.6 sub-doc 必須 § 機械検証 (構想書 §3.1.2.1)
+
+5 sub-doc 各々の必須 § (構想書 §3.1.2.1 表) を `ut-tdd plan lint` で fail-close 検証:
+
+| sub-doc | 必須 § header (h2、`^## §<N> <名称>`) | 必須 sub-§ (h3) |
+|---|---|---|
+| **business** | §1 目的・背景 / §2 対象業務一覧 / §3 業務フロー / §4 ステークホルダー / §5 現状課題 → あるべき姿 / §6 業務スコープ外 / §7 L14 運用テスト pair 対応表 / §8 関連 doc / §9 carry / §10 業務 entity 列挙 | §1.1 WHY / §1.2 WHAT / §1.3 WHO / §3.1 主線 / §3.2 9 mode 分岐 / §3.3 cross-cutting 横断機構 / §10.1 主要業務 entity 一覧 / §10.2 L4 carry / §10.3 SSoT 参照 |
+| **functional** | §1 機能一覧 / §2 利用シナリオ / §3 操作とデータの流れ / §4 入出力 / §5 上流 baton 反映 / §6 関連 doc | (無し、§3 内で操作種別を sub-section 化可) |
+| **screen** | §1 画面一覧 / §2 画面遷移の要望 / §3 表示・操作への要望 / §4 関連 doc | (無し、画面ごとに sub-section 化可) |
+| **technical** | §1 採用技術・技術制約 / §2 外部連携 + IF 要望 / §3 既存システム制約 / §4 state schema 二層構造 / §5 工程別 skill 注入機構 / §6 9 mode 共通基盤 / §7 drift 解消方針 / §8 関連 doc | (無し) |
+| **nfr** | §1 可用性 / §2 性能・拡張性 / §3 運用・保守性 / §4 移行性 / §5 セキュリティ / §6 システム環境 / §7 IPA × ISO 25010 二軸タグ表 / §8 関連 doc | (無し) |
+
+- [ ] sub_doc 指定 PLAN は必須 § 全件を h2 として持つ (欠落 → exit 1)
+- [ ] business sub-doc は必須 sub-§ 全件を h3 として持つ (欠落 → exit 1)
+- [ ] §header に typo / 番号飛び / 順序逸脱があれば warning
+
+##### G.7 ドメイン継承チェーン検証 (構想書 §3.1.2.2 DDD anti-corruption layer)
+
+L0 → L1 → L4 のドメイン継承チェーンを `ut-tdd plan lint` (sub_doc=business 時) で検証:
+
+- [ ] business sub-doc §10.1 の業務 entity 一覧 table が以下 4 列を持つ:
+  - `業務 entity` / `L0 用語 (参照 path 含む)` / `業務的意味 (BR で扱う側面)` / `対応 .ut-tdd state / CLI subcommand / file`
+- [ ] 各業務 entity の `L0 用語` 列が L0 概念層 (`docs/governance/ut-tdd-agent-harness-concept_v3.1.md §10 用語集`) に存在する用語と完全一致 (独自定義 → exit 1、anti-corruption layer)
+- [ ] §10.2 L4 carry section に **集約境界 / 値オブジェクト / entity ID 規約 / ライフサイクル / 不変条件 / 集約間整合性 / `ut-tdd doctor check_business_entity_coverage` 新設** の 7 項目が列挙されている (欠落 → P1 warning)
+- [ ] §10.3 SSoT 参照 section に **ユビキタス言語 SSoT / Bounded Context SSoT / 業界標準整合 SSoT** の 3 項目が path 付き reference として明示されている
+
+##### G.8 sub-doc 共通ヘッダー要素 (構想書 §3.1.2.3)
+
+5 sub-doc 全件の冒頭 blockquote に以下を必須化:
+
+- [ ] **SSoT 参照宣言ブロック** = `ユビキタス言語 = <L0 §10 用語集 path> / 業界標準整合 = <L0 §11 path> / Bounded Context = <L0 §2.5 9-mode>。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)` のテンプレ文字列が存在 (欠落 → exit 1)
+- [ ] **件数確定宣言** = `<sub-doc 種別> は <要求 prefix> <NN> 件で確定 (根拠: <TL/PMO レビュー record path>)` のパターンが存在 (欠落 → P1 warning)
+- [ ] **L3 接続規約** = `next_pair_freeze: <L3 or L4 doc path>` の frontmatter フィールド + 本文 §関連 doc に `L3 PLAN は本 sub-doc 全件を dependencies.requires に列挙する` の記載 (欠落 → exit 1、§G.2 frontmatter と連動)
 
 ---
 

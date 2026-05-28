@@ -69,6 +69,18 @@ PO 指示「V モデルとモデル駆動を全部同じにしろ」を受け、
 | **A-9** | **駆動別 L2-L14 挙動表** (be/fe/db/fullstack/agent × L2-L14 の中身とゲート判定。L10 要否 + L2 sub-doc skip ルール) | concept §3.7 / requirements §1.10.G.3 (drive × sub_doc 整合) |
 | **A-10** | **sub_doc / skip_sub_doc frontmatter フィールド** (machine 強制) | requirements §1.10.G.2 |
 | **A-11** | **L1 pair 修正** (L1 全 sub-doc ↔ L14 運用テスト設計 1 doc) | test-design/harness/L1-operational-test-design.md §0/§4 |
+| **A-12** | **5 sub-doc 必須 § 構造の正本転写** (HELIX-workflows 実体 doc 4 件から各 sub-doc の §1〜§10 までを必須化) | concept §3.1.2.1 5 sub-doc 表 |
+| **A-13** | **業務要求 §3.3 cross-cutting 横断機構** (interrupt / debt / drift-check / readiness) | concept §3.1.2.1 business 行 §3 |
+| **A-14** | **業務要求 §6 業務スコープ外** (本 BR で扱わない FR / 画面 / 技術 / NFR / 実装の明示的除外) | concept §3.1.2.1 business 行 §6 |
+| **A-15** | **業務要求 §7 L14 運用テスト pair 対応表** (BR-* ⇔ OT-* 1:1) | concept §3.1.2.1 business 行 §7 |
+| **A-16** | **業務要求 §9 carry / 既知の不足 + §9.1 上流 baton carry 一覧** | concept §3.1.2.1 business 行 §9 |
+| **A-17** | **業務要求 §10 業務 entity 列挙 (DDD ドメイン一覧)** + §10.1 主要業務 entity 一覧 + §10.2 L4 carry + §10.3 SSoT 参照 | concept §3.1.2.1 business 行 §10 / §3.1.2.2 / requirements §1.10.G.7 |
+| **A-18** | **L0 → L1 → L4 ドメイン継承チェーン** (anti-corruption layer 原則、L1 entity は L0 用語と 1:1、独自定義禁止) | concept §3.1.2.2 (新節) / requirements §1.10.G.7 |
+| **A-19** | **機能要求 §5 上流 baton 反映** (L0 企画書バトン項目と FR-L1-* の対応表 + carry 先) | concept §3.1.2.1 functional 行 §5 |
+| **A-20** | **NFR §7 IPA × ISO 25010 二軸タグ表** (全 NFR-ID × IPA 大項目 × ISO 25010 特性) + §3 冒頭 carry 宣言 + §8 carry 接続記述 | concept §3.1.2.1 nfr 行 §7 |
+| **A-21** | **技術要求 §4-§7** (state schema 二層構造 / 工程別 skill 注入機構 / 9 mode 共通基盤 / drift 解消方針「新規 drift 0 件 / week」) | concept §3.1.2.1 technical 行 §4-§7 |
+| **A-22** | **4 doc 共通ヘッダー要素** (SSoT 参照宣言ブロック / 件数確定宣言 / L3 接続規約 / frontmatter pair_artifact + related_l0 + related_br + next_pair_freeze) | concept §3.1.2.3 (新節) / requirements §1.10.G.2 / §1.10.G.8 |
+| **A-23** | **sub-doc 必須 § 機械検証 + ドメイン継承チェーン検証 + 共通ヘッダー要素検証** | requirements §1.10.G.6 / §1.10.G.7 / §1.10.G.8 |
 
 ### 5.2 派生 doc 再編 (next commit、本 ledger に予告)
 

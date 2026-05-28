@@ -493,21 +493,58 @@ L0 は「リポジトリ初期化」ではなく **企画工程**。企画書 PL
 
 V2 は要件を二段に分ける。**L1 = 業務要求 (BR-* / NFR-*) のみ** (FR を書かない)、**L3 = システム機能要件 (FR-*) + 受入条件 (AC-*)** で、FR-* は L1 の BR-* から双方向 trace する。チーム: L1 は po 主体 (業務要求まで)、L3 は tl 主体 (FR+AC 確定)。G1 を業務要求ゲート、G3 を FR+AC ゲートとして人間サインオフを分離する。
 
-### 3.1.2.1 L1 sub-doc 構造 (V2 HELIX-workflows 5 PLAN 正本)
+### 3.1.2.1 L1 sub-doc 構造 (V2 HELIX-workflows 5 PLAN 正本、必須 § 含む)
 
-V2 HELIX-workflows 正本 (`vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md`) は **L1 を 1 doc にまとめず 5 sub-doc に分割**する (PLAN は機能=doc 単位で起票)。UT-TDD はこれを正本として採用する:
+V2 HELIX-workflows 正本 (`vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md` の最小定義 + `vendor/helix-source/docs/v2/L1-requirements/*` の実体 doc) は **L1 を 1 doc にまとめず 5 sub-doc に分割**する。UT-TDD はこれを正本として採用し、各 sub-doc の **必須 § 構造**まで規定する (実体 doc から転写):
 
-| sub-doc (5 種) | 主な記載内容 (HELIX-workflows 原文) | PLAN 命名 (UT-TDD) |
-|----------------|------------------------------------|--------------------|
-| **業務要求** | 目的・背景 (WHY/WHAT/WHO) / 対象業務一覧 / 業務フロー / ステークホルダー / 現状課題 → あるべき姿 | `PLAN-L1-01-business-requirements` |
-| **機能要求** | 機能一覧 / 利用シナリオ (ユースケース) / 操作とデータの流れ / 入出力 | `PLAN-L1-02-functional-requirements` |
-| **画面要求** | 画面一覧 / 画面遷移の要望 / 表示・操作への要望 (具体的画面設計は L2) | `PLAN-L1-03-screen-requirements` |
-| **技術要求** | 採用技術・技術制約 / 外部連携・インターフェース要望 / 既存システム制約 | `PLAN-L1-04-technical-requirements` |
-| **非機能要求** | 可用性 / 性能・拡張性 / 運用・保守性 / 移行性 / セキュリティ / システム環境・エコロジー (**IPA 非機能要求グレード 6 大項目に準拠**) | `PLAN-L1-05-nfr` |
+| sub-doc (5 種) | 必須 § (HELIX-workflows 実体 doc に準拠) | PLAN 命名 (UT-TDD) |
+|----------------|------------------------------------------|--------------------|
+| **業務要求** (business) | §1 目的・背景 (WHY/WHAT/WHO) / §2 対象業務一覧 / §3 業務フロー (Forward V-model 主線 + 9 mode 分岐 + cross-cutting 横断機構) / §4 ステークホルダー / §5 現状課題 → あるべき姿 / §6 業務スコープ外 (本 BR で扱わない: FR / 画面 / 技術 / NFR / 実装) / §7 L14 運用テスト pair 対応表 (BR-* ⇔ OT-* 1:1) / §8 関連 doc / §9 carry / 既知の不足 + §9.1 上流 baton carry 一覧 / **§10 業務 entity 列挙 (DDD 適用、要件レベル / 詳細は L4)** + §10.1 主要業務 entity 一覧 (L0 用語と 1:1 対応 / 業務的意味 / 対応 schema・CLI・file の 4 列 table) + §10.2 L4 carry (集約境界 / 値オブジェクト / entity ID 規約 / ライフサイクル / 不変条件 / 集約間整合性 / `ut-tdd doctor check_business_entity_coverage` 新設) + §10.3 SSoT 参照 (ユビキタス言語 / Bounded Context / 業界標準整合) | `PLAN-L1-01-business-requirements` |
+| **機能要求** (functional) | §1 機能一覧 / §2 利用シナリオ (ユースケース) / §3 操作とデータの流れ / §4 入出力 / §5 上流 baton 反映 (L0 企画書バトン項目と本 doc FR-L1-* の対応表 + carry 先) / §6 関連 doc | `PLAN-L1-02-functional-requirements` |
+| **画面要求** (screen) | §1 画面一覧 / §2 画面遷移の要望 / §3 表示・操作への要望 / §4 関連 doc (具体的画面設計は L2、本 sub-doc は要求レベル) | `PLAN-L1-03-screen-requirements` |
+| **技術要求** (technical) | §1 採用技術・技術制約 / §2 外部連携 + IF 要望 / §3 既存システム制約 / **§4 state schema 二層構造** (UT-TDD では `.ut-tdd/` 配下、core tables + audit/event tables + derived views + 補助 state、closure event 契約 = `idempotency_key = mode + plan_id + closure_event_id` + rollback + conflict resolution) / **§5 工程別 skill 注入機構** (`docs/skills/<L>-injection.yaml` 相当、`owner_role` / `mandatory_agents` / `recommended_agents` / `recommended_skills` / `recommended_commands` / `orchestration_mode` の 6 フィールド) / **§6 9 mode 共通基盤** (R0-R4 + RGC を Reverse 専用ではなく共通 closure language として再利用、Forward 接続 event の state 登録 + 補助 state への中間 state 保存 + discrepancy_log からの機械起動) / **§7 drift 解消方針** (detector の週次以上起動 + inventory schema による工程双方向 mapping + 新規 asset 工程未割当不許容 + Reverse normalization 接続 + 運用目標「新規 drift 0 件 / week」) / §8 関連 doc | `PLAN-L1-04-technical-requirements` |
+| **非機能要求** (nfr) | §1 可用性 / §2 性能・拡張性 / §3 運用・保守性 (冒頭で carry 宣言 = 排泄系契約・上流 baton の段階 carry) / §4 移行性 / §5 セキュリティ / §6 システム環境 (**IPA 非機能要求グレード 2018 6 大項目に準拠**) / **§7 IPA × ISO 25010 二軸タグ表** (全 NFR-ID × IPA 大項目 × ISO 25010 特性 の 3 列 + 対象外特性の除外理由) / §8 関連 doc (carry 接続記述 = `pairs_test_design: []` の L1 許容 + L4 起票時追加 + L4↔L9+L13+L14 多層検証接続) | `PLAN-L1-05-nfr` |
 
 > **L1 機能要求 ≠ L3 機能要件**: L1 機能要求 (FR-L1-*) は「ユーザー視点で何の機能を望むか」= **要求**、L3 機能要件 (FR-*) は「システムが満たすべき仕様 + AC」= **要件**。L1 の 5 sub-doc は L3 で確定される FR-*/AC-* の **入力**であり別物。
 > **L1 = 1 PLAN にまとめる旧運用は誤り** (§3.5 AP-11)。
 > L1 全 sub-doc ↔ L14 運用テスト設計 1 doc の pair (G1↔L14、W-model)。
+> 5 sub-doc の **必須 § 機械検証**は要件定義書 §1.10.G.6 で fail-close 化する。
+
+### 3.1.2.2 L0 → L1 → L4 ドメイン継承チェーン (DDD anti-corruption layer)
+
+V2 HELIX-workflows 業務要求 doc §10 を採用し、UT-TDD は L0 → L1 → L4 のドメイン継承チェーンを以下で固定する (DDD anti-corruption layer 原則):
+
+```
+[L0 企画書]                          ユビキタス言語 SSoT
+  §Glossary (主要用語定義)             ↓ parent_doc reference
+                                       ↓ (1:1 対応、L1 独自定義禁止)
+[L1 業務要求 sub-doc §10]            業務 entity 列挙 (DDD、要件レベル)
+  §10.1 主要業務 entity 一覧 (table)   ↓ L4 carry
+                                       ↓ (集約境界 / 値オブジェクト 等で詳細化)
+[L4 基本設計 - データ設計 sub-doc]   ドメインモデル詳細 (arc42 §5 Building Block View)
+  + ut-tdd doctor check_business_entity_coverage で entity ↔ schema / CLI 整合検出
+```
+
+| chain step | 担当 doc | 規約 |
+|---|---|---|
+| **ユビキタス言語 SSoT** | L0 企画書 §Glossary (UT-TDD では `docs/governance/ut-tdd-agent-harness-concept_v3.1.md §10 用語集`) | L1 sub-doc は L0 用語を **parent_doc reference** とし、独自定義禁止 (anti-corruption layer) |
+| **Bounded Context SSoT** | L0 企画書 §BC (UT-TDD では §2.5 9-mode ecosystem) | L1 の業務スコープ・mode 接続は L0 BC を参照 |
+| **業界標準整合 SSoT** | L0 企画書 §業界標準 (UT-TDD では §11 参考文献) | L1 NFR の IPA × ISO 25010 二軸 / 業務 entity の DDD 適用 等は L0 で宣言された業界標準と整合 |
+| **業務 entity 列挙** | L1 業務要求 §10 (要件レベル、L0 用語と 1:1) | UT-TDD ドメイン entity (例: plan / gate / artifact / pair / mode / drive / agent_slot / handover / sprint / phase / carry / trace) を業務側面で列挙、対応 `.ut-tdd/` state / CLI subcommand / file を併記 |
+| **ドメインモデル詳細化** | L4 基本設計 (データ設計 sub-doc) で carry 確定 | 集約境界 / 値オブジェクト / entity ID 規約 / ライフサイクル / 不変条件 / 集約間整合性ルール を確定、`ut-tdd doctor check_business_entity_coverage` で機械検出 |
+
+**anti-corruption layer 原則**: L1 で entity を独自定義することを禁止し、L0 用語との 1:1 対応を `ut-tdd plan lint` (sub_doc=business 時) で機械検証する。詳細は要件定義書 §1.10.G.7 (新)。
+
+### 3.1.2.3 L1 sub-doc 共通ヘッダー要素 (4 doc 共通)
+
+5 sub-doc 全てに以下を冒頭 blockquote で必須化:
+
+| 要素 | 内容 | 検証 |
+|---|---|---|
+| **SSoT 参照宣言ブロック** | `ユビキタス言語 = L0 §10 用語集 / 業界標準整合 = L0 §11 / Bounded Context = §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)` を明示 | `ut-tdd plan lint` (sub_doc 指定 PLAN 全件) |
+| **件数確定宣言** | 当該 sub-doc が確定する要求の件数 (例: business なら BR-NN 件、functional なら FR-L1-NN 件) + 確定根拠 (TL/PMO レビュー record) | doctor で要求 ID の連番性 + 件数整合検証 |
+| **L3 接続規約** | `next_pair_freeze:` フィールドが指す L3 doc + `dependencies.requires` で L3 PLAN が本 sub-doc 全件を列挙する接続条件 | L3 PLAN 起票時の機械検証 |
+| **pair / parent / related フィールド** | frontmatter に `pair_artifact:` (L14 運用テスト設計 path) / `related_l0:` (L0 概念層 path) / `related_br:` (NFR/技術要求 sub-doc のみ、業務要求への参照) を必須 | requirements §1.10.G.2 拡張 |
 
 ### 3.1.3 設計の 3 段分割 (L4 基本 / L5 詳細 / L6 機能)
 
