@@ -183,8 +183,9 @@ S2=b 30 秒ポーリング / S3=b PLAN ビュー パース構造化 / S5=b Recov
 - [x] §3 4 横断原則が記載 (人間主導 / 詳細データテーブル / AI 指示 copy / 問題箇所視覚化)
 - [x] §6 Bounded Context 宣言 (PM/HM/GD)
 - [x] L14 OT で 14 画面被覆 (孤児 0、OT-15/25/32〜44)
-- [x] 専門サブエージェント review 通過 (acdc5ccd + 4 追加 subagent、2026-05-28)
-- [x] **G1 readiness: status = ready-for-G1-signoff** (v3 確定、14 画面 + 4 横断原則 + Bounded Context 全件 PO 承認済 2026-05-28)
+- [x] 専門サブエージェント review 通過 (acdc5ccd + 4 追加 subagent + Step J/K/L、2026-05-28)
+- [x] **G1-trace 機械検証 R1-R4 通過** (DD1=a / DD2=a PO 承認 2026-05-28): R1 全 BR/UX 12 件画面紐付き ✅ / R2 全 14 画面業務根拠紐付き ✅ / R3 FR-L1 P0 18 件全件画面紐付き ✅ / R4 screen sub-doc requires 整合 ✅。SSoT: §5 trace マトリクス
+- [x] **G1 readiness: status = ready-for-G1-signoff** (v5 確定、14 画面 + 4 横断原則 + Bounded Context + G1-trace 全件 PO 承認済 2026-05-28)
 
 ## §7 carry / 次工程 (L2 / L3) への引き継ぎ
 

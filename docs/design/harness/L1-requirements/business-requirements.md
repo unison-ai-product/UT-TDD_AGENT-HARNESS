@@ -284,6 +284,8 @@ UT-TDD Agent Harness の運用原則として、**画面・hook・gate のすべ
 
 > **L2 必須実施判定 (2026-05-28 PO 指摘で修正、A-37 反映)**: ut-tdd は dashboard (14 画面 PM/HM/GD) を持つ「**UI を持つ be**」のため、drive=be であっても L2 画面設計 3 sub-doc (画面一覧 / 遷移 / UI 要素) は必須実施。wireframe (High-Fi モック) のみ省略可 (Low-Fi で代替、High-Fi は L10 UX refinement)。旧 concept §3.7「be (BE-only) = L2 全 skip 可」を撤回し、BE-only (UI 完全不在) と「UI を持つ be」を区別する規約に修正済。画面要求の機械検証義務は drive 非依存。
 
+> **G1-trace 機械検証連動 (2026-05-28 PO 承認、DD1=a / DD2=a、A-38 反映)**: 業務要求 (BR/UX/BR-21) と画面要求 (PM/HM/GD-NN) の双方向 trace 整合は G1 内 sub-gate「G1-trace」で機械強制する (requirements §1.10.H 参照)。検証ルール 4 件: R1 (BR/UX → 画面、12 件 block) / R2 (画面 → BR/UX/FR-L1、14 画面 block) / R3 (FR-L1 P0 → 画面、18 件 block / P1-P2 warn) / R4 (screen sub-doc `requires` 整合、warn)。SSoT: screen §5 trace マトリクス。lint: `ut-tdd plan lint --gate G1-trace`。
+
 ### §10.4 skill / detector entity 参照注記 (B9=c)
 
 業務 entity §10.1 への entity 追加はしない (B9=c 採用)。skill / detector は以下の FR により機能要件として定義される:

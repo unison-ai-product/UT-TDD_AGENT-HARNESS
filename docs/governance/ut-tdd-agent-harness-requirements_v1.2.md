@@ -473,6 +473,74 @@ L0 → L1 → L4 のドメイン継承チェーンを `ut-tdd plan lint` (sub_do
 - [ ] **件数確定宣言** = `<sub-doc 種別> は <要求 prefix> <NN> 件で確定 (根拠: <TL/PMO レビュー record path>)` のパターンが存在 (欠落 → P1 warning)
 - [ ] **L3 接続規約** = `next_pair_freeze: <L3 or L4 doc path>` の frontmatter フィールド + 本文 §関連 doc に `L3 PLAN は本 sub-doc 全件を dependencies.requires に列挙する` の記載 (欠落 → exit 1、§G.2 frontmatter と連動)
 
+#### H. G1-trace 機械検証ルール (sub-gate、DD1=a / DD2=a PO 承認 2026-05-28)
+
+G1 内 sub-gate「業務 ⇔ 画面 ⇔ 機能 双方向 trace 整合」の機械検証ルール 4 件。SSoT: screen sub-doc §5 trace マトリクス。G1-trace は G1 内の 3 番目 sub-gate であり、G1-content → G1-pair → G1-trace の順で通過後に G1 exit となる (構想書 §3.3.1)。
+
+##### H.1 ルール R1: BR/UX → 画面 trace 必須
+
+検証式: 全 BR/UX-ID (BR-01〜08 + UX-01〜03 + BR-21、計 12 件) が screen §5.1/5.2 マトリクスで最低 1 画面に紐付くこと。
+
+孤児 BR/UX 検出時の動作: **block** (G1-trace fail-close)。
+
+fail メッセージ: 「BR-NN / UX-NN が画面要求に紐付いていません。screen §5 trace マトリクスを更新してください。」
+
+- [ ] 12 件全件が screen sub-doc §5.1 または §5.2 の trace 表に 1 行以上登場する (欠落 → exit 1)
+
+##### H.2 ルール R2: 画面 → BR/UX/FR-L1 trace 必須
+
+検証式: 全 14 画面 (PM-01〜PM-05 + HM-01〜HM-08 + GD-01) が screen §5.5 逆 trace 表で最低 1 つの BR/UX/FR-L1 に紐付くこと。
+
+孤児画面検出時の動作: **block**。
+
+fail メッセージ: 「PM/HM/GD-NN が業務根拠 (BR/UX/FR-L1) に紐付いていません。screen §5.5 逆 trace 表を更新してください。」
+
+- [ ] 14 画面全件が screen sub-doc §5.5 逆 trace 表に BR/UX/FR-L1 のいずれか 1 件以上紐付く (欠落 → exit 1)
+
+##### H.3 ルール R3: FR-L1 P0 → 画面 trace 必須
+
+検証式: FR-L1 P0 18 件のみ最低 1 画面に紐付く必要 (P1 18 件 / P2 5 件は warn 程度、block しない)。
+
+孤児 P0 FR-L1 検出時の動作: **block**。孤児 P1/P2 FR-L1 検出時の動作: **warn** (G1-trace 通過に影響しない、L3 で補完推奨)。
+
+DD2=a 採用根拠: P0 = dashboard 表出必須機能、P1/P2 は背景機能を含む。
+
+- [ ] FR-L1 P0 18 件全件が screen sub-doc §5 trace マトリクスで最低 1 画面に紐付く (欠落 → exit 1)
+- [ ] FR-L1 P1/P2 で紐付き無し → P1 warning (exit 0、stdout に warn 出力)
+
+##### H.4 ルール R4: screen sub-doc `requires` 整合
+
+検証式: PLAN-L1-03-screen-requirements 等の screen 関連 PLAN frontmatter `dependencies.requires` に **business + functional の両方が明示列挙** されていること。
+
+不整合検出時の動作: **warn** (G1-trace 通過に影響しない)。
+
+- [ ] screen sub-doc の PLAN frontmatter `dependencies.requires` に business sub-doc PLAN-ID と functional sub-doc PLAN-ID が両方含まれる (欠落 → P1 warning)
+
+##### H.5 検証実装
+
+- CLI: `ut-tdd plan lint --gate G1-trace` で実行
+- 設定ファイル: `gate-checks.yaml` の `G1-trace` セクションに R1-R4 を定義 (L4 carry)
+- machine 一次判定 (NFR-12 整合)。AI/human 補完は machine 判定の後段でのみ行う
+- `harness-check` の `plan-lint` subjob が G1-trace lint を内包する (§6.3 matrix の `design` branch 行)
+
+##### H.6 G1 entry / exit 条件
+
+| フェーズ | 判定内容 | 通過条件 |
+|----------|----------|----------|
+| G1 entry | 5 sub-doc 全件起票完了 | G1-content 通過 |
+| G1-content | 5 sub-doc 全件起票完了 + 件数確定 | business/functional/screen/technical/nfr 各 sub-doc が status=confirmed |
+| G1-pair | L1↔L14 OT 量閉じ (孤児 0) | 全 BR/NFR が L14 運用テスト設計の OT-* に 1:1 対応 |
+| G1-trace | 業務 ⇔ 画面 ⇔ 機能 双方向 trace 整合 (本 §H) | R1/R2/R3 block なし (R4 warn は pass 扱い) |
+| G1 exit | 3 sub-gate 全件通過 | G1-content ∧ G1-pair ∧ G1-trace のすべて pass |
+
+各 sub-gate fail 時は当該 sub-gate に戻り修正する。G1 exit は 3 sub-gate 全件通過まで block される (fail-close)。
+
+##### H.7 §1.10.A〜§1.10.G との接続規約
+
+- 本 §H は §G (L 別 sub-doc 構造) の後段に位置する。`ut-tdd plan lint` は §G の sub-doc 種別・フィールド・本文構造検証を先に実行し、G 系 check が pass した screen sub-doc に対して §H の G1-trace lint を実行する (依存順序固定)。
+- §G.3 で検証する `sub_doc=screen` の必須フィールド (`pair_artifact`, `related_l0`, `next_pair_freeze`) は G1-trace lint の前提条件。欠落があれば §G.3 で exit 1 となり §H の検証は実行しない。
+- §G.6 で検証する screen sub-doc の必須 § 構造 (§1 画面一覧 / §2 画面遷移の要望 / §3 表示・操作への要望 / §4 関連 doc) も G1-trace lint の前提。§5 trace マトリクスは本 §H が追加する screen sub-doc 必須 § であり、G1-trace lint が §5 系セクション (§5.1/5.2/5.5 など) の存在を別途確認する。
+
 ---
 
 # §2 V-model 4 artifact 工程要件
@@ -1852,6 +1920,7 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 |---|---|---|---|
 | 1.0 | 2026-05-20 | 初版。構想書 v3.0 と分離して要件定義のみを記述 | PM + TL |
 | **1.1** | **2026-05-20** | **Codex TL Round 4 (追突レビュー) で指摘された Critical 8 + Important 9 を全 fix。S4 outcome enum 追加 / G4 fail-close 条件統一 / pre-push fail-close と warning 分離 / branch prefix 全 11 kind 網羅 / Phase 0-A/0-B 必須ファイル区別 / failure_log の必須性とディレクトリ性の整理 / テスト PR matrix 化 / drive×kind matrix / 必須 role 表 / canonical diff rule / exit code 3 段階 / pre-commit 検証コマンド明記** | **PM + TL** |
+| **1.2+** | **2026-05-28** | **§1.10.H G1-trace 機械検証ルール追加 (DD1=a / DD2=a PO 承認 2026-05-28)。G1 内 sub-gate「業務⇔画面⇔機能 双方向 trace 整合」としてルール R1-R4 (H.1-H.4) を定義。R1: BR/UX→画面 trace block / R2: 画面→BR/UX/FR-L1 trace block / R3: FR-L1 P0 block + P1-P2 warn (DD2=a) / R4: screen PLAN requires 整合 warn。§H.5 CLI: `ut-tdd plan lint --gate G1-trace`。§H.6 G1 entry/exit 条件 (G1-content→G1-pair→G1-trace の 3 段 fail-close)。§H.7 §G との接続規約 (§G.3/G.6 が前提条件)。構想書 §3.3.1 と連動。** | **PMO (Sonnet)** |
 | **1.2** | **2026-05-27** | **V2 (HELIX-workflows) の工程・モード・配線を取り込み (構想書 v3.1 連動)。§1.4 VALID_LAYERS を V2 L0-L14 + W-model に作り替え (旧 L0-L11+小数層を remap、L3.5/L3.8/L4.5 廃止)。§2 の 3 段階 freeze / 受入条件を W-model (G1/G3/G4/G5/G6 pair → G7 trace) に更新。§1.1 に `parent_design` 必須フィールド追加 (kind=impl)。§7.8 配線要件新設 (signal→mode routing / RecommendedCommandV1 safety schema / requires_human_approval→承認者解決 / orchestration_mode enum 5 種 / layer-context 注入 / 横断検出)。必須 role 条件・委譲表・gate 番号を L0-L14 に整合。§7.8.7 execution mode × レビューゲート切り分け新設 (mode 別 gate 挙動 / same_model_approval 実行時強制 / escalation 境界は mode 問わず人間サインオフ必須、gate 崩壊防止)。**単一エージェント時は ② 専門サブエージェント review を hard 要件化し、§7.8.7.1 に doc/test/code 3 点 + 横断の明文化必須 checklist (DOC/TST/COD/XR) を確定** (明文化でレビュアーのモデル差異を吸収)。レビュー範囲を **関数単位 / 機能単位 / 横断** の 3 スコープに拡張し、依存関係 (DEP)・重複実装 (DUP)・機能整合 (MOD) のチェック項目と AP-9 (重複実装) / AP-10 (依存違反) を追加。§7.1 team run 検証 7 + §7.6 受入条件に **ルール同一性 (rule parity test: claude-only と codex-only で同一判定・同一 exit code、CLAUDE.md/AGENTS.md の drift 検出)** と **hybrid 機能分散 (判断系/実行系を別 runtime、二重実行を exit 1)** を MUST 化 (構想書 §2.1.0)。ADR-001 連動で**実装言語を TypeScript (Bun) に確定**し §7.1 / §9.1 / §1.1 / §1.7 / §366 等の言語前提を Python→TS に更新 (`python_module`→`source_module`、`python -m ut_tdd.cli`→TS core、`requirements.txt`→`package.json`、pytest→vitest、pydantic→zod)** | **PM (Opus)** |
 
 ---

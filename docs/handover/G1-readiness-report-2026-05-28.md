@@ -1,6 +1,6 @@
 ---
 doc_id: G1-readiness-report-2026-05-28
-title: "L1 G1 readiness report — PO サインオフ最終判断材料 (v4: L2 skip 撤回追加修正、画面要求 3 sub-doc は drive 非依存で必須)"
+title: "L1 G1 readiness report — PO サインオフ最終判断材料 (v5: G1-trace sub-gate 新設、業務 ⇔ 画面 ⇔ 機能 双方向 trace 機械強制)"
 status: ready-for-PO-final-signoff
 created: 2026-05-28
 updated: 2026-05-28
@@ -11,14 +11,17 @@ related_audit: |
   Phase 3 ac2517e7 + a008e781 (Step A screen 14 画面再編 + Step C ledger/OT 再採番)
 ---
 
-# L1 G1 readiness report (2026-05-28、v4 最終版)
+# L1 G1 readiness report (2026-05-28、v5 最終版)
 
 > **判定**: **PASS** (Critical 0 / Important 0 / Minor 5 任意 carry)
-> **本 v4 で追加された修正**: L2 skip 撤回 (PO 指摘「L2 スキップすんな。モックは作らなくてもせめて画面要求は作れよ」)
->   - concept §3.7「be (BE-only) = L2 全 skip 可」を撤回、「**be (UI を持つ) = 画面要求 3 sub-doc (画面一覧 / 遷移 / UI 要素) 必須、wireframe のみ省略可**」に修正
->   - PLAN-L1-03 §0 + §7 carry / screen §4 / business §10.3.1 / ledger A-37 整合修正
-> **本 v3 で追加された変更**: 画面要求 14 画面 PM/HM/GD 全面再編 + 4 横断原則 + 3 カテゴリ Bounded Context (PO 凍結前追加ヒアリング全件採用)
-> **PO に求める判断**: L1 業務要求の **G1 ゲート凍結最終サインオフ** (5 sub-doc + 5 PLAN + L14 OT 44 件 + 14 画面 + L2 必須実施規約 の pair freeze、L3 起票への進行承認)
+> **本 v5 で追加された新機能**: G1-trace sub-gate 新設 (PO 指摘「本来は要求と画面要求を照らし合わせるゲートがいるな」)
+>   - G1 内 sub-gate 3 段化: G1-content / G1-pair / **G1-trace (NEW)**
+>   - 機械検証ルール R1-R4: BR/UX → 画面 (12 件 block) / 画面 → BR/UX/FR-L1 (14 画面 block) / FR-L1 P0 → 画面 (18 件 block、P1-P2 warn) / screen requires 整合 (warn)
+>   - screen §5 trace マトリクス (6 sub-section、SSoT)、functional §1 対応画面列、business §10.3.1 連動、L14 OT-45 で被覆 (44→45 件)
+>   - concept §3.3.1 + requirements §1.10.H で sub-gate 定義 + lint ルール
+> **本 v4 で追加された修正**: L2 skip 撤回 (画面要求 3 sub-doc は drive 非依存で必須)
+> **本 v3 で追加された変更**: 画面要求 14 画面 PM/HM/GD 全面再編 + 4 横断原則 + 3 カテゴリ Bounded Context
+> **PO に求める判断**: L1 業務要求の **G1 ゲート凍結最終サインオフ** (5 sub-doc + 5 PLAN + L14 OT **45 件** + 14 画面 + G1-trace 機械強制 の pair freeze、L3 起票への進行承認)
 
 ## §1 サマリ (PO スキャン用)
 
@@ -159,7 +162,8 @@ cdd6598 G1 audit Critical 4 件修正
 1b148e1 G1 readiness report 起票 v1
 b0d0fbf Step 1+2: 5 sub-doc + 5 PLAN + ledger + L14 OT 更新 (PO 追加ヒアリング 32 問反映、G1 readiness v2)
 991b65f Step A/B/C: 画面要求 14 画面 PM/HM/GD 全面再編 + §3 横断原則 4 件 + 3 カテゴリ Bounded Context (G1 readiness v3)
-<本commit> L2 skip 撤回 (concept §3.7 修正 + ledger A-37 + 整合修正、G1 readiness v4)
+d9ce15f L2 skip 撤回 (concept §3.7 修正 + ledger A-37 + 整合修正、G1 readiness v4)
+<本commit> G1-trace sub-gate 新設 (concept §3.3.1 + requirements §1.10.H + screen §5 trace マトリクス + functional 対応画面列 + OT-45 + ledger A-38、G1 readiness v5)
 ```
 
 合計 14 commit、L1 G1 readiness v3 整備完了。
