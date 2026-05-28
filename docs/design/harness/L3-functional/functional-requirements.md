@@ -485,6 +485,30 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 
 ---
 
+### FR-19: doc-reviewer 必須召喚 (BR-08 派生、A-47 ledger カバレッジ補完)
+
+- **L1 上流**: BR-08 (doc 品質の継続レビュー)
+- **入力**: 大規模 doc 改定 / gate evidence 提出 / pair freeze の trigger event
+- **出力**: doc-reviewer (pmo-sonnet とは責務分離した read-only reviewer) 召喚記録 / 品質観点 (整合/網羅/一貫/明確) チェック結果
+- **振る舞い**: trigger event 発火時に doc-reviewer 必須召喚を機械強制、未召喚で gate (G1/G3/G7/G11) 通過禁止
+
+#### AC-FR-19-01 (正常系)
+- **Given**: 大規模 doc 改定 (例: L3 sub-doc 本起草 commit) を実行、doc-reviewer 召喚
+- **When**: `ut-tdd review --uncommitted --reviewer doc-reviewer`
+- **Then**: 品質観点 4 軸 (整合/網羅/一貫/明確) チェック結果が `.ut-tdd/audit/doc-reviews/<timestamp>.json` 記録 / pass で次工程 (gate) 許可 / 終了コード 0
+
+#### AC-FR-19-02 (異常系: 未召喚で gate 試行)
+- **Given**: 大規模 doc 改定後、doc-reviewer 未召喚で `ut-tdd gate G3` 実行
+- **When**: G3 ゲート判定
+- **Then**: fail-close `Error: G3 通過には doc-reviewer 召喚必須 (BR-08 / FR-19)` / next_action `ut-tdd review --uncommitted --reviewer doc-reviewer 実行` / 終了コード 1
+
+#### AC-FR-19-03 (境界系: bypass = PO 専属)
+- **Given**: PO が `UT_TDD_DOC_REVIEWER_BYPASS=1` で bypass 試行 (緊急 hotfix 等)
+- **When**: G3 ゲート判定
+- **Then**: bypass + audit `.ut-tdd/audit/doc-reviewer-bypass/<timestamp>.json` (PO ID + 理由必須) / KPI D-08 集計 / 終了コード 0
+
+---
+
 ## §3 carry 宣言 (P1 / P2 / Phase B)
 
 | FR-L1 | 優先度 | carry 先 | 理由 |
@@ -494,6 +518,39 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 | FR-L1-21〜35 (FE detector / Scrum / Add-feature / Refactor / Retrofit / Research / W 2 段 / 画面設計 / フロントUX / コンテキスト / フォルダ / 棚卸し / 穴管理 / 整備可視化) | P1 / P2 | L4 carry | 詳細仕様は L4 基本設計と合わせて確定 |
 | FR-L1-37/39/40/41/42/44 (model 推挙 / 難易度 / drive 別 state / drive 自動判定 / provider 引継ぎ / onboarding) | P1 | L4 carry | drive 軸拡張は L4 データ設計連動 / onboarding は L4 設計連動 |
 | FR-L1-36/38/43 (skill 評価 / model 評価 / PoC 計測) | P2 | **PLAN-L3-02 (business-detail.md) に委譲** | BR-21 経路で扱う (重複回避) |
+
+### §3.1 P1 13 件 carry 明示 note (A-47 カバレッジ補完、L4 PLAN 起票時の必須参照)
+
+pmo-sonnet カバレッジ matrix (A-47) で「carry 暗黙」と判定された P1 13 件を L4 carry として明示宣言:
+
+| FR-L1-ID | L4 carry 先 | 受入条件 placeholder (L4 PLAN で詳細化) |
+|----------|------------|--------------------------------------|
+| FR-L1-23 (Scrum→V昇華) | PLAN-L4-NN-mode-scrum | Scrum sprint 完了時に Reverse fullback で V モデル各工程 doc 追補生成 |
+| FR-L1-24 (Add-feature) | PLAN-L4-NN-mode-add-feature | kind=add-design/add-impl で requires 接続、影響範囲差分追補生成 |
+| FR-L1-25 (Refactor) | PLAN-L4-NN-mode-refactor | kind=refactor、axis-11 regression 機械検証で振る舞い不変確認 |
+| FR-L1-26 (Retrofit) | PLAN-L4-NN-mode-retrofit | retrofit-matrix 影響評価、段階 config 更新 + 回帰テスト |
+| FR-L1-27 (Research) | PLAN-L4-NN-mode-research | kind=research、generates=ADR 必須 |
+| FR-L1-28 (W 2 段設計) | PLAN-L4-NN-w2-stage | Phase 1 (一般) + Phase 2 (agent 昇華) を L10 合流、drive=agent 追加 |
+| FR-L1-29 (画面設計 L2) | PLAN-L4-NN-mode-screen-design | L2 IA → 画面一覧 → 遷移 → Low/High-Fi → ユーザビリティ |
+| FR-L1-30 (フロントUX L10) | PLAN-L4-NN-mode-frontend-design | L10 ビジュアル → デザイントークン SSOT → a11y → ビジュアル回帰 |
+| FR-L1-37 (model 推挙) | PLAN-L4-NN-model-suggestion | task × drive × L 別の model + reasoning effort 動的選定 |
+| FR-L1-39 (タスク難易度) | PLAN-L4-NN-task-complexity | 規模 / 依存 / 不確実性 × drive 別スコアリング |
+| FR-L1-42 (provider 引継ぎ) | PLAN-L4-NN-provider-handover | Claude ↔ Codex の context+PLAN+budget 連携渡し |
+| FR-L1-44 (onboarding) | PLAN-L4-NN-onboarding | 既存 repo への harness baseline 確立、`.ut-tdd/` 初期 baseline |
+| FR-L1-31/32 (P2 コンテキスト/フォルダ) | PLAN-L4-NN-folder-context | フォルダ構成 + コンテキスト管理 |
+
+> **明示化の目的**: pmo-sonnet matrix A-47 で「carry 暗黙 → L4 起票者が依存漏れリスク」と指摘されたため、本表で carry 先と受入条件 placeholder を明示し、G4 fail-close を予防する。
+
+### §3.2 UX-01 (3 バランス価値体験) AC + AT 追加 (C-01 補完)
+
+UX-01 (process / safety / automation の 3 バランス) は全画面横断宣言のみで AT 未設定だったため、本 sub-doc で AC 追加:
+
+#### AC-UX-01-01 (3 バランス被覆確認)
+- **Given**: 1 sprint で複数 PLAN を実行
+- **When**: sprint 末 KPI 集計
+- **Then**: process 指標 (D-03 W-model 順序遵守違反 = 0) + safety 指標 (D-04 回帰検出率 ≥ 80% + D-06 bypass 0 努力目標) + automation 指標 (D-07 AI 委譲時間率 ≥ 70%) の **3 軸全てで閾値 pass**。1 軸のみ突出 (例: D-07 高だが D-04 低) は warn
+
+> 対応 AT は L12 受入テスト §1.2 末尾 AT-UX-01 で追加。
 
 ## §4 画面 trace (L2 deep-link、screen §5 G1-trace 継承)
 

@@ -89,8 +89,12 @@ updated: 2026-05-28
 | **AT-FR-18-01** | AC-FR-18-01 (doctor clean) | 検出 0 件 → HM-07 All clean / exit 0 | vitest doctor test |
 | **AT-FR-18-02** | AC-FR-18-02 (doctor 検出 3 件) | error 1 + warn 2 → severity 別表示 / error で exit 1 | vitest doctor test |
 | **AT-FR-18-03** | AC-FR-18-03 (detector timeout) | 30s 超 → skip + warn / 他結果集約 | vitest doctor test |
+| **AT-FR-09-04** | (C-04 補完、A-47) opus override 禁止 AC | `Agent({subagent_type: "pmo-sonnet", model: "opus"})` → fail-close exit 2 / audit block 記録 (pdm-* 以外への opus 指定は block) | vitest agent-guard test 拡張 |
+| **AT-FR-19-01** | AC-FR-19-01 (doc-reviewer 召喚正常系) | `ut-tdd review --uncommitted --reviewer doc-reviewer` → `.ut-tdd/audit/doc-reviews/<timestamp>.json` 記録 / pass → 次工程許可 / exit 0 | vitest review test |
+| **AT-FR-19-02** | AC-FR-19-02 (未召喚で G3 fail-close) | doc-reviewer 未召喚 + `ut-tdd gate G3` → fail-close error / next_action 提示 / exit 1 | vitest gate + review test |
+| **AT-FR-19-03** | AC-FR-19-03 (PO bypass) | `UT_TDD_DOC_REVIEWER_BYPASS=1` + 理由 → bypass + audit / D-08 集計 / exit 0 | vitest gate + audit test |
 
-> **AT-FR 合計 = 54 件 (FR-01〜18 × 3 AC)**。一部 (AC-FR-10-03 UI / AC-FR-17-* GHA workflow) は L4 carry 想定 (L4 で実装後に L12 AT として lift)。
+> **AT-FR 合計 = 54 + 4 (A-47 補完: FR-09-04 + FR-19-01〜03) = 58 件**。一部 (AC-FR-10-03 UI / AC-FR-17-* GHA workflow) は L4 carry 想定 (L4 で実装後に L12 AT として lift)。
 
 ### §1.2 business-detail sub-doc 由来 AT (BR-21 + HM-08 + FR-BR21-36/38/43)
 
@@ -111,14 +115,18 @@ updated: 2026-05-28
 | **AT-FR-BR21-38-02** | (FR-BR21-38 境界系) | opt-in false → skip | vitest evaluation test |
 | **AT-FR-BR21-43-01** | (FR-BR21-43 正常系) | 10 件 PoC (6/3/1) → 成功率 60% 表示 | vitest evaluation test (Phase B carry) |
 | **AT-FR-BR21-43-02** | (FR-BR21-43 異常系) | PoC 0 件 → info + 「データ蓄積中」表示 | vitest evaluation test |
+| **AT-UX-01** | (C-01 補完、A-47) AC-UX-01-01 (3 バランス被覆) | sprint 末 D-03=0 + D-04 ≥ 80% + D-06 = 0 努力目標 + D-07 ≥ 70% を **3 軸全件 pass**。1 軸突出は warn | vitest KPI 集計 test |
 
-> **AT-BR21 合計 = 15 件** (Phase A 即実装 6 件 + Phase B carry 9 件)
+> **AT-BR21 合計 = 15 + 1 (UX-01 補完) = 16 件** (Phase A 即実装 7 件 + Phase B carry 9 件)
 
 ### §1.3 nfr-grade sub-doc 由来 AT (NFR-* 14 件)
 
 | AT-ID | 対応 NFR + AC | 受入条件 | 機械検証 |
 |-------|--------------|---------|---------|
 | **AT-NFR-01** | NFR-01 / AC-NFR-01 | GHA matrix 3 OS で `bun test` + `ut-tdd plan lint` pass | GHA workflow test |
+| **AT-NFR-03** | (C-03 補完、A-47) NFR-03 / AI mode 非依存 | 4 mode (standalone / claude-only / codex-only / hybrid) で P0 FR-01〜18 全件動作 / mode 別差異 0 件 | vitest mode E2E test (4 mode × P0 FR) |
+| **AT-NFR-D01** | (A-47 補完) NFR-D01 / KPI D-01 計測 | `ut-tdd plan list --since sprint-start` → PLAN 件数 ≥ 1 を機械計測 / sprint 末 KPI integrated | vitest KPI test |
+| **AT-NFR-D04** | (A-47 補完) NFR-D04 / KPI D-04 計測 | CI gate + `ut-tdd trace check --regression` で回帰検出率 ≥ 80% を集計 | vitest trace + KPI test |
 | **AT-NFR-04** | NFR-04 / AC-NFR-04-01 | TS/Python/Go/Rust 各 1 repo で動作確認 | E2E test (multi-repo) |
 | **AT-NFR-05** | NFR-05 / AC-NFR-05-01 | GHA workflow artifact upload + 90 日永続 | GHA workflow test |
 | **AT-NFR-06** | NFR-06 / AC-NFR-06 | agent-guard fail-close exit 2 + 全 fail-close test pass | vitest agent-guard test (既存カバー) |
@@ -137,18 +145,19 @@ updated: 2026-05-28
 | **AT-NFR-09** | NFR-09 (L4 carry、parity-check) | L4 ADR 後に lift | L4 carry placeholder |
 | **AT-NFR-17** | NFR-17 (Phase B carry、PII redaction) | Phase B 着手後に lift | Phase B carry placeholder |
 
-> **AT-NFR 合計 = 18 件** (Phase A 即実装 15 件 + L4 carry 2 件 + Phase B carry 1 件)
+> **AT-NFR 合計 = 18 + 3 (A-47 補完: NFR-03 + D-01 + D-04) = 21 件** (Phase A 即実装 18 件 + L4 carry 2 件 + Phase B carry 1 件)
 
 ### §1.4 件数まとめ
 
 | 区分 | 件数 |
 |------|------|
-| AT-FR (functional 由来) | 54 |
+| AT-FR (functional 由来、FR-01〜19) | 58 (A-47 補完: FR-09-04 + FR-19 × 3 追加) |
+| AT-UX (UX-01 補完) | 1 (A-47 補完) |
 | AT-BR21 (business-detail 由来、Phase A) | 6 |
 | AT-FR-BR21 (Phase B carry) | 9 |
-| AT-NFR (nfr-grade 由来、Phase A) | 15 |
+| AT-NFR (nfr-grade 由来、Phase A) | 18 (A-47 補完: NFR-03 + D-01 + D-04 追加) |
 | AT-NFR (L4/Phase B carry placeholder) | 3 |
-| **合計** | **87** (Phase A 即実装 75 件 + carry 12 件) |
+| **合計** | **95** (Phase A 即実装 83 件 + carry 12 件) |
 
 ## §2 量閉じ一覧 (要求 → AT 被覆、孤児チェック)
 

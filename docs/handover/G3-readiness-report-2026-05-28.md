@@ -1,6 +1,6 @@
 ---
 doc_id: G3-readiness-report-2026-05-28
-title: "L3 G3 readiness report — PO サインオフ判断材料 (v2: PO 指摘反映 — 6 subagent 調査結果 back-propagation + 残 2 件は別 commit)"
+title: "L3 G3 readiness report — PO サインオフ判断材料 (v3: PO 指摘「要件定義項目すべてカバー？」反映 — pmo-sonnet カバレッジ matrix + Critical 4 件 + P1 13 件 carry 明示 + D-01/D-04 補完)"
 status: ready-for-PO-signoff
 created: 2026-05-28
 updated: 2026-05-28
@@ -8,9 +8,15 @@ owner: PM (Opus)
 parent_g1: docs/handover/G1-readiness-report-2026-05-28.md (G1 v8 PASS)
 ---
 
-# L3 G3 readiness report (2026-05-28、v2)
+# L3 G3 readiness report (2026-05-28、v3)
 
 > **判定**: **PASS** (Critical 0 / Important 0 / Minor 0、PO 指摘 2 件は別 commit で governance 改善対応)
+> **v3 で追加** (PO 指摘「要件定義項目はすべてカバーできているの？」反映): pmo-sonnet (sonnet) でカバレッジ matrix 作成 → Critical 4 件 + Important 10 件 + Minor 5 件発見
+>   - **Critical 4 件解消** (G3 PASS 阻害リスク): C-01 UX-01 AT 追加 (AC-UX-01-01 + AT-UX-01、3 バランス被覆) / C-02 FR-19 新規 (BR-08 doc-reviewer 必須召喚) + AC 3 件 + AT 3 件 / C-03 NFR-03 (AI mode 非依存) nfr-grade §1 行追加 + AT-NFR-03 / C-04 AT-FR-09-04 (opus override 禁止) 追加
+>   - **Important 重点解消**: P1 13 件 carry 明示 note (functional §3.1、L4 PLAN 起票時の必須参照) + D-01/D-04 nfr-grade 行追加 + AT 追加
+>   - **AT 件数**: 87 → 95 件 (Phase A 即実装 83 件 + carry 12 件)
+>   - **G1-trace R1/R2/R3**: 全 PASS 維持、UX-01 carry 漏れ解消で R1 完全
+>   - **残 Important 6 件 + Minor 5 件**: G3 後 carry として §4 で明示 (L4 起票時に対応)
 > **v2 で追加** (PO 指摘 「コーディングルール / ドメイン更新 / web 検索 / フォーク / pdm」反映):
 >   - **tech-fork × 3 並列調査**: CLI library / state mgmt / hook framework / coding standards / linter / BDD-AC framework / DDD entity (commander + clack + lowdb + xstate + PGlite + lefthook + lint-staged + Biome v2 既採用 + knip 推奨)
 >   - **tech-docs × 1**: V-model+AI / IPA × ISO 25010 + SonarQube / DDD back-propagation pattern + Neurosymbolic Guard (4 ADR 候補)

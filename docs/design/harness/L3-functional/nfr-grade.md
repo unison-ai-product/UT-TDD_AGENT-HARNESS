@@ -23,6 +23,7 @@ updated: 2026-05-28
 | NFR-ID | 要件 | IPA Lv | 受入閾値 | 測定方法 | pass 条件 |
 |--------|------|--------|---------|---------|----------|
 | **NFR-01** | cross-platform (Windows/macOS/Linux ネイティブ) | Lv2 (業務時間内継続) | 3 OS で主要 CLI コマンド 95% 以上動作 | `ut-tdd doctor --platform-check` / CI matrix (Windows + macOS + Linux) | 3 OS で同一 commit が `ut-tdd plan lint / gate / doctor` 全件 pass |
+| **NFR-03** | AI mode 非依存 (4 mode 全動作、A-47 補完) | Lv2 | standalone / claude-only / codex-only / hybrid 全 mode で P0 FR-01〜18 動作 | `ut-tdd doctor --mode-check` / 4 mode × 統制対象 repo テスト | 4 mode で全 P0 FR が pass / mode 別差異 0 件 |
 | **NFR-06** | fail-close (guard / gate / lint) | Lv2 | 全 fail-close 経路で例外漏れ 0 件 | agent-guard test / gate test / vitest 全件 | 全 fail-close test pass / 例外漏れ audit 0 件 |
 | **NFR-16** | onboarding 互換性 (skip_sub_doc) | Lv2 | KPI D-09 ≥ 95% (handover 引継ぎ成功率、A-43 / A-44 ledger 整合) | `.ut-tdd/handover/` 引継ぎ成功 / 失敗ログ集計 | sprint 末 D-09 ≥ 95% |
 
@@ -76,6 +77,8 @@ updated: 2026-05-28
 | **NFR-08** | implementation_status 真実性 | Lv3 | KPI D-05 (4 artifact trace 整合率) ≥ 95% (A-43 ledger 整合) | `ut-tdd trace check` / `.ut-tdd/artifact/trace/` | sprint 末 D-05 ≥ 95% |
 | **NFR-13** | gate 通過率 / dev-local+CI 整合 | Lv3 | KPI D-02 ≥ 90% (A-43 ledger 整合) | `.ut-tdd/gate_runs/` 集計 | sprint 末 D-02 ≥ 90% |
 | **NFR-14** | human-as-residue (gate fail-close 例外権) | Lv3 | KPI D-06 (bypass 件数) ≤ 2 件/sprint (努力目標 = 0、A-43 ledger 整合) | `.ut-tdd/audit/agent-guard-bypass/` | bypass 全件 audit 記録 / D-06 ≤ 2 |
+| **NFR-D01** | KPI D-01 (PLAN 起票数) 機械計測化 (A-47 補完) | Lv3 | ≥ 1 件/sprint | `.ut-tdd/plan_registry/` 集計 / `ut-tdd plan list --since sprint-start` | sprint 末 PLAN 件数 ≥ 1 / KPI 集計に integrated |
+| **NFR-D04** | KPI D-04 (回帰検出率) 機械計測化 (A-47 補完) | Lv3 | ≥ 80% (検出件数 / 発生総件数) | CI gate + `ut-tdd trace check --regression` | sprint 末 D-04 ≥ 80% / 検出漏れ audit 記録 |
 
 #### AC-NFR-08-01 (正常系)
 - **Given**: 全 PLAN で generates / pair_artifact 整備済、trace check
