@@ -17,18 +17,33 @@ L1 画面要求 (14 画面 PM/HM/GD) を L2 画面設計に詳細化する sub-d
 | `screen-list.md` | 画面 ID 一覧 (PM-01〜PM-05 / HM-01〜HM-08 / GD-01 = 14 件) | placeholder | **必須** (L2 着手時に PLAN-L2-01 で本起票) |
 | `screen-flow.md` | 画面遷移詳細 (6 シナリオ + 3 カテゴリ間 deep-link) | placeholder | **必須** (PLAN-L2-02 で本起票) |
 | `ui-element.md` | 主要 UI コンポーネント (PM-01 4 階層プルダウン / HM-02 heat map / HM-03 動的配線 / HM-04 DB 整合性 / GD-01 サイドナビ等) | placeholder | **必須** (PLAN-L2-04 で本起票) |
-| `wireframe.md` | レイアウト・情報配置 (Low-Fi ASCII art で構造表示) | placeholder | **省略可** (PO 外部吸収方針、High-Fi モックは PO 側で別途用意) |
+| `wireframe.md` | レイアウト・情報配置 (Low-Fi ASCII art デフォルト) | placeholder | **省略可** (Low-Fi デフォルト、High-Fi モックは **ケース別判断**: harness 内保持 OR 外部依頼のいずれか、PO 外部は許容オプションで必須ではない) |
 
-## モック吸収方針 (2026-05-28 PO 指示確定)
+## モック方針 (2026-05-28 PO 確定、PO 訂正反映 2 回)
 
-> **wireframe (High-Fi モック) は PO 外部吸収**: ut-tdd harness では wireframe.md は **Low-Fi (ASCII art / 簡易図) のみ**保持し、**High-Fi モックは PO が外部ツール (Figma / Excalidraw / 紙資料等) で別途用意**する。harness 内部での High-Fi モック保存・管理は責務範囲外。
->
-> 理由:
-> - モック制作は専門ツールを使う方が効率的
-> - harness 内部の markdown ベース管理では High-Fi モック表現に限界
-> - PO 側で deisgn review プロセスを別途持つ前提
->
-> L10 UX refinement 工程で High-Fi モック確定が必要な場合も、PO 提供の外部成果物を参照する形で進める。
+ut-tdd harness の wireframe 運用は **柔軟方針 (ケース別判断)**:
+
+| モック種別 | デフォルト | 別オプション |
+|----------|----------|------------|
+| **Low-Fi (ASCII art / 簡易図)** | harness 内に保持 (wireframe.md) | — |
+| **High-Fi モック (デザイン)** | ケース別判断 | (a) harness 内保持 (img link / SVG 等) / (b) **外部依頼** (PO が Figma / Excalidraw / 外部デザイナ等に依頼) |
+
+選択基準 (PLAN-L2-03 本起票時 or L10 着手時に決定):
+- 画面の複雑度 / 設計レビュー深度
+- PO の design tool 採用状況
+- L10 UX refinement で必要な詳細度
+
+> **外部依頼は許容するが必須ではない**。harness 内に High-Fi を保持する選択も可。「**必ず外部にはならない**」(PO 訂正 2026-05-28)。
+
+### 外部依頼時の運用 (PO 追加指示 2026-05-28)
+
+外部依頼を選択する場合:
+1. **L2 確定が前提**: 画面要求 + UI 要素を確定した状態で外部に input を渡す (「L2 で本来やる工程をある程度確定した状態で出す」PO 指示)
+2. **外部成果物を harness 側でレビュー**: L1 画面要求と照合
+3. **要件修正 back-propagation の可能性**: モックと要件に不整合あれば L1 screen / business / functional 修正 → G1-trace 再検証
+4. **L10 UX refinement で参照**: 外部成果物 URL を参照欄に記載
+
+詳細は `wireframe.md` 参照。
 
 ## L1 ↔ L2 接続
 

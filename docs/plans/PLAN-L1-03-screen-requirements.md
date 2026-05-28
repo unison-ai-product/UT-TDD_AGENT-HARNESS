@@ -203,10 +203,12 @@ S2=b 30 秒ポーリング / S3=b PLAN ビュー パース構造化 / S5=b Recov
 - **PLAN-L2-01 画面一覧 (screen-list.md) 必須実施**: 14 画面 (PM/HM/GD) の画面 ID / 役割 / 業務根拠 確定
 - **PLAN-L2-02 画面遷移 (screen-flow.md) 必須実施**: 6 シナリオ + 3 カテゴリ間 deep-link の詳細遷移図
 - **PLAN-L2-04 UI 要素 (ui-element.md) 必須実施**: 14 画面の主要 UI コンポーネント / 入力 / 表示 / 操作要素
-- **PLAN-L2-03 wireframe (wireframe.md) PO 外部吸収方針 (A-39)**: PO 指示 2026-05-28「L2 のフォルダ作っておいてこっちでモック吸収する」に従い、**High-Fi モックは PO 外部吸収** (Figma / Excalidraw 等で別途用意)。harness 内部では Low-Fi (ASCII art / 簡易図) のみ保持。`skip_sub_doc: ["L2-wireframe"]` + 理由「High-Fi モックは PO 外部吸収」を frontmatter に明記
-  - L2-screen/wireframe.md は status=skip-with-external-absorption で起票済 (placeholder)
+- **PLAN-L2-03 wireframe (wireframe.md) 柔軟方針 (A-39/A-40)**: PO 指示 2026-05-28「L2 のフォルダ作っておいて」+ PO 訂正「必ず外部にはならないからな」を反映。**Low-Fi (ASCII art / 簡易図) は harness 内に保持 (デフォルト)**、**High-Fi モックは ケース別判断**:
+  - (a) harness 内保持 (img link / SVG 等)
+  - (b) **外部依頼** (PO が Figma / Excalidraw / 外部デザイナ等に依頼) — 許容オプション、必須ではない
+  - L2-screen/wireframe.md は status=placeholder で起票済 (L2 着手時に PLAN-L2-03 で本起票)
   - PM-01 4 階層プルダウン / HM-02 heat map / HM-03 動的配線図 / HM-04 DB 閲覧 / GD-01 左サイドナビ等の主要画面は **Low-Fi (ASCII art) を本起票時に追記推奨**
-  - L10 UX refinement で High-Fi モック確定が必要な場合は PO 提供の外部成果物を参照
+- **外部依頼選択時の back-propagation (PO 指示 2026-05-28)**: 「L2 で本来やる工程をある程度確定した状態で出す」前提。外部成果物が戻ったら L1 screen / business / functional への要件修正が入る可能性あり → **G1-trace 再検証必須** (R1-R4)。修正履歴は handover + carry に記録
 - **画面遷移詳細**: 3 カテゴリ間 deep-link の URL 設計 (PM-NN / HM-NN / GD-NN/<category> 規約)
 - **PLAN-L2-01〜04 接続規約**: 本 sub-doc 全 14 画面を `dependencies.requires` に列挙
 

@@ -716,7 +716,7 @@ PLAN 本文は「ヒアリング項目・メモ・調査結果」の **中間準
 | drive | L2 sub-doc 4 種 (画面一覧 / 遷移 / ワイヤー / UI 要素) の扱い |
 |-------|-------------------------------------------------------|
 | **be (BE-only、UI 完全不在)** | 全 skip 可 (frontmatter `skip_sub_doc: ["L2-*"]` + 理由 `"BE-only, no UI"`) |
-| **be (UI を持つ、ダッシュボード等)** | **画面要求 3 sub-doc (画面一覧 / 遷移 / UI 要素) 必須**、wireframe (モック High-Fi) のみ省略可 (`skip_sub_doc: ["L2-wireframe"]` + 理由 `"Low-Fi で代替、High-Fi は L10 UX refinement"` または `"High-Fi モックは PO 外部吸収 (Figma 等)"`、A-39 参照) |
+| **be (UI を持つ、ダッシュボード等)** | **画面要求 3 sub-doc (画面一覧 / 遷移 / UI 要素) 必須**、wireframe (モック High-Fi) のみ省略可 (`skip_sub_doc: ["L2-wireframe"]` + 理由 `"Low-Fi で代替、High-Fi は L10 UX refinement"` または `"High-Fi モックは外部依頼 (Figma 等)"`、A-39/A-40 参照)。**High-Fi モックは ケース別判断** (harness 内保持 OR 外部依頼、外部依頼は許容オプションで必須ではない)。**外部依頼時は要件修正 back-propagation の可能性あり** (G1-trace 再検証必須) |
 | fe | 全必須 |
 | db (UI 無し) | 全 skip 可 |
 | db (管理画面あり) | **画面要求 3 sub-doc 必須**、wireframe 省略可 |

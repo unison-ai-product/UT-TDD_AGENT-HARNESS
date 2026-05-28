@@ -55,4 +55,4 @@ created: 2026-05-28
 ## carry / 次工程
 
 - **L2 PLAN-L2-04 で本起票**: 本 placeholder を本起票で置換
-- High-Fi モック (wireframe.md High-Fi 版) は **PO 外部吸収**方針
+- High-Fi モック (wireframe.md High-Fi 版) は **ケース別判断** (harness 内保持 OR 外部依頼)、外部依頼は許容オプションで必須ではない (詳細は `wireframe.md` 参照)
