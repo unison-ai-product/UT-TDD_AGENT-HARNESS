@@ -1,3 +1,5 @@
+> **⚠️ SUPERSEDED by `SESSION-2026-05-27c-handover.md`** — §2 Next Action「frontmatter schema zod化(L7)」は同 session 後半で **W-model 順 (次は L1)** に方針転換し held 化。L1 業務要求 確定・企画書/G0.5 軽量化・phase-aware PLAN ID・self-review ルールは 27c を正本とする。本書の cleanup/charter 導入記録は有効。
+
 # Session Handover — 2026-05-27b (企画書整理 + kind=charter / G0.5 新設 + L0 骨組み)
 
 > 目的: 企画書 (governance) のファイル整理 + 中身の不整合修正を行い、`kind=charter` と G0.5 企画突合を新設して **L0 から回せる骨組み**を整えた、その引き継ぎ。
