@@ -641,7 +641,7 @@ PLAN 本文は「ヒアリング項目・メモ・調査結果」の **中間準
 
 | フェーズ | be | fe | db | fullstack | agent |
 |---------|----|----|----|-----------|----|
-| **L2 画面設計** | (UI 不在で skip / 軽量) | **モック駆動設計** (方針 + token + `mock.html` + `state-events.md`) | (UI 不在で skip / 軽量) | BE 方針 + FE 方針 (**mock 含**) + 接続契約方針 (同時策定) | 会話 UI モック / プロンプト UI 設計 |
+| **L2 画面設計** | **画面要求必須** (画面一覧 + 遷移 + UI 要素)、モック (wireframe) は省略可。**BE-only (UI 完全不在) のみ全 skip 可** | **モック駆動設計** (方針 + token + `mock.html` + `state-events.md`) | (UI 不在で skip / 軽量) | BE 方針 + FE 方針 (**mock 含**) + 接続契約方針 (同時策定) | 会話 UI モック / プロンプト UI 設計 |
 | **L3 要件定義** | API 契約 + DB + 工程表 | TL が `state-events.md` から **API 契約導出** + DB + 工程表 | マイグレーション + API 契約 + 工程表 | D-API + D-UI + D-CONTRACT + D-DB + D-STATE + **mock** + 工程表 | ツール契約 + 統合要件 + 工程表 |
 | **L4 基本設計** | アーキ・API 方針・ADR | mock 凍結後のアーキ反映 + Contract | ER 図・スキーマ方針 | BE 方針 + FE 方針 + Contract 三点凍結 | ツール定義・オーケストレーション方針 |
 | **L5 詳細設計** | D-API / D-DB / D-CONTRACT | mock→API 契約導出 + D-API/D-DB | D-DB 中心 + D-API | 全 D-* + mock | ツール契約詳細 + state-events |
@@ -650,7 +650,7 @@ PLAN 本文は「ヒアリング項目・メモ・調査結果」の **中間準
 | **L10 UX 磨き** | 薄い (表示確認) | **厚い** (デザイン駆動) | 薄い (管理画面確認) | 標準 (結合後に Visual Refinement) | 会話 UI / デモ確認 |
 | **L13 デプロイ後検証** | 標準 | 標準 | 薄い | 標準 | 薄い |
 | **L14 運用検証** | 標準 | 標準 | 薄い | 標準 | 標準 |
-| **G2 凍結** | (UI なしなら skip 可) | **モック凍結** (UX 承認) | (UI なしなら skip 可) | 接続契約方針凍結 (BE + FE + Contract 三点セット) | 会話 UI モック凍結 |
+| **G2 凍結** | **画面要求凍結必須** (一覧 + 遷移 + UI 要素)、モック凍結は省略可 (BE-only のみ全 skip 可) | **モック凍結** (UX 承認) | (UI なしなら skip 可) | 接続契約方針凍結 (BE + FE + Contract 三点セット) | 会話 UI モック凍結 |
 | **G5 着手** (API/Schema Freeze) | API/Schema Freeze | **モック + API/Schema Freeze** | Migration Freeze | API/Schema/UI/Contract 全凍結 | Tool Contract Freeze |
 
 ### L10 (UX 磨き) 要否 (drive 別)
@@ -663,17 +663,21 @@ PLAN 本文は「ヒアリング項目・メモ・調査結果」の **中間準
 | fullstack | **常に必要** (結合後の Visual Refinement) |
 | agent | **常に必要** (会話 UI / デモ) |
 
-### L2 sub-doc skip ルール (drive 別)
+### L2 sub-doc skip ルール (drive 別、2026-05-28 PO 指摘で修正)
 
-| drive | L2 sub-doc 4 種 (画面一覧/遷移/ワイヤー/UI 要素) の扱い |
+| drive | L2 sub-doc 4 種 (画面一覧 / 遷移 / ワイヤー / UI 要素) の扱い |
 |-------|-------------------------------------------------------|
-| be (BE-only) | 全 skip 可 (frontmatter `skip_sub_doc: ["L2-*"]` + 理由 `"BE-only, no UI"`) |
+| **be (BE-only、UI 完全不在)** | 全 skip 可 (frontmatter `skip_sub_doc: ["L2-*"]` + 理由 `"BE-only, no UI"`) |
+| **be (UI を持つ、ダッシュボード等)** | **画面要求 3 sub-doc (画面一覧 / 遷移 / UI 要素) 必須**、wireframe (モック High-Fi) のみ省略可 (`skip_sub_doc: ["L2-wireframe"]` + 理由 `"Low-Fi で代替、High-Fi は L10 UX refinement"`) |
 | fe | 全必須 |
 | db (UI 無し) | 全 skip 可 |
+| db (管理画面あり) | **画面要求 3 sub-doc 必須**、wireframe 省略可 |
 | fullstack | 全必須 |
 | agent | 全必須 (会話 UI を要素として扱う) |
 
 L4 画面設計、L5 物理データ設計 等の sub-doc skip も同様に drive で判定 (PLAN frontmatter `skip_sub_doc:` で明示)。
+
+> **2026-05-28 PO 指摘修正**: 旧版では「be (BE-only) = L2 全 skip 可」と一括判定していたが、ut-tdd 自身を含む「UI を持つ be」では画面要求 3 sub-doc は必須 (PO 指摘「L2 スキップすんな。モックは作らなくてもせめて画面要求は作れよ」)。skip 対象は wireframe (High-Fi モック) のみ。画面要求の機械検証義務は drive 非依存。
 
 > 注: SKILL_MAP では L9-L11 が「デプロイ検証 / 観測 / 運用学習」だったが、UT-TDD は V2 process docs を正本として L9=総合テスト / L10=UX 磨き / L11=総合レビュー+UAT / L12=デプロイ+受入 / L13=デプロイ後検証 / L14=運用検証 を採用。本表は SKILL_MAP の挙動を V2 process L 番号に合わせて remap している。
 

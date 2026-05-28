@@ -317,12 +317,14 @@ GD: ガイド・トラブルシューティング (参照)
 
 L2 画面設計 sub-doc 4 種への carry (旧 SCR-NN → PM/HM/GD-NN 再採番を反映):
 
-| L2 sub-doc | 役割 | 本 L1 からの引き継ぎ |
-|-----------|------|---------------------|
-| `docs/design/harness/L2-screen/screen-list.md` | 画面 ID・各画面の役割確定 | PM-01〜PM-05 / HM-01〜HM-08 / GD-01 の役割定義 (画面数 14) |
-| `docs/design/harness/L2-screen/screen-flow.md` | 遷移図・条件・イベント詳細 | §2 遷移シナリオ 6 パターン (PM↔HM↔GD 横断 deep-link 含む) |
-| `docs/design/harness/L2-screen/wireframe.md` | 各画面のレイアウト・情報配置 | §3 表示要望 / §1.PM.01〜§1.GD.01 情報要素 (14 画面 + GD-01 サイドナビ構造) |
-| `docs/design/harness/L2-screen/ui-element.md` | 主要 UI コンポーネント・入力/表示/操作要素 | §1 全画面操作要素 / §3 操作要望 (AI 指示テキストコピー UI 含む) |
+> **L2 必須実施判定 (2026-05-28 PO 指摘で修正)**: drive=be であっても ut-tdd は **「UI を持つ be」** (14 画面 dashboard) のため、**画面要求 3 sub-doc (screen-list / screen-flow / ui-element) は必須実施**、wireframe (High-Fi モック) のみ省略可 (Low-Fi で代替、High-Fi は L10 UX refinement)。PLAN-L2-03 は `skip_sub_doc: ["L2-wireframe"]` + 理由明記で省略可。詳細は concept §3.7「L2 sub-doc skip ルール」参照。
+
+| L2 sub-doc | 役割 | 本 L1 からの引き継ぎ | 必須/省略可 |
+|-----------|------|---------------------|-------------|
+| `docs/design/harness/L2-screen/screen-list.md` | 画面 ID・各画面の役割確定 | PM-01〜PM-05 / HM-01〜HM-08 / GD-01 の役割定義 (画面数 14) | **必須** |
+| `docs/design/harness/L2-screen/screen-flow.md` | 遷移図・条件・イベント詳細 | §2 遷移シナリオ 6 パターン (PM↔HM↔GD 横断 deep-link 含む) | **必須** |
+| `docs/design/harness/L2-screen/ui-element.md` | 主要 UI コンポーネント・入力/表示/操作要素 | §1 全画面操作要素 / §3 操作要望 (AI 指示テキストコピー UI 含む) | **必須** |
+| `docs/design/harness/L2-screen/wireframe.md` | 各画面のレイアウト・情報配置 (Low-Fi で OK) | §3 表示要望 / §1.PM.01〜§1.GD.01 情報要素。**主要画面 (PM-01 4 階層 / HM-02 heat map / HM-03 動的配線 / HM-04 DB / GD-01 サイドナビ) は Low-Fi ASCII art で構造を示す** | **省略可** (Low-Fi 推奨、High-Fi モックは L10 UX refinement) |
 
 その他参照:
 

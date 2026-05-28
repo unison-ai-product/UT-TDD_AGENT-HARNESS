@@ -48,7 +48,9 @@ v2_import: docs/migration/v2-import-ledger.md
 
 **注意**: L1 画面要求は「業務要求視点の必要画面列挙 + データ表示要望」。UI 具体化 (レイアウト / ワイヤーフレーム / UI 要素) は L2 画面設計 4 sub-doc に委ねる。
 
-**drive=be 注記**: harness core は be 駆動。dashboard は be の付属 UI として扱う。L2 sub-doc は `skip_sub_doc: true` + 理由明示で skip 可。ただし L1 画面要求は「どの画面が業務上必要か」の業務要求であり skip 対象ではない。
+**drive=be 注記 (2026-05-28 PO 指摘で修正)**: harness core は be 駆動だが、ut-tdd は **dashboard (14 画面 PM/HM/GD) を持つ「UI を持つ be」** であるため、**L2 画面設計 3 sub-doc (画面一覧 / 遷移 / UI 要素) は必須実施**。wireframe (High-Fi モック) のみ省略可 (Low-Fi で代替、High-Fi は L10 UX refinement)。詳細は concept §3.7 「L2 sub-doc skip ルール」参照。
+
+> **PO 指摘 (2026-05-28)**: 「L2 スキップすんな。モックは作らなくてもせめて画面要求は作れよ」 — 旧版で「drive=be で L2 全 skip 可」と判定していたが撤回。画面要求 3 sub-doc は drive 非依存で必須。
 
 ## §1 入力 (上流からの baton)
 
@@ -194,14 +196,14 @@ S2=b 30 秒ポーリング / S3=b PLAN ビュー パース構造化 / S5=b Recov
 - PM-02 工程ビュー (進捗・担当・詰まり 3 軸、機能内容除外): AA2=a 採用済
 - HM-03 配線図 + HM-04 DB 閲覧 再採用: CC1=a 採用済
 - GD-01 統合 1 画面 (左サイドナビ 7 カテゴリ): BB1/BB2=a 採用済
+- **L2 必須実施判定 (2026-05-28 PO 指摘)**: 旧「drive=be で L2 全 skip 可」撤回、**画面要求 3 sub-doc は必須**
 
-**L2 forward carry (継続)**:
-- **各画面 wireframe lift (L2)**: 14 画面の wireframe は L2 画面設計 sub-doc で詳細化
-  - PM-01 4 階層プルダウン UI 詳細
-  - HM-02 heat map UI (観点 × 軸 切替 UI)
-  - HM-03 動的配線図 UI (色分け + クリック詳細)
-  - HM-04 DB 閲覧 (整合性チェック表示)
-  - GD-01 左サイドナビ + 全文検索 UI
+**L2 forward carry (継続、必須実施、PO 指摘 2026-05-28)**:
+- **PLAN-L2-01 画面一覧 (screen-list.md) 必須実施**: 14 画面 (PM/HM/GD) の画面 ID / 役割 / 業務根拠 確定
+- **PLAN-L2-02 画面遷移 (screen-flow.md) 必須実施**: 6 シナリオ + 3 カテゴリ間 deep-link の詳細遷移図
+- **PLAN-L2-04 UI 要素 (ui-element.md) 必須実施**: 14 画面の主要 UI コンポーネント / 入力 / 表示 / 操作要素
+- **PLAN-L2-03 wireframe (wireframe.md) 省略可**: drive=be (UI を持つ) のため Low-Fi で代替可、High-Fi モックは L10 UX refinement 工程で実施。`skip_sub_doc: ["L2-wireframe"]` + 理由「Low-Fi で代替、High-Fi は L10 UX refinement、PO 指摘 2026-05-28」を frontmatter に明記
+  - ただし PM-01 4 階層プルダウン / HM-02 heat map / HM-03 動的配線図 / HM-04 DB 閲覧 / GD-01 左サイドナビ等の主要画面は Low-Fi (ASCII art / 簡易図) でも構造を示す必要あり
 - **画面遷移詳細**: 3 カテゴリ間 deep-link の URL 設計 (PM-NN / HM-NN / GD-NN/<category> 規約)
 - **PLAN-L2-01〜04 接続規約**: 本 sub-doc 全 14 画面を `dependencies.requires` に列挙
 

@@ -1,6 +1,6 @@
 ---
 doc_id: G1-readiness-report-2026-05-28
-title: "L1 G1 readiness report — PO サインオフ最終判断材料 (v3: 画面要求 14 画面 PM/HM/GD 全面再編 完了)"
+title: "L1 G1 readiness report — PO サインオフ最終判断材料 (v4: L2 skip 撤回追加修正、画面要求 3 sub-doc は drive 非依存で必須)"
 status: ready-for-PO-final-signoff
 created: 2026-05-28
 updated: 2026-05-28
@@ -11,11 +11,14 @@ related_audit: |
   Phase 3 ac2517e7 + a008e781 (Step A screen 14 画面再編 + Step C ledger/OT 再採番)
 ---
 
-# L1 G1 readiness report (2026-05-28、v3 最終版)
+# L1 G1 readiness report (2026-05-28、v4 最終版)
 
 > **判定**: **PASS** (Critical 0 / Important 0 / Minor 5 任意 carry)
+> **本 v4 で追加された修正**: L2 skip 撤回 (PO 指摘「L2 スキップすんな。モックは作らなくてもせめて画面要求は作れよ」)
+>   - concept §3.7「be (BE-only) = L2 全 skip 可」を撤回、「**be (UI を持つ) = 画面要求 3 sub-doc (画面一覧 / 遷移 / UI 要素) 必須、wireframe のみ省略可**」に修正
+>   - PLAN-L1-03 §0 + §7 carry / screen §4 / business §10.3.1 / ledger A-37 整合修正
 > **本 v3 で追加された変更**: 画面要求 14 画面 PM/HM/GD 全面再編 + 4 横断原則 + 3 カテゴリ Bounded Context (PO 凍結前追加ヒアリング全件採用)
-> **PO に求める判断**: L1 業務要求の **G1 ゲート凍結最終サインオフ** (5 sub-doc + 5 PLAN + L14 OT 44 件 + 14 画面 の pair freeze、L3 起票への進行承認)
+> **PO に求める判断**: L1 業務要求の **G1 ゲート凍結最終サインオフ** (5 sub-doc + 5 PLAN + L14 OT 44 件 + 14 画面 + L2 必須実施規約 の pair freeze、L3 起票への進行承認)
 
 ## §1 サマリ (PO スキャン用)
 
@@ -155,7 +158,8 @@ d2facad business §1.4 体系自己宣言 + functional §1.1 HELIX 翻案注記
 cdd6598 G1 audit Critical 4 件修正
 1b148e1 G1 readiness report 起票 v1
 b0d0fbf Step 1+2: 5 sub-doc + 5 PLAN + ledger + L14 OT 更新 (PO 追加ヒアリング 32 問反映、G1 readiness v2)
-<本commit> Step A/B/C: 画面要求 14 画面 PM/HM/GD 全面再編 + §3 横断原則 4 件 + 3 カテゴリ Bounded Context (G1 readiness v3)
+991b65f Step A/B/C: 画面要求 14 画面 PM/HM/GD 全面再編 + §3 横断原則 4 件 + 3 カテゴリ Bounded Context (G1 readiness v3)
+<本commit> L2 skip 撤回 (concept §3.7 修正 + ledger A-37 + 整合修正、G1 readiness v4)
 ```
 
 合計 14 commit、L1 G1 readiness v3 整備完了。

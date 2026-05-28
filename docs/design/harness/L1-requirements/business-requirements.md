@@ -282,6 +282,8 @@ UT-TDD Agent Harness の運用原則として、**画面・hook・gate のすべ
 
 カテゴリ間 deep-link は許容するが、各カテゴリの責務 (entity / 用語 / state 参照範囲) は混在させない。詳細は screen sub-doc §6 参照。
 
+> **L2 必須実施判定 (2026-05-28 PO 指摘で修正、A-37 反映)**: ut-tdd は dashboard (14 画面 PM/HM/GD) を持つ「**UI を持つ be**」のため、drive=be であっても L2 画面設計 3 sub-doc (画面一覧 / 遷移 / UI 要素) は必須実施。wireframe (High-Fi モック) のみ省略可 (Low-Fi で代替、High-Fi は L10 UX refinement)。旧 concept §3.7「be (BE-only) = L2 全 skip 可」を撤回し、BE-only (UI 完全不在) と「UI を持つ be」を区別する規約に修正済。画面要求の機械検証義務は drive 非依存。
+
 ### §10.4 skill / detector entity 参照注記 (B9=c)
 
 業務 entity §10.1 への entity 追加はしない (B9=c 採用)。skill / detector は以下の FR により機能要件として定義される:
