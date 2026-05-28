@@ -241,3 +241,10 @@ priority: P1」
 - **NFR-17 (telemetry PII redaction)**: nfr-grade.md §7 carry と整合、Phase B 着手時に確定
 - **L10 UX refinement**: HM-08 画面の最終 UX 確定は L10 UX 磨きへ送り
 - **CC2 carry 強化**: 全 §4 改善アクションは半自動 (提案 + 人間承認) の二段階を厳守、L4 / L5 で詳細実装
+
+### §9.1 PdM / tech-docs / fork 提案 carry (A-46、functional §7.1-§7.3 にも集約)
+
+- **§2 評価指標拡張候補** (PdM tech-innovation): D-14 reviewer cognitive load (SPACE Satisfaction、CC2 measurable proxy) / D-15 handover record 完全性 / D-16 gate block time / D-17 PLAN diff LOC を §2 5 指標に追加検討
+- **NSM 提案** (PdM marketing-innovation): NSM = Verified AI delivery rate (D-10 候補、process × safety × automation 統合) を BR-NSM-01 として L1 BR add-design 候補に追記済 (business §9 carry)
+- **HM-08 viral loop** (PdM PLG): handover JSON 共有リンク化 (cross-team adoption viral loop)、Phase B carry
+- **Phase B Learning Engine 入力強化** (PdM tech-innovation): LinearB LT 分解 (5 phase buckets) + Pluralsight churn (14 日同一 file 再編集率) を Learning Engine 主入力に追加、HM-08 BR-21 cold start 回避

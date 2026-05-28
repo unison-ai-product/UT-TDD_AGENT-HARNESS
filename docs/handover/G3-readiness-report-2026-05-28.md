@@ -1,6 +1,6 @@
 ---
 doc_id: G3-readiness-report-2026-05-28
-title: "L3 G3 readiness report — PO サインオフ判断材料 (v1: 3 sub-doc + L12 受入テスト 4 doc 本起草完了)"
+title: "L3 G3 readiness report — PO サインオフ判断材料 (v2: PO 指摘反映 — 6 subagent 調査結果 back-propagation + 残 2 件は別 commit)"
 status: ready-for-PO-signoff
 created: 2026-05-28
 updated: 2026-05-28
@@ -8,11 +8,21 @@ owner: PM (Opus)
 parent_g1: docs/handover/G1-readiness-report-2026-05-28.md (G1 v8 PASS)
 ---
 
-# L3 G3 readiness report (2026-05-28、v1)
+# L3 G3 readiness report (2026-05-28、v2)
 
-> **判定**: **PASS** (Critical 0 / Important 0 / Minor 0)
-> **本 v1 で完了**: L1 G1 v8 PASS → L3 sub-doc 3 件 + L12 受入テスト 1 doc 本起草完了
-> **PO に求める判断**: L3 機能要件の **G3 ゲート凍結サインオフ** (3 sub-doc + L12 受入テスト 1 doc + 3 PLAN の pair freeze、L4 起票への進行承認)
+> **判定**: **PASS** (Critical 0 / Important 0 / Minor 0、PO 指摘 2 件は別 commit で governance 改善対応)
+> **v2 で追加** (PO 指摘 「コーディングルール / ドメイン更新 / web 検索 / フォーク / pdm」反映):
+>   - **tech-fork × 3 並列調査**: CLI library / state mgmt / hook framework / coding standards / linter / BDD-AC framework / DDD entity (commander + clack + lowdb + xstate + PGlite + lefthook + lint-staged + Biome v2 既採用 + knip 推奨)
+>   - **tech-docs × 1**: V-model+AI / IPA × ISO 25010 + SonarQube / DDD back-propagation pattern + Neurosymbolic Guard (4 ADR 候補)
+>   - **pdm-tech-innovation (opus)**: DORA 4+1 → D-10〜D-13 / SPACE → D-14〜D-17 / Stripe writing-first + Linear cycle 固定の選定取り込み
+>   - **pdm-marketing-innovation (opus)**: JTBD 3 層 + NSM Verified AI delivery rate + Crossing Chasm Bowling Alley + PLG Aha moment 15 分 TTV + multi-team back-propagation
+>   - **L1 business §10.1.1 L3 由来 entity 11 件 back-propagation 追加** (AC / AT / plan_evaluation / skill_evaluation / model_evaluation / poc_evaluation / ipa_grade / cutover_command / kpi_metric / evaluation_batch / derived_view)
+>   - **L1 business §9 carry 拡張**: PdM 由来 BR (BR-JTBD-01 / BR-NSM-01 / BR-TTV-01 / BR-multi-01/02 + UX-04 / FR-L1-multi-01/02) + tech-docs 由来 governance (back-propagation protocol / NFR 3-tier / Neurosymbolic Guard / Testable Contract) 計 12 件 carry 追加
+>   - **L3 各 sub-doc §7/§9 carry に集約**: functional §7.1-§7.3 (fork + PdM + tech-docs) / business-detail §9.1 (PdM 評価指標拡張) / nfr-grade §7.4.1-§7.4.2 (KPI 拡張 + 3-tier 分類)
+> **PO 指摘 2 件 (別 commit 対応)**:
+>   1. PLAN 起票時の Web 検索 + フォーク + pdm 組込 process 改善 (PLAN テンプレ §3 ヒアリングに Step 0 = 外部調査追加)
+>   2. agent-guard に opus pdm-* 系の追加制約 (明示 --allow 必要、weekly quota 保護)
+> **PO に求める判断**: L3 機能要件の **G3 ゲート凍結サインオフ** (3 sub-doc + L12 受入テスト 1 doc + 3 PLAN の pair freeze + 12 carry 拡張、L4 起票への進行承認)
 
 ## §1 サマリ (PO スキャン用)
 

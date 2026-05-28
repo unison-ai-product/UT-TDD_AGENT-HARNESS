@@ -185,6 +185,23 @@ updated: 2026-05-28
 - NFR 閾値の測定アーキ (state schema / 集計クエリ / バッチ pipeline) は L4 基本設計
 - KPI D-01〜D-09 集計実装は L4 / L7 carry (本 PLAN は閾値定義のみ)
 
+### §7.4.1 KPI 拡張候補 (A-46 PdM tech-innovation + tech-docs)
+
+- **D-10〜D-13 (DORA)** Deployment Freq / Lead Time / Change Failure Rate / MTTR を Phase A NFR 追加 (9-mode 別集計)、NFR-12 と integrated
+- **D-14 (SPACE Satisfaction)** reviewer cognitive load Likert 1-5 を NFR-14 (human-as-residue) 強化候補、CC2 measurable proxy
+- **D-15 (SPACE Communication)** handover record 完全性 score を NFR-16 (onboarding 互換性) 拡張
+- **D-16 (SPACE Efficiency)** gate G2-G7 block time、NFR-13 関連
+- **D-17 (LinearB)** PLAN diff median LOC soft target 300、NFR-08 (implementation_status 真実性) 関連
+
+### §7.4.2 NFR 3-tier classification (A-46 tech-docs、L4 carry)
+
+NFR-01〜16 + 新規 KPI を以下 3 tier に分類:
+- **tier A** (doctor 自動判定): NFR-01/04/05/06/08/13/16 等、計測コマンド + 閾値で即判定
+- **tier B** (CI 後人間確認): NFR-07/14 等、レポート生成のみ
+- **tier C** (PO 合意のみ): NFR-02/15 (L4 ADR 専決) 等
+
+→ `docs/design/nfr-classification.md` L4 起票候補、`ut-tdd doctor --nfr` 実装入力
+
 ### §7.5 L12 受入テスト pair
 
 - 全 NFR-* (14 件 + L4/Phase B carry) の AC を L12 で AT-* に変換 (孤児 NFR = 0)

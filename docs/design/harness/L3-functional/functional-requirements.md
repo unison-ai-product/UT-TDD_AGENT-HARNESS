@@ -573,3 +573,40 @@ screen §5 G1-trace マトリクスを継承し、L3 FR-* × 14 画面 (PM/HM/GD
 - **L12 受入テスト設計**: 全 54+ AC-* を AT-* で被覆 (孤児 0)。本 sub-doc 完成後に L12 担当 sub-doc 本起草
 - **G3 lint 実装** (`ut-tdd plan lint --gate G3-trace`): R1 (BR/UX/FR-L1 → L3) / R2 (FR-* → AC → AT) / R3 (AT → 要求) / R4 (NFR → 閾値 → AT) を L7 で実装
 - **CC2 carry 強化**: L4 / L5 / L6 設計で「人間判断点」明示を継承 (各設計 layer に対応列追加)
+
+### §7.1 OSS フォーク候補 (tech-fork 調査 A-46、L4 ADR 入力)
+
+| 領域 | 採用候補 | license | 推奨度 | 役割 |
+|------|---------|---------|--------|------|
+| BDD/AC framework | **vitest BDD plugin + chai-as-promised** (調査中、@cucumber/cucumber TS adapter 候補) | MIT | 推奨 | AC Given-When-Then を vitest describe-it に直接マップ |
+| DDD entity 管理 | **zod + drizzle-orm**(zod 既採用) | MIT/Apache | 強推奨 | entity schema 正本、永続化は JSON ファイル (LowDB) |
+| CLI library | **commander + @clack/prompts** | MIT | **強推奨** | subcommand ディスパッチ + 対話 UX (next_action) |
+| state management | **lowdb** (Phase A) + **xstate** (Phase B 状態遷移) + **PGlite** (Phase B SQL) | MIT/Apache | 強推奨 | ファイルベース state、9-mode 状態遷移、Phase B 集計 |
+| hook framework | **lefthook + lint-staged** | MIT | **強推奨** | git + Claude Code + Codex 3 系統 hook 統制 |
+| coding standards | **Biome v2 (既採用) + knip** | MIT/Apache/ISC | **強推奨** | formatter + linter + dead code 検出、Bun ネイティブ |
+
+### §7.2 PdM 提案 (pdm 調査 A-46、Phase A 即適用 / Phase B carry)
+
+| 提案 ID | 内容 | 適用 | L1/L3 接続 |
+|---------|------|------|-----------|
+| **D-10〜D-13** (DORA) | Deployment Freq / Lead Time / CFR / MTTR を KPI 追加 (9-mode 別集計) | Phase A NFR | business §6.5 KPI 拡張 |
+| **D-14** (SPACE Satisfaction) | reviewer cognitive load Likert 1-5 (G2/G4/G7 後) | Phase A NFR | CC2 measurable proxy、HM-08 連動 |
+| **D-15** (SPACE Communication) | handover record 完全性 score (D-09 拡張) | Phase A NFR | 9-mode 切替時 context loss 直撃指標 |
+| **D-16** (SPACE Efficiency) | gate G2-G7 待機時間 (block time、flow efficiency) | Phase A NFR | bottleneck phase identify |
+| **D-17** (LinearB) | PLAN diff median LOC soft target 300 | Phase A NFR | AI 委譲大型 diff 防止 |
+| **BR-JTBD-01** | 3 層 job 明文化 (Functional/Emotional/Social) + UX-04 audit evidence 可視化新設 | Phase A add-design 候補 | business §1 / UX 拡張 |
+| **BR-NSM-01** | NSM = Verified AI delivery rate (D-10 候補、process × safety × automation 統合) | Phase A add-design 候補 | KPI 集約 |
+| **BR-TTV-01** | Aha moment + TTV ≤ 15 分 (FR-L1-44 連携) | Phase A→B 橋渡し | sample repo + migration tool + 教育資料 + CI template = whole product |
+| **BR-multi-01/02 + FR-L1-multi-01/02** | tenant 分離 + cross-team handover + team dashboard + policy inheritance | Phase B carry | multi-team 拡張時に活性化 |
+
+### §7.3 設計手法 carry (tech-docs 調査 A-46、L4 governance)
+
+- **back-propagation protocol 4-step** (`docs/governance/back-propagation-protocol.md` L4 起票): kind=reverse + confirmed_reverse_type=design による下流→上流 entity 進化記録手順
+- **NFR 3-tier classification** (`docs/design/nfr-classification.md` L4 起票): A doctor 自動 / B CI 後人間確認 / C PO 合意のみ
+- **Neurosymbolic Guard Pattern** (ADR-002 候補): LLM 判断ではなく TS 決定論コード + audit append-only (agent-guard.ts 既存実装の正本化)
+- **Testable Contract as Freeze Gate** (L7 carry): V-model 各 layer exit = artifact テスト可能性の機械検証 (`vmodel_validator` 実装)
+
+> **process 改善 carry (A-46 + PO 指摘 2026-05-28)**:
+> 1. PLAN 起票時に Web 検索 + OSS フォーク + pdm 調査を組み込む process 改善 (現状: PLAN-L3-01〜03 §3 ヒアリング項目に Step 0 = 外部調査を追加)
+> 2. agent-guard に opus pdm-* 系の追加制約 (明示 --allow 必要、weekly quota 保護)
+> 両件、別 commit で governance に反映予定。

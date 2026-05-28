@@ -239,6 +239,16 @@ UT-TDD Agent Harness の運用原則として、**画面・hook・gate のすべ
 | B9: skill / detector entity 参照注記の FR 詳細化 (FR-L1-12/08/18) | L3 FR | §10.4 参照注記 → FR 詳細化 |
 | BR-21: FR-L1-36/38/43 の詳細仕様 (AI 実行品質評価・改善サイクル) | L3 FR | Phase B、§11 carry |
 | 9 mode 統一合流シナリオの具体フロー (各 mode の closure 手順・RGC 設計) | L3 FR / L4 | §3.3.1 原則 → 機構設計 |
+| **(PdM tech-innovation A-46)** DORA 4+1 metrics → KPI D-10〜D-13 追加 (Deployment Freq / Lead Time / Change Failure Rate / MTTR、9-mode 別集計) | L4 ADR + Phase A NFR | pdm-tech-innovation 提案、業界 de facto standard、external benchmark 可能 |
+| **(PdM tech-innovation A-46)** SPACE Satisfaction → D-14 reviewer cognitive load (Likert 1-5、CC2 measurable proxy) + D-15 handover record 完全性 + D-16 gate G2-G7 待機時間 + D-17 PLAN diff median LOC | L4 ADR + Phase A NFR | AI harness 固有: reviewer 疲労が CC2 形骸化リスク |
+| **(PdM marketing-innovation A-46)** **BR-JTBD-01** 3 層 job 明文化 (Functional=trace 整合 / Emotional=AI 暴走不安解消 / Social=audit evidence 公開可能) + UX-04 audit evidence 可視化新設 | L3 / L4 add-design 候補 | Christensen JTBD、Phase A 即適用候補 |
+| **(PdM marketing-innovation A-46)** **BR-NSM-01** NSM = Verified AI delivery rate (process × safety × automation 統合 1 指標、D-10 候補) | L3 / L4 add-design 候補 | Sean Ellis / Amplitude NSF Playbook |
+| **(PdM marketing-innovation A-46)** **BR-TTV-01** Aha moment = 初回 doctor で drift 検出、TTV ≤ 15 分目標 (FR-L1-44 onboarding 連携) | Phase A→B 橋渡し | Wes Bush PLG、whole product = sample repo + migration tool + 教育資料 + CI template |
+| **(PdM marketing-innovation A-46)** **BR-multi-01/02 + FR-L1-multi-01/02** tenant 分離 + cross-team handover + team-level dashboard + policy inheritance (org→team→repo 3 階層 CLAUDE.md) | Phase B carry | multi-team 拡張時に活性化、solo maintainer では over-engineering |
+| **(tech-docs A-46)** back-propagation protocol 4-step (kind=reverse + confirmed_reverse_type=design による下流→上流 entity 進化記録) → `docs/governance/back-propagation-protocol.md` 起票 | L4 governance | InfoQ Guardian DDD 事例、§10.1.1 L3 由来 entity の取扱手順 |
+| **(tech-docs A-46)** NFR 3-tier classification (A: doctor 自動判定 / B: CI 後人間確認 / C: PO 合意のみ) → `docs/design/nfr-classification.md` | L4 carry | IPA × ISO 25010 二軸の実装適用、L7 で `ut-tdd doctor --nfr` 実装入力 |
+| **(tech-docs A-46)** Neurosymbolic Guard Pattern (LLM 判断ではなく TS 決定論コード + audit append-only) | L4 ADR-002 候補 | AWS Guardrails 事例、agent-guard.ts 設計原則の正本化 |
+| **(tech-docs A-46)** Testable Contract as Freeze Gate (V-model layer exit = artifact テスト可能性の機械検証) → `vmodel_validator` 実装 | L7 carry | DEV V-model+AI 事例、L6→L7 freeze + L3↔L12 pair 機械検証 |
 
 ## §10 業務 entity 列挙 (DDD)
 
@@ -259,9 +269,29 @@ UT-TDD Agent Harness の運用原則として、**画面・hook・gate のすべ
 | **carry** | carry | 後段工程へ送る未確定事項・前提条件 | PLAN §carry / `ut-tdd plan lint` |
 | **trace** | trace | 上流 ID → 下流 ID の双方向追跡記録 | `.ut-tdd/artifact/trace/` / `ut-tdd trace` |
 
+### §10.1.1 L3 由来 entity 追加 (back-propagation、A-46 ledger / 2026-05-28)
+
+L3 sub-doc 本起草 (functional / business-detail / nfr-grade + L12 受入テスト) で発生した新概念を L1 entity に逆方向 back-propagation する。今後 L4 で集約境界 / 値オブジェクト確定する対象として宣言。
+
+| 新規 entity | L3 由来 | 業務的意味 | L4 carry |
+|------------|---------|----------|----------|
+| **acceptance_criterion** (AC) | functional §2 / 全 FR-* に最低 3 件 | Given-When-Then 形式の受入条件、L7 TDD Red の入力 | 集約境界 = FR-* 配下、不変条件 = 3 件最低 (正常/異常/境界) |
+| **acceptance_test** (AT) | L12 受入テスト設計 §1 (87 件) | 各 AC を vitest / GHA workflow に変換、機械検証可能 | 集約境界 = AC 配下、AT 実装は L7 carry |
+| **plan_evaluation** | business-detail §1-§2 (5 指標) | PLAN status=completed 時の評価メトリクス | 集約 root、5 指標 + 集計時点 |
+| **skill_evaluation** | business-detail §7 FR-BR21-36 (Phase B) | skill 採用率 + 採用後成功率の sprint 末バッチ集計 | Phase B carry |
+| **model_evaluation** | business-detail §7 FR-BR21-38 (Phase B、opt-in) | model 別成功率 / cost 効率、`model-opt-in.yaml` 制御 | Phase B carry |
+| **poc_evaluation** | business-detail §7 FR-BR21-43 (Phase B) | Discovery (S0-S4) decision_outcome 集計 | Phase B carry |
+| **ipa_grade** | nfr-grade §1-§6 (NFR-* 14 件) | IPA 非機能要求グレード 2018 Lv1〜5、業界標準値オブジェクト | 値オブジェクト、IPA 公式 sample 整合 |
+| **cutover_command** | functional FR-10 (Recovery CLI コピー) | HM-06 で生成する CLI ロールバックコマンド、UI 直接実行禁止 (S5=b) | 値オブジェクト、CLI string + 引数構造 |
+| **kpi_metric** | business §6.5 D-01〜D-09 + nfr-grade KPI integrated | KPI 計測式 + 目標値 + 測定場所の 3 点組 | 値オブジェクト、§9 carry の DORA/SPACE 候補と統合検討 |
+| **evaluation_batch** | business-detail §5 (4 ソース統合) | sprint 末 trigger で 4 state ソース集計 → derived view | 集約 root、Phase B 実装 |
+| **derived_view** | business-detail §5 (HM-08 表示) | 集計済データ readonly view (30 秒ポーリング表示) | Phase A placeholder + Phase B 実装 |
+
+> **back-propagation protocol** (tech-docs 領域 3 提案、A-46): L3 実装フェーズで新概念が発見されたら → (1) 境界再定義 PLAN 起票 (kind=reverse + confirmed_reverse_type=design) → (2) L1 entity §10 更新 → (3) W-pair L1↔L14 re-trace 記録 → (4) L3 受入条件への反映。L4 で `docs/governance/back-propagation-protocol.md` 起票候補。
+
 ### §10.2 L4 carry
 
-業務 entity §10.1 の以下構造要素は L4 データ設計 sub-doc で確定する (Minor 5 G1 readiness v8 で機械検証可能化、箇条書き化 2026-05-28):
+業務 entity §10.1 + §10.1.1 (L3 由来 11 entity 追加) の以下構造要素は L4 データ設計 sub-doc で確定する (Minor 5 G1 readiness v8 で機械検証可能化、箇条書き化 2026-05-28 / L3 由来 entity 追加 A-46 2026-05-28):
 
 | carry 項目 | 役割 | L4 着地先 |
 |----------|------|---------|
