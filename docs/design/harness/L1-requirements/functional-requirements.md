@@ -59,6 +59,26 @@ FR-L1-01〜35 全件 (v2-import-ledger §6 より転写、1:1 コピー):
 | **FR-L1-34** | スキル・コマンド穴の優先順位管理 (vmodel-semantics 注入セット定義 / ut-tdd recover / ut-tdd route / retrofit skill 等) | integration-map | 穴リスト、設計確定済み仕様 | 優先順位付き実装タスクリスト | P2 |
 | **FR-L1-35** | 基盤整備状況の可視化 (実装済み / 設計済み・実装未 / 未設計の 3 区分で検証・テスト・検出基盤を一覧表示) | infra-readiness | 各機構の実装状況 | 整備状況一覧 (区分付き) | P2 |
 
+### §1.1 HELIX 固有名 → UT-TDD 翻案注記 (anti-corruption layer)
+
+FR-L1 35 件は HELIX-workflows 正本由来 (v2-import-ledger §6.1)。HELIX 固有実装名は UT-TDD 文脈で以下のように読み替える (concept §3.1.2.2 DDD anti-corruption layer 原則):
+
+| HELIX 固有名 | UT-TDD 翻案 | 該当 FR-L1 |
+|--------------|-------------|----------|
+| `helix.db` (SQLite) | `.ut-tdd/` 配下のファイルベース state (core + audit/event + derived views)、ADR-001 で SQLite は採用せず | FR-L1-06, FR-L1-07 |
+| `helix-doctor` | `ut-tdd doctor` | FR-L1-18 |
+| `helix-codex` | `ut-tdd codex` | FR-L1-09 |
+| `helix-recover` / `helix-route` (HELIX 穴) | `ut-tdd recover` / `ut-tdd route` (P2 carry、FR-L1-34) | FR-L1-34 |
+| `vmodel-semantics.yaml` | `docs/skills/<L>-injection.yaml` (UT-TDD では skill 注入を doc + YAML で正本化、interpreter なし) | FR-L1-12 |
+| `axis-09` / `axis-11` / `axis-15-19` (HELIX detector 番号) | UT-TDD 独自 detector 番号体系 (L3/L4 で再採番、現状は HELIX 番号を出典 reference として残す) | FR-L1-22, FR-L1-25 |
+| `gate-checks.yaml` | UT-TDD でも同名 path で扱う (`docs/governance/gate-checks.yaml`、L4 carry) | FR-L1-05 |
+| `helix-process/` doc 群 | UT-TDD では `docs/helix-process/` への取り込みではなく、`vendor/helix-source/docs/v2/process/` を read-only reference として参照 (FR-L1-32 で fold) | FR-L1-32 |
+| `helix-bench` / `helix-pr` 等 | `ut-tdd bench` / `ut-tdd pr` 等の同等命令体系 (L4 CLI 設計 carry) | FR-L1-17, FR-L1-20 |
+| `feedback_hook` (HELIX 5 軸) | `.ut-tdd/hooks/feedback.ts` (Bun、ADR-001 整合) | FR-L1-19, FR-L1-20 |
+| `cutover_orchestrator` | `ut-tdd cutover` (Recovery 収束専用、L4 carry) | FR-L1-10 |
+
+注記の目的: HELIX 由来知見を概念的に取り込みつつ、実装は UT-TDD 独自 (TS/Bun + ファイルベース state + 個別 CLI) で再構築する。
+
 ## §2 利用シナリオ
 
 ### シナリオ 1: Forward (新機能開発)

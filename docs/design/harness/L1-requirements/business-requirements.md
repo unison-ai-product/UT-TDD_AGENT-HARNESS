@@ -53,6 +53,26 @@ UX 要求 (UX-01〜03):
 - **開発チーム (AI + 人間)**: AI 実装エージェント (Claude Code / Codex) + 人間レビュアー。harness が役割境界を機械強制する対象。
 - **harness 運用者**: UT-TDD Agent Harness を社内開発基盤として導入するチーム。
 
+### §1.4 体系自己宣言 (本書が前提とする工程・mode・駆動・PLAN 規約)
+
+本書および L1 全 5 sub-doc は、以下の正本体系を採用する (v2 HELIX-workflows 由来、L0 概念層 + 要件定義書 で機械強制):
+
+| 体系要素 | 採用内容 | 正本 |
+|----------|---------|------|
+| **工程構造** | V-model L0-L14 + W-model 左右 pair (L1↔L14 / L2↔L10 / L3↔L12 / L4↔L9 / L5↔L8 / L6↔L7) | concept §3 / requirements §1.4 |
+| **入口 mode** | 9-mode ecosystem (Forward / Reverse / Discovery / Refactor / Retrofit / Recovery / Scrum / Incident / Add-feature) + 工程専門 2 (screen-design / frontend-design) | concept §2.5 |
+| **駆動タイプ** | 9 駆動 (be / fe / fullstack / db / agent / scrum / reverse / poc / troubleshoot)、各駆動で L2-L14 挙動が変わる | concept §3.7 / requirements §1.6 |
+| **PLAN 構造** | 機能 (doc) 単位、PLAN 内蔵物原則 (工程表 + 実装計画 + review Step 固定) | concept §3.6 / requirements §1.10.G.4 |
+| **L1 sub-doc** | 業務 / 機能 / 画面 / 技術 / 非機能 の 5 sub-doc (1 PLAN にまとめる旧運用は AP-11 違反) | concept §3.1.2.1 / requirements §1.10.G |
+| **4 artifact** | 設計 (文書) / 実装コード / テスト設計 (文書) / テストコード の双方向 12 directed edge | concept §2.3 / requirements §2.4 |
+| **3 段階 freeze** | 段階 A (Pair freeze、設計⇔テスト設計) / 段階 A2 (TDD Red、L7 entry) / 段階 B (4 artifact trace、G7) | concept §2.3 |
+| **DDD anti-corruption layer** | L1 entity は L0 §10 用語集と 1:1 対応、独自定義禁止 (§10 業務 entity 一覧で機械検証) | concept §3.1.2.2 / requirements §1.10.G.7 |
+| **NFR 体系** | IPA 非機能要求グレード 2018 6 大項目 + ISO 25010 二軸タグ | nfr §6 / nfr §7 |
+| **Forward フロー** | `plan → pair-freeze → implement → trace-freeze → review → accept` | concept §3.1 / §3.2 |
+| **AI ガード** | subagent guard (PreToolUse Agent、許可リスト 15 / model 明示 / override 禁止、fail-close) | `.claude/CLAUDE.md` Guard Rules / `.claude/hooks/agent-guard.ts` |
+
+本宣言節は U-体系-0 (体系自己宣言、PLAN-L1-01 §3.1 ヒアリング項目由来) の確定版。本書以降の L1 5 sub-doc は本体系を前提として記述する。
+
 ## §2 対象業務一覧
 
 | 業務領域 | 説明 |
