@@ -514,3 +514,21 @@ revert 検討条件 (main 混入後):
 - **同一 report 形式**: dev-local 出力と CI artifact が 1:1 (フィールド名 / status / severity)。エディタ AI agent は report を構造化解釈して self-修正できる。
 - **scope-aware**: dev-local は速度優先で changed-files の影響 feature だけ check 可能、CI は全量。
 - AI レビュー層 (§17.1) も二重実行する: dev-local は subagent (pmo-sonnet / code-reviewer 等) を `Agent` tool で呼び、CI は同じ判定ロジックを GHA 上で実行 (将来は workflow から Anthropic API 直叩き等)。AI 出力も report 統一。
+
+### 17.4 human-as-residue (人間判断負荷の最小化、PO declared 2026-05-28)
+
+Gate / 判定 / incident 分類はすべて **machine → AI → human の優先順位**で escalate。各層で closed なら次層を呼ばない。**人間に届くのは前 2 層で判定不能な residue のみ**。
+
+| 層 | 役割 | 次層へ escalate する条件 |
+| --- | --- | --- |
+| **machine** | deterministic 判定 | unknown (規則で判定不能) / AI レビュー必須と分類 |
+| **AI review** | contextual 判定 | unknown (文脈で判定不能) / danger tier (人間必須) |
+| **human** | residue 処理 | machine + AI で判定できなかったもの + 4-tier の danger |
+
+運用原則:
+- **default は machine + AI で closed**。人間に届くのは judgment residue のみ。
+- 4-tier 分類で **safe → auto-merge** (人間負荷ゼロ) / **caution → TL/AI review** (1 layer) / **danger → human** (residue) / **unknown → fail-close** (machine 拒否、原因調査は人間)。
+- **incident severity 自動分類** (rule-based) を組み込み、severity 判定を machine 一次処理 → ambiguous のみ human escalate。
+- **danger 判定の機械厳密化** (false positive 抑制) で不要な人間負荷を防ぐ (誤って danger 化された PR が人間に流れない)。
+- **escalate 量を計測** し、過度な escalate が出る Gate は machine / AI 側を強化する feedback loop を回す (cost-of-human-review メトリクス)。
+- 人間 escalate が必要な場合も、**「何を判断してほしいか / 根拠 / 推奨アクション」を structured report で提示** し、判断時間を最小化する。
