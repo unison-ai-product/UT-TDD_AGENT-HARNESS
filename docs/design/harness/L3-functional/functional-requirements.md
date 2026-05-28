@@ -50,6 +50,7 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 | FR-16 | FR-L1-16 | PM-03 / HM-06 | Incident | troubleshoot / all | hotfix 緊急判断 (PO 専属) / postmortem 確定 (TL/PO) |
 | FR-17 | FR-L1-17 | PM-03 / HM-07 | 全 mode | all | CI fail 時の修正 vs 再実行判断 (TL) |
 | FR-18 | FR-L1-18 | HM-07 / PM-04 | 全 mode | all | doctor 検出結果の優先度トリアージ (TL/運用者) |
+| FR-45 | FR-L1-45 (BR-08 派生、A-49 back-propagation) | PM-03 / HM-05 | 全 mode (大規模 doc 改定 trigger) | all | doc-reviewer 召喚判断 / bypass (PO 専属 S-03) |
 
 ---
 
@@ -485,24 +486,25 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 
 ---
 
-### FR-19: doc-reviewer 必須召喚 (BR-08 派生、A-47 ledger カバレッジ補完)
+### FR-45: doc-reviewer 必須召喚 (BR-08 派生、L1 FR-L1-45 と 1:1 対応、A-47 → A-49 back-propagation)
 
-- **L1 上流**: BR-08 (doc 品質の継続レビュー)
+- **L1 上流**: BR-08 (doc 品質の継続レビュー) → FR-L1-45 (L3 back-propagation で L1 追加)
 - **入力**: 大規模 doc 改定 / gate evidence 提出 / pair freeze の trigger event
 - **出力**: doc-reviewer (pmo-sonnet とは責務分離した read-only reviewer) 召喚記録 / 品質観点 (整合/網羅/一貫/明確) チェック結果
 - **振る舞い**: trigger event 発火時に doc-reviewer 必須召喚を機械強制、未召喚で gate (G1/G3/G7/G11) 通過禁止
+- **ID 補番注記 (A-49)**: 当初 L3 FR-19 として起草 (A-47 Critical C-02) → L1 FR-L1-19 (Learning Engine、P1) と ID 衝突発覚 → **FR-45 にリネーム + L1 FR-L1-45 として back-propagation** (PO 指摘 2026-05-28)
 
-#### AC-FR-19-01 (正常系)
+#### AC-FR-45-01 (正常系)
 - **Given**: 大規模 doc 改定 (例: L3 sub-doc 本起草 commit) を実行、doc-reviewer 召喚
 - **When**: `ut-tdd review --uncommitted --reviewer doc-reviewer`
 - **Then**: 品質観点 4 軸 (整合/網羅/一貫/明確) チェック結果が `.ut-tdd/audit/doc-reviews/<timestamp>.json` 記録 / pass で次工程 (gate) 許可 / 終了コード 0
 
-#### AC-FR-19-02 (異常系: 未召喚で gate 試行)
+#### AC-FR-45-02 (異常系: 未召喚で gate 試行)
 - **Given**: 大規模 doc 改定後、doc-reviewer 未召喚で `ut-tdd gate G3` 実行
 - **When**: G3 ゲート判定
-- **Then**: fail-close `Error: G3 通過には doc-reviewer 召喚必須 (BR-08 / FR-19)` / next_action `ut-tdd review --uncommitted --reviewer doc-reviewer 実行` / 終了コード 1
+- **Then**: fail-close `Error: G3 通過には doc-reviewer 召喚必須 (BR-08 / FR-45)` / next_action `ut-tdd review --uncommitted --reviewer doc-reviewer 実行` / 終了コード 1
 
-#### AC-FR-19-03 (境界系: bypass = PO 専属)
+#### AC-FR-45-03 (境界系: bypass = PO 専属)
 - **Given**: PO が `UT_TDD_DOC_REVIEWER_BYPASS=1` で bypass 試行 (緊急 hotfix 等)
 - **When**: G3 ゲート判定
 - **Then**: bypass + audit `.ut-tdd/audit/doc-reviewer-bypass/<timestamp>.json` (PO ID + 理由必須) / KPI D-08 集計 / 終了コード 0

@@ -393,9 +393,9 @@ R1: BR-01〜08 + BR-21 + UX-01〜03 = 12 件全て、最低 1 画面に紐付く
 | **UX-02** | **PM-01 / HM-01 (直接)** | HM-02 (カバレッジ) | ダッシュボード体験 |
 | **UX-03** | PM-03 (next_action 提示) / PM-05 (Handover) / HM-06 (Recovery CLI コピー) | GD-01 (Troubleshooting) | gate fail / handover / Recovery で next_action 明確 |
 
-### §5.3 FR-L1 P0 ⇔ 画面 trace 表 (R3 必須対象 — 18 件全件)
+### §5.3 FR-L1 P0 ⇔ 画面 trace 表 (R3 必須対象 — 19 件全件、A-49 で FR-L1-45 追加)
 
-R3: FR-L1 P0 18 件全て最低 1 画面に紐付く (孤児 P0 FR-L1 禁止、block)。P1/P2 は warn。
+R3: FR-L1 P0 19 件全て最低 1 画面に紐付く (孤児 P0 FR-L1 禁止、block)。P1/P2 は warn。
 
 | FR-L1-ID | 主画面 | 副画面 | trace 根拠 |
 |----------|--------|--------|-----------|
@@ -417,6 +417,7 @@ R3: FR-L1 P0 18 件全て最低 1 画面に紐付く (孤児 P0 FR-L1 禁止、b
 | **FR-L1-16** (Incident ワークフロー) | PM-03 (障害シグナル) | HM-06 (hotfix) | Incident 検出 + 対応 |
 | **FR-L1-17** (CI/PR 連携) | PM-03 (gate 証跡) | HM-07 | CI gate 通過状態 |
 | **FR-L1-18** (横断検出 ut-tdd doctor 一括集約) | **HM-07 (直接 Doctor)** | PM-04 | Doctor 全量検出 = 直接実現 |
+| **FR-L1-45** (doc-reviewer 必須召喚、A-49 back-propagation) | **PM-03 (Gate サインオフ前 review trigger)** | HM-05 (audit ログ) | BR-08 派生 P0、未召喚で gate fail-close |
 
 ### §5.4 FR-L1 P1/P2 ⇔ 画面 trace 表 (warn 対象 — 孤児許容)
 
@@ -475,7 +476,7 @@ R2: 全 14 画面が最低 1 つの BR/UX/FR-L1 に紐付く (孤児画面禁止
 |--------|------------|------|
 | **R1** (BR/UX → 画面): 孤児 BR 禁止 (block) | BR-01〜08 + BR-21 + UX-01〜03 = 12 件全て最低 1 画面に紐付き | PASS — 孤児 0 件 |
 | **R2** (画面 → BR/UX/FR-L1): 孤児画面禁止 (block) | 14 画面 (PM 5 + HM 8 + GD 1) 全て最低 1 件紐付き | PASS — 孤児 0 件 |
-| **R3** (FR-L1 P0 → 画面 必須): 孤児 P0 FR-L1 禁止 (block) | FR-L1 P0 18 件全て最低 1 画面に紐付き (P1/P2 は warn) | PASS — P0 孤児 0 件 |
+| **R3** (FR-L1 P0 → 画面 必須): 孤児 P0 FR-L1 禁止 (block) | FR-L1 P0 19 件全て最低 1 画面に紐付き (P1/P2 は warn、A-49 で FR-L1-45 追加) | PASS — P0 孤児 0 件 |
 | **R4** (`dependencies.requires` 整合): business + functional 必須 | L3 PLAN 起票時に BR/UX + FR-L1 + screen 全件 requires 列挙 (§5 冒頭注記) | 宣言済 — L3 起票時に充足 |
 
 ---

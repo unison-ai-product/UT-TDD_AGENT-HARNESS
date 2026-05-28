@@ -19,15 +19,17 @@ describe("G3-trace coverage (機能一覧 + ドメイン整合の機械検証)",
   const docs = loadDocs();
   const result = analyzeG3Trace(docs);
 
-  it("L1 FR-L1 41 件全件抽出される (P0:18 + P1:18 + P2:5)", () => {
+  it("L1 FR-L1 42 件全件抽出される (P0:19 + P1:18 + P2:5、A-49 で FR-L1-45 追加)", () => {
     const frL1 = extractFrL1Ids(docs.l1Functional);
-    // L1 表で確定済の件数 (FR-L1-01〜35 + 37/39/40/41/42/44 = 41 件)
-    expect(frL1.size).toBe(41);
+    // L1 表で確定済の件数 (FR-L1-01〜35 + 37/39/40/41/42/44/45 = 42 件、A-49 back-propagation)
+    expect(frL1.size).toBe(42);
+    expect(frL1.has("FR-L1-45")).toBe(true);
   });
 
-  it("L3 FR-* (P0 18 件 + FR-19 doc-reviewer 補完 = 19 件) 全件抽出", () => {
+  it("L3 FR-* (P0 18 件 + FR-45 doc-reviewer A-49 = 19 件) 全件抽出", () => {
     const l3Fr = extractL3FrIds(docs.l3Functional);
     expect(l3Fr.size).toBeGreaterThanOrEqual(19);
+    expect(l3Fr.has("FR-45")).toBe(true);
   });
 
   it("L3 AC-* (FR-* × 3 + BR-21 派生 + UX-01 補完) 全件抽出", () => {
@@ -69,8 +71,8 @@ describe("G3-trace coverage (機能一覧 + ドメイン整合の機械検証)",
     expect(result.orphanAc).toEqual([]);
   });
 
-  it("件数サマリ (G3 readiness v3 整合確認)", () => {
-    expect(result.totals.frL1).toBe(41);
+  it("件数サマリ (G3 readiness v3 整合確認、A-49 で FR-L1 42 件)", () => {
+    expect(result.totals.frL1).toBe(42);
     expect(result.totals.l3Fr).toBeGreaterThanOrEqual(19);
     expect(result.totals.ac).toBeGreaterThanOrEqual(54);
     expect(result.totals.l1Nfr).toBe(14);
