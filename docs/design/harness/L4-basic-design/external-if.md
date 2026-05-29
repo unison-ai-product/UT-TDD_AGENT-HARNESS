@@ -24,8 +24,10 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 
 | service | 関係 | 用途 | 実現 FR |
 |---|---|---|---|
-| **Claude (Code)** | harness ⇄ (相互) | AI 実装エージェント runtime。hook で harness が guard | FR-09 / FR-L1-42 |
-| **Codex** | harness → 呼ぶ | AI 実装エージェント runtime (委譲先 SE/PE) | FR-L1-42 |
+| **Claude (Code)** | harness ⇄ (相互) | AI 実装エージェント runtime。**harness は Claude Code 内に hook として常駐** (host runtime)。**契約プラン (月額) 認証は Claude Code 自身が管理、harness は API key を持たない** | FR-09 / FR-L1-42 |
+| **Codex** | harness → 呼ぶ | AI 実装エージェント runtime (委譲先 SE/PE)。**`codex exec` CLI を subprocess 起動** (`ut-tdd codex` 導線)。**契約プラン認証は `codex login` が自己管理、harness は API key を渡さない** | FR-L1-42 |
+
+> **⚠ 前提 (CLAUDE.md)**: Claude Code / Codex は **API 直叩きではなく契約プラン (月額) + CLI / hook** で利用する。harness が管理するのは **CLI 起動 + hook** であって AI provider の API/SDK/key ではない。本 doc の AI runtime 境界はこの前提に立つ (§3/§5/§6)。
 | **GitHub** | harness → 呼ぶ | VCS (PR / branch protection) | FR-17 |
 | **GitHub Actions** | harness → 呼ぶ | CI で gate 再実行 | FR-17 |
 | **Sentry** | harness ← 観測される | 本番エラー観測 (Incident trigger) | FR-16 (経由で FR-L1-20 観測記録、間接) |
@@ -45,7 +47,7 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 
 | 境界 | Precondition (前提) | Postcondition (保証) | Invariant (不変) |
 |---|---|---|---|
-| **(a) AI runtime** | agent-guard 通過 (allowlist 15 + model 明示) + budget 上限内 | 呼び出し記録が `.ut-tdd/audit/` に append (invocation_log) | core は provider SDK に直接依存しない (adapter 経由のみ、ADR-001) |
+| **(a) AI runtime** | agent-guard 通過 (allowlist 15 + model 明示) + 契約プラン CLI が認証済 (Claude Code 常駐 / `codex login` 済) | 呼び出し記録が `.ut-tdd/audit/` に append (invocation_log) | **API 直叩きでなく契約プラン CLI/hook 経由のみ** (CLAUDE.md)。core は provider SDK/API/key に依存しない (adapter = CLI subprocess + hook、ADR-001) |
 | **(b) VCS・CI** | ローカル gate 証跡が存在 | CI 側 gate 再実行結果がローカルと一致 (NFR-13 dev-local+CI 整合) | branch protection は gate pass を必須化、bypass は Incident のみ (FR-17) |
 | **(c) 観測・監視** | (inbound) alert payload が schema 準拠 | Incident mode 自動 routing trigger (FR-08/16) | 観測は記録のみ、harness の判定ロジックに副作用を直接与えない (mode routing 経由) |
 | **(d) 依存管理** | (inbound) Dependabot PR/alert | security NFR 経路で trishe (人間トリアージ) | 自動マージしない (人間確認、禁止事項) |
@@ -65,32 +67,37 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 
 ## §5 秘密情報・認証境界 (⚠ 人間確認事項、確定しない)
 
-| 項目 | 設計方針 (確定は PO 承認) |
-|---|---|
-| API key / token / credential | **doc / example / rules に書かない** (禁止事項)。env 経由 (`.env` は gitignore) または OS credential store。本 doc にも具体値を記載しない |
-| Claude/Codex 認証 | runtime adapter が認証を吸収。harness core は認証情報を保持しない |
-| GitHub 認証 | `gh` CLI / Actions secrets に委譲。harness は token を扱わない |
-| 認証・認可・本番影響 | **人間確認なしに仕様確定しない** (禁止事項)。本 doc は方針記述に留め、確定は PO/security レビュー |
+> **大原則 (CLAUDE.md)**: AI runtime (Claude/Codex) は **契約プラン (月額) + CLI/hook** で利用し、**API 直叩きをしない**。したがって harness は **AI provider の API key を一切保持・授受しない**。AI runtime の「認証」は各 CLI の契約ログインが自己管理する harness 外の関心事である。
 
-> 本 §5 は**設計方針の記述のみ**。認証フロー・認可ポリシー・秘密管理方式の確定は L5 詳細設計 + security 監査 + PO 承認を要する (G4 前に escalation)。
+| 項目 | 設計方針 |
+|---|---|
+| **Claude Code 認証** | Claude **契約プラン (月額)** のログインを **Claude Code 自身が管理**。harness は Claude Code 内に hook 常駐するだけで認証情報を持たない。**API key なし** |
+| **Codex 認証** | Codex **契約プラン**のログイン (`codex login`) を **Codex CLI 自身が管理**。harness は `codex exec` を subprocess 起動するだけ。**API key を渡さない** |
+| GitHub 認証 | `gh` CLI のログイン (契約/PAT は gh が管理) / CI は Actions secrets。harness core は token を保持しない |
+| 観測・依存 (Sentry/Uptime/Dependabot) | inbound (向こうから webhook/通知)。読取 token が要る場合のみ env 経由 (`.env` gitignore)、**doc/example に具体値を書かない** (禁止事項) |
+| 認証・認可・本番影響 | **人間確認なしに仕様確定しない** (禁止事項) |
+
+> 本 §5 は方針記述。**AI runtime は API key 管理が不要 (契約プラン CLI 自己認証) なので harness の認証関心はほぼ消える**。残るのは GitHub (gh 自己ログイン) と観測系 inbound token のみで、確定は L5 + PO レビュー。
 
 ## §6 runtime adapter 境界 (architecture §6 連動)
 
 ```
 core (正規化 intent: "reviewer を呼べ" / "worker に委譲")
-  │  (provider 非依存、SDK 直依存禁止)
+  │  (provider 非依存、API/SDK 直依存禁止)
   ▼
-runtime adapter  ← provider 固有 (Claude subagent 起動 / Codex CLI / gh) を吸収
-  │
+runtime adapter  ← provider 固有の起動方式を吸収:
+  │                ・Claude = Claude Code の Agent tool / hook (host 常駐、契約プラン自己認証)
+  │                ・Codex  = `codex exec` CLI subprocess (`codex login` 自己認証)
+  │                ・GitHub = `gh` CLI
   ▼
-外部 service (Claude / Codex / GitHub / Sentry ...)
+AI runtime / 外部ツール (Claude Code / Codex CLI / gh ...)  ← いずれも契約プラン or CLI 自己認証、harness は API key を持たない
 ```
 
 | 層 | 責務 | 依存 |
 |---|---|---|
 | **core** | 正規化 intent 発行 + agent-guard 判定 | schema のみ (architecture §3 一方向) |
-| **adapter** | provider 固有の起動・認証・エラー変換 | 外部 SDK / CLI (隔離) |
-| **外部 service** | 実行 | — |
+| **adapter** | provider 固有の**起動方式** (CLI subprocess / Claude Code Agent・hook) + エラー変換。**API key は扱わない** (契約プラン CLI が自己認証) | CLI / hook (隔離、SDK/API 非依存) |
+| **AI runtime / 外部ツール** | 実行 (契約プラン or CLI 自己認証) | — |
 
 > adapter 層は architecture.md §6「依存隔離」の具体化。adapter を差し替えれば provider 切替可 (Claude↔Codex、FR-L1-42 provider 引継ぎの基盤)。
 
