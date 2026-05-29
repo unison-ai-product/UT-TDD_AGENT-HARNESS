@@ -238,7 +238,7 @@ priority: P1」
 - **L4 基本設計**: BR-21 評価指標の集計アーキ (state schema / クエリ / 集計バッチ) は L4 基本設計で確定
 - **L4 データ設計**: 評価指標 entity (PlanEvaluation / SkillEvaluation / ModelEvaluation / PocEvaluation) は L4 データ設計で確定
 - **Phase B 実装 PLAN**: Phase B 着手時 (§6.2 AND 条件達成時) に PLAN-Phase-B-NN として Learning Engine 本実装を起票
-- **NFR-17 (telemetry PII redaction)**: nfr-grade.md §7 carry と整合、Phase B 着手時に確定
+- **NFR-18 (telemetry PII redaction)**: nfr-grade.md §7.3 carry と整合、Phase B 着手時に確定 (旧 NFR-17 を A-54 で NFR-18 にリネーム、NFR-17 = 統合セキュリティとの ID 衝突解消)
 - **L10 UX refinement**: HM-08 画面の最終 UX 確定は L10 UX 磨きへ送り
 - **CC2 carry 強化**: 全 §4 改善アクションは半自動 (提案 + 人間承認) の二段階を厳守、L4 / L5 で詳細実装
 

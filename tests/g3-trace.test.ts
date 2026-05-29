@@ -34,23 +34,24 @@ describe("G3-trace coverage (機能一覧 + ドメイン整合の機械検証)",
     expect(l3Fr.has("FR-30")).toBe(true);
   });
 
-  it("L3 AC-* (FR × 3 + workflow core 21 + BR-21 + UX-01 = 81+ 件) 全件抽出", () => {
-    const ac = extractAcIds(docs.l3Functional, docs.l3BusinessDetail);
-    // FR-01〜18 × 3 = 54 + FR-45 × 3 + FR-23/24/25/26/27/29/30 × 3 = 21 + BR-21 + UX-01 = 81+
-    expect(ac.size).toBeGreaterThanOrEqual(75);
+  it("L3 AC-* (FR × 3 + workflow core 21 + BR-21 + UX-01 + AC-NFR-* = 100+ 件) 全件抽出", () => {
+    const ac = extractAcIds(docs.l3Functional, docs.l3BusinessDetail, docs.l3NfrGrade);
+    // 実測 111 件 = AC-FR 79 (FR-09-04 含む) + AC-FR-BR21 12 + AC-UX-01 1 + AC-NFR-* 19 (A-54)
+    expect(ac.size).toBeGreaterThanOrEqual(110);
   });
 
-  it("L12 AT-* 全件抽出 (Phase A 即実装 + carry placeholder + A-50 workflow core 21 件追加)", () => {
+  it("L12 AT-* 全件抽出 (Phase A 即実装 + carry placeholder、A-54 で実数 117 件に再カウント)", () => {
     const at = extractAtIds(docs.l12AcceptanceTest);
-    // AT-FR 79+ + AT-BR21 15+ + AT-NFR 18+ + 補完 = 110+
-    expect(at.size).toBeGreaterThanOrEqual(100);
+    // 実測 117 件 = AT-FR 79 + AT-BR21/FR-BR21 15 + AT-UX 1 + AT-NFR 22
+    expect(at.size).toBeGreaterThanOrEqual(116);
   });
 
-  it("L1 NFR 14 件 (NFR-09/10 欠番) が正しく定義", () => {
+  it("L1 NFR 15 件 (NFR-09/10 欠番、NFR-17 統合セキュリティ A-54 追加) が正しく定義", () => {
     const l1Nfr = extractL1NfrIds();
-    expect(l1Nfr.size).toBe(14);
+    expect(l1Nfr.size).toBe(15);
     expect(l1Nfr.has("NFR-09")).toBe(false);
     expect(l1Nfr.has("NFR-10")).toBe(false);
+    expect(l1Nfr.has("NFR-17")).toBe(true);
   });
 
   it("L3 nfr-grade で L1 NFR 14 件全件被覆 (orphan NFR = 0)", () => {
@@ -73,10 +74,14 @@ describe("G3-trace coverage (機能一覧 + ドメイン整合の機械検証)",
     expect(result.orphanAc).toEqual([]);
   });
 
-  it("件数サマリ (G3 readiness v3 整合確認、A-49 で FR-L1 42 件)", () => {
+  it("R3-rev: 全 AT-FR-NN-MM が対応 AC を持つ (逆引き孤児 = 0、A-54: AT-FR-09-04 解消)", () => {
+    expect(result.orphanAt).toEqual([]);
+  });
+
+  it("件数サマリ (G3 readiness v4 整合確認、A-54 で FR-L1 42 / NFR 15)", () => {
     expect(result.totals.frL1).toBe(42);
-    expect(result.totals.l3Fr).toBeGreaterThanOrEqual(19);
-    expect(result.totals.ac).toBeGreaterThanOrEqual(54);
-    expect(result.totals.l1Nfr).toBe(14);
+    expect(result.totals.l3Fr).toBeGreaterThanOrEqual(26);
+    expect(result.totals.ac).toBeGreaterThanOrEqual(110);
+    expect(result.totals.l1Nfr).toBe(15);
   });
 });

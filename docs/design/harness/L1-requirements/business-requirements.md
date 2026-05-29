@@ -9,7 +9,7 @@ v2_import: docs/migration/v2-import-ledger.md
 ---
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
-> **件数確定**: business は BR-08 件 / NFR-08 件 / UX-03 件で確定 (根拠: 2026-05-28 v2 HELIX-workflows 正本由来、`docs/migration/v2-import-ledger.md §5.1 A-12〜A-24 / §6`)。
+> **件数確定**: business は **BR-01〜08 (8 件) + BR-21 (P2、§11) = BR 9 件** / **UX-01〜03 (3 件)** で確定 (根拠: 2026-05-28 v2 HELIX-workflows 正本由来、`docs/migration/v2-import-ledger.md §5.1 A-12〜A-24 / §6`)。NFR は `nfr.md` で **15 件確定** (NFR-09/10 欠番、NFR-17 統合セキュリティ A-54 追加。本 doc §6 は IPA 大項目で参照のみ、NFR-ID 件数の正本は nfr.md)。
 > **L3 接続規約**: `next_pair_freeze: L3`。L3 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
 
 # UT-TDD Agent Harness — L1 業務要求 (business)
@@ -206,7 +206,7 @@ UT-TDD Agent Harness の運用原則として、**画面・hook・gate のすべ
 | UX-02 | OT-10 | ダッシュボード UX 確認 |
 | UX-03 | OT-11 | gate/lint 失敗時 next_action 明確性確認 |
 
-(詳細は `docs/test-design/harness/L1-operational-test-design.md` OT-01〜13 参照)
+(本表は BR/UX → OT-01〜11 の対応。OT 全件 (追加観点含む) の詳細は `docs/test-design/harness/L1-operational-test-design.md` 参照)
 
 ## §8 関連 doc
 

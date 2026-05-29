@@ -10,7 +10,7 @@ v2_import: docs/migration/v2-import-ledger.md
 ---
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
-> **件数確定**: nfr は **NFR-14 件で確定** (NFR-01〜08 + NFR-11〜16、計 14 件。NFR-09/10 は U-補-3 PO 判断連動の欠番。根拠: 2026-05-28 v2 HELIX-workflows 正本 A-20 + PO declared GHA audit framework / server-optional + NFR-16 onboarding 互換性追加、`docs/migration/v2-import-ledger.md §5.1 A-20`)。
+> **件数確定**: nfr は **NFR-15 件で確定** (NFR-01〜08 + NFR-11〜17、NFR-09/10 は U-補-3 PO 判断連動の欠番、計 15 件。根拠: 2026-05-28 v2 HELIX-workflows 正本 A-20 + PO declared GHA audit framework / server-optional + NFR-16 onboarding 互換性追加、`docs/migration/v2-import-ledger.md §5.1 A-20`。**NFR-17 統合セキュリティは A-54 audit 軸1 I-01 back-propagation 追加、2026-05-29**)。
 > **L4 接続規約** (technical/nfr は L4 pair): `next_pair_freeze: L4`。L4 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
 
 # UT-TDD Agent Harness — L1 非機能要求 (nfr)
@@ -62,9 +62,10 @@ v2_import: docs/migration/v2-import-ledger.md
 | NFR-ID / 観点 | 要望 | 根拠 |
 |--------------|------|------|
 | **NFR-11** | **GHA audit framework の役割分離** — GHA workflow と reviewer agent の権限・実行コンテキスト・出力責務を分離し、agent が gate の判定権限を持たない (machine 一次判定、AI/human は補完) | concept §audit-framework §17 / FR-L1-09 AI ガード + NFR-12 連動 |
-| **5 段階セキュリティ統合** | concept §2.4 の 5 段階セキュリティ統合を L4 セキュリティ設計の基準とする | L0 §2.4 / concept §2.4 |
-| **OWASP Agentic Top 10** | AI エージェント固有リスク (Prompt Injection / Insecure Tool Use 等) に対応 | FR-L1-09 AI ガード |
-| **EU AI Act Article 14 human oversight** | 人間の監督可能性を機械保証 (gate サインオフ / agent guard / fail-close) | BR-02 / NFR-06 / NFR-14 human-as-residue |
+| **NFR-17** | **統合セキュリティグレード (DevSecOps 5 段階 + OWASP Agentic Top 10 + EU AI Act Art.14 human oversight)** — 下記 3 観点を単一トレース ID 配下で機械保証し、G1-trace / KPI 計測 / L4 セキュリティ設計の親 NFR とする (A-54 audit 軸1 I-01: 観点のみで NFR-ID 不在 → trace 対象外だった漏れを解消) | (a) 5 段階: Develop / Commit / Build / Deploy / Operate 各段の統制 (Build = SAST / SCA / Secret Scan、L0 §2.4) / (b) OWASP Agentic Top 10 (Prompt Injection / Insecure Tool Use 等、FR-L1-09) / (c) EU AI Act Art.14 (NFR-06 / NFR-14 / BR-02 で機械保証)。詳細グレードは L3 nfr-grade §5 + L4 セキュリティ設計 |
+| **NFR-17 配下: 5 段階セキュリティ統合** | concept §2.4 の 5 段階セキュリティ統合を L4 セキュリティ設計の基準とする | L0 §2.4 / concept §2.4 (NFR-17(a)) |
+| **NFR-17 配下: OWASP Agentic Top 10** | AI エージェント固有リスク (Prompt Injection / Insecure Tool Use 等) に対応 | FR-L1-09 AI ガード (NFR-17(b)) |
+| **NFR-17 配下: EU AI Act Article 14 human oversight** | 人間の監督可能性を機械保証 (gate サインオフ / agent guard / fail-close) | BR-02 / NFR-06 / NFR-14 human-as-residue (NFR-17(c)) |
 | **API key / secret / PII / credential** | rules / docs / examples に書かない (禁止事項) | CLAUDE.md 禁止事項 |
 | **認証・認可・決済・PII・本番影響** | 人間確認なしに仕様確定しない (escalate 必須) | CLAUDE.md 禁止事項 |
 | **agent guard bypass 条件** | `UT_TDD_ALLOW_RAW_AGENT=1`: PO 明示承認 + audit ログ記録必須 (B6=b、F6=a)。緊急障害対応以外での行使は禁止 | `.claude/CLAUDE.md` Subagent Guard / NFR-14 連動 |
@@ -81,7 +82,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | **性能・拡張性** | 実務で機能する完成度 / machine×AI 2 層補完 / server-optional 拡張 | NFR-07 / NFR-12 / NFR-15 |
 | **運用・保守性** | 更新性 / GitHub 正本 / 実装宣言真実性 / dev-local+CI 二重実行 / human-as-residue / 排泄系契約 | NFR-02 / NFR-05 / NFR-08 / NFR-13 / NFR-14 |
 | **移行性** | 言語非依存 / AI mode 非依存 | NFR-04 / NFR-03 |
-| **セキュリティ** | GHA audit framework 役割分離 / 5 段階 / OWASP / EU AI Act Article 14 | NFR-11 / concept §2.4 |
+| **セキュリティ** | GHA audit framework 役割分離 / 統合セキュリティグレード (5 段階 / OWASP Agentic / EU AI Act Art.14) | NFR-11 / **NFR-17** |
 | **システム環境** | Windows / macOS / Linux ネイティブ / Bun runtime | NFR-01 / ADR-001 |
 
 グレード値は L3 NFR グレード sub-doc (`docs/design/harness/L3-requirements/nfr-grade.md`) で確定する。
@@ -110,6 +111,7 @@ Phase B の server sync + telemetry (PII redaction / GDPR / audit trail 等) は
 | NFR-14 | 運用・保守性 | Usability (Operability) — human oversight 側面 / Maintainability (Analysability) |
 | NFR-15 | 性能・拡張性 | Portability (Adaptability) / Maintainability (Modularity) |
 | NFR-16 | 可用性 | Compatibility (Co-existence) / Portability (Adaptability) |
+| NFR-17 | セキュリティ | Security (Confidentiality / Integrity / Accountability / Authenticity) |
 
 **対象外特性と除外理由**:
 

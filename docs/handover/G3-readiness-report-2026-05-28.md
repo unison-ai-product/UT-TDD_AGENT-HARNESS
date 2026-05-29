@@ -8,9 +8,11 @@ owner: PM (Opus)
 parent_g1: docs/handover/G1-readiness-report-2026-05-28.md (G1 v8 PASS)
 ---
 
-# L3 G3 readiness report (2026-05-28、v3)
+# L3 G3 readiness report (2026-05-28、v3 → 2026-05-29 A-54 update)
 
-> **判定**: **PASS** (Critical 0 / Important 0 / Minor 0、PO 指摘 2 件は別 commit で governance 改善対応)
+> **🔴 A-54 update (2026-05-29)**: PO 指摘「L3 まで見直して見落としチェック」で 4 軸独立 audit (pmo-sonnet ×4) を実施し、**v3「PASS」は機械検証が空洞だった**ことが判明 (lint が AC-NFR-* 未捕捉・AT→AC 逆引き孤児検出なし・doc 内 AT 件数が 87/95/116 三者三様)。4 カテゴリの漏れを全件是正 (詳細 = ledger A-54)。**更新後の確定値**: L1 NFR **14→15 件** (NFR-17 統合セキュリティ追加、旧 telemetry NFR-17 → NFR-18 リネーム) / L12 AT **95→117 件** (実数再カウント) / FR-L1 42 件 (不変) / lint 強化後 vitest **46 pass** / g3-trace 全 orphan=0 (機械実効化)。**G3 再判定は本 update 反映後に PO サインオフ**。以下 v3 本文の旧件数 (NFR 14 / AT 95 等) は A-54 で上書き済。
+>
+> **判定 (v3 時点、A-54 で機械検証強化)**: PASS 候補 (Critical 0 / Important 0 / Minor 0、PO 指摘 2 件は別 commit で governance 改善対応)
 > **v3 で追加** (PO 指摘「要件定義項目はすべてカバーできているの？」反映): pmo-sonnet (sonnet) でカバレッジ matrix 作成 → Critical 4 件 + Important 10 件 + Minor 5 件発見
 >   - **Critical 4 件解消** (G3 PASS 阻害リスク): C-01 UX-01 AT 追加 (AC-UX-01-01 + AT-UX-01、3 バランス被覆) / C-02 FR-19 新規 (BR-08 doc-reviewer 必須召喚) + AC 3 件 + AT 3 件 / C-03 NFR-03 (AI mode 非依存) nfr-grade §1 行追加 + AT-NFR-03 / C-04 AT-FR-09-04 (opus override 禁止) 追加
 >   - **Important 重点解消**: P1 13 件 carry 明示 note (functional §3.1、L4 PLAN 起票時の必須参照) + D-01/D-04 nfr-grade 行追加 + AT 追加
@@ -62,9 +64,9 @@ parent_g1: docs/handover/G1-readiness-report-2026-05-28.md (G1 v8 PASS)
 - **§6 Phase A/B 境界**: Phase A = 宣言のみ + HM-08 placeholder / **Phase B 着手条件 = G14 + KPI D-07 ≥ 50% AND** (A-44 ledger TL 採用)
 - **§7 FR-BR21-36/38/43**: 各 AC 2 件 計 6 AC (Phase B carry)
 - **CC2 carry**: 全改善アクション「人間承認必須」(半自動 = 提案 + 承認の 2 段階)
-- **NFR-17 (PII redaction)**: Phase B carry で nfr-grade と整合
+- **NFR-18 (PII redaction)**: Phase B carry で nfr-grade と整合 (A-54 で旧 NFR-17→18 リネーム)
 
-### 確認 3: L3 NFR グレード値 (NFR-01〜16、IPA Lv + 受入閾値)
+### 確認 3: L3 NFR グレード値 (NFR-01〜17、15 件 IPA Lv + 受入閾値。A-54 で NFR-17 統合セキュリティ追加)
 
 `docs/design/harness/L3-functional/nfr-grade.md` (~250 行)
 
@@ -72,7 +74,7 @@ parent_g1: docs/handover/G1-readiness-report-2026-05-28.md (G1 v8 PASS)
   - 可用性 Lv2 / 性能 Lv2 / 保守性 Lv3 / 移行性 Lv2 / セキュリティ Lv3 / 環境 Lv3
 - 各 NFR-* に **IPA Lv + 受入閾値 + 測定方法 + pass 条件 + AC** (4 件サンプル AC 詳細化)
 - KPI integrated: D-02 (NFR-13) / D-05 (NFR-08) / D-06 (NFR-14) / D-07 (NFR-12) / D-09 (NFR-16)
-- **§7 carry**: NFR-02/15 = L4 ADR / NFR-09 = L4 carry / NFR-17 = Phase B (PII redaction)
+- **§7 carry**: NFR-02/15 = L4 ADR / NFR-09 = L4 carry / NFR-18 = Phase B (PII redaction、A-54 で旧 NFR-17→18)
 
 ### サマリ: L12 受入テスト設計 (AT-* 87 件量閉じ、L3 ↔ L12 pair)
 
@@ -112,7 +114,7 @@ L1 G1-trace と同構造で 4 軸検証 (本起草時点で人手確認):
 
 - BR-21 Learning Engine 本実装 (skill/model/PoC 評価 + 半自動適用)
 - HM-08 リアルタイム表示 (集計バッチ → イベントストリーム)
-- telemetry default + PII redaction (NFR-17 候補)
+- telemetry default + PII redaction (NFR-18 候補、A-54 で旧 NFR-17→18 リネーム)
 - model 単位 evaluation opt-in
 
 ## §5 commit chain (G3 readiness 整備の commit)

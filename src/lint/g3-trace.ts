@@ -70,12 +70,16 @@ export function extractL3FrIds(l3Functional: string): Set<string> {
   for (const m of l3Functional.matchAll(/^### FR-(\d{2}):/gm)) {
     matches.add(`FR-${m[1]}`);
   }
-  // FR-19 (BR-08 派生、A-47) も含める
+  // FR-45 (BR-08 派生、A-49 で FR-19 → FR-45 リネーム) も上記正規表現で抽出される
   return matches;
 }
 
-/** L3 functional + business-detail から AC-* 全件を抽出 */
-export function extractAcIds(l3Functional: string, l3BusinessDetail: string): Set<string> {
+/** L3 functional + business-detail + nfr-grade から AC-* 全件を抽出 */
+export function extractAcIds(
+  l3Functional: string,
+  l3BusinessDetail: string,
+  l3NfrGrade: string,
+): Set<string> {
   const matches = new Set<string>();
   // L3 functional: AC-FR-NN-NN
   for (const m of l3Functional.matchAll(/####\s+AC-FR-(\d{2})-(\d{2})\b/g)) {
@@ -88,6 +92,10 @@ export function extractAcIds(l3Functional: string, l3BusinessDetail: string): Se
   // L3 functional §3.2 UX-01 補完
   for (const m of l3Functional.matchAll(/####\s+AC-UX-(\d{2})-(\d{2})/g)) {
     matches.add(`AC-UX-${m[1]}-${m[2]}`);
+  }
+  // L3 nfr-grade: AC-NFR-* (A-54 audit 軸4 C-04: NFR 由来 AC を孤児検出対象に追加)
+  for (const m of l3NfrGrade.matchAll(/####\s+AC-NFR-([A-Z0-9-]+)/g)) {
+    matches.add(`AC-NFR-${m[1]}`);
   }
   return matches;
 }
@@ -103,9 +111,9 @@ export function extractAtIds(l12: string): Set<string> {
 
 /** L1 NFR (NFR-01〜16、欠番 NFR-09/10) を抽出 */
 export function extractL1NfrIds(): Set<string> {
-  // L1 nfr.md は確定済 14 件 (NFR-09/10 欠番)
+  // L1 nfr.md は確定済 15 件 (NFR-09/10 欠番、NFR-17 統合セキュリティ A-54 追加)
   const ids = new Set<string>();
-  for (const n of [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16]) {
+  for (const n of [1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17]) {
     ids.add(`NFR-${n.toString().padStart(2, "0")}`);
   }
   return ids;
@@ -139,6 +147,7 @@ export interface G3TraceResult {
   orphanFrL1: string[];
   orphanL3Fr: string[];
   orphanAc: string[];
+  orphanAt: string[];
   orphanNfr: string[];
   totals: {
     frL1: number;
@@ -155,7 +164,7 @@ export function analyzeG3Trace(docs?: DocSource): G3TraceResult {
 
   const frL1 = extractFrL1Ids(d.l1Functional);
   const l3Fr = extractL3FrIds(d.l3Functional);
-  const ac = extractAcIds(d.l3Functional, d.l3BusinessDetail);
+  const ac = extractAcIds(d.l3Functional, d.l3BusinessDetail, d.l3NfrGrade);
   const at = extractAtIds(d.l12AcceptanceTest);
   const l1Nfr = extractL1NfrIds();
   const l3Nfr = extractL3NfrIds(d.l3NfrGrade);
@@ -197,7 +206,16 @@ export function analyzeG3Trace(docs?: DocSource): G3TraceResult {
     if (!matched) orphanAc.push(acId);
   }
 
-  // R4: L1 NFR (14 件) が L3 nfr-grade で全件被覆
+  // R3-rev: functional FR 由来の AT-FR-NN-MM は対応 AC-FR-NN-MM を必須とする
+  // (A-54 audit 軸4 C-03: AT-FR-09-04 が AC 不在のまま pass していた逆引き孤児を機械検出)
+  // 他 family (AT-FR-BR21 / AT-UX / AT-NFR / AT-NFR-MIGRATION) は AC 構造が疎のため対象外
+  const orphanAt: string[] = [];
+  for (const atId of at) {
+    const m = atId.match(/^AT-FR-(\d{2})-(\d{2})$/);
+    if (m && !ac.has(`AC-FR-${m[1]}-${m[2]}`)) orphanAt.push(atId);
+  }
+
+  // R4: L1 NFR (15 件) が L3 nfr-grade で全件被覆
   const orphanNfr: string[] = [];
   for (const nfr of l1Nfr) {
     if (!l3Nfr.has(nfr)) orphanNfr.push(nfr);
@@ -207,6 +225,7 @@ export function analyzeG3Trace(docs?: DocSource): G3TraceResult {
     orphanFrL1,
     orphanL3Fr,
     orphanAc,
+    orphanAt,
     orphanNfr,
     totals: {
       frL1: frL1.size,

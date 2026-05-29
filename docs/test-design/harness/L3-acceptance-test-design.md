@@ -26,7 +26,7 @@ updated: 2026-05-28
 - 全 FR-* (P0 18 件 = FR-01〜18) / AT 対応必須
 - 全 AC-* (54+ 件、3.section AC) / AT 対応必須
 - 全 BR-21 派生 (FR-BR21-36/38/43) / AT 対応必須
-- 全 NFR-* (14 件 = NFR-01/04/05/06/07/08/11/12/13/14/15/16 + L4 carry / Phase B carry) / AT 対応必須 (carry の場合は placeholder AT)
+- 全 NFR-* (15 件、NFR-09/10 欠番。NFR-17 = 統合セキュリティ A-54 追加) / AT 対応必須 (carry の場合は placeholder AT)
 - 孤児 = 0 (機械検証 `ut-tdd plan lint --gate G3-trace`)
 
 ## §1 受入テスト (AT-*)
@@ -89,7 +89,7 @@ updated: 2026-05-28
 | **AT-FR-18-01** | AC-FR-18-01 (doctor clean) | 検出 0 件 → HM-07 All clean / exit 0 | vitest doctor test |
 | **AT-FR-18-02** | AC-FR-18-02 (doctor 検出 3 件) | error 1 + warn 2 → severity 別表示 / error で exit 1 | vitest doctor test |
 | **AT-FR-18-03** | AC-FR-18-03 (detector timeout) | 30s 超 → skip + warn / 他結果集約 | vitest doctor test |
-| **AT-FR-09-04** | (C-04 補完、A-47) opus override 禁止 AC | `Agent({subagent_type: "pmo-sonnet", model: "opus"})` → fail-close exit 2 / audit block 記録 (pdm-* 以外への opus 指定は block) | vitest agent-guard test 拡張 |
+| **AT-FR-09-04** | AC-FR-09-04 (opus override 禁止、A-54 で functional に AC 追加) | `Agent({subagent_type: "pmo-sonnet", model: "opus"})` → fail-close exit 2 / audit block 記録 (pdm-* 以外への opus 指定は block) | vitest agent-guard test 拡張 |
 | **AT-FR-45-01** | AC-FR-45-01 (doc-reviewer 召喚正常系) | `ut-tdd review --uncommitted --reviewer doc-reviewer` → `.ut-tdd/audit/doc-reviews/<timestamp>.json` 記録 / pass → 次工程許可 / exit 0 | vitest review test |
 | **AT-FR-45-02** | AC-FR-45-02 (未召喚で G3 fail-close) | doc-reviewer 未召喚 + `ut-tdd gate G3` → fail-close error / next_action 提示 / exit 1 | vitest gate + review test |
 | **AT-FR-45-03** | AC-FR-45-03 (PO bypass) | `UT_TDD_DOC_REVIEWER_BYPASS=1` + 理由 → bypass + audit / D-08 集計 / exit 0 | vitest gate + audit test |
@@ -140,7 +140,7 @@ updated: 2026-05-28
 
 > **AT-BR21 合計 = 15 + 1 (UX-01 補完) = 16 件** (Phase A 即実装 7 件 + Phase B carry 9 件)
 
-### §1.3 nfr-grade sub-doc 由来 AT (NFR-* 14 件)
+### §1.3 nfr-grade sub-doc 由来 AT (NFR-* 15 件)
 
 | AT-ID | 対応 NFR + AC | 受入条件 | 機械検証 |
 |-------|--------------|---------|---------|
@@ -161,24 +161,25 @@ updated: 2026-05-28
 | **AT-NFR-14-02** | NFR-14 / AC-NFR-14-02 | sprint bypass 3 件 → warn / block しない | vitest evaluation test |
 | **AT-NFR-15** | NFR-15 / AC-NFR-15 | server なしで全 P0 FR 動作 | vitest E2E test |
 | **AT-NFR-16** | NFR-16 / AC-NFR-16 | onboarding skip_sub_doc 段階 → G1 段階通過 | vitest gate + onboarding test |
+| **AT-NFR-17** | NFR-17 / AC-NFR-17 (統合セキュリティ、A-54 追加) | CI secret-scan fail-close + agent guard fail-close 全件 pass + 判断ゲート human oversight 経路存在 | vitest agent-guard + gate test / secret-scan (Phase A) |
 | **AT-NFR-MIGRATION-01** | (移行) / AC-NFR-MIGRATION-01 | cutover wave 完了 → G14 pass | vitest gate test (Phase A G14 carry) |
 | **AT-NFR-02** | NFR-02 (L4 ADR carry) | L4 ADR 確定後に lift | L4 carry placeholder |
 | **AT-NFR-09** | NFR-09 (L4 carry、parity-check) | L4 ADR 後に lift | L4 carry placeholder |
-| **AT-NFR-17** | NFR-17 (Phase B carry、PII redaction) | Phase B 着手後に lift | Phase B carry placeholder |
+| **AT-NFR-18** | NFR-18 (Phase B carry、PII redaction、旧 AT-NFR-17 を A-54 でリネーム) | Phase B 着手後に lift | Phase B carry placeholder |
 
-> **AT-NFR 合計 = 18 + 3 (A-47 補完: NFR-03 + D-01 + D-04) = 21 件** (Phase A 即実装 18 件 + L4 carry 2 件 + Phase B carry 1 件)
+> **AT-NFR 合計 = 19 + 3 = 22 件** (Phase A 即実装 19 件 [A-47 補完: NFR-03 / D-01 / D-04 + A-54: NFR-17 統合セキュリティ] + L4 carry 2 件 [NFR-02/09] + Phase B carry 1 件 [NFR-18 PII redaction])
 
 ### §1.4 件数まとめ
 
 | 区分 | 件数 |
 |------|------|
-| AT-FR (functional 由来、FR-01〜19) | 58 (A-47 補完: FR-09-04 + FR-19 × 3 追加) |
-| AT-UX (UX-01 補完) | 1 (A-47 補完) |
-| AT-BR21 (business-detail 由来、Phase A) | 6 |
-| AT-FR-BR21 (Phase B carry) | 9 |
-| AT-NFR (nfr-grade 由来、Phase A) | 18 (A-47 補完: NFR-03 + D-01 + D-04 追加) |
-| AT-NFR (L4/Phase B carry placeholder) | 3 |
-| **合計** | **95** (Phase A 即実装 83 件 + carry 12 件) |
+| AT-FR (functional 由来: FR-01〜18 ×3 = 54 + AT-FR-09-04 + FR-45 ×3 + workflow core FR-23/24/25/26/27/29/30 ×3 = 21) | 79 |
+| AT-UX (UX-01 補完) | 1 |
+| AT-BR21 (business-detail 由来、BR-21 §1〜§6) | 9 |
+| AT-FR-BR21 (FR-BR21-36/38/43 派生、Phase B carry 中心) | 6 |
+| AT-NFR (nfr-grade 由来、Phase A: 18 + NFR-17 統合セキュリティ A-54) | 19 |
+| AT-NFR (L4/Phase B carry placeholder: NFR-02/09/18) | 3 |
+| **合計** | **117** (Phase A 即実装 105 件 + carry 12 件。A-54 で実数再カウント、旧 95 は集計漏れ) |
 
 ## §2 量閉じ一覧 (要求 → AT 被覆、孤児チェック)
 
@@ -194,10 +195,10 @@ updated: 2026-05-28
 - **孤児 BR-21 派生 = 0**
 
 ### nfr-grade sub-doc
-- NFR-01/04/05/06/07/08/11/12/13/14/15/16 → AT-NFR-XX (Phase A 即実装 15 件)
+- NFR-01/03/04/05/06/07/08/11/12/13/14/15/16/17 + D01/D04 → AT-NFR-XX (Phase A 即実装)
 - NFR-02/09 → AT-NFR-02/09 (L4 carry placeholder)
-- NFR-17 (新規候補) → AT-NFR-17 (Phase B carry placeholder)
-- **孤児 NFR = 0** (14 件 + carry 3 件全件被覆)
+- NFR-18 (telemetry PII redaction、新規候補) → AT-NFR-18 (Phase B carry placeholder、旧 NFR-17 を A-54 でリネーム)
+- **孤児 NFR = 0** (15 件 + carry 全件被覆)
 
 ## §3 trace (④ → ②)
 
@@ -211,13 +212,13 @@ updated: 2026-05-28
 |--------|------------|-----------------|
 | **R1** (BR/UX/FR-L1 → L3) | 全 BR-01〜08 + BR-21 + UX-01〜03 + FR-L1 P0 18 件 が L3 FR-*/business-detail/nfr-grade のいずれかに紐付き | PASS — functional §2 (FR-01〜18) + business-detail §1-§7 (BR-21 派生) + nfr-grade §1-§6 (NFR-01〜16) で全件被覆 |
 | **R2** (FR-* → AC → AT) | 全 L3 FR-* に AC-* 最低 3 件、全 AC-* に AT-* 対応 (孤児 FR-* 禁止) | PASS — 18 FR × 3 AC × 1 AT = 54 件全件マップ |
-| **R3** (AT → 要求) | 全 AT-* が L3 要求 (FR-/AC-/NFR-/BR-21 派生) に紐付き (孤児 AT 禁止) | PASS — 87 AT 全件 trace 確認 |
-| **R4** (NFR → 閾値 → AT) | 全 NFR-* に閾値 (IPA Lv + 数値 / KPI) + AT 紐付き | PASS — 14 NFR + 3 carry 全件紐付き |
+| **R3** (AT → 要求) | 全 AT-* が L3 要求 (FR-/AC-/NFR-/BR-21 派生) に紐付き (孤児 AT 禁止) | PASS — 117 AT 全件 trace 確認 (A-54: AT-FR-09-04 に AC-FR-09-04 追加で孤児解消、AT→AC 逆引き lint 機械化) |
+| **R4** (NFR → 閾値 → AT) | 全 NFR-* に閾値 (IPA Lv + 数値 / KPI) + AT 紐付き | PASS — 15 NFR + carry 全件紐付き |
 
 > **lint 実装**: `ut-tdd plan lint --gate G3-trace` の R1-R4 ルール実装は L7 carry。本 PLAN は trace 整合の宣言と人手確認まで。
 
 ## §5 carry / 次工程
 
 - **L4 carry AT**: AT-FR-10-03 (UI 直接実行不可) / AT-FR-17-01〜03 (GHA workflow) / AT-NFR-02 / AT-NFR-09 → L4 設計 + 実装後に L12 AT として lift
-- **Phase B carry AT**: AT-FR-BR21-36-01〜43-02 (9 件) / AT-NFR-17 → Phase B 着手時に lift
+- **Phase B carry AT**: AT-FR-BR21-36-01〜43-02 (6 件) + AT-BR21-06/08 (UI、2 件) / AT-NFR-18 (PII redaction) → Phase B 着手時に lift
 - **L7 実装**: 全 AT-* を vitest / GHA workflow に変換、Red 状態で先行作成 (TDD 強制 FR-02)

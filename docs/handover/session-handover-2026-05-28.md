@@ -5,7 +5,7 @@ status: active
 created: 2026-05-28
 updated: 2026-05-28
 owner: PM (Opus)
-next_action: PO G3 PASS サインオフ判断
+next_action: PO G3 PASS サインオフ判断 (A-54 audit 是正反映後、2026-05-29 update)
 parent_g1: docs/handover/G1-readiness-report-2026-05-28.md (v8 PASS 確定)
 parent_g3: docs/handover/G3-readiness-report-2026-05-28.md (v3、PASS 待ち)
 ---
@@ -14,10 +14,11 @@ parent_g3: docs/handover/G3-readiness-report-2026-05-28.md (v3、PASS 待ち)
 
 ## §1 現在 phase
 
-- **L1**: G1 PASS 確定 (v8、commit 59f5fd5、Minor 0 件)
-- **L3**: G3 readiness v3 = PASS 推奨待ち (Critical 0 / Important 0 / Minor 0、PO サインオフ未)
+- **L1**: G1 v8 PASS 維持 + **A-54 で NFR-17 統合セキュリティ追加 (件数 14→15) により部分再オープン後 再凍結候補** (2026-05-29)
+- **L3**: G3 readiness v3 → **A-54 audit 是正済** (4 軸独立 audit で機械検証空洞化/件数誤り/carry不整合/L0→L1住所薄の 4 漏れ全件是正)。**PO G3 サインオフ待ち**
 - **L4**: 未起票 (G3 PASS 後着手)
-- **PO 直問**: 1 件保留 (G3 PASS or 残追加修正)
+- **A-54 確定値**: FR-L1 42 / NFR 15 (NFR-17 統合セキュリティ、telemetry は NFR-18 にリネーム) / L3 AC 111 / L12 AT 117 / vitest 46 pass / g3-trace 全 orphan=0
+- **PO 直問**: G3 サインオフ判断 (A-54 是正反映後)
 
 ## §2 直近 commit chain (本セッション分、新しい順)
 
@@ -98,7 +99,7 @@ parent_g3: docs/handover/G3-readiness-report-2026-05-28.md (v3、PASS 待ち)
 - NFR-02 (npm/template/Packages 配布形態 ADR-002 候補)
 - NFR-15 (Cloudflare/fly/docker Phase B 拡張 ADR-003 候補)
 - NFR-09 (rule parity 機械検証実装方式)
-- NFR-17 (Phase B telemetry PII redaction、新規候補)
+- NFR-18 (Phase B telemetry PII redaction、新規候補。A-54 で旧 NFR-17→18 リネーム、NFR-17 = 統合セキュリティに割当)
 
 ### governance L4 carry
 - `docs/governance/back-propagation-protocol.md` (4-step 手順 doc 化)

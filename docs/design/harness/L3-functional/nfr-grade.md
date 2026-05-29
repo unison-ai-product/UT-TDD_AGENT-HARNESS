@@ -12,8 +12,8 @@ created: 2026-05-28
 updated: 2026-05-28
 ---
 
-> **SSoT 参照**: L1 NFR-01〜16 (14 件、NFR-09/10 連動欠番) = nfr.md / IPA グレード Lv = IPA 非機能要求グレード 2018 公式 sample (社内内製ツール想定) / ISO 25010:2023 = 品質特性 catalog / KPI D-01〜D-09 = business-requirements.md §6.5。
-> **scope**: L1 NFR-01〜16 の IPA グレード Lv + 受入閾値 + 測定方法 + pass 条件確定のみ。NFR 体系追加は L4 carry。NFR-17 (telemetry PII redaction、Phase B) は §7 carry で宣言。
+> **SSoT 参照**: L1 NFR-01〜17 (15 件、NFR-09/10 連動欠番) = nfr.md / IPA グレード Lv = IPA 非機能要求グレード 2018 公式 sample (社内内製ツール想定) / ISO 25010:2023 = 品質特性 catalog / KPI D-01〜D-09 = business-requirements.md §6.5。
+> **scope**: L1 NFR-01〜17 (15 件、NFR-09/10 連動欠番) の IPA グレード Lv + 受入閾値 + 測定方法 + pass 条件確定。NFR-17 = 統合セキュリティ (A-54 audit 軸1 I-01 back-propagation、§5)。さらなる NFR 体系追加は L4 carry。NFR-18 (telemetry PII redaction、Phase B 新規候補) は §7.3 carry で宣言 (旧 NFR-17 を A-54 で NFR-18 にリネーム、統合セキュリティとの ID 衝突解消)。
 > **L12 接続**: 全 NFR-* に AT-* 紐付け (孤児 NFR = 0、機械検証)。
 
 # UT-TDD Agent Harness — L3 NFR グレード値 (nfr-grade) — IPA Lv + 受入閾値
@@ -24,7 +24,7 @@ updated: 2026-05-28
 |--------|------|--------|---------|---------|----------|
 | **NFR-01** | cross-platform (Windows/macOS/Linux ネイティブ) | Lv2 (業務時間内継続) | 3 OS で主要 CLI コマンド 95% 以上動作 | `ut-tdd doctor --platform-check` / CI matrix (Windows + macOS + Linux) | 3 OS で同一 commit が `ut-tdd plan lint / gate / doctor` 全件 pass |
 | **NFR-03** | AI mode 非依存 (4 mode 全動作、A-47 補完) | Lv2 | standalone / claude-only / codex-only / hybrid 全 mode で P0 FR-01〜18 動作 | `ut-tdd doctor --mode-check` / 4 mode × 統制対象 repo テスト | 4 mode で全 P0 FR が pass / mode 別差異 0 件 |
-| **NFR-06** | fail-close (guard / gate / lint) | Lv2 | 全 fail-close 経路で例外漏れ 0 件 | agent-guard test / gate test / vitest 全件 | 全 fail-close test pass / 例外漏れ audit 0 件 |
+| **NFR-06** | fail-close (guard / gate / lint) | Lv3 (§5 セキュリティ正本) | 全 fail-close 経路で例外漏れ 0 件 | agent-guard test / gate test / vitest 全件 | 全 fail-close test pass / 例外漏れ audit 0 件 |
 | **NFR-16** | onboarding 互換性 (skip_sub_doc) | Lv2 | KPI D-09 ≥ 95% (handover 引継ぎ成功率、A-43 / A-44 ledger 整合) | `.ut-tdd/handover/` 引継ぎ成功 / 失敗ログ集計 | sprint 末 D-09 ≥ 95% |
 
 #### AC-NFR-01 (正常系)
@@ -41,6 +41,11 @@ updated: 2026-05-28
 - **Given**: 既存 repo に `ut-tdd onboarding` 実行、skip_sub_doc 段階整備モード
 - **When**: G1 ゲート実行
 - **Then**: 未整備 sub-doc skip / 整備済 sub-doc のみ gate 評価 / G1 段階通過
+
+#### AC-NFR-03 (正常系: 4 mode 非依存、A-54 audit C-04 補完)
+- **Given**: standalone / claude-only / codex-only / hybrid の 4 mode
+- **When**: 各 mode で P0 FR-01〜18 を実行
+- **Then**: 4 mode 全件で pass / mode 別判定差異 0 件 (注: NFR-03 は L1 §7 二軸タグで Portability=移行性、可用性軸でも 4 mode 継続性として評価 — 両軸にまたがる要件)
 
 > **TL 採用根拠 (Lv2)**: 社内内製ツール想定、Lv3-5 (24/7 高可用) は過剰投資。業務時間内 (営業日 9-18 時) の継続動作で十分。Phase B server-optional 採用時に Lv3 へ昇格検討可。
 
@@ -73,12 +78,17 @@ updated: 2026-05-28
 
 | NFR-ID | 要件 | IPA Lv | 受入閾値 | 測定方法 | pass 条件 |
 |--------|------|--------|---------|---------|----------|
-| **NFR-07** | MVP なし (5 条件全件総合) | Lv3 | 5 成功条件 (BR-01〜05 由来) 全件被覆 | OT-01〜05 + OT-04 + AT 量閉じ | 全条件 OT/AT pass |
+| **NFR-07** | MVP なし (5 条件全件総合) | Lv3 | 5 成功条件 (BR-01〜05 由来) 全件被覆 | OT-01〜05 (L14 operational-test-design.md) + AT 量閉じ | 全条件 OT/AT pass |
 | **NFR-08** | implementation_status 真実性 | Lv3 | KPI D-05 (4 artifact trace 整合率) ≥ 95% (A-43 ledger 整合) | `ut-tdd trace check` / `.ut-tdd/artifact/trace/` | sprint 末 D-05 ≥ 95% |
 | **NFR-13** | gate 通過率 / dev-local+CI 整合 | Lv3 | KPI D-02 ≥ 90% (A-43 ledger 整合) | `.ut-tdd/gate_runs/` 集計 | sprint 末 D-02 ≥ 90% |
 | **NFR-14** | human-as-residue (gate fail-close 例外権) | Lv3 | KPI D-06 (bypass 件数) ≤ 2 件/sprint (努力目標 = 0、A-43 ledger 整合) | `.ut-tdd/audit/agent-guard-bypass/` | bypass 全件 audit 記録 / D-06 ≤ 2 |
 | **NFR-D01** | KPI D-01 (PLAN 起票数) 機械計測化 (A-47 補完) | Lv3 | ≥ 1 件/sprint | `.ut-tdd/plan_registry/` 集計 / `ut-tdd plan list --since sprint-start` | sprint 末 PLAN 件数 ≥ 1 / KPI 集計に integrated |
 | **NFR-D04** | KPI D-04 (回帰検出率) 機械計測化 (A-47 補完) | Lv3 | ≥ 80% (検出件数 / 発生総件数) | CI gate + `ut-tdd trace check --regression` | sprint 末 D-04 ≥ 80% / 検出漏れ audit 記録 |
+
+#### AC-NFR-07 (正常系: 5 成功条件総合、A-54 audit C-04 補完)
+- **Given**: ① L0-L14 通し実行 / ② 複数人 team gate 回転 / ③ AI 委譲で回帰なし / ④ ダッシュボード進捗可視 / ⑤ PoC 契約化合流 の 5 条件
+- **When**: OT-01〜05 (L14 operational-test-design.md) + 関連 AT を実行
+- **Then**: 5 条件すべて OT/AT pass / 1 条件でも fail なら NFR-07 未達 (部分 MVP は価値なしと判定)
 
 #### AC-NFR-08-01 (正常系)
 - **Given**: 全 PLAN で generates / pair_artifact 整備済、trace check
@@ -122,6 +132,7 @@ updated: 2026-05-28
 |--------|------|--------|---------|---------|----------|
 | **NFR-06** | fail-close (ガード側、§1 と兼用) | Lv3 | (§1 と同じ) | (§1 と同じ) | (§1 と同じ) |
 | **NFR-11** | 役割分離 (GHA 権限 / agent_slots) | Lv3 | S-01〜S-05 + harness 運用者ロール 6 件全件分離 | `ut-tdd doctor --role-check` / GHA workflow permissions | 全ロール権限境界明示 / 越権 audit 0 件 |
+| **NFR-17** | 統合セキュリティ (5 段階 DevSecOps / OWASP Agentic Top 10 / EU AI Act Art.14、A-54 back-propagation) | Lv3 | (a) Build 段で secret-scan (Phase A) + SAST/SCA (Phase B) / (b) OWASP Agentic Top 10 各リスクに対策 mapping / (c) human oversight = gate サインオフ + agent guard fail-close 経路存在 | (a) CI secret-scan (Phase A) + trivy/codeql (Phase B) / (b) `docs/design/security/owasp-agentic-map.md` (L4 carry) / (c) agent-guard test + gate fail-close test | Phase A: secret-scan pass + agent guard fail-close 全件 pass + human oversight gate 経路存在 / Phase B: SAST/SCA integrated |
 | **(NFR-09)** | rule parity (Claude/Codex 同一判定) | Lv3 (A-43 ledger 整合) | 機械検証必須化 (U-NFR3-13 採用) | `ut-tdd parity-check` (L4 carry) | Claude / Codex 同一入力 → 同一判定 |
 
 #### AC-NFR-11-01 (正常系)
@@ -139,13 +150,18 @@ updated: 2026-05-28
 - **When**: L4 PLAN 起票時
 - **Then**: parity check の機械検証ルール確定 (本 PLAN は機械検証必須化のみ宣言)
 
+#### AC-NFR-17 (正常系: human oversight + secret 防御)
+- **Given**: PR に secret 様パターン (`api_key=...`) を含む変更 + 判断ゲート G3
+- **When**: CI secret-scan + G3 gate 実行
+- **Then**: secret-scan が検出し fail-close / G3 は PO サインオフ (human oversight、EU AI Act Art.14) 必須 / agent は判定権を持たない (NFR-11 連動)
+
 > **TL 採用根拠 (Lv3)**: PII / credential 扱いなしだが agent guard fail-close 厳守 + 役割分離必須で Lv3。Lv4-5 (PII / 暗号化 / penetration test) は scope 外。
 
 ## §6 システム環境 (IPA 移植性、Lv3)
 
 | NFR-ID | 要件 | IPA Lv | 受入閾値 | 測定方法 | pass 条件 |
 |--------|------|--------|---------|---------|----------|
-| **NFR-01** | cross-platform (§1 と兼用) | Lv3 | (§1 と同じ + GitHub 正本連動) | (§1 と同じ) | (§1 と同じ) |
+| **NFR-01** | cross-platform (§1 と兼用) | Lv2 (§1 可用性正本) | (§1 と同じ + GitHub 正本連動) | (§1 と同じ) | (§1 と同じ) |
 | **NFR-04** | 言語非依存 (統制対象 repo の言語) | Lv3 | TS/Python/Go/Rust 等 任意言語 repo で動作 | 多言語 repo テスト (CI matrix 拡張) | 4 言語以上で `ut-tdd plan lint / gate` pass |
 | **NFR-05** | GitHub 正本 (CI / 証跡 / 権限) | Lv3 | gate 証跡 + audit 全件 GitHub 永続 | `.github/workflows/` artifact upload / GHA permissions | 全 gate run が GitHub Actions log で確認可能 |
 
@@ -181,7 +197,7 @@ updated: 2026-05-28
 | 項目 | Phase B 着手時確定内容 |
 |------|--------------------|
 | telemetry default | (推奨) default off + opt-in 3 レベル (off / local-only / sync) |
-| **NFR-17 (新規候補)** | telemetry PII redaction (prompt 本文除外、GDPR + 社内 PII 方針整合) |
+| **NFR-18 (新規候補)** | telemetry PII redaction (prompt 本文除外、GDPR + 社内 PII 方針整合)。A-54 で旧 NFR-17 → NFR-18 にリネーム (NFR-17 = 統合セキュリティと衝突回避) |
 
 ### §7.4 L4 基本設計 carry
 
@@ -207,7 +223,7 @@ NFR-01〜16 + 新規 KPI を以下 3 tier に分類:
 
 ### §7.5 L12 受入テスト pair
 
-- 全 NFR-* (14 件 + L4/Phase B carry) の AC を L12 で AT-* に変換 (孤児 NFR = 0)
+- 全 NFR-* (15 件 + L4/Phase B carry) の AC を L12 で AT-* に変換 (孤児 NFR = 0)
 - 機械検証ルール (R4 NFR → 閾値 → AT) は L7 carry
 
 ## §8 関連 doc

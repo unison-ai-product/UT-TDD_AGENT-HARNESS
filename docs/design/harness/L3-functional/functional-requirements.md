@@ -275,6 +275,11 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **When**: 同じ呼び出し
 - **Then**: warn + audit `bypass used by PO (reason: ...)` 記録必須 / KPI D-06 集計対象 / Agent 起動許可 / 終了コード 0
 
+#### AC-FR-09-04 (異常系: opus override 禁止、A-54 audit C-04 / 軸4 補完)
+- **Given**: Claude Code が `Agent({subagent_type: "pmo-sonnet", model: "opus"})` 呼び出し (pdm-* 以外への opus 指定)
+- **When**: agent-guard 検証 (model family 解決)
+- **Then**: fail-close `Error: model opus は pmo-sonnet の frontmatter (sonnet) と不一致、opus は pdm-* のみ許可` / Agent 起動 block / 終了コード 2 / audit に block 記録 ([[feedback-subagent-model-explicit]] / weekly quota 保護)
+
 ---
 
 ### FR-10: Recovery 収束フロー
@@ -710,11 +715,13 @@ A-50 で workflow core 7 件 (FR-L1-23/24/25/26/27/29/30) を L3 直接詳細化
 | FR-L1-28 (W 2 段設計) | PLAN-L4-NN-w2-stage | Phase 1 (一般) + Phase 2 (agent 昇華) を L10 合流、drive=agent 追加 |
 | FR-L1-37 (model 推挙) | PLAN-L4-NN-model-suggestion | task × drive × L 別の model + reasoning effort 動的選定 |
 | FR-L1-39 (タスク難易度) | PLAN-L4-NN-task-complexity | 規模 / 依存 / 不確実性 × drive 別スコアリング |
+| FR-L1-40 (drive 別 state 分離) | PLAN-L4-NN-drive-state-isolation | drive 軸 state 区画 (`.ut-tdd/drive/<drive>/`) + skip_sub_doc 機械強制 (FR-L1-06 の drive 拡張、A-54 で §3.1 明示追加) |
+| FR-L1-41 (drive 自動判定) | PLAN-L4-NN-drive-auto-classify | PLAN/コード/拡張子から drive 自動分類 → orchestration_mode routing (FR-L1-08 の drive 拡張)。AC-FR-08 の drive 判定入力 shape を本 PLAN で確定 (A-54 で §3.1 明示追加) |
 | FR-L1-42 (provider 引継ぎ) | PLAN-L4-NN-provider-handover | Claude ↔ Codex の context+PLAN+budget 連携渡し |
 | FR-L1-44 (onboarding) | PLAN-L4-NN-onboarding | 既存 repo への harness baseline 確立、`.ut-tdd/` 初期 baseline |
 | FR-L1-31〜35 (P2 コンテキスト/フォルダ/棚卸し/穴管理/整備可視化) | PLAN-L4-NN-infra-readiness | 整備系、Phase B carry 含む |
 
-> **A-50 で 6 件削減** (FR-L1-23/24/25/26/27/29/30 = workflow core 7 件を L3 詳細化に格上げ、carry 13 → 8 件に削減)。残 8 件は workflow core ではないため L4 carry を維持。
+> **A-50 で 6 件削減** (FR-L1-23/24/25/26/27/29/30 = workflow core 7 件を L3 詳細化に格上げ)。**A-54 で FR-L1-40/41 を本 §3.1 表に明示追加** (§3 主表に L4 carry 宣言済だが §3.1 詳細表から漏れていた不整合を解消、audit 軸2 C-01/C-02)。残 P1 L4 carry = 9 件 (FR-L1-21/22/28/37/39/40/41/42/44) + P2 (FR-L1-31〜35) + Phase B (FR-L1-19/20)。いずれも workflow core ではないため L4 carry を維持。
 
 ### §3.2 UX-01 (3 バランス価値体験) AC + AT 追加 (C-01 補完)
 
