@@ -498,6 +498,23 @@ L0 → L1 → L4 のドメイン継承チェーンを `ut-tdd plan lint` (sub_do
 
 > **architecture 注記**: `implementation_status` (installed/partial/not-implemented) は変動する **runtime state** (`.ut-tdd/state/`) に置き、版管理対象の spec table (§1) には**列として持たない** (mutable status を spec に混入させない)。HM-01 は §1 registry (静的属性) × runtime status を join して表示する。`導入工程` (provenance) は現状 §1 `出典 doc` 列に自由記述で内包 (例: "L3 back-propagation")、正規化列化は将来 increment。
 
+##### G.11 doc 間整合チェック (doc-consistency lint、構想書 §3.1.2.2 / A-58)
+
+doc 間の整合を `src/lint/doc-consistency.ts` で自動検証 = L3 到達までの手動 audit (A-51/52/54) の機械化。retro (ledger mine) で「手戻りの大半は既に 3 lint 化済 (g3-trace/entity-coverage/fr-registry-audit)、残自動化可は本 G.11 へ集約」と確認。
+
+**第1弾 (実装済、現状 clean)**:
+
+- [ ] **carry-consistency** = L3 functional §3 の純 L4 carry 宣言 FR-L1 (Phase B / L3 直接詳細化 / 委譲 を除く = 残 P1 9 件) が §3.1 詳細表に全件存在 → exit 1 (A-54 carry 不整合の再発防止)
+- [ ] **screen-id-validity** = functional §1 「対応画面」列の画面 ID が screen sub-doc で実在定義 (14 画面) → exit 1 (存在しない画面への誤参照検出)
+- [ ] **nfr-count** = nfr.md header 件数確定宣言 (計 N 件) と実 NFR 定義数 (unique 行 leader) の一致 → exit 1
+
+**第2弾 (spec のみ、未実装)**:
+
+- [ ] **doc-count 汎用** = 全 sub-doc (business BR / nfr / L12 AT / AC) の header 件数宣言 vs 実数 (nfr-count の一般化、A-54 件数誤りの全面防止)
+- [ ] **id-uniqueness** = 同一 ID の二重定義検出 (NFR-17 telemetry vs security 型の衝突、A-54)。定義 context の機械的確立後に実装
+- [ ] **frontmatter-path 実在** = PLAN frontmatter `parent_design` / `pair_artifact` / `related_l0` の path を fs 実在検証 (§1.10.G.2 連動)
+- [ ] **plan-id-schema** = `docs/plans/PLAN-*.md` の `plan_id` が planIdSchema regex 適合 (現状既存 PLAN debt を warn surface、A-55)
+
 #### H. G1-trace 機械検証ルール (sub-gate、DD1=a / DD2=a PO 承認 2026-05-28)
 
 G1 内 sub-gate「業務 ⇔ 画面 ⇔ 機能 双方向 trace 整合」の機械検証ルール 4 件。SSoT: screen sub-doc §5 trace マトリクス。G1-trace は G1 内の 3 番目 sub-gate であり、G1-content → G1-pair → G1-trace の順で通過後に G1 exit となる (構想書 §3.3.1)。
