@@ -39,3 +39,4 @@
 | **IMP-025** | 2026-05-29 | A-61 E3 | arc42 §5 (Building Block L1/L2) → L4/L5 sub-doc のビューマッピング表を追加 | doc | triaged | L4 |
 | **IMP-026** | 2026-05-29 | A-64 data self-review C-1 | requirements §1.10.G.1 の VALID_SUB_DOCS を src/schema の zod enum 化 (現状 spec のみ、SubDoc 値オブジェクトが機械検証不可) | lint | triaged | L5/impl |
 | **IMP-027** | 2026-05-29 | A-64 data self-review m-1 | business §10.2 carry 着地先 §番号 (§1-§7) と L4 data.md 実 §番号 (§2-§8) の +1 ずれを整合 (doctor §参照前に確定) | doc | observed | L4/doctor |
+| **IMP-028** | 2026-05-29 | A-65/A-66 self-review C-1/I-3 (反復) | design PLAN §4 DoD の「§6 用語更新 / §7 機能要求更新 が存在」が **artifact の §番号**と誤読され self-review が 3 回連続で false-positive を上げる。delta は artifact でなく **生成元 PLAN の §6/§7** に記録する規約。DoD 文言を「(PLAN 自身の) §6/§7 に記録 + artifact はヘッダで所在明示」へ template 修正 | doc / policy | triaged | docs/templates/plan/design/template.md / L5 doc-consistency 第2弾 |
