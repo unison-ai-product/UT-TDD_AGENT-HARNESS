@@ -539,6 +539,8 @@ V2 HELIX-workflows 業務要求 doc §10 を採用し、UT-TDD は L0 → L1 →
 
 **living FR registry 原則 (機能一覧の漏れ監査自動化)**: 機能一覧 (L1 機能要求 §1) も用語集と同型の living artifact とし、**FR registry の単一 SSoT** とする。各工程で発見 / 拡張した機能要求は独自管理せず §1 へ **back-merge** し (PLAN §7 機能要求更新 = ① 必須成果物)、登録完全性は `src/lint/fr-registry-audit.ts` が漏れ 5 型 (登録漏れ / 欠番 / 属性 / 件数整合 / 画面被覆) で自動監査する。手動 audit (A-51/52/54) はこの lint へ移行する。機械検証は要件定義書 §1.10.G.10 (新)。
 
+**improvement backlog 原則 (作業ログ → 機能化)**: 作業中に発見した不備・改善は揮発させず `docs/improvement-backlog.md` に蓄積し、triage して lint / FR / policy / doc へ機能化する living backlog とする (FR-L1-19 Learning Engine 本実装までの手動橋渡し)。ledger (起きたことの決定台帳) と backlog (これからやる改善候補) を相互参照で分離し、`verified` 以外の改善候補は §2.5 ②駆動モデル (検証 / 改修駆動) の trigger 源とする。機械検証は要件定義書 §1.10.G.12 (新)。
+
 ### 3.1.2.3 L1 sub-doc 共通ヘッダー要素 (4 doc 共通)
 
 5 sub-doc 全てに以下を冒頭 blockquote で必須化:

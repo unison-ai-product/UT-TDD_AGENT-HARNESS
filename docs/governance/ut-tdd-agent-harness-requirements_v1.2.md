@@ -515,6 +515,17 @@ doc 間の整合を `src/lint/doc-consistency.ts` で自動検証 = L3 到達ま
 - [ ] **frontmatter-path 実在** = PLAN frontmatter `parent_design` / `pair_artifact` / `related_l0` の path を fs 実在検証 (§1.10.G.2 連動)
 - [ ] **plan-id-schema** = `docs/plans/PLAN-*.md` の `plan_id` が planIdSchema regex 適合 (現状既存 PLAN debt を warn surface、A-55)
 
+##### G.12 improvement backlog (作業ログ → 機能化 pipeline、構想書 §3.1.2.2 / A-59)
+
+「作業中に発見した不備・改善を蓄積 → triage → 機能化」する living backlog。SSoT = `docs/improvement-backlog.md` §1。FR-L1-19 (Learning Engine) 本実装までの**手動の橋渡し**。`src/lint/improvement-backlog.ts` で構造健全性を検証:
+
+- [ ] entry ID が `IMP-NNN` 形式 + 一意 (malformed / duplicate → exit 1)
+- [ ] `status` ∈ {observed, triaged, implemented, verified} (enum 外 → exit 1)
+- [ ] `自動化候補` ∈ {lint, FR, policy, doc, none} (`/` 区切り複数可、enum 外 → exit 1)
+- [ ] 必須 7 列 (ID / 観測日 / 文脈 / 不備・改善 / 自動化候補 / status / 紐付け) 充足 (欠落 → exit 1)
+
+**運用**: 各工程で不備発見 → backlog 登録 (observed) → triage (どの機能化経路 = lint/FR/policy/doc か、triaged) → 実装 (implemented) → 検証 + ledger A-番号紐付け (verified)。`verified` 以外の openCount が「機能化待ち」= 次の ②駆動モデル (検証 / 改修駆動) の trigger 源。**ledger (起きたことの決定台帳) と backlog (これからやる改善候補) を相互参照で分離**する。
+
 #### H. G1-trace 機械検証ルール (sub-gate、DD1=a / DD2=a PO 承認 2026-05-28)
 
 G1 内 sub-gate「業務 ⇔ 画面 ⇔ 機能 双方向 trace 整合」の機械検証ルール 4 件。SSoT: screen sub-doc §5 trace マトリクス。G1-trace は G1 内の 3 番目 sub-gate であり、G1-content → G1-pair → G1-trace の順で通過後に G1 exit となる (構想書 §3.3.1)。
