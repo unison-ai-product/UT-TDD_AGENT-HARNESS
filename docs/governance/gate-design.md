@@ -1,0 +1,120 @@
+# UT-TDD Agent Harness — ゲート設計 + 自動追加型クロスチェックエンジン
+
+> **位置づけ**: 本 doc は **ゲート (G_N) の正本設計** と、ゲートが回す **自動追加型クロスチェック機構**を定義する governance doc。
+> **SSoT 参照**: 工程⇔ゲート対応 = [document-system-map](./document-system-map.md) §1 / W-pair = `src/schema` `W_MODEL_PAIRS` / ゲート機能要求 = FR-05 (決定論ゲート) / FR-13 (サインオフ) / FR-18 (doctor 横断検出) / FR-03 (trace) / FR-08 (fail routing)。
+> **実装方針**: 本 doc が設計、`gate-checks.yaml` (L7) が宣言、`ut-tdd gate <G-ID>` / `ut-tdd doctor` が実行 (ADR-001 TS core)。
+
+## §0 背景 (なぜ正本化するか)
+
+G1〜G5 を運用してきたが、(a) **各 G_N が何を check するか**の正式 spec が無く audit が improvised、(b) **全体整合の機械検証**が L1/L3 中心の 5 lint に限られ L4/L5 以降が人手依存、という gap があった (PO 指摘 2026-05-29)。本 doc は両者を解消し、**ゲート判定を再現可能・スケール可能**にする。
+
+## §1 ゲートモデル (G0.5〜G14)
+
+各ゲートは layer の **exit 判定点**。fail 時は mode routing (FR-08) で対応 mode へ。
+
+> **サインオフ列の凡例**: ★ = **FR-13 で定義済** (G1/G3/G7/G11=PO、G4-G6=TL)。それ以外は **FR-13 未定義の暫定提案** (各層着手時に確定、必要なら FR-13 拡張)。
+
+| ゲート | 層 | 判定内容 (要約) | サインオフ | W-pair |
+|---|---|---|---|---|
+| G0.5 | L0 企画 | 構想の妥当性 | PO (提案) | — |
+| **G1** | L1 要求定義 | 5 sub-doc + 件数閉じ + G1-trace | ★ **PO** | L1↔L14 |
+| **G2** | L2 画面 | モック凍結 + 画面 trace | — (FR-13 未定義、§2.1 defer 中) | L2↔L10 |
+| **G3** | L3 要件定義 | FR/AC/AT + G3-trace | ★ **PO** | L3↔L12 |
+| **G4** | L4 基本設計 | 4 sub-doc + 上流 trace + 集約整合 | ★ TL | L4↔L9 |
+| **G5** | L5 詳細設計 | DbC freeze (pre/post/invariant + edge docstring) | ★ TL | L5↔L8 |
+| **G6** | L6 機能設計 | 関数仕様/pseudocode + edge↔AT | ★ TL | L6↔L7 |
+| G7 | L7 実装 | TDD trace + 4 artifact 双方向 12 edge freeze | ★ **PO** | (trace freeze) |
+| G8/G9 | L8/L9 結合/総合 | IT/ST 実施 pass | TL (提案) | — |
+| G10 | L10 UX 磨き | a11y / visual regression | uiux/PO (提案) | — |
+| G11 | L11 総合レビュー+UAT | 受入 | ★ **PO** | — |
+| G12/G13/G14 | L12/L13/L14 デプロイ/後検証/運用 | リリース判定 / SLO / 改善 | PO (提案) | — |
+
+> ★ = FR-13 由来 (G1/G3/G7/G11=PO、G4-G6=TL)。「提案」は FR-13 未定義で本 doc の暫定。fail → mode routing (Recovery/Reverse/Refactor/Incident、FR-08)。
+
+## §2 ゲート台帳 (現況、2026-05-29)
+
+| ゲート | 状態 | 根拠 | 備考 |
+|---|---|---|---|
+| G0.5 | 既済 | concept_v3.1 (L0) | — |
+| G1 | ✅ PASS | A-41 | PO サインオフ済 (A-42 は G1 PASS 後の L3 着手記録で、G1 証跡ではない) |
+| **G2** | ⏸ **DEFER (未通過、parked)** | A-63 内で PO 承認 (G2 defer 専用の独立 ledger entry はなし) | **screen track を park、core track が先行進行** (下記 §2.1) |
+| G3 | ✅ PASS | A-60 | PO サインオフ済 |
+| G4 | ✅ COND PASS | A-67 | audit 通過。PO 正式サインオフは G6 後にまとめて可 |
+| G5 | ✅ COND PASS | A-70 | DbC freeze 準備済 (認証は契約プラン CLI 自己認証で対象外、A-71) |
+| G6〜 | 未到達 | — | — |
+
+### §2.1 G2 DEFER と W-model 順序の整合 (明示)
+
+harness core は **CLI/library (UI なし)**。screen track (PM/HM/GD 14 画面、L2) は L1 で要求確定済だが L2 モック検証前のため **G2 を defer (park)** し、**非 screen の forward spine (L3→L5) が先行**した。これは FR-13 (Forward ワークフロー順序制約) の AC-FR-13-02 「前工程未通過で後着手不可」の一般化に対する **product-choice 例外** (PO 承認)。
+
+**規約**: forward spine の各ゲート (G3/G4/G5...) は **screen track を除いたスコープ**で判定する。screen track は L2 モック後に G2 → L4-screen → L10 を**別レーン**で進め、合流時に G1-trace 再検証する (A-40 back-propagation)。台帳は 2 レーン (core / screen) を分けて管理する。
+
+## §3 ゲート判定の標準 4 軸 (improvised audit の正本化)
+
+G3/G4/G5 で運用した audit を正式 spec 化。各ゲートは以下 4 軸 + 未決管理を満たして PASS。
+
+| 軸 | 判定 | 機械化 (§4 engine) | 人手 (self-review) |
+|---|---|---|---|
+| **A1 DoD 充足** | 当該層 child PLAN §4 + Master §5 を全件満たす | 構造 (§必須/frontmatter) | 完成度の意味判断 |
+| **A2 上流 trace** | 上流要素 (要求/集約/module/FR) が当層に漏れなく着地、孤児 0 | `upstream-coverage` rule | 詳細化の妥当性 |
+| **A3 W-pair** | pair_artifact が実在し相互参照 (L_N↔L_M) | `pair-exists` / `trace-bidir` | テスト設計の網羅性 |
+| **A4 sub-doc 間整合** | 当層 sub-doc 間に矛盾・二重定義・循環なし | `ref-resolves` / 依存 drift (ADR-002) | 意味的一貫性 |
+| **未決管理** | blocker と PO escalation/carry を分離記録 | (backlog/ledger) | エスカレーション判断 |
+
+> 判定区分: **Critical(blocker)=0 → CONDITIONAL PASS で次工程着手可** (Important/Minor は carry)、Critical>0 → FAIL。G3/G4/G5 の前例と一致。
+
+## §4 自動追加型クロスチェックエンジン (機構)
+
+**目的**: 整合チェックを「関係ごとの手書き lint」から **宣言メタデータ駆動のルールエンジン**へ。doc が増えても lint を書き足さない (自動 enroll)。FR-18 (doctor 横断検出一括集約) の実現機構。
+
+```
+[1] doc レジストリ      docs/** の frontmatter 走査 → {path, layer, sub_doc,
+                        pair_artifact, related_*, generates, dependencies, 宣言件数}
+        │               (frontmatter schema は src/schema/frontmatter.ts 既存)
+[2] ルールレジストリ    関係の「型」ごとに 1 回実装した layer 非依存ルール (§5)
+        │
+[3] 自動 enroll        新 doc がレジストリに現れたら frontmatter 形状にマッチする
+        │               全ルールが自動適用 ← ★自動追加型の核心 (手書き不要)
+[4] ゲート束ね         gate-checks.yaml が「G_N で回すルール id 集合」を宣言 (§3 A1-A4 に対応)
+[5] カバレッジマップ    どの doc/関係が検査済かを自動レポート + 未検査 gap 可視化 (IMP-006)
+```
+
+**フロー (FR-05/18)**: `ut-tdd doctor` / `ut-tdd gate <G-ID>` → [1] レジストリ構築 → [2] 該当ルール解決 → [3] 全 doc に適用 → 結果集約 (severity 別) → fail-close。
+> **FR-05 決定論の実現箇所**: 各ルール型は**純粋関数** (ファイル走査・frontmatter 比較・ID 照合・グラフ構築のみ、LLM/外部 API 呼び出しなし)。既存 5 lint の `analyzeX(docs?)` pure 様式 (architecture §3.2) を継承し、判定に AI を一切呼ばない → FR-05「決定論 static ゲート (AI 不要)」の制約を満たす。
+
+## §5 ルール型一覧 (第1弾 + 既存 5 lint の吸収)
+
+| ルール型 (id) | 検査内容 | 駆動メタデータ | 吸収する既存 lint |
+|---|---|---|---|
+| `pair-exists` | `pair_artifact` が実在 | frontmatter pair_artifact + W_MODEL_PAIRS | (G4/G5 audit 手動 → 自動化) |
+| `ref-resolves` | `related_*`/`parent`/`requires` の path 実在 | frontmatter dependencies | (新規、IMP-003 = path fs 実在検証の backlog ID) |
+| `trace-bidir` | `generates` ↔ pair の相互参照 (双方向 edge) | generates + pair | g3-trace (一般化) / vmodel lint |
+| `upstream-coverage` | 下流参照 ⊆ 上流レジストリ (孤児 0) | layer 順 + ID 抽出 | **g3-trace** / **entity-coverage** |
+| `count-matches` | header 件数宣言 vs 実数 | 宣言件数 + table 行数 | **fr-registry-audit** / **doc-consistency** (一般化、IMP-001) |
+| `id-format` | ID が layer 別 regex 適合 | layer + ID pattern | (plan-id-schema IMP-004) |
+| `dup-id` | 同一 ID 二重定義検出 | ID レジストリ | IMP-002 |
+| `glossary-delta` | 用語が L0 §10 へ back-merge | sub-doc §用語更新 | G.9 (IMP-012) |
+| `dependency-drift` | 実 import グラフ vs 期待依存マップ | src/ import + architecture §3 | **ADR-002 / IMP-032** |
+| `backlog-format` | backlog 書式 | backlog table | **improvement-backlog** |
+
+> 既存 5 lint (g3-trace/entity-coverage/fr-registry/doc-consistency/improvement-backlog) は L7 で本エンジンの**ルール型インスタンスへリファクタ吸収**。新 doc/層は手書き不要で `upstream-coverage`/`pair-exists`/`count-matches` 等が自動適用される。
+
+## §6 構造 / 意味の境界 (engine vs self-review)
+
+| 種別 | 担当 | 例 |
+|---|---|---|
+| **構造的整合** | **engine (自動、毎コミット)** | pair 実在 / 参照解決 / 件数 / ID 形式 / trace 孤児 / 依存循環 / 用語 back-merge |
+| **意味的整合** | **self-review + gate audit (LLM/人手)** | 集約の意味が schema と一致するか / 設計判断の妥当性 / 詳細化の十分性 |
+
+> engine が構造を毎コミット機械保証することで、人手 self-review は**意味判断に集中**できる (現状 self-review が見ている構造系を engine へ移管)。
+
+## §7 機能要求更新 / carry
+
+- **新規 FR-L1 は起こさない**。本機構は **FR-L1-18 (doctor 横断検出一括集約) + FR-05 (決定論ゲート) + FR-03 (trace)** の**実現機構の明文化**であり、ユーザー視点の新機能ではない (L1 は G1-passed のため安易な back-prop を避ける、§7.1)。
+- **IMP-033** (cross-check rule engine) として L7 実装を起票。
+- **L6 carry**: ルール型のアルゴリズム (レジストリ構築 / ルール解決 / 適用 / 差分レポート) を機能設計で pseudocode 化 (IEEE 1016 §5.7)。
+- **L7 carry**: engine 実装 + 既存 5 lint のリファクタ吸収 + `gate-checks.yaml` + `ut-tdd gate`/`doctor` 配線。ADR-002 (dependency-drift) / IMP-001/002/003/006 を本エンジンのルール型として統合。
+
+### §7.1 新規 FR を起こさない判断 (記録)
+
+cross-check engine を新 FR-L1 にすると L1 (G1-passed) への back-prop + G1-trace 再検証が発生する。本機構は既存 FR-L1-18/05/03 の**実装アーキ**であり、FR-L1-45 (doc-reviewer、新規ユーザー機能) とは性質が異なる。よって新 FR を起こさず既存 FR の機構として設計する。**PO が「独立 FR として追跡したい」と判断する場合は FR-L1-46 として back-prop 起票** (要 G1-trace 再検証)。
