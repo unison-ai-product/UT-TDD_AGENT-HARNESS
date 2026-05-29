@@ -86,7 +86,8 @@ related_docs:
 - [ ] `tsc --noEmit` + `vitest` 全 PASS
 - [ ] 関連設計 PLAN への双方向 trace が明示済み
 - [ ] §6 用語更新 が存在 (当該工程の新規 / 精緻化用語を L0 §10 用語集へ back-merge する delta、無ければ「用語更新なし」明記、要件 §1.10.G.9)
-- [ ] frontmatter `kind == impl`、§0〜§6 完備
+- [ ] §7 機能要求更新 が存在 (新規 / 拡張 FR-L1 を §1 registry へ back-merge する delta、無ければ「機能要求更新なし」明記、要件 §1.10.G.10)
+- [ ] frontmatter `kind == impl`、§0〜§7 完備
 
 ## §5 関連 PLAN / ADR / docs
 
@@ -103,3 +104,13 @@ related_docs:
 | (例) ... | 新規 | ... | 導入層 = 当該 layer |
 
 > 当該工程で用語の新規導入・意味変更が無い場合は本文に `用語更新なし` と明記する。
+
+## §7 機能要求更新 (FR registry delta)
+
+当該工程で発見 / 拡張した機能要求を記録し、L1 機能一覧 (`docs/design/harness/L1-requirements/functional-requirements.md` §1) へ back-merge する (FR registry SSoT / 要件 §1.10.G.10、§1.2 back-propagation 手順)。
+
+| FR-L1-ID | 種別 (新規 / 拡張) | 機能要求名 / 変更点 | 重要度 | 対応画面 | §1 登録 + screen §5 紐付け |
+|---|---|---|---|---|---|
+| (例) FR-L1-NN | 新規 | ... | P0/P1/P2 | PM-/HM-/GD- | §1 行追加 + 件数宣言更新 |
+
+> 新規 FR は §1 行追加 / screen §5 trace 紐付け / header 件数確定宣言更新 / ledger 記録 の 4 点を満たす。機能要求の新規・変更が無い場合は本文に `機能要求更新なし` と明記する。

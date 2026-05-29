@@ -111,6 +111,8 @@ L3 詳細化フェーズで発生した「L1 に存在しない新概念」を L
 5. ledger に back-propagation 記録 (kind=reverse + confirmed_reverse_type=design に準ずる)
 6. g3-trace lint test の件数更新 (vitest)
 
+> **漏れ監査の自動化 (A-57、要件 §1.10.G.10)**: 上記 6 step のうち step 3 (§1 登録) / step 4 (screen §5 紐付け) / step 6 (件数整合) は `src/lint/fr-registry-audit.ts` で機械強制される (漏れ 5 型: 登録漏れ / 欠番 / 属性 / 件数整合 / 画面被覆)。各工程の PLAN は §7 機能要求更新 (FR registry delta) に新規 / 拡張 FR を記載してから back-merge する (登録機構)。手動 audit (A-51/52/54) はこの lint へ移行し、外部 corpus (HELIX 47 doc) 完全性突合のみ periodic subagent 監査 (tier-2) として残す。
+
 **将来 add-design 候補 (L1 未追加、carry のみ)**:
 - BR-multi-01/02 派生: FR-L1-multi-01 (tenant 分離) / FR-L1-multi-02 (cross-team handover) → Phase B carry (A-46 ledger)
 - BR-JTBD-01 / BR-NSM-01 / BR-TTV-01 派生 FR → L4 add-design 候補

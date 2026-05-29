@@ -483,6 +483,21 @@ L0 → L1 → L4 のドメイン継承チェーンを `ut-tdd plan lint` (sub_do
 - [ ] 既存用語の**意味変更**を行った場合、§10 該当 entry の **更新層** 列に当該 `layer` が追記済み (欠落 → P1 warning)
 - [ ] §6 用語更新 で参照する用語名が §10 と表記揺れ無く一致 (揺れ → warning)
 
+##### G.10 機能一覧 (FR registry) 漏れ監査 + 登録機構 (構想書 §3.1.2.2 / A-57)
+
+機能一覧 (L1 functional §1) を FR registry の**単一 SSoT** とし、`ut-tdd plan lint` / `src/lint/fr-registry-audit.ts` で **漏れ監査を自動化**する (手動 audit A-51/52/54 の lint 化)。漏れ 5 型は doc 間 ID 整合で自動判定:
+
+- [ ] **型1 登録漏れ** = screen §5 trace / L3 functional で参照される FR-L1-NN が §1 table に未登録 (carry/forward 宣言済みを除く) → exit 1
+- [ ] **型2 欠番漏れ** = FR-L1 連番の gap で carry/forward 宣言の無いもの (現 36/38/43 は宣言済 = OK) → exit 1
+- [ ] **型3 属性漏れ** = §1 行が必須 7 列 (機能要求名 / 出典 doc / 必要 input / 出力 output / 重要度 / 対応画面) を欠く or 重要度が P0|P1|P2 でない → exit 1
+- [ ] **型4 件数整合** = §1 実数が header 件数確定宣言 (計 N / P0 / P1 / P2) と不一致 → exit 1 (A-54 doc 件数誤りの再発防止)
+- [ ] **型5 画面被覆** = P0 FR-L1 に対応画面が無い → exit 1 (P1/P2 は warn、screen §5.3 R3 と連動)
+- [ ] **型6 外部 corpus 漏れ (tier-2、自動化対象外)** = source 機能 inventory (HELIX 47 doc 等) との完全性突合は periodic subagent 監査。inventory を登録すれば将来自動化可能だが、それ未満では手動 audit が残る
+
+**登録機構 (registration)**: 各工程で発見した機能要求は PLAN §7 機能要求更新 (FR-L1 delta) に記載 → §1 への back-merge を必須化 (§1.2 back-propagation 6 step を機械強制)。新 FR-L1 は (a) §1 行追加 (b) screen §5 trace 紐付け (c) header 件数確定宣言更新 (d) ledger 記録 を満たさなければ exit 1。
+
+> **architecture 注記**: `implementation_status` (installed/partial/not-implemented) は変動する **runtime state** (`.ut-tdd/state/`) に置き、版管理対象の spec table (§1) には**列として持たない** (mutable status を spec に混入させない)。HM-01 は §1 registry (静的属性) × runtime status を join して表示する。`導入工程` (provenance) は現状 §1 `出典 doc` 列に自由記述で内包 (例: "L3 back-propagation")、正規化列化は将来 increment。
+
 #### H. G1-trace 機械検証ルール (sub-gate、DD1=a / DD2=a PO 承認 2026-05-28)
 
 G1 内 sub-gate「業務 ⇔ 画面 ⇔ 機能 双方向 trace 整合」の機械検証ルール 4 件。SSoT: screen sub-doc §5 trace マトリクス。G1-trace は G1 内の 3 番目 sub-gate であり、G1-content → G1-pair → G1-trace の順で通過後に G1 exit となる (構想書 §3.3.1)。
