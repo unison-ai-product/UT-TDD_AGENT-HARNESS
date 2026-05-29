@@ -36,7 +36,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 > **正本宣言**: 本 PLAN は **中間準備ドシエ** (ヒアリング項目・調査メモ・工程表)。
 > **本 PLAN が産出する正本 doc**: `docs/design/harness/L1-requirements/business-requirements.md` (上記 frontmatter generates 参照)。
-> **W-model pair**: L1 業務要求 sub-doc ↔ L14 運用テスト設計 1 doc。本 PLAN 完了時に G1 pair freeze の対象。
+> **V-model pair**: L1 業務要求 sub-doc ↔ L14 運用テスト設計 1 doc。本 PLAN 完了時に G1 pair freeze の対象。
 
 ## §0 本 PLAN の役割
 
@@ -64,7 +64,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | ID | ヒアリング項目 | 着地先 | status |
 |----|--------------|--------|--------|
-| U-体系-0 | 要求定義の体系: ①要求タイプ (業務/機能/技術/UX) ②構造・置き場 ③W-model L1/L3/L4/L10 対応 ④ID・trace 規約 ⑤methodology spec と project 要求の区別 ⑥product-improvement lens | business §1.4 として着地。V-model L0-L14 + 9-mode + 9 駆動 + PLAN 内蔵物 + 5 sub-doc + 4 artifact + 3 段階 freeze + DDD anti-corruption + IPA × ISO 25010 + Forward フロー + AI ガードの 11 項目宣言 (commit d2facad、2026-05-28) | ✅ |
+| U-体系-0 | 要求定義の体系: ①要求タイプ (業務/機能/技術/UX) ②構造・置き場 ③V-model L1/L3/L4/L10 対応 ④ID・trace 規約 ⑤methodology spec と project 要求の区別 ⑥product-improvement lens | business §1.4 として着地。V-model L0-L14 + 9-mode + 9 駆動 + PLAN 内蔵物 + 5 sub-doc + 4 artifact + 3 段階 freeze + DDD anti-corruption + IPA × ISO 25010 + Forward フロー + AI ガードの 11 項目宣言 (commit d2facad、2026-05-28) | ✅ |
 
 ### 3.2 価値・スコープ・業務要求
 

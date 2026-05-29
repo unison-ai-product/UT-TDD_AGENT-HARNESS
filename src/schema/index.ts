@@ -45,8 +45,8 @@ export const VALID_LAYERS = [
 export const layerSchema = z.enum(VALID_LAYERS);
 export type Layer = z.infer<typeof layerSchema>;
 
-/** W-model 左右ペア (左=設計, 右=実施) */
-export const W_MODEL_PAIRS: Record<string, string> = {
+/** V-model 左右ペア (左=設計, 右=検証)。L0-L14 の設計層↔検証層の対。 */
+export const V_MODEL_PAIRS: Record<string, string> = {
   L1: "L14",
   L2: "L10",
   L3: "L12",

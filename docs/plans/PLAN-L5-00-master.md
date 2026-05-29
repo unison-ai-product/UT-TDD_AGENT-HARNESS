@@ -35,7 +35,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §0 位置づけ
 
-L5 (詳細設計 = 内部設計) を **メタモデル ①必須 + ②プロダクト選択** で起票する Master hub (要件 §1.10.G.13 導線)。G4 = CONDITIONAL PASS (A-67) を前提に、L4 基本設計 4 sub-doc を詳細化する。L5 sub-doc enum (§1.10.G.1) = `internal-processing / module-decomposition / physical-data / if-detail` (4 種)。W-pair = **L8 結合テスト設計** (L5↔L8)。
+L5 (詳細設計 = 内部設計) を **メタモデル ①必須 + ②プロダクト選択** で起票する Master hub (要件 §1.10.G.13 導線)。G4 = CONDITIONAL PASS (A-67) を前提に、L4 基本設計 4 sub-doc を詳細化する。L5 sub-doc enum (§1.10.G.1) = `internal-processing / module-decomposition / physical-data / if-detail` (4 種)。V-pair = **L8 結合テスト設計** (L5↔L8)。
 
 ## §1 triage (UT-TDD harness のプロダクト特性)
 
@@ -72,7 +72,7 @@ PLAN-L5-01-physical-data (foundational: data.md §8 → 物理 schema)
 2. **PLAN-L5-02-module-decomposition** (physical-data を使う)
 3. **PLAN-L5-03-internal-processing** / **PLAN-L5-04-if-detail** (module 確定後、並行可)
 
-各 child は W-pair = **L8 結合テスト設計** (`docs/test-design/harness/L8-integration-test-design.md`、L5↔L8)。
+各 child は V-pair = **L8 結合テスト設計** (`docs/test-design/harness/L8-integration-test-design.md`、L5↔L8)。
 
 ## §4 L5 carry 反映 (G4 escalation / backlog 由来)
 

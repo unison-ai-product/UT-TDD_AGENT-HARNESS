@@ -34,7 +34,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 > **正本宣言**: 本 PLAN は **中間準備ドシエ** (ヒアリング項目・調査メモ・工程表)。
 > **本 PLAN が産出する正本 doc**: `docs/design/harness/L1-requirements/screen-requirements.md` (上記 frontmatter generates 参照、337 行、14 画面 PM/HM/GD 確定)。
-> **W-model pair**: L1 画面要求 sub-doc ↔ L14 運用テスト設計 1 doc。本 PLAN 完了時に G1 pair freeze の対象。
+> **V-model pair**: L1 画面要求 sub-doc ↔ L14 運用テスト設計 1 doc。本 PLAN 完了時に G1 pair freeze の対象。
 
 ## §0 本 PLAN の役割
 
@@ -78,7 +78,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | **PM-01** | プロジェクト俯瞰ダッシュボード (4 階層プルダウン: 俯瞰 / 工程 / 割当 / 詳細) | Y1=a + AA3=a + S4=a 採用、V-model 駆動 | ✅ |
 | **PM-02** | 工程ビュー (L0-L14 共通テンプレート、進捗・担当・詰まり 3 軸) | Y1=a + Y2=a + AA2=a 採用、機能内容除外 | ✅ |
 | **PM-03** | Gate + 詰まり要因ビュー (gate fail + drift + handover stale + 暴走シグナル 横断) | Y1=a 採用、トラブル要因横断 | ✅ |
-| **PM-04** | Trace ビュー (4 artifact + W-model pair 統合) | Y1=a + AA4=a 採用、W-pair 独立画面削除 | ✅ |
+| **PM-04** | Trace ビュー (4 artifact + V-model pair 統合) | Y1=a + AA4=a 採用、V-pair 独立画面削除 | ✅ |
 | **PM-05** | Handover ビュー (セッション継続) | 既存維持 (旧 SCR-06、S6=a auto 表示) | ✅ |
 
 #### HM (8 画面) — 機能可視化 + 改善ループ + 学び

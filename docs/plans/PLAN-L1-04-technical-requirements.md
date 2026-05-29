@@ -33,7 +33,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 > **正本宣言**: 本 PLAN は **中間準備ドシエ** (ヒアリング項目・調査メモ・工程表)。
 > **本 PLAN が産出する正本 doc**: `docs/design/harness/L1-requirements/technical-requirements.md` (上記 frontmatter generates 参照)。
-> **W-model pair**: L1 技術要求 sub-doc ↔ L14 運用テスト設計 1 doc。本 PLAN 完了時に G1 pair freeze の対象 (next_pair_freeze: L4 — technical/nfr は L4 基本設計で具体化)。
+> **V-model pair**: L1 技術要求 sub-doc ↔ L14 運用テスト設計 1 doc。本 PLAN 完了時に G1 pair freeze の対象 (next_pair_freeze: L4 — technical/nfr は L4 基本設計で具体化)。
 
 ## §0 本 PLAN の役割
 

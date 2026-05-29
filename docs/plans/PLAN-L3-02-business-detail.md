@@ -36,7 +36,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 > **正本宣言**: 本 PLAN は **中間準備ドシエ** (ヒアリング項目・調査メモ・工程表)。
 > **本 PLAN が産出する正本 doc**: `docs/design/harness/L3-functional/business-detail.md` (上記 frontmatter generates 参照)。
-> **W-model pair**: L3 business-detail sub-doc ↔ L12 受入テスト設計 1 doc。本 PLAN 完了時に G3 pair freeze の対象。
+> **V-model pair**: L3 business-detail sub-doc ↔ L12 受入テスト設計 1 doc。本 PLAN 完了時に G3 pair freeze の対象。
 > **スコープ**: BR-21 + FR-L1-36/38/43 (Learning Engine 系、P2 Phase B carry) + HM-08 画面連動 の 3 軸詳細化のみ。FR 一般詳細化は PLAN-L3-01 が担当。
 
 ## §0 本 PLAN の役割

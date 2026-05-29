@@ -72,7 +72,7 @@ PLAN-L4-01-data (foundational: ドメインモデル/不変条件)
 2. **PLAN-L4-02-architecture** (data を使う)
 3. **PLAN-L4-03-function** / **PLAN-L4-04-external-if** (architecture 確定後、並行可)
 
-各 child は W-pair = **L9 総合テスト設計** (`docs/test-design/harness/L9-system-test-design.md`、L4↔L9)。
+各 child は V-pair = **L9 総合テスト設計** (`docs/test-design/harness/L9-system-test-design.md`、L4↔L9)。
 
 ## §4 L4 carry 反映 (backlog / G3 audit 由来)
 

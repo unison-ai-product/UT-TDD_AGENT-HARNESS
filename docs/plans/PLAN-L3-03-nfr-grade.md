@@ -37,7 +37,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 > **正本宣言**: 本 PLAN は **中間準備ドシエ** (ヒアリング項目・調査メモ・工程表)。
 > **本 PLAN が産出する正本 doc**: `docs/design/harness/L3-functional/nfr-grade.md` (上記 frontmatter generates 参照)。
-> **W-model pair**: L3 nfr-grade sub-doc ↔ L12 受入テスト設計 1 doc。本 PLAN 完了時に G3 pair freeze の対象。
+> **V-model pair**: L3 nfr-grade sub-doc ↔ L12 受入テスト設計 1 doc。本 PLAN 完了時に G3 pair freeze の対象。
 > **スコープ**: L1 NFR-01〜16 (14 件、NFR-09/10 欠番) の **IPA グレード値 + 受入閾値 + L4 ADR 連携点** 確定のみ。NFR 体系自体の追加は L4 carry。
 
 ## §0 本 PLAN の役割

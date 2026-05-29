@@ -24,7 +24,7 @@ L1 で確定した 14 画面 (PM 5 + HM 8 + GD 1) を L2 で詳細化:
 | PM-01 | プロジェクト俯瞰ダッシュボード | 4 階層プルダウン (俯瞰/工程/割当/詳細) | screen §1.PM.01 |
 | PM-02 | 工程ビュー (L0-L14 共通テンプレート) | 進捗・担当・詰まり 3 軸 | screen §1.PM.02 |
 | PM-03 | Gate + 詰まり要因ビュー | gate + トラブル横断 | screen §1.PM.03 |
-| PM-04 | Trace ビュー (4 artifact + W-pair 統合) | 整合性 | screen §1.PM.04 |
+| PM-04 | Trace ビュー (4 artifact + V-pair 統合) | 整合性 | screen §1.PM.04 |
 | PM-05 | Handover ビュー | セッション継続 (起動時 auto) | screen §1.PM.05 |
 | HM-01 | 機能一覧ビュー | FR-L1 41 件 × implementation_status | screen §1.HM.01 |
 | HM-02 | カバレッジヒートマップビュー | 観点 8 × 軸 5 = 40 通り | screen §1.HM.02 |

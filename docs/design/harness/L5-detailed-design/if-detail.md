@@ -13,7 +13,7 @@ v2_import: docs/migration/v2-import-ledger.md
 > **SSoT 参照**: 境界 (what/形状) = [external-if.md](../L4-basic-design/external-if.md) / adapter 責務 = [module-decomposition.md](./module-decomposition.md) §5 / 内部 how = [internal-processing.md](./internal-processing.md)。本 doc は外部境界の **how = 詳細契約 (D-CONTRACT)** を担う (IMP-018 の how 側)。
 >
 > **用語更新 (G.9) / 機能要求更新 (G.10) の所在**: per-工程 delta は生成元 [PLAN-L5-04](../../../plans/PLAN-L5-04-if-detail.md) の §6/§7 に記録。
-> **W-pair**: `pair_artifact = L8-integration-test-design.md` (L5↔L8 集合 pair)。
+> **V-pair**: `pair_artifact = L8-integration-test-design.md` (L5↔L8 集合 pair)。
 > **⚠ 前提 (CLAUDE.md) + 人間確認事項**: AI runtime (Claude/Codex) は **契約プラン (月額) + CLI/hook** で利用し **API 直叩きをしない**。adapter は API key ではなく**起動方式** (CLI subprocess / Claude Code Agent・hook) を吸収する。残る認証 (GitHub/観測系) の確定は本 doc で**確定しない** (禁止事項)、方針のみ・確定は PO + security 監査 (§6)。
 
 # UT-TDD Agent Harness — L5 詳細設計: IF 詳細 / D-CONTRACT (If-Detail)

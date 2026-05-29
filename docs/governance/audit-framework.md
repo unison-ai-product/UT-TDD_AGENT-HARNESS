@@ -1,7 +1,7 @@
 # UT-TDD GitHub / GHA Audit Framework (PO declared)
 
 > **status**: PO declared 2026-05-28。L1 業務要求の入力として `../plans/PLAN-L1-01-business-requirements.md §3.7` で扱う。下流で BR-13〜19 + NFR-11 等として L1 正本に分解する。
-> **役割**: PR/merge 時点の CI 検問 (7-Gate pipeline) の運用要件。W-model のフェーズ進捗ゲート (G0.5〜G14) とは別軸 (PR ごとに発火) で、両者は補完関係。
+> **役割**: PR/merge 時点の CI 検問 (7-Gate pipeline) の運用要件。V-model のフェーズ進捗ゲート (G0.5〜G14) とは別軸 (PR ごとに発火) で、両者は補完関係。
 > **正本性**: 本 doc は PO 提示の operational vision の faithful record。「HELIX」naming は本 framework 内の方法論名として保持する (vendor `vendor/helix-source/` 由来素材とは別概念)。
 > **既知の整合課題 (L1 確定前に PO 確認)**:
 > - 既存 `docs/` 構造 (governance/design/test-design/plans/adr/migration) vs framework の `docs/` (product.md/requirements.md/architecture.md/coding-rules.md/risk-policy.yaml/features/) — migration timing

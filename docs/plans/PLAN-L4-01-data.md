@@ -66,7 +66,7 @@ PLAN-L<N>-<NN>-slug / FR-L1-NN / AC-FR-NN-NN / IMP-NNN 等の ID 採番規約を
 各集約ルートの状態遷移 (例: plan status draft→active→archived、gate pending→pass/fail、freeze pending→frozen)。
 
 ### Step 6: 不変条件 (Invariant = DbC)
-集約ごとの不変条件を DbC invariant として記述 (例: 「逆ピラミッド禁止 = ①②あれば③④必須」「pair は W-model 6 組のいずれか」「verified backlog は紐付け必須」)。
+集約ごとの不変条件を DbC invariant として記述 (例: 「逆ピラミッド禁止 = ①②あれば③④必須」「pair は V-model 6 組のいずれか」「verified backlog は紐付け必須」)。
 
 ### Step 7: 集約間整合性ルール
 集約をまたぐ整合 (例: artifact.trace ↔ plan.generates、pair_artifact 双方向)。eventual/immediate の別を明示。

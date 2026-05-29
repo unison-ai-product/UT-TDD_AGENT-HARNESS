@@ -13,7 +13,7 @@ v2_import: docs/migration/v2-import-ledger.md
 > **SSoT 参照**: 構造 (集約) = [data.md](./data.md) / 方式 (module・依存) = [architecture.md](./architecture.md) / 上流 FR = [L3 functional-requirements](../../../design/harness/L3-functional/functional-requirements.md) / 様式 = arc42 §5 (functional building block) + IEEE 1016 §5 ([document-system-map](../../../governance/document-system-map.md) §2)。本 doc は L3 FR を**どの機能単位で実現するか**を担い、構造/方式は data/architecture に委ねる。
 >
 > **用語更新 (G.9) / 機能要求更新 (G.10) の所在**: per-工程 delta は生成元 [PLAN-L4-03](../../../plans/PLAN-L4-03-function.md) の §6/§7 に記録 (data.md/architecture.md と同規約)。
-> **W-pair**: `pair_artifact = L9-system-test-design.md` は L4 sub-doc 群の集合 pair (PLAN-L4-00-master 経由)。
+> **V-pair**: `pair_artifact = L9-system-test-design.md` は L4 sub-doc 群の集合 pair (PLAN-L4-00-master 経由)。
 
 # UT-TDD Agent Harness — L4 基本設計: 機能設計 (Function)
 

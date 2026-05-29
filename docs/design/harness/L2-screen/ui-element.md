@@ -24,7 +24,7 @@ created: 2026-05-28
 | PM-01 | 4 階層プルダウン (Expandable Section)、ヒートマップ Cell、フィルタ Dropdown |
 | PM-02 | 工程テンプレート (L0-L14 共通)、進捗バー、stale バッジ、carry リスト |
 | PM-03 | next_action コピーボタン、トラブル一覧テーブル、色分けバッジ (緑/黄/赤) |
-| PM-04 | trace グラフ (ノード + エッジ)、W-pair 状態テーブル |
+| PM-04 | trace グラフ (ノード + エッジ)、V-pair 状態テーブル |
 | PM-05 | CURRENT.json 表示 (構造化)、carry 詳細リスト、stale 警告バナー |
 | HM-01 | 3 階層プルダウン、FR-L1 行 (implementation_status バッジ) |
 | HM-02 | 観点 × 軸 切替セレクタ、Heat map (40 cell) |

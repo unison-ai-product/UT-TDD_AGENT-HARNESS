@@ -13,7 +13,7 @@ v2_import: docs/migration/v2-import-ledger.md
 > **SSoT 参照**: 論理モデル = [data.md](../L4-basic-design/data.md) (L4) / 実装 enum SSoT = `src/schema/index.ts` / 永続化方針 = file-based (`.ut-tdd/`、YAML+JSON、SQLite 不採用、[ADR-001](../../../adr/ADR-001-ut-tdd-harness-redesign-and-language.md))。本 doc は data.md §8 の論理 state schema を **物理 schema (フィールド型/必須任意/default/file レイアウト)** に詳細化する (D-DB)。
 >
 > **用語更新 (G.9) / 機能要求更新 (G.10) の所在**: per-工程 delta は生成元 [PLAN-L5-01](../../../plans/PLAN-L5-01-physical-data.md) の §6/§7 に記録 (L4 sub-doc と同規約)。
-> **W-pair**: `pair_artifact = L8-integration-test-design.md` は L5 sub-doc 群の集合 pair (PLAN-L5-00-master 経由、L5↔L8)。
+> **V-pair**: `pair_artifact = L8-integration-test-design.md` は L5 sub-doc 群の集合 pair (PLAN-L5-00-master 経由、L5↔L8)。
 
 # UT-TDD Agent Harness — L5 詳細設計: 物理データ設計 (Physical-Data)
 
@@ -72,7 +72,7 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` file
 | `artifact_id` | string | 必須 | primary key |
 | `artifact_type` | enum | 必須 | `artifactTypeSchema` (19) |
 | `path` | string | 必須 | repo 相対 path |
-| `pair_artifact` | string\|null | 任意 | W-model pair (6 組、§7) |
+| `pair_artifact` | string\|null | 任意 | V-model pair (6 組、§7) |
 | `trace.edges` | array<{from,to,kind}> | 必須 | 双方向 12 directed edge (G7) |
 | `acceptance_criteria` | array<{ac_id,...}> | 任意 | AcId パターン (§4) |
 | `acceptance_tests` | array<{at_id,...}> | 任意 | AtId、AC↔AT 被覆 |
@@ -180,7 +180,7 @@ export const VALID_SUB_DOCS = {
 | data.md §6 不変条件 | 物理検証点 | 実装 |
 |---|---|---|
 | 逆ピラミッド禁止 | artifact trace に design+impl あれば test_design+test_code edge 必須 | G6/G7 (trace file 検証) |
-| pair = W-model 6 組 | `pair_artifact` ↔ `W_MODEL_PAIRS` 照合 | zod refine (実装済 enum) |
+| pair = V-model 6 組 | `pair_artifact` ↔ `V_MODEL_PAIRS` 照合 | zod refine (実装済 enum) |
 | kind=poc → S0-S4 ∧ cross | frontmatter superRefine | **実装済** (frontmatter.ts) |
 | kind=design+L1-L6 → sub_doc ∈ VALID_SUB_DOCS | superRefine (SubDoc zod 後) | **L7 (IMP-026)** |
 | agent_slot.model allowlist | agent-guard (別経路) | **実装済** |

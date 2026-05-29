@@ -13,7 +13,7 @@ v2_import: docs/migration/v2-import-ledger.md
 > **SSoT 参照**: 方式 (adapter 隔離) = [architecture.md](./architecture.md) §6 / 構造 = [data.md](./data.md) / 様式 = DbC (Meyer、境界 invariant) + 外部設計 (IPA 共通フレーム) ([document-system-map](../../../governance/document-system-map.md) §3)。本 doc は外部境界の **what/形状** を担い、how/詳細契約は L5 D-API に委ねる (IMP-018)。
 >
 > **用語更新 (G.9) / 機能要求更新 (G.10) の所在**: per-工程 delta は生成元 [PLAN-L4-04](../../../plans/PLAN-L4-04-external-if.md) の §6/§7 に記録。
-> **W-pair**: `pair_artifact = L9-system-test-design.md` は L4 sub-doc 群の集合 pair (PLAN-L4-00-master 経由)。
+> **V-pair**: `pair_artifact = L9-system-test-design.md` は L4 sub-doc 群の集合 pair (PLAN-L4-00-master 経由)。
 > **⚠ 人間確認事項**: 認証・認可・本番影響・秘密情報の扱いは本 doc で**確定しない** (禁止事項)。設計方針の記述に留め、確定は PO 承認を要する (§5)。
 
 # UT-TDD Agent Harness — L4 基本設計: 外部インターフェース設計 (External-IF)

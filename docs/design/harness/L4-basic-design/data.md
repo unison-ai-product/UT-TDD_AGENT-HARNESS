@@ -101,13 +101,13 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | 集約 | 不変条件 (常に真) | 機械検証 |
 |---|---|---|
 | Artifact | **逆ピラミッド禁止**: design + impl が存在すれば test_design + test_code も存在 | G6/G7 fail-close |
-| Artifact | pair は W-model 6 組のいずれか (L1↔L14/L2↔L10/L3↔L12/L4↔L9/L5↔L8/L6↔L7) | `W_MODEL_PAIRS` |
+| Artifact | pair は V-model 6 組のいずれか (L1↔L14/L2↔L10/L3↔L12/L4↔L9/L5↔L8/L6↔L7) | `V_MODEL_PAIRS` |
 | Artifact | FR-L1 registry: 参照される FR-L1 ⊆ 登録済 (§1 機能一覧) | fr-registry-audit 型1 |
 | Plan | kind=poc → workflow_phase ∈ {S0-S4} ∧ layer=cross | frontmatter superRefine |
 | Plan | kind=reverse ∧ R4 → forward_routing ∧ promotion_strategy 必須 | frontmatter superRefine |
 | Plan | kind=design ∧ layer∈[L1-L6] → sub_doc 必須 ∧ ∈ VALID_SUB_DOCS[layer] | G.1/G.3 |
 | Plan | agent_slot.model ∈ allowlist、opus は pdm-* のみ | agent-guard |
-| Workflow | 前工程未完了で後工程着手不可 (W-model 順序、D-03=0) | doctor / plan lint |
+| Workflow | 前工程未完了で後工程着手不可 (V-model 順序、D-03=0) | doctor / plan lint |
 | Evaluation | verified 評価は紐付け (実装/A-番号) 必須 | improvement-backlog |
 
 ## §7 集約間整合性ルール
