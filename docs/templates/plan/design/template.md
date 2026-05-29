@@ -83,9 +83,9 @@ related_docs:
 - [ ] Step 1〜8 のすべてが該当 section に存在
 - [ ] `generates` に対応する設計 doc / ADR / 総合テスト設計が存在
 - [ ] V-model 4 artifact 双方向 trace 明示
-- [ ] §6 用語更新 が存在 (当該工程の新規 / 精緻化用語を L0 §10 用語集へ back-merge する delta、無ければ「用語更新なし」明記、要件 §1.10.G.9)
-- [ ] §7 機能要求更新 が存在 (新規 / 拡張 FR-L1 を §1 registry へ back-merge する delta、無ければ「機能要求更新なし」明記、要件 §1.10.G.10)
-- [ ] frontmatter `kind == design`、§0〜§7 完備
+- [ ] **本 PLAN の** §6 用語更新 が存在 (当該工程の新規 / 精緻化用語を L0 §10 用語集へ back-merge する delta、無ければ「用語更新なし」明記、要件 §1.10.G.9)。**delta tracking は PLAN が担い、生成 artifact (設計 doc) はヘッダで「所在 = PLAN §6/§7」を明示する** (artifact の §6/§7 は内容節であり別物、IMP-028)
+- [ ] **本 PLAN の** §7 機能要求更新 が存在 (新規 / 拡張 FR-L1 を §1 registry へ back-merge する delta、無ければ「機能要求更新なし」明記、要件 §1.10.G.10)
+- [ ] frontmatter `kind == design`、§0〜§7 完備 (PLAN 自身の構造。artifact の §番号とは独立)
 
 ## §5 関連 PLAN / ADR / docs
 

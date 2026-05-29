@@ -96,3 +96,4 @@ external-if.md (what/形状) の **how = adapter 詳細契約**を確定する (
 - **認証・秘密管理方式の確定** = **PO 承認 + security 監査** (G5 前、⚠ 人間確認必須)
 - **D-CONTRACT DSL 実装** (mode-routing.yaml / gate-checks.yaml + loader) = L7
 - **provider 引継ぎ** (FR-L1-42、context+budget 連携) = PLAN-L4-NN-provider-handover (function §6) と接続
+- **sprint check の VCS 参照** (TDD trace の git log/blame、internal-processing §2): adapter 経由か直接 fs/git 読込かを L7 で決定 (現状 adapter 公開 IF 6 本に未配線、L7 carry)

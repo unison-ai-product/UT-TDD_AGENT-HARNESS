@@ -89,7 +89,7 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` file
 | (gate_runs file) `plan_id` | string\|null | 任意 | 関連 Plan への参照 (foreign key) |
 | (gate_runs file) `checks` | array<{name,result}> | 必須 | 決定論 check 結果 (FR-05) |
 
-### §2.6 mode (`mode.yaml`、値オブジェクト state)
+### §2.4 mode (`mode.yaml`、値オブジェクト state)
 
 | フィールド | 型 | 必須/任意 | 制約 |
 |---|---|---|---|
@@ -98,7 +98,7 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` file
 | `drive` | enum\|null | 任意 | 既定 drive (`driveSchema`) |
 | `updated` | string(ts) | 必須 | ISO8601 |
 
-### §2.4 Handover (`handover/CURRENT.json`)
+### §2.5 Handover (`handover/CURRENT.json`)
 
 | フィールド | 型 | 必須/任意 | 制約 |
 |---|---|---|---|
@@ -107,7 +107,7 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` file
 | `context` | object | 任意 | session 引継ぎ |
 | `created` | string(ts) | 必須 | stale 判定基準 |
 
-### §2.5 Evaluation (`audit/*.jsonl`、Phase B)
+### §2.6 Evaluation (`audit/*.jsonl`、Phase B)
 
 | フィールド | 型 | 必須/任意 | 制約 |
 |---|---|---|---|
