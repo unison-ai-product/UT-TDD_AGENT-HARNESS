@@ -1114,6 +1114,7 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 - `ai-dev-team-operations_v1.1.md` (AI 駆動開発チーム運用ルール書 v1.1)
 - `ut-tdd-agent-harness-concept_v3.1.md` (本書)
 - `ut-tdd-agent-harness-requirements_v1.2.md` (要件定義書)
+- `document-system-map.md` (**各工程の作成必須ドキュメントの業界標準 grounding 正本** = メタモデル ① 必須スケルトンの裏付け。基本設計=外部設計 / 詳細設計=内部設計 の確定、配線図=Design by Contract、L0-L14 標準マップ、A-61)
 
 ## 業界 standard
 

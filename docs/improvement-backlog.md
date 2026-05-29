@@ -27,3 +27,13 @@
 | **IMP-013** | 2026-05-29 | A-60 G3 audit | FR-L1-20 (invocation_log) を L4 で詳細化する際 business-detail §2/§5 接続を明示 (AC-FR-BR21-02 の Phase A 前提との整合) | doc | triaged | L4 PLAN / business-detail |
 | **IMP-014** | 2026-05-29 | A-60 G3 audit | ②実装↔④テスト docstring (双方向 trace edge 5-8、requirements §2.3) 形式を L4 で設計し L7 入口前に凍結 | doc | triaged | L4 / requirements §2.3 |
 | **IMP-015** | 2026-05-29 | A-60 G3 audit | L3 functional §0 件数宣言が実件数ドリフト (「L3 FR 18 件」だが A-49/A-50 後の実数 26)。G3 audit で発見・修正 | doc | verified | A-60 (§0 を 26 件に是正) |
+| **IMP-016** | 2026-05-29 | A-61 業界標準調査 | 各工程の作成必須ドキュメントを業界標準 (IPA 共通フレーム / ISO 29148 / arc42 / IEEE 1016 / ISO 29119 / DbC) で grounding した document-system-map を作成 | doc | verified | A-61 (document-system-map.md) |
+| **IMP-017** | 2026-05-29 | A-61 Z1 | L4 を「方式設計 (arch/ADR、arc42 §4/§9)」と「外部設計 (外部 IF)」の sub-doc に明示分離 | doc | triaged | L4 着手時 |
+| **IMP-018** | 2026-05-29 | A-61 Z2 | L4 外部 IF (what/形状) ↔ L5 D-API (how/contract 詳細) の粒度境界を明確化、二重定義回避 | doc | triaged | L4/L5 |
+| **IMP-019** | 2026-05-29 | A-61 Z3 | L6 機能設計に IEEE 1016 §5.7 (Pseudocode) を grounding として concept §11 追記 | doc | triaged | L6 |
+| **IMP-020** | 2026-05-29 | A-61 Z4 | L10 UX 磨きに WCAG 2.2 / ISO 9241-110 を受入基準 reference 追記 | doc | observed | L10 |
+| **IMP-021** | 2026-05-29 | A-61 Z5 | L13 デプロイ後検証を ISO 29119-2 Test Evaluation に接続 (SLO/SLI を test result 扱い) | doc | observed | L13 |
+| **IMP-022** | 2026-05-29 | A-61 Z6 | L3 AC を BDD/Gherkin (Given-When-Then) 記述形式候補として §11 追記、L12 受入と機械連携 | doc | triaged | L3/L12 |
+| **IMP-023** | 2026-05-29 | A-61 E1 | ADR テンプレート (arc42 §9) を L4 方式設計 sub-doc の必須 artifact 化 | doc / policy | triaged | L4 |
+| **IMP-024** | 2026-05-29 | A-61 E2 | テスト設計観点一覧 (ISO 29119-4 技法: 境界値/同値/デシジョンテーブル) を各テスト設計に明記 | doc | observed | test-design 全般 |
+| **IMP-025** | 2026-05-29 | A-61 E3 | arc42 §5 (Building Block L1/L2) → L4/L5 sub-doc のビューマッピング表を追加 | doc | triaged | L4 |
