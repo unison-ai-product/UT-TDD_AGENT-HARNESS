@@ -97,9 +97,9 @@ L4 でドメインモデル用語 (集約 / 値オブジェクト / 不変条件
 
 | 用語 | 種別 | 定義 / 変更点 | L0 §10 back-merge (導入層 / 更新層) |
 |---|---|---|---|
-| (data.md 起草時に確定) | 新規/精緻化 | 集約 / 値オブジェクト 等 | 導入層 = L4 |
+| L4 集約 (Plan/Artifact/Workflow/Handover/Evaluation) | 新規 | 12 entity を DDD 集約に grouping (data.md §2) | concept §10.1 に back-merge 済 (導入層 = L4) |
 
-> 用語の新規導入が無ければ data.md 起草時に「用語更新なし」と明記。
+> 集約/値オブジェクト/不変条件 等の DDD 一般語は標準用語のため独自定義せず参照。UT-TDD 固有の 5 集約名のみ §10.1 へ back-merge。
 
 ## §7 機能要求更新 (FR registry delta)
 

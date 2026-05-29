@@ -37,3 +37,5 @@
 | **IMP-023** | 2026-05-29 | A-61 E1 | ADR テンプレート (arc42 §9) を L4 方式設計 sub-doc の必須 artifact 化 | doc / policy | triaged | L4 |
 | **IMP-024** | 2026-05-29 | A-61 E2 | テスト設計観点一覧 (ISO 29119-4 技法: 境界値/同値/デシジョンテーブル) を各テスト設計に明記 | doc | observed | test-design 全般 |
 | **IMP-025** | 2026-05-29 | A-61 E3 | arc42 §5 (Building Block L1/L2) → L4/L5 sub-doc のビューマッピング表を追加 | doc | triaged | L4 |
+| **IMP-026** | 2026-05-29 | A-64 data self-review C-1 | requirements §1.10.G.1 の VALID_SUB_DOCS を src/schema の zod enum 化 (現状 spec のみ、SubDoc 値オブジェクトが機械検証不可) | lint | triaged | L5/impl |
+| **IMP-027** | 2026-05-29 | A-64 data self-review m-1 | business §10.2 carry 着地先 §番号 (§1-§7) と L4 data.md 実 §番号 (§2-§8) の +1 ずれを整合 (doctor §参照前に確定) | doc | observed | L4/doctor |

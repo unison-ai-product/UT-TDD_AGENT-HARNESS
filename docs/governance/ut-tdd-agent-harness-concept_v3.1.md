@@ -1053,6 +1053,8 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **trace** | 上流 ID → 下流 ID の双方向追跡記録 | L0 | L1 |
 
 > L3 由来の派生 entity (acceptance_criterion / acceptance_test / plan_evaluation / skill_evaluation / model_evaluation / poc_evaluation / ipa_grade / cutover_command / kpi_metric / evaluation_batch / derived_view) は L1 業務要求 §10.1.1 に列挙。SSoT 定義は各導入層 (L3) で確定し本節へ back-merge する。
+>
+> **L4 集約 (Aggregate、導入層 L4)**: 上記 entity を DDD 集約に grouping した **Plan / Artifact / Workflow / Handover / Evaluation 集約** (data.md §2)。各集約ルート = plan / artifact / phase / handover / evaluation_batch。集約間は ID 参照のみ。詳細は [L4 データ設計 data.md](../design/harness/L4-basic-design/data.md)。
 
 ## §10.2 ワークフロー / メタモデル 用語
 
