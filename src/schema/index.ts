@@ -23,7 +23,7 @@ export const VALID_KINDS = [
 export const kindSchema = z.enum(VALID_KINDS);
 export type Kind = z.infer<typeof kindSchema>;
 
-/** §1.4 VALID_LAYERS (16 種 = V2 L0-L14 + cross、W-model) */
+/** §1.4 VALID_LAYERS (16 種 = V2 L0-L14 + cross、V-model) */
 export const VALID_LAYERS = [
   "L0", // 企画
   "L1", // 要求定義 (業務要求) ↔ L14

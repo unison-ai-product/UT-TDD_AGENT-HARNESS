@@ -5,7 +5,7 @@ export function lintVmodel(path?: string): LintResult {
   return {
     ok: true,
     messages: [
-      `vmodel lint: scaffold stub (W-model 8 directed edge / G7 trace freeze、未実装)${path ? ` target=${path}` : ""}`,
+      `vmodel lint: scaffold stub (V-model 8 directed edge / G7 trace freeze、未実装)${path ? ` target=${path}` : ""}`,
     ],
   };
 }
