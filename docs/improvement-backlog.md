@@ -24,3 +24,6 @@
 | **IMP-010** | 2026-05-29 | A-58 | carry 宣言 (§3) と詳細表 (§3.1) の整合を機械化 | lint | verified | A-58 doc-consistency carry-consistency |
 | **IMP-011** | 2026-05-29 | A-57 | 機能一覧 (FR registry) の漏れ監査を 5 型で機械化 | lint | verified | A-57 fr-registry-audit |
 | **IMP-012** | 2026-05-29 | A-56 | ユビキタス言語を各工程更新の living glossary 化 + per-工程 lint | doc / policy | verified | A-56 G.9 |
+| **IMP-013** | 2026-05-29 | A-60 G3 audit | FR-L1-20 (invocation_log) を L4 で詳細化する際 business-detail §2/§5 接続を明示 (AC-FR-BR21-02 の Phase A 前提との整合) | doc | triaged | L4 PLAN / business-detail |
+| **IMP-014** | 2026-05-29 | A-60 G3 audit | ②実装↔④テスト docstring (双方向 trace edge 5-8、requirements §2.3) 形式を L4 で設計し L7 入口前に凍結 | doc | triaged | L4 / requirements §2.3 |
+| **IMP-015** | 2026-05-29 | A-60 G3 audit | L3 functional §0 件数宣言が実件数ドリフト (「L3 FR 18 件」だが A-49/A-50 後の実数 26)。G3 audit で発見・修正 | doc | verified | A-60 (§0 を 26 件に是正) |

@@ -14,7 +14,7 @@ updated: 2026-05-28
 ---
 
 > **SSoT 参照**: ユビキタス言語 = L0 概念層 §10 用語集 / Bounded Context = L0 §2.5 (9-mode) + screen sub-doc §6 (PM/HM/GD 3 カテゴリ) / 業界標準整合 = ISO/IEC/IEEE 29148 (要件記述) + BDD Given-When-Then (AC 形式) + ISTQB Foundation Level (境界値分析)。
-> **件数確定**: L3 FR は **18 件 (P0、L1 FR-L1-01〜18 と 1:1 対応)**。P1 18 件 + P2 5 件は L4 carry (PLAN-L3-01 §3 U-L3-2 TL 推奨採用)。BR-21 経路 (FR-L1-36/38/43 + 関連 P2) は business-detail.md 担当 (重複回避)。
+> **件数確定**: L3 FR は **26 件** = P0 18 件 (FR-01〜18、L1 FR-L1-01〜18 と 1:1 対応) + FR-45 (P0、doc-reviewer back-propagation A-49) + workflow core 7 件 (FR-23〜30、A-50 で L3 直接詳細化)。残 P1 9 件 + P2 5 件は L4 carry (§3 / §3.1)。BR-21 経路 (FR-L1-36/38/43 + 関連 P2) は business-detail.md 担当 (重複回避)。g3-trace lint の l3Fr=26 と一致。
 > **AC 件数**: 全 FR で AC 最低 3 件 (正常 / 異常 / 境界)、計 54+ AC を予定。**人間判断点 列必須** (CC2 carry)。
 > **L12 接続規約**: `next_pair_freeze: L12`。L12 受入テスト設計は本 sub-doc の全 AC を AT-* で被覆 (孤児 AC = 0)。
 
@@ -24,7 +24,7 @@ updated: 2026-05-28
 
 L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) を L3 機能要件 (FR-*、システム視点の「何を満たすべきか」) に詳細化する sub-doc。各 FR に **入出力 / 振る舞い / 受入条件 (AC)** を確定し、L7 実装スプリント (TDD Red) の入力として機械検証可能な粒度に整える。
 
-スコープ: **P0 18 件 (FR-L1-01〜18) の詳細化のみ**。P1 18 件は L4 基本設計で carry (PLAN-L3-01 §3 U-L3-2)、P2 5 件は PLAN-L3-02 (business-detail) に委譲。
+スコープ: **L3 FR 26 件** = P0 18 件 (FR-01〜18) + FR-45 (P0、back-propagation) + workflow core 7 件 (FR-23〜30、A-50 で「ワークフロー = harness ガードレール」として L3 直接詳細化)。残 P1 9 件は L4 基本設計で carry (§3.1)、P2 5 件 + BR-21 経路は PLAN-L3-02 (business-detail) に委譲。
 
 ## §2 FR-* + AC-* 一覧 (本体)
 
