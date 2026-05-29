@@ -85,10 +85,21 @@ related_docs:
 - [ ] `generates` に対応する実装ファイルとテストファイルが存在
 - [ ] `tsc --noEmit` + `vitest` 全 PASS
 - [ ] 関連設計 PLAN への双方向 trace が明示済み
-- [ ] frontmatter `kind == impl`、§0〜§5 完備
+- [ ] §6 用語更新 が存在 (当該工程の新規 / 精緻化用語を L0 §10 用語集へ back-merge する delta、無ければ「用語更新なし」明記、要件 §1.10.G.9)
+- [ ] frontmatter `kind == impl`、§0〜§6 完備
 
 ## §5 関連 PLAN / ADR / docs
 
 - 関連 PLAN: (依存 / 後続 PLAN を列挙)
 - 関連 ADR: (採用判断 ADR があれば列挙)
 - 参照 docs: `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md`、`docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
+
+## §6 用語更新 (living glossary delta)
+
+当該工程で新規導入 / 精緻化したユビキタス言語を記録し、L0 §10 用語集 (`docs/governance/ut-tdd-agent-harness-concept_v3.1.md`) へ back-merge する (独自定義禁止、anti-corruption layer / 要件 §1.10.G.9)。
+
+| 用語 | 種別 (新規 / 精緻化) | 定義 / 変更点 | L0 §10 back-merge (導入層 / 更新層) |
+|---|---|---|---|
+| (例) ... | 新規 | ... | 導入層 = 当該 layer |
+
+> 当該工程で用語の新規導入・意味変更が無い場合は本文に `用語更新なし` と明記する。

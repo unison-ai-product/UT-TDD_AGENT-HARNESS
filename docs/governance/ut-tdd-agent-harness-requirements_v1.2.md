@@ -473,6 +473,16 @@ L0 → L1 → L4 のドメイン継承チェーンを `ut-tdd plan lint` (sub_do
 - [ ] **件数確定宣言** = `<sub-doc 種別> は <要求 prefix> <NN> 件で確定 (根拠: <TL/PMO レビュー record path>)` のパターンが存在 (欠落 → P1 warning)
 - [ ] **L3 接続規約** = `next_pair_freeze: <L3 or L4 doc path>` の frontmatter フィールド + 本文 §関連 doc に `L3 PLAN は本 sub-doc 全件を dependencies.requires に列挙する` の記載 (欠落 → exit 1、§G.2 frontmatter と連動)
 
+##### G.9 用語更新 (glossary delta) 検証 (living glossary、構想書 §3.1.2.2)
+
+各 L 層 design / impl PLAN の §用語更新 section を `ut-tdd plan lint` で検証 (living glossary の back-merge 強制、ユビキタス言語の各工程更新):
+
+- [ ] 各 design / impl PLAN に `## §6 用語更新` section が存在 (欠落 → exit 1)。当該工程で新規導入 / 精緻化した用語が無ければ本文に `用語更新なし` を明記
+- [ ] §6 用語更新 に挙げた**新規用語**は L0 §10 用語集 (`docs/governance/ut-tdd-agent-harness-concept_v3.1.md`) に同名 entry として back-merge 済み (未 merge の独自定義 → exit 1、anti-corruption layer)
+- [ ] back-merge した §10 entry の **導入層** 列が当該 PLAN の `layer` と一致 (不一致 → P1 warning)
+- [ ] 既存用語の**意味変更**を行った場合、§10 該当 entry の **更新層** 列に当該 `layer` が追記済み (欠落 → P1 warning)
+- [ ] §6 用語更新 で参照する用語名が §10 と表記揺れ無く一致 (揺れ → warning)
+
 #### H. G1-trace 機械検証ルール (sub-gate、DD1=a / DD2=a PO 承認 2026-05-28)
 
 G1 内 sub-gate「業務 ⇔ 画面 ⇔ 機能 双方向 trace 整合」の機械検証ルール 4 件。SSoT: screen sub-doc §5 trace マトリクス。G1-trace は G1 内の 3 番目 sub-gate であり、G1-content → G1-pair → G1-trace の順で通過後に G1 exit となる (構想書 §3.3.1)。
@@ -759,7 +769,7 @@ R4 outcome の `promotion_strategy` で PoC / 検証成果物の扱いを明示:
 - [ ] kind=reverse PLAN は `decision_outcome=confirmed` の poc PLAN だけを起点にできる
 - [ ] `decision_outcome=rejected/pivot` の poc PLAN から reverse / feature 昇格する参照は exit 1
 - [ ] R1 phase の PLAN は §3.3 の R1 実施対象 `confirmed_reverse_type` のみ許容 (skip 対象は exit 1)
-- [ ] R4 完了 PLAN は `forward_routing` を必須 (§3.4 の 4 値)
+- [ ] R4 完了 PLAN は `forward_routing` を必須 (§3.4 の 5 値: L1 / L3 / L4 / L5 / gap-only)
 - [ ] R4 完了 PLAN は `promotion_strategy` を必須 (§3.4 の 4 値)
 - [ ] `promotion_strategy=reuse-as-is` は trace / test / security 条件が揃わなければ exit 1
 - [ ] `promotion_strategy in [reuse-as-is, reuse-with-hardening]` でも feature PR で Forward gate を通さなければ main merge 不可

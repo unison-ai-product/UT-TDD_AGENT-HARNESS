@@ -535,6 +535,8 @@ V2 HELIX-workflows 業務要求 doc §10 を採用し、UT-TDD は L0 → L1 →
 
 **anti-corruption layer 原則**: L1 で entity を独自定義することを禁止し、L0 用語との 1:1 対応を `ut-tdd plan lint` (sub_doc=business 時) で機械検証する。詳細は要件定義書 §1.10.G.7 (新)。
 
+**living glossary 原則 (各工程で用語更新)**: ユビキタス言語は L0 §10 用語集を**単一 SSoT** とし、L0 で初期定義したうえで**各 V-model 工程 (L1-L6) で更新される living glossary** として扱う。各工程は語を独自定義せず、その工程で新規導入 / 精緻化したドメイン語・機構語を **L0 §10 へ back-merge** する。これにより「用語更新 (glossary delta)」は各設計層の **① 必須成果物の一部**となる (§3 driveモデルの ① 必須タスクに含む)。§10 用語集は各語に **導入層 / 更新層** を記録し、どの工程で生まれ・更新されたかを trace する。機械検証は要件定義書 §1.10.G.9 (新)。
+
 ### 3.1.2.3 L1 sub-doc 共通ヘッダー要素 (4 doc 共通)
 
 5 sub-doc 全てに以下を冒頭 blockquote で必須化:
@@ -1025,7 +1027,46 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 
 ---
 
-# §10 用語集
+# §10 用語集 (ユビキタス言語 SSoT / living glossary)
+
+> 本節は UT-TDD ユビキタス言語の**単一 SSoT** (§3.1.2.2 anti-corruption layer)。各工程は語を独自定義せず、新規導入 / 精緻化した語をここへ **back-merge** する **living glossary** とする。各語に **導入層** (初出工程) と **更新層** (意味を更新した工程、無ければ —) を記録する。§10.3 機構用語は既定で導入層 = L0。機械検証は要件定義書 §1.10.G.9。
+
+## §10.1 ドメイン entity 用語 (DDD、L1 業務要求 §10.1 と 1:1)
+
+| 用語 | 定義 | 導入層 | 更新層 |
+|---|---|---|---|
+| **plan** | 工程単位の作業計画 = **進め方手順書** (frontmatter + 工程表 + 実装計画)。機能仕様の入れ物ではない | L0 | L1 |
+| **gate** | 工程間の通過判定点 (G0.5-G14、fail-close) | L0 | L1 |
+| **artifact** | PLAN が generates する設計 / テスト設計 / 実装 / テストコード成果物 (V-model 4 artifact) | L0 | L1 |
+| **pair** | 設計 ⇔ テスト設計の双方向対応 (W-model、L1↔L14 / L2↔L10 / L3↔L12 / L4↔L9 / L5↔L8 / L6↔L7) | L0 | L1 |
+| **mode** | 開発経路種別 (9-mode: Forward / Reverse / Discovery / Refactor / Retrofit / Recovery / Scrum / Incident / Add-feature) | L0 | L1 |
+| **drive** | 実装の主軸 (be / fe / fullstack / db / agent / scrum / reverse / poc / troubleshoot) | L0 | L1 |
+| **agent_slot** | AI エージェント役割枠 (po / tl / qa / aim / uiux / se / docs) | L0 | L1 |
+| **handover** | セッション間の作業引き継ぎ状態 (`.ut-tdd/handover/CURRENT.json`) | L0 | L1 |
+| **sprint** | L7 実装スプリント単位 (TDD Red→Green→3 点 R) | L0 | L1 |
+| **phase** | 現在の V-model 工程位置 (`.ut-tdd/phase.yaml`) | L0 | L1 |
+| **carry** | 後段工程へ送る未確定事項・前提条件 | L0 | L1 |
+| **trace** | 上流 ID → 下流 ID の双方向追跡記録 | L0 | L1 |
+
+> L3 由来の派生 entity (acceptance_criterion / acceptance_test / plan_evaluation / skill_evaluation / model_evaluation / poc_evaluation / ipa_grade / cutover_command / kpi_metric / evaluation_batch / derived_view) は L1 業務要求 §10.1.1 に列挙。SSoT 定義は各導入層 (L3) で確定し本節へ back-merge する。
+
+## §10.2 ワークフロー / メタモデル 用語
+
+| 用語 | 定義 | 導入層 | 更新層 |
+|---|---|---|---|
+| **進め方手順書 (= PLAN)** | 工程をきれいに前へ進める段取り / 軌跡 / TODO。機能内容そのものは記述しない (それは L3 要件定義書 / 機能一覧の領域) | L0 | L1 |
+| **工程進捗プラン** | Forward V-model の背骨を L0→L14 へ進める PLAN (メタモデル ① 必須スケルトン) | L0 | — |
+| **駆動モデルプラン (駆動プラン)** | 工程進捗の途中で介在する内部ドライブ PLAN (メタモデル ② ケースバイケース)。「検証へ行く (kind=poc)」か「ドキュメントへ戻す (kind=reverse, fullback)」かで分離 | L0 | — |
+| **triage (maturity 判定)** | item の成熟度を判定し「どの検証が要るか」を決める PLAN の役割。検証は opt-in (必須でない) | L0 | — |
+| **検証ツールボックス** | opt-in の検証種別: Web 検証 (L0) / 概念検証 (L1) / 技術検証 (L3)。triage で必要時のみ発動、default cascade だが rigid でない | L0 | — |
+| **fullback (V字回帰)** | 駆動プラン (検証) の exit 後、本線 V-model へ合流復帰すること (kind=reverse + forward_routing で復帰先指定) | L0 | — |
+| **decision_outcome** | 検証 (PoC) の exit verdict: confirmed / rejected / pivot (S4 必須) | L0 | L3 |
+| **promotion_strategy** | 検証成果物の昇格戦略: reuse-as-is / reuse-with-hardening (promote+実装ゲート) / redesign (throwaway 再設計) / discard (R4 必須) | L0 | L3 |
+| **forward_routing** | fullback 時の本線復帰先 (L1 / L3 / L4 / L5 / gap-only の 5 値) | L0 | L3 |
+| **要求 (L1) / 要件 (L3)** | L1 = 業務「要求」(BR/NFR、po 主体) / L3 = 「要件」(FR+AC、tl 主体、BR から trace)。別ドキュメント・別ゲート (G1 / G3) | L0 | — |
+| **ユビキタス言語 / anti-corruption layer** | L0 §10 を単一 SSoT とし下層は独自定義禁止・参照のみとする DDD 原則 (§3.1.2.2) | L0 | — |
+
+## §10.3 機構 / 機械検証 用語 (導入層は既定 L0)
 
 | 用語 | 定義 |
 |---|---|
