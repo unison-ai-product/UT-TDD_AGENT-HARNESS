@@ -89,9 +89,10 @@ external-if.md (what/形状) の **how = adapter 詳細契約**を確定する (
 
 | 論点 | 内容 | 判断 |
 |---|---|---|
-| ADR-003 化 | adapter で provider (Claude/Codex/GitHub) を隔離する境界 (Anti-Corruption Layer) を ADR 化するか | **PO/TL 判断 (G5 前)**。external-if §6 + 本 doc §1 が設計根拠。ADR 化しない場合はこれらが正本 |
+| ADR-003 | adapter で provider (Claude/Codex/GitHub) を隔離する境界 (Anti-Corruption Layer)、契約プラン CLI/hook 前提 | **採択済 ([ADR-003](../../../adr/ADR-003-runtime-adapter-boundary-subscription-cli.md)、PO 承認 2026-05-29)**。A-71 の API-premise 是正を Context に反映。external-if §6 + 本 doc §1 が設計根拠 |
 
-> ADR-002 候補 (依存方向) は module-decomposition §7 で扱う。
+> ADR-002 (依存方向) は module-decomposition §7 で扱う (採択済)。
+> **将来境界 (IMP-031)**: 画面+DB を Web サーバ側に置く場合の **local↔Web 通信境界**は ADR-003 adapter 方針の延長で Phase B に設計。
 
 ## §8 carry → L7 実装 / security
 

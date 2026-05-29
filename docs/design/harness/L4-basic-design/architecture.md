@@ -131,10 +131,10 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 | ADR | 状態 | 扱い |
 |---|---|---|
 | **ADR-001** | accepted | TS/Bun + file-based state + bash 排除 (既存、本方式の基盤) |
-| ADR-002 候補 | proposed | 依存方向ルール (schema 安定核 + 循環禁止)。**§3 が設計根拠として先行文書化済 (正本)**。ADR 化は変更管理・却下理由を残す価値があるかを G4 前に PO/TL が判断。ADR 化しない場合は §3 を正本とする |
-| ADR-003 候補 | proposed | runtime adapter 境界 (外部 service 隔離) — external-if (PLAN-L4-04) と連動 |
+| **[ADR-002](../../../adr/ADR-002-dependency-direction-and-auto-map.md)** | **accepted** (2026-05-29) | 依存方向ルール (schema 安定核 + 循環禁止 + fs 隔離) + **依存マップ自動生成・構想 vs 実装 drift lint** (IMP-032)。§3 が設計根拠 |
+| **[ADR-003](../../../adr/ADR-003-runtime-adapter-boundary-subscription-cli.md)** | **accepted** (2026-05-29) | runtime adapter 境界 (Anti-Corruption Layer)、**契約プラン CLI/hook 前提・API key 非保持** (A-71 是正を反映)。§6 + external-if §6 が設計根拠 |
 
-> ADR 候補の確定 (起票要否) は方式の重要判断であり **PO/TL 承認事項** (本 doc では候補列挙まで、確定は G4 前のレビューで)。
+> ADR-002/003 は PO 承認済 (2026-05-29)。将来 local↔Web 通信境界 (画面+DB サーバ化、IMP-031) は ADR-003 の延長で Phase B に扱う。
 
 ## §8 carry → L5 詳細設計 / L6 機能設計
 

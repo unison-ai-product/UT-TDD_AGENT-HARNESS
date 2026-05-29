@@ -42,6 +42,7 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 | **(b) VCS・CI 境界** | GitHub / Actions | CI 配線 (`.github/workflows/`)、gate 再実行 |
 | **(c) 観測・監視境界** | Sentry / Uptime Robot | inbound trigger (harness が webhook/alert を受ける) |
 | **(d) 依存管理境界** | Dependabot | inbound 通知 (PR / alert) |
+| **(e) local↔Web 境界 (将来、IMP-031)** | 画面 (14 screen) + DB を載せる Web サーバ | **現状なし** (file-based local、ネットワーク非依存)。画面+DB をサーバ側に配置する Phase B / multi-team 時に **local harness ↔ Web サーバ間のネットワーク通信境界**が新設される。[ADR-003](../../../adr/ADR-003-runtime-adapter-boundary-subscription-cli.md) adapter 方針の延長で設計 |
 
 ## §3 各境界の DbC 契約 (precondition / postcondition / invariant)
 
