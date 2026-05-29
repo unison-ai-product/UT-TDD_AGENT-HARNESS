@@ -1,0 +1,89 @@
+---
+plan_id: PLAN-L6-00-master
+title: "PLAN-L6-00 (Master hub): L6 機能設計 — 必須/選択 triage + child PLAN 合成"
+kind: design
+layer: L6
+drive: fullstack
+status: draft
+created: 2026-05-29
+updated: 2026-05-29
+owner: PM (Opus) / PO (人間)
+master_hub: true
+agent_slots:
+  - role: tl
+    slot_label: "TL — L6 機能設計 (関数 schema / DbC pre-post / pseudocode / edge) のレビュー (別 runtime)"
+  - role: aim
+    slot_label: "AIM — L6 単体テスト設計 (L7 pair) の観点レビュー"
+generates:
+  - artifact_path: docs/plans/PLAN-L6-00-master.md
+    artifact_type: markdown_doc
+dependencies:
+  parent: null
+  requires:
+    - docs/design/harness/L5-detailed-design/internal-processing.md
+    - docs/design/harness/L5-detailed-design/module-decomposition.md
+    - docs/design/harness/L5-detailed-design/physical-data.md
+    - docs/design/harness/L5-detailed-design/if-detail.md
+  references:
+    - docs/governance/document-system-map.md
+    - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
+    - docs/governance/gate-design.md
+related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+v2_import: docs/migration/v2-import-ledger.md
+---
+
+# PLAN-L6-00 (Master hub): L6 機能設計 — 必須/選択 triage + child 合成
+
+## §0 位置づけ
+
+L6 (機能設計 = 詳細設計末端、関数 level) を **メタモデル ①必須 + ②プロダクト選択** で起票する Master hub (要件 §1.10.G.13 導線)。G5 = CONDITIONAL PASS (A-67/A-69) を前提に、L5 詳細設計 (internal-processing の D-API / module-decomposition の関数 export) を**関数 schema・pre/post・pseudocode・エッジケース**まで確定する設計層の最終工程。L6 sub-doc enum (§1.10.G.1) = `function-spec / class-design / edge-case` (3 種)。V-pair = **L7 単体テスト設計** (L6↔L7、G6 = L6 ① ⇔ L6 ③ 単体テスト設計)。grounding = document-system-map §1 (IEEE 1016 §5.7 Pseudocode) / §3 (DbC test oracle 導出)。
+
+## §1 triage (UT-TDD harness のプロダクト特性)
+
+| 軸 | UT-TDD の特性 | L6 sub-doc への影響 |
+|---|---|---|
+| 関数構造 | TS pure functions + zod schema (module-decomposition で export verbatim: loadDocs/analyzeG3Trace/evaluateAgentGuard/detectMode/lintPlan/lintVmodel/runDoctor 等) | function-spec 必須 (signature + DbC pre/post + pseudocode) |
+| OOP 有無 | **非 OOP** — クラス階層を持たず関数 + zod 値オブジェクト中心 (module-decomposition で class 不在を確認) | **class-design 縮退** (G.13 line 547「非 OOP drive で縮退」)。値オブジェクト/型設計は function-spec に吸収 |
+| エッジケース | CLI/lint/gate の境界条件 (空入力/不正 frontmatter/path 不在/循環依存 等)。IMP-014 の `@edge-*` docstring | edge-case 必須 (internal-processing §7 G5 凍結分を per-function 確定) |
+| WBS | L7 実装スプリントへの作業分解 (G6 = WBS 不在 → fail、§1.10 line 657) | function-spec §WBS に統合 (関数群 × Sprint 割当) |
+
+> L6 sub-doc に screen 系はない (画面は L1/L2/L10)。class-design は非 OOP のため縮退 (skip ではなく function-spec へ統合、reason 記録)。
+
+## §2 L6 sub-doc 合成結果 (必須/選択 区分 = G.13)
+
+| sub-doc | 区分 | 判定 | L5 由来 (詳細化元) | child PLAN |
+|---|---|---|---|---|
+| **function-spec** | ① 必須 | 起票 (関数 schema/signature + DbC pre/post/invariant + IEEE 1016 §5.7 pseudocode + WBS、internal-processing §6 D-API を関数 level 詳細化) | internal-processing.md / module-decomposition.md | **PLAN-L6-01-function-spec** |
+| **edge-case** | ① 必須 | 起票 (per-function エッジケース一覧 + `@edge-*` docstring 確定、internal-processing §7 G5 凍結を関数別に展開、IMP-014) | internal-processing.md §7 | **PLAN-L6-02-edge-case** |
+| **class-design** | ② 選択 | **縮退 (skip + reason)**: UT-TDD core は非 OOP (TS pure functions + zod 値オブジェクト、module-decomposition で class 階層不在を確認)。値オブジェクト/型設計は function-spec §型 に統合。G.13 line 547「非 OOP drive で縮退」に該当 | (function-spec へ統合) | **skip (PLAN 不要)** |
+
+## §3 実行順 (child 依存)
+
+```
+PLAN-L6-01-function-spec (foundational: D-API → 関数 signature + pre/post + pseudocode + WBS)
+        │
+        └─→ PLAN-L6-02-edge-case (function-spec の関数別に edge を展開、@edge-* docstring 確定)
+```
+
+1. **PLAN-L6-01-function-spec** (起点、関数 schema + pseudocode + WBS)
+2. **PLAN-L6-02-edge-case** (function-spec 確定後、関数別 edge)
+
+各 child は V-pair = **L7 単体テスト設計** (`docs/test-design/harness/L7-unit-test-design.md`、L6↔L7)。DbC 契約から test oracle を導出 (document-system-map §3)。artifact path = `docs/design/harness/L6-function-design/<sub-doc>.md` (§1.10 line 418 規約)。
+
+## §4 L6 carry 反映 (G5 escalation / backlog 由来)
+
+child PLAN 起票時に以下を織り込む:
+- **IMP-014 (G3→G5 carry)**: ②実装↔④テスト docstring (`@edge-*` format) を edge-case で per-function 確定し L7 TDD Red 入口前に凍結 (G5 で internal-processing §7 に枠を凍結済、L6 で関数別に展開)
+- **IMP-019 (Z3)**: L6 に IEEE 1016 §5.7 Pseudocode を grounding として function-spec に明記 (関数本体の処理手順を pseudocode 化、L7 実装の正本)
+- **IMP-033 (A-73)**: 自動追加型クロスチェックエンジン (gate-design §4/§5) の **ルール型 10 種の関数 signature + pseudocode** を function-spec で設計 (doc レジストリ scan / rule registry / auto-enroll / coverage map の関数化)
+- **IMP-004 (A-68 決定 (a))**: PlanId regex の階層 ID 対応を function-spec の frontmatter 検証関数 signature に反映
+- **G5 escalation**: 認証・秘密管理は if-detail (L5) で契約プラン CLI/hook 前提に確定済 (A-71)。L6 では adapter 起動関数の signature にのみ反映 (秘密値を扱わない = pre-condition「provider CLI ログイン済」)
+
+## §5 DoD (Master hub 完了条件)
+
+- [ ] §2 の必須 2 = child PLAN 2 件を起票 (function-spec / edge-case)
+- [ ] class-design 縮退 (skip + reason = 非 OOP、function-spec へ統合) を記録
+- [ ] 各 child が L7 単体テスト設計と pair_artifact 接続 (DbC → test oracle 導出)
+- [ ] WBS を function-spec に統合 (G6 = WBS 存在要件、§1.10 line 657)
+- [ ] G5 escalation / IMP-014/019/033/004 を child PLAN の §4 carry に織り込み
+- [ ] 全 child 完了で G6 (機能設計凍結 = L6 ① ⇔ L6 ③ 単体テスト設計) readiness へ
