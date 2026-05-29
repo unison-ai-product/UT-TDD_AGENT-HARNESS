@@ -526,6 +526,28 @@ doc 間の整合を `src/lint/doc-consistency.ts` で自動検証 = L3 到達ま
 
 **運用**: 各工程で不備発見 → backlog 登録 (observed) → triage (どの機能化経路 = lint/FR/policy/doc か、triaged) → 実装 (implemented) → 検証 + ledger A-番号紐付け (verified)。`verified` 以外の openCount が「機能化待ち」= 次の ②駆動モデル (検証 / 改修駆動) の trigger 源。**ledger (起きたことの決定台帳) と backlog (これからやる改善候補) を相互参照で分離**する。
 
+##### G.13 design 層 sub-doc の 必須 / プロダクト選択 区分 + PLAN 合成導線 (メタモデル ①②、A-62)
+
+設計層 (L1-L6) の sub-doc は「**① 必須** (プロダクト非依存で常に作成)」と「**② プロダクト/drive 選択** (条件付き、`skip_sub_doc` 判定)」に区分する (PLAN-001 メタモデル ①②の具体化)。PLAN 起票の**導線**:
+
+1. **triage**: 当該層 × プロダクト特性 (drive / UI 有無 / 外部連携有無 / DB 有無) を判定
+2. **① 必須 sub-doc** は常に `PLAN-L<N>-<NN>-<sub-doc>` を起票 (kind=design)
+3. **② 選択 sub-doc** は条件成立時のみ起票。不成立は `skip_sub_doc[]` に reason (≥10 字) で記録 (G.2 / G.3)
+4. 各 sub-doc = 1 PLAN (混在禁止 AP-11/12)。複数 sub-doc は Master PLAN (hub、`PLAN-L<N>-00-master`) が束ね、triage 結果・child 一覧・skip 決定・実行順を持つ
+
+**層別 必須 / 選択 区分**:
+
+| 層 | ① 必須 (常時) | ② プロダクト/drive 選択 (skip 条件) |
+|---|---|---|
+| L1 | business / functional / nfr / technical | screen (UI 無し drive で skip) |
+| L2 | — | screen-list / screen-flow / wireframe / ui-element (UI 無し drive で層ごと skip) |
+| L3 | functional-requirement / nfr-grade | business-requirement (評価系 BR が無ければ縮退) |
+| **L4** | **architecture (方式設計/ADR) / data (ドメインモデル) / function (機能設計)** | **external-if (外部連携無しで skip) / screen (UI 無し or 未確定で skip/defer)** |
+| L5 | internal-processing / module-decomposition | physical-data (DB 無しで skip) / if-detail (IF 無しで skip) |
+| L6 | function-spec / edge-case | class-design (非 OOP drive で縮退) |
+
+> **L4 の architecture (方式設計) と external-if (外部設計) は別 sub-doc** = document-system-map Z1 (方式設計/外部設計 分離) を既存 enum が満たす。**data** = DbC invariant (ドメイン不変条件)、**external-if** = DbC pre/post (境界契約) を担う (document-system-map §3 配線図=DbC)。**architecture** sub-doc は arc42 §4 (Solution Strategy) + §9 (ADR) を必須 artifact とする (Z1/E1)。
+
 #### H. G1-trace 機械検証ルール (sub-gate、DD1=a / DD2=a PO 承認 2026-05-28)
 
 G1 内 sub-gate「業務 ⇔ 画面 ⇔ 機能 双方向 trace 整合」の機械検証ルール 4 件。SSoT: screen sub-doc §5 trace マトリクス。G1-trace は G1 内の 3 番目 sub-gate であり、G1-content → G1-pair → G1-trace の順で通過後に G1 exit となる (構想書 §3.3.1)。
