@@ -1,0 +1,2 @@
+# CI workflow の home (repository-structure.md §1、Layer B-remote)
+# harness-check.yml は後続 PLAN で起こす (Phase 0-A では Required Status Checks に登録しない)。

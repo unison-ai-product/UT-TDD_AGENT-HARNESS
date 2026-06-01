@@ -4,7 +4,7 @@
 - **Date**: 2026-05-27
 - **正本**: 本書がリポジトリ配置の **canonical 正本**。`requirements_v1.2 §9.1`（Phase 0 存在チェック）と `CLAUDE.md` のディレクトリ節は本書を参照する。
 - **前提**: ADR-001（harness 実装 = TypeScript/Bun、HELIX は概念のみ）/ ADR-005（配布 = GitHub-pull、Web UI = 中央・全 project 横断、plugin = 補助チャネル）/ V-model 4 artifact（concept v3.1 §2.3）。
-- **要件同期 (済)**: `docs/process/` (A) / `src/web/` ([予定]) は **requirements_v1.2 §9.1 Phase 0-A 存在チェックツリーに反映済**。`docs/process/` は実体 (`.gitkeep`) を作成し A マーキングを truthful 化。`src/web/` は [予定] (Phase 0-A 対象外、後続 PLAN で A 化)。
+- **要件同期 (済)**: `docs/process/` (A) / `src/web/` は **requirements_v1.2 §9.1 Phase 0-A 存在チェックツリーに反映済**。canonical ツリーの全ディレクトリは実体 (`.gitkeep`) 作成済 (構成は要件定義で確定するため一括実体化)。各 `[予定]` ディレクトリは **ディレクトリ実体化済 / 中身 (機能・doc) は後続 PLAN で起こす** の意。`src/web/` も実体化済 (Phase 0-A 対象化は後続 PLAN)。
 - **本 repo の位置づけ (ADR-005)**: 本 repo は **harness engine repo（= 配布の単一真実）**。各 project は本 repo を **git dependency（tag-pin）で pull** し、`ut-tdd setup` が adapter を投影する。下記 canonical ツリーは **engine repo の構成**。consume 側 project への投影レイアウトは §9 を参照。
 
 ## 1. canonical ツリー
@@ -74,7 +74,7 @@ UT-TDD-agent-harness/
 └── .helix/                       # HELIX 由来 legacy state (gitignored、正本にしない)
 ```
 
-`★` = 配置ルールが特に重要な領域。`[予定]` = 後続 PLAN で作成。
+`★` = 配置ルールが特に重要な領域。`[予定]` = **ディレクトリ実体 (`.gitkeep`) は作成済、中身 (機能コード・doc・workflow) は後続 PLAN で起こす**。構成 (どのディレクトリを置くか) は要件定義で確定するため一括実体化する。
 
 ## 2. 配置ルール (どこに何を置くか)
 
@@ -130,6 +130,7 @@ UT-TDD-agent-harness/
 - `vendor/helix-source/` を直接編集しない（移植は UT-TDD 所有パスへ概念から再実装）。
 - `.ut-tdd/` runtime state を docs 目的で Git 追跡しない。
 - 日本語ファイル名を使わない。
+- **`[予定]` ディレクトリの中身を後続 PLAN 不在のまま実装しない**: ディレクトリ実体 (`.gitkeep`) は構成確定として一括作成済だが、中身 (機能コード・doc・workflow。特に `src/web/`) は対応 PLAN が確定してから起こす。`.gitkeep` があることを実装許可と誤読しない。
 
 ## 8. config 最小化方針 (root の散らかり防止)
 
