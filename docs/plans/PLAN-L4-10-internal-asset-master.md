@@ -1,0 +1,104 @@
+---
+plan_id: PLAN-L4-10-internal-asset-master
+title: "PLAN-L4-10 (Master): 内部資産 (subagent/skill/command) UT-TDD 化の L4 基本設計増分"
+kind: design
+layer: L4
+sub_doc: architecture
+drive: fullstack
+status: draft
+created: 2026-06-01
+updated: 2026-06-01
+owner: PM (Opus) / PO (人間)
+master_hub: true
+agent_slots:
+  - role: tl
+    slot_label: "TL — 内部資産 TS 統制境界 (層1 markdown / 層2 TS) の設計レビュー (別 runtime)"
+generates:
+  - artifact_path: docs/plans/PLAN-L4-10-internal-asset-master.md
+    artifact_type: markdown_doc
+dependencies:
+  parent: docs/plans/PLAN-REC-001-internal-asset-recovery.md
+  requires:
+    - docs/design/harness/L1-requirements/functional-requirements.md
+    - docs/design/harness/L4-basic-design/architecture.md
+    - docs/design/harness/L4-basic-design/function.md
+    - docs/migration/internal-asset-inventory.md
+  references:
+    - docs/migration/helix-porting-map.md
+    - docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
+    - docs/governance/recovery-workflow.md
+related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+v2_import: docs/migration/v2-import-ledger.md
+---
+
+# PLAN-L4-10 (Master): 内部資産 UT-TDD 化の L4 基本設計増分
+
+## §0 位置づけ
+
+Recovery (PLAN-REC-001) Step 4 後半 = **L4-L6 設計増分**の L4 Master hub。L1/L3 に追加した **FR-L1-46〜49** (BR-22 派生: subagent roster / skill pack curate / command CLI 化 / 内部資産 drift lint) を L4 基本設計に落とす。既存 L4 sub-doc (architecture/function) への**増分**であり、新規 sub-doc は起こさない (内部資産は方式設計 = architecture/function の範囲)。
+
+## §1 TL 確定境界 (本設計の前提、2026-06-01 real Codex TL)
+
+「内部資産を TS に作り替える」の射程を TL が確定:
+
+| 層 | 内容 | TS 化方針 |
+|---|---|---|
+| **層1 資産の中身** | subagent prompt 本文 / skill 知識本文 | **markdown 正本** (Claude Code native 規約 `.claude/agents/*.md` を維持)。TS literal 化は非推奨 (native 規約破壊 / 二重管理) |
+| **層2 管理機構** | roster registry / skill catalog・recommender・injector / capability resolver / drift lint / guard | **TS/Bun** (ADR-001 射程)。single source = markdown を TS が検証/注入/統制 |
+
+**single source = markdown**。TS は生成でなく **検証/注入/統制**のみ (Q3)。FR-L1-49 drift lint と整合 (「正本 .md に HELIX 前提が残っていないか fail-close」)。
+
+## §2 triage (FR-L1-46〜49 → L4 設計項目)
+
+| FR-L1 | 内容 | L4 設計先 | child PLAN |
+|---|---|---|---|
+| **FR-L1-46** | subagent roster の UT-TDD 化 (capability class / model family / guard 統合 / HELIX 前提除去) | architecture §3 に `roster` 概念 + runtime building block 拡張 / function に roster 機能 | **PLAN-L4-11-roster** |
+| **FR-L1-47** | skill pack の UT-TDD curate (UT-TDD 版 SKILL_MAP / core-optional-drop / CLI trigger / helix 用語除去) | architecture §3 に `skills` building block 新設 / function に catalog-injector | **PLAN-L4-12-skill-pack** |
+| **FR-L1-48** | 内部資産 command の ut-tdd CLI subcommand 化 | function の CLI コマンド表に追加 (dashboard/asset 等) | (function 増分に統合、PLAN-L4-11 で扱う) |
+| **FR-L1-49** | 内部資産 drift lint (HELIX 絶対パス残存 / docs-skills 空 / roster↔guard 整合) | architecture §3 lint building block + ADR-004 Consequences。IMP-033 rule engine インスタンス | **PLAN-L4-13-drift-lint** |
+
+> command (FR-L1-48) は単独 child を起こさず PLAN-L4-11 (roster) の CLI 設計に統合 (粒度過剰回避)。
+
+## §3 ADR-004 起票 (本 Master の大局判断 artifact)
+
+ADR 起票ルール (architecture §7「L4 方式設計 sub-doc は ADR を必須 artifact」/ design template §6「大局判断ある場合」/ ADR-002-003 の前例「構造の根幹・将来必ず参照・固定しないと前提ズレ再発」) に照らし、**層1/層2 境界は ADR 起票基準を満たす** (PO 確認済 2026-06-01):
+
+- 大局判断 = ○ (層1 markdown / 層2 TS 統制の境界は構造の根幹)
+- 将来必ず参照 = ○ (roster/catalog/recommender/injector/drift-lint 全判断の根拠)
+- 固定しないと再発 = ◎ (今回の前提抜けそのものの再発防止。ADR-003 が API key 前提ズレ再発防止で起票されたのと同型)
+
+**起票方針**: ADR-004 を**本 L4 設計の artifact として**起票 (ADR=L4 成果物のルール準拠)。ADR-001 は改訂せず ADR-004 `関連` 欄から片方向参照 (accepted ADR は superseded 以外で本文を変えない慣習)。
+
+## §4 実行順 (child)
+
+```
+ADR-004 (内部資産 TS 統制境界 = 層1/層2) ── 本 Master の大局判断 artifact、最初に確定
+   │
+   ├─→ PLAN-L4-11-roster (subagent roster + command CLI、FR-L1-46/48)
+   ├─→ PLAN-L4-12-skill-pack (skill catalog/injector + curate 設計、FR-L1-47)
+   └─→ PLAN-L4-13-drift-lint (内部資産 drift lint、FR-L1-49、IMP-033 rule)
+```
+
+1. **ADR-004** 起票 (層1/層2 境界、TL 確定を ADR 化)
+2. **PLAN-L4-11-roster** (roster registry + capability class + command CLI、architecture/function 増分)
+3. **PLAN-L4-12-skill-pack** (skills building block + catalog/recommender/injector、curate 計画)
+4. **PLAN-L4-13-drift-lint** (drift lint 検査項目、FR-L1-49、ADR-004 Consequences に接続)
+
+各 child は V-pair = L9 総合テスト設計 (L4↔L9 集合 pair)。
+
+## §5 carry (Recovery / TL 由来)
+
+- TL 次アクション: ADR-004 草案 / ADR-001 参照追記 / FR-L1-49 drift lint 検査項目 / subagent 19 + skill curate を L3/WBS 分解
+- porting-map W6/W7 (subagent harden) / W10 (skill curate) を child の後続実装 PLAN に接続
+- L5/L6 増分: roster/catalog の関数 signature + pseudocode (module-decomposition / internal-processing / function-spec に増分)
+- drift lint は **IMP-033 cross-check rule engine の rule 型インスタンス** (gate-design §5、新規 lint を手書きせず rule 登録で実現)
+
+## §6 DoD (Master 完了条件)
+
+- [ ] ADR-004 (内部資産 TS 統制境界) 起票 + accepted (TL/PO)
+- [ ] §2 の child PLAN 3 件起票 (roster / skill-pack / drift-lint)
+- [ ] architecture §3 に skills building block + roster 概念を増分
+- [ ] function に内部資産機能 (roster / catalog / injector / drift-lint / command) を増分
+- [ ] FR-L1-46〜49 が L4 設計に trace 接続 (g3-trace 維持)
+- [ ] self-review (pmo-sonnet / code-reviewer) 通過
+- [ ] 全 child 完了で Recovery Step 5 fullback (Forward L4→L5→L6→L7) へ

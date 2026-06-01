@@ -20,6 +20,7 @@ credentials.json
 .ut-tdd/handover/*.bak
 .ut-tdd/adapters/local*.yaml
 .ut-tdd/teams/local*.yaml
+.ut-tdd/tmp/
 .tools/
 
 # HELIX runtime state
