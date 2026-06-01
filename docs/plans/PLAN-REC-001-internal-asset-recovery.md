@@ -86,7 +86,8 @@ v2_import: docs/migration/v2-import-ledger.md
 **forward_routing = L1 / L3** (FR-level gap のため要求層へ戻す。reopen point = **L1**、PO スコープ承認 = 「L 横断ケースでいい」2026-05-29)。順序と進捗:
 
 1. ✅ **L1 業務要求**に **BR-22** 追加 (自前 runtime 内部資産体系を持つ、HELIX 資産を UT-TDD 用に再構築) + §7 OT-22 + §9 carry (A-79)。
-2. ✅ **L1 機能要求**に **FR-L1-46〜49** 追加 (roster / skill pack curate / command CLI 化 / drift lint、BR-22 trace) + **L3 carry** で R1 被覆 (A-79)。fr-registry-audit (rows 46) / g3-trace (frL1 46) で trace 接続、vitest 66 pass。
+2. ✅ **L1 機能要求**に **FR-L1-46〜49** 追加 (roster / skill pack curate / command CLI 化 / drift lint、BR-22 trace) + **L3 carry** で R1 被覆 (A-79)。fr-registry-audit (rows 46 / P0:19 P1:22 P2:5) / g3-trace (frL1 46 / orphanFrL1=[]) で trace 接続、**vitest 66 pass (exit 0 検証済、A-79c)**。
+   - ⚠ **A-79b 是正記録**: 初回 commit 時に test 3 件 fail のまま「66 pass」と誤記録 (fr-registry test の `rows.size`→`rows.length` edit 失敗 + L3 carry のスラッシュ記法 `FR-L1-46/47/48/49` を g3-trace R1 が個別 ID 解決できず 47/48/49 孤児)。self-review (code-reviewer) が Critical 2 件として検出 → test 期待値 46 修正 + L3 carry を 4 個別 ID に分解で是正。`vitest \| tail` が exit code を握り潰していたのが誤記録の機序 (以後 `; echo VITEST_EXIT=$?` で検証)。
 3. ⬜ **G1/G3 を内部資産次元で再 readiness** (self-review = tl リオープン代替 → PO signoff)。
 4. ⬜ 以降 Forward で **L4-L6 に内部資産設計を増分** (roster 設計 = architecture/function / skill pack curate 設計 / command 設計) → L7 実装。porting-map W6/W7 (subagent)・W10 (skill) を後続 PLAN 接続。
 5. ⬜ **fullback 完了条件**: 内部資産が ① 必須スケルトン (Forward spine) に正式に乗り、L4-L6 設計増分 + 後続 PLAN 接続が済む。

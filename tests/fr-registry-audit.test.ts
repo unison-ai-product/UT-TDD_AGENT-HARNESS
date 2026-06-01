@@ -16,15 +16,15 @@ describe("FR registry audit (機能一覧 漏れ監査)", () => {
   const docs = loadFrDocs();
   const result = analyzeFrRegistry(docs);
 
-  it("§1 機能一覧 table を 42 行構造化抽出 (P0:19 / P1:18 / P2:5)", () => {
+  it("§1 機能一覧 table を 46 行構造化抽出 (P0:19 / P1:22 / P2:5、A-79 で FR-L1-46〜49 追加)", () => {
     const rows = parseFrRows(docs.l1Functional);
-    expect(rows.length).toBe(42);
-    expect(result.totals).toEqual({ registered: 42, p0: 19, p1: 18, p2: 5 });
+    expect(rows.length).toBe(46);
+    expect(result.totals).toEqual({ registered: 46, p0: 19, p1: 22, p2: 5 });
   });
 
-  it("header の件数確定宣言 (計 42 / P0 19 / P1 18 / P2 5) を抽出", () => {
+  it("header の件数確定宣言 (計 46 / P0 19 / P1 22 / P2 5) を抽出", () => {
     const declared = extractDeclaredCounts(docs.l1Functional);
-    expect(declared).toEqual({ total: 42, p0: 19, p1: 18, p2: 5 });
+    expect(declared).toEqual({ total: 46, p0: 19, p1: 22, p2: 5 });
   });
 
   it("carry/forward 宣言の欠番 = {36,38,43} を explained と認識", () => {
