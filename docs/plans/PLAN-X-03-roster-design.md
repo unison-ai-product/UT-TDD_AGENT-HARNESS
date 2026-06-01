@@ -84,22 +84,47 @@ spike を走らせ、§1 の設計仮説が成立するか観察:
 - **pivot**: 設計の一部 (resolver / command 契約等) が詰まった → 該当を修正して再検証 (S2 へ戻る or 設計仮説差し替え)
 - **rejected**: roster module 設計自体が成立しない → fullback で要件/方式に戻す (考えにくいが構造上の選択肢)
 
-## §5 検証記録 (S3 実施時に追記)
+## §5 検証記録 (S2/S3 実施、2026-06-01)
 
-> S2/S3 実施後にここへ「回った / 詰まった / 設計修正」を記録 (PLAN-X-01 §7.1 と同形式)。現時点は未実施 (S1)。
+**実施経緯**: S2 spike は Codex SE 委譲を試行したが Windows `8009001d` で実装不可・review-only degrade ([[project_codex_windows_sandbox]])。**PO 承認の env-forced fallback** = PM が throwaway spike (`src/roster/spike.ts` + `spike-run.ts`、poc/roster-spike、使い捨て) を実装、Codex review が挙げた設計の詰まりを反映。`bun src/roster/spike-run.ts` で S3 検証。
+
+**回った (設計成立):**
+| 設計要素 | S1 確証度 | S3 実証結果 |
+|---|---|---|
+| scan→registry | 高 | ✅ 19 agent 全 scan (agent-guard の scan 流用で成立) |
+| capability class resolver | **低** | ✅ **成立** — name prefix (pmo-/pdm-) + review set で決定論分類 (pmo=9/pdm=3/review=3/other=4)。model family 全 19 解決 (null=0) |
+| roster↔guard 整合 (`roster check` 核) | **低** | ✅ **成立** — allowlistedPresent=15 / nonAllowlisted=4 (be-* / db-schema / devops-deploy = Codex 委譲組) / missingFromRoster=0 / nameMismatches=0 で fail-close 判定が物理成立 |
+| `runtime → roster` 一方向 | 中 | ✅ spike は roster→(agent-guard import) のみ、循環なし (guard は roster を import しない) |
+
+**詰まり (Codex review が surface → spike で解消):**
+| 詰まり | 是正 (設計確定) |
+|---|---|
+| roster 正本 ID = filename stem か frontmatter `name` か曖昧 → 整合チェックが偽陽性/偽陰性 | **ID = filename stem** (agent-guard が `.claude/agents/<id>.md` で解決する単位に一致) と確定 + name 不一致は WARN (nameMismatch)。spike で **nameMismatches=0** を実証 |
+
+**設計 refinement (S1 仮説 → 実証で確定、L5 設計へ反映する学び):**
+- **capabilityClass と modelFamily は直交** (pmo class 内に haiku/sonnet 混在) = capability class ≠ model tier。L5 module-decomposition に明記する
+- roster registry の安定化 = **id 昇順ソート** (再実行ログ比較の安定性、Codex review #3 反映)
+- frontmatter parse 欠落は空文字 fallback (spike は簡易 parser、本実装は zod 化が L6/L7 carry)
+- **残 (L6 spec carry)**: 内部資産 command の D-API 出力契約 (`roster list/check` の exit code・出力形式・`ut-tdd asset`) は spike 未実証 (core 機構のみ実証) → L6 機能設計 (waiting_layer:L6)
+
+> **結論**: roster module の核 (scan/resolve/consistency) は実証で**成立**。S1 で「低」確証だった capability resolver / roster↔guard 整合が実コードで詰まらず動いた。S4 (PO) で confirmed なら PLAN-L5-05-roster へ Forward 確定 (capability⊥model / ID=filename stem / nameMismatch WARN を設計反映)。決定権は PO。
+
+**self-review 反映 (code-reviewer、検証は信頼できると APPROVE、grep+node で数値裏取り済):**
+- **検証前提の明示 (Important)**: 本 nameMismatches=0 は **全 19 件に `name:` frontmatter が存在する前提**で成立 (実証済)。`name` 欠落 agent への WARN 動作 (spike は欠落=空文字 fallback で WARN 飛ばさず) は L6/L7 本実装で別途テストする。
+- **nonAllowlisted=4 の設計含意 (Minor)**: be-* / db-schema / devops-deploy は **意図的に roster 管理対象に含む** (Codex 委譲先の存在証明 = allowlist 外を「block して Codex へ」と判定するための既知集合)。roster は allowlist 外も registry に持ち、guard が allowlist と突合する設計。
 
 ## §6 carry / 関係
 
 - **Forward 着地先**: confirmed → PLAN-L5-05-roster (kind=design、L5↔L8 ペア) が設計を確定保持。本 Discovery は検証 vehicle で設計書ではない (設計書は per-requirement の L5-05、[[feedback-plan-per-requirement]])
 - **兄弟 Discovery (後続判定)**: skill (FR-L1-47 recommender = 最も不確実、Discovery 濃厚) / drift (FR-L1-49 = rule 定義済だが「確証あり」と自己判断せず roster Discovery 後に要否判定)
 - **メタモデル dogfood**: 本 PLAN の所見は [[PLAN-X-01]] §7.1 (S3 verify) へ Discovery-for-design の実適用例として back-merge
-- **L6 carry**: 関数 signature / capability resolver アルゴリズムは confirmed 後の L6 機能設計 (waiting_layer:L6)
+- **L6 carry**: 関数 signature / capability resolver アルゴリズム / frontmatter parse の zod 化 / **agents dir パス解決契約** (spike は `src/roster/` 相対ハードコード、本実装は設定/解決方式を確定) は confirmed 後の L6 機能設計 (waiting_layer:L6)
 
 ## §7 DoD (S1→S4)
 
 - [x] **S1**: roster 設計仮説を §1 に provisional 記述 (確証度ラベル付き)
-- [ ] **S2**: `poc/roster-spike` で `src/roster/` spike を SE 委譲・実装 (scan/resolve/consistency)
-- [ ] **S3**: spike を走らせ §3 検証点を観察、§5 に記録 (回った/詰まった/設計修正)
-- [ ] TL (別 runtime) が「spike が設計を実証したか」をレビュー
+- [x] **S2**: `poc/roster-spike` で `src/roster/` spike を実装 (scan/resolve/consistency)。Codex SE は 8009001d で実装不可・review-only degrade → **PO 承認の PM env-forced fallback** で実装 (Codex review 3 点反映)
+- [x] **S3**: `bun src/roster/spike-run.ts` で §3 検証点を観察、§5 に記録 (全検証点 ✅、roster ID 曖昧を ID=filename stem で解消)
+- [x] self-review (code-reviewer) が「spike が設計を実証したか」を確認 = **APPROVE / 検証は信頼できる** (Critical 0、Important 1 + Minor 2 を §5/§6 に反映済、grep+node で数値裏取り)。self-review 前置 MUST 充足 (TL=別 runtime は 8009001d のため code-reviewer で代替)
 - [ ] **S4**: PO が `decision_outcome` 記録 (confirmed/pivot/rejected) + `promotion_strategy` 選択
-- [ ] confirmed 時: PLAN-L5-05-roster へ Forward 確定反映 + 本 PLAN 所見を PLAN-X-01 §7.1 へ back-merge + spike ブランチ破棄/隔離
+- [ ] confirmed 時: PLAN-L5-05-roster へ Forward 確定反映 (capability⊥model / ID=filename stem / nameMismatch WARN) + 本 PLAN 所見を PLAN-X-01 §7.1 へ back-merge + spike ブランチ破棄/隔離
