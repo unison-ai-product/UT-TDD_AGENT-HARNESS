@@ -26,7 +26,7 @@ import {
 
 /**
  * §1.10 A plan_id 形式 (phase-aware): `PLAN-<layer>-<NN>-slug`。
- * layer token = `L0`〜`L14` (該当工程) / `X` (cross = poc・reverse・recovery 等の横断) / `M` (master plan)。
+ * layer token = `L0`〜`L14` (該当工程) / `X` (cross = poc・reverse のみ。WORKFLOW_KINDS と一致。recovery/troubleshoot 等は実 layer を使う) / `M` (master plan)。
  * NN = layer 内 2 桁連番、slug = kebab。**旧 flat `PLAN-001..004` は archived 別名前空間** (衝突しない)。
  * 狙い: ID 単体で phase 判別 → state(DB) が phase↔PLAN を拾える。
  */

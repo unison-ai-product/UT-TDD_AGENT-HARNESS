@@ -19,13 +19,13 @@ Claude Code が参照する優先順位は `../CLAUDE.md` -> 本ファイル -> 
 1. **既存 PLAN を先に確認** (`ls docs/plans/`)。同一関心・重複 scope の PLAN があれば**新規を作らず既存を拡張**する (§1.10 A ユニーク制約 / 「既存リソース確認→重複なら作成しない」)。特に **横断検証/メタモデルは `PLAN-X-01` が正本**、工程定義の検証はそこで進める。
 2. **正本 §1.10 を Read** してから書く (自己流禁止)。
 
-**plan_id (§1.10 A)**: `PLAN-<layer>-<NN>-slug`。layer = `L0`〜`L14` / `X`(cross=poc・reverse) / `M`(master)。**ID の layer token = frontmatter `layer` 一致** (X↔cross)。repo 内ユニーク。`tests/plan-id-naming.test.ts` が機械検証 → 起票後 `npx vitest run tests/plan-id-naming.test.ts`。
+**plan_id (§1.10 A)**: `PLAN-<layer>-<NN>[-slug]` (**slug は省略可**、regex `^PLAN-(L[0-9]|L1[0-4]|X|M)-\d{2}(-[a-z0-9-]+)?$`)。layer = `L0`〜`L14` / `X`(cross) / `M`(master)。**ID の layer token = frontmatter `layer` 一致** (X↔cross)。**`X`(cross) は kind=poc/reverse のみ** (schema `WORKFLOW_KINDS={poc,reverse}`。recovery/troubleshoot 等は実 layer を使い X 不可)。repo 内ユニーク + **ファイル名(拡張子除く) = plan_id 一致**。対象 = `docs/plans/PLAN-*.md`、除外 = `status:archived` + `docs/plans/archive/` + `docs/plans/_template/`。`tests/plan-id-naming.test.ts` が機械検証 → 起票後 `npx vitest run tests/plan-id-naming.test.ts`。
 
 **排他 (§1.1, schema fail-close)**: `kind=poc/reverse` → `workflow_phase` 必須 + `layer=cross` のみ。**それ以外の kind → 単一の実 layer 必須 + workflow_phase 禁止**。つまり **layer=cross は poc/reverse だけ** (工程定義は design でなく poc=Discovery)。
 
 **合成導線 (§G.13)**: kind=design + L1-L6 は **1 sub-doc = 1 PLAN (混在禁止)**。複数 sub-doc は Master hub `PLAN-L<N>-00-master` が束ねる。triage → ①必須 sub-doc 起票 → ②選択は `skip_sub_doc` に reason(≥10字)。
 
-**本文構造 (§G.4)**: `§工程表`(Step `### Step <N>: <title>` 形式、**review Step を固定**) + `§実装計画`(各項目の情報源明記) が必須。design/impl PLAN は `§6 用語更新` (§G.9) も必須。
+**本文構造 (§G.4)**: `§工程表`(Step `### Step <N>: <title>` 形式、**review Step (self / pmo-sonnet / tl-advisor のいずれか) を固定 Step で含む**) + `§実装計画`(各項目の情報源明記) が必須。design/impl/add-* PLAN は `§6 用語更新` (§G.9) も必須。
 
 **必須 role (§1.8)**: kind=design/impl→`tl` / L7 impl→`qa` 追加 / **kind=poc/recovery/troubleshoot→`aim`** / L1・L3・L11・L12→`po`。
 
