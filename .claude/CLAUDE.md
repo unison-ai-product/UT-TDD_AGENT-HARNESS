@@ -10,6 +10,27 @@ Claude Code が参照する優先順位は `../CLAUDE.md` -> 本ファイル -> 
 
 このファイルは Claude Code の runtime / hook 方針を定義する。プロジェクト文脈は `../CLAUDE.md`、Codex 向け規則は `../AGENTS.md` を正本にする。
 
+## PLAN 起票ルール (常時注入 — 正本 = requirements_v1.2 §1.10、MUST)
+
+> **背景**: §1.10 PLAN 起票ルールは requirements_v1.2 にあり常時注入されないため、過去「読まずに自己流で PLAN を起票 → 重複・非準拠」を繰り返した。本 section に要点を常時注入し、PLAN を触る前にルールが手元にある状態を作る。`ut-tdd plan lint` (fail-close) は `src/plan/lint.ts` が現状 stub のため未強制 → **当面は本 section が人手の binding ルール**。
+
+**PLAN を新規起票・編集する前に MUST で実施**:
+
+1. **既存 PLAN を先に確認** (`ls docs/plans/`)。同一関心・重複 scope の PLAN があれば**新規を作らず既存を拡張**する (§1.10 A ユニーク制約 / 「既存リソース確認→重複なら作成しない」)。特に **横断検証/メタモデルは `PLAN-X-01` が正本**、工程定義の検証はそこで進める。
+2. **正本 §1.10 を Read** してから書く (自己流禁止)。
+
+**plan_id (§1.10 A)**: `PLAN-<layer>-<NN>-slug`。layer = `L0`〜`L14` / `X`(cross=poc・reverse) / `M`(master)。**ID の layer token = frontmatter `layer` 一致** (X↔cross)。repo 内ユニーク。`tests/plan-id-naming.test.ts` が機械検証 → 起票後 `npx vitest run tests/plan-id-naming.test.ts`。
+
+**排他 (§1.1, schema fail-close)**: `kind=poc/reverse` → `workflow_phase` 必須 + `layer=cross` のみ。**それ以外の kind → 単一の実 layer 必須 + workflow_phase 禁止**。つまり **layer=cross は poc/reverse だけ** (工程定義は design でなく poc=Discovery)。
+
+**合成導線 (§G.13)**: kind=design + L1-L6 は **1 sub-doc = 1 PLAN (混在禁止)**。複数 sub-doc は Master hub `PLAN-L<N>-00-master` が束ねる。triage → ①必須 sub-doc 起票 → ②選択は `skip_sub_doc` に reason(≥10字)。
+
+**本文構造 (§G.4)**: `§工程表`(Step `### Step <N>: <title>` 形式、**review Step を固定**) + `§実装計画`(各項目の情報源明記) が必須。design/impl PLAN は `§6 用語更新` (§G.9) も必須。
+
+**必須 role (§1.8)**: kind=design/impl→`tl` / L7 impl→`qa` 追加 / **kind=poc/recovery/troubleshoot→`aim`** / L1・L3・L11・L12→`po`。
+
+**起票後 MUST**: 命名テスト + 全回帰 (`npx vitest run`) を通し、**PO へ確定/gate を求める前に self-review 前置 (code-reviewer / pmo-sonnet)** を通す (claude-only の tl 代替)。
+
 ## Target UT-TDD Hooks
 
 subagent guard (`PreToolUse(Agent)`) は実装・有効化済 (下記「Subagent Guard」)。以下のその他 hook は UT-TDD CLI 実装後に有効化する目標形であり、現時点では自動実行されない。
