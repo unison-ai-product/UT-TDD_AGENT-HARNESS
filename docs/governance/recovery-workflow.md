@@ -68,6 +68,6 @@ Step 1: 全部拾う ──────► Step 2: 認識確認 (PO) ──► S
 
 | Recovery PLAN | trigger | 対象 | 状態 |
 |---|---|---|---|
-| [PLAN-REC-001](../plans/PLAN-REC-001-internal-asset-recovery.md) | (a) 指示無視 (内部資産を UT-TDD 用に作り替える指示の不履行) | 内部資産 FR 前提抜け → L1/L3 | Step 1-2 実施中 (本ワークフロー構築に伴い再分類: 「認識ずれ」→「指示無視」) |
+| [PLAN-REC-001](../plans/PLAN-REC-001-internal-asset-recovery.md) | (a) 指示無視 (内部資産を UT-TDD 用に作り替える指示の不履行) | 内部資産 FR 前提抜け → reopen=L1 | **closed (completed、2026-06-01)**: Step 1-5 完遂。top-down 修正 = L1 BR-22 + FR-L1-46〜49 + L3 carry + L4 設計増分 (ADR-004 / PLAN-L4-10〜13) + L9 ST-ASSET。self-review CONDITIONAL PASS (Critical=0) → G1/G3 再 readiness 機械確認 (孤児0/66 pass) → **PO close signoff** → Forward fullback。L5/L6 内部資産は placeholder_deps back-fill 継続 |
 
 > **注**: PLAN-REC-001 は当初 trigger を「認識ずれ」と記述したが、本ワークフロー §1 に従い **(a) 指示無視**へ再分類する (PO 訂正反映)。さらに今回は単一事象でなく「全部拾う」= 複数事象の収集が先行するため、本ワークフロー Step 1 の collect-all を先に実施する。
