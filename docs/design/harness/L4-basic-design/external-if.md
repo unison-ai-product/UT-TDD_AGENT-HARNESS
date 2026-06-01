@@ -26,13 +26,14 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 |---|---|---|---|
 | **Claude (Code)** | harness ⇄ (相互) | AI 実装エージェント runtime。**harness は Claude Code 内に hook として常駐** (host runtime)。**契約プラン (月額) 認証は Claude Code 自身が管理、harness は API key を持たない** | FR-09 / FR-L1-42 |
 | **Codex** | harness → 呼ぶ | AI 実装エージェント runtime (委譲先 SE/PE)。**`codex exec` CLI を subprocess 起動** (`ut-tdd codex` 導線)。**契約プラン認証は `codex login` が自己管理、harness は API key を渡さない** | FR-L1-42 |
-
-> **⚠ 前提 (CLAUDE.md)**: Claude Code / Codex は **API 直叩きではなく契約プラン (月額) + CLI / hook** で利用する。harness が管理するのは **CLI 起動 + hook** であって AI provider の API/SDK/key ではない。本 doc の AI runtime 境界はこの前提に立つ (§3/§5/§6)。
 | **GitHub** | harness → 呼ぶ | VCS (PR / branch protection) | FR-17 |
 | **GitHub Actions** | harness → 呼ぶ | CI で gate 再実行 | FR-17 |
 | **Sentry** | harness ← 観測される | 本番エラー観測 (Incident trigger) | FR-16 (経由で FR-L1-20 観測記録、間接) |
 | **Uptime Robot** | harness ← 観測される | 可用性監視 (SLO trigger) | FR-16 (Incident trigger、観測は FR-L1-20 経路) |
 | **Dependabot** | harness ← 通知される | 依存脆弱性通知 | (NFR security 経路) |
+
+> **⚠ 前提 (CLAUDE.md)**: Claude Code / Codex は **API 直叩きではなく契約プラン (月額) + CLI / hook** で利用する。harness が管理するのは **CLI 起動 + hook** であって AI provider の API/SDK/key ではない。本 doc の AI runtime 境界はこの前提に立つ (§3/§5/§6)。
+> **内部資産 fs は外部 service でない (A-90)**: `.claude/agents/*.md` (roster 正本) / `docs/skills/**/*.md` (skill 正本) は **external-if の対象外 (internal resource)**。外部 service ではなくローカル fs 読取であり、§2 (f) で境界扱いを明示する。
 
 ## §2 境界カテゴリ定義
 
@@ -43,6 +44,7 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 | **(c) 観測・監視境界** | Sentry / Uptime Robot | inbound trigger (harness が webhook/alert を受ける) |
 | **(d) 依存管理境界** | Dependabot | inbound 通知 (PR / alert) |
 | **(e) local↔Web 境界 (将来、IMP-031)** | 画面 (14 screen) + DB を載せる Web サーバ | **現状なし** (file-based local、ネットワーク非依存)。画面+DB をサーバ側に配置する Phase B / multi-team 時に **local harness ↔ Web サーバ間のネットワーク通信境界**が新設される。[ADR-003](../../../adr/ADR-003-runtime-adapter-boundary-subscription-cli.md) adapter 方針の延長で設計 |
+| **(f) 内部資産 fs 境界 (A-90、内部資産増分の整合宣言)** | `.claude/agents/*.md` (roster 正本) / `docs/skills/**/*.md` (skill 正本) | **external-if 対象外 (internal resource)**。外部 service ではなくローカル fs 読取で、**adapter 隔離なし** — roster/skills module の `loadX()` 端点に隔離 (architecture §6、fs は副作用端点)。state は持たず scan-on-demand で in-memory 構築 (data.md §1/§8、ADR-004)。本行は「内部資産が外部境界でない」ことの**明示宣言** (cross-sub-doc 沈黙 gap を解消) |
 
 ## §3 各境界の DbC 契約 (precondition / postcondition / invariant)
 

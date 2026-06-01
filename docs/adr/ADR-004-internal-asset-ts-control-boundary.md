@@ -45,6 +45,7 @@ PO 指示 (2026-06-01):「内部資産は作り替える、TS に」。だが「
 - (+) 「内部資産を TS に作り替える」の射程が確定し、層1/層2 の二重管理リスク・native 規約破壊リスクを構造的に回避。
 - (+) FR-L1-49 drift lint の設計根拠が ADR として固定され、roster/catalog/injector の全判断の参照点になる。
 - (+) ADR-001 を触らず (accepted ADR 不変の慣習を維持)、本 ADR から片方向参照で履歴が散逸しない。
+- (+) **data 集約に影響しない (A-90)**: 層1 markdown を唯一正本とし TS (層2) は scan-on-demand で in-memory 構築 (永続 state なし) のため、roster / skill catalog は L4 data.md の **5 集約に新 entity を追加しない**。data.md §1 (非 entity 判断) / §8 (永続化なし) と本 ADR で整合 (cross-sub-doc 沈黙 gap の解消、L4 全体 G4 再 audit 対象)。
 - (−) 層2 (roster registry / catalog / recommender / injector / drift lint) の TS 実装コスト (L4-L7、porting-map W6/W7/W10)。
 - (−) markdown 正本に HELIX 前提が残るリスクは drift lint (FR-L1-49) が継続検証する必要がある (未実装の間は手動 audit)。
 

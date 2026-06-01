@@ -40,6 +40,8 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 
 → **5 集約** (Plan / Artifact / Workflow / Handover / Evaluation) + 値オブジェクト群 + 読みモデル (derived_view)。
 
+> **内部資産 (roster / skill catalog) の非 entity 判断 (A-90、ADR-004 整合、PO 確定 2026-06-01)**: subagent roster と skill catalog は **data 集約に含めない**。理由: ADR-004 で markdown (`.claude/agents/*.md` / `docs/skills/**/*.md`) を**唯一正本**とし、TS (層2、roster/skills module) は起動時に scan して **in-memory 構築 (scan-on-demand、永続 state なし)** するため、`.ut-tdd/` に独自の永続 entity を持たない。よって **5 集約モデルは不変** (roster/skill は state を持つ entity ではなく、fs 正本に対する読みモデル)。architecture §3.1 roster/skills building block / function §1.1 / L9 ST-ASSET と本判断で整合 (cross-sub-doc 沈黙 gap を解消)。詳細 = §8 state schema / ADR-004 Consequences。
+
 ## §2 集約境界 (Aggregate)
 
 | 集約 | ルート | 境界 (含む entity) | トランザクション一貫性単位 |
@@ -53,7 +55,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 > 集約間は **ID 参照のみ** (直接オブジェクト参照禁止、DDD 原則)。例: artifact.pair は plan を ID で参照。
 > **acceptance_criterion / acceptance_test の帰属** (business §10.1.1「FR-* 配下」): AC は FR の受入条件、AT はその検証であり、両者は artifact の **trace 経路 (AC↔AT 被覆、g3-trace R3)** で Artifact 集約に紐づく。FR 自体は artifact (要件 doc) の内容であるため、AC/AT を Artifact 集約の子とする。
 
-## §3 値オブジェクト (Value Object) — 11 種は `src/schema/index.ts` と 1:1 (SubDoc は spec のみ)
+## §3 値オブジェクト (Value Object) — 12 種 (うち 11 種は `src/schema/index.ts` と 1:1、SubDoc のみ spec 止まり → IMP-026)
 
 | 値オブジェクト | 値域 | src/schema |
 |---|---|---|
@@ -132,6 +134,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | Handover | `handover/CURRENT.json` | JSON (最新 1 件) |
 | Evaluation (Phase B) | `audit/` (invocation_log / accuracy_score / kpi) | JSON-lines |
 | 監査 | `audit/failure_log.jsonl` (local) / チーム共有 audit (別経路) | JSON-lines |
+| 内部資産 roster / skill catalog | **永続化なし** (`.claude/agents/*.md` / `docs/skills/**/*.md` が唯一正本、TS が scan-on-demand で in-memory 構築) | markdown (fs 正本、ADR-004 層1) |
 
 **src/schema 突合**: 上記値オブジェクト (§3) は `src/schema/index.ts` の zod enum を SSoT とし、state の JSON/YAML は読込時に zod でバリデート。齟齬検出は `ut-tdd doctor check_business_entity_coverage` (L1 §10.2 carry) で機械化 (実装は L7 carry)。**§3 値オブジェクト 11 種は src/schema enum と 1:1 一致 (齟齬 0)。SubDoc のみ requirements §1.10.G.1 spec で src/schema 未実装 → `VALID_SUB_DOCS` 定数化を impl carry (IMP-026)**。
 
@@ -142,3 +145,4 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 - evaluation_batch (Phase B) の集計アーキは L4 architecture + Phase B telemetry carry
 - **observability 系値オブジェクト候補** (business §10.4、Phase A): `invocation_log` / `detector_result` / `gate_evidence` / `code_catalog` / `command_catalog` の値オブジェクト/state schema を L5 physical-data で確定 (本 doc では entity 追加なし、候補として carry)
 - **SubDoc enum 実装** (IMP-026): requirements §1.10.G.1 の VALID_SUB_DOCS を `src/schema` の zod enum 化 (現状 spec のみ)
+- **内部資産 (roster/skill) の back-fill 依存** (A-90、L9 ST-ASSET-04 対応): roster/skill は in-memory scan-on-demand で**永続 state なし** (§8、ADR-004) のため data 集約・物理 state schema に**追加なし**と確定。各 subcommand / capability resolver / recommender / drift 判定の**関数仕様**は L6 機能設計で確定 (`placeholder_deps: {waiting_layer: L6}`、ST-ASSET-04 と対)。L5 physical-data で roster/skill の物理 state 追加は不要 (fs 正本)
