@@ -702,6 +702,7 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 | FR-L1-28 (W 2 段設計 Phase 1+2 agent 昇華) | P1 | L4 carry | drive=agent 拡張は L4 carry |
 | FR-L1-31〜35 (コンテキスト / フォルダ / 棚卸し / 穴管理 / 整備可視化) | P2 | L4 carry | 整備系は L4 / Phase B carry |
 | FR-L1-37/39/40/41/42/44 (model 推挙 / 難易度 / drive 別 state / drive 自動判定 / provider 引継ぎ / onboarding) | P1 | L4 carry | drive 軸拡張は L4 データ設計連動 / onboarding は L4 設計連動 |
+| FR-L1-46/47/48/49 (内部資産 UT-TDD 化: subagent roster / skill pack curate / command CLI 化 / drift lint) | P1 | L4-L6 carry | BR-22 派生、Recovery PLAN-REC-001。roster=W6/W7・skill pack=W10・drift lint=IMP-033 (L6-L7)。棚卸 = internal-asset-inventory.md |
 | FR-L1-36/38/43 (skill 評価 / model 評価 / PoC 計測) | P2 | **PLAN-L3-02 (business-detail.md) に委譲** | BR-21 経路で扱う (重複回避) |
 
 ### §3.1 P1 残 carry 明示 note (A-47 + A-50、L4 PLAN 起票時の必須参照)

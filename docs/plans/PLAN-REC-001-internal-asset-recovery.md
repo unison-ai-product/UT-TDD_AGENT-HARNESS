@@ -34,10 +34,13 @@ v2_import: docs/migration/v2-import-ledger.md
 
 > **駆動モデル = Recovery** (concept §3.1:384「AI の逸脱・認識ずれ・前提誤読からの再開の収束」)。PO 指示「こういうのは駆動モデルのリカバリーで対応」(2026-05-29) に基づき、前提抜けで進めた工程を Recovery で収束 → 中断工程 (Forward L1/L3) へ fullback する。requires_human_approval = true (tl リオープン確認 + po スコープ承認)。
 
+> **trigger 再分類 (A-78、recovery-workflow §1)**: 当初「認識ずれ」と記述したが、PO 訂正により **(a) 指示無視** = 「内部資産を UT-TDD 用に作り替えよ」という明確な指示の不履行と再分類する (softening しない)。
+> **進捗 (A-79)**: Step 1 全部拾う / Step 2 PO 認識確認 (スコープ = L 横断ケース) / Step 3 正常化ポイント特定 (reopen = L1) / **Step 4 top-down 修正 = L1 BR-22 + FR-L1-46〜49 + L3 carry 反映済 (G1/G3 再 readiness 対象)**。L4-L6 設計増分は Forward 継続。
+
 ## §1 事故記録
 
 - **timestamp**: 2026-05-29
-- **severity**: P2 (開発時の認識ずれ。本番影響なし。48h SLA 対象外)
+- **severity**: P2 (開発時の (a) 指示無視。本番影響なし。48h SLA 対象外)
 - **impact**: V-model 設計 L1-L6 を **「内部資産 (subagent/skill/command) は HELIX からそのまま使う/後で port」という誤前提**で進行。正しい前提は「**内部資産は UT-TDD 用に作り替える必要がある**」。結果、L1 業務要求・L3 機能要件に「UT-TDD が自前の runtime 資産体系を持つ/既存資産を再構築する」FR が欠落 (FR-level gap)。L4-L6 設計は TS core のみを対象にし、内部資産の次元が丸ごと欠けた。G1/G3 に gap。
 - **検知元**: PO 指摘 (「ヘリックス側のスキル資産・サブエージェント・コマンドは TS に作り替えているのか、整理してあるか」→「内部資産を UT-TDD 用に作り替える必要があるのを前提抜けている」)。
 
@@ -80,13 +83,15 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §6 再開ポイント (中断工程への fullback)
 
-**forward_routing = L1 / L3** (FR-level gap のため要求層へ戻す)。順序:
+**forward_routing = L1 / L3** (FR-level gap のため要求層へ戻す。reopen point = **L1**、PO スコープ承認 = 「L 横断ケースでいい」2026-05-29)。順序と進捗:
 
-1. **L1 業務要求**に「UT-TDD は自前の runtime 資産体系 (subagent roster / skill pack / command) を持ち、既存 (HELIX 由来) 資産を UT-TDD 用に再構築する」BR を追加。
-2. **L3 機能要件**に FR-AST-1〜4 を追加 (inventory §5)。fr-registry-audit / g3-trace で trace 接続。
-3. **G1/G3 を内部資産次元で再** (PO/TL signoff)。
-4. 以降 Forward で L4-L6 に内部資産設計を増分 (roster 設計 / skill pack curate 設計 / command 設計) → L7 実装。
-5. **fullback 完了条件**: 内部資産が ① 必須スケルトン (Forward spine) に正式に乗り、porting-map W6/W7 (subagent)・W10 (skill) が後続 PLAN として接続される。
+1. ✅ **L1 業務要求**に **BR-22** 追加 (自前 runtime 内部資産体系を持つ、HELIX 資産を UT-TDD 用に再構築) + §7 OT-22 + §9 carry (A-79)。
+2. ✅ **L1 機能要求**に **FR-L1-46〜49** 追加 (roster / skill pack curate / command CLI 化 / drift lint、BR-22 trace) + **L3 carry** で R1 被覆 (A-79)。fr-registry-audit (rows 46) / g3-trace (frL1 46) で trace 接続、vitest 66 pass。
+3. ⬜ **G1/G3 を内部資産次元で再 readiness** (self-review = tl リオープン代替 → PO signoff)。
+4. ⬜ 以降 Forward で **L4-L6 に内部資産設計を増分** (roster 設計 = architecture/function / skill pack curate 設計 / command 設計) → L7 実装。porting-map W6/W7 (subagent)・W10 (skill) を後続 PLAN 接続。
+5. ⬜ **fullback 完了条件**: 内部資産が ① 必須スケルトン (Forward spine) に正式に乗り、L4-L6 設計増分 + 後続 PLAN 接続が済む。
+
+> **FR-AST 採番注記**: inventory §5 の FR-AST-1〜4 は L1 反映時に既存 FR-L1 採番体系に合わせ **FR-L1-46〜49** とした (roster=46 / skill pack=47 / command=48 / drift lint=49)。
 
 > **承認ゲート (Recovery)**: tl がリオープンポイント (L1/L3) を確認、po がスコープ (内部資産 FR を追加して G1/G3 を reopen してよいか) を承認するまで本 fullback は着手しない (requires_human_approval)。
 

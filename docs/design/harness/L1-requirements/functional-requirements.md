@@ -10,7 +10,7 @@ v2_import: docs/migration/v2-import-ledger.md
 ---
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
-> **件数確定**: functional は **FR-L1-42 件で確定 (P0: 19 / P1: 18 / P2: 5)** (A-49 ledger で FR-L1-45 doc-reviewer back-propagation 追加、2026-05-28)。内訳: FR-L1-01〜35 は v2 HELIX-workflows 正本由来 (v2-import-ledger §5.1 A-24 / §6)、FR-L1-37/39/40/41/42/44 は PO directed 新規 6 件 (2026-05-28)、**FR-L1-45 は L3 back-propagation 由来 (A-47 Critical C-02 → A-49 で L1 反映、BR-08 派生 P0)**。FR-L1-36/38/43 は P2 のため L3 forward carry (BR-21 として宣言済み)。
+> **件数確定**: functional は **FR-L1-46 件で確定 (P0: 19 / P1: 22 / P2: 5)** (A-49 ledger で FR-L1-45 doc-reviewer back-propagation 追加、2026-05-28)。内訳: FR-L1-01〜35 は v2 HELIX-workflows 正本由来 (v2-import-ledger §5.1 A-24 / §6)、FR-L1-37/39/40/41/42/44 は PO directed 新規 6 件 (2026-05-28)、**FR-L1-45 は L3 back-propagation 由来 (A-47 Critical C-02 → A-49 で L1 反映、BR-08 派生 P0)**。FR-L1-36/38/43 は P2 のため L3 forward carry (BR-21 として宣言済み)。
 > **L3 接続規約**: `next_pair_freeze: L3`。L3 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
 
 # UT-TDD Agent Harness — L1 機能要求 (functional)
@@ -19,7 +19,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §1 機能一覧
 
-FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/40/41/42/44: PO directed 新規 6 件 (2026-05-28)。FR-L1-45: L3→L1 back-propagation (A-49、2026-05-28)。**計 42 件**:
+FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/40/41/42/44: PO directed 新規 6 件 (2026-05-28)。FR-L1-45: L3→L1 back-propagation (A-49、2026-05-28)。FR-L1-46〜49: 内部資産 UT-TDD 化 (BR-22 派生、Recovery PLAN-REC-001 / A-79、2026-05-29)。**計 46 件**:
 
 | FR-L1-NN | 機能要求名 (1 行) | 出典 doc | 必要 input | 出力 output | 重要度 | 対応画面 (G1-trace) |
 |---|---|---|---|---|---|---|
@@ -65,6 +65,10 @@ FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/4
 | **FR-L1-42** | AI プロバイダ間引継ぎ連携 (Claude ↔ Codex のみ、context+PLAN+budget 連携渡し) | PO directed (2026-05-28) | handover/CURRENT.json、mode.yaml、invocation_log、PLAN 位置 | provider-handover パッケージ、fresh セッション起動確認。FR-L1-31 (コンテキスト管理) の provider 拡張 | P1 | HM-03 / PM-05 |
 | **FR-L1-44** | 途中導入 onboarding workflow (既存プロジェクトへの harness baseline 確立) | PO directed (2026-05-28) | 既存コード/docs/PLAN 資産一覧、`.ut-tdd/` 未初期化状態 | `.ut-tdd/` 初期 baseline、既存資産 → state import レポート、onboarding 完了 gate 証跡。FR-L1-14 の前段 context、FR-L1-07 初回 import 引継ぎ、FR-L1-26 段階移行と組合せ | P1 | GD-01 (Onboarding) |
 | **FR-L1-45** | doc-reviewer 必須召喚 (大規模 doc 改定 / gate evidence / pair freeze の品質観点 4 軸チェック、BR-08 派生) | L3 back-propagation (A-47 → A-49) | trigger event (doc 改定 / gate / pair freeze)、doc-reviewer role 定義 | doc-reviewer 召喚記録 `.ut-tdd/audit/doc-reviews/<timestamp>.json`、品質観点 4 軸 (整合/網羅/一貫/明確) チェック結果、未召喚で gate (G1/G3/G7/G11) 通過禁止 (fail-close)、PO bypass = `UT_TDD_DOC_REVIEWER_BYPASS=1` + audit | P0 | PM-03 / HM-05 |
+| **FR-L1-46** | subagent roster の UT-TDD 化 (capability class 化 / model family / guard 統合 / HELIX 前提除去) | A-77 棚卸 (internal-asset-inventory.md) / BR-22 | `.claude/agents/*.md`、guard allowlist | UT-TDD 正本 roster (rename + harden 済)、HELIX 前提残存 0 | P1 | HM-02 |
+| **FR-L1-47** | skill pack の UT-TDD curate (UT-TDD 版 SKILL_MAP / core-optional-drop 区分 / ut-tdd CLI trigger / helix 用語除去) | A-77 棚卸 / BR-22 | `vendor/helix-source/skills/**`、SKILL_MAP | `docs/skills/*.md` skill pack + UT-TDD 版 SKILL_MAP | P1 | HM-02 |
+| **FR-L1-48** | 内部資産 command の ut-tdd CLI subcommand 化 (dashboard / asset 等) | A-77 棚卸 / porting-map W12/W16 / BR-22 | HELIX `cli/helix-*` / docs/commands | `ut-tdd` subcommand 体系 | P1 | HM-02 |
+| **FR-L1-49** | 内部資産 drift lint (HELIX 絶対パス残存 / docs-skills 空 / roster↔guard 整合の機械検証) | A-77 棚卸 / IMP-033 rule engine / BR-22 | roster / skill pack / guard allowlist | drift 検出レポート (fail-close) | P1 | HM-07 |
 
 ### §1.1 HELIX 固有名 → UT-TDD 翻案注記 (anti-corruption layer)
 
