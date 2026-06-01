@@ -101,6 +101,7 @@ v2_import: docs/migration/v2-import-ledger.md
   - `docs/skills/` が空のまま放置されていないか (curate 未着手検出)
   - `.claude/agents/*.md` に HELIX 絶対パス (`~/ai-dev-kit-vscode/` / `C:\Users\micro`) や `helix codex` 直叩きが残存していないか
   - subagent roster と guard allowlist (15) の整合 (frontmatter model family ↔ agent-guard.ts)
+- **lint 逆方向ガード注記** (self-review 軸2): FR-L1-46〜49 の L1↔L3 整合は **g3-trace R1 (orphanFrL1)** が唯一の逆方向ガード (L1 にあるが L3 carry 不在を検出)。fr-registry-audit は missingInL1 (L3→L1 方向) のみ。carry 記載を消すと g3-trace のみが検出するため、§3 carry 削除時は注意。
 - **設計工程チェックリスト**: V-model 着手時に「対象システムの内部資産 (agent/skill/command) を設計スコープに含めたか」を必須確認項目化 (gate-design の 4 軸に「資産次元」を追加検討)。
 - **メタモデル接続**: 本件を Recovery mode の参照事例として記録。前提抜け/認識ずれ検知時の標準応答 = recovery kind PLAN ([[feedback-recovery-mode-for-premise-gap]])。
 - **improvement-backlog 登録**: IMP として「内部資産 FR 前提抜け」を記録し verified までトラッキング。
