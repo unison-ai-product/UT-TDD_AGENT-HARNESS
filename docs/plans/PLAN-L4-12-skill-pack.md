@@ -60,6 +60,7 @@ PLAN-L4-10 (Master) §2 triage の child。**FR-L1-47 (skill pack の UT-TDD cur
 - **DB 検知**: `docs/skills/` 空 (curate 未着手) / skill ↔ SKILL_MAP 不整合は doctor / FR-L1-49 drift lint (IMP-033 rule) が fail-close
 - porting-map W10 (skill curate) を後続実装 PLAN に接続
 - FR-L1-12 (L 単位 skill 注入) / FR-L1-37 (model 推挙) と skills building block の連携を明示
+- **L4 記述範囲 (m-3 是正)**: architecture §3.2 Level 2 skills 内部に core-optional-drop の区分*方針*を 1 文で記述するに留める。区分アルゴリズム / SKILL_MAP 生成手順 / recommender スコアリングは L6 機能設計で確定 (L4 = 方針宣言のみ、curate 作業実体は porting-map W10)。これで「方針 (L4) ↔ 関数仕様 (L6) ↔ 作業 (W10)」の責務分界を明示
 
 ## §4 DoD
 

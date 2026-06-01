@@ -60,7 +60,7 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | **lint** (`src/lint/`) | doc/PLAN/trace の静的検証 (g3-trace / entity-coverage / fr-registry / doc-consistency / improvement-backlog) | `analyzeX(opt?)` pure 関数群 | schema (一部) / fs (loadX) |
 | **plan** (`src/plan/`) | PLAN frontmatter + 本文の lint | `lintPlan(path?)` | schema |
 | **vmodel** (`src/vmodel/`) | V-model 4 artifact 双方向 trace lint | `lintVmodel(path?)` | schema |
-| **runtime** (`src/runtime/`) | 実行モード検出 (detect) + agent-guard 判定本体 | `detectMode()` / `agent-guard` | schema (allowlist) |
+| **runtime** (`src/runtime/`) | 実行モード検出 (detect) + agent-guard 判定本体 | `detectMode()` / `agent-guard` | schema (allowlist) / roster (将来、実装後に切替。現状ハードコード相当、§3.1 note + §4.1 移行段階) |
 | **doctor** (`src/doctor/`) | 統合検証 (lint 群 + state 突合の集約) | `runDoctor()` | lint / runtime / schema |
 | **roster** (将来 `src/roster/`) | 内部資産 subagent roster registry。`.claude/agents/*.md` (層1 markdown 正本) の frontmatter を読み capability class / model family を構築、guard allowlist の SSoT (A-85、FR-L1-46、ADR-004 層2) | `loadRoster()` / `resolveCapability()` | schema / fs (loadX 端点) |
 | **skills** (将来 `src/skills/`) | 内部資産 skill catalog / recommender / injector。`docs/skills/**/*.md` (層1 正本) を読み L 別注入セットを構築 (A-85、FR-L1-47/12/37、ADR-004 層2) | `loadCatalog()` / `recommendSkill()` / `injectByLayer()` | schema / fs (loadX 端点) |

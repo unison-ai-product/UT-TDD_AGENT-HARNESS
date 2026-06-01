@@ -131,6 +131,7 @@ G3/G4/G5 で運用した audit を正式 spec 化。各ゲートは以下 4 軸 
 | `dup-id` | 同一 ID 二重定義検出 | ID レジストリ | IMP-002 |
 | `glossary-delta` | 用語が L0 §10 へ back-merge | sub-doc §用語更新 | G.9 (IMP-012) |
 | `dependency-drift` | 実 import グラフ vs 期待依存マップ | src/ import + architecture §3 | **ADR-002 / IMP-032** |
+| `asset-drift` | 内部資産 .md の HELIX 前提残存 + roster↔guard 整合 | `.claude/agents/*.md` + `docs/skills/` + roster allowlist | **FR-L1-49 / inventory §1 / ADR-004 (A-85)** |
 | `backlog-format` | backlog 書式 | backlog table | **improvement-backlog** |
 
 > 既存 5 lint (g3-trace/entity-coverage/fr-registry/doc-consistency/improvement-backlog) は L7 で本エンジンの**ルール型インスタンスへリファクタ吸収**。新 doc/層は手書き不要で `upstream-coverage`/`pair-exists`/`count-matches` 等が自動適用される。
@@ -149,8 +150,10 @@ G3/G4/G5 で運用した audit を正式 spec 化。各ゲートは以下 4 軸 
 - **新規 FR-L1 は起こさない**。本機構は **FR-L1-18 (doctor 横断検出一括集約) + FR-05 (決定論ゲート) + FR-03 (trace)** の**実現機構の明文化**であり、ユーザー視点の新機能ではない (L1 は G1-passed のため安易な back-prop を避ける、§7.1)。
 - **IMP-033** (cross-check rule engine) として L7 実装を起票。
 - **L6 carry**: ルール型のアルゴリズム (レジストリ構築 / ルール解決 / 適用 / 差分レポート) を機能設計で pseudocode 化 (IEEE 1016 §5.7)。
-- **L7 carry**: engine 実装 + 既存 5 lint のリファクタ吸収 + `gate-checks.yaml` + `ut-tdd gate`/`doctor` 配線。ADR-002 (dependency-drift) / IMP-001/002/003/006 を本エンジンのルール型として統合。
+- **L7 carry**: engine 実装 + 既存 5 lint のリファクタ吸収 + `gate-checks.yaml` + `ut-tdd gate`/`doctor` 配線。ADR-002 (dependency-drift) / IMP-001/002/003/006 / **FR-L1-49 (asset-drift、A-85)** を本エンジンのルール型として統合。
 
 ### §7.1 新規 FR を起こさない判断 (記録)
 
-cross-check engine を新 FR-L1 にすると L1 (G1-passed) への back-prop + G1-trace 再検証が発生する。本機構は既存 FR-L1-18/05/03 の**実装アーキ**であり、FR-L1-45 (doc-reviewer、新規ユーザー機能) とは性質が異なる。よって新 FR を起こさず既存 FR の機構として設計する。**PO が「独立 FR として追跡したい」と判断する場合は FR-L1-46 として back-prop 起票** (要 G1-trace 再検証)。
+cross-check engine を新 FR-L1 にすると L1 (G1-passed) への back-prop + G1-trace 再検証が発生する。本機構は既存 FR-L1-18/05/03 の**実装アーキ**であり、FR-L1-45 (doc-reviewer、新規ユーザー機能) とは性質が異なる。よって新 FR を起こさず既存 FR の機構として設計する。**PO が「独立 FR として追跡したい」と判断する場合は次の空き ID で back-prop 起票** (要 G1-trace 再検証)。
+
+> **採番注記 (A-85 是正)**: 本記述は当初 "FR-L1-46 として起票" と書いていたが、**FR-L1-46 は A-77 で内部資産 subagent roster に採番済** (FR-L1-46〜49 = 内部資産、Recovery PLAN-REC-001)。cross-check engine を独立 FR 化する場合は FR-L1-49 まで採番済のため **その次番号以降の空き ID** を用いる (ID 衝突回避。bare な未登録 ID トークンは upstream-coverage/g3-trace の孤児検出に掛かるため本文に直書きしない)。
