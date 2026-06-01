@@ -3,10 +3,10 @@ plan_id: PLAN-X-03-roster-design
 title: "PLAN-X-03 (kind=poc): roster module 設計の Discovery 検証 (設計→仮実装→検証→設計確定、PLAN-X-01 §1.1 適用)"
 kind: poc
 layer: cross
-workflow_phase: S1
+workflow_phase: S4
 drive: poc
-status: draft
-decision_outcome: null
+status: completed
+decision_outcome: confirmed
 created: 2026-06-01
 updated: 2026-06-01
 owner: PM (Opus) / PO (人間)
@@ -80,6 +80,8 @@ spike を走らせ、§1 の設計仮説が成立するか観察:
 
 ## §4 設計確定 (S4、decision_outcome = PO)
 
+> **S4 結果 (PO 確定 2026-06-01)**: `decision_outcome = confirmed` / `promotion_strategy = redesign`。roster module 核が S3 で実証成立・self-review APPROVE を受け、**設計を確定**。spike (品質ゲート無しの使い捨て) は破棄し、**PLAN-L5-05-roster へ Forward 確定で本実装し直す** (redesign)。設計反映 = capability⊥model / ID=filename stem / nameMismatch WARN。parse zod 化・agents dir パス解決は L6 carry。本 Discovery は status=completed。
+
 - **confirmed**: 設計成立 → PLAN-L5-05-roster へ設計を **Forward 確定**で反映 (module-decomposition + internal-processing 増分を accepted 水準へ)。出口 = `promotion_strategy`: spike は throwaway なので通常 **redesign** (再設計で本実装) / spike が gate 通過品質なら reuse-with-hardening
 - **pivot**: 設計の一部 (resolver / command 契約等) が詰まった → 該当を修正して再検証 (S2 へ戻る or 設計仮説差し替え)
 - **rejected**: roster module 設計自体が成立しない → fullback で要件/方式に戻す (考えにくいが構造上の選択肢)
@@ -126,5 +128,5 @@ spike を走らせ、§1 の設計仮説が成立するか観察:
 - [x] **S2**: `poc/roster-spike` で `src/roster/` spike を実装 (scan/resolve/consistency)。Codex SE は 8009001d で実装不可・review-only degrade → **PO 承認の PM env-forced fallback** で実装 (Codex review 3 点反映)
 - [x] **S3**: `bun src/roster/spike-run.ts` で §3 検証点を観察、§5 に記録 (全検証点 ✅、roster ID 曖昧を ID=filename stem で解消)
 - [x] self-review (code-reviewer) が「spike が設計を実証したか」を確認 = **APPROVE / 検証は信頼できる** (Critical 0、Important 1 + Minor 2 を §5/§6 に反映済、grep+node で数値裏取り)。self-review 前置 MUST 充足 (TL=別 runtime は 8009001d のため code-reviewer で代替)
-- [ ] **S4**: PO が `decision_outcome` 記録 (confirmed/pivot/rejected) + `promotion_strategy` 選択
-- [ ] confirmed 時: PLAN-L5-05-roster へ Forward 確定反映 (capability⊥model / ID=filename stem / nameMismatch WARN) + 本 PLAN 所見を PLAN-X-01 §7.1 へ back-merge + spike ブランチ破棄/隔離
+- [x] **S4**: PO が `decision_outcome = confirmed` / `promotion_strategy = redesign` 確定 (2026-06-01)
+- [ ] confirmed 後続: PLAN-L5-05-roster へ Forward 確定反映 (capability⊥model / ID=filename stem / nameMismatch WARN) + 本 PLAN 所見を PLAN-X-01 §7.1 へ back-merge + spike (poc/roster-spike) は redesign で破棄/隔離 (main 未 merge)
