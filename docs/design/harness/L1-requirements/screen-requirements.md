@@ -17,6 +17,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 > **PO 判断 carry**: 画面要求は L2 モック検証で lift する。本 sub-doc では業務要求視点の必要画面のみ列挙し、UI 具体化は L2 に委ねる (FR-L1-29 参照)。
 > **実装状態**: 全 14 画面は not-implemented (NFR-08 実装宣言の真実性)。
+> **配置 (ADR-005 D2)**: 本 UI は **中央・全 project 横断の team 管理ツール**であり、project-local でない。**全員の GitHub project repo を data backbone** に読み、harness 工程の粒度で詳細可視化する (GitHub native 可視化の工程・詳細版)。`案件横断` = チーム全 project 横断の意。backend (中央/team server) 配置・通信境界は L2 設計 (ADR-005 D2、ADR-003 §IMP-031)。Phase A local dashboard はその bootstrap (technical-requirements §2 carry note)。
 
 ## §1 画面一覧
 
