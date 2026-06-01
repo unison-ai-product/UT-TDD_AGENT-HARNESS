@@ -1818,6 +1818,7 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 - **A**: Phase 0-A 完了時に必須
 - **B**: Phase 0-B 完了時に追加必須
 - **G**: 生成時作成 (Phase 0 では不要、利用時に hook / script が作成)
+- **[予定]**: 凡例外。未実装で Phase 0 対象外、後続 PLAN で A 化予定 (ADR-005 D2 の `src/web/` 等)
 
 ```
 <repo-root>/
@@ -1857,6 +1858,7 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 │   ├── design/                                   # A (ディレクトリのみ)
 │   ├── test-design/                              # A (ディレクトリのみ)
 │   ├── adr/                                      # A (ディレクトリのみ)
+│   ├── process/                                  # A (ディレクトリのみ、工程(L0-L14)/駆動モデル定義の正本、ADR-005)
 │   ├── postmortem/                               # A (ディレクトリのみ)
 │   └── skills/                                   # A (ディレクトリのみ、構想書 §8 補助 3 層 1)
 ├── src/                                          # A (TypeScript core、ADR-001)
@@ -1865,7 +1867,8 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 │   ├── plan/                                    # A (plan lint / validator)
 │   ├── vmodel/                                  # A (4 artifact trace validator)
 │   ├── runtime/                                 # A (mode 検出 / orchestration)
-│   └── doctor/                                  # A
+│   ├── doctor/                                  # A
+│   └── web/                                     # [予定] 中央 Web UI service (ADR-005 D2、Phase 0-A 不要、後続 PLAN で A 化)
 ├── tests/                                        # A (vitest、*.test.ts)
 ├── package.json                                  # A (Node/Bun 依存 + scripts)
 ├── tsconfig.json                                 # A (strict)

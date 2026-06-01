@@ -4,7 +4,7 @@
 - **Date**: 2026-05-27
 - **正本**: 本書がリポジトリ配置の **canonical 正本**。`requirements_v1.2 §9.1`（Phase 0 存在チェック）と `CLAUDE.md` のディレクトリ節は本書を参照する。
 - **前提**: ADR-001（harness 実装 = TypeScript/Bun、HELIX は概念のみ）/ ADR-005（配布 = GitHub-pull、Web UI = 中央・全 project 横断、plugin = 補助チャネル）/ V-model 4 artifact（concept v3.1 §2.3）。
-- **carry (要件同期)**: 本更新で新設した `docs/process/` / `src/web/` は **requirements_v1.2 §9.1 Phase 0-A 存在チェックツリーに未反映**。§9.1 同期は ADR-005 follow-up の後続 PLAN で行う（それまで Phase 0 存在チェック対象外）。
+- **要件同期 (済)**: `docs/process/` (A) / `src/web/` ([予定]) は **requirements_v1.2 §9.1 Phase 0-A 存在チェックツリーに反映済**。`docs/process/` は実体 (`.gitkeep`) を作成し A マーキングを truthful 化。`src/web/` は [予定] (Phase 0-A 対象外、後続 PLAN で A 化)。
 - **本 repo の位置づけ (ADR-005)**: 本 repo は **harness engine repo（= 配布の単一真実）**。各 project は本 repo を **git dependency（tag-pin）で pull** し、`ut-tdd setup` が adapter を投影する。下記 canonical ツリーは **engine repo の構成**。consume 側 project への投影レイアウトは §9 を参照。
 
 ## 1. canonical ツリー
