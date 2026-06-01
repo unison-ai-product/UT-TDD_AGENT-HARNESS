@@ -28,6 +28,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | **shell entrypoint** | `scripts/ut-tdd` (bash) / `scripts/ut-tdd.ps1` (PowerShell) | Windows ネイティブ対応 |
 | **テスト** | vitest (`tests/*.test.ts`) | ADR-001 TS/Bun 準拠 |
 | **reasoning model selection** | task × drive × L 別に model + reasoning effort を動的選定 (FR-L1-37)、L3 で具体的 model 候補確定 | FR-L1-37 連動 |
+| **配布 / 更新 channel** | **GitHub-pull** (git dependency, tag-pin、更新享受 = tag bump)。public npm 不要 (社内)。tool 非依存 package (CLI / CI / Codex 共通)。`ut-tdd setup` が adapter 投影。Claude plugin は補助チャネル | ADR-005 D1/D3 (L3 で FR 化) |
 
 ## §2 外部連携 + インターフェース要望
 
@@ -42,7 +43,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ### carry note: ダッシュボード server sync (Phase B、BR-21 相当)
 
-Phase B のサーバー同期 (PGlite + ElectricSQL 候補) は L3/L4 forward carry。ADR-002 候補として L4 外部 IF 設計 sub-doc で検討する。現時点では Phase A (local DB + local dashboard) を対象とする。
+Phase B のサーバー同期 (PGlite + ElectricSQL 候補) は L3/L4 forward carry。ADR-002 候補として L4 外部 IF 設計 sub-doc で検討する。現時点では Phase A (local DB + local dashboard) を対象とする。**最終形 = ADR-005 D2 の「中央・全 project 横断 Web UI (team server、GitHub backbone)」**。Phase A local はその bootstrap であり、Phase B server sync が中央化に接続する (後続作業追跡は ADR-005 Follow-ups が正本)。
 
 ## §3 既存システム制約
 
