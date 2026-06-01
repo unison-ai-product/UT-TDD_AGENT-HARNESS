@@ -181,15 +181,19 @@ export const VALID_SUB_DOCS = {
 |---|---|---|
 | 逆ピラミッド禁止 | artifact trace に design+impl あれば test_design+test_code edge 必須 | G6/G7 (trace file 検証) |
 | pair = V-model 6 組 | `pair_artifact` ↔ `V_MODEL_PAIRS` 照合 | zod refine (実装済 enum) |
+| **ペア未充足 = back-fill 未完の機械検知 (A-84)** | 設計 artifact に対し対のテスト設計 artifact が state に不在、または `placeholder_deps` 未解消 → fail-close。back-fill 完了まで error 継続 (V-model 最終整合=孤児0 を DB 側で保証、人手非依存) | **doctor / vmodel lint (L7)**、FR-L1-49 drift lint も同機構 (IMP-033 rule) |
 | kind=poc → S0-S4 ∧ cross | frontmatter superRefine | **実装済** (frontmatter.ts) |
 | kind=design+L1-L6 → sub_doc ∈ VALID_SUB_DOCS | superRefine (SubDoc zod 後) | **L7 (IMP-026)** |
 | agent_slot.model allowlist | agent-guard (別経路) | **実装済** |
 | 集約間参照整合 | doctor check (ID 参照の存在確認) | L7 carry |
+
+> **back-fill の整合保証 (PO 確定 2026-06-01)**: 上位設計 (L4 等) が仕様未確定で対のテスト設計を書けない項目は Artifact に `placeholder_deps` (依存: どの層で何が確定したら書けるか) を持たせる。L6 機能設計で仕様確定 → テスト設計を back-fill → `placeholder_deps` 解消。**未解消の placeholder / pair edge 欠落は doctor が孤児として fail-close**し、V-model 状態が最終的に整う (孤児 0) ことを **DB(state) 側から機械保証**する。「入るべきところが入っていなければ DB 側からも検知」(PO)。`placeholder_deps` フィールドの物理 schema は L7 で zod 化 (§8 carry)。
 
 ## §8 carry → L7 実装
 
 - **SubDoc zod 化** (IMP-026): `src/schema/index.ts` に `VALID_SUB_DOCS` + `subDocSchema` 追加、`frontmatter.ts` superRefine 拡張 (layer×sub_doc) + テスト
 - **state 読込/書込 module**: `.ut-tdd/` file ↔ zod parse/serialize の実装 (architecture.md runtime/state)
 - **doctor check_business_entity_coverage**: state file ↔ src/schema 齟齬検出の実装 (data.md §8 / L1 §10.2 carry)
+- **`placeholder_deps` + ペア未充足検知** (A-84、PO back-fill 整合保証): Artifact schema に `placeholder_deps: array<{waiting_layer, waiting_spec}>` を追加し、doctor / vmodel lint で「設計 artifact に対の test_design artifact 不在 or `placeholder_deps` 未解消 → fail-close」を実装。back-fill 完了で解消、V-model 最終整合 (孤児0) を DB 側で機械保証。FR-L1-49 drift lint と同じ IMP-033 rule engine に rule 型として登録
 - **物理 schema の object 型詳細** (agent_slots/generates/dependencies の入れ子型) は L7 実装時に zod object で確定
 - evaluation_batch (Phase B) の物理 schema は Phase B telemetry 着手時に詳細化
