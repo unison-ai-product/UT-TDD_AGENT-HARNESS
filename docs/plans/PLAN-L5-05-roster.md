@@ -5,7 +5,7 @@ kind: design
 layer: L5
 sub_doc: module-decomposition
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-01
 updated: 2026-06-01
 owner: PM (Opus) / PO (人間)
@@ -68,15 +68,18 @@ L4 function §1.1 roster building block + §2 CLI を **module 結合粒度**へ
 
 ## §4 受入条件 / DoD
 
-- [ ] module-decomposition に `roster` module 新設 (§1/§2/§5、依存 schema/fs 一方向)
-- [ ] capability class 解決の module 内分割 (FR-L1-37 連携は C12 外と明示)
-- [ ] internal-processing に command D-API + DbC pre/post
-- [ ] roster↔guard `runtime → roster` 一方向結合 + 移行段階 placeholder_deps (循環なし)
-- [ ] L8 IT-ASSET (roster) ペア + 未確定 placeholder_deps + 依存明示
-- [ ] 関数 signature を L6 carry (waiting_layer:L6)
-- [ ] L4 function §1.1 / architecture §3.1 との 1:1 整合 (二重定義なし)
-- [ ] §6 用語更新 / §7 機能要求更新
-- [ ] self-review 通過
+> **Discovery 確定 (PLAN-X-03、2026-06-01)**: 本 PLAN の設計内容は roster Discovery (PLAN-X-03、kind=poc) で **設計→仮実装→検証→確定** を 1 周し `decision_outcome=confirmed`。確証度「低」だった capability resolver / roster↔guard 整合が spike で実証成立。確定設計 = **ID=filename stem / capability class ⊥ model family / nameMismatch WARN / `roster check` = allowlist 突合 fail-close**。本 PLAN はその確定を Forward で L5 設計書に反映 (redesign: spike 破棄・本実装は L7)。
+
+- [x] module-decomposition に `roster` module 新設 (§1 inventory + §5 責務境界 + 依存方向注記、依存 schema/fs 一方向)
+- [x] capability class 解決の module 内分割 = **capability⊥model** で確定 (FR-L1-37 model 推挙への入力は C12 外と明示)
+- [x] internal-processing に command D-API (`roster list/check`) + DbC pre/post (§1/§2/§3/§4)
+- [x] roster↔guard `runtime → roster` 一方向結合 + 移行段階 placeholder_deps (循環なし、spike で物理確認)
+- [x] L8 IT-ASSET-01〜03 (roster) ペア + §2 量閉じ接続
+- [x] 関数 signature / resolver アルゴリズム / parse zod 化 / パス解決を L6 carry (waiting_layer:L6)
+- [x] L4 function §1.1 / architecture §3.1 との 1:1 整合 (二重定義なし、self-review pmo-sonnet 確認)
+- [x] §6 用語更新 / §7 機能要求更新 (FR delta なし、FR-L1-46/48 詳細化)
+- [x] self-review (pmo-sonnet) 通過 = 整合成立、Important 2 (`ut-tdd asset` L6 carry 明示 / spike 経緯削除) 是正済
+- **carry (self-review Minor)**: `ut-tdd asset` (FR-L1-48) D-API は L6 詳細化 (`waiting_layer:L6`、本 PLAN は roster command を確定、asset は roster パターン後追い) / L8 IT-ASSET-01 は L6 本起票で「scan 全件」と「capability⊥model 解決」に分割
 
 ## §5 関連 PLAN / ADR / docs
 
