@@ -49,5 +49,5 @@ UT-TDD harness は Claude Code / Codex (AI runtime) / GitHub / 観測系 (Sentry
 ## Follow-ups
 
 - **IMP-030**: 「AI runtime に API key 前提を書かない」guard を L6/L7 doc + lint に組み込む。
-- **IMP-031 (将来境界)**: 画面 (14 screen) + DB を Web サーバ側に配置する場合、**local harness ↔ Web サーバ間の通信境界** (ネットワーク) が新設される。現状は file-based local (ネットワークなし) だが、Phase B / multi-team (L3 §7.2 BR-multi) で本 adapter 方針の延長として設計する。
+- **IMP-031 (将来境界)**: 画面 (14 screen) + DB を Web サーバ側に配置する場合、**local harness ↔ Web サーバ間の通信境界** (ネットワーク) が新設される。現状は file-based local (ネットワークなし) だが、Phase B / multi-team (L3 §7.2 BR-multi) で本 adapter 方針の延長として設計する。**Web サーバ配置方針 (中央・全 project 横断・GitHub backbone) は [ADR-005](./ADR-005-distribution-model-and-central-ui.md) D2 を参照。**
 - if-detail §7 の「ADR-003 候補」を本 ADR (accepted) 参照に更新。
