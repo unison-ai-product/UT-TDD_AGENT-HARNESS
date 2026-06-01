@@ -2,7 +2,7 @@
 
 > **目的**: HELIX 由来の **runtime 内部資産**を「UT-TDD 用に作り替える機能」として棚卸・一覧化する。既存の [helix-source-inventory.md](./helix-source-inventory.md) / [helix-porting-map.md](./helix-porting-map.md) は **code-port 視点** (cli/lib → TS) であり、subagent/skill/command を **harden/curate** 扱いで「機能として設計し直す対象」にしていなかった (= FR-level 前提抜け)。本 doc はその gap を埋める evidence。
 > **調査**: 2026-05-29、pmo-project-explorer ×2 (subagent / skill) 並行棚卸。read-only。
-> **接続**: 本 doc は recovery PLAN [PLAN-X-02](../plans/PLAN-X-02-internal-asset-recovery.md) §4 の evidence。不足 FR は同 PLAN §6/§7 で L1/L3 へ fullback。
+> **接続**: 本 doc は recovery PLAN [PLAN-RECOVERY-01](../plans/PLAN-RECOVERY-01-internal-asset-recovery.md) §4 の evidence。不足 FR は同 PLAN §6/§7 で L1/L3 へ fullback。
 
 ## §0 結論サマリ
 

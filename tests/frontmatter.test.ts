@@ -61,8 +61,8 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
 
   it("poc は layer=cross + workflow_phase 必須、S4 は decision_outcome 必須 (§1.1)", () => {
     const pocBase = {
-      plan_id: "PLAN-X-06-poc",
-      title: "PLAN-X-06: poc",
+      plan_id: "PLAN-DISCOVERY-06-poc",
+      title: "PLAN-DISCOVERY-06: poc",
       kind: "poc",
       layer: "cross",
       drive: "scrum",
@@ -90,8 +90,8 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
 
   it("reverse は confirmed_reverse_type 必須、R4 は forward_routing/promotion_strategy 必須 (§3.3 / §3.4)", () => {
     const revBase = {
-      plan_id: "PLAN-X-07-reverse",
-      title: "PLAN-X-07: reverse",
+      plan_id: "PLAN-REVERSE-07-reverse",
+      title: "PLAN-REVERSE-07: reverse",
       kind: "reverse",
       layer: "cross",
       drive: "reverse",
@@ -117,6 +117,27 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
         promotion_strategy: "reuse-with-hardening",
       }).success,
     ).toBe(true);
+  });
+
+  it("recovery は layer=cross 許可 + workflow_phase 禁止、token↔kind 一致 (§1.1 / §1.10 A)", () => {
+    const recBase = {
+      plan_id: "PLAN-RECOVERY-09-x",
+      title: "PLAN-RECOVERY-09: recovery",
+      kind: "recovery",
+      layer: "cross",
+      drive: "poc",
+      status: "draft",
+      agent_slots: [{ role: "aim", slot_label: "AIM — Recovery" }],
+      dependencies: { parent: null },
+    };
+    // recovery + cross + phase なしは通る (解禁)
+    expect(frontmatterSchema.safeParse(recBase).success).toBe(true);
+    // recovery に workflow_phase は fail
+    expect(frontmatterSchema.safeParse({ ...recBase, workflow_phase: "S2" }).success).toBe(false);
+    // 駆動トークン↔kind 不一致は fail (DISCOVERY token に recovery kind)
+    expect(
+      frontmatterSchema.safeParse({ ...recBase, plan_id: "PLAN-DISCOVERY-09-x" }).success,
+    ).toBe(false);
   });
 
   it("v2_import 任意フィールドが受理される (Minor 1 / G1 readiness v8)", () => {

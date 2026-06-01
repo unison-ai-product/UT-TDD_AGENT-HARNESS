@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-X-03-roster-design
-title: "PLAN-X-03 (kind=poc): roster module 設計の Discovery 検証 (設計→仮実装→検証→設計確定、PLAN-X-01 §1.1 適用)"
+plan_id: PLAN-DISCOVERY-02-roster-design
+title: "PLAN-DISCOVERY-02 (kind=poc): roster module 設計の Discovery 検証 (設計→仮実装→検証→設計確定、PLAN-DISCOVERY-01 §1.1 適用)"
 kind: poc
 layer: cross
 workflow_phase: S4
@@ -18,13 +18,13 @@ agent_slots:
   - role: tl
     slot_label: "TL — spike が roster 設計を実証したかの検証レビュー (別 runtime)"
 generates:
-  - artifact_path: docs/plans/PLAN-X-03-roster-design.md
+  - artifact_path: docs/plans/PLAN-DISCOVERY-02-roster-design.md
     artifact_type: markdown_doc
 dependencies:
   parent: null
   requires: []
   references:
-    - docs/plans/PLAN-X-01-workflow-metamodel.md
+    - docs/plans/PLAN-DISCOVERY-01-workflow-metamodel.md
     - docs/plans/PLAN-L5-05-roster.md
     - docs/plans/PLAN-L4-11-roster.md
     - docs/design/harness/L4-basic-design/function.md
@@ -34,11 +34,11 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
-# PLAN-X-03 (kind=poc): roster module 設計の Discovery 検証
+# PLAN-DISCOVERY-02 (kind=poc): roster module 設計の Discovery 検証
 
 ## §0 位置づけ
 
-これは **Forward 凍結 PLAN ではなく検証 (Discovery/PoC) 駆動プラン**。roster module の L5 設計 (PLAN-L5-05-roster) を**紙上で確定する前に、仮実装で実証して確定させる**。[[PLAN-X-01]] §1.1「Discovery は確証が持てない**設計**にも適用 — 設計→仮実装→検証→設計確定」の最初の実適用。
+これは **Forward 凍結 PLAN ではなく検証 (Discovery/PoC) 駆動プラン**。roster module の L5 設計 (PLAN-L5-05-roster) を**紙上で確定する前に、仮実装で実証して確定させる**。[[PLAN-DISCOVERY-01]] §1.1「Discovery は確証が持てない**設計**にも適用 — 設計→仮実装→検証→設計確定」の最初の実適用。
 
 > **なぜ Forward でなく Discovery か (PM 自己訂正 2026-06-01)**: PM は当初 roster を「agent-guard.ts に scan 実装があるから確証あり = Forward」と自己判断し Discovery を飛ばそうとした。これは「確証ある/重いから省略」で工程を抜く逸脱 ([[feedback-process-for-record-not-weight]])。agent-guard が実証するのは **scan 機構だけ**で、roster module 全体 (capability class resolver / 内部資産 command CLI / `runtime → roster` 一方向結合 / 移行段階 placeholder) は**未実証**。確証ありと偽って Forward 凍結すると後で大手戻り。PO 指摘「ディスカバリーはやらないのか？」で訂正。
 
@@ -119,7 +119,7 @@ spike を走らせ、§1 の設計仮説が成立するか観察:
 
 - **Forward 着地先**: confirmed → PLAN-L5-05-roster (kind=design、L5↔L8 ペア) が設計を確定保持。本 Discovery は検証 vehicle で設計書ではない (設計書は per-requirement の L5-05、[[feedback-plan-per-requirement]])
 - **兄弟 Discovery (後続判定)**: skill (FR-L1-47 recommender = 最も不確実、Discovery 濃厚) / drift (FR-L1-49 = rule 定義済だが「確証あり」と自己判断せず roster Discovery 後に要否判定)
-- **メタモデル dogfood**: 本 PLAN の所見は [[PLAN-X-01]] §7.1 (S3 verify) へ Discovery-for-design の実適用例として back-merge
+- **メタモデル dogfood**: 本 PLAN の所見は [[PLAN-DISCOVERY-01]] §7.1 (S3 verify) へ Discovery-for-design の実適用例として back-merge
 - **L6 carry**: 関数 signature / capability resolver アルゴリズム / frontmatter parse の zod 化 / **agents dir パス解決契約** (spike は `src/roster/` 相対ハードコード、本実装は設定/解決方式を確定) は confirmed 後の L6 機能設計 (waiting_layer:L6)
 
 ## §7 DoD (S1→S4)
@@ -129,4 +129,4 @@ spike を走らせ、§1 の設計仮説が成立するか観察:
 - [x] **S3**: `bun src/roster/spike-run.ts` で §3 検証点を観察、§5 に記録 (全検証点 ✅、roster ID 曖昧を ID=filename stem で解消)
 - [x] self-review (code-reviewer) が「spike が設計を実証したか」を確認 = **APPROVE / 検証は信頼できる** (Critical 0、Important 1 + Minor 2 を §5/§6 に反映済、grep+node で数値裏取り)。self-review 前置 MUST 充足 (TL=別 runtime は 8009001d のため code-reviewer で代替)
 - [x] **S4**: PO が `decision_outcome = confirmed` / `promotion_strategy = redesign` 確定 (2026-06-01)
-- [ ] confirmed 後続: PLAN-L5-05-roster へ Forward 確定反映 (capability⊥model / ID=filename stem / nameMismatch WARN) + 本 PLAN 所見を PLAN-X-01 §7.1 へ back-merge + spike (poc/roster-spike) は redesign で破棄/隔離 (main 未 merge)
+- [ ] confirmed 後続: PLAN-L5-05-roster へ Forward 確定反映 (capability⊥model / ID=filename stem / nameMismatch WARN) + 本 PLAN 所見を PLAN-DISCOVERY-01 §7.1 へ back-merge + spike (poc/roster-spike) は redesign で破棄/隔離 (main 未 merge)

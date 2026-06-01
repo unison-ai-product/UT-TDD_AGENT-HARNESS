@@ -11,7 +11,7 @@ L7-L14 工程定義の起票を試みる過程で、PO 指摘により **真の 
 セッション前半は triage 迷走 (Forward/design/poc/reverse を繰り返し誤判定、PO に複数回訂正された)。後半で根本原因を潰し収束:
 
 1. **根本原因修正** (`29ee94f` → `009d4e5` で厳密化): 「PLAN を読まず自己流で起票」の根本 = **§1.10 PLAN 起票ルールが常時コンテキスト注入されていない**こと。`.claude/CLAUDE.md` に §1.10 要点を常時注入。retroactive self-review で Critical 1 + Important 4 を発見し修正 (X(cross)=poc/reverse のみ等)。
-2. **PLAN-X-05 起票→撤回** (`971e9f4`→`66c04ca`): 工程定義 Discovery を新規起票したが **PLAN-X-01 (workflow メタモデル PoC) と重複** (起票ルール違反) → 撤回。工程定義の検証は **PLAN-X-01 が正本**。
+2. **PLAN-X-05 起票→撤回** (`971e9f4`→`66c04ca`): 工程定義 Discovery を新規起票したが **PLAN-DISCOVERY-01 (workflow メタモデル PoC) と重複** (起票ルール違反) → 撤回。工程定義の検証は **PLAN-DISCOVERY-01 が正本**。
 3. **ADR-005 確定** (`7df446f`): 基盤要件を固定 (下記 §2 前提)。
 4. **配置正本・要件へ反映**: repository-structure (`d18c389`) / L1 技術要求 (`534dfd7`) / screen-requirements (`a18a0f9`) / §9.1 (`0ae8d30`)。
 
@@ -36,7 +36,7 @@ L7-L14 工程定義の起票を試みる過程で、PO 指摘により **真の 
 | 5 | HELIX cutover (helix 導線→ut-tdd GitHub-pull) | ⬜ (離脱判断 PO 未了) |
 
 **follow-up 4 の進め方** (重要、過去の triage 迷走を繰り返さない):
-- 工程定義の検証は **PLAN-X-01 (workflow メタモデル PoC、S3) の scope 内**で進める。**新規 PLAN を作らない** (X-05 撤回の教訓)。
+- 工程定義の検証は **PLAN-DISCOVERY-01 (workflow メタモデル PoC、S3) の scope 内**で進める。**新規 PLAN を作らない** (X-05 撤回の教訓)。
 - 駆動モデルは **Forward = L のワークフロー本体、他 (Scrum/Reverse/Recovery/Incident/Refactor/Retrofit/Add-feature/Research) は補助導線**という骨格 (PO 確定)。
 - 工程定義は **要件 (L3) レベル**の話 (harness が L4=G4 COND PASS で未クローズ=上流)。Discovery で実証 → L3 要件へ。なぞり禁止 (vendor を読んでから書く)。
 - vendor source = `vendor/helix-source/docs/v2/process/L07-L14*.md` + `helix-process/*` (untracked)。
@@ -57,7 +57,7 @@ L7-L14 工程定義の起票を試みる過程で、PO 指摘により **真の 
 
 ## §5 本 session commit (時系列、全 main)
 
-- `971e9f4` PLAN-X-05 起票 → `66c04ca` 撤回 (X-01 重複)
+- `971e9f4` PLAN-X-05 起票 → `66c04ca` 撤回 (PLAN-DISCOVERY-01 重複、当時は旧 X 体系)
 - `29ee94f` PLAN ルール常時注入 → `009d4e5` 厳密化修正 (retroactive review)
 - `7df446f` ADR-005 (配布/UI 基盤要件)
 - `d18c389` repository-structure (docs/process/ 新設 + 3層)

@@ -21,7 +21,7 @@ describe("G3-trace coverage (機能一覧 + ドメイン整合の機械検証)",
 
   it("L1 FR-L1 46 件全件抽出される (P0:19 + P1:22 + P2:5、A-79 で FR-L1-46〜49 内部資産追加)", () => {
     const frL1 = extractFrL1Ids(docs.l1Functional);
-    // L1 表で確定済の件数 (既存 42 + FR-L1-46〜49 内部資産 UT-TDD 化 = 46 件、Recovery PLAN-X-02)
+    // L1 表で確定済の件数 (既存 42 + FR-L1-46〜49 内部資産 UT-TDD 化 = 46 件、Recovery PLAN-RECOVERY-01)
     expect(frL1.size).toBe(46);
     expect(frL1.has("FR-L1-45")).toBe(true);
     expect(frL1.has("FR-L1-49")).toBe(true);

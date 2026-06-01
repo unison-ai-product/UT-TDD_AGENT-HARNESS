@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-X-04-skill-design
-title: "PLAN-X-04 (kind=poc): skill module 設計の Discovery 検証 (catalog/recommender/injector、設計→仮実装→検証→設計確定)"
+plan_id: PLAN-DISCOVERY-03-skill-design
+title: "PLAN-DISCOVERY-03 (kind=poc): skill module 設計の Discovery 検証 (catalog/recommender/injector、設計→仮実装→検証→設計確定)"
 kind: poc
 layer: cross
 workflow_phase: S1
@@ -16,14 +16,14 @@ agent_slots:
   - role: tl
     slot_label: "TL — skills module (catalog/recommender/injector) 設計の検証レビュー (別 runtime)"
 generates:
-  - artifact_path: docs/plans/PLAN-X-04-skill-design.md
+  - artifact_path: docs/plans/PLAN-DISCOVERY-03-skill-design.md
     artifact_type: markdown_doc
 dependencies:
   parent: null
   requires: []
   references:
-    - docs/plans/PLAN-X-01-workflow-metamodel.md
-    - docs/plans/PLAN-X-03-roster-design.md
+    - docs/plans/PLAN-DISCOVERY-01-workflow-metamodel.md
+    - docs/plans/PLAN-DISCOVERY-02-roster-design.md
     - docs/plans/PLAN-L5-06-skill.md
     - docs/plans/PLAN-L4-12-skill-pack.md
     - docs/design/harness/L4-basic-design/architecture.md
@@ -32,11 +32,11 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
-# PLAN-X-04 (kind=poc): skill module 設計の Discovery 検証
+# PLAN-DISCOVERY-03 (kind=poc): skill module 設計の Discovery 検証
 
 ## §0 位置づけ
 
-roster (PLAN-X-03) に続く 2 件目の Discovery-for-design ([[PLAN-X-01]] §1.1)。skill module (FR-L1-47: catalog / recommender / injector) の L5 設計を**紙上で確定する前に仮実装で実証して確定**する。skill は **recommender (工程→skill 推挙/発火) の方式が最も不確実**で、roster より Discovery 適性が高い (PO 確定「skill Discovery を回す」)。
+roster (PLAN-DISCOVERY-02) に続く 2 件目の Discovery-for-design ([[PLAN-DISCOVERY-01]] §1.1)。skill module (FR-L1-47: catalog / recommender / injector) の L5 設計を**紙上で確定する前に仮実装で実証して確定**する。skill は **recommender (工程→skill 推挙/発火) の方式が最も不確実**で、roster より Discovery 適性が高い (PO 確定「skill Discovery を回す」)。
 
 > **recommender 基盤の方向 (PO 確定 2026-06-01)**: 「ワークフロー上にスキル発火を設け、スキルを **category タグ + 工程タグ**で分けて **工程単位で推挙**させる仕組み」。当初 PM が枠組んだ「PLAN/keyword → search」型 (HELIX gpt-5.4-mini freeform) は誤り → **工程タグ駆動の決定論推挙/発火**に訂正 (§1.1 詰まり②)。
 
@@ -60,7 +60,7 @@ architecture §3.1 skills building block = `loadCatalog()` / `recommendSkill()` 
 ## §2 仮実装計画 (S2、PoC spike)
 
 - **ブランチ**: `poc/skill-spike` (使い捨て、`poc/*` → main 直 PR 物理ブロック)
-- **実装**: PM-authored TS (Codex は 8009001d で broken、env-forced fallback = roster PLAN-X-03 A-96 で確立済の path)
+- **実装**: PM-authored TS (Codex は 8009001d で broken、env-forced fallback = roster PLAN-DISCOVERY-02 A-96 で確立済の path)
 - **spike 範囲** (`src/skill/` に最小):
   1. `scanSkills()`: `vendor/helix-source/skills/**/SKILL.md` を scan → catalog (`{id, description, layers, gate, role, tier}`)。frontmatter parse は roster spike 流用
   2. `recommendByPhase(layer, opts?)`: skill の 工程(layer/gate) タグ + category で、指定**工程**に該当する skill を**決定論で抽出** → per-phase skill set。LLM 不使用。HELIX `helix_layer` を ut-tdd 工程へ map する relabel も spike 内で簡易実装
@@ -83,14 +83,14 @@ architecture §3.1 skills building block = `loadCatalog()` / `recommendSkill()` 
 
 ## §5 検証記録 (S2/S3 実施時に追記)
 
-> S2/S3 実施後にここへ記録 (PLAN-X-03 §5 と同形式)。現時点 S1 (未実施)。
+> S2/S3 実施後にここへ記録 (PLAN-DISCOVERY-02 §5 と同形式)。現時点 S1 (未実施)。
 
 ## §6 carry / 関係
 
 - **Forward 着地先**: confirmed → PLAN-L5-06-skill (kind=design、L5↔L8 ペア)
 - **curate 依存**: catalog source の curate (FR-L1-47) は L7 / porting-map W10 (実装状態解消型)。spike は vendor sample で代替
-- **兄弟**: roster (PLAN-X-03、confirmed 済) / drift (FR-L1-49、未判定)
-- **メタモデル dogfood**: 所見は [[PLAN-X-01]] §7.1 へ back-merge (Discovery-for-design 2 件目)
+- **兄弟**: roster (PLAN-DISCOVERY-02、confirmed 済) / drift (FR-L1-49、未判定)
+- **メタモデル dogfood**: 所見は [[PLAN-DISCOVERY-01]] §7.1 へ back-merge (Discovery-for-design 2 件目)
 - **L6 carry**: recommender スコアリング詳細 / injector の layer 別注入セット定義 (waiting_layer:L6)
 
 ## §7 DoD (S1→S4)
@@ -100,4 +100,4 @@ architecture §3.1 skills building block = `loadCatalog()` / `recommendSkill()` 
 - [ ] **S3**: sample PLAN で推挙を観察、§5 に記録 (決定論で使えるか)
 - [ ] self-review (code-reviewer / pmo-sonnet) が検証の信頼性を確認 (前置 MUST)
 - [ ] **S4**: PO が `decision_outcome` (confirmed=決定論採用 / pivot=LLM hybrid / rejected) + `promotion_strategy`
-- [ ] confirmed 時: PLAN-L5-06-skill へ Forward 確定 + PLAN-X-01 §7.1 back-merge + spike 破棄
+- [ ] confirmed 時: PLAN-L5-06-skill へ Forward 確定 + PLAN-DISCOVERY-01 §7.1 back-merge + spike 破棄

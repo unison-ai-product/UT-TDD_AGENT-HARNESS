@@ -24,7 +24,7 @@ dependencies:
     - docs/design/harness/L4-basic-design/function.md
     - docs/migration/internal-asset-inventory.md
   references:
-    - docs/plans/PLAN-X-02-internal-asset-recovery.md
+    - docs/plans/PLAN-RECOVERY-01-internal-asset-recovery.md
     - docs/migration/helix-porting-map.md
     - docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
     - docs/governance/recovery-workflow.md
@@ -36,9 +36,9 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §0 位置づけ
 
-Recovery (PLAN-X-02) Step 4 後半 = **L4-L6 設計増分**の L4 Master hub。L1/L3 に追加した **FR-L1-46〜49** (BR-22 派生: subagent roster / skill pack curate / command CLI 化 / 内部資産 drift lint) を L4 基本設計に落とす。既存 L4 sub-doc (architecture/function) への**増分**であり、新規 sub-doc は起こさない (内部資産は方式設計 = architecture/function の範囲)。
+Recovery (PLAN-RECOVERY-01) Step 4 後半 = **L4-L6 設計増分**の L4 Master hub。L1/L3 に追加した **FR-L1-46〜49** (BR-22 派生: subagent roster / skill pack curate / command CLI 化 / 内部資産 drift lint) を L4 基本設計に落とす。既存 L4 sub-doc (architecture/function) への**増分**であり、新規 sub-doc は起こさない (内部資産は方式設計 = architecture/function の範囲)。
 
-> **構造位置づけ (A-90、L4 統合)**: 本 PLAN は **PLAN-L4-00-master の sub-master (child hub)** であり、L4 PLAN ツリーの根は **PLAN-L4-00-master 単一**。当初 parent = PLAN-X-02 (Recovery 起点) だったため L4-00 と並列の独立 root になっていた問題 (G4 再 audit スコープ曖昧 / data.md 取り残し) を、parent を L4-00 へ付替えて解消 (REC-001 は references で Recovery trace 保持)。本 PLAN の child = PLAN-L4-11/12/13。L4 全体 (data/architecture/function/external-if 4 sub-doc + 内部資産増分) は **PLAN-L4-00 §5 の G4 全体再 audit** で一括判定する。
+> **構造位置づけ (A-90、L4 統合)**: 本 PLAN は **PLAN-L4-00-master の sub-master (child hub)** であり、L4 PLAN ツリーの根は **PLAN-L4-00-master 単一**。当初 parent = PLAN-RECOVERY-01 (Recovery 起点) だったため L4-00 と並列の独立 root になっていた問題 (G4 再 audit スコープ曖昧 / data.md 取り残し) を、parent を L4-00 へ付替えて解消 (REC-001 は references で Recovery trace 保持)。本 PLAN の child = PLAN-L4-11/12/13。L4 全体 (data/architecture/function/external-if 4 sub-doc + 内部資産増分) は **PLAN-L4-00 §5 の G4 全体再 audit** で一括判定する。
 
 ### §0.1 L 内 PLAN と成果物の定義 (PO 確定 2026-06-01)
 

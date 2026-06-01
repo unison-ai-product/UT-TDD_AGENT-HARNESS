@@ -9,15 +9,15 @@ roster 内部資産を **Discovery (設計→仮実装→検証→確定) → L5
 ## §1 本 session 進捗 (A-95〜A-99)
 
 ### 内部資産 roster = Discovery → L5 Forward 完走
-- **Discovery `PLAN-X-03-roster-design`** (kind=poc/cross): S1 設計仮説 → S2 spike (Codex SE 8009001d で実装不可・review-only degrade → **PO 承認の PM env-forced TS spike**、`src/roster/` on poc/roster-spike) → S3 検証 (`bun` で scan=19 / capability⊥model / allowlist 15-4-0 / nameMismatches=0、設計成立) → **S4 PO confirmed + redesign**。self-review (code-reviewer) APPROVE。
+- **Discovery `PLAN-DISCOVERY-02-roster-design`** (kind=poc/cross): S1 設計仮説 → S2 spike (Codex SE 8009001d で実装不可・review-only degrade → **PO 承認の PM env-forced TS spike**、`src/roster/` on poc/roster-spike) → S3 検証 (`bun` で scan=19 / capability⊥model / allowlist 15-4-0 / nameMismatches=0、設計成立) → **S4 PO confirmed + redesign**。self-review (code-reviewer) APPROVE。
 - **L5 Forward `PLAN-L5-05-roster`** (status=confirmed): 確定設計を module-decomposition / internal-processing / L8 IT-ASSET に反映 (ID=filename stem / capability⊥model / nameMismatch WARN / `roster check`=allowlist 突合 fail-close)。self-review (pmo-sonnet) 整合成立。
 
 ### 内部資産 skill = Discovery S1 のみ (土台未完で保留)
-- **`PLAN-X-04-skill-design`** (kind=poc/cross/S1): recommender を当初「PLAN/keyword→search」(HELIX gpt-5.4-mini freeform) と枠組んだが **PO 訂正「スキルを category タグ + 工程タグで分けて工程単位で推挙/発火」** → **工程タグ駆動の決定論推挙** (TS-native、LLM 不要、FR-12 `injectByLayer` 同型) に確定。S2 以降は §2 の工程ワークフロー定義完成後に再開。
+- **`PLAN-DISCOVERY-03-skill-design`** (kind=poc/cross/S1): recommender を当初「PLAN/keyword→search」(HELIX gpt-5.4-mini freeform) と枠組んだが **PO 訂正「スキルを category タグ + 工程タグで分けて工程単位で推挙/発火」** → **工程タグ駆動の決定論推挙** (TS-native、LLM 不要、FR-12 `injectByLayer` 同型) に確定。S2 以降は §2 の工程ワークフロー定義完成後に再開。
 
 ### 工程ワークフロー定義 gap 棚卸し (pmo-sonnet、本 handover の発端)
 - **列挙(enum)=完全**: L0-L14 / G0.5-G14 / 駆動モード / phase(S0-S4・R0-R4) は schema・gate-design に全列挙。
-- **中身=部分的**: 定義済 = L0-L6 設計 + Forward/Recovery workflow + Recovery 正本。**gap = ① L7-L14 工程定義未着手 / ② 駆動モード 7/9 (Scrum/Incident/Refactor/Retrofit/Add-feature/Research/Reverse詳細) が 1 行概要のみ・UT-TDD 正本化未 / ③ Discovery メタモデル(PLAN-X-01)が S4 未確定 / ④ L10 テスト設計(L2↔L10)未作成**。
+- **中身=部分的**: 定義済 = L0-L6 設計 + Forward/Recovery workflow + Recovery 正本。**gap = ① L7-L14 工程定義未着手 / ② 駆動モード 7/9 (Scrum/Incident/Refactor/Retrofit/Add-feature/Research/Reverse詳細) が 1 行概要のみ・UT-TDD 正本化未 / ③ Discovery メタモデル(PLAN-DISCOVERY-01)が S4 未確定 / ④ L10 テスト設計(L2↔L10)未作成**。
 - → skill 工程タグ駆動は「工程の枠」にはタグ付け可だが、**undefined 工程への skill 割当は工程定義に依存** = 土台未完。
 
 ## §2 Next Action (新優先順位: 工程ワークフロー定義完成 → その後 skill)
@@ -32,8 +32,8 @@ roster 内部資産を **Discovery (設計→仮実装→検証→確定) → L5
 2. **ピース2 = L7-L14 工程定義 + L10**:
    - L7-L14 各工程の目的/entry/exit/成果物を確定 (gate-design G7-G14 + test-design ペアから consolidate。L7=実装で設計 doc なしは意図的、entry/exit は gate 定義)。
    - L10 テスト設計 (L2↔L10) を G2 park 解除時に作成。
-3. **ピース3 = PLAN-X-01 S4 確定**: 工程定義 (①spine + ②駆動モデル) が揃った状態でメタモデルを PO confirm。
-4. **ピース4 後 = skill 再開**: 工程タグ体系 (spine層 + 駆動モード phase) 確定後、`PLAN-X-04` S2 spike (poc/skill-spike、工程→タグ lookup) を PM env-forced で。続けて drift (FR-L1-49) Discovery 要否判定 (「確証あり」を自己判断しない)。
+3. **ピース3 = PLAN-DISCOVERY-01 S4 確定**: 工程定義 (①spine + ②駆動モデル) が揃った状態でメタモデルを PO confirm。
+4. **ピース4 後 = skill 再開**: 工程タグ体系 (spine層 + 駆動モード phase) 確定後、`PLAN-DISCOVERY-03` S2 spike (poc/skill-spike、工程→タグ lookup) を PM env-forced で。続けて drift (FR-L1-49) Discovery 要否判定 (「確証あり」を自己判断しない)。
 
 ## §3 ⚠ 壊さないための必須注意
 
@@ -47,11 +47,11 @@ roster 内部資産を **Discovery (設計→仮実装→検証→確定) → L5
 
 ## §4 成果物 (本 session、A-95〜A-99、全て main commit 済)
 
-- **A-95** (`f8f9f0e`): roster Discovery S1 起票 (PLAN-X-03)。「ディスカバリーはやらないのか？」訂正。
+- **A-95** (`f8f9f0e`): roster Discovery S1 起票 (PLAN-DISCOVERY-02)。「ディスカバリーはやらないのか？」訂正。
 - **A-96** (`2576632`): roster S2/S3 (Codex 8009001d→PM spike、検証成立) + PO「TS にそろえる」反映。
-- **A-97** (`327f52c`): roster S4 confirmed+redesign + PLAN-X-01 §7.1 back-merge。
+- **A-97** (`327f52c`): roster S4 confirmed+redesign + PLAN-DISCOVERY-01 §7.1 back-merge。
 - **A-98** (`854b6be`): roster L5 Forward 確定 (PLAN-L5-05、module-decomp/internal-proc/L8)。
-- **A-99** (`8ab8cfe`): skill Discovery S1 + PO 訂正「工程タグ駆動」(PLAN-X-04)。
+- **A-99** (`8ab8cfe`): skill Discovery S1 + PO 訂正「工程タグ駆動」(PLAN-DISCOVERY-03)。
 - spike: `poc/roster-spike` (`1472b68`、throwaway、main 未 merge の隔離記録)。
 
 ## §5 memory 反映済 (新規)

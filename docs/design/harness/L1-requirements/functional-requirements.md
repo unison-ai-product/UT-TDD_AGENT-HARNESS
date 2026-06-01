@@ -19,7 +19,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §1 機能一覧
 
-FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/40/41/42/44: PO directed 新規 6 件 (2026-05-28)。FR-L1-45: L3→L1 back-propagation (A-49、2026-05-28)。FR-L1-46〜49: 内部資産 UT-TDD 化 (BR-22 派生、Recovery PLAN-X-02 / A-79、2026-05-29)。**計 46 件**:
+FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/40/41/42/44: PO directed 新規 6 件 (2026-05-28)。FR-L1-45: L3→L1 back-propagation (A-49、2026-05-28)。FR-L1-46〜49: 内部資産 UT-TDD 化 (BR-22 派生、Recovery PLAN-RECOVERY-01 / A-79、2026-05-29)。**計 46 件**:
 
 | FR-L1-NN | 機能要求名 (1 行) | 出典 doc | 必要 input | 出力 output | 重要度 | 対応画面 (G1-trace) |
 |---|---|---|---|---|---|---|

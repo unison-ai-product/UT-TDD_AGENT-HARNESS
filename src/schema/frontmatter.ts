@@ -25,14 +25,25 @@ import {
 } from "./index";
 
 /**
- * §1.10 A plan_id 形式 (phase-aware): `PLAN-<layer>-<NN>-slug`。
- * layer token = `L0`〜`L14` (該当工程) / `X` (cross = poc・reverse のみ。WORKFLOW_KINDS と一致。recovery/troubleshoot 等は実 layer を使う) / `M` (master plan)。
- * NN = layer 内 2 桁連番、slug = kebab。**旧 flat `PLAN-001..004` は archived 別名前空間** (衝突しない)。
- * 狙い: ID 単体で phase 判別 → state(DB) が phase↔PLAN を拾える。
+ * §1.10 A plan_id 形式 (phase-aware + 駆動モデル legible): `PLAN-<token>-<NN>-slug`。
+ * token = ① Forward 工程 = `L0`〜`L14` (該当工程、token↔layer 一致) / ② 横断駆動モデル = `DISCOVERY`(kind=poc) / `REVERSE`(kind=reverse) / `RECOVERY`(kind=recovery) (token↔kind 一致、layer=cross) / ③ `M` (master plan)。
+ * 旧 `X`(cross) は駆動モデルを潰し ID から読めなかったため、駆動モデル名トークンへ置換 (option 1、PO 2026-06-01)。
+ * NN = token 内 2 桁連番、slug = kebab。**旧 flat `PLAN-001..004` は archived 別名前空間** (衝突しない)。
+ * 狙い: ID 単体で 工程/駆動モデル + phase を判別 → state(DB) が phase↔PLAN を拾える。
  */
-export const planIdSchema = z.string().regex(/^PLAN-(L(?:[0-9]|1[0-4])|X|M)-\d{2}(-[a-z0-9-]+)?$/, {
-  message: "plan_id は PLAN-<layer>-<NN>-slug 形式 (layer = L0〜L14 / X(cross) / M(master)、§1.10 A)",
-});
+export const planIdSchema = z
+  .string()
+  .regex(/^PLAN-(L(?:[0-9]|1[0-4])|DISCOVERY|REVERSE|RECOVERY|M)-\d{2}(-[a-z0-9-]+)?$/, {
+    message:
+      "plan_id は PLAN-<token>-<NN>-slug 形式 (token = L0〜L14 / DISCOVERY / REVERSE / RECOVERY / M、§1.10 A)",
+  });
+
+/** §1.10 A 駆動モデルトークン ↔ kind 対応 (横断駆動プランの ID legibility 正本) */
+export const DRIVE_TOKEN_TO_KIND: Record<string, string> = {
+  DISCOVERY: "poc",
+  REVERSE: "reverse",
+  RECOVERY: "recovery",
+};
 
 /** §1.8 agent_slots エントリ */
 export const agentSlotSchema = z.object({
@@ -75,7 +86,9 @@ const frontmatterBaseSchema = z.object({
   v2_import: z.string().optional(),
 });
 
-/** workflow_phase / layer=cross を取る kind (経路 2) */
+/** layer=cross を取る横断駆動 kind (Discovery=poc / Reverse=reverse / Recovery=recovery) */
+const CROSS_KINDS = new Set<string>(["poc", "reverse", "recovery"]);
+/** workflow_phase (S/R) を取る kind (Scrum=poc S0-S4 / Reverse R0-R4)。recovery は phase を持たない */
 const WORKFLOW_KINDS = new Set<string>(["poc", "reverse"]);
 
 const custom = z.ZodIssueCode.custom;
@@ -84,17 +97,11 @@ const custom = z.ZodIssueCode.custom;
  * §1.1 排他制約 + §1.1.parent_design + charter(L0) + §1.10 E を fail-close 検証する frontmatter schema。
  */
 export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => {
+  const isCrossKind = CROSS_KINDS.has(fm.kind);
   const isWorkflowKind = WORKFLOW_KINDS.has(fm.kind);
 
-  if (isWorkflowKind) {
-    // §1.1: kind in [poc,reverse] → workflow_phase 必須 / layer は cross のみ
-    if (!fm.workflow_phase) {
-      ctx.addIssue({
-        code: custom,
-        path: ["workflow_phase"],
-        message: `kind=${fm.kind} は workflow_phase 必須 (§1.1)`,
-      });
-    }
+  if (isCrossKind) {
+    // §1.1: 横断駆動 (poc/reverse/recovery) → layer は cross のみ
     if (fm.layer !== "cross") {
       ctx.addIssue({
         code: custom,
@@ -102,13 +109,28 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
         message: `kind=${fm.kind} は layer=cross のみ許可 (§1.1)`,
       });
     }
+    // §1.1: poc/reverse は workflow_phase 必須 / recovery は phase を持たない (禁止)
+    if (isWorkflowKind && !fm.workflow_phase) {
+      ctx.addIssue({
+        code: custom,
+        path: ["workflow_phase"],
+        message: `kind=${fm.kind} は workflow_phase 必須 (§1.1)`,
+      });
+    }
+    if (!isWorkflowKind && fm.workflow_phase) {
+      ctx.addIssue({
+        code: custom,
+        path: ["workflow_phase"],
+        message: `kind=${fm.kind} に workflow_phase は禁止 (§1.1)`,
+      });
+    }
   } else {
-    // §1.1: kind not in [poc,reverse] → layer 必須 / workflow_phase 禁止
-    if (!fm.layer) {
+    // §1.1: 横断駆動以外 → 実 layer 必須 / workflow_phase 禁止
+    if (!fm.layer || fm.layer === "cross") {
       ctx.addIssue({
         code: custom,
         path: ["layer"],
-        message: `kind=${fm.kind} は layer 必須 (§1.1)`,
+        message: `kind=${fm.kind} は実 layer 必須 (cross 不可、§1.1)`,
       });
     }
     if (fm.workflow_phase) {
@@ -118,6 +140,16 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
         message: `kind=${fm.kind} に workflow_phase は禁止 (§1.1)`,
       });
     }
+  }
+
+  // §1.10 A: plan_id の駆動トークン ↔ kind 一致 (横断駆動プランの ID legibility、fail-close)
+  const driveTok = fm.plan_id.match(/^PLAN-(DISCOVERY|REVERSE|RECOVERY)-/)?.[1];
+  if (driveTok && DRIVE_TOKEN_TO_KIND[driveTok] !== fm.kind) {
+    ctx.addIssue({
+      code: custom,
+      path: ["plan_id"],
+      message: `plan_id token=${driveTok} は kind=${DRIVE_TOKEN_TO_KIND[driveTok]} のみ (現 kind=${fm.kind}、§1.10 A)`,
+    });
   }
 
   // §1.1: kind=poc → workflow_phase ∈ {S0..S4}

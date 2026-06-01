@@ -4,10 +4,11 @@
  * されていなかった (A-94)。本 test が docs/plans/ 全件を新基準で機械検証し、
  * 「ID 単体で phase 判別 → state(DB) が phase↔PLAN を拾える」を保証する。
  */
-import { describe, expect, it } from "vitest";
+
 import { readdirSync, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
 import { planIdSchema } from "../src/schema/frontmatter";
 
 const plansDir = join(dirname(fileURLToPath(import.meta.url)), "..", "docs", "plans");
@@ -24,7 +25,7 @@ describe("plan_id 命名規約 (§1.10 A、DB 拾い上げ保証)", () => {
     expect(files.length).toBeGreaterThan(0);
   });
 
-  it("全 PLAN の plan_id が §1.10 A 形式に適合 (PLAN-<layer>-<NN>-slug、layer=L0〜L14/X/M)", () => {
+  it("全 PLAN の plan_id が §1.10 A 形式に適合 (PLAN-<token>-<NN>-slug、token=L0〜L14/DISCOVERY/REVERSE/RECOVERY/M)", () => {
     const violations: string[] = [];
     for (const f of files) {
       const planId = extract(readFileSync(join(plansDir, f), "utf8"), "plan_id");
@@ -35,17 +36,31 @@ describe("plan_id 命名規約 (§1.10 A、DB 拾い上げ保証)", () => {
     expect(violations).toEqual([]);
   });
 
-  it("plan_id の layer token が frontmatter layer と一致 (L{N}↔L{N} / X↔cross、§1.10 A)", () => {
+  it("plan_id の token が frontmatter と一致 (L{N}↔layer / 駆動トークン↔kind+layer=cross、§1.10 A)", () => {
+    const driveTokenToKind: Record<string, string> = {
+      DISCOVERY: "poc",
+      REVERSE: "reverse",
+      RECOVERY: "recovery",
+    };
     const violations: string[] = [];
     for (const f of files) {
       const content = readFileSync(join(plansDir, f), "utf8");
       const planId = extract(content, "plan_id");
       const layer = extract(content, "layer");
+      const kind = extract(content, "kind");
       if (!planId || !layer) continue;
-      const tok = planId.match(/^PLAN-(L(?:[0-9]|1[0-4])|X|M)-/)?.[1];
+      const tok = planId.match(/^PLAN-(L(?:[0-9]|1[0-4])|DISCOVERY|REVERSE|RECOVERY|M)-/)?.[1];
       if (!tok || tok === "M") continue; // M = master plan、layer は自由
-      const expected = tok === "X" ? "cross" : tok;
-      if (layer !== expected) violations.push(`${f}: token=${tok} ↔ layer=${layer}`);
+      if (tok in driveTokenToKind) {
+        // 横断駆動: token↔kind 一致 + layer=cross
+        if (kind !== driveTokenToKind[tok])
+          violations.push(`${f}: token=${tok} ↔ kind=${kind} (expected ${driveTokenToKind[tok]})`);
+        if (layer !== "cross")
+          violations.push(`${f}: token=${tok} は layer=cross 必須 (現 ${layer})`);
+      } else if (layer !== tok) {
+        // Forward 工程: token↔layer 一致
+        violations.push(`${f}: token=${tok} ↔ layer=${layer}`);
+      }
     }
     expect(violations).toEqual([]);
   });

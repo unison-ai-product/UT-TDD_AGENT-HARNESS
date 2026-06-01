@@ -68,7 +68,7 @@ L4 function §1.1 roster building block + §2 CLI を **module 結合粒度**へ
 
 ## §4 受入条件 / DoD
 
-> **Discovery 確定 (PLAN-X-03、2026-06-01)**: 本 PLAN の設計内容は roster Discovery (PLAN-X-03、kind=poc) で **設計→仮実装→検証→確定** を 1 周し `decision_outcome=confirmed`。確証度「低」だった capability resolver / roster↔guard 整合が spike で実証成立。確定設計 = **ID=filename stem / capability class ⊥ model family / nameMismatch WARN / `roster check` = allowlist 突合 fail-close**。本 PLAN はその確定を Forward で L5 設計書に反映 (redesign: spike 破棄・本実装は L7)。
+> **Discovery 確定 (PLAN-DISCOVERY-02、2026-06-01)**: 本 PLAN の設計内容は roster Discovery (PLAN-DISCOVERY-02、kind=poc) で **設計→仮実装→検証→確定** を 1 周し `decision_outcome=confirmed`。確証度「低」だった capability resolver / roster↔guard 整合が spike で実証成立。確定設計 = **ID=filename stem / capability class ⊥ model family / nameMismatch WARN / `roster check` = allowlist 突合 fail-close**。本 PLAN はその確定を Forward で L5 設計書に反映 (redesign: spike 破棄・本実装は L7)。
 
 - [x] module-decomposition に `roster` module 新設 (§1 inventory + §5 責務境界 + 依存方向注記、依存 schema/fs 一方向)
 - [x] capability class 解決の module 内分割 = **capability⊥model** で確定 (FR-L1-37 model 推挙への入力は C12 外と明示)
