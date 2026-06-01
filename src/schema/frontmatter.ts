@@ -24,9 +24,14 @@ import {
   workflowPhaseSchema,
 } from "./index";
 
-/** §1.10 A plan_id 形式: PLAN-NNN-slug または PLAN-MM-NNN */
-export const planIdSchema = z.string().regex(/^(PLAN-\d{3}(-[a-z0-9-]+)?|PLAN-MM-\d{3})$/, {
-  message: "plan_id は PLAN-NNN-slug または PLAN-MM-NNN 形式 (§1.10 A)",
+/**
+ * §1.10 A plan_id 形式 (phase-aware): `PLAN-<layer>-<NN>-slug`。
+ * layer token = `L0`〜`L14` (該当工程) / `X` (cross = poc・reverse・recovery 等の横断) / `M` (master plan)。
+ * NN = layer 内 2 桁連番、slug = kebab。**旧 flat `PLAN-001..004` は archived 別名前空間** (衝突しない)。
+ * 狙い: ID 単体で phase 判別 → state(DB) が phase↔PLAN を拾える。
+ */
+export const planIdSchema = z.string().regex(/^PLAN-(L(?:[0-9]|1[0-4])|X|M)-\d{2}(-[a-z0-9-]+)?$/, {
+  message: "plan_id は PLAN-<layer>-<NN>-slug 形式 (layer = L0〜L14 / X(cross) / M(master)、§1.10 A)",
 });
 
 /** §1.8 agent_slots エントリ */

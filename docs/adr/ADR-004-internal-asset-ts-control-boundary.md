@@ -3,11 +3,11 @@
 - **Status**: accepted
 - **Date**: 2026-06-01
 - **Deciders**: PM (Opus) + TL (Codex gpt-5.x、real invocation 2026-06-01) + PO (ユーザー)
-- **関連**: [ADR-001](./ADR-001-ut-tdd-harness-redesign-and-language.md) (TS 全面再実装の根本方針、本 ADR が境界を補完) / [ADR-003](./ADR-003-runtime-adapter-boundary-subscription-cli.md) (契約プラン CLI/hook 前提) / `docs/plans/PLAN-REC-001-internal-asset-recovery.md` (Recovery) / `docs/plans/PLAN-L4-10-internal-asset-master.md` (本 ADR の起票 PLAN) / `docs/migration/internal-asset-inventory.md` (棚卸) / FR-L1-46〜49 / BR-22
+- **関連**: [ADR-001](./ADR-001-ut-tdd-harness-redesign-and-language.md) (TS 全面再実装の根本方針、本 ADR が境界を補完) / [ADR-003](./ADR-003-runtime-adapter-boundary-subscription-cli.md) (契約プラン CLI/hook 前提) / `docs/plans/PLAN-X-02-internal-asset-recovery.md` (Recovery) / `docs/plans/PLAN-L4-10-internal-asset-master.md` (本 ADR の起票 PLAN) / `docs/migration/internal-asset-inventory.md` (棚卸) / FR-L1-46〜49 / BR-22
 
 ## Context
 
-UT-TDD harness は HELIX 由来の **runtime 内部資産** = subagent (`.claude/agents/*.md` 19 個) / skill (`vendor/helix-source/skills/**` 107 個) / command を持つ。これらを「UT-TDD 用に作り替える」必要がある (BR-22、Recovery PLAN-REC-001 で前提抜けを是正)。
+UT-TDD harness は HELIX 由来の **runtime 内部資産** = subagent (`.claude/agents/*.md` 19 個) / skill (`vendor/helix-source/skills/**` 107 個) / command を持つ。これらを「UT-TDD 用に作り替える」必要がある (BR-22、Recovery PLAN-X-02 で前提抜けを是正)。
 
 PO 指示 (2026-06-01):「内部資産は作り替える、TS に」。だが「TS に作り替える」には射程の曖昧さがあり、**2 層**に分かれる:
 

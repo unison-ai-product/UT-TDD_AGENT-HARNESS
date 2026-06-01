@@ -528,7 +528,7 @@ doc 間の整合を `src/lint/doc-consistency.ts` で自動検証 = L3 到達ま
 
 ##### G.13 design 層 sub-doc の 必須 / プロダクト選択 区分 + PLAN 合成導線 (メタモデル ①②、A-62)
 
-設計層 (L1-L6) の sub-doc は「**① 必須** (プロダクト非依存で常に作成)」と「**② プロダクト/drive 選択** (条件付き、`skip_sub_doc` 判定)」に区分する (PLAN-001 メタモデル ①②の具体化)。PLAN 起票の**導線**:
+設計層 (L1-L6) の sub-doc は「**① 必須** (プロダクト非依存で常に作成)」と「**② プロダクト/drive 選択** (条件付き、`skip_sub_doc` 判定)」に区分する (PLAN-X-01 メタモデル ①②の具体化)。PLAN 起票の**導線**:
 
 1. **triage**: 当該層 × プロダクト特性 (drive / UI 有無 / 外部連携有無 / DB 有無) を判定
 2. **① 必須 sub-doc** は常に `PLAN-L<N>-<NN>-<sub-doc>` を起票 (kind=design)

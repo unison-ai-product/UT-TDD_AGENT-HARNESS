@@ -4,7 +4,7 @@ import { frontmatterSchema } from "../src/schema/frontmatter";
 /** 有効な normal impl frontmatter の最小形 */
 function implBase(overrides: Record<string, unknown> = {}) {
   return {
-    plan_id: "PLAN-005-frontmatter-schema",
+    plan_id: "PLAN-L7-05-frontmatter-schema",
     title: "PLAN-005: frontmatter schema",
     kind: "impl",
     layer: "L7",
@@ -61,8 +61,8 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
 
   it("poc は layer=cross + workflow_phase 必須、S4 は decision_outcome 必須 (§1.1)", () => {
     const pocBase = {
-      plan_id: "PLAN-006-poc",
-      title: "PLAN-006: poc",
+      plan_id: "PLAN-X-06-poc",
+      title: "PLAN-X-06: poc",
       kind: "poc",
       layer: "cross",
       drive: "scrum",
@@ -90,8 +90,8 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
 
   it("reverse は confirmed_reverse_type 必須、R4 は forward_routing/promotion_strategy 必須 (§3.3 / §3.4)", () => {
     const revBase = {
-      plan_id: "PLAN-007-reverse",
-      title: "PLAN-007: reverse",
+      plan_id: "PLAN-X-07-reverse",
+      title: "PLAN-X-07: reverse",
       kind: "reverse",
       layer: "cross",
       drive: "reverse",
@@ -138,7 +138,7 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
     );
     expect(r.success).toBe(false);
     const ok = frontmatterSchema.safeParse(
-      implBase({ kind: "add-impl", dependencies: { parent: "PLAN-005-frontmatter-schema" } }),
+      implBase({ kind: "add-impl", dependencies: { parent: "PLAN-L7-05-frontmatter-schema" } }),
     );
     expect(ok.success).toBe(true);
   });

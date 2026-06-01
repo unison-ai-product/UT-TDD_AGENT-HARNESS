@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-REC-001-internal-asset-recovery
-title: "PLAN-REC-001 (recovery): 内部資産 UT-TDD 化の前提抜け — 認識ずれ収束 + L1/L3 fullback"
+plan_id: PLAN-X-02-internal-asset-recovery
+title: "PLAN-X-02 (recovery): 内部資産 UT-TDD 化の前提抜け — 認識ずれ収束 + L1/L3 fullback"
 kind: recovery
 layer: cross
 drive: fullstack
@@ -16,7 +16,7 @@ agent_slots:
   - role: po
     slot_label: "PO — Recovery スコープ承認 (内部資産 FR を L1/L3 に追加してよいか、G1/G3 reopen 可否)"
 generates:
-  - artifact_path: docs/plans/PLAN-REC-001-internal-asset-recovery.md
+  - artifact_path: docs/plans/PLAN-X-02-internal-asset-recovery.md
     artifact_type: markdown_doc
 dependencies:
   parent: null
@@ -30,7 +30,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
-# PLAN-REC-001 (recovery): 内部資産 UT-TDD 化の前提抜け — 認識ずれ収束 + L1/L3 fullback
+# PLAN-X-02 (recovery): 内部資産 UT-TDD 化の前提抜け — 認識ずれ収束 + L1/L3 fullback
 
 > **駆動モデル = Recovery** (concept §3.1:384「AI の逸脱・認識ずれ・前提誤読からの再開の収束」)。PO 指示「こういうのは駆動モデルのリカバリーで対応」(2026-05-29) に基づき、前提抜けで進めた工程を Recovery で収束 → 中断工程 (Forward L1/L3) へ fullback する。requires_human_approval = true (tl リオープン確認 + po スコープ承認)。
 
