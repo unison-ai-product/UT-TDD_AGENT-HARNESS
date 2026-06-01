@@ -6,7 +6,7 @@ layer: cross
 drive: fullstack
 status: draft
 created: 2026-05-29
-updated: 2026-05-29
+updated: 2026-06-01
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: aim
@@ -36,6 +36,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 > **trigger 再分類 (A-78、recovery-workflow §1)**: 当初「認識ずれ」と記述したが、PO 訂正により **(a) 指示無視** = 「内部資産を UT-TDD 用に作り替えよ」という明確な指示の不履行と再分類する (softening しない)。
 > **進捗 (A-79)**: Step 1 全部拾う / Step 2 PO 認識確認 (スコープ = L 横断ケース) / Step 3 正常化ポイント特定 (reopen = L1) / **Step 4 top-down 修正 = L1 BR-22 + FR-L1-46〜49 + L3 carry 反映済 (G1/G3 再 readiness 対象)**。L4-L6 設計増分は Forward 継続。
+> **進捗 (A-80〜A-86)**: ADR-004 (TS 統制境界、real Codex TL 判断) + PLAN-L4-10 Master + child PLAN-L4-11/12/13 で **L4 内部資産設計増分完了** (architecture §3.1 roster/skills + §4.1 asset-drift / function §1.1 roster + §2 CLI / L9 ST-ASSET-01〜07)。設計原則地盤 (粒度=ペア A-81 / 機能設計=仕様設計 A-82 / placeholder+back-fill A-83 / DB 機械保証 A-84) を確立。**必須再 self-review (A-86、PO 指示) = CONDITIONAL PASS (Critical=0)**、Important/Minor + 連鎖 defect 2 件是正。**G1/G3 内部資産次元 再 readiness 機械確認済** (g3-trace orphanFrL1=[] / fr-registry 46 rows / vitest 66 pass exit 0)。**L5/L6 内部資産関数仕様は placeholder_deps (waiting_layer L6) back-fill** = §6 Step 4-5 参照。
 
 ## §1 事故記録
 
@@ -88,13 +89,13 @@ v2_import: docs/migration/v2-import-ledger.md
 1. ✅ **L1 業務要求**に **BR-22** 追加 (自前 runtime 内部資産体系を持つ、HELIX 資産を UT-TDD 用に再構築) + §7 OT-22 + §9 carry (A-79)。
 2. ✅ **L1 機能要求**に **FR-L1-46〜49** 追加 (roster / skill pack curate / command CLI 化 / drift lint、BR-22 trace) + **L3 carry** で R1 被覆 (A-79)。fr-registry-audit (rows 46 / P0:19 P1:22 P2:5) / g3-trace (frL1 46 / orphanFrL1=[]) で trace 接続、**vitest 66 pass (exit 0 検証済、A-79c)**。
    - ⚠ **A-79b 是正記録**: 初回 commit 時に test 3 件 fail のまま「66 pass」と誤記録 (fr-registry test の `rows.size`→`rows.length` edit 失敗 + L3 carry のスラッシュ記法 `FR-L1-46/47/48/49` を g3-trace R1 が個別 ID 解決できず 47/48/49 孤児)。self-review (code-reviewer) が Critical 2 件として検出 → test 期待値 46 修正 + L3 carry を 4 個別 ID に分解で是正。`vitest \| tail` が exit code を握り潰していたのが誤記録の機序 (以後 `; echo VITEST_EXIT=$?` で検証)。
-3. ⬜ **G1/G3 を内部資産次元で再 readiness** (self-review = tl リオープン代替 → PO signoff)。
-4. ⬜ 以降 Forward で **L4-L6 に内部資産設計を増分** (roster 設計 = architecture/function / skill pack curate 設計 / command 設計) → L7 実装。porting-map W6/W7 (subagent)・W10 (skill) を後続 PLAN 接続。
-5. ⬜ **fullback 完了条件**: 内部資産が ① 必須スケルトン (Forward spine) に正式に乗り、L4-L6 設計増分 + 後続 PLAN 接続が済む。
+3. ✅ **G1/G3 を内部資産次元で再 readiness** (A-86): self-review (code-reviewer) = tl リオープン代替 = **CONDITIONAL PASS (Critical=0)**。機械確認 = g3-trace orphanFrL1=[] (FR-L1-46〜49 が L1↔L3 双方向被覆) / fr-registry-audit 46 rows / vitest 66 pass (exit 0)。**PO signoff 待ち** (本 §6 承認ゲート、requires_human_approval)。
+4. 🟡 Forward で **L4-L6 に内部資産設計を増分** — **L4 = 完了** (A-80〜A-86: architecture §3.1 roster/skills + §4.1 asset-drift / function §1.1 roster + §2 CLI / L9 ST-ASSET、ADR-004 境界準拠)。**L5/L6 = placeholder_deps back-fill** (A-83/A-84 back-fill モデル): 各 subcommand signature / capability resolver / recommender スコア / drift 判定 regex は L6 機能設計 (=仕様設計) で確定 → `waiting_layer: L6` (spec back-fill 型) として doctor が未充足を fail-close 追跡。移行段階 (guard→roster 切替) は `waiting_layer: L7` (実装状態解消型)。porting-map W6/W7 (subagent)・W10 (skill) を後続実装 PLAN 接続。
+5. 🟡 **fullback 完了条件 (back-fill モデルで再定義、A-83/A-84)**: 内部資産が ① 必須スケルトン (Forward spine) に **L4 設計増分として正式に乗る** + **L5/L6 未確定が placeholder_deps で DB(state) 側に登録され doctor が孤児 0 へ収束を機械保証** + 後続実装 PLAN 接続。**= L4 時点で fullback 成立** (L5/L6 を厳密滝で先行完成させる必要なし、back-fill で後追い)。**PO signoff 後に Recovery close**。
 
 > **FR-AST 採番注記**: inventory §5 の FR-AST-1〜4 は L1 反映時に既存 FR-L1 採番体系に合わせ **FR-L1-46〜49** とした (roster=46 / skill pack=47 / command=48 / drift lint=49)。
 
-> **承認ゲート (Recovery)**: tl がリオープンポイント (L1/L3) を確認、po がスコープ (内部資産 FR を追加して G1/G3 を reopen してよいか) を承認するまで本 fullback は着手しない (requires_human_approval)。
+> **承認ゲート (Recovery) 状態 (A-86)**: (1) **po スコープ承認 = 済** (「L 横断ケースでいい」+ FR-L1-46〜49 追加容認、2026-05-29/06-01)。(2) **tl リオープン確認 = self-review (code-reviewer) で代替済** (single-agent mode、cross-agent 不在を明示記録、CONDITIONAL PASS)。(3) **残 = po closure signoff** = Recovery を close し Forward へ正式 fullback してよいかの最終承認。本 signoff まで Recovery は `draft` 維持 (close 時に status 更新 + §5 適用記録)。requires_human_approval。
 
 ## §7 再発防止 (観点リスト / CI チェック追加案)
 
