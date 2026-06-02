@@ -78,6 +78,24 @@ concept §2.5 の **9-mode** は **Forward + 上表 8 mode (Research を除く)*
 
 ---
 
-## 6. このドキュメントの位置付け
+## 6. git ライフサイクル (Issue 起点スパイン、利用者チーム向け仕様)
 
-本台帳および各 mode 定義は **spike (PROVISIONAL)**。正本化は終点後の Reverse (R0-R4) が dogfood 実績から行う (PLAN-DISCOVERY-04 §3.1)。gate の機械検証条件は [../gates.md](../gates.md)。
+> **正本 = requirements §6.8 / §6.9**。本節はその mode 別要約。**harness 利用者チームに課す製品仕様**であり、harness 開発者 (solo/main 直) の手順ではない (Phase 0-A では緩和、Phase 0-B で有効化、§6.5)。
+
+全 mode は **問題/signal 起点 → Issue → PLAN → branch → PR+CI → merge+close** の一本道に乗る (§6.8.1)。Forward も「発注元 Issue (要件)」起点。
+
+| mode | 起点 (Issue 化する signal) | branch prefix (§6.1) | merge/CI 単位 (§6.9) | close |
+|------|---------------------------|----------------------|----------------------|-------|
+| Forward (design) | 発注元要件 Issue | `design/*` | 設計 PLAN/hub 完了 PR で vmodel-lint CI | hub merge |
+| Forward (impl) | 同上 | `feature/*` | **G7 trace freeze で全量 CI (本命アンカー)** | G7 merge |
+| Discovery / Scrum | requirement_undefined / user_feedback | `poc/*` | **CI 回さない** (使い捨て)。confirmed→Reverse→`feature/*` | Reverse 合流時 |
+| Reverse | drift / fullback | `reverse/*` | R4 routing 先 `feature/*` の G7 | Forward 合流時 |
+| Incident / Recovery | regression_prod / regression_dev | `hotfix/*` | 緊急 harness-check サブセット | hotfix merge + 恒久対策は別 Issue |
+| Add-feature | feature_addition | `add/*` | 親 PLAN と同 PR | merge |
+| Refactor / Retrofit | debt_degradation / dependency_outdated **or improvement-backlog** | `refactor/*` | L7 内 G7 | merge |
+
+**右腕 (L8-L14) は post-merge/scheduled CI** で、失敗時は §6.8.4 に従い **Issue を自動起票 → Recovery/Incident/Add-feature で差し戻し**。poc/* は merge せず CI 分を浪費しない (§6.4)。粒度は **1 Issue = 1 PLAN/hub = 1 branch** (§6.8.2)、PLAN frontmatter `github_issue_id` で close 漏れ機械検知。
+
+## 7. このドキュメントの位置付け
+
+本台帳および各 mode 定義は **spike (PROVISIONAL)**。正本化は終点後の Reverse (R0-R4) が dogfood 実績から行う (PLAN-DISCOVERY-04 §3.1)。gate の機械検証条件は [../gates.md](../gates.md)、git ライフサイクルの正本は requirements §6.8/§6.9。

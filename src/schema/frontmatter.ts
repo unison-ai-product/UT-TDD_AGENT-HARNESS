@@ -84,6 +84,9 @@ const frontmatterBaseSchema = z.object({
   agent_slots: z.array(agentSlotSchema).min(1, "agent_slots は 1 件以上 (§1.8)"),
   generates: z.array(generatesEntrySchema).default([]),
   dependencies: dependenciesSchema,
+  /** §6.8.2 Issue 起点スパイン: 解決対象 GitHub Issue 番号 (任意、Phase 0-B で recommended)。
+   *  feature/hotfix branch の close 漏れ機械検知 + PR `Closes #NN` 連携に使う。 */
+  github_issue_id: z.number().int().positive().optional(),
   /** v2 HELIX-workflows 取り込み軌跡への参照 (任意、migration ledger path) */
   v2_import: z.string().optional(),
 });

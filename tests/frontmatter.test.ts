@@ -28,6 +28,14 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
     }
   });
 
+  it("github_issue_id は optional・正の整数のみ (§6.8.2 Issue スパイン)", () => {
+    expect(frontmatterSchema.safeParse(implBase()).success).toBe(true); // 省略可
+    expect(frontmatterSchema.safeParse(implBase({ github_issue_id: 42 })).success).toBe(true);
+    expect(frontmatterSchema.safeParse(implBase({ github_issue_id: 0 })).success).toBe(false);
+    expect(frontmatterSchema.safeParse(implBase({ github_issue_id: -1 })).success).toBe(false);
+    expect(frontmatterSchema.safeParse(implBase({ github_issue_id: "42" })).success).toBe(false);
+  });
+
   it("kind=impl で parent_design 欠落は fail (§1.1.parent_design)", () => {
     const r = frontmatterSchema.safeParse(implBase({ parent_design: undefined }));
     expect(r.success).toBe(false);
