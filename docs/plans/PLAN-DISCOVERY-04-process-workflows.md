@@ -93,27 +93,33 @@ harness 自走前のため手動 + 既存 schema/frontmatter lint で回す。S1
 ### Step 1: S1 暫定定義 — Forward L0-L14 (forward/)
 
 - `docs/process/forward/` に L0-L14 の V-model L単位ワークフローを暫定起草。各層: 目的 / 入口出口 / ① 設計成果物 / ③ ペアになるテスト設計層 / gate。左腕 (L0-L6) / 谷 (L7) / 右腕 (L8-L14) で分割 (explorer 配置案準拠、確証なき箇所は placeholder)。
-- 状態: ⬜
+- 状態: ✅ (overview + L00-L06 + L07 + L08-L14、`c695772`)
 
 ### Step 2: S1 暫定定義 — 駆動モデル (modes/) + gates.md
 
 - `docs/process/modes/` に各駆動モデル (Discovery/Reverse/Recovery/Incident/Refactor/Retrofit/Add-feature/Scrum/Research) を 1 ファイル 1 モードで暫定起草。各: trigger / phase 構成 / exit / Forward 合流点。`gates.md` に G0.5-G14 を集約。
-- 状態: ⬜
+- 状態: ✅ (modes/ 9 種 + README 台帳 + gates.md、pmo-sonnet 2 並列委譲→PM review→翻案誤り 2 件 + schema 整合 3 件 修正)
 
 ### Step 3: S2 dogfood — 自 repo 実工程に当てて照合
 
 - 自 repo が L1-L5 で実際に回した工程を暫定定義に照合し、定義どおり辿れるか・詰まる箇所を手で確認。
-- 状態: ⬜
+- 状態: ✅ (§S2-S3 dogfood 記録「回った」。L1-L6 sub-doc ⇔ 実 PLAN 整合 / 実使用 mode frontmatter 整合 / V-pair 成立)
 
 ### Step 4: S3 verify — 詰まり/欠落/冗長/層越境/V-pair を記録
 
 - §5 基準で観察結果を本 PLAN に記録 (回った / 詰まった / refinement)。metamodel 欠陥か適用エラーかを分類。
-- 状態: ⬜
+- 状態: ✅ (§S2-S3 verify 記録。詰まり V1-V4 + 解決済 V5-V6。V1/V2 即是正、V3/V4 feedback 経路確定)
 
 ### Step 5: review (self-review 前置 MUST)
 
 - PO へ S4 を求める前に **code-reviewer / pmo-sonnet** で定義の整合・重複・層越境・V-pair 成立を self-review (claude-only の tl 代替)。別 runtime 可なら tl-advisor。
-- 状態: ⬜
+- 状態: ✅ **code-reviewer self-review = APPROVE-with-fixes (Critical 0)**。Important 4 + Minor 2 を本 session で是正:
+  - (Imp-1) README 台帳 Reverse の R3 po を承認者列へ移動 (owner=tl に整理)
+  - (Imp-2) V3 に matrix 強制前 PO 確定必須の衝突リスクを明記 (既存 PLAN-RECOVERY-01 fail 防止)
+  - (Imp-3) Incident layer `L7 (+cross)` → 内包 kind ごと正規 layer (troubleshoot=L7 / recovery=cross、複合値は schema 無効) に修正
+  - (Imp-4) retrofit §4 に「設計層書き戻しは kind=add-design 別起票、retrofit は layer=L7 固定」注記
+  - (Minor) discovery 承認者表現分離 / gates G8-G14 PLAN 未起票注記 / research V2 申し送り正本明記
+  - good practice 評価: なぞり禁止徹底・V-pair 正本整合・gap 自己申告構造化
 
 ### Step 6: S4 decide (PO) = 終点 → Reverse 起票
 
@@ -130,10 +136,41 @@ harness 自走前のため手動 + 既存 schema/frontmatter lint で回す。S1
 | 配置・分割 | docs/governance/repository-structure.md §2 (docs/process 置き場) + explorer 配置案 (forward/ modes/ gates.md) |
 | 境界 (process vs design/harness) | self-review (pmo-sonnet) 画定済: docs/process=方法論定義、docs/design/harness=harness 自身の機能要件。混在禁止 |
 
+## §S2-S3 dogfood + verify 記録 (Step3-4、decision は S4=PO)
+
+forward spike (Step1) + modes/9種 + gates.md (Step2) を、自 repo の実工程 (L1-L6 PLAN 群 + 実使用 mode) に照合した所見。**詰まりは大半が metamodel/forward 骨格の欠陥でなく「なぞり由来の不整合」「schema 未実装」「tree 未登録」で、検証 (本 dogfood) が全件捕捉・記録できた** = §2 仮説 (定義が clean/網羅/非冗長に書け、逸脱を検証が捕捉する) を支持する方向。最終 verdict は S4 (PO)。
+
+### 回った (hypothesis 支持)
+
+- **Forward L1-L6 sub-doc 定義 ⇔ 実 PLAN 整合**: L1=5 sub-doc✓ (business/functional/screen/technical/nfr) / L3=3✓ / L4 core 4✓ (data/architecture/function/external-if) / L5 core 4✓ / L6=function-spec+edge-case✓。spike の各層定義が実在 PLAN の構造と一致。
+- **実使用 mode の frontmatter ⇔ mode 定義 整合**: Discovery (DISCOVERY-01/02/03/04 = kind=poc/layer=cross/workflow_phase=S*)✓ / Recovery (RECOVERY-01 = kind=recovery/layer=cross/phase 無)✓。台帳の kind/layer/phase 値どおりに実 PLAN が起票されていた。
+- **9 mode 翻案 + 層越境なし**: 9 mode を README 台帳で kind/drive/layer/phase/owner/承認者/Forward 合流に翻案でき、全 mode が `cross` or 正規実 layer に収まり層越境なし。
+- **V-pair 成立**: forward overview の V-pair 表 (L1↔L14 / L2↔L10 / L3↔L12 / L4↔L9 / L5↔L8 / L6↔L7) が concept §2.3 / requirements §1.4 と一致、右腕 spike 各層の V-pair 列とも整合。
+- **gate 集約**: G0.5-G14 を gates.md に集約、forward spike §7 と数値矛盾なし。承認境界 (§2.6.3) も台帳と一致。
+- **regression**: vitest 全 pass (frontmatter / plan-id-naming 維持)。
+
+### 詰まった / gap (= なぞり不整合・未実装・未登録。すべて検証が捕捉)
+
+| # | 所見 | 種別 | 是正 / feedback 先 |
+|---|------|------|--------------------|
+| V1 | **forward_routing**: helix reverse は `L7` / `L8-L11`(fullback) へ routing するが、UT-TDD schema `VALID_FORWARD_ROUTING` = `L1/L3/L4/L5/gap-only` (5 種) に無い | なぞり × schema gap | reverse.md / README 台帳を **enum 整合に修正済** (本 session)。enum 拡張 (L7/fullback 経路) 要否は DISCOVERY-01 / schema へ feedback |
+| V2 | **docs/research/** が canonical tree (repository-structure) 未登録・実体不在だが research.md が参照 | tree gap | research.md に **注記追加済**。配置先 (tree 追加 vs docs/adr 寄せ) は正本化 (Reverse) 時に repository-structure へ反映 |
+| V3 | **Recovery drive**: 台帳/recovery.md = `troubleshoot` (§1.6 matrix `recovery→troubleshoot`) vs 実 PLAN-RECOVERY-01 = `fullstack` (確認済)。かつ **§1.6 kind×drive matrix は schema 未実装** (driveSchema は enum 9 種のみ検証、ペア未強制) | spec × 実使用 drift + 未強制 | mode 定義は §1.6 正本どおり (変更せず)。`recovery` が「復旧対象 work の drive を継承」か「troubleshoot 固定」かを **PO/requirements §1.6 判断** → 確定後 schema にペア強制を実装。**⚠ 衝突リスク: §1.6 を確定せず matrix 強制を先に実装すると、現存 PLAN-RECOVERY-01 (drive=fullstack) が即 fail する。matrix 強制実装は §1.6 定義確定を先行必須** (self-review Important-2) |
+| V4 | L4/L5 に内部資産拡張 sub-doc (roster/skill-pack/drift-lint) が実在するが forward spike の L4/L5 sub-doc enum は base のみ列挙 | 網羅 (拡張点) 注記不足 | 正本化時に forward spike へ「内部資産系は add-design 拡張 sub-doc」注記 |
+
+### 詰まりでない (翻案で解決済 / 設計意図)
+
+- **V5 mode ≠ kind の非 1:1**: Incident は独立 kind を持たず `troubleshoot`+`recovery` 内包、Add-feature は `add-design`+`add-impl` 内包、Discovery/Scrum は同 `kind=poc` を drive で分離。→ 台帳 §2 で**明示済** (なぞらず翻案の核心、混乱要因でなく確認事項)。
+- **V6 phase 命名「不統一」**: Discovery/Scrum=S0-S4 / Reverse=R0-R4 / 他=phase 無は **§1.5 の設計意図** (workflow_phase を持つのは poc/reverse のみ、recovery 等は phase 禁止が正)。不統一でなく仕様。
+
+### S4 への申し送り (PO 判断材料)
+
+メタモデル + forward/modes/gates 定義は「重複なく・層越境なく・V-pair 成立で・過剰 process なく」書けた (§5 confirmed 基準を満たす方向)。詰まり V1-V4 は **定義骨格の欠陥でなく**、①なぞり由来の schema 不整合 (V1)、②tree 未登録 (V2)、③matrix 未実装 (V3)、④拡張点の注記不足 (V4) で、いずれも本 dogfood が捕捉し V1/V2 は即是正、V3/V4 は feedback 経路を確定した。→ **confirmed (refinement 込み採用) が候補**。confirmed なら終点で `PLAN-REVERSE-NN-process-docs` を起票し V1-V4 を実績として正本へ反映。`decision_outcome` は S4 (PO 所有)。
+
 ## §DoD (S1→S3 進行、S4 は PO)
 
-- [ ] Step 1-2: forward/ + modes/ + gates.md を S1 暫定起草
-- [ ] Step 3: S2 dogfood (自 repo 実工程に照合)
-- [ ] Step 4: S3 verify 所見を記録
-- [ ] Step 5: self-review (code-reviewer / pmo-sonnet) 通過
+- [x] Step 1-2: forward/ + modes/ + gates.md を S1 暫定起草 (forward 4 + modes 9 + README 台帳 + gates.md)
+- [x] Step 3: S2 dogfood (自 repo 実工程に照合 — §S2-S3 記録)
+- [x] Step 4: S3 verify 所見を記録 (V1-V6、§S2-S3 記録)
+- [x] Step 5: self-review (code-reviewer) = APPROVE-with-fixes、Important 4 + Minor 2 是正済
 - [ ] Step 6: S4 = PO が decision_outcome 記録。confirmed なら終点で `PLAN-REVERSE-NN-process-docs` 起票 (docs/process 再整備は Reverse 側、§3.1)
