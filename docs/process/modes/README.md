@@ -59,7 +59,7 @@ concept §2.5 の **9-mode** は **Forward + 上表 8 mode (Research を除く)*
 | `drift` (schema/contract) | Reverse (normalization) |
 | `debt_degradation` / `code_smell` / `structural` | Refactor |
 | `dependency_outdated` / `upgrade` / `config_drift` | Retrofit |
-| `agent_runaway` / `context_exhaustion` / `regression_dev` | Recovery (承認必須) |
+| `agent_runaway` / `context_exhaustion` / `regression_dev` / `runaway` | Recovery (承認必須) |
 | `production_incident` / `hotfix_required` / `regression_prod` (env=prod) | Incident (承認必須) |
 | `feature_addition` / `scope_extension` | Add-feature |
 | `user_feedback_iteration` / `requirement_continuous_refinement` | Scrum |
