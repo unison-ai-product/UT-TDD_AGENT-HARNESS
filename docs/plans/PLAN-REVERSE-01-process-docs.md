@@ -66,6 +66,24 @@ PLAN-DISCOVERY-04 (Discovery、S4 confirmed 2026-06-02) の **終点 Reverse** (
 
 > V5/V6 (mode≠kind 非1:1 / phase 命名) は DISCOVERY-04 で翻案解決済 = gap でない。
 
+## §2.1 追加 gap — 成果物契約/カバレッジ多角レビュー (2026-06-02、Reverse+Forward workflow、12/15 confirmed)
+
+PO 問い「リバースは③テスト設計を引く仕組みか / フォワードも成果物契約は堅牢か / 設計書カバレッジは適切か」への多角検証 (各3レンズ並列→adversarial verify) で確定。**critical 1 (PLAN-REVERSE-01 frontmatter の confirmed_reverse_type 欠落 = validator fail-close) は本 PLAN に即修正済** (`c203d32`)。残りを routing 先別に記録。
+
+| # | gap (severity) | 対象 | routing / 対処 |
+|---|----------------|------|----------------|
+| V8 | **(impt) Reverse が③テスト設計を引かない**: R2 as-is に③復元なし / R0 に既存テスト有無(`has_existing_tests`)調査なし / R4 gap-register に③不在(`missing_pair_artifacts`)追跡なし。helix 翻案時に test_design が丸ごと脱落 | reverse.md R0/R2/§3 + requirements §3.5 | 本 PLAN R2-R4 正本化で reverse.md に③復元stub追記 + §3.5 受入条件に「①あり③不在 layer は missing_pair_artifacts 必須記録→再入先 pair freeze 前にテスト設計PLAN起票」 |
+| V9 | **(impt) Reverse 再入時の pair freeze gate 通過義務が未明記** (routing=L3→G3 / L4→G4 / L5→G5)。①だけ渡り③が宙に浮く誤読リスク (担保は Forward gate のみ) | reverse.md §4/§3 + requirements §3.5 (gate-design §1.1 は既定義) | 本 PLAN正本化で reverse.md §4 に「再入先 gate 通過義務」列 + §3 exit に「R4 routing確定後 再入先 pair freeze 通過まで L7 着手禁止」 |
+| V10 | **(impt) generates 契約不全**: Reverse が③/④を産まない明示宣言なし / phase表に artifact_type 列なし | reverse.md + requirements §3.3/§1.7 | §3.3 に「kind=reverse の generates は design_doc/yaml_config 限定、test_design/test_code 含むと fail-close」+ reverse.md phase表 artifact_type 列 |
+| V11 | **(impt) ③ test_design の所有 PLAN 未特定**: L1-01..05 が同一 pair_artifact を重複参照、`generates[]` に③所有者なし → pair freeze 機械検証が③所有を一意特定不可 | 各層 master hub の generates + §G.13 | §G.13 triage: 各層 hub に test_design generates 1件登録 (**L1-00/L3-00 hub 未起票** = 要起票 or 代表child) |
+| V12 | **(impt) L4-L6 child 13件の `artifact_type=markdown_doc` が §2.1 `design_doc` 規則違反** (L1/L3 は design_doc、docs/design/配下を指すのに型不一致) | PLAN-L4-01..04 / L5-01..07 / L6-01..02 + §1.7 | normalization: 13 PLAN を design_doc 統一 + §1.7/§G.13 に「docs/design/配下=design_doc / plans自己参照=markdown_doc」明記 |
+| V13 | **(impt) 設計書カバレッジ欠落**: セキュリティ/脅威モデル + arc42 §7 Deployment/§8 Cross-Cutting が architecture 必須§外 (現状 arc42 §4+§9 のみ)。G4 出口「threat model 確認」と機械検証成果物が未リンク | requirements §G.6 + G4 fail-close | §G.6 architecture 行に §脅威モデル(STRIDE簡易)/§デプロイ構成/§横断関心事 追記 + G4 検証項目化 (VALID_SUB_DOCS enum 追加は不要、必須§拡張で) |
+| V14 | (minor) `L7-unit-test-design.md` の `layer: L7` (③は左腕L6帰属、`next_pair_freeze: L6` と矛盾) | docs/test-design/harness/L7-unit-test-design.md | layer:L6 + executed_at_layer:L7 に修正 |
+| V15 | (minor) error/例外設計・データ移行設計の独立§不在 / 「評価系BR」定義不在(L3 skip条件) / L13 V-pair省略の記録薄 / G8-G14 fail-close が概念のみ | requirements §G + spike正本化 | 正本化時に §G.6/§G.13 拡張 + 注記。AP-7/AP-8(§2.7既定義)と G8-G14 接続 |
+| V16 | (minor) gates.md cross-mode 注記 / forward overview §6 freeze 注記 / `REVERSE_ROUTING_GATE_MAP` (schema TODO、gate cmd 実装時) / pair_artifact を kind=design 条件付き必須に昇格(lint) | gates.md/forward/overview/src/schema/src/plan/lint.ts | spike正本化 + ut-tdd gate/lint 実装 PLAN |
+
+> **即修正済 (本 session)**: critical (confirmed_reverse_type)。**即修正候補 (PO ok 待ち、機械的・既存§2.1規則への整合)**: V12 (13 PLAN artifact_type) / V14 (L7 layer)。**正本化(本PLAN R2-R4)/別PLAN carry**: V8-V11/V13/V15/V16 (要件本文 §G.6・§3.5 改訂 / hub 起票 / lint 実装を伴う)。
+
 ## §3 工程表 (R0-R4)
 
 ### Step R0: Evidence Acquisition
