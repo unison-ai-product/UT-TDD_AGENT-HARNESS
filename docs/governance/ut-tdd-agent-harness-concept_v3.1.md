@@ -409,9 +409,11 @@ mode と工程を「絵」で終わらせず自動で繋ぐ仕組み。V2 の ro
 | `production_incident` / `hotfix_required` / `regression_prod` | Incident | env=prod、承認必須 |
 | `feature_addition` / `scope_extension` | Add-feature | |
 | `user_feedback_iteration` / `requirement_continuous_refinement` | Scrum | |
-| (要件未確定 / 実現性不透明) | Discovery | 上流委譲 |
+| `requirement_undefined` / `feasibility_unknown` / `success_condition_unclear` (要件未確定 / 実現性不透明) | Discovery | 4 象限 P2、上流委譲 |
+| `tech_decision_required` / `option_comparison_needed` / `adr_required` | Research | 机上調査 (PoC 不要) |
+| `interrupt` (subtype=design_gap/new_requirement/constraint/po_change) | 分岐 (§2.6.5) | 重大・暴走→Recovery / 要件未確定→Discovery / 軽微追加→Add-feature / 設計ギャップ→Forward 該当 layer |
 
-`env=prod` や regression 系は優先的に Incident/Recovery に倒す。
+`env=prod` や regression 系は優先的に Incident/Recovery に倒す。`runaway` は `agent_runaway` の alias。詳細な機械契約は要件定義書 §7.8.1。
 
 ### 2.6.2 4 象限 priority/action (uncertainty × impact)
 
@@ -458,7 +460,7 @@ drive で owner_role / orchestration_mode が変わる (例: architecture 層は
 
 | 機構 | 検出 | 接続先 mode |
 |------|------|-------------|
-| interrupt | 開発中の割り込み (design_gap / new_requirement / constraint / po_change) | 重大・暴走なら Recovery |
+| interrupt | 開発中の割り込み (design_gap / new_requirement / constraint / po_change) | 分岐: 重大・暴走 (agent_runaway 併発)→Recovery / 要件未確定昇格→Discovery / 軽微追加 (new_requirement・po_change)→Add-feature / 設計ギャップ (design_gap・constraint)→Forward 該当 layer で spot 修正 (§2.6.1 / §7.8.1) |
 | debt | 技術負債台帳の蓄積 | Refactor |
 | drift-check | D-API / D-CONTRACT / D-DB の乖離 | Reverse normalization |
 | readiness | deferred finding (ゲート通過保留) | 後工程 PLAN へ carry (PM 承認要) |

@@ -80,7 +80,7 @@ R4 `forward_routing` で動的選択。**値は schema enum `VALID_FORWARD_ROUTI
 | API / DB / contract が不明 | `L5` 詳細設計 |
 | Forward に渡す確定経路が無い (gap のみ) | `gap-only` (debt/readiness-defer へ) |
 
-> **⚠ schema gap (S3 verify 所見)**: helix-source の reverse-workflow.md は「実装だけで閉じる→L7」「運用・受入・文書整合 (fullback)→L8-L11」も routing 先に持つが、**UT-TDD の `VALID_FORWARD_ROUTING` enum (5 種) には L7 / L8-L11 が無い**。現状は L7-only / fullback 系を `gap-only` に倒すか別機構で扱う。enum 拡張要否は PLAN-DISCOVERY-04 §verify 所見として DISCOVERY-01 / schema へ feedback。
+> **forward_routing が 5 値 (L1/L3/L4/L5/gap-only) に限る理由 (PM アーキ判断で確定、2026-06-02)**: helix-source は「実装だけで閉じる→L7」「fullback→L8-L11」も routing 先に持つが、**UT-TDD は意図的に L7 / L8-L11 を除外**する。Reverse は **必ず設計層 (L1/L3/L4/L5) に再入して ①⇔③ pair-freeze (G1/G3/G4/G5) を通す** のが V-model 規律であり、L7 (実装) / L8-L11 (検証) へ直接跳ぶのは pair-freeze をバイパスする違反 (helix の緩いモデル)。「実装だけで閉じる」案件は L5 (詳細設計) 経由 (→pair-freeze→L7)、fullback の文書整合は対象 ③ の設計層へ routing するか `gap-only` で新 PLAN 起票。よって **5 値は欠陥でなく V-model 設計の帰結** (§3.4 正本と一致)。enum 拡張は不要。
 
 ### 再入先 Pair freeze gate 通過義務 (DISCOVERY-04 V9、gate-design §1.1)
 

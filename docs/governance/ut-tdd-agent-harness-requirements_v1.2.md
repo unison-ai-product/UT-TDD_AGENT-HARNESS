@@ -309,6 +309,7 @@ validator は以下条件を fail-close 検証:
 | `layer in [L1`(要求), `L3`(要件 AC), `L11`(UAT), `L12`(受入)`]` | **`po` 必須** |
 | `kind=reverse + workflow_phase=R3`(Intent 検証) | **`po` 必須** |
 | `kind=recovery` | **`aim` 必須** (本文 7 セクションのため) |
+| `kind=research` | **`tl` 必須** (技術調査・方式比較・ADR 判断、§2.5 Research owner) |
 
 `se` と `docs` は任意 role (実装委譲・ドキュメント担当を slot に立てる場合のみ)。
 
@@ -343,7 +344,7 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
   - 構造 `PLAN-<token>-<NN>-<slug>`: **token** = ① Forward 工程 `L0`〜`L14` (該当工程、token↔`layer` 一致) / ② **横断駆動モデル** `DISCOVERY`(kind=poc) / `REVERSE`(kind=reverse) / `RECOVERY`(kind=recovery) (token↔`kind` 一致、`layer=cross`) / ③ `M` (master plan)、**NN** = token 内 2 桁連番、**slug** = kebab。
   - 例: `PLAN-L1-01-business-requirements` / `PLAN-L7-02-plan-lint` / `PLAN-DISCOVERY-01-workflow-metamodel` / `PLAN-RECOVERY-01-internal-asset`。
   - 狙い: **ID 単体で 工程 (L0-L14) または 駆動モデル (Discovery/Reverse/Recovery) が判別でき、phase ↔ PLAN のマッピングが容易**。旧 `X`(cross) は駆動モデルを潰し ID から読めなかったため駆動モデル名トークンへ置換 (option 1、PO 2026-06-01)。archived の旧 flat `PLAN-001..004` とは別名前空間で衝突しない。
-  - **mode legibility の射程 (DISCOVERY-04 監査で明文化、2026-06-02)**: ID で mode が読めるのは **横断駆動 (layer=cross) の 3 種 = Discovery/Reverse/Recovery のみ**。これらは実 layer を持たないため駆動モデル名 token で legible 化した (PO 原則「駆動を ID で読む」の対象)。一方 **layer を持つ mode (Refactor/Retrofit=L7 / Add-feature=L3-L7 / Research=L1-L4 / Incident の troubleshoot 部=L7) は layer token を使い、mode 識別は `kind` frontmatter で行う** (ID では保証しない)。これは「横断駆動=mode token / layer-bound=layer token + kind 識別」という意図的設計であり欠陥ではない。**Scrum は kind=poc で Discovery と同一名前空間 (token=DISCOVERY)**、両者は mode (入口) で識別し frontmatter では区別しない (§3.5 `scrum_type` の enum 定義が将来 Discovery/Scrum 区別を担う候補)。全 mode を ID-legible 化する token 拡張は別途 PO 判断 (現状は本設計で確定)。
+  - **mode legibility の射程 (DISCOVERY-04 監査で明文化、2026-06-02)**: ID で mode が読めるのは **横断駆動 (layer=cross) の 3 種 = Discovery/Reverse/Recovery のみ**。これらは実 layer を持たないため駆動モデル名 token で legible 化した (PO 原則「駆動を ID で読む」の対象)。一方 **layer を持つ mode (Refactor/Retrofit=L7 / Add-feature=L3-L7 / Research=L1-L4 / Incident の troubleshoot 部=L7) は layer token を使い、mode 識別は `kind` frontmatter で行う** (ID では保証しない)。これは「横断駆動=mode token / layer-bound=layer token + kind 識別」という意図的設計であり欠陥ではない。**Scrum は kind=poc で Discovery と同一名前空間 (token=DISCOVERY)**、両者は mode (入口) で識別し frontmatter では区別しない (`scrum_type` は §3.2 の 6 仮説タイプであり Discovery/Scrum を区別する軸ではない — 両 mode に共通)。Discovery/Scrum の区別が機械的に必要になった場合は別フィールド (例 `poc_mode`) の新設を要するが、現状は入口識別で足りる (PO 判断保留)。全 mode を ID-legible 化する token 拡張も別途 PO 判断 (現状は本設計で確定)。
 - [ ] **ID token が frontmatter と一致** — Forward 工程 (`L0`〜`L14`) は token↔`layer` 一致 / 横断駆動 (`DISCOVERY`/`REVERSE`/`RECOVERY`) は token↔`kind` 一致 (かつ `layer=cross`) / `M`=master (master hub は複数 layer を束ねるため `layer` 自由、token↔layer 検証は対象外)。不一致 → exit 1。
 - [ ] リポジトリ内で plan_id がユニーク (重複検出 → exit 1)
 
@@ -815,6 +816,8 @@ R4 outcome の `forward_routing` で Forward 接続点を明示:
 | `gap-only` | Forward Backlog (新 PLAN 起票)、L1 から再開 |
 
 > 旧 v1.1 の `L2`(全体設計)/`L3`(詳細設計) は L0-L14 remap で `L4`/`L5` に対応する。`L2` は画面設計専用になったため forward_routing 値としては使わない。
+>
+> **`L7` / `L8`-`L11` を forward_routing に含めない理由 (PM アーキ判断で確定、DISCOVERY-04 監査 2026-06-02)**: Reverse は **必ず設計層 (L1/L3/L4/L5) に再入し ①⇔③ pair-freeze gate (G1/G3/G4/G5) を通す** のが V-model 規律。L7 (実装) / L8-L11 (検証) へ直接 routing するのは pair-freeze をバイパスする違反 (helix-source の緩いモデルでは L7/L8-L11 routing があったが UT-TDD は不採用)。「実装だけで閉じる」案件は `L5` (→pair-freeze→L7)、fullback の文書整合は対象 ③ の設計層へ routing するか `gap-only`。enum は 5 値で確定 (拡張不要)。
 
 R4 outcome の `promotion_strategy` で PoC / 検証成果物の扱いを明示:
 
@@ -1505,6 +1508,20 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 | `production_incident` / `hotfix_required` / `regression_prod` | incident | env=prod 必須、human approval |
 | `feature_addition` / `scope_extension` | add_feature | |
 | `user_feedback_iteration` / `requirement_continuous_refinement` | scrum | |
+| `requirement_undefined` / `feasibility_unknown` / `success_condition_unclear` | discovery | 4 象限 P2 (uncertainty 高×impact 低) で Discovery 先行。上流委譲 |
+| `tech_decision_required` / `option_comparison_needed` / `adr_required` | research | 机上調査で完結 (PoC 不要)。作れるか不明→discovery / 既存実装調査→reverse に切替 |
+| `interrupt` (+`subtype=design_gap`/`new_requirement`/`constraint`/`po_change`) | 分岐 (下記) | 開発中割り込み (§2.6.5)。受け皿は subtype + 重大度で決まる |
+
+**`interrupt` の分岐ルール (§2.6.5 横断検出からの routing)**:
+
+| 条件 | 接続先 mode |
+|------|-------------|
+| `agent_runaway` / `context_exhaustion` を併発 (重大・暴走) | recovery (承認必須) |
+| 要件未確定・実現性不透明に昇格 | discovery (前段) |
+| 軽微な追加要件 (`new_requirement` / `po_change`、影響限定) | add_feature |
+| 設計ギャップ (`design_gap` / `constraint`、当該 layer で閉じる) | Forward 該当 layer で spot 修正 (mode 化せず) |
+
+> **`runaway` は `agent_runaway` の alias** (同義、recovery へ routing)。route-map では正規名 `agent_runaway` に正規化する。
 
 - `env=prod` または regression 系は Incident / Recovery を優先する。
 - priority/action は uncertainty × impact の 4 象限で決める (P0=緊急 routing / P1=即 PLAN / P2=Discovery 先行 / P3=suggest_only)。
