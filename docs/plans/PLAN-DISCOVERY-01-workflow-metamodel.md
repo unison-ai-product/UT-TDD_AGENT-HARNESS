@@ -4,6 +4,7 @@ title: "PLAN-DISCOVERY-01 (kind=poc): workflow メタモデル検証 (①必須+
 kind: poc
 layer: cross
 workflow_phase: S3
+scrum_type: design-spike
 drive: fullstack
 status: draft
 decision_outcome: null

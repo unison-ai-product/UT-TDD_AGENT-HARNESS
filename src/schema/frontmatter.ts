@@ -20,6 +20,7 @@ import {
   promotionStrategySchema,
   reverseTypeSchema,
   roleSchema,
+  scrumTypeSchema,
   statusSchema,
   workflowPhaseSchema,
 } from "./index";
@@ -77,6 +78,7 @@ const frontmatterBaseSchema = z.object({
   parent_design: z.string().optional(),
   decision_outcome: decisionOutcomeSchema.nullable().optional(),
   confirmed_reverse_type: reverseTypeSchema.optional(),
+  scrum_type: scrumTypeSchema.nullable().optional(),
   forward_routing: forwardRoutingSchema.nullable().optional(),
   promotion_strategy: promotionStrategySchema.nullable().optional(),
   agent_slots: z.array(agentSlotSchema).min(1, "agent_slots は 1 件以上 (§1.8)"),
@@ -166,6 +168,15 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
       code: custom,
       path: ["workflow_phase"],
       message: "kind=reverse は workflow_phase ∈ {R0..R4} (§1.1)",
+    });
+  }
+
+  // §3.5: kind=poc は scrum_type を S3 以降必須 (S0-S2 は null 可、6 種 = §3.2)
+  if (fm.kind === "poc" && (fm.workflow_phase === "S3" || fm.workflow_phase === "S4") && !fm.scrum_type) {
+    ctx.addIssue({
+      code: custom,
+      path: ["scrum_type"],
+      message: "kind=poc は workflow_phase S3 以降で scrum_type 必須 (6 種、§3.5 / §3.2)",
     });
   }
 

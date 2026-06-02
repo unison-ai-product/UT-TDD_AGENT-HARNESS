@@ -76,14 +76,25 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
     expect(frontmatterSchema.safeParse({ ...pocBase, layer: "L7" }).success).toBe(false);
     // S4 + decision_outcome 欠落は fail
     expect(frontmatterSchema.safeParse({ ...pocBase, workflow_phase: "S4" }).success).toBe(false);
-    // S4 + decision_outcome ありは通る
+    // S3 以降 scrum_type 欠落は fail (§3.5)
+    expect(frontmatterSchema.safeParse({ ...pocBase, workflow_phase: "S3" }).success).toBe(false);
+    // S4 + decision_outcome + scrum_type ありは通る
+    expect(
+      frontmatterSchema.safeParse({
+        ...pocBase,
+        workflow_phase: "S4",
+        scrum_type: "design-spike",
+        decision_outcome: "confirmed",
+      }).success,
+    ).toBe(true);
+    // S4 + decision_outcome ありでも scrum_type 欠落は fail (§3.5)
     expect(
       frontmatterSchema.safeParse({
         ...pocBase,
         workflow_phase: "S4",
         decision_outcome: "confirmed",
       }).success,
-    ).toBe(true);
+    ).toBe(false);
     // poc に R phase は fail
     expect(frontmatterSchema.safeParse({ ...pocBase, workflow_phase: "R2" }).success).toBe(false);
   });

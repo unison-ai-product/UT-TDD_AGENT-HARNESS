@@ -108,6 +108,18 @@ export const VALID_REVERSE_TYPES = [
 export const reverseTypeSchema = z.enum(VALID_REVERSE_TYPES);
 export type ReverseType = z.infer<typeof reverseTypeSchema>;
 
+/** §3.1/§3.2 VALID_SCRUM_TYPES (kind=poc の scrum_type、6 種 = 仮説タイプ。S3 以降必須、§3.5) */
+export const VALID_SCRUM_TYPES = [
+  "hypothesis-test",
+  "tech-spike",
+  "design-spike",
+  "perf-spike",
+  "security-spike",
+  "ux-spike",
+] as const;
+export const scrumTypeSchema = z.enum(VALID_SCRUM_TYPES);
+export type ScrumType = z.infer<typeof scrumTypeSchema>;
+
 /** §3.4 VALID_FORWARD_ROUTING (kind=reverse + R4 の forward_routing、5 種) */
 export const VALID_FORWARD_ROUTING = ["L1", "L3", "L4", "L5", "gap-only"] as const;
 export const forwardRoutingSchema = z.enum(VALID_FORWARD_ROUTING);
