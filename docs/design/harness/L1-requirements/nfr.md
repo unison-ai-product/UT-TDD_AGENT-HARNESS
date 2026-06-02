@@ -10,7 +10,7 @@ v2_import: docs/migration/v2-import-ledger.md
 ---
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
-> **件数確定**: nfr は **NFR-15 件で確定** (NFR-01〜08 + NFR-11〜17、NFR-09/10 は U-補-3 PO 判断連動の欠番、計 15 件。根拠: 2026-05-28 v2 HELIX-workflows 正本 A-20 + PO declared GHA audit framework / server-optional + NFR-16 onboarding 互換性追加、`docs/migration/v2-import-ledger.md §5.1 A-20`。**NFR-17 統合セキュリティは A-54 audit 軸1 I-01 back-propagation 追加、2026-05-29**)。
+> **件数確定**: nfr は **NFR-15 件で確定** (NFR-01〜08 + NFR-11〜17、NFR-09/10 は U-補-3 PO 判断連動の欠番、計 15 件。根拠: 2026-05-28 v2 HELIX-workflows 設計概念参照 A-20 + PO declared GHA audit framework / server-optional + NFR-16 onboarding 互換性追加、`docs/migration/v2-import-ledger.md §5.1 A-20`。**NFR-17 統合セキュリティは A-54 audit 軸1 I-01 back-propagation 追加、2026-05-29**)。
 > **L4 接続規約** (technical/nfr は L4 pair): `next_pair_freeze: L4`。L4 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
 
 # UT-TDD Agent Harness — L1 非機能要求 (nfr)
@@ -85,7 +85,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | **セキュリティ** | GHA audit framework 役割分離 / 統合セキュリティグレード (5 段階 / OWASP Agentic / EU AI Act Art.14) | NFR-11 / **NFR-17** |
 | **システム環境** | Windows / macOS / Linux ネイティブ / Bun runtime | NFR-01 / ADR-001 |
 
-グレード値は L3 NFR グレード sub-doc (`docs/design/harness/L3-requirements/nfr-grade.md`) で確定する。
+グレード値は L3 NFR グレード sub-doc (`docs/design/harness/L3-functional/nfr-grade.md`) で確定する。
 
 ### carry note: Phase B telemetry (PII redaction 等)
 
@@ -127,7 +127,7 @@ Phase B の server sync + telemetry (PII redaction / GDPR / audit trail 等) は
 - L1 技術要求: `docs/design/harness/L1-requirements/technical-requirements.md`
 - L0 概念層 (§2.4 セキュリティ / §10 用語集 / §11 参考文献): `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
 - v2 import ledger (A-20): `docs/migration/v2-import-ledger.md`
-- L3 NFR グレード (carry 先): `docs/design/harness/L3-requirements/nfr-grade.md`
+- L3 NFR グレード (carry 先): `docs/design/harness/L3-functional/nfr-grade.md`
 - ADR-001: `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
 
 carry 接続記述: `pairs_test_design: []` の L1 許容。L4 起票時に `pairs_test_design` に L9 / L13 / L14 の多層検証接続を追加する。

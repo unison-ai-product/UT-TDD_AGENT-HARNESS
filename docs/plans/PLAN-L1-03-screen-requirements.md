@@ -55,7 +55,7 @@ v2_import: docs/migration/v2-import-ledger.md
 ## §1 入力 (上流からの baton)
 
 - L0 企画書: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
-- v2 HELIX-workflows 正本: `vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md`
+- v2 HELIX-workflows 設計概念参照: `vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md`
 - 上流 baton (business): `docs/design/harness/L1-requirements/business-requirements.md` (BR-06 ダッシュボード / UX-02 チーム連携 / UX-03 DX 戦術 / **§3.3.2 人間主導 + AI 補助原則 (CC2)** / **§10.3.1 3 カテゴリ Bounded Context (X1=a)**)
 - 上流 baton (functional): `docs/design/harness/L1-requirements/functional-requirements.md` (FR-L1-20 観測層 / FR-L1-29 画面設計 WF / FR-L1-30 フロントデザイン UX WF / FR-L1-33 資産棚卸 / FR-L1-34 穴管理 / FR-L1-35 整備状況可視化 / FR-L1-44 onboarding)
 - PO 追加ヒアリング承認記録: `docs/handover/G1-readiness-report-2026-05-28.md` v3 (V1-CC3 全件 AI 推奨採用)
@@ -85,7 +85,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | ID | 画面 | 採用根拠 | status |
 |---|---|---|---|
-| **HM-01** | 機能一覧ビュー (FR-L1 41 件 × implementation_status) | W1=a + AA1=a 採用、FR-L1-33/34/35 直接実装 | ✅ |
+| **HM-01** | 機能一覧ビュー (FR-L1 46 件 × implementation_status) | W1=a + AA1=a 採用、FR-L1-33/34/35 直接実装 | ✅ |
 | **HM-02** | カバレッジヒートマップビュー (観点 8 × 軸 5) | Z1=a + Z2=b 採用、弱点診断 | ✅ |
 | **HM-03** | 配線図ビュー (動的、エラー赤表示) | **CC1=a 採用 (前回 doc 化判断撤回)**、問題箇所視覚化 | ✅ |
 | **HM-04** | データベース閲覧ビュー (整合性チェック付き) | **CC1=a 採用 (前回 CLI 専用判断撤回)**、state 異常検知 | ✅ |
@@ -184,7 +184,7 @@ S2=b 30 秒ポーリング / S3=b PLAN ビュー パース構造化 / S5=b Recov
 - [x] §6 Bounded Context 宣言 (PM/HM/GD)
 - [x] L14 OT で 14 画面被覆 (孤児 0、OT-15/25/32〜44)
 - [x] 専門サブエージェント review 通過 (acdc5ccd + 4 追加 subagent + Step J/K/L、2026-05-28)
-- [x] **G1-trace 機械検証 R1-R4 通過** (DD1=a / DD2=a PO 承認 2026-05-28): R1 全 BR/UX 12 件画面紐付き ✅ / R2 全 14 画面業務根拠紐付き ✅ / R3 FR-L1 P0 18 件全件画面紐付き ✅ / R4 screen sub-doc requires 整合 ✅。SSoT: §5 trace マトリクス
+- [x] **G1-trace 機械検証 R1-R4 通過** (DD1=a / DD2=a PO 承認 2026-05-28、2026-06-02 BR-22 fullback 更新): R1 全 BR/UX 13 件画面紐付き ✅ / R2 全 14 画面業務根拠紐付き ✅ / R3 FR-L1 P0 19 件全件画面紐付き ✅ / R4 screen sub-doc requires 整合 ✅。SSoT: §5 trace マトリクス
 - [x] **G1 readiness: status = ready-for-G1-signoff** (v5 確定、14 画面 + 4 横断原則 + Bounded Context + G1-trace 全件 PO 承認済 2026-05-28)
 
 ## §7 carry / 次工程 (L2 / L3) への引き継ぎ

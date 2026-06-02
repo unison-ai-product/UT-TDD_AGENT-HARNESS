@@ -10,7 +10,7 @@ v2_import: docs/migration/v2-import-ledger.md
 ---
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
-> **件数確定**: technical は技術要求 7 節 (§1〜§7) で確定 (根拠: 2026-05-28 v2 HELIX-workflows 正本由来、`docs/migration/v2-import-ledger.md §5.1 A-21 / §6`)。
+> **件数確定**: technical は技術要求 7 節 (§1〜§7) で確定 (根拠: 2026-05-28 v2 HELIX-workflows 設計概念参照、`docs/migration/v2-import-ledger.md §5.1 A-21 / §6`)。
 > **L3 接続規約**: `next_pair_freeze: L4`。L4 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
 
 # UT-TDD Agent Harness — L1 技術要求 (technical)
@@ -49,7 +49,7 @@ Phase B のサーバー同期 (PGlite + ElectricSQL 候補) は L3/L4 forward ca
 
 | 制約 | 内容 |
 |------|------|
-| **HELIX vendor snapshot** | `vendor/helix-source/` は read-only。移植時は UT-TDD 所有パスへコピーしてから変更 |
+| **HELIX vendor snapshot** | `vendor/helix-source/` は read-only。productizing 時は設計概念だけを参照し、UT-TDD 所有パスで TS/Bun として再実装 |
 | **`.ut-tdd/` state** | UT-TDD runtime state の正本。大半は gitignored |
 | **`.helix/` state** | 移行中の HELIX 由来 state。通常は Git 追跡しない。UT-TDD 正本 state にはしない |
 | **開発者規模** | チーム規模 2-5 名 + AI スロット 3 を想定 (B1=b / BR-02)。single-developer mode も互換維持 |

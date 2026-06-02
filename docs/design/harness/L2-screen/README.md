@@ -4,11 +4,14 @@ doc_type: index
 status: placeholder
 parent_doc: docs/design/harness/L1-requirements/screen-requirements.md
 created: 2026-05-28
+updated: 2026-06-02
 ---
 
 # L2 画面設計 sub-doc (harness)
 
 L1 画面要求 (14 画面 PM/HM/GD) を L2 画面設計に詳細化する sub-doc 群。
+
+> **Forward handling**: 本ディレクトリは L0→L3 時点では意図的な placeholder / carry。L3 は L1 screen §5 の trace を参照して AC / AT を確定し、L2 画面設計そのものは PLAN-L2-01〜04 起票時に本確定する。したがって L3 G3 判定では「L2 が存在しない漏れ」ではなく「L2 起票待ちの明示 carry」として扱う。
 
 ## 構成 (4 sub-doc)
 

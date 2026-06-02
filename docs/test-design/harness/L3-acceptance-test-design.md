@@ -11,7 +11,7 @@ related_l3_nfr: docs/design/harness/L3-functional/nfr-grade.md
 next_pair_freeze: L3
 v2_import: docs/migration/v2-import-ledger.md
 created: 2026-05-28
-updated: 2026-05-28
+updated: 2026-06-02
 ---
 
 # UT-TDD Agent Harness — L3 受入テスト設計 (④ / AT-*)
@@ -23,7 +23,7 @@ updated: 2026-05-28
 
 ## §0 量閉じ原則 (L3 ↔ L12)
 
-- 全 FR-* (P0 18 件 = FR-01〜18) / AT 対応必須
+- 全 L3 FR-* (26 件 = FR-01〜18 + FR-45 + workflow core 7 件 [FR-23〜27/29/30]) / AT 対応必須
 - 全 AC-* (54+ 件、3.section AC) / AT 対応必須
 - 全 BR-21 派生 (FR-BR21-36/38/43) / AT 対応必須
 - 全 NFR-* (15 件、NFR-09/10 欠番。NFR-17 = 統合セキュリティ A-54 追加) / AT 対応必須 (carry の場合は placeholder AT)
@@ -183,9 +183,10 @@ updated: 2026-05-28
 
 ## §2 量閉じ一覧 (要求 → AT 被覆、孤児チェック)
 
-### functional sub-doc (FR-01〜18)
+### functional sub-doc (L3 FR 26 件 = FR-01〜18 + FR-45 + workflow core 7 件)
 - FR-01 → AT-FR-01-01/02/03 / FR-02 → AT-FR-02-01/02/03 / ... / FR-18 → AT-FR-18-01/02/03
-- **孤児 FR = 0** (18 FR × 3 AC = 54 AC 全件被覆)
+- FR-45 + workflow core FR-23/24/25/26/27/29/30 → §1.4 件数まとめ参照 (AT-FR 計 79 件)
+- **孤児 FR = 0** (L3 FR 26 件、AT-FR 79 件で全件被覆。§1.4 件数まとめと整合)
 
 ### business-detail sub-doc
 - BR-21 (§1〜§6) → AT-BR21-01〜09 (9 件、Phase A)
@@ -210,8 +211,8 @@ updated: 2026-05-28
 
 | ルール | チェック内容 | 結果 (本起草時点) |
 |--------|------------|-----------------|
-| **R1** (BR/UX/FR-L1 → L3) | 全 BR-01〜08 + BR-21 + UX-01〜03 + FR-L1 P0 18 件 が L3 FR-*/business-detail/nfr-grade のいずれかに紐付き | PASS — functional §2 (FR-01〜18) + business-detail §1-§7 (BR-21 派生) + nfr-grade §1-§6 (NFR-01〜16) で全件被覆 |
-| **R2** (FR-* → AC → AT) | 全 L3 FR-* に AC-* 最低 3 件、全 AC-* に AT-* 対応 (孤児 FR-* 禁止) | PASS — 18 FR × 3 AC × 1 AT = 54 件全件マップ |
+| **R1** (BR/UX/FR-L1 → L3) | 全 BR-01〜08 + BR-21 + BR-22 + UX-01〜03 + FR-L1 P0 19 件 が L3 FR-*/business-detail/nfr-grade/carry のいずれかに紐付き | PASS — functional §2 (FR-01〜18 + FR-45 + workflow core 7 件) + functional §3 carry (FR-L1-46〜49 / BR-22) + business-detail §1-§7 (BR-21 派生) + nfr-grade §1-§6 (NFR-01〜17) で全件被覆 |
+| **R2** (FR-* → AC → AT) | 全 L3 FR-* に AC-* と AT-* 対応があり、carry 対象は carry AT / 後続 pair に接続 (孤児 FR-* 禁止) | PASS — L3 FR 26 件 + AT 117 件を trace、workflow core / FR-45 / NFR / BR-21 派生を含め孤児 0 |
 | **R3** (AT → 要求) | 全 AT-* が L3 要求 (FR-/AC-/NFR-/BR-21 派生) に紐付き (孤児 AT 禁止) | PASS — 117 AT 全件 trace 確認 (A-54: AT-FR-09-04 に AC-FR-09-04 追加で孤児解消、AT→AC 逆引き lint 機械化) |
 | **R4** (NFR → 閾値 → AT) | 全 NFR-* に閾値 (IPA Lv + 数値 / KPI) + AT 紐付き | PASS — 15 NFR + carry 全件紐付き |
 

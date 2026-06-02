@@ -10,7 +10,7 @@
 |---|---|---|---|
 | **subagent** (19) | active = vendor と **byte 完全一致 = 未改変**。HELIX 前提 (絶対パス / `helix codex` 直叩き) が現役で残存 | role→capability class、HELIX 前提除去、**roster の設計化** (誰が存在し何の role/model か) | **無し** (guard 機構=FR-09 のみ) |
 | **skill** (107) | `docs/skills/` = `.gitkeep` のみ = **curate 未着手**。vendor に 107、core 直結 ~15 | UT-TDD 版 SKILL_MAP、core/optional/drop 区分、ut-tdd CLI trigger 化、helix 用語除去 | FR-12 (skill 注入機構) のみ。**pack 内容の FR 無し** |
-| **command** | `.claude/commands/` = **空**。HELIX `docs/commands/*` 未移植 | `ut-tdd` CLI subcommand として実装 (dashboard/asset 等) | 部分的 (CLI FR は core 側) |
+| **command** | `.claude/commands/` = **空**。HELIX `docs/commands/*` は UT-TDD 正本化未着手 | `ut-tdd` CLI subcommand として実装 (dashboard/asset 等) | 部分的 (CLI FR は core 側) |
 
 > **核心**: 「呼び出しの安全弁 (guard = `agent-guard.ts`)」は TS 化・L4-L6 設計済。だが「**資産そのもの (roster / pack / command の中身と体系)**」を UT-TDD 用に作り替える FR が L1/L3 に存在しない。
 
@@ -25,7 +25,7 @@
 | **DB** | 1 | **block** | db-schema | optional (同上) | 同上 |
 | **DevOps** | 1 | **block** | devops-deploy | optional (同上) | 同上 |
 
-**未改変リスク**: active 19 は vendor をコピーしただけで UT-TDD 化ゼロ。HELIX 移植前提 (絶対パス・`helix` コマンド) のまま現役稼働中。pmo-sonnet は毎回 `~/ai-dev-kit-vscode/helix/HELIX_CORE.md` を Read する設計で、CI 等の不在環境でエラーリスク。
+**未改変リスク**: active 19 は vendor をコピーしただけで UT-TDD 化ゼロ。HELIX 前提 (絶対パス・`helix` コマンド) のまま現役稼働中。pmo-sonnet は毎回 `~/ai-dev-kit-vscode/helix/HELIX_CORE.md` を Read する設計で、CI 等の不在環境でエラーリスク。
 
 **作り替え観点**: (1) HELIX 絶対パス一掃 (11/19 に残存) (2) `helix codex` → `ut-tdd codex` (PdM 3) (3) pmo-helix-explorer/scout の drop or 再定義 (`vendor/helix-source/` 探索へ) (4) guard allowlist 15 の維持 (be-*/db/devops の block 設計は正当・継続) (5) description の「HELIX」→「UT-TDD」(誤起動の温床)。
 
@@ -61,7 +61,7 @@
 ## §3 command 棚卸
 
 - `.claude/commands/` = **空** (UT-TDD command 未整備)。
-- HELIX `cli/helix-dashboard` / `cli/helix-asset` / `docs/commands/*` → `ut-tdd dashboard` / `ut-tdd asset` 等 (porting-map W12/W16、未着手)。
+- HELIX `cli/helix-dashboard` / `cli/helix-asset` / builder 系 command / `docs/commands/*` → `ut-tdd dashboard` / `ut-tdd asset` / `ut-tdd builder` 等 (porting-map W11/W12/W16、未着手)。
 - 中核 command (`ut-tdd setup/status/doctor/plan/review/codex/claude/team/...`) は core CLI FR で別途定義済 (本 doc 対象外)。
 
 ## §4 cli/lib 機能 (既存 porting-map を cross-ref、本 doc では再掲のみ)
@@ -78,3 +78,30 @@ cli/lib (710 file) の機能棚卸は [helix-porting-map.md](./helix-porting-map
 | **FR-AST-4** | 内部資産の drift lint (roster/pack が HELIX 前提を残さない・docs/skills 空でない等を機械検証) | L3 (再発防止、§7) |
 
 > これらは「機構の FR (FR-09 guard / FR-12 skill 注入)」ではなく「**資産そのものを UT-TDD 用に構築する FR**」。現 L1/L3 に欠落 = G1/G3 の gap。recovery PLAN で reopen し fullback する。
+
+## §6 FR 反映結果と漏れ監査 (2026-06-02)
+
+2026-06-02 の再監査では、HELIX 側 runtime 内部資産機能を L1 機能一覧へ再突合した。結論は **FR-level の新規漏れなし**。§5 の FR-AST-1〜4 は L1 採番体系に合わせて以下へ反映済み。
+
+| 棚卸候補 | L1 反映先 | 状態 | 補足 |
+|---|---|---|---|
+| FR-AST-1 subagent roster | FR-L1-46 | 反映済み | active 19 件を UT-TDD roster として harden。guard / capability class / model family と接続 |
+| FR-AST-2 skill pack curate | FR-L1-47 | 反映済み | vendor `SKILL.md` 107 件を core / optional / drop に分類し、UT-TDD `docs/skills` へ curate |
+| FR-AST-3 command subcommand 化 | FR-L1-48 | 反映済み | `docs/commands` 19 件と `cli/helix-*` 70 件を対象に含める。builder 系は W11 として FR-L1-48 に明記 |
+| FR-AST-4 drift lint | FR-L1-49 | 反映済み | HELIX 前提残存、docs/skills 空、roster↔guard 不整合を fail-close 検出 |
+
+## §7 TS 再実装 / 転用可否分類
+
+ADR-001 に従い、HELIX Python をそのまま port せず TypeScript/Bun で作り直す。分類は「実行時にそのまま使えるか」ではなく「UT-TDD 正本としてどの形にするか」で判断する。
+
+| 資産種別 | 対象 | 判定 | 必要作業 |
+|---|---|---|---|
+| executable core logic | `cli/lib/**`, `cli/helix-*`, W1〜W17 の実行ロジック | **TS/Bun 再実装が必要** | `src/**` / CLI subcommand に作り直す。`.helix` path、HELIX enum、Python state、固定 model 名を除去 |
+| hook / guard / lint | `.claude/hooks/*`, `.claude/settings.json`, agent guard、drift lint | **TS 統制 + shell/PowerShell wrapper が必要** | package-local `ut-tdd` 経由、Windows/POSIX smoke、fail-close 範囲の明確化 |
+| subagent prompt | `.claude/agents/*.md` 19 件 | **TS literal 化しない。markdown 正本として修正転用** | role→capability class、model family、絶対パス、`helix codex`、HELIX 用語を除去。roster registry / guard は TS |
+| skill 本文 | `vendor/helix-source/skills/**/SKILL.md` 107 件 | **TS literal 化しない。markdown 正本として curate** | core / optional / drop 分類、UT-TDD SKILL_MAP、trigger、用語置換。catalog / recommender / injector は TS |
+| command docs / templates | `docs/commands/*.md`, plan/handover/team templates | **docs/templates として修正転用** | command 名、path、state、Windows 前提を UT-TDD 化。実行動作は TS CLI |
+| historical docs / audit findings | `docs/v2/**`, old PLAN / audit evidence | **無修正参照可 (runtime 転用不可)** | evidence / regression idea として link 参照のみ。正本要件・実装にはしない |
+| vendor snapshot | `vendor/helix-source/**` | **無修正参照可 (read-only)** | 直接編集・runtime 正本化は禁止。必要な場合は UT-TDD 所有パスへ取り込み、上記分類に従って再実装 / curate |
+
+**runtime として修正せず転用できるものは 0 件**。無修正で使えるのは evidence / reference としての vendor snapshot と historical docs に限る。subagent / skill の自然言語本文は TS 化しないが、UT-TDD で動かすには内容の harden / curate が必要である。

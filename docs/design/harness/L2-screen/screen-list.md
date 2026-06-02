@@ -26,7 +26,7 @@ L1 で確定した 14 画面 (PM 5 + HM 8 + GD 1) を L2 で詳細化:
 | PM-03 | Gate + 詰まり要因ビュー | gate + トラブル横断 | screen §1.PM.03 |
 | PM-04 | Trace ビュー (4 artifact + V-pair 統合) | 整合性 | screen §1.PM.04 |
 | PM-05 | Handover ビュー | セッション継続 (起動時 auto) | screen §1.PM.05 |
-| HM-01 | 機能一覧ビュー | FR-L1 41 件 × implementation_status | screen §1.HM.01 |
+| HM-01 | 機能一覧ビュー | FR-L1 現行 46 件 × implementation_status | screen §1.HM.01 |
 | HM-02 | カバレッジヒートマップビュー | 観点 8 × 軸 5 = 40 通り | screen §1.HM.02 |
 | HM-03 | 配線図ビュー (動的) | エラー赤表示 | screen §1.HM.03 |
 | HM-04 | データベース閲覧ビュー (整合性チェック) | state 検査 | screen §1.HM.04 |

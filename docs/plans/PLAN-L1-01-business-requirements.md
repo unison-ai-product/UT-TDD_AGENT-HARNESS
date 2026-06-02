@@ -225,5 +225,5 @@ v2_import: docs/migration/v2-import-ledger.md
 - **§10.2 L4 carry**: 集約境界 / 値オブジェクト / entity ID 規約 / ライフサイクル / 不変条件 / 集約間整合性 / `ut-tdd doctor check_business_entity_coverage` 新設 → L4 データ設計 sub-doc で確定
 - **Phase B**: NFR-16 + ADR-002 (2 層分離) → L3 NFR / L4 ADR forward。Phase B 開始時に ADR-002 を起票して整合解を確定
 - **B9 entity 化判断 (L4 carry)**: §10 DDD entity の集約境界・不変条件の詳細設計 → L4 データ設計で確定
-- **G1-trace 機械検証 R1 (PO 承認 2026-05-28、DD1=a)**: 全 BR-01〜08 + UX-01〜03 + BR-21 (12 件) は screen §5.1/5.2 trace マトリクスで最低 1 画面に紐付き済 (孤児 BR/UX 0)。L3 起票時は本 sub-doc 全 BR/UX を継承し画面 trace を維持する
+- **G1-trace 機械検証 R1 (PO 承認 2026-05-28、DD1=a、2026-06-02 BR-22 fullback 更新)**: 全 BR-01〜08 + UX-01〜03 + BR-21 + BR-22 (13 件) は screen §5.1/5.2 trace マトリクスで最低 1 画面に紐付き済 (孤児 BR/UX 0)。L3 起票時は本 sub-doc 全 BR/UX を継承し画面 trace を維持する
 - **L3 PLAN 接続規約**: PLAN-L3-01-functional-requirements は本 sub-doc 全件を `dependencies.requires` に列挙する

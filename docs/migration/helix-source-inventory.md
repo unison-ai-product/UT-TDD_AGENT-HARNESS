@@ -6,8 +6,8 @@
 |---|---|
 | Source | `C:\Users\micro\ai-dev-kit-vscode` |
 | Destination | `vendor/helix-source/` |
-| Purpose | UT-TDD Agent Harness への移植元 snapshot |
-| Snapshot policy | 素材としては原則すべて保持し、正本化は段階移植で行う |
+| Purpose | UT-TDD Agent Harness の TS 再実装に使う能力インベントリ / historical reference snapshot |
+| Snapshot policy | 素材としては原則すべて保持し、正本化は段階再実装 / curate で行う。runtime として無修正転用しない |
 
 ## Copied Scope
 
@@ -87,7 +87,7 @@ Checked absent after copy:
 
 ## High-impact Reuse Backlog
 
-The snapshot contains enough reusable implementation to build a large part of the UT-TDD harness by porting and renaming rather than rewriting. Treat these as migration waves.
+The snapshot contains enough reusable behavior and design ideas to guide a large part of the UT-TDD harness rebuild. Do not treat these as Python code-port waves; use them as TypeScript/Bun reimplementation waves.
 
 The execution-level mapping is maintained in `docs/migration/helix-porting-map.md`.
 
@@ -131,8 +131,8 @@ If the goal is to quickly produce a usable system, start with these concrete mod
 - `builders/*`
 - corresponding `cli/lib/tests/test_*` files
 
-These are mostly local logic and should be portable once `.helix` paths, command names, and HELIX-specific enums are replaced.
+These are mostly local logic and should be reimplemented in TypeScript/Bun once `.helix` paths, command names, HELIX-specific enums, and Python state assumptions are identified.
 
 ## Rule
 
-`vendor/helix-source/` is read-only source material. Do not edit it while productizing. Copy or port selected files into UT-TDD-owned paths, then rename and adapt them there.
+`vendor/helix-source/` is read-only source material. Do not edit it while productizing. Copy selected markdown/templates into UT-TDD-owned paths only when they are being curated; re-create executable behavior in TypeScript/Bun under UT-TDD-owned paths.

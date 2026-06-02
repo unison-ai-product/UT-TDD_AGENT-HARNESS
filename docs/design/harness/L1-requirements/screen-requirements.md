@@ -105,7 +105,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | 画面 ID | 画面名 | 主要目的 | 対応 BR/FR |
 |---------|--------|---------|-----------|
-| **HM-01** | 機能一覧ビュー | FR-L1 42 件 × implementation_status 可視化 (3 階層プルダウン) | FR-L1-20 / FR-L1-29 |
+| **HM-01** | 機能一覧ビュー | FR-L1 46 件 × implementation_status 可視化 (3 階層プルダウン) | FR-L1-20 / FR-L1-29 |
 | **HM-02** | カバレッジヒートマップビュー | 機能可視化・弱点診断 (観点 8 × 軸 5 = 40 通り heat map) | FR-L1-12 / BR-06 |
 | **HM-03** | 配線図ビュー | 静的アーキ + 動的エラー赤表示 (CC1=a 採用) | FR-L1-07 / FR-L1-18 |
 | **HM-04** | データベース閲覧ビュー | `.ut-tdd/` state 全 table + 整合性チェック結果 (CC1=a 採用) | FR-L1-07 / FR-L1-18 |
@@ -119,7 +119,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | 観点 | 内容 |
 |------|------|
 | **対応 BR/UX/FR-L1** | BR-06 / UX-02 / FR-L1-33 / FR-L1-35 |
-| **情報要素** | 3 階層プルダウン: (1) 整備率% サマリ / (2) カテゴリ別 (P0/P1/P2) / (3) FR-L1-NN 機能個別。FR-L1 全 42 件を installed/partial/not-implemented + 担当 PLAN で詳細テーブル表示 |
+| **情報要素** | 3 階層プルダウン: (1) 整備率% サマリ / (2) カテゴリ別 (P0/P1/P2) / (3) FR-L1-NN 機能個別。FR-L1 全 46 件を installed/partial/not-implemented + 担当 PLAN で詳細テーブル表示 |
 | **操作要素** | プルダウン階層切替 / FR-L1 行クリック → 担当 PLAN 参照 / フィルタ (status/priority) / 未実装一覧エクスポート |
 | **更新頻度** | 30 秒ポーリング (S2=b) |
 | **状態種別** | 整備率高 (緑) / 部分整備 (黄) / 未整備 (赤) / 空 |
@@ -129,7 +129,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | 観点 | 内容 |
 |------|------|
-| **対応 BR/UX/FR-L1** | BR-06 / FR-L1-33 / FR-L1-34 / FR-L1-35 |
+| **対応 BR/UX/FR-L1** | BR-06 / BR-22 / FR-L1-33 / FR-L1-34 / FR-L1-35 / FR-L1-46 / FR-L1-47 / FR-L1-48 / FR-L1-49 |
 | **情報要素** | 観点 8 (skill/command/detector/template/state/hook/docs/tests) × 軸 5 (L/drive/mode/phase/BR-FR) = 40 通り heat map。カバレッジ密度を色密度で表現 |
 | **操作要素** | heat map cell クリック → 不足項目一覧表示 + 起票候補テキスト生成 (AI 指示 copy-paste 用) / 観点・軸フィルタ切替 |
 | **更新頻度** | 30 秒ポーリング (S2=b) |
@@ -372,7 +372,7 @@ L3 機能要件 PLAN (PLAN-L3-NN) 起票時、本 screen sub-doc との接続は
 
 ### §5.1 BR ⇔ 画面 trace 表 (R1 検証用)
 
-R1: BR-01〜08 + BR-21 + UX-01〜03 = 12 件全て、最低 1 画面に紐付く (孤児 BR 禁止)。
+R1: BR-01〜08 + BR-21 + BR-22 + UX-01〜03 = 13 件全て、最低 1 画面に紐付く (孤児 BR 禁止)。
 
 | BR-ID | 主画面 | 副画面 | trace 根拠 |
 |-------|--------|--------|-----------|
@@ -385,6 +385,7 @@ R1: BR-01〜08 + BR-21 + UX-01〜03 = 12 件全て、最低 1 画面に紐付く
 | **BR-07** | PM-04 (Trace + V-pair) | HM-07 (Doctor) | ratchet 3 軸 = trace 切れ / balance_ratio / ID 追随 |
 | **BR-08** | HM-05 (audit) | GD-01 (doc Troubleshooting) | doc-reviewer 召喚記録 audit |
 | **BR-21** | **HM-08 (直接、L3 carry)** | GD-01 (Learning Engine 連動) | AI 効果評価 + recipe 蓄積 |
+| **BR-22** | **HM-02 (カバレッジ、直接)** | HM-05 (audit) / GD-01 (Architecture) | 内部資産 roster / skill pack / command の UT-TDD 化状況 + drift lint |
 
 ### §5.2 UX ⇔ 画面 trace 表 (R1 検証用)
 
@@ -422,7 +423,7 @@ R3: FR-L1 P0 19 件全て最低 1 画面に紐付く (孤児 P0 FR-L1 禁止、b
 
 ### §5.4 FR-L1 P1/P2 ⇔ 画面 trace 表 (warn 対象 — 孤児許容)
 
-P1 18 件 + P2 5 件は warn 程度で紐付け推奨。孤児 P1/P2 は block しない。
+P1 22 件 + P2 5 件は warn 程度で紐付け推奨。孤児 P1/P2 は block しない。
 
 | FR-L1-ID | 主画面 | trace 根拠 |
 |----------|--------|-----------|
@@ -462,7 +463,7 @@ R2: 全 14 画面が最低 1 つの BR/UX/FR-L1 に紐付く (孤児画面禁止
 | **PM-04** | BR-01 / BR-03 / BR-07 | FR-L1-03 / FR-L1-18 |
 | **PM-05** | UX-03 | FR-L1-01 / FR-L1-31 / FR-L1-42 |
 | **HM-01** | BR-06 / UX-02 | FR-L1-33 / FR-L1-35 |
-| **HM-02** | BR-06 | FR-L1-33 / FR-L1-34 / FR-L1-35 |
+| **HM-02** | BR-06 / BR-22 | FR-L1-33 / FR-L1-34 / FR-L1-35 / FR-L1-46 / FR-L1-47 / FR-L1-48 / FR-L1-49 |
 | **HM-03** | BR-03 | FR-L1-07 / FR-L1-08 / FR-L1-40 / FR-L1-42 |
 | **HM-04** | BR-05 / BR-07 | FR-L1-06 / FR-L1-07 |
 | **HM-05** | BR-02 / BR-03 / BR-08 | FR-L1-09 / FR-L1-12 / FR-L1-20 |
@@ -475,7 +476,7 @@ R2: 全 14 画面が最低 1 つの BR/UX/FR-L1 に紐付く (孤児画面禁止
 
 | ルール | チェック内容 | 結果 |
 |--------|------------|------|
-| **R1** (BR/UX → 画面): 孤児 BR 禁止 (block) | BR-01〜08 + BR-21 + UX-01〜03 = 12 件全て最低 1 画面に紐付き | PASS — 孤児 0 件 |
+| **R1** (BR/UX → 画面): 孤児 BR 禁止 (block) | BR-01〜08 + BR-21 + BR-22 + UX-01〜03 = 13 件全て最低 1 画面に紐付き | PASS — 孤児 0 件 |
 | **R2** (画面 → BR/UX/FR-L1): 孤児画面禁止 (block) | 14 画面 (PM 5 + HM 8 + GD 1) 全て最低 1 件紐付き | PASS — 孤児 0 件 |
 | **R3** (FR-L1 P0 → 画面 必須): 孤児 P0 FR-L1 禁止 (block) | FR-L1 P0 19 件全て最低 1 画面に紐付き (P1/P2 は warn、A-49 で FR-L1-45 追加) | PASS — P0 孤児 0 件 |
 | **R4** (`dependencies.requires` 整合): business + functional 必須 | L3 PLAN 起票時に BR/UX + FR-L1 + screen 全件 requires 列挙 (§5 冒頭注記) | 宣言済 — L3 起票時に充足 |

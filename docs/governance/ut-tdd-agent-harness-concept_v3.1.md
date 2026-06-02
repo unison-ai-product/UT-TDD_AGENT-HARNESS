@@ -677,9 +677,9 @@ G1 exit → L2 画面設計 (G2) へ進行
 
 | ルール | 検証内容 | fail 動作 |
 |--------|----------|-----------|
-| **R1** | BR-01〜08 + UX-01〜03 + BR-21 (計 12 件) が最低 1 画面に紐付く | block |
+| **R1** | BR-01〜08 + UX-01〜03 + BR-21 + BR-22 (計 13 件) が最低 1 画面に紐付く | block |
 | **R2** | 全 14 画面 (PM/HM/GD-NN) が最低 1 つの BR/UX/FR-L1 に紐付く | block |
-| **R3** | FR-L1 P0 18 件のみ最低 1 画面に紐付く (P1/P2 は warn、DD2=a) | block (P0) / warn (P1-P2) |
+| **R3** | FR-L1 P0 19 件のみ最低 1 画面に紐付く (P1/P2 は warn、DD2=a) | block (P0) / warn (P1-P2) |
 | **R4** | screen 関連 PLAN `dependencies.requires` に business + functional を明示列挙 | warn |
 
 SSoT: screen sub-doc §5 trace マトリクス (Step J で起票)。`ut-tdd plan lint --gate G1-trace` で machine 一次判定する。
@@ -950,7 +950,7 @@ v2.1 では「branch type 別 workflow を OR 条件で扱う」「該当 workfl
 
 AI (Claude Code / Codex) は PLAN 起票時に層 2/3 YAML を **自然言語指示として** 読み、step 順序と on_failure 規約を適用する。専用 interpreter は無い。
 
-HELIX 由来のスキル群は、個人プロジェクト用の原文をそのまま使わず、UT-TDD 向けの **skill pack** として `docs/skills/*.md` に正本化する。移植対象は「追加機能設計」「ドキュメント」「実装」「テスト」「Reverse」「運用」の単位に分け、各 skill pack は必ず workflow / harness / gate のどれに接続するかを明記する。
+HELIX 由来のスキル群は、個人プロジェクト用の原文をそのまま使わず、UT-TDD 向けの **skill pack** として `docs/skills/*.md` に正本化する。curate 対象は「追加機能設計」「ドキュメント」「実装」「テスト」「Reverse」「運用」の単位に分け、各 skill pack は必ず workflow / harness / gate のどれに接続するかを明記する。
 
 特に、追加機能設計では既存設計を破壊しない `add-design` / `add-impl` 原則、ドキュメント・実装・テストの成果物一致では 4 artifact trace / L6 QA doc-first / review 後の追加 regression を skill pack 側から参照できるようにする。skill は知識と観点の層に閉じ、実行条件や fail-close は harness-check 側で機械強制する。
 
@@ -1203,7 +1203,7 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 |---|---|---|---|
 | 2.1 | 2026-05-20 | (旧版) TL レビュー第 1+2 回 計 29 件反映、構想 + 要件 + 実装詳細を統合 | PM + TL |
 | **3.0** | **2026-05-20** | **構想書と要件定義書に分離。本書は構想 (WHY/WHAT/どう繋がるか) のみ。TL Round 3 の概念レベル Critical 5 件 (C1/C4/C6/C7/C8) + I22 を反映** | **PM + TL** |
-| **3.1+** | **2026-05-28** | **G1 sub-gate 構造 (G1-content / G1-pair / G1-trace) 追加 (§3.3.1)。DD1=a: G1 内 sub-gate として追加 (gate 番号体系維持)、DD2=a: FR-L1 P0 18 件のみ画面 trace 必須 (P1/P2 は warn)。PO 承認済。要件定義書 §1.10.H と連動。** | **PMO (Sonnet)** |
+| **3.1+** | **2026-05-28** | **G1 sub-gate 構造 (G1-content / G1-pair / G1-trace) 追加 (§3.3.1)。DD1=a: G1 内 sub-gate として追加 (gate 番号体系維持)、DD2=a: FR-L1 P0 のみ画面 trace 必須 (P1/P2 は warn)。PO 承認済。2026-06-02 BR-22 fullback により R1=13 件 / R3=P0 19 件へ更新。要件定義書 §1.10.H と連動。** | **PMO (Sonnet)** |
 | **3.1** | **2026-05-27** | **V2 (HELIX-workflows、`vendor/helix-source/docs/v2/`) の工程・モード・配線をチーム開発向けに取り込み。(V1) §3 を L0-L14 + V-model に作り替え (旧 L0-L11+小数層を remap)。(V2) §2.5 9-mode ecosystem 新設 (Discovery/Refactor/Retrofit/screen-design/frontend-design 追加)。(V3) §2.6 配線新設 (signal→mode routing / RecommendedCommandV1 safety / 横断検出)。(V4) orchestration_mode 5 値。(V5) §3.5 工程別アンチパターン。`requires_human_approval` を「誰が承認するか」へチーム翻案。(V6) §2.1.2.1 execution mode × レビューゲート切り分け新設 (self-review が cross-agent review に化ける gate 崩壊を防止)。レビュー強度 3 ティア (① cross-agent / ② 専門サブエージェント / ③ self) を定義し、**単一エージェント時は ② 専門サブエージェント review を hard 要件化** (明文化 checklist 駆動、要件定義書 §7.8.7.1)。レビュー範囲を関数単位/機能単位/横断に拡張し、依存関係・重複実装の検出を §3.1.4 / AP-9・AP-10 に追加。(V8) ADR-001 で実装言語を **TypeScript (Bun)** に確定 (HELIX は概念のみ + 全面再実装、旧 W1-W3a Python は superseded)。(V7) §2.1.0 に 2 つのマスト原則 (① ルール同一性: Claude/Codex は同一ルール・同一判定・同一 exit code、CLAUDE.md/AGENTS.md は薄い adapter / ② hybrid 機能分散: 判断系↔実行系を別 runtime、二重実行禁止) を MUST 化。要件定義書は v1.2 連動** | **PM (Opus)** |
 
 ---

@@ -65,7 +65,7 @@ Recovery (PLAN-RECOVERY-01) Step 4 後半 = **L4-L6 設計増分**の L4 Master 
 |---|---|---|---|
 | **FR-L1-46** | subagent roster の UT-TDD 化 (capability class / model family / guard 統合 / HELIX 前提除去) | architecture §3 に `roster` 概念 + runtime building block 拡張 / function に roster 機能 | **PLAN-L4-11-roster** |
 | **FR-L1-47** | skill pack の UT-TDD curate (UT-TDD 版 SKILL_MAP / core-optional-drop / CLI trigger / helix 用語除去) | architecture §3 に `skills` building block 新設 / function に catalog-injector | **PLAN-L4-12-skill-pack** |
-| **FR-L1-48** | 内部資産 command の ut-tdd CLI subcommand 化 | function の CLI コマンド表に追加 (dashboard/asset 等) | (L4 は PLAN-L4-11 に統合 → **L5 で module 結合粒度 → L6 で単体粒度**に段階分解) |
+| **FR-L1-48** | 内部資産 command の ut-tdd CLI subcommand 化 | function の CLI コマンド表に追加 (dashboard/asset/builder 等、command=W11/W12/W16) | (L4 は PLAN-L4-11 に統合 → **L5 で module 結合粒度 → L6 で単体粒度**に段階分解) |
 | **FR-L1-49** | 内部資産 drift lint (HELIX 絶対パス残存 / docs-skills 空 / roster↔guard 整合) | architecture §3 lint building block + ADR-004 Consequences。IMP-033 rule engine インスタンス | **PLAN-L4-13-drift-lint** |
 
 > **粒度基準 (PO 確定 2026-06-01) — V-model ペア原則: 設計の粒度 = テスト設計の粒度。L4→L5→L6 で段階的に細かくする (L5 を飛ばさない)**:
@@ -73,7 +73,7 @@ Recovery (PLAN-RECOVERY-01) Step 4 後半 = **L4-L6 設計増分**の L4 Master 
 > - **L5 詳細設計 ↔ L8 結合テスト設計** = module 結合粒度 (中間分解)
 > - **L6 機能設計 ↔ L7 単体テスト設計** = 関数 = 単体粒度 (最終分解)
 >
-> command (FR-L1-48) を **L4 で PLAN-L4-11 (roster) に束ねるのは可** = L4 は L9 総合テスト粒度で「内部資産 command 群が CLI として動く」を 1 system 観点で検証できるため。そこから **L5 詳細設計で module 結合粒度に中間分解** (command module の公開 IF / module 間結合 = L8 結合テスト粒度) → **L6 機能設計で各 subcommand (`ut-tdd dashboard` / `ut-tdd asset` 等) を単体テスト設計 (L7) 粒度に最終分解**する。**L4→L6 と飛ばさず L5 を必ず挟む** (PO 訂正 2026-06-01)。PM の往復回避都合でなく、各層のペア粒度で段階判定する。
+> command (FR-L1-48) を **L4 で PLAN-L4-11 (roster) に束ねるのは可** = L4 は L9 総合テスト粒度で「内部資産 command 群が CLI として動く」を 1 system 観点で検証できるため。そこから **L5 詳細設計で module 結合粒度に中間分解** (command module の公開 IF / module 間結合 = L8 結合テスト粒度) → **L6 機能設計で各 subcommand (`ut-tdd dashboard` / `ut-tdd asset` / `ut-tdd builder` 等) を単体テスト設計 (L7) 粒度に最終分解**する。**L4→L6 と飛ばさず L5 を必ず挟む** (PO 訂正 2026-06-01)。PM の往復回避都合でなく、各層のペア粒度で段階判定する。
 
 ## §3 ADR-004 起票 (本 Master の大局判断 artifact)
 

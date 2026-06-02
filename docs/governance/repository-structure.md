@@ -48,7 +48,7 @@ UT-TDD-agent-harness/
 │   ├── skills/                   # [予定] UT-TDD 正本化 skill doc
 │   ├── plans/                    # PLAN-NNN-slug.md (実装計画)
 │   ├── templates/                # PLAN / prompt / state テンプレ
-│   ├── migration/                # HELIX→UT-TDD 移行資料 (porting-map 等。code-port 部は ADR-001 で superseded)
+│   ├── migration/                # HELIX→UT-TDD 再設計資料 (旧 porting-map 等。code-port 部は ADR-001 で superseded)
 │   ├── handover/                 # セッション handover
 │   ├── memory/                   # 運用メモ
 │   └── archive/                  # 旧版・superseded (正本ではない)
@@ -70,7 +70,7 @@ UT-TDD-agent-harness/
 ├── .github/                      # [予定] workflows/harness-check.yml (Required Status Check)
 │
 ├── vendor/
-│   └── helix-source/             # ★ HELIX 移植元 snapshot (read-only、直接編集禁止)
+│   └── helix-source/             # ★ HELIX 参照 snapshot (read-only、直接編集禁止)
 │
 └── .helix/                       # HELIX 由来 legacy state (gitignored、正本にしない)
 ```
@@ -92,7 +92,7 @@ UT-TDD-agent-harness/
 | 実装計画 | `docs/plans/` | `PLAN-NNN-slug.md`。superseded は `status: archived` |
 | 移行資料 | `docs/migration/` | HELIX 能力参照。code-port 計画は ADR-001 で superseded |
 | runtime state | `.ut-tdd/` | generated。**docs 目的で追跡しない** (CLAUDE.md 禁止事項) |
-| 移植元 | `vendor/helix-source/` | **read-only**。概念のみ参照、コードは port しない・直接編集しない |
+| 参照 snapshot | `vendor/helix-source/` | **read-only**。概念のみ参照、コードは port しない・直接編集しない |
 
 ## 3. V-model 4 artifact の配置 (中核ルール、concept v3.1 §2.3)
 
@@ -128,7 +128,7 @@ UT-TDD-agent-harness/
 
 - `src/` core に bash / Python を持ち込まない（ADR-001。OS 差は `scripts/` の薄い wrapper に閉じる）。
 - enum / 契約を `src/schema/` 以外で再定義しない。
-- `vendor/helix-source/` を直接編集しない（移植は UT-TDD 所有パスへ概念から再実装）。
+- `vendor/helix-source/` を直接編集しない（実行ロジックは UT-TDD 所有パスへ概念から TS/Bun 再実装し、markdown/docs/templates は curate して正本化する）。
 - `.ut-tdd/` runtime state を docs 目的で Git 追跡しない。
 - 日本語ファイル名を使わない。
 - **`[予定]` ディレクトリの中身を後続 PLAN 不在のまま実装しない**: ディレクトリ実体 (`.gitkeep`) は構成確定として一括作成済だが、中身 (機能コード・doc・workflow。特に `src/web/`) は対応 PLAN が確定してから起こす。`.gitkeep` があることを実装許可と誤読しない。

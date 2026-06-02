@@ -67,8 +67,21 @@ FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/4
 | **FR-L1-45** | doc-reviewer 必須召喚 (大規模 doc 改定 / gate evidence / pair freeze の品質観点 4 軸チェック、BR-08 派生) | L3 back-propagation (A-47 → A-49) | trigger event (doc 改定 / gate / pair freeze)、doc-reviewer role 定義 | doc-reviewer 召喚記録 `.ut-tdd/audit/doc-reviews/<timestamp>.json`、品質観点 4 軸 (整合/網羅/一貫/明確) チェック結果、未召喚で gate (G1/G3/G7/G11) 通過禁止 (fail-close)、PO bypass = `UT_TDD_DOC_REVIEWER_BYPASS=1` + audit | P0 | PM-03 / HM-05 |
 | **FR-L1-46** | subagent roster の UT-TDD 化 (capability class 化 / model family / guard 統合 / HELIX 前提除去) | A-77 棚卸 (internal-asset-inventory.md) / BR-22 | `.claude/agents/*.md`、guard allowlist | UT-TDD 正本 roster (rename + harden 済)、HELIX 前提残存 0 | P1 | HM-02 |
 | **FR-L1-47** | skill pack の UT-TDD curate (UT-TDD 版 SKILL_MAP / core-optional-drop 区分 / ut-tdd CLI trigger / helix 用語除去) | A-77 棚卸 / BR-22 | `vendor/helix-source/skills/**`、SKILL_MAP | `docs/skills/*.md` skill pack + UT-TDD 版 SKILL_MAP | P1 | HM-02 |
-| **FR-L1-48** | 内部資産 command の ut-tdd CLI subcommand 化 (dashboard / asset 等) | A-77 棚卸 / rebuild map W12/W16 / BR-22 | HELIX `cli/helix-*` / docs/commands | `ut-tdd` subcommand 体系 | P1 | HM-02 |
+| **FR-L1-48** | 内部資産 command の ut-tdd CLI subcommand 化 (dashboard / asset / builder 等) | A-77 棚卸 / rebuild map W11/W12/W16 / BR-22 | HELIX `cli/helix-*` 70 件 / docs/commands 19 件 | `ut-tdd` subcommand 体系 | P1 | HM-02 |
 | **FR-L1-49** | 内部資産 drift lint (HELIX 絶対パス残存 / docs-skills 空 / roster↔guard 整合の機械検証) | A-77 棚卸 / IMP-033 rule engine / BR-22 | roster / skill pack / guard allowlist | drift 検出レポート (fail-close) | P1 | HM-07 |
+
+### §1.0.1 HELIX 内部資産機能カバレッジ監査 (2026-06-02)
+
+本監査は [internal-asset-inventory.md](../../../migration/internal-asset-inventory.md) / [helix-source-inventory.md](../../../migration/helix-source-inventory.md) / [helix-porting-map.md](../../../migration/helix-porting-map.md) を入力に、HELIX 側の runtime 内部資産機能が L1 機能一覧に載っているかを確認した結果である。結論: **新規 FR 採番の追加漏れはなし**。不足候補 FR-AST-1〜4 は既に **FR-L1-46〜49** として反映済み。ただし FR-L1-48 の対象に `builder` 系 command asset が明示されていなかったため、同一 FR 内で W11/W12/W16 と `docs/commands` 19 件 / `helix-*` CLI 70 件を明記した。
+
+| HELIX 資産機能 | 実測 / evidence | L1 被覆 | 判定 |
+|---|---:|---|---|
+| subagent roster | active 19 件 = vendor 19 件。現状 byte 一致で未 harden | FR-L1-46 + FR-L1-49 | 被覆済み。TS 化対象は roster registry / capability resolver / guard / drift lint。prompt 本文は markdown 正本 |
+| skill pack | vendor `SKILL.md` 107 件、UT-TDD `docs/skills` 0 件 | FR-L1-47 + FR-L1-12 + FR-L1-49 | 被覆済み。TS 化対象は catalog / recommender / injector / lint。skill 本文は curate 後 markdown 正本 |
+| command assets | `docs/commands` 19 件、`cli/helix-*` 70 件 | FR-L1-48 + 既存 core CLI FR (FR-L1-01/05/10/11/13/14/17/18/20/23/33/34/37/39/42) | 被覆済み。動作は TS/Bun subcommand として再実装、command docs は UT-TDD CLI docs へ curate |
+| cli/lib capability waves | W1〜W17 | 各 wave は FR-L1-01〜49 の該当 FR に接続。runtime 内部資産 gap は FR-L1-46〜49 で閉塞 | 被覆済み。Python port ではなく TS/Bun 再実装 |
+
+**無修正転用の境界**: runtime として無修正転用できる HELIX 資産は **0 件**。`vendor/helix-source/` は read-only evidence / regression idea としてのみ無修正参照できる。実行ロジック、hook、CLI、guard、catalog、lint は UT-TDD 所有パスで TS/Bun 再実装する。`.claude/agents/*.md` と `docs/skills/**/*.md` は TS literal 化せず markdown 正本として扱うが、HELIX 前提除去・role/capability class 化・用語置換・trigger 整備は必須。
 
 ### §1.1 HELIX 固有名 → UT-TDD 翻案注記 (anti-corruption layer)
 

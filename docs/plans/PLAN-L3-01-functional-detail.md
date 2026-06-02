@@ -7,7 +7,7 @@ sub_doc: functional
 drive: be
 status: draft
 created: 2026-05-28
-updated: 2026-05-28
+updated: 2026-06-02
 owner: PM (Opus) / PO (人間)
 pair_artifact: docs/test-design/harness/L3-acceptance-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -43,7 +43,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §0 本 PLAN の役割
 
-本 PLAN は L1 機能要求 (FR-L1-01〜44 = 41 件 P0:18 / P1:18 / P2:5) を L3 機能要件 (FR-* + AC-*) として詳細化する工程を管理する。
+本 PLAN は L1 機能要求 (現行 46 件 P0:19 / P1:22 / P2:5) のうち、L3 で確定する 26 件 (P0 18 件 + FR-45 + workflow core 7 件) を L3 機能要件 (FR-* + AC-*) として詳細化する工程を管理する。残 P1/P2 は L4 / Phase B / PLAN-L3-02 へ明示 carry する。
 
 L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙したのに対し、L3 FR-* は「機能の入出力 / 振る舞い / 受入条件 (AC)」を確定し、L7 実装スプリント (TDD Red) の入力として機械検証可能な粒度に整える。
 
@@ -52,7 +52,7 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 ## §1 入力 (上流からの baton)
 
 - L0 企画書: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
-- L1 機能要求 (確定済): `docs/design/harness/L1-requirements/functional-requirements.md` (FR-L1-01〜44 = 41 件)
+- L1 機能要求 (確定済): `docs/design/harness/L1-requirements/functional-requirements.md` (現行 46 件、P0:19 / P1:22 / P2:5)
 - L1 画面要求 (確定済): `docs/design/harness/L1-requirements/screen-requirements.md` (14 画面 PM/HM/GD + §5 G1-trace マトリクス)
 - L1 業務要求: `docs/design/harness/L1-requirements/business-requirements.md` (BR-01〜08 + UX-01〜03 + BR-21 + §3.3.2 人間主導原則)
 - L2 画面設計 placeholder: `docs/design/harness/L2-screen/` (PM/HM/GD 14 画面の L2 接続点)
@@ -62,7 +62,7 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 ## §2 出力 (本 PLAN で確定)
 
 - 正本 doc: `docs/design/harness/L3-functional/functional-requirements.md` (frontmatter generates)
-- 量閉じ: L1 FR-L1-* 41 件全件が L3 FR-* + AC-* で詳細化されていること (孤児 L1 FR = 0)
+- 量閉じ: L1 FR-L1-* 現行 46 件が、L3 確定 26 件または L4 / Phase B / PLAN-L3-02 carry のいずれかへ分類されていること (孤児 L1 FR = 0)
 - 機械検証: `ut-tdd plan lint --gate G3` (G3 = L3 pair freeze ゲート) で R-trace 整合 PASS
 
 ## §3 ヒアリング項目 / 調査メモ (functional 固有)
@@ -76,7 +76,7 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 | ID | ヒアリング項目 | 着地先 | status (TL 推奨採用) |
 |----|--------------|--------|--------|
 | U-L3-1 | P0 18 件 L3 詳細化粒度 | functional sub-doc §1 / §2 | 🆕 **P0 全件 G3 必須**。理由: G3 = L3 pair freeze の前提が「全 P0 受入条件確定」、carry 不可 (品質保証性、技術判断) |
-| U-L3-2 | P1 18 件の詳細化先 | functional sub-doc §3 carry 宣言 | 🆕 **L4 carry default + Phase B 連動 (Learning Engine 系) のみ Phase B carry**。理由: P1 を全件 L3 に持つと scope 過大、L4 基本設計時に技術詳細と合わせて確定が筋 |
+| U-L3-2 | 残 P1 件の詳細化先 | functional sub-doc §3 carry 宣言 | 🆕 **L4 carry default + Phase B 連動 (Learning Engine 系) のみ Phase B carry**。理由: P1 を全件 L3 に持つと scope 過大、L4 基本設計時に技術詳細と合わせて確定が筋 |
 | U-L3-3 | P2 5 件の委譲先 | PLAN-L3-02 連携 | 🆕 **PLAN-L3-02 に委譲 (本 PLAN 除外)**。理由: P2 5 件 = FR-L1-36/38/43 (Learning Engine) + 2 件、全て BR-21 経路で PLAN-L3-02 と scope 同一、重複回避 |
 
 ### 3.2 AC (Acceptance Criteria) 構造
@@ -113,7 +113,7 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 
 ### Step 1: L1 baton 整理
 - 担当: pmo-sonnet (Sonnet)
-- 内容: L1 functional / screen / business 3 sub-doc の現状を Read し、L3 で詳細化する FR-L1 41 件 + AC 候補を一覧化。L2-screen placeholder 状態の確認
+- 内容: L1 functional / screen / business 3 sub-doc の現状を Read し、L3 で詳細化する 26 件 + carry 対象 FR + AC 候補を一覧化。L2-screen placeholder 状態の確認
 - 進捗: 🔄 (本 commit で起票、本起票時に実施)
 
 ### Step 2: AC 構造設計 (U-L3-4〜6 確定)
@@ -126,9 +126,9 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 - 内容: P0 18 件 (FR-L1-01〜18 から HELIX 由来) を L3 FR-* + AC-* に詳細化。各 FR-* に対応画面・対応 mode・対応 drive・人間判断点を付与
 - 進捗: ✅ (functional-requirements.md §2 FR-01〜18 + AC 54 件起草完了、A-45 commit)
 
-### Step 4: P1 18 件 L3 vs L4 carry 判定
+### Step 4: 残 P1 件 L3 vs L4 carry 判定
 - 担当: tl
-- 内容: P1 18 件 (FR-L1-19〜44 拡張機能等) を L3 詳細化 vs L4 carry vs Phase B carry に分類。U-L3-2 確定後
+- 内容: 残 P1 件 (FR-L1 拡張機能等) を L3 詳細化 vs L4 carry vs Phase B carry に分類。U-L3-2 確定後
 - 進捗: ✅ (functional-requirements.md §3 carry 宣言で全件分類完了。P1/P2 = L4 carry default / FR-L1-19 = Phase B / FR-L1-36/38/43 = PLAN-L3-02 委譲)
 
 ### Step 5: 画面紐付き (L2 deep-link) 整合確認
@@ -151,7 +151,7 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 | 節 | 情報源 | 方法 |
 |----|--------|------|
 | §1 目的・背景 | L1 functional §1 + screen §1 | L1 baton を継承し L3 詳細化目的を宣言 |
-| §2 FR-* + AC-* 一覧 (本体) | L1 FR-L1 41 件 + screen §5 trace | P0 18 件先行、P1 18 件は U-L3-2 に従い分類 |
+| §2 FR-* + AC-* 一覧 (本体) | L1 FR-L1 現行 46 件 + screen §5 trace | L3 確定 26 件を本体化、残 P1/P2 は U-L3-2 / U-L3-3 に従い carry 分類 |
 | §3 carry 宣言 | P1/P2 の L4/Phase B carry | U-L3-2 / U-L3-3 確定に従う |
 | §4 画面 trace (L2 deep-link) | screen §5 G1-trace + L2-screen | L1 から継承、L3 AC レベルに展開 |
 | §5 9 mode × FR 整合 | business §3.3.1 + 各 FR | mode 統一合流原則を L3 で機械強制化 |
@@ -161,7 +161,7 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 ## §6 DoD (Definition of Done)
 
 - [ ] functional-requirements.md (L3) が必須 § 全件含む (§1〜§7)
-- [ ] §2 FR-* + AC-* が L1 FR-L1 P0 18 件全件を被覆 (孤児 L1 FR = 0)
+- [ ] §2 FR-* + AC-* が L1 FR-L1 P0 19 件 (FR-L1-01〜18 + FR-L1-45) を被覆し、FR-L1-46〜49 は §3 carry で後続 pair に接続 (孤児 L1 FR = 0)
 - [ ] 各 FR-* に対応画面 (PM/HM/GD-NN) / 対応 mode / 対応 drive / 人間判断点が記載
 - [ ] 各 FR-* に AC-* が最低 3 件 (正常 / 異常 / 境界、U-L3-5 確定後)
 - [ ] AC-* が Given-When-Then 形式 (U-L3-4 確定後)

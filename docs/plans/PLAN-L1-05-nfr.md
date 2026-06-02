@@ -37,7 +37,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §0 本 PLAN の役割
 
-本 PLAN は `非機能要求 (nfr)` sub-doc を v2 HELIX-workflows 正本 §1-§8 構造で起票する工程を管理する。中間準備 + 工程表 + 実装計画を内蔵し、進捗を追跡可能にする。
+本 PLAN は `非機能要求 (nfr)` sub-doc を v2 HELIX-workflows 設計概念 §1-§8 構造を参照して起票する工程を管理する。中間準備 + 工程表 + 実装計画を内蔵し、進捗を追跡可能にする。
 
 NFR は IPA 非機能要求グレード 2018 6 大項目 (可用性 / 性能・拡張性 / 運用・保守性 / 移行性 / セキュリティ / システム環境) に準拠し、§7 で IPA × ISO 25010 二軸タグ表として整理する。
 
@@ -46,7 +46,7 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 ## §1 入力 (上流からの baton)
 
 - L0 企画書: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
-- v2 HELIX-workflows 正本: `vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md`
+- v2 HELIX-workflows 設計概念参照: `vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md`
 - v2 取り込み軌跡: `docs/migration/v2-import-ledger.md` §5 (A-20)
 - 上流 baton (business): `docs/design/harness/L1-requirements/business-requirements.md` (NFR-11〜15 = GHA audit framework + server-optional の正本)
 - B-1 起票済: `docs/design/harness/L1-requirements/nfr.md` (NFR-01〜08 現状)
@@ -68,7 +68,7 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 |----|--------------|--------|--------|
 | U-NFR-1 | ISO 25010 対象外特性: **機能適合性 (Functional Suitability)** の除外理由 — UT-TDD では機能要求は FR-L1-* / BR-* で扱い、NFR で再定義しない (二重記述回避) | §7 除外行に `除外理由: 機能要求 (FR-L1-*/BR-*) で扱うため NFR 重複禁止 (AP-6 類似)` | ✅ (PO 承認済み 2026-05-28、nfr §7 対象外特性表に明記) |
 | U-NFR-2 | ISO 25010 対象外特性: **使用性 (Usability / Interaction Capability)** の除外理由 — UX-* で扱い、NFR での再定義は不要か | §7 除外行に除外理由を明示。UX-* が存在する場合は「UX-* sub-doc で扱うため」 | ✅ (PO 承認済み 2026-05-28、UX-* sub-doc で扱うため除外、nfr §7 注記済) |
-| U-NFR-3 | IPA × ISO 25010 の全 NFR-ID タグ付け: NFR-01〜16 を IPA 大項目 + ISO 25010 特性の 2 軸にタグ付けする作業 | §7 二軸タグ表 | ✅ (PO 承認済み 2026-05-28、nfr §7 13 行完備 + NFR-16 追加) |
+| U-NFR-3 | IPA × ISO 25010 の全 NFR-ID タグ付け: NFR-01〜17 を IPA 大項目 + ISO 25010 特性の 2 軸にタグ付けする作業 | §7 二軸タグ表 | ✅ (PO 承認済み 2026-05-28、nfr §7 15 件完備 + NFR-17 追加) |
 
 ### 3.2 Phase B telemetry NFR carry
 
@@ -110,7 +110,7 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 
 ### Step 2: IPA × ISO 25010 二軸タグ付け
 - 担当: tl + pmo-tech-docs
-- 内容: NFR-01〜16 全件を IPA 6 大項目 + ISO 25010 特性の 2 軸でタグ付け。対象外特性の除外理由を明示 (U-NFR-1/2)
+- 内容: NFR-01〜17 全件を IPA 6 大項目 + ISO 25010 特性の 2 軸でタグ付け。対象外特性の除外理由を明示 (U-NFR-1/2)
 - 進捗: ✅ (nfr §7 14 行完備、commit cdd6598 / Step 1-D 2026-05-28)
 
 ### Step 3: NFR-11〜16 の IPA 節配置確定
@@ -130,7 +130,7 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 
 ### Step 6: 運用テスト設計の pair 凍結
 - 担当: qa
-- 内容: L14 OT に NFR-01〜16 全件が被覆されているか確認、不足あれば OT 追加
+- 内容: L14 OT に NFR-01〜17 全件が被覆されているか確認、不足あれば OT 追加
 - 進捗: ✅ (OT-29/30/31 で NFR-16/13/14 被覆、L14 OT 31 件確定、Step 2-D 2026-05-28)
 
 ### Step 7: review (self / pmo-sonnet)
@@ -159,7 +159,7 @@ B-1 で NFR-01〜08 を起票済。PO declared 2026-05-28 で NFR-11〜15 (GHA a
 ## §6 DoD (Definition of Done)
 
 - [x] nfr.md が必須 § 全件含む (§1〜§8)
-- [x] §7 IPA × ISO 25010 二軸タグ表が NFR-01〜16 全件を含む (3 列 table 14 行完備)
+- [x] §7 IPA × ISO 25010 二軸タグ表が NFR-01〜17 全件を含む (3 列 table 15 件完備)
 - [x] §7 に対象外特性 (機能適合性 / 使用性) の除外理由が明示されている
 - [x] NFR-11〜16 (PO declared + 新規) が §1〜§6 の適切な IPA 節に配置されている
 - [x] §3 carry 宣言に NFR-02 L4 ADR 連携 + 排泄系契約 L3 forward が明記されている

@@ -214,7 +214,7 @@ updated: 2026-05-28
 
 ### §7.4.2 NFR 3-tier classification (A-46 tech-docs、L4 carry)
 
-NFR-01〜16 + 新規 KPI を以下 3 tier に分類:
+NFR-01〜17 + 新規 KPI を以下 3 tier に分類:
 - **tier A** (doctor 自動判定): NFR-01/04/05/06/08/13/16 等、計測コマンド + 閾値で即判定
 - **tier B** (CI 後人間確認): NFR-07/14 等、レポート生成のみ
 - **tier C** (PO 合意のみ): NFR-02/15 (L4 ADR 専決) 等
