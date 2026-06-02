@@ -33,7 +33,7 @@ HEAD = `896fff2`、main clean (untracked 2 件 `helix-process/` `ai-agent-harnes
 
 | # | action | 状態 |
 |---|--------|------|
-| 1 | **PLAN-REVERSE-03 R3 検証 (PO)**: (a) forced_stop=Recovery 級昇格、(b) 再発防止 doc を Recovery 出口契約に必須化、(c) FR-07 拡張で十分か (新 FR 不要) | ⬜ PO escalation (self-review GO 済) |
+| 1 | **PLAN-REVERSE-03 R3** | ✅ **PASS / クローズ (2026-06-02)**。(a) forced_stop=Recovery 級・(b) 再発防止 doc 必須化 は PO が本 session で確定済、(c) 新 FR 不要 は self-review GO。PLAN-REVERSE-03 status=confirmed。再エスカレーション不要 |
 | 2 | **recovery-workflow.md 正本同期** (recovery.md §6「当面の正本」): forced_stop trigger + 再発防止 doc 出口契約を正本側へ反映 | ⬜ follow-up (本 session は spike+concept+L3) |
 | 3 | **再発防止 doc artifact schema** (構造/テンプレート/機械強制への落とし) | ⬜ handover-b Next Action 7 (§6.8.5/§6.8.6 実装) と統合 follow-up |
 | 4 | **forced-stop carry** (PLAN-L7-02 §8): managed pmo-haiku 実 dispatch 配線 / `resolved_at` 更新 (Recovery 起票・却下で entry を resolved 化) の CLI 化 | ⬜ G7 後保守 |
@@ -57,5 +57,5 @@ HEAD = `896fff2`、main clean (untracked 2 件 `helix-process/` `ai-agent-harnes
 
 ## §7 未了の PO 判断事項
 
-1. **PLAN-REVERSE-03 R3** (Next Action 1)。
+1. ~~PLAN-REVERSE-03 R3~~ → **クローズ済** (本 session で PO 確定 + self-review GO、§4 #1)。本 feature サイクルに残 PO 判断なし。
 2. (継続) handover-b §6 の未了判断 (REVERSE-02 R3 / kind×layer guard / HELIX cutover タイミング 等)。

@@ -4,7 +4,7 @@ title: "PLAN-L7-02 (add-impl): forced-stop フィードバック実装 — src/r
 kind: add-impl
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-02
 updated: 2026-06-02
 owner: PM (Opus) / PO (人間)
