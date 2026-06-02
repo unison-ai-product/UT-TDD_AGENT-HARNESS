@@ -8,7 +8,7 @@
 
 ## 1. 概要
 
-Scrum は **作るものは概ね決定済だが、要件をユーザーとの反復で固めていく**モード。Discovery (「そもそも作れるか/何を作るか未確定」) とは入口が異なり、ユーザーフィードバックによる継続的な要件調整 (`user_feedback_iteration`) が trigger。Discovery と同じ `kind=poc` だが **mode (入口) で識別する** (drive ではない。drive はどちらも対象 work の専門職、§1.6 V7)。
+Scrum は **作るものは概ね決定済だが、要件をユーザーとの反復で固めていく**モード。Discovery (「そもそも作れるか/何を作るか未確定」) とは入口が異なり、**ユーザーフィードバックによる継続的な要件調整 (`user_feedback_iteration`) と PO/市場起点の継続的要件変更 (`requirement_continuous_refinement`)** が trigger (両 signal とも同一 Scrum フローに合流)。Discovery と同じ `kind=poc` だが **mode (入口) で識別する** (drive ではない。drive はどちらも対象 work の専門職、§1.6 V7)。frontmatter では Discovery と区別しない (mode は入口分類であり PLAN 識別子ではない、§1.10.A トレードオフ)。
 
 ### frontmatter 早見表 (README 台帳より)
 

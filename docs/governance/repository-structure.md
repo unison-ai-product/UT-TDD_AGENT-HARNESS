@@ -44,6 +44,7 @@ UT-TDD-agent-harness/
 │   ├── process/                  # ★[新設] 工程(L0-L14)定義 + 駆動モデル定義の正本 (詳細・移管方針は §2 参照)
 │   ├── design/                   # [予定] ① 設計 doc (D-API/D-DB 等)
 │   ├── test-design/              # [予定] ③ テスト設計 doc
+│   ├── research/                 # [予定] Research mode 成果 (research-memo。ADR は adr/、§2 参照)
 │   ├── skills/                   # [予定] UT-TDD 正本化 skill doc
 │   ├── plans/                    # PLAN-NNN-slug.md (実装計画)
 │   ├── templates/                # PLAN / prompt / state テンプレ

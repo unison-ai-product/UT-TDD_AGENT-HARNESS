@@ -230,6 +230,22 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
       message: "kind=add-* は dependencies.parent 必須 (§1.10 E)",
     });
   }
+
+  // §1.1: kind=add-design は L3-L6 / kind=add-impl は L7 (§1.3 主な layer の fail-close 化、DISCOVERY 起票監査)
+  if (fm.kind === "add-design" && fm.layer && !["L3", "L4", "L5", "L6"].includes(fm.layer)) {
+    ctx.addIssue({
+      code: custom,
+      path: ["layer"],
+      message: "kind=add-design は layer ∈ {L3,L4,L5,L6} (§1.3 設計追補、§1.1)",
+    });
+  }
+  if (fm.kind === "add-impl" && fm.layer !== "L7") {
+    ctx.addIssue({
+      code: custom,
+      path: ["layer"],
+      message: "kind=add-impl は layer=L7 (§1.3 実装追補、§1.1)",
+    });
+  }
 });
 
 export type Frontmatter = z.infer<typeof frontmatterSchema>;
