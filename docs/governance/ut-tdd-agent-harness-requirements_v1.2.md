@@ -961,7 +961,9 @@ add-* 完了時、既存 PLAN との双方向 reference を更新:
 
 # §6 補助 2: GitHub 統制要件
 
-## 6.1 ブランチタイプ × kind の対応 (R-C5 fix で全 12 kind 網羅)
+## 6.1 ブランチタイプ × kind の対応 (R-C5 fix で全 12 kind + 2 例外 prefix(docs/chore) 網羅)
+
+> 表は 10 prefix 行。うち 8 prefix が §1.3 の全 12 kind を担い (design→design+charter / add→add-design+add-impl / hotfix→recovery+troubleshoot / refactor→refactor+retrofit)、残り 2 prefix (`docs/*` `chore/*`) は PLAN 不要の例外。
 
 `branch-kind-check` (§7.4) が PR 起票時に prefix と PLAN kind の整合を機械検証する。
 
@@ -1104,7 +1106,7 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 
 右腕は §6.9 で **post-merge / scheduled CI** とするため、G7 通過後に L8/L9 等で失敗した実装が main に滞留しうる。スパインを切らさないため:
 
-- 右腕 CI (harness-check schedule job) が **失敗を検知したら Issue を自動起票** (`regression_*` signal 付き) し、§3.1.5 の差し戻し先 (L8→L5/L7・L9→L4・L13→Incident・L14→L1/L3) と紐づける。
+- 右腕 CI (harness-check schedule job) が **失敗を検知したら Issue を自動起票** (`regression_*` signal 付き) し、差し戻し先と紐づける (L8→L5/L7・L9→L4 は **concept §3.1.5 正本** / L13→Incident・L14→L1/L3 は **L08-L14-verification-phase.md §右腕差し戻しルールの spike 拡張**、REVERSE-01 で §3.1.5 を L8-L14 に改訂して正本化)。
 - そこから **Recovery (`regression_dev`) または Incident (`regression_prod`) / Add-feature** で差し戻し PLAN を起票する。
 - **Accept 条件**: 右腕 CI 失敗から差し戻し Issue 起票まで **検出サイクル 1 周以内** (scheduled job 1 run)。未起票のまま次の merge を進めない。
 
@@ -1132,8 +1134,8 @@ runner コスト比 Linux : Windows : macOS ≒ **1 : 1.67 : 10** → **PR は L
 
 ### 6.9.3 GitHub Actions 構成方針
 
-- **Required check は `harness-check` 1 本**に集約 (§6.2)。**workflow レベル `on.paths` フィルタは使わない** (skip された required check が `pending` で PR を永久ブロックする既知問題、構想書 §7.2 / GitHub 公式 doc)。
-- 代わりに **job レベル `if` + `dorny/paths-filter` + `if: always()` の aggregator job** で分岐し、未該当 subjob は `skipped`(=success) で報告する (§6.3 matrix に `docs-only` 判定列を追加)。
+- **Required check は `harness-check` 1 本**に集約 (1 本集約方針は構想書 §7.2)。**workflow レベル `on.paths` フィルタは使わない** (skip された required check が `pending` で PR を永久ブロックする既知問題 = GitHub 公式 doc「Troubleshooting required status checks」)。
+- 代わりに **単一 `harness-check` job に集約し、`dorny/paths-filter` + 各 step の `if` 条件**で分岐する (雛形参照)。job 自体は (draft を除き) 常に起動するため required check が `pending` で詰まらず、未該当 step は skip されても job は success/failure を必ず報告する (§6.3 matrix に `docs-only` 判定列を追加)。複数 job に分割する場合のみ、最終 `harness-check` aggregator job に `needs: [...]` + `if: always()` を付け、それだけを Required Status Check に登録する。
 - **concurrency**: group = `harness-check-${{ github.head_ref }}`、`cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}` (main は deploy 中断防止で false。重い vmodel-lint の race を避けるため group に workflow 名を含める)。
 - **draft PR では重 subjob (vitest / vmodel-lint) を skip** (`if: github.event.pull_request.draft == false`)、ready-for-review で起動。
 - **GitHub Merge Queue は不採用** (Free/Team の private repo では利用不可、Enterprise Cloud 専用)。直列化は concurrency で代替。
