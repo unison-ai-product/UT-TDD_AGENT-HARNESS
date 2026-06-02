@@ -57,6 +57,8 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 
 > Precondition/Postcondition の**詳細**(引数型・エラー型・リトライ・タイムアウト) は L5 D-API で確定 (§7 粒度境界)。
 
+> **`ut-tdd setup` の GitHub 設定境界 (PLAN-L6-05/L7-03、REVERSE-04 back-fill)**: solo/team で出し分ける GitHub 設定のうち **ファイル** (CODEOWNERS / `.github/workflows/` / ISSUE・PR テンプレ / commitlint) は harness が emit する (`GeneratedFile`)。**GitHub 設定操作** (branch protection / Required Status Checks / 必須レビュー数) はファイルで完結せず gh-api 操作 (`GithubAction`) であり、**既定は emit-only** (`scripts/setup-branch-protection.sh` 生成のみ、適用は admin 人間サインオフ = 認可・本番影響境界、CLAUDE.md エスカレーション境界)。`--apply-branch-protection` + 対話セッション下でのみ gh 経由適用 (非対話は precondition で封鎖)。**harness core は token を保持しない** (§5 GitHub 認証 = gh CLI 委譲)。参加規模検出も gh の認証状態に委ね token を読まない。
+
 ## §4 失敗時の振る舞い (fail-close / degradation)
 
 | 境界 | 外部 service 不在・エラー時 |

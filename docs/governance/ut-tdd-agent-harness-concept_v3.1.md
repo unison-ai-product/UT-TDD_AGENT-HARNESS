@@ -1139,6 +1139,9 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **branch-kind-check** | ブランチ prefix と PLAN kind の整合性検証 |
 | **failure_log** | 個人作業ログ (local-ignore)。チーム共有 audit trail は別経路 (§8.5) |
 | **harness-check** | 全 PR 共通の Required Status Check (内部で branch type 分岐) |
+| **Phase 0-A (solo) / Phase 0-B (team)** | CODEOWNERS bootstrap 2-stage (要件 §6.5)。0-A=branch protection なし / CODEOWNERS なし / harness-check 非 Required。0-B=CODEOWNERS + branch protection + Required。solo→team の格上げは人間サインオフのガバナンス変更。`ut-tdd setup` が出し分け emission を担う (導入層 L6、PLAN-L6-05) |
+| **参加規模検出 (project scale detection)** | owner 種別 / collaborator 数 / 既存 CODEOWNERS・protection から solo/team を**提案**する検出 (`ut-tdd setup`)。確定は人間確認 + state 記録 (数だけで自動確定しない)。検出不能は solo に安全フォールバック (導入層 L6) |
+| **emit-only (GitHub 設定)** | branch protection 等の GitHub 設定操作を harness が自動適用せず、スクリプト + 手順の生成にとどめる既定方針。適用は admin 人間 (opt-in `--apply-branch-protection` で対話下のみガード付き自動適用)。token は保持しない (導入層 L6) |
 
 ---
 

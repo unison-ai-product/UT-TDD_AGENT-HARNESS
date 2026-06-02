@@ -1033,6 +1033,8 @@ add-* 完了時、既存 PLAN との双方向 reference を更新:
 - Branch Protection の `required_pull_request_reviews.required_approving_review_count` を 1 に設定
 - bootstrap-owner から各 owner team へレビュー責任を移管
 
+> **`ut-tdd setup` solo/team がこの 2-stage の emission を担う** (PLAN-L6-05/L7-03、REVERSE-04 back-fill): 参加規模 (owner 種別 / collaborator 数 / 既存 CODEOWNERS・protection) を gh で検出 → solo(0-A)/team(0-B) を提案 → 人間確認 → `.ut-tdd/state/setup.json` に確定値記録 → phase 別の GitHub 設定を出し分け生成。数だけで自動確定しない (提案どまり)。`--solo`/`--team` で上書き、検出不能・非対話は solo 安全フォールバック。CODEOWNERS / workflow / ISSUE・PR テンプレ等の **ファイルは harness が emit** するが、**branch protection / Required 化は gh-api 操作で emit-only 既定** (`scripts/setup-branch-protection.sh` 生成のみ、適用は admin 人間サインオフ = 認可・本番影響境界)。境界契約は L4 external-if §3 を正本とする。
+
 ## 6.6 commitlint 設定
 
 Conventional Commits v1.0.0 準拠。型は `feat / fix / docs / style / refactor / test / chore / perf / ci / build / revert` のみ許容。
