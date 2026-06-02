@@ -9,7 +9,14 @@
  * never throws)。ログがワークフローを止めてはならない。判定本体は本ファイル、hook entry は
  * .claude/hooks/session-log.ts。
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 
 export type SessionEventType =
@@ -17,7 +24,9 @@ export type SessionEventType =
   | "tool_use"
   | "commit"
   | "plan_switch"
-  | "session_end";
+  | "session_end"
+  | "forced_stop" // 強制停止 (推定、PLAN-L6-04/L7-02 forced-stop-feedback)
+  | "user_prompt"; // ユーザー入力 (dangling-turn 推定の活動 marker)
 
 export interface SessionEvent {
   ts: string; // ISO8601 (hook 受領時)
@@ -55,6 +64,8 @@ export interface SessionLogDeps {
   readText: (path: string) => string | null;
   writeText: (path: string, content: string) => void;
   currentBranch: () => string | null;
+  /** dir 内の entry 名一覧 (feedback ログ走査用、PLAN-L7-02)。未提供/失敗時は []。 */
+  listDir?: (dir: string) => string[];
 }
 
 const BRANCH_PLAN_RE = /^(?:add|design|feature|reverse|hotfix|poc|refactor)\/(.+)$/;
@@ -84,7 +95,7 @@ function isPath(s: string): boolean {
 }
 
 /** session_id / plan_id を file 名に使う前に path 分離子を除去 (traversal 防止)。 */
-function safeName(s: string): string {
+export function safeName(s: string): string {
   return s.replace(/[^A-Za-z0-9._-]/g, "_");
 }
 
@@ -288,5 +299,6 @@ export function nodeDeps(repoRoot: string, gitBranch: () => string | null): Sess
       writeFileSync(path, content, "utf8");
     },
     currentBranch: gitBranch,
+    listDir: (dir) => (existsSync(dir) ? readdirSync(dir) : []),
   };
 }

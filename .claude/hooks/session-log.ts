@@ -11,6 +11,7 @@
 import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { scanDanglingStops } from "../../src/runtime/forced-stop";
 import { dispatch, nodeDeps, type SessionHookInput } from "../../src/runtime/session-log";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -37,7 +38,13 @@ async function readStdin(): Promise<string> {
 try {
   const raw = await readStdin();
   const input = JSON.parse(raw || "{}") as SessionHookInput;
-  dispatch(input, nodeDeps(repoRoot, gitBranch), process.argv[2]);
+  const deps = nodeDeps(repoRoot, gitBranch);
+  const evName = input.hook_event_name ?? process.argv[2];
+  // SessionStart: 直前までの dangling session (強制停止推定) を後追い記録 (fail-open)
+  if (evName === "SessionStart" || evName === "start") {
+    scanDanglingStops(deps, input.session_id);
+  }
+  dispatch(input, deps, process.argv[2]);
 } catch {
   // fail-OPEN: ログの失敗で作業を止めない
 }

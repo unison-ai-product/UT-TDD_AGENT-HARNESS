@@ -81,7 +81,7 @@ ClassifyResult (subcommand I/O) = { category, attention, reason }
 | 関数 | signature | DbC |
 |------|-----------|-----|
 | `detectDanglingTurn` | `(events: SessionEvent[]) => { dangling: boolean; from: string \| null }` | **純関数**。最後の `session_end` 以降に `tool_use`/`user_prompt` があれば dangling。なければ false |
-| `recordForcedStop` | `(input, deps) => void` | **never throws (fail-open)**。`forced_stop` event を session 生ログへ append (本文非掲載、参照のみ) |
+| `recordForcedStop` | `(params: ForcedStopParams, deps) => void` | **never throws (fail-open)**。`params={session_id?,plan_id?,dangling_from,next_message_ref?}`。`forced_stop` event を session 生ログへ append (本文非掲載、参照のみ) |
 | `recordFeedback` | `(result: ClassifyResult, ctx: FeedbackCtx, deps) => void` | `result.category="feedback"` のみ append (`ClassifyResult`+`ctx`→`FeedbackEntry` 変換を内部で担う、`recovery_proposed=attention==="high"`、sanitize)。mistake は no-op。`plan_id=null` skip。idempotent (ts キー) |
 | `classifyFeedback` | `(text: string, classifier: Classifier) => Promise<ClassifyResult>` | 非同期。`Classifier` = 注入 (既定 = managed pmo-haiku adapter、test = mock)。失敗時は `{category:"feedback", attention:"low", reason:"unclassified"}` (取りこぼし回避) |
 | `pendingRecoveryProposals` | `(deps) => FeedbackEntry[]` | フィードバックログから `recovery_proposed && resolved_at===undefined` を返す。不正 JSON 行はスキップ。agent が起動時に読む |
