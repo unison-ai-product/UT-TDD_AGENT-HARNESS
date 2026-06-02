@@ -113,6 +113,7 @@ Reverse は ① だけ Forward に渡して終わりではない。**routing 先
 |------|------|------|
 | Discovery | 組合せ (前段/後段) | 既存コード起因の不明点は Reverse 先行 → Discovery PoC。Discovery 終点 → Reverse fullback で昇華 |
 | Scrum | 後段 (必須) | Scrum increment 完了 → Reverse fullback で V-model 正本化 |
+| Retrofit | 前段 (Retrofit の影響評価) | Retrofit が依存更新の影響評価を要するとき `upgrade` type で前段起動される (retrofit.md §6 の reciprocal)。R4 routing で Retrofit の移行計画ステップへ戻す |
 | drift signal | 自動起動 | `drift` (schema/contract) を検出したら detection-routing 経由で自動起動 |
 
 翻案注記: helix-process の `helix reverse code R0` 等のコマンドは `ut-tdd` CLI 実装後に置換。`--invalidate-forward` フラグは UT-TDD gate 機構として実装予定 (現状 stub)。type 別成果物ファイル命名 (R0-evidence-map.yaml 等) は helix-process §type 別成果物を踏襲しつつ UT-TDD `.ut-tdd/reverse/` パスへ格納予定。

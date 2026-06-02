@@ -85,6 +85,7 @@ hotfix を打ちっぱなしにせず、Reverse fullback (R0-R4、`confirmed_rev
 | Recovery | 別モード。Recovery = AI 逸脱・開発中 (`regression_dev`)。Incident = 本番障害 (`regression_prod`, env=prod) で分岐 (§2.6.5) |
 | interrupt (IIP/CC) | 別対応。interrupt = 開発中 sprint 内の設計ギャップ・要件変更割込み |
 | L13/L14 | 別工程。L13/L14 = 計画的な運用・改善。Incident = 緊急即応 |
+| Discovery (前段) | 要件が未確定の場合、Incident 着手前に Discovery を前段起動する (README §5 / discovery.md §6 の reciprocal)。下の「Discovery post-deploy trigger」行とは方向が逆 (前段起動 vs 後段の検出止まり) |
 | Discovery post-deploy trigger | 本番後の問題を「検証候補化」するのみ (検出止まり)。緊急対応が要る場合は Incident へ |
 | Reverse fullback | 事後昇華の手段。hotfix の恒久対策を V-model 体系へ統合するために使用 |
 

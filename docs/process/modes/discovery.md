@@ -82,6 +82,7 @@ fail-close: confirmed は verify script 成功が必須。S3 verify 失敗時は
 | Reverse | 前段 (組合せ) | 不明点が既存コード・設計に起因する場合は Reverse で事実収集してから PoC へ |
 | Scrum | 隣接 | 作るものは概ね決定済だが要件を反復で固める場合は Scrum。Discovery は「そもそも作れるか/何を作るか未確定」が入口 |
 | Add-feature / Incident | 前段 | 要件未確定なら Discovery が前段になりうる |
+| Research | 前段 (切替) | Research (机上調査) で「作れるか不明」と判明した場合に Discovery へ切替・流入 (research.md §6 の reciprocal) |
 | Reverse (昇華) | 後段 | Discovery 終点 → Reverse fullback で V-model 正本化 |
 
 翻案注記: helix-process の `helix reverse code` / `helix plan draft` コマンドは `ut-tdd` CLI に置換。`poc/*` ブランチ運用は UT-TDD 独自ルール (CLAUDE.md §UT-TDD ワークフロー) に従う。
