@@ -21,19 +21,28 @@
 
 ### drive (駆動 / 実装ドライブ) を詳しく — 「どの技術軸で作るか」
 
-drive は「PLAN の作業がどの技術領域か」を表す。これで **L10 UX 磨きの要否 / owner role / orchestration_mode** が変わる。
+drive は「**その PLAN にどの専門職 (specialist) / 専門エージェントを招集するか**」を表す。これで **L10 UX 磨きの要否 / owner role / mandatory_agents / orchestration_mode** が変わる (concept §2.6.4)。
 
-| drive | 意味 | L10 (UX 磨き) |
-|-------|------|---------------|
-| `be` | バックエンド / API / ロジック中心 | UI 変更時のみ |
-| `fe` | UI / モック駆動 | 常に必要 |
+**真の drive (専門職) — 5 種**:
+
+| drive | 専門職 | L10 (UX 磨き) |
+|-------|--------|---------------|
+| `be` | バックエンド / API / ロジック | UI 変更時のみ |
+| `fe` | フロント / UI / モック駆動 | 常に必要 |
 | `fullstack` | BE + FE 同時 | 常に必要 |
-| `db` | スキーマ / データモデル中心 | UI 変更時のみ |
+| `db` | スキーマ / データモデル | UI 変更時のみ |
 | `agent` | AI エージェント / プロンプト設計 | 常に必要 (会話 UI) |
-| `scrum` | 仮説検証の反復 (経路 2) | — |
-| `reverse` | 既存コード逆引き (経路 2) | — |
-| `poc` | PoC 単独実装 | — |
-| `troubleshoot` | 緊急対応 (補助 1) | — |
+
+**⚠ V7: 現 §1.6 enum に混入した「mode 由来の値」(本来 drive でない)** — `scrum` / `reverse` / `poc` / `troubleshoot` は専門職でなく**駆動モデル (mode) / 状況ラベル**。drive enum に紛れ込んでいる (PLAN-DISCOVERY-04 V7、要 §1.6 再設計):
+
+| 現 enum 値 | 実体 (= mode 側の概念) | 誤解されやすい点 |
+|-----------|----------------------|------------------|
+| `scrum` | **ユーザー協業で要件を反復で固める** mode (= Scrum) | ❌「仮説検証」ではない。**仮説検証は Discovery** (下記 poc 系) |
+| `poc` | **仮説検証 / 実現性探索** mode (= Discovery) | Discovery の drive。これが「仮説検証」 |
+| `reverse` | 既存コード逆引き mode (= Reverse) | drive でなく mode |
+| `troubleshoot` | 緊急対応 (補助 1) の状況 | drive でなく状況 |
+
+> あるべき姿 (PO framing): drive = 上 5 専門職のみ。`scrum/reverse/poc/troubleshoot` は drive から外し 駆動モデル (mode、[modes/](modes/)) 側へ寄せる。`recovery` の drive も「troubleshoot 固定」でなく**復旧対象 work の専門職を継承** (PLAN-RECOVERY-01=fullstack が正)。→ PLAN-REVERSE-01 §2 V7 で requirements §1.6 へ routing。
 
 ### 4 軸の組み合わせ規則 (排他 / matrix)
 
