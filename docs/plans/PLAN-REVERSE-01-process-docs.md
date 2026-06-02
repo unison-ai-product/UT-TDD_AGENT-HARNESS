@@ -4,6 +4,7 @@ title: "PLAN-REVERSE-01 (kind=reverse): docs/process 正本化 — DISCOVERY-04 
 kind: reverse
 layer: cross
 workflow_phase: R3
+confirmed_reverse_type: design
 drive: fullstack
 status: draft
 created: 2026-06-02
@@ -42,7 +43,7 @@ PLAN-DISCOVERY-04 (Discovery、S4 confirmed 2026-06-02) の **終点 Reverse** (
 
 > **Discovery → Reverse 配線 (PO 確定、メタモデル標準)**: docs/process の正本は forward で机上起草せず、Discovery で回した実績から Reverse で再整備する。本 PLAN がその「再整備本体」。requirements §1.2 / DISCOVERY-01 §6 と同配線。
 
-**reverse_type = design/fullback** (既存 spike + dogfood 実績からの設計復元 + 完了 Discovery の文書整合)。design/normalization 型は **R1 (Observed Contracts) skip** 可 (§3.3)。
+**confirmed_reverse_type = `design`** (既存 spike + dogfood 実績からの**設計復元**。Discovery 終点 fullback の文脈だが、reverse_type enum 上は観測契約抽出を要さない `design` 型)。design 型は **R1 (Observed Contracts) skip** 可 (§3.3)。
 
 ## §1 evidence (R0-R2 の入力)
 
@@ -74,7 +75,7 @@ PLAN-DISCOVERY-04 (Discovery、S4 confirmed 2026-06-02) の **終点 Reverse** (
 
 ### Step R1: Observed Contracts (design/fullback 型は skip)
 
-- reverse_type=design/fullback のため **skip** (§3.3、RG1 を持たない)。skip 理由 = 設計復元 (既存 spike + dogfood 実績) であり観測契約抽出工程を要しない。
+- confirmed_reverse_type=`design` のため **skip** (§3.3、RG1 を持たない)。skip 理由 = 設計復元 (既存 spike + dogfood 実績) であり観測契約抽出工程を要しない。
 - 状態: ✅ (skip 記録済)
 
 ### Step R2: As-Is Design
