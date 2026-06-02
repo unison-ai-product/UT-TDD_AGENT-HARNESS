@@ -3,7 +3,7 @@ plan_id: PLAN-REVERSE-01-process-docs
 title: "PLAN-REVERSE-01 (kind=reverse): docs/process 正本化 — DISCOVERY-04 dogfood 実績 (V1-V7) から forward/modes/gates を as-is 復元し gap を Forward へ routing"
 kind: reverse
 layer: cross
-workflow_phase: R0
+workflow_phase: R3
 drive: reverse
 status: draft
 created: 2026-06-02
@@ -69,23 +69,23 @@ PLAN-DISCOVERY-04 (Discovery、S4 confirmed 2026-06-02) の **終点 Reverse** (
 
 ### Step R0: Evidence Acquisition
 
-- §1 evidence を収集・整理 (spike 群 + dogfood 実績 + gap register + 移植元)。`.ut-tdd/reverse/R0-evidence-map` 相当に整理。
-- 状態: ⬜ **次**
+- §1 evidence を収集・整理 (spike 群 + dogfood 実績 + gap register + 移植元)。
+- 状態: ✅ §R0 実績参照 (drive 使用集計 + spike + DISCOVERY-04 §S2-S3)。
 
 ### Step R1: Observed Contracts (design/fullback 型は skip)
 
-- reverse_type=design/fullback のため **skip** (§3.3、RG1 を持たない)。skip 理由を記録。
-- 状態: ⬜ (skip)
+- reverse_type=design/fullback のため **skip** (§3.3、RG1 を持たない)。skip 理由 = 設計復元 (既存 spike + dogfood 実績) であり観測契約抽出工程を要しない。
+- 状態: ✅ (skip 記録済)
 
 ### Step R2: As-Is Design
 
 - spike (forward/modes/gates) を「現状あるべき定義」として整理。dogfood で「回った」部分 (V-pair / sub-doc 整合 / mode frontmatter) を as-is 正本候補に昇格。
-- 状態: ⬜
+- 状態: ✅ §R2 実績参照 (現 §1.6 drive enum 9 種 + 実 PLAN drive 使用 as-is)。
 
 ### Step R3: Intent Hypotheses (po 検証必須)
 
 - gap register (V1/V2/V4/V7) の「あるべき姿」仮説を作成。**特に V7 (drive 再設計) は PO 検証必須** (§1.8 R3→po)。drive=専門職のみ / mode 値分離 / recovery は work 専門職継承 の方向を PO 確認。
-- 状態: ⬜
+- 状態: 🟡 **intent 起草済 (§R3、self-review 通過) → PO 検証待ち (R3 gate)**
 
 ### Step R4: Gap & Routing (forward_routing + promotion_strategy 必須)
 
@@ -95,7 +95,75 @@ PLAN-DISCOVERY-04 (Discovery、S4 confirmed 2026-06-02) の **終点 Reverse** (
 ### Step R-review: self-review 前置 (MUST)
 
 - PO へ R4 routing 確定を求める前に code-reviewer / pmo-sonnet で as-is 復元の正確性・gap routing の妥当性を self-review (claude-only の tl 代替)。
-- 状態: ⬜
+- 状態: ✅ **R3 intent を code-reviewer self-review = APPROVE-with-fixes (Critical 1 + Important 3 是正済)**:
+  - (Crit) §R0 集計数 35→34 是正 (glob 実数 + 件数合計一致を明記)
+  - (Imp-1) 案D に troubleshoot/recovery kind の matrix 扱い + modes/README Incident/Recovery 行を明示
+  - (Imp-2) 案G③ に requirements §1.1 poc variant サンプル `drive:scrum` 修正を追加
+  - (Imp-3) 案G③ に modes/README 台帳 drive 列 (Discovery/Scrum/Reverse/Recovery/Incident) 更新を明示
+  - (Minor) REVERSE-01 自己適用明記 / agent 代替の orchestration_mode 差 / Scrum drive 方針 追記
+  - good practice: §G 2 フェーズ破壊回避 / V3→V7 包含 / mode↔drive 命名分離を評価
+
+## §R0-R3 実績 (2026-06-02、V7 = drive 軸再設計を先行駆動)
+
+V7 (最重要 gap) は他 gap と独立に解決可能なため R0→R2→R3 を先行駆動した (R1 は design 型 skip)。
+
+### §R0 evidence (drive 使用実態)
+
+全 PLAN の `drive` 集計 (34 PLAN = `docs/plans/PLAN-*.md` glob 実数、下表件数合計 18+9+4+2+1=34 と一致):
+
+| drive | 件数 | 種別 | PLAN |
+|-------|------|------|------|
+| `fullstack` | 18 | **専門職** | L4/L5/L6 design + RECOVERY-01 |
+| `be` | 9 | **専門職** | L1/L3 design + L5-03 |
+| `db` | 2 | **専門職** | L4-01 / L5-01 |
+| `poc` | 4 | **mode 値** | DISCOVERY-01/02/03/04 (kind=poc) |
+| `reverse` | 1 | **mode 値** | REVERSE-01 (kind=reverse) |
+| `fe` `agent` `scrum` `troubleshoot` | 0 | (be/db/fullstack 以外の専門職 + 未使用 mode 値) | — |
+
+→ **mode 値 drive (poc/reverse) を使う PLAN は 5 件のみ。scrum/troubleshoot は未使用**。専門職 drive (be/db/fullstack、29 件) は変更不要 = migration は小規模。
+
+### §R2 as-is (現 §1.6 drive)
+
+`src/schema/index.ts` `VALID_DRIVES` = `[be, fe, fullstack, db, agent, scrum, reverse, poc, troubleshoot]` (9 種)。専門職 5 + mode/状況値 4 が混在。kind×drive matrix: poc→scrum/poc、reverse→reverse、recovery→troubleshoot、troubleshoot→troubleshoot (= mode 値固定)。§1.6 説明文で `scrum=仮説検証` と誤ラベル。
+
+### §R3 intent — drive 軸再設計案 (PO 検証対象、R3 gate)
+
+> **方針 (PO framing「drive=専門職」)**: drive = 「どの専門職/専門エージェントを招集するか」のみ。mode 概念 (入口パターン) は駆動モデル (§2.5、modes/) が担い、drive から分離する。
+
+**A. VALID_DRIVES = 専門職 5 種のみ**: `[be, fe, fullstack, db, agent]`。**削除**: `scrum / reverse / poc / troubleshoot` (= mode/状況値、drive でない)。
+
+**B. drive 定義 (§1.6 改訂文)**: 「その PLAN にどの専門職/専門エージェントを招集するか (owner_role / mandatory_agents / orchestration_mode を決める)」。`scrum=仮説検証` 等の mode 説明を削除。
+
+**C. 横断駆動 kind (poc/reverse/recovery) の drive**: 探索/逆引き/復旧 **対象 work の専門職を宣言** (継承)。技術モジュール対象なら its specialist、harness methodology/process 対象なら `fullstack` (UT-TDD harness = TS fullstack) を default。→ V3 決着 (recovery→対象専門職、PLAN-RECOVERY-01=fullstack が正)。
+
+**D. kind×drive matrix 改訂**: **全 12 kind** (charter/design/impl/add-design/add-impl/refactor/retrofit/research/poc/reverse/recovery/troubleshoot) → `be/fe/fullstack/db/agent` のいずれか (対象 work の専門職)。旧 mode 値固定 (poc→scrum/poc / reverse→reverse / **recovery→troubleshoot** / **troubleshoot→troubleshoot**) を全廃止。
+- **recovery kind**: 旧 `recovery→troubleshoot` 固定行を削除 (PLAN-RECOVERY-01=fullstack を合法化、V3 決着)。
+- **troubleshoot kind**: 旧 `troubleshoot→troubleshoot` を削除し障害対象の専門職に。Incident mode (kind=troubleshoot+recovery 内包) の意味分けは **drive でなく kind/mode 側で担保** (drive は「誰が直すか」)。
+- → **modes/README 台帳の Recovery 行 (`drive=troubleshoot`) / Incident 行 (`drive=troubleshoot`) も専門職継承へ更新対象** (§G に含む)。
+
+**E. mode↔drive 分離 (concept §2.5/§2.6.4)**: 駆動モデル (mode) = 入口パターン。drive = 招集専門職。Discovery/Scrum は共に exploratory mode だが drive は対象専門職。命名も「駆動モデル」と「drive」を区別 (用語集更新)。
+
+**F. 既存 PLAN migration (5 件、poc/reverse → 専門職)**:
+
+| PLAN | 現 drive | 新 drive (案) | 根拠 |
+|------|---------|--------------|------|
+| DISCOVERY-01 (workflow metamodel) | poc | `fullstack` | harness methodology = UT-TDD TS fullstack work |
+| DISCOVERY-02 (roster module) | poc | `fullstack` | roster は harness 内部 module (L4/L5 roster PLAN も fullstack) |
+| DISCOVERY-03 (skill module) | poc | `fullstack` | skill は harness 内部 module |
+| DISCOVERY-04 (process docs) | poc | `fullstack` | process methodology = harness work |
+| REVERSE-01 (process docs、本PLAN) | reverse | `fullstack` | 同上 (**本 PLAN 自身を自己適用**。実装①で本 PLAN frontmatter も書換) |
+
+> 代替案 (PO 判断): 純 methodology の DISCOVERY-01/04・REVERSE-01 は `agent` も候補。本案は既存 harness design PLAN (全 fullstack) + RECOVERY-01 (fullstack) との一貫性で `fullstack` 統一を default とした。`agent` は concept §2.6.4 で `orchestration_mode=pm_lead` 系 (AI 実装・保守) を注入、`fullstack` は `claude_design_impl` 系を注入する差があり、PO は注入 mode の観点でも比較可。
+> **Scrum mode の drive**: Scrum (kind=poc) も Discovery 同様、対象 work の専門職を drive とする (mode=反復で固める入口、drive=誰が実装するか、で分離)。
+
+**G. 実装順序 (R4 routing 後、L3 で破壊回避)**:
+1. **先に 5 PLAN の drive を migration** (poc/reverse→fullstack、frontmatter)。
+2. `VALID_DRIVES` から mode 値 (scrum/reverse/poc/troubleshoot) 削除 + kind×drive matrix 改訂 (`src/schema/index.ts` + requirements §1.6 表)。
+3. **正本文書の追随修正** (削除前提の記述を全洗い): ① **requirements §1.1 poc variant サンプル YAML の `drive: scrum`** → 専門職値 / ② concept §2.5 mode 表 + §2.6.4 drive×layer injection の drive 説明 / ③ `docs/process/README.md` §1 drive 表 (是正済) / ④ **`docs/process/modes/README.md` 台帳の drive 列** (Discovery=`poc`→fullstack / Scrum=`scrum`→専門職 / Reverse=`reverse`→fullstack / Recovery=`troubleshoot`→継承 / Incident=`troubleshoot`→継承)。
+4. frontmatter test + plan-id-naming 回帰。
+- **順序逆 (enum 削除を先) だと既存 PLAN が即 fail** (driveSchema zod parse。DISCOVERY-04 V3 衝突リスクと同根)。なお kind×drive matrix 違反は **現状 schema 未実装** (frontmatter.ts は将来実装) のため、matrix 改訂は doc 正本先行 + 実装は別途。
+
+**R3 gate (PO 検証必須)**: 上記 A-G を PO が承認 → R4 で `forward_routing=L3` + `promotion_strategy` 確定 → L3 design PLAN (requirements §1.6 改訂) として実装。
 
 ## §4 Forward 合流
 
