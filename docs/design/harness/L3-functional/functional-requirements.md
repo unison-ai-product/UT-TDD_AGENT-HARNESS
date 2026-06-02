@@ -211,6 +211,7 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **入力**: hook イベント (PLAN 起票 / コード変更 / Codex 実行 / ゲート通過 / 停止)
 - **出力**: state 自動更新、手動登録漏れ排除
 - **振る舞い**: `.ut-tdd/hooks/` 配下に 5 種 hook (TS、bun 実行) を実装 / Claude Code/git/Codex 経由でイベント捕捉
+- **振る舞い (extended, PLAN-REVERSE-02 fullback)**: state 登録 (fail-close) とは別系統の **session-log 観測 hook** (SessionStart/PostToolUse/Stop、`.claude/hooks/session-log.ts` → `src/runtime/session-log.ts`) を **fail-open** で実装。session イベントを append-only 記録し、PLAN 単位ダイジェスト (`.ut-tdd/logs/plan/<plan_id>.digest.json`) に圧縮 → handover/audit/FR-19 接続。秘匿: sanitize で secret/PII を載せない
 
 #### AC-FR-07-01 (正常系)
 - **Given**: 開発者が `git commit` で src/X.ts 変更
@@ -226,6 +227,11 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **Given**: 5 hook のうち 1 つが未実装状態 (placeholder)
 - **When**: 該当イベント発火
 - **Then**: skip + audit `hook event Y skipped (not implemented)` / 他 hook は正常動作 / 終了コード 0
+
+#### AC-FR-07-04 (session-log 観測 hook、fail-open、PLAN-REVERSE-02 back-fill)
+- **Given**: session-log hook 実行中に I/O 失敗 (`.ut-tdd/logs/` 書込み不可) または stdin/JSON 不正
+- **When**: SessionStart / PostToolUse / Stop 発火
+- **Then**: **常に終了コード 0 (fail-open、作業を止めない。state 登録 hook の fail-close と逆)** / 記録できた分のみ append / Stop 時 PLAN 単位ダイジェストを生成し、**同一 (plan_id, session_id) を 2 回以上 onStop しても event counts が増殖しない (折り畳み済み session_id を skip = idempotent。同一バッチ内の複数 event は正規にカウント)** / `plan_id=null` のみの session は digest 書かない / secret/PII は sanitize (`name=value` 形式の token/key/password 等を `name=***` マスク + 120 字 truncate) で除外 / **hook I/F: `hook_event_name` ∈ {SessionStart, PostToolUse, Stop} で dispatch、未知値は PostToolUse へ fallback (契約は L6 session-log.md §5)** (検証: U-SLOG-001〜005)
 
 ---
 
