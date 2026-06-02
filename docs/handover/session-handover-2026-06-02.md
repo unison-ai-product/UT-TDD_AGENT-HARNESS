@@ -4,7 +4,7 @@
 
 ## §0 現在地 (一言)
 
-PLAN-DISCOVERY-04 **完遂 (S4 confirmed)**。docs/process spike (forward L0-L14 + 駆動モデル9種 + gates + 4軸 README) を起草・dogfood・self-review し、終点 `PLAN-REVERSE-01-process-docs` を起票。さらに **V7 (drive 概念欠陥) 解決を REVERSE-01 R0→R3 で先行駆動し、§1.6 drive 軸再設計 intent (A-G) を起草・self-review (APPROVE-with-fixes 是正済)**。HEAD = `a7840d6`、main clean (untracked 2件は維持)、**vitest 71 pass**。**次 = REVERSE-01 R3 gate = PO が drive 再設計案 A-G を検証 (§1.8 R3=po必須)**。
+PLAN-DISCOVERY-04 **完遂 (S4 confirmed)** + 終点 `PLAN-REVERSE-01` 起票 + **V7 (drive 概念欠陥) を REVERSE-01 R0→R3→実装まで完遂**。docs/process spike (forward L0-L14 + 駆動モデル9種 + gates + 4軸 README) 起草・dogfood・self-review 済。**V7 実装 = `VALID_DRIVES` を 9→5 種 (専門職: be/fe/fullstack/db/agent) に縮小、scrum/reverse/poc/troubleshoot 除去、5 PLAN を fullstack に migration、requirements §1.6/§1.1 + docs/process + modes台帳 同期**。HEAD = `6c006e5`、main clean (untracked 2件は維持)、**vitest 71 pass / tsc 0 / 変更ファイル biome クリーン**。**ゴール「駆動モデル群が的確に動く状態」= drive 軸 mechanical に達成**。残 = V1/V2/V4 routing + docs/process 正本化 (PROVISIONAL 外し)。
 
 ## §1 本 session 進捗 (時系列)
 
@@ -15,9 +15,9 @@ PLAN-DISCOVERY-04 **完遂 (S4 confirmed)**。docs/process spike (forward L0-L14
 5. **Step6 cycle2=confirmed (`fa921ee`)**: legible 化後 PO confirmed。frontmatter S4/confirmed/completed。終点 `PLAN-REVERSE-01-process-docs` 起票。
 6. **V7 発見 + drive 表是正 (`fa921ee` `c44db21`)**: PO 指摘で drive 概念の構造欠陥を発見 (§2)。
 
-## §2 ⭐ 最重要 open = V7: `drive` 概念の構造欠陥 (PO 2026-06-02)
+## §2 ⭐ V7: `drive` 概念の構造欠陥 → **再設計・実装済 (2026-06-02)**
 
-PO の連続指摘で確定。**`drive` (§1.6) は「どの専門職 (specialist) / 専門エージェントを招集するか」が本質**だが、現定義に 3 欠陥:
+PO の連続指摘で確定し、本 session で再設計・実装完了 (`6c006e5`)。**`drive` (§1.6) は「どの専門職 (specialist) / 専門エージェントを招集するか」が本質**だが、旧定義に 3 欠陥:
 
 1. **命名衝突**: 英語 drive=「駆動」、「駆動モデル」(mode, §2.5)= literally "drive model"。別軸なのに同一語根で混同必至。
 2. **値の重複**: §1.6 `VALID_DRIVES` 9種に `scrum/reverse/poc/troubleshoot` (= 駆動モデル名/状況) が混在。専門職 (be/fe/fullstack/db/agent) と mode 値が同居。
@@ -31,16 +31,16 @@ PO の連続指摘で確定。**`drive` (§1.6) は「どの専門職 (specialis
 
 | # | action | 状態 |
 |---|--------|------|
-| 1 | **REVERSE-01 R3 gate = PO が drive 再設計案 A-G を検証** (§R3、§1.8 R3=po必須 + 要件変更 escalation) | 🟡 **PO 検証待ち (intent 起草+self-review 済)** |
-| 2 | R4 = `forward_routing=L3` + `promotion_strategy` 確定 → L3 PLAN で §1.6 実装 (§G 順序: 5 PLAN migration 先→enum 削除後) | ⬜ |
-| 3 | gap V1 (forward_routing enum) / V2 (docs/research tree) / V4 (sub-doc拡張) を Reverse で routing | ⬜ |
-| 4 | docs/process/{forward,modes,gates} を PROVISIONAL→正本化 (Reverse R4 後) | ⬜ |
+| 1 | **V7 = drive 軸再設計 (§1.6 5種化 + 5 PLAN migration + docs 同期)** | ✅ **実装済 (`6c006e5`)。PO 追認事項: migration default=fullstack の可否 / mode↔drive 呼称分離 (用語集)** |
+| 2 | gap V1 (forward_routing enum L7/fullback) / V2 (docs/research tree) / V4 (sub-doc拡張) を REVERSE-01 R4 で routing | ⬜ |
+| 3 | docs/process/{forward,modes,gates} を PROVISIONAL→正本化 (REVERSE-01 R4 後) | ⬜ |
+| 4 | kind×drive matrix の **ペア機械検証** を schema 実装 (現状 enum のみ、[[project_kind_drive_matrix_not_enforced]]) | ⬜ |
 
 ## §4 ⚠ 壊さない / 再発させない
 
 - **docs/process は spike (PROVISIONAL)**。正本化は REVERSE-01 が dogfood 実績から行う。spike を正本と誤読しない。
-- **drive ≠ 駆動モデル**: drive=専門職 (§1.6、要再設計)、駆動モデル=mode (§2.5、modes/)。V7 確定まで両者を慎重に区別。
-- **§1.6 VALID_DRIVES の変更は破壊的**: 既存 PLAN migration なしに enum から値を外さない。
+- **drive ≠ 駆動モデル**: drive=専門職 5種 (§1.6、再設計済)、駆動モデル=mode (§2.5、modes/)。両者を区別。横断駆動の drive は対象 work の専門職を継承。
+- **§1.6 VALID_DRIVES = 5種 (専門職)**。enum から値を外す/足す際は既存 PLAN migration を先行 (§G 順序、破壊回避)。
 - **untracked 維持**: `helix-process/` `ai-agent-harness-directory-reference.md` は commit 禁止 (`git add <path>` か `-u`)。
 - **self-review 前置 MUST** / **subagent model 明示** / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)`。main 直 commit 可 (solo)。
 
@@ -50,10 +50,13 @@ PO の連続指摘で確定。**`drive` (§1.6) は「どの専門職 (specialis
 - `9dc59e6` S4 cycle1=pivot — 4軸 legibility 入口 (process/README) 追加
 - `fa921ee` S4 cycle2=confirmed + PLAN-REVERSE-01 起票 (V7 drive 概念歪み)
 - `c44db21` drive 表の誤記是正 (scrum≠仮説検証) + V7 誤ラベル facet
+- `a7840d6` REVERSE-01 を R3 まで駆動 — V7 drive 軸再設計 intent 起草
+- `a3b44bc` handover 更新 (R3 intent 駆動済み)
+- `6c006e5` **feat(schema)!: V7 drive 軸を専門職5種に再設計 (mode値除去) — 実装**
 
 ## §6 未了の PO 判断事項 (escalation 済)
 
-1. **V7 drive 軸再設計** (本 session 最重要、§2)。
+1. **V7 PO 追認** (実装済、方向は PO 確定。残: migration default=fullstack の可否 / mode↔drive 呼称分離)。
 2. PLAN-DISCOVERY-01 の S4 decision_outcome 未確定 (メタモデル PoC、別件)。
 3. HELIX 離脱 (cutover) タイミング。
 4. §9.1 先在乖離 (別 follow-up)。
