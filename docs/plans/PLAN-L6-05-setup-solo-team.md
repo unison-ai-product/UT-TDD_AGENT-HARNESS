@@ -89,11 +89,10 @@ SetupState = {                                       # .ut-tdd/state/setup.json 
 | 関数 | signature | DbC |
 |------|-----------|-----|
 | `detectProjectScale` | `(deps: { gh: GhRunner; fs: FsReader }) => ProjectScale` | **never throws**。gh 不在/未認証/権限不足 → `ownerType:"unknown", collaborators:null`。token は読まない (gh の認証状態に委ねる) |
-| `recommendPhase` | `(scale: ProjectScale) => PhaseRecommendation` | **純関数**。org OR collaborators>1 OR hasCodeowners OR hasBranchProtection → 0-B(high、既存 protection は team 既存運用の強信号)。User かつ collaborators<=1 → 0-A(high)。unknown 信号 → 0-A(low、安全フォールバック) |
+| `recommendPhase` | `(scale: ProjectScale) => PhaseRecommendation` | **純関数**。org OR collaborators>1 OR hasCodeowners OR `hasBranchProtection===true` → 0-B(high、既存 protection は team 既存運用の強信号)。User かつ collaborators<=1 → 0-A(high)。unknown 信号 (含 `hasBranchProtection===null`・`collaborators===null` 単独) → 0-A(low、安全フォールバック) |
 | `planSetup` | `(phase: SetupPhase, opts: { teams?: {tl,qa,po}; dryRun: boolean }) => SetupPlan` | **純関数**。0-A=共通(A)のみ。0-B=共通(A)+CODEOWNERS(B)+branch-protection script。actions.applied は常に false (適用は別関数) |
-| `renderArtifacts` | `(plan: SetupPlan, templates: TemplateSet) => { path: string; content: string }[]` | **純関数**。templates 注入。token を含む内容を生成しない |
-| `emitSetup` | `(rendered, deps: { fs: FsWriter; confirm }) => void` | dryRun は書かない (一覧表示のみ)。既存ファイル上書きは confirm 経由。**fail 時も token を漏らさない** |
-| `recordSetupState` | `(state: SetupState, deps: { fs: FsWriter }) => void` | `.ut-tdd/state/setup.json` を書く。**`signals` は 4 フィールド (ownerType/collaborators/hasCodeowners/hasBranchProtection) のみへ strip して書く** (それ以外を破棄 = 認証情報混入経路を遮断) |
+| `emitSetup` | `(plan: SetupPlan, templates: TemplateSet, deps: { fs: FsWriter; confirm }) => string[]` | テンプレ render (内部 helper `renderArtifacts` が純 render) して書込。**`plan.dryRun` は書かず path 一覧を返すのみ**。既存上書きは confirm 経由。**生成内容に token を含めない**。書いた path を返す (renderArtifacts は独立契約でなく emitSetup 内 helper = U-SETUP-004 に内包) |
+| `recordSetupState` | `(state: SetupState, deps: { fs: FsWriter }) => void` | `.ut-tdd/state/setup.json` を**上書き** (単一ファイル = 確定値 SSoT、再実行・phase 変更時は最新 state で上書き・append しない)。**`signals` は 4 フィールド (ownerType/collaborators/hasCodeowners/hasBranchProtection) のみへ strip して書く** (それ以外を破棄 = 認証情報混入経路を遮断) |
 | `applyBranchProtection` | `(plan: SetupPlan, deps: { gh; confirm; isInteractive }, opts: { apply: boolean }) => { applied: boolean; reason: string }` | `opts.apply!==true` → `{applied:false, reason:"emit-only"}` (既定)。**`deps.isInteractive!==true` → `opts.apply=true` でも `{applied:false, reason:"non-interactive"}`** (非対話での無人適用を precondition で封鎖)。対話下でのみ gh 認証 + admin 確認 + 変更内容提示 + 人間 confirm が揃って初めて `gh api` 実行。いずれか欠落 → 実行せず emit-only に戻す |
 | `runSetup` | `(args: SetupArgs, deps) => SetupResult` | orchestration。phase = フラグ > confirm(recommend(detect)) > fallback(solo)。確定→record→render→emit→(apply は opt-in)。非対話+フラグ無し→solo。**invariant: `--apply-branch-protection` は対話セッションのみ有効** (非対話では emit-only 固定、I-2 ガバナンス保証) |
 
@@ -121,10 +120,10 @@ SetupState = {                                       # .ut-tdd/state/setup.json 
 | U-ID | 対象 | DoD |
 |------|------|-----|
 | U-SETUP-001 | `detectProjectScale` | gh mock: org → ownerType=Organization / gh 失敗(未認証) → unknown+collaborators=null (never throw) |
-| U-SETUP-002 | `recommendPhase` | org or collab>1 or hasCodeowners → 0-B high / User+collab<=1 → 0-A high / unknown → 0-A low (安全フォールバック) |
+| U-SETUP-002 | `recommendPhase` | org or collab>1 or hasCodeowners or `hasBranchProtection===true` → 0-B high / User+collab<=1 → 0-A high / unknown (含 null 単独) → 0-A low (安全フォールバック) |
 | U-SETUP-003 | `planSetup` | 0-A=共通(A)のみ / 0-B=共通(A)+CODEOWNERS(B)+branch-protection script / actions.applied=false / team 名注入が CODEOWNERS plan に反映 |
 | U-SETUP-004 | `emitSetup` | dryRun=true → fs.write 呼ばれない (一覧のみ) / dryRun=false → 期待ファイル群を書く / 生成内容に token 文字列を含まない |
-| U-SETUP-005 | `recordSetupState` | setup.json に phase/decidedBy/signals を書く / **signals が 4 フィールド以外を含まない (strip 検証)** / token 非含 / 再読込で同一 phase |
+| U-SETUP-005 | `recordSetupState` | setup.json に phase/decidedBy/signals を書く / **signals が 4 フィールド以外を含まない (strip 検証)** / token 非含 / 再読込で同一 phase / **再実行 (phase 変更) → 上書きで最新 phase のみ (append しない)** |
 | U-SETUP-006 | `applyBranchProtection` | apply≠true → {applied:false, reason:"emit-only"} (gh 呼ばれない) / **isInteractive≠true かつ apply=true → {applied:false, reason:"non-interactive"} (gh 呼ばれない)** / 対話下でも admin/auth/confirm 欠落 → 実行しない |
 | U-SETUP-007 | `runSetup` (orchestration) | ①フラグあり→フラグ値採用 / ②フラグ無し+対話→confirm 結果 / ③フラグ無し+非対話→solo (fallback) / ④apply=true+非対話→applied:false (I-2 配線ミス検出) |
 
