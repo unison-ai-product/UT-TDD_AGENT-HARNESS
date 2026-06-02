@@ -1,0 +1,46 @@
+# harness-check — UT-TDD Agent Harness CI (要件定義書 §6.2/§6.9)
+#
+# §6.9: ローカル hook は早期検知のみ。全量テスト・回帰確認は GitHub Actions で実行する。
+# §6.2: Branch Protection の Required Status Checks は本 `harness-check` 1 本のみ (集約 gate)。
+#
+# 本 workflow は §6.5 Phase 0-A 相当 (配備するが Required 化はしない / solo)。
+# トリガは §6.9 の `pull_request: [main]` に加え、solo main 直開発を即 dogfood するため `push: [main]` も含める。
+#
+# 現状実装される subjob = typecheck + 全回帰 (vitest)。以下は negative carry (実装後に subjob 追加):
+#   - biome lint: repo 既存 biome 負債 (cli.ts/detect.ts/g3-trace.ts 等) 解消 (別 Refactor PLAN) 後に有効化
+#   - commitlint / poc-no-merge-guard / hotfix-postmortem-required 等 §6.3 の branch-type subjob: PLAN で追加
+name: harness-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harness-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  harness-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3"
+
+      - name: install deps (frozen)
+        run: bun install --frozen-lockfile
+
+      - name: typecheck (tsc --noEmit)
+        run: bun run typecheck
+
+      - name: test — 全回帰 (vitest run)
+        run: bun run test
