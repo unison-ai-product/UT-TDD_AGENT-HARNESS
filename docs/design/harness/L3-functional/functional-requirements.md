@@ -212,6 +212,7 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **出力**: state 自動更新、手動登録漏れ排除
 - **振る舞い**: `.ut-tdd/hooks/` 配下に 5 種 hook (TS、bun 実行) を実装 / Claude Code/git/Codex 経由でイベント捕捉
 - **振る舞い (extended, PLAN-REVERSE-02 fullback)**: state 登録 (fail-close) とは別系統の **session-log 観測 hook** (SessionStart/PostToolUse/Stop、`.claude/hooks/session-log.ts` → `src/runtime/session-log.ts`) を **fail-open** で実装。session イベントを append-only 記録し、PLAN 単位ダイジェスト (`.ut-tdd/logs/plan/<plan_id>.digest.json`) に圧縮 → handover/audit/FR-19 接続。秘匿: sanitize で secret/PII を載せない
+- **振る舞い (extended, PLAN-REVERSE-03 fullback)**: session-log の facet として **forced-stop 検出** (`src/runtime/forced-stop.ts`) を実装。専用 hook 不在のため SessionStart 時に session ログ群を走査し `session_end` で閉じない dangling session を **強制停止と推定**して `forced_stop` 記録。停止後メッセージは Haiku 意味解析 (managed pmo-haiku、raw API なし) で是正/間違えを分類し、**是正のみ**フィードバックログ (`.ut-tdd/logs/feedback/<plan_id>.jsonl`) へ記録 → `forced_stop` を concept §2.6.1 の `agent_runaway` 級 Recovery trigger とし、アテンション高は Recovery 起票候補として agent が提示 (起票は人間 yes)。fail-open + 曖昧時は是正寄りに倒す
 
 #### AC-FR-07-01 (正常系)
 - **Given**: 開発者が `git commit` で src/X.ts 変更
@@ -232,6 +233,11 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **Given**: session-log hook 実行中に I/O 失敗 (`.ut-tdd/logs/` 書込み不可) または stdin/JSON 不正
 - **When**: SessionStart / PostToolUse / Stop 発火
 - **Then**: **常に終了コード 0 (fail-open、作業を止めない。state 登録 hook の fail-close と逆)** / 記録できた分のみ append / Stop 時 PLAN 単位ダイジェストを生成し、**同一 (plan_id, session_id) を 2 回以上 onStop しても event counts が増殖しない (折り畳み済み session_id を skip = idempotent。同一バッチ内の複数 event は正規にカウント)** / `plan_id=null` のみの session は digest 書かない / secret/PII は sanitize (`name=value` 形式の token/key/password 等を `name=***` マスク + 120 字 truncate) で除外 / **hook I/F: `hook_event_name` ∈ {SessionStart, PostToolUse, Stop} で dispatch、未知値は PostToolUse へ fallback (契約は L6 session-log.md §5)** (検証: U-SLOG-001〜005)
+
+#### AC-FR-07-05 (forced-stop 検出 + フィードバックログ、fail-open、PLAN-REVERSE-03 back-fill)
+- **Given**: 前 session が `session_end` で閉じず途切れた (強制停止)。次 session 開始
+- **When**: SessionStart で `scanDanglingStops` 発火 → dangling 推定 → 停止後メッセージを Haiku 分類
+- **Then**: **常に終了コード 0 (fail-open)** / `session_end` で閉じた正常 session は対象外 / `forced_stop` 既記録の session は再記録しない (idempotent) / 分類 `category="feedback"` (AI やらかし) のみフィードバックログへ記録し **`category="mistake"` (ユーザー誤操作) は記録しない** / 分類失敗・曖昧時は **`feedback`+`low`+unclassified に倒す (取りこぼし回避)** / 記録は**内容キー (session_id+plan_id+attention+summary+reason) で idempotent (ts が変わっても同一内容は重複記録しない)** / 生文・PII・credential を durable に残さず sanitize / アテンション高は `recovery_proposed=true` で Recovery 起票候補 (起票は人間 yes、§2.6.3) / 意味判定は managed pmo-haiku に分離 (raw API なし) (検証: U-FSF-001〜007)
 
 ---
 
@@ -816,7 +822,7 @@ screen §5 G1-trace マトリクスを継承し、L3 FR-* × 14 画面 (PM/HM/GD
 
 - **L4 基本設計 (PLAN-L4-01〜05)**:
   - 各 FR-* の実現アーキ (state schema / CLI コマンド設計 / hook 実装方式) は L4 基本設計で確定
-  - P1 18 件 + P2 5 件は L4 で AC + 詳細化 (本 PLAN は P0 のみ)
+  - 残 P1 件 + P2 5 件は L4 / Phase B / PLAN-L3-02 で AC + 詳細化
 - **L4 データ設計 (PLAN-L4-04)**: business §10.2 L4 carry 表 7 項目 (集約境界 / 値オブジェクト等) + 各 FR の入出力データ構造を L4 で確定
 - **L7 実装スプリント**: 各 AC-* を TDD Red の入力として使用。Given-When-Then 形式を vitest describe-it に直接変換可能
 - **L12 受入テスト設計**: 全 54+ AC-* を AT-* で被覆 (孤児 0)。本 sub-doc 完成後に L12 担当 sub-doc 本起草

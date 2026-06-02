@@ -4,7 +4,7 @@
 - **位置付け**: 構想書 (L1 概念層) / 要件定義書は別ファイル
 - **対応構想書**: AI駆動開発チーム構想書 v1.1
 - **対応運用ルール書**: AI駆動開発チーム運用ルール書 v1.1
-- **工程層体系**: v3.1 で **V2 (HELIX-workflows) の L0-L14 + V-model を base に採用** (移植元 `vendor/helix-source/docs/v2/process/`)
+- **工程層体系**: v3.1 で **V2 (HELIX-workflows) の L0-L14 + V-model を base に採用** (参照 snapshot `vendor/helix-source/docs/v2/process/`)
 - **想定実装エージェント**: Claude Code (複雑タスク・設計判断) / Codex (自律実行・並列処理)
 - **対象 OS**:
   - Windows / macOS / Linux: ネイティブ動作を第一級対応
@@ -39,7 +39,7 @@ v2.1 (2215 行) を構想書 v3.0 と要件定義に分離し、現行要件は 
 
 ## v3.1 の主旨 (V2 工程・モード・配線の取り込み)
 
-v3.1 は、移植元 V2 (HELIX-workflows、`vendor/helix-source/docs/v2/`) の **開発工程・開発モード・配線 (routing/injection)** を UT-TDD のチーム開発向けに翻案して取り込む。コード/state DB は移植せず、**工程・フロー・仕組み**を概念層に統合する。
+v3.1 は、参照 snapshot V2 (HELIX-workflows、`vendor/helix-source/docs/v2/`) の **開発工程・開発モード・配線 (routing/injection)** を UT-TDD のチーム開発向けに翻案して取り込む。コード/state DB は取り込まず、**工程・フロー・仕組み**を概念層に統合する。
 
 | # | 取り込み | v3.1 での反映 |
 |---|----------|---------------|
@@ -405,7 +405,7 @@ mode と工程を「絵」で終わらせず自動で繋ぐ仕組み。V2 の ro
 | `drift` (drift_type=schema/contract) | Reverse | normalization |
 | `debt_degradation` / `code_smell` / `structural` | Refactor | |
 | `dependency_outdated` / `upgrade` / `config_drift` | Retrofit | upgrade は preflight 要 |
-| `agent_runaway` / `context_exhaustion` / `regression_dev` / `runaway` | Recovery | 承認必須 |
+| `agent_runaway` / `context_exhaustion` / `regression_dev` / `runaway` / `forced_stop` | Recovery | 承認必須。`forced_stop` = ユーザー強制停止 (ESC/Ctrl+C/Stop) = 高 severity 負シグナル (罵倒・強否定・同論点での連続停止を含む。罵倒のみが基準ではない)。専用 hook 不在のため dangling-turn 推定で検出 (PLAN-L6-04/L7-02)。提示まで自動・起票は人間 yes |
 | `production_incident` / `hotfix_required` / `regression_prod` | Incident | env=prod、承認必須 |
 | `feature_addition` / `scope_extension` | Add-feature | |
 | `user_feedback_iteration` / `requirement_continuous_refinement` | Scrum | |
@@ -517,12 +517,12 @@ V2 は要件を二段に分ける。**L1 = 業務要求 (BR-* / NFR-*) のみ** 
 
 ### 3.1.2.1 L1 sub-doc 構造 (V2 HELIX-workflows 5 PLAN 正本、必須 § 含む)
 
-V2 HELIX-workflows 正本 (`vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md` の最小定義 + `vendor/helix-source/docs/v2/L1-requirements/*` の実体 doc) は **L1 を 1 doc にまとめず 5 sub-doc に分割**する。UT-TDD はこれを正本として採用し、各 sub-doc の **必須 § 構造**まで規定する (実体 doc から転写):
+V2 HELIX-workflows 設計概念 (`vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md` の最小定義 + `vendor/helix-source/docs/v2/L1-requirements/*` の実体 doc) は **L1 を 1 doc にまとめず 5 sub-doc に分割**する。UT-TDD はこれを設計概念として参照し、各 sub-doc の **必須 § 構造**まで規定する:
 
 | sub-doc (5 種) | 必須 § (HELIX-workflows 実体 doc に準拠) | PLAN 命名 (UT-TDD) |
 |----------------|------------------------------------------|--------------------|
 | **業務要求** (business) | §1 目的・背景 (WHY/WHAT/WHO) / §2 対象業務一覧 / §3 業務フロー (Forward V-model 主線 + 9 mode 分岐 + cross-cutting 横断機構) / §4 ステークホルダー / §5 現状課題 → あるべき姿 / §6 業務スコープ外 (本 BR で扱わない: FR / 画面 / 技術 / NFR / 実装) / §7 L14 運用テスト pair 対応表 (BR-* ⇔ OT-* 1:1) / §8 関連 doc / §9 carry / 既知の不足 + §9.1 上流 baton carry 一覧 / **§10 業務 entity 列挙 (DDD 適用、要件レベル / 詳細は L4)** + §10.1 主要業務 entity 一覧 (L0 用語と 1:1 対応 / 業務的意味 / 対応 schema・CLI・file の 4 列 table) + §10.2 L4 carry (集約境界 / 値オブジェクト / entity ID 規約 / ライフサイクル / 不変条件 / 集約間整合性 / `ut-tdd doctor check_business_entity_coverage` 新設) + §10.3 SSoT 参照 (ユビキタス言語 / Bounded Context / 業界標準整合) | `PLAN-L1-01-business-requirements` |
-| **機能要求** (functional) | §1 機能一覧 (**FR-L1-01〜35、HELIX-workflows 正本 47 doc 由来、P0: 18 / P1: 12 / P2: 5 で確定**、`docs/migration/v2-import-ledger.md §6` 参照) / §2 利用シナリオ (ユースケース) / §3 操作とデータの流れ / §4 入出力 / §5 上流 baton 反映 (L0 企画書バトン項目と本 doc FR-L1-* の対応表 + carry 先) / §6 関連 doc | `PLAN-L1-02-functional-requirements` |
+| **機能要求** (functional) | §1 機能一覧 (**FR-L1 現行 46 件、P0: 19 / P1: 22 / P2: 5 で確定**、`docs/migration/v2-import-ledger.md §6` 参照) / §2 利用シナリオ (ユースケース) / §3 操作とデータの流れ / §4 入出力 / §5 上流 baton 反映 (L0 企画書バトン項目と本 doc FR-L1-* の対応表 + carry 先) / §6 関連 doc | `PLAN-L1-02-functional-requirements` |
 | **画面要求** (screen) | §1 画面一覧 / §2 画面遷移の要望 / §3 表示・操作への要望 / §4 関連 doc (具体的画面設計は L2、本 sub-doc は要求レベル) | `PLAN-L1-03-screen-requirements` |
 | **技術要求** (technical) | §1 採用技術・技術制約 / §2 外部連携 + IF 要望 / §3 既存システム制約 / **§4 state schema 二層構造** (UT-TDD では `.ut-tdd/` 配下、core tables + audit/event tables + derived views + 補助 state、closure event 契約 = `idempotency_key = mode + plan_id + closure_event_id` + rollback + conflict resolution) / **§5 工程別 skill 注入機構** (`docs/skills/<L>-injection.yaml` 相当、`owner_role` / `mandatory_agents` / `recommended_agents` / `recommended_skills` / `recommended_commands` / `orchestration_mode` の 6 フィールド) / **§6 9 mode 共通基盤** (R0-R4 + RGC を Reverse 専用ではなく共通 closure language として再利用、Forward 接続 event の state 登録 + 補助 state への中間 state 保存 + discrepancy_log からの機械起動) / **§7 drift 解消方針** (detector の週次以上起動 + inventory schema による工程双方向 mapping + 新規 asset 工程未割当不許容 + Reverse normalization 接続 + 運用目標「新規 drift 0 件 / week」) / §8 関連 doc | `PLAN-L1-04-technical-requirements` |
 | **非機能要求** (nfr) | §1 可用性 / §2 性能・拡張性 / §3 運用・保守性 (冒頭で carry 宣言 = 排泄系契約・上流 baton の段階 carry) / §4 移行性 / §5 セキュリティ / §6 システム環境 (**IPA 非機能要求グレード 2018 6 大項目に準拠**) / **§7 IPA × ISO 25010 二軸タグ表** (全 NFR-ID × IPA 大項目 × ISO 25010 特性 の 3 列 + 対象外特性の除外理由) / §8 関連 doc (carry 接続記述 = `pairs_test_design: []` の L1 許容 + L4 起票時追加 + L4↔L9+L13+L14 多層検証接続) | `PLAN-L1-05-nfr` |
@@ -578,11 +578,11 @@ V2 HELIX-workflows 業務要求 doc §10 を採用し、UT-TDD は L0 → L1 →
 
 V2 は設計を **L4 基本設計 (外部設計: アーキ/ADR)** → **L5 詳細設計 (内部設計: D-API/D-DB/D-CONTRACT、API/Schema Freeze)** → **L6 機能設計 (関数 signature・エッジケース + WBS)** の 3 段に分け、それぞれ G4/G5/G6 で独立凍結する。旧 UT-TDD の L2 全体設計 / L3 詳細 / L3.5 機能はこの L4 / L5 / L6 に remap される。
 
-### 3.1.3.1 L2-L6 sub-doc 構造 (V2 HELIX-workflows 正本)
+### 3.1.3.1 L2-L6 sub-doc 構造 (V2 HELIX-workflows 設計概念)
 
 各設計層も sub-doc 分割を取る (V2 HELIX-workflows 各 process doc の正本抽出セクションから転写):
 
-| layer | sub-doc 構造 (HELIX-workflows 正本) | 数 |
+| layer | sub-doc 構造 (HELIX-workflows 設計概念参照) | 数 |
 |-------|------------------------------------|-----|
 | **L2 画面設計** | 画面一覧 (画面 ID・各画面の役割) / 画面遷移 (遷移図・条件・イベント) / ワイヤーフレーム (各画面のレイアウト・情報配置) / UI 要素 (主要 UI コンポーネント・入力/表示/操作要素) | 4 |
 | **L3 要件定義** | 業務要件 (業務フロー確定版・業務ルール・対象業務範囲) / 機能要件 (機能一覧確定版・機能仕様・入出力定義) / 非機能要件 (IPA 非機能要求グレードのグレード値で確定) | 3 |
@@ -706,13 +706,13 @@ L7 実装完了後に QA が追加する **regression / exploratory / edge-case*
 | AP-8 | 逆ピラミッド (① + ② はあるが ③ + ④ が無い) | 「テストも書いた」と称し ③ テスト設計 doc を欠く |
 | AP-9 | 重複実装 / 機能被り | 既存に同等機能があるのに再実装する (着手前の `ut-tdd code find` 流用確認を怠る。被りは Add-feature / Refactor へ回す) |
 | AP-10 | 依存関係違反 | 呼び出し/import グラフに orphan・cycle・missing、またはレイヤリング違反を生む (機能単位レビューで検出) |
-| AP-11 | L1 を 1 PLAN / 1 doc にまとめる | V2 HELIX-workflows 正本では L1 = 5 sub-doc (業務/機能/画面/技術/非機能、§3.1.2.1)。1 doc 統合は要求の関心混在で再番号化リスク |
-| AP-12 | L2-L6 sub-doc 構造を持たない設計 PLAN | V2 HELIX-workflows 正本では L2=4 / L3=3 / L4=5 / L5=4 / L6=3 sub-doc (§3.1.3.1)。複数関心を 1 PLAN に混在させる起票は禁止 |
-| AP-13 | PLAN に工程表 + 実装計画が内蔵されていない | V2 HELIX-workflows 正本では PLAN = 機能 (doc) 単位で工程表 + 実装計画を内蔵 (§3.6)。本文 0 行・成果物 declare のみの PLAN は無効 |
+| AP-11 | L1 を 1 PLAN / 1 doc にまとめる | V2 HELIX-workflows 設計概念では L1 = 5 sub-doc (業務/機能/画面/技術/非機能、§3.1.2.1)。1 doc 統合は要求の関心混在で再番号化リスク |
+| AP-12 | L2-L6 sub-doc 構造を持たない設計 PLAN | V2 HELIX-workflows 設計概念では L2=4 / L3=3 / L4=5 / L5=4 / L6=3 sub-doc (§3.1.3.1)。複数関心を 1 PLAN に混在させる起票は禁止 |
+| AP-13 | PLAN に工程表 + 実装計画が内蔵されていない | V2 HELIX-workflows 設計概念では PLAN = 機能 (doc) 単位で工程表 + 実装計画を内蔵 (§3.6)。本文 0 行・成果物 declare のみの PLAN は無効 |
 
 ## 3.6 PLAN 内蔵物原則 (V2 HELIX-workflows 共通)
 
-V2 HELIX-workflows 正本に従い、**PLAN は機能 (=ドキュメント) 単位で起票し、以下 2 要素を内蔵する**:
+V2 HELIX-workflows 設計概念に従い、**PLAN は機能 (=ドキュメント) 単位で起票し、以下 2 要素を内蔵する**:
 
 | 内蔵要素 | 内容 |
 |----------|------|

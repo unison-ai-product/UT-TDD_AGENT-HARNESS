@@ -38,6 +38,7 @@ Recovery は phase ではなく **二段構えの機構**で動作する:
 | gate (fail-close) | 危険操作を関所で停止 |
 | budget 上限 | トークン・操作の過剰消費を上限で警告 |
 | subagent guard | Codex 委譲経路外の直叩きを block |
+| **forced-stop 検出** (SessionStart `scanDanglingStops`、PLAN-L6-04/L7-02) | `session_end` で閉じない dangling session を**ユーザー強制停止 (ESC/Ctrl+C/Stop) = 高 severity 負シグナル**と推定し `forced_stop` 記録。停止後の是正フィードバック (Haiku 分類) を Recovery 起票候補に (concept §2.6.1 `forced_stop`=`agent_runaway` 級。fail-open、起票は人間 yes) |
 
 ### 収束機構 (事後: 再開ポイントへ戻す)
 
@@ -55,8 +56,10 @@ Recovery は phase ではなく **二段構えの機構**で動作する:
 
 - 再開ポイント確定
 - 認識訂正履歴を recovery-log に記録済
+- **再発防止ドキュメント作成済 (MUST)** — root cause + **具体的な仕組み変更 (guard/test/schema/CLAUDE.md rule/hook への機械強制)** + 強制点への trace + L14 route。prose 止まりを禁じる (仕組み化志向、§8.6 失敗→仕組みループ、[[feedback_process_for_record_not_weight]])。「軽い停止だから省略」は不可
+  - **最低要件 (これを満たさないと「作成済」と見なさない)**: ① root cause 特定 / ② 再発防止に向けた guard/test/rule/hook のいずれかへの**具体的変更点 (ファイル・関数粒度で trace 可能)** / ③ L14 への route 先または carry 先の明記。① のみ列挙 (②③ 空欄) の prose は不可。詳細 artifact schema は後続 PLAN で確定 (§4 carry)
 - **tl がリオープンポイント確認 + po がスコープ承認** (人間サインオフ必須、§2.6.3)
-- 標準 L0-L14 フロー復帰が可能な状態
+- 標準 L0-L14 フロー復帰が可能な状態 (rollback/再開 **と** 再発防止 doc の両方を満たすまで exit しない。判定: tl + po、§2.6.3)
 
 ---
 
@@ -85,6 +88,7 @@ Recovery は phase ではなく **二段構えの機構**で動作する:
 |------------|------|
 | Incident | 別モード。Recovery = AI 逸脱・開発中。Incident = 本番障害。`env=prod` / `regression_prod` → Incident で分岐 |
 | interrupt (設計ギャップ割込み) | 別対応。interrupt = 開発中の設計ギャップ・要件変更の割込み。Recovery = AI 暴走・工程逸脱 |
+| forced_stop (強制停止) | **interrupt とは別概念** (命名衝突させない)。forced_stop = ユーザー強制停止 (ESC/Ctrl+C/Stop) = AI やらかしの高 severity signal → Recovery (`agent_runaway` 級、concept §2.6.1)。上記 interrupt は「要件/設計の割込み」、forced_stop は「逸脱 signal」。検出は dangling-turn 推定 (PLAN-L6-04/L7-02、専用 hook 不在 = anthropics/claude-code #9516)。間違え系 (ユーザー誤操作) は Haiku 分類で除外し記録しない |
 | docs/governance/recovery-workflow.md | **当面の正本**。本 dir への移管は後続 PLAN (repository-structure §2) で実施予定 |
 
 翻案注記: helix-process の `cutover_orchestrator` / `stop-hook` は UT-TDD の `.claude/hooks/agent-guard.ts` + `ut-tdd` CLI hook 体系に対応。`agent_mandatory` / `lock` 機構は UT-TDD guard + gate として実装予定 (現状 agent-guard のみ有効化済)。
