@@ -14,7 +14,7 @@ agent_slots:
     slot_label: "TL — 関数 signature + DbC + pseudocode のレビュー (別 runtime)"
 generates:
   - artifact_path: docs/design/harness/L6-function-design/function-spec.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md

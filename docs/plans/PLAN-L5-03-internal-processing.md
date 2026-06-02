@@ -14,7 +14,7 @@ agent_slots:
     slot_label: "TL — D-API 処理ロジック / DbC 契約のレビュー (別 runtime)"
 generates:
   - artifact_path: docs/design/harness/L5-detailed-design/internal-processing.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
 skip_sub_doc: []
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

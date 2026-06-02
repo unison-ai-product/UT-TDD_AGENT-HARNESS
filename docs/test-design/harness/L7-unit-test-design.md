@@ -1,5 +1,6 @@
 ---
-layer: L7
+layer: L6
+executed_at_layer: L7
 artifact_type: test_design
 status: draft
 pair_artifact: docs/design/harness/L6-function-design/

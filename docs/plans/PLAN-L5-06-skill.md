@@ -14,9 +14,9 @@ agent_slots:
     slot_label: "TL — skills module 内部分割 (catalog/recommender/injector) の結合境界レビュー (別 runtime)"
 generates:
   - artifact_path: docs/design/harness/L5-detailed-design/module-decomposition.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
   - artifact_path: docs/design/harness/L5-detailed-design/internal-processing.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
 skip_sub_doc: []
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

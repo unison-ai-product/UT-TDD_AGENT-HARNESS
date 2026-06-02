@@ -14,7 +14,7 @@ agent_slots:
     slot_label: "TL — 方式設計 / モジュール境界 / ADR の技術レビュー (別 runtime)"
 generates:
   - artifact_path: docs/design/harness/L4-basic-design/architecture.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
 skip_sub_doc: []
 pair_artifact: docs/test-design/harness/L9-system-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

@@ -14,7 +14,7 @@ agent_slots:
     slot_label: "TL — asset-drift rule の IMP-033 rule engine 結合 (module 登録方式) のレビュー (別 runtime)"
 generates:
   - artifact_path: docs/design/harness/L5-detailed-design/module-decomposition.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
 skip_sub_doc: []
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
