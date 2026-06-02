@@ -34,6 +34,7 @@ PO の連続指摘で確定し、本 session で再設計・実装完了 (`6c006
 | 1 | **V7 = drive 軸再設計** (§1.6 5種化 + 5 PLAN migration + docs 同期) | ✅ 実装済 (`6c006e5`)。PO 追認: migration default=fullstack 可否 / mode↔drive 呼称分離 |
 | 2 | **成果物契約/カバレッジレビュー** (Reverse+Forward workflow、REVERSE-01 §2.1 V8-V16) | ✅ critical (`c203d32`) + V12/V14 (`aeaf15e`) 修正済。V8-V11/V13/V15/V16 carry |
 | 2b | **L2 skip / サービス選択レビュー** (deep archetype workflow、REVERSE-01 §2.1 V17-V19) | ✅ V17/V18 (§G.3/§G.13/§H.6 を §3.7 UI有無判定に整合 + db行) 修正済 (`5dfbb29`)。**結論: 設計書=固定普遍+サービス選択の併存、選択は既に発生。drive5種は Web/API には十分・非Webに粗い。service_profile enum 新設は不採用、UI-presence 宣言化を段階導入** (第1段=reasonテキスト判定済 / 第2段=has_ui flag→R4→L3 carry)。非Web archetype観点→DISCOVERY-01 backlog |
+| 2c | **全駆動モデル 発火点/収束点/起票ルール 監査** (audit workflow 50 agents、37/45 confirmed、REVERSE-01 §2.2) | ✅ 安全な不備修正済 (`7807cf4` `5b7bd3a`): incident F0-F4→R0-R4 / scrum signal / **add-feature layer fail-close (add-design→L3-L6/add-impl→L7)** / docs/research 実体化 / README runaway整合 / **§1.10.A に mode legibility 設計明文化**。残り = B(正本改訂 R4→L3): Discovery/Research named signal・interrupt routing・scrum_type 実装+enum・Research role §1.8・Incident 2-PLAN分割・exit機械検証 / C(PO判断): **forward_routing enum L7拡張 / runaway alias可否 / 全mode ID-legible token拡張可否** |
 | 3 | **REVERSE-01 R2-R4 正本化**: V8-V11 (reverse ③ 復元機構・再入gate義務・generates契約・③所有hub) + **V13 R4→L3 で requirements §G.6 改訂 (脅威モデル/arc42§7/§8)** | ⬜ **次の主線** |
 | 4 | gap V1 (forward_routing enum L7/fullback) / V2 (docs/research tree) / V4 (sub-doc拡張) を REVERSE-01 R4 で routing + docs/process 正本化 (PROVISIONAL 外し) | ⬜ |
 | 5 | ③ 所有 hub 起票 (L1-00/L3-00 未起票、§G.13 triage) + lint 実装 (pair_artifact 条件付き必須 / path→type 検証 / kind×drive matrix ペア検証、[[project_kind_drive_matrix_not_enforced]]) | ⬜ |
@@ -61,6 +62,9 @@ PO の連続指摘で確定し、本 session で再設計・実装完了 (`6c006
 - `f128e63` docs: REVERSE-01 §2.1 に L2 skip/サービス選択所見 V17-V19 記録
 - `5dfbb29` **fix(requirements): L2 skip 機械検証を §3.7 (UI有無判定) に整合 + db行 (§G.3/§G.13/§H.6)**
 - (memory) `feedback_no_askuserquestion_no_gap_numbers` 追加 (PO: AskUserQuestion 使うな + 番号で聞くな)
+- `02d9f17` feat(process): Reverse に ③テスト設計復元機構 + 再入 Pair freeze gate 義務
+- `7807cf4` fix(process): 駆動モデル監査 — 安全不備修正 (incident/scrum/add-feature guard/research) + §2.2 記録
+- `5b7bd3a` fix(requirements): plan_id mode legibility 設計を §1.10.A 明文化 + README runaway 整合
 
 ## §6 未了の PO 判断事項 (escalation 済)
 
