@@ -1106,7 +1106,7 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 
 右腕は §6.9 で **post-merge / scheduled CI** とするため、G7 通過後に L8/L9 等で失敗した実装が main に滞留しうる。スパインを切らさないため:
 
-- 右腕 CI (harness-check schedule job) が **失敗を検知したら Issue を自動起票** (`regression_*` signal 付き) し、差し戻し先と紐づける (L8→L5/L7・L9→L4 は **concept §3.1.5 正本** / L13→Incident・L14→L1/L3 は **L08-L14-verification-phase.md §右腕差し戻しルールの spike 拡張**、REVERSE-01 で §3.1.5 を L8-L14 に改訂して正本化)。
+- 右腕 CI (harness-check schedule job) が **失敗を検知したら Issue を自動起票** (`regression_*` signal 付き) し、**concept §3.1.5「右腕工程の差し戻しルール (L8-L14)」正本**の差し戻し先 (L8→L5/L7・L9→L4・L10→L2・L11→L3/L1・L12→L3/L7・L13→Incident・L14→L1/L3) と紐づける。
 - そこから **Recovery (`regression_dev`) または Incident (`regression_prod`) / Add-feature** で差し戻し PLAN を起票する。
 - **Accept 条件**: 右腕 CI 失敗から差し戻し Issue 起票まで **検出サイクル 1 周以内** (scheduled job 1 run)。未起票のまま次の merge を進めない。
 
