@@ -4,7 +4,7 @@ title: "PLAN-DISCOVERY-03 (kind=poc): skill module 設計の Discovery 検証 (c
 kind: poc
 layer: cross
 workflow_phase: S1
-drive: poc
+drive: fullstack
 status: draft
 decision_outcome: null
 created: 2026-06-01

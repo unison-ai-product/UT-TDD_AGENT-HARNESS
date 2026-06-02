@@ -55,18 +55,14 @@ export const V_MODEL_PAIRS: Record<string, string> = {
   L6: "L7",
 };
 
-/** §1.6 VALID_DRIVES (9 種) */
-export const VALID_DRIVES = [
-  "be",
-  "fe",
-  "fullstack",
-  "db",
-  "agent",
-  "scrum",
-  "reverse",
-  "poc",
-  "troubleshoot",
-] as const;
+/**
+ * §1.6 VALID_DRIVES (5 種 = 専門職のみ。PLAN-DISCOVERY-04 V7 / PLAN-REVERSE-01 R3)。
+ * drive = 「その PLAN にどの専門職/専門エージェントを招集するか」(owner_role / mandatory_agents /
+ * orchestration_mode を決める)。旧 9 種は mode/状況値 (scrum/reverse/poc/troubleshoot) を混在させ
+ * 駆動モデル (mode、§2.5) と命名衝突していたため除去。横断駆動 kind (poc/reverse/recovery) の drive は
+ * 対象 work の専門職を継承する (例: PLAN-RECOVERY-01 = fullstack)。
+ */
+export const VALID_DRIVES = ["be", "fe", "fullstack", "db", "agent"] as const;
 export const driveSchema = z.enum(VALID_DRIVES);
 export type Drive = z.infer<typeof driveSchema>;
 

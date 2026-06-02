@@ -4,7 +4,7 @@ title: "PLAN-DISCOVERY-04 (kind=poc): docs/process ワークフロー整備の D
 kind: poc
 layer: cross
 workflow_phase: S4
-drive: poc
+drive: fullstack
 status: completed
 decision_outcome: confirmed
 created: 2026-06-01

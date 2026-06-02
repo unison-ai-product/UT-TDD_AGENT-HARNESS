@@ -58,7 +58,7 @@ plan_id: PLAN-L7-01-slug                      # §1.10 A: PLAN-<layer>-<NN>-<slu
 title: "PLAN-L7-01: タイトル"
 kind: impl                                    # §1.3 の 12 種から
 layer: L7                                      # §1.4 の 16 種 (L0-L14 + cross) から。impl は L7 実装スプリント
-drive: be                                     # §1.6 の 9 種から
+drive: be                                     # §1.6 の専門職 5 種から
 status: draft                                 # §1.2 の VALID_STATUSES から
 parent_design: docs/design/<feature>/<function>.md  # §1.1.parent_design。kind=impl (L7) は必須
 agent_slots:                                  # §1.8 の役割スロット
@@ -87,7 +87,7 @@ title: "..."
 kind: poc                                     # 固定
 layer: cross                                  # 固定
 workflow_phase: S2                            # §1.5 から (S0-S4 のみ許容)
-drive: scrum                                  # §1.6 の poc 対応 drive のみ許容
+drive: fullstack                              # §1.6 専門職 5 種。poc は探索対象 work の専門職を継承 (V7)
 status: draft
 decision_outcome: null                        # S4 到達時のみ §1.2.2 から指定
 agent_slots:
@@ -110,7 +110,7 @@ title: "..."
 kind: reverse
 layer: cross
 workflow_phase: R2                            # §1.5 から (R0-R4 のみ許容)
-drive: reverse
+drive: fullstack                              # §1.6 専門職 5 種。reverse は逆引き対象 work の専門職を継承 (V7)
 status: draft
 confirmed_reverse_type: code                  # §3.3 から (code / design / upgrade / normalization / fullback)
 forward_routing: null                         # R4 到達時のみ §3.4 から指定
@@ -218,40 +218,42 @@ v1.2 で **V2 (HELIX-workflows) の L0-L14 + V-model** を base に採用。左 
 
 validator は `(kind, workflow_phase)` ペアが本表に存在しなければ fail-close。
 
-## 1.6 VALID_DRIVES (9 種) + kind × drive 互換性 matrix (R-I2 fix)
+## 1.6 VALID_DRIVES (5 種 = 専門職) + kind × drive 互換性 matrix (R-I2 fix / V7 再設計)
 
-### 9 種
+> **V7 再設計 (PLAN-DISCOVERY-04 V7 → PLAN-REVERSE-01 R3、PO 確定 2026-06-02)**: drive = **「その PLAN にどの専門職 (specialist) / 専門エージェントを招集するか」**(owner_role / mandatory_agents / orchestration_mode を決める、§2.6.4)。旧 9 種は専門職 (be/fe/fullstack/db/agent) と **mode/状況値 (scrum/reverse/poc/troubleshoot) を混在**させ、駆動モデル (mode、構想書 §2.5) と**命名衝突**していた (例: `scrum=仮説検証` は誤り。仮説検証は Discovery)。mode 値を drive から除去し**専門職 5 種**に絞る。入口パターンは駆動モデル (mode) が、招集専門職は drive が担う。
 
-| drive | 用途 | L10 (UX 磨き) 要否 |
+### 5 種 (専門職)
+
+| drive | 専門職 | L10 (UX 磨き) 要否 |
 |-------|------|----------------------------|
 | `be` | バックエンド / API / ロジック中心 | UI 変更時のみ |
 | `fe` | UI / モック駆動 | **常に必要** |
 | `fullstack` | BE + FE 同時 (Twin Track) | **常に必要** |
 | `db` | スキーマ / データモデル中心 | UI 変更時のみ |
 | `agent` | AI エージェント / プロンプト設計 | **常に必要** (会話 UI) |
-| `scrum` | 仮説検証 (経路 2 専用) | — |
-| `reverse` | 既存コード逆引き (経路 2 専用) | — |
-| `poc` | PoC 単独実装時 | — |
-| `troubleshoot` | 緊急対応 (補助 1 専用) | — |
 
-### kind × drive 許可 matrix (R-I2 fix)
+> 削除した旧値: `scrum` / `reverse` / `poc` / `troubleshoot` (= 駆動モデル/状況。drive でない)。
+
+### kind × drive 許可 matrix (R-I2 fix / V7)
+
+**全 12 kind とも drive = 専門職 5 種のいずれか**。横断駆動 kind (poc/reverse/recovery) と troubleshoot は「**対象 work の専門職を継承**」する (探索/逆引き/復旧/障害対象が何の専門領域か)。
 
 | kind | 許可 drive |
 |------|-----------|
 | `charter` | `be / fe / fullstack / db / agent` (企画段階で想定する drive を宣言) |
 | `design` | `be / fe / fullstack / db / agent` |
 | `impl` | `be / fe / fullstack / db / agent` |
-| `poc` | `scrum / poc` |
-| `reverse` | `reverse` |
+| `poc` | `be / fe / fullstack / db / agent` (探索対象 work の専門職) |
+| `reverse` | `be / fe / fullstack / db / agent` (逆引き対象 work の専門職) |
 | `add-design` | `be / fe / fullstack / db / agent` (親 PLAN と一致必須) |
 | `add-impl` | `be / fe / fullstack / db / agent` (親 PLAN と一致必須) |
 | `refactor` | `be / fe / fullstack / db / agent` |
 | `retrofit` | `be / fe / fullstack / db / agent` |
-| `recovery` | `troubleshoot` |
-| `troubleshoot` | `troubleshoot` |
+| `recovery` | `be / fe / fullstack / db / agent` (復旧対象 work の専門職。例: PLAN-RECOVERY-01=fullstack) |
+| `troubleshoot` | `be / fe / fullstack / db / agent` (障害対象 work の専門職) |
 | `research` | `be / fe / fullstack / db / agent` |
 
-validator は本表で組み合わせ違反を fail-close。
+validator は本表で組み合わせ違反を fail-close (matrix 機械検証は `src/schema` 側で将来実装、現状 enum 検証のみ)。
 
 ## 1.7 VALID_ARTIFACT_TYPES (19 種、test_design / test_code 分離済)
 
@@ -346,7 +348,7 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
 
 - [ ] `kind` ∈ §1.3 VALID_KINDS (12 種) — 違反 → exit 1
 - [ ] `layer` ∈ §1.4 VALID_LAYERS (16 種、`cross` 含む) — 違反 → exit 1
-- [ ] `drive` ∈ §1.6 VALID_DRIVES (9 種) — 違反 → exit 1
+- [ ] `drive` ∈ §1.6 VALID_DRIVES (5 種、専門職) — 違反 → exit 1
 - [ ] `status` ∈ §1.2 VALID_STATUSES (4 種) — 違反 → exit 1
 - [ ] `workflow_phase` ∈ §1.5 VALID_WORKFLOW_PHASES (使用時のみ、10 種) — 違反 → exit 1
 - [ ] `decision_outcome` ∈ §1.2.2 VALID_DECISION_OUTCOMES (kind=poc + workflow_phase=S4 のみ、3 種) — 違反 → exit 1
@@ -1983,7 +1985,7 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 | **VALID_KINDS** | frontmatter `kind` の enum (12 種、§1.3) |
 | **VALID_LAYERS** | frontmatter `layer` の enum (16 種、§1.4) |
 | **VALID_WORKFLOW_PHASES** | frontmatter `workflow_phase` の enum (10 種、§1.5) |
-| **VALID_DRIVES** | frontmatter `drive` の enum (9 種、§1.6) |
+| **VALID_DRIVES** | frontmatter `drive` の enum (5 種 = 専門職、§1.6。旧 9 種から mode 値除去 = V7) |
 | **VALID_ARTIFACT_TYPES** | frontmatter `generates[].artifact_type` の enum (19 種、§1.7) |
 | **VALID_ROLES** | frontmatter `agent_slots[].role` の enum (7 種、§1.8) |
 | **必須 8 directed edge** | §2.4 の vmodel_validator 必須検証対象 (#1-#8、残り #9-#12 は warn) |

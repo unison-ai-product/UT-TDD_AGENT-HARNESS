@@ -4,7 +4,7 @@ title: "PLAN-DISCOVERY-02 (kind=poc): roster module 設計の Discovery 検証 (
 kind: poc
 layer: cross
 workflow_phase: S4
-drive: poc
+drive: fullstack
 status: completed
 decision_outcome: confirmed
 created: 2026-06-01

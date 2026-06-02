@@ -4,7 +4,7 @@ title: "PLAN-REVERSE-01 (kind=reverse): docs/process 正本化 — DISCOVERY-04 
 kind: reverse
 layer: cross
 workflow_phase: R3
-drive: reverse
+drive: fullstack
 status: draft
 created: 2026-06-02
 updated: 2026-06-02
@@ -85,12 +85,12 @@ PLAN-DISCOVERY-04 (Discovery、S4 confirmed 2026-06-02) の **終点 Reverse** (
 ### Step R3: Intent Hypotheses (po 検証必須)
 
 - gap register (V1/V2/V4/V7) の「あるべき姿」仮説を作成。**特に V7 (drive 再設計) は PO 検証必須** (§1.8 R3→po)。drive=専門職のみ / mode 値分離 / recovery は work 専門職継承 の方向を PO 確認。
-- 状態: 🟡 **intent 起草済 (§R3、self-review 通過) → PO 検証待ち (R3 gate)**
+- 状態: ✅ **V7 intent (A-G) 起草 + self-review (APPROVE-with-fixes 是正) + PO 方向確定 (drive=専門職、2026-06-02) → §R3-impl で実装**。V1/V2/V4 intent は R4 で詰める。
 
 ### Step R4: Gap & Routing (forward_routing + promotion_strategy 必須)
 
 - 各 gap の `forward_routing` (大半 L3=requirements) + `promotion_strategy` を確定。docs/process/{forward,modes,gates} の正本昇格 + recovery-workflow.md 移管判断 (repository-structure §2)。
-- 状態: ⬜
+- 状態: 🟡 **V7 = `forward_routing=L3` (requirements §1.6) + `promotion_strategy=redesign` で実装済 (§R3-impl)**。V1/V2/V4 の routing + docs/process 正本化 (PROVISIONAL 外し) は未了。
 
 ### Step R-review: self-review 前置 (MUST)
 
@@ -164,6 +164,22 @@ V7 (最重要 gap) は他 gap と独立に解決可能なため R0→R2→R3 を
 - **順序逆 (enum 削除を先) だと既存 PLAN が即 fail** (driveSchema zod parse。DISCOVERY-04 V3 衝突リスクと同根)。なお kind×drive matrix 違反は **現状 schema 未実装** (frontmatter.ts は将来実装) のため、matrix 改訂は doc 正本先行 + 実装は別途。
 
 **R3 gate (PO 検証必須)**: 上記 A-G を PO が承認 → R4 で `forward_routing=L3` + `promotion_strategy` 確定 → L3 design PLAN (requirements §1.6 改訂) として実装。
+
+### §R3-impl — V7 実装記録 (2026-06-02、PO 方向確定 drive=専門職)
+
+PO が drive=専門職の方向を確定 (DISCOVERY-04 S4 + V7 連続指摘) し、goal 駆動で本 session に §G 順序で実装 (可逆・本番影響なし、PO 追認/調整可)。`forward_routing=L3` / `promotion_strategy=redesign` (drive 軸を専門職のみへ再定義)。
+
+| # (§G) | 実装 | 対象 |
+|--------|------|------|
+| ① | 5 PLAN の drive migration (poc/reverse→fullstack) | DISCOVERY-01/02/03/04 + REVERSE-01 (自己適用) |
+| ② | `VALID_DRIVES` を 5 種 (専門職) に縮小 | `src/schema/index.ts` (単一正本、§1.10.F) + test fixture 3 箇所 |
+| ③a | §1.6 表 (5種) + kind×drive matrix (全12kind→専門職) + V7 注記 | requirements §1.6 |
+| ③b | §1.1 / §1.1.reverse サンプル `drive:scrum`/`reverse`→fullstack、§1.10 enum 数 9→5 | requirements §1.1/§1.10 |
+| ③c | drive 表・台帳 drive 列 (Discovery/Scrum/Reverse/Recovery/Incident=専門職継承) | docs/process/README.md + modes/README.md + 各 mode 早見表 |
+| ④ | frontmatter + plan-id-naming 全回帰 | vitest **71 pass** |
+
+**残 (本 PLAN 継続分)**: V1 (forward_routing enum) / V2 (docs/research tree) / V4 (sub-doc 拡張) の R4 routing + **docs/process/{forward,modes,gates} の PROVISIONAL→正本化**。concept §2.6.4 は enum を requirements に委譲のため追随不要 (drive=専門職の含意は §1.6 で確定)。
+**PO 追認事項**: ① migration default = fullstack (代替 agent 可) / ② mode↔drive の呼称分離 (用語集) は未了。
 
 ## §4 Forward 合流
 

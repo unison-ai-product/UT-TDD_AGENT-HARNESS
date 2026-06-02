@@ -15,7 +15,7 @@ Recovery は **AI エージェント (Claude Code / Codex) の逸脱・暴走・
 | 項目 | 値 |
 |------|----|
 | kind | `recovery` |
-| drive | `troubleshoot` |
+| drive | 専門職継承 (be/fe/fullstack/db/agent、§1.6 V7。復旧対象 work の専門職、例 fullstack) |
 | layer | `cross` |
 | workflow_phase | **禁止** (§1.5/§1.10、phase を持たない) |
 | owner | tl + po |
