@@ -74,7 +74,7 @@ concept §2.5 の **9-mode** は **Forward + 上表 8 mode (Research を除く)*
 - **出口 = Forward 合流**: どの mode も最終的に L0-L14 へ戻る。mode 固有で設計・テスト・検証を完結させない。
 - **承認境界**: Recovery / prod Incident / config_drift Retrofit は人間サインオフ必須 (§2.6.3、承認者は本台帳列)。
 - **execution mode 参照**: cross-agent review が self-review に化けないよう判断ゲートは `ut-tdd status` の execution mode を参照する (§2.6.4 / §2.1.2.1)。
-- **mode 連鎖**: Discovery 終点 → Reverse 昇華 / Scrum increment → Reverse fullback / Incident・Add-feature の前段に Discovery (要件未確定時) or Reverse (既存逆引き時) / Retrofit の影響評価前段に Reverse (`upgrade`) / Research で「作れるか不明」→ Discovery 切替。
+- **mode 連鎖**: Discovery 終点 → Reverse 昇華 / Scrum increment → Reverse fullback / Incident・Add-feature の前段に Discovery (要件未確定時) or Reverse (既存逆引き時) / Retrofit の影響評価前段に Reverse (`upgrade`) / Research で「作れるか不明」→ Discovery 切替 / **Add-feature (最頻) の bottom-up build (L6/L7) → 後段 Reverse fullback で L3 要件 back-fill (常態、add-feature.md §1.1 経路 B)**。
 
 ---
 
@@ -91,7 +91,7 @@ concept §2.5 の **9-mode** は **Forward + 上表 8 mode (Research を除く)*
 | Discovery / Scrum | requirement_undefined / user_feedback | `poc/*` | **CI 回さない** (使い捨て)。confirmed→Reverse→`feature/*` | Reverse 合流時 |
 | Reverse | drift / fullback | `reverse/*` | R4 routing 先 `feature/*` の G7 | Forward 合流時 |
 | Incident / Recovery | regression_prod / regression_dev | `hotfix/*` | 緊急 harness-check サブセット | hotfix merge + 恒久対策は別 Issue |
-| Add-feature | feature_addition | `add/*` | 親 PLAN と同 PR | merge |
+| Add-feature | feature_addition | `add/*` | 親 PLAN と同 PR | merge → **最頻は後段 `reverse/*` で L3 要件 back-fill** (§1.1 経路 B) |
 | Refactor / Retrofit | debt_degradation / dependency_outdated **or improvement-backlog** | `refactor/*` | L7 内 G7 | merge |
 
 **右腕 (L8-L14) は post-merge/scheduled CI** で、失敗時は §6.8.4 に従い **Issue を自動起票 → Recovery/Incident/Add-feature で差し戻し**。poc/* は merge せず CI 分を浪費しない (§6.4)。粒度は **1 Issue = 1 PLAN/hub = 1 branch** (§6.8.2)、PLAN frontmatter `github_issue_id` で close 漏れ機械検知。

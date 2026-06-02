@@ -22,20 +22,36 @@
 
 ---
 
-## 2. phase / フロー構成
+## 1.1 標準ライフサイクル (最頻 = bottom-up build → Reverse back-fill)
+
+**Add-feature は実務で最頻の駆動モデル**であり、要件が先に固まるとは限らない。多くは **「作れる/作りたい機能」が先に具体化** → **機能設計 (L6) と実装 (L7) を先に作る** → **要件 (L3) は後追いで Reverse fullback により back-fill / 修正**する (PO 2026-06-02 確定。bottom-up build → 上位整合)。よって 2 経路を持つ:
+
+| 経路 | いつ | 流れ |
+|------|------|------|
+| **B. bottom-up (最頻、default)** | 機能が具体・要件は後追いで足りる | **add-design (L6 機能設計) → add-impl (L7) → Reverse (R0-R4) で L3 要件定義へ back-fill/修正 (fullback)** → V-model 整合 |
+| A. top-down | 要件側の追補が先に要る (スコープ拡張・契約変更) | 要件追補 (L1/L3) → add-design (L4-L6) → add-impl (L7) → テスト確認 |
+
+> **なぜ Reverse で戻すか**: bottom-up で L6/L7 を先に作ると L3 要件が空くため、V-model の左腕が孤児化する。**Reverse (`confirmed_reverse_type=fullback`、`forward_routing=L3`) で実装事実から L3 要件を逆復元し、①⇔③ ペアを G3 で凍結**することで整合を回復する (要件は「後で Reverse 正本化」が前提)。これは Add-feature の例外でなく **常態**。
+
+---
+
+## 2. phase / フロー構成 (Step 集合)
+
+下表は経路 A/B 共通の Step 集合。**経路 B (最頻) では Step 2 (要件追補) を Step 6 の後段 Reverse へ送る**:
 
 ```
-影響範囲特定 → 追加要求・要件追補 → add-design → add-impl → テスト確認 → V-model 統合
+[B 最頻] 影響範囲特定 → add-design(L6) → add-impl(L7) → テスト確認 → Reverse(R0-R4)→L3 要件 back-fill → V-model 整合
+[A]      影響範囲特定 → 要件追補(L1/L3) → add-design(L4-L6) → add-impl(L7) → テスト確認 → V-model 統合
 ```
 
 | Step | 内容 | 成果物 |
 |------|------|--------|
 | 1. 影響範囲特定 | 既存 L1-L14 doc のどこに影響するか洗い出す | 影響範囲メモ |
-| 2. 追加要求・要件追補 | 必要なら L1/L3 に追補。既存 doc は不変で追記扱い | L1/L3 差分 |
-| 3. add-design | L4/L5/L6 に追補設計。`dependencies.parent` に親 PLAN 必須 | add-design PLAN |
-| 4. add-impl | L7 実装。`dependencies.parent` に親 impl PLAN 必須 | add-impl PLAN + ② |
+| 2. 要件追補 (A) / 後送 (B) | A=先に L1/L3 追補。**B=ここでは飛ばし Step 6 の Reverse で back-fill** | L1/L3 差分 (A のみ) |
+| 3. add-design | 機能設計 (L6) 中心 (B) / L4-L6 (A)。`dependencies.parent` に親 PLAN 必須 | add-design PLAN + ① |
+| 4. add-impl | L7 実装。`dependencies.parent` に親 add-design PLAN 必須 | add-impl PLAN + ②④ |
 | 5. 既存テスト確認 + 追加テスト | L8/L9 で既存テスト影響確認、追加テスト起票 | ③ + ④ 差分 |
-| 6. V-model 統合 | 追補を該当工程ファイルに反映し、双方向 trace 更新完了 | trace 更新記録 |
+| 6. V-model 整合 | **B: Reverse (R0-R4, fullback, forward_routing=L3) で L3 要件を back-fill → G3 凍結**。A: 追補を該当工程ファイルへ反映 | trace 更新 / L3 要件復元 |
 
 ---
 
@@ -53,7 +69,8 @@
 ## 4. Forward 合流点
 
 - **既存 L1-L14 を維持しつつ L3/L7 差分を追補**。削除・上書きでなく追加記述。
-- 影響範囲に応じて L1 / L3 / L4-L7 に直接接続。
+- **最頻 (経路 B)**: L6/L7 を先に作り、**後段 Reverse (fullback, forward_routing=L3) で L3 要件を back-fill** → G3 で ①⇔③ 凍結。要件は後追い正本化。
+- 影響範囲に応じて L1 / L3 / L4-L7 に直接接続 (経路 A)。
 - L8/L9 で既存テストへの影響を確認する。
 - L11 UAT フィードバックの巻き取りは **add-design** で起票 (既存 doc を直接変更しない)。
 
@@ -72,6 +89,7 @@
 
 | 状況 | 前段/遷移 |
 |------|----------|
+| **bottom-up build 後の要件 back-fill (最頻)** | **Reverse を後段に必須** (R0-R4, fullback, forward_routing=L3。§1.1 経路 B)。Add-feature→Reverse は例外でなく常態 |
 | 追加要件が未確定 | **Discovery** を前段に挟む (S0-S4 で仮説検証) |
 | 既存設計の逆引きが必要 | **Reverse** を前段に挟む (R0-R4 で実装遡及) |
 | 機能追加でなく構造改善 | **Refactor** へ切替 |
