@@ -4,7 +4,7 @@
 
 この repo の Claude Code runtime は UT-TDD Agent Harness として扱う。HELIX 由来の hook / subagent / memory は移植元素材であり、正本 runtime として直接使わない。
 
-`.claude/settings.json` で有効化している hook は **subagent guard (`PreToolUse(Agent)`) のみ**。これは package-local かつ環境非依存の TS hook (`.claude/hooks/agent-guard.ts`、bun 実行、bash/python3 不要) で、個人 workspace (`ai-dev-kit-vscode` / `helix-*`) や絶対パスに一切依存しない。それ以外の hook は UT-TDD CLI が package-local command として実装されるまで有効化しない (個人 workspace を呼ぶ hook も足さない)。
+`.claude/settings.json` で有効化している hook は **2 種**: ① **subagent guard (`PreToolUse(Agent)`、fail-close)** = `.claude/hooks/agent-guard.ts`、② **session-log (`SessionStart` / `PostToolUse(Edit|Write|MultiEdit|Bash)` / `Stop`、fail-OPEN)** = `.claude/hooks/session-log.ts` (判定/圧縮本体 `src/runtime/session-log.ts`、PLAN-L6-03/L7-01)。両者とも **package-local かつ環境非依存の TS hook** (bun 実行、bash/python3 不要) で、個人 workspace (`ai-dev-kit-vscode` / `helix-*`) や絶対パスに一切依存しない。session-log は `blockOnFailure` を付けない (fail-open = ログ失敗で作業を止めない)。これ以外の hook (guard claudemd/bash/research) は UT-TDD CLI が package-local command として実装されるまで有効化しない (個人 workspace を呼ぶ hook も足さない)。
 
 Claude Code が参照する優先順位は `../CLAUDE.md` -> 本ファイル -> `../docs/governance/README.md`。`../docs/archive/` と `../vendor/helix-source/` は historical / migration material であり、現在の受入条件や実行導線の正本ではない。
 

@@ -29,7 +29,7 @@ interface SessionEvent {
 interface PlanDigest {
   plan_id: string;
   sessions: string[];                       // 寄与した session_id (重複なし)
-  event_counts: Record<SessionEventType, number>;
+  event_counts: Partial<Record<SessionEventType, number>>;  // 未発生 type はキー無し (emptyDigest={})
   files_touched: string[];                  // 重複なし
   commits: string[];                        // commit hash (取得可能時)
   failures: { ts: string; summary: string }[];
@@ -46,7 +46,7 @@ interface PlanDigest {
 
 | 関数 | signature | pre | post |
 |------|-----------|-----|------|
-| `resolveActivePlan` | `(repoRoot: string) => string \| null` | — | state ファイル `.ut-tdd/state/current-plan` 優先 → branch 名から抽出 (regex `/^(?:add\|design\|feature\|reverse\|hotfix\|poc\|refactor)\/(.+)$/`、capture を current-plan と突合、§6.1 branch↔kind 整合) → 解決不能は `null`。**throw しない** |
+| `resolveActivePlan` | `(deps: SessionLogDeps) => string \| null` | — | state ファイル `.ut-tdd/state/current-plan` 優先 → **state 無き時の fallback** として branch 名 capture (regex `/^(?:add\|design\|feature\|reverse\|hotfix\|poc\|refactor)\/(.+)$/`、§6.1 branch↔kind 整合) をそのまま採用 (厳密突合は state 側が持つ) → 解決不能は `null`。**throw しない** |
 | `onSessionStart` | `(input, deps) => number` | — | session_start event を append。常に `0`、I/O 失敗でも throw しない (fail-open)。**③ U-SLOG-005 で被覆** |
 | `recordEvent` | `(input: SessionHookInput, deps: SessionLogDeps) => void` | — | `.ut-tdd/logs/session/<session_id>.jsonl` へ 1 行 append。**never throws (fail-open)** — I/O / 解析失敗は握りつぶし warn |
 | `compressPlanDigest` | `(events: SessionEvent[], planId: string, prev?: PlanDigest) => PlanDigest` | — | **純関数 (I/O なし)**。planId の events を集計。`prev` とマージ (PLAN は複数 session 跨ぎ)。同一 (plan, session) 再適用で **idempotent** |

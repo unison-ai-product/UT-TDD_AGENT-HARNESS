@@ -13,6 +13,43 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-log.ts\"",
+            "timeout": 5,
+            "statusMessage": "session-log: セッション開始記録 (fail-open)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-log.ts\"",
+            "timeout": 5,
+            "statusMessage": "session-log: イベント記録 (fail-open)"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-log.ts\"",
+            "timeout": 5,
+            "statusMessage": "session-log: PLAN 単位ダイジェスト圧縮 (fail-open)"
+          }
+        ]
+      }
     ]
   }
 }
