@@ -11,6 +11,8 @@ PLAN: PLAN-L6-03-session-log (add-design)。pair (③): docs/test-design/harness
 
 Claude Code セッションの生イベントを hook で append-only に記録 (ephemeral) し、**PLAN 単位でダイジェストに圧縮** (durable) する runtime 機能。agent-guard と同じ package-local TS hook パターン (`.claude/hooks/*.ts` → `src/runtime/*.ts`、bun・環境非依存) を踏襲するが、**fail-OPEN** (guard は fail-close)。出力 = handover / audit / 失敗→仕組みループ (§8.6) の入力。
 
+> **進捗管理 3 層 (要件 §6.8.6) における位置**: PLAN ダイジェストは **log 層**の成果物であり、**handover (§6.8.5) への入力**かつ **state DB 登録 (FR-L1-07 hook) のトリガ**。log (どう進めたか) / handover (次どうするか) / state DB (今どこまで) の結節点。
+
 ## §2 型 / schema (D-CONTRACT)
 
 ```ts

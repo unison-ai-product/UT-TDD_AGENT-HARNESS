@@ -1110,6 +1110,29 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 - そこから **Recovery (`regression_dev`) または Incident (`regression_prod`) / Add-feature** で差し戻し PLAN を起票する。
 - **Accept 条件**: 右腕 CI 失敗から差し戻し Issue 起票まで **検出サイクル 1 周以内** (scheduled job 1 run)。未起票のまま次の merge を進めない。
 
+### 6.8.5 PLAN 完了時 handover (必須、PO 2026-06-02)
+
+**PLAN が `status=completed` に遷移する時、handover の生成を必須**とする (継続性・引き継ぎの担保)。「完了したが何を次にやるか不明」を構造的に防ぐ。
+
+- **必須内容**: ① PLAN サマリ (kind/layer/何をしたか) / ② 成果物 (generates 実体 + commit) / ③ **Next Action** (順序付き) / ④ carry (未了・先送り) / ⑤ 未了 PO 判断 (escalation) / ⑥ 壊さない注意。
+- **入力**: **session-log の PLAN ダイジェスト** (`.ut-tdd/logs/plan/<plan_id>.digest.json`、§6.8.1 / PLAN-L6-03) を機械的入力にできる (touched files / commits / failures)。これに人間判断 (Next Action / carry) を足して handover とする。
+- **配置**: チーム継続記録 = `docs/handover/session-handover-<date>[suffix].md` (tracked) / 機械ポインタ = `.ut-tdd/handover/CURRENT.json` (local, gitignored)。
+- **検証**: PLAN completed なのに当該期間の handover 追記が無い → `plan-lint` warn (lint engine 実装時。現状は人手 binding ルール)。
+- **粒度**: 1 PLAN = 1 handover entry を要しない。**1 作業セッション or 1 駆動サイクル単位で束ねた handover に当該 PLAN の completion を記録**すれば足る (過剰生成を避ける)。
+- **詳細設計 (artifact schema + 自動生成機構)** は session-log digest → handover 変換の follow-up PLAN で確定 (現状は本 §が binding ルール、handover 構造は §0-§6 の本テンプレート)。
+
+### 6.8.6 進捗管理 = log + handover + state DB の 3 層組合せ (PO 2026-06-02)
+
+進捗は単一機構でなく **3 層の組合せ**で管理する。各層は役割が直交し相互補完する:
+
+| 層 | 実体 | 役割 (何を答えるか) | 性質 |
+|----|------|---------------------|------|
+| **UT-harness DB (state)** | plan_registry / code_catalog / contract_registry / coverage / trace (FR-L1-06、`.ut-tdd/` state) | **今どこまで進んだか** (V-model 正本 state、孤児 0 / coverage を機械保証) | 機械 SSoT、doctor / vmodel lint で fail-close ([[feedback_vmodel_state_db_completeness]]) |
+| **log (session-log)** | session イベント + PLAN ダイジェスト (FR-L1-07 ext、§6.8.1、PLAN-L6-03/L7-01) | **どう進めたか** (作業の事実トレイル: touched files / commits / failures) | 観測、fail-open、ephemeral → PLAN digest |
+| **handover** | PLAN 完了 / session 境界の継続記録 (§6.8.5) | **次どうするか** (Next Action / carry / 未了 PO 判断) | 人間判断、durable |
+
+**組合せ原則**: state DB = 「正本の進捗」、log = 「事実の裏付け」、handover = 「判断の継続」。3 者を突合して進捗を多面管理する (DB だけでは『なぜ/次』が、log だけでは『正本 state』が、handover だけでは『機械保証』が欠ける)。**session-log の PLAN ダイジェストは log→handover の橋渡し (§6.8.5 入力) かつ state DB 登録 (FR-L1-07 hook) のトリガ**でもあり、3 層の結節点になる。
+
 ## 6.9 CI 起動単位とコスト方針 (GitHub Actions 無料枠制約、tech 裏取り 2026-06-02)
 
 ### 6.9.1 前提 (無料枠の実態)
