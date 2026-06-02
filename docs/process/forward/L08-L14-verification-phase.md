@@ -161,10 +161,14 @@
 | L8 結合テスト失敗 | L5 詳細設計 または L7 実装 |
 | L9 総合テスト失敗 | L4 基本設計 |
 | L10 UX 不承認 | L2 画面設計 (モック再確認) |
-| L11 UAT フィードバック | L1/L3 `add-design` 差分起票 (既存 doc は不可変) |
+| L11 UAT フィードバック | **L3 要件**: `kind=add-design layer=L3` 差分起票 / **L1 業務要求**: `kind=design layer=L1` 新規 PLAN (add-design は L3-L6 限定のため L1 不可。schema fail-close、§1.3 / frontmatter.ts)。既存 doc は不可変 |
 | L12 受入テスト失敗 | L3 要件定義 または L7 実装 |
+| L13 デプロイ後検証 失敗 | smoke 全断・本番回帰 → `regression_prod` signal で **Incident mode** 起動 (incident.md §2、三者承認必須) / 軽微な設定ミス → L12 再デプロイ |
+| L14 運用検証 失敗 | 運用テスト観点不足 → 次サイクル L1/L3 設計 feedback / 重大 NFR 逸脱 → Incident または L1 要求見直し |
 
 差し戻し記録は PLAN の carry log に残す。右側工程で「ペア未凍結のテスト設計を後付け」することは V-model 違反 (AP-7)。
+
+> **正本化 carry (DISCOVERY-04 右腕監査)**: 本表のうち **L10-L14 は spike 拡張**であり、正本 (concept §3.1.5) は現状 **L8/L9 のみ**。L10-L14 差し戻し (特に L13→Incident 橋渡し・L11 の L1/L3 分岐) の正本化は **REVERSE-01 で concept §3.1.5 を「L8-L14」に改訂**して行う。それまで本表は暫定運用。
 
 ---
 
