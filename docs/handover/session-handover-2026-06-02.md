@@ -4,7 +4,7 @@
 
 ## §0 現在地 (一言)
 
-PLAN-DISCOVERY-04 **完遂 (S4 confirmed)**。docs/process spike (forward L0-L14 + 駆動モデル9種 + gates + 4軸 README) を起草・dogfood・self-review し、終点 `PLAN-REVERSE-01-process-docs` を起票。HEAD = `c44db21`、main clean (untracked 2件は維持)、**vitest 71 pass**。**最重要 open = V7 (drive 概念欠陥、§1.6 再設計が REVERSE-01 で要)**。
+PLAN-DISCOVERY-04 **完遂 (S4 confirmed)**。docs/process spike (forward L0-L14 + 駆動モデル9種 + gates + 4軸 README) を起草・dogfood・self-review し、終点 `PLAN-REVERSE-01-process-docs` を起票。さらに **V7 (drive 概念欠陥) 解決を REVERSE-01 R0→R3 で先行駆動し、§1.6 drive 軸再設計 intent (A-G) を起草・self-review (APPROVE-with-fixes 是正済)**。HEAD = `a7840d6`、main clean (untracked 2件は維持)、**vitest 71 pass**。**次 = REVERSE-01 R3 gate = PO が drive 再設計案 A-G を検証 (§1.8 R3=po必須)**。
 
 ## §1 本 session 進捗 (時系列)
 
@@ -31,8 +31,8 @@ PO の連続指摘で確定。**`drive` (§1.6) は「どの専門職 (specialis
 
 | # | action | 状態 |
 |---|--------|------|
-| 1 | **V7 = drive 軸 §1.6 再設計の方針 PO 確定** (drive=専門職5種 / mode値分離 / recovery継承 / 既存PLAN migration) | ⬜ **PO 判断待ち (escalation)** |
-| 2 | PLAN-REVERSE-01 を R0 から駆動 (evidence→as-is→R3 intent(V7含むpo検証)→R4 routing) | ⬜ |
+| 1 | **REVERSE-01 R3 gate = PO が drive 再設計案 A-G を検証** (§R3、§1.8 R3=po必須 + 要件変更 escalation) | 🟡 **PO 検証待ち (intent 起草+self-review 済)** |
+| 2 | R4 = `forward_routing=L3` + `promotion_strategy` 確定 → L3 PLAN で §1.6 実装 (§G 順序: 5 PLAN migration 先→enum 削除後) | ⬜ |
 | 3 | gap V1 (forward_routing enum) / V2 (docs/research tree) / V4 (sub-doc拡張) を Reverse で routing | ⬜ |
 | 4 | docs/process/{forward,modes,gates} を PROVISIONAL→正本化 (Reverse R4 後) | ⬜ |
 
