@@ -54,6 +54,7 @@ HEAD = `c6dd883`、main は本 session 分すべて push 済 (untracked 2 件 `h
 - `bc11a68` feat(design): setup solo/team L6 機能設計 + L7 単体テスト設計 (①③ ペア)
 - `3b009b1` feat(setup): ut-tdd setup solo/team 実装 (add-impl ②④ + templates)
 - `c6dd883` feat(reverse): setup solo/team を上位整合へ back-fill (経路B完結)
+- `841d064` docs(handover): 本 handover を起票 (§6.8.5)。※本追記 commit は次番
 
 ## §7 未了の PO 判断事項
 
