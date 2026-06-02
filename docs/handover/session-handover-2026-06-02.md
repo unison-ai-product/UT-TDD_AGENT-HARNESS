@@ -31,10 +31,11 @@ PO の連続指摘で確定し、本 session で再設計・実装完了 (`6c006
 
 | # | action | 状態 |
 |---|--------|------|
-| 1 | **V7 = drive 軸再設計 (§1.6 5種化 + 5 PLAN migration + docs 同期)** | ✅ **実装済 (`6c006e5`)。PO 追認事項: migration default=fullstack の可否 / mode↔drive 呼称分離 (用語集)** |
-| 2 | gap V1 (forward_routing enum L7/fullback) / V2 (docs/research tree) / V4 (sub-doc拡張) を REVERSE-01 R4 で routing | ⬜ |
-| 3 | docs/process/{forward,modes,gates} を PROVISIONAL→正本化 (REVERSE-01 R4 後) | ⬜ |
-| 4 | kind×drive matrix の **ペア機械検証** を schema 実装 (現状 enum のみ、[[project_kind_drive_matrix_not_enforced]]) | ⬜ |
+| 1 | **V7 = drive 軸再設計** (§1.6 5種化 + 5 PLAN migration + docs 同期) | ✅ 実装済 (`6c006e5`)。PO 追認: migration default=fullstack 可否 / mode↔drive 呼称分離 |
+| 2 | **成果物契約/カバレッジレビュー** (Reverse+Forward workflow、REVERSE-01 §2.1 V8-V16) | ✅ critical (`c203d32`) + V12/V14 (`aeaf15e`) 修正済。V8-V11/V13/V15/V16 carry |
+| 3 | **REVERSE-01 R2-R4 正本化**: V8-V11 (reverse ③ 復元機構・再入gate義務・generates契約・③所有hub) + **V13 R4→L3 で requirements §G.6 改訂 (脅威モデル/arc42§7/§8)** | ⬜ **次の主線** |
+| 4 | gap V1 (forward_routing enum L7/fullback) / V2 (docs/research tree) / V4 (sub-doc拡張) を REVERSE-01 R4 で routing + docs/process 正本化 (PROVISIONAL 外し) | ⬜ |
+| 5 | ③ 所有 hub 起票 (L1-00/L3-00 未起票、§G.13 triage) + lint 実装 (pair_artifact 条件付き必須 / path→type 検証 / kind×drive matrix ペア検証、[[project_kind_drive_matrix_not_enforced]]) | ⬜ |
 
 ## §4 ⚠ 壊さない / 再発させない
 
@@ -53,6 +54,9 @@ PO の連続指摘で確定し、本 session で再設計・実装完了 (`6c006
 - `a7840d6` REVERSE-01 を R3 まで駆動 — V7 drive 軸再設計 intent 起草
 - `a3b44bc` handover 更新 (R3 intent 駆動済み)
 - `6c006e5` **feat(schema)!: V7 drive 軸を専門職5種に再設計 (mode値除去) — 実装**
+- `c203d32` fix: PLAN-REVERSE-01 に confirmed_reverse_type=design (validator fail-close 解消)
+- `8d3b133` docs: REVERSE-01 §2.1 に成果物契約/カバレッジレビュー所見 V8-V16 記録
+- `aeaf15e` fix: V12 L4-L6 設計PLAN 16件 artifact_type→design_doc + V14 L7テスト設計 layer 是正
 
 ## §6 未了の PO 判断事項 (escalation 済)
 
