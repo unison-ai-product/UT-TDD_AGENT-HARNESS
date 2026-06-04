@@ -163,6 +163,7 @@
 
 ## §4 carry (未了・先送り)
 
+- **IMP-051 (新規・PO 指摘、最優先 feature 候補)**: impl/add-impl PLAN が **Reverse back-fill + doc 整合 (§6 用語更新の L0 §10 back-merge / 上位 governance 整合) とセットか** を機械未検証。本 session で実装 commit 後に Reverse R4 back-fill を放置 → PO 指摘で完遂 = 再発ギャップ。state DB (V-model pair 完全性) で「Reverse 無き impl」「glossary 未 merge な impl」を `doctor`/`vmodel lint` が fail-close 検知する **新 FR (要件拡張)**。Add-feature で起票・実装、FR scope は PO 確定が前提。
 - **IMP-047〜050 の残実装**: ①`src/plan/lint.ts` stub 解消時に handoverStale lint + §G.4 直列/並列トークン検証を配線 (IMP-047/049 の lint surface) ②pre-push hook で handover 強制 (IMP-047) ③team_runner 実行エンジン本体 (ThreadPoolExecutor 相当、hybrid mode 実装時、IMP-050)。いずれも本 cycle の core 実装の上に乗る追加配線で、機能の骨格は完成済。
 - session 1-2 継続: CI biome subjob 有効化 (workflow scope PAT) / L0-L3 freeze (G1/G3) / REVERSE-02 R3 / kind×layer guard (§1.6 確定待ち)。
 
