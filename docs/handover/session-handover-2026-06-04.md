@@ -237,3 +237,48 @@
 - **endsWith 判定は `/`+id+`.md` 境界固定** (別 plan_id の suffix 誤マッチ防止)。
 - **「実装したのに Reverse/用語集に戻していない」状態で完了扱いにしない** (本 session の主題。doctor backfill 行で常時確認)。
 - review 前置 MUST / subagent model 明示 / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ。
+
+---
+
+# Session Handover — 2026-06-04 (session 5: 全 Reverse 完全クローズ — /goal 達成)
+
+> PO 委譲「全リバースの検証ならびに実行で完全クローズ」を完遂。draft 残 2 件 (REVERSE-01/02) を検証・残実行して confirmed 化。
+
+## §1 PLAN サマリ
+
+| PLAN | 対応 | commit |
+|------|------|--------|
+| REVERSE-06 / REVERSE-07 | R3 Intent 検証 (全 6 intent HOLDS) → confirmed | `40e0757` |
+| REVERSE-02-session-log | R3 PASS (新 FR 不要 + back-fill 実在 + L7-01 pairing) → confirmed | `0a68e00` |
+| REVERSE-01-process-docs | 残実行 (V1 close / V2 tree / V4 §G.1 注記 / PROVISIONAL外し 16 ファイル) + R3 → confirmed | `0a68e00` |
+
+## §2 成果物
+
+- **全 7 REVERSE PLAN が status=confirmed** (01〜07)。R3 はすべて記録済 (03/04/05 は既存 PASS、06/07 は intra_runtime_subagent + 客観 evidence、01/02 は本 session)。
+- docs/process/{forward,modes,gates} 16 ファイルの PROVISIONAL→正本化 (grep PROVISIONAL = 0)。
+- requirements §1.10.G.1 に内部資産拡張 sub-doc 注記 (V4)。
+- 検証: vitest 159 pass / doctor backfill 孤児 0・glossary gap 0 (conditional note のみ)。
+
+## §3 Next Action
+
+1. **継続最優先**: L0-L3 freeze の PO サインオフ (G0.5/G1/G3、RECOVERY-02、freeze-ready)。Reverse が全クローズしたので上流 freeze の障害なし。
+2. **L4 entry** (G3 freeze 後)。
+3. **fail-close 昇格** (carry): `src/plan/lint.ts` 実装時に backfill/handover/§G.4 直列並列を exit 連動へ。
+
+## §4 carry
+
+- PO 追認 (軽微・非 blocking): ① migration default=fullstack ② mode↔drive 呼称分離 (用語集)。
+- warn-first → fail-close 昇格 (plan lint engine 実装時)。
+- IMP-047〜051 残配線 (lint トークン / pre-push / team_runner 本体)。
+- CI biome subjob (workflow PAT) / kind×layer guard (§1.6 確定待ち)。
+
+## §5 未了 PO 判断
+
+1. L0-L3 freeze 承認 (継続)。
+2. PO 追認 2 件 (上記 §4、軽微)。
+
+## §6 壊さない / 再発させない
+
+- **全 Reverse confirmed = V-model 左腕の孤児解消が一巡**。今後 add-impl を起こしたら必ず対応 Reverse をセットで起こす (doctor backfill が孤児を surface)。
+- PROVISIONAL外し済の docs/process は運用正本。規範変更は concept/requirements 先行 → docs/process へ反映 (逆流させない)。
+- R3 は PO 直接検証が原則だが、PO 委譲時は intra_runtime_subagent + 客観 evidence で代替し PLAN に記録する。
