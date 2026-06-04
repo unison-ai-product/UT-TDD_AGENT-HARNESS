@@ -1,4 +1,4 @@
-> **PROVISIONAL SPIKE** (PLAN-DISCOVERY-04 S1)。正本でない。終点後 Reverse で実績から再整備される。
+> **正本化済** (PLAN-REVERSE-01 で DISCOVERY-04 dogfood 実績から正本化、2026-06-04)。docs/process は forward/modes/gates の運用正本。規範変更は concept/requirements (上位正本) 先行 → 本 dir へ反映する。
 
 # 右腕: L8-L14 検証フェーズ
 
@@ -170,7 +170,7 @@
 
 差し戻し記録は PLAN の carry log に残す。右側工程で「ペア未凍結のテスト設計を後付け」することは V-model 違反 (AP-7)。
 
-> **正本化済 (2026-06-02、REVERSE-01 R2-R4)**: L10-L14 差し戻し (L13→Incident 橋渡し・L11 の L1/L3 分岐 含む) は **concept §3.1.5「右腕工程の差し戻しルール (L8-L14)」が正本**。本表はそのミラー (spike PROVISIONAL のまま、正本は concept §3.1.5)。
+> **正本化済 (2026-06-02、REVERSE-01 R2-R4 → 2026-06-04 全体正本化)**: L10-L14 差し戻し (L13→Incident 橋渡し・L11 の L1/L3 分岐 含む) は **concept §3.1.5「右腕工程の差し戻しルール (L8-L14)」が正本**。本表はそのミラー。
 
 ---
 

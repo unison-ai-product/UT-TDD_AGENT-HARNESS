@@ -1,4 +1,4 @@
-> **PROVISIONAL SPIKE** (PLAN-DISCOVERY-04 S1)。正本でない。終点後 Reverse で実績から再整備される。
+> **正本化済** (PLAN-REVERSE-01 で DISCOVERY-04 dogfood 実績から正本化、2026-06-04)。docs/process は forward/modes/gates の運用正本。規範変更は concept/requirements (上位正本) 先行 → 本 dir へ反映する。
 
 # 駆動モデル (mode) 定義 — index + 正本台帳
 
@@ -98,4 +98,4 @@ concept §2.5 の **9-mode** は **Forward + 上表 8 mode (Research を除く)*
 
 ## 7. このドキュメントの位置付け
 
-本台帳および各 mode 定義は **spike (PROVISIONAL)**。正本化は終点後の Reverse (R0-R4) が dogfood 実績から行う (PLAN-DISCOVERY-04 §3.1)。gate の機械検証条件は [../gates.md](../gates.md)、git ライフサイクルの正本は requirements §6.8/§6.9。
+本台帳および各 mode 定義は **正本化済** (PLAN-REVERSE-01、2026-06-04)。gate の機械検証条件は [../gates.md](../gates.md)、git ライフサイクルの正本は requirements §6.8/§6.9。

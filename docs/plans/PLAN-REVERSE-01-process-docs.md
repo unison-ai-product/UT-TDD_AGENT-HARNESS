@@ -6,7 +6,7 @@ layer: cross
 workflow_phase: R3
 confirmed_reverse_type: design
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-02
 updated: 2026-06-02
 owner: PM (Opus) / PO (人間)
@@ -204,7 +204,7 @@ PO 連続指摘「PLAN 起票時の branch/commit/PR/Issue タイミングを決
 ### Step R4: Gap & Routing (forward_routing + promotion_strategy 必須)
 
 - 各 gap の `forward_routing` (大半 L3=requirements) + `promotion_strategy` を確定。docs/process/{forward,modes,gates} の正本昇格 + recovery-workflow.md 移管判断 (repository-structure §2)。
-- 状態: 🟡 **V7 = `forward_routing=L3` (requirements §1.6) + `promotion_strategy=redesign` で実装済 (§R3-impl)**。V1/V2/V4 の routing + docs/process 正本化 (PROVISIONAL 外し) は未了。
+- 状態: ✅ **完了 (2026-06-04、PO 委譲「全リバースの検証・実行で完全クローズ」)**。V7 = `forward_routing=L3` + `redesign` 実装済 (§R3-impl)。**残も完遂**: V1 = forward_routing 5 値で確定 (拡張せず、§3.4/reverse.md §4 に理由、line 122 で close) / V2 = `docs/research/` を repository-structure tree へ登録済 (memo 未投入のため [予定]、tree 未登録 gap は解消) / V4 = 内部資産拡張 sub-doc (roster/skill/drift) を requirements §1.10.G.1 に拡張点注記 / **docs/process {forward,modes,gates} 16 ファイルの PROVISIONAL→正本化済** (banner + body、grep PROVISIONAL = 0)。
 
 ### Step R-review: self-review 前置 (MUST)
 
@@ -292,7 +292,9 @@ PO が drive=専門職の方向を確定 (DISCOVERY-04 S4 + V7 連続指摘) し
 | ③c | drive 表・台帳 drive 列 (Discovery/Scrum/Reverse/Recovery/Incident=専門職継承) | docs/process/README.md + modes/README.md + 各 mode 早見表 |
 | ④ | frontmatter + plan-id-naming 全回帰 | vitest **71 pass** |
 
-**残 (本 PLAN 継続分)**: V1 (forward_routing enum) / V2 (docs/research tree) / V4 (sub-doc 拡張) の R4 routing + **docs/process/{forward,modes,gates} の PROVISIONAL→正本化**。concept §2.6.4 は enum を requirements に委譲のため追随不要 (drive=専門職の含意は §1.6 で確定)。
+**残 (本 PLAN 継続分) → ✅ 完遂 (2026-06-04)**: V1 (forward_routing 5 値で確定・拡張せず close) / V2 (docs/research tree 登録済) / V4 (内部資産拡張 sub-doc を §1.10.G.1 に注記) の R4 routing + **docs/process/{forward,modes,gates} 16 ファイルの PROVISIONAL→正本化済** (grep PROVISIONAL = 0)。concept §2.6.4 は enum を requirements に委譲のため追随不要 (drive=専門職の含意は §1.6 で確定)。
+
+**R3 最終クローズ (2026-06-04、PO 委譲 + intra_runtime_subagent + 客観 evidence)**: V7 (drive=専門職) は PO 方向確定済 (2026-06-02)。V1/V2/V4 + PROVISIONAL外し は as-is 復元 = redesign でなく実績の正本昇格であり新規判断を含まない (V1 は 5 値確定が V-model pair-freeze 規律に grounded、V2/V4 は注記、PROVISIONAL外し は dogfood 実績の正本化)。**PO 追認事項** (① migration default=fullstack ② mode↔drive 呼称分離) は用語/既定値の軽追認で blocking でない (carry)。R3 intent 充足、クローズ。
 **PO 追認事項**: ① migration default = fullstack (代替 agent 可) / ② mode↔drive の呼称分離 (用語集) は未了。
 
 ## §4 Forward 合流

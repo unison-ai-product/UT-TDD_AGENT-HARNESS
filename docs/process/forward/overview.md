@@ -1,4 +1,4 @@
-> **PROVISIONAL SPIKE** (PLAN-DISCOVERY-04 S1)。正本でない。終点後 Reverse で実績から再整備される。
+> **正本化済** (PLAN-REVERSE-01 で DISCOVERY-04 dogfood 実績から正本化、2026-06-04)。docs/process は forward/modes/gates の運用正本。規範変更は concept/requirements (上位正本) 先行 → 本 dir へ反映する。
 
 # Forward ワークフロー概要 (V-model L0-L14)
 
@@ -117,10 +117,10 @@ L6 機能設計
 
 ## 8. このドキュメントの位置付けと残作業
 
-この forward 定義は **spike (PROVISIONAL)** であり、以下は別 Step で扱う。
+この forward 定義は **正本化済** (PLAN-REVERSE-01、2026-06-04)。以下は carry として今後の PLAN で扱う。
 
 - 各 mode (Scrum / Reverse / Discovery / Recovery / Add-feature) の詳細 → `docs/process/modes/`
 - gate の機械検証条件 → `docs/process/gates.md`
 - drive 別 (be/fe/db/fullstack/agent) の挙動差異 → concept v3.1 §3.7 を参照
 
-詳細メカニクスは carry とし、spike 完了後に Reverse (R0-R4) で実績から再整備する。
+詳細メカニクスは carry として残す (内容は消さない)。
