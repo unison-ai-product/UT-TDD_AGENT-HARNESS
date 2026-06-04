@@ -1153,6 +1153,12 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **handover scaffold** | session-log PLAN digest と PLAN frontmatter から §6.8.5 の 6 セクション markdown を機械生成し、機械部 (①サマリ・②成果物) を prefill・判断部 (③Next Action〜⑥壊さない) を human placeholder にする生成物。AI が Next Action を捏造しない (導入層 L6) |
 | **plan_id 活性化 (current-plan)** | `.ut-tdd/state/current-plan` を `ut-tdd plan use <id>` で設定し session-log の PLAN digest を populate させる経路。solo/main 直で branch から PLAN を読めず plan_id が null になる Gap を埋める (`resolveActivePlan` の入力、本体は不変、導入層 L6) |
 | **handover stale** | `CURRENT.json` の `updated_at` が閾値 (既定 24h) を超えた状態 (`handoverStale`)。pre-push warn / plan-lint の機械基盤 (導入層 L6) |
+| **handover discipline (規律 surface)** | PLAN 活動 (active_plan + digest あり) があるのに `CURRENT.json` が未生成 / stale / 別 PLAN を指す (drift) 状態を機械が warn すること (`checkHandoverDiscipline`)。handover-on-completion を agent 記憶でなく Stop-hook + `ut-tdd doctor` で surface する (導入層 L6 更新、IMP-047) |
+| **plan family / dedup 正本化** | bare plan_id (`PLAN-L7-04`) と slug 付き (`PLAN-L7-04-handover-mechanism`) を同一 PLAN family と見なし (`sameFamilyPlan`、`-` 境界 prefix・対称・推移)、最長 (最具体) id を正本に digest を union 集約する (`dedupeDigests`)。handover prefill の `unknown` ゴーストを排除 (導入層 L6 更新、IMP-048) |
+| **agent-slot / slot lifecycle** | subagent / team member の fire→release を機械記録する Layer-2 オーケストレーション単位 (`Slot`、`.ut-tdd/state/agent-slots.json`、gitignored)。HELIX `agent_slots.py` (SQLite) の ADR-001 TS-native 移植 = `src/runtime/agent-slots.ts` (fire/release/listActive/listStale、全 fail-open、導入層 L6、IMP-050) |
+| **peak_parallel** | 与えた slot 群の同時実行ピーク数 (sweep-line、`peakParallel`)。`ut-tdd doctor` が stale slot (5 分超 release なし) と併せて surface (導入層 L6、IMP-050) |
+| **直列化 3 条件** | タスクを直列実行すべきかの機械判定キー: **file_conflict** (同一ファイルを書く) / **downstream_dependency** (前段成果物・判断に依存) / **shared_state** (DB / current-plan / handover 等の共有 state を変更)。いずれか true → 直列化必須 (`mustSerialize`)、すべて false → 並列可 (上限 8)。PLAN §工程表 の各 Step で `[並列]/[直列]` + 該当条件を明示 (要件 §G.4、導入層 L6、IMP-049) |
+| **team 定義 (strategy)** | `.ut-tdd/teams/*.yaml` (`teamDefinitionSchema`、`src/schema/team.ts`)。`strategy: sequential|parallel` + `max_parallel` + `serialization` 3 条件 + `members[].serialize_after` で直列/並列を宣言。HELIX `team_runner.py` の TS-native 移植、`ut-tdd team run` (hybrid) の入力 (導入層 L6、IMP-050) |
 
 ---
 
