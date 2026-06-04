@@ -4,6 +4,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type HandoverPointer, handoverStale } from "../handover/index";
 import type { LintResult } from "../plan/lint";
+import {
+  type AgentSlotsDeps,
+  DEFAULT_STALE_MINUTES,
+  listActiveSlots,
+  listStaleSlots,
+  loadSlots,
+  peakParallel,
+} from "../runtime/agent-slots";
 import { detectMode } from "../runtime/detect";
 
 /** I/O・clock 注入 (test 可能、handover staleness 検査用)。 */
@@ -31,6 +39,34 @@ export function checkHandover(deps: DoctorDeps): string {
     : `doctor: handover — OK (active=${p.active_plan ?? "-"}, updated_at=${p.updated_at})`;
 }
 
+/**
+ * agent-slots (Layer-2 オーケストレーション) の stale slot / peak 並列を surface (IMP-050、warning レベル)。
+ * stale (5 分超 released なし) があれば warn、無ければ active/peak を表示 (doctor.ok は落とさない)。
+ */
+export function checkAgentSlots(deps: AgentSlotsDeps): string {
+  const all = loadSlots(deps);
+  if (all.length === 0) return "doctor: agent-slots — 記録なし";
+  const stale = listStaleSlots(deps, DEFAULT_STALE_MINUTES);
+  const active = listActiveSlots(deps).length;
+  const peak = peakParallel(all);
+  if (stale.length > 0) {
+    const ids = stale.map((s) => s.slot_id).join(", ");
+    return `doctor: agent-slots — ⚠ stale ${stale.length} 件 (${DEFAULT_STALE_MINUTES}分超 release なし: ${ids}。release 漏れを確認)`;
+  }
+  return `doctor: agent-slots — OK (active=${active}, peak_parallel=${peak})`;
+}
+
+/** doctor 用に agent-slots deps を node I/O で構築 (now 固定は test 注入)。 */
+function doctorSlotsDeps(deps: DoctorDeps): AgentSlotsDeps {
+  return {
+    repoRoot: deps.repoRoot,
+    now: () => deps.now,
+    readText: deps.readText,
+    writeText: () => {}, // doctor は read-only
+    newId: () => "doctor-readonly",
+  };
+}
+
 export function nodeDoctorDeps(repoRoot: string): DoctorDeps {
   return {
     repoRoot,
@@ -47,6 +83,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
       checkHandover(deps),
+      checkAgentSlots(doctorSlotsDeps(deps)),
       "doctor: scaffold stub (横断検出 relation-graph / drift / regression は後続 PLAN)",
     ],
   };

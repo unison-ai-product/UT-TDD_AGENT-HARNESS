@@ -19,6 +19,7 @@ import {
   normalizeModelFamily,
   type ResolvedFamily,
 } from "../../src/runtime/agent-guard";
+import { DEFAULT_MAX_PARALLEL, nodeAgentSlotsDeps, recordGuardFire } from "../../src/runtime/agent-slots";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..", "..");
@@ -63,4 +64,21 @@ const decision = evaluateAgentGuard(input, {
 });
 
 if (decision.message) process.stderr.write(`${decision.message}\n`);
+
+// IMP-050 助言: pass (code 0) 時のみ subagent fire を記録し並列超過なら warn。
+// block 判定 (fail-close) には一切影響しない。slot I/O 失敗は recordGuardFire 内で握る (fail-open)。
+const passedKind = input.tool_input?.subagent_type;
+if (decision.code === 0 && passedKind) {
+  try {
+    const { activeCount, exceeded } = recordGuardFire(passedKind, nodeAgentSlotsDeps(repoRoot));
+    if (exceeded) {
+      process.stderr.write(
+        `[ut-tdd-guard] ⚠ 並列 subagent が ${activeCount} 件 (上限 ${DEFAULT_MAX_PARALLEL} 超)。直列化要否を確認 (.claude/CLAUDE.md 並列実行 / IMP-049)。\n`,
+      );
+    }
+  } catch {
+    // 助言の失敗で Agent 呼び出しを止めない (fail-open)
+  }
+}
+
 process.exit(decision.code);

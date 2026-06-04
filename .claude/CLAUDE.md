@@ -27,6 +27,8 @@ Claude Code が参照する優先順位は `../CLAUDE.md` -> 本ファイル -> 
 
 **本文構造 (§G.4)**: `§工程表`(Step `### Step <N>: <title>` 形式、**review Step (self / pmo-sonnet / tl-advisor のいずれか) を固定 Step で含む**) + `§実装計画`(各項目の情報源明記) が必須。design/impl/add-* PLAN は `§6 用語更新` (§G.9) も必須。
 
+**直列/並列の明示 (§G.4 / IMP-049、MUST)**: §工程表 の各 Step は **`[並列]` または `[直列]` を明示**する。`[直列]` の Step は **直列化 3 条件のどれに該当するか**を 1 行で示す: ① **file_conflict** (前段と同一ファイルを書く) / ② **downstream_dependency** (前段の成果物・判断に依存) / ③ **shared_state** (DB / current-plan / handover 等の共有 state を変更)。3 条件いずれにも該当しないなら `[並列]` で投入してよい (default 上限 8、[[並列実行]])。判定支援は `src/schema/team.ts` の `mustSerialize` + agent-slots の並列超過 warn (IMP-050) が機械側で補助する。「重いから直列」「念のため直列」は理由にならない (untraceable arbitrary serialization)。
+
 **必須 role (§1.8)**: kind=design/impl→`tl` / L7 impl→`qa` 追加 / **kind=poc/recovery/troubleshoot→`aim`** / L1・L3・L11・L12→`po`。
 
 **起票後 MUST**: 命名テスト + 全回帰 (`npx vitest run`) を通し、**PO へ確定/gate を求める前に review 前置** を通す。`hybrid` では別 runtime / 別 model 系統の `frontier-reviewer`、`claude-only` / `standalone` では `intra_runtime_subagent` (`code-reviewer` / `pmo-sonnet`) を使い、代替 reviewer を evidence に残す。
@@ -144,7 +146,9 @@ UT-TDD 独自 `ut-tdd plan` / `ut-tdd gate` が揃うまで:
 
 ### 並列実行
 
-依存しないタスクは並列投入。default 上限 = 8。直列化する場合は会話に理由を 1 行残す。
+依存しないタスクは並列投入。default 上限 = 8。**直列化する場合は直列化 3 条件 (file_conflict / downstream_dependency / shared_state) のどれに該当するかを会話に 1 行残す** (IMP-049、PLAN では §工程表 の Step に明示)。
+
+**機械支援 (IMP-050)**: subagent / team member の fire→release は `src/runtime/agent-slots.ts` が `.ut-tdd/state/agent-slots.json` に記録する (fail-open)。並列が上限 8 に達すると agent-guard hook が stderr に warn を出し、`ut-tdd doctor` が stale slot (5 分超 release なし) と peak_parallel を surface する。team 定義 (`.ut-tdd/teams/*.yaml`、schema = `src/schema/team.ts`) は `strategy: sequential|parallel` + `serialization` 3 条件 + `members[].serialize_after` で直列/並列を宣言する。`mustSerialize(serialization)` が 3 条件 OR で直列要否を機械判定する。
 
 ### エスカレーション境界（Opus が単独確定しない）
 

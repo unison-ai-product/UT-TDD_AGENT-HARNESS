@@ -1,9 +1,11 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkHandover, type DoctorDeps, runDoctor } from "../src/doctor/index";
+import { checkAgentSlots, checkHandover, type DoctorDeps, runDoctor } from "../src/doctor/index";
+import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots";
 
 const NOW = "2026-06-04T00:00:00.000Z";
 const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
+const slotStatePath = join("/repo", ".ut-tdd", "state", "agent-slots.json");
 
 function deps(over: Partial<DoctorDeps> & { files?: Map<string, string> } = {}): DoctorDeps {
   const files = over.files ?? new Map<string, string>();
@@ -47,10 +49,58 @@ describe("checkHandover (doctor handover staleness surface)", () => {
   });
 });
 
+describe("checkAgentSlots (doctor agent-slots surface, IMP-050)", () => {
+  function slotDeps(slots: Slot[] | null, now = "2026-06-04T00:10:00.000Z"): AgentSlotsDeps {
+    const files = new Map<string, string>();
+    if (slots !== null) files.set(slotStatePath, JSON.stringify(slots));
+    return {
+      repoRoot: "/repo",
+      now: () => now,
+      readText: (p) => files.get(p) ?? null,
+      writeText: () => {
+        throw new Error("doctor は read-only であるべき (writeText 呼び出し禁止)");
+      },
+      newId: () => "x",
+    };
+  }
+  function slot(over: Partial<Slot>): Slot {
+    return {
+      slot_id: "s",
+      agent_kind: "pmo-sonnet",
+      role: null,
+      slot_source: "agent_guard",
+      fired_at: "2026-06-04T00:00:00.000Z",
+      released_at: null,
+      status: "running",
+      exit_code: null,
+      ...over,
+    };
+  }
+
+  it("記録なし → 記録なし message", () => {
+    expect(checkAgentSlots(slotDeps(null))).toContain("記録なし");
+  });
+
+  it("stale slot (5分超 release なし) → stale 警告", () => {
+    const msg = checkAgentSlots(slotDeps([slot({ slot_id: "old" })])); // fired 00:00, now 00:10
+    expect(msg).toContain("stale");
+    expect(msg).toContain("old");
+  });
+
+  it("released 済のみ → OK + peak 表示 (read-only、writeText を呼ばない)", () => {
+    const msg = checkAgentSlots(
+      slotDeps([slot({ status: "completed", released_at: "2026-06-04T00:02:00.000Z" })]),
+    );
+    expect(msg).toContain("OK");
+    expect(msg).toContain("peak_parallel");
+  });
+});
+
 describe("runDoctor", () => {
-  it("ok=true で handover surface を含む (staleness は warning、ok を落とさない)", () => {
+  it("ok=true で handover + agent-slots surface を含む (warning、ok を落とさない)", () => {
     const r = runDoctor(deps());
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("handover"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("agent-slots"))).toBe(true);
   });
 });
