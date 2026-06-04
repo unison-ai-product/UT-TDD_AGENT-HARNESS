@@ -944,7 +944,7 @@ add-* 完了時、既存 PLAN との双方向 reference を更新:
 | 1 | **設計 ⇔ 実装 ⇔ テストの整合性** | `vmodel_lint` 軽量版 (current branch の差分対象のみ、§2.4 必須 8 directed edge の P0 のみ検査) | **fail-close (exit 1)** |
 | 2 | **未 commit ファイルの取り残し** | `git status --porcelain` が non-empty | **fail-close (exit 1)** |
 | 3 | **認識ずれの記録** | session 中に `failure_log.jsonl` 追記があれば recovery PLAN 起票推奨 | **warning** (exit 0、stderr) |
-| 4 | **次セッションへの引き継ぎメモ** | `.ut-tdd/handover/CURRENT.md` の `updated_at` が 24h 以内 | **warning** (exit 0、stderr) |
+| 4 | **次セッションへの引き継ぎメモ** | `.ut-tdd/handover/CURRENT.json` の `updated_at` が 24h 以内 (`handoverStale`、PLAN-L7-04) | **warning** (exit 0、stderr) |
 
 → item 1-2 は push を中止、item 3-4 は push 続行 + warning。
 
@@ -1121,7 +1121,7 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 - **配置**: チーム継続記録 = `docs/handover/session-handover-<date>[suffix].md` (tracked) / 機械ポインタ = `.ut-tdd/handover/CURRENT.json` (local, gitignored)。
 - **検証**: PLAN completed なのに当該期間の handover 追記が無い → `plan-lint` warn (lint engine 実装時。現状は人手 binding ルール)。
 - **粒度**: 1 PLAN = 1 handover entry を要しない。**1 作業セッション or 1 駆動サイクル単位で束ねた handover に当該 PLAN の completion を記録**すれば足る (過剰生成を避ける)。
-- **詳細設計 (artifact schema + 自動生成機構)** は session-log digest → handover 変換の follow-up PLAN で確定 (現状は本 §が binding ルール、handover 構造は §0-§6 の本テンプレート)。
+- **詳細設計 (artifact schema + 自動生成機構)** は **`PLAN-L6-06-handover-mechanism` (設計) / `PLAN-L7-04-handover-mechanism` (実装) で確定済** (2026-06-04)。機械ポインタ正本 = `.ut-tdd/handover/CURRENT.json` (CURRENT.md は廃止、PLAN-REVERSE-05)、生成は `ut-tdd handover` (digest から機械部 ①② prefill + ③-⑥ human placeholder)、活性化は `ut-tdd plan use <id>` で `.ut-tdd/state/current-plan` を設定。
 
 ### 6.8.6 進捗管理 = log + handover + state DB の 3 層組合せ (PO 2026-06-02)
 
@@ -1133,7 +1133,7 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 | **log (session-log)** | session イベント + PLAN ダイジェスト (FR-L1-07 ext、§6.8.1、PLAN-L6-03/L7-01) | **どう進めたか** (作業の事実トレイル: touched files / commits / failures) | 観測、fail-open、ephemeral → PLAN digest |
 | **handover** | PLAN 完了 / session 境界の継続記録 (§6.8.5) | **次どうするか** (Next Action / carry / 未了 PO 判断) | 人間判断、durable |
 
-**組合せ原則**: state DB = 「正本の進捗」、log = 「事実の裏付け」、handover = 「判断の継続」。3 者を突合して進捗を多面管理する (DB だけでは『なぜ/次』が、log だけでは『正本 state』が、handover だけでは『機械保証』が欠ける)。**session-log の PLAN ダイジェストは log→handover の橋渡し (§6.8.5 入力) かつ state DB 登録 (FR-L1-07 hook) のトリガ**でもあり、3 層の結節点になる。
+**組合せ原則**: state DB = 「正本の進捗」、log = 「事実の裏付け」、handover = 「判断の継続」。3 者を突合して進捗を多面管理する (DB だけでは『なぜ/次』が、log だけでは『正本 state』が、handover だけでは『機械保証』が欠ける)。**session-log の PLAN ダイジェストは log→handover の橋渡し (§6.8.5 入力) かつ state DB 登録 (FR-L1-07 hook) のトリガ**でもあり、3 層の結節点になる。**digest の活性化** = `.ut-tdd/state/current-plan` を `ut-tdd plan use <id>` で設定すること (`resolveActivePlan` の入力)。solo/main 直開発では branch から PLAN を読めず plan_id が null になり digest が生成されない Gap があるため、この明示設定で結節点を活性化する (PLAN-L7-04、`resolveActivePlan` 本体は不変)。
 
 ## 6.9 CI 起動単位とコスト方針 (GitHub Actions 無料枠制約、tech 裏取り 2026-06-02)
 
@@ -1969,7 +1969,7 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 |------------|------------|----------|
 | `vmodel_lint` P0 | 修正 commit または `add-design` / `add-impl` PLAN | P0 が残る PR は `harness-check` exit 1 |
 | レビューで見つかったテスト不足 | L6 QA 追加テスト設計 + `QA-XXX-NNN` test | L6 QA trace 欠落は §2.5 により P0 |
-| session 断絶・認識ずれ | `.ut-tdd/handover/CURRENT.md` または `recovery` PLAN | pre-push は handover なしを warning、recovery 7 セクション欠落を exit 1 |
+| session 断絶・認識ずれ | `.ut-tdd/handover/CURRENT.json` または `recovery` PLAN | pre-push は handover なしを warning、recovery 7 セクション欠落を exit 1 |
 | PoC confirmed | Reverse PLAN + R4 `forward_routing` + `promotion_strategy` | §3.4 の R4 必須 field 欠落は exit 1 |
 | 同種失敗の反復 | escalation L0-L3 event | §8.2 の冪等算出で target_level を出す |
 | AI の自己承認 | cross-agent review または P1 warning | `same_model_approval=forbidden` 時は §7.1 orchestration で exit 1 |
@@ -2021,7 +2021,7 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 │   │   ├── default-hybrid.yaml                   # G (team run 利用時に作成)
 │   │   └── local*.yaml                           # G (個人 model / command override、git 管理しない)
 │   └── handover/                                 # A
-│       └── CURRENT.md                            # G (session 引き継ぎ時に生成 or 編集)
+│       └── CURRENT.json                          # G (機械ポインタ、ut-tdd handover が生成、gitignored)
 ├── .pre-commit-config.yaml                       # A
 ├── .gitignore                                    # A (§8.4 エントリ含む)
 ├── commitlint.config.js                          # A
@@ -2145,7 +2145,7 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 
 - [ ] Phase 0-A の 11 項目 + Phase 0-B の 3 項目 = 計 14 項目すべて pass
 - [ ] §10.2 の branch type 別テスト PR matrix で `harness-check` subjob 適用が §6.3 と一致
-- [ ] §5.3 の pre-push 4 項目が動作 (handover/CURRENT.md なしで warning が出る等)
+- [ ] §5.3 の pre-push 4 項目が動作 (handover/CURRENT.json なしで warning が出る等)
 
 ---
 

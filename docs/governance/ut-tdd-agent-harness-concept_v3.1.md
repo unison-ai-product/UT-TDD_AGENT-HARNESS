@@ -1142,6 +1142,10 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **Phase 0-A (solo) / Phase 0-B (team)** | CODEOWNERS bootstrap 2-stage (要件 §6.5)。0-A=branch protection なし / CODEOWNERS なし / harness-check 非 Required。0-B=CODEOWNERS + branch protection + Required。solo→team の格上げは人間サインオフのガバナンス変更。`ut-tdd setup` が出し分け emission を担う (導入層 L6、PLAN-L6-05) |
 | **参加規模検出 (project scale detection)** | owner 種別 / collaborator 数 / 既存 CODEOWNERS・protection から solo/team を**提案**する検出 (`ut-tdd setup`)。確定は人間確認 + state 記録 (数だけで自動確定しない)。検出不能は solo に安全フォールバック (導入層 L6) |
 | **emit-only (GitHub 設定)** | branch protection 等の GitHub 設定操作を harness が自動適用せず、スクリプト + 手順の生成にとどめる既定方針。適用は admin 人間 (opt-in `--apply-branch-protection` で対話下のみガード付き自動適用)。token は保持しない (導入層 L6) |
+| **handover 機械ポインタ (CURRENT.json)** | `.ut-tdd/handover/CURRENT.json`。active PLAN / status / 最新 handover doc への pointer / digest 要約を機械可読で保持する単一 SSoT (gitignored)。`ut-tdd handover` が生成、CLAUDE.md ワークフロー・pre-push stale 検知の参照先 (旧 CURRENT.md は廃止、導入層 L6、PLAN-L6-06/L7-04) |
+| **handover scaffold** | session-log PLAN digest と PLAN frontmatter から §6.8.5 の 6 セクション markdown を機械生成し、機械部 (①サマリ・②成果物) を prefill・判断部 (③Next Action〜⑥壊さない) を human placeholder にする生成物。AI が Next Action を捏造しない (導入層 L6) |
+| **plan_id 活性化 (current-plan)** | `.ut-tdd/state/current-plan` を `ut-tdd plan use <id>` で設定し session-log の PLAN digest を populate させる経路。solo/main 直で branch から PLAN を読めず plan_id が null になる Gap を埋める (`resolveActivePlan` の入力、本体は不変、導入層 L6) |
+| **handover stale** | `CURRENT.json` の `updated_at` が閾値 (既定 24h) を超えた状態 (`handoverStale`)。pre-push warn / plan-lint の機械基盤 (導入層 L6) |
 
 ---
 
