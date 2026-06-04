@@ -107,12 +107,16 @@
 
 1. **【最優先・po-gate】L0-L3 freeze の PO サインオフ**: doc は正規式整合 + 機械 trace green = freeze-ready。PO が G0.5/G1/G3 を承認したら L1/L3 PLAN を confirmed 化し L4 着手起点を整える (RECOVERY-02 requires_human_approval)。
 2. **L4 entry**: G3 freeze 後、L4 基本設計を正規式 (L4⇔L9 総合、検証本質=総合) で着手。
-3. **workflow 改善 (IMP-047)**: handover/log を PLAN完了/節目で自動生成・強制する仕組み (handoverStale lint / Stop-hook / doctor surface)。今回 PM が手動を忘れ PO 指摘 = workflow ギャップ。
+3. **【feature 対応・PO 指示】workflow 改善 4 件を Add-feature で実装 (IMP-047〜050)**: 作業効率・改善方針に直結するため **backlog 据え置きにせず feature (Add-feature 駆動: L6 機能設計 → L7 実装 → Reverse back-fill) として起票・実装**する。**次セッション (高性能時) で着手** — 本 session では実装させない (PO 2026-06-04「君は性能が落ちてるからこのまま実装までさせるつもりがない」)。全 4 件 backlog 記録済だが**未実装** (047-049=observed / 050=triaged)。
+   - **IMP-047** handover-on-completion 強制: PLAN 完了/節目で handover+log 生成を強制 (`handoverStale` lint / Stop-hook / `doctor checkHandover` surface)。今回 PM が手動生成を忘れ PO 指摘 = workflow ギャップ。
+   - **IMP-048** handover prefill digest ノイズ低減: §1-§2 auto-prefill を active plan / セッション境界で絞る + dedup (`src/handover`)。
+   - **IMP-049** 直列/並列判定の強制・記録: PLAN §工程表 に各 Step の直列/並列 + 直列理由を明示する規約化 + `ut-tdd task classify/estimate` 判定支援。
+   - **IMP-050** HELIX agent-slot Layer-2 移植: `src/runtime/agent-slots.ts` (fire/release/listActive/listStale) + `.ut-tdd/teams/*.yaml` strategy + 直列化 3 条件 (ファイル衝突/後段依存/共有状態) + doctor stale check + agent-guard 並列上限 warn。IMP-049 の機械支援の本体。**大規模 = 単独 Add-feature PLAN** に切り出す。
 
 ## §4 carry (未了・先送り)
 
 - **L0-L3 最終 freeze (G1/G3)** = po-gate (Next Action 1)。
-- **handover-on-completion 強制 (IMP-047)** + **§1-§2 prefill ノイズ/重複低減 (IMP-048)**: 機構はあるが未強制・digest ノイジー。
+- **workflow 改善 feature 4 件 (IMP-047〜050)** = 作業効率/改善方針の feature。**全て未実装** (Add-feature で対応、Next Action 3)。handover-on-completion 強制 (047) / prefill ノイズ低減 (048) / 直列・並列判定の強制記録 (049) / HELIX agent-slot Layer-2 移植 (050、大規模 = 単独 PLAN)。
 - session 1 からの継続 carry: CI biome subjob 有効化 / `src/plan/lint.ts` stub 実装 / REVERSE-02 R3 等。
 
 ## §5 未了 PO 判断
