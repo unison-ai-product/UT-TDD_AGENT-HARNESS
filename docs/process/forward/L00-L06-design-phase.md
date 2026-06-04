@@ -79,7 +79,7 @@
 | 項目 | 内容 |
 |------|------|
 | 名称 | 画面設計 (Screen Design) |
-| 目的 | ワイヤーモック / 画面要求を確定し、UX の方向性を L4 基本設計へ feed-forward する |
+| 目的 | ワイヤーモック / 画面要求を確定 (L1 のフェーズ分離: 画面要求→要求/要件 L1/L3、画面詳細→L5 詳細設計に分配)。UX 方向性を L4 へ feed-forward |
 | 主要成果物 ① | 4 sub-doc: screen-list / screen-flow / wireframe / ui-element |
 | ③ テスト設計ペア | ワイヤーモック自体が「UX テスト基準」として機能 (→ L10 で実施) |
 | V-pair (右腕) | **L10** UX 磨き |
