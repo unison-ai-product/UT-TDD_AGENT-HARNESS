@@ -1,3 +1,13 @@
+---
+layer: L14
+artifact_type: test_design
+status: draft
+pair_artifact: docs/design/harness/L1-requirements/
+related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+next_pair_freeze: L1
+created: 2026-05-29
+---
+
 # UT-TDD Agent Harness — L1 運用テスト設計 (③ / OT-*)
 
 > **layer**: L14 (運用検証) / **artifact**: ③ 運用テスト設計 (V-model 右、① L1 全 sub-doc と対)

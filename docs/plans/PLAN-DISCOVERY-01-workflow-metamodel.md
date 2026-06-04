@@ -42,7 +42,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | メタモデル要素 | 既存 schema |
 |---|---|
-| ②駆動モデル | `kind` = poc/reverse/refactor/retrofit/recovery/troubleshoot/research、`drive` = poc/scrum/reverse |
+| ②駆動モデル | `kind` = poc/reverse/refactor/retrofit/recovery/troubleshoot/research、`drive` = be/fe/fullstack/db/agent (専門職 5 種、V7 再設計 2026-06-02。横断駆動 kind は対象 work の専門職を継承。旧 poc/scrum/reverse 値は mode 混在の誤りで撤去) |
 | 駆動プラン (PoC) | `kind=poc` + `workflow_phase ∈ {S0..S4}` + `layer=cross` |
 | exit verdict | `decision_outcome` = confirmed / rejected / pivot (S4 必須) |
 | fullback (V字回帰) | `kind=reverse` + R0-R4 + `forward_routing` (L1/L3/L4/L5/gap-only) |
