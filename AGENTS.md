@@ -9,6 +9,7 @@
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` — 社内展開向け構想書
 - `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` — 要件定義・受入条件
 - `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` — HELIX 移植元からの切り出し計画
+- `docs/design/harness/L3-functional/roadmap.md` — 要件定義後の検証/改善ロードマップ (L3 設計層 doc、DRAFT)
 - `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` — 再設計方針・実装言語 (TypeScript/Bun)
 - `docs/governance/README.md` — governance 配下の正本 / 参照 / archive 境界
 - `docs/migration/helix-source-inventory.md` — HELIX source snapshot 棚卸し
