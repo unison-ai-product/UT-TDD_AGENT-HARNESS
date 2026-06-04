@@ -131,3 +131,52 @@
 - **PLAN完了/節目では log + handover を作る** (本指摘。IMP-047 で強制化目標)。
 - エスカレーション列挙は右腕工程順 (実データ検証 L10 → 本番受入 L12)。
 
+---
+
+
+# Session Handover — 2026-06-04 (session 3: workflow 改善 feature IMP-047〜050 実装 — /goal B 達成)
+
+> §1-§2 は機械 prefill が前セッション digest で stale だったため git から手記入 (REVERSE-06 の digest は Stop hook 未発火で不在 → IMP-048 の scope fallback が作動)。本 doc 自体が IMP-047 (handover-on-completion) の dogfood。
+
+## §1 PLAN サマリ
+
+| PLAN | kind | 何を | commit |
+|------|------|------|--------|
+| `PLAN-L7-06-handover-enforcement` | add-impl (IMP-047) | handover 規律の機械強制 — checkHandoverDiscipline + Stop-hook warn (+既存 doctor) | `5b09ee5` |
+| `PLAN-L7-07-handover-prefill-scope` | add-impl (IMP-048) | prefill ノイズ低減 — sameFamilyPlan/dedupeDigests 常時 dedup + scopeToActive | `5b09ee5` |
+| `PLAN-L6-07-agent-slots` | add-design (IMP-050) | agent-slots Layer-2 機構の機能設計 (slot lifecycle + team schema + 3条件) | `1acda2e` |
+| `PLAN-L7-08-agent-slots` | add-impl (IMP-050/049) | src/runtime/agent-slots.ts + src/schema/team.ts + doctor/guard 配線 | `1acda2e` |
+| `PLAN-REVERSE-06-workflow-improvements` | reverse/fullback (IMP-047/049/050) | §6.8.5 強制側 + §G.4 直列/並列規約 + 用語を上位整合へ back-fill | `1acda2e` |
+
+## §2 成果物 (commit / files)
+
+- **cluster 1 (`5b09ee5`)**: `src/handover/index.ts` (sameFamilyPlan/dedupeDigests/scopeToActive/readPointer/checkHandoverDiscipline) / `.claude/hooks/session-log.ts` (Stop warn) / `src/cli.ts` (--scope-active) / `tests/handover.test.ts` (U-HOVER-008〜010, +14)。
+- **cluster 2 (`1acda2e`)**: `src/runtime/agent-slots.ts` (新規) / `src/schema/team.ts` (新規) / `src/doctor/index.ts` (checkAgentSlots) / `.claude/hooks/agent-guard.ts` (並列 warn) / `tests/agent-slots.test.ts` + `tests/team-schema.test.ts` (新規) / `tests/doctor.test.ts` (checkAgentSlots) / `.ut-tdd/teams/example-review-team.yaml` / `.claude/CLAUDE.md` + requirements §G.4 (直列/並列規約) / `docs/design/.../agent-slots.md` + L7-unit-test-design §1.9/§1.10 / `docs/improvement-backlog.md` (IMP-047〜050 implemented 化)。
+- 検証: typecheck 0 / biome CLEAN / **vitest 147 pass** (113→+34) / **code-reviewer 2 周 APPROVE** (Important 全件反映: 閾値統一/単一 load-save/doctor test/推移マージ/drift null/dedup キー固定)。
+- HEAD = `1acda2e` (push 前)。untracked 2 件 (`helix-process/` `ai-agent-harness-directory-reference.md`) は policy-exempt。
+
+## §3 Next Action
+
+1. **【最優先・po-gate】REVERSE-06 R3 検証**: 3 intent を PO 検証 — ①handover-on-completion を機械 surface で強制してよいか ②直列化は 3 条件 (file_conflict/downstream_dependency/shared_state) のみを正当理由とし「重いから直列」を排してよいか ③agent-slots は process governance (新 FR 不要) でよいか。OK で REVERSE-06 を confirmed 維持。
+2. **session 2 からの継続最優先**: **L0-L3 freeze の PO サインオフ** (G0.5/G1/G3、RECOVERY-02、freeze-ready)。承認で L4 着手起点へ。
+3. **L4 entry** (G3 freeze 後、L4⇔L9 総合)。
+
+## §4 carry (未了・先送り)
+
+- **IMP-047〜050 の残実装**: ①`src/plan/lint.ts` stub 解消時に handoverStale lint + §G.4 直列/並列トークン検証を配線 (IMP-047/049 の lint surface) ②pre-push hook で handover 強制 (IMP-047) ③team_runner 実行エンジン本体 (ThreadPoolExecutor 相当、hybrid mode 実装時、IMP-050)。いずれも本 cycle の core 実装の上に乗る追加配線で、機能の骨格は完成済。
+- session 1-2 継続: CI biome subjob 有効化 (workflow scope PAT) / L0-L3 freeze (G1/G3) / REVERSE-02 R3 / kind×layer guard (§1.6 確定待ち)。
+
+## §5 未了 PO 判断
+
+1. **REVERSE-06 R3** (§3 Next Action 1 の 3 intent)。
+2. **L0-L3 freeze 承認** (継続、RECOVERY-02)。
+3. 直列/並列規約 (§G.4) の 3 条件で過不足ないか (file_conflict/downstream_dependency/shared_state)。
+
+## §6 壊さない / 再発させない
+
+- **agent-slots 全関数 fail-open / agent-guard は fail-close 不変**: recordGuardFire は guard の block 判定に一切干渉しない (try/catch 隔離)。slot I/O 失敗で Agent 呼び出しを止めない。
+- **session-log Stop warn は fail-open**: handover discipline surface の失敗で作業を止めない (内側 try/catch、exit 0)。
+- **handover prefill は常時 dedup + scopeToActive opt**: bare/slug ゴーストを畳む。digest は Stop hook 生成のため当該セッション PLAN は handover 時点で不在になりうる (§1-§2 手記入の余地は残る = IMP-048 の構造的限界、別途 carry)。
+- **agent-slots.json は gitignored** (`.ut-tdd/state/*`)。runtime state を追跡しない。
+- **biome は repo 全体 CLEAN(0)**。`npm run lint` (pinned) で確認、`npx biome` は使わない。
+- review 前置 MUST / subagent model 明示 / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 2 件は禁止)。
