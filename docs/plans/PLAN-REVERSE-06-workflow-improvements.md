@@ -41,6 +41,10 @@ Add-feature で bottom-up 実装した workflow 改善 3 系統 (IMP-047 handove
 - **R0 観測**: IMP-047 (handover 手動忘れ) / IMP-049 (直列化理由未記録) / IMP-050 (Layer-2 欠落) の 3 ギャップ。
 - **R1-R2 as-is 復元**: 実装済の checkHandoverDiscipline (Stop-hook + doctor) / §G.4 直列・並列トークン規約 / agent-slots + team schema。
 - **R3 intent 検証 (PO 必須)**: ①handover-on-completion を agent 記憶でなく機械 surface で強制してよいか ②直列化は 3 条件 (file_conflict/downstream_dependency/shared_state) のみを正当理由とし「重いから直列」を排してよいか ③agent-slots は process governance (新 FR 不要) でよいか。
+- **R3 検証結果 (2026-06-04、PO 委譲「両リバースの検証と確定を完遂」+ intra_runtime_subagent + 客観 evidence)**: **全 intent HOLDS = 確定**。
+  - ①HOLDS: `checkHandoverDiscipline` (src/handover/index.ts) + Stop-hook (.claude/hooks/session-log.ts、fail-open) + doctor `checkHandover` の 3 機構で機械 surface (U-HOVER-010)。
+  - ②HOLDS: `.claude/CLAUDE.md` + requirements §G.4 に 3 条件明文化 / `mustSerialize` が 3 条件 OR (U-TEAM-002)。
+  - ③HOLDS: 新 FR 起こさず (`tests/fr-registry-audit.test.ts` 9 pass = FR drift なし)、§6.8/§G.4/§10 の明確化に留まる。
 - **R4 合流 (本 PLAN で実施済)**:
   - `.claude/CLAUDE.md`: §G.4 注入規則に直列/並列明示 + 3 条件、並列実行節に機械支援 (agent-slots/doctor/team schema) を追記。
   - `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` §G.4: 直列/並列トークン規約 (IMP-049) を機械検証条件として追記。

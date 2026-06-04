@@ -38,6 +38,10 @@ Add-feature で bottom-up 実装した back-fill pairing 機構 (IMP-051) を上
 - **R0 観測**: 本 harness 開発で agent が impl commit 後に Reverse R4 back-fill を放置 → PO 指摘で完遂した再発ギャップ。agent 記憶依存では漏れる。
 - **R1-R2 as-is 復元**: 実装済の `KIND_BACKFILL` マトリクス + `checkBackfill` (doctor)。
 - **R3 intent 検証 (PO 必須)**: ①駆動モデルは「設計ドキュメントまで戻す」までが 1 サイクルでよいか ②add-impl は Reverse 合流必須 / glossary back-merge は impl 完了条件としてよいか ③当面 warn-first (fail-close 化は lint engine 実装時) でよいか。
+- **R3 検証結果 (2026-06-04、PO 委譲「両リバースの検証と確定を完遂」+ intra_runtime_subagent + 客観 evidence)**: **全 intent HOLDS = 確定**。
+  - ①HOLDS: `KIND_BACKFILL` マトリクス (src/lint/backfill-pairing.ts) が駆動モデル→back-fill 要否を表現、`analyzeBackfill` が Reverse 合流 + glossary back-merge を完全性として扱う。
+  - ②HOLDS: requirements §1.10.E2 + `.claude/CLAUDE.md` 起票ルールに機械検証条件として明文化、doctor `checkBackfill` が検出、実 repo で孤児 0 / glossary gap 0 (U-BACKFILL-006)。
+  - ③HOLDS: `analyzeBackfill.ok` は required orphan + glossary gap のみで落とし conditional は warn のみ、doctor は exit を落とさない (warn-first)。fail-close 化は `src/plan/lint.ts` 実装時 (§4 carry 明記)。
 - **R4 合流 (本 PLAN で実施済)**:
   - `requirements §1.10.E2`: back-fill pairing 完全性を機械検証条件として追加。
   - `.claude/CLAUDE.md` 起票ルール: back-fill pairing (add-impl→Reverse 必須 / §6→§10 back-merge) を binding 明文化。
