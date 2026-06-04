@@ -1,20 +1,20 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  buildPointer,
   type HandoverArgs,
   type HandoverDeps,
   type HandoverScope,
-  type PlanDigestRef,
-  buildPointer,
   handoverStale,
   inferPlanFromCommit,
+  type PlanDigestRef,
   renderHandoverScaffold,
   resolveHandoverScope,
   runHandover,
   scaffoldFromDigests,
   setActivePlan,
 } from "../src/handover/index";
-import { type SessionLogDeps, resolveActivePlan } from "../src/runtime/session-log";
+import { resolveActivePlan, type SessionLogDeps } from "../src/runtime/session-log";
 
 const NOW = "2026-06-04T00:00:00.000Z";
 
@@ -74,7 +74,10 @@ describe("U-HOVER-001 resolveHandoverScope", () => {
   it("current-plan 有 → active_plan 解決 / digest 群を集約", () => {
     const deps = mockDeps();
     deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
-    deps.files.set(join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"), JSON.stringify(digest()));
+    deps.files.set(
+      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
+      JSON.stringify(digest()),
+    );
     const scope = resolveHandoverScope(deps);
     expect(scope.active_plan).toBe("PLAN-L7-04-handover-mechanism");
     expect(scope.digests).toHaveLength(1);
@@ -92,7 +95,16 @@ describe("U-HOVER-001 resolveHandoverScope", () => {
 
 describe("U-HOVER-002 buildPointer", () => {
   it("digests 非空 → 件数集計 / updated_at=now", () => {
-    const scope: HandoverScope = { active_plan: "P", digests: [digest({ commits: ["c1", "c2"], files_touched: ["f1"], failures: [{ ts: NOW, summary: "x" }] })] };
+    const scope: HandoverScope = {
+      active_plan: "P",
+      digests: [
+        digest({
+          commits: ["c1", "c2"],
+          files_touched: ["f1"],
+          failures: [{ ts: NOW, summary: "x" }],
+        }),
+      ],
+    };
     const p = buildPointer(scope, "docs/handover/x.md", "in_progress", NOW);
     expect(p.digest_summary).toEqual({ commits: 2, files: 1, failures: 1 });
     expect(p.updated_at).toBe(NOW);
@@ -131,7 +143,14 @@ describe("U-HOVER-004 renderHandoverScaffold", () => {
   it("6 セクション + ③-⑥ TODO placeholder", () => {
     const doc = scaffoldFromDigests([digest()], [], "2026-06-04");
     const md = renderHandoverScaffold(doc);
-    for (const s of ["§1 PLAN サマリ", "§2 成果物", "§3 Next Action", "§4 carry", "§5 未了 PO 判断", "§6 壊さない"]) {
+    for (const s of [
+      "§1 PLAN サマリ",
+      "§2 成果物",
+      "§3 Next Action",
+      "§4 carry",
+      "§5 未了 PO 判断",
+      "§6 壊さない",
+    ]) {
       expect(md).toContain(s);
     }
     expect(md).toContain("TODO(human)");
@@ -140,7 +159,13 @@ describe("U-HOVER-004 renderHandoverScaffold", () => {
   it("sanitize defense-in-depth: summary の token=secret123 が出力に出ず ***", () => {
     const doc = scaffoldFromDigests(
       [digest()],
-      [{ plan_id: "PLAN-L7-04-handover-mechanism", kind: "add-impl", title: "token=secret123 を含む" }],
+      [
+        {
+          plan_id: "PLAN-L7-04-handover-mechanism",
+          kind: "add-impl",
+          title: "token=secret123 を含む",
+        },
+      ],
       "2026-06-04",
     );
     const md = renderHandoverScaffold(doc);
@@ -187,7 +212,9 @@ describe("U-HOVER-006 setActivePlan + inferPlanFromCommit", () => {
   });
 
   it("inferPlanFromCommit: 抽出 / 非該当→null / heredoc 様→null", () => {
-    expect(inferPlanFromCommit("feat: 実装 (PLAN-L7-04-handover-mechanism)")).toBe("PLAN-L7-04-handover-mechanism");
+    expect(inferPlanFromCommit("feat: 実装 (PLAN-L7-04-handover-mechanism)")).toBe(
+      "PLAN-L7-04-handover-mechanism",
+    );
     expect(inferPlanFromCommit("PLAN-DISCOVERY-01")).toBe("PLAN-DISCOVERY-01");
     expect(inferPlanFromCommit("docs: 修正のみ")).toBeNull();
     expect(inferPlanFromCommit("git commit -F -")).toBeNull(); // heredoc は本文が乗らない
@@ -198,7 +225,10 @@ describe("U-HOVER-007 runHandover", () => {
   function seeded(): ReturnType<typeof mockDeps> {
     const deps = mockDeps();
     deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
-    deps.files.set(join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"), JSON.stringify(digest()));
+    deps.files.set(
+      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
+      JSON.stringify(digest()),
+    );
     return deps;
   }
 
@@ -224,7 +254,10 @@ describe("U-HOVER-007 runHandover", () => {
 
   it("complete=true → CURRENT.json status=completed かつ active_plan=planId", () => {
     const deps = seeded();
-    runHandover({ date: "2026-06-04", complete: true, planId: "PLAN-L7-04-handover-mechanism" }, deps);
+    runHandover(
+      { date: "2026-06-04", complete: true, planId: "PLAN-L7-04-handover-mechanism" },
+      deps,
+    );
     const pointer = JSON.parse(deps.files.get(pointerPath) ?? "{}");
     expect(pointer.status).toBe("completed");
     expect(pointer.active_plan).toBe("PLAN-L7-04-handover-mechanism");

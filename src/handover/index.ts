@@ -11,14 +11,14 @@
  * 型で分離し、AI が Next Action を捏造しない。current-plan 活性化 (Gap B) の writer は循環 import
  * 回避のため session-log.ts に置き、本 module は import 再利用する (PLAN §1.1)。
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
-  type PlanDigest,
-  type SessionLogDeps,
   inferPlanFromCommit,
   nodeDeps,
+  type PlanDigest,
   resolveActivePlan,
+  type SessionLogDeps,
   sanitize,
   setActivePlan,
 } from "../runtime/session-log";
@@ -141,7 +141,13 @@ export function buildPointer(
           failures: scope.digests.reduce((n, d) => n + (d.failures?.length ?? 0), 0),
         }
       : null;
-  return { active_plan: scope.active_plan, status, latest_doc: latestDoc, digest_summary, updated_at: now };
+  return {
+    active_plan: scope.active_plan,
+    status,
+    latest_doc: latestDoc,
+    digest_summary,
+    updated_at: now,
+  };
 }
 
 /**
@@ -217,7 +223,10 @@ export function handoverStale(updated_at: string | null, now: string, maxHours =
 }
 
 /** CURRENT.json を JSON 上書き (単一機械ポインタ、append しない)。 */
-export function writePointer(pointer: HandoverPointer, deps: { repoRoot: string; writeText: (p: string, c: string) => void }): void {
+export function writePointer(
+  pointer: HandoverPointer,
+  deps: { repoRoot: string; writeText: (p: string, c: string) => void },
+): void {
   deps.writeText(join(deps.repoRoot, POINTER_PATH), `${JSON.stringify(pointer, null, 2)}\n`);
 }
 
@@ -253,7 +262,9 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
   const written: string[] = [];
   if (!args.dryRun) {
     const existing = deps.readText(docAbs);
-    const next = existing ? `${existing.replace(/\s*$/, "")}\n\n---\n\n${content}\n` : `${content}\n`;
+    const next = existing
+      ? `${existing.replace(/\s*$/, "")}\n\n---\n\n${content}\n`
+      : `${content}\n`;
     deps.writeText(docAbs, next);
     written.push(docRel);
     writePointer(pointer, deps);
@@ -293,6 +304,10 @@ export function nodeHandoverDeps(repoRoot: string): HandoverDeps {
 }
 
 /** CLI `ut-tdd plan use` 用: current-plan を session-log の nodeDeps 経由で書く/clear。 */
-export function setActivePlanCli(repoRoot: string, planId: string | null, gitBranch: () => string | null): void {
+export function setActivePlanCli(
+  repoRoot: string,
+  planId: string | null,
+  gitBranch: () => string | null,
+): void {
   setActivePlan(planId, nodeDeps(repoRoot, gitBranch));
 }
