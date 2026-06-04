@@ -88,7 +88,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 - **現在地**: Forward spine は L3 停止 (L1/L3/L4 全 draft、L5/L6 は Add-feature slice のみ confirmed)。本 Recovery で L0-L3 を正規式整合 → フィックス → L4 へ。
 - **情報源**: 主たる正本 = PO 対話 (2026-06-04) で確定した正規式。既存資料 = concept §2.3 / requirements §1.4 / overview §4。Web/TL 調査・自動生成は無し。
-- **進捗 (Phase 1 第一弾)**: concept §2.3 + requirements §1.4 に正規式注記を反映済 (検証本質列 / L0⇔価値 / 3 点合算 / エスカレーション / L2=L1 分離、非破壊)。
+- **進捗 (2026-06-04、commit db79a3e→096a40e)**: **Phase 1 (定義: concept §2.3 / requirements §1.4 / gate-design / document-system-map) + Phase 2 (WF: overview §4 / forward L00-L06/L07/L08-L14 / gates.md) + Phase 3 (既存資産: L1/L3 design・test-design) 完了** (9+ doc 正規式整合、非破壊)。phase 境界 review 前置 (pmo-sonnet) 通過 (エスカレーション列挙順を右腕工程順へ統一)。**要件定義 (L3) は正規式整合済** (検証本質=本番受入 / 画面要求=L1 確認。FR 内容は不変、P1/P2 は既存どおり L4 carry)。**残 = L0-L3 freeze (G0.5/G1/G2/G3) の po-gate**: doc は正規式整合 + 機械 trace (g3-trace / fr-registry / doc-consistency / vitest 113 pass) green = **freeze-ready**。最終 freeze (L1/L3 PLAN の confirmed 化 + G1/G3 の PO サインオフ) は requires_human_approval。L4 entry は G3 freeze 後にスムーズ。
 
 ## §6 再開ポイント (中断工程への fullback)
 
