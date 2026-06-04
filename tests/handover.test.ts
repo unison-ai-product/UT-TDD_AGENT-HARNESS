@@ -2,14 +2,19 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildPointer,
+  checkHandoverDiscipline,
+  dedupeDigests,
   type HandoverDeps,
+  type HandoverPointer,
   type HandoverScope,
   handoverStale,
   inferPlanFromCommit,
   type PlanDigestRef,
+  readPointer,
   renderHandoverScaffold,
   resolveHandoverScope,
   runHandover,
+  sameFamilyPlan,
   scaffoldFromDigests,
   setActivePlan,
 } from "../src/handover/index";
@@ -217,6 +222,164 @@ describe("U-HOVER-006 setActivePlan + inferPlanFromCommit", () => {
     expect(inferPlanFromCommit("PLAN-DISCOVERY-01")).toBe("PLAN-DISCOVERY-01");
     expect(inferPlanFromCommit("docs: 修正のみ")).toBeNull();
     expect(inferPlanFromCommit("git commit -F -")).toBeNull(); // heredoc は本文が乗らない
+  });
+});
+
+describe("U-HOVER-008 sameFamilyPlan / dedupeDigests (IMP-048)", () => {
+  it("sameFamilyPlan: 同一 / bare ⊂ slug (- 境界) は true、無関係は false", () => {
+    expect(sameFamilyPlan("PLAN-L7-04", "PLAN-L7-04")).toBe(true);
+    expect(sameFamilyPlan("PLAN-L7-04", "PLAN-L7-04-handover-mechanism")).toBe(true);
+    expect(sameFamilyPlan("PLAN-L7-04-handover-mechanism", "PLAN-L7-04")).toBe(true);
+    expect(sameFamilyPlan("PLAN-L7-04", "PLAN-L7-05")).toBe(false);
+    // prefix だが - 境界でない (誤マッチ防止)
+    expect(sameFamilyPlan("PLAN-L7-0", "PLAN-L7-04")).toBe(false);
+  });
+
+  it("dedupeDigests: bare/slug ゴーストを最長 id へ union 集約", () => {
+    const out = dedupeDigests([
+      digest({ plan_id: "PLAN-L7-04", commits: ["c1"], files_touched: ["f1"], sessions: ["s1"] }),
+      digest({
+        plan_id: "PLAN-L7-04-handover-mechanism",
+        commits: ["c2"],
+        files_touched: ["f1", "f2"],
+        sessions: ["s2"],
+      }),
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].plan_id).toBe("PLAN-L7-04-handover-mechanism");
+    expect(out[0].commits).toEqual(["c1", "c2"]);
+    expect(out[0].files_touched).toEqual(["f1", "f2"]); // 重複除去
+    expect(out[0].sessions).toEqual(["s1", "s2"]);
+  });
+
+  it("dedupeDigests: 無関係な PLAN は別 group のまま残す", () => {
+    const out = dedupeDigests([
+      digest({ plan_id: "PLAN-L7-04-handover-mechanism" }),
+      digest({ plan_id: "PLAN-L7-05-biome-debt" }),
+    ]);
+    expect(out).toHaveLength(2);
+  });
+
+  it("dedupeDigests: bare 無しで slug 2 種 + bare が来ても推移的に 1 group へ収束 (I-1, 順序非依存)", () => {
+    const out = dedupeDigests([
+      digest({ plan_id: "PLAN-L7-04-aaa", commits: ["a"] }),
+      digest({ plan_id: "PLAN-L7-04-bbb", commits: ["b"] }),
+      digest({ plan_id: "PLAN-L7-04", commits: ["bare"] }), // bare が最後でも全部畳む
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].commits.sort()).toEqual(["a", "b", "bare"]);
+  });
+});
+
+describe("U-HOVER-009 resolveHandoverScope scopeToActive (IMP-048)", () => {
+  function seededMulti(): ReturnType<typeof mockDeps> {
+    const deps = mockDeps();
+    deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
+    deps.files.set(
+      join(digestDir, "PLAN-L7-04.digest.json"),
+      JSON.stringify(digest({ plan_id: "PLAN-L7-04", commits: ["bare"] })),
+    );
+    deps.files.set(
+      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
+      JSON.stringify(digest({ plan_id: "PLAN-L7-04-handover-mechanism", commits: ["slug"] })),
+    );
+    deps.files.set(
+      join(digestDir, "PLAN-L7-05-biome-debt.digest.json"),
+      JSON.stringify(digest({ plan_id: "PLAN-L7-05-biome-debt" })),
+    );
+    return deps;
+  }
+
+  it("既定 (scopeToActive 無し): dedup のみ → bare/slug は 1 件に畳まれ別 PLAN は残る", () => {
+    const scope = resolveHandoverScope(seededMulti());
+    expect(scope.digests).toHaveLength(2); // L7-04 family (1) + L7-05 (1)
+  });
+
+  it("scopeToActive: active family の digest のみへ絞る", () => {
+    const scope = resolveHandoverScope(seededMulti(), { scopeToActive: true });
+    expect(scope.digests).toHaveLength(1);
+    expect(scope.digests[0].plan_id).toBe("PLAN-L7-04-handover-mechanism");
+  });
+
+  it("scopeToActive だが active family が digest に無い → 全件 fallback (空 handover 回避)", () => {
+    const deps = mockDeps();
+    deps.files.set(currentPlanPath, "PLAN-L9-99-nonexistent");
+    deps.files.set(
+      join(digestDir, "PLAN-L7-05-biome-debt.digest.json"),
+      JSON.stringify(digest({ plan_id: "PLAN-L7-05-biome-debt" })),
+    );
+    const scope = resolveHandoverScope(deps, { scopeToActive: true });
+    expect(scope.digests).toHaveLength(1);
+  });
+});
+
+describe("U-HOVER-010 readPointer / checkHandoverDiscipline (IMP-047)", () => {
+  function pointer(over: Partial<HandoverPointer> = {}): HandoverPointer {
+    return {
+      active_plan: "PLAN-L7-04-handover-mechanism",
+      status: "in_progress",
+      latest_doc: "docs/handover/x.md",
+      digest_summary: { commits: 1, files: 1, failures: 0 },
+      updated_at: NOW,
+      ...over,
+    };
+  }
+  function withActivity(): ReturnType<typeof mockDeps> {
+    const deps = mockDeps();
+    deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
+    deps.files.set(
+      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
+      JSON.stringify(digest()),
+    );
+    return deps;
+  }
+
+  it("readPointer: 不在→null / 壊れ→null / 正常→object", () => {
+    const deps = mockDeps();
+    expect(readPointer(deps)).toBeNull();
+    deps.files.set(pointerPath, "{not json");
+    expect(readPointer(deps)).toBeNull();
+    deps.files.set(pointerPath, JSON.stringify(pointer()));
+    expect(readPointer(deps)?.active_plan).toBe("PLAN-L7-04-handover-mechanism");
+  });
+
+  it("活動なし (digest 空) → 規律対象外で警告ゼロ", () => {
+    expect(checkHandoverDiscipline(mockDeps())).toEqual([]);
+  });
+
+  it("活動あり + CURRENT.json 不在 → 未生成 warn", () => {
+    const w = checkHandoverDiscipline(withActivity());
+    expect(w).toHaveLength(1);
+    expect(w[0]).toContain("handover 未生成");
+  });
+
+  it("活動あり + fresh pointer (同 family) → 警告ゼロ", () => {
+    const deps = withActivity();
+    deps.files.set(pointerPath, JSON.stringify(pointer()));
+    expect(checkHandoverDiscipline(deps)).toEqual([]);
+  });
+
+  it("活動あり + stale pointer → stale warn", () => {
+    const deps = withActivity();
+    deps.files.set(
+      pointerPath,
+      JSON.stringify(pointer({ updated_at: "2026-06-01T00:00:00.000Z" })),
+    );
+    const w = checkHandoverDiscipline(deps);
+    expect(w.some((m) => m.includes("stale"))).toBe(true);
+  });
+
+  it("活動あり + pointer が別 plan を指す → drift warn", () => {
+    const deps = withActivity();
+    deps.files.set(pointerPath, JSON.stringify(pointer({ active_plan: "PLAN-L7-05-biome-debt" })));
+    const w = checkHandoverDiscipline(deps);
+    expect(w.some((m) => m.includes("drift"))).toBe(true);
+  });
+
+  it("活動あり + fresh pointer だが active_plan=null (完了済正常形) → drift 無音 (I-2)", () => {
+    const deps = withActivity();
+    deps.files.set(pointerPath, JSON.stringify(pointer({ active_plan: null })));
+    expect(checkHandoverDiscipline(deps)).toEqual([]);
   });
 });
 

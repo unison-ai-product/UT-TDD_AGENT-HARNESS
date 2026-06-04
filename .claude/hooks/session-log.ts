@@ -11,6 +11,7 @@
 import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkHandoverDiscipline, nodeHandoverDeps } from "../../src/handover";
 import { scanDanglingStops } from "../../src/runtime/forced-stop";
 import { dispatch, nodeDeps, type SessionHookInput } from "../../src/runtime/session-log";
 
@@ -45,6 +46,17 @@ try {
     scanDanglingStops(deps, input.session_id);
   }
   dispatch(input, deps, process.argv[2]);
+  // IMP-047: Stop 時に handover 規律を機械 surface (stderr warn のみ、fail-open)。
+  // 「PLAN 活動したが handover 追記なし」を agent 記憶に頼らず気付かせる。
+  if (evName === "Stop" || evName === "stop") {
+    try {
+      for (const w of checkHandoverDiscipline(nodeHandoverDeps(repoRoot))) {
+        process.stderr.write(`[ut-tdd handover] ${w}\n`);
+      }
+    } catch {
+      // fail-open: 規律 surface の失敗で作業を止めない
+    }
+  }
 } catch {
   // fail-OPEN: ログの失敗で作業を止めない
 }

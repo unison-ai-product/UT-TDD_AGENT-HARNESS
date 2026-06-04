@@ -70,6 +70,8 @@ export interface HandoverArgs {
   dryRun?: boolean;
   complete?: boolean;
   planId?: string;
+  /** IMP-048: true なら §1-§2 を active plan family の digest のみへ絞る (multi-plan ノイズ低減)。 */
+  scopeToActive?: boolean;
 }
 
 export interface HandoverResult {
@@ -91,11 +93,86 @@ const HANDOVER_DIR = join(".ut-tdd", "handover");
 const POINTER_PATH = join(HANDOVER_DIR, "CURRENT.json");
 const PLAN_DIGEST_DIR = join(".ut-tdd", "logs", "plan");
 
+/** resolveHandoverScope の絞り込みオプション (IMP-048、後方互換: 無指定は dedup のみ)。 */
+export interface HandoverScopeOpts {
+  /** active_plan が解決できたとき、同 family (bare ⊂ slug) の digest のみへ絞る。 */
+  scopeToActive?: boolean;
+}
+
+/**
+ * IMP-048: bare plan_id (`PLAN-L7-04`) を slug 付き正本 (`PLAN-L7-04-handover-mechanism`) へ畳む。
+ * `a` が `b` の `-` 境界 prefix なら同一 family。bare は inferPlanFromCommit が commit から拾う変種で、
+ * 同じ PLAN を `unknown` ゴーストとして二重計上していた (session-2 handover で実証)。
+ * 対称 (sameFamilyPlan(a,b) === sameFamilyPlan(b,a))。呼び出し側は引数順を意識しなくてよい。
+ */
+export function sameFamilyPlan(a: string, b: string): boolean {
+  if (a === b) return true;
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  return long.startsWith(`${short}-`);
+}
+
+/** family ごとに最長 (= 最も具体的な slug) を正本 id とし digest を union 集約する。 */
+export function dedupeDigests(raw: PlanDigestRef[]): PlanDigestRef[] {
+  const groups: PlanDigestRef[][] = [];
+  for (const d of raw) {
+    const g = groups.find((grp) => grp.some((x) => sameFamilyPlan(x.plan_id, d.plan_id)));
+    if (g) g.push(d);
+    else groups.push([d]);
+  }
+  // 推移的マージ (I-1): bare 無しで slug 2 種が来ると初回 grouping では別 group になりうる
+  // (例 `-a` と `-b` は family 否定)。listDir の順序非依存にするため group 同士を収束まで結合。
+  let merged = true;
+  while (merged) {
+    merged = false;
+    outer: for (let i = 0; i < groups.length; i++) {
+      for (let j = i + 1; j < groups.length; j++) {
+        if (groups[i].some((x) => groups[j].some((y) => sameFamilyPlan(x.plan_id, y.plan_id)))) {
+          groups[i].push(...groups[j]);
+          groups.splice(j, 1);
+          merged = true;
+          break outer;
+        }
+      }
+    }
+  }
+  // string はそのまま、failures (object) は固定順フィールド列挙でキー化 (M-1: プロパティ順非依存)。
+  const keyOf = (x: unknown): string =>
+    typeof x === "string"
+      ? x
+      : JSON.stringify([(x as { ts?: string }).ts, (x as { summary?: string }).summary]);
+  const uniq = <T>(xs: T[]): T[] => {
+    const seen = new Set<string>();
+    const out: T[] = [];
+    for (const x of xs) {
+      const k = keyOf(x);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(x);
+    }
+    return out;
+  };
+  return groups.map((grp) => {
+    const canonical = grp.reduce((a, b) => (b.plan_id.length > a.plan_id.length ? b : a));
+    return {
+      plan_id: canonical.plan_id,
+      sessions: uniq(grp.flatMap((d) => d.sessions ?? [])),
+      commits: uniq(grp.flatMap((d) => d.commits ?? [])),
+      files_touched: uniq(grp.flatMap((d) => d.files_touched ?? [])),
+      failures: uniq(grp.flatMap((d) => d.failures ?? [])),
+      updated_at: grp.reduce((a, b) => (b.updated_at > a.updated_at ? b : a)).updated_at,
+    };
+  });
+}
+
 /**
  * U-HOVER-001: current-plan + 直近 digest 群から対象 PLAN・digest を集める。never throws。
  * resolveActivePlan (session-log) を current-plan 解決に再利用 (state→branch→null)。
+ * IMP-048: 収集後は常に dedup (bare/slug ゴースト除去)。opts.scopeToActive で active family へ絞る。
  */
-export function resolveHandoverScope(deps: HandoverDeps): HandoverScope {
+export function resolveHandoverScope(
+  deps: HandoverDeps,
+  opts: HandoverScopeOpts = {},
+): HandoverScope {
   let active_plan: string | null = null;
   try {
     // resolveActivePlan は SessionLogDeps を要求するが readText/repoRoot のみ使う経路。
@@ -103,22 +180,29 @@ export function resolveHandoverScope(deps: HandoverDeps): HandoverScope {
   } catch {
     active_plan = null;
   }
-  const digests: PlanDigestRef[] = [];
+  const raw: PlanDigestRef[] = [];
   try {
     const dir = join(deps.repoRoot, PLAN_DIGEST_DIR);
     for (const name of deps.listDir(dir)) {
       if (!name.endsWith(".digest.json")) continue;
-      const raw = deps.readText(join(dir, name));
-      if (!raw) continue;
+      const text = deps.readText(join(dir, name));
+      if (!text) continue;
       try {
-        const d = JSON.parse(raw) as PlanDigestRef;
-        if (d?.plan_id) digests.push(d);
+        const d = JSON.parse(text) as PlanDigestRef;
+        if (d?.plan_id) raw.push(d);
       } catch {
         // 壊れ JSON は skip (fail-open)
       }
     }
   } catch {
     // listDir 失敗等 → digests は空のまま
+  }
+  let digests = dedupeDigests(raw);
+  if (opts.scopeToActive && active_plan) {
+    const ap = active_plan;
+    const scoped = digests.filter((d) => sameFamilyPlan(d.plan_id, ap));
+    // active family が digest に無い場合は全件にフォールバック (空 handover を避ける)。
+    if (scoped.length > 0) digests = scoped;
   }
   return { active_plan, digests };
 }
@@ -222,6 +306,53 @@ export function handoverStale(updated_at: string | null, now: string, maxHours =
   return (n - u) / 3_600_000 > maxHours;
 }
 
+/** CURRENT.json を読む (不在/壊れ → null、never throws)。 */
+export function readPointer(deps: {
+  repoRoot: string;
+  readText: (p: string) => string | null;
+}): HandoverPointer | null {
+  try {
+    const raw = deps.readText(join(deps.repoRoot, POINTER_PATH));
+    if (!raw) return null;
+    return JSON.parse(raw) as HandoverPointer;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * IMP-047: handover-on-completion 規律の機械 surface (fail-open, 純判定)。
+ * PLAN 活動 (active_plan + digest あり) があるのに CURRENT.json が未生成/stale/別 plan を指す場合に
+ * warning を返す。Stop-hook / plan lint / doctor が共有する。空配列 = 規律 OK。
+ * 「PLAN 完了/節目なのに handover 追記なし」を agent 記憶でなく機械が surface する (§6.8.5)。
+ */
+export function checkHandoverDiscipline(deps: HandoverDeps, maxHours = 24): string[] {
+  const warnings: string[] = [];
+  const scope = resolveHandoverScope(deps);
+  // 活動が無ければ規律対象外 (digest 不在 = まだ何もしていない)。
+  if (!scope.active_plan || scope.digests.length === 0) return warnings;
+  const pointer = readPointer(deps);
+  if (!pointer) {
+    warnings.push(
+      `handover 未生成: active plan ${scope.active_plan} の活動があるが CURRENT.json が無い → \`ut-tdd handover\` を実行`,
+    );
+    return warnings;
+  }
+  if (handoverStale(pointer.updated_at, deps.now(), maxHours)) {
+    warnings.push(
+      `handover stale: CURRENT.json が ${maxHours}h 以上未更新 (active=${scope.active_plan}) → \`ut-tdd handover\` で更新`,
+    );
+  }
+  // I-2: pointer.active_plan=null は complete=true + planId 省略時の正常形 (完了済で active 無し)。
+  // drift は「別 PLAN を指している」ケースのみ問題なので非 null 時だけ判定する (null は無音で正常)。
+  if (pointer.active_plan !== null && !sameFamilyPlan(pointer.active_plan, scope.active_plan)) {
+    warnings.push(
+      `handover ポインタ drift: CURRENT.json は ${pointer.active_plan} を指すが現 active は ${scope.active_plan} → \`ut-tdd handover\` で同期`,
+    );
+  }
+  return warnings;
+}
+
 /** CURRENT.json を JSON 上書き (単一機械ポインタ、append しない)。 */
 export function writePointer(
   pointer: HandoverPointer,
@@ -245,7 +376,7 @@ function readPlanMeta(planId: string, deps: HandoverDeps): PlanMeta {
  * dry-run 非破壊 (written=[]) / 既存 md は追記 (上書きしない) / CURRENT.json は単一上書き。
  */
 export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverResult {
-  const scope = resolveHandoverScope(deps);
+  const scope = resolveHandoverScope(deps, { scopeToActive: args.scopeToActive });
   const planMeta = scope.digests.map((d) => readPlanMeta(d.plan_id, deps));
   const doc = scaffoldFromDigests(scope.digests, planMeta, args.date);
   const content = renderHandoverScaffold(doc);

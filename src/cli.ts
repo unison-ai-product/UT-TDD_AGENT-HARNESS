@@ -102,24 +102,28 @@ program
   .option("--dry-run", "書き込まず内容のみ表示")
   .option("--complete", "status=completed として記録 (PLAN 完了時)")
   .option("--plan <id>", "明示 active PLAN (省略時 current-plan/branch から解決)")
-  .action((opts: { dryRun?: boolean; complete?: boolean; plan?: string }) => {
-    const date = new Date().toISOString().slice(0, 10);
-    const deps = nodeHandoverDeps(process.cwd());
-    const r = runHandover(
-      {
-        date,
-        dryRun: Boolean(opts.dryRun),
-        complete: Boolean(opts.complete),
-        ...(opts.plan ? { planId: opts.plan } : {}),
-      },
-      deps,
-    );
-    process.stdout.write(
-      `handover: active=${r.pointer.active_plan ?? "-"} status=${r.pointer.status}${opts.dryRun ? " (dry-run)" : ""}\n`,
-    );
-    for (const w of r.written) process.stdout.write(`  + ${w}\n`);
-    if (opts.dryRun) process.stdout.write(`\n--- scaffold ---\n${r.content}\n`);
-  });
+  .option("--scope-active", "§1-§2 を active plan family の digest のみへ絞る (IMP-048 ノイズ低減)")
+  .action(
+    (opts: { dryRun?: boolean; complete?: boolean; plan?: string; scopeActive?: boolean }) => {
+      const date = new Date().toISOString().slice(0, 10);
+      const deps = nodeHandoverDeps(process.cwd());
+      const r = runHandover(
+        {
+          date,
+          dryRun: Boolean(opts.dryRun),
+          complete: Boolean(opts.complete),
+          scopeToActive: Boolean(opts.scopeActive),
+          ...(opts.plan ? { planId: opts.plan } : {}),
+        },
+        deps,
+      );
+      process.stdout.write(
+        `handover: active=${r.pointer.active_plan ?? "-"} status=${r.pointer.status}${opts.dryRun ? " (dry-run)" : ""}\n`,
+      );
+      for (const w of r.written) process.stdout.write(`  + ${w}\n`);
+      if (opts.dryRun) process.stdout.write(`\n--- scaffold ---\n${r.content}\n`);
+    },
+  );
 
 const vmodel = program.command("vmodel").description("V-model trace");
 vmodel
