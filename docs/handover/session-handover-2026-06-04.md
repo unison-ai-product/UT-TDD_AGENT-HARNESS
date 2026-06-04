@@ -181,3 +181,59 @@
 - **agent-slots.json は gitignored** (`.ut-tdd/state/*`)。runtime state を追跡しない。
 - **biome は repo 全体 CLEAN(0)**。`npm run lint` (pinned) で確認、`npx biome` は使わない。
 - review 前置 MUST / subagent model 明示 / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 2 件は禁止)。
+
+---
+# Session Handover — 2026-06-04 (session 4: 駆動モデル→設計 back-fill 制御機構 IMP-051 — /goal 達成)
+
+> §1-§2 は git から手記入 (REVERSE-07 の digest は Stop hook 未発火で不在)。本機構自身が自分の back-fill 完全性検査を pass する (ドグフード)。
+
+## §1 PLAN サマリ
+
+| PLAN | kind | 何を | commit |
+|------|------|------|--------|
+| `PLAN-L6-08-backfill-pairing` | add-design (IMP-051) | 駆動モデル back-fill pairing 完全性の機能設計 (KIND_BACKFILL マトリクス + 2 検査) | `af11c82` |
+| `PLAN-L7-09-backfill-pairing` | add-impl (IMP-051) | src/lint/backfill-pairing.ts + doctor checkBackfill (warn-first) | `af11c82` |
+| `PLAN-REVERSE-07-backfill-pairing` | reverse/fullback (IMP-051) | §1.10.E2 + 起票ルール + L0 §10 用語 back-fill。要件拡張 (V-pair 完全性の対象拡張) | `af11c82` |
+| (関連 backlog) | doc | IMP-051 起票→implemented 化 | `1bf58f4`/`af11c82` |
+
+## §2 成果物 (commit / files)
+
+- **`src/lint/backfill-pairing.ts`** (新規): `KIND_BACKFILL` マトリクス (kind→back-fill 要否の機械正本) + `analyzeBackfill` (reverse.requires→impl の向きで「Reverse 無き impl」検出 + §6 用語→L0 §10 照合) + parseRequires / parseGlossaryTerms (/m と $ の罠回避) / normalizeTerm (複合ラベル表記ゆれ吸収) / endsWith 境界固定。
+- **`src/doctor/index.ts`**: `checkBackfill` を runDoctor に warn-first 配線 (I/O 失敗は note)。
+- **`tests/backfill-pairing.test.ts`** (新規): U-BACKFILL-001〜006 + endsWith 誤判定ガード + **実 repo 完全性回帰ガード** (孤児 0 / glossary gap 0)。
+- **governance back-fill** (REVERSE-07 R4): requirements §1.10.E2 (機械検証条件) / .claude/CLAUDE.md 起票ルール (add-impl→Reverse 必須 / §6→§10 back-merge) / concept §10 用語 (back-fill pairing / KIND_BACKFILL マトリクス)。
+- **実 repo 孤児解消**: `PLAN-REVERSE-02` の requires に L7-01 追加 (PO 指摘の draft 放置に起因する未 pairing を構造修正)。
+- 設計記録: `docs/design/.../backfill-pairing.md` + L7-unit-test-design §1.11 U-BACKFILL。
+- 検証: typecheck 0 / biome CLEAN / **vitest 159 pass** (147→+12) / `ut-tdd doctor` backfill 行稼働 / **自己ドグフード pass** (本機構の PLAN 群が自分の検査を通る) / 主要リスク (endsWith 誤判定) 自己 review 反映。
+- HEAD = `af11c82`、origin main へ push 済。untracked 2 件は policy-exempt。
+
+## §3 Next Action
+
+1. **【最優先・po-gate】REVERSE-06 + REVERSE-07 の R3 検証** (2 件まとめて):
+   - REVERSE-06: ①handover-on-completion 機械強制 ②直列化 3 条件のみ正当 ③agent-slots=新 FR 不要。
+   - REVERSE-07: ①駆動モデルは「設計まで戻す」までが 1 サイクル ②add-impl は Reverse 合流必須 / glossary back-merge は impl 完了条件 ③当面 warn-first (fail-close は lint engine 実装時)。
+2. **継続最優先**: L0-L3 freeze の PO サインオフ (G0.5/G1/G3、RECOVERY-02、freeze-ready)。
+3. **fail-close 昇格**: `src/plan/lint.ts` (stub) 実装時に checkBackfill / handoverStale / §G.4 直列並列トークンを exit code 連動の fail-close へ (現状すべて warn-first)。
+
+## §4 carry (未了・先送り)
+
+- **warn-first → fail-close 昇格**: backfill / handover discipline / §G.4 直列並列 は plan lint engine (`src/plan/lint.ts` stub) 実装時に exit 連動へ。本 session で骨格・surface は完成、強制 (block) のみ残。
+- **REVERSE-02 status**: requires は構造修正したが status=draft のまま (R3 PO 検証が前提)。R3 で confirmed 化する。
+- IMP-047〜050 残: lint トークン検証 / pre-push / team_runner 実行エンジン本体 (前 session §4 参照)。
+- session 1-2 継続: CI biome subjob (workflow PAT) / L0-L3 freeze / kind×layer guard (§1.6 確定待ち)。
+
+## §5 未了 PO 判断
+
+1. **REVERSE-06 + REVERSE-07 R3** (§3 Next Action 1)。
+2. **L0-L3 freeze 承認** (継続)。
+3. KIND_BACKFILL マトリクスの要否が駆動モデルとして過不足ないか (add-impl=required / refactor 等=conditional / forward impl・recovery=none)。
+
+## §6 壊さない / 再発させない
+
+- **back-fill 完全性は warn-first**: `analyzeBackfill` の ok は required orphan と glossary gap が無いことのみ (conditional は warn、doctor.ok を落とさない)。fail-close 化は段階。
+- **検査の向き**: 「Reverse が impl を requires する」向きで pairing を辿る。add-impl 起票時は必ず対応 Reverse の requires に自分を載せる (.claude/CLAUDE.md 起票ルール)。
+- **§6 用語更新 は L0 §10 へ back-merge 必須**: 宣言した語が glossary に無いと doctor が warn。impl 名を §6 に書くなら §10 にも載せる (living glossary)。
+- **parseGlossaryTerms の section 抽出は /m を付けない** (`$` が行末になり section が空になる罠。コメント済、再発させない)。
+- **endsWith 判定は `/`+id+`.md` 境界固定** (別 plan_id の suffix 誤マッチ防止)。
+- **「実装したのに Reverse/用語集に戻していない」状態で完了扱いにしない** (本 session の主題。doctor backfill 行で常時確認)。
+- review 前置 MUST / subagent model 明示 / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ。
