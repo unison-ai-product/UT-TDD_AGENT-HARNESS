@@ -41,7 +41,7 @@ screen §4.1 で carry 宣言した「人間主導 + AI 補助原則 (CC2)」を
 
 ## G3 ゲート (L3 pair freeze)
 
-L3 3 sub-doc + L12 受入テスト 1 doc の pair freeze を **G3** で確定する。G3 内 sub-gate 候補 (L1 G1-trace と同様の構造):
+L3 3 sub-doc + L12 受入テスト 1 doc の pair freeze を **G3** で確定する。**正規式モデル (PLAN-RECOVERY-02)**: L3 の検証本質 = 本番受入 (L12)。画面要求は L1 (screen sub-doc) が担い L3 では起こさない (L2=L1 フェーズ分離、本 README §scope 分離と一致)。G3 内 sub-gate 候補 (L1 G1-trace と同様の構造):
 
 - **G3-content**: 各 sub-doc の必須 § 完備
 - **G3-pair**: L3 sub-doc ⇔ L12 受入テスト pair 整合

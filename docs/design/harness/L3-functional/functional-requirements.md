@@ -17,6 +17,7 @@ updated: 2026-05-28
 > **件数確定**: L3 FR は **26 件** = P0 18 件 (FR-01〜18、L1 FR-L1-01〜18 と 1:1 対応) + FR-45 (P0、doc-reviewer back-propagation A-49) + workflow core 7 件 (FR-23〜30、A-50 で L3 直接詳細化)。残 P1 9 件 + P2 5 件は L4 carry (§3 / §3.1)。BR-21 経路 (FR-L1-36/38/43 + 関連 P2) は business-detail.md 担当 (重複回避)。g3-trace lint の l3Fr=26 と一致。
 > **AC 件数**: 全 FR で AC 最低 3 件 (正常 / 異常 / 境界)、計 54+ AC を予定。**人間判断点 列必須** (CC2 carry)。
 > **L12 接続規約**: `next_pair_freeze: L12`。L12 受入テスト設計は本 sub-doc の全 AC を AT-* で被覆 (孤児 AC = 0)。
+> **正規式モデル (PLAN-RECOVERY-02、2026-06-04)**: L3 要件の検証本質 = **本番受入** (本番環境で FR+AC が満たせるか、L12 で実施。データ実在性エスカレーションの本番 band)。画面要求は L1 (screen sub-doc) が担い L3 では起こさない (L2=L1 フェーズ分離)。
 
 # UT-TDD Agent Harness — L3 機能要件 (functional)
 
