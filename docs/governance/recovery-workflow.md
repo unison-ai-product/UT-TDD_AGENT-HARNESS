@@ -1,5 +1,7 @@
 # UT-TDD Recovery 駆動ワークフロー (トラブルシューティング本線)
 
+> ⚠️ **SUPERSEDED (2026-06-04、IMP-060)**: 本 doc の内容 (トリガー分類 §1 / 本線 5-step §2 / reopen 可変 §2.1 / 適用記録 §5) は **`docs/process/modes/recovery.md` へ統合完了**。Recovery の単一正本は **docs/process/modes/recovery.md**。本 doc は historical reference として残置 (新規参照は recovery.md を見ること、規範変更は recovery.md 側で行う)。docs/process が「工程/駆動モデル定義の正本」(repository-structure §2)。
+
 > 駆動モデル ② の **Recovery mode** の実行ワークフロー正本。PO 定義 (2026-05-29):「リカバリーは認識ズレや AI 暴走の対応。だが**実態の本線は『明確に指示したのにやっていない』『勝手に余計なことをした』のトラブルシューティング**。要求レベルに戻してスコープから見直し、**上からドキュメントを直す**のが Recovery」。
 > **正本接続**: ゲート/駆動の関係は [gate-design.md](./gate-design.md) §1.1、recovery kind PLAN の必須構造は [requirements §5.1](./ut-tdd-agent-harness-requirements_v1.2.md)、メタモデルは concept §2.5。本 doc は Recovery の **step 手順**を定義する。
 

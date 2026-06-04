@@ -1,5 +1,6 @@
 ---
-layer: L8
+layer: L5
+executed_at_layer: L8
 artifact_type: test_design
 status: draft
 pair_artifact: docs/design/harness/L5-detailed-design/
@@ -17,7 +18,7 @@ updated: 2026-05-29
 
 # UT-TDD Agent Harness — L8 結合テスト設計 (④ / IT-*)
 
-> **layer**: L8 (結合テスト設計) / **artifact**: ④ テスト設計 (V-model 右、② L5 詳細設計 全 sub-doc と対)
+> **layer (作成層 = V-pair key)**: L5 (詳細設計) / **executed_at_layer (実施層)**: L8 (結合テスト) / **artifact**: ④ テスト設計 (V-model 右、② L5 詳細設計 全 sub-doc と対)
 > **pair (V-model L5↔L8)**: `docs/design/harness/L5-detailed-design/{physical-data,module-decomposition,internal-processing,if-detail}.md` 4 sub-doc 全体 ↔ 本書 1 doc
 > **status**: draft (placeholder skeleton — L5 設計確定に伴い pair を物質化。IT-* 詳細は L8 本起票で展開、L3↔L12 / L4↔L9 と同型)
 > **PLAN**: `docs/plans/PLAN-L5-{01..04}-*.md` の pair_artifact / DoD で本書参照

@@ -1,5 +1,6 @@
 ---
-layer: L9
+layer: L4
+executed_at_layer: L9
 artifact_type: test_design
 status: draft
 pair_artifact: docs/design/harness/L4-basic-design/
@@ -18,7 +19,7 @@ updated: 2026-05-29
 
 # UT-TDD Agent Harness — L9 総合テスト設計 (④ / ST-*)
 
-> **layer**: L9 (総合/システムテスト設計) / **artifact**: ④ テスト設計 (V-model 右、② L4 基本設計 全 sub-doc と対)
+> **layer (作成層 = V-pair key)**: L4 (基本設計) / **executed_at_layer (実施層)**: L9 (総合テスト) / **artifact**: ④ テスト設計 (V-model 右、② L4 基本設計 全 sub-doc と対)
 > **pair (V-model L4↔L9)**: `docs/design/harness/L4-basic-design/{data,architecture,function,external-if}.md` 4 sub-doc 全体 ↔ 本書 1 doc
 > **status**: draft (placeholder skeleton — L4 設計確定に伴い pair を物質化。ST-* 詳細は L9 本起票で展開、L3↔L12 と同型)
 > **PLAN**: `docs/plans/PLAN-L4-{01..04}-*.md` の pair_artifact / DoD で本書参照

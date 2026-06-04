@@ -1,5 +1,6 @@
 ---
-layer: L14
+layer: L1
+executed_at_layer: L14
 artifact_type: test_design
 status: draft
 pair_artifact: docs/design/harness/L1-requirements/
@@ -10,7 +11,7 @@ created: 2026-05-29
 
 # UT-TDD Agent Harness — L1 運用テスト設計 (③ / OT-*)
 
-> **layer**: L14 (運用検証) / **artifact**: ③ 運用テスト設計 (V-model 右、① L1 全 sub-doc と対)
+> **layer (作成層 = V-pair key)**: L1 (要求) / **executed_at_layer (実施層)**: L14 (運用検証) / **artifact**: ③ 運用テスト設計 (V-model 右、① L1 全 sub-doc と対)
 > **pair (V-model L1↔L14)**: `../../design/harness/L1-requirements/{business,functional,screen,technical,nfr}-requirements.md` の 5 sub-doc 全体 ↔ 本書 1 doc (V2 HELIX-workflows 設計概念を参照し、L1 = 5 sub-doc 構造、運用テスト設計は L14 pair として 1 本)
 > **status**: draft (① と対で G1 pair freeze 予定。BR-07/08・NFR-08 対応 OT は ① 同様 draft。5 sub-doc 化 + 14 画面 PM/HM/GD 再採番 に伴う OT 追加は OT-32〜44 で量閉じ完了)
 > **PLAN**: `../../plans/PLAN-L1-{01..05}-*.md` Step 5 / DoD (5 PLAN すべての DoD で本書を参照)

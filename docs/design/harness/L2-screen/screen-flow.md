@@ -2,7 +2,7 @@
 layer: L2
 sub_doc: screen-flow
 status: placeholder
-pair_artifact: (TBD L2 着手時に確定)
+pair_artifact: docs/design/harness/L2-screen/wireframe.md  # mock が L2 設計群の③ペア (IMP-039/058)
 parent_doc: docs/design/harness/L1-requirements/screen-requirements.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md

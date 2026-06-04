@@ -334,3 +334,56 @@
 - **2巡目で「改善=実装」を徹底**: routing で逃げたのは PO 判断/schema 契約に効く 3 件 (037/S4/060) のみ。doc 残差は同 cycle で実装解消。
 - **roadmap・improvement-backlog は living**: 現状接地ドリフト (L2=placeholder) を 2巡目で検出・修正。次サイクルも §5 現在地 + backlog の鮮度を節目で更新する。
 - review 前置 MUST / subagent model 明示 (本 session: pmo-sonnet×2 + code-reviewer すべて sonnet 明示) / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 2 件 helix-process/・ai-agent-harness-directory-reference.md は commit 禁止)。
+
+---
+
+# Session Handover — 2026-06-04 (session 7: PO 判断要 3件を解消 + フェーズ1 3巡目 刊行 — /goal 達成)
+
+> PO /goal「3件の問題を解消して、フェーズ1サイクル3巡目を刊行」を達成。2巡目で「PO 判断要」とした 3件を PO「解消して」授権で実装解消し、3巡目サイクルを roadmap §5 に刊行。**review 前置 code-reviewer が process 違反 (PoC confirmed→Reverse 欠落) を検出 → REVERSE-08 起票で解消** (harness の dogfood が harness ルールに従う)。
+
+## §1 解消した 3件 + 3巡目
+
+| # | 懸案 | 解消 | 主 commit |
+|---|------|------|-----------|
+| 1 | layer 表記規約 (IMP-037/058/059) | 全 5 test-design を `layer`=作成層(V-pair key=next_pair_freeze 一致) + `executed_at_layer`=実施層 に統一 (両保持)、規約を roadmap §2 明文化、L2 pair_artifact 確定 | (本 commit) |
+| 2 | DISCOVERY-01 S4 (IMP-064 派生) | decision_outcome=confirmed (reuse-with-hardening) + concept §2.5 promote + **REVERSE-08 vehicle 起票** (§1.2 準拠) | (本 commit) |
+| 3 | recovery 正本二重 (IMP-060) | recovery-workflow.md を recovery.md へ統合 (トリガー分類/本線5-step/reopen可変/適用記録)、superseded 化 | (本 commit) |
+| — | 3巡目 sweep (IMP-061/063/064) | .gitkeep stale / roadmap §2 self-pair 注記 / PoC→Reverse 欠落 を解消 | (本 commit) |
+
+## §2 成果物 (commit / files)
+
+- **layer 規約**: `docs/test-design/harness/{L1-operational,L3-acceptance,L7-unit,L8-integration,L9-system}-test-design.md` の frontmatter `layer`→作成層 + `executed_at_layer` 追加 + 本文ヘッダ整合。`roadmap.md §2` に規約注記。`L2-screen/{wireframe(self),screen-list,screen-flow,ui-element}.md` の pair_artifact 確定。
+- **DISCOVERY-01 promote**: `PLAN-DISCOVERY-01` frontmatter (S4/confirmed/promotion_strategy) + DoD box + §1.1 vehicle 参照。`concept_v3.1.md §2.5` Discovery 行 + 補足 bullet + `§10.2` 用語「確証なき設計」。**新規 `PLAN-REVERSE-08-discovery-metamodel.md`** (reverse/normalization、requires=DISCOVERY-01)。
+- **recovery 統合**: `docs/process/modes/recovery.md` §2 トリガー分類 + 本線5-step + reopen可変 + §5.1 適用記録、§6 注記更新。`recovery-workflow.md` superseded banner。`repository-structure.md §2` + `docs/process/.gitkeep` 更新。
+- **backlog**: IMP-037/058/059/060/061/063/064 → implemented、IMP-062 → verified。
+- **roadmap §5**: 3巡目サイクルを刊行 (ログ追記)。
+- 検証: typecheck 0 / **vitest 162 pass** / biome CLEAN / doctor (handover OK / agent-slots OK / backfill 孤児0・glossary merge済) / pmo-sonnet 3巡目整合 A-1〜A-5 OK / **code-reviewer APPROVE** (Critical 0、IMP-064 解消確認、Minor 3 のうち 2 反映)。
+
+## §3 Next Action
+
+1. **Phase 1 主要懸案は全クローズ** (layer 規約 / DISCOVERY-01 S4 / recovery 二重) — **残 PO 判断要 = 0**。次は Phase 2 (L4-L6) 改善サイクル、または L0-L3 Forward freeze の PO 判断 (※これは PO 起点、こちらから急かさない)。
+2. **fail-close 昇格 (継続 carry)**: `src/plan/lint.ts` stub 実装時に scrum_reverse_lint (IMP-064 再発防止) / backfill / handover / §G.4 直列並列 / IMP-035 (recovery aim) を exit 連動へ。
+3. **IMP-052** G8-G14 機械化 PLAN は Phase 3/5 で起票 (carry、gates.md→backlog で追跡可)。
+
+## §4 carry (未了・先送り)
+
+- **warn-first → fail-close 昇格** (plan lint engine 実装時): scrum_reverse_lint / backfill / handover discipline / §G.4 直列並列。
+- IMP-047〜051 残配線 (lint トークン / pre-push / team_runner 本体)。
+- CI biome subjob (workflow PAT、deferred) / kind×layer guard (§1.6)。
+- Phase 2 (L4-L6) 改善サイクル本検証 (L4/L5 テスト設計 doc 起票含む)。
+
+## §5 未了 PO 判断
+
+- **Phase 1 の PO 判断要 = 0** (3件すべて本 session で解消)。
+- (任意) DISCOVERY-01 S4 を PO「解消して」授権で confirmed 記録した点に異論があれば指摘 (decision_outcome は本来 PO 所有。授権解釈で記録、覆せる)。
+- (任意) recovery 統合のスコープ (3 固有内容の移管粒度) に過不足あれば指摘。
+
+## §6 壊さない / 再発させない
+
+- **harness の dogfood が harness ルールに従う**: PoC confirmed → 必ず reverse PLAN を vehicle にする (concept §2.5 等への inline promote だけで済ませない = §1.2/scrum_reverse_lint 違反、IMP-064 の再発防止)。confirmed poc に reverse が無い状態を作らない。
+- **test-design layer 規約**: `layer`=作成層 (V-pair pairing key = next_pair_freeze 一致) / `executed_at_layer`=実施層。L7-unit が template。vmodel-lint はこの `layer` で左腕設計と pairing する。
+- **recovery 正本 = docs/process/modes/recovery.md (単一)**。recovery-workflow.md は superseded (historical)。規範変更は recovery.md 側で。
+- **concept は上位正本**: §2.5 promote は DISCOVERY-01 §1.1 の文言に忠実、discovery.md と一致を保つ (逆流させない)。
+- **CURRENT.json は forward-slash で書く** (`\h`/`\s` は不正 JSON エスケープ → doctor「壊れています」。前 session の heredoc `\\\\` 起因の実害)。
+- **agent-slots は session 内で dangling が出るのが正常** (SessionStart sweep / 次 fire で self-heal)。commit 前に手動 sweep でクリーン化可。
+- review 前置 MUST (本 session: pmo-sonnet×3 + code-reviewer×2、全 sonnet 明示) / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 2 件は禁止)。

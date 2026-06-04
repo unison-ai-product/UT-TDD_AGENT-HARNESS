@@ -82,13 +82,15 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 | V-pair | 左腕 (設計) | ③ テスト設計 | 右腕 (実施) |
 |--------|------------|--------------|-------------|
 | L1 ⇔ L14 | 要求定義 | 運用テスト設計 | 運用検証 |
-| L2 ⇔ L10 | 画面設計 | ワイヤーモック自体 | UX 磨き |
+| L2 ⇔ L10 | 画面設計 | ワイヤーモック自体 (wireframe=self pair、L10 独立 doc 不要 = IMP-039/058) | UX 磨き |
 | L3 ⇔ L12 | 要件定義 | 受入テスト設計 | デプロイ+受入 |
 | L4 ⇔ L9 | 基本設計 | 総合テスト設計 | 総合テスト |
 | L5 ⇔ L8 | 詳細設計 | 結合テスト設計 | 結合テスト |
 | L6 ⇔ L7 | 機能設計 | 単体テスト設計 | 実装スプリント内 |
 
 出典: requirements §1.4 VALID_LAYERS / docs/process/forward/overview.md。
+
+> **テスト設計 frontmatter の layer 規約 (IMP-037/059 確定、PO「解消して」2026-06-04)**: ③/④ テスト設計 doc の `layer` は **作成層 (= 左腕設計層 = V-pair の pairing key、`next_pair_freeze` と一致)** を正本とし、実施層は `executed_at_layer` で別保持する (両保持 = 情報損失ゼロ)。例: 単体テスト設計 = `layer:L6` + `executed_at_layer:L7` / 受入テスト設計 = `layer:L3` + `executed_at_layer:L12`。vmodel-lint は `layer` を pairing key として左腕設計と突合する。**ファイル名 (L7-unit/L8-integration/L9-system は実施層、L1-operational/L3-acceptance は作成層) は歴史的経緯で混在するが、機械正本は frontmatter `layer`=作成層**。L7-unit が template。
 
 ---
 
@@ -184,6 +186,7 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 |------|---------|------|---------|----------------|
 | 2026-06-04 | Phase 1/2 検証 (PO /goal) | B (設計⇔テスト設計の同粒度) + A (workflow⇔設計対応) | **粒度対照性 (成熟度 caveat 付き)**: 既存 doc は 6 V-pair 中 5/6 で左右の構造が並行 (L2⇔L10 のみ右腕 doc 不在で ×)。**ただし主 Forward spine は L3 で停止中** = L1/L3/L4 PLAN 全 draft、L5/L6 は Add-feature slice の L5-05・L6-04・L6-05・L6-06 のみ confirmed。したがって L4⇔L9 / L5⇔L8 / L6⇔L7 の主 spine 部分は **draft 同士の構造並行**であって gate 凍結済の検証済対照ではない。**確定対照と言えるのは confirmed な Add-feature slice (L6-04/05/06 ⇔ L7-unit U-FSF/U-SETUP/U-HOVER) のみ**。L4-L6 主設計 (function-spec/edge-case/data/architecture 等) の粒度対照性 verify+improve は、当該層を Forward で実開発する **Phase 2 で本検証** (L3 停止中の現時点では暫定)。最小単位 L6 機能設計⇔L7 単体テスト設計は (slice では) ○。「L8 単体」は会話の言い違い (単体=L6作成/L7実施・結合=L5作成/L8実施 で doc 一貫)。軽微整合事項 = test-design の layer 表記非対称 / L1op frontmatter 欠落(本cycle修正) / U-RULE 束ね / ST-ASSET back-fill。**workflow⇔設計対応**: Forward は L0-L14 整合写像で pair-freeze 内蔵、非 Forward 8 mode は「出口 Forward 合流」で間接接続。critical = Add-feature×gate 境界 / Scrum→L8-L14 routing 欠落 / DISCOVERY-01 旧drive残存(本cycle修正)。 | IMP-037〜046 起票。本cycleで改善実施: IMP-038 (L1op frontmatter) / IMP-042 (DISCOVERY-01 drive V7) / IMP-039 (L2 mock=③ペア明文化) / IMP-043 (Add-feature×gate 境界明文化) / IMP-044 (Scrum 昇華経路正確化) / IMP-045 (Incident ③-first) / IMP-046 (Research layer 規則)。**IMP-037 (test-design layer 規約統一) のみ REVERSE-01/vmodel-lint へ routing 継続** |
 | 2026-06-04 | **Phase 1 (L0-L3) 2巡目** (PO /goal「carry 整理と解消 + 2巡目完遂」) | A (workflow) + B (V-pair 同粒度) を L0-L3 へ再適用 + carry 棚卸し | **1巡目残課題の検証と新残差の解消**。観点A残差: roadmap §3 現状接地ドリフト (L2=placeholder→5 doc 実在、修正済) / gates G8-G14 機械化 PLAN 未起票 carry (IMP-052 登録) / Incident layer の §1.10 排他制約の読み方 (README 明文化) / recovery.md §6 正本二重 (IMP-060、PO 方針要) / DISCOVERY-01 S4 未実施→concept §2.5 promote ブロック (PO gate)。観点B残差: **IMP-037 (作成層 vs 実施層の layer 規約) は未解消継続** (4 doc 実施層 vs L7-unit 二重表記、IMP-059 として派生明示) / L1-operational §0 を L3-acc §0 と同形式の件数表へ統一 (IMP-053) / L3-acc §1.2 注記内訳統一 (IMP-054) / wireframe.md pair_artifact:(TBD) (IMP-058、IMP-037 波及)。**即時 carry**: agent-slots の release 漏れ (最後の slot 永久 running) を `sweepStaleGuardSlots`+SessionStart self-heal で構造解消 (IMP-057、U-SLOT-007 +3) / PLAN-L7-05 confirmed 化。検証: typecheck 0 / vitest 162 pass / biome CLEAN / doctor agent-slots OK / code-reviewer APPROVE。 | IMP-052〜060 起票。本cycle implemented: 053/054/055/056/057。triaged 継続 (PO/規約 gate): 037/058/059/060。observed: 052。**DISCOVERY-01 S4 + layer 規約 (037) は PO 判断要として handover §5 記録** |
+| 2026-06-04 | **Phase 1 (L0-L3) 3巡目** (PO /goal「3件の問題を解消 + 3巡目刊行」) | 2巡目の PO 判断要 3件を解消 + 整合 sweep | **2巡目で「PO 判断要」とした 3件を PO「解消して」授権で解消**: ① **layer 表記規約 (IMP-037/059)** → `layer`=作成層(V-pair key=next_pair_freeze 一致) + `executed_at_layer`=実施層 の両保持に全 5 test-design 統一、規約を §2 明文化、L2 pair_artifact 確定 (IMP-058)。② **DISCOVERY-01 S4 confirmed** (decision_outcome=confirmed / promotion_strategy=reuse-with-hardening、dogfood 実績根拠) → concept §2.5 Discovery 定義に「確証なき設計」適用 + 合流点 L1/L3-L6 を promote (2巡目 FIND-A-02/A-07 同時解消)。③ **recovery 正本二重 (IMP-060)** → recovery-workflow.md を recovery.md へ統合 (トリガー分類/本線5-step/reopen可変/適用記録)、superseded 化、repository-structure §2 更新。**3巡目 sweep 残差** IMP-061 (.gitkeep stale) / IMP-063 (roadmap §2 self-pair 注記) も同 cycle 解消、IMP-062 は確認のみで verified。検証: typecheck 0 / vitest 162 pass / biome CLEAN / pmo-sonnet 整合 OK (A-1〜A-5) / code-reviewer 前置。 | IMP-061〜063 起票・全解消。implemented: 037/058/059/060/061/063。verified: 062。**Phase 1 の主要懸案 (layer 規約 / DISCOVERY-01 S4 / recovery 二重) を全クローズ** — 残 PO 判断要は 0 |
 
 ---
 

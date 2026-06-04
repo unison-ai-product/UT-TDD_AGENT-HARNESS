@@ -16,7 +16,7 @@ updated: 2026-05-29
 
 # UT-TDD Agent Harness — L7 単体テスト設計 (④ / U-*)
 
-> **layer**: L7 (単体テスト設計 — 実装スプリント内で TDD Red 先行) / **artifact**: ④ テスト設計 (V-model 右、② L6 機能設計 と対)
+> **layer (作成層 = V-pair key)**: L6 (機能設計) / **executed_at_layer (実施層)**: L7 (単体テスト — 実装スプリント内で TDD Red 先行) / **artifact**: ④ テスト設計 (V-model 右、② L6 機能設計 と対)
 > **pair (V-model L6↔L7)**: `docs/design/harness/L6-function-design/{function-spec,edge-case}.md` 2 sub-doc ↔ 本書 1 doc
 > **status**: draft (placeholder skeleton — L6 機能設計確定に伴い pair を物質化。U-* 詳細は L7 entry (TDD Red) で展開)
 > **PLAN**: `docs/plans/PLAN-L6-{01,02}-*.md` の pair_artifact / DoD で本書参照

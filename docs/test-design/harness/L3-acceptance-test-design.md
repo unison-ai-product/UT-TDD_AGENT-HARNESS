@@ -1,5 +1,6 @@
 ---
-layer: L12
+layer: L3
+executed_at_layer: L12
 artifact_type: test_design
 status: draft
 pair_artifact: docs/design/harness/L3-functional/
@@ -16,7 +17,7 @@ updated: 2026-06-02
 
 # UT-TDD Agent Harness — L3 受入テスト設計 (④ / AT-*)
 
-> **layer**: L12 (受入テスト設計) / **artifact**: ④ 受入テスト設計 (V-model 右、② L3 全 sub-doc と対)
+> **layer (作成層 = V-pair key)**: L3 (要件) / **executed_at_layer (実施層)**: L12 (受入) / **artifact**: ④ 受入テスト設計 (V-model 右、② L3 全 sub-doc と対)
 > **pair (V-model L3↔L12)**: `docs/design/harness/L3-functional/{functional-requirements,business-detail,nfr-grade}.md` 3 sub-doc 全体 ↔ 本書 1 doc
 > **status**: draft (PLAN-L3-01/02/03 進行と並行)
 > **正規式モデル (PLAN-RECOVERY-02、2026-06-04)**: L3⇔L12 の検証本質 = **本番受入** (本番環境で要件 FR+AC が満たせるか)。データ実在性エスカレーションの本番 band (画面の実データ検証 L10 の後に位置)。
