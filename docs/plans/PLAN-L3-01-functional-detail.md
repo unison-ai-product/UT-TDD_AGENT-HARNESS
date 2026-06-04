@@ -5,7 +5,7 @@ kind: design
 layer: L3
 sub_doc: functional
 drive: be
-status: draft
+status: confirmed
 created: 2026-05-28
 updated: 2026-06-02
 owner: PM (Opus) / PO (人間)

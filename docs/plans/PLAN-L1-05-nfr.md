@@ -5,7 +5,7 @@ kind: design
 layer: L1
 sub_doc: nfr
 drive: be
-status: draft
+status: confirmed
 created: 2026-05-28
 updated: 2026-05-28
 owner: PM (Opus) / PO (人間)

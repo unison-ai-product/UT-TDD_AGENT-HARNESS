@@ -5,7 +5,7 @@ kind: design
 layer: L1
 sub_doc: business
 drive: be
-status: draft
+status: confirmed
 created: 2026-05-27
 updated: 2026-05-28
 owner: PM (Opus) / PO (人間)

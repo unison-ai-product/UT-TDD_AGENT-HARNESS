@@ -1,7 +1,7 @@
 ---
 layer: L3
 doc_type: index
-status: draft
+status: confirmed
 parent_doc: docs/design/harness/L1-requirements/
 created: 2026-05-28
 updated: 2026-06-02
