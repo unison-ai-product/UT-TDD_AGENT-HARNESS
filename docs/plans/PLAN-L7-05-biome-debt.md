@@ -4,10 +4,11 @@ title: "PLAN-L7-05 (refactor): repo 既存 biome 負債を解消し harness-chec
 kind: refactor
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-04
 updated: 2026-06-04
 owner: PM (Opus) / PO (人間)
+backfill_required: false  # refactor 機能不変 (dead code 削除 + biome --write、契約/挙動の変更なし) → KIND_BACKFILL conditional で Reverse 不要。doctor backfill 行は note のみ。
 agent_slots:
   - role: tl
     slot_label: "TL — 機能不変 (113 test green 維持) / dead code 削除の妥当性 (g3-trace 陳腐化 regex) / useLiteralKeys が TS strict と非競合 / CI biome 有効化のレビュー (claude-only は code-reviewer 代替)"

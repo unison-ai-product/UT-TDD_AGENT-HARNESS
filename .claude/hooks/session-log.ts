@@ -12,6 +12,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkHandoverDiscipline, nodeHandoverDeps } from "../../src/handover";
+import { nodeAgentSlotsDeps, sweepStaleGuardSlots } from "../../src/runtime/agent-slots";
 import { scanDanglingStops } from "../../src/runtime/forced-stop";
 import { dispatch, nodeDeps, type SessionHookInput } from "../../src/runtime/session-log";
 
@@ -44,6 +45,9 @@ try {
   // SessionStart: 直前までの dangling session (強制停止推定) を後追い記録 (fail-open)
   if (evName === "SessionStart" || evName === "start") {
     scanDanglingStops(deps, input.session_id);
+    // 前セッション末尾の dangling guard slot (subagent に release hook が無く next-fire まで
+    // 永久 running で残る release 漏れ) を self-heal で失効 (fail-open、never throws)。
+    sweepStaleGuardSlots(nodeAgentSlotsDeps(repoRoot));
   }
   dispatch(input, deps, process.argv[2]);
   // IMP-047: Stop 時に handover 規律を機械 surface (stderr warn のみ、fail-open)。

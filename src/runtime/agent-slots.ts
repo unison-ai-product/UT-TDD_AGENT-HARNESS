@@ -115,6 +115,45 @@ export function listActiveSlots(deps: AgentSlotsDeps): Slot[] {
   return loadSlots(deps).filter((s) => s.status === "running" && s.released_at === null);
 }
 
+/**
+ * agent_guard 由来の stale active slot (fired_at が閾値分を超過) を status=cancelled で失効。
+ * 返り値 = 失効させた件数。never throws (fail-open)。
+ *
+ * **なぜ必要か**: Claude Code subagent には release hook が無く (agent-guard は PreToolUse のみ)、
+ * `recordGuardFire` の遅延失効は「次の fire」でしか走らない。よって**セッション最後の guard slot は
+ * 後続 fire が無く永久に running で残り**、doctor が毎回 stale warn を出す (release 漏れの構造原因)。
+ * SessionStart でこれを呼び、前セッションの dangling slot を self-heal する
+ * (forced-stop の `scanDanglingStops` と同型の後追い記録)。閾値は recordGuardFire / doctor と統一。
+ */
+export function sweepStaleGuardSlots(
+  deps: AgentSlotsDeps,
+  staleMinutes = DEFAULT_STALE_MINUTES,
+): number {
+  try {
+    const nowIso = deps.now();
+    const now = Date.parse(nowIso);
+    if (Number.isNaN(now)) return 0;
+    const slots = loadSlots(deps);
+    let swept = 0;
+    for (const s of slots) {
+      // listActiveSlots と同じ AND 条件 (running && 未 release) で対象集合を一致させる (I-1)。
+      if (s.slot_source !== "agent_guard" || s.status !== "running" || s.released_at !== null) continue;
+      const fired = Date.parse(s.fired_at);
+      if (Number.isNaN(fired)) continue; // fired_at が不正値の slot は触らずスキップ (corrupt 防止)
+      if ((now - fired) / 60_000 > staleMinutes) {
+        s.status = "cancelled";
+        s.released_at = nowIso;
+        s.exit_code = null;
+        swept++;
+      }
+    }
+    if (swept > 0) saveSlots(slots, deps);
+    return swept;
+  } catch {
+    return 0;
+  }
+}
+
 /** active かつ fired_at が閾値 (分) を超えて放置されている slot (stale)。 */
 export function listStaleSlots(
   deps: AgentSlotsDeps,
@@ -176,7 +215,8 @@ export function recordGuardFire(
     // I-2: stale 失効 → 新規 fire を 1 回の load→save にまとめ lost-update 窓を閉じる。
     const slots = loadSlots(deps);
     for (const s of slots) {
-      if (s.slot_source !== "agent_guard" || s.released_at !== null) continue;
+      // sweepStaleGuardSlots / listActiveSlots と対象集合を一致 (running && 未 release、I-1)。
+      if (s.slot_source !== "agent_guard" || s.status !== "running" || s.released_at !== null) continue;
       const fired = Date.parse(s.fired_at);
       if (Number.isNaN(fired) || Number.isNaN(now)) continue;
       if ((now - fired) / 60_000 > staleMinutes) {

@@ -102,7 +102,7 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 - **検証**: 観点 A (L0-L3 に関わる mode の workflow が動くか) + 観点 B (L1⇔L14 運用TD / L3⇔L12 受入TD / L2⇔L10 mock が同粒度か)。
 - **このフェーズの追加任務**: §1 の観点 A/B を全フェーズ共通テンプレートとして**確定・明文化**する (PO が Phase 1 を「検証対象 + 観点定義の場」と指定)。
 - **出力**: 課題/アイディア → improvement-backlog。
-- **現状接地**: L0=concept_v3.1 既済 / L1=draft (5 sub-doc) / L2=placeholder / L3=draft (3 sub-doc)。
+- **現状接地**: L0=concept_v3.1 既済 / L1=draft (5 sub-doc) / **L2=5 sub-doc 実在** (screen-flow/screen-list/ui-element/wireframe + README、全件 `status:placeholder`。③ペア=mock 自体・L10 独立 doc 不要を README で明文化済 = IMP-039) / L3=draft (3 sub-doc + roadmap)。
 
 ### Phase 2 — L4〜L6 改善サイクル
 
@@ -183,6 +183,7 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 | 日付 | サイクル | 観点 | 主な結果 | 機能一覧への登録 |
 |------|---------|------|---------|----------------|
 | 2026-06-04 | Phase 1/2 検証 (PO /goal) | B (設計⇔テスト設計の同粒度) + A (workflow⇔設計対応) | **粒度対照性 (成熟度 caveat 付き)**: 既存 doc は 6 V-pair 中 5/6 で左右の構造が並行 (L2⇔L10 のみ右腕 doc 不在で ×)。**ただし主 Forward spine は L3 で停止中** = L1/L3/L4 PLAN 全 draft、L5/L6 は Add-feature slice の L5-05・L6-04・L6-05・L6-06 のみ confirmed。したがって L4⇔L9 / L5⇔L8 / L6⇔L7 の主 spine 部分は **draft 同士の構造並行**であって gate 凍結済の検証済対照ではない。**確定対照と言えるのは confirmed な Add-feature slice (L6-04/05/06 ⇔ L7-unit U-FSF/U-SETUP/U-HOVER) のみ**。L4-L6 主設計 (function-spec/edge-case/data/architecture 等) の粒度対照性 verify+improve は、当該層を Forward で実開発する **Phase 2 で本検証** (L3 停止中の現時点では暫定)。最小単位 L6 機能設計⇔L7 単体テスト設計は (slice では) ○。「L8 単体」は会話の言い違い (単体=L6作成/L7実施・結合=L5作成/L8実施 で doc 一貫)。軽微整合事項 = test-design の layer 表記非対称 / L1op frontmatter 欠落(本cycle修正) / U-RULE 束ね / ST-ASSET back-fill。**workflow⇔設計対応**: Forward は L0-L14 整合写像で pair-freeze 内蔵、非 Forward 8 mode は「出口 Forward 合流」で間接接続。critical = Add-feature×gate 境界 / Scrum→L8-L14 routing 欠落 / DISCOVERY-01 旧drive残存(本cycle修正)。 | IMP-037〜046 起票。本cycleで改善実施: IMP-038 (L1op frontmatter) / IMP-042 (DISCOVERY-01 drive V7) / IMP-039 (L2 mock=③ペア明文化) / IMP-043 (Add-feature×gate 境界明文化) / IMP-044 (Scrum 昇華経路正確化) / IMP-045 (Incident ③-first) / IMP-046 (Research layer 規則)。**IMP-037 (test-design layer 規約統一) のみ REVERSE-01/vmodel-lint へ routing 継続** |
+| 2026-06-04 | **Phase 1 (L0-L3) 2巡目** (PO /goal「carry 整理と解消 + 2巡目完遂」) | A (workflow) + B (V-pair 同粒度) を L0-L3 へ再適用 + carry 棚卸し | **1巡目残課題の検証と新残差の解消**。観点A残差: roadmap §3 現状接地ドリフト (L2=placeholder→5 doc 実在、修正済) / gates G8-G14 機械化 PLAN 未起票 carry (IMP-052 登録) / Incident layer の §1.10 排他制約の読み方 (README 明文化) / recovery.md §6 正本二重 (IMP-060、PO 方針要) / DISCOVERY-01 S4 未実施→concept §2.5 promote ブロック (PO gate)。観点B残差: **IMP-037 (作成層 vs 実施層の layer 規約) は未解消継続** (4 doc 実施層 vs L7-unit 二重表記、IMP-059 として派生明示) / L1-operational §0 を L3-acc §0 と同形式の件数表へ統一 (IMP-053) / L3-acc §1.2 注記内訳統一 (IMP-054) / wireframe.md pair_artifact:(TBD) (IMP-058、IMP-037 波及)。**即時 carry**: agent-slots の release 漏れ (最後の slot 永久 running) を `sweepStaleGuardSlots`+SessionStart self-heal で構造解消 (IMP-057、U-SLOT-007 +3) / PLAN-L7-05 confirmed 化。検証: typecheck 0 / vitest 162 pass / biome CLEAN / doctor agent-slots OK / code-reviewer APPROVE。 | IMP-052〜060 起票。本cycle implemented: 053/054/055/056/057。triaged 継続 (PO/規約 gate): 037/058/059/060。observed: 052。**DISCOVERY-01 S4 + layer 規約 (037) は PO 判断要として handover §5 記録** |
 
 ---
 

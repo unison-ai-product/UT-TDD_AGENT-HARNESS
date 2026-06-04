@@ -282,3 +282,55 @@
 - **全 Reverse confirmed = V-model 左腕の孤児解消が一巡**。今後 add-impl を起こしたら必ず対応 Reverse をセットで起こす (doctor backfill が孤児を surface)。
 - PROVISIONAL外し済の docs/process は運用正本。規範変更は concept/requirements 先行 → docs/process へ反映 (逆流させない)。
 - R3 は PO 直接検証が原則だが、PO 委譲時は intra_runtime_subagent + 客観 evidence で代替し PLAN に記録する。
+
+---
+
+# Session Handover — 2026-06-04 (session 6: carry 整理・解消 + フェーズ1 (L0-L3) 見直しサイクル2巡目 — /goal 達成)
+
+> PO /goal「キャリー整理と解消。フェーズ1における見直しサイクル2巡目を完遂する」を受け、roadmap §1 改善サイクル (観点A workflow / 観点B V-pair 同粒度) を L0-L3 へ**2巡目**適用。1巡目残課題の検証 + 新残差抽出 (pmo-sonnet 2体並列委譲) → 解消可能を実装、PO 判断要を §5 記録。§1-§2 は git から手記入 (handover prefill の digest ノイズ = IMP-048 既知限界)。
+
+## §1 サマリ (PLAN ではなく改善サイクル)
+
+| 区分 | 何を | commit |
+|------|------|--------|
+| 即時 carry (doctor) | agent-slots release 漏れ (最後の guard slot が永久 running) を構造解消 + L7-05 confirmed 化 | (本 commit) |
+| Phase1 2巡目 観点A | roadmap 現状接地ドリフト / gates G8-G14 carry / Incident layer 排他読み方 を doc 解消 | (本 commit) |
+| Phase1 2巡目 観点B | L1-operational §0 件数表統一 / L3-acc §1.2 注記内訳統一 を doc 解消 | (本 commit) |
+| carry living化 | IMP-052〜060 を improvement-backlog へ登録 (implemented 5 / triaged 4 / observed 1) | (本 commit) |
+
+## §2 成果物 (commit / files)
+
+- **`src/runtime/agent-slots.ts`**: `sweepStaleGuardSlots` 新規 (agent_guard 由来 stale active slot を閾値超で cancelled 失効、never-throws fail-open)。release hook 不在で「セッション最後の slot が次 fire まで永久 running」になる構造欠陥を SessionStart self-heal で解消。`recordGuardFire` の対象判定も `status==="running"` を追加し 3 経路 (sweep/recordGuardFire/listActive) で一致 (review I-1)。
+- **`.claude/hooks/session-log.ts`**: SessionStart で `sweepStaleGuardSlots` 呼び出し (fail-open、agent-guard の fail-close に非干渉)。
+- **`tests/agent-slots.test.ts`**: U-SLOT-007 (失効/部分スキップ/冪等、+3) → vitest **162 pass** (159→+3)。
+- **doc 解消**: roadmap §3 現状接地 (L2=5 doc 実在) / gates §1 注記 (G8-G14 carry→IMP-052) / modes README (multi-kind セル= kind 応じた択一、1 PLAN 両載せ不可) / L1-operational §0 (L3-acc §0 と同形式の件数表: BR/FR-L1 46/SR 14画面/TR/NFR 15/UX + 孤児=0 + G1-trace。FR-L1-36/38/43 除外理由明記 = review I-3) / L3-acceptance §1.2 注記 (category 別 9+6+1=16 に統一) / PLAN-L7-05 status=confirmed + `backfill_required:false`。
+- **improvement-backlog**: IMP-052〜060 登録。implemented=053/054/055/056/057、triaged=037継続/058/059/060、observed=052。
+- **roadmap §5 ログ**: Phase 1 2巡目の行を追記 (living doc 更新)。
+- 検証: typecheck 0 / **vitest 162 pass** / biome CLEAN / doctor (handover OK / agent-slots OK / backfill note のみ) / **code-reviewer APPROVE** (件数 FR-L1 46/NFR 15/SR 14 を node 照合・一致確認、I-1/I-3/m-1 反映)。
+
+## §3 Next Action
+
+1. **継続最優先 (PO 判断)**: 下記 §5 の 2 件 — ① **layer 表記規約 (IMP-037/059)** の確定 (4 doc 実施層 vs L7-unit 作成層、vmodel-lint の pairing key に効く新規決定) ② **DISCOVERY-01 S4** decision_outcome 記録 (PO 権限、concept §2.5 promote の前提)。この 2 件が解けると IMP-058 (wireframe pair_artifact) / concept §2.5 back-fill が連鎖で進む。
+2. **recovery 正本二重 (IMP-060)**: recovery.md §6 と docs/governance/recovery-workflow.md の差分確認 → 統合/廃止方針を PO 確定後 Reverse/Refactor で解消。
+3. **fail-close 昇格 (継続 carry)**: `src/plan/lint.ts` stub 実装時に backfill/handover/§G.4 直列並列 + IMP-035 (recovery aim 必須) を exit 連動へ。
+
+## §4 carry (未了・先送り)
+
+- **PO 判断要 (§5)**: layer 規約 (037/059) / DISCOVERY-01 S4 / recovery 正本二重 (060)。
+- **IMP-058** wireframe.md pair_artifact:(TBD) = IMP-037 規約確定と同時解消。
+- **IMP-052** G8-G14 機械化 PLAN 未起票 = Phase 3/5 で起票 (carry 所在は gates.md→backlog で追跡可)。
+- 継続: CI biome subjob (workflow PAT、deferred) / kind×layer guard (§1.6) / IMP-047〜051 残配線 (lint トークン/pre-push/team_runner 本体)。
+
+## §5 未了 PO 判断
+
+1. **layer 表記規約 (IMP-037/059)**: test-design frontmatter の `layer` を **作成層基準** (L7-unit の `layer:L6`+`executed_at_layer:L7`) と **実施層基準** (他 4 doc の `layer:L8/L9/L12/L14`) のどちらに統一するか。多数決は実施層 4:1 だが、V-pair の pairing key (L6 設計⇔L6 作成の単体テスト設計) としては作成層基準が整合的という反論あり。vmodel-lint が pairing に使うため**正本の確定が必要** (PM 単独確定せず routing 維持)。推奨を出すなら「両保持 (`layer`=作成層 + `executed_at_layer`=実施層) を全 doc へ統一」が情報損失ゼロ。
+2. **DISCOVERY-01 S4**: workflow メタモデル PoC の decision_outcome を PO が記録 (S3 verify は完成済)。確定で concept §2.5 Discovery 定義の promote (mode doc が先行拡張した L1/L3-L6 合流点を concept へ back-fill) が解ける。
+3. **recovery 正本二重 (IMP-060)**: docs/process/modes/recovery.md (正本化済) と docs/governance/recovery-workflow.md (「当面の正本」注記) の統合/廃止方針。
+
+## §6 壊さない / 再発させない
+
+- **sweepStaleGuardSlots は SessionStart 専用の self-heal** (閾値超の agent_guard slot のみ失効)。within-session の dangling は recordGuardFire の遅延失効 or 次 SessionStart が掃除する設計 = doctor の session 内 stale warn は異常ではない。全 active を無条件失効させない (短時間再起動の running agent 誤失効防止)。
+- **agent-slots 全関数 fail-open / agent-guard は fail-close 不変**: session-log hook への sweep 追加は agent-guard の block 判定に非干渉。
+- **2巡目で「改善=実装」を徹底**: routing で逃げたのは PO 判断/schema 契約に効く 3 件 (037/S4/060) のみ。doc 残差は同 cycle で実装解消。
+- **roadmap・improvement-backlog は living**: 現状接地ドリフト (L2=placeholder) を 2巡目で検出・修正。次サイクルも §5 現在地 + backlog の鮮度を節目で更新する。
+- review 前置 MUST / subagent model 明示 (本 session: pmo-sonnet×2 + code-reviewer すべて sonnet 明示) / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 2 件 helix-process/・ai-agent-harness-directory-reference.md は commit 禁止)。

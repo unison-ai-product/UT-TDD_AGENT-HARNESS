@@ -139,7 +139,7 @@ updated: 2026-06-02
 | **AT-FR-BR21-43-02** | (FR-BR21-43 異常系) | PoC 0 件 → info + 「データ蓄積中」表示 | vitest evaluation test |
 | **AT-UX-01** | (C-01 補完、A-47) AC-UX-01-01 (3 バランス被覆) | sprint 末 D-03=0 + D-04 ≥ 80% + D-06 = 0 努力目標 + D-07 ≥ 70% を **3 軸全件 pass**。1 軸突出は warn | vitest KPI 集計 test |
 
-> **AT-BR21 合計 = 15 + 1 (UX-01 補完) = 16 件** (Phase A 即実装 7 件 + Phase B carry 9 件)
+> **AT-BR21 系 合計 = 16 件** = AT-BR21 (BR-21 §1〜§6 直接) 9 件 + AT-FR-BR21 (FR-BR21-36/38/43 派生) 6 件 + AT-UX-01 (補完) 1 件 — **§1.4 件数まとめと一致**。Phase 別の内訳では Phase A 即実装 7 件 + Phase B carry 9 件 (= 16)。category 別 (§1.4) と Phase 別 (本注記) は切り口が異なるだけで合計は同一。
 
 ### §1.3 nfr-grade sub-doc 由来 AT (NFR-* 15 件)
 

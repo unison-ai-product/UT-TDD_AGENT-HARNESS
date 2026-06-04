@@ -12,6 +12,7 @@ import {
   recordGuardFire,
   releaseSlot,
   type Slot,
+  sweepStaleGuardSlots,
 } from "../src/runtime/agent-slots";
 
 const statePath = join("/repo", ".ut-tdd", "state", "agent-slots.json");
@@ -105,6 +106,36 @@ describe("U-SLOT-003 listActiveSlots / listStaleSlots", () => {
     const stale = listStaleSlots(deps, 5);
     expect(stale).toHaveLength(1);
     expect(stale[0].agent_kind).toBe("old");
+  });
+});
+
+describe("U-SLOT-007 sweepStaleGuardSlots (SessionStart self-heal)", () => {
+  it("セッション末尾の dangling guard slot (閾値超) を cancelled へ失効し件数を返す", () => {
+    const deps = mockDeps();
+    fireSlot({ agent_kind: "pmo-sonnet", slot_source: "agent_guard" }, deps); // fired 00:00, 未 release
+    deps.setNow("2026-06-04T00:10:00.000Z"); // 10 分後の新セッション開始
+    expect(sweepStaleGuardSlots(deps, 5)).toBe(1);
+    const after = loadSlots(deps)[0];
+    expect(after.status).toBe("cancelled");
+    expect(after.released_at).toBe("2026-06-04T00:10:00.000Z");
+    expect(listActiveSlots(deps)).toHaveLength(0); // doctor の stale warn が消える
+  });
+
+  it("閾値内の guard slot / 非 guard slot / 既 release は失効しない", () => {
+    const deps = mockDeps();
+    fireSlot({ agent_kind: "fresh", slot_source: "agent_guard" }, deps); // fired 00:00
+    fireSlot({ agent_kind: "team", slot_source: "team_runner" }, deps); // 非 guard
+    deps.setNow("2026-06-04T00:03:00.000Z"); // 3 分後 (閾値 5 未満)
+    expect(sweepStaleGuardSlots(deps, 5)).toBe(0);
+    expect(listActiveSlots(deps)).toHaveLength(2);
+  });
+
+  it("対象なし → 0 / 冪等 (二度目は 0)", () => {
+    const deps = mockDeps();
+    fireSlot({ agent_kind: "old", slot_source: "agent_guard" }, deps);
+    deps.setNow("2026-06-04T00:10:00.000Z");
+    expect(sweepStaleGuardSlots(deps, 5)).toBe(1);
+    expect(sweepStaleGuardSlots(deps, 5)).toBe(0); // 既失効は再失効しない
   });
 });
 
