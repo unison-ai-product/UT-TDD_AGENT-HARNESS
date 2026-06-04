@@ -458,7 +458,8 @@
 - **`.ut-tdd/audit/A-100-l0-l3-refreeze.md`** (新規、gitignored runtime 記録、**commit 対象外**)。
 - **concept/requirements は flip せず**: prose 見出しで自前 status 無し。frozen は gate 台帳 (G0.5/G1/G3 + A-100) で記録。**L2 は placeholder 据え置き** (G2 DEFER 維持、screen track)。
 - 検証: **vitest 177 pass** (status flip で破壊なし) / doctor hard 条件 (backfill/scrum-reverse/propagation) OK / biome CLEAN。review 前置 = pmo-sonnet 2 体起動したが verdict が truncate → 観点 (対象漏れ/過剰・台帳整合・exit条件・波及) を PM 直接検証で補完・APPROVE。
-- HEAD = `086f06f`、push 未 (本 session 末で push 予定)。untracked 3 件 (audit + policy-exempt 2) は commit 禁止。
+- **後続修正 (`635b90e`、PO 指摘)**: roadmap を「driver」から「検証/改善タイミングの **anchor**」へ格下げ。§5 状態欄を「検証/改善サイクル状態」に改称 + 「本書は anchor であって driver でない」読み方注記。freeze 権限は gate-design §2 (gate プロセス) が正本で roadmap は後追い反映のみ、Phase 2 検証/改善サイクルは L4-L6 が Forward 設計降下された後に適用 (roadmap 先行起動しない) と明示。[[feedback_roadmap_is_design_doc_level]] に追記。
+- HEAD = `635b90e`、origin main へ **push 済** (086f06f freeze + ec0a90e handover + 635b90e roadmap 格下げ)。untracked 3 件 (audit + policy-exempt 2) は commit 禁止。
 
 ## §3 Next Action
 
@@ -483,6 +484,7 @@
 
 - **freeze の正本記録 = gate-design §2 台帳 (tracked) + .ut-tdd/audit/A-100 (runtime)**。concept/requirements は prose 見出しで status を持たない (スキーマ例の `status: draft` を本物と誤認して flip しない)。
 - **roadmap.md は living = freeze 対象外** (status draft 維持)。L0-L3 確定後も進捗で更新する companion doc。
+- **roadmap は anchor であって driver でない** (PO 2026-06-04、`635b90e`): 検証/改善のタイミングを記録するだけで Forward 工程・freeze を駆動/先行しない。freeze 権限は gate-design §2 (gate プロセス) が正本。roadmap §5 等で「Phase N freeze 済」「次は Phase N+1 実行」のように工程を**宣言/命令する書き方をしない**。Phase N 検証/改善サイクルは当該層が Forward 設計降下された後に適用する band。[[feedback_roadmap_is_design_doc_level]]。
 - **G4/G5 は park (要再評価)**。L4-L6 を「既に COND PASS」と誤認しない (RECOVERY-02 で仕切り直し)。Phase 2 で再 audit する。
 - **status flip は frontmatter の status 行のみ** (本文に触れない)。`sed '0,/^status: draft/s//status: confirmed/'` で frontmatter 先頭のみ置換 (本文の status: draft 例を巻き込まない)。
 - review 前置 MUST / subagent model 明示 (本 session pmo-sonnet 全 sonnet) / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 3 件は禁止)。
