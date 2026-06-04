@@ -56,8 +56,8 @@ FR_L1_REGEX / FR_L3_REGEX / AC_REGEX / AT_REGEX / NFR_REGEX (+ doc コメント)
 ### Step 3: 振る舞い不変の検証 (安全網)
 `npm run typecheck` (0) + `npx vitest run` (**113 pass 不変** = 機能変更なしの機械保証) + `npm run lint` (**biome 0**)。
 
-### Step 4: CI に biome subjob 追加
-`.github/workflows/harness-check.yml` に `bun run lint` step を typecheck と test の間に追加。negative carry コメントを解消済へ更新。**push は `.github/workflows` 変更ゆえ workflow スコープ token が必要** ([[project_github_push_workflow_scope]] temp-file 経由)。
+### Step 4: CI に biome subjob 追加 — **PO 判断で deferred (2026-06-04)**
+`.github/workflows/harness-check.yml` に `bun run lint` step を追加する変更は実装・ローカル commit まで行ったが、**push に workflow スコープ token が必要** ([[project_github_push_workflow_scope]]) で、PO が「今はいらない」と判断したためローカル commit を破棄し **deferred** とした (§4 carry)。biome 負債解消 (Step 1-3) は完了・push 済 (`27efe75`) なので、`bun run lint` ローカル実行で品質は担保される。CI 有効化は token 入手時に follow-up。
 
 ### Step 5: review (review 前置 MUST)
 `code-reviewer` で 機能不変 (113 green) / dead code 削除の妥当性 / useLiteralKeys 非競合 / CI 配線をレビュー。cross-agent 不在を evidence 記録。
@@ -74,12 +74,13 @@ FR_L1_REGEX / FR_L3_REGEX / AC_REGEX / AT_REGEX / NFR_REGEX (+ doc コメント)
 
 ## §3 成否
 
-- `npm run lint` (pinned biome) = **violation 0**
-- `npm run typecheck` = 0 / `npx vitest run` = **113 pass 不変** (機能変更なしの機械保証)
-- `harness-check.yml` に biome subjob 追加、negative carry コメント解消
-- code-reviewer review APPROVE (機能不変 / dead code 削除妥当 / useLiteralKeys 非競合 / CI 配線)
-- 旧 carry「repo 既存 biome 負債解消 + CI 有効化」をクローズ
+- `npm run lint` (pinned biome) = **violation 0** ✅ (push 済 `27efe75`)
+- `npm run typecheck` = 0 / `npx vitest run` = **113 pass 不変** (機能変更なしの機械保証) ✅
+- `harness-check.yml` の biome subjob 追加 = **deferred** (PO 判断 2026-06-04、workflow スコープ token 未入手、§4 carry)
+- code-reviewer review APPROVE (機能不変 / dead code 削除妥当 / useLiteralKeys 非競合) ✅
+- 旧 carry「repo 既存 biome 負債解消」をクローズ。「CI 有効化」は carry へ繰り越し
 
 ## §4 carry
 
+- **CI biome subjob 有効化 (deferred)**: `harness-check.yml` に `bun run lint` step を足す変更は確定済だが、`.github/workflows` の push に workflow スコープ PAT が必要 ([[project_github_push_workflow_scope]])。PO が「今はいらない」と判断 (2026-06-04)。token 入手時に follow-up commit で有効化する (repo は既に biome CLEAN なので即 green)。
 - §6.3 の branch-type subjob (commitlint / poc-no-merge-guard / hotfix-postmortem-required) は別 PLAN (本 PLAN は biome subjob のみ)。
