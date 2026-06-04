@@ -43,7 +43,7 @@ dependencies:
 | **R1** | Observed Contracts: `confirmed_reverse_type=normalization` のため **skip** (設計 drift 修正型、R2 で normalize。requirements line 820) | skip |
 | **R2** | normalize: concept §2.5 Discovery 定義 (現「要件未確定/実現性不透明」のみ) を、dogfood で確証した「**確証なき設計**にも適用 (設計→仮実装→検証→設計確定)」へ正規化。合流点を `確定後 → L1` から `L1 (要求) / L3-L6 (設計確証時)` へ拡張 | done |
 | **R3** | Intent 検証 (PO)。intent = ①workflow メタモデルを reuse-with-hardening で採用してよいか ②promote 文面が PoC §1.1 と整合か。**PO「3件の問題を解消して」2026-06-04 で授権**、claude-only のため intra_runtime_subagent (pmo-sonnet 整合 A-4 OK + code-reviewer) で代替検証し evidence 記録 | confirmed |
-| **R4** | fullback: concept §2.5 へ promote 適用済 (Discovery 行 + 補足 bullet)。discovery.md §3/§4 の合流点 (L1/L3-L6) と一致確認済 (フェーズ1 2巡目検証で検出した「concept §2.5 ⇔ discovery.md 合流点 gap」をクローズ)。DISCOVERY-01 DoD の「concept §2.5 へ promote」box を check | done |
+| **R4** | fullback: concept §2.5 へ promote 適用済 (Discovery 行 + 補足 bullet) + **requirements §1.3 signal→mode マップに `design_uncertain` を反映** (concept のみ promote して requirements を放置すると L0⇔L3 ドリフト、IMP-065)。discovery.md §3/§4 の合流点 (L1/L3-L6) と一致確認済。DISCOVERY-01 DoD の「concept §2.5 へ promote」box を check | done |
 
 ## §2 工程表
 
