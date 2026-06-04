@@ -436,3 +436,53 @@
 - **doctor.ok の hard / warn 分離**: backfill/scrum-reverse/propagation = hard (ok 連動)、handover/agent-slots = warn-only (鮮度/運用 surface)。この分離を崩さない。
 - **biome は pinned `@biomejs/biome` 2.4.15 で `npm run format`** (`npx biome` は最新版で rule 差、使わない)。
 - review 前置 MUST / subagent model 明示 (本 session 全 sonnet) / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 2 件 helix-process/・ai-agent-harness-directory-reference.md は禁止)。
+
+---
+
+# Session Handover — 2026-06-04 (session 9: L0-L3 Forward freeze — G0.5/G1/G3 PO サインオフ, A-100)
+
+> PO「フィックス」= ロードマップ Phase 1 (L0-L3) の改善/検証サイクル終了 → L0-L3 freeze 授権。**台帳の食い違い** (gate-design §2 旧台帳が G1/G3 PASS + G4/G5 COND PASS、一方 living roadmap は「L1-L3 draft / spine L3 停止」) を PO 決定 (A) で reconcile し freeze 実行。§1-§2 は git/audit から手記入 (handover digest は前 session 由来ノイズ = IMP-048 既知限界)。
+
+## §1 サマリ (PLAN ではなく gate サインオフ action)
+
+| 区分 | 何を | commit |
+|------|------|--------|
+| L0-L3 freeze | 改善/検証 4 巡完走 (残 PO 判断要 0) → PO 再確定サインオフ (A-100) | `086f06f` |
+| 前提 reconcile | RECOVERY-02 (正規式モデル) 後、旧台帳 (A-41/A-60/A-67/A-91/A-70) は正規式前スコープ → PO 決定 (A)「L0-L3 固め、L4-L6 仕切り直し」 | `086f06f` |
+
+## §2 成果物 (commit / files)
+
+- **status flip 17 ファイル `draft → confirmed`** (frontmatter status 行のみ、本文不変): L1 設計 doc 5 (`docs/design/harness/L1-requirements/*`) + L3 設計 doc 4 (`L3-functional/{README,business-detail,functional-requirements,nfr-grade}.md`、**roadmap.md は living で除外**) + L1/L3 PLAN 8 (PLAN-L1-01〜05 / PLAN-L3-01〜03)。
+- **`docs/governance/gate-design.md §2` 台帳**: G0.5/G1/G3 を A-100 で再確定 PASS、**G4/G5 を「要再評価 (park)」へ rollback** (旧 A-67/A-91/A-70 = historical 保持)、§2.1 に A-100 注記。
+- **`docs/design/harness/L3-functional/roadmap.md §5`**: 現在地を Phase1=freeze / Phase2=仕切り直し に更新 + freeze ログ 1 行。
+- **`.ut-tdd/audit/A-100-l0-l3-refreeze.md`** (新規、gitignored runtime 記録、**commit 対象外**)。
+- **concept/requirements は flip せず**: prose 見出しで自前 status 無し。frozen は gate 台帳 (G0.5/G1/G3 + A-100) で記録。**L2 は placeholder 据え置き** (G2 DEFER 維持、screen track)。
+- 検証: **vitest 177 pass** (status flip で破壊なし) / doctor hard 条件 (backfill/scrum-reverse/propagation) OK / biome CLEAN。review 前置 = pmo-sonnet 2 体起動したが verdict が truncate → 観点 (対象漏れ/過剰・台帳整合・exit条件・波及) を PM 直接検証で補完・APPROVE。
+- HEAD = `086f06f`、push 未 (本 session 末で push 予定)。untracked 3 件 (audit + policy-exempt 2) は commit 禁止。
+
+## §3 Next Action
+
+1. **Phase 2 = L4-L6 の Forward 実開発** (改善/検証サイクルではなく **設計の新規降下**)。正規式モデルで L4⇔L9 総合 / L5⇔L8 結合 / L6⇔L7 単体。**L4 基本設計から着手**。既存 L4/L5 doc は draft scaffold (status draft 据え置き)、L6 は Add-feature slice のみ confirmed。**L4/L5 テスト設計 doc (L9-system / L8-integration は存在、L4/L5 固有のペア整備) も要確認**。
+2. **freeze 後の L0-L3 規範変更は Reverse/Recovery を通す** (ad-hoc 編集禁止)。confirmed 化した L1/L3 PLAN・設計 doc を直接 draft へ戻さない。
+3. **fail-close 昇格 (継続 carry)**: `src/plan/lint.ts` stub 実装時 (Phase 4 前後)。今は据え置きで OK (PO 確認済、session 9 冒頭)。
+
+## §4 carry (未了・先送り)
+
+- **Phase 2 (L4-L6) Forward 実開発** = 次の主タスク (Next Action 1)。
+- warn-first → fail-close 昇格 (plan lint engine 実装時): backfill/handover/§G.4 直列並列/scrum-reverse 統合。
+- CI biome subjob (workflow PAT、deferred) / kind×layer guard (§1.6 PO 確定待ち) / IMP-047〜051 残配線 (lint トークン/pre-push/team_runner 本体)。
+- IMP-052 G8-G14 機械化 PLAN は Phase 3/5 で起票。
+
+## §5 未了 PO 判断
+
+- **L0-L3 freeze は実行済 (A-100)、残 PO 判断要 = 0**。
+- (任意) freeze で concept/requirements を status flip しなかった判断 (prose 見出し = 自前 status 無 → gate 台帳で frozen 記録) に異論あれば指摘。
+- (任意) G4/G5 を park=要再評価へ rollback した粒度 (旧 A-67/A-91/A-70 を historical 保持) に過不足あれば指摘。
+
+## §6 壊さない / 再発させない
+
+- **freeze の正本記録 = gate-design §2 台帳 (tracked) + .ut-tdd/audit/A-100 (runtime)**。concept/requirements は prose 見出しで status を持たない (スキーマ例の `status: draft` を本物と誤認して flip しない)。
+- **roadmap.md は living = freeze 対象外** (status draft 維持)。L0-L3 確定後も進捗で更新する companion doc。
+- **G4/G5 は park (要再評価)**。L4-L6 を「既に COND PASS」と誤認しない (RECOVERY-02 で仕切り直し)。Phase 2 で再 audit する。
+- **status flip は frontmatter の status 行のみ** (本文に触れない)。`sed '0,/^status: draft/s//status: confirmed/'` で frontmatter 先頭のみ置換 (本文の status: draft 例を巻き込まない)。
+- review 前置 MUST / subagent model 明示 (本 session pmo-sonnet 全 sonnet) / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 3 件は禁止)。
