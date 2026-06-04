@@ -56,3 +56,74 @@
 - **biome は repo 全体 CLEAN(0)**。`npm run lint` (pinned biome) で確認すること。**`npx biome` は最新版を取得し pinned と rule が違う**ため判定に使わない (本 session で誤判定の実害あり、PLAN-L7-05 §0)。
 - **g3-trace.ts の trace 抽出は各 extractor の inline regex が正本** (削除した module 級定数は陳腐化 dead だった)。再び module 定数を足さない。
 - **review 前置 MUST** / **subagent model 明示** / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / **staged は明示ファイルのみ** (untracked 2 件は commit 禁止)。
+
+---
+
+# Session Handover — 2026-06-04 (session 2: V-model 正規式モデル Recovery — PLAN-RECOVERY-02)
+
+> §1-§2 は session-log digest からの**機械 auto-prefill** (active=PLAN-RECOVERY-02)。digest が当日全 PLAN を含むため重複/`unknown` のノイズあり (→ IMP-048)。**正規式の確定内容は RECOVERY-02 §5、成果と次手は本 §2 末尾・§3 を正**とする。
+
+## §1 PLAN サマリ
+
+- `PLAN-DISCOVERY-01-workflow-metamodel` (poc): PLAN-DISCOVERY-01 (kind=poc): workflow メタモデル検証 (①必須+②駆動モデル→PLAN合成→駆動プラン→exit→fullback がきれいに回るか)
+- `PLAN-L6-06-handover-mechanism` (add-design): PLAN-L6-06 (add-design): handover 記録機構の機能設計 — session-log PLAN digest → handover 生成 (機械ポインタ CURRENT.json + 人間判断 markdow…
+- `PLAN-L7-04-handover-mechanism` (add-impl): PLAN-L7-04 (add-impl): handover 記録機構の実装 — src/handover + ut-tdd handover / plan use CLI + session-log 限定 amendment (cur…
+- `PLAN-L7-04` (unknown): PLAN-L7-04
+- `PLAN-L7-05` (unknown): PLAN-L7-05
+- `PLAN-RECOVERY-02-vmodel-canonical` (recovery): PLAN-RECOVERY-02 (recovery): V-model 定義の前提欠落 — 正規式モデルへ収束 + L0-L3 fullback/フィックス
+- `PLAN-RECOVERY-02` (unknown): PLAN-RECOVERY-02
+- `PLAN-REVERSE-05-handover-mechanism` (reverse): PLAN-REVERSE-05 (reverse/fullback): handover 記録機構を上位整合へ back-fill — §6.8.5 follow-up done 化 + CURRENT.md→.json 表記同期 + §…
+- `PLAN-REVERSE-05` (unknown): PLAN-REVERSE-05
+
+## §2 成果物 (commit / files)
+
+- `PLAN-DISCOVERY-01-workflow-metamodel`
+- `PLAN-L6-06-handover-mechanism`
+- `PLAN-L7-04-handover-mechanism`
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\handover\index.ts
+- `PLAN-L7-04`
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\plans\PLAN-REVERSE-05-handover-mechanism.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\governance\ut-tdd-agent-harness-requirements_v1.2.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\governance\ut-tdd-agent-harness-concept_v3.1.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\design\harness\L1-requirements\functional-requirements.md
+- `PLAN-L7-05`
+- `PLAN-RECOVERY-02-vmodel-canonical`
+- `PLAN-RECOVERY-02`
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\process\forward\overview.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\process\forward\L07-implementation.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\process\forward\L08-L14-verification-phase.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\process\forward\L00-L06-design-phase.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\process\gates.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\governance\gate-design.md
+  - file: Write C:\Users\micro\.claude\projects\c--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness\memory\project_vmodel_canoni…
+  - file: Edit C:\Users\micro\.claude\projects\c--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness\memory\MEMORY.md
+- `PLAN-REVERSE-05-handover-mechanism`
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\handover\session-handover-2026-06-04.md
+- `PLAN-REVERSE-05`
+
+> **本 session 2 のクリーン成果サマリ**: 検証/改善ロードマップ起票 (`docs/design/harness/L3-functional/roadmap.md`) → 粒度対照性 + WF↔設計対応 監査 (IMP-037〜046) → **V-model 定義の前提欠落を発見 → 正規式モデル確定 → Recovery (PLAN-RECOVERY-02) で docs→workflow→assets を整合**。RECOVERY-02 8 commit (`db79a3e`→`0d298df`)。正規式 = L0⇔価値検証 / 谷=3点合算 / 右腕=データ実在性エスカレーション / L2=L1分離、**非破壊**。vitest 113 pass / 機械 trace green。
+
+## §3 Next Action
+
+1. **【最優先・po-gate】L0-L3 freeze の PO サインオフ**: doc は正規式整合 + 機械 trace green = freeze-ready。PO が G0.5/G1/G3 を承認したら L1/L3 PLAN を confirmed 化し L4 着手起点を整える (RECOVERY-02 requires_human_approval)。
+2. **L4 entry**: G3 freeze 後、L4 基本設計を正規式 (L4⇔L9 総合、検証本質=総合) で着手。
+3. **workflow 改善 (IMP-047)**: handover/log を PLAN完了/節目で自動生成・強制する仕組み (handoverStale lint / Stop-hook / doctor surface)。今回 PM が手動を忘れ PO 指摘 = workflow ギャップ。
+
+## §4 carry (未了・先送り)
+
+- **L0-L3 最終 freeze (G1/G3)** = po-gate (Next Action 1)。
+- **handover-on-completion 強制 (IMP-047)** + **§1-§2 prefill ノイズ/重複低減 (IMP-048)**: 機構はあるが未強制・digest ノイジー。
+- session 1 からの継続 carry: CI biome subjob 有効化 / `src/plan/lint.ts` stub 実装 / REVERSE-02 R3 等。
+
+## §5 未了 PO 判断
+
+1. **L0-L3 freeze 承認** (正規式整合 + freeze-ready で G0.5/G1/G3 を freeze してよいか)。
+2. RECOVERY-02 スコープに修正があれば指摘 (正規式モデル全表 = RECOVERY-02 §5)。
+
+## §6 壊さない / 再発させない
+
+- **正規式は非破壊**: 既存 L0-L14 番号・6 V-pair を動かさない。追加 (L0⇔価値) と明確化のみ。正本 anchor = concept §2.3。
+- **定義修正は駆動モデル (Recovery) を通す**: 「アップデート」という非モデルの ad-hoc 編集をしない (PO 2026-06-04)。
+- **PLAN完了/節目では log + handover を作る** (本指摘。IMP-047 で強制化目標)。
+- エスカレーション列挙は右腕工程順 (実データ検証 L10 → 本番受入 L12)。
+
