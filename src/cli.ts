@@ -17,6 +17,7 @@ import {
   pendingRecoveryProposals,
   recordFeedback,
 } from "./runtime/forced-stop";
+import { nodeHandoverDeps, runHandover, setActivePlanCli } from "./handover/index";
 import { nodeDeps, resolveActivePlan } from "./runtime/session-log";
 import { type SetupArgs, nodeSetupDeps, runSetup } from "./setup/index";
 import { lintVmodel } from "./vmodel/lint";
@@ -75,6 +76,40 @@ plan
     const r = lintPlan(path);
     for (const m of r.messages) process.stdout.write(m + "\n");
     process.exitCode = r.ok ? 0 : 1;
+  });
+
+plan
+  .command("use [id]")
+  .description("active PLAN を .ut-tdd/state/current-plan に記録 (session-log digest を活性化)。--clear で解除")
+  .option("--clear", "current-plan を clear")
+  .action((id: string | undefined, opts: { clear?: boolean }) => {
+    if (!opts.clear && !id) {
+      process.stderr.write("plan use <id> または --clear を指定してください\n");
+      process.exitCode = 1;
+      return;
+    }
+    setActivePlanCli(process.cwd(), opts.clear ? null : (id as string), gitBranch);
+    process.stdout.write(opts.clear ? "current-plan: cleared\n" : `current-plan: ${id}\n`);
+  });
+
+program
+  .command("handover")
+  .description("session-log PLAN digest から handover を生成 (機械ポインタ CURRENT.json + 人間判断 markdown scaffold、要件 §6.8.5)")
+  .option("--dry-run", "書き込まず内容のみ表示")
+  .option("--complete", "status=completed として記録 (PLAN 完了時)")
+  .option("--plan <id>", "明示 active PLAN (省略時 current-plan/branch から解決)")
+  .action((opts: { dryRun?: boolean; complete?: boolean; plan?: string }) => {
+    const date = new Date().toISOString().slice(0, 10);
+    const deps = nodeHandoverDeps(process.cwd());
+    const r = runHandover(
+      { date, dryRun: Boolean(opts.dryRun), complete: Boolean(opts.complete), ...(opts.plan ? { planId: opts.plan } : {}) },
+      deps,
+    );
+    process.stdout.write(
+      `handover: active=${r.pointer.active_plan ?? "-"} status=${r.pointer.status}${opts.dryRun ? " (dry-run)" : ""}\n`,
+    );
+    for (const w of r.written) process.stdout.write(`  + ${w}\n`);
+    if (opts.dryRun) process.stdout.write("\n--- scaffold ---\n" + r.content + "\n");
   });
 
 const vmodel = program.command("vmodel").description("V-model trace");

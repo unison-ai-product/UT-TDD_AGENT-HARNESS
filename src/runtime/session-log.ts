@@ -15,6 +15,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
@@ -66,6 +67,8 @@ export interface SessionLogDeps {
   currentBranch: () => string | null;
   /** dir 内の entry 名一覧 (feedback ログ走査用、PLAN-L7-02)。未提供/失敗時は []。 */
   listDir?: (dir: string) => string[];
+  /** file 削除 (current-plan clear 用、PLAN-L7-04)。未提供時は空文字書込で代替。 */
+  removeFile?: (path: string) => void;
 }
 
 const BRANCH_PLAN_RE = /^(?:add|design|feature|reverse|hotfix|poc|refactor)\/(.+)$/;
@@ -122,12 +125,43 @@ function emptyDigest(planId: string): PlanDigest {
  * U-SLOG-001: state ファイル優先 → branch fallback → 解決不能は null。throw しない。
  */
 export function resolveActivePlan(deps: SessionLogDeps): string | null {
-  const stateFile = join(deps.repoRoot, ".ut-tdd", "state", "current-plan");
-  const fromState = deps.readText(stateFile);
+  const fromState = deps.readText(currentPlanPath(deps.repoRoot));
   if (fromState && fromState.trim()) return fromState.trim();
   const branch = deps.currentBranch();
   const m = branch?.match(BRANCH_PLAN_RE);
   return m ? m[1] : null;
+}
+
+function currentPlanPath(repoRoot: string): string {
+  return join(repoRoot, ".ut-tdd", "state", "current-plan");
+}
+
+// PLAN-L6-06 §2.3: ID 単体形 (slug 任意)。commit message 抽出 / handover scope 解決で再利用。
+const PLAN_ID_RE = /PLAN-(?:L(?:[0-9]|1[0-4])|DISCOVERY|REVERSE|RECOVERY|M)-\d{2}(?:-[a-z0-9-]+)?/;
+
+/**
+ * U-HOVER-006: active PLAN を `.ut-tdd/state/current-plan` へ書く (Gap B 活性化)。
+ * planId!==null → 書く / null + removeFile 有 → 削除 / null + removeFile 無 → 空文字書込
+ * (resolveActivePlan は空文字を trim で falsy 判定し branch fallback→null へ落とす = 実質 clear)。
+ * resolveActivePlan の解決ロジックは不変。
+ */
+export function setActivePlan(planId: string | null, deps: SessionLogDeps): void {
+  const path = currentPlanPath(deps.repoRoot);
+  if (planId !== null) {
+    deps.writeText(path, planId);
+    return;
+  }
+  if (deps.removeFile) deps.removeFile(path);
+  else deps.writeText(path, "");
+}
+
+/**
+ * U-HOVER-006: commit message から PLAN ID を抽出 (best-effort、純関数)。
+ * `git commit -F -` heredoc は本文が command に乗らないため null (= no-op)。
+ */
+export function inferPlanFromCommit(commitMessage: string): string | null {
+  const m = commitMessage.match(PLAN_ID_RE);
+  return m ? m[0] : null;
 }
 
 /**
@@ -206,6 +240,12 @@ export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): nu
   try {
     const cmd = String((input.tool_input as { command?: unknown })?.command ?? "");
     const isCommit = input.tool_name === "Bash" && /git\s+commit/.test(cmd);
+    // PLAN-L7-04 Gap B 配線: commit message に PLAN ID があれば current-plan を活性化 (best-effort)。
+    // `-F -` heredoc は cmd に本文が乗らず inferred=null → no-op。fail-open (throw しない)。
+    if (isCommit) {
+      const inferred = inferPlanFromCommit(cmd);
+      if (inferred) setActivePlan(inferred, deps);
+    }
     recordEvent(
       {
         ts: deps.now(),
@@ -300,5 +340,8 @@ export function nodeDeps(repoRoot: string, gitBranch: () => string | null): Sess
     },
     currentBranch: gitBranch,
     listDir: (dir) => (existsSync(dir) ? readdirSync(dir) : []),
+    removeFile: (path) => {
+      if (existsSync(path)) rmSync(path);
+    },
   };
 }
