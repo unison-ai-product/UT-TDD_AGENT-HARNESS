@@ -13,6 +13,8 @@ L1 画面要求 (14 画面 PM/HM/GD) を L2 画面設計に詳細化する sub-d
 
 > **Forward handling**: 本ディレクトリは L0→L3 時点では意図的な placeholder / carry。L3 は L1 screen §5 の trace を参照して AC / AT を確定し、L2 画面設計そのものは PLAN-L2-01〜04 起票時に本確定する。したがって L3 G3 判定では「L2 が存在しない漏れ」ではなく「L2 起票待ちの明示 carry」として扱う。
 
+> **③ ペアの所在 (IMP-039)**: L2 の V-pair (右腕 L10) は **ワイヤーモック自体が ③ テスト設計を兼ねる** (requirements §1.4「L2: ワイヤーモック (mock がペア →L10)」)。したがって `docs/test-design/` に L10 用の独立 test-design doc は作成しない。L2⇔L10 の右腕 doc 不在は「欠落」ではなく設計意図であり、本 placeholder 確定後も mock が pair を担う。
+
 ## 構成 (4 sub-doc)
 
 | sub-doc | 役割 | status | 必須/省略可 |

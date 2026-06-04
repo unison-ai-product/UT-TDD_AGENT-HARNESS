@@ -182,7 +182,7 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 
 | 日付 | サイクル | 観点 | 主な結果 | 機能一覧への登録 |
 |------|---------|------|---------|----------------|
-| 2026-06-04 | Phase 1/2 検証 (PO /goal) | B (設計⇔テスト設計の同粒度) + A (workflow⇔設計対応) | **粒度対照性**: 6 V-pair 中 5/6 が左右対照 (L6⇔L7 / L5⇔L8 / L4⇔L9 / L3⇔L12 / L1⇔L14)、L2⇔L10 のみ右腕 doc 不在で × (モック=ペア方針未明文化)。最小単位 L6 機能設計⇔L7 単体テスト設計は○。監査中に会話で「L8 単体」と表現したが全 doc は「単体=L6作成/L7実施・結合=L5作成/L8実施」で統一済 (doc 不整合なし)。軽微整合事項 = test-design の layer 表記非対称 / L1op frontmatter 欠落(本cycle修正) / U-RULE 束ね / ST-ASSET back-fill。**workflow⇔設計対応**: Forward は L0-L14 整合写像で pair-freeze 内蔵、非 Forward 8 mode は「出口 Forward 合流」で間接接続。critical = Add-feature×gate 境界 / Scrum→L8-L14 routing 欠落 / DISCOVERY-01 旧drive残存(本cycle修正)。 | IMP-037〜046。即修正: IMP-038 (L1op frontmatter) / IMP-042 (DISCOVERY-01 drive V7)。残は REVERSE-01 等へ routing |
+| 2026-06-04 | Phase 1/2 検証 (PO /goal) | B (設計⇔テスト設計の同粒度) + A (workflow⇔設計対応) | **粒度対照性**: 6 V-pair 中 5/6 が左右対照 (L6⇔L7 / L5⇔L8 / L4⇔L9 / L3⇔L12 / L1⇔L14)、L2⇔L10 のみ右腕 doc 不在で × (モック=ペア方針未明文化)。最小単位 L6 機能設計⇔L7 単体テスト設計は○。監査中に会話で「L8 単体」と表現したが全 doc は「単体=L6作成/L7実施・結合=L5作成/L8実施」で統一済 (doc 不整合なし)。軽微整合事項 = test-design の layer 表記非対称 / L1op frontmatter 欠落(本cycle修正) / U-RULE 束ね / ST-ASSET back-fill。**workflow⇔設計対応**: Forward は L0-L14 整合写像で pair-freeze 内蔵、非 Forward 8 mode は「出口 Forward 合流」で間接接続。critical = Add-feature×gate 境界 / Scrum→L8-L14 routing 欠落 / DISCOVERY-01 旧drive残存(本cycle修正)。 | IMP-037〜046 起票。本cycleで改善実施: IMP-038 (L1op frontmatter) / IMP-042 (DISCOVERY-01 drive V7) / IMP-039 (L2 mock=③ペア明文化) / IMP-043 (Add-feature×gate 境界明文化) / IMP-044 (Scrum 昇華経路正確化) / IMP-045 (Incident ③-first) / IMP-046 (Research layer 規則)。**IMP-037 (test-design layer 規約統一) のみ REVERSE-01/vmodel-lint へ routing 継続** |
 
 ---
 

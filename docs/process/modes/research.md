@@ -20,6 +20,8 @@
 | 承認者 | — (人間サインオフ不要) |
 | branch prefix | `research/*` (§6.1) |
 
+> **layer 値の確定 (IMP-046)**: 早見表の `L1`-`L4` は適用範囲の表記。実 PLAN 起票時の `layer` は **合流先 1 値**を設定する (ADR が L4 基本設計の判断材料なら `layer=L4`、要求影響なら `layer=L1`。VALID_LAYERS は単一値、§1.4 のため範囲値は schema 無効)。`docs/research/` の canonical tree 登録は §6 tree gap 注記のとおり Reverse 正本化時に repository-structure へ反映する。
+
 ---
 
 ## 2. phase / フロー構成

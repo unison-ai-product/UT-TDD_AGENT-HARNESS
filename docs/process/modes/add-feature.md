@@ -33,6 +33,8 @@
 
 > **なぜ Reverse で戻すか**: bottom-up で L6/L7 を先に作ると L3 要件が空くため、V-model の左腕が孤児化する。**Reverse (`confirmed_reverse_type=fullback`、`forward_routing=L3`) で実装事実から L3 要件を逆復元し、①⇔③ ペアを G3 で凍結**することで整合を回復する (要件は「後で Reverse 正本化」が前提)。これは Add-feature の例外でなく **常態**。
 
+> **経路 B と Reverse gate 通過義務の境界 (IMP-043)**: `reverse.md §4`「再入先 Pair freeze gate 通過まで L7 着手禁止」は **Reverse routing 後に新規開始する下流 L7** を規律するルール。経路 B の add-impl (L7) は Reverse より**前**に存在する bottom-up build であり、この先行実装は禁止対象ではない (bottom-up build → 後追い back-fill は常態)。Reverse は既存実装から L3 ① を復元し G3 で ①⇔③ を遡及凍結する。**ただし当該 add-impl の G7 4-artifact trace 凍結は、Reverse が G3 ペア凍結を閉じるまで保留**される (③ 不在のまま trace 確定不可、AP-7/AP-8 準拠)。= 先行 build は許容、trace 確定は pair-freeze 後。
+
 ---
 
 ## 2. phase / フロー構成 (Step 集合)

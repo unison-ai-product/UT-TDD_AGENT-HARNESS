@@ -95,6 +95,8 @@ Reverse は ① だけ Forward に渡して終わりではない。**routing 先
 
 §2.1 で復元/記録した ③ (as-is-test-design or `missing_pair_artifacts`) が、この再入先 gate で ① とペア凍結される。gate 未通過で L7 着手した PLAN は exit 1 (AP-7 準拠)。これは全 mode 共通の合流規約 (Forward 進行時と同一条件、gate-design §1.1)。
 
+> **Add-feature 経路 B との境界 (IMP-043)**: 本 gate 義務は **Reverse routing 後に新規開始する L7** に適用する。Add-feature 経路 B のように L6/L7 を先に build してから Reverse で L3 を back-fill する場合、その先行 L7 (add-impl) は禁止対象外 (bottom-up build は常態、add-feature.md §1.1)。ただし当該実装の **G7 trace 凍結は再入先 G3 通過後まで保留**される (③ 不在のまま trace 確定不可)。「L7 着手禁止」は新規 forward 下降の規律であって、後追い back-fill される bottom-up build を禁じるものではない。
+
 ---
 
 ## 5. 必須 role / 承認者
