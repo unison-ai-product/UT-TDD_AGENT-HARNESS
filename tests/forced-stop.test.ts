@@ -2,10 +2,10 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   type ClassifyResult,
-  type FeedbackEntry,
   classifyFeedback,
   detectDanglingTurn,
   emitClassifyRequest,
+  type FeedbackEntry,
   pendingRecoveryProposals,
   recordFeedback,
   recordForcedStop,
@@ -42,7 +42,8 @@ const ev = (
 ): SessionEvent => ({ ts, session_id: "s1", plan_id: "PLAN-A", event_type, ...over });
 
 const sessionPath = (sid: string) => join("/repo", ".ut-tdd", "logs", "session", `${sid}.jsonl`);
-const feedbackPath = (plan: string) => join("/repo", ".ut-tdd", "logs", "feedback", `${plan}.jsonl`);
+const feedbackPath = (plan: string) =>
+  join("/repo", ".ut-tdd", "logs", "feedback", `${plan}.jsonl`);
 
 describe("forced-stop (PLAN-L7-02 add-impl / U-FSF)", () => {
   it("U-FSF-001: detectDanglingTurn 純粋性 / dangling 判定 / from 規則", () => {
@@ -50,9 +51,10 @@ describe("forced-stop (PLAN-L7-02 add-impl / U-FSF)", () => {
     expect(detectDanglingTurn([])).toEqual({ dangling: false, from: null });
 
     // session_end で閉じている → false
-    expect(
-      detectDanglingTurn([ev("T1", "tool_use"), ev("T2", "session_end")]),
-    ).toEqual({ dangling: false, from: null });
+    expect(detectDanglingTurn([ev("T1", "tool_use"), ev("T2", "session_end")])).toEqual({
+      dangling: false,
+      from: null,
+    });
 
     // session_end あり + その後 tool_use → from = 直後イベント ts
     expect(
@@ -119,7 +121,10 @@ describe("forced-stop (PLAN-L7-02 add-impl / U-FSF)", () => {
     expect(rejected).toEqual({ category: "feedback", attention: "low", reason: "unclassified" });
 
     // 不正出力 → 同様に倒す
-    const garbage = await classifyFeedback("x", async () => ({ foo: "bar" }) as unknown as ClassifyResult);
+    const garbage = await classifyFeedback(
+      "x",
+      async () => ({ foo: "bar" }) as unknown as ClassifyResult,
+    );
     expect(garbage).toEqual({ category: "feedback", attention: "low", reason: "unclassified" });
   });
 
@@ -148,7 +153,9 @@ describe("forced-stop (PLAN-L7-02 add-impl / U-FSF)", () => {
       { session_id: "s1", plan_id: "PLAN-A", summary: "password=secret を docs に書いた" },
       movedNow,
     );
-    expect((movedNow.files.get(feedbackPath("PLAN-A")) as string).trim().split("\n").length).toBe(1);
+    expect((movedNow.files.get(feedbackPath("PLAN-A")) as string).trim().split("\n").length).toBe(
+      1,
+    );
 
     // mistake は no-op
     const d2 = mockDeps();
@@ -220,7 +227,10 @@ describe("forced-stop (PLAN-L7-02 add-impl / U-FSF)", () => {
       sessionPath("s2"),
       `${JSON.stringify(ev("T1", "tool_use", { session_id: "s2" }))}\n${JSON.stringify(ev("T2", "session_end", { session_id: "s2" }))}\n`,
     );
-    deps.files.set(sessionPath("cur"), `${JSON.stringify(ev("T1", "session_start", { session_id: "cur" }))}\n`);
+    deps.files.set(
+      sessionPath("cur"),
+      `${JSON.stringify(ev("T1", "session_start", { session_id: "cur" }))}\n`,
+    );
 
     expect(scanDanglingStops(deps, "cur")).toBe(1); // s1 のみ
     expect(deps.files.get(sessionPath("s1"))).toContain('"event_type":"forced_stop"');

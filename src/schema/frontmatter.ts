@@ -175,7 +175,11 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
   }
 
   // §3.5: kind=poc は scrum_type を S3 以降必須 (S0-S2 は null 可、6 種 = §3.2)
-  if (fm.kind === "poc" && (fm.workflow_phase === "S3" || fm.workflow_phase === "S4") && !fm.scrum_type) {
+  if (
+    fm.kind === "poc" &&
+    (fm.workflow_phase === "S3" || fm.workflow_phase === "S4") &&
+    !fm.scrum_type
+  ) {
     ctx.addIssue({
       code: custom,
       path: ["scrum_type"],

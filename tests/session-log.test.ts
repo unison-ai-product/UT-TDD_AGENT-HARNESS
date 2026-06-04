@@ -6,13 +6,15 @@ import {
   onStop,
   recordEvent,
   resolveActivePlan,
-  sanitize,
   type SessionEvent,
   type SessionLogDeps,
+  sanitize,
 } from "../src/runtime/session-log";
 
 /** in-memory file store の mock deps (now 固定で決定論)。 */
-function mockDeps(over: Partial<SessionLogDeps> = {}): SessionLogDeps & { files: Map<string, string> } {
+function mockDeps(
+  over: Partial<SessionLogDeps> = {},
+): SessionLogDeps & { files: Map<string, string> } {
   const files = new Map<string, string>();
   return {
     files,
@@ -70,8 +72,20 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
 
   it("U-SLOG-003: compressPlanDigest 集計 + idempotent + updated_at 巻き戻りなし + failures ts dedupe", () => {
     const evs: SessionEvent[] = [
-      { ts: "2026-06-02T00:00:01Z", session_id: "s1", plan_id: "P", event_type: "tool_use", target: "src/a.ts" },
-      { ts: "2026-06-02T00:00:02Z", session_id: "s1", plan_id: "P", event_type: "commit", target: "abc123" },
+      {
+        ts: "2026-06-02T00:00:01Z",
+        session_id: "s1",
+        plan_id: "P",
+        event_type: "tool_use",
+        target: "src/a.ts",
+      },
+      {
+        ts: "2026-06-02T00:00:02Z",
+        session_id: "s1",
+        plan_id: "P",
+        event_type: "commit",
+        target: "abc123",
+      },
       { ts: "2026-06-02T00:00:03Z", session_id: "s1", plan_id: "Q", event_type: "tool_use" }, // 別 plan (ts=03) は planId="P" 集計対象外
     ];
     const d1 = compressPlanDigest(evs, "P");
@@ -105,8 +119,22 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
 
     // failures ts dedupe (同一 ts → 1 件)
     const errs: SessionEvent[] = [
-      { ts: "TE", session_id: "s2", plan_id: "P", event_type: "tool_use", outcome: "error", target: "x" },
-      { ts: "TE", session_id: "s2", plan_id: "P", event_type: "tool_use", outcome: "error", target: "y" },
+      {
+        ts: "TE",
+        session_id: "s2",
+        plan_id: "P",
+        event_type: "tool_use",
+        outcome: "error",
+        target: "x",
+      },
+      {
+        ts: "TE",
+        session_id: "s2",
+        plan_id: "P",
+        event_type: "tool_use",
+        outcome: "error",
+        target: "y",
+      },
     ];
     expect(compressPlanDigest(errs, "P").failures.length).toBe(1);
   });
@@ -118,7 +146,9 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
       `${JSON.stringify({ ts: "T1", session_id: "s1", plan_id: "PLAN-A", event_type: "tool_use", target: "src/a.ts" })}\n`,
     );
     expect(onStop({ session_id: "s1" }, deps)).toBe(0);
-    const digestKey = [...deps.files.keys()].find((k) => k.includes("PLAN-A") && k.includes("digest"));
+    const digestKey = [...deps.files.keys()].find(
+      (k) => k.includes("PLAN-A") && k.includes("digest"),
+    );
     expect(digestKey).toBeDefined();
     expect(JSON.parse(deps.files.get(digestKey as string) as string).plan_id).toBe("PLAN-A");
 

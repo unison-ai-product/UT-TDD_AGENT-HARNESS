@@ -1,17 +1,17 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  type ProjectScale,
-  type SetupDeps,
-  type SetupState,
-  type TemplateSet,
   applyBranchProtection,
   detectProjectScale,
   emitSetup,
+  type ProjectScale,
   planSetup,
   recommendPhase,
   recordSetupState,
   runSetup,
+  type SetupDeps,
+  type SetupState,
+  type TemplateSet,
 } from "../src/setup/index";
 
 /** in-memory file store + gh 呼び出し記録の mock deps (now 固定で決定論)。 */
@@ -45,23 +45,29 @@ const statePath = join("/repo", ".ut-tdd", "state", "setup.json");
 const ghTeam = (args: string[]): { ok: boolean; stdout: string } => {
   const key = args.join(" ");
   if (key === "api repos/{owner}/{repo}")
-    return { ok: true, stdout: JSON.stringify({ owner: { type: "Organization" }, permissions: { admin: true } }) };
+    return {
+      ok: true,
+      stdout: JSON.stringify({ owner: { type: "Organization" }, permissions: { admin: true } }),
+    };
   if (key === "api repos/{owner}/{repo}/collaborators")
     return { ok: true, stdout: JSON.stringify([{}, {}, {}, {}]) };
-  if (key === "api repos/{owner}/{repo}/branches/main/protection") return { ok: true, stdout: "{}" };
+  if (key === "api repos/{owner}/{repo}/branches/main/protection")
+    return { ok: true, stdout: "{}" };
   if (key === "auth status") return { ok: true, stdout: "logged in" };
   return { ok: false, stdout: "" };
 };
 
 const baseTemplates: TemplateSet = {
   "common/harness-check.yml": "name: harness-check\n",
-  "common/commitlint.config.js": "module.exports = { extends: ['@commitlint/config-conventional'] };\n",
+  "common/commitlint.config.js":
+    "module.exports = { extends: ['@commitlint/config-conventional'] };\n",
   "common/escalation-stale.yml": "name: escalation-stale\n",
   "common/recovery.md": "# Recovery\n",
   "common/add-feature.md": "# Add-feature\n",
   "common/PULL_REQUEST_TEMPLATE.md": "## 概要\nCloses #\n",
   "team/CODEOWNERS": "* {{TL_TEAM}}\n/docs/ {{PO_TEAM}}\n/tests/ {{QA_TEAM}}\n",
-  "team/setup-branch-protection.sh": "#!/usr/bin/env bash\ngh api -X PUT repos/{owner}/{repo}/branches/main/protection --input protection.json\n",
+  "team/setup-branch-protection.sh":
+    "#!/usr/bin/env bash\ngh api -X PUT repos/{owner}/{repo}/branches/main/protection --input protection.json\n",
 };
 
 describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
@@ -100,16 +106,33 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       hasBranchProtection: false,
     };
     // team 信号
-    expect(recommendPhase({ ...base, ownerType: "Organization" })).toMatchObject({ phase: "0-B", confidence: "high" });
+    expect(recommendPhase({ ...base, ownerType: "Organization" })).toMatchObject({
+      phase: "0-B",
+      confidence: "high",
+    });
     expect(recommendPhase({ ...base, collaborators: 3 })).toMatchObject({ phase: "0-B" });
     expect(recommendPhase({ ...base, hasCodeowners: true })).toMatchObject({ phase: "0-B" });
     expect(recommendPhase({ ...base, hasBranchProtection: true })).toMatchObject({ phase: "0-B" });
     // solo (User + collaborators<=1)
     expect(recommendPhase(base)).toMatchObject({ phase: "0-A", confidence: "high" });
     // 不明信号 → solo low (安全フォールバック)
-    expect(recommendPhase({ ownerType: "unknown", collaborators: null, hasCodeowners: false, hasBranchProtection: null })).toMatchObject({ phase: "0-A", confidence: "low" });
+    expect(
+      recommendPhase({
+        ownerType: "unknown",
+        collaborators: null,
+        hasCodeowners: false,
+        hasBranchProtection: null,
+      }),
+    ).toMatchObject({ phase: "0-A", confidence: "low" });
     // null 単独 (User だが collaborators 取得不可) → 0-B にしない
-    expect(recommendPhase({ ownerType: "User", collaborators: null, hasCodeowners: false, hasBranchProtection: null })).toMatchObject({ phase: "0-A", confidence: "low" });
+    expect(
+      recommendPhase({
+        ownerType: "User",
+        collaborators: null,
+        hasCodeowners: false,
+        hasBranchProtection: null,
+      }),
+    ).toMatchObject({ phase: "0-A", confidence: "low" });
   });
 
   it("U-SETUP-003: planSetup 0-A=A のみ / 0-B=A+CODEOWNERS+bp script / teams 反映 / applied=false", () => {
@@ -118,14 +141,23 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(solo.files.some((f) => f.path.endsWith("CODEOWNERS"))).toBe(false);
     expect(solo.actions).toEqual([]);
 
-    const team = planSetup("0-B", { dryRun: false, teams: { tl: "@org/tl", qa: "@org/qa", po: "@org/po" } });
+    const team = planSetup("0-B", {
+      dryRun: false,
+      teams: { tl: "@org/tl", qa: "@org/qa", po: "@org/po" },
+    });
     expect(team.files.some((f) => f.path.endsWith("CODEOWNERS") && f.category === "B")).toBe(true);
     expect(team.files.some((f) => f.path.includes("setup-branch-protection.sh"))).toBe(true);
     // teams 名が CODEOWNERS GeneratedFile に反映
     const co = team.files.find((f) => f.path.endsWith("CODEOWNERS"));
     expect(co?.purpose).toContain("@org/tl");
     // action は宣言されるが applied=false (適用は別関数)
-    expect(team.actions).toEqual([{ kind: "branch-protection", script_path: join("scripts", "setup-branch-protection.sh"), applied: false }]);
+    expect(team.actions).toEqual([
+      {
+        kind: "branch-protection",
+        script_path: join("scripts", "setup-branch-protection.sh"),
+        applied: false,
+      },
+    ]);
   });
 
   it("U-SETUP-004: emitSetup dryRun 非書込 / 書込 / token 非埋込 / team 名 render", () => {
@@ -138,7 +170,10 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
     // 書込
     const wet = mockDeps({ templates: baseTemplates });
-    const teamPlan = planSetup("0-B", { dryRun: false, teams: { tl: "@org/tl-team", qa: "@org/qa-team", po: "@org/po-team" } });
+    const teamPlan = planSetup("0-B", {
+      dryRun: false,
+      teams: { tl: "@org/tl-team", qa: "@org/qa-team", po: "@org/po-team" },
+    });
     const written = emitSetup(teamPlan, baseTemplates, wet);
     expect(written).toContain(join(".github", "CODEOWNERS"));
     const co = wet.files.get(join("/repo", ".github", "CODEOWNERS")) as string;
@@ -159,14 +194,25 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       hasBranchProtection: true,
       token: "ghp_secret", // 混入を試みる余分フィールド
     } as unknown as ProjectScale;
-    recordSetupState({ phase: "0-B", decidedAt: "2026-06-02T00:00:00.000Z", decidedBy: "confirm", signals: dirty }, deps);
+    recordSetupState(
+      { phase: "0-B", decidedAt: "2026-06-02T00:00:00.000Z", decidedBy: "confirm", signals: dirty },
+      deps,
+    );
     const stored = JSON.parse(deps.files.get(statePath) as string) as SetupState;
-    expect(Object.keys(stored.signals).sort()).toEqual(["collaborators", "hasBranchProtection", "hasCodeowners", "ownerType"]);
+    expect(Object.keys(stored.signals).sort()).toEqual([
+      "collaborators",
+      "hasBranchProtection",
+      "hasCodeowners",
+      "ownerType",
+    ]);
     expect(deps.files.get(statePath)).not.toContain("ghp_secret"); // 余分フィールド strip
     expect(stored.phase).toBe("0-B");
 
     // 再実行 (phase 変更) → 上書きで最新のみ
-    recordSetupState({ phase: "0-A", decidedAt: "2026-06-03T00:00:00.000Z", decidedBy: "flag", signals: dirty }, deps);
+    recordSetupState(
+      { phase: "0-A", decidedAt: "2026-06-03T00:00:00.000Z", decidedBy: "flag", signals: dirty },
+      deps,
+    );
     const re = JSON.parse(deps.files.get(statePath) as string) as SetupState;
     expect(re.phase).toBe("0-A"); // append でなく上書き
   });
@@ -176,32 +222,57 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
     // apply≠true → emit-only、gh 呼ばれない
     const d1 = mockDeps({ isInteractive: true, gh: ghTeam });
-    expect(applyBranchProtection(plan, d1, { apply: false })).toEqual({ applied: false, reason: "emit-only" });
+    expect(applyBranchProtection(plan, d1, { apply: false })).toEqual({
+      applied: false,
+      reason: "emit-only",
+    });
     expect(d1.ghCalls.length).toBe(0);
 
     // 非対話 + apply=true → non-interactive、gh 呼ばれない (ガバナンス封鎖)
     const d2 = mockDeps({ isInteractive: false, gh: ghTeam, confirm: () => true });
-    expect(applyBranchProtection(plan, d2, { apply: true })).toEqual({ applied: false, reason: "non-interactive" });
+    expect(applyBranchProtection(plan, d2, { apply: true })).toEqual({
+      applied: false,
+      reason: "non-interactive",
+    });
     expect(d2.ghCalls.length).toBe(0);
 
     // 対話 + 認証ありだが admin でない → not-admin
     const ghNoAdmin = (args: string[]) => {
       const key = args.join(" ");
       if (key === "auth status") return { ok: true, stdout: "" };
-      if (key === "api repos/{owner}/{repo}") return { ok: true, stdout: JSON.stringify({ permissions: { admin: false } }) };
+      if (key === "api repos/{owner}/{repo}")
+        return { ok: true, stdout: JSON.stringify({ permissions: { admin: false } }) };
       return { ok: false, stdout: "" };
     };
     const d3 = mockDeps({ isInteractive: true, gh: ghNoAdmin, confirm: () => true });
-    expect(applyBranchProtection(plan, d3, { apply: true })).toEqual({ applied: false, reason: "not-admin" });
+    expect(applyBranchProtection(plan, d3, { apply: true })).toEqual({
+      applied: false,
+      reason: "not-admin",
+    });
   });
 
   it("U-SETUP-007: runSetup 優先順 (flag > confirm > fallback) + 非対話 apply 封鎖", () => {
     // ① フラグあり → フラグ値採用
     const f = mockDeps({ templates: baseTemplates, isInteractive: true });
-    expect(runSetup({ phase: "0-B", dryRun: true, applyBranchProtection: false, teams: { tl: "@a", qa: "@b", po: "@c" } }, f).phase).toBe("0-B");
+    expect(
+      runSetup(
+        {
+          phase: "0-B",
+          dryRun: true,
+          applyBranchProtection: false,
+          teams: { tl: "@a", qa: "@b", po: "@c" },
+        },
+        f,
+      ).phase,
+    ).toBe("0-B");
 
     // ② フラグ無し + 対話 + confirm yes → 推奨 phase (ここでは org 検出 → 0-B)
-    const c = mockDeps({ templates: baseTemplates, isInteractive: true, gh: ghTeam, confirm: () => true });
+    const c = mockDeps({
+      templates: baseTemplates,
+      isInteractive: true,
+      gh: ghTeam,
+      confirm: () => true,
+    });
     expect(runSetup({ dryRun: true, applyBranchProtection: false }, c).phase).toBe("0-B");
 
     // ③ フラグ無し + 非対話 → 0-A fallback

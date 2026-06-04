@@ -10,10 +10,7 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..", "..");
 
-const BUSINESS_PATH = resolve(
-  ROOT,
-  "docs/design/harness/L1-requirements/business-requirements.md",
-);
+const BUSINESS_PATH = resolve(ROOT, "docs/design/harness/L1-requirements/business-requirements.md");
 
 export interface EntityCoverageResult {
   primaryEntities: string[]; // §10.1

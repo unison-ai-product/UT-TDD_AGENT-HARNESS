@@ -10,16 +10,8 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..", "..");
 
-/** L1 機能要求 FR-L1-NN (NN は数字) */
-const FR_L1_REGEX = /\bFR-L1-(\d+)\b/g;
-/** L3 機能要件 FR-NN (NN は 2 桁数字、L1 と区別) */
-const FR_L3_REGEX = /\*\*FR-(\d{2})\*\*/g;
-/** AC-FR-NN-NN (L3 sub-doc 内 + L12 受入テスト) */
-const AC_REGEX = /\bAC-FR-(\d{2})-(\d{2})\b/g;
-/** AT-* (L12 受入テスト) */
-const AT_REGEX = /\*\*AT-([A-Z0-9-]+)\*\*/g;
-/** NFR-NN または NFR-DNN (D-* 連携) */
-const NFR_REGEX = /\*\*NFR-(\d{2}|D\d{2})\*\*/g;
+// 注: 抽出ロジックは各 extractor 内の inline regex (表行・見出しアンカー付きで厳密) を使う。
+// 旧 module 級 regex 定数 (FR_L1_REGEX 等) は陳腐化のため削除 (PLAN-L7-05、未使用 dead code)。
 
 interface DocSource {
   l1Functional: string;
@@ -200,9 +192,7 @@ export function analyzeG3Trace(docs?: DocSource): G3TraceResult {
       `AT-${acSuffix}`, // 直接対応
       `AT-${acSuffix.replace(/-\d{2}$/, "")}`, // suffix 削除版
     ];
-    const matched = candidateAts.some((cand) =>
-      [...at].some((atId) => atId.startsWith(cand)),
-    );
+    const matched = candidateAts.some((cand) => [...at].some((atId) => atId.startsWith(cand)));
     if (!matched) orphanAc.push(acId);
   }
 

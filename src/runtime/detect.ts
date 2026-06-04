@@ -29,8 +29,8 @@ function onPath(bin: string): boolean {
 }
 
 export function detectMode(): RuntimeDetection {
-  const inClaude = process.env["CLAUDECODE"] === "1";
-  const inCodex = Boolean(process.env["CODEX_SANDBOX"] ?? process.env["CODEX_HOME"]);
+  const inClaude = process.env.CLAUDECODE === "1";
+  const inCodex = Boolean(process.env.CODEX_SANDBOX ?? process.env.CODEX_HOME);
 
   const claude = inClaude || onPath("claude");
   const codex = inCodex || onPath("codex");

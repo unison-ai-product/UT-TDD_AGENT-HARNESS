@@ -126,7 +126,7 @@ function emptyDigest(planId: string): PlanDigest {
  */
 export function resolveActivePlan(deps: SessionLogDeps): string | null {
   const fromState = deps.readText(currentPlanPath(deps.repoRoot));
-  if (fromState && fromState.trim()) return fromState.trim();
+  if (fromState?.trim()) return fromState.trim();
   const branch = deps.currentBranch();
   const m = branch?.match(BRANCH_PLAN_RE);
   return m ? m[1] : null;

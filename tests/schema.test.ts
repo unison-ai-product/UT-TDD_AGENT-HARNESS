@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   kindSchema,
   recommendedCommandV1Schema,
+  V_MODEL_PAIRS,
   VALID_ARTIFACT_TYPES,
   VALID_KINDS,
   VALID_LAYERS,
-  V_MODEL_PAIRS,
   VALID_ORCHESTRATION_MODES,
 } from "../src/schema";
 
@@ -35,8 +35,8 @@ describe("schema (zod single source, ADR-001 / requirements_v1.2 §1)", () => {
   });
 
   it("V-model pairs L6<->L7 / L1<->L14", () => {
-    expect(V_MODEL_PAIRS["L6"]).toBe("L7");
-    expect(V_MODEL_PAIRS["L1"]).toBe("L14");
+    expect(V_MODEL_PAIRS.L6).toBe("L7");
+    expect(V_MODEL_PAIRS.L1).toBe("L14");
   });
 
   it("RecommendedCommandV1 rejects helix command, accepts ut-tdd", () => {

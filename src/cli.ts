@@ -8,18 +8,18 @@ import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { Command } from "commander";
 import { runDoctor } from "./doctor";
+import { nodeHandoverDeps, runHandover, setActivePlanCli } from "./handover/index";
 import { lintPlan } from "./plan/lint";
 import { detectMode } from "./runtime/detect";
 import {
   type ClassifyResult,
-  type FeedbackCtx,
   emitClassifyRequest,
+  type FeedbackCtx,
   pendingRecoveryProposals,
   recordFeedback,
 } from "./runtime/forced-stop";
-import { nodeHandoverDeps, runHandover, setActivePlanCli } from "./handover/index";
 import { nodeDeps, resolveActivePlan } from "./runtime/session-log";
-import { type SetupArgs, nodeSetupDeps, runSetup } from "./setup/index";
+import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
 import { lintVmodel } from "./vmodel/lint";
 
 function gitBranch(): string | null {
@@ -51,7 +51,7 @@ program
   .action((opts: { json?: boolean }) => {
     const d = detectMode();
     if (opts.json) {
-      process.stdout.write(JSON.stringify(d, null, 2) + "\n");
+      process.stdout.write(`${JSON.stringify(d, null, 2)}\n`);
     } else {
       process.stdout.write(
         `mode: ${d.mode}  (claude=${d.claude}, codex=${d.codex}, current=${d.currentRuntime ?? "-"})\n`,
@@ -64,7 +64,7 @@ program
   .description("統合検証 (scaffold stub)")
   .action(() => {
     const r = runDoctor();
-    for (const m of r.messages) process.stdout.write(m + "\n");
+    for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
   });
 
@@ -74,13 +74,15 @@ plan
   .description("PLAN lint (scaffold stub)")
   .action((path?: string) => {
     const r = lintPlan(path);
-    for (const m of r.messages) process.stdout.write(m + "\n");
+    for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
   });
 
 plan
   .command("use [id]")
-  .description("active PLAN を .ut-tdd/state/current-plan に記録 (session-log digest を活性化)。--clear で解除")
+  .description(
+    "active PLAN を .ut-tdd/state/current-plan に記録 (session-log digest を活性化)。--clear で解除",
+  )
   .option("--clear", "current-plan を clear")
   .action((id: string | undefined, opts: { clear?: boolean }) => {
     if (!opts.clear && !id) {
@@ -94,7 +96,9 @@ plan
 
 program
   .command("handover")
-  .description("session-log PLAN digest から handover を生成 (機械ポインタ CURRENT.json + 人間判断 markdown scaffold、要件 §6.8.5)")
+  .description(
+    "session-log PLAN digest から handover を生成 (機械ポインタ CURRENT.json + 人間判断 markdown scaffold、要件 §6.8.5)",
+  )
   .option("--dry-run", "書き込まず内容のみ表示")
   .option("--complete", "status=completed として記録 (PLAN 完了時)")
   .option("--plan <id>", "明示 active PLAN (省略時 current-plan/branch から解決)")
@@ -102,14 +106,19 @@ program
     const date = new Date().toISOString().slice(0, 10);
     const deps = nodeHandoverDeps(process.cwd());
     const r = runHandover(
-      { date, dryRun: Boolean(opts.dryRun), complete: Boolean(opts.complete), ...(opts.plan ? { planId: opts.plan } : {}) },
+      {
+        date,
+        dryRun: Boolean(opts.dryRun),
+        complete: Boolean(opts.complete),
+        ...(opts.plan ? { planId: opts.plan } : {}),
+      },
       deps,
     );
     process.stdout.write(
       `handover: active=${r.pointer.active_plan ?? "-"} status=${r.pointer.status}${opts.dryRun ? " (dry-run)" : ""}\n`,
     );
     for (const w of r.written) process.stdout.write(`  + ${w}\n`);
-    if (opts.dryRun) process.stdout.write("\n--- scaffold ---\n" + r.content + "\n");
+    if (opts.dryRun) process.stdout.write(`\n--- scaffold ---\n${r.content}\n`);
   });
 
 const vmodel = program.command("vmodel").description("V-model trace");
@@ -118,7 +127,7 @@ vmodel
   .description("V-model 4 artifact trace lint (scaffold stub)")
   .action((path?: string) => {
     const r = lintVmodel(path);
-    for (const m of r.messages) process.stdout.write(m + "\n");
+    for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
   });
 
@@ -186,7 +195,9 @@ feedback
 
 program
   .command("setup")
-  .description("solo/team を検出・提案・確認して GitHub 設定を出し分け生成 (Phase 0-A/0-B、要件 §6.5)")
+  .description(
+    "solo/team を検出・提案・確認して GitHub 設定を出し分け生成 (Phase 0-A/0-B、要件 §6.5)",
+  )
   .option("--solo", "Phase 0-A (solo) を強制 (自動提案の上書き)")
   .option("--team", "Phase 0-B (team) を強制 (自動提案の上書き)")
   .option("--dry-run", "生成物一覧のみ表示 (書き込まない)")
@@ -246,6 +257,6 @@ program
   );
 
 program.parseAsync(process.argv).catch((e: unknown) => {
-  process.stderr.write(String(e) + "\n");
+  process.stderr.write(`${String(e)}\n`);
   process.exitCode = 1;
 });

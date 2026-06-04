@@ -103,12 +103,50 @@ const BP_SCRIPT = join("scripts", "setup-branch-protection.sh");
 
 /** A 種別 (共通) GeneratedFile + 対応テンプレ名。 */
 const COMMON_FILES: { template: string; file: GeneratedFile }[] = [
-  { template: "common/harness-check.yml", file: { path: join(".github", "workflows", "harness-check.yml"), category: "A", purpose: "CI (typecheck + 回帰)" } },
-  { template: "common/commitlint.config.js", file: { path: "commitlint.config.js", category: "A", purpose: "Conventional Commits 強制" } },
-  { template: "common/escalation-stale.yml", file: { path: join(".github", "workflows", "escalation-stale.yml"), category: "A", purpose: "スパイン滞留 Issue 自動起票" } },
-  { template: "common/recovery.md", file: { path: join(".github", "ISSUE_TEMPLATE", "recovery.md"), category: "A", purpose: "Recovery Issue テンプレ" } },
-  { template: "common/add-feature.md", file: { path: join(".github", "ISSUE_TEMPLATE", "add-feature.md"), category: "A", purpose: "Add-feature Issue テンプレ" } },
-  { template: "common/PULL_REQUEST_TEMPLATE.md", file: { path: join(".github", "PULL_REQUEST_TEMPLATE.md"), category: "A", purpose: "PR テンプレ" } },
+  {
+    template: "common/harness-check.yml",
+    file: {
+      path: join(".github", "workflows", "harness-check.yml"),
+      category: "A",
+      purpose: "CI (typecheck + 回帰)",
+    },
+  },
+  {
+    template: "common/commitlint.config.js",
+    file: { path: "commitlint.config.js", category: "A", purpose: "Conventional Commits 強制" },
+  },
+  {
+    template: "common/escalation-stale.yml",
+    file: {
+      path: join(".github", "workflows", "escalation-stale.yml"),
+      category: "A",
+      purpose: "スパイン滞留 Issue 自動起票",
+    },
+  },
+  {
+    template: "common/recovery.md",
+    file: {
+      path: join(".github", "ISSUE_TEMPLATE", "recovery.md"),
+      category: "A",
+      purpose: "Recovery Issue テンプレ",
+    },
+  },
+  {
+    template: "common/add-feature.md",
+    file: {
+      path: join(".github", "ISSUE_TEMPLATE", "add-feature.md"),
+      category: "A",
+      purpose: "Add-feature Issue テンプレ",
+    },
+  },
+  {
+    template: "common/PULL_REQUEST_TEMPLATE.md",
+    file: {
+      path: join(".github", "PULL_REQUEST_TEMPLATE.md"),
+      category: "A",
+      purpose: "PR テンプレ",
+    },
+  },
 ];
 
 /**
@@ -162,9 +200,17 @@ export function recommendPhase(scale: ProjectScale): PhaseRecommendation {
     return { phase: "0-B", reason: teamReason(scale), confidence: "high" };
   }
   if (scale.ownerType === "User" && scale.collaborators !== null && scale.collaborators <= 1) {
-    return { phase: "0-A", reason: "個人 owner + collaborator 1 名以下 = solo", confidence: "high" };
+    return {
+      phase: "0-A",
+      reason: "個人 owner + collaborator 1 名以下 = solo",
+      confidence: "high",
+    };
   }
-  return { phase: "0-A", reason: "信号不足 (owner/collaborator 不明)、安全側 solo に倒す", confidence: "low" };
+  return {
+    phase: "0-A",
+    reason: "信号不足 (owner/collaborator 不明)、安全側 solo に倒す",
+    confidence: "low",
+  };
 }
 
 function teamReason(s: ProjectScale): string {
@@ -187,9 +233,15 @@ export function planSetup(
   const files: GeneratedFile[] = COMMON_FILES.map((c) => ({ ...c.file }));
   const actions: GithubAction[] = [];
   if (phase === "0-B") {
-    const teamNote = opts.teams ? ` (tl=${opts.teams.tl} qa=${opts.teams.qa} po=${opts.teams.po})` : "";
+    const teamNote = opts.teams
+      ? ` (tl=${opts.teams.tl} qa=${opts.teams.qa} po=${opts.teams.po})`
+      : "";
     files.push({ path: CODEOWNERS_TARGET, category: "B", purpose: `CODEOWNERS${teamNote}` });
-    files.push({ path: BP_SCRIPT, category: "B", purpose: "branch protection 適用スクリプト (emit-only)" });
+    files.push({
+      path: BP_SCRIPT,
+      category: "B",
+      purpose: "branch protection 適用スクリプト (emit-only)",
+    });
     actions.push({ kind: "branch-protection", script_path: BP_SCRIPT, applied: false });
   }
   return {
@@ -282,12 +334,18 @@ export function applyBranchProtection(
   const repo = deps.gh(["api", "repos/{owner}/{repo}"]);
   let admin = false;
   try {
-    admin = (JSON.parse(repo.stdout) as { permissions?: { admin?: boolean } })?.permissions?.admin === true;
+    admin =
+      (JSON.parse(repo.stdout) as { permissions?: { admin?: boolean } })?.permissions?.admin ===
+      true;
   } catch {
     admin = false;
   }
   if (!repo.ok || !admin) return { applied: false, reason: "not-admin" };
-  if (!deps.confirm("main の branch protection を適用します (本番 merge ゲート変更)。よろしいですか？")) {
+  if (
+    !deps.confirm(
+      "main の branch protection を適用します (本番 merge ゲート変更)。よろしいですか？",
+    )
+  ) {
     return { applied: false, reason: "declined" };
   }
   // emit-only script と同じ PUT を gh 経由で適用 (token は gh 認証に委譲、harness は保持しない)
@@ -355,7 +413,10 @@ function readNonEmpty(deps: SetupDeps, path: string): boolean {
 /** gh CLI 実行。失敗 (不在/未認証/非0) は {ok:false}。token は扱わない (gh 認証に委譲)。 */
 export function nodeGh(args: string[]): { ok: boolean; stdout: string } {
   try {
-    const stdout = execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    const stdout = execFileSync("gh", args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
     return { ok: true, stdout };
   } catch (e) {
     const stdout = (e as { stdout?: string })?.stdout;
@@ -403,7 +464,7 @@ export function nodeSetupDeps(repoRoot: string): SetupDeps {
       writeFileSync(p, c);
     },
     confirm: nodeConfirm,
-    isInteractive: Boolean(process.stdin.isTTY) && Boolean(process.stderr.isTTY) && !process.env["CI"],
+    isInteractive: Boolean(process.stdin.isTTY) && Boolean(process.stderr.isTTY) && !process.env.CI,
     templates: loadTemplates(repoRoot),
   };
 }
