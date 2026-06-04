@@ -20,7 +20,8 @@ agent_slots:
 generates: []
 dependencies:
   parent: null
-  requires: []
+  requires:
+    - docs/plans/PLAN-L7-01-session-log.md
   blocks: []
 ---
 

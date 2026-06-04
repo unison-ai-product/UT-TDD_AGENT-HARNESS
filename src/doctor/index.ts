@@ -3,6 +3,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type HandoverPointer, handoverStale } from "../handover/index";
+import { analyzeBackfill, backfillMessages, loadBackfillDocs } from "../lint/backfill-pairing";
 import type { LintResult } from "../plan/lint";
 import {
   type AgentSlotsDeps,
@@ -56,6 +57,20 @@ export function checkAgentSlots(deps: AgentSlotsDeps): string {
   return `doctor: agent-slots — OK (active=${active}, peak_parallel=${peak})`;
 }
 
+/**
+ * 駆動モデルの back-fill 完全性 (impl⇔Reverse / impl⇔glossary) を surface (IMP-051、warning-first)。
+ * Reverse 無き impl / §6 用語の glossary 未 merge を warn する。doctor.ok は落とさない (fail-close 化は段階)。
+ * I/O 失敗は飲んで note を返す (doctor の堅牢性維持)。
+ */
+export function checkBackfill(repoRoot: string): string[] {
+  try {
+    const docs = loadBackfillDocs(repoRoot);
+    return backfillMessages(analyzeBackfill(docs.plans, docs.glossaryText));
+  } catch {
+    return ["backfill — note: PLAN/glossary を読めず検査 skip"];
+  }
+}
+
 /** doctor 用に agent-slots deps を node I/O で構築 (now 固定は test 注入)。 */
 function doctorSlotsDeps(deps: DoctorDeps): AgentSlotsDeps {
   return {
@@ -84,6 +99,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
       checkHandover(deps),
       checkAgentSlots(doctorSlotsDeps(deps)),
+      ...checkBackfill(deps.repoRoot).map((m) => `doctor: ${m}`),
       "doctor: scaffold stub (横断検出 relation-graph / drift / regression は後続 PLAN)",
     ],
   };

@@ -1,0 +1,176 @@
+import { describe, expect, it } from "vitest";
+import {
+  analyzeBackfill,
+  backfillMessages,
+  KIND_BACKFILL,
+  loadBackfillDocs,
+  type ParsedPlan,
+  parseGlossaryTerms,
+  parsePlan,
+  parseRequires,
+} from "../src/lint/backfill-pairing";
+
+function plan(over: Partial<ParsedPlan> = {}): ParsedPlan {
+  return {
+    file: "f.md",
+    plan_id: "PLAN-L7-99-x",
+    kind: "add-impl",
+    status: "confirmed",
+    requires: [],
+    glossaryTerms: [],
+    ...over,
+  };
+}
+
+describe("U-BACKFILL-001 parseRequires / parseGlossaryTerms", () => {
+  it("requires の YAML list path を抽出 / 無し・[] → []", () => {
+    const fm = `---
+plan_id: PLAN-REVERSE-06-x
+dependencies:
+  parent: null
+  requires:
+    - docs/plans/PLAN-L7-06-handover-enforcement.md
+    - docs/plans/PLAN-L7-08-agent-slots.md
+  blocks: []
+---
+`;
+    expect(parseRequires(fm)).toEqual([
+      "docs/plans/PLAN-L7-06-handover-enforcement.md",
+      "docs/plans/PLAN-L7-08-agent-slots.md",
+    ]);
+    expect(parseRequires("requires: []\n")).toEqual([]);
+    expect(parseRequires("no requires here")).toEqual([]);
+  });
+
+  it("§6 用語更新 の太字 term を抽出", () => {
+    const body = `## §6 用語更新
+
+- **agent-slot**: 定義...
+- **直列化 3 条件**: file_conflict / ...
+- 通常行 (太字なし) は無視
+
+## §7 次
+- **無関係**: 別 section`;
+    expect(parseGlossaryTerms(body)).toEqual(["agent-slot", "直列化 3 条件"]);
+  });
+});
+
+describe("U-BACKFILL-002 parsePlan", () => {
+  it("frontmatter + requires + glossary を構造化", () => {
+    const content = `---
+plan_id: PLAN-L7-08-agent-slots
+kind: add-impl
+status: confirmed
+dependencies:
+  requires:
+    - docs/plans/PLAN-L6-07-agent-slots.md
+---
+## §6 用語更新
+- **peak_parallel**: 同時実行ピーク`;
+    const p = parsePlan("PLAN-L7-08-agent-slots.md", content);
+    expect(p.plan_id).toBe("PLAN-L7-08-agent-slots");
+    expect(p.kind).toBe("add-impl");
+    expect(p.requires).toEqual(["docs/plans/PLAN-L6-07-agent-slots.md"]);
+    expect(p.glossaryTerms).toEqual(["peak_parallel"]);
+  });
+});
+
+describe("U-BACKFILL-003 KIND_BACKFILL matrix", () => {
+  it("add-impl=required / refactor=conditional / impl・design・reverse・recovery=none", () => {
+    expect(KIND_BACKFILL["add-impl"]).toBe("required");
+    expect(KIND_BACKFILL.refactor).toBe("conditional");
+    expect(KIND_BACKFILL.troubleshoot).toBe("conditional");
+    expect(KIND_BACKFILL.impl).toBe("none");
+    expect(KIND_BACKFILL.design).toBe("none");
+    expect(KIND_BACKFILL.reverse).toBe("none");
+    expect(KIND_BACKFILL.recovery).toBe("none");
+  });
+});
+
+describe("U-BACKFILL-004 analyzeBackfill", () => {
+  const glossary = "用語集: agent-slot は ... peak_parallel は ...";
+
+  it("required (add-impl) に Reverse requires が有る → 孤児なし", () => {
+    const plans = [
+      plan({ plan_id: "PLAN-L7-08-agent-slots", kind: "add-impl" }),
+      plan({
+        plan_id: "PLAN-REVERSE-06-x",
+        kind: "reverse",
+        requires: ["docs/plans/PLAN-L7-08-agent-slots.md"],
+      }),
+    ];
+    const r = analyzeBackfill(plans, glossary);
+    expect(r.reverseOrphans).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("required (add-impl) に Reverse が無い → reverseOrphan + ok=false", () => {
+    const r = analyzeBackfill([plan({ plan_id: "PLAN-L7-50-orphan", kind: "add-impl" })], glossary);
+    expect(r.reverseOrphans).toEqual([{ plan_id: "PLAN-L7-50-orphan", kind: "add-impl" }]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("conditional (refactor) に Reverse 無し → conditionalPending (warn のみ、ok を落とさない)", () => {
+    const r = analyzeBackfill([plan({ plan_id: "PLAN-L7-05-x", kind: "refactor" })], glossary);
+    expect(r.conditionalPending).toHaveLength(1);
+    expect(r.reverseOrphans).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("§6 用語が glossary 未 merge → glossaryGap + ok=false", () => {
+    const r = analyzeBackfill(
+      [
+        plan({
+          plan_id: "PLAN-L6-07-agent-slots",
+          kind: "add-design",
+          glossaryTerms: ["未登録語"],
+        }),
+      ],
+      glossary,
+    );
+    expect(r.glossaryGaps).toEqual([{ plan_id: "PLAN-L6-07-agent-slots", term: "未登録語" }]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("endsWith 誤判定なし: 別 plan_id の suffix では back-fill 済と見なさない", () => {
+    const plans = [
+      plan({ plan_id: "PLAN-L7-1", kind: "add-impl" }),
+      plan({
+        plan_id: "PLAN-REVERSE-9-x",
+        kind: "reverse",
+        // 別 plan の path。`PLAN-L7-1` の suffix だが境界が違う
+        requires: ["docs/plans/PLAN-X-L7-1.md"],
+      }),
+    ];
+    const r = analyzeBackfill(plans, glossary);
+    expect(r.reverseOrphans).toEqual([{ plan_id: "PLAN-L7-1", kind: "add-impl" }]);
+  });
+
+  it("archived は対象外", () => {
+    const r = analyzeBackfill(
+      [plan({ plan_id: "PLAN-L7-99-old", kind: "add-impl", status: "archived" })],
+      glossary,
+    );
+    expect(r.reverseOrphans).toEqual([]);
+  });
+});
+
+describe("U-BACKFILL-005 backfillMessages", () => {
+  it("孤児なし → OK / 孤児あり → warn 文言", () => {
+    expect(backfillMessages(analyzeBackfill([], "")).some((m) => m.includes("OK"))).toBe(true);
+    const orphan = analyzeBackfill([plan({ plan_id: "PLAN-L7-50-o", kind: "add-impl" })], "");
+    expect(backfillMessages(orphan).some((m) => m.includes("Reverse 無き impl"))).toBe(true);
+  });
+});
+
+describe("U-BACKFILL-006 実 repo の back-fill 完全性 (回帰ガード)", () => {
+  it("docs/plans/ 全 add-impl が Reverse 合流済 + §6 用語が L0 §10 に merge 済 (required orphan 0 / glossary gap 0)", () => {
+    const docs = loadBackfillDocs();
+    const r = analyzeBackfill(docs.plans, docs.glossaryText);
+    // 失敗時に具体 PLAN/term を出して直せるように
+    expect({ reverseOrphans: r.reverseOrphans, glossaryGaps: r.glossaryGaps }).toEqual({
+      reverseOrphans: [],
+      glossaryGaps: [],
+    });
+  });
+});

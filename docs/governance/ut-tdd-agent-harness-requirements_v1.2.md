@@ -383,6 +383,15 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
 - [ ] `dependencies.parent` が存在する場合、当該 PLAN が repo 内に存在
 - [ ] `kind=add-*` の場合、`dependencies.parent` が必須 (null 不可)
 
+#### E2. back-fill pairing 完全性 (駆動モデル整理 / IMP-051、`ut-tdd doctor` checkBackfill)
+
+> 駆動モデルは「設計ドキュメントまで戻す」までが 1 サイクル。bottom-up build した impl を上位設計/governance へ Reverse 合流させ、§6 用語更新を L0 §10 用語集へ back-merge する完全性を機械検証する。要否マトリクスの正本 = `src/lint/backfill-pairing.ts` `KIND_BACKFILL`。
+
+- [ ] **`kind=add-impl` (back-fill required) は、`kind=reverse` PLAN の `dependencies.requires` から参照される** (Reverse 合流の pairing)。参照無し = 「Reverse 無き impl」→ doctor warn (既定 warn-first、将来 fail-close)。
+- [ ] **`kind` が `refactor`/`retrofit`/`troubleshoot` (conditional)** は契約/挙動変更時に Reverse 要 (doctor note、人間判断)。`impl`/`design`/`add-design`/`poc`/`reverse`/`recovery` は back-fill 不要。
+- [ ] **全 PLAN の `§6 用語更新` で宣言した語が L0 §10 用語集 (`concept_v3.1.md`) に存在** (living glossary back-merge、§G.9 と連動)。未 merge → doctor warn。
+- 機構: `ut-tdd doctor` の `backfill —` 行が `reverseOrphans` / `glossaryGaps` / `conditionalPending` を surface。lint engine (`src/plan/lint.ts`) 実装時に exit code 連動 (fail-close) へ昇格予定。
+
 #### F. enum source-of-truth と drift 検知 (R-P1 fix)
 
 - **正本**: 本書 §1 の各 enum 表が正本。

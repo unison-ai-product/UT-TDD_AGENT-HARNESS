@@ -31,6 +31,8 @@ Claude Code が参照する優先順位は `../CLAUDE.md` -> 本ファイル -> 
 
 **必須 role (§1.8)**: kind=design/impl→`tl` / L7 impl→`qa` 追加 / **kind=poc/recovery/troubleshoot→`aim`** / L1・L3・L11・L12→`po`。
 
+**back-fill pairing (駆動モデル整理 / IMP-051、MUST)**: 駆動モデルは「設計ドキュメントまで戻す」ことまでが 1 サイクル。**`kind=add-impl` (Add-feature の bottom-up build) は、対応する Reverse PLAN (上位設計/governance への合流) を必ずセットで起こす** — Reverse PLAN の `dependencies.requires` に当該 impl PLAN path を列挙して pairing を宣言する (この向きで `ut-tdd doctor` が「Reverse 無き impl」を検知)。`refactor`/`retrofit`/`troubleshoot` は契約/挙動を変えたとき Reverse 要 (conditional、doctor は note)。`impl`(forward 設計凍結済)/`design`/`add-design`/`poc`/`reverse`/`recovery` は Reverse 不要 (要否マトリクス = `src/lint/backfill-pairing.ts` `KIND_BACKFILL` が正本)。**さらに全 design/impl/add-* PLAN は `§6 用語更新` で宣言した語を L0 §10 用語集 (`concept_v3.1.md`) へ back-merge する** (living glossary、doctor `checkBackfill` が未 merge を warn)。**「実装したが Reverse/用語集に戻していない」状態で PLAN を完了扱いにしない**。検査: `bun run src/cli.ts doctor` の `backfill —` 行 (既定 warn-first、孤児 0 / glossary merge 済を確認)。
+
 **起票後 MUST**: 命名テスト + 全回帰 (`npx vitest run`) を通し、**PO へ確定/gate を求める前に review 前置** を通す。`hybrid` では別 runtime / 別 model 系統の `frontier-reviewer`、`claude-only` / `standalone` では `intra_runtime_subagent` (`code-reviewer` / `pmo-sonnet`) を使い、代替 reviewer を evidence に残す。
 
 ## Target UT-TDD Hooks
