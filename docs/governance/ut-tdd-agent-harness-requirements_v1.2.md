@@ -1676,7 +1676,7 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 | `drift` (+drift_type=schema/contract) | reverse | normalization |
 | `debt_degradation` / `code_smell` / `structural` | refactor | |
 | `dependency_outdated` / `upgrade` / `config_drift` | retrofit | upgrade は preflight |
-| `agent_runaway` / `context_exhaustion` / `regression_dev` / `runaway` | recovery | human approval |
+| `agent_runaway` / `context_exhaustion` / `regression_dev` / `runaway` / `forced_stop` | recovery | human approval。`forced_stop` = ユーザー強制停止 (ESC/Ctrl+C/Stop) = 高 severity 負シグナル (concept §2.6.1、PLAN-L6-04/L7-02 dangling-turn 推定で検出) |
 | `production_incident` / `hotfix_required` / `regression_prod` | incident | env=prod 必須、human approval |
 | `feature_addition` / `scope_extension` | add_feature | |
 | `user_feedback_iteration` / `requirement_continuous_refinement` | scrum | |

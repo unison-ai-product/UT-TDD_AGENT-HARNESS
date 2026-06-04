@@ -8,6 +8,7 @@ scrum_type: design-spike
 drive: fullstack
 status: completed
 decision_outcome: confirmed
+promotion_strategy: redesign  # §4: spike 破棄 → PLAN-L5-05-roster へ Forward 確定で本実装し直す。redesign は Reverse 不要 (throwaway 再設計、IMP-066)
 created: 2026-06-01
 updated: 2026-06-01
 owner: PM (Opus) / PO (人間)

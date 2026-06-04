@@ -387,3 +387,52 @@
 - **CURRENT.json は forward-slash で書く** (`\h`/`\s` は不正 JSON エスケープ → doctor「壊れています」。前 session の heredoc `\\\\` 起因の実害)。
 - **agent-slots は session 内で dangling が出るのが正常** (SessionStart sweep / 次 fire で self-heal)。commit 前に手動 sweep でクリーン化可。
 - review 前置 MUST (本 session: pmo-sonnet×3 + code-reviewer×2、全 sonnet 明示) / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 2 件は禁止)。
+
+---
+
+# Session Handover — 2026-06-04 (session 8: 強制機構 A/B/C 実装 + フェーズ1 4巡目 — /goal 達成)
+
+> PO /goal「A/B/C を実装して検証まで回す + フェーズ1 4巡目完遂」。過去3巡で **review 依存だった process 漏れを機械強制化** (plan lint engine を待たず CI vitest ベクトルに乗せ fail-close)。**新 lint が即 round-4 finding を2件検出・解消**。3 PLAN (L6設計/L7実装/Reverse) で discipline を満たし、自 PLAN が自 lint を dogfood 通過。
+
+## §1 実装した 3 強制機構 (A/B/C)
+
+| | 機構 | 何を fail-close | 実体 |
+|--|------|---------------|------|
+| **A** | scrum-reverse lint (IMP-064) | confirmed poc (redesign 除く) の Reverse 孤児 / reverse→非 confirmed poc 参照 | `src/lint/scrum-reverse.ts` + U-SCRUMREV (9 test) |
+| **B** | backfill hard-fail 昇格 (IMP-051) | `runDoctor.ok = backfill.ok ∧ scrumRev.ok ∧ propagation.ok` (handover/agent-slots は warn-only 維持) | `src/doctor/index.ts` |
+| **C** | propagation lint (IMP-065) | concept §2.6 ⇔ requirements §7.8.1 の signal 語彙ドリフト | `src/lint/propagation.ts` + U-PROP (8 test) |
+
+## §2 成果物 (commit / files)
+
+- **新 lint**: `src/lint/scrum-reverse.ts` (pocOrphans/badReverseRefs、path 末尾 `/id.md` 境界固定) / `src/lint/propagation.ts` (`extractSignals` で `\| signal \| mode \|` テーブル限定抽出、interrupt 行除外)。
+- **doctor**: `checkBackfillResult`/`checkScrumReverse`/`checkPropagation` を `runDoctor.ok` に hard-fail 連動。I/O 失敗は skip (ok:true=fail-safe)。
+- **test**: `tests/scrum-reverse.test.ts` (U-SCRUMREV-001〜005、実 repo ガード) / `tests/propagation.test.ts` (U-PROP-001〜004、実 repo ガード) / `tests/doctor.test.ts` (wiring 確認)。**vitest 162→177 pass (+15)**。
+- **round-4 finding (新 lint が検出・解消)**: ① **DISCOVERY-02 frontmatter `promotion_strategy` 欠落** (§4 prose のみ→frontmatter 補完、IMP-066) ② **forced_stop / design_uncertain の signal table 非対称** → requirements §7.8.1 に forced_stop / concept §2.6 に design_uncertain を sync (IMP-065 token 完成)。
+- **discipline PLAN**: `PLAN-L6-09` (add-design、機能設計) / `PLAN-L7-10` (add-impl、実装) / `PLAN-REVERSE-09` (reverse、§7.8.1/§1.2/§1.10 back-fill、requires L7-10)。`docs/design/harness/L6-function-design/governance-enforcement.md` + L7-unit §1.12。**自 PLAN が自 lint を dogfood 通過** (backfill 孤児0 / scrum-reverse OK)。
+- 検証: typecheck 0 / vitest 177 pass / biome CLEAN (pinned 2.4.15 で format) / doctor exit 0 / **dogfood green**。
+
+## §3 Next Action
+
+1. **Phase 1 は 4巡完走、残 PO 判断要 = 0、主要 process 漏れは CI hard-fail 化済**。次は **Phase 2 (L4-L6) 改善サイクル** (L4/L5 テスト設計 doc 起票含む)、または L0-L3 Forward freeze の PO 判断 (PO 起点)。
+2. **DEFER した強制機構** (実装時でよい): plan lint engine 本体 (§1.10 全ルール: §G.4 直列並列 token / §1.8 必須 role / sub_doc enum) / vmodel-lint (layer pairing、state DB 依存、Phase 4) / cross-check engine 汎用形 (IMP-033) / kind×layer guard (§1.6 PO 確定待ち) / pre-push hook。
+3. **新 lint の plan lint engine 統合**: A/C を `src/plan/lint.ts` 本実装時に exit 連動の plan lint ルールへ吸収 (現状は doctor.ok + vitest ガードで fail-close)。
+
+## §4 carry
+
+- DEFER 強制機構 (上記 §3-2)。
+- CI biome subjob (workflow PAT)。
+- DISCOVERY-04 frontmatter `promotion_strategy` 未宣言 (reverse 有りで lint は green だが完全性のため宣言推奨 = 軽微 carry)。
+- review 前置 verdict が diff 規模で truncate (code-reviewer 2回 cut-off)。32 tool-use の精査は実施、提起された path 一致懸念は実 repo ガード + 明示検算で green。大 diff 時の review 分割は workflow 改善候補。
+
+## §5 未了 PO 判断
+
+- **Phase 1 PO 判断要 = 0** (4巡で全クローズ)。
+- (任意) A/B/C を「今入れるべき NOW」と判断した粒度 (DEFER との線引き) に異論あれば指摘。
+
+## §6 壊さない / 再発させない
+
+- **enforcement の質的転換**: PoC→Reverse (IMP-064) / L0→L3 伝播 (IMP-065) / backfill (IMP-051) は **review 依存 → CI vitest + doctor.ok hard-fail**。confirmed poc を起こしたら Reverse をセットで (redesign 除く)、governance の signal を増やしたら concept §2.6 と requirements §7.8.1 両方に。lint が即捕まえる。
+- **新 lint は純関数 + 実 repo vitest ガード** (CI が回す vitest ベクトルで fail-close)。新 hook 不要。`extractSignals` は `\| signal \| mode \|` テーブル限定 (他テーブル巻き込み防止)。path 一致は `/id.md` 境界固定。
+- **doctor.ok の hard / warn 分離**: backfill/scrum-reverse/propagation = hard (ok 連動)、handover/agent-slots = warn-only (鮮度/運用 surface)。この分離を崩さない。
+- **biome は pinned `@biomejs/biome` 2.4.15 で `npm run format`** (`npx biome` は最新版で rule 差、使わない)。
+- review 前置 MUST / subagent model 明示 (本 session 全 sonnet) / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 2 件 helix-process/・ai-agent-harness-directory-reference.md は禁止)。

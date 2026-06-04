@@ -137,7 +137,8 @@ export function sweepStaleGuardSlots(
     let swept = 0;
     for (const s of slots) {
       // listActiveSlots と同じ AND 条件 (running && 未 release) で対象集合を一致させる (I-1)。
-      if (s.slot_source !== "agent_guard" || s.status !== "running" || s.released_at !== null) continue;
+      if (s.slot_source !== "agent_guard" || s.status !== "running" || s.released_at !== null)
+        continue;
       const fired = Date.parse(s.fired_at);
       if (Number.isNaN(fired)) continue; // fired_at が不正値の slot は触らずスキップ (corrupt 防止)
       if ((now - fired) / 60_000 > staleMinutes) {
@@ -216,7 +217,8 @@ export function recordGuardFire(
     const slots = loadSlots(deps);
     for (const s of slots) {
       // sweepStaleGuardSlots / listActiveSlots と対象集合を一致 (running && 未 release、I-1)。
-      if (s.slot_source !== "agent_guard" || s.status !== "running" || s.released_at !== null) continue;
+      if (s.slot_source !== "agent_guard" || s.status !== "running" || s.released_at !== null)
+        continue;
       const fired = Date.parse(s.fired_at);
       if (Number.isNaN(fired) || Number.isNaN(now)) continue;
       if ((now - fired) / 60_000 > staleMinutes) {

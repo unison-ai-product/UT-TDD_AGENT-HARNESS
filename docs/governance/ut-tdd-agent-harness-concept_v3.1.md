@@ -417,7 +417,7 @@ mode と工程を「絵」で終わらせず自動で繋ぐ仕組み。V2 の ro
 | `production_incident` / `hotfix_required` / `regression_prod` | Incident | env=prod、承認必須 |
 | `feature_addition` / `scope_extension` | Add-feature | |
 | `user_feedback_iteration` / `requirement_continuous_refinement` | Scrum | |
-| `requirement_undefined` / `feasibility_unknown` / `success_condition_unclear` (要件未確定 / 実現性不透明) | Discovery | 4 象限 P2、上流委譲 |
+| `requirement_undefined` / `feasibility_unknown` / `success_condition_unclear` / `design_uncertain` (要件未確定 / 実現性不透明 / 確証なき設計) | Discovery | 4 象限 P2、上流委譲。`design_uncertain` = 紙上で確定できない設計 (§2.5、PLAN-DISCOVERY-01 S4 confirmed) |
 | `tech_decision_required` / `option_comparison_needed` / `adr_required` | Research | 机上調査 (PoC 不要) |
 | `interrupt` (subtype=design_gap/new_requirement/constraint/po_change) | 分岐 (§2.6.5) | 重大・暴走→Recovery / 要件未確定→Discovery / 軽微追加→Add-feature / 設計ギャップ→Forward 該当 layer |
 
@@ -1121,6 +1121,8 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 |---|---|
 | **ハーネス** | AI エージェントを安全に動かす土台 (構想書 v1.1 用語集) |
 | **9-mode ecosystem** | Forward / Reverse / Discovery / Refactor / Retrofit / Recovery / Scrum / Incident / Add-feature の 9 mode + screen-design / frontend-design の 2 工程専門 (§2.5)。旧「3 経路 + 4 補助軸」を再編した入口分類 |
+| **scrum-reverse lint** | PoC confirmed (promotion_strategy≠redesign) ⇔ Reverse 合流 / reverse→confirmed poc 参照の整合検査 (§1.2、IMP-064)。`src/lint/scrum-reverse.ts` |
+| **propagation lint** | concept §2.6 ⇔ requirements §7.8.1 の signal→mode 語彙一致検査 (L0⇔L3 伝播ドリフト検出、IMP-065)。`src/lint/propagation.ts` |
 | **配線** | signal → mode 自動 routing / mode → command 機械契約 (RecommendedCommandV1) / drive×layer 注入 (orchestration_mode 等) / 横断検出 の連携機構 (§2.6) |
 | **orchestration_mode** | drive×layer ごとの「誰が判断し誰が実装するか」(pm_lead / claude_judge / claude_judge_codex_impl / codex_impl_qa_verify / claude_design_impl) |
 | **L0-L14 + V-model** | V2 由来の 15 工程。左 (設計 L0-L6) と右 (検証 L8-L14) が対 (L1↔L14 / L2↔L10 / L3↔L12 / L4↔L9 / L5↔L8 / L6↔L7) |

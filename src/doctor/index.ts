@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type HandoverPointer, handoverStale } from "../handover/index";
 import { analyzeBackfill, backfillMessages, loadBackfillDocs } from "../lint/backfill-pairing";
+import { analyzePropagation, loadPropagationDocs, propagationMessages } from "../lint/propagation";
+import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
 import type { LintResult } from "../plan/lint";
 import {
   type AgentSlotsDeps,
@@ -62,12 +64,48 @@ export function checkAgentSlots(deps: AgentSlotsDeps): string {
  * Reverse 無き impl / §6 用語の glossary 未 merge を warn する。doctor.ok は落とさない (fail-close 化は段階)。
  * I/O 失敗は飲んで note を返す (doctor の堅牢性維持)。
  */
-export function checkBackfill(repoRoot: string): string[] {
+export function checkBackfillResult(repoRoot: string): { messages: string[]; ok: boolean } {
   try {
     const docs = loadBackfillDocs(repoRoot);
-    return backfillMessages(analyzeBackfill(docs.plans, docs.glossaryText));
+    const r = analyzeBackfill(docs.plans, docs.glossaryText);
+    return { messages: backfillMessages(r), ok: r.ok };
   } catch {
-    return ["backfill — note: PLAN/glossary を読めず検査 skip"];
+    // 読めない (docs 不在等) → 検査 skip。doctor.ok は落とさない (note のみ)。
+    return { messages: ["backfill — note: PLAN/glossary を読めず検査 skip"], ok: true };
+  }
+}
+
+/** 後方互換: messages のみ返す薄いラッパ。 */
+export function checkBackfill(repoRoot: string): string[] {
+  return checkBackfillResult(repoRoot).messages;
+}
+
+/**
+ * PoC confirmed ⇔ Reverse 合流の整合を surface (IMP-064、hard fail)。
+ * confirmed poc (redesign 除く) の Reverse 孤児 / reverse が confirmed でない poc を参照 → ok=false。
+ * I/O 失敗は skip (doctor.ok を落とさない)。
+ */
+export function checkScrumReverse(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeScrumReverse(loadSrPlans(repoRoot));
+    return { messages: scrumReverseMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["scrum-reverse — note: PLAN を読めず検査 skip"], ok: true };
+  }
+}
+
+/**
+ * concept §2.6 ⇔ requirements §7.8.1 の signal 語彙伝播を surface (IMP-065、hard fail)。
+ * 上位正本 (concept) と機械 routing SSoT (requirements) の signal 集合が乖離 → ok=false。
+ * I/O 失敗は skip (doctor.ok を落とさない)。
+ */
+export function checkPropagation(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const d = loadPropagationDocs(repoRoot);
+    const r = analyzePropagation(d.conceptText, d.requirementsText);
+    return { messages: propagationMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["propagation — note: governance doc を読めず検査 skip"], ok: true };
   }
 }
 
@@ -93,13 +131,20 @@ export function nodeDoctorDeps(repoRoot: string): DoctorDeps {
 // CLI entrypoint は process.cwd() = repoRoot を想定 (deps 未指定時)。test は deps 注入で固定。
 export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): LintResult {
   const d = detectMode();
+  // back-fill / scrum-reverse は hard 判定 (orphan/gap → ok=false で fail-close)。
+  // handover / agent-slots は warn-only (鮮度/運用 surface であり ok を落とさない)。
+  const backfill = checkBackfillResult(deps.repoRoot);
+  const scrumRev = checkScrumReverse(deps.repoRoot);
+  const propagation = checkPropagation(deps.repoRoot);
   return {
-    ok: true,
+    ok: backfill.ok && scrumRev.ok && propagation.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
       checkHandover(deps),
       checkAgentSlots(doctorSlotsDeps(deps)),
-      ...checkBackfill(deps.repoRoot).map((m) => `doctor: ${m}`),
+      ...backfill.messages.map((m) => `doctor: ${m}`),
+      ...scrumRev.messages.map((m) => `doctor: ${m}`),
+      ...propagation.messages.map((m) => `doctor: ${m}`),
       "doctor: scaffold stub (横断検出 relation-graph / drift / regression は後続 PLAN)",
     ],
   };

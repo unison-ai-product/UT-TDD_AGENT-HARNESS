@@ -102,5 +102,8 @@ describe("runDoctor", () => {
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("handover"))).toBe(true);
     expect(r.messages.some((m) => m.includes("agent-slots"))).toBe(true);
+    // hard-fail lints も surface に出る (合成 repoRoot は docs 不在で skip note、wiring 存在を確認)
+    expect(r.messages.some((m) => m.includes("scrum-reverse"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("propagation"))).toBe(true);
   });
 });
