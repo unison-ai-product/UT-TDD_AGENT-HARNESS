@@ -4,7 +4,7 @@ title: "PLAN-L6-06 (add-design): handover 記録機構の機能設計 — sessio
 kind: add-design
 layer: L6
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-04
 updated: 2026-06-04
 owner: PM (Opus) / PO (人間)

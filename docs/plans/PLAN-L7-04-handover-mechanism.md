@@ -4,7 +4,7 @@ title: "PLAN-L7-04 (add-impl): handover 記録機構の実装 — src/handover +
 kind: add-impl
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-04
 updated: 2026-06-04
 owner: PM (Opus) / PO (人間)

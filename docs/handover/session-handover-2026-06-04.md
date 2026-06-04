@@ -26,7 +26,7 @@
 
 ## §3 Next Action
 
-1. **【PO 確認待ち / R3】CURRENT.md の廃止**: 機械ポインタ正本を `.ut-tdd/handover/CURRENT.json` に確定し、要件の旧 `CURRENT.md` 表記を全廃した。これはガバナンス表記変更のため PO 認識を確認 (PLAN-REVERSE-05 R3 ゲート)。問題なければ REVERSE-05 を `confirmed` 化。
+1. ~~【PO 確認待ち / R3】CURRENT.md の廃止~~ → **PO 承認済 (2026-06-04 "OK")**。機械ポインタ正本 = `.ut-tdd/handover/CURRENT.json`、`CURRENT.md` 全廃を確定。handover 3 PLAN (L6-06/L7-04/REVERSE-05) を `confirmed` 化。
 2. **handoverStale の lint/pre-push 配線**: §6.8.5「PLAN completed なのに handover 追記なし → warn」/ §5.3「CURRENT.json 24h stale warn」を `handoverStale` 基盤に `src/plan/lint.ts` (現 stub) 実装時に配線。現状 human-binding。
 3. **運用ディシプリン**: 今後は PLAN 着手時に `ut-tdd plan use <id>` で current-plan を活性化すると session-log digest が populate され、session 終了時に `ut-tdd handover` が機械部を自動 prefill する。本 session は活性化が遅く digest が sparse だったため §1-§2 を git から手記入した。
 
