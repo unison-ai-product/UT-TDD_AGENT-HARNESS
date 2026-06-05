@@ -159,3 +159,38 @@
 - **CLAUDE.md「設計の柱 6 本」が判断基準**: 設計・実装・レビューは「どの柱に資するか」で判断、どの柱にも資さない作業は untraceable arbitrary work として疑う。
 - **G4 freeze 記録の二層**: A-101 (core 4 doc) + A-102 (workflow orchestration add-design)。両方 gate §2.1 + .ut-tdd/audit に記録。function.md は両 audit で bless された confirmed (draft へ戻さない、規範変更は Reverse/Recovery)。
 - **粒度監査は「準拠 (coverage/altitude/grounding) + 完遂 (under-design 解消)」の両輪**。freeze 済でも under-design が残れば「doc 書いたが機械着地なし」で完遂と誤認しない (本 session の起点 = PO「L4 は定義に準拠しているか」の問い)。
+
+---
+
+# Session Handover — 2026-06-05 (session 5: review 前置の機械強制 — 設計上の問題を実装で解消、IMP-071)
+
+> PO 指摘の連鎖: ① §3.6 を review 前置スキップで freeze → ② PO「なぜ review を飛ばす? ワークフロー上の問題? プラン起票ルールの問題? **やらなかったことは許すが設計上の問題は許さない**」→ ③ 診断 = review 前置が doc-only で機械強制ゼロ (柱 2 違反の under-design)、しかも同 session で「vitest red を確認せず commit」も再演 (機械ゲート無い箇所は規律依存で漏れる実証) → ④ PO「OK」で実装。
+
+## §1-§2 成果 (commit)
+
+| commit | 何を |
+|---|---|
+| `67b33f1` | §3.6 追補の事後 review (code-reviewer) 指摘修正 (handover §3.6→§3.7 stale / dangling PLAN ref) + **IMP-071 起票** |
+| `50f9ea3` | IMP-071 candidate 無効 enum (schema) 修正 — backlog lint が即捕捉 (機械強制が効く箇所の実例) |
+| `bef0c2a` | **review 前置の機械強制 feature** (PLAN-L6-12 設計 / L7-13 実装 / REVERSE-12 back-fill) |
+
+- **診断 (証拠ベース)**: review 前置 MUST (CLAUDE.md / requirements §7.8.7 / concept §2.1.2.1) は doc-only。src grep 0 / plan lint=stub / doctor 非検査 → freeze (status→confirmed) / commit が review 証跡ゼロで素通り。concept §2.1.2.1 は「review 記録なければ gate exit 1」と機械ゲート設計済だが**未実装**だった = harness が柱 2 を自分のレビュー規律で破る under-design。
+- **機構**: `src/schema/frontmatter.ts` review_evidence (array of reviewer/review_kind=cross_agent\|intra_runtime_subagent\|human/reviewed_at/verdict/scope) + `src/lint/review-evidence.ts` (analyze/loader/messages、対象=confirmed の design/add-design/impl/add-impl で evidence 無し) + `src/doctor/index.ts` checkReviewEvidence (warn-first、ok 非連動) + tests U-REVIEW-001〜006 + L6 設計 review-evidence.md ↔ L7-unit §1.15 ペア。
+- **governance**: requirements §7.8.7 機械着地注記 (「記録欠落→exit 1」の実装着地 = review_evidence/checkReviewEvidence) + concept §10.3 用語 back-merge。
+- **review 前置 (本 feature 自身)**: code-reviewer APPROVE (Critical 0) → I-1 (loader PLAN- prefix guard) / I-2 (テストコメント正確化) / m-3/m-4 修正後、feature 3 PLAN を confirmed + review_evidence 記録。**「未実施 review を証跡に書かない」ため review 通過まで draft 維持** (本 feature が防ぐ行為を自分でしない規律を実演)。
+- **back-fill**: 履歴 design/impl PLAN 13 件 (L1/L3=A-100 / L4-core=A-101 の citable review) に review_evidence。**missing 29→15** (残 L5/L6/L7 feature 15 件は handover に review 記録、warn-first surfaced queue)。
+- 検証: typecheck 0 / **vitest 195 pass** (189→+6) / doctor exit 0 / pair-freeze 31 孤児0 / backfill OK。HEAD = `bef0c2a`。
+
+## §3 Next Action (session 5)
+
+1. **IMP-071 残: 履歴 15 件 (L5/L6/L7 feature) の review_evidence back-fill** (handover の review 記録から)。完了後 **warn-first → hard 化** (runDoctor.ok に reviewEvidence.ok 連動 + U-REVIEW-006 を missing==[] 昇格 + CI fail-close、REVERSE-12 §8 hard checklist)。これで新規 design/impl PLAN の review-skip freeze が機械で止まる。
+2. **L5 詳細設計** (PLAN-L5-00-master) を Forward で降下 (L4 完遂済、IMP-069 確定済)。
+3. **増分設計変更の review ゲート**: freeze 後追補 (本事故の核) に review_evidence entry を確実に append させる運用 (将来 hook 候補、review-evidence.md §7 carry)。
+
+## §6 壊さない / 再発させない (session 5)
+
+- **review 前置は機械強制対象 (IMP-071)**: design/impl/add-* PLAN を confirmed にする前に review_evidence (reviewer/review_kind/verdict) を記録。doctor checkReviewEvidence が surface (warn-first→hard)。**freeze 後の増分追補も review→evidence append** (§3.6 を review スキップで freeze した事故を再発させない)。
+- **未実施の review を証跡に書かない**: review_evidence は review 通過後に記録、それまで PLAN は draft。事前に「approve」と書くのは本 feature が防ぐ行為そのもの。
+- **commit 前に vitest 結果を確認**: 本 session で red のまま commit (67b33f1) を再演。機械ゲートが無い箇所 (review 前置 / test green 確認) は規律に依存して漏れる = IMP-071 の論拠そのもの。
+- **warn-first → hard の昇格パス**: 履歴 back-fill 完了後に runDoctor.ok 連動 (pair-freeze/backfill と同パス)。review-evidence は現状 warn-first (doctor.ok 非連動)。
+- review_kind enum = concept §2.1.2.1 の 3 tier と一致 (cross_agent/intra_runtime_subagent/human)。崩さない。
