@@ -159,13 +159,29 @@ screen-design / frontend-design は**独立した駆動モデルでなく、Forw
 
 > 制御フローの実行時ビュー (代表シナリオ) は architecture.md §5。workflow orchestration module 本体は未実装 (L7 carry)。
 
-### §3.6 carry → L5 / L6 / requirements (正規 defer、under-design ではない)
+### §3.6 実行モード (3+1 パターン) × オーケストレーション (FR-08/FR-L1-42)
+
+**中核価値 = 適切なオーケストレーションで開発コストを下げる (柱 5)** の本質は、**利用可能な runtime に合わせてオーケストレーションを変える**こと。§3.1-§3.5 の駆動モデル設計は runtime 非依存で書いたが、**実行担当・review・委譲は execution mode (concept §2.1.1) で変わる**。orchestration は `ut-tdd status` が検出する **3+1 パターン** で振る舞いを切り替える (single fallback でなく明示縮退、§2.1.2.1)。
+
+| execution mode | 判断 / 実装の割当 | 駆動モデルの review/gate tier | 委譲 (worker/reviewer 分散) |
+|---|---|---|---|
+| **hybrid** (Claude+Codex、mix) | 判断系 (frontier-reviewer) ↔ 実行系 (worker) を**別 runtime に分散** (二重実行禁止、concept §2.1.0) | **① cross-agent review** (別 runtime/model) で full enforce。worker と reviewer の (provider,model) 同一なら承認無効化 | 可。orchestration_mode の `*_codex_impl` 系が完全実体化 |
+| **claude-only** | PM(Opus) 判断 + Claude が実装も担う | **② intra_runtime_subagent review を hard 必須** (`.claude/agents/code-reviewer` 等、明文化 checklist)。`review_kind=intra_runtime_subagent` + `cross_agent_review=unavailable` 記録 | 不可 → orchestration_mode は §2.1.2.1 縮退規則で別 mode へ (silent fallback 禁止、不在を明示記録) |
+| **codex-only** | Codex(TL) 主導 + ② reviewer-role | 同上 (② hard 必須) | 不可 → 同上縮退 |
+| **standalone** (AI なし) | 機械 lint のみ | サブエージェント起動不可 → **判断ゲートは人間レビュー必須** を `next_action` に出す (自動 pass 不可) | 不可 |
+
+- **mode-invariant な人間サインオフ (§2.1.2.1 point 5)**: §3.1 の **Recovery (tl+po) / Incident (オンコール+tl+pm) / Retrofit config_drift (tl)** + escalation 境界 (本番影響/認証/認可/決済/PII/ライセンス/destructive) は **execution mode を問わず人間サインオフ必須** (② でも代替不可、hard-block)。execution mode で縮退するのは「AI レビューの tier」であり、人間サインオフ点は不変。
+- **orchestration_mode 注入**: 各駆動モデルの drive×layer に `orchestration_mode` (5値) を注入 (§2.6.4)。`claude_judge_codex_impl` / `codex_impl_qa_verify` は hybrid 前提で、単体 mode では §2.1.2.1 の縮退規則に従う。**判断ゲートは必ず execution mode を参照する** (orchestration_mode と execution mode を独立に扱うとレビューゲートが崩れる、§2.6.4)。
+- **担当 building block**: mode 検出 = `runtime` (`detectMode()`、§3.5 / architecture §5)。provider 引継ぎ (Claude↔Codex context+PLAN+budget、FR-L1-42) = `runtime(adapter)` (PLAN-L4-NN-provider-handover、§6)。
+- **ペア**: execution-mode degradation の総合検証 = L9 **ST-EXT-02** (Codex 不在→claude-only / 双方不在→standalone) + 駆動モデルの review-tier 縮退 = ST-FUNC-06 (mode-aware サインオフ/review)。
+
+### §3.7 carry → L5 / L6 / requirements (正規 defer、under-design ではない)
 
 L4 は外部設計 (what/形状) で確定。以下は altitude 上 L4 の範囲外として**明示 defer** (CLAUDE.md「正規 defer は under-design でない」):
 
 - 各 mode の **CLI subcommand signature / エラー型 / リトライ** → L5 D-API (IMP-018、external-if §7 境界と整合)。
 - 駆動モデルの **状態遷移 pseudocode / 内部処理** → L6 機能設計 (IEEE 1016 §5.7、IMP-019)。
-- **orchestration_mode (drive×layer の「誰が判断し誰が実装するか」5値) の cell matrix** → requirements §1/§7 (concept §2.6.4、現状 stub)。
+- **orchestration_mode の cell matrix (drive×layer → 5値の具体割当)** → requirements §1/§7 (concept §2.6.4、現状 stub)。**注入機構・execution mode 別の縮退規則・review tier は §3.6 で外部設計済**、defer は cell の具体割当値のみ (under-design でなく値の確定待ち)。
 - **Scrum 6 type × Reverse 5 type の 30-cell routing matrix** → requirements §3 (concept §4.4、現状 stub)。
 - **Recovery 再発防止 artifact schema** → 後続 PLAN (recovery.md §4 carry)。
 - **G8-G14 の機械検証条件** → IMP-052 (gates.md §1 注記、現状概念定義)。
