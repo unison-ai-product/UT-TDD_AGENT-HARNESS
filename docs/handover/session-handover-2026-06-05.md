@@ -51,3 +51,34 @@
 - **trace-bidir の dir 集合参照は trailing slash 正規化 + startsWith 境界固定** (別 dir の prefix 誤マッチ防止)。
 - **検算で見逃しを担保**: pairs == 検査対象数 (regex マッチ − EXCLUDED) を確認すれば孤児見逃しゼロ。実 repo ガード U-VPAIR-005 が CI fail-close。
 - review 前置 MUST / subagent model 明示 (本 session pmo-project-explorer / pmo-sonnet / code-reviewer すべて sonnet) / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 3 件は禁止)。
+
+---
+
+# Session Handover — 2026-06-05 (session 2: 検証ロードマップ改称 + 検証発火 機械化 + クリーンアップ原則)
+
+> PO 是正: ① 報告で「Phase 2 / 1 サイクル」と roadmap フレームを多用し「ロードマップの影響を受けすぎ、ロードマップばかり意識してうざい。**定常は Forward、ロードマップは検証サイクル**」② 「検証タイミングを **V-model 単位で機械発火**させろ。崩れ防止の全体調整」③ 「**クリーンアップ原則とハードコード慎重**を開発原則に」。
+
+## §1-§2 成果 (commit)
+
+| commit | 何を |
+|---|---|
+| `0e456cf` | **検証ロードマップへ改称 + 常時参照撤廃**。CLAUDE.md Read Order / AGENTS.md Core Reads から roadmap を外し、**節目 (V-model 層群 freeze 完了時) 限定の動的参照**に。frontmatter doc_type=verification-roadmap |
+| `b3035d4` | **検証発火 verification trigger (IMP-068)**: V-model 層群 (L0-L3/L4-L6/L0-L6) の Forward freeze 完了を doctor が surface。pair-freeze lint (IMP-067) の status 拡張。PLAN-L6-11/L7-12/REVERSE-11 |
+| `886ce4d` | **クリーンアップ原則 + ハードコード慎重原則**を CLAUDE.md コーディング規約に MUST 追加 |
+
+- **検証発火実装**: `src/vmodel/lint.ts` `analyzeVerificationGroups` (freeze = draft 0 + pair 孤児0 + confirmed≥1、**placeholder=park** で発火を妨げない) + doctor `checkVerificationGroups` (note、ok 非連動)。実 repo: **L0-L3 ✅ freeze 完了 (8/12 confirmed, 4 park, 孤児0) → 検証サイクル発火可 / L4-L6 Forward 進行中** = A-100 整合。U-VTRIG-001〜005。
+- concept §10 用語 (検証発火/検証層群) back-merge、検証ロードマップに機械発火反映。
+- 検証: typecheck 0 / **vitest 189 pass** (184→+5) / biome CLEAN / doctor backfill green / **pmo-sonnet APPROVE** (P-1 layers 注記 / P-3 review DoD 反映)。
+
+## §3 Next Action (session 2)
+
+1. **定常 = Forward で L4 基本設計を降ろす** (検証ロードマップの Phase/サイクルで語らない)。L4-L6 が freeze 完了したら doctor `checkVerificationGroups` が「L4-L6 検証サイクル発火可」を機械的に surface する。検証はそのタイミングで回す。
+2. **検証発火の発展** (後続 carry): verification を hard 化 (現状 note) / 層群 freeze → 検証 PLAN 自動起票 (現状 surface まで、起票は人間)。
+3. session 1 からの継続: plan lint engine 最小 (G4 audit A2) / G4 再 audit / L5 テスト設計 doc 起票。
+
+## §6 壊さない / 再発させない (session 2)
+
+- **定常は Forward、検証ロードマップは節目の検証サイクル** (混同禁止)。L4 着手等の定常作業を「Phase N / サイクル」で語らない (PO「うざい」の正体)。検証ロードマップは read order に無く、層群 freeze 完了の節目で動的参照する band。[[feedback_roadmap_is_design_doc_level]]。
+- **クリーンアップ原則 / ハードコード慎重** (CLAUDE.md、MUST): 誤り・取り下げ・陳腐化の残骸を残さない / ハードコードは根拠コメント + 単一正本 + 拡張性。
+- **検証発火 = surface まで** (検証 PLAN 起票は人間トリガー、§2.6 signal→mode と同様)。**placeholder=park は freeze を妨げない** (L2 screen track G2 DEFER)。draft があれば Forward 進行中。
+- **VERIFICATION_GROUPS の id は表示用レンジ、layers は実在層のみ** (L0 は価値検証で design doc なし)。id と layers の非対称はコメントで根拠明示済。
