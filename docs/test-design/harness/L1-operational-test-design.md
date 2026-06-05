@@ -2,7 +2,7 @@
 layer: L1
 executed_at_layer: L14
 artifact_type: test_design
-status: draft
+status: confirmed
 pair_artifact: docs/design/harness/L1-requirements/
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L1
@@ -13,7 +13,7 @@ created: 2026-05-29
 
 > **layer (作成層 = V-pair key)**: L1 (要求) / **executed_at_layer (実施層)**: L14 (運用検証) / **artifact**: ③ 運用テスト設計 (V-model 右、① L1 全 sub-doc と対)
 > **pair (V-model L1↔L14)**: `../../design/harness/L1-requirements/{business,functional,screen,technical,nfr}-requirements.md` の 5 sub-doc 全体 ↔ 本書 1 doc (V2 HELIX-workflows 設計概念を参照し、L1 = 5 sub-doc 構造、運用テスト設計は L14 pair として 1 本)
-> **status**: draft (① と対で G1 pair freeze 予定。BR-07/08・NFR-08 対応 OT は ① 同様 draft。5 sub-doc 化 + 14 画面 PM/HM/GD 再採番 に伴う OT 追加は OT-32〜44 で量閉じ完了)
+> **status**: confirmed (A-100 で ① と対の G1 pair freeze 両側揃い、2026-06-04。BR-07/08・NFR-08 対応 OT は ① 同様 confirmed。5 sub-doc 化 + 14 画面 PM/HM/GD 再採番 に伴う OT 追加は OT-32〜44 で量閉じ完了)
 > **PLAN**: `../../plans/PLAN-L1-{01..05}-*.md` Step 5 / DoD (5 PLAN すべての DoD で本書を参照)
 > 方針: **軽量** (完全性レビューは課さない)。各 BR / FR-L1 / SR / TR / NFR は最低 1 OT に対応させ孤児要求を作らない (量閉じ)。OT は「運用で何を観測すれば満たされたと言えるか」の検証観点であり、実装テストコード (L7/単体) ではない。
 > v1.2 構造化: 本書は v1.2 で 5 sub-doc 全体の pair 凍結相手として位置付け直された (構想書 §3.1.2.1)。OT は sub-doc 横断で粒度が変わらないため、引き続き **L14 で 1 本** の運用テスト設計とする (HELIX-workflows 設計概念でも L14 = 単一 doc)。
