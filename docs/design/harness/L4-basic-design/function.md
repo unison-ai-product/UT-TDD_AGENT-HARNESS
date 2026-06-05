@@ -172,7 +172,7 @@ screen-design / frontend-design は**独立した駆動モデルでなく、Forw
 
 - **mode-invariant な人間サインオフ (§2.1.2.1 point 5)**: §3.1 の **Recovery (tl+po) / Incident (オンコール+tl+pm) / Retrofit config_drift (tl)** + escalation 境界 (本番影響/認証/認可/決済/PII/ライセンス/destructive) は **execution mode を問わず人間サインオフ必須** (② でも代替不可、hard-block)。execution mode で縮退するのは「AI レビューの tier」であり、人間サインオフ点は不変。
 - **orchestration_mode 注入**: 各駆動モデルの drive×layer に `orchestration_mode` (5値) を注入 (§2.6.4)。`claude_judge_codex_impl` / `codex_impl_qa_verify` は hybrid 前提で、単体 mode では §2.1.2.1 の縮退規則に従う。**判断ゲートは必ず execution mode を参照する** (orchestration_mode と execution mode を独立に扱うとレビューゲートが崩れる、§2.6.4)。
-- **担当 building block**: mode 検出 = `runtime` (`detectMode()`、§3.5 / architecture §5)。provider 引継ぎ (Claude↔Codex context+PLAN+budget、FR-L1-42) = `runtime(adapter)` (PLAN-L4-NN-provider-handover、§6)。
+- **担当 building block**: mode 検出 = `runtime` (`detectMode()`、§3.5 / architecture §5)。provider 引継ぎ (Claude↔Codex context+PLAN+budget、FR-L1-42) = `runtime(adapter)` (§6 P1 carry の `PLAN-L4-NN-provider-handover` = 未起票 placeholder、NN は起票時確定)。
 - **ペア**: execution-mode degradation の総合検証 = L9 **ST-EXT-02** (Codex 不在→claude-only / 双方不在→standalone) + 駆動モデルの review-tier 縮退 = ST-FUNC-06 (mode-aware サインオフ/review)。
 
 ### §3.7 carry → L5 / L6 / requirements (正規 defer、under-design ではない)
