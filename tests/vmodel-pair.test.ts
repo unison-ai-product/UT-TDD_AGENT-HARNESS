@@ -6,17 +6,25 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzePairFreeze,
+  analyzeVerificationGroups,
   loadPairDocs,
   type PairDoc,
   pairFreezeMessages,
   parsePairDoc,
   stripInlineComment,
+  verificationGroupMessages,
 } from "../src/vmodel/lint";
 
-const doc = (path: string, layer: string | null, pa: string | null): PairDoc => ({
+const doc = (
+  path: string,
+  layer: string | null,
+  pa: string | null,
+  status: string | null = null,
+): PairDoc => ({
   path,
   layer,
   pairArtifact: pa,
+  status,
 });
 
 describe("vmodel pair-freeze lint (U-VPAIR)", () => {
@@ -124,5 +132,92 @@ describe("vmodel pair-freeze lint (U-VPAIR)", () => {
       ],
     });
     expect(msgs.join(" ")).toContain("pair 欠落");
+  });
+});
+
+describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-068)", () => {
+  it("U-VTRIG-001: analyzeVerificationGroups — 層群ごとに confirmed/draft を集計", () => {
+    const docs = [
+      doc("docs/design/harness/L1-requirements/a.md", "L1", "x", "confirmed"),
+      doc("docs/design/harness/L3-functional/b.md", "L3", "x", "confirmed"),
+      doc("docs/design/harness/L4-basic-design/c.md", "L4", "x", "draft"),
+    ];
+    const groups = analyzeVerificationGroups(docs, []);
+    const l03 = groups.find((g) => g.id === "L0-L3");
+    expect(l03?.confirmed).toBe(2);
+    expect(l03?.total).toBe(2);
+    expect(l03?.frozen).toBe(true);
+    const l46 = groups.find((g) => g.id === "L4-L6");
+    expect(l46?.draft).toBe(1);
+    expect(l46?.frozen).toBe(false);
+  });
+
+  it("U-VTRIG-002: frozen 判定 — draft があれば未完了、placeholder(park) は発火を妨げない", () => {
+    const withPark = analyzeVerificationGroups(
+      [
+        doc("docs/design/harness/L1-requirements/a.md", "L1", "x", "confirmed"),
+        doc("docs/design/harness/L2-screen/b.md", "L2", "x", "placeholder"),
+      ],
+      [],
+    ).find((g) => g.id === "L0-L3");
+    expect(withPark?.frozen).toBe(true); // placeholder=park、confirmed 1 件で発火可
+    expect(withPark?.placeholder).toBe(1);
+
+    const withDraft = analyzeVerificationGroups(
+      [
+        doc("docs/design/harness/L1-requirements/a.md", "L1", "x", "confirmed"),
+        doc("docs/design/harness/L3-functional/b.md", "L3", "x", "draft"),
+      ],
+      [],
+    ).find((g) => g.id === "L0-L3");
+    expect(withDraft?.frozen).toBe(false); // draft あり → Forward 進行中
+  });
+
+  it("U-VTRIG-003: 層群に pair 孤児があれば freeze 未完了", () => {
+    const g = analyzeVerificationGroups(
+      [doc("docs/design/harness/L1-requirements/a.md", "L1", "x", "confirmed")],
+      [{ path: "docs/design/harness/L1-requirements/a.md", reason: "pair-missing", detail: "" }],
+    ).find((g) => g.id === "L0-L3");
+    expect(g?.frozen).toBe(false);
+    expect(g?.hasOrphan).toBe(true);
+  });
+
+  it("U-VTRIG-004: verificationGroupMessages — freeze 完了(park 表示) / Forward 進行中", () => {
+    const frozen = verificationGroupMessages([
+      {
+        id: "L0-L3",
+        label: "上流",
+        total: 5,
+        confirmed: 4,
+        draft: 0,
+        placeholder: 1,
+        hasOrphan: false,
+        frozen: true,
+      },
+    ]);
+    expect(frozen[0]).toContain("freeze 完了");
+    expect(frozen[0]).toContain("検証サイクル発火可");
+    expect(frozen[0]).toContain("park");
+    const progress = verificationGroupMessages([
+      {
+        id: "L4-L6",
+        label: "設計",
+        total: 18,
+        confirmed: 0,
+        draft: 18,
+        placeholder: 0,
+        hasOrphan: false,
+        frozen: false,
+      },
+    ]);
+    expect(progress[0]).toContain("Forward 進行中");
+  });
+
+  it("U-VTRIG-005: 実 repo ガード — L0-L3 は freeze 完了(A-100、L2 park)、L4-L6 は Forward 進行中", () => {
+    const docs = loadPairDocs();
+    const { orphans } = analyzePairFreeze(docs);
+    const groups = analyzeVerificationGroups(docs, orphans);
+    expect(groups.find((g) => g.id === "L0-L3")?.frozen).toBe(true);
+    expect(groups.find((g) => g.id === "L4-L6")?.frozen).toBe(false);
   });
 });

@@ -16,7 +16,13 @@ import {
   peakParallel,
 } from "../runtime/agent-slots";
 import { detectMode } from "../runtime/detect";
-import { analyzePairFreeze, loadPairDocs, pairFreezeMessages } from "../vmodel/lint";
+import {
+  analyzePairFreeze,
+  analyzeVerificationGroups,
+  loadPairDocs,
+  pairFreezeMessages,
+  verificationGroupMessages,
+} from "../vmodel/lint";
 
 /** I/O・clock 注入 (test 可能、handover staleness 検査用)。 */
 export interface DoctorDeps {
@@ -124,6 +130,21 @@ export function checkPairFreeze(repoRoot: string): { messages: string[]; ok: boo
   }
 }
 
+/**
+ * V-model 層群の Forward freeze 完了 (検証サイクル発火タイミング) を surface (IMP-068、note)。
+ * 層群が freeze 完了 → 検証発火可 / Forward 進行中。検証ロードマップの「いつ検証するか」を
+ * V-model 構造 (層群 freeze) で機械発火させる全体調整。doctor.ok は落とさない (タイミング surface)。
+ */
+export function checkVerificationGroups(repoRoot: string): string[] {
+  try {
+    const docs = loadPairDocs(repoRoot);
+    const { orphans } = analyzePairFreeze(docs);
+    return verificationGroupMessages(analyzeVerificationGroups(docs, orphans));
+  } catch {
+    return ["verification — note: design doc を読めず検査 skip"];
+  }
+}
+
 /** doctor 用に agent-slots deps を node I/O で構築 (now 固定は test 注入)。 */
 function doctorSlotsDeps(deps: DoctorDeps): AgentSlotsDeps {
   return {
@@ -163,6 +184,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...scrumRev.messages.map((m) => `doctor: ${m}`),
       ...propagation.messages.map((m) => `doctor: ${m}`),
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
+      ...checkVerificationGroups(deps.repoRoot).map((m) => `doctor: ${m}`),
       "doctor: scaffold stub (横断検出 relation-graph / drift / regression は後続 PLAN)",
     ],
   };

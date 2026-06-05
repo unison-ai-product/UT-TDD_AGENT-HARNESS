@@ -100,3 +100,30 @@ function analyzePairFreeze(docs):
 - `tests/vmodel-pair.test.ts` で **実 repo 完全性回帰** (`analyzePairFreeze(loadPairDocs()) ⇒ orphans == []`) を CI vitest ベクトルに乗せ fail-close。
 - `runDoctor` に `checkPairFreeze` を **warn-first** で配線 (初期投入。hard-fail 昇格は実 repo green 確認後に別 Step or 後続)。
 - 純関数 + 実 repo ガードのみ。新 hook 不要 (governance-enforcement / backfill-pairing と同方式)。
+
+## §7 検証タイミングの機械発火 (IMP-068、PLAN-L6-11 / L7-12)
+
+> pair-freeze lint (§1-§6) の status 集計を **V-model 層群**単位に拡張し、**検証ロードマップの「いつ検証するか」を人の記憶でなく V-model 構造で機械発火**させる (崩れ防止の全体調整)。
+
+### §7.1 検証発火単位 (層群)
+
+`VERIFICATION_GROUPS` = **L0-L3 (上流: 要求〜要件) / L4-L6 (設計: 基本〜機能) / L0-L6 (全設計層)** (PO 例示)。L0 = 価値検証で design doc なし、L7+ は実装/検証実施で別レイヤー。
+
+### §7.2 freeze 完了判定 (発火条件)
+
+- 層群の全 design sub-doc が **draft 0 かつ pair 孤児 0 かつ confirmed ≥ 1** → **freeze 完了 (検証サイクル発火可)**。
+- **placeholder は park (意図的保留、例: L2 screen track の G2 DEFER) として発火を妨げない** (A-100 の L0-L3 core freeze と整合)。
+- draft (未着手/作業中) が 1 件でもあれば **Forward 進行中** (検証発火しない = 定常)。
+
+### §7.3 関数
+
+| 関数 | signature | post |
+|---|---|---|
+| `loadPairDocs` (§1 拡張) | `(root?) => PairDoc[]` | `status` フィールドを追加で読む |
+| `analyzeVerificationGroups` | `(docs, orphans) => GroupReadiness[]` | 層群ごとに confirmed/draft/placeholder/孤児を集計 + frozen 判定 (純関数) |
+| `verificationGroupMessages` | `(groups) => string[]` | freeze 完了 (park 表示) / Forward 進行中 の surface |
+| doctor `checkVerificationGroups` | `(repoRoot) => string[]` | note レベル surface (doctor.ok 非連動) |
+
+### §7.4 「機械発火」の範囲
+
+surface まで (doctor が「層群 X freeze 完了 → 検証サイクル発火可」を機械的に告げる)。**検証 PLAN の起票は人間トリガー** (concept §2.6 signal→mode と同じく、機械は提示・人間が起票)。検証サイクルの自動起票は後続 carry。

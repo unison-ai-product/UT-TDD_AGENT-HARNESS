@@ -14,7 +14,7 @@ related_backlog: docs/improvement-backlog.md
 
 # UT-TDD Agent Harness — 検証ロードマップ (v0.1)
 
-> **名称 = 検証ロードマップ**: V-model 層群 (例: L0-L3 / L4-L6 / L7 / L8-L14) の Forward が freeze 完了した**節目を機械的に検知して検証サイクルを発火**させる **全体調整 (崩れ防止) の band**。検証タイミングを人の記憶でなく **V-model 単位の構造**に従わせ、層群の freeze 完了 → 検証発火を機械化する (実装 = doctor の検証発火 surface、pair-freeze lint の層群 freeze 集計を素地とする)。改善は検証で出た課題を backlog へ還流する従属作業であり、本書の主語は**検証**。
+> **名称 = 検証ロードマップ**: V-model 層群 (例: L0-L3 / L4-L6 / L7 / L8-L14) の Forward が freeze 完了した**節目を機械的に検知して検証サイクルを発火**させる **全体調整 (崩れ防止) の band**。検証タイミングを人の記憶でなく **V-model 単位の構造**に従わせ、層群の freeze 完了 → 検証発火を機械化する (**実装済 = IMP-068**: doctor `checkVerificationGroups` が L0-L3 / L4-L6 / L0-L6 の層群 freeze を surface。pair-freeze lint の層群 freeze 集計が素地。発火 = surface まで、検証 PLAN 起票は人間トリガー)。改善は検証で出た課題を backlog へ還流する従属作業であり、本書の主語は**検証**。
 
 > **位置付け**: 本書は「**要件定義 (L3) が出揃った後に、どの順番で・どの粒度で harness 自身を検証し改善していくか**」を定義する **設計ドキュメントレベルのロードマップ** (PO 2026-06-04) である。L3 マイルストーンで起票する設計層の計画 doc として `docs/design/harness/L3-functional/roadmap.md` に置く。concept / requirements のような governance 正本ではなく、また V-model の標準 sub_doc (テスト設計と pair する artifact) でもない、**L3 設計層の計画文書**。scope は L0-L14 横断だが起票点は L3。**CLAUDE.md / AGENTS.md の read order には含めず、常時参照しない**。本書は **節目（層群の Forward が一区切りついた時点。例: L0-L3 / L4-L6 / L0-L6）に検証/改善サイクルを回すときだけ動的に参照する** band であり、**定常（Forward 工程 L0→L14）の driver / 主語ではない**。定常作業を本書の Phase / サイクルで語らない（[[feedback_roadmap_is_design_doc_level]]）。
 >
