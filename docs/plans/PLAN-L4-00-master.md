@@ -26,6 +26,12 @@ dependencies:
     - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 v2_import: docs/migration/v2-import-ledger.md
+review_evidence:
+  - reviewer: pmo-sonnet
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-05"
+    verdict: approve
+    scope: "A-101 G4 L4 audit 4 軸 PASS (pmo-sonnet TL 代替、claude-only)"
 ---
 
 # PLAN-L4-00 (Master hub): L4 基本設計 — 必須/選択 triage + child 合成

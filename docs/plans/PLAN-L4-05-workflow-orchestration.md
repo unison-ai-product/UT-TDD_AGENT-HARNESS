@@ -29,6 +29,17 @@ dependencies:
     - docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_adr: docs/adr/ADR-004-internal-asset-ts-control-boundary.md
 v2_import: docs/migration/v2-import-ledger.md
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-05"
+    verdict: approve_after_fixes
+    scope: "PLAN-L4-05 本体 (REQUEST_CHANGES → I-1/I-2 修正後 approve、A-102)"
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-05"
+    verdict: approve
+    scope: "§3.6 execution mode 追補 (事後 review、A-102 追補)"
 ---
 
 # PLAN-L4-05 (add-design): L4 workflow オーケストレーション外部設計の補追

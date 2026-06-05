@@ -89,6 +89,22 @@ const frontmatterBaseSchema = z.object({
   github_issue_id: z.number().int().positive().optional(),
   /** v2 HELIX-workflows 取り込み軌跡への参照 (任意、migration ledger path) */
   v2_import: z.string().optional(),
+  /** review 前置エビデンス (requirements §7.8.7 / .claude/CLAUDE.md MUST、IMP-071)。
+   *  design/impl/add-* PLAN が confirmed (gate/freeze 到達) に至る前に通した review を構造的に記録する。
+   *  review_kind = cross_agent (hybrid) | intra_runtime_subagent (claude/codex 単体) | human (standalone/escalation)。
+   *  機械強制 = doctor checkReviewEvidence (warn-first → hard)。freeze 後の増分追補も entry を append する
+   *  (concept §2.1.2.1 の review tier と整合、review-skip の silent 化を機械で塞ぐ)。 */
+  review_evidence: z
+    .array(
+      z.object({
+        reviewer: z.string().min(1),
+        review_kind: z.enum(["cross_agent", "intra_runtime_subagent", "human"]),
+        reviewed_at: z.string().min(1),
+        verdict: z.string().min(1),
+        scope: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 /** layer=cross を取る横断駆動 kind (Discovery=poc / Reverse=reverse / Recovery=recovery) */

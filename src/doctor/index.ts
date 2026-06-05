@@ -5,6 +5,11 @@ import { join } from "node:path";
 import { type HandoverPointer, handoverStale } from "../handover/index";
 import { analyzeBackfill, backfillMessages, loadBackfillDocs } from "../lint/backfill-pairing";
 import { analyzePropagation, loadPropagationDocs, propagationMessages } from "../lint/propagation";
+import {
+  analyzeReviewEvidence,
+  loadReviewPlans,
+  reviewEvidenceMessages,
+} from "../lint/review-evidence";
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
 import type { LintResult } from "../plan/lint";
 import {
@@ -131,6 +136,21 @@ export function checkPairFreeze(repoRoot: string): { messages: string[]; ok: boo
 }
 
 /**
+ * review 前置証跡 (review_evidence) の完全性を surface (IMP-071、warn-first)。
+ * confirmed/completed の design/impl/add-* PLAN が review_evidence を持たない (review 前置スキップ) を warn する。
+ * doctor.ok は落とさない (初期投入、実 repo back-fill 完了後に hard 化)。review-skip の silent 化を機械で塞ぐ。
+ * I/O 失敗は skip (doctor の堅牢性維持)。
+ */
+export function checkReviewEvidence(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeReviewEvidence(loadReviewPlans(repoRoot));
+    return { messages: reviewEvidenceMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["review-evidence — note: PLAN を読めず検査 skip"], ok: true };
+  }
+}
+
+/**
  * V-model 層群の Forward freeze 完了 (検証サイクル発火タイミング) を surface (IMP-068、note)。
  * 層群が freeze 完了 → 検証発火可 / Forward 進行中。検証ロードマップの「いつ検証するか」を
  * V-model 構造 (層群 freeze) で機械発火させる全体調整。doctor.ok は落とさない (タイミング surface)。
@@ -172,8 +192,9 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const backfill = checkBackfillResult(deps.repoRoot);
   const scrumRev = checkScrumReverse(deps.repoRoot);
   const propagation = checkPropagation(deps.repoRoot);
-  // pair-freeze は warn-first (初期投入、ok 連動しない。hard 化は実 repo green 安定後)。
+  // pair-freeze / review-evidence は warn-first (初期投入、ok 連動しない。hard 化は実 repo green 安定後)。
   const pairFreeze = checkPairFreeze(deps.repoRoot);
+  const reviewEvidence = checkReviewEvidence(deps.repoRoot);
   return {
     ok: backfill.ok && scrumRev.ok && propagation.ok,
     messages: [
@@ -184,6 +205,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...scrumRev.messages.map((m) => `doctor: ${m}`),
       ...propagation.messages.map((m) => `doctor: ${m}`),
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
+      ...reviewEvidence.messages.map((m) => `doctor: ${m}`),
       ...checkVerificationGroups(deps.repoRoot).map((m) => `doctor: ${m}`),
       "doctor: scaffold stub (横断検出 relation-graph / drift / regression は後続 PLAN)",
     ],

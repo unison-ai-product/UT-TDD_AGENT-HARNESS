@@ -1173,6 +1173,7 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **team 定義 (strategy)** | `.ut-tdd/teams/*.yaml` (`teamDefinitionSchema`、`src/schema/team.ts`)。`strategy: sequential|parallel` + `max_parallel` + `serialization` 3 条件 + `members[].serialize_after` で直列/並列を宣言。HELIX `team_runner.py` の TS-native 移植、`ut-tdd team run` (hybrid) の入力 (導入層 L6、IMP-050) |
 | **back-fill pairing** | 駆動モデルが「設計ドキュメントまで戻す」完全性。bottom-up build した impl を上位設計/governance へ Reverse 合流させ、§6 用語更新を L0 §10 へ back-merge する。`src/lint/backfill-pairing.ts` が「Reverse 無き impl」「glossary 未 merge」を検知 (`ut-tdd doctor`、warn-first、導入層 L6、IMP-051)。検査の 3 出力 = `reverseOrphans` / `glossaryGaps` / `conditionalPending`。複合ラベルの表記ゆれは `normalizeTerm` (先頭コア語) で吸収 |
 | **KIND_BACKFILL マトリクス** | kind → back-fill 要否 (`required`/`conditional`/`none`) の正本表。add-impl=required / refactor・retrofit・troubleshoot=conditional / impl・design・add-design・poc・reverse・recovery=none。駆動モデル整理の機械正本 (導入層 L6、IMP-051) |
+| **review_evidence** | design/impl/add-* PLAN が confirmed (gate/freeze 到達) 前に通した review 前置 (§2.1.2.1 review tier) を frontmatter に構造記録する証跡 (`reviewer` / `review_kind` = cross_agent\|intra_runtime_subagent\|human / `reviewed_at` / `verdict` / `scope`)。freeze 後の増分追補も entry を append。`src/lint/review-evidence.ts` + doctor `checkReviewEvidence` が「confirmed design/impl なのに review_evidence なし」を surface し、review-skip の silent 化を機械で塞ぐ (warn-first → hard、§7.8.7「記録欠落→exit 1」の機械着地、導入層 L6、IMP-071) |
 
 ---
 
