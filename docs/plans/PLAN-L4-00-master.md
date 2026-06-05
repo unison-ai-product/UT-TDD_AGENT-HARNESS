@@ -101,6 +101,7 @@ child PLAN 起票時に以下を織り込む:
 - [x] **内部資産 sub-master (L4-10→11/12/13) を本 Master に統合** (A-90、根 1 本化、data/external-if 整合 back-fill)
 - [x] **L4 全体 (4 sub-doc 統合 + 内部資産増分) で G4 再 audit → CONDITIONAL PASS** (A-91、Critical 0、4軸 PASS、2026-06-01)。旧 G4 COND PASS (A-67) は FR-L1-01〜45 スコープで内部資産 (FR-L1-46〜49) を含まなかったため、**内部資産を含む全体スコープで G4 を再判定** (gate-design §1.1 Recovery 合流時の forward ゲート再通過原則 / gate §2 台帳に A-91 記録)。残条件 = child PLAN-L4-11/12/13 起票済 / ST-ASSET-04 placeholder は doctor 追跡。**これで L5 降下可**
 - [x] **A-100 park → A-101 正規式 G4 再確定 (2026-06-05)**: 旧 A-91 (内部資産含む COND PASS、正規式前) は **historical**。RECOVERY-02 正規式モデル確定後、A-100 で G4 を park。**A-101 で core 4 doc ⇔ L9 を正規式 V-model (L4⇔L9 総合) で G4 audit → 4 軸 PASS** (intra_runtime_subagent = pmo-sonnet、TL 代替)。L4 4 doc + L9 + PLAN-L4-00〜04 を confirmed。**内部資産 L4-10〜13 は別スコープで未 freeze** (ST-ASSET、L6/L7 carry)。記録 = gate §2 台帳 A-101 / `.ut-tdd/audit/A-101-g4-l4-freeze.md`
+- [x] **A-102 G4 add-design freeze (workflow オーケストレーション、2026-06-05)**: A-101 後の粒度監査で確定した function §3 の under-design (workflow mode 群 + FR-12 skill = 外部設計判断なし) を **add-design PLAN-L4-05** で解消。function §3 を Forward spine + 9 駆動モデル + 2 工程専門の外部設計へ deepening + L9 ST-FUNC ペア + IMP-069 (mode taxonomy reconcile) / IMP-070 (commander ADR-006) 解消。**4 軸 PASS** (code-reviewer、I-1/I-2 修正後)。記録 = gate §2 台帳 A-102 / `.ut-tdd/audit/A-102-g4-workflow-orchestration.md`
 
 ### §5.1 G4 全体再 audit の合格基準 (A-90)
 
