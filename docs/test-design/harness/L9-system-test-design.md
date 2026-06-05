@@ -2,7 +2,7 @@
 layer: L4
 executed_at_layer: L9
 artifact_type: test_design
-status: draft
+status: confirmed
 pair_artifact: docs/design/harness/L4-basic-design/
 parent_doc: docs/plans/PLAN-L4-00-master.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

@@ -5,7 +5,7 @@ kind: design
 layer: L4
 sub_doc: external-if
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-05-29
 updated: 2026-05-29
 owner: PM (Opus) / PO (人間)
