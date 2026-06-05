@@ -261,3 +261,12 @@
 - **L4 設計 doc は実装実体と一致させる (drift 禁止)**: data Drive=5 / lint=9 / runtime=5 / handover・setup・web 実装済 / ADR-005。実装が先行したら L4 設計 doc へ back-fill する (IMP-051 を L4 でも守る)。再発防止の機械化 = IMP-075。
 - **code-reviewer truncate 時 (IMP-009)**: 完全 verdict が出る pmo-sonnet を代替に使い + drift 精度は PM が src 直照合で一次検証。**truncate を verdict 捏造で埋めない** (scope に明記)。
 - **under-design は明示 defer (carry+IMP 紐付け)**: 「doc に書いたが機械担保着地先未定義」を放置しない。defer なら plan_id/IMP を残す。
+
+## Session 7 追補 — PO 問い「実装タスクの ClaudeCode/Codex subagent + クロスレビュー設計は?」
+
+調査結果 (honest):
+- **実装 worker 設計 = L4 で外部設計済**: 実装は Claude subagent でなく Codex worker 委譲 (agent-guard allowlist 15 = PMO/PdM/review の判断・レビュー系のみ、be-*/general-purpose block→Codex SE/PE)。具体 Codex model 割当は runtime policy (.claude/CLAUDE.md) = altitude 外。function §3.6 に明記追加。
+- **クロスレビュー = concept §2.1.2.1 robust 設計 + L4 §3.6 wiring 済**。
+- **GAP = cross-review semantic 強制が未実装** (IMP-071 が presence+review_kind を閉じた続き): ① same_model_approval=forbidden (worker≡reviewer 同一モデル弾き) ② review_kind↔mode 整合 (claude-only の cross_agent 僭称弾き) ③ checklist 逐条記録。worker 識別子 (provider,model) の記録が前提のため **IMP-076 で明示 defer** (機械着地予定)。
+- function §3.6 に 2 bullet 追加 (worker 委譲設計 + semantic 強制 gap→IMP-076)。pmo-sonnet review PASS_WITH_FIXES (Critical 0、IMP 番号順のみ修正、§2.1.0 は repo 既存規約で据え置き)。
+- 残 carry: **IMP-076** (cross-review semantic enforcement = review_evidence に worker field + same_model/kind↔mode 検査、schema 契約) を IMP-071 の続きとして実装する選択肢。
