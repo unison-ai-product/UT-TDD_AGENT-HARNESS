@@ -12,6 +12,7 @@ review_evidence:
   - reviewer: pmo-sonnet
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-05"
+    tests_green_at: "2026-06-05"
     verdict: pass
     scope: "schema worker_model/reviewer_model + analyzeReviewEvidence crossReviewViolations (cross_agent⟹worker≠reviewer) + extractReviewEntries + doctor hard 連動 + U-XREVIEW-001〜005。pmo-sonnet PASS (Critical 0、正確性/doctor連動/scope OK)。code-reviewer は IMP-009 truncate のため pmo-sonnet 確定。typecheck 0 / vitest 200 / doctor exit 0"
 agent_slots:

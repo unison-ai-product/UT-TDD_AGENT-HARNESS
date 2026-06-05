@@ -40,6 +40,7 @@ review_evidence:
   - reviewer: pmo-sonnet
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-01"
+    tests_green_at: "2026-06-01"
     verdict: approve
     scope: "self-review (pmo-sonnet) で roster/command module 結合粒度の整合成立、Important 2 是正済 (handover 2026-06-01)。claude-only の TL 代替"
 ---

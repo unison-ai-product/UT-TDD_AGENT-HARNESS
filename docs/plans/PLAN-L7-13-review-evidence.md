@@ -28,6 +28,7 @@ review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-05"
+    tests_green_at: "2026-06-05"
     verdict: approve_after_fixes
     scope: "src/lint/review-evidence.ts + schema + doctor + tests (APPROVE 条件付き、Critical 0 → I-1/I-2/m-3/m-4 修正後)。typecheck 0 / vitest 195 / doctor exit 0"
 dependencies:

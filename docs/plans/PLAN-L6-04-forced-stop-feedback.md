@@ -30,6 +30,7 @@ review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-02"
+    tests_green_at: "2026-06-02"
     verdict: approve
     scope: "code-reviewer APPROVE (Critical 0)。関数 signature/DbC/分類契約/fail-open/hook↔subcommand 責務分離 (handover 2026-06-02c §5)"
 ---

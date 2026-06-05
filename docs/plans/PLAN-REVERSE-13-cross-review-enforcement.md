@@ -16,6 +16,7 @@ review_evidence:
   - reviewer: pmo-sonnet
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-05"
+    tests_green_at: "2026-06-05"
     verdict: pass
     scope: "Add-feature (cross-review semantic 強制 IMP-076) の back-fill。concept §2.1.2.1/§10.3 + requirements §7.8.7 機械着地注記 + glossary merge。pmo-sonnet PASS (Critical 0)。code-reviewer は IMP-009 truncate のため pmo-sonnet 確定。claude-only TL 代替"
 agent_slots:

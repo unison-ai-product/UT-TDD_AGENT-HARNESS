@@ -280,3 +280,15 @@ PO「サブエージェントの配置は後で」を受け、Add-feature 経路
 - review 前置: pmo-sonnet PASS (Critical 0)。code-reviewer は IMP-009 で 2 回 truncate → pmo-sonnet 確定。指摘 P-2 (L7-14 requires) / M-2 (REVERSE-13 confirmed_reverse_type=design) 修正後 confirmed flip。
 - 検証: typecheck 0 / vitest 200 / doctor exit 0 / pair-freeze 32 孤児0。IMP-076 → implemented。
 - **latent gap 記録**: REVERSE-12 等が confirmed_reverse_type/promotion_strategy 欠落でも通っているのは **plan lint=stub で §3.3/§3.4 が未強制**のため。plan lint 実装時に back-fill 要 (既知、CLAUDE.md)。
+
+## Session 7 追補3 — Add-feature: test→review 順序強制 (IMP-077、全駆動モデル普遍)
+
+PO「テストをしたあとにレビューするように強制して。フィーチャーで。これは駆動モデルのワークフローもすべて」。Add-feature (L6-14→L7-15→REVERSE-14) で **定量テスト→定性レビュー順序**を機械強制。
+- **実装**: review_evidence entry に `tests_green_at` + `analyzeReviewEvidence` に `testBeforeReviewViolations` (tests_green_at 欠落 or > reviewed_at → violation)。**全 kind/駆動モデル普遍** (status=confirmed/completed の review_evidence を持つ全 entry が対象、design/impl に限らない)。doctor hard 連動。U-TORDER-001〜005 (U-TORDER-004 が reverse で普遍性実証)。
+- **back-fill**: 実 repo 38 entry に tests_green_at=reviewed_at (honest: 各 review は vitest/doctor green 確認後に記録) → 即 presence hard。
+- **back-fill (Reverse)**: concept §2.1.2.1 核心ルール6 (定量→定性順序、全駆動モデル) + §10.3 tests_green_at 用語 + function §3 各駆動モデル exit の verify→review 順序注記 + requirements §7.8.7。
+- review 前置: pmo-sonnet PASS (Critical 0、正確性/honesty/普遍/doctor連動 OK)。P1/P2 (flip) 解消、P3/P4 minor。IMP-077 → implemented。
+- 検証: typecheck 0 / vitest 205 / doctor exit 0 / pair-freeze 33 孤児0 / review-evidence OK (3軸: presence IMP-071 + distinctness IMP-076 + order IMP-077)。
+
+### 品質保証の現状 (定量×定性、PO 問いへの到達点)
+review_evidence が品質保証二軸の機械アンカーに成長: ① presence (review した) ② cross_agent distinctness (worker≠reviewer) ③ **order (テスト→レビュー)**。残 = checklist 逐条 (内容品質、IMP-076③) + サブエージェント配置 (orchestration_mode cell/roster) は defer。

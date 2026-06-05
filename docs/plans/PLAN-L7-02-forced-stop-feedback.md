@@ -35,6 +35,7 @@ review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-02"
+    tests_green_at: "2026-06-02"
     verdict: approve
     scope: "code-reviewer APPROVE (Critical 0)。Critical/Important/Minor 是正済 (handover 2026-06-02c §5)"
 ---

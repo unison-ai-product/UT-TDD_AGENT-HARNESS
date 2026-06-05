@@ -33,6 +33,7 @@ review_evidence:
   - reviewer: pmo-sonnet
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-05"
+    tests_green_at: "2026-06-05"
     verdict: approve
     scope: "A-101 G4 L4 audit 4 軸 PASS (pmo-sonnet TL 代替、claude-only)"
 ---

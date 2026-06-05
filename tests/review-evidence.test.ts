@@ -74,6 +74,7 @@ describe("review-evidence lint (review 前置の機械強制、IMP-071)", () => 
     const r = analyzeReviewEvidence(loadReviewPlans());
     expect(r.missing).toEqual([]);
     expect(r.crossReviewViolations).toEqual([]); // 実 repo に cross_agent entry は無い (claude-only solo) → 違反0
+    expect(r.testBeforeReviewViolations).toEqual([]); // 全 review_evidence entry に tests_green_at ≤ reviewed_at (IMP-077 back-fill 済)
     expect(r.ok).toBe(true);
     // confirmed かつ review_evidence ありの代表 PLAN が missing に出ないことも明示 (draft 除外と混同しない)。
     const missingIds = new Set(r.missing.map((m) => m.plan_id));
@@ -89,7 +90,15 @@ describe("cross-review semantic 強制 (IMP-076)", () => {
       plan({
         plan_id: "PLAN-A",
         kind: "add-impl",
-        crossEntries: [{ review_kind: "cross_agent", worker_model: "claude-opus-4-8", reviewer_model: "gpt-5.5" }],
+        crossEntries: [
+          {
+            review_kind: "cross_agent",
+            reviewed_at: "2026-06-05",
+            tests_green_at: "2026-06-05",
+            worker_model: "claude-opus-4-8",
+            reviewer_model: "gpt-5.5",
+          },
+        ],
         hasEvidence: true,
       }),
     ]);
@@ -121,7 +130,15 @@ describe("cross-review semantic 強制 (IMP-076)", () => {
     const r = analyzeReviewEvidence([
       plan({
         plan_id: "PLAN-D",
-        crossEntries: [{ review_kind: "intra_runtime_subagent", worker_model: "x", reviewer_model: "x" }],
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-06-05",
+            tests_green_at: "2026-06-05",
+            worker_model: "x",
+            reviewer_model: "x",
+          },
+        ],
         hasEvidence: true,
       }),
     ]);
@@ -143,7 +160,77 @@ review_evidence:
 body`;
     const entries = extractReviewEntries(content);
     expect(entries).toEqual([
-      { review_kind: "cross_agent", worker_model: "claude-opus-4-8", reviewer_model: "gpt-5.5" },
+      {
+        review_kind: "cross_agent",
+        reviewed_at: "2026-06-05",
+        worker_model: "claude-opus-4-8",
+        reviewer_model: "gpt-5.5",
+      },
     ]);
+  });
+});
+
+/** IMP-077 — 定量テスト→定性レビュー順序強制 (tests_green_at ≤ reviewed_at、全駆動モデル普遍)。 */
+describe("test→review 順序強制 (IMP-077)", () => {
+  it("U-TORDER-001: tests_green_at ≤ reviewed_at → 違反なし / ok=true", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-T1",
+        crossEntries: [{ review_kind: "human", reviewed_at: "2026-06-05", tests_green_at: "2026-06-04" }],
+        hasEvidence: true,
+      }),
+    ]);
+    expect(r.testBeforeReviewViolations).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("U-TORDER-002: tests_green_at > reviewed_at → review_before_test violation / ok=false", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-T2",
+        crossEntries: [{ review_kind: "intra_runtime_subagent", reviewed_at: "2026-06-05", tests_green_at: "2026-06-06" }],
+        hasEvidence: true,
+      }),
+    ]);
+    expect(r.testBeforeReviewViolations).toEqual([{ plan_id: "PLAN-T2", reason: "review_before_test" }]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("U-TORDER-003: tests_green_at 欠落 → missing_tests_green_at violation", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-T3",
+        crossEntries: [{ review_kind: "intra_runtime_subagent", reviewed_at: "2026-06-05" }],
+        hasEvidence: true,
+      }),
+    ]);
+    expect(r.testBeforeReviewViolations).toEqual([{ plan_id: "PLAN-T3", reason: "missing_tests_green_at" }]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("U-TORDER-004: 全駆動モデル普遍 — kind=reverse (非 design/impl) でも review_evidence entry があれば順序対象", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-T4",
+        kind: "reverse",
+        crossEntries: [{ review_kind: "intra_runtime_subagent", reviewed_at: "2026-06-05", tests_green_at: "2026-06-06" }],
+        hasEvidence: true,
+      }),
+    ]);
+    expect(r.testBeforeReviewViolations).toEqual([{ plan_id: "PLAN-T4", reason: "review_before_test" }]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("U-TORDER-005: draft (未確定) は順序対象外", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-T5",
+        status: "draft",
+        crossEntries: [{ review_kind: "intra_runtime_subagent", reviewed_at: "2026-06-05" }],
+        hasEvidence: true,
+      }),
+    ]);
+    expect(r.testBeforeReviewViolations).toEqual([]);
+    expect(r.ok).toBe(true);
   });
 });

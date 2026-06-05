@@ -32,6 +32,7 @@ review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-04"
+    tests_green_at: "2026-06-04"
     verdict: approve
     scope: "code-reviewer 2周 APPROVE (cluster1 commit 5b09ee5 で L7-06/L7-07 一括 review) (handover 2026-06-04)"
 ---

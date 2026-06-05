@@ -29,6 +29,7 @@ review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-02"
+    tests_green_at: "2026-06-02"
     verdict: approve
     scope: "code-reviewer APPROVE (Critical 0)。file↔API 境界 / token 非記録 確認 (handover 2026-06-02d §5)"
 ---

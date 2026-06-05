@@ -32,6 +32,7 @@ review_evidence:
   - reviewer: pmo-sonnet
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-04"
+    tests_green_at: "2026-06-04"
     verdict: approve
     scope: "A-100 L0-L3 refreeze sign-off (pmo-sonnet + PO、claude-only intra_runtime_subagent)"
 ---

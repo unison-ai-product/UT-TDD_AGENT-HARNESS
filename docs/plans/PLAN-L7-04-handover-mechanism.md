@@ -34,6 +34,7 @@ review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-04"
+    tests_green_at: "2026-06-04"
     verdict: approve
     scope: "code-reviewer 全6周 APPROVE。循環 import 回避 / dry-run 非破壊 / sanitize 確認 (handover 2026-06-04)"
 ---

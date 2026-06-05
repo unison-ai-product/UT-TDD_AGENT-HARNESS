@@ -29,6 +29,7 @@ review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-04"
+    tests_green_at: "2026-06-04"
     verdict: approve
     scope: "code-reviewer 全6周 APPROVE (Critical 1 + Important 5 + Minor 3 反映済) (handover 2026-06-04)"
 ---

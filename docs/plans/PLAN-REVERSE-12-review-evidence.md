@@ -21,11 +21,13 @@ review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-05"
+    tests_green_at: "2026-06-05"
     verdict: approve_after_fixes
     scope: "requirements §7.8.7 機械強制注記 + concept §10 用語 back-merge (L7-13 と同一 review に内包、claude-only intra_runtime_subagent 代替)"
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-05"
+    tests_green_at: "2026-06-05"
     verdict: approve_after_fixes
     scope: "hard 化 (runDoctor.ok 連動 + U-REVIEW-006 missing==[] 昇格) + 履歴 15 件 back-fill の honesty (転記/事後 review/truncate 明記)。APPROVE Critical 0、Important 2 (warn-first コメント残留) 修正後"
 dependencies:

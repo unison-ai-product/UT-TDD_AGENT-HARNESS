@@ -33,11 +33,13 @@ review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-05"
+    tests_green_at: "2026-06-05"
     verdict: approve_after_fixes
     scope: "PLAN-L4-05 本体 (REQUEST_CHANGES → I-1/I-2 修正後 approve、A-102)"
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-05"
+    tests_green_at: "2026-06-05"
     verdict: approve
     scope: "§3.6 execution mode 追補 (事後 review、A-102 追補)"
 ---

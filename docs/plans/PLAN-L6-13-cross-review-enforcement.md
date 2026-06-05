@@ -12,6 +12,7 @@ review_evidence:
   - reviewer: pmo-sonnet
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-05"
+    tests_green_at: "2026-06-05"
     verdict: pass
     scope: "cross-review semantic 強制の機能設計 (DbC: cross_agent⟹worker≠reviewer) + scope OUT (subagent 配置 defer)。pmo-sonnet PASS (Critical 0)。code-reviewer は IMP-009 truncate のため pmo-sonnet 確定。claude-only TL 代替"
 agent_slots:

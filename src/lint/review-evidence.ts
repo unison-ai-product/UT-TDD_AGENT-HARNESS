@@ -27,9 +27,12 @@ export const KIND_REVIEW_REQUIRED = new Set<string>(["design", "add-design", "im
 /** review_evidence を要求する status (gate/freeze 到達点)。draft は未確定なので対象外。 */
 export const STATUS_REVIEW_REQUIRED = new Set<string>(["confirmed", "completed"]);
 
-/** review_evidence の 1 entry (cross-review semantic 検査に必要な部分、IMP-076)。 */
+/** review_evidence の 1 entry (cross-review semantic IMP-076 + test→review 順序 IMP-077 検査に必要な部分)。 */
 export interface ReviewEntry {
   review_kind: string;
+  reviewed_at?: string;
+  /** 定量検証 (vitest/doctor/lint) green 時刻。tests_green_at ≤ reviewed_at が不変条件 (IMP-077)。 */
+  tests_green_at?: string;
   worker_model?: string;
   reviewer_model?: string;
 }
@@ -50,6 +53,8 @@ export interface ReviewEvidenceResult {
   missing: { plan_id: string; kind: string }[];
   /** cross_agent を称するが worker と reviewer の model が同一/欠落の entry (same_model_approval 違反、IMP-076)。 */
   crossReviewViolations: { plan_id: string; reason: string }[];
+  /** 定量テスト→定性レビュー順序違反 (tests_green_at 欠落 or > reviewed_at、全駆動モデル普遍、IMP-077)。 */
+  testBeforeReviewViolations: { plan_id: string; reason: string }[];
   ok: boolean;
 }
 
@@ -80,6 +85,8 @@ export function extractReviewEntries(content: string): ReviewEntry[] {
       .filter((e): e is Record<string, unknown> => typeof e === "object" && e !== null)
       .map((e) => ({
         review_kind: typeof e.review_kind === "string" ? e.review_kind : "",
+        reviewed_at: typeof e.reviewed_at === "string" ? e.reviewed_at : undefined,
+        tests_green_at: typeof e.tests_green_at === "string" ? e.tests_green_at : undefined,
         worker_model: typeof e.worker_model === "string" ? e.worker_model : undefined,
         reviewer_model: typeof e.reviewer_model === "string" ? e.reviewer_model : undefined,
       }));
@@ -109,6 +116,7 @@ export function parseReviewPlan(file: string, content: string): ParsedReviewPlan
 export function analyzeReviewEvidence(plans: ParsedReviewPlan[]): ReviewEvidenceResult {
   const missing: { plan_id: string; kind: string }[] = [];
   const crossReviewViolations: { plan_id: string; reason: string }[] = [];
+  const testBeforeReviewViolations: { plan_id: string; reason: string }[] = [];
   for (const p of plans) {
     if (p.status === "archived") continue;
     // presence (IMP-071)
@@ -123,11 +131,29 @@ export function analyzeReviewEvidence(plans: ParsedReviewPlan[]): ReviewEvidence
         break; // 1 PLAN 1 violation で十分 (surface 目的)
       }
     }
+    // test→review 順序 (IMP-077、全駆動モデル普遍 = review_evidence を持つ全 entry が対象)。
+    // confirmed/completed の review_evidence entry は定量テスト green 後にレビューされたこと (tests_green_at ≤ reviewed_at) を要求。
+    if (STATUS_REVIEW_REQUIRED.has(p.status)) {
+      for (const e of p.crossEntries ?? []) {
+        if (!e.tests_green_at) {
+          testBeforeReviewViolations.push({ plan_id: p.plan_id, reason: "missing_tests_green_at" });
+          break;
+        }
+        if (e.reviewed_at && e.tests_green_at > e.reviewed_at) {
+          testBeforeReviewViolations.push({ plan_id: p.plan_id, reason: "review_before_test" });
+          break;
+        }
+      }
+    }
   }
   return {
     missing,
     crossReviewViolations,
-    ok: missing.length === 0 && crossReviewViolations.length === 0,
+    testBeforeReviewViolations,
+    ok:
+      missing.length === 0 &&
+      crossReviewViolations.length === 0 &&
+      testBeforeReviewViolations.length === 0,
   };
 }
 
@@ -147,8 +173,14 @@ export function loadReviewPlans(repoRoot: string = process.cwd()): ParsedReviewP
 
 /** doctor / CLI 向けの 1 行サマリ群を返す (ok は呼び出し側で参照、hard 判定)。 */
 export function reviewEvidenceMessages(result: ReviewEvidenceResult): string[] {
-  if (result.missing.length === 0 && result.crossReviewViolations.length === 0) {
-    return ["review-evidence — OK (confirmed design/impl PLAN は全件 review_evidence あり / cross_agent は worker≠reviewer)"];
+  if (
+    result.missing.length === 0 &&
+    result.crossReviewViolations.length === 0 &&
+    result.testBeforeReviewViolations.length === 0
+  ) {
+    return [
+      "review-evidence — OK (review_evidence あり / cross_agent は worker≠reviewer / 定量テスト→定性レビュー順序 tests_green_at≤reviewed_at)",
+    ];
   }
   const out: string[] = [];
   if (result.missing.length > 0) {
@@ -161,6 +193,12 @@ export function reviewEvidenceMessages(result: ReviewEvidenceResult): string[] {
     const ids = result.crossReviewViolations.map((v) => v.plan_id).join(", ");
     out.push(
       `review-evidence — ⚠ cross_agent review なのに worker≡reviewer の同一 model / model 欠落 ${result.crossReviewViolations.length} 件 (${ids}): same_model_approval 違反 (concept §2.1.2.1)。worker_model ≠ reviewer_model を記録 (IMP-076)`,
+    );
+  }
+  if (result.testBeforeReviewViolations.length > 0) {
+    const ids = result.testBeforeReviewViolations.map((v) => v.plan_id).join(", ");
+    out.push(
+      `review-evidence — ⚠ 定量テスト→定性レビュー順序違反 ${result.testBeforeReviewViolations.length} 件 (${ids}): tests_green_at 欠落 or > reviewed_at。定量テスト green 後にレビュー (全駆動モデル普遍、IMP-077)`,
     );
   }
   return out;

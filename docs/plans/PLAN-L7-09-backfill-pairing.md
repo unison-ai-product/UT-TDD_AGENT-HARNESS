@@ -33,6 +33,7 @@ review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-05"
+    tests_green_at: "2026-06-05"
     verdict: approve
     scope: "code-reviewer 事後 review APPROVE (Critical 0)。analyze 純関数 + loader 分離 / 実 repo 回帰ガード U-BACKFILL-006。Important は carry"
 ---

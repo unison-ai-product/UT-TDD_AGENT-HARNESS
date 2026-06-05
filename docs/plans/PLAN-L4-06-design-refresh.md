@@ -12,6 +12,7 @@ review_evidence:
   - reviewer: pmo-sonnet
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-05"
+    tests_green_at: "2026-06-05"
     verdict: pass
     scope: "L4 drift 整合 + under-design→defer + L9 孤児0 の最終 verdict = PASS (Critical 0)。drift 精度 5 点 (VALID_DRIVES=5 / src handover・setup・web + runHandover・runSetup / lint 9 / runtime 5 / ADR-005) を src 直照合で一致確認。code-reviewer は 2 回 truncate (IMP-009) のため pmo-sonnet で確定 + PM が src を直接再照合。Important 2 = ① workflow 残手続き (本 flip で解消) ② A-102 references (gitignore 実在の誤検知)。claude-only の TL 代替"
 agent_slots:

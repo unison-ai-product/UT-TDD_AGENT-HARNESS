@@ -31,6 +31,7 @@ review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-04"
+    tests_green_at: "2026-06-04"
     verdict: approve
     scope: "code-reviewer 2回 cut-off (diff 規模で truncate、完全 verdict 未取得) → PM 直接検証で補完、実 repo ガード (U-SCRUMREV-005 / U-PROP-004) CI green (handover 2026-06-04 session8 §6)"
 ---
