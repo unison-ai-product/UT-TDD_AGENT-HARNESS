@@ -10,9 +10,10 @@ Claude Code はこの repo では次を正本として扱う。
 4. `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
 5. `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md`
 6. `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md`
-7. `docs/design/harness/L3-functional/roadmap.md`（要件定義後の検証/改善ロードマップ。L3 設計層 doc、DRAFT）
-8. `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`（再設計方針・実装言語）
-9. `docs/migration/helix-to-ut-tdd-cutover-strategy.md`
+7. `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md`（再設計方針・実装言語）
+8. `docs/migration/helix-to-ut-tdd-cutover-strategy.md`
+
+**検証ロードマップは常時参照しない（節目限定の動的参照）**: `docs/design/harness/L3-functional/roadmap.md`（検証ロードマップ、L3 設計層 doc）は **read order に含めない**。**定常は Forward 工程（L0→L14 の設計降下）が本線**であり、検証ロードマップは **V-model 層群（L0-L3 / L4-L6 / L7 / L8-L14 など）の Forward が freeze 完了した節目で検証サイクルを回すときだけ動的に Read する** band である。検証タイミングは V-model 単位に依存して機械発火させる（崩れ防止の全体調整）。定常作業を検証ロードマップの Phase / サイクルで語らない（driver / 主語にしない、[[feedback_roadmap_is_design_doc_level]]）。
 
 `docs/archive/`、`vendor/helix-source/`、`.helix/`、移植前の `.claude/agents` / `.claude/hooks` は正本ではない。HELIX は移植元であり、社内版 UT-TDD の runtime command は `helix` ではなく `ut-tdd` とする。
 

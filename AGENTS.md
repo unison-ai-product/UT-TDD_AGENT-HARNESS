@@ -9,10 +9,11 @@
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` — 社内展開向け構想書
 - `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` — 要件定義・受入条件
 - `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` — HELIX 移植元からの切り出し計画
-- `docs/design/harness/L3-functional/roadmap.md` — 要件定義後の検証/改善ロードマップ (L3 設計層 doc、DRAFT)
 - `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` — 再設計方針・実装言語 (TypeScript/Bun)
 - `docs/governance/README.md` — governance 配下の正本 / 参照 / archive 境界
 - `docs/migration/helix-source-inventory.md` — HELIX source snapshot 棚卸し
+
+**検証ロードマップは常時参照しない（節目限定の動的参照）**: `docs/design/harness/L3-functional/roadmap.md`（検証ロードマップ）は Core Reads に含めない。**定常は Forward 工程（L0→L14 の設計降下）が本線**で、検証ロードマップは **V-model 層群（L0-L3 / L4-L6 / L7 / L8-L14 など）の Forward が freeze 完了した節目で検証サイクルを回すときだけ動的に Read する** band。検証タイミングは V-model 単位に依存して機械発火させる（崩れ防止の全体調整）。定常作業を検証ロードマップの Phase / サイクルで語らない。
 
 **実装方針 (ADR-001)**: HELIX は設計概念のみ取り込み、内部は **TypeScript (Bun) で全面再実装**する。HELIX / 旧 W1-W3a の Python は port せず TS で作り直す。core (`src/`) は TS、薄い `.ps1`/`.sh` entrypoint が compiled binary を呼ぶ。UT-TDD が統制する対象リポジトリの言語は非依存。
 
