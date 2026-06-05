@@ -191,7 +191,7 @@ cross-agent review は **別 runtime / 別モデルのレビュアー**を前提
 #### 核心ルール
 
 1. **self-review (③) を判断ゲートの通過根拠にしない**。単一エージェント時は ② 専門サブエージェント review を hard 要件とし、未実行なら exit 1 (silent pass 禁止)。
-2. ② は同一モデルのため **cross-provider 要件を満たさない**。`same_model_approval: forbidden` を実行時強制し、worker と reviewer の (provider, model) 一致時は承認を無効化して gate を止める (hybrid でも同一モデル割当を弾く)。
+2. ② は同一モデルのため **cross-provider 要件を満たさない**。`same_model_approval: forbidden` を実行時強制し、worker と reviewer の (provider, model) 一致時は承認を無効化して gate を止める (hybrid でも同一モデル割当を弾く)。**機械着地 (IMP-076)**: review_evidence entry に `worker_model` / `reviewer_model` を記録し、doctor `checkReviewEvidence` が cross_agent entry の同一/欠落を `crossReviewViolations` として fail-close 検出する (単体 runtime は相異 model を供給できず `cross_agent` を僭称できない = 核心ルール 1 の静的担保)。PLAN-L6-13/L7-14/REVERSE-13。
 3. ② のレビュー観点は曖昧にせず **明文化された checklist を逐条評価** し、各項目に pass/fail/n-a + 根拠を記録する (checklist 正本は要件定義書 §7.8.7)。
 4. `orchestration_mode` (§2.6.4) が要求する agent が execution mode で不在なら、silent fallback せず **縮退規則**で別 mode に落とすか人間に委ねる (不在を明示記録)。例: `claude_judge_codex_impl` は hybrid のみ完全実体化。claude-only では実装も Claude が担い review は ② に縮退、codex-only では Codex 主導 + ②。
 5. **escalation 境界 (本番影響 / 認証 / 認可 / 決済 / PII / ライセンス / destructive) は execution mode を問わず人間サインオフ必須** (② でも代替不可。hard-block。§8 エスカレーションと整合)。
@@ -1173,7 +1173,9 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **team 定義 (strategy)** | `.ut-tdd/teams/*.yaml` (`teamDefinitionSchema`、`src/schema/team.ts`)。`strategy: sequential|parallel` + `max_parallel` + `serialization` 3 条件 + `members[].serialize_after` で直列/並列を宣言。HELIX `team_runner.py` の TS-native 移植、`ut-tdd team run` (hybrid) の入力 (導入層 L6、IMP-050) |
 | **back-fill pairing** | 駆動モデルが「設計ドキュメントまで戻す」完全性。bottom-up build した impl を上位設計/governance へ Reverse 合流させ、§6 用語更新を L0 §10 へ back-merge する。`src/lint/backfill-pairing.ts` が「Reverse 無き impl」「glossary 未 merge」を検知 (`ut-tdd doctor`、warn-first、導入層 L6、IMP-051)。検査の 3 出力 = `reverseOrphans` / `glossaryGaps` / `conditionalPending`。複合ラベルの表記ゆれは `normalizeTerm` (先頭コア語) で吸収 |
 | **KIND_BACKFILL マトリクス** | kind → back-fill 要否 (`required`/`conditional`/`none`) の正本表。add-impl=required / refactor・retrofit・troubleshoot=conditional / impl・design・add-design・poc・reverse・recovery=none。駆動モデル整理の機械正本 (導入層 L6、IMP-051) |
-| **review_evidence** | design/impl/add-* PLAN が confirmed (gate/freeze 到達) 前に通した review 前置 (§2.1.2.1 review tier) を frontmatter に構造記録する証跡 (`reviewer` / `review_kind` = cross_agent\|intra_runtime_subagent\|human / `reviewed_at` / `verdict` / `scope`)。freeze 後の増分追補も entry を append。`src/lint/review-evidence.ts` + doctor `checkReviewEvidence` が「confirmed design/impl なのに review_evidence なし」を surface し、review-skip の silent 化を機械で塞ぐ (warn-first → hard、§7.8.7「記録欠落→exit 1」の機械着地、導入層 L6、IMP-071) |
+| **review_evidence** | design/impl/add-* PLAN が confirmed (gate/freeze 到達) 前に通した review 前置 (§2.1.2.1 review tier) を frontmatter に構造記録する証跡 (`reviewer` / `review_kind` = cross_agent\|intra_runtime_subagent\|human / `reviewed_at` / `verdict` / `scope` / `worker_model` / `reviewer_model`)。freeze 後の増分追補も entry を append。`src/lint/review-evidence.ts` + doctor `checkReviewEvidence` が「confirmed design/impl なのに review_evidence なし」を surface し、review-skip の silent 化を機械で塞ぐ (warn-first → hard、§7.8.7「記録欠落→exit 1」の機械着地、導入層 L6、IMP-071) |
+| **same_model_approval** | cross_agent review で worker と reviewer の (provider, model) が同一なら承認を無効化する原則 (`forbidden`、§2.1.2.1 核心ルール 2、cross-provider 要件)。機械着地 = review_evidence の `worker_model` ≠ `reviewer_model` を doctor `checkReviewEvidence` が `crossReviewViolations` で fail-close 検出 (単体 runtime は cross_agent を僭称できない、導入層 L6、IMP-076) |
+| **worker_model / reviewer_model** | review_evidence entry の model 識別子。レビュー対象成果物を産出した model (worker) と reviewer の model。`review_kind=cross_agent` では両者 present かつ相異が必須 (same_model_approval、導入層 L6、IMP-076) |
 
 ---
 

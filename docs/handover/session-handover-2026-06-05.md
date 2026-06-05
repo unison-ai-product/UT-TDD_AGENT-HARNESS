@@ -270,3 +270,13 @@
 - **GAP = cross-review semantic 強制が未実装** (IMP-071 が presence+review_kind を閉じた続き): ① same_model_approval=forbidden (worker≡reviewer 同一モデル弾き) ② review_kind↔mode 整合 (claude-only の cross_agent 僭称弾き) ③ checklist 逐条記録。worker 識別子 (provider,model) の記録が前提のため **IMP-076 で明示 defer** (機械着地予定)。
 - function §3.6 に 2 bullet 追加 (worker 委譲設計 + semantic 強制 gap→IMP-076)。pmo-sonnet review PASS_WITH_FIXES (Critical 0、IMP 番号順のみ修正、§2.1.0 は repo 既存規約で据え置き)。
 - 残 carry: **IMP-076** (cross-review semantic enforcement = review_evidence に worker field + same_model/kind↔mode 検査、schema 契約) を IMP-071 の続きとして実装する選択肢。
+
+## Session 7 追補2 — Add-feature: cross-review semantic 強制 (IMP-076)
+
+PO「サブエージェントの配置は後で」を受け、Add-feature 経路 (add-design L6-13 → add-impl L7-14 → Reverse REVERSE-13) で **cross-review の semantic 強制**を実装。**「L7 着手」でなく Add-feature 駆動モデル**で進めた (PO 是正: 設計済だが未実装の挙動追加は Forward 直行でなく Add-feature)。
+- **実装 (①②)**: review_evidence entry に `worker_model`/`reviewer_model` + `analyzeReviewEvidence` に `crossReviewViolations` (cross_agent ⟹ worker≠reviewer、欠落=violation) + `extractReviewEntries` (yaml) + doctor hard 連動 + U-XREVIEW-001〜005。単体 runtime は相異 model 供給不可 = cross_agent 僭称を静的に弾く (self-review が cross-agent に化けない)。
+- **scope OUT (後で)**: サブエージェント配置 (orchestration_mode cell / worker roster) + checklist 逐条記録 (③) は defer。
+- **back-fill**: concept §2.1.2.1 核心ルール2 + §10.3 用語 + requirements §7.8.7 に機械着地注記。glossary merge 済 (backfill green)。
+- review 前置: pmo-sonnet PASS (Critical 0)。code-reviewer は IMP-009 で 2 回 truncate → pmo-sonnet 確定。指摘 P-2 (L7-14 requires) / M-2 (REVERSE-13 confirmed_reverse_type=design) 修正後 confirmed flip。
+- 検証: typecheck 0 / vitest 200 / doctor exit 0 / pair-freeze 32 孤児0。IMP-076 → implemented。
+- **latent gap 記録**: REVERSE-12 等が confirmed_reverse_type/promotion_strategy 欠落でも通っているのは **plan lint=stub で §3.3/§3.4 が未強制**のため。plan lint 実装時に back-fill 要 (既知、CLAUDE.md)。

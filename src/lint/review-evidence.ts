@@ -14,6 +14,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { parse as parseYaml } from "yaml";
 
 /**
  * review 前置 MUST の対象 kind (§1.8 / requirements §7.8.7)。
@@ -26,6 +27,13 @@ export const KIND_REVIEW_REQUIRED = new Set<string>(["design", "add-design", "im
 /** review_evidence を要求する status (gate/freeze 到達点)。draft は未確定なので対象外。 */
 export const STATUS_REVIEW_REQUIRED = new Set<string>(["confirmed", "completed"]);
 
+/** review_evidence の 1 entry (cross-review semantic 検査に必要な部分、IMP-076)。 */
+export interface ReviewEntry {
+  review_kind: string;
+  worker_model?: string;
+  reviewer_model?: string;
+}
+
 export interface ParsedReviewPlan {
   file: string;
   plan_id: string;
@@ -33,11 +41,15 @@ export interface ParsedReviewPlan {
   status: string;
   /** frontmatter に review_evidence の entry が 1 件以上あるか。 */
   hasEvidence: boolean;
+  /** review_evidence entry 群 (cross_agent distinctness 検査用、IMP-076)。 */
+  crossEntries: ReviewEntry[];
 }
 
 export interface ReviewEvidenceResult {
   /** confirmed/completed の design/impl 系なのに review_evidence が無い PLAN。 */
   missing: { plan_id: string; kind: string }[];
+  /** cross_agent を称するが worker と reviewer の model が同一/欠落の entry (same_model_approval 違反、IMP-076)。 */
+  crossReviewViolations: { plan_id: string; reason: string }[];
   ok: boolean;
 }
 
@@ -52,6 +64,30 @@ export function hasReviewEvidence(content: string): boolean {
   return /^review_evidence:\s*\n\s+-\s+reviewer:/m.test(content);
 }
 
+/**
+ * frontmatter (最初の `---` ブロック) を yaml で解析し review_evidence entry を抽出 (IMP-076)。
+ * presence 検出の正規表現とは別に、cross_agent distinctness 検査のため entry レベルで読む。
+ * parse 失敗 / review_evidence 不在は [] (堅牢性、検査 skip)。
+ */
+export function extractReviewEntries(content: string): ReviewEntry[] {
+  const m = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!m) return [];
+  try {
+    const fm = parseYaml(m[1]) as { review_evidence?: unknown };
+    const ev = fm?.review_evidence;
+    if (!Array.isArray(ev)) return [];
+    return ev
+      .filter((e): e is Record<string, unknown> => typeof e === "object" && e !== null)
+      .map((e) => ({
+        review_kind: typeof e.review_kind === "string" ? e.review_kind : "",
+        worker_model: typeof e.worker_model === "string" ? e.worker_model : undefined,
+        reviewer_model: typeof e.reviewer_model === "string" ? e.reviewer_model : undefined,
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export function parseReviewPlan(file: string, content: string): ParsedReviewPlan {
   return {
     file,
@@ -59,23 +95,40 @@ export function parseReviewPlan(file: string, content: string): ParsedReviewPlan
     kind: fmValue(content, "kind") ?? "unknown",
     status: fmValue(content, "status") ?? "unknown",
     hasEvidence: hasReviewEvidence(content),
+    crossEntries: extractReviewEntries(content),
   };
 }
 
 /**
  * review 前置証跡の完全性を分析。
+ * - missing: confirmed/completed の design/impl 系で review_evidence 不在 (presence、IMP-071)
+ * - crossReviewViolations: cross_agent を称すが worker≡reviewer の同一 model / 欠落 (same_model_approval、IMP-076)。
+ *   単体 runtime は相異 model を供給できないため cross_agent を僭称できない (concept §2.1.2.1 核心ルール 1/2 を静的担保)。
  * @param plans 全 PLAN (archived は内部で除外)
  */
 export function analyzeReviewEvidence(plans: ParsedReviewPlan[]): ReviewEvidenceResult {
   const missing: { plan_id: string; kind: string }[] = [];
+  const crossReviewViolations: { plan_id: string; reason: string }[] = [];
   for (const p of plans) {
     if (p.status === "archived") continue;
-    if (!KIND_REVIEW_REQUIRED.has(p.kind)) continue;
-    if (!STATUS_REVIEW_REQUIRED.has(p.status)) continue;
-    if (p.hasEvidence) continue;
-    missing.push({ plan_id: p.plan_id, kind: p.kind });
+    // presence (IMP-071)
+    if (KIND_REVIEW_REQUIRED.has(p.kind) && STATUS_REVIEW_REQUIRED.has(p.status) && !p.hasEvidence) {
+      missing.push({ plan_id: p.plan_id, kind: p.kind });
+    }
+    // cross_agent distinctness (IMP-076、kind/status 非依存 = cross_agent を称する全 entry が対象)
+    for (const e of p.crossEntries ?? []) {
+      if (e.review_kind !== "cross_agent") continue;
+      if (!e.worker_model || !e.reviewer_model || e.worker_model === e.reviewer_model) {
+        crossReviewViolations.push({ plan_id: p.plan_id, reason: "same_model_or_missing" });
+        break; // 1 PLAN 1 violation で十分 (surface 目的)
+      }
+    }
   }
-  return { missing, ok: missing.length === 0 };
+  return {
+    missing,
+    crossReviewViolations,
+    ok: missing.length === 0 && crossReviewViolations.length === 0,
+  };
 }
 
 /** docs/plans/*.md (archive/template 除く) を読み込む。 */
@@ -94,11 +147,21 @@ export function loadReviewPlans(repoRoot: string = process.cwd()): ParsedReviewP
 
 /** doctor / CLI 向けの 1 行サマリ群を返す (ok は呼び出し側で参照、hard 判定)。 */
 export function reviewEvidenceMessages(result: ReviewEvidenceResult): string[] {
-  if (result.missing.length === 0) {
-    return ["review-evidence — OK (confirmed design/impl PLAN は全件 review_evidence あり)"];
+  if (result.missing.length === 0 && result.crossReviewViolations.length === 0) {
+    return ["review-evidence — OK (confirmed design/impl PLAN は全件 review_evidence あり / cross_agent は worker≠reviewer)"];
   }
-  const ids = result.missing.map((m) => m.plan_id).join(", ");
-  return [
-    `review-evidence — ⚠ review 前置証跡なしで confirmed の design/impl PLAN ${result.missing.length} 件 (${ids}): frontmatter review_evidence に reviewer/review_kind/verdict を記録 (review 前置 MUST、IMP-071)`,
-  ];
+  const out: string[] = [];
+  if (result.missing.length > 0) {
+    const ids = result.missing.map((m) => m.plan_id).join(", ");
+    out.push(
+      `review-evidence — ⚠ review 前置証跡なしで confirmed の design/impl PLAN ${result.missing.length} 件 (${ids}): frontmatter review_evidence に reviewer/review_kind/verdict を記録 (review 前置 MUST、IMP-071)`,
+    );
+  }
+  if (result.crossReviewViolations.length > 0) {
+    const ids = result.crossReviewViolations.map((v) => v.plan_id).join(", ");
+    out.push(
+      `review-evidence — ⚠ cross_agent review なのに worker≡reviewer の同一 model / model 欠落 ${result.crossReviewViolations.length} 件 (${ids}): same_model_approval 違反 (concept §2.1.2.1)。worker_model ≠ reviewer_model を記録 (IMP-076)`,
+    );
+  }
+  return out;
 }

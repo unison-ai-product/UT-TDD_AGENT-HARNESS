@@ -102,6 +102,12 @@ const frontmatterBaseSchema = z.object({
         reviewed_at: z.string().min(1),
         verdict: z.string().min(1),
         scope: z.string().optional(),
+        /** cross-review semantic 強制 (IMP-076): レビュー対象成果物を産出した model /
+         *  reviewer の model。review_kind=cross_agent では両者 present かつ相異が必須
+         *  (same_model_approval: forbidden、concept §2.1.2.1)。単体 runtime は相異 model を
+         *  供給できないため cross_agent を僭称できない。intra_runtime_subagent/human は任意。 */
+        worker_model: z.string().optional(),
+        reviewer_model: z.string().optional(),
       }),
     )
     .optional(),
