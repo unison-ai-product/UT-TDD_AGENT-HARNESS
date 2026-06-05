@@ -26,6 +26,12 @@ dependencies:
   requires:
     - docs/plans/PLAN-L6-03-session-log.md
   blocks: []
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-02"
+    verdict: approve
+    scope: "code-reviewer APPROVE (Critical 0)。関数 signature/DbC/分類契約/fail-open/hook↔subcommand 責務分離 (handover 2026-06-02c §5)"
 ---
 
 # PLAN-L6-04 (add-design): forced-stop フィードバック機能設計

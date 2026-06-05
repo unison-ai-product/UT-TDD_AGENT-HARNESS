@@ -36,6 +36,12 @@ dependencies:
 related_adr: docs/adr/ADR-004-internal-asset-ts-control-boundary.md
 related_l0_extra: docs/design/harness/L1-requirements/functional-requirements.md
 v2_import: docs/migration/v2-import-ledger.md
+review_evidence:
+  - reviewer: pmo-sonnet
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-01"
+    verdict: approve
+    scope: "self-review (pmo-sonnet) で roster/command module 結合粒度の整合成立、Important 2 是正済 (handover 2026-06-01)。claude-only の TL 代替"
 ---
 
 # PLAN-L5-05 (design/roster): L5 roster + command module 結合粒度 back-fill

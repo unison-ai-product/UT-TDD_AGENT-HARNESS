@@ -8,7 +8,8 @@
  * 「review 記録が無ければ gate を exit 1」と機械ゲート設計済だが未実装だった穴を塞ぐ。
  *
  * 設計: design/impl/add-* PLAN が confirmed (gate/freeze 到達) なのに frontmatter `review_evidence` を
- * 持たない場合に surface する (既定 warn-first、fail-close 化は実 repo back-fill 完了後)。
+ * 持たない場合に surface する。**hard 判定** (ok=false → doctor fail-close、IMP-071 hard 化 2026-06-05。
+ * 実 repo 履歴 15 件 back-fill 完了 = missing 0 安定を確認後に warn-first → hard 昇格)。
  * 純関数 (analyze) + I/O loader を分離 (backfill-pairing / vmodel-pair と同方針)。
  */
 import { readdirSync, readFileSync } from "node:fs";
@@ -91,7 +92,7 @@ export function loadReviewPlans(repoRoot: string = process.cwd()): ParsedReviewP
   return plans;
 }
 
-/** doctor / CLI 向けの 1 行サマリ群を返す (warn-first、ok は呼び出し側で参照)。 */
+/** doctor / CLI 向けの 1 行サマリ群を返す (ok は呼び出し側で参照、hard 判定)。 */
 export function reviewEvidenceMessages(result: ReviewEvidenceResult): string[] {
   if (result.missing.length === 0) {
     return ["review-evidence — OK (confirmed design/impl PLAN は全件 review_evidence あり)"];

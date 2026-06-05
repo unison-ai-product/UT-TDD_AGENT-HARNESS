@@ -25,6 +25,12 @@ dependencies:
   parent: docs/plans/PLAN-L4-04-external-if.md
   requires: []
   blocks: []
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-02"
+    verdict: approve
+    scope: "code-reviewer APPROVE (Critical 0)。file↔API 境界 / token 非記録 確認 (handover 2026-06-02d §5)"
 ---
 
 # PLAN-L6-05 (add-design): ut-tdd setup solo/team 機能設計

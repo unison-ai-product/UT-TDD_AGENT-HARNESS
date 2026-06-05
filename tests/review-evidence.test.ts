@@ -65,14 +65,15 @@ describe("review-evidence lint (review 前置の機械強制、IMP-071)", () => 
     expect(r.ok).toBe(true);
   });
 
-  it("U-REVIEW-006: 実 repo 機構ガード — analyze が動き、confirmed+evidence の PLAN は missing に出ない", () => {
-    // warn-first 段階のため missing==[] は課さない (履歴 PLAN の back-fill は段階、本 lint が surface する)。
-    // 機構の健全性 = (a) 例外なく動く (b) confirmed かつ review_evidence ありの PLAN は認識される、を回帰ガード。
+  it("U-REVIEW-006: 実 repo CI fail-close ガード — confirmed design/impl PLAN は全件 review_evidence あり (missing 0)", () => {
+    // hard 化 (IMP-071 2026-06-05): 履歴 15 件 back-fill 完了後、missing==[] を CI で課す。
+    // 以後 confirmed design/impl PLAN を review 証跡なしで足すと本テストが red → CI fail-close
+    // (backfill U-BACKFILL-006 / scrum-reverse U-SCRUMREV-005 と同パターンの実 repo 回帰ガード)。
     const r = analyzeReviewEvidence(loadReviewPlans());
-    expect(Array.isArray(r.missing)).toBe(true);
+    expect(r.missing).toEqual([]);
+    expect(r.ok).toBe(true);
+    // confirmed かつ review_evidence ありの代表 PLAN が missing に出ないことも明示 (draft 除外と混同しない)。
     const missingIds = new Set(r.missing.map((m) => m.plan_id));
-    // PLAN-L4-05 / L7-13 は confirmed かつ review_evidence あり (本 feature の review 通過後に記録) →
-    // 「confirmed なのに missing」に出ないことが機構の認識証拠。draft 由来の除外と混同しない。
     expect(missingIds.has("PLAN-L4-05-workflow-orchestration")).toBe(false);
     expect(missingIds.has("PLAN-L7-13-review-evidence")).toBe(false);
   });

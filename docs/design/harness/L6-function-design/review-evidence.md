@@ -51,14 +51,14 @@ analyzeReviewEvidence(plans: ParsedReviewPlan[]) -> { missing, ok }
 - `loadReviewPlans(repoRoot)`: `docs/plans/` を flat 列挙し **`.md` かつ `PLAN-` prefix** のみ対象 (サブディレクトリ archive/_template はディレクトリエントリ=拡張子なしで除外 + prefix ガードで二重防御)、`parseReviewPlan` で {plan_id, kind, status, hasEvidence} に。
 - `reviewEvidenceMessages(result)`: missing 0 → `"OK"` / missing あり → 件数 + plan_id 列 + 「review_evidence に reviewer/review_kind/verdict を記録」。
 
-## §4 doctor 配線 (warn-first)
+## §4 doctor 配線 (hard 判定、2026-06-05 昇格済)
 
-`checkReviewEvidence(repoRoot)` を `runDoctor` に **warn-first** (ok 非連動、pairFreeze と同パターン) で配線。I/O 失敗は note で skip (doctor 堅牢性)。**hard 化 (runDoctor.ok 連動) は実 repo の confirmed design/impl PLAN を全件 back-fill 後** (backfill/scrum-reverse と同じ昇格パス)。
+`checkReviewEvidence(repoRoot)` を `runDoctor` に **hard 判定** (ok=false → `runDoctor.ok` 連動で fail-close) で配線。I/O 失敗は note で skip (doctor 堅牢性、ok=true で fail-open)。backfill/scrum-reverse/propagation と同じ hard 群。**当初は warn-first で投入し、実 repo 履歴 back-fill 完了 (missing 0 安定) を確認後に hard 昇格** (backfill/scrum-reverse と同じ昇格パス)。
 
-## §5 段階導入 (warn-first → hard)
+## §5 段階導入の経緯 (warn-first → hard、完了)
 
-- **warn-first (初期)**: 既存 confirmed design/impl PLAN の多くが review_evidence 未記録 (history)。doctor が件数 surface、CI は green 維持。back-fill は段階 (各 freeze の audit/handover に review 記録は存在、構造化は incremental)。
-- **hard 化 (将来)**: 実 repo missing=0 安定後、`runDoctor.ok` に連動 + CI fail-close (U-REVIEW 実 repo ガードを `missing==[]` へ昇格)。これで **新規 design/impl PLAN の review-skip freeze が機械で止まる**。
+- **warn-first (初期投入)**: 既存 confirmed design/impl PLAN の多くが review_evidence 未記録 (history)。doctor が件数 surface、CI は green 維持。back-fill は段階 (各 freeze の audit/handover に review 記録は存在、構造化は incremental)。
+- **hard 化 (2026-06-05、完了)**: 履歴 15 件を back-fill (missing 29→0。実在 review 記録のみ転記、未記録 2 件は code-reviewer 事後 review、truncate 2 件は scope 明記の honest 記録) → `runDoctor.ok` に連動 + CI fail-close (U-REVIEW-006 実 repo ガードを `missing==[]` へ昇格)。これで **新規 design/impl PLAN の review-skip freeze が機械で止まる状態が完成**。
 
 ## §6 既存 lint との非重複
 
@@ -67,6 +67,7 @@ analyzeReviewEvidence(plans: ParsedReviewPlan[]) -> { missing, ok }
 
 ## §7 carry
 
-- 実 repo 全 confirmed design/impl PLAN への review_evidence back-fill (warn-first 解消、incremental)。
-- hard 化 (runDoctor.ok 連動 + CI fail-close) は back-fill 完了後。
-- freeze 後増分追補の review (本事故の核) を確実に append させる運用補助 (将来 hook 候補)。
+> back-fill (missing 0) と hard 化は 2026-06-05 完了 (§4/§5 に反映済)。残 carry:
+
+- freeze 後増分追補の review (本事故の核) を確実に append させる運用補助 (将来 hook 候補) — 未着手。
+- (review 由来) backfill-pairing の `checkBackfill` comment="warn-first" vs 実挙動=hard の不整合 (code-reviewer Important #3、別 feature) / `normalizeTerm` 単体テスト追加 — IMP carry。

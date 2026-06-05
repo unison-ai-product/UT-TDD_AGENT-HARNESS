@@ -20,6 +20,12 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 dependencies:
   parent: null
   requires: []
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-04"
+    verdict: approve
+    scope: "code-reviewer 2回 cut-off (diff 32 tool-use で truncate、完全 verdict 未取得) → PM 直接検証で path 一致 / doctor.ok 分離を補完、実 repo ガード CI green (handover 2026-06-04 session8 §6)"
 ---
 
 # PLAN-L6-09 (add-design): governance enforcement lints の機能設計

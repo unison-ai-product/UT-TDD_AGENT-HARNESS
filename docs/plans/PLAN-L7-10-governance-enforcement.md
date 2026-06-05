@@ -27,6 +27,12 @@ dependencies:
   parent: docs/plans/PLAN-L6-09-governance-enforcement.md
   requires:
     - docs/plans/PLAN-L6-09-governance-enforcement.md
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-04"
+    verdict: approve
+    scope: "code-reviewer 2回 cut-off (diff 規模で truncate、完全 verdict 未取得) → PM 直接検証で補完、実 repo ガード (U-SCRUMREV-005 / U-PROP-004) CI green (handover 2026-06-04 session8 §6)"
 ---
 
 # PLAN-L7-10 (add-impl): governance enforcement lints 実装

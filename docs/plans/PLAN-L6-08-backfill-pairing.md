@@ -25,6 +25,12 @@ dependencies:
   parent: docs/plans/PLAN-L6-06-handover-mechanism.md
   requires: []
   blocks: []
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-05"
+    verdict: approve
+    scope: "code-reviewer 事後 review APPROVE (Critical 0)。KIND_BACKFILL 要否マトリクス / analyze 純関数 + loader 分離 / U-BACKFILL 網羅。Important (normalizeTerm 単体テスト追加・checkBackfill comment 整合) は carry"
 ---
 
 # PLAN-L6-08 (add-design): 駆動モデル back-fill pairing 完全性の機能設計 (IMP-051)

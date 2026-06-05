@@ -33,6 +33,12 @@ dependencies:
   parent: docs/plans/PLAN-L6-07-agent-slots.md
   requires: []
   blocks: []
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-04"
+    verdict: approve
+    scope: "code-reviewer 2周 APPROVE (cluster2 commit 1acda2e で L6-07/L7-08/REVERSE-06 一括 review) (handover 2026-06-04)"
 ---
 
 # PLAN-L7-08 (add-impl): agent-slots 機構の実装 (IMP-050 + IMP-049 機械支援)

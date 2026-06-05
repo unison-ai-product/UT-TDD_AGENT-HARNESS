@@ -136,10 +136,11 @@ export function checkPairFreeze(repoRoot: string): { messages: string[]; ok: boo
 }
 
 /**
- * review 前置証跡 (review_evidence) の完全性を surface (IMP-071、warn-first)。
- * confirmed/completed の design/impl/add-* PLAN が review_evidence を持たない (review 前置スキップ) を warn する。
- * doctor.ok は落とさない (初期投入、実 repo back-fill 完了後に hard 化)。review-skip の silent 化を機械で塞ぐ。
- * I/O 失敗は skip (doctor の堅牢性維持)。
+ * review 前置証跡 (review_evidence) の完全性を検査 (IMP-071、hard 判定)。
+ * confirmed/completed の design/impl/add-* PLAN が review_evidence を持たない (review 前置スキップ) を検知する。
+ * **hard 判定** (ok=false → runDoctor.ok 連動で fail-close、IMP-071 hard 化 2026-06-05)。実 repo 履歴 15 件の
+ * back-fill 完了 (missing 0 安定) を確認してから warn-first → hard へ昇格した。review-skip の silent 化を機械で塞ぐ。
+ * I/O 失敗は skip (doctor の堅牢性維持、ok=true で fail-open)。
  */
 export function checkReviewEvidence(repoRoot: string): { messages: string[]; ok: boolean } {
   try {
@@ -187,16 +188,17 @@ export function nodeDoctorDeps(repoRoot: string): DoctorDeps {
 // CLI entrypoint は process.cwd() = repoRoot を想定 (deps 未指定時)。test は deps 注入で固定。
 export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): LintResult {
   const d = detectMode();
-  // back-fill / scrum-reverse は hard 判定 (orphan/gap → ok=false で fail-close)。
-  // handover / agent-slots は warn-only (鮮度/運用 surface であり ok を落とさない)。
+  // back-fill / scrum-reverse / propagation / review-evidence は hard 判定 (orphan/gap/review-skip → ok=false で fail-close)。
+  // handover / agent-slots / pair-freeze は warn-only (鮮度/運用 surface であり ok を落とさない)。
   const backfill = checkBackfillResult(deps.repoRoot);
   const scrumRev = checkScrumReverse(deps.repoRoot);
   const propagation = checkPropagation(deps.repoRoot);
-  // pair-freeze / review-evidence は warn-first (初期投入、ok 連動しない。hard 化は実 repo green 安定後)。
-  const pairFreeze = checkPairFreeze(deps.repoRoot);
+  // review-evidence は hard 判定 (review 前置スキップ → ok=false で fail-close、IMP-071 hard 化 2026-06-05)。
   const reviewEvidence = checkReviewEvidence(deps.repoRoot);
+  // pair-freeze は warn-first (初期投入、ok 連動しない。hard 化は実 repo green 安定後)。
+  const pairFreeze = checkPairFreeze(deps.repoRoot);
   return {
-    ok: backfill.ok && scrumRev.ok && propagation.ok,
+    ok: backfill.ok && scrumRev.ok && propagation.ok && reviewEvidence.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
       checkHandover(deps),

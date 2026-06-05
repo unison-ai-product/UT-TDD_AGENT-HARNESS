@@ -25,6 +25,12 @@ dependencies:
   parent: docs/plans/PLAN-L6-05-setup-solo-team.md
   requires: []
   blocks: []
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-04"
+    verdict: approve
+    scope: "code-reviewer 2周 APPROVE (Important 全件反映: 閾値統一 / 単一 load-save) (handover 2026-06-04)"
 ---
 
 # PLAN-L6-07 (add-design): agent-slots Layer-2 オーケストレーション機構の機能設計 (IMP-050)

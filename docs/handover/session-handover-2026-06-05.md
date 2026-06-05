@@ -194,3 +194,33 @@
 - **commit 前に vitest 結果を確認**: 本 session で red のまま commit (67b33f1) を再演。機械ゲートが無い箇所 (review 前置 / test green 確認) は規律に依存して漏れる = IMP-071 の論拠そのもの。
 - **warn-first → hard の昇格パス**: 履歴 back-fill 完了後に runDoctor.ok 連動 (pair-freeze/backfill と同パス)。review-evidence は現状 warn-first (doctor.ok 非連動)。
 - review_kind enum = concept §2.1.2.1 の 3 tier と一致 (cross_agent/intra_runtime_subagent/human)。崩さない。
+
+---
+
+# Session 6 — IMP-071 完遂 (warn-first → hard 化 + 履歴 15 件 back-fill)
+
+> PO「キャリーの解決は必要そう？」→ 判定提示 (hard 化=本丸、back-fill=前提だが捏造禁止の棚卸し要) → PO「a で」(締める)。
+
+## 成果 (1 commit、20 files)
+
+- **棚卸し (pmo-sonnet)**: 残 15 件の実 review 記録の実在を確認。**捏造防止**のため実在記録のみ転記。結果 = 11 件 (handover/PLAN 本文に code-reviewer/pmo-sonnet APPROVE 実在) / partial 4 件 (L6-09・L7-10 = code-reviewer 2回 cut-off + PM 補完 → scope に truncate 明記の honest 記録 / L6-08・L7-09 = verdict 記録ゼロ → **今 session code-reviewer 事後 review APPROVE Critical 0** して記録) / no=0 件。
+- **back-fill**: 15 件 frontmatter に review_evidence 追記 (deterministic script、転記のみ)。**missing 29→0**。
+- **hard 化**: `src/doctor/index.ts` runDoctor.ok に `reviewEvidence.ok` 連動 (backfill/scrumRev/propagation と同 hard 群) + `src/lint/review-evidence.ts` コメント hard 化。
+- **CI fail-close**: `tests/review-evidence.test.ts` U-REVIEW-006 を `missing==[]` 昇格 (U-BACKFILL-006 と同パターンの実 repo 回帰ガード = 今後 review なし design/impl PLAN を red 化)。
+- **docs**: PLAN-REVERSE-12 §8 hard checklist [x] / L6 design review-evidence.md §4/§5/§7 を hard 化済へ更新 (旧 "warn-first (将来)" を実態へクリーンアップ)。
+- **review 前置 (本作業自身)**: hard 化 + back-fill honesty を code-reviewer に通し **APPROVE Critical 0** → Important 2 (warn-first コメント残留 = クリーンアップ原則違反) を**即修正** (routing で逃げず implement) → REVERSE-12 に 2 件目の review_evidence 追記。
+- 検証: typecheck 0 / **vitest 195 pass** / doctor exit 0 / review-evidence OK (全件あり)。
+
+## これで閉じたこと
+
+**「review を飛ばせた設計上の問題」が機構として完全閉鎖**: 新規 design/impl/add-* PLAN を review_evidence なしで confirmed にすると doctor.ok=false + U-REVIEW-006 red で CI が止まる。warn-first 段階 (silent 可視化) → hard (fail-close) へ昇格完了。
+
+## §3 Next Action (session 6)
+
+1. **L5 詳細設計** (PLAN-L5-00-master) を Forward で降下 (L4 完遂 + IMP-071 完遂済)。
+2. carry: forced-stop 再発防止の仕組み化 (concept §2.6.1 / recovery.md §3 の exit 契約ギャップ、[[feedback_forced_stop_high_severity_recovery]]) / backfill-pairing `checkBackfill` comment="warn-first" vs 実挙動=hard の不整合 (code-reviewer Important #3) + `normalizeTerm` 単体テスト / freeze 後増分追補の review append 運用補助 (将来 hook)。
+
+## §6 壊さない (session 6)
+
+- **review-evidence は hard 判定**: doctor.ok 連動済。design/impl/add-* PLAN は review_evidence (reviewer/review_kind/verdict) なしで confirmed にできない (CI red)。
+- **back-fill は実在記録の転記のみ**: review 記録が無い PLAN へ evidence を貼るのは本 feature が禁じる捏造。未記録なら今 review を通すか honest warn のまま残す (L6-08/L7-09 は事後 review、L6-09/L7-10 は truncate を scope 明記)。

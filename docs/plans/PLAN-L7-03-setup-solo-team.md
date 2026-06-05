@@ -30,6 +30,12 @@ dependencies:
   parent: docs/plans/PLAN-L6-05-setup-solo-team.md
   requires: []
   blocks: []
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-02"
+    verdict: approve
+    scope: "code-reviewer APPROVE (Critical 0) (handover 2026-06-02d §1)"
 ---
 
 # PLAN-L7-03 (add-impl): ut-tdd setup solo/team 実装

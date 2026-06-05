@@ -29,6 +29,12 @@ dependencies:
   parent: docs/plans/PLAN-L6-08-backfill-pairing.md
   requires: []
   blocks: []
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-05"
+    verdict: approve
+    scope: "code-reviewer 事後 review APPROVE (Critical 0)。analyze 純関数 + loader 分離 / 実 repo 回帰ガード U-BACKFILL-006。Important は carry"
 ---
 
 # PLAN-L7-09 (add-impl): back-fill pairing lint の実装 (IMP-051)
