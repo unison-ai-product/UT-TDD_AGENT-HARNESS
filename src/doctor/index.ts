@@ -16,6 +16,7 @@ import {
   peakParallel,
 } from "../runtime/agent-slots";
 import { detectMode } from "../runtime/detect";
+import { analyzePairFreeze, loadPairDocs, pairFreezeMessages } from "../vmodel/lint";
 
 /** I/O・clock 注入 (test 可能、handover staleness 検査用)。 */
 export interface DoctorDeps {
@@ -109,6 +110,20 @@ export function checkPropagation(repoRoot: string): { messages: string[]; ok: bo
   }
 }
 
+/**
+ * 設計層 pair freeze (design⇔test-design の pair_artifact 双方向・孤児0) を surface (IMP-067、warn-first)。
+ * 孤児 (pair-missing/ref-unresolved/trace-orphan) を warn する。doctor.ok は落とさない (初期投入、hard 化は段階)。
+ * I/O 失敗は skip (doctor の堅牢性維持)。
+ */
+export function checkPairFreeze(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzePairFreeze(loadPairDocs(repoRoot));
+    return { messages: pairFreezeMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["pair-freeze — note: design/test-design doc を読めず検査 skip"], ok: true };
+  }
+}
+
 /** doctor 用に agent-slots deps を node I/O で構築 (now 固定は test 注入)。 */
 function doctorSlotsDeps(deps: DoctorDeps): AgentSlotsDeps {
   return {
@@ -136,6 +151,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const backfill = checkBackfillResult(deps.repoRoot);
   const scrumRev = checkScrumReverse(deps.repoRoot);
   const propagation = checkPropagation(deps.repoRoot);
+  // pair-freeze は warn-first (初期投入、ok 連動しない。hard 化は実 repo green 安定後)。
+  const pairFreeze = checkPairFreeze(deps.repoRoot);
   return {
     ok: backfill.ok && scrumRev.ok && propagation.ok,
     messages: [
@@ -145,6 +162,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...backfill.messages.map((m) => `doctor: ${m}`),
       ...scrumRev.messages.map((m) => `doctor: ${m}`),
       ...propagation.messages.map((m) => `doctor: ${m}`),
+      ...pairFreeze.messages.map((m) => `doctor: ${m}`),
       "doctor: scaffold stub (横断検出 relation-graph / drift / regression は後続 PLAN)",
     ],
   };

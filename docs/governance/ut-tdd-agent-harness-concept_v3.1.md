@@ -1123,6 +1123,8 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **9-mode ecosystem** | Forward / Reverse / Discovery / Refactor / Retrofit / Recovery / Scrum / Incident / Add-feature の 9 mode + screen-design / frontend-design の 2 工程専門 (§2.5)。旧「3 経路 + 4 補助軸」を再編した入口分類 |
 | **scrum-reverse lint** | PoC confirmed (promotion_strategy≠redesign) ⇔ Reverse 合流 / reverse→confirmed poc 参照の整合検査 (§1.2、IMP-064)。`src/lint/scrum-reverse.ts` |
 | **propagation lint** | concept §2.6 ⇔ requirements §7.8.1 の signal→mode 語彙一致検査 (L0⇔L3 伝播ドリフト検出、IMP-065)。`src/lint/propagation.ts` |
+| **pair-freeze lint (設計層)** | design doc (①) ⇔ test-design doc (③) の `pair_artifact` 双方向整合・孤児0 検査 (G1-G6 設計層 pair freeze の機械担保、requirements §6.8.3)。function-spec §4 rule pair-exists/ref-resolves/trace-bidir の最小実装。G7 の 4 artifact 12 directed edge trace とは別レイヤー (導入層 L6、IMP-067)。`src/vmodel/lint.ts` |
+| **self-pair** | `pair_artifact: self` の doc (wireframe mock 自体が③ペア、L2⇔L10、IMP-039/058)。pair-freeze lint は孤児扱いしない (導入層 L6、IMP-067) |
 | **配線** | signal → mode 自動 routing / mode → command 機械契約 (RecommendedCommandV1) / drive×layer 注入 (orchestration_mode 等) / 横断検出 の連携機構 (§2.6) |
 | **orchestration_mode** | drive×layer ごとの「誰が判断し誰が実装するか」(pm_lead / claude_judge / claude_judge_codex_impl / codex_impl_qa_verify / claude_design_impl) |
 | **L0-L14 + V-model** | V2 由来の 15 工程。左 (設計 L0-L6) と右 (検証 L8-L14) が対 (L1↔L14 / L2↔L10 / L3↔L12 / L4↔L9 / L5↔L8 / L6↔L7) |

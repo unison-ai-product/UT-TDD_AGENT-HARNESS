@@ -1,3 +1,11 @@
+---
+layer: L6
+artifact_type: design_doc
+status: draft
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+next_pair_freeze: L7
+---
 <!--
 ① 設計 (L6 機能設計) — agent-slots 機構 (subagent/team-member の fire→release 状態記録 + 並列上限助言 + stale 検知)。
 PLAN: IMP-050 (Layer-2 オーケストレーション移植、add-feature)。

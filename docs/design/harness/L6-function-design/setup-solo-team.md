@@ -1,3 +1,11 @@
+---
+layer: L6
+artifact_type: design_doc
+status: draft
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+next_pair_freeze: L7
+---
 <!--
 ① 設計 (L6 機能設計) — ut-tdd setup solo/team GitHub 設定出し分け。
 PLAN: PLAN-L6-05-setup-solo-team (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.7 U-SETUP。
