@@ -1,0 +1,53 @@
+# Session Handover — 2026-06-05 (Phase 2 着手: vmodel pair-freeze lint + L4 doc カバレッジ改善)
+
+> PO /goal「L4 完遂と進行を円滑に進めるためにカバーすべき機能を Feature/Discovery で起票して対応 + 進行中に doc カバレッジが適切かを review・改善」。Phase 2 (L4) 着手の最大 enabler = **doc カバレッジを機械 review する基盤** (vmodel-lint stub) を Add-feature で実装し、実 repo に当てて L6 doc の検査漏れ (frontmatter 欠落) を検出・補完。§1-§2 は git から手記入 (handover digest は前 session ノイズ = IMP-048 既知限界)。
+
+## §1 PLAN サマリ
+
+| PLAN | kind | 何を | commit |
+|------|------|------|--------|
+| (前段) L0-L3 pair-freeze 対称性是正 | docs | A-100 freeze のテスト設計③ (L1-operational/L3-acceptance) を confirmed へ flip、gate 台帳 A-100 追補 | `7a13637` |
+| `PLAN-L6-10-vmodel-pair-lint` | add-design | pair-freeze lint の機能設計 (loadPairDocs/analyzePairFreeze/pairFreezeMessages + 対象選定規約) + L7-unit §1.13 U-VPAIR | `fd7aa62` |
+| `PLAN-L7-11-vmodel-pair-lint` | add-impl | src/vmodel/lint.ts 本実装 + doctor checkPairFreeze (warn-first) + tests/vmodel-pair.test.ts | `fd7aa62` |
+| `PLAN-REVERSE-10-vmodel-pair-lint` | reverse/fullback | requirements §6.8.3/§2.4 整合 + L6 frontmatter 規約 + concept §10 用語 back-fill | `fd7aa62` |
+
+## §2 成果物 (commit / files)
+
+- **`src/vmodel/lint.ts`** (stub → 本実装): design doc (①) ⇔ test-design doc (③) の `pair_artifact` 双方向整合・孤児0 を検査。rule **pair-exists / ref-resolves / trace-bidir** (function-spec §4 の最小インスタンス化)。self-pair (wireframe) / L2 group / README・roadmap 除外 / ルート直下 stub 除外。**G7 の 4 artifact 12-edge trace はスコープ外** (L7 trace freeze の別マイルストーン)。
+- **`src/doctor/index.ts`**: `checkPairFreeze` を **warn-first** で配線 (runDoctor.ok に非連動。hard 化は実 repo green 安定後)。既存 hard 条件 (backfill/scrum-reverse/propagation) 不変。
+- **`tests/vmodel-pair.test.ts`** (新規): U-VPAIR-001〜006 (7 test) + 実 repo 完全性ガード (孤児0)。
+- **doc カバレッジ改善 (lint が穴を検出 → 補完)**: L6 の **6 doc** (session-log/handover-mechanism/agent-slots/backfill-pairing/forced-stop-feedback/setup-solo-team) が **layer/pair_artifact frontmatter 欠落** (HTML コメントのみ) で lint を素通りしていた穴を検出 → YAML frontmatter 補完。lint 対象選定を **path ベース** (`designLayerFromPath`) に改修し layer 欠落も孤児検出。**24→30 pair 孤児0**。
+- **back-fill**: concept §10 用語 (pair-freeze lint / self-pair) merge、improvement-backlog IMP-067。
+- 検証: typecheck 0 / **vitest 184 pass** (177→+7) / biome CLEAN / **doctor.ok=true** (pair-freeze 30 pair 孤児0 / backfill/scrum-reverse/propagation OK)。
+- review 前置 = code-reviewer **2回とも大 diff で truncate** (handover session 8 §4 既知問題) → **PM 精査 + 明示検算** (regex マッチ 33 − EXCLUDED 3 = 30 = pairs、見逃し0/誤検出0、trace-bidir slash 境界・stub 除外を bun 検算) で補完。
+- HEAD = `fd7aa62`、origin main へ push 済。untracked 3 件 (audit + policy-exempt 2) は commit 禁止。
+
+## §3 Next Action
+
+1. **Phase 2 (L4) 継続: カバーすべき機能の次手**。explorer 調査 (本 session) で L4 完遂 enabler を列挙済 — ① **plan lint engine 最小** (src/plan/lint.ts stub、G4 audit A2 機械化) ② **G4 再 audit** (TL/frontier-reviewer サインオフ、park → PASS) ③ **L5 テスト設計 doc の左腕 doc 起票** (roadmap Phase 2 観点 B)。いずれも Add-feature/Discovery で起票して対応する (PO /goal 方針)。
+2. **pair-freeze lint の hard 化検討**: 現状 warn-first (doctor.ok 非連動)。実 repo 30 pair 孤児0 で安定。次 cycle で backfill/scrum-reverse/propagation と同じ doctor.ok hard-fail へ昇格を検討 (CI vitest ガードは既に fail-close = U-VPAIR-005)。
+3. **L1-business-requirements.md (moved stub) の整理**: docs/design/harness 直下の `# (moved)` 残骸。pair-freeze は2階層 regex で対象外にしているが、stub 自体の archive/削除は別 carry。
+
+## §4 carry (未了・先送り)
+
+- **L4 完遂 enabler の残**: plan lint engine 本体 / G4 再 audit (park) / L5 テスト設計 doc 起票。
+- **pair-freeze hard 化** (warn-first → doctor.ok 連動)。
+- **L1-business-requirements.md stub 整理** (Next Action 3)。
+- 継続: CI biome subjob (workflow PAT、deferred) / kind×layer guard (§1.6) / IMP-047〜051 残配線 (lint トークン/pre-push/team_runner 本体) / IMP-052 G8-G14 機械化。
+- **review 前置の truncate 対処**: 大 diff で code-reviewer が cut-off する既知問題 (session 8 から継続)。diff 分割 or PM 精査+検算での補完を workflow 改善候補として継続観察。
+
+## §5 未了 PO 判断
+
+- **PO /goal は継続中** (L4 完遂と進行円滑化のための機能起票・doc カバレッジ改善)。本 cycle で 1 機能 (pair-freeze lint) + doc 改善を完遂。次の「カバーすべき機能」(plan lint / G4 audit / L5 テスト設計) に進んでよいか、別の優先があるか。
+- (任意) pair-freeze を warn-first で導入した粒度 (即 hard 化でなく段階導入) に異論があれば指摘。
+- (任意) L6 6 doc を status:draft で frontmatter 補完した判断 (G6 未 freeze に整合) に異論があれば指摘。
+
+## §6 壊さない / 再発させない
+
+- **pair-freeze lint は設計層 (①⇔③ pair) のみ**。G7 の 4 artifact 12-edge trace (traceCheck) は別レイヤーで未実装。混同しない。
+- **対象選定は path ベース** (`designLayerFromPath` = `docs/design/harness/L<N>-<topic>/<file>.md` の2階層)。README/roadmap は basename 除外、ルート直下 stub は2階層 regex で対象外。**frontmatter layer 欠落でも path で対象に入れる** (HTML コメントのみの doc が検査を素通りする穴を塞いだ。再発させない)。
+- **L6 機能設計 doc は YAML frontmatter (layer + pair_artifact) を持つ** (機械検査の前提)。新規 L6 doc を HTML コメントのみで作らない。
+- **doctor.ok の hard/warn 分離を崩さない**: backfill/scrum-reverse/propagation = hard、handover/agent-slots/**pair-freeze** = warn-first。
+- **trace-bidir の dir 集合参照は trailing slash 正規化 + startsWith 境界固定** (別 dir の prefix 誤マッチ防止)。
+- **検算で見逃しを担保**: pairs == 検査対象数 (regex マッチ − EXCLUDED) を確認すれば孤児見逃しゼロ。実 repo ガード U-VPAIR-005 が CI fail-close。
+- review 前置 MUST / subagent model 明示 (本 session pmo-project-explorer / pmo-sonnet / code-reviewer すべて sonnet) / commit footer = `Co-Authored-By: Claude Opus 4.8 (1M context)` / staged は明示ファイルのみ (untracked 3 件は禁止)。
