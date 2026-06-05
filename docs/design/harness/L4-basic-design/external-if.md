@@ -53,7 +53,7 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 | **(a) AI runtime** | agent-guard 通過 (allowlist 15 + model 明示) + 契約プラン CLI が認証済 (Claude Code 常駐 / `codex login` 済) | 呼び出し記録が `.ut-tdd/audit/` に append (invocation_log) | **API 直叩きでなく契約プラン CLI/hook 経由のみ** (CLAUDE.md)。core は provider SDK/API/key に依存しない (adapter = CLI subprocess + hook、ADR-001) |
 | **(b) VCS・CI** | ローカル gate 証跡が存在 | CI 側 gate 再実行結果がローカルと一致 (NFR-13 dev-local+CI 整合) | branch protection は gate pass を必須化、bypass は Incident のみ (FR-17) |
 | **(c) 観測・監視** | (inbound) alert payload が schema 準拠 | Incident mode 自動 routing trigger (FR-08/16) | 観測は記録のみ、harness の判定ロジックに副作用を直接与えない (mode routing 経由) |
-| **(d) 依存管理** | (inbound) Dependabot PR/alert | security NFR 経路で trishe (人間トリアージ) | 自動マージしない (人間確認、禁止事項) |
+| **(d) 依存管理** | (inbound) Dependabot PR/alert | security NFR 経路で triage (人間トリアージ) | 自動マージしない (人間確認、禁止事項) |
 
 > Precondition/Postcondition の**詳細**(引数型・エラー型・リトライ・タイムアウト) は L5 D-API で確定 (§7 粒度境界)。
 
@@ -63,7 +63,7 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 
 | 境界 | 外部 service 不在・エラー時 |
 |---|---|
-| **AI runtime** | Codex 不在 → `claude-only` mode で動作 (架空 fallback を通常導線にしない、禁止事項)。Claude/Codex 双方不在 → `standalone` (検証のみ、AI 委譲なし) |
+| **AI runtime** | Codex 不在・Claude 存在 → `claude-only` / **Claude 不在・Codex 存在 → `codex-only`** / Claude・Codex 双方不在 → `standalone` (検証のみ、AI 委譲なし)。架空 fallback を通常導線にしない (禁止事項)。4 execution mode の review tier 縮退は function §3.6 と整合 (silent fallback 禁止、不在を明示記録) |
 | **VCS・CI** | GitHub 不在 → ローカル gate のみで継続 (CI は branch protection でのみ必須)。CI fail → PR block (fail-close) |
 | **観測・監視** | Sentry/Uptime Robot 不在 → Incident 自動 trigger が無効化されるのみ、手動 `ut-tdd incident open` は機能継続 |
 | **依存管理** | Dependabot 不在 → security 通知が手動 (`ut-tdd doctor` の依存検出で代替) |

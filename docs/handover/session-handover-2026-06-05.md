@@ -224,3 +224,40 @@
 
 - **review-evidence は hard 判定**: doctor.ok 連動済。design/impl/add-* PLAN は review_evidence (reviewer/review_kind/verdict) なしで confirmed にできない (CI red)。
 - **back-fill は実在記録の転記のみ**: review 記録が無い PLAN へ evidence を貼るのは本 feature が禁じる捏造。未記録なら今 review を通すか honest warn のまま残す (L6-08/L7-09 は事後 review、L6-09/L7-10 は truncate を scope 明記)。
+
+---
+
+# Session 7 — L4 見直し・改善 (PLAN-L4-06: drift back-fill + under-design 明示 defer)
+
+> PO /goal「L4の見直し。改善を。」。L4 core 4 doc を新鮮な adversarial 監査 (pmo-sonnet ×4) → 2 種の問題を確定し add-design PLAN-L4-06 で改善。G4 再 bless A-103。
+
+## 確定した 2 種の問題
+
+1. **drift (実装 ahead-of-design、meta 所見)**: 実装済かつ review 済の feature が L4 設計 doc へ back-fill されていなかった = **harness 自身が IMP-051 (impl→design 戻し) を L4 で破った**。
+   - data §3 Drive=9 (mode 値混入) vs `VALID_DRIVES`=5 / lint=5 記載 vs src/lint=9 / handover・setup・web「将来」vs 実装済 / runtime=2 vs 5 ファイル / ADR-005 欠落 / review_evidence (IMP-071) §6 未着地 / external-if codex-only 欠落。**全て src 直照合で verify**。
+2. **under-design (機械担保着地先未定義、柱 2 違反)**: GateId 形式 lint (data §4 空白) / Research 出口 gate 機械条件 / review_kind 着地。
+
+## 成果 (1 commit、8 files)
+
+- **Tier1 drift 整合**: data (Drive 5種/review_evidence 不変条件) + architecture (lint 9/runtime 5/handover・setup・web building block/ADR-005/commit-msg・session-log hook) + external-if (codex-only/typo trishe→triage)。
+- **Tier2 under-design→明示 defer**: GateId=IMP-072 carry / Research gate=IMP-052 carry / review_kind→review_evidence 着地 / Discovery・Scrum→Reverse=checkScrumReverse 参照 (実は enforce 済を可視化) / Scrum L8-L14=ForwardRouting enum 着地。
+- **L9 再ペア**: ST-DATA-05 (review_evidence) / ST-EXT-02 (codex-only) + 量閉じ 10 不変条件→5 ST (孤児0)。
+- **IMP-072〜075 起票** (IMP-075 = architecture↔src module drift lint = 本 meta drift の再発防止) + IMP-071 hard 化反映。
+- **review 前置**: pmo-sonnet **VERDICT=PASS / Critical 0** (drift 精度 5 点 src 直照合 OK)。**code-reviewer は 2 回 truncate (IMP-009 再発、計 74 tool-use)** のため完全 verdict が出る pmo-sonnet で確定 + PM が src 直照合 (honest 記録、review_evidence に明記)。
+- 検証: typecheck 0 / **vitest 195 pass** / doctor exit 0 / pair-freeze 31 孤児0 / review-evidence OK。
+
+## G4 再 bless
+
+- **A-103** (`.ut-tdd/audit/A-103-g4-l4-design-refresh.md`、gitignored) + gate-design §2 台帳 G4 行 + §2.1 A-103 注記。4 軸 PASS。
+- L4 4 doc/L9 は confirmed 維持 (refresh を A-103 が bless)、PLAN-L4-06 を draft→confirmed。
+
+## §3 Next Action (session 7)
+
+1. **L5 詳細設計** (PLAN-L5-00-master) を Forward で降下 → G5 (L4 完遂 + IMP-071 完遂 + A-103 済)。
+2. carry: **IMP-075** (architecture↔src module drift lint = 本 meta drift 再発防止、最優先) / IMP-072 (gate-id-format lint) / IMP-073 (external-if (c)(d) ST 被覆) / IMP-074 (asset-drift carry PLAN id)。
+
+## §6 壊さない (session 7)
+
+- **L4 設計 doc は実装実体と一致させる (drift 禁止)**: data Drive=5 / lint=9 / runtime=5 / handover・setup・web 実装済 / ADR-005。実装が先行したら L4 設計 doc へ back-fill する (IMP-051 を L4 でも守る)。再発防止の機械化 = IMP-075。
+- **code-reviewer truncate 時 (IMP-009)**: 完全 verdict が出る pmo-sonnet を代替に使い + drift 精度は PM が src 直照合で一次検証。**truncate を verdict 捏造で埋めない** (scope に明記)。
+- **under-design は明示 defer (carry+IMP 紐付け)**: 「doc に書いたが機械担保着地先未定義」を放置しない。defer なら plan_id/IMP を残す。

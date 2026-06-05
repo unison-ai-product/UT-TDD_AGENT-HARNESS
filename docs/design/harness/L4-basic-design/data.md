@@ -61,7 +61,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 |---|---|---|
 | Kind | charter/impl/design/poc/reverse/add-design/add-impl/refactor/retrofit/recovery/troubleshoot/research (12) | `VALID_KINDS` |
 | Layer | L0-L14 + cross (16) | `VALID_LAYERS` |
-| Drive | be/fe/fullstack/db/agent/scrum/reverse/poc/troubleshoot (9) | `VALID_DRIVES` |
+| Drive | be/fe/fullstack/db/agent (5、専門職のみ) | `VALID_DRIVES` |
 | WorkflowPhase | S0-S4 (kind=poc) / R0-R4 (kind=reverse) (10) | `VALID_WORKFLOW_PHASES` |
 | ArtifactType | 19 種 (source_module 含む) | `VALID_ARTIFACT_TYPES` |
 | DecisionOutcome | confirmed/rejected/pivot (3) | `VALID_DECISION_OUTCOMES` |
@@ -73,6 +73,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | SubDoc | 層別 (L1-L6) | requirements §1.10.G.1 (spec のみ、**src/schema 未実装 → impl carry IMP-026**) |
 
 > mode / drive は単独の identity を持たず属性として埋め込むため **値オブジェクト** (entity ではない)。
+> **Drive 値域整合 (PLAN-L4-06、drift 是正)**: `VALID_DRIVES` は **専門職 5 種のみ** (be/fe/fullstack/db/agent)。旧記載の mode 値 (scrum/reverse/poc/troubleshoot) は **drive ではなく entry mode** であり、`PLAN-DISCOVERY-04 V7 / PLAN-REVERSE-01 R3` で drive enum から除去済 ([[feedback_drive_is_specialist_not_mode]])。drive=専門職 / mode=駆動モデル を混同しない (mode は function §3.1)。
 > **SubDoc 注記**: 値域は requirements §1.10.G.1 VALID_SUB_DOCS (text spec) が SSoT。zod enum 化は src/schema に未実装で、L5/impl で `VALID_SUB_DOCS` 定数化する (IMP-026)。他 11 値オブジェクトは src/schema 実装済。
 
 ## §4 entity ID 規約 (集約横断、既存 lint regex と一致)
@@ -85,7 +86,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | AcId | `AC-FR-<NN>-<NN>` / `AC-NFR-*` / `AC-UX-*` | g3-trace |
 | AtId | `AT-*` | g3-trace |
 | NfrId | `NFR-<NN>` (NFR-09/10 欠番) | g3-trace / doc-consistency |
-| GateId | `G<N>` (G0.5-G14) | — |
+| GateId | `G<N>` (G0.5-G14) | (形式 lint 未実装 → IMP-072 carry。現状 gate **状態遷移** は doctor/plan lint が検証、ID **形式**検証は L5 carry) |
 | ImpId | `IMP-<NNN>` | improvement-backlog |
 
 > ID は値オブジェクト (不変・等価性は値で判定)。採番は集約ルート起票時に確定。
@@ -111,6 +112,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | Plan | agent_slot.model ∈ allowlist、opus は pdm-* のみ | agent-guard |
 | Workflow | 前工程未完了で後工程着手不可 (V-model 順序、D-03=0) | doctor / plan lint |
 | Evaluation | verified 評価は紐付け (実装/A-番号) 必須 | improvement-backlog |
+| Plan | confirmed/completed の design/impl/add-* PLAN は **review 前置証跡 (review_evidence) 必須** (review-skip freeze 禁止) | `doctor checkReviewEvidence` (IMP-071、hard/fail-close) |
 
 ## §7 集約間整合性ルール
 
