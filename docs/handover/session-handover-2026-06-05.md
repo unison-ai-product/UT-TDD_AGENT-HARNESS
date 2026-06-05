@@ -82,3 +82,33 @@
 - **クリーンアップ原則 / ハードコード慎重** (CLAUDE.md、MUST): 誤り・取り下げ・陳腐化の残骸を残さない / ハードコードは根拠コメント + 単一正本 + 拡張性。
 - **検証発火 = surface まで** (検証 PLAN 起票は人間トリガー、§2.6 signal→mode と同様)。**placeholder=park は freeze を妨げない** (L2 screen track G2 DEFER)。draft があれば Forward 進行中。
 - **VERIFICATION_GROUPS の id は表示用レンジ、layers は実在層のみ** (L0 は価値検証で design doc なし)。id と layers の非対称はコメントで根拠明示済。
+
+---
+
+# Session Handover — 2026-06-05 (session 3: L4 基本設計 G4 freeze — **L4 完遂**)
+
+> PO /goal「**L4完遂を進めろ**。事前に必要なものは Discovery/Feature で実装」。前 session で機能起票 (lint) に終始し **L4 本体を進めていない**ことを PO 指摘 → **L4 完遂 (G4 freeze) を実行**。L4 完遂に新規前提機能は不要 (既存 vitest/doctor/pair-freeze で機械証跡充足) と判定し、G4 audit → status flip で freeze。
+
+## §1-§2 成果 (commit `770333a`)
+
+- **G4 audit 4 軸 PASS** (intra_runtime_subagent = pmo-sonnet、TL サインオフ代替、最終報告到達):
+  - A1 上流 trace (FR 26件漏れ0/FR-L1-46〜49 着地/ADR-004) / A2 DoD (L5 降下適性) / A3 V-pair 孤児0 (L4⇔L9 双方向 + pair-freeze 30 pair) / A4 sub-doc 整合 (Critical 0)。
+- **freeze 10 ファイル** (draft → confirmed): L4 core 4 doc (architecture/data/function/external-if) + L9 + PLAN-L4-00〜04。
+- **carry 許容**: L9 骨格 (Given-When-Then は Phase 2 後続) / ST-ASSET (L6/L7 待ち) / **内部資産 L4-10〜13 (別スコープ、未 freeze)**。
+- gate-design §2: G4 park → **PASS (A-101)**、旧 A-91 (正規式前) は historical。`.ut-tdd/audit/A-101-g4-l4-freeze.md` (gitignored)。PLAN-L4-00-master §5 に A-101 再確定追記。
+- P1 carry IMP 化: **IMP-069 (mode taxonomy reconcile)** / **IMP-070 (commander ADR)**。
+- **機械証跡**: doctor verification = **L4-L6 4/18 confirmed へ前進** (L4 freeze が機械に反映)。vitest 189 pass / doctor exit 0 / pair-freeze 30 孤児0。
+
+## §3 Next Action (session 3)
+
+1. **L5 詳細設計を Forward で起票・降下** (PLAN-L5-00-master)。L4 freeze 完了で L5 降下可。正規式 L5⇔L8 結合。
+2. **L5 起票前に IMP-069 (mode taxonomy reconcile)** を確定 (L0 §2.5 9-mode vs function §3 10-mode、L5 workflow 設計の揺れ防止)。IMP-070 (commander ADR) も L5 前に。
+3. L4-L6 層群が全 freeze したら doctor verification が「L4-L6 検証サイクル発火可」を機械 surface → そのタイミングで Phase 2 検証 (検証ロードマップ band)。
+
+## §6 壊さない / 再発させない (session 3)
+
+- **L4 = G4 freeze 済 (A-101)**。L4 core 4 doc + L9 + PLAN-L4-00〜04 を draft へ戻さない。規範変更は Reverse/Recovery。
+- **内部資産 L4-10〜13 は未 freeze** (ST-ASSET、L6/L7 待ち placeholder_deps)。L4 core freeze と混同しない。
+- **G4 freeze 記録 = gate §2 台帳 (A-101) + .ut-tdd/audit/A-101** (concept/requirements は prose 見出しで status を持たない、A-100 同様)。
+- **L4 完遂は「設計の新規降下」でなく「既存 L4 doc の G4 audit + freeze」だった** (doc は実質書けていた、explorer/audit 確認)。
+- **ゴール (L4完遂) を見失わない**: 機能起票 (lint) は L4 完遂を円滑にする手段、L4 完遂が目的 (前 session の反省 = lint に終始して本体未進行を PO 指摘)。
