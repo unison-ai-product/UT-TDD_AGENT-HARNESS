@@ -112,3 +112,50 @@
 - **G4 freeze 記録 = gate §2 台帳 (A-101) + .ut-tdd/audit/A-101** (concept/requirements は prose 見出しで status を持たない、A-100 同様)。
 - **L4 完遂は「設計の新規降下」でなく「既存 L4 doc の G4 audit + freeze」だった** (doc は実質書けていた、explorer/audit 確認)。
 - **ゴール (L4完遂) を見失わない**: 機能起票 (lint) は L4 完遂を円滑にする手段、L4 完遂が目的 (前 session の反省 = lint に終始して本体未進行を PO 指摘)。
+
+---
+
+# Session Handover — 2026-06-05 (session 4: CLAUDE.md 原則明文化 + L4 workflow オーケストレーション外部設計 補追 = under-design 解消・真の L4 完遂)
+
+> PO 指示の流れ: ① L4 が設計ドキュメント定義に準拠しているか → 粒度監査 (要件→基本設計) で **under-design 2 件** 検出 → ② PO「改善して L4 完遂。harness は別プロダクト開発の基盤でありオーケストレーション設計が薄いのは doc×機械厳格化思想に反する」→ ③ PO「Claude.md 記載案件レベル」で上位思想を CLAUDE.md へ明文化 → ④ /goal「OK.改善してL4完遂」で実装。
+
+## §1 PLAN サマリ
+
+| commit | kind | 何を |
+|---|---|---|
+| `1aa3322` | docs(governance) | CLAUDE.md: 基盤目的 (harness 完成が目的でなく別プロダクト開発の基盤) + doc×機械厳格化の融合思想 (under-design 禁止、正規 defer は除外) を開発原則に追加 |
+| `5c3927e` | docs(governance) | CLAUDE.md「設計の柱 (中核価値 6 本)」: 1 基盤 / 2 doc×機械融合 / 3 自動化で DB 管理+FB 機構 / 4 context/skill 動的注入 / 5 オーケストレーションで開発コスト減 / 6 厳格ルール+検証で品質 |
+| `8652e6c` | feat(l4) | **add-design PLAN-L4-05**: function §3 を workflow オーケストレーション外部設計へ deepening + L9 ST-FUNC ペア + IMP-069/070 解消 + ADR-006。**A-102 G4 add-design freeze** |
+
+## §2 成果物
+
+- **粒度監査 (2 軸、pmo-project-explorer + pmo-sonnet)**: coverage ✅ (26 FR orphan 0) / altitude 上 ✅ (over-design 1 minor) / grounding ✅ (arc42/DDD/ADR 充足) / **altitude 下 = under-design 2 件**: workflow mode 群 + FR-12 skill が function §3 で「将来 module 一括 defer」= 外部設計判断なし。
+- **function.md §3 deepening**: `Forward spine + 9 駆動モデル + 2 工程専門` の外部設計。§3.1 駆動モデル 9 種 (入口 signal / 状態遷移 phase / 出口 contract+Forward 合流 L / gate・サインオフ) / §3.2 signal→mode routing 全順序 (Incident>Recovery>Reverse>Refactor の 4 失敗 rank + 他は固有 signal) + mode↔kind 非1:1 / §3.3 工程専門 (screen/frontend) / §3.4 FR-12 skill 外部形状 / §3.5 担当 building block / §3.6 carry 明示。
+- **L9 ST-FUNC ペア**: ST-FUNC-01 (遷移) / 01b (Forward 合流) / 04 (routing 全順序) / 05 (mode↔kind) / 06 (サインオフ gate) / 07 (skill)。§2 量閉じ孤児0。
+- **IMP-069 reconcile**: PO「Forward=spine」確定。operational 正本 = Forward spine + 9 駆動モデル (= `docs/process/modes/` の 9、Research 含む) + 2 工程専門。concept §2.5 の legacy「9-mode (Forward+8、Research 除く)」とは同一 universe の別グルーピングで、**橋渡し = modes/README §3**。function §3 / concept §2.5 intro / §10.2 (新語 2 + legacy 9-mode 項) を全て bridge 注記で整合。→ backlog IMP-069→resolved。
+- **IMP-070**: commander を **ADR-006** で確定 (ADR-005 は distribution で既使用)。architecture §2 floating 注記 + §7 ADR 一覧を更新。→ backlog IMP-070→resolved。
+- **glossary back-merge**: concept §10.2 に「駆動モデル (entry mode、9 種)」「Forward spine」。
+- **A-102 G4 add-design freeze**: 4 軸 PASS。gate §2.1 A-102 注記 + G4 行追記 + `.ut-tdd/audit/A-102` (gitignored)。PLAN-L4-05 `confirmed`、function.md/L9 は confirmed 維持。
+- **review 前置**: code-reviewer (sonnet) REQUEST_CHANGES → **I-1 (Research/9-mode 帰属の二重 framing)** + **I-2 (routing 優先度 P0/P0 曖昧 vs ST-FUNC-04 全順序)** を修正後 freeze。M-1/M-2/M-4 = minor carry。cross-agent 不在 = intra_runtime_subagent 代替。
+- 検証: typecheck 0 / **vitest 189 pass** / doctor exit 0 / pair-freeze 30 孤児0。HEAD = `8652e6c`、push 済。
+
+## §3 Next Action (session 4)
+
+1. **L5 詳細設計を Forward で起票・降下** (`PLAN-L5-00-master`)。L4 完遂 (core A-101 + workflow A-102) で L5 降下可。正規式 L5⇔L8 結合。**IMP-069 確定済**なので mode カウントは operational 正本 (Forward spine + 9 駆動モデル + 2 工程専門) に従う (L5 で揺れない)。
+2. **L5 内部処理設計で workflow orchestration module の how を降ろす**: function §3.6 で defer した CLI signature (L5 D-API) / 状態遷移 pseudocode (L6) / orchestration_mode cell matrix (requirements §1/§7) / 30-cell matrix (requirements §3) を L5 で確定。
+3. minor carry (M-1 Refactor 保護網 / M-2 ST-FUNC-06 carry 記述 / M-4 building block クロスリンク) を L5/L6 deepening 時に解消。
+
+## §4 carry (未了・先送り)
+
+- **function §3.6 の defer 群** (L5/L6/requirements 着地)。
+- pair-freeze hard 化 (warn-first → doctor.ok) / plan lint engine 本体 / CI biome subjob。
+- **L4-screen sub-doc** (画面設計、5 番目の L4 要素) は L2 モック (G2) 後に別途起票の defer 継続 (PO 承認済、under-design でない正規 skip)。
+- 内部資産 L4-10〜13 未 freeze (ST-ASSET、L6/L7 待ち)。
+
+## §6 壊さない / 再発させない (session 4)
+
+- **mode taxonomy の operational 正本 = Forward spine + 9 駆動モデル (Research 含む) + 2 工程専門** (function §3 / §10.2)。concept §2.5 の「9-mode (Forward+8)」は legacy framing、橋渡しは modes/README §3。**L5 以降で mode を数えるときは operational 正本に従う** (再び「9 か 10 か」で揺らさない)。
+- **function §3 は L4 外部設計 (what/形状)**。CLI signature・pseudocode・cell matrix は §3.6 で L5/L6/requirements へ明示 defer = under-design でない。**新原則 (CLAUDE.md): doc を書いただけで機械担保の着地先未定義のまま freeze にするのが under-design、defer 宣言は under-design でない**。
+- **CLAUDE.md「設計の柱 6 本」が判断基準**: 設計・実装・レビューは「どの柱に資するか」で判断、どの柱にも資さない作業は untraceable arbitrary work として疑う。
+- **G4 freeze 記録の二層**: A-101 (core 4 doc) + A-102 (workflow orchestration add-design)。両方 gate §2.1 + .ut-tdd/audit に記録。function.md は両 audit で bless された confirmed (draft へ戻さない、規範変更は Reverse/Recovery)。
+- **粒度監査は「準拠 (coverage/altitude/grounding) + 完遂 (under-design 解消)」の両輪**。freeze 済でも under-design が残れば「doc 書いたが機械着地なし」で完遂と誤認しない (本 session の起点 = PO「L4 は定義に準拠しているか」の問い)。
