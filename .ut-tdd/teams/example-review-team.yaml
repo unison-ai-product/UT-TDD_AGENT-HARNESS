@@ -15,7 +15,7 @@ members:
     engine: codex-se
     task: "契約実装 (src/foo を実装)"
   - role: tl
-    engine: codex-tl
+    engine: pmo-sonnet
     task: "実装レビュー + 契約凍結"
     serialize_after: se        # se の成果物に依存するため se 完了後に実行
   - role: qa

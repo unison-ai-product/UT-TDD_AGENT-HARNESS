@@ -53,5 +53,5 @@ IMP-071 は review 前置の **presence + review_kind** を機械強制した。
 ## §7 carry
 
 - サブエージェント配置 (orchestration_mode cell / worker roster) = requirements defer (function §3.7、本機能対象外)。
-- checklist 逐条 pass/fail/n-a 記録 (§2.1.2.1 核心ルール 3、§7.8.7 checklist) = 別 feature (未着手 carry)。
+- checklist 逐条 pass/fail/n-a 記録 (§2.1.2.1 核心ルール 3、§7.8.7 checklist) = `src/gate/review-tier.ts` + `docs/skills/review-checklist.yaml` で実装済 (2026-06-08)。
 - provider 次元 (model だけでなく provider 一致も弾く) は現状 model 文字列比較で代替 (claude-\* vs gpt-\* は model で判別可)。厳密な provider field は将来拡張候補。

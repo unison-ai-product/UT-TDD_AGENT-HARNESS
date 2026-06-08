@@ -120,7 +120,11 @@ export function analyzeReviewEvidence(plans: ParsedReviewPlan[]): ReviewEvidence
   for (const p of plans) {
     if (p.status === "archived") continue;
     // presence (IMP-071)
-    if (KIND_REVIEW_REQUIRED.has(p.kind) && STATUS_REVIEW_REQUIRED.has(p.status) && !p.hasEvidence) {
+    if (
+      KIND_REVIEW_REQUIRED.has(p.kind) &&
+      STATUS_REVIEW_REQUIRED.has(p.status) &&
+      !p.hasEvidence
+    ) {
       missing.push({ plan_id: p.plan_id, kind: p.kind });
     }
     // cross_agent distinctness (IMP-076、kind/status 非依存 = cross_agent を称する全 entry が対象)

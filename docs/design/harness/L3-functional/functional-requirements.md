@@ -731,7 +731,7 @@ A-50 で workflow core 7 件 (FR-L1-23/24/25/26/27/29/30) を L3 直接詳細化
 | FR-L1-39 (タスク難易度) | PLAN-L4-NN-task-complexity | 規模 / 依存 / 不確実性 × drive 別スコアリング |
 | FR-L1-40 (drive 別 state 分離) | PLAN-L4-NN-drive-state-isolation | drive 軸 state 区画 (`.ut-tdd/drive/<drive>/`) + skip_sub_doc 機械強制 (FR-L1-06 の drive 拡張、A-54 で §3.1 明示追加) |
 | FR-L1-41 (drive 自動判定) | PLAN-L4-NN-drive-auto-classify | PLAN/コード/拡張子から drive 自動分類 → orchestration_mode routing (FR-L1-08 の drive 拡張)。AC-FR-08 の drive 判定入力 shape を本 PLAN で確定 (A-54 で §3.1 明示追加) |
-| FR-L1-42 (provider 引継ぎ) | PLAN-L4-NN-provider-handover | Claude ↔ Codex の context+PLAN+budget 連携渡し |
+| FR-L1-42 (provider 引継ぎ) | implemented 2026-06-08 (`provider-handover.v1`) | Claude ↔ Codex の context+PLAN+budget 連携渡し |
 | FR-L1-44 (onboarding) | PLAN-L4-NN-onboarding | 既存 repo への harness baseline 確立、`.ut-tdd/` 初期 baseline |
 | FR-L1-31〜35 (P2 コンテキスト/フォルダ/棚卸し/穴管理/整備可視化) | PLAN-L4-NN-infra-readiness | 整備系、Phase B carry 含む |
 

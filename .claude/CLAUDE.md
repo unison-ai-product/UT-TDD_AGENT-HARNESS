@@ -167,3 +167,17 @@ UT-TDD 独自 `ut-tdd plan` / `ut-tdd gate` が揃うまで:
 - WSL2 は任意の互換環境であり、必須条件ではない。
 - `.ut-tdd/` は UT-TDD runtime state として扱う。
 - `.helix/` は移行中の HELIX 由来 state であり、通常は Git 追跡しない。
+
+## UT-TDD Adapter Rule Markers
+
+This section is machine-checked by `rule-drift` so Codex and Claude adapters do not silently diverge.
+
+- Shared project context: `../CLAUDE.md`
+- Codex project rules: `../AGENTS.md`
+- Modes: `standalone` / `claude-only` / `codex-only` / `hybrid`
+- Status: `ut-tdd status`
+- Doctor: `ut-tdd doctor`
+- Handover: `ut-tdd handover`
+- Codex delegation: `ut-tdd codex --role <role> --task "..."`
+- Claude delegation: `ut-tdd claude --role <role> --task "..."`
+- Team run: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`

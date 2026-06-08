@@ -11,7 +11,7 @@
 import { execFileSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkHandoverDiscipline, nodeHandoverDeps } from "../../src/handover";
+import { checkHandoverBypass, checkHandoverDiscipline, nodeHandoverDeps } from "../../src/handover";
 import { nodeAgentSlotsDeps, sweepStaleGuardSlots } from "../../src/runtime/agent-slots";
 import { scanDanglingStops } from "../../src/runtime/forced-stop";
 import { dispatch, nodeDeps, type SessionHookInput } from "../../src/runtime/session-log";
@@ -31,6 +31,19 @@ function gitBranch(): string | null {
   }
 }
 
+/** IMP-078 gap③: 直近 commit hash (短縮 7 桁)。PostToolUse は git commit 完了後 = 新 HEAD。fail-open→null。 */
+function gitHead(): string | null {
+  try {
+    const out = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    }).trim();
+    return out || null;
+  } catch {
+    return null;
+  }
+}
+
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
@@ -40,7 +53,7 @@ async function readStdin(): Promise<string> {
 try {
   const raw = await readStdin();
   const input = JSON.parse(raw || "{}") as SessionHookInput;
-  const deps = nodeDeps(repoRoot, gitBranch);
+  const deps = nodeDeps(repoRoot, gitBranch, gitHead);
   const evName = input.hook_event_name ?? process.argv[2];
   // SessionStart: 直前までの dangling session (強制停止推定) を後追い記録 (fail-open)
   if (evName === "SessionStart" || evName === "start") {
@@ -54,7 +67,9 @@ try {
   // 「PLAN 活動したが handover 追記なし」を agent 記憶に頼らず気付かせる。
   if (evName === "Stop" || evName === "stop") {
     try {
-      for (const w of checkHandoverDiscipline(nodeHandoverDeps(repoRoot))) {
+      const hdeps = nodeHandoverDeps(repoRoot);
+      // IMP-047 規律 (presence/stale/drift) + IMP-078 gap① bypass (手書き検知) を併せて surface。
+      for (const w of [...checkHandoverDiscipline(hdeps), ...checkHandoverBypass(hdeps)]) {
         process.stderr.write(`[ut-tdd handover] ${w}\n`);
       }
     } catch {

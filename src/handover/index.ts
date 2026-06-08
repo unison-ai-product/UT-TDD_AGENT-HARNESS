@@ -14,6 +14,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import {
+  activePlanStale,
   inferPlanFromCommit,
   nodeDeps,
   type PlanDigest,
@@ -41,6 +42,19 @@ export interface HandoverPointer {
   latest_doc: string | null;
   digest_summary: { commits: number; files: number; failures: number } | null;
   updated_at: string;
+  /** IMP-078 gap①: ut-tdd handover 由来の証跡 (手書き bypass 検知)。手書き pointer は欠落。 */
+  generated_by?: string;
+  /** IMP-078 gap①: 生成時の markdown entry 数 (手書き追記 = 増分 mismatch 検知)。 */
+  doc_entry_count?: number;
+}
+
+/** runHandover が CURRENT.json に刻む生成元署名 (手書き bypass 検知の基準値、単一正本)。 */
+export const GENERATED_BY = "ut-tdd-handover";
+
+/** handover markdown の `# Session Handover` entry 数を数える (bypass 検知の照合値)。 */
+export function countHandoverEntries(md: string | null): number {
+  if (!md) return 0;
+  return (md.match(/^# Session Handover\b/gm) ?? []).length;
 }
 
 /** markdown 1 entry の論理内容 (③-⑥ は human placeholder)。 */
@@ -72,6 +86,8 @@ export interface HandoverArgs {
   planId?: string;
   /** IMP-048: true なら §1-§2 を active plan family の digest のみへ絞る (multi-plan ノイズ低減)。 */
   scopeToActive?: boolean;
+  /** IMP-078 gap④: 指定 session が触れた digest のみへ絞る (前 session の PLAN 混入を排除)。 */
+  sessionId?: string;
 }
 
 export interface HandoverResult {
@@ -97,6 +113,40 @@ const PLAN_DIGEST_DIR = join(".ut-tdd", "logs", "plan");
 export interface HandoverScopeOpts {
   /** active_plan が解決できたとき、同 family (bare ⊂ slug) の digest のみへ絞る。 */
   scopeToActive?: boolean;
+  /** IMP-078 gap④: 指定 session が触れた digest のみへ絞る (session 横断ノイズ排除)。 */
+  scopeToSession?: string;
+}
+
+/**
+ * IMP-078 gap④: 直近 session_id を session jsonl 群から解決 (最新 event ts の session)。
+ * handover CLI は session_id を直接受け取れないため、ログから「いま回している session」を推定する。
+ * never throws (fail-open、解決不能は null)。
+ */
+export function latestSessionId(deps: HandoverDeps): string | null {
+  try {
+    const dir = join(deps.repoRoot, ".ut-tdd", "logs", "session");
+    let best: { sid: string; ts: string } | null = null;
+    for (const name of deps.listDir(dir)) {
+      if (!name.endsWith(".jsonl")) continue;
+      const text = deps.readText(join(dir, name));
+      if (!text) continue;
+      const lines = text.split("\n").filter((l) => l.trim());
+      const last = lines[lines.length - 1];
+      if (!last) continue;
+      try {
+        // ts は ISO8601 (nodeDeps.now が常に ISO 出力) = 辞書順比較が時系列順と一致。
+        const ev = JSON.parse(last) as { ts?: string; session_id?: string };
+        if (ev.ts && ev.session_id && (!best || ev.ts > best.ts)) {
+          best = { sid: ev.session_id, ts: ev.ts };
+        }
+      } catch {
+        // 壊れ行 skip
+      }
+    }
+    return best?.sid ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -198,6 +248,13 @@ export function resolveHandoverScope(
     // listDir 失敗等 → digests は空のまま
   }
   let digests = dedupeDigests(raw);
+  // IMP-078 gap④: session scope を最優先 (前 session の PLAN 混入を排除)。
+  // 当該 session が触れた digest が無ければ全件 fallback (空 handover を避ける)。
+  if (opts.scopeToSession) {
+    const sid = opts.scopeToSession;
+    const scoped = digests.filter((d) => d.sessions?.includes(sid));
+    if (scoped.length > 0) digests = scoped;
+  }
   if (opts.scopeToActive && active_plan) {
     const ap = active_plan;
     const scoped = digests.filter((d) => sameFamilyPlan(d.plan_id, ap));
@@ -331,6 +388,12 @@ export function checkHandoverDiscipline(deps: HandoverDeps, maxHours = 24): stri
   const scope = resolveHandoverScope(deps);
   // 活動が無ければ規律対象外 (digest 不在 = まだ何もしていない)。
   if (!scope.active_plan || scope.digests.length === 0) return warnings;
+  // IMP-078 gap②: current-plan marker が古い → 解決した active_plan が最新作業を指していない恐れ。
+  if (activePlanStale(toSessionDeps(deps), deps.now(), maxHours)) {
+    warnings.push(
+      `active-plan marker stale: current-plan が ${maxHours}h 以上未更新 (解決値 ${scope.active_plan} が最新作業と乖離の恐れ) → \`ut-tdd plan use <id>\` で更新`,
+    );
+  }
   const pointer = readPointer(deps);
   if (!pointer) {
     warnings.push(
@@ -361,13 +424,61 @@ export function writePointer(
   deps.writeText(join(deps.repoRoot, POINTER_PATH), `${JSON.stringify(pointer, null, 2)}\n`);
 }
 
-/** docs/plans/<plan_id>.md の frontmatter から kind/title を軽量抽出 (無ければ plan_id fallback)。 */
+/**
+ * docs/plans/<plan_id>.md の frontmatter から kind/title を軽量抽出 (無ければ plan_id fallback)。
+ * IMP-078 gap⑤: 完全一致が無い bare id (`PLAN-L7-04`) は同 family の slug 付き正本
+ * (`PLAN-L7-04-handover-mechanism.md`) を listDir で family 解決し、`(unknown)` ゴーストを防ぐ。
+ */
 function readPlanMeta(planId: string, deps: HandoverDeps): PlanMeta {
-  const raw = deps.readText(join(deps.repoRoot, "docs", "plans", `${planId}.md`));
+  const plansDir = join(deps.repoRoot, "docs", "plans");
+  let raw = deps.readText(join(plansDir, `${planId}.md`));
+  if (!raw) {
+    const match = deps
+      .listDir(plansDir)
+      // basename のみ対象 (archive/ 等サブディレクトリ配下の同名 PLAN を誤解決しない、review Important)。
+      .filter(
+        (n) =>
+          n.endsWith(".md") &&
+          !n.includes("/") &&
+          !n.includes("\\") &&
+          sameFamilyPlan(planId, n.replace(/\.md$/, "")),
+      )
+      .sort((a, b) => b.length - a.length)[0]; // 最も具体的な slug を正本
+    if (match) raw = deps.readText(join(plansDir, match));
+  }
   if (!raw) return { plan_id: planId, kind: "unknown", title: planId };
   const kind = raw.match(/^kind:\s*(.+)$/m)?.[1]?.trim() ?? "unknown";
   const title = raw.match(/^title:\s*"?(.+?)"?\s*$/m)?.[1]?.trim() ?? planId;
   return { plan_id: planId, kind, title };
+}
+
+/**
+ * IMP-078 gap①: handover が `ut-tdd handover` 機構を経ず手書き bypass されたかを検知 (fail-open, 純判定)。
+ * checkHandoverDiscipline (presence/stale/drift) と責務分離し、bypass のみを surface する。
+ * ① CURRENT.json が generated_by 署名を持たない = 手書き pointer / ② latest_doc の entry 数が
+ * pointer.doc_entry_count を超える = 機構を経ない手書き追記。pointer 不在は対象外 (discipline が担う)。
+ * **検知範囲 (意図的な部分検知)**: entry **数**の増加のみを見る。既存 entry の §3-§6 **内容書換え**は
+ * 検知対象外 (md hash 化は durable noise が大きいため不採用)。完全検知でない点は将来拡張の余地。
+ */
+export function checkHandoverBypass(deps: HandoverDeps): string[] {
+  const warnings: string[] = [];
+  const pointer = readPointer(deps);
+  if (!pointer) return warnings; // 不在は checkHandoverDiscipline の「未生成」が担当
+  if (pointer.generated_by !== GENERATED_BY) {
+    warnings.push(
+      "handover bypass: CURRENT.json が ut-tdd handover 由来でない (手書き) → `ut-tdd handover` で生成し直す",
+    );
+    return warnings; // 手書き pointer の doc_entry_count は信頼できないので entry 照合は skip
+  }
+  if (pointer.latest_doc) {
+    const md = deps.readText(join(deps.repoRoot, pointer.latest_doc));
+    if (md && countHandoverEntries(md) > (pointer.doc_entry_count ?? 0)) {
+      warnings.push(
+        `handover bypass: ${pointer.latest_doc} が手書き追記されている (entry 数 mismatch) → \`ut-tdd handover\` で再生成`,
+      );
+    }
+  }
+  return warnings;
 }
 
 /**
@@ -376,7 +487,10 @@ function readPlanMeta(planId: string, deps: HandoverDeps): PlanMeta {
  * dry-run 非破壊 (written=[]) / 既存 md は追記 (上書きしない) / CURRENT.json は単一上書き。
  */
 export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverResult {
-  const scope = resolveHandoverScope(deps, { scopeToActive: args.scopeToActive });
+  const scope = resolveHandoverScope(deps, {
+    scopeToActive: args.scopeToActive,
+    scopeToSession: args.sessionId,
+  });
   const planMeta = scope.digests.map((d) => readPlanMeta(d.plan_id, deps));
   const doc = scaffoldFromDigests(scope.digests, planMeta, args.date);
   const content = renderHandoverScaffold(doc);
@@ -388,14 +502,18 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
     active_plan: args.planId ?? scope.active_plan,
     digests: scope.digests,
   };
-  const pointer = buildPointer(effectiveScope, docRel, status, deps.now());
+  // 追記後の最終 md (dryRun でも would-be 内容で entry 数を算出 = bypass 照合基準)。docAbs read は非破壊。
+  const existing = deps.readText(docAbs);
+  const next = existing ? `${existing.replace(/\s*$/, "")}\n\n---\n\n${content}\n` : `${content}\n`;
+  // IMP-078 gap①: generated_by 署名 + entry 数を刻む (手書き bypass を checkHandoverBypass が検知できる)。
+  const pointer: HandoverPointer = {
+    ...buildPointer(effectiveScope, docRel, status, deps.now()),
+    generated_by: GENERATED_BY,
+    doc_entry_count: countHandoverEntries(next),
+  };
 
   const written: string[] = [];
   if (!args.dryRun) {
-    const existing = deps.readText(docAbs);
-    const next = existing
-      ? `${existing.replace(/\s*$/, "")}\n\n---\n\n${content}\n`
-      : `${content}\n`;
     deps.writeText(docAbs, next);
     written.push(docRel);
     writePointer(pointer, deps);

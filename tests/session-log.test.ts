@@ -1,14 +1,19 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  activePlanStale,
+  activePlanUpdatedAt,
   compressPlanDigest,
+  onPostToolUse,
   onSessionStart,
   onStop,
   recordEvent,
   resolveActivePlan,
   type SessionEvent,
+  type SessionHookInput,
   type SessionLogDeps,
   sanitize,
+  setActivePlan,
 } from "../src/runtime/session-log";
 
 /** in-memory file store の mock deps (now 固定で決定論)。 */
@@ -174,5 +179,42 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
       },
     });
     expect(onSessionStart({ session_id: "s1" }, throwing)).toBe(0); // fail-open
+  });
+
+  // U-SLOG-006: IMP-078 gap② active-plan marker stale + gap③ commit hash 捕捉。
+  it("U-SLOG-006: setActivePlan は updated_at を 2 行目に刻み activePlanStale が検知 (1 行目は不変)", () => {
+    const deps = mockDeps();
+    setActivePlan("PLAN-L7-16-module-drift", deps);
+    // 1 行目 = plan_id (後方互換) / 2 行目 = updated_at
+    expect(resolveActivePlan(deps)).toBe("PLAN-L7-16-module-drift");
+    expect(activePlanUpdatedAt(deps)).toBe("2026-06-02T00:00:00.000Z");
+    // now が marker と同時刻 → not stale / 大きく進める → stale
+    expect(activePlanStale(deps, deps.now())).toBe(false);
+    expect(activePlanStale(deps, "2030-01-01T00:00:00Z", 24)).toBe(true);
+    // 旧形式 (timestamp 無し 1 行) → 判定不能 = false (後方互換、stale 扱いにしない)
+    deps.files.set(statePath, "PLAN-OLD");
+    expect(activePlanUpdatedAt(deps)).toBeNull();
+    expect(activePlanStale(deps, "2030-01-01T00:00:00Z")).toBe(false);
+  });
+
+  it("U-SLOG-006b: onPostToolUse の git commit は headCommit hash を commit event target に載せる (gap③)", () => {
+    const deps = mockDeps({ headCommit: () => "deadbee" });
+    deps.files.set(statePath, "PLAN-L7-16-module-drift");
+    const input: SessionHookInput = {
+      session_id: "s1",
+      tool_name: "Bash",
+      tool_input: { command: "git commit -m x" },
+    };
+    expect(onPostToolUse(input, deps)).toBe(0);
+    const log = deps.files.get(sessionPath("s1")) ?? "";
+    expect(log).toContain('"event_type":"commit"');
+    expect(log).toContain('"target":"deadbee"');
+    // headCommit 未提供なら target 無し (旧挙動、commits 汚染なし)
+    const deps2 = mockDeps();
+    deps2.files.set(statePath, "PLAN-L7-16-module-drift");
+    onPostToolUse(input, deps2);
+    const log2 = deps2.files.get(sessionPath("s1")) ?? "";
+    expect(log2).toContain('"event_type":"commit"');
+    expect(log2).not.toContain('"target"');
   });
 });

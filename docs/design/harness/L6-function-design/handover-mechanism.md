@@ -169,9 +169,23 @@ if (isCommit) {
 
 既存 `docs/handover/session-handover-*.md` の節構成 (現在地 / PLAN サマリ / 成果物 / Next Action / carry / 壊さない) と互換。
 
+## §2.7 品質増分 (IMP-078、PLAN-L6-16 add-design) — 5 gap の機能設計
+
+> 本機構を実 session で運用したところ 5 つの品質 gap (enforcement gap 含む) を検出 (PO 指摘「ハンドオーバーってこういう時に入らないの?」)。柱 2 (doc×機械厳格化) / 柱 3 (自動化で state 管理) に照らし、いずれも機械担保を増分する。
+
+| gap | 現象 | 機能設計 (機械担保) |
+|---|---|---|
+| **① 手書き bypass 検知不可** | `ut-tdd handover` を経ず手書きで markdown / CURRENT.json を更新しても discipline が素通り | `HandoverPointer.generated_by` 署名 + `doc_entry_count` を runHandover が刻む。`checkHandoverBypass(deps)` が ① 署名欠落 (手書き pointer) / ② md entry 数 > 記録値 (手書き追記) を surface (presence/stale/drift の `checkHandoverDiscipline` と責務分離) |
+| **② active-plan stale** | current-plan marker に時刻が無く、古い PLAN を active と誤解決 (例 L4-06) | current-plan 2 行目に `updated_at` を刻む (1 行目=plan_id は後方互換)。`activePlanUpdatedAt` / `activePlanStale` で鮮度判定し、checkHandoverDiscipline が「marker stale → 解決値が最新作業と乖離の恐れ」を surface |
+| **③ commits=0** | session-log が commit hash を捕捉せず digest_summary.commits が常に 0 | `SessionLogDeps.headCommit` (`git rev-parse --short HEAD`) を hook が供給。onPostToolUse の commit event target に実 hash を載せ、compressPlanDigest が commits へ集計 (未供給は旧挙動 = hash 無し) |
+| **④ §1-§2 session 非 scoped** | digest が session 横断で累積し、前 session の PLAN が §1-§2 に混入 | `resolveHandoverScope` に `scopeToSession` を追加し当該 session が触れた digest のみへ絞る (該当無しは全件 fallback)。`latestSessionId` が session jsonl 群から直近 session を推定、CLI `--scope-session` / `--session <id>` で指定 |
+| **⑤ unknown kind** | bare plan_id (commit 推定変種) で PLAN file 完全一致せず kind=`(unknown)` ゴースト | `readPlanMeta` が完全一致不在時に同 family の slug 付き正本 (`PLAN-L7-04-handover-mechanism.md`) を listDir で family 解決 (最長 slug を正本) |
+
+**配線**: `checkHandoverBypass` は Stop hook (session-log.ts) が `checkHandoverDiscipline` と併せて stderr surface (fail-open)。enforcement の hard 化 (doctor.ok 連動) は plan lint engine 実装時に検討 (現状 surface)。
+
 ## §3 ③ 単体テスト設計とのペア (G6 pair freeze 対象)
 
-generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007**。本書 §2.3 の 9 関数を被覆 (writePointer は U-HOVER-007 orchestration 経路、session-log amendment は U-HOVER-006 で被覆、孤児 0)。trace は G7 で双方向凍結。
+generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + §1.5 **U-SLOG-006** (active-plan stale / commit hash)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) を被覆 (孤児 0)。trace は G7 で双方向凍結。
 
 ## §4 carry / 次工程
 

@@ -69,6 +69,8 @@ export interface SessionLogDeps {
   listDir?: (dir: string) => string[];
   /** file 削除 (current-plan clear 用、PLAN-L7-04)。未提供時は空文字書込で代替。 */
   removeFile?: (path: string) => void;
+  /** 直近 commit hash (`git rev-parse HEAD`)。IMP-078 gap③: commit 捕捉を hook で供給。未提供→hash 無し。 */
+  headCommit?: () => string | null;
 }
 
 const BRANCH_PLAN_RE = /^(?:add|design|feature|reverse|hotfix|poc|refactor)\/(.+)$/;
@@ -123,13 +125,35 @@ function emptyDigest(planId: string): PlanDigest {
 
 /**
  * U-SLOG-001: state ファイル優先 → branch fallback → 解決不能は null。throw しない。
+ * current-plan は 1 行目 = plan_id (IMP-078 gap②で 2 行目に updated_at を追記、後方互換で 1 行目のみ読む)。
  */
 export function resolveActivePlan(deps: SessionLogDeps): string | null {
   const fromState = deps.readText(currentPlanPath(deps.repoRoot));
-  if (fromState?.trim()) return fromState.trim();
+  const firstLine = fromState?.split("\n")[0]?.trim();
+  if (firstLine) return firstLine;
   const branch = deps.currentBranch();
   const m = branch?.match(BRANCH_PLAN_RE);
   return m ? m[1] : null;
+}
+
+/** IMP-078 gap②: current-plan marker の 2 行目 (updated_at) を読む。無ければ null。 */
+export function activePlanUpdatedAt(deps: SessionLogDeps): string | null {
+  const raw = deps.readText(currentPlanPath(deps.repoRoot));
+  const second = raw?.split("\n")[1]?.trim();
+  return second || null;
+}
+
+/**
+ * IMP-078 gap②: current-plan marker が maxHours を超えて未更新なら stale (古い PLAN を active 誤判定する元)。
+ * updated_at 不在 (旧形式) は判定不能 = false (stale 扱いにしない、後方互換)。境界 (=maxHours) は stale でない。
+ */
+export function activePlanStale(deps: SessionLogDeps, now: string, maxHours = 24): boolean {
+  const u = activePlanUpdatedAt(deps);
+  if (!u) return false;
+  const uMs = Date.parse(u);
+  const nMs = Date.parse(now);
+  if (Number.isNaN(uMs) || Number.isNaN(nMs)) return false;
+  return (nMs - uMs) / 3_600_000 > maxHours;
 }
 
 function currentPlanPath(repoRoot: string): string {
@@ -148,7 +172,8 @@ const PLAN_ID_RE = /PLAN-(?:L(?:[0-9]|1[0-4])|DISCOVERY|REVERSE|RECOVERY|M)-\d{2
 export function setActivePlan(planId: string | null, deps: SessionLogDeps): void {
   const path = currentPlanPath(deps.repoRoot);
   if (planId !== null) {
-    deps.writeText(path, planId);
+    // IMP-078 gap②: 2 行目に updated_at を刻む (stale 検知用)。1 行目 = plan_id は不変 (後方互換)。
+    deps.writeText(path, `${planId}\n${deps.now()}`);
     return;
   }
   if (deps.removeFile) deps.removeFile(path);
@@ -253,8 +278,9 @@ export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): nu
         plan_id: resolveActivePlan(deps),
         event_type: isCommit ? "commit" : "tool_use",
         tool: input.tool_name,
-        // commit は hash 未取得 (取得可能時のみ commits へ。"Bash (bash)" 汚染を防ぐ、I-2)
-        target: isCommit ? undefined : summarize(input),
+        // IMP-078 gap③: commit は HEAD hash を捕捉 (deps.headCommit、PostToolUse は commit 完了後 = 新 HEAD)。
+        // hash 取得不能 (headCommit 未提供/null) なら undefined = 旧挙動 ("Bash (bash)" 汚染は避ける、I-2)。
+        target: isCommit ? (deps.headCommit?.() ?? undefined) : summarize(input),
         outcome: outcomeOf(input),
       },
       deps,
@@ -324,8 +350,15 @@ export function dispatch(
   return onPostToolUse(input, deps); // default = PostToolUse
 }
 
-/** hook entry 用の実 I/O deps (fail-open: I/O 例外は呼び出し側 try/catch が握る)。 */
-export function nodeDeps(repoRoot: string, gitBranch: () => string | null): SessionLogDeps {
+/**
+ * hook entry 用の実 I/O deps (fail-open: I/O 例外は呼び出し側 try/catch が握る)。
+ * gitHead (IMP-078 gap③): `git rev-parse HEAD` closure。未指定なら commit hash 捕捉なし (旧挙動)。
+ */
+export function nodeDeps(
+  repoRoot: string,
+  gitBranch: () => string | null,
+  gitHead?: () => string | null,
+): SessionLogDeps {
   return {
     repoRoot,
     now: () => new Date().toISOString(),
@@ -343,5 +376,6 @@ export function nodeDeps(repoRoot: string, gitBranch: () => string | null): Sess
     removeFile: (path) => {
       if (existsSync(path)) rmSync(path);
     },
+    headCommit: gitHead,
   };
 }

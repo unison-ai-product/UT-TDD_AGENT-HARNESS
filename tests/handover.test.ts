@@ -2,13 +2,17 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildPointer,
+  checkHandoverBypass,
   checkHandoverDiscipline,
+  countHandoverEntries,
   dedupeDigests,
+  GENERATED_BY,
   type HandoverDeps,
   type HandoverPointer,
   type HandoverScope,
   handoverStale,
   inferPlanFromCommit,
+  latestSessionId,
   type PlanDigestRef,
   readPointer,
   renderHandoverScaffold,
@@ -423,5 +427,119 @@ describe("U-HOVER-007 runHandover", () => {
     const pointer = JSON.parse(deps.files.get(pointerPath) ?? "{}");
     expect(pointer.status).toBe("completed");
     expect(pointer.active_plan).toBe("PLAN-L7-04-handover-mechanism");
+  });
+
+  // IMP-078 gap①: runHandover は generated_by 署名 + doc_entry_count を刻む。
+  it("gap①: runHandover が CURRENT.json に generated_by + doc_entry_count を刻む", () => {
+    const deps = seeded();
+    const r = runHandover({ date: "2026-06-08", complete: true }, deps);
+    expect(r.pointer.generated_by).toBe(GENERATED_BY);
+    expect(r.pointer.doc_entry_count).toBe(1); // 新規 md = entry 1
+  });
+
+  // IMP-078 gap⑤: bare plan_id digest でも slug PLAN file を family 解決し kind を埋める。
+  it("gap⑤: bare plan_id の digest を slug PLAN file へ family 解決し kind を埋める (unknown 防止)", () => {
+    const deps = mockDeps();
+    deps.files.set(currentPlanPath, "PLAN-L7-16-module-drift");
+    deps.files.set(
+      join(digestDir, "PLAN-L7-16.digest.json"),
+      JSON.stringify(digest({ plan_id: "PLAN-L7-16", sessions: ["s1"] })),
+    );
+    deps.files.set(
+      join("/repo", "docs", "plans", "PLAN-L7-16-module-drift.md"),
+      '---\nplan_id: PLAN-L7-16-module-drift\nkind: add-impl\ntitle: "X"\n---\n',
+    );
+    const r = runHandover({ date: "2026-06-08", dryRun: true }, deps);
+    expect(r.content).toContain("(add-impl)"); // unknown でなく実 kind
+  });
+});
+
+describe("U-HOVER-011 checkHandoverBypass (IMP-078 gap①)", () => {
+  const docRel = join("docs", "handover", "x.md");
+  function pointerJson(over: Record<string, unknown> = {}): string {
+    return JSON.stringify({
+      active_plan: "P",
+      status: "completed",
+      latest_doc: docRel,
+      digest_summary: null,
+      updated_at: NOW,
+      ...over,
+    });
+  }
+
+  it("generated_by 無し pointer → 手書き bypass warn", () => {
+    const deps = mockDeps();
+    deps.files.set(pointerPath, pointerJson()); // generated_by 欠落
+    const w = checkHandoverBypass(deps);
+    expect(w.some((m) => m.includes("bypass"))).toBe(true);
+  });
+
+  it("generated_by 一致 + entry 数一致 → 警告ゼロ", () => {
+    const deps = mockDeps();
+    deps.files.set(join("/repo", docRel), "# Session Handover — 2026-06-08\n");
+    deps.files.set(pointerPath, pointerJson({ generated_by: GENERATED_BY, doc_entry_count: 1 }));
+    expect(checkHandoverBypass(deps)).toEqual([]);
+  });
+
+  it("entry 数 mismatch (手書き追記) → bypass warn", () => {
+    const deps = mockDeps();
+    deps.files.set(
+      join("/repo", docRel),
+      "# Session Handover — a\n\n---\n\n# Session Handover — b\n",
+    );
+    deps.files.set(pointerPath, pointerJson({ generated_by: GENERATED_BY, doc_entry_count: 1 }));
+    const w = checkHandoverBypass(deps);
+    expect(w.some((m) => m.includes("mismatch"))).toBe(true);
+  });
+
+  it("pointer 不在 → 警告ゼロ (discipline 担当)", () => {
+    expect(checkHandoverBypass(mockDeps())).toEqual([]);
+  });
+
+  it("countHandoverEntries: `# Session Handover` 見出し数を数える / null→0", () => {
+    expect(countHandoverEntries("# Session Handover — a\n# Session Handover — b")).toBe(2);
+    expect(countHandoverEntries(null)).toBe(0);
+  });
+});
+
+describe("U-HOVER-012 session scope + latestSessionId (IMP-078 gap④)", () => {
+  const sessionDir = join("/repo", ".ut-tdd", "logs", "session");
+
+  it("scopeToSession: 指定 session が触れた digest のみへ絞る", () => {
+    const deps = mockDeps();
+    deps.files.set(
+      join(digestDir, "PLAN-L7-16-module-drift.digest.json"),
+      JSON.stringify(digest({ plan_id: "PLAN-L7-16-module-drift", sessions: ["s2"] })),
+    );
+    deps.files.set(
+      join(digestDir, "PLAN-L7-05-biome-debt.digest.json"),
+      JSON.stringify(digest({ plan_id: "PLAN-L7-05-biome-debt", sessions: ["s1"] })),
+    );
+    const scope = resolveHandoverScope(deps, { scopeToSession: "s2" });
+    expect(scope.digests).toHaveLength(1);
+    expect(scope.digests[0].plan_id).toBe("PLAN-L7-16-module-drift");
+  });
+
+  it("scopeToSession: 該当 digest 無し → 全件 fallback (空 handover 回避)", () => {
+    const deps = mockDeps();
+    deps.files.set(
+      join(digestDir, "PLAN-L7-05-biome-debt.digest.json"),
+      JSON.stringify(digest({ plan_id: "PLAN-L7-05-biome-debt", sessions: ["s1"] })),
+    );
+    expect(resolveHandoverScope(deps, { scopeToSession: "sX" }).digests).toHaveLength(1);
+  });
+
+  it("latestSessionId: 最新 event ts の session を返す / 不在→null", () => {
+    const deps = mockDeps();
+    expect(latestSessionId(deps)).toBeNull();
+    deps.files.set(
+      join(sessionDir, "s1.jsonl"),
+      '{"ts":"2026-06-08T01:00:00Z","session_id":"s1"}\n',
+    );
+    deps.files.set(
+      join(sessionDir, "s2.jsonl"),
+      '{"ts":"2026-06-08T05:00:00Z","session_id":"s2"}\n',
+    );
+    expect(latestSessionId(deps)).toBe("s2");
   });
 });

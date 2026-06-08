@@ -4,12 +4,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type HandoverPointer, handoverStale } from "../handover/index";
 import { analyzeBackfill, backfillMessages, loadBackfillDocs } from "../lint/backfill-pairing";
+import { analyzeModuleDrift, loadModuleDocs, moduleDriftMessages } from "../lint/module-drift";
 import { analyzePropagation, loadPropagationDocs, propagationMessages } from "../lint/propagation";
 import {
   analyzeReviewEvidence,
   loadReviewPlans,
   reviewEvidenceMessages,
 } from "../lint/review-evidence";
+import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lint/rule-drift";
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
 import type { LintResult } from "../plan/lint";
 import {
@@ -152,6 +154,29 @@ export function checkReviewEvidence(repoRoot: string): { messages: string[]; ok:
 }
 
 /**
+ * architecture §3.1 設計 module 集合 ⊇ src/ 実在 module を検査 (IMP-075、warn-first)。
+ * 実在するが設計 doc 未列挙 (= impl→design back-fill 漏れ、A-103 で手動発見した meta-drift) を warn する。
+ * doctor.ok は落とさない (初期投入、hard 化は実 repo green 安定後)。I/O 失敗は skip (堅牢性維持)。
+ */
+export function checkModuleDrift(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeModuleDrift(loadModuleDocs(repoRoot));
+    return { messages: moduleDriftMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["module-drift — note: architecture.md / src を読めず検査 skip"], ok: true };
+  }
+}
+
+export function checkRuleDrift(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeRuleDrift(loadRuleAdapterDocs(repoRoot));
+    return { messages: ruleDriftMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["rule-drift — note: adapter rule docs を読めず検査 skip"], ok: true };
+  }
+}
+
+/**
  * V-model 層群の Forward freeze 完了 (検証サイクル発火タイミング) を surface (IMP-068、note)。
  * 層群が freeze 完了 → 検証発火可 / Forward 進行中。検証ロードマップの「いつ検証するか」を
  * V-model 構造 (層群 freeze) で機械発火させる全体調整。doctor.ok は落とさない (タイミング surface)。
@@ -197,8 +222,11 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const reviewEvidence = checkReviewEvidence(deps.repoRoot);
   // pair-freeze は warn-first (初期投入、ok 連動しない。hard 化は実 repo green 安定後)。
   const pairFreeze = checkPairFreeze(deps.repoRoot);
+  // module-drift は warn-first (impl→design back-fill 漏れ surface、IMP-075。hard 化は段階)。
+  const moduleDrift = checkModuleDrift(deps.repoRoot);
+  const ruleDrift = checkRuleDrift(deps.repoRoot);
   return {
-    ok: backfill.ok && scrumRev.ok && propagation.ok && reviewEvidence.ok,
+    ok: backfill.ok && scrumRev.ok && propagation.ok && reviewEvidence.ok && ruleDrift.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
       checkHandover(deps),
@@ -207,6 +235,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...scrumRev.messages.map((m) => `doctor: ${m}`),
       ...propagation.messages.map((m) => `doctor: ${m}`),
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
+      ...moduleDrift.messages.map((m) => `doctor: ${m}`),
+      ...ruleDrift.messages.map((m) => `doctor: ${m}`),
       ...reviewEvidence.messages.map((m) => `doctor: ${m}`),
       ...checkVerificationGroups(deps.repoRoot).map((m) => `doctor: ${m}`),
       "doctor: scaffold stub (横断検出 relation-graph / drift / regression は後続 PLAN)",

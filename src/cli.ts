@@ -4,12 +4,14 @@
  * 薄い OS 別 entrypoint (scripts/ut-tdd, ut-tdd.ps1) が本 core を呼ぶ。
  * 現状は scaffold: status / doctor は最小実装、plan/vmodel lint は stub。
  */
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { Command } from "commander";
 import { runDoctor } from "./doctor";
-import { nodeHandoverDeps, runHandover, setActivePlanCli } from "./handover/index";
+import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
+import { latestSessionId, nodeHandoverDeps, runHandover, setActivePlanCli } from "./handover/index";
 import { lintPlan } from "./plan/lint";
+import { type AdapterProvider, buildAdapterPlan } from "./runtime/adapter";
 import { detectMode } from "./runtime/detect";
 import {
   type ClassifyResult,
@@ -18,8 +20,15 @@ import {
   pendingRecoveryProposals,
   recordFeedback,
 } from "./runtime/forced-stop";
+import {
+  nodeProviderHandoverDeps,
+  type ProviderRuntime,
+  readProviderHandoverCurrent,
+  runProviderHandover,
+} from "./runtime/provider-handover";
 import { nodeDeps, resolveActivePlan } from "./runtime/session-log";
 import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
+import { loadTeamDefinition, validateTeamRun } from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
 
 function gitBranch(): string | null {
@@ -94,7 +103,7 @@ plan
     process.stdout.write(opts.clear ? "current-plan: cleared\n" : `current-plan: ${id}\n`);
   });
 
-program
+const handover = program
   .command("handover")
   .description(
     "session-log PLAN digest から handover を生成 (機械ポインタ CURRENT.json + 人間判断 markdown scaffold、要件 §6.8.5)",
@@ -103,16 +112,35 @@ program
   .option("--complete", "status=completed として記録 (PLAN 完了時)")
   .option("--plan <id>", "明示 active PLAN (省略時 current-plan/branch から解決)")
   .option("--scope-active", "§1-§2 を active plan family の digest のみへ絞る (IMP-048 ノイズ低減)")
+  .option(
+    "--scope-session",
+    "§1-§2 を直近 session が触れた digest のみへ絞る (IMP-078 gap④ 前 session 混入排除)",
+  )
+  .option(
+    "--session <id>",
+    "session scope に使う session_id を明示 (省略時 --scope-session で直近を推定)",
+  )
   .action(
-    (opts: { dryRun?: boolean; complete?: boolean; plan?: string; scopeActive?: boolean }) => {
+    (opts: {
+      dryRun?: boolean;
+      complete?: boolean;
+      plan?: string;
+      scopeActive?: boolean;
+      scopeSession?: boolean;
+      session?: string;
+    }) => {
       const date = new Date().toISOString().slice(0, 10);
       const deps = nodeHandoverDeps(process.cwd());
+      // IMP-078 gap④: --session 明示 > --scope-session 推定 (latestSessionId) > なし。
+      const sessionId =
+        opts.session ?? (opts.scopeSession ? (latestSessionId(deps) ?? undefined) : undefined);
       const r = runHandover(
         {
           date,
           dryRun: Boolean(opts.dryRun),
           complete: Boolean(opts.complete),
           scopeToActive: Boolean(opts.scopeActive),
+          ...(sessionId ? { sessionId } : {}),
           ...(opts.plan ? { planId: opts.plan } : {}),
         },
         deps,
@@ -125,6 +153,77 @@ program
     },
   );
 
+const providerHandover = handover.command("provider").description("Claude/Codex provider handover");
+providerHandover
+  .command("export")
+  .description("write provider handover package under .ut-tdd/handover/provider")
+  .requiredOption("--from <runtime>", "claude or codex")
+  .requiredOption("--to <runtime>", "claude or codex")
+  .requiredOption("--summary <text>", "handover context summary")
+  .option("--plan <id>", "active PLAN (defaults to current-plan/branch resolution)")
+  .option("--budget <text>", "budget or constraint summary")
+  .option("--next-action <text...>", "next actions")
+  .option("--file <path...>", "relevant files")
+  .option("--dry-run", "do not write files")
+  .action(
+    (opts: {
+      from: ProviderRuntime;
+      to: ProviderRuntime;
+      summary: string;
+      plan?: string;
+      budget?: string;
+      nextAction?: string[];
+      file?: string[];
+      dryRun?: boolean;
+    }) => {
+      const planId = opts.plan ?? resolveActivePlan(nodeDeps(process.cwd(), gitBranch));
+      if (!planId) {
+        process.stderr.write("provider handover requires --plan or active current-plan\n");
+        process.exitCode = 1;
+        return;
+      }
+      try {
+        const result = runProviderHandover(
+          {
+            from: opts.from,
+            to: opts.to,
+            activePlan: planId,
+            budget: opts.budget ?? null,
+            summary: opts.summary,
+            nextActions: opts.nextAction ?? [],
+            files: opts.file ?? [],
+            dryRun: Boolean(opts.dryRun),
+          },
+          nodeProviderHandoverDeps(process.cwd()),
+        );
+        process.stdout.write(`${JSON.stringify(result.package, null, 2)}\n`);
+        for (const w of result.written) process.stdout.write(`  + ${w}\n`);
+      } catch (e) {
+        process.stderr.write(`${String(e)}\n`);
+        process.exitCode = 1;
+      }
+    },
+  );
+
+providerHandover
+  .command("status")
+  .description("show latest provider handover package")
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const current = readProviderHandoverCurrent(nodeProviderHandoverDeps(process.cwd()));
+    if (!current) {
+      process.stderr.write("provider handover: CURRENT.json not found\n");
+      process.exitCode = 1;
+      return;
+    }
+    if (opts.json) process.stdout.write(`${JSON.stringify(current, null, 2)}\n`);
+    else {
+      process.stdout.write(
+        `provider handover: ${current.handover_id} ${current.from}->${current.to} plan=${current.active_plan}\n`,
+      );
+    }
+  });
+
 const vmodel = program.command("vmodel").description("V-model trace");
 vmodel
   .command("lint [path]")
@@ -134,6 +233,123 @@ vmodel
     for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
   });
+
+function runtimeCommand(provider: AdapterProvider): Command {
+  return program
+    .command(provider)
+    .description(`${provider} runtime adapter command`)
+    .requiredOption("--role <role>", "delegation role")
+    .requiredOption("--task <text>", "task text")
+    .option("--plan <id>", "PLAN id")
+    .option("--execute", "execute provider CLI instead of dry-run")
+    .option("--json", "JSON output")
+    .action(
+      (opts: { role: string; task: string; plan?: string; execute?: boolean; json?: boolean }) => {
+        const mode = detectMode().mode;
+        const plan = buildAdapterPlan(
+          {
+            provider,
+            role: opts.role,
+            task: opts.task,
+            planId: opts.plan,
+            execute: Boolean(opts.execute),
+          },
+          mode,
+        );
+        if (!plan.available) {
+          process.stderr.write(`${plan.messages.join("\n")}\n`);
+          process.exitCode = 1;
+          return;
+        }
+        if (opts.json || !opts.execute) {
+          process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
+          return;
+        }
+        const child = spawnSync(plan.command, plan.args, { stdio: "inherit" });
+        process.exitCode = child.status ?? 1;
+      },
+    );
+}
+
+runtimeCommand("codex");
+runtimeCommand("claude");
+
+program
+  .command("gate <id>")
+  .description("mode-aware gate review-tier check")
+  .option("--mode <mode>", "override execution mode for tests")
+  .option("--review-kind <kind>", "cross_agent / intra_runtime_subagent / human")
+  .option("--worker-model <model>", "worker provider/model id")
+  .option("--reviewer-model <model>", "reviewer provider/model id")
+  .option("--checklist <path>", "YAML checklist evidence for single-runtime review")
+  .option("--human-approved", "standalone human approval evidence")
+  .option("--json", "JSON output")
+  .action(
+    (
+      id: string,
+      opts: {
+        mode?: ReturnType<typeof detectMode>["mode"];
+        reviewKind?: "cross_agent" | "intra_runtime_subagent" | "human";
+        workerModel?: string;
+        reviewerModel?: string;
+        checklist?: string;
+        humanApproved?: boolean;
+        json?: boolean;
+      },
+    ) => {
+      const mode = opts.mode ?? detectMode().mode;
+      const result = evaluateGateReview({
+        gate: id,
+        mode,
+        reviewKind: opts.reviewKind,
+        workerModel: opts.workerModel,
+        reviewerModel: opts.reviewerModel,
+        checklist: loadReviewChecklistIfPresent(opts.checklist),
+        humanApproved: Boolean(opts.humanApproved),
+      });
+      if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else {
+        process.stdout.write(
+          `gate ${id}: ${result.passed ? "passed" : "failed"} mode=${result.mode} review=${result.review_kind ?? "-"} cross_agent_review=${result.cross_agent_review}\n`,
+        );
+        for (const m of result.messages) process.stdout.write(`  - ${m}\n`);
+      }
+      process.exitCode = result.passed ? 0 : 1;
+    },
+  );
+
+const team = program.command("team").description("team orchestration");
+team
+  .command("run")
+  .description("validate and plan a hybrid team run")
+  .requiredOption("--definition <path>", "team definition YAML")
+  .option("--mode <mode>", "override execution mode for tests")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      definition: string;
+      mode?: ReturnType<typeof detectMode>["mode"];
+      json?: boolean;
+    }) => {
+      try {
+        const mode = opts.mode ?? detectMode().mode;
+        const definition = loadTeamDefinition(opts.definition);
+        const result = validateTeamRun(definition, mode);
+        const output = { team: definition.name, strategy: definition.strategy, ...result };
+        if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+        else {
+          process.stdout.write(
+            `team ${definition.name}: ${result.ok ? "ok" : "failed"} mode=${mode}\n`,
+          );
+          for (const m of result.messages) process.stdout.write(`  - ${m}\n`);
+        }
+        process.exitCode = result.ok ? 0 : 1;
+      } catch (e) {
+        process.stderr.write(`${String(e)}\n`);
+        process.exitCode = 1;
+      }
+    },
+  );
 
 const feedback = program
   .command("feedback")

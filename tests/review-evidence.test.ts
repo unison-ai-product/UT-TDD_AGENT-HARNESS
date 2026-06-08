@@ -3,9 +3,9 @@ import {
   analyzeReviewEvidence,
   extractReviewEntries,
   hasReviewEvidence,
+  loadReviewPlans,
   type ParsedReviewPlan,
   parseReviewPlan,
-  loadReviewPlans,
 } from "../src/lint/review-evidence";
 
 /** review-evidence lint (IMP-071 presence + IMP-076 cross-review semantic) — review 前置証跡の機械強制。 */
@@ -39,7 +39,9 @@ describe("review-evidence lint (review 前置の機械強制、IMP-071)", () => 
   });
 
   it("U-REVIEW-003: confirmed の design/impl 系で evidence 無し → missing + ok=false", () => {
-    const r = analyzeReviewEvidence([plan({ plan_id: "PLAN-L4-09-x", kind: "design", hasEvidence: false })]);
+    const r = analyzeReviewEvidence([
+      plan({ plan_id: "PLAN-L4-09-x", kind: "design", hasEvidence: false }),
+    ]);
     expect(r.missing).toEqual([{ plan_id: "PLAN-L4-09-x", kind: "design" }]);
     expect(r.ok).toBe(false);
   });
@@ -110,19 +112,33 @@ describe("cross-review semantic 強制 (IMP-076)", () => {
     const r = analyzeReviewEvidence([
       plan({
         plan_id: "PLAN-B",
-        crossEntries: [{ review_kind: "cross_agent", worker_model: "claude-opus-4-8", reviewer_model: "claude-opus-4-8" }],
+        crossEntries: [
+          {
+            review_kind: "cross_agent",
+            worker_model: "claude-opus-4-8",
+            reviewer_model: "claude-opus-4-8",
+          },
+        ],
         hasEvidence: true,
       }),
     ]);
-    expect(r.crossReviewViolations).toEqual([{ plan_id: "PLAN-B", reason: "same_model_or_missing" }]);
+    expect(r.crossReviewViolations).toEqual([
+      { plan_id: "PLAN-B", reason: "same_model_or_missing" },
+    ]);
     expect(r.ok).toBe(false);
   });
 
   it("U-XREVIEW-003: cross_agent で model 欠落 → violation (単体 runtime は相異 model を供給できない=僭称を弾く)", () => {
     const r = analyzeReviewEvidence([
-      plan({ plan_id: "PLAN-C", crossEntries: [{ review_kind: "cross_agent" }], hasEvidence: true }),
+      plan({
+        plan_id: "PLAN-C",
+        crossEntries: [{ review_kind: "cross_agent" }],
+        hasEvidence: true,
+      }),
     ]);
-    expect(r.crossReviewViolations).toEqual([{ plan_id: "PLAN-C", reason: "same_model_or_missing" }]);
+    expect(r.crossReviewViolations).toEqual([
+      { plan_id: "PLAN-C", reason: "same_model_or_missing" },
+    ]);
     expect(r.ok).toBe(false);
   });
 
@@ -176,7 +192,9 @@ describe("test→review 順序強制 (IMP-077)", () => {
     const r = analyzeReviewEvidence([
       plan({
         plan_id: "PLAN-T1",
-        crossEntries: [{ review_kind: "human", reviewed_at: "2026-06-05", tests_green_at: "2026-06-04" }],
+        crossEntries: [
+          { review_kind: "human", reviewed_at: "2026-06-05", tests_green_at: "2026-06-04" },
+        ],
         hasEvidence: true,
       }),
     ]);
@@ -188,11 +206,19 @@ describe("test→review 順序強制 (IMP-077)", () => {
     const r = analyzeReviewEvidence([
       plan({
         plan_id: "PLAN-T2",
-        crossEntries: [{ review_kind: "intra_runtime_subagent", reviewed_at: "2026-06-05", tests_green_at: "2026-06-06" }],
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-06-05",
+            tests_green_at: "2026-06-06",
+          },
+        ],
         hasEvidence: true,
       }),
     ]);
-    expect(r.testBeforeReviewViolations).toEqual([{ plan_id: "PLAN-T2", reason: "review_before_test" }]);
+    expect(r.testBeforeReviewViolations).toEqual([
+      { plan_id: "PLAN-T2", reason: "review_before_test" },
+    ]);
     expect(r.ok).toBe(false);
   });
 
@@ -204,7 +230,9 @@ describe("test→review 順序強制 (IMP-077)", () => {
         hasEvidence: true,
       }),
     ]);
-    expect(r.testBeforeReviewViolations).toEqual([{ plan_id: "PLAN-T3", reason: "missing_tests_green_at" }]);
+    expect(r.testBeforeReviewViolations).toEqual([
+      { plan_id: "PLAN-T3", reason: "missing_tests_green_at" },
+    ]);
     expect(r.ok).toBe(false);
   });
 
@@ -213,11 +241,19 @@ describe("test→review 順序強制 (IMP-077)", () => {
       plan({
         plan_id: "PLAN-T4",
         kind: "reverse",
-        crossEntries: [{ review_kind: "intra_runtime_subagent", reviewed_at: "2026-06-05", tests_green_at: "2026-06-06" }],
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-06-05",
+            tests_green_at: "2026-06-06",
+          },
+        ],
         hasEvidence: true,
       }),
     ]);
-    expect(r.testBeforeReviewViolations).toEqual([{ plan_id: "PLAN-T4", reason: "review_before_test" }]);
+    expect(r.testBeforeReviewViolations).toEqual([
+      { plan_id: "PLAN-T4", reason: "review_before_test" },
+    ]);
     expect(r.ok).toBe(false);
   });
 
