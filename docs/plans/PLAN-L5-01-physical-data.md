@@ -48,35 +48,53 @@ data.md の 5 集約 + state schema (§8) を **永続化レベルの物理 sche
 - 業界標準: D-DB (物理データ設計) / DbC (state invariant の物理表現)
 - L5 carry: IMP-026 (VALID_SUB_DOCS の zod enum 化 = SubDoc 値オブジェクトの物理化)
 
-## §3 設計計画 (Step 1〜8)
+## §3 工程表 (Step + 進捗)
 
-### Step 1: state file レイアウト
+### Step 1: [直列] state file レイアウト
+> 直列理由: downstream_dependency — file レイアウトが後続 schema / zod 対応の入力になるため。
 `.ut-tdd/` 配下の物理ディレクトリ/ファイル構成 (plan_registry / artifact / trace / phase.yaml / mode.yaml / handover / audit / drive 別区画) を確定。
 
-### Step 2: 集約別 物理 schema (JSON フィールド)
+### Step 2: [直列] 集約別 物理 schema (JSON フィールド)
+> 直列理由: downstream_dependency — Step 1 の配置に基づいて file ごとの schema を定義するため。
 5 集約 (Plan/Artifact/Workflow/Handover/Evaluation) ごとに state file の JSON フィールド (名前・型・必須/任意・default・制約)。
 
-### Step 3: 値オブジェクトの物理表現
+### Step 3: [直列] 値オブジェクトの物理表現
+> 直列理由: downstream_dependency — Step 2 の schema に埋め込む値オブジェクト表現を決めるため。
 data.md §3 の 12 値オブジェクトを物理 (enum string / ID パターン) で表現。SubDoc の zod enum 化 (IMP-026) を含む。
 
-### Step 4: ID 採番 / index / 参照整合
+### Step 4: [直列] ID 採番 / index / 参照整合
+> 直列理由: downstream_dependency — Step 2/3 の物理表現を前提に参照整合を設計するため。
 ID 規約 (data.md §4) の物理採番 (連番/timestamp) + 集約間参照 (ID 参照) の物理整合方針 (孤児検出)。
 
-### Step 5: zod スキーマ対応
+### Step 5: [直列] zod スキーマ対応
+> 直列理由: downstream_dependency — Step 2〜4 の物理 schema を `src/schema` に写像するため。
 各 state file ↔ `src/schema` zod スキーマの 1:1 対応表。読込時 validate / 書込時の型保証。
 
-### Step 6: drive 別区画 (FR-L1-40)
+### Step 6: [直列] drive 別区画 (FR-L1-40)
+> 直列理由: downstream_dependency — Step 1〜5 の state 方針を drive partition へ拡張するため。
 `.ut-tdd/drive/<drive>/` の物理区画 schema + skip_sub_doc 機械強制の物理表現。
 
-### Step 7: 不変条件の物理検証点
+### Step 7: [直列] 不変条件の物理検証点
+> 直列理由: downstream_dependency — Step 2〜6 の schema と区画に対して不変条件を置くため。
 data.md §6 不変条件を物理 schema レベルで検証する点 (zod superRefine / doctor check)。
 
-### Step 8: carry → L7 実装
+### Step 8: [直列] carry → L7 実装
+> 直列理由: downstream_dependency — Step 1〜7 の物理 schema を実装 carry に変換するため。
 物理 schema → `src/schema` 実装 (zod 定義追加) / `ut-tdd doctor check_business_entity_coverage` への carry。
+
+### Step 9: [直列] review
+> 直列理由: downstream_dependency — Step 1〜8 と L8 IT-STATE 粒度の整合を確認してから review するため。
+self / pmo-sonnet / TL reviewer のいずれかで、D-DB 粒度・state 検証点・L8 IT-STATE の対称性を確認する。
+
+## §3.1 実装計画
+
+- L5 では `physical-data.md` の物理 schema 記述を更新し、runtime 実装は行わない。
+- L6/L7 で zod schema / state loader / doctor 検査へ落とす。
+- G5 再 freeze は Step 9 review と L8 IT-STATE 詳細粒度の監査後に行う。
 
 ## §4 受入条件 / DoD
 
-- [x] Step 1〜8 のすべてが `physical-data.md` に存在
+- [x] Step 1〜9 のすべてが `physical-data.md` に存在
 - [x] 5 集約の物理 schema (JSON フィールド型/必須任意/default) が存在
 - [x] 12 値オブジェクトの物理表現 + SubDoc zod 化方針 (IMP-026) が存在
 - [x] state file ↔ `src/schema` zod 1:1 対応表が存在
