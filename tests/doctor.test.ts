@@ -1,15 +1,32 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkAgentSlots, checkHandover, type DoctorDeps, runDoctor } from "../src/doctor/index";
+import {
+  checkAgentSlots,
+  checkHandover,
+  checkHandoverDisciplineMessages,
+  type DoctorDeps,
+  runDoctor,
+} from "../src/doctor/index";
 import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots";
 
 const NOW = "2026-06-04T00:00:00.000Z";
 const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
 const slotStatePath = join("/repo", ".ut-tdd", "state", "agent-slots.json");
+const currentPlanPath = join("/repo", ".ut-tdd", "state", "current-plan");
+const digestDir = join("/repo", ".ut-tdd", "logs", "plan");
 
 function deps(over: Partial<DoctorDeps> & { files?: Map<string, string> } = {}): DoctorDeps {
   const files = over.files ?? new Map<string, string>();
-  return { repoRoot: "/repo", now: NOW, readText: (p) => files.get(p) ?? null, ...over };
+  return {
+    repoRoot: "/repo",
+    now: NOW,
+    readText: (p) => files.get(p) ?? null,
+    listDir: (dir) =>
+      [...files.keys()]
+        .filter((k) => k.startsWith(`${dir}/`) || k.startsWith(`${dir}\\`))
+        .map((k) => k.slice(dir.length + 1)),
+    ...over,
+  };
 }
 
 describe("checkHandover (doctor handover staleness surface)", () => {
@@ -46,6 +63,59 @@ describe("checkHandover (doctor handover staleness surface)", () => {
     const files = new Map([[pointerPath, "{not json"]]);
     expect(() => checkHandover(deps({ files }))).not.toThrow();
     expect(checkHandover(deps({ files }))).toContain("壊れて");
+  });
+});
+
+describe("checkHandoverDisciplineMessages", () => {
+  it("fresh CURRENT 縺ｧ繧・current-plan/digest 縺ｨ active_plan 縺後★繧後※縺・ｌ縺ｰ drift 繧・surface", () => {
+    const files = new Map([
+      [currentPlanPath, "PLAN-L5-08-harness-db-feedback\n2026-06-03T23:50:00.000Z"],
+      [
+        join(digestDir, "PLAN-L5-08-harness-db-feedback.digest.json"),
+        JSON.stringify({
+          plan_id: "PLAN-L5-08-harness-db-feedback",
+          sessions: ["s1"],
+          commits: [],
+          files_touched: ["docs/plans/PLAN-L5-08-harness-db-feedback.md"],
+          failures: [],
+          updated_at: "2026-06-03T23:55:00.000Z",
+        }),
+      ],
+      [
+        pointerPath,
+        JSON.stringify({
+          active_plan: "PLAN-L5-00-master",
+          status: "completed",
+          latest_doc: null,
+          digest_summary: { commits: 0, files: 0, failures: 0 },
+          updated_at: "2026-06-03T23:59:00.000Z",
+          generated_by: "ut-tdd-handover",
+          doc_entry_count: 0,
+        }),
+      ],
+    ]);
+    const messages = checkHandoverDisciplineMessages(deps({ files }));
+    expect(messages.some((m) => m.includes("drift"))).toBe(true);
+  });
+
+  it("runDoctor 縺・handover discipline 繧・warning-only 縺ｧ蜷梧凾 surface 縺吶ｋ", () => {
+    const files = new Map([
+      [currentPlanPath, "PLAN-L5-08-harness-db-feedback\n2026-06-03T23:50:00.000Z"],
+      [
+        join(digestDir, "PLAN-L5-08-harness-db-feedback.digest.json"),
+        JSON.stringify({
+          plan_id: "PLAN-L5-08-harness-db-feedback",
+          sessions: ["s1"],
+          commits: [],
+          files_touched: ["docs/plans/PLAN-L5-08-harness-db-feedback.md"],
+          failures: [],
+          updated_at: "2026-06-03T23:55:00.000Z",
+        }),
+      ],
+    ]);
+    const r = runDoctor(deps({ files }));
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("handover-discipline"))).toBe(true);
   });
 });
 
