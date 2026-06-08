@@ -47,7 +47,7 @@ L4 Master (`PLAN-L4-00-master`) §2 の ① 必須 sub-doc「data」を詳細化
 
 ## §1 目的
 
-L1 §10.1 で列挙した業務 entity 12 件 (plan/gate/artifact/pair/mode/drive/agent_slot/handover/sprint/phase/carry/trace) を **L4 基本設計レベルのドメインモデル**へ詳細化し、`.ut-tdd/` file-based state schema (SQLite 不採用、ADR-001) と既存 `src/schema/index.ts` の設計裏付けを確定する。
+L1 §10.1 で列挙した業務 entity 12 件 (plan/gate/artifact/pair/mode/drive/agent_slot/handover/sprint/phase/carry/trace) を **L4 基本設計レベルのドメインモデル**へ詳細化し、`.ut-tdd/` YAML/JSON state schema + `.ut-tdd/harness.db` SQLite projection feedback DB (ADR-001) と既存 `src/schema/index.ts` の設計裏付けを確定する。
 
 ## §2 背景
 
@@ -79,7 +79,7 @@ PLAN-L<N>-<NN>-slug / FR-L1-NN / AC-FR-NN-NN / IMP-NNN 等の ID 採番規約を
 集約をまたぐ整合 (例: artifact.trace ↔ plan.generates、pair_artifact 双方向)。eventual/immediate の別を明示。
 
 ### Step 8: state schema (`.ut-tdd/`) + src/schema 突合
-file-based state のディレクトリ/ファイル schema を定義し、`src/schema/index.ts` の既存 enum と齟齬がないか突合 (doctor check_business_entity_coverage の検証対象を確定)。
+YAML/JSON state のディレクトリ/ファイル schema と SQLite projection table を定義し、`src/schema/index.ts` の既存 enum と齟齬がないか突合 (doctor check_business_entity_coverage / vmodel lint の検証対象を確定)。
 
 ## §4 受入条件 / DoD
 
@@ -95,7 +95,7 @@ file-based state のディレクトリ/ファイル schema を定義し、`src/s
 ## §5 関連 PLAN / ADR / docs
 
 - 関連 PLAN: 親 = PLAN-L4-00-master / 後続 = PLAN-L4-02-architecture (data を building block に配置)
-- 関連 ADR: ADR-001 (TS/Bun + file-based state、SQLite 不採用)
+- 関連 ADR: ADR-001 (TS/Bun + YAML/JSON state + SQLite projection DB)
 - 参照 docs: document-system-map.md §3 (DbC) / business-requirements.md §10 / src/schema/index.ts
 
 ## §6 用語更新 (living glossary delta)

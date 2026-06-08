@@ -14,7 +14,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 # UT-TDD Agent Harness — L4 基本設計: データ設計 / ドメインモデル
 
-L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-L4-01-data)。永続化は `.ut-tdd/` file-based state (SQLite 不採用、ADR-001)。値オブジェクトは `src/schema/index.ts` の zod enum と 1:1。
+L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-L4-01-data)。永続化は `.ut-tdd/` YAML/JSON state と `.ut-tdd/harness.db` SQLite projection DB の二層 (ADR-001)。値オブジェクトは `src/schema/index.ts` の zod enum と 1:1。
 
 ## §1 entity 棚卸し (集約ルート / 値オブジェクト / 参照)
 
@@ -139,6 +139,22 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | 内部資産 roster / skill catalog | **永続化なし** (`.claude/agents/*.md` / `docs/skills/**/*.md` が唯一正本、TS が scan-on-demand で in-memory 構築) | markdown (fs 正本、ADR-004 層1) |
 
 **src/schema 突合**: 上記値オブジェクト (§3) は `src/schema/index.ts` の zod enum を SSoT とし、state の JSON/YAML は読込時に zod でバリデート。齟齬検出は `ut-tdd doctor check_business_entity_coverage` (L1 §10.2 carry) で機械化 (実装は L7 carry)。**§3 値オブジェクト 11 種は src/schema enum と 1:1 一致 (齟齬 0)。SubDoc のみ requirements §1.10.G.1 spec で src/schema 未実装 → `VALID_SUB_DOCS` 定数化を impl carry (IMP-026)**。
+
+### §8.1 SQLite projection DB (`.ut-tdd/harness.db`)
+
+`.ut-tdd/harness.db` は YAML/JSON state と docs を読み込んで正規化する projection DB であり、HELIX 版 `helix.db` schema は再利用しない。役割は V-model の製本化、別駆動 model の実行結果保存、trace/coverage/finding の横断照合、doctor/vmodel lint の fail-close 入力である。
+
+| table | 役割 |
+|---|---|
+| `plan_registry` | PLAN frontmatter / status / layer / sub_doc / drive / dependencies の正規化 |
+| `artifact_registry` | 設計・実装・テスト設計・テストコード artifact の catalog |
+| `model_runs` | Codex / Claude / worker / reviewer など別駆動 model の実行単位と evidence |
+| `trace_edges` | V-model 4 artifact + directed edge の照合 |
+| `coverage` | trace coverage / test coverage / plan coverage の集計 |
+| `findings` | drift / connection deficiency / regression / review finding の保存 |
+| `gate_runs` | gate 判定証跡と doctor/vmodel lint 結果 |
+
+不変条件: projection DB は生成 state だが、検出器の機械 SSoT として扱う。入力となる docs/YAML/JSON と projection の齟齬は doctor が finding として出し、silent repair しない。
 
 ## §9 carry → L5 詳細設計
 

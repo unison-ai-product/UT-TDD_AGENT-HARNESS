@@ -5,7 +5,16 @@ kind: design
 layer: L4
 sub_doc: architecture
 drive: fullstack
-status: draft
+status: confirmed
+review_evidence:
+  - reviewer: claude-opus-4-8
+    review_kind: cross_agent
+    reviewed_at: "2026-06-08"
+    tests_green_at: "2026-06-08"
+    verdict: pass
+    scope: "L4 skill-pack add-design closure (A-104). Cross-agent: Codex authored, Claude verified substance + descent to PLAN-L5-06 / L8 IT-ASSET. 文字化け除去後 clean 再 freeze。"
+    worker_model: codex
+    reviewer_model: claude-opus-4-8
 created: 2026-06-01
 updated: 2026-06-01
 owner: PM (Opus) / PO (人間)
@@ -64,9 +73,9 @@ PLAN-L4-10 (Master) §2 triage の child。**FR-L1-47 (skill pack の UT-TDD cur
 
 ## §4 DoD
 
-- [ ] architecture §3 に skills building block 追加 (依存方向 schema 一方向、循環禁止維持)
-- [ ] 層1 (.md 正本) / 層2 (catalog-injector TS) 境界を ADR-004 準拠で記述
-- [ ] curate 方針 (core-optional-drop / SKILL_MAP / helix 用語除去) 記述
-- [ ] L9 総合テスト設計にペア観点追加 + 未確定 placeholder + 依存明示
-- [ ] 粒度段階分解 (L5→L6) を §carry に明記
-- [ ] self-review 通過
+- [x] architecture §3 に skills building block 追加 (依存方向 schema 一方向、循環禁止維持)
+- [x] 層1 (.md 正本) / 層2 (catalog-injector TS) 境界を ADR-004 準拠で記述
+- [x] curate 方針 (core-optional-drop / SKILL_MAP / helix 用語除去) 記述
+- [x] L9 総合テスト設計にペア観点追加 + 未確定 placeholder + 依存明示
+- [x] 粒度段階分解 (L5→L6) を §carry に明記
+- [x] self-review 通過

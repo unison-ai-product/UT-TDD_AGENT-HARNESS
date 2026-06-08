@@ -5,7 +5,14 @@ kind: design
 layer: L4
 sub_doc: architecture
 drive: fullstack
-status: draft
+status: confirmed
+review_evidence:
+  - reviewer: codex-tl
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-08"
+    tests_green_at: "2026-06-08"
+    verdict: pass
+    scope: "L4 internal asset master closure. L4-11/12/13 are paired to L9, decomposed through L5-05/06/07, and remaining algorithmic detail is explicit L6/L7 carry."
 created: 2026-06-01
 updated: 2026-06-01
 owner: PM (Opus) / PO (人間)

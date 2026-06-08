@@ -5,7 +5,16 @@ kind: design
 layer: L4
 sub_doc: architecture
 drive: fullstack
-status: draft
+status: confirmed
+review_evidence:
+  - reviewer: claude-opus-4-8
+    review_kind: cross_agent
+    reviewed_at: "2026-06-08"
+    tests_green_at: "2026-06-08"
+    verdict: pass
+    scope: "L4 drift-lint add-design closure (A-104). Cross-agent: Codex authored, Claude verified substance + descent to PLAN-L5-07 / L8 IT-ASSET. 文字化け除去後 clean 再 freeze。"
+    worker_model: codex
+    reviewer_model: claude-opus-4-8
 created: 2026-06-01
 updated: 2026-06-01
 owner: PM (Opus) / PO (人間)
@@ -69,9 +78,9 @@ drift lint の検査項目 (system 粒度で確定するもの) を architecture
 
 ## §4 DoD
 
-- [ ] architecture lint building block に内部資産 drift lint を IMP-033 rule 型として記述 (新規 lint 手書きせず)
-- [ ] 検査項目 4 種 (HELIX パス / helix codex 直叩き / docs-skills 空 / roster↔guard 整合) を inventory §1 / ADR-004 と trace
-- [ ] auto-enroll + fail-close 経路を gate-design §4 機構に接続
-- [ ] DB 未充足検知統合 (PLAN-L4-10 §0.1) を記述
-- [ ] L9 総合テスト設計にペア観点追加 + 未確定 placeholder + 依存
-- [ ] self-review 通過
+- [x] architecture lint building block に内部資産 drift lint を IMP-033 rule 型として記述 (新規 lint 手書きせず)
+- [x] 検査項目 4 種 (HELIX パス / helix codex 直叩き / docs-skills 空 / roster↔guard 整合) を inventory §1 / ADR-004 と trace
+- [x] auto-enroll + fail-close 経路を gate-design §4 機構に接続
+- [x] DB 未充足検知統合 (PLAN-L4-10 §0.1) を記述
+- [x] L9 総合テスト設計にペア観点追加 + 未確定 placeholder + 依存
+- [x] self-review 通過

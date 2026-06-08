@@ -89,7 +89,7 @@ FR-L1 35 件は HELIX-workflows 設計概念参照 (v2-import-ledger §6.1)。HE
 
 | HELIX 固有名 | UT-TDD 翻案 | 該当 FR-L1 |
 |--------------|-------------|----------|
-| `helix.db` (SQLite) | `.ut-tdd/` 配下のファイルベース state (core + audit/event + derived views)、ADR-001 で SQLite は採用せず | FR-L1-06, FR-L1-07 |
+| `helix.db` (SQLite) | `.ut-tdd/` 配下の YAML/JSON state + UT-TDD 独自の `.ut-tdd/harness.db` SQLite projection DB。HELIX 版 schema は採用せず、V-model state / model_runs / trace / coverage / findings を projection として保存する | FR-L1-06, FR-L1-07 |
 | `helix-doctor` | `ut-tdd doctor` | FR-L1-18 |
 | `helix-codex` | `ut-tdd codex` | FR-L1-09 |
 | `helix-recover` / `helix-route` (HELIX 穴) | `ut-tdd recover` / `ut-tdd route` (P2 carry、FR-L1-34) | FR-L1-34 |
@@ -279,3 +279,19 @@ doc-reviewer (pmo-sonnet とは責務分離した doc 品質専用 read-only rev
 - v2 import ledger (FR-L1 全件出典): `docs/migration/v2-import-ledger.md §6`
 - L14 運用テスト設計: `docs/test-design/harness/L1-operational-test-design.md`
 - L1 技術要求: `docs/design/harness/L1-requirements/technical-requirements.md`
+## §7 Request/Requirement Bundle: DB Reference Feedback + Automation Foundation (2026-06-08)
+
+ユーザー要求「機械的なチェックとDB参照構造で抜け漏れ・依存関係・ゆがみを検出し、V-modelだけでなく各駆動モデル、各ログ、スキル発火率までデータ化して検索コストも下げる」は、既存 FR-L1 では複数行に分散している。以下を束ねて Phase A の L5 降下対象にする。
+
+| User request | Covered FR-L1 | Current gap | L5 descent |
+|---|---|---|---|
+| V-model 製本 state を SQLite に自動登録し、ゆがみ・漏れを並べて検出する | FR-L1-06 / FR-L1-07 / FR-L1-18 / FR-L1-20 | `harness.db` の投影 table はあるが、品質 signal と feedback event の束ね方が薄い | physical-data §9 / internal-processing Appendix B / L8 IT-DB |
+| V-model 以外の駆動モデルごとの状態・実行結果も保存する | FR-L1-08 / FR-L1-37 / FR-L1-39 / FR-L1-40 / FR-L1-41 | drive と mode の違いは定義済みだが、`drive_runs` / `mode_transition` と各 log の join key が L5 で未明確 | physical-data §9.2 / module-decomposition Appendix B |
+| session / hook / gate / model run / finding を参照グラフ化する | FR-L1-07 / FR-L1-19 / FR-L1-20 | log→handover→state DB の橋渡しはあるが、DB 参照構造・index・検索 surface が未固定 | physical-data §9.3 / if-detail Appendix B |
+| skill 発火率、推薦採用率、model/effort 適切性を学習 input にする | FR-L1-12 / FR-L1-19 / FR-L1-20 / FR-L1-37 | skill firing log は要求済みだが、発火率 numerator/denominator と推薦理由の保存粒度が未固定 | physical-data §9.2 / internal-processing Appendix B |
+| 探すコストを下げる | FR-L1-06 / FR-L1-18 / FR-L1-20 / FR-L1-39 | code/find 相当は要求にあるが、DB search index と `ut-tdd find` の対象・出力が未固定 | if-detail Appendix B / L8 IT-SEARCH |
+| workflow 自動化の ready 判定を data-backed にする | FR-L1-05 / FR-L1-13 / FR-L1-17 / FR-L1-18 / FR-L1-24 | workflow/gate/CI は定義済みだが、どの自動化が ready / blocked / human-required かを DB 上で横断検索する粒度が未固定 | physical-data §9.1 / internal-processing Appendix B / L8 IT-AUTOMATION |
+| guardrail の安全性を証跡化し、越権や silent pass を防ぐ | FR-L1-05 / FR-L1-09 / FR-L1-10 / FR-L1-17 / FR-L1-45 | agent-guard / review_evidence / escalation 境界はあるが、fail-open/fail-close 判定・human signoff・禁止データ非保存を同じ参照構造で並べる L5 契約が不足 | physical-data §9.1 / if-detail Appendix B / L8 IT-GUARDRAIL |
+| skill / roster / command docs を自動化基盤として catalog 化する | FR-L1-12 / FR-L1-33 / FR-L1-46 / FR-L1-47 / FR-L1-48 / FR-L1-49 | skill/roster/command の棚卸しと drift lint は要求済みだが、trigger/role/capability/drift/search を DB projection に入れる粒度が未固定 | module-decomposition Appendix B / internal-processing Appendix B / L8 IT-ASSET-DB |
+
+不足判定: 要求は既存 FR に入っている。**本当はできるが気づいていないだけ**の領域は、FR-L1-05/06/07/09/12/13/17/18/19/20/33/37/39/40/41/45/46/47/48/49 に分散済みだった。未充足は、これらを **一体の DB reference-feedback + automation-foundation 機構として受入条件化し、L5 詳細設計へ同じ参照粒度で落とすこと**だった。PLAN-L5-08 で L5 へ add-design として降下する。

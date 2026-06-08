@@ -1,7 +1,7 @@
 ---
 layer: L5
 sub_doc: if-detail
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -102,3 +102,17 @@ external-if.md (what/形状) の **how = adapter 詳細契約**を確定する (
 - **D-CONTRACT DSL 実装** (mode-routing.yaml / gate-checks.yaml + loader) = L7
 - **provider 引継ぎ** (FR-L1-42、context+budget 連携) = `provider-handover.v1` package (`ut-tdd handover provider export/status`) と接続
 - **sprint check の VCS 参照** (TDD trace の git log/blame、internal-processing §2): adapter 経由か直接 fs/git 読込かを L7 で決定 (現状 adapter 公開 IF 6 本に未配線、L7 carry)
+## Appendix B: DB/Search CLI Contracts (PLAN-L5-08)
+
+| CLI surface | contract | output |
+|---|---|---|
+| `ut-tdd db status` | Open `.ut-tdd/harness.db`, report schema version, projection freshness, and orphan counts. | JSON/text summary with non-secret metadata only. |
+| `ut-tdd db rebuild` | Rebuild projection DB from docs/state/log digests. | Exit 0 when rebuild is deterministic; exit 1 on unreadable source or schema mismatch. |
+| `ut-tdd find <query>` | Search PLAN/artifact/finding/skill/model/session references through `search_index` and exact ID tables. | Ranked rows: `{subject_type, subject_id, path, reason, evidence_path}`. |
+| `ut-tdd metrics skill` | Read skill recommendation/invocation projections and compute firing/acceptance rates. | Aggregates by layer/drive/plan; no transcript body. |
+| `ut-tdd feedback list` | List feedback events generated from repeated findings and quality signals. | Open/closed feedback event rows with next_action references. |
+| `ut-tdd automation readiness` | Query workflow readiness from `workflow_runs`, gate/doctor projections, and open findings. | Ready/blocked/human-required rows with blocking evidence paths. |
+| `ut-tdd guardrail status` | Query guardrail decisions for agent-guard, review evidence, escalation, and human signoff boundaries. | Decisions by plan/session with mode, policy, and evidence path; no provider transcript body. |
+| `ut-tdd asset catalog` | Query skill/roster/command docs catalog and drift status. | Asset rows with path, asset_type, trigger/capability summary, drift status, and indexed_at. |
+
+Security contract: these commands must never print provider transcript body, secrets, credentials, or PII. They may print redacted summaries, evidence paths, hashes, IDs, and counts.

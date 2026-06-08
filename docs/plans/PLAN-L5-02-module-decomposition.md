@@ -5,7 +5,14 @@ kind: design
 layer: L5
 sub_doc: module-decomposition
 drive: fullstack
-status: draft
+status: confirmed
+review_evidence:
+  - reviewer: codex-tl
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-08"
+    tests_green_at: "2026-06-08"
+    verdict: pass
+    scope: "L5 module-decomposition freeze. Module boundary and dependency-direction contracts are paired to L8 IT-MODULE with GWT-level coverage."
 created: 2026-05-29
 updated: 2026-06-08
 owner: PM (Opus) / PO (人間)

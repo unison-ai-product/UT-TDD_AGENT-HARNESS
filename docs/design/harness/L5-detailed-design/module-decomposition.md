@@ -1,7 +1,7 @@
 ---
 layer: L5
 sub_doc: module-decomposition
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -150,3 +150,18 @@ PLAN-L5-07 closes the L5 module-integration slice for FR-L1-49.
 | dependency-drift coexistence | `asset-drift` sits beside ADR-002 dependency-drift; both are IMP-033 rule types and must not duplicate ownership. | L7 import-map implementation remains under dependency-drift. |
 
 These additions complete the L5 integration boundary for skill and drift assets while leaving function-level algorithms to L6 and implementation state to L7.
+## Appendix B: Harness DB Feedback Modules (PLAN-L5-08)
+
+PLAN-L5-08 adds a DB-centered reference-feedback slice without replacing the existing lint/rule modules.
+
+| module | path intent | responsibility | dependency direction |
+|---|---|---|---|
+| `state-db` | `src/state-db/` | SQLite connection, migration, projection upsert, rebuild from docs/state/logs. | `state-db -> schema`; no import from CLI adapters. |
+| `projection-writer` | `src/state-db/projection-writer.ts` | Convert PLAN, artifact, gate, hook, model, skill, and finding records into `harness.db` rows. | Consumes normalized records from loaders; does not parse provider transcripts. |
+| `search-index` | `src/search/` | Maintain `search_index` and serve `ut-tdd find` queries across PLAN/artifact/finding/skill/model/session. | Reads projection DB; may call loaders only during rebuild. |
+| `feedback-engine` | `src/feedback/` | Aggregate repeated findings, unresolved dependencies, stale approvals, skill firing rates, and model selection signals. | Reads DB projections and emits `feedback_events`; does not mutate source docs. |
+| `automation-readiness` | `src/workflow/readiness.ts` | Join workflow/gate/doctor/CI projections and classify ready/blocked/human-required automation states. | Reads DB projections and gate docs; does not execute workflow steps. |
+| `guardrail-ledger` | `src/guardrail/ledger.ts` | Normalize agent-guard, review evidence, escalation, and human signoff decisions into `guardrail_decisions`. | Reads policy/evidence; never bypasses human approval requirements. |
+| `asset-catalog` | `src/assets/catalog.ts` | Catalog skill/roster/command docs with trigger/capability/drift metadata for search and recommendation. | Reads markdown/YAML sources; does not persist prompt bodies beyond redacted metadata. |
+
+Boundary rule: lint modules remain the first-class detectors. The DB layer records and cross-references their outputs; it does not hide failed checks by treating projection failure as success.

@@ -1,17 +1,24 @@
----
+﻿---
 plan_id: PLAN-L5-07-drift
-title: "PLAN-L5-07 (design/drift): L5 詳細設計 — 内部資産 drift lint (asset-drift rule) の module 結合粒度 back-fill (FR-L1-49)"
+title: "PLAN-L5-07 (design/drift): L5 隧ｳ邏ｰ險ｭ險・窶・蜀・Κ雉・肇 drift lint (asset-drift rule) 縺ｮ module 邨仙粋邊貞ｺｦ back-fill (FR-L1-49)"
 kind: design
 layer: L5
 sub_doc: module-decomposition
 drive: fullstack
-status: draft
+status: confirmed
+review_evidence:
+  - reviewer: codex-tl
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-08"
+    tests_green_at: "2026-06-08"
+    verdict: pass
+    scope: "L5 asset-drift freeze. Rule registration, fail-close, and placeholder dependency contracts are paired to L8 IT-ASSET-06..07 with GWT-level coverage."
 created: 2026-06-01
 updated: 2026-06-08
-owner: PM (Opus) / PO (人間)
+owner: PM (Opus) / PO (莠ｺ髢・
 agent_slots:
   - role: tl
-    slot_label: "TL — asset-drift rule の IMP-033 rule engine 結合 (module 登録方式) のレビュー (別 runtime)"
+    slot_label: "TL 窶・asset-drift rule 縺ｮ IMP-033 rule engine 邨仙粋 (module 逋ｻ骭ｲ譁ｹ蠑・ 縺ｮ繝ｬ繝薙Η繝ｼ (蛻･ runtime)"
 generates:
   - artifact_path: docs/design/harness/L5-detailed-design/module-decomposition.md
     artifact_type: design_doc
@@ -36,58 +43,82 @@ related_l0_extra: docs/design/harness/L1-requirements/functional-requirements.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
-# PLAN-L5-07 (design/drift): L5 内部資産 drift lint module 結合粒度 back-fill
+# PLAN-L5-07 (design/drift): L5 蜀・Κ雉・肇 drift lint module 邨仙粋邊貞ｺｦ back-fill
 
-## §0 PLAN
+## ﾂｧ0 PLAN
 
-L4-13 (drift-lint、FR-L1-49) の L5 詳細化。**per-requirement PLAN** ([[feedback-plan-per-requirement]])。L4=system → 本 PLAN L5=module 結合粒度 (⇔L8) → L6=判定関数仕様 (⇔L7)。**新規 lint module を手書きせず IMP-033 cross-check rule engine の rule 型 `asset-drift` インスタンス**として実現 (architecture §4.1)。成果物 = module-decomposition 増分 ⇔ L8 ペア。
+L4-13 (drift-lint縲：R-L1-49) 縺ｮ L5 隧ｳ邏ｰ蛹悶・*per-requirement PLAN** ([[feedback-plan-per-requirement]])縲・4=system 竊・譛ｬ PLAN L5=module 邨仙粋邊貞ｺｦ (竍猫8) 竊・L6=蛻､螳夐未謨ｰ莉墓ｧ・(竍猫7)縲・*譁ｰ隕・lint module 繧呈焔譖ｸ縺阪○縺・IMP-033 cross-check rule engine 縺ｮ rule 蝙・`asset-drift` 繧､繝ｳ繧ｹ繧ｿ繝ｳ繧ｹ**縺ｨ縺励※螳溽樟 (architecture ﾂｧ4.1)縲よ・譫懃黄 = module-decomposition 蠅怜・ 竍・L8 繝壹い縲・
+## ﾂｧ1 逶ｮ逧・
+L4 architecture ﾂｧ4.1 縺ｮ `asset-drift` rule 繧・**module 邨仙粋邊貞ｺｦ**縺ｸ隧ｳ邏ｰ蛹・ 竭 rule engine (gate-design ﾂｧ5 rule registry) 縺ｸ縺ｮ `asset-drift` 逋ｻ骭ｲ譁ｹ蠑・(module 邨仙粋)縲≫贈 doc registry 縺・`.claude/agents/*.md` / `docs/skills/` 繧・scan 縺・auto-enroll 縺吶ｋ邨仙粋縲≫造 fail-close 邨瑚ｷｯ (doctor/gate exit) 縺ｮ邨仙粋縲≫促 DB 譛ｪ蜈・ｶｳ讀懃衍 (placeholder_deps) 縺ｨ縺ｮ邨ｱ蜷医ょ推讀懈渊鬆・岼縺ｮ蛻､螳夐未謨ｰ (HELIX 繝代せ讀懷・ / allowlist 辣ｧ蜷・/ regex) 縺ｯ L6 carry縲・
+## ﾂｧ2 閭梧勹
 
-## §1 目的
+- 荳頑ｵ・ architecture ﾂｧ4.1 (asset-drift = IMP-033 rule 蝙・ / gate-design ﾂｧ5 rule registry (`asset-drift` 逋ｻ骭ｲ貂医、-86) / ﾂｧ7 L7 carry
+- 譌｢蟄・dependency-drift (ADR-002/IMP-032) 縺ｨ荳ｦ鄂ｮ (荳｡譁ｹ IMP-033 rule)
+- 讀懈渊鬆・岼 (inventory ﾂｧ1): HELIX 邨ｶ蟇ｾ繝代せ谿句ｭ・/ `helix codex` 逶ｴ蜿ｩ縺・/ `docs/skills/` 遨ｺ / roster竊波uard allowlist 謨ｴ蜷・- 蠅・阜: ADR-004 (drift lint = 螻､2 逡ｪ莠ｺ縲［arkdown 豁｣譛ｬ縺ｫ HELIX 蜑肴署縺梧ｮ九ｉ縺ｪ縺・° fail-close)
 
-L4 architecture §4.1 の `asset-drift` rule を **module 結合粒度**へ詳細化: ① rule engine (gate-design §5 rule registry) への `asset-drift` 登録方式 (module 結合)、② doc registry が `.claude/agents/*.md` / `docs/skills/` を scan し auto-enroll する結合、③ fail-close 経路 (doctor/gate exit) の結合、④ DB 未充足検知 (placeholder_deps) との統合。各検査項目の判定関数 (HELIX パス検出 / allowlist 照合 / regex) は L6 carry。
+## §3 工程表 (Step + 進捗)
 
-## §2 背景
+### Step 1: [直列] asset-drift rule 結合定義
+直列理由: downstream_dependency
+module-decomposition と gate-design rule registry に asset-drift rule の module 結合を定義する。
 
-- 上流: architecture §4.1 (asset-drift = IMP-033 rule 型) / gate-design §5 rule registry (`asset-drift` 登録済、A-86) / §7 L7 carry
-- 既存 dependency-drift (ADR-002/IMP-032) と並置 (両方 IMP-033 rule)
-- 検査項目 (inventory §1): HELIX 絶対パス残存 / `helix codex` 直叩き / `docs/skills/` 空 / roster↔guard allowlist 整合
-- 境界: ADR-004 (drift lint = 層2 番人、markdown 正本に HELIX 前提が残らないか fail-close)
+### Step 2: [直列] doc registry auto-enroll 定義
+直列理由: downstream_dependency
+Step 1 の rule 境界を前提に、.claude/agents/*.md と docs/skills/ の scan / auto-enroll 対象を定義する。
 
-## §3 設計計画 (Step)
+### Step 3: [直列] fail-close / placeholder_deps 統合
+直列理由: downstream_dependency
+Step 1/2 の検査対象を doctor / gate exit と DB 未充足検知 placeholder_deps に接続する。
 
-1. Step 1: module-decomposition §4 (rule engine) に `asset-drift` rule の module 結合を記述 (新規 module 起こさず rule 登録、gate-design §5 整合)
-2. Step 2: doc registry の scan → auto-enroll 結合 (`.claude/agents/*.md` / `docs/skills/`)、§6 lint 共通様式 (`loadX→analyzeX`) の延長
-3. Step 3: fail-close 経路 (doctor/gate exit≠0) + DB 未充足検知 (placeholder_deps、physical-data §7) との統合
-4. Step 4: 検査項目 4 種を inventory §1 / ADR-004 Consequences と trace (判定関数 signature/regex は L6)
-5. Step 5: 依存方向 (rule は engine に従属、循環なし)
-6. Step 6: L8 IT-ASSET (asset-drift rule 実行 / fail-close) 追加 + 未確定 placeholder_deps
-7. Step 7: carry → L6 (各検査の判定関数 signature / HELIX パス regex / allowlist 照合 = `waiting_layer:L6` spec back-fill) / L7 (engine 実装)
-8. Step 8: self-review
+### Step 4: [直列] 検査項目 trace の確定
+直列理由: downstream_dependency
+Step 1-3 の rule 実行経路に、HELIX path residue、command residue、docs/skills vacancy、roster allowlist の検査項目を割り当てる。
 
-## §4 受入条件 / DoD
+### Step 5: [直列] 依存方向の物理保証
+直列理由: downstream_dependency
+Step 1-4 の rule / registry / fail-close 境界を import graph へ反映し、rule が engine に従属する構造を確認する。
 
-- [x] module-decomposition §4 に `asset-drift` rule を IMP-033 rule 型として結合記述 (新規 lint 手書きせず)
-- [x] auto-enroll (doc registry scan) + fail-close 経路 (doctor/gate) の結合
-- [x] 検査項目 4 種を inventory §1 / ADR-004 と trace
-- [x] DB 未充足検知 (placeholder_deps) 統合
-- [x] dependency-drift (ADR-002) と並置 (両方 IMP-033、二重定義なし)
-- [x] L8 IT-ASSET (drift) ペア + 未確定 placeholder_deps + 依存明示
-- [x] 判定関数 signature/regex を L6 carry (waiting_layer:L6) / engine 実装は L7
-- [x] §6 用語更新 / §7 機能要求更新
-- [x] self-review 通過
+### Step 6: [直列] L8 IT-ASSET pair 接続
+直列理由: downstream_dependency
+Step 1-5 の asset-drift 契約を L8 IT-ASSET の Given/When/Then と placeholder_deps へ接続する。
 
-## §5 関連 PLAN / ADR / docs
+### Step 7: [直列] L6/L7 carry の確定
+直列理由: downstream_dependency
+Step 1-6 の rule 境界を L6 rule signature / regex / allowlist と L7 rule engine implementation へ引き継ぐ。
 
-- 関連 PLAN: 親 = PLAN-L5-00-master / L4 = PLAN-L4-13-drift-lint / 兄弟 = PLAN-L5-05-roster / PLAN-L5-06-skill / 後続 = PLAN-L6-NN-drift (判定関数仕様)
-- 関連 ADR: ADR-004 (境界番人) / ADR-002 (dependency-drift 並置)
-- 参照: architecture §4.1 / gate-design §5 / inventory §1
+### Step 8: [直列] review
+直列理由: downstream_dependency
+self / pmo-sonnet / codex-tl review で、asset-drift rule 境界、placeholder_deps、L8 IT-ASSET の対称性を確認する。
 
-## §6 用語更新 (living glossary delta)
+## §3.1 実装計画
 
-| 用語 | 種別 | 定義 / 変更点 | L0 §10 back-merge |
+- 情報源: docs/design/harness/L5-detailed-design/module-decomposition.md / docs/design/harness/L5-detailed-design/physical-data.md / docs/test-design/harness/L8-integration-test-design.md
+- L5 では asset-drift rule の module 結合と placeholder_deps 統合を freeze し、runtime 実装は行わない。
+- L6 で rule signature / regex / allowlist を仕様化し、L7 で rule engine に実装する。
+- G5 freeze は Step 8 review と L8 IT-ASSET の Given/When/Then 粒度確認後に行う。
+## ﾂｧ4 蜿怜・譚｡莉ｶ / DoD
+
+- [x] module-decomposition ﾂｧ4 縺ｫ `asset-drift` rule 繧・IMP-033 rule 蝙九→縺励※邨仙粋險倩ｿｰ (譁ｰ隕・lint 謇区嶌縺阪○縺・
+- [x] auto-enroll (doc registry scan) + fail-close 邨瑚ｷｯ (doctor/gate) 縺ｮ邨仙粋
+- [x] 讀懈渊鬆・岼 4 遞ｮ繧・inventory ﾂｧ1 / ADR-004 縺ｨ trace
+- [x] DB 譛ｪ蜈・ｶｳ讀懃衍 (placeholder_deps) 邨ｱ蜷・- [x] dependency-drift (ADR-002) 縺ｨ荳ｦ鄂ｮ (荳｡譁ｹ IMP-033縲∽ｺ碁㍾螳夂ｾｩ縺ｪ縺・
+- [x] L8 IT-ASSET (drift) 繝壹い + 譛ｪ遒ｺ螳・placeholder_deps + 萓晏ｭ俶・遉ｺ
+- [x] 蛻､螳夐未謨ｰ signature/regex 繧・L6 carry (waiting_layer:L6) / engine 螳溯｣・・ L7
+- [x] ﾂｧ6 逕ｨ隱樊峩譁ｰ / ﾂｧ7 讖溯・隕∵ｱよ峩譁ｰ
+- [x] self-review 騾夐℃ (G5 蜀・freeze 蜑阪↓蜀榊ｮ滓命)
+
+## ﾂｧ5 髢｢騾｣ PLAN / ADR / docs
+
+- 髢｢騾｣ PLAN: 隕ｪ = PLAN-L5-00-master / L4 = PLAN-L4-13-drift-lint / 蜈・ｼ・= PLAN-L5-05-roster / PLAN-L5-06-skill / 蠕檎ｶ・= PLAN-L6-NN-drift (蛻､螳夐未謨ｰ莉墓ｧ・
+- 髢｢騾｣ ADR: ADR-004 (蠅・阜逡ｪ莠ｺ) / ADR-002 (dependency-drift 荳ｦ鄂ｮ)
+- 蜿ら・: architecture ﾂｧ4.1 / gate-design ﾂｧ5 / inventory ﾂｧ1
+
+## ﾂｧ6 逕ｨ隱樊峩譁ｰ (living glossary delta)
+
+| 逕ｨ隱・| 遞ｮ蛻･ | 螳夂ｾｩ / 螟画峩轤ｹ | L0 ﾂｧ10 back-merge |
 |---|---|---|---|
-| asset-drift | 参照 | IMP-033 rule 型 (内部資産 .md の HELIX 前提・roster↔guard 乖離検出)。dependency-drift と並置 | back-merge 不要 |
+| asset-drift | 蜿ら・ | IMP-033 rule 蝙・(蜀・Κ雉・肇 .md 縺ｮ HELIX 蜑肴署繝ｻroster竊波uard 荵夜屬讀懷・)縲Ｅependency-drift 縺ｨ荳ｦ鄂ｮ | back-merge 荳崎ｦ・|
 
-## §7 機能要求更新 (FR registry delta)
+## ﾂｧ7 讖溯・隕∵ｱよ峩譁ｰ (FR registry delta)
 
-> **機能要求更新なし**。FR-L1-49 (L1 起票済) の module 結合詳細化。FR-L1-49 → L5 設計要素 → L8 IT-ASSET の trace を接続。
+> **讖溯・隕∵ｱよ峩譁ｰ縺ｪ縺・*縲・R-L1-49 (L1 襍ｷ逾ｨ貂・ 縺ｮ module 邨仙粋隧ｳ邏ｰ蛹悶・R-L1-49 竊・L5 險ｭ險郁ｦ∫ｴ 竊・L8 IT-ASSET 縺ｮ trace 繧呈磁邯壹・

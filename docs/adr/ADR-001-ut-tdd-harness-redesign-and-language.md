@@ -20,9 +20,11 @@ UT-TDD Agent Harness の実体実装に着手するにあたり、2 つの基盤
 
 ## Decision
 
-1. **再設計で進める (流用しない)**: HELIX からは **設計概念のみ**を取り込み (v3.1/v1.2 に反映済み)、内部は `ut-tdd` として **全面再実装**する。`helix-*` コマンド・bash ディスパッチャ・`helix.db`・個人絶対パスは持ち込まない。
+> **決定の更新 (2026-06-08, [ADR-007](ADR-007-harness-db-sqlite-projection.md))**: 本 ADR は当初 state を file-based (YAML/JSON) とし SQLite を「必要時 `better-sqlite3`」として deferral していた。その後 PLAN-L5-08 / A-105 で `.ut-tdd/harness.db` を **SQLite projection / フィードバック機構 (設計の柱3)** として採用 (deferral 解除)。本文 §1/§3・技術スタック表は ADR-007 の決定を反映済み (HELIX 版 `helix.db` schema 流用却下は不変)。決定史は ADR-007 を正本とする。
+
+1. **再設計で進める (流用しない)**: HELIX からは **設計概念のみ**を取り込み (v3.1/v1.2 に反映済み)、内部は `ut-tdd` として **全面再実装**する。`helix-*` コマンド・bash ディスパッチャ・HELIX 版 `helix.db` schema・個人絶対パスは持ち込まない。
 2. **実装言語は TypeScript に統一**: core を **TypeScript (strict) / Bun runtime** で実装し、**bash 層を廃止**。OS 入口は薄い `ut-tdd.ps1` (Windows) / `ut-tdd` (POSIX) が同一の compiled core を呼ぶだけにする。
-3. **クロスプラットフォーム規約**: path は Node `path`、`.ut-tdd/` state は YAML + JSON (+ 必要時 `better-sqlite3`)、core に bash を使わない、`.gitattributes` で改行正規化、subagent 起動は runtime adapter に隔離する。
+3. **クロスプラットフォーム規約**: path は Node `path`、`.ut-tdd/` state は YAML + JSON + UT-TDD 独自の SQLite projection DB (`.ut-tdd/harness.db`) とし、core に bash を使わない、`.gitattributes` で改行正規化、subagent 起動は runtime adapter に隔離する。
 
 ### 技術スタック
 
@@ -32,7 +34,7 @@ UT-TDD Agent Harness の実体実装に着手するにあたり、2 つの基盤
 | CLI framework | oclif または commander |
 | **schema / enum / 契約** | **zod を単一正本** (実行時検証 + 型推論。`VALID_LAYERS` / `RecommendedCommandV1` / `orchestration_mode` 等を 1 定義で型と検証を兼ねる) |
 | test | vitest |
-| state | `yaml` + JSON (+ 必要時 `better-sqlite3`) |
+| state | `yaml` + JSON + SQLite projection DB (`.ut-tdd/harness.db`; Bun runtime では `bun:sqlite` 第一候補、Node 互換が必要な場合のみ `better-sqlite3`) |
 | 配布 | 開発 `tsx`、VPS へは **`bun build --compile` で単一バイナリ** 1 ファイル投下 |
 | 入口 | 薄い `ut-tdd.ps1` / `ut-tdd` が compiled core を呼ぶ (core に bash 不使用) |
 
@@ -50,7 +52,7 @@ TypeScript と Python の技術差は本ツール (型付きルール/検証/ル
 
 | 案 | 判定 | 理由 |
 |----|------|------|
-| HELIX `helix-*` をそのまま流用 | **却下** | bash 依存・個人パス・`helix.db` を引きずり、governance (ut-tdd 単一正本 / クロスプラットフォーム) と矛盾 |
+| HELIX `helix-*` をそのまま流用 | **却下** | bash 依存・個人パス・HELIX 版 `helix.db` schema を引きずり、governance (ut-tdd 単一正本 / クロスプラットフォーム) と矛盾 |
 | Python で実装 | **不採用 (僅差)** | port 優位が消えた状態では、市場/エコシステム整合 (MCP/Claude Code 圏) と単一バイナリ配布で TS が上回る。保守者の Python フルエンシーは利点だが、戦略的 diversification と ecosystem fit を優先。**チーム保守が Python 一択化する等あれば再評価** |
 | Go 等 | 却下 | エコシステム不整合 (MCP/Claude Code 圏から外れる) |
 

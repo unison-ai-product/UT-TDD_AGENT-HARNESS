@@ -26,7 +26,7 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | 制約 (ADR-001) | 方式への影響 |
 |---|---|
 | 実装言語 = TypeScript (strict) / Bun | core は全 TS。bash を core に置かない (entrypoint のみ薄い OS shell) |
-| state = file-based (`.ut-tdd/`、YAML+JSON)、SQLite 不採用 | 永続化層は fs。集約は file schema (data.md §8)。DB driver 依存なし |
+| state = `.ut-tdd/` YAML/JSON + SQLite projection DB (`.ut-tdd/harness.db`) | 永続化層は fs + projection。集約は file schema (data.md §8)、V-model 製本・trace/coverage/findings は SQLite projection (data.md §8.1) |
 | 対象リポジトリ言語非依存 | harness は対象コードを実行せず、doc/PLAN/state を検証する静的 + orchestration ツール |
 | Windows ネイティブ第一級 | path = Node `path`、改行 = `.gitattributes` 正規化、Codex sandbox 不安定を runtime adapter に隔離 |
 | ルール同一性 (concept §2.1.0) | Claude (hook) / Codex (AGENTS.md) が**同一 core**を呼ぶ。判定ロジックを 2 重実装しない |
@@ -45,7 +45,7 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | テスト容易性 | 各 module が pure 関数 (`analyzeX(opt?)`) を export、副作用を entrypoint に隔離 | lint 5 種の共通様式、vitest |
 | 相互運用性 (Claude/Codex/MCP 圏) | commander CLI + 将来 MCP server 化を見据えた TS | ADR-001 Rationale (ecosystem fit) |
 
-技術スタック (ADR-001 §技術スタック より): TypeScript strict / Bun / commander / **zod** / vitest / YAML+JSON state / 単一バイナリ配布。
+技術スタック (ADR-001 §技術スタック より): TypeScript strict / Bun / commander / **zod** / vitest / YAML+JSON state + SQLite projection DB / 単一バイナリ配布。
 
 > **CLI framework 注記 (確定)**: ADR-001 が保留していた「oclif または commander」は **commander に確定** ([ADR-006](../../../adr/ADR-006-cli-framework-commander.md)、accepted 2026-06-05)。oclif は重量級構成が「薄い entrypoint + compiled core」方針に過剰として却下。`src/cli.ts` の実装確定を ADR-006 が追認記録 (IMP-070 resolved)。
 
@@ -160,7 +160,7 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 
 | ADR | 状態 | 扱い |
 |---|---|---|
-| **ADR-001** | accepted | TS/Bun + file-based state + bash 排除 (既存、本方式の基盤) |
+| **ADR-001** | accepted | TS/Bun + YAML/JSON state + SQLite projection DB + bash 排除 (既存、本方式の基盤) |
 | **[ADR-002](../../../adr/ADR-002-dependency-direction-and-auto-map.md)** | **accepted** (2026-05-29) | 依存方向ルール (schema 安定核 + 循環禁止 + fs 隔離) + **依存マップ自動生成・構想 vs 実装 drift lint** (IMP-032)。§3 が設計根拠 |
 | **[ADR-003](../../../adr/ADR-003-runtime-adapter-boundary-subscription-cli.md)** | **accepted** (2026-05-29) | runtime adapter 境界 (Anti-Corruption Layer)、**契約プラン CLI/hook 前提・API key 非保持** (A-71 是正を反映)。§6 + external-if §6 が設計根拠 |
 | **[ADR-004](../../../adr/ADR-004-internal-asset-ts-control-boundary.md)** | **accepted** (2026-06-01) | 内部資産 (subagent/skill/command) の TS 統制境界 = **層1 資産の中身 markdown 正本 / 層2 管理機構 TS**。TS は生成でなく検証/注入/統制。FR-L1-46〜49 / BR-22 / Recovery PLAN-RECOVERY-01 の設計根拠。real Codex TL 確定 |

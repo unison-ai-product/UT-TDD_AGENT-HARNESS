@@ -4,7 +4,16 @@ title: "PLAN-L5-00 (Master hub): L5 詳細設計 — 必須/選択 triage + chil
 kind: design
 layer: L5
 drive: fullstack
-status: draft
+status: confirmed
+review_evidence:
+  - reviewer: claude-opus-4-8
+    review_kind: cross_agent
+    reviewed_at: "2026-06-08"
+    tests_green_at: "2026-06-08"
+    verdict: pass
+    scope: "G5 L5 master freeze。Cross-agent review (Codex が L5-01..08 + L8 GWT を authored、Claude が検証): 要件→L5→L8 descent の中身確認 (physical-data 物理 schema 実在 / L8 IT-* GWT)、文字化け除去、harness.db は柱3 フィードバック機構として ADR-007 で正式化。"
+    worker_model: codex
+    reviewer_model: claude-opus-4-8
 created: 2026-05-29
 updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
@@ -95,3 +104,6 @@ child PLAN 起票時に以下を織り込む:
 - [ ] 各 child が L8 結合テスト設計と pair_artifact 接続 (現状は candidate skeleton 接続まで。詳細 IT case 未展開)
 - [x] G4 escalation ①② を child PLAN の §4 carry に織り込み
 - [ ] 全 child 完了で G5 (詳細設計ゲート = DbC freeze 点、document-system-map §3) readiness へ
+## Appendix B: PLAN-L5-08 Add-Design Registration (2026-06-08)
+
+PLAN-L5-08-harness-db-feedback is registered as a post-freeze add-design child for the DB reference-feedback and automation-foundation mechanism. It binds the user request to FR-L1-05/06/07/09/12/13/17/18/19/20/33/37/39/40/41/45/46/47/48/49, descends the missing schema/module/D-API/CLI/search/feedback/automation/guardrail/asset-catalog detail to L5, and pairs the additions to L8 IT-DB/IT-SEARCH/IT-FEEDBACK/IT-AUTOMATION/IT-GUARDRAIL/IT-ASSET-DB rows. It does not roll back or replace PLAN-L5-01..07.

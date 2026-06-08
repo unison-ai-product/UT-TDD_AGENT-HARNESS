@@ -1,7 +1,7 @@
 ---
 layer: L5
 sub_doc: internal-processing
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -154,3 +154,17 @@ PLAN-L5-07 adds the following D-API contracts to the L5 internal-processing scop
 | `placeholder gap check` | read placeholder dependency markers -> compare waiting layer and materialization state -> report unresolved gaps | pre: artifact metadata is readable; post: unresolved placeholder dependencies remain visible until the waiting layer is reached; invariant: gap visibility is fail-close, not manual memory |
 
 Predicate signatures and regex details are L6 carry; rule-engine wiring is L7.
+## Appendix B: Harness DB Feedback D-API (PLAN-L5-08)
+
+| operation | processing flow | DbC summary |
+|---|---|---|
+| `recordProjectionEvent` | receive normalized PLAN/artifact/gate/hook/model/skill/finding event -> validate IDs -> upsert projection row -> return row reference | pre: event has `plan_id` or `session_id`; post: row is queryable by ID; invariant: projection write never rewrites source docs |
+| `rebuildHarnessDb` | scan docs/state/log digests -> truncate projection tables -> replay normalized records -> recompute search index and quality signals | pre: repo root is known and DB path is under `.ut-tdd/`; post: rebuild is deterministic; invariant: no secret/raw transcript is copied |
+| `computeSkillMetrics` | read `skill_recommendations` + `skill_invocations` -> compute firing and acceptance rates by layer/drive/plan | pre: recommendation rows exist or denominator is explicit zero; post: rates are stored as `quality_signals`; invariant: missing logs become findings, not fabricated success |
+| `findReference` | parse query -> search `search_index` + direct ID tables -> return ranked references with path, ID, reason, evidence | pre: DB exists or rebuild is requested; post: result includes source table and evidence path; invariant: search is read-only |
+| `emitFeedbackEvents` | read open findings/quality signals -> group by pattern -> create feedback event and suggested next action | pre: findings are normalized; post: repeated gaps are visible as feedback events; invariant: automatic event creation does not auto-approve PLAN changes |
+| `evaluateAutomationReadiness` | read workflow/gate/doctor/CI projections -> classify each plan/workflow as ready, blocked, or human-required | pre: workflow and gate IDs are known; post: readiness row references blocking evidence; invariant: missing evidence cannot produce ready |
+| `recordGuardrailDecision` | receive normalized guardrail decision -> verify escalation/human boundary -> store decision and evidence path | pre: guardrail name and decision are known; post: block/allow/human-required is queryable; invariant: human-required cannot be downgraded by DB projection |
+| `catalogAutomationAssets` | scan skill/roster/command docs -> extract metadata -> record automation assets and drift status -> update search index | pre: source path is under approved docs/.claude roots; post: catalog rows have path and asset_type; invariant: prompt bodies and secrets are not copied |
+
+Failure policy: corrupt DB, migration mismatch, or projection orphan is a doctor finding. For commands whose purpose is validation, unresolved projection errors are fail-close; for passive logging hooks, the hook is fail-open but records a minimal failure event when possible.

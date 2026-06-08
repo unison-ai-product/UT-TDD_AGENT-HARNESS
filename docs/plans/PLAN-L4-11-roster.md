@@ -5,7 +5,16 @@ kind: design
 layer: L4
 sub_doc: function
 drive: fullstack
-status: draft
+status: confirmed
+review_evidence:
+  - reviewer: claude-opus-4-8
+    review_kind: cross_agent
+    reviewed_at: "2026-06-08"
+    tests_green_at: "2026-06-08"
+    verdict: pass
+    scope: "L4 roster/command add-design closure (A-104). Cross-agent: Codex authored, Claude verified substance + descent to PLAN-L5-05 / L8 IT-ASSET. 文字化け除去後 clean 再 freeze。"
+    worker_model: codex
+    reviewer_model: claude-opus-4-8
 created: 2026-06-01
 updated: 2026-06-01
 owner: PM (Opus) / PO (人間)
@@ -72,10 +81,10 @@ L4 = システム粒度 (L9 総合テスト設計と対)。本 PLAN で **functi
 
 ## §4 DoD
 
-- [ ] function §1 に C12 内部資産 (roster/command) カテゴリ追加 (FR-L1-46/48 マップ)
-- [ ] roster registry 機能 building block 記述 (ADR-004 層1/層2 境界準拠)
-- [ ] function §2 CLI コマンド表に内部資産 command 追加
-- [ ] guard 統合 (roster=SSoT / agent-guard=enforcement) 明示
-- [ ] L9 総合テスト設計にペア観点追加 (書ける範囲) + 未確定は placeholder + 依存明示
-- [ ] 粒度段階分解可能性 (L5→L6) を §carry に明記
-- [ ] self-review 通過
+- [x] function §1 に C12 内部資産 (roster/command) カテゴリ追加 (FR-L1-46/48 マップ)
+- [x] roster registry 機能 building block 記述 (ADR-004 層1/層2 境界準拠)
+- [x] function §2 CLI コマンド表に内部資産 command 追加
+- [x] guard 統合 (roster=SSoT / agent-guard=enforcement) 明示
+- [x] L9 総合テスト設計にペア観点追加 (書ける範囲) + 未確定は placeholder + 依存明示
+- [x] 粒度段階分解可能性 (L5→L6) を §carry に明記
+- [x] self-review 通過

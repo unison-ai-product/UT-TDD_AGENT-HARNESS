@@ -1,7 +1,7 @@
 ---
 layer: L5
 sub_doc: physical-data
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -10,14 +10,14 @@ plan: docs/plans/PLAN-L5-01-physical-data.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
-> **SSoT 参照**: 論理モデル = [data.md](../L4-basic-design/data.md) (L4) / 実装 enum SSoT = `src/schema/index.ts` / 永続化方針 = file-based (`.ut-tdd/`、YAML+JSON、SQLite 不採用、[ADR-001](../../../adr/ADR-001-ut-tdd-harness-redesign-and-language.md))。本 doc は data.md §8 の論理 state schema を **物理 schema (フィールド型/必須任意/default/file レイアウト)** に詳細化する (D-DB)。
+> **SSoT 参照**: 論理モデル = [data.md](../L4-basic-design/data.md) (L4) / 実装 enum SSoT = `src/schema/index.ts` / 永続化方針 = `.ut-tdd/` YAML/JSON state + `.ut-tdd/harness.db` SQLite projection DB ([ADR-001](../../../adr/ADR-001-ut-tdd-harness-redesign-and-language.md))。本 doc は data.md §8 の論理 state schema を **物理 schema (フィールド型/必須任意/default/file レイアウト + projection table)** に詳細化する (D-DB)。
 >
 > **用語更新 (G.9) / 機能要求更新 (G.10) の所在**: per-工程 delta は生成元 [PLAN-L5-01](../../../plans/PLAN-L5-01-physical-data.md) の §6/§7 に記録 (L4 sub-doc と同規約)。
 > **V-pair**: `pair_artifact = L8-integration-test-design.md` は L5 sub-doc 群の集合 pair (PLAN-L5-00-master 経由、L5↔L8)。
 
 # UT-TDD Agent Harness — L5 詳細設計: 物理データ設計 (Physical-Data)
 
-data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` file-based state の **物理 schema** に詳細化する (PLAN-L5-01-physical-data)。各 file は `src/schema` の zod で読込時 validate する。
+data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML/JSON state と `.ut-tdd/harness.db` SQLite projection DB の **物理 schema** に詳細化する (PLAN-L5-01-physical-data)。各 file は `src/schema` の zod で読込時 validate し、projection DB は V-model 製本・別駆動 model run・trace/coverage/finding 照合に使う。
 
 ## §1 state file レイアウト
 
@@ -115,6 +115,22 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` file
 | `invocation_log` | array | 任意 | AI 呼び出し記録 (FR-L1-20、append-only) |
 | `scores` | object | 任意 | accuracy_score / kpi (Phase B) |
 
+### §2.7 SQLite projection DB (`harness.db`)
+
+`harness.db` は HELIX 版 `helix.db` schema を流用せず、YAML/JSON state と docs を正規化して V-model feedback loop に使う projection DB。Bun runtime では `bun:sqlite` を第一候補とし、Node 互換が必要な adapter のみ `better-sqlite3` を検討する。
+
+| table | primary key | 主な列 | 入力 |
+|---|---|---|---|
+| `plan_registry` | `plan_id` | `kind`, `layer`, `sub_doc`, `drive`, `status`, `parent`, `updated_at` | `docs/plans/*.md`, `.ut-tdd/plan_registry/*.json` |
+| `artifact_registry` | `artifact_id` | `artifact_type`, `path`, `pair_artifact`, `status`, `updated_at` | docs/test-design, source catalog, trace state |
+| `model_runs` | `run_id` | `runtime`, `model`, `role`, `drive`, `plan_id`, `started_at`, `completed_at`, `evidence_path` | Codex / Claude / worker / reviewer execution evidence |
+| `trace_edges` | `edge_id` | `from_artifact`, `to_artifact`, `edge_kind`, `plan_id`, `status` | artifact trace state |
+| `coverage` | `coverage_id` | `scope`, `subject_id`, `metric`, `value`, `threshold`, `status` | test coverage / trace coverage / plan coverage |
+| `findings` | `finding_id` | `kind`, `severity`, `subject_id`, `source`, `status`, `evidence_path` | doctor / vmodel lint / review findings |
+| `gate_runs` | `gate_run_id` | `gate_id`, `plan_id`, `status`, `checked_at`, `evidence_path` | `.ut-tdd/gate_runs/*.json`, CI evidence |
+
+物理不変条件: `trace_edges` の orphan 0、`coverage.status=fail` の gate fail-close、`findings.status=open` の severity 別 gate 判定、`model_runs.plan_id` と `plan_registry.plan_id` の参照整合を doctor / vmodel lint が検証する。projection は自動生成だが、検出対象の機械 SSoT として扱い、入力 state との不一致は `findings` に保存する。
+
 ## §3 値オブジェクトの物理表現 + SubDoc zod 化 (IMP-026)
 
 data.md §3 の 12 値オブジェクトは全て **enum string** で物理表現 (JSON では文字列)。
@@ -197,3 +213,55 @@ export const VALID_SUB_DOCS = {
 - **`placeholder_deps` + ペア未充足検知** (A-84、PO back-fill 整合保証): Artifact schema に `placeholder_deps: array<{waiting_layer, waiting_spec}>` を追加し、doctor / vmodel lint で「設計 artifact に対の test_design artifact 不在 or `placeholder_deps` 未解消 → fail-close」を実装。back-fill 完了で解消、V-model 最終整合 (孤児0) を DB 側で機械保証。FR-L1-49 drift lint と同じ IMP-033 rule engine に rule 型として登録。**`waiting_layer` の2類型 (A-85 self-review I-3)**: ① **spec back-fill 型** (`waiting_layer` = 設計層、例 L6) = 対のテスト設計を*書く*のに上位仕様 (関数 signature 等) 確定待ち (例 ST-ASSET-04)。② **実装状態解消型** (`waiting_layer` = L7) = テスト設計は書けているが検証対象の状態が実装/コンテンツ整備で初めて materialize する (例 ST-ASSET-05 skill curate 完了 / ST-ASSET-07 guard→roster 切替)。doctor は両型とも `waiting_layer` 到達まで未充足を fail-close 継続 (L7 は実装層だが「いつまで未充足を許容するか」の境界として有効)
 - **物理 schema の object 型詳細** (agent_slots/generates/dependencies の入れ子型) は L7 実装時に zod object で確定
 - evaluation_batch (Phase B) の物理 schema は Phase B telemetry 着手時に詳細化
+## §9 Harness DB Reference-Feedback Projection (PLAN-L5-08)
+
+PLAN-L5-08 adds the missing L5 slice for the user requirement that SQLite is not just storage, but a reference-feedback mechanism. The DB remains a projection of docs/state/logs, not the authoring source for governance docs.
+
+External reinforcement: SQLite FTS5 supports external/contentless index patterns, so `search_index` is specified as rebuildable projection rather than primary content storage. OpenTelemetry semantic conventions support using named events with attributes for logs/traces/metrics correlation. W3C PROV frames provenance around entity/activity/agent, which maps here to artifact/run/agent or skill.
+
+### §9.1 projection table expansion
+
+| table | primary key | required columns | purpose |
+|---|---|---|---|
+| `drive_runs` | `drive_run_id` | `plan_id`, `session_id`, `drive`, `mode`, `layer`, `kind`, `started_at`, `completed_at`, `status` | Track every drive/model execution lane, including non-V-model modes. |
+| `hook_events` | `event_id` | `session_id`, `plan_id`, `hook_name`, `event_type`, `occurred_at`, `digest`, `evidence_path` | Join SessionStart/PostToolUse/Stop, gate, and PLAN events into state projection. |
+| `skill_invocations` | `skill_invocation_id` | `session_id`, `plan_id`, `skill_id`, `layer`, `drive`, `fired_at`, `source`, `accepted` | Persist actual skill firing events. |
+| `skill_recommendations` | `skill_recommendation_id` | `session_id`, `plan_id`, `skill_id`, `rank`, `score`, `reason`, `recommended_at` | Persist the denominator for skill firing rate and recommendation quality. |
+| `feedback_events` | `feedback_event_id` | `finding_id`, `plan_id`, `signal_type`, `severity`, `status`, `next_action`, `created_at` | Convert repeated findings and drift into replanning input. |
+| `quality_signals` | `signal_id` | `source`, `subject_id`, `metric`, `value`, `threshold`, `status`, `computed_at` | Store machine-check metrics: orphan count, coverage, stale approval, gate-confirm coupling, schedule lint. |
+| `search_index` | `search_id` | `subject_type`, `subject_id`, `path`, `title`, `tokens`, `summary`, `updated_at` | Reduce lookup cost for PLAN/artifact/finding/skill/model/session queries. |
+| `workflow_runs` | `workflow_run_id` | `plan_id`, `drive_run_id`, `workflow`, `phase`, `ready_status`, `blocked_reason`, `human_required`, `checked_at` | Make workflow automation readiness queryable and data-backed. |
+| `guardrail_decisions` | `guardrail_decision_id` | `plan_id`, `session_id`, `guardrail`, `decision`, `mode`, `human_signoff_required`, `evidence_path`, `decided_at` | Persist safety decisions for agent-guard, review evidence, escalation, and same-model approval checks. |
+| `automation_assets` | `asset_id` | `asset_type`, `path`, `trigger`, `role`, `capability`, `drift_status`, `indexed_at` | Catalog skill/roster/command docs as automation inputs and search subjects. |
+
+Existing tables in §2.7 remain required. New rows must reference existing `plan_registry`, `artifact_registry`, `model_runs`, `findings`, or `gate_runs` when such source IDs exist. Missing join keys become `findings` rows instead of silent skips.
+
+### §9.2 skill/model metrics
+
+Skill firing rate is computed from persisted rows, not from chat memory:
+
+- `skill_firing_rate = count(skill_invocations where fired) / count(skill_recommendations)`
+- `skill_acceptance_rate = count(skill_invocations where accepted=true) / count(skill_invocations)`
+- `model_selection_trace = model_runs.plan_id + drive_runs.drive_run_id + skill_recommendations.reason`
+- `automation_readiness = workflow_runs.ready_status + open findings by plan/workflow + guardrail_decisions.decision`
+- `guardrail_block_rate = count(guardrail_decisions where decision=block) / count(guardrail_decisions)`
+
+The DB stores IDs, reasons, scores, and redacted summaries only. Raw provider transcript, secret, credential, and PII are out of scope.
+
+### §9.3 indexes and invariants
+
+Required indexes:
+
+- `idx_plan_layer_drive_status(plan_id, layer, drive, status)`
+- `idx_trace_from_to(from_artifact, to_artifact)`
+- `idx_findings_subject_status(subject_id, status, severity)`
+- `idx_hook_session_plan(session_id, plan_id, occurred_at)`
+- `idx_skill_plan_skill(plan_id, skill_id, fired_at)`
+- `idx_search_subject(subject_type, subject_id)`
+
+Invariants:
+
+- Every `drive_runs`, `hook_events`, `skill_*`, `feedback_events`, and `quality_signals` row has `plan_id` or `session_id`.
+- Every `workflow_runs`, `guardrail_decisions`, and `automation_assets` row has either a source path or evidence path, and non-ready automation never appears as ready without a closing finding.
+- Every non-green lint/doctor/vmodel/gate result is representable as `findings` plus optional `quality_signals`.
+- `search_index` is rebuildable from docs/state/logs and can be deleted/rebuilt without changing authoritative state.

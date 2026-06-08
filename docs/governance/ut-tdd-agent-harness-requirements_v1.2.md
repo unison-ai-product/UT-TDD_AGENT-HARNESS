@@ -1149,11 +1149,32 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 
 | 層 | 実体 | 役割 (何を答えるか) | 性質 |
 |----|------|---------------------|------|
-| **UT-harness DB (state)** | plan_registry / code_catalog / contract_registry / coverage / trace (FR-L1-06、`.ut-tdd/` state) | **今どこまで進んだか** (V-model 正本 state、孤児 0 / coverage を機械保証) | 機械 SSoT、doctor / vmodel lint で fail-close ([[feedback_vmodel_state_db_completeness]]) |
+| **UT-harness DB (state)** | `.ut-tdd/harness.db` SQLite projection DB + `.ut-tdd/` YAML/JSON state。主要 table: plan_registry / artifact_registry / model_runs / trace_edges / coverage / findings / gate_runs (FR-L1-06) | **今どこまで進んだか** (V-model 製本 state、別駆動 model の実行結果、孤児 0 / coverage / ゆがみ・もれを機械保証) | 機械 SSoT、doctor / vmodel lint で fail-close ([[feedback_vmodel_state_db_completeness]]) |
 | **log (session-log)** | session イベント + PLAN ダイジェスト (FR-L1-07 ext、§6.8.1、PLAN-L6-03/L7-01) | **どう進めたか** (作業の事実トレイル: touched files / commits / failures) | 観測、fail-open、ephemeral → PLAN digest |
 | **handover** | PLAN 完了 / session 境界の継続記録 (§6.8.5) | **次どうするか** (Next Action / carry / 未了 PO 判断) | 人間判断、durable |
 
 **組合せ原則**: state DB = 「正本の進捗」、log = 「事実の裏付け」、handover = 「判断の継続」。3 者を突合して進捗を多面管理する (DB だけでは『なぜ/次』が、log だけでは『正本 state』が、handover だけでは『機械保証』が欠ける)。**session-log の PLAN ダイジェストは log→handover の橋渡し (§6.8.5 入力) かつ state DB 登録 (FR-L1-07 hook) のトリガ**でもあり、3 層の結節点になる。**digest の活性化** = `.ut-tdd/state/current-plan` を `ut-tdd plan use <id>` で設定すること (`resolveActivePlan` の入力)。solo/main 直開発では branch から PLAN を読めず plan_id が null になり digest が生成されない Gap があるため、この明示設定で結節点を活性化する (PLAN-L7-04、`resolveActivePlan` 本体は不変)。
+
+
+### §6.8.7 DB reference-feedback and automation foundation bundle (2026-06-08)
+
+以下を FR-L1-05/06/07/09/12/13/17/18/19/20/33/37/39/40/41/45/46/47/48/49 の束ね要件として扱う。これは V-model state の保存だけではなく、機械チェック結果・駆動モデル別実行・ログ・skill/model telemetry・workflow 自動化 readiness・guardrail 安全判定・skill/roster/command 文書基盤を SQLite projection DB に投影し、抜け漏れ・依存関係・ゆがみの検出と検索コスト低減に使う要求である。
+
+| Requirement | Acceptance condition |
+|---|---|
+| `harness.db` は参照グラフを持つ | `plan_registry / artifact_registry / trace_edges / gate_runs / coverage / findings / model_runs` に加え、`drive_runs / hook_events / skill_invocations / skill_recommendations / feedback_events / search_index / quality_signals` 相当の投影を持つ。 |
+| 全駆動モデル・各ログを PLAN/session と join できる | drive/mode/run/log/finding は `plan_id` または `session_id` の少なくとも一方を持ち、孤児は doctor が finding 化する。 |
+| skill 発火率を計算できる | 推薦された skill、実際に発火した skill、採用/却下、理由、layer/drive/model/run を保存し、`fired / recommended` と `accepted / fired` を再計算できる。 |
+| フィードバック機構になる | lint/doctor/vmodel/gate/review の機械結果は `findings` と `quality_signals` に並び、同種反復・未解決・依存詰まりを `feedback_events` として再計画入力にできる。 |
+| 探すコストを下げる | PLAN/artifact/finding/skill/model/session の検索用 projection を持ち、`ut-tdd find` 相当の CLI が path/ID/reason/evidence を返せる。 |
+| workflow 自動化 readiness を判定できる | Forward/Add-feature/Reverse/Recovery などの workflow run、gate/CI/doctor 結果、blocked/human-required 状態を同じ `plan_id` / `session_id` / `drive_run_id` で参照できる。 |
+| guardrail の安全性を証跡化できる | agent-guard、review_evidence、same-model approval 禁止、tests-before-review、escalation 境界、human signoff の判定結果を `guardrail_decisions` 相当の projection として持ち、silent pass を finding 化できる。 |
+| skill/roster/command docs を自動化基盤として catalog 化できる | skill/roster/command docs の path、trigger、role/capability、drift status、recommendation reason、search token を catalog projection として持ち、空 catalog・HELIX 前提残存・guard 不整合を検出できる。 |
+| 機密を保存しない | provider transcript 本文、secret、credential、PII は保存対象外。DB は ID、digest、metadata、evidence path、redacted summary のみを持つ。 |
+
+External design references used for strengthening: SQLite FTS5 external/contentless index pattern for rebuildable search projection; OpenTelemetry semantic conventions for traces/logs/metrics/events naming; W3C PROV entity/activity/agent provenance model for reference graph thinking. These references do not introduce external runtime dependencies at L5.
+
+L5 降下先: `docs/plans/PLAN-L5-08-harness-db-feedback.md`、`docs/design/harness/L5-detailed-design/physical-data.md` §9、`module-decomposition.md` Appendix B、`internal-processing.md` Appendix B、`if-detail.md` Appendix B、`docs/test-design/harness/L8-integration-test-design.md` IT-DB/IT-SEARCH/IT-FEEDBACK/IT-AUTOMATION/IT-GUARDRAIL/IT-ASSET-DB。
 
 ## 6.9 CI 起動単位とコスト方針 (GitHub Actions 無料枠制約、tech 裏取り 2026-06-02)
 
@@ -1768,7 +1789,7 @@ interrupt / debt / drift-check / readiness と doctor 検出器 (relation-graph 
 - [ ] `command` が `helix` を含めば exit 1、`ut-tdd` 始まりのみ許可
 - [ ] `requires_human_approval: true` で承認者ポリシー未解決または未承認なら exit 1 + 承認記録を audit に残す
 - [ ] `ut-tdd vmodel show <drive> <layer> --injection` が 5 注入 key を返し、`orchestration_mode` は VALID_ORCHESTRATION_MODES のいずれか
-- [ ] 配線 config / 検出器が `helix.db` / 個人絶対パスに依存しない (`.ut-tdd/` state のみ)
+- [ ] 配線 config / 検出器が HELIX 版 `helix.db` / 個人絶対パスに依存しない (`.ut-tdd/` YAML/JSON state + `.ut-tdd/harness.db` projection DB のみ)
 
 ## 7.8.7 execution mode × レビューゲート切り分け (gate 崩壊防止、構想書 v3.1 §2.1.2.1)
 
