@@ -195,6 +195,8 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-REVIEW-004 | `analyzeReviewEvidence` (ok) | design/add-design/impl/add-impl すべて evidence あり → `missing=[]`/`ok=true` |
 | U-REVIEW-005 | `analyzeReviewEvidence` (対象外) | draft (未確定) / poc・charter・reverse (非 design-impl) / archived は missing にしない (過検知回避) |
 | U-REVIEW-006 | `loadReviewPlans`+`analyzeReviewEvidence` (実 repo CI fail-close ガード) | hard 化後 (IMP-071): 実 repo の confirmed design/impl PLAN は全件 review_evidence あり (`missing==[]`) + cross_agent 違反0 (`crossReviewViolations==[]`)。以後 review 証跡なし PLAN を足すと red |
+| U-REVIEW-007 | `analyzeReviewEvidence` (stale approval、IMP-080) | draft / 降格 PLAN に `verdict=approve` が残る → `staleApprovalViolations` + `ok=false` |
+| U-REVIEW-008 | `analyzeReviewEvidence` (stale approval ok) | confirmed + approve / draft + 証跡なし → stale approval ではない |
 | U-XREVIEW-001 | `analyzeReviewEvidence` (cross_agent ok) | cross_agent で worker_model≠reviewer_model → `crossReviewViolations=[]` / `ok=true` (IMP-076) |
 | U-XREVIEW-002 | `analyzeReviewEvidence` (same_model) | cross_agent で worker≡reviewer の同一 model → violation / `ok=false` (same_model_approval、concept §2.1.2.1) |
 | U-XREVIEW-003 | `analyzeReviewEvidence` (model 欠落) | cross_agent で model 欠落 → violation (単体 runtime は相異 model 供給不可 = cross_agent 僭称を弾く) |
@@ -217,6 +219,32 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-MDRIFT-003 | `analyzeModuleDrift` (orphan) | 実在するが未列挙 → `orphans` + `ok=false` / listedCount・actualCount 集計 |
 | U-MDRIFT-004 | `analyzeModuleDrift` (将来 module) | 設計が web/roster/skills を余分列挙 (src 未実在) は drift でない → `orphans=[]`/`ok=true` |
 | U-MDRIFT-005 | `loadModuleDocs`+`analyzeModuleDrift` (実 repo CI fail-close ガード) | 実 repo の `src/` 実在 module は全件 architecture §3.1 列挙 (`orphans==[]`) + listedCount≥actualCount。以後 src module を足して設計未列挙だと red |
+
+### §1.18 U-GCONF (gate-confirm coupling lint、PLAN-L7-18 / IMP-079)
+
+> ペア = `gate-confirm.md`。gate-design §2 台帳と design/test-design doc `status: confirmed` の coupling を検査する。初期配線は warn-first。
+
+| Test ID | 対象 | 期待 |
+|---|---|---|
+| U-GCONF-001 | `parseGateStatuses` | gate table から G/L/status/PASS を抽出 |
+| U-GCONF-002 | `layerToGate` | `L5 -> G5`、非 layer は null |
+| U-GCONF-003 | `analyzeGateConfirm` | gate park の layer に confirmed doc → violation |
+| U-GCONF-004 | `analyzeGateConfirm` | gate PASS の layer に confirmed doc → ok |
+| U-GCONF-005 | `analyzeGateConfirm` | gate table parse 失敗 → skip/fail-open |
+| U-GCONF-006 | `analyzeGateConfirm` | draft doc は対象外 |
+
+### §1.19 U-PLANSCH (plan lint §工程表 最小強制、PLAN-L7-20 / IMP-081)
+
+> ペア = `plan-schedule-lint.md`。§1.10.G.4 の最小スライスとして、Step の [並列]/[直列]、直列理由、review Step、§3.1 実装計画を検査する。
+
+| Test ID | 対象 | 期待 |
+|---|---|---|
+| U-PLANSCH-001 | `extractScheduleSection` | §工程表 section を抽出 |
+| U-PLANSCH-002 | `analyzePlanSchedule` | 準拠 PLAN → ok |
+| U-PLANSCH-003 | `analyzePlanSchedule` | [並列]/[直列] 欠落 Step → violation |
+| U-PLANSCH-004 | `analyzePlanSchedule` | [直列] の理由が 3 条件に該当しない → violation |
+| U-PLANSCH-005 | `analyzePlanSchedule` | review Step heading 不在 → violation |
+| U-PLANSCH-006 | `analyzePlanSchedule` | §3.1 実装計画 不在 → violation |
 
 ### §1.17 U-XRUNTIME (provider handover / gate review-tier / team run / adapter, 2026-06-08)
 

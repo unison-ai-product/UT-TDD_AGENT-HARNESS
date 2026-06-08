@@ -20,6 +20,44 @@ const plan = (o: Partial<ParsedReviewPlan>): ParsedReviewPlan => ({
   ...o,
 });
 
+describe("stale approval cleanup (IMP-080)", () => {
+  it("U-REVIEW-007: draft + verdict=approve は stale approval violation", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-DRAFT-APPROVE",
+        status: "draft",
+        hasEvidence: true,
+        crossEntries: [{ review_kind: "intra_runtime_subagent", verdict: "approve" }],
+      }),
+    ]);
+    expect(r.staleApprovalViolations).toEqual([
+      { plan_id: "PLAN-DRAFT-APPROVE", reason: "draft_with_approval" },
+    ]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("U-REVIEW-008: confirmed + approve / draft + 証跡なし は stale approval ではない", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-CONFIRMED-APPROVE",
+        status: "confirmed",
+        hasEvidence: true,
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            verdict: "approve",
+            reviewed_at: "2026-06-08",
+            tests_green_at: "2026-06-08",
+          },
+        ],
+      }),
+      plan({ plan_id: "PLAN-DRAFT-NONE", status: "draft", hasEvidence: false, crossEntries: [] }),
+    ]);
+    expect(r.staleApprovalViolations).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe("review-evidence lint (review 前置の機械強制、IMP-071)", () => {
   it("U-REVIEW-001: hasReviewEvidence — review_evidence ブロック (≥1 entry) を presence 検出", () => {
     const withEv = `plan_id: PLAN-A\nstatus: confirmed\nreview_evidence:\n  - reviewer: code-reviewer\n    review_kind: intra_runtime_subagent\n    reviewed_at: "2026-06-05"\n    verdict: approve\n`;
@@ -178,6 +216,7 @@ body`;
     expect(entries).toEqual([
       {
         review_kind: "cross_agent",
+        verdict: "approve",
         reviewed_at: "2026-06-05",
         worker_model: "claude-opus-4-8",
         reviewer_model: "gpt-5.5",

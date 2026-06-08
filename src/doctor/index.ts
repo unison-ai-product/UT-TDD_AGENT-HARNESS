@@ -1,9 +1,16 @@
 /** 統合検証 doctor (requirements_v1.2 §7 / §7.8.5). scaffold stub — 検出器は後続 PLAN。 */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { type HandoverPointer, handoverStale } from "../handover/index";
+import {
+  checkHandoverBypass,
+  checkHandoverDiscipline,
+  type HandoverDeps,
+  type HandoverPointer,
+  handoverStale,
+} from "../handover/index";
 import { analyzeBackfill, backfillMessages, loadBackfillDocs } from "../lint/backfill-pairing";
+import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
 import { analyzeModuleDrift, loadModuleDocs, moduleDriftMessages } from "../lint/module-drift";
 import { analyzePropagation, loadPropagationDocs, propagationMessages } from "../lint/propagation";
 import {
@@ -14,6 +21,7 @@ import {
 import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lint/rule-drift";
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
 import type { LintResult } from "../plan/lint";
+import { lintPlan } from "../plan/lint";
 import {
   type AgentSlotsDeps,
   DEFAULT_STALE_MINUTES,
@@ -36,6 +44,24 @@ export interface DoctorDeps {
   repoRoot: string;
   now: string;
   readText: (path: string) => string | null;
+  listDir: (dir: string) => string[];
+}
+
+function handoverDeps(deps: DoctorDeps): HandoverDeps {
+  return {
+    repoRoot: deps.repoRoot,
+    now: () => deps.now,
+    readText: deps.readText,
+    listDir: deps.listDir,
+    writeText: () => {
+      throw new Error("doctor is read-only and must not write handover state");
+    },
+  };
+}
+
+export function checkHandoverDisciplineMessages(deps: DoctorDeps): string[] {
+  const hd = handoverDeps(deps);
+  return [...checkHandoverDiscipline(hd), ...checkHandoverBypass(hd)];
 }
 
 /**
@@ -176,6 +202,26 @@ export function checkRuleDrift(repoRoot: string): { messages: string[]; ok: bool
   }
 }
 
+export function checkGateConfirm(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeGateConfirm(loadGateConfirmDocs(repoRoot));
+    return { messages: gateConfirmMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["gate-confirm — note: gate-design/doc frontmatter を読めず検査 skip"],
+      ok: true,
+    };
+  }
+}
+
+export function checkPlanSchedule(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    return lintPlan(undefined, repoRoot);
+  } catch {
+    return { messages: ["plan-schedule — note: PLAN を読めず検査 skip"], ok: true };
+  }
+}
+
 /**
  * V-model 層群の Forward freeze 完了 (検証サイクル発火タイミング) を surface (IMP-068、note)。
  * 層群が freeze 完了 → 検証発火可 / Forward 進行中。検証ロードマップの「いつ検証するか」を
@@ -207,6 +253,7 @@ export function nodeDoctorDeps(repoRoot: string): DoctorDeps {
     repoRoot,
     now: new Date().toISOString(),
     readText: (path) => (existsSync(path) ? readFileSync(path, "utf8") : null),
+    listDir: (dir) => (existsSync(dir) ? readdirSync(dir) : []),
   };
 }
 
@@ -225,11 +272,14 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   // module-drift は warn-first (impl→design back-fill 漏れ surface、IMP-075。hard 化は段階)。
   const moduleDrift = checkModuleDrift(deps.repoRoot);
   const ruleDrift = checkRuleDrift(deps.repoRoot);
+  const gateConfirm = checkGateConfirm(deps.repoRoot);
+  const planSchedule = checkPlanSchedule(deps.repoRoot);
   return {
     ok: backfill.ok && scrumRev.ok && propagation.ok && reviewEvidence.ok && ruleDrift.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
       checkHandover(deps),
+      ...checkHandoverDisciplineMessages(deps).map((m) => `doctor: handover-discipline — ${m}`),
       checkAgentSlots(doctorSlotsDeps(deps)),
       ...backfill.messages.map((m) => `doctor: ${m}`),
       ...scrumRev.messages.map((m) => `doctor: ${m}`),
@@ -237,6 +287,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
       ...moduleDrift.messages.map((m) => `doctor: ${m}`),
       ...ruleDrift.messages.map((m) => `doctor: ${m}`),
+      ...gateConfirm.messages.map((m) => `doctor: ${m}`),
+      ...planSchedule.messages.map((m) => `doctor: ${m}`),
       ...reviewEvidence.messages.map((m) => `doctor: ${m}`),
       ...checkVerificationGroups(deps.repoRoot).map((m) => `doctor: ${m}`),
       "doctor: scaffold stub (横断検出 relation-graph / drift / regression は後続 PLAN)",
