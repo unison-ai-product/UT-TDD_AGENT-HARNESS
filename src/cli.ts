@@ -39,6 +39,16 @@ function gitBranch(): string | null {
   }
 }
 
+function optionFromCommandChain<T>(cmd: Command, key: string): T | undefined {
+  let current: Command | null = cmd;
+  while (current) {
+    const value = (current.opts() as Record<string, unknown>)[key];
+    if (value !== undefined) return value as T;
+    current = current.parent ?? null;
+  }
+  return undefined;
+}
+
 function readStdin(): string {
   try {
     return readFileSync(0, "utf8");
@@ -166,17 +176,30 @@ providerHandover
   .option("--file <path...>", "relevant files")
   .option("--dry-run", "do not write files")
   .action(
-    (opts: {
-      from: ProviderRuntime;
-      to: ProviderRuntime;
-      summary: string;
-      plan?: string;
-      budget?: string;
-      nextAction?: string[];
-      file?: string[];
-      dryRun?: boolean;
-    }) => {
-      const planId = opts.plan ?? resolveActivePlan(nodeDeps(process.cwd(), gitBranch));
+    (
+      opts: {
+        from: ProviderRuntime;
+        to: ProviderRuntime;
+        summary: string;
+        plan?: string;
+        budget?: string;
+        nextAction?: string[];
+        file?: string[];
+        dryRun?: boolean;
+      },
+      cmd: Command,
+    ) => {
+      const localOpts = cmd.opts() as typeof opts;
+      const chainPlan = optionFromCommandChain<string>(cmd, "plan");
+      const chainBudget = optionFromCommandChain<string>(cmd, "budget");
+      const chainNextAction = optionFromCommandChain<string[]>(cmd, "nextAction");
+      const chainFile = optionFromCommandChain<string[]>(cmd, "file");
+      const chainDryRun = optionFromCommandChain<boolean>(cmd, "dryRun");
+      const planId =
+        localOpts.plan ??
+        opts.plan ??
+        chainPlan ??
+        resolveActivePlan(nodeDeps(process.cwd(), gitBranch));
       if (!planId) {
         process.stderr.write("provider handover requires --plan or active current-plan\n");
         process.exitCode = 1;
@@ -188,11 +211,11 @@ providerHandover
             from: opts.from,
             to: opts.to,
             activePlan: planId,
-            budget: opts.budget ?? null,
+            budget: localOpts.budget ?? opts.budget ?? chainBudget ?? null,
             summary: opts.summary,
-            nextActions: opts.nextAction ?? [],
-            files: opts.file ?? [],
-            dryRun: Boolean(opts.dryRun),
+            nextActions: localOpts.nextAction ?? opts.nextAction ?? chainNextAction ?? [],
+            files: localOpts.file ?? opts.file ?? chainFile ?? [],
+            dryRun: Boolean(localOpts.dryRun ?? opts.dryRun ?? chainDryRun),
           },
           nodeProviderHandoverDeps(process.cwd()),
         );

@@ -266,3 +266,10 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - **L7 entry (TDD Red)**: 全 U-* を vitest 単体テストに先行変換 (FR-02、Red 先行、未実装理由のみで fail 可)
 - **L7 実装**: function-spec WBS (§5) の Sprint L7.1〜L7.7 を Red→Green→3点R で実装。DbC docstring (`@edge-*`) を実関数へ転記
 - **G7 trace freeze**: 4 artifact 双方向 12 edge 凍結時に本書 U ↔ L6 設計の trace 確定
+
+### 2026-06-08 Residual Review Closure Test Addendum
+
+- U-GATE-004: `evaluateGateReview` rejects `self_review` / `self-review` / `naive_self_review` as judgment-gate evidence in hybrid, single-runtime, and standalone modes.
+- U-RDRIFT-001: `analyzeRuleDrift` passes when AGENTS / CLAUDE adapter docs share required command and mode markers.
+- U-RDRIFT-002: `analyzeRuleDrift` reports missing adapter markers with file and marker identity.
+- U-RDRIFT-003: real repo AGENTS / CLAUDE adapter docs have no required marker drift.
