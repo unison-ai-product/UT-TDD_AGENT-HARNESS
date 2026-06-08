@@ -5,19 +5,10 @@ kind: design
 layer: L5
 sub_doc: internal-processing
 drive: be
-status: confirmed
+status: draft
 created: 2026-05-29
 updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
-review_evidence:
-  - reviewer: pmo-sonnet
-    review_kind: cross_agent
-    reviewed_at: "2026-06-08"
-    verdict: pass
-    worker_model: gpt-5.5
-    reviewer_model: claude-sonnet-4-6
-    tests_green_at: "2026-06-08"
-    scope: "G5 readiness for internal-processing D-API: processing flows, DbC pre/post/invariants, skill/drift D-API back-fill, L8 IT-CONTRACT/IT-ASSET pair; gate G5 hybrid cross_agent check passed."
 agent_slots:
   - role: tl
     slot_label: "TL — D-API 処理ロジック / DbC 契約のレビュー (別 runtime)"

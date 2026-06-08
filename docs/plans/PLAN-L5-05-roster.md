@@ -5,9 +5,9 @@ kind: design
 layer: L5
 sub_doc: module-decomposition
 drive: fullstack
-status: confirmed
+status: draft
 created: 2026-06-01
-updated: 2026-06-01
+updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl

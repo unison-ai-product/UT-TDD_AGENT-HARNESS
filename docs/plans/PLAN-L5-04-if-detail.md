@@ -5,19 +5,10 @@ kind: design
 layer: L5
 sub_doc: if-detail
 drive: fullstack
-status: confirmed
+status: draft
 created: 2026-05-29
 updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
-review_evidence:
-  - reviewer: pmo-sonnet
-    review_kind: cross_agent
-    reviewed_at: "2026-06-08"
-    verdict: pass
-    worker_model: gpt-5.5
-    reviewer_model: claude-sonnet-4-6
-    tests_green_at: "2026-06-08"
-    scope: "G5 readiness for if-detail D-CONTRACT: adapter intent/error contracts, no API-key premise, auth/secrets remain PO+security carry, L8 IT-ADAPTER pair; gate G5 hybrid cross_agent check passed."
 agent_slots:
   - role: tl
     slot_label: "TL — adapter 詳細契約 / エラー型のレビュー (別 runtime)"

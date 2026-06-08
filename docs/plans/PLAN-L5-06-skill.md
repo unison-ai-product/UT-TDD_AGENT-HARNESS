@@ -5,19 +5,10 @@ kind: design
 layer: L5
 sub_doc: module-decomposition
 drive: fullstack
-status: confirmed
+status: draft
 created: 2026-06-01
 updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
-review_evidence:
-  - reviewer: pmo-sonnet
-    review_kind: cross_agent
-    reviewed_at: "2026-06-08"
-    verdict: pass
-    worker_model: gpt-5.5
-    reviewer_model: claude-sonnet-4-6
-    tests_green_at: "2026-06-08"
-    scope: "G5 readiness for PLAN-L5-06 skill module integration. Evidence: module-decomposition Appendix A.1, internal-processing Appendix A.1, L8-integration Appendix A.1/A.2; gate G5 hybrid cross_agent check passed."
 agent_slots:
   - role: tl
     slot_label: "TL — skills module 内部分割 (catalog/recommender/injector) の結合境界レビュー (別 runtime)"

@@ -5,19 +5,10 @@ kind: design
 layer: L5
 sub_doc: module-decomposition
 drive: fullstack
-status: confirmed
+status: draft
 created: 2026-06-01
 updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
-review_evidence:
-  - reviewer: pmo-sonnet
-    review_kind: cross_agent
-    reviewed_at: "2026-06-08"
-    verdict: pass
-    worker_model: gpt-5.5
-    reviewer_model: claude-sonnet-4-6
-    tests_green_at: "2026-06-08"
-    scope: "G5 readiness for PLAN-L5-07 asset-drift module integration. Evidence: module-decomposition Appendix A.2, internal-processing Appendix A.2, L8-integration Appendix A.1/A.2; gate G5 hybrid cross_agent check passed."
 agent_slots:
   - role: tl
     slot_label: "TL — asset-drift rule の IMP-033 rule engine 結合 (module 登録方式) のレビュー (別 runtime)"
