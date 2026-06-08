@@ -5,10 +5,19 @@ kind: design
 layer: L5
 sub_doc: physical-data
 drive: db
-status: draft
+status: confirmed
 created: 2026-05-29
-updated: 2026-05-29
+updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: pmo-sonnet
+    review_kind: cross_agent
+    reviewed_at: "2026-06-08"
+    verdict: pass
+    worker_model: gpt-5.5
+    reviewer_model: claude-sonnet-4-6
+    tests_green_at: "2026-06-08"
+    scope: "G5 readiness for physical-data D-DB: state schema, zod mapping, invariant checks, L8 IT-STATE pair; gate G5 hybrid cross_agent check passed."
 agent_slots:
   - role: tl
     slot_label: "TL — 物理 schema / zod 化 / file レイアウトのレビュー (別 runtime)"
@@ -76,13 +85,13 @@ data.md §6 不変条件を物理 schema レベルで検証する点 (zod superR
 
 ## §4 受入条件 / DoD
 
-- [ ] Step 1〜8 のすべてが `physical-data.md` に存在
-- [ ] 5 集約の物理 schema (JSON フィールド型/必須任意/default) が存在
-- [ ] 12 値オブジェクトの物理表現 + SubDoc zod 化方針 (IMP-026) が存在
-- [ ] state file ↔ `src/schema` zod 1:1 対応表が存在
-- [ ] data.md §6 不変条件の物理検証点が明示
-- [ ] §6 用語更新 / §7 機能要求更新 が存在 (要件 §1.10.G.9/G.10)
-- [ ] frontmatter `kind == design`、§0〜§7 完備
+- [x] Step 1〜8 のすべてが `physical-data.md` に存在
+- [x] 5 集約の物理 schema (JSON フィールド型/必須任意/default) が存在
+- [x] 12 値オブジェクトの物理表現 + SubDoc zod 化方針 (IMP-026) が存在
+- [x] state file ↔ `src/schema` zod 1:1 対応表が存在
+- [x] data.md §6 不変条件の物理検証点が明示
+- [x] §6 用語更新 / §7 機能要求更新 が存在 (要件 §1.10.G.9/G.10)
+- [x] frontmatter `kind == design`、§0〜§7 完備
 
 ## §5 関連 PLAN / ADR / docs
 

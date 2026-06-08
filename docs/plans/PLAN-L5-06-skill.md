@@ -5,10 +5,19 @@ kind: design
 layer: L5
 sub_doc: module-decomposition
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-01
-updated: 2026-06-01
+updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: pmo-sonnet
+    review_kind: cross_agent
+    reviewed_at: "2026-06-08"
+    verdict: pass
+    worker_model: gpt-5.5
+    reviewer_model: claude-sonnet-4-6
+    tests_green_at: "2026-06-08"
+    scope: "G5 readiness for PLAN-L5-06 skill module integration. Evidence: module-decomposition Appendix A.1, internal-processing Appendix A.1, L8-integration Appendix A.1/A.2; gate G5 hybrid cross_agent check passed."
 agent_slots:
   - role: tl
     slot_label: "TL — skills module 内部分割 (catalog/recommender/injector) の結合境界レビュー (別 runtime)"
@@ -66,14 +75,14 @@ L4 architecture §3.1 skills building block を **module 結合粒度**へ詳細
 
 ## §4 受入条件 / DoD
 
-- [ ] module-decomposition の skill stub を内部分割具体化 (catalog/recommender/injector、依存 schema/fs 一方向)
-- [ ] 層1/層2 結合境界 (ADR-004) + curate 区分方針 (アルゴリズムは L6 carry)
-- [ ] internal-processing に skill 推挙/注入 D-API + DbC
-- [ ] L8 IT-ASSET (skill) ペア + 未確定 placeholder_deps + 依存明示
-- [ ] recommender/injector の関数仕様を L6 carry (waiting_layer:L6) / curate 完了は L7 (実装状態解消型)
-- [ ] L4 architecture §3.1 との 1:1 整合 (二重定義なし)
-- [ ] §6 用語更新 / §7 機能要求更新
-- [ ] self-review 通過
+- [x] module-decomposition の skill stub を内部分割具体化 (catalog/recommender/injector、依存 schema/fs 一方向)
+- [x] 層1/層2 結合境界 (ADR-004) + curate 区分方針 (アルゴリズムは L6 carry)
+- [x] internal-processing に skill 推挙/注入 D-API + DbC
+- [x] L8 IT-ASSET (skill) ペア + 未確定 placeholder_deps + 依存明示
+- [x] recommender/injector の関数仕様を L6 carry (waiting_layer:L6) / curate 完了は L7 (実装状態解消型)
+- [x] L4 architecture §3.1 との 1:1 整合 (二重定義なし)
+- [x] §6 用語更新 / §7 機能要求更新
+- [x] self-review 通過
 
 ## §5 関連 PLAN / ADR / docs
 

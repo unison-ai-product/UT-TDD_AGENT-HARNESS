@@ -4,11 +4,20 @@ title: "PLAN-L5-00 (Master hub): L5 詳細設計 — 必須/選択 triage + chil
 kind: design
 layer: L5
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-05-29
-updated: 2026-05-29
+updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
 master_hub: true
+review_evidence:
+  - reviewer: pmo-sonnet
+    review_kind: cross_agent
+    reviewed_at: "2026-06-08"
+    verdict: pass
+    worker_model: gpt-5.5
+    reviewer_model: claude-sonnet-4-6
+    tests_green_at: "2026-06-08"
+    scope: "G5 readiness for L5 master hub: child PLANs 01-07 exist, L5 design docs and L8 pair are connected, gate G5 hybrid cross_agent check passed."
 agent_slots:
   - role: tl
     slot_label: "TL — L5 詳細設計 (DbC contract / module 分割 / 物理 schema) のレビュー (別 runtime)"
@@ -89,9 +98,9 @@ child PLAN 起票時に以下を織り込む:
 
 ## §5 DoD (Master hub 完了条件)
 
-- [ ] §2 の必須 3 + 選択 1 = child PLAN 4 件を起票 (physical-data/module-decomposition/internal-processing/if-detail)
-- [ ] **内部資産 per-requirement child 3 件を起票** (PLAN-L5-05-roster / L5-06-skill / L5-07-drift、A-92、[[feedback-plan-per-requirement]])
-- [ ] skip 候補なし (L5 全 sub-doc がプロダクト適合) を記録
-- [ ] 各 child が L8 結合テスト設計と pair_artifact 接続
-- [ ] G4 escalation ①② を child PLAN の §4 carry に織り込み
-- [ ] 全 child 完了で G5 (詳細設計ゲート = DbC freeze 点、document-system-map §3) readiness へ
+- [x] §2 の必須 3 + 選択 1 = child PLAN 4 件を起票 (physical-data/module-decomposition/internal-processing/if-detail)
+- [x] **内部資産 per-requirement child 3 件を起票** (PLAN-L5-05-roster / L5-06-skill / L5-07-drift、A-92、[[feedback-plan-per-requirement]])
+- [x] skip 候補なし (L5 全 sub-doc がプロダクト適合) を記録
+- [x] 各 child が L8 結合テスト設計と pair_artifact 接続
+- [x] G4 escalation ①② を child PLAN の §4 carry に織り込み
+- [x] 全 child 完了で G5 (詳細設計ゲート = DbC freeze 点、document-system-map §3) readiness へ

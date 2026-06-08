@@ -1,7 +1,7 @@
 ---
 layer: L5
 sub_doc: internal-processing
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -128,3 +128,29 @@ requirements §2.3 の ②実装↔④テスト 双方向 trace edge のうち *
 - **edge↔AT trace lint** (`vmodel lint` の edge 5-8 照合) = L7
 - 外部操作 (adapter 経由) の DbC = if-detail (PLAN-L5-04、IMP-018 の how 側を本 doc と分担)
 - **G5 freeze**: 本 doc の DbC (pre/post/invariant + edge docstring 形式) を G5 で凍結 (document-system-map §3)
+
+## Appendix A: L5 internal asset D-API back-fill (PLAN-L5-06 / PLAN-L5-07)
+
+### A.1 skill operations
+
+PLAN-L5-06 adds the following D-API contracts to the L5 internal-processing scope:
+
+| operation | processing flow | DbC summary |
+|---|---|---|
+| `skill catalog` | scan `docs/skills/**/*.md` -> parse skill metadata -> build in-memory catalog -> return sorted catalog entries | pre: skills directory is readable or explicitly absent; post: no persistent state is written; invariant: layer-1 skill source docs are never rewritten by catalog loading |
+| `skill recommend` | load catalog -> normalize task/layer/drive context -> score candidates -> return deterministic ranked list | pre: catalog entries are parsed; post: ranking is deterministic for identical inputs; invariant: recommender has no provider/runtime side effect |
+| `skill inject` | consume recommendation set -> build layer-scoped injection list -> hand off to provider adapter intent | pre: selected skills resolve to existing docs; post: injection set contains paths + reasons, not copied skill bodies; invariant: ADR-004 layer-1/layer-2 boundary remains intact |
+
+Function-level scoring, tie-breaks, and injector schemas are L6 carry; provider prompt materialization is L7.
+
+### A.2 asset-drift operations
+
+PLAN-L5-07 adds the following D-API contracts to the L5 internal-processing scope:
+
+| operation | processing flow | DbC summary |
+|---|---|---|
+| `asset drift check` | load enrolled asset docs -> run `asset-drift` rule predicates -> aggregate violations -> surface doctor/gate result | pre: rule registry contains `asset-drift`; post: unresolved drift produces non-green validation result; invariant: this rule does not replace dependency-drift |
+| `asset enroll` | scan `.claude/agents/*.md` and `docs/skills/**/*.md` -> normalize asset IDs -> produce registry input for rule execution | pre: scan roots are known; post: absent optional roots become empty sets with evidence, not silent success; invariant: scanner follows the `loadX -> analyzeX` lint pattern |
+| `placeholder gap check` | read placeholder dependency markers -> compare waiting layer and materialization state -> report unresolved gaps | pre: artifact metadata is readable; post: unresolved placeholder dependencies remain visible until the waiting layer is reached; invariant: gap visibility is fail-close, not manual memory |
+
+Predicate signatures and regex details are L6 carry; rule-engine wiring is L7.

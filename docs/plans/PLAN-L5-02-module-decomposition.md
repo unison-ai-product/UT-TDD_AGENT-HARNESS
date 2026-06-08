@@ -5,10 +5,19 @@ kind: design
 layer: L5
 sub_doc: module-decomposition
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-05-29
-updated: 2026-05-29
+updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: pmo-sonnet
+    review_kind: cross_agent
+    reviewed_at: "2026-06-08"
+    verdict: pass
+    worker_model: gpt-5.5
+    reviewer_model: claude-sonnet-4-6
+    tests_green_at: "2026-06-08"
+    scope: "G5 readiness for module-decomposition: module inventory, dependency direction, skill/roster/drift internal asset back-fill, L8 IT-MODULE/IT-ASSET pair; gate G5 hybrid cross_agent check passed."
 agent_slots:
   - role: tl
     slot_label: "TL — module 内部分割 / 公開 IF 境界のレビュー (別 runtime)"
@@ -77,13 +86,13 @@ module 内部関数 → L6 関数仕様 (pseudocode) / L7 実装への carry。
 
 ## §4 受入条件 / DoD
 
-- [ ] Step 1〜8 のすべてが `module-decomposition.md` に存在
-- [ ] 実装済 7 module + 未実装 module の責務・公開 IF が存在
-- [ ] 依存方向 (schema 一方向・循環禁止) の物理保証方針が存在
-- [ ] architecture.md §3 building block との 1:1 整合 (二重定義なし)
-- [ ] ADR-002 候補の判断材料が存在 (G4 escalation ①)
-- [ ] §6 用語更新 / §7 機能要求更新 が存在 (要件 §1.10.G.9/G.10)
-- [ ] frontmatter `kind == design`、§0〜§7 完備
+- [x] Step 1〜8 のすべてが `module-decomposition.md` に存在
+- [x] 実装済 7 module + 未実装 module の責務・公開 IF が存在
+- [x] 依存方向 (schema 一方向・循環禁止) の物理保証方針が存在
+- [x] architecture.md §3 building block との 1:1 整合 (二重定義なし)
+- [x] ADR-002 候補の判断材料が存在 (G4 escalation ①)
+- [x] §6 用語更新 / §7 機能要求更新 が存在 (要件 §1.10.G.9/G.10)
+- [x] frontmatter `kind == design`、§0〜§7 完備
 
 ## §5 関連 PLAN / ADR / docs
 
