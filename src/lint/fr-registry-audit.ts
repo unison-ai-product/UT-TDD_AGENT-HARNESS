@@ -28,18 +28,19 @@ export interface FrDocSource {
   screen: string;
 }
 
-export function loadFrDocs(): FrDocSource {
+// A-120 I-5: repoRoot 注入可 (default = ROOT で挙動保存)。
+export function loadFrDocs(repoRoot: string = ROOT): FrDocSource {
   return {
     l1Functional: readFileSync(
-      resolve(ROOT, "docs/design/harness/L1-requirements/functional-requirements.md"),
+      resolve(repoRoot, "docs/design/harness/L1-requirements/functional-requirements.md"),
       "utf-8",
     ),
     l3Functional: readFileSync(
-      resolve(ROOT, "docs/design/harness/L3-functional/functional-requirements.md"),
+      resolve(repoRoot, "docs/design/harness/L3-functional/functional-requirements.md"),
       "utf-8",
     ),
     screen: readFileSync(
-      resolve(ROOT, "docs/design/harness/L1-requirements/screen-requirements.md"),
+      resolve(repoRoot, "docs/design/harness/L1-requirements/screen-requirements.md"),
       "utf-8",
     ),
   };

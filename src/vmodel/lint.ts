@@ -12,6 +12,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { fmValue } from "../lint/shared";
 import type { LintResult } from "../plan/lint";
 
 export interface PairDoc {
@@ -41,9 +42,6 @@ export interface PairFreezeResult {
 
 /** 検査対象外の index/living doc (basename 固定リスト、vmodel-pair-freeze.md §3)。 */
 const EXCLUDED_BASENAMES = new Set(["README.md", "roadmap.md"]);
-
-const fmValue = (content: string, key: string): string | undefined =>
-  content.match(new RegExp(`^${key}:\\s*(.+)$`, "m"))?.[1]?.trim();
 
 /** frontmatter 値の inline コメント (`  # ...`) を除去 (`self  # wireframe...` → `self`)。 */
 export function stripInlineComment(value: string): string {

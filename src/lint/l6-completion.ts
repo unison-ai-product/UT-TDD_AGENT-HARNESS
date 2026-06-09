@@ -1,5 +1,9 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+// A-120 I-3: review_evidence の有無判定は review-evidence.ts を単一正本にする
+// (旧 l6-completion 版は判定ロジックが乖離し review-evidence hard gate と齟齬を生む恐れがあった)。
+import { hasReviewEvidence } from "./review-evidence";
+import { hasDbcTable } from "./shared";
 
 export interface L6CompletionDoc {
   path: string;
@@ -48,15 +52,8 @@ function docPlanOf(text: string): string | null {
   return text.match(DOC_PLAN_RE)?.[1] ?? null;
 }
 
-function hasReviewEvidence(text: string): boolean {
-  return /^review_evidence:\s*$/m.test(text) && /^\s*-\s*reviewer:\s*/m.test(text);
-}
-
 function hasUnitContractSubstance(text: string): boolean {
-  const hasStructuredDbcTable =
-    /\|\s*Function\(s\)\s*\|\s*Signature\s*\|\s*pre\s*\|\s*post\s*\|\s*invariant\s*\|\s*oracle\s*\|/i.test(
-      text,
-    ) || /\|\s*Function\s*\|\s*Signature\s*\|\s*pre\s*\|\s*post/i.test(text);
+  const hasStructuredDbcTable = hasDbcTable(text);
   const signatureCount = (text.match(/\b[A-Za-z][A-Za-z0-9_]*\([^)]*\)\s*=>/g) ?? []).length;
   const oracleCount = (text.match(/\bU-[A-Z0-9-]+/g) ?? []).length;
   const dbcMarkerCount = (text.match(/\b(pre|post|invariant|oracle|DbC)\b/gi) ?? []).length;

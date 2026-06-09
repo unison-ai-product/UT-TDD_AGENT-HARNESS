@@ -29,6 +29,9 @@ const MOJIBAKE_MARKERS: { marker: string; pattern: RegExp }[] = [
   },
 ];
 
+// G5 freeze 時に PM review 対象だった L5 PLAN (Codex 製で過去 mojibake が出た系)。
+// A-120 m-3: 全 PLAN-L5-*.md の動的収集にしない理由 = freeze 品質で守る review band を
+// 意図的に明示固定する (単一正本)。新規 freeze review 対象 PLAN を増やすときは本リストへ追記する。
 const PM_REVIEW_PLAN_PATHS = [
   join("docs", "plans", "PLAN-L5-03-internal-processing.md"),
   join("docs", "plans", "PLAN-L5-05-roster.md"),

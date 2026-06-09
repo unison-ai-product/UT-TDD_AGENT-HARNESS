@@ -21,26 +21,27 @@ interface DocSource {
   l12AcceptanceTest: string;
 }
 
-export function loadDocs(): DocSource {
+// A-120 I-5: repoRoot 注入可 (default = ROOT で挙動保存)。
+export function loadDocs(repoRoot: string = ROOT): DocSource {
   return {
     l1Functional: readFileSync(
-      resolve(ROOT, "docs/design/harness/L1-requirements/functional-requirements.md"),
+      resolve(repoRoot, "docs/design/harness/L1-requirements/functional-requirements.md"),
       "utf-8",
     ),
     l3Functional: readFileSync(
-      resolve(ROOT, "docs/design/harness/L3-functional/functional-requirements.md"),
+      resolve(repoRoot, "docs/design/harness/L3-functional/functional-requirements.md"),
       "utf-8",
     ),
     l3BusinessDetail: readFileSync(
-      resolve(ROOT, "docs/design/harness/L3-functional/business-detail.md"),
+      resolve(repoRoot, "docs/design/harness/L3-functional/business-detail.md"),
       "utf-8",
     ),
     l3NfrGrade: readFileSync(
-      resolve(ROOT, "docs/design/harness/L3-functional/nfr-grade.md"),
+      resolve(repoRoot, "docs/design/harness/L3-functional/nfr-grade.md"),
       "utf-8",
     ),
     l12AcceptanceTest: readFileSync(
-      resolve(ROOT, "docs/test-design/harness/L3-acceptance-test-design.md"),
+      resolve(repoRoot, "docs/test-design/harness/L3-acceptance-test-design.md"),
       "utf-8",
     ),
   };

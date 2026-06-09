@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import ts from "typescript";
+import { importedSourceModule, lineOf, normalizePath, sourceModule } from "./shared";
 
 export type CodingRulesScope = "source" | "test";
 
@@ -144,14 +145,6 @@ const DISALLOWED_SOURCE_IMPORTS: Record<string, Set<string>> = {
   ]),
 };
 
-function normalizePath(path: string): string {
-  return path.replaceAll("\\", "/");
-}
-
-function lineOf(sourceFile: ts.SourceFile, pos: number): number {
-  return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
-}
-
 function firstMatchingLine(text: string, pattern: RegExp): number {
   const lines = text.split(/\r?\n/);
   for (let i = 0; i < lines.length; i += 1) {
@@ -173,32 +166,6 @@ function isFunctionLike(node: ts.Node): node is ts.FunctionLikeDeclaration {
     ts.isMethodDeclaration(node) ||
     ts.isConstructorDeclaration(node)
   );
-}
-
-function sourceModule(path: string): string | null {
-  const parts = normalizePath(path).split("/");
-  if (parts[0] !== "src") return null;
-  if (parts.length === 2) return parts[1].replace(/\.ts$/, "");
-  return parts[1] ?? null;
-}
-
-function importedSourceModule(fromPath: string, specifier: string): string | null {
-  if (!specifier.startsWith(".")) return null;
-  const fromParts = normalizePath(fromPath).split("/");
-  if (fromParts[0] !== "src") return null;
-  const fromDirParts = fromParts.slice(0, -1);
-  const resolvedParts: string[] = [];
-  for (const part of [...fromDirParts, ...specifier.split("/")]) {
-    if (part === "." || part === "") continue;
-    if (part === "..") {
-      resolvedParts.pop();
-      continue;
-    }
-    resolvedParts.push(part);
-  }
-  if (resolvedParts[0] !== "src") return null;
-  if (resolvedParts.length === 2) return resolvedParts[1].replace(/\.ts$/, "");
-  return resolvedParts[1] ?? null;
 }
 
 function catchHasOnlyThrow(block: ts.Block): boolean {

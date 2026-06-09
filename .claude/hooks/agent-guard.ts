@@ -70,7 +70,10 @@ if (decision.message) process.stderr.write(`${decision.message}\n`);
 const passedKind = input.tool_input?.subagent_type;
 if (decision.code === 0 && passedKind) {
   try {
-    const { activeCount, exceeded } = recordGuardFire(passedKind, nodeAgentSlotsDeps(repoRoot));
+    const { activeCount, exceeded } = recordGuardFire(
+      { agentKind: passedKind },
+      nodeAgentSlotsDeps(repoRoot),
+    );
     if (exceeded) {
       process.stderr.write(
         `[ut-tdd-guard] ⚠ 並列 subagent が ${activeCount} 件 (上限 ${DEFAULT_MAX_PARALLEL} 超)。直列化要否を確認 (.claude/CLAUDE.md 並列実行 / IMP-049)。\n`,

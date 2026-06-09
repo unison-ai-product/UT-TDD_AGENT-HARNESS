@@ -10,8 +10,6 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..", "..");
 
-const BUSINESS_PATH = resolve(ROOT, "docs/design/harness/L1-requirements/business-requirements.md");
-
 export interface EntityCoverageResult {
   primaryEntities: string[]; // §10.1
   l3DerivedEntities: string[]; // §10.1.1
@@ -19,8 +17,12 @@ export interface EntityCoverageResult {
   duplicates: string[];
 }
 
-export function loadBusiness(): string {
-  return readFileSync(BUSINESS_PATH, "utf-8");
+// A-120 I-5: repoRoot 注入可 (default = __filename 由来 ROOT で挙動保存、test fixture 注入を許可)。
+export function loadBusiness(repoRoot: string = ROOT): string {
+  return readFileSync(
+    resolve(repoRoot, "docs/design/harness/L1-requirements/business-requirements.md"),
+    "utf-8",
+  );
 }
 
 /** §10.1 主要業務 entity 一覧 表から entity 名抽出 (table 行 | **<name>** | ...) */

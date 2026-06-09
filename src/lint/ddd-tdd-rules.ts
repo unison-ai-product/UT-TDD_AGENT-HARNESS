@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import ts from "typescript";
+import { importedSourceModule, lineOf, normalizePath, sourceModule } from "./shared";
 
 export type DddTddDocScope = "source" | "test";
 
@@ -121,14 +122,6 @@ const DISALLOWED_DOMAIN_IMPORTS: Record<string, Set<string>> = {
   schema: new Set(["cli", "doctor", "gate", "handover", "lint", "plan", "runtime", "team"]),
 };
 
-function normalizePath(path: string): string {
-  return path.replaceAll("\\", "/");
-}
-
-function lineOf(sourceFile: ts.SourceFile, pos: number): number {
-  return sourceFile.getLineAndCharacterOfPosition(pos).line + 1;
-}
-
 function collectDocs(repoRoot: string, relDir: string, scope: DddTddDocScope): DddTddDoc[] {
   const root = join(repoRoot, relDir);
   if (!existsSync(root)) return [];
@@ -202,31 +195,6 @@ export function loadDddTddInputs(repoRoot: string = process.cwd()): DddTddInputs
     ),
     plans: collectPlanDocs(repoRoot),
   };
-}
-
-function sourceModule(path: string): string | null {
-  const parts = normalizePath(path).split("/");
-  if (parts[0] !== "src") return null;
-  if (parts.length === 2) return basename(parts[1], ".ts");
-  return parts[1] ?? null;
-}
-
-function importedSourceModule(fromPath: string, specifier: string): string | null {
-  if (!specifier.startsWith(".")) return null;
-  const fromParts = normalizePath(fromPath).split("/");
-  if (fromParts[0] !== "src") return null;
-  const resolvedParts: string[] = [];
-  for (const part of [...fromParts.slice(0, -1), ...specifier.split("/")]) {
-    if (!part || part === ".") continue;
-    if (part === "..") {
-      resolvedParts.pop();
-      continue;
-    }
-    resolvedParts.push(part);
-  }
-  if (resolvedParts[0] !== "src") return null;
-  if (resolvedParts.length === 2) return basename(resolvedParts[1], ".ts");
-  return resolvedParts[1] ?? null;
 }
 
 function policyViolations(policy: DddTddPolicy | null): DddTddViolation[] {

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadFrDocs, parseFrRows } from "./fr-registry-audit";
+import { hasDbcTable } from "./shared";
 
 export interface L6FrCoverageDocs {
   frIds: string[];
@@ -62,6 +63,10 @@ function escapeRe(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+// substance gate (type body + pseudocode/defer) を要求する L6 spec doc。
+// 根拠: A-110 MUST-2 / A-120 で「explicit_l7_defer 行が hollow になりうる」と指摘された
+// FR-alias 契約表を持つ 3 doc のみが対象 (他 L6 doc は alias 表を持たない)。
+// 新たに FR-alias 契約表を持つ L6 spec を追加したら、このリストへ追記すること。
 function requiresSubstanceMarker(specPath: string): boolean {
   return (
     specPath.endsWith("function-spec.md") ||
@@ -151,10 +156,7 @@ export function analyzeL6FrCoverage(docs: L6FrCoverageDocs): L6FrCoverageResult 
           });
         }
       }
-      const hasDbcStructure =
-        /\|\s*Function\(s\)\s*\|\s*Signature\s*\|\s*pre\s*\|\s*post\s*\|\s*invariant\s*\|\s*oracle\s*\|/i.test(
-          specText,
-        ) || /\|\s*Function\s*\|\s*Signature\s*\|\s*pre\s*\|\s*post/i.test(specText);
+      const hasDbcStructure = hasDbcTable(specText);
       if (row.l6_spec.endsWith("function-spec.md") && !hasDbcStructure) {
         weakContracts.push({
           fr_id: row.fr_id,

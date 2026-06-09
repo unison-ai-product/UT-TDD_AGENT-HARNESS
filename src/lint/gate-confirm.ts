@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fmValue } from "./shared";
 
 export interface GateStatus {
   gate: string;
@@ -25,9 +26,6 @@ export interface GateConfirmResult {
   skipped: boolean;
   ok: boolean;
 }
-
-const fmValue = (content: string, key: string): string | undefined =>
-  content.match(new RegExp(`^${key}:\\s*(.+)$`, "m"))?.[1]?.trim();
 
 export function layerToGate(layer: string): string | null {
   const m = layer.match(/^L(\d+)$/);

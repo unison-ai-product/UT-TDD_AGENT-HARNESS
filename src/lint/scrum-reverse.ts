@@ -15,6 +15,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fmValue } from "./shared";
 
 /** promotion_strategy が redesign のとき Reverse 不要 (throwaway 再設計 → Forward 再実装)。 */
 export const REVERSE_EXEMPT_PROMOTION = new Set(["redesign"]);
@@ -37,9 +38,6 @@ export interface ScrumReverseResult {
   badReverseRefs: { reverse_id: string; poc_id: string; outcome: string | null }[];
   ok: boolean;
 }
-
-const fmValue = (content: string, key: string): string | undefined =>
-  content.match(new RegExp(`^${key}:\\s*(.+?)\\s*(?:#.*)?$`, "m"))?.[1]?.trim();
 
 /** dependencies.requires / references の YAML list を抽出 (両方を 1 集合へ)。 */
 export function parseLinks(content: string): string[] {

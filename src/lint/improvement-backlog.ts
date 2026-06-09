@@ -16,8 +16,6 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..", "..");
 
-const BACKLOG_PATH = resolve(ROOT, "docs/improvement-backlog.md");
-
 export const VALID_STATUS = ["observed", "triaged", "implemented", "verified"] as const;
 export const VALID_CANDIDATE = ["lint", "FR", "policy", "doc", "none"] as const;
 const ID_REGEX = /^IMP-\d{3}$/;
@@ -35,8 +33,9 @@ export interface BacklogEntry {
   cellCount: number;
 }
 
-export function loadBacklog(): string {
-  return readFileSync(BACKLOG_PATH, "utf-8");
+// A-120 I-5: repoRoot 注入可 (default = ROOT で挙動保存)。
+export function loadBacklog(repoRoot: string = ROOT): string {
+  return readFileSync(resolve(repoRoot, "docs/improvement-backlog.md"), "utf-8");
 }
 
 /** §1 backlog table の行を構造化抽出 */

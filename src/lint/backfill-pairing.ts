@@ -10,6 +10,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fmValue } from "./shared";
 
 /** 駆動モデル (kind) → back-fill (設計ドキュメントへ戻す) 要否。 */
 export type BackfillReq = "required" | "conditional" | "none";
@@ -54,9 +55,6 @@ export interface BackfillResult {
   glossaryGaps: { plan_id: string; term: string }[];
   ok: boolean;
 }
-
-const fmValue = (content: string, key: string): string | undefined =>
-  content.match(new RegExp(`^${key}:\\s*(.+)$`, "m"))?.[1]?.trim();
 
 /** 複合ラベルの先頭コア語を取り出す (" / " / " (" / "（" 手前まで)。glossary 照合の表記ゆれ吸収。 */
 export function normalizeTerm(term: string): string {

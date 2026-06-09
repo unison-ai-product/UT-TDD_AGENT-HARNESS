@@ -28,8 +28,9 @@ export interface DocConsistencySource {
   nfr: string;
 }
 
-export function loadDocConsistencyDocs(): DocConsistencySource {
-  const read = (p: string) => readFileSync(resolve(ROOT, p), "utf-8");
+// A-120 I-5: repoRoot 注入可 (default = ROOT で挙動保存)。
+export function loadDocConsistencyDocs(repoRoot: string = ROOT): DocConsistencySource {
+  const read = (p: string) => readFileSync(resolve(repoRoot, p), "utf-8");
   return {
     l1Functional: read("docs/design/harness/L1-requirements/functional-requirements.md"),
     l3Functional: read("docs/design/harness/L3-functional/functional-requirements.md"),

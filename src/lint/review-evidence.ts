@@ -15,6 +15,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
+import { fmValue } from "./shared";
 
 /**
  * review 前置 MUST の対象 kind (§1.8 / requirements §7.8.7)。
@@ -59,9 +60,6 @@ export interface ReviewEvidenceResult {
   staleApprovalViolations: { plan_id: string; reason: string }[];
   ok: boolean;
 }
-
-const fmValue = (content: string, key: string): string | undefined =>
-  content.match(new RegExp(`^${key}:\\s*(.+)$`, "m"))?.[1]?.trim();
 
 /**
  * frontmatter に `review_evidence:` ブロックが存在し ≥1 entry (`- reviewer:`) を持つか判定。
