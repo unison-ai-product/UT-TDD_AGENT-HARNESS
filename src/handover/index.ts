@@ -268,12 +268,15 @@ export function resolveHandoverScope(
  * U-HOVER-002: 純関数。digest_summary は digests 非空なら active_plan の null/非 null に関わらず集計、
  * 空のときのみ null。digest_summary=null は「digest 不在」を意味し active_plan 未設定とは独立。
  */
-export function buildPointer(
-  scope: HandoverScope,
-  latestDoc: string | null,
-  status: HandoverStatus,
-  now: string,
-): HandoverPointer {
+export interface BuildPointerInput {
+  scope: HandoverScope;
+  latestDoc: string | null;
+  status: HandoverStatus;
+  now: string;
+}
+
+export function buildPointer(input: BuildPointerInput): HandoverPointer {
+  const { scope, latestDoc, status, now } = input;
   const digest_summary =
     scope.digests.length > 0
       ? {
@@ -507,7 +510,7 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
   const next = existing ? `${existing.replace(/\s*$/, "")}\n\n---\n\n${content}\n` : `${content}\n`;
   // IMP-078 gap①: generated_by 署名 + entry 数を刻む (手書き bypass を checkHandoverBypass が検知できる)。
   const pointer: HandoverPointer = {
-    ...buildPointer(effectiveScope, docRel, status, deps.now()),
+    ...buildPointer({ scope: effectiveScope, latestDoc: docRel, status, now: deps.now() }),
     generated_by: GENERATED_BY,
     doc_entry_count: countHandoverEntries(next),
   };

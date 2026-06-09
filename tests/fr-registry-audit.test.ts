@@ -18,13 +18,13 @@ describe("FR registry audit (機能一覧 漏れ監査)", () => {
 
   it("§1 機能一覧 table を 46 行構造化抽出 (P0:19 / P1:22 / P2:5、A-79 で FR-L1-46〜49 追加)", () => {
     const rows = parseFrRows(docs.l1Functional);
-    expect(rows.length).toBe(46);
-    expect(result.totals).toEqual({ registered: 46, p0: 19, p1: 22, p2: 5 });
+    expect(rows.length).toBe(47);
+    expect(result.totals).toEqual({ registered: 47, p0: 19, p1: 23, p2: 5 });
   });
 
   it("header の件数確定宣言 (計 46 / P0 19 / P1 22 / P2 5) を抽出", () => {
     const declared = extractDeclaredCounts(docs.l1Functional);
-    expect(declared).toEqual({ total: 46, p0: 19, p1: 22, p2: 5 });
+    expect(declared).toEqual({ total: 47, p0: 19, p1: 23, p2: 5 });
   });
 
   it("carry/forward 宣言の欠番 = {36,38,43} を explained と認識", () => {
@@ -56,5 +56,9 @@ describe("FR registry audit (機能一覧 漏れ監査)", () => {
 
   it("FR-L1-45 (L3 back-propagation 由来) が registry に登録済", () => {
     expect(result.registered).toContain("FR-L1-45");
+  });
+
+  it("FR-L1-50 registry entry is present", () => {
+    expect(result.registered).toContain("FR-L1-50");
   });
 });

@@ -52,8 +52,6 @@ function gateLedgerSection(gateText: string): string {
 export function parseGateStatuses(gateText: string): GateStatus[] {
   const rows: GateStatus[] = [];
   for (const line of gateLedgerSection(gateText).split(/\r?\n/)) {
-    const m = line.match(/^\|\s*(\*\*)?(G\d+(?:\.\d+)?)(?:\*\*)?\s*\|(.+)$/);
-    if (!m) continue;
     const cells = line
       .split("|")
       .slice(1, -1)

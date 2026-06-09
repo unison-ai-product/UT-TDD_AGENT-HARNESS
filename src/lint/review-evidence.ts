@@ -226,7 +226,7 @@ export function reviewEvidenceMessages(result: ReviewEvidenceResult): string[] {
   if (result.staleApprovalViolations.length > 0) {
     const ids = result.staleApprovalViolations.map((v) => v.plan_id).join(", ");
     out.push(
-      `review-evidence 窶・笞 draft/降格 PLAN に approve/pass 系 review_evidence が残存 ${result.staleApprovalViolations.length} 件 (${ids}): un-freeze 残骸を削除 (IMP-080)`,
+      `review-evidence — ⚠ draft/降格 PLAN に approve/pass 系 review_evidence が残存 ${result.staleApprovalViolations.length} 件 (${ids}): un-freeze 残骸を削除 (IMP-080)`,
     );
   }
   return out;

@@ -49,6 +49,16 @@ describe("gate-confirm lint (IMP-079)", () => {
     ]);
   });
 
+  it("U-GCONF-001c: parses a gate cell even when generated text leaves a suffix", () => {
+    const rows = parseGateStatuses(`
+## section 2 ledger
+| Gate | Status | Evidence |
+|---|---|---|
+| G6 stray | not reached | - |
+`);
+    expect(rows).toEqual([{ gate: "G6", layer: "L6", status: "not reached", pass: false }]);
+  });
+
   it("U-GCONF-002: maps layer to gate", () => {
     expect(layerToGate("L5")).toBe("G5");
     expect(layerToGate("cross")).toBeNull();

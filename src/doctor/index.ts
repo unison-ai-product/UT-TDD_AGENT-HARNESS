@@ -10,9 +10,34 @@ import {
   handoverStale,
 } from "../handover/index";
 import { analyzeBackfill, backfillMessages, loadBackfillDocs } from "../lint/backfill-pairing";
+import { analyzeChangeImpact, changeImpactMessages, loadChangedFiles } from "../lint/change-impact";
+import {
+  analyzeCodingRules,
+  codingRulesMessages,
+  loadCodingRuleDocs,
+  loadCodingRulePolicy,
+  loadCodingWorkflowDocs,
+} from "../lint/coding-rules";
+import { analyzeDddTddRules, dddTddRulesMessages, loadDddTddInputs } from "../lint/ddd-tdd-rules";
 import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
+import {
+  analyzeL6Completion,
+  canLoadL6CompletionInputs,
+  l6CompletionMessages,
+  loadL6CompletionInputs,
+} from "../lint/l6-completion";
+import {
+  analyzeL6FrCoverage,
+  l6FrCoverageMessages,
+  loadL6FrCoverageDocs,
+} from "../lint/l6-fr-coverage";
 import { analyzeModuleDrift, loadModuleDocs, moduleDriftMessages } from "../lint/module-drift";
 import { analyzePropagation, loadPropagationDocs, propagationMessages } from "../lint/propagation";
+import {
+  analyzeReadability,
+  loadFreezeReadabilityDocs,
+  readabilityMessages,
+} from "../lint/readability";
 import {
   analyzeReviewEvidence,
   loadReviewPlans,
@@ -193,6 +218,46 @@ export function checkModuleDrift(repoRoot: string): { messages: string[]; ok: bo
   }
 }
 
+export function checkChangeImpact(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeChangeImpact({ changedFiles: loadChangedFiles(repoRoot) });
+    return { messages: changeImpactMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["change-impact — note: git status を読めず検査 skip"], ok: true };
+  }
+}
+
+export function checkCodingRules(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["coding-rules — note: repo root を読めず検査 skip"], ok: true };
+  }
+  try {
+    const r = analyzeCodingRules(
+      loadCodingRuleDocs(repoRoot),
+      loadCodingRulePolicy(repoRoot),
+      loadCodingWorkflowDocs(repoRoot),
+    );
+    return { messages: codingRulesMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["coding-rules — violation: TS coding rule lint could not run"], ok: false };
+  }
+}
+
+export function checkDddTddRules(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["ddd-tdd-rules - note: repo root could not be read; skipped"], ok: true };
+  }
+  try {
+    const r = analyzeDddTddRules(loadDddTddInputs(repoRoot));
+    return { messages: dddTddRulesMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["ddd-tdd-rules - violation: DDD/TDD strictness lint could not run"],
+      ok: false,
+    };
+  }
+}
+
 export function checkRuleDrift(repoRoot: string): { messages: string[]; ok: boolean } {
   try {
     const r = analyzeRuleDrift(loadRuleAdapterDocs(repoRoot));
@@ -222,11 +287,47 @@ export function checkPlanSchedule(repoRoot: string): { messages: string[]; ok: b
   }
 }
 
+export function checkL6FrCoverage(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["l6-fr-coverage — note: repo root を読めず検査 skip"], ok: true };
+  }
+  try {
+    const r = analyzeL6FrCoverage(loadL6FrCoverageDocs(repoRoot));
+    return { messages: l6FrCoverageMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["l6-fr-coverage — ⚠ L6 FR coverage matrix を読めない"], ok: false };
+  }
+}
+
+export function checkReadability(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeReadability(loadFreezeReadabilityDocs(repoRoot));
+    return { messages: readabilityMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["readability — ⚠ freeze review docs を読めない"], ok: false };
+  }
+}
+
 /**
  * V-model 層群の Forward freeze 完了 (検証サイクル発火タイミング) を surface (IMP-068、note)。
  * 層群が freeze 完了 → 検証発火可 / Forward 進行中。検証ロードマップの「いつ検証するか」を
  * V-model 構造 (層群 freeze) で機械発火させる全体調整。doctor.ok は落とさない (タイミング surface)。
  */
+export function checkL6Completion(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!canLoadL6CompletionInputs(repoRoot)) {
+    return { messages: ["l6-completion — note: L6 completion inputs を読めず検査 skip"], ok: true };
+  }
+  try {
+    const r = analyzeL6Completion(loadL6CompletionInputs(repoRoot));
+    return { messages: l6CompletionMessages(r), ok: true };
+  } catch {
+    return {
+      messages: ["l6-completion — note: L6 completion readiness を読めず検査 skip"],
+      ok: true,
+    };
+  }
+}
+
 export function checkVerificationGroups(repoRoot: string): string[] {
   try {
     const docs = loadPairDocs(repoRoot);
@@ -271,11 +372,29 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const pairFreeze = checkPairFreeze(deps.repoRoot);
   // module-drift は warn-first (impl→design back-fill 漏れ surface、IMP-075。hard 化は段階)。
   const moduleDrift = checkModuleDrift(deps.repoRoot);
+  const changeImpact = checkChangeImpact(deps.repoRoot);
+  const codingRules = checkCodingRules(deps.repoRoot);
+  const dddTddRules = checkDddTddRules(deps.repoRoot);
   const ruleDrift = checkRuleDrift(deps.repoRoot);
+  // gate-confirm and plan-schedule are intentionally warn-first during rollout.
+  // Their messages surface policy drift, but runDoctor.ok hardening is a later gate switch.
   const gateConfirm = checkGateConfirm(deps.repoRoot);
   const planSchedule = checkPlanSchedule(deps.repoRoot);
+  const l6FrCoverage = checkL6FrCoverage(deps.repoRoot);
+  const readability = checkReadability(deps.repoRoot);
+  const l6Completion = checkL6Completion(deps.repoRoot);
   return {
-    ok: backfill.ok && scrumRev.ok && propagation.ok && reviewEvidence.ok && ruleDrift.ok,
+    ok:
+      backfill.ok &&
+      scrumRev.ok &&
+      propagation.ok &&
+      reviewEvidence.ok &&
+      changeImpact.ok &&
+      codingRules.ok &&
+      dddTddRules.ok &&
+      ruleDrift.ok &&
+      l6FrCoverage.ok &&
+      readability.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
       checkHandover(deps),
@@ -286,12 +405,18 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...propagation.messages.map((m) => `doctor: ${m}`),
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
       ...moduleDrift.messages.map((m) => `doctor: ${m}`),
+      ...changeImpact.messages.map((m) => `doctor: ${m}`),
+      ...codingRules.messages.map((m) => `doctor: ${m}`),
+      ...dddTddRules.messages.map((m) => `doctor: ${m}`),
       ...ruleDrift.messages.map((m) => `doctor: ${m}`),
       ...gateConfirm.messages.map((m) => `doctor: ${m}`),
       ...planSchedule.messages.map((m) => `doctor: ${m}`),
+      ...l6FrCoverage.messages.map((m) => `doctor: ${m}`),
+      ...readability.messages.map((m) => `doctor: ${m}`),
+      ...l6Completion.messages.map((m) => `doctor: ${m}`),
       ...reviewEvidence.messages.map((m) => `doctor: ${m}`),
       ...checkVerificationGroups(deps.repoRoot).map((m) => `doctor: ${m}`),
-      "doctor: scaffold stub (横断検出 relation-graph / drift / regression は後続 PLAN)",
+      "doctor: scaffold stub (relation-graph / dependency-drift / regression expansion は後続 PLAN)",
     ],
   };
 }

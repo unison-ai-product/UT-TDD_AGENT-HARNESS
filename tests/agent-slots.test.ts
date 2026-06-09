@@ -64,7 +64,7 @@ describe("U-SLOT-002 fireSlot / releaseSlot", () => {
     const deps = mockDeps();
     const s = fireSlot({ agent_kind: "codex-se", slot_source: "team_runner" }, deps);
     deps.setNow("2026-06-04T00:05:00.000Z");
-    expect(releaseSlot(s.slot_id, "completed", 0, deps)).toBe(true);
+    expect(releaseSlot({ slotId: s.slot_id, status: "completed", exitCode: 0 }, deps)).toBe(true);
     const after = loadSlots(deps)[0];
     expect(after.status).toBe("completed");
     expect(after.exit_code).toBe(0);
@@ -73,10 +73,10 @@ describe("U-SLOT-002 fireSlot / releaseSlot", () => {
 
   it("release: 対象なし / 既 release → false (idempotent)", () => {
     const deps = mockDeps();
-    expect(releaseSlot("nope", "completed", 0, deps)).toBe(false);
+    expect(releaseSlot({ slotId: "nope", status: "completed", exitCode: 0 }, deps)).toBe(false);
     const s = fireSlot({ agent_kind: "x", slot_source: "manual" }, deps);
-    releaseSlot(s.slot_id, "completed", 0, deps);
-    expect(releaseSlot(s.slot_id, "failed", 1, deps)).toBe(false); // 二重 release 不可
+    releaseSlot({ slotId: s.slot_id, status: "completed", exitCode: 0 }, deps);
+    expect(releaseSlot({ slotId: s.slot_id, status: "failed", exitCode: 1 }, deps)).toBe(false); // 二重 release 不可
   });
 
   it("role 省略 → null", () => {
@@ -91,7 +91,7 @@ describe("U-SLOT-003 listActiveSlots / listStaleSlots", () => {
     const deps = mockDeps();
     const a = fireSlot({ agent_kind: "a", slot_source: "manual" }, deps);
     fireSlot({ agent_kind: "b", slot_source: "manual" }, deps);
-    releaseSlot(a.slot_id, "completed", 0, deps);
+    releaseSlot({ slotId: a.slot_id, status: "completed", exitCode: 0 }, deps);
     const active = listActiveSlots(deps);
     expect(active).toHaveLength(1);
     expect(active[0].agent_kind).toBe("b");
@@ -195,19 +195,22 @@ describe("U-SLOT-006 recordGuardFire", () => {
     const deps = mockDeps();
     let last = { activeCount: 0, exceeded: false };
     for (let i = 0; i < DEFAULT_MAX_PARALLEL - 1; i++) {
-      last = recordGuardFire(`pmo-sonnet-${i}`, deps);
+      last = recordGuardFire({ agentKind: `pmo-sonnet-${i}` }, deps);
     }
     expect(last.exceeded).toBe(false); // active = max-1
-    last = recordGuardFire("at-limit", deps); // active = max
+    last = recordGuardFire({ agentKind: "at-limit" }, deps); // active = max
     expect(last.activeCount).toBe(DEFAULT_MAX_PARALLEL);
     expect(last.exceeded).toBe(true);
   });
 
   it("stale な agent_guard slot は自動失効し active から外れる (持続汚染防止)", () => {
     const deps = mockDeps();
-    recordGuardFire("old", deps, DEFAULT_MAX_PARALLEL, 5); // fired 00:00
+    recordGuardFire({ agentKind: "old", max: DEFAULT_MAX_PARALLEL, staleMinutes: 5 }, deps); // fired 00:00
     deps.setNow("2026-06-04T00:10:00.000Z"); // 10 分後 = stale
-    const r = recordGuardFire("fresh", deps, DEFAULT_MAX_PARALLEL, 5);
+    const r = recordGuardFire(
+      { agentKind: "fresh", max: DEFAULT_MAX_PARALLEL, staleMinutes: 5 },
+      deps,
+    );
     // old は cancelled、fresh のみ active。
     expect(r.activeCount).toBe(1);
     const slots = loadSlots(deps);

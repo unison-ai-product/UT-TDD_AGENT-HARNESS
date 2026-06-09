@@ -213,11 +213,11 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
     expect(progress[0]).toContain("Forward 進行中");
   });
 
-  it("U-VTRIG-005: 実 repo ガード — L0-L3 は freeze 完了(A-100、L2 park)、L4-L6 は Forward 進行中", () => {
+  it("U-VTRIG-005: 実 repo ガード — L0-L3 と L4-L6 は freeze 完了", () => {
     const docs = loadPairDocs();
     const { orphans } = analyzePairFreeze(docs);
     const groups = analyzeVerificationGroups(docs, orphans);
     expect(groups.find((g) => g.id === "L0-L3")?.frozen).toBe(true);
-    expect(groups.find((g) => g.id === "L4-L6")?.frozen).toBe(false);
+    expect(groups.find((g) => g.id === "L4-L6")?.frozen).toBe(true);
   });
 });

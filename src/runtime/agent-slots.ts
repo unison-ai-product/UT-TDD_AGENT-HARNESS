@@ -93,13 +93,15 @@ export function fireSlot(
   return slot;
 }
 
+export interface ReleaseSlotInput {
+  slotId: string;
+  status: Exclude<SlotStatus, "running">;
+  exitCode: number | null;
+}
+
 /** slot を terminal status へ release。対象なし → false (idempotent)。 */
-export function releaseSlot(
-  slotId: string,
-  status: Exclude<SlotStatus, "running">,
-  exitCode: number | null,
-  deps: AgentSlotsDeps,
-): boolean {
+export function releaseSlot(input: ReleaseSlotInput, deps: AgentSlotsDeps): boolean {
+  const { slotId, status, exitCode } = input;
   const slots = loadSlots(deps);
   const slot = slots.find((s) => s.slot_id === slotId && s.released_at === null);
   if (!slot) return false;
@@ -204,12 +206,17 @@ export function exceedsParallelLimit(deps: AgentSlotsDeps, max = DEFAULT_MAX_PAR
  * 先に自動失効 (status=cancelled) させて「直近 staleMinutes 以内の同時 fire 数」を近似する。
  * never throws (fail-open)。返り値: { activeCount, exceeded } (exceeded=true で warn 表示推奨)。
  */
+export interface RecordGuardFireInput {
+  agentKind: string;
+  max?: number;
+  staleMinutes?: number;
+}
+
 export function recordGuardFire(
-  agentKind: string,
+  input: RecordGuardFireInput,
   deps: AgentSlotsDeps,
-  max = DEFAULT_MAX_PARALLEL,
-  staleMinutes = DEFAULT_STALE_MINUTES,
 ): { activeCount: number; exceeded: boolean } {
+  const { agentKind, max = DEFAULT_MAX_PARALLEL, staleMinutes = DEFAULT_STALE_MINUTES } = input;
   try {
     const nowIso = deps.now();
     const now = Date.parse(nowIso);

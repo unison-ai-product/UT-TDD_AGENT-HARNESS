@@ -113,20 +113,30 @@ describe("U-HOVER-002 buildPointer", () => {
         }),
       ],
     };
-    const p = buildPointer(scope, "docs/handover/x.md", "in_progress", NOW);
+    const p = buildPointer({
+      scope,
+      latestDoc: "docs/handover/x.md",
+      status: "in_progress",
+      now: NOW,
+    });
     expect(p.digest_summary).toEqual({ commits: 2, files: 1, failures: 1 });
     expect(p.updated_at).toBe(NOW);
   });
 
   it("edge: active_plan=null だが digests 非空 → digest_summary は集計値 (null にしない)", () => {
     const scope: HandoverScope = { active_plan: null, digests: [digest()] };
-    const p = buildPointer(scope, null, "in_progress", NOW);
+    const p = buildPointer({ scope, latestDoc: null, status: "in_progress", now: NOW });
     expect(p.active_plan).toBeNull();
     expect(p.digest_summary).toEqual({ commits: 1, files: 1, failures: 0 });
   });
 
   it("digests 空 → digest_summary=null", () => {
-    const p = buildPointer({ active_plan: "P", digests: [] }, null, "in_progress", NOW);
+    const p = buildPointer({
+      scope: { active_plan: "P", digests: [] },
+      latestDoc: null,
+      status: "in_progress",
+      now: NOW,
+    });
     expect(p.digest_summary).toBeNull();
   });
 });
