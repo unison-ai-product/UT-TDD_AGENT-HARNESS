@@ -1,48 +1,22 @@
 #!/usr/bin/env bun
 /**
- * Claude Code session-log hook entry — SessionStart / PostToolUse / Stop。
+ * Backward-compatible Claude Code session-log shim.
  *
- * 環境非依存 (bun 実行、bash/python3 不要)。判定/圧縮本体は src/runtime/session-log.ts。
- * settings.json: 3 event に同一 command を登録し、stdin の `hook_event_name` で handler 分岐。
+ * The canonical implementation is the package-local UT-TDD CLI:
+ *   - SessionStart -> src/cli.ts session start
+ *   - PostToolUse  -> src/cli.ts hook post-tool-use
+ *   - Stop         -> src/cli.ts session summary
  *
- * **fail-OPEN**: stdin/JSON/I-O 失敗を含め **常に exit 0** (ログがワークフローを止めない。
- * agent-guard の fail-close と逆。settings.json に blockOnFailure を付けないこと)。
+ * This file remains only for older settings or manual invocations.
+ * It is fail-open: hook failures must not block Claude Code work.
  */
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkHandoverBypass, checkHandoverDiscipline, nodeHandoverDeps } from "../../src/handover";
-import { nodeAgentSlotsDeps, sweepStaleGuardSlots } from "../../src/runtime/agent-slots";
-import { scanDanglingStops } from "../../src/runtime/forced-stop";
-import { dispatch, nodeDeps, type SessionHookInput } from "../../src/runtime/session-log";
+import type { SessionHookInput } from "../../src/runtime/session-log";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.env.CLAUDE_PROJECT_DIR ?? join(here, "..", "..");
-
-function gitBranch(): string | null {
-  try {
-    const out = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
-      cwd: repoRoot,
-      encoding: "utf8",
-    }).trim();
-    return out || null;
-  } catch {
-    return null;
-  }
-}
-
-/** IMP-078 gap③: 直近 commit hash (短縮 7 桁)。PostToolUse は git commit 完了後 = 新 HEAD。fail-open→null。 */
-function gitHead(): string | null {
-  try {
-    const out = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
-      cwd: repoRoot,
-      encoding: "utf8",
-    }).trim();
-    return out || null;
-  } catch {
-    return null;
-  }
-}
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
@@ -50,33 +24,30 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
+function commandFor(raw: string): string[] {
+  let eventName = process.argv[2] ?? "";
+  try {
+    const input = JSON.parse(raw.replace(/^\uFEFF/, "") || "{}") as SessionHookInput;
+    eventName = input.hook_event_name ?? eventName;
+  } catch {
+    // Keep argv fallback.
+  }
+  if (eventName === "SessionStart" || eventName === "start") return ["session", "start"];
+  if (eventName === "Stop" || eventName === "stop") return ["session", "summary"];
+  return ["hook", "post-tool-use"];
+}
+
 try {
   const raw = await readStdin();
-  const input = JSON.parse(raw || "{}") as SessionHookInput;
-  const deps = nodeDeps(repoRoot, gitBranch, gitHead);
-  const evName = input.hook_event_name ?? process.argv[2];
-  // SessionStart: 直前までの dangling session (強制停止推定) を後追い記録 (fail-open)
-  if (evName === "SessionStart" || evName === "start") {
-    scanDanglingStops(deps, input.session_id);
-    // 前セッション末尾の dangling guard slot (subagent に release hook が無く next-fire まで
-    // 永久 running で残る release 漏れ) を self-heal で失効 (fail-open、never throws)。
-    sweepStaleGuardSlots(nodeAgentSlotsDeps(repoRoot));
-  }
-  dispatch(input, deps, process.argv[2]);
-  // IMP-047: Stop 時に handover 規律を機械 surface (stderr warn のみ、fail-open)。
-  // 「PLAN 活動したが handover 追記なし」を agent 記憶に頼らず気付かせる。
-  if (evName === "Stop" || evName === "stop") {
-    try {
-      const hdeps = nodeHandoverDeps(repoRoot);
-      // IMP-047 規律 (presence/stale/drift) + IMP-078 gap① bypass (手書き検知) を併せて surface。
-      for (const w of [...checkHandoverDiscipline(hdeps), ...checkHandoverBypass(hdeps)]) {
-        process.stderr.write(`[ut-tdd handover] ${w}\n`);
-      }
-    } catch {
-      // fail-open: 規律 surface の失敗で作業を止めない
-    }
-  }
+  const child = spawnSync("bun", [join(repoRoot, "src", "cli.ts"), ...commandFor(raw)], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    input: raw,
+  });
+  if (child.stdout) process.stdout.write(child.stdout);
+  if (child.stderr) process.stderr.write(child.stderr);
 } catch {
-  // fail-OPEN: ログの失敗で作業を止めない
+  // fail-open
 }
+
 process.exit(0);

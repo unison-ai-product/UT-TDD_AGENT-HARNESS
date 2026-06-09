@@ -16,6 +16,7 @@ export interface AdapterPlan {
   command: string;
   args: string[];
   dry_run: boolean;
+  plan_id?: string;
   messages: string[];
 }
 
@@ -26,17 +27,14 @@ export function providerAvailable(provider: AdapterProvider, mode: ExecutionMode
 
 export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): AdapterPlan {
   const available = providerAvailable(intent.provider, mode);
-  const args =
-    intent.provider === "codex"
-      ? ["exec", intent.task]
-      : ["--role", intent.role, "--task", intent.task];
-  if (intent.planId) args.push("--plan-id", intent.planId);
+  const args = intent.provider === "codex" ? ["exec", intent.task] : ["--print", "-p", intent.task];
   return {
     provider: intent.provider,
     available,
     command: intent.provider === "codex" ? "codex" : "claude",
     args,
     dry_run: !intent.execute,
+    plan_id: intent.planId,
     messages: available
       ? [intent.execute ? "adapter execution allowed" : "adapter dry-run plan"]
       : [`${intent.provider} is not available in ${mode} mode`],

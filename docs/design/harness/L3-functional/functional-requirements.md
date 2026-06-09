@@ -212,7 +212,7 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **入力**: hook イベント (PLAN 起票 / コード変更 / Codex 実行 / ゲート通過 / 停止)
 - **出力**: state 自動更新、手動登録漏れ排除
 - **振る舞い**: `.ut-tdd/hooks/` 配下に 5 種 hook (TS、bun 実行) を実装 / Claude Code/git/Codex 経由でイベント捕捉
-- **振る舞い (extended, PLAN-REVERSE-02 fullback)**: state 登録 (fail-close) とは別系統の **session-log 観測 hook** (SessionStart/PostToolUse/Stop、`.claude/hooks/session-log.ts` → `src/runtime/session-log.ts`) を **fail-open** で実装。session イベントを append-only 記録し、PLAN 単位ダイジェスト (`.ut-tdd/logs/plan/<plan_id>.digest.json`) に圧縮 → handover/audit/FR-19 接続。秘匿: sanitize で secret/PII を載せない
+- **振る舞い (extended, PLAN-REVERSE-02 fullback)**: state 登録 (fail-close) とは別系統の **session-log 観測 hook** (SessionStart/PostToolUse/Stop、`src/cli.ts` session/hook entrypoints → `src/runtime/session-log.ts`) を **fail-open** で実装。session イベントを append-only 記録し、PLAN 単位ダイジェスト (`.ut-tdd/logs/plan/<plan_id>.digest.json`) に圧縮 → handover/audit/FR-19 接続。秘匿: sanitize で secret/PII を載せない
 - **振る舞い (extended, PLAN-REVERSE-03 fullback)**: session-log の facet として **forced-stop 検出** (`src/runtime/forced-stop.ts`) を実装。専用 hook 不在のため SessionStart 時に session ログ群を走査し `session_end` で閉じない dangling session を **強制停止と推定**して `forced_stop` 記録。停止後メッセージは Haiku 意味解析 (managed pmo-haiku、raw API なし) で是正/間違えを分類し、**是正のみ**フィードバックログ (`.ut-tdd/logs/feedback/<plan_id>.jsonl`) へ記録 → `forced_stop` を concept §2.6.1 の `agent_runaway` 級 Recovery trigger とし、アテンション高は Recovery 起票候補として agent が提示 (起票は人間 yes)。fail-open + 曖昧時は是正寄りに倒す
 
 #### AC-FR-07-01 (正常系)

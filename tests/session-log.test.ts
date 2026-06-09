@@ -157,6 +157,18 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     expect(digestKey).toBeDefined();
     expect(JSON.parse(deps.files.get(digestKey as string) as string).plan_id).toBe("PLAN-A");
 
+    const depsExplicit = mockDeps();
+    depsExplicit.files.set(
+      sessionPath("s3"),
+      `${JSON.stringify({ ts: "T1", session_id: "s3", plan_id: "PLAN-A", event_type: "tool_use" })}\n`,
+    );
+    expect(onStop({ session_id: "s3", plan_id: "PLAN-A" }, depsExplicit)).toBe(0);
+    const explicitDigestKey = [...depsExplicit.files.keys()].find(
+      (k) => k.includes("PLAN-A") && k.includes("digest"),
+    );
+    const explicitDigest = JSON.parse(depsExplicit.files.get(explicitDigestKey as string) ?? "{}");
+    expect(explicitDigest.event_counts.session_end).toBe(1);
+
     // plan_id=null のみ → digest を書かない
     const depsNull = mockDeps();
     depsNull.files.set(

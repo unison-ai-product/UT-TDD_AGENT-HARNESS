@@ -4,7 +4,7 @@
 
 この repo の Claude Code runtime は UT-TDD Agent Harness として扱う。HELIX 由来の hook / subagent / memory は移植元素材であり、正本 runtime として直接使わない。
 
-`.claude/settings.json` で有効化している hook は **2 種**: ① **subagent guard (`PreToolUse(Agent)`、fail-close)** = `.claude/hooks/agent-guard.ts`、② **session-log (`SessionStart` / `PostToolUse(Edit|Write|MultiEdit|Bash)` / `Stop`、fail-OPEN)** = `.claude/hooks/session-log.ts` (判定/圧縮本体 `src/runtime/session-log.ts`、PLAN-L6-03/L7-01)。SessionStart 時に **forced-stop 検出** (`src/runtime/forced-stop.ts` の `scanDanglingStops`、PLAN-L6-04/L7-02) も実行し、強制停止 (dangling session) を後追い記録する (同 fail-OPEN、追加 hook なし)。両者とも **package-local かつ環境非依存の TS hook** (bun 実行、bash/python3 不要) で、個人 workspace (`ai-dev-kit-vscode` / `helix-*`) や絶対パスに一切依存しない。session-log は `blockOnFailure` を付けない (fail-open = ログ失敗で作業を止めない)。これ以外の hook (guard claudemd/bash/research) は UT-TDD CLI が package-local command として実装されるまで有効化しない (個人 workspace を呼ぶ hook も足さない)。
+`.claude/settings.json` で有効化している hook は **2 種**: ① **subagent guard (`PreToolUse(Agent)`、fail-close)** = `.claude/hooks/agent-guard.ts`、② **session-log (`SessionStart` / `PostToolUse(Edit|Write|MultiEdit|Bash)` / `Stop`、fail-OPEN)** = `ut-tdd` package-local CLI (`bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start` / `hook post-tool-use` / `session summary`)。判定/圧縮本体は `src/runtime/session-log.ts` (PLAN-L6-03/L7-01)。SessionStart 時に **forced-stop 検出** (`src/runtime/forced-stop.ts` の `scanDanglingStops`、PLAN-L6-04/L7-02) と agent-slot stale sweep も実行し、強制停止 (dangling session) を後追い記録する (同 fail-OPEN、追加 hook なし)。両者とも **package-local かつ環境非依存の TS hook/CLI** (bun 実行、bash/python3 不要) で、個人 workspace (`ai-dev-kit-vscode` / `helix-*`) や絶対パスに一切依存しない。session-log は `blockOnFailure` を付けない (fail-open = ログ失敗で作業を止めない)。`.claude/hooks/session-log.ts` は後方互換 shim として残す。これ以外の hook (guard claudemd/bash/research) は UT-TDD CLI が package-local command として実装されるまで有効化しない (個人 workspace を呼ぶ hook も足さない)。
 
 Claude Code が参照する優先順位は `../CLAUDE.md` -> 本ファイル -> `../docs/governance/README.md`。`../docs/archive/` と `../vendor/helix-source/` は historical / migration material であり、現在の受入条件や実行導線の正本ではない。
 
@@ -37,7 +37,7 @@ Claude Code が参照する優先順位は `../CLAUDE.md` -> 本ファイル -> 
 
 ## Target UT-TDD Hooks
 
-subagent guard (`PreToolUse(Agent)`) は実装・有効化済 (下記「Subagent Guard」)。以下のその他 hook は UT-TDD CLI 実装後に有効化する目標形であり、現時点では自動実行されない。
+subagent guard (`PreToolUse(Agent)`) は実装・有効化済 (下記「Subagent Guard」)。session-log 系 hook は UT-TDD CLI 経由で有効化済。以下の guard 系 hook は UT-TDD CLI 実装後に有効化する目標形であり、現時点では自動実行されない。
 
 有効化する hook は、最終的に package-local な UT-TDD コマンドを呼び出す。
 
@@ -113,23 +113,23 @@ Opus が直接やってよい例外:
 
 | タスク性質 | 委譲先 | 起動方法 |
 |---|---|---|
-| BE/DB/インフラ実装 | Codex SE / PE / DBA / DevOps | `helix codex --role se/pe/dba/devops --task "..."` |
-| 設計・契約・複雑レビュー | Codex TL | `helix codex --role tl --task "..."` |
-| セキュリティ監査 | Codex Security | `helix codex --role security --task "..."` |
-| テスト実装（BE/FE） | Codex QA | `helix codex --role qa --task "..."` |
+| BE/DB/インフラ実装 | Codex SE / PE / DBA / DevOps | `ut-tdd codex --role se --task "..."` / `ut-tdd codex --role pe --task "..."` |
+| 設計・契約・複雑レビュー | Codex TL | `ut-tdd codex --role tl --task "..."` |
+| セキュリティ監査 | Codex Security | `ut-tdd codex --role security --task "..."` |
+| テスト実装（BE/FE） | Codex QA | `ut-tdd codex --role qa --task "..."` |
 | 状況把握 / docs 構造化チェック | PMO Sonnet | `Agent({subagent_type: "pmo-sonnet"})` |
 | Web 検索目星 / `docs/**` 軽修正 | PMO Haiku | `Agent({subagent_type: "pmo-haiku"})` |
-| PM 級難判断の adversarial check | PM Advisor | `helix claude --role pm-advisor --execute --task "..."` |
-| TL 級難判断の adversarial check | TL Advisor | `helix codex --role tl-advisor --task "..."` |
+| PM 級難判断の adversarial check | PM Advisor | `ut-tdd claude --role pm-advisor --execute --task "..."` |
+| TL 級難判断の adversarial check | TL Advisor | `ut-tdd codex --role tl-advisor --task "..."` |
 
 ### PLAN / Gate 流（porting 期間中の HELIX 式）
 
 UT-TDD 独自 `ut-tdd plan` / `ut-tdd gate` が揃うまで:
 
-1. **起票**: `helix plan draft --title "..." --plan-id PLAN-NNN`
+1. **起票**: `docs/plans/PLAN-NNN-<slug>.md` を作成し、`ut-tdd plan lint docs/plans/PLAN-NNN-<slug>.md` で検証
 2. **本文作成**: `docs/plans/PLAN-NNN-<slug>.md` に frontmatter + §0-§7 で記述
-3. **レビュー**: `helix plan review --id PLAN-NNN --reviewer tl`（Codex TL）
-4. **finalize**: `helix plan finalize --id PLAN-NNN`（TL approve 必須）
+3. **レビュー**: `ut-tdd codex --role tl --task "review PLAN-NNN"`（Codex TL）
+4. **finalize**: reviewer evidence を PLAN に反映し、`ut-tdd plan lint docs/plans/PLAN-NNN-<slug>.md` を再実行（TL approve 必須）
 5. **Sprint 実行**: PLAN §4 の Sprint .1-.8 を順に。実装系 Sprint は Codex 委譲が default
 6. **commit**: 1 PLAN = 1 commit を default。Sprint 単位でちぎる場合は PLAN §6 carry note に理由記録
 
@@ -137,14 +137,15 @@ UT-TDD 独自 `ut-tdd plan` / `ut-tdd gate` が揃うまで:
 
 `8009001d` PowerShell startup error は full-auto sandbox 有効時に発生するが、full-auto なしでも Codex の shell 経路は不安定。回避策:
 
-1. 大きな入力（vendor module 等）は `helix codex --task-file <path>` で task 本文に **埋め込む**
+1. 大きな入力（vendor module 等）は task file を作って `ut-tdd codex --role se --task-file <path>` で task 本文に **埋め込む**
 2. 1 chunk ≤ 20KB（Windows ARG_MAX ~32KB）。超える場合は分割投入
 3. task header に「shell アクセス不要 / 必須参照は読まなくて良い / 埋め込み chunk だけで判断」を明示
 4. Codex log の PowerShell error は無視可。`intermediate_errors` 記録だけで Codex は task を進める
+5. `ut-tdd codex --execute` / `ut-tdd claude --execute` は package-local adapter wrapper として session lifecycle / handover warning を記録し、HELIX raw guard とは Codex=`HELIX_ALLOW_RAW_CODEX=1` / Claude=`HELIX_ALLOW_RAW_CLAUDE=1` + `*_REASON=ut-tdd-runtime-adapter-wrapper` で共存する。raw `codex exec` / raw `claude` 直叩きは引き続き禁止。
 
 ### 委譲 Codex のコミット禁止
 
-`helix codex` で呼ぶ委譲 Codex は `git add` / `git commit` / `git push` を一切しない。Opus（PM）が成果物検証後にまとめて commit する。
+`ut-tdd codex` で呼ぶ委譲 Codex は `git add` / `git commit` / `git push` を一切しない。Opus（PM）が成果物検証後にまとめて commit する。
 
 ### 並列実行
 

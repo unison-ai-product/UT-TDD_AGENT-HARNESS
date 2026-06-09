@@ -63,6 +63,8 @@ describe("evaluateAgentGuard", () => {
     const d = evaluateAgentGuard(agent({ subagent_type: "be-logic", model: "sonnet" }), ctx());
     expect(d.code).toBe(2);
     expect(d.message).toContain("許可リスト外");
+    expect(d.message).toContain("ut-tdd codex --role");
+    expect(d.message).not.toContain("helix codex");
   });
 
   it("blocks an unnormalizable or ambiguous model on an allowlisted agent", () => {

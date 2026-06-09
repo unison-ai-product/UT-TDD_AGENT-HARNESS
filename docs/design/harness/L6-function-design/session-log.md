@@ -6,10 +6,17 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
 ---
+
+## 2026-06-09 Runtime Adapter Lifecycle Addendum
+
+- `onStop(input, deps)` records one `session_end` event with `input.plan_id ?? resolveActivePlan(deps)` before compressing the session jsonl into plan digests.
+- The adapter wrapper passes its explicit `--plan` value only to the session-log lifecycle input, not to provider CLI args.
+- A plan digest produced through `ut-tdd codex|claude --execute --plan <id>` must include `session_start`, `tool_use`, and `session_end` counts for `<id>`.
+
 <!--
 ① 設計 (L6 機能設計) — session-log 機能。
 PLAN: PLAN-L6-03-session-log (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.5 U-SLOG。
-実装 (②): src/runtime/session-log.ts + .claude/hooks/session-log.ts (PLAN-L7-01-session-log, add-impl)。
+実装 (②): src/runtime/session-log.ts + src/cli.ts session/hook entrypoints + .claude/hooks/session-log.ts backward-compatible shim (PLAN-L7-01-session-log, add-impl)。
 正本機能: 要件定義書 §6.8 (Issue 起点スパイン) / §6.9 のローカル観測側。
 -->
 
@@ -98,7 +105,7 @@ compressPlanDigest(events, planId, prev):
 
 - 生: `.ut-tdd/logs/session/<session_id>.jsonl` (gitignored)
 - 圧縮: `.ut-tdd/logs/plan/<plan_id>.digest.json` (gitignored、durable)
-- hook 実体: `.claude/hooks/session-log.ts` (bun, 環境非依存)。**variant 分岐 = stdin JSON の `hook_event_name` を正 (SessionStart / PostToolUse / Stop) とし、argv[2] (`start|post-tool-use|stop`) を fallback** に持つ (m-2)。settings.json は 3 event に同一 command を登録し、Claude Code が渡す `hook_event_name` で handler を選ぶ。
+- hook 実体: `src/cli.ts` session/hook entrypoints (`.claude/hooks/session-log.ts` backward-compatible shim) (bun, 環境非依存)。**variant 分岐 = stdin JSON の `hook_event_name` を正 (SessionStart / PostToolUse / Stop) とし、CLI command (`session start` / `hook post-tool-use` / `session summary`) を fallback** に持つ (m-2)。settings.json は 3 event に対応する UT-TDD CLI command を登録し、Claude Code が渡す `hook_event_name` で handler を選ぶ。
 - `.gitignore` に `.ut-tdd/logs/` を追加。
 - `.claude/settings.json`: `SessionStart` / `PostToolUse(Edit|Write|MultiEdit|Bash)` / `Stop` に登録。**`blockOnFailure` を付けない (fail-open)**。
 
@@ -113,5 +120,5 @@ compressPlanDigest(events, planId, prev):
 ## §7 V-pair / トレース
 
 - ③ pair: `docs/test-design/harness/L7-unit-test-design.md §1.5 U-SLOG` (G6 pair freeze 対象)
-- ② impl: `src/runtime/session-log.ts` + `.claude/hooks/session-log.ts` (PLAN-L7-01)
+- ② impl: `src/runtime/session-log.ts` + `src/cli.ts` session/hook entrypoints (`.claude/hooks/session-log.ts` backward-compatible shim) (PLAN-L7-01)
 - 上位整合: 本機能の **要件 (L3) 表現は後段 Reverse (R0-R4) で back-fill / 修正** (PO 方針、bottom-up build → 上位整合)。

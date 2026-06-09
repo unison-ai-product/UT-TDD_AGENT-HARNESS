@@ -5,13 +5,22 @@
  * 現状は scaffold: status / doctor は最小実装、plan/vmodel lint は stub。
  */
 import { execSync, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { Command } from "commander";
 import { runDoctor } from "./doctor";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
-import { latestSessionId, nodeHandoverDeps, runHandover, setActivePlanCli } from "./handover/index";
+import {
+  checkHandoverBypass,
+  checkHandoverDiscipline,
+  latestSessionId,
+  nodeHandoverDeps,
+  runHandover,
+  setActivePlanCli,
+} from "./handover/index";
 import { lintPlan } from "./plan/lint";
 import { type AdapterProvider, buildAdapterPlan } from "./runtime/adapter";
+import { nodeAgentSlotsDeps, sweepStaleGuardSlots } from "./runtime/agent-slots";
 import { detectMode } from "./runtime/detect";
 import {
   type ClassifyResult,
@@ -19,6 +28,7 @@ import {
   type FeedbackCtx,
   pendingRecoveryProposals,
   recordFeedback,
+  scanDanglingStops,
 } from "./runtime/forced-stop";
 import {
   nodeProviderHandoverDeps,
@@ -26,7 +36,12 @@ import {
   readProviderHandoverCurrent,
   runProviderHandover,
 } from "./runtime/provider-handover";
-import { nodeDeps, resolveActivePlan } from "./runtime/session-log";
+import {
+  dispatch,
+  nodeDeps,
+  resolveActivePlan,
+  type SessionHookInput,
+} from "./runtime/session-log";
 import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
 import { loadTeamDefinition, validateTeamRun } from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
@@ -34,6 +49,14 @@ import { lintVmodel } from "./vmodel/lint";
 function gitBranch(): string | null {
   try {
     return execSync("git rev-parse --abbrev-ref HEAD", { encoding: "utf8" }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function gitHead(): string | null {
+  try {
+    return execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
   } catch {
     return null;
   }
@@ -55,6 +78,109 @@ function readStdin(): string {
   } catch {
     return "";
   }
+}
+
+function resolveTaskText(opts: { task?: string; taskFile?: string }): string | null {
+  if (opts.task && opts.taskFile) return null;
+  if (opts.taskFile) {
+    try {
+      return readFileSync(opts.taskFile, "utf8");
+    } catch {
+      return null;
+    }
+  }
+  return opts.task ?? null;
+}
+
+function readHookInput(defaultEvent: string, sessionId?: string): SessionHookInput {
+  const raw = process.stdin.isTTY ? "" : readStdin();
+  const normalized = raw.replace(/^\uFEFF/, "").trim();
+  let parsed: SessionHookInput = {};
+  if (normalized) {
+    try {
+      parsed = JSON.parse(normalized) as SessionHookInput;
+    } catch {
+      parsed = {};
+    }
+  }
+  return {
+    ...parsed,
+    hook_event_name: parsed.hook_event_name ?? defaultEvent,
+    session_id: sessionId ?? parsed.session_id ?? "ut-tdd-cli",
+  };
+}
+
+function writeHandoverWarnings(): void {
+  const hdeps = nodeHandoverDeps(process.cwd());
+  for (const w of [...checkHandoverDiscipline(hdeps), ...checkHandoverBypass(hdeps)]) {
+    process.stderr.write(`[ut-tdd handover] ${w}\n`);
+  }
+}
+
+function runSessionStartSideEffects(
+  repoRoot: string,
+  input: SessionHookInput,
+  deps: ReturnType<typeof nodeDeps>,
+): void {
+  try {
+    scanDanglingStops(deps, input.session_id);
+    sweepStaleGuardSlots(nodeAgentSlotsDeps(repoRoot));
+  } catch {
+    // fail-open: lifecycle maintenance must not block the runtime.
+  }
+}
+
+function adapterExecutionEnv(provider: AdapterProvider): NodeJS.ProcessEnv {
+  if (provider === "claude") {
+    return {
+      ...process.env,
+      HELIX_ALLOW_RAW_CLAUDE: "1",
+      HELIX_RAW_CLAUDE_REASON: "ut-tdd-runtime-adapter-wrapper",
+    };
+  }
+  if (provider !== "codex") return process.env;
+  return {
+    ...process.env,
+    HELIX_ALLOW_RAW_CODEX: "1",
+    HELIX_RAW_CODEX_REASON: "ut-tdd-runtime-adapter-wrapper",
+  };
+}
+
+function newestExisting(paths: string[]): string | null {
+  const existing = paths.filter((p) => existsSync(p));
+  return existing.length > 0 ? (existing.sort().at(-1) ?? null) : null;
+}
+
+function resolveClaudeNativeCommand(): string | null {
+  const explicit = process.env.HELIX_CLAUDE_BIN;
+  if (explicit && existsSync(explicit)) return explicit;
+
+  if (process.platform !== "win32") return null;
+
+  const appData =
+    process.env.APPDATA ??
+    (process.env.USERPROFILE ? join(process.env.USERPROFILE, "AppData", "Roaming") : null);
+  const appDataRoot = appData ? join(appData, "Claude", "claude-code") : null;
+  const appDataCandidates =
+    appDataRoot && existsSync(appDataRoot)
+      ? readdirSync(appDataRoot).map((version) => join(appDataRoot, version, "claude.exe"))
+      : [];
+
+  const home = process.env.USERPROFILE ?? process.env.HOME;
+  const vscodeRoot = home ? join(home, ".vscode", "extensions") : null;
+  const vscodeCandidates =
+    vscodeRoot && existsSync(vscodeRoot)
+      ? readdirSync(vscodeRoot)
+          .filter((name) => name.startsWith("anthropic.claude-code-"))
+          .map((name) => join(vscodeRoot, name, "resources", "native-binary", "claude.exe"))
+      : [];
+
+  return newestExisting([...appDataCandidates, ...vscodeCandidates]);
+}
+
+function adapterCommand(provider: AdapterProvider, plannedCommand: string): string {
+  if (provider !== "claude") return plannedCommand;
+  return resolveClaudeNativeCommand() ?? plannedCommand;
 }
 
 const program = new Command();
@@ -86,6 +212,74 @@ program
     for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
   });
+
+const session = program.command("session").description("session-log runtime events");
+session
+  .command("start")
+  .description("record SessionStart through the shared session-log core")
+  .option("--session <id>", "session_id (defaults to stdin session_id or ut-tdd-cli)")
+  .action((opts: { session?: string }) => {
+    const input = readHookInput("SessionStart", opts.session);
+    const repoRoot = process.cwd();
+    const deps = nodeDeps(repoRoot, gitBranch, gitHead);
+    runSessionStartSideEffects(repoRoot, input, deps);
+    dispatch(input, deps, "SessionStart");
+    process.stdout.write(`session-log: start ${input.session_id ?? "ut-tdd-cli"}\n`);
+  });
+
+session
+  .command("summary")
+  .description("compress session events into PLAN digest and surface handover discipline warnings")
+  .option("--session <id>", "session_id (defaults to stdin session_id or ut-tdd-cli)")
+  .action((opts: { session?: string }) => {
+    const input = readHookInput("Stop", opts.session);
+    dispatch(input, nodeDeps(process.cwd(), gitBranch, gitHead), "Stop");
+    writeHandoverWarnings();
+    process.stdout.write(`session-log: summary ${input.session_id ?? "ut-tdd-cli"}\n`);
+  });
+
+const hook = program.command("hook").description("package-local hook entrypoints");
+hook
+  .command("post-tool-use")
+  .description("record PostToolUse through the shared session-log core")
+  .option("--session <id>", "session_id (defaults to stdin session_id or ut-tdd-cli)")
+  .option("--tool <name>", "tool_name override")
+  .option("--path <path>", "file_path/path target hint")
+  .option("--command <command>", "Bash command target hint")
+  .option("--outcome <outcome>", "tool outcome: ok or error")
+  .action(
+    (opts: {
+      session?: string;
+      tool?: string;
+      path?: string;
+      command?: string;
+      outcome?: "ok" | "error";
+    }) => {
+      const input = readHookInput("PostToolUse", opts.session);
+      const toolInput: Record<string, unknown> = {
+        ...(input.tool_input ?? {}),
+        ...(opts.path ? { file_path: opts.path } : {}),
+        ...(opts.command ? { command: opts.command } : {}),
+      };
+      dispatch(
+        {
+          ...input,
+          hook_event_name: "PostToolUse",
+          tool_name: opts.tool ?? input.tool_name ?? (opts.command ? "Bash" : "manual"),
+          tool_input: toolInput,
+          tool_response: opts.outcome
+            ? {
+                ...(typeof input.tool_response === "object" ? input.tool_response : {}),
+                outcome: opts.outcome,
+              }
+            : input.tool_response,
+        },
+        nodeDeps(process.cwd(), gitBranch, gitHead),
+        "PostToolUse",
+      );
+      process.stdout.write(`session-log: post-tool-use ${input.session_id ?? "ut-tdd-cli"}\n`);
+    },
+  );
 
 const plan = program.command("plan").description("PLAN 操作");
 plan
@@ -262,18 +456,32 @@ function runtimeCommand(provider: AdapterProvider): Command {
     .command(provider)
     .description(`${provider} runtime adapter command`)
     .requiredOption("--role <role>", "delegation role")
-    .requiredOption("--task <text>", "task text")
+    .option("--task <text>", "task text")
+    .option("--task-file <path>", "read task text from file")
     .option("--plan <id>", "PLAN id")
     .option("--execute", "execute provider CLI instead of dry-run")
     .option("--json", "JSON output")
     .action(
-      (opts: { role: string; task: string; plan?: string; execute?: boolean; json?: boolean }) => {
+      (opts: {
+        role: string;
+        task?: string;
+        taskFile?: string;
+        plan?: string;
+        execute?: boolean;
+        json?: boolean;
+      }) => {
+        const task = resolveTaskText(opts);
+        if (!task) {
+          process.stderr.write("adapter requires exactly one of --task or --task-file\n");
+          process.exitCode = 1;
+          return;
+        }
         const mode = detectMode().mode;
         const plan = buildAdapterPlan(
           {
             provider,
             role: opts.role,
-            task: opts.task,
+            task,
             planId: opts.plan,
             execute: Boolean(opts.execute),
           },
@@ -288,7 +496,42 @@ function runtimeCommand(provider: AdapterProvider): Command {
           process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
           return;
         }
-        const child = spawnSync(plan.command, plan.args, { stdio: "inherit" });
+        const sessionId = `${provider}-${Date.now()}`;
+        const repoRoot = process.cwd();
+        const deps = nodeDeps(repoRoot, gitBranch, gitHead);
+        const startInput: SessionHookInput = {
+          hook_event_name: "SessionStart",
+          session_id: sessionId,
+          ...(opts.plan ? { plan_id: opts.plan } : {}),
+        };
+        runSessionStartSideEffects(repoRoot, startInput, deps);
+        dispatch(startInput, deps, "SessionStart");
+        const child = spawnSync(adapterCommand(provider, plan.command), plan.args, {
+          stdio: "inherit",
+          env: adapterExecutionEnv(provider),
+        });
+        dispatch(
+          {
+            hook_event_name: "PostToolUse",
+            session_id: sessionId,
+            ...(opts.plan ? { plan_id: opts.plan } : {}),
+            tool_name: provider,
+            tool_input: { command: `${plan.command} ${plan.args.join(" ")}` },
+            tool_response: { outcome: child.status === 0 ? "ok" : "error" },
+          },
+          deps,
+          "PostToolUse",
+        );
+        dispatch(
+          {
+            hook_event_name: "Stop",
+            session_id: sessionId,
+            ...(opts.plan ? { plan_id: opts.plan } : {}),
+          },
+          deps,
+          "Stop",
+        );
+        writeHandoverWarnings();
         process.exitCode = child.status ?? 1;
       },
     );

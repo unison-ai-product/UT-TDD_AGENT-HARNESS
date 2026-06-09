@@ -52,6 +52,7 @@ export interface PlanDigest {
 export interface SessionHookInput {
   hook_event_name?: string;
   session_id?: string;
+  plan_id?: string | null;
   tool_name?: string;
   tool_input?: Record<string, unknown>;
   tool_response?: unknown;
@@ -249,7 +250,7 @@ export function onSessionStart(input: SessionHookInput, deps: SessionLogDeps): n
       {
         ts: deps.now(),
         session_id: input.session_id ?? "unknown",
-        plan_id: resolveActivePlan(deps),
+        plan_id: input.plan_id ?? resolveActivePlan(deps),
         event_type: "session_start",
       },
       deps,
@@ -275,7 +276,7 @@ export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): nu
       {
         ts: deps.now(),
         session_id: input.session_id ?? "unknown",
-        plan_id: resolveActivePlan(deps),
+        plan_id: input.plan_id ?? resolveActivePlan(deps),
         event_type: isCommit ? "commit" : "tool_use",
         tool: input.tool_name,
         // IMP-078 gap③: commit は HEAD hash を捕捉 (deps.headCommit、PostToolUse は commit 完了後 = 新 HEAD)。
@@ -298,6 +299,15 @@ export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): nu
 export function onStop(input: SessionHookInput, deps: SessionLogDeps): number {
   try {
     const sid = input.session_id ?? "unknown";
+    recordEvent(
+      {
+        ts: deps.now(),
+        session_id: sid,
+        plan_id: input.plan_id ?? resolveActivePlan(deps),
+        event_type: "session_end",
+      },
+      deps,
+    );
     const file = join(deps.repoRoot, ".ut-tdd", "logs", "session", `${safeName(sid)}.jsonl`);
     const raw = deps.readText(file);
     if (!raw) return 0;

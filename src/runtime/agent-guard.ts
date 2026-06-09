@@ -112,7 +112,7 @@ export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContex
     return blockOrBypass(
       `[ut-tdd-guard] BLOCK: subagent_type=${subagentType} は許可リスト外です。\n` +
         `許可: ${ALLOWLIST_TEXT}\n` +
-        `be-*/db-schema/devops-deploy/general-purpose 等は Codex 委譲 (helix codex --role ...) 経由。\n${BYPASS_HINT}`,
+        `be-*/db-schema/devops-deploy/general-purpose 等は Codex 委譲 (ut-tdd codex --role ...) 経由。\n${BYPASS_HINT}`,
     );
   }
 

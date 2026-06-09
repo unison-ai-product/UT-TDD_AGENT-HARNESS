@@ -46,4 +46,10 @@ describe("rule-drift lint", () => {
     expect(result.missingMarkers).toEqual([]);
     expect(result.ok).toBe(true);
   });
+
+  it("guards the real Claude/Codex adapter docs against legacy HELIX command routing", () => {
+    const docs = loadRuleAdapterDocs(process.cwd());
+    const combined = [docs.agents, docs.claudeProject, docs.claudeRuntime].join("\n");
+    expect(combined).not.toMatch(/\bhelix (codex|claude|plan)\b/);
+  });
 });
