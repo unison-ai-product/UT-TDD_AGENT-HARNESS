@@ -611,3 +611,25 @@
 
 <!-- TODO(human): 壊さない注意 -->
 
+
+---
+
+# 現行 handover (2026-06-09 PM 追記) — Phase 2 全体検証へ移行
+
+## §3 Next Action
+1. **Phase 2 = L0-L6 全設計層の検証サイクル**へ移行 (Forward 設計降下 L0→L6 freeze 完了)。検証ロードマップ (`docs/design/harness/L3-functional/roadmap.md`) を**この節目で動的 Read** (定常参照しない、[[feedback_roadmap_is_design_doc_level]])。入口 = doctor `verification — L0-L6 ✅ freeze 完了 → 検証サイクル発火可`。
+2. 検証は V-model 単位で発火 (L0-L3 / L4-L6 / L0-L6)。整合・descent を**中身で**検証 (coverage でなく substance、[[feedback_verify_descent_not_coverage_count]])。
+3. 設計層 OK 後、Forward は L7 実装へ。DDD/TDD・coding-rule の add-impl triad (L7-24..31) が待機。impl 時に ddd-tdd-rules が Red-first / domain-boundary / oracle-strength を機械強制。
+
+## §4 carry
+- **`.github/workflows/harness-check.yml`** に CI lint+doctor step 追加済だが **未コミット/未 push** (workflow-scope token 必須、[[project_github_push_workflow_scope]])。
+- **IMP-087 / IMP-088**: A-108 orphan 4 件の三つ組 back-fill + impl↔PLAN traceability lint。
+- doctor scaffold stub: relation-graph / dependency-drift / regression expansion は後続 PLAN。
+
+## §5 未了 PO 判断
+- `.ut-tdd/audit/A-100〜A-115.md` (監査記録) は禁止事項に従い **untracked**。git 追跡対象にするかは PO 判断。
+
+## §6 壊さない / 再発させない
+- **l6-completion の `kind: add-design` 除外は意図的** (post-G6 add-design が base G6 を reopen しない、`function-spec.md:132` + `tests/l6-completion.test.ts:128`)。バグ誤認で regex 拡張しない ([[feedback_verify_intent_before_calling_gate_a_bug]])。
+- freeze doc 文字化けは `readability` lint が機械検知。破損は **git HEAD から復元** ([[feedback_freeze_check_full_doc_readability]])。
+- 確定基準: typecheck/lint clean・vitest 309・doctor exit 0 (A-115 PASS)。回帰時はこれと比較。
