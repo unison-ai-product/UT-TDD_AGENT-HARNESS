@@ -4,7 +4,7 @@ title: "PLAN-L6-17 (add-design): gate-confirm coupling lint 機能設計 (IMP-07
 kind: add-design
 layer: L6
 drive: agent
-status: draft
+status: confirmed
 created: 2026-06-08
 updated: 2026-06-08
 owner: PM / Codex TL
@@ -20,6 +20,15 @@ related_br: docs/design/harness/L1-requirements/business-requirements.md
 dependencies:
   parent: docs/plans/PLAN-L6-00-master.md
   requires: []
+review_evidence:
+  - reviewer: pmo-sonnet
+    review_kind: cross_agent
+    worker_model: codex:gpt-5.4
+    reviewer_model: claude:pmo-sonnet
+    tests_green_at: "2026-06-09T13:00:00+09:00"
+    reviewed_at: "2026-06-09T13:10:23+09:00"
+    verdict: approve
+    scope: "G6 L6 completion final recheck; lint/typecheck/vitest/doctor green; L6 FR coverage and guardrail coverage reviewed"
 ---
 
 # PLAN-L6-17 (add-design): gate-confirm coupling lint 機能設計 (IMP-079)

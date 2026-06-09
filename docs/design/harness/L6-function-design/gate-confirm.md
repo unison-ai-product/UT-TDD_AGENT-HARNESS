@@ -1,10 +1,12 @@
 ---
 layer: L6
 sub_doc: function-spec
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 plan: docs/plans/PLAN-L6-17-gate-confirm.md
 ---
+
+> **L6 contract marker**: `analyzeGateConfirm(input: GateConfirmInput) => GateConfirmResult` is the unit-test-granularity contract. DbC pre/post/invariant maps gate PASS/park states to U-GCONF-001..005.
 
 # gate-confirm lint — function design (IMP-079)
 
@@ -23,9 +25,18 @@ plan: docs/plans/PLAN-L6-17-gate-confirm.md
 | `loadGateConfirmDocs(repoRoot)` | Load gate-design plus `docs/design/harness/**` and `docs/test-design/harness/**`. |
 | `gateConfirmMessages(result)` | Emit OK / skip / violation messages for doctor. |
 
+## §2.1 DbC / fail-open invariant
+
+| contract point | invariant |
+|---|---|
+| gate parser failure | `skipped=true`, `ok=true`, and message must contain `skip/fail-open`; parse ambiguity cannot produce a false violation or false PASS |
+| confirmed doc with PASS gate | `violations=[]` for that doc/gate pair |
+| confirmed doc with park/non-PASS gate | one violation containing doc path, layer, and expected gate |
+| draft doc | ignored by coupling check; draft never requires a gate PASS |
+
 ## §3 Doctor Behavior
 
-Initial integration is warn-first. `checkGateConfirm` is included in doctor messages but does not change `runDoctor.ok`. Hard fail is a later policy switch after the real repo stays green.
+Initial integration is warn-first. `checkGateConfirm` is included in doctor messages but does not change `runDoctor.ok`. This is intentional rollout behavior: the lint surfaces gate/doc coupling drift while the policy hard-fail switch remains a later gate decision after the real repo stays green.
 
 ## §4 Test Oracle
 

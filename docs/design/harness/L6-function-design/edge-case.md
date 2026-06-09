@@ -1,7 +1,7 @@
 ---
 layer: L6
 sub_doc: edge-case
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -9,6 +9,9 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-02-edge-case.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
+
+> **L6 contract marker**: `deriveEdgeCaseOracle(input: EdgeCaseInput) => EdgeCaseOracle` is the unit-test-granularity contract. DbC pre/post/invariant maps each function signature to edge coverage. L7 oracle family: U-EDGE-001..005.
+
 
 > **SSoT 参照**: 関数 signature = [function-spec.md](./function-spec.md) §1/§2 / edge docstring 枠 = [internal-processing.md](../L5-detailed-design/internal-processing.md) §7 (G5 凍結) / fail-close 形式 = internal-processing §6。本 doc は各関数に `@edge-normal/error/boundary/throws` の 4 観点を per-function 確定する (L6、IMP-014)。
 >
@@ -73,9 +76,13 @@ function-spec §1/§2 の各関数に **正常/異常/境界/throws の 4 観点
 | `pair-exists` | pair doc 不在 → violation | 新規 doc 追加直後 (auto-enroll 前) |
 | `ref-resolves` | path 参照先不在 → violation | 相対 path / シンボリックリンク |
 | `trace-bidir` | 片方向のみ (孤児) → violation | 自己参照 |
+| `upstream-coverage` | 下流 ID が上流 ID に未接続 → violation | optional upstream が明示 defer |
 | `count-matches` | 宣言 ≠ 実カウント (ドリフト) → violation | 件数 0 宣言 |
+| `id-format` | PlanId / FR-ID / U-ID が正規式に不一致 → violation | legacy ID は明示 alias がある場合のみ許容 |
 | `dup-id` | ID 重複 → violation | 大文字小文字差異 |
+| `glossary-delta` | §6 用語更新が glossary/back-merge に未反映 → violation | 新規 term なしの明示 |
 | `dependency-drift` | 実 import ≠ 期待マップ / 循環 → violation | fs 隔離端点 (依存方向対象外) |
+| `backlog-format` | IMP-ID / status / 候補 enum が形式不一致 → violation | candidate から confirmed backlog への昇格前 |
 
 > 全 rule = 純粋関数 (FR-05 決定論)。violation は fail-close (gate binding で G_N が exit 反映)。
 

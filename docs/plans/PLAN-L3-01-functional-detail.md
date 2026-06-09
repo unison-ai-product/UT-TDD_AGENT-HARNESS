@@ -50,7 +50,7 @@ review_evidence:
 
 ## §0 本 PLAN の役割
 
-本 PLAN は L1 機能要求 (現行 46 件 P0:19 / P1:22 / P2:5) のうち、L3 で確定する 26 件 (P0 18 件 + FR-45 + workflow core 7 件) を L3 機能要件 (FR-* + AC-*) として詳細化する工程を管理する。残 P1/P2 は L4 / Phase B / PLAN-L3-02 へ明示 carry する。
+本 PLAN は L1 機能要求 (現行 47 件 P0:19 / P1:23 / P2:5) のうち、L3 で確定する 26 件 (P0 18 件 + FR-45 + workflow core 7 件) を L3 機能要件 (FR-* + AC-*) として詳細化する工程を管理する。残 P1/P2 は L4 / Phase B / PLAN-L3-02 へ明示 carry する。
 
 L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙したのに対し、L3 FR-* は「機能の入出力 / 振る舞い / 受入条件 (AC)」を確定し、L7 実装スプリント (TDD Red) の入力として機械検証可能な粒度に整える。
 
@@ -59,7 +59,7 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 ## §1 入力 (上流からの baton)
 
 - L0 企画書: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
-- L1 機能要求 (確定済): `docs/design/harness/L1-requirements/functional-requirements.md` (現行 46 件、P0:19 / P1:22 / P2:5)
+- L1 機能要求 (確定済): `docs/design/harness/L1-requirements/functional-requirements.md` (現行 47 件、P0:19 / P1:23 / P2:5)
 - L1 画面要求 (確定済): `docs/design/harness/L1-requirements/screen-requirements.md` (14 画面 PM/HM/GD + §5 G1-trace マトリクス)
 - L1 業務要求: `docs/design/harness/L1-requirements/business-requirements.md` (BR-01〜08 + UX-01〜03 + BR-21 + §3.3.2 人間主導原則)
 - L2 画面設計 placeholder: `docs/design/harness/L2-screen/` (PM/HM/GD 14 画面の L2 接続点)
@@ -69,7 +69,7 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 ## §2 出力 (本 PLAN で確定)
 
 - 正本 doc: `docs/design/harness/L3-functional/functional-requirements.md` (frontmatter generates)
-- 量閉じ: L1 FR-L1-* 現行 46 件が、L3 確定 26 件または L4 / Phase B / PLAN-L3-02 carry のいずれかへ分類されていること (孤児 L1 FR = 0)
+- 量閉じ: L1 FR-L1-* 現行 47 件が、L3 確定 26 件または L4 / Phase B / PLAN-L3-02 / L6-L8 add-feature carry のいずれかへ分類されていること (孤児 L1 FR = 0)
 - 機械検証: `ut-tdd plan lint --gate G3` (G3 = L3 pair freeze ゲート) で R-trace 整合 PASS
 
 ## §3 ヒアリング項目 / 調査メモ (functional 固有)
@@ -158,7 +158,7 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 | 節 | 情報源 | 方法 |
 |----|--------|------|
 | §1 目的・背景 | L1 functional §1 + screen §1 | L1 baton を継承し L3 詳細化目的を宣言 |
-| §2 FR-* + AC-* 一覧 (本体) | L1 FR-L1 現行 46 件 + screen §5 trace | L3 確定 26 件を本体化、残 P1/P2 は U-L3-2 / U-L3-3 に従い carry 分類 |
+| §2 FR-* + AC-* 一覧 (本体) | L1 FR-L1 現行 47 件 + screen §5 trace | L3 確定 26 件を本体化、残 P1/P2 は U-L3-2 / U-L3-3 に従い carry 分類 |
 | §3 carry 宣言 | P1/P2 の L4/Phase B carry | U-L3-2 / U-L3-3 確定に従う |
 | §4 画面 trace (L2 deep-link) | screen §5 G1-trace + L2-screen | L1 から継承、L3 AC レベルに展開 |
 | §5 9 mode × FR 整合 | business §3.3.1 + 各 FR | mode 統一合流原則を L3 で機械強制化 |

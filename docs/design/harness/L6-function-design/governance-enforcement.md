@@ -1,9 +1,10 @@
 ---
 layer: L6
 sub_doc: function-spec-addendum
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 parent_doc: docs/plans/PLAN-L6-09-governance-enforcement.md
+plan: docs/plans/PLAN-L6-09-governance-enforcement.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 created: 2026-06-04
 ---
@@ -38,6 +39,22 @@ created: 2026-06-04
 - `analyzePropagation(conceptText, requirementsText): { conceptOnly, requirementsOnly, ok }`。
 - 両 doc の `| signal | mode |` ヘッダを持つ routing テーブル**だけ**から signal 列 token を抽出し集合一致を要求 (`extractSignals`)。他テーブル (decision_outcome/reverse_type/kind) は巻き込まない。interrupt 行は subtype 表記が非対称ゆえ除外。
 - `ok = conceptOnly=0 ∧ requirementsOnly=0`。concept §2.6 (上位 narrative) ⇔ requirements §7.8.1 (機械 routing SSoT) の signal 語彙ドリフトを検出 (IMP-065)。
+
+### §2.4 FR gate/review aliases
+
+These aliases bind FR-L1-05 and FR-L1-17 to this addendum so the FR coverage matrix cannot point to prose-only governance scope.
+
+| Function | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `evaluateGateReview` | evaluateGateReview(input: GateReviewInput, deps: GateReviewDeps) => GateReviewResult | gate id, execution mode, review kind, worker model, and reviewer/checklist evidence are supplied. | returns pass only for valid cross-agent, intra-runtime, or human review evidence by mode. | naive self-review and same-model approval are never valid judgment-gate evidence. | U-FR-L1-05 |
+| `checkReviewEvidence` | checkReviewEvidence(input: ReviewEvidenceInput, deps: ReviewEvidenceDeps) => ReviewEvidenceResult | target PLAN frontmatter and current test/doctor evidence are supplied. | returns violations for missing review evidence, invalid review tier, or test-after-review ordering. | confirmed/completed design or implementation PLANs cannot silently skip review evidence. | U-FR-L1-17 |
+
+Type/pseudocode substance:
+
+| function | type body | pseudocode / implementation_state |
+|---|---|---|
+| `evaluateGateReview` | `GateReviewInput { gate_id; execution_mode; review_kind; worker_model; reviewer_model?; human_signoff?; checklist_evidence[] } -> GateReviewResult { ok; violations[]; accepted_tier }` | explicit_l7_defer; pseudocode = load gate policy, reject same-model self approval, accept cross-agent/intra-runtime/human only when required evidence exists |
+| `checkReviewEvidence` | `ReviewEvidenceInput { plan_path; frontmatter; tests_green_at?; reviewed_at?; doctor_ok? } -> ReviewEvidenceResult { ok; missing[]; stale_approval[]; ordering_violations[] }` | implemented by `src/lint/review-evidence.ts`; pseudocode = parse PLAN review_evidence, require reviewer/verdict for confirmed/completed, reject draft approve residue and test-after-review ordering |
 
 ## §3 統合点
 

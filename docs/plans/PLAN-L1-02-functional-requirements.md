@@ -61,13 +61,13 @@ FR-L1-01〜35 全件は `docs/migration/v2-import-ledger.md §6` で確定済 (P
 ## §2 出力 (本 PLAN で確定)
 
 - 正本 doc: `docs/design/harness/L1-requirements/functional-requirements.md` (frontmatter generates)
-- 量閉じ: FR-L1 現行 46 件が L14 OT に被覆されていること (追加・back-propagation 分を含む = 46 件確定)
+- 量閉じ: FR-L1 現行 47 件が L14 OT に被覆されていること (追加・back-propagation 分を含む = 47 件確定)
 
 ## §3 ヒアリング項目 / 調査メモ (functional 固有)
 
 **status 凡例**: ✅ = 正本着地済 / ➡️ = L3 forward / ❓ = PO 判断待ち / 🆕 = draft 着地・G1 待ち
 
-### 3.1 FR-L1 現行 46 件の UT-TDD 文脈翻案 (P0 19 件優先)
+### 3.1 FR-L1 現行 47 件の UT-TDD 文脈翻案 (P0 19 件優先)
 
 | ID | 確認項目 | 翻案内容 | status |
 |----|---------|---------|--------|
@@ -120,7 +120,7 @@ FR-L1-01〜35 全件は `docs/migration/v2-import-ledger.md §6` で確定済 (P
 
 | ID | 確認項目 | status |
 |----|---------|--------|
-| P0 18 件の L3 FR-* mapping | FR-L1-01〜18 各々が L3 でどの FR-* に詳細化されるかの mapping 表 | ✅ (PO 承認済 2026-05-28。L3 PLAN 起票時に PLAN-L3-01 dependencies.requires で現行 46 件を列挙する接続規約確定) |
+| P0 18 件の L3 FR-* mapping | FR-L1-01〜18 各々が L3 でどの FR-* に詳細化されるかの mapping 表 | ✅ (PO 承認済 2026-05-28。L3 PLAN 起票時に PLAN-L3-01 dependencies.requires で現行 47 件を列挙する接続規約確定) |
 
 ## §4 工程表 (Step + 進捗)
 
@@ -173,7 +173,7 @@ FR-L1-01〜35 全件は `docs/migration/v2-import-ledger.md §6` で確定済 (P
 ## §6 DoD (Definition of Done)
 
 - [ ] functional-requirements.md が必須 § 全件含む (§1〜§6)
-- [x] §1 機能一覧が FR-L1 現行 46 件を含む (追加・back-propagation 分を含む。PO 承認済 2026-05-28)
+- [x] §1 機能一覧が FR-L1 現行 47 件を含む (追加・back-propagation 分を含む。FR-L1-50 は PO directed 2026-06-09)
 - [x] P0 18 件の UT-TDD 文脈翻案完了 (HELIX 固有名残存ゼロ。PO 承認済 2026-05-28)
 - [ ] §5 上流 baton 反映 (L0 バトン項目 × FR-L1-* 対応表、46 件版) 存在
 - [ ] frontmatter 必須フィールド完備 (sub_doc / pair_artifact / related_l0 / related_br / next_pair_freeze)
@@ -181,7 +181,7 @@ FR-L1-01〜35 全件は `docs/migration/v2-import-ledger.md §6` で確定済 (P
 - [ ] L14 OT で本 sub-doc 由来要求が被覆 (孤児 0)
 - [ ] FR-* (L3 要件) を含まない (AP-6 違反なし)
 - [x] 専門サブエージェント review (Step 6) 通過記録 (2026-05-28 pmo-sonnet 再被覆監査 acdc5ccd6f31ae951 通過、CONDITIONAL PASS)
-- [x] G1 readiness: status = ready-for-G1-signoff (PO サインオフ準備完了。§3 全件 ✅/➡️ 確定済、FR-L1 46 件確定)
+- [x] G1 readiness: status = ready-for-G1-signoff (PO サインオフ準備完了。§3 全件 ✅/➡️ 確定済、FR-L1 47 件確定)
 
 ## §7 carry / 次工程 (L3) への引き継ぎ
 
@@ -198,7 +198,7 @@ FR-L1-01〜35 全件は `docs/migration/v2-import-ledger.md §6` で確定済 (P
 - **FR-L1-38 L3 carry**: FR-L1-38 の AC 詳細化 → PLAN-L3-01 で確定
 - **FR-L1-43 L3 carry**: FR-L1-43 の AC 詳細化 → PLAN-L3-01 で確定
 - **既存拡張 AC 詳細化 (L3)**: FR-L1-06/08/09/13/16/17/20 拡張分の受入条件は L3 FR-* 起票時に詳細化
-- **FR-L1 → L3 FR-* 詳細化**: FR-L1 現行 46 件 (L1 要求) → L3 FR-*/AC-* (L3 要件 + 受入条件) への詳細化。PLAN-L3-01 が現行 46 件を `dependencies.requires` に列挙する
+- **FR-L1 → L3 FR-* 詳細化**: FR-L1 現行 47 件 (L1 要求) → L3 FR-*/AC-* (L3 要件 + 受入条件) への詳細化。PLAN-L3-01 が現行 47 件を `dependencies.requires` に列挙する
 - **P0 19 件の優先実装順**: L3 FR-* 起票時に P0 → P1 → P2 の順で詳細化。FR-L1-01 / FR-L1-05 / FR-L1-09 を先行。内訳は HELIX 由来 FR-L1-01〜18 + L3 back-propagation 由来 FR-L1-45
 - **上流 baton carry**: §5 整備の L0 baton 項目対応表 (46 件版) → L3 PLAN §1 入力として引き継ぎ
-- **G1-trace 機械検証 R3 (PO 承認 2026-05-28、DD2=a、2026-06-02 BR-22 fullback 更新)**: FR-L1 P0 19 件は §1 表「対応画面」列で screen 14 画面に紐付き済 (孤児 P0 0)。P1 22 件 / P2 5 件は warn 程度で紐付け推奨 (孤児許容)。L3 起票時は現行 46 件の画面 trace を継承し維持する
+- **G1-trace 機械検証 R3 (PO 承認 2026-05-28、DD2=a、2026-06-02 BR-22 fullback 更新、2026-06-09 FR-L1-50 追加)**: FR-L1 P0 19 件は §1 表「対応画面」列で screen 14 画面に紐付き済 (孤児 P0 0)。P1 23 件 / P2 5 件は warn 程度で紐付け推奨 (孤児許容)。L3 起票時は現行 47 件の画面 trace を継承し維持する

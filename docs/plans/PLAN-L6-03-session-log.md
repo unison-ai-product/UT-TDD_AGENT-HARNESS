@@ -4,7 +4,7 @@ title: "PLAN-L6-03 (add-design): session-log 機能設計 — セッションロ
 kind: add-design
 layer: L6
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-02
 updated: 2026-06-02
 owner: PM (Opus) / PO (人間)
@@ -25,6 +25,15 @@ dependencies:
   parent: docs/plans/PLAN-L6-01-function-spec.md
   requires: []
   blocks: []
+review_evidence:
+  - reviewer: pmo-sonnet
+    review_kind: cross_agent
+    worker_model: codex:gpt-5.4
+    reviewer_model: claude:pmo-sonnet
+    tests_green_at: "2026-06-09T13:00:00+09:00"
+    reviewed_at: "2026-06-09T13:10:23+09:00"
+    verdict: approve
+    scope: "G6 L6 completion final recheck; lint/typecheck/vitest/doctor green; L6 FR coverage and guardrail coverage reviewed"
 ---
 
 # PLAN-L6-03 (add-design): session-log 機能設計

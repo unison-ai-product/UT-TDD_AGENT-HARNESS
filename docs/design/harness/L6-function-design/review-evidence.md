@@ -1,12 +1,16 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
 created: 2026-06-05
+plan: docs/plans/PLAN-L6-12-review-evidence.md
 ---
+
+> **L6 contract marker**: `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` is the unit-test-granularity contract. DbC pre/post/invariant maps review evidence presence and tier checks to U-REVIEW-001..008.
+
 
 # review-evidence lint — 機能設計 (① / PLAN-L6-12、IMP-071)
 

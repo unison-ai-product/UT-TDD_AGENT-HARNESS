@@ -4,7 +4,7 @@ title: "PLAN-L7-20 (add-impl): plan lint §工程表 最小強制 実装 (IMP-08
 kind: add-impl
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 created: 2026-06-08
 updated: 2026-06-08
 owner: PM / Codex TL
@@ -24,7 +24,15 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 dependencies:
   parent: docs/plans/PLAN-L6-19-plan-schedule-lint.md
-  requires: []
+  requires:
+    - docs/plans/PLAN-REVERSE-19-plan-schedule-lint.md
+review_evidence:
+  - reviewer: PO/A-114-ddd-tdd-strengthening-reaudit
+    review_kind: human
+    tests_green_at: "2026-06-09T16:58:00+09:00"
+    reviewed_at: "2026-06-09T17:00:00+09:00"
+    verdict: approve
+    scope: "Plan-schedule lint implementation already shipped; lint/typecheck/vitest/doctor green before confirmation; reverse pairing edge added."
 ---
 
 # PLAN-L7-20 (add-impl): plan lint §工程表 最小強制 実装 (IMP-081)
@@ -62,6 +70,6 @@ self/pmo-sonnet review で §1.10.G.4 最小スライスと既存 PLAN への過
 
 ## §8 DoD
 
-- [ ] `src/plan/lint.ts` が scaffold stub ではなく最小 analyzer を持つ
-- [ ] tests/plan-lint.test.ts が oracle を持つ
-- [ ] PLAN-REVERSE-19 が本 PLANを requires している
+- [x] `src/plan/lint.ts` が scaffold stub ではなく最小 analyzer を持つ
+- [x] tests/plan-lint.test.ts が oracle を持つ
+- [x] PLAN-REVERSE-19 が本 PLANを requires している

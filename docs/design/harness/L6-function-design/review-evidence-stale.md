@@ -1,10 +1,12 @@
 ---
 layer: L6
 sub_doc: function-spec
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 plan: docs/plans/PLAN-L6-18-review-evidence-stale.md
 ---
+
+> **L6 contract marker**: `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` is the unit-test-granularity contract. DbC pre/post/invariant maps stale approval residues to U-REVIEW-007..008.
 
 # review-evidence stale approval lint - function design (IMP-080)
 

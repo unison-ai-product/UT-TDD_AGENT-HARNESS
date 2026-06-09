@@ -101,3 +101,17 @@
 - `add-design` / `add-impl` どちらも `dependencies.parent` が null の場合 validator は exit 1 (§1.10 E)。
 - drive は親 PLAN と一致させる。不一致は §1.6 matrix 違反で fail-close。
 - 4 artifact (①②③④) の追補セットを新規 Forward と同じ規律で揃えること (AP-8 逆ピラミッド禁止)。
+## CODING-RULE-WORKFLOW
+
+Coding-rule documentation is part of Add-feature, not only CI.
+
+- SSoT: `docs/governance/coding-rules.md`.
+- Step 3 `add-design`: record coding-rule impact as `unchanged` or update the SSoT with the delta.
+- Step 4 `add-impl`: start only after coding-rule impact is resolved and U-CODE tests cover any new rule behavior.
+- Machine gate: `ut-tdd doctor` runs `checkCodingRules`; missing workflow placement or missing SSoT reference is a hard failure.
+## DDD-TDD-WORKFLOW
+
+- SSoT: `docs/governance/ddd-tdd-rules.md`
+- `add-design` must record DDD boundary/invariant impact or explicit no-impact.
+- `add-impl` must preserve Red-first TDD evidence when `tdd_red_required: true` is present.
+- Critical Add-feature decisions bundle quantitative evidence (`tests_green_at`) with qualitative reviewer evidence before confirmation.

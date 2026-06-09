@@ -1,11 +1,15 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
+plan: docs/plans/PLAN-L6-03-session-log.md
 ---
+
+> **L6 contract marker**: `recordEvent(input: SessionHookInput) => void` and `compressPlanDigest(input: PlanDigestInput) => PlanDigest` are the unit-test-granularity contracts. DbC pre/post/invariant maps hook/session events and PLAN digest generation to U-SLOG-001..007.
+
 
 ## 2026-06-09 Runtime Adapter Lifecycle Addendum
 

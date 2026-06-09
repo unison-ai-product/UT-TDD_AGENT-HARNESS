@@ -106,7 +106,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | 画面 ID | 画面名 | 主要目的 | 対応 BR/FR |
 |---------|--------|---------|-----------|
-| **HM-01** | 機能一覧ビュー | FR-L1 46 件 × implementation_status 可視化 (3 階層プルダウン) | FR-L1-20 / FR-L1-29 |
+| **HM-01** | 機能一覧ビュー | FR-L1 47 件 × implementation_status 可視化 (3 階層プルダウン) | FR-L1-20 / FR-L1-29 |
 | **HM-02** | カバレッジヒートマップビュー | 機能可視化・弱点診断 (観点 8 × 軸 5 = 40 通り heat map) | FR-L1-12 / BR-06 |
 | **HM-03** | 配線図ビュー | 静的アーキ + 動的エラー赤表示 (CC1=a 採用) | FR-L1-07 / FR-L1-18 |
 | **HM-04** | データベース閲覧ビュー | `.ut-tdd/` state 全 table + 整合性チェック結果 (CC1=a 採用) | FR-L1-07 / FR-L1-18 |
@@ -120,7 +120,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | 観点 | 内容 |
 |------|------|
 | **対応 BR/UX/FR-L1** | BR-06 / UX-02 / FR-L1-33 / FR-L1-35 |
-| **情報要素** | 3 階層プルダウン: (1) 整備率% サマリ / (2) カテゴリ別 (P0/P1/P2) / (3) FR-L1-NN 機能個別。FR-L1 全 46 件を installed/partial/not-implemented + 担当 PLAN で詳細テーブル表示 |
+| **情報要素** | 3 階層プルダウン: (1) 整備率% サマリ / (2) カテゴリ別 (P0/P1/P2) / (3) FR-L1-NN 機能個別。FR-L1 全 47 件を installed/partial/not-implemented + 担当 PLAN で詳細テーブル表示 |
 | **操作要素** | プルダウン階層切替 / FR-L1 行クリック → 担当 PLAN 参照 / フィルタ (status/priority) / 未実装一覧エクスポート |
 | **更新頻度** | 30 秒ポーリング (S2=b) |
 | **状態種別** | 整備率高 (緑) / 部分整備 (黄) / 未整備 (赤) / 空 |

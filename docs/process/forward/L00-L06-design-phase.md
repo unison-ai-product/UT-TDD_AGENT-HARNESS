@@ -214,3 +214,17 @@ architecture sub-doc は arc42 §4 (Solution Strategy) + §9 (ADR) を必須 art
 | AP-12 | L2-L6 sub-doc 構造を持たない | 各層 sub-doc 分割が要件 |
 
 出典: concept v3.1 §3.5
+## CODING-RULE-WORKFLOW
+
+Coding-rule documentation is part of the Forward design workflow.
+
+- SSoT: `docs/governance/coding-rules.md`.
+- Forward L6: confirm the coding rules are unchanged or update the SSoT before G6/G7 handoff.
+- Forward L7 entry: implementation may start only after the L6 design notes and U-CODE tests reflect any coding-rule delta.
+- Machine gate: `ut-tdd doctor` runs `checkCodingRules`; missing workflow placement or missing SSoT reference is a hard failure.
+## DDD-TDD-WORKFLOW
+
+- SSoT: `docs/governance/ddd-tdd-rules.md`
+- Forward L6 must confirm domain boundaries, invariant-to-oracle trace, and TDD strictness rules before L7 implementation.
+- L8 confirmation requires IT-* rows with Given/When/Then granularity.
+- Important gate points require quantitative checks first, then qualitative review evidence; the two are bundled for freeze readiness.

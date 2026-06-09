@@ -1,11 +1,15 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
+plan: docs/plans/PLAN-L6-06-handover-mechanism.md
 ---
+
+> **L6 contract marker**: `runHandover(input: HandoverInput) => HandoverResult` and `checkHandoverDiscipline(input: HandoverDisciplineInput) => HandoverDisciplineResult` are the unit-test-granularity contracts. DbC pre/post/invariant maps digest, CURRENT.json, and stale/drift checks to U-HOVER-001..012.
+
 <!--
 ① 設計 (L6 機能設計) — handover 記録機構 (session-log PLAN digest → handover 生成 + plan_id 活性化)。
 PLAN: PLAN-L6-06-handover-mechanism (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.8 U-HOVER。
@@ -103,7 +107,7 @@ interface HandoverResult {
 | 関数 | signature | DbC |
 |------|-----------|-----|
 | `resolveHandoverScope` | `(deps: { repoRoot: string; readText; listDir }) => { active_plan: string\|null; digests: PlanDigestRef[] }` | **never throws**。`.ut-tdd/state/current-plan` を読み active_plan を決定 / `.ut-tdd/logs/plan/` を listDir し `*.digest.json` を parse / 不在・壊れ JSON は skip / 何も無ければ `{active_plan:null, digests:[]}`。**`listDir` は本 deps では必須** (session-log の optional `listDir?` と異なり handover は走査が責務) |
-| `buildPointer` | `(scope, latestDoc: string\|null, status: HandoverStatus, now: string) => HandoverPointer` | **純関数**。**digest_summary は `scope.digests` が非空なら active_plan の null/非 null に関わらず集計** (`commits.length`/`files_touched.length`/`failures.length` 合算) / `scope.digests` が空のときのみ `digest_summary=null` / `active_plan` は scope の値をそのまま透過 (null 可) / `updated_at=now`。**`digest_summary=null` は「digest 不在」を意味し、「active_plan 未設定」とは独立** (両者を混同しない、CLAUDE.md ワークフローの誤読防止) |
+| `buildPointer` | `(input: { scope; latestDoc: string\|null; status: HandoverStatus; now: string }) => HandoverPointer` | **純関数**。source coding rule の max 3 params に従い object input を受ける。**digest_summary は `scope.digests` が非空なら active_plan の null/非 null に関わらず集計** (`commits.length`/`files_touched.length`/`failures.length` 合算) / `scope.digests` が空のときのみ `digest_summary=null` / `active_plan` は scope の値をそのまま透過 (null 可) / `updated_at=now`。**`digest_summary=null` は「digest 不在」を意味し、「active_plan 未設定」とは独立** (両者を混同しない、CLAUDE.md ワークフローの誤読防止) |
 | `scaffoldFromDigests` | `(digests: PlanDigestRef[], planMeta: {plan_id;kind;title}[], date: string) => HandoverDoc` | **純関数**。digest.commits/files_touched → `deliverables` / planMeta.kind/title → `plans.summary` / **③-⑥ は空配列** (human 記入のため scaffold では生成しない) |
 | `renderHandoverScaffold` | `(doc: HandoverDoc) => string` | **純関数**。`# Session Handover — <date>` + §0..§6 相当の 6 セクション markdown を render / 機械部 (①②) は埋め、③-⑥ は `<!-- TODO(human): ... -->` placeholder / **自由テキスト欄 (`plans[].summary` / `deliverables[].*` / digest 由来 failures) は session-log の `sanitize` を render 時にも適用する (defense-in-depth)**。tracked な `docs/handover/*.md` に commit されるため、digest 側 sanitize 済でも render 段で再マスクして credential/PII の流出経路をゼロにする (二重 sanitize は冪等、`SECRET_RE` は `name=value` を `name=***` に) |
 | `handoverStale` | `(updated_at: string\|null, now: string, maxHours = 24) => boolean` | **純関数**。precondition: `now`/`updated_at` は ISO8601 (`Date.parse` 可能、UTC 推奨)。`updated_at` 無し/parse 不能 → true / `(Date.parse(now) - Date.parse(updated_at)) / 3.6e6 > maxHours` → true / 以内 → false / **境界 (=maxHours ちょうど) は `>` 判定ゆえ stale でない**。**辞書順比較でなく数値差分で判定** (TZ 混入時の silent wrong answer 回避) |

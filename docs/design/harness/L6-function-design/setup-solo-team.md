@@ -1,11 +1,15 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
+plan: docs/plans/PLAN-L6-05-setup-solo-team.md
 ---
+
+> **L6 contract marker**: `planSetup(input: SetupInput) => SetupPlan` and `runSetup(input: SetupInput) => SetupResult` are the unit-test-granularity contracts. DbC pre/post/invariant maps solo/team detection and setup outputs to U-SETUP-001..007.
+
 <!--
 ① 設計 (L6 機能設計) — ut-tdd setup solo/team GitHub 設定出し分け。
 PLAN: PLAN-L6-05-setup-solo-team (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.7 U-SETUP。

@@ -1,11 +1,12 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
 created: 2026-06-05
+plan: docs/plans/PLAN-L6-10-vmodel-pair-lint.md
 ---
 
 # vmodel pair-freeze lint — 機能設計 (① / PLAN-L6-10、IMP-067)
@@ -123,6 +124,12 @@ function analyzePairFreeze(docs):
 | `analyzeVerificationGroups` | `(docs, orphans) => GroupReadiness[]` | 層群ごとに confirmed/draft/placeholder/孤児を集計 + frozen 判定 (純関数) |
 | `verificationGroupMessages` | `(groups) => string[]` | freeze 完了 (park 表示) / Forward 進行中 の surface |
 | doctor `checkVerificationGroups` | `(repoRoot) => string[]` | note レベル surface (doctor.ok 非連動) |
+
+### §7.3.1 FR test-perspective alias
+
+| Function | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `analyzeTestPerspectiveGate` | analyzeTestPerspectiveGate(input: TestPerspectiveInput, deps: TestPerspectiveDeps) => TestPerspectiveResult | design/test-design pair docs and declared test viewpoints are supplied. | returns missing or duplicate test perspective coverage by layer. | pair presence alone is insufficient when a required test viewpoint is absent. | U-FR-L1-21 |
 
 ### §7.4 「機械発火」の範囲
 

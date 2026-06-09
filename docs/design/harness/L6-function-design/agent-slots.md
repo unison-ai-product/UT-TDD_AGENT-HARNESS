@@ -1,10 +1,11 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
+plan: docs/plans/PLAN-L6-07-agent-slots.md
 ---
 <!--
 ① 設計 (L6 機能設計) — agent-slots 機構 (subagent/team-member の fire→release 状態記録 + 並列上限助言 + stale 検知)。
@@ -118,14 +119,26 @@ export const teamDefinitionSchema = z.object({
 |------|-----------|-----|
 | `loadSlots` | `(deps: AgentSlotsDeps) => Slot[]` | **never throws**。`readText` null → `[]` / JSON.parse 失敗 → `[]` / 非配列 → `[]` |
 | `fireSlot` | `(input: {agent_kind; role?; slot_source}, deps) => Slot` | running slot を `Slot[]` に append し永続化。返り値は生成した Slot (`status="running"`, `released_at=null`)。saveSlots 失敗は warn せず pass (fail-open) |
-| `releaseSlot` | `(slotId, status: Exclude<SlotStatus,"running">, exitCode: number\|null, deps) => boolean` | `slotId` が存在し `released_at===null` の slot を terminal 化 (`status`, `exitCode`, `released_at=now`)。対象なし/既に released → `false` (idempotent)。**never throws** |
+| `releaseSlot` | `(input: { slotId; status: Exclude<SlotStatus,"running">; exitCode: number\|null }, deps) => boolean` | source coding rule の max 3 params に従い object input を受ける。`slotId` が存在し `released_at===null` の slot を terminal 化 (`status`, `exitCode`, `released_at=now`)。対象なし/既に released → `false` (idempotent)。**never throws** |
 | `listActiveSlots` | `(deps) => Slot[]` | `status==="running" && released_at===null` のみ。**never throws** |
 | `listStaleSlots` | `(deps, thresholdMinutes=5) => Slot[]` | `listActiveSlots` の結果から `(now - fired_at) / 60000 > thresholdMinutes` を満たすものを返す。`deps.now()` / `fired_at` が parse 不能の slot はスキップ。**never throws** |
 | `peakParallel` | `(slots: Slot[]) => number` | **純関数**。sweep-line: `fire=+1` / `release=-1`。`released_at=null` は `+∞` 扱い (現在も実行中)。**同時刻は `delta` 昇順 (`release(-1)` を `fire(+1)` より先) ソートして隣接区間の重複カウントを防ぐ**。`fired_at` parse 不能 slot はスキップ |
 | `exceedsParallelLimit` | `(deps, max=8) => boolean` | `listActiveSlots(deps).length >= max` (上限到達で即 `true`、`>` でなく `>=`)。**never throws** |
-| `recordGuardFire` | `(agentKind, deps, max=8, staleMinutes=5) => {activeCount: number; exceeded: boolean}` | I/O を 1 回の load→save に集約 (lost-update 窓を閉じる)。① `slot_source==="agent_guard"` かつ stale な slot を `status="cancelled"` に失効 → ② 新規 slot を push → ③ save → `activeCount` (agent_guard running 数) / `exceeded = activeCount >= max` を返す。catch → `{0, false}` (fail-open) |
+| `recordGuardFire` | `(input: { agentKind; max?: number; staleMinutes?: number }, deps) => {activeCount: number; exceeded: boolean}` | source coding rule の max 3 params に従い object input を受ける。I/O を 1 回の load→save に集約 (lost-update 窓を閉じる)。① `slot_source==="agent_guard"` かつ stale な slot を `status="cancelled"` に失効 → ② 新規 slot を push → ③ save → `activeCount` (agent_guard running 数) / `exceeded = activeCount >= max` を返す。catch → `{0, false}` (fail-open) |
 | `nodeAgentSlotsDeps` | `(repoRoot: string) => AgentSlotsDeps` | 実 I/O deps。`idSeq` は closure に閉じ込め module 状態を持たない (テスト間リセット不能回避) |
 | `mustSerialize` (team.ts) | `(reason: SerializationReason\|undefined) => boolean` | **純関数**。`file_conflict \|\| downstream_dependency \|\| shared_state` の OR。`undefined → false` |
+
+### §2.3.1 FR roster capability alias
+
+| Function | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `resolveRosterCapability` | resolveRosterCapability(input: RosterCapabilityInput, deps: RosterCapabilityDeps) => RosterCapabilityResult | roster/slot source and requested role/capability are supplied. | returns matched capability/model class or an explicit missing-capability finding. | roster lookup never fabricates capability and never reads provider credentials. | U-FR-L1-46 |
+
+Type/pseudocode substance:
+
+| function | type body | pseudocode / implementation_state |
+|---|---|---|
+| `resolveRosterCapability` | `RosterCapabilityInput { role; requested_capability; slot_source; roster_snapshot } -> RosterCapabilityResult { ok; capability?; model_class?; findings[] }` | explicit_l7_defer; pseudocode = normalize role/capability, search roster snapshot, return exact match or missing-capability finding, never read provider credentials |
 
 ### §2.4 DbC 補足
 

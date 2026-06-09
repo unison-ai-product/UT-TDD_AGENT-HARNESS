@@ -533,7 +533,7 @@ V2 HELIX-workflows 設計概念 (`vendor/helix-source/docs/v2/process/L01-requir
 | sub-doc (5 種) | 必須 § (HELIX-workflows 実体 doc に準拠) | PLAN 命名 (UT-TDD) |
 |----------------|------------------------------------------|--------------------|
 | **業務要求** (business) | §1 目的・背景 (WHY/WHAT/WHO) / §2 対象業務一覧 / §3 業務フロー (Forward V-model 主線 + 9 mode 分岐 + cross-cutting 横断機構) / §4 ステークホルダー / §5 現状課題 → あるべき姿 / §6 業務スコープ外 (本 BR で扱わない: FR / 画面 / 技術 / NFR / 実装) / §7 L14 運用テスト pair 対応表 (BR-* ⇔ OT-* 1:1) / §8 関連 doc / §9 carry / 既知の不足 + §9.1 上流 baton carry 一覧 / **§10 業務 entity 列挙 (DDD 適用、要件レベル / 詳細は L4)** + §10.1 主要業務 entity 一覧 (L0 用語と 1:1 対応 / 業務的意味 / 対応 schema・CLI・file の 4 列 table) + §10.2 L4 carry (集約境界 / 値オブジェクト / entity ID 規約 / ライフサイクル / 不変条件 / 集約間整合性 / `ut-tdd doctor check_business_entity_coverage` 新設) + §10.3 SSoT 参照 (ユビキタス言語 / Bounded Context / 業界標準整合) | `PLAN-L1-01-business-requirements` |
-| **機能要求** (functional) | §1 機能一覧 (**FR-L1 現行 46 件、P0: 19 / P1: 22 / P2: 5 で確定**、`docs/migration/v2-import-ledger.md §6` 参照) / §2 利用シナリオ (ユースケース) / §3 操作とデータの流れ / §4 入出力 / §5 上流 baton 反映 (L0 企画書バトン項目と本 doc FR-L1-* の対応表 + carry 先) / §6 関連 doc | `PLAN-L1-02-functional-requirements` |
+| **機能要求** (functional) | §1 機能一覧 (**FR-L1 現行 47 件、P0: 19 / P1: 23 / P2: 5 で確定**、`docs/migration/v2-import-ledger.md §6` + FR-L1-50 DDD/TDD strictness 参照) / §2 利用シナリオ (ユースケース) / §3 操作とデータの流れ / §4 入出力 / §5 上流 baton 反映 (L0 企画書バトン項目と本 doc FR-L1-* の対応表 + carry 先) / §6 関連 doc | `PLAN-L1-02-functional-requirements` |
 | **画面要求** (screen) | §1 画面一覧 / §2 画面遷移の要望 / §3 表示・操作への要望 / §4 関連 doc (具体的画面設計は L2、本 sub-doc は要求レベル) | `PLAN-L1-03-screen-requirements` |
 | **技術要求** (technical) | §1 採用技術・技術制約 / §2 外部連携 + IF 要望 / §3 既存システム制約 / **§4 state schema 二層構造** (UT-TDD では `.ut-tdd/` 配下、core tables + audit/event tables + derived views + 補助 state、closure event 契約 = `idempotency_key = mode + plan_id + closure_event_id` + rollback + conflict resolution) / **§5 工程別 skill 注入機構** (`docs/skills/<L>-injection.yaml` 相当、`owner_role` / `mandatory_agents` / `recommended_agents` / `recommended_skills` / `recommended_commands` / `orchestration_mode` の 6 フィールド) / **§6 9 mode 共通基盤** (R0-R4 + RGC を Reverse 専用ではなく共通 closure language として再利用、Forward 接続 event の state 登録 + 補助 state への中間 state 保存 + discrepancy_log からの機械起動) / **§7 drift 解消方針** (detector の週次以上起動 + inventory schema による工程双方向 mapping + 新規 asset 工程未割当不許容 + Reverse normalization 接続 + 運用目標「新規 drift 0 件 / week」) / §8 関連 doc | `PLAN-L1-04-technical-requirements` |
 | **非機能要求** (nfr) | §1 可用性 / §2 性能・拡張性 / §3 運用・保守性 (冒頭で carry 宣言 = 排泄系契約・上流 baton の段階 carry) / §4 移行性 / §5 セキュリティ / §6 システム環境 (**IPA 非機能要求グレード 2018 6 大項目に準拠**) / **§7 IPA × ISO 25010 二軸タグ表** (全 NFR-ID × IPA 大項目 × ISO 25010 特性 の 3 列 + 対象外特性の除外理由) / §8 関連 doc (carry 接続記述 = `pairs_test_design: []` の L1 許容 + L4 起票時追加 + L4↔L9+L13+L14 多層検証接続) | `PLAN-L1-05-nfr` |
@@ -1078,6 +1078,32 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 
 # §10 用語集 (ユビキタス言語 SSoT / living glossary)
 
+## §10.0 coding-rule governance terms
+
+| 用語 | 定義 |
+|---|---|
+| **coding-rules SSoT** | TypeScript/Bun core の coding rule 正本。`docs/governance/coding-rules.md` を rule ID と workflow placement の SSoT とし、doctor `checkCodingRules` が hard gate として検証する (導入層 L6、PLAN-L6-23/L7-24/REVERSE-23) |
+| **CODING-RULE-WORKFLOW** | coding-rule 文書化が CI 後付けではなく Forward/Add-feature/mode workflow step であることを示す process doc anchor (導入層 L6、PLAN-L6-23) |
+| **coding-rules workflow analyzer** | `loadCodingWorkflowDocs` / `analyzeCodingRules` によって coding-rule SSoT と workflow anchor の欠落を検出する lint (導入層 L7、PLAN-L7-24) |
+| **coding-rules back-fill** | implemented coding-rule workflow を Reverse PLAN へ接続し、add-impl orphan を防ぐ back-fill 記録 (導入層 cross、PLAN-REVERSE-23) |
+| **structured-error-handling** | catch block が explicit failure state を返す、記録する、変換する、または fail-open 意図を文書化する coding rule。無記録の空 catch と rethrow-only catch を禁止する (導入層 L6/L7、PLAN-L6-24/L7-25/REVERSE-24) |
+| **rethrow-only catch** | catch block whose only statement is `throw`; failure state の変換・記録が無いため structured-error-handling violation とする (導入層 L7、PLAN-L7-25) |
+| **error-handling back-fill** | structured-error-handling rule を Reverse PLAN に接続し、実装と governance 設計の trace を閉じる記録 (導入層 cross、PLAN-REVERSE-24) |
+| **module-boundary** | source module 間の依存方向を coding rule として検証する境界。`lint`/`runtime`/`schema` の逆依存を禁止する (導入層 L6/L7、PLAN-L6-25/L7-26/REVERSE-25) |
+| **reverse import** | lower-level governance module が higher-level runtime/CLI feature module を import する逆依存。module-boundary violation とする (導入層 L7、PLAN-L7-26) |
+| **module-boundary back-fill** | module-boundary rule を Reverse PLAN に接続し、実装と governance 設計の trace を閉じる記録 (導入層 cross、PLAN-REVERSE-25) |
+| **DDD/TDD strictness** | DDD 境界と TDD evidence を requirements-level SSoT から機械検出へ落とす rule 群。domain-boundary / invariant-test-trace / red-first-evidence / test-oracle-strength / integration-gwt を含む (導入層 L6/L7、PLAN-L6-26..30/L7-27..31/REVERSE-26..30) |
+| **DDD-TDD-WORKFLOW** | DDD/TDD rule 文書化が Forward/Add-feature/mode workflow step であることを示す process doc anchor (導入層 L6、PLAN-L6-26..30) |
+| **domain-boundary** | DDD の bounded-context / anti-corruption 原則を source import graph に適用し、lint/runtime/schema の逆依存を検出する rule (導入層 L6/L7、PLAN-L6-26/L7-27/REVERSE-26) |
+| **invariant-test-trace** | DDD invariant declaration が L7 の U-* oracle と接続していることを検査する trace rule (導入層 L6/L7、PLAN-L6-27/L7-28/REVERSE-27) |
+| **red-first evidence** | TDD Red が Green より先に存在することを `red_at <= green_at` evidence で確認する PLAN rule (導入層 L6/L7、PLAN-L6-28/L7-29/REVERSE-28) |
+| **test-oracle-strength** | unit test が実行確認だけでなく具体的な assertion oracle を持つことを検査する rule。truthiness-only assertion は弱い oracle として扱う (導入層 L6/L7、PLAN-L6-29/L7-30/REVERSE-29) |
+| **integration-gwt** | integration test design の `IT-*` row が Given / When / Then 粒度を持つことを検査する rule (導入層 L6/L8、PLAN-L6-30/L7-31/REVERSE-30) |
+| **quantitative check** | vitest / lint / doctor など、システムが定量的に pass/fail する evidence。定性 review の前提条件として扱う (導入層 L6、PLAN-L6-26..30) |
+| **qualitative review** | エージェントまたは人間が設計意図・粒度・リスクを判断する review evidence。機械 gate の代替ではない (導入層 L6、PLAN-L6-26..30) |
+| **evidence bundle** | gate-significant decision で quantitative check と qualitative review の両方を揃える evidence grouping。片方だけでは freeze-ready としない (導入層 L6、PLAN-L6-26..30) |
+| **DDD/TDD back-fill** | implemented DDD/TDD strictness rules を Reverse PLAN に接続し、requirements / design / test / workflow trace を閉じる記録 (導入層 cross、PLAN-REVERSE-26..30) |
+
 > 本節は UT-TDD ユビキタス言語の**単一 SSoT** (§3.1.2.2 anti-corruption layer)。各工程は語を独自定義せず、新規導入 / 精緻化した語をここへ **back-merge** する **living glossary** とする。各語に **導入層** (初出工程) と **更新層** (意味を更新した工程、無ければ —) を記録する。§10.3 機構用語は既定で導入層 = L0。機械検証は要件定義書 §1.10.G.9。
 
 ## §10.1 ドメイン entity 用語 (DDD、L1 業務要求 §10.1 と 1:1)
@@ -1178,7 +1204,11 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **shared hook entrypoint** | Claude Code hook が個別 hook 実装ではなく package-local `src/cli.ts` の `session start` / `hook post-tool-use` / `session summary` を呼び、`src/runtime/session-log.ts` の shared core に dispatch する入口。`.claude/hooks/session-log.ts` は後方互換 shim (導入層 L6、PLAN-L6-20/L7-21) |
 | **adapter lifecycle wrapper** | `ut-tdd codex\|claude --execute` が provider CLI 実行を SessionStart / PostToolUse / Stop で包み、session-log PLAN digest と handover warning surface を記録する機構。raw guard 共存 env は wrapper が付与する (導入層 L6、PLAN-L6-20/L7-21) |
 | **plan metadata separation** | `ut-tdd codex\|claude --plan <id>` の PLAN は harness/session-log metadata として保持し、provider CLI 引数へ `--plan-id` を転送しない規約。provider 境界を汚さず digest plan_id だけに使う (導入層 L6、PLAN-L6-20/L7-21) |
+| **L6 FR unit coverage** | L1 FR registry の各 FR を L6 spec path、unit-level contract、U-* oracle へ接続する coverage matrix。L6 に入る前の FR 漏れ確認と L6 単体テスト粒度の 100% coverage を機械検査する (導入層 L6、PLAN-L6-21/L7-22/REVERSE-21) |
 | **back-fill pairing** | 駆動モデルが「設計ドキュメントまで戻す」完全性。bottom-up build した impl を上位設計/governance へ Reverse 合流させ、§6 用語更新を L0 §10 へ back-merge する。`src/lint/backfill-pairing.ts` が「Reverse 無き impl」「glossary 未 merge」を検知 (`ut-tdd doctor`、warn-first、導入層 L6、IMP-051)。検査の 3 出力 = `reverseOrphans` / `glossaryGaps` / `conditionalPending`。複合ラベルの表記ゆれは `normalizeTerm` (先頭コア語) で吸収 |
+| **L6 completion readiness** | L6 docs、対応 L6 design/add-design PLAN、L7 unit-test design、G6 gate status を集約し、L6 完了可否を明示する機械判定。`src/lint/l6-completion.ts` が warn-only で surface し、G6 freeze 前の未完了条件を draft docs / draft PLANs / L7 draft / G6 not-pass として列挙する。導入層 L6、PLAN-L6-22。 |
+| **L6 completion readiness lint** | `analyzeL6Completion` / `checkL6Completion` による L6 completion readiness の実装名。doctor に未完了条件を表示し、G6 audit 時に hard 化できる。導入層 L7、PLAN-L7-23。 |
+| **completion readiness back-fill** | completion readiness lint の実装を Reverse PLAN へ接続し、add-impl が orphan にならないよう Forward/Gate 設計へ戻す記録。導入層 cross、PLAN-REVERSE-22。 |
 | **KIND_BACKFILL マトリクス** | kind → back-fill 要否 (`required`/`conditional`/`none`) の正本表。add-impl=required / refactor・retrofit・troubleshoot=conditional / impl・design・add-design・poc・reverse・recovery=none。駆動モデル整理の機械正本 (導入層 L6、IMP-051) |
 | **review_evidence** | design/impl/add-* PLAN が confirmed (gate/freeze 到達) 前に通した review 前置 (§2.1.2.1 review tier) を frontmatter に構造記録する証跡 (`reviewer` / `review_kind` = cross_agent\|intra_runtime_subagent\|human / `reviewed_at` / `verdict` / `scope` / `worker_model` / `reviewer_model`)。freeze 後の増分追補も entry を append。`src/lint/review-evidence.ts` + doctor `checkReviewEvidence` が「confirmed design/impl なのに review_evidence なし」を surface し、review-skip の silent 化を機械で塞ぐ (warn-first → hard、§7.8.7「記録欠落→exit 1」の機械着地、導入層 L6、IMP-071) |
 | **same_model_approval** | cross_agent review で worker と reviewer の (provider, model) が同一なら承認を無効化する原則 (`forbidden`、§2.1.2.1 核心ルール 2、cross-provider 要件)。機械着地 = review_evidence の `worker_model` ≠ `reviewer_model` を doctor `checkReviewEvidence` が `crossReviewViolations` で fail-close 検出 (単体 runtime は cross_agent を僭称できない、導入層 L6、IMP-076) |

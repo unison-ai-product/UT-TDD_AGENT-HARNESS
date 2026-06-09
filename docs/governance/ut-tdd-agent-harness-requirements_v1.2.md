@@ -1639,6 +1639,34 @@ output:
 - [x] **rule parity test**: 同一 PLAN / diff を claude-only と codex-only で処理した際、`ut-tdd gate` / `ut-tdd plan lint` / `ut-tdd vmodel lint` の **判定結果と exit code が一致**する (runtime 差で結果が変わらない)。`ut-tdd gate` の判断ゲート review-tier は `evaluateGateReview` parity test で codex-only/claude-only 同一結果を機械検証 (2026-06-08)。
 - [x] **hybrid 機能分散 (MUST、構想書 §2.1.0)**: `ut-tdd team run` が `hybrid` で判断系 / 実行系を別 runtime に割り当て、同一 role の同一 runtime 重複・同一作業の二重実行を exit 1 で弾く (§7.1 team run 検証 7)。`validateTeamRun` が worker/reviewer provider 分離・duplicate role/provider を fail-close (2026-06-08)。
 
+### 7.6.1 Coding Rules SSoT (TypeScript core)
+
+ADR-001 により `src/` core は TypeScript/Bun で実装する。coding rules は本要件定義と `docs/governance/coding-rules.md` を SSoT とし、AGENTS / CLAUDE adapter は再定義せず参照する。
+
+- [x] `tsconfig.json` は `strict: true` / `noImplicitOverride: true` / `noFallthroughCasesInSwitch: true` を維持し、`bun run typecheck` を必須検証に含める。
+- [x] formatter/linter は Biome (`bun run lint`) を正本とし、手動整形ルールではなく tool output を優先する。
+- [x] explicit `any` を禁止する。必要な場合は `unknown`、generic、または具体型を使う。
+- [x] `@ts-ignore` / `@ts-expect-error` / `eslint-disable` / `biome-ignore` を禁止する。例外が必要な場合は先に policy PLAN で例外条件を定義する。
+- [x] `src/**` の function / method / constructor / arrow function は 3 params 以下とする。4 以上は input object 化する。`tests/**` の helper arity は対象外だが、no-any / suppression / file naming は対象内。
+- [x] TypeScript file name は kebab-case、kebab-case + `.test.ts`、または `index.ts` とする。
+- [x] Error handling は fail-open を許容するが、無記録の空 `catch` と rethrow-only `catch` を禁止する。catch block は explicit failure state の返却、記録、変換、または fail-open 意図の文書化を行う。
+- [x] Module boundary は `lint` / `runtime` / `schema` の逆依存を禁止する。shared logic は低位 module へ移し、governance check が runtime/CLI 実装へ依存しないようにする。
+- [x] Workflow placement: Forward L6 は `docs/governance/coding-rules.md` の unchanged/update を確認してから G6/G7 handoff する。Add-feature は `add-design` で coding-rule impact を記録し、`add-impl` は impact 解消後に開始する。
+- [x] 機械検出は `docs/governance/coding-rules.md` の rule ID と workflow anchor を `src/lint/coding-rules.ts` が読み、`doctor` `checkCodingRules` で hard failure とする。対応 oracle は L7 `U-CODE-001..009`。
+
+### 7.6.2 DDD/TDD Strictness SSoT
+
+DDD/TDD strictness は `docs/governance/ddd-tdd-rules.md` を SSoT とし、domain boundary / invariant trace / Red-first evidence / test oracle strength / integration GWT を doctor で機械検出する。
+
+- [x] Domain boundary: governance/lint/schema/runtime の逆向き依存を `domain-boundary` として検出する。
+- [x] Invariant trace: DDD invariant は L7 U-* oracle を持たなければならない。
+- [x] Red-first evidence: `tdd_red_required: true` の confirmed PLAN は `red_at <= green_at` を満たす。
+- [x] Test oracle strength: test case は `expect` / `assert` を持ち、truthiness のみの oracle を禁止する。
+- [x] Integration GWT: L8 IT-* row は Given/When/Then を持つ。
+- [x] Workflow placement: Forward L6 / Add-feature / mode index は `DDD-TDD-WORKFLOW` anchor と SSoT 参照を持つ。
+- [x] 定量チェックと定性レビューの使い分け: `vitest` / lint / doctor が green になってから review evidence を付ける。重要 gate / freeze / TDD evidence は `tests_green_at` と reviewer evidence を抱き合わせ、片方だけで confirmed にしない。
+- [x] 機械検出は `src/lint/ddd-tdd-rules.ts` + doctor `checkDddTddRules` で hard failure とする。対応 oracle は L7 `U-DDDTDD-001..008` と FR-L1-50。
+
 ---
 
 # §7.7 HELIX 由来 skill pack の curate / 正本化要件

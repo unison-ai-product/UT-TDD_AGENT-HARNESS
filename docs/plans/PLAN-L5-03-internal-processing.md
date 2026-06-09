@@ -1,6 +1,6 @@
-﻿---
+---
 plan_id: PLAN-L5-03-internal-processing
-title: "PLAN-L5-03 (design/internal-processing): L5 隧ｳ邏ｰ險ｭ險・窶・蜀・Κ蜃ｦ逅・/ D-API (蜃ｦ逅・Ο繧ｸ繝・け + DbC pre/post/invariant docstring縲‘dge 5-8)"
+title: "PLAN-L5-03 (design/internal-processing): L5 詳細設計 — 内部処理 / D-API (処理ロジック + DbC pre/post/invariant docstring、edge 5-8)"
 kind: design
 layer: L5
 sub_doc: internal-processing
@@ -15,10 +15,10 @@ review_evidence:
     scope: "L5 internal-processing freeze. DbC, fail-close, and edge docstring contracts are paired to L8 IT-CONTRACT with GWT-level coverage."
 created: 2026-05-29
 updated: 2026-06-08
-owner: PM (Opus) / PO (莠ｺ髢・
+owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl
-    slot_label: "TL 窶・D-API 蜃ｦ逅・Ο繧ｸ繝・け / DbC 螂醍ｴ・・繝ｬ繝薙Η繝ｼ (蛻･ runtime)"
+    slot_label: "TL — D-API 処理ロジック / DbC 契約のレビュー (別 runtime)"
 generates:
   - artifact_path: docs/design/harness/L5-detailed-design/internal-processing.md
     artifact_type: design_doc
@@ -38,86 +38,90 @@ related_adr: docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
-# PLAN-L5-03 (design/internal-processing): L5 蜀・Κ蜃ｦ逅・/ D-API
+# PLAN-L5-03 (design/internal-processing): L5 内部処理 / D-API
 
-## ﾂｧ0 PLAN
+## §0 PLAN
 
-L5 Master (`PLAN-L5-00-master`) ﾂｧ2 縺ｮ 竭 蠢・・sub-doc縲景nternal-processing縲阪ｒ隧ｳ邏ｰ蛹悶☆繧・design PLAN縲ょ・蜉・= `docs/design/harness/L5-detailed-design/internal-processing.md`縲Ｎodule-decomposition 縺ｮ蜈ｬ髢矩未謨ｰ (D-API) 縺ｫ **蜃ｦ逅・Ο繧ｸ繝・け + Design by Contract (precondition/postcondition/invariant)** 繧剃ｻ倅ｸ弱＠縲！MP-014 (竭｡螳溯｣・・竭｣繝・せ繝・docstring縲‘dge 5-8) 繧貞㍾邨先ｺ門ｙ縺吶ｋ縲・
-## ﾂｧ1 逶ｮ逧・
-module-decomposition 縺ｮ蜈ｬ髢・IF 繧・**蜃ｦ逅・ｻ墓ｧ・+ DbC 螂醍ｴ・*縺ｸ隧ｳ邏ｰ蛹悶☆繧・ 竭 荳ｻ隕∵桃菴懊・蜃ｦ逅・ヵ繝ｭ繝ｼ (蜈･蜉帶､懆ｨｼ竊貞・逅・・state 譖ｴ譁ｰ竊貞・蜉・縲≫贈 蜷・桃菴懊・ pre/post/invariant (Meyer DbC縲‥ocument-system-map ﾂｧ3)縲≫造 fail-close 繧ｨ繝ｩ繝ｼ繝代ち繝ｼ繝ｳ (exit code + next_action)縲≫促 edge case (G3 carry IMP-014 縺ｮ edge 5-8 = 逡ｰ蟶ｸ/蠅・阜縺ｮ docstring 蠖｢蠑・縲・6 讖溯・險ｭ險・(pseudocode) / L7 螳溯｣・(vitest) 縺ｮ蜈･蜉帙・
-## ﾂｧ2 閭梧勹
+L5 Master (`PLAN-L5-00-master`) §2 の ① 必須 sub-doc「internal-processing」を詳細化する design PLAN。出力 = `docs/design/harness/L5-detailed-design/internal-processing.md`。module-decomposition の公開関数 (D-API) に **処理ロジック + Design by Contract (precondition/postcondition/invariant)** を付与し、IMP-014 (②実装↔④テスト docstring、edge 5-8) を凍結準備する。
 
-- 荳頑ｵ・ module-decomposition (蜈ｬ髢・IF) / function.md ﾂｧ2 (CLI 繧ｳ繝槭Φ繝・ ﾂｧ7 (讖溯・髢謎ｾ晏ｭ・
-- 讌ｭ逡梧ｨ呎ｺ・ DbC (Meyer) + IEEE 1016 ﾂｧ5 (Design Description) + ISO 29119 (繝・せ繝亥庄閭ｽ螂醍ｴ・
-- L5 carry: IMP-014 (竭｡竊披促 docstring edge 5-8 繧・L7 蜈･蜿｣蜑阪↓蜃咲ｵ・= G5 = DbC freeze 轤ｹ縲‥ocument-system-map ﾂｧ3)
-- IMP-018: external-if (what) 竊・譛ｬ doc (D-API how) 縺ｮ邊貞ｺｦ蠅・阜 (if-detail 縺ｨ蛻・球)
+## §1 目的
+
+module-decomposition の公開 IF を **処理仕様 + DbC 契約**へ詳細化する: ① 主要操作の処理フロー (入力検証→処理→state 更新→出力)、② 各操作の pre/post/invariant (Meyer DbC、document-system-map §3)、③ fail-close エラーパターン (exit code + next_action)、④ edge case (G3 carry IMP-014 の edge 5-8 = 異常/境界の docstring 形式)。L6 機能設計 (pseudocode) / L7 実装 (vitest) の入力。
+
+## §2 背景
+
+- 上流: module-decomposition (公開 IF) / function.md §2 (CLI コマンド) §7 (機能間依存)
+- 業界標準: DbC (Meyer) + IEEE 1016 §5 (Design Description) + ISO 29119 (テスト可能契約)
+- L5 carry: IMP-014 (②↔④ docstring edge 5-8 を L7 入口前に凍結 = G5 = DbC freeze 点、document-system-map §3)
+- IMP-018: external-if (what) ↔ 本 doc (D-API how) の粒度境界 (if-detail と分担)
 
 ## §3 工程表 (Step + 進捗)
 
 ### Step 1: [直列] D-API 対象操作の棚卸し
-直列理由: downstream_dependency
-function.md §2 CLI command と module public function から、DbC 記述対象の操作を選定する。
+> 直列理由: downstream_dependency — 操作棚卸しが後続 Step 2〜8 の入力になるため。
+function.md §2 CLI コマンド + module 公開関数から DbC 記述対象の操作を選定 (plan draft/lint, gate, trace check, sprint check, doctor, agent-guard, detectMode 等)。
 
-### Step 2: [直列] 操作別処理フローの定義
-直列理由: downstream_dependency
-Step 1 の対象操作ごとに input -> validation -> state read -> process -> state write -> output / exit code を定義する。
+### Step 2: [直列] 操作別 処理フロー
+> 直列理由: downstream_dependency — Step 1 の対象操作ごとに処理フローを作るため。
+各操作の処理ステップ (入力 → 検証 (zod) → state 読込 → 処理 → state 書込 → 出力/exit code)。
 
-### Step 3: [直列] DbC precondition の定義
-直列理由: downstream_dependency
-Step 2 の処理フローを前提に、呼び出し前に満たすべき状態・frontmatter・gate 前提を定義する。
+### Step 3: [直列] DbC precondition
+> 直列理由: downstream_dependency — Step 2 の処理フローを前提に precondition を切るため。
+各操作の事前条件 (呼び出し側が保証すべき: state 存在/frontmatter 妥当/gate 前提)。
 
-### Step 4: [直列] DbC postcondition の定義
-直列理由: downstream_dependency
-Step 2/3 の処理と入力条件を前提に、state update、evidence、exit code の保証を定義する。
+### Step 4: [直列] DbC postcondition
+> 直列理由: downstream_dependency — Step 2/3 の処理と入力条件を前提に postcondition を切るため。
+各操作の事後条件 (操作が保証する: state 更新/証跡記録/exit code 意味)。
 
-### Step 5: [直列] DbC invariant の定義
-直列理由: downstream_dependency
-Step 3/4 の契約を横断して、data.md §6 の集約不変条件と操作レベルの不変条件を整合させる。
+### Step 5: [直列] DbC invariant
+> 直列理由: downstream_dependency — Step 3/4 の契約を横断して不変条件へ写像するため。
+処理を通じて常に真の不変条件 (data.md §6 集約不変条件の操作レベル表現)。
 
-### Step 6: [直列] fail-close error pattern の定義
-直列理由: downstream_dependency
-Step 3-5 の契約違反を fail-close 形式へ落とし込み、error reason、next_action、exit code を統一する。
+### Step 6: [直列] fail-close エラーパターン
+> 直列理由: downstream_dependency — Step 3〜5 の契約違反を fail-close 形式に写像するため。
+異常系の統一形式 (`Error: <理由> (FR-XX)` + next_action + exit 1/2)。function.md AC の異常系と整合。
 
-### Step 7: [直列] edge case docstring trace の接続
-直列理由: downstream_dependency
-Step 3-6 の DbC / fail-close を、IMP-014 edge 5-8 と L8 IT-* の境界ケースへ接続する。
+### Step 7: [直列] edge case docstring (IMP-014、edge 5-8)
+> 直列理由: downstream_dependency — Step 3〜6 の DbC / fail-close を test docstring trace へ落とすため。
+②実装↔④テストの双方向 trace edge (requirements §2.3 の edge 5-8 = 正常/異常/境界/エラーの docstring) 形式を確定し、L8 詳細粒度と接続する。
 
-### Step 8: [直列] L6/L7 carry の確定
-直列理由: downstream_dependency
-Step 1-7 の処理契約を L6 pseudocode / function signature と L7 TypeScript + vitest へ引き継ぐ。
+### Step 8: [直列] carry → L6/L7
+> 直列理由: downstream_dependency — Step 1〜7 の処理契約を L6/L7 へ引き継ぐため。
+処理ロジック → L6 pseudocode (IEEE 1016 §5.7) / DbC docstring → L7 実装 (関数 docstring + vitest)。
 
 ### Step 9: [直列] review
-直列理由: downstream_dependency
-self / pmo-sonnet / codex-tl review で、DbC 粒度、L8 IT-* 粒度、L6/L7 carry の整合を確認する。
+> 直列理由: downstream_dependency — Step 1〜8 と L8 詳細粒度の整合を確認してから review するため。
+self / pmo-sonnet / TL reviewer のいずれかで、G5 再 freeze 前に DbC 粒度・L8 IT-* 粒度・carry の妥当性を確認する。
 
 ## §3.1 実装計画
 
-- 情報源: docs/design/harness/L5-detailed-design/internal-processing.md / docs/design/harness/L4-basic-design/function.md / docs/test-design/harness/L8-integration-test-design.md
-- L5 では internal-processing.md の D-API / DbC 記述を freeze し、runtime 実装は行わない。
-- L6 で function signature / pseudocode へ具体化し、L7 で TypeScript 実装と vitest へ落とす。
-- G5 freeze は Step 9 review と L8 IT-* の Given/When/Then 粒度確認後に行う。
-## ﾂｧ4 蜿怜・譚｡莉ｶ / DoD
+- L5 では `internal-processing.md` の D-API / DbC 記述を更新し、runtime 実装は行わない。
+- L6 で関数仕様・pseudocode、L7 で TypeScript 実装と vitest に落とす。
+- G5 freeze は Step 9 review と L8 IT-* 詳細粒度の監査を根拠に confirmed とする。
 
-- [x] Step 1縲・ 縺ｮ縺吶∋縺ｦ縺・`internal-processing.md` 縺ｫ蟄伜惠
-- [x] 荳ｻ隕∵桃菴・(譛菴・8 謫堺ｽ・ 縺ｫ蜃ｦ逅・ヵ繝ｭ繝ｼ + DbC pre/post/invariant 縺悟ｭ伜惠
-- [x] fail-close 繧ｨ繝ｩ繝ｼ繝代ち繝ｼ繝ｳ邨ｱ荳蠖｢蠑上′蟄伜惠 (function AC 逡ｰ蟶ｸ邉ｻ縺ｨ謨ｴ蜷・
-- [x] edge case docstring 蠖｢蠑・(IMP-014縲‘dge 5-8) 縺檎｢ｺ螳壹＠ G5 freeze 貅門ｙ (L8 隧ｳ邏ｰ邊貞ｺｦ逶｣譟ｻ蠕後↓蜀咲｢ｺ隱・
-- [x] DbC 縺・data.md ﾂｧ6 髮・ｴ・ｸ榊､画擅莉ｶ縺ｨ謨ｴ蜷・(莠碁㍾螳夂ｾｩ縺ｧ縺ｪ縺乗桃菴懊Ξ繝吶Ν蜀吝ワ)
-- [x] ﾂｧ6 逕ｨ隱樊峩譁ｰ / ﾂｧ7 讖溯・隕∵ｱよ峩譁ｰ 縺悟ｭ伜惠
-- [x] frontmatter `kind == design`縲・ｧ0縲慊ｧ7 螳悟ｙ
+## §4 受入条件 / DoD
 
-## ﾂｧ5 髢｢騾｣ PLAN / ADR / docs
+- [x] Step 1〜9 のすべてが `internal-processing.md` に存在
+- [x] 主要操作 (最低 8 操作) に処理フロー + DbC pre/post/invariant が存在
+- [x] fail-close エラーパターン統一形式が存在 (function AC 異常系と整合)
+- [x] edge case docstring 形式 (IMP-014、edge 5-8) が確定し G5 freeze 準備
+- [x] DbC が data.md §6 集約不変条件と整合 (二重定義でなく操作レベル写像)
+- [x] §6 用語更新 / §7 機能要求更新 が存在
+- [x] frontmatter `kind == design`、§0〜§7 完備
 
-- 髢｢騾｣ PLAN: 隕ｪ = PLAN-L5-00-master / 蜑・= module-decomposition / 荳ｦ陦・= if-detail
-- 蜿ら・ docs: function.md / module-decomposition.md / document-system-map.md ﾂｧ3 (DbC)
+## §5 関連 PLAN / ADR / docs
 
-## ﾂｧ6 逕ｨ隱樊峩譁ｰ (living glossary delta)
+- 関連 PLAN: 親 = PLAN-L5-00-master / 前 = module-decomposition / 並行 = if-detail
+- 参照 docs: function.md / module-decomposition.md / document-system-map.md §3 (DbC)
 
-| 逕ｨ隱・| 遞ｮ蛻･ | 螳夂ｾｩ / 螟画峩轤ｹ | L0 ﾂｧ10 back-merge |
+## §6 用語更新 (living glossary delta)
+
+| 用語 | 種別 | 定義 / 変更点 | L0 §10 back-merge |
 |---|---|---|---|
-| Design by Contract (pre/post/invariant) | 蜿ら・ | Meyer 讓呎ｺ冶ｪ・(document-system-map ﾂｧ3 縺ｧ蟆主・貂・縲∫峡閾ｪ螳夂ｾｩ縺帙★蜿ら・ | back-merge 荳崎ｦ・|
+| Design by Contract (pre/post/invariant) | 参照 | Meyer 標準語 (document-system-map §3 で導入済)、独自定義せず参照 | back-merge 不要 |
 
-> 蜀・Κ蜃ｦ逅・ｨｭ險医・ DbC 讓呎ｺ冶ｪ槭・驕ｩ逕ｨ縲よ眠隕上ラ繝｡繧､繝ｳ逕ｨ隱槭・蟆主・縺励↑縺・・
-## ﾂｧ7 讖溯・隕∵ｱよ峩譁ｰ (FR registry delta)
+> 内部処理設計は DbC 標準語の適用。新規ドメイン用語は導入しない。
 
-> 迴ｾ譎らせ: **讖溯・隕∵ｱよ峩譁ｰ縺ｪ縺・* (internal-processing 縺ｯ譌｢蟄俶ｩ溯・縺ｮ蜃ｦ逅・ｻ墓ｧ伜喧縲よ眠隕・FR-L1 縺ｯ逕溘∪縺ｪ縺・ｦ玖ｾｼ縺ｿ)縲・
+## §7 機能要求更新 (FR registry delta)
+
+> 現時点: **機能要求更新なし** (internal-processing は既存機能の処理仕様化。新規 FR-L1 は生まない見込み)。

@@ -7,6 +7,9 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 plan: docs/plans/PLAN-L6-13-cross-review-enforcement.md
 ---
 
+> **L6 contract marker**: `extractReviewEntries(input: ReviewEvidenceInput) => ReviewEntry[]` and `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` are the unit-test-granularity contracts. DbC pre/post/invariant maps review tier and same-model checks to U-XREVIEW-001..005.
+
+
 > **SSoT 参照**: review tier 原則 = [concept §2.1.2.1](../../../governance/ut-tdd-agent-harness-concept_v3.1.md) / 外部設計 = [L4 function §3.6](../L4-basic-design/function.md) / 実装 = `src/lint/review-evidence.ts` + `src/schema/frontmatter.ts`。本 doc は IMP-071 (review_evidence presence) の続きとして cross-review の **semantic 強制** (same_model_approval) を関数粒度で確定する (IMP-076)。
 
 # L6 機能設計: cross-review semantic 強制 (same_model_approval)

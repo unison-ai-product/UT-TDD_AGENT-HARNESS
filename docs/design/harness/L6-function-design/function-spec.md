@@ -1,7 +1,7 @@
 ---
 layer: L6
 sub_doc: function-spec
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
@@ -9,6 +9,127 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-01-function-spec.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
+
+## 2026-06-09 FR Unit Coverage Addendum
+
+- Before L6 can be closed, the L1 FR registry must be parsed by `fr-registry-audit` and every registered FR must be represented in `fr-unit-coverage.md`.
+- `fr-unit-coverage.md` maps each FR-L1 row to one L6 spec path, one deterministic unit contract, and one U-* oracle.
+- `src/lint/l6-fr-coverage.ts` is the mechanical guard for this rule and is wired into `ut-tdd doctor`.
+- Contracts listed in `fr-unit-coverage.md` are unit-test-granularity specifications. L7 may implement them as direct unit tests or route them through a confirmed follow-up PLAN, but it may not invent missing FR coverage at implementation time.
+
+## 2026-06-09 Harness DB Feedback Function Addendum
+
+This addendum lowers requirements §6.8.6/§6.8.7 and L5 `physical-data.md` §9 / `internal-processing.md` Appendix B to L6 function-level contracts. The SQLite DB is a rebuildable projection of docs/state/logs, not the authoring source.
+
+| Function | Signature | pre | post / oracle |
+|---|---|---|---|
+| `recordProjectionEvent` | `(event: ProjectionEvent, deps: HarnessDbDeps) => ProjectionRowRef` | `event.plan_id` or `event.session_id` is present; `deps.dbPath` resolves under `.ut-tdd/` | validates IDs, upserts the correct projection table row, returns `{table, id, evidence_path}`; never rewrites source docs |
+| `rebuildHarnessDb` | `(input: RebuildInput, deps: HarnessDbDeps) => RebuildResult` | repo root is readable; DB path is under `.ut-tdd/` | truncates projection tables, replays normalized docs/state/log digests, recomputes `search_index` and `quality_signals`; deterministic for identical inputs |
+| `computeSkillMetrics` | `(rows: SkillMetricInput) => QualitySignal[]` | recommendation/invocation rows are supplied; zero denominator is explicit | computes `fired/recommended` and `accepted/fired` by layer/drive/plan/model; missing rows become findings, not fabricated success |
+| `findReference` | `(query: ReferenceQuery, deps: HarnessDbDeps) => ReferenceHit[]` | DB exists or caller requested rebuild first | searches `search_index` plus direct ID tables and returns path, ID, reason, source table, and evidence path; read-only |
+| `emitFeedbackEvents` | `(findings: FindingRow[], signals: QualitySignal[]) => FeedbackEvent[]` | findings/signals are normalized | groups repeated gaps, unresolved blockers, dependency stalls, and quality regression patterns into feedback events; does not auto-approve PLAN changes |
+| `recordGuardrailDecision` | `(decision: GuardrailDecision, deps: HarnessDbDeps) => ProjectionRowRef` | guardrail name, decision, and evidence path are present | stores block/allow/human-required with evidence; `human-required` cannot be downgraded by projection rebuild |
+| `catalogAutomationAssets` | `(roots: AssetRoot[], deps: HarnessDbDeps) => AutomationAsset[]` | roots are approved docs/.claude locations | catalogs skill/roster/command docs with path, trigger/capability/search token/drift status; does not copy prompt bodies, secrets, or provider transcripts |
+
+Unit oracle families:
+
+- U-FR-L1-06 / U-FR-L1-19 / U-FR-L1-20 / U-FR-L1-40 / U-FR-L1-41 cover projection write/rebuild, drive partitioning, and feedback event generation.
+- U-FR-L1-12 / U-FR-L1-46 / U-FR-L1-47 cover skill recommendation, roster capability, and skill metric inputs.
+- U-FR-L1-33 / U-FR-L1-34 / U-FR-L1-48 / U-FR-L1-49 cover search/reference reduction, command cataloging, and asset drift detection.
+
+### FR registry function contract table
+
+This table is the function-spec-side descent for rows in `fr-unit-coverage.md` whose L6 spec is this file. It prevents the FR matrix from becoming a prose-only coverage claim. Each row is intentionally unit-test sized: one or more named functions, a concrete signature shape, DbC pre/post/invariant, and the exact U-FR oracle.
+
+| FR | Function(s) | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|---|
+| FR-L1-01 | `planDraft` | planDraft(input: PlanDraftInput, deps: PlanDraftDeps) => PlanDraftResult | required IDs/paths are normalized and required evidence is present. | returns deterministic U-FR-L1-01 result; missing evidence is a violation/finding. | read-only for source docs; generated state/projection is rebuildable; no secrets or provider transcripts are stored. | U-FR-L1-01 |
+| FR-L1-02 | `sprintCheck` | sprintCheck(input: SprintCheckInput, deps: SprintCheckDeps) => SprintCheckResult | required IDs/paths are normalized and required evidence is present. | returns deterministic U-FR-L1-02 result; missing evidence is a violation/finding. | read-only for source docs; generated state/projection is rebuildable; no secrets or provider transcripts are stored. | U-FR-L1-02 |
+| FR-L1-04 | `frontmatterSchema`, `parseRequires` | frontmatterSchema(input: FrontmatterSchemaInput, deps: FrontmatterSchemaDeps) => FrontmatterSchemaResult<br>parseRequires(input: ParseRequiresInput, deps: ParseRequiresDeps) => ParseRequiresResult | required IDs/paths are normalized and required evidence is present. | returns deterministic U-FR-L1-04 result; missing evidence is a violation/finding. | read-only for source docs; generated state/projection is rebuildable; no secrets or provider transcripts are stored. | U-FR-L1-04 |
+| FR-L1-06 | `recordProjectionEvent`, `rebuildHarnessDb` | recordProjectionEvent(input: RecordProjectionEventInput, deps: RecordProjectionEventDeps) => RecordProjectionEventResult<br>rebuildHarnessDb(input: RebuildHarnessDbInput, deps: RebuildHarnessDbDeps) => RebuildHarnessDbResult | event has `plan_id` or `session_id`; `deps.dbPath` is under `.ut-tdd/`; source docs/logs are readable. | projection rows are upserted or rebuilt deterministically; `search_index` and `quality_signals` are recomputed. | DB is a rebuildable projection, not an authoring source; source docs are never rewritten. | U-FR-L1-06 |
+| FR-L1-08 | `routeSignalToMode` | routeSignalToMode(input: RouteSignalToModeInput, deps: RouteSignalToModeDeps) => RouteSignalToModeResult | signal type, evidence path, and current plan/mode context are present. | returns candidate mode(s) with reason and does not mutate workflow state. | unknown signal becomes a finding or no-route result, not silent success. | U-FR-L1-08 |
+| FR-L1-09 | `evaluateAgentGuard` | evaluateAgentGuard(input: EvaluateAgentGuardInput, deps: EvaluateAgentGuardDeps) => EvaluateAgentGuardResult | subagent/model family and allow-raw context are supplied. | returns allow/block/bypass decision with evidence; forbidden same-model or raw calls are blocked unless explicitly allowed. | no credential or provider transcript is persisted. | U-FR-L1-09 |
+| FR-L1-11 | `recordCrossCuttingEvent` | recordCrossCuttingEvent(input: RecordCrossCuttingEventInput, deps: RecordCrossCuttingEventDeps) => RecordCrossCuttingEventResult | event has type, severity, subject, and evidence path. | records interrupt/debt/drift/readiness event or returns a validation violation. | recording is append/projection only and cannot approve gates. | U-FR-L1-11 |
+| FR-L1-12 | `suggestSkillInjection` | suggestSkillInjection(input: SuggestSkillInjectionInput, deps: SuggestSkillInjectionDeps) => SuggestSkillInjectionResult | task text, layer, kind/drive, and catalog snapshot are supplied. | returns deterministic ranked skill/command candidates with reasons. | missing catalog rows become findings; recommendations never copy prompt bodies. | U-FR-L1-12 |
+| FR-L1-13 | `enforceForwardOrder` | enforceForwardOrder(input: EnforceForwardOrderInput, deps: EnforceForwardOrderDeps) => EnforceForwardOrderResult | current layer/gate and prior gate statuses are known. | returns pass only when Forward order and required gates are satisfied. | exceptions require explicit evidence and cannot silently skip blocked gates. | U-FR-L1-13 |
+| FR-L1-14 | `routeReverseR4` | routeReverseR4(input: RouteReverseR4Input, deps: RouteReverseR4Deps) => RouteReverseR4Result | reverse type, R4 evidence, `forward_routing`, and `promotion_strategy` are present. | returns the Forward target or a blocking violation. | only confirmed reverse evidence can merge into Forward. | U-FR-L1-14 |
+| FR-L1-15 | `decideDiscoveryS4` | decideDiscoveryS4(input: DecideDiscoveryS4Input, deps: DecideDiscoveryS4Deps) => DecideDiscoveryS4Result | hypothesis, PoC verification evidence, and outcome are present. | returns confirmed/rejected/pivot decision with routing requirements. | rejected/pivot cannot be treated as confirmed. | U-FR-L1-15 |
+| FR-L1-19 | `emitFeedbackEvents` | emitFeedbackEvents(input: EmitFeedbackEventsInput, deps: EmitFeedbackEventsDeps) => EmitFeedbackEventsResult | normalized findings and quality signals are supplied. | repeated gaps, unresolved blockers, dependency stalls, and regressions become feedback events. | feedback events do not edit or approve PLANs. | U-FR-L1-19 |
+| FR-L1-22 | `detectFrontendDrift` | detectFrontendDrift(input: DetectFrontendDriftInput, deps: DetectFrontendDriftDeps) => DetectFrontendDriftResult | mock/token/a11y/visual/state evidence roots are supplied or explicitly absent. | returns deterministic drift signals with evidence paths. | absent optional roots are explicit, not silent pass. | U-FR-L1-22 |
+| FR-L1-23 | `routeScrumFullback` | routeScrumFullback(input: RouteScrumFullbackInput, deps: RouteScrumFullbackDeps) => RouteScrumFullbackResult | increment evidence and S4 decision are present. | returns Forward target(s) and required back-fill artifacts. | only confirmed increments can enter Forward. | U-FR-L1-23 |
+| FR-L1-25 | `assertRefactorInvariant` | assertRefactorInvariant(input: AssertRefactorInvariantInput, deps: AssertRefactorInvariantDeps) => AssertRefactorInvariantResult | before/after behavior evidence and regression results are present. | pass only when external behavior is unchanged and regression evidence is green. | refactor cannot introduce new functional scope. | U-FR-L1-25 |
+| FR-L1-26 | `evaluateRetrofitMatrix` | evaluateRetrofitMatrix(input: EvaluateRetrofitMatrixInput, deps: EvaluateRetrofitMatrixDeps) => EvaluateRetrofitMatrixResult | migration/config/rollback fixtures are supplied. | returns readiness classification and blocking evidence. | staged migration cannot be ready without rollback evidence. | U-FR-L1-26 |
+| FR-L1-27 | `evaluateResearchDecision` | evaluateResearchDecision(input: EvaluateResearchDecisionInput, deps: EvaluateResearchDecisionDeps) => EvaluateResearchDecisionResult | research memo, source list, and ADR candidate are supplied. | returns decision-ready or blocked with missing evidence. | research output cannot bypass ADR or requirement trace. | U-FR-L1-27 |
+| FR-L1-28 | `mergeTwoStageAgentDesign` | mergeTwoStageAgentDesign(input: MergeTwoStageAgentDesignInput, deps: MergeTwoStageAgentDesignDeps) => MergeTwoStageAgentDesignResult | Phase 1/2 design artifacts and drive=agent handoff evidence are present. | returns merged design state or explicit gap list. | merged output preserves layer boundaries and cannot copy provider transcripts. | U-FR-L1-28 |
+| FR-L1-29 | `validateScreenDesignWorkflow` | validateScreenDesignWorkflow(input: ValidateScreenDesignWorkflowInput, deps: ValidateScreenDesignWorkflowDeps) => ValidateScreenDesignWorkflowResult | IA, screen list, flow, wireframe/mock, and componentization outputs are supplied. | pass only when screen design artifacts and pair traces are complete. | UI workflow cannot be marked complete from backend-only evidence. | U-FR-L1-29 |
+| FR-L1-30 | `validateFrontendDesignWorkflow` | validateFrontendDesignWorkflow(input: ValidateFrontendDesignWorkflowInput, deps: ValidateFrontendDesignWorkflowDeps) => ValidateFrontendDesignWorkflowResult | visual design, token SSoT, a11y, VRT, and UX evidence are supplied. | returns pass or missing artifact list for frontend polish gates. | accessibility and token evidence remain first-class, not advisory text. | U-FR-L1-30 |
+| FR-L1-32 | `validateFolderRules` | validateFolderRules(input: ValidateFolderRulesInput, deps: ValidateFolderRulesDeps) => ValidateFolderRulesResult | path registry and artifact kind are supplied. | returns violations for misplaced process docs/tests/state. | folder policy is checked without rewriting files. | U-FR-L1-32 |
+| FR-L1-33 | `catalogExistingAssets` | catalogExistingAssets(input: CatalogExistingAssetsInput, deps: CatalogExistingAssetsDeps) => CatalogExistingAssetsResult | approved asset roots are supplied. | classifies command/skill/detector/template/state/hook/doc/test assets by coverage status. | catalog stores metadata only; prompt bodies and secrets stay in source docs. | U-FR-L1-33 |
+| FR-L1-34 | `prioritizeCapabilityGaps` | prioritizeCapabilityGaps(input: PrioritizeCapabilityGapsInput, deps: PrioritizeCapabilityGapsDeps) => PrioritizeCapabilityGapsResult | asset catalog, workflow impact, and missing route/recover signals are supplied. | returns deterministic priority order with reason. | priority is advisory until converted into a PLAN. | U-FR-L1-34 |
+| FR-L1-35 | `renderFoundationReadiness` | renderFoundationReadiness(input: RenderFoundationReadinessInput, deps: RenderFoundationReadinessDeps) => RenderFoundationReadinessResult | infrastructure category inventory is supplied. | reports implemented/designed/missing categories. | report cannot mark missing categories as implemented. | U-FR-L1-35 |
+| FR-L1-37 | `recommendModelEffort` | recommendModelEffort(input: RecommendModelEffortInput, deps: RecommendModelEffortDeps) => RecommendModelEffortResult | task, drive, layer, size, and uncertainty signals are supplied. | returns model family and reasoning effort recommendation. | model recommendation is recorded as evidence, not hidden prompt state. | U-FR-L1-37 |
+| FR-L1-39 | `scoreTaskComplexity` | scoreTaskComplexity(input: ScoreTaskComplexityInput, deps: ScoreTaskComplexityDeps) => ScoreTaskComplexityResult | size, dependency, uncertainty, and affected artifact signals are supplied. | returns deterministic score and class. | unknown inputs produce explicit uncertainty, not low complexity. | U-FR-L1-39 |
+| FR-L1-40 | `resolveDriveStatePartition` | resolveDriveStatePartition(input: ResolveDriveStatePartitionInput, deps: ResolveDriveStatePartitionDeps) => ResolveDriveStatePartitionResult | drive/mode/kind/layer are supplied. | returns `.ut-tdd/drive/<drive>` partition and skip/defer rules. | drive state joins by plan/session and cannot contaminate other drive partitions. | U-FR-L1-40 |
+| FR-L1-41 | `classifyDrive` | classifyDrive(input: ClassifyDriveInput, deps: ClassifyDriveDeps) => ClassifyDriveResult | PLAN/code/dependency evidence is supplied. | classifies drive and orchestration mode input with confidence. | low confidence becomes finding/confirmation need, not fabricated certainty. | U-FR-L1-41 |
+| FR-L1-42 | `buildAdapterPlan` | buildAdapterPlan(input: BuildAdapterPlanInput, deps: BuildAdapterPlanDeps) => BuildAdapterPlanResult | provider, role, task, plan, and execution mode are supplied. | returns provider command plan and boundary flags without forwarding UT-TDD-only plan flags. | provider boundary separation and handover context are preserved. | U-FR-L1-42 |
+| FR-L1-47 | `catalogSkills`, `recommendSkills` | catalogSkills(input: CatalogSkillsInput, deps: CatalogSkillsDeps) => CatalogSkillsResult<br>recommendSkills(input: RecommendSkillsInput, deps: RecommendSkillsDeps) => RecommendSkillsResult | skill docs and task/layer/drive context are supplied. | returns catalog entries and deterministic recommendations. | missing metadata becomes a finding; skill source docs are not rewritten. | U-FR-L1-47 |
+| FR-L1-48 | `buildCommandCatalog` | buildCommandCatalog(input: BuildCommandCatalogInput, deps: BuildCommandCatalogDeps) => BuildCommandCatalogResult | command docs and CLI surface inputs are supplied. | maps command assets to UT-TDD CLI subcommand contracts. | search rows are rebuildable and do not become authoring source. | U-FR-L1-48 |
+
+### FR registry type body / pseudocode substance
+
+This section closes A-110 MUST-2. Rows above are L6 unit contracts; the implementation body may land in L7, but each named function now has a typed input/result body and either a pseudocode anchor or an explicit L7 defer. `explicit_l7_defer` means the L6 contract is frozen here and the L7 implementation must not invent new requirements.
+
+Common value bodies:
+
+```ts
+type EvidencePath = string;
+type Finding = { code: string; severity: "info" | "warn" | "error"; evidence_path: EvidencePath; message: string };
+type ContractResult = { ok: boolean; findings: Finding[]; evidence_paths: EvidencePath[] };
+type HarnessDbDeps = { repoRoot: string; dbPath: string; readText(path: string): string | null; now(): string };
+type ProjectionRef = { table: string; id: string; evidence_path: EvidencePath };
+type QualitySignal = { signal_type: string; subject_id: string; score?: number; evidence_path: EvidencePath };
+```
+
+| function | type body | pseudocode / implementation_state |
+|---|---|---|
+| `planDraft` | `PlanDraftInput { title; kind; layer; sub_doc?; generates[] } -> PlanDraftResult extends ContractResult { path; plan_id }` | implemented pseudocode §2.1 |
+| `sprintCheck` | `SprintCheckInput { target; redEvidence; greenEvidence } -> SprintCheckResult extends ContractResult { ordered }` | implemented pseudocode §2.4 |
+| `frontmatterSchema` | `unknown -> Frontmatter` | implemented zod parse; pseudocode = validate schema, return typed frontmatter or throw |
+| `parseRequires` | `ParseRequiresInput { frontmatterText; planPath } -> ParseRequiresResult extends ContractResult { requires[] }` | explicit_l7_defer; parse list fields, normalize repo paths, emit unresolved findings |
+| `recordProjectionEvent` | `RecordProjectionEventInput { event; source_path } -> RecordProjectionEventResult { ref: ProjectionRef }` | explicit_l7_defer; validate ID, upsert projection row, return ref |
+| `rebuildHarnessDb` | `RebuildHarnessDbInput { roots[]; truncate: true } -> RebuildHarnessDbResult extends ContractResult { rows_by_table; search_rows; signals }` | explicit_l7_defer; truncate projection, replay docs/state/logs, recompute `search_index` and `quality_signals` |
+| `routeSignalToMode` | `RouteSignalToModeInput { signal; current_plan?; drive? } -> RouteSignalToModeResult extends ContractResult { candidates[] }` | explicit_l7_defer; classify signal, rank allowed modes, unknown signal becomes finding |
+| `evaluateAgentGuard` | `AgentGuardInput + AgentGuardContext -> GuardDecision` | implemented runtime guard; pseudocode = normalize model family, compare worker/reviewer boundaries, return allow/block |
+| `recordCrossCuttingEvent` | `RecordCrossCuttingEventInput { type; subject_id; severity; evidence_path } -> RecordCrossCuttingEventResult { ref: ProjectionRef }` | explicit_l7_defer; append projection event, never approve gates |
+| `suggestSkillInjection` | `SuggestSkillInjectionInput { task; layer; drive; catalog } -> SuggestSkillInjectionResult extends ContractResult { candidates[] }` | explicit_l7_defer; filter catalog, score triggers, return deterministic ranked skills |
+| `enforceForwardOrder` | `EnforceForwardOrderInput { layer; gate; prior_gates } -> EnforceForwardOrderResult extends ContractResult { allowed }` | explicit_l7_defer; require prior PASS or explicit exception evidence |
+| `routeReverseR4` | `RouteReverseR4Input { reverse_type; r4_evidence; forward_routing } -> RouteReverseR4Result extends ContractResult { target_plan? }` | explicit_l7_defer; validate confirmed reverse evidence before Forward merge |
+| `decideDiscoveryS4` | `DecideDiscoveryS4Input { hypothesis; poc_evidence; outcome } -> DecideDiscoveryS4Result extends ContractResult { decision }` | explicit_l7_defer; reject pivot/confirmed ambiguity and record routing |
+| `emitFeedbackEvents` | `EmitFeedbackEventsInput { findings; quality_signals } -> EmitFeedbackEventsResult { events[] }` | explicit_l7_defer; group repeated gaps/stalls/regressions, never edit PLANs |
+| `detectFrontendDrift` | `DetectFrontendDriftInput { mock_root?; token_root?; a11y?; vrt? } -> DetectFrontendDriftResult extends ContractResult { drift_signals[] }` | explicit_l7_defer; optional roots must be absent-by-contract, not silent pass |
+| `routeScrumFullback` | `RouteScrumFullbackInput { increment; s4_decision } -> RouteScrumFullbackResult extends ContractResult { forward_targets[] }` | explicit_l7_defer; confirmed increments only |
+| `assertRefactorInvariant` | `AssertRefactorInvariantInput { before; after; regression } -> AssertRefactorInvariantResult extends ContractResult { unchanged }` | explicit_l7_defer; compare behavior evidence and require green regression |
+| `evaluateRetrofitMatrix` | `EvaluateRetrofitMatrixInput { migration; config; rollback } -> EvaluateRetrofitMatrixResult extends ContractResult { readiness }` | explicit_l7_defer; fail when rollback evidence is missing |
+| `evaluateResearchDecision` | `EvaluateResearchDecisionInput { memo; sources; adr_candidate? } -> EvaluateResearchDecisionResult extends ContractResult { decision_ready }` | explicit_l7_defer; research cannot bypass ADR/requirement trace |
+| `mergeTwoStageAgentDesign` | `MergeTwoStageAgentDesignInput { phase1; phase2; handoff } -> MergeTwoStageAgentDesignResult extends ContractResult { merged? }` | explicit_l7_defer; preserve layer boundaries and redact provider transcript content |
+| `validateScreenDesignWorkflow` | `ValidateScreenDesignWorkflowInput { ia; screens; flow; wireframe; mock; components } -> ValidateScreenDesignWorkflowResult extends ContractResult { complete }` | explicit_l7_defer; backend-only evidence cannot complete screen design |
+| `validateFrontendDesignWorkflow` | `ValidateFrontendDesignWorkflowInput { visual; tokens; a11y; vrt; ux } -> ValidateFrontendDesignWorkflowResult extends ContractResult { complete }` | explicit_l7_defer; a11y/token/VRT are first-class evidence |
+| `validateFolderRules` | `ValidateFolderRulesInput { path; artifact_kind; registry } -> ValidateFolderRulesResult extends ContractResult { violations[] }` | explicit_l7_defer; check placement without rewriting files |
+| `catalogExistingAssets` | `CatalogExistingAssetsInput { roots: string[] } -> CatalogExistingAssetsResult extends ContractResult { assets: AssetCatalogEntry[] }` | explicit_l7_defer; catalog metadata only, no prompt bodies/secrets |
+| `prioritizeCapabilityGaps` | `PrioritizeCapabilityGapsInput { assets; workflow_impact; missing_routes } -> PrioritizeCapabilityGapsResult { priorities[] }` | explicit_l7_defer; priority is advisory until converted to PLAN |
+| `renderFoundationReadiness` | `RenderFoundationReadinessInput { categories[] } -> RenderFoundationReadinessResult extends ContractResult { implemented; designed; missing }` | explicit_l7_defer; missing categories cannot be reported implemented |
+| `recommendModelEffort` | `RecommendModelEffortInput { task; drive; layer; size; uncertainty } -> RecommendModelEffortResult { model_family; reasoning_effort; evidence_path }` | explicit_l7_defer; recommendation is recorded evidence, not hidden prompt state |
+| `scoreTaskComplexity` | `ScoreTaskComplexityInput { size; dependencies; uncertainty; affected_artifacts } -> ScoreTaskComplexityResult { score; class; findings[] }` | explicit_l7_defer; unknowns produce uncertainty, not low complexity |
+| `resolveDriveStatePartition` | `ResolveDriveStatePartitionInput { drive; mode; kind; layer; plan_id?; session_id? } -> ResolveDriveStatePartitionResult { partition_path; skip_sub_doc[] }` | explicit_l7_defer; drive state joins by plan/session and never contaminates other drives |
+| `classifyDrive` | `ClassifyDriveInput { plan; code_delta?; dependency_delta? } -> ClassifyDriveResult { drive; confidence; findings[] }` | explicit_l7_defer; low confidence requires finding/human confirmation |
+| `buildAdapterPlan` | `BuildAdapterPlanInput { provider; role; task; plan; execution_mode } -> BuildAdapterPlanResult extends ContractResult { command_plan; boundary_flags[] }` | explicit_l7_defer; provider boundary flags are preserved |
+| `catalogSkills` | `CatalogSkillsInput { skill_docs: SkillDocRef[] } -> CatalogSkillsResult extends ContractResult { skills: SkillCatalogEntry[] }` | explicit_l7_defer; metadata only, source docs remain SSoT |
+| `recommendSkills` | `RecommendSkillsInput { task; layer; drive; catalog } -> RecommendSkillsResult { recommendations[]; findings[] }` | explicit_l7_defer; missing metadata is a finding |
+| `buildCommandCatalog` | `BuildCommandCatalogInput { command_docs[]; cli_surface } -> BuildCommandCatalogResult extends ContractResult { commands[] }` | explicit_l7_defer; search rows are rebuildable projection |
+
+## 2026-06-09 L6 Completion Readiness Addendum
+
+`analyzeL6Completion` is the G6 readiness aggregator. It separates `freezeInputReady` (trace/substance is ready for a G6 audit before status flip) from final `ready` (L6 completion after confirmed docs/plans, confirmed L7, and G6 PASS). It reads L6 design doc status, each L6 doc owning `plan:` reference, each L6 doc `pair_artifact`, L7 reverse references by L6 doc filename, minimum unit-contract substance markers (contract/signature, DbC or oracle, and U-* oracle family), base L6 `kind=design` PLAN status and review evidence, L7 unit-test-design status, and the G6 gate table row. Post-G6 `kind=add-design` PLANs are governed by add-feature/backfill/review evidence and do not reopen base G6 completion. The unit oracle is U-L6COMP-001..005 in `L7-unit-test-design.md`.
 
 > **SSoT 参照**: module 公開 IF = [module-decomposition.md](../L5-detailed-design/module-decomposition.md) / DbC pre-post-invariant = [internal-processing.md](../L5-detailed-design/internal-processing.md) §3-§5 / 型の単一正本 = `src/schema/` / pseudocode 標準 = [document-system-map](../../../governance/document-system-map.md) §1 (IEEE 1016 §5.7)。本 doc は公開 IF に **関数 signature + アルゴリズム pseudocode + 型設計 + WBS** を付与する (L6、IEEE 1016 §5.7)。
 >

@@ -4,7 +4,7 @@ title: "PLAN-L6-19 (add-design): plan lint §工程表 最小強制 機能設計
 kind: add-design
 layer: L6
 drive: agent
-status: draft
+status: confirmed
 created: 2026-06-08
 updated: 2026-06-08
 owner: PM / Codex TL
@@ -19,6 +19,15 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 dependencies:
   parent: docs/plans/PLAN-L6-00-master.md
   requires: []
+review_evidence:
+  - reviewer: pmo-sonnet
+    review_kind: cross_agent
+    worker_model: codex:gpt-5.4
+    reviewer_model: claude:pmo-sonnet
+    tests_green_at: "2026-06-09T13:00:00+09:00"
+    reviewed_at: "2026-06-09T13:10:23+09:00"
+    verdict: approve
+    scope: "G6 L6 completion final recheck; lint/typecheck/vitest/doctor green; L6 FR coverage and guardrail coverage reviewed"
 ---
 
 # PLAN-L6-19 (add-design): plan lint §工程表 最小強制 (IMP-081)

@@ -1,11 +1,14 @@
 ---
 layer: L6
 artifact_type: design_doc
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7
+plan: docs/plans/PLAN-L6-08-backfill-pairing.md
 ---
+
+> **L6 contract marker**: `analyzeBackfill(input: BackfillInput) => BackfillResult` is the unit-test-granularity contract. DbC pre/post/invariant maps required Reverse back-fill and glossary gaps to U-BACKFILL-001..006.
 <!--
 ① 設計 (L6 機能設計) — backfill-pairing lint (駆動モデルの設計ドキュメント back-fill 完全性検証)。
 PLAN: IMP-051 (back-fill pairing lint、add-feature)。

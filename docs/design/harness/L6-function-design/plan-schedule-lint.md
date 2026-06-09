@@ -1,10 +1,12 @@
 ---
 layer: L6
 sub_doc: function-spec
-status: draft
+status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 plan: docs/plans/PLAN-L6-19-plan-schedule-lint.md
 ---
+
+> **L6 contract marker**: `analyzePlanSchedule(input: PlanScheduleInput) => PlanScheduleResult` is the unit-test-granularity contract. DbC pre/post/invariant maps Step parallel/serial and review-step requirements to U-PLANSCH-001..003.
 
 # plan-schedule lint — function design (IMP-081)
 
@@ -24,7 +26,7 @@ This is the minimum §1.10.G.4 enforcement slice. It does not implement the full
 
 ## §3 Doctor Behavior
 
-`ut-tdd plan lint` returns `ok=false` on violation. Doctor includes `plan-schedule` as warn-first surface and does not connect it to `runDoctor.ok` yet.
+`ut-tdd plan lint` returns `ok=false` on violation. Doctor includes `plan-schedule` as warn-first surface and does not connect it to `runDoctor.ok` yet. This is intentional rollout behavior: PLAN-local lint is fail-close through `ut-tdd plan lint`, while doctor hard-fail coupling remains a later policy switch after the real repo stays green.
 
 ## §4 Test Oracle
 

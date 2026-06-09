@@ -716,6 +716,7 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 | FR-L1-31〜35 (コンテキスト / フォルダ / 棚卸し / 穴管理 / 整備可視化) | P2 | L4 carry | 整備系は L4 / Phase B carry |
 | FR-L1-37/39/40/41/42/44 (model 推挙 / 難易度 / drive 別 state / drive 自動判定 / provider 引継ぎ / onboarding) | P1 | L4 carry | drive 軸拡張は L4 データ設計連動 / onboarding は L4 設計連動 |
 | FR-L1-46 / FR-L1-47 / FR-L1-48 / FR-L1-49 (内部資産 UT-TDD 化: subagent roster / skill pack curate / command CLI 化 / drift lint) | P1 | L4-L6 carry | BR-22 派生、Recovery PLAN-RECOVERY-01。roster=W6/W7・skill pack=W10・command=W11/W12/W16・drift lint=IMP-033 (L6-L7)。棚卸 = internal-asset-inventory.md |
+| FR-L1-50 (DDD/TDD strictness automation) | P1 | L6-L8 Add-feature carry | PO directed 2026-06-09。domain boundary / invariant trace / Red-first evidence / oracle strength / integration GWT を PLAN-L6-26..30 / PLAN-L7-27..31 / PLAN-REVERSE-26..30 で機械化 |
 | FR-L1-36/38/43 (skill 評価 / model 評価 / PoC 計測) | P2 | **PLAN-L3-02 (business-detail.md) に委譲** | BR-21 経路で扱う (重複回避) |
 
 ### §3.1 P1 残 carry 明示 note (A-47 + A-50、L4 PLAN 起票時の必須参照)
@@ -733,6 +734,7 @@ A-50 で workflow core 7 件 (FR-L1-23/24/25/26/27/29/30) を L3 直接詳細化
 | FR-L1-41 (drive 自動判定) | PLAN-L4-NN-drive-auto-classify | PLAN/コード/拡張子から drive 自動分類 → orchestration_mode routing (FR-L1-08 の drive 拡張)。AC-FR-08 の drive 判定入力 shape を本 PLAN で確定 (A-54 で §3.1 明示追加) |
 | FR-L1-42 (provider 引継ぎ) | implemented 2026-06-08 (`provider-handover.v1`) | Claude ↔ Codex の context+PLAN+budget 連携渡し |
 | FR-L1-44 (onboarding) | PLAN-L4-NN-onboarding | 既存 repo への harness baseline 確立、`.ut-tdd/` 初期 baseline |
+| FR-L1-50 (DDD/TDD strictness automation) | PLAN-L6-26..30 / PLAN-L7-27..31 / PLAN-REVERSE-26..30 | DDD/TDD SSoT、workflow anchor、Red-first evidence、test oracle、integration GWT を機械検出し、重要 gate では定量 evidence と定性 review evidence を抱き合わせる |
 | FR-L1-31〜35 (P2 コンテキスト/フォルダ/棚卸し/穴管理/整備可視化) | PLAN-L4-NN-infra-readiness | 整備系、Phase B carry 含む |
 
 > **A-50 で 6 件削減** (FR-L1-23/24/25/26/27/29/30 = workflow core 7 件を L3 詳細化に格上げ)。**A-54 で FR-L1-40/41 を本 §3.1 表に明示追加** (§3 主表に L4 carry 宣言済だが §3.1 詳細表から漏れていた不整合を解消、audit 軸2 C-01/C-02)。残 P1 L4 carry = 9 件 (FR-L1-21/22/28/37/39/40/41/42/44) + P2 (FR-L1-31〜35) + Phase B (FR-L1-19/20)。いずれも workflow core ではないため L4 carry を維持。

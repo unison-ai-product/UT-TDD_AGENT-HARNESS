@@ -5,7 +5,7 @@ kind: design
 layer: L6
 sub_doc: function-spec
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-05-29
 updated: 2026-05-29
 owner: PM (Opus) / PO (人間)
@@ -29,6 +29,15 @@ dependencies:
     - docs/governance/gate-design.md
 related_l0_extra: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
 v2_import: docs/migration/v2-import-ledger.md
+review_evidence:
+  - reviewer: pmo-sonnet
+    review_kind: cross_agent
+    worker_model: codex:gpt-5.4
+    reviewer_model: claude:pmo-sonnet
+    tests_green_at: "2026-06-09T13:00:00+09:00"
+    reviewed_at: "2026-06-09T13:10:23+09:00"
+    verdict: approve
+    scope: "G6 L6 completion final recheck; lint/typecheck/vitest/doctor green; L6 FR coverage and guardrail coverage reviewed"
 ---
 
 # PLAN-L6-01: L6 機能設計 — 関数 schema / signature + DbC + pseudocode + WBS

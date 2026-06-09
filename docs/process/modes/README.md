@@ -101,3 +101,16 @@ concept §2.5 の **9-mode** は **Forward + 上表 8 mode (Research を除く)*
 ## 7. このドキュメントの位置付け
 
 本台帳および各 mode 定義は **正本化済** (PLAN-REVERSE-01、2026-06-04)。gate の機械検証条件は [../gates.md](../gates.md)、git ライフサイクルの正本は requirements §6.8/§6.9。
+## CODING-RULE-WORKFLOW
+
+All modes use the coding-rule SSoT as a workflow artifact.
+
+- SSoT: `docs/governance/coding-rules.md`.
+- Issue -> PLAN -> branch -> PR+CI must preserve coding-rule impact: `unchanged`, `updated`, or `not_applicable`.
+- Any mode that changes TypeScript/Bun implementation style, lint tooling, naming, typing, error-handling, or generated-code boundaries updates the SSoT before implementation freeze.
+- Machine gate: `ut-tdd doctor` runs `checkCodingRules`; missing workflow placement or missing SSoT reference is a hard failure.
+## DDD-TDD-WORKFLOW
+
+- SSoT: `docs/governance/ddd-tdd-rules.md`
+- Mode-specific changes still inherit domain-boundary, invariant trace, Red-first evidence, oracle-strength, and integration GWT checks.
+- Quantitative checks and qualitative review are separate steps, but freeze-significant decisions require both.

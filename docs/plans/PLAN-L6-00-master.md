@@ -4,7 +4,7 @@ title: "PLAN-L6-00 (Master hub): L6 機能設計 — 必須/選択 triage + chil
 kind: design
 layer: L6
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-05-29
 updated: 2026-05-29
 owner: PM (Opus) / PO (人間)
@@ -30,7 +30,80 @@ dependencies:
     - docs/governance/gate-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 v2_import: docs/migration/v2-import-ledger.md
+review_evidence:
+  - reviewer: pmo-sonnet
+    review_kind: cross_agent
+    worker_model: codex:gpt-5.4
+    reviewer_model: claude:pmo-sonnet
+    tests_green_at: "2026-06-09T13:00:00+09:00"
+    reviewed_at: "2026-06-09T13:10:23+09:00"
+    verdict: approve
+    scope: "G6 L6 completion final recheck; lint/typecheck/vitest/doctor green; L6 FR coverage and guardrail coverage reviewed"
 ---
+
+## 2026-06-09 L6 completion scope addendum
+
+This addendum is the readable current scope for L6 completion and supersedes the historical body below for G6 readiness. The older function-spec/edge-case-only body remains background for the original seed PLANs, but it is no longer normative for L6 completion.
+
+### Scope rule
+
+- L6 completion is not limited to the original `function-spec` and `edge-case` child PLANs.
+- All L6 add-design PLANs that generate or amend files under `docs/design/harness/L6-function-design/` are part of the G6 readiness surface.
+- `docs/test-design/harness/L7-unit-test-design.md` is the single L7 pair artifact for the whole L6 function-design set.
+- `docs/design/harness/L6-function-design/fr-unit-coverage.md` is the FR coverage guard: every FR-L1 row must have one L6 spec path, one deterministic unit contract, and one U-* oracle before L6 can be closed.
+
+### Current L6 design inventory
+
+| L6 artifact | owning PLAN | current status | L7 oracle family |
+|---|---|---|---|
+| function-spec.md | PLAN-L6-01 + amendments PLAN-L6-20/21 | confirmed | U-FUNC / U-CORE / U-RULE / U-FR-L1-* |
+| edge-case.md | PLAN-L6-02 | confirmed | U-EDGE |
+| session-log.md | PLAN-L6-03 + PLAN-L6-20 | confirmed | U-SLOG |
+| forced-stop-feedback.md | PLAN-L6-04 | confirmed | U-FSF |
+| setup-solo-team.md | PLAN-L6-05 | confirmed | U-SETUP |
+| handover-mechanism.md | PLAN-L6-06 + PLAN-L6-16 | confirmed | U-HOVER |
+| agent-slots.md | PLAN-L6-07 | confirmed | U-SLOT / U-TEAM |
+| backfill-pairing.md | PLAN-L6-08 | confirmed | U-BACKFILL |
+| governance-enforcement.md | PLAN-L6-09 | confirmed | U-SCRUMREV / U-PROP |
+| vmodel-pair-freeze.md | PLAN-L6-10 + PLAN-L6-11 | confirmed | U-VPAIR / U-VTRIG |
+| review-evidence.md | PLAN-L6-12 | confirmed | U-REVIEW |
+| cross-review-enforcement.md | PLAN-L6-13 | confirmed | U-XREVIEW |
+| test-before-review.md | PLAN-L6-14 | confirmed | U-TORDER |
+| module-drift.md | PLAN-L6-15 + PLAN-L6-26..30 addenda | confirmed + draft add-feature | U-MDRIFT / U-FR-L1-49 / U-DDDTDD / U-FR-L1-50 |
+| gate-confirm.md | PLAN-L6-17 | confirmed | U-GCONF |
+| review-evidence-stale.md | PLAN-L6-18 | confirmed | U-REVIEW-007..008 |
+| plan-schedule-lint.md | PLAN-L6-19 | confirmed | U-PLANSCH |
+| fr-unit-coverage.md | PLAN-L6-21 | confirmed | U-FR-L1-01..50 registry rows |
+
+### Added requirement coverage
+
+The additional user requirements for SQLite reference-feedback, search-cost reduction, drive/model logs, skill firing metrics, mechanical checks, and feedback loops are in scope for L6 via the following references:
+
+| Requirement bundle | Requirement source | L5 design source | L6 unit contract source |
+|---|---|---|---|
+| SQLite projection as feedback mechanism | requirements §6.8.6 / §6.8.7 | physical-data.md §2.7 / §9, internal-processing.md Appendix B | fr-unit-coverage.md FR-L1-06 / 19 / 20 / 40 / 41 |
+| Drive/model/log projection | requirements §6.8.7 rows `drive_runs`, `model_runs`, `hook_events` | physical-data.md §9 | fr-unit-coverage.md FR-L1-07 / 20 / 37 / 39 / 40 / 41 / 42 |
+| Skill firing and recommendation metrics | requirements §6.8.7 skill rows, §7.7 | physical-data.md §9, internal-processing.md Appendix B | fr-unit-coverage.md FR-L1-12 / 46 / 47 |
+| Search cost reduction | requirements §6.8.7 `search_index` / `ut-tdd find` intent | physical-data.md §9, internal-processing.md `findReference` | fr-unit-coverage.md FR-L1-33 / 34 / 48 / 49 |
+| Mechanical quality checks and dependency feedback | requirements §6.8.7 findings / quality_signals / feedback_events | physical-data.md §2.7 / §9 | fr-unit-coverage.md FR-L1-05 / 17 / 18 / 19 / 45 / 49 |
+
+### G6 audit input rule
+
+G6 audit may start only when all of the following inputs are true:
+
+- every artifact in the inventory above has an owning `plan:` reference, a L7 `pair_artifact`, and unit-test-granularity contract substance;
+- every owning design/add-design PLAN is known and has no unresolved structural lint violation;
+- L7 unit-test design names the matching U-* oracle family for every L6 artifact and the FR coverage addendum;
+- `l6-fr-coverage`, `pair-freeze`, `plan-schedule`, `review-evidence`, typecheck, vitest, and doctor are green.
+
+### L6 final completion rule
+
+L6 is complete only after the G6 audit passes and the following final state is true:
+
+- every artifact in the inventory above is `status: confirmed` or explicitly superseded by a confirmed PLAN;
+- every owning design/add-design PLAN is confirmed and has valid review evidence;
+- `docs/test-design/harness/L7-unit-test-design.md` is confirmed for the L6 pair scope;
+- `docs/governance/gate-design.md` records G6 as PASS and references the matching audit record.
 
 # PLAN-L6-00 (Master hub): L6 機能設計 — 必須/選択 triage + child 合成
 
@@ -84,6 +157,6 @@ child PLAN 起票時に以下を織り込む:
 - [ ] §2 の必須 2 = child PLAN 2 件を起票 (function-spec / edge-case)
 - [ ] class-design 縮退 (skip + reason = 非 OOP、function-spec へ統合) を記録
 - [ ] 各 child が L7 単体テスト設計と pair_artifact 接続 (DbC → test oracle 導出)
-- [ ] WBS を function-spec に統合 (G6 = WBS 存在要件、§1.10 line 657)
+- [x] WBS を function-spec に統合 (G6 = WBS 存在要件、§1.10 line 657)
 - [ ] G5 escalation / IMP-014/019/033/004 を child PLAN の §4 carry に織り込み
-- [ ] 全 child 完了で G6 (機能設計凍結 = L6 ① ⇔ L6 ③ 単体テスト設計) readiness へ
+- [x] 全 child 完了で G6 (機能設計凍結 = L6 ① ⇔ L6 ③ 単体テスト設計) readiness へ

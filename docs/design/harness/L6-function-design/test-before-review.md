@@ -7,6 +7,9 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 plan: docs/plans/PLAN-L6-14-test-before-review.md
 ---
 
+> **L6 contract marker**: `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` is the unit-test-granularity contract. DbC pre/post/invariant maps tests_green_at <= reviewed_at ordering to U-TORDER-001..005.
+
+
 > **SSoT 参照**: 品質保証二軸 (定量テスト × 定性レビュー) = concept 柱6 / review tier = [concept §2.1.2.1](../../../governance/ut-tdd-agent-harness-concept_v3.1.md) / 駆動モデル exit = [L4 function §3.1](../L4-basic-design/function.md) / 実装 = `src/lint/review-evidence.ts`。IMP-071 (presence) / IMP-076 (cross_agent distinctness) の続きで **時間順序** (テスト→レビュー) を確定 (IMP-077)。
 
 # L6 機能設計: test→review 順序強制 (定量テスト → 定性レビュー)
