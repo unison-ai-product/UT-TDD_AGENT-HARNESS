@@ -633,3 +633,36 @@
 - **l6-completion の `kind: add-design` 除外は意図的** (post-G6 add-design が base G6 を reopen しない、`function-spec.md:132` + `tests/l6-completion.test.ts:128`)。バグ誤認で regex 拡張しない ([[feedback_verify_intent_before_calling_gate_a_bug]])。
 - freeze doc 文字化けは `readability` lint が機械検知。破損は **git HEAD から復元** ([[feedback_freeze_check_full_doc_readability]])。
 - 確定基準: typecheck/lint clean・vitest 309・doctor exit 0 (A-115 PASS)。回帰時はこれと比較。
+
+---
+
+# Session Handover — 2026-06-09
+
+## §1 PLAN サマリ
+
+- `PLAN-L6-22-l6-completion-readiness` (add-design): PLAN-L6-22 (add-design): L6 completion readiness lint
+
+## §2 成果物 (commit / files)
+
+- `PLAN-L6-22-l6-completion-readiness`
+  - commit: 0047f5b
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\audit\A-108-orphan-impl-vs-plan.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\improvement-backlog.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\audit\A-110-l6-independent-reaudit.md
+
+## §3 Next Action
+
+<!-- TODO(human): 順序付き次手 -->
+
+## §4 carry (未了・先送り)
+
+<!-- TODO(human): carry -->
+
+## §5 未了 PO 判断
+
+<!-- TODO(human): escalation -->
+
+## §6 壊さない / 再発させない
+
+<!-- TODO(human): 壊さない注意 -->
+

@@ -1,6 +1,6 @@
 ---
 name: pdm-tech-innovation
-description: PdM Tech Innovation — 海外技術思想 (Spotify Squad / Stripe Engineering / Linear / Vercel / DORA / SPACE 等) を日本版実装案に翻案。新規プロダクト企画 phase (G0.5 前後) で使う。Opus 主体、技術採用判断時のみ helix codex --role tl-advisor を呼ぶ。
+description: PdM Tech Innovation — 海外技術思想 (Spotify Squad / Stripe Engineering / Linear / Vercel / DORA / SPACE 等) を日本版実装案に翻案。新規プロダクト企画 phase (G0.5 前後) で使う。Opus 主体、技術採用判断時のみ ut-tdd codex --role tl-advisor を呼ぶ。
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
 model: claude-opus-4-7
 effort: high
@@ -84,12 +84,12 @@ decision_log:
 
 ## 5) multi-model 利用ルール
 
-- 次の判断時のみ Bash で `helix codex --role tl-advisor --task "..."` を呼ぶこと:
+- 次の判断時のみ Bash で `ut-tdd codex --role tl-advisor --task "..."` を呼ぶこと:
   - 技術採用判断
   - 契約影響評価
   - 後戻りコスト評価
 - 上記以外は通常判断で進め、毎回上記コールは避ける。
-- raw `codex exec` / raw `claude` は禁止。必ず `helix codex` 経由で実行する。
+- raw `codex exec` / raw `claude` は禁止。必ず `ut-tdd codex` 経由で実行する。
 
 ## 6) 連携先 (chain)
 
@@ -108,4 +108,3 @@ decision_log:
 - 仮説（何を採用し、なぜ除外したか）
 - 次アクション（検証対象・期間・撤退条件）
 - `decision_log`（意思決定日、判断者、根拠、条件）
-

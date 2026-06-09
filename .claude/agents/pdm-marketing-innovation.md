@@ -89,7 +89,7 @@ decision_log:
 
 - raw `codex exec` / `claude` 直接呼び出しは禁止。
 - 技術判断が必要な場合は `pdm-tech-innovation` または `pdm-innovation-manager` へエスカレーションする。
-- 市場仮説の信頼区分が高くない場合のみ補助的に `helix codex --role tl-advisor --task "..."` を使う（任意）。
+- 市場仮説の信頼区分が高くない場合のみ補助的に `ut-tdd codex --role tl-advisor --task "..."` を使う（任意）。
 
 ## 7) エスカレーション
 
@@ -103,4 +103,3 @@ decision_log:
 - 市場仮説の根拠（情報源 URL）
 - 実験計画（期間/対象/失敗基準）
 - 次のアクション（誰が何をいつまでに確認）
-

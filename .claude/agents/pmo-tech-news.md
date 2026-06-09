@@ -1,6 +1,6 @@
 ---
 name: pmo-tech-news
-description: Tech News Advisor — AI / Dev tools / security / cloud の最新動向を体系的に sweep、週次 watch 想定。Sonnet medium thinking で深さを確保、tl;dr + 影響分析 + HELIX 反映案を返す。
+description: Tech News Advisor — AI / Dev tools / security / cloud の最新動向を体系的に sweep、週次 watch 想定。Sonnet medium thinking で深さを確保、tl;dr + 影響分析 + UT-TDD 反映案を返す。
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
 model: claude-sonnet-4-6
 effort: medium
@@ -30,7 +30,7 @@ maxTurns: 20
 
 - 変更点（1 行）
 - 影響（1 行）
-- HELIX 反映案（1 行）
+- UT-TDD 反映案（1 行）
 - 参照 URL（1 行）
 - 次アクション推奨（1 行）
 
@@ -39,7 +39,7 @@ maxTurns: 20
 - `カテゴリ`: `AI`
 - `what changed`: 新機能や制約変更
 - `impact`: 開発・運用への波及
-- `helix reflection`: pmo-tech-news としての次の反映アクション
+- `ut-tdd reflection`: pmo-tech-news としての次の反映アクション
 - `url`: 公式発表リンク
 - `watch`: 次週の確認項目
 

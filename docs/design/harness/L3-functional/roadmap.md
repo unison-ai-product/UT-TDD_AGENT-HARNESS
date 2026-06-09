@@ -169,20 +169,20 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 
 ---
 
-## §5 現在地 (2026-06-04)
+## §5 現在地 (2026-06-09)
 
 > **読み方 (本書は anchor であって driver でない)**: 下表「状態」欄は **§1 の検証/改善サイクルが各バンドにいつ適用されたか**を記録するものであり、Forward 工程の進行・freeze を**駆動・先行する正本ではない**。工程の確定 (freeze) 権限は gate プロセス (gate-design.md §2 台帳 / G_N) にあり、本書はそれを後追いで反映する companion (§6 配置)。
 
 | Phase | 検証/改善サイクル状態 | 備考 (Forward 側の実態は gate-design §2 / 各層 status が正本) |
 |-------|------|------|
 | Phase 1 (L0-L3) | **検証/改善サイクル完了 (4 巡)** | サイクル完了を受けて Forward 側で L0-L3 freeze 済 (gate-design §2: G0.5/G1/G3、2026-06-04、A-100 が正本記録)。本書はそれを反映するのみ。`roadmap.md` 自身は living で draft 維持 (frozen 対象外) |
-| Phase 2 (L4-L6) | **未適用** | 本書の Phase 2 検証/改善サイクルは **L4-L6 の Forward 設計が存在してから**適用される。L4-L6 の Forward 設計降下は本書ではなく Forward プロセス/gate が駆動する。現状: 旧 G4/G5 COND PASS は RECOVERY-02 (正規式モデル) で park=要再評価へ rollback 済 (gate-design §2)。L4/L5 テスト設計 doc は要整備 |
-| GATE-A | 未 | — |
-| Phase 3 (L7 自動化) | 部分着手 | src/ に複数機能実装済。**ただし `src/plan/lint.ts` は stub = §1.10 PLAN 起票ルールが未強制 (当面 .claude/CLAUDE.md の人手 binding)**、gate 自動化も未 |
+| Phase 2 (L4-L6) | **全件見直し完了 / quantitative+qualitative findings fixed+routed** | L4/G4、L5/G5、L6/G6 は gate-design §2 で PASS 再確定済 (A-101〜A-104 / A-109〜A-111 / A-115)。L4⇔L9、L5⇔L8、L6⇔L7 の V-pair は doctor pair-freeze 孤児0、L6 completion は G6 PASS、FR registry 47件は L6 unit contract / U-* oracle に接続。A-110 で L6 substance 指摘が出て、A-111 で blocker 解消を再確認。A-116 は verification readiness と HELIX cutover hardening、A-117 は no-finding 過剰主張の補正、A-118 は定量 evidence と定性 workflow/substance review を束ねた L4-L6/L7-L9/PLAN 全件レビューの完了記録 |
+| GATE-A | **full review PASS / PO accept 待ち** | L0-L6 全設計層は doctor `verification — L0-L6 ✅ freeze 完了 → 検証サイクル発火可` を満たす。A-118 で Phase 2 artifacts を全件見直し、stale/overclaim 表現を修正し、残る placeholder_deps / roster / skill catalog / IMP-087/088 等を明示 carry として routing 済。正式な受入・スコープ判断は PO accept として別管理 |
+| Phase 3 (L7 自動化) | 部分着手 | src/ に複数機能実装済。`asset-drift` は HELIX 切り離しの hard gate slice として doctor に接続済。relation-graph / dependency-drift / regression expansion は後続 PLAN |
 | Phase 4 (L7 DB) | 未 | handover ポインタのみ機械化済 |
 | GATE-B / Phase 5-7 | 未 | — |
 
-> Phase 1 (L0-L3) の検証/改善サイクルは完了し、Forward 側で freeze 済 (gate-design §2 が正本)。**本書は Phase 2 検証/改善サイクルを先行起動しない** — それは L4-L6 が Forward で設計降下された後に適用する band であり、設計降下の駆動は Forward プロセス側にある。freeze 後の L0-L3 規範変更は Reverse/Recovery を通す。
+> Phase 1 (L0-L3) は検証/改善サイクル完了。Phase 2 (L4-L6) は A-118 で全件見直し完了。ただし「no finding」ではなく、stale/overclaim を修正し、残 work を carry routing した完了である。今後の規範変更は Reverse/Recovery または add-design/add-impl の差分 PLAN を通す。roadmap は完了状態を反映する companion であり、freeze 権限元ではない。
 
 ### 実施した改善サイクル (ログ)
 
@@ -193,6 +193,8 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 | 2026-06-04 | **Phase 1 (L0-L3) 3巡目** (PO /goal「3件の問題を解消 + 3巡目刊行」) | 2巡目の PO 判断要 3件を解消 + 整合 sweep | **2巡目で「PO 判断要」とした 3件を PO「解消して」授権で解消**: ① **layer 表記規約 (IMP-037/059)** → `layer`=作成層(V-pair key=next_pair_freeze 一致) + `executed_at_layer`=実施層 の両保持に全 5 test-design 統一、規約を §2 明文化、L2 pair_artifact 確定 (IMP-058)。② **DISCOVERY-01 S4 confirmed** (decision_outcome=confirmed / promotion_strategy=reuse-with-hardening、dogfood 実績根拠) → concept §2.5 Discovery 定義に「確証なき設計」適用 + 合流点 L1/L3-L6 を promote (2巡目 FIND-A-02/A-07 同時解消)。③ **recovery 正本二重 (IMP-060)** → recovery-workflow.md を recovery.md へ統合 (トリガー分類/本線5-step/reopen可変/適用記録)、superseded 化、repository-structure §2 更新。**3巡目 sweep 残差** IMP-061 (.gitkeep stale) / IMP-063 (roadmap §2 self-pair 注記) も同 cycle 解消、IMP-062 は確認のみで verified。検証: typecheck 0 / vitest 162 pass / biome CLEAN / pmo-sonnet 整合 OK (A-1〜A-5) / code-reviewer 前置。 | IMP-061〜063 起票・全解消。implemented: 037/058/059/060/061/063。verified: 062。**Phase 1 の主要懸案 (layer 規約 / DISCOVERY-01 S4 / recovery 二重) を全クローズ** — 残 PO 判断要は 0 |
 | 2026-06-04 | **Phase 1 (L0-L3) 4巡目** (PO /goal「A/B/C 実装+検証 + 4巡目完遂」) | 強制機構 A/B/C を実装し、新 lint で L0-L3 を再 sweep | **過去3巡で review 依存だった process 漏れを機械強制化** (plan lint engine を待たず CI vitest ベクトルに乗せ fail-close)。**A** = `src/lint/scrum-reverse.ts` (PoC confirmed⇔Reverse 合流、IMP-064)。**B** = backfill を doctor.ok hard-fail へ昇格 (IMP-051)。**C** = `src/lint/propagation.ts` (concept §2.6 ⇔ requirements §7.8.1 signal 語彙、IMP-065)。**新 lint が即 round-4 finding を2件検出・解消**: DISCOVERY-02 frontmatter `promotion_strategy` 欠落 (IMP-066) / forced_stop・design_uncertain の signal table 非対称 (両 governance sync)。discipline = L6-09 設計 + L7-10 実装 + REVERSE-09 back-fill (自 PLAN が自 lint を dogfood 通過)。検証: typecheck 0 / **vitest 177 pass** (+15) / biome CLEAN / doctor exit 0 (scrum-reverse・propagation OK)。 | IMP-066 起票・解消。IMP-064/065/051 を **machine-enforced (verified)** へ昇格。**3巡まで review でしか捕まらなかった漏れが、4巡目で CI hard-fail に変わった** = enforcement の質的転換 |
 | 2026-06-04 | **Phase 1 (L0-L3) 検証/改善サイクル完了の記録** (PO「フィックス」) | サイクル終了 → Forward 側 freeze を反映 | **改善/検証サイクル 4 巡完走 (残 PO 判断要 0)。これを受けて Forward 側で L0-L3 freeze (G0.5/G1/G3) を PO 再確定サインオフ (A-100、正本記録 = gate-design §2)**。本書は freeze の権限元ではなく、サイクル完了とその結果を反映するのみ。Forward 側で実施されたこと: ① L1 設計 doc 5 + L3 設計 doc 4 (roadmap=living 除く) + L1/L3 PLAN 8 = 17 ファイル `status: confirmed` 化 ② gate-design §2 台帳の再確定 (旧 A-41/A-60 は正規式前スコープ) ③ L4-L6 (G4/G5) を park=要再評価へ rollback (RECOVERY-02 正規式で仕切り直し)。検証: vitest 177 pass / doctor exit 0。 | freeze 記録 (新 IMP なし)。本書の Phase 2 検証/改善サイクルは L4-L6 が Forward 設計降下された後に適用する (本書は先行起動しない) |
+| 2026-06-09 | **Phase 2 (L4-L6) + GATE-A readiness 補正** (Codex TL) | A (workflow/descent) + B (V-pair 同粒度) + HELIX cutover hard gate | **L4-L6 Forward 設計降下後の technical readiness を確認**。G4/G5/G6 は gate-design §2 で PASS、doctor は pair-freeze 38 pair 孤児0 / l6-fr-coverage 47FR / l6-completion G6 PASS / review-evidence OK / verification L0-L6 freeze 完了→検証サイクル発火可を surface。追加で **asset-drift hard gate** を実装し `.claude/agents` / `docs/skills` / `docs/templates/prompts` の HELIX personal path residue、legacy `helix` delegation residue、docs-skills vacancy、guard allowlist missing を検出対象化。現 repo は asset-drift OK。A-117 で、これは full no-finding substance audit の証明ではないと補正。 | A-116/A-117 追加。残 carry は L6 blocker でない IMP-087/088、placeholder_deps back-fill、relation-graph/dependency-drift/regression expansion、PO accept |
+| 2026-06-09 | **Phase 2 full review 完了** (Codex TL) | L4-L6 design + L7-L9 test-design + PLAN inventory + prior audit findings | **Phase 2 artifacts を全件見直し**。対象 29 design/test-design doc は全件 confirmed、関連 PLAN 51件は全件 confirmed + review_evidence + tests_green_at。定量は doctor/typecheck/lint/test + pair-freeze/L6 completion/FR coverage/review ordering で確認。定性は workflow descent、L4/L5/L6 と L7/L8/L9 の整合、current-vs-future 境界、A-110/A-111 substance remediation を確認。発見: L7 historical draft wording、L9 placeholder_deps doctor overclaim、L4 asset-drift/roster stale wording、A-118 自体の定量/定性 bundle 記録不足。修正済。残る placeholder_deps dedicated rule / roster / full skill catalog / green-definition schema は A-118 で L7/L9 carry routing。 | A-118 更新。doctor/typecheck/lint/test pass。Phase 2 full review PASS / PO accept 待ち |
 
 ---
 

@@ -26,7 +26,7 @@ The additional SQLite/reference-feedback/search/drive-log/skill-metric requireme
 
 > **layer (作成層 = V-pair key)**: L6 (機能設計) / **executed_at_layer (実施層)**: L7 (単体テスト — 実装スプリント内で TDD Red 先行) / **artifact**: ④ テスト設計 (V-model 右、② L6 機能設計 と対)
 > **pair (V-model L6↔L7)**: `docs/design/harness/L6-function-design/{function-spec,edge-case}.md` 2 sub-doc ↔ 本書 1 doc
-> **status**: draft (placeholder skeleton — L6 機能設計確定に伴い pair を物質化。U-* 詳細は L7 entry (TDD Red) で展開)
+> **status correction (2026-06-09 / A-118)**: frontmatter status is `confirmed`. The historical "draft / placeholder skeleton" wording below is superseded by the L6 pair-scope addendum above and by the U-* oracle families added for all current L6 design docs. Remaining implementation-detail expansion is L7 carry, not Phase 2 pair incompleteness.
 > **PLAN**: `docs/plans/PLAN-L6-{01,02}-*.md` の pair_artifact / DoD で本書参照
 > **特殊性**: L6↔L7 は最短ペア。L7 は単体テスト設計と実装スプリントが同層 — 本書 U-* は L7 entry で先行 ④ テストコード (TDD Red、§1.10 line 671) に変換される oracle。
 
@@ -229,6 +229,19 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-MDRIFT-004 | `analyzeModuleDrift` (将来 module) | 設計が web/roster/skills を余分列挙 (src 未実在) は drift でない → `orphans=[]`/`ok=true` |
 | U-MDRIFT-005 | `loadModuleDocs`+`analyzeModuleDrift` (実 repo CI fail-close ガード) | 実 repo の `src/` 実在 module は全件 architecture §3.1 列挙 (`orphans==[]`) + listedCount≥actualCount。以後 src module を足して設計未列挙だと red |
 
+### §1.16.0a U-ASSETDRIFT (internal asset cutover lint = HELIX runtime 前提の残存検出)
+
+> ペア = `module-drift.md` asset-drift alias。内部資産 markdown と prompt template を正本のまま維持しつつ、個人 HELIX workspace path / legacy `helix` 委譲 / skill catalog 空 / guard allowlist 乖離を doctor hard gate で検出する。
+
+| U-ID | 対象関数 | DbC oracle |
+|---|---|---|
+| U-ASSETDRIFT-001 | `analyzeAssetDrift` (HELIX path residue) | enrolled `.claude/agents` / `docs/skills` asset に個人 HELIX workspace path があれば `helix-path-residue` + `ok=false` |
+| U-ASSETDRIFT-002 | `analyzeAssetDrift` (legacy command residue) | enrolled asset に `helix codex` / `helix claude` / `helix plan` / `helix gate` / `helix handover` があれば `legacy-command-residue` + `ok=false` |
+| U-ASSETDRIFT-003 | `analyzeAssetDrift` (docs-skills vacancy) | enrolled `docs/skills` root が `.gitkeep` 以外の asset を持たなければ `empty-docs-skills` + `ok=false` |
+| U-ASSETDRIFT-004 | `analyzeAssetDrift` (guard allowlist missing) | guard allowlist entry に対応する `.claude/agents/<id>.md` が無ければ `missing-allowlisted-agent` + `ok=false` |
+| U-ASSETDRIFT-005 | `analyzeAssetDrift` (isolated fixture) | enrolled roots が無い isolated test fixture は unrelated doctor tests を落とさず skip (`checkedAssets=0`, `ok=true`) |
+| U-ASSETDRIFT-006 | `loadAssetDriftInput` + `analyzeAssetDrift` (実 repo guard) | 実 repo の active internal assets と prompt templates は HELIX path residue 0 / legacy command residue 0 / docs-skills non-empty / missing allowlisted agent 0 |
+
 ### §1.16.1 U-CHGIMPACT (code change impact lint = コード変更時の設計・テスト更新漏れ検出)
 
 > ペア = `module-drift.md` change-impact addendum。`src/**` 変更を含む change set が design PLAN/doc と test/test-design の更新を同時に持つか検査する。
@@ -360,6 +373,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - **handover IMP-078 品質増分 (checkHandoverBypass/countHandoverEntries/resolveHandoverScope scopeToSession/latestSessionId/readPlanMeta family 解決/活性化 activePlanStale 連動) → U-HOVER-011〜012 + U-SLOG-006** (gap① bypass / gap② stale / gap③ commit hash / gap④ session-scope / gap⑤ unknown-kind。PLAN-L6-16/L7-17。readPlanMeta は U-HOVER-012 runHandover 経路に内包。孤児 0)
 - **agent-slots.md §2.3 関数 (loadSlots/fireSlot/releaseSlot/listActiveSlots/listStaleSlots/peakParallel/exceedsParallelLimit/recordGuardFire) → U-SLOT-001〜006** (add-feature 差分、IMP-050。nodeAgentSlotsDeps は実 I/O deps で unit では mock 代替。孤児 0)
 - **module-drift.md §2-§3 関数 (parseListedModules/scanActualModules/analyzeModuleDrift/loadModuleDocs/moduleDriftMessages) → U-MDRIFT-001〜005** (add-feature 差分、PLAN-L7-16/IMP-075。moduleDriftMessages は U-MDRIFT-003/004 経路 + 専用 assert で被覆、loadModuleDocs は U-MDRIFT-005 実 repo ガードに内包。孤児 0)
+- **module-drift.md asset-drift alias (loadAssetDriftInput/analyzeAssetDrift/assetDriftMessages/checkAssetDrift) → U-ASSETDRIFT-001〜006** (内部資産 + prompt template cutover 差分、FR-L1-49。HELIX path residue / legacy command residue / docs-skills vacancy / guard allowlist missing を doctor hard guard。孤児 0)
 - **module-drift.md change-impact addendum (analyzeChangeImpact/parseGitPorcelain/loadChangedFiles/changeImpactMessages) → U-CHGIMPACT-001〜004** (コード変更に対する設計・テスト更新漏れ検出。doctor hard guard。孤児 0)
 - **module-drift.md coding-rules addendum (analyzeCodingRules/loadCodingRuleDocs/loadCodingWorkflowDocs/codingRulesMessages/checkCodingRules) → U-CODE-001〜009** (requirements-level coding rule SSoT + workflow placement + error/module-boundary の機械検出。doctor hard guard。孤児 0)
 - **module-drift.md DDD/TDD strictness addendum (analyzeDddTddRules/loadDddTddInputs/dddTddRulesMessages/checkDddTddRules) → U-DDDTDD-001〜008** (DDD/TDD SSoT + workflow placement + Red-first evidence + test oracle + integration GWT の機械検出。doctor hard guard。孤児 0)

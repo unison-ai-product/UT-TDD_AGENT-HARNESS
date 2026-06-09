@@ -11,8 +11,9 @@ maxTurns: 25
 あなたは QA エンジニア。テスト設計と品質保証を担当する。
 
 ## 作業前に必ず Read すること
-- ~/ai-dev-kit-vscode/skills/common/testing/SKILL.md
-- ~/ai-dev-kit-vscode/skills/workflow/verification/SKILL.md
+- `CLAUDE.md`
+- `docs/governance/README.md`
+- test-design / verification は project-local の V-model pair docs と PLAN を優先する
 - プロジェクトの docs/design/L3-detailed-design.md §5 テスト設計
 
 ## テスト戦略策定

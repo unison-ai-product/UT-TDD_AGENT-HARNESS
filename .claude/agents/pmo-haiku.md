@@ -23,7 +23,8 @@ maxTurns: 10
 
 ## 作業前 Read
 
-- `~/ai-dev-kit-vscode/skills/SKILL_MAP.md`
+- `CLAUDE.md`
+- `docs/governance/README.md`
 
 ## 制限
 

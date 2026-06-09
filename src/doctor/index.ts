@@ -9,6 +9,7 @@ import {
   type HandoverPointer,
   handoverStale,
 } from "../handover/index";
+import { analyzeAssetDrift, assetDriftMessages, loadAssetDriftInput } from "../lint/asset-drift";
 import { analyzeBackfill, backfillMessages, loadBackfillDocs } from "../lint/backfill-pairing";
 import { analyzeChangeImpact, changeImpactMessages, loadChangedFiles } from "../lint/change-impact";
 import {
@@ -47,6 +48,7 @@ import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lin
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
 import type { LintResult } from "../plan/lint";
 import { lintPlan } from "../plan/lint";
+import { SUBAGENT_ALLOWLIST } from "../runtime/agent-guard";
 import {
   type AgentSlotsDeps,
   DEFAULT_STALE_MINUTES,
@@ -218,6 +220,20 @@ export function checkModuleDrift(repoRoot: string): { messages: string[]; ok: bo
   }
 }
 
+export function checkAssetDrift(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const input = loadAssetDriftInput(repoRoot);
+    input.allowlist = [...SUBAGENT_ALLOWLIST].sort();
+    const r = analyzeAssetDrift(input);
+    return { messages: assetDriftMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["asset-drift — violation: internal asset drift lint could not run"],
+      ok: false,
+    };
+  }
+}
+
 export function checkChangeImpact(repoRoot: string): { messages: string[]; ok: boolean } {
   try {
     const r = analyzeChangeImpact({ changedFiles: loadChangedFiles(repoRoot) });
@@ -372,6 +388,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const pairFreeze = checkPairFreeze(deps.repoRoot);
   // module-drift は warn-first (impl→design back-fill 漏れ surface、IMP-075。hard 化は段階)。
   const moduleDrift = checkModuleDrift(deps.repoRoot);
+  const assetDrift = checkAssetDrift(deps.repoRoot);
   const changeImpact = checkChangeImpact(deps.repoRoot);
   const codingRules = checkCodingRules(deps.repoRoot);
   const dddTddRules = checkDddTddRules(deps.repoRoot);
@@ -389,6 +406,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       scrumRev.ok &&
       propagation.ok &&
       reviewEvidence.ok &&
+      assetDrift.ok &&
       changeImpact.ok &&
       codingRules.ok &&
       dddTddRules.ok &&
@@ -405,6 +423,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...propagation.messages.map((m) => `doctor: ${m}`),
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
       ...moduleDrift.messages.map((m) => `doctor: ${m}`),
+      ...assetDrift.messages.map((m) => `doctor: ${m}`),
       ...changeImpact.messages.map((m) => `doctor: ${m}`),
       ...codingRules.messages.map((m) => `doctor: ${m}`),
       ...dddTddRules.messages.map((m) => `doctor: ${m}`),

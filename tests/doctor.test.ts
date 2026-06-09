@@ -177,4 +177,10 @@ describe("runDoctor", () => {
     expect(r.messages.some((m) => m.includes("propagation"))).toBe(true);
     expect(r.messages.some((m) => m.includes("coding-rules"))).toBe(true);
   });
+
+  it("includes asset-drift hard gate in doctor output", () => {
+    const r = runDoctor();
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: asset-drift — OK"))).toBe(true);
+  });
 });

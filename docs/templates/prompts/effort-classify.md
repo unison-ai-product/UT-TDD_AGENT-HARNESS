@@ -108,5 +108,5 @@ buffered = expected * risk_factor、story_points = Fibonacci(buffered_hours)
 
 - 本 prompt の LLM 委譲経路は **W3a (PLAN-003) 未配線**。skill_recommender + LLM dispatcher と統合する W3b (PLAN-004) で配線する。
 - rule-based path (src/task/、TS) のみで判定不能なケース (confidence < 0.7、境界 score、要件曖昧) の fallback として、本テンプレートを LLM に投げる想定。
-- 直接 `helix codex` / Codex SDK を呼ばず、UT-TDD harness 経由で委譲する (HELIX-style provider SDK fallback は §禁止事項)。
+- 直接 legacy HELIX CLI / Codex SDK を呼ばず、UT-TDD harness 経由で委譲する (HELIX-style provider SDK fallback は §禁止事項)。
 - model 名 (gpt-X / claude-X) は本書では明示しない。capability class (frontier-reviewer / worker / fast-checker) で抽象化し、実モデル名は `.ut-tdd/teams/*.yaml` の local override に閉じ込める。

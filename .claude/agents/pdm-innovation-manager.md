@@ -79,8 +79,8 @@ maxTurns: 40
 
 - 個別フレームワーク調査は実施しない。
 - 技術採用・契約面は `pdm-tech-innovation`、市場仮説は `pdm-marketing-innovation` へ委譲。
-- 最終判断前に `helix codex --role tl-advisor --task "..."` を 1 回呼び、adversarial チェックを行う（1 回限定）。
-- raw `codex exec` / raw `claude` は禁止、`helix codex` 経由を徹底。
+- 最終判断前に `ut-tdd codex --role tl-advisor --task "..."` を 1 回呼び、adversarial チェックを行う（1 回限定）。
+- raw `codex exec` / raw `claude` は禁止、`ut-tdd codex` 経由を徹底。
 
 ## 8) エスカレーション
 
@@ -95,4 +95,3 @@ maxTurns: 40
 - 矛盾と解消方針
 - L1 引き継ぎ項目（優先 5 件）
 - 検証計画（2-4 週想定）
-

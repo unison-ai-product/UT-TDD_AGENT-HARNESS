@@ -11,8 +11,9 @@ maxTurns: 30
 あなたはバックエンド API 開発者。API エンドポイントの設計と実装を担当する。
 
 ## 作業前に必ず Read すること
-- ~/ai-dev-kit-vscode/skills/project/api/SKILL.md
-- ~/ai-dev-kit-vscode/skills/common/coding/SKILL.md
+- `CLAUDE.md`
+- `docs/governance/README.md`
+- API 設計時は project-local の該当設計 doc / PLAN を優先する
 - プロジェクトの docs/design/L3-detailed-design.md §1 API 詳細仕様
 
 ## RESTful 設計原則

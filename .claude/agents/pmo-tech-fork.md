@@ -1,6 +1,6 @@
 ---
 name: pmo-tech-fork
-description: Tech Fork Manager — OSS/plugin/library を GitHub から探索、license/stars/maintenance/活発度を評価、HELIX への転用可能性レポート。BE/FE/CLI/DB ライブラリ選定の前段で使う。
+description: Tech Fork Manager — OSS/plugin/library を GitHub から探索、license/stars/maintenance/活発度を評価、UT-TDD への転用可能性レポート。BE/FE/CLI/DB ライブラリ選定の前段で使う。
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
 model: claude-sonnet-4-6
 effort: medium
@@ -14,7 +14,7 @@ maxTurns: 20
 
 - GitHub 上の OSS/plugin/library を高速に調査し、採用候補を短距離で絞り込む。
 - ライセンス・スター数・保守状況・更新頻度・依存構造を実務目線で評価する。
-- 既存システムへ組み込む場合の転用可否（導入/PoC/見送り）を HELIX 文脈で判定する。
+- 既存システムへ組み込む場合の転用可否（導入/PoC/見送り）を UT-TDD 文脈で判定する。
 
 ## 利用方針（外部 OSS 探索 + 転用判断）
 
@@ -95,4 +95,3 @@ gh api repos/OWNER/REPO --jq '.open_issues_count,.forks_count'
 - 1 回目: 候補収集と一次フィルタ
 - 2 回目: 上位候補 3〜5 件で比較
 - 3 回目: 転用判断（採用 / PoC / 見送り）と次アクション提示
-
