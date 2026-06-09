@@ -10,6 +10,7 @@ import {
   loadSlots,
   peakParallel,
   recordGuardFire,
+  releaseOldestGuardSlot,
   releaseSlot,
   type Slot,
   sweepStaleGuardSlots,
@@ -136,6 +137,43 @@ describe("U-SLOT-007 sweepStaleGuardSlots (SessionStart self-heal)", () => {
     deps.setNow("2026-06-04T00:10:00.000Z");
     expect(sweepStaleGuardSlots(deps, 5)).toBe(1);
     expect(sweepStaleGuardSlots(deps, 5)).toBe(0); // 既失効は再失効しない
+  });
+});
+
+describe("U-SLOT-008 releaseOldestGuardSlot (SubagentStop 実時間 release)", () => {
+  it("最古の running guard slot を completed で release し active 数を 1 減らす", () => {
+    const deps = mockDeps();
+    fireSlot({ agent_kind: "first", slot_source: "agent_guard" }, deps); // fired 00:00
+    deps.setNow("2026-06-04T00:01:00.000Z");
+    fireSlot({ agent_kind: "second", slot_source: "agent_guard" }, deps); // fired 00:01
+    deps.setNow("2026-06-04T00:02:00.000Z");
+    const released = releaseOldestGuardSlot(deps);
+    expect(released?.agent_kind).toBe("first"); // 最古から閉じる (FIFO)
+    expect(released?.status).toBe("completed"); // 正常終了 (cancelled でない)
+    expect(released?.released_at).toBe("2026-06-04T00:02:00.000Z");
+    const active = listActiveSlots(deps);
+    expect(active).toHaveLength(1);
+    expect(active[0].agent_kind).toBe("second");
+  });
+
+  it("agent_guard でない slot は対象外 / 対象なし → null (idempotent)", () => {
+    const deps = mockDeps();
+    fireSlot({ agent_kind: "team", slot_source: "team_runner" }, deps);
+    expect(releaseOldestGuardSlot(deps)).toBeNull(); // guard slot 無し
+    const g = fireSlot({ agent_kind: "g", slot_source: "agent_guard" }, deps);
+    expect(releaseOldestGuardSlot(deps)?.slot_id).toBe(g.slot_id);
+    expect(releaseOldestGuardSlot(deps)).toBeNull(); // 既に release 済 → null
+  });
+
+  it("SubagentStop n 回 = active を n 件閉じても count は厳密 (個体同定不要)", () => {
+    const deps = mockDeps();
+    for (let i = 0; i < 3; i++) fireSlot({ agent_kind: `g${i}`, slot_source: "agent_guard" }, deps);
+    expect(listActiveSlots(deps)).toHaveLength(3);
+    releaseOldestGuardSlot(deps);
+    releaseOldestGuardSlot(deps);
+    const active = listActiveSlots(deps);
+    expect(active).toHaveLength(1); // 3 fire - 2 stop = 1 active (count 厳密)
+    expect(active[0].agent_kind).toBe("g2"); // FIFO: 最古 g0/g1 が閉じ最若 g2 が残る (LIFO/random 排除)
   });
 });
 

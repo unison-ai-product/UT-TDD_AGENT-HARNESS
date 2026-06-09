@@ -118,13 +118,54 @@ export function listActiveSlots(deps: AgentSlotsDeps): Slot[] {
 }
 
 /**
+ * SubagentStop hook 用: agent_guard 由来の running slot を 1 件 (最古) release する。
+ *
+ * **なぜ最古を 1 件か (相関問題)**: Claude Code の `SubagentStop` payload は終了した
+ * subagent の slot_id を持たない (session_id / transcript_path / stop_hook_active のみ)
+ * ため、`recordGuardFire` が fire 時に採番した slot_id と厳密には相関できない。
+ * だが slot は **active 数 (並列上限 warn) と peak_parallel 統計にしか使わず slot 個体の
+ * 同定は不要**なので、SubagentStop 1 回 = running guard slot を 1 件 release すれば
+ * active 数は厳密に正しく保たれる。最古 (fired_at 最小) から閉じるのは running 集合を
+ * 最新 = 実際に実行中の可能性が高い側へ寄せる近似 (sweep の dangling 失効と同方向)。
+ * status は正常終了なので `completed` (sweep の `cancelled` = 強制失効と区別)。
+ * 対象なし → null (idempotent / fail-open、never throws)。
+ */
+export function releaseOldestGuardSlot(deps: AgentSlotsDeps): Slot | null {
+  try {
+    const slots = loadSlots(deps);
+    let oldest: Slot | null = null;
+    let oldestT = Number.POSITIVE_INFINITY;
+    for (const s of slots) {
+      // listActiveSlots / sweep と同じ対象集合 (agent_guard && running && 未 release)。
+      if (s.slot_source !== "agent_guard" || s.status !== "running" || s.released_at !== null)
+        continue;
+      const fired = Date.parse(s.fired_at);
+      if (Number.isNaN(fired)) continue; // fired_at 不正値は触らない (corrupt 防止)
+      if (fired < oldestT) {
+        oldestT = fired;
+        oldest = s;
+      }
+    }
+    if (!oldest) return null;
+    oldest.status = "completed";
+    oldest.exit_code = null;
+    oldest.released_at = deps.now();
+    saveSlots(slots, deps);
+    return oldest;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * agent_guard 由来の stale active slot (fired_at が閾値分を超過) を status=cancelled で失効。
  * 返り値 = 失効させた件数。never throws (fail-open)。
  *
- * **なぜ必要か**: Claude Code subagent には release hook が無く (agent-guard は PreToolUse のみ)、
- * `recordGuardFire` の遅延失効は「次の fire」でしか走らない。よって**セッション最後の guard slot は
- * 後続 fire が無く永久に running で残り**、doctor が毎回 stale warn を出す (release 漏れの構造原因)。
- * SessionStart でこれを呼び、前セッションの dangling slot を self-heal する
+ * **なぜ必要か (SubagentStop 配線後も残る safety net)**: 通常の release は `SubagentStop`
+ * hook → `releaseOldestGuardSlot` が担うが、hook 無効化 / crash / 強制停止では release が
+ * 漏れ、`recordGuardFire` の遅延失効は「次の fire」でしか走らないため**セッション最後の
+ * guard slot が後続 fire 無く running で残り**、doctor が stale warn を出しうる。
+ * SessionStart でこれを呼び、取りこぼした dangling slot を self-heal する
  * (forced-stop の `scanDanglingStops` と同型の後追い記録)。閾値は recordGuardFire / doctor と統一。
  */
 export function sweepStaleGuardSlots(

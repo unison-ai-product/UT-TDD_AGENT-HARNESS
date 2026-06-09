@@ -20,7 +20,11 @@ import {
 } from "./handover/index";
 import { lintPlan } from "./plan/lint";
 import { type AdapterProvider, buildAdapterPlan } from "./runtime/adapter";
-import { nodeAgentSlotsDeps, sweepStaleGuardSlots } from "./runtime/agent-slots";
+import {
+  nodeAgentSlotsDeps,
+  releaseOldestGuardSlot,
+  sweepStaleGuardSlots,
+} from "./runtime/agent-slots";
 import { detectMode } from "./runtime/detect";
 import {
   type ClassifyResult,
@@ -280,6 +284,22 @@ hook
       process.stdout.write(`session-log: post-tool-use ${input.session_id ?? "ut-tdd-cli"}\n`);
     },
   );
+
+hook
+  .command("subagent-stop")
+  .description(
+    "SubagentStop: agent_guard slot を 1 件 (最古) release し active 数を実時間で正確化 (fail-open)",
+  )
+  .action(() => {
+    // SubagentStop payload (session_id/transcript_path/stop_hook_active) は終了 subagent の
+    // slot_id を含まず slot 個体相関に使えないため読まない (設計根拠 = agent-slots.md §2.4)。
+    const released = releaseOldestGuardSlot(nodeAgentSlotsDeps(process.cwd()));
+    process.stdout.write(
+      released
+        ? `agent-slots: released ${released.slot_id} (${released.agent_kind})\n`
+        : "agent-slots: no running guard slot to release\n",
+    );
+  });
 
 const plan = program.command("plan").description("PLAN 操作");
 plan

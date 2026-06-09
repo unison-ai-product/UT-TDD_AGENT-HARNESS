@@ -38,6 +38,8 @@ ADR-001 準拠: HELIX/Python コードを port せず TypeScript (Bun) で全面
 | `loadSlots` | `.ut-tdd/state/agent-slots.json` を読み `Slot[]` を返す | **never throws**。不在/壊れ/非配列 → `[]` |
 | `fireSlot` | running slot を追記し永続化 | **never throws** (saveSlots 内部 fail-open) |
 | `releaseSlot` | slot を terminal status へ遷移 | 対象なし/既 release → `false` (idempotent)。**never throws** |
+| `releaseOldestGuardSlot` | SubagentStop 用: 最古の running `agent_guard` slot を 1 件 `completed` 化 (FIFO 近似) | 対象なし → `null` (idempotent)。**never throws** |
+| `sweepStaleGuardSlots` | SessionStart 用: stale な running `agent_guard` slot を `cancelled` 失効 (hook 取りこぼし safety net) | 失効件数を返す。**never throws** |
 | `listActiveSlots` | running かつ `released_at=null` の slot 一覧 | **never throws** |
 | `listStaleSlots` | active かつ `fired_at` が閾値 (分) 超の slot | **never throws** |
 | `peakParallel` | sweep-line で同時実行ピーク数を算出 | **純関数**。fired_at parse 不能 slot はスキップ |
@@ -120,6 +122,8 @@ export const teamDefinitionSchema = z.object({
 | `loadSlots` | `(deps: AgentSlotsDeps) => Slot[]` | **never throws**。`readText` null → `[]` / JSON.parse 失敗 → `[]` / 非配列 → `[]` |
 | `fireSlot` | `(input: {agent_kind; role?; slot_source}, deps) => Slot` | running slot を `Slot[]` に append し永続化。返り値は生成した Slot (`status="running"`, `released_at=null`)。saveSlots 失敗は warn せず pass (fail-open) |
 | `releaseSlot` | `(input: { slotId; status: Exclude<SlotStatus,"running">; exitCode: number\|null }, deps) => boolean` | source coding rule の max 3 params に従い object input を受ける。`slotId` が存在し `released_at===null` の slot を terminal 化 (`status`, `exitCode`, `released_at=now`)。対象なし/既に released → `false` (idempotent)。**never throws** |
+| `releaseOldestGuardSlot` | `(deps) => Slot \| null` | **SubagentStop hook 用 (IMP-106)**。`slot_source==="agent_guard" && status==="running" && released_at===null` の中で `fired_at` 最小の slot を `status="completed"` / `exit_code=null` / `released_at=now` へ遷移し返す。対象なし → `null` (idempotent)。`fired_at` parse 不能はスキップ。**never throws** (fail-open)。**相関根拠**: SubagentStop payload は終了 subagent の slot_id を持たないが、slot は active 数/peak しか消費せず個体同定不要なので「stop 1 回 = 最古 1 件 release」で active 数を厳密維持 (count-exact / identity-approximate) |
+| `sweepStaleGuardSlots` | `(deps, staleMinutes=5) => number` | **SessionStart hook 用 safety net**。`agent_guard` かつ stale な running slot を `status="cancelled"` / `released_at=now` へ失効し件数を返す。`now`/`fired_at` parse 不能はスキップ。閾値は `recordGuardFire`/doctor と統一。**never throws** |
 | `listActiveSlots` | `(deps) => Slot[]` | `status==="running" && released_at===null` のみ。**never throws** |
 | `listStaleSlots` | `(deps, thresholdMinutes=5) => Slot[]` | `listActiveSlots` の結果から `(now - fired_at) / 60000 > thresholdMinutes` を満たすものを返す。`deps.now()` / `fired_at` が parse 不能の slot はスキップ。**never throws** |
 | `peakParallel` | `(slots: Slot[]) => number` | **純関数**。sweep-line: `fire=+1` / `release=-1`。`released_at=null` は `+∞` 扱い (現在も実行中)。**同時刻は `delta` 昇順 (`release(-1)` を `fire(+1)` より先) ソートして隣接区間の重複カウントを防ぐ**。`fired_at` parse 不能 slot はスキップ |
@@ -144,13 +148,15 @@ Type/pseudocode substance:
 
 **`peakParallel` 同時刻順序規則**: 同じタイムスタンプに fire と release が重なる場合、`release(-1)` を先に処理することで「前 slot が終わり次 slot が始まる」隣接パターンを peak 2 でなく peak 1 と正しく計上する。これは HELIX `agent_slots.py` の `sorted(key=lambda e: (e.t, e.delta))` と等価。
 
-**`recordGuardFire` Claude subagent 制約**: Claude Code の subagent には `PostToolUse` release hook が無い (`Agent` tool の完了は hook で検知不可)。このため `agent_guard` 由来 slot は自動失効で近似する。`team_runner` 由来は `ut-tdd team run` が明示 release できるため stale 失効対象外。
+**`recordGuardFire` Claude subagent 制約と release 経路 (IMP-106)**: Claude Code の subagent fire は `PreToolUse(Agent)` で捕捉できるが、`PostToolUse` での per-subagent release hook は無い。代わりに **`SubagentStop` hook → `releaseOldestGuardSlot` が通常の release を実時間で担う** (SubagentStop は終了 subagent の slot_id を payload に持たないため、最古 1 件を release する FIFO 近似で active 数を厳密維持)。hook 無効化 / crash / 強制停止で release が漏れた slot は SessionStart の `sweepStaleGuardSlots` が `cancelled` で回収する safety net。`recordGuardFire` 内の stale 自動失効は「次 fire」契機の追加保険として残す。`team_runner` 由来は `ut-tdd team run` が明示 release できるため両機構の対象外。
+
+**`releaseOldestGuardSlot` の単独 load→save と lost-update**: `releaseOldestGuardSlot` は 1 回の load→save で完結する。`recordGuardFire` の I-2 集約 (stale 失効 + fire を 1 load→save) は**同一関数内の 2 ステップ**を束ねるものであり、**別 hook invocation 間** (例: SubagentStop の release と次 PreToolUse(Agent) の fire が同一 ms に並走) の lost-update は I-2 では塞げない。この invocation 間競合は file lock を持たない JSON state 設計上、`fireSlot`/`releaseSlot`/`recordGuardFire`/`sweepStaleGuardSlots` すべてが等しく抱える既知の許容リスクであり、`releaseOldestGuardSlot` だけが非対称なわけではない。万一 count が ±1 ずれても fail-open 方針下で機能は停止せず、SessionStart の `sweepStaleGuardSlots` + 次 fire の stale 失効で次セッション開始時に self-heal する (active 数は運用 warn の近似指標であり厳密台帳ではない)。
 
 **`teamDefinitionSchema` 直列化 3 条件 (IMP-049)**: `serialization` フィールドはチーム全体の直列化根拠を機械記録する。`members[].serialize_after` は `parallel` 戦略でも個別 member を直列化するエスケープハッチ。どちらも `mustSerialize` の入力になる。
 
 ## §3 テスト指針 (V-pair)
 
-generates pair: `docs/test-design/harness/L7-unit-test-design.md` **§1.9 U-SLOT-001〜006** / **§1.10 U-TEAM-001〜002**。本書 §2.3 の全関数を被覆 (孤児 0)。trace は G7 で双方向凍結。
+generates pair: `docs/test-design/harness/L7-unit-test-design.md` **§1.9 U-SLOT-001〜008** / **§1.10 U-TEAM-001〜002**。本書 §2.3 の全関数を被覆 (孤児 0)。trace は G7 で双方向凍結。
 
 | U-ID | 対象関数 | 観点 |
 |------|----------|------|
@@ -160,12 +166,15 @@ generates pair: `docs/test-design/harness/L7-unit-test-design.md` **§1.9 U-SLOT
 | U-SLOT-004 | `peakParallel` | 重なり/非重なり / `null=実行中` |
 | U-SLOT-005 | `exceedsParallelLimit` | `>= max` 境界 / max override |
 | U-SLOT-006 | `recordGuardFire` | `>= max` 境界 / stale 自動失効 |
+| U-SLOT-007 | `sweepStaleGuardSlots` | 閾値超 guard slot 失効 / 閾値内・非 guard・既 release 不変 / 冪等 |
+| U-SLOT-008 | `releaseOldestGuardSlot` | 最古 FIFO release / `completed` / 非 guard 対象外 / 対象なし `null` / n 回で count 厳密 |
 | U-TEAM-001 | `teamDefinitionSchema` | default / 空 members reject / 不正 role/strategy reject / serialize_after + serialization 受理 |
 | U-TEAM-002 | `mustSerialize` | 3 条件 OR / `undefined → false` |
 
 ## §4 carry / 次工程
 
-- **doctor surface**: `listStaleSlots` の結果を `ut-tdd doctor` に接続し stale slot を運用可視化する (stub 待ち)。
+- **doctor surface** ✅ 実装済: `listStaleSlots`/`peakParallel` を `ut-tdd doctor` の `agent-slots —` 行に接続済 (stale 件数 + peak_parallel を運用可視化)。
+- **release 経路** ✅ 実装済 (IMP-106): `SubagentStop` hook → `releaseOldestGuardSlot` で通常 release、`SessionStart` → `sweepStaleGuardSlots` で取りこぼし回収。`.claude/settings.json` 3 hook 化。
 - **`ut-tdd team run` 配線**: `teamDefinitionSchema` を parser として `team run` サブコマンドに接続し、`fireSlot`/`releaseSlot` を member 実行前後に呼ぶ (IMP-050 Layer-2 実装続き)。
 - **IMP-049 強制記録**: `mustSerialize` の結果を PLAN `§工程表` trace に機械記録する経路は stub 待ち。現状は `serialization` フィールドへの人手記述 + `mustSerialize` 純関数で判定。
 - **PLAN-REVERSE back-fill**: IMP-050 要件の L3 back-fill は PLAN-REVERSE-* で後続 (本機能設計は add-feature として bottom-up で先行実装済)。

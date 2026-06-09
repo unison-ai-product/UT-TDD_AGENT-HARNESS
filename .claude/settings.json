@@ -50,6 +50,18 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/src/cli.ts\" hook subagent-stop",
+            "timeout": 5,
+            "statusMessage": "agent-slots: subagent 終了で slot を release (fail-open)"
+          }
+        ]
+      }
     ]
   }
 }
