@@ -1,0 +1,36 @@
+{
+  "schema_version": "verification-evidence-v1",
+  "kind": "profile-probe",
+  "id": "bun-unit",
+  "recorded_at": "2026-06-09T12:13:32.665Z",
+  "payload": {
+    "profile": {
+      "id": "bun-unit",
+      "label": "Bun/Vitest unit regression",
+      "command": "bun run test",
+      "sourceType": "builtin",
+      "packageName": null,
+      "executable": "bun",
+      "authEnv": [],
+      "requiresNetwork": false,
+      "requiresDocker": false,
+      "requiresAuth": false,
+      "defaultEnabled": true,
+      "riskTier": "low",
+      "installHint": null
+    },
+    "ready": true,
+    "checks": [
+      {
+        "name": "activation",
+        "ok": true,
+        "message": "enabled by default"
+      },
+      {
+        "name": "executable",
+        "ok": true,
+        "message": "bun --version"
+      }
+    ]
+  }
+}

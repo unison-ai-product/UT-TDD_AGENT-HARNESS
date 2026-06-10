@@ -46,6 +46,10 @@ import {
 } from "../lint/review-evidence";
 import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lint/rule-drift";
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
+import {
+  loadVerificationRecommendation,
+  verificationRecommendationMessages,
+} from "../lint/verification-profile";
 import type { LintResult } from "../plan/lint";
 import { lintPlan } from "../plan/lint";
 import { SUBAGENT_ALLOWLIST } from "../runtime/agent-guard";
@@ -243,6 +247,20 @@ export function checkChangeImpact(repoRoot: string): { messages: string[]; ok: b
   }
 }
 
+export function checkVerificationProfile(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    return {
+      messages: verificationRecommendationMessages(loadVerificationRecommendation(repoRoot)),
+      ok: true,
+    };
+  } catch {
+    return {
+      messages: ["verification-profile - note: changed file graph could not be read"],
+      ok: true,
+    };
+  }
+}
+
 export function checkCodingRules(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
     return { messages: ["coding-rules — note: repo root を読めず検査 skip"], ok: true };
@@ -390,6 +408,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const moduleDrift = checkModuleDrift(deps.repoRoot);
   const assetDrift = checkAssetDrift(deps.repoRoot);
   const changeImpact = checkChangeImpact(deps.repoRoot);
+  const verificationProfile = checkVerificationProfile(deps.repoRoot);
   const codingRules = checkCodingRules(deps.repoRoot);
   const dddTddRules = checkDddTddRules(deps.repoRoot);
   const ruleDrift = checkRuleDrift(deps.repoRoot);
@@ -425,6 +444,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...moduleDrift.messages.map((m) => `doctor: ${m}`),
       ...assetDrift.messages.map((m) => `doctor: ${m}`),
       ...changeImpact.messages.map((m) => `doctor: ${m}`),
+      ...verificationProfile.messages.map((m) => `doctor: ${m}`),
       ...codingRules.messages.map((m) => `doctor: ${m}`),
       ...dddTddRules.messages.map((m) => `doctor: ${m}`),
       ...ruleDrift.messages.map((m) => `doctor: ${m}`),
@@ -435,7 +455,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...l6Completion.messages.map((m) => `doctor: ${m}`),
       ...reviewEvidence.messages.map((m) => `doctor: ${m}`),
       ...checkVerificationGroups(deps.repoRoot).map((m) => `doctor: ${m}`),
-      "doctor: scaffold stub (relation-graph / dependency-drift / regression expansion は後続 PLAN)",
+      "doctor: scaffold stub (dependency-drift / regression expansion は後続 PLAN)",
     ],
   };
 }

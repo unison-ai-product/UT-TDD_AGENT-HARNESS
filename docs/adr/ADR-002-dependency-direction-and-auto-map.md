@@ -46,3 +46,137 @@ PO 意図 (2026-05-29): UT harness の state/DB を構築する際に **依存�
 - **最小スライス実装済 (IMP-075、PLAN-L7-16)**: 上記 IMP-032 (import グラフの循環/逆依存/想定外 edge 照合、knip/madge) の前段として、**「architecture §3.1 building block 集合 ⊇ `src/` 実在 module」の包含 drift** を `src/lint/module-drift.ts` (doctor `checkModuleDrift`、warn-first) で実装した。これは A-103 で発見した impl→design back-fill 漏れ (handover/setup/web を「将来」放置した meta-drift) の再発防止網 (U-MDRIFT-005 が実 repo 孤児0 を CI 担保)。**IMP-032 本体 (import グラフ drift) は引き続き carry** — module 集合包含と import edge 照合は別検査 (前者=module の有無、後者=module 間の依存方向)。
 - module-decomposition §7 の「ADR-002 候補」を本 ADR (accepted) 参照に更新。
 - L6 機能設計で drift lint のアルゴリズム (グラフ構築 + 照合 + 差分レポート) を pseudocode 化。
+## A-124 Addendum: cross-artifact graph and tool adapter selection
+
+Date: 2026-06-09
+
+The earlier ADR-002 decision covers dependency direction and the first `module-drift` slice. A-124 extends the target from module-set drift to a cross-artifact relation graph:
+
+- source import graph
+- design-declared expected dependencies
+- doc/PLAN/FR references
+- test-to-source and test-to-artifact edges
+- DB projection source-to-table edges
+- generated diagram artifacts
+
+The relation graph must be projected into `harness.db` and exported to diagrams. The DB remains a rebuildable projection, not the authoring source.
+
+### Tool research summary
+
+| tool | role | adoption stance |
+|---|---|---|
+| `dependency-cruiser` | Validate and visualize JS/TS dependencies with project rules. Useful for circular dependencies, forbidden dependencies, missing package dependencies, orphans, and DOT output. | Preferred optional adapter for dependency rules and graph export. |
+| `knip` | Find unused dependencies, exports, and files in TypeScript/JavaScript projects. | Optional adapter for dead-node / unused edge detection. |
+| `madge` | Generate dependency graphs and detect circular dependencies. | Optional lightweight helper, secondary to dependency-cruiser for rules. |
+| Graphviz DOT | Render large graphs to SVG/PDF/PNG. | Optional renderer for large graph snapshots and CI artifacts. |
+| Mermaid | Markdown-native diagrams that render in GitHub. | Preferred documentation diagram format for small/medium workflow and relation views. |
+| D2 | Text-to-diagram language with CLI export to SVG/PNG/PDF. | Optional renderer for cleaner architecture/review diagrams. |
+
+### Decision
+
+Do not make any external tool the source of truth. The core graph collector is TypeScript/Bun and writes normalized rows to `harness.db`. External tools are adapters:
+
+1. Run tool.
+2. Store raw output as evidence.
+3. Normalize to `graph_nodes`, `dependency_edges`, `tool_runs`, `findings`, and `diagram_artifacts`.
+4. Gate only on normalized rows.
+
+### First implementation slice
+
+1. Build source import graph from `src/**/*.ts` and `tests/**/*.ts`.
+2. Build doc reference graph from Markdown path/ID references.
+3. Project both into `graph_nodes` and `dependency_edges`.
+4. Add `ut-tdd graph impact --changed <path>` to compute `impact_results`.
+5. Add `ut-tdd graph export --format mermaid|dot --scope <scope>`.
+6. Wire doctor to warn-first when graph projection is missing and fail-close when impact rules are enabled for G7/accept.
+
+## A-125 Addendum: MCP server and external verification profile selection
+
+Date: 2026-06-09
+
+The A-124 graph tells UT-TDD what is impacted. A-125 tells it which external capability should be activated to verify the impact. Web research on 2026-06-09 selected these candidates for scope:
+
+| candidate | role | adoption stance |
+|---|---|---|
+| MCP Registry | Discovery metadata for public MCP servers with namespace/installation metadata. | Use as metadata source only; not a security scanner. |
+| MCP Inspector | Interactive/CLI developer tool for testing and debugging MCP servers. | Preferred smoke tool for every configured MCP profile. |
+| Microsoft Playwright MCP | Browser automation MCP for exploratory automation, screenshots, and self-healing/browser-state-heavy loops. | Optional interactive verification profile; deterministic CI should prefer Playwright/Vitest tests. |
+| GitHub MCP Server | GitHub issue/PR/repo/actions/code-security toolsets. | Optional workflow automation profile; default profile must be read-only or narrow toolset. |
+| modelcontextprotocol reference servers | filesystem/git/memory/fetch/postgres/sqlite reference capabilities. | Controlled local/reference profiles only; default filesystem/git profiles must be workspace-scoped. |
+| Docker MCP Toolkit | Containerized MCP gateway with profiles, signed/attested images, OAuth handling, and runtime resource constraints. | Preferred team/enterprise runtime profile when Docker Desktop is available. |
+| Vitest Browser Mode + Playwright provider | Browser-native component/UI tests. | Optional test profile for UI/browser-targeted changes. |
+| Testcontainers for Node.js | Disposable databases/services for integration tests. | Optional test profile for DB/service contract verification when Docker is available. |
+| MSW | Browser/Node API mocking. | Optional test profile for API-bound test stabilization and fixture reuse. |
+
+### Decision
+
+External tools are not installed or enabled globally by default. UT-TDD will model them as **profiles**:
+
+1. `mcp_server_profiles` / `verification_profiles` define allowed commands, package refs, risk tier, auth/network/Docker requirements, and trigger signals.
+2. Relation graph impact expansion recommends profiles via `verification_recommendations`.
+3. `ut-tdd mcp profile probe` and MCP Inspector smoke prove a profile is callable.
+4. Runs are persisted as `mcp_server_runs`, `tool_runs`, `test_runs`, and normalized `external_tool_findings`.
+5. Gate decisions use only normalized DB rows and bounded evidence files.
+
+### Security posture
+
+- Prefer read-only and narrow toolsets.
+- Do not mount home directories into filesystem/git MCP profiles.
+- Do not store credentials, raw provider transcripts, or unredacted MCP payloads in DB.
+- Treat registry/catalog metadata as discovery input, not proof of safety.
+- Docker MCP Toolkit is a preferred packaged option when its resource limits, signing/attestation, OAuth handling, and profile isolation are available.
+
+### First implementation slice
+
+1. Add profile schema and generated local config path.
+2. Implemented first slice: `ut-tdd mcp profile list --json` and `ut-tdd mcp profile probe <name>` expose catalog and readiness checks without installing packages.
+3. Implemented readiness gate: `ut-tdd mcp inspect <name> --method tools/list` combines target MCP profile checks with MCP Inspector profile checks and refuses external inspection by default. Actual Inspector server invocation remains later scope.
+4. Implemented first slice: `ut-tdd verify recommend --changed <path>` maps changed-file signals to profile triggers and can emit Mermaid impact evidence. DB-backed relation graph expansion remains separate A-124 scope.
+5. Implemented first slice: `ut-tdd verify run --profile <name> --dry-run` and built-in profile execution. Disabled external profiles require explicit `--allow-external`, package/auth/Docker readiness, and a wired runner. `--save-evidence` persists normalized JSON under `.ut-tdd/evidence/verification-profiles/`.
+6. Wire doctor warn-first for recommended-but-unavailable profiles and fail-close at G7/accept only after profile rules are enabled.
+
+## A-126 Addendum: canonical document export selection
+
+Date: 2026-06-09
+
+A-126 extends the dependency/relation graph decision to canonical document conversion. The target is not generic review reporting; it is conversion of UT-TDD source documents into human-friendly spreadsheet / Excel / PPTX formats:
+
+- concept / planning documents;
+- requirements and acceptance documents;
+- detailed design documents;
+- PLAN and ADR documents;
+- test-design and evidence-summary documents;
+- D2 PPTX export as an optional diagram-to-deck bridge for architecture/workflow visuals.
+
+### Tool research summary
+
+| tool | role | adoption stance |
+|---|---|---|
+| CSV / Markdown summary | Built-in conversion outputs for document matrices and summaries. | Default, no external dependency. |
+| ExcelJS | Excel workbook creation and manipulation for Node/browser with TypeScript definitions. | Optional XLSX renderer candidate for structured requirements/design/trace workbooks. |
+| SheetJS CE | Broad JavaScript spreadsheet format support. | Optional spreadsheet renderer/parser candidate when compatibility matters. |
+| PptxGenJS | JavaScript/TypeScript OOXML PowerPoint generation. | Optional PPTX renderer candidate for concept, requirements, design, ADR, PLAN, and test-design decks. |
+| D2 PPTX export | Diagram export into PPTX. | Optional diagram-to-deck renderer for architecture/workflow visuals. |
+
+### Decision
+
+Generated spreadsheet/deck files are not source-of-truth documents. The source of truth is the canonical Markdown/docs plus normalized DB projection and explicit review/gate/handover evidence.
+
+1. Parse canonical documents into a structured document projection.
+2. Preserve source path, section ID, FR/AC/AT/PLAN/ADR IDs, status, trace, and evidence links.
+3. Build a deterministic export dataset from that projection.
+4. Redact the dataset before rendering.
+5. Render CSV / Markdown by default.
+6. Render XLSX / PPTX only through optional renderer profiles with readiness evidence.
+7. Store artifact metadata in `document_export_runs`, `document_export_datasets`, and `document_export_artifacts`.
+8. Gate on canonical docs, normalized rows, and recorded human decisions, not manually edited Office files.
+
+### First implementation slice
+
+Future L7 work may implement:
+
+1. `parseCanonicalDocumentStructure` from concept, requirements, detailed design, PLAN, ADR, and test-design docs.
+2. `buildDocumentExportDataset` for document matrices and deck outlines.
+3. `renderDocumentExport` for CSV and Markdown only.
+4. Optional renderer probes for ExcelJS / SheetJS / PptxGenJS / D2.
+5. `ut-tdd export docs --kind requirements|concept|design|plan|adr|test-design --format csv|md|xlsx|pptx` only after TDD Red and PLAN route.

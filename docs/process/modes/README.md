@@ -101,6 +101,51 @@ concept §2.5 の **9-mode** は **Forward + 上表 8 mode (Research を除く)*
 ## 7. このドキュメントの位置付け
 
 本台帳および各 mode 定義は **正本化済** (PLAN-REVERSE-01、2026-06-04)。gate の機械検証条件は [../gates.md](../gates.md)、git ライフサイクルの正本は requirements §6.8/§6.9。
+
+## MCP-VERIFICATION-PROFILE-WORKFLOW
+
+All modes inherit the MCP / external verification profile rule from requirements §6.8.10.
+
+- Modes may recommend MCP servers or external test foundations only by emitting workflow signals and profile recommendations.
+- Add-feature / Refactor / Retrofit discoveries that add a profile, plugin, MCP server, or test foundation must classify the change with `backprop_decision`.
+- Recovery and Incident may use MCP/browser/GitHub profiles for diagnosis, but credentialed write actions require human approval.
+- Discovery and Scrum can use profiles as PoC evidence, but confirmed outcomes still need Forward or Reverse back-fill.
+- Profile availability is environment state. Missing Docker, browser, auth, or MCP server installation creates a finding; it does not invalidate unrelated local checks.
+- Accept/close requires normalized evidence when a profile rule is enabled for that mode or gate.
+
+## CANONICAL-DOCUMENT-EXPORT-WORKFLOW
+
+All modes inherit the canonical document export rule from requirements §6.8.11.
+
+- Concept, requirements, detailed design, PLAN, ADR, and test-design documents may be converted to CSV/Markdown/XLSX/PPTX only as derived artifacts.
+- Add-feature / Reverse / Recovery / Retrofit discoveries that require new export surfaces must classify the change with `backprop_decision`.
+- CSV and Markdown summary exports are built-in document conversion outputs.
+- XLSX/PPTX exports require renderer readiness evidence and must not install ExcelJS / SheetJS / PptxGenJS / D2 implicitly.
+- Exported spreadsheets/decks must preserve source document paths, section IDs, FR/AC/AT/PLAN/ADR IDs, status, trace, and evidence links.
+- Generated files are stale when source document digests change, and they cannot be used as current evidence until refreshed.
+- Human decisions made from exported files must be recorded as normal review/gate/handover evidence before accept/close.
+
+## TOOL-ADAPTER-WORKFLOW
+
+All modes inherit the optional tool adapter rule from requirements §6.8.9.
+
+- Dependency-cruiser, Knip, Madge, Graphviz, Mermaid, and D2 are optional adapters, not source-of-truth systems.
+- Modes may recommend adapters only through workflow signals and readiness probes.
+- Missing package/executable/config readiness creates a finding and must not trigger implicit installation.
+- Adapter raw output remains bounded evidence; normalized DB rows are the only gate-consumable output.
+- Auto-fix/delete behavior remains out of scope without a human-approved PLAN and rollback evidence.
+
+## LOWER-L-REVERSE-BACKPROP
+
+All modes inherit the whole-system consistency rule from requirements v1.2 §6.8.8. If a lower-layer task (L4-L14) creates or discovers an addition, ticket, acceptance change, DB projection, guardrail, workflow rule, or automation rule, the mode must classify it with `backprop_decision`.
+
+- `local_impl_only`: close locally only when upstream requirements/design/acceptance are unchanged and the audit records why.
+- `requires_design_normalization`: route to Reverse `normalization` / `design` and back-fill L4-L6 or test-design.
+- `requires_requirement_backprop`: route to Reverse `fullback` / `design` and back-merge L1/L3 FR/AC/AT/registry before Forward completion.
+- `requires_concept_policy`: stop for human policy judgment, then update concept / requirements before Forward resumes.
+
+This applies to Add-feature bottom-up work, Recovery/Incident regressions, Retrofit impact findings, Refactor discoveries, right-arm verification failures, and improvement-backlog items. A mode cannot claim accept/close while a `requires_*` back-prop decision is open.
+
 ## CODING-RULE-WORKFLOW
 
 All modes use the coding-rule SSoT as a workflow artifact.

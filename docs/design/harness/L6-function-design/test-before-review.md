@@ -50,4 +50,46 @@ plan: docs/plans/PLAN-L6-14-test-before-review.md
 ## §7 carry
 
 - 段階導入: warn-first 不採用 (実 repo 38 entry を同 feature で back-fill 済 → 即 presence hard)。以後 review 証跡を足すとき tests_green_at 必須。
-- 「green の定義」(どの定量検証セットが green か = vitest 全回帰 / doctor exit 0 / 該当 lint) の厳密 schema 化は将来拡張 (現状は時刻の前後関係のみ機械検査、green 内容は人手記録)。
+- 「green の定義」(どの定量検証セットが green か = vitest 全回帰 / doctor exit 0 / 該当 lint) の厳密 schema 化は **A-122 / IMP-108** で Phase 2 pre-close carry として起票済み。現状は時刻の前後関係のみ機械検査、green 内容は人手記録。
+
+## §8 GreenDefinition addendum (A-122 / IMP-108)
+
+`tests_green_at <= reviewed_at` は定量検証が定性レビューより前に実行されたことだけを保証する。Phase 4 DB projection と Phase 3 workflow automation では、review evidence に次の `green_definition_id` を追加し、どの定量 profile が green だったかを機械再現できるようにする。
+
+```ts
+type GreenCommandKind =
+  | "typecheck"
+  | "lint"
+  | "unit_test"
+  | "targeted_test"
+  | "doctor"
+  | "vmodel_lint"
+  | "smoke";
+
+type GreenCommandEvidence = {
+  kind: GreenCommandKind;
+  command: string;
+  runner: "bun" | "powershell" | "bash" | "ci";
+  scope: "full" | "targeted" | "changed-files" | "gate";
+  exit_code: 0;
+  started_at: string;
+  completed_at: string;
+  evidence_path: string;
+  output_digest: string;
+};
+
+type GreenDefinition = {
+  green_definition_id: string;
+  profile: "docs-change" | "ts-core" | "cli-hook" | "db-projection" | "phase-close";
+  required_commands: GreenCommandKind[];
+  command_evidence: GreenCommandEvidence[];
+  computed_green_at: string;
+};
+```
+
+DbC:
+
+- Precondition: `profile` is chosen from changed artifact kinds and Test Rules; Bun/TypeScript core changes require at least `typecheck`, `lint`, and relevant `unit_test`.
+- Postcondition: `computed_green_at` is the max `completed_at` of all required commands, and every required command has `exit_code=0`.
+- Invariant: a `review_evidence` entry may be `confirmed` only when `green_definition_id` resolves and `computed_green_at <= reviewed_at`.
+- Projection: `GreenCommandEvidence` maps to `test_runs` / `quality_signals` in `physical-data.md` §9.4. Missing evidence becomes a finding rather than a warning.

@@ -124,3 +124,54 @@ L6 機能設計
 - drive 別 (be/fe/db/fullstack/agent) の挙動差異 → concept v3.1 §3.7 を参照
 
 詳細メカニクスは carry として残す (内容は消さない)。
+
+## MCP-VERIFICATION-PROFILE-WORKFLOW
+
+Forward work can recommend external MCP servers, plugins, and test foundations only through profile rules. They are verification aids, not authoring sources.
+
+- Relation graph impact expansion runs first and identifies impacted artifacts, tests, DB projection tables, and diagrams.
+- `ut-tdd verify recommend --changed <path>` maps changed-file signals to verification profiles and can emit JSON or Mermaid graph evidence. Full DB-backed relation graph expansion remains later scope.
+- `ut-tdd mcp profile list/probe` must be used before adding or activating an external MCP/test foundation profile. Probe checks are evidence only; they do not install packages.
+- `ut-tdd mcp inspect <name> --method tools/list` is the MCP Inspector readiness gate. It refuses by default and requires explicit external allow-list before real MCP inspection.
+- `ut-tdd verify run --profile <name>` runs built-in profiles by default. External profiles require explicit allow-list review (`--allow-external`) plus satisfied package/auth/Docker checks.
+- `--save-evidence` stores normalized profile evidence under `.ut-tdd/evidence/verification-profiles/` so DB collector work can ingest the same shape later.
+- Browser/UI signals recommend Playwright MCP for exploratory browser inspection and Vitest Browser Mode with the Playwright provider for deterministic browser tests.
+- DB/service-contract signals recommend Testcontainers for Node.js when Docker is available.
+- API mock gaps and flaky external API signals recommend MSW.
+- GitHub issue/PR/CI/backlog signals recommend a read-only or narrow-toolset GitHub MCP profile first.
+- Any MCP profile added or changed requires MCP Inspector smoke evidence before accept.
+- Unavailable profiles are findings, not silent passes. G7/accept may fail-close only after the profile rule is enabled for that gate.
+- Raw MCP/tool output remains evidence; gates consume normalized DB rows.
+
+## CANONICAL-DOCUMENT-EXPORT-WORKFLOW
+
+Forward work can convert canonical UT-TDD documents to spreadsheet / Excel / PPTX outputs only as derived artifacts. The source of truth remains the Markdown/source document and DB projection rows.
+
+- Requirements / concept / detailed design / PLAN / ADR / test-design exports use `document_export_*` projection rows.
+- Pair-freeze or gate-review milestones may recommend `doc-csv-matrix` or `doc-markdown-summary` for human review without external packages.
+- XLSX and PPTX exports require renderer readiness evidence for ExcelJS / SheetJS / PptxGenJS / D2 before use.
+- Export datasets must preserve source path, section ID, FR/AC/AT/PLAN/ADR IDs, status, trace, and evidence links.
+- Generated spreadsheets/decks are stale when their source snapshot hash no longer matches the canonical document set.
+- Human decisions made from exported files must be recorded separately as review/gate/handover evidence; editing the export file does not update canonical docs.
+
+## TOOL-ADAPTER-WORKFLOW
+
+Forward work can use dependency-cruiser, Knip, Madge, Graphviz, Mermaid, and D2 only as optional graph/diagram adapters.
+
+- Core relation graph collection remains TypeScript/Bun and DB projection based.
+- `catalogToolAdapters` defines adapter metadata and trigger signals.
+- `probeToolAdapter` checks package/executable/config/workspace readiness without installing packages.
+- Raw adapter output is bounded evidence; gates consume normalized `tool_runs`, `dependency_edges`, `diagram_artifacts`, and findings.
+- Missing adapters are findings, not unrelated check failures.
+- Auto-fix/delete behavior from adapters is out of scope unless a future human-approved PLAN adds rollback evidence.
+
+## LOWER-L-REVERSE-BACKPROP
+
+Forward の下位 L (L4-L14) で追加機能・改善起票・受入条件変更・DB projection・guardrail・workflow rule を発見した場合、局所 carry のまま完了扱いしない。全体一貫性の原則として、該当発見は requirements v1.2 §6.8.8 の `backprop_decision` に分類する。
+
+- `local_impl_only`: 上位要求・設計・受入条件を変えない局所補正。理由を audit に残す。
+- `requires_design_normalization`: L4-L6 / test-design の整合補正が必要。Reverse `normalization` / `design` で戻す。
+- `requires_requirement_backprop`: FR / AC / 機能一覧 / 運用ポリシーの意味が増える。Reverse `fullback` / `design` で L1/L3 へ戻す。
+- `requires_concept_policy`: 企画価値・本番影響・認証/PII/ライセンス等を変える。人間判断後に concept / requirements へ戻す。
+
+G7 / accept 時点で `requires_*` が未処理なら、Forward は完了ではなく back-prop 未了である。先行実装を許す場合も `add-design` / `add-impl` と `reverse/*` の pairing を evidence に残す。

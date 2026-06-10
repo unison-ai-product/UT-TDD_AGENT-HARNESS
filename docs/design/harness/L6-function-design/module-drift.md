@@ -63,6 +63,38 @@ analyzeModuleDrift(docs: { listed, actual }) -> { orphans, listedCount, actualCo
 | `analyzeCodingRules` | analyzeCodingRules(docs: CodingRulesDoc[], policy?: CodingRulesPolicy, workflowDocs?: CodingWorkflowDoc[]) => CodingRulesResult | TypeScript source/test docs, coding-rule SSoT, and workflow placement docs are supplied. | returns violations for explicit `any`, TS/lint suppression comments, TS file names outside kebab-case / kebab-case `.test.ts` / `index.ts`, source functions with more than 3 parameters, empty/rethrow-only catch blocks, module-boundary drift, SSoT policy drift, and missing workflow anchors. | coding rules are requirements-level SSoT and workflow artifact; tests keep no-any/suppression/naming checks, while max-params / structured-error / module-boundary apply to `src/**` only. | U-CODE-001..009 |
 | `analyzeDddTddRules` | analyzeDddTddRules(input: DddTddInputs) => DddTddResult | DDD/TDD rule SSoT, workflow docs, source/test docs, PLAN docs, and L7/L8 test-design docs are supplied. | returns violations for policy drift, workflow anchor drift, domain-boundary imports, invariant oracle gaps, missing Red-first evidence, weak test oracles, and missing integration GWT. | quantitative checks are separated from qualitative review, but freeze-significant points require both test evidence and reviewer evidence. | U-DDDTDD-001..008 / U-FR-L1-50 |
 
+### Cross-Artifact Relation Graph Addendum (A-124/A-125 / PLAN-L6-31)
+
+This addendum is the L6 function-design entry for the cross-artifact graph and verification-profile projection. It closes the design gap exposed by PLAN-RECOVERY-03: relation graph source code is not authorized until these contracts are covered by L7 unit oracles and an L7 implementation PLAN.
+
+| Function | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `collectRelationGraphProjection` | collectRelationGraphProjection(input: RelationGraphSourceSet) => RelationGraphProjection | docs, source paths, tests, PLAN metadata, audit records, and verification evidence paths are supplied as text/metadata fixtures; missing optional roots are explicit empty sets. | returns normalized nodes and edges for requirements, PLANs, design docs, test-design docs, source files, tests, DB tables, verification profiles, external tools, diagrams, and findings. | The graph is a rebuildable projection, not an authoring source; projection rows do not copy raw MCP responses, browser traces, screenshots, provider transcripts, secrets, or credentials. | U-RELGRAPH-001..003 |
+| `analyzeRelationImpact` | analyzeRelationImpact(input: RelationImpactInput) => RelationImpactResult | changed paths and a graph projection are supplied; changed paths are repo-relative and normalized. | returns directly changed nodes, impacted upstream/downstream nodes, required follow-up actions, and findings for missing design/test/DB/evidence coverage. | A lower-layer change can require reverse/backprop actions; docs-only changes do not require source tests unless the graph marks a behavioral contract. | U-RELGRAPH-004..006 |
+| `exportRelationDiagram` | exportRelationDiagram(snapshot: RelationGraphSnapshot, format: "mermaid" \| "dot" \| "d2") => DiagramArtifact | a graph snapshot and requested format are supplied; Mermaid is always available, DOT/D2 are optional adapters gated by installed tooling. | returns deterministic diagram text with stable node IDs and edge labels; unavailable optional adapters return a finding instead of invoking tools implicitly. | Diagram export is evidence for review/handover and must not mutate source docs or DB state. | U-RELGRAPH-007..008 |
+| `collectVerificationEvidenceProjection` | collectVerificationEvidenceProjection(input: VerificationEvidenceRecord[]) => VerificationProfileProjection | saved A-125 evidence records from `.ut-tdd/evidence/verification-profiles/*.json` are supplied after schema validation. | returns `verification_profiles`, `verification_recommendations`, `mcp_server_runs`, and `external_tool_findings` projection rows with evidence paths. | External execution remains opt-in; projection stores summaries and classification, not raw external payloads. | U-RELGRAPH-009..010 |
+
+**Required impact classes**:
+
+- source -> sibling test, L6 design contract, L7 oracle, PLAN, and reverse/backprop guard;
+- design/test-design -> paired artifact, PLAN DoD, and trace-freeze evidence;
+- physical-data / DB projection docs -> DB table nodes, rebuild contract, and upstream requirement/ADR nodes;
+- verification-profile evidence -> external-tool profile, MCP server/tooling decision, evidence path, and sanitized finding rows;
+- diagram export -> review/handover artifact with stale-source detection.
+
+**Workflow guard**: if `src/**` relation-graph source is created before PLAN-L6-31 has L7 oracle coverage and PLAN-L7-32 has a TDD Red entry, the change is a Recovery event, not a valid implementation shortcut.
+
+### Tool Adapter Probe Addendum (A-124 / PLAN-L6-33)
+
+This addendum defines the L6 contract for optional graph/diagram development-tool adapters. It is separate from the core relation graph collector: adapters can improve evidence quality, but the TypeScript/Bun collector and DB projection remain the source of gate-normalized truth.
+
+| Function | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `catalogToolAdapters` | catalogToolAdapters(input: ToolAdapterCatalogInput) => ToolAdapterCatalogResult | researched adapter metadata, package refs, executable names, trigger signals, and output formats are supplied. | returns deterministic adapter profiles for dependency-cruiser, Knip, Madge, Graphviz DOT, Mermaid, and D2. | adapters are optional, disabled until declared/available, and cannot become authoring sources. | U-TOOLADAPTER-001..002 |
+| `probeToolAdapter` | probeToolAdapter(input: ToolAdapterProbeInput, deps: ToolAdapterProbeDeps) => ToolAdapterProbeResult | adapter profile, package metadata, executable check, and workspace scope are supplied. | returns readiness checks for package/executable/config/scope without installing or running destructive actions. | missing adapter availability is a finding, not a silent pass or unrelated check failure. | U-TOOLADAPTER-003..005 |
+| `normalizeToolAdapterRun` | normalizeToolAdapterRun(input: ToolAdapterRunEvidence) => ToolAdapterProjection | raw adapter evidence path, command, exit code, version, scope, and parsed output summary are supplied. | returns normalized `tool_runs`, `dependency_edges`, `diagram_artifacts`, and `findings` rows. | raw DOT/JSON/SVG/Mermaid/D2 output remains evidence; gates consume normalized projection rows only. | U-TOOLADAPTER-006..008 |
+| `planDiagramRefresh` | planDiagramRefresh(input: DiagramRefreshInput) => DiagramRefreshPlan | graph snapshot digest, existing diagram artifacts, requested format, and adapter readiness are supplied. | returns refresh/mark-stale/no-op actions for Mermaid/DOT/D2 diagram artifacts. | stale diagrams cannot be treated as current review evidence. Optional renderer absence returns a finding. | U-TOOLADAPTER-009..010 |
+
 ### Coding Rules Addendum
 
 - **coding-rules**: requirements `Coding Rules SSoT` から `src/lint/coding-rules.ts` へ落とす TS core 規約。explicit `any`、TS/lint suppression comment、TS file-name drift、source max-params drift は doctor hard failure。

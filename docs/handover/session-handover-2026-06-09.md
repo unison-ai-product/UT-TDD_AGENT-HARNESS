@@ -666,3 +666,73 @@
 
 <!-- TODO(human): 壊さない注意 -->
 
+---
+
+# Session Handover — 2026-06-09
+
+## §1 PLAN サマリ
+
+- `PLAN-L6-22-l6-completion-readiness` (add-design): PLAN-L6-22 (add-design): L6 completion readiness lint
+
+## §2 成果物 (commit / files)
+
+- `PLAN-L6-22-l6-completion-readiness`
+  - commit: 0047f5b
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\audit\A-108-orphan-impl-vs-plan.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\improvement-backlog.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\audit\A-110-l6-independent-reaudit.md
+
+## §3 Next Action
+
+<!-- TODO(human): 順序付き次手 -->
+
+## §4 carry (未了・先送り)
+
+<!-- TODO(human): carry -->
+
+## §5 未了 PO 判断
+
+<!-- TODO(human): escalation -->
+
+## §6 壊さない / 再発させない
+
+<!-- TODO(human): 壊さない注意 -->
+
+---
+
+# Current Handover - 2026-06-09 Codex
+
+## Next Action
+
+1. Start from **Phase 2 re-review**: run the V-model verification cycle for the completed L0-L6 design layers.
+2. Read `docs/design/harness/L3-functional/roadmap.md` only at this milestone, then verify by V-model bands: L0-L3, L4-L6, and L0-L6.
+3. Treat the recently closed PLAN set as already confirmed; do not reopen those PLANs unless a new review finding identifies a concrete defect.
+
+## Completed In This Session
+
+- Closed shipped-but-draft PLANs by adding `status: confirmed`, `review_evidence`, and checked DoD.
+- DDD/TDD and coding-rules triads closed: `PLAN-L6-23..30`, `PLAN-L7-24..31`, `PLAN-REVERSE-23..30`.
+- Additional shipped draft closures completed: `PLAN-L7-20`, `PLAN-REVERSE-19`, `PLAN-L7-22`, `PLAN-L7-23`, `PLAN-REVERSE-21`, `PLAN-REVERSE-22`.
+- Added missing reverse pairing edges for `PLAN-L7-20 -> PLAN-REVERSE-19` and `PLAN-L7-22 -> PLAN-REVERSE-21`.
+
+## Verification Snapshot
+
+- `bun run typecheck` -> pass.
+- `bun run lint` -> pass.
+- `npx vitest run` -> 37 files / 309 tests pass.
+- `bun run src/cli.ts doctor` -> exit 0.
+- Closed scope check -> no `status: draft` and no open DoD checkboxes in the closed PLAN set.
+
+## Carry
+
+- No commit or push was performed. Keep the PM validation then commit rule.
+- Current handover pointer is `.ut-tdd/handover/CURRENT.json`; latest human-readable handover is this file.
+- Existing unrelated dirty/untracked files remain in the worktree. Do not revert them.
+- Phase 2 re-review has not been started; it is the next task.
+
+## Do Not Break
+
+- Keep `review_evidence.tests_green_at <= reviewed_at`.
+- Keep add-feature closure as triads: L6 add-design -> L7 add-impl -> REVERSE.
+- Do not treat post-G6 `kind: add-design` drafts as base G6 blockers unless the policy is explicitly changed.
+- Do not commit workflow file changes without confirming token scope / PM approval.

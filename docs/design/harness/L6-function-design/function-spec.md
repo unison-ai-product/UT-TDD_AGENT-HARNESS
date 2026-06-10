@@ -30,12 +30,60 @@ This addendum lowers requirements §6.8.6/§6.8.7 and L5 `physical-data.md` §9 
 | `emitFeedbackEvents` | `(findings: FindingRow[], signals: QualitySignal[]) => FeedbackEvent[]` | findings/signals are normalized | groups repeated gaps, unresolved blockers, dependency stalls, and quality regression patterns into feedback events; does not auto-approve PLAN changes |
 | `recordGuardrailDecision` | `(decision: GuardrailDecision, deps: HarnessDbDeps) => ProjectionRowRef` | guardrail name, decision, and evidence path are present | stores block/allow/human-required with evidence; `human-required` cannot be downgraded by projection rebuild |
 | `catalogAutomationAssets` | `(roots: AssetRoot[], deps: HarnessDbDeps) => AutomationAsset[]` | roots are approved docs/.claude locations | catalogs skill/roster/command docs with path, trigger/capability/search token/drift status; does not copy prompt bodies, secrets, or provider transcripts |
+| `recordTestRunEvidence` | `(input: TestRunEvidenceInput, deps: HarnessDbDeps) => ProjectionRowRef[]` | command evidence has runner/scope/timestamps/exit code/evidence path; repo root and DB path resolve under `.ut-tdd/` | upserts `test_runs`, optional `test_cases`, `test_results`, and `test_artifact_edges`; missing `plan_id`/`oracle_id` creates findings, not silent pass |
+| `evaluateGreenDefinition` | `(input: GreenDefinitionInput, deps: HarnessDbDeps) => GreenDefinitionResult` | profile and required command kinds are known for changed artifact kinds | returns computed green time, missing commands, non-zero exits, and DB projection refs; confirmed review evidence is valid only when result is green and `computed_green_at <= reviewed_at` |
+| `computeUtHistorySignals` | `(input: UtHistoryInput, deps: HarnessDbDeps) => QualitySignal[]` | test run/result rows are normalized; zero denominators are explicit | computes oracle coverage, plan green rate, flake score, duration regression, and green-definition compliance; non-green signals join `findings` |
 
 Unit oracle families:
 
 - U-FR-L1-06 / U-FR-L1-19 / U-FR-L1-20 / U-FR-L1-40 / U-FR-L1-41 cover projection write/rebuild, drive partitioning, and feedback event generation.
 - U-FR-L1-12 / U-FR-L1-46 / U-FR-L1-47 cover skill recommendation, roster capability, and skill metric inputs.
 - U-FR-L1-33 / U-FR-L1-34 / U-FR-L1-48 / U-FR-L1-49 cover search/reference reduction, command cataloging, and asset drift detection.
+
+## 2026-06-09 MCP Profile Config / Safety Addendum (A-125 / PLAN-L6-32)
+
+This addendum lowers requirements §6.8.10 and the A-125 research memo into L6 function contracts for MCP profile catalog hardening. It does not authorize profile execution by itself; it defines the pure checks and generated-config rules that a later L7 implementation must satisfy.
+
+| Function | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `catalogVerificationProfiles` | catalogVerificationProfiles(input: VerificationProfileCatalogInput) => VerificationProfileCatalogResult | built-in profiles and researched external candidates are supplied with source URL, package reference, trigger signals, and risk fields. | returns deterministic profile rows including Docker MCP Toolkit, MCP Inspector, Playwright MCP, GitHub read-only MCP, Vitest browser, Testcontainers, and MSW. | external profiles are disabled by default and are discovery/config metadata, not trusted execution. | U-MCPPROFILE-001..003 |
+| `renderGeneratedMcpConfig` | renderGeneratedMcpConfig(input: GeneratedMcpConfigInput) => GeneratedMcpConfigResult | selected profiles are allow-listed, workspace root is known, and secret values are represented only by env var names. | returns generated local config text and target path suggestion without writing Git-tracked secrets. | filesystem/git profiles are workspace-root scoped; user home mounts and inline tokens are violations. | U-MCPPROFILE-004..006 |
+| `analyzeVerificationProfileSafety` | analyzeVerificationProfileSafety(input: VerificationProfileSafetyInput) => VerificationProfileSafetyResult | profile catalog, local package metadata, config text, and optional Docker profile metadata are supplied. | returns findings for unverified source, package mismatch, missing allow-list, broad toolset, write-enabled GitHub profile, global mount, credential persistence, or missing Docker controls. | official source verification and package integrity are required before `trusted`; registry/catalog presence alone is insufficient. | U-MCPPROFILE-007..010 |
+| `planExternalProfileActivation` | planExternalProfileActivation(input: ExternalProfileActivationInput) => ExternalProfileActivationPlan | trigger signals, relation graph impact, profile readiness, and safety findings are supplied. | returns required probe, MCP Inspector smoke, human approval, or refusal steps for each recommended profile. | external activation is workflow evidence; it cannot silently install packages or enable MCP servers. | U-MCPPROFILE-011..012 |
+
+Safety defaults:
+
+- Docker MCP Toolkit is a profile-isolation candidate and must remain optional unless Docker Desktop/toolkit availability is proven.
+- GitHub MCP defaults to read-only and narrow toolsets; write-capable profile variants require `requires_human_approval`.
+- Generated MCP config is local/environment state and must not introduce committed credentials or user-specific absolute home paths.
+- Tool/profile output is normalized into evidence/projection rows; raw MCP responses, screenshots, traces, and provider transcripts are excluded from DB rows.
+
+## 2026-06-09 Canonical Document Export Addendum (A-126 / PLAN-L6-34)
+
+This addendum lowers requirements §6.8.11 and the A-126 research memo into L6 function contracts for converting canonical UT-TDD documents into spreadsheet / Excel / PPTX outputs. It does not authorize Office-format generation by itself; it defines the pure document-structure and export-dataset rules that a later L7 implementation must satisfy.
+
+| Function | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `parseCanonicalDocumentStructure` | parseCanonicalDocumentStructure(input: CanonicalDocumentInput) => CanonicalDocumentProjection | source docs are supplied as repo-relative paths and text; document family is one of concept, requirements, design, plan, adr, or test-design. | returns sections, headings, tables, decisions, trace IDs, status fields, evidence links, and source anchors. | canonical Markdown/docs remain source of truth; generated exports cannot introduce or drop FR/AC/AT/PLAN/ADR IDs. | U-DOCEXPORT-001..003 |
+| `buildDocumentExportDataset` | buildDocumentExportDataset(input: DocumentExportDatasetInput) => DocumentExportDataset | document projection, requested format, and export profile are supplied. | returns deterministic rows/sheets/slide-outline records with source path, section ID, ID columns, status, trace, and evidence links. | dataset is redacted before rendering; large docs split by family/section instead of truncating. | U-DOCEXPORT-004..006 |
+| `renderDocumentExport` | renderDocumentExport(input: DocumentExportRenderInput, deps: DocumentExportRendererDeps) => DocumentExportRenderResult | dataset and renderer profile are supplied; CSV/Markdown are built-in; XLSX/PPTX/D2 require readiness. | returns generated artifact metadata or a renderer-unavailable finding. | renderer execution is optional and never installs packages implicitly. | U-DOCEXPORT-007..009 |
+| `recordDocumentExportArtifact` | recordDocumentExportArtifact(input: DocumentExportArtifactInput) => DocumentExportProjectionRows | render result, source snapshot hash, redaction profile, and evidence path are supplied. | returns `document_export_runs`, `document_export_datasets`, and `document_export_artifacts` projection rows. | generated files are derived artifacts; gate truth remains canonical docs, normalized rows, and recorded human decisions. | U-DOCEXPORT-010..012 |
+
+Supported document families:
+
+- concept / planning documents -> objective, value, scope, KPI, risks, decisions, roadmap;
+- requirements -> FR/AC/AT, priority, acceptance, trace, owner/status;
+- detailed design -> module/function/API/DB/contract rows, dependencies, unresolved carry;
+- PLAN -> frontmatter, dependencies, generated artifacts, DoD, evidence, blockers;
+- ADR -> decision, alternatives, consequences, follow-ups, status/date;
+- test-design -> U/IT/AT oracles, GWT rows, green definitions, missing coverage.
+
+Export defaults:
+
+- CSV and Markdown summary are built-in.
+- XLSX is optional via ExcelJS or SheetJS readiness.
+- PPTX is optional via PptxGenJS readiness.
+- D2 PPTX is optional for architecture/workflow diagrams only.
 
 ### FR registry function contract table
 
@@ -98,6 +146,9 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `parseRequires` | `ParseRequiresInput { frontmatterText; planPath } -> ParseRequiresResult extends ContractResult { requires[] }` | explicit_l7_defer; parse list fields, normalize repo paths, emit unresolved findings |
 | `recordProjectionEvent` | `RecordProjectionEventInput { event; source_path } -> RecordProjectionEventResult { ref: ProjectionRef }` | explicit_l7_defer; validate ID, upsert projection row, return ref |
 | `rebuildHarnessDb` | `RebuildHarnessDbInput { roots[]; truncate: true } -> RebuildHarnessDbResult extends ContractResult { rows_by_table; search_rows; signals }` | explicit_l7_defer; truncate projection, replay docs/state/logs, recompute `search_index` and `quality_signals` |
+| `recordTestRunEvidence` | `TestRunEvidenceInput { command; runner; scope; started_at; completed_at; exit_code; evidence_path; cases? } -> RecordTestRunEvidenceResult { refs[] }` | explicit_l7_defer; collect Bun/vitest/doctor/lint evidence into UT history projection, redact failure digests, never persist raw provider transcripts |
+| `evaluateGreenDefinition` | `GreenDefinitionInput { profile; required_commands[]; command_evidence[]; reviewed_at? } -> GreenDefinitionResult extends ContractResult { computed_green_at?; missing[]; non_green[] }` | explicit_l7_defer; fail when required commands are absent/non-zero or computed green time is after review time |
+| `computeUtHistorySignals` | `UtHistoryInput { plan_id?; window? } -> ComputeUtHistorySignalsResult { signals[] }` | explicit_l7_defer; compute oracle coverage, plan green rate, flake score, duration regression, and green-definition compliance |
 | `routeSignalToMode` | `RouteSignalToModeInput { signal; current_plan?; drive? } -> RouteSignalToModeResult extends ContractResult { candidates[] }` | explicit_l7_defer; classify signal, rank allowed modes, unknown signal becomes finding |
 | `evaluateAgentGuard` | `AgentGuardInput + AgentGuardContext -> GuardDecision` | implemented runtime guard; pseudocode = normalize model family, compare worker/reviewer boundaries, return allow/block |
 | `recordCrossCuttingEvent` | `RecordCrossCuttingEventInput { type; subject_id; severity; evidence_path } -> RecordCrossCuttingEventResult { ref: ProjectionRef }` | explicit_l7_defer; append projection event, never approve gates |

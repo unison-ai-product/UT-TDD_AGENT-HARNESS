@@ -18,6 +18,17 @@ import {
   runHandover,
   setActivePlanCli,
 } from "./handover/index";
+import { loadChangedFiles } from "./lint/change-impact";
+import {
+  inspectMcpProfile,
+  listVerificationProfiles,
+  nodeVerificationProbeDeps,
+  probeVerificationProfile,
+  recommendVerificationProfiles,
+  runVerificationProfile,
+  saveVerificationEvidence,
+  verificationRecommendationMermaid,
+} from "./lint/verification-profile";
 import { lintPlan } from "./plan/lint";
 import { type AdapterProvider, buildAdapterPlan } from "./runtime/adapter";
 import {
@@ -216,6 +227,188 @@ program
     for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
   });
+
+const mcp = program.command("mcp").description("MCP and external verification profile catalog");
+const mcpProfile = mcp.command("profile").description("verification profile catalog");
+mcpProfile
+  .command("list")
+  .description("list MCP / external verification profiles")
+  .option("--all", "include builtin profiles")
+  .option("--json", "JSON output")
+  .option("--save-evidence", "persist normalized evidence for DB collector")
+  .action((opts: { all?: boolean; json?: boolean; saveEvidence?: boolean }) => {
+    const deps = nodeVerificationProbeDeps(process.cwd());
+    const profiles = listVerificationProfiles().filter(
+      (profile) => opts.all || profile.sourceType !== "builtin",
+    );
+    if (opts.saveEvidence) {
+      saveVerificationEvidence({ kind: "profile-list", id: "catalog", payload: profiles }, deps);
+    }
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(profiles, null, 2)}\n`);
+      return;
+    }
+    for (const profile of profiles) {
+      const state = profile.defaultEnabled ? "enabled" : "disabled";
+      process.stdout.write(
+        `${profile.id}: ${profile.sourceType} ${state} risk=${profile.riskTier} command="${profile.command}"\n`,
+      );
+    }
+  });
+
+mcpProfile
+  .command("probe <name>")
+  .description("probe whether a verification profile is configured and runnable")
+  .option("--json", "JSON output")
+  .option("--save-evidence", "persist normalized evidence for DB collector")
+  .action((name: string, opts: { json?: boolean; saveEvidence?: boolean }) => {
+    const deps = nodeVerificationProbeDeps(process.cwd());
+    const result = probeVerificationProfile(name, deps);
+    if (!result) {
+      process.stderr.write(`unknown profile: ${name}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    if (opts.saveEvidence) {
+      saveVerificationEvidence({ kind: "profile-probe", id: name, payload: result }, deps);
+    }
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      return;
+    }
+    process.stdout.write(
+      `profile ${result.profile.id}: ${result.ready ? "ready" : "not-ready"} (${result.profile.label})\n`,
+    );
+    for (const check of result.checks) {
+      process.stdout.write(`  - ${check.ok ? "ok" : "missing"} ${check.name}: ${check.message}\n`);
+    }
+    process.exitCode = result.ready ? 0 : 1;
+  });
+
+mcp
+  .command("inspect <name>")
+  .description("inspect an MCP profile through the MCP Inspector readiness gate")
+  .option("--method <method>", "MCP method to inspect", "tools/list")
+  .option("--allow-external", "allow disabled external MCP inspection after review")
+  .option("--json", "JSON output")
+  .option("--save-evidence", "persist normalized evidence for DB collector")
+  .action(
+    (
+      name: string,
+      opts: { method?: string; allowExternal?: boolean; json?: boolean; saveEvidence?: boolean },
+    ) => {
+      const deps = nodeVerificationProbeDeps(process.cwd());
+      const result = inspectMcpProfile(
+        name,
+        { method: opts.method, allowExternal: Boolean(opts.allowExternal) },
+        deps,
+      );
+      if (!result) {
+        process.stderr.write(`unknown MCP profile: ${name}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      if (opts.saveEvidence) {
+        saveVerificationEvidence({ kind: "mcp-inspect", id: name, payload: result }, deps);
+      }
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        process.stdout.write(`mcp inspect ${name}: ${result.status} method=${result.method}\n`);
+        for (const message of result.messages) process.stdout.write(`  - ${message}\n`);
+      }
+      process.exitCode = result.status === "ready" ? 0 : 1;
+    },
+  );
+
+const verify = program.command("verify").description("verification profile recommendation");
+verify
+  .command("recommend")
+  .description("recommend verification profiles from changed files and emit an impact graph")
+  .option("--changed <path...>", "changed path(s); defaults to git status --porcelain")
+  .option("--format <format>", "text / json / mermaid", "text")
+  .option("--save-evidence", "persist normalized evidence for DB collector")
+  .action(
+    (opts: {
+      changed?: string[];
+      format?: "text" | "json" | "mermaid" | string;
+      saveEvidence?: boolean;
+    }) => {
+      const deps = nodeVerificationProbeDeps(process.cwd());
+      const changedFiles =
+        opts.changed && opts.changed.length > 0 ? opts.changed : loadChangedFiles();
+      const result = recommendVerificationProfiles(changedFiles);
+      if (opts.saveEvidence) {
+        saveVerificationEvidence(
+          { kind: "verify-recommend", id: "changed-files", payload: result },
+          deps,
+        );
+      }
+      if (opts.format === "json") {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+        return;
+      }
+      if (opts.format === "mermaid") {
+        process.stdout.write(`${verificationRecommendationMermaid(result)}\n`);
+        return;
+      }
+      process.stdout.write(
+        `verify recommend: ${result.recommendations.length} profile(s), changed=${result.changedFiles.length}\n`,
+      );
+      for (const recommendation of result.recommendations) {
+        const profile = recommendation.profile;
+        const disabled = profile.defaultEnabled ? "" : " disabled-by-default";
+        process.stdout.write(
+          `  - ${profile.id}${disabled}: ${recommendation.signals.join(", ")} -> ${profile.command}\n`,
+        );
+      }
+      if (result.missingProfiles.length > 0) {
+        process.stdout.write(`missing/disabled profiles: ${result.missingProfiles.join(", ")}\n`);
+      }
+    },
+  );
+
+verify
+  .command("run")
+  .description("run an allow-listed verification profile")
+  .requiredOption("--profile <id>", "profile id")
+  .option("--dry-run", "print runnable command without executing")
+  .option("--allow-external", "allow disabled-by-default external profile execution after review")
+  .option("--json", "JSON output")
+  .option("--save-evidence", "persist normalized evidence for DB collector")
+  .action(
+    (opts: {
+      profile: string;
+      dryRun?: boolean;
+      allowExternal?: boolean;
+      json?: boolean;
+      saveEvidence?: boolean;
+    }) => {
+      const deps = nodeVerificationProbeDeps(process.cwd());
+      const result = runVerificationProfile(
+        opts.profile,
+        { dryRun: Boolean(opts.dryRun), allowExternal: Boolean(opts.allowExternal) },
+        deps,
+      );
+      if (!result) {
+        process.stderr.write(`unknown profile: ${opts.profile}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      if (opts.saveEvidence) {
+        saveVerificationEvidence({ kind: "verify-run", id: opts.profile, payload: result }, deps);
+      }
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        process.stdout.write(
+          `verify run ${result.profile.id}: ${result.status} command="${result.command}"\n`,
+        );
+        for (const message of result.messages) process.stdout.write(`  - ${message}\n`);
+      }
+      process.exitCode = result.status === "passed" || result.status === "dry-run" ? 0 : 1;
+    },
+  );
 
 const session = program.command("session").description("session-log runtime events");
 session

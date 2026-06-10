@@ -1170,11 +1170,156 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 | workflow 自動化 readiness を判定できる | Forward/Add-feature/Reverse/Recovery などの workflow run、gate/CI/doctor 結果、blocked/human-required 状態を同じ `plan_id` / `session_id` / `drive_run_id` で参照できる。 |
 | guardrail の安全性を証跡化できる | agent-guard、review_evidence、same-model approval 禁止、tests-before-review、escalation 境界、human signoff の判定結果を `guardrail_decisions` 相当の projection として持ち、silent pass を finding 化できる。 |
 | skill/roster/command docs を自動化基盤として catalog 化できる | skill/roster/command docs の path、trigger、role/capability、drift status、recommendation reason、search token を catalog projection として持ち、空 catalog・HELIX 前提残存・guard 不整合を検出できる。 |
+| UT evidence history を query できる (A-122 / IMP-109) | `test_cases / test_runs / test_results / test_artifact_edges / test_flake_events` 相当の projection を持ち、どの UT がどの PLAN / FR / U-* oracle / artifact を証明したか、いつ green だったか、flake や duration regression があるかを参照できる。 |
+| 定量 green profile を再現できる (A-122 / IMP-108) | `review_evidence.tests_green_at <= reviewed_at` に加え、`GreenDefinition` として required command profile、runner (`bun` / powershell / bash / ci)、scope、exit code、evidence path、output digest を記録し、定性レビューが正しい定量 green の後に実施されたことを検証できる。 |
+| DB projection 実装 profile を固定する (A-122 / IMP-110) | Core runtime は Bun/TypeScript を前提に `bun:sqlite` を第一候補とし、schema_version、deterministic rebuild、migration fixture、doctor integration、redacted failure digest を持つ。DB は projection であり docs/state/logs を authoring source として残す。 |
+| CI / hook / OS evidence matrix を保持できる (A-122 / IMP-114) | PowerShell / Bash / Bun / Claude hook / CI の smoke と green command evidence を同じ projection profile で比較でき、Windows/POSIX 片側欠落を finding 化できる。 |
 | 機密を保存しない | provider transcript 本文、secret、credential、PII は保存対象外。DB は ID、digest、metadata、evidence path、redacted summary のみを持つ。 |
 
 External design references used for strengthening: SQLite FTS5 external/contentless index pattern for rebuildable search projection; OpenTelemetry semantic conventions for traces/logs/metrics/events naming; W3C PROV entity/activity/agent provenance model for reference graph thinking. These references do not introduce external runtime dependencies at L5.
 
-L5 降下先: `docs/plans/PLAN-L5-08-harness-db-feedback.md`、`docs/design/harness/L5-detailed-design/physical-data.md` §9、`module-decomposition.md` Appendix B、`internal-processing.md` Appendix B、`if-detail.md` Appendix B、`docs/test-design/harness/L8-integration-test-design.md` IT-DB/IT-SEARCH/IT-FEEDBACK/IT-AUTOMATION/IT-GUARDRAIL/IT-ASSET-DB。
+L5/L6 降下先: `docs/plans/PLAN-L5-08-harness-db-feedback.md`、`docs/design/harness/L5-detailed-design/physical-data.md` §9 / §9.4、`module-decomposition.md` Appendix B、`internal-processing.md` Appendix B、`if-detail.md` Appendix B、`docs/design/harness/L6-function-design/test-before-review.md` §8、`docs/design/harness/L6-function-design/function-spec.md` Harness DB addendum、`docs/test-design/harness/L8-integration-test-design.md` IT-DB/IT-SEARCH/IT-FEEDBACK/IT-AUTOMATION/IT-GUARDRAIL/IT-ASSET-DB。A-122 の Phase 3/4 seed は IMP-107..116。
+
+### §6.8.8 Lower-L discovery Reverse back-propagation (全体一貫性原則、2026-06-09)
+
+下位 L (L4-L14、特に L6/L7 実装・テスト・レビュー・右腕検証) で追加機能、改善起票、受入条件変更、DB projection、guardrail、workflow rule、automation rule、または既存 FR の意味拡張を発見した場合、局所 carry だけで完了扱いしてはならない。全体一貫性のため、発見時点で PLAN / audit / improvement backlog に **back-propagation decision** を記録し、次のいずれかへ分類する。
+
+| decision | 条件 | 必須処置 |
+|----------|------|----------|
+| `local_impl_only` | 既存 L1/L3/L4-L6 の意味・受入条件・外部契約・運用手順を変えず、実装内の局所補正だけで閉じる | 理由と対象範囲を audit に記録。上位 doc 更新不要の根拠を残す |
+| `requires_design_normalization` | 要求は不変だが、L4-L6 設計、テスト設計、DB/IF/関数分解、workflow detail の整合補正が必要 | Reverse `normalization` または `design` PLAN を起票し、L4-L6 / test-design へ back-fill する |
+| `requires_requirement_backprop` | FR、AC、受入条件、ユーザー価値、運用ポリシー、機能一覧、または要件束の意味が増える | Reverse `fullback` / `design` PLAN を起票し、L1/L3 registry・AC/AT・§1.10 registration へ back-merge してから Forward に戻す |
+| `requires_concept_policy` | 企画価値、対象ユーザー、責任境界、本番影響、認証・認可・PII・ライセンス等の上位判断を変える | PO / 人間判断を gate とし、concept / requirements 更新後に Forward を再開する |
+
+**完了判定**: 下位 L で発見した追加・起票が `requires_design_normalization` / `requires_requirement_backprop` / `requires_concept_policy` のまま未処理なら、元 PLAN を `completed` / `confirmed` と呼ばない。やむを得ず先行実装する場合は `add-design` / `add-impl` と `reverse/*` の pairing を明示し、未完了 carry ではなく back-prop 未了として handover に残す。
+
+**記録項目**: PLAN §7 機能要求更新、audit record、または `docs/improvement-backlog.md` は `backprop_decision`、`reverse_type`、`target_layer`、`upstream_docs`、`evidence_path`、`closure_status` を持つ。`ut-tdd doctor` / `plan-lint` は将来 IMP-117 で、下位 L 由来の追加起票がこの分類を持たない場合に warn-first し、G7 / accept では fail-close へ昇格する。
+
+**未承認 L7 着手の扱い (PLAN-RECOVERY-03)**: `src/**` 追加・変更など L7 実装相当の作業を、parent L6 design / L7 PLAN / TDD Red entry / pair artifact なしに開始した場合は `agent_runaway` 相当の Recovery 事象として扱う。封じ込めでは未承認 source 差分を残さず、Recovery で reopen point を確定した後、Reverse `fullback` で本節・backlog・必要な workflow rule へ戻す。active goal や継続作業を理由に、この back-prop を省略してはならない。
+
+**例**: A-122 の UT evidence history / GreenDefinition / Harness DB projection は単なる L5/L6 carry ではなく、既存 FR-L1-05/06/07/17/18/20/45/50 の `requires_requirement_backprop` 拡張として L1/L3/requirements へ back-propagation 済みと扱う。
+
+### §6.8.9 Cross-artifact relation graph / visualization / tool adapters (A-124, 2026-06-09)
+
+UT-TDD は「1 つを直したら、関連する設計・コード・テスト・DB projection・PLAN・FR も合わせて直す」ために、横断 relation graph を `harness.db` projection として持つ。これは authoring source ではなく、docs / source / tests / PLAN / state / logs から再構築できる derived graph である。
+
+**対象 edge**:
+
+| edge kind | from | to | 目的 |
+|-----------|------|----|------|
+| `imports` | source file/module | source file/module | import graph、循環依存、逆依存、変更影響範囲 |
+| `declares_module` | design artifact | module | 設計宣言と実装 module の drift 検出 |
+| `implements` | source file/module | FR / PLAN / artifact | impl -> requirement/design/test の back-fill 漏れ検出 |
+| `tests` | test case/file | source file/module / artifact / FR | 変更時に必要な test scope を出す |
+| `references` | doc / PLAN / ADR / audit | doc / PLAN / FR / IMP | 文書横断の関連修正候補を出す |
+| `projects_to` | docs/state/log source | DB projection table | DB projection の生成元・欠落・再構築影響を出す |
+| `visualizes` | relation graph snapshot | diagram artifact | Mermaid / DOT / D2 などの図化成果物を trace する |
+
+**必須クエリ**:
+
+- `changed_path -> impacted_artifacts`: 変更ファイルから関連 FR / PLAN / design / test / DB table / diagram を列挙する。
+- `module -> reverse_dependencies`: module を直した時に影響する import 逆向き利用者を列挙する。
+- `artifact -> required_tests`: artifact / FR / module に対して必要な UT / integration / acceptance test scope を列挙する。
+- `open_finding -> impacted_workflow`: finding が閉じるまで止めるべき PLAN / gate / workflow を列挙する。
+- `relation_graph -> diagram`: graph snapshot を Mermaid / DOT / D2 のいずれかへ export し、review / handover で読める図にする。
+
+**tool adapter 方針**:
+
+- Core collector は TypeScript/Bun で実装し、`bun:sqlite` へ projection する。外部 package は authoring source にしない。
+- `dependency-cruiser` は JS/TS dependency rule + visualization の optional adapter 候補。循環依存、禁止依存、package.json 欠落、orphan 検出を候補にする。
+- `knip` は unused dependency / file / export 検出の optional adapter 候補。relation graph の dead-node 検出補助にする。
+- `madge` は circular dependency / dependency graph の optional adapter 候補。Graphviz 連携が必要な図化は optional とする。
+- `Graphviz DOT` は large graph の SVG/PDF/PNG export、`Mermaid` は GitHub Markdown で読める軽量 diagram、`D2` は設計レビュー向けの整った diagram export の候補とする。
+- tool output は `tool_runs` / `dependency_edges` / `diagram_artifacts` / `findings` に正規化し、tool 固有形式のまま gate 判定しない。
+
+**完了判定**: A-124 の実装が入るまで、`doctor` の `relation-graph / dependency-drift / regression expansion` は scaffold stub として扱う。module/asset/change-impact の現行検査 green は、横断 impact expansion 完了の証拠ではない。
+
+### §6.8.10 MCP / external testing tool scope and workflow triggers (A-125, 2026-06-09)
+
+A-124 の relation graph / diagram / impact expansion は、MCP server や外部テスト基盤を使うことで大幅に強化できる。ただし MCP server は host 権限・filesystem・browser・GitHub・DB へ接続し得るため、常時接続や raw tool output gate は禁止する。UT-TDD は **allow-list された tool profile を workflow trigger で必要時だけ起動し、結果を DB projection へ正規化して gate が見る**。
+
+#### 採用候補 (Web research 2026-06-09)
+
+| category | candidate | scope | adoption stance |
+|---|---|---|---|
+| MCP discovery / trust | MCP Registry | 公開 MCP server metadata / install metadata / namespace verification | Candidate source for discovery metadata only. Registry metadata is not a security scan. |
+| MCP debug / test | MCP Inspector | MCP server の tools/resources/prompts 接続確認、local server smoke | Preferred verification tool for UT-TDD-owned MCP server or configured server profiles. |
+| Browser automation MCP | Microsoft Playwright MCP (`@playwright/mcp`) | exploratory browser verification, self-healing E2E investigation, screenshots | Optional interactive verification profile. Prefer Playwright CLI/tests for deterministic CI. |
+| GitHub workflow MCP | GitHub MCP Server | issues / PR / repos / actions / code_security toolsets | Optional profile for issue/PR/backlog automation; must use narrow toolsets or read-only mode by default. |
+| Reference MCP servers | filesystem / git / memory / fetch / postgres / sqlite | local file, git, memory graph, web fetch, DB inspection | Reference or controlled local profiles only; no production credential use in default profile. |
+| Containerized MCP gateway | Docker MCP Toolkit | signed/attested container images, OAuth, resource limits, profile-based MCP gateway | Preferred team/enterprise runtime profile when Docker Desktop is available. |
+| Test foundation | Vitest Browser Mode + Playwright provider | browser-native component tests and UI interaction checks | Optional L7/L8 test profile for UI/browser-targeted harness or target repos. |
+| Test foundation | Testcontainers for Node.js | disposable DB/service containers for integration/smoke tests | Optional integration-test profile when Docker is available. |
+| API mocking | MSW | reusable REST/GraphQL/WebSocket mocks for browser and Node tests | Optional mock profile for API-bound tests and fixture standardization. |
+
+#### Workflow trigger rules
+
+- `signal=ui_flow`, `web_target`, or `browser_regression` -> recommend `mcp_profile=playwright` and/or `test_profile=vitest-browser-playwright`.
+- `signal=external_issue`, `ci_failure`, `pr_review`, or `backlog_sync` -> recommend `mcp_profile=github-readonly` first; write toolsets require explicit human approval.
+- `signal=db_integration`, `migration`, or `service_contract` -> recommend `test_profile=testcontainers` and DB projection review.
+- `signal=api_mock_gap` or `flaky_external_api` -> recommend `test_profile=msw`.
+- `signal=mcp_server_added` or `mcp_profile_changed` -> run MCP Inspector smoke (`tools/list` minimum) and record `mcp_server_runs`.
+
+#### Safety and automation constraints
+
+- MCP profiles are disabled by default. `ut-tdd mcp profile enable <name>` is future scope and must write a generated local config outside Git-tracked secrets.
+- Each profile has `allowed_tools`, `read_only`, `requires_network`, `requires_docker`, `requires_auth`, `secret_policy`, `risk_tier`, and `trigger_signals`.
+- Default GitHub MCP profile is read-only and enables only the minimum toolsets needed for discovery/status. PR/issue write actions require explicit `requires_human_approval`.
+- Filesystem and Git MCP profiles are restricted to the workspace root and must not receive global home-directory mounts.
+- Raw MCP responses, browser traces, screenshots, and external tool logs are evidence files. Gate decisions use normalized `tool_runs`, `mcp_server_runs`, `test_runs`, `dependency_edges`, `impact_results`, and `findings`.
+- MCP Registry / Docker Catalog / npm / PyPI metadata can support discovery, but official source verification and package integrity checks remain required before a profile is marked `trusted`.
+
+#### Commands
+
+- `ut-tdd mcp profile list --json`
+- `ut-tdd mcp profile probe <name>`
+- `ut-tdd mcp inspect <name> --method tools/list [--allow-external]`
+- `ut-tdd verify recommend --changed <path> [--format text|json|mermaid] [--save-evidence]` -> changed-file signal graph -> recommended MCP/test profiles
+- `ut-tdd verify run --profile <name> [--dry-run] [--allow-external] [--save-evidence]` -> run built-in profiles by default; external profiles require explicit allow-list and satisfied probe checks before execution
+
+`--save-evidence` writes normalized JSON records under `.ut-tdd/evidence/verification-profiles/` for later DB collector/rebuild. These files are bounded metadata evidence, not raw provider transcripts or secret-bearing tool output.
+
+**完了判定**: A-125 is scoped when requirements, physical data, ADR/backlog/audit, and workflow docs define candidate tools, trigger rules, safety constraints, DB projection tables, and commands. The first runtime slice is implemented when `ut-tdd mcp profile list/probe`, `ut-tdd mcp inspect` readiness gating, `ut-tdd verify recommend`, `ut-tdd verify run --dry-run`, `--save-evidence`, and `doctor` surface profile catalog / readiness / recommendation evidence. Full implementation still requires actual MCP Inspector server invocation, external profile execution evidence, and DB collector/rebuild for external verification rows.
+
+### §6.8.11 Canonical document export (A-126, 2026-06-09)
+
+A-124/A-125 make relation graphs, diagrams, MCP/test profiles, and evidence queryable. Human reviewers also need spreadsheet / Excel / PPTX conversions of canonical UT-TDD documents: concept / planning, requirements, detailed design, PLAN, ADR, and test-design documents. UT-TDD therefore scopes **canonical document export** as derived artifacts.
+
+**Source-of-truth boundary**:
+
+- Markdown/source documents, PLANs, ADRs, test-design docs, DB projection rows, tests, and evidence records remain authoritative.
+- CSV / Markdown summary / XLSX / PPTX files are generated conversion artifacts only.
+- Exported files must record source document paths, source section IDs, snapshot hash, renderer, format, path, redaction profile, and evidence path.
+- Deleting or manually editing an export artifact must not change harness truth. A human decision made from an export must be imported or recorded separately as review / gate / handover evidence.
+
+**Baseline outputs**:
+
+- `doc-csv-matrix`: built-in, zero-dependency, deterministic columns for requirements, design, PLAN, ADR, and test-design matrices.
+- `doc-markdown-summary`: built-in, GitHub-readable conversion summary with source links and section IDs.
+
+**Optional renderer outputs**:
+
+- `doc-xlsx-workbook`: Excel workbook with multiple sheets for concept, requirements, design, PLAN, ADR, trace, and test-design rows. Candidate adapters: ExcelJS or SheetJS.
+- `doc-pptx-deck`: PowerPoint deck generated from concept, requirements, detailed design, PLAN, ADR, or test-design structure. Candidate adapter: PptxGenJS.
+- `doc-d2-pptx-diagram`: diagram-to-PPTX export for architecture / workflow / relation graph visuals when D2 readiness is proven.
+
+**Trigger rules**:
+
+- `requirements_export`, `fr_ac_at_matrix`, `acceptance_review` -> recommend CSV and optional XLSX.
+- `concept_export`, `planning_review`, `stakeholder_brief` -> recommend Markdown summary and optional PPTX.
+- `detailed_design_export`, `architecture_review`, `db_contract_review`, `api_contract_review` -> recommend CSV/XLSX and optional PPTX.
+- `plan_export`, `adr_export`, `test_design_export`, `handover` -> recommend Markdown summary, CSV, and optional XLSX/PPTX depending on document family.
+- `document_export_profile_changed` -> require renderer probe evidence before accept.
+
+**Safety and quality constraints**:
+
+- Exports must redact before rendering and must not include raw provider transcripts, credentials, secrets, PII, raw MCP payloads, screenshots, or browser traces unless a future human-approved policy defines a redacted attachment profile.
+- Optional renderers are disabled by default. Missing ExcelJS / SheetJS / PptxGenJS / D2 availability returns a finding, not an implicit installation.
+- Source section IDs / FR IDs / AC IDs / AT IDs / PLAN IDs / ADR IDs must remain visible in generated spreadsheet/deck output.
+- Generated spreadsheets and decks must be deterministic for the same source snapshot except for explicit timestamp metadata.
+- Large exports must chunk rows or split sheets/slides by document family or section instead of silently truncating.
+
+**完了判定**: A-126 is scoped when requirements, research, audit, physical-data, ADR/backlog, workflow docs, L6 function contracts, L7 unit oracles, and L6/L7/Reverse PLANs define canonical document export profiles and safety boundaries. Runtime implementation requires a future L7 TDD Red entry; this section does not authorize source changes.
 
 ## 6.9 CI 起動単位とコスト方針 (GitHub Actions 無料枠制約、tech 裏取り 2026-06-02)
 

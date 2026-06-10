@@ -1,0 +1,154 @@
+{
+  "schema_version": "verification-evidence-v1",
+  "kind": "verify-recommend",
+  "id": "changed-files",
+  "recorded_at": "2026-06-09T12:13:32.640Z",
+  "payload": {
+    "changedFiles": [
+      "src/web/app.tsx"
+    ],
+    "recommendations": [
+      {
+        "profile": {
+          "id": "bun-unit",
+          "label": "Bun/Vitest unit regression",
+          "command": "bun run test",
+          "sourceType": "builtin",
+          "packageName": null,
+          "executable": "bun",
+          "authEnv": [],
+          "requiresNetwork": false,
+          "requiresDocker": false,
+          "requiresAuth": false,
+          "defaultEnabled": true,
+          "riskTier": "low",
+          "installHint": null
+        },
+        "signals": [
+          "source_change"
+        ],
+        "reasons": [
+          "src/web/app.tsx triggered source_change"
+        ],
+        "changedFiles": [
+          "src/web/app.tsx"
+        ]
+      },
+      {
+        "profile": {
+          "id": "doctor",
+          "label": "UT-TDD doctor gate surface",
+          "command": "bun run src/cli.ts doctor",
+          "sourceType": "builtin",
+          "packageName": null,
+          "executable": "bun",
+          "authEnv": [],
+          "requiresNetwork": false,
+          "requiresDocker": false,
+          "requiresAuth": false,
+          "defaultEnabled": true,
+          "riskTier": "low",
+          "installHint": null
+        },
+        "signals": [
+          "source_change"
+        ],
+        "reasons": [
+          "src/web/app.tsx triggered source_change"
+        ],
+        "changedFiles": [
+          "src/web/app.tsx"
+        ]
+      },
+      {
+        "profile": {
+          "id": "playwright-mcp",
+          "label": "Playwright MCP agentic browser check",
+          "command": "ut-tdd verify run --profile playwright-mcp",
+          "sourceType": "mcp",
+          "packageName": "@playwright/mcp",
+          "executable": "bun",
+          "authEnv": [],
+          "requiresNetwork": false,
+          "requiresDocker": false,
+          "requiresAuth": false,
+          "defaultEnabled": false,
+          "riskTier": "medium",
+          "installHint": "bun add -D @playwright/mcp"
+        },
+        "signals": [
+          "ui_flow"
+        ],
+        "reasons": [
+          "src/web/app.tsx triggered ui_flow"
+        ],
+        "changedFiles": [
+          "src/web/app.tsx"
+        ]
+      },
+      {
+        "profile": {
+          "id": "vitest-browser-playwright",
+          "label": "Vitest Browser Mode with Playwright provider",
+          "command": "bun run test -- --browser",
+          "sourceType": "test-foundation",
+          "packageName": "@vitest/browser-playwright",
+          "executable": "bun",
+          "authEnv": [],
+          "requiresNetwork": false,
+          "requiresDocker": false,
+          "requiresAuth": false,
+          "defaultEnabled": false,
+          "riskTier": "low",
+          "installHint": "bun add -D @vitest/browser-playwright"
+        },
+        "signals": [
+          "ui_flow"
+        ],
+        "reasons": [
+          "src/web/app.tsx triggered ui_flow"
+        ],
+        "changedFiles": [
+          "src/web/app.tsx"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "from": "src/web/app.tsx",
+        "to": "source_change",
+        "kind": "changed_file_to_signal"
+      },
+      {
+        "from": "source_change",
+        "to": "bun-unit",
+        "kind": "signal_to_profile"
+      },
+      {
+        "from": "source_change",
+        "to": "doctor",
+        "kind": "signal_to_profile"
+      },
+      {
+        "from": "src/web/app.tsx",
+        "to": "ui_flow",
+        "kind": "changed_file_to_signal"
+      },
+      {
+        "from": "ui_flow",
+        "to": "vitest-browser-playwright",
+        "kind": "signal_to_profile"
+      },
+      {
+        "from": "ui_flow",
+        "to": "playwright-mcp",
+        "kind": "signal_to_profile"
+      }
+    ],
+    "missingProfiles": [
+      "playwright-mcp",
+      "vitest-browser-playwright"
+    ],
+    "ok": true
+  }
+}

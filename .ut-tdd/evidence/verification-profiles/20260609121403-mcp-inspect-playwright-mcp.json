@@ -1,0 +1,75 @@
+{
+  "schema_version": "verification-evidence-v1",
+  "kind": "mcp-inspect",
+  "id": "playwright-mcp",
+  "recorded_at": "2026-06-09T12:14:03.750Z",
+  "payload": {
+    "profile": {
+      "id": "playwright-mcp",
+      "label": "Playwright MCP agentic browser check",
+      "command": "ut-tdd verify run --profile playwright-mcp",
+      "sourceType": "mcp",
+      "packageName": "@playwright/mcp",
+      "executable": "bun",
+      "authEnv": [],
+      "requiresNetwork": false,
+      "requiresDocker": false,
+      "requiresAuth": false,
+      "defaultEnabled": false,
+      "riskTier": "medium",
+      "installHint": "bun add -D @playwright/mcp"
+    },
+    "inspectorProfile": {
+      "id": "mcp-inspector-smoke",
+      "label": "MCP Inspector tools/list smoke",
+      "command": "ut-tdd mcp inspect <name> --method tools/list",
+      "sourceType": "mcp",
+      "packageName": "@modelcontextprotocol/inspector",
+      "executable": "bun",
+      "authEnv": [],
+      "requiresNetwork": true,
+      "requiresDocker": false,
+      "requiresAuth": false,
+      "defaultEnabled": false,
+      "riskTier": "medium",
+      "installHint": "bun add -D @modelcontextprotocol/inspector"
+    },
+    "method": "tools/list",
+    "status": "refused",
+    "checks": [
+      {
+        "name": "inspector:activation",
+        "ok": false,
+        "message": "disabled by default; requires explicit allow-list before execution"
+      },
+      {
+        "name": "inspector:executable",
+        "ok": true,
+        "message": "bun --version"
+      },
+      {
+        "name": "inspector:package",
+        "ok": false,
+        "message": "@modelcontextprotocol/inspector is not declared; bun add -D @modelcontextprotocol/inspector"
+      },
+      {
+        "name": "target:activation",
+        "ok": false,
+        "message": "disabled by default; requires explicit allow-list before execution"
+      },
+      {
+        "name": "target:executable",
+        "ok": true,
+        "message": "bun --version"
+      },
+      {
+        "name": "target:package",
+        "ok": false,
+        "message": "@playwright/mcp is not declared; bun add -D @playwright/mcp"
+      }
+    ],
+    "messages": [
+      "MCP inspection is disabled by default; pass --allow-external after allow-list review"
+    ]
+  }
+}

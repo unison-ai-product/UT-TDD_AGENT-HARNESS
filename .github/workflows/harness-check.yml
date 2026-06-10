@@ -6,8 +6,8 @@
 # 本 workflow は §6.5 Phase 0-A 相当 (配備するが Required 化はしない / solo)。
 # トリガは §6.9 の `pull_request: [main]` に加え、solo main 直開発を即 dogfood するため `push: [main]` も含める。
 #
-# 現状実装される subjob = typecheck + 全回帰 (vitest)。以下は negative carry (実装後に subjob 追加):
-#   - biome lint: repo 既存 biome 負債 (cli.ts/detect.ts/g3-trace.ts 等) 解消 (別 Refactor PLAN) 後に有効化
+# 現状実装される subjob = typecheck + 全回帰 (vitest) + biome lint + doctor。
+# 以下は negative carry (実装後に subjob 追加):
 #   - commitlint / poc-no-merge-guard / hotfix-postmortem-required 等 §6.3 の branch-type subjob: PLAN で追加
 name: harness-check
 
@@ -44,3 +44,9 @@ jobs:
 
       - name: test — 全回帰 (vitest run)
         run: bun run test
+
+      - name: lint (biome)
+        run: bun run lint
+
+      - name: doctor (governance hard gates)
+        run: bun src/cli.ts doctor

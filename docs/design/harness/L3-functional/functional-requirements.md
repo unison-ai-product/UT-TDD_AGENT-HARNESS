@@ -717,6 +717,9 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 | FR-L1-37/39/40/41/42/44 (model 推挙 / 難易度 / drive 別 state / drive 自動判定 / provider 引継ぎ / onboarding) | P1 | L4 carry | drive 軸拡張は L4 データ設計連動 / onboarding は L4 設計連動 |
 | FR-L1-46 / FR-L1-47 / FR-L1-48 / FR-L1-49 (内部資産 UT-TDD 化: subagent roster / skill pack curate / command CLI 化 / drift lint) | P1 | L4-L6 carry | BR-22 派生、Recovery PLAN-RECOVERY-01。roster=W6/W7・skill pack=W10・command=W11/W12/W16・drift lint=IMP-033 (L6-L7)。棚卸 = internal-asset-inventory.md |
 | FR-L1-50 (DDD/TDD strictness automation) | P1 | L6-L8 Add-feature carry | PO directed 2026-06-09。domain boundary / invariant trace / Red-first evidence / oracle strength / integration GWT を PLAN-L6-26..30 / PLAN-L7-27..31 / PLAN-REVERSE-26..30 で機械化 |
+| FR-L1-05/06/07/17/18/19/20/24/49/50 A-124 extension | P1 | L5-L7 Add-feature carry + Phase 4 DB implementation | 横断 relation graph、impact expansion、diagram export、tool adapter normalization を requirements §6.8.9 / physical-data §9.5 / ADR-002 A-124 addendum で back-propagation。`ut-tdd graph impact` / `ut-tdd graph export` / optional dependency-cruiser・Knip・Madge・Graphviz・Mermaid・D2 adapter を後続 PLAN で機械化 |
+| FR-L1-05/06/07/17/18/19/20/24/45/49/50 A-125 extension | P1 | L5-L7 Add-feature carry + Phase 4 DB implementation | MCP server profile、MCP Inspector smoke、external verification profile recommendation、profile security gate を requirements §6.8.10 / physical-data §9.6 / ADR-002 A-125 addendum で back-propagation。`ut-tdd mcp profile` / `ut-tdd mcp inspect` / `ut-tdd verify recommend` / `ut-tdd verify run` を後続 PLAN で機械化 |
+| FR-L1-05/06/07/17/18/20/24/33/45/50 A-126 extension | P1 | L5-L7 Add-feature carry + Phase 4 DB implementation | 企画・要件定義・詳細設計・PLAN・ADR・テスト設計の正本ドキュメントを CSV / Markdown summary / XLSX / PPTX へ変換する document export を requirements §6.8.11 / physical-data §9.7 / ADR-002 A-126 addendum で back-propagation。`ut-tdd export docs --kind ... --format ...` を後続 PLAN で機械化 |
 | FR-L1-36/38/43 (skill 評価 / model 評価 / PoC 計測) | P2 | **PLAN-L3-02 (business-detail.md) に委譲** | BR-21 経路で扱う (重複回避) |
 
 ### §3.1 P1 残 carry 明示 note (A-47 + A-50、L4 PLAN 起票時の必須参照)
@@ -735,6 +738,10 @@ A-50 で workflow core 7 件 (FR-L1-23/24/25/26/27/29/30) を L3 直接詳細化
 | FR-L1-42 (provider 引継ぎ) | implemented 2026-06-08 (`provider-handover.v1`) | Claude ↔ Codex の context+PLAN+budget 連携渡し |
 | FR-L1-44 (onboarding) | PLAN-L4-NN-onboarding | 既存 repo への harness baseline 確立、`.ut-tdd/` 初期 baseline |
 | FR-L1-50 (DDD/TDD strictness automation) | PLAN-L6-26..30 / PLAN-L7-27..31 / PLAN-REVERSE-26..30 | DDD/TDD SSoT、workflow anchor、Red-first evidence、test oracle、integration GWT を機械検出し、重要 gate では定量 evidence と定性 review evidence を抱き合わせる |
+| FR-L1-02/06/07/17/18/20/45/50 A-122 extension | PLAN-L5-08 + A-122 addendum / Phase 3-4 seed IMP-107..116 | UT evidence history (`test_cases/test_runs/test_results/test_flake_events`)、GreenDefinition、Bun `bun:sqlite` collector/rebuild/migration、CI/hook/OS evidence matrix を requirements-level acceptance として束ねる。新 FR 採番ではなく既存 FR の DB/自動化/定量+定性 bundle 強化 |
+| FR-L1-05/06/07/17/18/19/20/24/49/50 A-124 extension | PLAN-L5-08 + A-124 addendum / Phase 4 seed IMP-118..120 | `graph_nodes/dependency_edges/impact_rules/impact_results/tool_runs/diagram_artifacts/graph_snapshots` を DB projection に追加し、変更ファイルから関連設計・コード・テスト・DB・図を列挙する。外部ツールは optional adapter、gate は正規化DB rowで判定 |
+| FR-L1-05/06/07/17/18/19/20/24/45/49/50 A-125 extension | PLAN-L5-08 + A-125 addendum / Phase 4 seed IMP-121..124 | `mcp_server_profiles/mcp_profile_triggers/mcp_server_runs/verification_profiles/verification_recommendations/external_tool_findings` を DB projection に追加し、relation graph impact から MCP / browser / DB container / API mock / GitHub workflow verification profile を推薦・検証・記録する。 |
+| FR-L1-05/06/07/17/18/20/24/33/45/50 A-126 extension | PLAN-L5-08 + A-126 addendum / Phase 4 seed IMP-126 | `document_export_profiles/document_export_runs/document_export_datasets/document_export_artifacts` を DB projection に追加し、企画・要件定義・詳細設計・PLAN・ADR・テスト設計から source anchor 付き spreadsheet / Excel / PPTX 変換物を生成・記録する。 |
 | FR-L1-31〜35 (P2 コンテキスト/フォルダ/棚卸し/穴管理/整備可視化) | PLAN-L4-NN-infra-readiness | 整備系、Phase B carry 含む |
 
 > **A-50 で 6 件削減** (FR-L1-23/24/25/26/27/29/30 = workflow core 7 件を L3 詳細化に格上げ)。**A-54 で FR-L1-40/41 を本 §3.1 表に明示追加** (§3 主表に L4 carry 宣言済だが §3.1 詳細表から漏れていた不整合を解消、audit 軸2 C-01/C-02)。残 P1 L4 carry = 9 件 (FR-L1-21/22/28/37/39/40/41/42/44) + P2 (FR-L1-31〜35) + Phase B (FR-L1-19/20)。いずれも workflow core ではないため L4 carry を維持。
@@ -827,6 +834,7 @@ screen §5 G1-trace マトリクスを継承し、L3 FR-* × 14 画面 (PM/HM/GD
   - 各 FR-* の実現アーキ (state schema / CLI コマンド設計 / hook 実装方式) は L4 基本設計で確定
   - 残 P1 件 + P2 5 件は L4 / Phase B / PLAN-L3-02 で AC + 詳細化
 - **L4 データ設計 (PLAN-L4-04)**: business §10.2 L4 carry 表 7 項目 (集約境界 / 値オブジェクト等) + 各 FR の入出力データ構造を L4 で確定
+- **A-122 requirements back-propagation**: UT evidence history、GreenDefinition、DB collector/rebuild/migration、CI/hook/OS evidence matrix は、L1 functional §7 と requirements §6.8.7 に戻した。L4/L5/L6 では `FR-L1-02/06/07/17/18/20/45/50` の既存 FR 拡張として AC/DbC/IT を追加し、新 FR 採番は行わない。
 - **L7 実装スプリント**: 各 AC-* を TDD Red の入力として使用。Given-When-Then 形式を vitest describe-it に直接変換可能
 - **L12 受入テスト設計**: 全 54+ AC-* を AT-* で被覆 (孤児 0)。本 sub-doc 完成後に L12 担当 sub-doc 本起草
 - **G3 lint 実装** (`ut-tdd plan lint --gate G3-trace`): R1 (BR/UX/FR-L1 → L3) / R2 (FR-* → AC → AT) / R3 (AT → 要求) / R4 (NFR → 閾値 → AT) を L7 で実装
@@ -868,3 +876,14 @@ screen §5 G1-trace マトリクスを継承し、L3 FR-* × 14 画面 (PM/HM/GD
 > 1. PLAN 起票時に Web 検索 + OSS フォーク + pdm 調査を組み込む process 改善 (現状: PLAN-L3-01〜03 §3 ヒアリング項目に Step 0 = 外部調査を追加)
 > 2. agent-guard に opus pdm-* 系の追加制約 (明示 --allow 必要、weekly quota 保護)
 > 両件、別 commit で governance に反映予定。
+## A-124 BACKPROP NOTE
+
+A-124 requirements back-propagation: cross-artifact relation graph, impact expansion, diagram export, and tool adapter normalization have been returned to L1 functional §7 and requirements §6.8.9. L5 physical-data §9.5 defines the DB projection tables and invariants. L6/L7 follow-up work must implement graph impact, graph export, and optional tool adapter normalization as extensions of existing FR-L1-05/06/07/17/18/19/20/24/49/50, without allocating new FR IDs.
+
+## A-125 BACKPROP NOTE
+
+A-125 requirements back-propagation: MCP server profiles, external verification profiles, MCP Inspector smoke, profile-trigger automation, and profile security gates have been returned to L1 functional §7 and requirements §6.8.10. L5 physical-data §9.6 defines the DB projection tables and invariants. L6/L7 follow-up work must implement profile probing, Inspector smoke, verification recommendation, and allow-listed verification runs as extensions of existing FR-L1-05/06/07/17/18/19/20/24/45/49/50, without allocating new FR IDs.
+
+## A-126 BACKPROP NOTE
+
+A-126 requirements back-propagation: canonical document export for concept/planning, requirements, detailed design, PLAN, ADR, and test-design documents has been returned to L1 functional §7 and requirements §6.8.11. L5 physical-data §9.7 defines the DB projection tables and invariants. L6/L7 follow-up work must implement document structure parsing, export dataset generation, built-in CSV/Markdown rendering, optional XLSX/PPTX renderer readiness, and artifact stale detection as extensions of existing FR-L1-05/06/07/17/18/20/24/33/45/50, without allocating new FR IDs.

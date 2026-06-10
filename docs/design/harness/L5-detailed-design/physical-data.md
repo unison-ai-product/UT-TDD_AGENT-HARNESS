@@ -265,3 +265,161 @@ Invariants:
 - Every `workflow_runs`, `guardrail_decisions`, and `automation_assets` row has either a source path or evidence path, and non-ready automation never appears as ready without a closing finding.
 - Every non-green lint/doctor/vmodel/gate result is representable as `findings` plus optional `quality_signals`.
 - `search_index` is rebuildable from docs/state/logs and can be deleted/rebuilt without changing authoritative state.
+
+### §9.4 UT evidence history projection (A-122 / IMP-109)
+
+Phase 2 close review found that the DB design can already project workflow, guardrail, skill, and quality signals, but it cannot yet answer UT-specific feedback questions. Add the following projection tables before Phase 4 DB implementation starts. They remain derived data; the authoring sources are test files, PLAN artifacts, vitest/Bun output, CI logs, and `.ut-tdd/` evidence.
+
+| table | primary key | required columns | purpose |
+|---|---|---|---|
+| `test_cases` | `test_case_id` | `test_file`, `test_name`, `oracle_id`, `plan_id`, `fr_id`, `artifact_id`, `kind`, `first_seen_at`, `last_seen_at` | Make each UT oracle queryable by PLAN/FR/artifact. |
+| `test_runs` | `test_run_id` | `session_id`, `plan_id`, `command`, `runner`, `runtime`, `os`, `shell`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `green_definition_id` | Record one executed quantitative test command, especially Bun/vitest/doctor/lint runs. |
+| `test_results` | `test_result_id` | `test_run_id`, `test_case_id`, `status`, `duration_ms`, `failure_digest`, `started_at`, `completed_at` | Track pass/fail/skip/todo by case and run. |
+| `test_artifact_edges` | `edge_id` | `test_case_id`, `artifact_id`, `edge_kind`, `plan_id`, `source_path` | Join test evidence back to V-model trace without overloading `trace_edges`. |
+| `test_flake_events` | `flake_event_id` | `test_case_id`, `window`, `pass_count`, `fail_count`, `flake_score`, `computed_at`, `evidence_path` | Surface unstable tests and duration regressions as quality signals. |
+
+Required UT-derived metrics:
+
+- `ut_oracle_coverage = count(test_cases where oracle_id is not null) / expected U-* oracle count by plan`.
+- `ut_plan_green_rate = count(test_runs where plan_id=X and exit_code=0) / count(test_runs where plan_id=X)`.
+- `ut_flake_score` is computed from alternating pass/fail history and stored in `test_flake_events`; non-zero score creates a `quality_signals` row.
+- `green_definition_compliance = every test_runs.green_definition_id resolves and every required command in that definition has exit_code=0`.
+
+Implementation constraints:
+
+- Bun is the default execution runtime. The collector reads Bun/vitest JSON output when available and falls back to command/evidence digests when individual case data is unavailable.
+- DB writes use `bun:sqlite` in the core runtime. External adapters may use a compatibility layer only if they preserve the same schema and rebuild semantics.
+- Raw provider transcripts, secrets, and PII are never inserted. `failure_digest` is a bounded digest with redaction applied before persistence.
+- A missing `plan_id`, unresolved `oracle_id`, or green definition mismatch becomes a `findings` row; it is not silently dropped.
+
+### §9.5 Cross-artifact relation graph and diagram projection (A-124 / IMP-118..120)
+
+The DB must make cross-cutting impact analysis queryable. The authoring sources remain docs, source files, test files, PLAN frontmatter, audit records, logs, and state files. The relation graph is a rebuildable projection that lets the harness answer: "if this changed, what else must be reviewed, fixed, tested, or redrawn?"
+
+| table | primary key | required columns | purpose |
+|---|---|---|---|
+| `graph_nodes` | `node_id` | `node_type`, `subject_id`, `path`, `name`, `layer`, `kind`, `status`, `source`, `indexed_at` | Normalize source files, modules, docs, PLANs, FR/AC/AT IDs, DB tables, tests, findings, and diagrams into graph nodes. |
+| `dependency_edges` | `edge_id` | `from_node_id`, `to_node_id`, `edge_kind`, `strength`, `source`, `evidence_path`, `is_expected`, `is_actual`, `indexed_at` | Store import/reference/test/projection/implementation edges and distinguish design-declared expected edges from observed actual edges. |
+| `impact_rules` | `impact_rule_id` | `trigger_edge_kind`, `trigger_node_type`, `required_node_type`, `required_action`, `severity`, `gate`, `enabled` | Convert relation edges into required co-change, review, test, Reverse, or diagram-refresh actions. |
+| `impact_results` | `impact_result_id` | `change_set_id`, `root_node_id`, `impacted_node_id`, `required_action`, `status`, `reason`, `evidence_path`, `computed_at` | Persist one computed impact expansion for a diff/session/PLAN. |
+| `tool_runs` | `tool_run_id` | `tool_name`, `tool_version`, `command`, `input_scope`, `exit_code`, `started_at`, `completed_at`, `evidence_path` | Record optional adapter runs such as dependency-cruiser, Knip, Madge, Graphviz, Mermaid, or D2. |
+| `diagram_artifacts` | `diagram_id` | `graph_snapshot_id`, `format`, `path`, `renderer`, `scope`, `created_at`, `evidence_path` | Store generated Mermaid/DOT/D2/SVG/PNG diagram outputs as traceable artifacts. |
+| `graph_snapshots` | `graph_snapshot_id` | `scope`, `node_count`, `edge_count`, `hash`, `created_at`, `source_digest` | Make diagrams and impact results reproducible from a stable graph snapshot. |
+
+Required edge kinds:
+
+- `imports`: TS/JS import relation.
+- `references`: Markdown/YAML/JSON path or ID reference.
+- `declares_module`: design artifact declares a source module/building block.
+- `implements`: source module implements a PLAN/FR/artifact.
+- `tests`: test case/file exercises a source module, artifact, FR, or oracle.
+- `projects_to`: source doc/state/log projects into a DB table.
+- `visualizes`: diagram artifact visualizes a graph snapshot or scope.
+
+Required indexes:
+
+- `idx_graph_node_type_subject(node_type, subject_id)`.
+- `idx_graph_path(path)`.
+- `idx_dependency_from_kind(from_node_id, edge_kind)`.
+- `idx_dependency_to_kind(to_node_id, edge_kind)`.
+- `idx_impact_change_status(change_set_id, status)`.
+- `idx_tool_name_scope(tool_name, input_scope)`.
+- `idx_diagram_scope_format(scope, format)`.
+
+Invariants:
+
+- Every edge references existing `graph_nodes`.
+- Every non-local source change must either produce an `impact_results` row or a `findings` row explaining why impact expansion could not run.
+- Expected-vs-actual mismatches become `findings` rows; they are not silently repaired.
+- Diagram artifacts are derived from `graph_snapshots`; deleting diagrams does not delete graph state.
+- External tool output is normalized before gate use. Tool-specific JSON/DOT/Mermaid/D2 output is evidence, not the gate source of truth.
+
+Tool adapter profile:
+
+- Core parser: TypeScript/Bun AST and Markdown/YAML scanners. This is the default SSoT path.
+- Optional dependency rule/graph: `dependency-cruiser`.
+- Optional unused dependency/export/file detector: `knip`.
+- Optional circular graph helper: `madge`.
+- Optional renderers: Graphviz DOT for large SVG/PDF/PNG, Mermaid for GitHub-readable Markdown diagrams, D2 for presentation-quality architecture diagrams.
+
+Initial impact rules:
+
+- A changed `src/**` node requires related design artifact, test/test-design artifact, and reverse dependencies to be reviewed.
+- A changed design/test-design doc requires paired V-model artifact and trace edge review.
+- A changed DB projection table requires its `projects_to` source docs/state/logs and dependent quality/impact queries to be reviewed.
+- A changed relation graph snapshot requires diagram artifacts in the same scope to be refreshed or marked stale.
+
+### §9.6 MCP and external verification profile projection (A-125 / IMP-121..124)
+
+A-125 extends the relation graph with externally installed MCP servers, plugins, and test foundations. These are not authoring sources. They are environment-dependent verification profiles whose discovery, probe result, invocation, and normalized findings must be queryable.
+
+| table | primary key | required columns | purpose |
+|---|---|---|---|
+| `mcp_server_profiles` | `mcp_profile_id` | `name`, `package_ref`, `source_url`, `transport`, `command`, `args_digest`, `allowed_tools`, `read_only`, `requires_network`, `requires_docker`, `requires_auth`, `risk_tier`, `enabled`, `source`, `indexed_at` | Catalog allowed MCP profiles such as Playwright, GitHub read-only, filesystem-workspace, git-workspace, fetch, sqlite, and Docker MCP gateway profiles. |
+| `mcp_profile_triggers` | `trigger_id` | `mcp_profile_id`, `signal`, `workflow`, `layer`, `gate`, `reason`, `enabled` | Map workflow signals to profile recommendations without relying on agent memory. |
+| `mcp_server_runs` | `mcp_run_id` | `mcp_profile_id`, `session_id`, `plan_id`, `command`, `method`, `tool_name`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `normalized_status` | Persist MCP Inspector, profile probe, and allowed MCP tool invocations. |
+| `verification_profiles` | `verification_profile_id` | `name`, `profile_type`, `package_refs`, `requires_docker`, `requires_browser`, `requires_network`, `green_definition_id`, `trigger_signals`, `enabled` | Catalog external test foundations such as Vitest browser + Playwright, Testcontainers, and MSW. |
+| `verification_recommendations` | `verification_recommendation_id` | `change_set_id`, `plan_id`, `profile_id`, `profile_kind`, `reason`, `source_rule`, `accepted`, `created_at` | Store which MCP/test profiles relation-graph impact expansion recommended for a change. |
+| `external_tool_findings` | `external_finding_id` | `source_run_id`, `source_kind`, `finding_type`, `severity`, `subject_id`, `path`, `status`, `digest`, `created_at` | Normalize MCP, browser, container, and mock/test profile output into gate-queryable findings. |
+
+Required indexes:
+
+- `idx_mcp_profile_name(name)`.
+- `idx_mcp_triggers_signal(signal, workflow, gate)`.
+- `idx_mcp_runs_profile_plan(mcp_profile_id, plan_id, started_at)`.
+- `idx_verification_profile_type(profile_type, enabled)`.
+- `idx_verification_recommendations_change(change_set_id, profile_kind, accepted)`.
+- `idx_external_tool_findings_subject(subject_id, status, severity)`.
+
+Invariants:
+
+- Every enabled MCP profile has an allow-list and an explicit `risk_tier`.
+- Profiles with `requires_auth=true` cannot be enabled by repo-tracked config alone.
+- Workspace filesystem/git profiles must scope mounts or repository paths to the workspace root.
+- Browser and Docker profiles may be recommended without being available; absence becomes a `findings` row, not a silent pass.
+- `mcp_server_runs` and `verification_recommendations` join to `tool_runs` or `test_runs` when an external command actually ran.
+- Gate decisions use normalized profile/run/finding rows. Raw MCP output, screenshots, traces, and logs remain bounded evidence artifacts.
+
+Initial trigger rules:
+
+- `ui_flow`, `web_target`, `browser_regression` -> recommend `playwright-mcp` and `vitest-browser-playwright`.
+- `ci_failure`, `pr_review`, `backlog_sync` -> recommend `github-mcp-readonly`; write-capable GitHub profiles require human approval.
+- `db_integration`, `migration`, `service_contract` -> recommend `testcontainers-node` plus DB projection review.
+- `api_mock_gap`, `flaky_external_api` -> recommend `msw`.
+- `mcp_server_added`, `mcp_profile_changed` -> require MCP Inspector `tools/list` smoke before accept.
+
+### §9.7 Canonical document export projection (A-126 / IMP-126)
+
+A-126 adds generated spreadsheet / Excel / PPTX conversions for canonical UT-TDD documents. These outputs are not authoring sources. They are derived from concept/planning docs, requirements, detailed design, PLAN, ADR, test-design, trace rows, and normalized evidence links.
+
+| table | primary key | required columns | purpose |
+|---|---|---|---|
+| `document_export_profiles` | `document_export_profile_id` | `name`, `source_doc_family`, `format`, `renderer`, `package_ref`, `source_url`, `built_in`, `requires_package`, `requires_d2`, `enabled`, `risk_tier`, `trigger_signals` | Catalog CSV, Markdown summary, XLSX, PPTX, and D2-PPTX export profiles for canonical document families. |
+| `document_export_runs` | `document_export_run_id` | `profile_id`, `session_id`, `plan_id`, `source_doc_family`, `source_paths_digest`, `source_snapshot_hash`, `redaction_profile`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `normalized_status` | Record one document conversion attempt and the source snapshot used to build it. |
+| `document_export_datasets` | `document_export_dataset_id` | `export_run_id`, `dataset_kind`, `row_count`, `column_digest`, `source_paths`, `source_section_digest`, `created_at`, `hash` | Persist the pre-render document matrix/deck dataset summary so renderer output can be reproduced or audited. |
+| `document_export_artifacts` | `document_export_artifact_id` | `export_run_id`, `format`, `path`, `renderer`, `byte_size`, `hash`, `created_at`, `evidence_path`, `stale_status` | Store generated CSV/Markdown/XLSX/PPTX artifact metadata as traceable document conversion evidence. |
+
+Required indexes:
+
+- `idx_document_export_profile_family(source_doc_family, format, enabled)`.
+- `idx_document_export_run_family(source_doc_family, plan_id)`.
+- `idx_document_export_run_snapshot(source_snapshot_hash)`.
+- `idx_document_export_artifact_format(format, stale_status)`.
+
+Invariants:
+
+- Every export artifact references a `document_export_run`.
+- Every export run has source document paths, a source snapshot hash, and redaction profile.
+- Built-in CSV / Markdown table exports are available without external packages.
+- XLSX / PPTX / D2-PPTX profiles are disabled until renderer readiness is proven; missing renderer availability becomes a finding.
+- Export datasets preserve source section IDs, FR/AC/AT IDs, PLAN IDs, ADR IDs, trace IDs, status fields, and evidence links where present.
+- Export datasets are redacted before rendering. Raw provider transcripts, credentials, secrets, PII, raw MCP payloads, screenshots, and browser traces are not stored in export rows.
+- Generated files are evidence only. Canonical Markdown/docs remain source of truth.
+
+Initial export profiles:
+
+- `doc-csv-matrix`: requirements, design, PLAN, ADR, trace, and test-design matrix rows.
+- `doc-markdown-summary`: GitHub-readable conversion summary with source links.
+- `doc-xlsx-workbook`: multi-sheet workbook via ExcelJS or SheetJS optional renderer.
+- `doc-pptx-deck`: concept/requirements/design/ADR/PLAN/test-design deck via PptxGenJS optional renderer.
+- `doc-d2-pptx-diagram`: graph/architecture/workflow diagram deck output via D2 optional renderer.

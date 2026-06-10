@@ -1,0 +1,68 @@
+---
+plan_id: PLAN-REVERSE-35-canonical-document-export
+title: "PLAN-REVERSE-35 (reverse): canonical document export fullback"
+kind: reverse
+layer: cross
+drive: fullstack
+status: draft
+created: 2026-06-09
+updated: 2026-06-09
+owner: Codex TL / PO
+agent_slots:
+  - role: tl
+    slot_label: "TL - canonical document export fullback"
+generates:
+  - artifact_path: docs/plans/PLAN-REVERSE-35-canonical-document-export.md
+    artifact_type: markdown_doc
+dependencies:
+  parent: docs/plans/PLAN-L7-35-canonical-document-export.md
+  requires:
+    - docs/plans/PLAN-L6-34-canonical-document-export.md
+    - docs/plans/PLAN-L7-35-canonical-document-export.md
+---
+
+# PLAN-REVERSE-35 (reverse): canonical document export fullback
+
+## §0 Position
+
+Reverse pairing for the future PLAN-L7-35 implementation. This PLAN remains draft until source implementation exists.
+
+## §1 R0 Evidence
+
+Expected evidence after L7:
+
+- parser output for concept, requirements, detailed design, PLAN, ADR, and test-design fixtures;
+- CSV/Markdown built-in render evidence;
+- optional XLSX/PPTX/D2 renderer readiness findings;
+- source snapshot hash and generated artifact metadata;
+- CLI smoke output if an export command is added.
+
+## §2 R1 Observed Gap
+
+Expected gaps to classify:
+
+- whether requirements §6.8.11 needs additional document families;
+- whether physical-data §9.7 needs more projection columns;
+- whether ADR-002 A-126 needs to distinguish document import from document export;
+- whether workflow docs need stricter rules for stale generated Office files.
+
+## §3 R2 Alignment
+
+Forward implementation must align with:
+
+- requirements §6.8.11;
+- physical-data §9.7;
+- ADR-002 A-126;
+- A-126 research memo;
+- IMP-126.
+
+## §4 R3 / R4
+
+R3 and R4 remain pending until implementation evidence exists. No governance document may claim spreadsheet / Excel / PPTX document export complete before this Reverse closes.
+
+## §8 DoD
+
+- [ ] L7 implementation evidence exists.
+- [ ] New lower-layer discoveries are classified with `backprop_decision`.
+- [ ] Requirements / physical-data / ADR / backlog are updated if implementation changes their meaning.
+- [ ] Generated Office/spreadsheet files remain derived artifacts and do not replace canonical docs.

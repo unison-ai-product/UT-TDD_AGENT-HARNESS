@@ -255,6 +255,78 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-CHGIMPACT-003 | `analyzeChangeImpact` (docs-only) | docs/test のみで `src/**` 変更なし → `sourceFiles=[]` / `ok=true` |
 | U-CHGIMPACT-004 | `parseGitPorcelain` | modified / rename / untracked の porcelain path を正規化し、rename は新 path を採用 |
 
+### §1.16.1a U-RELGRAPH (cross-artifact relation graph = docs/code/DB/evidence impact)
+
+> Pair = `module-drift.md` Cross-Artifact Relation Graph Addendum (A-124/A-125 / PLAN-L6-31). These oracles authorize only the future L7 TDD Red entry in PLAN-L7-32; they do not authorize source implementation by themselves.
+
+| ID | Target | Oracle |
+|---|---|---|
+| U-RELGRAPH-001 | `collectRelationGraphProjection` source/doc/test nodes | requirements, PLAN, design, test-design, source, and test fixtures produce stable node IDs, typed edges, and no duplicate `(kind,id,path)` rows. |
+| U-RELGRAPH-002 | `collectRelationGraphProjection` DB nodes | physical-data DB projection fixtures produce table nodes and upstream requirement/ADR/PLAN edges; orphan table references become findings. |
+| U-RELGRAPH-003 | projection sanitization | MCP evidence, browser/tool fixtures, provider transcript-like fields, secret-like values, and screenshot/trace blobs are not copied into projection rows; only classification, counts, evidence path, and redacted summary remain. |
+| U-RELGRAPH-004 | `analyzeRelationImpact` source change | changed `src/**` node expands to sibling test, L6 design contract, L7 unit oracle, PLAN, and reverse/backprop guard actions. |
+| U-RELGRAPH-005 | `analyzeRelationImpact` docs/DB change | changed design/test-design/physical-data node expands to paired artifact, DB table nodes where applicable, PLAN DoD, and trace-freeze evidence actions without requiring source tests unless a behavioral contract edge exists. |
+| U-RELGRAPH-006 | missing projection coverage | changed node with no graph projection or stale edge returns `ok=false` and a finding; it must not silently fall back to the weaker `analyzeChangeImpact` result. |
+| U-RELGRAPH-007 | `exportRelationDiagram` Mermaid | same graph snapshot emits deterministic Mermaid with stable node order, stable edge labels, and no raw evidence payload. |
+| U-RELGRAPH-008 | optional diagram adapters | DOT/D2 requested without installed adapter returns an unavailable-adapter finding and does not install or invoke tools implicitly. |
+| U-RELGRAPH-009 | `collectVerificationEvidenceProjection` valid evidence | A-125 `verification-evidence-v1` records become `verification_profiles`, `verification_recommendations`, `mcp_server_runs`, and `external_tool_findings` projection rows with evidence paths. |
+| U-RELGRAPH-010 | `collectVerificationEvidenceProjection` invalid evidence | malformed evidence, missing schema, or external run without `allow_external` becomes a finding; raw external payload remains excluded. |
+
+### §1.16.1b U-TOOLADAPTER (A-124 graph/diagram adapter probes)
+
+> Pair = `module-drift.md` Tool Adapter Probe Addendum (A-124 / PLAN-L6-33). These oracles cover dependency-cruiser, Knip, Madge, Graphviz DOT, Mermaid, and D2 as optional adapters. They do not authorize package installation or adapter execution without explicit workflow evidence.
+
+| ID | Target | Oracle |
+|---|---|---|
+| U-TOOLADAPTER-001 | `catalogToolAdapters` complete candidates | catalog contains dependency-cruiser, Knip, Madge, Graphviz DOT, Mermaid, and D2 with trigger signals, package/executable refs, output formats, and risk/default state. |
+| U-TOOLADAPTER-002 | optional adapter policy | every external adapter is disabled/unavailable by default until package/executable/config readiness is proven. |
+| U-TOOLADAPTER-003 | `probeToolAdapter` package readiness | missing dependency-cruiser/Knip/Madge/Mermaid/D2 package declaration becomes a readiness finding, not an implicit install. |
+| U-TOOLADAPTER-004 | `probeToolAdapter` executable readiness | missing Graphviz `dot` or D2 executable becomes an unavailable-adapter finding and does not fail unrelated local checks. |
+| U-TOOLADAPTER-005 | workspace scope | adapter probe refuses home-directory or repo-external scan scope unless a future human-approved PLAN explicitly allows it. |
+| U-TOOLADAPTER-006 | `normalizeToolAdapterRun` tool run row | adapter command, version, input scope, exit code, and evidence path normalize into a `tool_runs` row. |
+| U-TOOLADAPTER-007 | dependency evidence normalization | dependency-cruiser/Madge cycle or forbidden-edge output normalizes into `dependency_edges` and findings without using raw output as gate truth. |
+| U-TOOLADAPTER-008 | dead-node evidence normalization | Knip unused file/dependency/export output normalizes into findings requiring review; auto-fix/delete remains out of scope. |
+| U-TOOLADAPTER-009 | `planDiagramRefresh` stale diagram | graph snapshot digest mismatch marks existing diagram artifact stale or requires refresh before review/handover use. |
+| U-TOOLADAPTER-010 | renderer availability | Mermaid export is default text output; DOT/D2 renderer requests without adapter readiness return findings instead of implicit installation. |
+
+### §1.16.1c U-MCPPROFILE (A-125 profile config / safety lint)
+
+> Pair = `function-spec.md` MCP Profile Config / Safety Addendum (A-125 / PLAN-L6-32). These oracles cover generated local MCP config, Docker MCP Toolkit profile inclusion, and external-profile safety lint before any L7 source change.
+
+| ID | Target | Oracle |
+|---|---|---|
+| U-MCPPROFILE-001 | `catalogVerificationProfiles` complete candidates | catalog contains MCP Inspector, Playwright MCP, GitHub read-only MCP, Docker MCP Toolkit, Vitest browser Playwright provider, Testcontainers, and MSW with trigger signals and source URLs. |
+| U-MCPPROFILE-002 | disabled-by-default policy | every external or MCP profile has `defaultEnabled=false`; built-in Bun/doctor profiles remain enabled. |
+| U-MCPPROFILE-003 | Docker MCP Toolkit metadata | Docker MCP Toolkit profile is marked optional, requires Docker, has profile-isolation value, and does not become a test runner unless Docker/toolkit readiness is proven. |
+| U-MCPPROFILE-004 | `renderGeneratedMcpConfig` local config | generated config writes only suggested local config content/path and never writes `.vscode/mcp.json` or committed secrets by default. |
+| U-MCPPROFILE-005 | workspace mount restriction | filesystem/git profile config using home-directory or global mounts returns a `global-mount` finding. |
+| U-MCPPROFILE-006 | credential non-persistence | inline token-like values in generated config are redacted or rejected; env var names are allowed. |
+| U-MCPPROFILE-007 | `analyzeVerificationProfileSafety` source trust | registry/catalog presence alone cannot set `trusted=true`; official source URL and package identity must match. |
+| U-MCPPROFILE-008 | GitHub MCP read-only guard | GitHub profile with write tools or broad toolsets without `requires_human_approval` returns a safety finding. |
+| U-MCPPROFILE-009 | package integrity readiness | declared package/install hint mismatch or absent package declaration becomes a readiness finding, not an implicit install. |
+| U-MCPPROFILE-010 | Docker controls | Docker MCP Toolkit profile without Docker availability or documented profile/resource controls is not ready. |
+| U-MCPPROFILE-011 | `planExternalProfileActivation` trigger routing | UI/GitHub/DB/API/MCP-profile signals produce required probe/smoke/human-approval steps before run. |
+| U-MCPPROFILE-012 | no implicit activation | profile recommendation does not install packages, enable servers, or run external tools without explicit `allow_external` / approved workflow evidence. |
+
+### §1.16.1d U-DOCEXPORT (A-126 canonical document export)
+
+> Pair = `function-spec.md` Canonical Document Export Addendum (A-126 / PLAN-L6-34). These oracles cover conversion of concept, requirements, detailed design, PLAN, ADR, and test-design documents into CSV/Markdown/XLSX/PPTX derived artifacts. They do not authorize package installation or source implementation without PLAN-L7-35 TDD Red evidence.
+
+| ID | Target | Oracle |
+|---|---|---|
+| U-DOCEXPORT-001 | `parseCanonicalDocumentStructure` supported families | parser accepts concept, requirements, design, plan, adr, and test-design document families with repo-relative source paths. |
+| U-DOCEXPORT-002 | source anchors preserved | headings, section IDs, FR/AC/AT IDs, PLAN IDs, ADR IDs, status fields, and evidence links remain present in the projection. |
+| U-DOCEXPORT-003 | malformed/unsupported docs | unsupported family or missing source path returns a finding and does not fabricate export rows. |
+| U-DOCEXPORT-004 | `buildDocumentExportDataset` deterministic rows | same document projection and export profile produce stable row/sheet/slide-outline ordering. |
+| U-DOCEXPORT-005 | redaction before render | secret-like, credential-like, PII-like, raw provider, and raw MCP payload fields are redacted or refused before rendering. |
+| U-DOCEXPORT-006 | large document splitting | large requirements/design docs split by document family or section instead of silent truncation. |
+| U-DOCEXPORT-007 | built-in CSV/Markdown render | CSV and Markdown summary render without external package readiness. |
+| U-DOCEXPORT-008 | optional XLSX readiness | XLSX request without ExcelJS/SheetJS readiness returns a renderer-unavailable finding, not an implicit install. |
+| U-DOCEXPORT-009 | optional PPTX readiness | PPTX request without PptxGenJS/D2 readiness returns a renderer-unavailable finding, not an implicit install. |
+| U-DOCEXPORT-010 | `recordDocumentExportArtifact` projection rows | successful render creates `document_export_runs`, `document_export_datasets`, and `document_export_artifacts` rows with source snapshot hash. |
+| U-DOCEXPORT-011 | generated artifact boundary | generated spreadsheet/deck edits do not mutate canonical docs or gate truth. |
+| U-DOCEXPORT-012 | stale source snapshot | source digest mismatch marks an existing export artifact stale before review/handover use. |
+
 ### U-CODE Addendum (coding-rules lint = requirements-level coding rule SSoT)
 
 > Pair = `module-drift.md` Coding Rules Addendum. Requirements-level TS core coding rules are mechanically enforced by `src/lint/coding-rules.ts` and `doctor`.
