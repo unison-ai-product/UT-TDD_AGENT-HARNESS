@@ -203,20 +203,40 @@ export interface VerificationGroup {
   id: string;
   layers: string[];
   label: string;
+  /** 検証サイクルゲート名 = band 単位の機械発火ゲート (band 終端層 / band 性質で命名、PLAN-REVERSE-36)。
+   *  旧称 GATE-A (L0-L6) / GATE-B (L0-L7) を置換。Forward per-layer gate (G0.5〜G7) とは別レイヤー。 */
+  gate: string;
 }
 
-/** 検証発火単位 = 設計層群 (PO 例示: L0-L3 / L4-L6 / L0-L6)。L0=価値検証で design doc なし、L7+ は実装/検証実施。 */
+/** 検証発火単位 = 設計層群 (PO 例示: L0-L3 / L4-L6 / L0-L6)。L0=価値検証で design doc なし、L7+ は実装/検証実施。
+ *  `gate` = 検証サイクルゲート名の単一正本 (roadmap §4 / concept §10 はこれを参照、PLAN-REVERSE-36)。 */
 export const VERIFICATION_GROUPS: VerificationGroup[] = [
   // id は層群レンジを表示用に示す。layers は実在する design sub-doc の層のみ列挙する
   // (L0 = 価値検証で design doc を持たないため、"L0-L3"/"L0-L6" でも layers に L0 は無い、§7.1)。
-  { id: "L0-L3", layers: ["L1", "L2", "L3"], label: "上流 (要求〜要件)" },
-  { id: "L4-L6", layers: ["L4", "L5", "L6"], label: "設計 (基本〜機能)" },
-  { id: "L0-L6", layers: ["L1", "L2", "L3", "L4", "L5", "L6"], label: "全設計層" },
+  {
+    id: "L0-L3",
+    layers: ["L1", "L2", "L3"],
+    label: "上流 (要求〜要件)",
+    gate: "L3 検証サイクルゲート",
+  },
+  {
+    id: "L4-L6",
+    layers: ["L4", "L5", "L6"],
+    label: "設計 (基本〜機能)",
+    gate: "L6 検証サイクルゲート",
+  },
+  {
+    id: "L0-L6",
+    layers: ["L1", "L2", "L3", "L4", "L5", "L6"],
+    label: "全設計層",
+    gate: "設計検証サイクルゲート",
+  },
 ];
 
 export interface GroupReadiness {
   id: string;
   label: string;
+  gate: string;
   total: number;
   confirmed: number;
   draft: number;
@@ -256,6 +276,7 @@ export function analyzeVerificationGroups(
     return {
       id: g.id,
       label: g.label,
+      gate: g.gate,
       total,
       confirmed,
       draft,
@@ -271,15 +292,17 @@ export function analyzeVerificationGroups(
 /** doctor / CLI 向けの検証発火 surface (note レベル、ok は落とさない)。 */
 export function verificationGroupMessages(groups: GroupReadiness[]): string[] {
   return groups.map((g) => {
-    if (g.total === 0) return `verification — ${g.id} (${g.label}): design doc なし`;
+    // 検証サイクルゲート名を主見出しにし、range id + label を併記 (PLAN-REVERSE-36)。
+    const head = `${g.gate} [${g.id}] (${g.label})`;
+    if (g.total === 0) return `verification — ${head}: design doc なし`;
     if (g.frozen) {
       const park = g.placeholder > 0 ? `, ${g.placeholder} park` : "";
-      return `verification — ${g.id} (${g.label}): ✅ freeze 完了 (${g.confirmed}/${g.total} confirmed${park}, 孤児0) → 検証サイクル発火可`;
+      return `verification — ${head}: ✅ freeze 完了 (${g.confirmed}/${g.total} confirmed${park}, 孤児0) → 検証サイクル発火可`;
     }
     const parts = [`${g.confirmed}/${g.total} confirmed`];
     if (g.draft > 0) parts.push(`draft ${g.draft}`);
     if (g.placeholder > 0) parts.push(`placeholder ${g.placeholder}`);
     if (g.hasOrphan) parts.push("pair 孤児あり");
-    return `verification — ${g.id} (${g.label}): Forward 進行中 (${parts.join(", ")})`;
+    return `verification — ${head}: Forward 進行中 (${parts.join(", ")})`;
   });
 }

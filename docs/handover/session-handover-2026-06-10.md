@@ -428,19 +428,19 @@
 
 ## §3 Next Action
 
-1. **Forward L7 実装へ**: GATE-A (L0-L6) は PO accept 待ち。accept するなら gate-design 台帳に記録 → Phase 3 (L7)。待機列の先頭 = 外部ツーリング (PLAN-L7-32 relation graph / L7-33 MCP profile / L7-34 setup graph-tools へ改訂済 / L7-35 doc export) の TDD Red entry。
+1. **Forward L7 実装へ**: 設計検証サイクルゲート (旧 GATE-A、L0-L6) は **per-layer Forward gate G0.5〜G6 が gate-design §2 で PO サインオフ済**で着地済 (G2 のみ DEFER)。横断 band は機械発火 (doctor) であって別建ての手動 accept ceremony は持たない (PO 2026-06-10 是正「フォワードのワークフロー上じゃない？」、PLAN-REVERSE-36 で命名正規化済)。よって定常は Forward で Phase 3 (L7) へ降下。待機列の先頭 = 外部ツーリング (PLAN-L7-32 relation graph / L7-33 MCP profile / L7-34 setup graph-tools へ改訂済 / L7-35 doc export) の TDD Red entry。
 2. backend-first 継続: core を固めてから Phase B (中央 UI + 同期) を起票。方向は ADR-005 Follow-ups + [[project_harness_central_ui_backend_first]]。
 
 ## §4 carry (未了・先送り)
 
-- GATE-A = PO accept 待ち (機械検証・レビューは全通過、受入サインオフのみ未)。
+- 設計検証サイクルゲート (旧 GATE-A) = per-layer Forward gate (G0.5〜G6) で PO サインオフ済・横断 band は機械発火 (別 accept ceremony なし、PLAN-REVERSE-36 で reframe 済)。実装検証サイクルゲート (旧 GATE-B、L0-L7) の機械発火は L7 freeze 後に VERIFICATION_GROUPS 追加 (carry)。
 - IMP-128 の oracle⇔実テスト突合 lint (IMP-083 系)、IMP-127 の tracked⊆canonical 機械突合 lint (asset-drift 拡張) は降下先候補のまま。
 - 既存 carry: IMP-087/088 (A-108 orphan 三つ組)、doctor scaffold stub (dependency-drift / regression expansion)。
 - Phase B 中央 UI/同期は direction-only (未 freeze・未実装)。
 
 ## §5 未了 PO 判断
 
-- GATE-A の accept (L0-L6 全設計層を正式受入するか)。
+- (解決済) 設計検証サイクルゲート (旧 GATE-A) の「正式受入」は別建てゲートでなく per-layer Forward gate G0.5〜G6 の PO サインオフが着地点 = 済 (PLAN-REVERSE-36、PO 2026-06-10 是正)。
 - Phase B 着手タイミング (core 安定をどこで「フロント要件を出せる」と判断するか)。
 - 外部ツーリング (relation graph / doc export / MCP profile) の実装優先順位。
 

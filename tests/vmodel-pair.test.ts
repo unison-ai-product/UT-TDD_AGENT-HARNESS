@@ -187,6 +187,7 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
       {
         id: "L0-L3",
         label: "上流",
+        gate: "L3 検証サイクルゲート",
         total: 5,
         confirmed: 4,
         draft: 0,
@@ -198,10 +199,13 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
     expect(frozen[0]).toContain("freeze 完了");
     expect(frozen[0]).toContain("検証サイクル発火可");
     expect(frozen[0]).toContain("park");
+    // 検証サイクルゲート名が主見出しに surface される (PLAN-REVERSE-36)。
+    expect(frozen[0]).toContain("L3 検証サイクルゲート");
     const progress = verificationGroupMessages([
       {
         id: "L4-L6",
         label: "設計",
+        gate: "L6 検証サイクルゲート",
         total: 18,
         confirmed: 0,
         draft: 18,
@@ -219,5 +223,10 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
     const groups = analyzeVerificationGroups(docs, orphans);
     expect(groups.find((g) => g.id === "L0-L3")?.frozen).toBe(true);
     expect(groups.find((g) => g.id === "L4-L6")?.frozen).toBe(true);
+    // 全 3 検証サイクルゲート名が実 repo の surface に出る (PLAN-REVERSE-36、命名の壊れを CI で検知)。
+    const surface = verificationGroupMessages(groups).join("\n");
+    expect(surface).toContain("L3 検証サイクルゲート");
+    expect(surface).toContain("L6 検証サイクルゲート");
+    expect(surface).toContain("設計検証サイクルゲート");
   });
 });
