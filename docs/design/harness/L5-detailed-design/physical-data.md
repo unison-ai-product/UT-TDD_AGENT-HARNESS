@@ -298,7 +298,7 @@ The DB must make cross-cutting impact analysis queryable. The authoring sources 
 
 | table | primary key | required columns | purpose |
 |---|---|---|---|
-| `graph_nodes` | `node_id` | `node_type`, `subject_id`, `path`, `name`, `layer`, `kind`, `status`, `source`, `indexed_at` | Normalize source files, modules, docs, PLANs, FR/AC/AT IDs, DB tables, tests, findings, and diagrams into graph nodes. |
+| `graph_nodes` | `node_id` | `node_type`, `subject_id`, `section_id` (nullable), `path`, `name`, `layer`, `kind`, `status`, `source`, `indexed_at` | Normalize source files, modules, docs, PLANs, FR/AC/AT IDs, DB tables, tests, findings, and diagrams into graph nodes. `section_id` keeps doc-internal section granularity so impact expansion does not collapse section-level changes into whole-doc nodes (A-128 F-3 / IMP-129①). |
 | `dependency_edges` | `edge_id` | `from_node_id`, `to_node_id`, `edge_kind`, `strength`, `source`, `evidence_path`, `is_expected`, `is_actual`, `indexed_at` | Store import/reference/test/projection/implementation edges and distinguish design-declared expected edges from observed actual edges. |
 | `impact_rules` | `impact_rule_id` | `trigger_edge_kind`, `trigger_node_type`, `required_node_type`, `required_action`, `severity`, `gate`, `enabled` | Convert relation edges into required co-change, review, test, Reverse, or diagram-refresh actions. |
 | `impact_results` | `impact_result_id` | `change_set_id`, `root_node_id`, `impacted_node_id`, `required_action`, `status`, `reason`, `evidence_path`, `computed_at` | Persist one computed impact expansion for a diff/session/PLAN. |
@@ -377,7 +377,7 @@ Invariants:
 - Profiles with `requires_auth=true` cannot be enabled by repo-tracked config alone.
 - Workspace filesystem/git profiles must scope mounts or repository paths to the workspace root.
 - Browser and Docker profiles may be recommended without being available; absence becomes a `findings` row, not a silent pass.
-- `mcp_server_runs` and `verification_recommendations` join to `tool_runs` or `test_runs` when an external command actually ran.
+- `mcp_server_runs` and `verification_recommendations` join to `tool_runs` (§9.5) or `test_runs` (§9.4) when an external command actually ran (cross-section reference made explicit, A-128 F-3 / IMP-129⑤).
 - Gate decisions use normalized profile/run/finding rows. Raw MCP output, screenshots, traces, and logs remain bounded evidence artifacts.
 
 Initial trigger rules:
@@ -398,6 +398,7 @@ A-126 adds generated spreadsheet / Excel / PPTX conversions for canonical UT-TDD
 | `document_export_runs` | `document_export_run_id` | `profile_id`, `session_id`, `plan_id`, `source_doc_family`, `source_paths_digest`, `source_snapshot_hash`, `redaction_profile`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `normalized_status` | Record one document conversion attempt and the source snapshot used to build it. |
 | `document_export_datasets` | `document_export_dataset_id` | `export_run_id`, `dataset_kind`, `row_count`, `column_digest`, `source_paths`, `source_section_digest`, `created_at`, `hash` | Persist the pre-render document matrix/deck dataset summary so renderer output can be reproduced or audited. |
 | `document_export_artifacts` | `document_export_artifact_id` | `export_run_id`, `format`, `path`, `renderer`, `byte_size`, `hash`, `created_at`, `evidence_path`, `stale_status` | Store generated CSV/Markdown/XLSX/PPTX artifact metadata as traceable document conversion evidence. |
+| `document_export_triggers` | `trigger_id` | `document_export_profile_id`, `signal`, `workflow`, `layer`, `gate`, `reason`, `enabled` | Map export trigger signals (requirements §6.8.11, including `document_export_profile_changed`) to export profile recommendations, symmetric to `mcp_profile_triggers` (A-128 F-3 / IMP-129④). |
 
 Required indexes:
 
@@ -405,6 +406,7 @@ Required indexes:
 - `idx_document_export_run_family(source_doc_family, plan_id)`.
 - `idx_document_export_run_snapshot(source_snapshot_hash)`.
 - `idx_document_export_artifact_format(format, stale_status)`.
+- `idx_document_export_triggers_signal(signal, workflow, gate)`.
 
 Invariants:
 

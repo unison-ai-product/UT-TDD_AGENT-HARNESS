@@ -408,6 +408,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const moduleDrift = checkModuleDrift(deps.repoRoot);
   const assetDrift = checkAssetDrift(deps.repoRoot);
   const changeImpact = checkChangeImpact(deps.repoRoot);
+  // verification-profile は warn-first (推奨 surface のみ。外部 profile 実行が PLAN-L7-33 で配線されるまで
+  // ok 連動させない — 推奨の見落としは review で拾う段階、A-128 F-5 / IMP-130(e))。
   const verificationProfile = checkVerificationProfile(deps.repoRoot);
   const codingRules = checkCodingRules(deps.repoRoot);
   const dddTddRules = checkDddTddRules(deps.repoRoot);
@@ -418,6 +420,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const planSchedule = checkPlanSchedule(deps.repoRoot);
   const l6FrCoverage = checkL6FrCoverage(deps.repoRoot);
   const readability = checkReadability(deps.repoRoot);
+  // l6-completion は warn-first (G6 PASS 後の運用観察期間。誤 fail で post-G6 作業を止めないため
+  // ok 連動は安定確認後に切替 — A-128 F-5 / IMP-130(e))。
   const l6Completion = checkL6Completion(deps.repoRoot);
   return {
     ok:

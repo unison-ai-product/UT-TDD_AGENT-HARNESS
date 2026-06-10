@@ -471,6 +471,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - **L7 entry (TDD Red)**: 全 U-* を vitest 単体テストに先行変換 (FR-02、Red 先行、未実装理由のみで fail 可)
 - **L7 実装**: function-spec WBS (§5) の Sprint L7.1〜L7.7 を Red→Green→3点R で実装。DbC docstring (`@edge-*`) を実関数へ転記
 - **G7 trace freeze**: 4 artifact 双方向 12 edge 凍結時に本書 U ↔ L6 設計の trace 確定
+- **外部ツーリング 4 ファミリーの明示 carry (A-128 F-2 / IMP-128、2026-06-10)**: §1.16.1a-1d の **U-RELGRAPH-001..010 / U-TOOLADAPTER-001..010 / U-MCPPROFILE-001..012 / U-DOCEXPORT-001..012 (計 44 oracle) は現時点で対応する実テスト未着手の正規 defer** であり、それぞれ **PLAN-L7-32 (relation graph) / PLAN-L7-34 (tool adapter) / PLAN-L7-33 (MCP profile) / PLAN-L7-35 (doc export) の TDD Red entry 待ち** (A-127 implementation-pending boundary と同一)。例外 = U-MCPPROFILE の disabled-by-default / refused / probe / evidence 経路は `tests/verification-profile.test.ts` が先行被覆済。本 carry 宣言により「明示 defer なき未実装」(under-design) には該当しない (concept §3.1.3.1 正規 defer)。
 
 ### 2026-06-08 Residual Review Closure Test Addendum
 

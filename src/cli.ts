@@ -723,6 +723,10 @@ function runtimeCommand(provider: AdapterProvider): Command {
           stdio: "inherit",
           env: adapterExecutionEnv(provider),
         });
+        if (child.error) {
+          // spawn 自体の失敗 (ENOENT 等) は status=null のまま沈黙するため理由を surface する (A-128 F-5 / IMP-130(d))。
+          process.stderr.write(`${provider}: failed to launch (${String(child.error)})\n`);
+        }
         dispatch(
           {
             hook_event_name: "PostToolUse",

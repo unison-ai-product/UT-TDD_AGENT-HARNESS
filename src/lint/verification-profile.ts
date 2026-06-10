@@ -91,8 +91,11 @@ export interface VerificationProbeDeps {
   writeText: (path: string, content: string) => void;
 }
 
+/** evidence schema の単一正本 (テスト・将来の DB collector はこの定数を参照する、A-128 F-6)。 */
+export const VERIFICATION_EVIDENCE_SCHEMA_VERSION = "verification-evidence-v1";
+
 export interface VerificationEvidenceRecord {
-  schema_version: "verification-evidence-v1";
+  schema_version: typeof VERIFICATION_EVIDENCE_SCHEMA_VERSION;
   kind: "profile-list" | "profile-probe" | "verify-recommend" | "verify-run" | "mcp-inspect";
   id: string;
   recorded_at: string;
@@ -242,10 +245,14 @@ const PROFILES: Record<VerificationProfileId, VerificationProfile> = {
   },
 };
 
-const PROFILE_RUNNERS: Partial<Record<VerificationProfileId, [string, string[]]>> = {
-  "bun-unit": ["bun", ["run", "test"]],
-  doctor: ["bun", ["run", "src/cli.ts", "doctor"]],
-  "vitest-browser-playwright": ["bun", ["run", "test", "--", "--browser"]],
+// runner は固定 allowlist (ユーザー入力をコマンドへ連結しない)。readonly で実行時の動的追加を型で禁止し、
+// 将来エントリを足すときは A-125 safety boundary (allow-list review) を経由する (A-128 F-4 / IMP-130(c))。
+const PROFILE_RUNNERS: Partial<
+  Record<VerificationProfileId, readonly [string, readonly string[]]>
+> = {
+  "bun-unit": ["bun", ["run", "test"]] as const,
+  doctor: ["bun", ["run", "src/cli.ts", "doctor"]] as const,
+  "vitest-browser-playwright": ["bun", ["run", "test", "--", "--browser"]] as const,
 };
 
 const SIGNAL_TO_PROFILE: Record<VerificationSignal, VerificationProfileId[]> = {
@@ -264,7 +271,9 @@ export function listVerificationProfiles(): VerificationProfile[] {
 }
 
 export function getVerificationProfile(id: string): VerificationProfile | null {
-  return PROFILES[id as VerificationProfileId] ?? null;
+  // `as` キャスト素通しでなく実在キーで境界チェック (将来の動的 id 経路への防御、A-128 F-4 / IMP-130(c))。
+  if (!Object.hasOwn(PROFILES, id)) return null;
+  return PROFILES[id as VerificationProfileId];
 }
 
 function packageNames(repoRoot: string, readText: (path: string) => string | null): Set<string> {
@@ -286,17 +295,40 @@ function packageNames(repoRoot: string, readText: (path: string) => string | nul
   }
 }
 
+// probe (`--version` 等) の即応確認上限。外部コマンド hang でプロセスが永久ブロックしないため (A-128 F-4 / IMP-130(b))。
+const PROBE_TIMEOUT_MS = 10_000;
+// runner は全回帰 (vitest/doctor) を含むため CI 相当の 10 分を上限にする (harness-check の感覚と整合)。
+const RUN_TIMEOUT_MS = 600_000;
+
+// 全 profile の authEnv 名の和集合。runner 実行時は既定で子プロセスへ渡さない。
+// 現行 runner (bun-unit/doctor/vitest-browser) はいずれも requiresAuth=false で auth env 不要。
+// requiresAuth profile の runner を配線する際に profile 単位の pass-through を追加する (A-128 F-4 / IMP-130(a))。
+const AUTH_ENV_NAMES = new Set(Object.values(PROFILES).flatMap((p) => p.authEnv));
+
+function envWithoutAuthSecrets(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = {};
+  for (const [name, value] of Object.entries(env)) {
+    if (!AUTH_ENV_NAMES.has(name)) out[name] = value;
+  }
+  return out;
+}
+
 export function nodeVerificationProbeDeps(repoRoot: string = process.cwd()): VerificationProbeDeps {
   return {
     repoRoot,
     env: process.env,
     now: () => new Date().toISOString(),
     commandOk: (command, args) => {
-      const r = spawnSync(command, args, { stdio: "ignore" });
+      const r = spawnSync(command, args, { stdio: "ignore", timeout: PROBE_TIMEOUT_MS });
       return r.status === 0;
     },
     runCommand: (command, args) => {
-      const r = spawnSync(command, args, { stdio: "inherit", cwd: repoRoot, env: process.env });
+      const r = spawnSync(command, args, {
+        stdio: "inherit",
+        cwd: repoRoot,
+        env: envWithoutAuthSecrets(process.env),
+        timeout: RUN_TIMEOUT_MS,
+      });
       return { status: r.status };
     },
     readText: (path) => (existsSync(path) ? readFileSync(path, "utf8") : null),
@@ -316,7 +348,7 @@ export function saveVerificationEvidence(
   deps: VerificationProbeDeps = nodeVerificationProbeDeps(),
 ): VerificationEvidenceWrite {
   const record: VerificationEvidenceRecord = {
-    schema_version: "verification-evidence-v1",
+    schema_version: VERIFICATION_EVIDENCE_SCHEMA_VERSION,
     kind: input.kind,
     id: input.id,
     recorded_at: deps.now(),
@@ -421,7 +453,7 @@ export function runVerificationProfile(
   if (opts.dryRun) {
     return { profile, status: "dry-run", exitCode: null, command: fullCommand, messages: [] };
   }
-  const r = deps.runCommand(command, args);
+  const r = deps.runCommand(command, [...args]);
   return {
     profile,
     status: r.status === 0 ? "passed" : "failed",

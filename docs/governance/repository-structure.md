@@ -59,15 +59,19 @@ UT-TDD-agent-harness/
 │   ├── agents/                   #   subagent 定義 (code-reviewer 等)
 │   └── hooks/                    #   hook script
 │
-├── .ut-tdd/                      # ★ UT-TDD runtime state (大半 gitignored)
+├── .ut-tdd/                      # ★ UT-TDD runtime state + 監査証跡 (state 系 gitignored / 証跡系 tracked、§5)
 │   ├── state/                    #   runtime.json 等 (generated、.gitkeep のみ tracked)
-│   ├── audit/                    #   failure_log / escalation (gitignored、CI artifact が team 正本)
+│   ├── audit/                    #   A-NNN-*.md 監査記録 = tracked 証跡 (PO 決定 2026-06-10、A-128)。*.jsonl / escalation_state.json は gitignored
+│   ├── evidence/                 #   verification-profiles 等の正規化 evidence JSON (tracked、secret/PII 禁止)
 │   ├── cache/                    #   (.gitkeep のみ tracked)
-│   ├── handover/                 #   CURRENT.* (gitignored)
+│   ├── handover/                 #   CURRENT.* / *.bak は gitignored。provider/ (provider 間 handover 記録) は tracked
 │   ├── teams/                    #   teams/*.yaml (local* は gitignored)
 │   └── adapters/                 #   optional adapter 設定 (local* は gitignored)
 │
-├── .github/                      # [予定] workflows/harness-check.yml (Required Status Check)
+├── .github/                      # workflows/harness-check.yml (Required Status Check)
+│
+├── helix-process/                # HELIX 工程定義の curated export (参照資料、tracked。正本は docs/process/ — 混同しない)
+├── ai-agent-harness-directory-reference.md  # ディレクトリ横断参照資料 (tracked、参照用で正本でない)
 │
 ├── vendor/
 │   └── helix-source/             # ★ HELIX 参照 snapshot (read-only、直接編集禁止)
@@ -91,7 +95,10 @@ UT-TDD-agent-harness/
 | 決定記録 | `docs/adr/` | `ADR-NNN-slug.md` |
 | 実装計画 | `docs/plans/` | `PLAN-NNN-slug.md`。superseded は `status: archived` |
 | 移行資料 | `docs/migration/` | HELIX 能力参照。code-port 計画は ADR-001 で superseded |
-| runtime state | `.ut-tdd/` | generated。**docs 目的で追跡しない** (CLAUDE.md 禁止事項) |
+| runtime state | `.ut-tdd/` (state/cache/logs/handover CURRENT/tmp/local*) | generated。**docs 目的で追跡しない** (CLAUDE.md 禁止事項) |
+| 監査証跡 | `.ut-tdd/audit/*.md` / `.ut-tdd/evidence/` / `.ut-tdd/handover/provider/` | **tracked** (PO 決定 2026-06-10、A-128 F-1)。audit = A-NNN 監査記録、evidence = 正規化 JSON (secret/PII/raw transcript 禁止)。runtime state と区別する |
+| HELIX 工程 export | `helix-process/` | curated 参照資料 (tracked)。**工程定義の正本は `docs/process/`** — helix-process/ を正本として参照しない |
+| 横断参照資料 | `ai-agent-harness-directory-reference.md` | tracked。参照用であり配置正本は本書 |
 | 参照 snapshot | `vendor/helix-source/` | **read-only**。概念のみ参照、コードは port しない・直接編集しない |
 
 ## 3. V-model 4 artifact の配置 (中核ルール、concept v3.1 §2.3)
@@ -114,8 +121,8 @@ UT-TDD-agent-harness/
 
 ## 5. tracked / gitignored
 
-- **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/audit/cache/handover/CURRENT、local*) / `.helix/` / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
-- **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `.gitattributes` `vendor/helix-source/`
+- **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / `.helix/` / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
+- **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `.gitattributes` `vendor/helix-source/` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `helix-process/` `ai-agent-harness-directory-reference.md` (PO 決定 2026-06-10、A-128 F-1 / IMP-127)
 
 ## 6. 境界
 
@@ -129,7 +136,8 @@ UT-TDD-agent-harness/
 - `src/` core に bash / Python を持ち込まない（ADR-001。OS 差は `scripts/` の薄い wrapper に閉じる）。
 - enum / 契約を `src/schema/` 以外で再定義しない。
 - `vendor/helix-source/` を直接編集しない（実行ロジックは UT-TDD 所有パスへ概念から TS/Bun 再実装し、markdown/docs/templates は curate して正本化する）。
-- `.ut-tdd/` runtime state を docs 目的で Git 追跡しない。
+- `.ut-tdd/` **runtime state** (state/cache/logs/tmp/handover CURRENT/local*) を docs 目的で Git 追跡しない。**監査証跡** (`audit/*.md` / `evidence/` / `handover/provider/`) は例外として tracked (§5、A-128 F-1)。
+- `helix-process/` を工程定義の正本として参照しない (正本 = `docs/process/`。helix-process/ は curated 参照資料)。
 - 日本語ファイル名を使わない。
 - **`[予定]` ディレクトリの中身を後続 PLAN 不在のまま実装しない**: ディレクトリ実体 (`.gitkeep`) は構成確定として一括作成済だが、中身 (機能コード・doc・workflow。特に `src/web/`) は対応 PLAN が確定してから起こす。`.gitkeep` があることを実装許可と誤読しない。
 
