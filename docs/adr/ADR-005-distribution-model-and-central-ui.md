@@ -68,3 +68,9 @@
 - **repository-structure.md / ディレクトリ構成要件**: 3 層 (① engine repo[GitHub-pull] / ② project 投影[adapter via setup] / ③ 中央 UI service) を反映。工程/駆動モデル定義の home (`docs/process/` 候補) と機能 home (`src/<domain>/`) を要件化。
 - **HELIX cutover**: 本配布モデルは HELIX 個人 global の「作って差し替え」対象。cutover-strategy に沿って `.claude/CLAUDE.md` の helix CLI 導線を `ut-tdd` GitHub-pull 導線へ置換。
 - **IMP-031 更新**: `ADR-003-runtime-adapter-boundary-subscription-cli.md` Follow-ups §IMP-031 (L52) に「Web サーバ配置方針は ADR-005 D2 を参照」を追記。
+- **Phase B server sync 方向 (PO 2026-06-10、direction-only / 未 freeze)**: 中央 UI の同期方式を以下の方向で具体化 (technical-requirements §2 carry note の「PGlite + ElectricSQL 候補」を refine。実装は Phase B PLAN で起票)。
+  - **DB = SQLite** (`bun:sqlite` 継続 = physical-data §9 の core DB 選択と同一、新規依存なし。WAL モードで同期中の読取非ブロック。ElectricSQL/Postgres は不要として candidate から外す方向)。
+  - **同期 = ハイブリッド**: ① GitHub webhook (push) で鮮度同期 (project が `.ut-tdd` state を commit → webhook → VPS が pull + projection rebuild) + ② 定期 reconcile (cron full rebuild) を取りこぼし安全網に (柱3 整合保証)。純イベントのみは drift リスクで不可。
+  - **host = XServer VPS** (Bun HTTP server + SQLite)。CI (GitHub Actions, public 無料) と別の自己管理 ops (TLS/backup/監視)。
+  - **正本境界**: 各 project の git (`.ut-tdd` state) が正本。中央 SQLite は**非正本 projection** (再構築可能、生成物を正本化しない原則)。
+  - **auth = escalation (人間確定必須)**: ① webhook 受信は GitHub HMAC 署名検証 ② ダッシュボード閲覧アクセス制御。projection に secret/PII/raw transcript を載せない (physical-data 既定を outward-facing VPS で厳守)。判断根拠 = [[project_harness_central_ui_backend_first]]。
