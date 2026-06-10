@@ -16,6 +16,19 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-40-orphan-governance.md
     artifact_type: markdown_doc
+  - artifact_path: src/lint/impl-plan-trace.ts
+    artifact_type: source
+  - artifact_path: tests/impl-plan-trace.test.ts
+    artifact_type: test
+  # IMP-087 orphan 4 件の back-fill (本 PLAN が trace owner、baseline でなく generates 帰属で解消)
+  - artifact_path: src/gate/review-tier.ts
+    artifact_type: source
+  - artifact_path: src/lint/rule-drift.ts
+    artifact_type: source
+  - artifact_path: src/team/run.ts
+    artifact_type: source
+  - artifact_path: src/runtime/provider-handover.ts
+    artifact_type: source
 dependencies:
   parent: null
   requires: []

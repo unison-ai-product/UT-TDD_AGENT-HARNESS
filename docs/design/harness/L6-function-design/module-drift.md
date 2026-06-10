@@ -111,6 +111,17 @@ This addendum defines the L6 contract for optional graph/diagram development-too
 - **quantitative/qualitative split**: `analyzeDddTddRules` provides mechanical evidence before review; gate-significant DDD/TDD decisions still require reviewer evidence, so the two are bundled for freeze readiness rather than collapsed into one signal.
 - **doctor contract**: `checkDddTddRules(repoRoot)` loads the SSoT, workflow docs, PLAN docs, L7/L8 test-design docs, and TS source/test files; `runDoctor.ok` fails when DDD/TDD strictness violations exist.
 
+### Impl-Plan-Trace Addendum (IMP-088 / FR-L1-18 descent / PLAN-REVERSE-40)
+
+`module-drift` (src⇔architecture §3.1) と `pair-freeze` (design⇔test-design) はいずれも **PLAN を見ない**ため、「設計 doc に名前が載れば PLAN 無しでも通る」穴 (A-108 orphan の根因) が残る。本 addendum は FR-L1-18 (横断検出・**接続欠損**) の descent として impl→PLAN トレーサビリティを定義する。
+
+| Function | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `analyzeImplPlanTrace` | analyzeImplPlanTrace(input: ImplPlanTraceInput) => ImplPlanTraceResult | `src/**.ts` 集合 + PLAN generates/本文に出現した src パス集合 + baseline allowlist が供給される。 | traced でも baseline でもない src を `orphans` に返し、NEW orphan 有無で `ok` を決める。 | baseline は known-debt の段階導入であり**縮小のみ可**。IMP-087 の 4 orphan は baseline でなく PLAN generates への back-fill で trace 解消する。 | U-IPT-001..005 |
+
+- **baseline 根拠**: 2026-06-10 実測 (`find src -name '*.ts'` vs PLAN generates) で 12 孤児。うち 4 (IMP-087: review-tier/rule-drift/team-run/provider-handover) は PLAN-REVERSE-40 generates へ back-fill、残 8 (asset-drift/change-impact/doc-consistency/entity-coverage/g3-trace/improvement-backlog/readability/shared) を baseline。
+- **doctor 配線**: `checkImplPlanTrace(repoRoot)` を **warn-first** で配線 (module-drift と同じ段階導入)。CI 回帰網 `U-IPT-004` (実 repo orphan 0) が vitest で fail-close。hard 化は baseline 縮小安定後。
+
 ## §4 doctor 配線 (warn-first)
 
 `checkModuleDrift(repoRoot)` を `runDoctor` に **warn-first** (ok 非連動、`messages` のみ) で配線。I/O 失敗は note で skip (doctor 堅牢性、ok=true で fail-open)。pair-freeze と同じ warn-first 群。**hard 化は実 repo 孤児0 安定 + 設計合意後** (backfill/review-evidence と同じ昇格パス)。

@@ -22,6 +22,11 @@ import {
 import { analyzeDddTddRules, dddTddRulesMessages, loadDddTddInputs } from "../lint/ddd-tdd-rules";
 import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
 import {
+  analyzeImplPlanTrace,
+  implPlanTraceMessages,
+  loadImplPlanTraceInput,
+} from "../lint/impl-plan-trace";
+import {
   analyzeL6Completion,
   canLoadL6CompletionInputs,
   l6CompletionMessages,
@@ -365,6 +370,20 @@ export function checkL6Completion(repoRoot: string): { messages: string[]; ok: b
 }
 
 /**
+ * impl→PLAN トレーサビリティ (src ⊆ PLAN generates ∪ baseline) を surface (IMP-088、warn-first)。
+ * NEW orphan (PLAN 無き新規 src) を warn する。doctor.ok は落とさない (module-drift と同じ段階導入)
+ * が、CI 回帰網 (U-IPT-004 = 実 repo orphan 0) が vitest で fail-close する。I/O 失敗は skip。
+ */
+export function checkImplPlanTrace(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeImplPlanTrace(loadImplPlanTraceInput(repoRoot));
+    return { messages: implPlanTraceMessages(r), ok: true };
+  } catch {
+    return { messages: ["impl-plan-trace — note: src/PLAN を読めず検査 skip"], ok: true };
+  }
+}
+
+/**
  * 工程表 (登録 roadmap) の span 実在 + 層内ゲート進捗を surface (PLAN-DISCOVERY-05 spike、warn-first)。
  * spike 段階のため ok 連動しない (S4 confirmed + 本実装後に孤児 span を hard 化する想定)。
  */
@@ -475,6 +494,9 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   // roadmap は warn-first (PLAN-DISCOVERY-05 spike。登録工程表の gate 進捗/孤児 span surface のみ、
   // ok 連動は S4 confirmed + 本実装後に切替)。
   const roadmap = checkRoadmap(deps.repoRoot);
+  // impl-plan-trace は warn-first (IMP-088、module-drift と同じ段階導入。NEW orphan surface、
+  // hard 化は baseline 縮小安定後。CI 回帰網 U-IPT-004 が実 repo orphan 0 を fail-close)。
+  const implPlanTrace = checkImplPlanTrace(deps.repoRoot);
   return {
     ok:
       backfill.ok &&
@@ -512,6 +534,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...reviewEvidence.messages.map((m) => `doctor: ${m}`),
       ...checkVerificationGroups(deps.repoRoot).map((m) => `doctor: ${m}`),
       ...roadmap.messages.map((m) => `doctor: ${m}`),
+      ...implPlanTrace.messages.map((m) => `doctor: ${m}`),
       "doctor: scaffold stub (dependency-drift / regression expansion は後続 PLAN)",
     ],
   };
