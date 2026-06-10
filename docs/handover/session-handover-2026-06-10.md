@@ -583,8 +583,8 @@
 
 ## §3 Next Action (PLAN-REVERSE-36 完了後)
 
-1. **push**: commit `4c89184` を `origin main` へ。workflow scope token 経由 ([[project_github_push_workflow_scope]])。
-2. **Forward L7 実装へ**: GATE-A 再検証 clean (vitest 332 / doctor exit 0 / mojibake 0)、退行なし。設計検証サイクルゲート (旧 GATE-A) は per-layer Forward gate G0.5〜G6 の PO サインオフで着地済 = 別 accept ceremony 不要 (PO 2026-06-10 是正)。定常は Forward で Phase 3 (L7) へ降下。待機列先頭 = 外部ツーリング (PLAN-L7-32〜35) の TDD Red entry。
+1. **(完了済) push**: 全 commit (`4c89184` rename + handover ×2) は `origin/main` 済み。**push 経路は SSH へ刷新済** (下記 §6 / [[project_github_push_workflow_scope]] 更新)。今後は agent が `git push` を直接実行可 (settings.local.json で許可)。
+2. **Forward L7 実装へ (定常の本線)**: GATE-A 再検証 clean (vitest 332 / doctor exit 0 / mojibake 0)、退行なし。設計検証サイクルゲート (旧 GATE-A) は per-layer Forward gate G0.5〜G6 の PO サインオフで着地済 = 別 accept ceremony 不要 (PO 2026-06-10 是正)。定常は Forward で Phase 3 (L7) へ降下。待機列先頭 = 外部ツーリング (PLAN-L7-32〜35) の TDD Red entry。優先順位は §5 の PO 判断待ち。
 
 ## §4 carry (未了・先送り)
 
@@ -602,4 +602,5 @@
 - **検証サイクルゲート ≠ Forward gate**: 横断 band ゲート (L3/L6/設計/実装 検証サイクルゲート) は roadmap 固有・V-model band freeze で機械発火。Forward 正規ゲート G0.5〜G7 (gate-design §2) とは別レイヤー。検証ロードマップを driver にしない・別建て手動 accept ceremony を立てない ([[feedback_roadmap_is_design_doc_level]]、PO 2026-06-10 是正)。
 - **ゲート名の単一正本 = `src/vmodel/lint.ts` `VERIFICATION_GROUPS`**。roadmap / concept §10 はこれを参照。新 band 追加時はここに足す。
 - 確定基準: typecheck/lint clean・vitest 332・doctor exit 0。
+- **push 経路刷新 (2026-06-10 PM、[[project_github_push_workflow_scope]] 更新)**: ① origin は **SSH** = `git@github.com:unison-ai-product/UT-TDD_AGENT-HARNESS.git` (旧 HTTPS+gh-token+GCM の dance は廃止)。**origin を勝手に書き換えない** (書き換えると classifier が「未検証の宛先」として push を弾く)。② SSH 鍵 = `~/.ssh/id_ed25519` (このマシン、公開鍵は GitHub `unison-ai-product` に登録済)。③ agent の push 許可は **`.claude/settings.local.json`** (`{"permissions":{"allow":["Bash(git push:*)"]}}`、gitignored・個人マシン限定)。**tracked の `.claude/settings.json` には入れない** (将来のチーム利用者に「agent push 可」を押し付けないため。一度 PO が誤って settings.json に貼って JSON 破損 → committed 版へ復元済)。④ permission rule の追記は **agent には不可** (Self-Modification ガード) = PO 手動。⑤ GitHub Actions (`harness-check`) は **push 契機の検証 CI** であって auto-push 機構ではない (構造上 CI はローカル未 push commit を push できない)。
 
