@@ -44,8 +44,10 @@ import {
   loadReviewPlans,
   reviewEvidenceMessages,
 } from "../lint/review-evidence";
+import { checkSpanExistence, computeGateProgress, loadRoadmaps } from "../lint/roadmap-registry";
 import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lint/rule-drift";
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
+import { fmValue } from "../lint/shared";
 import {
   loadVerificationRecommendation,
   verificationRecommendationMessages,
@@ -362,6 +364,53 @@ export function checkL6Completion(repoRoot: string): { messages: string[]; ok: b
   }
 }
 
+/**
+ * 工程表 (登録 roadmap) の span 実在 + 層内ゲート進捗を surface (PLAN-DISCOVERY-05 spike、warn-first)。
+ * spike 段階のため ok 連動しない (S4 confirmed + 本実装後に孤児 span を hard 化する想定)。
+ */
+export function checkRoadmap(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const records = loadRoadmaps(repoRoot);
+    if (records.length === 0) {
+      return {
+        messages: ["roadmap — note: 登録工程表なし (master-hub roadmap block 未使用)"],
+        ok: true,
+      };
+    }
+    // I-1: 各 PLAN を 1 回だけ読み id→status を構築 (二重 readFile 解消)。
+    const dir = join(repoRoot, "docs", "plans");
+    const known = new Set<string>();
+    const statusMap = new Map<string, string>();
+    for (const f of readdirSync(dir).filter((x) => x.endsWith(".md"))) {
+      const content = readFileSync(join(dir, f), "utf8");
+      const id = fmValue(content, "plan_id");
+      if (id) {
+        known.add(id);
+        statusMap.set(id, fmValue(content, "status") ?? "draft");
+      }
+    }
+    const messages: string[] = [];
+    for (const rec of records) {
+      const spanIssues = checkSpanExistence(rec.roadmap, known);
+      const progress = computeGateProgress(rec.roadmap, (id) => statusMap.get(id) ?? null);
+      const reached = progress.filter((g) => g.reached).length;
+      messages.push(
+        `roadmap — ${rec.planId} [${rec.roadmap.layer}]: gates ${reached}/${progress.length} 到達, spans ${rec.roadmap.spans.length}, 孤児 span ${spanIssues.length}, 構造 issue ${rec.errors.length}`,
+      );
+      for (const gi of progress) {
+        messages.push(
+          `  ${gi.gateId}: ${gi.reached ? "✅ reached" : "pending"} (${gi.confirmedSpans}/${gi.totalSpans} span confirmed)`,
+        );
+      }
+      for (const si of spanIssues) messages.push(`  ⚠ ${si}`);
+      for (const e of rec.errors) messages.push(`  ⚠ 構造: ${e}`);
+    }
+    return { messages, ok: true };
+  } catch {
+    return { messages: ["roadmap — note: 工程表を読めず検査 skip"], ok: true };
+  }
+}
+
 export function checkVerificationGroups(repoRoot: string): string[] {
   try {
     const docs = loadPairDocs(repoRoot);
@@ -423,6 +472,9 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   // l6-completion は warn-first (G6 PASS 後の運用観察期間。誤 fail で post-G6 作業を止めないため
   // ok 連動は安定確認後に切替 — A-128 F-5 / IMP-130(e))。
   const l6Completion = checkL6Completion(deps.repoRoot);
+  // roadmap は warn-first (PLAN-DISCOVERY-05 spike。登録工程表の gate 進捗/孤児 span surface のみ、
+  // ok 連動は S4 confirmed + 本実装後に切替)。
+  const roadmap = checkRoadmap(deps.repoRoot);
   return {
     ok:
       backfill.ok &&
@@ -459,6 +511,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...l6Completion.messages.map((m) => `doctor: ${m}`),
       ...reviewEvidence.messages.map((m) => `doctor: ${m}`),
       ...checkVerificationGroups(deps.repoRoot).map((m) => `doctor: ${m}`),
+      ...roadmap.messages.map((m) => `doctor: ${m}`),
       "doctor: scaffold stub (dependency-drift / regression expansion は後続 PLAN)",
     ],
   };
