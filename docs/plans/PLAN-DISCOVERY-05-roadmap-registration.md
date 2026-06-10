@@ -153,6 +153,20 @@ roadmap:
 - **gate 進捗**: 各 gate について、その直前 spans の PLAN が全 confirmed なら gate=reached を surface (gate-confirm 同型、ただし層内)。
 - **gate 順序整合**: `after_gate`/`before_gate` が gates[] 内に存在し循環しない。
 
+## §4.4 工程表 粒度ドクトリン (span sizing — PO 指摘 2026-06-10、定義の正本)
+
+> **背景**: §4 は登録「機構 (器)」を定義したが「span をどの粒度にすべきか」の定義が無く、初回 dogfood で過大 span が出た (REVERSE-41 が別関心 2 lint、塊C が 4 family を 1 gate)。器に定義を伴わせる (柱2 doc×機械)。
+
+**D1. 1 span = 1 PLAN = 1 cohesive V-model unit**: design⇄test-design⇄テストコード⇄impl が一体で freeze できる最小単位。粒度の基準 = **単体テスト設計粒度** ([[feedback_design_granularity_equals_test_design]])。1 つの cohesive な unit-test 設計 (GWT/oracle 群) が書ける単位を 1 span とする。別関心を 1 span に lump しない ([[feedback_plan_per_requirement]]、REVERSE-41 が違反例)。
+
+**D2. TDD 2× 計上 (PO 2026-06-10)**: 各 span は「テスト実装 (Red) → impl (Green) → review」。**span の実コスト ≈ impl の最低 2倍 (test+impl)**、full V-model では 4 artifact (L6 設計 + L7/L8 テスト設計 + テストコード + src)。**見積り・gate sizing は impl LOC でなく test+impl で行う**。「impl だけ見て小さい」と誤認しない。
+
+**D3. span 粒度 = 1〜3 機能 (PO 2026-06-10)**: 1 span ≈ **1〜3 機能 (関数)**。**1 PLAN=1 関数は細かすぎ** (over-fragmentation)、**大型 module 丸ごと=粗すぎ**。TDD 2× (test+impl) 込みで **1 Red→Green→review cycle に収まる範囲** = 概ね 1〜3 機能。判定補助: 独立 freeze 可能な oracle 群が 1〜3 個に収まるか。例: **L7-32 relation-graph の 4 関数 → 2 span** (例 collect+impact の 2 機能 / export+verification-projection の 2 機能、各 test+impl で 1 cycle)。4 関数を 1 span は過大、4 span は過細。
+
+**D4. gate 配置**: 各 cohesive unit の freeze/review 境界ごとに gate。独立並列 span は同一 gate 間隔に複数可 (直列化 3 条件に該当しなければ並列、[[並列実行]])、依存は直列 gate。
+
+**D5. 機械担保 (define+enforce の対、方向)**: checkRoadmap を拡張し ① 各 span plan_id が pair_artifact (V-pair) を持つか ② span PLAN の宣言 oracle 数 / §工程表 Step 数が閾値超なら「過大 span」warn、を surface する (S4 confirmed 後の本実装で着地)。定義 (本 §4.4) を機械が守らせる降下先。
+
 ## §5 dogfood インスタンス — L7 層工程表 (登録対象)
 
 ```
