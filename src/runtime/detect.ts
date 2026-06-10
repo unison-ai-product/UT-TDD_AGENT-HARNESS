@@ -4,6 +4,7 @@
  * config ファイル (.claude / AGENTS.md) の有無は mode 切替の主信号にしない (§7.8 注記)。
  */
 import { execFileSync } from "node:child_process";
+import { join } from "node:path";
 
 export type ExecutionMode = "standalone" | "claude-only" | "codex-only" | "hybrid";
 
@@ -19,7 +20,13 @@ export interface RuntimeDetection {
 
 /** binary が PATH 上にあるか (where / which)。capability probe は将来追加。 */
 function onPath(bin: string): boolean {
-  const finder = process.platform === "win32" ? "where" : "which";
+  // Windows の where.exe は %SystemRoot%\System32 から canonical に解決する。
+  // PATH 注入事故 (System32 欠落) で finder 自体が見つからず全 runtime を
+  // unavailable と誤検出する事故を防ぐ (A-128 F-7)。
+  const finder =
+    process.platform === "win32"
+      ? join(process.env.SystemRoot ?? "C:\\Windows", "System32", "where.exe")
+      : "which";
   try {
     execFileSync(finder, [bin], { stdio: "ignore" });
     return true;

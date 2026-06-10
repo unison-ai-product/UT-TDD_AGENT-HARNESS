@@ -10,7 +10,10 @@ const cliPath = join(repoRoot, "src", "cli.ts");
 function runCli(cwd: string, args: string[], input?: unknown, env?: NodeJS.ProcessEnv) {
   const stdin = input === undefined ? undefined : JSON.stringify(input);
   if (process.platform === "win32") {
-    return spawnSync("cmd.exe", ["/d", "/c", "bun", cliPath, ...args], {
+    // cmd.exe は PATH 探索でなく %SystemRoot% から canonical に解決する。
+    // PATH 注入事故 (System32 欠落) でテストが環境誘発 fail しないため (A-128 F-7)。
+    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+    return spawnSync(cmdExe, ["/d", "/c", "bun", cliPath, ...args], {
       cwd,
       encoding: "utf8",
       env: { ...process.env, ...env },
