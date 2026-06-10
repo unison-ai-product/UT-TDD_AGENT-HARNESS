@@ -8,18 +8,129 @@
 // は Step 2 (pure projection functions) で Red→Green に着地させる。確定基準 (vitest 全 green) を
 // 壊さないため未実装オラクルは it.todo で可視化する (起こすと Red、実装で it に昇格)。
 // entry 条件 (PLAN-L7-32 §1): src/** relation-graph source を作る前に本 Red 契約が存在すること。
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import {
+  collectRelationGraphProjection,
+  type RelationGraphSourceSet,
+} from "../src/lint/relation-graph";
 
 describe("collectRelationGraphProjection (U-RELGRAPH-001..003)", () => {
-  it.todo(
-    "U-RELGRAPH-001: requirements/PLAN/design/test-design/source/test fixtures が安定 node ID + typed edge を生成し (kind,id,path) 重複行ゼロ",
-  );
-  it.todo(
-    "U-RELGRAPH-002: physical-data DB projection fixtures が table node + upstream requirement/ADR/PLAN edge を生成、orphan table 参照は finding",
-  );
-  it.todo(
-    "U-RELGRAPH-003: projection sanitization — MCP evidence/browser trace/provider transcript/secret/screenshot blob を projection 行へコピーせず classification/count/evidence path/redacted summary のみ残す",
-  );
+  it("U-RELGRAPH-001: requirements/PLAN/design/test-design/source/test fixtures が安定 node ID + typed edge を生成し (kind,id,path) 重複行ゼロ", () => {
+    const input: RelationGraphSourceSet = {
+      requirements: [{ id: "FR-L1-18", path: "docs/.../fr.md" }],
+      plans: [
+        {
+          id: "PLAN-L7-32",
+          path: "docs/plans/PLAN-L7-32.md",
+          requirements: ["FR-L1-18"],
+          generates: ["src/lint/relation-graph.ts"],
+        },
+        // 重複 PLAN — dedup されること
+        { id: "PLAN-L7-32", path: "docs/plans/PLAN-L7-32.md" },
+      ],
+      designDocs: [{ id: "module-drift", path: "docs/design/.../module-drift.md", pairs: "L7-unit" }],
+      testDesignDocs: [{ id: "L7-unit", path: "docs/test-design/.../L7-unit.md" }],
+      sourceFiles: [{ path: "src/lint/relation-graph.ts", tests: ["tests/relation-graph.test.ts"] }],
+      tests: [{ path: "tests/relation-graph.test.ts" }],
+    };
+
+    const projection = collectRelationGraphProjection(input);
+
+    // 安定 node ID = `${kind}:${key}`
+    const ids = projection.nodes.map((n) => n.id);
+    expect(ids).toContain("requirement:FR-L1-18");
+    expect(ids).toContain("plan:PLAN-L7-32");
+    expect(ids).toContain("design:module-drift");
+    expect(ids).toContain("test-design:L7-unit");
+    expect(ids).toContain("source:src/lint/relation-graph.ts");
+    expect(ids).toContain("test:tests/relation-graph.test.ts");
+
+    // (kind,id,path) 重複行ゼロ
+    const rowKeys = projection.nodes.map((n) => `${n.kind}|${n.id}|${n.path ?? ""}`);
+    expect(new Set(rowKeys).size).toBe(rowKeys.length);
+
+    // typed edge: derives-from / generates / pairs / covered-by
+    const edgeKey = (from: string, to: string, kind: string) => `${from}->${to}:${kind}`;
+    const edges = projection.edges.map((e) => edgeKey(e.from, e.to, e.kind));
+    expect(edges).toContain(edgeKey("plan:PLAN-L7-32", "requirement:FR-L1-18", "derives-from"));
+    expect(edges).toContain(
+      edgeKey("plan:PLAN-L7-32", "source:src/lint/relation-graph.ts", "generates"),
+    );
+    expect(edges).toContain(edgeKey("design:module-drift", "test-design:L7-unit", "pairs"));
+    expect(edges).toContain(
+      edgeKey("source:src/lint/relation-graph.ts", "test:tests/relation-graph.test.ts", "covered-by"),
+    );
+
+    // 決定的順序 (node id 昇順)
+    expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)));
+  });
+
+  it("U-RELGRAPH-002: physical-data DB projection fixtures が table node + upstream requirement/ADR/PLAN edge を生成、orphan table 参照は finding", () => {
+    const input: RelationGraphSourceSet = {
+      dbTables: [
+        { name: "plan", upstream: ["requirement:FR-L1-18", "adr:ADR-001", "plan:PLAN-L7-32"] },
+        { name: "orphan_cache", upstream: [] },
+      ],
+    };
+
+    const projection = collectRelationGraphProjection(input);
+
+    const ids = projection.nodes.map((n) => n.id);
+    expect(ids).toContain("db-table:plan");
+    expect(ids).toContain("db-table:orphan_cache");
+
+    const upstreamEdges = projection.edges.filter((e) => e.kind === "upstream");
+    expect(upstreamEdges.map((e) => e.to)).toEqual(
+      expect.arrayContaining(["requirement:FR-L1-18", "adr:ADR-001", "plan:PLAN-L7-32"]),
+    );
+    expect(upstreamEdges.every((e) => e.from === "db-table:plan")).toBe(true);
+
+    const orphan = projection.findings.find((f) => f.code === "orphan-table");
+    expect(orphan).toBeDefined();
+    expect(orphan?.nodeId).toBe("db-table:orphan_cache");
+  });
+
+  it("U-RELGRAPH-003: projection sanitization — MCP evidence/browser trace/provider transcript/secret/screenshot blob を projection 行へコピーせず classification/count/evidence path/redacted summary のみ残す", () => {
+    const SECRET = "sk-live-DEADBEEF-must-not-leak";
+    const input: RelationGraphSourceSet = {
+      verificationEvidence: [
+        {
+          id: "VP-001",
+          evidencePath: ".ut-tdd/evidence/verification-profiles/vp-001.json",
+          classification: "external-tool",
+          summary: "playwright smoke passed",
+          rawMcpResponse: `{"tool":"mcp","payload":"${SECRET}"}`,
+          browserTrace: "trace blob ...",
+          providerTranscript: "transcript ...",
+          secret: SECRET,
+          screenshotBlob: "iVBORw0KGgo... base64 blob",
+        },
+      ],
+    };
+
+    const projection = collectRelationGraphProjection(input);
+
+    // node + projection row は classification/count/evidence path/redacted summary のみ
+    const row = projection.verificationProfiles.find(
+      (r) => r.nodeId === "verification-profile:VP-001",
+    );
+    expect(row).toBeDefined();
+    expect(row?.classification).toBe("external-tool");
+    expect(row?.evidencePath).toBe(".ut-tdd/evidence/verification-profiles/vp-001.json");
+    expect(row?.redactedSummary).toBe("playwright smoke passed");
+    expect(row?.redactedFieldCount).toBe(5);
+
+    // 全 projection を JSON 化しても raw な機微 payload は一切含まれない
+    const serialized = JSON.stringify(projection);
+    expect(serialized).not.toContain(SECRET);
+    expect(serialized).not.toContain("trace blob");
+    expect(serialized).not.toContain("transcript ...");
+    expect(serialized).not.toContain("iVBORw0KGgo");
+
+    const finding = projection.findings.find((f) => f.code === "redacted-evidence");
+    expect(finding?.severity).toBe("info");
+    expect(finding?.evidencePath).toBe(".ut-tdd/evidence/verification-profiles/vp-001.json");
+  });
 });
 
 describe("analyzeRelationImpact (U-RELGRAPH-004..006)", () => {

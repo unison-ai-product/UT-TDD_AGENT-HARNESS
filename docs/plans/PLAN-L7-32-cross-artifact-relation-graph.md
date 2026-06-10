@@ -69,6 +69,8 @@ Out of scope:
 
 直列理由: downstream_dependency. CLI / DB writer must depend on deterministic pure output.
 
+**進捗 (2026-06-10、塊C span 第1段)**: `collectRelationGraphProjection` (U-RELGRAPH-001..003) を `src/lint/relation-graph.ts` に実装し、`tests/relation-graph.test.ts` の 001..003 を `it.todo`→green `it` へ昇格 (node 安定 ID + typed edge + (kind,id,path) dedup / DB table upstream + orphan finding / sanitization で raw payload 非複製)。`analyzeRelationImpact` (004..006) は本 span 第2段で着地予定。green 後に confirmed → G-L7.C1。
+
 ### Step 3: [並列] CLI smoke and docs back-fill
 
 CLI smoke and doc back-fill can proceed after pure function green.
