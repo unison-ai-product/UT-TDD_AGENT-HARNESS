@@ -30,9 +30,13 @@ dependencies:
 
 This PLAN is the L6 entry for optional dependency/diagram tool adapter probes. It does not replace the core TypeScript/Bun relation graph collector.
 
+> **スコープ改訂 (2026-06-10 PO 決定、IMP-131)**: tool adapter (dependency-cruiser / Knip / Madge / Graphviz DOT / Mermaid / D2) は **gate truth でない insight 系** (A-124「raw 出力を gate truth にしない」) のため、**harness core の profile カタログとしてモデル化しない**。代わりに **`ut-tdd setup graph-tools [--with ...]` の一括セットアップ + layer-context アナウンス**へ降格する。これにより adapter ごとの probe/normalize/findings/優先順位を core に持たず、保守表面積を削減する。Madge⊂dependency-cruiser の重複や 3 図化レンダラ (Mermaid/DOT/D2) の選択は `--with` のユーザー選択に吸収され、カタログ優先順位を維持する必要が消える。**MCP / verification profile (playwright / testcontainers / github-mcp / msw / mcp-inspector / vitest-browser) は別扱い = マストツール系**として profile + 機械着地を維持する (V-model gate を支える検証であり gate truth になるため、setup+announce へ降格しない)。本 PLAN の §1-§4 は下記のとおり setup/announce 設計へ読み替える。
+
 ## §1 Scope
 
-Design function contracts for dependency-cruiser, Knip, Madge, Graphviz DOT, Mermaid, and D2 adapter catalog/probe/normalization/stale diagram refresh planning.
+**改訂後 (IMP-131)**: `ut-tdd setup graph-tools` セットアップコマンド (冪等、`--with` で dependency-cruiser/knip/madge/graphviz/mermaid/d2 から選択導入、生成 config は git 秘匿の外 = §6.8.10 安全則踏襲) と、layer-context が関連 V-model 工程で導入手順をアナウンスする設計。adapter 出力の DB 正規化は「project が setup で opt-in した時のみ薄く配線」とし、未導入を前提に gate を組まない。
+
+> 旧スコープ (改訂前、参考): dependency-cruiser / Knip / Madge / Graphviz DOT / Mermaid / D2 を adapter catalog/probe/normalization/stale diagram refresh として profile 設計。→ IMP-131 で setup+announce へ置換。
 
 ## §2 Contracts
 

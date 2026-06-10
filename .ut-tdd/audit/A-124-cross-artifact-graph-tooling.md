@@ -80,3 +80,12 @@ Current routing:
 - Relation graph core: PLAN-L6-31 / PLAN-L7-32 / PLAN-REVERSE-32.
 - MCP/external verification profile safety: PLAN-L6-32 / PLAN-L7-33 / PLAN-REVERSE-33.
 - Optional graph/diagram tool adapter probes: PLAN-L6-33 / PLAN-L7-34 / PLAN-REVERSE-34.
+
+## Boundary revision — insight adapter vs must-tool profile (2026-06-10 PO 決定, IMP-131)
+
+検証ツールを 2 種に分け、重さを変える:
+
+- **insight 系 (gate truth でない)** = tool adapter (dependency-cruiser / Knip / Madge / Graphviz DOT / Mermaid / D2)。本 audit の「raw 出力を gate truth にしない」原則どおり、これらは開発者 insight であり gate を支えない。よって **harness core の profile カタログとしてモデル化せず、`ut-tdd setup graph-tools [--with ...]` の一括セットアップ + layer-context アナウンス**に降格する (PLAN-L6-33/L7-34 スコープ改訂)。adapter ごとの probe/normalize/findings/優先順位を core に持たない (保守表面積削減)。Madge⊂dependency-cruiser の重複・3 図化レンダラの選択は `--with` のユーザー選択に吸収。first slice = dependency-cruiser + Knip + Mermaid、Madge/DOT/D2 は conditional。
+- **マストツール系 (gate を支える検証 = gate truth になる)** = MCP / verification profile (playwright=画面検証 / testcontainers=DB結合 / github-mcp=CI context / msw=API契約 / mcp-inspector / vitest-browser)。V-model gate (L2/L10 画面検証、L8 結合) を支えるため profile + 機械着地 (A-125 / physical-data §9.6) を維持し、setup+announce へ降格しない。これを単なるアナウンスに格下げすると柱2 の under-design (検証を要求して機械着地が無い) に戻るため不可。
+
+判断根拠 = [[feedback_judge_tooling_by_mission_not_self_scope]] (土台のツールはミッションで測る) + insight/gate の性質差。adapter 降格は実害ゼロ (全 PLAN draft / 実装 pending)。

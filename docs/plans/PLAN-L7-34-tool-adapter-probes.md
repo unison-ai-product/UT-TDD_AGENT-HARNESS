@@ -32,6 +32,8 @@ dependencies:
 
 This is the future L7 implementation entry for optional graph/diagram tool adapter probes.
 
+> **スコープ改訂 (2026-06-10 PO 決定、IMP-131)**: 実装対象を「adapter probe profile」から **`ut-tdd setup graph-tools [--with ...]` セットアップコマンド + layer-context アナウンス**へ変更 (理由・境界は PLAN-L6-33 §0 / IMP-131 / A-124 境界注記)。adapter は insight 系 (gate truth でない) のため profile 化せず、setup で opt-in した project にのみ薄い正規化を配線する。MCP/verification profile (マストツール系) はこの降格対象外。`first slice = dependency-cruiser + Knip + Mermaid`、`Madge / Graphviz DOT / D2 は --with で conditional`。
+
 ## §1 Entry Conditions
 
 - PLAN-L6-33 has confirmed function contracts and U-TOOLADAPTER oracles.
