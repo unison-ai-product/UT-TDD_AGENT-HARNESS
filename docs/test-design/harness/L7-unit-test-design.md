@@ -259,7 +259,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 > Pair = `module-drift.md` Cross-Artifact Relation Graph Addendum (A-124/A-125 / PLAN-L6-31). PLAN-L7-32 is the authorized L7 implementation entry.
 >
-> **Status (PLAN-L7-32 塊C span, 2026-06-10)**: U-RELGRAPH-001..003 (`collectRelationGraphProjection`) promoted from `it.todo` to green `it` in `tests/relation-graph.test.ts` against `src/lint/relation-graph.ts`. U-RELGRAPH-004..006 (`analyzeRelationImpact`) remain `it.todo` in this span; 007..010 belong to PLAN-L7-36.
+> **Status (PLAN-L7-32 塊C span, 2026-06-10)**: U-RELGRAPH-001..006 promoted from `it.todo` to green `it` in `tests/relation-graph.test.ts` against `src/lint/relation-graph.ts` — `collectRelationGraphProjection` (001..003) + `analyzeRelationImpact` (004..006, source/design/test-design/physical-data 変更の波及 action + behavioral-contract conditional + missing-projection/stale-edge を ok=false finding 化, change-impact へ無音 fallback しない)。PLAN-L7-32 (collect+impact) はこれで実装完了。U-RELGRAPH-007..010 (`exportRelationDiagram` / `collectVerificationEvidenceProjection`) は PLAN-L7-36。
 
 | ID | Target | Oracle |
 |---|---|---|

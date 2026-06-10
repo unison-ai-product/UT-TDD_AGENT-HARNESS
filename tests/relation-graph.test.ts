@@ -10,8 +10,10 @@
 // entry 条件 (PLAN-L7-32 §1): src/** relation-graph source を作る前に本 Red 契約が存在すること。
 import { describe, expect, it } from "vitest";
 import {
+  analyzeRelationImpact,
   collectRelationGraphProjection,
   type RelationGraphSourceSet,
+  type RelationImpactActionKind,
 } from "../src/lint/relation-graph";
 
 describe("collectRelationGraphProjection (U-RELGRAPH-001..003)", () => {
@@ -134,15 +136,150 @@ describe("collectRelationGraphProjection (U-RELGRAPH-001..003)", () => {
 });
 
 describe("analyzeRelationImpact (U-RELGRAPH-004..006)", () => {
-  it.todo(
-    "U-RELGRAPH-004: source 変更 node が sibling test / L6 design contract / L7 unit oracle / PLAN / reverse-backprop guard へ展開",
-  );
-  it.todo(
-    "U-RELGRAPH-005: design/test-design/physical-data 変更が paired artifact / DB table node / PLAN DoD / trace-freeze evidence へ展開 (behavioral contract edge が無ければ source test を要求しない)",
-  );
-  it.todo(
-    "U-RELGRAPH-006: projection coverage 欠落 (graph projection なし / stale edge) は ok=false + finding、analyzeChangeImpact へ無音 fallback しない",
-  );
+  const actionKinds = (
+    result: ReturnType<typeof analyzeRelationImpact>,
+  ): Set<RelationImpactActionKind> => new Set(result.actions.map((a) => a.kind));
+
+  it("U-RELGRAPH-004: source 変更 node が sibling test / L6 design contract / L7 unit oracle / PLAN / reverse-backprop guard へ展開", () => {
+    const projection = collectRelationGraphProjection({
+      plans: [{ id: "PLAN-L7-32", generates: ["src/lint/relation-graph.ts"] }],
+      sourceFiles: [
+        { path: "src/lint/relation-graph.ts", tests: ["tests/relation-graph.test.ts"] },
+      ],
+      tests: [{ path: "tests/relation-graph.test.ts" }],
+    });
+
+    const result = analyzeRelationImpact({
+      changedPaths: ["src/lint/relation-graph.ts"],
+      projection,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.changedNodes.map((n) => n.id)).toEqual(["source:src/lint/relation-graph.ts"]);
+
+    const kinds = actionKinds(result);
+    expect(kinds.has("require-sibling-test")).toBe(true); // sibling test
+    expect(kinds.has("review-design-contract")).toBe(true); // L6 design contract
+    expect(kinds.has("review-l7-oracle")).toBe(true); // L7 unit oracle
+    expect(kinds.has("update-plan")).toBe(true); // PLAN
+    expect(kinds.has("reverse-backprop")).toBe(true); // reverse/backprop guard
+
+    // reverse-backprop action は変更 source node を指す (向き誤り検出)
+    expect(result.actions.find((a) => a.kind === "reverse-backprop")?.nodeId).toBe(
+      "source:src/lint/relation-graph.ts",
+    );
+
+    // edge を辿った波及先に sibling test と owning PLAN が含まれる
+    const impactedIds = result.impacted.map((n) => n.id);
+    expect(impactedIds).toContain("test:tests/relation-graph.test.ts");
+    expect(impactedIds).toContain("plan:PLAN-L7-32");
+  });
+
+  it("U-RELGRAPH-005: design/test-design/physical-data 変更が paired artifact / DB table node / PLAN DoD / trace-freeze evidence へ展開 (behavioral contract edge が無ければ source test を要求しない)", () => {
+    const projection = collectRelationGraphProjection({
+      requirements: [{ id: "FR-1" }],
+      designDocs: [
+        // docs-only 設計 (behavioral contract なし)
+        { id: "module-drift", path: "docs/design/module-drift.md", pairs: "L7-unit" },
+        // behavioral contract を持つ設計
+        {
+          id: "schema-contract",
+          path: "docs/design/schema-contract.md",
+          pairs: "L7-schema",
+          behavioralContract: ["src/schema/team.ts"],
+        },
+      ],
+      testDesignDocs: [
+        { id: "L7-unit", path: "docs/test-design/L7-unit.md" },
+        { id: "L7-schema", path: "docs/test-design/L7-schema.md" },
+      ],
+      sourceFiles: [{ path: "src/schema/team.ts" }],
+      dbTables: [
+        { name: "plan", upstream: ["requirement:FR-1"], path: "docs/design/physical-data/plan.md" },
+      ],
+    });
+
+    // docs-only 設計変更: paired artifact / PLAN DoD / trace-freeze へ展開、source test は要求しない
+    const docsOnly = analyzeRelationImpact({
+      changedPaths: ["docs/design/module-drift.md"],
+      projection,
+    });
+    const docsKinds = actionKinds(docsOnly);
+    expect(docsKinds.has("update-paired-artifact")).toBe(true);
+    expect(docsKinds.has("update-plan-dod")).toBe(true);
+    expect(docsKinds.has("record-trace-freeze-evidence")).toBe(true);
+    expect(docsKinds.has("require-sibling-test")).toBe(false); // behavioral contract edge なし
+    expect(docsOnly.impacted.map((n) => n.id)).toContain("test-design:L7-unit");
+
+    // test-design 変更: 逆引きで paired design へ展開、paired design に behavioral contract が
+    // 無ければ source test を要求しない
+    const testDesignChange = analyzeRelationImpact({
+      changedPaths: ["docs/test-design/L7-unit.md"],
+      projection,
+    });
+    expect(testDesignChange.changedNodes.map((n) => n.id)).toEqual(["test-design:L7-unit"]);
+    expect(
+      testDesignChange.actions.find((a) => a.kind === "update-paired-artifact")?.nodeId,
+    ).toBe("design:module-drift");
+    expect(actionKinds(testDesignChange).has("require-sibling-test")).toBe(false);
+
+    // behavioral contract を持つ test-design 変更: paired design の contract を辿り source test を要求
+    const behavioralTestDesign = analyzeRelationImpact({
+      changedPaths: ["docs/test-design/L7-schema.md"],
+      projection,
+    });
+    expect(actionKinds(behavioralTestDesign).has("require-sibling-test")).toBe(true);
+    expect(behavioralTestDesign.impacted.map((n) => n.id)).toContain("source:src/schema/team.ts");
+
+    // behavioral contract を持つ設計変更: source test を要求する
+    const behavioral = analyzeRelationImpact({
+      changedPaths: ["docs/design/schema-contract.md"],
+      projection,
+    });
+    expect(actionKinds(behavioral).has("require-sibling-test")).toBe(true);
+    expect(behavioral.impacted.map((n) => n.id)).toContain("source:src/schema/team.ts");
+
+    // physical-data 変更: DB table node + upstream requirement へ展開
+    const physical = analyzeRelationImpact({
+      changedPaths: ["docs/design/physical-data/plan.md"],
+      projection,
+    });
+    expect(physical.changedNodes.map((n) => n.id)).toEqual(["db-table:plan"]);
+    expect(actionKinds(physical).has("rebuild-db-table")).toBe(true);
+    expect(actionKinds(physical).has("review-upstream")).toBe(true);
+    expect(physical.impacted.map((n) => n.id)).toContain("requirement:FR-1");
+  });
+
+  it("U-RELGRAPH-006: projection coverage 欠落 (graph projection なし / stale edge) は ok=false + finding、analyzeChangeImpact へ無音 fallback しない", () => {
+    const projection = collectRelationGraphProjection({
+      sourceFiles: [{ path: "src/lint/relation-graph.ts", tests: ["tests/relation-graph.test.ts"] }],
+      tests: [{ path: "tests/relation-graph.test.ts" }],
+    });
+
+    // (a) 変更 path が projection node に無い → missing-projection finding + ok=false
+    const noNode = analyzeRelationImpact({
+      changedPaths: ["src/runtime/unknown-module.ts"],
+      projection,
+    });
+    expect(noNode.ok).toBe(false);
+    expect(noNode.findings.some((f) => f.code === "missing-projection")).toBe(true);
+    expect(noNode.changedNodes).toHaveLength(0);
+
+    // (b) 端点 node が欠落した stale edge → stale-edge finding + ok=false
+    const staleProjection = {
+      ...projection,
+      edges: [
+        ...projection.edges,
+        { from: "source:src/lint/relation-graph.ts", to: "test:tests/ghost.test.ts", kind: "covered-by" as const },
+      ],
+    };
+    const stale = analyzeRelationImpact({
+      changedPaths: ["src/lint/relation-graph.ts"],
+      projection: staleProjection,
+    });
+    expect(stale.ok).toBe(false);
+    expect(stale.findings.some((f) => f.code === "stale-edge")).toBe(true);
+  });
 });
 
 describe("exportRelationDiagram (U-RELGRAPH-007..008)", () => {

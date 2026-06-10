@@ -4,10 +4,19 @@ title: "PLAN-L7-32 (add-impl): cross-artifact relation graph and verification pr
 kind: add-impl
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-09
-updated: 2026-06-09
-owner: Codex TL / PO
+updated: 2026-06-10
+owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-10"
+    tests_green_at: "2026-06-10"
+    verdict: pass
+    scope: "collect+impact 2 機能 (U-RELGRAPH-001..006)。code-reviewer APPROVE / Critical 0。Important I-1 (test-design→paired design の behavioral-contract 逆引き) / I-3 (test-design 変更 oracle 追加) / m-2/m-4/m-5 を同サイクルで反映。hybrid だが Codex CLI が壊れ legacy のため intra_runtime_subagent review (cross-agent 不在を evidence に記録)。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
 agent_slots:
   - role: tl
     slot_label: "TL - relation graph implementation"
@@ -69,7 +78,11 @@ Out of scope:
 
 直列理由: downstream_dependency. CLI / DB writer must depend on deterministic pure output.
 
-**進捗 (2026-06-10、塊C span 第1段)**: `collectRelationGraphProjection` (U-RELGRAPH-001..003) を `src/lint/relation-graph.ts` に実装し、`tests/relation-graph.test.ts` の 001..003 を `it.todo`→green `it` へ昇格 (node 安定 ID + typed edge + (kind,id,path) dedup / DB table upstream + orphan finding / sanitization で raw payload 非複製)。`analyzeRelationImpact` (004..006) は本 span 第2段で着地予定。green 後に confirmed → G-L7.C1。
+**進捗 (2026-06-10、塊C span)**:
+- 第1段: `collectRelationGraphProjection` (U-RELGRAPH-001..003) を `src/lint/relation-graph.ts` に実装、001..003 を green 昇格 (node 安定 ID + typed edge + (kind,id,path) dedup / DB table upstream + orphan finding / sanitization で raw payload 非複製)。
+- 第2段: `analyzeRelationImpact` (U-RELGRAPH-004..006) を実装、004..006 を green 昇格。source 変更→sibling test/L6 design contract/L7 oracle/PLAN/reverse-backprop へ展開、design/test-design/physical-data 変更→paired artifact/DB table/PLAN DoD/trace-freeze へ展開 (behavioral-contract edge 無ければ source test 非要求)、missing-projection/stale-edge は ok=false finding (`analyzeChangeImpact` へ無音 fallback しない)。
+
+**これで PLAN-L7-32 (collect+impact 2 機能) 実装完了**。green + review 前置後に confirmed → G-L7.C1 reached。export+evidence (007..010) は PLAN-L7-36。
 
 ### Step 3: [並列] CLI smoke and docs back-fill
 
