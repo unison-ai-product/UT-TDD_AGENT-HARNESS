@@ -81,6 +81,6 @@ Reverse-first 骨格。baseline は known-debt を許容し NEW のみ fail-clos
 
 ## §8 DoD
 
-- [ ] oracle-test-trace + tracked-canonical が green (baseline 適用、NEW orphan/drift fail-close)。
-- [ ] doctor 配線 (warn-first) + 実 repo regression 0。
-- [ ] review 前置を通す。
+- [x] oracle-test-trace + tracked-canonical が green (baseline 適用、NEW orphan/drift fail-close)。**実装済 2026-06-10**: oracle-test-trace (IMP-128、baseline 89、U-OTT-001..005) + tracked-canonical (IMP-127、baseline 0、U-TCAN-001..005)。
+- [x] doctor 配線 (warn-first) + 実 repo regression 0 (U-OTT-004 / U-TCAN-004)。
+- [ ] review 前置を通す (塊A/B まとめて intra_runtime_subagent review 予定)。

@@ -59,6 +59,11 @@ import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lin
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
 import { fmValue } from "../lint/shared";
 import {
+  analyzeTrackedCanonical,
+  loadTrackedCanonicalInput,
+  trackedCanonicalMessages,
+} from "../lint/tracked-canonical";
+import {
   loadVerificationRecommendation,
   verificationRecommendationMessages,
 } from "../lint/verification-profile";
@@ -389,6 +394,22 @@ export function checkImplPlanTrace(repoRoot: string): { messages: string[]; ok: 
 }
 
 /**
+ * git tracked top-level ⊆ repository-structure.md canonical の突合を surface (IMP-127、warn-first)。
+ * canonical 未記載の tracked top-level を warn。CI 回帰網 (U-TCAN-004 = drift 0) が fail-close。
+ */
+export function checkTrackedCanonical(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeTrackedCanonical(loadTrackedCanonicalInput(repoRoot));
+    return { messages: trackedCanonicalMessages(r), ok: true };
+  } catch {
+    return {
+      messages: ["tracked-canonical — note: git/repository-structure を読めず検査 skip"],
+      ok: true,
+    };
+  }
+}
+
+/**
  * oracle 宣言 ⇔ 実テスト citation の突合を surface (IMP-128、warn-first)。
  * NEW oracle (baseline 外で未 citation) を warn。CI 回帰網 (U-OTT-004 = 実 repo orphan 0) が fail-close。
  */
@@ -521,6 +542,9 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   // oracle-test-trace は warn-first (IMP-128。NEW oracle 未 citation surface、
   // CI 回帰網 U-OTT-004 が実 repo orphan 0 を fail-close。既存 89 は baseline)。
   const oracleTestTrace = checkOracleTestTrace(deps.repoRoot);
+  // tracked-canonical は warn-first (IMP-127。canonical 未記載 tracked top-level surface、
+  // CI 回帰網 U-TCAN-004 が drift 0 を fail-close)。
+  const trackedCanonical = checkTrackedCanonical(deps.repoRoot);
   return {
     ok:
       backfill.ok &&
@@ -560,6 +584,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...roadmap.messages.map((m) => `doctor: ${m}`),
       ...implPlanTrace.messages.map((m) => `doctor: ${m}`),
       ...oracleTestTrace.messages.map((m) => `doctor: ${m}`),
+      ...trackedCanonical.messages.map((m) => `doctor: ${m}`),
       "doctor: scaffold stub (dependency-drift / regression expansion は後続 PLAN)",
     ],
   };
