@@ -37,9 +37,15 @@ roadmap:
     - id: G-L7.B
       name: substance-gate lints
       exit_criteria: "tracked⊆canonical + oracle⇔test 突合 green"
+    - id: G-L7.C1
+      name: relation-graph core (collect + impact)
+      exit_criteria: "collectRelationGraphProjection + analyzeRelationImpact green (U-RELGRAPH-001..006)"
+    - id: G-L7.C2
+      name: relation-graph export + evidence
+      exit_criteria: "exportRelationDiagram + collectVerificationEvidenceProjection green (U-RELGRAPH-007..010)"
     - id: G-L7.C
       name: L7 Forward 本線 families
-      exit_criteria: "relation-graph/MCP/tool-adapter/doc-export 4 family 実装 + pair-freeze + review"
+      exit_criteria: "relation-graph(2 span)/MCP/tool-adapter/doc-export family 実装 + pair-freeze + review (各 1〜3 機能 span に分割、D3)"
     - id: G-L7.D
       name: relation-graph 依存キャリー
       exit_criteria: "regression expansion + dependency-drift 実装 (scaffold stub 解消)"
@@ -55,15 +61,18 @@ roadmap:
       before_gate: G-L7.B
     - plan_id: PLAN-L7-32-cross-artifact-relation-graph
       after_gate: G-L7.B
-      before_gate: G-L7.C
+      before_gate: G-L7.C1
+    - plan_id: PLAN-L7-36-relation-graph-export
+      after_gate: G-L7.C1
+      before_gate: G-L7.C2
     - plan_id: PLAN-L7-33-mcp-profile-config-safety
-      after_gate: G-L7.B
+      after_gate: G-L7.C2
       before_gate: G-L7.C
     - plan_id: PLAN-L7-34-tool-adapter-probes
-      after_gate: G-L7.B
+      after_gate: G-L7.C2
       before_gate: G-L7.C
     - plan_id: PLAN-L7-35-canonical-document-export
-      after_gate: G-L7.B
+      after_gate: G-L7.C2
       before_gate: G-L7.C
     - plan_id: PLAN-REVERSE-42-regression-dependency-drift
       after_gate: G-L7.C
@@ -177,9 +186,11 @@ G-L7.A = impl-plan-trace green + orphan 0 (doctor fail-close) ← 以降の span
 塊B [span: Reverse→L6→L7] substance-gate lint 群
    IMP-127 tracked⊆canonical (asset-drift 拡張) + IMP-128/083 oracle⇔実test 突合
 G-L7.B = 両 lint green
-塊C [span: family 各 1 PLAN] L7 Forward 本線 ★L7 初手 = この先頭
-   L7-32 relation graph (Red entry=初手) → L7-33 → L7-34 → L7-35
-G-L7.C = 4 family 実装 + pair-freeze + review 済
+塊C [span: 各 1〜3 機能 = 1 PLAN、D3 粒度] L7 Forward 本線 ★L7 初手 = この先頭
+   L7-32 relation-graph core (collect+impact, 2機能) → G-L7.C1
+   L7-36 relation-graph export+evidence (2機能) → G-L7.C2
+   L7-33 MCP / L7-34 tool-adapter / L7-35 doc-export (各 build 時に 1〜3 機能 span へ分割)
+G-L7.C = 全 family 実装 + pair-freeze + review 済
 塊D [span: Reverse→L6→L7] relation-graph 依存キャリー
    regression expansion (L7-32 依存) + dependency-drift (IMP-032)
 G-L7.D = doctor scaffold stub 解消

@@ -19,6 +19,7 @@ dependencies:
   requires:
     - docs/plans/PLAN-L6-31-cross-artifact-relation-graph.md
     - docs/plans/PLAN-L7-32-cross-artifact-relation-graph.md
+    - docs/plans/PLAN-L7-36-relation-graph-export.md
 ---
 
 # PLAN-REVERSE-32 (reverse): cross-artifact relation graph fullback

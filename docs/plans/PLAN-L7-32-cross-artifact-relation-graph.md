@@ -43,11 +43,15 @@ Implementation must not start until:
 
 ## §2 Implementation Scope
 
-Allowed implementation after entry conditions are met:
+> **粒度ドクトリン適用 (DISCOVERY-05 §4.4 D3、PO 2026-06-10)**: relation-graph 4 関数を 2 span に分割。
+> 本 PLAN = **collect + impact の 2 機能** (U-RELGRAPH-001..006)。export + verification-evidence-projection
+> (U-RELGRAPH-007..010) は **PLAN-L7-36** へ分離 (TDD 2× で 1 cycle に収める)。
 
-- `src/lint/relation-graph.ts`: pure relation graph analyzer / projection normalizer.
-- `tests/relation-graph.test.ts`: unit fixtures for source/test/design/DB/MCP evidence impacts.
-- CLI wiring only after pure functions are green: `ut-tdd graph impact`, `ut-tdd graph export`, and evidence projection collector.
+Allowed implementation after entry conditions are met (本 span = 2 機能):
+
+- `src/lint/relation-graph.ts`: `collectRelationGraphProjection` (U-RELGRAPH-001..003) + `analyzeRelationImpact` (U-RELGRAPH-004..006) の pure projection / impact 解析。
+- `tests/relation-graph.test.ts`: 上記 2 機能の unit fixtures (U-RELGRAPH-001..006 を it.todo → it 昇格)。
+- CLI wiring (`ut-tdd graph impact`) は pure functions green 後。
 
 Out of scope:
 
