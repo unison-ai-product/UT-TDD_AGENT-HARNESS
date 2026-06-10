@@ -38,6 +38,11 @@ import {
   loadL6FrCoverageDocs,
 } from "../lint/l6-fr-coverage";
 import { analyzeModuleDrift, loadModuleDocs, moduleDriftMessages } from "../lint/module-drift";
+import {
+  analyzeOracleTestTrace,
+  loadOracleTestTraceInput,
+  oracleTestTraceMessages,
+} from "../lint/oracle-test-trace";
 import { analyzePropagation, loadPropagationDocs, propagationMessages } from "../lint/propagation";
 import {
   analyzeReadability,
@@ -384,6 +389,22 @@ export function checkImplPlanTrace(repoRoot: string): { messages: string[]; ok: 
 }
 
 /**
+ * oracle 宣言 ⇔ 実テスト citation の突合を surface (IMP-128、warn-first)。
+ * NEW oracle (baseline 外で未 citation) を warn。CI 回帰網 (U-OTT-004 = 実 repo orphan 0) が fail-close。
+ */
+export function checkOracleTestTrace(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeOracleTestTrace(loadOracleTestTraceInput(repoRoot));
+    return { messages: oracleTestTraceMessages(r), ok: true };
+  } catch {
+    return {
+      messages: ["oracle-test-trace — note: test-design/tests を読めず検査 skip"],
+      ok: true,
+    };
+  }
+}
+
+/**
  * 工程表 (登録 roadmap) の span 実在 + 層内ゲート進捗を surface (PLAN-DISCOVERY-05 spike、warn-first)。
  * spike 段階のため ok 連動しない (S4 confirmed + 本実装後に孤児 span を hard 化する想定)。
  */
@@ -497,6 +518,9 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   // impl-plan-trace は warn-first (IMP-088、module-drift と同じ段階導入。NEW orphan surface、
   // hard 化は baseline 縮小安定後。CI 回帰網 U-IPT-004 が実 repo orphan 0 を fail-close)。
   const implPlanTrace = checkImplPlanTrace(deps.repoRoot);
+  // oracle-test-trace は warn-first (IMP-128。NEW oracle 未 citation surface、
+  // CI 回帰網 U-OTT-004 が実 repo orphan 0 を fail-close。既存 89 は baseline)。
+  const oracleTestTrace = checkOracleTestTrace(deps.repoRoot);
   return {
     ok:
       backfill.ok &&
@@ -535,6 +559,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...checkVerificationGroups(deps.repoRoot).map((m) => `doctor: ${m}`),
       ...roadmap.messages.map((m) => `doctor: ${m}`),
       ...implPlanTrace.messages.map((m) => `doctor: ${m}`),
+      ...oracleTestTrace.messages.map((m) => `doctor: ${m}`),
       "doctor: scaffold stub (dependency-drift / regression expansion は後続 PLAN)",
     ],
   };

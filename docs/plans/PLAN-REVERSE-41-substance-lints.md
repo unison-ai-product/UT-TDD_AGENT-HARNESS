@@ -16,6 +16,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/lint/oracle-test-trace.ts
     artifact_type: source
+  - artifact_path: src/lint/oracle-test-trace-baseline.ts
+    artifact_type: source
   - artifact_path: tests/oracle-test-trace.test.ts
     artifact_type: test
   - artifact_path: src/lint/tracked-canonical.ts
