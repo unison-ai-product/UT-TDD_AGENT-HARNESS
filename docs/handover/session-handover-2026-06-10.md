@@ -604,3 +604,165 @@
 - 確定基準: typecheck/lint clean・vitest 332・doctor exit 0。
 - **push 経路刷新 (2026-06-10 PM、[[project_github_push_workflow_scope]] 更新)**: ① origin は **SSH** = `git@github.com:unison-ai-product/UT-TDD_AGENT-HARNESS.git` (旧 HTTPS+gh-token+GCM の dance は廃止)。**origin を勝手に書き換えない** (書き換えると classifier が「未検証の宛先」として push を弾く)。② SSH 鍵 = `~/.ssh/id_ed25519` (このマシン、公開鍵は GitHub `unison-ai-product` に登録済)。③ agent の push 許可は **`.claude/settings.local.json`** (`{"permissions":{"allow":["Bash(git push:*)"]}}`、gitignored・個人マシン限定)。**tracked の `.claude/settings.json` には入れない** (将来のチーム利用者に「agent push 可」を押し付けないため。一度 PO が誤って settings.json に貼って JSON 破損 → committed 版へ復元済)。④ permission rule の追記は **agent には不可** (Self-Modification ガード) = PO 手動。⑤ GitHub Actions (`harness-check`) は **push 契機の検証 CI** であって auto-push 機構ではない (構造上 CI はローカル未 push commit を push できない)。
 
+---
+
+# Session Handover — 2026-06-10
+
+## §1 PLAN サマリ
+
+- `PLAN-DISCOVERY-01-workflow-metamodel` (poc): PLAN-DISCOVERY-01 (kind=poc): workflow メタモデル検証 (①必須+②駆動モデル→PLAN合成→駆動プラン→exit→fullback がきれいに回るか)
+- `PLAN-DISCOVERY-05-roadmap-registration` (poc): PLAN-DISCOVERY-05 (kind=poc): 工程表 (gated layer-decomposition roadmap) を第一級・機械登録エンティティ化する metamodel 検証
+- `PLAN-L4-00-master` (design): PLAN-L4-00 (Master hub): L4 基本設計 — 必須/選択 triage + child PLAN 合成
+- `PLAN-L4-05-workflow-orchestration` (add-design): PLAN-L4-05 (add-design): L4 基本設計 — workflow オーケストレーション外部設計の補追 (9 駆動モデル + Forward spine + 2 工程専門の状態遷移 what / 入口出口 / 担当 b…
+- `PLAN-L4-06` (add-design): PLAN-L4-06 (add-design): L4 設計 doc を実装実体へ整合 (drift back-fill) + under-design の明示 defer 化
+- `PLAN-L4-13` (design): PLAN-L4-13: 内部資産 drift lint の L4 基本設計増分
+- `PLAN-L6-06-handover-mechanism` (add-design): PLAN-L6-06 (add-design): handover 記録機構の機能設計 — session-log PLAN digest → handover 生成 (機械ポインタ CURRENT.json + 人間判断 markdow…
+- `PLAN-L6-07-agent-slots` (add-design): PLAN-L6-07 (add-design): agent-slots Layer-2 オーケストレーション機構の機能設計 — slot lifecycle + team strategy schema + 直列化3条件 (IMP-05…
+- `PLAN-L6-08-backfill-pairing` (add-design): PLAN-L6-08 (add-design): 駆動モデル back-fill pairing 完全性の機能設計 — KIND_BACKFILL マトリクス + impl⇔Reverse / impl⇔glossary 検査 (IMP-…
+- `PLAN-L6-09-governance-enforcement` (add-design): PLAN-L6-09 (add-design): governance enforcement lints の機能設計 — scrum-reverse / backfill-hard / propagation (A/B/C、IMP-06…
+- `PLAN-L6-10` (add-design): PLAN-L6-10 (add-design): vmodel pair-freeze lint の機能設計 — design⇔test-design pair_artifact 双方向整合・孤児0 (rule pair-exists/r…
+- `PLAN-L6-11-verification-trigger` (add-design): PLAN-L6-11 (add-design): 検証タイミングの機械発火の機能設計 — V-model 層群 freeze 集計 (vmodel-pair-freeze §7、IMP-068)
+- `PLAN-L6-12-review-evidence` (add-design): PLAN-L6-12 (add-design): review 前置の機械強制 — review_evidence 機能設計 (confirmed design/impl PLAN が review 証跡なしで素通りするのを doctor…
+- `PLAN-L6-21-fr-unit-coverage` (add-design): PLAN-L6-21 (add-design): FR registry to L6 unit coverage
+- `PLAN-L6-22-l6-completion-readiness` (add-design): PLAN-L6-22 (add-design): L6 completion readiness lint
+- `PLAN-L6-33-tool-adapter-probes` (add-design): PLAN-L6-33 (add-design): graph and diagram tool adapter probes
+- `PLAN-L7-04-handover-mechanism` (add-impl): PLAN-L7-04 (add-impl): handover 記録機構の実装 — src/handover + ut-tdd handover / plan use CLI + session-log 限定 amendment (cur…
+- `PLAN-L7-05-biome-debt` (refactor): PLAN-L7-05 (refactor): repo 既存 biome 負債を解消し harness-check CI に biome lint を有効化 (機能変更なし、113 test green 維持が安全網)
+- `PLAN-L7-06-handover-enforcement` (add-impl): PLAN-L7-06 (add-impl): handover-on-completion 規律の機械強制 — checkHandoverDiscipline + Stop-hook warn + doctor surface (IMP-…
+- `PLAN-L7-21-runtime-adapter-session-lifecycle` (add-impl): PLAN-L7-21 (add-impl): runtime adapter session lifecycle and shared hook entrypoints
+- `PLAN-L7-32` (add-impl): PLAN-L7-32 (add-impl): cross-artifact relation graph and verification profile projection
+- `PLAN-RECOVERY-02-vmodel-canonical` (recovery): PLAN-RECOVERY-02 (recovery): V-model 定義の前提欠落 — 正規式モデルへ収束 + L0-L3 fullback/フィックス
+- `PLAN-REVERSE-01-process-docs` (reverse): PLAN-REVERSE-01 (kind=reverse): docs/process 正本化 — DISCOVERY-04 dogfood 実績 (V1-V7) から forward/modes/gates を as-is 復元し g…
+- `PLAN-REVERSE-05-handover-mechanism` (reverse): PLAN-REVERSE-05 (reverse/fullback): handover 記録機構を上位整合へ back-fill — §6.8.5 follow-up done 化 + CURRENT.md→.json 表記同期 + §…
+- `PLAN-REVERSE-06-workflow-improvements` (reverse): PLAN-REVERSE-06 (reverse/fullback): workflow 改善 (IMP-047/049/050) を上位整合へ back-fill — §6.8.5 handover 強制側 + §G.4 直列/並列規約…
+- `PLAN-REVERSE-07-backfill-pairing` (reverse): PLAN-REVERSE-07 (reverse/fullback): back-fill pairing 機構を上位整合へ back-fill — §1.10.E2 + 起票ルール + L0 §10 用語 (IMP-051)。新 FR …
+- `PLAN-REVERSE-08-discovery-metamodel` (reverse): PLAN-REVERSE-08 (reverse/normalization): DISCOVERY-01 (workflow メタモデル PoC) confirmed を上位整合へ — concept §2.5 Discovery 定義…
+- `PLAN-REVERSE-12` (reverse): PLAN-REVERSE-12 (reverse/back-fill): review_evidence 機械強制を governance へ合流 — requirements §7.8.7 機械強制注記 + concept §10 用語…
+- `PLAN-REVERSE-36-verification-cycle-gate-naming` (reverse): PLAN-REVERSE-36 (reverse/normalization): 横断ゲート命名を V-model band 検証サイクルゲートへ正規化 — roadmap GATE-A/B 廃し L3/L6/設計/実装 検証サイクルゲー…
+
+## §2 成果物 (commit / files)
+
+- `PLAN-DISCOVERY-01-workflow-metamodel`
+- `PLAN-DISCOVERY-05-roadmap-registration`
+  - commit: 236c70e
+- `PLAN-L4-00-master`
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\handover\CURRENT.json
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\handover\session-handover-2026-06-05.md
+- `PLAN-L4-05-workflow-orchestration`
+- `PLAN-L4-06`
+- `PLAN-L4-13`
+  - commit: 86c61fa
+  - file: Edit src/cli.ts
+  - file: Edit .claude/hooks/session-log.ts
+- `PLAN-L6-06-handover-mechanism`
+- `PLAN-L6-07-agent-slots`
+- `PLAN-L6-08-backfill-pairing`
+- `PLAN-L6-09-governance-enforcement`
+- `PLAN-L6-10`
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\handover\session-handover-2026-06-05.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\handover\CURRENT.json
+- `PLAN-L6-11-verification-trigger`
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\handover\CURRENT.json
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\handover\session-handover-2026-06-05.md
+- `PLAN-L6-12-review-evidence`
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\improvement-backlog.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\handover\CURRENT.json
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\handover\session-handover-2026-06-05.md
+- `PLAN-L6-21-fr-unit-coverage`
+- `PLAN-L6-22-l6-completion-readiness`
+  - commit: 0047f5b
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\audit\A-108-orphan-impl-vs-plan.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\improvement-backlog.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\audit\A-110-l6-independent-reaudit.md
+- `PLAN-L6-33-tool-adapter-probes`
+  - commit: 78716bd
+- `PLAN-L7-04-handover-mechanism`
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\handover\index.ts
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\plans\PLAN-REVERSE-05-handover-mechanism.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\governance\ut-tdd-agent-harness-requirements_v1.2.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\governance\ut-tdd-agent-harness-concept_v3.1.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\design\harness\L1-requirements\functional-requirements.md
+- `PLAN-L7-05-biome-debt`
+- `PLAN-L7-06-handover-enforcement`
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\runtime\agent-slots.ts
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\runtime\agent-slots.ts
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\doctor\index.ts
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\tests\agent-slots.test.ts
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.claude\hooks\agent-guard.ts
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\tests\agent-slots.test.ts
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\schema\team.ts
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\teams\example-review-team.yaml
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\tests\team-schema.test.ts
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\teams\example-review-team.yaml
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\tests\doctor.test.ts
+  - file: Write C:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\design\harness\L6-function-design\agent-slots.md
+  - file: Edit C:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\test-design\harness\L7-unit-test-design.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.claude\CLAUDE.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\governance\ut-tdd-agent-harness-requirements_v1.2.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\plans\PLAN-L6-07-agent-slots.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\plans\PLAN-L7-08-agent-slots.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\plans\PLAN-REVERSE-06-workflow-improvements.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\improvement-backlog.md
+- `PLAN-L7-21-runtime-adapter-session-lifecycle`
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\test-design\harness\L8-integration-test-design.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\plans\PLAN-L5-00-master.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\audit\A-106-l5-completion-re-review.md
+  - file: Write C:\Users\micro\.claude\projects\c--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness\memory\feedback_freeze_check…
+- `PLAN-L7-32`
+  - commit: f171e3f
+- `PLAN-RECOVERY-02-vmodel-canonical`
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\process\forward\overview.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\process\forward\L07-implementation.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\process\forward\L08-L14-verification-phase.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\process\forward\L00-L06-design-phase.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\process\gates.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\governance\gate-design.md
+  - file: Write C:\Users\micro\.claude\projects\c--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness\memory\project_vmodel_canoni…
+  - file: Edit C:\Users\micro\.claude\projects\c--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness\memory\MEMORY.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\handover\session-handover-2026-06-04.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\.ut-tdd\handover\CURRENT.json
+- `PLAN-REVERSE-01-process-docs`
+- `PLAN-REVERSE-05-handover-mechanism`
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\handover\session-handover-2026-06-04.md
+- `PLAN-REVERSE-06-workflow-improvements`
+- `PLAN-REVERSE-07-backfill-pairing`
+  - file: Write C:\Users\micro\.claude\projects\c--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness\memory\feedback_impl_must_ba…
+- `PLAN-REVERSE-08-discovery-metamodel`
+- `PLAN-REVERSE-12`
+- `PLAN-REVERSE-36-verification-cycle-gate-naming`
+  - commit: 4c89184
+  - commit: fa29f67
+
+## §3 Next Action (実装工程表登録 + L7 初手セッション、2026-06-10 PM2)
+
+> 文脈: PO 指示「工程表でグルーピング → 塊で実装」「ゲート間=PLAN起票」「工程表自体も登録できる仕組みに」「これは**実装工程表**」を受け、キャリーを場当たり実装せず **実装工程表 (L7 実装層の分解) を第一級・機械登録エンティティ化**してから span 単位で潰す方針へ転換。検証ロードマップ (design-doc レベル・非 driver、[[feedback_roadmap_is_design_doc_level]]) とは別物。
+
+1. **span program を順次実装 (多セッション)**: L7 実装工程表 (DISCOVERY-05 §5) の塊を gate 順に。
+   - **塊A** (REVERSE-40 起票済) → 次は **L6 span**: impl-plan-trace lint を FR-L1-18 descent として L6 機能設計 addendum に落とす (DbC + baseline 方針) → **L7 span**: `src/lint/impl-plan-trace.ts` 実装 (12 orphan を baseline allowlist + NEW orphan fail-close) + doctor 配線。これで IMP-087/088 を eliminate。
+   - **塊B**: IMP-127 (tracked⊆canonical) + IMP-128/083 (oracle⇔実test) を Reverse→L6→L7。
+   - **塊C**: L7-32 (Red scaffold 敷済 → Step2 pure projection 実装で Green) → L7-33/34/35。
+   - **塊D**: regression expansion + dependency-drift。**塊E (G-L7.E)**: GATE-B = VERIFICATION_GROUPS に L0-L7 group (L7 freeze 後)。
+2. **DISCOVERY-05 S4 decision (PO)**: 実装工程表登録 metamodel を confirmed とするか。confirmed なら Reverse で FR 起票 + concept §10 promote + master-hub 配置 (spike は PoC plan 仮置き)。
+
+## §4 carry (未了・先送り)
+
+- **実装工程表登録機構**: spike (PoC plan 仮置き、warn-first)。S4 confirmed 後に ① 本配置 (master-hub vs 専用 registry) ② FR 起票 ③ 孤児 span の hard 化 (IMP-088 連動) を Reverse で。
+- **impl-plan-trace の orphan 実数 = 12** (IMP-087 既知4 + 既存 lint 8: asset-drift/change-impact/doc-consistency/entity-coverage/g3-trace/improvement-backlog/readability/shared)。厳格 fail-close は flood するため baseline 必須。
+- 既存 carry 継続: IMP-127/128/083、doctor scaffold stub (dependency-drift/regression)。
+
+## §5 未了 PO 判断
+
+- 実装工程表登録 metamodel の S4 confirmed 可否 (concept 級)。
+- 層内ゲート (G-L7.A〜E) を gate-design の「層内版」として正式概念化するか (DISCOVERY-05 §6 用語 → concept promote)。
+- 12 orphan の処理: baseline allowlist で段階か / 各 orphan を所属 PLAN generates へ全 back-fill か。
+- 塊の順序 (ガード先行 A→B→本線 C→依存 D→exit E) の承認。
+
+## §6 壊さない / 再発させない
+
+- **確定基準 = vitest 全 green** (現 346 + relation-graph 10 todo)。**failing Red を単独 commit しない** → L7 family は Red→Green を同セッションで着地、未実装 oracle は it.todo で可視化。
+- **実装工程表 ≠ 検証ロードマップ**: 前者 (本件) は L7 実装層を gate+span に割る正規 driver。後者は design-doc レベルで driver 化禁止 ([[feedback_roadmap_is_design_doc_level]])。混同しない。
+- **工程表 span membership は roadmap span で表現** (PLAN frontmatter dependencies に **draft poc を参照すると scrum-reverse hard を踏む** — REVERSE-40 で実証、frontmatter から除外して解消)。
+- **キャリーは全 needs-reverse-first**。場当たり実装は A-108 再発。impl 前に Reverse→L6 descent ([[feedback_impl_must_backfill_to_design]])。
+- 工程表登録の単一正本 = `src/schema/roadmap.ts` + `src/lint/roadmap-registry.ts` + doctor `checkRoadmap` (warn-first)。
+- PATH 注入対策: `PATH="$PATH:/c/Windows/System32:/c/Windows"` 前置 ([[project_path_injection_breaks_spawn_tests]])。
+
