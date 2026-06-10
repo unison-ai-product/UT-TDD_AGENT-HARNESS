@@ -4,10 +4,19 @@ title: "PLAN-REVERSE-40 (reverse): orphan 統制の土台 — impl→PLAN trace 
 kind: reverse
 layer: cross
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-10
 updated: 2026-06-10
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-10"
+    tests_green_at: "2026-06-10"
+    verdict: pass
+    scope: "塊A impl-plan-trace (IMP-088) + 4 orphan back-fill (IMP-087)。code-reviewer APPROVE / Critical 0。hybrid だが Codex CLI が壊れ legacy のため intra_runtime_subagent review (cross-agent 不在を evidence に記録)。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
 agent_slots:
   - role: tl
     slot_label: "TL — impl→PLAN trace lint 設計レビュー (別 runtime)"

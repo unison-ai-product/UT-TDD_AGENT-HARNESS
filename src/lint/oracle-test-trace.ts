@@ -15,7 +15,9 @@ import { ORACLE_TEST_TRACE_BASELINE } from "./oracle-test-trace-baseline";
 
 export { ORACLE_TEST_TRACE_BASELINE };
 
-/** oracle ID パターン (U-RELGRAPH-001 / IT-DOCEXPORT-003 等)。 */
+/** oracle ID パターン (U-RELGRAPH-001 / IT-DOCEXPORT-003 等)。
+ *  注 (review Minor): IT-* は現状宣言 0 件で baseline 未収載。将来 IT-* oracle を test-design に
+ *  追加する場合、forward-citation 規律により tests に ID 明記が無いと即 fail する (意図通り = NEW gate)。 */
 const ORACLE_ID = /\b(?:U|IT)-[A-Z0-9]+-[0-9]{3}\b/g;
 
 export interface OracleTestTraceInput {

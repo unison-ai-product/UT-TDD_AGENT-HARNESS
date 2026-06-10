@@ -73,6 +73,8 @@ export function loadImplPlanTraceInput(repoRoot: string): ImplPlanTraceInput {
     const plansDir = join(repoRoot, "docs", "plans");
     for (const f of readdirSync(plansDir).filter((x) => x.endsWith(".md"))) {
       const content = readFileSync(join(plansDir, f), "utf8");
+      // 注 (review Minor): PLAN generates の artifact_path は `/` 区切り統一 (repository-structure.md
+      // 規約)。`\` 区切りの Windows パス記法は対象外 (docs は LF/`/` 統一、.gitattributes)。
       for (const m of content.matchAll(/src\/[A-Za-z0-9_./-]+\.ts/g)) {
         tracedPaths.add(m[0]);
       }

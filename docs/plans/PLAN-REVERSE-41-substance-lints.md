@@ -4,10 +4,19 @@ title: "PLAN-REVERSE-41 (reverse): substance-gate lint 群 — oracle⇔実test 
 kind: reverse
 layer: cross
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-10
 updated: 2026-06-10
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-10"
+    tests_green_at: "2026-06-10"
+    verdict: pass
+    scope: "塊B oracle-test-trace (IMP-128、forward-citation baseline 89) + tracked-canonical (IMP-127、baseline 0)。code-reviewer APPROVE / Critical 0 / Important 0、Minor 2 は反映済。hybrid だが Codex CLI が壊れ legacy のため intra_runtime_subagent review。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
 agent_slots:
   - role: tl
     slot_label: "TL — substance-gate lint 設計レビュー (別 runtime)"
