@@ -391,21 +391,27 @@
 - `PLAN-REVERSE-08-discovery-metamodel`
 - `PLAN-REVERSE-12`
 
-## §3 Next Action
+## §3 Next Action (PLAN-REVERSE-36 完了後)
 
-<!-- TODO(human): 順序付き次手 -->
+1. **push**: commit `4c89184` (検証サイクルゲート命名正規化) ほかを SSH 経由で `origin main` へ。
+2. **Forward L7 実装へ**: GATE-A 再検証 clean (vitest 332 / doctor exit 0 / mojibake 0)、退行なし。設計検証サイクルゲート (旧 GATE-A) は per-layer Forward gate G0.5〜G6 の PO サインオフで着地済 = 別 accept ceremony 不要 (PO 2026-06-10 是正)。定常は Forward で Phase 3 (L7) へ降下。待機列先頭 = 外部ツーリング (PLAN-L7-32〜35) の TDD Red entry。
 
 ## §4 carry (未了・先送り)
 
-<!-- TODO(human): carry -->
+- **実装検証サイクルゲート (旧 GATE-B、L0-L7) の機械発火**: `VERIFICATION_GROUPS` は現状 design 層 (L0-L6) のみ。L7 実装 freeze 後に L0-L7 group を追加 (PLAN-REVERSE-36 carry)。
+- 既存 carry: IMP-128 oracle⇔実テスト突合 / IMP-127 tracked⊆canonical 突合 / IMP-087/088 (A-108 orphan) / doctor scaffold stub。
+- Phase B 中央 UI/同期は direction-only。
 
 ## §5 未了 PO 判断
 
-<!-- TODO(human): escalation -->
+- Phase B 着手タイミング (core 安定をどこで「フロント要件を出せる」と判断するか)。
+- 外部ツーリング (relation graph / doc export / MCP profile) の実装優先順位。
 
 ## §6 壊さない / 再発させない
 
-<!-- TODO(human): 壊さない注意 -->
+- **検証サイクルゲート ≠ Forward gate**: 横断 band ゲート (L3/L6/設計/実装 検証サイクルゲート) は roadmap 固有・V-model band freeze で機械発火。Forward 正規ゲート G0.5〜G7 (gate-design §2) とは別レイヤー。検証ロードマップを driver にしない・別建て手動 accept ceremony を立てない ([[feedback_roadmap_is_design_doc_level]]、PO 2026-06-10 是正)。
+- **ゲート名の単一正本 = `src/vmodel/lint.ts` `VERIFICATION_GROUPS`**。roadmap / concept §10 はこれを参照。新 band 追加時はここに足す。
+- **git 認証 = SSH 鍵** (`~/.ssh/id_ed25519`、unison-ai-product)。対話 GCM OAuth に依存しない (チーム利用者にも同方針が推奨、[[project_github_push_workflow_scope]])。確定基準: typecheck/lint clean・vitest 332・doctor exit 0。
 
 
 ---
