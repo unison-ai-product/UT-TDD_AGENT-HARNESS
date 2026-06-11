@@ -80,7 +80,8 @@ export interface GateProgress {
 }
 
 /**
- * 各層内ゲートの到達状況。gate に到達 = その直前 (before_gate) の span PLAN が**全て** confirmed。
+ * 各層内ゲートの到達状況。gate に到達 = その直前 (before_gate) の span PLAN が**全て** confirmed/completed。
+ * confirmedSpans は互換のため名称維持し、confirmed または completed の到達計数 span を表す。
  * span 0 の gate は vacuous reached を避け未到達扱い (coverage≠substance、空集合で偽 green を出さない)。
  */
 export function computeGateProgress(
@@ -89,7 +90,9 @@ export function computeGateProgress(
 ): GateProgress[] {
   return roadmap.gates.map((g) => {
     const spans = roadmap.spans.filter((s) => s.before_gate === g.id);
-    const confirmedSpans = spans.filter((s) => statusOf(s.plan_id) === "confirmed").length;
+    const confirmedSpans = spans.filter((s) =>
+      ["confirmed", "completed"].includes(statusOf(s.plan_id) ?? ""),
+    ).length;
     const reached = spans.length > 0 && confirmedSpans === spans.length;
     return { gateId: g.id, totalSpans: spans.length, confirmedSpans, reached };
   });

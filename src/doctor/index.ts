@@ -65,6 +65,7 @@ import {
   analyzeProgramCoverage,
   checkSpanExistence,
   computeGateProgress,
+  computeProgramRollup,
   loadRoadmaps,
   PARKED_BANDS,
   programCoverageMessages,
@@ -492,12 +493,20 @@ export function checkRoadmap(repoRoot: string): { messages: string[]; ok: boolea
       );
       for (const gi of progress) {
         messages.push(
-          `  ${gi.gateId}: ${gi.reached ? "✅ reached" : "pending"} (${gi.confirmedSpans}/${gi.totalSpans} span confirmed)`,
+          `  ${gi.gateId}: ${gi.reached ? "✅ reached" : "pending"} (${gi.confirmedSpans}/${gi.totalSpans} span reached: confirmed/completed)`,
         );
       }
       for (const si of spanIssues) messages.push(`  ⚠ ${si}`);
       for (const e of rec.errors) messages.push(`  ⚠ 構造: ${e}`);
     }
+    const rollup = computeProgramRollup(
+      records,
+      (id) => statusMap.get(id) ?? null,
+      new Set(PARKED_BANDS.keys()),
+    );
+    messages.push(
+      `roadmap-rollup — bands ${rollup.coveredBands}/${rollup.totalBands} covered (park ${rollup.parkedBands}, uncovered ${rollup.uncoveredBands}) / gates ${rollup.reachedGates}/${rollup.totalGates} reached / spans ${rollup.confirmedSpans}/${rollup.totalSpans} / frontier: ${rollup.frontier.length ? rollup.frontier.join(", ") : "なし"}`,
+    );
     messages.push(...coverageMessages);
     return { messages, ok: true };
   } catch {

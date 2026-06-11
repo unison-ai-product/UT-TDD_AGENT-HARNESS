@@ -306,6 +306,27 @@ describe("computeGateProgress (U-ROADMAP-009/010)", () => {
     const progress = computeGateProgress(rmNoSpan, () => "confirmed");
     expect(progress.every((g) => g.reached === false)).toBe(true);
   });
+
+  it("U-ROADMAP-023: completed は confirmed と同等に gate 到達計数へ含める", () => {
+    const roadmap = {
+      layer: "L7",
+      gates: [{ id: "G-L7.CLOSE", name: "close", exit_criteria: "span done" }],
+      spans: [{ plan_id: "PLAN-L7-CLOSE", after_gate: "entry", before_gate: "G-L7.CLOSE" }],
+    };
+
+    expect(computeGateProgress(roadmap, () => "confirmed")[0]).toMatchObject({
+      confirmedSpans: 1,
+      reached: true,
+    });
+    expect(computeGateProgress(roadmap, () => "completed")[0]).toMatchObject({
+      confirmedSpans: 1,
+      reached: true,
+    });
+    expect(computeGateProgress(roadmap, () => "draft")[0]).toMatchObject({
+      confirmedSpans: 0,
+      reached: false,
+    });
+  });
 });
 
 describe("analyzeProgramCoverage (U-ROADMAP-015〜018、全プログラム被覆)", () => {

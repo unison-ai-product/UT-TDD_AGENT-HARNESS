@@ -193,4 +193,17 @@ describe("runDoctor", () => {
     expect(r.messages.some((m) => m.includes("doctor: regression-expansion —"))).toBe(true);
     expect(r.messages.some((m) => m.includes("scaffold stub"))).toBe(false);
   });
+
+  it("surfaces roadmap-rollup as a warning-first summary line", () => {
+    const r = runDoctor();
+    // roadmap.messages は runDoctor 内で `doctor: ${m}` へ変換されるため "doctor: " prefix を期待する。
+    const rollupLines = r.messages.filter((m) => m.startsWith("doctor: roadmap-rollup —"));
+
+    expect(r.ok).toBe(true);
+    expect(rollupLines).toHaveLength(1);
+    expect(rollupLines[0]).toContain("bands ");
+    expect(rollupLines[0]).toContain("gates ");
+    expect(rollupLines[0]).toContain("spans ");
+    expect(rollupLines[0]).toContain("frontier:");
+  });
 });
