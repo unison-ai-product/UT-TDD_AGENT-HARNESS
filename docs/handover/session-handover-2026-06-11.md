@@ -1024,12 +1024,15 @@
 
 ## §5 未了 PO 判断
 
-- **PLAN-L7-44 工程表 accept** (harness.db セグメント close) — 前セッション持ち越し。
-- **DISCOVERY-05 roadmap PoC の S4 採用判断**。
+- (訂正) **PLAN-L7-44 accept は既済** (accepted_by:PO / A-130 / commit 6dec6bf)。前セッションからの stale carry → 未了ではない。
+- (訂正) **DISCOVERY-05 S4 採用は RECOVERY-04 closure に内包済** (§4.4、PO 承認済)。roadmap 機構は de-facto 採用 (製本化 + 4 工程表 本番運用)。残 = DISCOVERY-05 status 表記整理のみ → REVERSE-44 (spike hardening 移送) close 時。新規 PO 判断なし。
+- **実質、未了 PO 判断は現状なし**。次の PO action = Codex に park/rollup を投げる → 返り PM verify+commit。
 
 ## §6 壊さない / 再発させない
 
 - **Codex は git 操作禁止** (prompt に明記)。PM が verify 後に commit。
+- **handover の pending は転記でなく実体確認**してから載せる (今回 L7-44 stale carry を反省、[[feedback_coverage_not_substance]])。
+- **Codex 並行の安全条件**: park/rollup タスクは roadmap-registry.ts + tests/roadmap.test.ts に閉じる。Codex 作業中は PM も同 2 ファイルを編集しない (file_conflict 回避、IMP-049)。
 - **PARKED_BANDS / PROGRAM_BANDS は roadmap-registry.ts が単一正本**。park は加算拡張・非破壊 (既存 4 工程表据え置き)。
 - **RECOVERY-04 は completed**。再 open せず、残 impl は REVERSE-44 で trace。
 - **roadmap ブロックの span は実在 plan_id のみ** (孤児 = doctor fail)。新 PLAN 追加時は該当 master の roadmap span も追従。
