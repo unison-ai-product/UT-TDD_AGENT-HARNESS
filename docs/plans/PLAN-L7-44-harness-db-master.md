@@ -7,6 +7,9 @@ drive: db
 status: confirmed
 created: 2026-06-11
 updated: 2026-06-11
+accepted_by: PO
+accepted_at: "2026-06-11"
+accept_evidence: .ut-tdd/audit/A-130-harness-db-segment-accept.md
 review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
