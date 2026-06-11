@@ -1,5 +1,7 @@
 // PLAN-DISCOVERY-05 (poc spike): 工程表 (gated layer-decomposition roadmap) 登録機構の TDD Red→Green。
 // 検証: roadmap zod schema / 構造整合 (gate 参照・順序) / frontmatter 抽出 / span 実在 / gate 進捗。
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzeProgramCoverage,
@@ -7,6 +9,7 @@ import {
   computeGateProgress,
   computeProgramRollup,
   extractRoadmap,
+  loadRoadmaps,
   PARKED_BANDS,
   PROGRAM_BANDS,
   parseRoadmap,
@@ -40,6 +43,21 @@ const VALID_ROADMAP = {
     { plan_id: "PLAN-REVERSE-41-substance-lints", after_gate: "G-L7.A", before_gate: "G-L7.B" },
   ],
 };
+
+function loadPlanStatuses(repoRoot: string): Map<string, string> {
+  const planDir = join(repoRoot, "docs", "plans");
+  const statuses = new Map<string, string>();
+
+  for (const name of readdirSync(planDir)) {
+    if (!name.endsWith(".md")) continue;
+    const content = readFileSync(join(planDir, name), "utf8");
+    const planId = content.match(/^plan_id:\s*(.+)$/m)?.[1]?.trim();
+    const status = content.match(/^status:\s*(.+)$/m)?.[1]?.trim();
+    if (planId && status) statuses.set(planId, status);
+  }
+
+  return statuses;
+}
 
 describe("roadmapSchema (U-ROADMAP-001/002)", () => {
   it("U-ROADMAP-001: 正規 roadmap を parse する", () => {
@@ -182,6 +200,31 @@ describe("roadmap park / program rollup (U-ROADMAP-019..022)", () => {
         roadmaps: [],
       },
     ]);
+  });
+
+  it("U-ROADMAP-024: real repo verification/cutover bands are covered by PLAN-M-00/M-01", () => {
+    const repoRoot = process.cwd();
+    const records = loadRoadmaps(repoRoot);
+    const statuses = loadPlanStatuses(repoRoot);
+    const rollup = computeProgramRollup(
+      records,
+      (planId) => statuses.get(planId) ?? null,
+      new Set(PARKED_BANDS.keys()),
+    );
+    const byBand = new Map(rollup.perBand.map((band) => [band.bandId, band]));
+
+    expect(byBand.get("verification")).toMatchObject({
+      status: "covered",
+      roadmaps: expect.arrayContaining(["PLAN-M-00-verify-cutover"]),
+    });
+    expect(byBand.get("cutover")).toMatchObject({
+      status: "covered",
+      roadmaps: expect.arrayContaining(["PLAN-M-01-cutover-backfill"]),
+    });
+    expect(rollup.coveredBands).toBe(rollup.totalBands);
+    expect(rollup.parkedBands).toBe(0);
+    expect(rollup.uncoveredBands).toBe(0);
+    expect(rollup.frontier).toEqual([]);
   });
 });
 
