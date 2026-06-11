@@ -110,6 +110,18 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 - U-ROADMAP-021: park 非対象の未登録 band は引き続き `uncovered` に残る (verification/cutover 以外を仮に未登録にした fixture)。
 - U-ROADMAP-022: `computeProgramRollup` の band 分類合算 = totalBands、frontier が uncovered + pending gate を列挙。
 
+### E. IMP-132 — gate 到達計数の `completed` 対応 (凍結追加、2026-06-11)
+
+- `computeGateProgress` (`src/lint/roadmap-registry.ts`) の到達計数を `statusOf(span) === "confirmed"` から **`["confirmed","completed"].includes(statusOf(span))`** へ拡張。`completed` は `confirmed` の後続状態であり、より進んだ状態が gate を un-reach させる逆転 (4/4→3/4) を塞ぐ (IMP-132、A-130 で回避済の根本対処)。本 Reverse PLAN が IMP-132 の上位設計合流を兼ねる。
+- テスト: **U-ROADMAP-023** = master 自身が close gate の span で status=completed のとき gate が reached のまま (confirmed と completed が同等に到達計数される)。
+
+### F. rollup の doctor 可視化 (凍結追加、2026-06-11) — 「実装どこまで?」を 1 行で答える
+
+- `src/doctor/index.ts` に **`roadmap-rollup —` 行**を追加。`computeProgramRollup(loadRoadmaps(), statusOf, new Set(PARKED_BANDS.keys()))` を呼び、`bands covered/parked/uncovered` + `gates reached/total` + `spans confirmed/total` + `frontier` を surface。`statusOf` は既存 roadmap check と同じ status 解決を再利用。**warn-first** (doctor.ok 非連動、program-coverage spike と整合)。
+- これにより rollup が runtime から呼ばれ (dead code 解消)、人間が doctor 1 実行で全プログラム進捗を読める。harness.db projection (front 返却) は別増分 (V-pair 要、本 PLAN scope 外、carry)。
+- テスト: **doctor surface** = `tests/doctor.test.ts` に rollup 行の存在 + 集計フォーマットを検証 (既存 doctor.test の様式に倣う)。
+- **change-impact 整合**: src 変更 (roadmap-registry.ts + doctor/index.ts) に対し design (本 PLAN + architecture.md §3.1) + test (roadmap.test.ts + doctor.test.ts) を同一変更集合に含める (`change-impact` fail-close 回避、[[feedback_codex_prompt_scope_vs_change_impact]])。
+
 ## §2 実装計画 (情報源明記)
 
 - **L4 設計書**: 情報源 = RECOVERY-04 §4 製本化 (確定定義) + 既存 architecture.md §3.1 (roadmap mechanism は将来 module として) + `src/schema/roadmap.ts` (as-is)。
