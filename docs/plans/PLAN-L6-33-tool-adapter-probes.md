@@ -4,10 +4,19 @@ title: "PLAN-L6-33 (add-design): graph and diagram tool adapter probes"
 kind: add-design
 layer: L6
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-11
 owner: Codex TL / PO
+review_evidence:
+  - reviewer: codex-intra-runtime-review
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-11"
+    tests_green_at: "2026-06-11"
+    verdict: pass
+    scope: "PLAN-L6-33 close: tool adapter setup/announce scope, U-TOOLADAPTER oracles, PLAN-L7-34 implementation entry, and REVERSE-34 back-fill are present; doctor/review-evidence green."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5-intra-runtime-review
 agent_slots:
   - role: tl
     slot_label: "TL - tool adapter probe design"
@@ -54,3 +63,12 @@ The L7 pair artifact adds U-TOOLADAPTER-001..010.
 ## §5 Guard
 
 No package installation, source implementation, or external command execution is authorized by this PLAN alone. L7 requires PLAN-L7-34 TDD Red and PLAN-REVERSE-34.
+
+## §8 DoD
+
+- [x] L6 function contracts are documented as setup/announce design after IMP-131 scope revision.
+- [x] U-TOOLADAPTER unit oracles are added to L7 unit test design.
+- [x] L7 implementation PLAN references this PLAN and is confirmed.
+- [x] Reverse pairing PLAN exists for implementation back-fill.
+
+Status is `confirmed`: optional adapter execution remains out of scope and must be explicitly enabled by later workflow evidence.

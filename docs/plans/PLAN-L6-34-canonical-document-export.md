@@ -4,10 +4,19 @@ title: "PLAN-L6-34 (add-design): canonical document export"
 kind: add-design
 layer: L6
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-11
 owner: Codex TL / PO
+review_evidence:
+  - reviewer: codex-intra-runtime-review
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-11"
+    tests_green_at: "2026-06-11"
+    verdict: pass
+    scope: "PLAN-L6-34 close: canonical document export function contracts, U-DOCEXPORT oracles, PLAN-L7-35 implementation entry, and REVERSE-35 back-fill are present; doctor/review-evidence green."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5-intra-runtime-review
 agent_slots:
   - role: tl
     slot_label: "TL - canonical document export design"
@@ -73,4 +82,4 @@ No source implementation for document export is authorized until PLAN-L7-35 has 
 - [x] L7 implementation PLAN references this PLAN.
 - [x] Reverse pairing PLAN exists for implementation back-fill.
 
-Status remains `draft`: this PLAN defines the entry but does not authorize L7 source changes without TDD Red and review evidence.
+Status is `confirmed`: the L6 entry, L7 oracle coverage, confirmed L7 implementation route, and Reverse pairing are present. Office-format rendering remains gated by renderer readiness and later workflow evidence.

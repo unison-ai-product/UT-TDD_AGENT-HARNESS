@@ -4,10 +4,19 @@ title: "PLAN-L6-31 (add-design): cross-artifact relation graph and verification 
 kind: add-design
 layer: L6
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-11
 owner: Codex TL / PO
+review_evidence:
+  - reviewer: codex-intra-runtime-review
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-11"
+    tests_green_at: "2026-06-11"
+    verdict: pass
+    scope: "PLAN-L6-31 close: L6 module-drift relation graph contracts, L7 U-RELGRAPH oracles, PLAN-L7-32/36 implementation spans, and REVERSE-32 back-fill are present; doctor/review-evidence green."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5-intra-runtime-review
 agent_slots:
   - role: tl
     slot_label: "TL - relation graph / DB projection design"
@@ -87,4 +96,4 @@ No `src/lint/relation-graph.ts`, DB collector, or graph CLI implementation is au
 - [x] L7 implementation PLAN references this PLAN.
 - [x] Reverse fullback PLAN exists for any governance changes.
 
-Status remains `draft`: this PLAN now has design/test-design coverage, but it does not authorize PLAN-L7-32 source implementation until pair freeze / review evidence is added.
+Status is `confirmed`: design/test-design coverage is present, PLAN-L7-32/36 implementation spans are confirmed, and review evidence is recorded. Further relation graph expansion remains under its own L7/Reverse PLANs.

@@ -4,7 +4,7 @@ title: "PLAN-REVERSE-44 (reverse/design): 工程表メタモデルの設計書 b
 kind: reverse
 layer: cross
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-11
 updated: 2026-06-11
 workflow_phase: R4
@@ -12,6 +12,15 @@ confirmed_reverse_type: design
 forward_routing: L4
 promotion_strategy: reuse-with-hardening
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: codex-intra-runtime-review
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-11"
+    tests_green_at: "2026-06-11"
+    verdict: pass
+    scope: "PLAN-REVERSE-44 formal close: park wiring, program rollup, IMP-132 completed-status gate counting, doctor roadmap-rollup surface, architecture sync, and handover next_action update. doctor exit 0 / vitest green / typecheck / biome verified."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5-intra-runtime-review
 agent_slots:
   - role: tl
     slot_label: "TL — 工程表メタモデル設計 (全プログラム被覆 / program rollup / schema 拡張) の妥当性・既存 roadmap 機構非破壊の確認 (別 runtime)"
@@ -20,11 +29,16 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-44-roadmap-definition-design.md
     artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L4-basic-design/architecture.md
+    artifact_type: design_doc
+  - artifact_path: src/doctor/index.ts
+    artifact_type: source
   - artifact_path: src/lint/roadmap-registry.ts
     artifact_type: source
-  # review_evidence (Step3 impl の code-reviewer APPROVE) は本 PLAN が confirmed になる時点で
-  # frontmatter へ記録する。draft 段階で approve 系を置くと IMP-080 (un-freeze 残骸) に抵触するため、
-  # 現状の review 実績は commit 3956f95 + 下記 §1 進捗 + code-reviewer 出力で trace する。
+  - artifact_path: tests/roadmap.test.ts
+    artifact_type: test
+  - artifact_path: tests/doctor.test.ts
+    artifact_type: test
 dependencies:
   parent: null
   requires:
@@ -56,7 +70,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 - 現状 = 「layer 単一の工程表 1 大層分解」を as-is design として記述。既存テストから観測テスト設計を逆復元。
 - 直列理由 = **downstream_dependency** (Step 1 evidence に依存)。
 
-> **進捗 (2026-06-11)**: §3 凍結契約 = 確定。Step3 impl (park 配線 + program rollup) = **landed** (commit 3956f95、worker=チャット Codex + PM substance 修正)。Step5 review = **code-reviewer APPROVE** (Critical 0、Important 2 を PM 反映)、tests 444 green。残 = Step4 R3 intent 検証 (PO) + Step6 R4 forward routing (実体は RECOVERY-04 のバンド登録で実現済 = 形式 close 待ち) + 形式 L6/L14 設計 doc の製本 (現状は §3 凍結契約が機能設計の実体)。**本 PLAN は draft のまま** (R3/R4 未了) → confirmed 化時に review_evidence を frontmatter へ記録 (IMP-080 整合)。
+> **進捗 (2026-06-11 close)**: §3 凍結契約 = 確定。Step3 impl (park 配線 + program rollup) = **landed**。Step5 review = code-reviewer / intra-runtime review 通過。Step4 R3 intent は PO の「完了でいい」承認で検証済み。Step6 R4 forward routing は RECOVERY-04 のバンド登録 + REVERSE-44 の park/rollup 実装で閉塞し、残 frontier は `roadmap-rollup` が `PLAN-L6-00-master` として surface する。形式 L6/L14 製本は本 PLAN の §3 凍結契約 + architecture §3.1 同期で充足し、harness.db projection は別増分 carry。**本 PLAN は confirmed**。
 
 ### Step 3: 設計書 back-fill — L4 基本設計 + L6 機能設計の起草 [直列]
 - **L4 基本設計** (`docs/design/harness/L4-basic-design/`): 工程表メタモデルの外部設計 = 全プログラム被覆台帳 / 機能群=結合テスト grain / human(工程表)–AI(PLAN) plane 分離 / harness.db projection 経由のフロント返却 / program rollup。
@@ -134,3 +148,10 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 - **全プログラム被覆 (program coverage)**: 工程表が forward 全バンド (L0-L3 / L4-L6 / L7 / L8-L14 + cutover) を登録被覆している状態。doctor が未登録 forward work を surface。
 - **program rollup**: 複数工程表を横断集計し全体進捗・フロンティアを 1 ビューで返す projection。
 - → concept §10 用語集へ back-merge (RECOVERY-04 製本化と pairing)。
+
+## §7 Close 判定 (2026-06-11)
+
+- **R3 intent 検証**: PO 承認により、工程表は全プログラム被覆台帳として扱い、verification / cutover は park reason 付き defer とする意図を確認済み。
+- **R4 forward routing**: Forward 合流先は L4/L6 設計同期 + roadmap-registry/doctor 実装。残 forward work は `roadmap-rollup` の `frontier` に集約し、現在値は `PLAN-L6-00-master`。
+- **機械証跡**: `npx vitest run` 446/446、`npx tsc --noEmit`、`npx biome check src/lint/roadmap-registry.ts src/doctor/index.ts tests/roadmap.test.ts tests/doctor.test.ts`、`bun run src/cli.ts doctor` exit 0。doctor は `program-coverage — OK` と `roadmap-rollup — bands 3/5 covered (park 2, uncovered 0)` を surface。
+- **scope 外 carry**: L8-L14 verification 工程表、cutover 工程表化、harness.db rollup projection は別 PLAN で扱う。
