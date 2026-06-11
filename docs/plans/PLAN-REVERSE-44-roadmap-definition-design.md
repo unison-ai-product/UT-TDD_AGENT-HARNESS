@@ -69,6 +69,44 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 ### Step 6: R4 Gap & Routing — Forward 合流 [直列]
 - gap を `forward_routing=L4` で Forward へ閉塞 (全プログラム工程表登録の Forward 着手点)。`missing_pair_artifacts` 記録。直列理由 = **shared_state** (handover / forward routing 更新)。
 
+## §3 凍結設計契約 (Step 3 L6 機能設計 — Codex 実装入力、2026-06-11 凍結)
+
+> RECOVERY-04 fullback で descended バンド登録 + future バンド明示 defer まで完了。残 impl = **park 配線 + program rollup**。本節で型契約・挙動・不変条件・テスト oracle を凍結し、チャット側 Codex が `src/lint/roadmap-registry.ts` + `tests/roadmap.test.ts` を実装する入力とする。**非破壊** (既存 `analyzeProgramCoverage` / `PROGRAM_BANDS` / 既存 4 工程表は据え置き、加算拡張のみ)。
+
+### A. park 配線 (明示 defer band の単一正本化 + doctor 連動)
+
+- **`PARKED_BANDS: Map<string,string>`** を `roadmap-registry.ts` に新設 (bandId → reason、単一正本 + 根拠コメント、CLAUDE.md ハードコード規約)。初期値 = `verification` / `cutover` (RECOVERY-04 §5 の正規 defer 文言)。
+- **`ProgramCoverageResult` に `parked: BandCoverage[]` を追加**。`analyzeProgramCoverage` は parkedBandIds に属す band を `parked` に分類し `uncovered` から除外する (既存の `parkedBandIds` 引数を活用、シグネチャ変更なし)。
+- **doctor 呼び出し変更**: `src/doctor/index.ts` の `analyzeProgramCoverage(records)` → `analyzeProgramCoverage(records, new Set(PARKED_BANDS.keys()))`。
+- **`programCoverageMessages` 拡張**: parked band を **reason 付きで明示 surface** (silent truncation 禁止、[[feedback_coverage_not_substance]])。uncovered=0 でも parked を列挙し「全 park で偽 OK」を防ぐ。
+
+### B. program rollup (複数工程表の横断集計 = 中央 UI projection 源)
+
+- **`computeProgramRollup(records, statusOf, parkedBandIds): ProgramRollup`** を新設。
+- **`ProgramRollup`** 形:
+  ```ts
+  interface ProgramRollup {
+    totalBands: number; coveredBands: number; parkedBands: number; uncoveredBands: number;
+    totalGates: number; reachedGates: number; totalSpans: number; confirmedSpans: number;
+    frontier: string[];   // uncovered band id + pending gate を持つ工程表 planId (「実装どこまで?」の残り)
+    perBand: Array<{ bandId: string; name: string; status: "covered" | "parked" | "uncovered"; roadmaps: string[] }>;
+  }
+  ```
+- gate/span 集計は既存 `computeGateProgress` を全 records へ適用して合算。`frontier` = uncovered band id ∪ (reached=false の gate を持つ工程表 planId)。
+
+### C. 不変条件 (invariant)
+
+- parked band は uncovered に**現れない**が、必ず reason 付きで surface される (隠蔽しない)。
+- rollup の `coveredBands + parkedBands + uncoveredBands === totalBands` (= `PROGRAM_BANDS.length`)。
+- 既存 4 工程表の gate 到達計数・既存テストは不変 (回帰 0)。
+
+### D. テスト oracle (V-pair、`tests/roadmap.test.ts` U-ROADMAP-019〜)
+
+- U-ROADMAP-019: PARKED_BANDS の band は `analyzeProgramCoverage` の `uncovered` に出ず `parked` に入る。
+- U-ROADMAP-020: `programCoverageMessages` が parked band を reason 付きで含む (空でも掲出)。
+- U-ROADMAP-021: park 非対象の未登録 band は引き続き `uncovered` に残る (verification/cutover 以外を仮に未登録にした fixture)。
+- U-ROADMAP-022: `computeProgramRollup` の band 分類合算 = totalBands、frontier が uncovered + pending gate を列挙。
+
 ## §2 実装計画 (情報源明記)
 
 - **L4 設計書**: 情報源 = RECOVERY-04 §4 製本化 (確定定義) + 既存 architecture.md §3.1 (roadmap mechanism は将来 module として) + `src/schema/roadmap.ts` (as-is)。
