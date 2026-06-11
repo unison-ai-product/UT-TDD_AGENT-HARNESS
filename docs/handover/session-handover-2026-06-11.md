@@ -801,3 +801,56 @@
 
 <!-- TODO(human): 壊さない注意 -->
 
+---
+
+# Session Handover — 2026-06-11
+
+## §1 PLAN サマリ
+
+- `PLAN-L7-32-cross-artifact-relation-graph` (add-impl): PLAN-L7-32 (add-impl): cross-artifact relation graph and verification profile projection
+- `PLAN-L7-35` (add-impl): PLAN-L7-35 (add-impl): canonical document export
+- `PLAN-L7-43` (add-impl): PLAN-L7-43 (add-impl): 実装検証サイクルゲート L0-L7 verification group
+
+## §2 成果物 (commit / files)
+
+- `PLAN-L7-32-cross-artifact-relation-graph`
+  - commit: 06ed076
+  - commit: f171e3f
+  - commit: b83d6d2
+  - commit: 41f6313
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\handover\session-handover-2026-06-10.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\plans\PLAN-REVERSE-40-orphan-governance.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\plans\PLAN-REVERSE-40-orphan-governance.md
+- `PLAN-L7-35`
+  - commit: 879e899
+- `PLAN-L7-43`
+
+## §3 Next Action
+
+本セッションは Phase 3 close + harness.db L7 セグメント着手。active = **PLAN-L7-44 (harness.db 工程表、in_progress)**。
+
+1. **Codex に span 46 を依頼** (PO がチャット側 Codex へ)。プロンプト = `.ut-tdd/codex-tasks/harness-db-codex-goal-prompt.md` の【共有 preamble】+【span ブロック 46】を貼る。46 完了 → PM が verify(vitest+doctor)+commit。
+2. **46 完了後、span 47/48/49 を 3 並列 Codex** (互いに独立、別ファイル/凍結 schema)。各 PM verify+commit。
+3. 全 span 完了で **G-L7DB.D 到達** → harness.db セグメント close → HELIX→UT cutover (Mode 2→3) が射程。
+
+実装済 (commit `4f81f5d`): **span ① foundation** = `src/state-db/`(adapter bun/node 両対応 + migration + maintenance) + `src/schema/harness-db.ts`(17 table registry 単一正本) + CLI `db status/rebuild` + IT-DB-01 (10 tests)。
+
+## §4 carry (未了・先送り)
+
+- **§9.4-§9.7 projection table** (UT evidence / relation-graph / MCP / doc-export): 各射影 span が registry に追記 (span 46 が §9.5/9.6/9.7、UT evidence は別 span)。foundation は core 17 table のみ。
+- **bun:sqlite path が vitest(Node) 未カバー**: adapter は両対応だが test は node:sqlite 経路のみ通る (vitest=Node worker)。bun 経路の acceptance test は別途 (Minor、code-reviewer 指摘)。
+- **PLAN-L7-45 status=draft**: 実装+review(code-reviewer PASS-with-fixes)+green 済だが、G-L7DB.A 到達 (confirmed) は **PO accept 待ち** (self-confirm しない)。
+- **cutover 戦略 doc が stale** (ADR-001 前提ズレ): Reverse back-fill で現況 (TS-native / 実 Mode) へ更新する IMP を起票予定。
+
+## §5 未了 PO 判断
+
+- **span 45 の accept** (PLAN-L7-45 draft→confirmed、G-L7DB.A 到達判定)。
+- **実装者の最終確定**: (c) ハイブリッド = 45 PM-TS済 / 46-49 Codex で合意済。Codex はチャット側。
+
+## §6 壊さない / 再発させない
+
+- **`.ut-tdd/harness.db` は runtime state = 絶対に commit しない** (gitignore 済)。`.ut-tdd/codex-tasks/` も同様。
+- **harness-db.ts の table registry が単一正本**: table 追加は registry append + SCHEMA_VERSION bump の 1 箇所。DDL を別所に直書きしない。
+- **SQL 識別子は `assertSqlIdentifier` 検証必須** (値はバインド)。projection-writer も registry 由来の識別子を使う。
+- **新規 src module/file は登録必須**: architecture §3.1 (module-drift) + PLAN generates (impl-plan-trace)。漏れると dogfooding ゲートが fail-close (今回 4 件検知→修正で学習)。
+
