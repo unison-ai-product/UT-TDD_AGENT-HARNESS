@@ -131,6 +131,20 @@ export const PROGRAM_BANDS: ProgramBand[] = [
   { id: "cutover", name: "cutover (HELIX→UT)", layers: ["cutover"] },
 ];
 
+/**
+ * 明示 defer (park) バンド = forward 未降下で登録対象 PLAN 皆無のバンド (concept §3.1.3.1 正規 defer)。
+ * 単一正本 (bandId → reason、CLAUDE.md ハードコード規約: 根拠コメント + 集約)。RECOVERY-04 §5 で宣言済。
+ * park 宣言 band は uncovered から除外するが、reason を必ず surface して残り forward work を隠さない
+ * ([[feedback_coverage_not_substance]] silent truncation 禁止)。covered な band は park 指定でも covered 優先。
+ */
+export const PARKED_BANDS: Map<string, string> = new Map([
+  ["verification", "forward 未降下 (L8-L14 PLAN 皆無)。降下時に当該 Forward PLAN が工程表を起こす"],
+  [
+    "cutover",
+    "HELIX→UT cutover は harness.db (PLAN-L7-44) close 後の射程。cutover 戦略 doc stale → Reverse back-fill 先行",
+  ],
+]);
+
 export interface BandCoverage {
   band: ProgramBand;
   covered: boolean;
@@ -140,6 +154,7 @@ export interface BandCoverage {
 
 export interface ProgramCoverageResult {
   coverage: BandCoverage[];
+  parked: BandCoverage[];
   /** 未登録 (park 宣言もない) band。「実装どこまで?」の残り frontier。 */
   uncovered: BandCoverage[];
 }
@@ -159,24 +174,97 @@ export function analyzeProgramCoverage(
       .map((r) => r.planId);
     return { band, covered: roadmaps.length > 0, roadmaps };
   });
+  const parked = coverage.filter((c) => !c.covered && parkedBandIds.has(c.band.id));
   const uncovered = coverage.filter((c) => !c.covered && !parkedBandIds.has(c.band.id));
-  return { coverage, uncovered };
+  return { coverage, parked, uncovered };
 }
 
 /** doctor surface 用メッセージ (warn-first)。 */
 export function programCoverageMessages(result: ProgramCoverageResult): string[] {
   const covered = result.coverage.filter((c) => c.covered).length;
   const total = result.coverage.length;
-  if (result.uncovered.length === 0) {
-    // park 宣言 band を含めても uncovered 0。covered 実数を併記し「全 park で偽 OK」の誤読を防ぐ。
+  const parked = result.parked;
+  const uncovered = result.uncovered;
+  const parkedDetails = parked
+    .map((c) => `${c.band.id}: ${PARKED_BANDS.get(c.band.id) ?? "parked"}`)
+    .join("; ");
+  if (uncovered.length === 0) {
     return [
-      `program-coverage — OK (forward ${total} バンド、未登録 (park 除く) なし、登録被覆 ${covered})`,
+      `program-coverage — OK (forward ${total} バンド、登録 ${covered} / park ${parked.length}${parkedDetails ? ` [${parkedDetails}]` : ""}、未登録 (park 除く) なし)`,
     ];
   }
-  const missing = result.uncovered.map((c) => `${c.band.id}(${c.band.name})`).join(", ");
+  const missing = uncovered.map((c) => `${c.band.id}(${c.band.name})`).join(", ");
+  const parkSuffix = parkedDetails ? `、park ${parked.length}: ${parkedDetails}` : "";
   return [
-    `program-coverage — ⚠ ${covered}/${total} バンド登録、未登録 ${result.uncovered.length} 件: ${missing}。工程表 (roadmap) 未登録の forward work = 「実装どこまで?」の残り frontier (PLAN-RECOVERY-04、warn-first)`,
+    `program-coverage — ⚠ ${covered}/${total} バンド登録、未登録 ${uncovered.length} 件: ${missing}${parkSuffix}。工程表 (roadmap) 未登録の forward work = 「実装どこまで?」の残り frontier (PLAN-RECOVERY-04、warn-first)`,
   ];
+}
+
+export interface ProgramRollup {
+  totalBands: number;
+  coveredBands: number;
+  parkedBands: number;
+  uncoveredBands: number;
+  totalGates: number;
+  reachedGates: number;
+  totalSpans: number;
+  confirmedSpans: number;
+  frontier: string[];
+  perBand: Array<{
+    bandId: string;
+    name: string;
+    status: "covered" | "parked" | "uncovered";
+    roadmaps: string[];
+  }>;
+}
+
+/**
+ * Program-level summary for roadmap registry consumers. Band accounting is kept separate from
+ * gate/span progress so parked forward bands stay visible without becoming uncovered work.
+ */
+export function computeProgramRollup(
+  records: RoadmapRecord[],
+  statusOf: (planId: string) => string | null,
+  parkedBandIds: Set<string> = new Set(),
+): ProgramRollup {
+  const coverage = analyzeProgramCoverage(records, parkedBandIds);
+  const progressByRecord = records.map((record) => ({
+    record,
+    progress: computeGateProgress(record.roadmap, statusOf),
+  }));
+  const gateProgress = progressByRecord.flatMap((entry) => entry.progress);
+  const frontier = Array.from(
+    new Set([
+      ...coverage.uncovered.map((c) => c.band.id),
+      ...progressByRecord
+        .filter((entry) => entry.progress.some((g) => !g.reached))
+        .map((entry) => entry.record.planId),
+    ]),
+  );
+  const parkedBandIdsInResult = new Set(coverage.parked.map((c) => c.band.id));
+  const perBand = coverage.coverage.map((c) => ({
+    bandId: c.band.id,
+    name: c.band.name,
+    status: c.covered
+      ? ("covered" as const)
+      : parkedBandIdsInResult.has(c.band.id)
+        ? ("parked" as const)
+        : ("uncovered" as const),
+    roadmaps: c.roadmaps,
+  }));
+
+  return {
+    totalBands: coverage.coverage.length,
+    coveredBands: coverage.coverage.filter((c) => c.covered).length,
+    parkedBands: coverage.parked.length,
+    uncoveredBands: coverage.uncovered.length,
+    totalGates: gateProgress.length,
+    reachedGates: gateProgress.filter((g) => g.reached).length,
+    totalSpans: gateProgress.reduce((sum, g) => sum + g.totalSpans, 0),
+    confirmedSpans: gateProgress.reduce((sum, g) => sum + g.confirmedSpans, 0),
+    frontier,
+    perBand,
+  };
 }
 
 /** docs/plans/ から `roadmap:` block を持つ登録工程表を全 load。 */

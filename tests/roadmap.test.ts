@@ -5,7 +5,9 @@ import {
   analyzeProgramCoverage,
   checkSpanExistence,
   computeGateProgress,
+  computeProgramRollup,
   extractRoadmap,
+  PARKED_BANDS,
   PROGRAM_BANDS,
   parseRoadmap,
   programCoverageMessages,
@@ -48,6 +50,138 @@ describe("roadmapSchema (U-ROADMAP-001/002)", () => {
   it("U-ROADMAP-002: gates 空は reject (層分解の体をなさない)", () => {
     const parsed = roadmapSchema.safeParse({ ...VALID_ROADMAP, gates: [] });
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe("roadmap park / program rollup (U-ROADMAP-019..022)", () => {
+  it("U-ROADMAP-019: PARKED_BANDS の未登録 band は parked に入り / covered band は park 指定でも covered 優先", () => {
+    // fixture 注入で実 fs (loadRoadmaps) 非依存にする (cwd 変動で偽 PASS/FAIL を出さない、substance 担保)。
+    // impl(L7) のみ登録。verification/cutover は未登録 → park 指定で parked へ。
+    // impl も parkedBandIds に含めるが covered なので parked にならない (covered 優先 = 二重計上なし)。
+    const records = [record("PLAN-L7-44-harness-db-master", "L7")];
+    const parked = new Set([...PARKED_BANDS.keys(), "impl"]);
+    const result = analyzeProgramCoverage(records, parked);
+    const parkedIds = result.parked.map((c) => c.band.id);
+    const uncoveredIds = result.uncovered.map((c) => c.band.id);
+    const coveredIds = result.coverage.filter((c) => c.covered).map((c) => c.band.id);
+    // 未登録 park band は parked に分類され uncovered に出ない
+    expect(parkedIds).toContain("verification");
+    expect(parkedIds).toContain("cutover");
+    expect(uncoveredIds).not.toContain("verification");
+    expect(uncoveredIds).not.toContain("cutover");
+    // covered な impl は park 指定でも parked に入らない (covered 優先)
+    expect(coveredIds).toContain("impl");
+    expect(parkedIds).not.toContain("impl");
+    // 不変条件: covered + parked + uncovered = 全 band (二重計上なし)
+    expect(coveredIds.length + result.parked.length + result.uncovered.length).toBe(
+      PROGRAM_BANDS.length,
+    );
+  });
+
+  it("U-ROADMAP-020: programCoverageMessages は uncovered=0 でも parked band と reason を surface する", () => {
+    const result = analyzeProgramCoverage(
+      [
+        record("PLAN-L3-00-master", "L3"),
+        record("PLAN-L4-00-master", "L4"),
+        record("PLAN-L7-44-harness-db-master", "L7"),
+      ],
+      new Set(PARKED_BANDS.keys()),
+    );
+    const message = programCoverageMessages(result)[0];
+    const verificationReason = PARKED_BANDS.get("verification");
+    const cutoverReason = PARKED_BANDS.get("cutover");
+    expect(message).toContain("登録 3 / park 2");
+    expect(message).toContain("verification:");
+    expect(verificationReason).toBeDefined();
+    expect(message).toContain(String(verificationReason));
+    expect(message).toContain("cutover:");
+    expect(cutoverReason).toBeDefined();
+    expect(message).toContain(String(cutoverReason));
+  });
+
+  it("U-ROADMAP-021: parkedBandIds に含めない未登録 band は uncovered に残る", () => {
+    const result = analyzeProgramCoverage(
+      [
+        record("PLAN-L3-00-master", "L3"),
+        record("PLAN-L4-00-master", "L4"),
+        record("PLAN-L7-44-harness-db-master", "L7"),
+      ],
+      new Set(["verification"]),
+    );
+    expect(result.parked.map((c) => c.band.id)).toEqual(["verification"]);
+    expect(result.uncovered.map((c) => c.band.id)).toEqual(["cutover"]);
+  });
+
+  it("U-ROADMAP-022: computeProgramRollup は band 合計不変条件と pending frontier を返す", () => {
+    const records: RoadmapRecord[] = [
+      {
+        planId: "PLAN-UP",
+        file: "docs/plans/PLAN-UP.md",
+        roadmap: {
+          layer: "L3",
+          gates: [{ id: "G-UP", name: "up", exit_criteria: "x" }],
+          spans: [{ plan_id: "PLAN-UP-1", after_gate: "entry", before_gate: "G-UP" }],
+        },
+        errors: [],
+      },
+      {
+        planId: "PLAN-IMPL",
+        file: "docs/plans/PLAN-IMPL.md",
+        roadmap: {
+          layer: "L7",
+          gates: [{ id: "G-IMPL", name: "impl", exit_criteria: "x" }],
+          spans: [{ plan_id: "PLAN-IMPL-1", after_gate: "entry", before_gate: "G-IMPL" }],
+        },
+        errors: [],
+      },
+    ];
+    const rollup = computeProgramRollup(
+      records,
+      (planId) => (planId === "PLAN-UP-1" ? "confirmed" : "draft"),
+      new Set(["verification"]),
+    );
+
+    expect(rollup.coveredBands + rollup.parkedBands + rollup.uncoveredBands).toBe(
+      rollup.totalBands,
+    );
+    expect(rollup.totalBands).toBe(PROGRAM_BANDS.length);
+    expect(rollup.totalGates).toBe(2);
+    expect(rollup.reachedGates).toBe(1);
+    expect(rollup.totalSpans).toBe(2);
+    expect(rollup.confirmedSpans).toBe(1);
+    expect(rollup.frontier).toEqual(["design", "cutover", "PLAN-IMPL"]);
+    expect(rollup.perBand).toEqual([
+      {
+        bandId: "upstream",
+        name: PROGRAM_BANDS[0]?.name,
+        status: "covered",
+        roadmaps: ["PLAN-UP"],
+      },
+      {
+        bandId: "design",
+        name: PROGRAM_BANDS[1]?.name,
+        status: "uncovered",
+        roadmaps: [],
+      },
+      {
+        bandId: "impl",
+        name: PROGRAM_BANDS[2]?.name,
+        status: "covered",
+        roadmaps: ["PLAN-IMPL"],
+      },
+      {
+        bandId: "verification",
+        name: PROGRAM_BANDS[3]?.name,
+        status: "parked",
+        roadmaps: [],
+      },
+      {
+        bandId: "cutover",
+        name: PROGRAM_BANDS[4]?.name,
+        status: "uncovered",
+        roadmaps: [],
+      },
+    ]);
   });
 });
 

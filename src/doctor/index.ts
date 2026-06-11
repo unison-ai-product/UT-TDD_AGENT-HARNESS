@@ -66,6 +66,7 @@ import {
   checkSpanExistence,
   computeGateProgress,
   loadRoadmaps,
+  PARKED_BANDS,
   programCoverageMessages,
 } from "../lint/roadmap-registry";
 import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lint/rule-drift";
@@ -457,7 +458,9 @@ export function checkRoadmap(repoRoot: string): { messages: string[]; ok: boolea
     const records = loadRoadmaps(repoRoot);
     // 全プログラム被覆 (program coverage): 登録工程表が forward 全バンドを被覆するか (warn-first、
     // PLAN-RECOVERY-04 工程表定義 = 人間向け全プログラム台帳)。登録 0 でも全バンド未登録として surface。
-    const coverageMessages = programCoverageMessages(analyzeProgramCoverage(records));
+    const coverageMessages = programCoverageMessages(
+      analyzeProgramCoverage(records, new Set(PARKED_BANDS.keys())),
+    );
     if (records.length === 0) {
       return {
         messages: [
