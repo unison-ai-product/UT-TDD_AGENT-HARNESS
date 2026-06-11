@@ -58,6 +58,7 @@ import {
   type SessionHookInput,
 } from "./runtime/session-log";
 import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
+import { ensureHarnessSchema, harnessDbStatus } from "./state-db/maintenance";
 import { loadTeamDefinition, validateTeamRun } from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
 
@@ -652,6 +653,52 @@ providerHandover
         `provider handover: ${current.handover_id} ${current.from}->${current.to} plan=${current.active_plan}\n`,
       );
     }
+  });
+
+const db = program
+  .command("db")
+  .description("harness.db projection state (PLAN-L7-44 工程表、span ① foundation)");
+db.command("status")
+  .description(
+    "harness.db の schema version / table / 行数 / orphan を報告 (read-only、新規作成しない)",
+  )
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const s = harnessDbStatus(process.cwd());
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(s, null, 2)}\n`);
+      return;
+    }
+    if (!s.initialized) {
+      process.stdout.write(
+        `db status: not initialized (${s.path})\n  → 'ut-tdd db rebuild' で schema を作成\n`,
+      );
+      return;
+    }
+    const stale = s.schemaVersion !== s.expectedVersion ? ` (expected ${s.expectedVersion})` : "";
+    process.stdout.write(
+      `db status: schema v${s.schemaVersion}${stale}, tables ${s.tableCount}, rows ${s.totalRows}, orphan trace_edges ${s.orphanTraceEdges}\n`,
+    );
+    if (s.missingTables.length > 0) {
+      process.stdout.write(`  ⚠ missing tables: ${s.missingTables.join(", ")}\n`);
+    }
+  });
+db.command("rebuild")
+  .description(
+    "harness.db schema を現行 version まで適用 (冪等)。projection 充填は span ② (projection-writer) で配線",
+  )
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const r = ensureHarnessSchema(process.cwd());
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
+      return;
+    }
+    const m = r.migration;
+    process.stdout.write(
+      `db rebuild: schema v${m.fromVersion}->${m.toVersion} ${m.applied ? "applied" : "already current"}, tables ${m.tables.length} (${r.path})\n`,
+    );
+    process.stdout.write("  note: docs/state/logs からの projection 充填は span ② で実装\n");
   });
 
 const vmodel = program.command("vmodel").description("V-model trace");

@@ -8,6 +8,15 @@ status: draft
 created: 2026-06-11
 updated: 2026-06-11
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
+    tests_green_at: "2026-06-11"
+    reviewed_at: "2026-06-11"
+    verdict: pass-with-fixes
+    scope: "state-db foundation (adapter/migration/schema/maintenance/IT-DB-01) の正しさ・SQL injection・設計整合・scope 境界・テスト substance。Critical 0。指摘の識別子検証単一正本化・maintenance テスト・userVersion round-trip・index §9.3 整合・orphan guard を反映済。"
 agent_slots:
   - role: tl
     slot_label: "TL — state-db adapter / migration / schema のレビュー (別 runtime)"
@@ -17,6 +26,8 @@ generates:
   - artifact_path: src/state-db/index.ts
     artifact_type: source
   - artifact_path: src/state-db/migration.ts
+    artifact_type: source
+  - artifact_path: src/state-db/maintenance.ts
     artifact_type: source
   - artifact_path: src/schema/harness-db.ts
     artifact_type: source

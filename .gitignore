@@ -22,6 +22,12 @@ credentials.json
 .ut-tdd/adapters/local*.yaml
 .ut-tdd/teams/local*.yaml
 .ut-tdd/tmp/
+# harness.db projection (runtime state, rebuildable from docs/state/logs; never tracked)
+.ut-tdd/harness.db
+.ut-tdd/harness.db-wal
+.ut-tdd/harness.db-shm
+# Codex 委譲タスク入力 (transient、PM が貼る目標プロンプト)
+.ut-tdd/codex-tasks/
 .tools/
 
 # HELIX runtime state
