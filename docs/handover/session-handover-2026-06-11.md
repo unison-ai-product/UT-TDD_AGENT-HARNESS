@@ -854,3 +854,49 @@
 - **SQL 識別子は `assertSqlIdentifier` 検証必須** (値はバインド)。projection-writer も registry 由来の識別子を使う。
 - **新規 src module/file は登録必須**: architecture §3.1 (module-drift) + PLAN generates (impl-plan-trace)。漏れると dogfooding ゲートが fail-close (今回 4 件検知→修正で学習)。
 
+---
+
+# Session Handover — 2026-06-11
+
+## §1 PLAN サマリ
+
+- `PLAN-L7-44` (impl): PLAN-L7-44 (Master hub / 工程表): harness.db L7 実装セグメント — gate+span 分解
+
+## §2 成果物 (commit / files)
+
+- `PLAN-L7-44`
+  - commit: 4f81f5d (span ① foundation)
+  - commit: 3dd88e4 (span 45 §3-§6)
+  - commit: 692f358 (span 46-49 projection 層、G-L7DB.B→D close)
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\handover\session-handover-2026-06-11.md
+
+## §3 Next Action
+
+前セッションが Codex で span 46-49 を実装し作業ツリーに残置 → 本セッションは
+ハンドオーバー Next Action の **PM verify+commit** を実行して harness.db セグメントを close した。
+
+実施済 (commit `692f358`):
+- span 46-49 (projection-writer / search+feedback / readiness+guardrail / asset-catalog) を verify+commit
+- verify: vitest 436/436 green、doctor 全項目 OK、roadmap PLAN-L7-44 gates 4/4 到達 (**G-L7DB.D reached**)
+- review 前置: 各 span に code-reviewer review_evidence (pass-with-fixes) 記録済を確認
+
+次手:
+1. **PO accept**: PLAN-L7-44 工程表の最終 accept (G-L7DB.D 到達判定 → harness.db セグメント close 確定)。
+2. accept 後、**HELIX→UT cutover (Mode 2→3)** が射程。cutover 戦略 doc は stale (§4) なので Reverse back-fill が先行。
+
+## §4 carry (未了・先送り)
+
+- **bun:sqlite path が vitest(Node) 未カバー**: adapter 両対応だが test は node:sqlite 経路のみ。bun 経路 acceptance test は別途 (Minor)。
+- **cutover 戦略 doc が stale** (ADR-001 前提ズレ): Reverse back-fill で現況 (TS-native / 実 Mode) へ更新する IMP 起票予定。
+
+## §5 未了 PO 判断
+
+- **PLAN-L7-44 工程表の accept** (G-L7DB.D 到達 → harness.db セグメント close 確定)。実装・review・gate はすべて green、self-confirm せず PO accept 待ち。
+
+## §6 壊さない / 再発させない
+
+- **`.ut-tdd/harness.db` / `.ut-tdd/codex-tasks/` は runtime state = 絶対に commit しない** (gitignore 済)。
+- **harness-db.ts の table registry が単一正本**: table 追加は registry append + SCHEMA_VERSION bump の 1 箇所。
+- **SQL 識別子は `assertSqlIdentifier` 検証必須** (値はバインド)。projection-writer も registry 由来識別子を使う。
+- **新規 src module/file は登録必須**: architecture §3.1 (module-drift) + PLAN generates (impl-plan-trace)。今回 span 46-49 の 5 module は登録済 (doctor OK)。
+
