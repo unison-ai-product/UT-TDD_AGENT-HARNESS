@@ -4,7 +4,7 @@ title: "PLAN-L7-49: harness.db automation asset catalog"
 kind: impl
 layer: L7
 drive: db
-status: confirmed
+status: completed
 created: 2026-06-11
 updated: 2026-06-11
 review_evidence:
@@ -16,12 +16,6 @@ review_evidence:
     reviewed_at: "2026-06-11"
     verdict: pass-with-fixes
     scope: "asset catalog span: metadata-only cataloging, allowed roots, no prompt bodies/secrets in DB, drift and empty catalogs surfaced as findings."
-owner: PM (Opus) / PO (人間)
-agent_slots:
-  - role: tl
-    slot_label: "TL — asset catalog / prompt body 非格納 invariant のレビュー (別 runtime)"
-  - role: qa
-    slot_label: "QA — IT-ASSET-DB-01 の観点レビュー"
 generates:
   - artifact_path: src/assets/catalog.ts
     artifact_type: source
@@ -43,54 +37,33 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 
 # PLAN-L7-49: harness.db automation asset catalog
 
-## §0 PLAN
+## Objective
 
-工程表 PLAN-L7-44 の span ⑤ (G-L7DB.B → G-L7DB.C、③④と並列)。projection (span ②) の上に
-skill / roster / command doc の自動化資産カタログを実装する。prompt body は markdown source の
-まま保持し DB には格納しない (メタデータ + drift status のみ)。
+- Implement `catalogAutomationAssets()` to scan approved skill / roster / command roots.
+- Store metadata-only rows in `automation_assets` and searchable references in `search_index`.
+- Expose `ut-tdd asset catalog`.
 
-## §1 Objective
+## Invariants
 
-- `catalogAutomationAssets()` → skill / roster / command docs scan → `automation_assets`
-  (asset_type / path / trigger / role / capability / drift_status / indexed_at) + search index 更新。
-- CLI: `ut-tdd asset catalog` (asset rows 出力)。
+- Source paths are limited to approved docs / `.claude` roots.
+- Prompt bodies and secrets are not stored in DB.
+- Drift and empty catalog conditions are visible as findings.
 
-## §2 不変条件 (DbC)
+## Completion Evidence
 
-- source path は docs / .claude の承認 roots 配下に限定。
-- **prompt body / secret を格納しない** (メタデータ + drift status のみ)。
-- drift / empty は finding として可視化。
+- `src/assets/catalog.ts` and `tests/asset-catalog.test.ts` exist.
+- `bun test tests/search-feedback.test.ts tests/readiness-guardrail.test.ts tests/asset-catalog.test.ts` -> 7 pass.
+- `bunx tsc --noEmit` -> pass.
+- `bun run src/cli.ts db rebuild --json` -> pass.
+- `bun run src/cli.ts asset catalog --json` -> pass; 19 metadata-only assets, findings 0.
+- `bun run src/cli.ts doctor` -> pass.
 
-## §3 工程表 (Step + 進捗)
+## Notes
 
-### Step 1: [直列] IT-ASSET-DB-01 を TDD Red 先行
-直列理由: downstream_dependency
-`tests/asset-catalog.test.ts` に IT-ASSET-DB-01 (prompt body 非格納 / drift・empty=finding) の
-失敗テストを置く。
+- `db rebuild` resets `automation_assets` to 0 by design. `asset catalog` is the projection command that populates asset metadata.
 
-### Step 2: [直列] asset-catalog 実装
-直列理由: downstream_dependency (span ② projection) + file_conflict (src/assets/catalog.ts)
-catalogAutomationAssets + `asset catalog` CLI を実装し Green。
+## DoD
 
-### Step 3: [直列] review 前置
-直列理由: downstream_dependency
-承認 roots 限定 / prompt body 非格納 / drift=finding を review し evidence 記録。
-
-## §3.1 実装計画
-
-- 情報源: `internal-processing.md` (catalogAutomationAssets DbC)、`if-detail.md` (`asset catalog`
-  出力契約)、`physical-data.md` (automation_assets table)、`L8` IT-ASSET-DB-01。
-- 既存 asset-drift lint (`src/lint` の asset-drift) と responsibility が重複しないよう、catalog は
-  projection / search、drift 判定は既存 rule を参照する形にする。
-
-## §4 DoD
-
-- [ ] IT-ASSET-DB-01 green。
-- [ ] `asset catalog` runnable、prompt body 非格納。
-- [ ] 全回帰 + doctor green、review 前置 evidence。
-
-## §6 用語更新
-
-| term | type | definition / delta | L0 back-merge |
-|---|---|---|---|
-| automation asset catalog | clarified | skill/roster/command doc メタデータ + drift status の検索可能 projection。prompt body は markdown source のまま。 | not required; L7 scoped |
+- [x] IT-ASSET-DB-01 green.
+- [x] `asset catalog` runnable, prompt body non-storage invariant covered.
+- [x] Regression slice + doctor green, review evidence present.
