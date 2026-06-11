@@ -900,3 +900,52 @@
 - **SQL 識別子は `assertSqlIdentifier` 検証必須** (値はバインド)。projection-writer も registry 由来識別子を使う。
 - **新規 src module/file は登録必須**: architecture §3.1 (module-drift) + PLAN generates (impl-plan-trace)。今回 span 46-49 の 5 module は登録済 (doctor OK)。
 
+---
+
+# Session Handover — 2026-06-11
+
+## §1 PLAN サマリ
+
+- `PLAN-RECOVERY-04-roadmap-definition` (recovery): 工程表の定義の前提欠落 — 人間向け全プログラム台帳へ収束 + 製本化 fullback
+- `PLAN-REVERSE-44-roadmap-definition-design` (reverse/design): 工程表メタモデルの設計書 back-fill
+
+## §2 成果物 (commit / files)
+
+- `PLAN-RECOVERY-04-roadmap-definition` / `PLAN-REVERSE-44-roadmap-definition-design`
+  - commit: 975b25b (工程表定義の製本化 + 全プログラム被覆チェック)
+  - file: concept §10.2 (用語製本化) / architecture §3.1 / process/forward §7.1
+  - file: src/lint/roadmap-registry.ts (PROGRAM_BANDS + analyzeProgramCoverage) / src/doctor/index.ts / tests/roadmap.test.ts
+
+## §3 Next Action
+
+本セッション = PO /goal「工程表を完璧に定義 + 現行実装修正 + 全関連ファイル完遂で作業再開可能に」を完遂。
+
+実施済 (commit `975b25b`):
+- **工程表の定義を製本化**: concept §10.2 に 工程表(roadmap)=人間向け全プログラム進行台帳 (機能群=結合テスト粒度 / human-AI plane: 工程表=人間自己割当・PLAN=AIオーケストレーション / フロント返却) + §工程表(PLAN内、名前衝突解消) + 全プログラム被覆 + program rollup を用語登録。architecture §3.1 + process/forward §7.1 へ降下。
+- **現行実装を修正**: `src/lint/roadmap-registry.ts` に `PROGRAM_BANDS` 単一正本 + `analyzeProgramCoverage` + doctor `program-coverage` 配線 (warn-first)。`tests/roadmap.test.ts` U-ROADMAP-015〜018。
+- **起票**: PLAN-RECOVERY-04 (定義/製本化、confirmed) + PLAN-REVERSE-44 (設計書 back-fill、draft)。
+- verify: vitest 440 green / doctor exit=0 / tsc・biome clean。review 前置 = code-reviewer APPROVE (Critical 0、3 指摘反映)。
+
+次手 (resumable frontier = doctor `program-coverage` が surface):
+1. **未登録 4 バンドの工程表登録** (upstream L0-L3 / design L4-L6 / verification L8-L14 / cutover)。各バンドを roadmap master PLAN の `roadmap:` block (gate+span) で登録 → program-coverage 緑化に向かう。
+2. cutover バンド = HELIX→UT cutover を工程表化 (PLAN-L7-44 後の射程)。
+3. PLAN-REVERSE-44 の L6 機能設計詳細 (schema program rollup / front API) を起草。
+
+## §4 carry (未了・先送り)
+
+- **program-coverage は warn-first** (doctor.ok 非連動、spike 段階)。全バンド登録 + S4 採用判断後に hard 化を検討。
+- **PLAN-REVERSE-44 draft**: L4 設計 (architecture §3.1) は back-fill 済、L6 詳細 + 対の単体テスト設計 (V-pair) は未起草 (tracked scope)。
+- **IMP-132** (roadmap 到達計数の completed 対応) 未着手。
+- **cutover 戦略 doc が stale** (ADR-001 前提ズレ) — cutover バンド工程表化と合わせて Reverse back-fill。
+
+## §5 未了 PO 判断
+
+- **PLAN-RECOVERY-04 の closure 承認**: 定義・現行実装修正・再発防止機械化は完遂。Recovery close (Forward 全バンド登録の完遂) は PO closure 承認後 (§2.6.3 人間サインオフ)。
+- **DISCOVERY-05 roadmap PoC の S4 採用判断** (spike → 正規採用)。
+
+## §6 壊さない / 再発させない
+
+- **工程表 = 人間向け全プログラム台帳 / PLAN = AI オーケストレーション** の human/AI plane は定義の芯。縮めない (solo 現況で sizing しない、[[project_roadmap_human_ai_planes]])。
+- **PROGRAM_BANDS は `src/lint/roadmap-registry.ts` が単一正本**。band 追加はここ 1 箇所 (散在禁止)。
+- **名前衝突注意**: 工程表(roadmap、top/人間向け) ≠ §工程表(PLAN 内手順、leaf)。concept §10.2 が正本。
+- **roadmap.layer は schema 上 z.string() 自由文字列**。cutover 等 L 番号外も valid。
