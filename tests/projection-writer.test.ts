@@ -3,6 +3,17 @@ import { openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
 import { rebuildHarnessDb, recordProjectionEvent } from "../src/state-db/projection-writer";
 
+interface VerificationWorkflowRow {
+  phase: string;
+  ready_status: string;
+  human_required: number;
+}
+
+interface VerificationGateRow {
+  status: string;
+  evidence_path: string;
+}
+
 describe("IT-DB-01/02: harness.db projection writer", () => {
   it("records normalized projection events idempotently and keeps rows joinable by plan_id", () => {
     const db = openHarnessDb(":memory:");
@@ -206,6 +217,64 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
         has_evidence: 1,
         review_kind: "intra_runtime_subagent",
         verdict: "pass",
+      });
+
+      const verificationRuns = db
+        .prepare(
+          `SELECT phase, ready_status, human_required
+           FROM workflow_runs
+           WHERE plan_id = ? AND workflow = ?
+           ORDER BY CASE phase
+             WHEN 'L8' THEN 8
+             WHEN 'L9' THEN 9
+             WHEN 'L10' THEN 10
+             WHEN 'L11' THEN 11
+             WHEN 'L12' THEN 12
+             WHEN 'L13' THEN 13
+             WHEN 'L14' THEN 14
+             ELSE 99
+           END`,
+        )
+        .all("PLAN-M-00-verify-cutover", "L8-L14-verification-band") as unknown as VerificationWorkflowRow[];
+      expect(verificationRuns).toHaveLength(7);
+      expect(verificationRuns.map((row) => row.phase)).toEqual([
+        "L8",
+        "L9",
+        "L10",
+        "L11",
+        "L12",
+        "L13",
+        "L14",
+      ]);
+      expect(verificationRuns.every((row) => row.ready_status === "passed_local")).toBe(true);
+      expect(
+        verificationRuns
+          .filter((row) => row.phase === "L12" || row.phase === "L13")
+          .every((row) => row.human_required === 1),
+      ).toBe(true);
+
+      const verificationGates = db
+        .prepare(
+          "SELECT gate_id, status, evidence_path FROM gate_runs WHERE plan_id = ? AND gate_id LIKE ? ORDER BY gate_id",
+        )
+        .all("PLAN-M-00-verify-cutover", "G-VERIFY.L%") as unknown as VerificationGateRow[];
+      expect(verificationGates).toHaveLength(7);
+      expect(verificationGates.every((row) => row.status === "passed")).toBe(true);
+      expect(
+        verificationGates.every((row) =>
+          String(row.evidence_path).includes("A-132-l8-l14-verification-band-execution.md"),
+        ),
+      ).toBe(true);
+
+      const coverage = db
+        .prepare(
+          "SELECT value, threshold, status FROM coverage WHERE scope = ? AND subject_id = ? AND metric = ?",
+        )
+        .get("verification-band", "program", "covered_program_bands");
+      expect(coverage).toMatchObject({
+        value: 5,
+        threshold: 5,
+        status: "passed",
       });
     } finally {
       db.close();

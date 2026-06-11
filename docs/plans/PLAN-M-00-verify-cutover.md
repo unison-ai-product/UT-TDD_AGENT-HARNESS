@@ -4,7 +4,7 @@ title: "PLAN-VERIFY-CUTOVER-00: L8-L14 verification band + HELIX to UT cutover b
 kind: design
 layer: L14
 drive: fullstack
-status: confirmed
+status: completed
 created: 2026-06-11
 updated: 2026-06-11
 owner: Codex TL / PO
@@ -19,6 +19,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-M-01-cutover-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-132-l8-l14-verification-band-execution.md
+    artifact_type: audit_record
 roadmap:
   layer: L14
   gates:
@@ -46,13 +48,14 @@ dependencies:
     - docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
     - .ut-tdd/audit/A-130-harness-db-segment-accept.md
     - .ut-tdd/audit/A-131-recovery-04-closure-accept.md
+    - .ut-tdd/audit/A-132-l8-l14-verification-band-execution.md
 review_evidence:
   - reviewer: codex-intra-runtime-review
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-11"
     tests_green_at: "2026-06-11"
     verdict: pass
-    scope: "PLAN-VERIFY-CUTOVER-00 completion: verification band roadmap registration, cutover backfill route registration, roadmap rollup 5/5 coverage, and stale handover replacement. Cross-agent review unavailable in current Codex-only execution; intra-runtime review used as documented fallback."
+    scope: "PLAN-VERIFY-CUTOVER-00 completion: verification band roadmap registration, cutover backfill route registration, roadmap rollup 5/5 coverage, harness.db L8-L14 local execution rows, and stale handover replacement. Production deploy, PO UAT signoff, and destructive cutover are not performed by this local verification band. Cross-agent review unavailable in current Codex-only execution; intra-runtime review used as documented fallback."
     worker_model: codex-gpt-5
     reviewer_model: codex-gpt-5-intra-runtime-review
 ---
@@ -66,7 +69,7 @@ This plan closes the two bands that were intentionally parked by PLAN-REVERSE-44
 - verification: L8-L14 right-arm verification work was parked because no Forward roadmap existed.
 - cutover: HELIX to UT cutover was parked because the strategy document is stale after ADR-001 and harness.db close.
 
-Completion here means the bands are no longer invisible parked work. It does not mean production deploy, PO final acceptance for L8-L14, or a destructive cutover. Those require later execution gates.
+Completion here means the bands are no longer invisible parked work and the local L8-L14 verification execution is recorded in `harness.db`. It does not mean production deploy, PO final acceptance for L8-L14, or a destructive cutover. Those remain human-signoff/prod-scope activities outside this local band.
 
 ## 1. Completion Contract
 
@@ -75,6 +78,8 @@ Completion here means the bands are no longer invisible parked work. It does not
 - `roadmap-rollup` can report all five program bands as covered and no parked or uncovered band remains.
 - The cutover stale-doc problem is routed to a concrete backfill artifact instead of staying only as an audit carry.
 - Handover points at the next executable action after this close, not the already-closed L6 frontier.
+- `harness.db` records seven L8-L14 `workflow_runs`, seven matching `gate_runs`, and `coverage` rows for program coverage, reached gates, and review evidence.
+- `.ut-tdd/audit/A-132-l8-l14-verification-band-execution.md` records the local execution boundary and explicitly marks production deploy / post-deploy observation as out of scope.
 
 ## 3. 蟾･遞玖｡ｨ
 
@@ -94,9 +99,10 @@ Create the paired cutover roadmap (`PLAN-M-01-cutover-backfill`) and make this m
 
 Serial reason: downstream_dependency.
 
-Run roadmap, doctor, and review-evidence checks. Required evidence:
+Run roadmap, doctor, review-evidence, and DB projection checks. Required evidence:
 
 - `tests/roadmap.test.ts` proves the real repository rollup has verification and cutover covered.
+- `tests/projection-writer.test.ts` proves the real repository rebuild emits L8-L14 execution rows into `harness.db`.
 - `bun run src/cli.ts doctor` surfaces `roadmap-rollup` with no frontier.
 - `review-evidence` remains OK for confirmed design plans.
 
@@ -118,5 +124,7 @@ Record intra-runtime review evidence and update `.ut-tdd/handover/CURRENT.json` 
 - [x] L8-L14 verification band has a confirmed roadmap host.
 - [x] HELIX to UT cutover has a confirmed backfill roadmap host.
 - [x] Program rollup can prove 5/5 covered bands with no parked or uncovered band.
+- [x] `harness.db` rebuild records L8-L14 verification execution rows.
+- [x] A-132 audit evidence records the local execution result and production/PO boundary.
 - [x] Stale handover next action is replaced.
 - [x] No vendor or HELIX runtime source is edited.

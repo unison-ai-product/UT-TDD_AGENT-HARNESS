@@ -59,6 +59,10 @@ const RAW_PAYLOAD_KEYS = new Set([
   "credential",
   "screenshotBlob",
 ]);
+const VERIFY_CUTOVER_PLAN_ID = "PLAN-M-00-verify-cutover";
+const VERIFY_CUTOVER_AUDIT_PATH =
+  ".ut-tdd/audit/A-132-l8-l14-verification-band-execution.md";
+const VERIFICATION_BAND_LAYERS = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"] as const;
 
 function tableDef(name: string): TableDef {
   const table = HARNESS_DB_TABLE_BY_NAME.get(name);
@@ -76,6 +80,12 @@ function stableId(prefix: string, value: string): string {
 
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function scalarNumber(db: HarnessDb, sql: string, params: unknown[] = []): number {
+  const row = db.prepare(sql).get(...params) as Record<string, unknown> | undefined;
+  const value = row?.value;
+  return typeof value === "number" ? value : Number(value ?? 0);
 }
 
 function assertNoSensitivePayload(row: Record<string, unknown>): void {
@@ -311,6 +321,127 @@ function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
   }
 }
 
+function projectVerificationBandExecution(db: HarnessDb): void {
+  if (!planExists(db, VERIFY_CUTOVER_PLAN_ID)) return;
+
+  const programCoveredBands = scalarNumber(
+    db,
+    "SELECT covered_bands AS value FROM roadmap_rollups WHERE rollup_id = ?",
+    ["program"],
+  );
+  const programTotalBands = scalarNumber(
+    db,
+    "SELECT total_bands AS value FROM roadmap_rollups WHERE rollup_id = ?",
+    ["program"],
+  );
+  const reachedGates = scalarNumber(
+    db,
+    "SELECT reached_gates AS value FROM roadmap_rollups WHERE rollup_id = ?",
+    ["program"],
+  );
+  const totalGates = scalarNumber(
+    db,
+    "SELECT total_gates AS value FROM roadmap_rollups WHERE rollup_id = ?",
+    ["program"],
+  );
+  const passingReviewEvidence = scalarNumber(
+    db,
+    "SELECT COUNT(*) AS value FROM review_evidence_registry WHERE plan_id IN (?, ?) AND has_evidence = 1 AND verdict = ?",
+    [VERIFY_CUTOVER_PLAN_ID, "PLAN-M-01-cutover-backfill", "pass"],
+  );
+  const checkedAt = nowIso();
+  const localPass =
+    programTotalBands > 0 &&
+    programCoveredBands === programTotalBands &&
+    totalGates > 0 &&
+    reachedGates === totalGates &&
+    passingReviewEvidence >= 2;
+
+  for (const layer of VERIFICATION_BAND_LAYERS) {
+    const humanRequired = layer === "L12" || layer === "L13" ? 1 : 0;
+    const blockedReason =
+      humanRequired === 1
+        ? "production deploy, post-deploy observation, and PO signoff are explicitly outside this local execution band"
+        : "";
+    recordProjectionEvent(db, {
+      table: "workflow_runs",
+      id: stableId("verification-band-workflow", layer),
+      row: {
+        workflow_run_id: stableId("verification-band-workflow", layer),
+        plan_id: VERIFY_CUTOVER_PLAN_ID,
+        drive_run_id: "",
+        workflow: "L8-L14-verification-band",
+        phase: layer,
+        ready_status: localPass ? "passed_local" : "blocked",
+        blocked_reason: localPass ? blockedReason : "roadmap, gate, or review evidence projection is incomplete",
+        human_required: humanRequired,
+        checked_at: checkedAt,
+      },
+    });
+    recordProjectionEvent(db, {
+      table: "gate_runs",
+      id: stableId("verification-band-gate", layer),
+      row: {
+        gate_run_id: stableId("verification-band-gate", layer),
+        gate_id: `G-VERIFY.${layer}`,
+        plan_id: VERIFY_CUTOVER_PLAN_ID,
+        status: localPass ? "passed" : "blocked",
+        checked_at: checkedAt,
+        evidence_path: VERIFY_CUTOVER_AUDIT_PATH,
+      },
+    });
+    recordProjectionEvent(db, {
+      table: "coverage",
+      id: stableId("verification-band-coverage", `${layer}:local_check_passed`),
+      row: {
+        coverage_id: stableId("verification-band-coverage", `${layer}:local_check_passed`),
+        scope: "verification-band",
+        subject_id: layer,
+        metric: "local_check_passed",
+        value: localPass ? 1 : 0,
+        threshold: 1,
+        status: localPass ? "passed" : "blocked",
+      },
+    });
+  }
+
+  for (const metric of [
+    {
+      subject_id: "program",
+      metric: "covered_program_bands",
+      value: programCoveredBands,
+      threshold: programTotalBands,
+    },
+    {
+      subject_id: "program",
+      metric: "reached_roadmap_gates",
+      value: reachedGates,
+      threshold: totalGates,
+    },
+    {
+      subject_id: "review",
+      metric: "passing_review_evidence",
+      value: passingReviewEvidence,
+      threshold: 2,
+    },
+  ]) {
+    const passed = metric.threshold > 0 && metric.value >= metric.threshold;
+    recordProjectionEvent(db, {
+      table: "coverage",
+      id: stableId("verification-band-coverage", `${metric.subject_id}:${metric.metric}`),
+      row: {
+        coverage_id: stableId("verification-band-coverage", `${metric.subject_id}:${metric.metric}`),
+        scope: "verification-band",
+        subject_id: metric.subject_id,
+        metric: metric.metric,
+        value: metric.value,
+        threshold: metric.threshold,
+        status: passed ? "passed" : "blocked",
+      },
+    });
+  }
+}
+
 function truncateProjectionTables(db: HarnessDb): void {
   for (const table of [...HARNESS_DB_TABLES].reverse()) {
     db.prepare(`DELETE FROM ${table.name}`).run();
@@ -495,6 +626,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     projectPlans(repoRoot, db);
     projectRoadmapRollup(repoRoot, db);
     projectReviewEvidenceRegistry(repoRoot, db);
+    projectVerificationBandExecution(db);
     projectRelationGraph(db, input.relationGraph);
     projectDocumentExports(db, input.documentExports);
     projectVerificationEvidence(db, input.verificationEvidence);
