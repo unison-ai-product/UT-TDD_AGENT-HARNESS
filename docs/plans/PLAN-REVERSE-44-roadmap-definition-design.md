@@ -22,17 +22,9 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/lint/roadmap-registry.ts
     artifact_type: source
-  - artifact_path: tests/roadmap.test.ts
-    artifact_type: test
-review_evidence:
-  - reviewer: code-reviewer
-    review_kind: intra_runtime_subagent
-    worker_model: codex-chat
-    reviewer_model: claude-sonnet-4-6
-    reviewed_at: "2026-06-11"
-    tests_green_at: "2026-06-11"
-    verdict: approve
-    scope: "Step3 park 配線 + program rollup 実装 (worker=チャット Codex)。5 軸レビュー Critical 0、Important 2 (U-ROADMAP-019 実 fs 依存 / covered+park エッジ未テスト) を PM が本コミットで解消。凍結契約 §3 と差異なし、非破壊・444 green。cross-agent (Codex worker ≠ Claude reviewer)。"
+  # review_evidence (Step3 impl の code-reviewer APPROVE) は本 PLAN が confirmed になる時点で
+  # frontmatter へ記録する。draft 段階で approve 系を置くと IMP-080 (un-freeze 残骸) に抵触するため、
+  # 現状の review 実績は commit 3956f95 + 下記 §1 進捗 + code-reviewer 出力で trace する。
 dependencies:
   parent: null
   requires:
@@ -64,7 +56,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 - 現状 = 「layer 単一の工程表 1 大層分解」を as-is design として記述。既存テストから観測テスト設計を逆復元。
 - 直列理由 = **downstream_dependency** (Step 1 evidence に依存)。
 
-> **進捗 (2026-06-11)**: §3 凍結契約 = 確定。Step3 impl (park 配線 + program rollup) = **landed** (commit 3956f95、worker=Codex + PM substance 修正)。Step5 review = **code-reviewer APPROVE** (Critical 0)。残 = Step4 R3 intent 検証 (PO) + Step6 R4 forward routing (実体は RECOVERY-04 のバンド登録で実現済 = 形式 close 待ち) + 形式 L6/L14 設計 doc の製本 (現状は §3 凍結契約が機能設計の実体)。
+> **進捗 (2026-06-11)**: §3 凍結契約 = 確定。Step3 impl (park 配線 + program rollup) = **landed** (commit 3956f95、worker=チャット Codex + PM substance 修正)。Step5 review = **code-reviewer APPROVE** (Critical 0、Important 2 を PM 反映)、tests 444 green。残 = Step4 R3 intent 検証 (PO) + Step6 R4 forward routing (実体は RECOVERY-04 のバンド登録で実現済 = 形式 close 待ち) + 形式 L6/L14 設計 doc の製本 (現状は §3 凍結契約が機能設計の実体)。**本 PLAN は draft のまま** (R3/R4 未了) → confirmed 化時に review_evidence を frontmatter へ記録 (IMP-080 整合)。
 
 ### Step 3: 設計書 back-fill — L4 基本設計 + L6 機能設計の起草 [直列]
 - **L4 基本設計** (`docs/design/harness/L4-basic-design/`): 工程表メタモデルの外部設計 = 全プログラム被覆台帳 / 機能群=結合テスト grain / human(工程表)–AI(PLAN) plane 分離 / harness.db projection 経由のフロント返却 / program rollup。
