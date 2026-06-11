@@ -991,3 +991,45 @@
 - **band 登録 fullback は PO closure 承認後**。承認前に confirmed master を改変する ad-hoc fix は recovery 規律違反 (§2「承認前の ad-hoc 編集をしない」)。今回 review 前置→§5 反映に留め、登録自体は次段へ正しく分離した。
 - **requirements §G.E3 が被覆要件の正本**。program-coverage の挙動変更はここと `PROGRAM_BANDS` を同期。
 - **review 前置の cross-agent 不在は必ず evidence 明示** (claude-only は intra_runtime_subagent 代替)。
+
+---
+
+# Session Handover — 2026-06-11 (継続: RECOVERY-04 closure + fullback + Codex 入力凍結)
+
+## §1 PLAN サマリ
+
+- `PLAN-RECOVERY-04-roadmap-definition` (recovery): **completed** (PO closure 承認 A-131 + 全バンド fullback 完遂)。
+- `PLAN-L3-00-master` (design, 新規): upstream バンド工程表 host。
+- `PLAN-REVERSE-44-roadmap-definition-design` (reverse, draft): §3 に park/rollup 凍結設計契約を追加。
+
+## §2 成果物 (commit / files)
+
+- `edb245d` feat(roadmap): RECOVERY-04 fullback — descended 登録 + closure
+  - L4-00/L5-00/L6-00 master に roadmap ブロック (design バンド) / PLAN-L3-00-master 新規 (upstream) / RECOVERY-04 completed / A-131 audit
+- `f280f16` docs(reverse): REVERSE-44 §3 park/rollup 凍結設計契約
+- `.ut-tdd/codex-tasks/roadmap-park-rollup-prompt.md` (gitignored): Codex goal-prompt
+
+## §3 Next Action
+
+1. **PO → チャット Codex**: `.ut-tdd/codex-tasks/roadmap-park-rollup-prompt.md` を貼り、park 配線 + program rollup を実装させる (src/lint/roadmap-registry.ts + tests/roadmap.test.ts、非破壊)。完了 → PM verify (vitest/doctor/tsc/biome) + commit。
+2. Codex 実装後、program-coverage が ⚠(未登録2) → OK(登録3/park2) へ。verification/cutover が parked 表示。
+3. REVERSE-44 の残 (R3 intent / R4 forward routing / 形式 L6・L14 設計 doc) を Codex impl 後に close。
+
+## §4 carry (未了・先送り)
+
+- park/rollup impl = Codex (上記)。それまで verification/cutover は uncovered warn (意図的、requirements §G.E3)。
+- G-DESIGN.L6 は draft 4 本 (L6-31〜34) で 30/34 pending = 正直な surface。draft freeze 時に reached。
+- IMP-132 (roadmap 到達計数の completed 対応) 未着手。
+- cutover 工程表化 + cutover doc stale Reverse back-fill (harness.db close 後)。
+
+## §5 未了 PO 判断
+
+- **PLAN-L7-44 工程表 accept** (harness.db セグメント close) — 前セッション持ち越し。
+- **DISCOVERY-05 roadmap PoC の S4 採用判断**。
+
+## §6 壊さない / 再発させない
+
+- **Codex は git 操作禁止** (prompt に明記)。PM が verify 後に commit。
+- **PARKED_BANDS / PROGRAM_BANDS は roadmap-registry.ts が単一正本**。park は加算拡張・非破壊 (既存 4 工程表据え置き)。
+- **RECOVERY-04 は completed**。再 open せず、残 impl は REVERSE-44 で trace。
+- **roadmap ブロックの span は実在 plan_id のみ** (孤児 = doctor fail)。新 PLAN 追加時は該当 master の roadmap span も追従。
