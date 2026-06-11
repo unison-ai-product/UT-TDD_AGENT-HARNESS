@@ -4,9 +4,18 @@ title: "PLAN-L7-47: harness.db search index + skill metrics + feedback engine"
 kind: impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 created: 2026-06-11
 updated: 2026-06-11
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    worker_model: gpt-5.4
+    reviewer_model: gpt-5.3-codex
+    tests_green_at: "2026-06-11"
+    reviewed_at: "2026-06-11"
+    verdict: pass-with-fixes
+    scope: "search/metrics/feedback span: ranked find, skill metrics, feedback events, read-only search, and no feedback auto-approval of PLANs."
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl

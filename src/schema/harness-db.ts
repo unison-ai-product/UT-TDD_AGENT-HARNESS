@@ -15,7 +15,7 @@
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
 
@@ -275,6 +275,149 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("indexed_at"),
     ],
   },
+  // --- §9.5 relation graph projection ---
+  {
+    name: "graph_nodes",
+    columns: [
+      pk("node_id"),
+      col("node_type"),
+      col("subject_id"),
+      col("section_id"),
+      col("path"),
+      col("name"),
+      col("layer"),
+      col("kind"),
+      col("status"),
+      col("source"),
+      col("indexed_at"),
+    ],
+  },
+  {
+    name: "dependency_edges",
+    columns: [
+      pk("edge_id"),
+      col("from_node_id"),
+      col("to_node_id"),
+      col("edge_kind"),
+      col("strength", "REAL"),
+      col("source"),
+      col("evidence_path"),
+      col("is_expected", "INTEGER"),
+      col("is_actual", "INTEGER"),
+      col("indexed_at"),
+    ],
+  },
+  // --- §9.6 verification profile projection ---
+  {
+    name: "verification_profiles",
+    columns: [
+      pk("verification_profile_id"),
+      col("name"),
+      col("profile_type"),
+      col("package_refs"),
+      col("requires_docker", "INTEGER"),
+      col("requires_browser", "INTEGER"),
+      col("requires_network", "INTEGER"),
+      col("green_definition_id"),
+      col("trigger_signals"),
+      col("enabled", "INTEGER"),
+    ],
+  },
+  {
+    name: "verification_recommendations",
+    columns: [
+      pk("verification_recommendation_id"),
+      col("change_set_id"),
+      col("plan_id"),
+      col("profile_id"),
+      col("profile_kind"),
+      col("reason"),
+      col("source_rule"),
+      col("accepted", "INTEGER"),
+      col("created_at"),
+    ],
+  },
+  {
+    name: "mcp_server_runs",
+    columns: [
+      pk("mcp_run_id"),
+      col("mcp_profile_id"),
+      col("session_id"),
+      col("plan_id"),
+      col("command"),
+      col("method"),
+      col("tool_name"),
+      col("started_at"),
+      col("completed_at"),
+      col("exit_code", "INTEGER"),
+      col("evidence_path"),
+      col("normalized_status"),
+    ],
+  },
+  {
+    name: "external_tool_findings",
+    columns: [
+      pk("external_finding_id"),
+      col("source_run_id"),
+      col("source_kind"),
+      col("finding_type"),
+      col("severity"),
+      col("subject_id"),
+      col("path"),
+      col("status"),
+      col("digest"),
+      col("created_at"),
+    ],
+  },
+  // --- §9.7 document export projection ---
+  {
+    name: "document_export_runs",
+    columns: [
+      pk("document_export_run_id"),
+      col("profile_id"),
+      col("session_id"),
+      col("plan_id"),
+      col("source_doc_family"),
+      col("source_paths_digest"),
+      col("source_snapshot_hash"),
+      col("redaction_profile"),
+      col("started_at"),
+      col("completed_at"),
+      col("exit_code", "INTEGER"),
+      col("evidence_path"),
+      col("normalized_status"),
+    ],
+  },
+  {
+    name: "document_export_datasets",
+    columns: [
+      pk("document_export_dataset_id"),
+      col("export_run_id"),
+      col("dataset_kind"),
+      col("row_count", "INTEGER"),
+      col("column_digest"),
+      col("source_paths"),
+      col("source_section_digest"),
+      col("created_at"),
+      col("hash"),
+      col("format"),
+    ],
+  },
+  {
+    name: "document_export_artifacts",
+    columns: [
+      pk("document_export_artifact_id"),
+      col("export_run_id"),
+      col("format"),
+      col("path"),
+      col("renderer"),
+      col("byte_size", "INTEGER"),
+      col("hash"),
+      col("created_at"),
+      col("evidence_path"),
+      col("stale_status"),
+    ],
+  },
 ];
 
 /** §9.3 で宣言された projection index。 */
@@ -302,6 +445,52 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     columns: ["plan_id", "skill_id", "fired_at"],
   },
   { name: "idx_search_subject", table: "search_index", columns: ["subject_type", "subject_id"] },
+  {
+    name: "idx_graph_node_type_subject",
+    table: "graph_nodes",
+    columns: ["node_type", "subject_id"],
+  },
+  { name: "idx_graph_path", table: "graph_nodes", columns: ["path"] },
+  {
+    name: "idx_dependency_from_kind",
+    table: "dependency_edges",
+    columns: ["from_node_id", "edge_kind"],
+  },
+  {
+    name: "idx_dependency_to_kind",
+    table: "dependency_edges",
+    columns: ["to_node_id", "edge_kind"],
+  },
+  {
+    name: "idx_verification_profile_type",
+    table: "verification_profiles",
+    columns: ["profile_type", "enabled"],
+  },
+  {
+    name: "idx_verification_recommendations_change",
+    table: "verification_recommendations",
+    columns: ["change_set_id", "profile_kind", "accepted"],
+  },
+  {
+    name: "idx_external_tool_findings_subject",
+    table: "external_tool_findings",
+    columns: ["subject_id", "status", "severity"],
+  },
+  {
+    name: "idx_document_export_run_family",
+    table: "document_export_runs",
+    columns: ["source_doc_family", "plan_id"],
+  },
+  {
+    name: "idx_document_export_run_snapshot",
+    table: "document_export_runs",
+    columns: ["source_snapshot_hash"],
+  },
+  {
+    name: "idx_document_export_artifact_format",
+    table: "document_export_artifacts",
+    columns: ["format", "stale_status"],
+  },
 ];
 
 // registry の全識別子を module load 時に検証する (single-source guard)。span 46+ が registry に

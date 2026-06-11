@@ -4,7 +4,7 @@ title: "PLAN-L7-45: harness.db state-db foundation (adapter + migration + schema
 kind: impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 created: 2026-06-11
 updated: 2026-06-11
 owner: PM (Opus) / PO (人間)

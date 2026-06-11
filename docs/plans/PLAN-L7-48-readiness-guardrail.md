@@ -4,9 +4,18 @@ title: "PLAN-L7-48: harness.db automation-readiness + guardrail-ledger"
 kind: impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 created: 2026-06-11
 updated: 2026-06-11
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    worker_model: gpt-5.4
+    reviewer_model: gpt-5.3-codex
+    tests_green_at: "2026-06-11"
+    reviewed_at: "2026-06-11"
+    verdict: pass-with-fixes
+    scope: "readiness/guardrail span: missing evidence blocks readiness, human-required is not downgraded, self-review/missing signoff becomes guardrail finding."
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl

@@ -8,7 +8,9 @@ import { execSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Command } from "commander";
+import { catalogAutomationAssets } from "./assets/catalog";
 import { runDoctor } from "./doctor";
+import { computeSkillMetrics, emitFeedbackEvents } from "./feedback/engine";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import {
   checkHandoverBypass,
@@ -57,10 +59,14 @@ import {
   resolveActivePlan,
   type SessionHookInput,
 } from "./runtime/session-log";
+import { findReference } from "./search/index";
 import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
-import { ensureHarnessSchema, harnessDbStatus } from "./state-db/maintenance";
+import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index";
+import { harnessDbStatus } from "./state-db/maintenance";
+import { rebuildHarnessDb } from "./state-db/projection-writer";
 import { loadTeamDefinition, validateTeamRun } from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
+import { evaluateAutomationReadiness } from "./workflow/readiness";
 
 function gitBranch(): string | null {
   try {
@@ -689,16 +695,127 @@ db.command("rebuild")
   )
   .option("--json", "JSON output")
   .action((opts: { json?: boolean }) => {
-    const r = ensureHarnessSchema(process.cwd());
+    const r = rebuildHarnessDb({ repoRoot: process.cwd() });
     if (opts.json) {
       process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
       return;
     }
-    const m = r.migration;
+    const totalRows = Object.values(r.rowCounts).reduce((sum, n) => sum + n, 0);
     process.stdout.write(
-      `db rebuild: schema v${m.fromVersion}->${m.toVersion} ${m.applied ? "applied" : "already current"}, tables ${m.tables.length} (${r.path})\n`,
+      `db rebuild: projection ${r.ok ? "ok" : "failed"}, rows ${totalRows} (${r.path})\n`,
     );
     process.stdout.write("  note: docs/state/logs からの projection 充填は span ② で実装\n");
+  });
+
+program
+  .command("find <query>")
+  .description("search harness.db reference index")
+  .option("--json", "JSON output")
+  .action((query: string, opts: { json?: boolean }) => {
+    const dbPath = defaultHarnessDbPath(process.cwd());
+    const db = openHarnessDb(dbPath, { repoRoot: process.cwd() });
+    try {
+      const rows = findReference(db, query);
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+        return;
+      }
+      for (const row of rows) {
+        process.stdout.write(
+          `${row.subject_type} ${row.subject_id} ${row.path} (${row.reason}, score=${row.score})\n`,
+        );
+      }
+    } finally {
+      db.close();
+    }
+  });
+
+const metrics = program.command("metrics").description("harness.db quality metrics");
+metrics
+  .command("skill")
+  .description("compute skill firing and acceptance metrics")
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      const rows = computeSkillMetrics(db);
+      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+      else {
+        for (const row of rows) {
+          process.stdout.write(
+            `${row.plan_id} ${row.skill_id}: firing=${row.firing_rate} acceptance=${row.acceptance_rate}\n`,
+          );
+        }
+      }
+    } finally {
+      db.close();
+    }
+  });
+
+const automation = program.command("automation").description("workflow automation readiness");
+automation
+  .command("readiness")
+  .description("evaluate automation readiness from harness.db projections")
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      const rows = evaluateAutomationReadiness(db);
+      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+      else {
+        for (const row of rows) {
+          process.stdout.write(
+            `${row.plan_id} ${row.workflow}/${row.phase}: ${row.ready_status} ${row.blocked_reason}\n`,
+          );
+        }
+      }
+    } finally {
+      db.close();
+    }
+  });
+
+const guardrail = program.command("guardrail").description("guardrail decision ledger");
+guardrail
+  .command("status")
+  .description("list guardrail decisions from harness.db")
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      const rows = db.prepare("SELECT * FROM guardrail_decisions ORDER BY decided_at").all();
+      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+      else {
+        for (const row of rows) {
+          process.stdout.write(
+            `${row.plan_id ?? ""} ${row.guardrail ?? ""}: ${row.decision ?? ""} evidence=${row.evidence_path ?? ""}\n`,
+          );
+        }
+      }
+    } finally {
+      db.close();
+    }
+  });
+
+const asset = program.command("asset").description("automation asset catalog");
+asset
+  .command("catalog")
+  .description("catalog skill/roster/command docs into harness.db")
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      const result = catalogAutomationAssets({ repoRoot: process.cwd(), db });
+      if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else {
+        process.stdout.write(
+          `asset catalog: ${result.assets.length} assets, findings=${result.findings.length}\n`,
+        );
+        for (const id of result.assets) process.stdout.write(`  - ${id}\n`);
+      }
+      process.exitCode = result.ok ? 0 : 1;
+    } finally {
+      db.close();
+    }
   });
 
 const vmodel = program.command("vmodel").description("V-model trace");
@@ -884,6 +1001,32 @@ team
 const feedback = program
   .command("feedback")
   .description("強制停止フィードバック (forced-stop-feedback, PLAN-L7-02)");
+
+feedback
+  .command("list")
+  .description("emit/list harness.db feedback events")
+  .option("--json", "JSON output")
+  .option(
+    "--emit",
+    "compute feedback events from current findings and quality signals before listing",
+  )
+  .action((opts: { json?: boolean; emit?: boolean }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      if (opts.emit) emitFeedbackEvents(db);
+      const rows = db.prepare("SELECT * FROM feedback_events ORDER BY created_at").all();
+      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+      else {
+        for (const row of rows) {
+          process.stdout.write(
+            `${row.feedback_event_id ?? ""} ${row.signal_type ?? ""}: ${row.next_action ?? ""}\n`,
+          );
+        }
+      }
+    } finally {
+      db.close();
+    }
+  });
 
 feedback
   .command("classify")

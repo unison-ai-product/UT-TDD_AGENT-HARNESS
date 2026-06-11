@@ -4,9 +4,18 @@ title: "PLAN-L7-44 (Master hub / 工程表): harness.db L7 実装セグメント
 kind: impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 created: 2026-06-11
 updated: 2026-06-11
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    worker_model: gpt-5.4
+    reviewer_model: gpt-5.3-codex
+    tests_green_at: "2026-06-11"
+    reviewed_at: "2026-06-11"
+    verdict: pass-with-fixes
+    scope: "PLAN-L7-44 harness.db L7 DB segment: child spans 45-49 implemented with red-first tests, typecheck/lint/test/doctor evidence, and no secret/PII/raw transcript persistence."
 owner: PM (Opus) / PO (人間)
 master_hub: true
 agent_slots:
@@ -48,6 +57,9 @@ roadmap:
     - plan_id: PLAN-L7-49-asset-catalog
       after_gate: G-L7DB.B
       before_gate: G-L7DB.C
+    - plan_id: PLAN-L7-44-harness-db-master
+      after_gate: G-L7DB.C
+      before_gate: G-L7DB.D
 dependencies:
   parent: null
   requires:
