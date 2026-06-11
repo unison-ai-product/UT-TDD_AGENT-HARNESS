@@ -115,6 +115,17 @@ L6 機能設計
 
 ---
 
+## 7.1 工程表 (roadmap) と PLAN の二層 (human/AI plane)
+
+Forward 降下は **二層**で回す (定義正本 = concept §10.2、PLAN-RECOVERY-04)。
+
+- **工程表 (roadmap) = 人間向け全プログラム進行台帳**: 機能群 (feature-group) を**結合テスト粒度**で並べた進行順序。**全プログラム (forward 全バンド L0-L3 / L4-L6 / L7 / L8-L14 + cutover) を被覆**し、**人間が見て「ここ担当する」と自己割当**する。中央 UI (フロント) へ harness.db projection 経由で返す。master-hub PLAN の `roadmap:` block (gate+span) として機械登録し、`ut-tdd doctor` の `program-coverage` が未登録バンド = 残り frontier を surface する。
+- **PLAN (区間 / span) = AI 開発のオーケストレーション**: 工程表の 1 区間 = 1 機能群のスプリント。依存洗い出し → 難易度分類 → agent 割当 → 並列/直列 (§工程表 Step の `[並列]/[直列]` + 直列化3条件)。leaf = 機能設計 ⇔ 単体テスト仕様書 (単体 V-pair) → 実装 + テストコード。
+
+> 人間が「何を・誰が」(工程表)、AI が「どう作るか」(PLAN) を担う。「実装どこまで?」は工程表 (doctor program-coverage) から機械的に answer する。
+
+---
+
 ## 8. このドキュメントの位置付けと残作業
 
 この forward 定義は **正本化済** (PLAN-REVERSE-01、2026-06-04)。以下は carry として今後の PLAN で扱う。

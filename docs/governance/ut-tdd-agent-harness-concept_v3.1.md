@@ -1131,6 +1131,11 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 
 | 用語 | 定義 | 導入層 | 更新層 |
 |---|---|---|---|
+| **工程表 (roadmap)** | **機能群 (feature-group) を進める順番**の進行台帳。粒度 = **結合テストレベル** (V-model 結合テスト⇔基本設計の対)。**人間が見て「ここ担当する」と自己割当できる人間向けプランニングボード**であり、**全プログラム (forward 全バンド L0-L3 / L4-L6 / L7 / L8-L14 + cutover) を被覆**する。harness.db projection 経由で**中央 UI (フロント) へ返す**前提で backend を準備する (backend-first)。粒度階層 = 工程表 (roadmap) → 層内ゲート (gate) → 区間 (span)=PLAN → leaf=機能設計⇔単体テスト仕様書 (単体 V-pair)。**PLAN 内の §工程表 (下記、leaf 手順) とは別レベル** (名前衝突注意)。機械登録 = `src/schema/roadmap.ts` + `src/lint/roadmap-registry.ts`、被覆検査 = doctor (下記 [[全プログラム被覆]])。 | L0 | L4 |
+| **§工程表 (PLAN 内手順)** | PLAN (=区間/span) 本文の §工程表。その区間を進める **作成手順 + 進捗 (☐/🔄/✅) + 各 Step の [並列]/[直列]**。**工程表 (roadmap) の leaf 側**であり top レベルの roadmap とは別 (同名異義)。区間内の AI 開発オーケストレーション (依存洗い出し→難易度分類→agent 割当→並列/直列) を表す。 | L0 | L6 |
+| **human/AI plane (工程表/PLAN の責務分離)** | **工程表 (roadmap) = 人間向け** (人間が機能群を見て自己割当・進捗把握) / **PLAN (span) = AI 開発のオーケストレーション** (1機能群=1区間のスプリント: 依存・難易度分類・agent 割当・並列/直列)。人間が「何を・誰が」、AI が「どう作るか」を担う plane 分離。柱5 (オーケストレーション)。 | L0 | L4 |
+| **全プログラム被覆 (program coverage)** | 工程表 (roadmap) が forward 全バンド (L0-L3 / L4-L6 / L7 / L8-L14 + cutover) を登録被覆している状態。doctor が未登録 forward work を surface し、「実装どこまで?」を機械的に answer 可能にする (柱3 state DB 完全性)。検査 = `src/lint/roadmap-registry.ts` + doctor (warn-first、未登録バンドを park 宣言可)。 | L0 | L4 |
+| **program rollup** | 複数の工程表 (roadmap) を横断集計し、全体進捗・フロンティアバンド・残り span を 1 ビューで返す projection。中央 UI へ返す人間向けサマリの源。 | L0 | L4 |
 | **進め方手順書 (= PLAN)** | 工程をきれいに前へ進める段取り / 軌跡 / TODO。機能内容そのものは記述しない (それは L3 要件定義書 / 機能一覧の領域) | L0 | L1 |
 | **工程進捗プラン** | Forward V-model の背骨を L0→L14 へ進める PLAN (メタモデル ① 必須スケルトン) | L0 | — |
 | **駆動モデルプラン (駆動プラン)** | 工程進捗の途中で介在する内部ドライブ PLAN (メタモデル ② ケースバイケース)。「検証へ行く (kind=poc)」か「ドキュメントへ戻す (kind=reverse, fullback)」かで分離 | L0 | — |

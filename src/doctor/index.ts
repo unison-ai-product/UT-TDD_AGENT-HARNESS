@@ -61,7 +61,13 @@ import {
   loadReviewPlans,
   reviewEvidenceMessages,
 } from "../lint/review-evidence";
-import { checkSpanExistence, computeGateProgress, loadRoadmaps } from "../lint/roadmap-registry";
+import {
+  analyzeProgramCoverage,
+  checkSpanExistence,
+  computeGateProgress,
+  loadRoadmaps,
+  programCoverageMessages,
+} from "../lint/roadmap-registry";
 import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lint/rule-drift";
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
 import { fmValue } from "../lint/shared";
@@ -449,9 +455,15 @@ export function checkOracleTestTrace(repoRoot: string): { messages: string[]; ok
 export function checkRoadmap(repoRoot: string): { messages: string[]; ok: boolean } {
   try {
     const records = loadRoadmaps(repoRoot);
+    // 全プログラム被覆 (program coverage): 登録工程表が forward 全バンドを被覆するか (warn-first、
+    // PLAN-RECOVERY-04 工程表定義 = 人間向け全プログラム台帳)。登録 0 でも全バンド未登録として surface。
+    const coverageMessages = programCoverageMessages(analyzeProgramCoverage(records));
     if (records.length === 0) {
       return {
-        messages: ["roadmap — note: 登録工程表なし (master-hub roadmap block 未使用)"],
+        messages: [
+          "roadmap — note: 登録工程表なし (master-hub roadmap block 未使用)",
+          ...coverageMessages,
+        ],
         ok: true,
       };
     }
@@ -483,6 +495,7 @@ export function checkRoadmap(repoRoot: string): { messages: string[]; ok: boolea
       for (const si of spanIssues) messages.push(`  ⚠ ${si}`);
       for (const e of rec.errors) messages.push(`  ⚠ 構造: ${e}`);
     }
+    messages.push(...coverageMessages);
     return { messages, ok: true };
   } catch {
     return { messages: ["roadmap — note: 工程表を読めず検査 skip"], ok: true };

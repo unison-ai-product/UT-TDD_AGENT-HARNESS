@@ -102,6 +102,83 @@ export interface RoadmapRecord {
   errors: string[];
 }
 
+/**
+ * forward プログラムのバンド (band) = 工程表 (roadmap) 登録が期待される機能群塊の単一正本。
+ * 工程表の定義 = 人間向け**全プログラム台帳** (concept §10.2 [[全プログラム被覆]])。
+ * band は roadmap.layer の集合で表し、roadmap.layer ∈ band.layers なら当該 band を被覆とみなす。
+ * PLAN-RECOVERY-04 (定義) / PLAN-REVERSE-44 (設計書)。
+ * 直書き根拠: forward V-model のバンド分割は concept §2.3 / §10.3 [[検証層群]] と対応する固定構造であり、
+ * 単一正本としてここに集約する (散在禁止、CLAUDE.md ハードコード規約)。
+ */
+export interface ProgramBand {
+  id: string;
+  name: string;
+  /** この band を被覆とみなす roadmap.layer 値の集合。 */
+  layers: string[];
+}
+
+export const PROGRAM_BANDS: ProgramBand[] = [
+  { id: "upstream", name: "上流 (要求〜要件 L0-L3)", layers: ["L0", "L1", "L2", "L3"] },
+  { id: "design", name: "設計 (基本〜機能 L4-L6)", layers: ["L4", "L5", "L6"] },
+  { id: "impl", name: "実装+谷 (L7)", layers: ["L7"] },
+  {
+    id: "verification",
+    name: "検証 (結合〜運用 L8-L14)",
+    layers: ["L8", "L9", "L10", "L11", "L12", "L13", "L14"],
+  },
+  // roadmap.layer は schema 上 z.string() (自由文字列、L 番号に限定しない) なので "cutover" は valid。
+  // cutover 工程表が未登録の間は意図的に uncovered (= 残り frontier) として surface される。
+  { id: "cutover", name: "cutover (HELIX→UT)", layers: ["cutover"] },
+];
+
+export interface BandCoverage {
+  band: ProgramBand;
+  covered: boolean;
+  /** この band を被覆する登録工程表の planId 群。 */
+  roadmaps: string[];
+}
+
+export interface ProgramCoverageResult {
+  coverage: BandCoverage[];
+  /** 未登録 (park 宣言もない) band。「実装どこまで?」の残り frontier。 */
+  uncovered: BandCoverage[];
+}
+
+/**
+ * 全プログラム被覆 (program coverage): 工程表 (roadmap) が forward 全バンドを被覆するか。
+ * roadmap.layer が band.layers に属せば当該 band を被覆。park 宣言 band は uncovered から除外
+ * (明示 defer = under-design でない、concept §3.1.3.1)。warn-first (doctor.ok 非連動、spike 段階)。
+ */
+export function analyzeProgramCoverage(
+  records: RoadmapRecord[],
+  parkedBandIds: Set<string> = new Set(),
+): ProgramCoverageResult {
+  const coverage: BandCoverage[] = PROGRAM_BANDS.map((band) => {
+    const roadmaps = records
+      .filter((r) => band.layers.includes(r.roadmap.layer))
+      .map((r) => r.planId);
+    return { band, covered: roadmaps.length > 0, roadmaps };
+  });
+  const uncovered = coverage.filter((c) => !c.covered && !parkedBandIds.has(c.band.id));
+  return { coverage, uncovered };
+}
+
+/** doctor surface 用メッセージ (warn-first)。 */
+export function programCoverageMessages(result: ProgramCoverageResult): string[] {
+  const covered = result.coverage.filter((c) => c.covered).length;
+  const total = result.coverage.length;
+  if (result.uncovered.length === 0) {
+    // park 宣言 band を含めても uncovered 0。covered 実数を併記し「全 park で偽 OK」の誤読を防ぐ。
+    return [
+      `program-coverage — OK (forward ${total} バンド、未登録 (park 除く) なし、登録被覆 ${covered})`,
+    ];
+  }
+  const missing = result.uncovered.map((c) => `${c.band.id}(${c.band.name})`).join(", ");
+  return [
+    `program-coverage — ⚠ ${covered}/${total} バンド登録、未登録 ${result.uncovered.length} 件: ${missing}。工程表 (roadmap) 未登録の forward work = 「実装どこまで?」の残り frontier (PLAN-RECOVERY-04、warn-first)`,
+  ];
+}
+
 /** docs/plans/ から `roadmap:` block を持つ登録工程表を全 load。 */
 export function loadRoadmaps(repoRoot: string = process.cwd()): RoadmapRecord[] {
   const dir = join(repoRoot, "docs", "plans");

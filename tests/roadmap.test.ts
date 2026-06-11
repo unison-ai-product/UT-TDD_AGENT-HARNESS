@@ -2,12 +2,26 @@
 // 検証: roadmap zod schema / 構造整合 (gate 参照・順序) / frontmatter 抽出 / span 実在 / gate 進捗。
 import { describe, expect, it } from "vitest";
 import {
+  analyzeProgramCoverage,
   checkSpanExistence,
   computeGateProgress,
   extractRoadmap,
+  PROGRAM_BANDS,
   parseRoadmap,
+  programCoverageMessages,
+  type RoadmapRecord,
 } from "../src/lint/roadmap-registry";
 import { roadmapSchema, validateRoadmapStructure } from "../src/schema/roadmap";
+
+/** test 用 RoadmapRecord factory (layer だけ可変、gates/spans は最小)。 */
+function record(planId: string, layer: string): RoadmapRecord {
+  return {
+    planId,
+    file: `docs/plans/${planId}.md`,
+    roadmap: { layer, gates: [{ id: "G", name: "g", exit_criteria: "x" }], spans: [] },
+    errors: [],
+  };
+}
 
 const VALID_ROADMAP = {
   layer: "L7",
@@ -157,5 +171,44 @@ describe("computeGateProgress (U-ROADMAP-009/010)", () => {
     const rmNoSpan = { ...VALID_ROADMAP, spans: [] };
     const progress = computeGateProgress(rmNoSpan, () => "confirmed");
     expect(progress.every((g) => g.reached === false)).toBe(true);
+  });
+});
+
+describe("analyzeProgramCoverage (U-ROADMAP-015〜018、全プログラム被覆)", () => {
+  it("U-ROADMAP-015: roadmap.layer が band.layers に属せば当該 band を被覆", () => {
+    const { coverage } = analyzeProgramCoverage([record("PLAN-L7-44", "L7")]);
+    const impl = coverage.find((c) => c.band.id === "impl");
+    expect(impl?.covered).toBe(true);
+    expect(impl?.roadmaps).toContain("PLAN-L7-44");
+  });
+
+  it("U-ROADMAP-016: 未登録バンドは uncovered として surface (実装どこまで frontier)", () => {
+    // L7 のみ登録 → impl 以外の全 band が uncovered。PROGRAM_BANDS から動的に検証し band 追加に追随。
+    const { uncovered } = analyzeProgramCoverage([record("PLAN-L7-44", "L7")]);
+    const ids = uncovered.map((c) => c.band.id);
+    expect(ids).not.toContain("impl"); // L7 登録済 band は除外される
+    expect(ids).toHaveLength(PROGRAM_BANDS.length - 1); // impl 以外すべて未登録
+  });
+
+  it("U-ROADMAP-017: park 宣言 band は uncovered から除外 (明示 defer は under-design でない)", () => {
+    const parked = new Set(["upstream", "design", "verification", "cutover"]);
+    const { uncovered } = analyzeProgramCoverage([record("PLAN-L7-44", "L7")], parked);
+    expect(uncovered).toHaveLength(0);
+  });
+
+  it("U-ROADMAP-018: 登録 0 なら全 band uncovered、全 band 被覆なら OK メッセージ", () => {
+    const none = analyzeProgramCoverage([]);
+    expect(none.uncovered).toHaveLength(PROGRAM_BANDS.length);
+    expect(programCoverageMessages(none)[0]).toContain("未登録");
+    // 全 band を別 roadmap で被覆
+    const all = analyzeProgramCoverage([
+      record("p-up", "L1"),
+      record("p-de", "L5"),
+      record("p-im", "L7"),
+      record("p-ve", "L10"),
+      record("p-cu", "cutover"),
+    ]);
+    expect(all.uncovered).toHaveLength(0);
+    expect(programCoverageMessages(all)[0]).toContain("OK");
   });
 });
