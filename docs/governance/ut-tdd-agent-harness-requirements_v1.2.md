@@ -392,6 +392,14 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
 - [ ] **全 PLAN の `§6 用語更新` で宣言した語が L0 §10 用語集 (`concept_v3.1.md`) に存在** (living glossary back-merge、§G.9 と連動)。未 merge → doctor warn。
 - 機構: `ut-tdd doctor` の `backfill —` 行が `reverseOrphans` / `glossaryGaps` / `conditionalPending` を surface。lint engine (`src/plan/lint.ts`) 実装時に exit code 連動 (fail-close) へ昇格予定。
 
+#### E3. 全プログラム被覆 (program coverage / PLAN-RECOVERY-04、`ut-tdd doctor` program-coverage)
+
+> 工程表 (roadmap) = forward 全プログラムを被覆する**人間向け進行台帳** (concept §10.2)。「実装がどこまで進んだか」を機械が answerable にするため (柱3 state DB 完全性)、forward の各バンド (upstream L0-L3 / design L4-L6 / impl L7 / verification L8-L14 + cutover) に対応する登録工程表があるかを doctor が検証する。バンド定義の正本 = `src/lint/roadmap-registry.ts` `PROGRAM_BANDS` (単一正本 + 直書き根拠コメント)。
+
+- [ ] **forward 各バンドに登録工程表 (frontmatter `roadmap:` ブロックを持つ master PLAN) が存在**する。未登録バンド = 「実装どこまで?」の残り frontier として surface (既定 warn-first、spike 段階。DISCOVERY-05 の S4 採用 + 全バンド登録後に fail-close 昇格を検討)。
+- [ ] **forward 未降下のバンド (登録対象 PLAN 皆無) は明示 defer (park 宣言 + reason) で uncovered から除外**する (明示 defer = under-design でない、concept §3.1.3.1 / §G.13)。park 宣言なしの放置 uncovered とは機械的に区別する (silent truncation 禁止 = parked バンドも reason 付きで surface)。
+- 機構: `ut-tdd doctor` の `program-coverage —` 行が covered / uncovered (= frontier) を surface。`analyzeProgramCoverage` (`src/lint/roadmap-registry.ts`) が判定。`parkedBandIds` 配線 (park 宣言の単一正本化 + doctor 連動) は **PLAN-REVERSE-44 Step 3 (schema 拡張) で実装予定 (carry)**。lint engine 実装時に exit code 連動 (fail-close) へ昇格予定。
+
 #### F. enum source-of-truth と drift 検知 (R-P1 fix)
 
 - **正本**: 本書 §1 の各 enum 表が正本。

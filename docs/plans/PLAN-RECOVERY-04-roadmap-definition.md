@@ -36,6 +36,12 @@ review_evidence:
     reviewed_at: "2026-06-11"
     verdict: approve
     scope: "PO directed (2026-06-11) that the 工程表 definition gap is a Recovery ticket: 製本化して governance へ戻し、設計書は Reverse で書く。This PLAN is confirmed for correction routing, not closed."
+  - reviewer: pmo-sonnet
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-11"
+    tests_green_at: "2026-06-11"
+    verdict: pass-with-fixes
+    scope: "RECOVERY-04 closure-readiness adversarial review (reopen point 妥当性 / 製本化 substance / 再発防止機械担保 / band 登録 fullback リスク / closure 条件充足)。blocker なし、§5 への 2 加筆 (verification・cutover 明示 defer + park-wiring carry to REVERSE-44 Step3) を closure 前条件として指摘 → 本コミットで反映。cross-agent 不在のため intra_runtime_subagent 代替 (claude-only)。"
 ---
 
 # PLAN-RECOVERY-04 (recovery): 工程表の定義の前提欠落 — 人間向け全プログラム台帳へ収束 + 製本化 fullback
@@ -89,6 +95,16 @@ review_evidence:
   - **(rule / 製本)** 工程表定義を concept/requirements に製本化し、living glossary へ語を登録 (§4)。
 - **L14 route**: 全プログラム被覆チェックの運用検証 = L14 フィードバック。carry 先 = REVERSE-44 + 後続 Forward PLAN。
 
+### §5 carry (closure 前 review 前置の指摘反映、2026-06-11 intra_runtime review)
+
+review 前置 (pmo-sonnet、cross-agent 不在の intra_runtime 代替) の closure-readiness 審査で「blocker なし / 条件付き」と判定され、closure 前に PM 側で明示すべき defer を下記へ正規 defer 様式 (carry plan_id 紐付け、IMP-074 パターン) で宣言する。
+
+- **verification (L8-L14) / cutover バンドの明示 defer**: 両バンドは **forward 未降下で登録対象 PLAN が皆無**のため、本 Recovery では工程表登録しない (明示 defer = under-design でない、concept §3.1.3.1)。
+  - verification (L8-L14): forward が L8 以降へ降下した時点で当該 Forward PLAN が工程表を起こす (carry 先 = 後続 Forward、descent 時に登録)。
+  - cutover (HELIX→UT): **PLAN-L7-44 (harness.db) close 後の射程**。cutover 戦略 doc が stale (ADR-001 前提ズレ) のため Reverse back-fill を先行 (carry 先 = cutover 工程表化 + cutover doc Reverse、§4 carry の stale doc と同件)。
+- **park 機構 (`parkedBandIds`) の配線 carry**: `analyzeProgramCoverage` は `parkedBandIds` 引数を持つが doctor 連動が未配線 (現状 warn-only)。park 宣言の単一正本化 + doctor 連動は **PLAN-REVERSE-44 Step 3 (roadmap schema 拡張)** で実装する。それまでは verification/cutover は uncovered warn として surface され続ける (意図的制限、requirements §G.E3 に明記)。
+- **requirements 降下の着地**: §4.1 が宣言した requirements_v1.2 への被覆要件降下を本コミットで **§G.E3 (program coverage / doctor program-coverage)** として着地 (claimed-but-not-landed の解消)。
+
 ## §6 exit 条件
 
 Recovery close には以下が必要。
@@ -98,8 +114,9 @@ Recovery close には以下が必要。
 - [x] 製本化 (Step 4): concept §10.2 へ工程表定義 (工程表(roadmap) / §工程表(PLAN内) / human/AI plane / 全プログラム被覆 / program rollup) を back-merge + 用語登録 (glossary green)。
 - [x] Reverse pairing: PLAN-REVERSE-44 起票。設計書 (L4) は architecture §3.1 へ roadmap メタモデル back-fill 済、L6 詳細は REVERSE-44 tracked scope。
 - [x] 再発防止: **全プログラム被覆チェック実装済** (`src/lint/roadmap-registry.ts` `analyzeProgramCoverage` + `PROGRAM_BANDS` 単一正本 + doctor `program-coverage` surface + `tests/roadmap.test.ts` U-ROADMAP-015〜018)。未登録 forward work (upstream/design/verification/cutover) を機械 surface = 「実装どこまで?」answerable (柱3)。
-- [ ] TL reopen point 確認 + PO scope/closure 承認 (人間サインオフ必須、§2.6.3)。
-- [ ] fullback: Forward (全バンドの工程表登録) へ合流。program-coverage が残り frontier を surface 中 = **作業再開可能状態**。
+- [x] reopen point 独立確認 (review 前置): pmo-sonnet (intra_runtime_subagent、cross-agent 不在の代替) が closure-readiness を adversarial 審査 → **blocker なし / 条件付き** (§5 carry 2 件を本コミットで反映)。cross-agent 不在は evidence に明示。
+- [ ] **PO scope/closure 承認** (人間サインオフ必須、§2.6.3)。← 残る唯一の closure gate。
+- [ ] fullback: Forward (全バンドの工程表登録) へ合流。design (L4-L6) = 既存 master の空 `roadmap:` 埋め / upstream (L0-L3) = host PLAN 新規 / verification・cutover = §5 明示 defer。program-coverage が残り frontier を surface 中 = **作業再開可能状態**。
 
 本 PLAN は correction routing として confirmed。Recovery close (Forward 全バンド登録の完遂) は PO closure 承認後。定義・現行実装修正・再発防止機械化は本セッションで完遂し、残バンド登録は program-coverage が surface する resumable state。
 
