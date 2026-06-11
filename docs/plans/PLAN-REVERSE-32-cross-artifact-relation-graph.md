@@ -4,9 +4,9 @@ title: "PLAN-REVERSE-32 (reverse): cross-artifact relation graph fullback"
 kind: reverse
 layer: cross
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-11
 owner: Codex TL / PO
 agent_slots:
   - role: tl
@@ -56,11 +56,18 @@ Forward implementation must align with:
 
 ## §4 R3 / R4
 
-R3 and R4 remain pending until implementation evidence exists. No governance document may claim relation graph completion before this Reverse closes.
+2026-06-11 L7 implementation evidence exists for the split relation graph span:
+
+- PLAN-L7-32: U-RELGRAPH-001..006 green for relation graph collection and impact expansion.
+- PLAN-L7-36: U-RELGRAPH-007..010 green for deterministic Mermaid export, unavailable DOT/D2 adapter findings, and A-125 verification evidence projection.
+- Backprop decision: no lower-layer requirements / physical-data / ADR meaning change was discovered; DB write path and external adapter execution remain out of scope for this L7 span.
+- Recovery-03 recurrence check: implementation stayed under authorized PLAN files and source/test owners; `vendor/helix-source/` was not edited.
+
+R4 fullback outcome: Forward L7 relation graph implementation has merged back to this Reverse plan with no additional governance/backlog additions required.
 
 ## §8 DoD
 
-- [ ] L7 implementation evidence exists.
-- [ ] New lower-layer discoveries are classified with `backprop_decision`.
-- [ ] Requirements / physical-data / ADR / backlog are updated if implementation changes their meaning.
-- [ ] Recovery-03 does not recur in this implementation path.
+- [x] L7 implementation evidence exists.
+- [x] New lower-layer discoveries are classified with `backprop_decision`.
+- [x] Requirements / physical-data / ADR / backlog are unchanged because implementation did not change their meaning.
+- [x] Recovery-03 does not recur in this implementation path.

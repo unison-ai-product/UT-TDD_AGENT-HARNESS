@@ -206,9 +206,22 @@ export interface VerificationGroup {
   /** 検証サイクルゲート名 = band 単位の機械発火ゲート (band 終端層 / band 性質で命名、PLAN-REVERSE-36)。
    *  旧称 GATE-A (L0-L6) / GATE-B (L0-L7) を置換。Forward per-layer gate (G0.5〜G7) とは別レイヤー。 */
   gate: string;
+  requiredPlanIds?: string[];
 }
 
-/** 検証発火単位 = 設計層群 (PO 例示: L0-L3 / L4-L6 / L0-L6)。L0=価値検証で design doc なし、L7+ は実装/検証実施。
+export const L0_L7_AUTOMATION_PLAN_IDS = [
+  "PLAN-REVERSE-40-orphan-governance",
+  "PLAN-REVERSE-41-substance-lints",
+  "PLAN-L7-32-cross-artifact-relation-graph",
+  "PLAN-L7-36-relation-graph-export",
+  "PLAN-L7-33-mcp-profile-config-safety",
+  "PLAN-L7-34-tool-adapter-probes",
+  "PLAN-L7-35-canonical-document-export",
+  "PLAN-REVERSE-42-regression-dependency-drift",
+  "PLAN-L7-43-implementation-verification-group",
+] as const;
+
+/** 検証発火単位 = 設計層群 (PO 例示: L0-L3 / L4-L6 / L0-L6)。L0=価値検証で design doc なし、L7 は実装 band。
  *  `gate` = 検証サイクルゲート名の単一正本 (roadmap §4 / concept §10 はこれを参照、PLAN-REVERSE-36)。 */
 export const VERIFICATION_GROUPS: VerificationGroup[] = [
   // id は層群レンジを表示用に示す。layers は実在する design sub-doc の層のみ列挙する
@@ -231,6 +244,13 @@ export const VERIFICATION_GROUPS: VerificationGroup[] = [
     label: "全設計層",
     gate: "設計検証サイクルゲート",
   },
+  {
+    id: "L0-L7",
+    requiredPlanIds: [...L0_L7_AUTOMATION_PLAN_IDS],
+    layers: ["L1", "L2", "L3", "L4", "L5", "L6"],
+    label: "左腕+谷",
+    gate: "実装検証サイクルゲート",
+  },
 ];
 
 export interface GroupReadiness {
@@ -242,8 +262,60 @@ export interface GroupReadiness {
   draft: number;
   placeholder: number;
   hasOrphan: boolean;
+  requiredPlanIds: string[];
+  confirmedPlanIds: string[];
+  missingPlanIds: string[];
+  evidenceReadyPlanIds: string[];
+  evidenceMissingPlanIds: string[];
   /** freeze 完了 = 全 design sub-doc が confirmed かつ その層群に pair 孤児が無い。 */
   frozen: boolean;
+}
+
+export interface VerificationPlanEvidence {
+  status: string | null;
+  hasReviewEvidence: boolean;
+  hasGenerates: boolean;
+}
+
+export type VerificationPlanEvidenceMap =
+  | Map<string, string>
+  | Map<string, VerificationPlanEvidence>;
+
+function hasPlanEvidence(value: string | VerificationPlanEvidence | undefined): boolean {
+  if (typeof value === "string") return value === "confirmed";
+  return value?.status === "confirmed" && value.hasReviewEvidence && value.hasGenerates;
+}
+
+export function loadVerificationPlanEvidence(
+  repoRoot: string = process.cwd(),
+): Map<string, VerificationPlanEvidence> {
+  const evidence = new Map<string, VerificationPlanEvidence>();
+  let docs: { rel: string; content: string }[];
+  try {
+    docs = walkMd(join(repoRoot, "docs/plans"), repoRoot);
+  } catch {
+    return evidence;
+  }
+  for (const { content } of docs) {
+    const id = fmValue(content, "plan_id");
+    if (!id) continue;
+    evidence.set(id, {
+      status: fmValue(content, "status") ?? null,
+      hasReviewEvidence: /^review_evidence:\s*$/m.test(content),
+      hasGenerates: /^generates:\s*$/m.test(content),
+    });
+  }
+  return evidence;
+}
+
+export function loadVerificationPlanStatuses(
+  repoRoot: string = process.cwd(),
+): Map<string, string> {
+  const statuses = new Map<string, string>();
+  for (const [id, evidence] of loadVerificationPlanEvidence(repoRoot)) {
+    if (evidence.status) statuses.set(id, evidence.status);
+  }
+  return statuses;
 }
 
 /**
@@ -254,6 +326,7 @@ export interface GroupReadiness {
 export function analyzeVerificationGroups(
   docs: PairDoc[],
   orphans: PairOrphan[],
+  planEvidence: VerificationPlanEvidenceMap = new Map<string, VerificationPlanEvidence>(),
 ): GroupReadiness[] {
   const orphanPaths = new Set(orphans.map((o) => o.path));
   return VERIFICATION_GROUPS.map((g) => {
@@ -273,6 +346,25 @@ export function analyzeVerificationGroups(
       if (orphanPaths.has(d.path)) hasOrphan = true;
     }
     const total = groupDocs.length;
+    const requiredPlanIds = g.requiredPlanIds ?? [];
+    const confirmedPlanIds = requiredPlanIds.filter((id) => {
+      const evidence = planEvidence.get(id);
+      return typeof evidence === "string"
+        ? evidence === "confirmed"
+        : evidence?.status === "confirmed";
+    });
+    const missingPlanIds = requiredPlanIds.filter((id) => {
+      const evidence = planEvidence.get(id);
+      return typeof evidence === "string"
+        ? evidence !== "confirmed"
+        : evidence?.status !== "confirmed";
+    });
+    const evidenceReadyPlanIds = requiredPlanIds.filter((id) =>
+      hasPlanEvidence(planEvidence.get(id)),
+    );
+    const evidenceMissingPlanIds = requiredPlanIds.filter(
+      (id) => !hasPlanEvidence(planEvidence.get(id)),
+    );
     return {
       id: g.id,
       label: g.label,
@@ -282,14 +374,29 @@ export function analyzeVerificationGroups(
       draft,
       placeholder,
       hasOrphan,
+      requiredPlanIds,
+      confirmedPlanIds,
+      missingPlanIds,
+      evidenceReadyPlanIds,
+      evidenceMissingPlanIds,
       // freeze 完了 = 未着手/作業中 (draft) が無く孤児0 + confirmed が 1 件以上。
       // placeholder は意図的保留 (park、例: L2 screen track G2 DEFER) として発火を妨げない。
-      frozen: total > 0 && draft === 0 && !hasOrphan && confirmed > 0,
+      frozen:
+        total > 0 &&
+        draft === 0 &&
+        !hasOrphan &&
+        confirmed > 0 &&
+        missingPlanIds.length === 0 &&
+        evidenceMissingPlanIds.length === 0,
     };
   });
 }
 
 /** doctor / CLI 向けの検証発火 surface (note レベル、ok は落とさない)。 */
+export function verificationGroupsOk(groups: GroupReadiness[]): boolean {
+  return groups.every((g) => g.frozen);
+}
+
 export function verificationGroupMessages(groups: GroupReadiness[]): string[] {
   return groups.map((g) => {
     // 検証サイクルゲート名を主見出しにし、range id + label を併記 (PLAN-REVERSE-36)。
@@ -297,10 +404,22 @@ export function verificationGroupMessages(groups: GroupReadiness[]): string[] {
     if (g.total === 0) return `verification — ${head}: design doc なし`;
     if (g.frozen) {
       const park = g.placeholder > 0 ? `, ${g.placeholder} park` : "";
-      return `verification — ${head}: ✅ freeze 完了 (${g.confirmed}/${g.total} confirmed${park}, 孤児0) → 検証サイクル発火可`;
+      const planEvidence =
+        g.requiredPlanIds.length > 0
+          ? `, L7 plans ${g.confirmedPlanIds.length}/${g.requiredPlanIds.length} confirmed, evidence ${g.evidenceReadyPlanIds.length}/${g.requiredPlanIds.length}`
+          : "";
+      return `verification — ${head}: ✅ freeze 完了 (${g.confirmed}/${g.total} confirmed${park}${planEvidence}, 孤児0) → 検証サイクル発火可`;
     }
     const parts = [`${g.confirmed}/${g.total} confirmed`];
     if (g.draft > 0) parts.push(`draft ${g.draft}`);
+    if (g.requiredPlanIds.length > 0) {
+      parts.push(`L7 plans ${g.confirmedPlanIds.length}/${g.requiredPlanIds.length} confirmed`);
+      parts.push(`evidence ${g.evidenceReadyPlanIds.length}/${g.requiredPlanIds.length}`);
+    }
+    if (g.evidenceMissingPlanIds.length > 0) {
+      parts.push(`missing evidence ${g.evidenceMissingPlanIds.join(", ")}`);
+    }
+    if (g.missingPlanIds.length > 0) parts.push(`missing plans ${g.missingPlanIds.join(", ")}`);
     if (g.placeholder > 0) parts.push(`placeholder ${g.placeholder}`);
     if (g.hasOrphan) parts.push("pair 孤児あり");
     return `verification — ${head}: Forward 進行中 (${parts.join(", ")})`;

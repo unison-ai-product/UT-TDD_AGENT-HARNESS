@@ -125,9 +125,9 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 
 ### Phase 3 — L7 ワークフロー自動化の実装 / 改善サイクル
 
-- **対象**: L7 実装 (谷) のうち **harness ワークフロー自動化** = `ut-tdd` CLI / hook / `plan lint` (現 stub) / gate 機械検証 / クロスチェックエンジン (IMP-033)。
+- **対象**: L7 実装 (谷) のうち **harness ワークフロー自動化** = `ut-tdd` CLI / hook / `plan lint` / gate・doctor 機械検証 / cross-artifact relation graph / verification profile / dependency-drift / regression expansion / canonical document export。
 - **検証**: 観点 A を**実装で裏付ける** (workflow が doc 上だけでなくコードで動く)。L6⇔L7 単体テスト設計の TDD Red 先行。
-- **現状接地**: src/ に session-log / forced-stop / setup / handover / doctor / agent-guard 実装済。plan lint は stub、gate 自動検証は未。
+- **現状接地**: src/ に session-log / forced-stop / setup / handover / doctor / agent-guard / plan lint / roadmap registry / review evidence / relation graph / dependency-drift / regression expansion / verification-profile / tool-adapter / document export pure core 実装済。Phase 3 検証サイクルでは、これらが `doctor` / unit test / trace lint で一体に動くかを検証する。DB projection への自動登録・feedback/監査 DB は Phase 4。
 
 ### Phase 4 — L7 データベース統合の実装 / 改善サイクル
 
@@ -139,7 +139,7 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 
 - **対象**: 左腕 + 谷 (設計 → 実装) の縦断 (L0-L7 band)。
 - **判定**: G7 (4 artifact trace: ①設計 ⇔ ②実装 ⇔ ③テスト設計 ⇔ ④テストコード の 8 directed edge + coverage) がバンド横断で閉じるか。Phase 3/4 の自動化・DB が観点 A/B を機械保証するか。
-- **発火 (機械、carry)**: L7 band の Forward freeze 検知は `VERIFICATION_GROUPS` 未追加 (現状 design 層 L0-L6 のみ機械化)。L7 実装 freeze 後に L0-L7 group を追加して機械発火させる (PLAN-REVERSE-36 carry、§1.10 「層群 L7」)。
+- **発火 (機械)**: L7 band の Forward freeze 検知は `VERIFICATION_GROUPS` の L0-L7 group で機械 surface 済み (PLAN-L7-43)。L7 roadmap G-L7.E 到達時に doctor が `実装検証サイクルゲート [L0-L7]` を発火可として表示する。
 
 ### Phase 5 — L8〜L11 改善サイクル
 
@@ -171,7 +171,7 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 | **L3 検証サイクルゲート** | L0-L3 freeze 後 | L0〜L3 (上流 要求〜要件) | 上流設計降下 + テスト設計の trace 整合・同粒度 |
 | **L6 検証サイクルゲート** | L4-L6 freeze 後 | L4〜L6 (設計 基本〜機能) | 設計降下 + テスト設計の trace 整合・同粒度 |
 | **設計検証サイクルゲート** (旧 GATE-A) | L0-L6 freeze 後 (Phase 2 の後) | L0〜L6 (左腕全体 = 上記累積) | 設計降下 + テスト設計の横断 trace 整合・同粒度・backlog verified 到達 |
-| **実装検証サイクルゲート** (旧 GATE-B) | L0-L7 freeze 後 (Phase 4 の後) | L0〜L7 (左腕 + 谷) | G7 4-artifact trace の縦断整合 + 自動化/DB による観点 A/B の機械保証 |
+| **実装検証サイクルゲート** (旧 GATE-B) | L0-L7 freeze 後 (Phase 3 automation slice 完了後。Phase 4 DB は同 gate から派生する次 cycle) | L0〜L7 (左腕 + 谷) | G7 4-artifact trace の縦断整合 + 自動化による観点 A の機械保証。DB による feedback/監査機構の完全化は Phase 4 |
 
 各ゲートとも fail-close: 未充足バンドがあれば該当 Phase へ差し戻す。検証サイクルの判断は **po-gate** + review 前置 (別 runtime `frontier-reviewer` / 単体 mode は `intra_runtime_subagent`) を通す。発火 (いつ検証するか) は doctor の band freeze 集計で機械化済 (人手駆動でない)。
 
@@ -186,9 +186,9 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 | Phase 1 (L0-L3) | **検証/改善サイクル完了 (4 巡)** | サイクル完了を受けて Forward 側で L0-L3 freeze 済 (gate-design §2: G0.5/G1/G3、2026-06-04、A-100 が正本記録)。本書はそれを反映するのみ。`roadmap.md` 自身は living で draft 維持 (frozen 対象外) |
 | Phase 2 (L4-L6) | **全件見直し完了 / quantitative+qualitative findings fixed+routed** | L4/G4、L5/G5、L6/G6 は gate-design §2 で PASS 再確定済 (A-101〜A-104 / A-109〜A-111 / A-115)。L4⇔L9、L5⇔L8、L6⇔L7 の V-pair は doctor pair-freeze 孤児0、L6 completion は G6 PASS、FR registry 47件は L6 unit contract / U-* oracle に接続。A-110 で L6 substance 指摘が出て、A-111 で blocker 解消を再確認。A-116 は verification readiness と HELIX cutover hardening、A-117 は no-finding 過剰主張の補正、A-118 は定量 evidence と定性 workflow/substance review を束ねた L4-L6/L7-L9/PLAN 全件レビューの完了記録。A-122 で自動化/UT DB/共通化/マルチ協調の pre-close hardening を追加し、IMP-107..116 として Phase 3/4 carry へ routing 済 |
 | 設計検証サイクルゲート (旧 GATE-A) | **検証サイクル発火可 (機械) / per-layer Forward gate は PO サインオフ済** | L0-L6 全設計層は doctor `verification — 設計検証サイクルゲート [L0-L6] (全設計層) ✅ freeze 完了 → 検証サイクル発火可` を満たす。**per-layer の正規 Forward gate G0.5/G1/G3/G4/G5/G6 は gate-design §2 で PO サインオフ済 (G2 のみ DEFER)** = 受入の着地点はここ。本 band ゲートは検証ロードマップ固有の機械発火であって別建ての手動 accept ceremony は持たない (PO 2026-06-10 是正「フォワードのワークフロー上じゃない？」、PLAN-REVERSE-36)。2026-06-10 セッション跨ぎ再検証 clean (vitest 332 / typecheck・biome・doctor exit 0 / mojibake 0)、L0-L6 freeze 後の退行なし。A-118 で Phase 2 artifacts 全件見直し (stale/overclaim 修正)、残 placeholder_deps / roster / skill catalog / IMP-087/088 は明示 carry routing。A-122 の GreenDefinition / UT evidence history projection は設計補強済・実装は Phase 3/4 carry |
-| Phase 3 (L7 自動化) | 部分着手 | src/ に複数機能実装済。`asset-drift` は HELIX 切り離しの hard gate slice として doctor に接続済。relation-graph / dependency-drift / regression expansion は後続 PLAN |
+| Phase 3 (L7 自動化) | **検証サイクル完了** | src/ に複数機能実装済。`asset-drift`、relation-graph、dependency-drift、regression expansion、MCP profile、tool adapter、doc export pure core は L7 roadmap span で doctor / unit test に接続済。Phase 3 検証サイクルは `docs/handover/phase3-workflow-automation-verification-2026-06-11.md` に証跡化 |
 | Phase 4 (L7 DB) | 未 | handover ポインタのみ機械化済 |
-| 実装検証サイクルゲート (旧 GATE-B) / Phase 5-7 | 未 | L0-L7 band freeze の機械発火は `VERIFICATION_GROUPS` 未追加 (L7 実装 freeze 後に追加、PLAN-REVERSE-36 carry) |
+| 実装検証サイクルゲート (旧 GATE-B) / Phase 5-7 | **検証サイクル発火可 (機械)** | `VERIFICATION_GROUPS` に L0-L7 group 追加済 (PLAN-L7-43)。doctor が `verification — 実装検証サイクルゲート [L0-L7]` を surface |
 
 > Phase 1 (L0-L3) は検証/改善サイクル完了。Phase 2 (L4-L6) は A-118 で全件見直し完了。ただし「no finding」ではなく、stale/overclaim を修正し、残 work を carry routing した完了である。今後の規範変更は Reverse/Recovery または add-design/add-impl の差分 PLAN を通す。roadmap は完了状態を反映する companion であり、freeze 権限元ではない。
 

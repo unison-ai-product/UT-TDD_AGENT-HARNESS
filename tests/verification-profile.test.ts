@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  analyzeVerificationProfileSafety,
+  catalogVerificationProfiles,
   getVerificationProfile,
   inspectMcpProfile,
   listVerificationProfiles,
+  planExternalProfileActivation,
   probeVerificationProfile,
   recommendVerificationProfiles,
+  renderGeneratedMcpConfig,
   runVerificationProfile,
   saveVerificationEvidence,
   VERIFICATION_EVIDENCE_SCHEMA_VERSION,
@@ -27,6 +31,12 @@ function deps(over: Partial<VerificationProbeDeps> = {}): VerificationProbeDeps 
     writeText: () => undefined,
     ...over,
   };
+}
+
+function mustProfile(id: string) {
+  const profile = getVerificationProfile(id);
+  if (!profile) throw new Error(`missing test profile: ${id}`);
+  return profile;
 }
 
 describe("verification profile recommendation", () => {
@@ -181,5 +191,204 @@ describe("verification profile recommendation", () => {
     // 拒否理由 (デフォルト無効 + allow-list review 必要) を oracle にする (A-128 F-6)。
     expect(result?.messages.join(" ")).toContain("disabled by default");
     expect(result?.messages.join(" ")).toContain("--allow-external");
+  });
+});
+
+describe("MCP profile config and safety (U-MCPPROFILE-001..012)", () => {
+  it("U-MCPPROFILE-001: catalog contains complete researched candidates with source URLs and trigger signals", () => {
+    const catalog = catalogVerificationProfiles();
+    const ids = catalog.profiles.map((profile) => profile.id);
+
+    expect(ids).toEqual([
+      "bun-unit",
+      "docker-mcp-toolkit",
+      "doctor",
+      "github-mcp-readonly",
+      "mcp-inspector-smoke",
+      "msw",
+      "playwright-mcp",
+      "testcontainers",
+      "vitest-browser-playwright",
+    ]);
+    for (const id of [
+      "mcp-inspector-smoke",
+      "playwright-mcp",
+      "github-mcp-readonly",
+      "docker-mcp-toolkit",
+      "vitest-browser-playwright",
+      "testcontainers",
+      "msw",
+    ]) {
+      const profile = catalog.profiles.find((candidate) => candidate.id === id);
+      expect(profile?.sourceUrl).toMatch(/^https:\/\//);
+      expect(profile?.triggerSignals?.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("U-MCPPROFILE-002: external and MCP profiles are disabled by default while built-ins stay enabled", () => {
+    const catalog = catalogVerificationProfiles();
+    const external = catalog.profiles.filter((profile) => profile.sourceType !== "builtin");
+    const builtins = catalog.profiles.filter((profile) => profile.sourceType === "builtin");
+
+    expect(external.every((profile) => profile.defaultEnabled === false)).toBe(true);
+    expect(builtins.map((profile) => [profile.id, profile.defaultEnabled])).toEqual([
+      ["bun-unit", true],
+      ["doctor", true],
+    ]);
+  });
+
+  it("U-MCPPROFILE-003: Docker MCP Toolkit is optional, isolated, Docker-backed, and has no runner", () => {
+    const profile = catalogVerificationProfiles().profiles.find(
+      (candidate) => candidate.id === "docker-mcp-toolkit",
+    );
+
+    expect(profile).toMatchObject({
+      optional: true,
+      requiresDocker: true,
+      profileIsolation: "docker-desktop-mcp-toolkit",
+      defaultEnabled: false,
+    });
+    expect(
+      runVerificationProfile("docker-mcp-toolkit", { allowExternal: true }, deps())?.status,
+    ).toBe("failed");
+  });
+
+  it("U-MCPPROFILE-004: generated MCP config is a local suggestion and never writes .vscode/mcp.json", () => {
+    const result = renderGeneratedMcpConfig({
+      repoRoot: "/repo",
+      selectedProfileIds: ["playwright-mcp"],
+      env: { PLAYWRIGHT_MCP_TOKEN: "env:PLAYWRIGHT_MCP_TOKEN" },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.targetPath).toBe(".ut-tdd/local/mcp.generated.json");
+    expect(result.targetPath).not.toBe(".vscode/mcp.json");
+    expect(result.content).toContain("playwright-mcp");
+    expect(result.writesCommittedConfig).toBe(false);
+  });
+
+  it("U-MCPPROFILE-005: home-directory or global mounts become global-mount findings", () => {
+    const result = renderGeneratedMcpConfig({
+      repoRoot: "/repo",
+      selectedProfileIds: ["playwright-mcp"],
+      mounts: ["/repo", "/Users/example"],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.findings).toEqual([
+      expect.objectContaining({ code: "global-mount", severity: "error" }),
+    ]);
+  });
+
+  it("U-MCPPROFILE-006: inline token-like values are rejected while env var references are allowed", () => {
+    const rejected = renderGeneratedMcpConfig({
+      repoRoot: "/repo",
+      selectedProfileIds: ["github-mcp-readonly"],
+      env: { GITHUB_TOKEN: "ghp_inline_secret" },
+    });
+    const allowed = renderGeneratedMcpConfig({
+      repoRoot: "/repo",
+      selectedProfileIds: ["github-mcp-readonly"],
+      env: { GITHUB_TOKEN: "env:GITHUB_TOKEN" },
+    });
+
+    expect(rejected.ok).toBe(false);
+    expect(rejected.content).not.toContain("ghp_inline_secret");
+    expect(rejected.findings.map((finding) => finding.code)).toContain("credential-inline");
+    expect(allowed.ok).toBe(true);
+    expect(allowed.content).toContain("$" + "{GITHUB_TOKEN}");
+  });
+
+  it("U-MCPPROFILE-007: catalog presence alone cannot mark a profile trusted", () => {
+    const result = analyzeVerificationProfileSafety({
+      profile: {
+        ...mustProfile("playwright-mcp"),
+        sourceUrl: "https://example.com/not-official",
+      },
+      declaredPackages: ["@playwright/mcp"],
+    });
+
+    expect(result.trusted).toBe(false);
+    expect(result.findings.map((finding) => finding.code)).toContain("untrusted-source");
+  });
+
+  it("U-MCPPROFILE-008: GitHub MCP write tools or broad toolsets require human approval", () => {
+    const result = analyzeVerificationProfileSafety({
+      profile: mustProfile("github-mcp-readonly"),
+      allowedTools: ["issues:write", "pull_requests:write"],
+      requiresHumanApproval: false,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.findings.map((finding) => finding.code)).toContain("github-write-tool");
+  });
+
+  it("U-MCPPROFILE-009: missing package declaration is readiness finding, not implicit install", () => {
+    const result = analyzeVerificationProfileSafety({
+      profile: mustProfile("playwright-mcp"),
+      declaredPackages: [],
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.findings).toEqual([
+      expect.objectContaining({ code: "package-missing", severity: "warn" }),
+    ]);
+    expect(result.actions).not.toContain("install-package");
+  });
+
+  it("U-MCPPROFILE-010: Docker MCP Toolkit without Docker controls is not ready", () => {
+    const result = analyzeVerificationProfileSafety({
+      profile: mustProfile("docker-mcp-toolkit"),
+      declaredPackages: ["docker-mcp-toolkit"],
+      dockerAvailable: false,
+      dockerControlsDocumented: false,
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.findings.map((finding) => finding.code).sort()).toEqual([
+      "docker-controls-missing",
+      "docker-unavailable",
+    ]);
+  });
+
+  it("U-MCPPROFILE-011: activation plan routes trigger signals to probe, smoke, and approval steps", () => {
+    const plan = planExternalProfileActivation({
+      triggerSignals: ["ui_flow", "external_issue", "db_integration"],
+      recommendations: recommendVerificationProfiles([
+        "src/web/app.tsx",
+        ".github/workflows/ci.yml",
+        "docs/design/harness/L5-detailed-design/physical-data.md",
+      ]).recommendations,
+      allowExternal: true,
+    });
+
+    expect(plan.steps.map((step) => step.action)).toEqual([
+      "probe-profile",
+      "mcp-inspector-smoke",
+      "human-approval",
+      "probe-profile",
+      "mcp-inspector-smoke",
+      "human-approval",
+      "probe-profile",
+      "human-approval",
+      "probe-profile",
+      "human-approval",
+    ]);
+    expect(plan.steps.map((step) => step.profileId)).toContain("github-mcp-readonly");
+  });
+
+  it("U-MCPPROFILE-012: recommendation does not install, enable, or run external tools implicitly", () => {
+    const plan = planExternalProfileActivation({
+      triggerSignals: ["mcp_profile_changed"],
+      recommendations: recommendVerificationProfiles([".vscode/mcp.json"]).recommendations,
+      allowExternal: false,
+    });
+
+    expect(plan.ok).toBe(false);
+    expect(plan.actionsTaken).toEqual([]);
+    expect(plan.steps.map((step) => step.action)).toContain("refuse-run");
+    expect(plan.findings).toEqual([
+      expect.objectContaining({ code: "external-approval-required" }),
+    ]);
   });
 });

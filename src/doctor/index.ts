@@ -20,6 +20,13 @@ import {
   loadCodingWorkflowDocs,
 } from "../lint/coding-rules";
 import { analyzeDddTddRules, dddTddRulesMessages, loadDddTddInputs } from "../lint/ddd-tdd-rules";
+import {
+  analyzeDependencyDrift,
+  dependencyDriftMessages,
+  expandRegressionScope,
+  loadDependencyDriftInput,
+  regressionExpansionMessages,
+} from "../lint/dependency-drift";
 import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
 import {
   analyzeImplPlanTrace,
@@ -83,8 +90,10 @@ import {
   analyzePairFreeze,
   analyzeVerificationGroups,
   loadPairDocs,
+  loadVerificationPlanEvidence,
   pairFreezeMessages,
   verificationGroupMessages,
+  verificationGroupsOk,
 } from "../vmodel/lint";
 
 /** I/O・clock 注入 (test 可能、handover staleness 検査用)。 */
@@ -261,6 +270,14 @@ export function checkChangeImpact(repoRoot: string): { messages: string[]; ok: b
     return { messages: changeImpactMessages(r), ok: r.ok };
   } catch {
     return { messages: ["change-impact — note: git status を読めず検査 skip"], ok: true };
+  }
+}
+
+function loadChangedFilesForDoctor(repoRoot: string): string[] {
+  try {
+    return loadChangedFiles(repoRoot);
+  } catch {
+    return [];
   }
 }
 
@@ -472,14 +489,25 @@ export function checkRoadmap(repoRoot: string): { messages: string[]; ok: boolea
   }
 }
 
-export function checkVerificationGroups(repoRoot: string): string[] {
+export function checkVerificationGroupsResult(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
   try {
     const docs = loadPairDocs(repoRoot);
     const { orphans } = analyzePairFreeze(docs);
-    return verificationGroupMessages(analyzeVerificationGroups(docs, orphans));
+    const groups = analyzeVerificationGroups(docs, orphans, loadVerificationPlanEvidence(repoRoot));
+    return { messages: verificationGroupMessages(groups), ok: verificationGroupsOk(groups) };
   } catch {
-    return ["verification — note: design doc を読めず検査 skip"];
+    return {
+      messages: ["verification — violation: verification group lint could not run"],
+      ok: false,
+    };
   }
+}
+
+export function checkVerificationGroups(repoRoot: string): string[] {
+  return checkVerificationGroupsResult(repoRoot).messages;
 }
 
 /** doctor 用に agent-slots deps を node I/O で構築 (now 固定は test 注入)。 */
@@ -545,6 +573,12 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   // tracked-canonical は warn-first (IMP-127。canonical 未記載 tracked top-level surface、
   // CI 回帰網 U-TCAN-004 が drift 0 を fail-close)。
   const trackedCanonical = checkTrackedCanonical(deps.repoRoot);
+  const verificationGroups = checkVerificationGroupsResult(deps.repoRoot);
+  const dependencyDrift = analyzeDependencyDrift(loadDependencyDriftInput(deps.repoRoot));
+  const regressionExpansion = expandRegressionScope(
+    dependencyDrift,
+    loadChangedFilesForDoctor(deps.repoRoot),
+  );
   return {
     ok:
       backfill.ok &&
@@ -557,7 +591,10 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       dddTddRules.ok &&
       ruleDrift.ok &&
       l6FrCoverage.ok &&
-      readability.ok,
+      readability.ok &&
+      verificationGroups.ok &&
+      dependencyDrift.ok &&
+      regressionExpansion.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
       checkHandover(deps),
@@ -580,12 +617,13 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...readability.messages.map((m) => `doctor: ${m}`),
       ...l6Completion.messages.map((m) => `doctor: ${m}`),
       ...reviewEvidence.messages.map((m) => `doctor: ${m}`),
-      ...checkVerificationGroups(deps.repoRoot).map((m) => `doctor: ${m}`),
+      ...verificationGroups.messages.map((m) => `doctor: ${m}`),
       ...roadmap.messages.map((m) => `doctor: ${m}`),
       ...implPlanTrace.messages.map((m) => `doctor: ${m}`),
       ...oracleTestTrace.messages.map((m) => `doctor: ${m}`),
       ...trackedCanonical.messages.map((m) => `doctor: ${m}`),
-      "doctor: scaffold stub (dependency-drift / regression expansion は後続 PLAN)",
+      ...dependencyDriftMessages(dependencyDrift).map((m) => `doctor: ${m}`),
+      ...regressionExpansionMessages(regressionExpansion).map((m) => `doctor: ${m}`),
     ],
   };
 }

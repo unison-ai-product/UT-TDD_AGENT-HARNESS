@@ -114,8 +114,9 @@ describe("checkHandoverDisciplineMessages", () => {
       ],
     ]);
     const r = runDoctor(deps({ files }));
-    expect(r.ok).toBe(true);
+    expect(r.ok).toBe(false);
     expect(r.messages.some((m) => m.includes("handover-discipline"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("verification group lint could not run"))).toBe(true);
   });
 });
 
@@ -169,9 +170,10 @@ describe("checkAgentSlots (doctor agent-slots surface, IMP-050)", () => {
 describe("runDoctor", () => {
   it("ok=true で handover + agent-slots surface を含む (warning、ok を落とさない)", () => {
     const r = runDoctor(deps());
-    expect(r.ok).toBe(true);
+    expect(r.ok).toBe(false);
     expect(r.messages.some((m) => m.includes("handover"))).toBe(true);
     expect(r.messages.some((m) => m.includes("agent-slots"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("verification group lint could not run"))).toBe(true);
     // hard-fail lints も surface に出る (合成 repoRoot は docs 不在で skip note、wiring 存在を確認)
     expect(r.messages.some((m) => m.includes("scrum-reverse"))).toBe(true);
     expect(r.messages.some((m) => m.includes("propagation"))).toBe(true);
@@ -182,5 +184,13 @@ describe("runDoctor", () => {
     const r = runDoctor();
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: asset-drift — OK"))).toBe(true);
+  });
+
+  it("surfaces dependency-drift and regression expansion instead of scaffold stub", () => {
+    const r = runDoctor();
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: dependency-drift —"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: regression-expansion —"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("scaffold stub"))).toBe(false);
   });
 });

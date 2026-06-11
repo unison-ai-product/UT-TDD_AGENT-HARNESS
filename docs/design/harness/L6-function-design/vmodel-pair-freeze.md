@@ -108,7 +108,7 @@ function analyzePairFreeze(docs):
 
 ### §7.1 検証発火単位 (層群)
 
-`VERIFICATION_GROUPS` = **L0-L3 (上流: 要求〜要件) / L4-L6 (設計: 基本〜機能) / L0-L6 (全設計層)** (PO 例示)。L0 = 価値検証で design doc なし、L7+ は実装/検証実施で別レイヤー。
+`VERIFICATION_GROUPS` = **L0-L3 (上流: 要求〜要件) / L4-L6 (設計: 基本〜機能) / L0-L6 (全設計層) / L0-L7 (左腕+谷、実装検証サイクルゲート)**。L0 = 価値検証で design doc なし、L7 は実装 band として PLAN-L7-43 で追加。
 
 ### §7.2 freeze 完了判定 (発火条件)
 

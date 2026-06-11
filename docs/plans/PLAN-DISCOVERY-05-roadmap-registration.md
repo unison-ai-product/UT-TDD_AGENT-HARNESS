@@ -194,10 +194,10 @@ G-L7.C = 全 family 実装 + pair-freeze + review 済
 塊D [span: Reverse→L6→L7] relation-graph 依存キャリー
    regression expansion (L7-32 依存) + dependency-drift (IMP-032)
 G-L7.D = doctor scaffold stub 解消
-G-L7.E (layer exit) = GATE-B: VERIFICATION_GROUPS に L0-L7 group 追加 (L7 freeze 後発火可 = 実装検証サイクルゲート機械化)
+G-L7.E (layer exit) = 実装検証サイクルゲート: VERIFICATION_GROUPS に L0-L7 group 追加 (L7 freeze 後発火可 = 実装検証サイクルゲート機械化)
 ```
 
-> 当初ゴール「キャリー潰して L7 の初手まで」= 塊A・塊B (キャリー) を span PLAN で潰す → 塊C 先頭 = L7-32 Red entry。GATE-B (旧 carry) は「L7 freeze 後」が定位置の最終ゲート G-L7.E として正しく位置付く (今潰せないキャリーではない)。
+> 当初ゴール「キャリー潰して L7 の初手まで」= 塊A・塊B (キャリー) を span PLAN で潰す → 塊C 先頭 = L7-32 Red entry。旧 GATE-B carry は `PLAN-L7-43` / `PLAN-REVERSE-43` で L0-L7 `VERIFICATION_GROUPS` に機械着地し、G-L7.E reached として閉じた。Phase 4 DB はこの automation evidence を projection DB へ引き込む次 cycle。
 
 ## §工程表
 

@@ -359,7 +359,7 @@ function buildCoverageMap():
 | **L7.3** | `lintVmodel` 本実装 (12 edge trace) | schema | stub→本 |
 | **L7.4** | `runDoctor` 統合 (5 lint + state 突合) | lint 群 | scaffold→本 |
 | **L7.5** | rule engine 10 型 + auto-enroll (IMP-033) | schema/lint | 未 |
-| **L7.6** | dependency-drift lint (knip/madge、ADR-002/IMP-032) | runtime | 未 |
+| **L7.6** | dependency-drift lint (built-in TS import graph、optional knip/madge は adapter insight、ADR-002/IMP-032) | runtime | 実装済 (`src/lint/dependency-drift.ts` / `tests/dependency-drift.test.ts`、PLAN-REVERSE-42) |
 | **L7.7** | 未実装 module (workflow/session/cutover 等) | schema | 未 (後続 PLAN 分割可) |
 
 > 各 Sprint = TDD Red-first (L7 entry、§1.10 line 671)。先行 ④ 単体テストコードは L7 単体テスト設計 (pair) の U-* に対応。

@@ -221,7 +221,7 @@ program
 
 program
   .command("doctor")
-  .description("統合検証 (scaffold stub)")
+  .description("統合検証 (doctor / gate / trace / drift / roadmap)")
   .action(() => {
     const r = runDoctor();
     for (const m of r.messages) process.stdout.write(`${m}\n`);
@@ -497,7 +497,7 @@ hook
 const plan = program.command("plan").description("PLAN 操作");
 plan
   .command("lint [path]")
-  .description("PLAN lint (scaffold stub)")
+  .description("PLAN lint")
   .action((path?: string) => {
     const r = lintPlan(path);
     for (const m of r.messages) process.stdout.write(`${m}\n`);
@@ -657,7 +657,7 @@ providerHandover
 const vmodel = program.command("vmodel").description("V-model trace");
 vmodel
   .command("lint [path]")
-  .description("V-model 4 artifact trace lint (scaffold stub)")
+  .description("V-model 4 artifact trace lint")
   .action((path?: string) => {
     const r = lintVmodel(path);
     for (const m of r.messages) process.stdout.write(`${m}\n`);

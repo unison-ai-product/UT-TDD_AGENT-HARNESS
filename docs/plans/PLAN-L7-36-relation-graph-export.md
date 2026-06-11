@@ -4,10 +4,19 @@ title: "PLAN-L7-36 (add-impl): relation graph export + verification-evidence pro
 kind: add-impl
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-10
-updated: 2026-06-10
+updated: 2026-06-11
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-11"
+    tests_green_at: "2026-06-11"
+    verdict: pass
+    scope: "U-RELGRAPH-007..010 promoted from it.todo to green tests; exportRelationDiagram and collectVerificationEvidenceProjection implemented as pure deterministic projections. Critical 0 / Important 0. External adapter execution remains out of scope; unavailable DOT/D2 returns findings only. Raw MCP/tool payload, screenshots, traces, provider transcript, secret-like fields are not projected."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5-intra-runtime-review
 agent_slots:
   - role: tl
     slot_label: "TL - relation graph export 実装レビュー (別 runtime)"
@@ -70,6 +79,6 @@ Out of scope: 実外部ツール実行、SQLite write path。
 
 ## §8 DoD
 
-- [ ] U-RELGRAPH-007..010 が it.todo → it 昇格で green。
-- [ ] `bun run typecheck` / `lint` / `vitest` / `doctor` green。
-- [ ] PLAN-REVERSE-32 (relation graph fullback) へ合流宣言。
+- [x] U-RELGRAPH-007..010 promoted from `it.todo` to green `it` in `tests/relation-graph.test.ts`.
+- [x] `bun run typecheck`, `bun run lint`, and targeted `bun run vitest run tests/relation-graph.test.ts` are green before review.
+- [x] PLAN-REVERSE-32 (relation graph fullback) has the L7-36 merge declaration.

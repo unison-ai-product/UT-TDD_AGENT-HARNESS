@@ -4,9 +4,9 @@ title: "PLAN-REVERSE-35 (reverse): canonical document export fullback"
 kind: reverse
 layer: cross
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-11
 owner: Codex TL / PO
 agent_slots:
   - role: tl
@@ -58,11 +58,17 @@ Forward implementation must align with:
 
 ## §4 R3 / R4
 
-R3 and R4 remain pending until implementation evidence exists. No governance document may claim spreadsheet / Excel / PPTX document export complete before this Reverse closes.
+2026-06-11 L7 implementation evidence exists for canonical document export:
+
+- PLAN-L7-35: U-DOCEXPORT-001..012 green for canonical document parsing, deterministic datasets, built-in CSV/Markdown rendering, optional renderer readiness findings, normalized projection rows, derived-artifact boundary, and stale source snapshot detection.
+- Backprop decision: no lower-layer requirements / physical-data / ADR meaning change was discovered; generated Office/spreadsheet/deck outputs remain derived artifacts.
+- Safety boundary: no package installation, external Office renderer invocation, canonical doc mutation, or generated artifact gate truth is introduced.
+
+R4 fullback outcome: Forward L7 canonical document export implementation has merged back to this Reverse plan with no additional governance/backlog additions required.
 
 ## §8 DoD
 
-- [ ] L7 implementation evidence exists.
-- [ ] New lower-layer discoveries are classified with `backprop_decision`.
-- [ ] Requirements / physical-data / ADR / backlog are updated if implementation changes their meaning.
-- [ ] Generated Office/spreadsheet files remain derived artifacts and do not replace canonical docs.
+- [x] L7 implementation evidence exists.
+- [x] New lower-layer discoveries are classified with `backprop_decision`.
+- [x] Requirements / physical-data / ADR / backlog are unchanged because implementation did not change their meaning.
+- [x] Generated Office/spreadsheet files remain derived artifacts and do not replace canonical docs.

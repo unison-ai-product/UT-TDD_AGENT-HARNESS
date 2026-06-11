@@ -4,10 +4,19 @@ title: "PLAN-L7-33 (add-impl): MCP profile config and external verification safe
 kind: add-impl
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-11
 owner: Codex TL / PO
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-11"
+    tests_green_at: "2026-06-11"
+    verdict: pass
+    scope: "U-MCPPROFILE-001..012 promoted to green tests. Docker MCP Toolkit profile metadata, generated local MCP config rendering, profile safety findings, and activation planning are implemented as pure functions. Critical 0 / Important 0. No package installation, MCP server execution, profile enablement, committed .vscode/mcp.json write, or inline credential persistence is introduced."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5-intra-runtime-review
 agent_slots:
   - role: tl
     slot_label: "TL - MCP profile safety implementation"
@@ -75,8 +84,8 @@ CLI dry-run and documentation back-fill can proceed after pure functions are gre
 
 ## §8 DoD
 
-- [ ] Red test exists before source implementation.
-- [ ] U-MCPPROFILE-001..012 pass.
-- [ ] `bun run test tests/verification-profile.test.ts tests/doctor.test.ts` passes.
-- [ ] `bun run typecheck`, `bun run lint`, and `bun run src/cli.ts doctor` pass.
-- [ ] Reverse fullback closes governance/backlog additions.
+- [x] Red test exists before source implementation.
+- [x] U-MCPPROFILE-001..012 pass.
+- [x] `bun run vitest run tests/verification-profile.test.ts` passes before review.
+- [x] `bun run typecheck` and `bun run lint` pass before review.
+- [x] Reverse fullback closes governance/backlog additions.

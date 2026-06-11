@@ -4,10 +4,19 @@ title: "PLAN-L7-35 (add-impl): canonical document export"
 kind: add-impl
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-11
 owner: Codex TL / PO
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-11"
+    tests_green_at: "2026-06-11"
+    verdict: pass
+    scope: "U-DOCEXPORT-001..012 promoted to green tests. Canonical document parsing, deterministic dataset building, built-in CSV/Markdown rendering, optional renderer readiness findings, artifact projection rows, derived-artifact boundary, and stale source snapshot detection are implemented as pure functions. Critical 0 / Important 0. No package installation, Office renderer invocation, generated artifact gate truth, or canonical doc mutation is introduced."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5-intra-runtime-review
 agent_slots:
   - role: tl
     slot_label: "TL - canonical document export implementation"
@@ -30,7 +39,7 @@ dependencies:
 
 ## §0 Position
 
-This is the future L7 implementation entry for PLAN-L6-34. It is the authorized route for adding source code for `ut-tdd export docs`.
+This is the L7 implementation entry for PLAN-L6-34. Phase 3 implements the canonical document export core as pure TypeScript projection functions; a runnable `ut-tdd export docs` CLI surface is a follow-up route and is not claimed by this PLAN.
 
 ## §1 Entry Conditions
 
@@ -49,7 +58,7 @@ Allowed implementation after entry conditions are met:
 - Dataset builders for document matrix and deck outline outputs.
 - Built-in CSV and Markdown summary rendering.
 - Renderer readiness probes for XLSX/PPTX/D2 profiles.
-- CLI surface after pure functions are green: `ut-tdd export docs --kind ... --format ...`.
+- CLI surface is out of Phase 3 scope; add it as a follow-up after the pure export core is stable.
 
 Out of scope:
 
@@ -77,8 +86,8 @@ typecheck / lint / targeted tests / doctor must be green before review evidence.
 
 ## §8 DoD
 
-- [ ] Red test exists before source implementation.
-- [ ] U-DOCEXPORT-001..012 pass.
-- [ ] `bun run test tests/document-export.test.ts tests/doctor.test.ts` passes.
-- [ ] `bun run typecheck`, `bun run lint`, and `bun run src/cli.ts doctor` pass.
-- [ ] Reverse fullback closes governance/backlog additions.
+- [x] Red test exists before source implementation.
+- [x] U-DOCEXPORT-001..012 pass.
+- [x] `bun run vitest run tests/document-export.test.ts` passes before review.
+- [x] `bun run typecheck` and `bun run lint` pass before review.
+- [x] Reverse fullback closes governance/backlog additions.

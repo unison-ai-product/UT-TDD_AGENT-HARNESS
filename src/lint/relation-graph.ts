@@ -37,6 +37,9 @@ export type RelationEdgeKind =
 export type RelationFindingCode =
   | "orphan-table"
   | "redacted-evidence"
+  | "unavailable-adapter"
+  | "invalid-evidence"
+  | "external-not-allowed"
   | "missing-projection" // 変更 path に対応 node が projection に無い (impact 解析不能)
   | "stale-edge" // edge の端点 node が projection に存在しない (整合崩れ)
   | "missing-test-coverage"; // source 変更 node に sibling test edge が無い
@@ -195,7 +198,12 @@ function projectVerificationEvidence(input: VerificationEvidenceInput): {
     (field) => typeof input[field] === "string" && input[field] !== "",
   ).length;
   return {
-    node: { id, kind: "verification-profile", path: input.evidencePath, label: input.classification },
+    node: {
+      id,
+      kind: "verification-profile",
+      path: input.evidencePath,
+      label: input.classification,
+    },
     row: {
       nodeId: id,
       classification: input.classification,
@@ -311,7 +319,8 @@ export function collectRelationGraphProjection(
 
 function sortEdges(list: RelationEdge[]): RelationEdge[] {
   return [...list].sort(
-    (a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to) || a.kind.localeCompare(b.kind),
+    (a, b) =>
+      a.from.localeCompare(b.from) || a.to.localeCompare(b.to) || a.kind.localeCompare(b.kind),
   );
 }
 
@@ -389,14 +398,22 @@ function buildIndex(projection: RelationGraphProjection): GraphIndex {
   return { nodeById, edgesFrom, edgesTo };
 }
 
-function targets(edges: RelationEdge[] | undefined, kind: RelationEdgeKind, index: GraphIndex): RelationNode[] {
+function targets(
+  edges: RelationEdge[] | undefined,
+  kind: RelationEdgeKind,
+  index: GraphIndex,
+): RelationNode[] {
   return (edges ?? [])
     .filter((e) => e.kind === kind)
     .map((e) => index.nodeById.get(e.to))
     .filter((n): n is RelationNode => n !== undefined);
 }
 
-function sources(edges: RelationEdge[] | undefined, kind: RelationEdgeKind, index: GraphIndex): RelationNode[] {
+function sources(
+  edges: RelationEdge[] | undefined,
+  kind: RelationEdgeKind,
+  index: GraphIndex,
+): RelationNode[] {
   return (edges ?? [])
     .filter((e) => e.kind === kind)
     .map((e) => index.nodeById.get(e.from))
@@ -413,17 +430,37 @@ function expandSource(node: RelationNode, index: GraphIndex): Expansion {
   const tests = targets(index.edgesFrom.get(node.id), "covered-by", index);
   const plans = sources(index.edgesTo.get(node.id), "generates", index);
   const actions: RelationImpactAction[] = [
-    { kind: "review-design-contract", nodeId: node.id, reason: "source change requires L6 design contract review" },
-    { kind: "reverse-backprop", nodeId: node.id, reason: "lower-layer source change may need reverse/backprop to design/requirement" },
+    {
+      kind: "review-design-contract",
+      nodeId: node.id,
+      reason: "source change requires L6 design contract review",
+    },
+    {
+      kind: "reverse-backprop",
+      nodeId: node.id,
+      reason: "lower-layer source change may need reverse/backprop to design/requirement",
+    },
   ];
   const findings: RelationFinding[] = [];
   if (tests.length > 0) {
     for (const t of tests) {
-      actions.push({ kind: "require-sibling-test", nodeId: t.id, reason: "sibling test must cover the source change" });
-      actions.push({ kind: "review-l7-oracle", nodeId: t.id, reason: "L7 unit oracle must reflect the source change" });
+      actions.push({
+        kind: "require-sibling-test",
+        nodeId: t.id,
+        reason: "sibling test must cover the source change",
+      });
+      actions.push({
+        kind: "review-l7-oracle",
+        nodeId: t.id,
+        reason: "L7 unit oracle must reflect the source change",
+      });
     }
   } else {
-    actions.push({ kind: "require-sibling-test", nodeId: node.id, reason: "no sibling test in projection — add coverage" });
+    actions.push({
+      kind: "require-sibling-test",
+      nodeId: node.id,
+      reason: "no sibling test in projection — add coverage",
+    });
     findings.push({
       code: "missing-test-coverage",
       severity: "warn",
@@ -432,7 +469,11 @@ function expandSource(node: RelationNode, index: GraphIndex): Expansion {
     });
   }
   for (const p of plans) {
-    actions.push({ kind: "update-plan", nodeId: p.id, reason: "owning PLAN must record the source change" });
+    actions.push({
+      kind: "update-plan",
+      nodeId: p.id,
+      reason: "owning PLAN must record the source change",
+    });
   }
   return { impacted: [...tests, ...plans], actions, findings };
 }
@@ -452,15 +493,31 @@ function expandDesignLike(node: RelationNode, index: GraphIndex): Expansion {
     ),
   );
   const actions: RelationImpactAction[] = [
-    { kind: "update-plan-dod", nodeId: node.id, reason: "design/test-design change updates the owning PLAN DoD" },
-    { kind: "record-trace-freeze-evidence", nodeId: node.id, reason: "design/test-design change requires trace-freeze evidence" },
+    {
+      kind: "update-plan-dod",
+      nodeId: node.id,
+      reason: "design/test-design change updates the owning PLAN DoD",
+    },
+    {
+      kind: "record-trace-freeze-evidence",
+      nodeId: node.id,
+      reason: "design/test-design change requires trace-freeze evidence",
+    },
   ];
   for (const p of paired) {
-    actions.push({ kind: "update-paired-artifact", nodeId: p.id, reason: "paired design⇔test-design artifact must stay consistent" });
+    actions.push({
+      kind: "update-paired-artifact",
+      nodeId: p.id,
+      reason: "paired design⇔test-design artifact must stay consistent",
+    });
   }
   // behavioral contract edge が無ければ source test を要求しない (U-RELGRAPH-005 conditional)。
   for (const src of behavioralSources) {
-    actions.push({ kind: "require-sibling-test", nodeId: src.id, reason: "behavioral-contract edge requires source test update" });
+    actions.push({
+      kind: "require-sibling-test",
+      nodeId: src.id,
+      reason: "behavioral-contract edge requires source test update",
+    });
   }
   return { impacted: [...paired, ...behavioralSources], actions, findings: [] };
 }
@@ -468,13 +525,21 @@ function expandDesignLike(node: RelationNode, index: GraphIndex): Expansion {
 function expandDbTable(node: RelationNode, index: GraphIndex): Expansion {
   const upstreamEdges = (index.edgesFrom.get(node.id) ?? []).filter((e) => e.kind === "upstream");
   const actions: RelationImpactAction[] = [
-    { kind: "rebuild-db-table", nodeId: node.id, reason: "physical-data change requires DB table rebuild contract check" },
+    {
+      kind: "rebuild-db-table",
+      nodeId: node.id,
+      reason: "physical-data change requires DB table rebuild contract check",
+    },
   ];
   const impacted: RelationNode[] = [];
   for (const edge of upstreamEdges) {
     // upstream は requirement/ADR/PLAN を指す。ADR 等は projection に未 materialize でも
     // review action は要る (review は edge target id 基準、impacted は実在 node のみ)。
-    actions.push({ kind: "review-upstream", nodeId: edge.to, reason: "DB table change must trace to upstream requirement/ADR/PLAN" });
+    actions.push({
+      kind: "review-upstream",
+      nodeId: edge.to,
+      reason: "DB table change must trace to upstream requirement/ADR/PLAN",
+    });
     const target = index.nodeById.get(edge.to);
     if (target) {
       impacted.push(target);
@@ -496,7 +561,10 @@ function expandNode(node: RelationNode, index: GraphIndex): Expansion {
   return { impacted: [], actions: [], findings: [] };
 }
 
-function detectStaleEdges(projection: RelationGraphProjection, index: GraphIndex): RelationFinding[] {
+function detectStaleEdges(
+  projection: RelationGraphProjection,
+  index: GraphIndex,
+): RelationFinding[] {
   const findings: RelationFinding[] = [];
   for (const edge of projection.edges) {
     // from (edge の所有 node) は kind を問わず projection 内に実在すべき。
@@ -535,7 +603,9 @@ function dedupeActions(list: RelationImpactAction[]): RelationImpactAction[] {
       seen.set(key, a);
     }
   }
-  return [...seen.values()].sort((a, b) => a.kind.localeCompare(b.kind) || a.nodeId.localeCompare(b.nodeId));
+  return [...seen.values()].sort(
+    (a, b) => a.kind.localeCompare(b.kind) || a.nodeId.localeCompare(b.nodeId),
+  );
 }
 
 /**
@@ -580,6 +650,435 @@ export function analyzeRelationImpact(input: RelationImpactInput): RelationImpac
     changedNodes: dedupeNodes(changedNodes),
     impacted: dedupeNodes(impacted),
     actions: dedupeActions(actions),
+    findings: sortedFindings,
+    ok: !sortedFindings.some((f) => f.severity === "error"),
+  };
+}
+
+// ---- PLAN-L7-36: exportRelationDiagram (U-RELGRAPH-007..008) ------------------
+
+export type RelationDiagramFormat = "mermaid" | "dot" | "d2";
+export type RelationDiagramAdapter = Exclude<RelationDiagramFormat, "mermaid">;
+
+export interface ExportRelationDiagramInput {
+  snapshot: RelationGraphProjection;
+  format: RelationDiagramFormat;
+  availableAdapters?: RelationDiagramAdapter[];
+}
+
+export interface DiagramArtifact {
+  format: RelationDiagramFormat;
+  content: string;
+  findings: RelationFinding[];
+  ok: boolean;
+  invokedAdapters: RelationDiagramAdapter[];
+}
+
+function diagramNodeId(id: string): string {
+  return id.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+function quotedLabel(label: string): string {
+  return label.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function relationDiagramRows(snapshot: RelationGraphProjection): {
+  nodes: RelationNode[];
+  edges: RelationEdge[];
+} {
+  return {
+    nodes: [...snapshot.nodes].sort((a, b) => a.id.localeCompare(b.id)),
+    edges: sortEdges(snapshot.edges),
+  };
+}
+
+function renderMermaid(snapshot: RelationGraphProjection): string {
+  const { nodes, edges } = relationDiagramRows(snapshot);
+  const lines = ["flowchart TD"];
+  for (const node of nodes) {
+    lines.push(`  ${diagramNodeId(node.id)}["${quotedLabel(node.id)}"]`);
+  }
+  for (const edge of edges) {
+    lines.push(`  ${diagramNodeId(edge.from)} -->|${edge.kind}| ${diagramNodeId(edge.to)}`);
+  }
+  return lines.join("\n");
+}
+
+function renderDot(snapshot: RelationGraphProjection): string {
+  const { nodes, edges } = relationDiagramRows(snapshot);
+  const lines = ["digraph relation_graph {"];
+  for (const node of nodes) {
+    lines.push(`  "${node.id}" [label="${quotedLabel(node.id)}"];`);
+  }
+  for (const edge of edges) {
+    lines.push(`  "${edge.from}" -> "${edge.to}" [label="${edge.kind}"];`);
+  }
+  lines.push("}");
+  return lines.join("\n");
+}
+
+function renderD2(snapshot: RelationGraphProjection): string {
+  const { nodes, edges } = relationDiagramRows(snapshot);
+  const lines: string[] = [];
+  for (const node of nodes) {
+    lines.push(`${diagramNodeId(node.id)}: "${quotedLabel(node.id)}"`);
+  }
+  for (const edge of edges) {
+    lines.push(`${diagramNodeId(edge.from)} -> ${diagramNodeId(edge.to)}: "${edge.kind}"`);
+  }
+  return lines.join("\n");
+}
+
+export function exportRelationDiagram(input: ExportRelationDiagramInput): DiagramArtifact {
+  if (input.format === "mermaid") {
+    return {
+      format: "mermaid",
+      content: renderMermaid(input.snapshot),
+      findings: [],
+      ok: true,
+      invokedAdapters: [],
+    };
+  }
+
+  const available = new Set(input.availableAdapters ?? []);
+  if (!available.has(input.format)) {
+    return {
+      format: input.format,
+      content: "",
+      findings: [
+        {
+          code: "unavailable-adapter",
+          severity: "warn",
+          message: `${input.format} diagram adapter is unavailable; no install or external command was invoked`,
+        },
+      ],
+      ok: false,
+      invokedAdapters: [],
+    };
+  }
+
+  return {
+    format: input.format,
+    content: input.format === "dot" ? renderDot(input.snapshot) : renderD2(input.snapshot),
+    findings: [],
+    ok: true,
+    invokedAdapters: [input.format],
+  };
+}
+
+// ---- PLAN-L7-36: collectVerificationEvidenceProjection (U-RELGRAPH-009..010) ---
+
+export interface VerificationProfileProjectionRow {
+  verification_profile_id: string;
+  name: string;
+  profile_type: string;
+  package_refs?: string[];
+  requires_docker?: boolean;
+  requires_browser?: boolean;
+  requires_network?: boolean;
+  green_definition_id?: string;
+  trigger_signals?: string[];
+  enabled?: boolean;
+  evidence_path: string;
+}
+
+export interface VerificationRecommendationProjectionRow {
+  verification_recommendation_id: string;
+  change_set_id: string;
+  plan_id: string;
+  profile_id: string;
+  profile_kind: string;
+  reason: string;
+  source_rule: string;
+  accepted: boolean;
+  evidence_path: string;
+}
+
+export interface McpServerRunProjectionRow {
+  mcp_run_id: string;
+  mcp_profile_id: string;
+  session_id?: string;
+  plan_id?: string;
+  command: string;
+  method: string;
+  tool_name?: string;
+  started_at?: string;
+  completed_at?: string;
+  exit_code?: number;
+  evidence_path: string;
+  normalized_status: string;
+}
+
+export interface ExternalToolFindingProjectionRow {
+  external_finding_id: string;
+  source_run_id: string;
+  source_kind: string;
+  finding_type: string;
+  severity: "error" | "warn" | "info";
+  subject_id?: string;
+  path?: string;
+  status?: string;
+  digest?: string;
+  evidence_path: string;
+}
+
+export interface VerificationEvidenceProjection {
+  verification_profiles: VerificationProfileProjectionRow[];
+  verification_recommendations: VerificationRecommendationProjectionRow[];
+  mcp_server_runs: McpServerRunProjectionRow[];
+  external_tool_findings: ExternalToolFindingProjectionRow[];
+  findings: RelationFinding[];
+  ok: boolean;
+}
+
+type EvidenceRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): EvidenceRecord | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as EvidenceRecord)
+    : null;
+}
+
+function stringValue(record: EvidenceRecord, key: string): string | undefined {
+  const value = record[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function booleanValue(record: EvidenceRecord, key: string): boolean | undefined {
+  return typeof record[key] === "boolean" ? record[key] : undefined;
+}
+
+function numberValue(record: EvidenceRecord, key: string): number | undefined {
+  const value = record[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function stringArrayValue(record: EvidenceRecord, key: string): string[] | undefined {
+  const value = record[key];
+  if (!Array.isArray(value)) return undefined;
+  const strings = value.filter((v): v is string => typeof v === "string" && v.length > 0);
+  return strings.length > 0 ? strings : undefined;
+}
+
+function evidenceFinding(
+  code: Extract<RelationFindingCode, "invalid-evidence" | "external-not-allowed">,
+  message: string,
+  evidencePath?: string,
+): RelationFinding {
+  return {
+    code,
+    severity: "error",
+    message,
+    evidencePath,
+  };
+}
+
+function projectProfile(
+  profile: EvidenceRecord,
+  evidencePath: string,
+): VerificationProfileProjectionRow | null {
+  const id = stringValue(profile, "id");
+  const name = stringValue(profile, "name");
+  const profileType = stringValue(profile, "profile_type");
+  if (!id || !name || !profileType) return null;
+  return {
+    verification_profile_id: id,
+    name,
+    profile_type: profileType,
+    package_refs: stringArrayValue(profile, "package_refs"),
+    requires_docker: booleanValue(profile, "requires_docker"),
+    requires_browser: booleanValue(profile, "requires_browser"),
+    requires_network: booleanValue(profile, "requires_network"),
+    green_definition_id: stringValue(profile, "green_definition_id"),
+    trigger_signals: stringArrayValue(profile, "trigger_signals"),
+    enabled: booleanValue(profile, "enabled"),
+    evidence_path: evidencePath,
+  };
+}
+
+function projectRecommendation(
+  recommendation: EvidenceRecord,
+  evidencePath: string,
+): VerificationRecommendationProjectionRow | null {
+  const id = stringValue(recommendation, "id");
+  const changeSetId = stringValue(recommendation, "change_set_id");
+  const planId = stringValue(recommendation, "plan_id");
+  const profileId = stringValue(recommendation, "profile_id");
+  const profileKind = stringValue(recommendation, "profile_kind");
+  const reason = stringValue(recommendation, "reason");
+  const sourceRule = stringValue(recommendation, "source_rule");
+  if (!id || !changeSetId || !planId || !profileId || !profileKind || !reason || !sourceRule)
+    return null;
+  return {
+    verification_recommendation_id: id,
+    change_set_id: changeSetId,
+    plan_id: planId,
+    profile_id: profileId,
+    profile_kind: profileKind,
+    reason,
+    source_rule: sourceRule,
+    accepted: booleanValue(recommendation, "accepted") ?? false,
+    evidence_path: evidencePath,
+  };
+}
+
+function projectMcpRun(
+  run: EvidenceRecord,
+  evidencePath: string,
+): McpServerRunProjectionRow | null {
+  const id = stringValue(run, "id");
+  const profileId = stringValue(run, "profile_id");
+  const command = stringValue(run, "command");
+  const method = stringValue(run, "method");
+  const status = stringValue(run, "normalized_status");
+  if (!id || !profileId || !command || !method || !status) return null;
+  return {
+    mcp_run_id: id,
+    mcp_profile_id: profileId,
+    session_id: stringValue(run, "session_id"),
+    plan_id: stringValue(run, "plan_id"),
+    command,
+    method,
+    tool_name: stringValue(run, "tool_name"),
+    started_at: stringValue(run, "started_at"),
+    completed_at: stringValue(run, "completed_at"),
+    exit_code: numberValue(run, "exit_code"),
+    evidence_path: evidencePath,
+    normalized_status: status,
+  };
+}
+
+function projectFinding(
+  finding: EvidenceRecord,
+  evidencePath: string,
+): ExternalToolFindingProjectionRow | null {
+  const id = stringValue(finding, "id");
+  const sourceRunId = stringValue(finding, "source_run_id");
+  const sourceKind = stringValue(finding, "source_kind");
+  const findingType = stringValue(finding, "finding_type");
+  const severity = stringValue(finding, "severity");
+  if (!id || !sourceRunId || !sourceKind || !findingType) return null;
+  const normalizedSeverity =
+    severity === "error" || severity === "warn" || severity === "info" ? severity : "warn";
+  return {
+    external_finding_id: id,
+    source_run_id: sourceRunId,
+    source_kind: sourceKind,
+    finding_type: findingType,
+    severity: normalizedSeverity,
+    subject_id: stringValue(finding, "subject_id"),
+    path: stringValue(finding, "path"),
+    status: stringValue(finding, "status"),
+    digest: stringValue(finding, "digest"),
+    evidence_path: evidencePath,
+  };
+}
+
+export function collectVerificationEvidenceProjection(
+  records: unknown[],
+): VerificationEvidenceProjection {
+  const verificationProfiles: VerificationProfileProjectionRow[] = [];
+  const verificationRecommendations: VerificationRecommendationProjectionRow[] = [];
+  const mcpServerRuns: McpServerRunProjectionRow[] = [];
+  const externalToolFindings: ExternalToolFindingProjectionRow[] = [];
+  const findings: RelationFinding[] = [];
+
+  for (const raw of records) {
+    const record = asRecord(raw);
+    const evidencePath = record ? stringValue(record, "evidence_path") : undefined;
+    if (!record || record.schema_version !== "verification-evidence-v1" || !evidencePath) {
+      findings.push(
+        evidenceFinding(
+          "invalid-evidence",
+          "verification evidence must include schema_version=verification-evidence-v1 and evidence_path",
+          evidencePath,
+        ),
+      );
+      continue;
+    }
+
+    const profile = asRecord(record.profile);
+    if (profile) {
+      const row = projectProfile(profile, evidencePath);
+      if (row) verificationProfiles.push(row);
+      else
+        findings.push(
+          evidenceFinding(
+            "invalid-evidence",
+            "verification profile row is missing required fields",
+            evidencePath,
+          ),
+        );
+    }
+
+    const recommendation = asRecord(record.recommendation);
+    if (recommendation) {
+      const row = projectRecommendation(recommendation, evidencePath);
+      if (row) verificationRecommendations.push(row);
+      else
+        findings.push(
+          evidenceFinding(
+            "invalid-evidence",
+            "verification recommendation row is missing required fields",
+            evidencePath,
+          ),
+        );
+    }
+
+    const mcpRun = asRecord(record.mcp_run);
+    if (mcpRun && record.allow_external === false) {
+      findings.push(
+        evidenceFinding(
+          "external-not-allowed",
+          "external MCP/tool run evidence was supplied while allow_external=false",
+          evidencePath,
+        ),
+      );
+      continue;
+    }
+    if (mcpRun) {
+      const row = projectMcpRun(mcpRun, evidencePath);
+      if (row) mcpServerRuns.push(row);
+      else
+        findings.push(
+          evidenceFinding(
+            "invalid-evidence",
+            "mcp_server_runs row is missing required fields",
+            evidencePath,
+          ),
+        );
+    }
+
+    const rawFindings = record.findings;
+    if (Array.isArray(rawFindings)) {
+      for (const rawFinding of rawFindings) {
+        const findingRecord = asRecord(rawFinding);
+        const row = findingRecord ? projectFinding(findingRecord, evidencePath) : null;
+        if (row) externalToolFindings.push(row);
+        else
+          findings.push(
+            evidenceFinding(
+              "invalid-evidence",
+              "external_tool_findings row is missing required fields",
+              evidencePath,
+            ),
+          );
+      }
+    }
+  }
+
+  const sortedFindings = sortFindings(findings);
+  return {
+    verification_profiles: verificationProfiles.sort((a, b) =>
+      a.verification_profile_id.localeCompare(b.verification_profile_id),
+    ),
+    verification_recommendations: verificationRecommendations.sort((a, b) =>
+      a.verification_recommendation_id.localeCompare(b.verification_recommendation_id),
+    ),
+    mcp_server_runs: mcpServerRuns.sort((a, b) => a.mcp_run_id.localeCompare(b.mcp_run_id)),
+    external_tool_findings: externalToolFindings.sort((a, b) =>
+      a.external_finding_id.localeCompare(b.external_finding_id),
+    ),
     findings: sortedFindings,
     ok: !sortedFindings.some((f) => f.severity === "error"),
   };

@@ -12,6 +12,8 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeRelationImpact,
   collectRelationGraphProjection,
+  collectVerificationEvidenceProjection,
+  exportRelationDiagram,
   type RelationGraphSourceSet,
   type RelationImpactActionKind,
 } from "../src/lint/relation-graph";
@@ -30,9 +32,13 @@ describe("collectRelationGraphProjection (U-RELGRAPH-001..003)", () => {
         // 重複 PLAN — dedup されること
         { id: "PLAN-L7-32", path: "docs/plans/PLAN-L7-32.md" },
       ],
-      designDocs: [{ id: "module-drift", path: "docs/design/.../module-drift.md", pairs: "L7-unit" }],
+      designDocs: [
+        { id: "module-drift", path: "docs/design/.../module-drift.md", pairs: "L7-unit" },
+      ],
       testDesignDocs: [{ id: "L7-unit", path: "docs/test-design/.../L7-unit.md" }],
-      sourceFiles: [{ path: "src/lint/relation-graph.ts", tests: ["tests/relation-graph.test.ts"] }],
+      sourceFiles: [
+        { path: "src/lint/relation-graph.ts", tests: ["tests/relation-graph.test.ts"] },
+      ],
       tests: [{ path: "tests/relation-graph.test.ts" }],
     };
 
@@ -60,7 +66,11 @@ describe("collectRelationGraphProjection (U-RELGRAPH-001..003)", () => {
     );
     expect(edges).toContain(edgeKey("design:module-drift", "test-design:L7-unit", "pairs"));
     expect(edges).toContain(
-      edgeKey("source:src/lint/relation-graph.ts", "test:tests/relation-graph.test.ts", "covered-by"),
+      edgeKey(
+        "source:src/lint/relation-graph.ts",
+        "test:tests/relation-graph.test.ts",
+        "covered-by",
+      ),
     );
 
     // 決定的順序 (node id 昇順)
@@ -218,9 +228,9 @@ describe("analyzeRelationImpact (U-RELGRAPH-004..006)", () => {
       projection,
     });
     expect(testDesignChange.changedNodes.map((n) => n.id)).toEqual(["test-design:L7-unit"]);
-    expect(
-      testDesignChange.actions.find((a) => a.kind === "update-paired-artifact")?.nodeId,
-    ).toBe("design:module-drift");
+    expect(testDesignChange.actions.find((a) => a.kind === "update-paired-artifact")?.nodeId).toBe(
+      "design:module-drift",
+    );
     expect(actionKinds(testDesignChange).has("require-sibling-test")).toBe(false);
 
     // behavioral contract を持つ test-design 変更: paired design の contract を辿り source test を要求
@@ -252,7 +262,9 @@ describe("analyzeRelationImpact (U-RELGRAPH-004..006)", () => {
 
   it("U-RELGRAPH-006: projection coverage 欠落 (graph projection なし / stale edge) は ok=false + finding、analyzeChangeImpact へ無音 fallback しない", () => {
     const projection = collectRelationGraphProjection({
-      sourceFiles: [{ path: "src/lint/relation-graph.ts", tests: ["tests/relation-graph.test.ts"] }],
+      sourceFiles: [
+        { path: "src/lint/relation-graph.ts", tests: ["tests/relation-graph.test.ts"] },
+      ],
       tests: [{ path: "tests/relation-graph.test.ts" }],
     });
 
@@ -270,7 +282,11 @@ describe("analyzeRelationImpact (U-RELGRAPH-004..006)", () => {
       ...projection,
       edges: [
         ...projection.edges,
-        { from: "source:src/lint/relation-graph.ts", to: "test:tests/ghost.test.ts", kind: "covered-by" as const },
+        {
+          from: "source:src/lint/relation-graph.ts",
+          to: "test:tests/ghost.test.ts",
+          kind: "covered-by" as const,
+        },
       ],
     };
     const stale = analyzeRelationImpact({
@@ -283,19 +299,186 @@ describe("analyzeRelationImpact (U-RELGRAPH-004..006)", () => {
 });
 
 describe("exportRelationDiagram (U-RELGRAPH-007..008)", () => {
-  it.todo(
-    "U-RELGRAPH-007: 同一 snapshot が決定的 Mermaid (安定 node 順 / 安定 edge label / raw evidence payload なし) を出力",
-  );
-  it.todo(
-    "U-RELGRAPH-008: DOT/D2 を adapter 未インストールで要求すると unavailable-adapter finding、暗黙インストール/実行しない",
-  );
+  it("U-RELGRAPH-007: 同一 snapshot が決定的 Mermaid (安定 node 順 / 安定 edge label / raw evidence payload なし) を出力", () => {
+    const SECRET = "sk-live-raw-evidence";
+    const snapshot = collectRelationGraphProjection({
+      requirements: [{ id: "FR-L1-18" }],
+      plans: [
+        { id: "PLAN-L7-36", requirements: ["FR-L1-18"], generates: ["src/lint/relation-graph.ts"] },
+      ],
+      sourceFiles: [
+        { path: "src/lint/relation-graph.ts", tests: ["tests/relation-graph.test.ts"] },
+      ],
+      tests: [{ path: "tests/relation-graph.test.ts" }],
+      verificationEvidence: [
+        {
+          id: "VP-raw",
+          evidencePath: ".ut-tdd/evidence/verification-profiles/raw.json",
+          classification: "mcp-smoke",
+          summary: "sanitized summary",
+          rawMcpResponse: SECRET,
+        },
+      ],
+    });
+
+    const a = exportRelationDiagram({ snapshot, format: "mermaid" });
+    const b = exportRelationDiagram({ snapshot, format: "mermaid" });
+
+    expect(a.ok).toBe(true);
+    expect(a.format).toBe("mermaid");
+    expect(a.findings).toEqual([]);
+    expect(a.content).toBe(b.content);
+    expect(a.content.split("\n")).toEqual([
+      "flowchart TD",
+      '  plan_PLAN_L7_36["plan:PLAN-L7-36"]',
+      '  requirement_FR_L1_18["requirement:FR-L1-18"]',
+      '  source_src_lint_relation_graph_ts["source:src/lint/relation-graph.ts"]',
+      '  test_tests_relation_graph_test_ts["test:tests/relation-graph.test.ts"]',
+      '  verification_profile_VP_raw["verification-profile:VP-raw"]',
+      "  plan_PLAN_L7_36 -->|derives-from| requirement_FR_L1_18",
+      "  plan_PLAN_L7_36 -->|generates| source_src_lint_relation_graph_ts",
+      "  source_src_lint_relation_graph_ts -->|covered-by| test_tests_relation_graph_test_ts",
+    ]);
+    expect(a.content).not.toContain(SECRET);
+    expect(a.content).not.toContain("rawMcpResponse");
+  });
+
+  it("U-RELGRAPH-008: DOT/D2 を adapter 未インストールで要求すると unavailable-adapter finding、暗黙インストール/実行しない", () => {
+    const snapshot = collectRelationGraphProjection({
+      plans: [{ id: "PLAN-L7-36" }],
+    });
+    const dot = exportRelationDiagram({ snapshot, format: "dot", availableAdapters: [] });
+    const d2 = exportRelationDiagram({ snapshot, format: "d2", availableAdapters: ["dot"] });
+
+    expect(dot.ok).toBe(false);
+    expect(dot.content).toBe("");
+    expect(dot.findings).toEqual([
+      expect.objectContaining({
+        code: "unavailable-adapter",
+        severity: "warn",
+      }),
+    ]);
+    expect(dot.invokedAdapters).toEqual([]);
+
+    expect(d2.ok).toBe(false);
+    expect(d2.content).toBe("");
+    expect(d2.findings[0]?.message).toContain("d2");
+    expect(d2.invokedAdapters).toEqual([]);
+  });
 });
 
 describe("collectVerificationEvidenceProjection (U-RELGRAPH-009..010)", () => {
-  it.todo(
-    "U-RELGRAPH-009: A-125 verification-evidence-v1 record が verification_profiles / verification_recommendations / mcp_server_runs / external_tool_findings 行へ (evidence path 付き)",
-  );
-  it.todo(
-    "U-RELGRAPH-010: 不正 evidence (malformed / schema 欠落 / allow_external なし external run) は finding、raw external payload を除外",
-  );
+  it("U-RELGRAPH-009: A-125 verification-evidence-v1 record が verification_profiles / verification_recommendations / mcp_server_runs / external_tool_findings 行へ (evidence path 付き)", () => {
+    const projection = collectVerificationEvidenceProjection([
+      {
+        schema_version: "verification-evidence-v1",
+        evidence_path: ".ut-tdd/evidence/verification-profiles/playwright.json",
+        profile: {
+          id: "playwright-mcp",
+          name: "Playwright MCP",
+          profile_type: "mcp",
+          enabled: true,
+        },
+        recommendation: {
+          id: "rec-1",
+          change_set_id: "change-1",
+          plan_id: "PLAN-L7-36",
+          profile_id: "playwright-mcp",
+          profile_kind: "browser",
+          reason: "UI artifact changed",
+          source_rule: "relation-graph",
+          accepted: false,
+        },
+        mcp_run: {
+          id: "run-1",
+          profile_id: "playwright-mcp",
+          session_id: "session-1",
+          plan_id: "PLAN-L7-36",
+          command: "mcp-inspector",
+          method: "tools/list",
+          tool_name: "browser_navigate",
+          normalized_status: "passed",
+          exit_code: 0,
+        },
+        findings: [
+          {
+            id: "finding-1",
+            source_run_id: "run-1",
+            source_kind: "mcp",
+            finding_type: "tools-list",
+            severity: "info",
+            subject_id: "playwright-mcp",
+            path: "docs/test-design/harness/L8-integration-test-design.md",
+            status: "open",
+            digest: "tools available",
+          },
+        ],
+      },
+    ]);
+
+    expect(projection.ok).toBe(true);
+    expect(projection.verification_profiles).toEqual([
+      expect.objectContaining({
+        verification_profile_id: "playwright-mcp",
+        name: "Playwright MCP",
+        profile_type: "mcp",
+        evidence_path: ".ut-tdd/evidence/verification-profiles/playwright.json",
+      }),
+    ]);
+    expect(projection.verification_recommendations).toEqual([
+      expect.objectContaining({
+        verification_recommendation_id: "rec-1",
+        change_set_id: "change-1",
+        plan_id: "PLAN-L7-36",
+        evidence_path: ".ut-tdd/evidence/verification-profiles/playwright.json",
+      }),
+    ]);
+    expect(projection.mcp_server_runs).toEqual([
+      expect.objectContaining({
+        mcp_run_id: "run-1",
+        mcp_profile_id: "playwright-mcp",
+        method: "tools/list",
+        evidence_path: ".ut-tdd/evidence/verification-profiles/playwright.json",
+      }),
+    ]);
+    expect(projection.external_tool_findings).toEqual([
+      expect.objectContaining({
+        external_finding_id: "finding-1",
+        source_run_id: "run-1",
+        evidence_path: ".ut-tdd/evidence/verification-profiles/playwright.json",
+      }),
+    ]);
+  });
+
+  it("U-RELGRAPH-010: 不正 evidence (malformed / schema 欠落 / allow_external なし external run) は finding、raw external payload を除外", () => {
+    const SECRET = "provider-transcript-secret";
+    const projection = collectVerificationEvidenceProjection([
+      {
+        evidence_path: ".ut-tdd/evidence/verification-profiles/missing-schema.json",
+        raw_payload: SECRET,
+      },
+      {
+        schema_version: "verification-evidence-v1",
+        evidence_path: ".ut-tdd/evidence/verification-profiles/external-denied.json",
+        allow_external: false,
+        mcp_run: {
+          id: "run-denied",
+          profile_id: "github-mcp",
+          command: "github-mcp",
+          method: "tools/list",
+          normalized_status: "passed",
+        },
+        raw_payload: { transcript: SECRET },
+      },
+    ]);
+
+    expect(projection.ok).toBe(false);
+    expect(projection.findings.map((f) => f.code)).toEqual([
+      "external-not-allowed",
+      "invalid-evidence",
+    ]);
+    expect(projection.mcp_server_runs).toEqual([]);
+    expect(JSON.stringify(projection)).not.toContain(SECRET);
+    expect(JSON.stringify(projection)).not.toContain("raw_payload");
+  });
 });

@@ -4,10 +4,19 @@ title: "PLAN-L7-34 (add-impl): graph and diagram tool adapter probes"
 kind: add-impl
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-11
 owner: Codex TL / PO
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-11"
+    tests_green_at: "2026-06-11"
+    verdict: pass
+    scope: "U-TOOLADAPTER-001..010 promoted to green tests. Tool adapter catalog/probe/normalization/diagram refresh are implemented as pure functions. Critical 0 / Important 0. Missing packages/executables remain findings; no package install, external command execution, destructive auto-fix, or raw adapter output gate truth is introduced."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5-intra-runtime-review
 agent_slots:
   - role: tl
     slot_label: "TL - tool adapter probe implementation"
@@ -50,7 +59,7 @@ Allowed after entry conditions:
 
 ## §8 DoD
 
-- [ ] Red test exists before source implementation.
-- [ ] U-TOOLADAPTER-001..010 pass.
-- [ ] typecheck, lint, targeted tests, and doctor pass.
-- [ ] Reverse fullback closes any lower-layer discoveries.
+- [x] Red test exists before source implementation.
+- [x] U-TOOLADAPTER-001..010 pass.
+- [x] typecheck, lint, and targeted tests pass before review.
+- [x] Reverse fullback closes any lower-layer discoveries.

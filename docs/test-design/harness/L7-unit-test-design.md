@@ -261,6 +261,8 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 >
 > **Status (PLAN-L7-32 塊C span, 2026-06-10)**: U-RELGRAPH-001..006 promoted from `it.todo` to green `it` in `tests/relation-graph.test.ts` against `src/lint/relation-graph.ts` — `collectRelationGraphProjection` (001..003) + `analyzeRelationImpact` (004..006, source/design/test-design/physical-data 変更の波及 action + behavioral-contract conditional + missing-projection/stale-edge を ok=false finding 化, change-impact へ無音 fallback しない)。PLAN-L7-32 (collect+impact) はこれで実装完了。U-RELGRAPH-007..010 (`exportRelationDiagram` / `collectVerificationEvidenceProjection`) は PLAN-L7-36。
 
+> **Status (PLAN-L7-36 follow-up span, 2026-06-11)**: U-RELGRAPH-007..010 promoted from `it.todo` to green `it` in `tests/relation-graph.test.ts` against `src/lint/relation-graph.ts` — `exportRelationDiagram` (deterministic Mermaid + DOT/D2 unavailable-adapter finding) and `collectVerificationEvidenceProjection` (A-125 evidence projection rows + invalid/external-not-allowed findings, raw payload excluded).
+
 | ID | Target | Oracle |
 |---|---|---|
 | U-RELGRAPH-001 | `collectRelationGraphProjection` source/doc/test nodes | requirements, PLAN, design, test-design, source, and test fixtures produce stable node IDs, typed edges, and no duplicate `(kind,id,path)` rows. |
@@ -291,6 +293,8 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-TOOLADAPTER-009 | `planDiagramRefresh` stale diagram | graph snapshot digest mismatch marks existing diagram artifact stale or requires refresh before review/handover use. |
 | U-TOOLADAPTER-010 | renderer availability | Mermaid export is default text output; DOT/D2 renderer requests without adapter readiness return findings instead of implicit installation. |
 
+> **Status (PLAN-L7-34, 2026-06-11)**: U-TOOLADAPTER-001..010 promoted to green `it` in `tests/tool-adapter.test.ts` against `src/lint/tool-adapter.ts` — adapter catalog, package/executable readiness findings, workspace-scope refusal, normalized projection rows, dead-node review findings, stale diagram refresh, and renderer-unavailable findings are pure and do not install packages or invoke external tools.
+
 ### §1.16.1c U-MCPPROFILE (A-125 profile config / safety lint)
 
 > Pair = `function-spec.md` MCP Profile Config / Safety Addendum (A-125 / PLAN-L6-32). These oracles cover generated local MCP config, Docker MCP Toolkit profile inclusion, and external-profile safety lint before any L7 source change.
@@ -310,6 +314,8 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-MCPPROFILE-011 | `planExternalProfileActivation` trigger routing | UI/GitHub/DB/API/MCP-profile signals produce required probe/smoke/human-approval steps before run. |
 | U-MCPPROFILE-012 | no implicit activation | profile recommendation does not install packages, enable servers, or run external tools without explicit `allow_external` / approved workflow evidence. |
 
+> **Status (PLAN-L7-33, 2026-06-11)**: U-MCPPROFILE-001..012 promoted to green `it` in `tests/verification-profile.test.ts` against `src/lint/verification-profile.ts` — catalog/profile metadata, Docker MCP Toolkit readiness metadata, generated local MCP config rendering, safety findings, and activation planning are pure and do not install packages, enable servers, run external tools, or write committed MCP config.
+
 ### §1.16.1d U-DOCEXPORT (A-126 canonical document export)
 
 > Pair = `function-spec.md` Canonical Document Export Addendum (A-126 / PLAN-L6-34). These oracles cover conversion of concept, requirements, detailed design, PLAN, ADR, and test-design documents into CSV/Markdown/XLSX/PPTX derived artifacts. They do not authorize package installation or source implementation without PLAN-L7-35 TDD Red evidence.
@@ -328,6 +334,32 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DOCEXPORT-010 | `recordDocumentExportArtifact` projection rows | successful render creates `document_export_runs`, `document_export_datasets`, and `document_export_artifacts` rows with source snapshot hash. |
 | U-DOCEXPORT-011 | generated artifact boundary | generated spreadsheet/deck edits do not mutate canonical docs or gate truth. |
 | U-DOCEXPORT-012 | stale source snapshot | source digest mismatch marks an existing export artifact stale before review/handover use. |
+
+> **Status (PLAN-L7-35, 2026-06-11)**: U-DOCEXPORT-001..012 promoted to green `it` in `tests/document-export.test.ts` against `src/export/document-export.ts` — supported family parsing, source anchors, deterministic datasets, redaction, built-in CSV/Markdown rendering, optional renderer findings, projection rows, derived-artifact boundary, and stale source snapshot detection are pure and do not mutate canonical docs.
+
+### §1.16.1e U-DEPD / U-REGEXP (dependency-drift + regression expansion)
+
+> Pair = `function-spec.md` dependency-drift rule (ADR-002/IMP-032) + roadmap G-L7.D. These oracles close the former doctor scaffold stub by replacing fixed text with pure import-graph lint and regression-scope expansion.
+
+| ID | Target | Oracle |
+|---|---|---|
+| U-DEPD-001 | `analyzeDependencyDrift` allowed graph | allowed source module imports normalize to deterministic module edges and OK messages. |
+| U-DEPD-002 | disallowed dependency | reverse dependency such as runtime -> lint returns `disallowed-module-dependency` finding. |
+| U-DEPD-003 | cycle detection | cyclic module imports return deterministic `module-cycle` finding. |
+| U-REGEXP-001 | `expandRegressionScope` affected modules | changed source module expands to direct tests and reverse-dependent module tests. |
+| U-REGEXP-002 | missing coverage | changed source module without direct test coverage returns `missing-regression-test` finding instead of silent fallback. |
+
+> **Status (PLAN-REVERSE-42, 2026-06-11)**: U-DEPD-001..003 and U-REGEXP-001..002 are green in `tests/dependency-drift.test.ts` against `src/lint/dependency-drift.ts`. `doctor` now surfaces `dependency-drift` / `regression-expansion` and no longer emits the scaffold stub.
+
+### §1.16.1f U-VTRIG L0-L7 (implementation verification cycle gate)
+
+> Pair = `vmodel-pair-freeze.md` verification group trigger + roadmap G-L7.E. The L0-L7 implementation band is a machine-surfaced verification cycle gate after L7 freeze.
+
+| ID | Target | Oracle |
+|---|---|---|
+| U-VTRIG-005-L7 | `VERIFICATION_GROUPS` L0-L7 | real repo guard surface includes `実装検証サイクルゲート` and the L0-L7 group is frozen. |
+
+> **Status (PLAN-L7-43, 2026-06-11)**: U-VTRIG-005 now asserts L0-L7 / `実装検証サイクルゲート` in `tests/vmodel-pair.test.ts`; `doctor` surfaces the implementation verification cycle gate.
 
 ### U-CODE Addendum (coding-rules lint = requirements-level coding rule SSoT)
 
@@ -473,7 +505,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - **L7 entry (TDD Red)**: 全 U-* を vitest 単体テストに先行変換 (FR-02、Red 先行、未実装理由のみで fail 可)
 - **L7 実装**: function-spec WBS (§5) の Sprint L7.1〜L7.7 を Red→Green→3点R で実装。DbC docstring (`@edge-*`) を実関数へ転記
 - **G7 trace freeze**: 4 artifact 双方向 12 edge 凍結時に本書 U ↔ L6 設計の trace 確定
-- **外部ツーリング 4 ファミリーの明示 carry (A-128 F-2 / IMP-128、2026-06-10)**: §1.16.1a-1d の **U-RELGRAPH-001..010 / U-TOOLADAPTER-001..010 / U-MCPPROFILE-001..012 / U-DOCEXPORT-001..012 (計 44 oracle) は現時点で対応する実テスト未着手の正規 defer** であり、それぞれ **PLAN-L7-32 (relation graph) / PLAN-L7-34 (tool adapter) / PLAN-L7-33 (MCP profile) / PLAN-L7-35 (doc export) の TDD Red entry 待ち** (A-127 implementation-pending boundary と同一)。例外 = U-MCPPROFILE の disabled-by-default / refused / probe / evidence 経路は `tests/verification-profile.test.ts` が先行被覆済。本 carry 宣言により「明示 defer なき未実装」(under-design) には該当しない (concept §3.1.3.1 正規 defer)。
+- **外部ツーリング family carry 更新 (A-128 F-2 / IMP-128、2026-06-11)**: §1.16.1a の **U-RELGRAPH-001..010 は PLAN-L7-32 / PLAN-L7-36 で実テスト化済み**、§1.16.1b の **U-TOOLADAPTER-001..010 は PLAN-L7-34 で実テスト化済み**、§1.16.1c の **U-MCPPROFILE-001..012 は PLAN-L7-33 で実テスト化済み**、§1.16.1d の **U-DOCEXPORT-001..012 は PLAN-L7-35 で実テスト化済み**。外部ツーリング family の正規 defer は 0。
 
 ### 2026-06-08 Residual Review Closure Test Addendum
 
