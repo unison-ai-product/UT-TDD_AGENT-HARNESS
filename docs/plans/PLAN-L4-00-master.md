@@ -17,6 +17,43 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L4-00-master.md
     artifact_type: markdown_doc
+roadmap:
+  layer: L4
+  gates:
+    - id: G-DESIGN.L4
+      name: L4 基本設計 freeze
+      exit_criteria: "L4 基本設計 sub-doc (architecture/function/screen/data/external-if + 内部資産拡張 roster/skill-pack/drift-lint) が全 child PLAN で confirmed、L4↔L10 V-pair freeze 整合、G4 PASS 台帳と一致"
+  spans:
+    - plan_id: PLAN-L4-01-data
+      after_gate: entry
+      before_gate: G-DESIGN.L4
+    - plan_id: PLAN-L4-02-architecture
+      after_gate: entry
+      before_gate: G-DESIGN.L4
+    - plan_id: PLAN-L4-03-function
+      after_gate: entry
+      before_gate: G-DESIGN.L4
+    - plan_id: PLAN-L4-04-external-if
+      after_gate: entry
+      before_gate: G-DESIGN.L4
+    - plan_id: PLAN-L4-05-workflow-orchestration
+      after_gate: entry
+      before_gate: G-DESIGN.L4
+    - plan_id: PLAN-L4-06-design-refresh
+      after_gate: entry
+      before_gate: G-DESIGN.L4
+    - plan_id: PLAN-L4-10-internal-asset-master
+      after_gate: entry
+      before_gate: G-DESIGN.L4
+    - plan_id: PLAN-L4-11-roster
+      after_gate: entry
+      before_gate: G-DESIGN.L4
+    - plan_id: PLAN-L4-12-skill-pack
+      after_gate: entry
+      before_gate: G-DESIGN.L4
+    - plan_id: PLAN-L4-13-drift-lint
+      after_gate: entry
+      before_gate: G-DESIGN.L4
 dependencies:
   parent: null
   requires:

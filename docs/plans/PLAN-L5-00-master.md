@@ -26,6 +26,37 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L5-00-master.md
     artifact_type: markdown_doc
+roadmap:
+  layer: L5
+  gates:
+    - id: G-DESIGN.L5
+      name: L5 詳細設計 freeze
+      exit_criteria: "L5 詳細設計 sub-doc (internal-processing/module-decomposition/physical-data/if-detail + 内部資産拡張 roster/skill/drift + harness-db-feedback) が全 child PLAN で confirmed、L5↔L9 V-pair 整合、G5 PASS 台帳と一致"
+  spans:
+    - plan_id: PLAN-L5-01-physical-data
+      after_gate: entry
+      before_gate: G-DESIGN.L5
+    - plan_id: PLAN-L5-02-module-decomposition
+      after_gate: entry
+      before_gate: G-DESIGN.L5
+    - plan_id: PLAN-L5-03-internal-processing
+      after_gate: entry
+      before_gate: G-DESIGN.L5
+    - plan_id: PLAN-L5-04-if-detail
+      after_gate: entry
+      before_gate: G-DESIGN.L5
+    - plan_id: PLAN-L5-05-roster
+      after_gate: entry
+      before_gate: G-DESIGN.L5
+    - plan_id: PLAN-L5-06-skill
+      after_gate: entry
+      before_gate: G-DESIGN.L5
+    - plan_id: PLAN-L5-07-drift
+      after_gate: entry
+      before_gate: G-DESIGN.L5
+    - plan_id: PLAN-L5-08-harness-db-feedback
+      after_gate: entry
+      before_gate: G-DESIGN.L5
 dependencies:
   parent: null
   requires:

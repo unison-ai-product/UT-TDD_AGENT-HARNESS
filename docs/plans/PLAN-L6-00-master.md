@@ -17,6 +17,115 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L6-00-master.md
     artifact_type: markdown_doc
+roadmap:
+  layer: L6
+  gates:
+    - id: G-DESIGN.L6
+      name: L6 機能設計 freeze
+      exit_criteria: "L6 機能設計 sub-doc (function-spec/edge-case + governance/enforcement lint 群の機能設計) が child PLAN で confirmed、L6↔L8 V-pair (pair-freeze 孤児0) 整合、G6 PASS 台帳と一致 (draft span = 未 freeze の残り frontier)"
+  spans:
+    - plan_id: PLAN-L6-01-function-spec
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-02-edge-case
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-03-session-log
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-04-forced-stop-feedback
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-05-setup-solo-team
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-06-handover-mechanism
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-07-agent-slots
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-08-backfill-pairing
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-09-governance-enforcement
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-10-vmodel-pair-lint
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-11-verification-trigger
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-12-review-evidence
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-13-cross-review-enforcement
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-14-test-before-review
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-15-module-drift
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-16-handover-quality
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-17-gate-confirm
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-18-review-evidence-stale
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-19-plan-schedule-lint
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-20-runtime-adapter-session-lifecycle
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-21-fr-unit-coverage
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-22-l6-completion-readiness
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-23-coding-rules-workflow
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-24-structured-error-handling
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-25-module-boundary-rule
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-26-domain-boundary-lint
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-27-invariant-test-trace
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-28-red-first-tdd-evidence
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-29-test-oracle-strength
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-30-integration-gwt-lint
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-31-cross-artifact-relation-graph
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-32-mcp-profile-config-safety
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-33-tool-adapter-probes
+      after_gate: entry
+      before_gate: G-DESIGN.L6
+    - plan_id: PLAN-L6-34-canonical-document-export
+      after_gate: entry
+      before_gate: G-DESIGN.L6
 dependencies:
   parent: null
   requires:
