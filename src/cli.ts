@@ -690,9 +690,7 @@ db.command("status")
     }
   });
 db.command("rebuild")
-  .description(
-    "harness.db schema を現行 version まで適用 (冪等)。projection 充填は span ② (projection-writer) で配線",
-  )
+  .description("harness.db schema と deterministic projection を再構築")
   .option("--json", "JSON output")
   .action((opts: { json?: boolean }) => {
     const r = rebuildHarnessDb({ repoRoot: process.cwd() });
@@ -704,7 +702,9 @@ db.command("rebuild")
     process.stdout.write(
       `db rebuild: projection ${r.ok ? "ok" : "failed"}, rows ${totalRows} (${r.path})\n`,
     );
-    process.stdout.write("  note: docs/state/logs からの projection 充填は span ② で実装\n");
+    process.stdout.write(
+      "  note: plans / roadmap rollups / review evidence / optional Phase3 outputs を projection\n",
+    );
   });
 
 program

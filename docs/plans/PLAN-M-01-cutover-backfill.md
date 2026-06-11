@@ -4,7 +4,7 @@ title: "PLAN-M-01: HELIX to UT cutover backfill roadmap"
 kind: design
 layer: L14
 drive: fullstack
-status: confirmed
+status: completed
 created: 2026-06-11
 updated: 2026-06-11
 owner: Codex TL / PO
@@ -48,7 +48,7 @@ review_evidence:
     reviewed_at: "2026-06-11"
     tests_green_at: "2026-06-11"
     verdict: pass
-    scope: "Cutover backfill registration only: stale HELIX to UT cutover strategy is routed into a covered cutover roadmap. No production cutover, credential, infrastructure, or destructive state operation is authorized."
+    scope: "Cutover backfill completion: stale HELIX to UT cutover strategy is rewritten to ADR-001 current truth and harness.db roadmap/review evidence projections are implemented. No production cutover, credential, infrastructure, or destructive state operation is authorized."
     worker_model: codex-gpt-5
     reviewer_model: codex-gpt-5-intra-runtime-review
 ---
@@ -68,8 +68,8 @@ This plan is the cutover band host for the program roadmap registry. It converts
 In scope:
 
 - Register cutover as a covered program band.
-- Preserve the stale strategy document as reference-only until a later reverse/backfill update rewrites it into UT-TDD-owned truth.
-- Make the next task explicit: update the cutover strategy and any migration wording to ADR-001 and current runtime mode.
+- Rewrite the stale strategy document into UT-TDD-owned truth aligned to ADR-001.
+- Project roadmap rollup and review evidence metadata into `harness.db`.
 
 Out of scope:
 
@@ -106,11 +106,14 @@ Record review evidence. The review scope is intentionally limited to backfill re
 ## 3.1 螳溯｣・ｨ育判
 
 - The backfill route is a documentation and roadmap registration change.
-- The future execution task should update `docs/migration/helix-to-ut-tdd-cutover-strategy.md` or supersede it with a UT-TDD-owned cutover plan aligned to ADR-001.
-- Rollback is document-only: remove this PLAN and the corresponding verification master span.
+- `docs/migration/helix-to-ut-tdd-cutover-strategy.md` is now backfilled to current UT-TDD-owned execution/state rules.
+- `harness.db` projection now includes roadmap rollups, band coverage, gate progress, and review evidence registry rows.
+- Rollback is non-destructive: revert the document/projection commit and rebuild `.ut-tdd/harness.db` from sources.
 
 ## 4. DoD
 
 - [x] `roadmap.layer: cutover` exists in a confirmed PLAN.
 - [x] Cutover no longer depends only on `.ut-tdd/audit/A-130...` carry text.
 - [x] Production-impacting cutover execution remains out of scope and requires human approval.
+- [x] Cutover strategy doc is backfilled to ADR-001 current truth.
+- [x] `harness.db` rebuild projects roadmap and review evidence feedback rows.

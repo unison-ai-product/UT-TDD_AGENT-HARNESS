@@ -5,6 +5,13 @@ import type {
   RelationGraphProjection,
   VerificationEvidenceProjection,
 } from "../lint/relation-graph";
+import {
+  computeGateProgress,
+  computeProgramRollup,
+  loadRoadmaps,
+  PARKED_BANDS,
+} from "../lint/roadmap-registry";
+import { loadReviewPlans } from "../lint/review-evidence";
 import { normalizePath } from "../lint/shared";
 import {
   HARNESS_DB_TABLE_BY_NAME,
@@ -214,6 +221,96 @@ function projectPlans(repoRoot: string, db: HarnessDb): void {
   }
 }
 
+function planStatusMap(repoRoot: string): Map<string, string> {
+  return new Map(loadReviewPlans(repoRoot).map((plan) => [plan.plan_id, plan.status]));
+}
+
+function projectRoadmapRollup(repoRoot: string, db: HarnessDb): void {
+  const records = loadRoadmaps(repoRoot);
+  const statuses = planStatusMap(repoRoot);
+  const statusOf = (planId: string): string | null => statuses.get(planId) ?? null;
+  const rollup = computeProgramRollup(records, statusOf, new Set(PARKED_BANDS.keys()));
+  const computedAt = nowIso();
+
+  recordProjectionEvent(db, {
+    table: "roadmap_rollups",
+    id: "program",
+    row: {
+      rollup_id: "program",
+      total_bands: rollup.totalBands,
+      covered_bands: rollup.coveredBands,
+      parked_bands: rollup.parkedBands,
+      uncovered_bands: rollup.uncoveredBands,
+      total_gates: rollup.totalGates,
+      reached_gates: rollup.reachedGates,
+      total_spans: rollup.totalSpans,
+      confirmed_spans: rollup.confirmedSpans,
+      frontier: rollup.frontier.join(","),
+      computed_at: computedAt,
+    },
+  });
+
+  for (const band of rollup.perBand) {
+    recordProjectionEvent(db, {
+      table: "roadmap_band_coverage",
+      id: band.bandId,
+      row: {
+        band_id: band.bandId,
+        name: band.name,
+        status: band.status,
+        roadmap_ids: band.roadmaps.join(","),
+        computed_at: computedAt,
+      },
+    });
+  }
+
+  for (const record of records) {
+    for (const gate of computeGateProgress(record.roadmap, statusOf)) {
+      const id = stableId("roadmap-gate", `${record.planId}:${gate.gateId}`);
+      recordProjectionEvent(db, {
+        table: "roadmap_gate_progress",
+        id,
+        row: {
+          roadmap_gate_id: id,
+          plan_id: record.planId,
+          gate_id: gate.gateId,
+          total_spans: gate.totalSpans,
+          confirmed_spans: gate.confirmedSpans,
+          reached: gate.reached ? 1 : 0,
+          computed_at: computedAt,
+        },
+      });
+    }
+  }
+}
+
+function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
+  const indexedAt = nowIso();
+  for (const plan of loadReviewPlans(repoRoot)) {
+    const firstEntry = plan.crossEntries[0];
+    const id = stableId("review-evidence", plan.plan_id);
+    recordProjectionEvent(db, {
+      table: "review_evidence_registry",
+      id,
+      row: {
+        review_evidence_id: id,
+        plan_id: plan.plan_id,
+        kind: plan.kind,
+        status: plan.status,
+        has_evidence: plan.hasEvidence ? 1 : 0,
+        review_kind: firstEntry?.review_kind ?? "",
+        verdict: firstEntry?.verdict ?? "",
+        reviewed_at: firstEntry?.reviewed_at ?? "",
+        tests_green_at: firstEntry?.tests_green_at ?? "",
+        worker_model: firstEntry?.worker_model ?? "",
+        reviewer_model: firstEntry?.reviewer_model ?? "",
+        source: normalizePath(join("docs", "plans", plan.file)),
+        indexed_at: indexedAt,
+      },
+    });
+  }
+}
+
 function truncateProjectionTables(db: HarnessDb): void {
   for (const table of [...HARNESS_DB_TABLES].reverse()) {
     db.prepare(`DELETE FROM ${table.name}`).run();
@@ -396,6 +493,8 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     migrate(db);
     truncateProjectionTables(db);
     projectPlans(repoRoot, db);
+    projectRoadmapRollup(repoRoot, db);
+    projectReviewEvidenceRegistry(repoRoot, db);
     projectRelationGraph(db, input.relationGraph);
     projectDocumentExports(db, input.documentExports);
     projectVerificationEvidence(db, input.verificationEvidence);

@@ -159,6 +159,54 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
       expect(rowCounts(db).plan_registry).toBeGreaterThan(0);
       expect(rowCounts(db).graph_nodes).toBe(1);
       expect(rowCounts(db).document_export_runs).toBe(1);
+      expect(rowCounts(db).roadmap_rollups).toBe(1);
+      expect(rowCounts(db).roadmap_band_coverage).toBeGreaterThan(0);
+      expect(rowCounts(db).roadmap_gate_progress).toBeGreaterThan(0);
+      expect(rowCounts(db).review_evidence_registry).toBeGreaterThan(0);
+
+      const program = db.prepare("SELECT * FROM roadmap_rollups WHERE rollup_id = ?").get("program");
+      expect(program).toMatchObject({
+        total_bands: 5,
+        covered_bands: 5,
+        parked_bands: 0,
+        uncovered_bands: 0,
+        total_gates: 20,
+        reached_gates: 20,
+      });
+
+      const verificationBand = db
+        .prepare("SELECT status, roadmap_ids FROM roadmap_band_coverage WHERE band_id = ?")
+        .get("verification");
+      expect(verificationBand).toMatchObject({ status: "covered" });
+      expect(String(verificationBand?.roadmap_ids)).toContain("PLAN-M-00-verify-cutover");
+
+      const cutoverBand = db
+        .prepare("SELECT status, roadmap_ids FROM roadmap_band_coverage WHERE band_id = ?")
+        .get("cutover");
+      expect(cutoverBand).toMatchObject({ status: "covered" });
+      expect(String(cutoverBand?.roadmap_ids)).toContain("PLAN-M-01-cutover-backfill");
+
+      const cutoverGate = db
+        .prepare(
+          "SELECT reached, confirmed_spans, total_spans FROM roadmap_gate_progress WHERE plan_id = ? AND gate_id = ?",
+        )
+        .get("PLAN-M-01-cutover-backfill", "G-CUTOVER.B");
+      expect(cutoverGate).toMatchObject({
+        reached: 1,
+        confirmed_spans: 1,
+        total_spans: 1,
+      });
+
+      const reviewEvidence = db
+        .prepare(
+          "SELECT has_evidence, review_kind, verdict FROM review_evidence_registry WHERE plan_id = ?",
+        )
+        .get("PLAN-M-01-cutover-backfill");
+      expect(reviewEvidence).toMatchObject({
+        has_evidence: 1,
+        review_kind: "intra_runtime_subagent",
+        verdict: "pass",
+      });
     } finally {
       db.close();
     }

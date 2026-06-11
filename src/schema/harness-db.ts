@@ -15,7 +15,7 @@
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
 
@@ -418,6 +418,63 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("stale_status"),
     ],
   },
+  // --- roadmap / review evidence projection (cutover feedback loop) ---
+  {
+    name: "roadmap_rollups",
+    columns: [
+      pk("rollup_id"),
+      col("total_bands", "INTEGER"),
+      col("covered_bands", "INTEGER"),
+      col("parked_bands", "INTEGER"),
+      col("uncovered_bands", "INTEGER"),
+      col("total_gates", "INTEGER"),
+      col("reached_gates", "INTEGER"),
+      col("total_spans", "INTEGER"),
+      col("confirmed_spans", "INTEGER"),
+      col("frontier"),
+      col("computed_at"),
+    ],
+  },
+  {
+    name: "roadmap_band_coverage",
+    columns: [
+      pk("band_id"),
+      col("name"),
+      col("status"),
+      col("roadmap_ids"),
+      col("computed_at"),
+    ],
+  },
+  {
+    name: "roadmap_gate_progress",
+    columns: [
+      pk("roadmap_gate_id"),
+      col("plan_id"),
+      col("gate_id"),
+      col("total_spans", "INTEGER"),
+      col("confirmed_spans", "INTEGER"),
+      col("reached", "INTEGER"),
+      col("computed_at"),
+    ],
+  },
+  {
+    name: "review_evidence_registry",
+    columns: [
+      pk("review_evidence_id"),
+      col("plan_id"),
+      col("kind"),
+      col("status"),
+      col("has_evidence", "INTEGER"),
+      col("review_kind"),
+      col("verdict"),
+      col("reviewed_at"),
+      col("tests_green_at"),
+      col("worker_model"),
+      col("reviewer_model"),
+      col("source"),
+      col("indexed_at"),
+    ],
+  },
 ];
 
 /** §9.3 で宣言された projection index。 */
@@ -490,6 +547,21 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     name: "idx_document_export_artifact_format",
     table: "document_export_artifacts",
     columns: ["format", "stale_status"],
+  },
+  {
+    name: "idx_roadmap_band_status",
+    table: "roadmap_band_coverage",
+    columns: ["status", "band_id"],
+  },
+  {
+    name: "idx_roadmap_gate_plan",
+    table: "roadmap_gate_progress",
+    columns: ["plan_id", "reached"],
+  },
+  {
+    name: "idx_review_evidence_plan",
+    table: "review_evidence_registry",
+    columns: ["plan_id", "has_evidence"],
   },
 ];
 
