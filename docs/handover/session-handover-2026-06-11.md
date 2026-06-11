@@ -949,3 +949,45 @@
 - **PROGRAM_BANDS は `src/lint/roadmap-registry.ts` が単一正本**。band 追加はここ 1 箇所 (散在禁止)。
 - **名前衝突注意**: 工程表(roadmap、top/人間向け) ≠ §工程表(PLAN 内手順、leaf)。concept §10.2 が正本。
 - **roadmap.layer は schema 上 z.string() 自由文字列**。cutover 等 L 番号外も valid。
+
+---
+
+# Session Handover — 2026-06-11 (継続: RECOVERY-04 closure-readiness)
+
+## §1 PLAN サマリ
+
+- `PLAN-RECOVERY-04-roadmap-definition` (recovery, in_progress): closure-readiness 整備。review 前置 (intra_runtime) で blocker なし確認 → §5 carry 2 件 + requirements §G.E3 降下着地。
+
+## §2 成果物 (commit / files)
+
+- commit `2f1981d` docs(recovery): RECOVERY-04 closure-readiness
+  - Edit docs/governance/ut-tdd-agent-harness-requirements_v1.2.md (§G.E3 program coverage 新設)
+  - Edit docs/plans/PLAN-RECOVERY-04-roadmap-definition.md (§5 carry / §6 reopen 確認 / review_evidence)
+
+## §3 Next Action
+
+1. **PO: RECOVERY-04 closure 承認** — 残る唯一の closure gate (§2.6.3 人間サインオフ)。review 前置 (blocker なし) 済、§5 carry 反映済。承認で Recovery close → fullback 解禁。
+2. **PO 承認後、band 登録 fullback (Forward)**:
+   - design (L4-L6): 既存 master PLAN-L4-00 / L5-00 / L6-00 の空 `roadmap:` ブロックを各層の gate+span で埋める (§1(a) 事前サンクション済、各層 PLAN を span 列挙)。
+   - upstream (L0-L3): host PLAN 不在 → 新規 master (L1-* / L3-* span を束ねる) を起票。§3「過剰に上流へ戻さない」に従い最小構成。
+   - verification (L8-L14) / cutover: §5 明示 defer (forward 未降下)。降下時 / harness.db close 後に登録。
+3. **PLAN-REVERSE-44 Step 3**: roadmap schema 拡張 (program rollup) + `parkedBandIds` 配線実装。park 後 program-coverage が verification/cutover を「parked」表示へ。
+
+## §4 carry (未了・先送り)
+
+- park 機構 (`parkedBandIds`) 未配線 → REVERSE-44 Step 3 (上記)。それまで verification/cutover は uncovered warn 継続 (意図的、requirements §G.E3 明記)。
+- cutover 戦略 doc stale (ADR-001 前提ズレ) → cutover 工程表化と合わせ Reverse back-fill。
+- IMP-132 (roadmap 到達計数の completed 対応) 未着手。
+- program-coverage warn-first (doctor.ok 非連動)。全バンド登録 + DISCOVERY-05 S4 採用後に hard 化検討。
+
+## §5 未了 PO 判断
+
+- **RECOVERY-04 closure 承認** (上記 Next Action 1)。
+- **PLAN-L7-44 工程表 accept** (G-L7DB.D 到達、harness.db セグメント close 確定) — 前セッション持ち越し。
+- **DISCOVERY-05 roadmap PoC の S4 採用判断** (spike → 正規採用)。
+
+## §6 壊さない / 再発させない
+
+- **band 登録 fullback は PO closure 承認後**。承認前に confirmed master を改変する ad-hoc fix は recovery 規律違反 (§2「承認前の ad-hoc 編集をしない」)。今回 review 前置→§5 反映に留め、登録自体は次段へ正しく分離した。
+- **requirements §G.E3 が被覆要件の正本**。program-coverage の挙動変更はここと `PROGRAM_BANDS` を同期。
+- **review 前置の cross-agent 不在は必ず evidence 明示** (claude-only は intra_runtime_subagent 代替)。
