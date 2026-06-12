@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import type { DriveDbRegistrationStats } from "../lint/drive-db-registration";
 import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index";
+import { rebuildHarnessDb } from "./projection-writer";
 
 function count(db: HarnessDb, sql: string): number {
   const row = db.prepare(sql).get();
@@ -78,6 +79,28 @@ export function loadDriveDbRegistrationStats(
   const db = openHarnessDb(dbPath, { repoRoot });
   try {
     return collectDriveDbRegistrationStats(db);
+  } finally {
+    db.close();
+  }
+}
+
+export function loadOrBuildDriveDbRegistrationStats(
+  repoRoot: string = process.cwd(),
+): DriveDbRegistrationStats | null {
+  let persisted: DriveDbRegistrationStats | null = null;
+  try {
+    persisted = loadDriveDbRegistrationStats(repoRoot);
+  } catch {
+    persisted = null;
+  }
+  if (persisted) return persisted;
+
+  const db = openHarnessDb(":memory:", { repoRoot });
+  try {
+    rebuildHarnessDb({ repoRoot, db });
+    return collectDriveDbRegistrationStats(db);
+  } catch {
+    return null;
   } finally {
     db.close();
   }

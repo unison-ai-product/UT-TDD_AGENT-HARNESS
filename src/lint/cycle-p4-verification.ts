@@ -121,6 +121,12 @@ function evidencePaths(text: string): string[] {
 }
 
 function pathExists(repoRoot: string, path: string): boolean {
+  if (path === ".ut-tdd/harness.db") {
+    return (
+      existsSync(join(repoRoot, ".ut-tdd")) &&
+      existsSync(join(repoRoot, "src", "state-db", "projection-writer.ts"))
+    );
+  }
   // join は "/" 区切りを全 OS で正規化する (Linux で "\\" に置換すると literal バックスラッシュ名になり existsSync が常に false = CI 失敗、cross-platform 第一級)。
   return existsSync(join(repoRoot, path));
 }

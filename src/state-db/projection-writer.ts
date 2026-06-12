@@ -80,6 +80,17 @@ interface SessionLogProjection {
   outcome?: string;
 }
 
+interface ProviderHandoverProjection {
+  handover_id?: string;
+  from?: string;
+  to?: string;
+  active_plan?: string;
+  created_at?: string;
+  context?: {
+    summary?: string;
+  };
+}
+
 const SECRET_PATTERN =
   /(sk-[A-Za-z0-9_-]+|ghp_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|xox[baprs]-[A-Za-z0-9-]+)/;
 const RAW_PAYLOAD_KEYS = new Set([
@@ -355,50 +366,89 @@ function projectDriveRuns(
   }
 }
 
-function projectHookEvents(repoRoot: string, db: HarnessDb): void {
+function resolveProjectedPlanId(plans: Map<string, ProjectedPlan>, planId: string): string {
+  if (plans.has(planId)) return planId;
+  return [...plans.keys()].find((id) => id.startsWith(`${planId}-`)) ?? planId;
+}
+
+function projectHookEvents(
+  repoRoot: string,
+  db: HarnessDb,
+  plans: Map<string, ProjectedPlan>,
+): void {
   const sessionDir = join(repoRoot, ".ut-tdd", "logs", "session");
-  if (!existsSync(sessionDir)) return;
-  for (const file of readdirSync(sessionDir)
-    .filter((name) => name.endsWith(".jsonl"))
-    .sort()) {
-    const path = join(sessionDir, file);
-    const relPath = normalizePath(relative(repoRoot, path));
-    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-      if (!line.trim()) continue;
-      let event: SessionLogProjection;
-      try {
-        event = JSON.parse(line) as SessionLogProjection;
-      } catch {
-        continue;
+  if (existsSync(sessionDir)) {
+    for (const file of readdirSync(sessionDir)
+      .filter((name) => name.endsWith(".jsonl"))
+      .sort()) {
+      const path = join(sessionDir, file);
+      const relPath = normalizePath(relative(repoRoot, path));
+      for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+        if (!line.trim()) continue;
+        let event: SessionLogProjection;
+        try {
+          event = JSON.parse(line) as SessionLogProjection;
+        } catch {
+          continue;
+        }
+        if (!event.session_id || !event.plan_id || !event.event_type) continue;
+        const hookName =
+          event.event_type === "session_start"
+            ? "SessionStart"
+            : event.event_type === "session_end"
+              ? "Stop"
+              : event.event_type === "forced_stop"
+                ? "ForcedStop"
+                : "PostToolUse";
+        const id = stableId(
+          "hook-event",
+          `${event.session_id}:${event.plan_id}:${event.ts ?? ""}:${event.event_type}`,
+        );
+        recordProjectionEvent(db, {
+          table: "hook_events",
+          id,
+          row: {
+            event_id: id,
+            session_id: event.session_id,
+            plan_id: resolveProjectedPlanId(plans, event.plan_id),
+            hook_name: hookName,
+            event_type: event.event_type,
+            occurred_at: event.ts ?? "",
+            digest: event.outcome ?? "",
+            evidence_path: relPath,
+          },
+        });
       }
-      if (!event.session_id || !event.plan_id || !event.event_type) continue;
-      const hookName =
-        event.event_type === "session_start"
-          ? "SessionStart"
-          : event.event_type === "session_end"
-            ? "Stop"
-            : event.event_type === "forced_stop"
-              ? "ForcedStop"
-              : "PostToolUse";
-      const id = stableId(
-        "hook-event",
-        `${event.session_id}:${event.plan_id}:${event.ts ?? ""}:${event.event_type}`,
-      );
-      recordProjectionEvent(db, {
-        table: "hook_events",
-        id,
-        row: {
-          event_id: id,
-          session_id: event.session_id,
-          plan_id: event.plan_id,
-          hook_name: hookName,
-          event_type: event.event_type,
-          occurred_at: event.ts ?? "",
-          digest: event.outcome ?? "",
-          evidence_path: relPath,
-        },
-      });
     }
+  }
+
+  const providerDir = join(repoRoot, ".ut-tdd", "handover", "provider");
+  if (!existsSync(providerDir)) return;
+  for (const file of readdirSync(providerDir)
+    .filter((name) => name.endsWith(".json"))
+    .sort()) {
+    const path = join(providerDir, file);
+    const relPath = normalizePath(relative(repoRoot, path));
+    const handover = readJson<ProviderHandoverProjection>(path);
+    const rawPlanId = asString(handover?.active_plan);
+    if (!rawPlanId) continue;
+    const planId = resolveProjectedPlanId(plans, rawPlanId);
+    const handoverId = asString(handover?.handover_id) ?? file.replace(/\.json$/, "");
+    const id = stableId("hook-event", `provider:${handoverId}:${planId}`);
+    recordProjectionEvent(db, {
+      table: "hook_events",
+      id,
+      row: {
+        event_id: id,
+        session_id: handoverId,
+        plan_id: planId,
+        hook_name: "ProviderHandover",
+        event_type: "provider_handover",
+        occurred_at: handover?.created_at ?? "",
+        digest: handover?.context?.summary ?? `${handover?.from ?? ""}->${handover?.to ?? ""}`,
+        evidence_path: relPath,
+      },
+    });
   }
 }
 
@@ -1478,7 +1528,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     truncateProjectionTables(db);
     const plans = projectPlans(repoRoot, db);
     projectDriveRuns(repoRoot, db, plans);
-    projectHookEvents(repoRoot, db);
+    projectHookEvents(repoRoot, db, plans);
     projectReviewModelRuns(repoRoot, db, plans);
     projectRoadmapRollup(repoRoot, db);
     projectReviewEvidenceRegistry(repoRoot, db);

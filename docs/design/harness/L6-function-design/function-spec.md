@@ -380,3 +380,7 @@ The BR-21 evaluation hooks are Phase B oriented, but the function-design trace m
 | FR-L1-36 | skill evaluation input is normalized as skill metric feedback before Learning Engine aggregation |
 | FR-L1-38 | model evaluation input is normalized as model/effort quality feedback before recommendation updates |
 | FR-L1-43 | PoC success measurement input is normalized as verification outcome feedback before recipe/risk aggregation |
+
+## Appendix C: L7 clean checkout DB projection invariant
+
+`harness-check` must run deterministic `db rebuild` before tests in a clean checkout. The projection layer must derive `hook_events` from tracked provider handover evidence when ignored local session logs are absent, and `ut-tdd skill suggest --json` must rebuild a read-only in-memory DB from source when persistent `.ut-tdd/harness.db` is absent.

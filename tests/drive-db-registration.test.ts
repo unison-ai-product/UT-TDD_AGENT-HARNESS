@@ -4,7 +4,7 @@ import {
   type DriveDbRegistrationStats,
   driveDbRegistrationMessages,
 } from "../src/lint/drive-db-registration";
-import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration";
+import { loadOrBuildDriveDbRegistrationStats } from "../src/state-db/drive-registration";
 
 const compliant: DriveDbRegistrationStats = {
   planCount: 10,
@@ -59,7 +59,7 @@ describe("drive DB registration lint", () => {
   });
 
   it("U-DDBREG-003: current harness.db has automatic registration evidence", () => {
-    const stats = loadDriveDbRegistrationStats(process.cwd());
+    const stats = loadOrBuildDriveDbRegistrationStats(process.cwd());
     const r = analyzeDriveDbRegistration(stats);
 
     expect(stats).not.toBeNull();

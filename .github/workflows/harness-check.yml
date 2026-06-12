@@ -42,6 +42,9 @@ jobs:
       - name: typecheck (tsc --noEmit)
         run: bun run typecheck
 
+      - name: db rebuild (deterministic projection)
+        run: bun src/cli.ts db rebuild --json
+
       - name: test — 全回帰 (vitest run)
         run: bun run test
 

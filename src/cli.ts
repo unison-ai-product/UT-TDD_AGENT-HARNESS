@@ -767,8 +767,12 @@ skill
   .option("--record", "write recommendations to harness.db")
   .option("--json", "JSON output")
   .action((opts: { plan: string; record?: boolean; json?: boolean }) => {
-    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    const repoRoot = process.cwd();
+    const db = openHarnessDb(opts.record ? defaultHarnessDbPath(repoRoot) : ":memory:", {
+      repoRoot,
+    });
     try {
+      rebuildHarnessDb({ repoRoot, db });
       const rows = recommendSkillsForPlan(db, opts.plan);
       if (opts.record) recordSkillRecommendations(db, rows);
       if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);

@@ -157,7 +157,7 @@ import {
   peakParallel,
 } from "../runtime/agent-slots";
 import { detectMode } from "../runtime/detect";
-import { loadDriveDbRegistrationStats } from "../state-db/drive-registration";
+import { loadOrBuildDriveDbRegistrationStats } from "../state-db/drive-registration";
 import {
   analyzePairFreeze,
   analyzeVerificationGroups,
@@ -599,7 +599,7 @@ export function checkDriveDbRegistration(repoRoot: string): { messages: string[]
     };
   }
   try {
-    const r = analyzeDriveDbRegistration(loadDriveDbRegistrationStats(repoRoot));
+    const r = analyzeDriveDbRegistration(loadOrBuildDriveDbRegistrationStats(repoRoot));
     return { messages: driveDbRegistrationMessages(r), ok: r.ok };
   } catch {
     return {
