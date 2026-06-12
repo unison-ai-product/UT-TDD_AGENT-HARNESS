@@ -49,7 +49,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-FUNC-01 | `analyzeX` 純粋性 + post (orphans/totals) | 同入力→同出力、orphans==[]⟺ok (既存 seed) |
 | U-FUNC-02 | `evaluateAgentGuard` allowlist/model/family | block 判定 + fail-close (既存 seed) |
 | U-FUNC-03 | `detectMode` mode 決定 | mode∈4種、副作用なし (既存 seed) |
-| U-FUNC-04 | `lintPlan`/`lintVmodel` 本実装 | frontmatter validate / 12 edge (stub→本、L7.2/L7.3) |
+| U-FUNC-04 | `lintPlan`/`lintVmodel` 本実装 | schedule lint + PLAN governance/frontmatter strict gate + G1/G3 trace gate / 12 edge (L7.2/L7.3 implemented) |
 
 ### §1.2 U-CORE (function-spec §2 pseudocode 由来)
 | U-ID (候補) | 検証対象 | oracle |
@@ -405,7 +405,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 ### §1.18 U-GCONF (gate-confirm coupling lint、PLAN-L7-18 / IMP-079)
 
-> ペア = `gate-confirm.md`。gate-design §2 台帳と design/test-design doc `status: confirmed` の coupling を検査する。初期配線は warn-first。
+> ペア = `gate-confirm.md`。gate-design §2 台帳と design/test-design doc `status: confirmed` の coupling を検査する。parse 失敗を含む不整合は fail-close。
 
 | Test ID | 対象 | 期待 |
 |---|---|---|
@@ -413,7 +413,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-GCONF-002 | `layerToGate` | `L5 -> G5`、非 layer は null |
 | U-GCONF-003 | `analyzeGateConfirm` | gate park の layer に confirmed doc → violation |
 | U-GCONF-004 | `analyzeGateConfirm` | gate PASS の layer に confirmed doc → ok |
-| U-GCONF-005 | `analyzeGateConfirm` | gate table parse 失敗 → skip/fail-open |
+| U-GCONF-005 | `analyzeGateConfirm` | gate table parse 失敗 → `ok=false` + `violation` (fail-close) |
 | U-GCONF-006 | `analyzeGateConfirm` | draft doc は対象外 |
 
 ### §1.19 U-PLANSCH (plan lint §工程表 最小強制、PLAN-L7-20 / IMP-081)
@@ -463,6 +463,9 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-GATE-001 | `evaluateGateReview` (hybrid) | judgment gate は `review_kind=cross_agent` + workerModel≠reviewerModel で pass / 同一 model は fail |
 | U-GATE-002 | `evaluateGateReview` (single runtime) | claude-only/codex-only は checklist 必須、欠落・fail・根拠なし n-a で fail、揃えば `cross_agent_review=unavailable` |
 | U-GATE-003 | `evaluateGateReview` parity | 同一 checklist で claude-only/codex-only の passed・review_kind・message が一致 |
+| U-GATE-004 | `evaluateStaticGate` unknown/review-only | 未登録 gate は deterministic static check 不在で fail-close / `G0.5`・`R4` は既知の review-tier gate として static n-a + pass |
+| U-GATE-005 | `evaluateStaticGate` deterministic failure | G1/G3/G7 などの静的検査が I/O / parse 失敗で実行できない場合は throw せず `violation` + fail-close |
+| U-GATE-006 | `ut-tdd gate --checklist` | checklist YAML 読込・parse 失敗は CLI crash ではなく review checklist violation として gate failure |
 | U-TEAMRUN-001 | `validateTeamRun` | hybrid 以外は fail / hybrid で worker(se) と reviewer(tl/qa) が別 provider なら pass |
 | U-TEAMRUN-002 | `validateTeamRun` | 同一 role/provider 重複、worker/reviewer 同一 provider は fail |
 | U-ADAPTER-001 | `buildAdapterPlan` | `ut-tdd codex` / `ut-tdd claude` dry-run command plan を mode に基づき available 判定 / Codex provider args は `exec <task>`、Claude provider args は Claude Code print-mode の `--print -p <task>` / `--plan` は harness metadata として保持し provider CLI へ渡さない |

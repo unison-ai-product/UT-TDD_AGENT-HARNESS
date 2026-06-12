@@ -142,7 +142,7 @@ Type/pseudocode substance:
 
 | function | type body | pseudocode / implementation_state |
 |---|---|---|
-| `resolveRosterCapability` | `RosterCapabilityInput { role; requested_capability; slot_source; roster_snapshot } -> RosterCapabilityResult { ok; capability?; model_class?; findings[] }` | explicit_l7_defer; pseudocode = normalize role/capability, search roster snapshot, return exact match or missing-capability finding, never read provider credentials |
+| `resolveRosterCapability` | `RosterCapabilityInput { role; requested_capability; slot_source; roster_snapshot } -> RosterCapabilityResult { ok; capability?; model_class?; findings[] }` | implemented by `src/runtime/agent-slots.ts`; pseudocode = normalize role/capability, search roster snapshot, return exact match or missing-capability finding, never read provider credentials |
 
 ### §2.4 DbC 補足
 

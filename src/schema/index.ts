@@ -45,6 +45,47 @@ export const VALID_LAYERS = [
 export const layerSchema = z.enum(VALID_LAYERS);
 export type Layer = z.infer<typeof layerSchema>;
 
+export const VALID_SUB_DOCS = {
+  L1: ["business", "functional", "nfr", "technical", "screen"],
+  L2: ["screen-list", "screen-flow", "ui-element", "wireframe"],
+  L3: ["business", "functional", "nfr"],
+  L4: ["data", "architecture", "function", "external-if"],
+  L5: ["physical-data", "module-decomposition", "internal-processing", "if-detail"],
+  L6: ["function-spec", "class-design", "edge-case"],
+} as const;
+export const VALID_SUB_DOC_VALUES = [
+  "business",
+  "functional",
+  "nfr",
+  "technical",
+  "screen",
+  "screen-list",
+  "screen-flow",
+  "ui-element",
+  "wireframe",
+  "data",
+  "architecture",
+  "function",
+  "external-if",
+  "physical-data",
+  "module-decomposition",
+  "internal-processing",
+  "if-detail",
+  "function-spec",
+  "class-design",
+  "edge-case",
+] as const;
+export const subDocSchema = z.enum(VALID_SUB_DOC_VALUES);
+export type SubDoc = z.infer<typeof subDocSchema>;
+
+export function isValidSubDocForLayer(
+  layer: string | undefined,
+  subDoc: string | undefined,
+): boolean {
+  if (!layer || !subDoc) return false;
+  return ((VALID_SUB_DOCS as Record<string, readonly string[]>)[layer] ?? []).includes(subDoc);
+}
+
 /** V-model 左右ペア (左=設計, 右=検証)。L0-L14 の設計層↔検証層の対。 */
 export const V_MODEL_PAIRS: Record<string, string> = {
   L1: "L14",

@@ -191,7 +191,7 @@ export function loadTelemetryClosureDocs(repoRoot: string = process.cwd()): Tele
 
 export function telemetryClosureMessages(result: TelemetryClosureResult): string[] {
   if (result.checked === 0) {
-    return ["telemetry-closure - note: telemetry closure matrix not found; lint skipped"];
+    return ["telemetry-closure - violation: telemetry closure matrix not found"];
   }
   if (result.violations.length > 0) {
     const sample = result.violations

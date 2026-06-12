@@ -15,9 +15,9 @@ agent_slots:
     slot_label: "QA - structured error oracle"
 generates:
   - artifact_path: src/lint/coding-rules.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/coding-rules.test.ts
-    artifact_type: test
+    artifact_type: test_code
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 dependencies:
   parent: docs/plans/PLAN-L6-24-structured-error-handling.md

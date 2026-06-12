@@ -4,6 +4,7 @@ title: "PLAN-L7-45: harness.db state-db foundation (adapter + migration + schema
 kind: impl
 layer: L7
 drive: db
+parent_design: docs/design/harness/L6-function-design/function-spec.md
 status: confirmed
 created: 2026-06-11
 updated: 2026-06-11
@@ -24,15 +25,15 @@ agent_slots:
     slot_label: "QA — IT-DB-01 基盤 (idempotent upsert) の観点レビュー"
 generates:
   - artifact_path: src/state-db/index.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: src/state-db/migration.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: src/state-db/maintenance.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: src/schema/harness-db.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/state-db.test.ts
-    artifact_type: test
+    artifact_type: test_code
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 next_pair_freeze: L8
 dependencies:
@@ -98,10 +99,10 @@ secret 非保存・deterministic rebuild を review し evidence に残す。
 
 ## §4 DoD
 
-- [ ] IT-DB-01 基盤 green (table 作成 + idempotent upsert)。
-- [ ] `ut-tdd db status` / `ut-tdd db rebuild` runnable、deterministic。
-- [ ] schema⇔physical-data 整合、secret/PII 非格納。
-- [ ] 全回帰 + typecheck + lint + doctor green、review 前置 evidence。
+- [x] IT-DB-01 基盤 green (table 作成 + idempotent upsert)。
+- [x] `ut-tdd db status` / `ut-tdd db rebuild` runnable、deterministic。
+- [x] schema⇔physical-data 整合、secret/PII 非格納。
+- [x] 全回帰 + typecheck + lint + doctor green、review 前置 evidence。
 
 ## §6 用語更新
 

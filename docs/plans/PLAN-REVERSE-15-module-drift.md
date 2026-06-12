@@ -24,9 +24,9 @@ agent_slots:
     slot_label: "TL — ADR-002 への実装注記が設計意図 (IMP-032 import グラフ drift とは別の最小スライス) と整合するか / concept §10 用語の living glossary 整合をレビュー"
 generates:
   - artifact_path: docs/adr/ADR-002-dependency-direction-and-auto-map.md
-    artifact_type: governance_doc
+    artifact_type: markdown_doc
   - artifact_path: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-    artifact_type: governance_doc
+    artifact_type: markdown_doc
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 dependencies:
   parent: null

@@ -13,7 +13,7 @@ agent_slots:
     slot_label: "TL - integration GWT design"
 generates:
   - artifact_path: docs/governance/ddd-tdd-rules.md
-    artifact_type: governance_doc
+    artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L8-integration-test-design.md
     artifact_type: test_design
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md

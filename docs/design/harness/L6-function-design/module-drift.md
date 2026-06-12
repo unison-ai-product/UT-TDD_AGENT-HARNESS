@@ -19,7 +19,7 @@ plan: docs/plans/PLAN-L6-15-module-drift.md
 
 **「architecture §3.1 building block 集合 ⊇ `src/` 実在 module」の包含 drift を機械検査** (IMP-075)。
 
-背景: A-103 (L4 見直し) で handover/setup/web/lint が「実装済かつ設計 doc が将来扱い」の back-fill 漏れ (= harness 自身が [[feedback_impl_must_backfill_to_design]] を L4 で破った) を **手動監査**で発見した。柱 2「doc×機械厳格化」「柱 3 自動化で state 管理」に照らすと、impl→design back-fill 漏れ (meta-drift) を手動 audit に頼るのは under-design。本設計は **`src/` 実在 module がすべて architecture §3.1 に列挙されているか** (actual ⊆ listed) を doctor が surface する純関数 lint を定義する (既定 warn-first、実 repo 孤児0 安定後に hard 化検討)。
+背景: A-103 (L4 見直し) で handover/setup/web/lint が「実装済かつ設計 doc が将来扱い」の back-fill 漏れ (= harness 自身が [[feedback_impl_must_backfill_to_design]] を L4 で破った) を **手動監査**で発見した。柱 2「doc×機械厳格化」「柱 3 自動化で state 管理」に照らすと、impl→design back-fill 漏れ (meta-drift) を手動 audit に頼るのは under-design。本設計は **`src/` 実在 module がすべて architecture §3.1 に列挙されているか** (actual ⊆ listed) を doctor hard gate で検査する純関数 lint を定義する。
 
 **スコープ外**:
 - **逆向き (listed ⊋ actual = 将来 module)**: 設計が web/roster/skills 等を「将来」列挙し src 未実在は drift ではない (宣言済 carry)。検査しない。
@@ -120,15 +120,15 @@ This addendum defines the L6 contract for optional graph/diagram development-too
 | `analyzeImplPlanTrace` | analyzeImplPlanTrace(input: ImplPlanTraceInput) => ImplPlanTraceResult | `src/**.ts` 集合 + PLAN generates/本文に出現した src パス集合 + baseline allowlist が供給される。 | traced でも baseline でもない src を `orphans` に返し、NEW orphan 有無で `ok` を決める。 | baseline は known-debt の段階導入であり**縮小のみ可**。IMP-087 の 4 orphan は baseline でなく PLAN generates への back-fill で trace 解消する。 | U-IPT-001..005 |
 
 - **baseline 根拠**: 2026-06-10 実測 (`find src -name '*.ts'` vs PLAN generates) で 12 孤児。うち 4 (IMP-087: review-tier/rule-drift/team-run/provider-handover) は PLAN-REVERSE-40 generates へ back-fill、残 8 (asset-drift/change-impact/doc-consistency/entity-coverage/g3-trace/improvement-backlog/readability/shared) を baseline。
-- **doctor 配線**: `checkImplPlanTrace(repoRoot)` を **warn-first** で配線 (module-drift と同じ段階導入)。CI 回帰網 `U-IPT-004` (実 repo orphan 0) が vitest で fail-close。hard 化は baseline 縮小安定後。
+- **doctor 配線**: `checkImplPlanTrace(repoRoot)` を **hard/fail-close** で配線。CI 回帰網 `U-IPT-004` と doctor の両方で実 repo orphan 0 を維持する。
 
-## §4 doctor 配線 (warn-first)
+## §4 doctor 配線 (hard/fail-close)
 
-`checkModuleDrift(repoRoot)` を `runDoctor` に **warn-first** (ok 非連動、`messages` のみ) で配線。I/O 失敗は note で skip (doctor 堅牢性、ok=true で fail-open)。pair-freeze と同じ warn-first 群。**hard 化は実 repo 孤児0 安定 + 設計合意後** (backfill/review-evidence と同じ昇格パス)。
+`checkModuleDrift(repoRoot)` を `runDoctor` に **hard/fail-close** で配線。I/O 失敗は violation として `ok=false` を返し、module-drift があれば `ut-tdd doctor` は失敗する。
 
 ## §5 段階導入 / hard 化判断
 
-- **warn-first (初期投入)**: A-103 back-fill 直後で実 repo は既に孤児0 (handover/setup/web 列挙済)。warn-first でも CI 回帰網 (U-MDRIFT-005 = 実 repo 孤児0 を vitest fail-close) は即 fail-close で効く。doctor.ok 連動 (hard) 化は、新規 module 追加運用で誤検知 0 を確認後に検討。
+- **hard 化完了**: A-103 back-fill 後、実 repo 孤児0 (handover/setup/web 列挙済) を確認し、CI 回帰網 (U-MDRIFT-005) と doctor.ok 連動の両方で fail-close する。
 
 ## §6 用語更新
 
@@ -137,6 +137,6 @@ This addendum defines the L6 contract for optional graph/diagram development-too
 
 ## §7 carry
 
-- **hard 化** (warn-first → doctor.ok 連動): 実 repo 孤児0 安定後に検討 (§5)。
+- **hard 化**: 完了。`checkModuleDrift.ok` / `checkImplPlanTrace.ok` は `runDoctor.ok` に連動する。
 - **粒度の深化**: 現状 top-level module 集合のみ。Level 2 (代表 module 内部ファイル) 粒度の drift は対象外 (§3.2 は人手)。
 - **asset-drift**: `analyzeAssetDrift` (FR-L1-49) is implemented as the current hard gate slice for internal asset cutover. It scans `.claude/agents/*.md`, `docs/skills`, and `docs/templates/prompts/*.md` assets, fails on HELIX personal path residue, legacy `helix codex` / `helix claude` / `helix plan` / `helix gate` / `helix handover` delegation residue, empty `docs/skills`, and guard allowlist entries without matching agent docs. It intentionally does not parse prompt bodies into persistent state; the markdown assets remain the source of truth.

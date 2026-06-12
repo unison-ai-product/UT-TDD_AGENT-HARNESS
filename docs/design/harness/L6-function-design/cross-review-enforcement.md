@@ -31,7 +31,7 @@ IMP-071 は review 前置の **presence + review_kind** を機械強制した。
 
 ### `extractReviewEntries(content): ReviewEntry[]`
 - **Precondition**: PLAN 本文 (frontmatter 含む)。
-- **Postcondition**: 最初の `---` ブロックを yaml 解析し `review_evidence[]` を `{review_kind, worker_model?, reviewer_model?}[]` で返す。parse 失敗 / 不在は `[]` (堅牢性、検査 skip)。
+- **Postcondition**: 最初の `---` ブロックを yaml 解析し `review_evidence[]` を `{review_kind, worker_model?, reviewer_model?}[]` で返す。parse 失敗 / 不在は entry なしとして `[]` を返し、必須PLANの evidence 欠落は `analyzeReviewEvidence` 側で violation 化する。
 
 ### `analyzeReviewEvidence(plans)` 拡張 — `crossReviewViolations`
 - **Precondition**: parsed plan 群 (archived は除外)。

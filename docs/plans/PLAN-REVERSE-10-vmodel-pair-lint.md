@@ -16,7 +16,7 @@ agent_slots:
   - role: tl
     slot_label: "TL — pair-freeze lint が requirements §6.8.3 (設計 PLAN 完了 PR で vmodel-lint 必須) / §2.4 (12 edge は別) の既存定義と矛盾しないか / L6 6 doc の frontmatter 補完が pair freeze 規約に整合するか / concept §10 用語追加の妥当性のレビュー (claude-only は code-reviewer 代替)"
   - role: po
-    slot_label: "PO — R3 intent (設計層 pair freeze を機械検査してよいか / L6 機能設計 doc の frontmatter 必須化 / pair-freeze は warn-first 導入でよいか) 検証。PO /goal 2026-06-05「カバーすべき機能を起票して対応 + doc カバレッジ review・改善 + チェック機構も改修」で授権済"
+    slot_label: "PO — R3 intent (設計層 pair freeze を機械検査してよいか / L6 機能設計 doc の frontmatter 必須化 / pair-freeze は hard/fail-close 導入でよいか) 検証。PO /goal 2026-06-05「カバーすべき機能を起票して対応 + doc カバレッジ review・改善 + チェック機構も改修」で授権済"
 generates: []
 dependencies:
   parent: null

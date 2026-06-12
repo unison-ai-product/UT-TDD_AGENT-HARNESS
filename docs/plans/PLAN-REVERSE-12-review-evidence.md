@@ -4,12 +4,14 @@ title: "PLAN-REVERSE-12 (reverse/back-fill): review_evidence 機械強制を gov
 kind: reverse
 layer: cross
 workflow_phase: R4
+confirmed_reverse_type: design
 drive: agent
 status: confirmed
 created: 2026-06-05
 updated: 2026-06-05
 owner: PM (Opus) / PO (人間)
 forward_routing: gap-only
+promotion_strategy: reuse-as-is
 agent_slots:
   - role: tl
     slot_label: "TL — requirements §7.8.7 への機械強制注記の整合 / concept §2.1.2.1 review tier との一貫性レビュー"

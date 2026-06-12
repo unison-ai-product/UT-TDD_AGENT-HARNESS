@@ -152,6 +152,35 @@ export interface G3TraceResult {
   };
 }
 
+export function g3TraceOk(result: G3TraceResult): boolean {
+  return (
+    result.orphanFrL1.length === 0 &&
+    result.orphanL3Fr.length === 0 &&
+    result.orphanAc.length === 0 &&
+    result.orphanAt.length === 0 &&
+    result.orphanNfr.length === 0
+  );
+}
+
+export function g3TraceMessages(result: G3TraceResult): string[] {
+  if (g3TraceOk(result)) {
+    return [
+      `g3-trace - OK (frL1=${result.totals.frL1}, l3Fr=${result.totals.l3Fr}, ac=${result.totals.ac}, at=${result.totals.at}, l1Nfr=${result.totals.l1Nfr}, l3Nfr=${result.totals.l3Nfr})`,
+    ];
+  }
+  const orphanGroups: [string, string[]][] = [
+    ["orphanFrL1", result.orphanFrL1],
+    ["orphanL3Fr", result.orphanL3Fr],
+    ["orphanAc", result.orphanAc],
+    ["orphanAt", result.orphanAt],
+    ["orphanNfr", result.orphanNfr],
+  ];
+  const parts = orphanGroups
+    .filter(([, ids]) => ids.length > 0)
+    .map(([kind, ids]) => `${kind}=${ids.slice(0, 8).join(",")}${ids.length > 8 ? ",..." : ""}`);
+  return [`g3-trace - violation: ${parts.join("; ")}`];
+}
+
 export function analyzeG3Trace(docs?: DocSource): G3TraceResult {
   const d = docs ?? loadDocs();
 

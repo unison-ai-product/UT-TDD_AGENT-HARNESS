@@ -20,7 +20,7 @@ generates:
   - artifact_path: docs/plans/PLAN-M-01-cutover-backfill.md
     artifact_type: markdown_doc
   - artifact_path: .ut-tdd/audit/A-132-l8-l14-verification-band-execution.md
-    artifact_type: audit_record
+    artifact_type: markdown_doc
 roadmap:
   layer: L14
   gates:

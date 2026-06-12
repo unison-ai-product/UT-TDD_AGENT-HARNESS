@@ -61,7 +61,7 @@ Trace DoD addendum:
 - [x] Incomplete states surface as draft docs, missing owning plan, unresolved owning plan, missing L7 pair, missing L7 reverse reference, weak unit-contract substance, draft PLANs, L7 draft, or G6 not-pass.
 - [x] A synthetic oracle proves `ready=true` only when every condition is satisfied.
 - [x] A synthetic oracle proves `freezeInputReady=true` can be true before final G6 completion when trace/substance inputs are complete but status/gate flips are still pending.
-- [x] doctor surfaces readiness as warn-only.
+- [x] doctor surfaces readiness as hard/fail-close.
 
 ## §3 工程表
 
@@ -86,4 +86,4 @@ U-L6COMP-* を L7 unit test design の readiness oracle として参照する。
 - [x] L6 readiness inputs が L6 docs / L6 design PLAN / L7 / G6 を含む。
 - [x] 未完了状態が draft docs / draft PLANs / L7 draft / G6 not-pass として表示される。
 - [x] 全条件充足時に `ready=true` になる synthetic oracle を持つ。
-- [x] doctor は warn-only として readiness を surface する。
+- [x] doctor は hard/fail-close として readiness を surface する。

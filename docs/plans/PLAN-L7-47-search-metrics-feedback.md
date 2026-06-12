@@ -4,9 +4,15 @@ title: "PLAN-L7-47: harness.db search index + skill metrics + feedback engine"
 kind: impl
 layer: L7
 drive: db
+parent_design: docs/design/harness/L6-function-design/function-spec.md
 status: completed
 created: 2026-06-11
 updated: 2026-06-11
+agent_slots:
+  - role: tl
+    slot_label: 'TL - search metrics and feedback DB projection review'
+  - role: qa
+    slot_label: 'QA - IT-DB search and feedback evidence review'
 review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
@@ -18,11 +24,11 @@ review_evidence:
     scope: "search/metrics/feedback span: ranked find, skill metrics, feedback events, read-only search, and no feedback auto-approval of PLANs."
 generates:
   - artifact_path: src/search/index.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: src/feedback/engine.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/search-feedback.test.ts
-    artifact_type: test
+    artifact_type: test_code
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 next_pair_freeze: L8
 dependencies:

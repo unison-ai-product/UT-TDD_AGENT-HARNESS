@@ -2,6 +2,12 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { DocumentExportProjectionRows } from "../export/document-export";
+import {
+  analyzeDescentObligations,
+  loadDeferLedger,
+  loadDescentAdjacency,
+  loadTraceKeyedArtifacts,
+} from "../lint/descent-obligation";
 import type {
   RelationGraphProjection,
   VerificationEvidenceProjection,
@@ -272,7 +278,7 @@ function projectPlans(repoRoot: string, db: HarnessDb): Map<string, ProjectedPla
     const status = frontmatterValue(content, "status") || "draft";
     const updatedAt = frontmatterValue(content, "updated") || frontmatterValue(content, "created");
     plans.set(planId, { planId, kind, layer, drive, status, updatedAt });
-    const relPath = normalizePath(path.replace(`${repoRoot}\\`, ""));
+    const relPath = normalizePath(relative(repoRoot, path));
     recordProjectionEvent(db, {
       table: "plan_registry",
       id: planId,
@@ -356,7 +362,7 @@ function projectHookEvents(repoRoot: string, db: HarnessDb): void {
     .filter((name) => name.endsWith(".jsonl"))
     .sort()) {
     const path = join(sessionDir, file);
-    const relPath = normalizePath(path.replace(`${repoRoot}\\`, ""));
+    const relPath = normalizePath(relative(repoRoot, path));
     for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
       if (!line.trim()) continue;
       let event: SessionLogProjection;
@@ -520,6 +526,70 @@ function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
         source: normalizePath(join("docs", "plans", plan.file)),
         indexed_at: indexedAt,
       },
+    });
+  }
+}
+
+function projectDescentObligations(repoRoot: string, db: HarnessDb): void {
+  const indexedAt = nowIso();
+  const result = analyzeDescentObligations(
+    loadTraceKeyedArtifacts(repoRoot),
+    loadDescentAdjacency(repoRoot),
+    loadDeferLedger(repoRoot),
+  );
+  for (const obligation of result.obligations) {
+    const id = stableId(
+      "descent-obligation",
+      `${obligation.traceKey}:${obligation.fromLayer}:${obligation.requiredLayer}:${obligation.kind}`,
+    );
+    recordProjectionEvent(db, {
+      table: "descent_obligations",
+      id,
+      row: {
+        descent_obligation_id: id,
+        trace_key: obligation.traceKey,
+        from_layer: obligation.fromLayer,
+        required_layer: obligation.requiredLayer,
+        kind: obligation.kind,
+        status: obligation.status,
+        reason: obligation.reason,
+        defer_owner: obligation.defer?.owner ?? "",
+        defer_spec: obligation.defer?.waitingSpec ?? "",
+        source: "descent-obligation",
+        indexed_at: indexedAt,
+      },
+    });
+  }
+  for (const violation of result.implAhead) {
+    const id = stableId(
+      "descent-obligation",
+      `${violation.traceKey}:${violation.landedAt}:${violation.waitingLayer}:impl-ahead`,
+    );
+    recordProjectionEvent(db, {
+      table: "descent_obligations",
+      id,
+      row: {
+        descent_obligation_id: id,
+        trace_key: violation.traceKey,
+        from_layer: violation.landedAt,
+        required_layer: violation.waitingLayer,
+        kind: "impl-guard",
+        status: "impl-ahead",
+        reason: violation.waitingSpec,
+        defer_owner: violation.owner,
+        defer_spec: violation.waitingSpec,
+        source: "descent-obligation",
+        indexed_at: indexedAt,
+      },
+    });
+  }
+  for (const finding of result.findings) {
+    recordFinding(db, {
+      kind: `descent-${finding.code}`,
+      severity: "warn",
+      subjectId: finding.traceKey || finding.path || finding.code,
+      source: "descent-obligation",
+      evidencePath: finding.path,
     });
   }
 }
@@ -1412,6 +1482,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     projectReviewModelRuns(repoRoot, db, plans);
     projectRoadmapRollup(repoRoot, db);
     projectReviewEvidenceRegistry(repoRoot, db);
+    projectDescentObligations(repoRoot, db);
     projectVerificationBandExecution(db);
     projectAutomationAssets(repoRoot, db);
     projectSkillTelemetry(db, plans);

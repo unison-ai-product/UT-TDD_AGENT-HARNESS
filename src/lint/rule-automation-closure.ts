@@ -154,7 +154,7 @@ export function loadRuleAutomationClosureDocs(
 
 export function ruleAutomationClosureMessages(result: RuleAutomationClosureResult): string[] {
   if (result.checked === 0) {
-    return ["rule-automation-closure - note: closure table not found; lint skipped"];
+    return ["rule-automation-closure - violation: closure table not found"];
   }
   if (result.violations.length > 0) {
     const sample = result.violations

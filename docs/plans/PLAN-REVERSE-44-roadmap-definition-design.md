@@ -32,13 +32,13 @@ generates:
   - artifact_path: docs/design/harness/L4-basic-design/architecture.md
     artifact_type: design_doc
   - artifact_path: src/doctor/index.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: src/lint/roadmap-registry.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/roadmap.test.ts
-    artifact_type: test
+    artifact_type: test_code
   - artifact_path: tests/doctor.test.ts
-    artifact_type: test
+    artifact_type: test_code
 dependencies:
   parent: null
   requires:
@@ -131,7 +131,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 
 ### F. rollup の doctor 可視化 (凍結追加、2026-06-11) — 「実装どこまで?」を 1 行で答える
 
-- `src/doctor/index.ts` に **`roadmap-rollup —` 行**を追加。`computeProgramRollup(loadRoadmaps(), statusOf, new Set(PARKED_BANDS.keys()))` を呼び、`bands covered/parked/uncovered` + `gates reached/total` + `spans confirmed/total` + `frontier` を surface。`statusOf` は既存 roadmap check と同じ status 解決を再利用。**warn-first** (doctor.ok 非連動、program-coverage spike と整合)。
+- `src/doctor/index.ts` に **`roadmap-rollup —` 行**を追加。`computeProgramRollup(loadRoadmaps(), statusOf, new Set(PARKED_BANDS.keys()))` を呼び、`bands covered/parked/uncovered` + `gates reached/total` + `spans confirmed/total` + `frontier` を surface。`statusOf` は既存 roadmap check と同じ status 解決を再利用。現在は hard/fail-close で、uncovered band / orphan span / 構造 issue があれば doctor.ok に連動する。
 - これにより rollup が runtime から呼ばれ (dead code 解消)、人間が doctor 1 実行で全プログラム進捗を読める。harness.db projection (front 返却) は別増分 (V-pair 要、本 PLAN scope 外、carry)。
 - テスト: **doctor surface** = `tests/doctor.test.ts` に rollup 行の存在 + 集計フォーマットを検証 (既存 doctor.test の様式に倣う)。
 - **change-impact 整合**: src 変更 (roadmap-registry.ts + doctor/index.ts) に対し design (本 PLAN + architecture.md §3.1) + test (roadmap.test.ts + doctor.test.ts) を同一変更集合に含める (`change-impact` fail-close 回避、[[feedback_codex_prompt_scope_vs_change_impact]])。

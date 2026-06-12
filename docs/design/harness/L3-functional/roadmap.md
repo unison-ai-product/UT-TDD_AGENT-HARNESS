@@ -215,7 +215,7 @@ L6 機能   ┘                            └ L8 結合テスト       ┘ (L8-
 
 本書は **設計ドキュメントレベル**の artifact として `docs/design/harness/L3-functional/roadmap.md` に置く。governance 昇格 (concept / requirements と同列の正本扱い) は取り下げた。V-model の標準 sub_doc (functional-requirement / business-requirement / nfr-grade) とは別の、L3 で起票する**設計層の計画 doc** (テスト設計と pair しない companion artifact) として扱う。
 
-> **スキーマ補足**: 現 PLAN スキーマ (requirements §1.10.G.1) の L3 sub_doc enum は `business-requirement / functional-requirement / nfr-grade` の 3 種で roadmap 型を持たない。本書は sub_doc pair artifact ではないため `kind=design + sub_doc` の起票導線には乗らない。これを正式な design PLAN で機械追跡するなら sub_doc enum の扱い (拡張 or 非 sub_doc design doc の許容) を整理する必要がある → IMP-036 の back-fill で扱う。当面 `ut-tdd plan lint` は stub のため強制されない。
+> **スキーマ補足**: 現 PLAN スキーマ (requirements §1.10.G.1) の L3 sub_doc enum は `business-requirement / functional-requirement / nfr-grade` の 3 種で roadmap 型を持たない。本書は sub_doc pair artifact ではないため `kind=design + sub_doc` の起票導線には乗らない。これを正式な design PLAN で機械追跡するなら sub_doc enum の扱い (拡張 or 非 sub_doc design doc の許容) を整理する必要がある → IMP-036 の back-fill で扱う。現行 `ut-tdd plan lint` は schedule/G1-trace/G3-trace を実装済みだが、本 roadmap 型の sub_doc schema 拡張はまだ対象外。
 
 ### 常時参照配線
 

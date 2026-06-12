@@ -28,7 +28,7 @@ generates:
   - artifact_path: docs/design/harness/L4-basic-design/function.md
     artifact_type: design_doc
   - artifact_path: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
-    artifact_type: requirements_doc
+    artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-21-runtime-adapter-session-lifecycle.md
   requires:

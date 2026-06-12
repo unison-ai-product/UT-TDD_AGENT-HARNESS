@@ -3,11 +3,15 @@ plan_id: PLAN-REVERSE-40-orphan-governance
 title: "PLAN-REVERSE-40 (reverse): orphan 統制の土台 — impl→PLAN trace lint (IMP-088) + orphan back-fill (IMP-087) を上位設計へ back-fill"
 kind: reverse
 layer: cross
+workflow_phase: R4
+confirmed_reverse_type: design
 drive: fullstack
 status: confirmed
 created: 2026-06-10
 updated: 2026-06-10
 owner: PM (Opus) / PO (人間)
+forward_routing: L5
+promotion_strategy: reuse-with-hardening
 review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
@@ -26,18 +30,18 @@ generates:
   - artifact_path: docs/plans/PLAN-REVERSE-40-orphan-governance.md
     artifact_type: markdown_doc
   - artifact_path: src/lint/impl-plan-trace.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/impl-plan-trace.test.ts
-    artifact_type: test
+    artifact_type: test_code
   # IMP-087 orphan 4 件の back-fill (本 PLAN が trace owner、baseline でなく generates 帰属で解消)
   - artifact_path: src/gate/review-tier.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: src/lint/rule-drift.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: src/team/run.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: src/runtime/provider-handover.ts
-    artifact_type: source
+    artifact_type: source_module
 dependencies:
   parent: null
   requires: []

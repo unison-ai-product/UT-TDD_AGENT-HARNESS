@@ -15,6 +15,7 @@ import {
   decisionOutcomeSchema,
   driveSchema,
   forwardRoutingSchema,
+  isValidSubDocForLayer,
   kindSchema,
   layerSchema,
   promotionStrategySchema,
@@ -22,6 +23,7 @@ import {
   roleSchema,
   scrumTypeSchema,
   statusSchema,
+  subDocSchema,
   workflowPhaseSchema,
 } from "./index";
 
@@ -72,8 +74,10 @@ const frontmatterBaseSchema = z.object({
   title: z.string().min(1),
   kind: kindSchema,
   drive: driveSchema,
-  status: statusSchema,
+  status: statusSchema.default("draft"),
   layer: layerSchema.optional(),
+  sub_doc: subDocSchema.optional(),
+  master_hub: z.boolean().optional(),
   workflow_phase: workflowPhaseSchema.optional(),
   parent_design: z.string().optional(),
   decision_outcome: decisionOutcomeSchema.nullable().optional(),
@@ -86,13 +90,13 @@ const frontmatterBaseSchema = z.object({
   dependencies: dependenciesSchema,
   /** §6.8.2 Issue 起点スパイン: 解決対象 GitHub Issue 番号 (任意、Phase 0-B で recommended)。
    *  feature/hotfix branch の close 漏れ機械検知 + PR `Closes #NN` 連携に使う。 */
-  github_issue_id: z.number().int().positive().optional(),
+  github_issue_id: z.number().int().positive().nullable().optional(),
   /** v2 HELIX-workflows 取り込み軌跡への参照 (任意、migration ledger path) */
   v2_import: z.string().optional(),
   /** review 前置エビデンス (requirements §7.8.7 / .claude/CLAUDE.md MUST、IMP-071)。
    *  design/impl/add-* PLAN が confirmed (gate/freeze 到達) に至る前に通した review を構造的に記録する。
    *  review_kind = cross_agent (hybrid) | intra_runtime_subagent (claude/codex 単体) | human (standalone/escalation)。
-   *  機械強制 = doctor checkReviewEvidence (warn-first → hard)。freeze 後の増分追補も entry を append する
+   *  機械強制 = doctor checkReviewEvidence (fail-close → hard)。freeze 後の増分追補も entry を append する
    *  (concept §2.1.2.1 の review tier と整合、review-skip の silent 化を機械で塞ぐ)。 */
   review_evidence: z
     .array(
@@ -173,6 +177,27 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
     }
   }
 
+  if (
+    fm.kind === "design" &&
+    !fm.master_hub &&
+    fm.layer &&
+    ["L1", "L2", "L3", "L4", "L5", "L6"].includes(fm.layer)
+  ) {
+    if (!fm.sub_doc) {
+      ctx.addIssue({
+        code: custom,
+        path: ["sub_doc"],
+        message: "kind=design + layer=L1-L6 は sub_doc 必須 (§1.10.G.1)",
+      });
+    } else if (!isValidSubDocForLayer(fm.layer, fm.sub_doc)) {
+      ctx.addIssue({
+        code: custom,
+        path: ["sub_doc"],
+        message: "sub_doc は layer 別 VALID_SUB_DOCS のみ (§1.10.G.1)",
+      });
+    }
+  }
+
   // §1.10 A: plan_id の駆動トークン ↔ kind 一致 (横断駆動プランの ID legibility、fail-close)
   const driveTok = fm.plan_id.match(/^PLAN-(DISCOVERY|REVERSE|RECOVERY)-/)?.[1];
   if (driveTok && DRIVE_TOKEN_TO_KIND[driveTok] !== fm.kind) {
@@ -249,7 +274,7 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
   }
 
   // §1.1.parent_design: kind=impl (L7) は parent_design 必須
-  if (fm.kind === "impl" && !fm.parent_design) {
+  if (fm.kind === "impl" && !fm.master_hub && !fm.parent_design) {
     ctx.addIssue({
       code: custom,
       path: ["parent_design"],

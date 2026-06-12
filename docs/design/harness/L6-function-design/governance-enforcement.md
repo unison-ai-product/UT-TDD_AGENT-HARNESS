@@ -53,7 +53,7 @@ Type/pseudocode substance:
 
 | function | type body | pseudocode / implementation_state |
 |---|---|---|
-| `evaluateGateReview` | `GateReviewInput { gate_id; execution_mode; review_kind; worker_model; reviewer_model?; human_signoff?; checklist_evidence[] } -> GateReviewResult { ok; violations[]; accepted_tier }` | explicit_l7_defer; pseudocode = load gate policy, reject same-model self approval, accept cross-agent/intra-runtime/human only when required evidence exists |
+| `evaluateGateReview` | `GateReviewInput { gate_id; execution_mode; review_kind; worker_model; reviewer_model?; human_signoff?; checklist_evidence[] } -> GateReviewResult { ok; violations[]; accepted_tier }` | implemented by `src/gate/review-tier.ts`; pseudocode = load gate policy, reject same-model self approval, accept cross-agent/intra-runtime/human only when required evidence exists |
 | `checkReviewEvidence` | `ReviewEvidenceInput { plan_path; frontmatter; tests_green_at?; reviewed_at?; doctor_ok? } -> ReviewEvidenceResult { ok; missing[]; stale_approval[]; ordering_violations[] }` | implemented by `src/lint/review-evidence.ts`; pseudocode = parse PLAN review_evidence, require reviewer/verdict for confirmed/completed, reject draft approve residue and test-after-review ordering |
 
 ## §3 統合点

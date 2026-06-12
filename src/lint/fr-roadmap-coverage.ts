@@ -340,7 +340,7 @@ export function loadFrRoadmapCoverageDocs(
 
 export function frRoadmapCoverageMessages(result: FrRoadmapCoverageResult): string[] {
   if (result.checked === 0) {
-    return ["fr-roadmap-coverage - note: residual bucket table not found; lint skipped"];
+    return ["fr-roadmap-coverage - violation: residual bucket table not found"];
   }
   if (result.violations.length > 0) {
     const sample = result.violations

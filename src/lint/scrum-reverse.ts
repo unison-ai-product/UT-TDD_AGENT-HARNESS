@@ -120,7 +120,7 @@ export function loadSrPlans(repoRoot: string = process.cwd()): ParsedSrPlan[] {
   return plans;
 }
 
-/** doctor / CLI 向けの 1 行サマリ群 (warn-first、ok は呼び出し側で参照)。 */
+/** doctor / CLI 向けの 1 行サマリ群 (fail-close、ok は呼び出し側で参照)。 */
 export function scrumReverseMessages(result: ScrumReverseResult): string[] {
   const msgs: string[] = [];
   if (result.pocOrphans.length > 0) {

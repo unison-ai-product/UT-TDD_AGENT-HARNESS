@@ -180,6 +180,7 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
       expect(rowCounts(db).roadmap_band_coverage).toBeGreaterThan(0);
       expect(rowCounts(db).roadmap_gate_progress).toBeGreaterThan(0);
       expect(rowCounts(db).review_evidence_registry).toBeGreaterThan(0);
+      expect(rowCounts(db).descent_obligations).toBeGreaterThan(0);
       expect(rowCounts(db).drive_runs).toBeGreaterThan(0);
       expect(rowCounts(db).hook_events).toBeGreaterThan(0);
       expect(rowCounts(db).model_runs).toBeGreaterThan(0);

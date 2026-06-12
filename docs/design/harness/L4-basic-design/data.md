@@ -55,7 +55,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 > 集約間は **ID 参照のみ** (直接オブジェクト参照禁止、DDD 原則)。例: artifact.pair は plan を ID で参照。
 > **acceptance_criterion / acceptance_test の帰属** (business §10.1.1「FR-* 配下」): AC は FR の受入条件、AT はその検証であり、両者は artifact の **trace 経路 (AC↔AT 被覆、g3-trace R3)** で Artifact 集約に紐づく。FR 自体は artifact (要件 doc) の内容であるため、AC/AT を Artifact 集約の子とする。
 
-## §3 値オブジェクト (Value Object) — 12 種 (うち 11 種は `src/schema/index.ts` と 1:1、SubDoc のみ spec 止まり → IMP-026)
+## §3 値オブジェクト (Value Object) — 12 種 (`src/schema/index.ts` と 1:1、SubDoc は IMP-026 で zod 化済み)
 
 | 値オブジェクト | 値域 | src/schema |
 |---|---|---|
@@ -70,11 +70,11 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | Role | po/tl/qa/aim/uiux/se/docs (7) | `VALID_ROLES` |
 | OrchestrationMode | pm_lead/claude_judge/claude_judge_codex_impl/codex_impl_qa_verify/claude_design_impl (5) | `VALID_ORCHESTRATION_MODES` |
 | ReverseType | code/design/upgrade/normalization/fullback (5) | `VALID_REVERSE_TYPES` |
-| SubDoc | 層別 (L1-L6) | requirements §1.10.G.1 (spec のみ、**src/schema 未実装 → impl carry IMP-026**) |
+| SubDoc | 層別 (L1-L6) | `VALID_SUB_DOCS` / `subDocSchema` / `frontmatterSchema` layer×sub_doc superRefine |
 
 > mode / drive は単独の identity を持たず属性として埋め込むため **値オブジェクト** (entity ではない)。
 > **Drive 値域整合 (PLAN-L4-06、drift 是正)**: `VALID_DRIVES` は **専門職 5 種のみ** (be/fe/fullstack/db/agent)。旧記載の mode 値 (scrum/reverse/poc/troubleshoot) は **drive ではなく entry mode** であり、`PLAN-DISCOVERY-04 V7 / PLAN-REVERSE-01 R3` で drive enum から除去済 ([[feedback_drive_is_specialist_not_mode]])。drive=専門職 / mode=駆動モデル を混同しない (mode は function §3.1)。
-> **SubDoc 注記**: 値域は requirements §1.10.G.1 VALID_SUB_DOCS (text spec) が SSoT。zod enum 化は src/schema に未実装で、L5/impl で `VALID_SUB_DOCS` 定数化する (IMP-026)。他 11 値オブジェクトは src/schema 実装済。
+> **SubDoc 注記**: 値域は requirements §1.10.G.1 VALID_SUB_DOCS (text spec) を `src/schema/index.ts` の `VALID_SUB_DOCS` / `subDocSchema` に定数化済み。`frontmatterSchema` は kind=design + L1-L6 の `sub_doc` 必須と layer 別値域を fail-close で検査する。
 
 ## §4 entity ID 規約 (集約横断、既存 lint regex と一致)
 
@@ -138,7 +138,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | 監査 | `audit/failure_log.jsonl` (local) / チーム共有 audit (別経路) | JSON-lines |
 | 内部資産 roster / skill catalog | **永続化なし** (`.claude/agents/*.md` / `docs/skills/**/*.md` が唯一正本、TS が scan-on-demand で in-memory 構築) | markdown (fs 正本、ADR-004 層1) |
 
-**src/schema 突合**: 上記値オブジェクト (§3) は `src/schema/index.ts` の zod enum を SSoT とし、state の JSON/YAML は読込時に zod でバリデート。齟齬検出は `ut-tdd doctor check_business_entity_coverage` (L1 §10.2 carry) で機械化 (実装は L7 carry)。**§3 値オブジェクト 11 種は src/schema enum と 1:1 一致 (齟齬 0)。SubDoc のみ requirements §1.10.G.1 spec で src/schema 未実装 → `VALID_SUB_DOCS` 定数化を impl carry (IMP-026)**。
+**src/schema 突合**: 上記値オブジェクト (§3) は `src/schema/index.ts` の zod enum を SSoT とし、state の JSON/YAML は読込時に zod でバリデート。齟齬検出は `ut-tdd doctor check_business_entity_coverage` (L1 §10.2 carry) で機械化。**§3 値オブジェクト 12 種は src/schema enum と 1:1 一致 (齟齬 0)。SubDoc は requirements §1.10.G.1 spec から `VALID_SUB_DOCS` / `subDocSchema` / layer×sub_doc superRefine へ着地済み (IMP-026)**。
 
 ### §8.1 SQLite projection DB (`.ut-tdd/harness.db`)
 
@@ -162,5 +162,5 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 - **集約ルートの操作 (API)** = Precondition/Postcondition は L5 D-API / internal-processing で DbC 記述 (IMP-014、edge 5-8 docstring)
 - evaluation_batch (Phase B) の集計アーキは L4 architecture + Phase B telemetry carry
 - **observability 系値オブジェクト候補** (business §10.4、Phase A): `invocation_log` / `detector_result` / `gate_evidence` / `code_catalog` / `command_catalog` の値オブジェクト/state schema を L5 physical-data で確定 (本 doc では entity 追加なし、候補として carry)
-- **SubDoc enum 実装** (IMP-026): requirements §1.10.G.1 の VALID_SUB_DOCS を `src/schema` の zod enum 化 (現状 spec のみ)
+- **SubDoc enum 実装** (IMP-026): requirements §1.10.G.1 の VALID_SUB_DOCS は `src/schema` の zod enum と frontmatter superRefine へ実装済み
 - **内部資産 (roster/skill) の back-fill 依存** (A-90、L9 ST-ASSET-04 対応): roster/skill は in-memory scan-on-demand で**永続 state なし** (§8、ADR-004) のため data 集約・物理 state schema に**追加なし**と確定。各 subcommand / capability resolver / recommender / drift 判定の**関数仕様**は L6 機能設計で確定 (`placeholder_deps: {waiting_layer: L6}`、ST-ASSET-04 と対)。L5 physical-data で roster/skill の物理 state 追加は不要 (fs 正本)

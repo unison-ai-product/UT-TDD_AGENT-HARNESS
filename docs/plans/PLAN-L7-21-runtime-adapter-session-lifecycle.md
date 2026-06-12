@@ -31,7 +31,7 @@ generates:
   - artifact_path: src/runtime/adapter.ts
     artifact_type: source_module
   - artifact_path: .claude/settings.json
-    artifact_type: runtime_config
+    artifact_type: config
   - artifact_path: .claude/hooks/session-log.ts
     artifact_type: source_module
   - artifact_path: tests/runtime-hook-entrypoints.test.ts

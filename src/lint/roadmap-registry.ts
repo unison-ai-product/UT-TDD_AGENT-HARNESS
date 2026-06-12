@@ -165,7 +165,7 @@ export interface ProgramCoverageResult {
 /**
  * 全プログラム被覆 (program coverage): 工程表 (roadmap) が forward 全バンドを被覆するか。
  * roadmap.layer が band.layers に属せば当該 band を被覆。park 宣言 band は uncovered から除外
- * (明示 defer = under-design でない、concept §3.1.3.1)。warn-first (doctor.ok 非連動、spike 段階)。
+ * (明示 defer = under-design でない、concept §3.1.3.1)。fail-close (doctor.ok 非連動、spike 段階)。
  */
 export function analyzeProgramCoverage(
   records: RoadmapRecord[],
@@ -182,7 +182,7 @@ export function analyzeProgramCoverage(
   return { coverage, parked, uncovered };
 }
 
-/** doctor surface 用メッセージ (warn-first)。 */
+/** doctor surface 用メッセージ (fail-close)。 */
 export function programCoverageMessages(result: ProgramCoverageResult): string[] {
   const covered = result.coverage.filter((c) => c.covered).length;
   const total = result.coverage.length;
@@ -199,7 +199,7 @@ export function programCoverageMessages(result: ProgramCoverageResult): string[]
   const missing = uncovered.map((c) => `${c.band.id}(${c.band.name})`).join(", ");
   const parkSuffix = parkedDetails ? `、park ${parked.length}: ${parkedDetails}` : "";
   return [
-    `program-coverage — ⚠ ${covered}/${total} バンド登録、未登録 ${uncovered.length} 件: ${missing}${parkSuffix}。工程表 (roadmap) 未登録の forward work = 「実装どこまで?」の残り frontier (PLAN-RECOVERY-04、warn-first)`,
+    `program-coverage — ⚠ ${covered}/${total} バンド登録、未登録 ${uncovered.length} 件: ${missing}${parkSuffix}。工程表 (roadmap) 未登録の forward work = 「実装どこまで?」の残り frontier (PLAN-RECOVERY-04、fail-close)`,
   ];
 }
 

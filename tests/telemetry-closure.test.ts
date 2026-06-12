@@ -49,6 +49,13 @@ describe("telemetry-closure lint", () => {
     });
   });
 
+  it("U-TCLOS-002b: reports missing telemetry docs as a violation", () => {
+    const r = analyzeTelemetryClosure([]);
+
+    expect(r.checked).toBe(0);
+    expect(telemetryClosureMessages(r)[0]).toContain("violation");
+  });
+
   it("U-TCLOS-003: current A-134 audit lists all telemetry closure requirements", () => {
     const docs = loadTelemetryClosureDocs(process.cwd());
     const r = analyzeTelemetryClosure(docs);

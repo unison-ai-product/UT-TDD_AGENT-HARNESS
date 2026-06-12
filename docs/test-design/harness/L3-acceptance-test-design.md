@@ -218,7 +218,7 @@ updated: 2026-06-02
 | **R3** (AT → 要求) | 全 AT-* が L3 要求 (FR-/AC-/NFR-/BR-21 派生) に紐付き (孤児 AT 禁止) | PASS — 117 AT 全件 trace 確認 (A-54: AT-FR-09-04 に AC-FR-09-04 追加で孤児解消、AT→AC 逆引き lint 機械化) |
 | **R4** (NFR → 閾値 → AT) | 全 NFR-* に閾値 (IPA Lv + 数値 / KPI) + AT 紐付き | PASS — 15 NFR + carry 全件紐付き |
 
-> **lint 実装**: `ut-tdd plan lint --gate G3-trace` の R1-R4 ルール実装は L7 carry。本 PLAN は trace 整合の宣言と人手確認まで。
+> **lint 実装**: `ut-tdd plan lint --gate G3-trace` の R1-R4 ルールは L7 実装済みで、`ut-tdd doctor` の hard gate に集約される。本書は trace 整合の宣言と、機械検証の期待値を兼ねる。
 
 ## §5 carry / 次工程
 

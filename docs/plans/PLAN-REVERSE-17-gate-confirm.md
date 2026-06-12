@@ -38,7 +38,7 @@ U-GCONF oracle を L7 unit test design へ反映する。
 
 ### Step 2: [直列] governance carry 整合
 直列理由: downstream_dependency
-warn-first から hard 化への carry を IMP-079 の残課題として維持する。
+hard/fail-close 化は完了。IMP-079 の残課題は gate 台帳と confirmed doc の継続整合監査に限定する。
 
 ### Step 3: [直列] review
 直列理由: downstream_dependency

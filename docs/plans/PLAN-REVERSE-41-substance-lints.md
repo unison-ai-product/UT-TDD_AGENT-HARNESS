@@ -3,11 +3,15 @@ plan_id: PLAN-REVERSE-41-substance-lints
 title: "PLAN-REVERSE-41 (reverse): substance-gate lint 群 — oracle⇔実test (IMP-128) + tracked⊆canonical (IMP-127) を上位設計へ back-fill"
 kind: reverse
 layer: cross
+workflow_phase: R4
+confirmed_reverse_type: design
 drive: fullstack
 status: confirmed
 created: 2026-06-10
 updated: 2026-06-10
 owner: PM (Opus) / PO (人間)
+forward_routing: L5
+promotion_strategy: reuse-with-hardening
 review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
@@ -24,15 +28,15 @@ generates:
   - artifact_path: docs/plans/PLAN-REVERSE-41-substance-lints.md
     artifact_type: markdown_doc
   - artifact_path: src/lint/oracle-test-trace.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: src/lint/oracle-test-trace-baseline.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/oracle-test-trace.test.ts
-    artifact_type: test
+    artifact_type: test_code
   - artifact_path: src/lint/tracked-canonical.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/tracked-canonical.test.ts
-    artifact_type: test
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
@@ -91,5 +95,5 @@ Reverse-first 骨格。baseline は known-debt を許容し NEW のみ fail-clos
 ## §8 DoD
 
 - [x] oracle-test-trace + tracked-canonical が green (baseline 適用、NEW orphan/drift fail-close)。**実装済 2026-06-10**: oracle-test-trace (IMP-128、baseline 89、U-OTT-001..005) + tracked-canonical (IMP-127、baseline 0、U-TCAN-001..005)。
-- [x] doctor 配線 (warn-first) + 実 repo regression 0 (U-OTT-004 / U-TCAN-004)。
+- [x] doctor 配線 (hard/fail-close) + 実 repo regression 0 (U-OTT-004 / U-TCAN-004)。
 - [ ] review 前置を通す (塊A/B まとめて intra_runtime_subagent review 予定)。

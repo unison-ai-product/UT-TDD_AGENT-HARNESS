@@ -18,29 +18,29 @@ generates:
   - artifact_path: .ut-tdd/audit/A-136-cycle-p4-verification-audit.md
     artifact_type: markdown_doc
   - artifact_path: src/lint/telemetry-closure.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
   - artifact_path: src/lint/cycle-p4-verification.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
   - artifact_path: src/lint/skill-assignment.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
   - artifact_path: src/lint/project-hook.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
   - artifact_path: src/skills/recommend.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
   - artifact_path: src/doctor/index.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
   - artifact_path: tests/skill-recommend.test.ts
-    artifact_type: test_source
+    artifact_type: test_code
   - artifact_path: tests/issue-queue.test.ts
-    artifact_type: test_source
+    artifact_type: test_code
   - artifact_path: tests/project-hook.test.ts
-    artifact_type: test_source
+    artifact_type: test_code
   - artifact_path: tests/telemetry-closure.test.ts
-    artifact_type: test_source
+    artifact_type: test_code
   - artifact_path: tests/cycle-p4-verification.test.ts
-    artifact_type: test_source
+    artifact_type: test_code
   - artifact_path: tests/skill-assignment.test.ts
-    artifact_type: test_source
+    artifact_type: test_code
   - artifact_path: docs/skills/review-checklist.yaml
     artifact_type: skill_doc
 dependencies:
@@ -94,7 +94,7 @@ This PLAN treats UT-TDD as a TDD team standardization development harness. It cr
 |---|---|---|---|---|---|---|---|---|
 | WBS-L3-05-01 | Create A-134 telemetry closure audit with DB count evidence and no-omission rules | TL | none | 0.25d | docs | .1 | N/A | Remove A-134 and keep open finding in backlog |
 | WBS-L3-05-02 | Add telemetry closure lint that validates every required measurement row has evidence, owner, and status | TL | WBS-L3-05-01 | 0.25d | src/tests | .1 | N/A | Disable doctor wiring; keep lint test-only |
-| WBS-L3-05-03 | Wire telemetry closure into doctor as warn-first non-closed surface | TL | WBS-L3-05-02 | 0.25d | src | .1 | N/A | Remove doctor call and keep A-134 manual |
+| WBS-L3-05-03 | Wire telemetry closure into doctor as hard/fail-close surface | TL | WBS-L3-05-02 | 0.25d | src | .1 | N/A | Remove doctor call and keep A-134 manual |
 | WBS-L3-05-04 | Implement dynamic L-unit and drive-model skill recommender CLI | TL/worker | WBS-L3-05-01..03 | 1.0d | src/tests/docs | .2 | ff_skill_recommendation_runtime=false | Keep `skill suggest` hidden and tables non-closed |
 | WBS-L3-05-05 | Add skill invocation projection and metrics by plan, layer, drive, source, and acceptance | TL/worker | WBS-L3-05-04 | 1.0d | src/tests/db | .2 | ff_skill_invocation_projection=false | Drop new projection rows via migration rollback |
 | WBS-L3-05-06 | Add drive firing-rate, retry, and bottleneck analytics into `quality_signals` | TL/worker | WBS-L3-05-05 | 1.0d | src/tests/db | .3 | ff_telemetry_quality_signals=false | Disable metrics command and keep raw rows |

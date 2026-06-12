@@ -24,7 +24,7 @@ agent_slots:
     slot_label: "TL — 全駆動モデル exit contract の test→review 順序注記が設計意図と整合するかレビュー"
 generates:
   - artifact_path: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-    artifact_type: governance_doc
+    artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L4-basic-design/function.md
     artifact_type: design_doc
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

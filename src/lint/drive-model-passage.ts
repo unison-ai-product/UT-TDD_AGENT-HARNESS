@@ -140,7 +140,7 @@ export function loadDriveModelPassageDocs(
 
 export function driveModelPassageMessages(result: DriveModelPassageResult): string[] {
   if (result.checked === 0) {
-    return ["drive-model-passage - note: passage certificate table not found; lint skipped"];
+    return ["drive-model-passage - violation: passage certificate table not found"];
   }
   if (result.violations.length > 0) {
     const sample = result.violations

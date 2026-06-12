@@ -3,11 +3,15 @@ plan_id: PLAN-REVERSE-25-module-boundary-rule
 title: "PLAN-REVERSE-25 (reverse): back-fill module-boundary rule"
 kind: reverse
 layer: cross
+workflow_phase: R4
+confirmed_reverse_type: fullback
 drive: fullstack
 status: confirmed
 created: 2026-06-09
 updated: 2026-06-09
 owner: Codex TL / PO
+forward_routing: L5
+promotion_strategy: reuse-as-is
 agent_slots:
   - role: tl
     slot_label: "TL - module-boundary rule back-fill"

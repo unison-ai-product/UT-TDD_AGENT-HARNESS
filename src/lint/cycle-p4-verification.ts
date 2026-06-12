@@ -121,7 +121,8 @@ function evidencePaths(text: string): string[] {
 }
 
 function pathExists(repoRoot: string, path: string): boolean {
-  return existsSync(join(repoRoot, path.replaceAll("/", "\\")));
+  // join は "/" 区切りを全 OS で正規化する (Linux で "\\" に置換すると literal バックスラッシュ名になり existsSync が常に false = CI 失敗、cross-platform 第一級)。
+  return existsSync(join(repoRoot, path));
 }
 
 export function analyzeCycleP4Verification(
@@ -204,7 +205,7 @@ export function analyzeCycleP4Verification(
   }
 
   for (const file of CURRENT_OPERATIONAL_FILES) {
-    const target = join(repoRoot, file.replaceAll("/", "\\"));
+    const target = join(repoRoot, file);
     if (!existsSync(target)) continue;
     const content = readFileSync(target, "utf8");
     if (FORBIDDEN_LEGACY_SOURCE_RE.test(content)) {

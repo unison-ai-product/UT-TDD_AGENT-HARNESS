@@ -105,7 +105,7 @@ export function loadGateConfirmDocs(repoRoot: string = process.cwd()): GateConfi
 
 export function analyzeGateConfirm(input: GateConfirmDocs): GateConfirmResult {
   const statuses = parseGateStatuses(input.gateText);
-  if (statuses.length === 0) return { violations: [], skipped: true, ok: true };
+  if (statuses.length === 0) return { violations: [], skipped: true, ok: false };
   const byGate = new Map(statuses.map((s) => [s.gate, s]));
   const violations: GateConfirmResult["violations"] = [];
   for (const doc of input.docs) {
@@ -122,7 +122,7 @@ export function analyzeGateConfirm(input: GateConfirmDocs): GateConfirmResult {
 }
 
 export function gateConfirmMessages(result: GateConfirmResult): string[] {
-  if (result.skipped) return ["gate-confirm — note: gate-design §2 を parse できず検査 skip"];
+  if (result.skipped) return ["gate-confirm - violation: gate-design ledger could not be parsed"];
   if (result.violations.length === 0) {
     return ["gate-confirm — OK (confirmed doc は gate PASS 台帳と整合)"];
   }

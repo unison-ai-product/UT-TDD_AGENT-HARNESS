@@ -25,7 +25,7 @@ ADR-001 準拠: HELIX/Python コードを port せず TypeScript (Bun) で全面
 
 **動機**: Add-feature (bottom-up 駆動) で実装 (②) した後、上位設計/governance への **Reverse 合流** + **§6 用語更新の L0 §10 用語集 back-merge** を agent 記憶に頼ると漏れる。本 harness 開発で impl 後 Reverse 放置 → PO 指摘の実績あり。V-model pair 完全性 (`[[feedback_vmodel_state_db_completeness]]`) を **impl ⇔ Reverse / impl ⇔ glossary** へ拡張し、「Reverse 無き impl」「glossary 未 merge な PLAN」を機械が surface する。
 
-**段階方針**: 既定 **warn-first** (doctor に接続、ok は reverseOrphans と glossaryGaps が 0 のときのみ真)。fail-close 化 (lint engine exit code 連動) は §4 carry で段階昇格。
+**段階方針**: 現在は **hard/fail-close**。doctor に接続し、`reverseOrphans` または `glossaryGaps` が 1 件でもあれば `checkBackfillResult.ok=false` として `runDoctor.ok` に連動する。
 
 **設計原則**: 純関数 (`analyze*` / `parse*`) と I/O loader (`loadBackfillDocs`) を分離する。fr-registry-audit / doc-consistency と同方針。
 
@@ -39,8 +39,8 @@ ADR-001 準拠: HELIX/Python コードを port せず TypeScript (Bun) で全面
 | `parsePlan` | 1 ファイル分の frontmatter + requires + glossaryTerms を `ParsedPlan` に構造化 | **純関数** |
 | `analyzeBackfill` | `ParsedPlan[]` + L0 §10 用語集本文 から `BackfillResult` を算出 | **純関数**。archived は除外 |
 | `loadBackfillDocs` | `docs/plans/*.md` (archive/template 除く) + concept §10 用語集 をファイル読み込み | I/O。失敗は `checkBackfill` 側で catch |
-| `backfillMessages` | `BackfillResult` から doctor/CLI 向け 1 行サマリ群を生成 | **純関数**。warn-first |
-| `checkBackfill` (doctor) | `loadBackfillDocs` → `analyzeBackfill` → `backfillMessages` を I/O try-catch でラップして surface | fail-open (I/O 失敗 → note を返しスキップ) |
+| `backfillMessages` | `BackfillResult` から doctor/CLI 向け 1 行サマリ群を生成 | **純関数**。hard gate message |
+| `checkBackfillResult` (doctor) | `loadBackfillDocs` → `analyzeBackfill` → `backfillMessages` を I/O try-catch でラップして surface | fail-close (I/O 失敗 → violation / ok=false) |
 
 ## §2 型 / schema (D-CONTRACT)
 
@@ -112,7 +112,7 @@ export const KIND_BACKFILL: Record<string, BackfillReq> = {
 | `analyzeBackfill` | `(plans: ParsedPlan[], glossaryText: string) => BackfillResult` | **純関数**。① `status === "archived"` を除外 → active。② reverse PLAN の `requires` が指す path 集合を構築 (`reverseRequires`)。③ active で `KIND_BACKFILL[kind] === "required"` かつ `reverseRequires` に含まれない → `reverseOrphans`。④ `conditional` かつ未リンク → `conditionalPending`。⑤ 全 active の `glossaryTerms` を `normalizeTerm` で照合 → `glossaryText` に含まれない → `glossaryGaps`。`ok = reverseOrphans.length === 0 && glossaryGaps.length === 0` (conditional は ok に影響しない) |
 | `loadBackfillDocs` | `(repoRoot?: string) => BackfillDocs` | I/O。`docs/plans/*.md` を全読み (archive/template dir は含まれない flat ファイル想定)。concept §10 用語集を正規表現 (`#\s*§10[\s\S]*?(?=\n#\s*§11|$)`) で抽出 |
 | `backfillMessages` | `(result: BackfillResult) => string[]` | **純関数**。① reverseOrphans > 0 → warn 文言。② glossaryGaps > 0 → warn 文言。③ conditionalPending > 0 → note 文言。④ すべて 0 → OK 文言。複数メッセージを配列で返す |
-| `checkBackfill` (doctor) | `(repoRoot: string) => string[]` | fail-open。`loadBackfillDocs` → `analyzeBackfill` → `backfillMessages` を try-catch でラップ。catch → `["backfill — note: PLAN/glossary を読めず検査 skip"]` を返す (doctor の堅牢性維持) |
+| `checkBackfill` (doctor) | `(repoRoot: string) => string[]` | fail-close。`loadBackfillDocs` → `analyzeBackfill` → `backfillMessages` を実行し、I/O / parse 失敗は `violation` message として返す。doctor は `backfill` violation を hard gate に集約し、PLAN/glossary を読めない状態を skip しない。 |
 
 ### §2.4 DbC 補足
 
@@ -139,6 +139,6 @@ generates pair: `docs/test-design/harness/L7-unit-test-design.md` **§1.11 U-BAC
 
 ## §4 carry / 次工程
 
-- **lint engine fail-close 昇格**: 現状 warn-first (doctor surface のみ)。`ut-tdd plan lint` の lint engine 実装時に `backfillMessages` の ok=false を exit code 1 連動にし fail-close へ昇格する。
+- **doctor fail-close 昇格**: 完了。`checkBackfillResult.ok` は `runDoctor.ok` に連動する。`ut-tdd plan lint` 側へ同等 gate を追加する場合も、この result contract を流用する。
 - **docs/plans/ archive/ 除外の明示化**: `loadBackfillDocs` は現状 `docs/plans/` の flat ファイルのみを読む。`archive/` サブディレクトリ対応が必要な場合は `readdirSync` を再帰化する (現状は status=archived のフィルタで代替)。
 - **PLAN-REVERSE back-fill 自己適用**: 本 IMP-051 (add-impl) 自体が KIND_BACKFILL=required の対象。対応 PLAN-REVERSE-* で L3 要件 back-fill が必要 (IMP-051 完了後の後続 PLAN)。

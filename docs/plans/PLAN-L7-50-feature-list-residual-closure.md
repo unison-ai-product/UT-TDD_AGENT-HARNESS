@@ -4,7 +4,8 @@ title: "PLAN-L7-50: feature-list residual closure for R1-R9"
 kind: impl
 layer: L7
 drive: fullstack
-status: confirmed
+parent_design: docs/design/harness/L6-function-design/function-spec.md
+status: completed
 created: 2026-06-12
 updated: 2026-06-12
 review_evidence:
@@ -25,9 +26,17 @@ generates:
   - artifact_path: .ut-tdd/audit/A-133-upstream-vmodel-coverage-audit.md
     artifact_type: markdown_doc
   - artifact_path: src/lint/fr-roadmap-coverage.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
+  - artifact_path: src/workflow/contracts.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/agent-slots.ts
+    artifact_type: source_module
   - artifact_path: tests/fr-roadmap-coverage.test.ts
-    artifact_type: test
+    artifact_type: test_code
+  - artifact_path: tests/workflow-contracts.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/agent-slots.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L3-04-upstream-schedule-reconciliation.md
   requires:
@@ -57,11 +66,21 @@ Close the feature-list residual buckets from A-133 at L7. A residual bucket is n
 | WBS-L7-50-R7 | R7 relation graph | `src/lint/relation-graph.ts` | `tests/relation-graph.test.ts` | `doctor fr-roadmap-coverage`, `npm test` | N/A | Revert A-133 row to `scheduled` and keep relation graph as residual PLAN |
 | WBS-L7-50-R8 | R8 external verification/MCP | `src/lint/tool-adapter.ts` | `tests/tool-adapter.test.ts` | `doctor fr-roadmap-coverage`, `npm test` | N/A | Revert A-133 row to `scheduled` and keep must-tool profiles as carry |
 | WBS-L7-50-R9 | R9 document export | `src/export/document-export.ts` | `tests/document-export.test.ts` | `doctor fr-roadmap-coverage`, `npm test` | N/A | Revert A-133 row to `scheduled` and keep export derivatives as carry |
+| WBS-L7-50-R10 | Function-spec explicit L7 defer discharge | `src/workflow/contracts.ts`, `src/schema/harness-db.ts` | `tests/workflow-contracts.test.ts` | `doctor impl-plan-trace`, `doctor oracle-test-trace`, `npm test` | N/A | Revert function-spec rows to `explicit_l7_defer` and keep R10 open |
+| WBS-L7-50-R11 | Agent roster capability defer discharge | `src/runtime/agent-slots.ts` | `tests/agent-slots.test.ts` | `doctor impl-plan-trace`, `doctor oracle-test-trace`, `npm test` | N/A | Revert agent-slots row to explicit defer and keep R11 open |
 
 ## Acceptance Criteria
 
-- A-133 residual bucket rows R1-R9 are `closed`.
-- A-133 has a `Residual Feature Closure Evidence` table with one evidence row per bucket.
-- `fr-roadmap-coverage` fails if a closed bucket lacks PLAN/WBS, source, test, coverage gate, or target file existence.
-- `ut-tdd doctor` passes the `fr-roadmap-coverage` hard gate.
-- `npm run lint`, `npm run typecheck`, and `npm test` pass.
+- [x] A-133 residual bucket rows R1-R9 are `closed`.
+- [x] A-133 has a `Residual Feature Closure Evidence` table with one evidence row per bucket.
+- [x] `fr-roadmap-coverage` fails if a closed bucket lacks PLAN/WBS, source, test, coverage gate, or target file existence.
+- [x] Function-spec rows marked `explicit_l7_defer` are discharged to L7 source/test evidence or reopened as non-closed residuals.
+- [x] Agent roster capability row is discharged to L7 source/test evidence or reopened as non-closed residual.
+- [x] `ut-tdd doctor` passes the `fr-roadmap-coverage` hard gate.
+- [x] `npm run lint`, `npm run typecheck`, and `npm test` pass.
+
+## DoD
+
+- [x] R1-R9 residual rows are closed by source, test, and doctor evidence.
+- [x] R10/R11 defer discharge rows are covered by source and test evidence.
+- [x] `doctor`, typecheck, lint, and full vitest suite pass after DB rebuild.

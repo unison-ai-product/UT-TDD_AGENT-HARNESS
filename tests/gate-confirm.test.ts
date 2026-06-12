@@ -89,11 +89,11 @@ describe("gate-confirm lint (IMP-079)", () => {
     expect(r.ok).toBe(true);
   });
 
-  it("U-GCONF-005: parse failure is fail-open skip", () => {
+  it("U-GCONF-005: parse failure is a fail-closed violation", () => {
     const r = analyzeGateConfirm({ gateText: "no table", docs: [doc({})] });
     expect(r.skipped).toBe(true);
-    expect(r.ok).toBe(true);
-    expect(gateConfirmMessages(r)[0]).toContain("skip");
+    expect(r.ok).toBe(false);
+    expect(gateConfirmMessages(r)[0]).toContain("violation");
   });
 
   it("U-GCONF-006: draft doc is outside the check", () => {

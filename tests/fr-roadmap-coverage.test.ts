@@ -103,6 +103,13 @@ describe("fr-roadmap-coverage lint", () => {
     });
   });
 
+  it("U-FRC-004b: reports missing residual bucket docs as a violation", () => {
+    const r = analyzeFrRoadmapCoverage([]);
+
+    expect(r.checked).toBe(0);
+    expect(frRoadmapCoverageMessages(r)[0]).toContain("violation");
+  });
+
   it("U-FRC-005: current A-133 audit closes R1-R9 with closure evidence", () => {
     const docs = loadFrRoadmapCoverageDocs(process.cwd());
     const r = analyzeFrRoadmapCoverageWithRoot(docs, process.cwd());

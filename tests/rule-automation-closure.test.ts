@@ -38,6 +38,13 @@ describe("rule automation closure lint", () => {
     expect(ruleAutomationClosureMessages(r)[0]).toContain("violation 1");
   });
 
+  it("U-RAC-002b: reports missing closure docs as a violation", () => {
+    const r = analyzeRuleAutomationClosure([]);
+
+    expect(r.checked).toBe(0);
+    expect(ruleAutomationClosureMessages(r)[0]).toContain("violation");
+  });
+
   it("U-RAC-003: current reconciliation PLAN has no text-only or scheduled rule closures", () => {
     const docs = loadRuleAutomationClosureDocs(process.cwd());
     const r = analyzeRuleAutomationClosure(docs);

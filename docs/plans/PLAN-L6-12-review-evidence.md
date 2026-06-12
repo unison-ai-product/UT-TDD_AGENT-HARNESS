@@ -25,7 +25,7 @@ review_evidence:
     verdict: approve_after_fixes
     scope: "review-evidence 機能設計 + L7-13 実装一式 (APPROVE 条件付き → I-1 loader 堅牢性 / I-2 テストコメント / m-3/m-4 修正後)。cross-agent 不在=claude-only intra_runtime_subagent 代替"
 dependencies:
-  parent: null
+  parent: docs/plans/PLAN-L6-00-master.md
   requires: []
 ---
 

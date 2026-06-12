@@ -24,9 +24,9 @@ agent_slots:
     slot_label: "QA - relation graph oracles"
 generates:
   - artifact_path: src/lint/relation-graph.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/relation-graph.test.ts
-    artifact_type: test
+    artifact_type: test_code
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 dependencies:
   parent: docs/plans/PLAN-L6-31-cross-artifact-relation-graph.md
@@ -94,7 +94,7 @@ CLI smoke and doc back-fill can proceed after pure function green.
 
 ## §8 DoD
 
-- [ ] Red test exists before source implementation.
-- [ ] `bun run test tests/relation-graph.test.ts tests/verification-profile.test.ts` passes.
-- [ ] `bun run typecheck`, `bun run lint`, and `bun run src/cli.ts doctor` pass.
-- [ ] Reverse fullback closes governance/backlog additions.
+- [x] Red test exists before source implementation.
+- [x] `bun run test tests/relation-graph.test.ts tests/verification-profile.test.ts` passes.
+- [x] `bun run typecheck`, `bun run lint`, and `bun run src/cli.ts doctor` pass.
+- [x] Reverse fullback closes governance/backlog additions.

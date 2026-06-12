@@ -29,6 +29,7 @@ generates:
 dependencies:
   parent: null
   requires:
+    - PLAN-L1-01-business-requirements
     - PLAN-L1-02-functional-requirements
     - PLAN-L1-03-screen-requirements
   blocks: []

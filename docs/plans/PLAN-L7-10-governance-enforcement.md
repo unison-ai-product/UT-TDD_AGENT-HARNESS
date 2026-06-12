@@ -15,13 +15,13 @@ agent_slots:
     slot_label: "QA — U-SCRUMREV / U-PROP の oracle 被覆 + 実 repo 回帰ガード (CI vitest で fail-close) の妥当性"
 generates:
   - artifact_path: src/lint/scrum-reverse.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: src/lint/propagation.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/scrum-reverse.test.ts
-    artifact_type: test
+    artifact_type: test_code
   - artifact_path: tests/propagation.test.ts
-    artifact_type: test
+    artifact_type: test_code
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 dependencies:
   parent: docs/plans/PLAN-L6-09-governance-enforcement.md

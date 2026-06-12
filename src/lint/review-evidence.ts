@@ -9,7 +9,7 @@
  *
  * 設計: design/impl/add-* PLAN が confirmed (gate/freeze 到達) なのに frontmatter `review_evidence` を
  * 持たない場合に surface する。**hard 判定** (ok=false → doctor fail-close、IMP-071 hard 化 2026-06-05。
- * 実 repo 履歴 15 件 back-fill 完了 = missing 0 安定を確認後に warn-first → hard 昇格)。
+ * 実 repo 履歴 15 件 back-fill 完了 = missing 0 安定を確認後に hard 昇格)。
  * 純関数 (analyze) + I/O loader を分離 (backfill-pairing / vmodel-pair と同方針)。
  */
 import { readdirSync, readFileSync } from "node:fs";
@@ -72,7 +72,8 @@ export function hasReviewEvidence(content: string): boolean {
 /**
  * frontmatter (最初の `---` ブロック) を yaml で解析し review_evidence entry を抽出 (IMP-076)。
  * presence 検出の正規表現とは別に、cross_agent distinctness 検査のため entry レベルで読む。
- * parse 失敗 / review_evidence 不在は [] (堅牢性、検査 skip)。
+ * parse 失敗 / review_evidence 不在は entry なしとして扱う。
+ * 必須PLANの evidence 欠落は analyzeReviewEvidence 側で violation 化する。
  */
 export function extractReviewEntries(content: string): ReviewEntry[] {
   const m = content.match(/^---\n([\s\S]*?)\n---/);

@@ -10,7 +10,7 @@ status: confirmed
 created: 2026-06-11
 updated: 2026-06-11
 owner: Codex TL
-forward_routing: L7
+forward_routing: L5
 promotion_strategy: reuse-with-hardening
 review_evidence:
   - reviewer: codex-intra-runtime-review
@@ -32,7 +32,7 @@ generates:
   - artifact_path: docs/design/harness/L6-function-design/vmodel-pair-freeze.md
     artifact_type: design_doc
   - artifact_path: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-    artifact_type: governance_doc
+    artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
 dependencies:

@@ -15,7 +15,7 @@
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 9;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
 
@@ -219,6 +219,57 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("threshold", "REAL"),
       col("status"),
       col("computed_at"),
+    ],
+  },
+  {
+    name: "test_runs",
+    columns: [
+      pk("test_run_id"),
+      col("plan_id"),
+      col("command"),
+      col("runner"),
+      col("scope"),
+      col("started_at"),
+      col("completed_at"),
+      col("exit_code", "INTEGER"),
+      col("evidence_path"),
+      col("status"),
+    ],
+  },
+  {
+    name: "test_cases",
+    columns: [
+      pk("test_case_id"),
+      col("test_run_id"),
+      col("plan_id"),
+      col("oracle_id"),
+      col("name"),
+      col("status"),
+      col("duration_ms", "REAL"),
+      col("evidence_path"),
+    ],
+  },
+  {
+    name: "test_results",
+    columns: [
+      pk("test_result_id"),
+      col("test_case_id"),
+      col("test_run_id"),
+      col("oracle_id"),
+      col("status"),
+      col("message"),
+      col("evidence_path"),
+    ],
+  },
+  {
+    name: "test_artifact_edges",
+    columns: [
+      pk("test_artifact_edge_id"),
+      col("test_run_id"),
+      col("artifact_path"),
+      col("edge_kind"),
+      col("oracle_id"),
+      col("evidence_path"),
     ],
   },
   {
@@ -528,6 +579,22 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("indexed_at"),
     ],
   },
+  {
+    name: "descent_obligations",
+    columns: [
+      pk("descent_obligation_id"),
+      col("trace_key"),
+      col("from_layer"),
+      col("required_layer"),
+      col("kind"),
+      col("status"),
+      col("reason"),
+      col("defer_owner"),
+      col("defer_spec"),
+      col("source"),
+      col("indexed_at"),
+    ],
+  },
 ];
 
 /** §9.3 で宣言された projection index。 */
@@ -635,6 +702,11 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     name: "idx_review_evidence_plan",
     table: "review_evidence_registry",
     columns: ["plan_id", "has_evidence"],
+  },
+  {
+    name: "idx_descent_obligation_trace_status",
+    table: "descent_obligations",
+    columns: ["trace_key", "status", "required_layer"],
   },
 ];
 

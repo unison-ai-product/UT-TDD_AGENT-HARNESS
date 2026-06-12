@@ -182,12 +182,12 @@ function analyzeDescentObligations(artifacts, adjacency, defers):
 
 - `tests/descent-obligation.test.ts` (L7) で **実 repo の現存 drop を回帰固定**: 導入時点で **skill subsystem の片肺 (FR-L1-47 系の L6 test-design 不在 / impl-ahead) が `unmet` / `impl-ahead` として surface される**ことをベクトル化 (Phase 0 = 既存 drop の一掃検出)。是正後はそのベクトルが 0 件へ収束する。
 - 純関数 (load×3 = 副作用端点) + 実 repo ガード。新 hook 不要 (pair-freeze / module-drift と同方式)。
-- `runDoctor` に `checkDescentObligation` を **warn-first** で配線 (初期投入、副作用端点 = load×3 → analyzeDescentObligations → messages)。
-- **hard 昇格条件 (機械判定、M-3)**: 人手判断に頼らず、`vmodel-pair-freeze.md §7` の `analyzeVerificationGroups` と同型で機械化する。昇格可 = **実 repo で `analyzeDescentObligations` の `unmet==[] ∧ implAhead==[] ∧ findings==[]` が CI 回帰 (U-DESC-008) で安定 green、かつ対象 V-model 層群が freeze 完了**。この条件を満たすまでは warn-first を維持し、満たした時点で `runDoctor.ok` 連動 + G6/G7 freeze の hard ブロックへ切替える (切替自体も lint 条件で機械発火)。
+- `runDoctor` に `checkDescentObligation` を **hard/fail-close** で配線 (副作用端点 = load×3 → analyzeDescentObligations → messages → `runDoctor.ok`)。
+- **hard 昇格完了 (機械判定、M-3)**: 実 repo で `analyzeDescentObligations` の `unmet==[] ∧ implAhead==[] ∧ findings==[]` が green のため、`runDoctor.ok` 連動 + G6/G7 freeze の hard ブロックへ切替済み。
 - harness.db `descent_obligations` projection table (柱3 feedback、queryable) は L7 で追加。設計⇔実装⇔テストのズレを次サイクルへ返す。
 
 ## §7 段階導入 (崩れ防止)
 
-- **Phase 0**: matrix SSoT + `analyzeDescentObligations` を **warn-first** で実 repo に被せ、現存 drop (skill 片肺ほか) を一掃検出。
+- **Phase 0**: matrix SSoT + `analyzeDescentObligations` を実 repo に被せ、現存 drop (skill 片肺ほか) を一掃検出する。現在は doctor hard gate。
 - **Phase 1**: trace key frontmatter (`traces:`) を全成果物に必須化 + obligation 生成を **hard gate** 化。
 - **Phase 2**: defer ledger discharge + impl-ahead ガード + harness.db projection + G6/G7 freeze 配線。

@@ -13,7 +13,7 @@ agent_slots:
     slot_label: "TL - module-boundary rule design"
 generates:
   - artifact_path: docs/governance/coding-rules.md
-    artifact_type: governance_doc
+    artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L6-function-design/module-drift.md
     artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md

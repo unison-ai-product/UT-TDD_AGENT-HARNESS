@@ -3,11 +3,15 @@ plan_id: PLAN-REVERSE-30-integration-gwt-lint
 title: "PLAN-REVERSE-30 (reverse): back-fill integration-gwt lint"
 kind: reverse
 layer: cross
+workflow_phase: R4
+confirmed_reverse_type: fullback
 drive: fullstack
 status: confirmed
 created: 2026-06-09
 updated: 2026-06-09
 owner: Codex TL / PO
+forward_routing: L5
+promotion_strategy: reuse-as-is
 agent_slots:
   - role: tl
     slot_label: "TL - integration GWT back-fill"

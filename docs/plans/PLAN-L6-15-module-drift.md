@@ -10,7 +10,7 @@ updated: 2026-06-08
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl
-    slot_label: "TL — parseListedModules の §3.1 限定切り出し (§3.2 太字非巻き込み) / analyzeModuleDrift の actual⊆listed 方向 / warn-first 配線が doctor 堅牢性 (fail-open) を壊さない / 既存 lint 様式との非重複レビュー (claude-only は code-reviewer/pmo-sonnet 代替)"
+    slot_label: "TL — parseListedModules の §3.1 限定切り出し (§3.2 太字非巻き込み) / analyzeModuleDrift の actual⊆listed 方向 / doctor hard/fail-close 配線 / 既存 lint 様式との非重複レビュー (claude-only は code-reviewer/pmo-sonnet 代替)"
 generates:
   - artifact_path: docs/design/harness/L6-function-design/module-drift.md
     artifact_type: design_doc
@@ -33,7 +33,7 @@ review_evidence:
     reviewed_at: "2026-06-08"
     tests_green_at: "2026-06-08"
     verdict: pass
-    scope: "module-drift 機能設計 (§0-§7) + architecture §4.1 carry plan_id 明示 (IMP-074) のレビュー。actual⊆listed 方向・§3.1 限定切り出し・warn-first・asset-drift/dependency-drift との別検査明示を確認。pmo-sonnet 確定 (code-reviewer は IMP-009 truncate)。claude-only TL 代替"
+    scope: "module-drift 機能設計 (§0-§7) + architecture §4.1 carry plan_id 明示 (IMP-074) のレビュー。actual⊆listed 方向・§3.1 限定切り出し・doctor hard/fail-close・asset-drift/dependency-drift との別検査明示を確認。pmo-sonnet 確定 (code-reviewer は IMP-009 truncate)。claude-only TL 代替"
 ---
 
 # PLAN-L6-15 (add-design): module-drift lint の機能設計 (IMP-075) + asset-drift carry plan_id (IMP-074)
@@ -45,7 +45,7 @@ A-103 (L4 見直し) で handover/setup/web/lint が「実装済かつ設計 doc
 ## §工程表
 
 ### Step 1: [直列] module-drift 機能設計 doc 起草
-- 直列理由 = **file_conflict** (module-drift.md を書く)。§0 スコープ (actual⊆listed、asset-drift/dependency-drift と別検査) / §1 入力 / §2 純関数 DbC / §3 loader+messages / §4 doctor warn-first / §5 段階導入 / §6 用語 / §7 carry。
+- 直列理由 = **file_conflict** (module-drift.md を書く)。§0 スコープ (actual⊆listed、asset-drift/dependency-drift と別検査) / §1 入力 / §2 純関数 DbC / §3 loader+messages / §4 doctor hard/fail-close / §5 段階導入 / §6 用語 / §7 carry。
 - 情報源: review-evidence.md (機能設計 doc の先例構造) + backfill-pairing.ts (lint 共通様式) + ADR-002 (drift lint 設計根拠)。
 
 ### Step 2: [直列] architecture §4.1 の carry plan_id 明示 (IMP-074)

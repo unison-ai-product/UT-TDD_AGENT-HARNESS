@@ -2,7 +2,7 @@
 /**
  * UT-TDD Agent Harness CLI (TypeScript core, ADR-001).
  * 薄い OS 別 entrypoint (scripts/ut-tdd, ut-tdd.ps1) が本 core を呼ぶ。
- * 現状は scaffold: status / doctor は最小実装、plan/vmodel lint は stub。
+ * status / doctor / plan lint / vmodel lint / gate / runtime adapter を集約する。
  */
 import { execSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -12,6 +12,7 @@ import { catalogAutomationAssets } from "./assets/catalog";
 import { runDoctor } from "./doctor";
 import { computeSkillMetrics, emitFeedbackEvents } from "./feedback/engine";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
+import { evaluateStaticGate } from "./gate/static";
 import {
   checkHandoverBypass,
   checkHandoverDiscipline,
@@ -31,7 +32,7 @@ import {
   saveVerificationEvidence,
   verificationRecommendationMermaid,
 } from "./lint/verification-profile";
-import { lintPlan } from "./plan/lint";
+import { lintPlanWithGate } from "./plan/lint";
 import { type AdapterProvider, buildAdapterPlan } from "./runtime/adapter";
 import {
   nodeAgentSlotsDeps,
@@ -67,6 +68,7 @@ import { harnessDbStatus } from "./state-db/maintenance";
 import { rebuildHarnessDb } from "./state-db/projection-writer";
 import { loadTeamDefinition, validateTeamRun } from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
+import { buildCommandCatalog } from "./workflow/contracts";
 import { evaluateAutomationReadiness } from "./workflow/readiness";
 
 function gitBranch(): string | null {
@@ -506,8 +508,12 @@ const plan = program.command("plan").description("PLAN 操作");
 plan
   .command("lint [path]")
   .description("PLAN lint")
-  .action((path?: string) => {
-    const r = lintPlan(path);
+  .option(
+    "--gate <id>",
+    "run a named PLAN gate lint (schedule, governance/frontmatter, G1-trace, G3-trace)",
+  )
+  .action((path?: string, opts?: { gate?: string }) => {
+    const r = lintPlanWithGate(path, process.cwd(), opts?.gate);
     for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
   });
@@ -778,6 +784,89 @@ skill
     }
   });
 
+program
+  .command("review")
+  .description("prepare a deterministic review packet for the current worktree")
+  .option("--uncommitted", "review uncommitted git changes")
+  .option("--json", "JSON output")
+  .action((opts: { uncommitted?: boolean; json?: boolean }) => {
+    if (!opts.uncommitted) {
+      process.stderr.write(
+        "review requires --uncommitted for the current implementation surface\n",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    const changedFiles = loadChangedFiles(process.cwd());
+    const doctor = runDoctor();
+    const verification = recommendVerificationProfiles(changedFiles);
+    const output = {
+      scope: "uncommitted",
+      ok: doctor.ok,
+      changedFiles,
+      verificationRecommendations: verification.recommendations.map((r) => ({
+        profile: r.profile.id,
+        signals: r.signals,
+        command: r.profile.command,
+        defaultEnabled: r.profile.defaultEnabled,
+      })),
+      missingProfiles: verification.missingProfiles,
+      doctorMessages: doctor.messages,
+    };
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+    } else {
+      process.stdout.write(
+        `review uncommitted: ${doctor.ok ? "ok" : "failed"} changed=${changedFiles.length} recommendations=${output.verificationRecommendations.length}\n`,
+      );
+      for (const rec of output.verificationRecommendations) {
+        process.stdout.write(`  - ${rec.profile}: ${rec.signals.join(", ")} -> ${rec.command}\n`);
+      }
+      if (verification.missingProfiles.length > 0) {
+        process.stdout.write(
+          `missing/disabled profiles: ${verification.missingProfiles.join(", ")}\n`,
+        );
+      }
+    }
+    process.exitCode = doctor.ok ? 0 : 1;
+  });
+
+program
+  .command("cutover")
+  .description("prepare a non-destructive cutover / rollback plan")
+  .requiredOption("--to <target>", "target ref, environment, or release label")
+  .option("--from <source>", "source ref; defaults to current git HEAD when available")
+  .option("--dry-run", "emit plan only; required for current implementation surface")
+  .option("--json", "JSON output")
+  .action((opts: { to: string; from?: string; dryRun?: boolean; json?: boolean }) => {
+    const from = opts.from ?? gitHead() ?? "unknown";
+    const output = {
+      ok: Boolean(opts.dryRun),
+      mode: opts.dryRun ? "dry-run" : "requires-human-approval",
+      from,
+      to: opts.to,
+      checks: ["bun run src\\cli.ts doctor", "bun run src\\cli.ts db status --json"],
+      rollback:
+        from === "unknown" ? "record source ref before applying cutover" : `git switch ${from}`,
+      humanApprovalRequired: true,
+    };
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+    } else {
+      process.stdout.write(
+        `cutover ${from} -> ${opts.to}: ${output.mode} approval=${output.humanApprovalRequired}\n`,
+      );
+      for (const check of output.checks) process.stdout.write(`  - check: ${check}\n`);
+      process.stdout.write(`  - rollback: ${output.rollback}\n`);
+    }
+    if (!opts.dryRun) {
+      process.stderr.write(
+        "cutover apply is not implemented without explicit human-approved runbook\n",
+      );
+      process.exitCode = 1;
+    }
+  });
+
 const automation = program.command("automation").description("workflow automation readiness");
 automation
   .command("readiness")
@@ -957,6 +1046,30 @@ asset
     }
   });
 
+const builder = program.command("builder").description("command and workflow builder catalog");
+builder
+  .command("catalog")
+  .description("emit the implemented command-builder surface without mutating state")
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const commandDocs = [
+      { path: "src/cli.ts", command: "ut-tdd skill suggest", description: "skill recommendation" },
+      { path: "src/cli.ts", command: "ut-tdd review --uncommitted", description: "review packet" },
+      { path: "src/cli.ts", command: "ut-tdd cutover --to", description: "cutover dry-run" },
+      { path: "src/cli.ts", command: "ut-tdd asset catalog", description: "asset catalog" },
+      { path: "src/cli.ts", command: "ut-tdd builder catalog", description: "builder catalog" },
+    ];
+    const surface = commandDocs.map((doc) => doc.command);
+    const result = buildCommandCatalog({ command_docs: commandDocs, cli_surface: surface });
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      process.stdout.write(`builder catalog: ${result.commands.length} commands\n`);
+      for (const row of result.commands) process.stdout.write(`  - ${row.command}\n`);
+    }
+    process.exitCode = result.ok ? 0 : 1;
+  });
+
 const vmodel = program.command("vmodel").description("V-model trace");
 vmodel
   .command("lint [path]")
@@ -1062,12 +1175,13 @@ runtimeCommand("claude");
 
 program
   .command("gate <id>")
-  .description("mode-aware gate review-tier check")
+  .description("mode-aware gate review-tier and deterministic static checks")
   .option("--mode <mode>", "override execution mode for tests")
   .option("--review-kind <kind>", "cross_agent / intra_runtime_subagent / human")
   .option("--worker-model <model>", "worker provider/model id")
   .option("--reviewer-model <model>", "reviewer provider/model id")
   .option("--checklist <path>", "YAML checklist evidence for single-runtime review")
+  .option("--coverage-summary <path>", "coverage/coverage-summary.json evidence for G7")
   .option("--human-approved", "standalone human approval evidence")
   .option("--json", "JSON output")
   .action(
@@ -1079,24 +1193,50 @@ program
         workerModel?: string;
         reviewerModel?: string;
         checklist?: string;
+        coverageSummary?: string;
         humanApproved?: boolean;
         json?: boolean;
       },
     ) => {
       const mode = opts.mode ?? detectMode().mode;
-      const result = evaluateGateReview({
+      let checklist = null;
+      const checklistMessages: string[] = [];
+      try {
+        checklist = loadReviewChecklistIfPresent(opts.checklist);
+      } catch (e) {
+        checklistMessages.push(
+          `review checklist - violation: could not load checklist (${String(e)})`,
+        );
+      }
+      const review = evaluateGateReview({
         gate: id,
         mode,
         reviewKind: opts.reviewKind,
         workerModel: opts.workerModel,
         reviewerModel: opts.reviewerModel,
-        checklist: loadReviewChecklistIfPresent(opts.checklist),
+        checklist,
         humanApproved: Boolean(opts.humanApproved),
       });
+      if (checklistMessages.length > 0) {
+        review.passed = false;
+        review.messages.push(...checklistMessages);
+      }
+      const staticGate = evaluateStaticGate({
+        gate: id,
+        repoRoot: process.cwd(),
+        coverageSummaryPath: opts.coverageSummary,
+      });
+      const result = {
+        ...review,
+        passed: review.passed && staticGate.passed,
+        review,
+        static_gate: staticGate,
+        messages: [...review.messages, ...staticGate.messages],
+      };
       if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
       else {
         process.stdout.write(
-          `gate ${id}: ${result.passed ? "passed" : "failed"} mode=${result.mode} review=${result.review_kind ?? "-"} cross_agent_review=${result.cross_agent_review}\n`,
+          `gate ${id}: ${result.passed ? "passed" : "failed"} mode=${result.mode} review=${result.review_kind ?? "-"} cross_agent_review=${result.cross_agent_review} static=${staticGate.applicable ? (staticGate.passed ? "passed" : "failed") : "n-a"}\n`,
         );
         for (const m of result.messages) process.stdout.write(`  - ${m}\n`);
       }

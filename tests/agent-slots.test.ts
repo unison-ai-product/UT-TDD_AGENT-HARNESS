@@ -12,6 +12,7 @@ import {
   recordGuardFire,
   releaseOldestGuardSlot,
   releaseSlot,
+  resolveRosterCapability,
   type Slot,
   sweepStaleGuardSlots,
 } from "../src/runtime/agent-slots";
@@ -253,5 +254,46 @@ describe("U-SLOT-006 recordGuardFire", () => {
     expect(r.activeCount).toBe(1);
     const slots = loadSlots(deps);
     expect(slots.find((s) => s.agent_kind === "old")?.status).toBe("cancelled");
+  });
+});
+
+describe("U-FR-L1-46 resolveRosterCapability", () => {
+  it("role/capability の完全一致から model_class と evidence を返す", () => {
+    const result = resolveRosterCapability({
+      role: "TL",
+      requested_capability: "gate-review",
+      slot_source: "team_runner",
+      roster_snapshot: [
+        {
+          role: "tl",
+          capability: ["gate-review", "design-freeze"],
+          model_class: "frontier",
+          slot_source: "team_runner",
+          evidence_path: ".claude/agents/pdm-tech-innovation.md",
+        },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    expect(result.capability).toBe("gate-review");
+    expect(result.model_class).toBe("frontier");
+    expect(result.evidence_path).toBe(".claude/agents/pdm-tech-innovation.md");
+  });
+
+  it("未登録 capability は捏造せず missing-capability finding を返す", () => {
+    const result = resolveRosterCapability({
+      role: "qa",
+      requested_capability: "payment-review",
+      roster_snapshot: [{ role: "qa", capability: "test-design", model_class: "codex" }],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.capability).toBeUndefined();
+    expect(result.findings).toEqual([
+      {
+        code: "missing-capability",
+        severity: "error",
+        message: "qa cannot resolve payment-review",
+        evidence_path: "",
+      },
+    ]);
   });
 });

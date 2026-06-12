@@ -24,9 +24,9 @@ agent_slots:
     slot_label: "QA - U-TOOLADAPTER oracle"
 generates:
   - artifact_path: src/lint/tool-adapter.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/tool-adapter.test.ts
-    artifact_type: test
+    artifact_type: test_code
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 dependencies:
   parent: docs/plans/PLAN-L6-33-tool-adapter-probes.md

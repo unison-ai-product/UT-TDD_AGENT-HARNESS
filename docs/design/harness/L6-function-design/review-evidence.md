@@ -18,7 +18,7 @@ plan: docs/plans/PLAN-L6-12-review-evidence.md
 
 ## §0 スコープ
 
-**review 前置 MUST の機械強制**。review 前置 (CLAUDE.md / requirements §7.8.7 / concept §2.1.2.1) は doc-only で src に強制が無く (grep 0 / plan lint=stub / doctor 非検査)、freeze (status→confirmed) / commit が review 証跡ゼロで素通りした (harness が柱 2「doc×機械厳格化」を自分のレビュー規律で破る under-design、IMP-071)。concept §2.1.2.1 は「review 記録が無ければ gate exit 1」と機械ゲート設計済だが未実装だった。本設計は **design/impl 系 PLAN が confirmed (gate/freeze 到達) なのに `review_evidence` を持たない**ことを doctor が surface する純関数 lint を定義する (既定 warn-first、実 repo back-fill 完了後に hard 化)。
+**review 前置 MUST の機械強制**。review 前置 (CLAUDE.md / requirements §7.8.7 / concept §2.1.2.1) は doc-only で src に強制が無く (grep 0 / plan lint=stub / doctor 非検査)、freeze (status→confirmed) / commit が review 証跡ゼロで素通りした (harness が柱 2「doc×機械厳格化」を自分のレビュー規律で破る under-design、IMP-071)。concept §2.1.2.1 は「review 記録が無ければ gate exit 1」と機械ゲート設計済だが未実装だった。本設計は **design/impl 系 PLAN が confirmed (gate/freeze 到達) なのに `review_evidence` を持たない**ことを doctor が surface する純関数 lint を定義する (既定 hard-gate、実 repo back-fill 完了後に hard 化)。
 
 **スコープ外**: review の中身の質判定 (人間/agent の責務)。本 lint は「review 前置が記録されたか」の presence のみを機械保証する。
 
@@ -57,11 +57,11 @@ analyzeReviewEvidence(plans: ParsedReviewPlan[]) -> { missing, ok }
 
 ## §4 doctor 配線 (hard 判定、2026-06-05 昇格済)
 
-`checkReviewEvidence(repoRoot)` を `runDoctor` に **hard 判定** (ok=false → `runDoctor.ok` 連動で fail-close) で配線。I/O 失敗は note で skip (doctor 堅牢性、ok=true で fail-open)。backfill/scrum-reverse/propagation と同じ hard 群。**当初は warn-first で投入し、実 repo 履歴 back-fill 完了 (missing 0 安定) を確認後に hard 昇格** (backfill/scrum-reverse と同じ昇格パス)。
+`checkReviewEvidence(repoRoot)` を `runDoctor` に **hard 判定** (ok=false → `runDoctor.ok` 連動で fail-close) で配線。I/O 失敗も violation として ok=false を返す。backfill/scrum-reverse/propagation と同じ hard 群。
 
-## §5 段階導入の経緯 (warn-first → hard、完了)
+## §5 段階導入の経緯 (hard、完了)
 
-- **warn-first (初期投入)**: 既存 confirmed design/impl PLAN の多くが review_evidence 未記録 (history)。doctor が件数 surface、CI は green 維持。back-fill は段階 (各 freeze の audit/handover に review 記録は存在、構造化は incremental)。
+- **初期投入**: 既存 confirmed design/impl PLAN の多くが review_evidence 未記録 (history)。doctor が件数 surface、CI は green 維持。back-fill は段階 (各 freeze の audit/handover に review 記録は存在、構造化は incremental)。
 - **hard 化 (2026-06-05、完了)**: 履歴 15 件を back-fill (missing 29→0。実在 review 記録のみ転記、未記録 2 件は code-reviewer 事後 review、truncate 2 件は scope 明記の honest 記録) → `runDoctor.ok` に連動 + CI fail-close (U-REVIEW-006 実 repo ガードを `missing==[]` へ昇格)。これで **新規 design/impl PLAN の review-skip freeze が機械で止まる状態が完成**。
 
 ## §6 既存 lint との非重複
@@ -74,4 +74,4 @@ analyzeReviewEvidence(plans: ParsedReviewPlan[]) -> { missing, ok }
 > back-fill (missing 0) と hard 化は 2026-06-05 完了 (§4/§5 に反映済)。残 carry:
 
 - freeze 後増分追補の review (本事故の核) を確実に append させる運用補助 (将来 hook 候補) — 未着手。
-- (review 由来) backfill-pairing の `checkBackfill` comment="warn-first" vs 実挙動=hard の不整合 (code-reviewer Important #3、別 feature) / `normalizeTerm` 単体テスト追加 — IMP carry。
+- (review 由来) backfill-pairing の `checkBackfill` comment と実挙動の不整合は解消済み。`normalizeTerm` 単体テスト追加は別 IMP carry。

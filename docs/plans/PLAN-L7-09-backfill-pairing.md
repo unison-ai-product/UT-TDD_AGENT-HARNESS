@@ -10,7 +10,7 @@ updated: 2026-06-04
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl
-    slot_label: "TL — analyzeBackfill 純関数 / parseRequires・parseGlossaryTerms の regex (/m と $ の罠) / normalizeTerm 表記ゆれ吸収 / doctor warn-first 配線 / 実 repo 回帰ガードのレビュー (claude-only は code-reviewer 代替)"
+    slot_label: "TL — analyzeBackfill 純関数 / parseRequires・parseGlossaryTerms の regex (/m と $ の罠) / normalizeTerm 表記ゆれ吸収 / doctor hard/fail-close 配線 / 実 repo 回帰ガードのレビュー (claude-only は code-reviewer 代替)"
   - role: qa
     slot_label: "QA — U-BACKFILL-001〜006 がパース・マトリクス・孤児検出・glossary gap・実 repo 完全性を被覆 / archived 除外 / conditional は ok を落とさない oracle"
 generates:
@@ -42,14 +42,14 @@ review_evidence:
 
 ## §0 位置づけ
 
-`PLAN-L6-08-backfill-pairing` (add-design ①③) の実装。U-BACKFILL を ④ 先行 (Red) → `src/lint/backfill-pairing.ts` (②) Green → doctor 配線 (warn-first)。**本機構自身が「Reverse 無き impl」を検知するため、本 PLAN は `PLAN-REVERSE-07` から requires され back-fill 完全性を満たす (ドグフード)**。
+`PLAN-L6-08-backfill-pairing` (add-design ①③) の実装。U-BACKFILL を ④ 先行 (Red) → `src/lint/backfill-pairing.ts` (②) Green → doctor 配線 (hard/fail-close)。**本機構自身が「Reverse 無き impl」を検知するため、本 PLAN は `PLAN-REVERSE-07` から requires され back-fill 完全性を満たす (ドグフード)**。
 
 - 親: `PLAN-L6-08-backfill-pairing` (drive=fullstack 一致)。
 
 ## §1 実装する契約
 
 - `src/lint/backfill-pairing.ts`: `KIND_BACKFILL` / `parseRequires` / `parseGlossaryTerms` / `normalizeTerm` / `parsePlan` / `analyzeBackfill` / `loadBackfillDocs` / `backfillMessages` (純関数 + loader 分離、fr-registry-audit 同方針)。
-- `src/doctor/index.ts`: `checkBackfill(repoRoot)` を runDoctor に配線 (warn-first、I/O 失敗は note で飲む)。
+- `src/doctor/index.ts`: `checkBackfillResult(repoRoot)` を runDoctor に hard/fail-close 配線 (I/O 失敗は violation)。
 
 ## §工程表
 
@@ -63,7 +63,7 @@ review_evidence:
 checkBackfill を runDoctor へ。実 repo で検出された孤児 (REVERSE-02 が L7-01 未 requires) と glossary gap を解消。**直列理由: downstream_dependency + shared_state** (analyze API 依存 + 既存 PLAN/glossary を修正)。
 
 ### Step 4: [並列] review Step (self / code-reviewer)
-regex の罠 (/m と $)・表記ゆれ吸収・warn-first・実 repo 完全性を review (claude-only = code-reviewer 代替)。
+regex の罠 (/m と $)・表記ゆれ吸収・hard/fail-close・実 repo 完全性を review (claude-only = code-reviewer 代替)。
 
 ### Step 5: [直列] 回帰 + 用語更新
 typecheck 0 / biome CLEAN / `npx vitest run` 全 pass / §6 用語更新。**直列理由: downstream_dependency**。
@@ -75,7 +75,7 @@ typecheck 0 / biome CLEAN / `npx vitest run` 全 pass / §6 用語更新。**直
 | analyze/parse 関数 | 設計 doc backfill-pairing.md (L6-08) |
 | /m と $ の罠 (section が空になる) | 実装時に発見・修正 (parseGlossaryTerms) |
 | 実 repo 孤児 (REVERSE-02 未 requires L7-01) | 実 repo 回帰ガードが検出 → 構造修正 |
-| doctor warn-first 配線 | 既存資料 (checkHandover/checkAgentSlots パターン) |
+| doctor hard/fail-close 配線 | 既存資料 (checkBackfillResult / runDoctor.ok パターン) |
 
 ## §6 用語更新
 

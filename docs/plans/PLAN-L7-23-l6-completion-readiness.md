@@ -15,11 +15,11 @@ agent_slots:
     slot_label: "QA - L6 completion readiness unit oracle"
 generates:
   - artifact_path: src/lint/l6-completion.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/l6-completion.test.ts
-    artifact_type: test
+    artifact_type: test_code
   - artifact_path: src/doctor/index.ts
-    artifact_type: source
+    artifact_type: source_module
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 dependencies:
   parent: docs/plans/PLAN-L6-22-l6-completion-readiness.md
@@ -39,7 +39,7 @@ review_evidence:
 
 ## §0 Position
 
-Implements PLAN-L6-22 as a warn-only doctor surface. Hard-fail promotion is deferred until the L6 artifacts are ready for G6 freeze.
+Implements PLAN-L6-22 as a hard/fail-close doctor surface. L6 readiness now gates `runDoctor.ok`.
 
 ## §3.1 実装計画（情報源）
 
@@ -65,7 +65,7 @@ Implements PLAN-L6-22 as a warn-only doctor surface. Hard-fail promotion is defe
 
 Synthetic fixture で not-ready / ready の両方を検証する。
 
-### Step 3: [直列] doctor warn-only 配線
+### Step 3: [直列] doctor hard/fail-close 配線
 
 直列理由: shared_state。doctor の aggregate message surface を変更するため、既存 doctor tests と整合確認が必要。
 
@@ -75,7 +75,7 @@ Synthetic fixture で not-ready / ready の両方を検証する。
 
 ## §6 用語更新
 
-- **L6 completion readiness lint**: G6 前の L6 完了条件を doctor に明示する warn-only lint。
+- **L6 completion readiness lint**: G6 前の L6 完了条件を doctor に明示する hard/fail-close lint。
 
 ## §8 DoD
 

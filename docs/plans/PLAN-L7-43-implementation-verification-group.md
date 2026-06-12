@@ -22,13 +22,13 @@ agent_slots:
     slot_label: "TL - implementation verification group close"
 generates:
   - artifact_path: src/vmodel/lint.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/vmodel-pair.test.ts
-    artifact_type: test
+    artifact_type: test_code
   - artifact_path: docs/design/harness/L3-functional/roadmap.md
     artifact_type: design_doc
   - artifact_path: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
-    artifact_type: governance_doc
+    artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md

@@ -165,7 +165,7 @@ export function loadPairDocs(repoRoot: string = process.cwd()): PairDoc[] {
   return docs;
 }
 
-/** doctor / CLI 向けの 1 行サマリ群 (warn-first、ok は呼び出し側で参照)。 */
+/** doctor / CLI 向けの 1 行サマリ群 (ok は呼び出し側で gate 判定に使う)。 */
 export function pairFreezeMessages(result: PairFreezeResult): string[] {
   if (result.orphans.length === 0) {
     return [`pair-freeze — OK (design⇔test-design 双方向 ${result.pairs} pair、孤児 0)`];

@@ -4,7 +4,7 @@
  * 背景: Add-feature 等の bottom-up 駆動で実装 (②) した後、上位設計/governance への Reverse 合流 +
  * §6 用語更新の L0 §10 用語集 back-merge を agent 記憶に頼ると漏れる (本 harness 開発で実証)。
  * V-model pair 完全性 ([[feedback_vmodel_state_db_completeness]]) を impl⇔Reverse / impl⇔glossary へ拡張し、
- * 「Reverse 無き impl」「glossary 未 merge な PLAN」を機械が surface する (既定 warn-first、fail-close 化は段階)。
+ * 「Reverse 無き impl」「glossary 未 merge な PLAN」を機械が surface する (既定 fail-close、fail-close 化は段階)。
  *
  * 純関数 (analyze*) + I/O loader を分離 (fr-registry-audit / doc-consistency と同方針)。
  */
@@ -158,7 +158,7 @@ export function loadBackfillDocs(repoRoot: string = process.cwd()): BackfillDocs
   return { plans, glossaryText };
 }
 
-/** doctor / CLI 向けの 1 行サマリ群を返す (warn-first、ok は呼び出し側で参照)。 */
+/** doctor / CLI 向けの 1 行サマリ群を返す (fail-close、ok は呼び出し側で参照)。 */
 export function backfillMessages(result: BackfillResult): string[] {
   const msgs: string[] = [];
   if (result.reverseOrphans.length > 0) {

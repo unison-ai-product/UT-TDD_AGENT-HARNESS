@@ -148,11 +148,11 @@ code-reviewer) で、roadmap 構造 (gate 順序 / span 実在予定 / IT pairin
 
 ## §4 DoD
 
-- [ ] `roadmap:` block が roadmapSchema validate を通り、`validateRoadmapStructure` issue 0。
-- [ ] doctor `roadmap` が本工程表を G-L7DB.A〜D / 5 span で surface (span 実在 = child 起票後)。
-- [ ] 5 child span PLAN (L7-45〜49) が起票され、各 L8 IT に pair 接続。
-- [ ] 命名テスト (`tests/plan-id-naming.test.ts`) + 全回帰 green。
-- [ ] review 前置 evidence を frontmatter `review_evidence` に記録。
+- [x] `roadmap:` block が roadmapSchema validate を通り、`validateRoadmapStructure` issue 0。
+- [x] doctor `roadmap` が本工程表を G-L7DB.A〜D / 5 span で surface (span 実在 = child 起票後)。
+- [x] 5 child span PLAN (L7-45〜49) が起票され、各 L8 IT に pair 接続。
+- [x] 命名テスト (`tests/plan-id-naming.test.ts`) + 全回帰 green。
+- [x] review 前置 evidence を frontmatter `review_evidence` に記録。
 
 ## §5 Related PLAN / docs
 

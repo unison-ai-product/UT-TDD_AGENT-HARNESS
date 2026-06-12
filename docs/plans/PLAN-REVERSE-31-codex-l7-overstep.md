@@ -3,11 +3,15 @@ plan_id: PLAN-REVERSE-31-codex-l7-overstep
 title: "PLAN-REVERSE-31 (reverse): Codex L7 overstep recovery fullback"
 kind: reverse
 layer: cross
+workflow_phase: R4
+confirmed_reverse_type: fullback
 drive: fullstack
 status: confirmed
 created: 2026-06-09
 updated: 2026-06-09
 owner: Codex TL / PO
+forward_routing: L5
+promotion_strategy: reuse-as-is
 agent_slots:
   - role: tl
     slot_label: "TL - Recovery fullback"
@@ -15,11 +19,11 @@ generates:
   - artifact_path: docs/plans/PLAN-REVERSE-31-codex-l7-overstep.md
     artifact_type: markdown_doc
   - artifact_path: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
-    artifact_type: requirements_doc
+    artifact_type: markdown_doc
   - artifact_path: docs/improvement-backlog.md
-    artifact_type: backlog
+    artifact_type: markdown_doc
   - artifact_path: docs/process/modes/recovery.md
-    artifact_type: process_doc
+    artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-RECOVERY-03-codex-l7-overstep.md
   requires:

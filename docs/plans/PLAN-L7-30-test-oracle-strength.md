@@ -15,9 +15,9 @@ agent_slots:
     slot_label: "QA - test oracle strength"
 generates:
   - artifact_path: src/lint/ddd-tdd-rules.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/ddd-tdd-rules.test.ts
-    artifact_type: test
+    artifact_type: test_code
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 dependencies:
   parent: docs/plans/PLAN-L6-29-test-oracle-strength.md

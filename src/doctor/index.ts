@@ -1,7 +1,7 @@
 /**
  * 統合検証 doctor (requirements_v1.2 §7 / §7.8.5)。
  * 多数の検出器 (back-fill / review-evidence / asset-drift / cycle-p4-verification / roadmap 等) を集約し、
- * hard 判定群を runDoctor.ok に連動させて fail-close する。warn-first 群は ok を落とさず surface のみ。
+ * gate 判定群を runDoctor.ok に連動させて fail-close する。handover / agent-slots / verification-profile は surface のみ。
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -32,11 +32,23 @@ import {
 import { analyzeDddTddRules, dddTddRulesMessages, loadDddTddInputs } from "../lint/ddd-tdd-rules";
 import {
   analyzeDependencyDrift,
+  type DependencyDriftResult,
   dependencyDriftMessages,
   expandRegressionScope,
   loadDependencyDriftInput,
   regressionExpansionMessages,
 } from "../lint/dependency-drift";
+import {
+  analyzeDescentObligations,
+  descentObligationMessages,
+  loadDeferLedger,
+  loadDescentAdjacency,
+  loadTraceKeyedArtifacts,
+} from "../lint/descent-obligation";
+import {
+  analyzeDriveDbRegistration,
+  driveDbRegistrationMessages,
+} from "../lint/drive-db-registration";
 import {
   analyzeDriveModelPassage,
   driveModelPassageMessages,
@@ -64,12 +76,23 @@ import {
   l6FrCoverageMessages,
   loadL6FrCoverageDocs,
 } from "../lint/l6-fr-coverage";
+import {
+  analyzeL7Completion,
+  l7CompletionMessages,
+  loadL7CompletionDocs,
+} from "../lint/l7-completion";
 import { analyzeModuleDrift, loadModuleDocs, moduleDriftMessages } from "../lint/module-drift";
 import {
   analyzeOracleTestTrace,
   loadOracleTestTraceInput,
   oracleTestTraceMessages,
 } from "../lint/oracle-test-trace";
+import {
+  analyzePlaceholderDeps,
+  loadPlaceholderDepsDocs,
+  placeholderDepsMessages,
+} from "../lint/placeholder-deps";
+import { analyzePlanDod, loadPlanDodDocs, planDodMessages } from "../lint/plan-dod";
 import {
   analyzeProjectHooks,
   loadProjectHookDocs,
@@ -123,7 +146,7 @@ import {
   verificationRecommendationMessages,
 } from "../lint/verification-profile";
 import type { LintResult } from "../plan/lint";
-import { lintPlan } from "../plan/lint";
+import { lintPlan, lintPlanWithGate } from "../plan/lint";
 import { SUBAGENT_ALLOWLIST } from "../runtime/agent-guard";
 import {
   type AgentSlotsDeps,
@@ -134,6 +157,7 @@ import {
   peakParallel,
 } from "../runtime/agent-slots";
 import { detectMode } from "../runtime/detect";
+import { loadDriveDbRegistrationStats } from "../state-db/drive-registration";
 import {
   analyzePairFreeze,
   analyzeVerificationGroups,
@@ -209,9 +233,8 @@ export function checkAgentSlots(deps: AgentSlotsDeps): string {
 }
 
 /**
- * 駆動モデルの back-fill 完全性 (impl⇔Reverse / impl⇔glossary) を surface (IMP-051、warning-first)。
- * Reverse 無き impl / §6 用語の glossary 未 merge を warn する。doctor.ok は落とさない (fail-close 化は段階)。
- * I/O 失敗は飲んで note を返す (doctor の堅牢性維持)。
+ * 駆動モデルの back-fill 完全性 (impl⇔Reverse / impl⇔glossary) を検査 (IMP-051、hard)。
+ * Reverse 無き impl / §6 用語の glossary 未 merge を violation にして doctor.ok に連動する。
  */
 export function checkBackfillResult(repoRoot: string): { messages: string[]; ok: boolean } {
   try {
@@ -219,8 +242,7 @@ export function checkBackfillResult(repoRoot: string): { messages: string[]; ok:
     const r = analyzeBackfill(docs.plans, docs.glossaryText);
     return { messages: backfillMessages(r), ok: r.ok };
   } catch {
-    // 読めない (docs 不在等) → 検査 skip。doctor.ok は落とさない (note のみ)。
-    return { messages: ["backfill — note: PLAN/glossary を読めず検査 skip"], ok: true };
+    return { messages: ["backfill - violation: PLAN/glossary could not be read"], ok: false };
   }
 }
 
@@ -232,43 +254,54 @@ export function checkBackfill(repoRoot: string): string[] {
 /**
  * PoC confirmed ⇔ Reverse 合流の整合を surface (IMP-064、hard fail)。
  * confirmed poc (redesign 除く) の Reverse 孤児 / reverse が confirmed でない poc を参照 → ok=false。
- * I/O 失敗は skip (doctor.ok を落とさない)。
+ * I/O 失敗も violation にして fail-close する。
  */
 export function checkScrumReverse(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["scrum-reverse - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeScrumReverse(loadSrPlans(repoRoot));
     return { messages: scrumReverseMessages(r), ok: r.ok };
   } catch {
-    return { messages: ["scrum-reverse — note: PLAN を読めず検査 skip"], ok: true };
+    return { messages: ["scrum-reverse - violation: PLAN could not be read"], ok: false };
   }
 }
 
 /**
  * concept §2.6 ⇔ requirements §7.8.1 の signal 語彙伝播を surface (IMP-065、hard fail)。
  * 上位正本 (concept) と機械 routing SSoT (requirements) の signal 集合が乖離 → ok=false。
- * I/O 失敗は skip (doctor.ok を落とさない)。
+ * I/O 失敗も violation にして fail-close する。
  */
 export function checkPropagation(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["propagation - violation: repo root could not be read"], ok: false };
+  }
   try {
     const d = loadPropagationDocs(repoRoot);
     const r = analyzePropagation(d.conceptText, d.requirementsText);
     return { messages: propagationMessages(r), ok: r.ok };
   } catch {
-    return { messages: ["propagation — note: governance doc を読めず検査 skip"], ok: true };
+    return { messages: ["propagation - violation: governance docs could not be read"], ok: false };
   }
 }
 
 /**
- * 設計層 pair freeze (design⇔test-design の pair_artifact 双方向・孤児0) を surface (IMP-067、warn-first)。
- * 孤児 (pair-missing/ref-unresolved/trace-orphan) を warn する。doctor.ok は落とさない (初期投入、hard 化は段階)。
- * I/O 失敗は skip (doctor の堅牢性維持)。
+ * 設計層 pair freeze (design⇔test-design の pair_artifact 双方向・孤児0) を検査 (IMP-067、hard)。
+ * 孤児 (pair-missing/ref-unresolved/trace-orphan) を violation にして doctor.ok に連動する。
  */
 export function checkPairFreeze(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["pair-freeze - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzePairFreeze(loadPairDocs(repoRoot));
     return { messages: pairFreezeMessages(r), ok: r.ok };
   } catch {
-    return { messages: ["pair-freeze — note: design/test-design doc を読めず検査 skip"], ok: true };
+    return {
+      messages: ["pair-freeze - violation: design/test-design docs could not be read"],
+      ok: false,
+    };
   }
 }
 
@@ -276,33 +309,44 @@ export function checkPairFreeze(repoRoot: string): { messages: string[]; ok: boo
  * review 前置証跡 (review_evidence) の完全性を検査 (IMP-071、hard 判定)。
  * confirmed/completed の design/impl/add-* PLAN が review_evidence を持たない (review 前置スキップ) を検知する。
  * **hard 判定** (ok=false → runDoctor.ok 連動で fail-close、IMP-071 hard 化 2026-06-05)。実 repo 履歴 15 件の
- * back-fill 完了 (missing 0 安定) を確認してから warn-first → hard へ昇格した。review-skip の silent 化を機械で塞ぐ。
- * I/O 失敗は skip (doctor の堅牢性維持、ok=true で fail-open)。
+ * back-fill 完了 (missing 0 安定) を確認してから hard へ昇格した。review-skip の silent 化を機械で塞ぐ。
+ * I/O 失敗も violation にして fail-close する。
  */
 export function checkReviewEvidence(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["review-evidence - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeReviewEvidence(loadReviewPlans(repoRoot));
     return { messages: reviewEvidenceMessages(r), ok: r.ok };
   } catch {
-    return { messages: ["review-evidence — note: PLAN を読めず検査 skip"], ok: true };
+    return { messages: ["review-evidence - violation: PLAN could not be read"], ok: false };
   }
 }
 
 /**
- * architecture §3.1 設計 module 集合 ⊇ src/ 実在 module を検査 (IMP-075、warn-first)。
- * 実在するが設計 doc 未列挙 (= impl→design back-fill 漏れ、A-103 で手動発見した meta-drift) を warn する。
- * doctor.ok は落とさない (初期投入、hard 化は実 repo green 安定後)。I/O 失敗は skip (堅牢性維持)。
+ * architecture §3.1 設計 module 集合 ⊇ src/ 実在 module を検査 (IMP-075、hard)。
+ * 実在するが設計 doc 未列挙 (= impl→design back-fill 漏れ) を violation にして doctor.ok に連動する。
  */
 export function checkModuleDrift(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["module-drift - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeModuleDrift(loadModuleDocs(repoRoot));
     return { messages: moduleDriftMessages(r), ok: r.ok };
   } catch {
-    return { messages: ["module-drift — note: architecture.md / src を読めず検査 skip"], ok: true };
+    return {
+      messages: ["module-drift - violation: architecture/src modules could not be read"],
+      ok: false,
+    };
   }
 }
 
 export function checkAssetDrift(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["asset-drift - violation: repo root could not be read"], ok: false };
+  }
   try {
     const input = loadAssetDriftInput(repoRoot);
     input.allowlist = [...SUBAGENT_ALLOWLIST].sort();
@@ -317,6 +361,9 @@ export function checkAssetDrift(repoRoot: string): { messages: string[]; ok: boo
 }
 
 export function checkSkillAssignment(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["skill-assignment - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeSkillAssignments(loadSkillAssignmentDocs(repoRoot));
     return { messages: skillAssignmentMessages(r), ok: r.ok };
@@ -328,12 +375,34 @@ export function checkSkillAssignment(repoRoot: string): { messages: string[]; ok
   }
 }
 
+export function checkDescentObligation(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["descent-obligation - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeDescentObligations(
+      loadTraceKeyedArtifacts(repoRoot),
+      loadDescentAdjacency(repoRoot),
+      loadDeferLedger(repoRoot),
+    );
+    return { messages: descentObligationMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["descent-obligation - violation: descent obligation ledger could not be read"],
+      ok: false,
+    };
+  }
+}
+
 export function checkChangeImpact(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["change-impact - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeChangeImpact({ changedFiles: loadChangedFiles(repoRoot) });
     return { messages: changeImpactMessages(r), ok: r.ok };
   } catch {
-    return { messages: ["change-impact — note: git status を読めず検査 skip"], ok: true };
+    return { messages: ["change-impact - violation: git status could not be read"], ok: false };
   }
 }
 
@@ -361,7 +430,7 @@ export function checkVerificationProfile(repoRoot: string): { messages: string[]
 
 export function checkCodingRules(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
-    return { messages: ["coding-rules — note: repo root を読めず検査 skip"], ok: true };
+    return { messages: ["coding-rules - violation: repo root could not be read"], ok: false };
   }
   try {
     const r = analyzeCodingRules(
@@ -377,7 +446,7 @@ export function checkCodingRules(repoRoot: string): { messages: string[]; ok: bo
 
 export function checkDddTddRules(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
-    return { messages: ["ddd-tdd-rules - note: repo root could not be read; skipped"], ok: true };
+    return { messages: ["ddd-tdd-rules - violation: repo root could not be read"], ok: false };
   }
   try {
     const r = analyzeDddTddRules(loadDddTddInputs(repoRoot));
@@ -391,86 +460,198 @@ export function checkDddTddRules(repoRoot: string): { messages: string[]; ok: bo
 }
 
 export function checkRuleDrift(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["rule-drift - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeRuleDrift(loadRuleAdapterDocs(repoRoot));
     return { messages: ruleDriftMessages(r), ok: r.ok };
   } catch {
-    return { messages: ["rule-drift — note: adapter rule docs を読めず検査 skip"], ok: true };
+    return { messages: ["rule-drift - violation: adapter rule docs could not be read"], ok: false };
   }
 }
 
 export function checkGateConfirm(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["gate-confirm - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeGateConfirm(loadGateConfirmDocs(repoRoot));
     return { messages: gateConfirmMessages(r), ok: r.ok };
   } catch {
     return {
-      messages: ["gate-confirm — note: gate-design/doc frontmatter を読めず検査 skip"],
-      ok: true,
+      messages: ["gate-confirm - violation: gate-design/doc frontmatter could not be read"],
+      ok: false,
     };
   }
 }
 
 export function checkPlanSchedule(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["plan-schedule - violation: repo root could not be read"], ok: false };
+  }
   try {
     return lintPlan(undefined, repoRoot);
   } catch {
-    return { messages: ["plan-schedule — note: PLAN を読めず検査 skip"], ok: true };
+    return { messages: ["plan-schedule - violation: PLAN schedule lint could not run"], ok: false };
+  }
+}
+
+export function checkPlanGovernance(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["plan-governance - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    return lintPlanWithGate(undefined, repoRoot, "governance");
+  } catch {
+    return {
+      messages: ["plan-governance - violation: PLAN governance lint could not run"],
+      ok: false,
+    };
+  }
+}
+
+export function checkPlanDod(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["plan-dod - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzePlanDod(loadPlanDodDocs(repoRoot));
+    return { messages: planDodMessages(r), ok: r.checked > 0 && r.ok };
+  } catch {
+    return { messages: ["plan-dod - violation: L7 PLAN DoD could not be read"], ok: false };
+  }
+}
+
+export function checkPlaceholderDeps(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["placeholder-deps - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzePlaceholderDeps(loadPlaceholderDepsDocs(repoRoot));
+    return { messages: placeholderDepsMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["placeholder-deps - violation: design/test-design docs could not be read"],
+      ok: false,
+    };
+  }
+}
+
+export function checkPlanTraceGate(
+  repoRoot: string,
+  gate: "G1-trace" | "G3-trace",
+): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: [`${gate.toLowerCase()} - violation: repo root could not be read`],
+      ok: false,
+    };
+  }
+  try {
+    return lintPlanWithGate(undefined, repoRoot, gate);
+  } catch {
+    return { messages: [`${gate.toLowerCase()} - violation: trace gate could not run`], ok: false };
   }
 }
 
 export function checkRuleAutomationClosure(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["rule-automation-closure - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
   try {
     const r = analyzeRuleAutomationClosure(loadRuleAutomationClosureDocs(repoRoot));
-    return { messages: ruleAutomationClosureMessages(r), ok: r.ok };
+    return { messages: ruleAutomationClosureMessages(r), ok: r.checked > 0 && r.ok };
   } catch {
     return {
-      messages: ["rule-automation-closure - note: closure table could not be read"],
-      ok: true,
+      messages: ["rule-automation-closure - violation: closure table could not be read"],
+      ok: false,
     };
   }
 }
 
 export function checkDriveModelPassage(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["drive-model-passage - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
   try {
     const r = analyzeDriveModelPassage(loadDriveModelPassageDocs(repoRoot));
-    return { messages: driveModelPassageMessages(r), ok: r.ok };
+    return { messages: driveModelPassageMessages(r), ok: r.checked > 0 && r.ok };
   } catch {
     return {
-      messages: ["drive-model-passage - note: passage certificate table could not be read"],
-      ok: true,
+      messages: ["drive-model-passage - violation: passage certificate table could not be read"],
+      ok: false,
+    };
+  }
+}
+
+export function checkDriveDbRegistration(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["drive-db-registration - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeDriveDbRegistration(loadDriveDbRegistrationStats(repoRoot));
+    return { messages: driveDbRegistrationMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["drive-db-registration - violation: harness.db registration could not be read"],
+      ok: false,
     };
   }
 }
 
 export function checkFrRoadmapCoverage(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["fr-roadmap-coverage - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
   try {
     const r = analyzeFrRoadmapCoverageWithRoot(loadFrRoadmapCoverageDocs(repoRoot), repoRoot);
-    return { messages: frRoadmapCoverageMessages(r), ok: r.ok };
+    return { messages: frRoadmapCoverageMessages(r), ok: r.checked > 0 && r.ok };
   } catch {
     return {
-      messages: ["fr-roadmap-coverage - note: residual bucket table could not be read"],
-      ok: true,
+      messages: ["fr-roadmap-coverage - violation: residual bucket table could not be read"],
+      ok: false,
     };
   }
 }
 
 export function checkTelemetryClosure(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["telemetry-closure - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeTelemetryClosure(loadTelemetryClosureDocs(repoRoot));
-    return { messages: telemetryClosureMessages(r), ok: r.ok };
+    return { messages: telemetryClosureMessages(r), ok: r.checked > 0 && r.ok };
   } catch {
     return {
-      messages: ["telemetry-closure - note: telemetry closure matrix could not be read"],
-      ok: true,
+      messages: ["telemetry-closure - violation: telemetry closure matrix could not be read"],
+      ok: false,
     };
   }
 }
 
 export function checkCycleP4Verification(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["cycle-p4-verification - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
   try {
     const r = analyzeCycleP4Verification(loadCycleP4VerificationDocs(repoRoot), repoRoot);
-    return { messages: cycleP4VerificationMessages(r), ok: r.ok };
+    return { messages: cycleP4VerificationMessages(r), ok: r.checked > 0 && r.ok };
   } catch {
     return {
       messages: ["cycle-p4-verification - violation: Cycle P4 closure audit could not be read"],
@@ -480,6 +661,9 @@ export function checkCycleP4Verification(repoRoot: string): { messages: string[]
 }
 
 export function checkProjectHooks(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["project-hook - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeProjectHooks(loadProjectHookDocs(repoRoot));
     return { messages: projectHookMessages(r), ok: r.ok };
@@ -493,7 +677,7 @@ export function checkProjectHooks(repoRoot: string): { messages: string[]; ok: b
 
 export function checkL6FrCoverage(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
-    return { messages: ["l6-fr-coverage — note: repo root を読めず検査 skip"], ok: true };
+    return { messages: ["l6-fr-coverage - violation: repo root could not be read"], ok: false };
   }
   try {
     const r = analyzeL6FrCoverage(loadL6FrCoverageDocs(repoRoot));
@@ -504,99 +688,118 @@ export function checkL6FrCoverage(repoRoot: string): { messages: string[]; ok: b
 }
 
 export function checkReadability(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["readability - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeReadability(loadFreezeReadabilityDocs(repoRoot));
-    return { messages: readabilityMessages(r), ok: r.ok };
+    return { messages: readabilityMessages(r), ok: r.checked > 0 && r.ok };
   } catch {
     return { messages: ["readability — ⚠ freeze review docs を読めない"], ok: false };
   }
 }
 
-/**
- * V-model 層群の Forward freeze 完了 (検証サイクル発火タイミング) を surface (IMP-068、note)。
- * 層群が freeze 完了 → 検証発火可 / Forward 進行中。検証ロードマップの「いつ検証するか」を
- * V-model 構造 (層群 freeze) で機械発火させる全体調整。doctor.ok は落とさない (タイミング surface)。
- */
+/** V-model 層群の Forward freeze 完了 (検証サイクル発火タイミング) を hard gate として検査する。 */
 export function checkL6Completion(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!canLoadL6CompletionInputs(repoRoot)) {
-    return { messages: ["l6-completion — note: L6 completion inputs を読めず検査 skip"], ok: true };
+    return {
+      messages: ["l6-completion - violation: L6 completion inputs could not be read"],
+      ok: false,
+    };
   }
   try {
     const r = analyzeL6Completion(loadL6CompletionInputs(repoRoot));
-    return { messages: l6CompletionMessages(r), ok: true };
+    return { messages: l6CompletionMessages(r), ok: r.ready };
   } catch {
     return {
-      messages: ["l6-completion — note: L6 completion readiness を読めず検査 skip"],
-      ok: true,
+      messages: ["l6-completion - violation: L6 completion readiness could not be read"],
+      ok: false,
     };
   }
 }
 
-/**
- * impl→PLAN トレーサビリティ (src ⊆ PLAN generates ∪ baseline) を surface (IMP-088、warn-first)。
- * NEW orphan (PLAN 無き新規 src) を warn する。doctor.ok は落とさない (module-drift と同じ段階導入)
- * が、CI 回帰網 (U-IPT-004 = 実 repo orphan 0) が vitest で fail-close する。I/O 失敗は skip。
- */
+export function checkL7Completion(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["l7-completion - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeL7Completion(loadL7CompletionDocs(repoRoot));
+    return { messages: l7CompletionMessages(r), ok: r.checked > 0 && r.ok };
+  } catch {
+    return {
+      messages: ["l7-completion - violation: active L4-L6 design docs could not be read"],
+      ok: false,
+    };
+  }
+}
+
+/** impl→PLAN トレーサビリティ (src ⊆ PLAN generates ∪ baseline) を hard gate として検査する。 */
 export function checkImplPlanTrace(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["impl-plan-trace - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeImplPlanTrace(loadImplPlanTraceInput(repoRoot));
-    return { messages: implPlanTraceMessages(r), ok: true };
+    return { messages: implPlanTraceMessages(r), ok: r.ok };
   } catch {
-    return { messages: ["impl-plan-trace — note: src/PLAN を読めず検査 skip"], ok: true };
+    return {
+      messages: ["impl-plan-trace - violation: src/PLAN trace could not be read"],
+      ok: false,
+    };
   }
 }
 
-/**
- * git tracked top-level ⊆ repository-structure.md canonical の突合を surface (IMP-127、warn-first)。
- * canonical 未記載の tracked top-level を warn。CI 回帰網 (U-TCAN-004 = drift 0) が fail-close。
- */
+/** git tracked top-level ⊆ repository-structure.md canonical の突合を hard gate として検査する。 */
 export function checkTrackedCanonical(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["tracked-canonical - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeTrackedCanonical(loadTrackedCanonicalInput(repoRoot));
-    return { messages: trackedCanonicalMessages(r), ok: true };
+    return { messages: trackedCanonicalMessages(r), ok: r.ok };
   } catch {
     return {
-      messages: ["tracked-canonical — note: git/repository-structure を読めず検査 skip"],
-      ok: true,
+      messages: ["tracked-canonical - violation: git/repository-structure could not be read"],
+      ok: false,
     };
   }
 }
 
-/**
- * oracle 宣言 ⇔ 実テスト citation の突合を surface (IMP-128、warn-first)。
- * NEW oracle (baseline 外で未 citation) を warn。CI 回帰網 (U-OTT-004 = 実 repo orphan 0) が fail-close。
- */
+/** oracle 宣言 ⇔ 実テスト citation の突合を hard gate として検査する。 */
 export function checkOracleTestTrace(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["oracle-test-trace - violation: repo root could not be read"], ok: false };
+  }
   try {
     const r = analyzeOracleTestTrace(loadOracleTestTraceInput(repoRoot));
-    return { messages: oracleTestTraceMessages(r), ok: true };
+    return { messages: oracleTestTraceMessages(r), ok: r.ok };
   } catch {
     return {
-      messages: ["oracle-test-trace — note: test-design/tests を読めず検査 skip"],
-      ok: true,
+      messages: ["oracle-test-trace - violation: test-design/tests could not be read"],
+      ok: false,
     };
   }
 }
 
-/**
- * 工程表 (登録 roadmap) の span 実在 + 層内ゲート進捗を surface (PLAN-DISCOVERY-05 spike、warn-first)。
- * spike 段階のため ok 連動しない (S4 confirmed + 本実装後に孤児 span を hard 化する想定)。
- */
+/** 工程表 (登録 roadmap) の span 実在 + 層内ゲート進捗を hard gate として検査する。 */
 export function checkRoadmap(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["roadmap - violation: repo root could not be read"], ok: false };
+  }
   try {
     const records = loadRoadmaps(repoRoot);
-    // 全プログラム被覆 (program coverage): 登録工程表が forward 全バンドを被覆するか (warn-first、
-    // PLAN-RECOVERY-04 工程表定義 = 人間向け全プログラム台帳)。登録 0 でも全バンド未登録として surface。
+    // 全プログラム被覆 (program coverage): 登録工程表が forward 全バンドを被覆するか。
+    // PLAN-RECOVERY-04 工程表定義 = 人間向け全プログラム台帳。登録 0 は hard violation。
     const coverageMessages = programCoverageMessages(
       analyzeProgramCoverage(records, new Set(PARKED_BANDS.keys())),
     );
     if (records.length === 0) {
       return {
         messages: [
-          "roadmap — note: 登録工程表なし (master-hub roadmap block 未使用)",
+          "roadmap - violation: 登録工程表なし (master-hub roadmap block 未使用)",
           ...coverageMessages,
         ],
-        ok: true,
+        ok: false,
       };
     }
     // I-1: 各 PLAN を 1 回だけ読み id→status を構築 (二重 readFile 解消)。
@@ -612,8 +815,10 @@ export function checkRoadmap(repoRoot: string): { messages: string[]; ok: boolea
       }
     }
     const messages: string[] = [];
+    let issueCount = 0;
     for (const rec of records) {
       const spanIssues = checkSpanExistence(rec.roadmap, known);
+      issueCount += spanIssues.length + rec.errors.length;
       const progress = computeGateProgress(rec.roadmap, (id) => statusMap.get(id) ?? null);
       const reached = progress.filter((g) => g.reached).length;
       messages.push(
@@ -636,9 +841,62 @@ export function checkRoadmap(repoRoot: string): { messages: string[]; ok: boolea
       `roadmap-rollup — bands ${rollup.coveredBands}/${rollup.totalBands} covered (park ${rollup.parkedBands}, uncovered ${rollup.uncoveredBands}) / gates ${rollup.reachedGates}/${rollup.totalGates} reached / spans ${rollup.confirmedSpans}/${rollup.totalSpans} / frontier: ${rollup.frontier.length ? rollup.frontier.join(", ") : "なし"}`,
     );
     messages.push(...coverageMessages);
-    return { messages, ok: true };
+    const coverageOk =
+      analyzeProgramCoverage(records, new Set(PARKED_BANDS.keys())).uncovered.length === 0;
+    return { messages, ok: issueCount === 0 && coverageOk };
   } catch {
-    return { messages: ["roadmap — note: 工程表を読めず検査 skip"], ok: true };
+    return { messages: ["roadmap - violation: 工程表を読めず検査できない"], ok: false };
+  }
+}
+
+export function checkDependencyDrift(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+  result: DependencyDriftResult | null;
+} {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["dependency-drift - violation: repo root could not be read"],
+      ok: false,
+      result: null,
+    };
+  }
+  try {
+    const result = analyzeDependencyDrift(loadDependencyDriftInput(repoRoot));
+    return { messages: dependencyDriftMessages(result), ok: result.ok, result };
+  } catch {
+    return {
+      messages: ["dependency-drift - violation: dependency graph could not be read"],
+      ok: false,
+      result: null,
+    };
+  }
+}
+
+export function checkRegressionExpansion(
+  repoRoot: string,
+  drift: DependencyDriftResult | null,
+): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["regression-expansion - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  if (drift == null) {
+    return {
+      messages: ["regression-expansion - violation: dependency drift result is unavailable"],
+      ok: false,
+    };
+  }
+  try {
+    const result = expandRegressionScope(drift, loadChangedFilesForDoctor(repoRoot));
+    return { messages: regressionExpansionMessages(result), ok: result.ok };
+  } catch {
+    return {
+      messages: ["regression-expansion - violation: regression scope could not be expanded"],
+      ok: false,
+    };
   }
 }
 
@@ -686,83 +944,86 @@ export function nodeDoctorDeps(repoRoot: string): DoctorDeps {
 // CLI entrypoint は process.cwd() = repoRoot を想定 (deps 未指定時)。test は deps 注入で固定。
 export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): LintResult {
   const d = detectMode();
-  // back-fill / scrum-reverse / propagation / review-evidence は hard 判定 (orphan/gap/review-skip → ok=false で fail-close)。
-  // handover / agent-slots / pair-freeze は warn-only (鮮度/運用 surface であり ok を落とさない)。
+  // handover / agent-slots / verification-profile は surface。gate 判定群は runDoctor.ok に連動して fail-close。
   const backfill = checkBackfillResult(deps.repoRoot);
   const scrumRev = checkScrumReverse(deps.repoRoot);
   const propagation = checkPropagation(deps.repoRoot);
-  // review-evidence は hard 判定 (review 前置スキップ → ok=false で fail-close、IMP-071 hard 化 2026-06-05)。
   const reviewEvidence = checkReviewEvidence(deps.repoRoot);
-  // pair-freeze は warn-first (初期投入、ok 連動しない。hard 化は実 repo green 安定後)。
   const pairFreeze = checkPairFreeze(deps.repoRoot);
-  // module-drift は warn-first (impl→design back-fill 漏れ surface、IMP-075。hard 化は段階)。
   const moduleDrift = checkModuleDrift(deps.repoRoot);
   const assetDrift = checkAssetDrift(deps.repoRoot);
   const skillAssignment = checkSkillAssignment(deps.repoRoot);
+  const descentObligation = checkDescentObligation(deps.repoRoot);
   const changeImpact = checkChangeImpact(deps.repoRoot);
-  // verification-profile は warn-first (推奨 surface のみ。外部 profile 実行が PLAN-L7-33 で配線されるまで
+  // verification-profile は surface-only (推奨表示のみ。外部 profile 実行が PLAN-L7-33 で配線されるまで
   // ok 連動させない — 推奨の見落としは review で拾う段階、A-128 F-5 / IMP-130(e))。
   const verificationProfile = checkVerificationProfile(deps.repoRoot);
   const codingRules = checkCodingRules(deps.repoRoot);
   const dddTddRules = checkDddTddRules(deps.repoRoot);
   const ruleDrift = checkRuleDrift(deps.repoRoot);
-  // gate-confirm and plan-schedule are intentionally warn-first during rollout.
-  // Their messages surface policy drift, but runDoctor.ok hardening is a later gate switch.
   const gateConfirm = checkGateConfirm(deps.repoRoot);
   const planSchedule = checkPlanSchedule(deps.repoRoot);
-  // rule-automation-closure / drive-model-passage / telemetry-closure は warn-first。
-  // これらは audit doc の matrix 構造・owner・status を surface する meta-check であり、実体の substance
-  // (nonzero telemetry 行・driveモデル通過・rule⇔automation 対) は別の hard gate / CI 回帰で fail-close する:
-  //   - telemetry nonzero 行: tests/projection-writer.test.ts (db rebuild 後 > 0 を assert)
-  //   - cycle-p4 / fr-roadmap / skill-assignment: 下記 hard gate (runDoctor.ok 連動)
-  // ゆえに matrix 自体は warn 段階に留め、誤 fail で doc 整形作業を止めない。hard 化は matrix 安定後に切替。
+  const planGovernance = checkPlanGovernance(deps.repoRoot);
+  const planDod = checkPlanDod(deps.repoRoot);
+  const placeholderDeps = checkPlaceholderDeps(deps.repoRoot);
+  const g1Trace = checkPlanTraceGate(deps.repoRoot, "G1-trace");
+  const g3Trace = checkPlanTraceGate(deps.repoRoot, "G3-trace");
   const ruleAutomationClosure = checkRuleAutomationClosure(deps.repoRoot);
   const driveModelPassage = checkDriveModelPassage(deps.repoRoot);
+  const driveDbRegistration = checkDriveDbRegistration(deps.repoRoot);
   const frRoadmapCoverage = checkFrRoadmapCoverage(deps.repoRoot);
   const telemetryClosure = checkTelemetryClosure(deps.repoRoot);
   const cycleP4Verification = checkCycleP4Verification(deps.repoRoot);
   const projectHooks = checkProjectHooks(deps.repoRoot);
   const l6FrCoverage = checkL6FrCoverage(deps.repoRoot);
   const readability = checkReadability(deps.repoRoot);
-  // l6-completion は warn-first (G6 PASS 後の運用観察期間。誤 fail で post-G6 作業を止めないため
-  // ok 連動は安定確認後に切替 — A-128 F-5 / IMP-130(e))。
   const l6Completion = checkL6Completion(deps.repoRoot);
-  // roadmap は warn-first (PLAN-DISCOVERY-05 spike。登録工程表の gate 進捗/孤児 span surface のみ、
-  // ok 連動は S4 confirmed + 本実装後に切替)。
+  const l7Completion = checkL7Completion(deps.repoRoot);
   const roadmap = checkRoadmap(deps.repoRoot);
-  // impl-plan-trace は warn-first (IMP-088、module-drift と同じ段階導入。NEW orphan surface、
-  // hard 化は baseline 縮小安定後。CI 回帰網 U-IPT-004 が実 repo orphan 0 を fail-close)。
   const implPlanTrace = checkImplPlanTrace(deps.repoRoot);
-  // oracle-test-trace は warn-first (IMP-128。NEW oracle 未 citation surface、
-  // CI 回帰網 U-OTT-004 が実 repo orphan 0 を fail-close。既存 89 は baseline)。
   const oracleTestTrace = checkOracleTestTrace(deps.repoRoot);
-  // tracked-canonical は warn-first (IMP-127。canonical 未記載 tracked top-level surface、
-  // CI 回帰網 U-TCAN-004 が drift 0 を fail-close)。
   const trackedCanonical = checkTrackedCanonical(deps.repoRoot);
   const verificationGroups = checkVerificationGroupsResult(deps.repoRoot);
-  const dependencyDrift = analyzeDependencyDrift(loadDependencyDriftInput(deps.repoRoot));
-  const regressionExpansion = expandRegressionScope(
-    dependencyDrift,
-    loadChangedFilesForDoctor(deps.repoRoot),
-  );
+  const dependencyDrift = checkDependencyDrift(deps.repoRoot);
+  const regressionExpansion = checkRegressionExpansion(deps.repoRoot, dependencyDrift.result);
   return {
     ok:
       backfill.ok &&
       scrumRev.ok &&
       propagation.ok &&
       reviewEvidence.ok &&
+      pairFreeze.ok &&
+      moduleDrift.ok &&
       assetDrift.ok &&
       skillAssignment.ok &&
+      descentObligation.ok &&
       changeImpact.ok &&
       codingRules.ok &&
       dddTddRules.ok &&
       ruleDrift.ok &&
+      gateConfirm.ok &&
+      planSchedule.ok &&
+      planGovernance.ok &&
+      planDod.ok &&
+      placeholderDeps.ok &&
+      g1Trace.ok &&
+      g3Trace.ok &&
+      ruleAutomationClosure.ok &&
+      driveModelPassage.ok &&
+      driveDbRegistration.ok &&
       frRoadmapCoverage.ok &&
+      telemetryClosure.ok &&
       cycleP4Verification.ok &&
       l6FrCoverage.ok &&
       readability.ok &&
       projectHooks.ok &&
+      l6Completion.ok &&
+      l7Completion.ok &&
       verificationGroups.ok &&
+      roadmap.ok &&
+      implPlanTrace.ok &&
+      oracleTestTrace.ok &&
+      trackedCanonical.ok &&
       dependencyDrift.ok &&
       regressionExpansion.ok,
     messages: [
@@ -777,6 +1038,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...moduleDrift.messages.map((m) => `doctor: ${m}`),
       ...assetDrift.messages.map((m) => `doctor: ${m}`),
       ...skillAssignment.messages.map((m) => `doctor: ${m}`),
+      ...descentObligation.messages.map((m) => `doctor: ${m}`),
       ...changeImpact.messages.map((m) => `doctor: ${m}`),
       ...verificationProfile.messages.map((m) => `doctor: ${m}`),
       ...codingRules.messages.map((m) => `doctor: ${m}`),
@@ -784,8 +1046,14 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...ruleDrift.messages.map((m) => `doctor: ${m}`),
       ...gateConfirm.messages.map((m) => `doctor: ${m}`),
       ...planSchedule.messages.map((m) => `doctor: ${m}`),
+      ...planGovernance.messages.map((m) => `doctor: ${m}`),
+      ...planDod.messages.map((m) => `doctor: ${m}`),
+      ...placeholderDeps.messages.map((m) => `doctor: ${m}`),
+      ...g1Trace.messages.map((m) => `doctor: ${m}`),
+      ...g3Trace.messages.map((m) => `doctor: ${m}`),
       ...ruleAutomationClosure.messages.map((m) => `doctor: ${m}`),
       ...driveModelPassage.messages.map((m) => `doctor: ${m}`),
+      ...driveDbRegistration.messages.map((m) => `doctor: ${m}`),
       ...frRoadmapCoverage.messages.map((m) => `doctor: ${m}`),
       ...telemetryClosure.messages.map((m) => `doctor: ${m}`),
       ...cycleP4Verification.messages.map((m) => `doctor: ${m}`),
@@ -793,14 +1061,15 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...l6FrCoverage.messages.map((m) => `doctor: ${m}`),
       ...readability.messages.map((m) => `doctor: ${m}`),
       ...l6Completion.messages.map((m) => `doctor: ${m}`),
+      ...l7Completion.messages.map((m) => `doctor: ${m}`),
       ...reviewEvidence.messages.map((m) => `doctor: ${m}`),
       ...verificationGroups.messages.map((m) => `doctor: ${m}`),
       ...roadmap.messages.map((m) => `doctor: ${m}`),
       ...implPlanTrace.messages.map((m) => `doctor: ${m}`),
       ...oracleTestTrace.messages.map((m) => `doctor: ${m}`),
       ...trackedCanonical.messages.map((m) => `doctor: ${m}`),
-      ...dependencyDriftMessages(dependencyDrift).map((m) => `doctor: ${m}`),
-      ...regressionExpansionMessages(regressionExpansion).map((m) => `doctor: ${m}`),
+      ...dependencyDrift.messages.map((m) => `doctor: ${m}`),
+      ...regressionExpansion.messages.map((m) => `doctor: ${m}`),
     ],
   };
 }

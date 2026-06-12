@@ -10,7 +10,7 @@ status: confirmed
 created: 2026-06-09
 updated: 2026-06-09
 owner: Codex TL / PO
-forward_routing: L6
+forward_routing: L5
 promotion_strategy: reuse-as-is
 agent_slots:
   - role: tl

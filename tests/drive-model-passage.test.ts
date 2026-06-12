@@ -48,6 +48,13 @@ describe("drive-model passage lint", () => {
     });
   });
 
+  it("U-DMP-002b: reports missing passage certificate docs as a violation", () => {
+    const r = analyzeDriveModelPassage([]);
+
+    expect(r.checked).toBe(0);
+    expect(driveModelPassageMessages(r)[0]).toContain("violation");
+  });
+
   it("U-DMP-003: current reconciliation PLAN has all passage certificate modes", () => {
     const docs = loadDriveModelPassageDocs(process.cwd());
     const r = analyzeDriveModelPassage(docs);

@@ -4,9 +4,15 @@ title: "PLAN-L7-48: harness.db automation-readiness + guardrail-ledger"
 kind: impl
 layer: L7
 drive: db
+parent_design: docs/design/harness/L6-function-design/function-spec.md
 status: completed
 created: 2026-06-11
 updated: 2026-06-11
+agent_slots:
+  - role: tl
+    slot_label: 'TL - automation readiness and guardrail ledger review'
+  - role: qa
+    slot_label: 'QA - readiness and guardrail evidence review'
 review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
@@ -18,11 +24,11 @@ review_evidence:
     scope: "readiness/guardrail span: missing evidence blocks readiness, human-required is not downgraded, self-review/missing signoff becomes guardrail finding."
 generates:
   - artifact_path: src/workflow/readiness.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: src/guardrail/ledger.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/readiness-guardrail.test.ts
-    artifact_type: test
+    artifact_type: test_code
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 next_pair_freeze: L8
 dependencies:

@@ -99,7 +99,7 @@ function analyzePairFreeze(docs):
 ## §6 実 repo ガード方針
 
 - `tests/vmodel-pair.test.ts` で **実 repo 完全性回帰** (`analyzePairFreeze(loadPairDocs()) ⇒ orphans == []`) を CI vitest ベクトルに乗せ fail-close。
-- `runDoctor` に `checkPairFreeze` を **warn-first** で配線 (初期投入。hard-fail 昇格は実 repo green 確認後に別 Step or 後続)。
+- `runDoctor` に `checkPairFreeze` を **hard/fail-close** で配線 (`pairFreeze.ok` を `runDoctor.ok` に連動)。
 - 純関数 + 実 repo ガードのみ。新 hook 不要 (governance-enforcement / backfill-pairing と同方式)。
 
 ## §7 検証タイミングの機械発火 (IMP-068、PLAN-L6-11 / L7-12)
@@ -123,7 +123,7 @@ function analyzePairFreeze(docs):
 | `loadPairDocs` (§1 拡張) | `(root?) => PairDoc[]` | `status` フィールドを追加で読む |
 | `analyzeVerificationGroups` | `(docs, orphans) => GroupReadiness[]` | 層群ごとに confirmed/draft/placeholder/孤児を集計 + frozen 判定 (純関数) |
 | `verificationGroupMessages` | `(groups) => string[]` | freeze 完了 (park 表示) / Forward 進行中 の surface |
-| doctor `checkVerificationGroups` | `(repoRoot) => string[]` | note レベル surface (doctor.ok 非連動) |
+| doctor `checkVerificationGroups` | `(repoRoot) => string[]` | hard/fail-close surface (`verificationGroups.ok` は doctor.ok 連動) |
 
 ### §7.3.1 FR test-perspective alias
 

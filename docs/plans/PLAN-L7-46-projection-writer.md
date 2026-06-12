@@ -4,6 +4,7 @@ title: "PLAN-L7-46: harness.db projection-writer (record + rebuild projections)"
 kind: impl
 layer: L7
 drive: db
+parent_design: docs/design/harness/L6-function-design/function-spec.md
 status: confirmed
 created: 2026-06-11
 updated: 2026-06-11
@@ -24,9 +25,9 @@ agent_slots:
     slot_label: "QA — IT-DB-01/02 (projection + join) の観点レビュー"
 generates:
   - artifact_path: src/state-db/projection-writer.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/projection-writer.test.ts
-    artifact_type: test
+    artifact_type: test_code
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 next_pair_freeze: L8
 dependencies:
@@ -88,10 +89,10 @@ source 非改変 / idempotency / secret 非格納 / 未解消 join = finding を
 
 ## §4 DoD
 
-- [ ] IT-DB-01/02 green。
-- [ ] rebuild deterministic、idempotent upsert、source 非改変。
-- [ ] 既存 graph/export/MCP 出力が対応 table へ射影される。
-- [ ] 全回帰 + doctor green、review 前置 evidence。
+- [x] IT-DB-01/02 green。
+- [x] rebuild deterministic、idempotent upsert、source 非改変。
+- [x] 既存 graph/export/MCP 出力が対応 table へ射影される。
+- [x] 全回帰 + doctor green、review 前置 evidence。
 
 ## §6 用語更新
 

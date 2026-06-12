@@ -30,7 +30,10 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
 
   it("github_issue_id は optional・正の整数のみ (§6.8.2 Issue スパイン)", () => {
     expect(frontmatterSchema.safeParse(implBase()).success).toBe(true); // 省略可
+    const defaulted = frontmatterSchema.safeParse(implBase({ status: undefined }));
+    expect(defaulted.success && defaulted.data.status === "draft").toBe(true);
     expect(frontmatterSchema.safeParse(implBase({ github_issue_id: 42 })).success).toBe(true);
+    expect(frontmatterSchema.safeParse(implBase({ github_issue_id: null })).success).toBe(true);
     expect(frontmatterSchema.safeParse(implBase({ github_issue_id: 0 })).success).toBe(false);
     expect(frontmatterSchema.safeParse(implBase({ github_issue_id: -1 })).success).toBe(false);
     expect(frontmatterSchema.safeParse(implBase({ github_issue_id: "42" })).success).toBe(false);
@@ -65,6 +68,28 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
   it("normal kind に workflow_phase は禁止 (§1.1)", () => {
     const r = frontmatterSchema.safeParse(implBase({ workflow_phase: "S2" }));
     expect(r.success).toBe(false);
+  });
+
+  it("kind=design + L1-L6 requires layer-scoped sub_doc", () => {
+    const designBase = implBase({
+      plan_id: "PLAN-L4-99-design-subdoc",
+      kind: "design",
+      layer: "L4",
+      parent_design: undefined,
+      sub_doc: "function",
+      generates: [
+        {
+          artifact_path: "docs/design/harness/L4-basic-design/function.md",
+          artifact_type: "design_doc",
+        },
+      ],
+    });
+
+    expect(frontmatterSchema.safeParse(designBase).success).toBe(true);
+    expect(frontmatterSchema.safeParse({ ...designBase, sub_doc: undefined }).success).toBe(false);
+    expect(frontmatterSchema.safeParse({ ...designBase, sub_doc: "wireframe" }).success).toBe(
+      false,
+    );
   });
 
   it("poc は layer=cross + workflow_phase 必須、S4 は decision_outcome 必須 (§1.1)", () => {
@@ -181,5 +206,20 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
       implBase({ kind: "add-impl", dependencies: { parent: "PLAN-L7-05-frontmatter-schema" } }),
     );
     expect(ok.success).toBe(true);
+  });
+  it("kind=impl の master_hub は工程表ハブとして parent_design 不要", () => {
+    const r = frontmatterSchema.safeParse(
+      implBase({
+        parent_design: undefined,
+        master_hub: true,
+        generates: [
+          {
+            artifact_path: "docs/plans/PLAN-L7-05-frontmatter-schema.md",
+            artifact_type: "markdown_doc",
+          },
+        ],
+      }),
+    );
+    expect(r.success).toBe(true);
   });
 });

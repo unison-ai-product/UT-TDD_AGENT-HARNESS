@@ -93,7 +93,7 @@ export function analyzeModuleDrift(docs: ModuleDocs): ModuleDriftResult {
   };
 }
 
-/** doctor 用 message 整形 (warn-first)。 */
+/** doctor 用 message 整形 (fail-close)。 */
 export function moduleDriftMessages(r: ModuleDriftResult): string[] {
   if (r.orphans.length > 0) {
     return [

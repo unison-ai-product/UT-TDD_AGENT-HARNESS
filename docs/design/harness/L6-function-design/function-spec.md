@@ -143,40 +143,40 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `planDraft` | `PlanDraftInput { title; kind; layer; sub_doc?; generates[] } -> PlanDraftResult extends ContractResult { path; plan_id }` | implemented pseudocode §2.1 |
 | `sprintCheck` | `SprintCheckInput { target; redEvidence; greenEvidence } -> SprintCheckResult extends ContractResult { ordered }` | implemented pseudocode §2.4 |
 | `frontmatterSchema` | `unknown -> Frontmatter` | implemented zod parse; pseudocode = validate schema, return typed frontmatter or throw |
-| `parseRequires` | `ParseRequiresInput { frontmatterText; planPath } -> ParseRequiresResult extends ContractResult { requires[] }` | explicit_l7_defer; parse list fields, normalize repo paths, emit unresolved findings |
-| `recordProjectionEvent` | `RecordProjectionEventInput { event; source_path } -> RecordProjectionEventResult { ref: ProjectionRef }` | explicit_l7_defer; validate ID, upsert projection row, return ref |
-| `rebuildHarnessDb` | `RebuildHarnessDbInput { roots[]; truncate: true } -> RebuildHarnessDbResult extends ContractResult { rows_by_table; search_rows; signals }` | explicit_l7_defer; truncate projection, replay docs/state/logs, recompute `search_index` and `quality_signals` |
-| `recordTestRunEvidence` | `TestRunEvidenceInput { command; runner; scope; started_at; completed_at; exit_code; evidence_path; cases? } -> RecordTestRunEvidenceResult { refs[] }` | explicit_l7_defer; collect Bun/vitest/doctor/lint evidence into UT history projection, redact failure digests, never persist raw provider transcripts |
-| `evaluateGreenDefinition` | `GreenDefinitionInput { profile; required_commands[]; command_evidence[]; reviewed_at? } -> GreenDefinitionResult extends ContractResult { computed_green_at?; missing[]; non_green[] }` | explicit_l7_defer; fail when required commands are absent/non-zero or computed green time is after review time |
-| `computeUtHistorySignals` | `UtHistoryInput { plan_id?; window? } -> ComputeUtHistorySignalsResult { signals[] }` | explicit_l7_defer; compute oracle coverage, plan green rate, flake score, duration regression, and green-definition compliance |
-| `routeSignalToMode` | `RouteSignalToModeInput { signal; current_plan?; drive? } -> RouteSignalToModeResult extends ContractResult { candidates[] }` | explicit_l7_defer; classify signal, rank allowed modes, unknown signal becomes finding |
+| `parseRequires` | `ParseRequiresInput { frontmatterText; planPath } -> ParseRequiresResult extends ContractResult { requires[] }` | implemented in `analyzePlanGovernance`; parse list fields, normalize PLAN IDs/paths, emit unresolved and not-completed findings |
+| `recordProjectionEvent` | `RecordProjectionEventInput { event; source_path } -> RecordProjectionEventResult { ref: ProjectionRef }` | implemented in `src/state-db/projection-writer.ts`; validate ID, upsert projection row, return ref |
+| `rebuildHarnessDb` | `RebuildHarnessDbInput { roots[]; truncate: true } -> RebuildHarnessDbResult extends ContractResult { rows_by_table; search_rows; signals }` | implemented in `src/state-db/projection-writer.ts`; truncate projection, replay docs/state/logs, recompute `search_index` and `quality_signals` |
+| `recordTestRunEvidence` | `TestRunEvidenceInput { command; runner; scope; started_at; completed_at; exit_code; evidence_path; cases? } -> RecordTestRunEvidenceResult { refs[] }` | implemented in `src/workflow/contracts.ts`; collect Bun/vitest/doctor/lint evidence into UT history projection, redact failure digests, never persist raw provider transcripts |
+| `evaluateGreenDefinition` | `GreenDefinitionInput { profile; required_commands[]; command_evidence[]; reviewed_at? } -> GreenDefinitionResult extends ContractResult { computed_green_at?; missing[]; non_green[] }` | implemented in `src/workflow/contracts.ts`; fail when required commands are absent/non-zero or computed green time is after review time |
+| `computeUtHistorySignals` | `UtHistoryInput { plan_id?; window? } -> ComputeUtHistorySignalsResult { signals[] }` | implemented in `src/workflow/contracts.ts`; compute oracle coverage, plan green rate, flake score, duration regression, and green-definition compliance |
+| `routeSignalToMode` | `RouteSignalToModeInput { signal; current_plan?; drive? } -> RouteSignalToModeResult extends ContractResult { candidates[] }` | implemented in `src/workflow/contracts.ts`; classify signal, rank allowed modes, unknown signal becomes finding |
 | `evaluateAgentGuard` | `AgentGuardInput + AgentGuardContext -> GuardDecision` | implemented runtime guard; pseudocode = normalize model family, compare worker/reviewer boundaries, return allow/block |
-| `recordCrossCuttingEvent` | `RecordCrossCuttingEventInput { type; subject_id; severity; evidence_path } -> RecordCrossCuttingEventResult { ref: ProjectionRef }` | explicit_l7_defer; append projection event, never approve gates |
-| `suggestSkillInjection` | `SuggestSkillInjectionInput { task; layer; drive; catalog } -> SuggestSkillInjectionResult extends ContractResult { candidates[] }` | explicit_l7_defer; filter catalog, score triggers, return deterministic ranked skills |
-| `enforceForwardOrder` | `EnforceForwardOrderInput { layer; gate; prior_gates } -> EnforceForwardOrderResult extends ContractResult { allowed }` | explicit_l7_defer; require prior PASS or explicit exception evidence |
-| `routeReverseR4` | `RouteReverseR4Input { reverse_type; r4_evidence; forward_routing } -> RouteReverseR4Result extends ContractResult { target_plan? }` | explicit_l7_defer; validate confirmed reverse evidence before Forward merge |
-| `decideDiscoveryS4` | `DecideDiscoveryS4Input { hypothesis; poc_evidence; outcome } -> DecideDiscoveryS4Result extends ContractResult { decision }` | explicit_l7_defer; reject pivot/confirmed ambiguity and record routing |
-| `emitFeedbackEvents` | `EmitFeedbackEventsInput { findings; quality_signals } -> EmitFeedbackEventsResult { events[] }` | explicit_l7_defer; group repeated gaps/stalls/regressions, never edit PLANs |
-| `detectFrontendDrift` | `DetectFrontendDriftInput { mock_root?; token_root?; a11y?; vrt? } -> DetectFrontendDriftResult extends ContractResult { drift_signals[] }` | explicit_l7_defer; optional roots must be absent-by-contract, not silent pass |
-| `routeScrumFullback` | `RouteScrumFullbackInput { increment; s4_decision } -> RouteScrumFullbackResult extends ContractResult { forward_targets[] }` | explicit_l7_defer; confirmed increments only |
-| `assertRefactorInvariant` | `AssertRefactorInvariantInput { before; after; regression } -> AssertRefactorInvariantResult extends ContractResult { unchanged }` | explicit_l7_defer; compare behavior evidence and require green regression |
-| `evaluateRetrofitMatrix` | `EvaluateRetrofitMatrixInput { migration; config; rollback } -> EvaluateRetrofitMatrixResult extends ContractResult { readiness }` | explicit_l7_defer; fail when rollback evidence is missing |
-| `evaluateResearchDecision` | `EvaluateResearchDecisionInput { memo; sources; adr_candidate? } -> EvaluateResearchDecisionResult extends ContractResult { decision_ready }` | explicit_l7_defer; research cannot bypass ADR/requirement trace |
-| `mergeTwoStageAgentDesign` | `MergeTwoStageAgentDesignInput { phase1; phase2; handoff } -> MergeTwoStageAgentDesignResult extends ContractResult { merged? }` | explicit_l7_defer; preserve layer boundaries and redact provider transcript content |
-| `validateScreenDesignWorkflow` | `ValidateScreenDesignWorkflowInput { ia; screens; flow; wireframe; mock; components } -> ValidateScreenDesignWorkflowResult extends ContractResult { complete }` | explicit_l7_defer; backend-only evidence cannot complete screen design |
-| `validateFrontendDesignWorkflow` | `ValidateFrontendDesignWorkflowInput { visual; tokens; a11y; vrt; ux } -> ValidateFrontendDesignWorkflowResult extends ContractResult { complete }` | explicit_l7_defer; a11y/token/VRT are first-class evidence |
-| `validateFolderRules` | `ValidateFolderRulesInput { path; artifact_kind; registry } -> ValidateFolderRulesResult extends ContractResult { violations[] }` | explicit_l7_defer; check placement without rewriting files |
-| `catalogExistingAssets` | `CatalogExistingAssetsInput { roots: string[] } -> CatalogExistingAssetsResult extends ContractResult { assets: AssetCatalogEntry[] }` | explicit_l7_defer; catalog metadata only, no prompt bodies/secrets |
-| `prioritizeCapabilityGaps` | `PrioritizeCapabilityGapsInput { assets; workflow_impact; missing_routes } -> PrioritizeCapabilityGapsResult { priorities[] }` | explicit_l7_defer; priority is advisory until converted to PLAN |
-| `renderFoundationReadiness` | `RenderFoundationReadinessInput { categories[] } -> RenderFoundationReadinessResult extends ContractResult { implemented; designed; missing }` | explicit_l7_defer; missing categories cannot be reported implemented |
-| `recommendModelEffort` | `RecommendModelEffortInput { task; drive; layer; size; uncertainty } -> RecommendModelEffortResult { model_family; reasoning_effort; evidence_path }` | explicit_l7_defer; recommendation is recorded evidence, not hidden prompt state |
-| `scoreTaskComplexity` | `ScoreTaskComplexityInput { size; dependencies; uncertainty; affected_artifacts } -> ScoreTaskComplexityResult { score; class; findings[] }` | explicit_l7_defer; unknowns produce uncertainty, not low complexity |
-| `resolveDriveStatePartition` | `ResolveDriveStatePartitionInput { drive; mode; kind; layer; plan_id?; session_id? } -> ResolveDriveStatePartitionResult { partition_path; skip_sub_doc[] }` | explicit_l7_defer; drive state joins by plan/session and never contaminates other drives |
-| `classifyDrive` | `ClassifyDriveInput { plan; code_delta?; dependency_delta? } -> ClassifyDriveResult { drive; confidence; findings[] }` | explicit_l7_defer; low confidence requires finding/human confirmation |
-| `buildAdapterPlan` | `BuildAdapterPlanInput { provider; role; task; plan; execution_mode } -> BuildAdapterPlanResult extends ContractResult { command_plan; boundary_flags[] }` | explicit_l7_defer; provider boundary flags are preserved |
-| `catalogSkills` | `CatalogSkillsInput { skill_docs: SkillDocRef[] } -> CatalogSkillsResult extends ContractResult { skills: SkillCatalogEntry[] }` | explicit_l7_defer; metadata only, source docs remain SSoT |
-| `recommendSkills` | `RecommendSkillsInput { task; layer; drive; catalog } -> RecommendSkillsResult { recommendations[]; findings[] }` | explicit_l7_defer; missing metadata is a finding |
-| `buildCommandCatalog` | `BuildCommandCatalogInput { command_docs[]; cli_surface } -> BuildCommandCatalogResult extends ContractResult { commands[] }` | explicit_l7_defer; search rows are rebuildable projection |
+| `recordCrossCuttingEvent` | `RecordCrossCuttingEventInput { type; subject_id; severity; evidence_path } -> RecordCrossCuttingEventResult { ref: ProjectionRef }` | implemented in `src/workflow/contracts.ts`; append projection event, never approve gates |
+| `suggestSkillInjection` | `SuggestSkillInjectionInput { task; layer; drive; catalog } -> SuggestSkillInjectionResult extends ContractResult { candidates[] }` | implemented in `src/workflow/contracts.ts`; filter catalog, score triggers, return deterministic ranked skills |
+| `enforceForwardOrder` | `EnforceForwardOrderInput { layer; gate; prior_gates } -> EnforceForwardOrderResult extends ContractResult { allowed }` | implemented in `src/workflow/contracts.ts`; require prior PASS or explicit exception evidence |
+| `routeReverseR4` | `RouteReverseR4Input { reverse_type; r4_evidence; forward_routing } -> RouteReverseR4Result extends ContractResult { target_plan? }` | implemented in `src/workflow/contracts.ts`; validate confirmed reverse evidence before Forward merge |
+| `decideDiscoveryS4` | `DecideDiscoveryS4Input { hypothesis; poc_evidence; outcome } -> DecideDiscoveryS4Result extends ContractResult { decision }` | implemented in `src/workflow/contracts.ts`; reject pivot/confirmed ambiguity and record routing |
+| `emitFeedbackEvents` | `EmitFeedbackEventsInput { findings; quality_signals } -> EmitFeedbackEventsResult { events[] }` | implemented in `src/feedback/engine.ts`; group repeated gaps/stalls/regressions, never edit PLANs |
+| `detectFrontendDrift` | `DetectFrontendDriftInput { mock_root?; token_root?; a11y?; vrt? } -> DetectFrontendDriftResult extends ContractResult { drift_signals[] }` | implemented in `src/workflow/contracts.ts`; optional roots must be absent-by-contract, not silent pass |
+| `routeScrumFullback` | `RouteScrumFullbackInput { increment; s4_decision } -> RouteScrumFullbackResult extends ContractResult { forward_targets[] }` | implemented in `src/workflow/contracts.ts`; confirmed increments only |
+| `assertRefactorInvariant` | `AssertRefactorInvariantInput { before; after; regression } -> AssertRefactorInvariantResult extends ContractResult { unchanged }` | implemented in `src/workflow/contracts.ts`; compare behavior evidence and require green regression |
+| `evaluateRetrofitMatrix` | `EvaluateRetrofitMatrixInput { migration; config; rollback } -> EvaluateRetrofitMatrixResult extends ContractResult { readiness }` | implemented in `src/workflow/contracts.ts`; fail when rollback evidence is missing |
+| `evaluateResearchDecision` | `EvaluateResearchDecisionInput { memo; sources; adr_candidate? } -> EvaluateResearchDecisionResult extends ContractResult { decision_ready }` | implemented in `src/workflow/contracts.ts`; research cannot bypass ADR/requirement trace |
+| `mergeTwoStageAgentDesign` | `MergeTwoStageAgentDesignInput { phase1; phase2; handoff } -> MergeTwoStageAgentDesignResult extends ContractResult { merged? }` | implemented in `src/workflow/contracts.ts`; preserve layer boundaries and redact provider transcript content |
+| `validateScreenDesignWorkflow` | `ValidateScreenDesignWorkflowInput { ia; screens; flow; wireframe; mock; components } -> ValidateScreenDesignWorkflowResult extends ContractResult { complete }` | implemented in `src/workflow/contracts.ts`; backend-only evidence cannot complete screen design |
+| `validateFrontendDesignWorkflow` | `ValidateFrontendDesignWorkflowInput { visual; tokens; a11y; vrt; ux } -> ValidateFrontendDesignWorkflowResult extends ContractResult { complete }` | implemented in `src/workflow/contracts.ts`; a11y/token/VRT are first-class evidence |
+| `validateFolderRules` | `ValidateFolderRulesInput { path; artifact_kind; registry } -> ValidateFolderRulesResult extends ContractResult { violations[] }` | implemented in `src/workflow/contracts.ts`; check placement without rewriting files |
+| `catalogExistingAssets` | `CatalogExistingAssetsInput { roots: string[] } -> CatalogExistingAssetsResult extends ContractResult { assets: AssetCatalogEntry[] }` | implemented in `src/workflow/contracts.ts`; catalog metadata only, no prompt bodies/secrets |
+| `prioritizeCapabilityGaps` | `PrioritizeCapabilityGapsInput { assets; workflow_impact; missing_routes } -> PrioritizeCapabilityGapsResult { priorities[] }` | implemented in `src/workflow/contracts.ts`; priority is advisory until converted to PLAN |
+| `renderFoundationReadiness` | `RenderFoundationReadinessInput { categories[] } -> RenderFoundationReadinessResult extends ContractResult { implemented; designed; missing }` | implemented in `src/workflow/contracts.ts`; missing categories cannot be reported implemented |
+| `recommendModelEffort` | `RecommendModelEffortInput { task; drive; layer; size; uncertainty } -> RecommendModelEffortResult { model_family; reasoning_effort; evidence_path }` | implemented in `src/workflow/contracts.ts`; recommendation is recorded evidence, not hidden prompt state |
+| `scoreTaskComplexity` | `ScoreTaskComplexityInput { size; dependencies; uncertainty; affected_artifacts } -> ScoreTaskComplexityResult { score; class; findings[] }` | implemented in `src/workflow/contracts.ts`; unknowns produce uncertainty, not low complexity |
+| `resolveDriveStatePartition` | `ResolveDriveStatePartitionInput { drive; mode; kind; layer; plan_id?; session_id? } -> ResolveDriveStatePartitionResult { partition_path; skip_sub_doc[] }` | implemented in `src/workflow/contracts.ts`; drive state joins by plan/session and never contaminates other drives |
+| `classifyDrive` | `ClassifyDriveInput { plan; code_delta?; dependency_delta? } -> ClassifyDriveResult { drive; confidence; findings[] }` | implemented in `src/workflow/contracts.ts`; low confidence requires finding/human confirmation |
+| `buildAdapterPlan` | `BuildAdapterPlanInput { provider; role; task; plan; execution_mode } -> BuildAdapterPlanResult extends ContractResult { command_plan; boundary_flags[] }` | implemented in `src/runtime/adapter.ts`; provider boundary flags are preserved |
+| `catalogSkills` | `CatalogSkillsInput { skill_docs: SkillDocRef[] } -> CatalogSkillsResult extends ContractResult { skills: SkillCatalogEntry[] }` | implemented in `src/workflow/contracts.ts`; metadata only, source docs remain SSoT |
+| `recommendSkills` | `RecommendSkillsInput { task; layer; drive; catalog } -> RecommendSkillsResult { recommendations[]; findings[] }` | implemented in `src/workflow/contracts.ts`; missing metadata is a finding |
+| `buildCommandCatalog` | `BuildCommandCatalogInput { command_docs[]; cli_surface } -> BuildCommandCatalogResult extends ContractResult { commands[] }` | implemented in `src/workflow/contracts.ts`; search rows are rebuildable projection |
 
 ## 2026-06-09 L6 Completion Readiness Addendum
 
@@ -223,7 +223,7 @@ module-decomposition の公開 IF に**関数 signature・pseudocode・型・WBS
 | 関数 | signature | pre | post |
 |---|---|---|---|
 | `frontmatterSchema.parse` | `(data: unknown) => Frontmatter` | — | zod 妥当 or throw ZodError |
-| `lintPlan` | `(path?: string) => LintResult` | path 省略時カレント | `{ok, messages[]}`、state 不変 (read-only) |
+| `lintPlan` | `(path?: string, gate?: "schedule" \| "governance" \| "frontmatter" \| "G1-trace" \| "G3-trace") => LintResult` | path 省略時カレント | `{ok, messages[]}`、state 不変 (read-only)。schedule は最小強制、governance/frontmatter は PLAN frontmatter + cross-record strict、G1/G3 は trace gate |
 | `lintVmodel` | `(path?: string) => LintResult` | 同上 | 12 edge 照合、孤児で ok=false |
 | `runDoctor` | `() => LintResult` | detector/lint の読む doc 解決可 | 全 detector 集約、error≥1 で ok=false/exit 1 |
 
@@ -300,8 +300,8 @@ function sprintCheck(target):
 
 | 型 | 種別 | 定義 (実 src を正本) | carry |
 |---|---|---|---|
-| `SubDoc` | 値オブジェクト (zod enum) | §1.10.G.1 VALID_SUB_DOCS の層別 enum。値 = L1:[business,functional,screen,technical,nfr] / L2:[screen-list,screen-flow,wireframe,ui-element] / L3:[business-requirement,functional-requirement,nfr-grade] / L4:[architecture,function,screen,data,external-if] / L5:[internal-processing,module-decomposition,physical-data,if-detail] / L6:[function-spec,class-design,edge-case] | IMP-026 (L7 実装、未) |
-| `PlanId` | 値オブジェクト (zod regex) | **現行** = `src/schema/frontmatter.ts:28` `^(PLAN-\d{3}(-[a-z0-9-]+)?\|PLAN-MM-\d{3})$`。**IMP-004 で層別拡張予定** (`PLAN-L<N>-NN` 形式を許容、L7) | IMP-004 (L7、現行値が G6 凍結対象) |
+| `SubDoc` | 値オブジェクト (plan governance lint) | §1.10.G.1 VALID_SUB_DOCS の層別 enum。現行 `analyzePlanGovernance` が L1-L6 design PLAN の sub_doc 欠落 / 層外値 / duplicate layer+sub_doc / skip_sub_doc reason を検出 | implemented |
+| `PlanId` | 値オブジェクト (zod regex) | **現行** = `src/schema/frontmatter.ts` `PLAN-(L0..L14\|DISCOVERY\|REVERSE\|RECOVERY\|M)-NN-slug`。横断 token と kind の整合も `frontmatterSchema` で検証 | implemented |
 | `RuleType` | 判別共用体 (discriminated union) | `{ id: "pair-exists" \| "ref-resolves" \| "trace-bidir" \| "upstream-coverage" \| "count-matches" \| "id-format" \| "dup-id" \| "glossary-delta" \| "dependency-drift" \| "backlog-format" }` (discriminant = `id`、§4) | IMP-033 (L6 本 doc §4) |
 | `GuardDecision` | interface (実装済、`src/runtime/agent-guard.ts:55`) | `{ code: 0 \| 2, message?: string, bypassed?: boolean }` (exit code を返すのみ、block boolean は持たない) | 実装済 |
 | `RuntimeDetection` | interface (実装済、`src/runtime/detect.ts:10`) | `{ mode: ExecutionMode, claude: boolean, codex: boolean, currentRuntime: "claude"\|"codex"\|null, availableRuntimes: string[], missingRuntimes: string[] }`。**検出契約 (A-128 F-7、2026-06-10)**: Windows の binary 探索 (`onPath`) は finder (`where.exe`) を PATH 探索せず `%SystemRoot%\System32` から canonical に解決する — PATH 注入事故 (System32 欠落) で finder 自体が不在となり全 runtime を unavailable と誤検出する事故を防ぐ (oracle = `tests/runtime-hook-entrypoints.test.ts` の wrapper lifecycle 群が壊れた PATH 下でも green) | 実装済 |
@@ -354,13 +354,13 @@ function buildCoverageMap():
 
 | Sprint | 対象関数群 | 依存 | 状態 |
 |---|---|---|---|
-| **L7.1** | schema 拡張 (`subDocSchema` IMP-026 / `planIdSchema` 層別 IMP-004) | — (安定核) | 未 |
-| **L7.2** | `lintPlan` 本実装 (stub → frontmatter validate) | schema | stub→本 |
-| **L7.3** | `lintVmodel` 本実装 (12 edge trace) | schema | stub→本 |
+| **L7.1** | schema 拡張 (`subDocSchema` IMP-026 / `planIdSchema` 層別 IMP-004) | — (安定核) | 実装済 (`src/schema/index.ts` / `src/schema/frontmatter.ts`) |
+| **L7.2** | `lintPlan` 本実装 (schedule + governance/frontmatter + G1/G3 trace gate) | schema / trace lint | implemented; repo debt closed and doctor hard-gates `plan-schedule` / `plan-governance` |
+| **L7.3** | `lintVmodel` 本実装 (12 edge trace) | schema | implemented |
 | **L7.4** | `runDoctor` 統合 (5 lint + state 突合) | lint 群 | scaffold→本 |
-| **L7.5** | rule engine 10 型 + auto-enroll (IMP-033) | schema/lint | 未 |
+| **L7.5** | rule engine 10 型 + auto-enroll (IMP-033) | schema/lint | 実装済 (`src/lint/*` hard gates + doctor integration) |
 | **L7.6** | dependency-drift lint (built-in TS import graph、optional knip/madge は adapter insight、ADR-002/IMP-032) | runtime | 実装済 (`src/lint/dependency-drift.ts` / `tests/dependency-drift.test.ts`、PLAN-REVERSE-42) |
-| **L7.7** | 未実装 module (workflow/session/cutover 等) | schema | 未 (後続 PLAN 分割可) |
+| **L7.7** | L7 closure module surface (workflow/session/cutover/review/skill/asset 等) | schema | 実装済 (`src/workflow/`、`src/handover/`、`src/runtime/`、`src/skills/`、`src/assets/`、CLI surface) |
 
 > 各 Sprint = TDD Red-first (L7 entry、§1.10 line 671)。先行 ④ 単体テストコードは L7 単体テスト設計 (pair) の U-* に対応。
 
@@ -371,3 +371,12 @@ function buildCoverageMap():
 - pseudocode (§2/§4.3) の実装 = L7 各 Sprint
 - DbC → U-* test oracle 導出 = L7 単体テスト設計 (pair、document-system-map §3)
 - **G6 freeze**: 本 doc の signature + pseudocode + 型 + WBS を G6 で凍結 (L7 の parent_design 正本)
+## Appendix B: BR-21 evaluation trace coverage addendum
+
+The BR-21 evaluation hooks are Phase B oriented, but the function-design trace must not skip L6 once L4/L5 module boundaries name them. This addendum records the L6 contract landing points for the current evaluation surfaces; detailed algorithm expansion remains in the owning Phase B PLAN.
+
+| trace | L6 contract landing |
+|---|---|
+| FR-L1-36 | skill evaluation input is normalized as skill metric feedback before Learning Engine aggregation |
+| FR-L1-38 | model evaluation input is normalized as model/effort quality feedback before recommendation updates |
+| FR-L1-43 | PoC success measurement input is normalized as verification outcome feedback before recipe/risk aggregation |

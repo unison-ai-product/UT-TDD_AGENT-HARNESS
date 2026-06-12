@@ -26,7 +26,7 @@ This is the minimum §1.10.G.4 enforcement slice. It does not implement the full
 
 ## §3 Doctor Behavior
 
-`ut-tdd plan lint` returns `ok=false` on violation. Doctor includes `plan-schedule` as warn-first surface and does not connect it to `runDoctor.ok` yet. This is intentional rollout behavior: PLAN-local lint is fail-close through `ut-tdd plan lint`, while doctor hard-fail coupling remains a later policy switch after the real repo stays green.
+`ut-tdd plan lint` returns `ok=false` on violation. Doctor includes `plan-schedule` as a hard/fail-close gate and wires `planSchedule.ok` into `runDoctor.ok`, so PLAN schedule drift blocks both `ut-tdd plan lint` and `ut-tdd doctor`.
 
 ## §4 Test Oracle
 

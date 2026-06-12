@@ -59,7 +59,7 @@ self/pmo-sonnet review で gate PASS 判定、park 時 violation、parse failure
 
 - 情報源: `docs/governance/gate-design.md` §2、`src/lint/review-evidence.ts`、`src/lint/module-drift.ts`。
 - L7 で `src/lint/gate-confirm.ts`、doctor `checkGateConfirm`、`tests/gate-confirm.test.ts` を実装する。
-- 初期配線は warn-first とし、実 repo green 安定後に hard 化を判断する。
+- doctor 配線は hard/fail-close とし、`gateConfirm.ok` を `runDoctor.ok` に連動する。
 
 ## §6 用語更新
 

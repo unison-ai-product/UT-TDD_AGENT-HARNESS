@@ -4,9 +4,15 @@ title: "PLAN-L7-49: harness.db automation asset catalog"
 kind: impl
 layer: L7
 drive: db
+parent_design: docs/design/harness/L6-function-design/function-spec.md
 status: completed
 created: 2026-06-11
 updated: 2026-06-11
+agent_slots:
+  - role: tl
+    slot_label: 'TL - automation asset catalog review'
+  - role: qa
+    slot_label: 'QA - asset catalog evidence and drift review'
 review_evidence:
   - reviewer: code-reviewer
     review_kind: intra_runtime_subagent
@@ -18,9 +24,9 @@ review_evidence:
     scope: "asset catalog span: metadata-only cataloging, allowed roots, no prompt bodies/secrets in DB, drift and empty catalogs surfaced as findings."
 generates:
   - artifact_path: src/assets/catalog.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/asset-catalog.test.ts
-    artifact_type: test
+    artifact_type: test_code
 pair_artifact: docs/test-design/harness/L8-integration-test-design.md
 next_pair_freeze: L8
 dependencies:

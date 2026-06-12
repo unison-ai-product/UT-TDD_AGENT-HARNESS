@@ -16,13 +16,13 @@ generates:
   - artifact_path: .ut-tdd/audit/A-133-upstream-vmodel-coverage-audit.md
     artifact_type: markdown_doc
   - artifact_path: src/lint/rule-automation-closure.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
   - artifact_path: src/lint/drive-model-passage.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
   - artifact_path: src/lint/fr-roadmap-coverage.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
   - artifact_path: src/handover/index.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
 dependencies:
   parent: docs/plans/PLAN-L3-00-master.md
   requires:

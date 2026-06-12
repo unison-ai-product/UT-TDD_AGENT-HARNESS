@@ -101,7 +101,7 @@ external-if.md (what/形状) の **how = adapter 詳細契約**を確定する (
 - **認証・秘密管理方式の確定 (縮小スコープ)** = AI runtime は契約プラン CLI 自己認証で **harness 対象外**。確定対象は **GitHub (gh ログイン) + 観測系 inbound token のみ** → L7 前に **PO 承認 + security 監査** (⚠ 人間確認必須)
 - **D-CONTRACT DSL 実装** (mode-routing.yaml / gate-checks.yaml + loader) = L7
 - **provider 引継ぎ** (FR-L1-42、context+budget 連携) = `provider-handover.v1` package (`ut-tdd handover provider export/status`) と接続
-- **sprint check の VCS 参照** (TDD trace の git log/blame、internal-processing §2): adapter 経由か直接 fs/git 読込かを L7 で決定 (現状 adapter 公開 IF 6 本に未配線、L7 carry)
+- **sprint check の VCS 参照** (TDD trace の git changed-files / review scope): `loadChangedFiles` を `verify recommend`、`review --uncommitted`、doctor `change-impact`、`regression-expansion` が共有する。git log/blame の深掘りは optional evidence enrichment とし、L7 完遂の隠れ carry にしない。
 ## Appendix B: DB/Search CLI Contracts (PLAN-L5-08)
 
 | CLI surface | contract | output |

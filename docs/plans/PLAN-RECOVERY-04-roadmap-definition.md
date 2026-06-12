@@ -105,7 +105,7 @@ review 前置 (pmo-sonnet、cross-agent 不在の intra_runtime 代替) の clos
 - **verification (L8-L14) / cutover バンドの明示 defer**: 両バンドは **forward 未降下で登録対象 PLAN が皆無**のため、本 Recovery では工程表登録しない (明示 defer = under-design でない、concept §3.1.3.1)。
   - verification (L8-L14): forward が L8 以降へ降下した時点で当該 Forward PLAN が工程表を起こす (carry 先 = 後続 Forward、descent 時に登録)。
   - cutover (HELIX→UT): **PLAN-L7-44 (harness.db) close 後の射程**。cutover 戦略 doc が stale (ADR-001 前提ズレ) のため Reverse back-fill を先行 (carry 先 = cutover 工程表化 + cutover doc Reverse、§4 carry の stale doc と同件)。
-- **park 機構 (`parkedBandIds`) の配線 carry**: `analyzeProgramCoverage` は `parkedBandIds` 引数を持つが doctor 連動が未配線 (現状 warn-only)。park 宣言の単一正本化 + doctor 連動は **PLAN-REVERSE-44 Step 3 (roadmap schema 拡張)** で実装する。それまでは verification/cutover は uncovered warn として surface され続ける (意図的制限、requirements §G.E3 に明記)。
+- **park 機構 (`parkedBandIds`) の配線**: `analyzeProgramCoverage` は `parkedBandIds` 引数を持ち、doctor `checkRoadmap` は `PARKED_BANDS` を渡して hard/fail-close 判定する。park 宣言外の uncovered band は `runDoctor.ok=false` になる。
 - **requirements 降下の着地**: §4.1 が宣言した requirements_v1.2 への被覆要件降下を本コミットで **§G.E3 (program coverage / doctor program-coverage)** として着地 (claimed-but-not-landed の解消)。
 
 ## §6 exit 条件

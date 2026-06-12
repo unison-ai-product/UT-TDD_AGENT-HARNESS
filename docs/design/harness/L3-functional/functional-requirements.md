@@ -843,7 +843,7 @@ screen §5 G1-trace マトリクスを継承し、L3 FR-* × 14 画面 (PM/HM/GD
 - **A-122 requirements back-propagation**: UT evidence history、GreenDefinition、DB collector/rebuild/migration、CI/hook/OS evidence matrix は、L1 functional §7 と requirements §6.8.7 に戻した。L4/L5/L6 では `FR-L1-02/06/07/17/18/20/45/50` の既存 FR 拡張として AC/DbC/IT を追加し、新 FR 採番は行わない。
 - **L7 実装スプリント**: 各 AC-* を TDD Red の入力として使用。Given-When-Then 形式を vitest describe-it に直接変換可能
 - **L12 受入テスト設計**: 全 54+ AC-* を AT-* で被覆 (孤児 0)。本 sub-doc 完成後に L12 担当 sub-doc 本起草
-- **G3 lint 実装** (`ut-tdd plan lint --gate G3-trace`): R1 (BR/UX/FR-L1 → L3) / R2 (FR-* → AC → AT) / R3 (AT → 要求) / R4 (NFR → 閾値 → AT) を L7 で実装
+- **G3 lint 実装** (`ut-tdd plan lint --gate G3-trace`): R1 (BR/UX/FR-L1 → L3) / R2 (FR-* → AC → AT) / R3 (AT → 要求) / R4 (NFR → 閾値 → AT) は L7 実装済みで、`ut-tdd doctor` hard gate に集約される
 - **CC2 carry 強化**: L4 / L5 / L6 設計で「人間判断点」明示を継承 (各設計 layer に対応列追加)
 
 ### §7.1 OSS フォーク候補 (tech-fork 調査 A-46、L4 ADR 入力)

@@ -10,7 +10,7 @@ status: confirmed
 created: 2026-06-11
 updated: 2026-06-11
 owner: Codex TL
-forward_routing: L7
+forward_routing: L5
 promotion_strategy: reuse-with-hardening
 review_evidence:
   - reviewer: codex-intra-runtime-review
@@ -26,13 +26,13 @@ agent_slots:
     slot_label: "TL - dependency drift / regression expansion reverse close"
 generates:
   - artifact_path: src/lint/dependency-drift.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/dependency-drift.test.ts
-    artifact_type: test
+    artifact_type: test_code
   - artifact_path: src/doctor/index.ts
-    artifact_type: source
+    artifact_type: source_module
   - artifact_path: tests/doctor.test.ts
-    artifact_type: test
+    artifact_type: test_code
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
