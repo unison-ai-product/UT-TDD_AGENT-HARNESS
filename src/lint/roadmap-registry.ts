@@ -131,7 +131,7 @@ export const PROGRAM_BANDS: ProgramBand[] = [
   },
   // roadmap.layer は schema 上 z.string() (自由文字列、L 番号に限定しない) なので "cutover" は valid。
   // cutover 工程表が未登録の間は意図的に uncovered (= 残り frontier) として surface される。
-  { id: "cutover", name: "cutover (HELIX→UT)", layers: ["cutover"] },
+  { id: "cutover", name: "cutover (legacy-source isolation)", layers: ["cutover"] },
 ];
 
 /**
@@ -144,7 +144,7 @@ export const PARKED_BANDS: Map<string, string> = new Map([
   ["verification", "forward 未降下 (L8-L14 PLAN 皆無)。降下時に当該 Forward PLAN が工程表を起こす"],
   [
     "cutover",
-    "HELIX→UT cutover は harness.db (PLAN-L7-44) close 後の射程。cutover 戦略 doc stale → Reverse back-fill 先行",
+    "legacy-source isolation cutover は harness.db (PLAN-L7-44) close 後の射程。cutover 戦略 doc stale → Reverse back-fill 先行",
   ],
 ]);
 

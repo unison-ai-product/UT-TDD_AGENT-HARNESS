@@ -161,3 +161,14 @@
 | ID | observed_at | source | gap | automation_candidate | status | trace |
 |---|---|---|---|---|---|---|
 | **IMP-132** | 2026-06-11 | A-130 PLAN-L7-44 accept | **roadmap 到達計数が `completed` span を `confirmed` 未満として扱い gate を un-reach させる**: `computeGateProgress` (`src/lint/roadmap-registry.ts:92`) は span PLAN の status が `=== "confirmed"` の場合のみ到達計数する。close gate の span が master hub 自身の工程表 (G-L7DB.D の span = PLAN-L7-44 自身) の場合、PO accept で master を `confirmed → completed` に bump すると自分の close gate が un-reach (4/4→3/4) する矛盾が起きる。`completed` は `confirmed` の後続状態であり到達計数では `confirmed`/`completed` を満たす扱いにすべき。今回は accept を status 遷移でなく frontmatter (`accepted_by`/`accept_evidence`) + audit で表現して回避済 (A-130)。**要件**: 到達計数を `["confirmed","completed"].includes(statusOf(span))` に拡張し、`completed` span が gate を un-reach させないことを保証 (substance: 「より進んだ状態が gate を外す」逆転を塞ぐ)。lint 契約変更のため test (roadmap-registry) + Reverse (上位設計合流) 要 | lint / policy | implemented | **REVERSE-44 §3 E で解消** (commit 6aeab9f): computeGateProgress を `["confirmed","completed"].includes(...)` へ拡張、U-ROADMAP-023 で confirmed/completed/draft の到達弁別を検証、doctor 表示も "span reached: confirmed/completed" へ整合。A-130 / [[feedback_verify_intent_before_calling_gate_a_bug]] |
+## A-133 backlog addendum (upstream schedule gap, 2026-06-12)
+
+| ID | observed_at | source | gap | automation_candidate | status | trace |
+|---|---|---|---|---|---|---|
+| **IMP-133** | 2026-06-12 | A-133 upstream V-model coverage audit | `PLAN-L7-44` harness.db segment completion was read as all-L7 completion. Current checks prove registered roadmap and artifact edges, but not every FR-L1 carry/addendum has a scheduled PLAN/WBS row. | lint / policy / doc | observed | `.ut-tdd/audit/A-133-upstream-vmodel-coverage-audit.md` / `docs/plans/PLAN-L3-04-upstream-schedule-reconciliation.md` / future `fr-roadmap-coverage` lint |
+
+## A-134 backlog addendum (harness telemetry/self-improvement closure, 2026-06-12)
+
+| ID | observed_at | source | gap | automation_candidate | status | trace |
+|---|---|---|---|---|---|---|
+| **IMP-134** | 2026-06-12 | A-134 telemetry closure audit | Harness measurement has raw DB projections (`drive_runs`, `workflow_runs`, `hook_events`, `model_runs`, `findings`), but dynamic skill injection, drive-model skill injection, firing-rate metrics, retry/bottleneck analytics, trouble taxonomy, GitHub issue queue, and measurement-to-feedback loop are not operational. `skill_recommendations`, `skill_invocations`, `quality_signals`, `feedback_events`, `guardrail_decisions`, and `automation_assets` are currently 0 rows. Follow-up implementation requires metrics, DB projection, feedback loop, and issue queue work. | lint / policy / doc | observed | `.ut-tdd/audit/A-134-harness-telemetry-self-improvement-audit.md` / `docs/plans/PLAN-L3-05-harness-telemetry-closure.md` / `src/lint/telemetry-closure.ts` / doctor `telemetry-closure` |

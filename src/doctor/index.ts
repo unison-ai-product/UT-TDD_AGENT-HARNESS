@@ -1,9 +1,14 @@
-/** 統合検証 doctor (requirements_v1.2 §7 / §7.8.5). scaffold stub — 検出器は後続 PLAN。 */
+/**
+ * 統合検証 doctor (requirements_v1.2 §7 / §7.8.5)。
+ * 多数の検出器 (back-fill / review-evidence / asset-drift / cycle-p4-verification / roadmap 等) を集約し、
+ * hard 判定群を runDoctor.ok に連動させて fail-close する。warn-first 群は ok を落とさず surface のみ。
+ */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   checkHandoverBypass,
+  checkHandoverCompletionWording,
   checkHandoverDiscipline,
   type HandoverDeps,
   type HandoverPointer,
@@ -19,6 +24,11 @@ import {
   loadCodingRulePolicy,
   loadCodingWorkflowDocs,
 } from "../lint/coding-rules";
+import {
+  analyzeCycleP4Verification,
+  cycleP4VerificationMessages,
+  loadCycleP4VerificationDocs,
+} from "../lint/cycle-p4-verification";
 import { analyzeDddTddRules, dddTddRulesMessages, loadDddTddInputs } from "../lint/ddd-tdd-rules";
 import {
   analyzeDependencyDrift,
@@ -27,6 +37,16 @@ import {
   loadDependencyDriftInput,
   regressionExpansionMessages,
 } from "../lint/dependency-drift";
+import {
+  analyzeDriveModelPassage,
+  driveModelPassageMessages,
+  loadDriveModelPassageDocs,
+} from "../lint/drive-model-passage";
+import {
+  analyzeFrRoadmapCoverageWithRoot,
+  frRoadmapCoverageMessages,
+  loadFrRoadmapCoverageDocs,
+} from "../lint/fr-roadmap-coverage";
 import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
 import {
   analyzeImplPlanTrace,
@@ -50,6 +70,11 @@ import {
   loadOracleTestTraceInput,
   oracleTestTraceMessages,
 } from "../lint/oracle-test-trace";
+import {
+  analyzeProjectHooks,
+  loadProjectHookDocs,
+  projectHookMessages,
+} from "../lint/project-hook";
 import { analyzePropagation, loadPropagationDocs, propagationMessages } from "../lint/propagation";
 import {
   analyzeReadability,
@@ -70,9 +95,24 @@ import {
   PARKED_BANDS,
   programCoverageMessages,
 } from "../lint/roadmap-registry";
+import {
+  analyzeRuleAutomationClosure,
+  loadRuleAutomationClosureDocs,
+  ruleAutomationClosureMessages,
+} from "../lint/rule-automation-closure";
 import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lint/rule-drift";
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
 import { fmValue } from "../lint/shared";
+import {
+  analyzeSkillAssignments,
+  loadSkillAssignmentDocs,
+  skillAssignmentMessages,
+} from "../lint/skill-assignment";
+import {
+  analyzeTelemetryClosure,
+  loadTelemetryClosureDocs,
+  telemetryClosureMessages,
+} from "../lint/telemetry-closure";
 import {
   analyzeTrackedCanonical,
   loadTrackedCanonicalInput,
@@ -126,7 +166,11 @@ function handoverDeps(deps: DoctorDeps): HandoverDeps {
 
 export function checkHandoverDisciplineMessages(deps: DoctorDeps): string[] {
   const hd = handoverDeps(deps);
-  return [...checkHandoverDiscipline(hd), ...checkHandoverBypass(hd)];
+  return [
+    ...checkHandoverDiscipline(hd),
+    ...checkHandoverBypass(hd),
+    ...checkHandoverCompletionWording(hd),
+  ];
 }
 
 /**
@@ -272,6 +316,18 @@ export function checkAssetDrift(repoRoot: string): { messages: string[]; ok: boo
   }
 }
 
+export function checkSkillAssignment(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeSkillAssignments(loadSkillAssignmentDocs(repoRoot));
+    return { messages: skillAssignmentMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["skill-assignment - violation: skill assignment metadata could not be read"],
+      ok: false,
+    };
+  }
+}
+
 export function checkChangeImpact(repoRoot: string): { messages: string[]; ok: boolean } {
   try {
     const r = analyzeChangeImpact({ changedFiles: loadChangedFiles(repoRoot) });
@@ -360,6 +416,78 @@ export function checkPlanSchedule(repoRoot: string): { messages: string[]; ok: b
     return lintPlan(undefined, repoRoot);
   } catch {
     return { messages: ["plan-schedule — note: PLAN を読めず検査 skip"], ok: true };
+  }
+}
+
+export function checkRuleAutomationClosure(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeRuleAutomationClosure(loadRuleAutomationClosureDocs(repoRoot));
+    return { messages: ruleAutomationClosureMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["rule-automation-closure - note: closure table could not be read"],
+      ok: true,
+    };
+  }
+}
+
+export function checkDriveModelPassage(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeDriveModelPassage(loadDriveModelPassageDocs(repoRoot));
+    return { messages: driveModelPassageMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["drive-model-passage - note: passage certificate table could not be read"],
+      ok: true,
+    };
+  }
+}
+
+export function checkFrRoadmapCoverage(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeFrRoadmapCoverageWithRoot(loadFrRoadmapCoverageDocs(repoRoot), repoRoot);
+    return { messages: frRoadmapCoverageMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["fr-roadmap-coverage - note: residual bucket table could not be read"],
+      ok: true,
+    };
+  }
+}
+
+export function checkTelemetryClosure(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeTelemetryClosure(loadTelemetryClosureDocs(repoRoot));
+    return { messages: telemetryClosureMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["telemetry-closure - note: telemetry closure matrix could not be read"],
+      ok: true,
+    };
+  }
+}
+
+export function checkCycleP4Verification(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeCycleP4Verification(loadCycleP4VerificationDocs(repoRoot), repoRoot);
+    return { messages: cycleP4VerificationMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["cycle-p4-verification - violation: Cycle P4 closure audit could not be read"],
+      ok: false,
+    };
+  }
+}
+
+export function checkProjectHooks(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeProjectHooks(loadProjectHookDocs(repoRoot));
+    return { messages: projectHookMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["project-hook - violation: project hook settings could not be read"],
+      ok: false,
+    };
   }
 }
 
@@ -570,6 +698,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   // module-drift は warn-first (impl→design back-fill 漏れ surface、IMP-075。hard 化は段階)。
   const moduleDrift = checkModuleDrift(deps.repoRoot);
   const assetDrift = checkAssetDrift(deps.repoRoot);
+  const skillAssignment = checkSkillAssignment(deps.repoRoot);
   const changeImpact = checkChangeImpact(deps.repoRoot);
   // verification-profile は warn-first (推奨 surface のみ。外部 profile 実行が PLAN-L7-33 で配線されるまで
   // ok 連動させない — 推奨の見落としは review で拾う段階、A-128 F-5 / IMP-130(e))。
@@ -581,6 +710,18 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   // Their messages surface policy drift, but runDoctor.ok hardening is a later gate switch.
   const gateConfirm = checkGateConfirm(deps.repoRoot);
   const planSchedule = checkPlanSchedule(deps.repoRoot);
+  // rule-automation-closure / drive-model-passage / telemetry-closure は warn-first。
+  // これらは audit doc の matrix 構造・owner・status を surface する meta-check であり、実体の substance
+  // (nonzero telemetry 行・driveモデル通過・rule⇔automation 対) は別の hard gate / CI 回帰で fail-close する:
+  //   - telemetry nonzero 行: tests/projection-writer.test.ts (db rebuild 後 > 0 を assert)
+  //   - cycle-p4 / fr-roadmap / skill-assignment: 下記 hard gate (runDoctor.ok 連動)
+  // ゆえに matrix 自体は warn 段階に留め、誤 fail で doc 整形作業を止めない。hard 化は matrix 安定後に切替。
+  const ruleAutomationClosure = checkRuleAutomationClosure(deps.repoRoot);
+  const driveModelPassage = checkDriveModelPassage(deps.repoRoot);
+  const frRoadmapCoverage = checkFrRoadmapCoverage(deps.repoRoot);
+  const telemetryClosure = checkTelemetryClosure(deps.repoRoot);
+  const cycleP4Verification = checkCycleP4Verification(deps.repoRoot);
+  const projectHooks = checkProjectHooks(deps.repoRoot);
   const l6FrCoverage = checkL6FrCoverage(deps.repoRoot);
   const readability = checkReadability(deps.repoRoot);
   // l6-completion は warn-first (G6 PASS 後の運用観察期間。誤 fail で post-G6 作業を止めないため
@@ -611,12 +752,16 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       propagation.ok &&
       reviewEvidence.ok &&
       assetDrift.ok &&
+      skillAssignment.ok &&
       changeImpact.ok &&
       codingRules.ok &&
       dddTddRules.ok &&
       ruleDrift.ok &&
+      frRoadmapCoverage.ok &&
+      cycleP4Verification.ok &&
       l6FrCoverage.ok &&
       readability.ok &&
+      projectHooks.ok &&
       verificationGroups.ok &&
       dependencyDrift.ok &&
       regressionExpansion.ok,
@@ -631,6 +776,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
       ...moduleDrift.messages.map((m) => `doctor: ${m}`),
       ...assetDrift.messages.map((m) => `doctor: ${m}`),
+      ...skillAssignment.messages.map((m) => `doctor: ${m}`),
       ...changeImpact.messages.map((m) => `doctor: ${m}`),
       ...verificationProfile.messages.map((m) => `doctor: ${m}`),
       ...codingRules.messages.map((m) => `doctor: ${m}`),
@@ -638,6 +784,12 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...ruleDrift.messages.map((m) => `doctor: ${m}`),
       ...gateConfirm.messages.map((m) => `doctor: ${m}`),
       ...planSchedule.messages.map((m) => `doctor: ${m}`),
+      ...ruleAutomationClosure.messages.map((m) => `doctor: ${m}`),
+      ...driveModelPassage.messages.map((m) => `doctor: ${m}`),
+      ...frRoadmapCoverage.messages.map((m) => `doctor: ${m}`),
+      ...telemetryClosure.messages.map((m) => `doctor: ${m}`),
+      ...cycleP4Verification.messages.map((m) => `doctor: ${m}`),
+      ...projectHooks.messages.map((m) => `doctor: ${m}`),
       ...l6FrCoverage.messages.map((m) => `doctor: ${m}`),
       ...readability.messages.map((m) => `doctor: ${m}`),
       ...l6Completion.messages.map((m) => `doctor: ${m}`),

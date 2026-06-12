@@ -4,10 +4,17 @@ title: "PLAN-L7-19 (add-impl): review-evidence stale approval 実装 (IMP-080)"
 kind: add-impl
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-06-12
 owner: PM / Codex TL
+review_evidence:
+  - reviewer: codex-tl
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-12"
+    tests_green_at: "2026-06-12"
+    verdict: approve_after_fixes
+    scope: "L7 completion audit A-135: U-REVIEW stale approval artifacts exist, target tests and full npm test green, G4/G7 codex-only checklist review passed with .ut-tdd/audit/A-135-l7-completion-review-checklist.yaml."
 agent_slots:
   - role: tl
     slot_label: "TL - review-evidence analyzer 拡張"
@@ -60,6 +67,6 @@ self/pmo-sonnet review で IMP-071/076/077 既存 oracle の回帰がないこ�
 
 ## §8 DoD
 
-- [ ] stale approval oracle が追加されている
-- [ ] 既存 U-REVIEW/U-XREVIEW/U-TORDER が green
-- [ ] PLAN-REVERSE-18 が本 PLAN を requires している
+- [x] stale approval oracle が追加されている
+- [x] 既存 U-REVIEW/U-XREVIEW/U-TORDER が green
+- [x] PLAN-REVERSE-18 が本 PLAN を requires している

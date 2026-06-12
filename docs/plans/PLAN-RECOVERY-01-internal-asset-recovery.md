@@ -62,8 +62,8 @@ v2_import: docs/migration/v2-import-ledger.md
 |---|---|---|---|
 | 1 | HELIX 内部資産はそのまま使う / 後で port すれば良い | **UT-TDD 用に作り替える必要がある** (機能要求レベル) | PO 指摘 |
 | 2 | guard が TS 化済なら内部資産は統制済 | guard (呼び出しの安全弁) と **資産の中身 (roster/pack)** は別。中身は未整理 | inventory §0 |
-| 3 | subagent は active 化されている | active 19 = vendor と **byte 完全一致 = 未改変**。HELIX 絶対パス・`helix codex` 直叩きが現役残存 | inventory §1 |
-| 4 | skill は参照すれば足りる | `docs/skills/` = 空 (`.gitkeep`)。curate 未着手。107 skill 中 core 直結 ~15 が未整理 | inventory §2 |
+| 3 | subagent は active 化されている | original finding: active 19 に HELIX 前提残存。Current: asset-drift で HELIX path residue 0 / legacy command residue 0 を確認 | inventory §1 |
+| 4 | skill は参照すれば足りる | original finding: `docs/skills/` = 空 (`.gitkeep`)。Current: curated `docs/skills/` と asset-drift で放置 0 を確認 | inventory §2 |
 | 5 | L1-L6 は内部資産も網羅 | L4-L6 は TS core のみ。内部資産は設計対象外 = FR 不在 | inventory §5 |
 
 ## §4 中間結論 list
@@ -79,7 +79,7 @@ v2_import: docs/migration/v2-import-ledger.md
 - V-model/W-model 用語は A-74 で是正済 (L0-L14 = V-model / UT-TDD W = AI エージェント 2段V)。harness 自身は単一 V。
 - 駆動モデル ② (9-mode) は gate-design §1.1 に統合済。本件は Recovery mode の最初の実適用。
 - 設計層 L1-L6 は完了 (G1-G6 passed/conditional) **だが内部資産次元が欠落** = G1/G3 に gap。
-- 内部資産の正本: subagent = `.claude/agents/` (未改変)、skill = `vendor/helix-source/skills/` (read-only reference)、UT-TDD 側 `docs/skills/` は空。
+- 内部資産の正本: subagent = `.claude/agents/` (UT-TDD-hardened)、skill = curated `docs/skills/`。`vendor/helix-source/skills/` は read-only reference。
 - 棚卸 evidence = [internal-asset-inventory.md](../migration/internal-asset-inventory.md)。
 
 ## §6 再開ポイント (中断工程への fullback)

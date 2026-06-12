@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { parse as parseYaml } from "yaml";
 import { upsertSearchReference } from "../search/index";
 import type { HarnessDb } from "../state-db/index";
 import { upsertRow } from "../state-db/index";
@@ -37,13 +38,13 @@ function normalizeRel(path: string): string {
   return path.replaceAll("\\", "/");
 }
 
-function markdownFiles(dir: string): string[] {
+function assetFiles(dir: string): string[] {
   if (!existsSync(dir)) return [];
   const out: string[] = [];
   for (const name of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, name.name);
-    if (name.isDirectory()) out.push(...markdownFiles(path));
-    else if (name.isFile() && name.name.endsWith(".md")) out.push(path);
+    if (name.isDirectory()) out.push(...assetFiles(path));
+    else if (name.isFile() && /\.(md|ya?ml)$/i.test(name.name)) out.push(path);
   }
   return out.sort();
 }
@@ -51,6 +52,34 @@ function markdownFiles(dir: string): string[] {
 function frontmatterValue(content: string, key: string): string {
   const match = content.match(new RegExp(`^${key}:\\s*"?([^"\\r\\n]+)"?`, "m"));
   return match?.[1]?.trim() ?? "";
+}
+
+function markdownFrontmatter(content: string): string {
+  if (!content.startsWith("---")) return "";
+  const end = content.indexOf("\n---", 3);
+  return end < 0 ? "" : content.slice(3, end);
+}
+
+function metadataFromContent(path: string, content: string): Record<string, unknown> {
+  const raw = /\.md$/i.test(path) ? markdownFrontmatter(content) : content;
+  if (!raw.trim()) return {};
+  const parsed = parseYaml(raw);
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>)
+    : {};
+}
+
+function stringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+  }
+  return [];
 }
 
 function recordFinding(db: HarnessDb, finding: AssetCatalogFinding): void {
@@ -84,7 +113,7 @@ export function catalogAutomationAssets(input: CatalogAutomationAssetsInput): As
 
   for (const source of SOURCES) {
     const root = join(repoRoot, source.root);
-    for (const path of markdownFiles(root)) {
+    for (const path of assetFiles(root)) {
       const rel = normalizeRel(relative(repoRoot, path));
       if (!SOURCES.some((allowed) => rel === allowed.root || rel.startsWith(`${allowed.root}/`))) {
         const finding: AssetCatalogFinding = {
@@ -98,8 +127,19 @@ export function catalogAutomationAssets(input: CatalogAutomationAssetsInput): As
         continue;
       }
       const content = readFileSync(path, "utf8");
+      const metadata = metadataFromContent(path, content);
+      const appliesTo =
+        metadata.applies_to && typeof metadata.applies_to === "object"
+          ? (metadata.applies_to as Record<string, unknown>)
+          : {};
       const name =
-        frontmatterValue(content, "name") || rel.split("/").at(-1)?.replace(/\.md$/, "") || rel;
+        (typeof metadata.name === "string" ? metadata.name : "") ||
+        frontmatterValue(content, "name") ||
+        rel
+          .split("/")
+          .at(-1)
+          ?.replace(/\.(md|ya?ml)$/i, "") ||
+        rel;
       const status = driftStatus(content);
       const assetId = `${source.type}:${name}`;
       const trigger =
@@ -107,6 +147,11 @@ export function catalogAutomationAssets(input: CatalogAutomationAssetsInput): As
       const role = frontmatterValue(content, "role") || (source.type === "roster" ? name : "");
       const capability =
         frontmatterValue(content, "description") || `${source.type} metadata from ${rel}`;
+      const skillType = source.type === "skill" ? String(metadata.skill_type ?? "") : "";
+      const appliesLayers =
+        source.type === "skill" ? stringList(appliesTo.layers).sort().join(",") : "";
+      const appliesDriveModels =
+        source.type === "skill" ? stringList(appliesTo.drive_models).sort().join(",") : "";
       upsertRow(input.db, {
         table: "automation_assets",
         primaryKey: "asset_id",
@@ -117,6 +162,9 @@ export function catalogAutomationAssets(input: CatalogAutomationAssetsInput): As
           trigger,
           role,
           capability,
+          skill_type: skillType,
+          applies_layers: appliesLayers,
+          applies_drive_models: appliesDriveModels,
           drift_status: status,
           indexed_at: indexedAt,
         },
@@ -126,7 +174,7 @@ export function catalogAutomationAssets(input: CatalogAutomationAssetsInput): As
         subject_id: assetId,
         path: rel,
         title: name,
-        tokens: `${source.type} ${trigger} ${role} ${capability}`,
+        tokens: `${source.type} ${trigger} ${role} ${capability} ${skillType} ${appliesLayers} ${appliesDriveModels}`,
         summary: `${source.type} ${status}`,
         updated_at: indexedAt,
       });

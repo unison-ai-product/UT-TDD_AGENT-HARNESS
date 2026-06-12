@@ -4,10 +4,17 @@ title: "PLAN-L7-12 (add-impl): 検証タイミングの機械発火の実装 —
 kind: add-impl
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 created: 2026-06-05
-updated: 2026-06-05
+updated: 2026-06-12
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: codex-tl
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-12"
+    tests_green_at: "2026-06-12"
+    verdict: approve_after_fixes
+    scope: "L7 completion audit A-135: U-VTRIG artifacts exist, target tests and full npm test green, G4/G7 codex-only checklist review passed with .ut-tdd/audit/A-135-l7-completion-review-checklist.yaml."
 agent_slots:
   - role: tl
     slot_label: "TL — loadPairDocs の status 拡張が既存 pair-freeze を壊さないか / freeze 判定の純関数の正しさ / placeholder=park 許容 / doctor note 配線が既存 hard 条件を壊さないかのレビュー (claude-only は code-reviewer 代替)"
@@ -59,8 +66,8 @@ PLAN-L6-11 (vmodel-pair-freeze.md §7) の機能設計を実装する。`src/vmo
 - **検証発火 / 検証層群**: PLAN-L6-11 §6 で宣言済。L0 §10 への back-merge は REVERSE-11 で実施。
 
 ## §7 DoD
-- [ ] src/vmodel/lint.ts (層群 freeze 集計) + doctor checkVerificationGroups (note)
-- [ ] tests U-VTRIG-001〜005 + 実 repo ガード green
-- [ ] typecheck 0 / vitest 全 pass / biome CLEAN
+- [x] src/vmodel/lint.ts (層群 freeze 集計) + doctor checkVerificationGroups (note)
+- [x] tests U-VTRIG-001〜005 + 実 repo ガード green
+- [x] typecheck 0 / vitest 全 pass / biome CLEAN
 - [x] review 前置 (pmo-sonnet を code-reviewer 代替で実施、2026-06-05 APPROVE。freeze 判定の A-100 整合 / 既存非破壊 / 同粒度を確認)
-- [ ] Reverse (REVERSE-11) で検証ロードマップ反映 + glossary back-merge
+- [x] Reverse (REVERSE-11) で検証ロードマップ反映 + glossary back-merge

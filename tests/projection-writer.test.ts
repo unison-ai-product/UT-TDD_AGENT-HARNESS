@@ -14,6 +14,12 @@ interface VerificationGateRow {
   evidence_path: string;
 }
 
+interface DriveRunRow {
+  plan_id: string;
+  mode: string;
+  status: string;
+}
+
 describe("IT-DB-01/02: harness.db projection writer", () => {
   it("records normalized projection events idempotently and keeps rows joinable by plan_id", () => {
     const db = openHarnessDb(":memory:");
@@ -174,8 +180,21 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
       expect(rowCounts(db).roadmap_band_coverage).toBeGreaterThan(0);
       expect(rowCounts(db).roadmap_gate_progress).toBeGreaterThan(0);
       expect(rowCounts(db).review_evidence_registry).toBeGreaterThan(0);
+      expect(rowCounts(db).drive_runs).toBeGreaterThan(0);
+      expect(rowCounts(db).hook_events).toBeGreaterThan(0);
+      expect(rowCounts(db).model_runs).toBeGreaterThan(0);
+      expect(rowCounts(db).automation_assets).toBeGreaterThan(0);
+      expect(rowCounts(db).skill_recommendations).toBeGreaterThan(0);
+      expect(rowCounts(db).skill_invocations).toBeGreaterThan(0);
+      expect(rowCounts(db).quality_signals).toBeGreaterThan(0);
+      expect(rowCounts(db).feedback_events).toBeGreaterThan(0);
+      expect(rowCounts(db).issue_queue).toBeGreaterThan(0);
+      expect(rowCounts(db).trouble_events).toBeGreaterThan(0);
+      expect(rowCounts(db).improvement_log).toBeGreaterThan(0);
 
-      const program = db.prepare("SELECT * FROM roadmap_rollups WHERE rollup_id = ?").get("program");
+      const program = db
+        .prepare("SELECT * FROM roadmap_rollups WHERE rollup_id = ?")
+        .get("program");
       expect(program).toMatchObject({
         total_bands: 5,
         covered_bands: 5,
@@ -235,7 +254,10 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
              ELSE 99
            END`,
         )
-        .all("PLAN-M-00-verify-cutover", "L8-L14-verification-band") as unknown as VerificationWorkflowRow[];
+        .all(
+          "PLAN-M-00-verify-cutover",
+          "L8-L14-verification-band",
+        ) as unknown as VerificationWorkflowRow[];
       expect(verificationRuns).toHaveLength(7);
       expect(verificationRuns.map((row) => row.phase)).toEqual([
         "L8",
@@ -252,6 +274,37 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
           .filter((row) => row.phase === "L12" || row.phase === "L13")
           .every((row) => row.human_required === 1),
       ).toBe(true);
+
+      const verificationDriveJoin = db
+        .prepare(
+          `SELECT d.plan_id, d.mode, d.status
+           FROM workflow_runs w
+           JOIN drive_runs d ON d.drive_run_id = w.drive_run_id
+           WHERE w.plan_id = ? AND w.phase = ?`,
+        )
+        .get("PLAN-M-00-verify-cutover", "L8") as DriveRunRow | undefined;
+      expect(verificationDriveJoin).toMatchObject({
+        plan_id: "PLAN-M-00-verify-cutover",
+        mode: "Verification",
+      });
+
+      const hookJoin = db
+        .prepare(
+          `SELECT COUNT(*) AS value
+           FROM hook_events h
+           JOIN plan_registry p ON p.plan_id = h.plan_id`,
+        )
+        .get() as { value: number };
+      expect(hookJoin.value).toBeGreaterThan(0);
+
+      const modelJoin = db
+        .prepare(
+          `SELECT COUNT(*) AS value
+           FROM model_runs m
+           JOIN plan_registry p ON p.plan_id = m.plan_id`,
+        )
+        .get() as { value: number };
+      expect(modelJoin.value).toBeGreaterThan(0);
 
       const verificationGates = db
         .prepare(
@@ -276,6 +329,73 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
         threshold: 5,
         status: "passed",
       });
+
+      const skillRecommendation = db
+        .prepare(
+          "SELECT skill_id, reason FROM skill_recommendations WHERE plan_id = ? ORDER BY rank LIMIT 1",
+        )
+        .get("PLAN-M-01-cutover-backfill");
+      expect(skillRecommendation).toMatchObject({ skill_id: "skill:review-checklist" });
+      expect(String(skillRecommendation?.reason)).toContain("layer=");
+
+      const skillInvocation = db
+        .prepare(
+          "SELECT skill_id, source, accepted FROM skill_invocations WHERE plan_id = ? LIMIT 1",
+        )
+        .get("PLAN-M-01-cutover-backfill");
+      expect(skillInvocation).toMatchObject({
+        skill_id: "skill:review-checklist",
+        source: "auto-projection:review-evidence",
+        accepted: 1,
+      });
+
+      const driveMetric = db
+        .prepare("SELECT metric, status FROM quality_signals WHERE metric = ? LIMIT 1")
+        .get("drive_firing_rate");
+      expect(driveMetric).toMatchObject({ metric: "drive_firing_rate" });
+
+      const feedbackEvent = db
+        .prepare("SELECT signal_type, next_action FROM feedback_events ORDER BY created_at LIMIT 1")
+        .get();
+      expect(String(feedbackEvent?.signal_type ?? "")).not.toHaveLength(0);
+      expect(String(feedbackEvent?.next_action ?? "")).toContain("review");
+
+      const issueQueue = db
+        .prepare(
+          "SELECT target, status, human_approval_required, external_issue_url FROM issue_queue ORDER BY created_at LIMIT 1",
+        )
+        .get();
+      expect(issueQueue).toMatchObject({
+        target: "github",
+        status: "queued_dry_run",
+        human_approval_required: 1,
+        external_issue_url: "",
+      });
+
+      const approvalGuardrail = db
+        .prepare(
+          "SELECT guardrail, decision, human_signoff_required FROM guardrail_decisions WHERE guardrail = ? LIMIT 1",
+        )
+        .get("external-github-issue-approval");
+      expect(approvalGuardrail).toMatchObject({
+        guardrail: "external-github-issue-approval",
+        decision: "requires-human-approval",
+        human_signoff_required: 1,
+      });
+
+      const troubleEvent = db
+        .prepare("SELECT category, status FROM trouble_events ORDER BY created_at LIMIT 1")
+        .get();
+      expect(String(troubleEvent?.category ?? "")).not.toHaveLength(0);
+      expect(troubleEvent).toMatchObject({ status: "open" });
+
+      const improvementLog = db
+        .prepare(
+          "SELECT category, status, next_action FROM improvement_log ORDER BY created_at LIMIT 1",
+        )
+        .get();
+      expect(String(improvementLog?.next_action ?? "")).toContain("review");
+      expect(improvementLog).toMatchObject({ status: "open" });
     } finally {
       db.close();
     }

@@ -4,10 +4,17 @@ title: "PLAN-L7-01 (add-impl): session-log 実装 — hook 3本 + src/runtime/se
 kind: add-impl
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-02
-updated: 2026-06-02
+updated: 2026-06-12
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: codex-tl
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-12"
+    tests_green_at: "2026-06-12"
+    verdict: approve_after_fixes
+    scope: "L7 completion audit A-135: U-SLOG artifacts exist, target tests and full npm test green, G4/G7 codex-only checklist review passed with .ut-tdd/audit/A-135-l7-completion-review-checklist.yaml."
 parent_design: docs/design/harness/L6-function-design/session-log.md
 agent_slots:
   - role: tl

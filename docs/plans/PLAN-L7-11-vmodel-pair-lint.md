@@ -4,10 +4,17 @@ title: "PLAN-L7-11 (add-impl): vmodel pair-freeze lint 実装 — src/vmodel/lin
 kind: add-impl
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 created: 2026-06-05
-updated: 2026-06-05
+updated: 2026-06-12
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: codex-tl
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-12"
+    tests_green_at: "2026-06-12"
+    verdict: approve_after_fixes
+    scope: "L7 completion audit A-135: U-VPAIR artifacts exist, target tests and full npm test green, G4/G7 codex-only checklist review passed with .ut-tdd/audit/A-135-l7-completion-review-checklist.yaml."
 agent_slots:
   - role: tl
     slot_label: "TL — pair-freeze 純関数の正しさ / dir 集合参照の境界 (trailing slash) / README・roadmap 除外規約 / inline コメント除去 / doctor warn-first 配線が既存 hard 条件 (backfill/scrum-reverse/propagation) を壊さないかのレビュー (claude-only は code-reviewer 代替)"
@@ -60,9 +67,9 @@ PLAN-L6-10 (vmodel-pair-freeze.md) の機能設計を実装する。`src/vmodel/
 - **pair-freeze lint (設計層)** / **self-pair**: PLAN-L6-10 §6 で宣言済。L0 §10 への back-merge は REVERSE-10 で実施。
 
 ## §7 DoD
-- [ ] src/vmodel/lint.ts 本実装 (4 純関数) + doctor checkPairFreeze (warn-first)
-- [ ] tests/vmodel-pair.test.ts (U-VPAIR-001〜006 + 実 repo 孤児0 ガード) green
-- [ ] 実 repo 孤児改修で orphans=0 達成 (doc カバレッジ改善)
-- [ ] typecheck 0 / vitest 全 pass / biome CLEAN
-- [ ] review 前置 (code-reviewer)
-- [ ] Reverse (REVERSE-10) で上位整合 + glossary back-merge
+- [x] src/vmodel/lint.ts 本実装 (4 純関数) + doctor checkPairFreeze (warn-first)
+- [x] tests/vmodel-pair.test.ts (U-VPAIR-001〜006 + 実 repo 孤児0 ガード) green
+- [x] 実 repo 孤児改修で orphans=0 達成 (doc カバレッジ改善)
+- [x] typecheck 0 / vitest 全 pass / biome CLEAN
+- [x] review 前置 (code-reviewer)
+- [x] Reverse (REVERSE-10) で上位整合 + glossary back-merge

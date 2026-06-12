@@ -49,6 +49,38 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
     db.close();
   });
 
+  it("migrate repairs missing added columns even when user_version is current", () => {
+    const db = openHarnessDb(":memory:");
+    db.exec(`
+      CREATE TABLE issue_queue (
+        issue_queue_id TEXT PRIMARY KEY,
+        source_event_id TEXT,
+        plan_id TEXT,
+        target TEXT,
+        title TEXT,
+        body TEXT,
+        status TEXT,
+        human_approval_required INTEGER,
+        created_at TEXT
+      )
+    `);
+    db.setUserVersion(SCHEMA_VERSION);
+
+    const result = migrate(db);
+    const issueQueueColumns = db
+      .prepare("PRAGMA table_info(issue_queue)")
+      .all()
+      .map((row) => String(row.name));
+
+    expect(result.applied).toBe(true);
+    expect(issueQueueColumns).toContain("approved_by");
+    expect(issueQueueColumns).toContain("approved_at");
+    expect(issueQueueColumns).toContain("external_issue_id");
+    expect(issueQueueColumns).toContain("external_issue_url");
+    expect(db.userVersion()).toBe(SCHEMA_VERSION);
+    db.close();
+  });
+
   it("upsertRow が PK conflict で idempotent (二重適用で重複せず更新)", () => {
     const db = openHarnessDb(":memory:");
     migrate(db);

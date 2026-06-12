@@ -1,17 +1,18 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
+import { parse as parseYaml } from "yaml";
 import type { DocumentExportProjectionRows } from "../export/document-export";
 import type {
   RelationGraphProjection,
   VerificationEvidenceProjection,
 } from "../lint/relation-graph";
+import { loadReviewPlans } from "../lint/review-evidence";
 import {
   computeGateProgress,
   computeProgramRollup,
   loadRoadmaps,
   PARKED_BANDS,
 } from "../lint/roadmap-registry";
-import { loadReviewPlans } from "../lint/review-evidence";
 import { normalizePath } from "../lint/shared";
 import {
   HARNESS_DB_TABLE_BY_NAME,
@@ -48,6 +49,31 @@ export interface RebuildHarnessDbResult {
   };
 }
 
+interface ProjectedPlan {
+  planId: string;
+  kind: string;
+  layer: string;
+  drive: string;
+  status: string;
+  updatedAt: string;
+}
+
+interface PlanDigestProjection {
+  plan_id: string;
+  sessions?: string[];
+  event_counts?: Record<string, number>;
+  updated_at?: string;
+}
+
+interface SessionLogProjection {
+  ts?: string;
+  session_id?: string;
+  plan_id?: string | null;
+  event_type?: string;
+  tool?: string;
+  outcome?: string;
+}
+
 const SECRET_PATTERN =
   /(sk-[A-Za-z0-9_-]+|ghp_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|xox[baprs]-[A-Za-z0-9-]+)/;
 const RAW_PAYLOAD_KEYS = new Set([
@@ -60,8 +86,7 @@ const RAW_PAYLOAD_KEYS = new Set([
   "screenshotBlob",
 ]);
 const VERIFY_CUTOVER_PLAN_ID = "PLAN-M-00-verify-cutover";
-const VERIFY_CUTOVER_AUDIT_PATH =
-  ".ut-tdd/audit/A-132-l8-l14-verification-band-execution.md";
+const VERIFY_CUTOVER_AUDIT_PATH = ".ut-tdd/audit/A-132-l8-l14-verification-band-execution.md";
 const VERIFICATION_BAND_LAYERS = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"] as const;
 
 function tableDef(name: string): TableDef {
@@ -183,23 +208,82 @@ function frontmatterValue(content: string, key: string): string {
   return match?.[1]?.trim() ?? "";
 }
 
-function projectPlans(repoRoot: string, db: HarnessDb): void {
+function markdownFrontmatter(content: string): string {
+  if (!content.startsWith("---")) return "";
+  const end = content.indexOf("\n---", 3);
+  return end < 0 ? "" : content.slice(3, end);
+}
+
+function metadataFromContent(path: string, content: string): Record<string, unknown> {
+  const raw = /\.md$/i.test(path) ? markdownFrontmatter(content) : content;
+  if (!raw.trim()) return {};
+  const parsed = parseYaml(raw);
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>)
+    : {};
+}
+
+function stringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function workflowModeForPlan(planId: string): string {
+  if (planId.startsWith("PLAN-DISCOVERY-")) return "Discovery";
+  if (planId.startsWith("PLAN-REVERSE-")) return "Reverse";
+  if (planId.startsWith("PLAN-RECOVERY-")) return "Recovery";
+  if (planId.startsWith("PLAN-M-")) return "Verification";
+  return "Forward";
+}
+
+function skillDriveModelForPlan(planId: string): string {
+  if (planId.startsWith("PLAN-DISCOVERY-")) return "Discovery";
+  if (planId.startsWith("PLAN-REVERSE-")) return "Reverse";
+  if (planId.startsWith("PLAN-RECOVERY-")) return "Recovery";
+  return "Forward";
+}
+
+function readJson<T>(path: string): T | null {
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, "utf8")) as T;
+  } catch {
+    return null;
+  }
+}
+
+function projectPlans(repoRoot: string, db: HarnessDb): Map<string, ProjectedPlan> {
+  const plans = new Map<string, ProjectedPlan>();
   for (const path of markdownFiles(join(repoRoot, "docs", "plans"))) {
     const content = readFileSync(path, "utf8");
     const planId = frontmatterValue(content, "plan_id");
     if (!planId) continue;
+    const kind = frontmatterValue(content, "kind");
+    const layer = frontmatterValue(content, "layer");
+    const drive = frontmatterValue(content, "drive");
+    const status = frontmatterValue(content, "status") || "draft";
+    const updatedAt = frontmatterValue(content, "updated") || frontmatterValue(content, "created");
+    plans.set(planId, { planId, kind, layer, drive, status, updatedAt });
     const relPath = normalizePath(path.replace(`${repoRoot}\\`, ""));
     recordProjectionEvent(db, {
       table: "plan_registry",
       id: planId,
       row: {
         plan_id: planId,
-        kind: frontmatterValue(content, "kind"),
-        layer: frontmatterValue(content, "layer"),
-        drive: frontmatterValue(content, "drive"),
-        status: frontmatterValue(content, "status") || "draft",
+        kind,
+        layer,
+        drive,
+        status,
         parent: "",
-        updated_at: frontmatterValue(content, "updated") || frontmatterValue(content, "created"),
+        updated_at: updatedAt,
       },
     });
     recordProjectionEvent(db, {
@@ -211,7 +295,7 @@ function projectPlans(repoRoot: string, db: HarnessDb): void {
         path: relPath,
         pair_artifact: "",
         status: "current",
-        updated_at: frontmatterValue(content, "updated") || frontmatterValue(content, "created"),
+        updated_at: updatedAt,
       },
     });
     recordProjectionEvent(db, {
@@ -223,10 +307,129 @@ function projectPlans(repoRoot: string, db: HarnessDb): void {
         subject_id: planId,
         path: relPath,
         title: frontmatterValue(content, "title") || planId,
-        tokens: `${planId} ${frontmatterValue(content, "kind")} ${frontmatterValue(content, "layer")} ${frontmatterValue(content, "drive")}`,
-        summary: frontmatterValue(content, "status") || "plan",
-        updated_at: frontmatterValue(content, "updated") || frontmatterValue(content, "created"),
+        tokens: `${planId} ${kind} ${layer} ${drive}`,
+        summary: status || "plan",
+        updated_at: updatedAt,
       },
+    });
+  }
+  return plans;
+}
+
+function projectDriveRuns(
+  repoRoot: string,
+  db: HarnessDb,
+  plans: Map<string, ProjectedPlan>,
+): void {
+  for (const plan of plans.values()) {
+    const digest = readJson<PlanDigestProjection>(
+      join(repoRoot, ".ut-tdd", "logs", "plan", `${plan.planId}.digest.json`),
+    );
+    const sessions = ["", ...(digest?.sessions ?? [])];
+    for (const sessionId of sessions) {
+      const id = stableId("drive-run", `${plan.planId}:${sessionId || "documented"}`);
+      const completed = (digest?.event_counts?.session_end ?? 0) > 0;
+      recordProjectionEvent(db, {
+        table: "drive_runs",
+        id,
+        row: {
+          drive_run_id: id,
+          plan_id: plan.planId,
+          session_id: sessionId,
+          drive: plan.drive,
+          mode: workflowModeForPlan(plan.planId),
+          layer: plan.layer,
+          kind: plan.kind,
+          started_at: plan.updatedAt || digest?.updated_at || "",
+          completed_at: completed ? (digest?.updated_at ?? "") : "",
+          status: sessionId ? (completed ? "completed" : "active") : plan.status || "documented",
+        },
+      });
+    }
+  }
+}
+
+function projectHookEvents(repoRoot: string, db: HarnessDb): void {
+  const sessionDir = join(repoRoot, ".ut-tdd", "logs", "session");
+  if (!existsSync(sessionDir)) return;
+  for (const file of readdirSync(sessionDir)
+    .filter((name) => name.endsWith(".jsonl"))
+    .sort()) {
+    const path = join(sessionDir, file);
+    const relPath = normalizePath(path.replace(`${repoRoot}\\`, ""));
+    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      let event: SessionLogProjection;
+      try {
+        event = JSON.parse(line) as SessionLogProjection;
+      } catch {
+        continue;
+      }
+      if (!event.session_id || !event.plan_id || !event.event_type) continue;
+      const hookName =
+        event.event_type === "session_start"
+          ? "SessionStart"
+          : event.event_type === "session_end"
+            ? "Stop"
+            : event.event_type === "forced_stop"
+              ? "ForcedStop"
+              : "PostToolUse";
+      const id = stableId(
+        "hook-event",
+        `${event.session_id}:${event.plan_id}:${event.ts ?? ""}:${event.event_type}`,
+      );
+      recordProjectionEvent(db, {
+        table: "hook_events",
+        id,
+        row: {
+          event_id: id,
+          session_id: event.session_id,
+          plan_id: event.plan_id,
+          hook_name: hookName,
+          event_type: event.event_type,
+          occurred_at: event.ts ?? "",
+          digest: event.outcome ?? "",
+          evidence_path: relPath,
+        },
+      });
+    }
+  }
+}
+
+function runtimeForModel(model: string): string {
+  if (/claude/i.test(model)) return "claude";
+  if (/gpt|codex/i.test(model)) return "codex";
+  return "";
+}
+
+function projectReviewModelRuns(
+  repoRoot: string,
+  db: HarnessDb,
+  plans: Map<string, ProjectedPlan>,
+): void {
+  for (const plan of loadReviewPlans(repoRoot)) {
+    const meta = plans.get(plan.plan_id);
+    plan.crossEntries.forEach((entry, index) => {
+      for (const role of ["worker", "reviewer"] as const) {
+        const model = role === "worker" ? entry.worker_model : entry.reviewer_model;
+        if (!model) continue;
+        const id = stableId("model-run", `${plan.plan_id}:${index}:${role}:${model}`);
+        recordProjectionEvent(db, {
+          table: "model_runs",
+          id,
+          row: {
+            run_id: id,
+            runtime: runtimeForModel(model),
+            model,
+            role,
+            drive: meta?.drive ?? "",
+            plan_id: plan.plan_id,
+            started_at: entry.tests_green_at ?? entry.reviewed_at ?? "",
+            completed_at: entry.reviewed_at ?? "",
+            evidence_path: normalizePath(join("docs", "plans", plan.file)),
+          },
+        });
+      }
     });
   }
 }
@@ -350,6 +553,7 @@ function projectVerificationBandExecution(db: HarnessDb): void {
     [VERIFY_CUTOVER_PLAN_ID, "PLAN-M-01-cutover-backfill", "pass"],
   );
   const checkedAt = nowIso();
+  const driveRunId = stableId("drive-run", `${VERIFY_CUTOVER_PLAN_ID}:documented`);
   const localPass =
     programTotalBands > 0 &&
     programCoveredBands === programTotalBands &&
@@ -369,11 +573,13 @@ function projectVerificationBandExecution(db: HarnessDb): void {
       row: {
         workflow_run_id: stableId("verification-band-workflow", layer),
         plan_id: VERIFY_CUTOVER_PLAN_ID,
-        drive_run_id: "",
+        drive_run_id: driveRunId,
         workflow: "L8-L14-verification-band",
         phase: layer,
         ready_status: localPass ? "passed_local" : "blocked",
-        blocked_reason: localPass ? blockedReason : "roadmap, gate, or review evidence projection is incomplete",
+        blocked_reason: localPass
+          ? blockedReason
+          : "roadmap, gate, or review evidence projection is incomplete",
         human_required: humanRequired,
         checked_at: checkedAt,
       },
@@ -430,7 +636,10 @@ function projectVerificationBandExecution(db: HarnessDb): void {
       table: "coverage",
       id: stableId("verification-band-coverage", `${metric.subject_id}:${metric.metric}`),
       row: {
-        coverage_id: stableId("verification-band-coverage", `${metric.subject_id}:${metric.metric}`),
+        coverage_id: stableId(
+          "verification-band-coverage",
+          `${metric.subject_id}:${metric.metric}`,
+        ),
         scope: "verification-band",
         subject_id: metric.subject_id,
         metric: metric.metric,
@@ -616,6 +825,580 @@ function projectVerificationEvidence(
   }
 }
 
+function assetFiles(dir: string, extensions: RegExp): string[] {
+  if (!existsSync(dir)) return [];
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...assetFiles(path, extensions));
+    else if (entry.isFile() && extensions.test(entry.name)) out.push(path);
+  }
+  return out.sort();
+}
+
+function projectAutomationAssets(repoRoot: string, db: HarnessDb): void {
+  const indexedAt = nowIso();
+  const sources = [
+    { type: "skill", root: join(repoRoot, "docs", "skills"), exts: /\.(md|ya?ml)$/i },
+    { type: "roster", root: join(repoRoot, ".claude", "agents"), exts: /\.md$/i },
+    { type: "command", root: join(repoRoot, "docs", "commands"), exts: /\.md$/i },
+  ] as const;
+  let assetCount = 0;
+  for (const source of sources) {
+    for (const path of assetFiles(source.root, source.exts)) {
+      const rel = normalizePath(relative(repoRoot, path));
+      const content = readFileSync(path, "utf8");
+      const metadata = metadataFromContent(path, content);
+      const appliesTo =
+        metadata.applies_to && typeof metadata.applies_to === "object"
+          ? (metadata.applies_to as Record<string, unknown>)
+          : {};
+      const name =
+        (typeof metadata.name === "string" ? metadata.name : "") ||
+        frontmatterValue(content, "name") ||
+        rel
+          .split("/")
+          .at(-1)
+          ?.replace(/\.(md|ya?ml)$/i, "") ||
+        rel;
+      const status = /\bhelix\s+codex\b/i.test(content) ? "drift" : "current";
+      const assetId = `${source.type}:${name}`;
+      const trigger =
+        frontmatterValue(content, "triggers") || frontmatterValue(content, "description");
+      const role = frontmatterValue(content, "role") || (source.type === "roster" ? name : "");
+      const capability =
+        frontmatterValue(content, "description") || `${source.type} metadata from ${rel}`;
+      const skillType = source.type === "skill" ? String(metadata.skill_type ?? "") : "";
+      const appliesLayers =
+        source.type === "skill" ? stringList(appliesTo.layers).sort().join(",") : "";
+      const appliesDriveModels =
+        source.type === "skill" ? stringList(appliesTo.drive_models).sort().join(",") : "";
+      recordProjectionEvent(db, {
+        table: "automation_assets",
+        id: assetId,
+        row: {
+          asset_id: assetId,
+          asset_type: source.type,
+          path: rel,
+          trigger,
+          role,
+          capability,
+          skill_type: skillType,
+          applies_layers: appliesLayers,
+          applies_drive_models: appliesDriveModels,
+          drift_status: status,
+          indexed_at: indexedAt,
+        },
+      });
+      recordProjectionEvent(db, {
+        table: "search_index",
+        id: stableId("automation-asset", assetId),
+        row: {
+          search_id: stableId("automation-asset", assetId),
+          subject_type: "automation_asset",
+          subject_id: assetId,
+          path: rel,
+          title: name,
+          tokens: `${source.type} ${trigger} ${role} ${capability} ${skillType} ${appliesLayers} ${appliesDriveModels}`,
+          summary: `${source.type} ${status}`,
+          updated_at: indexedAt,
+        },
+      });
+      assetCount += 1;
+      if (status === "drift") {
+        recordFinding(db, {
+          kind: "asset-drift",
+          subjectId: assetId,
+          source: "projection-writer",
+          evidencePath: rel,
+        });
+      }
+    }
+  }
+  if (assetCount === 0) {
+    recordFinding(db, {
+      kind: "empty-catalog",
+      subjectId: "automation_assets",
+      source: "projection-writer",
+    });
+  }
+}
+
+function skillScore(plan: ProjectedPlan, asset: Record<string, unknown>): number {
+  const text = [
+    asset.asset_id,
+    asset.path,
+    asset.trigger,
+    asset.role,
+    asset.capability,
+    asset.skill_type,
+    asset.applies_layers,
+    asset.applies_drive_models,
+  ]
+    .join(" ")
+    .toLowerCase();
+  const appliesLayers = String(asset.applies_layers ?? "")
+    .split(",")
+    .filter(Boolean);
+  const appliesDriveModels = String(asset.applies_drive_models ?? "")
+    .split(",")
+    .filter(Boolean);
+  const driveModel = skillDriveModelForPlan(plan.planId);
+  let score = 0.2;
+  if (appliesLayers.includes(plan.layer)) score += 0.35;
+  if (appliesDriveModels.includes(driveModel)) score += 0.35;
+  if (text.includes(plan.drive.toLowerCase())) score += 0.1;
+  if (/review|checklist|quality|test|lint/.test(text)) score += 0.25;
+  return Math.min(1, Number(score.toFixed(2)));
+}
+
+function projectSkillTelemetry(db: HarnessDb, plans: Map<string, ProjectedPlan>): void {
+  const recordedAt = nowIso();
+  const assets = db
+    .prepare("SELECT * FROM automation_assets WHERE asset_type = ? ORDER BY asset_id")
+    .all("skill");
+  for (const plan of plans.values()) {
+    const ranked = assets
+      .map((asset) => ({ asset, score: skillScore(plan, asset) }))
+      .filter((entry) => entry.score > 0)
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          String(a.asset.asset_id ?? "").localeCompare(String(b.asset.asset_id ?? "")),
+      )
+      .slice(0, 5);
+    const review = db
+      .prepare("SELECT has_evidence FROM review_evidence_registry WHERE plan_id = ?")
+      .get(plan.planId) as { has_evidence?: number } | undefined;
+    const accepted = Number(review?.has_evidence ?? 0) === 1 ? 1 : 0;
+    ranked.forEach((entry, index) => {
+      const skillId = String(entry.asset.asset_id ?? "");
+      const recId = stableId("skill-rec", `${plan.planId}:${skillId}`);
+      recordProjectionEvent(db, {
+        table: "skill_recommendations",
+        id: recId,
+        row: {
+          skill_recommendation_id: recId,
+          session_id: "",
+          plan_id: plan.planId,
+          skill_id: skillId,
+          rank: index + 1,
+          score: entry.score,
+          reason: `layer=${plan.layer}; technical_drive=${plan.drive}; drive_model=${skillDriveModelForPlan(plan.planId)}; kind=${plan.kind}`,
+          recommended_at: recordedAt,
+        },
+      });
+      if (accepted === 1) {
+        const invId = stableId("skill-inv", `${plan.planId}:${skillId}:review`);
+        recordProjectionEvent(db, {
+          table: "skill_invocations",
+          id: invId,
+          row: {
+            skill_invocation_id: invId,
+            session_id: "",
+            plan_id: plan.planId,
+            skill_id: skillId,
+            layer: plan.layer,
+            drive: plan.drive,
+            fired_at: recordedAt,
+            source: "auto-projection:review-evidence",
+            accepted,
+          },
+        });
+      }
+    });
+  }
+}
+
+function projectSkillMetrics(db: HarnessDb): void {
+  const computedAt = nowIso();
+  const rows = db
+    .prepare(
+      `SELECT r.plan_id, r.skill_id,
+              COUNT(DISTINCT r.skill_recommendation_id) AS rec,
+              COUNT(DISTINCT i.skill_invocation_id) AS inv,
+              SUM(CASE WHEN i.accepted = 1 THEN 1 ELSE 0 END) AS acc
+       FROM skill_recommendations r
+       LEFT JOIN skill_invocations i
+         ON i.plan_id = r.plan_id AND i.skill_id = r.skill_id
+       GROUP BY r.plan_id, r.skill_id`,
+    )
+    .all();
+  for (const row of rows) {
+    const rec = Number(row.rec ?? 0);
+    const inv = Number(row.inv ?? 0);
+    const acc = Number(row.acc ?? 0);
+    const planId = String(row.plan_id ?? "");
+    const skillId = String(row.skill_id ?? "");
+    const firing = rec === 0 ? 0 : inv / rec;
+    const acceptance = inv === 0 ? 0 : acc / inv;
+    for (const metric of [
+      { name: "skill_firing_rate", value: firing },
+      { name: "skill_acceptance_rate", value: acceptance },
+    ]) {
+      const signalId = stableId("skill-signal", `${planId}:${skillId}:${metric.name}`);
+      recordProjectionEvent(db, {
+        table: "quality_signals",
+        id: signalId,
+        row: {
+          signal_id: signalId,
+          source: "skill-metrics",
+          subject_id: `${planId}:${skillId}`,
+          metric: metric.name,
+          value: Number(metric.value.toFixed(4)),
+          threshold: 1,
+          status: metric.value < 1 ? "warn" : "pass",
+          computed_at: computedAt,
+        },
+      });
+    }
+  }
+}
+
+function projectOperationalMetrics(db: HarnessDb): void {
+  const computedAt = nowIso();
+  const metrics: {
+    subject: string;
+    name: string;
+    value: number;
+    threshold: number;
+    status: string;
+  }[] = [];
+  const driveModes = db
+    .prepare("SELECT mode, COUNT(*) AS total FROM drive_runs GROUP BY mode ORDER BY mode")
+    .all();
+  for (const row of driveModes) {
+    const mode = String(row.mode ?? "unknown");
+    const total = Number(row.total ?? 0);
+    const completed = scalarNumber(
+      db,
+      "SELECT COUNT(*) AS value FROM drive_runs WHERE mode = ? AND status IN ('completed', 'confirmed', 'documented')",
+      [mode],
+    );
+    const rate = total === 0 ? 0 : completed / total;
+    metrics.push({
+      subject: `drive:${mode}`,
+      name: "drive_firing_rate",
+      value: Number(rate.toFixed(4)),
+      threshold: 0.8,
+      status: rate >= 0.8 ? "pass" : "warn",
+    });
+  }
+  const hookTotal = scalarNumber(db, "SELECT COUNT(*) AS value FROM hook_events");
+  const troubleTotal = scalarNumber(
+    db,
+    "SELECT COUNT(*) AS value FROM hook_events WHERE event_type IN ('forced_stop', 'error', 'failed') OR digest LIKE '%fail%' OR digest LIKE '%error%'",
+  );
+  metrics.push({
+    subject: "hooks",
+    name: "trouble_event_rate",
+    value: hookTotal === 0 ? 0 : Number((troubleTotal / hookTotal).toFixed(4)),
+    threshold: 0,
+    status: troubleTotal === 0 ? "pass" : "warn",
+  });
+  const workflowTotal = scalarNumber(db, "SELECT COUNT(*) AS value FROM workflow_runs");
+  const blockedTotal = scalarNumber(
+    db,
+    "SELECT COUNT(*) AS value FROM workflow_runs WHERE ready_status NOT IN ('passed_local', 'passed', 'ready')",
+  );
+  const humanTotal = scalarNumber(
+    db,
+    "SELECT COUNT(*) AS value FROM workflow_runs WHERE human_required = 1",
+  );
+  const retryGroups = scalarNumber(
+    db,
+    `SELECT COUNT(*) AS value
+     FROM (
+       SELECT plan_id, workflow, phase, COUNT(*) AS c
+       FROM workflow_runs
+       GROUP BY plan_id, workflow, phase
+       HAVING c > 1
+     )`,
+  );
+  metrics.push({
+    subject: "workflow",
+    name: "workflow_blocked_rate",
+    value: workflowTotal === 0 ? 0 : Number((blockedTotal / workflowTotal).toFixed(4)),
+    threshold: 0,
+    status: blockedTotal === 0 ? "pass" : "warn",
+  });
+  metrics.push({
+    subject: "workflow",
+    name: "workflow_human_required_rate",
+    value: workflowTotal === 0 ? 0 : Number((humanTotal / workflowTotal).toFixed(4)),
+    threshold: 0,
+    status: humanTotal === 0 ? "pass" : "warn",
+  });
+  metrics.push({
+    subject: "workflow",
+    name: "workflow_retry_groups",
+    value: retryGroups,
+    threshold: 0,
+    status: retryGroups === 0 ? "pass" : "warn",
+  });
+  for (const metric of metrics) {
+    const signalId = stableId("telemetry-signal", `${metric.subject}:${metric.name}`);
+    recordProjectionEvent(db, {
+      table: "quality_signals",
+      id: signalId,
+      row: {
+        signal_id: signalId,
+        source: "telemetry-metrics",
+        subject_id: metric.subject,
+        metric: metric.name,
+        value: metric.value,
+        threshold: metric.threshold,
+        status: metric.status,
+        computed_at: computedAt,
+      },
+    });
+  }
+}
+
+function projectFeedbackEvents(db: HarnessDb): void {
+  const createdAt = nowIso();
+  for (const finding of db.prepare("SELECT * FROM findings WHERE status = 'open'").all()) {
+    const findingId = String(finding.finding_id ?? "");
+    const subject = String(finding.subject_id ?? findingId);
+    const id = stableId("feedback:finding", findingId || subject);
+    recordProjectionEvent(db, {
+      table: "feedback_events",
+      id,
+      row: {
+        feedback_event_id: id,
+        finding_id: findingId,
+        plan_id: subject.startsWith("PLAN-") ? subject : "",
+        signal_type: String(finding.kind ?? "finding"),
+        severity: String(finding.severity ?? "warn"),
+        status: "open",
+        next_action: `review finding ${findingId || subject}`,
+        created_at: createdAt,
+      },
+    });
+  }
+  for (const signal of db
+    .prepare("SELECT * FROM quality_signals WHERE status IN ('fail', 'warn')")
+    .all()) {
+    const signalId = String(signal.signal_id ?? "");
+    const subject = String(signal.subject_id ?? signalId);
+    const id = stableId("feedback:signal", signalId || subject);
+    recordProjectionEvent(db, {
+      table: "feedback_events",
+      id,
+      row: {
+        feedback_event_id: id,
+        finding_id: "",
+        plan_id: subject.startsWith("PLAN-") ? subject : "",
+        signal_type: String(signal.metric ?? "quality_signal"),
+        severity: String(signal.status ?? "warn") === "fail" ? "warn" : "info",
+        status: "open",
+        next_action: `review quality signal ${signalId || subject}`,
+        created_at: createdAt,
+      },
+    });
+  }
+}
+
+function projectTroubleEvents(db: HarnessDb): void {
+  const createdAt = nowIso();
+  const hookRows = db
+    .prepare(
+      `SELECT event_id, plan_id, event_type, digest
+       FROM hook_events
+       WHERE event_type IN ('forced_stop', 'error', 'failed')
+          OR digest LIKE '%fail%'
+          OR digest LIKE '%error%'
+       ORDER BY occurred_at, event_id`,
+    )
+    .all();
+  for (const row of hookRows) {
+    const sourceEventId = String(row.event_id ?? "");
+    const category = String(row.event_type ?? "").includes("forced")
+      ? "forced_stop"
+      : "hook_failure";
+    const id = stableId("trouble", sourceEventId);
+    recordProjectionEvent(db, {
+      table: "trouble_events",
+      id,
+      row: {
+        trouble_event_id: id,
+        source_event_id: sourceEventId,
+        plan_id: String(row.plan_id ?? ""),
+        category,
+        severity: "warn",
+        summary: String(row.digest ?? category).slice(0, 240),
+        status: "open",
+        created_at: createdAt,
+      },
+    });
+  }
+
+  for (const signal of db
+    .prepare("SELECT * FROM quality_signals WHERE metric = ? AND status IN ('warn', 'fail')")
+    .all("trouble_event_rate")) {
+    const signalId = String(signal.signal_id ?? "");
+    const id = stableId("trouble", signalId);
+    recordProjectionEvent(db, {
+      table: "trouble_events",
+      id,
+      row: {
+        trouble_event_id: id,
+        source_event_id: signalId,
+        plan_id: "",
+        category: "trouble_rate",
+        severity: String(signal.status ?? "warn") === "fail" ? "error" : "warn",
+        summary: `trouble_event_rate=${signal.value ?? ""}`,
+        status: "open",
+        created_at: createdAt,
+      },
+    });
+  }
+}
+
+function projectRetryEvents(db: HarnessDb): void {
+  const createdAt = nowIso();
+  const rows = db
+    .prepare(
+      `SELECT plan_id, workflow, phase, COUNT(*) AS attempt_count
+       FROM workflow_runs
+       GROUP BY plan_id, workflow, phase
+       HAVING COUNT(*) > 1
+       ORDER BY plan_id, workflow, phase`,
+    )
+    .all();
+  for (const row of rows) {
+    const planId = String(row.plan_id ?? "");
+    const workflow = String(row.workflow ?? "");
+    const phase = String(row.phase ?? "");
+    const id = stableId("retry", `${planId}:${workflow}:${phase}`);
+    recordProjectionEvent(db, {
+      table: "retry_events",
+      id,
+      row: {
+        retry_event_id: id,
+        plan_id: planId,
+        workflow,
+        phase,
+        attempt_count: Number(row.attempt_count ?? 0),
+        status: "open",
+        created_at: createdAt,
+      },
+    });
+  }
+}
+
+function projectIssueQueue(db: HarnessDb): void {
+  const createdAt = nowIso();
+  const issueSignals = new Set([
+    "trouble_event_rate",
+    "workflow_human_required_rate",
+    "workflow_retry_groups",
+    "workflow_blocked_rate",
+  ]);
+  const rows = db
+    .prepare(
+      `SELECT feedback_event_id, plan_id, signal_type, severity, next_action
+       FROM feedback_events
+       WHERE signal_type IN ('trouble_event_rate', 'workflow_human_required_rate', 'workflow_retry_groups', 'workflow_blocked_rate')
+       ORDER BY feedback_event_id`,
+    )
+    .all();
+  for (const row of rows) {
+    const signalType = String(row.signal_type ?? "");
+    if (!issueSignals.has(signalType)) continue;
+    const sourceEventId = String(row.feedback_event_id ?? "");
+    const id = stableId("issue-queue", sourceEventId);
+    recordProjectionEvent(db, {
+      table: "issue_queue",
+      id,
+      row: {
+        issue_queue_id: id,
+        source_event_id: sourceEventId,
+        plan_id: String(row.plan_id ?? ""),
+        target: "github",
+        title: `[ut-tdd telemetry] ${signalType}`,
+        body: `Dry-run issue candidate from feedback event ${sourceEventId}: ${row.next_action ?? ""}`,
+        status: "queued_dry_run",
+        human_approval_required: 1,
+        approved_by: "",
+        approved_at: "",
+        external_issue_id: "",
+        external_issue_url: "",
+        created_at: createdAt,
+      },
+    });
+  }
+}
+
+function projectIssueApprovalGuardrails(db: HarnessDb): void {
+  const decidedAt = nowIso();
+  const rows = db
+    .prepare("SELECT * FROM issue_queue WHERE human_approval_required = 1 ORDER BY issue_queue_id")
+    .all();
+  for (const row of rows) {
+    const id = stableId("guardrail", `issue-approval:${row.issue_queue_id ?? ""}`);
+    recordProjectionEvent(db, {
+      table: "guardrail_decisions",
+      id,
+      row: {
+        guardrail_decision_id: id,
+        plan_id: String(row.plan_id ?? ""),
+        session_id: "",
+        guardrail: "external-github-issue-approval",
+        decision: String(row.external_issue_url ?? "")
+          ? "approved-created"
+          : "requires-human-approval",
+        mode: "manual-approval",
+        human_signoff_required: String(row.external_issue_url ?? "") ? 0 : 1,
+        evidence_path: String(row.issue_queue_id ?? ""),
+        decided_at: decidedAt,
+      },
+    });
+  }
+}
+
+function projectImprovementLog(db: HarnessDb): void {
+  const createdAt = nowIso();
+  const issueRows = db.prepare("SELECT * FROM issue_queue ORDER BY issue_queue_id").all();
+  for (const row of issueRows) {
+    const sourceEventId = String(row.source_event_id ?? "");
+    const id = stableId("improvement", sourceEventId || String(row.issue_queue_id ?? ""));
+    recordProjectionEvent(db, {
+      table: "improvement_log",
+      id,
+      row: {
+        improvement_log_id: id,
+        source_event_id: sourceEventId,
+        plan_id: String(row.plan_id ?? ""),
+        category: "issue_queue",
+        summary: String(row.title ?? ""),
+        next_action: `review queued issue ${row.issue_queue_id ?? ""}`,
+        status: "open",
+        created_at: createdAt,
+      },
+    });
+  }
+
+  const retryRows = db.prepare("SELECT * FROM retry_events ORDER BY retry_event_id").all();
+  for (const row of retryRows) {
+    const id = stableId("improvement", String(row.retry_event_id ?? ""));
+    recordProjectionEvent(db, {
+      table: "improvement_log",
+      id,
+      row: {
+        improvement_log_id: id,
+        source_event_id: String(row.retry_event_id ?? ""),
+        plan_id: String(row.plan_id ?? ""),
+        category: "retry",
+        summary: `${row.workflow ?? ""}/${row.phase ?? ""} attempts=${row.attempt_count ?? ""}`,
+        next_action: "review retry/bottleneck pattern",
+        status: "open",
+        created_at: createdAt,
+      },
+    });
+  }
+}
+
 export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarnessDbResult {
   const repoRoot = input.repoRoot ?? process.cwd();
   const ownsDb = input.db === undefined;
@@ -623,10 +1406,23 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
   try {
     migrate(db);
     truncateProjectionTables(db);
-    projectPlans(repoRoot, db);
+    const plans = projectPlans(repoRoot, db);
+    projectDriveRuns(repoRoot, db, plans);
+    projectHookEvents(repoRoot, db);
+    projectReviewModelRuns(repoRoot, db, plans);
     projectRoadmapRollup(repoRoot, db);
     projectReviewEvidenceRegistry(repoRoot, db);
     projectVerificationBandExecution(db);
+    projectAutomationAssets(repoRoot, db);
+    projectSkillTelemetry(db, plans);
+    projectSkillMetrics(db);
+    projectOperationalMetrics(db);
+    projectFeedbackEvents(db);
+    projectTroubleEvents(db);
+    projectRetryEvents(db);
+    projectIssueQueue(db);
+    projectIssueApprovalGuardrails(db);
+    projectImprovementLog(db);
     projectRelationGraph(db, input.relationGraph);
     projectDocumentExports(db, input.documentExports);
     projectVerificationEvidence(db, input.verificationEvidence);

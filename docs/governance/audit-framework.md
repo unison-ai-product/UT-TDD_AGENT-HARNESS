@@ -6,7 +6,7 @@
 > **既知の整合課題 (L1 確定前に PO 確認)**:
 > - 既存 `docs/` 構造 (governance/design/test-design/plans/adr/migration) vs framework の `docs/` (product.md/requirements.md/architecture.md/coding-rules.md/risk-policy.yaml/features/) — migration timing
 > - feature ID `F-NNN` と既存 BR-NN の関係
-> - `.helix/reports/` (framework) vs `.ut-tdd/` (現行 runtime state) のパス名前空間
+> - `.ut-tdd/audit/reports/` (framework report) vs `.ut-tdd/` runtime state のパス名前空間
 > - 「HELIX」naming を UT-TDD context に normalize するか
 
 ---
@@ -204,7 +204,7 @@ Domain Gateでは、ドキュメントの中身を業務概念・責務・境界
 
 ### 5.5 出力
 
-`.helix/reports/domain-audit.md` を出力。例:
+`.ut-tdd/audit/reports/domain-audit.md` を出力。例:
 
 ```md
 # Domain Audit Report
@@ -264,7 +264,7 @@ Test Gate 確認項目:
 * 一時的な実装・仮実装の残存なし
 * TODO/FIXME に理由明記
 
-出力: `.helix/reports/implementation-audit.md`
+出力: `.ut-tdd/audit/reports/implementation-audit.md`
 
 ## 8. コーディングルール駆動
 
@@ -323,7 +323,7 @@ Coding Rule Gate で `docs/coding-rules.md` 遵守を確認:
 
 機械的検査は Lint/Typecheck/静的解析、AI 判断は HELIX 監査レポートで。
 
-出力: `.helix/reports/coding-rule-audit.md`
+出力: `.ut-tdd/audit/reports/coding-rule-audit.md`
 
 ## 11. docs / code / tests 三点一致
 
@@ -344,7 +344,7 @@ Coding Rule Gate で `docs/coding-rules.md` 遵守を確認:
 PRに以下のレポートを含める:
 
 ```txt
-.helix/reports/
+.ut-tdd/audit/reports/
 ├─ document-audit.md
 ├─ domain-audit.md
 ├─ test-result.json
@@ -400,7 +400,7 @@ GHA が行うこと:
 - `docs/features/*.md` の frontmatter 読み込み
 - `related_paths` と変更ファイルの照合
 - `risk` / `auto_merge` 取得
-- `.helix/reports/` の監査結果確認
+- `.ut-tdd/audit/reports/` の監査結果確認
 - safe/caution/danger/unknown 判定
 - safe のみ Auto-merge 候補
 

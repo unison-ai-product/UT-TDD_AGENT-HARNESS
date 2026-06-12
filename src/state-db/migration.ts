@@ -6,7 +6,9 @@
  * DDL は `CREATE TABLE/INDEX IF NOT EXISTS` で冪等。同 DB に複数回適用しても安全 (deterministic)。
  */
 
+import type { ColumnDef } from "../schema/harness-db";
 import {
+  assertSqlIdentifier,
   HARNESS_DB_TABLE_BY_NAME,
   HARNESS_DB_TABLES,
   SCHEMA_VERSION,
@@ -33,6 +35,37 @@ export function tableNames(db: HarnessDb): string[] {
   return rows.map((r) => String(r.name));
 }
 
+function columnNames(db: HarnessDb, table: string): Set<string> {
+  assertSqlIdentifier(table);
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all();
+  return new Set(rows.map((r) => String(r.name)));
+}
+
+function addColumnSql(table: string, column: ColumnDef): string {
+  assertSqlIdentifier(table);
+  assertSqlIdentifier(column.name);
+  if (column.primaryKey) {
+    throw new Error(`existing table ${table} is missing primary key column ${column.name}`);
+  }
+  return `ALTER TABLE ${table} ADD COLUMN ${column.name} ${column.type}`;
+}
+
+function addMissingColumns(db: HarnessDb): number {
+  const present = new Set(tableNames(db));
+  let added = 0;
+  for (const table of HARNESS_DB_TABLES) {
+    if (!present.has(table.name)) continue;
+    const columns = columnNames(db, table.name);
+    for (const column of table.columns) {
+      if (columns.has(column.name)) continue;
+      db.exec(addColumnSql(table.name, column));
+      columns.add(column.name);
+      added += 1;
+    }
+  }
+  return added;
+}
+
 /**
  * schema を現行 SCHEMA_VERSION まで適用する。
  * user_version < SCHEMA_VERSION のときのみ DDL を流し、適用後に user_version を更新する。
@@ -40,20 +73,16 @@ export function tableNames(db: HarnessDb): string[] {
  */
 export function migrate(db: HarnessDb): MigrationResult {
   const fromVersion = db.userVersion();
-  if (fromVersion >= SCHEMA_VERSION) {
-    return {
-      fromVersion,
-      toVersion: fromVersion,
-      applied: false,
-      tables: tableNames(db),
-    };
-  }
-  for (const ddl of schemaDdl()) db.exec(ddl);
-  db.setUserVersion(SCHEMA_VERSION);
+  const ddls = schemaDdl();
+  for (const ddl of ddls.filter((s) => s.startsWith("CREATE TABLE"))) db.exec(ddl);
+  const addedColumns = addMissingColumns(db);
+  for (const ddl of ddls.filter((s) => s.startsWith("CREATE INDEX"))) db.exec(ddl);
+  if (fromVersion < SCHEMA_VERSION) db.setUserVersion(SCHEMA_VERSION);
+  const toVersion = fromVersion > SCHEMA_VERSION ? fromVersion : SCHEMA_VERSION;
   return {
     fromVersion,
-    toVersion: SCHEMA_VERSION,
-    applied: true,
+    toVersion,
+    applied: fromVersion < SCHEMA_VERSION || addedColumns > 0,
     tables: tableNames(db),
   };
 }

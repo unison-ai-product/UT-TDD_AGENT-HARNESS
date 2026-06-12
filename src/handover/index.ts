@@ -380,6 +380,74 @@ export function readPointer(deps: {
   }
 }
 
+const NON_CLOSED_RESIDUAL_STATUSES = new Set(["gap", "scheduled", "parked", "po decision"]);
+const NO_NEXT_ACTION_PATTERNS = [
+  /\bno\s+next\s+action\b/i,
+  /次に着手する作業はなし/,
+  /次.*作業.*なし/,
+  /未了.*なし/,
+  /残(?:件|り|る)?.*なし/,
+];
+
+function normalizeStatus(raw: string): string {
+  return raw.replace(/`/g, "").trim().toLowerCase();
+}
+
+function residualStatusesFromAudit(md: string | null): string[] {
+  if (!md) return [];
+  const statuses: string[] = [];
+  let inResidualTable = false;
+  for (const line of md.split(/\r?\n/)) {
+    if (/^##\s+Residual Feature Buckets\b/.test(line)) {
+      inResidualTable = true;
+      continue;
+    }
+    if (inResidualTable && /^##\s+/.test(line)) break;
+    if (!inResidualTable) continue;
+    if (!/^\|\s*R\d+\s*\|/.test(line)) continue;
+    const cells = line.split("|").map((cell) => cell.trim());
+    const status = normalizeStatus(cells[cells.length - 2] ?? "");
+    if (status) statuses.push(status);
+  }
+  return statuses;
+}
+
+function noNextActionLines(md: string): string[] {
+  return md
+    .split(/\r?\n/)
+    .map((line, index) => ({ line: line.trim(), lineNo: index + 1 }))
+    .filter(({ line }) => line && NO_NEXT_ACTION_PATTERNS.some((pattern) => pattern.test(line)))
+    .map(({ line, lineNo }) => `${lineNo}: ${line}`);
+}
+
+/**
+ * PLAN-L3-04: residual rows が非 closed の間は、handover の広域な
+ * "no next action" 完了表現を警告する。CURRENT.json の latest_doc だけを対象にし、
+ * 過去 handover の無関係な文言までは拾わない。
+ */
+export function checkHandoverCompletionWording(deps: HandoverDeps): string[] {
+  const pointer = readPointer(deps);
+  if (!pointer?.latest_doc) return [];
+
+  const audit = deps.readText(
+    join(deps.repoRoot, ".ut-tdd", "audit", "A-133-upstream-vmodel-coverage-audit.md"),
+  );
+  const nonClosed = residualStatusesFromAudit(audit).filter((status) =>
+    NON_CLOSED_RESIDUAL_STATUSES.has(status),
+  );
+  if (nonClosed.length === 0) return [];
+
+  const md = deps.readText(join(deps.repoRoot, pointer.latest_doc));
+  if (!md) return [];
+  const lines = noNextActionLines(md);
+  if (lines.length === 0) return [];
+
+  const summary = [...new Set(nonClosed)].sort().join(", ");
+  return [
+    `handover completion wording: residual rows remain non-closed (${summary}) but ${pointer.latest_doc} says no next action (${lines.join("; ")})`,
+  ];
+}
+
 /**
  * IMP-047: handover-on-completion 規律の機械 surface (fail-open, 純判定)。
  * PLAN 活動 (active_plan + digest あり) があるのに CURRENT.json が未生成/stale/別 plan を指す場合に

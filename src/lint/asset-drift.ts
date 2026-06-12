@@ -20,7 +20,7 @@ export interface AssetDriftInput {
 
 export interface AssetDriftViolation {
   kind:
-    | "helix-path-residue"
+    | "legacy-source-path-residue"
     | "legacy-command-residue"
     | "empty-docs-skills"
     | "missing-allowlisted-agent";
@@ -34,7 +34,7 @@ export interface AssetDriftResult {
   violations: AssetDriftViolation[];
 }
 
-const HELIX_PATH_PATTERNS = [
+const LEGACY_SOURCE_PATH_PATTERNS = [
   /~\/ai-dev-kit-vscode/,
   /ai-dev-kit-vscode/,
   /C:\\Users\\micro\\ai-dev-kit-vscode/i,
@@ -90,12 +90,12 @@ export function analyzeAssetDrift(input: AssetDriftInput): AssetDriftResult {
   const assetById = new Map(input.assets.filter((a) => a.type === "agent").map((a) => [a.id, a]));
 
   for (const asset of input.assets) {
-    for (const pattern of HELIX_PATH_PATTERNS) {
+    for (const pattern of LEGACY_SOURCE_PATH_PATTERNS) {
       if (pattern.test(asset.text)) {
         violations.push({
-          kind: "helix-path-residue",
+          kind: "legacy-source-path-residue",
           path: asset.path,
-          detail: "HELIX 個人 workspace path residue",
+          detail: "legacy source personal workspace path residue",
         });
         break;
       }
@@ -148,11 +148,11 @@ export function analyzeAssetDrift(input: AssetDriftInput): AssetDriftResult {
 export function assetDriftMessages(result: AssetDriftResult): string[] {
   if (result.ok) {
     return [
-      `asset-drift — OK (agent/skill/prompt docs ${result.checkedAssets} 件、HELIX path residue 0、legacy command residue 0、allowlist missing 0)`,
+      `asset-drift - OK (agent/skill/prompt docs=${result.checkedAssets}, legacy_source_path_residue=0, legacy_command_residue=0, allowlist_missing=0)`,
     ];
   }
   return result.violations.map((v) => {
     const loc = v.path ? `${v.path}: ` : "";
-    return `asset-drift — violation: ${loc}${v.kind} (${v.detail})`;
+    return `asset-drift  Eviolation: ${loc}${v.kind} (${v.detail})`;
   });
 }

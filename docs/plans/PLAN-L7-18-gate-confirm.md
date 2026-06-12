@@ -4,10 +4,17 @@ title: "PLAN-L7-18 (add-impl): gate-confirm coupling lint 実装 (IMP-079)"
 kind: add-impl
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-06-12
 owner: PM / Codex TL
+review_evidence:
+  - reviewer: codex-tl
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-12"
+    tests_green_at: "2026-06-12"
+    verdict: approve_after_fixes
+    scope: "L7 completion audit A-135: U-GCONF artifacts exist, target tests and full npm test green, G4/G7 codex-only checklist review passed with .ut-tdd/audit/A-135-l7-completion-review-checklist.yaml."
 agent_slots:
   - role: tl
     slot_label: "TL - gate-confirm analyzer / doctor warn-first 配線"
@@ -63,6 +70,6 @@ self/pmo-sonnet review で純関数/loader 分離、warn-first、oracle coverage
 
 ## §8 DoD
 
-- [ ] lint module / doctor warn-first / tests が実装されている
-- [ ] typecheck / vitest / doctor が green
-- [ ] PLAN-REVERSE-17 が本 PLAN を requires している
+- [x] lint module / doctor warn-first / tests が実装されている
+- [x] typecheck / vitest / doctor が green
+- [x] PLAN-REVERSE-17 が本 PLAN を requires している

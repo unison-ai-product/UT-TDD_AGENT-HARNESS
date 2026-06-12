@@ -183,7 +183,15 @@ describe("runDoctor", () => {
   it("includes asset-drift hard gate in doctor output", () => {
     const r = runDoctor();
     expect(r.ok).toBe(true);
-    expect(r.messages.some((m) => m.includes("doctor: asset-drift — OK"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: asset-drift") && m.includes("OK"))).toBe(
+      true,
+    );
+  });
+
+  it("includes skill-assignment hard gate in doctor output", () => {
+    const r = runDoctor();
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: skill-assignment - OK"))).toBe(true);
   });
 
   it("surfaces dependency-drift and regression expansion instead of scaffold stub", () => {
@@ -205,5 +213,12 @@ describe("runDoctor", () => {
     expect(rollupLines[0]).toContain("gates ");
     expect(rollupLines[0]).toContain("spans ");
     expect(rollupLines[0]).toContain("frontier:");
+  });
+
+  it("surfaces Cycle P4 closure audit as a hard gate", () => {
+    const r = runDoctor();
+
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: cycle-p4-verification - OK"))).toBe(true);
   });
 });

@@ -4,9 +4,9 @@ title: "PLAN-REVERSE-18 (reverse): review-evidence stale approval の back-fill 
 kind: reverse
 layer: cross
 drive: agent
-status: draft
+status: confirmed
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-06-12
 owner: PM / Codex TL
 workflow_phase: R4
 forward_routing: gap-only
@@ -55,5 +55,5 @@ self/pmo-sonnet review で add-impl -> reverse pairing と back-fill 範囲を�
 
 ## §8 DoD
 
-- [ ] PLAN-L7-19 を dependencies.requires に持つ
-- [ ] stale approval oracle が L7 unit test design に trace されている
+- [x] PLAN-L7-19 を dependencies.requires に持つ
+- [x] stale approval oracle が L7 unit test design に trace されている

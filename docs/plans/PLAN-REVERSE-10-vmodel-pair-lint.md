@@ -6,9 +6,9 @@ layer: cross
 workflow_phase: R4
 confirmed_reverse_type: fullback
 drive: agent
-status: draft
+status: confirmed
 created: 2026-06-05
-updated: 2026-06-05
+updated: 2026-06-12
 owner: PM (Opus) / PO (人間)
 forward_routing: L3
 promotion_strategy: reuse-as-is
@@ -54,7 +54,7 @@ PLAN-L6-10 (設計) / L7-11 (実装) で導入した **設計層 pair freeze lin
 - **self-pair**: `pair_artifact: self` の doc (wireframe mock 自体が③ペア、L2⇔L10、IMP-039/058)。pair-freeze lint は孤児扱いしない。→ concept §10 へ back-merge。
 
 ## §7 DoD
-- [ ] requirements §6.8.3/§2.4 との非矛盾確認 + L6 frontmatter 規約注記
-- [ ] concept §10 に「pair-freeze lint (設計層)」「self-pair」を back-merge (glossary gap 解消)
-- [ ] doctor backfill 行で本 cycle の Reverse 孤児 0 / glossary gap 0 を確認
-- [ ] review 前置 (code-reviewer)
+- [x] requirements §6.8.3/§2.4 との非矛盾確認 + L6 frontmatter 規約注記
+- [x] concept §10 に「pair-freeze lint (設計層)」「self-pair」を back-merge (glossary gap 解消)
+- [x] doctor backfill 行で本 cycle の Reverse 孤児 0 / glossary gap 0 を確認
+- [x] review 前置 (code-reviewer)

@@ -1,0 +1,31 @@
+schema_version: review-checklist.v1
+description: L7 completion review evidence for remaining draft implementation PLANs.
+items:
+  - id: DOC
+    label: Documentation consistency
+    status: pass
+    evidence: "Checked PLAN-L7-01/11/12/18/19, paired L6 designs, paired L7 unit test design rows U-SLOG/U-VPAIR/U-VTRIG/U-GCONF/U-REVIEW, and Reverse back-fill PLAN-REVERSE-02/10/11/17/18."
+  - id: TST
+    label: Test coverage and green result
+    status: pass
+    evidence: "npm test passed: 60 files / 469 tests. Target tests for session-log, vmodel-pair, gate-confirm, review-evidence, and doctor passed."
+  - id: COD
+    label: Code correctness and maintainability
+    status: pass
+    evidence: "Reviewed source modules src/runtime/session-log.ts, src/vmodel/lint.ts, src/lint/gate-confirm.ts, src/lint/review-evidence.ts, and src/doctor/index.ts against their test-design oracles."
+  - id: XR
+    label: Cross-runtime behavior
+    status: pass
+    evidence: "ut-tdd gate G4/G7 executed in codex-only mode with intra_runtime_subagent review-kind and passed; cross_agent_review is unavailable by design in single-runtime mode."
+  - id: DEP
+    label: Dependency and boundary impact
+    status: pass
+    evidence: "doctor dependency-drift and regression-expansion passed after L7 telemetry/project-hook changes; no new external package, credential, production, or infrastructure dependency was introduced."
+  - id: DUP
+    label: Duplicate implementation avoidance
+    status: pass
+    evidence: "Existing modules are reused: session-log runtime, vmodel lint, gate-confirm lint, review-evidence lint, and doctor wiring. No duplicate checker was introduced for the remaining draft PLAN close."
+  - id: MOD
+    label: Module and workflow consistency
+    status: pass
+    evidence: "doctor surfaced pair-freeze OK, verification cycle gates including L0-L7 frozen, gate-confirm OK, review-evidence OK, roadmap-rollup frontier none, and L7/L7DB gates reached."

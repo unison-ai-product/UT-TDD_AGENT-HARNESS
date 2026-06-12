@@ -151,7 +151,7 @@ review_evidence:
 
 - (A) `docs/` 構造 migration の timing (即時 / 段階 / 並走)
 - (B) feature ID `F-NNN` と既存 BR-NN の関係
-- (C) `.helix/reports/` vs `.ut-tdd/` のパス名前空間
+- (C) `.ut-tdd/audit/reports/` vs `.ut-tdd/` runtime state のパス名前空間
 
 ## §4 工程表 (Step + 進捗)
 

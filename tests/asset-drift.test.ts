@@ -31,14 +31,14 @@ const input = (overrides: Partial<AssetDriftInput>): AssetDriftInput => ({
 });
 
 describe("asset-drift lint (U-FR-L1-49)", () => {
-  it("detects HELIX personal path residue in enrolled assets", () => {
+  it("detects legacy source personal path residue in enrolled assets", () => {
     const r = analyzeAssetDrift(
       input({
         assets: [agent("pmo-sonnet", "Read ~/ai-dev-kit-vscode/skills/SKILL_MAP.md")],
       }),
     );
     expect(r.ok).toBe(false);
-    expect(r.violations.map((v) => v.kind)).toContain("helix-path-residue");
+    expect(r.violations.map((v) => v.kind)).toContain("legacy-source-path-residue");
   });
 
   it("detects legacy helix command delegation residue", () => {

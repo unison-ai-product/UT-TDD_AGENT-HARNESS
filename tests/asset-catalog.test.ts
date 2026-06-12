@@ -19,10 +19,26 @@ describe("IT-ASSET-DB-01: automation asset catalog", () => {
         [
           "---",
           "name: testing",
+          "skill_type: testing",
+          "applies_to:",
+          "  layers: [L7]",
+          "  drive_models: [Forward]",
           "description: test skill",
           "---",
           "# Testing",
           "LONG PROMPT BODY SHOULD NOT BE STORED",
+        ].join("\n"),
+      );
+      writeFileSync(
+        join(repo, "docs", "skills", "review-checklist.yaml"),
+        [
+          "schema_version: review-checklist.v1",
+          "name: review-checklist",
+          "skill_type: quality-gate-review",
+          "applies_to:",
+          "  layers: [L7]",
+          "  drive_models: [Forward]",
+          "description: YAML review skill",
         ].join("\n"),
       );
       writeFileSync(
@@ -33,12 +49,28 @@ describe("IT-ASSET-DB-01: automation asset catalog", () => {
       const result = catalogAutomationAssets({ repoRoot: repo, db });
 
       expect(result.ok).toBe(true);
-      expect(rowCounts(db).automation_assets).toBe(2);
-      expect(rowCounts(db).search_index).toBe(2);
+      expect(rowCounts(db).automation_assets).toBe(3);
+      expect(rowCounts(db).search_index).toBe(3);
       const stored = db
         .prepare("SELECT capability FROM automation_assets WHERE asset_id = ?")
         .get("skill:testing");
       expect(String(stored?.capability ?? "")).not.toContain("LONG PROMPT BODY");
+      expect(
+        db
+          .prepare("SELECT asset_id FROM automation_assets WHERE asset_id = ?")
+          .get("skill:review-checklist"),
+      ).toMatchObject({ asset_id: "skill:review-checklist" });
+      expect(
+        db
+          .prepare(
+            "SELECT skill_type, applies_layers, applies_drive_models FROM automation_assets WHERE asset_id = ?",
+          )
+          .get("skill:review-checklist"),
+      ).toMatchObject({
+        skill_type: "quality-gate-review",
+        applies_layers: "L7",
+        applies_drive_models: "Forward",
+      });
     } finally {
       db.close();
       rmSync(repo, { recursive: true, force: true });

@@ -61,6 +61,7 @@ import {
 } from "./runtime/session-log";
 import { findReference } from "./search/index";
 import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
+import { recommendSkillsForPlan, recordSkillRecommendations } from "./skills/recommend";
 import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index";
 import { harnessDbStatus } from "./state-db/maintenance";
 import { rebuildHarnessDb } from "./state-db/projection-writer";
@@ -752,6 +753,31 @@ metrics
     }
   });
 
+const skill = program.command("skill").description("skill recommendation and invocation telemetry");
+skill
+  .command("suggest")
+  .description("suggest skills for a PLAN from harness.db plan/layer/drive context")
+  .requiredOption("--plan <id>", "PLAN id")
+  .option("--record", "write recommendations to harness.db")
+  .option("--json", "JSON output")
+  .action((opts: { plan: string; record?: boolean; json?: boolean }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      const rows = recommendSkillsForPlan(db, opts.plan);
+      if (opts.record) recordSkillRecommendations(db, rows);
+      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+      else {
+        for (const row of rows) {
+          process.stdout.write(
+            `${row.plan_id} ${row.skill_id}: rank=${row.rank} score=${row.score} reason=${row.reason}\n`,
+          );
+        }
+      }
+    } finally {
+      db.close();
+    }
+  });
+
 const automation = program.command("automation").description("workflow automation readiness");
 automation
   .command("readiness")
@@ -788,6 +814,119 @@ guardrail
         for (const row of rows) {
           process.stdout.write(
             `${row.plan_id ?? ""} ${row.guardrail ?? ""}: ${row.decision ?? ""} evidence=${row.evidence_path ?? ""}\n`,
+          );
+        }
+      }
+    } finally {
+      db.close();
+    }
+  });
+
+const issue = program.command("issue").description("external issue dry-run queue");
+issue
+  .command("queue")
+  .description("list GitHub issue dry-run queue entries")
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      const rows = db
+        .prepare("SELECT * FROM issue_queue ORDER BY created_at, issue_queue_id")
+        .all();
+      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+      else {
+        for (const row of rows) {
+          process.stdout.write(
+            `${row.issue_queue_id ?? ""} ${row.status ?? ""}: ${row.title ?? ""} approval=${row.human_approval_required ?? ""}\n`,
+          );
+        }
+      }
+    } finally {
+      db.close();
+    }
+  });
+
+issue
+  .command("mark-created")
+  .description("record externally created GitHub issue back-reference for a queued dry-run item")
+  .requiredOption("--queue-id <id>", "issue_queue_id")
+  .requiredOption("--issue-url <url>", "created GitHub issue URL")
+  .option("--issue-id <id>", "GitHub issue number or node id")
+  .option("--approved-by <name>", "human approver")
+  .action((opts: { queueId: string; issueUrl: string; issueId?: string; approvedBy?: string }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      const existing = db
+        .prepare("SELECT * FROM issue_queue WHERE issue_queue_id = ?")
+        .get(opts.queueId);
+      if (!existing) {
+        process.stderr.write(`issue queue entry not found: ${opts.queueId}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      db.prepare(
+        `UPDATE issue_queue
+           SET status = ?,
+               human_approval_required = 0,
+               approved_by = ?,
+               approved_at = ?,
+               external_issue_id = ?,
+               external_issue_url = ?
+           WHERE issue_queue_id = ?`,
+      ).run(
+        "created",
+        opts.approvedBy ?? "",
+        new Date().toISOString(),
+        opts.issueId ?? "",
+        opts.issueUrl,
+        opts.queueId,
+      );
+      process.stdout.write(`issue queue updated: ${opts.queueId} -> ${opts.issueUrl}\n`);
+    } finally {
+      db.close();
+    }
+  });
+
+const trouble = program.command("trouble").description("trouble taxonomy events");
+trouble
+  .command("list")
+  .description("list projected trouble events")
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      const rows = db
+        .prepare("SELECT * FROM trouble_events ORDER BY created_at, trouble_event_id")
+        .all();
+      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+      else {
+        for (const row of rows) {
+          process.stdout.write(
+            `${row.trouble_event_id ?? ""} ${row.category ?? ""}: ${row.summary ?? ""}\n`,
+          );
+        }
+      }
+    } finally {
+      db.close();
+    }
+  });
+
+const improvement = program.command("improvement").description("self-improvement log");
+improvement
+  .command("log")
+  .description("list projected self-improvement log entries")
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      const rows = db
+        .prepare("SELECT * FROM improvement_log ORDER BY created_at, improvement_log_id")
+        .all();
+      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+      else {
+        for (const row of rows) {
+          process.stdout.write(
+            `${row.improvement_log_id ?? ""} ${row.category ?? ""}: ${row.next_action ?? ""}\n`,
           );
         }
       }

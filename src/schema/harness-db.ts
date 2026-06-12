@@ -15,7 +15,7 @@
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 7;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
 
@@ -263,6 +263,62 @@ export const HARNESS_DB_TABLES: TableDef[] = [
     ],
   },
   {
+    name: "issue_queue",
+    columns: [
+      pk("issue_queue_id"),
+      col("source_event_id"),
+      col("plan_id"),
+      col("target"),
+      col("title"),
+      col("body"),
+      col("status"),
+      col("human_approval_required", "INTEGER"),
+      col("approved_by"),
+      col("approved_at"),
+      col("external_issue_id"),
+      col("external_issue_url"),
+      col("created_at"),
+    ],
+  },
+  {
+    name: "trouble_events",
+    columns: [
+      pk("trouble_event_id"),
+      col("source_event_id"),
+      col("plan_id"),
+      col("category"),
+      col("severity"),
+      col("summary"),
+      col("status"),
+      col("created_at"),
+    ],
+  },
+  {
+    name: "retry_events",
+    columns: [
+      pk("retry_event_id"),
+      col("plan_id"),
+      col("workflow"),
+      col("phase"),
+      col("attempt_count", "INTEGER"),
+      col("status"),
+      col("created_at"),
+    ],
+  },
+  {
+    name: "improvement_log",
+    columns: [
+      pk("improvement_log_id"),
+      col("source_event_id"),
+      col("plan_id"),
+      col("category"),
+      col("summary"),
+      col("next_action"),
+      col("status"),
+      col("created_at"),
+    ],
+  },
+  {
     name: "automation_assets",
     columns: [
       pk("asset_id"),
@@ -271,6 +327,9 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("trigger"),
       col("role"),
       col("capability"),
+      col("skill_type"),
+      col("applies_layers"),
+      col("applies_drive_models"),
       col("drift_status"),
       col("indexed_at"),
     ],
@@ -437,13 +496,7 @@ export const HARNESS_DB_TABLES: TableDef[] = [
   },
   {
     name: "roadmap_band_coverage",
-    columns: [
-      pk("band_id"),
-      col("name"),
-      col("status"),
-      col("roadmap_ids"),
-      col("computed_at"),
-    ],
+    columns: [pk("band_id"), col("name"), col("status"), col("roadmap_ids"), col("computed_at")],
   },
   {
     name: "roadmap_gate_progress",
@@ -500,6 +553,26 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     name: "idx_skill_plan_skill",
     table: "skill_invocations",
     columns: ["plan_id", "skill_id", "fired_at"],
+  },
+  {
+    name: "idx_issue_queue_plan_status",
+    table: "issue_queue",
+    columns: ["plan_id", "status", "created_at"],
+  },
+  {
+    name: "idx_trouble_events_plan_category",
+    table: "trouble_events",
+    columns: ["plan_id", "category", "created_at"],
+  },
+  {
+    name: "idx_retry_events_plan_phase",
+    table: "retry_events",
+    columns: ["plan_id", "workflow", "phase"],
+  },
+  {
+    name: "idx_improvement_log_status",
+    table: "improvement_log",
+    columns: ["status", "created_at"],
   },
   { name: "idx_search_subject", table: "search_index", columns: ["subject_type", "subject_id"] },
   {

@@ -1,6 +1,6 @@
 ---
 plan_id: PLAN-M-01-cutover-backfill
-title: "PLAN-M-01: HELIX to UT cutover backfill roadmap"
+title: "PLAN-M-01: legacy-source isolation backfill roadmap"
 kind: design
 layer: L14
 drive: fullstack
@@ -22,7 +22,7 @@ roadmap:
   gates:
     - id: G-CUTOVER.A
       name: stale strategy evidence
-      exit_criteria: "ADR-001 and A-130 evidence identify the HELIX to UT cutover strategy as stale and requiring backfill before execution."
+      exit_criteria: "ADR-001 and A-130 evidence identify the legacy-source cutover strategy as stale and requiring backfill before execution."
     - id: G-CUTOVER.B
       name: cutover route ready
       exit_criteria: "The stale strategy is routed to a concrete backfill roadmap and the cutover program band is covered in roadmap rollup."
@@ -48,18 +48,18 @@ review_evidence:
     reviewed_at: "2026-06-11"
     tests_green_at: "2026-06-11"
     verdict: pass
-    scope: "Cutover backfill completion: stale HELIX to UT cutover strategy is rewritten to ADR-001 current truth and harness.db roadmap/review evidence projections are implemented. No production cutover, credential, infrastructure, or destructive state operation is authorized."
+    scope: "Cutover backfill completion: stale legacy-source cutover strategy is rewritten to ADR-001 current truth and harness.db roadmap/review evidence projections are implemented. No production cutover, credential, infrastructure, or destructive state operation is authorized."
     worker_model: codex-gpt-5
     reviewer_model: codex-gpt-5-intra-runtime-review
 ---
 
-# PLAN-M-01: HELIX to UT cutover backfill roadmap
+# PLAN-M-01: legacy-source isolation backfill roadmap
 
 ## 0. Position
 
 This plan is the cutover band host for the program roadmap registry. It converts the A-130 carry into a concrete route:
 
-- ADR-001 says HELIX concepts are imported, but executable behavior is rebuilt in TypeScript/Bun.
+- ADR-001 says source concepts may be referenced, but executable behavior is rebuilt in TypeScript/Bun under UT-TDD-owned paths.
 - The previous cutover strategy can no longer be treated as executable truth without backfill.
 - harness.db L7 close makes cutover visible, but it does not authorize production or destructive migration.
 
@@ -83,7 +83,7 @@ Out of scope:
 
 Serial reason: downstream_dependency.
 
-Use ADR-001, A-130, and the migration inventory to define the stale condition: HELIX runtime paths, Python code-port assumptions, or old `helix` command routes must not remain as executable UT-TDD guidance.
+Use ADR-001, A-130, and the migration inventory to define the stale condition: legacy runtime paths, Python code-port assumptions, or old source command routes must not remain as executable UT-TDD guidance.
 
 ### Step 2: [逶ｴ蛻余] cutover roadmap registration
 

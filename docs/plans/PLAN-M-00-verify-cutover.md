@@ -1,6 +1,6 @@
 ---
 plan_id: PLAN-M-00-verify-cutover
-title: "PLAN-VERIFY-CUTOVER-00: L8-L14 verification band + HELIX to UT cutover backfill"
+title: "PLAN-VERIFY-CUTOVER-00: L8-L14 verification band + legacy-source isolation backfill"
 kind: design
 layer: L14
 drive: fullstack
@@ -29,7 +29,7 @@ roadmap:
       exit_criteria: "L8-L14 verification band is represented by a confirmed master roadmap; the roadmap registry covers the verification program band without relying on parked status."
     - id: G-VERIFY.B
       name: verification to cutover bridge
-      exit_criteria: "HELIX to UT cutover backfill is represented by a registered cutover roadmap and program rollup can surface 5/5 covered bands."
+      exit_criteria: "Legacy-source isolation backfill is represented by a registered cutover roadmap and program rollup can surface 5/5 covered bands."
   spans:
     - plan_id: PLAN-M-00-verify-cutover
       after_gate: entry
@@ -60,14 +60,14 @@ review_evidence:
     reviewer_model: codex-gpt-5-intra-runtime-review
 ---
 
-# PLAN-VERIFY-CUTOVER-00: L8-L14 verification band + HELIX to UT cutover backfill
+# PLAN-VERIFY-CUTOVER-00: L8-L14 verification band + legacy-source isolation backfill
 
 ## 0. Position
 
 This plan closes the two bands that were intentionally parked by PLAN-REVERSE-44:
 
 - verification: L8-L14 right-arm verification work was parked because no Forward roadmap existed.
-- cutover: HELIX to UT cutover was parked because the strategy document is stale after ADR-001 and harness.db close.
+- cutover: legacy-source isolation was parked because the previous strategy document was stale after ADR-001 and harness.db close.
 
 Completion here means the bands are no longer invisible parked work and the local L8-L14 verification execution is recorded in `harness.db`. It does not mean production deploy, PO final acceptance for L8-L14, or a destructive cutover. Those remain human-signoff/prod-scope activities outside this local band.
 
@@ -122,9 +122,9 @@ Record intra-runtime review evidence and update `.ut-tdd/handover/CURRENT.json` 
 ## 4. DoD
 
 - [x] L8-L14 verification band has a confirmed roadmap host.
-- [x] HELIX to UT cutover has a confirmed backfill roadmap host.
+- [x] Legacy-source isolation has a confirmed backfill roadmap host.
 - [x] Program rollup can prove 5/5 covered bands with no parked or uncovered band.
 - [x] `harness.db` rebuild records L8-L14 verification execution rows.
 - [x] A-132 audit evidence records the local execution result and production/PO boundary.
 - [x] Stale handover next action is replaced.
-- [x] No vendor or HELIX runtime source is edited.
+- [x] No vendor or legacy runtime source is edited.
