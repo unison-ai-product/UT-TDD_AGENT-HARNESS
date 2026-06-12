@@ -56,6 +56,20 @@ ADR-004 の **層1 markdown 正本 / 層2 TS 統制**境界に従う。TS は ma
 > **roster 未実装期間の移行段階 (Critical-2 是正、placeholder_deps)**: 現状 agent-guard は allowlist をハードコード相当で保持 (実装済・現行 hook、fail-close 動作中)。roster module 実装完了 (L7) まではこのハードコード allowlist を維持し、roster 実装時に agent-guard を roster 参照へ切替える。**移行期間中は drift lint の「roster↔guard 整合」検査を `placeholder_deps: {waiting_layer: L7, waiting_spec: roster module 実装 + guard の roster 参照切替}` (実装状態解消型、physical-data §7) として残す**。Current doctor hard gate は HELIX path / legacy command / docs-skills vacancy / allowlist missing agent docs の asset-drift slice までで、dedicated `placeholder_deps` rule は A-118 carry として扱う。整合の最終検知は roster 実装後に drift lint (FR-L1-49) が担う。
 > **粒度 (L4=L9 総合テスト)**: 本 §1.1 は「内部資産 roster が system として動く」を L9 総合テスト粒度で束ねる。各 subcommand signature / capability resolver アルゴリズム / model family 解決の関数粒度は **L5 (module 結合) → L6 (関数仕様=単体テスト設計) で段階分解** (PLAN-L4-11 §3、L5 を挟む)。L4 で書けない関数仕様は placeholder + 依存 (`waiting_layer: L6`) として残し back-fill (PLAN-L4-10 §0.1)。
 
+### §1.2 C2 trace の descent-obligation building block (FR-03 / FR-L1-03、PLAN-L6-35 add-design)
+
+C2 (TDD・gate・trace) の FR-03 (V字双方向 trace) は当初「宣言された pair link の照合」(`vmodel pair-freeze` / `trace check`) として実装された (document-driven)。これは **在る成果物の link 整合**は見るが「**在るべき下流/pair 成果物の不在**」を検出できない (absence-blindness)。A-136 後の skill 片肺 (impl 着地済だが L6 単体テスト設計不在) がこの穴を素通りした。
+
+本 building block は FR-03 の **降下完全性 (抜け漏れ検出)** を absence-detecting に強化する:
+
+| 機能 | 層 | building block | 内容 |
+|---|---|---|---|
+| **層隣接 obligation matrix** | 層2 (TS) | lint (descent-obligation) | `document-system-map.md §1` の層×成果物×V-pair を機械可読 rule (descent/pair × condition) に集約 (SSoT、現状 6 lint に暗黙分散していた隣接規則を単一化) |
+| **上流駆動 obligation 生成** | 層2 (TS) | lint + relation-graph 再利用 | 上流 (要件 FR) + matrix から「在るべき下流/pair 成果物」を生成し、不在を fail-close。下流の自己宣言に依存しない (pair-freeze の一般化) |
+| **defer ledger + impl-ahead ガード** | 層2 (TS) | lint + placeholder_deps (physical-data §7) | open defer を `(traceKey, waitingLayer, dischargeCondition, owner)` で台帳化。src 着地済 + 未 discharge defer = impl-ahead 違反 (impl→設計 back-fill 未完の機械検出) |
+
+> **粒度 (L4=L9 総合テスト)**: 本 §1.2 は「降下鎖が層を取りこぼさず system として閉じる」を L9 総合テスト粒度で束ねる。各関数 signature / obligation 生成アルゴリズム / defer 有効性判定は **L5 (module 結合) → L6 (関数仕様=単体テスト設計) で段階分解** (機能設計 = `descent-obligation.md`、③ ペア = L7-unit §1.22 U-DESC)。lint 実装 + harness.db `descent_obligations` projection + doctor 配線は L7 (別 add-impl PLAN、Codex 委譲)。
+
 ## §2 CLI コマンド面の機能 building block
 
 FR → `ut-tdd` サブコマンドの対応 (architecture.md cli module に集約、副作用端点)。

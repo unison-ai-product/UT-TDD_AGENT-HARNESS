@@ -116,6 +116,7 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **入力**: 設計 PLAN + テスト設計 PLAN
 - **出力**: trace 整合レポート (`.ut-tdd/artifact/trace/`) / 抜け漏れ検出ログ
 - **振る舞い**: `ut-tdd trace check` で 4 artifact (設計 / 実装 / テスト設計 / テストコード) の双方向 12 directed edge を全件照合
+- **振る舞い (descent obligation、PLAN-L6-35 add-design)**: 宣言された link の照合だけでなく、上流 (要件 FR) + 層隣接 obligation matrix から「在るべき下流/pair 成果物」を**生成**し、不在 (= 取りこぼし) を fail-close で検出する (absence-blind 是正)。src/test 着地済の trace key に未 discharge の設計/テスト設計 defer があれば impl-ahead 違反とする (機能設計 = `descent-obligation.md`)
 
 #### AC-FR-03-01 (正常系)
 - **Given**: PLAN-005 が generates: 設計 doc + 実装 + テスト設計 + テストコード 4 artifact 全件指定
@@ -131,6 +132,11 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **Given**: PLAN-005 が pair_artifact のみ宣言、generates なし (片方向のみ)
 - **When**: `ut-tdd trace check`
 - **Then**: warn `Warning: generates 未宣言、L7 実装前に補完推奨` / fail-close せず / 終了コード 0
+
+#### AC-FR-03-04 (descent obligation — 不在検出 / impl-ahead、PLAN-L6-35)
+- **Given**: trace key K の src/test が着地済だが、K の L6 単体テスト設計が不在 (= skill 片肺と同型)
+- **When**: `ut-tdd doctor` (descent-obligation 検査)
+- **Then**: fail-close `unmet obligation: K の L6→L7 pair が不在` または `impl-ahead: K は src 着地済だが設計/テスト設計 defer 未 discharge` / next_action: `機能設計⇔単体テスト設計 pair を back-fill、または有効 defer (discharge条件+owner) を宣言` / 上流が park/placeholder のときは obligation を生成しない (誤検出しない)
 
 ---
 

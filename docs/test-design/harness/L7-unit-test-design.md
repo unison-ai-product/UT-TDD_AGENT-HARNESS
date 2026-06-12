@@ -467,6 +467,21 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-TEAMRUN-002 | `validateTeamRun` | 同一 role/provider 重複、worker/reviewer 同一 provider は fail |
 | U-ADAPTER-001 | `buildAdapterPlan` | `ut-tdd codex` / `ut-tdd claude` dry-run command plan を mode に基づき available 判定 / Codex provider args は `exec <task>`、Claude provider args は Claude Code print-mode の `--print -p <task>` / `--plan` は harness metadata として保持し provider CLI へ渡さない |
 
+### §1.22 U-DESC (descent-obligation ledger 由来、PLAN-L6-35 add-design / descent-obligation.md §1-§4、FR-L1-03)
+
+> ペア = `descent-obligation.md` §1-§4。上流 (要件 FR) + 層隣接 matrix から「在るべき下流/pair 成果物」を生成し不在を fail-close する (absence-blind 是正)。pair-freeze (document-driven) の一般化を上流駆動 (absence-detecting) で行う。
+
+| U-ID | 対象関数 | oracle (DbC) |
+|---|---|---|
+| U-DESC-001 | `generateObligations` | **純関数 + 上流駆動**。present artifact の layer から adjacency.rules を引き、condition (active/impl-present) を満たす to-layer のみ Obligation を emit / **下流の自己宣言 (pair_artifact 等) を一切参照しない** / 同入力→同出力 |
+| U-DESC-002 | `analyzeDescentObligations` (健全性) | trace key 無し成果物→`untraceable` finding (ok=false) **かつ obligation ループから除外 = unmet/implAhead に混入しない** (I-2) / 同一 (traceKey,layer,role) 衝突→`duplicate-key` finding (E1/E8) |
+| U-DESC-003 | `analyzeDescentObligations` (満たし) | 全 obligation が **`status=="active"` の**下流/pair で満たされる→`graded` 全 satisfied + ok=true + chain.complete=true (I-1) |
+| U-DESC-004 | `analyzeDescentObligations` (不在) | 義務付けられた下流/pair が不在・defer 無し→`unmet` + ok=false / chain.firstGap=最初の欠落層 / **requiredLayer に park/placeholder の stub があっても satisfied にしない** (E2/E6/I-1、**skill 片肺の本体**) |
+| U-DESC-005 | `analyzeDescentObligations` (defer) | 不在 + 有効 defer (dischargeCondition 非空 ∧ owner 非空) ∧ impl 未着地→`deferred` (ok 維持) / defer に条件 or owner 欠落→**`invalid-defer` finding 発火**かつ `unmet` (免責しない、E3/E4/I-4) |
+| U-DESC-006 | `analyzeDescentObligations` (impl-ahead) | src/test 着地済 + 設計/テスト設計層の未 discharge defer→`impl-ahead` 違反 (defer で免責しない、ok=false) / 方向非依存 / **graded.unmet と implAhead は排他 = 同一 layer を二重登録しない** (E5/E7/I-3、**skill 片肺の核**) |
+| U-DESC-007 | `analyzeDescentObligations` (park) | 上流が park/placeholder→descent obligation を生成しない (pair-freeze park 規約と整合、E6) |
+| U-DESC-008 | `descentObligationMessages` + 実 repo ガード | unmet/impl-ahead を reason+traceKey+layer で文言化 / **実 repo で skill subsystem の片肺が unmet または impl-ahead として surface される** (Phase 0 = 現存 drop 一掃検出、是正後 0 へ収束) |
+
 ## §2 量閉じ一覧 (L6 設計 → U 被覆、孤児チェック)
 
 - function-spec §1 関数 → U-FUNC-01〜04
@@ -494,6 +509,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - **cross-review-enforcement.md §1-§2 関数 (extractReviewEntries/analyzeReviewEvidence の crossReviewViolations、schema worker_model/reviewer_model) → U-XREVIEW-001〜005** (add-feature 差分、PLAN-L7-14/IMP-076。doctor 連動は U-REVIEW-006 実 repo ガードの crossReviewViolations==[] に内包。孤児 0)
 - **test-before-review.md §2-§3 関数 (analyzeReviewEvidence の testBeforeReviewViolations、schema tests_green_at、reviewed_at/tests_green_at 抽出) → U-TORDER-001〜005** (add-feature 差分、PLAN-L7-15/IMP-077。doctor 連動は U-REVIEW-006 実 repo ガードの testBeforeReviewViolations==[] に内包。全駆動モデル普遍。孤児 0)
 - **provider-handover.ts / gate/review-tier.ts / team/run.ts / runtime/adapter.ts → U-PHOVER-001〜002 / U-GATE-001〜003 / U-TEAMRUN-001〜002 / U-ADAPTER-001** (review 残課題解消差分、2026-06-08。provider handover package、mode-aware judgment gate、hybrid team 分散、runtime adapter dry-run surface。孤児 0)
+- **descent-obligation.md §1-§4 関数 (loadDescentAdjacency/loadTraceKeyedArtifacts/loadDeferLedger/generateObligations/analyzeDescentObligations/descentObligationMessages、doctor checkDescentObligation) → U-DESC-001〜008** (add-design 差分、PLAN-L6-35/FR-L1-03。load×3 は U-DESC-008 実 repo ガードに内包。上流駆動 obligation 生成 + defer ledger + impl-ahead ガードで absence-blind を是正。孤児 0)
 - **孤児 (設計で U 未被覆) = 0** を L7 entry で機械確認
 
 ## §3 trace (④ → ②)

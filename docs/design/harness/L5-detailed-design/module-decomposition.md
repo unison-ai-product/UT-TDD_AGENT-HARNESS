@@ -150,6 +150,19 @@ PLAN-L5-07 closes the L5 module-integration slice for FR-L1-49.
 | dependency-drift coexistence | `asset-drift` sits beside ADR-002 dependency-drift; both are IMP-033 rule types and must not duplicate ownership. | L7 import-map implementation remains under dependency-drift. |
 
 These additions complete the L5 integration boundary for skill and drift assets while leaving function-level algorithms to L6 and implementation state to L7.
+
+### A.3 descent-obligation module integration (PLAN-L6-35 / FR-L1-03)
+
+PLAN-L6-35 closes the L5 module-integration slice for FR-L1-03's descent-completeness (抜け漏れ検出). It strengthens the existing `vmodel pair-freeze` (document-driven) into an upstream-driven, absence-detecting check.
+
+| component | L5 responsibility | dependency direction | carry |
+|---|---|---|---|
+| descent adjacency matrix | Materialize `document-system-map.md §1` (layer × artifact × V-pair) as a single machine-readable rule set; no new SSoT, it derives from governance docs. | `descent-obligation -> schema/fs`; no import from runtime/guard. | L6 defines `AdjacencyRule` shape and `condition` semantics. |
+| obligation generator | Drive obligations from upstream requirement + matrix (not from downstream self-declaration); reuse `relation-graph.ts` node/edge substrate (`requirement`/`design`/`test-design`/`source`/`test`) rather than a second graph. | Pure analyzer over loaded artifacts; consumes relation-graph projection. | L6 defines `generateObligations` / `analyzeDescentObligations` signatures and DbC. |
+| defer ledger + impl-ahead | Read open defers (`explicit_l7_defer` / `placeholder_deps`, physical-data §7); treat src-landed + undischarged design/test-design defer as an impl-ahead violation. | Pure; defers are an input, not mutated. | L6 defines defer validity and impl-ahead rule; L7 wires `descent_obligations` projection + `runDoctor`. |
+
+This concretizes a new `lint/descent-obligation` module reusing the relation-graph substrate; it does not duplicate pair-freeze (which becomes the document-driven subset) or impl-plan-trace (PLAN-ID coverage). Function-level algorithms stay in L6; lint/projection/doctor wiring is L7 (add-impl, Codex 委譲).
+
 ## Appendix B: Harness DB Feedback Modules (PLAN-L5-08)
 
 PLAN-L5-08 adds a DB-centered reference-feedback slice without replacing the existing lint/rule modules.
