@@ -384,3 +384,94 @@ The BR-21 evaluation hooks are Phase B oriented, but the function-design trace m
 ## Appendix C: L7 clean checkout DB projection invariant
 
 `harness-check` must run deterministic `db rebuild` before tests in a clean checkout. The projection layer must derive `hook_events` from tracked provider handover evidence when ignored local session logs are absent, and `ut-tdd skill suggest --json` must rebuild a read-only in-memory DB from source when persistent `.ut-tdd/harness.db` is absent.
+
+## Appendix D: PLAN-L7-51 同梱 lint モジュール契約 back-fill (PLAN-L7-52 C-4, 2026-06-15)
+
+PLAN-L7-51 が impl-ahead で着地した 4 モジュール (`plan-dod`, `placeholder-deps`, `l7-completion`, `drive-db-registration`) の L6 契約を後追いで明文化する。parent PLAN = PLAN-L7-51。oracle ID 宣言 (U-* / FR-L1-*) は L7 oracle slice で別途行うため本 addendum では省略し、関数 signature + DbC + doctor 配線のみを記録する。
+
+### D.1 `src/lint/plan-dod.ts`
+
+| 関数 (実 export) | signature | pre | post | doctor 配線 |
+|---|---|---|---|---|
+| `loadPlanDodDocs` | `(root?: string) => PlanDodDoc[]` | `root` 省略時は `process.cwd()`; `docs/plans/` が存在しない場合は空配列を返す | fs read のみ (write なし); 返り値は `PLAN-L7-*.md` ファイルを sort 順で列挙した `PlanDodDoc[]` | `checkPlanDod` 内部で呼ばれる |
+| `analyzePlanDod` | `(docs: PlanDodDoc[]) => PlanDodResult` | `docs` は `loadPlanDodDocs` の返り値相当; 純粋関数 (fs アクセスなし) | `status` が `confirmed` または `completed` の PLAN の DoD セクション内に未チェック項目 (`- [ ]`) が 1 件でもあれば `ok=false`; 対象 PLAN が 0 件の場合は `checked=0` (警告扱い) | `checkPlanDod` が `planDodMessages` とともに `runDoctor` へ集約 |
+| `planDodMessages` | `(result: PlanDodResult) => string[]` | `result` は `analyzePlanDod` の返り値 | `checked=0` のとき警告メッセージを 1 件返す; `ok=true` のとき合格メッセージを返す; 違反時は最大 8 件のサンプル (`planId:line`) を含む違反メッセージを返す | `checkPlanDod` → `runDoctor.messages` に `doctor:` プレフィックスで合流 |
+
+型定義:
+
+```ts
+interface PlanDodDoc { path: string; planId: string; status: string; text: string }
+interface PlanDodViolation { planId: string; path: string; line: number; item: string }
+interface PlanDodResult { checked: number; violations: PlanDodViolation[]; ok: boolean }
+```
+
+共通 invariant: `analyzePlanDod` は純粋関数 (同入力→同出力)。`loadPlanDodDocs` が唯一の fs 端点。`status` フィルタは `confirmed` / `completed` のみ対象とし、それ以外の PLAN は DoD 検査をスキップする。
+
+### D.2 `src/lint/placeholder-deps.ts`
+
+| 関数 (実 export) | signature | pre | post | doctor 配線 |
+|---|---|---|---|---|
+| `loadPlaceholderDepsDocs` | `(root?: string) => PlaceholderDepsDoc[]` | `root` 省略時は `process.cwd()`; 対象ディレクトリが存在しない場合は空配列を返す | `docs/design/harness/` と `docs/test-design/harness/` を再帰 walk して `.md` ファイルを収集; path は repo root からの相対パスで正規化; sort 済みで返す | `checkPlaceholderDeps` 内部で呼ばれる |
+| `analyzePlaceholderDeps` | `(docs: PlaceholderDepsDoc[]) => PlaceholderDepsResult` | `docs` は `loadPlaceholderDepsDocs` の返り値相当; 純粋関数 | active (`""` / `confirmed` / `completed`) の doc に L7 を待ち先とする未解決の依存宣言行が残る、または専用 doctor rule が未整備との自己申告行が残る場合は `ok=false` | `checkPlaceholderDeps` → `runDoctor` |
+| `placeholderDepsMessages` | `(result: PlaceholderDepsResult) => string[]` | `result` は `analyzePlaceholderDeps` の返り値 | `ok=true` のとき合格メッセージ (`checked=N, active L7 waits=0`) を返す; 違反時は最大 8 件のサンプル (`path:line`) を含む違反メッセージを返す | `checkPlaceholderDeps` → `runDoctor.messages` |
+
+型定義:
+
+```ts
+interface PlaceholderDepsDoc { path: string; status: string; text: string }
+interface PlaceholderDepsViolation { path: string; line: number; detail: string }
+interface PlaceholderDepsResult { checked: number; violations: PlaceholderDepsViolation[]; ok: boolean }
+```
+
+共通 invariant: active status の判定は lowercase で行う。`placeholder_deps` が残存するドキュメントは design/test-design ともに対象。`analyzePlaceholderDeps` は純粋関数 (fs アクセスなし)。
+
+### D.3 `src/lint/l7-completion.ts`
+
+| 関数 (実 export) | signature | pre | post | doctor 配線 |
+|---|---|---|---|---|
+| `loadL7CompletionDocs` | `(root?: string) => L7CompletionDoc[]` | `root` 省略時は `process.cwd()`; 対象ディレクトリが存在しない場合は空 | `docs/design/harness/L4-basic-design/`, `L5-detailed-design/`, `L6-function-design/` を再帰 walk; path は repo root からの相対パスで正規化; sort 済みで返す | `checkL7Completion` 内部で呼ばれる |
+| `classifyStaleL7Line` | `(line: string) => string \| null` | 任意の文字列行; 純粋関数 | L7 完了後も残存する陳腐化記述 (要約行が残作業を carry と述べる / orchestration 本体を未着手と述べる / CI 配線を後続へ送ると述べる / WBS 行が未完ステータスを保持する など計 6 パターン) を検出し分類メッセージを返す; 該当なし = `null` | `analyzeL7Completion` の内部ヘルパー (外部公開のみ、doc 配線なし) |
+| `analyzeL7Completion` | `(docs: L7CompletionDoc[]) => L7CompletionResult` | `docs` は `loadL7CompletionDocs` の返り値相当; 純粋関数 | active status の doc 各行に対して `classifyStaleL7Line` を適用; 1 件でも陳腐化パターンが残存すれば `ok=false`; 対象 doc が 0 件のとき `checked=0` (警告扱い) | `checkL7Completion` → `runDoctor` |
+| `l7CompletionMessages` | `(result: L7CompletionResult) => string[]` | `result` は `analyzeL7Completion` の返り値 | `ok=true` のとき合格メッセージ (`checked=N, stale L7 blockers=0`) を返す; 違反時は最大 8 件のサンプル (`path:line`) を含む違反メッセージを返す | `checkL7Completion` → `runDoctor.messages` |
+
+型定義:
+
+```ts
+interface L7CompletionDoc { path: string; status: string; text: string }
+interface L7CompletionViolation { path: string; line: number; detail: string; sample: string }
+interface L7CompletionResult { checked: number; violations: L7CompletionViolation[]; ok: boolean }
+```
+
+共通 invariant: 対象スコープは L4-L6 design doc のみ (L7 PLAN 自体は対象外)。`classifyStaleL7Line` は正規表現マッチで判定し false-positive を避けるため `active design doc 内の WBS 表・モジュール一覧・サマリ行` に限定したパターンを使う。`analyzeL7Completion` は純粋関数。
+
+### D.4 `src/lint/drive-db-registration.ts`
+
+| 関数 (実 export) | signature | pre | post | doctor 配線 |
+|---|---|---|---|---|
+| `analyzeDriveDbRegistration` | `(stats: DriveDbRegistrationStats \| null) => DriveDbRegistrationResult` | `stats` は `.ut-tdd/harness.db` から呼び出し元が事前に取得したもの; `null` = DB 不在 or 読み取り失敗; 純粋関数 | `null` のとき `violations=[{reason:"missing_db"}]`, `ok=false`; stats が供給された場合は plan 登録数・drive runs・workflow/model/skill runs・hook events・必須 mode 5 種 (`Discovery/Forward/Recovery/Reverse/Verification`) の各存在を検査し、1 件でも欠落があれば `ok=false` | `checkDriveDbRegistration` → `runDoctor` |
+| `driveDbRegistrationMessages` | `(result: DriveDbRegistrationResult) => string[]` | `result` は `analyzeDriveDbRegistration` の返り値 | `ok=false` のとき最大 8 件の違反理由サンプル (`reason[:mode][=count]`) を含む違反メッセージを返す; `ok=true` のとき全 stats を含む合格メッセージを返す | `checkDriveDbRegistration` → `runDoctor.messages` |
+
+型定義:
+
+```ts
+interface DriveDbRegistrationStats {
+  planCount: number; driveRuns: number; plansWithoutDriveRun: number;
+  workflowRuns: number; workflowOrphans: number; modelRuns: number; modelOrphans: number;
+  skillRecommendations: number; skillRecommendationOrphans: number;
+  skillInvocations: number; skillInvocationOrphans: number;
+  registeredHookEvents: number; hookOrphans: number; modes: string[];
+}
+interface DriveDbRegistrationViolation {
+  reason: "missing_db" | "empty_plan_registry" | "missing_drive_runs" | "plans_without_drive_run"
+        | "missing_workflow_runs" | "workflow_orphans" | "missing_model_runs" | "model_orphans"
+        | "missing_skill_recommendations" | "skill_recommendation_orphans"
+        | "missing_skill_invocations" | "skill_invocation_orphans"
+        | "missing_registered_hook_events" | "missing_required_mode";
+  count?: number; mode?: string;
+}
+interface DriveDbRegistrationResult {
+  stats: DriveDbRegistrationStats | null; violations: DriveDbRegistrationViolation[]; ok: boolean;
+}
+```
+
+共通 invariant: `analyzeDriveDbRegistration` は純粋関数 (DB アクセスは呼び出し元の `checkDriveDbRegistration` が担う)。必須 mode リスト (`Discovery/Forward/Recovery/Reverse/Verification`) は実装内定数 `REQUIRED_CURRENT_MODES` を単一正本とし、本契約の一覧はその写し。orphan 検査は stats フィールドの正値チェックで行い、DB クエリを直接発行しない。
