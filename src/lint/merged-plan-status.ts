@@ -1,0 +1,132 @@
+/**
+ * merged-plan-status lint — 「generated artifact が repo に実在 (merged) なのに owning PLAN が
+ * draft / 未 confirm のまま放置」される V-model state 不整合を機械検出する (hard、doctor.ok 連動)。
+ *
+ * 動機 (PO 指摘 2026-06-15): PLAN-L7-53 (Learning Engine) は kind=impl の実装が main に merge 済・
+ * 全テスト green だったが status=draft + review_evidence=[] のまま放置され、**人手 grep でしか
+ * 発見できなかった**。review-evidence gate は confirmed/completed PLAN にのみ証跡を要求するため、
+ * draft の PLAN は素通りする (absence-blindness)。harness.db / V-model state DB が「フィードバック
+ * 機構」(設計の柱3) として機能するなら、この不整合は機械が surface すべきである。
+ *
+ * 検出規則: kind が artifact 産出系 (impl/add-impl/refactor) かつ status が confirmed/completed/
+ * accepted のいずれでもない PLAN について、その `generates` の **src 成果物が実在 (existsSync)** なら
+ * 「merged-but-unconfirmed」violation とする。draft でも src が未 merge なら (= 真に作業中) violation
+ * にしない。これにより「実装が merge されたら PLAN を confirm + review せよ」を fail-close 強制する。
+ *
+ * 純関数 (analyzeMergedPlanStatus) + I/O loader (loadMergedPlanStatusInput) を分離 (lint 共通様式)。
+ */
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { parse as parseYaml } from "yaml";
+import { loadReviewPlans } from "./review-evidence";
+import { normalizePath } from "./shared";
+
+// review-evidence gate との scope 差は意図的 (別関心、reviewer I-1/I-2):
+//   - 本 gate = **status 正確性**の強制 = 「src を merge したら PLAN を draft のままにするな」。
+//     src を産出する全 kind (impl/add-impl/refactor) が対象。refactor も「merge したら confirm」
+//     は普遍 (review_evidence の要否とは独立)。
+//   - review-evidence gate = **証跡要求** = confirmed/completed の PLAN が review_evidence を持つか。
+//     refactor は review-evidence 対象外 (機能変更なし) だが、それは「confirm 時に証跡が要るか」の話で、
+//     「merge 済みなら draft でないこと」とは別軸。両 gate は相補 (重複でも矛盾でもない)。
+/** confirm 済み (= merge して良い終端) とみなす status。これ以外で src 実在 = draft 放置の不整合。 */
+const CONFIRMED_STATUSES: ReadonlySet<string> = new Set(["confirmed", "completed", "accepted"]);
+/** src 成果物を産出する kind (design/poc/reverse 等は src を merge しないので status 正確性対象外)。 */
+const ARTIFACT_KINDS: ReadonlySet<string> = new Set(["impl", "add-impl", "refactor"]);
+
+export interface MergedPlanRow {
+  planId: string;
+  status: string;
+  kind: string;
+  /** generates の src/*.ts のうち repo に実在する (= merged) パス集合。 */
+  mergedArtifacts: string[];
+}
+
+export interface MergedPlanStatusInput {
+  plans: MergedPlanRow[];
+}
+
+export interface MergedPlanStatusViolation {
+  planId: string;
+  status: string;
+  artifacts: string[];
+}
+
+export interface MergedPlanStatusResult {
+  violations: MergedPlanStatusViolation[];
+  ok: boolean;
+}
+
+/**
+ * artifact 産出 kind かつ未 confirm かつ merged artifact 実在の PLAN を violation として返す。
+ */
+export function analyzeMergedPlanStatus(input: MergedPlanStatusInput): MergedPlanStatusResult {
+  const violations = input.plans
+    .filter(
+      (p) =>
+        ARTIFACT_KINDS.has(p.kind.toLowerCase()) &&
+        !CONFIRMED_STATUSES.has(p.status.toLowerCase()) &&
+        p.mergedArtifacts.length > 0,
+    )
+    .map((p) => ({ planId: p.planId, status: p.status, artifacts: p.mergedArtifacts }))
+    .sort((a, b) => a.planId.localeCompare(b.planId));
+  return { violations, ok: violations.length === 0 };
+}
+
+interface PlanFrontmatterGenerates {
+  generates?: { artifact_path?: string }[];
+}
+
+function generatesSrcPaths(content: string): string[] {
+  const m = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!m) return [];
+  let fm: PlanFrontmatterGenerates;
+  try {
+    fm = (parseYaml(m[1]) as PlanFrontmatterGenerates) ?? {};
+  } catch {
+    return [];
+  }
+  return (fm.generates ?? [])
+    .map((g) => g.artifact_path ?? "")
+    .filter((p) => p.startsWith("src/") && p.endsWith(".ts"))
+    .map((p) => normalizePath(p));
+}
+
+export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInput {
+  const plans: MergedPlanRow[] = [];
+  let reviewPlans: ReturnType<typeof loadReviewPlans>;
+  try {
+    reviewPlans = loadReviewPlans(repoRoot);
+  } catch {
+    return { plans: [] }; // docs/plans 不在は空 (fail-open、他 lint と同方針)
+  }
+  const plansDir = join(repoRoot, "docs", "plans");
+  for (const rp of reviewPlans) {
+    if (rp.status === "archived") continue;
+    let content = "";
+    try {
+      content = readFileSync(join(plansDir, rp.file), "utf8");
+    } catch {
+      continue;
+    }
+    const mergedArtifacts = generatesSrcPaths(content).filter((p) => existsSync(join(repoRoot, p)));
+    plans.push({
+      planId: rp.plan_id,
+      status: rp.status,
+      kind: rp.kind,
+      mergedArtifacts,
+    });
+  }
+  return { plans };
+}
+
+export function mergedPlanStatusMessages(r: MergedPlanStatusResult): string[] {
+  if (r.ok) {
+    return [
+      "merged-plan-status — OK (merged generated artifact を持つ全 PLAN が confirmed/completed)",
+    ];
+  }
+  return r.violations.map(
+    (v) =>
+      `merged-plan-status - violation: PLAN ${v.planId} は status=${v.status} (未 confirm) なのに generated src が merge 済み: ${v.artifacts.join(", ")} → PLAN を confirm + review_evidence 記録せよ`,
+  );
+}

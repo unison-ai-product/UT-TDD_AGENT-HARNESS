@@ -83,6 +83,11 @@ import {
   l7CompletionMessages,
   loadL7CompletionDocs,
 } from "../lint/l7-completion";
+import {
+  analyzeMergedPlanStatus,
+  loadMergedPlanStatusInput,
+  mergedPlanStatusMessages,
+} from "../lint/merged-plan-status";
 import { analyzeModuleDrift, loadModuleDocs, moduleDriftMessages } from "../lint/module-drift";
 import {
   analyzeOracleTestTrace,
@@ -434,6 +439,27 @@ export function checkGuardrailInvariants(repoRoot: string): { messages: string[]
  * architecture §3.1 設計 module 集合 ⊇ src/ 実在 module を検査 (IMP-075、hard)。
  * 実在するが設計 doc 未列挙 (= impl→design back-fill 漏れ) を violation にして doctor.ok に連動する。
  */
+/**
+ * merged-plan-status hard gate (PO 指摘 2026-06-15): generated src が merge 済みなのに owning PLAN が
+ * draft / 未 confirm のまま放置される V-model state 不整合を fail-close 検出する。review-evidence gate が
+ * confirmed PLAN にのみ証跡を要求し draft を素通りさせる absence-blindness を補完する (柱3 = state DB が
+ * フィードバック機構)。
+ */
+export function checkMergedPlanStatus(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["merged-plan-status - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeMergedPlanStatus(loadMergedPlanStatusInput(repoRoot));
+    return { messages: mergedPlanStatusMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["merged-plan-status - violation: PLAN generates could not be read"],
+      ok: false,
+    };
+  }
+}
+
 export function checkModuleDrift(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
     return { messages: ["module-drift - violation: repo root could not be read"], ok: false };
@@ -1060,6 +1086,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const reviewEvidence = checkReviewEvidence(deps.repoRoot);
   const pairFreeze = checkPairFreeze(deps.repoRoot);
   const moduleDrift = checkModuleDrift(deps.repoRoot);
+  const mergedPlanStatus = checkMergedPlanStatus(deps.repoRoot);
   const assetDrift = checkAssetDrift(deps.repoRoot);
   const skillAssignment = checkSkillAssignment(deps.repoRoot);
   const descentObligation = checkDescentObligation(deps.repoRoot);
@@ -1105,6 +1132,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       guardrailInvariants.ok &&
       pairFreeze.ok &&
       moduleDrift.ok &&
+      mergedPlanStatus.ok &&
       assetDrift.ok &&
       skillAssignment.ok &&
       descentObligation.ok &&
@@ -1147,6 +1175,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...propagation.messages.map((m) => `doctor: ${m}`),
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
       ...moduleDrift.messages.map((m) => `doctor: ${m}`),
+      ...mergedPlanStatus.messages.map((m) => `doctor: ${m}`),
       ...assetDrift.messages.map((m) => `doctor: ${m}`),
       ...skillAssignment.messages.map((m) => `doctor: ${m}`),
       ...descentObligation.messages.map((m) => `doctor: ${m}`),
