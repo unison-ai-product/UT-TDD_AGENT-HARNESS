@@ -161,6 +161,10 @@ import {
 import { detectMode } from "../runtime/detect";
 import { loadOrBuildDriveDbRegistrationStats } from "../state-db/drive-registration";
 import {
+  type GuardrailDecisionInput,
+  inspectGuardrailInvariants,
+} from "../state-db/guardrail-invariants";
+import {
   analyzePairFreeze,
   analyzeVerificationGroups,
   loadPairDocs,
@@ -323,6 +327,106 @@ export function checkReviewEvidence(repoRoot: string): { messages: string[]; ok:
     return { messages: reviewEvidenceMessages(r), ok: r.ok };
   } catch {
     return { messages: ["review-evidence - violation: PLAN could not be read"], ok: false };
+  }
+}
+
+/**
+ * guardrail 不変条件の hard doctor gate (PLAN-L7-52 C-1 option A、warn-first Phase 0 →
+ * hard Phase 2 昇格。PO /goal 承認 2026-06-15)。これまで projectGuardrailInvariantAdvisories
+ * が severity=warn の非ブロック advisory として surface するだけだった同一ロジックを、ok=false の
+ * fail-close gate に昇格する。
+ * harness.db に依存せず、committed の PLAN frontmatter review_evidence から再計算する。
+ * 各 entry に inspectGuardrailInvariants (state-db guardrail-invariants SSoT) を適用し、
+ * violation (secret-evidence / same-model-self-review / human-required-without-evidence) が
+ * あれば ok=false。空文字列の reviewer_model / worker_model は undefined に正規化して
+ * same-model 誤検知を防ぐ (= 両 model が明示・同一のときだけ発火)。
+ *
+ * **review_kind scoping (concept §2.1.2.1)**: same-model-self-review は
+ * `review_kind=cross_agent` (別 runtime/別モデルの独立性を僭称するレビュー) のみ hard-block する。
+ * intra_runtime_subagent は単体 runtime (claude-only/codex-only) の正規 review tier で同一モデルが
+ * 設計上許容される (cross-provider 要件に数えないだけ) ため block しない。secret-evidence /
+ * human-required-without-evidence は review_kind 非依存で常に適用。
+ *
+ * checkReviewEvidence との関係: checkReviewEvidence も cross_agent entry の same-model/欠落を
+ * crossReviewViolations で hard 判定する。本 gate は同じ cross_agent same-model を
+ * guardrail-invariants SSoT 経由で defense-in-depth に再担保しつつ、SSoT が持つ secret-evidence /
+ * human-required-without-evidence 不変条件 (recordGuardrailDecision 書込経路と共有) も review_evidence
+ * 面で hard 化する。runtime guardrail decision (recordGuardrailDecision) 経路の本番配線は C-1 carry。
+ */
+export function checkGuardrailInvariants(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["guardrail-invariants - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const plans = loadReviewPlans(repoRoot);
+    const violations: {
+      rule: string;
+      planId: string;
+      reviewerModel?: string;
+      workerModel?: string;
+    }[] = [];
+    for (const plan of plans) {
+      if (plan.status === "archived") continue;
+      // plan.crossEntries は parseReviewPlan → extractReviewEntries で既に populate 済み。
+      // re-read せず直接使う (loader 再利用方針、重複 I/O 回避)。
+      for (const entry of plan.crossEntries) {
+        const reviewerModel = entry.reviewer_model?.trim() || undefined;
+        const workerModel = entry.worker_model?.trim() || undefined;
+        const input: GuardrailDecisionInput = {
+          plan_id: plan.plan_id,
+          session_id: "",
+          guardrail: "review-evidence",
+          decision: "allow",
+          mode: "review",
+          evidence_path: plan.file,
+          reviewer_model: reviewerModel,
+          worker_model: workerModel,
+        };
+        const inspection = inspectGuardrailInvariants(input);
+        for (const v of inspection.violations) {
+          // same_model_approval: forbidden は concept §2.1.2.1 (line 181/1224) より
+          // **review_kind=cross_agent (独立性を僭称するレビュー) のみ**に適用する。
+          // intra_runtime_subagent は単体 runtime (claude-only / codex-only) の正規 fallback で
+          // 「同一モデルである事実を記録し cross-provider 要件に数えない」設計 (line 188 = codex-only は
+          // intra_runtime_subagent を hard 必須)。ここを全 review_kind に hard-block すると codex-only
+          // mode が永久に doctor を通れなくなる。cross_agent 限定は checkReviewEvidence の
+          // crossReviewViolations scoping とも一致 (核心ルール 1 の静的担保)。
+          // secret-evidence / human-required-without-evidence は review_kind 非依存で評価される
+          // (この review_evidence 経路では evidence_path=plan.file(非 secret) / decision=allow 固定の
+          //  ため発火条件を満たさないが、SSoT のロジック自体は適用されている)。
+          if (v.rule === "same-model-self-review" && entry.review_kind !== "cross_agent") {
+            continue;
+          }
+          violations.push({
+            rule: v.rule,
+            planId: plan.plan_id,
+            reviewerModel,
+            workerModel,
+          });
+        }
+      }
+    }
+    if (violations.length === 0) {
+      return {
+        messages: ["guardrail-invariants — OK (review_evidence 全 entry でインバリアント違反なし)"],
+        ok: true,
+      };
+    }
+    return {
+      messages: violations.map(
+        (v) =>
+          `guardrail-invariants - violation: rule=${v.rule} plan_id=${v.planId} reviewer=${v.reviewerModel ?? "(none)"} worker=${v.workerModel ?? "(none)"}`,
+      ),
+      ok: false,
+    };
+  } catch {
+    return {
+      messages: ["guardrail-invariants - violation: PLAN review_evidence could not be read"],
+      ok: false,
+    };
   }
 }
 
@@ -991,12 +1095,14 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const verificationGroups = checkVerificationGroupsResult(deps.repoRoot);
   const dependencyDrift = checkDependencyDrift(deps.repoRoot);
   const regressionExpansion = checkRegressionExpansion(deps.repoRoot, dependencyDrift.result);
+  const guardrailInvariants = checkGuardrailInvariants(deps.repoRoot);
   return {
     ok:
       backfill.ok &&
       scrumRev.ok &&
       propagation.ok &&
       reviewEvidence.ok &&
+      guardrailInvariants.ok &&
       pairFreeze.ok &&
       moduleDrift.ok &&
       assetDrift.ok &&
@@ -1068,6 +1174,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...l6Completion.messages.map((m) => `doctor: ${m}`),
       ...l7Completion.messages.map((m) => `doctor: ${m}`),
       ...reviewEvidence.messages.map((m) => `doctor: ${m}`),
+      ...guardrailInvariants.messages.map((m) => `doctor: ${m}`),
       ...verificationGroups.messages.map((m) => `doctor: ${m}`),
       ...roadmap.messages.map((m) => `doctor: ${m}`),
       ...implPlanTrace.messages.map((m) => `doctor: ${m}`),

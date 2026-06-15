@@ -46,7 +46,11 @@ export interface ParsedReviewPlan {
   status: string;
   /** frontmatter に review_evidence の entry が 1 件以上あるか。 */
   hasEvidence: boolean;
-  /** review_evidence entry 群 (cross_agent distinctness 検査用、IMP-076)。 */
+  /**
+   * review_evidence の **全 entry** (cross_agent / intra_runtime_subagent / human を区別せず保持)。
+   * 命名は cross_agent distinctness 検査 (IMP-076) が初出だが、内容は review_kind で絞らない全件。
+   * 消費側 (checkReviewEvidence / checkGuardrailInvariants) が entry.review_kind で個別に scope する。
+   */
   crossEntries: ReviewEntry[];
 }
 

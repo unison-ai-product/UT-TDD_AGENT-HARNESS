@@ -9,7 +9,11 @@ applies_to:
     - Forward
 ---
 
-# UT-TDD SKILL_MAP — W10 curate DRAFT first-pass (FR-L1-47)
+> **SUPERSEDED**: このファイルは W10 curate の first-pass draft であり、2026-06-15 に
+> `docs/skills/SKILL_MAP.md` (canonical) へ昇格済み。現行正本は SKILL_MAP.md を参照せよ。
+> 本ファイルは historical reference として保持する (クリーンアップ原則: 昇格済みのため削除でなく banner 方式)。
+
+# UT-TDD SKILL_MAP — W10 curate DRAFT first-pass (FR-L1-47) [SUPERSEDED]
 
 > **DRAFT NOTICE**: これは W10 (FR-L1-47 skill pack curate) の **first-pass 叩き台**であり最終分類ではない。
 > 軸 (core / optional / drop) は FR-L1-47 設計に準拠する。各スキルへの criteria 適用は**本提案であり PO 調整を前提**とする。
