@@ -48,6 +48,23 @@ export interface TraceKeyedArtifact {
   role: ArtifactRole;
   path: string;
   status: ArtifactStatus;
+  /**
+   * この artifact の traceKey が、doc 内の blanket FR レンジ (`U-FR-L1-01..U-FR-L1-50` 等) の
+   * 展開のみに由来し、focused な単一 oracle 引用が無い場合に true (PLAN-L7-52 C-2)。
+   * source/test (@ut-tdd-trace) は常に false。thin-coverage advisory の判定に使う。
+   */
+  traceKeyFromRange?: boolean;
+}
+
+/**
+ * 充足 (satisfied) と判定されたが、L7 unit-test-design 側の被覆が blanket FR レンジの
+ * 展開のみ (focused oracle 不在) で実体未検証な trace key の advisory (warn-first、ok 不変)。
+ * descent-obligation 機構自身の false-confidence (coverage≠substance) を可視化する。
+ */
+export interface ThinCoverageAdvisory {
+  traceKey: string;
+  requiredLayer: Layer;
+  detail: string;
 }
 
 export interface DeferEntry {
@@ -102,6 +119,8 @@ export interface DescentResult {
   implAhead: ImplAheadViolation[];
   chains: ChainSummary[];
   findings: DescentFinding[];
+  /** thin-coverage advisory (warn-first、ok に算入しない、PLAN-L7-52 C-2)。 */
+  advisories: ThinCoverageAdvisory[];
 }
 
 export const DEFAULT_DESCENT_ADJACENCY: DescentAdjacency = {
@@ -260,6 +279,33 @@ function documentTraceKeys(text: string): string[] {
   return uniq([...expandedFrTraceKeys(text), ...expandedUnitFrTraceKeys(text)]).sort();
 }
 
+/**
+ * doc 内の FR trace key を、focused な単一引用 (explicit) と blanket レンジ展開 (ranged) に
+ * 分けて provenance を返す。value=true は「レンジ展開のみに由来し focused 引用が無い」(thin)。
+ * blanket レンジ (`U-FR-L1-01..U-FR-L1-50` 等) を実体 oracle と誤認する false-confidence の検出に使う。
+ */
+function documentTraceKeyProvenance(text: string): Map<string, boolean> {
+  const explicit = new Set<string>();
+  const ranged = new Set<string>();
+  for (const match of text.matchAll(DOC_FR_TRACE_RE)) {
+    const [, start, end, slashGroup] = match;
+    if (end) for (const key of boundedRange(start, end)) ranged.add(key);
+    else if (slashGroup) {
+      explicit.add(frId(start));
+      for (const part of slashGroup.slice(1).split("/")) explicit.add(frId(part));
+    } else explicit.add(frId(start));
+  }
+  for (const match of text.matchAll(U_FR_TRACE_RE)) {
+    const [, start, end] = match;
+    if (end) for (const key of boundedRange(start, end)) ranged.add(key);
+    else explicit.add(frId(start));
+  }
+  const provenance = new Map<string, boolean>();
+  for (const key of explicit) provenance.set(key, false);
+  for (const key of ranged) if (!explicit.has(key)) provenance.set(key, true);
+  return provenance;
+}
+
 function explicitImplementationTraceKeys(text: string): string[] {
   return uniq([...text.matchAll(EXPLICIT_IMPLEMENTATION_TRACE_RE)].map((match) => match[1])).sort();
 }
@@ -357,8 +403,12 @@ function artifactRowsForFile(repoRoot: string, path: string): TraceKeyedArtifact
   if (!layer) return [];
   const role: ArtifactRole = isTest ? "test" : isSource ? "source" : inferDocRole(rel, layer);
   const status = metadataStatus(metadata, content);
+  // source/test は @ut-tdd-trace の explicit 引用のみ (provenance=false)。doc は blanket レンジ
+  // 展開のみ由来の key を traceKeyFromRange=true として記録する (PLAN-L7-52 C-2)。
+  const provenance =
+    isTest || isSource ? null : documentTraceKeyProvenance(content);
   const keys =
-    isTest || isSource ? explicitImplementationTraceKeys(content) : documentTraceKeys(content);
+    isTest || isSource ? explicitImplementationTraceKeys(content) : [...provenance!.keys()].sort();
   return keys
     .filter(
       (traceKey) =>
@@ -368,7 +418,14 @@ function artifactRowsForFile(repoRoot: string, path: string): TraceKeyedArtifact
           !rel.endsWith("L1-requirements/functional-requirements.md")
         ),
     )
-    .map((traceKey) => ({ traceKey, layer, role, path: rel, status }));
+    .map((traceKey) => ({
+      traceKey,
+      layer,
+      role,
+      path: rel,
+      status,
+      traceKeyFromRange: provenance ? (provenance.get(traceKey) ?? false) : false,
+    }));
 }
 
 function deferRowsForFile(repoRoot: string, path: string): DeferEntry[] {
@@ -585,17 +642,57 @@ export function analyzeDescentObligations(
     })
     .sort((a, b) => a.traceKey.localeCompare(b.traceKey));
 
+  // thin-coverage advisory (warn-first、ok に算入しない): L7 で satisfied と判定されたが、
+  // L7 unit-test-design 側の被覆が blanket FR レンジ展開のみ (focused oracle 不在) の trace key を
+  // 可視化する。descent-obligation 機構自身の false-confidence (coverage≠substance) を surface する。
+  const advisories: ThinCoverageAdvisory[] = [];
+  const advisorySeen = new Set<string>();
+  for (const obligation of graded) {
+    if (obligation.status !== "satisfied" || obligation.requiredLayer !== "L7") continue;
+    if (advisorySeen.has(obligation.traceKey)) continue;
+    const testDesignL7 = (byTrace.get(obligation.traceKey) ?? []).filter(
+      (artifact) =>
+        isActiveArtifact(artifact) && artifact.layer === "L7" && artifact.role === "test-design",
+    );
+    if (testDesignL7.length > 0 && testDesignL7.every((artifact) => artifact.traceKeyFromRange === true)) {
+      advisorySeen.add(obligation.traceKey);
+      advisories.push({
+        traceKey: obligation.traceKey,
+        requiredLayer: "L7",
+        detail:
+          "L7 unit-test-design coverage derives only from a blanket FR range (redirect); no focused oracle — substance unverified",
+      });
+    }
+  }
+  advisories.sort((a, b) => a.traceKey.localeCompare(b.traceKey));
+
   const ok =
     graded.every((obligation) => obligation.status !== "unmet") &&
     implAhead.length === 0 &&
     findings.length === 0;
-  return { ok, obligations: graded, implAhead, chains, findings };
+  return { ok, obligations: graded, implAhead, chains, findings, advisories };
+}
+
+/** thin-coverage advisory を message 行へ変換 (warn-first、ok を落とさない、最大 8 件 + 総数)。 */
+function advisoryLines(advisories: ThinCoverageAdvisory[]): string[] {
+  if (advisories.length === 0) return [];
+  const lines = advisories
+    .slice(0, 8)
+    .map(
+      (advisory) =>
+        `descent-obligation - advisory (thin-coverage): ${advisory.traceKey} ${advisory.requiredLayer}: ${advisory.detail}`,
+    );
+  lines.push(
+    `descent-obligation - advisory: ${advisories.length} trace key(s) satisfied only by blanket-range L7 coverage (warn-first、ok 不変; hard 昇格 + oracle back-fill = PLAN-L7-52 C-2/C-4)`,
+  );
+  return lines;
 }
 
 export function descentObligationMessages(result: DescentResult): string[] {
   if (result.ok) {
     return [
       `descent-obligation - OK (graded=${result.obligations.length}, chains=${result.chains.length})`,
+      ...advisoryLines(result.advisories),
     ];
   }
   const messages: string[] = [];
@@ -614,5 +711,6 @@ export function descentObligationMessages(result: DescentResult): string[] {
       `descent-obligation - impl-ahead: ${violation.traceKey} landed at ${violation.landedAt} while ${violation.waitingLayer} defer remains open (${violation.waitingSpec})`,
     );
   }
+  messages.push(...advisoryLines(result.advisories));
   return messages;
 }

@@ -17,6 +17,14 @@ review_evidence:
     reviewed_at: "2026-06-15"
     verdict: pass
     scope: "Cycle-1 risk reduction: dead-export removal (computeOperationalMetrics), L7-48 guardrail invariant tests (secret-reject, human-required non-downgrade), and secret-pattern single-source-of-truth consolidation (reviewer I-1, ledger ↔ projection-writer). Auth/human-signoff wiring and V-pair descent back-fill are carried, not in this scope. Reviewer Important I-2 / Minor M-3 recorded as doc notes / carry."
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
+    tests_green_at: "2026-06-15"
+    reviewed_at: "2026-06-15"
+    verdict: pass
+    scope: "WBS-04 C-2 warn-first: descent-obligation thin-coverage advisory (traceKeyFromRange provenance + ok-invariant advisory surfacing). Verified ok unchanged, detection rule correctness (FR-L1-47 flagged, focused-oracle suppression), U-DESC-013 incl multi-artifact case (reviewer I-1 addressed). Reviewer I-2 (harness.db projection of advisories) deferred to Phase 1, registered in Carry C-2."
 agent_slots:
   - role: tl
     slot_label: "TL - close cycle-1 L7 audit risks (dead-code + invariant tests) and register carry"
@@ -65,6 +73,7 @@ L7 はコードとして完成・green (551→553 tests / `ut-tdd doctor` 左腕
 | WBS-L7-52-01 | L7-48 guardrail 不変条件テスト (secret-reject / human-required 非降格) | (test only) | `tests/readiness-guardrail.test.ts` | `vitest tests/readiness-guardrail.test.ts` |
 | WBS-L7-52-02 | dead-export 除去 (`computeOperationalMetrics` / `upsertSignal` / `OperationalMetric` / `signalId` / `count`)。本番正本 = `projectOperationalMetrics` (projection-writer)、単一正本化 (CLAUDE.md MUST) | `src/feedback/engine.ts` | `tests/search-feedback.test.ts` | `vitest tests/search-feedback.test.ts` + `npm run typecheck` + `npm run lint` |
 | WBS-L7-52-03 | secret 検出パターン単一正本化 (reviewer I-1)。`SECRET_PATTERN` + `isSecretLike` を `src/state-db/index.ts` に集約し、`projection-writer` の投影ガードと `guardrail/ledger` の evidence_path ガードが共有。ledger 側が欠いていた Slack `xox*` を含む4パターンに統一 | `src/state-db/index.ts`, `src/state-db/projection-writer.ts`, `src/guardrail/ledger.ts` | `tests/readiness-guardrail.test.ts` | `vitest tests/readiness-guardrail.test.ts tests/projection-writer.test.ts` |
+| WBS-L7-52-04 | C-2 warn-first: descent-obligation の false-confidence 可視化。loader に `traceKeyFromRange` provenance を追加し、L7 で satisfied だが unit-test-design 被覆が blanket FR レンジ展開のみ由来 (focused oracle 不在) の trace key を **thin-coverage advisory** として surface (`ok` に算入せず=赤化なし、warn-first)。検出規則は非恣意 (range 展開のみ由来)。hard 昇格 + 閾値ポリシーは PO 入力待ちで本サイクル外 | `src/lint/descent-obligation.ts` | `tests/descent-obligation.test.ts` (U-DESC-013) | `vitest tests/descent-obligation.test.ts tests/doctor.test.ts` |
 
 ## Acceptance Criteria (cycle-1)
 
@@ -73,13 +82,14 @@ L7 はコードとして完成・green (551→553 tests / `ut-tdd doctor` 左腕
 - [x] WBS-02: `computeOperationalMetrics` とその専用 helper (`upsertSignal`/`OperationalMetric`/`signalId`/`count`) を除去。design doc 参照ゼロ・src 内のみ閉鎖の dead cluster を確認済 (orphan 非生成)。
 - [x] WBS-02: 本番 telemetry 正本は `projectOperationalMetrics` (projection-writer.ts) のみ。重複解消で単一正本化。
 - [x] WBS-03: `SECRET_PATTERN` / `isSecretLike` を `src/state-db/index.ts` に単一正本化。ledger / projection-writer が共有し、ledger 側の Slack `xox*` 欠落 (reviewer I-1) を解消。secret-reject テストが sk-/ghp_/github_pat_/xox の4族を検証。
+- [x] WBS-04 (C-2 warn-first): descent-obligation が blanket-range-only L7 被覆を **thin-coverage advisory** として surface し `ok` 不変 (赤化なし)。実 repo で FR-L1-47 含む 45 trace key を可視化 (= 機構自身の false-confidence を honest 化)。U-DESC-013 green。**残 (PO 入力要)**: hard 昇格の閾値ポリシー + L7 oracle back-fill (C-4 L7 half) とのセット discharge。
 - [x] 全回帰 green (`npm test`)、`npm run typecheck` clean、`npm run lint` clean、`ut-tdd doctor` exit 0。
 - [x] review 前置: `code-reviewer` (intra_runtime_subagent、claude-only cross-runtime 代替) verdict=APPROVE。Important I-1 は本サイクルで対応、I-2 / Minor M-3 は §壊さない / §Carry に記録。
 
 ## Carry (follow-on、本サイクル外。owner/condition 明示)
 
 - **C-1 (auth-gated, PO 確定要)**: L7-48 `recordGuardrailDecision` の本番配線 (agent-guard / review / escalation / human-signoff の decision source からの projection)。**authorization / human-signoff semantics に該当するため CLAUDE.md Guard Rule により人間確認なしに仕様確定しない**。PO が配線方針 (どの decision source を ledger 経由にするか) を確定するまで保留。condition = PO 設計確定。
-- **C-2**: descent-obligation FR-L1-47 false-confidence 修正。loader が blanket レンジ `U-FR-L1-01..U-FR-L1-50` を substantive L7 coverage と扱わないようにする (warn-first → 実 oracle back-fill → hard、descent-obligation.md §7 phased rollout 準拠)。condition = skill FR-L1-47 実 oracle back-fill とセットで赤カスケード回避。
+- **C-2 (warn-first 完了、Phase 0)**: descent-obligation の false-confidence。**WBS-04 で warn-first advisory を実装済** — blanket-range-only な L7 unit-test-design 被覆を thin-coverage advisory として surface (`ok` 不変、実 repo で FR-L1-47 含む 45 trace key を可視化)。機構自身の coverage≠substance を honest 化。**残 (Phase 1→2、PO 入力要)**: ① hard 昇格の閾値/タイミングポリシー (融合思想の機械担保設計判断)、② surface された 45 件の実 oracle back-fill (C-4 L7 half と同一作業)。descent-obligation.md §7 phased rollout 準拠。**reviewer I-2 (defer)**: advisory の harness.db 投影 (柱3 フィードバック機構) は warn-first scope 外として未実装。Phase 1 着手時に `descent_obligations` projection へ severity=info で投影し feedback ループに載せることを検討。
 - **C-3 (formal defer 記録済、2026-06-15)**: `ut-tdd graph impact` / `graph export` CLI。ADR-002 が当 CLI を **A-124 separate scope** と明示しており impl-ahead ではない (first slice `ut-tdd verify recommend --changed` は出荷済)。欠けていた formal defer 記録を **PLAN-L7-32 §9** に追記し discharge condition (A-124 着手時に repo→source-set loader + `graph` subcommand) を明示済。本サイクルでの CLI 実装は不要。
 - **C-4 (進行中、first slice 完了)**: V-pair 降下 back-fill。**L7-51 同梱4モジュール (plan-dod/placeholder-deps/l7-completion/drive-db-registration) の L6 設計契約 half を完了** (function-spec.md Appendix D、pmo-sonnet ドラフト→PM 検証→doctor green、2026-06-15)。**L7-49 catalogAutomationAssets 署名ドリフト修正済** (function-spec.md:32 を実装 `{repoRoot?, db} → AssetCatalogResult` に整合化、存在しない `AssetRoot[]`/`AutomationAsset[]` を除去、2026-06-15)。**fr-roadmap-coverage (L7-50) L6 契約も完了** (function-spec.md Appendix D.5、2026-06-15)。**= C-4 の L6 設計 half は完了** (L7-46/47 の関数は既に function-spec §1 に存在)。**残 = L7 oracle half のみ**: ①L7-51 4モジュール + ②fr-roadmap-coverage の U-* 宣言+test citation、③L7-46 (U-FR-L1-06)、L7-47 (U-FR-L1-19)。L7 oracle half は oracle-test-trace citation cascade を伴うため、descent-obligation Phase 0→2 (C-2、PO 設計入力要) とセットで進めるのが本筋。**reviewer M-3**: `computeSkillMetrics` (engine.ts) と `projectSkillMetrics` (projection-writer.ts) の `quality_signals` 二重書き (signal_id キー差) もここで一本化検討。
 - **C-5**: W10 skill pack curate (107 HELIX skills → ~7 `docs/skills/*-pack.md`)。前回 handover Residual #2 の未消化。

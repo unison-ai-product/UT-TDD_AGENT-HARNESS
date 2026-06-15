@@ -88,6 +88,57 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
     );
   });
 
+  it("U-DESC-013: surfaces blanket-range-only L7 coverage as a thin-coverage advisory without failing ok (warn-first, PLAN-L7-52 C-2)", () => {
+    // impl 無し (L8/L9/L12 の impl-present 義務を発火させない) で L6→L7 pair が満たされる鎖。
+    const base: TraceKeyedArtifact[] = [
+      a({ traceKey: "FR-L1-47", layer: "L1", role: "requirement" }),
+      a({ traceKey: "FR-L1-47", layer: "L3", role: "requirement" }),
+      a({ traceKey: "FR-L1-47", layer: "L4", role: "design" }),
+      a({ traceKey: "FR-L1-47", layer: "L5", role: "design" }),
+      a({ traceKey: "FR-L1-47", layer: "L6", role: "design" }),
+    ];
+
+    // L7 unit-test-design coverage が blanket レンジ展開のみ由来 → advisory、ただし ok は不変
+    const rangeOnly = analyzeDescentObligations(
+      [...base, a({ traceKey: "FR-L1-47", layer: "L7", role: "test-design", traceKeyFromRange: true })],
+      DEFAULT_DESCENT_ADJACENCY,
+      [],
+    );
+    expect(rangeOnly.ok).toBe(true);
+    expect(rangeOnly.advisories).toContainEqual(
+      expect.objectContaining({ traceKey: "FR-L1-47", requiredLayer: "L7" }),
+    );
+    expect(descentObligationMessages(rangeOnly).join("\n")).toContain("thin-coverage");
+
+    // focused (非レンジ) な L7 test-design oracle があれば advisory は出ない
+    const focused = analyzeDescentObligations(
+      [...base, a({ traceKey: "FR-L1-47", layer: "L7", role: "test-design", traceKeyFromRange: false })],
+      DEFAULT_DESCENT_ADJACENCY,
+      [],
+    );
+    expect(focused.ok).toBe(true);
+    expect(focused.advisories).toEqual([]);
+
+    // range-only と focused が併存する場合は focused が優先され advisory は出ない (every が false)
+    const mixed = analyzeDescentObligations(
+      [
+        ...base,
+        a({ traceKey: "FR-L1-47", layer: "L7", role: "test-design", traceKeyFromRange: true }),
+        a({
+          traceKey: "FR-L1-47",
+          layer: "L7",
+          role: "test-design",
+          path: "docs/test-design/harness/focused.md",
+          traceKeyFromRange: false,
+        }),
+      ],
+      DEFAULT_DESCENT_ADJACENCY,
+      [],
+    );
+    expect(mixed.ok).toBe(true);
+    expect(mixed.advisories).toEqual([]);
+  });
+
   it("U-DESC-004: reports missing downstream pairs as unmet even when a placeholder exists", () => {
     const result = analyzeDescentObligations(
       [
