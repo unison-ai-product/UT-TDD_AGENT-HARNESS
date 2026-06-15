@@ -41,8 +41,10 @@ import {
 import {
   analyzeDescentObligations,
   descentObligationMessages,
+  filterSubstanceVerifiedAdvisories,
   loadDeferLedger,
   loadDescentAdjacency,
+  loadFrUnitCoverageOracles,
   loadTraceKeyedArtifacts,
 } from "../lint/descent-obligation";
 import {
@@ -380,10 +382,13 @@ export function checkDescentObligation(repoRoot: string): { messages: string[]; 
     return { messages: ["descent-obligation - violation: repo root could not be read"], ok: false };
   }
   try {
-    const r = analyzeDescentObligations(
-      loadTraceKeyedArtifacts(repoRoot),
-      loadDescentAdjacency(repoRoot),
-      loadDeferLedger(repoRoot),
+    const r = filterSubstanceVerifiedAdvisories(
+      analyzeDescentObligations(
+        loadTraceKeyedArtifacts(repoRoot),
+        loadDescentAdjacency(repoRoot),
+        loadDeferLedger(repoRoot),
+      ),
+      loadFrUnitCoverageOracles(repoRoot),
     );
     return { messages: descentObligationMessages(r), ok: r.ok };
   } catch {

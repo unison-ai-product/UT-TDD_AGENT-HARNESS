@@ -455,6 +455,25 @@ export function loadDeferLedger(root = process.cwd()): DeferEntry[] {
   return files.flatMap((path) => deferRowsForFile(root, path));
 }
 
+/**
+ * fr-unit-coverage.md (L6 FR Unit Coverage Matrix) で U-FR oracle が定義された FR の集合を返す。
+ * `l6-fr-coverage` ゲートが「全 FR registry 行が L6 spec + 契約 + U-FR oracle に解決する」ことを
+ * enforce する正本なので、ここに含まれる FR は L7 redirect 被覆でも substance-verified とみなす。
+ * 行形式: `| FR-L1-NN | <spec> | <contract> | U-FR-L1-MM |`。
+ */
+export function loadFrUnitCoverageOracles(root = process.cwd()): Set<string> {
+  const path = join(root, "docs", "design", "harness", "L6-function-design", "fr-unit-coverage.md");
+  const oracles = new Set<string>();
+  if (!existsSync(path)) return oracles;
+  for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const row = line.match(/^\|\s*FR-L1-(\d+)\s*\|/);
+    // frId で正規化し、advisory の traceKey 生成 (documentTraceKeyProvenance も frId 経由) と
+    // 同一表記 (2 桁 zero-pad) に揃える。1 桁/2 桁の表記揺れで filter が miss しないようにする。
+    if (row && /\bU-FR-L1-\d+\b/.test(line)) oracles.add(frId(row[1]));
+  }
+  return oracles;
+}
+
 export function generateObligations(
   artifacts: TraceKeyedArtifact[],
   adjacency: DescentAdjacency,
@@ -620,8 +639,8 @@ export function analyzeDescentObligations(
   // descent-obligation の scope は design⇔test-design pairing (loader は tests/ を走査しない —
   // 実 test 引用の検査は oracle-test-trace の領分)。L7 で satisfied だが unit-test-design 側の被覆が
   // blanket FR レンジ展開のみ由来 (focused oracle 行が無く、fr-unit-coverage.md への redirect に依存)
-  // の trace key を thin-coverage advisory として surface する。この redirect を substantive な L7
-  // 被覆と認めるか (= advisory を解消するか hard 化するか) は Phase 1 の substance-gate 設計判断。
+  // の trace key を thin-coverage advisory として surface する。oracle 正本 (fr-unit-coverage.md)
+  // による substance 検証は `filterSubstanceVerifiedAdvisories` で後段合成する (3 引数を保つため)。
   const advisories: ThinCoverageAdvisory[] = [];
   const advisorySeen = new Set<string>();
   for (const obligation of graded) {
@@ -640,7 +659,7 @@ export function analyzeDescentObligations(
         traceKey: obligation.traceKey,
         requiredLayer: "L7",
         detail:
-          "L7 unit-test-design coverage derives only from a blanket FR range that redirects to fr-unit-coverage.md; no focused oracle row in the unit-test-design doc itself (Phase-1 substance-gate decision: accept redirect vs require focused oracle)",
+          "L7 coverage is a blanket-range redirect and the FR has no U-FR oracle in fr-unit-coverage.md (the l6-fr-coverage SSoT); confirm this is a documented defer (e.g. P2 forward-carry) vs a genuine substance gap",
       });
     }
   }
@@ -653,6 +672,25 @@ export function analyzeDescentObligations(
   return { ok, obligations: graded, implAhead, chains, findings, advisories };
 }
 
+/**
+ * thin-coverage advisory のうち、`l6-fr-coverage` ゲートが enforce する正本 (fr-unit-coverage.md)
+ * に U-FR oracle が定義済みの FR を substance-verified として除外する (ゲート間整合)。残る advisory =
+ * oracle 正本にも無い真の thin candidate (多くは P2 forward-carry 等の宣言済 defer)。`ok` は不変。
+ * 後段合成にしているのは source 関数を 3 引数に保つため (coding-rule max-source-params)。
+ */
+export function filterSubstanceVerifiedAdvisories(
+  result: DescentResult,
+  frUnitCoverageOracles: ReadonlySet<string>,
+): DescentResult {
+  if (frUnitCoverageOracles.size === 0) return result;
+  return {
+    ...result,
+    advisories: result.advisories.filter(
+      (advisory) => !frUnitCoverageOracles.has(advisory.traceKey),
+    ),
+  };
+}
+
 /** thin-coverage advisory を message 行へ変換 (warn-first、ok を落とさない、最大 8 件 + 総数)。 */
 function advisoryLines(advisories: ThinCoverageAdvisory[]): string[] {
   if (advisories.length === 0) return [];
@@ -663,7 +701,7 @@ function advisoryLines(advisories: ThinCoverageAdvisory[]): string[] {
         `descent-obligation - advisory (thin-coverage): ${advisory.traceKey} ${advisory.requiredLayer}: ${advisory.detail}`,
     );
   lines.push(
-    `descent-obligation - advisory: ${advisories.length} trace key(s) satisfied only by blanket-range L7 coverage (warn-first、ok 不変; hard 昇格 + oracle back-fill = PLAN-L7-52 C-2/C-4)`,
+    `descent-obligation - advisory: ${advisories.length} trace key(s) satisfied only by blanket-range L7 coverage (warn-first, ok invariant preserved; hard-gate promotion + oracle back-fill = PLAN-L7-52 C-2/C-4)`,
   );
   return lines;
 }

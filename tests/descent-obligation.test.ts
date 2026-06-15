@@ -7,9 +7,11 @@ import {
   DEFAULT_DESCENT_ADJACENCY,
   type DeferEntry,
   descentObligationMessages,
+  filterSubstanceVerifiedAdvisories,
   generateObligations,
   loadDeferLedger,
   loadDescentAdjacency,
+  loadFrUnitCoverageOracles,
   loadTraceKeyedArtifacts,
   type TraceKeyedArtifact,
 } from "../src/lint/descent-obligation";
@@ -143,6 +145,39 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
     );
     expect(mixed.ok).toBe(true);
     expect(mixed.advisories).toEqual([]);
+
+    // fr-unit-coverage.md (l6-fr-coverage SSoT) に U-FR oracle がある FR は substance-verified
+    // として後段合成で除外され advisory は出ない (ゲート間整合、PLAN-L7-52 C-2 Phase-1)。
+    const verified = filterSubstanceVerifiedAdvisories(rangeOnly, new Set(["FR-L1-47"]));
+    expect(verified.ok).toBe(true);
+    expect(verified.advisories).toEqual([]);
+    // 正本に含まれない FR は除外されず advisory が残る。
+    const stillThin = filterSubstanceVerifiedAdvisories(rangeOnly, new Set(["FR-L1-99"]));
+    expect(stillThin.advisories).toContainEqual(expect.objectContaining({ traceKey: "FR-L1-47" }));
+  });
+
+  it("U-DESC-014: loadFrUnitCoverageOracles reads the l6-fr-coverage SSoT and filters real-repo advisories", () => {
+    const root = process.cwd();
+    const oracles = loadFrUnitCoverageOracles(root);
+    // fr-unit-coverage.md にマトリクス行と U-FR oracle を持つ FR は含まれる (frId 正規化 = 2 桁)。
+    expect(oracles.has("FR-L1-47")).toBe(true);
+    expect(oracles.has("FR-L1-01")).toBe(true);
+    // BR-21 で L3 forward-carry 宣言された P2 FR (oracle 行なし) は含まれない。
+    expect(oracles.has("FR-L1-36")).toBe(false);
+    expect(oracles.has("FR-L1-38")).toBe(false);
+    expect(oracles.has("FR-L1-43")).toBe(false);
+
+    // end-to-end: 実 repo の advisory を filter すると、oracle 正本にある FR は残らない (ゲート整合)。
+    const filtered = filterSubstanceVerifiedAdvisories(
+      analyzeDescentObligations(
+        loadTraceKeyedArtifacts(root),
+        loadDescentAdjacency(root),
+        loadDeferLedger(root),
+      ),
+      oracles,
+    );
+    expect(filtered.ok).toBe(true);
+    expect(filtered.advisories.every((advisory) => !oracles.has(advisory.traceKey))).toBe(true);
   });
 
   it("U-DESC-004: reports missing downstream pairs as unmet even when a placeholder exists", () => {
