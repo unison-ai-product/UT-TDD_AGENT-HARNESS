@@ -15,7 +15,7 @@
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
 
@@ -95,6 +95,16 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("started_at"),
       col("completed_at"),
       col("evidence_path"),
+      // FR-L1-38 token telemetry (PLAN-L7-57): cross-runtime per-run usage. NULL for review-evidence
+      // 由来の行 (token 不明)、token-tracker が session ログ走査で投入した行のみ非 NULL。
+      // cached_input/reasoning は runtime により欠ける (Claude=cache_read, Codex=cached_input/reasoning)。
+      col("input_tokens", "INTEGER"),
+      col("output_tokens", "INTEGER"),
+      col("cached_input_tokens", "INTEGER"),
+      col("reasoning_tokens", "INTEGER"),
+      // cost_usd: provider 非対称の enrichment。Claude=CLAUDE_PRICING で計算可、Codex=OpenAI 単価
+      // source 未取得のため NULL (core metric は token 効率、$ は出せる runtime のみ)。
+      col("cost_usd", "REAL"),
     ],
   },
   {
@@ -570,6 +580,15 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("run_count", "INTEGER"),
       col("success_count", "INTEGER"),
       col("evaluated_at"),
+      // FR-L1-38 cost-efficiency (PLAN-L7-57): token 効率 = cross-runtime core metric、$ は enrichment。
+      // token 行が無い (review-evidence のみ) なら totals=0・tokens_per_success/cost_per_success=NULL。
+      col("total_input_tokens", "INTEGER"),
+      col("total_output_tokens", "INTEGER"),
+      col("total_cost_usd", "REAL"),
+      // tokens_per_success = total_output_tokens / success_count (provider 非依存、低いほど効率的)。
+      col("tokens_per_success", "REAL"),
+      // cost_per_success = total_cost_usd / success_count ($ enrichment、cost 不明なら NULL)。
+      col("cost_per_success", "REAL"),
     ],
   },
   // --- roadmap / review evidence projection (cutover feedback loop) ---

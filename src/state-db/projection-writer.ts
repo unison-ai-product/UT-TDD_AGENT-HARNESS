@@ -36,6 +36,7 @@ import {
   upsertRow,
 } from "./index";
 import { migrate, rowCounts } from "./migration";
+import type { RunUsage } from "./token-tracker";
 
 export interface ProjectionEvent {
   table: string;
@@ -502,6 +503,38 @@ function projectReviewModelRuns(
           },
         });
       }
+    });
+  }
+}
+
+/**
+ * token-tracker が走査した session ログの RunUsage[] を model_runs へ投入する (FR-L1-38、PLAN-L7-57)。
+ * review-evidence 由来行 (token NULL) とは別ソースで、token/cost 列が非 NULL の行を足す。
+ * cold-start (usages 空) は no-op。run_id は runtime:session:turn から安定生成 (再投入で重複しない)。
+ */
+export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
+  for (const u of usages) {
+    if (!u.model) continue; // model 不明の行は集計不能なので捨てる
+    const id = stableId("token-run", `${u.runtime}:${u.sessionId}:${u.turnIndex}`);
+    recordProjectionEvent(db, {
+      table: "model_runs",
+      id,
+      row: {
+        run_id: id,
+        runtime: u.runtime,
+        model: u.model,
+        role: "session",
+        drive: "",
+        plan_id: "",
+        started_at: "",
+        completed_at: "",
+        evidence_path: u.sessionId,
+        input_tokens: u.inputTokens,
+        output_tokens: u.outputTokens,
+        cached_input_tokens: u.cachedInputTokens,
+        reasoning_tokens: u.reasoningTokens,
+        cost_usd: u.costUsd,
+      },
     });
   }
 }
@@ -1412,12 +1445,21 @@ export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): 
  * Default (no file) = disabled. This is deterministic and does not throw.
  *
  * Success inferred by joining model_runs.plan_id -> plan_registry.status
- * IN PLAN_SUCCESS_STATUSES (single-source from this module). No token/cost
- * column exists in the schema; cost-efficiency is a declared follow-up:
- *   - PLAN-L7-53 follow-up: extend model_evaluations with cost_per_success
- *     once token/cost telemetry is available (FR-L1-38 invariant §1).
- *   - Output: per-model row with model (PK), success_rate REAL,
- *     run_count INTEGER, success_count INTEGER, evaluated_at TEXT.
+ * IN PLAN_SUCCESS_STATUSES (single-source from this module).
+ *
+ * PLAN-L7-57: token/cost telemetry を model_runs に追加 (projectTokenUsage が session ログ走査で投入)。
+ * 本関数は token 効率も集計する:
+ *   - total_input/output_tokens, total_cost_usd = SUM over model_runs WHERE model (NULL は無視)。
+ *   - tokens_per_success / cost_per_success の **分子と分母は別ソースで意図的に非対称** (review I-2、
+ *     Option B = 定義を明示):
+ *       分子 = その model の **全 model_runs** の token/cost (session ログ由来行 plan_id='' を含む)。
+ *       分母 = success_count = plan_registry に join して success な行数 (review-evidence 由来)。
+ *     session ログは PLAN に紐づかない (plan_id 不明) ため、両者は構造的に別母集団。よって指標の意味は
+ *     「この model が全 session で費やした output token / その model が delivered した success PLAN 数」=
+ *     **粗い「success PLAN あたり token コスト」proxy** であり、「success run あたり token」ではない。
+ *     この非対称を解消するには session→PLAN 帰属が要るが現状ログに無い (carry)。
+ *   - Output: per-model row (model PK, success_rate, run_count, success_count, evaluated_at,
+ *     total_input_tokens, total_output_tokens, total_cost_usd, tokens_per_success, cost_per_success)。
  *
  * AC-38-01: model-A (2 runs, both success) => rate 1.0; model-B (2 runs, 1 success) => rate 0.5.
  * AC-38-02: disabled (no opt-in file) => 0 model_evaluations rows.
@@ -1469,6 +1511,25 @@ export function projectModelEvaluations(db: HarnessDb, repoRoot: string): void {
 
     const successRate = runCount === 0 ? 0 : Number((Number(successCount) / runCount).toFixed(4));
 
+    // FR-L1-38 token 効率 (PLAN-L7-57): token 行 (token-tracker 投入) のみ非 NULL。SUM は NULL を無視。
+    // total_cost は全行 NULL のとき NULL (= cost を出せる run が無い)。tokens_per_success / cost_per_success
+    // は success が無い / 該当 totals が無いとき NULL (core=token、$=enrichment、捏造しない)。
+    const agg = db
+      .prepare(
+        `SELECT COALESCE(SUM(input_tokens), 0) AS total_input,
+                COALESCE(SUM(output_tokens), 0) AS total_output,
+                SUM(cost_usd) AS total_cost
+         FROM model_runs WHERE model = ?`,
+      )
+      .get(model) as { total_input: number; total_output: number; total_cost: number | null };
+    const totalInput = Number(agg.total_input ?? 0);
+    const totalOutput = Number(agg.total_output ?? 0);
+    const totalCost = agg.total_cost == null ? null : Number(agg.total_cost);
+    const sc = Number(successCount);
+    const tokensPerSuccess =
+      sc > 0 && totalOutput > 0 ? Number((totalOutput / sc).toFixed(2)) : null;
+    const costPerSuccess = totalCost != null && sc > 0 ? Number((totalCost / sc).toFixed(6)) : null;
+
     recordProjectionEvent(db, {
       table: "model_evaluations",
       id: model,
@@ -1476,8 +1537,13 @@ export function projectModelEvaluations(db: HarnessDb, repoRoot: string): void {
         model,
         success_rate: successRate,
         run_count: runCount,
-        success_count: Number(successCount),
+        success_count: sc,
         evaluated_at: evaluatedAt,
+        total_input_tokens: totalInput,
+        total_output_tokens: totalOutput,
+        total_cost_usd: totalCost,
+        tokens_per_success: tokensPerSuccess,
+        cost_per_success: costPerSuccess,
       },
     });
   }
