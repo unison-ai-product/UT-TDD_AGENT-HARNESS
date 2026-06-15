@@ -99,6 +99,11 @@ import {
   loadPlaceholderDepsDocs,
   placeholderDepsMessages,
 } from "../lint/placeholder-deps";
+import {
+  analyzePlanArtifactExistence,
+  loadPlanArtifactExistenceInput,
+  planArtifactExistenceMessages,
+} from "../lint/plan-artifact-existence";
 import { analyzePlanDod, loadPlanDodDocs, planDodMessages } from "../lint/plan-dod";
 import {
   analyzeProjectHooks,
@@ -455,6 +460,30 @@ export function checkMergedPlanStatus(repoRoot: string): { messages: string[]; o
   } catch {
     return {
       messages: ["merged-plan-status - violation: PLAN generates could not be read"],
+      ok: false,
+    };
+  }
+}
+
+/**
+ * plan-artifact-existence hard gate (PO /goal 2026-06-15): PLAN が confirmed/completed/accepted (完了宣言)
+ * なのに generates artifact が不在 (phantom / false-completion) を fail-close 検出する。merged-plan-status
+ * の鏡像で、PLAN↕artifact 実在マトリクスを 2 gate で完結させる。impl-plan-trace (src→PLAN) も
+ * review-evidence (証跡有無) も artifact 実在を見ない absence-blindness を塞ぐ (柱3 / 柱6)。
+ */
+export function checkPlanArtifactExistence(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["plan-artifact-existence - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzePlanArtifactExistence(loadPlanArtifactExistenceInput(repoRoot));
+    return { messages: planArtifactExistenceMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["plan-artifact-existence - violation: PLAN generates could not be read"],
       ok: false,
     };
   }
@@ -1087,6 +1116,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const pairFreeze = checkPairFreeze(deps.repoRoot);
   const moduleDrift = checkModuleDrift(deps.repoRoot);
   const mergedPlanStatus = checkMergedPlanStatus(deps.repoRoot);
+  const planArtifactExistence = checkPlanArtifactExistence(deps.repoRoot);
   const assetDrift = checkAssetDrift(deps.repoRoot);
   const skillAssignment = checkSkillAssignment(deps.repoRoot);
   const descentObligation = checkDescentObligation(deps.repoRoot);
@@ -1133,6 +1163,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       pairFreeze.ok &&
       moduleDrift.ok &&
       mergedPlanStatus.ok &&
+      planArtifactExistence.ok &&
       assetDrift.ok &&
       skillAssignment.ok &&
       descentObligation.ok &&
@@ -1176,6 +1207,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
       ...moduleDrift.messages.map((m) => `doctor: ${m}`),
       ...mergedPlanStatus.messages.map((m) => `doctor: ${m}`),
+      ...planArtifactExistence.messages.map((m) => `doctor: ${m}`),
       ...assetDrift.messages.map((m) => `doctor: ${m}`),
       ...skillAssignment.messages.map((m) => `doctor: ${m}`),
       ...descentObligation.messages.map((m) => `doctor: ${m}`),

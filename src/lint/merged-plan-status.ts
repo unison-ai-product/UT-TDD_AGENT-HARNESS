@@ -77,7 +77,9 @@ interface PlanFrontmatterGenerates {
 }
 
 function generatesSrcPaths(content: string): string[] {
-  const m = content.match(/^---\n([\s\S]*?)\n---/);
+  // CRLF 許容 (Windows-first)。`\n` 固定だと CRLF 保存の PLAN を無言 skip し検出漏れ (PLAN-L7-55
+  // review I-1、plan-artifact-existence と同一様式)。
+  const m = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!m) return [];
   let fm: PlanFrontmatterGenerates;
   try {
