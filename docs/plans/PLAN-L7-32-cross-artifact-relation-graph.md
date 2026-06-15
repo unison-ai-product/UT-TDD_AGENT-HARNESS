@@ -6,7 +6,7 @@ layer: L7
 drive: fullstack
 status: confirmed
 created: 2026-06-09
-updated: 2026-06-10
+updated: 2026-06-15
 owner: PM (Opus) / PO (人間)
 review_evidence:
   - reviewer: code-reviewer
@@ -98,3 +98,12 @@ CLI smoke and doc back-fill can proceed after pure function green.
 - [x] `bun run test tests/relation-graph.test.ts tests/verification-profile.test.ts` passes.
 - [x] `bun run typecheck`, `bun run lint`, and `bun run src/cli.ts doctor` pass.
 - [x] Reverse fullback closes governance/backlog additions.
+
+## §9 Deferred scope — `ut-tdd graph impact|export` CLI (explicit_l7_defer → ADR-002 A-124)
+
+2026-06-15 L7 完全実装監査 (PLAN-L7-52) で「PLAN §2 が予告した `ut-tdd graph impact` CLI が未実装・formal defer 記録なし」が指摘された。本節でその defer を明示記録する (CLAUDE.md: 明示 defer は under-design でない / concept §3.1.3.1)。
+
+- **defer 対象**: `ut-tdd graph impact --changed <path>` / `ut-tdd graph export --format mermaid|dot --scope <scope>` の CLI surface (repo→`RelationGraphSourceSet` loader を含む)。
+- **defer 根拠 (impl-ahead ではない)**: ADR-002 §Implementation Notes は当 CLI を **A-124 separate scope** と明示し、本 PLAN の pure functions (`collectRelationGraphProjection` / `analyzeRelationImpact` / `exportRelationDiagram`、U-RELGRAPH-001..010 green) のみを L7-32 scope とした。CLI は最初から本 PLAN の DoD 外で、§2 でも「pure functions green 後」の後続条件として記載済。
+- **first slice 出荷済**: ADR-002 §134 — `ut-tdd verify recommend --changed <path>` が changed-file → profile trigger を写像し Mermaid impact evidence を emit 可能 (= graph-impact ユースケースの最初の slice は既に CLI に存在する)。
+- **owner / condition**: owner = A-124 (DB-backed relation graph expansion)。condition = A-124 着手時に repo→source-set loader + `graph` subcommand を実装し、本 defer を discharge する。それまで pure functions は projection-writer 経由 (`rebuildHarnessDb` の `input.relationGraph`) でのみ供給される設計とする。

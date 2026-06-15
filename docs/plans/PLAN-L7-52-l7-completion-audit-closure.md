@@ -80,7 +80,7 @@ L7 はコードとして完成・green (551→553 tests / `ut-tdd doctor` 左腕
 
 - **C-1 (auth-gated, PO 確定要)**: L7-48 `recordGuardrailDecision` の本番配線 (agent-guard / review / escalation / human-signoff の decision source からの projection)。**authorization / human-signoff semantics に該当するため CLAUDE.md Guard Rule により人間確認なしに仕様確定しない**。PO が配線方針 (どの decision source を ledger 経由にするか) を確定するまで保留。condition = PO 設計確定。
 - **C-2**: descent-obligation FR-L1-47 false-confidence 修正。loader が blanket レンジ `U-FR-L1-01..U-FR-L1-50` を substantive L7 coverage と扱わないようにする (warn-first → 実 oracle back-fill → hard、descent-obligation.md §7 phased rollout 準拠)。condition = skill FR-L1-47 実 oracle back-fill とセットで赤カスケード回避。
-- **C-3**: `ut-tdd graph impact` / `graph export` CLI 実装 (PLAN-L7-32 §2 + ADR-002 A-124 が約束、pure functions は green だが CLI 未到達)。
+- **C-3 (formal defer 記録済、2026-06-15)**: `ut-tdd graph impact` / `graph export` CLI。ADR-002 が当 CLI を **A-124 separate scope** と明示しており impl-ahead ではない (first slice `ut-tdd verify recommend --changed` は出荷済)。欠けていた formal defer 記録を **PLAN-L7-32 §9** に追記し discharge condition (A-124 着手時に repo→source-set loader + `graph` subcommand) を明示済。本サイクルでの CLI 実装は不要。
 - **C-4**: V-pair 降下 back-fill — L7-46 (U-FR-L1-06)、L7-47 (U-FR-L1-19 + findReference/computeSkillMetrics)、L7-50 (fr-roadmap-coverage L6契約 + U-FRC)、L7-51 (plan-dod/placeholder-deps/l7-completion/drive-db-registration の L6設計 + U-* oracle)、L7-49 (catalogAutomationAssets 署名ドリフト)。impl-ahead パターンのため descent-obligation Phase 0→2 で機械発火させるのが本筋。**reviewer M-3**: `computeSkillMetrics` (engine.ts) と `projectSkillMetrics` (projection-writer.ts) が `quality_signals` に signal_id キー差で二重書きしうる点もここで一本化検討。
 - **C-5**: W10 skill pack curate (107 HELIX skills → ~7 `docs/skills/*-pack.md`)。前回 handover Residual #2 の未消化。
 
