@@ -475,3 +475,64 @@ interface DriveDbRegistrationResult {
 ```
 
 共通 invariant: `analyzeDriveDbRegistration` は純粋関数 (DB アクセスは呼び出し元の `checkDriveDbRegistration` が担う)。必須 mode リスト (`Discovery/Forward/Recovery/Reverse/Verification`) は実装内定数 `REQUIRED_CURRENT_MODES` を単一正本とし、本契約の一覧はその写し。orphan 検査は stats フィールドの正値チェックで行い、DB クエリを直接発行しない。
+
+### D.5 `src/lint/fr-roadmap-coverage.ts`
+
+parent PLAN = PLAN-L7-50。L6 契約なし着地分の後追い明文化。oracle ID 宣言は L7 oracle slice で別途行うため本サブセクションでは省略し、関数 signature + DbC + doctor 配線のみを記録する。
+
+| 関数 (実 export) | signature | pre | post | doctor 配線 |
+|---|---|---|---|---|
+| `analyzeFrRoadmapCoverage` | `(docs: FrRoadmapCoverageDoc[]) => FrRoadmapCoverageResult` | `docs` は `loadFrRoadmapCoverageDocs` 等で事前に取得したもの; fs アクセスなし (純粋); `repoRoot` は `process.cwd()` で補完 | `FrRoadmapCoverageResult` を返す; `checked=docs.length`; 各 doc の残留 bucket テーブル (`## Residual Feature Buckets`) が存在しない場合 `violations` に `missing_section` を積む; 既定 bucket 集合 (R1〜R9) のうち doc 内に未出現のものは `missing_expected_bucket` として違反; 解決が特定できない open 行は `ambiguous_resolution` 違反; `closed` 行には closure evidence セクション (`## Residual Feature Closure Evidence`) の対照検査を行い、plan/source/test 各参照先の fs 実在を `process.cwd()` 基準で検証; 全 violations = 0 かつ open rows = 0 のとき `ok=true` | `checkFrRoadmapCoverage` → `runDoctor.ok` / `runDoctor.messages` |
+| `analyzeFrRoadmapCoverageWithRoot` | `(docs: FrRoadmapCoverageDoc[], repoRoot: string) => FrRoadmapCoverageResult` | `docs` は取得済み; `repoRoot` は fs 実在確認の基点パス; `analyzeFrRoadmapCoverage` の実装委譲先 (repoRoot を明示渡し) | 同上; closure evidence の plan/source/test 参照先は `join(repoRoot, path)` で存在検証; `missing_evidence_file` 違反はファイルが実在しない場合に積む; 純粋性の例外 = fs 実在確認 (`existsSync`) を内部で呼ぶ | `checkFrRoadmapCoverage` の内部委譲先 |
+| `loadFrRoadmapCoverageDocs` | `(repoRoot?: string) => FrRoadmapCoverageDoc[]` | `repoRoot` 省略時は `process.cwd()` を使用; fs 端点; 対象ファイルが存在しない場合は空配列を返す (fail-open) | `.ut-tdd/audit/A-133-upstream-vmodel-coverage-audit.md` を読み込み `FrRoadmapCoverageDoc[]` として返す; `file` フィールドは `join(".ut-tdd", "audit", "A-133-upstream-vmodel-coverage-audit.md")` (repo 相対) | `checkFrRoadmapCoverage` の唯一の fs 端点 |
+| `frRoadmapCoverageMessages` | `(result: FrRoadmapCoverageResult) => string[]` | `result` は `analyzeFrRoadmapCoverage` / `analyzeFrRoadmapCoverageWithRoot` の返り値; 純粋関数 | `checked=0` のとき bucket テーブル不在を示す単一違反メッセージを返す; violations > 0 のとき最大 8 件のサンプル (`file[:bucket]:reason`) を含む違反メッセージを返す; open rows > 0 のとき status 別カウントと bucket 一覧を含むメッセージを返す; すべて解決済みのとき `OK (checked=N, buckets=N, closure=N)` 形式の合格メッセージを返す | `checkFrRoadmapCoverage` → `runDoctor.messages` |
+
+型定義:
+
+```ts
+type FrRoadmapCoverageStatus = "closed" | "scheduled" | "parked" | "PO decision";
+
+interface FrRoadmapCoverageDoc {
+  file: string;    // repo 相対パス
+  content: string; // ファイル全文
+}
+
+interface FrRoadmapCoverageRow {
+  file: string; bucket: string; upstreamSource: string;
+  currentRoute: string; vmodelState: string;
+  requiredNextArtifact: string; status: FrRoadmapCoverageStatus;
+}
+
+interface FrRoadmapClosureEvidenceRow {
+  file: string; bucket: string; planTarget: string;
+  sourceTarget: string; testTarget: string;
+  coverageGate: string; status: FrRoadmapCoverageStatus;
+}
+
+interface FrRoadmapCoverageViolation {
+  file: string; bucket?: string;
+  reason:
+    | "missing_section" | "missing_table" | "malformed_row"
+    | "missing_expected_bucket" | "missing_upstream_source"
+    | "missing_current_route" | "missing_vmodel_state"
+    | "missing_next_artifact" | "unknown_status" | "ambiguous_resolution"
+    | "missing_closure_section" | "missing_closure_table"
+    | "malformed_closure_row" | "missing_closure_evidence"
+    | "missing_plan_target" | "missing_source_target"
+    | "missing_test_target" | "missing_coverage_gate"
+    | "missing_evidence_file" | "closure_status_mismatch";
+}
+
+interface FrRoadmapCoverageResult {
+  checked: number; rows: FrRoadmapCoverageRow[];
+  closureRows: FrRoadmapClosureEvidenceRow[];
+  openRows: FrRoadmapCoverageRow[];
+  violations: FrRoadmapCoverageViolation[]; ok: boolean;
+}
+```
+
+doctor 配線 (src/doctor/index.ts):
+
+`checkFrRoadmapCoverage(repoRoot)` が `loadFrRoadmapCoverageDocs(repoRoot)` → `analyzeFrRoadmapCoverageWithRoot(docs, repoRoot)` → `frRoadmapCoverageMessages(result)` の順に委譲し、`{ messages, ok }` を返す。`runDoctor` は line 974 で `frRoadmapCoverage = checkFrRoadmapCoverage(deps.repoRoot)` を呼び、`frRoadmapCoverage.ok` を全体 `ok` の AND 条件 (line 1014)、`frRoadmapCoverage.messages` を `doctor:` プレフィックス付きで全メッセージに展開 (line 1057) する。
+
+共通 invariant: `analyzeFrRoadmapCoverage` / `analyzeFrRoadmapCoverageWithRoot` は純粋関数 (fs アクセスは `analyzeFrRoadmapCoverageWithRoot` 内の `existsSync` による closure evidence 存在確認のみ; doc 読み込み端点は `loadFrRoadmapCoverageDocs` に集約)。bucket 検査の対象集合 (R1〜R9) は実装内定数 `EXPECTED_BUCKETS` を単一正本とし、本契約の列挙はその写し。`normalizeStatus` はバッククォート除去後に `VALID_STATUSES` と照合し、不一致は `unknown_status` 違反とする。open bucket の解決文言は `RESOLUTION_PATTERN` 正規表現で検証し、パターン不一致は `ambiguous_resolution` 違反とする。`closed` 行には closure evidence の対照が必須であり、evidence 行が欠落する場合は `missing_closure_evidence` 違反として `ok=false` となる。
