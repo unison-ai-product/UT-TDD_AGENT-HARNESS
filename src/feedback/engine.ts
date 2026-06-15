@@ -19,14 +19,6 @@ export interface FeedbackEvent {
   created_at: string;
 }
 
-export interface OperationalMetric {
-  subject_id: string;
-  metric: string;
-  value: number;
-  threshold: number;
-  status: string;
-}
-
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -123,118 +115,6 @@ export function computeSkillMetrics(db: HarnessDb): SkillMetric[] {
         acceptance_rate: acceptance,
       } satisfies SkillMetric;
     });
-  return metrics;
-}
-
-function signalId(prefix: string, subject: string, metric: string): string {
-  return `${prefix}:${subject}:${metric}`.replace(/[^A-Za-z0-9._:-]+/g, "-");
-}
-
-function count(db: HarnessDb, sql: string, params: unknown[] = []): number {
-  const row = db.prepare(sql).get(...params) as { value?: number } | undefined;
-  return Number(row?.value ?? 0);
-}
-
-function upsertSignal(
-  db: HarnessDb,
-  metric: OperationalMetric,
-  source = "telemetry-metrics",
-): void {
-  upsertRow(db, {
-    table: "quality_signals",
-    primaryKey: "signal_id",
-    row: {
-      signal_id: signalId(source, metric.subject_id, metric.metric),
-      source,
-      subject_id: metric.subject_id,
-      metric: metric.metric,
-      value: metric.value,
-      threshold: metric.threshold,
-      status: metric.status,
-      computed_at: nowIso(),
-    },
-  });
-}
-
-export function computeOperationalMetrics(db: HarnessDb): OperationalMetric[] {
-  const metrics: OperationalMetric[] = [];
-  const driveModes = db
-    .prepare("SELECT mode, COUNT(*) AS total FROM drive_runs GROUP BY mode ORDER BY mode")
-    .all();
-  for (const row of driveModes) {
-    const mode = String(row.mode ?? "unknown");
-    const total = Number(row.total ?? 0);
-    const completed = count(
-      db,
-      "SELECT COUNT(*) AS value FROM drive_runs WHERE mode = ? AND status IN ('completed', 'confirmed', 'documented')",
-      [mode],
-    );
-    const rate = total === 0 ? 0 : completed / total;
-    metrics.push({
-      subject_id: `drive:${mode}`,
-      metric: "drive_firing_rate",
-      value: Number(rate.toFixed(4)),
-      threshold: 0.8,
-      status: rate >= 0.8 ? "pass" : "warn",
-    });
-  }
-
-  const hookTotal = count(db, "SELECT COUNT(*) AS value FROM hook_events");
-  const troubleTotal = count(
-    db,
-    "SELECT COUNT(*) AS value FROM hook_events WHERE event_type IN ('forced_stop', 'error', 'failed') OR digest LIKE '%fail%' OR digest LIKE '%error%'",
-  );
-  const troubleRate = hookTotal === 0 ? 0 : troubleTotal / hookTotal;
-  metrics.push({
-    subject_id: "hooks",
-    metric: "trouble_event_rate",
-    value: Number(troubleRate.toFixed(4)),
-    threshold: 0,
-    status: troubleRate === 0 ? "pass" : "warn",
-  });
-
-  const workflowTotal = count(db, "SELECT COUNT(*) AS value FROM workflow_runs");
-  const blockedTotal = count(
-    db,
-    "SELECT COUNT(*) AS value FROM workflow_runs WHERE ready_status NOT IN ('passed_local', 'passed', 'ready')",
-  );
-  const humanTotal = count(
-    db,
-    "SELECT COUNT(*) AS value FROM workflow_runs WHERE human_required = 1",
-  );
-  const duplicatePhases = count(
-    db,
-    `SELECT COUNT(*) AS value
-     FROM (
-       SELECT plan_id, workflow, phase, COUNT(*) AS c
-       FROM workflow_runs
-       GROUP BY plan_id, workflow, phase
-       HAVING c > 1
-     )`,
-  );
-  metrics.push({
-    subject_id: "workflow",
-    metric: "workflow_blocked_rate",
-    value: workflowTotal === 0 ? 0 : Number((blockedTotal / workflowTotal).toFixed(4)),
-    threshold: 0,
-    status: blockedTotal === 0 ? "pass" : "warn",
-  });
-  metrics.push({
-    subject_id: "workflow",
-    metric: "workflow_human_required_rate",
-    value: workflowTotal === 0 ? 0 : Number((humanTotal / workflowTotal).toFixed(4)),
-    threshold: 0,
-    status: humanTotal === 0 ? "pass" : "warn",
-  });
-  metrics.push({
-    subject_id: "workflow",
-    metric: "workflow_retry_groups",
-    value: duplicatePhases,
-    threshold: 0,
-    status: duplicatePhases === 0 ? "pass" : "warn",
-  });
-
-  for (const metric of metrics) upsertSignal(db, metric);
   return metrics;
 }
 

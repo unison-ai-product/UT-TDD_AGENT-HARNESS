@@ -26,7 +26,13 @@ import {
   primaryKeyOf,
   type TableDef,
 } from "../schema/harness-db";
-import { defaultHarnessDbPath, type HarnessDb, openHarnessDb, upsertRow } from "./index";
+import {
+  defaultHarnessDbPath,
+  type HarnessDb,
+  openHarnessDb,
+  SECRET_PATTERN,
+  upsertRow,
+} from "./index";
 import { migrate, rowCounts } from "./migration";
 
 export interface ProjectionEvent {
@@ -91,8 +97,6 @@ interface ProviderHandoverProjection {
   };
 }
 
-const SECRET_PATTERN =
-  /(sk-[A-Za-z0-9_-]+|ghp_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|xox[baprs]-[A-Za-z0-9-]+)/;
 const RAW_PAYLOAD_KEYS = new Set([
   "rawMcpResponse",
   "browserTrace",

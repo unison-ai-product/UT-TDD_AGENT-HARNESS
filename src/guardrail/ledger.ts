@@ -1,5 +1,5 @@
 import type { HarnessDb } from "../state-db/index";
-import { upsertRow } from "../state-db/index";
+import { isSecretLike, upsertRow } from "../state-db/index";
 
 export type GuardrailDecisionValue = "allow" | "block" | "human-required";
 
@@ -38,10 +38,6 @@ function decisionId(input: GuardrailDecisionInput): string {
   );
 }
 
-function containsSecret(value: string): boolean {
-  return /(sk-[A-Za-z0-9_-]+|ghp_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)/.test(value);
-}
-
 function normalizeDecision(input: GuardrailDecisionInput): GuardrailDecisionValue {
   const sameModel =
     input.reviewer_model !== undefined &&
@@ -57,7 +53,7 @@ export function recordGuardrailDecision(
   db: HarnessDb,
   input: GuardrailDecisionInput,
 ): GuardrailDecisionRow {
-  if (containsSecret(input.evidence_path)) {
+  if (isSecretLike(input.evidence_path)) {
     throw new Error("guardrail evidence_path must not contain secret-like values");
   }
   const decision = normalizeDecision(input);

@@ -35,6 +35,19 @@ export interface HarnessDb {
   close(): void;
 }
 
+/**
+ * harness.db に投影・記録してはならない secret 様トークンの単一正本パターン
+ * (sk-* / ghp_* / github_pat_* / Slack xox*)。projection-writer の投影ガードと
+ * guardrail ledger の evidence_path ガードが共有する (単一正本化、PLAN-L7-52 I-1)。
+ */
+export const SECRET_PATTERN =
+  /(sk-[A-Za-z0-9_-]+|ghp_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|xox[baprs]-[A-Za-z0-9-]+)/;
+
+/** 文字列が secret 様トークンを含むか (SECRET_PATTERN 単一正本)。 */
+export function isSecretLike(value: string): boolean {
+  return SECRET_PATTERN.test(value);
+}
+
 // bun:sqlite / node:sqlite の最小構造 (型は提供されないため局所定義)。
 interface NativeStatement {
   run(...params: unknown[]): unknown;
