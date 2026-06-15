@@ -4,7 +4,12 @@ import {
   type DriveDbRegistrationStats,
   driveDbRegistrationMessages,
 } from "../src/lint/drive-db-registration";
-import { loadOrBuildDriveDbRegistrationStats } from "../src/state-db/drive-registration";
+import {
+  collectDriveDbRegistrationStats,
+  loadOrBuildDriveDbRegistrationStats,
+} from "../src/state-db/drive-registration";
+import { openHarnessDb, upsertRow } from "../src/state-db/index";
+import { migrate } from "../src/state-db/migration";
 
 const compliant: DriveDbRegistrationStats = {
   planCount: 10,
@@ -56,6 +61,50 @@ describe("drive DB registration lint", () => {
         "missing_required_mode",
       ]),
     );
+  });
+
+  it("U-DDBREG-004: session-scoped token rows (role='session', plan_id='') are NOT orphans, but worker runs with a missing plan are (PLAN-L7-58)", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      // session telemetry row from `ut-tdd telemetry scan` — inherently plan-less, must not count.
+      upsertRow(db, {
+        table: "model_runs",
+        primaryKey: "run_id",
+        row: {
+          run_id: "tok-1",
+          runtime: "claude",
+          model: "claude-opus-4-8",
+          role: "session",
+          drive: "",
+          plan_id: "",
+          started_at: "",
+          completed_at: "",
+          evidence_path: "sess.jsonl",
+        },
+      });
+      // genuine orphan: a worker run that points at a non-existent PLAN — must still be flagged.
+      upsertRow(db, {
+        table: "model_runs",
+        primaryKey: "run_id",
+        row: {
+          run_id: "orphan-1",
+          runtime: "claude",
+          model: "claude-opus-4-8",
+          role: "worker",
+          drive: "db",
+          plan_id: "PLAN-DOES-NOT-EXIST",
+          started_at: "",
+          completed_at: "",
+          evidence_path: "",
+        },
+      });
+      const stats = collectDriveDbRegistrationStats(db);
+      expect(stats.modelRuns).toBe(2);
+      expect(stats.modelOrphans).toBe(1); // only the worker run, not the session row
+    } finally {
+      db.close();
+    }
   });
 
   it("U-DDBREG-003: current harness.db has automatic registration evidence", () => {

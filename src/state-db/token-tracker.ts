@@ -9,7 +9,8 @@
  *
  * core metric = **token 効率** (両 runtime とも token は確実に出す = provider 非依存)。$ コストは enrichment:
  *   - Claude: usage + CLAUDE_PRICING でローカル計算 (単価は claude-api 正本、単一正本化)。
- *   - Codex: token のみ。OpenAI 公式単価 source 未取得のため cost=null (捏造しない)。token 効率は成立。
+ *   - Codex: usage + OPENAI_PRICING (公式 API pricing、2026-06-15 取得) でローカル計算。**公式 pricing に
+ *     掲載のあるモデルのみ** cost を出し、未掲載 (例 gpt-5.4-codex) は null を維持する (捏造しない)。token 効率は常に成立。
  *
  * 純関数 (parse / cost) と I/O loader (loadRuntimeSessionUsage) を分離。ingest/projection は
  * projection-writer.ts 側 (projectTokenUsage) が本モジュールの純関数を消費する。
@@ -31,7 +32,7 @@ export interface RunUsage {
   cachedInputTokens: number;
   /** Codex reasoning_output_tokens。Claude には無く 0。 */
   reasoningTokens: number;
-  /** $ enrichment。Codex は単価未取得で null。 */
+  /** $ enrichment。pricing 表に未掲載のモデルは null (捏造しない)。 */
   costUsd: number | null;
 }
 
@@ -53,13 +54,42 @@ const CACHE_READ_MULTIPLIER = 0.1;
 const CACHE_WRITE_MULTIPLIER = 1.25;
 
 /**
- * model id を CLAUDE_PRICING のキーへ正規化 (日付/[1m] 等の suffix を許容)。
- * **longest-prefix-match** を採る (review M-1): 将来 "claude-opus-4" 等の短いキーを足しても
- * "claude-opus-4-8" が先に取られ、短い prefix に誤マッチしない。Object.keys 反復順に依存しない。
+ * OpenAI (Codex runtime) モデル単価 ($/1M tokens)。正本 = OpenAI 公式 API pricing
+ * (https://developers.openai.com/api/docs/pricing、standard tier、2026-06-15 取得)。`cached` は公式
+ * "cached input" 割引単価で、caching 非対応モデル (pro) は null → computeCodexCostUsd が input 単価で課金する。
+ * 根拠: ハードコードだが公式 published 単価であり、model→price の散在を避けここへ集約 (CLAUDE_PRICING と対称)。
+ * **未掲載モデルは表に入れない = cost null** (捏造禁止の不変条件)。例: gpt-5.4-codex は公式 pricing に未掲載の
+ * ため意図的に不在にし null を維持する。将来の改定はこの表を差し替える (単一正本)。
  */
-function pricingKeyFor(model: string): string | null {
-  const m = model.toLowerCase();
-  const matches = Object.keys(CLAUDE_PRICING).filter((key) => m.startsWith(key));
+export const OPENAI_PRICING: Record<
+  string,
+  { input: number; cached: number | null; output: number }
+> = {
+  "gpt-5.5": { input: 5, cached: 0.5, output: 30 },
+  "gpt-5.5-pro": { input: 30, cached: null, output: 180 },
+  "gpt-5.4": { input: 2.5, cached: 0.25, output: 15 },
+  "gpt-5.4-mini": { input: 0.75, cached: 0.075, output: 4.5 },
+  "gpt-5.4-nano": { input: 0.2, cached: 0.02, output: 1.25 },
+  "gpt-5.4-pro": { input: 30, cached: null, output: 180 },
+  "gpt-5.3-codex": { input: 1.75, cached: 0.175, output: 14 },
+};
+
+/**
+ * model id を pricing table のキーへ正規化する**安全な** matcher (CLAUDE_PRICING / OPENAI_PRICING 共用)。
+ * - 完全一致を最優先。
+ * - 接尾辞は **日付 / version / `[1m]` 等の継続のみ**許容し、新しい variant 語 (`-codex` / `-mini` / `-pro`
+ *   等) を跨いでマッチしない。これは `gpt-5.4-codex` が `gpt-5.4` 単価へ誤マッチして $ を捏造するのを防ぐため
+ *   (= 残差が空、区切り直後が数字 `-2026…`/`.1`、または `[` で始まる場合のみ prefix-match 成立)。
+ * - 複数候補は最長一致を採る (Object.keys 反復順に依存しない)。
+ */
+function pricingKeyFor(model: string, table: Record<string, unknown>): string | null {
+  const m = model.toLowerCase().trim();
+  if (Object.hasOwn(table, m)) return m;
+  const matches = Object.keys(table).filter((key) => {
+    if (!m.startsWith(key)) return false;
+    const rest = m.slice(key.length);
+    return rest === "" || /^[-_.]?\d/.test(rest) || rest.startsWith("[");
+  });
   if (matches.length === 0) return null;
   return matches.sort((a, b) => b.length - a.length)[0];
 }
@@ -75,7 +105,7 @@ export function computeClaudeCostUsd(args: {
   cacheReadTokens: number;
   cacheWriteTokens: number;
 }): number | null {
-  const key = pricingKeyFor(args.model);
+  const key = pricingKeyFor(args.model, CLAUDE_PRICING);
   if (!key) return null;
   const p = CLAUDE_PRICING[key];
   const inputCost =
@@ -83,6 +113,28 @@ export function computeClaudeCostUsd(args: {
       args.cacheReadTokens * CACHE_READ_MULTIPLIER +
       args.cacheWriteTokens * CACHE_WRITE_MULTIPLIER) *
     p.input;
+  const outputCost = args.outputTokens * p.output;
+  return Number(((inputCost + outputCost) / 1_000_000).toFixed(6));
+}
+
+/**
+ * Codex (OpenAI) の 1 turn コスト ($) を usage から計算する。公式 pricing 未掲載モデルは null (捏造しない)。
+ * OpenAI 課金: cached_input は割引 (cached) 単価、残りの input は通常単価、output (reasoning を内包) は
+ * output 単価。cost = ((input - cached)×input単価 + cached×cached単価 + output×output単価) / 1e6。
+ * caching 非対応 (cached=null) のモデルでは cached トークンも input 単価で課金する。
+ */
+export function computeCodexCostUsd(args: {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens: number;
+}): number | null {
+  const key = pricingKeyFor(args.model, OPENAI_PRICING);
+  if (!key) return null;
+  const p = OPENAI_PRICING[key];
+  const uncachedInput = Math.max(0, args.inputTokens - args.cachedInputTokens);
+  const cachedRate = p.cached ?? p.input;
+  const inputCost = uncachedInput * p.input + args.cachedInputTokens * cachedRate;
   const outputCost = args.outputTokens * p.output;
   return Number(((inputCost + outputCost) / 1_000_000).toFixed(6));
 }
@@ -168,7 +220,7 @@ function readCodexCumulative(info: Record<string, unknown>): CodexCumulative | n
  * per-turn を復元する (上流 issue openai/codex#17539 で per-call `last` が追加予定だが、それまでは差分)。
  * 想定行: { type:"event_msg", payload:{ type:"token_count", info:{ total_token_usage:{ input_tokens,
  * cached_input_tokens, output_tokens, reasoning_output_tokens } } } }。model は session_meta 行から。
- * cost は OpenAI 単価 source 未取得のため null (token 効率は成立、捏造しない)。
+ * cost は OPENAI_PRICING (公式 API pricing) で計算。公式 pricing 未掲載モデルは null (token 効率は成立、捏造しない)。
  */
 export function parseCodexSessionUsage(content: string, sessionId = ""): RunUsage[] {
   const out: RunUsage[] = [];
@@ -213,7 +265,12 @@ export function parseCodexSessionUsage(content: string, sessionId = ""): RunUsag
       outputTokens: delta.outputTokens,
       cachedInputTokens: delta.cachedInputTokens,
       reasoningTokens: delta.reasoningTokens,
-      costUsd: null,
+      costUsd: computeCodexCostUsd({
+        model,
+        inputTokens: delta.inputTokens,
+        outputTokens: delta.outputTokens,
+        cachedInputTokens: delta.cachedInputTokens,
+      }),
     });
   }
   return out;
@@ -276,4 +333,41 @@ export function loadRuntimeSessionUsage(dirs: SessionScanDirs): RunUsage[] {
     }
   }
   return out;
+}
+
+/** scan サマリ (CLI `ut-tdd telemetry scan` の表示用)。$ は cost を出せた run の合計のみ。 */
+export interface UsageSummary {
+  totalRuns: number;
+  claudeRuns: number;
+  codexRuns: number;
+  inputTokens: number;
+  outputTokens: number;
+  /** cost を計算できた run の合計 ($)。未掲載モデル (cost=null) は加算しない。 */
+  knownCostUsd: number;
+  /** cost=null だった run 数 (公式単価未掲載モデル)。 */
+  runsWithoutCost: number;
+}
+
+/** RunUsage[] を runtime 別に集計する純関数 (CLI scan の出力に使う)。 */
+export function summarizeRunUsage(usages: RunUsage[]): UsageSummary {
+  const s: UsageSummary = {
+    totalRuns: 0,
+    claudeRuns: 0,
+    codexRuns: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    knownCostUsd: 0,
+    runsWithoutCost: 0,
+  };
+  for (const u of usages) {
+    s.totalRuns++;
+    if (u.runtime === "claude") s.claudeRuns++;
+    else s.codexRuns++;
+    s.inputTokens += u.inputTokens;
+    s.outputTokens += u.outputTokens;
+    if (u.costUsd === null) s.runsWithoutCost++;
+    else s.knownCostUsd += u.costUsd;
+  }
+  s.knownCostUsd = Number(s.knownCostUsd.toFixed(6));
+  return s;
 }

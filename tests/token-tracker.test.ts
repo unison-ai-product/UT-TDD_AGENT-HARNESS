@@ -1,9 +1,9 @@
 /**
- * U-FR-L1-38 token telemetry tracker (PLAN-L7-57)
+ * U-FR-L1-38 token telemetry tracker (PLAN-L7-57 + PLAN-L7-58 cost enrichment)
  *
  * Oracle: 両 runtime の session JSONL を **CLI を起動せず** 読み、per-turn token usage を正規化する。
  * - Claude: per-message usage (累積差分 不要)、cost は CLAUDE_PRICING で計算。
- * - Codex: token_count は session 累積 → 連続差分で per-turn を復元、cost=null (単価 source 未取得)。
+ * - Codex: token_count は session 累積 → 連続差分で per-turn を復元、cost は OPENAI_PRICING で計算 (公式単価未掲載モデルは null)。
  * projectTokenUsage が model_runs へ投入し、projectModelEvaluations が token 効率を集計する。
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -15,9 +15,12 @@ import { migrate } from "../src/state-db/migration";
 import { projectModelEvaluations, projectTokenUsage } from "../src/state-db/projection-writer";
 import {
   computeClaudeCostUsd,
+  computeCodexCostUsd,
   loadRuntimeSessionUsage,
   parseClaudeSessionUsage,
   parseCodexSessionUsage,
+  type RunUsage,
+  summarizeRunUsage,
 } from "../src/state-db/token-tracker";
 
 describe("computeClaudeCostUsd", () => {
@@ -67,6 +70,137 @@ describe("computeClaudeCostUsd", () => {
         cacheWriteTokens: 0,
       }),
     ).toBeNull();
+  });
+});
+
+describe("computeCodexCostUsd (OPENAI_PRICING, 公式単価)", () => {
+  it("computes cost for a published codex model (uncached input + cached + output)", () => {
+    // gpt-5.3-codex = $1.75/$0.175/$14 per 1M. (1000-200)*1.75 + 200*0.175 + 500*14
+    //   = 1400 + 35 + 7000 = 8435 / 1e6 = 0.008435
+    const cost = computeCodexCostUsd({
+      model: "gpt-5.3-codex",
+      inputTokens: 1000,
+      cachedInputTokens: 200,
+      outputTokens: 500,
+    });
+    expect(cost).toBeCloseTo(0.008435, 6);
+  });
+
+  it("computes cost for a published flagship model (gpt-5.4)", () => {
+    // gpt-5.4 = $2.5/$0.25/$15. 1000*2.5 + 1000*15 = 17500 / 1e6 = 0.0175
+    expect(
+      computeCodexCostUsd({
+        model: "gpt-5.4",
+        inputTokens: 1000,
+        cachedInputTokens: 0,
+        outputTokens: 1000,
+      }),
+    ).toBeCloseTo(0.0175, 6);
+  });
+
+  it("tolerates a trailing date/version suffix (prefix match to gpt-5.4)", () => {
+    expect(
+      computeCodexCostUsd({
+        model: "gpt-5.4-2026-01-01",
+        inputTokens: 1000,
+        cachedInputTokens: 0,
+        outputTokens: 1000,
+      }),
+    ).toBeCloseTo(0.0175, 6);
+  });
+
+  it("does NOT cross a variant boundary — gpt-5.4-codex is unpublished => null (no fabricated $)", () => {
+    // gpt-5.4-codex starts with "gpt-5.4" but is a distinct variant not in the official table.
+    // The safe matcher must NOT charge it gpt-5.4's price. Keeps the existing FR-38 invariant.
+    expect(
+      computeCodexCostUsd({
+        model: "gpt-5.4-codex",
+        inputTokens: 1000,
+        cachedInputTokens: 0,
+        outputTokens: 1000,
+      }),
+    ).toBeNull();
+    expect(
+      computeCodexCostUsd({
+        model: "gpt-4o",
+        inputTokens: 1000,
+        cachedInputTokens: 0,
+        outputTokens: 1000,
+      }),
+    ).toBeNull();
+  });
+
+  it("clamps uncached input to 0 when cachedInputTokens > inputTokens (safe undercharge, no negative cost)", () => {
+    // Codex 累積差分では一時的に delta.cached > delta.input が起きうる。uncached=max(0,...) で
+    // 負課金を防ぐ。結果は安全方向 (undercharge)。gpt-5.4: cached $0.25 → 500*0.25 = 0.000125。
+    const cost = computeCodexCostUsd({
+      model: "gpt-5.4",
+      inputTokens: 200,
+      cachedInputTokens: 500,
+      outputTokens: 0,
+    });
+    expect(cost).toBeCloseTo(0.000125, 6);
+    expect(cost).not.toBeLessThan(0);
+  });
+
+  it("charges cached tokens at the input rate when the model has no cached rate (pro)", () => {
+    // gpt-5.4-pro = $30/(no cache)/$180. cached falls back to input rate.
+    // (1000-400)*30 + 400*30 + 100*180 = 18000 + 12000 + 18000 = 48000 / 1e6 = 0.048
+    expect(
+      computeCodexCostUsd({
+        model: "gpt-5.4-pro",
+        inputTokens: 1000,
+        cachedInputTokens: 400,
+        outputTokens: 100,
+      }),
+    ).toBeCloseTo(0.048, 6);
+  });
+});
+
+describe("summarizeRunUsage", () => {
+  it("aggregates per-runtime counts, tokens, and known cost (null cost not summed)", () => {
+    const usages: RunUsage[] = [
+      {
+        runtime: "claude",
+        model: "claude-opus-4-8",
+        sessionId: "s1",
+        turnIndex: 0,
+        inputTokens: 100,
+        outputTokens: 200,
+        cachedInputTokens: 0,
+        reasoningTokens: 0,
+        costUsd: 0.01,
+      },
+      {
+        runtime: "codex",
+        model: "gpt-5.4-codex",
+        sessionId: "c1",
+        turnIndex: 0,
+        inputTokens: 50,
+        outputTokens: 80,
+        cachedInputTokens: 0,
+        reasoningTokens: 0,
+        costUsd: null,
+      },
+    ];
+    const s = summarizeRunUsage(usages);
+    expect(s).toEqual({
+      totalRuns: 2,
+      claudeRuns: 1,
+      codexRuns: 1,
+      inputTokens: 150,
+      outputTokens: 280,
+      knownCostUsd: 0.01,
+      runsWithoutCost: 1,
+    });
+  });
+
+  it("is cold-start safe (empty input)", () => {
+    expect(summarizeRunUsage([])).toMatchObject({
+      totalRuns: 0,
+      knownCostUsd: 0,
+      runsWithoutCost: 0,
+    });
   });
 });
 
@@ -181,6 +315,30 @@ describe("parseCodexSessionUsage (cumulative -> per-turn delta)", () => {
       }),
     ].join("\n");
     expect(parseCodexSessionUsage(content)).toHaveLength(1);
+  });
+
+  it("computes non-null cost for a published codex model (gpt-5.3-codex)", () => {
+    const content = [
+      JSON.stringify({ type: "session_meta", payload: { model: "gpt-5.3-codex" } }),
+      JSON.stringify({
+        type: "event_msg",
+        payload: {
+          type: "token_count",
+          info: {
+            total_token_usage: {
+              input_tokens: 1000,
+              cached_input_tokens: 200,
+              output_tokens: 500,
+              reasoning_output_tokens: 100,
+            },
+          },
+        },
+      }),
+    ].join("\n");
+    const runs = parseCodexSessionUsage(content);
+    expect(runs).toHaveLength(1);
+    // (1000-200)*1.75 + 200*0.175 + 500*14 = 8435 / 1e6 = 0.008435 (reasoning は output に内包、別課金しない)
+    expect(runs[0]?.costUsd).toBeCloseTo(0.008435, 6);
   });
 });
 

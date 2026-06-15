@@ -6,6 +6,7 @@
  */
 import { execSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
 import { catalogAutomationAssets } from "./assets/catalog";
@@ -72,7 +73,13 @@ import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
 import { recommendSkillsForPlan, recordSkillRecommendations } from "./skills/recommend";
 import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index";
 import { harnessDbStatus } from "./state-db/maintenance";
-import { rebuildHarnessDb } from "./state-db/projection-writer";
+import { migrate } from "./state-db/migration";
+import {
+  projectModelEvaluations,
+  projectTokenUsage,
+  rebuildHarnessDb,
+} from "./state-db/projection-writer";
+import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
 import { loadTeamDefinition, validateTeamRun } from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
 import { buildCommandCatalog } from "./workflow/contracts";
@@ -821,6 +828,59 @@ metrics
     } finally {
       db.close();
     }
+  });
+
+const telemetry = program
+  .command("telemetry")
+  .description("cross-runtime token/cost telemetry (FR-L1-38、PLAN-L7-57/58)");
+telemetry
+  .command("scan")
+  .description(
+    "両 runtime の session JSONL を走査し token/cost を harness.db (model_runs) へ ingest (CLI 非起動)",
+  )
+  .option(
+    "--claude-dir <dir>",
+    "Claude transcript dir (default: $UT_TDD_CLAUDE_SESSIONS_DIR or ~/.claude/projects)",
+  )
+  .option(
+    "--codex-dir <dir>",
+    "Codex session dir (default: $UT_TDD_CODEX_SESSIONS_DIR or ~/.codex/sessions)",
+  )
+  .option("--json", "JSON output")
+  .action((opts: { claudeDir?: string; codexDir?: string; json?: boolean }) => {
+    const repoRoot = process.cwd();
+    // env-specific session-dir 解決: 明示 option > 環境変数 > OS default。CLI は一切起動せず
+    // 既存ログを読むだけ (8009001d 無関係、OS 非依存)。不在ディレクトリは cold-start 安全 (空)。
+    const claudeDir =
+      opts.claudeDir ??
+      process.env.UT_TDD_CLAUDE_SESSIONS_DIR ??
+      join(homedir(), ".claude", "projects");
+    const codexDir =
+      opts.codexDir ??
+      process.env.UT_TDD_CODEX_SESSIONS_DIR ??
+      join(homedir(), ".codex", "sessions");
+    const usages = loadRuntimeSessionUsage({ claudeDirs: [claudeDir], codexDirs: [codexDir] });
+    const summary = summarizeRunUsage(usages);
+    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+    try {
+      // 既存 on-disk db が古い schema (token 列なし) でも壊れないよう migrate (冪等 ADD COLUMN)。
+      migrate(db);
+      projectTokenUsage(db, usages);
+      // model_evaluations を再集計 (opt-in gate 無効なら no-op、cold-start 安全)。
+      projectModelEvaluations(db, repoRoot);
+    } finally {
+      db.close();
+    }
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify({ claudeDir, codexDir, ...summary }, null, 2)}\n`);
+      return;
+    }
+    process.stdout.write(
+      `telemetry scan: ${summary.totalRuns} runs ingested (claude=${summary.claudeRuns}, codex=${summary.codexRuns})\n` +
+        `  tokens: input ${summary.inputTokens}, output ${summary.outputTokens}\n` +
+        `  cost: $${summary.knownCostUsd} known, ${summary.runsWithoutCost} runs without published pricing (cost=null)\n` +
+        `  sources: claude=${claudeDir}, codex=${codexDir}\n`,
+    );
   });
 
 const skill = program.command("skill").description("skill recommendation and invocation telemetry");

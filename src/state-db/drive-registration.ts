@@ -31,12 +31,16 @@ export function collectDriveDbRegistrationStats(db: HarnessDb): DriveDbRegistrat
        WHERE d.drive_run_id IS NULL`,
     ),
     modelRuns: count(db, "SELECT COUNT(*) AS value FROM model_runs"),
+    // session-scoped token telemetry rows (role='session', plan_id='', written by projectTokenUsage
+    // from `ut-tdd telemetry scan`) are inherently NOT PLAN-linked, so they must be excluded from the
+    // orphan check — otherwise running a scan would trip drive-db-registration (PLAN-L7-58). genuine
+    // orphans = review/worker runs that SHOULD trace to a PLAN but do not.
     modelOrphans: count(
       db,
       `SELECT COUNT(*) AS value
        FROM model_runs m
        LEFT JOIN plan_registry p ON p.plan_id = m.plan_id
-       WHERE p.plan_id IS NULL`,
+       WHERE p.plan_id IS NULL AND m.role <> 'session'`,
     ),
     skillRecommendations: count(db, "SELECT COUNT(*) AS value FROM skill_recommendations"),
     skillRecommendationOrphans: count(
