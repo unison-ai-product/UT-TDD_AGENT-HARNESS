@@ -539,6 +539,12 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - U-SLOG-007 extends the shared CLI and adapter wrapper oracle: explicit `--plan <id>` lifecycle runs must produce a plan digest with `session_start`, `tool_use`, and `session_end` counts for `<id>`.
 - U-SLOG-007 also asserts `--plan <id>` remains harness metadata and is not forwarded as `--plan-id` or raw plan text to Codex / Claude provider CLI args.
 
+### 2026-06-15 Skill Evaluation Oracle (FR-L1-36, PLAN-L7-53)
+
+| U-ID | 関数 | oracle (DbC) |
+|------|------|--------------|
+| U-FR-L1-36 | `projectSkillEvaluations` | **Cold-start**: 0 skill_invocations → 0 skill_evaluations rows (never throws). **AC-01**: 5 adopted plans all "confirmed" → skill_rating=1.0, adoption_count=5, success_count=5, unused_flag=0. **AC-02**: last accepted invocation > 30 days before asOf → unused_flag=1; row is preserved (no auto-delete). **Partial success**: 3 of 5 adopted plans "confirmed", 2 "draft" → skill_rating=0.6. **Rejected invocations**: accepted=0 only → 0 evaluation rows. **"completed" counts as success**: plan_registry.status="completed" increments success_count. asOf parameter makes time-window logic deterministic in tests. |
+
 ### 2026-06-09 L6 FR Unit Coverage Addendum
 
 - U-FR-L1-01..U-FR-L1-50 are defined by `docs/design/harness/L6-function-design/fr-unit-coverage.md`.

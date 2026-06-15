@@ -68,6 +68,7 @@ Added requirement bundle mapping:
 | FR-L1-33 | docs/design/harness/L6-function-design/function-spec.md | `catalogExistingAssets` classifies command/skill/detector/template/state/hook/doc/test assets by coverage status. | U-FR-L1-33 |
 | FR-L1-34 | docs/design/harness/L6-function-design/function-spec.md | `prioritizeCapabilityGaps` ranks skill/command gaps by workflow impact and missing route/recover capability. | U-FR-L1-34 |
 | FR-L1-35 | docs/design/harness/L6-function-design/function-spec.md | `renderFoundationReadiness` reports implemented/designed/missing infrastructure categories. | U-FR-L1-35 |
+| FR-L1-36 | docs/design/harness/L6-function-design/function-spec.md | `projectSkillEvaluations` computes per-skill rating, adoption count, success count, and unused flag from skill_invocations + plan_registry; cold-start zero-row; no auto-delete. | U-FR-L1-36 |
 | FR-L1-37 | docs/design/harness/L6-function-design/function-spec.md | `recommendModelEffort` maps task/drive/layer signals to model family and reasoning effort. | U-FR-L1-37 |
 | FR-L1-39 | docs/design/harness/L6-function-design/function-spec.md | `scoreTaskComplexity` computes size/dependency/uncertainty scores per drive. | U-FR-L1-39 |
 | FR-L1-40 | docs/design/harness/L6-function-design/function-spec.md | `resolveDriveStatePartition` maps drive to `.ut-tdd/drive/<drive>` state and skip_sub_doc behavior. | U-FR-L1-40 |

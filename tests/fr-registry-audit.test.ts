@@ -16,20 +16,21 @@ describe("FR registry audit (機能一覧 漏れ監査)", () => {
   const docs = loadFrDocs();
   const result = analyzeFrRegistry(docs);
 
-  it("§1 機能一覧 table を 46 行構造化抽出 (P0:19 / P1:22 / P2:5、A-79 で FR-L1-46〜49 追加)", () => {
+  it("§1 機能一覧 table を 48 行構造化抽出 (P0:19 / P1:23 / P2:6、FR-L1-36 が P2 carry から昇格 PLAN-L7-53)", () => {
     const rows = parseFrRows(docs.l1Functional);
-    expect(rows.length).toBe(47);
-    expect(result.totals).toEqual({ registered: 47, p0: 19, p1: 23, p2: 5 });
+    expect(rows.length).toBe(48);
+    expect(result.totals).toEqual({ registered: 48, p0: 19, p1: 23, p2: 6 });
   });
 
-  it("header の件数確定宣言 (計 46 / P0 19 / P1 22 / P2 5) を抽出", () => {
+  it("header の件数確定宣言 (計 48 / P0 19 / P1 23 / P2 6) を抽出", () => {
     const declared = extractDeclaredCounts(docs.l1Functional);
-    expect(declared).toEqual({ total: 47, p0: 19, p1: 23, p2: 5 });
+    expect(declared).toEqual({ total: 48, p0: 19, p1: 23, p2: 6 });
   });
 
-  it("carry/forward 宣言の欠番 = {36,38,43} を explained と認識", () => {
+  it("carry/forward 宣言の欠番 = {38,43} を explained と認識 (FR-L1-36 は登録済のため除外)", () => {
     const explained = extractExplainedGapNums(docs.l1Functional);
-    expect(explained.has(36)).toBe(true);
+    // FR-L1-36 は PLAN-L7-53 で実装・登録済み → carry 宣言不要
+    expect(explained.has(36)).toBe(false);
     expect(explained.has(38)).toBe(true);
     expect(explained.has(43)).toBe(true);
   });
@@ -38,7 +39,7 @@ describe("FR registry audit (機能一覧 漏れ監査)", () => {
     expect(result.unregistered).toEqual([]);
   });
 
-  it("漏れ型2 欠番漏れ: carry 宣言なき連番 gap = 0 (36/38/43 は宣言済)", () => {
+  it("漏れ型2 欠番漏れ: carry 宣言なき連番 gap = 0 (38/43 は宣言済、36 は登録済)", () => {
     expect(result.unexplainedGaps).toEqual([]);
   });
 

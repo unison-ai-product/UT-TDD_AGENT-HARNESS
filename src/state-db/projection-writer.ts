@@ -1233,6 +1233,95 @@ function projectSkillMetrics(db: HarnessDb): void {
   }
 }
 
+/**
+ * FR-L1-36: Per-skill evaluation projection.
+ *
+ * skill_rating = success_count / adoption_count (0.0–1.0).
+ * adoption    = distinct plan_id with accepted=1 invocation.
+ * success     = adopted plans whose plan_registry.status is a success state.
+ *
+ * Success states rationale (hardcode-with-reason):
+ * - "confirmed" and "completed" are the two terminal-success statuses in use across
+ *   all docs/plans/*.md frontmatter (as of 2026-06-15: 149 confirmed, 12 completed).
+ *   "draft" and "archived" are explicitly not success.  No other status values appear
+ *   in the corpus.  Single source of truth: PLAN frontmatter `status:` field parsed
+ *   by projectPlans above.  If new statuses are introduced they must be registered
+ *   here and in the schema (CLAUDE.md: ハードコード単一正本化).
+ *
+ * unused_flag = 1 when no invocation has fired_at within the last 30 days from asOf.
+ * AC-FR-BR21-36-01: 5 adopted plans, all 5 success → rating 1.0, unused_flag 0.
+ * AC-FR-BR21-36-02: 0 adoption in last 30 days → unused_flag 1; no auto-delete.
+ * Cold-start: 0 skill_invocations → 0 evaluation rows.
+ */
+// Success states that count toward skill_rating numerator.  See rationale above.
+const PLAN_SUCCESS_STATUSES = ["confirmed", "completed"] as const;
+
+export function projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string }): void {
+  const evaluatedAt = opts?.asOf ?? nowIso();
+  // 30-day window: ISO timestamp 30 days before evaluatedAt.
+  const cutoff = new Date(new Date(evaluatedAt).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Adoption: distinct plan_id per skill_id with accepted=1 invocation.
+  const adoptionRows = db
+    .prepare(
+      `SELECT i.skill_id,
+              COUNT(DISTINCT i.plan_id) AS adoption_count,
+              MAX(i.fired_at) AS last_fired_at
+       FROM skill_invocations i
+       WHERE i.accepted = 1
+       GROUP BY i.skill_id`,
+    )
+    .all();
+
+  if (adoptionRows.length === 0) return; // Cold-start: nothing to write.
+
+  const successStatusPlaceholders = PLAN_SUCCESS_STATUSES.map(() => "?").join(", ");
+
+  for (const row of adoptionRows) {
+    const skillId = String(row.skill_id ?? "");
+    const adoptionCount = Number(row.adoption_count ?? 0);
+
+    // Success count: adopted plans in a success status.
+    const successRow = db
+      .prepare(
+        `SELECT COUNT(DISTINCT i.plan_id) AS success_count
+         FROM skill_invocations i
+         JOIN plan_registry p ON p.plan_id = i.plan_id
+         WHERE i.skill_id = ?
+           AND i.accepted = 1
+           AND p.status IN (${successStatusPlaceholders})`,
+      )
+      .get(skillId, ...PLAN_SUCCESS_STATUSES) as { success_count: number } | undefined;
+
+    const successCount = Number(successRow?.success_count ?? 0);
+    const skillRating = adoptionCount === 0 ? 0 : Number((successCount / adoptionCount).toFixed(4));
+
+    // unused_flag: no invocation in last 30 days from asOf.
+    const recentRow = db
+      .prepare(
+        `SELECT COUNT(*) AS cnt
+         FROM skill_invocations
+         WHERE skill_id = ? AND fired_at >= ?`,
+      )
+      .get(skillId, cutoff) as { cnt: number } | undefined;
+
+    const unusedFlag = Number(recentRow?.cnt ?? 0) === 0 ? 1 : 0;
+
+    recordProjectionEvent(db, {
+      table: "skill_evaluations",
+      id: skillId,
+      row: {
+        skill_id: skillId,
+        skill_rating: skillRating,
+        adoption_count: adoptionCount,
+        success_count: successCount,
+        unused_flag: unusedFlag,
+        evaluated_at: evaluatedAt,
+      },
+    });
+  }
+}
+
 function projectOperationalMetrics(db: HarnessDb): void {
   const computedAt = nowIso();
   const metrics: {
@@ -1596,6 +1685,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     projectAutomationAssets(repoRoot, db);
     projectSkillTelemetry(db, plans);
     projectSkillMetrics(db);
+    projectSkillEvaluations(db);
     projectOperationalMetrics(db);
     projectFeedbackEvents(db);
     projectTroubleEvents(db);

@@ -162,8 +162,9 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
     // fr-unit-coverage.md にマトリクス行と U-FR oracle を持つ FR は含まれる (frId 正規化 = 2 桁)。
     expect(oracles.has("FR-L1-47")).toBe(true);
     expect(oracles.has("FR-L1-01")).toBe(true);
-    // BR-21 で L3 forward-carry 宣言された P2 FR (oracle 行なし) は含まれない。
-    expect(oracles.has("FR-L1-36")).toBe(false);
+    // FR-L1-36 は PLAN-L7-53 で実装・登録済み → oracle 行あり → 含まれる。
+    expect(oracles.has("FR-L1-36")).toBe(true);
+    // BR-21 で L3 forward-carry 宣言された残存 P2 FR (oracle 行なし) は含まれない。
     expect(oracles.has("FR-L1-38")).toBe(false);
     expect(oracles.has("FR-L1-43")).toBe(false);
 

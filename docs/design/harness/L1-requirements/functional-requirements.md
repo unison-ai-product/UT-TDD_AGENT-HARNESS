@@ -10,7 +10,7 @@ v2_import: docs/migration/v2-import-ledger.md
 ---
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
-> **件数確定**: functional は **FR-L1-47 件で確定 (P0: 19 / P1: 23 / P2: 5)** (A-49 ledger で FR-L1-45 doc-reviewer back-propagation 追加、2026-05-28)。内訳: FR-L1-01〜35 は v2 HELIX-workflows 設計概念参照 (v2-import-ledger §5.1 A-24 / §6)、FR-L1-37/39/40/41/42/44 は PO directed 新規 6 件 (2026-05-28)、**FR-L1-45 は L3 back-propagation 由来 (A-47 Critical C-02 → A-49 で L1 反映、BR-08 派生 P0)**、**FR-L1-50 は DDD/TDD strictness automation 追加 (PO directed 2026-06-09、IMP-097..101)**。FR-L1-36/38/43 は P2 のため L3 forward carry (BR-21 として宣言済み)。
+> **件数確定**: functional は **FR-L1-48 件で確定 (P0: 19 / P1: 23 / P2: 6)** (A-49 ledger で FR-L1-45 doc-reviewer back-propagation 追加、2026-05-28)。内訳: FR-L1-01〜35 は v2 HELIX-workflows 設計概念参照 (v2-import-ledger §5.1 A-24 / §6)、FR-L1-37/39/40/41/42/44 は PO directed 新規 6 件 (2026-05-28)、**FR-L1-45 は L3 back-propagation 由来 (A-47 Critical C-02 → A-49 で L1 反映、BR-08 派生 P0)**、**FR-L1-50 は DDD/TDD strictness automation 追加 (PO directed 2026-06-09、IMP-097..101)**、**FR-L1-36 は P2 から昇格 (skill evaluation 実装済み、PLAN-L7-53、2026-06-15)**。FR-L1-38/43 は P2 のため L3 forward carry (BR-21 として宣言済み)。
 > **L3 接続規約**: `next_pair_freeze: L3`。L3 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
 
 # UT-TDD Agent Harness — L1 機能要求 (functional)
@@ -19,7 +19,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §1 機能一覧
 
-FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/40/41/42/44: PO directed 新規 6 件 (2026-05-28)。FR-L1-45: L3→L1 back-propagation (A-49、2026-05-28)。FR-L1-46〜49: 内部資産 UT-TDD 化 (BR-22 派生、Recovery PLAN-RECOVERY-01 / A-79、2026-05-29)。FR-L1-50: DDD/TDD strictness automation (PO directed 2026-06-09)。**計 47 件**:
+FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/40/41/42/44: PO directed 新規 6 件 (2026-05-28)。FR-L1-45: L3→L1 back-propagation (A-49、2026-05-28)。FR-L1-46〜49: 内部資産 UT-TDD 化 (BR-22 派生、Recovery PLAN-RECOVERY-01 / A-79、2026-05-29)。FR-L1-50: DDD/TDD strictness automation (PO directed 2026-06-09)。FR-L1-36: P2 carry から昇格 (PLAN-L7-53 実装済み、2026-06-15)。**計 48 件**:
 
 | FR-L1-NN | 機能要求名 (1 行) | 出典 doc | 必要 input | 出力 output | 重要度 | 対応画面 (G1-trace) |
 |---|---|---|---|---|---|---|
@@ -58,6 +58,7 @@ FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/4
 | **FR-L1-33** | 既存資産棚卸し・充足度マッピング (コマンド / スキル / detector / template / state / hook / docs / tests の網羅確認) | asset-mapping | リポジトリ全資産 | 充足度レポート、不足項目リスト。※ extended (既存 HELIX 能力 W11/W12/W16 突合、2026-06-04): workflow/task/agent builder、audit/metrics/dashboard、asset/code catalog は本機能の棚卸し対象に含め、Phase 0 の必須開発導線ではなく、後続 PLAN の候補機能・trace hint・CI summary として分類する | P2 | HM-01 / HM-02 |
 | **FR-L1-34** | スキル・コマンド穴の優先順位管理 (vmodel-semantics 注入セット定義 / ut-tdd recover / ut-tdd route / retrofit skill 等) | integration-map | 穴リスト、設計確定済み仕様 | 優先順位付き実装タスクリスト | P2 | HM-02 |
 | **FR-L1-35** | 基盤整備状況の可視化 (実装済み / 設計済み・実装未 / 未設計の 3 区分で検証・テスト・検出基盤を一覧表示) | infra-readiness | 各機構の実装状況 | 整備状況一覧 (区分付き) | P2 | HM-01 |
+| **FR-L1-36** | スキル評価システム (per-skill rating / adoption / success / unused flag を skill_invocations + plan_registry から projection) | BR-21 / PLAN-L7-53 (2026-06-15 P2 carry から昇格) | skill_invocations.accepted=1 件、plan_registry.status、asOf timestamp | skill_evaluations projection (skill_rating 0.0-1.0、adoption_count、success_count、unused_flag)。cold-start = 0 行。unused = 30 日以内発火なし。削除は人手のみ | P2 | HM-05 |
 | **FR-L1-37** | モデル/エフォート推挙システム (task × drive × L 別 model + reasoning effort 動的選定) | PO directed (2026-05-28) | task 分類結果 (FR-L1-39)、drive、L 層、budget 残量 | 推奨 model ID、reasoning effort 値、選定根拠ログ。FR-L1-12 (L 単位注入) の model 粒度拡張。FR-L1-39 上流 input。※ extended (既存 HELIX 能力 W3/W4 突合、2026-06-04): `ut-tdd task estimate` と `ut-tdd skill suggest` の出力を入力に、frontier-reviewer / worker / fast-checker の capability class と reasoning effort を選定する | P1 | HM-08 |
 | **FR-L1-39** | タスク難易度測定システム (規模 / 依存 / 不確実性 × drive 別スコアリング) | PO directed (2026-05-28) | PLAN 内容 (kind/generates/requires)、過去実行ログ、drive | task_complexity_score (P0/P1/P2 分類)、推奨エフォート。FR-L1-37 上流。FR-L1-05 の事前 triage。※ extended (既存 HELIX 能力 W3 突合、2026-06-04): `ut-tdd task classify --text/--plan/--diff` を公開I/Oとし、kind / drive / size / complexity / risk flags を構造化して plan lint・gate・skill suggest に渡す | P1 | HM-08 / HM-05 |
 | **FR-L1-40** | drive 別 state 分離管理 (`.ut-tdd/drive/<drive>/`、skip_sub_doc 機械強制) | PO directed (2026-05-28) | drive 種別 (PLAN frontmatter)、L 層 | drive 別 state 区画、skip_sub_doc 自動検証結果。FR-L1-06 (state 一元管理) の drive 軸 extension | P1 | HM-04 |

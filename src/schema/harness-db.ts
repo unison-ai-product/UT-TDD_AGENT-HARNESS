@@ -15,7 +15,7 @@
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
 
@@ -528,6 +528,18 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("stale_status"),
     ],
   },
+  // --- §9.8 skill evaluation projection (FR-L1-36, PLAN-L7-53) ---
+  {
+    name: "skill_evaluations",
+    columns: [
+      pk("skill_id"),
+      col("skill_rating", "REAL"),
+      col("adoption_count", "INTEGER"),
+      col("success_count", "INTEGER"),
+      col("unused_flag", "INTEGER"),
+      col("evaluated_at"),
+    ],
+  },
   // --- roadmap / review evidence projection (cutover feedback loop) ---
   {
     name: "roadmap_rollups",
@@ -707,6 +719,11 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     name: "idx_descent_obligation_trace_status",
     table: "descent_obligations",
     columns: ["trace_key", "status", "required_layer"],
+  },
+  {
+    name: "idx_skill_evaluations_unused",
+    table: "skill_evaluations",
+    columns: ["unused_flag", "skill_rating"],
   },
 ];
 
