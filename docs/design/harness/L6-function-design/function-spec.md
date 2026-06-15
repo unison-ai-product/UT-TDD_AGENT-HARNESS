@@ -182,7 +182,7 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `buildCommandCatalog` | `BuildCommandCatalogInput { command_docs[]; cli_surface } -> BuildCommandCatalogResult extends ContractResult { commands[] }` | implemented in `src/workflow/contracts.ts`; search rows are rebuildable projection |
 | `projectSkillEvaluations` | `SkillEvaluationsInput { asOf?: string } -> void` | implemented in `src/state-db/projection-writer.ts`; per-skill rating/adoption/success/unused from skill_invocations + plan_registry; cold-start zero rows |
 | `projectPocEvaluations` | `PocEvaluationsInput { asOf?: string } -> void` | implemented in `src/state-db/projection-writer.ts`; one summary row: poc_success_rate = confirmed/(confirmed+rejected+pivot); cold-start (no decided PoC PLANs) zero rows; pivot is non-success |
-| `projectModelEvaluations` | `ModelEvaluationsInput { repoRoot: string } -> void` | implemented in `src/state-db/projection-writer.ts`; opt-in via .ut-tdd/config/model-opt-in.yaml (enabled:true); per-model success_rate = success_count/run_count joining model_runs -> plan_registry; cold-start zero rows; cost-efficiency is explicit_l7_defer (token telemetry not yet available, PLAN-L7-53 follow-up) |
+| `projectModelEvaluations` | `ModelEvaluationsInput { repoRoot: string } -> void` | implemented in `src/state-db/projection-writer.ts`; opt-in via .ut-tdd/config/model-opt-in.yaml (enabled:true); per-model success_rate = success_count/run_count joining model_runs -> plan_registry; cold-start zero rows; cost-efficiency is explicit_l7_defer (token telemetry not yet available; formal owner + discharge condition in PLAN-L7-53 §Carry; no fabricated cost stored) |
 
 ## 2026-06-09 L6 Completion Readiness Addendum
 

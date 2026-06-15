@@ -85,8 +85,9 @@ All three BR-21 FR slices are implemented in this PLAN.
 - Per-model: success_rate = success_count / run_count (join model_runs.plan_id →
   plan_registry.status IN PLAN_SUCCESS_STATUSES).
 - Cold-start (enabled but 0 model_runs) → 0 rows, no throw.
-- Cost-efficiency (cost_per_success) is a declared follow-up pending token/cost
-  telemetry — no fabricated cost data is stored.
+- Cost-efficiency (cost_per_success) is an `explicit_l7_defer` follow-up pending
+  token/cost telemetry — no fabricated cost data is stored (see §Carry for the
+  formal owner + discharge condition).
 
 ### FR-L1-43 (implemented — PoC success measurement)
 
@@ -136,3 +137,22 @@ All three BR-21 FR slices are implemented in this PLAN.
 - [x] tsc + vitest + biome + doctor all pass.
 - [x] function-spec.md, fr-unit-coverage.md, L7-unit-test-design.md updated.
 - [x] FR-L1-38 follow-up (cost-efficiency) declared in PLAN body and function-spec.md invariant.
+- [x] FR-L1-38 cost-efficiency formalized as a named defer with explicit owner + discharge condition (§Carry).
+
+## Carry (deferred follow-up — owner + discharge condition 明示)
+
+> 正規 defer 手続き (CLAUDE.md G.13 / concept §3.1.3.1: 明示宣言した defer は under-design ではない)。
+> doc-only に留めず discharge condition を機械追跡可能な形で残す。
+
+- **FR-L1-38 cost-efficiency (`cost_per_success`)** — `explicit_l7_defer`
+  - **deferred because**: token/cost telemetry が現状 harness のどこにも存在しない (`model_runs` に
+    cost/token 列がなく、cost を計算する原資データがゼロ)。捏造した cost を投影しない方針 (= 0 行 cold-start
+    と同じ honest-absence 原則)。FR-L1-38 本体 (model 別 success_rate) は実装済・substance-verified
+    (U-FR-L1-38 oracle / `tests/model-evaluation.test.ts`) であり、**deferred なのは cost 効率の sub-aspect のみ**
+    (FR 全体を defer しているのではない)。
+  - **owner**: PO (telemetry 配線の優先度判断) + telemetry 実装担当。
+  - **discharge condition**: token/cost telemetry が `model_runs` (または同等の run-level metrics) に配線され
+    実 cost データが入った時点で → ① `model_evaluations` に cost 列 (例 `total_cost` / `cost_per_success`) 追加、
+    ② `projectModelEvaluations` で `cost_per_success = total_cost / success_count` を計算、③ U-FR-L1-38 oracle に
+    cost-efficiency ケースを追加して substance-verify。
+  - **non-fabrication invariant**: discharge までは cost 列を投影しない / ダミー値を入れない (壊さない事項)。
