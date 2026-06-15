@@ -1,14 +1,25 @@
 # Session Handover — 2026-06-15 (detection gate 強化 + FR-38 cross-runtime token telemetry)
 
-> active = PLAN-L7-55 / PLAN-L7-57 (ともに confirmed・push 済・CI green)。PO /goal「キャリー解消 + ハーネス DB の検出ギャップ強化」を本セッションで実施。**解決可能 carry (FR-38) を discharge、検出ギャップ (phantom-artifact) を強化**。残るは PO 判断依存の C-1A / C-5 のみ。
+> active = PLAN-L7-55 / PLAN-L7-57 (ともに confirmed・push 済・CI green)。PO /goal「キャリー解消 + ハーネス DB の検出ギャップ強化」を本セッションで実施。**解決可能 carry (FR-38) を discharge、検出ギャップ (phantom-artifact) を強化**。
+>
+> **訂正 (2026-06-15 後続セッション)**: 当初この行は「残るは PO 判断依存の C-1A / C-5 のみ」と書いていたが**誤り**。
+> C-1A / C-5 は既に commit `e9ecdff` でクローズ済み (詳細 = §3 訂正注記)。完了済み work を open carry として
+> 書き戻す false-state を本訂正で解消する。
 
 ## §3 Next Action
 
-待機事項なし (本セッション分は完了・push 済)。次に動かすなら PO 判断 2 件のいずれか:
+> **訂正 (2026-06-15 後続セッション)**: 本ブロックは当初 C-1A / C-5 を「PO 判断待ち carry」と書いていたが
+> **誤り**。両者は既に commit `e9ecdff` (C-1A guardrail hard-gate Phase 2 + C-5 SKILL_MAP canonical 昇格) で
+> **クローズ済み**で、`dfbfcd2` で carry hygiene (verified-done) 済み。doctor の `guardrail-invariants` gate は
+> `runDoctor.ok` 連動 (hard、cross_agent 限定スコープ、src/doctor/index.ts:1162)、SKILL_MAP.md は canonical
+> (schema-version skill-map.v1)。完了済み work を open carry として再報告していた false-state を本訂正で解消する
+> ([[feedback_verify_carry_status_against_code]])。
 
-1. **C-1A guardrail hard-gate 昇格** (owner=PO、auth/Guard Rule で solo 確定不可): option C (warn-first advisory) のまま置くか Phase 2 (hard-block) へ上げるか。上げる指示があれば `inspectGuardrailInvariants` の `review_kind !== "cross_agent"` skip を保ったまま doctor 連動を強化。
-2. **C-5 SKILL_MAP canonical 昇格** (owner=PO): `docs/skills/SKILL_MAP-draft.md` の 5 分類論点 (Scrum hold/drop・core/optional 境界・未確認13件) を PO taxonomy 確定後に canonical 昇格。
-3. **FR-38 follow-up (任意)**: OpenAI/Codex 単価表 (Codex $ enrichment) + `ut-tdd telemetry scan` CLI 配線 (env 固有 session-dir 解決)。PLAN-L7-57 の明示 carry。
+待機事項なし。**唯一の真の残件 = FR-38 follow-up (任意の enrichment)**:
+
+1. ~~C-1A guardrail hard-gate 昇格~~ → **クローズ済 (`e9ecdff`)**。Phase 2 hard-block 配線済み・cross_agent 限定。
+2. ~~C-5 SKILL_MAP canonical 昇格~~ → **クローズ済 (`e9ecdff` + `c184409` curate)**。`docs/skills/SKILL_MAP.md` 正本。分類細部は PO-overridable な既定値として canonical に内包済み (open carry ではない)。
+3. **FR-38 follow-up (任意 enrichment、solo 可)**: OpenAI/Codex 単価表 (Codex $ enrichment) + `ut-tdd telemetry scan` CLI 配線 (env 固有 session-dir 解決)。PLAN-L7-57 の明示 carry。token 効率 (core) は既に両 runtime で成立済みなので、これは $ 換算と定期実行の追加のみ。
 
 ## §2.1 本セッション成果 (commit / push 済)
 
@@ -19,13 +30,15 @@
 
 ## §4 carry (未了・owner/condition 明示)
 
-- **C-1A guardrail hard-gate** (Phase 2): owner=PO、auth-gated。option C は完成済 (defer でない、PO 明示選択)。
-- **C-5 SKILL_MAP taxonomy**: owner=PO、5 分類論点確定後に canonical 昇格。
-- **FR-38 follow-up**: OpenAI 単価表 + telemetry scan CLI 配線 (PLAN-L7-57 明示 carry、env 固有)。
+> **訂正**: C-1A / C-5 は以前ここに「未了 carry」として残っていたが**クローズ済み** (`e9ecdff`)。下記より除去。
+
+- ~~C-1A guardrail hard-gate (Phase 2)~~ → **クローズ済 (`e9ecdff`)**。doctor hard-gate 連動・cross_agent 限定。
+- ~~C-5 SKILL_MAP taxonomy~~ → **クローズ済 (`e9ecdff` + `c184409`)**。canonical 昇格済、分類細部は PO-overridable 既定値で内包。
+- **FR-38 follow-up** (唯一の真の残件、任意 enrichment): OpenAI 単価表 + telemetry scan CLI 配線 (PLAN-L7-57 明示 carry、env 固有)。token 効率 (core) は discharge 済。
 
 ## §5 未了 PO 判断
 
-- C-1A hard-gate timing (warn-first 維持 or Phase 2 昇格) / C-5 SKILL_MAP 5 分類 — いずれも PO の明示選択待ち。独断で覆さない (Guard Rule)。
+- **なし**。C-1A / C-5 は既に PO /goal で承認・クローズ済み (`e9ecdff`)。FR-38 follow-up は PO 判断不要の solo 可能な技術 enrichment。
 
 ## §6 壊さない / 再発させない
 
