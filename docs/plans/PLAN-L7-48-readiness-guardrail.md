@@ -7,7 +7,7 @@ drive: db
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 status: completed
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-06-15
 agent_slots:
   - role: tl
     slot_label: 'TL - automation readiness and guardrail ledger review'
@@ -78,3 +78,12 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 - [x] IT-AUTOMATION-01 / GUARDRAIL-01 green.
 - [x] `automation readiness` / `guardrail status` runnable, invariants maintained.
 - [x] Regression slice + doctor green, review evidence present.
+
+## §Deferred — `recordGuardrailDecision` production wiring (explicit_l7_defer, auth-gated, 2026-06-15)
+
+L7 完全実装監査 (PLAN-L7-52 C-1) で「`recordGuardrailDecision` が本番の decision source から未配線 (唯一の caller はテスト) で formal defer 記録なし」が指摘された。本節でその defer を明示記録する (CLAUDE.md: 明示 defer は under-design でない)。
+
+- **defer 対象**: `recordGuardrailDecision` の本番 decision-source 配線 — agent-guard / review_evidence / escalation / human-signoff の各 decision を ledger 経由で記録し、`normalizeDecision` の安全不変条件 (same-model→block / human-required→block / secret reject) を本番に適用する経路。
+- **defer 根拠 (auth-gated、solo 確定禁止)**: この配線は **authorization / human-signoff semantics の確定 + automation-readiness gate への本番影響**を伴う。CLAUDE.md Guard Rule「認証・認可・本番影響・human-signoff は人間確認なしに仕様確定しない」に直接該当するため PM solo で確定しない。
+- **現状の安全性 (active な漏洩リスクなし)**: 本番の `guardrail_decisions` 書込 (`projectIssueApprovalGuardrails`) は `SECRET_PATTERN` SSoT 経由で secret-safe (PLAN-L7-52 WBS-03)。`recordGuardrailDecision` の安全ロジックは単体テスト済 (tests/readiness-guardrail.test.ts: secret-reject 4族 / human-required 昇格・非降格)。
+- **owner / condition**: owner = PO。condition = PO が配線方針 (どの decision source を ledger 経由にするか / issue 承認 vocabulary との統合 or 分離) を確定後、`rebuildHarnessDb` の projection に配線して本 defer を discharge する。それまで `recordGuardrailDecision` は単体テスト済の ledger library として保持。
