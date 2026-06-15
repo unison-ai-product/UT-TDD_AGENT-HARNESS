@@ -1385,6 +1385,9 @@ export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): 
   const totalCount = confirmedCount + rejectedCount + pivotCount;
   const pocSuccessRate = totalCount === 0 ? 0 : Number((confirmedCount / totalCount).toFixed(4));
 
+  // 単一行制約 (review I-1): id 固定で全 PoC を 1 集計行に集約するのは FR-L1-43 の現要件
+  // (1 summary 行) のみで有効。将来 PoC 種別別 / スプリント別に分解する要件が出たら PK を
+  // (scope, evaluated_at) 等へ変更し、本 id 固定・idx_poc_evaluations_rate も合わせて見直す。
   recordProjectionEvent(db, {
     table: "poc_evaluations",
     id: "poc-evaluation:summary",

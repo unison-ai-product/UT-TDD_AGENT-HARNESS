@@ -5,7 +5,7 @@ kind: impl
 layer: L7
 drive: db
 parent_design: docs/design/harness/L6-function-design/function-spec.md
-status: draft
+status: confirmed
 created: 2026-06-15
 updated: 2026-06-15
 agent_slots:
@@ -13,7 +13,15 @@ agent_slots:
     slot_label: 'TL - skill evaluation + learning engine review'
   - role: qa
     slot_label: 'QA - evaluation oracle and acceptance criteria'
-review_evidence: []
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
+    tests_green_at: "2026-06-15"
+    reviewed_at: "2026-06-15"
+    verdict: pass
+    scope: "Learning Engine FR-L1-36/38/43 (projectSkillEvaluations/projectPocEvaluations/projectModelEvaluations + harness-db schema v12 + 3 evaluation test suites)。cold-start 不変条件 (0 telemetry/opt-in 無効で 0 行・throw しない) を 3 projection で確認、FR-38 cost-efficiency の explicit_l7_defer (token telemetry 未存在・捏造なし) 正当性、値の正しさ (skill rating=adoption×success / PoC=confirmed/(confirmed+rejected+pivot) pivot 非成功 / model=success_count/run_count、join=plan_registry.status IN PLAN_SUCCESS_STATUSES) を検証。Critical=0、APPROVE。Important I-1 (poc PK single-row 制約 doc note) は対応、I-2 (unused cutoff 30d 境界テスト) + Minor M-1..3 (asOf 対称性/PLAN_SUCCESS_STATUSES export/index コメント) は §Carry に test-hardening follow-up として記録 (非ブロッカー、green コードへの増分)。V-model closure 用の後追い review (実装は 2026-06-15 同日 merge 済 green、status=draft + review_evidence 空のまま放置されていたのを本クローズで confirmed 化)。"
 generates:
   # FR-L1-36 (foundation slice — implemented in this PLAN)
   - artifact_path: src/schema/harness-db.ts
@@ -156,3 +164,8 @@ All three BR-21 FR slices are implemented in this PLAN.
     ② `projectModelEvaluations` で `cost_per_success = total_cost / success_count` を計算、③ U-FR-L1-38 oracle に
     cost-efficiency ケースを追加して substance-verify。
   - **non-fabrication invariant**: discharge までは cost 列を投影しない / ダミー値を入れない (壊さない事項)。
+
+- **test-hardening follow-up (review 2026-06-15 I-2 / M-1..3、非ブロッカー)** — green コードへの増分:
+  - I-2: `unused_flag` cutoff の **ちょうど 30 日前 (境界、`fired_at === cutoff`)** ケースを `tests/skill-evaluation.test.ts` に追加し inclusive (`>=`) を回帰固定。
+  - M-1: `projectModelEvaluations` に `opts?: { asOf?: string }` を足し skill/poc と対称化 (値固定テスト可能化)。
+  - M-3: `idx_poc_evaluations_rate` は単一行テーブルでは実質無効 = 「multi-row 拡張を見越した前倒し」コメント (I-1 の PK 注記とセット)。
