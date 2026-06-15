@@ -10,7 +10,7 @@ v2_import: docs/migration/v2-import-ledger.md
 ---
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
-> **件数確定**: functional は **FR-L1-48 件で確定 (P0: 19 / P1: 23 / P2: 6)** (A-49 ledger で FR-L1-45 doc-reviewer back-propagation 追加、2026-05-28)。内訳: FR-L1-01〜35 は v2 HELIX-workflows 設計概念参照 (v2-import-ledger §5.1 A-24 / §6)、FR-L1-37/39/40/41/42/44 は PO directed 新規 6 件 (2026-05-28)、**FR-L1-45 は L3 back-propagation 由来 (A-47 Critical C-02 → A-49 で L1 反映、BR-08 派生 P0)**、**FR-L1-50 は DDD/TDD strictness automation 追加 (PO directed 2026-06-09、IMP-097..101)**、**FR-L1-36 は P2 から昇格 (skill evaluation 実装済み、PLAN-L7-53、2026-06-15)**。FR-L1-38/43 は P2 のため L3 forward carry (BR-21 として宣言済み)。
+> **件数確定**: functional は **FR-L1-50 件で確定 (P0: 19 / P1: 23 / P2: 8)** (A-49 ledger で FR-L1-45 doc-reviewer back-propagation 追加、2026-05-28)。内訳: FR-L1-01〜35 は v2 HELIX-workflows 設計概念参照 (v2-import-ledger §5.1 A-24 / §6)、FR-L1-37/39/40/41/42/44 は PO directed 新規 6 件 (2026-05-28)、**FR-L1-45 は L3 back-propagation 由来 (A-47 Critical C-02 → A-49 で L1 反映、BR-08 派生 P0)**、**FR-L1-50 は DDD/TDD strictness automation 追加 (PO directed 2026-06-09、IMP-097..101)**、**FR-L1-36 は P2 から昇格 (skill evaluation 実装済み、PLAN-L7-53、2026-06-15)**、**FR-L1-43 は P2 から昇格 (PoC success measurement 実装済み、PLAN-L7-53、2026-06-15)**、**FR-L1-38 は P2 から昇格 (model evaluation 実装済み、PLAN-L7-53、2026-06-15)**。
 > **L3 接続規約**: `next_pair_freeze: L3`。L3 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
 
 # UT-TDD Agent Harness — L1 機能要求 (functional)
@@ -19,7 +19,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §1 機能一覧
 
-FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/40/41/42/44: PO directed 新規 6 件 (2026-05-28)。FR-L1-45: L3→L1 back-propagation (A-49、2026-05-28)。FR-L1-46〜49: 内部資産 UT-TDD 化 (BR-22 派生、Recovery PLAN-RECOVERY-01 / A-79、2026-05-29)。FR-L1-50: DDD/TDD strictness automation (PO directed 2026-06-09)。FR-L1-36: P2 carry から昇格 (PLAN-L7-53 実装済み、2026-06-15)。**計 48 件**:
+FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/40/41/42/44: PO directed 新規 6 件 (2026-05-28)。FR-L1-45: L3→L1 back-propagation (A-49、2026-05-28)。FR-L1-46〜49: 内部資産 UT-TDD 化 (BR-22 派生、Recovery PLAN-RECOVERY-01 / A-79、2026-05-29)。FR-L1-50: DDD/TDD strictness automation (PO directed 2026-06-09)。FR-L1-36: P2 carry から昇格 (PLAN-L7-53 実装済み、2026-06-15)。FR-L1-43: P2 carry から昇格 (PLAN-L7-53 実装済み、2026-06-15)。FR-L1-38: P2 carry から昇格 (PLAN-L7-53 実装済み、2026-06-15)。**計 50 件**:
 
 | FR-L1-NN | 機能要求名 (1 行) | 出典 doc | 必要 input | 出力 output | 重要度 | 対応画面 (G1-trace) |
 |---|---|---|---|---|---|---|
@@ -60,10 +60,12 @@ FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/4
 | **FR-L1-35** | 基盤整備状況の可視化 (実装済み / 設計済み・実装未 / 未設計の 3 区分で検証・テスト・検出基盤を一覧表示) | infra-readiness | 各機構の実装状況 | 整備状況一覧 (区分付き) | P2 | HM-01 |
 | **FR-L1-36** | スキル評価システム (per-skill rating / adoption / success / unused flag を skill_invocations + plan_registry から projection) | BR-21 / PLAN-L7-53 (2026-06-15 P2 carry から昇格) | skill_invocations.accepted=1 件、plan_registry.status、asOf timestamp | skill_evaluations projection (skill_rating 0.0-1.0、adoption_count、success_count、unused_flag)。cold-start = 0 行。unused = 30 日以内発火なし。削除は人手のみ | P2 | HM-05 |
 | **FR-L1-37** | モデル/エフォート推挙システム (task × drive × L 別 model + reasoning effort 動的選定) | PO directed (2026-05-28) | task 分類結果 (FR-L1-39)、drive、L 層、budget 残量 | 推奨 model ID、reasoning effort 値、選定根拠ログ。FR-L1-12 (L 単位注入) の model 粒度拡張。FR-L1-39 上流 input。※ extended (既存 HELIX 能力 W3/W4 突合、2026-06-04): `ut-tdd task estimate` と `ut-tdd skill suggest` の出力を入力に、frontier-reviewer / worker / fast-checker の capability class と reasoning effort を選定する | P1 | HM-08 |
+| **FR-L1-38** | model 評価システム (per-model success rate を model_runs + plan_registry から projection、opt-in) | BR-21 / PLAN-L7-53 (2026-06-15 P2 carry から昇格) | model_runs (run_id, runtime, model, role, drive, plan_id, started_at, completed_at, evidence_path)、plan_registry.status、.ut-tdd/config/model-opt-in.yaml (enabled:true で有効化) | model_evaluations projection (model PK、success_rate REAL 0.0-1.0、run_count INTEGER、success_count INTEGER、evaluated_at TEXT)。opt-in 無効 = 0 行。cold-start = 0 行。cost 効率は token telemetry 未実装のため declared follow-up (PLAN-L7-53) | P2 | HM-08 |
 | **FR-L1-39** | タスク難易度測定システム (規模 / 依存 / 不確実性 × drive 別スコアリング) | PO directed (2026-05-28) | PLAN 内容 (kind/generates/requires)、過去実行ログ、drive | task_complexity_score (P0/P1/P2 分類)、推奨エフォート。FR-L1-37 上流。FR-L1-05 の事前 triage。※ extended (既存 HELIX 能力 W3 突合、2026-06-04): `ut-tdd task classify --text/--plan/--diff` を公開I/Oとし、kind / drive / size / complexity / risk flags を構造化して plan lint・gate・skill suggest に渡す | P1 | HM-08 / HM-05 |
 | **FR-L1-40** | drive 別 state 分離管理 (`.ut-tdd/drive/<drive>/`、skip_sub_doc 機械強制) | PO directed (2026-05-28) | drive 種別 (PLAN frontmatter)、L 層 | drive 別 state 区画、skip_sub_doc 自動検証結果。FR-L1-06 (state 一元管理) の drive 軸 extension | P1 | HM-04 |
 | **FR-L1-41** | drive 自動判定システム (PLAN/コード/依存から drive を自動分類 → orchestration_mode routing) | PO directed (2026-05-28) | PLAN 内容、コードファイル拡張子・パターン | drive 判定結果、orchestration_mode routing 先。FR-L1-08 (mode 自動 routing) の drive 軸拡張 | P1 | HM-03 |
 | **FR-L1-42** | AI プロバイダ間引継ぎ連携 (Claude ↔ Codex のみ、context+PLAN+budget 連携渡し) | PO directed (2026-05-28) | handover/CURRENT.json、mode.yaml、invocation_log、PLAN 位置 | provider-handover パッケージ、fresh セッション起動確認。FR-L1-31 (コンテキスト管理) の provider 拡張 | P1 | HM-03 / PM-05 |
+| **FR-L1-43** | PoC サクセス計測 (confirmed / rejected / pivot 件数から成功率を projection) | BR-21 / PLAN-L7-53 (2026-06-15 P2 carry から昇格) | plan_registry (kind=poc, decision_outcome∈{confirmed,rejected,pivot}) | poc_evaluations projection (poc_success_rate 0.0-1.0、confirmed_count、rejected_count、pivot_count、total_count)。cold-start = 0 行。決定未記録 PoC は分母除外 | P2 | HM-08 |
 | **FR-L1-44** | 途中導入 onboarding workflow (既存プロジェクトへの harness baseline 確立) | PO directed (2026-05-28) | 既存コード/docs/PLAN 資産一覧、`.ut-tdd/` 未初期化状態 | `.ut-tdd/` 初期 baseline、既存資産 → state import レポート、onboarding 完了 gate 証跡。FR-L1-14 の前段 context、FR-L1-07 初回 import 引継ぎ、FR-L1-26 段階移行と組合せ | P1 | GD-01 (Onboarding) |
 | **FR-L1-45** | doc-reviewer 必須召喚 (大規模 doc 改定 / gate evidence / pair freeze の品質観点 4 軸チェック、BR-08 派生) | L3 back-propagation (A-47 → A-49) | trigger event (doc 改定 / gate / pair freeze)、doc-reviewer role 定義 | doc-reviewer 召喚記録 `.ut-tdd/audit/doc-reviews/<timestamp>.json`、品質観点 4 軸 (整合/網羅/一貫/明確) チェック結果、未召喚で gate (G1/G3/G7/G11) 通過禁止 (fail-close)、PO bypass = `UT_TDD_DOC_REVIEWER_BYPASS=1` + audit | P0 | PM-03 / HM-05 |
 | **FR-L1-46** | subagent roster の UT-TDD 化 (capability class 化 / model family / guard 統合 / HELIX 前提除去) | A-77 棚卸 (internal-asset-inventory.md) / BR-22 | `.claude/agents/*.md`、guard allowlist | UT-TDD 正本 roster (rename + harden 済)、HELIX 前提残存 0 | P1 | HM-02 |
@@ -109,7 +111,7 @@ FR-L1 35 件は HELIX-workflows 設計概念参照 (v2-import-ledger §6.1)。HE
 
 | (対応 HELIX 参照 doc なし) | FR-L1-44 (途中導入 onboarding workflow) は HELIX 参照側に対応 doc なし、UT-TDD 独自設計 (PO directed 2026-05-28) | FR-L1-44 |
 | (対応 HELIX 参照 doc なし) | FR-L1-37 (モデル/エフォート推挙システム) は HELIX 参照側に対応 doc なし、UT-TDD 独自設計 (PO directed 2026-05-28) | FR-L1-37 |
-| (対応 HELIX 参照 doc なし) | FR-L1-38/39 (model 評価 / タスク難易度測定) は HELIX 参照側に対応 doc なし、UT-TDD 独自設計 (PO directed 2026-05-28)。FR-L1-38 は P2 L3 forward carry | FR-L1-38, FR-L1-39 |
+| (対応 HELIX 参照 doc なし) | FR-L1-38/39 (model 評価 / タスク難易度測定) は HELIX 参照側に対応 doc なし、UT-TDD 独自設計 (PO directed 2026-05-28)。FR-L1-38 は PLAN-L7-53 で実装済み (2026-06-15) | FR-L1-38, FR-L1-39 |
 | (対応 HELIX doc なし) | **FR-L1-45 (doc-reviewer) は UT-TDD 独自設計、L3 back-propagation 由来 (A-47 Critical C-02 「BR-08 派生 FR が L3 に不在で G3 lint 孤児リスク」 → A-49 で L1 に追加、BR-08 派生 P0)** | FR-L1-45 |
 
 注記の目的: HELIX 由来知見を概念的に取り込みつつ、実装は UT-TDD 独自 (TS/Bun + ファイルベース state + 個別 CLI) で再構築する。
@@ -258,7 +260,7 @@ BR-* と FR-L1-* の対応表:
 | BR-20 (local DB) | FR-L1-06 | V モデル本線 state 一元管理 |
 | BR-20 (ダッシュボード Phase A) | FR-L1-20 | 観測・計測層 (Phase A: local DB + local dashboard) |
 | BR-20 (ダッシュボード Phase B) | FR-L1-20 + L3 forward carry | server sync + telemetry + self-improvement (Phase B、§5 末 carry) |
-| BR-21 (AI 実行成果評価) | FR-L1-36/38/43 → L3 forward carry | スキル評価 / model 評価 / PoC サクセス計測 (3 件とも P2、L3 で FR 詳細化。§5 末 carry 参照) |
+| BR-21 (AI 実行成果評価) | FR-L1-36 (昇格済み) / FR-L1-38 (昇格済み) / FR-L1-43 (昇格済み) | スキル評価 (PLAN-L7-53 実装済み) / model 評価 (PLAN-L7-53 実装済み) / PoC サクセス計測 (PLAN-L7-53 実装済み) |
 
 ### carry note: doc-reviewer 召喚機能 (BR-08 下流)
 
@@ -267,7 +269,7 @@ doc-reviewer (pmo-sonnet とは責務分離した doc 品質専用 read-only rev
 ### carry note: AI 実行成果評価 (BR-21 下流)
 
 - **BR-21** (AI 実行成果評価) の業務目標: スキル発火精度・モデル選定適切性・PoC の成否を定量評価し、Learning Engine (FR-L1-19) のフィードバック精度を高める。
-- **FR-L1-36** (スキル評価システム)、**FR-L1-38** (model 評価システム)、**FR-L1-43** (PoC サクセス計測) の 3 件は P2 のため L3 forward carry。L3 PLAN 起票時に BR-21 を `dependencies.requires` に列挙し FR 詳細化する。
+- **FR-L1-36** (スキル評価システム)、**FR-L1-38** (model 評価システム)、**FR-L1-43** (PoC サクセス計測) はすべて PLAN-L7-53 で実装済み (2026-06-15 P2 carry から昇格)。BR-21 の 3 件すべてが実装完了。
 
 ### carry note: ダッシュボード Phase A/B (BR-06 / BR-20 下流)
 

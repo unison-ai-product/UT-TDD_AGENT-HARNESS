@@ -14,7 +14,7 @@ updated: 2026-05-28
 ---
 
 > **SSoT 参照**: ユビキタス言語 = L0 概念層 §10 用語集 / Bounded Context = L0 §2.5 (9-mode) + screen sub-doc §6 (PM/HM/GD 3 カテゴリ) / 業界標準整合 = ISO/IEC/IEEE 29148 (要件記述) + BDD Given-When-Then (AC 形式) + ISTQB Foundation Level (境界値分析)。
-> **件数確定**: L3 FR は **26 件** = P0 18 件 (FR-01〜18、L1 FR-L1-01〜18 と 1:1 対応) + FR-45 (P0、doc-reviewer back-propagation A-49) + workflow core 7 件 (FR-23〜30、A-50 で L3 直接詳細化)。残 P1 9 件 + P2 5 件は L4 carry (§3 / §3.1)。BR-21 経路 (FR-L1-36/38/43 + 関連 P2) は business-detail.md 担当 (重複回避)。g3-trace lint の l3Fr=26 と一致。
+> **件数確定**: L3 FR は **26 件** = P0 18 件 (FR-01〜18、L1 FR-L1-01〜18 と 1:1 対応) + FR-45 (P0、doc-reviewer back-propagation A-49) + workflow core 7 件 (FR-23〜30、A-50 で L3 直接詳細化)。残 P1 9 件 + P2 5 件は L4 carry (§3 / §3.1)。BR-21 経路 (FR-L1-36 / FR-L1-38 / FR-L1-43 + 関連 P2) は business-detail.md 担当 (重複回避)。FR-L1-36 / FR-L1-38 / FR-L1-43 はすべて PLAN-L7-53 で実装済み (2026-06-15)。g3-trace lint の l3Fr=26 と一致。
 > **AC 件数**: 全 FR で AC 最低 3 件 (正常 / 異常 / 境界)、計 54+ AC を予定。**人間判断点 列必須** (CC2 carry)。
 > **L12 接続規約**: `next_pair_freeze: L12`。L12 受入テスト設計は本 sub-doc の全 AC を AT-* で被覆 (孤児 AC = 0)。
 > **正規式モデル (PLAN-RECOVERY-02、2026-06-04)**: L3 要件の検証本質 = **本番受入** (本番環境で FR+AC が満たせるか、L12 で実施。データ実在性エスカレーションの本番 band)。画面要求は L1 (screen sub-doc) が担い L3 では起こさない (L2=L1 フェーズ分離)。
@@ -726,7 +726,7 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 | FR-L1-05/06/07/17/18/19/20/24/49/50 A-124 extension | P1 | L5-L7 Add-feature carry + Phase 4 DB implementation | 横断 relation graph、impact expansion、diagram export、tool adapter normalization を requirements §6.8.9 / physical-data §9.5 / ADR-002 A-124 addendum で back-propagation。`ut-tdd graph impact` / `ut-tdd graph export` / optional dependency-cruiser・Knip・Madge・Graphviz・Mermaid・D2 adapter を後続 PLAN で機械化 |
 | FR-L1-05/06/07/17/18/19/20/24/45/49/50 A-125 extension | P1 | L5-L7 Add-feature carry + Phase 4 DB implementation | MCP server profile、MCP Inspector smoke、external verification profile recommendation、profile security gate を requirements §6.8.10 / physical-data §9.6 / ADR-002 A-125 addendum で back-propagation。`ut-tdd mcp profile` / `ut-tdd mcp inspect` / `ut-tdd verify recommend` / `ut-tdd verify run` を後続 PLAN で機械化 |
 | FR-L1-05/06/07/17/18/20/24/33/45/50 A-126 extension | P1 | L5-L7 Add-feature carry + Phase 4 DB implementation | 企画・要件定義・詳細設計・PLAN・ADR・テスト設計の正本ドキュメントを CSV / Markdown summary / XLSX / PPTX へ変換する document export を requirements §6.8.11 / physical-data §9.7 / ADR-002 A-126 addendum で back-propagation。`ut-tdd export docs --kind ... --format ...` を後続 PLAN で機械化 |
-| FR-L1-36/38/43 (skill 評価 / model 評価 / PoC 計測) | P2 | **PLAN-L3-02 (business-detail.md) に委譲** | BR-21 経路で扱う (重複回避) |
+| FR-L1-36 (skill 評価) / FR-L1-38 (model 評価) / FR-L1-43 (PoC 計測) | P2 | **PLAN-L3-02 (business-detail.md) に委譲** (FR-L1-36 / FR-L1-38 / FR-L1-43 はすべて PLAN-L7-53 で実装済み、2026-06-15) | BR-21 経路で扱う (重複回避) |
 
 ### §3.1 P1 残 carry 明示 note (A-47 + A-50、L4 PLAN 起票時の必須参照)
 

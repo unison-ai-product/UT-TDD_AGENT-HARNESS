@@ -32,8 +32,12 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L1-requirements/functional-requirements.md
     artifact_type: design_doc
-  # FR-L1-38 (skill trend signals — future slice, files TBD)
-  # FR-L1-43 (skill recommendation feedback loop — future slice, files TBD)
+  # FR-L1-38 (model evaluation — implemented in this PLAN)
+  - artifact_path: tests/model-evaluation.test.ts
+    artifact_type: test_code
+  # FR-L1-43 (PoC success measurement — implemented in this PLAN)
+  - artifact_path: tests/poc-evaluation.test.ts
+    artifact_type: test_code
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
 dependencies:
@@ -53,12 +57,10 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 
 ## Objective
 
-Implement the skill learning engine foundation (FR-L1-36) and prepare the scaffold
-for trend signals (FR-L1-38) and recommendation feedback loop (FR-L1-43).
+Implement the skill learning engine foundation (FR-L1-36), model evaluation opt-in
+(FR-L1-38), and PoC success measurement (FR-L1-43).
 
-This PLAN covers the FR-L1-36 foundation slice in full. FR-L1-38 and FR-L1-43 are
-pre-listed in `generates` to allow later agents to fill them in without creating a
-new PLAN (impl-plan-trace gate compliance).
+All three BR-21 FR slices are implemented in this PLAN.
 
 ## Scope
 
@@ -73,17 +75,27 @@ new PLAN (impl-plan-trace gate compliance).
 - Cold-start (0 invocations) → 0 rows, no throw.
 - Deletion of unused skills is human-only; flag surfaces the signal.
 
-### FR-L1-38 (deferred — future slice)
+### FR-L1-38 (implemented — model evaluation, opt-in)
 
-Skill trend signals: temporal window aggregation of skill_rating over successive
-evaluation snapshots. Requires at least two evaluation runs. To be implemented
-in a follow-up commit to this PLAN.
+- `model_evaluations` table added to harness-db schema (SCHEMA_VERSION 11→12).
+- `projectModelEvaluations(db, repoRoot)` added to projection-writer.ts and wired
+  into `rebuildHarnessDb` after `projectPocEvaluations`.
+- Opt-in: reads `.ut-tdd/config/model-opt-in.yaml` under repoRoot; runs only if
+  `enabled: true`. Default (no file) = disabled → 0 rows.
+- Per-model: success_rate = success_count / run_count (join model_runs.plan_id →
+  plan_registry.status IN PLAN_SUCCESS_STATUSES).
+- Cold-start (enabled but 0 model_runs) → 0 rows, no throw.
+- Cost-efficiency (cost_per_success) is a declared follow-up pending token/cost
+  telemetry — no fabricated cost data is stored.
 
-### FR-L1-43 (deferred — future slice)
+### FR-L1-43 (implemented — PoC success measurement)
 
-Recommendation feedback loop: use skill_evaluations.skill_rating to bias
-projectSkillTelemetry ranking and surface low-rated skills as improvement findings.
-Requires FR-L1-36 to be stable. To be implemented in a follow-up commit to this PLAN.
+- `poc_evaluations` table added to harness-db schema (SCHEMA_VERSION bumped to 11).
+- `projectPocEvaluations(db, opts?)` added to projection-writer.ts and wired into
+  `rebuildHarnessDb` after `projectSkillEvaluations`.
+- One summary row (id="poc-evaluation:summary"); poc_success_rate = confirmed /
+  (confirmed + rejected + pivot). Pivot is non-success.
+- Cold-start (0 decided PoC PLANs) → 0 rows, no throw.
 
 ## Acceptance Criteria
 
@@ -93,20 +105,34 @@ Requires FR-L1-36 to be stable. To be implemented in a follow-up commit to this 
 - AC-FR-BR21-36-02: skill with last invocation > 30 days ago → unused_flag 1; row preserved.
 - Cold-start: 0 invocations → 0 evaluation rows, no exception.
 
+### FR-L1-38
+
+- AC-38-01 (enabled): model-A (2 runs both success) → rate 1.0; model-B (2 runs, 1 success) → rate 0.5.
+- AC-38-02 (disabled): no opt-in file → 0 model_evaluations rows.
+- Cold-start (enabled, 0 model_runs) → 0 rows, no throw.
+
+### FR-L1-43
+
+- AC-FR-BR21-43-01: 10 PoC (6 confirmed / 3 rejected / 1 pivot) → rate 0.60.
+- AC-FR-BR21-43-02 cold-start: 0 PoC PLANs → 0 rows.
+
 ## Completion Evidence
 
-- `src/schema/harness-db.ts` has `skill_evaluations` table, SCHEMA_VERSION=10.
-- `src/state-db/projection-writer.ts` exports `projectSkillEvaluations` and calls it
-  in `rebuildHarnessDb`.
+- `src/schema/harness-db.ts` has `skill_evaluations`, `poc_evaluations`, `model_evaluations` tables; SCHEMA_VERSION=12.
+- `src/state-db/projection-writer.ts` exports `projectSkillEvaluations`, `projectPocEvaluations`, `projectModelEvaluations` and calls them in `rebuildHarnessDb`.
 - `tests/skill-evaluation.test.ts` passes (6 tests, U-FR-L1-36 cited).
+- `tests/poc-evaluation.test.ts` passes (U-FR-L1-43 cited).
+- `tests/model-evaluation.test.ts` passes (U-FR-L1-38 cited).
 - `npx tsc --noEmit` clean.
 - `npx vitest run` fully green.
 - `npx biome check src tests` clean.
-- `bun run src/cli.ts doctor` exits 0.
+- `bun run src/cli.ts doctor` exits 0 with no learning-engine FR in thin-coverage advisory.
 
 ## DoD
 
-- [ ] FR-L1-36 acceptance criteria green.
-- [ ] tsc + vitest + biome + doctor all pass.
-- [ ] function-spec.md, fr-unit-coverage.md, L7-unit-test-design.md updated.
-- [ ] FR-L1-38 / FR-L1-43 scaffold pre-listed in generates for future agents.
+- [x] FR-L1-36 acceptance criteria green.
+- [x] FR-L1-38 acceptance criteria green.
+- [x] FR-L1-43 acceptance criteria green.
+- [x] tsc + vitest + biome + doctor all pass.
+- [x] function-spec.md, fr-unit-coverage.md, L7-unit-test-design.md updated.
+- [x] FR-L1-38 follow-up (cost-efficiency) declared in PLAN body and function-spec.md invariant.

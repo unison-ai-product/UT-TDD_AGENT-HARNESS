@@ -15,7 +15,7 @@
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 12;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
 
@@ -66,6 +66,10 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("status"),
       col("parent"),
       col("updated_at"),
+      // decision_outcome: S4 verdict for PoC (kind=poc) PLANs.
+      // Values: "confirmed" | "rejected" | "pivot" | "" (null/unset stored as "").
+      // Source: PLAN frontmatter field `decision_outcome`. Used by projectPocEvaluations (FR-L1-43).
+      col("decision_outcome"),
     ],
   },
   {
@@ -540,6 +544,34 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("evaluated_at"),
     ],
   },
+  // --- §9.9 PoC success measurement projection (FR-L1-43, PLAN-L7-53) ---
+  {
+    name: "poc_evaluations",
+    columns: [
+      pk("poc_evaluation_id"),
+      col("poc_success_rate", "REAL"),
+      col("confirmed_count", "INTEGER"),
+      col("rejected_count", "INTEGER"),
+      col("pivot_count", "INTEGER"),
+      col("total_count", "INTEGER"),
+      col("evaluated_at"),
+    ],
+  },
+  // --- §9.10 model evaluation projection (FR-L1-38, PLAN-L7-53) ---
+  // Opt-in: runs only when .ut-tdd/config/model-opt-in.yaml exists with enabled:true.
+  // Computes per-model success_rate by joining model_runs.plan_id -> plan_registry.status
+  // IN PLAN_SUCCESS_STATUSES. No token/cost columns — cost-efficiency is a declared
+  // follow-up (see function-spec.md FR-L1-38 invariant and PLAN-L7-53).
+  {
+    name: "model_evaluations",
+    columns: [
+      pk("model"),
+      col("success_rate", "REAL"),
+      col("run_count", "INTEGER"),
+      col("success_count", "INTEGER"),
+      col("evaluated_at"),
+    ],
+  },
   // --- roadmap / review evidence projection (cutover feedback loop) ---
   {
     name: "roadmap_rollups",
@@ -724,6 +756,16 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     name: "idx_skill_evaluations_unused",
     table: "skill_evaluations",
     columns: ["unused_flag", "skill_rating"],
+  },
+  {
+    name: "idx_poc_evaluations_rate",
+    table: "poc_evaluations",
+    columns: ["poc_success_rate", "evaluated_at"],
+  },
+  {
+    name: "idx_model_evaluations_rate",
+    table: "model_evaluations",
+    columns: ["success_rate", "evaluated_at"],
   },
 ];
 

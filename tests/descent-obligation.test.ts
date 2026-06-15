@@ -164,9 +164,10 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
     expect(oracles.has("FR-L1-01")).toBe(true);
     // FR-L1-36 は PLAN-L7-53 で実装・登録済み → oracle 行あり → 含まれる。
     expect(oracles.has("FR-L1-36")).toBe(true);
-    // BR-21 で L3 forward-carry 宣言された残存 P2 FR (oracle 行なし) は含まれない。
-    expect(oracles.has("FR-L1-38")).toBe(false);
-    expect(oracles.has("FR-L1-43")).toBe(false);
+    // FR-L1-43 は PLAN-L7-53 で実装・登録済み → oracle 行あり → 含まれる。
+    expect(oracles.has("FR-L1-43")).toBe(true);
+    // FR-L1-38 は PLAN-L7-53 で実装・登録済み → oracle 行あり → 含まれる。
+    expect(oracles.has("FR-L1-38")).toBe(true);
 
     // end-to-end: 実 repo の advisory を filter すると、oracle 正本にある FR は残らない (ゲート整合)。
     const filtered = filterSubstanceVerifiedAdvisories(
