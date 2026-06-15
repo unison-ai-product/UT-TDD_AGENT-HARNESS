@@ -341,9 +341,9 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
 
       const skillInvocation = db
         .prepare(
-          "SELECT skill_id, source, accepted FROM skill_invocations WHERE plan_id = ? LIMIT 1",
+          "SELECT skill_id, source, accepted FROM skill_invocations WHERE plan_id = ? AND skill_id = ?",
         )
-        .get("PLAN-M-01-cutover-backfill");
+        .get("PLAN-M-01-cutover-backfill", "skill:review-checklist");
       expect(skillInvocation).toMatchObject({
         skill_id: "skill:review-checklist",
         source: "auto-projection:review-evidence",

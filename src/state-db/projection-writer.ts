@@ -136,12 +136,16 @@ function scalarNumber(db: HarnessDb, sql: string, params: unknown[] = []): numbe
   return typeof value === "number" ? value : Number(value ?? 0);
 }
 
-function assertNoSensitivePayload(row: Record<string, unknown>): void {
+function assertNoSensitivePayload(row: Record<string, unknown>, table: TableDef): void {
+  // Primary-key columns are structured identifiers (e.g. "skill:planning-and-task-breakdown"),
+  // not free-form text. Exempt them from the secret-pattern check to avoid false positives
+  // (e.g. "sk-breakdown" inside a skill ID matching the sk-* pattern).
+  const pkNames = new Set(table.columns.filter((c) => c.primaryKey).map((c) => c.name));
   for (const [key, value] of Object.entries(row)) {
     if (RAW_PAYLOAD_KEYS.has(key)) {
       throw new Error(`raw/sensitive payload column is not allowed in harness.db: ${key}`);
     }
-    if (typeof value === "string" && SECRET_PATTERN.test(value)) {
+    if (!pkNames.has(key) && typeof value === "string" && SECRET_PATTERN.test(value)) {
       throw new Error(`secret-like value is not allowed in harness.db projection column: ${key}`);
     }
   }
@@ -155,7 +159,7 @@ function normalizeRow(table: TableDef, event: ProjectionEvent): Record<string, u
     if (allowed.has(key)) row[key] = value;
   }
   if (row[pk] === undefined) row[pk] = event.id;
-  assertNoSensitivePayload(row);
+  assertNoSensitivePayload(row, table);
   return row;
 }
 
