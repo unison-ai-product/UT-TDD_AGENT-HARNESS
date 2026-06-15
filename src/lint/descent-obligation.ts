@@ -251,34 +251,6 @@ function boundedRange(startRaw: string, endRaw: string): string[] {
   return ids;
 }
 
-function expandedFrTraceKeys(text: string): string[] {
-  const ids: string[] = [];
-  for (const match of text.matchAll(DOC_FR_TRACE_RE)) {
-    const [, start, end, slashGroup] = match;
-    if (end) ids.push(...boundedRange(start, end));
-    else if (slashGroup) {
-      ids.push(frId(start));
-      ids.push(...slashGroup.slice(1).split("/").map(frId));
-    } else {
-      ids.push(frId(start));
-    }
-  }
-  return ids;
-}
-
-function expandedUnitFrTraceKeys(text: string): string[] {
-  const ids: string[] = [];
-  for (const match of text.matchAll(U_FR_TRACE_RE)) {
-    const [, start, end] = match;
-    ids.push(...(end ? boundedRange(start, end) : [frId(start)]));
-  }
-  return ids;
-}
-
-function documentTraceKeys(text: string): string[] {
-  return uniq([...expandedFrTraceKeys(text), ...expandedUnitFrTraceKeys(text)]).sort();
-}
-
 /**
  * doc 内の FR trace key を、focused な単一引用 (explicit) と blanket レンジ展開 (ranged) に
  * 分けて provenance を返す。value=true は「レンジ展開のみに由来し focused 引用が無い」(thin)。
@@ -405,10 +377,10 @@ function artifactRowsForFile(repoRoot: string, path: string): TraceKeyedArtifact
   const status = metadataStatus(metadata, content);
   // source/test は @ut-tdd-trace の explicit 引用のみ (provenance=false)。doc は blanket レンジ
   // 展開のみ由来の key を traceKeyFromRange=true として記録する (PLAN-L7-52 C-2)。
-  const provenance =
-    isTest || isSource ? null : documentTraceKeyProvenance(content);
-  const keys =
-    isTest || isSource ? explicitImplementationTraceKeys(content) : [...provenance!.keys()].sort();
+  const provenance = isTest || isSource ? null : documentTraceKeyProvenance(content);
+  const keys = provenance
+    ? [...provenance.keys()].sort()
+    : explicitImplementationTraceKeys(content);
   return keys
     .filter(
       (traceKey) =>
@@ -645,6 +617,11 @@ export function analyzeDescentObligations(
   // thin-coverage advisory (warn-first、ok に算入しない): L7 で satisfied と判定されたが、
   // L7 unit-test-design 側の被覆が blanket FR レンジ展開のみ (focused oracle 不在) の trace key を
   // 可視化する。descent-obligation 機構自身の false-confidence (coverage≠substance) を surface する。
+  // descent-obligation の scope は design⇔test-design pairing (loader は tests/ を走査しない —
+  // 実 test 引用の検査は oracle-test-trace の領分)。L7 で satisfied だが unit-test-design 側の被覆が
+  // blanket FR レンジ展開のみ由来 (focused oracle 行が無く、fr-unit-coverage.md への redirect に依存)
+  // の trace key を thin-coverage advisory として surface する。この redirect を substantive な L7
+  // 被覆と認めるか (= advisory を解消するか hard 化するか) は Phase 1 の substance-gate 設計判断。
   const advisories: ThinCoverageAdvisory[] = [];
   const advisorySeen = new Set<string>();
   for (const obligation of graded) {
@@ -654,13 +631,16 @@ export function analyzeDescentObligations(
       (artifact) =>
         isActiveArtifact(artifact) && artifact.layer === "L7" && artifact.role === "test-design",
     );
-    if (testDesignL7.length > 0 && testDesignL7.every((artifact) => artifact.traceKeyFromRange === true)) {
+    if (
+      testDesignL7.length > 0 &&
+      testDesignL7.every((artifact) => artifact.traceKeyFromRange === true)
+    ) {
       advisorySeen.add(obligation.traceKey);
       advisories.push({
         traceKey: obligation.traceKey,
         requiredLayer: "L7",
         detail:
-          "L7 unit-test-design coverage derives only from a blanket FR range (redirect); no focused oracle — substance unverified",
+          "L7 unit-test-design coverage derives only from a blanket FR range that redirects to fr-unit-coverage.md; no focused oracle row in the unit-test-design doc itself (Phase-1 substance-gate decision: accept redirect vs require focused oracle)",
       });
     }
   }

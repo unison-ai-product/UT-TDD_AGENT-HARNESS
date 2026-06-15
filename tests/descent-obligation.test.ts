@@ -100,7 +100,10 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
 
     // L7 unit-test-design coverage が blanket レンジ展開のみ由来 → advisory、ただし ok は不変
     const rangeOnly = analyzeDescentObligations(
-      [...base, a({ traceKey: "FR-L1-47", layer: "L7", role: "test-design", traceKeyFromRange: true })],
+      [
+        ...base,
+        a({ traceKey: "FR-L1-47", layer: "L7", role: "test-design", traceKeyFromRange: true }),
+      ],
       DEFAULT_DESCENT_ADJACENCY,
       [],
     );
@@ -112,7 +115,10 @@ describe("descent-obligation ledger (PLAN-L6-35 / FR-L1-03)", () => {
 
     // focused (非レンジ) な L7 test-design oracle があれば advisory は出ない
     const focused = analyzeDescentObligations(
-      [...base, a({ traceKey: "FR-L1-47", layer: "L7", role: "test-design", traceKeyFromRange: false })],
+      [
+        ...base,
+        a({ traceKey: "FR-L1-47", layer: "L7", role: "test-design", traceKeyFromRange: false }),
+      ],
       DEFAULT_DESCENT_ADJACENCY,
       [],
     );
