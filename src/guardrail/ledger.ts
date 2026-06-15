@@ -1,19 +1,23 @@
+import {
+  type GuardrailDecisionInput,
+  type GuardrailDecisionValue,
+  inspectGuardrailInvariants,
+} from "../state-db/guardrail-invariants";
 import type { HarnessDb } from "../state-db/index";
-import { isSecretLike, upsertRow } from "../state-db/index";
+import { upsertRow } from "../state-db/index";
 
-export type GuardrailDecisionValue = "allow" | "block" | "human-required";
-
-export interface GuardrailDecisionInput {
-  plan_id: string;
-  session_id: string;
-  guardrail: string;
-  decision: GuardrailDecisionValue;
-  mode: string;
-  human_signoff_required?: boolean;
-  evidence_path: string;
-  reviewer_model?: string;
-  worker_model?: string;
-}
+// The invariant logic + decision types live in state-db (single source of truth,
+// shared with the projection advisory path) to avoid a guardrail <-> state-db
+// module cycle. Re-exported here so existing guardrail/ledger consumers and
+// tests keep their import path.
+export type {
+  GuardrailDecisionInput,
+  GuardrailDecisionValue,
+  GuardrailInvariantInspection,
+  GuardrailInvariantRule,
+  GuardrailInvariantViolation,
+} from "../state-db/guardrail-invariants";
+export { inspectGuardrailInvariants } from "../state-db/guardrail-invariants";
 
 export interface GuardrailDecisionRow {
   guardrail_decision_id: string;
@@ -38,25 +42,15 @@ function decisionId(input: GuardrailDecisionInput): string {
   );
 }
 
-function normalizeDecision(input: GuardrailDecisionInput): GuardrailDecisionValue {
-  const sameModel =
-    input.reviewer_model !== undefined &&
-    input.worker_model !== undefined &&
-    input.reviewer_model === input.worker_model;
-  if (sameModel) return "block";
-  if (input.decision === "human-required" && !input.evidence_path) return "block";
-  if (input.human_signoff_required && !input.evidence_path) return "block";
-  return input.decision;
-}
-
 export function recordGuardrailDecision(
   db: HarnessDb,
   input: GuardrailDecisionInput,
 ): GuardrailDecisionRow {
-  if (isSecretLike(input.evidence_path)) {
+  const inspection = inspectGuardrailInvariants(input);
+  if (inspection.violations.some((violation) => violation.rule === "secret-evidence")) {
     throw new Error("guardrail evidence_path must not contain secret-like values");
   }
-  const decision = normalizeDecision(input);
+  const decision = inspection.normalizedDecision;
   const row: GuardrailDecisionRow = {
     guardrail_decision_id: decisionId(input),
     plan_id: input.plan_id,

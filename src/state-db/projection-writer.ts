@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -26,6 +27,7 @@ import {
   primaryKeyOf,
   type TableDef,
 } from "../schema/harness-db";
+import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants";
 import {
   defaultHarnessDbPath,
   type HarnessDb,
@@ -584,6 +586,54 @@ function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
   }
 }
 
+function advisorySubject(rule: string, reviewEvidenceId: string): string {
+  // Plan-id-free, stable subject. The warn-first advisory must surface as a
+  // feedback event WITHOUT flipping automation readiness, which scans
+  // findings.subject_id LIKE '%plan_id%' (severity-agnostic). The hard-gate that
+  // would block on this violation stays PO-gated (PLAN-L7-52 C-1 option A).
+  const digest = createHash("sha1").update(reviewEvidenceId).digest("hex").slice(0, 12);
+  return `guardrail-self-review:${rule}:${digest}`;
+}
+
+export function projectGuardrailInvariantAdvisories(db: HarnessDb): void {
+  // PLAN-L7-52 C-1 (option C, PO-approved): consult the guardrail invariant SSoT
+  // (inspectGuardrailInvariants) against committed review evidence at CLI-rebuild
+  // time — no API runtime. Surfaces violations (e.g. reviewer_model ==
+  // worker_model self-review) as non-blocking advisory findings only; projected
+  // decisions and readiness are unchanged. Empty model strings are passed as
+  // undefined so blank evidence never false-positives as same-model.
+  const rows = db
+    .prepare(
+      "SELECT review_evidence_id, plan_id, reviewer_model, worker_model, source FROM review_evidence_registry ORDER BY review_evidence_id",
+    )
+    .all();
+  for (const row of rows) {
+    const reviewEvidenceId = String(row.review_evidence_id ?? "");
+    const reviewerModel = String(row.reviewer_model ?? "");
+    const workerModel = String(row.worker_model ?? "");
+    const evidencePath = String(row.source ?? "");
+    const input: GuardrailDecisionInput = {
+      plan_id: String(row.plan_id ?? ""),
+      session_id: "",
+      guardrail: "review-self-review",
+      decision: "allow",
+      mode: "review",
+      evidence_path: evidencePath,
+      reviewer_model: reviewerModel ? reviewerModel : undefined,
+      worker_model: workerModel ? workerModel : undefined,
+    };
+    for (const violation of inspectGuardrailInvariants(input).violations) {
+      recordFinding(db, {
+        kind: `guardrail-invariant-advisory:${violation.rule}`,
+        severity: "warn",
+        subjectId: advisorySubject(violation.rule, reviewEvidenceId),
+        source: "guardrail-invariant-advisory",
+        evidencePath,
+      });
+    }
+  }
+}
+
 function projectDescentObligations(repoRoot: string, db: HarnessDb): void {
   const indexedAt = nowIso();
   const result = analyzeDescentObligations(
@@ -1080,7 +1130,11 @@ function projectSkillTelemetry(db: HarnessDb, plans: Map<string, ProjectedPlan>)
   const recordedAt = nowIso();
   const assets = db
     .prepare("SELECT * FROM automation_assets WHERE asset_type = ? ORDER BY asset_id")
-    .all("skill");
+    .all("skill")
+    // A skill-MAP (index of skills — the W10 curate draft and the future
+    // SKILL_MAP.md) is catalogued under docs/skills for asset-drift coverage but
+    // is NOT itself a recommendable skill, so it must not enter the ranking.
+    .filter((asset) => !String(asset.skill_type ?? "").startsWith("skill-map"));
   for (const plan of plans.values()) {
     const ranked = assets
       .map((asset) => ({ asset, score: skillScore(plan, asset) }))
@@ -1536,6 +1590,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     projectReviewModelRuns(repoRoot, db, plans);
     projectRoadmapRollup(repoRoot, db);
     projectReviewEvidenceRegistry(repoRoot, db);
+    projectGuardrailInvariantAdvisories(db);
     projectDescentObligations(repoRoot, db);
     projectVerificationBandExecution(db);
     projectAutomationAssets(repoRoot, db);

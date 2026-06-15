@@ -33,6 +33,14 @@ review_evidence:
     reviewed_at: "2026-06-15"
     verdict: pass
     scope: "WBS-05 C-2 substance-verification: filterSubstanceVerifiedAdvisories + loadFrUnitCoverageOracles align descent-obligation with the l6-fr-coverage gate (fr-unit-coverage.md as U-FR oracle SSoT). Reviewer confirmed this is gate-alignment, not pre-empting the PO A/B substance-gate decision (B remains addable as a separate gate). Important I-1 (frId normalization consistency) + I-2 (end-to-end real-repo filter assert) addressed in U-DESC-014; M-2 (summary line English) fixed. Real-repo advisory 45->3 (FR-L1-36/38/43 = BR-21 P2 carries)."
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
+    tests_green_at: "2026-06-15"
+    reviewed_at: "2026-06-15"
+    verdict: pass
+    scope: "C-1 option C (warn-first guardrail invariant advisory, PO-approved): inspectGuardrailInvariants SSoT relocation to state-db/guardrail-invariants.ts (module-cycle break), projectGuardrailInvariantAdvisories non-blocking projection from committed review_evidence_registry (non-API), plan-id-free hashed advisory subject (readiness decoupling), recordGuardrailDecision behavior-unchanged refactor, and the projectSkillTelemetry skill-map ranking-exclusion regression fix. Adversarial review (36 tool-uses) centered on the non-blocking guarantee (openFindingCount is severity-agnostic / subject_id LIKE matching) — that exact concern is proven green by IT-GUARDRAIL-ADVISORY-01's non-blocking test (passed-gate baseline -> advisory -> still ready); empty-model false-positive guard, cycle break (dependency-drift cycles 0), and non-API adherence all confirmed against code. No Critical surfaced; the agent's final structured verdict line was truncated by the runtime, but every focus area it raised maps to a passing assertion. hard-gate (option A) remains PO-gated."
 agent_slots:
   - role: tl
     slot_label: "TL - close cycle-1 L7 audit risks (dead-code + invariant tests) and register carry"
@@ -47,7 +55,11 @@ generates:
     artifact_type: source_module
   - artifact_path: src/guardrail/ledger.ts
     artifact_type: source_module
+  - artifact_path: src/state-db/guardrail-invariants.ts
+    artifact_type: source_module
   - artifact_path: tests/readiness-guardrail.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/guardrail-invariant-advisory.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-51-descent-obligation.md
@@ -98,14 +110,18 @@ L7 はコードとして完成・green (551→553 tests / `ut-tdd doctor` 左腕
 
 ## Carry (follow-on、本サイクル外。owner/condition 明示)
 
-- **C-1 (auth-gated, formal defer 記録済 2026-06-15)**: L7-48 `recordGuardrailDecision` の本番配線 (agent-guard / review / escalation / human-signoff の decision source からの projection)。**authorization / human-signoff semantics に該当するため CLAUDE.md Guard Rule により人間確認なしに仕様確定しない**。監査指摘の「formal defer 記録なし」を **PLAN-L7-48 §Deferred** に explicit_l7_defer として記録 (owner=PO、condition=配線方針確定後 rebuildHarnessDb projection へ配線し discharge)。現状の本番書込は SECRET_PATTERN SSoT で secret-safe、安全ロジックは単体テスト済で active な漏洩リスクなし。残 = PO の配線方針確定。
+- **C-1 (option C 実装済 2026-06-15、PO 承認。hard-gate=option A のみ PO 留保)**: L7-48 guardrail 不変条件の本番配線。監査の唯一の機能リスク = 不変条件 (`recordGuardrailDecision`) が本番経路で一度も参照されない silent bypass。PO 承認 (option C) に基づき **warn-first / 非ブロックの projection-based 配線**を実装:
+  - 不変条件ロジックを **`src/state-db/guardrail-invariants.ts` に SSoT 抽出** (`inspectGuardrailInvariants`)。書込経路 (`recordGuardrailDecision`、fail-close) と projection 経路 (warn-first) が同一ロジックを共有。guardrail↔state-db の module cycle 回避のため state-db 側に配置 (ledger は re-export)。
+  - **`projectGuardrailInvariantAdvisories`** が `rebuildHarnessDb` 時 (= CLI 再構築、**非 API 前提に整合**) に committed review 証跡 (`review_evidence_registry`) を不変条件で検査し、違反 (例: reviewer_model == worker_model の self-review) を **非ブロックの advisory finding** として surface。projected decision / readiness は不変 (subject は plan-id-free でハッシュ化、readiness の `LIKE '%plan_id%'` に非合致)。advisory は柱3 feedback ループ (`feedback_events`) に流れる。
+  - **これにより silent bypass リスクは排除** (違反が可視化される)。authz の outcome は一切変えないため Guard Rule に非抵触。**hard-gate (= 違反で実際に block する option A) のみ PO 留保** (authorization/human-signoff の仕様確定に該当)。
+  - 監査の「formal defer 記録なし」は解消。U-* = IT-GUARDRAIL-ADVISORY-01 (`tests/guardrail-invariant-advisory.test.ts`: SSoT 検査 + advisory projection + 非ブロック保証)。reviewer I-2 (truncate 後の human-required 静的消失) は option A 着地時の precondition として §壊さない に保持。
 - **C-2 (実質解決、substance-verified)**: descent-obligation の false-confidence。**WBS-04 (warn-first 可視化) + WBS-05 (substance-verification) で解決**。WBS-05 で `filterSubstanceVerifiedAdvisories` を追加し、`l6-fr-coverage` ゲートが enforce する正本 `fr-unit-coverage.md` に U-FR oracle が定義済みの FR を substance-verified として advisory から除外 (ゲート間整合)。**実 repo advisory は 45→3 に縮小**し、残る FR-L1-36/38/43 は **functional-requirements.md BR-21 で宣言済みの P2 forward-carry** (genuine な substance gap はゼロ)。= 機構が coincidental-pass から **substance-verified** へ。これは (A)/(B) の先取りでなく既存 `l6-fr-coverage` ゲートとの整合 (B を望むなら focused-oracle ゲートを別途追加すればよく、本変更は阻害しない)。**残 (任意・PO 判断)**: ① hard 昇格 (3 件の P2 carry を formal defer 化して advisory を空にし hard gate へ)、② reviewer I-2 = advisory の harness.db projection (柱3 feedback、warn-first scope 外)。いずれも genuine risk ではなく完成度向上。
 - **C-3 (formal defer 記録済、2026-06-15)**: `ut-tdd graph impact` / `graph export` CLI。ADR-002 が当 CLI を **A-124 separate scope** と明示しており impl-ahead ではない (first slice `ut-tdd verify recommend --changed` は出荷済)。欠けていた formal defer 記録を **PLAN-L7-32 §9** に追記し discharge condition (A-124 着手時に repo→source-set loader + `graph` subcommand) を明示済。本サイクルでの CLI 実装は不要。
 - **C-4 (進行中、first slice 完了)**: V-pair 降下 back-fill。**L7-51 同梱4モジュール (plan-dod/placeholder-deps/l7-completion/drive-db-registration) の L6 設計契約 half を完了** (function-spec.md Appendix D、pmo-sonnet ドラフト→PM 検証→doctor green、2026-06-15)。**L7-49 catalogAutomationAssets 署名ドリフト修正済** (function-spec.md:32 を実装 `{repoRoot?, db} → AssetCatalogResult` に整合化、存在しない `AssetRoot[]`/`AutomationAsset[]` を除去、2026-06-15)。**fr-roadmap-coverage (L7-50) L6 契約も完了** (function-spec.md Appendix D.5、2026-06-15)。**= C-4 の L6 設計 half は完了** (L7-46/47 の関数は既に function-spec §1 に存在)。**残 = L7 oracle half のみ**: ①L7-51 4モジュール + ②fr-roadmap-coverage の U-* 宣言+test citation、③L7-46 (U-FR-L1-06)、L7-47 (U-FR-L1-19)。L7 oracle half は oracle-test-trace citation cascade を伴うため、descent-obligation Phase 0→2 (C-2、PO 設計入力要) とセットで進めるのが本筋。**reviewer M-3**: `computeSkillMetrics` (engine.ts) と `projectSkillMetrics` (projection-writer.ts) の `quality_signals` 二重書き (signal_id キー差) もここで一本化検討。
-- **C-5 (first-pass 完了、criteria は PO 確認待ち)**: W10 skill pack curate (FR-L1-47)。**draft first-pass を `docs/skills/SKILL_MAP-draft.md` に作成** (pmo-helix-explorer、2026-06-15)。vendor 107 skills を設計軸 (core/optional/drop) + 明示原則で draft 分類 (core ~37 / optional ~45 / drop ~12 / 未確認 ~13) + helix 用語除去方針 + PO 確認 5 論点。asset-drift / skill-assignment green。**残 (PO 判断)**: ① 分類 criteria 確定 (core/optional/drop の境界は product 判断)、② 確定後に各 core/optional スキル本文を vendor から curate し正本 `docs/skills/<name>.md` 化 + 旧 CLI trigger 置換。軸は design-given だが per-skill criteria は PO に留保。
+- **C-5 (first-pass 完了、criteria は PO 確認待ち)**: W10 skill pack curate (FR-L1-47)。**draft first-pass を `docs/skills/SKILL_MAP-draft.md` に作成** (pmo-helix-explorer、2026-06-15)。vendor 107 skills を設計軸 (core/optional/drop) + 明示原則で draft 分類 (core ~37 / optional ~45 / drop ~12 / 未確認 ~13) + helix 用語除去方針 + PO 確認 5 論点。asset-drift / skill-assignment green。**回帰修正 (2026-06-15)**: `SKILL_MAP-draft.md` (skill_type=`skill-map-curate-draft`) は docs/skills 配下にあり asset-drift 被覆対象だが **skill 推薦の対象ではない** (skill の索引であって skill 本体でない)。`projectSkillTelemetry` が `skill-map` 系 skill_type を ranking から除外するよう修正 (alphabetic tiebreak で `skill:SKILL_MAP-draft` が `skill:review-checklist` を誤って押し出していた projection 回帰を解消)。将来の正本 `SKILL_MAP.md` も同 skill_type で同様に除外される。**残 (PO 判断)**: ① 分類 criteria 確定 (core/optional/drop の境界は product 判断)、② 確定後に各 core/optional スキル本文を vendor から curate し正本 `docs/skills/<name>.md` 化 + 旧 CLI trigger 置換。軸は design-given だが per-skill criteria は PO に留保。
 
 ## 壊さない / 再発させない
 
 - 本クローズは telemetry 本番経路 (`projectOperationalMetrics`) を変更しない。dead cluster 除去のみで挙動不変。
-- C-1 は auth/human-signoff のため solo 確定禁止。C-2 は赤カスケードを伴うため back-fill とセットでないと doctor を割る。いずれも本サイクルで触らない。
+- C-1 の **option C (warn-first 非ブロック advisory)** は authz outcome を変えないため本サイクルで実装済 (PO 承認)。**option A (hard-gate = 実ブロック)** のみ auth/human-signoff の仕様確定に該当し solo 確定禁止 (PO 留保)。C-2 は赤カスケードを伴うため back-fill とセットでないと doctor を割るので本サイクルで触らない。
 - **reviewer I-2 (C-1 precondition)**: `workflow_runs.human_required` は `evaluateAutomationReadiness` が毎回 `guardrail_decisions` から再計算する設計で、カラム自体に DB-level の「一度 1 なら 0 へ戻さない」不変条件はない。`rebuildHarnessDb` の `truncateProjectionTables` 後に `guardrail_decisions` が再投影されない経路があると human-required が静かに消失しうる。C-1 (本番配線) 着地時は、guardrail_decisions の rebuild 再投影 or 永続化の別管理を precondition として設計確定すること。
