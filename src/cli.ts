@@ -13,6 +13,7 @@ import { runDoctor } from "./doctor";
 import { computeSkillMetrics, emitFeedbackEvents } from "./feedback/engine";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { evaluateStaticGate } from "./gate/static";
+import { loadRelationGraphSourceSet } from "./graph/loader";
 import {
   checkHandoverBypass,
   checkHandoverDiscipline,
@@ -22,6 +23,12 @@ import {
   setActivePlanCli,
 } from "./handover/index";
 import { loadChangedFiles } from "./lint/change-impact";
+import {
+  analyzeRelationImpact,
+  collectRelationGraphProjection,
+  exportRelationDiagram,
+  type RelationDiagramAdapter,
+} from "./lint/relation-graph";
 import {
   inspectMcpProfile,
   listVerificationProfiles,
@@ -419,6 +426,63 @@ verify
       process.exitCode = result.status === "passed" || result.status === "dry-run" ? 0 : 1;
     },
   );
+
+// PLAN-L7-32 §9 discharge: cross-artifact relation graph CLI (ADR-002 A-124 surface)。
+// 純関数 (collect/analyze/export) は src/lint/relation-graph.ts、repo→source set loader は
+// src/graph/loader.ts。doc/source graph に集中し db-table node は projection-writer 経由で別供給。
+const graph = program
+  .command("graph")
+  .description("cross-artifact relation graph (impact analysis / diagram export)");
+graph
+  .command("impact")
+  .description("compute impact of changed files across the cross-artifact relation graph")
+  .option("--changed <path...>", "changed path(s); defaults to git status --porcelain")
+  .action((opts: { changed?: string[] }) => {
+    const repoRoot = process.cwd();
+    const changedFiles =
+      opts.changed && opts.changed.length > 0 ? opts.changed : loadChangedFiles();
+    const projection = collectRelationGraphProjection(loadRelationGraphSourceSet(repoRoot));
+    const result = analyzeRelationImpact({ changedPaths: changedFiles, projection });
+    process.stdout.write(
+      `graph impact: changed=${result.changedNodes.length}, impacted=${result.impacted.length}, actions=${result.actions.length}\n`,
+    );
+    for (const n of result.changedNodes) process.stdout.write(`  changed: ${n.id}\n`);
+    for (const n of result.impacted) process.stdout.write(`  impacted: ${n.id}\n`);
+    for (const a of result.actions) {
+      process.stdout.write(`  action: ${a.kind} -> ${a.nodeId} (${a.reason})\n`);
+    }
+    for (const f of result.findings) {
+      process.stdout.write(`  [${f.severity}] ${f.code}: ${f.message}\n`);
+    }
+    process.exitCode = result.ok ? 0 : 1;
+  });
+graph
+  .command("export")
+  .description("export the relation graph as a diagram (mermaid|dot)")
+  .option("--format <format>", "mermaid | dot", "mermaid")
+  .option("--scope <scope>", "scope label (full export; per-scope filtering is a follow-up)")
+  .action((opts: { format?: string; scope?: string }) => {
+    const repoRoot = process.cwd();
+    const projection = collectRelationGraphProjection(loadRelationGraphSourceSet(repoRoot));
+    const format = opts.format === "dot" ? "dot" : "mermaid";
+    // dot は renderDot が純粋に DOT テキストを生成する (外部 graphviz は SVG 化の後段でのみ要る)
+    // ため CLI からは常に emit 可能。adapter を available 宣言して text 出力を有効化する。
+    const availableAdapters: RelationDiagramAdapter[] = format === "dot" ? ["dot"] : [];
+    const artifact = exportRelationDiagram({ snapshot: projection, format, availableAdapters });
+    if (opts.scope) {
+      process.stdout.write(
+        `# scope=${opts.scope} (full export; per-scope filtering is a follow-up)\n`,
+      );
+    }
+    if (!artifact.ok) {
+      for (const f of artifact.findings) {
+        process.stderr.write(`[${f.severity}] ${f.code}: ${f.message}\n`);
+      }
+      process.exitCode = 1;
+      return;
+    }
+    process.stdout.write(`${artifact.content}\n`);
+  });
 
 const session = program.command("session").description("session-log runtime events");
 session

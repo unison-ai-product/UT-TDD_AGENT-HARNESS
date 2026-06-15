@@ -1,0 +1,270 @@
+/**
+ * Relation graph source set loader (PLAN-L7-32 §9 discharge, 2026-06-15).
+ *
+ * repo → RelationGraphSourceSet の I/O 組み立て層。既存 loader を最大限再利用し
+ * 重複 I/O / 重複ロジックを避ける:
+ *   - sourceFiles / tracedPaths: loadImplPlanTraceInput (src/lint/impl-plan-trace.ts)
+ *   - plans:                     loadReviewPlans (src/lint/review-evidence.ts) + yaml frontmatter
+ *   - designDocs / pairArtifact: loadPairDocs (src/vmodel/lint.ts)
+ *   - testDesignDocs:            docs/test-design/** walk
+ *   - tests:                     tests/**\/*.ts walk
+ *
+ * dbTable node は projection-writer 経由 (rebuildHarnessDb input.relationGraph) で別途供給。
+ * CLI loader は doc/source graph に集中し、DB table node はここでは省略 (空配列)。
+ *
+ * fail-open 原則: 各ディレクトリ不在 / parse 失敗は空集合として扱う (既存 loader と同一方針)。
+ * sanitization invariant: raw MCP response / browser trace / secret / credential を行へ複製しない。
+ */
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
+import { parse as parseYaml } from "yaml";
+import { loadImplPlanTraceInput } from "../lint/impl-plan-trace";
+import type {
+  DesignDocInput,
+  PlanInput,
+  RelationGraphSourceSet,
+  SourceFileInput,
+  TestDesignDocInput,
+  TestFileInput,
+} from "../lint/relation-graph";
+import { loadReviewPlans } from "../lint/review-evidence";
+import { normalizePath } from "../lint/shared";
+import { loadPairDocs } from "../vmodel/lint";
+
+// ---- helpers ----------------------------------------------------------------
+
+function walkTs(dir: string, repoRoot: string, acc: string[]): void {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return;
+  }
+  for (const e of entries) {
+    const full = join(dir, e);
+    let st: ReturnType<typeof statSync>;
+    try {
+      st = statSync(full);
+    } catch {
+      continue;
+    }
+    if (st.isDirectory()) {
+      walkTs(full, repoRoot, acc);
+    } else if (e.endsWith(".ts")) {
+      acc.push(normalizePath(relative(repoRoot, full)));
+    }
+  }
+}
+
+/**
+ * tests/**\/*.ts を走査し、各テストファイルの import 文を解析して
+ * "covered src path → test path" の逆引き map を構築する。
+ *
+ * 解析戦略 (ADR-002「source import graph」):
+ *  1. import/require で `../src/...` 形式を静的に正規表現マッチ。
+ *  2. マッチ失敗の補助として tests/foo.test.ts → src 配下の foo.ts の basename 一致も使用。
+ */
+function buildCoveredByMap(
+  testFiles: string[],
+  srcFiles: string[],
+  repoRoot: string,
+): Map<string, string[]> {
+  // srcPath → coveredByTestPaths
+  const covered = new Map<string, string[]>();
+
+  const srcByBasename = new Map<string, string[]>();
+  for (const sf of srcFiles) {
+    const base = sf.split("/").pop()?.replace(/\.ts$/, "") ?? "";
+    const list = srcByBasename.get(base) ?? [];
+    list.push(sf);
+    srcByBasename.set(base, list);
+  }
+
+  for (const testPath of testFiles) {
+    let content = "";
+    try {
+      content = readFileSync(join(repoRoot, testPath), "utf8");
+    } catch {
+      // fail-open: unreadable test
+    }
+
+    // 1. import 解析: `from "../src/..."` / `require("../src/...")`
+    const importedSrcPaths = new Set<string>();
+    for (const m of content.matchAll(/(?:from|require)\s*\(?\s*["']([^"']+)["']/g)) {
+      const spec = m[1];
+      if (!spec.includes("src/")) continue;
+      // src/ 以降を抽出して正規化
+      const srcIdx = spec.indexOf("src/");
+      if (srcIdx === -1) continue;
+      let rel = spec.slice(srcIdx);
+      if (!rel.endsWith(".ts")) rel = `${rel}.ts`;
+      const normalized = normalizePath(rel);
+      if (srcFiles.includes(normalized)) {
+        importedSrcPaths.add(normalized);
+      }
+    }
+
+    // 2. basename 一致補助: tests/foo.test.ts → src/**/foo.ts
+    const testBase =
+      testPath
+        .split("/")
+        .pop()
+        ?.replace(/\.test\.ts$/, "") ?? "";
+    if (testBase) {
+      for (const sf of srcByBasename.get(testBase) ?? []) {
+        importedSrcPaths.add(sf);
+      }
+    }
+
+    for (const srcPath of importedSrcPaths) {
+      const list = covered.get(srcPath) ?? [];
+      if (!list.includes(testPath)) list.push(testPath);
+      covered.set(srcPath, list);
+    }
+  }
+  return covered;
+}
+
+// ---- plan frontmatter parse -------------------------------------------------
+
+interface PlanFrontmatter {
+  plan_id?: string;
+  generates?: { artifact_path?: string; artifact_type?: string }[];
+  dependencies?: { requires?: string[] };
+}
+
+function parsePlanFrontmatter(content: string): PlanFrontmatter {
+  const m = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!m) return {};
+  try {
+    return (parseYaml(m[1]) as PlanFrontmatter) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * FR reference IDs を PLAN 本文から抽出する (FR-L1-NN 形式)。
+ * derives-from edge 用 (requirement id = FR-L1-NN)。
+ */
+function extractFrRefs(content: string): string[] {
+  const refs = new Set<string>();
+  for (const m of content.matchAll(/\bFR-L\d+-\d+\b/g)) {
+    refs.add(m[0]);
+  }
+  return [...refs];
+}
+
+// ---- main loader ------------------------------------------------------------
+
+/**
+ * 実 repo の docs/plans / src / tests / docs/design / docs/test-design を走査し
+ * RelationGraphSourceSet を組み立てる。
+ *
+ * @param repoRoot  absolute path to repo root (process.cwd() 相当)
+ */
+export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourceSet {
+  // 1. sourceFiles: loadImplPlanTraceInput が src/**/*.ts を収集済み
+  const implTrace = loadImplPlanTraceInput(repoRoot);
+  const srcFiles = implTrace.srcFiles; // repo-relative "/" 正規化済み
+
+  // 2. tests: tests/**/*.ts 走査
+  const testPaths: string[] = [];
+  try {
+    walkTs(join(repoRoot, "tests"), repoRoot, testPaths);
+  } catch {
+    // fail-open
+  }
+
+  // 3. covered-by 逆引き map
+  const coveredBy = buildCoveredByMap(testPaths, srcFiles, repoRoot);
+
+  // 4. sourceFiles input
+  const sourceFiles: SourceFileInput[] = srcFiles.map((path) => ({
+    path,
+    tests: coveredBy.get(path) ?? [],
+  }));
+
+  // 5. tests input
+  const tests: TestFileInput[] = testPaths.map((path) => ({ path }));
+
+  // 6. plans: loadReviewPlans → frontmatter parse で generates + FR refs を取得。
+  // loadReviewPlans は docs/plans 不在で throw する (fail-close) ため、loader の fail-open
+  // 原則を保つために全体を try/catch で包む (docs/plans 不在 repo = 空 plans)。
+  const plans: PlanInput[] = [];
+  try {
+    const reviewPlans = loadReviewPlans(repoRoot);
+    const plansDir = join(repoRoot, "docs", "plans");
+    for (const rp of reviewPlans) {
+      let content = "";
+      try {
+        content = readFileSync(join(plansDir, rp.file), "utf8");
+      } catch {
+        // fail-open
+      }
+      const fm = parsePlanFrontmatter(content);
+      // generates: src/*.ts artifact のみ抽出 (generates edge = plan→source)
+      const generatesSrc = (fm.generates ?? [])
+        .map((g) => g.artifact_path ?? "")
+        .filter((p) => p.startsWith("src/") && p.endsWith(".ts"));
+      // requirements: frontmatter dependencies.requires の FR-L1-NN + 本文 FR refs
+      const fmRequires = (fm.dependencies?.requires ?? []).filter((r) => /^FR-L\d+-\d+$/.test(r));
+      const bodyRefs = extractFrRefs(content);
+      const allRefs = [...new Set([...fmRequires, ...bodyRefs])];
+      plans.push({
+        id: rp.plan_id,
+        path: `docs/plans/${rp.file}`,
+        generates: generatesSrc.length > 0 ? generatesSrc : undefined,
+        requirements: allRefs.length > 0 ? allRefs : undefined,
+      });
+    }
+  } catch {
+    // fail-open: docs/plans 不在は空 plans
+  }
+
+  // 7. designDocs: loadPairDocs → PairDoc を DesignDocInput に写像
+  const designDocs: DesignDocInput[] = [];
+  try {
+    const pairDocs = loadPairDocs(repoRoot);
+    for (const d of pairDocs) {
+      if (!d.path.startsWith("docs/design/")) continue;
+      designDocs.push({
+        id: d.path, // path を安定 ID として使用
+        path: d.path,
+        pairs: d.pairArtifact ?? undefined,
+      });
+    }
+  } catch {
+    // fail-open
+  }
+
+  // 8. testDesignDocs: docs/test-design/**/*.md 走査
+  const testDesignDocs: TestDesignDocInput[] = [];
+  try {
+    const tdDir = join(repoRoot, "docs", "test-design");
+    const collectMd = (dir: string): void => {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, e.name);
+        if (e.isDirectory()) {
+          collectMd(full);
+        } else if (e.name.endsWith(".md")) {
+          const rel = normalizePath(relative(repoRoot, full));
+          testDesignDocs.push({ id: rel, path: rel });
+        }
+      }
+    };
+    collectMd(tdDir);
+  } catch {
+    // fail-open
+  }
+
+  return {
+    sourceFiles,
+    tests,
+    plans,
+    designDocs,
+    testDesignDocs,
+    // dbTables: 省略 (projection-writer 経由で供給)
+    dbTables: [],
+  };
+}
