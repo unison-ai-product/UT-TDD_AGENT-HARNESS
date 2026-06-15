@@ -333,7 +333,7 @@ draft の「未確認 ~13 件」として積み残されていたスキルを実
 
 ## 次工程
 
-1. core スキル 48 本の旧 CLI trigger を `ut-tdd` 相当へ一括機械置換 + per-skill spot review (PO 決定 #2 完全適用)。
-2. optional スキルの本文 curate (対象 repo 需要に応じて随時)。
-3. hold の helix-scrum: UT-TDD TS Scrum drive 実装後に core へ再分類。
-4. `catalogSkills` / `recommendSkills` (FR-L1-47 function-spec) が読む `automation_assets` 投影と整合確認。
+1. ~~core スキル本文の旧 CLI trigger を `ut-tdd` へ置換~~ **完了済 (PO 決定 #2)**: c184409 の curate 時点で 48 本本文に legacy command trigger は残存せず (`asset-drift` の `legacy_command_residue=0` で機械検証、`helix <codex|claude|plan|gate|handover>` 検出ゼロ)。本文に残る `helix-source` 参照は `upstream:` provenance と historical-reference ポインタのみで、PO 決定 #3 (MIT/upstream 帰属保持) により意図的に残す。
+2. optional スキルの本文 curate (対象 repo 需要に応じて随時、未着手 = 任意)。
+3. hold の helix-scrum: UT-TDD TS Scrum drive 実装後に core へ再分類 (TS Scrum 実装 carry に従属)。
+4. `catalogSkills` / `recommendSkills` (FR-L1-47 function-spec) が読む `automation_assets` 投影と整合確認 (asset-drift / skill-assignment green で確認済)。
