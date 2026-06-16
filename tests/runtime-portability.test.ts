@@ -1,3 +1,7 @@
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzeRuntimePortability,
@@ -97,5 +101,26 @@ describe("runtime-portability lint", () => {
     const result = analyzeRuntimePortability(loadRuntimePortabilityDocs(process.cwd()));
 
     expect(result.violations).toEqual([]);
+  });
+
+  it("U-RPORT-005: scans untracked runtime files during active Windows setup work", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rport-"));
+    try {
+      execFileSync("git", ["init"], { cwd: root, stdio: "ignore" });
+      mkdirSync(join(root, "src", "state-db"), { recursive: true });
+      writeFileSync(join(root, "package.json"), validDocs[0].text);
+      writeFileSync(join(root, "tsconfig.json"), validDocs[1].text);
+      writeFileSync(join(root, "src", "state-db", "index.ts"), validDocs[2].text);
+      writeFileSync(join(root, "src", "legacy.py"), "print('windows drift')\n");
+
+      const result = analyzeRuntimePortability(loadRuntimePortabilityDocs(root));
+
+      expect(result.violations.map((violation) => violation.rule)).toContain(
+        "core-non-typescript-file",
+      );
+      expect(result.violations.map((violation) => violation.path)).toContain("src/legacy.py");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

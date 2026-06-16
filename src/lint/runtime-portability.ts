@@ -266,7 +266,10 @@ export function loadRuntimePortabilityDocs(
 ): RuntimePortabilityDoc[] {
   let files: string[] = [];
   try {
-    files = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
+    files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    })
       .split(/\r?\n/)
       .filter(Boolean);
   } catch {

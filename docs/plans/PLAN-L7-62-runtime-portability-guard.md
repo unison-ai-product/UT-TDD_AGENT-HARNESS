@@ -58,6 +58,7 @@ into current core surfaces.
 
 - Add `runtime-portability` lint for package/tsconfig runtime contract, TS-only core surfaces,
   TypeScript Claude hooks, approved thin wrappers, local absolute paths, and shell/Python dispatch.
+- Scan both tracked and untracked non-ignored files so active setup/worktree drift is caught before commit.
 - Wire `runtime-portability` into `doctor` as a hard gate.
 - Replace CLI `git` helper calls that used shell-string `execSync` with `execFileSync("git", args)`.
 - Add detector meta tests and current-repo guard coverage.
@@ -71,6 +72,7 @@ into current core surfaces.
 ## DoD
 
 - [x] Non-TS runtime files under `src/` or `.claude/hooks/` are detected.
+- [x] Untracked non-ignored runtime files are detected during active worktree setup.
 - [x] Unapproved `scripts/` runtime wrappers are detected.
 - [x] Package/tsconfig drift that weakens TS/Bun/Node guarantees is detected.
 - [x] Node SQLite fallback behavior is covered by a named smoke script.
