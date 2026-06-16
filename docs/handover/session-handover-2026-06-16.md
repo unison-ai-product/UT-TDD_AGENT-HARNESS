@@ -1,102 +1,47 @@
 # Session Handover - 2026-06-16
 
-## 1. Completed Scope
+> このセッション(Claude Code)の実体で上書き。直前の「Codex Windows runtime-portability 検証依頼」は本セッションで**完了**したため付録に縮約済み(§7)。auto-scaffold の §1-§2 digest は前セッション(PLAN-L7-58)を拾った stale 値だったため破棄。
 
-- Hardened detector, trace, DB projection, and runtime portability checks.
-- Added shared Claude/Codex team runner execution flow.
-- Added deterministic task difficulty, model, effort, and team launch policy.
-- Added existing-repo setup fallback templates and root README.
-- Added `ut-tdd team suggest` for non-destructive subagent launch decisions.
+## §1 このセッションの完了スコープ (Claude Code)
 
-## 2. Key Artifacts
+- **Codex の Windows runtime-portability 検証依頼(旧 §6)を完了**: Windows 実機で 9 項目すべて green。typecheck / lint(biome 167 files)/ doctor(全 gate 到達)/ db rebuild(findings `[]`)/ node-fallback / runtime-hook+cli-surface+runtime(17)/ full test **81 files 672 tests** / PowerShell wrapper `status --json`(mode `hybrid`)。working tree clean、origin 同期。
+- **クロスレビュー機構を実機検証**: 判定ゲート `evaluateGateReview`(hybrid で cross_agent 必須・same-model 拒否・self-review 拒否・未指定拒否)/ `team run` dry-run の cross-provider 割付 + 同一 provider fail-close / slot・直列依存・失敗伝播。**機構は正しい**。
+- **/goal 使えない機能の洗い出しと対策** → 監査 `.ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md` を作成。
+  - **usable と判明(ライブ実証)**: `ut-tdd claude --execute` は native `claude.exe`(`%APPDATA%\Claude\claude-code\2.1.138`)解決で動作(`CLAUDE-DISPATCH-OK` 取得)。
+  - **unusable**: `ut-tdd codex --execute` / `team run --execute` / hybrid 実クロスレビュー。
 
-- `PLAN-L7-59` through `PLAN-L7-67`
-- `src/lint/runtime-portability.ts`
-- `src/lint/db-projection-coverage.ts`
-- `src/lint/db-projection-ingestion.ts`
-- `src/team/model-policy.ts`
-- `src/team/launch-policy.ts`
-- `src/team/run.ts`
-- `README.md`
+## §2 成果物
 
-## 3. Review Notes
+- `.ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md`(洗い出し+対策+証跡、正本)
+- `.ut-tdd/handover/provider/20260616091932-claude-to-codex-plan-l7-68.json`(claude→codex 委譲)
+- memory `project_cross_review_live_dispatch_blocked`(訂正済み)
+- コード変更なし(検証 + 監査 doc + handover のみ)
 
-- Intra-runtime subagent review was performed by Godel for the team launch policy and CLI surface.
-- Findings addressed:
-  - Windows CLI surface test timeout margin.
-  - Missing oracle coverage for standard, trivial+risk, and complex launch policy cases.
+## §3 Next Action — Codex が A-137 の対策を実装
 
-## 4. Verification
+provider handover = `.ut-tdd/handover/provider/20260616091932-claude-to-codex-plan-l7-68.json`。
 
-- `bun run typecheck`: pass
-- `bun run lint`: pass
-- `bun run test:node-fallback`: pass
-- `bun src\cli.ts db rebuild --json`: pass
-- `bun src\cli.ts doctor`: pass
-- `bun run test`: pass, 81 files / 671 tests
+1. `.ut-tdd/audit/A-137-...md` を読み、`PLAN-L7-68`(provider dispatch portability)を起票(PLAN 起票は Codex の仕事)。
+2. **#2**: `team run` の runCommand を `adapterCommand(provider, command)` 経由にする(`src/cli.ts:1452`)→ team の claude 側が即復活。
+3. **#1**: `resolveCodexNativeCommand`(`AppData\Roaming\npm\codex.cmd`/`.exe` 優先・`HELIX_CODEX_BIN` 尊重・Windows `.cmd` spawn 対応)を追加し `adapterCommand` を codex にも拡張(`src/cli.ts:201/229`)→ codex 単体 + team 復活 → 実クロスレビュー成立。
+4. **#4(本丸)**: `detect` に capability probe(`<resolved-bin> --version` exit0 で初めて available)を追加し false-positive `hybrid` を fail-close 化(`src/runtime/detect.ts:21` の将来課題を着地)。
+5. (任意 #5)`newestExisting` を semver ソートへ。
+- **DoD**: live `team run --execute` cross-provider が成功し、`status` の availability が実 spawnability を反映する。
 
-## 5. Next Action
+## §4 carry (未了・先送り)
 
-- No implementation carry remains for this scope.
-- Use `ut-tdd team suggest --task "..." --json` before `ut-tdd team run` when a free-form task needs deterministic subagent launch classification.
+- A-137 対策の実装一式(#1/#2/#4 = open、#5 = low)。本 PLAN として Codex が起票・実装。
 
-## 6. Claude Code Verification Handover - Windows Runtime Portability
+## §5 未了 PO 判断 (bootstrap)
 
-### Status
+- 委譲経路 `ut-tdd codex` 自体が #1 で壊れている(鶏卵)。**(A)** 環境修正(PATH で `AppData\Roaming\npm` を dev-kit `cli\` より前に / `HELIX_CODEX_BIN` を native codex に向ける)で `ut-tdd codex` を復活させてから委譲、が筋。PO が (A) を実施するか、Codex が別経路で #1/#2 を先に着地させるか。
 
-- Branch: `codex/harden-automation-team-launch`
-- Pushed head: `574271b fix: scan untracked runtime portability drift`
-- Provider handover: `.ut-tdd/handover/provider/20260616084105-codex-to-claude-plan-l7-62-runtime-portability-guard.json`
-- Verification target: confirm the harness absorbs Windows-specific runtime/setup drift without hiding real provider CLI limitations.
+## §6 壊さない / 再発させない
 
-### Codex Delta To Review
+- `ut-tdd claude --execute` は既に native 解決で動く。`adapterCommand` refactor 時に**これを退行させない**。
+- クロスレビュー方針(worker≠reviewer model、同一 provider fail-close)を保持。
+- capability probe は **fail-close**(availability=spawnability)。fail-open にして false-positive を再生産しない=presence≠spawnable。
 
-- `src/lint/runtime-portability.ts`
-  - `loadRuntimePortabilityDocs()` now scans `git ls-files --cached --others --exclude-standard`.
-  - Purpose: tracked files and untracked non-ignored active worktree files are both checked before commit.
-- `tests/runtime-portability.test.ts`
-  - Added `U-RPORT-005`, which creates a temp git repo with untracked `src/legacy.py`.
-  - Expected finding: `core-non-typescript-file` on `src/legacy.py`.
-- `docs/plans/PLAN-L7-62-runtime-portability-guard.md`
-  - DoD now explicitly includes untracked non-ignored runtime file detection during active setup work.
+## §7 付録: Codex Windows runtime-portability 検証 (COMPLETED 2026-06-16)
 
-### Evidence Already Collected On Windows
-
-- `bunx vitest run tests\runtime-portability.test.ts`: pass, 5 tests.
-- `bun run lint`: pass.
-- `bun run typecheck`: pass.
-- `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\ut-tdd.ps1 status --json`: pass, mode `hybrid`.
-- `bun run test:node-fallback`: pass.
-- `bunx vitest run tests\runtime-hook-entrypoints.test.ts tests\cli-surface.test.ts tests\runtime.test.ts`: pass, 17 tests.
-- `bun src\cli.ts db rebuild --json`: pass, findings `[]`.
-- `bun src\cli.ts doctor`: pass, including `runtime-portability`, `coding-rules`, `ddd-tdd-rules`, `change-impact`, and `regression-expansion`.
-- `bun run test`: pass, 81 files / 672 tests.
-
-### Claude Code Verification Request
-
-Run these from the repository root on Windows:
-
-```powershell
-git status --short --branch
-bunx vitest run tests\runtime-portability.test.ts
-bun run lint
-bun run typecheck
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\ut-tdd.ps1 status --json
-bun run test:node-fallback
-bunx vitest run tests\runtime-hook-entrypoints.test.ts tests\cli-surface.test.ts tests\runtime.test.ts
-bun src\cli.ts db rebuild --json
-bun src\cli.ts doctor
-bun run test
-```
-
-Check these points specifically:
-
-- `runtime-portability` fails closed for untracked non-ignored runtime drift, not only committed files.
-- Windows wrapper coverage still uses PowerShell / `.cmd` / canonical `cmd.exe` paths without shell-string dispatch.
-- SQLite fallback still passes through `bun:sqlite` / `node:sqlite` environments.
-- `CLAUDE_CODE_EFFORT_LEVEL` and team/provider dry-run surfaces remain machine-readable.
-- Any remaining risk is classified as external provider CLI host behavior, not harness-owned invocation/detection behavior.
-
-### Residual Boundary
-
-The harness now detects the Windows-relevant repo/runtime drift it owns. It still cannot guarantee every external Claude/Codex CLI installation on every Windows host; that boundary is handled by adapter invocation guards, status detection, and fail-close diagnostics.
+旧 §6 の検証依頼は本セッションで完了。対象 = untracked 非ignore runtime drift への fail-close(`U-RPORT-005`)、Windows wrapper(PowerShell/`.cmd`/`cmd.exe`)、SQLite fallback(`bun:sqlite`/`node:sqlite`)、`CLAUDE_CODE_EFFORT_LEVEL`・team/provider dry-run の machine-readability。pushed head `574271b`。すべて green を実機確認済み。Residual boundary(全 Windows host の外部 CLI 導入は保証外)は A-137 で provider dispatch 観点として具体化された。
