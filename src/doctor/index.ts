@@ -1,7 +1,7 @@
 /**
  * 統合検証 doctor (requirements_v1.2 §7 / §7.8.5)。
  * 多数の検出器 (back-fill / review-evidence / asset-drift / cycle-p4-verification / roadmap 等) を集約し、
- * gate 判定群を runDoctor.ok に連動させて fail-close する。handover / agent-slots / verification-profile は surface のみ。
+ * gate 判定群を runDoctor.ok に連動させて fail-close する。handover / agent-slots は warning surface。
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -16,7 +16,13 @@ import {
 } from "../handover/index";
 import { analyzeAssetDrift, assetDriftMessages, loadAssetDriftInput } from "../lint/asset-drift";
 import { analyzeBackfill, backfillMessages, loadBackfillDocs } from "../lint/backfill-pairing";
-import { analyzeChangeImpact, changeImpactMessages, loadChangedFiles } from "../lint/change-impact";
+import {
+  analyzeChangeImpact,
+  analyzeChangeSetIntegrity,
+  changeImpactMessages,
+  changeSetIntegrityMessages,
+  loadChangedFiles,
+} from "../lint/change-impact";
 import {
   analyzeCodingRules,
   codingRulesMessages,
@@ -29,6 +35,15 @@ import {
   cycleP4VerificationMessages,
   loadCycleP4VerificationDocs,
 } from "../lint/cycle-p4-verification";
+import {
+  analyzeDbProjectionCoverage,
+  dbProjectionCoverageMessages,
+  loadDbProjectionRequirements,
+} from "../lint/db-projection-coverage";
+import {
+  analyzeDbProjectionIngestion,
+  dbProjectionIngestionMessages,
+} from "../lint/db-projection-ingestion";
 import { analyzeDddTddRules, dddTddRulesMessages, loadDddTddInputs } from "../lint/ddd-tdd-rules";
 import {
   analyzeDependencyDrift,
@@ -136,6 +151,11 @@ import {
   ruleAutomationClosureMessages,
 } from "../lint/rule-automation-closure";
 import { analyzeRuleDrift, loadRuleAdapterDocs, ruleDriftMessages } from "../lint/rule-drift";
+import {
+  analyzeRuntimePortability,
+  loadRuntimePortabilityDocs,
+  runtimePortabilityMessages,
+} from "../lint/runtime-portability";
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
 import { fmValue } from "../lint/shared";
 import {
@@ -154,8 +174,9 @@ import {
   trackedCanonicalMessages,
 } from "../lint/tracked-canonical";
 import {
+  analyzeVerificationProfileGate,
   loadVerificationRecommendation,
-  verificationRecommendationMessages,
+  verificationProfileGateMessages,
 } from "../lint/verification-profile";
 import type { LintResult } from "../plan/lint";
 import { lintPlan, lintPlanWithGate } from "../plan/lint";
@@ -174,6 +195,8 @@ import {
   type GuardrailDecisionInput,
   inspectGuardrailInvariants,
 } from "../state-db/guardrail-invariants";
+import { openHarnessDb } from "../state-db/index";
+import { rebuildHarnessDb } from "../state-db/projection-writer";
 import {
   analyzePairFreeze,
   analyzeVerificationGroups,
@@ -570,6 +593,28 @@ export function checkChangeImpact(repoRoot: string): { messages: string[]; ok: b
   }
 }
 
+export function checkChangeSetIntegrity(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["change-set-integrity - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const dependencyDrift = analyzeDependencyDrift(loadDependencyDriftInput(repoRoot));
+    const result = analyzeChangeSetIntegrity({
+      changedFiles: loadChangedFiles(repoRoot),
+      dependencyDrift,
+    });
+    return { messages: changeSetIntegrityMessages(result), ok: result.ok };
+  } catch {
+    return {
+      messages: ["change-set-integrity - violation: change/dependency graph could not be read"],
+      ok: false,
+    };
+  }
+}
+
 function loadChangedFilesForDoctor(repoRoot: string): string[] {
   try {
     return loadChangedFiles(repoRoot);
@@ -579,15 +624,22 @@ function loadChangedFilesForDoctor(repoRoot: string): string[] {
 }
 
 export function checkVerificationProfile(repoRoot: string): { messages: string[]; ok: boolean } {
-  try {
+  if (!existsSync(repoRoot)) {
     return {
-      messages: verificationRecommendationMessages(loadVerificationRecommendation(repoRoot)),
-      ok: true,
+      messages: ["verification-profile - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeVerificationProfileGate(loadVerificationRecommendation(repoRoot));
+    return {
+      messages: verificationProfileGateMessages(r),
+      ok: r.ok,
     };
   } catch {
     return {
-      messages: ["verification-profile - note: changed file graph could not be read"],
-      ok: true,
+      messages: ["verification-profile - violation: changed file graph could not be read"],
+      ok: false,
     };
   }
 }
@@ -623,6 +675,50 @@ export function checkDddTddRules(repoRoot: string): { messages: string[]; ok: bo
   }
 }
 
+export function checkDbProjectionCoverage(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["db-projection-coverage - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const result = analyzeDbProjectionCoverage(loadDbProjectionRequirements(repoRoot));
+    return { messages: dbProjectionCoverageMessages(result), ok: result.ok };
+  } catch {
+    return {
+      messages: ["db-projection-coverage - violation: physical-data/schema coverage could not run"],
+      ok: false,
+    };
+  }
+}
+
+export function checkDbProjectionIngestion(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["db-projection-ingestion - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const db = openHarnessDb(":memory:", { repoRoot });
+    try {
+      const rebuilt = rebuildHarnessDb({ repoRoot, db });
+      const result = analyzeDbProjectionIngestion(rebuilt.rowCounts);
+      return { messages: dbProjectionIngestionMessages(result), ok: result.ok };
+    } finally {
+      db.close();
+    }
+  } catch {
+    return {
+      messages: [
+        "db-projection-ingestion - violation: automatic projection ingestion could not run",
+      ],
+      ok: false,
+    };
+  }
+}
+
 export function checkRuleDrift(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
     return { messages: ["rule-drift - violation: repo root could not be read"], ok: false };
@@ -632,6 +728,24 @@ export function checkRuleDrift(repoRoot: string): { messages: string[]; ok: bool
     return { messages: ruleDriftMessages(r), ok: r.ok };
   } catch {
     return { messages: ["rule-drift - violation: adapter rule docs could not be read"], ok: false };
+  }
+}
+
+export function checkRuntimePortability(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["runtime-portability - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeRuntimePortability(loadRuntimePortabilityDocs(repoRoot));
+    return { messages: runtimePortabilityMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["runtime-portability - violation: TS/Bun/Node portability lint could not run"],
+      ok: false,
+    };
   }
 }
 
@@ -1108,7 +1222,7 @@ export function nodeDoctorDeps(repoRoot: string): DoctorDeps {
 // CLI entrypoint は process.cwd() = repoRoot を想定 (deps 未指定時)。test は deps 注入で固定。
 export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): LintResult {
   const d = detectMode();
-  // handover / agent-slots / verification-profile は surface。gate 判定群は runDoctor.ok に連動して fail-close。
+  // handover / agent-slots are warning surfaces. Verification profile is a hard gate.
   const backfill = checkBackfillResult(deps.repoRoot);
   const scrumRev = checkScrumReverse(deps.repoRoot);
   const propagation = checkPropagation(deps.repoRoot);
@@ -1121,11 +1235,11 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const skillAssignment = checkSkillAssignment(deps.repoRoot);
   const descentObligation = checkDescentObligation(deps.repoRoot);
   const changeImpact = checkChangeImpact(deps.repoRoot);
-  // verification-profile は surface-only (推奨表示のみ。外部 profile 実行が PLAN-L7-33 で配線されるまで
-  // ok 連動させない — 推奨の見落としは review で拾う段階、A-128 F-5 / IMP-130(e))。
+  const changeSetIntegrity = checkChangeSetIntegrity(deps.repoRoot);
   const verificationProfile = checkVerificationProfile(deps.repoRoot);
   const codingRules = checkCodingRules(deps.repoRoot);
   const dddTddRules = checkDddTddRules(deps.repoRoot);
+  const runtimePortability = checkRuntimePortability(deps.repoRoot);
   const ruleDrift = checkRuleDrift(deps.repoRoot);
   const gateConfirm = checkGateConfirm(deps.repoRoot);
   const planSchedule = checkPlanSchedule(deps.repoRoot);
@@ -1153,6 +1267,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const dependencyDrift = checkDependencyDrift(deps.repoRoot);
   const regressionExpansion = checkRegressionExpansion(deps.repoRoot, dependencyDrift.result);
   const guardrailInvariants = checkGuardrailInvariants(deps.repoRoot);
+  const dbProjectionCoverage = checkDbProjectionCoverage(deps.repoRoot);
+  const dbProjectionIngestion = checkDbProjectionIngestion(deps.repoRoot);
   return {
     ok:
       backfill.ok &&
@@ -1168,8 +1284,11 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       skillAssignment.ok &&
       descentObligation.ok &&
       changeImpact.ok &&
+      changeSetIntegrity.ok &&
+      verificationProfile.ok &&
       codingRules.ok &&
       dddTddRules.ok &&
+      runtimePortability.ok &&
       ruleDrift.ok &&
       gateConfirm.ok &&
       planSchedule.ok &&
@@ -1195,7 +1314,9 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       oracleTestTrace.ok &&
       trackedCanonical.ok &&
       dependencyDrift.ok &&
-      regressionExpansion.ok,
+      regressionExpansion.ok &&
+      dbProjectionCoverage.ok &&
+      dbProjectionIngestion.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
       checkHandover(deps),
@@ -1212,9 +1333,11 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...skillAssignment.messages.map((m) => `doctor: ${m}`),
       ...descentObligation.messages.map((m) => `doctor: ${m}`),
       ...changeImpact.messages.map((m) => `doctor: ${m}`),
+      ...changeSetIntegrity.messages.map((m) => `doctor: ${m}`),
       ...verificationProfile.messages.map((m) => `doctor: ${m}`),
       ...codingRules.messages.map((m) => `doctor: ${m}`),
       ...dddTddRules.messages.map((m) => `doctor: ${m}`),
+      ...runtimePortability.messages.map((m) => `doctor: ${m}`),
       ...ruleDrift.messages.map((m) => `doctor: ${m}`),
       ...gateConfirm.messages.map((m) => `doctor: ${m}`),
       ...planSchedule.messages.map((m) => `doctor: ${m}`),
@@ -1243,6 +1366,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...trackedCanonical.messages.map((m) => `doctor: ${m}`),
       ...dependencyDrift.messages.map((m) => `doctor: ${m}`),
       ...regressionExpansion.messages.map((m) => `doctor: ${m}`),
+      ...dbProjectionCoverage.messages.map((m) => `doctor: ${m}`),
+      ...dbProjectionIngestion.messages.map((m) => `doctor: ${m}`),
     ],
   };
 }

@@ -13,6 +13,9 @@ import { migrate } from "../src/state-db/migration";
 
 const compliant: DriveDbRegistrationStats = {
   planCount: 10,
+  expectedPlanCount: 10,
+  planRegistryFingerprint: "sha256:current",
+  expectedPlanRegistryFingerprint: "sha256:current",
   driveRuns: 10,
   plansWithoutDriveRun: 0,
   workflowRuns: 2,
@@ -63,7 +66,35 @@ describe("drive DB registration lint", () => {
     );
   });
 
-  it("U-DDBREG-004: session-scoped token rows (role='session', plan_id='') are NOT orphans, but worker runs with a missing plan are (PLAN-L7-58)", () => {
+  it("U-DDBREG-005: fails when persisted harness.db plan count is stale", () => {
+    const r = analyzeDriveDbRegistration({
+      ...compliant,
+      planCount: 9,
+      expectedPlanCount: 10,
+    });
+
+    expect(r.ok).toBe(false);
+    expect(r.violations).toContainEqual(
+      expect.objectContaining({ reason: "stale_plan_registry", count: -1 }),
+    );
+    expect(driveDbRegistrationMessages(r)[0]).toContain("stale_plan_registry=-1");
+  });
+
+  it("U-DDBREG-006: fails when persisted harness.db plan content fingerprint is stale", () => {
+    const r = analyzeDriveDbRegistration({
+      ...compliant,
+      planRegistryFingerprint: "sha256:old",
+      expectedPlanRegistryFingerprint: "sha256:new",
+    });
+
+    expect(r.ok).toBe(false);
+    expect(r.violations).toContainEqual(
+      expect.objectContaining({ reason: "stale_plan_registry_fingerprint" }),
+    );
+    expect(driveDbRegistrationMessages(r)[0]).toContain("stale_plan_registry_fingerprint");
+  });
+
+  it("U-DDBREG-004: only session-scoped token rows are excluded from model orphan checks (PLAN-L7-58)", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -99,9 +130,26 @@ describe("drive DB registration lint", () => {
           evidence_path: "",
         },
       });
+      // Missing/legacy role is not a session telemetry marker, so it must still be audited.
+      upsertRow(db, {
+        table: "model_runs",
+        primaryKey: "run_id",
+        row: {
+          run_id: "orphan-null-role",
+          runtime: "claude",
+          model: "claude-opus-4-8",
+          role: null,
+          drive: "",
+          plan_id: "PLAN-DOES-NOT-EXIST-2",
+          started_at: "",
+          completed_at: "",
+          evidence_path: "",
+        },
+      });
       const stats = collectDriveDbRegistrationStats(db);
-      expect(stats.modelRuns).toBe(2);
-      expect(stats.modelOrphans).toBe(1); // only the worker run, not the session row
+      expect(stats.modelRuns).toBe(3);
+      expect(stats.modelOrphans).toBe(2); // worker + null-role, not the session row
+      expect(stats.planRegistryFingerprint).toMatch(/^sha256:/);
     } finally {
       db.close();
     }
@@ -113,6 +161,8 @@ describe("drive DB registration lint", () => {
 
     expect(stats).not.toBeNull();
     expect(r.ok).toBe(true);
+    expect(stats?.expectedPlanCount).toBe(stats?.planCount);
+    expect(stats?.expectedPlanRegistryFingerprint).toBe(stats?.planRegistryFingerprint);
     expect(stats?.driveRuns).toBeGreaterThan(0);
     expect(stats?.workflowOrphans).toBe(0);
     expect(stats?.modelOrphans).toBe(0);

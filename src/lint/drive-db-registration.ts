@@ -1,5 +1,8 @@
 export interface DriveDbRegistrationStats {
   planCount: number;
+  expectedPlanCount?: number;
+  planRegistryFingerprint?: string;
+  expectedPlanRegistryFingerprint?: string;
   driveRuns: number;
   plansWithoutDriveRun: number;
   workflowRuns: number;
@@ -19,6 +22,8 @@ export interface DriveDbRegistrationViolation {
   reason:
     | "missing_db"
     | "empty_plan_registry"
+    | "stale_plan_registry"
+    | "stale_plan_registry_fingerprint"
     | "missing_drive_runs"
     | "plans_without_drive_run"
     | "missing_workflow_runs"
@@ -56,6 +61,18 @@ export function analyzeDriveDbRegistration(
   }
 
   if (stats.planCount <= 0) violations.push({ reason: "empty_plan_registry" });
+  if (stats.expectedPlanCount !== undefined && stats.planCount !== stats.expectedPlanCount) {
+    violations.push({
+      reason: "stale_plan_registry",
+      count: stats.planCount - stats.expectedPlanCount,
+    });
+  }
+  if (
+    stats.expectedPlanRegistryFingerprint !== undefined &&
+    stats.planRegistryFingerprint !== stats.expectedPlanRegistryFingerprint
+  ) {
+    violations.push({ reason: "stale_plan_registry_fingerprint" });
+  }
   if (stats.driveRuns <= 0) violations.push({ reason: "missing_drive_runs" });
   if (stats.plansWithoutDriveRun > 0) {
     violations.push({ reason: "plans_without_drive_run", count: stats.plansWithoutDriveRun });
@@ -95,7 +112,10 @@ export function driveDbRegistrationMessages(result: DriveDbRegistrationResult): 
   if (!result.ok) {
     const sample = result.violations
       .slice(0, 8)
-      .map((v) => `${v.reason}${v.mode ? `:${v.mode}` : ""}${v.count ? `=${v.count}` : ""}`)
+      .map(
+        (v) =>
+          `${v.reason}${v.mode ? `:${v.mode}` : ""}${v.count !== undefined ? `=${v.count}` : ""}`,
+      )
       .join(", ");
     return [`drive-db-registration - violation ${result.violations.length} (${sample})`];
   }

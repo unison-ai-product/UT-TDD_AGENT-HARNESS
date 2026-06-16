@@ -10,7 +10,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { openHarnessDb, upsertRow } from "../src/state-db/index";
+import { type HarnessDb, openHarnessDb, upsertRow } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import { projectModelEvaluations, projectTokenUsage } from "../src/state-db/projection-writer";
 import {
@@ -518,6 +518,82 @@ describe("projectTokenUsage + projectModelEvaluations (token efficiency)", () =>
     } finally {
       db.close();
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ingests token usage in a single transaction for large automatic scans", () => {
+    const db = openHarnessDb(":memory:");
+    const execSql: string[] = [];
+    const wrappedDb: HarnessDb = {
+      ...db,
+      exec: (sql: string) => {
+        execSql.push(sql);
+        db.exec(sql);
+      },
+    };
+    try {
+      migrate(db);
+      projectTokenUsage(
+        wrappedDb,
+        Array.from({ length: 25 }, (_, i) => ({
+          runtime: "codex",
+          model: "gpt-5.3-codex",
+          sessionId: "bulk-session",
+          turnIndex: i,
+          inputTokens: 100 + i,
+          outputTokens: 10 + i,
+          cachedInputTokens: 0,
+          reasoningTokens: 0,
+          costUsd: 0.001,
+        })),
+      );
+
+      expect(execSql[0]).toBe("BEGIN IMMEDIATE");
+      expect(execSql).toContain("COMMIT");
+      expect(execSql).not.toContain("ROLLBACK");
+      const count = db.prepare("SELECT COUNT(*) AS n FROM model_runs").get() as { n: number };
+      expect(count.n).toBe(25);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("rolls back token usage ingestion when projection fails", () => {
+    const db = openHarnessDb(":memory:");
+    const execSql: string[] = [];
+    const wrappedDb: HarnessDb = {
+      ...db,
+      exec: (sql: string) => {
+        execSql.push(sql);
+        db.exec(sql);
+      },
+      prepare: () => {
+        throw new Error("forced projection failure");
+      },
+    };
+    try {
+      migrate(db);
+      expect(() =>
+        projectTokenUsage(wrappedDb, [
+          {
+            runtime: "claude",
+            model: "claude-opus-4-8",
+            sessionId: "broken-session",
+            turnIndex: 0,
+            inputTokens: 100,
+            outputTokens: 20,
+            cachedInputTokens: 0,
+            reasoningTokens: 0,
+            costUsd: 0.001,
+          },
+        ]),
+      ).toThrow("forced projection failure");
+
+      expect(execSql).toEqual(["BEGIN IMMEDIATE", "ROLLBACK"]);
+      const count = db.prepare("SELECT COUNT(*) AS n FROM model_runs").get() as { n: number };
+      expect(count.n).toBe(0);
+    } finally {
+      db.close();
     }
   });
 

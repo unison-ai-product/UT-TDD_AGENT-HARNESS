@@ -116,6 +116,30 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
     }
   });
 
+  it("auto-populates relation, profile, document export, and test catalog projections on rebuild", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      const result = rebuildHarnessDb({ repoRoot: process.cwd(), db });
+
+      expect(result.ok).toBe(true);
+      expect(rowCounts(db).graph_nodes).toBeGreaterThan(0);
+      expect(rowCounts(db).dependency_edges).toBeGreaterThan(0);
+      expect(rowCounts(db).graph_snapshots).toBeGreaterThan(0);
+      expect(rowCounts(db).impact_rules).toBeGreaterThan(0);
+      expect(rowCounts(db).verification_profiles).toBeGreaterThan(0);
+      expect(rowCounts(db).mcp_server_profiles).toBeGreaterThan(0);
+      expect(rowCounts(db).mcp_profile_triggers).toBeGreaterThan(0);
+      expect(rowCounts(db).document_export_profiles).toBeGreaterThan(0);
+      expect(rowCounts(db).document_export_triggers).toBeGreaterThan(0);
+      expect(rowCounts(db).document_export_runs).toBeGreaterThan(0);
+      expect(rowCounts(db).document_export_datasets).toBeGreaterThan(0);
+      expect(rowCounts(db).test_cases).toBeGreaterThan(0);
+      expect(rowCounts(db).test_artifact_edges).toBeGreaterThan(0);
+    } finally {
+      db.close();
+    }
+  });
+
   it("rebuildHarnessDb deterministically projects plans and Phase3 outputs without source mutation", () => {
     const db = openHarnessDb(":memory:");
     try {
@@ -174,6 +198,10 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
       expect(result.ok).toBe(true);
       expect(second.rowCounts).toEqual(result.rowCounts);
       expect(rowCounts(db).plan_registry).toBeGreaterThan(0);
+      const projectedPlan = db
+        .prepare("SELECT source_hash FROM plan_registry WHERE source_hash <> '' LIMIT 1")
+        .get() as { source_hash?: string } | undefined;
+      expect(projectedPlan?.source_hash).toMatch(/^sha256:[a-f0-9]{64}$/);
       expect(rowCounts(db).graph_nodes).toBe(1);
       expect(rowCounts(db).document_export_runs).toBe(1);
       expect(rowCounts(db).roadmap_rollups).toBe(1);

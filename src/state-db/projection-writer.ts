@@ -4,14 +4,23 @@ import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { DocumentExportProjectionRows } from "../export/document-export";
 import {
+  buildDocumentExportDataset,
+  type CanonicalDocumentFamily,
+  parseCanonicalDocumentStructure,
+} from "../export/document-export";
+import { loadRelationGraphSourceSet } from "../graph/loader";
+import { loadChangedFiles } from "../lint/change-impact";
+import {
   analyzeDescentObligations,
   loadDeferLedger,
   loadDescentAdjacency,
   loadTraceKeyedArtifacts,
 } from "../lint/descent-obligation";
-import type {
-  RelationGraphProjection,
-  VerificationEvidenceProjection,
+import {
+  analyzeRelationImpact,
+  collectRelationGraphProjection,
+  type RelationGraphProjection,
+  type VerificationEvidenceProjection,
 } from "../lint/relation-graph";
 import { loadReviewPlans } from "../lint/review-evidence";
 import {
@@ -21,6 +30,10 @@ import {
   PARKED_BANDS,
 } from "../lint/roadmap-registry";
 import { normalizePath } from "../lint/shared";
+import {
+  catalogVerificationProfiles,
+  recommendVerificationProfiles,
+} from "../lint/verification-profile";
 import {
   HARNESS_DB_TABLE_BY_NAME,
   HARNESS_DB_TABLES,
@@ -125,6 +138,14 @@ function nowIso(): string {
 
 function stableId(prefix: string, value: string): string {
   return `${prefix}:${value.replace(/[^A-Za-z0-9._:-]+/g, "-")}`;
+}
+
+function stableHash(value: string): string {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
+
+function relationArtifactId(nodeId: string): string {
+  return stableId("relation-artifact", nodeId);
 }
 
 function asString(value: unknown): string | null {
@@ -299,6 +320,7 @@ function projectPlans(repoRoot: string, db: HarnessDb): Map<string, ProjectedPla
     const drive = frontmatterValue(content, "drive");
     const status = frontmatterValue(content, "status") || "draft";
     const updatedAt = frontmatterValue(content, "updated") || frontmatterValue(content, "created");
+    const sourceHash = stableHash(content);
     // decision_outcome: S4 verdict for PoC PLANs (confirmed/rejected/pivot).
     // Read from `decision_outcome` frontmatter field; fall back to `decision` for legacy.
     // Stored as "" when absent so the column is always TEXT (single-source: harness-db.ts §plan_registry).
@@ -318,6 +340,7 @@ function projectPlans(repoRoot: string, db: HarnessDb): Map<string, ProjectedPla
         parent: "",
         updated_at: updatedAt,
         decision_outcome: decisionOutcome,
+        source_hash: sourceHash,
       },
     });
     recordProjectionEvent(db, {
@@ -513,29 +536,37 @@ function projectReviewModelRuns(
  * cold-start (usages 空) は no-op。run_id は runtime:session:turn から安定生成 (再投入で重複しない)。
  */
 export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
-  for (const u of usages) {
-    if (!u.model) continue; // model 不明の行は集計不能なので捨てる
-    const id = stableId("token-run", `${u.runtime}:${u.sessionId}:${u.turnIndex}`);
-    recordProjectionEvent(db, {
-      table: "model_runs",
-      id,
-      row: {
-        run_id: id,
-        runtime: u.runtime,
-        model: u.model,
-        role: "session",
-        drive: "",
-        plan_id: "",
-        started_at: "",
-        completed_at: "",
-        evidence_path: u.sessionId,
-        input_tokens: u.inputTokens,
-        output_tokens: u.outputTokens,
-        cached_input_tokens: u.cachedInputTokens,
-        reasoning_tokens: u.reasoningTokens,
-        cost_usd: u.costUsd,
-      },
-    });
+  if (usages.length === 0) return;
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const u of usages) {
+      if (!u.model) continue; // model 不明の行は集計不能なので捨てる
+      const id = stableId("token-run", `${u.runtime}:${u.sessionId}:${u.turnIndex}`);
+      recordProjectionEvent(db, {
+        table: "model_runs",
+        id,
+        row: {
+          run_id: id,
+          runtime: u.runtime,
+          model: u.model,
+          role: "session",
+          drive: "",
+          plan_id: "",
+          started_at: "",
+          completed_at: "",
+          evidence_path: u.sessionId,
+          input_tokens: u.inputTokens,
+          output_tokens: u.outputTokens,
+          cached_input_tokens: u.cachedInputTokens,
+          reasoning_tokens: u.reasoningTokens,
+          cost_usd: u.costUsd,
+        },
+      });
+    }
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
   }
 }
 
@@ -877,7 +908,10 @@ function truncateProjectionTables(db: HarnessDb): void {
 function projectRelationGraph(db: HarnessDb, graph: RelationGraphProjection | undefined): void {
   if (!graph) return;
   const indexedAt = nowIso();
+  const artifactIds = new Map<string, string>();
   for (const node of graph.nodes) {
+    const artifactId = relationArtifactId(node.id);
+    artifactIds.set(node.id, artifactId);
     recordProjectionEvent(db, {
       table: "graph_nodes",
       id: node.id,
@@ -893,6 +927,18 @@ function projectRelationGraph(db: HarnessDb, graph: RelationGraphProjection | un
         status: "current",
         source: "relation-graph",
         indexed_at: indexedAt,
+      },
+    });
+    recordProjectionEvent(db, {
+      table: "artifact_registry",
+      id: artifactId,
+      row: {
+        artifact_id: artifactId,
+        artifact_type: "relation_node",
+        path: node.path ?? "",
+        pair_artifact: "",
+        status: "current",
+        updated_at: indexedAt,
       },
     });
   }
@@ -914,6 +960,22 @@ function projectRelationGraph(db: HarnessDb, graph: RelationGraphProjection | un
         indexed_at: indexedAt,
       },
     });
+    const fromArtifact = artifactIds.get(edge.from);
+    const toArtifact = artifactIds.get(edge.to);
+    if (fromArtifact && toArtifact) {
+      recordProjectionEvent(db, {
+        table: "trace_edges",
+        id: stableId("trace-edge", `${edge.from}->${edge.kind}->${edge.to}`),
+        row: {
+          edge_id: stableId("trace-edge", `${edge.from}->${edge.kind}->${edge.to}`),
+          from_artifact: fromArtifact,
+          to_artifact: toArtifact,
+          edge_kind: edge.kind,
+          plan_id: "",
+          status: "current",
+        },
+      });
+    }
   }
   for (const finding of graph.findings) {
     recordFinding(db, {
@@ -1039,6 +1101,513 @@ function projectVerificationEvidence(
       source: "verification-evidence",
       evidencePath: finding.evidencePath,
     });
+  }
+}
+
+function defaultRelationGraphProjection(repoRoot: string): RelationGraphProjection {
+  const sourceSet = loadRelationGraphSourceSet(repoRoot);
+  return collectRelationGraphProjection({
+    ...sourceSet,
+    dbTables: HARNESS_DB_TABLES.map((table) => ({
+      name: table.name,
+      upstream: ["plan:PLAN-L7-44-harness-db-master"],
+      path: "src/schema/harness-db.ts",
+    })),
+  });
+}
+
+function projectGraphSnapshot(db: HarnessDb, graph: RelationGraphProjection | undefined): void {
+  if (!graph) return;
+  const createdAt = nowIso();
+  const sourceDigest = stableHash(JSON.stringify({ nodes: graph.nodes, edges: graph.edges }));
+  const id = stableId("graph-snapshot", sourceDigest);
+  recordProjectionEvent(db, {
+    table: "graph_snapshots",
+    id,
+    row: {
+      graph_snapshot_id: id,
+      scope: "repo",
+      node_count: graph.nodes.length,
+      edge_count: graph.edges.length,
+      hash: sourceDigest,
+      created_at: createdAt,
+      source_digest: sourceDigest,
+    },
+  });
+}
+
+const DEFAULT_IMPACT_RULES = [
+  {
+    id: "source-tests-design",
+    edge: "covered-by",
+    node: "source",
+    required: "test",
+    action: "require-sibling-test",
+    gate: "G4",
+  },
+  {
+    id: "design-pair",
+    edge: "pairs",
+    node: "design",
+    required: "test-design",
+    action: "update-paired-artifact",
+    gate: "G2",
+  },
+  {
+    id: "db-table-upstream",
+    edge: "upstream",
+    node: "db-table",
+    required: "plan",
+    action: "review-upstream",
+    gate: "G7",
+  },
+  {
+    id: "diagram-refresh",
+    edge: "visualizes",
+    node: "diagram",
+    required: "graph-snapshot",
+    action: "refresh-diagram",
+    gate: "G8",
+  },
+] as const;
+
+function projectImpactRules(db: HarnessDb): void {
+  for (const rule of DEFAULT_IMPACT_RULES) {
+    const id = stableId("impact-rule", rule.id);
+    recordProjectionEvent(db, {
+      table: "impact_rules",
+      id,
+      row: {
+        impact_rule_id: id,
+        trigger_edge_kind: rule.edge,
+        trigger_node_type: rule.node,
+        required_node_type: rule.required,
+        required_action: rule.action,
+        severity: "warn",
+        gate: rule.gate,
+        enabled: 1,
+      },
+    });
+  }
+}
+
+function projectCurrentImpactResults(
+  repoRoot: string,
+  db: HarnessDb,
+  graph: RelationGraphProjection | undefined,
+): void {
+  if (!graph) return;
+  let changedFiles: string[] = [];
+  try {
+    changedFiles = loadChangedFiles(repoRoot);
+  } catch {
+    return;
+  }
+  if (changedFiles.length === 0) return;
+  const result = analyzeRelationImpact({ changedPaths: changedFiles, projection: graph });
+  const computedAt = nowIso();
+  for (const action of result.actions) {
+    const id = stableId("impact-result", `working-tree:${action.kind}:${action.nodeId}`);
+    recordProjectionEvent(db, {
+      table: "impact_results",
+      id,
+      row: {
+        impact_result_id: id,
+        change_set_id: "working-tree",
+        root_node_id: action.nodeId,
+        impacted_node_id: action.nodeId,
+        required_action: action.kind,
+        status: "open",
+        reason: action.reason,
+        evidence_path: "git status --porcelain",
+        computed_at: computedAt,
+      },
+    });
+  }
+  for (const finding of result.findings) {
+    recordFinding(db, {
+      kind: finding.code,
+      severity: finding.severity,
+      subjectId: finding.nodeId ?? finding.message,
+      source: "relation-impact",
+      evidencePath: finding.evidencePath,
+    });
+  }
+}
+
+function projectVerificationCatalogs(repoRoot: string, db: HarnessDb): void {
+  const indexedAt = nowIso();
+  const profiles = catalogVerificationProfiles().profiles;
+  for (const profile of profiles) {
+    recordProjectionEvent(db, {
+      table: "verification_profiles",
+      id: profile.id,
+      row: {
+        verification_profile_id: profile.id,
+        name: profile.label,
+        profile_type: profile.sourceType,
+        package_refs: profile.packageName ?? "",
+        requires_docker: profile.requiresDocker ? 1 : 0,
+        requires_browser: profile.id.includes("playwright") ? 1 : 0,
+        requires_network: profile.requiresNetwork ? 1 : 0,
+        green_definition_id: profile.defaultEnabled ? "default-green" : "",
+        trigger_signals: (profile.triggerSignals ?? []).join(","),
+        enabled: profile.defaultEnabled ? 1 : 0,
+      },
+    });
+    if (profile.sourceType === "mcp") {
+      recordProjectionEvent(db, {
+        table: "mcp_server_profiles",
+        id: profile.id,
+        row: {
+          mcp_profile_id: profile.id,
+          name: profile.label,
+          package_ref: profile.packageName ?? "",
+          source_url: profile.sourceUrl ?? "",
+          transport: "stdio",
+          command: profile.command,
+          args_digest: stableHash(profile.command),
+          allowed_tools: (profile.allowedTools ?? []).join(","),
+          read_only: profile.readOnly ? 1 : 0,
+          requires_network: profile.requiresNetwork ? 1 : 0,
+          requires_docker: profile.requiresDocker ? 1 : 0,
+          requires_auth: profile.requiresAuth ? 1 : 0,
+          risk_tier: profile.riskTier,
+          enabled: profile.defaultEnabled ? 1 : 0,
+          source: "verification-profile-catalog",
+          indexed_at: indexedAt,
+        },
+      });
+      for (const signal of profile.triggerSignals ?? []) {
+        const id = stableId("mcp-trigger", `${profile.id}:${signal}`);
+        recordProjectionEvent(db, {
+          table: "mcp_profile_triggers",
+          id,
+          row: {
+            trigger_id: id,
+            mcp_profile_id: profile.id,
+            signal,
+            workflow: "",
+            layer: "",
+            gate: "",
+            reason: `${signal} recommends ${profile.id}`,
+            enabled: 1,
+          },
+        });
+      }
+    }
+  }
+  let changedFiles: string[] = [];
+  try {
+    changedFiles = loadChangedFiles(repoRoot);
+  } catch {
+    changedFiles = [];
+  }
+  const recommendations = recommendVerificationProfiles(changedFiles);
+  for (const rec of recommendations.recommendations) {
+    const id = stableId("verification-rec", `working-tree:${rec.profile.id}`);
+    recordProjectionEvent(db, {
+      table: "verification_recommendations",
+      id,
+      row: {
+        verification_recommendation_id: id,
+        change_set_id: "working-tree",
+        plan_id: "",
+        profile_id: rec.profile.id,
+        profile_kind: rec.profile.sourceType,
+        reason: rec.reasons.join("; "),
+        source_rule: rec.signals.join(","),
+        accepted: rec.profile.defaultEnabled ? 1 : 0,
+        created_at: indexedAt,
+      },
+    });
+  }
+}
+
+const DOCUMENT_EXPORT_PROFILES = [
+  {
+    id: "doc-csv-matrix",
+    name: "Canonical CSV matrix",
+    family: "mixed",
+    format: "csv",
+    renderer: "builtin",
+    builtIn: 1,
+    requiresPackage: 0,
+    requiresD2: 0,
+    enabled: 1,
+    riskTier: "low",
+    signals: "doc_backprop,document_export_profile_changed",
+  },
+  {
+    id: "doc-markdown-summary",
+    name: "Canonical Markdown summary",
+    family: "mixed",
+    format: "markdown",
+    renderer: "builtin",
+    builtIn: 1,
+    requiresPackage: 0,
+    requiresD2: 0,
+    enabled: 1,
+    riskTier: "low",
+    signals: "doc_backprop,document_export_profile_changed",
+  },
+  {
+    id: "doc-xlsx-workbook",
+    name: "Canonical XLSX workbook",
+    family: "mixed",
+    format: "xlsx",
+    renderer: "exceljs-or-sheetjs",
+    builtIn: 0,
+    requiresPackage: 1,
+    requiresD2: 0,
+    enabled: 0,
+    riskTier: "medium",
+    signals: "document_export_profile_changed",
+  },
+  {
+    id: "doc-pptx-deck",
+    name: "Canonical PPTX deck",
+    family: "mixed",
+    format: "pptx",
+    renderer: "pptxgenjs",
+    builtIn: 0,
+    requiresPackage: 1,
+    requiresD2: 0,
+    enabled: 0,
+    riskTier: "medium",
+    signals: "document_export_profile_changed",
+  },
+  {
+    id: "doc-d2-pptx-diagram",
+    name: "Canonical D2 diagram deck",
+    family: "diagram",
+    format: "pptx",
+    renderer: "d2+pptxgenjs",
+    builtIn: 0,
+    requiresPackage: 1,
+    requiresD2: 1,
+    enabled: 0,
+    riskTier: "medium",
+    signals: "diagram_changed,document_export_profile_changed",
+  },
+] as const;
+
+function projectDocumentExportCatalogs(db: HarnessDb): void {
+  for (const profile of DOCUMENT_EXPORT_PROFILES) {
+    recordProjectionEvent(db, {
+      table: "document_export_profiles",
+      id: profile.id,
+      row: {
+        document_export_profile_id: profile.id,
+        name: profile.name,
+        source_doc_family: profile.family,
+        format: profile.format,
+        renderer: profile.renderer,
+        package_ref: "",
+        source_url: "",
+        built_in: profile.builtIn,
+        requires_package: profile.requiresPackage,
+        requires_d2: profile.requiresD2,
+        enabled: profile.enabled,
+        risk_tier: profile.riskTier,
+        trigger_signals: profile.signals,
+      },
+    });
+    for (const signal of profile.signals.split(",")) {
+      const id = stableId("document-export-trigger", `${profile.id}:${signal}`);
+      recordProjectionEvent(db, {
+        table: "document_export_triggers",
+        id,
+        row: {
+          trigger_id: id,
+          document_export_profile_id: profile.id,
+          signal,
+          workflow: "",
+          layer: "",
+          gate: "",
+          reason: `${signal} recommends ${profile.id}`,
+          enabled: 1,
+        },
+      });
+    }
+  }
+}
+
+function canonicalDocInputs(repoRoot: string): Array<{
+  family: CanonicalDocumentFamily;
+  path: string;
+  content: string;
+}> {
+  const roots: Array<{ family: CanonicalDocumentFamily; dir: string }> = [
+    { family: "concept", dir: join(repoRoot, "docs", "governance") },
+    { family: "requirements", dir: join(repoRoot, "docs", "design", "harness", "L1-requirements") },
+    { family: "design", dir: join(repoRoot, "docs", "design", "harness") },
+    { family: "plan", dir: join(repoRoot, "docs", "plans") },
+    { family: "adr", dir: join(repoRoot, "docs", "adr") },
+    { family: "test-design", dir: join(repoRoot, "docs", "test-design") },
+  ];
+  const docs: Array<{ family: CanonicalDocumentFamily; path: string; content: string }> = [];
+  const seen = new Set<string>();
+  for (const root of roots) {
+    for (const path of assetFiles(root.dir, /\.md$/i)) {
+      const rel = normalizePath(relative(repoRoot, path));
+      if (seen.has(rel)) continue;
+      seen.add(rel);
+      docs.push({ family: root.family, path: rel, content: readFileSync(path, "utf8") });
+    }
+  }
+  return docs.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function defaultDocumentExportProjection(repoRoot: string): DocumentExportProjectionRows {
+  const projections = canonicalDocInputs(repoRoot).map((doc) =>
+    parseCanonicalDocumentStructure({
+      family: doc.family,
+      sourcePath: doc.path,
+      content: doc.content,
+    }),
+  );
+  const dataset = buildDocumentExportDataset({
+    projections,
+    format: "markdown",
+    maxRowsPerChunk: 500,
+  });
+  const sourceSnapshotHash = stableHash(
+    JSON.stringify(projections.map((p) => [p.sourcePath, p.sourceHash])),
+  );
+  const runId = stableId("document-export-run", "doc-markdown-summary:rebuild");
+  return {
+    document_export_runs: [
+      {
+        document_export_run_id: runId,
+        source_snapshot_hash: sourceSnapshotHash,
+        evidence_path: "docs",
+      },
+    ],
+    document_export_datasets: [
+      {
+        document_export_dataset_id: dataset.datasetId,
+        document_export_run_id: runId,
+        format: dataset.format,
+      },
+    ],
+    document_export_artifacts: [],
+    findings: dataset.findings,
+    actionsTaken: [],
+    ok: dataset.ok,
+  };
+}
+
+function planGeneratedPathMap(repoRoot: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const path of markdownFiles(join(repoRoot, "docs", "plans"))) {
+    const content = readFileSync(path, "utf8");
+    const planId = frontmatterValue(content, "plan_id");
+    const meta = metadataFromContent(path, content);
+    const generates = Array.isArray(meta.generates) ? meta.generates : [];
+    for (const item of generates) {
+      if (!item || typeof item !== "object") continue;
+      const artifactPath = (item as Record<string, unknown>).artifact_path;
+      if (typeof artifactPath === "string" && artifactPath) {
+        map.set(normalizePath(artifactPath), planId);
+      }
+    }
+  }
+  return map;
+}
+
+function extractTestNames(content: string): string[] {
+  const names = new Set<string>();
+  for (const match of content.matchAll(/\b(?:it|test)\s*\(\s*["'`]([^"'`]+)["'`]/g)) {
+    names.add(match[1]);
+  }
+  return [...names].sort();
+}
+
+function importedSourcePaths(content: string): string[] {
+  const paths = new Set<string>();
+  for (const match of content.matchAll(/(?:from|require)\s*\(?\s*["']([^"']*src\/[^"']+)["']/g)) {
+    const spec = match[1];
+    const idx = spec.indexOf("src/");
+    if (idx < 0) continue;
+    let rel = normalizePath(spec.slice(idx));
+    if (!/\.(ts|tsx)$/.test(rel)) rel = `${rel}.ts`;
+    paths.add(rel);
+  }
+  return [...paths].sort();
+}
+
+function projectTestCaseCatalog(repoRoot: string, db: HarnessDb): void {
+  const planByPath = planGeneratedPathMap(repoRoot);
+  const indexedAt = nowIso();
+  for (const path of assetFiles(join(repoRoot, "tests"), /\.test\.ts$/i)) {
+    const rel = normalizePath(relative(repoRoot, path));
+    const content = readFileSync(path, "utf8");
+    const planId = planByPath.get(rel) ?? "";
+    const sources = importedSourcePaths(content);
+    const names = extractTestNames(content);
+    for (const [index, name] of names.entries()) {
+      const oracleId = name.match(/\bU-[A-Z0-9-]+\b/)?.[0] ?? "";
+      const testCaseId = stableId("test-case", `${rel}:${index}:${stableHash(name)}`);
+      recordProjectionEvent(db, {
+        table: "test_cases",
+        id: testCaseId,
+        row: {
+          test_case_id: testCaseId,
+          test_file: rel,
+          test_name: name,
+          name,
+          test_run_id: "",
+          oracle_id: oracleId,
+          plan_id: planId,
+          fr_id: name.match(/\bFR-L\d+-\d+\b/)?.[0] ?? "",
+          artifact_id: sources[0] ?? "",
+          kind: "unit",
+          first_seen_at: indexedAt,
+          last_seen_at: indexedAt,
+          status: "cataloged",
+          evidence_path: rel,
+        },
+      });
+      if (!planId) {
+        recordFinding(db, {
+          kind: "missing-test-plan-id",
+          severity: "warn",
+          subjectId: testCaseId,
+          source: "test-case-catalog",
+          evidencePath: rel,
+        });
+      }
+      if (!oracleId) {
+        recordFinding(db, {
+          kind: "missing-test-oracle-id",
+          severity: "info",
+          subjectId: testCaseId,
+          source: "test-case-catalog",
+          evidencePath: rel,
+        });
+      }
+      for (const sourcePath of sources) {
+        const edgeId = stableId("test-artifact-edge", `${testCaseId}:${sourcePath}`);
+        const compatibilityEdgeId = stableId("test-edge-compat", stableHash(edgeId));
+        recordProjectionEvent(db, {
+          table: "test_artifact_edges",
+          id: edgeId,
+          row: {
+            edge_id: edgeId,
+            test_artifact_edge_id: compatibilityEdgeId,
+            test_case_id: testCaseId,
+            artifact_id: sourcePath,
+            plan_id: planId,
+            source_path: rel,
+            artifact_path: sourcePath,
+            edge_kind: "tests",
+            oracle_id: oracleId,
+            evidence_path: rel,
+          },
+        });
+      }
+    }
   }
 }
 
@@ -1900,6 +2469,8 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
   try {
     migrate(db);
     truncateProjectionTables(db);
+    const relationGraph = input.relationGraph ?? defaultRelationGraphProjection(repoRoot);
+    const documentExports = input.documentExports ?? defaultDocumentExportProjection(repoRoot);
     const plans = projectPlans(repoRoot, db);
     projectDriveRuns(repoRoot, db, plans);
     projectHookEvents(repoRoot, db, plans);
@@ -1916,15 +2487,21 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     projectPocEvaluations(db);
     projectModelEvaluations(db, repoRoot);
     projectOperationalMetrics(db);
+    projectRelationGraph(db, relationGraph);
+    projectGraphSnapshot(db, relationGraph);
+    projectImpactRules(db);
+    projectCurrentImpactResults(repoRoot, db, relationGraph);
+    projectVerificationCatalogs(repoRoot, db);
+    projectDocumentExportCatalogs(db);
+    projectDocumentExports(db, documentExports);
+    projectVerificationEvidence(db, input.verificationEvidence);
+    projectTestCaseCatalog(repoRoot, db);
     projectFeedbackEvents(db);
     projectTroubleEvents(db);
     projectRetryEvents(db);
     projectIssueQueue(db);
     projectIssueApprovalGuardrails(db);
     projectImprovementLog(db);
-    projectRelationGraph(db, input.relationGraph);
-    projectDocumentExports(db, input.documentExports);
-    projectVerificationEvidence(db, input.verificationEvidence);
     const counts = rowCounts(db);
     return {
       ok: true,
@@ -1932,8 +2509,8 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       rowCounts: counts,
       findings: [],
       inputs: {
-        relationGraph: input.relationGraph,
-        documentExports: input.documentExports,
+        relationGraph,
+        documentExports,
         verificationEvidence: input.verificationEvidence,
       },
     };

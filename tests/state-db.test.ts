@@ -19,6 +19,20 @@ import { migrate, missingTables, rowCounts, tableNames } from "../src/state-db/m
  * 設計 pair: docs/test-design/harness/L8-integration-test-design.md IT-DB-01。
  */
 describe("IT-DB-01: harness.db state-db foundation", () => {
+  it("uses node:sqlite fallback when the test worker is running under Node", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      const expectedDriver =
+        typeof (globalThis as { Bun?: unknown }).Bun === "undefined" ? "node" : "bun";
+      expect(db.driver).toBe(expectedDriver);
+      db.exec("CREATE TABLE fallback_smoke (id TEXT PRIMARY KEY)");
+      db.prepare("INSERT INTO fallback_smoke (id) VALUES (?)").run("ok");
+      expect(db.prepare("SELECT id FROM fallback_smoke").get()?.id).toBe("ok");
+    } finally {
+      db.close();
+    }
+  });
+
   it("migrate が registry の全 table を作成し user_version を設定する", () => {
     const db = openHarnessDb(":memory:");
     const result = migrate(db);
@@ -32,6 +46,11 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
     for (const table of HARNESS_DB_TABLES) {
       expect(present).toContain(table.name);
     }
+    const planRegistryColumns = db
+      .prepare("PRAGMA table_info(plan_registry)")
+      .all()
+      .map((row) => String(row.name));
+    expect(planRegistryColumns).toContain("source_hash");
     expect(missingTables(db)).toEqual([]);
     db.close();
   });

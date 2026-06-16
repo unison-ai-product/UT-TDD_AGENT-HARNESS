@@ -17,6 +17,7 @@
     "lint": "biome check src tests",
     "format": "biome check --write src tests",
     "test": "vitest run",
+    "test:node-fallback": "vitest run tests/state-db.test.ts tests/runtime-portability.test.ts",
     "test:watch": "vitest"
   },
   "dependencies": {

@@ -1,0 +1,101 @@
+import { describe, expect, it } from "vitest";
+import {
+  analyzeRuntimePortability,
+  loadRuntimePortabilityDocs,
+  type RuntimePortabilityDoc,
+  runtimePortabilityMessages,
+} from "../src/lint/runtime-portability";
+
+const validDocs: RuntimePortabilityDoc[] = [
+  {
+    path: "package.json",
+    text: JSON.stringify({
+      type: "module",
+      engines: { bun: ">=1.3" },
+      scripts: {
+        build: "bun build src/cli.ts --compile --outfile dist/ut-tdd",
+        "test:node-fallback": "vitest run tests/state-db.test.ts tests/runtime-portability.test.ts",
+        typecheck: "tsc --noEmit",
+      },
+    }),
+  },
+  {
+    path: "tsconfig.json",
+    text: JSON.stringify({ compilerOptions: { strict: true, types: ["node"] } }),
+  },
+  {
+    path: "src/state-db/index.ts",
+    text: 'nodeRequire("bun:sqlite"); nodeRequire("node:sqlite");',
+  },
+  { path: "src/runtime/adapter.ts", text: "export const adapter = true;" },
+  { path: ".claude/hooks/session-log.ts", text: "export const hook = true;" },
+  {
+    path: "scripts/ut-tdd",
+    text: '#!/usr/bin/env sh\nROOT="$(pwd)"\nexec "$ROOT/dist/ut-tdd" "$@"\nexec bun run "$ROOT/src/cli.ts" "$@"\n',
+  },
+  {
+    path: "scripts/ut-tdd.ps1",
+    text: '$root = "."\n& "$root\\dist\\ut-tdd.exe" @args\n& bun run (Join-Path $root "src\\cli.ts") @args\n',
+  },
+];
+
+describe("runtime-portability lint", () => {
+  it("U-RPORT-001: accepts TS/Bun core with Node types and thin wrappers", () => {
+    const result = analyzeRuntimePortability(validDocs);
+
+    expect(result.ok).toBe(true);
+    expect(runtimePortabilityMessages(result)[0]).toContain("OK");
+  });
+
+  it("U-RPORT-002: rejects Python/Bash runtime files and shell-specific core dispatch", () => {
+    const result = analyzeRuntimePortability([
+      ...validDocs,
+      { path: "src/runtime/legacy.py", text: "print('legacy')" },
+      { path: ".claude/hooks/guard.sh", text: "python3 guard.py" },
+      { path: "scripts/install-hooks.sh", text: "#!/usr/bin/env bash\npython3 setup.py\n" },
+      {
+        path: "src/cli.ts",
+        text: 'import { execSync } from "node:child_process";\nexecSync("bash run.sh");',
+      },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.rule)).toEqual(
+      expect.arrayContaining([
+        "core-non-typescript-file",
+        "disallowed-runtime-language",
+        "hook-non-typescript-file",
+        "script-wrapper-unapproved",
+        "source-shell-runtime",
+      ]),
+    );
+  });
+
+  it("U-RPORT-003: rejects package/tsconfig drift that weakens TS runtime guarantees", () => {
+    const result = analyzeRuntimePortability([
+      { path: "package.json", text: JSON.stringify({ type: "commonjs", scripts: {} }) },
+      { path: "tsconfig.json", text: JSON.stringify({ compilerOptions: { strict: false } }) },
+      { path: "src/state-db/index.ts", text: 'nodeRequire("bun:sqlite");' },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.rule)).toEqual(
+      expect.arrayContaining([
+        "package-missing-esm",
+        "package-missing-bun-engine",
+        "package-missing-compiled-build",
+        "package-missing-node-fallback-smoke",
+        "package-missing-typecheck",
+        "tsconfig-not-strict",
+        "tsconfig-missing-node-types",
+        "sqlite-driver-fallback-missing",
+      ]),
+    );
+  });
+
+  it("U-RPORT-004: current repo keeps Windows-relevant runtime portability guard green", () => {
+    const result = analyzeRuntimePortability(loadRuntimePortabilityDocs(process.cwd()));
+
+    expect(result.violations).toEqual([]);
+  });
+});

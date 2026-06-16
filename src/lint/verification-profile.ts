@@ -69,6 +69,27 @@ export interface VerificationRecommendationResult {
   ok: boolean;
 }
 
+export type VerificationProfileGateFindingCode =
+  | "missing-default-profile"
+  | "unrunnable-default-profile"
+  | "external-without-activation-plan"
+  | "recommendation-without-signal";
+
+export interface VerificationProfileGateFinding {
+  code: VerificationProfileGateFindingCode;
+  profileId?: VerificationProfileId;
+  message: string;
+}
+
+export interface VerificationProfileGateResult {
+  recommendation: VerificationRecommendationResult;
+  activationPlan: ExternalProfileActivationPlan;
+  defaultRunnableProfiles: VerificationProfileId[];
+  externalProfiles: VerificationProfileId[];
+  findings: VerificationProfileGateFinding[];
+  ok: boolean;
+}
+
 export interface VerificationProbeCheck {
   name: string;
   ok: boolean;
@@ -227,7 +248,7 @@ const PROFILES: Record<VerificationProfileId, VerificationProfile> = {
   },
   doctor: {
     id: "doctor",
-    label: "UT-TDD doctor gate surface",
+    label: "UT-TDD doctor hard gate",
     command: "bun run src/cli.ts doctor",
     sourceType: "builtin",
     packageName: null,
@@ -1031,5 +1052,94 @@ export function verificationRecommendationMessages(
   const external = result.recommendations.length - enabled;
   return [
     `verification-profile - OK (${result.recommendations.length} profiles recommended, enabled=${enabled}, external_or_disabled=${external})`,
+  ];
+}
+
+export function analyzeVerificationProfileGate(
+  recommendation: VerificationRecommendationResult,
+): VerificationProfileGateResult {
+  const findings: VerificationProfileGateFinding[] = [];
+  const defaultRecommendations = recommendation.recommendations.filter(
+    (r) => r.profile.defaultEnabled,
+  );
+  const externalRecommendations = recommendation.recommendations.filter(
+    (r) => !r.profile.defaultEnabled,
+  );
+  const activationPlan = planExternalProfileActivation({
+    triggerSignals: uniqueSorted(recommendation.recommendations.flatMap((r) => r.signals)),
+    recommendations: recommendation.recommendations,
+    allowExternal: false,
+  });
+
+  for (const rec of recommendation.recommendations) {
+    if (rec.signals.length === 0) {
+      findings.push({
+        code: "recommendation-without-signal",
+        profileId: rec.profile.id,
+        message: `${rec.profile.id} was recommended without a trigger signal`,
+      });
+    }
+  }
+
+  if (recommendation.recommendations.length > 0 && defaultRecommendations.length === 0) {
+    findings.push({
+      code: "missing-default-profile",
+      message: "changed files produced recommendations but no default-enabled profile",
+    });
+  }
+
+  for (const rec of defaultRecommendations) {
+    if (!PROFILE_RUNNERS[rec.profile.id]) {
+      findings.push({
+        code: "unrunnable-default-profile",
+        profileId: rec.profile.id,
+        message: `${rec.profile.id} is default-enabled but has no concrete runner`,
+      });
+    }
+  }
+
+  for (const rec of externalRecommendations) {
+    const actions = activationPlan.steps
+      .filter((step) => step.profileId === rec.profile.id)
+      .map((step) => step.action);
+    if (!actions.includes("human-approval") || !actions.includes("refuse-run")) {
+      findings.push({
+        code: "external-without-activation-plan",
+        profileId: rec.profile.id,
+        message: `${rec.profile.id} is external/disabled but lacks approval and refusal routing`,
+      });
+    }
+  }
+
+  const defaultRunnableProfiles = defaultRecommendations
+    .map((rec) => rec.profile.id)
+    .filter((id) => PROFILE_RUNNERS[id])
+    .sort();
+  const externalProfiles = externalRecommendations.map((rec) => rec.profile.id).sort();
+
+  return {
+    recommendation,
+    activationPlan,
+    defaultRunnableProfiles,
+    externalProfiles,
+    findings: findings.sort((a, b) =>
+      `${a.code}:${a.profileId ?? ""}`.localeCompare(`${b.code}:${b.profileId ?? ""}`),
+    ),
+    ok: recommendation.ok && findings.length === 0,
+  };
+}
+
+export function verificationProfileGateMessages(result: VerificationProfileGateResult): string[] {
+  if (result.ok) {
+    return [
+      `verification-profile - OK (${result.recommendation.recommendations.length} profiles recommended; default_runnable=${result.defaultRunnableProfiles.length}; external_gated=${result.externalProfiles.length})`,
+    ];
+  }
+  return [
+    "verification-profile - violation",
+    ...result.findings.map(
+      (finding) =>
+        `${finding.code}${finding.profileId ? ` ${finding.profileId}` : ""}: ${finding.message}`,
+    ),
   ];
 }

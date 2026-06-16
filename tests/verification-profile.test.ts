@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  analyzeVerificationProfileGate,
   analyzeVerificationProfileSafety,
   catalogVerificationProfiles,
   getVerificationProfile,
@@ -13,6 +14,7 @@ import {
   saveVerificationEvidence,
   VERIFICATION_EVIDENCE_SCHEMA_VERSION,
   type VerificationProbeDeps,
+  verificationProfileGateMessages,
   verificationRecommendationMermaid,
   verificationRecommendationMessages,
 } from "../src/lint/verification-profile";
@@ -81,6 +83,17 @@ describe("verification profile recommendation", () => {
     const result = recommendVerificationProfiles(["src/cli.ts"]);
 
     expect(verificationRecommendationMessages(result)[0]).toContain("profiles recommended");
+  });
+
+  it("hard-gates default runnable profiles while routing external profiles to approval/refusal", () => {
+    const gate = analyzeVerificationProfileGate(recommendVerificationProfiles(["src/web/app.tsx"]));
+
+    expect(gate.ok).toBe(true);
+    expect(gate.defaultRunnableProfiles).toEqual(["bun-unit", "doctor"]);
+    expect(gate.externalProfiles).toEqual(["playwright-mcp", "vitest-browser-playwright"]);
+    expect(gate.activationPlan.steps.map((step) => step.action)).toContain("human-approval");
+    expect(gate.activationPlan.steps.map((step) => step.action)).toContain("refuse-run");
+    expect(verificationProfileGateMessages(gate)[0]).toContain("default_runnable=2");
   });
 
   it("lists MCP and external test foundation profiles as disabled by default", () => {

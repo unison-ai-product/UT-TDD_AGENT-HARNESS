@@ -41,13 +41,28 @@ function columnNames(db: HarnessDb, table: string): Set<string> {
   return new Set(rows.map((r) => String(r.name)));
 }
 
+function tablePrimaryKeyColumns(db: HarnessDb, table: string): Set<string> {
+  assertSqlIdentifier(table);
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all();
+  return new Set(rows.filter((r) => Number(r.pk ?? 0) > 0).map((r) => String(r.name)));
+}
+
 function addColumnSql(table: string, column: ColumnDef): string {
   assertSqlIdentifier(table);
   assertSqlIdentifier(column.name);
-  if (column.primaryKey) {
-    throw new Error(`existing table ${table} is missing primary key column ${column.name}`);
-  }
   return `ALTER TABLE ${table} ADD COLUMN ${column.name} ${column.type}`;
+}
+
+function primaryKeyCompatibilityIndexName(table: string, column: string): string {
+  const indexName = `idx_${table}_${column}_pk_compat`;
+  assertSqlIdentifier(indexName);
+  return indexName;
+}
+
+function addMissingPrimaryKeyCompatibility(db: HarnessDb, table: string, column: ColumnDef): void {
+  db.exec(addColumnSql(table, { ...column, primaryKey: false }));
+  const indexName = primaryKeyCompatibilityIndexName(table, column.name);
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ${indexName} ON ${table} (${column.name})`);
 }
 
 function addMissingColumns(db: HarnessDb): number {
@@ -58,12 +73,32 @@ function addMissingColumns(db: HarnessDb): number {
     const columns = columnNames(db, table.name);
     for (const column of table.columns) {
       if (columns.has(column.name)) continue;
-      db.exec(addColumnSql(table.name, column));
+      if (column.primaryKey) {
+        addMissingPrimaryKeyCompatibility(db, table.name, column);
+      } else {
+        db.exec(addColumnSql(table.name, column));
+      }
       columns.add(column.name);
       added += 1;
     }
   }
   return added;
+}
+
+function ensurePrimaryKeyCompatibilityIndexes(db: HarnessDb): void {
+  const present = new Set(tableNames(db));
+  for (const table of HARNESS_DB_TABLES) {
+    if (!present.has(table.name)) continue;
+    const columns = columnNames(db, table.name);
+    const actualPrimaryKeys = tablePrimaryKeyColumns(db, table.name);
+    for (const column of table.columns) {
+      if (!column.primaryKey || !columns.has(column.name) || actualPrimaryKeys.has(column.name)) {
+        continue;
+      }
+      const indexName = primaryKeyCompatibilityIndexName(table.name, column.name);
+      db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS ${indexName} ON ${table.name} (${column.name})`);
+    }
+  }
 }
 
 /**
@@ -76,6 +111,7 @@ export function migrate(db: HarnessDb): MigrationResult {
   const ddls = schemaDdl();
   for (const ddl of ddls.filter((s) => s.startsWith("CREATE TABLE"))) db.exec(ddl);
   const addedColumns = addMissingColumns(db);
+  ensurePrimaryKeyCompatibilityIndexes(db);
   for (const ddl of ddls.filter((s) => s.startsWith("CREATE INDEX"))) db.exec(ddl);
   if (fromVersion < SCHEMA_VERSION) db.setUserVersion(SCHEMA_VERSION);
   const toVersion = fromVersion > SCHEMA_VERSION ? fromVersion : SCHEMA_VERSION;

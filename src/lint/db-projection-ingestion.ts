@@ -1,0 +1,84 @@
+export interface DbProjectionIngestionRequirement {
+  table: string;
+  reason: string;
+}
+
+export interface DbProjectionIngestionResult {
+  checked: number;
+  missingRows: DbProjectionIngestionRequirement[];
+  optionalEvidenceTables: string[];
+  rowCounts: Record<string, number>;
+  ok: boolean;
+}
+
+export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirement[] = [
+  {
+    table: "graph_nodes",
+    reason: "relation graph nodes are derived from repo docs/src/test inputs",
+  },
+  { table: "dependency_edges", reason: "relation graph edges are derived from trace links" },
+  { table: "trace_edges", reason: "trace edges are derived from relation graph edges" },
+  { table: "graph_snapshots", reason: "graph snapshot is derived from the relation graph" },
+  { table: "impact_rules", reason: "impact rules are built-in workflow policy" },
+  { table: "verification_profiles", reason: "verification profile catalog is built-in" },
+  {
+    table: "mcp_server_profiles",
+    reason: "MCP profile catalog is derived from verification profiles",
+  },
+  {
+    table: "mcp_profile_triggers",
+    reason: "MCP triggers are derived from profile trigger signals",
+  },
+  { table: "document_export_profiles", reason: "document export profile catalog is built-in" },
+  { table: "document_export_triggers", reason: "document export triggers are built-in" },
+  { table: "document_export_runs", reason: "canonical document dataset run is derived from docs" },
+  { table: "document_export_datasets", reason: "canonical document dataset is derived from docs" },
+  { table: "test_cases", reason: "test case catalog is derived from tests/**/*.test.ts" },
+  { table: "test_artifact_edges", reason: "test artifact edges are derived from test imports" },
+];
+
+export const EVIDENCE_GATED_DB_PROJECTION_TABLES = [
+  "test_runs",
+  "test_results",
+  "test_flake_events",
+  "impact_results",
+  "tool_runs",
+  "diagram_artifacts",
+  "verification_recommendations",
+  "mcp_server_runs",
+  "external_tool_findings",
+  "document_export_artifacts",
+  "model_evaluations",
+  "retry_events",
+];
+
+export function analyzeDbProjectionIngestion(
+  rowCounts: Record<string, number>,
+  requirements: DbProjectionIngestionRequirement[] = AUTOMATIC_DB_PROJECTION_REQUIREMENTS,
+): DbProjectionIngestionResult {
+  const missingRows = requirements.filter(
+    (requirement) => (rowCounts[requirement.table] ?? 0) <= 0,
+  );
+  return {
+    checked: requirements.length,
+    missingRows,
+    optionalEvidenceTables: EVIDENCE_GATED_DB_PROJECTION_TABLES.filter(
+      (table) => (rowCounts[table] ?? 0) <= 0,
+    ),
+    rowCounts,
+    ok: requirements.length > 0 && missingRows.length === 0,
+  };
+}
+
+export function dbProjectionIngestionMessages(result: DbProjectionIngestionResult): string[] {
+  if (result.ok) {
+    return [
+      `db-projection-ingestion - OK (${result.checked} automatic projection tables populated; evidence-gated zero tables: ${result.optionalEvidenceTables.length})`,
+    ];
+  }
+  const messages = ["db-projection-ingestion - violation"];
+  for (const item of result.missingRows) {
+    messages.push(`empty automatic projection table ${item.table}: ${item.reason}`);
+  }
+  return messages;
+}

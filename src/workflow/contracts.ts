@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { HarnessDb } from "../state-db/index";
 import { upsertRow } from "../state-db/index";
 
@@ -41,6 +42,10 @@ function result(findings: Finding[], evidence_paths: string[] = []): ContractRes
 
 function stableId(prefix: string, value: string): string {
   return `${prefix}:${value || "unknown"}`.replace(/[^A-Za-z0-9._:-]+/g, "-");
+}
+
+function stableHash(value: string): string {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
 
 function hasText(value: unknown): value is string {
@@ -151,11 +156,16 @@ export function recordTestRunEvidence(
         const edgeId = stableId("test-edge", `${testRunId}:${testCase.artifact_path}:${index}`);
         upsertRow(deps.db, {
           table: "test_artifact_edges",
-          primaryKey: "test_artifact_edge_id",
+          primaryKey: "edge_id",
           row: {
-            test_artifact_edge_id: edgeId,
+            edge_id: edgeId,
+            test_artifact_edge_id: stableId("test-edge-compat", stableHash(edgeId)),
+            test_case_id: testCaseId,
             test_run_id: testRunId,
             artifact_path: testCase.artifact_path,
+            artifact_id: testCase.artifact_path,
+            plan_id: input.plan_id ?? "",
+            source_path: input.evidence_path,
             edge_kind: "covers",
             oracle_id: testCase.oracle_id ?? "",
             evidence_path: input.evidence_path,

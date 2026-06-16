@@ -15,7 +15,7 @@
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 15;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
 
@@ -70,6 +70,9 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       // Values: "confirmed" | "rejected" | "pivot" | "" (null/unset stored as "").
       // Source: PLAN frontmatter field `decision_outcome`. Used by projectPocEvaluations (FR-L1-43).
       col("decision_outcome"),
+      // source_hash: sha256 of the full PLAN markdown content. Used by drive-db-registration to
+      // detect persisted harness.db staleness even when the plan count is unchanged.
+      col("source_hash"),
     ],
   },
   {
@@ -239,14 +242,19 @@ export const HARNESS_DB_TABLES: TableDef[] = [
     name: "test_runs",
     columns: [
       pk("test_run_id"),
+      col("session_id"),
       col("plan_id"),
       col("command"),
       col("runner"),
+      col("runtime"),
+      col("os"),
+      col("shell"),
       col("scope"),
       col("started_at"),
       col("completed_at"),
       col("exit_code", "INTEGER"),
       col("evidence_path"),
+      col("green_definition_id"),
       col("status"),
     ],
   },
@@ -255,9 +263,16 @@ export const HARNESS_DB_TABLES: TableDef[] = [
     columns: [
       pk("test_case_id"),
       col("test_run_id"),
+      col("test_file"),
+      col("test_name"),
       col("plan_id"),
+      col("fr_id"),
+      col("artifact_id"),
+      col("kind"),
       col("oracle_id"),
       col("name"),
+      col("first_seen_at"),
+      col("last_seen_at"),
       col("status"),
       col("duration_ms", "REAL"),
       col("evidence_path"),
@@ -271,6 +286,10 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("test_run_id"),
       col("oracle_id"),
       col("status"),
+      col("duration_ms", "REAL"),
+      col("failure_digest"),
+      col("started_at"),
+      col("completed_at"),
       col("message"),
       col("evidence_path"),
     ],
@@ -278,11 +297,29 @@ export const HARNESS_DB_TABLES: TableDef[] = [
   {
     name: "test_artifact_edges",
     columns: [
-      pk("test_artifact_edge_id"),
+      pk("edge_id"),
+      col("test_artifact_edge_id"),
+      col("test_case_id"),
       col("test_run_id"),
+      col("artifact_id"),
+      col("plan_id"),
+      col("source_path"),
       col("artifact_path"),
       col("edge_kind"),
       col("oracle_id"),
+      col("evidence_path"),
+    ],
+  },
+  {
+    name: "test_flake_events",
+    columns: [
+      pk("flake_event_id"),
+      col("test_case_id"),
+      col("window"),
+      col("pass_count", "INTEGER"),
+      col("fail_count", "INTEGER"),
+      col("flake_score", "REAL"),
+      col("computed_at"),
       col("evidence_path"),
     ],
   },
@@ -433,6 +470,106 @@ export const HARNESS_DB_TABLES: TableDef[] = [
   },
   // --- §9.6 verification profile projection ---
   {
+    name: "impact_rules",
+    columns: [
+      pk("impact_rule_id"),
+      col("trigger_edge_kind"),
+      col("trigger_node_type"),
+      col("required_node_type"),
+      col("required_action"),
+      col("severity"),
+      col("gate"),
+      col("enabled", "INTEGER"),
+    ],
+  },
+  {
+    name: "impact_results",
+    columns: [
+      pk("impact_result_id"),
+      col("change_set_id"),
+      col("root_node_id"),
+      col("impacted_node_id"),
+      col("required_action"),
+      col("status"),
+      col("reason"),
+      col("evidence_path"),
+      col("computed_at"),
+    ],
+  },
+  {
+    name: "tool_runs",
+    columns: [
+      pk("tool_run_id"),
+      col("tool_name"),
+      col("tool_version"),
+      col("command"),
+      col("input_scope"),
+      col("exit_code", "INTEGER"),
+      col("started_at"),
+      col("completed_at"),
+      col("evidence_path"),
+    ],
+  },
+  {
+    name: "diagram_artifacts",
+    columns: [
+      pk("diagram_id"),
+      col("graph_snapshot_id"),
+      col("format"),
+      col("path"),
+      col("renderer"),
+      col("scope"),
+      col("created_at"),
+      col("evidence_path"),
+    ],
+  },
+  {
+    name: "graph_snapshots",
+    columns: [
+      pk("graph_snapshot_id"),
+      col("scope"),
+      col("node_count", "INTEGER"),
+      col("edge_count", "INTEGER"),
+      col("hash"),
+      col("created_at"),
+      col("source_digest"),
+    ],
+  },
+  {
+    name: "mcp_server_profiles",
+    columns: [
+      pk("mcp_profile_id"),
+      col("name"),
+      col("package_ref"),
+      col("source_url"),
+      col("transport"),
+      col("command"),
+      col("args_digest"),
+      col("allowed_tools"),
+      col("read_only", "INTEGER"),
+      col("requires_network", "INTEGER"),
+      col("requires_docker", "INTEGER"),
+      col("requires_auth", "INTEGER"),
+      col("risk_tier"),
+      col("enabled", "INTEGER"),
+      col("source"),
+      col("indexed_at"),
+    ],
+  },
+  {
+    name: "mcp_profile_triggers",
+    columns: [
+      pk("trigger_id"),
+      col("mcp_profile_id"),
+      col("signal"),
+      col("workflow"),
+      col("layer"),
+      col("gate"),
+      col("reason"),
+      col("enabled", "INTEGER"),
+    ],
+  },
+  {
     name: "verification_profiles",
     columns: [
       pk("verification_profile_id"),
@@ -495,6 +632,24 @@ export const HARNESS_DB_TABLES: TableDef[] = [
   },
   // --- §9.7 document export projection ---
   {
+    name: "document_export_profiles",
+    columns: [
+      pk("document_export_profile_id"),
+      col("name"),
+      col("source_doc_family"),
+      col("format"),
+      col("renderer"),
+      col("package_ref"),
+      col("source_url"),
+      col("built_in", "INTEGER"),
+      col("requires_package", "INTEGER"),
+      col("requires_d2", "INTEGER"),
+      col("enabled", "INTEGER"),
+      col("risk_tier"),
+      col("trigger_signals"),
+    ],
+  },
+  {
     name: "document_export_runs",
     columns: [
       pk("document_export_run_id"),
@@ -540,6 +695,19 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("created_at"),
       col("evidence_path"),
       col("stale_status"),
+    ],
+  },
+  {
+    name: "document_export_triggers",
+    columns: [
+      pk("trigger_id"),
+      col("document_export_profile_id"),
+      col("signal"),
+      col("workflow"),
+      col("layer"),
+      col("gate"),
+      col("reason"),
+      col("enabled", "INTEGER"),
     ],
   },
   // --- §9.8 skill evaluation projection (FR-L1-36, PLAN-L7-53) ---
@@ -722,6 +890,36 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     columns: ["to_node_id", "edge_kind"],
   },
   {
+    name: "idx_impact_change_status",
+    table: "impact_results",
+    columns: ["change_set_id", "status"],
+  },
+  {
+    name: "idx_tool_name_scope",
+    table: "tool_runs",
+    columns: ["tool_name", "input_scope"],
+  },
+  {
+    name: "idx_diagram_scope_format",
+    table: "diagram_artifacts",
+    columns: ["scope", "format"],
+  },
+  {
+    name: "idx_mcp_profile_name",
+    table: "mcp_server_profiles",
+    columns: ["name"],
+  },
+  {
+    name: "idx_mcp_triggers_signal",
+    table: "mcp_profile_triggers",
+    columns: ["signal", "workflow", "gate"],
+  },
+  {
+    name: "idx_mcp_runs_profile_plan",
+    table: "mcp_server_runs",
+    columns: ["mcp_profile_id", "plan_id", "started_at"],
+  },
+  {
     name: "idx_verification_profile_type",
     table: "verification_profiles",
     columns: ["profile_type", "enabled"],
@@ -750,6 +948,16 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     name: "idx_document_export_artifact_format",
     table: "document_export_artifacts",
     columns: ["format", "stale_status"],
+  },
+  {
+    name: "idx_document_export_profile_family",
+    table: "document_export_profiles",
+    columns: ["source_doc_family", "format", "enabled"],
+  },
+  {
+    name: "idx_document_export_triggers_signal",
+    table: "document_export_triggers",
+    columns: ["signal", "workflow", "gate"],
   },
   {
     name: "idx_roadmap_band_status",

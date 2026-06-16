@@ -19,6 +19,10 @@ generates:
     artifact_type: source_module
   - artifact_path: src/lint/drive-db-registration.ts
     artifact_type: source_module
+  - artifact_path: src/lint/db-projection-coverage.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/db-projection-ingestion.ts
+    artifact_type: source_module
   - artifact_path: src/lint/l7-completion.ts
     artifact_type: source_module
   - artifact_path: src/state-db/drive-registration.ts
@@ -28,6 +32,10 @@ generates:
   - artifact_path: tests/doctor.test.ts
     artifact_type: test_code
   - artifact_path: tests/drive-db-registration.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/db-projection-coverage.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/db-projection-ingestion.test.ts
     artifact_type: test_code
   - artifact_path: src/schema/harness-db.ts
     artifact_type: schema_migration
