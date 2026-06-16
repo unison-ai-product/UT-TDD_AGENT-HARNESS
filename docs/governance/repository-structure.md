@@ -13,6 +13,7 @@
 UT-TDD-agent-harness/
 ├── CLAUDE.md                     # Claude Code project context (正本ナビ)
 ├── AGENTS.md                     # Codex CLI project rules
+├── README.md                     # project overview / onboarding entrypoint
 ├── package.json                  # Node/Bun 依存 + scripts
 ├── tsconfig.json                 # TypeScript strict
 ├── bun.lock                      # Bun lockfile (tracked)

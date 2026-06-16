@@ -40,6 +40,55 @@ describe("U-TEAM-001 teamDefinitionSchema", () => {
     expect(parsed.serialization?.downstream_dependency).toBe(true);
     expect(parsed.members[1].serialize_after).toBe("se");
   });
+
+  it("model policy overrides を member schema で受理する", () => {
+    const parsed = teamDefinitionSchema.parse({
+      name: "t",
+      members: [
+        {
+          role: "se",
+          engine: "codex-se",
+          task: "implement",
+          difficulty: "complex",
+          model: "gpt-5.4",
+          effort: "high",
+        },
+      ],
+    });
+
+    expect(parsed.members[0]).toMatchObject({
+      difficulty: "complex",
+      model: "gpt-5.4",
+      effort: "high",
+    });
+    expect(() =>
+      teamDefinitionSchema.parse({
+        name: "t",
+        members: [{ role: "se", engine: "codex-se", task: "x", effort: "extreme" }],
+      }),
+    ).toThrow();
+  });
+
+  it("model override は provider model id か family alias のみ受理する", () => {
+    expect(() =>
+      teamDefinitionSchema.parse({
+        name: "t",
+        members: [{ role: "se", engine: "codex-se", task: "x", model: "typo" }],
+      }),
+    ).toThrow();
+    expect(() =>
+      teamDefinitionSchema.parse({
+        name: "t",
+        members: [{ role: "tl", engine: "pmo-sonnet", task: "x", model: "sonnet" }],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      teamDefinitionSchema.parse({
+        name: "t",
+        members: [{ role: "se", engine: "codex-se", task: "x", model: "codex-local" }],
+      }),
+    ).not.toThrow();
+  });
 });
 
 describe("U-TEAM-002 mustSerialize", () => {

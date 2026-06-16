@@ -17,6 +17,31 @@ export const VALID_TEAM_STRATEGIES = ["sequential", "parallel"] as const;
 export const teamStrategySchema = z.enum(VALID_TEAM_STRATEGIES);
 export type TeamStrategy = z.infer<typeof teamStrategySchema>;
 
+export const taskDifficultySchema = z.enum([
+  "trivial",
+  "simple",
+  "standard",
+  "complex",
+  "critical",
+]);
+export type TaskDifficulty = z.infer<typeof taskDifficultySchema>;
+
+export const reasoningEffortSchema = z.enum(["low", "medium", "high"]);
+export type ReasoningEffort = z.infer<typeof reasoningEffortSchema>;
+
+export const modelOverrideSchema = z
+  .string()
+  .min(1)
+  .refine(
+    (model) =>
+      /^(gpt-|claude-|codex-)/.test(model) || ["haiku", "sonnet", "opus", "local"].includes(model),
+    {
+      message:
+        "model must be a known provider model id or family alias: gpt-*, claude-*, codex-*, haiku, sonnet, opus, or local",
+    },
+  );
+export type ModelOverride = z.infer<typeof modelOverrideSchema>;
+
 /** 直列化 3 条件 (IMP-049)。1 つでも true なら直列化必須。 */
 export const serializationReasonSchema = z.object({
   file_conflict: z.boolean().default(false),
@@ -30,6 +55,9 @@ export const teamMemberSchema = z.object({
   /** 委譲先エンジン (codex-tl / codex-se / pmo-sonnet 等)。agent_kind として slot に記録。 */
   engine: z.string().min(1),
   task: z.string().min(1),
+  difficulty: taskDifficultySchema.optional(),
+  model: modelOverrideSchema.optional(),
+  effort: reasoningEffortSchema.optional(),
   /** この member を前段に直列化する理由 (parallel 戦略でも個別に直列化指定可)。 */
   serialize_after: z.string().optional(),
 });

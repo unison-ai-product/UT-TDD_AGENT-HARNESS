@@ -4,7 +4,7 @@
  * 薄い OS 別 entrypoint (scripts/ut-tdd, ut-tdd.ps1) が本 core を呼ぶ。
  * status / doctor / plan lint / vmodel lint / gate / runtime adapter を集約する。
  */
-import { execSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -80,14 +80,17 @@ import {
   rebuildHarnessDb,
 } from "./state-db/projection-writer";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
-import { loadTeamDefinition, validateTeamRun } from "./team/run";
+import { recommendTeamLaunch } from "./team/launch-policy";
+import { buildTeamRunPlan, executeTeamRunPlan, loadTeamDefinition } from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
 import { buildCommandCatalog } from "./workflow/contracts";
 import { evaluateAutomationReadiness } from "./workflow/readiness";
 
 function gitBranch(): string | null {
   try {
-    return execSync("git rev-parse --abbrev-ref HEAD", { encoding: "utf8" }).trim();
+    return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      encoding: "utf8",
+    }).trim();
   } catch {
     return null;
   }
@@ -95,7 +98,7 @@ function gitBranch(): string | null {
 
 function gitHead(): string | null {
   try {
-    return execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
   } catch {
     return null;
   }
@@ -169,12 +172,16 @@ function runSessionStartSideEffects(
   }
 }
 
-function adapterExecutionEnv(provider: AdapterProvider): NodeJS.ProcessEnv {
+function adapterExecutionEnv(
+  provider: AdapterProvider,
+  extraEnv: Record<string, string> = {},
+): NodeJS.ProcessEnv {
   if (provider === "claude") {
     return {
       ...process.env,
       HELIX_ALLOW_RAW_CLAUDE: "1",
       HELIX_RAW_CLAUDE_REASON: "ut-tdd-runtime-adapter-wrapper",
+      ...extraEnv,
     };
   }
   if (provider !== "codex") return process.env;
@@ -182,6 +189,7 @@ function adapterExecutionEnv(provider: AdapterProvider): NodeJS.ProcessEnv {
     ...process.env,
     HELIX_ALLOW_RAW_CODEX: "1",
     HELIX_RAW_CODEX_REASON: "ut-tdd-runtime-adapter-wrapper",
+    ...extraEnv,
   };
 }
 
@@ -1265,7 +1273,7 @@ function runtimeCommand(provider: AdapterProvider): Command {
         dispatch(startInput, deps, "SessionStart");
         const child = spawnSync(adapterCommand(provider, plan.command), plan.args, {
           stdio: "inherit",
-          env: adapterExecutionEnv(provider),
+          env: adapterExecutionEnv(provider, plan.env),
         });
         if (child.error) {
           // spawn 自体の失敗 (ENOENT 等) は status=null のまま沈黙するため理由を surface する (A-128 F-5 / IMP-130(d))。
@@ -1374,30 +1382,96 @@ program
 
 const team = program.command("team").description("team orchestration");
 team
-  .command("run")
-  .description("validate and plan a hybrid team run")
-  .requiredOption("--definition <path>", "team definition YAML")
+  .command("suggest")
+  .description("recommend whether a task should launch a Claude/Codex team")
+  .requiredOption("--task <text>", "task text to classify")
   .option("--mode <mode>", "override execution mode for tests")
   .option("--json", "JSON output")
   .action(
-    (opts: {
+    (opts: { task: string; mode?: ReturnType<typeof detectMode>["mode"]; json?: boolean }) => {
+      const mode = opts.mode ?? detectMode().mode;
+      const result = recommendTeamLaunch({ task: opts.task, mode });
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else {
+        process.stdout.write(
+          `team suggest: ${result.should_launch ? "launch" : "single-agent"} mode=${result.mode} difficulty=${result.difficulty} trigger=${result.trigger}\n`,
+        );
+        process.stdout.write(`  - ${result.reason}\n`);
+        if (result.definition) {
+          process.stdout.write(
+            `  - definition=${result.definition.name} members=${result.definition.members.length}\n`,
+          );
+        }
+      }
+    },
+  );
+team
+  .command("run")
+  .description("validate, plan, and optionally execute a hybrid team run")
+  .requiredOption("--definition <path>", "team definition YAML")
+  .option("--mode <mode>", "override execution mode for tests")
+  .option("--plan <id>", "PLAN id to attach to provider adapter metadata")
+  .option("--execute", "execute provider adapters; default is dry-run planning only")
+  .option("--json", "JSON output")
+  .action(
+    async (opts: {
       definition: string;
       mode?: ReturnType<typeof detectMode>["mode"];
+      plan?: string;
+      execute?: boolean;
       json?: boolean;
     }) => {
       try {
         const mode = opts.mode ?? detectMode().mode;
         const definition = loadTeamDefinition(opts.definition);
-        const result = validateTeamRun(definition, mode);
-        const output = { team: definition.name, strategy: definition.strategy, ...result };
-        if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+        const result = buildTeamRunPlan(definition, mode, {
+          execute: Boolean(opts.execute),
+          planId: opts.plan,
+        });
+        if (!opts.execute) {
+          if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+          else {
+            process.stdout.write(
+              `team ${definition.name}: ${result.ok ? "ok" : "failed"} mode=${mode} strategy=${result.strategy} dry-run\n`,
+            );
+            for (const member of result.members) {
+              process.stdout.write(
+                `  - ${member.role}:${member.engine} provider=${member.provider}${member.adapter ? ` command=${member.adapter.command}` : ""}\n`,
+              );
+            }
+            for (const m of result.messages) process.stdout.write(`  - ${m}\n`);
+          }
+          process.exitCode = result.ok ? 0 : 1;
+          return;
+        }
+        const execution = await executeTeamRunPlan(result, {
+          slots: nodeAgentSlotsDeps(process.cwd()),
+          runCommand: ({ command, args, provider, env }) =>
+            new Promise((resolve) => {
+              const child = spawn(command, args, {
+                cwd: process.cwd(),
+                env: adapterExecutionEnv(provider, env),
+                stdio: opts.json ? "ignore" : "inherit",
+                shell: false,
+              });
+              child.on("error", () => resolve({ exitCode: null }));
+              child.on("close", (code) => resolve({ exitCode: code }));
+            }),
+        });
+        if (opts.json) process.stdout.write(`${JSON.stringify(execution, null, 2)}\n`);
         else {
           process.stdout.write(
-            `team ${definition.name}: ${result.ok ? "ok" : "failed"} mode=${mode}\n`,
+            `team ${definition.name}: ${execution.ok ? "completed" : "failed"} strategy=${execution.strategy}\n`,
           );
-          for (const m of result.messages) process.stdout.write(`  - ${m}\n`);
+          for (const member of execution.executions) {
+            process.stdout.write(
+              `  - ${member.role}:${member.engine} status=${member.status} exit=${member.exit_code ?? "null"} slot=${member.slot_id ?? "-"}\n`,
+            );
+          }
+          for (const m of execution.messages) process.stdout.write(`  - ${m}\n`);
         }
-        process.exitCode = result.ok ? 0 : 1;
+        process.exitCode = execution.ok ? 0 : 1;
       } catch (e) {
         process.stderr.write(`${String(e)}\n`);
         process.exitCode = 1;

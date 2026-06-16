@@ -101,6 +101,73 @@ const CODEOWNERS_TARGET = join(".github", "CODEOWNERS");
 const STATE_PATH = join(".ut-tdd", "state", "setup.json");
 const BP_SCRIPT = join("scripts", "setup-branch-protection.sh");
 
+export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
+  "common/harness-check.yml": [
+    "name: harness-check",
+    "on:",
+    "  push:",
+    "    branches: [main]",
+    "  pull_request:",
+    "    branches: [main]",
+    "jobs:",
+    "  harness-check:",
+    "    runs-on: ubuntu-latest",
+    "    steps:",
+    "      - uses: actions/checkout@v4",
+    "      - uses: oven-sh/setup-bun@v2",
+    "      - run: bun install --frozen-lockfile",
+    "      - run: bun run typecheck",
+    "      - run: bun run test",
+    "",
+  ].join("\n"),
+  "common/commitlint.config.js":
+    "module.exports = { extends: ['@commitlint/config-conventional'] };\n",
+  "common/escalation-stale.yml": [
+    "name: escalation-stale",
+    "on:",
+    "  schedule:",
+    "    - cron: '0 0 * * 1'",
+    "jobs:",
+    "  noop:",
+    "    runs-on: ubuntu-latest",
+    "    steps:",
+    "      - run: echo escalation policy placeholder",
+    "",
+  ].join("\n"),
+  "common/recovery.md":
+    "# Recovery\n\nDescribe the broken invariant, evidence, and rollback path.\n",
+  "common/add-feature.md":
+    "# Add Feature\n\nDescribe objective, scope, tests, and review evidence.\n",
+  "common/PULL_REQUEST_TEMPLATE.md":
+    "## Summary\n\n## Verification\n\n## Review evidence\n\nCloses #\n",
+  "team/CODEOWNERS": [
+    "* {{TL_TEAM}}",
+    "/docs/ {{PO_TEAM}}",
+    "/src/ {{TL_TEAM}}",
+    "/tests/ {{QA_TEAM}}",
+    "",
+  ].join("\n"),
+  "team/setup-branch-protection.sh": [
+    "#!/usr/bin/env bash",
+    "set -euo pipefail",
+    'REPO="$' + '{1:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"',
+    'echo "Apply branch protection to $' + '{REPO}/main"',
+    'read -r -p "Continue? [y/N] " ans',
+    '[[ "$' + '{ans}" == "y" || "$' + '{ans}" == "Y" ]] || exit 1',
+    'gh api -X PUT "repos/$' + '{REPO}/branches/main/protection" \\',
+    '  -H "Accept: application/vnd.github+json" \\',
+    "  --input - <<'JSON'",
+    "{",
+    '  "required_status_checks": { "strict": true, "checks": [ { "context": "harness-check" } ] },',
+    '  "enforce_admins": true,',
+    '  "required_pull_request_reviews": { "required_approving_review_count": 1 },',
+    '  "restrictions": null',
+    "}",
+    "JSON",
+    "",
+  ].join("\n"),
+};
+
 /** A 種別 (共通) GeneratedFile + 対応テンプレ名。 */
 const COMMON_FILES: { template: string; file: GeneratedFile }[] = [
   {
@@ -440,7 +507,7 @@ function nodeConfirm(message: string): boolean {
 /** docs/templates/github/{common,team}/ 配下を TemplateSet (相対名→内容) に読み込む。 */
 export function loadTemplates(repoRoot: string): TemplateSet {
   const root = join(repoRoot, "docs", "templates", "github");
-  const set: TemplateSet = {};
+  const set: TemplateSet = { ...BUILTIN_GITHUB_TEMPLATES };
   const walk = (dir: string): void => {
     if (!existsSync(dir)) return;
     for (const entry of readdirSync(dir, { withFileTypes: true })) {

@@ -107,7 +107,7 @@ type TemplateSet = { [name: string]: string };     // テンプレ名 → 内容
 
 - 確定 phase: `.ut-tdd/state/setup.json` (gitignored runtime state、確定値の SSoT。毎回再推測しない安定化)。
 - 生成物の配置 (対象 repo): `.github/` (workflow / CODEOWNERS / ISSUE_TEMPLATE / PR template) / repo root or package.json (commitlint、L7 で config 最小化方針と突合) / `scripts/setup-branch-protection.sh`。
-- 本 repo のテンプレ置き場: `docs/templates/github/` (新設)。テンプレ実ファイル群は `PLAN-L7-03-setup-solo-team` (add-impl) が `artifact_type=template` として generates・tracking する (本書は型/契約まで)。
+- 本 repo のテンプレ置き場: `docs/templates/github/`。テンプレ実ファイル群は `PLAN-L7-03-setup-solo-team` (add-impl) が `artifact_type=template` として generates・tracking する。既存プロジェクトへ harness binary だけを持ち込む場合は対象 repo にこの docs tree が存在しないため、`loadTemplates` は `BUILTIN_GITHUB_TEMPLATES` を fallback として持つ (PLAN-L7-66)。対象 repo 側の `docs/templates/github/` が存在する場合はそれで built-in を上書きできる。
 - hook: **無し** (setup は CLI subcommand。hook は足さない)。
 
 ## §3 ③ 単体テスト設計 (pair) — L7-unit-test-design.md §1.7

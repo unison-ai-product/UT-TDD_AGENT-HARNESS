@@ -10,14 +10,25 @@ describe("runtime adapter plan", () => {
 
   it("builds dry-run codex command plan", () => {
     const plan = buildAdapterPlan(
-      { provider: "codex", role: "se", task: "implement", planId: "PLAN-L4-99-x" },
+      {
+        provider: "codex",
+        role: "se",
+        task: "implement",
+        planId: "PLAN-L4-99-x",
+        model: "gpt-5.3-codex",
+        effort: "medium",
+      },
       "hybrid",
     );
     expect(plan.available).toBe(true);
     expect(plan.dry_run).toBe(true);
     expect(plan.command).toBe("codex");
     expect(plan.args).toContain("exec");
+    expect(plan.args).toContain("-m");
+    expect(plan.args).toContain("gpt-5.3-codex");
     expect(plan.args).not.toContain("--plan-id");
+    expect(plan.model).toBe("gpt-5.3-codex");
+    expect(plan.effort).toBe("medium");
     expect(plan.plan_id).toBe("PLAN-L4-99-x");
   });
 
@@ -29,12 +40,30 @@ describe("runtime adapter plan", () => {
 
   it("builds claude command plan with Claude Code print-mode args", () => {
     const plan = buildAdapterPlan(
-      { provider: "claude", role: "pmo-sonnet", task: "review", planId: "PLAN-L4-99-x" },
+      {
+        provider: "claude",
+        role: "pmo-sonnet",
+        task: "review",
+        planId: "PLAN-L4-99-x",
+        model: "claude-sonnet-4-6",
+        effort: "medium",
+      },
       "hybrid",
     );
     expect(plan.available).toBe(true);
     expect(plan.command).toBe("claude");
-    expect(plan.args).toEqual(["--print", "-p", "review"]);
+    expect(plan.args).toEqual([
+      "--print",
+      "--model",
+      "claude-sonnet-4-6",
+      "--effort",
+      "medium",
+      "-p",
+      "review",
+    ]);
+    expect(plan.model).toBe("claude-sonnet-4-6");
+    expect(plan.effort).toBe("medium");
+    expect(plan.env).toEqual({ CLAUDE_CODE_EFFORT_LEVEL: "medium" });
     expect(plan.args).not.toContain("--role");
     expect(plan.args).not.toContain("--task");
     expect(plan.args).not.toContain("PLAN-L4-99-x");

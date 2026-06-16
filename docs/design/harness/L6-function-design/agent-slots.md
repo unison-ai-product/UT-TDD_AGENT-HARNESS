@@ -101,6 +101,9 @@ export const teamMemberSchema = z.object({
   role: roleSchema,             // src/schema/index.ts の共通 role enum
   engine: z.string().min(1),   // agent_kind として slot に記録
   task: z.string().min(1),
+  difficulty: taskDifficultySchema.optional(),  // 未指定時は task から決定論推定
+  model: modelOverrideSchema.optional(),        // gpt-*|claude-*|codex-*|haiku|sonnet|opus|local only
+  effort: reasoningEffortSchema.optional(),     // low|medium|high override
   serialize_after: z.string().optional(),  // 個別直列化指定
 });
 
@@ -114,6 +117,10 @@ export const teamDefinitionSchema = z.object({
 ```
 
 `teamDefinitionSchema` は `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml` (`hybrid` mode) の入力である。`strategy` のデフォルトを `sequential` にするのは HELIX `team_runner.py` と同じ安全側設計。
+
+**model/effort policy (FR-L1-37 landing)**: `difficulty` 未指定時は `selectTeamModel` が task keyword から `trivial|simple|standard|complex|critical` を決定論推定し、`recommendModelEffort` の `model_family` / `reasoning_effort` へ接続する。`model` / `effort` が明示された member は override として `model_selection.*_source="explicit"` に記録する。推挙は hidden prompt state ではなく `buildTeamRunPlan().members[].model_selection` と prompt header に出す。`model` override は `gpt-*|claude-*|codex-*|haiku|sonnet|opus|local` のみ zod で受理し、タイポを fail-close する。Claude は `--model` / `--effort` / `CLAUDE_CODE_EFFORT_LEVEL` に渡す。Codex は `-m` に model を渡し、effort は公式 surface を pin するまで evidence/prompt metadata に留める。
+
+**launch policy (`ut-tdd team suggest`)**: free-form task text から subagent/team 起動可否を決定論判定する。`trivial|simple` は単独実行を既定とし、`standard|complex|critical` は `hybrid` mode で cross-provider team を推奨する。`auth|database|doctor|migration|production|runtime|schema|security|subagent|windows` 等の risk term は `hybrid` mode で team 推奨を強制する。`claude-only` / `codex-only` / `standalone` では `should_launch=false` / `trigger="unavailable"` を返し、cross-provider review を暗黙代替しない。推奨結果は `TeamLaunchRecommendation` として `difficulty` / `trigger` / `reason` / `definition` を JSON に出し、`definition` は `teamDefinitionSchema` と同一 flow で `team run` に渡せる。`complex|critical` は reviewer を `serialize_after: se` にし、`critical` は `qa` verifier を追加する。
 
 ## §2.3 関数 signature / DbC
 
@@ -156,7 +163,7 @@ Type/pseudocode substance:
 
 ## §3 テスト指針 (V-pair)
 
-generates pair: `docs/test-design/harness/L7-unit-test-design.md` **§1.9 U-SLOT-001〜008** / **§1.10 U-TEAM-001〜002**。本書 §2.3 の全関数を被覆 (孤児 0)。trace は G7 で双方向凍結。
+generates pair: `docs/test-design/harness/L7-unit-test-design.md` **§1.9 U-SLOT-001〜008** / **§1.10 U-TEAM-001〜003**。本書 §2.3 の全関数を被覆 (孤児 0)。trace は G7 で双方向凍結。
 
 | U-ID | 対象関数 | 観点 |
 |------|----------|------|
@@ -170,11 +177,12 @@ generates pair: `docs/test-design/harness/L7-unit-test-design.md` **§1.9 U-SLOT
 | U-SLOT-008 | `releaseOldestGuardSlot` | 最古 FIFO release / `completed` / 非 guard 対象外 / 対象なし `null` / n 回で count 厳密 |
 | U-TEAM-001 | `teamDefinitionSchema` | default / 空 members reject / 不正 role/strategy reject / serialize_after + serialization 受理 |
 | U-TEAM-002 | `mustSerialize` | 3 条件 OR / `undefined → false` |
+| U-TEAM-003 | `recommendTeamLaunch` | trivial/simple は単独 / risk or standard+ は hybrid team / non-hybrid は unavailable |
 
 ## §4 carry / 次工程
 
 - **doctor surface** ✅ 実装済: `listStaleSlots`/`peakParallel` を `ut-tdd doctor` の `agent-slots —` 行に接続済 (stale 件数 + peak_parallel を運用可視化)。
 - **release 経路** ✅ 実装済 (IMP-106): `SubagentStop` hook → `releaseOldestGuardSlot` で通常 release、`SessionStart` → `sweepStaleGuardSlots` で取りこぼし回収。`.claude/settings.json` 3 hook 化。
-- **`ut-tdd team run` 配線**: `teamDefinitionSchema` を parser として `team run` サブコマンドに接続し、`fireSlot`/`releaseSlot` を member 実行前後に呼ぶ (IMP-050 Layer-2 実装続き)。
+- **`ut-tdd team run` 配線**: `teamDefinitionSchema` を parser として `team run` サブコマンドに接続する。`buildTeamRunPlan` は `members[]` を Claude/Codex 共通の launch plan (`provider`, `prompt`, `adapter.command/args`) に正規化し、dry-run をデフォルトにする。明示 `--execute` 時だけ `executeTeamRunPlan` が `fireSlot(slot_source="team_runner")` / provider adapter 実行 / `releaseSlot` を member 実行前後に呼ぶ。`strategy=parallel` は `max_parallel` ごとの batch 並列、`serialization` 3 条件が true の場合は sequential に縮退する (IMP-050 Layer-2 実装続き)。
 - **IMP-049 強制記録**: `mustSerialize` の結果を PLAN `§工程表` trace に機械記録する経路は stub 待ち。現状は `serialization` フィールドへの人手記述 + `mustSerialize` 純関数で判定。
 - **PLAN-REVERSE back-fill**: IMP-050 要件の L3 back-fill は PLAN-REVERSE-* で後続 (本機能設計は add-feature として bottom-up で先行実装済)。

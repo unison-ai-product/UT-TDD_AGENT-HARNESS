@@ -1,9 +1,12 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   applyBranchProtection,
   detectProjectScale,
   emitSetup,
+  loadTemplates,
   type ProjectScale,
   planSetup,
   recommendPhase,
@@ -182,6 +185,25 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(co).not.toContain("{{TL_TEAM}}");
     for (const v of wet.files.values()) {
       expect(v.toLowerCase()).not.toMatch(/(ghp_|github_pat_|token=|bearer )/);
+    }
+  });
+
+  it("U-SETUP-004b: loadTemplates has built-in fallback for existing repos without harness docs", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-setup-existing-"));
+    try {
+      const templates = loadTemplates(repo);
+      expect(templates["common/harness-check.yml"]).toContain("harness-check");
+      expect(templates["team/CODEOWNERS"]).toContain("{{TL_TEAM}}");
+      const deps = mockDeps({ repoRoot: repo, templates });
+      const plan = planSetup("0-B", {
+        dryRun: false,
+        teams: { tl: "@org/tl", qa: "@org/qa", po: "@org/po" },
+      });
+      const written = emitSetup(plan, templates, deps);
+      expect(written).toContain(join(".github", "CODEOWNERS"));
+      expect(deps.files.get(join(repo, ".github", "CODEOWNERS"))).toContain("@org/tl");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
     }
   });
 
