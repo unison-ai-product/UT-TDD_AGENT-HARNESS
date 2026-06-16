@@ -30,6 +30,8 @@ const input = (overrides: Partial<AssetDriftInput>): AssetDriftInput => ({
   ...overrides,
 });
 
+const legacyRuntimeName = ["he", "lix"].join("");
+
 describe("asset-drift lint (U-FR-L1-49)", () => {
   it("detects legacy source personal path residue in enrolled assets", () => {
     const r = analyzeAssetDrift(
@@ -41,15 +43,29 @@ describe("asset-drift lint (U-FR-L1-49)", () => {
     expect(r.violations.map((v) => v.kind)).toContain("legacy-source-path-residue");
   });
 
-  it("detects legacy helix command delegation residue", () => {
+  it("detects legacy runtime command delegation residue", () => {
     const r = analyzeAssetDrift(
       input({
-        assets: [agent("pdm-tech", "Run helix codex --role tl-advisor")],
+        assets: [agent("pdm-tech", `Run ${legacyRuntimeName} codex --role tl-advisor`)],
         allowlist: ["pdm-tech"],
       }),
     );
     expect(r.ok).toBe(false);
     expect(r.violations.map((v) => v.kind)).toContain("legacy-command-residue");
+  });
+
+  it("detects legacy runtime agent and env-name residue", () => {
+    const r = analyzeAssetDrift(
+      input({
+        assets: [
+          agent("pdm-tech", `Use pmo-${legacyRuntimeName}-explorer`),
+          skill("runtime-env", `${legacyRuntimeName.toUpperCase()}_CODEX_BIN=true`),
+        ],
+        allowlist: ["pdm-tech"],
+      }),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.violations.map((v) => v.kind)).toContain("legacy-runtime-name-residue");
   });
 
   it("detects empty docs-skills catalog source", () => {

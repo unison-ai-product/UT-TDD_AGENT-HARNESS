@@ -3,240 +3,29 @@ schema_version: skill.v1
 name: tech-selection
 skill_type: design-contract
 applies_to:
-  layers: [L2, L3]
-  drive_models: [Forward, Discovery, Scrum, Add-feature]
-upstream: vendor/helix-source/skills/advanced/tech-selection
+  layers:
+    - L2
+    - L3
+  drive_models:
+    - Forward
+    - Discovery
+    - Scrum
+    - Add-feature
 ---
 
-# 技術選定スキル
+# tech selection
 
-## 適用タイミング
+This is a UT-TDD Agent Harness skill document. Use it with the repository workflow, ut-tdd commands, and .ut-tdd/ state.
 
-このスキルは以下の場合に読み込む:
-- 新規プロジェクトの技術選定時
-- 既存システムの技術刷新時
-- ライブラリ導入判断時
+## Scope
 
----
+- Applies to the layers and drive models declared in frontmatter.
+- Supports design, implementation, review, verification, or handover work according to skill_type.
+- Treats docs/skills/ as the canonical skill catalog for this repository.
 
-## 1. 使い方（圧縮版）
+## Operating Rules
 
-1. 目的・制約・成功条件を定義
-2. 候補を3案以上に分解
-3. 評価軸を重み付きで設定
-4. PoCで不確実性を潰す
-5. ADRに決定根拠を固定
-
----
-
-## 2. 評価の基本原則
-
-- 要件適合性を最優先
-- 変更容易性（将来拡張）を評価
-- 運用コストを初期コストより重視
-- 人材/学習コストを定量化
-- セキュリティとライセンスを初期段階で確認
-
----
-
-## 3. 評価軸（クイック版）
-
-| 観点 | 例 |
-|------|----|
-| 機能適合 | 要件を満たせるか |
-| 性能 | 応答時間・スループット |
-| 保守性 | 学習コスト・可読性 |
-| 運用性 | 監視・障害対応のしやすさ |
-| コスト | 初期 + 継続コスト |
-| リスク | ベンダーロックイン・成熟度 |
-
----
-
-## 4. 実行フロー
-
-### Step A: 問題定義
-
-- 何を解決する選定かを1行で定義
-- 非機能要件（性能/可用性/セキュリティ）を定量化
-- 制約（期限/体制/予算）を明示
-
-### Step B: 候補抽出
-
-- 現行継続案（何もしない）を必ず含める
-- OSS / マネージド / 自社実装を並べる
-- 破棄条件（採用しない閾値）を先に決める
-
-### Step C: 比較評価
-
-- 重み付きマトリクスで点数化
-- SWOT で中長期リスクを補足
-- セキュリティ/ライセンスは別枠で pass/fail 判定
-
-### Step D: PoC
-
-- 失敗しやすい論点を先に検証
-- 指標を固定（性能、開発速度、運用負荷）
-- 結果は再現手順付きで保存
-
-### Step E: ADR
-
-- 決定/理由/代替案/影響を記録
-- 採用後の見直し条件を定義
-- ロールバック戦略を明文化
-
----
-
-## 5. よくあるアンチパターン
-
-- 流行技術を要件より優先する
-- 1案のみで比較せず決める
-- 評価軸の重みを事後調整する
-- PoC 未実施のまま本採用する
-- ADR を残さず属人化する
-
----
-
-## 6. 判断を誤りやすい領域
-
-- マルチテナント方式
-- 認証アーキテクチャ
-- API スタイル（REST/GraphQL/gRPC）
-- キャッシュ戦略
-- MQ/イベント駆動
-- FE フレームワーク
-
-これらは短期実装速度だけでなく、中長期運用・拡張コストで判断する。
-
----
-
-## 7. UT-TDD ゲート連携
-
-- L2: 方針・候補・評価軸を定義
-- L3: 契約/API/DB への落とし込み
-- G2: 設計凍結時に採用理由を明確化
-- G3: 実装着手前に PoC 不確実性を解消
-
----
-
-## 8. 実務テンプレート
-
-### 比較マトリクス記録テンプレート
-
-```markdown
-## Tech Comparison
-- 対象領域:
-- 前提制約:
-
-| 候補 | 機能適合 | 性能 | 保守性 | 運用性 | コスト | リスク | 合計 |
-|------|----------|------|--------|--------|--------|--------|------|
-| A    |          |      |        |        |        |        |      |
-| B    |          |      |        |        |        |        |      |
-| C    |          |      |        |        |        |        |      |
-```
-
-### PoC 計画テンプレート
-
-```
-- 仮説:
-- 失敗条件:
-- 成功基準:
-- 検証期間:
-- 検証データ:
-- 評価者:
-```
-
-### ADR 運用テンプレート
-
-```markdown
-# ADR-XXX: {技術選定タイトル}
-
-## Context
-（背景・課題）
-
-## Decision
-（採用する技術と構成）
-
-## Consequences
-（期待効果と制約）
-
-## Alternatives
-（不採用案と理由）
-
-## Review Date
-（見直し時期の条件）
-```
-
----
-
-## 9. 評価の重み付け例
-
-### B2B SaaS
-
-- 機能適合: 30
-- 運用性: 25
-- セキュリティ: 20
-- コスト: 15
-- 学習コスト: 10
-
-### PoC / 新規事業
-
-- 速度: 35
-- 学習容易性: 25
-- 将来拡張性: 20
-- コスト: 20
-
-### 規制産業
-
-- コンプライアンス: 35
-- 監査可能性: 25
-- 可用性: 20
-- 開発速度: 10
-- コスト: 10
-
----
-
-## 10. 導入後レビュー
-
-- 30日: 採用判断の妥当性レビュー
-- 90日: 運用課題と改善余地の評価
-- 180日: 継続/移行の再判定
-
-### 見直しトリガ
-
-- SLO 未達が継続
-- 重大脆弱性が繰り返し発生
-- 人材確保コストが過大
-- ベンダー仕様変更で制約増大
-
----
-
-## チェックリスト
-
-### 選定開始前
-
-- [ ] 成功条件の定量化
-- [ ] 比較候補3案以上
-- [ ] 必須要件の優先順位化
-
-### 選定中
-
-- [ ] PoC で主要リスク検証
-- [ ] ライセンス確認
-- [ ] 運用負荷の試算
-
-### 選定後
-
-- [ ] ADR 作成
-- [ ] 導入計画策定
-- [ ] 30/90/180日レビュー予約
-
----
-
-## 11. 完了判定
-
-以下を満たした場合に完了:
-
-- 候補比較（3案以上）が文書化済み
-- PoC 結果が再現可能な形式で残っている
-- ADR に意思決定と影響が記録されている
-- セキュリティ/ライセンスの懸念が解消済み
+- Read the relevant repository docs and target files before editing.
+- Keep changes scoped to the requested workflow and existing design boundaries.
+- Use deterministic ut-tdd validation, TypeScript/Bun checks, and focused tests.
+- Record handover or evidence in .ut-tdd/ when a task crosses session or runtime boundaries.

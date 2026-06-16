@@ -55,18 +55,23 @@ export function loadL7CompletionDocs(root = process.cwd()): L7CompletionDoc[] {
 }
 
 function classifyStaleL7Line(line: string): string | null {
-  if (/残は\s+L7\s+carry/i.test(line))
+  if (/\b(?:remaining|residual|open)\b.*\bL7\s+carry\b/i.test(line)) {
     return "L7 completion summary still says residual work remains";
-  if (/workflow orchestration module 本体は未実装/i.test(line)) {
+  }
+  if (/\bworkflow orchestration module\b.*\bnot implemented\b/i.test(line)) {
     return "workflow orchestration is still described as not implemented";
   }
-  if (/CI 配線は\s+L7\s+carry/i.test(line)) return "CI wiring is still described as L7 carry";
-  if (/未実装 module/i.test(line)) return "module boundary is still labeled as unimplemented";
-  if (/^\|\s+\*\*L7\.\d+\*\*\s+\|.*\|\s*(?:未|pending|not implemented)/i.test(line)) {
+  if (/\bCI wiring\b.*\bL7\s+carry\b/i.test(line)) {
+    return "CI wiring is still described as L7 carry";
+  }
+  if (/\bunimplemented module\b|\bmodule\b.*\bnot implemented\b/i.test(line)) {
+    return "module boundary is still labeled as unimplemented";
+  }
+  if (/^\|\s+\*\*L7\.\d+\*\*\s+\|.*\|\s*(?:pending|not implemented)/i.test(line)) {
     return "L7 WBS row still has an unimplemented status";
   }
   if (
-    /^\|\s+\*\*(workflow|session|telemetry|hook|review|skill|roster|cutover|adapter)\*\*\s+\|.*未実装/i.test(
+    /^\|\s+\*\*(workflow|session|telemetry|hook|review|skill|roster|cutover|adapter)\*\*\s+\|.*not implemented/i.test(
       line,
     )
   ) {
@@ -76,11 +81,11 @@ function classifyStaleL7Line(line: string): string | null {
     /^\|\s+`ut-tdd (review --uncommitted|skill suggest|cutover --to|asset` \/ `ut-tdd builder)/.test(
       line,
     ) &&
-    /\|\s*未(?:\s|\|)/.test(line)
+    /\|\s*(?:pending|not implemented)(?:\s|\|)/i.test(line)
   ) {
     return "implemented CLI surface is still marked unimplemented";
   }
-  if (/将来 (workflow|roster|skills?) module/i.test(line)) {
+  if (/future (workflow|roster|skills?) module/i.test(line)) {
     return "implemented L7 module slice is still described as future module work";
   }
   return null;
@@ -118,6 +123,6 @@ export function l7CompletionMessages(result: L7CompletionResult): string[] {
     .map((v) => `${v.path}:${v.line}`)
     .join(", ");
   return [
-    `l7-completion - violation: active design still contains stale L7 completion blockers ${result.violations.length}件 (${sample})`,
+    `l7-completion - violation: active design still contains stale L7 completion blockers ${result.violations.length} item(s) (${sample})`,
   ];
 }

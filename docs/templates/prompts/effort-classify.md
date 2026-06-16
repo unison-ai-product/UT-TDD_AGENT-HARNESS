@@ -1,78 +1,58 @@
-# UT-TDD task classify + estimate prompt (LLM 委譲用、§7.2 準拠)
+# UT-TDD Task Classification And Estimation Prompt
 
-> 移植元: vendor/helix-source/cli/templates/prompts/effort-classify.md (概念参照。旧 PLAN-003 W3a の Python port は ADR-001 (TS 再実装) で superseded)
-> 仕様: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md §7.1 / §7.2
-> rule-based path のみで判定不能 (confidence < 0.7 or boundary) の場合に LLM 委譲する。
-> 通常は src/task/classifier.ts + effort.ts (TS) の rule-based path が正本。
+Use this prompt only when the rule-based classifier needs an LLM fallback. The
+normal execution path is the TypeScript classifier under `src/task/`.
 
-## 入力
+## Input
 
 ```json
 {
   "task_text": "...",
-  "files": <int|null>,
-  "lines": <int|null>,
-  "api_changes": <bool>,
-  "db_changes": <bool>,
-  "plan_frontmatter": {"kind": "...", "drive": "..."}  // optional
+  "files": null,
+  "lines": null,
+  "api_changes": false,
+  "db_changes": false,
+  "plan_frontmatter": {
+    "kind": "...",
+    "drive": "..."
+  }
 }
 ```
 
-## 判定 1: 5 軸スコアリング (rule-based、vendor 互換)
+## Classification Rules
 
-1. **files** (ファイル数): 1-2 → 1pt / 3-5 → 2pt / 6-10 → 3pt / 11+ → 4pt
-2. **cross_module** (横断度): 単一 → 1pt / 横断 keyword あり → 2pt
-3. **spec_understanding** (仕様理解): バグ修正/typo/fix → 1pt / 既存拡張 → 2pt / 新規設計/ADR → 3pt
-4. **side_effect** (副作用): なし → 0pt / API・DB・endpoint → 2pt / migration → 4pt
-5. **test_complexity** (テスト): test/E2E/regression keyword → 2pt / 単純 → 1pt
+Return one `kind`, one `drive`, one `size`, one `complexity`, and one
+`capability_class`.
 
-合計 → complexity: 1-3 low / 4-7 medium / 8-12 high / 13+ xhigh
+- `kind`: `impl`, `design`, `poc`, `reverse`, `add-design`, `add-impl`,
+  `refactor`, `retrofit`, `recovery`, `troubleshoot`, or `research`.
+- `drive`: `be`, `fe`, `fullstack`, `db`, or `agent`.
+- `size`: `S`, `M`, `L`, or `XL`.
+- `complexity`: `low`, `medium`, `high`, or `xhigh`.
+- `capability_class`: `frontier-reviewer`, `worker`, or `fast-checker`.
 
-## 判定 2: kind / drive (§1.3 / §1.6)
+Escalate to `frontier-reviewer` when the task has production impact, security
+impact, external API assumptions, high uncertainty, large size, or cross-module
+design risk.
 
-- **kind** (11 種): impl / design / poc / reverse / add-design / add-impl / refactor / retrofit / recovery / troubleshoot / research
-- **drive** (9 種): be / fe / fullstack / db / agent / scrum / reverse / poc / troubleshoot
-- PLAN frontmatter があれば、その `kind` / `drive` を正本とする (regex 推定より優先)。
+## Estimation Rules
 
-## 判定 3: size 3 軸 max (§7.2)
+Use a simple PERT estimate:
 
-| 軸 | S | M | L |
-|----|---|---|---|
-| files | 1-3 | 4-10 | 11+ |
-| lines | ≤100 | 101-500 | 501+ |
-| api+db | none | one | both |
-
-3 軸の最大値を size とする。size=L かつ XL keyword (new module / cross-platform / security / production) が match すると XL (split_required=true)。
-
-## 判定 4: PERT 三点見積 (§7.2)
-
-```
-most_likely = base_hours[complexity]  # low=2 / medium=6 / high=12 / xhigh=24
-optimistic  = most_likely * 0.5
-pessimistic = most_likely * 2.0
-expected    = (optimistic + 4 * most_likely + pessimistic) / 6
+```text
+most_likely = low:2h, medium:6h, high:12h, xhigh:24h
+optimistic = most_likely * 0.5
+pessimistic = most_likely * 2
+expected = (optimistic + 4 * most_likely + pessimistic) / 6
+buffered = expected * risk_factor
 ```
 
-risk_factor:
-- 1.0 base
-- +0.2 per matched risk keyword (cross-platform / security / external API / migration / unclear requirement)
-- clamp [1.0, 2.0]
+Use `risk_factor` from `1.0` to `2.0` based on uncertainty, migration work,
+cross-platform work, security, external dependencies, and unclear requirements.
 
-buffered = expected * risk_factor、story_points = Fibonacci(buffered_hours)
+## Output
 
-## 判定 5: capability class escalation (§7.1)
-
-| 条件 | capability_class |
-|---|---|
-| production_impact / production keyword | frontier-reviewer |
-| risk_factor >= 1.6 | frontier-reviewer |
-| size in {L, XL} | frontier-reviewer |
-| confidence < 0.7 | frontier-reviewer |
-| kind in {design, poc, reverse, recovery} | frontier-reviewer |
-| kind in {impl, add-impl, refactor, retrofit, troubleshoot} | worker |
-| その他 (research / add-design / unknown) | fast-checker |
-
-## 出力形式 (JSON only、§7.2 contract 完全互換)
+Return JSON only:
 
 ```json
 {
@@ -104,9 +84,5 @@ buffered = expected * risk_factor、story_points = Fibonacci(buffered_hours)
 }
 ```
 
-## UT-TDD 注記
-
-- 本 prompt の LLM 委譲経路は **W3a (PLAN-003) 未配線**。skill_recommender + LLM dispatcher と統合する W3b (PLAN-004) で配線する。
-- rule-based path (src/task/、TS) のみで判定不能なケース (confidence < 0.7、境界 score、要件曖昧) の fallback として、本テンプレートを LLM に投げる想定。
-- 直接 legacy HELIX CLI / Codex SDK を呼ばず、UT-TDD harness 経由で委譲する (HELIX-style provider SDK fallback は §禁止事項)。
-- model 名 (gpt-X / claude-X) は本書では明示しない。capability class (frontier-reviewer / worker / fast-checker) で抽象化し、実モデル名は `.ut-tdd/teams/*.yaml` の local override に閉じ込める。
+Do not call raw provider CLIs or SDKs from this prompt. UT-TDD wrappers own
+runtime dispatch, audit evidence, and handover state.

@@ -1,8 +1,8 @@
 /**
  * git tracked top-level ⊆ repository-structure.md canonical の突合 (IMP-127、PLAN-REVERSE-41 塊B)。
  *
- * asset-drift (FR-L1-49) は HELIX path / legacy command 残渣のみで、tracked 集合が canonical ツリー
- * 定義に収まるかは見ない (A-128 F-1 で helix-process/ 等の tracked 化が policy 正本と矛盾した穴)。
+ * asset-drift (FR-L1-49) only checks legacy path / command residue. It does
+ * not ensure that the tracked top-level set fits the canonical tree.
  * 本 lint は git tracked ファイルの top-level path component が repository-structure.md に記載される
  * ことを検査し、NEW 未記載 top-level (canonical ツリー外の tracked 物) を fail-close する。
  *

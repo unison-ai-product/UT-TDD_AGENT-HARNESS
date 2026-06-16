@@ -3,187 +3,30 @@ schema_version: skill.v1
 name: agent-design
 skill_type: design-contract
 applies_to:
-  layers: [L2, L3, L4]
-  drive_models: [Forward, Add-feature, Discovery, Refactor]
-upstream: vendor/helix-source/skills/integration/agent-design
+  layers:
+    - L2
+    - L3
+    - L4
+  drive_models:
+    - Forward
+    - Add-feature
+    - Discovery
+    - Refactor
 ---
 
-# Agent Design スキル
+# agent design
 
-LLM 駆動 task / agent の設計判断を、判断詰まり時に開く詳細参照マップ。
-要素・フレーム・骨格・前段・後段を軸に、LLM 出力の構造化判断を収束させる。
+This is a UT-TDD Agent Harness skill document. Use it with the repository workflow, ut-tdd commands, and .ut-tdd/ state.
 
-**常時必読の教科書ではなく**、判断に詰まった時に該当 axis を開くための参照ノード。
+## Scope
 
-## トリガー
+- Applies to the layers and drive models declared in frontmatter.
+- Supports design, implementation, review, verification, or handover work according to skill_type.
+- Treats docs/skills/ as the canonical skill catalog for this repository.
 
-- LLM 出力構造を JSON Schema で固定するか自由文にするかで迷う
-- task をパッチ化するかワークフロー化するかで迷う
-- 骨格/思考指定/出力指定の責務分離が曖昧なとき
-- 前段で詰めるべき制約と後段で吸収すべき制約がわからないとき
-- agent の後段で正規化を盛りすぎていないか確認したい
+## Operating Rules
 
-## 適用タイミング
-
-- L1 要件で、LLM task の最小分解単位が不明確なとき
-- L2 ADR で出力骨格の方針を選べないとき
-- L3 契約化で schema / 制約を API / CONTRACT に落とし込むとき
-- L4 実装で前段 prompt / 後段処理責務を整理する前
-- G2/G3/G4 で adversarial-review 的に疑義を再点検するとき
-
-## 既存中核（温存）
-
-### 還元式
-
-すべての設計対象は以下に従う。
-
-```
-型 = 要素定義 + フレーム化
-```
-
-要素（要件粒度）とフレーム化（表現制約）を分けて再利用し、
-新規型は既存要素の再編成として生成する。
-
-### 3 レイヤー構造
-
-エージェント設計は 3 レイヤーで構成される。
-
-```
-レイヤー3: ワークフロー = タスクの連鎖（順序固定・不可逆）
-    ↓ 各ノードを開けると
-レイヤー2: タスク = フレームワークで構成（入出力契約付き処理単位）
-    ↓ 各タスクの内部を開けると
-レイヤー1: フレームワーク = 要素 + フレーム化
-    ↓ さらに分解すると
-レイヤー0: 要素・フレーム（最小単位）
-```
-
-### 縛りの階層
-
-完全な決定論化は不可。設計は以下の 3 階層で段階的に縛る。
-
-| 層 | 縛れるもの | 縛り方 | 性質 |
-|---|---|---|---|
-| 構造 | フィールド・型・骨格 | スキーマ・骨格定義 | 決定論 |
-| 表層 | 文字数・語彙・トーン・書式 | 特徴定義・制約記述 | 半決定論 |
-| 内容 | 文章の意味・表現 | Few-shot・思考指定 | 確率的誘導 |
-
-設計者の仕事は「どこまで確定し、どこを確率に委ねるか」を明示すること。
-
-### 判断軸 11 本（順序固定の連鎖）
-
-各判断軸は前提に依存する不可逆な連鎖で、原則この順で読む。
-
-| # | 判断軸 | 担当する判断 |
-|---|---|---|
-| 01 | 要素・フレーム定義 | 設計の最小単位を切り出す |
-| 02 | 骨格選択・新規定義 | 出力の構造的フレームワークを決める |
-| 03 | フレームワーク vs ワークフロー判定 | 順序制約の強度を決める |
-| 04 | タスクの 2 類型判定 | パッチ適用かフル生成かを決める |
-| 05 | 思考の指定 | システムプロンプトの思考側を設計する |
-| 06 | 出力の指定 | システムプロンプトの出力側を設計する |
-| 07 | スキーマ導出 | 骨格から機械可読スキーマを導出する |
-| 08 | 前段の生成制約 | 生成段階からスキーマを強制する |
-| 09 | 後段の責務分離 | 後段コードの責務を 3 つに限定する |
-| 10 | 縛りの階層配置 | 構造・表層・内容のどこを縛るか決める |
-| 11 | 効果と配置のメタデータ | 要素 × 配置で機能的効果を設計する |
-
-### 設計フロー全体像
-
-```
-タスク受領
-    ↓
-[01] 要素とフレームを定義
-    ↓
-[02] 骨格を選択 or 新規定義
-    ↓
-[03] フレームワークかワークフローかを判定
-    ├── フレームワーク → [05][06] へ
-    └── ワークフロー → タスク分解 → 各タスクで [04]
-        ↓
-[04] 各タスクの patch/full を判定
-    ↓
-[05] 思考の指定を書く
-    ↓
-[06] 出力の指定を書く
-    ↓
-[07] スキーマを導出
-    ↓
-[08] 前段で制約として注入
-    ↓
-[10] 縛りの階層を確認
-    ↓
-[11] 効果と配置を最終調整
-    ↓
-[09] 後段の責務を限定して実装
-```
-
-### 中核原則
-
-- **前段で絞り、後段は正規化に徹する**: 確率で足りる制約は前段、決定論が必要な制約は後段
-- **制御点は思考と出力の 2 軸**: 前段制御はこの 2 箇所を主軸にする
-- **骨格起点**: スキーマ、思考指定、後段検証はすべて骨格に寄せる
-- **自由型を認めない**: 自然言語は文法を持つため、完全自由はありえない
-- **スキルと型は直交資産**: スキルは判断、型は構造。混同しない
-
-### アンチパターン
-
-- 要素・フレームを定義せずに骨格やスキーマを書き始める
-- 骨格を定義せずに思考指定や出力指定を先に決める
-- 「自由型」を許容して前段を省略する
-- 後段でリトライ・フィルタ・再整形を増やし続ける
-- スキルと型を混同して管理する
-- 各 axis の順序を無視して適用する
-
-## レイヤー × axis 対応表
-
-| レイヤー / ゲート | 開く axis | 判断する内容 |
-|---|---|---|
-| L1 要件 | 01 | LLM task の最小単位 (要素 + フレーム) を切り出す |
-| L2 ADR | 02, 03 | 出力骨格 / framework vs workflow を決める |
-| L3 D-API / D-CONTRACT | 04, 07, 08 | task 類型 / 機械可読 schema 導出 / 前段制約を契約に載せる |
-| L4 実装 (LLM 呼び出し側) | 05, 06 | 思考指定 / 出力指定の system prompt 設計 |
-| L4 実装 (後段コード) | 09 | 後段の責務を 3 つに限定 (schema validation / 外部整合 / 境界例救済) |
-| L4 仕上げ | 10, 11 | 縛り階層 / 効果配置の最終調整 |
-| G2/G3/G4 レビュー | 全 axis | adversarial-review 観点として使う |
-
-## 用語
-
-| このスキル内の用語 | UT-TDD 対応 | 補足 |
-|---|---|---|
-| 骨格 | D-API / D-CONTRACT (JSON Schema / Zod) | 出力契約の正本は workflow/api-contract |
-| フレームワーク型 | 単一 task の structured output | task 内部の構造制約 |
-| ワークフロー型 | sprint / WBS の不可逆連鎖 | UT-TDD フェーズ進行と一致 |
-| **タスク (本スキル内)** | **LLM 処理単位** | **「WBS task」とは別概念。用語衝突に注意。** |
-| 前段 | LLM 生成段階 | 確率的領域 |
-| 後段 | LLM 出力後のコード処理 | 決定論的領域 |
-
-## 関連スキル境界
-
-| スキル | 守備範囲 | agent-design との関係 |
-|---|---|---|
-| `agent-teams` | 複数 agent の協調・分業 | **agent-design の上位**。個別 agent 設計後にチーム化する時 |
-| `agent-skills/spec-driven-development` | 仕様駆動開発 (全実装) | **上位概念**。agent-design は LLM agent 限定の structural design |
-| `workflow/api-contract` | D-API / D-CONTRACT の正本 | axis 07 が LLM 用 schema 導出方針を提供 |
-
-## 判断に迷ったときの引き方（逆引き）
-
-| 迷いのタイプ | 開く axis |
-|---|---|
-| LLM の入出力を分解したい | 01 |
-| 出力フォーマットをまず決めたい | 02 |
-| 単発処理か連鎖処理か迷う | 03 |
-| 「差分更新にするか全文更新か」迷う | 04 |
-| 思考能力の範囲・制限を決める | 05 |
-| 出力文字や構造を厳密にしたい | 06 |
-| 契約/スキーマへ確実化したい | 07 |
-| モデル側制約をどこまで課すか迷う | 08 |
-| 後段責務が増えすぎる | 09 |
-| 縛りを強める場所の設計 | 10 |
-| 出力効果の置き場所が迷う | 11 |
-
-### 上位スキルへ昇格するタイミング
-
-- **個別 agent 設計が複数 agent の協調運用に発展する** → `agent-teams`
-- **LLM 限定を超え、全実装の仕様記述へ拡張する** → `spec-driven-development`
-- **契約/スキーマを API 一般設計として確定する** → `workflow/api-contract`
+- Read the relevant repository docs and target files before editing.
+- Keep changes scoped to the requested workflow and existing design boundaries.
+- Use deterministic ut-tdd validation, TypeScript/Bun checks, and focused tests.
+- Record handover or evidence in .ut-tdd/ when a task crosses session or runtime boundaries.

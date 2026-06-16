@@ -2,47 +2,56 @@
 
 ## Active Runtime Boundary
 
-この repository の Claude Code runtime は UT-TDD Agent Harness として扱う。HELIX 由来の hook / subagent / memory / `.helix/` / `vendor/helix-source/` は historical / migration material であり、現在の runtime state や実行導線ではない。
+This repository's Claude Code runtime is part of UT-TDD Agent Harness.
+Legacy-source-derived hooks, subagents, memory, `legacy local state/`, and `vendor source snapshot`
+are historical or migration material. They are not current runtime state or
+execution paths.
 
-現在の正本導線は TypeScript/Bun の package-local 実装である。
+Current runtime boundary:
 
 - Runtime CLI: `ut-tdd`
 - Runtime state: `.ut-tdd/`
 - Core implementation: `src/`
 - Hook configuration: `.claude/settings.json`
 
-Claude Code が参照する優先順は `../CLAUDE.md` -> 本ファイル -> `../docs/governance/README.md` とする。Codex 向け project rules は `../AGENTS.md` を正本にする。
+Claude Code read priority is `../CLAUDE.md` -> this file ->
+`../docs/governance/README.md`. Codex project rules are in `../AGENTS.md`.
 
 ## Hooks
 
-`.claude/settings.json` で有効化する hook は package-local の UT-TDD command だけにする。個人 workspace や HELIX runtime path へ依存する hook は有効化しない。
+Active hooks in `.claude/settings.json` must call package-local UT-TDD commands
+only. Do not enable hooks that depend on personal legacy runtime paths.
 
-- `PreToolUse(Agent)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"`。subagent guard は fail-close。
-- `SessionStart`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start`。session log / stale sweep は fail-open。
-- `PostToolUse(Edit|Write|MultiEdit|Bash)`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use`。session log / drift advisory は fail-open。
-- `Stop`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary`。summary generation は fail-open。
-- `SubagentStop`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook subagent-stop`。agent-slot release は fail-open。
+- `PreToolUse(Agent)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"`
+- `SessionStart`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start`
+- `PostToolUse(Edit|Write|MultiEdit|Bash)`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use`
+- `Stop`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary`
+- `SubagentStop`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook subagent-stop`
 
-Hook が HELIX 由来仕様を参照する場合でも、実装は UT-TDD 所有パスへ移植済みであることを条件にする。移植前の資料は参照だけにとどめ、直接実行しない。
+Historical behavior may be referenced for migration, but implementation must
+live in UT-TDD-owned paths.
 
 ## PLAN Rules
 
-PLAN の起票・更新は `docs/plans/` の既存 PLAN を先に確認してから行う。重複 scope の新規 PLAN は作らず、既存 PLAN を拡張する。
+Before creating or updating PLAN files, inspect existing `docs/plans/` entries.
+Prefer extending an existing PLAN over creating an overlapping one.
 
-MUST:
+PLAN requirements:
 
-- `plan_id` は repository 内で一意にし、ファイル名と一致させる。
-- `kind`, `layer`, `status`, `dependencies`, `review_evidence` を現行 schema に合わせる。
-- 工程表 Step は `[並列]` または `[直列]` を明示する。
-- `kind=add-impl` は対応する Reverse PLAN を持たせる。
-- design / impl / add-* PLAN は用語更新を L0 用語集へ back-merge する。
-- PO へ確定 gate を求める前に review evidence を残す。
+- `plan_id` is unique and matches the filename.
+- `kind`, `layer`, `status`, `dependencies`, and `review_evidence` match the
+  current schema.
+- Schedule steps show parallel or serial mode.
+- `kind=add-impl` carries the required Reverse pairing.
+- Design / implementation / add-* changes update terminology and L0 glossary
+  where relevant.
+- Review evidence is recorded before asking for confirmation gates.
 
-検証は `ut-tdd plan lint`、対象 test、`ut-tdd doctor` を使う。`ut-tdd plan lint` が未対応の領域は、本ファイルと requirements の手動 binding rule を適用して evidence に残す。
+Use `ut-tdd plan lint`, targeted tests, and `ut-tdd doctor`.
 
 ## Runtime And Delegation
 
-現在の操作 path は UT-TDD wrapper 経由に統一する。
+Current command path:
 
 - Status: `ut-tdd status`
 - Doctor: `ut-tdd doctor`
@@ -51,30 +60,36 @@ MUST:
 - Claude delegation: `ut-tdd claude --role <role> --task "..."`
 - Team run: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`
 
-Runtime mode は `standalone` / `claude-only` / `codex-only` / `hybrid` のいずれかで扱う。
+Runtime mode is one of `standalone`, `claude-only`, `codex-only`, or `hybrid`.
+In `hybrid`, judgement gates should use a different runtime / model family when
+feasible. In single-runtime modes, record `intra_runtime_subagent` review
+evidence as the substitute.
 
-`hybrid` mode では、設計判断・gate 判定・review は可能な限り別 runtime / 別 model 系統の reviewer に通す。`claude-only` / `codex-only` / `standalone` では cross-runtime review の代替として `intra_runtime_subagent` review を evidence に残す。
-
-Raw `codex exec` / raw `claude` を通常運用の導線にしない。必要な場合は UT-TDD wrapper が session lifecycle / handover warning / audit evidence を記録できる形にしてから使う。
+Do not make raw `codex exec` or raw `claude` the normal path for UT-TDD work.
+Use UT-TDD wrappers so session lifecycle, handover warnings, and audit evidence
+can be recorded.
 
 ## Subagent Guard
 
-`PreToolUse(Agent)` の active hook は `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"` とする。実体は TypeScript の UT-TDD 実装であり、Windows native 環境でも動作することを前提にする。
+`PreToolUse(Agent)` uses:
 
-強制ルール:
+```bash
+bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"
+```
 
-1. `subagent_type` は allowlist のみ許可する。
-2. `model` frontmatter または明示 model がない Agent 呼び出しは block する。
-3. 指定 model は agent frontmatter の family と一致させる。
-4. bypass は `UT_TDD_ALLOW_RAW_AGENT=1` のみ。使用理由を会話または evidence に残す。
-5. stdin の JSON parse 失敗や検証不能状態は fail-close とする。
+Rules:
+
+1. `subagent_type` must be in the allowlist.
+2. Agent calls without a model are blocked.
+3. The requested model must match the agent frontmatter family.
+4. Bypass is allowed only with `UT_TDD_ALLOW_RAW_AGENT=1` and must leave
+   evidence.
+5. Invalid stdin JSON or unverifiable state fails closed.
 
 Allowlist:
 
 - `pmo-sonnet`
 - `pmo-haiku`
-- `pmo-helix-explorer`
-- `pmo-helix-scout`
 - `pmo-project-explorer`
 - `pmo-project-scout`
 - `pmo-tech-docs`
@@ -87,31 +102,33 @@ Allowlist:
 - `security-audit`
 - `qa-test`
 
-Allowlist 外の BE / DB / DevOps / general-purpose 作業は `ut-tdd codex --role <role> --task "..."` へ寄せる。
+Source-snapshot exploration is not an active Claude Code subagent route. Use
+project-focused agents for repository inspection and treat migration snapshots
+as read-only material.
 
 ## Guard Rules
 
-- 認証、認可、決済、PII、license、本番影響、destructive operation は人間確認なしに確定しない。
-- `vendor/helix-source/` は read-only の移植元 snapshot として扱う。
-- `.helix/` は active runtime state として扱わない。
-- Secret、PII、credential を docs / examples / audit evidence に書かない。
-- Hook failure は fail-close / fail-open の設計意図を確認し、黙って無視しない。
-- Windows / macOS / Linux の native 動作を第一級対象にする。WSL2 は任意の互換環境であり必須条件ではない。
+- Escalate before changing authentication, authorization, payments, PII,
+  licenses, production infrastructure, destructive operations, or external API
+  assumptions.
+- Treat `vendor source snapshot` as read-only migration source material.
+- Do not treat `legacy local state/` as active runtime state.
+- Do not write secrets, PII, or credentials into docs, examples, or audit
+  evidence.
+- Respect explicit fail-open / fail-close hook design; do not ignore hook
+  failures silently.
+- Native Windows behavior is first-class. WSL2 is optional compatibility, not a
+  required condition.
 
 ## Cutover Boundary
 
-UT-TDD は HELIX の設計概念を取り込むが、product code は TypeScript/Bun で再実装する。HELIX Python module や旧 command を現在の operating path として記述しない。
-
-Current cutover rule:
-
-- UT-TDD-owned execution and state are current.
-- HELIX materials are reference only.
-- `.ut-tdd/harness.db` is rebuildable generated state.
-- Migration work is documentation, command, state projection, and audit-feedback alignment.
+UT-TDD imports design concepts from previous framework but current product code is
+TypeScript/Bun. Do not describe legacy Python modules or legacy commands as the
+current operating path.
 
 Current cutover evidence:
 
-- `docs/migration/helix-to-ut-tdd-cutover-strategy.md`
+- migration strategy docs under `docs/migration/`
 - `docs/plans/PLAN-M-01-cutover-backfill.md`
 - `docs/plans/PLAN-L7-44-harness-db-master.md`
 - `tests/projection-writer.test.ts`
@@ -127,7 +144,8 @@ Current cutover evidence:
 
 ## UT-TDD Adapter Rule Markers
 
-This section is machine-checked by `rule-drift` so Codex and Claude adapters do not silently diverge.
+This section is machine-checked by `rule-drift` so Codex and Claude adapters do
+not silently diverge.
 
 - Shared project context: `../CLAUDE.md`
 - Codex project rules: `../AGENTS.md`

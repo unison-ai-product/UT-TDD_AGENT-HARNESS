@@ -3,186 +3,28 @@ schema_version: skill.v1
 name: threat-model
 skill_type: verification
 applies_to:
-  layers: [L2]
-  drive_models: [Forward, Add-feature, Reverse, Recovery]
-upstream: vendor/helix-source/skills/workflow/threat-model
+  layers:
+    - L2
+  drive_models:
+    - Forward
+    - Add-feature
+    - Reverse
+    - Recovery
 ---
 
-# 脅威モデルスキル
+# threat model
 
-## 適用タイミング
+This is a UT-TDD Agent Harness skill document. Use it with the repository workflow, ut-tdd commands, and .ut-tdd/ state.
 
-このスキルは以下の場合に読み込む:
-- L2 の G2 設計凍結前に脅威分析を行う時
-- 認証境界・外部連携・権限境界を定義する時
-- セキュリティ要件を設計書に固定する時
+## Scope
 
----
+- Applies to the layers and drive models declared in frontmatter.
+- Supports design, implementation, review, verification, or handover work according to skill_type.
+- Treats docs/skills/ as the canonical skill catalog for this repository.
 
-## 1. 目的と分担
+## Operating Rules
 
-- 本スキルは **G2 一回目の脅威モデル書** を作成する
-- `common/security` は G4/G6 の実装・RC段階で継続チェックを行う
-- 役割分担:
-  - `threat-model`: 脅威の同定、優先度付け、設計対策の固定
-  - `security`: 実装検証、設定検証、運用時の監査
-
----
-
-## 2. STRIDE 分析手順
-
-### 2.1 分析対象の分解
-
-1. 資産（データ、認証情報、業務機能）を列挙
-2. データフロー図（DFD）を作成
-3. 信頼境界（Trust Boundary）を明示
-4. 各要素に STRIDE を適用
-
-### 2.2 STRIDE の6カテゴリ
-
-| カテゴリ | 観点 | 代表例 |
-|----------|------|--------|
-| S: Spoofing | なりすまし | トークン偽造、セッション乗っ取り |
-| T: Tampering | 改ざん | パラメータ改ざん、保存データ改ざん |
-| R: Repudiation | 否認 | 操作ログ欠落、監査証跡不足 |
-| I: Information Disclosure | 情報漏えい | PII 露出、過剰エラーメッセージ |
-| D: Denial of Service | 可用性阻害 | レート制限欠如、リソース枯渇 |
-| E: Elevation of Privilege | 権限昇格 | RBAC不備、IDOR |
-
-### 2.3 実施ルール
-
-- 各カテゴリで最低 1 件以上の脅威を記載
-- 「該当なし」は原則不可。不可避時は根拠必須
-- 脅威ごとに対策と残留リスクを必ず記載
-
----
-
-## 3. DREAD リスクスコア
-
-DREAD は脅威の優先順位付けに利用する。
-
-| 指標 | 意味 | スコア範囲 |
-|------|------|-----------|
-| D: Damage | 影響度 | 1-10 |
-| R: Reproducibility | 再現容易性 | 1-10 |
-| E: Exploitability | 攻撃容易性 | 1-10 |
-| A: Affected Users | 影響ユーザー範囲 | 1-10 |
-| D: Discoverability | 発見容易性 | 1-10 |
-
-計算式:
-
-```
-DREAD 総合 = (D + R + E + A + D) / 5
-```
-
-判定目安:
-- High: 7.0 以上（G2時点で対策必須）
-- Medium: 4.0-6.9（実装計画に対策を組み込む）
-- Low: 3.9 以下（受容可、ただし根拠を記録）
-
----
-
-## 4. 脅威モデル書テンプレート
-
-```markdown
-# Threat Model
-
-## 0. 基本情報
-- 対象システム:
-- 作成日:
-- 作成者:
-- 対象リリース:
-
-## 1. 資産一覧
-| Asset ID | 資産 | 機密性 | 完全性 | 可用性 |
-|----------|------|--------|--------|--------|
-| A-01 | 顧客PII | High | High | Medium |
-
-## 2. 攻撃者モデル
-| Actor ID | 攻撃者 | 能力 | 動機 |
-|----------|--------|------|------|
-| T-01 | 外部攻撃者 | 中 | 情報窃取 |
-| T-02 | 内部不正者 | 高 | 不正操作 |
-
-## 3. STRIDE 分析
-| Threat ID | STRIDE | 対象 | 脅威内容 | 対策 | 残留リスク | DREAD |
-|-----------|--------|------|----------|------|------------|-------|
-| TH-01 | S | 認証API | JWT偽造 | 署名検証/短寿命化 | 低 | 8.2 |
-| TH-02 | T | 注文API | パラメータ改ざん | サーバ側再計算 | 低 | 7.4 |
-
-## 4. 高リスク対策計画
-| Threat ID | 優先度 | 実施時期 | 所有者 | 検証方法 |
-|-----------|--------|----------|--------|----------|
-| TH-01 | High | L4 .3 | @se | セキュリティテスト |
-
-## 5. 残留リスクと受容判断
-- 残留リスク:
-- 受容理由:
-- 承認者:
-```
-
-保存先: `docs/security/threat-model.md`
-
----
-
-## 5. データフロー図（DFD）の書き方
-
-### 必須要素
-
-- 外部エンティティ（ユーザー、外部API）
-- プロセス（API、バッチ、認証処理）
-- データストア（DB、キャッシュ、ログ基盤）
-- データフロー（矢印）
-- 信頼境界（外部/内部、VPC境界、権限境界）
-
-### 記述の最小ルール
-
-- 全ての認証トークン流路を図示
-- PII の保存/送信経路を図示
-- 外部API 呼び出し境界を図示
-- 境界を跨ぐフローに対して STRIDE を重点適用
-
-### テキスト例
-
-```
-[User] -> [Web App] -> [API Gateway] -> [Auth Service] -> [DB]
-                    -> [Order Service] -> [External Payment API]
-
-Trust Boundary 1: Internet / VPC
-Trust Boundary 2: Internal Services / External Payment
-```
-
----
-
-## 6. common/security との連携
-
-- G2（本スキル）で脅威モデルを一度確定する
-- G4（security）で実装対策の閉塞を確認する
-- G6（security）で RC 前に攻撃観点の再検証を実施する
-
-連携ルール:
-- 高リスク脅威は L4 タスクに必ず紐付ける
-- security の検証結果で新規脅威が出た場合、脅威モデル書へ追記する
-
----
-
-## 7. G2 通過チェックリスト
-
-```
-□ docs/security/ に脅威モデル書が存在
-□ STRIDE 6カテゴリすべてで脅威が1件以上
-□ High リスク脅威に対策・所有者・時期が記載
-□ データフロー図と信頼境界が明記
-□ 残留リスクの受容根拠が記載
-```
-
----
-
-## 8. 失敗パターン
-
-- STRIDE が一部カテゴリのみで網羅されていない
-- DREAD スコアはあるが優先順位が計画に反映されていない
-- 高リスク脅威に対策が未記載、または担当が未定
-- DFD に信頼境界が記載されていない
-
-上記がある場合、G2 は `failed` または `blocked` とする。
+- Read the relevant repository docs and target files before editing.
+- Keep changes scoped to the requested workflow and existing design boundaries.
+- Use deterministic ut-tdd validation, TypeScript/Bun checks, and focused tests.
+- Record handover or evidence in .ut-tdd/ when a task crosses session or runtime boundaries.

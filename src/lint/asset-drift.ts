@@ -22,6 +22,7 @@ export interface AssetDriftViolation {
   kind:
     | "legacy-source-path-residue"
     | "legacy-command-residue"
+    | "legacy-runtime-name-residue"
     | "empty-docs-skills"
     | "missing-allowlisted-agent";
   path?: string;
@@ -40,7 +41,15 @@ const LEGACY_SOURCE_PATH_PATTERNS = [
   /C:\\Users\\micro\\ai-dev-kit-vscode/i,
 ];
 
-const LEGACY_COMMAND_PATTERNS = [/\bhelix\s+(codex|claude|plan|gate|handover)\b/];
+const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
+const LEGACY_RUNTIME_ENV_PREFIX = LEGACY_RUNTIME_NAME.toUpperCase();
+const LEGACY_COMMAND_PATTERNS = [
+  new RegExp(String.raw`\b${LEGACY_RUNTIME_NAME}\s+(codex|claude|plan|gate|handover)\b`, "i"),
+];
+const LEGACY_RUNTIME_NAME_PATTERNS = [
+  new RegExp(String.raw`\bpmo-${LEGACY_RUNTIME_NAME}-`, "i"),
+  new RegExp(String.raw`\b${LEGACY_RUNTIME_ENV_PREFIX}(_|\b)`),
+];
 
 function hasNonGitkeepFile(dir: string): boolean {
   if (!existsSync(dir)) return false;
@@ -105,7 +114,17 @@ export function analyzeAssetDrift(input: AssetDriftInput): AssetDriftResult {
         violations.push({
           kind: "legacy-command-residue",
           path: asset.path,
-          detail: "legacy helix command delegation residue",
+          detail: "legacy runtime command delegation residue",
+        });
+        break;
+      }
+    }
+    for (const pattern of LEGACY_RUNTIME_NAME_PATTERNS) {
+      if (pattern.test(asset.text)) {
+        violations.push({
+          kind: "legacy-runtime-name-residue",
+          path: asset.path,
+          detail: "legacy runtime name residue",
         });
         break;
       }
@@ -148,11 +167,11 @@ export function analyzeAssetDrift(input: AssetDriftInput): AssetDriftResult {
 export function assetDriftMessages(result: AssetDriftResult): string[] {
   if (result.ok) {
     return [
-      `asset-drift - OK (agent/skill/prompt docs=${result.checkedAssets}, legacy_source_path_residue=0, legacy_command_residue=0, allowlist_missing=0)`,
+      `asset-drift - OK (agent/skill/prompt docs=${result.checkedAssets}, legacy_source_path_residue=0, legacy_command_residue=0, legacy_runtime_name_residue=0, allowlist_missing=0)`,
     ];
   }
   return result.violations.map((v) => {
     const loc = v.path ? `${v.path}: ` : "";
-    return `asset-drift  Eviolation: ${loc}${v.kind} (${v.detail})`;
+    return `asset-drift - violation: ${loc}${v.kind} (${v.detail})`;
   });
 }

@@ -3,278 +3,31 @@ schema_version: skill.v1
 name: project-management
 skill_type: process
 applies_to:
-  layers: [L1]
-  drive_models: [Forward, Add-feature, Discovery, Scrum, Reverse, Recovery, Incident]
-upstream: vendor/helix-source/skills/workflow/project-management
+  layers:
+    - L1
+  drive_models:
+    - Forward
+    - Add-feature
+    - Discovery
+    - Scrum
+    - Reverse
+    - Recovery
+    - Incident
 ---
 
-# プロジェクト管理スキル
+# project management
 
-ダッシュボードとカンバンテンプレートを用いた計画・進捗・報告の運用手順を提供。
+This is a UT-TDD Agent Harness skill document. Use it with the repository workflow, ut-tdd commands, and .ut-tdd/ state.
 
-## 適用タイミング
+## Scope
 
-- プロジェクト開始時
-- 進捗管理時
-- 報告作成時
+- Applies to the layers and drive models declared in frontmatter.
+- Supports design, implementation, review, verification, or handover work according to skill_type.
+- Treats docs/skills/ as the canonical skill catalog for this repository.
 
----
+## Operating Rules
 
-## 1. ダッシュボード式管理
-
-### プロジェクトダッシュボード構成
-
-```markdown
-# {{プロジェクト名}} ダッシュボード
-
-## ステータス: 順調 / 注意 / 危険
-
-## サマリー
-| 項目 | 値 |
-|------|-----|
-| 進捗率 | 45% |
-| 残日数 | 15日 |
-| 完了タスク | 23/51 |
-| ブロッカー | 2件 |
-
-## 今週のフォーカス
-1. API認証機能完成
-2. DB設計レビュー
-3. フロントエンド画面3つ
-
-## リスク・課題
-| # | 内容 | 影響度 | 対策 | 担当 |
-|---|------|--------|------|------|
-| 1 | 外部API仕様未確定 | 高 | 代替案準備 | xxx |
-
-## マイルストーン
-| MS | 内容 | 予定日 | 状態 |
-|----|------|--------|------|
-| M1 | MVP完成 | 2/15 | 順調 |
-| M2 | β版リリース | 3/1 | 注意 |
-```
-
-### タスクボード構成（Kanban）
-
-```
-┌─────────────┬─────────────┬─────────────┬─────────────┐
-│   Backlog   │    Todo     │  In Progress │    Done     │
-├─────────────┼─────────────┼─────────────┼─────────────┤
-│ ・タスクE   │ ・タスクC   │ ・タスクA    │ ・タスクX   │
-│ ・タスクF   │ ・タスクD   │ ・タスクB    │ ・タスクY   │
-│ ・タスクG   │             │              │ ・タスクZ   │
-└─────────────┴─────────────┴─────────────┴─────────────┘
-
-ルール:
-- In Progress は1人2タスクまで
-- 3日以上滞留したらブロッカー扱い
-- Done後にレビュー完了で Close
-```
-
----
-
-## 2. 作業ログドキュメント
-
-### 日次ログテンプレート
-
-```markdown
-# 作業ログ: {{日付}}
-
-## 実施内容
-- [x] タスクA: API認証実装（2h）
-- [x] タスクB: テストコード追加（1h）
-- [ ] タスクC: レビュー対応（途中）
-
-## 成果物
-- `src/auth/login.ts` 新規作成
-- `tests/auth.test.ts` 新規作成
-- PR #123 作成
-
-## 学び・気づき
-- JWTのリフレッシュトークンは7日が一般的
-- bcryptのcostは12以上推奨
-
-## ブロッカー・課題
-- [ ] Stripe APIの本番キー未発行（担当に依頼中）
-
-## 明日のTodo
-1. タスクC完了
-2. タスクD着手
-3. MTGで設計レビュー
-```
-
-### 週次ログテンプレート
-
-```markdown
-# 週次レポート: {{週}}
-
-## 今週の成果
-| タスク | 予定 | 実績 | 差異 |
-|--------|------|------|------|
-| API実装 | 5h | 6h | +1h（仕様変更対応） |
-| テスト | 3h | 3h | ±0 |
-| レビュー | 2h | 1h | -1h |
-| **計** | **10h** | **10h** | **±0** |
-
-## 来週の予定
-- [ ] ダッシュボード画面
-- [ ] ユーザー管理画面
-- [ ] E2Eテスト
-
-## 課題・リスク
-| 課題 | 影響 | 対策 | 期限 |
-|------|------|------|------|
-| 外部API遅延 | 中 | モック対応 | 来週水 |
-```
-
----
-
-## 3. ネクストアクション管理
-
-```markdown
-# ネクストアクション一覧
-
-## 今日中（Urgent）
-| # | アクション | 担当 | 期限 | 依存 |
-|---|-----------|------|------|------|
-| 1 | PR #123 レビュー | @担当A | 今日17時 | - |
-| 2 | 本番DBバックアップ | @担当B | 今日中 | - |
-
-## 今週中（This Week）
-| # | アクション | 担当 | 期限 | 依存 |
-|---|-----------|------|------|------|
-| 3 | API設計書更新 | @担当C | 金曜 | タスクA完了後 |
-| 4 | E2Eテスト追加 | @担当D | 金曜 | - |
-```
-
-### ネクストアクション抽出ルール
-
-```
-MTG/レビュー後に必ず抽出:
-
-1. 誰が（担当）
-2. 何を（具体的アクション）
-3. いつまでに（期限）
-4. 何待ちか（依存）
-
-NG例: 「検討する」「確認する」
-OK例: 「@担当Aが API 仕様書を水曜までにレビュー」
-```
-
----
-
-## 4. 進捗管理ルール
-
-### デイリースタンドアップ
-
-```
-時間: 毎日10:00（15分以内）
-形式: 同期 or 非同期
-
-各自報告:
-1. 昨日やったこと（30秒）
-2. 今日やること（30秒）
-3. ブロッカー（あれば）
-
-注意: 議論は別途。ここでは共有のみ。
-```
-
-### ステータス定義
-
-| ステータス | 定義 |
-|-----------|------|
-| Not Started | 未着手 |
-| In Progress | 作業中 |
-| In Review | レビュー中 |
-| Blocked | ブロック中 |
-| Done | 完了 |
-
-### ブロッカー対応
-
-```
-ブロッカー発生時:
-1. 即座にチャンネルで共有
-2. 担当者・期限・代替案を明記
-3. 日次で進捗確認
-4. 3日以上継続でエスカレーション
-```
-
----
-
-## 5. ドキュメント構成
-
-```
-docs/
-├── dashboard.md           # ダッシュボード
-├── design/                # 設計書
-│   ├── basic-design.md
-│   └── detail-design.md
-├── logs/                  # 作業ログ
-│   ├── 2025-01/
-│   │   └── 2025-01-20.md
-│   └── weekly/
-│       └── 2025-W03.md
-├── meeting/               # 議事録
-│   └── 2025-01-20-kickoff.md
-└── decisions/             # 意思決定記録（ADR）
-    └── 001-tech-stack.md
-```
-
-### 命名規則
-
-```
-日付: YYYY-MM-DD
-週次: YYYY-WXX
-会議: YYYY-MM-DD-{meeting-name}
-ADR: XXX-{decision-title}
-```
-
----
-
-## 6. マルチエージェント協調管理
-
-### Supervisor パターン（UT-TDD デフォルト）
-
-- PM（人間またはオーケストレーター）が全体を統括する
-- タスクを TL / SE / PG / FE に委譲する（`ut-tdd codex --role <role>`）
-- 結果をレビューして統合し、次フェーズへ進める
-
-### 状態共有メカニズム
-
-- `.ut-tdd/`: UT-TDD runtime state
-- `ut-tdd status`: 現在の進行状況確認
-- `ut-tdd handover`: セッション間引継ぎ
-
-### デッドロック検出
-
-- 全 track が `blocked` なら人間（PM）にエスカレーション
-- 同一タスクで 3 回 `failed` した場合は TL レビューを強制
-
----
-
-## チェックリスト
-
-### プロジェクト開始時
-
-```
-[ ] ダッシュボード作成
-[ ] タスクボード設定
-[ ] ログテンプレート準備
-[ ] 定例MTG設定
-```
-
-### 日次
-
-```
-[ ] 作業ログ記入
-[ ] ネクストアクション更新
-[ ] ブロッカー共有
-```
-
-### 週次
-
-```
-[ ] 週次レポート作成
-[ ] ダッシュボード更新
-[ ] 来週計画確定
-```
+- Read the relevant repository docs and target files before editing.
+- Keep changes scoped to the requested workflow and existing design boundaries.
+- Use deterministic ut-tdd validation, TypeScript/Bun checks, and focused tests.
+- Record handover or evidence in .ut-tdd/ when a task crosses session or runtime boundaries.

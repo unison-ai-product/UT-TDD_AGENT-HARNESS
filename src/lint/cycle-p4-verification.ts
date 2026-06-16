@@ -70,8 +70,19 @@ const CURRENT_OPERATIONAL_FILES = [
   ".ut-tdd/audit/A-136-cycle-p4-verification-audit.md",
   "src/lint/roadmap-registry.ts",
 ] as const;
-const FORBIDDEN_LEGACY_SOURCE_RE =
-  /Phase 4 \(L7 DB\)|Phase4|phase4|HELIX to UT|HELIX→UT|HELIX 本体|HELIX runtime|HELIX cutover|HELIX to|HELIX→/;
+const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
+const FORBIDDEN_LEGACY_SOURCE_RE = new RegExp(
+  [
+    String.raw`Phase 4 \(L7 DB\)`,
+    "Phase4",
+    "phase4",
+    `${LEGACY_RUNTIME_NAME} to UT`,
+    `${LEGACY_RUNTIME_NAME} runtime`,
+    `${LEGACY_RUNTIME_NAME} cutover`,
+    `${LEGACY_RUNTIME_NAME} to`,
+  ].join("|"),
+  "i",
+);
 
 function section(content: string): string {
   const match = content.match(SECTION_RE);

@@ -75,11 +75,11 @@ function deps(over: Partial<DoctorDeps> & { files?: Map<string, string> } = {}):
 }
 
 describe("checkHandover (doctor handover staleness surface)", () => {
-  it("CURRENT.json なし → 生成を促す message (ok は落とさない)", () => {
-    expect(checkHandover(deps())).toContain("CURRENT.json なし");
+  it("missing CURRENT.json prompts generation without failing", () => {
+    expect(checkHandover(deps())).toContain("CURRENT.json");
   });
 
-  it("fresh pointer → OK + active 表示", () => {
+  it("fresh pointer returns OK and includes active plan", () => {
     const files = new Map([
       [
         pointerPath,
@@ -97,22 +97,22 @@ describe("checkHandover (doctor handover staleness surface)", () => {
     expect(msg).toContain("PLAN-X");
   });
 
-  it("24h 超 → stale 警告", () => {
+  it("older than 24h returns stale warning", () => {
     const files = new Map([
       [pointerPath, JSON.stringify({ updated_at: "2026-06-01T00:00:00.000Z" })],
     ]);
     expect(checkHandover(deps({ files }))).toContain("stale");
   });
 
-  it("壊れ JSON → 再生成を促す (throw しない)", () => {
+  it("broken JSON prompts regeneration without throwing", () => {
     const files = new Map([[pointerPath, "{not json"]]);
     expect(() => checkHandover(deps({ files }))).not.toThrow();
-    expect(checkHandover(deps({ files }))).toContain("壊れて");
+    expect(checkHandover(deps({ files }))).toContain("CURRENT.json");
   });
 });
 
 describe("checkHandoverDisciplineMessages", () => {
-  it("fresh CURRENT 縺ｧ繧・current-plan/digest 縺ｨ active_plan 縺後★繧後※縺・ｌ縺ｰ drift 繧・surface", () => {
+  it("fresh CURRENT still surfaces drift when active_plan differs from current plan", () => {
     const files = new Map([
       [currentPlanPath, "PLAN-L5-08-harness-db-feedback\n2026-06-03T23:50:00.000Z"],
       [
@@ -143,7 +143,7 @@ describe("checkHandoverDisciplineMessages", () => {
     expect(messages.some((m) => m.includes("drift"))).toBe(true);
   });
 
-  it("runDoctor 縺・handover discipline 繧・warning-only 縺ｧ蜷梧凾 surface 縺吶ｋ", () => {
+  it("runDoctor surfaces handover discipline as warning-only", () => {
     const files = new Map([
       [currentPlanPath, "PLAN-L5-08-harness-db-feedback\n2026-06-03T23:50:00.000Z"],
       [
@@ -174,7 +174,7 @@ describe("checkAgentSlots (doctor agent-slots surface, IMP-050)", () => {
       now: () => now,
       readText: (p) => files.get(p) ?? null,
       writeText: () => {
-        throw new Error("doctor は read-only であるべき (writeText 呼び出し禁止)");
+        throw new Error("doctor slotDeps writeText must stay read-only");
       },
       newId: () => "x",
     };
@@ -193,17 +193,17 @@ describe("checkAgentSlots (doctor agent-slots surface, IMP-050)", () => {
     };
   }
 
-  it("記録なし → 記録なし message", () => {
-    expect(checkAgentSlots(slotDeps(null))).toContain("記録なし");
+  it("returns a no-record message when slot state is missing", () => {
+    expect(checkAgentSlots(slotDeps(null))).toContain("agent-slots");
   });
 
-  it("stale slot (5分超 release なし) → stale 警告", () => {
+  it("reports stale slots older than the release threshold", () => {
     const msg = checkAgentSlots(slotDeps([slot({ slot_id: "old" })])); // fired 00:00, now 00:10
     expect(msg).toContain("stale");
     expect(msg).toContain("old");
   });
 
-  it("released 済のみ → OK + peak 表示 (read-only、writeText を呼ばない)", () => {
+  it("reports OK and peak for released slots without writing state", () => {
     const msg = checkAgentSlots(
       slotDeps([slot({ status: "completed", released_at: "2026-06-04T00:02:00.000Z" })]),
     );
@@ -213,13 +213,13 @@ describe("checkAgentSlots (doctor agent-slots surface, IMP-050)", () => {
 });
 
 describe("runDoctor", () => {
-  it("ok=true で handover + agent-slots surface を含む (warning、ok を落とさない)", () => {
+  it("ok=true includes handover and agent-slots surfaces as warnings", () => {
     const r = runDoctor(deps());
     expect(r.ok).toBe(false);
     expect(r.messages.some((m) => m.includes("handover"))).toBe(true);
     expect(r.messages.some((m) => m.includes("agent-slots"))).toBe(true);
     expect(r.messages.some((m) => m.includes("verification group lint could not run"))).toBe(true);
-    // hard-fail lints も surface に出る (合成 repoRoot は docs 不在で skip note、wiring 存在を確認)
+    // Keep warning-only surfaces from masking hard-fail lint coverage.
     expect(r.messages.some((m) => m.includes("scrum-reverse"))).toBe(true);
     expect(r.messages.some((m) => m.includes("propagation"))).toBe(true);
     expect(r.messages.some((m) => m.includes("coding-rules"))).toBe(true);
@@ -262,15 +262,14 @@ describe("runDoctor", () => {
   it("surfaces dependency-drift and regression expansion instead of scaffold stub", () => {
     const r = runDoctor();
     expect(r.ok).toBe(true);
-    expect(r.messages.some((m) => m.includes("doctor: dependency-drift —"))).toBe(true);
-    expect(r.messages.some((m) => m.includes("doctor: regression-expansion —"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: dependency-drift"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: regression-expansion"))).toBe(true);
     expect(r.messages.some((m) => m.includes("scaffold stub"))).toBe(false);
   });
 
   it("surfaces roadmap-rollup as a hard gate summary line", () => {
     const r = runDoctor();
-    // roadmap.messages は runDoctor 内で `doctor: ${m}` へ変換されるため "doctor: " prefix を期待する。
-    const rollupLines = r.messages.filter((m) => m.startsWith("doctor: roadmap-rollup —"));
+    const rollupLines = r.messages.filter((m) => m.startsWith("doctor: roadmap-rollup"));
 
     expect(r.ok).toBe(true);
     expect(rollupLines).toHaveLength(1);
@@ -308,13 +307,7 @@ describe("runDoctor", () => {
     }
   });
 
-  // C-1A (PLAN-L7-52 C-1 option A): guardrail self-review invariant を warn-first advisory から
-  // hard doctor gate に昇格。same-model-self-review は concept §2.1.2.1 より review_kind=cross_agent
-  // (独立性を僭称するレビュー) のみ ok=false にする。intra_runtime_subagent は単体 runtime の正規
-  // fallback で同一モデルが許容されるため block しない。evidence_path は plan.file 固定・decision は
-  // allow 固定のため、本 gate で実発火するのは cross_agent same-model のみ (secret-evidence /
-  // human-required-without-evidence の発火は SSoT inspectGuardrailInvariants 側のテストで被覆 —
-  // 到達不能な経路を擬似テストして coincidental coverage を作らない)。
+  // Guardrail invariant helper for review evidence fixtures.
   function planWithReview(
     planId: string,
     reviewKind: string,
@@ -388,12 +381,11 @@ describe("runDoctor", () => {
     }
   });
 
-  it("permits intra_runtime_subagent same-model review (codex-only/standalone fallback, §2.1.2.1)", () => {
+  it("permits intra_runtime_subagent same-model review in single-runtime fallback", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-guardrail-intra-"));
     try {
       const planDir = join(root, "docs", "plans");
       mkdirSync(planDir, { recursive: true });
-      // PLAN-L7-51 と同型: codex-only の正規 review tier。同一モデルでも block しない。
       writeFileSync(
         join(planDir, "PLAN-TEST-04-intra.md"),
         planWithReview("PLAN-TEST-04-intra", "intra_runtime_subagent", "gpt-5.4", "gpt-5.4"),
@@ -413,8 +405,7 @@ describe("runDoctor", () => {
     try {
       const planDir = join(root, "docs", "plans");
       mkdirSync(planDir, { recursive: true });
-      // worker_model 欠落 → inspectGuardrailInvariants は両 model 明示時のみ same-model 発火
-      // なので violation にしない (model 欠落の presence 検査は checkReviewEvidence 側の責務)。
+      // Missing worker_model should not trigger a same-model violation.
       writeFileSync(
         join(planDir, "PLAN-TEST-03-partial.md"),
         [
@@ -463,11 +454,11 @@ describe("runDoctor", () => {
           "kind: impl",
           "---",
           "",
-          "## §4 DoD",
+          "## L4 DoD",
           "",
           "- [ ] verification evidence is not closed",
           "",
-          "## §5 Notes",
+          "## L5 Notes",
           "",
         ].join("\n"),
         "utf8",
@@ -525,8 +516,8 @@ describe("runDoctor", () => {
           "status: confirmed",
           "---",
           "",
-          "> 現状実装済は C2 のみ。残は L7 carry。",
-          "| `ut-tdd review --uncommitted` | FR-45 | 未 | doc-reviewer 召喚 |",
+          "> Current implementation only covers C2; remaining items are L7 carry.",
+          "| `ut-tdd review --uncommitted` | FR-45 | pending | doc-reviewer |",
         ].join("\n"),
         "utf8",
       );

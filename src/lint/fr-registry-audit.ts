@@ -1,7 +1,7 @@
 /**
  * FR registry audit lint (A-57 ledger).
  * 機能一覧 (L1 functional §1) の登録完全性・整合性を機械検証 = 漏れ監査の自動化。
- * 手動 audit (A-51 helix 47 doc 突合 / A-52 4 sub-doc / A-54 4 軸) の lint 化、
+ * Manual audit backfill from A-51/A-52/A-54 is enforced as lint.
  * PO 指摘「機能一覧の漏れ監査の自動化と登録の機構」反映。requirements §1.10.G.10。
  *
  * 漏れ 5 型 (doc 間 ID 整合で自動判定、外部 corpus 不要):

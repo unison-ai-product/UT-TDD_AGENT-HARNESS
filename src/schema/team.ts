@@ -1,7 +1,7 @@
 /**
  * team 定義 schema (`.ut-tdd/teams/*.yaml`) — Layer-2 オーケストレーション設定 (IMP-050/049)。
- * HELIX team_runner.py (strategy=sequential|parallel + members) を ADR-001 TS-native 再実装。
- * zod を single source とし実行時検証 + 型推論を 1 本化 (frontmatter schema と同方針)。
+ * ADR-001 準拠で TS-native に実装し、zod を single source として
+ * 実行時検証 + 型推論を 1 本化する (frontmatter schema と同方針)。
  *
  * 直列化 3 条件 (IMP-049): タスクを直列実行すべきか並列でよいかの機械判定キー。
  *   - file_conflict: 同一ファイルを書く (編集衝突)
@@ -12,7 +12,7 @@
 import { z } from "zod";
 import { roleSchema } from "./index";
 
-/** 実行戦略。default=sequential (HELIX team_runner と同じ安全側)。 */
+/** 実行戦略。default=sequential (安全側)。 */
 export const VALID_TEAM_STRATEGIES = ["sequential", "parallel"] as const;
 export const teamStrategySchema = z.enum(VALID_TEAM_STRATEGIES);
 export type TeamStrategy = z.infer<typeof teamStrategySchema>;

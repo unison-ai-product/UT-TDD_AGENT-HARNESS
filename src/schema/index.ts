@@ -219,7 +219,7 @@ export type OrchestrationMode = z.infer<typeof orchestrationModeSchema>;
 export const recommendedCommandV1Schema = z.object({
   schema_version: z.literal("v1"),
   command: z.string().refine((c) => c.startsWith("ut-tdd"), {
-    message: "command は ut-tdd 始まりのみ許可 (helix を含めば不可、ADR-001 / §7.8.2)",
+    message: "command must start with ut-tdd; legacy runtime commands are not allowed",
   }),
   args: z.record(z.string(), z.unknown()).default({}),
   safety: z.object({

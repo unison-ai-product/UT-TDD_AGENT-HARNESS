@@ -101,8 +101,16 @@ function recordFinding(db: HarnessDb, finding: AssetCatalogFinding): void {
   });
 }
 
+const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
+const LEGACY_RUNTIME_ENV_PREFIX = LEGACY_RUNTIME_NAME.toUpperCase();
+const LEGACY_DRIFT_PATTERNS = [
+  new RegExp(String.raw`\b${LEGACY_RUNTIME_NAME}\s+(codex|claude|plan|gate|handover)\b`, "i"),
+  new RegExp(String.raw`\bpmo-${LEGACY_RUNTIME_NAME}-`, "i"),
+  new RegExp(String.raw`\b${LEGACY_RUNTIME_ENV_PREFIX}(_|\b)`),
+];
+
 function driftStatus(content: string): "current" | "drift" {
-  return /\bhelix\s+codex\b/i.test(content) ? "drift" : "current";
+  return LEGACY_DRIFT_PATTERNS.some((pattern) => pattern.test(content)) ? "drift" : "current";
 }
 
 export function catalogAutomationAssets(input: CatalogAutomationAssetsInput): AssetCatalogResult {

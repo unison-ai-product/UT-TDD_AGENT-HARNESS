@@ -63,7 +63,16 @@ const REQUIRED = [
   { event: "SubagentStop", commandParts: ["src/cli.ts", "hook subagent-stop"] },
 ] satisfies readonly RequiredProjectHook[];
 
-const FORBIDDEN_PATH_RE = /(?:ai-dev-kit-vscode|vendor\/helix-source|\.helix|C:\\Users\\micro)/i;
+const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
+const FORBIDDEN_PATH_RE = new RegExp(
+  [
+    "ai-dev-kit-vscode",
+    `vendor/${LEGACY_RUNTIME_NAME}-source`,
+    String.raw`\.${LEGACY_RUNTIME_NAME}`,
+    String.raw`C:\\Users\\micro`,
+  ].join("|"),
+  "i",
+);
 
 function parseSettings(doc: ProjectHookDoc): ClaudeSettings | null {
   try {

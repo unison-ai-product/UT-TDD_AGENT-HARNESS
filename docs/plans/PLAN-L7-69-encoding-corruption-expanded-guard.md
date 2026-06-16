@@ -62,3 +62,14 @@ Detection signals:
 ## 4. Status
 
 Draft only. This PLAN is the ticket requested by the user; implementation is not part of PLAN-L7-68.
+
+## 5. Partial Implementation Note
+
+2026-06-16 cleanup implemented a narrower first slice for active internal assets:
+
+- `src/lint/asset-drift.ts` now rejects legacy runtime command/name residue in enrolled agent, skill, and prompt assets.
+- `src/assets/catalog.ts` uses the same drift signal for catalog findings.
+- `.claude/agents/*.md`, `docs/skills/*.md`, and `docs/templates/prompts/effort-classify.md` were normalized so active runtime assets are readable and current.
+- `tests/asset-drift.test.ts`, `tests/asset-catalog.test.ts`, and `tests/doctor.test.ts` cover the detector and doctor surfaces touched by this cleanup.
+
+The broader handover/audit JSON scope in sections 2-3 remains open for a later slice.

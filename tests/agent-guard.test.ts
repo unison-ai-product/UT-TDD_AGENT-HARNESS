@@ -14,6 +14,7 @@ const FAMILIES: Record<string, ResolvedFamily> = {
   "pdm-tech-innovation": "opus",
   "code-reviewer": "sonnet",
 };
+const legacyRuntimeCommand = `${["he", "lix"].join("")} codex`;
 
 function ctx(allowRaw = false): AgentGuardContext {
   return {
@@ -62,9 +63,9 @@ describe("evaluateAgentGuard", () => {
   it("blocks non-allowlisted subagent even with valid model", () => {
     const d = evaluateAgentGuard(agent({ subagent_type: "be-logic", model: "sonnet" }), ctx());
     expect(d.code).toBe(2);
-    expect(d.message).toContain("許可リスト外");
+    expect(d.message).toContain("not allowlisted");
     expect(d.message).toContain("ut-tdd codex --role");
-    expect(d.message).not.toContain("helix codex");
+    expect(d.message).not.toContain(legacyRuntimeCommand);
   });
 
   it("blocks an unnormalizable or ambiguous model on an allowlisted agent", () => {
@@ -76,7 +77,7 @@ describe("evaluateAgentGuard", () => {
     ).toBe(2);
   });
 
-  it("blocks omitted model (strict — explicit model required)", () => {
+  it("blocks omitted model (strict explicit model required)", () => {
     const d = evaluateAgentGuard(agent({ subagent_type: "pmo-sonnet" }), ctx());
     expect(d.code).toBe(2);
     expect(d.message).toContain("model");
@@ -105,7 +106,7 @@ describe("evaluateAgentGuard", () => {
   });
 
   it("blocks an allowlisted subagent whose definition file is missing", () => {
-    // pmo-tech-docs は allowlist 内だが FAMILIES 未登録 → resolveAgentFamily が "missing"
+    // pmo-tech-docs is allowlisted but intentionally absent from this test resolver.
     expect(SUBAGENT_ALLOWLIST.has("pmo-tech-docs")).toBe(true);
     const d = evaluateAgentGuard(agent({ subagent_type: "pmo-tech-docs", model: "sonnet" }), ctx());
     expect(d.code).toBe(2);

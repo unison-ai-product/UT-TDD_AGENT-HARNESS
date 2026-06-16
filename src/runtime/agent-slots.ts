@@ -1,8 +1,8 @@
 /**
  * agent-slots — Layer-2 実行オーケストレーションの状態機構 (IMP-050)。
  *
- * HELIX `cli/lib/agent_slots.py` (SQLite) を ADR-001 準拠で TS-native 再実装。
- * SQLite は持ち込まず `.ut-tdd/state/agent-slots.json` (Slot[]) を単一 state とする
+ * ADR-001 準拠で TS-native に実装し、`.ut-tdd/state/agent-slots.json` (Slot[])
+ * を単一 state とする
  * (Windows ネイティブ互換 + bun 単独実行、bash/python3 不要)。
  *
  * 用途: subagent / team member の fire→release を機械記録し、
@@ -43,7 +43,7 @@ export interface AgentSlotsDeps {
 
 /** .claude/CLAUDE.md「依存しないタスクは並列投入、default 上限 8」と整合。 */
 export const DEFAULT_MAX_PARALLEL = 8;
-/** HELIX list_stale_slots と同じ既定閾値 (分)。 */
+/** stale slot cleanup の既定閾値 (分)。 */
 export const DEFAULT_STALE_MINUTES = 5;
 
 const STATE_REL = join(".ut-tdd", "state", "agent-slots.json");

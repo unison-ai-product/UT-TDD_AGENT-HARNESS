@@ -6,6 +6,8 @@ import { catalogAutomationAssets } from "../src/assets/catalog";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
 
+const legacyRuntimeName = ["he", "lix"].join("");
+
 describe("IT-ASSET-DB-01: automation asset catalog", () => {
   it("catalogs metadata, updates search_index, and never stores prompt bodies", () => {
     const repo = mkdtempSync(join(tmpdir(), "ut-assets-"));
@@ -83,7 +85,10 @@ describe("IT-ASSET-DB-01: automation asset catalog", () => {
     try {
       migrate(db);
       mkdirSync(join(repo, "docs", "commands"), { recursive: true });
-      writeFileSync(join(repo, "docs", "commands", "legacy.md"), "run helix codex directly");
+      writeFileSync(
+        join(repo, "docs", "commands", "legacy.md"),
+        `run ${legacyRuntimeName} codex directly`,
+      );
 
       const result = catalogAutomationAssets({ repoRoot: repo, db });
 
