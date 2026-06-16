@@ -81,5 +81,5 @@ Added requirement bundle mapping:
 | FR-L1-46 | docs/design/harness/L6-function-design/agent-slots.md | `resolveRosterCapability` and guard integration contracts map subagent roster to capability/model class. | U-FR-L1-46 |
 | FR-L1-47 | docs/design/harness/L6-function-design/function-spec.md | `catalogSkills` and `recommendSkills` curate UT-TDD skill pack metadata and trigger candidates. | U-FR-L1-47 |
 | FR-L1-48 | docs/design/harness/L6-function-design/function-spec.md | `buildCommandCatalog` maps internal command assets to UT-TDD CLI subcommand contracts. | U-FR-L1-48 |
-| FR-L1-49 | docs/design/harness/L6-function-design/module-drift.md | `analyzeAssetDrift` detects HELIX path residue, empty docs-skills, and roster/guard drift. | U-FR-L1-49 |
+| FR-L1-49 | docs/design/harness/L6-function-design/module-drift.md | `analyzeAssetDrift` detects legacy source path/runtime residue, empty docs-skills, nested agent-memory residue, and roster/guard drift. | U-FR-L1-49 |
 | FR-L1-50 | docs/design/harness/L6-function-design/module-drift.md | `analyzeDddTddRules` detects DDD/TDD SSoT drift, domain-boundary imports, invariant oracle gaps, missing Red-first evidence, weak test oracles, and L8 GWT gaps. | U-FR-L1-50 |

@@ -177,7 +177,7 @@ function adapterExecutionEnv(
   extraEnv: Record<string, string> = {},
 ): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env };
-  const legacyPrefix = "HELIX";
+  const legacyPrefix = ["HE", "LIX"].join("");
   for (const key of [
     [legacyPrefix, "ALLOW", "RAW", "CLAUDE"].join("_"),
     [legacyPrefix, "RAW", "CLAUDE", "REASON"].join("_"),

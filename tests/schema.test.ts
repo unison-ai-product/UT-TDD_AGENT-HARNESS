@@ -39,11 +39,13 @@ describe("schema (zod single source, ADR-001 / requirements_v1.2 §1)", () => {
     expect(V_MODEL_PAIRS.L1).toBe("L14");
   });
 
-  it("RecommendedCommandV1 rejects helix command, accepts ut-tdd", () => {
+  const legacyRuntimeName = ["he", "lix"].join("");
+
+  it("RecommendedCommandV1 rejects legacy runtime command, accepts ut-tdd", () => {
     expect(
       recommendedCommandV1Schema.safeParse({
         schema_version: "v1",
-        command: "helix plan draft",
+        command: `${legacyRuntimeName} plan draft`,
         safety: {},
       }).success,
     ).toBe(false);

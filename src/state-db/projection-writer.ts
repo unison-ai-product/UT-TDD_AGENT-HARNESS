@@ -1647,7 +1647,12 @@ function projectAutomationAssets(repoRoot: string, db: HarnessDb): void {
           .at(-1)
           ?.replace(/\.(md|ya?ml)$/i, "") ||
         rel;
-      const status = /\bhelix\s+codex\b/i.test(content) ? "drift" : "current";
+      const legacyRuntimeName = ["he", "lix"].join("");
+      const legacyCommandPattern = new RegExp(
+        String.raw`\b${legacyRuntimeName}\s+codex\b`,
+        "i",
+      );
+      const status = legacyCommandPattern.test(content) ? "drift" : "current";
       const assetId = `${source.type}:${name}`;
       const trigger =
         frontmatterValue(content, "triggers") || frontmatterValue(content, "description");

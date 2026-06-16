@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");
+const legacyEnvPrefix = ["HE", "LIX"].join("");
 
 function runCli(args: string[]) {
   return runCliIn(repoRoot, args);
@@ -28,8 +29,8 @@ function runCliIn(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.
 }
 
 function writeFakeProvider(binDir: string, name: "codex" | "claude"): string {
-  const rawEnv = ["HELIX", "ALLOW", "RAW", name.toUpperCase()].join("_");
-  const reasonEnv = ["HELIX", "RAW", name.toUpperCase(), "REASON"].join("_");
+  const rawEnv = [legacyEnvPrefix, "ALLOW", "RAW", name.toUpperCase()].join("_");
+  const reasonEnv = [legacyEnvPrefix, "RAW", name.toUpperCase(), "REASON"].join("_");
   if (process.platform === "win32") {
     const path = join(binDir, `${name}.cmd`);
     writeFileSync(

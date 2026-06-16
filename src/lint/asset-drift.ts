@@ -61,22 +61,33 @@ function hasNonGitkeepFile(dir: string): boolean {
 function loadAssetFiles(repoRoot: string, relDir: string, type: AssetType): AssetDoc[] {
   const dir = join(repoRoot, relDir);
   if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-    .map((entry) => {
-      const path = join(dir, entry.name);
-      return {
-        path: relative(repoRoot, path).replace(/\\/g, "/"),
-        type,
-        id: basename(entry.name, ".md"),
-        text: readFileSync(path, "utf8"),
-      };
-    })
+  const pending = [dir];
+  const files: string[] = [];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (!current) continue;
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) {
+        pending.push(path);
+      } else if (entry.isFile() && entry.name.endsWith(".md")) {
+        files.push(path);
+      }
+    }
+  }
+  return files
+    .map((path) => ({
+      path: relative(repoRoot, path).replace(/\\/g, "/"),
+      type,
+      id: basename(path, ".md"),
+      text: readFileSync(path, "utf8"),
+    }))
     .sort((a, b) => a.path.localeCompare(b.path));
 }
 
 export function loadAssetDriftInput(repoRoot: string): AssetDriftInput {
   const agentRoot = join(repoRoot, ".claude", "agents");
+  const agentMemoryRoot = join(repoRoot, ".claude", "agent-memory");
   const skillRoot = join(repoRoot, "docs", "skills");
   const promptRoot = join(repoRoot, "docs", "templates", "prompts");
   const skillDocs = loadAssetFiles(repoRoot, join("docs", "skills"), "skill");
@@ -84,13 +95,16 @@ export function loadAssetDriftInput(repoRoot: string): AssetDriftInput {
   return {
     assets: [
       ...loadAssetFiles(repoRoot, join(".claude", "agents"), "agent"),
+      ...loadAssetFiles(repoRoot, join(".claude", "agent-memory"), "agent"),
       ...skillDocs,
       ...loadAssetFiles(repoRoot, join("docs", "templates", "prompts"), "prompt"),
     ],
     skillRootExists: existsSync(skillRoot),
     skillDocCount: skillDocs.length + extraSkillFiles,
     allowlist: [],
-    enrolledRootCount: [agentRoot, skillRoot, promptRoot].filter((p) => existsSync(p)).length,
+    enrolledRootCount: [agentRoot, agentMemoryRoot, skillRoot, promptRoot].filter((p) =>
+      existsSync(p),
+    ).length,
   };
 }
 

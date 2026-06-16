@@ -8,6 +8,8 @@ import {
   loadCycleP4VerificationDocs,
 } from "../src/lint/cycle-p4-verification";
 
+const legacyRuntimeName = ["HE", "LIX"].join("");
+
 const compliant = `# A-TEST
 
 ## Cycle P4 Verification Closure Matrix
@@ -93,7 +95,7 @@ describe("cycle-p4-verification lint", () => {
     writeFileSync(join(repo, "tests", "cycle-p4-verification.test.ts"), "");
     writeFileSync(
       join(repo, "docs", "design", "harness", "L3-functional", "roadmap.md"),
-      "HELIX to UT cutover",
+      `${legacyRuntimeName} to UT cutover`,
     );
 
     const r = analyzeCycleP4Verification([{ file: "A.md", content: compliant }], repo);

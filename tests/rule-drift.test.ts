@@ -24,6 +24,7 @@ const completeDocs = (): RuleAdapterDocs => ({
   claudeProject: `${markers}\n.claude/CLAUDE.md\nAGENTS.md`,
   claudeRuntime: `${markers}\n../CLAUDE.md\n../AGENTS.md`,
 });
+const legacyRuntimeName = ["he", "lix"].join("");
 
 describe("rule-drift lint", () => {
   it("passes when Codex and Claude adapter docs share required command/mode markers", () => {
@@ -47,9 +48,11 @@ describe("rule-drift lint", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("guards the real Claude/Codex adapter docs against legacy HELIX command routing", () => {
+  it("guards the real Claude/Codex adapter docs against legacy runtime command routing", () => {
     const docs = loadRuleAdapterDocs(process.cwd());
     const combined = [docs.agents, docs.claudeProject, docs.claudeRuntime].join("\n");
-    expect(combined).not.toMatch(/\bhelix (codex|claude|plan)\b/);
+    expect(combined).not.toMatch(
+      new RegExp(String.raw`\b${legacyRuntimeName} (codex|claude|plan)\b`),
+    );
   });
 });

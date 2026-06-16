@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   type AssetDoc,
   type AssetDriftInput,
@@ -95,5 +98,27 @@ describe("asset-drift lint (U-FR-L1-49)", () => {
     const r = analyzeAssetDrift(loaded);
     expect(r.violations).toEqual([]);
     expect(r.checkedAssets).toBeGreaterThan(0);
+  });
+
+  it("U-ASSETDRIFT-007: loads nested agent memory as an enrolled asset source", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-asset-drift-"));
+    try {
+      const memoryDir = join(root, ".claude", "agent-memory", `pmo-${legacyRuntimeName}-explorer`);
+      mkdirSync(memoryDir, { recursive: true });
+      writeFileSync(join(memoryDir, "MEMORY.md"), `Use pmo-${legacyRuntimeName}-explorer`);
+      mkdirSync(join(root, "docs", "skills"), { recursive: true });
+      writeFileSync(join(root, "docs", "skills", "review.md"), "name: review");
+
+      const r = analyzeAssetDrift(loadAssetDriftInput(root));
+
+      expect(r.ok).toBe(false);
+      expect(r.violations).toContainEqual({
+        kind: "legacy-runtime-name-residue",
+        path: `.claude/agent-memory/pmo-${legacyRuntimeName}-explorer/MEMORY.md`,
+        detail: "legacy runtime name residue",
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
