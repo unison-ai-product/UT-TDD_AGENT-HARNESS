@@ -21,7 +21,7 @@ function deps(): ProviderHandoverDeps & { files: Map<string, string> } {
 }
 
 describe("provider handover", () => {
-  it("builds a Claude to Codex package with sanitized context", () => {
+  it("U-PHOVER-002: builds a Claude to Codex mechanical package with sanitized context", () => {
     const pkg = buildProviderHandover(
       {
         from: "claude",
@@ -35,6 +35,7 @@ describe("provider handover", () => {
       NOW,
     );
     expect(pkg.schema_version).toBe("provider-handover.v1");
+    expect(pkg.handover_kind).toBe("mechanical");
     expect(pkg.from).toBe("claude");
     expect(pkg.to).toBe("codex");
     expect(JSON.stringify(pkg)).not.toContain("secret123");

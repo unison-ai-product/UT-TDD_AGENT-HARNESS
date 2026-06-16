@@ -12,6 +12,7 @@ export interface ProviderHandoverContext {
 
 export interface ProviderHandoverPackage {
   schema_version: "provider-handover.v1";
+  handover_kind: "mechanical";
   handover_id: string;
   from: ProviderRuntime;
   to: ProviderRuntime;
@@ -72,6 +73,7 @@ export function buildProviderHandover(
   const handoverId = `${timeToken}-${input.from}-to-${input.to}-${normalizeToken(plan)}`;
   return {
     schema_version: "provider-handover.v1",
+    handover_kind: "mechanical",
     handover_id: handoverId,
     from: input.from,
     to: input.to,

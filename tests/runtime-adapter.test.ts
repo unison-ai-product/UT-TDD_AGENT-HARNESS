@@ -1,5 +1,14 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildAdapterPlan, providerAvailable } from "../src/runtime/adapter";
+import {
+  buildAdapterPlan,
+  buildProviderInvocation,
+  isProviderCommandSpawnable,
+  providerAvailable,
+  resolveCodexNativeCommand,
+} from "../src/runtime/adapter";
 
 describe("runtime adapter plan", () => {
   it("checks provider availability by execution mode", () => {
@@ -68,5 +77,66 @@ describe("runtime adapter plan", () => {
     expect(plan.args).not.toContain("--task");
     expect(plan.args).not.toContain("PLAN-L4-99-x");
     expect(plan.plan_id).toBe("PLAN-L4-99-x");
+  });
+
+  it("U-ADAPTER-002: honors UT_TDD_CODEX_BIN before PATH lookup", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-adapter-codex-bin-"));
+    try {
+      const explicit = join(root, process.platform === "win32" ? "codex.cmd" : "codex");
+      writeFileSync(explicit, "");
+
+      expect(resolveCodexNativeCommand({ env: { UT_TDD_CODEX_BIN: explicit } })).toBe(explicit);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-ADAPTER-003: wraps Windows command scripts through canonical cmd.exe", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-adapter-cmd-"));
+    try {
+      const explicit = join(root, "codex.cmd");
+      writeFileSync(explicit, "");
+      const invocation = buildProviderInvocation({
+        provider: "codex",
+        command: "codex",
+        args: ["exec", "hello world"],
+        opts: {
+          platform: "win32",
+          env: {
+            SystemRoot: "C:\\Windows",
+            UT_TDD_CODEX_BIN: explicit,
+          },
+        },
+      });
+
+      expect(invocation.args).toEqual([]);
+      expect(invocation.shell).toBe(true);
+      expect(invocation.command).toContain(`"${explicit}"`);
+      expect(invocation.command).toContain('"hello world"');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-ADAPTER-004: treats provider availability as a successful capability probe", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-adapter-probe-"));
+    try {
+      const explicit = join(root, process.platform === "win32" ? "codex.cmd" : "codex");
+      writeFileSync(explicit, "");
+      const seen: string[] = [];
+      const ok = isProviderCommandSpawnable("codex", {
+        env: { UT_TDD_CODEX_BIN: explicit },
+        platform: process.platform,
+        runProbe: (command, args) => {
+          seen.push(`${command} ${args.join(" ")}`);
+          return { status: 0 };
+        },
+      });
+
+      expect(ok).toBe(true);
+      expect(seen[0]).toContain("--version");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

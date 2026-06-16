@@ -13,4 +13,32 @@ describe("detectMode (requirements_v1.2 §7.1)", () => {
     const d = detectMode();
     expect(d.mode === "hybrid").toBe(d.claude && d.codex);
   });
+
+  it("uses provider spawnability rather than command-name presence", () => {
+    const d = detectMode({
+      env: {},
+      isProviderSpawnable: (provider) => provider === "claude",
+    });
+
+    expect(d).toMatchObject({
+      mode: "claude-only",
+      claude: true,
+      codex: false,
+      availableRuntimes: ["claude"],
+      missingRuntimes: ["codex"],
+    });
+  });
+
+  it("keeps current runtime env signals available even without a successful probe", () => {
+    const d = detectMode({
+      env: { CODEX_HOME: "/tmp/codex" },
+      isProviderSpawnable: () => false,
+    });
+
+    expect(d).toMatchObject({
+      mode: "codex-only",
+      codex: true,
+      currentRuntime: "codex",
+    });
+  });
 });

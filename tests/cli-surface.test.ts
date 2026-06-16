@@ -27,22 +27,25 @@ function runCliIn(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.
   });
 }
 
-function writeFakeProvider(binDir: string, name: "codex" | "claude") {
+function writeFakeProvider(binDir: string, name: "codex" | "claude"): string {
+  const rawEnv = ["HELIX", "ALLOW", "RAW", name.toUpperCase()].join("_");
+  const reasonEnv = ["HELIX", "RAW", name.toUpperCase(), "REASON"].join("_");
   if (process.platform === "win32") {
+    const path = join(binDir, `${name}.cmd`);
     writeFileSync(
-      join(binDir, `${name}.cmd`),
+      path,
       [
         "@echo off",
         `echo noisy-${name}`,
-        `echo raw=%HELIX_ALLOW_RAW_${name.toUpperCase()}% > ${name}-env.txt`,
-        `echo reason=%HELIX_RAW_${name.toUpperCase()}_REASON% >> ${name}-env.txt`,
+        `echo raw=%${rawEnv}% > ${name}-env.txt`,
+        `echo reason=%${reasonEnv}% >> ${name}-env.txt`,
         `echo effort=%CLAUDE_CODE_EFFORT_LEVEL% >> ${name}-env.txt`,
         `echo args=%* >> ${name}-env.txt`,
         "exit /b 0",
         "",
       ].join("\r\n"),
     );
-    return;
+    return path;
   }
   const path = join(binDir, name);
   writeFileSync(
@@ -50,12 +53,13 @@ function writeFakeProvider(binDir: string, name: "codex" | "claude") {
     [
       "#!/bin/sh",
       `echo noisy-${name}`,
-      `printf "raw=%s\\nreason=%s\\neffort=%s\\nargs=%s\\n" "$HELIX_ALLOW_RAW_${name.toUpperCase()}" "$HELIX_RAW_${name.toUpperCase()}_REASON" "$CLAUDE_CODE_EFFORT_LEVEL" "$*" > ${name}-env.txt`,
+      `printf "raw=%s\\nreason=%s\\neffort=%s\\nargs=%s\\n" "$${rawEnv}" "$${reasonEnv}" "$CLAUDE_CODE_EFFORT_LEVEL" "$*" > ${name}-env.txt`,
       "exit 0",
       "",
     ].join("\n"),
   );
   chmodSync(path, 0o755);
+  return path;
 }
 
 describe("L7 CLI surface closure", () => {
@@ -212,8 +216,8 @@ describe("L7 CLI surface closure", () => {
     try {
       const binDir = join(root, "bin");
       mkdirSync(binDir);
-      writeFakeProvider(binDir, "codex");
-      writeFakeProvider(binDir, "claude");
+      const fakeCodex = writeFakeProvider(binDir, "codex");
+      const fakeClaude = writeFakeProvider(binDir, "claude");
       const teamPath = join(root, "team.yaml");
       writeFileSync(
         teamPath,
@@ -238,6 +242,8 @@ describe("L7 CLI surface closure", () => {
         ...process.env,
         PATH: testPath,
         Path: testPath,
+        UT_TDD_CODEX_BIN: fakeCodex,
+        UT_TDD_CLAUDE_BIN: fakeClaude,
       };
       const run = runCliIn(
         root,
@@ -269,11 +275,11 @@ describe("L7 CLI surface closure", () => {
       expect(slots.every((slot: { released_at: string | null }) => slot.released_at !== null)).toBe(
         true,
       );
-      expect(readFileSync(join(root, "codex-env.txt"), "utf8")).toContain("raw=1");
-      expect(readFileSync(join(root, "codex-env.txt"), "utf8")).toContain(
+      expect(readFileSync(join(root, "codex-env.txt"), "utf8")).not.toContain("raw=1");
+      expect(readFileSync(join(root, "codex-env.txt"), "utf8")).not.toContain(
         "reason=ut-tdd-runtime-adapter-wrapper",
       );
-      expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("raw=1");
+      expect(readFileSync(join(root, "claude-env.txt"), "utf8")).not.toContain("raw=1");
       expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("effort=medium");
     } finally {
       rmSync(root, { recursive: true, force: true });

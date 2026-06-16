@@ -28,37 +28,43 @@ function runCli(cwd: string, args: string[], input?: unknown, env?: NodeJS.Proce
   });
 }
 
-function writeFakeCodex(binDir: string): void {
+function writeFakeCodex(binDir: string): string {
   mkdirSync(binDir, { recursive: true });
+  const rawEnv = ["HELIX", "ALLOW", "RAW", "CODEX"].join("_");
+  const reasonEnv = ["HELIX", "RAW", "CODEX", "REASON"].join("_");
   if (process.platform === "win32") {
+    const path = join(binDir, "codex.cmd");
     writeFileSync(
-      join(binDir, "codex.cmd"),
-      "@echo off\r\necho %* > codex-called.txt\r\n(echo raw=%HELIX_ALLOW_RAW_CODEX%)> codex-env.txt\r\n(echo reason=%HELIX_RAW_CODEX_REASON%)>> codex-env.txt\r\nexit /b 0\r\n",
+      path,
+      `@echo off\r\necho %* > codex-called.txt\r\n(echo raw=%${rawEnv}%)> codex-env.txt\r\n(echo reason=%${reasonEnv}%)>> codex-env.txt\r\nexit /b 0\r\n`,
     );
-    return;
+    return path;
   }
   const path = join(binDir, "codex");
   writeFileSync(
     path,
-    '#!/bin/sh\necho "$@" > codex-called.txt\nprintf "raw=%s\\nreason=%s\\n" "$HELIX_ALLOW_RAW_CODEX" "$HELIX_RAW_CODEX_REASON" > codex-env.txt\nexit 0\n',
+    `#!/bin/sh\necho "$@" > codex-called.txt\nprintf "raw=%s\\nreason=%s\\n" "$${rawEnv}" "$${reasonEnv}" > codex-env.txt\nexit 0\n`,
   );
   chmodSync(path, 0o755);
+  return path;
 }
 
 function writeFakeClaude(binDir: string): string {
   mkdirSync(binDir, { recursive: true });
+  const rawEnv = ["HELIX", "ALLOW", "RAW", "CLAUDE"].join("_");
+  const reasonEnv = ["HELIX", "RAW", "CLAUDE", "REASON"].join("_");
   if (process.platform === "win32") {
     const path = join(binDir, "claude.cmd");
     writeFileSync(
       path,
-      "@echo off\r\necho %* > claude-called.txt\r\n(echo raw=%HELIX_ALLOW_RAW_CLAUDE%)> claude-env.txt\r\n(echo reason=%HELIX_RAW_CLAUDE_REASON%)>> claude-env.txt\r\nexit /b 0\r\n",
+      `@echo off\r\necho %* > claude-called.txt\r\n(echo raw=%${rawEnv}%)> claude-env.txt\r\n(echo reason=%${reasonEnv}%)>> claude-env.txt\r\nexit /b 0\r\n`,
     );
     return path;
   }
   const path = join(binDir, "claude");
   writeFileSync(
     path,
-    '#!/bin/sh\necho "$@" > claude-called.txt\nprintf "raw=%s\\nreason=%s\\n" "$HELIX_ALLOW_RAW_CLAUDE" "$HELIX_RAW_CLAUDE_REASON" > claude-env.txt\nexit 0\n',
+    `#!/bin/sh\necho "$@" > claude-called.txt\nprintf "raw=%s\\nreason=%s\\n" "$${rawEnv}" "$${reasonEnv}" > claude-env.txt\nexit 0\n`,
   );
   chmodSync(path, 0o755);
   return path;
@@ -127,8 +133,11 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-codex-wrapper-"));
     const binDir = join(cwd, "bin");
     try {
-      writeFakeCodex(binDir);
-      const env = { PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}` };
+      const fakeCodex = writeFakeCodex(binDir);
+      const env = {
+        PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
+        UT_TDD_CODEX_BIN: fakeCodex,
+      };
 
       expect(runCli(cwd, ["plan", "use", "PLAN-L4-13"]).status).toBe(0);
       const run = runCli(
@@ -148,8 +157,8 @@ describe("runtime hook entrypoints", () => {
       expect(digest.event_counts.tool_use).toBe(1);
       expect(readFileSync(join(cwd, "codex-called.txt"), "utf8")).toContain("exec");
       const envText = readFileSync(join(cwd, "codex-env.txt"), "utf8");
-      expect(envText).toContain("raw=1");
-      expect(envText).toContain("reason=ut-tdd-runtime-adapter-wrapper");
+      expect(envText).not.toContain("raw=1");
+      expect(envText).not.toContain("reason=ut-tdd-runtime-adapter-wrapper");
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -159,9 +168,12 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-codex-task-file-"));
     const binDir = join(cwd, "bin");
     try {
-      writeFakeCodex(binDir);
+      const fakeCodex = writeFakeCodex(binDir);
       writeFileSync(join(cwd, "task.md"), "implement from task file");
-      const env = { PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}` };
+      const env = {
+        PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
+        UT_TDD_CODEX_BIN: fakeCodex,
+      };
 
       expect(runCli(cwd, ["plan", "use", "PLAN-L4-13"]).status).toBe(0);
       const run = runCli(
@@ -181,8 +193,8 @@ describe("runtime hook entrypoints", () => {
       expect(called).toContain("exec");
       expect(called).toContain("implement from task file");
       const envText = readFileSync(join(cwd, "codex-env.txt"), "utf8");
-      expect(envText).toContain("raw=1");
-      expect(envText).toContain("reason=ut-tdd-runtime-adapter-wrapper");
+      expect(envText).not.toContain("raw=1");
+      expect(envText).not.toContain("reason=ut-tdd-runtime-adapter-wrapper");
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
@@ -192,8 +204,11 @@ describe("runtime hook entrypoints", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-codex-plan-"));
     const binDir = join(cwd, "bin");
     try {
-      writeFakeCodex(binDir);
-      const env = { PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}` };
+      const fakeCodex = writeFakeCodex(binDir);
+      const env = {
+        PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
+        UT_TDD_CODEX_BIN: fakeCodex,
+      };
 
       const run = runCli(
         cwd,
@@ -231,14 +246,14 @@ describe("runtime hook entrypoints", () => {
     }
   });
 
-  it("ut-tdd claude --execute records lifecycle and raw-guard wrapper env", () => {
+  it("ut-tdd claude --execute records lifecycle without legacy raw-wrapper env", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-claude-wrapper-"));
     const binDir = join(cwd, "bin");
     try {
       const fakeClaude = writeFakeClaude(binDir);
       const env = {
         PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
-        HELIX_CLAUDE_BIN: fakeClaude,
+        UT_TDD_CLAUDE_BIN: fakeClaude,
       };
 
       const run = runCli(
@@ -277,8 +292,8 @@ describe("runtime hook entrypoints", () => {
       expect(called).not.toContain("--plan-id");
       expect(called).not.toContain("PLAN-L4-78-adapter");
       const envText = readFileSync(join(cwd, "claude-env.txt"), "utf8");
-      expect(envText).toContain("raw=1");
-      expect(envText).toContain("reason=ut-tdd-runtime-adapter-wrapper");
+      expect(envText).not.toContain("raw=1");
+      expect(envText).not.toContain("reason=ut-tdd-runtime-adapter-wrapper");
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }

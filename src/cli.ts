@@ -5,7 +5,7 @@
  * status / doctor / plan lint / vmodel lint / gate / runtime adapter を集約する。
  */
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
@@ -41,7 +41,7 @@ import {
   verificationRecommendationMermaid,
 } from "./lint/verification-profile";
 import { lintPlanWithGate } from "./plan/lint";
-import { type AdapterProvider, buildAdapterPlan } from "./runtime/adapter";
+import { type AdapterProvider, buildAdapterPlan, buildProviderInvocation } from "./runtime/adapter";
 import {
   nodeAgentSlotsDeps,
   releaseOldestGuardSlot,
@@ -176,58 +176,20 @@ function adapterExecutionEnv(
   provider: AdapterProvider,
   extraEnv: Record<string, string> = {},
 ): NodeJS.ProcessEnv {
-  if (provider === "claude") {
-    return {
-      ...process.env,
-      HELIX_ALLOW_RAW_CLAUDE: "1",
-      HELIX_RAW_CLAUDE_REASON: "ut-tdd-runtime-adapter-wrapper",
-      ...extraEnv,
-    };
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  const legacyPrefix = "HELIX";
+  for (const key of [
+    [legacyPrefix, "ALLOW", "RAW", "CLAUDE"].join("_"),
+    [legacyPrefix, "RAW", "CLAUDE", "REASON"].join("_"),
+    [legacyPrefix, "ALLOW", "RAW", "CODEX"].join("_"),
+    [legacyPrefix, "RAW", "CODEX", "REASON"].join("_"),
+    [legacyPrefix, "CLAUDE", "BIN"].join("_"),
+    [legacyPrefix, "CODEX", "BIN"].join("_"),
+  ]) {
+    delete env[key];
   }
-  if (provider !== "codex") return process.env;
-  return {
-    ...process.env,
-    HELIX_ALLOW_RAW_CODEX: "1",
-    HELIX_RAW_CODEX_REASON: "ut-tdd-runtime-adapter-wrapper",
-    ...extraEnv,
-  };
-}
-
-function newestExisting(paths: string[]): string | null {
-  const existing = paths.filter((p) => existsSync(p));
-  return existing.length > 0 ? (existing.sort().at(-1) ?? null) : null;
-}
-
-function resolveClaudeNativeCommand(): string | null {
-  const explicit = process.env.HELIX_CLAUDE_BIN;
-  if (explicit && existsSync(explicit)) return explicit;
-
-  if (process.platform !== "win32") return null;
-
-  const appData =
-    process.env.APPDATA ??
-    (process.env.USERPROFILE ? join(process.env.USERPROFILE, "AppData", "Roaming") : null);
-  const appDataRoot = appData ? join(appData, "Claude", "claude-code") : null;
-  const appDataCandidates =
-    appDataRoot && existsSync(appDataRoot)
-      ? readdirSync(appDataRoot).map((version) => join(appDataRoot, version, "claude.exe"))
-      : [];
-
-  const home = process.env.USERPROFILE ?? process.env.HOME;
-  const vscodeRoot = home ? join(home, ".vscode", "extensions") : null;
-  const vscodeCandidates =
-    vscodeRoot && existsSync(vscodeRoot)
-      ? readdirSync(vscodeRoot)
-          .filter((name) => name.startsWith("anthropic.claude-code-"))
-          .map((name) => join(vscodeRoot, name, "resources", "native-binary", "claude.exe"))
-      : [];
-
-  return newestExisting([...appDataCandidates, ...vscodeCandidates]);
-}
-
-function adapterCommand(provider: AdapterProvider, plannedCommand: string): string {
-  if (provider !== "claude") return plannedCommand;
-  return resolveClaudeNativeCommand() ?? plannedCommand;
+  if (provider !== "claude" && provider !== "codex") return env;
+  return { ...env, ...extraEnv };
 }
 
 const program = new Command();
@@ -1271,9 +1233,15 @@ function runtimeCommand(provider: AdapterProvider): Command {
         };
         runSessionStartSideEffects(repoRoot, startInput, deps);
         dispatch(startInput, deps, "SessionStart");
-        const child = spawnSync(adapterCommand(provider, plan.command), plan.args, {
+        const invocation = buildProviderInvocation({
+          provider,
+          command: plan.command,
+          args: plan.args,
+        });
+        const child = spawnSync(invocation.command, invocation.args, {
           stdio: "inherit",
           env: adapterExecutionEnv(provider, plan.env),
+          shell: invocation.shell ?? false,
         });
         if (child.error) {
           // spawn 自体の失敗 (ENOENT 等) は status=null のまま沈黙するため理由を surface する (A-128 F-5 / IMP-130(d))。
@@ -1449,11 +1417,12 @@ team
           slots: nodeAgentSlotsDeps(process.cwd()),
           runCommand: ({ command, args, provider, env }) =>
             new Promise((resolve) => {
-              const child = spawn(command, args, {
+              const invocation = buildProviderInvocation({ provider, command, args });
+              const child = spawn(invocation.command, invocation.args, {
                 cwd: process.cwd(),
                 env: adapterExecutionEnv(provider, env),
                 stdio: opts.json ? "ignore" : "inherit",
-                shell: false,
+                shell: invocation.shell ?? false,
               });
               child.on("error", () => resolve({ exitCode: null }));
               child.on("close", (code) => resolve({ exitCode: code }));

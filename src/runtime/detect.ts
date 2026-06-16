@@ -1,10 +1,11 @@
 /**
- * 実行モード検出 (requirements_v1.2 §7.1 / 構想書 §2.1.1, §2.1.2.1).
- * CLI binary (PATH) + 現在 runtime の env signal で mode を確定する。
- * config ファイル (.claude / AGENTS.md) の有無は mode 切替の主信号にしない (§7.8 注記)。
+ * Runtime mode detection.
+ *
+ * Availability is based on spawnability, not only command-name presence on PATH.
+ * This keeps `hybrid` from becoming a false-positive when a wrapper exists but
+ * cannot actually launch the provider CLI.
  */
-import { execFileSync } from "node:child_process";
-import { join } from "node:path";
+import { type AdapterProvider, isProviderCommandSpawnable } from "./adapter";
 
 export type ExecutionMode = "standalone" | "claude-only" | "codex-only" | "hybrid";
 
@@ -12,35 +13,29 @@ export interface RuntimeDetection {
   mode: ExecutionMode;
   claude: boolean;
   codex: boolean;
-  /** いま自分がどの runtime 内で実行されているか (env signal) */
+  /** Runtime currently hosting this process, when an environment signal exists. */
   currentRuntime: "claude" | "codex" | null;
   availableRuntimes: string[];
   missingRuntimes: string[];
 }
 
-/** binary が PATH 上にあるか (where / which)。capability probe は将来追加。 */
-function onPath(bin: string): boolean {
-  // Windows の where.exe は %SystemRoot%\System32 から canonical に解決する。
-  // PATH 注入事故 (System32 欠落) で finder 自体が見つからず全 runtime を
-  // unavailable と誤検出する事故を防ぐ (A-128 F-7)。
-  const finder =
-    process.platform === "win32"
-      ? join(process.env.SystemRoot ?? "C:\\Windows", "System32", "where.exe")
-      : "which";
-  try {
-    execFileSync(finder, [bin], { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
+export interface RuntimeDetectionDeps {
+  env?: NodeJS.ProcessEnv;
+  isProviderSpawnable?: (provider: AdapterProvider, env: NodeJS.ProcessEnv) => boolean;
 }
 
-export function detectMode(): RuntimeDetection {
-  const inClaude = process.env.CLAUDECODE === "1";
-  const inCodex = Boolean(process.env.CODEX_SANDBOX ?? process.env.CODEX_HOME);
+function defaultProviderSpawnable(provider: AdapterProvider, env: NodeJS.ProcessEnv): boolean {
+  return isProviderCommandSpawnable(provider, { env });
+}
 
-  const claude = inClaude || onPath("claude");
-  const codex = inCodex || onPath("codex");
+export function detectMode(deps: RuntimeDetectionDeps = {}): RuntimeDetection {
+  const env = deps.env ?? process.env;
+  const providerSpawnable = deps.isProviderSpawnable ?? defaultProviderSpawnable;
+  const inClaude = env.CLAUDECODE === "1";
+  const inCodex = Boolean(env.CODEX_SANDBOX ?? env.CODEX_HOME);
+
+  const claude = inClaude || providerSpawnable("claude", env);
+  const codex = inCodex || providerSpawnable("codex", env);
 
   let mode: ExecutionMode;
   if (claude && codex) mode = "hybrid";

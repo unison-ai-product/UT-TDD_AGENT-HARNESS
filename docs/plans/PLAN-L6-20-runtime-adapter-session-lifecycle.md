@@ -49,7 +49,7 @@ dependencies:
 - `ut-tdd codex|claude --execute` は provider 起動前後に SessionStart / PostToolUse / Stop を記録し、handover warnings を surface する。
 - `--task-file` を追加し、Windows ARG_MAX 回避を provider 非依存の adapter contract にする。
 - `--plan` は harness metadata として保持し、provider CLI には `--plan-id` を渡さない。Codex は `codex exec <task>`、Claude は `claude --print -p <task>` を使う。
-- raw guard とは `HELIX_ALLOW_RAW_CODEX|CLAUDE=1` と `HELIX_RAW_*_REASON=ut-tdd-runtime-adapter-wrapper` で共存する。
+- Superseded by PLAN-L7-68: provider execution no longer emits legacy raw-wrapper env names. Native provider resolution and `UT_TDD_CODEX_BIN` / `UT_TDD_CLAUDE_BIN` are the supported execution path.
 
 ## §3.1 実装計画（情報源明記）
 
@@ -107,6 +107,6 @@ runtime hook entrypoint tests、runtime adapter tests、agent guard / rule drift
 
 - [x] L6 design と L7 unit test design に U-SLOG-007 / U-ADAPTER 変更が反映されている。
 - [x] shared CLI hook entrypoints が temp repo で PLAN digest を生成し、explicit `--plan` では `session_start` / `tool_use` / `session_end` を同一 plan_id に集計する。
-- [x] Codex / Claude adapter wrapper が lifecycle を記録し、raw guard env を付与する。
+- [x] Codex / Claude adapter wrapper records lifecycle. PLAN-L7-68 supersedes the earlier raw-guard-env behavior and strips legacy wrapper env names from provider execution.
 - [x] provider CLI に `--plan-id` を渡さない。
 - [x] typecheck / full vitest / doctor / review が green。

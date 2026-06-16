@@ -172,3 +172,9 @@
 | ID | observed_at | source | gap | automation_candidate | status | trace |
 |---|---|---|---|---|---|---|
 | **IMP-134** | 2026-06-12 | A-134 telemetry closure audit | Harness measurement has raw DB projections (`drive_runs`, `workflow_runs`, `hook_events`, `model_runs`, `findings`), but dynamic skill injection, drive-model skill injection, firing-rate metrics, retry/bottleneck analytics, trouble taxonomy, GitHub issue queue, and measurement-to-feedback loop are not operational. `skill_recommendations`, `skill_invocations`, `quality_signals`, `feedback_events`, `guardrail_decisions`, and `automation_assets` are currently 0 rows. Follow-up implementation requires metrics, DB projection, feedback loop, and issue queue work. | lint / policy / doc | observed | `.ut-tdd/audit/A-134-harness-telemetry-self-improvement-audit.md` / `docs/plans/PLAN-L3-05-harness-telemetry-closure.md` / `src/lint/telemetry-closure.ts` / doctor `telemetry-closure` |
+
+## A-137/A-138 backlog addendum (handover readability and provider dispatch, 2026-06-16)
+
+| ID | observed_at | source | gap | automation_candidate | status | trace |
+|---|---|---|---|---|---|---|
+| **IMP-135** | 2026-06-16 | A-137 provider-dispatch handover review | Latest handover and related skill/core reads exposed mojibake / unreadable text outside the current freeze-readability guard scope. Existing readability checks do not prove `docs/handover`, `.ut-tdd/audit`, or `.ut-tdd/handover/provider` are readable. | lint / policy / doc | observed | `docs/plans/PLAN-L7-69-encoding-corruption-expanded-guard.md` / future expanded `src/lint/readability.ts` + `tests/readability.test.ts` + doctor wiring |

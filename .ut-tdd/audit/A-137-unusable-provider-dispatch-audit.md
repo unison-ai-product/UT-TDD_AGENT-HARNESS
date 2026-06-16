@@ -2,55 +2,60 @@
 
 Date: 2026-06-16
 
-Goal: 使えない機能の洗い出しと対策 (enumerate features that are configured but not actually usable, and define countermeasures).
+Goal: enumerate provider-dispatch surfaces that were configured but not actually usable, then define and track countermeasures.
 
 ## Result
 
-The UT-TDD self-contained command surface (status / doctor / db / plan lint / review --uncommitted / task classify / skill suggest / team suggest / all dry-runs / cutover dry-run / handover) is usable. Single-provider `ut-tdd claude --execute` is usable because it resolves a native `claude.exe`. The unusable surface is **provider CLI dispatch that bypasses native resolution**: `ut-tdd codex --execute`, `ut-tdd team run --execute`, and therefore hybrid cross-review live dispatch. The root cause is a combination of (1) no native resolution for codex, (2) `team run` not routing through `adapterCommand`, and (3) a detection layer that reports `hybrid` from PATH name-presence alone with no capability probe, masking the breakage as a false-positive availability signal.
+The self-contained UT-TDD command surface remains usable: `status`, `doctor`, DB maintenance, plan lint, `review --uncommitted`, task classification, skill suggestion, dry-runs, cutover dry-run, and handover.
 
-## Verification Evidence (live, Windows, 2026-06-16)
+The broken surface was live provider dispatch:
 
-| Check | Command | Observed |
-|---|---|---|
-| Gate-review policy | `evaluateGateReview` (4 cases) | cross_agent required / same-model rejected / self-review rejected / missing-kind rejected — all as expected |
-| Cross-provider team plan | `team run --definition example-review-team.yaml --mode hybrid` (dry-run) | ok; se→codex, tl→claude on different providers |
-| Same-provider fail-close | `team run` on a claude-only team | failed: `requires worker and reviewer on different providers` |
-| Single claude dispatch | `ut-tdd claude --role tl --task "..." --execute` | **succeeded**, native `claude.exe` 2.1.138 returned the requested line |
-| Codex team dispatch | `team run --execute` (codex worker) | `exit_code=null` spawn failure; tl skipped `dependency failed: se` |
-| Claude team dispatch | `team run --execute` (claude worker) | `exit_code=null` spawn failure (team path bypasses native resolution) |
-| PATH resolution | `Get-Command -All claude/codex` | `claude`→`ai-dev-kit-vscode\cli\claude` (no native on PATH); `codex`→ dev-kit `codex.ps1` shadowing working `AppData\Roaming\npm\codex.cmd` (codex-cli 0.128.0) |
-| Native claude probe | APPDATA + VSCode ext scan | `%APPDATA%\Claude\claude-code\2.1.138\claude.exe` + VSCode ext 2.1.11/2.1.15/2.1.170 all present |
+- `ut-tdd codex --execute`
+- `ut-tdd team run --execute`
+- hybrid live cross-review dispatch
+
+Root causes:
+
+1. Codex had no native command resolution and could hit a broken wrapper on PATH.
+2. `team run --execute` spawned raw member adapter commands instead of the shared provider invocation path.
+3. Runtime detection treated command-name presence as provider availability, so `hybrid` could be a false positive.
+4. The adapter still carried HELIX wrapper env names even though UT-TDD provider dispatch must be product-owned.
 
 ## Unusable-Feature Matrix
 
-| # | Feature | Root cause | Evidence | Countermeasure | Status |
-|---|---|---|---|---|---|
-| 1 | `ut-tdd codex --execute` | `adapterCommand` resolves native only for claude (`src/cli.ts:229`); bare `codex` → broken dev-kit `codex.ps1` shadowing working `codex.cmd`; `.ps1`/`.cmd` not spawnable under `shell:false`. NOTE: codex currently has NO bin-override env at all | live spawn failure; `Get-Command -All codex` | Add `resolveCodexNativeCommand()` (prefer `AppData\Roaming\npm\codex.cmd`/`.exe`, honor a NEW `UT_TDD_CODEX_BIN` — not a HELIX_* name) + Windows `.cmd` spawn handling; extend `adapterCommand` to cover codex | open |
-| 2 | `ut-tdd team run --execute` | runner (`src/cli.ts:1452`) spawns raw `member.adapter.command` and never calls `adapterCommand`, so the native resolution used by the single-provider path is skipped; claude side also hits the broken PATH wrapper | live spawn failure on claude-worker team | Route `team run` `runCommand` through `adapterCommand(provider, command)` | open |
-| 3 | Hybrid cross-review live dispatch | depends on #2 (codex worker + claude reviewer); codex worker fails via #1, claude reviewer fails via #2 | sequential team `--execute`, both members failed/skipped | Resolved transitively by #1 + #2 | open |
-| 4 | `status`/`doctor` provider availability | `detectMode` (`src/runtime/detect.ts:21`) uses `where/which` name presence only; comment states "capability probe は将来追加"; counts broken dev-kit wrappers as available → false-positive `hybrid` | status reports `hybrid` while no provider is spawnable via team path | Add capability probe: mark a provider available only if the resolved binary launches (`<resolved-bin> --version` exit 0); fail-close the mode otherwise | open |
-| 5 | `resolveClaudeNativeCommand` version pick (minor) | `newestExisting` sorts full paths lexicographically across mixed dirs, so "newest" is not semver-newest (picks AppData 2.1.138 over VSCode 2.1.170) | code read `src/cli.ts:196-226` | Sort by parsed semver, scoped per source dir | open (low) |
-| 6 | HELIX_* runtime env debt | UT-TDD adapter still emits/reads HELIX_* env names: `HELIX_ALLOW_RAW_CLAUDE`/`HELIX_RAW_CLAUDE_REASON` (`src/cli.ts:182-183`), `HELIX_ALLOW_RAW_CODEX`/`HELIX_RAW_CODEX_REASON` (`:190-191`), `HELIX_CLAUDE_BIN` (`:202`). These exist only to satisfy the broken dev-kit (HELIX) wrappers; native binaries ignore them. Inconsistent with `UT_TDD_ALLOW_RAW_AGENT` (agent-guard). HELIX is reference-only (vendor snapshot), not current runtime | `grep HELIX src` | Rename `HELIX_CLAUDE_BIN`→`UT_TDD_CLAUDE_BIN`; drop `HELIX_ALLOW_RAW_*`/`_REASON` injection once #1/#2 land native resolution (they only mattered for the dev-kit wrapper path). Do NOT add any new HELIX_* name | open |
-
-## Countermeasure Sequencing (dependency order)
-
-1. #2 — route `team run` through `adapterCommand` (small; restores claude side of team/cross-review).
-2. #1 — codex native resolution + `.cmd` spawn (restores codex single + team → cross-review live dispatch succeeds).
-3. #4 — capability probe in `detect` (the systemic fix; turns false-positive `hybrid` into accurate fail-close and prevents recurrence of #1–#3). 本丸。
-4. #6 — purge HELIX_* runtime env debt (fold into #1/#2 since the dev-kit-wrapper env injection dies with native resolution).
-5. #5 — semver sort (optional).
-
-## Bootstrap Constraint
-
-Implementation should be delegated to Codex, but the delegation path `ut-tdd codex --execute` is itself broken by #1 (chicken-and-egg). Unblock options:
-- (A) Environment-side: reorder PATH so `AppData\Roaming\npm` (working `codex.cmd` 0.128.0) precedes the dev-kit `cli\` (broken `codex.ps1`), so `ut-tdd codex` works and remaining impl can be delegated to Codex. NOTE: codex has no bin-override env today; PATH reorder is the only current lever (claude already resolves native and works).
-- (B) Minimal bootstrap fix lands #1+#2 first to restore the delegation path, then the rest (#4/#6) is delegated to Codex.
-
-PO decision required on (A) vs (B). HELIX is reference-only (vendor snapshot); the unblock must not depend on or add HELIX_* names.
+| # | Feature | Root cause | Countermeasure | Status |
+|---|---|---|---|---|
+| 1 | `ut-tdd codex --execute` | Bare `codex` could resolve to a non-spawnable wrapper; Windows command scripts needed shell-safe invocation. | Add `resolveCodexNativeCommand()`, prefer `%APPDATA%\\npm\\codex.exe/codex.cmd`, honor `UT_TDD_CODEX_BIN`, and wrap `.cmd` / `.bat` invocation safely. | verified by unit, hook-entrypoint, full regression, and doctor |
+| 2 | `ut-tdd team run --execute` | Team execution bypassed shared adapter/native resolution. | Route `runCommand` through `buildProviderInvocation(provider, command, args)`. | verified by fake-provider team execution and full regression |
+| 3 | Hybrid cross-review live dispatch | Depends on #1 and #2. | Restore both provider execution paths and verify fake cross-provider team execution. | dispatch mechanism verified; live AI task invocation intentionally not run in this audit |
+| 4 | `status` / `doctor` provider availability | Detection used PATH name presence without spawnability. | Use capability probe (`--version`) and report availability only when the provider can actually spawn. | verified by doctor reporting `mode=hybrid` only after provider probes |
+| 5 | HELIX runtime env debt | Provider dispatch emitted or depended on HELIX wrapper env names. | Use `UT_TDD_CLAUDE_BIN` / `UT_TDD_CODEX_BIN`; strip `HELIX_ALLOW_RAW_*`, `HELIX_RAW_*_REASON`, `HELIX_CLAUDE_BIN`, and `HELIX_CODEX_BIN` from provider execution env. | verified by tests and HELIX-separation search |
+| 6 | Native Claude version sort | Mixed-source lexicographic sorting may not pick semver-newest native binary. | Sort by parsed semver per source. | deferred low-priority follow-up |
 
 ## No-Omission Rule
 
-- A provider reported "available" by `status` is not proven usable until its resolved binary actually spawns; presence ≠ spawnable.
-- `ut-tdd claude --execute` working does NOT imply `team run --execute` works — the team path bypasses native resolution.
-- Cross-review machinery being correct (policy + planning + fail-close) does NOT mean live dispatch is usable; the dispatch layer is a separate, currently-broken concern.
-- Countermeasures are not closed until a live `team run --execute` cross-provider run completes and `status` availability reflects real spawnability.
+- A provider reported available by `status` is not proven usable until the resolved binary actually spawns.
+- `ut-tdd claude --execute` working does not imply `team run --execute` works.
+- Cross-review policy correctness does not prove live dispatch usability.
+- Countermeasures are closed only after targeted tests, full regression, `doctor`, and HELIX-separation search evidence are clean.
+
+## Current Implementation Evidence
+
+- `src/runtime/adapter.ts` owns provider command resolution and invocation.
+- `src/runtime/detect.ts` uses provider spawnability.
+- `src/cli.ts` routes both single-provider execution and team execution through `buildProviderInvocation`.
+- Tests cover capability-based detection, Codex override resolution, Windows command-script invocation, provider handover kind, hook wrapper lifecycle, and fake cross-provider team execution.
+
+## Verification Completed
+
+- `bun run typecheck` passed.
+- `bun run lint` passed.
+- `bun run src\\cli.ts doctor` passed.
+- `bun run test` passed: 81 files, 677 tests.
+- HELIX-separation search passed for UT-TDD-owned runtime/test/handover surfaces.
+- `PLAN-L7-68` and the handover docs now distinguish mechanical handover from explicit handover.
+
+## Remaining Carry
+
+- Native Claude version semver sorting remains a deferred low-priority follow-up.
+- Live AI task execution through real cross-provider `team run --execute` was not invoked in this audit; the dispatch mechanism is covered by fake-provider execution tests and provider spawnability probes.

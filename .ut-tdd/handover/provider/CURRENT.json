@@ -1,25 +1,35 @@
 {
   "schema_version": "provider-handover.v1",
+  "handover_kind": "mechanical",
   "handover_id": "20260616091932-claude-to-codex-plan-l7-68",
   "from": "claude",
   "to": "codex",
   "active_plan": "PLAN-L7-68",
-  "budget": "solo harness dev; bootstrap (A) PATH/HELIX_CODEX_BIN env-fix may be required before ut-tdd codex delegation works",
+  "budget": "solo harness dev; use UT_TDD_CODEX_BIN / UT_TDD_CLAUDE_BIN for provider binary overrides when native auto-discovery is insufficient",
   "context": {
-    "summary": "A-137 unusable provider-dispatch countermeasures: restore codex/team --execute and add detect capability probe",
+    "summary": "A-137 provider-dispatch countermeasures verified: codex/team dispatch path restored, spawnability-based detection enabled, handover split recorded",
     "next_actions": [
-      "Read .ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md and author PLAN-L7-68",
-      "Impl #2: route team run runCommand through adapterCommand(provider,command)",
-      "Impl #1: add resolveCodexNativeCommand + HELIX_CODEX_BIN + .cmd spawn handling; extend adapterCommand to codex",
-      "Impl #4 (honmaru): detect capability probe so availability reflects real spawnability, fail-close hybrid",
-      "DoD: live team run --execute cross-provider succeeds; status availability reflects spawnability"
+      "Review docs/handover/session-handover-2026-06-16.md for explicit human-readable judgement",
+      "Review .ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md and .ut-tdd/audit/A-138-helix-separation-check.md",
+      "Verify PLAN-L7-68 and PLAN-L7-69 frontmatter/governance if continuing from ClaudeCode",
+      "Carry forward PLAN-L7-69 / IMP-135 for expanded encoding-corruption detection"
     ],
     "files": [
       ".ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md",
+      ".ut-tdd/audit/A-138-helix-separation-check.md",
+      "docs/handover/session-handover-2026-06-16.md",
+      "docs/handover/handover-mechanical-explicit.md",
+      "docs/plans/PLAN-L7-68-provider-dispatch-portability.md",
+      "docs/plans/PLAN-L7-69-encoding-corruption-expanded-guard.md",
       "src/cli.ts",
+      "src/runtime/adapter.ts",
       "src/runtime/detect.ts",
-      "src/team/run.ts",
-      "src/runtime/adapter.ts"
+      "src/runtime/provider-handover.ts",
+      "tests/cli-surface.test.ts",
+      "tests/provider-handover.test.ts",
+      "tests/runtime-adapter.test.ts",
+      "tests/runtime-hook-entrypoints.test.ts",
+      "tests/runtime.test.ts"
     ]
   },
   "created_at": "2026-06-16T09:19:32.085Z"
