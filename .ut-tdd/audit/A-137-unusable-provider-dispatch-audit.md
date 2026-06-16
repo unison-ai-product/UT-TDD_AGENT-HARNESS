@@ -25,26 +25,28 @@ The UT-TDD self-contained command surface (status / doctor / db / plan lint / re
 
 | # | Feature | Root cause | Evidence | Countermeasure | Status |
 |---|---|---|---|---|---|
-| 1 | `ut-tdd codex --execute` | `adapterCommand` resolves native only for claude (`src/cli.ts:229`); bare `codex` → broken dev-kit `codex.ps1` shadowing working `codex.cmd`; `.ps1`/`.cmd` not spawnable under `shell:false` | live spawn failure; `Get-Command -All codex` | Add `resolveCodexNativeCommand()` (prefer `AppData\Roaming\npm\codex.cmd`/`.exe`, honor `HELIX_CODEX_BIN`) + Windows `.cmd` spawn handling; extend `adapterCommand` to cover codex | open |
+| 1 | `ut-tdd codex --execute` | `adapterCommand` resolves native only for claude (`src/cli.ts:229`); bare `codex` → broken dev-kit `codex.ps1` shadowing working `codex.cmd`; `.ps1`/`.cmd` not spawnable under `shell:false`. NOTE: codex currently has NO bin-override env at all | live spawn failure; `Get-Command -All codex` | Add `resolveCodexNativeCommand()` (prefer `AppData\Roaming\npm\codex.cmd`/`.exe`, honor a NEW `UT_TDD_CODEX_BIN` — not a HELIX_* name) + Windows `.cmd` spawn handling; extend `adapterCommand` to cover codex | open |
 | 2 | `ut-tdd team run --execute` | runner (`src/cli.ts:1452`) spawns raw `member.adapter.command` and never calls `adapterCommand`, so the native resolution used by the single-provider path is skipped; claude side also hits the broken PATH wrapper | live spawn failure on claude-worker team | Route `team run` `runCommand` through `adapterCommand(provider, command)` | open |
 | 3 | Hybrid cross-review live dispatch | depends on #2 (codex worker + claude reviewer); codex worker fails via #1, claude reviewer fails via #2 | sequential team `--execute`, both members failed/skipped | Resolved transitively by #1 + #2 | open |
 | 4 | `status`/`doctor` provider availability | `detectMode` (`src/runtime/detect.ts:21`) uses `where/which` name presence only; comment states "capability probe は将来追加"; counts broken dev-kit wrappers as available → false-positive `hybrid` | status reports `hybrid` while no provider is spawnable via team path | Add capability probe: mark a provider available only if the resolved binary launches (`<resolved-bin> --version` exit 0); fail-close the mode otherwise | open |
 | 5 | `resolveClaudeNativeCommand` version pick (minor) | `newestExisting` sorts full paths lexicographically across mixed dirs, so "newest" is not semver-newest (picks AppData 2.1.138 over VSCode 2.1.170) | code read `src/cli.ts:196-226` | Sort by parsed semver, scoped per source dir | open (low) |
+| 6 | HELIX_* runtime env debt | UT-TDD adapter still emits/reads HELIX_* env names: `HELIX_ALLOW_RAW_CLAUDE`/`HELIX_RAW_CLAUDE_REASON` (`src/cli.ts:182-183`), `HELIX_ALLOW_RAW_CODEX`/`HELIX_RAW_CODEX_REASON` (`:190-191`), `HELIX_CLAUDE_BIN` (`:202`). These exist only to satisfy the broken dev-kit (HELIX) wrappers; native binaries ignore them. Inconsistent with `UT_TDD_ALLOW_RAW_AGENT` (agent-guard). HELIX is reference-only (vendor snapshot), not current runtime | `grep HELIX src` | Rename `HELIX_CLAUDE_BIN`→`UT_TDD_CLAUDE_BIN`; drop `HELIX_ALLOW_RAW_*`/`_REASON` injection once #1/#2 land native resolution (they only mattered for the dev-kit wrapper path). Do NOT add any new HELIX_* name | open |
 
 ## Countermeasure Sequencing (dependency order)
 
 1. #2 — route `team run` through `adapterCommand` (small; restores claude side of team/cross-review).
 2. #1 — codex native resolution + `.cmd` spawn (restores codex single + team → cross-review live dispatch succeeds).
 3. #4 — capability probe in `detect` (the systemic fix; turns false-positive `hybrid` into accurate fail-close and prevents recurrence of #1–#3). 本丸。
-4. #5 — semver sort (optional).
+4. #6 — purge HELIX_* runtime env debt (fold into #1/#2 since the dev-kit-wrapper env injection dies with native resolution).
+5. #5 — semver sort (optional).
 
 ## Bootstrap Constraint
 
 Implementation should be delegated to Codex, but the delegation path `ut-tdd codex --execute` is itself broken by #1 (chicken-and-egg). Unblock options:
-- (A) Environment-side: reorder PATH so `AppData\Roaming\npm` precedes the dev-kit `cli\`, or set `HELIX_CODEX_BIN` to the native codex, so `ut-tdd codex` works and remaining impl can be delegated to Codex.
-- (B) Minimal bootstrap fix lands #1+#2 first to restore the delegation path, then the rest (#4) is delegated to Codex.
+- (A) Environment-side: reorder PATH so `AppData\Roaming\npm` (working `codex.cmd` 0.128.0) precedes the dev-kit `cli\` (broken `codex.ps1`), so `ut-tdd codex` works and remaining impl can be delegated to Codex. NOTE: codex has no bin-override env today; PATH reorder is the only current lever (claude already resolves native and works).
+- (B) Minimal bootstrap fix lands #1+#2 first to restore the delegation path, then the rest (#4/#6) is delegated to Codex.
 
-PO decision required on (A) vs (B).
+PO decision required on (A) vs (B). HELIX is reference-only (vendor snapshot); the unblock must not depend on or add HELIX_* names.
 
 ## No-Omission Rule
 

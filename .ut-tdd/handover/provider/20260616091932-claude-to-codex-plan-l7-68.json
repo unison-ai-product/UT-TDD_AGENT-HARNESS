@@ -4,15 +4,16 @@
   "from": "claude",
   "to": "codex",
   "active_plan": "PLAN-L7-68",
-  "budget": "solo harness dev; bootstrap (A) PATH/HELIX_CODEX_BIN env-fix may be required before ut-tdd codex delegation works",
+  "budget": "solo harness dev; bootstrap (A) = PATH reorder so AppData/Roaming/npm precedes dev-kit cli/ (codex currently has no bin-override env; claude already resolves native). HELIX is reference-only (vendor snapshot) — do not introduce new HELIX_* names.",
   "context": {
-    "summary": "A-137 unusable provider-dispatch countermeasures: restore codex/team --execute and add detect capability probe",
+    "summary": "A-137 unusable provider-dispatch countermeasures: restore codex/team --execute, add detect capability probe, and purge HELIX_* runtime env debt (UT-TDD is current, HELIX is reference-only)",
     "next_actions": [
       "Read .ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md and author PLAN-L7-68",
       "Impl #2: route team run runCommand through adapterCommand(provider,command)",
-      "Impl #1: add resolveCodexNativeCommand + HELIX_CODEX_BIN + .cmd spawn handling; extend adapterCommand to codex",
+      "Impl #1: add resolveCodexNativeCommand + new UT_TDD_CODEX_BIN override + .cmd spawn handling; extend adapterCommand to codex",
       "Impl #4 (honmaru): detect capability probe so availability reflects real spawnability, fail-close hybrid",
-      "DoD: live team run --execute cross-provider succeeds; status availability reflects spawnability"
+      "Impl #6 cleanup: rename HELIX_* runtime env to UT_TDD_* (HELIX_CLAUDE_BIN->UT_TDD_CLAUDE_BIN) and drop HELIX_ALLOW_RAW_*/_REASON dev-kit-wrapper coupling once native resolution lands (src/cli.ts:182-202)",
+      "DoD: live team run --execute cross-provider succeeds; status availability reflects spawnability; no HELIX_* names remain in src runtime env contract"
     ],
     "files": [
       ".ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md",

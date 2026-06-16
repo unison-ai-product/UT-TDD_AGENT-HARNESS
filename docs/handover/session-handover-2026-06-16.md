@@ -23,9 +23,10 @@ provider handover = `.ut-tdd/handover/provider/20260616091932-claude-to-codex-pl
 
 1. `.ut-tdd/audit/A-137-...md` を読み、`PLAN-L7-68`(provider dispatch portability)を起票(PLAN 起票は Codex の仕事)。
 2. **#2**: `team run` の runCommand を `adapterCommand(provider, command)` 経由にする(`src/cli.ts:1452`)→ team の claude 側が即復活。
-3. **#1**: `resolveCodexNativeCommand`(`AppData\Roaming\npm\codex.cmd`/`.exe` 優先・`HELIX_CODEX_BIN` 尊重・Windows `.cmd` spawn 対応)を追加し `adapterCommand` を codex にも拡張(`src/cli.ts:201/229`)→ codex 単体 + team 復活 → 実クロスレビュー成立。
+3. **#1**: `resolveCodexNativeCommand`(`AppData\Roaming\npm\codex.cmd`/`.exe` 優先・新規 `UT_TDD_CODEX_BIN` override 尊重・Windows `.cmd` spawn 対応)を追加し `adapterCommand` を codex にも拡張(`src/cli.ts:201/229`)→ codex 単体 + team 復活 → 実クロスレビュー成立。**HELIX_* 名を新設しない**。
 4. **#4(本丸)**: `detect` に capability probe(`<resolved-bin> --version` exit0 で初めて available)を追加し false-positive `hybrid` を fail-close 化(`src/runtime/detect.ts:21` の将来課題を着地)。
-5. (任意 #5)`newestExisting` を semver ソートへ。
+5. **#6(クリーンアップ)**: HELIX_* runtime env 残債を UT_TDD_* へ。`HELIX_CLAUDE_BIN`→`UT_TDD_CLAUDE_BIN`、`HELIX_ALLOW_RAW_*`/`_REASON`(`src/cli.ts:182-202`)は dev-kit ラッパー専用で native 解決着地後は dead → 除去。HELIX は reference-only。
+6. (任意 #5)`newestExisting` を semver ソートへ。
 - **DoD**: live `team run --execute` cross-provider が成功し、`status` の availability が実 spawnability を反映する。
 
 ## §4 carry (未了・先送り)
@@ -34,7 +35,7 @@ provider handover = `.ut-tdd/handover/provider/20260616091932-claude-to-codex-pl
 
 ## §5 未了 PO 判断 (bootstrap)
 
-- 委譲経路 `ut-tdd codex` 自体が #1 で壊れている(鶏卵)。**(A)** 環境修正(PATH で `AppData\Roaming\npm` を dev-kit `cli\` より前に / `HELIX_CODEX_BIN` を native codex に向ける)で `ut-tdd codex` を復活させてから委譲、が筋。PO が (A) を実施するか、Codex が別経路で #1/#2 を先に着地させるか。
+- 委譲経路 `ut-tdd codex` 自体が #1 で壊れている(鶏卵)。**(A)** 環境修正 = PATH で `AppData\Roaming\npm`(動く `codex.cmd` 0.128.0)を dev-kit `cli\`(壊れ `codex.ps1`)より前に出す。codex には bin-override env が今は無いので PATH 並べ替えが唯一の手(claude は既に native 解決で動く)。PO が (A) を実施 → `ut-tdd codex` 復活 → 委譲、が筋。または Codex が別経路で #1/#2 を先に着地。HELIX 名に依存・新設しない。
 
 ## §6 壊さない / 再発させない
 
