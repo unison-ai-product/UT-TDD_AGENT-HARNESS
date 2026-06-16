@@ -48,6 +48,7 @@ These aliases bind FR-L1-05 and FR-L1-17 to this addendum so the FR coverage mat
 |---|---|---|---|---|---|
 | `evaluateGateReview` | evaluateGateReview(input: GateReviewInput, deps: GateReviewDeps) => GateReviewResult | gate id, execution mode, review kind, worker model, and reviewer/checklist evidence are supplied. | returns pass only for valid cross-agent, intra-runtime, or human review evidence by mode. | naive self-review and same-model approval are never valid judgment-gate evidence. | U-FR-L1-05 |
 | `checkReviewEvidence` | checkReviewEvidence(input: ReviewEvidenceInput, deps: ReviewEvidenceDeps) => ReviewEvidenceResult | target PLAN frontmatter and current test/doctor evidence are supplied. | returns violations for missing review evidence, invalid review tier, or test-after-review ordering. | confirmed/completed design or implementation PLANs cannot silently skip review evidence. | U-FR-L1-17 |
+| `analyzeRuleDrift` | analyzeRuleDrift(docs: RuleAdapterDocs) => RuleDriftResult | AGENTS / CLAUDE adapter docs are supplied as text. | returns missing shared markers and forbidden legacy adapter markers for old runtime command routing, env prefixes, local state paths, and agent names. | adapter docs cannot silently reintroduce legacy runtime routing while marker parity remains green. | U-RDRIFT-001..004 |
 
 Type/pseudocode substance:
 

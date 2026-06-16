@@ -406,9 +406,9 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
 - **validator 同期方針**: VALID_* は `src/schema/*.ts` の **zod enum/literal を単一正本**として定義し本書 §1 表と整合させる (型推論 + 実行時検証を 1 本化、enum drift を型で抑止)。drift 検知のため schema 冒頭に「最終同期: requirements vM.N §1.X」コメントを必須化、`ut-tdd doctor` が本書の更新日と schema のコメントを比較し 30 日以上乖離なら warning。
 - **将来移行**: 将来的に enum を YAML schema ファイル (`docs/governance/schema/frontmatter-schema.yaml`) に切り出して両者が読み込む構造にする (個別 PLAN-XXX で詳細設計)。
 
-#### G. L 別 sub-doc 構造 (v1.2 で V2 HELIX-workflows 正本採用、構想書 §3.1.2.1 / §3.1.3.1)
+#### G. L 別 sub-doc 構造 (v1.2 で V2 source snapshot reference を UT-TDD 正本へ再定義、構想書 §3.1.2.1 / §3.1.3.1)
 
-V2 HELIX-workflows 正本では L1-L6 設計層が sub-doc 分割を持つ。`kind=design` の PLAN は単一 sub-doc を generates し、複数関心を 1 PLAN に混在させない (構想書 §3.5 AP-11/AP-12)。
+V2 source snapshot reference の設計概念では L1-L6 設計層が sub-doc 分割を持つ。UT-TDD ではこれを正本要件として再定義する。`kind=design` の PLAN は単一 sub-doc を generates し、複数関心を 1 PLAN に混在させない (構想書 §3.5 AP-11/AP-12)。
 
 ##### G.1 sub-doc 種別 enum
 

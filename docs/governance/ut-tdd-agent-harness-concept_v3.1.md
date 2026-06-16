@@ -526,9 +526,9 @@ L0 は「リポジトリ初期化」ではなく **企画工程**。企画書 PL
 
 V2 は要件を二段に分ける。**L1 = 業務要求 (BR-* / NFR-*) のみ** (FR を書かない)、**L3 = システム機能要件 (FR-*) + 受入条件 (AC-*)** で、FR-* は L1 の BR-* から双方向 trace する。チーム: L1 は po 主体 (業務要求まで)、L3 は tl 主体 (FR+AC 確定)。G1 を業務要求ゲート、G3 を FR+AC ゲートとして人間サインオフを分離する。
 
-### 3.1.2.1 L1 sub-doc 構造 (V2 HELIX-workflows 5 PLAN 正本、必須 § 含む)
+### 3.1.2.1 L1 sub-doc 構造 (V2 source snapshot reference を UT-TDD 正本へ再定義、必須 § 含む)
 
-V2 HELIX-workflows 設計概念 (`vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md` の最小定義 + `vendor/helix-source/docs/v2/L1-requirements/*` の実体 doc) は **L1 を 1 doc にまとめず 5 sub-doc に分割**する。UT-TDD はこれを設計概念として参照し、各 sub-doc の **必須 § 構造**まで規定する:
+V2 source snapshot reference (`vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md` の最小定義 + `vendor/helix-source/docs/v2/L1-requirements/*` の実体 doc) は **L1 を 1 doc にまとめず 5 sub-doc に分割**する。UT-TDD はこれを設計概念として参照し、各 sub-doc の **必須 § 構造**まで規定する:
 
 | sub-doc (5 種) | 必須 § (HELIX-workflows 実体 doc に準拠) | PLAN 命名 (UT-TDD) |
 |----------------|------------------------------------------|--------------------|
@@ -545,7 +545,7 @@ V2 HELIX-workflows 設計概念 (`vendor/helix-source/docs/v2/process/L01-requir
 
 ### 3.1.2.2 L0 → L1 → L4 ドメイン継承チェーン (DDD anti-corruption layer)
 
-V2 HELIX-workflows 業務要求 doc §10 を採用し、UT-TDD は L0 → L1 → L4 のドメイン継承チェーンを以下で固定する (DDD anti-corruption layer 原則):
+V2 source snapshot reference の業務要求 doc §10 を採用し、UT-TDD は L0 → L1 → L4 のドメイン継承チェーンを以下で固定する (DDD anti-corruption layer 原則):
 
 ```
 [L0 企画書]                          ユビキタス言語 SSoT
@@ -589,9 +589,9 @@ V2 HELIX-workflows 業務要求 doc §10 を採用し、UT-TDD は L0 → L1 →
 
 V2 は設計を **L4 基本設計 (外部設計: アーキ/ADR)** → **L5 詳細設計 (内部設計: D-API/D-DB/D-CONTRACT、API/Schema Freeze)** → **L6 機能設計 (関数 signature・エッジケース + WBS)** の 3 段に分け、それぞれ G4/G5/G6 で独立凍結する。旧 UT-TDD の L2 全体設計 / L3 詳細 / L3.5 機能はこの L4 / L5 / L6 に remap される。
 
-### 3.1.3.1 L2-L6 sub-doc 構造 (V2 HELIX-workflows 設計概念)
+### 3.1.3.1 L2-L6 sub-doc 構造 (V2 source snapshot reference)
 
-各設計層も sub-doc 分割を取る (V2 HELIX-workflows 各 process doc の正本抽出セクションから転写):
+各設計層も sub-doc 分割を取る (V2 source snapshot reference の各 process doc から UT-TDD 向けに再定義):
 
 | layer | sub-doc 構造 (HELIX-workflows 設計概念参照) | 数 |
 |-------|------------------------------------|-----|
@@ -717,13 +717,13 @@ L7 実装完了後に QA が追加する **regression / exploratory / edge-case*
 | AP-8 | 逆ピラミッド (① + ② はあるが ③ + ④ が無い) | 「テストも書いた」と称し ③ テスト設計 doc を欠く |
 | AP-9 | 重複実装 / 機能被り | 既存に同等機能があるのに再実装する (着手前の `ut-tdd code find` 流用確認を怠る。被りは Add-feature / Refactor へ回す) |
 | AP-10 | 依存関係違反 | 呼び出し/import グラフに orphan・cycle・missing、またはレイヤリング違反を生む (機能単位レビューで検出) |
-| AP-11 | L1 を 1 PLAN / 1 doc にまとめる | V2 HELIX-workflows 設計概念では L1 = 5 sub-doc (業務/機能/画面/技術/非機能、§3.1.2.1)。1 doc 統合は要求の関心混在で再番号化リスク |
-| AP-12 | L2-L6 sub-doc 構造を持たない設計 PLAN | V2 HELIX-workflows 設計概念では L2=4 / L3=3 / L4=5 / L5=4 / L6=3 sub-doc (§3.1.3.1)。複数関心を 1 PLAN に混在させる起票は禁止 |
-| AP-13 | PLAN に工程表 + 実装計画が内蔵されていない | V2 HELIX-workflows 設計概念では PLAN = 機能 (doc) 単位で工程表 + 実装計画を内蔵 (§3.6)。本文 0 行・成果物 declare のみの PLAN は無効 |
+| AP-11 | L1 を 1 PLAN / 1 doc にまとめる | V2 source snapshot reference では L1 = 5 sub-doc (業務/機能/画面/技術/非機能、§3.1.2.1)。1 doc 統合は要求の関心混在で再番号化リスク |
+| AP-12 | L2-L6 sub-doc 構造を持たない設計 PLAN | V2 source snapshot reference では L2=4 / L3=3 / L4=5 / L5=4 / L6=3 sub-doc (§3.1.3.1)。複数関心を 1 PLAN に混在させる起票は禁止 |
+| AP-13 | PLAN に工程表 + 実装計画が内蔵されていない | V2 source snapshot reference では PLAN = 機能 (doc) 単位で工程表 + 実装計画を内蔵 (§3.6)。本文 0 行・成果物 declare のみの PLAN は無効 |
 
-## 3.6 PLAN 内蔵物原則 (V2 HELIX-workflows 共通)
+## 3.6 PLAN 内蔵物原則 (V2 source snapshot reference)
 
-V2 HELIX-workflows 設計概念に従い、**PLAN は機能 (=ドキュメント) 単位で起票し、以下 2 要素を内蔵する**:
+V2 source snapshot reference の設計概念に従い、**PLAN は機能 (=ドキュメント) 単位で起票し、以下 2 要素を内蔵する**:
 
 | 内蔵要素 | 内容 |
 |----------|------|
@@ -734,9 +734,9 @@ PLAN 本文は「ヒアリング項目・メモ・調査結果」の **中間準
 
 工程表 Step には **review (self / pmo-sonnet / tl-advisor) を必ず固定 Step として組み込む** (self-review 前置原則と整合、`.claude/CLAUDE.md` Guard Rules)。
 
-## 3.7 駆動別 L2-L14 挙動表 (V2 HELIX SKILL_MAP 正本 + V2 process L 番号 remap)
+## 3.7 駆動別 L2-L14 挙動表 (source skill-map reference + V2 process L 番号 remap)
 
-各 drive (be / fe / fullstack / db / agent) で L2-L14 の中身とゲート判定が変わる。**正本は `vendor/helix-source/skills/SKILL_MAP.md §駆動タイプ別 L2〜L11`** を V2 process docs (`vendor/helix-source/docs/v2/process/L00-L14`) の L 番号に remap して転写したもの:
+各 drive (be / fe / fullstack / db / agent) で L2-L14 の中身とゲート判定が変わる。UT-TDD 正本は source skill-map reference (`vendor/helix-source/skills/SKILL_MAP.md §駆動タイプ別 L2〜L11`) を V2 process docs (`vendor/helix-source/docs/v2/process/L00-L14`) の L 番号に remap して再定義したもの:
 
 | フェーズ | be | fe | db | fullstack | agent |
 |---------|----|----|----|-----------|----|
@@ -1206,10 +1206,10 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **handover stale** | `CURRENT.json` の `updated_at` が閾値 (既定 24h) を超えた状態 (`handoverStale`)。pre-push warn / plan-lint の機械基盤 (導入層 L6) |
 | **handover discipline (規律 surface)** | PLAN 活動 (active_plan + digest あり) があるのに `CURRENT.json` が未生成 / stale / 別 PLAN を指す (drift) 状態を機械が warn すること (`checkHandoverDiscipline`)。handover-on-completion を agent 記憶でなく Stop-hook + `ut-tdd doctor` で surface する (導入層 L6 更新、IMP-047) |
 | **plan family / dedup 正本化** | bare plan_id (`PLAN-L7-04`) と slug 付き (`PLAN-L7-04-handover-mechanism`) を同一 PLAN family と見なし (`sameFamilyPlan`、`-` 境界 prefix・対称・推移)、最長 (最具体) id を正本に digest を union 集約する (`dedupeDigests`)。handover prefill の `unknown` ゴーストを排除 (導入層 L6 更新、IMP-048) |
-| **agent-slot / slot lifecycle** | subagent / team member の fire→release を機械記録する Layer-2 オーケストレーション単位 (`Slot`、`.ut-tdd/state/agent-slots.json`、`slot_source` = agent_guard/team_runner/manual、gitignored)。HELIX `agent_slots.py` (SQLite) の ADR-001 TS-native 移植 = `src/runtime/agent-slots.ts` (fire/release/listActive/listStale/`recordGuardFire`、全 fail-open、導入層 L6、IMP-050) |
+| **agent-slot / slot lifecycle** | subagent / team member の fire→release を機械記録する Layer-2 オーケストレーション単位 (`Slot`、`.ut-tdd/state/agent-slots.json`、`slot_source` = agent_guard/team_runner/manual、gitignored)。source reference の agent slot lifecycle 挙動を UT-TDD TS/Bun 実装として再定義したもの = `src/runtime/agent-slots.ts` (fire/release/listActive/listStale/`recordGuardFire`、全 fail-open、導入層 L6、IMP-050) |
 | **peak_parallel** | 与えた slot 群の同時実行ピーク数 (sweep-line、`peakParallel`)。`ut-tdd doctor` が stale slot (5 分超 release なし) と併せて surface (導入層 L6、IMP-050) |
 | **直列化 3 条件** | タスクを直列実行すべきかの機械判定キー: **file_conflict** (同一ファイルを書く) / **downstream_dependency** (前段成果物・判断に依存) / **shared_state** (DB / current-plan / handover 等の共有 state を変更)。いずれか true → 直列化必須 (`mustSerialize`)、すべて false → 並列可 (上限 8)。PLAN §工程表 の各 Step で `[並列]/[直列]` + 該当条件を明示 (要件 §G.4、導入層 L6、IMP-049) |
-| **team 定義 (strategy)** | `.ut-tdd/teams/*.yaml` (`teamDefinitionSchema`、`src/schema/team.ts`)。`strategy: sequential|parallel` + `max_parallel` + `serialization` 3 条件 + `members[].serialize_after` で直列/並列を宣言。HELIX `team_runner.py` の TS-native 移植、`ut-tdd team run` (hybrid) の入力 (導入層 L6、IMP-050) |
+| **team 定義 (strategy)** | `.ut-tdd/teams/*.yaml` (`teamDefinitionSchema`、`src/schema/team.ts`)。`strategy: sequential|parallel` + `max_parallel` + `serialization` 3 条件 + `members[].serialize_after` で直列/並列を宣言。source reference の team runner 挙動を UT-TDD TS/Bun 実装として再定義したもので、`ut-tdd team run` (hybrid) の入力 (導入層 L6、IMP-050) |
 | **shared hook entrypoint** | Claude Code hook が個別 hook 実装ではなく package-local `src/cli.ts` の `session start` / `hook post-tool-use` / `session summary` を呼び、`src/runtime/session-log.ts` の shared core に dispatch する入口。`.claude/hooks/session-log.ts` は後方互換 shim (導入層 L6、PLAN-L6-20/L7-21) |
 | **adapter lifecycle wrapper** | `ut-tdd codex\|claude --execute` が provider CLI 実行を SessionStart / PostToolUse / Stop で包み、session-log PLAN digest と handover warning surface を記録する機構。raw guard 共存 env は wrapper が付与する (導入層 L6、PLAN-L6-20/L7-21) |
 | **plan metadata separation** | `ut-tdd codex\|claude --plan <id>` の PLAN は harness/session-log metadata として保持し、provider CLI 引数へ `--plan-id` を転送しない規約。provider 境界を汚さず digest plan_id だけに使う (導入層 L6、PLAN-L6-20/L7-21) |

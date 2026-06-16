@@ -12,15 +12,15 @@ plan: docs/plans/PLAN-L6-07-agent-slots.md
 PLAN: IMP-050 (Layer-2 オーケストレーション移植、add-feature)。
 pair (③): docs/test-design/harness/L7-unit-test-design.md §1.9 U-SLOT / §1.10 U-TEAM。
 実装 (②): src/runtime/agent-slots.ts + src/schema/team.ts。
-移植元: vendor/helix-source/cli/lib/agent_slots.py (SQLite) + vendor/helix-source/cli/lib/team_runner.py。
-ADR-001 準拠: HELIX/Python コードを port せず TypeScript (Bun) で全面再実装。SQLite 非採用。
+参照元: vendor source snapshot の agent slot / team runner 挙動。
+ADR-001 準拠: 旧 Python コードを port せず TypeScript (Bun) で全面再実装。SQLite 非採用。
 -->
 
 # UT-TDD Agent Harness — L6 機能設計: agent-slots 機構 (IMP-050)
 
 ## §0 位置づけ・移植方針
 
-本設計は HELIX の `cli/lib/agent_slots.py` (SQLite 永続) と `cli/lib/team_runner.py` (strategy + ThreadPoolExecutor 上限) を **ADR-001 準拠で TypeScript (Bun) として全面再実装**した後追い設計記録である。実装は完了済 (`src/runtime/agent-slots.ts` / `src/schema/team.ts`)、本書はその V-pair 整合のための設計文書化 (Add-feature back-fill でなく V-pair 整合目的)。
+本設計は vendor source snapshot の agent slot / team runner 挙動を参考に、UT-TDD の TypeScript (Bun) 実装として再定義した設計記録である。実装は完了済 (`src/runtime/agent-slots.ts` / `src/schema/team.ts`)、本書はその V-pair 整合のための設計文書化 (Add-feature back-fill でなく V-pair 整合目的)。
 
 **SQLite を持ち込まない理由**: Windows ネイティブ環境では SQLite の native module がビルドツール依存を生み、bun 単独実行要件 (ADR-001) と衝突する。代替として `.ut-tdd/state/agent-slots.json` (`Slot[]`) を単一 state ファイルとし、`readText`/`writeText` 注入で決定論的テストを確保する。この選択は session-log.ts・setup/index.ts のストレージ方針 (SSoT + deps 注入 + never-throws) と一致する。
 
@@ -80,7 +80,7 @@ export interface AgentSlotsDeps {
 }
 
 export const DEFAULT_MAX_PARALLEL = 8;   // .claude/CLAUDE.md 並列上限と整合
-export const DEFAULT_STALE_MINUTES = 5;  // HELIX list_stale_slots と同じ既定値
+export const DEFAULT_STALE_MINUTES = 5;  // source reference の list_stale_slots と同じ既定値
 ```
 
 **ストレージパス**: `.ut-tdd/state/agent-slots.json` (gitignored、runtime state)。
@@ -109,14 +109,14 @@ export const teamMemberSchema = z.object({
 
 export const teamDefinitionSchema = z.object({
   name: z.string().min(1),
-  strategy: teamStrategySchema.default("sequential"),  // HELIX team_runner と同じ安全側デフォルト
+  strategy: teamStrategySchema.default("sequential"),  // source reference の team_runner と同じ安全側デフォルト
   max_parallel: z.number().int().positive().default(8),
   serialization: serializationReasonSchema.optional(), // チーム全体の直列化根拠 (3 条件)
   members: z.array(teamMemberSchema).min(1),           // 空 → reject (zod fail-close)
 });
 ```
 
-`teamDefinitionSchema` は `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml` (`hybrid` mode) の入力である。`strategy` のデフォルトを `sequential` にするのは HELIX `team_runner.py` と同じ安全側設計。
+`teamDefinitionSchema` は `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml` (`hybrid` mode) の入力である。`strategy` のデフォルトを `sequential` にするのは source reference の team runner と同じ安全側設計。
 
 **model/effort policy (FR-L1-37 landing)**: `difficulty` 未指定時は `selectTeamModel` が task keyword から `trivial|simple|standard|complex|critical` を決定論推定し、`recommendModelEffort` の `model_family` / `reasoning_effort` へ接続する。`model` / `effort` が明示された member は override として `model_selection.*_source="explicit"` に記録する。推挙は hidden prompt state ではなく `buildTeamRunPlan().members[].model_selection` と prompt header に出す。`model` override は `gpt-*|claude-*|codex-*|haiku|sonnet|opus|local` のみ zod で受理し、タイポを fail-close する。Claude は `--model` / `--effort` / `CLAUDE_CODE_EFFORT_LEVEL` に渡す。Codex は `-m` に model を渡し、effort は公式 surface を pin するまで evidence/prompt metadata に留める。
 
@@ -153,7 +153,7 @@ Type/pseudocode substance:
 
 ### §2.4 DbC 補足
 
-**`peakParallel` 同時刻順序規則**: 同じタイムスタンプに fire と release が重なる場合、`release(-1)` を先に処理することで「前 slot が終わり次 slot が始まる」隣接パターンを peak 2 でなく peak 1 と正しく計上する。これは HELIX `agent_slots.py` の `sorted(key=lambda e: (e.t, e.delta))` と等価。
+**`peakParallel` 同時刻順序規則**: 同じタイムスタンプに fire と release が重なる場合、`release(-1)` を先に処理することで「前 slot が終わり次 slot が始まる」隣接パターンを peak 2 でなく peak 1 と正しく計上する。これは source reference の `sorted(key=lambda e: (e.t, e.delta))` と等価。
 
 **`recordGuardFire` Claude subagent 制約と release 経路 (IMP-106)**: Claude Code の subagent fire は `PreToolUse(Agent)` で捕捉できるが、`PostToolUse` での per-subagent release hook は無い。代わりに **`SubagentStop` hook → `releaseOldestGuardSlot` が通常の release を実時間で担う** (SubagentStop は終了 subagent の slot_id を payload に持たないため、最古 1 件を release する FIFO 近似で active 数を厳密維持)。hook 無効化 / crash / 強制停止で release が漏れた slot は SessionStart の `sweepStaleGuardSlots` が `cancelled` で回収する safety net。`recordGuardFire` 内の stale 自動失効は「次 fire」契機の追加保険として残す。`team_runner` 由来は `ut-tdd team run` が明示 release できるため両機構の対象外。
 

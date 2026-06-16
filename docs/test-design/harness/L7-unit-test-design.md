@@ -535,7 +535,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - U-RDRIFT-001: `analyzeRuleDrift` passes when AGENTS / CLAUDE adapter docs share required command and mode markers.
 - U-RDRIFT-002: `analyzeRuleDrift` reports missing adapter markers with file and marker identity.
 - U-RDRIFT-003: real repo AGENTS / CLAUDE adapter docs have no required marker drift.
-- U-RDRIFT-004: real repo AGENTS / CLAUDE adapter docs do not route delegation through legacy `legacy-source codex` / `legacy-source claude` / `legacy-source plan` commands.
+- U-RDRIFT-004: `analyzeRuleDrift` reports forbidden legacy adapter markers for old runtime command routing, env prefixes, local state paths, and agent names; real repo AGENTS / CLAUDE adapter docs have zero forbidden markers.
 
 ### 2026-06-09 Runtime Adapter Lifecycle Test Addendum
 

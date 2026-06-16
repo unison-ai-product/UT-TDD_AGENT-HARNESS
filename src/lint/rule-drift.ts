@@ -8,6 +8,7 @@ export interface RuleAdapterDocs {
 }
 
 export interface RuleDriftResult {
+  forbiddenMarkers: { file: string; marker: string }[];
   missingMarkers: { file: string; marker: string }[];
   ok: boolean;
 }
@@ -31,12 +32,37 @@ const ADAPTER_MARKERS = {
   ".claude/CLAUDE.md": ["../CLAUDE.md", "../AGENTS.md"],
 } as const;
 
+const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
+const LEGACY_RUNTIME_ENV_PREFIX = LEGACY_RUNTIME_NAME.toUpperCase();
+const FORBIDDEN_ADAPTER_MARKERS = [
+  {
+    marker: "legacy runtime command routing",
+    pattern: new RegExp(
+      String.raw`\b${LEGACY_RUNTIME_NAME}\s+(codex|claude|plan|gate|handover)\b`,
+      "i",
+    ),
+  },
+  {
+    marker: "legacy runtime env prefix",
+    pattern: new RegExp(String.raw`\b${LEGACY_RUNTIME_ENV_PREFIX}_`),
+  },
+  {
+    marker: "legacy runtime local state path",
+    pattern: new RegExp(String.raw`\.${LEGACY_RUNTIME_NAME}(?:/|\\)`, "i"),
+  },
+  {
+    marker: "legacy runtime agent name",
+    pattern: new RegExp(String.raw`\bpmo-${LEGACY_RUNTIME_NAME}-`, "i"),
+  },
+] as const;
+
 export function analyzeRuleDrift(docs: RuleAdapterDocs): RuleDriftResult {
   const files = {
     "AGENTS.md": docs.agents,
     "CLAUDE.md": docs.claudeProject,
     ".claude/CLAUDE.md": docs.claudeRuntime,
   };
+  const forbiddenMarkers: { file: string; marker: string }[] = [];
   const missingMarkers: { file: string; marker: string }[] = [];
 
   for (const marker of SHARED_MARKERS) {
@@ -50,8 +76,17 @@ export function analyzeRuleDrift(docs: RuleAdapterDocs): RuleDriftResult {
       if (!text.includes(marker)) missingMarkers.push({ file, marker });
     }
   }
+  for (const [file, text] of Object.entries(files)) {
+    for (const marker of FORBIDDEN_ADAPTER_MARKERS) {
+      if (marker.pattern.test(text)) forbiddenMarkers.push({ file, marker: marker.marker });
+    }
+  }
 
-  return { missingMarkers, ok: missingMarkers.length === 0 };
+  return {
+    forbiddenMarkers,
+    missingMarkers,
+    ok: missingMarkers.length === 0 && forbiddenMarkers.length === 0,
+  };
 }
 
 export function loadRuleAdapterDocs(repoRoot: string): RuleAdapterDocs {
@@ -69,13 +104,22 @@ export function loadRuleAdapterDocs(repoRoot: string): RuleAdapterDocs {
 
 export function ruleDriftMessages(result: RuleDriftResult): string[] {
   if (result.ok) {
-    return ["rule-drift — OK (AGENTS/CLAUDE adapters share required mode and command markers)"];
+    return ["rule-drift - OK (AGENTS/CLAUDE adapters share required mode and command markers)"];
+  }
+  if (result.forbiddenMarkers.length > 0) {
+    const sample = result.forbiddenMarkers
+      .slice(0, 8)
+      .map((m) => `${m.file}:${m.marker}`)
+      .join(", ");
+    return [
+      `rule-drift - violation: forbidden adapter legacy marker ${result.forbiddenMarkers.length} (${sample})`,
+    ];
   }
   const sample = result.missingMarkers
     .slice(0, 8)
     .map((m) => `${m.file}:${m.marker}`)
     .join(", ");
   return [
-    `rule-drift — ⚠ adapter rule marker drift ${result.missingMarkers.length} 件 (${sample})`,
+    `rule-drift - violation: adapter rule marker drift ${result.missingMarkers.length} (${sample})`,
   ];
 }
