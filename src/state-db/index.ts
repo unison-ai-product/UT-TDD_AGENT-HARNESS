@@ -42,9 +42,11 @@ export interface HarnessDb {
  *
  * sk-* は最低 16 文字 (実 OpenAI key 最短 ~48 文字) を要求し、"sk-breakdown" のような
  * 通常の識別子が誤検知されないようにする。ghp_/github_pat_/xox* も同様に最低 16 文字。
+ * 各 prefix は語境界 (\b) にアンカーし、"task-..."/"risk-..." のような語中の "sk" や
+ * hyphenated slug/path 内の部分一致を誤検知しない (実 secret は token 境界で出現する)。
  */
 export const SECRET_PATTERN =
-  /(sk-[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9_]{16,}|github_pat_[A-Za-z0-9_]{16,}|xox[baprs]-[A-Za-z0-9-]{16,})/;
+  /(\bsk-[A-Za-z0-9_-]{16,}|\bghp_[A-Za-z0-9_]{16,}|\bgithub_pat_[A-Za-z0-9_]{16,}|\bxox[baprs]-[A-Za-z0-9-]{16,})/;
 
 /** 文字列が secret 様トークンを含むか (SECRET_PATTERN 単一正本)。 */
 export function isSecretLike(value: string): boolean {

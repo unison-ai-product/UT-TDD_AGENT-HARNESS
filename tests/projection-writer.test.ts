@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { openHarnessDb } from "../src/state-db/index";
+import { isSecretLike, openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
 import { rebuildHarnessDb, recordProjectionEvent } from "../src/state-db/projection-writer";
 
@@ -19,6 +19,23 @@ interface DriveRunRow {
   mode: string;
   status: string;
 }
+
+describe("SECRET_PATTERN word-boundary anchoring", () => {
+  it("does not match 'sk' inside a word but matches a boundary-delimited token", () => {
+    // Hyphenated slugs / paths must not false-positive (these crashed db rebuild).
+    // The "sk" segments are interpolated so no literal token appears in source.
+    expect(isSecretLike(`changed-path-src-${"task"}-has-no-relation-graph-node-impact`)).toBe(
+      false,
+    );
+    expect(isSecretLike(`review the ${"risk"}-assessment-and-mitigation-plan-now-please`)).toBe(
+      false,
+    );
+    expect(isSecretLike("planning-and-task-breakdown")).toBe(false);
+    // Real boundary-delimited tokens (16+ chars) are still detected.
+    expect(isSecretLike(`sk-${"a".repeat(20)}`)).toBe(true);
+    expect(isSecretLike(`leaked ghp_${"b".repeat(20)} here`)).toBe(true);
+  });
+});
 
 describe("IT-DB-01/02: harness.db projection writer", () => {
   it("records normalized projection events idempotently and keeps rows joinable by plan_id", () => {
