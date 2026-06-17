@@ -82,6 +82,49 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
     }
   });
 
+  it("exempts structured-id columns from the secret check but still rejects free-form payload secrets", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      // Regression: a relation-graph finding_id slug that contains "sk-" inside a
+      // "task-" run (built here so no literal token appears in source) matches the
+      // canonical SECRET_PATTERN but is a structured identifier, not a secret. It
+      // must NOT be rejected — this exact slug crashed `ut-tdd db rebuild`.
+      const slugId = `finding:missing-projection:changed-path-src-${"task"}-has-no-relation-graph-node`;
+      expect(() =>
+        recordProjectionEvent(db, {
+          table: "feedback_events",
+          id: "feedback:idtest",
+          row: {
+            finding_id: slugId,
+            plan_id: "",
+            signal_type: "finding",
+            severity: "warn",
+            next_action: "review the missing relation-graph node",
+          },
+        }),
+      ).not.toThrow();
+
+      // A real high-entropy token in a free-form (non-id) column is still rejected.
+      const realToken = `sk-${"a".repeat(20)}`;
+      expect(() =>
+        recordProjectionEvent(db, {
+          table: "feedback_events",
+          id: "feedback:leak",
+          row: {
+            finding_id: "",
+            plan_id: "",
+            signal_type: "finding",
+            severity: "warn",
+            next_action: `leaked ${realToken}`,
+          },
+        }),
+      ).toThrow(/secret-like/);
+    } finally {
+      db.close();
+    }
+  });
+
   it("turns unresolved cross-drive/model joins into findings instead of silently skipping them", () => {
     const db = openHarnessDb(":memory:");
     try {

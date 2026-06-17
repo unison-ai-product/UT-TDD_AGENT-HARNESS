@@ -159,15 +159,19 @@ function scalarNumber(db: HarnessDb, sql: string, params: unknown[] = []): numbe
 }
 
 function assertNoSensitivePayload(row: Record<string, unknown>, table: TableDef): void {
-  // Primary-key columns are structured identifiers (e.g. "skill:planning-and-task-breakdown"),
-  // not free-form text. Exempt them from the secret-pattern check to avoid false positives
-  // (e.g. "sk-breakdown" inside a skill ID matching the sk-* pattern).
+  // Structured-identifier columns — primary keys and `*_id` reference columns —
+  // hold deterministic composite slugs (e.g. "skill:planning-and-task-breakdown",
+  // or a relation-graph "finding:...:changed-path-src-task-..." slug), not
+  // free-form payload. Exempt them from the secret-pattern check so a legitimate
+  // slug that happens to contain "sk-" (inside a "task-" prefix or a "-breakdown"
+  // suffix) is not a false-positive secret. Free-form columns are still checked.
   const pkNames = new Set(table.columns.filter((c) => c.primaryKey).map((c) => c.name));
+  const isStructuredId = (key: string): boolean => pkNames.has(key) || key.endsWith("_id");
   for (const [key, value] of Object.entries(row)) {
     if (RAW_PAYLOAD_KEYS.has(key)) {
       throw new Error(`raw/sensitive payload column is not allowed in harness.db: ${key}`);
     }
-    if (!pkNames.has(key) && typeof value === "string" && SECRET_PATTERN.test(value)) {
+    if (!isStructuredId(key) && typeof value === "string" && SECRET_PATTERN.test(value)) {
       throw new Error(`secret-like value is not allowed in harness.db projection column: ${key}`);
     }
   }
