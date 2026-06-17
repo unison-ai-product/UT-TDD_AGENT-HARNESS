@@ -1,5 +1,5 @@
 import type { HarnessDb } from "../state-db/index";
-import { upsertRow } from "../state-db/index";
+import { isSecretLike, upsertRow } from "../state-db/index";
 
 export interface SearchReferenceRow {
   subject_type: string;
@@ -21,13 +21,12 @@ function searchId(row: Pick<SearchReferenceRow, "subject_type" | "subject_id">):
   return `${row.subject_type}:${row.subject_id}`;
 }
 
-function includesSecret(value: string): boolean {
-  return /(sk-[A-Za-z0-9_-]+|ghp_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)/.test(value);
-}
-
 export function upsertSearchReference(db: HarnessDb, row: SearchReferenceRow): void {
   const text = `${row.title} ${row.tokens} ${row.summary}`;
-  if (includesSecret(text)) {
+  // Use the canonical SECRET_PATTERN (state-db SSoT, min 16 chars) so legitimate
+  // identifiers like the skill name "planning-and-task-breakdown" ("…task-break…")
+  // are not false-positively rejected as secrets.
+  if (isSecretLike(text)) {
     throw new Error("search_index cannot store secret-like tokens");
   }
   upsertRow(db, {

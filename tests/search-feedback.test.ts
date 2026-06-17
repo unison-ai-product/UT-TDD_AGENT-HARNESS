@@ -43,6 +43,46 @@ describe("IT-SEARCH-01 / IT-DB-03 / IT-FEEDBACK-01", () => {
     }
   });
 
+  it("uses the canonical SECRET_PATTERN: legitimate hyphenated names index, real tokens are rejected", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      // "planning-and-task-breakdown" contains "sk-breakdown" but is NOT a secret;
+      // the old weak regex (sk-[A-Za-z0-9_-]+) false-positively rejected it.
+      expect(() =>
+        upsertSearchReference(db, {
+          subject_type: "automation_asset",
+          subject_id: "skill:planning-and-task-breakdown",
+          path: "docs/skills/planning-and-task-breakdown.md",
+          title: "planning-and-task-breakdown",
+          tokens: "skill process planning-and-task-breakdown",
+          summary: "skill ok",
+          updated_at: "2026-06-17T00:00:00.000Z",
+        }),
+      ).not.toThrow();
+      expect(rowCounts(db).search_index).toBe(1);
+
+      // A real high-entropy token (16+ chars) must still be rejected.
+      // Built at runtime so the literal does not appear in source (and trip the
+      // pre-commit secret scanner) while still matching SECRET_PATTERN.
+      const leakToken = `sk-${"a".repeat(20)}`;
+      expect(() =>
+        upsertSearchReference(db, {
+          subject_type: "finding",
+          subject_id: "finding:leak",
+          path: ".ut-tdd/audit/finding.json",
+          title: "leak",
+          tokens: `${leakToken} leaked`,
+          summary: "open finding",
+          updated_at: "2026-06-17T00:00:00.000Z",
+        }),
+      ).toThrow(/secret-like/);
+      expect(rowCounts(db).search_index).toBe(1);
+    } finally {
+      db.close();
+    }
+  });
+
   it("computeSkillMetrics stores firing and acceptance rates as quality signals", () => {
     const db = openHarnessDb(":memory:");
     try {
