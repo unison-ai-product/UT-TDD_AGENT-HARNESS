@@ -3,7 +3,7 @@
 ## Active Runtime Boundary
 
 This repository's Claude Code runtime is part of UT-TDD Agent Harness.
-Legacy-source-derived hooks, subagents, memory, `legacy local state/`, and `vendor source snapshot`
+Legacy-source-derived hooks, subagents, memory, and `legacy local state/`
 are historical or migration material. They are not current runtime state or
 execution paths.
 
@@ -111,7 +111,6 @@ as read-only material.
 - Escalate before changing authentication, authorization, payments, PII,
   licenses, production infrastructure, destructive operations, or external API
   assumptions.
-- Treat `vendor source snapshot` as read-only migration source material.
 - Do not treat `legacy local state/` as active runtime state.
 - Do not write secrets, PII, or credentials into docs, examples, or audit
   evidence.

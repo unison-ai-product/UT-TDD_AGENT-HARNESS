@@ -19,7 +19,7 @@ Do not load `docs/design/harness/L3-functional/roadmap.md` as a normal startup
 read. The verification roadmap is read dynamically only when a V-model layer
 group has completed Forward freeze and a verification cycle is being run.
 
-`docs/archive/`, `vendor source snapshot`, `legacy local state/`, and pre-migration
+`docs/archive/`, `legacy local state/`, and pre-migration
 `.claude/agents` / `.claude/hooks` are not canonical runtime state. Migration
 source material is historical reference only; current UT-TDD runtime commands
 use `ut-tdd`, not legacy commands.
@@ -62,7 +62,6 @@ Design and implementation should be judged by these pillars:
 - `scripts/`: thin OS entrypoints only
 - `.ut-tdd/`: UT-TDD runtime state and audit/handover evidence
 - `.claude/`: Claude Code runtime / hook policy
-- `vendor source snapshot`: read-only migration source snapshot
 - `legacy local state/`: historical source state, not UT-TDD state
 
 V-model artifacts must stay separated:
@@ -79,7 +78,6 @@ V-model artifacts must stay separated:
 - Do not declare completion without tests or explicit verification.
 - Treat Codex / Claude Code as local CLI + hook surfaces managed by UT-TDD, not
   direct API calls.
-- Treat `vendor source snapshot` as read-only source material.
 - Remove or clearly supersede wrong development residue when it is discovered;
   do not leave misleading comments or dead paths as technical debt.
 

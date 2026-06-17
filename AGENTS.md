@@ -20,9 +20,8 @@ their workflow.
 - `docs/governance/README.md` - canonical / reference / archive boundary under governance
 
 Migration snapshots and inventories are not Core Reads. Read `docs/migration/`
-and `vendor source snapshot` only when migration, gap audit, or regression-source
-inspection requires them. Do not treat them as UT-TDD runtime state or execution
-paths.
+only when migration, gap audit, or regression-source inspection requires it. Do
+not treat it as UT-TDD runtime state or execution paths.
 
 Do not load `docs/design/harness/L3-functional/roadmap.md` as a normal startup
 read. The verification roadmap is read dynamically only at V-model freeze
@@ -35,10 +34,9 @@ Thin `.ps1` / `.sh` entrypoints may call the compiled or Bun-based TypeScript
 core. The language of repositories governed by UT-TDD is independent of the
 harness implementation language.
 
-`docs/archive/` and `vendor source snapshot` are not canonical. Vendor material is
-read-only source evidence. When migration is needed, copy the relevant material
-into a UT-TDD-owned path and then rewrite names, assumptions, and Windows
-support.
+`docs/archive/` is not canonical; it is historical material only. The HELIX
+vendor snapshot has been removed now that the fork is complete (see
+`docs/migration/helix-fork-completion-plan.md` §11).
 
 ## Session Start
 
@@ -104,8 +102,6 @@ different runtime / model family when feasible. In single-runtime modes, record
 `intra_runtime_subagent` as the review substitute and leave evidence.
 
 Do not add legacy commands as current company/product execution paths.
-Unmigrated historical behavior may be inspected under `vendor source snapshot`
-only as source evidence.
 
 ## Skills
 
@@ -123,7 +119,6 @@ only as source evidence.
   explicit instruction.
 - Do not write secrets, PII, or credentials into docs, rules, examples, or audit
   evidence.
-- Treat `vendor source snapshot` as read-only.
 
 ## Test Rules
 
