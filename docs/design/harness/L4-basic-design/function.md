@@ -49,7 +49,7 @@ ADR-004 の **層1 markdown 正本 / 層2 TS 統制**境界に従う。TS は ma
 | **roster registry** | 層2 (TS) | `src/runtime/agent-slots.ts#resolveRosterCapability` | `.claude/agents/*.md` (層1 正本) の frontmatter (model family / capability) を読み、roster metadata を構築。subagent の存在・属性の SSoT |
 | **capability class 解決** | 層2 (TS) | roster module | **FR-L1-46 の機能**: subagent を capability class (PMO/PdM/review/...) に分類。FR-L1-37 (model 推挙) へ入力を提供する**連携先**だが、FR-L1-37 自体は C12 実装対象外 (別境界 = PLAN-L4-NN-model-suggestion、§6 P1 carry) |
 | **guard allowlist 統合** | 層2 (TS) | runtime (agent-guard 既存) が roster を読む (`runtime → roster` 一方向、循環なし) | roster が allowlist の **SSoT** (受動提供)、agent-guard が **enforcement** (能動参照、実装済 15 種 allowlist + model family 一致 fail-close)。roster と guard の二重定義を排除 |
-| **subagent 本文** | 層1 (markdown) | `.claude/agents/*.md` | prompt 本文は markdown 正本のまま (TS literal 化しない)。HELIX 前提 (絶対パス / `helix codex` 直叩き) 除去は drift lint (FR-L1-49) の fail-close 対象 |
+| **subagent 本文** | 層1 (markdown) | `.claude/agents/*.md` | prompt 本文は markdown 正本のまま (TS literal 化しない)。legacy source 前提 (絶対パス / legacy runtime command direct call) 除去は drift lint (FR-L1-49) の fail-close 対象 |
 | **command** | 層2 (TS) | cli (§2 内部資産 command) | 内部資産操作の CLI subcommand (roster 一覧 / 整合確認 / asset カタログ)。各 subcommand の関数粒度は L6 で確定 (back-fill) |
 
 > **roster ↔ guard の関係 (依存方向、Critical-1 是正)**: agent-guard.ts は既存実装 (subagent_type allowlist 15 + model family 一致、fail-close)。roster registry はその allowlist の **設計上の SSoT** を `.claude/agents/*.md` 群から構築する層 (依存先 = schema/fs のみ、guard に依存しない)。統合は **agent-guard (runtime) が roster を読む = `runtime → roster` の一方向**で実現 (循環なし、architecture §3.1)。

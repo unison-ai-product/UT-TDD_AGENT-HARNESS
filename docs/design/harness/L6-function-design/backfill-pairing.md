@@ -14,7 +14,7 @@ plan: docs/plans/PLAN-L6-08-backfill-pairing.md
 PLAN: IMP-051 (back-fill pairing lint、add-feature)。
 pair (③): docs/test-design/harness/L7-unit-test-design.md §1.11 U-BACKFILL。
 実装 (②): src/lint/backfill-pairing.ts + src/doctor/index.ts checkBackfill。
-ADR-001 準拠: HELIX/Python コードを port せず TypeScript (Bun) で全面再実装。
+ADR-001 準拠: 旧 Python コードを port せず TypeScript (Bun) で全面再実装。
 -->
 
 # UT-TDD Agent Harness — L6 機能設計: backfill-pairing lint (IMP-051)

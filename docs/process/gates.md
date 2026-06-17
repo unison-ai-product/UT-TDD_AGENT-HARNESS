@@ -76,4 +76,4 @@ G7 は L7 実装完了の唯一の exit gate。以下 3 条件をすべて満た
 | `debt_degradation` / `code_smell` | コード劣化検出 | **Refactor** |
 | `dependency_outdated` / `upgrade` | 依存陳腐化 | **Retrofit** (upgrade preflight 必須) |
 
-検出は `.ut-tdd/` state を参照し、`helix.db` には依存しない (§7.8.5)。`--static-only` フラグで AI 不要の機械判定のみ実行可能。
+検出は `.ut-tdd/` state を参照し、`legacy DB` には依存しない (§7.8.5)。`--static-only` フラグで AI 不要の機械判定のみ実行可能。

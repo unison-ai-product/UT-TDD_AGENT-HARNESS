@@ -44,14 +44,14 @@ review_evidence:
 
 ## §0 本 PLAN の役割
 
-本 PLAN は `技術要求 (technical)` sub-doc を v2 HELIX-workflows 設計概念 §1-§8 構造を参照して起票する工程を管理する。中間準備 + 工程表 + 実装計画を内蔵し、進捗を追跡可能にする。
+本 PLAN は `技術要求 (technical)` sub-doc を V2 source snapshot reference の設計概念 §1-§8 構造を参照して起票する工程を管理する。中間準備 + 工程表 + 実装計画を内蔵し、進捗を追跡可能にする。
 
 技術要求 (TR-*) は業務要求 (BR-*) の制約・実現手段を技術視点で規定する。§4 state schema 二層構造 / §5 工程別 skill 注入 / §6 9 mode 共通基盤 / §7 drift 解消は UT-TDD 固有の高度技術要求であり、L4 carry で詳細設計する。
 
 ## §1 入力 (上流からの baton)
 
 - L0 企画書: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
-- v2 HELIX-workflows 設計概念参照: `vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md`
+- 翻案元 reference: V2 source snapshot requirements process doc
 - v2 取り込み軌跡: `docs/migration/v2-import-ledger.md` §5 (A-21)
 - ADR-001: `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` (TypeScript + Bun 正本宣言)
 - 上流 baton (business): `docs/design/harness/L1-requirements/business-requirements.md` (NFR-01〜15 / BR-20 / BR-16 7-Gate 等)
@@ -70,7 +70,7 @@ review_evidence:
 
 | ID | ヒアリング項目 | 着地先 | status |
 |----|--------------|--------|--------|
-| U-技術-1 | ADR-001 (HELIX は設計概念のみ流用 / TS 全面再実装) を L1 技術要求として独立明示するか (= U-技-5) | technical §1 に ADR-001 参照明示 + NFR-04 (言語非依存) と組み合わせて担保。NFR-10 独立明示は不要 | ✅ (PO 承認済 2026-05-28) |
+| U-技術-1 | ADR-001 (source snapshot は設計概念のみ参照 / TS 全面再実装) を L1 技術要求として独立明示するか (= U-技-5) | technical §1 に ADR-001 参照明示 + NFR-04 (言語非依存) と組み合わせて担保。NFR-10 独立明示は不要 | ✅ (PO 承認済 2026-05-28) |
 | U-技術-1b | Bun runtime の version pinning 方針 (LTS相当 / latest follow) | technical §1 に「LTS 相当の安定版を使用、major version 変更は L4 ADR で管理」として確定 | ✅ (PO 承認済 2026-05-28) |
 
 ### 3.2 state schema 二層構造 (§4 L4 carry)
@@ -160,9 +160,9 @@ review_evidence:
 
 | 節 | 情報源 | 方法 |
 |----|--------|------|
-| §1 採用技術・技術制約 | ADR-001 + CLAUDE.md + B-1 現状 | TypeScript (Bun) / cross-platform / AI runtime 4 mode / 言語非依存 / HELIX vendor snapshot + ADR-001 明示追加 |
+| §1 採用技術・技術制約 | ADR-001 + CLAUDE.md + B-1 現状 | TypeScript (Bun) / cross-platform / AI runtime 4 mode / 言語非依存 / source reference snapshot + ADR-001 明示追加 |
 | §2 外部連携 + IF 要望 | concept §8 + BR-20/NFR-15 (Phase A) + Phase B 候補 | Claude Code API / Codex API / GitHub API / Phase B DB 候補 (参考) |
-| §3 既存システム制約 | CLAUDE.md + `.helix/` 移行状況 + vendor/helix-source/ | HELIX 参照 snapshot の read-only 制約 / `.helix/` 互換参照 / Windows PowerShell 環境 |
+| §3 既存システム制約 | CLAUDE.md + legacy local state 移行状況 + source reference snapshot | source reference snapshot の read-only 制約 / legacy local state は migration evidence のみ / Windows PowerShell 環境 |
 | §4 state schema 二層構造 | concept §2.6.4 + v2-import-ledger §3 (R-1) + BR-20 | Phase A: ファイルベース `.ut-tdd/` (概要)。Phase B: PGlite 二層 (carry)。idempotency_key 概要記載 |
 | §5 工程別 skill 注入機構 | concept §2.6.4 + v2-import-ledger §2 (F-1) | 6 フィールド schema の概要 (要求レベル) + L4 carry 宣言 |
 | §6 9 mode 共通基盤 | concept §2.5 + v2-import-ledger §3 (R-2) | R0-R4 + RGC を Forward/Reverse 共通 closure language として概要記載 + L4 carry |

@@ -38,7 +38,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 roster (PLAN-DISCOVERY-02) に続く 2 件目の Discovery-for-design ([[PLAN-DISCOVERY-01]] §1.1)。skill module (FR-L1-47: catalog / recommender / injector) の L5 設計を**紙上で確定する前に仮実装で実証して確定**する。skill は **recommender (工程→skill 推挙/発火) の方式が最も不確実**で、roster より Discovery 適性が高い (PO 確定「skill Discovery を回す」)。
 
-> **recommender 基盤の方向 (PO 確定 2026-06-01)**: 「ワークフロー上にスキル発火を設け、スキルを **category タグ + 工程タグ**で分けて **工程単位で推挙**させる仕組み」。当初 PM が枠組んだ「PLAN/keyword → search」型 (HELIX gpt-5.4-mini freeform) は誤り → **工程タグ駆動の決定論推挙/発火**に訂正 (§1.1 詰まり②)。
+> **recommender 基盤の方向 (PO 確定 2026-06-01)**: 「ワークフロー上にスキル発火を設け、スキルを **category タグ + 工程タグ**で分けて **工程単位で推挙**させる仕組み」。当初 PM が枠組んだ「PLAN/keyword → freeform search」型は誤り → **工程タグ駆動の決定論推挙/発火**に訂正 (§1.1 詰まり②)。
 
 > **roster との違い (なぜ skill も Discovery)**: roster は scan 対象 (`.claude/agents/`) が実在し agent-guard で scan 実証済だった。skill は **catalog source (`docs/skills/`) が空** (curate 未実施) + **recommender が本質的にヒューリスティック** = roster 以上に紙上で確証が持てない。
 
@@ -54,16 +54,16 @@ architecture §3.1 skills building block = `loadCatalog()` / `recommendSkill()` 
 
 ### §1.1 S1 で surface した設計の詰まり (Discovery で解くべき核心)
 
-- **詰まり① catalog source 空 (curate 依存)**: UT-TDD の catalog source `docs/skills/**/*.md` は **空 (`.gitkeep` のみ)**。curate (FR-L1-47: vendor/helix-source/skills の ~100 skill を UT-TDD 用に選別・`helix_*` ラベル除去/relabel) が**前提依存** (porting-map W10、L7 = 実装状態解消型 `placeholder_deps:{waiting_layer:L7}`)。**spike は vendor skills を sample catalog として使い、catalog/recommender 機構を実証**する (curate そのものは検証対象外)。
-- **詰まり② recommender 基盤 = 工程タグ駆動 (PO 確定方向 2026-06-01)**: PO 指摘「スキルをカテゴリタグで分けて**工程単位で推挙させる仕組み**にすべき」。**HELIX の task-description → gpt-5.4-mini freeform search は不採用** (LLM 依存 + 「TS にそろえる」非整合、[[feedback-ts-native-over-helix-cli]])。代わりに **skill を category タグ + 工程(layer/gate) タグで分類し、ワークフローの各工程で当該タグを持つ skill を決定論で推挙/発火する** (= FR-12 `injectByLayer` + 既存「工程別 subagent 起動マップ mandatory-by-phase」と同型、TS-native、LLM 不要)。HELIX skill は既に `helix_layer`/`helix_gate` タグを持つので、curate で ut-tdd 工程へ relabel + category 付与すれば成立する見込み。**spike は「工程 → タグ lookup が per-phase で sensible な skill set を出すか」を検証**。出なければ pivot (タグ設計の見直し)。
+- **詰まり① catalog source 空 (curate 依存)**: UT-TDD の catalog source `docs/skills/**/*.md` は当時 **空 (`.gitkeep` のみ)**。curate (FR-L1-47: source skill reference の skill を UT-TDD 用に選別・旧 label 除去/relabel) が**前提依存** (porting-map W10、L7 = 実装状態解消型 `placeholder_deps:{waiting_layer:L7}`)。**spike は UT-TDD-owned `docs/skills/**/*.md` または test fixture を sample catalog として使い、catalog/recommender 機構を実証**する (curate そのものは検証対象外)。source snapshot は provenance / comparison のみ。
+- **詰まり② recommender 基盤 = 工程タグ駆動 (PO 確定方向 2026-06-01)**: PO 指摘「スキルをカテゴリタグで分けて**工程単位で推挙させる仕組み**にすべき」。**source freeform search は不採用** (LLM 依存 + 「TS にそろえる」非整合)。代わりに **skill を category タグ + 工程(layer/gate) タグで分類し、ワークフローの各工程で当該タグを持つ skill を決定論で推挙/発火する** (= FR-12 `injectByLayer` + 既存「工程別 subagent 起動マップ mandatory-by-phase」と同型、TS-native、LLM 不要)。source skill metadata tags は curate で ut-tdd 工程へ relabel + category 付与すれば成立する見込み。**spike は「工程 → タグ lookup が per-phase で sensible な skill set を出すか」を検証**。出なければ pivot (タグ設計の見直し)。
 
 ## §2 仮実装計画 (S2、PoC spike)
 
 - **ブランチ**: `poc/skill-spike` (使い捨て、`poc/*` → main 直 PR 物理ブロック)
 - **実装**: PM-authored TS (Codex は 8009001d で broken、env-forced fallback = roster PLAN-DISCOVERY-02 A-96 で確立済の path)
 - **spike 範囲** (`src/skill/` に最小):
-  1. `scanSkills()`: `vendor/helix-source/skills/**/SKILL.md` を scan → catalog (`{id, description, layers, gate, role, tier}`)。frontmatter parse は roster spike 流用
-  2. `recommendByPhase(layer, opts?)`: skill の 工程(layer/gate) タグ + category で、指定**工程**に該当する skill を**決定論で抽出** → per-phase skill set。LLM 不使用。HELIX `helix_layer` を ut-tdd 工程へ map する relabel も spike 内で簡易実装
+  1. `scanSkills()`: `docs/skills/**/*.md` または `tests/fixtures/skill-catalog/**` を scan → catalog (`{id, description, layers, gate, role, tier}`)。frontmatter parse は roster spike 流用
+  2. `recommendByPhase(layer, opts?)`: skill の 工程(layer/gate) タグ + category で、指定**工程**に該当する skill を**決定論で抽出** → per-phase skill set。LLM 不使用。source layer tag を ut-tdd 工程へ map する relabel も spike 内で簡易実装
   3. (injector は stub、recommendByPhase の出力を注入する骨子のみ。本筋は工程→タグ lookup)
 - **検証用**: 各**工程** (例 L1 要求 / L4 基本設計 / L5 詳細設計 / G2 / G4) に対し、推挙される per-phase skill set が直感に合うか観察 (PLAN keyword 入力でなく**工程**入力)
 
@@ -73,7 +73,7 @@ architecture §3.1 skills building block = `loadCatalog()` / `recommendSkill()` 
 |---|---|---|
 | catalog scan が skill を拾うか | vendor skills 全件 catalog 化 (frontmatter parse 成立) | catalog 設計の成立 |
 | **工程タグ駆動 recommender が sensible な per-phase skill set を出すか** | 各**工程**に対し category+工程タグで該当 skill が出る (例: L5 詳細設計 → design/spec-driven/adr 系、G2 → adversarial-review/security 系、L4 → tdd/test 系) | **recommender 基盤の成否** (詰まり②)。出なければタグ設計 pivot |
-| 工程タグ relabel が機能するか | HELIX `helix_layer` → ut-tdd 工程 の map + category 付与で per-phase 抽出が成立 | curate のタグ relabel 方針の成立 |
+| 工程タグ relabel が機能するか | source layer tag → ut-tdd 工程 の map + category 付与で per-phase 抽出が成立 | curate のタグ relabel 方針の成立 |
 
 ## §4 設計確定 (S4、decision_outcome = PO)
 

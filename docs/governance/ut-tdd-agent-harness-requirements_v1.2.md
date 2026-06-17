@@ -3,7 +3,7 @@
 - **Version**: 1.2
 - **対応構想書**: `ut-tdd-agent-harness-concept_v3.1.md`
 - **位置付け**: 要件定義 (L1-L3 受入条件層)
-- **工程層体系**: v1.2 で **V2 (HELIX-workflows) の L0-L14 + V-model を base に採用** (§1.4 / §2、構想書 v3.1 連動)
+- **工程層体系**: v1.2 で **V2 source snapshot reference の L0-L14 + V-model を base に採用** (§1.4 / §2、構想書 v3.1 連動)
 - **想定読者**: Phase 0 Bootstrap 担当 (AI 実装エージェント + TL)
 - **対象 OS**:
   - Windows / macOS / Linux: ネイティブ動作を第一級対応
@@ -178,7 +178,7 @@ dependencies:
 
 ## 1.4 VALID_LAYERS (16 種 = V2 L0-L14 + cross、v1.2 で L0-L14 + V-model 採用)
 
-v1.2 で **V2 (HELIX-workflows) の L0-L14 + V-model** を base に採用。左 (設計 L0-L6) で書いた設計には同層で ③ テスト設計を対に凍結し、右 (検証 L8-L14) の対応工程で ④ テストコードを実施する。旧 L0-L11+小数層は本表に remap した (構想書 v3.1 §3 連動)。
+v1.2 で **V2 source snapshot reference の L0-L14 + V-model** を base に採用。左 (設計 L0-L6) で書いた設計には同層で ③ テスト設計を対に凍結し、右 (検証 L8-L14) の対応工程で ④ テストコードを実施する。旧 L0-L11+小数層は本表に remap した (構想書 v3.1 §3 連動)。
 
 | layer | 名称 | ① 設計 / ③ テスト設計ペア (V-model) | 旧 v1.1 layer からの remap |
 |-------|------|--------------------------------------|----------------------------|
@@ -528,7 +528,7 @@ L0 → L1 → L4 のドメイン継承チェーンを `ut-tdd plan lint` (sub_do
 - [ ] **型3 属性漏れ** = §1 行が必須 7 列 (機能要求名 / 出典 doc / 必要 input / 出力 output / 重要度 / 対応画面) を欠く or 重要度が P0|P1|P2 でない → exit 1
 - [ ] **型4 件数整合** = §1 実数が header 件数確定宣言 (計 N / P0 / P1 / P2) と不一致 → exit 1 (A-54 doc 件数誤りの再発防止)
 - [ ] **型5 画面被覆** = P0 FR-L1 に対応画面が無い → exit 1 (P1/P2 は warn、screen §5.3 R3 と連動)
-- [ ] **型6 外部 corpus 漏れ (tier-2、自動化対象外)** = source 機能 inventory (HELIX 47 doc 等) との完全性突合は periodic subagent 監査。inventory を登録すれば将来自動化可能だが、それ未満では手動 audit が残る
+- [ ] **型6 外部 corpus 漏れ (tier-2、自動化対象外)** = source 機能 inventory (legacy source 47 doc 等) との完全性突合は periodic subagent 監査。inventory を登録すれば将来自動化可能だが、それ未満では手動 audit が残る
 
 **登録機構 (registration)**: 各工程で発見した機能要求は PLAN §7 機能要求更新 (FR-L1 delta) に記載 → §1 への back-merge を必須化 (§1.2 back-propagation 6 step を機械強制)。新 FR-L1 は (a) §1 行追加 (b) screen §5 trace 紐付け (c) header 件数確定宣言更新 (d) ledger 記録 を満たさなければ exit 1。
 
@@ -844,7 +844,7 @@ R4 outcome の `forward_routing` で Forward 接続点を明示:
 
 > 旧 v1.1 の `L2`(全体設計)/`L3`(詳細設計) は L0-L14 remap で `L4`/`L5` に対応する。`L2` は画面設計専用になったため forward_routing 値としては使わない。
 >
-> **`L7` / `L8`-`L11` を forward_routing に含めない理由 (PM アーキ判断で確定、DISCOVERY-04 監査 2026-06-02)**: Reverse は **必ず設計層 (L1/L3/L4/L5) に再入し ①⇔③ pair-freeze gate (G1/G3/G4/G5) を通す** のが V-model 規律。L7 (実装) / L8-L11 (検証) へ直接 routing するのは pair-freeze をバイパスする違反 (helix-source の緩いモデルでは L7/L8-L11 routing があったが UT-TDD は不採用)。「実装だけで閉じる」案件は `L5` (→pair-freeze→L7)、fullback の文書整合は対象 ③ の設計層へ routing するか `gap-only`。enum は 5 値で確定 (拡張不要)。
+> **`L7` / `L8`-`L11` を forward_routing に含めない理由 (PM アーキ判断で確定、DISCOVERY-04 監査 2026-06-02)**: Reverse は **必ず設計層 (L1/L3/L4/L5) に再入し ①⇔③ pair-freeze gate (G1/G3/G4/G5) を通す** のが V-model 規律。L7 (実装) / L8-L11 (検証) へ直接 routing するのは pair-freeze をバイパスする違反 (source snapshot の緩いモデルでは L7/L8-L11 routing があったが UT-TDD は不採用)。「実装だけで閉じる」案件は `L5` (→pair-freeze→L7)、fullback の文書整合は対象 ③ の設計層へ routing するか `gap-only`。enum は 5 値で確定 (拡張不要)。
 
 R4 outcome の `promotion_strategy` で PoC / 検証成果物の扱いを明示:
 
@@ -1177,7 +1177,7 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 | 探すコストを下げる | PLAN/artifact/finding/skill/model/session の検索用 projection を持ち、`ut-tdd find` 相当の CLI が path/ID/reason/evidence を返せる。 |
 | workflow 自動化 readiness を判定できる | Forward/Add-feature/Reverse/Recovery などの workflow run、gate/CI/doctor 結果、blocked/human-required 状態を同じ `plan_id` / `session_id` / `drive_run_id` で参照できる。 |
 | guardrail の安全性を証跡化できる | agent-guard、review_evidence、same-model approval 禁止、tests-before-review、escalation 境界、human signoff の判定結果を `guardrail_decisions` 相当の projection として持ち、silent pass を finding 化できる。 |
-| skill/roster/command docs を自動化基盤として catalog 化できる | skill/roster/command docs の path、trigger、role/capability、drift status、recommendation reason、search token を catalog projection として持ち、空 catalog・HELIX 前提残存・guard 不整合を検出できる。 |
+| skill/roster/command docs を自動化基盤として catalog 化できる | skill/roster/command docs の path、trigger、role/capability、drift status、recommendation reason、search token を catalog projection として持ち、空 catalog・legacy source 前提残存・guard 不整合を検出できる。 |
 | UT evidence history を query できる (A-122 / IMP-109) | `test_cases / test_runs / test_results / test_artifact_edges / test_flake_events` 相当の projection を持ち、どの UT がどの PLAN / FR / U-* oracle / artifact を証明したか、いつ green だったか、flake や duration regression があるかを参照できる。 |
 | 定量 green profile を再現できる (A-122 / IMP-108) | `review_evidence.tests_green_at <= reviewed_at` に加え、`GreenDefinition` として required command profile、runner (`bun` / powershell / bash / ci)、scope、exit code、evidence path、output digest を記録し、定性レビューが正しい定量 green の後に実施されたことを検証できる。 |
 | DB projection 実装 profile を固定する (A-122 / IMP-110) | Core runtime は Bun/TypeScript を前提に `bun:sqlite` を第一候補とし、schema_version、deterministic rebuild、migration fixture、doctor integration、redacted failure digest を持つ。DB は projection であり docs/state/logs を authoring source として残す。 |
@@ -1828,9 +1828,9 @@ DDD/TDD strictness は `docs/governance/ddd-tdd-rules.md` を SSoT とし、doma
 
 ---
 
-# §7.7 HELIX 由来 skill pack の curate / 正本化要件
+# §7.7 source-derived skill pack の curate / 正本化要件
 
-HELIX 由来 skill は `vendor/helix-source/` から直接実行しない。UT-TDD で使うものだけを `docs/skills/*.md` に **skill pack** として curate / 正本化し、`artifact_type=skill_doc` の PLAN 成果物として管理する。skill 本文は TypeScript literal 化しないが、catalog / recommender / injector / lint は TypeScript/Bun core で実装する。
+source-derived skill は `vendor source snapshot` から直接実行しない。UT-TDD で使うものだけを `docs/skills/*.md` に **skill pack** として curate / 正本化し、`artifact_type=skill_doc` の PLAN 成果物として管理する。skill 本文は TypeScript literal 化しないが、catalog / recommender / injector / lint は TypeScript/Bun core で実装する。
 
 ## 7.7.1 curate 候補 skill pack
 
@@ -1845,7 +1845,7 @@ HELIX 由来 skill は `vendor/helix-source/` から直接実行しない。UT-T
 
 ## 7.7.2 curate / TS 再実装時の変換ルール
 
-- `HELIX` 固有名、個人プロジェクト前提、WSL2 固定、絶対パスは UT-TDD 用語と相対パスへ置換する。
+- `legacy source` 固有名、個人プロジェクト前提、WSL2 固定、絶対パスは UT-TDD 用語と相対パスへ置換する。
 - `Claude Code` 固定の指示は `runtime_mode` (`standalone` / `claude-only` / `codex-only` / `hybrid`) に従う表現へ置換する。
 - external API / secret / credential を前提にする手順は core skill へ入れず、optional adapter 側に隔離する。
 - skill は「知識・観点・チェックリスト」までを持つ。GitHub Actions や hook の実行条件は workflow / harness 側に置く。
@@ -1866,7 +1866,7 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 
 - [ ] 正本化済み skill は `docs/skills/*.md` に配置され、PLAN の `generates` に `artifact_type=skill_doc` として記録される
 - [ ] skill doc は対応する workflow / harness / gate を明記する
-- [ ] HELIX 固有名、個人絶対パス、WSL2 固定表現が残らない
+- [ ] legacy source 固有名、個人絶対パス、WSL2 固定表現が残らない
 - [ ] `skill_doc` 更新 PR は `docs/*` 例外ではなく、PLAN 付き branch (`design/*` または `add/*`) で扱う
 - [ ] skill pack は vendor snapshot を直接参照せず、UT-TDD 正本化済みの本文を参照する
 
@@ -1874,7 +1874,7 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 
 # §7.8 配線要件 (signal routing / RecommendedCommandV1 / orchestration_mode / layer-context 注入)
 
-構想書 v3.1 §2.6 の配線を機械検証可能な形に確定する。V2 (`route_engine.py` / ADR-042 / `vmodel-semantics.yaml`) の routing/injection を UT-TDD 向けに翻案する。`helix *` コマンド名・`helix.db` 依存・個人絶対パスは持ち込まず、`ut-tdd *` 相当・`.ut-tdd/` state・package-local に再定義する。
+構想書 v3.1 §2.6 の配線を機械検証可能な形に確定する。V2 (`route_engine.py` / ADR-042 / `vmodel-semantics.yaml`) の routing/injection を UT-TDD 向けに翻案する。legacy runtime command name・legacy DB 依存・個人絶対パスは持ち込まず、`ut-tdd *` 相当・`.ut-tdd/` state・package-local に再定義する。
 
 ## 7.8.1 signal → mode routing 要件
 
@@ -1925,7 +1925,7 @@ route 結果は **人間向け表示 (`suggest_command`、文字列)** と **機
 }
 ```
 
-- `command` は必ず `ut-tdd` 始まり (`helix` を含めば exit 1)。
+- `command` は必ず `ut-tdd` 始まり (legacy runtime command name を含めば exit 1)。
 - `schema_version` は additive 拡張のみ (既存 field の意味変更禁止)。
 - `recommended_command` を agent / CI が JSON parse して実行する。`suggest_command` の文字列値は backward-compat 凍結 (変更時は schema_version を上げる)。
 
@@ -1968,15 +1968,15 @@ route 結果は **人間向け表示 (`suggest_command`、文字列)** と **機
 
 ## 7.8.5 横断検出の束ね要件
 
-interrupt / debt / drift-check / readiness と doctor 検出器 (relation-graph / doc-drift / connection-deficiency / regression) + test-perspective-gate を `ut-tdd doctor` / `ut-tdd plan lint` に束ねる。検出は `.ut-tdd/` state を参照し、`helix.db` には依存しない。test-perspective-gate は V-model 各ペアの **観点網羅** (抜け) と **レベル間非重複** (重複) を `--static-only` で fail-close 検証する。
+interrupt / debt / drift-check / readiness と doctor 検出器 (relation-graph / doc-drift / connection-deficiency / regression) + test-perspective-gate を `ut-tdd doctor` / `ut-tdd plan lint` に束ねる。検出は `.ut-tdd/` state を参照し、legacy DB には依存しない。test-perspective-gate は V-model 各ペアの **観点網羅** (抜け) と **レベル間非重複** (重複) を `--static-only` で fail-close 検証する。
 
 ## 7.8.6 受入条件 (配線)
 
 - [ ] `ut-tdd route eval --signal <s> --format json` が RecommendedCommandV1 (schema_version/command/args/safety) を返す
-- [ ] `command` が `helix` を含めば exit 1、`ut-tdd` 始まりのみ許可
+- [ ] `command` が legacy runtime command name を含めば exit 1、`ut-tdd` 始まりのみ許可
 - [ ] `requires_human_approval: true` で承認者ポリシー未解決または未承認なら exit 1 + 承認記録を audit に残す
 - [ ] `ut-tdd vmodel show <drive> <layer> --injection` が 5 注入 key を返し、`orchestration_mode` は VALID_ORCHESTRATION_MODES のいずれか
-- [ ] 配線 config / 検出器が HELIX 版 `helix.db` / 個人絶対パスに依存しない (`.ut-tdd/` YAML/JSON state + `.ut-tdd/harness.db` projection DB のみ)
+- [ ] 配線 config / 検出器が legacy `legacy DB` / 個人絶対パスに依存しない (`.ut-tdd/` YAML/JSON state + `.ut-tdd/harness.db` projection DB のみ)
 
 ## 7.8.7 execution mode × レビューゲート切り分け (gate 崩壊防止、構想書 v3.1 §2.1.2.1)
 
@@ -2411,7 +2411,7 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 | 1.0 | 2026-05-20 | 初版。構想書 v3.0 と分離して要件定義のみを記述 | PM + TL |
 | **1.1** | **2026-05-20** | **Codex TL Round 4 (追突レビュー) で指摘された Critical 8 + Important 9 を全 fix。S4 outcome enum 追加 / G4 fail-close 条件統一 / pre-push fail-close と warning 分離 / branch prefix 全 11 kind 網羅 / Phase 0-A/0-B 必須ファイル区別 / failure_log の必須性とディレクトリ性の整理 / テスト PR matrix 化 / drive×kind matrix / 必須 role 表 / canonical diff rule / exit code 3 段階 / pre-commit 検証コマンド明記** | **PM + TL** |
 | **1.2+** | **2026-05-28** | **§1.10.H G1-trace 機械検証ルール追加 (DD1=a / DD2=a PO 承認 2026-05-28)。G1 内 sub-gate「業務⇔画面⇔機能 双方向 trace 整合」としてルール R1-R4 (H.1-H.4) を定義。R1: BR/UX→画面 trace block / R2: 画面→BR/UX/FR-L1 trace block / R3: FR-L1 P0 block + P1-P2 warn (DD2=a) / R4: screen PLAN requires 整合 warn。§H.5 CLI: `ut-tdd plan lint --gate G1-trace`。§H.6 G1 entry/exit 条件 (G1-content→G1-pair→G1-trace の 3 段 fail-close)。§H.7 §G との接続規約 (§G.3/G.6 が前提条件)。構想書 §3.3.1 と連動。** | **PMO (Sonnet)** |
-| **1.2** | **2026-05-27** | **V2 (HELIX-workflows) の工程・モード・配線を取り込み (構想書 v3.1 連動)。§1.4 VALID_LAYERS を V2 L0-L14 + V-model に作り替え (旧 L0-L11+小数層を remap、L3.5/L3.8/L4.5 廃止)。§2 の 3 段階 freeze / 受入条件を V-model (G1/G3/G4/G5/G6 pair → G7 trace) に更新。§1.1 に `parent_design` 必須フィールド追加 (kind=impl)。§7.8 配線要件新設 (signal→mode routing / RecommendedCommandV1 safety schema / requires_human_approval→承認者解決 / orchestration_mode enum 5 種 / layer-context 注入 / 横断検出)。必須 role 条件・委譲表・gate 番号を L0-L14 に整合。§7.8.7 execution mode × レビューゲート切り分け新設 (mode 別 gate 挙動 / same_model_approval 実行時強制 / escalation 境界は mode 問わず人間サインオフ必須、gate 崩壊防止)。**単一エージェント時は ② 専門サブエージェント review を hard 要件化し、§7.8.7.1 に doc/test/code 3 点 + 横断の明文化必須 checklist (DOC/TST/COD/XR) を確定** (明文化でレビュアーのモデル差異を吸収)。レビュー範囲を **関数単位 / 機能単位 / 横断** の 3 スコープに拡張し、依存関係 (DEP)・重複実装 (DUP)・機能整合 (MOD) のチェック項目と AP-9 (重複実装) / AP-10 (依存違反) を追加。§7.1 team run 検証 7 + §7.6 受入条件に **ルール同一性 (rule parity test: claude-only と codex-only で同一判定・同一 exit code、CLAUDE.md/AGENTS.md の drift 検出)** と **hybrid 機能分散 (判断系/実行系を別 runtime、二重実行を exit 1)** を MUST 化 (構想書 §2.1.0)。ADR-001 連動で**実装言語を TypeScript (Bun) に確定**し §7.1 / §9.1 / §1.1 / §1.7 / §366 等の言語前提を Python→TS に更新 (`python_module`→`source_module`、`python -m ut_tdd.cli`→TS core、`requirements.txt`→`package.json`、pytest→vitest、pydantic→zod)** | **PM (Opus)** |
+| **1.2** | **2026-05-27** | **V2 source snapshot reference の工程・モード・配線を取り込み (構想書 v3.1 連動)。§1.4 VALID_LAYERS を V2 L0-L14 + V-model に作り替え (旧 L0-L11+小数層を remap、L3.5/L3.8/L4.5 廃止)。§2 の 3 段階 freeze / 受入条件を V-model (G1/G3/G4/G5/G6 pair → G7 trace) に更新。§1.1 に `parent_design` 必須フィールド追加 (kind=impl)。§7.8 配線要件新設 (signal→mode routing / RecommendedCommandV1 safety schema / requires_human_approval→承認者解決 / orchestration_mode enum 5 種 / layer-context 注入 / 横断検出)。必須 role 条件・委譲表・gate 番号を L0-L14 に整合。§7.8.7 execution mode × レビューゲート切り分け新設 (mode 別 gate 挙動 / same_model_approval 実行時強制 / escalation 境界は mode 問わず人間サインオフ必須、gate 崩壊防止)。**単一エージェント時は ② 専門サブエージェント review を hard 要件化し、§7.8.7.1 に doc/test/code 3 点 + 横断の明文化必須 checklist (DOC/TST/COD/XR) を確定** (明文化でレビュアーのモデル差異を吸収)。レビュー範囲を **関数単位 / 機能単位 / 横断** の 3 スコープに拡張し、依存関係 (DEP)・重複実装 (DUP)・機能整合 (MOD) のチェック項目と AP-9 (重複実装) / AP-10 (依存違反) を追加。§7.1 team run 検証 7 + §7.6 受入条件に **ルール同一性 (rule parity test: claude-only と codex-only で同一判定・同一 exit code、CLAUDE.md/AGENTS.md の drift 検出)** と **hybrid 機能分散 (判断系/実行系を別 runtime、二重実行を exit 1)** を MUST 化 (構想書 §2.1.0)。ADR-001 連動で**実装言語を TypeScript (Bun) に確定**し §7.1 / §9.1 / §1.1 / §1.7 / §366 等の言語前提を Python→TS に更新 (`python_module`→`source_module`、`python -m ut_tdd.cli`→TS core、`requirements.txt`→`package.json`、pytest→vitest、pydantic→zod)** | **PM (Opus)** |
 
 ---
 

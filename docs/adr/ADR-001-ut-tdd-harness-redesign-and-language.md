@@ -9,20 +9,20 @@
 
 UT-TDD Agent Harness の実体実装に着手するにあたり、2 つの基盤判断が必要になった。
 
-1. **HELIX の扱い**: 当初は HELIX の `helix-*` コマンド類をそのまま流用する案があった。しかし HELIX から取り込みたいのは **設計概念のみ**であり (その概念は既に governance v3.1/v1.2 に吸い出し済み)、内部はチーム開発向けに **全面再実装**したい。
+1. **legacy source の扱い**: 当初は legacy runtime command setをそのまま流用する案があった。しかし source snapshot から取り込みたいのは **設計概念のみ**であり (その概念は既に governance v3.1/v1.2 に吸い出し済み)、内部はチーム開発向けに **全面再実装**したい。
 2. **実装言語**: 環境は Windows がメイン、VPS は Linux。環境差異を最小化したい。候補は Python と TypeScript (Node/Bun)。
 
 制約・前提:
 
-- HELIX の `cli/helix-*` は **bash ディスパッチャ**で、これが Windows との環境差異・不安定 (path 変換 / CRLF / Codex `8009001d` sandbox 等) の主因。再設計の核心は bash 層の廃止。
+- legacy CLI dispatchers は **bash ディスパッチャ**で、これが Windows との環境差異・不安定 (path 変換 / CRLF / Codex `8009001d` sandbox 等) の主因。再設計の核心は bash 層の廃止。
 - governance 2 マスト原則 (concept §2.1.0): ① ルール同一性 (Claude/Codex が同一 core を呼び同一判定) ② hybrid 機能分散。
 - 流用ゼロのクリーン rebuild 前提のため、「既存 Python ロジックの port」優位は消える。
 
 ## Decision
 
-> **決定の更新 (2026-06-08, [ADR-007](ADR-007-harness-db-sqlite-projection.md))**: 本 ADR は当初 state を file-based (YAML/JSON) とし SQLite を「必要時 `better-sqlite3`」として deferral していた。その後 PLAN-L5-08 / A-105 で `.ut-tdd/harness.db` を **SQLite projection / フィードバック機構 (設計の柱3)** として採用 (deferral 解除)。本文 §1/§3・技術スタック表は ADR-007 の決定を反映済み (HELIX 版 `helix.db` schema 流用却下は不変)。決定史は ADR-007 を正本とする。
+> **決定の更新 (2026-06-08, [ADR-007](ADR-007-harness-db-sqlite-projection.md))**: 本 ADR は当初 state を file-based (YAML/JSON) とし SQLite を「必要時 `better-sqlite3`」として deferral していた。その後 PLAN-L5-08 / A-105 で `.ut-tdd/harness.db` を **SQLite projection / フィードバック機構 (設計の柱3)** として採用 (deferral 解除)。本文 §1/§3・技術スタック表は ADR-007 の決定を反映済み (legacy DB schema 流用却下は不変)。決定史は ADR-007 を正本とする。
 
-1. **再設計で進める (流用しない)**: HELIX からは **設計概念のみ**を取り込み (v3.1/v1.2 に反映済み)、内部は `ut-tdd` として **全面再実装**する。`helix-*` コマンド・bash ディスパッチャ・HELIX 版 `helix.db` schema・個人絶対パスは持ち込まない。
+1. **再設計で進める (流用しない)**: source snapshot からは **設計概念のみ**を取り込み (v3.1/v1.2 に反映済み)、内部は `ut-tdd` として **全面再実装**する。legacy runtime commands・bash ディスパッチャ・legacy DB schema・個人絶対パスは持ち込まない。
 2. **実装言語は TypeScript に統一**: core を **TypeScript (strict) / Bun runtime** で実装し、**bash 層を廃止**。OS 入口は薄い `ut-tdd.ps1` (Windows) / `ut-tdd` (POSIX) が同一の compiled core を呼ぶだけにする。
 3. **クロスプラットフォーム規約**: path は Node `path`、`.ut-tdd/` state は YAML + JSON + UT-TDD 独自の SQLite projection DB (`.ut-tdd/harness.db`) とし、core に bash を使わない、`.gitattributes` で改行正規化、subagent 起動は runtime adapter に隔離する。
 
@@ -52,7 +52,7 @@ TypeScript と Python の技術差は本ツール (型付きルール/検証/ル
 
 | 案 | 判定 | 理由 |
 |----|------|------|
-| HELIX `helix-*` をそのまま流用 | **却下** | bash 依存・個人パス・HELIX 版 `helix.db` schema を引きずり、governance (ut-tdd 単一正本 / クロスプラットフォーム) と矛盾 |
+| legacy runtime commands をそのまま流用 | **却下** | bash 依存・個人パス・legacy DB schema を引きずり、governance (ut-tdd 単一正本 / クロスプラットフォーム) と矛盾 |
 | Python で実装 | **不採用 (僅差)** | port 優位が消えた状態では、市場/エコシステム整合 (MCP/Claude Code 圏) と単一バイナリ配布で TS が上回る。保守者の Python フルエンシーは利点だが、戦略的 diversification と ecosystem fit を優先。**チーム保守が Python 一択化する等あれば再評価** |
 | Go 等 | 却下 | エコシステム不整合 (MCP/Claude Code 圏から外れる) |
 

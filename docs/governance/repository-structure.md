@@ -3,7 +3,7 @@
 - **Status**: accepted
 - **Date**: 2026-05-27
 - **正本**: 本書がリポジトリ配置の **canonical 正本**。`requirements_v1.2 §9.1`（Phase 0 存在チェック）と `CLAUDE.md` のディレクトリ節は本書を参照する。
-- **前提**: ADR-001（harness 実装 = TypeScript/Bun、HELIX は概念のみ）/ ADR-005（配布 = GitHub-pull、Web UI = 中央・全 project 横断、plugin = 補助チャネル）/ V-model 4 artifact（concept v3.1 §2.3）。
+- **前提**: ADR-001（harness 実装 = TypeScript/Bun、source snapshot は概念のみ）/ ADR-005（配布 = GitHub-pull、Web UI = 中央・全 project 横断、plugin = 補助チャネル）/ V-model 4 artifact（concept v3.1 §2.3）。
 - **要件同期 (済)**: `docs/process/` (A) / `src/web/` は **requirements_v1.2 §9.1 Phase 0-A 存在チェックツリーに反映済**。canonical ツリーの全ディレクトリは実体 (`.gitkeep`) 作成済 (構成は要件定義で確定するため一括実体化)。各 `[予定]` ディレクトリは **ディレクトリ実体化済 / 中身 (機能・doc) は後続 PLAN で起こす** の意。`src/web/` も実体化済 (Phase 0-A 対象化は後続 PLAN)。
 - **本 repo の位置づけ (ADR-005)**: 本 repo は **harness engine repo（= 配布の単一真実）**。各 project は本 repo を **git dependency（tag-pin）で pull** し、`ut-tdd setup` が adapter を投影する。下記 canonical ツリーは **engine repo の構成**。consume 側 project への投影レイアウトは §9 を参照。
 
@@ -50,7 +50,7 @@ UT-TDD-agent-harness/
 │   ├── skills/                   # [予定] UT-TDD 正本化 skill doc
 │   ├── plans/                    # PLAN-NNN-slug.md (実装計画)
 │   ├── templates/                # PLAN / prompt / state テンプレ
-│   ├── migration/                # HELIX→UT-TDD 再設計資料 (旧 porting-map 等。code-port 部は ADR-001 で superseded)
+│   ├── migration/                # legacy source → UT-TDD 再設計資料 (旧 porting-map 等。code-port 部は ADR-001 で superseded)
 │   ├── handover/                 # セッション handover
 │   ├── memory/                   # 運用メモ
 │   └── archive/                  # 旧版・superseded (正本ではない)
@@ -72,13 +72,12 @@ UT-TDD-agent-harness/
 │
 ├── .github/                      # workflows/harness-check.yml (Required Status Check)
 │
-├── helix-process/                # HELIX 工程定義の curated export (参照資料、tracked。正本は docs/process/ — 混同しない)
 ├── ai-agent-harness-directory-reference.md  # ディレクトリ横断参照資料 (tracked、参照用で正本でない)
 │
 ├── vendor/
-│   └── helix-source/             # ★ HELIX 参照 snapshot (read-only、直接編集禁止)
+│   └── source snapshot/             # ★ source reference snapshot (read-only、直接編集禁止)
 │
-└── .helix/                       # HELIX 由来 legacy state (gitignored、正本にしない)
+└── legacy local state            # gitignored、正本にしない
 ```
 
 `★` = 配置ルールが特に重要な領域。`[予定]` = **ディレクトリ実体 (`.gitkeep`) は作成済、中身 (機能コード・doc・workflow) は後続 PLAN で起こす**。構成 (どのディレクトリを置くか) は要件定義で確定するため一括実体化する。
@@ -96,10 +95,9 @@ UT-TDD-agent-harness/
 | 現行正本 doc | `docs/governance/` | concept v3.1 / requirements v1.2 / README / extraction-plan / 本書 |
 | 決定記録 | `docs/adr/` | `ADR-NNN-slug.md` |
 | 実装計画 | `docs/plans/` | `PLAN-NNN-slug.md`。superseded は `status: archived` |
-| 移行資料 | `docs/migration/` | HELIX 能力参照。code-port 計画は ADR-001 で superseded |
+| 移行資料 | `docs/migration/` | source capability reference。code-port 計画は ADR-001 で superseded |
 | runtime state | `.ut-tdd/` (state/cache/logs/handover CURRENT/tmp/local*) | generated。**docs 目的で追跡しない** (CLAUDE.md 禁止事項) |
 | 監査証跡 | `.ut-tdd/audit/*.md` / `.ut-tdd/audit/reports/*.md` / `.ut-tdd/evidence/` / `.ut-tdd/handover/provider/` | **tracked** (PO 決定 2026-06-10、A-128 F-1)。audit = A-NNN 監査記録、evidence = 正規化 JSON (secret/PII/raw transcript 禁止)。runtime state と区別する |
-| HELIX 工程 export | `helix-process/` | curated 参照資料 (tracked)。**工程定義の正本は `docs/process/`** — helix-process/ を正本として参照しない |
 | 横断参照資料 | `ai-agent-harness-directory-reference.md` | tracked。参照用であり配置正本は本書 |
 | 参照 snapshot | `vendor/helix-source/` | **read-only**。概念のみ参照、コードは port しない・直接編集しない |
 
@@ -123,14 +121,14 @@ UT-TDD-agent-harness/
 
 ## 5. tracked / gitignored
 
-- **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / `.helix/` / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
-- **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `vendor/helix-source/` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `helix-process/` `ai-agent-harness-directory-reference.md` (PO 決定 2026-06-10、A-128 F-1 / IMP-127)
+- **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
+- **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `vendor/helix-source/` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `ai-agent-harness-directory-reference.md` (PO 決定 2026-06-10、A-128 F-1 / IMP-127)
 
 ## 6. 境界
 
 - **正本**: `docs/governance/*` + `docs/adr/*` + `docs/process/*` (工程/駆動モデル定義) + `src/` (TS core)。
 - **read-only**: `vendor/helix-source/`（概念参照のみ）。
-- **generated / 非正本**: `.ut-tdd/state` `dist/` `node_modules/` `.helix/`。
+- **generated / 非正本**: `.ut-tdd/state` `dist/` `node_modules/` legacy local state。
 - **historical**: `docs/archive/`（旧版）/ `docs/migration/`（移行資料、code-port 部は superseded）。
 
 ## 7. 禁止事項
@@ -139,7 +137,7 @@ UT-TDD-agent-harness/
 - enum / 契約を `src/schema/` 以外で再定義しない。
 - `vendor/helix-source/` を直接編集しない（実行ロジックは UT-TDD 所有パスへ概念から TS/Bun 再実装し、markdown/docs/templates は curate して正本化する）。
 - `.ut-tdd/` **runtime state** (state/cache/logs/tmp/handover CURRENT/local*) を docs 目的で Git 追跡しない。**監査証跡** (`audit/*.md` / `audit/reports/*.md` / `evidence/` / `handover/provider/`) は例外として tracked (§5、A-128 F-1)。
-- `helix-process/` を工程定義の正本として参照しない (正本 = `docs/process/`。helix-process/ は curated 参照資料)。
+- source process reference を工程定義の正本として参照しない (正本 = `docs/process/`)。
 - 日本語ファイル名を使わない。
 - **`[予定]` ディレクトリの中身を後続 PLAN 不在のまま実装しない**: ディレクトリ実体 (`.gitkeep`) は構成確定として一括作成済だが、中身 (機能コード・doc・workflow。特に `src/web/`) は対応 PLAN が確定してから起こす。`.gitkeep` があることを実装許可と誤読しない。
 

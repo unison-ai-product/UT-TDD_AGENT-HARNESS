@@ -2,7 +2,7 @@
 
 # Incident 駆動モデル
 
-出典: concept v3.1 §2.5 / §2.6.1 signal→mode (`production_incident`/`hotfix_required`/`regression_prod`) / §2.6.5 env=prod 分岐 / §2.6.3 承認者 / requirements v1.2 §1.3 kind=troubleshoot/recovery / §1.5 workflow_phase 禁止規定 / §1.8 role=aim / helix-process/incident-workflow.md (翻案元)
+出典: concept v3.1 §2.5 / §2.6.1 signal→mode (`production_incident`/`hotfix_required`/`regression_prod`) / §2.6.5 env=prod 分岐 / §2.6.3 承認者 / requirements v1.2 §1.3 kind=troubleshoot/recovery / §1.5 workflow_phase 禁止規定 / §1.8 role=aim / source process reference (incident workflow)
 
 ---
 
@@ -91,8 +91,8 @@ hotfix を打ちっぱなしにせず、Reverse fullback (R0-R4、`confirmed_rev
 | Discovery post-deploy trigger | 本番後の問題を「検証候補化」するのみ (検出止まり)。緊急対応が要る場合は Incident へ |
 | Reverse fullback | 事後昇華の手段。hotfix の恒久対策を V-model 体系へ統合するために使用 |
 
-翻案注記: helix-process には `incident` 専用 kind がなく HELIX も `troubleshoot`+`recovery` の内包として扱う。UT-TDD では README 台帳でこの内包構造を明示し、layer=L7(+cross) と三者承認を UT-TDD 固有の追加定義として確定している。
+翻案注記: source process reference には `incident` 専用 kind がなく legacy source も `troubleshoot`+`recovery` の内包として扱う。UT-TDD では README 台帳でこの内包構造を明示し、layer=L7(+cross) と三者承認を UT-TDD 固有の追加定義として確定している。
 
 ---
 
-出典再掲: README.md 台帳 §2 / concept v3.1 §2.5/§2.6.3/§2.6.5 / requirements v1.2 §1.3/§1.5/§1.8 / helix-process/incident-workflow.md
+出典再掲: README.md 台帳 §2 / concept v3.1 §2.5/§2.6.3/§2.6.5 / requirements v1.2 §1.3/§1.5/§1.8 / source process reference (incident workflow)

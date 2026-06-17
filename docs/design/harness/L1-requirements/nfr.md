@@ -10,7 +10,7 @@ v2_import: docs/migration/v2-import-ledger.md
 ---
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
-> **件数確定**: nfr は **NFR-15 件で確定** (NFR-01〜08 + NFR-11〜17、NFR-09/10 は U-補-3 PO 判断連動の欠番、計 15 件。根拠: 2026-05-28 v2 HELIX-workflows 設計概念参照 A-20 + PO declared GHA audit framework / server-optional + NFR-16 onboarding 互換性追加、`docs/migration/v2-import-ledger.md §5.1 A-20`。**NFR-17 統合セキュリティは A-54 audit 軸1 I-01 back-propagation 追加、2026-05-29**)。
+> **件数確定**: nfr は **NFR-15 件で確定** (NFR-01〜08 + NFR-11〜17、NFR-09/10 は U-補-3 PO 判断連動の欠番、計 15 件。根拠: 2026-05-28 v2 legacy source-workflows 設計概念参照 A-20 + PO declared GHA audit framework / server-optional + NFR-16 onboarding 互換性追加、`docs/migration/v2-import-ledger.md §5.1 A-20`。**NFR-17 統合セキュリティは A-54 audit 軸1 I-01 back-propagation 追加、2026-05-29**)。
 > **L4 接続規約** (technical/nfr は L4 pair): `next_pair_freeze: L4`。L4 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
 
 # UT-TDD Agent Harness — L1 非機能要求 (nfr)

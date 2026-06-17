@@ -9,7 +9,7 @@
 
 2026-06-01 セッションで「L7-L14 工程定義 → 駆動モデル → ディレクトリ構成」を辿る中、**より上流の前提 = 「ハーネスをどう配布し、更新をどう享受し、Web UI をどこに置くか」が要件定義されていない**ことが判明 (PO 指摘)。この基盤未定義のため、ディレクトリ構成も工程/駆動モデルの置き場も決まらず収束しなかった。
 
-確定済の周辺事実: extraction-plan は配布を「repo template / setup script」とだけ記述 (global 個人 workspace = HELIX 方式は否定)、ただし **global 中央 / npm / plugin / version-pin 更新は未定義**。screen-requirements に **14 画面 Web UI** (PM 案件横断 / HM harness 診断 / GD) が PO 承認済 (2026-05-28) だが backend 配置は未確定 (IMP-031 で将来境界として予告)。UT-TDD は **社内開発チーム配布パッケージ** (HELIX 単一ユーザー前提と対比)。
+確定済の周辺事実: extraction-plan は配布を「repo template / setup script」とだけ記述 (global 個人 workspace = legacy global workspace 方式は否定)、ただし **global 中央 / npm / plugin / version-pin 更新は未定義**。screen-requirements に **14 画面 Web UI** (PM 案件横断 / HM harness 診断 / GD) が PO 承認済 (2026-05-28) だが backend 配置は未確定 (IMP-031 で将来境界として予告)。UT-TDD は **社内開発チーム配布パッケージ** (legacy single-user workspace 前提と対比)。
 
 「ハーネスの単一真実 (指示/skill/agent/工程/駆動モデル定義 + TS engine) = リファレンス §④の `.ai/` の役割」であり、`CLAUDE.md`/`.claude/`/`AGENTS.md` は各ツールへ供給する **adapter**。
 
@@ -38,7 +38,7 @@
 
 - **CI が package を要求**: Layer B-remote (`.github/workflows`) は `ut-tdd` lint/doctor を回す最終防壁。CI は Claude plugin を使えず、tool 非依存 package (GitHub-pull) が必須。
 - **社内最適**: GitHub-pull は public publish 不要・registry 構築不要で社内導入が最も楽 (PO 判断)。
-- **チーム前提**: tag-pin コミットで「チーム共有 + 再現性 + 中央更新享受」を両立。HELIX 個人 global の divergence も repo-template の更新不能も解消。
+- **チーム前提**: tag-pin コミットで「チーム共有 + 再現性 + 中央更新享受」を両立。legacy personal global workspace の divergence も repo-template の更新不能も解消。
 - **中央 UI = チーム管理**: 全 project 横断の可視化は中央配置でしか成立しない。GitHub を backbone にすれば配布 (D1) と UI (D2) が同一 data source で閉じる。
 - ADR-001 (TS package) / ADR-003 (provider 非 API・CLI adapter、IMP-031 Web 境界) と整合。
 
@@ -49,7 +49,7 @@
 | public npm publish | 却下 | 社内コードを公開不要。GitHub-pull で足りる |
 | Claude plugin を配布主軸 | 却下 | CI 不可 + Claude 専用 (multi-tool 崩す)。補助チャネルに留める (D3) |
 | repo-template コミット (extraction-plan §配布単位) | 却下 | 中央更新享受なし (PO 要望に反)。各 repo が diverge。extraction-plan の当該記述は本 ADR D1 で置換 |
-| global 個人 workspace (HELIX 方式) | 却下 | 単一ユーザー前提。チームでルール diverge |
+| global 個人 workspace (legacy global workspace 方式) | 却下 | 単一ユーザー前提。チームでルール diverge |
 | Web UI を project-local | 却下 | 全 project 横断のチーム管理が成立しない |
 
 ## Consequences
@@ -66,7 +66,7 @@
 - **L1 技術要求**: 「配布 = GitHub-pull / 更新 channel = tag-pin bump」を technical sub-doc §1 に追記し L3 で FR 化。
 - **screen-requirements 更新**: Web UI を「中央・全 project 横断 (team server)」と明示 (現状は project 文脈で記述)。
 - **repository-structure.md / ディレクトリ構成要件**: 3 層 (① engine repo[GitHub-pull] / ② project 投影[adapter via setup] / ③ 中央 UI service) を反映。工程/駆動モデル定義の home (`docs/process/` 候補) と機能 home (`src/<domain>/`) を要件化。
-- **HELIX cutover**: 本配布モデルは HELIX 個人 global の「作って差し替え」対象。cutover-strategy に沿って `.claude/CLAUDE.md` の helix CLI 導線を `ut-tdd` GitHub-pull 導線へ置換。
+- **legacy cutover**: 本配布モデルは legacy personal global workspace の「作って差し替え」対象。cutover-strategy に沿って `.claude/CLAUDE.md` の legacy CLI routeを `ut-tdd` GitHub-pull 導線へ置換。
 - **IMP-031 更新**: `ADR-003-runtime-adapter-boundary-subscription-cli.md` Follow-ups §IMP-031 (L52) に「Web サーバ配置方針は ADR-005 D2 を参照」を追記。
 - **Phase B server sync 方向 (PO 2026-06-10、direction-only / 未 freeze)**: 中央 UI の同期方式を以下の方向で具体化 (technical-requirements §2 carry note の「PGlite + ElectricSQL 候補」を refine。実装は Phase B PLAN で起票)。
   - **DB = SQLite** (`bun:sqlite` 継続 = physical-data §9 の core DB 選択と同一、新規依存なし。WAL モードで同期中の読取非ブロック。ElectricSQL/Postgres は不要として candidate から外す方向)。

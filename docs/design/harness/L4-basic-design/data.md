@@ -142,7 +142,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 
 ### §8.1 SQLite projection DB (`.ut-tdd/harness.db`)
 
-`.ut-tdd/harness.db` は YAML/JSON state と docs を読み込んで正規化する projection DB であり、HELIX 版 `helix.db` schema は再利用しない。役割は V-model の製本化、別駆動 model の実行結果保存、trace/coverage/finding の横断照合、doctor/vmodel lint の fail-close 入力である。
+`.ut-tdd/harness.db` は YAML/JSON state と docs を読み込んで正規化する projection DB であり、legacy DB schema は再利用しない。役割は V-model の製本化、別駆動 model の実行結果保存、trace/coverage/finding の横断照合、doctor/vmodel lint の fail-close 入力である。
 
 | table | 役割 |
 |---|---|

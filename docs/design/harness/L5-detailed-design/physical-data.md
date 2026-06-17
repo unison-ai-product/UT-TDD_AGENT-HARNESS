@@ -117,7 +117,7 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 
 ### §2.7 SQLite projection DB (`harness.db`)
 
-`harness.db` は HELIX 版 `helix.db` schema を流用せず、YAML/JSON state と docs を正規化して V-model feedback loop に使う projection DB。Bun runtime では `bun:sqlite` を第一候補とし、Node 互換が必要な adapter のみ `better-sqlite3` を検討する。
+`harness.db` は legacy DB schema を流用せず、YAML/JSON state と docs を正規化して V-model feedback loop に使う projection DB。Bun runtime では `bun:sqlite` を第一候補とし、Node 互換が必要な adapter のみ `better-sqlite3` を検討する。
 
 | table | primary key | 主な列 | 入力 |
 |---|---|---|---|

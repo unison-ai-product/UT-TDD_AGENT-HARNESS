@@ -2,7 +2,7 @@
 
 # Discovery 駆動モデル
 
-出典: concept v3.1 §2.5 (9-mode ecosystem) / §2.6.1 signal→mode / requirements v1.2 §1.3 kind=poc / §1.5 workflow_phase S0-S4 / §1.8 role=aim / helix-process/discovery-workflow.md (翻案元)
+出典: concept v3.1 §2.5 (9-mode ecosystem) / §2.6.1 signal→mode / requirements v1.2 §1.3 kind=poc / §1.5 workflow_phase S0-S4 / §1.8 role=aim / source process reference (discovery workflow)
 
 ---
 
@@ -85,8 +85,8 @@ fail-close: confirmed は verify script 成功が必須。S3 verify 失敗時は
 | Research | 前段 (切替) | Research (机上調査) で「作れるか不明」と判明した場合に Discovery へ切替・流入 (research.md §6 の reciprocal) |
 | Reverse (昇華) | 後段 | Discovery 終点 → Reverse fullback で V-model 正本化 |
 
-翻案注記: helix-process の `helix reverse code` / `helix plan draft` コマンドは `ut-tdd` CLI に置換。`poc/*` ブランチ運用は UT-TDD 独自ルール (CLAUDE.md §UT-TDD ワークフロー) に従う。
+翻案注記: source process reference の旧 command route は UT-TDD CLI route へ置換済み。`poc/*` ブランチ運用は UT-TDD 独自ルール (CLAUDE.md §UT-TDD ワークフロー) に従う。
 
 ---
 
-出典再掲: README.md 台帳 §2 / concept v3.1 §2.5-§2.6 / requirements v1.2 §1.3/§1.5/§1.8 / helix-process/discovery-workflow.md
+出典再掲: README.md 台帳 §2 / concept v3.1 §2.5-§2.6 / requirements v1.2 §1.3/§1.5/§1.8 / source process reference (discovery workflow)

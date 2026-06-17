@@ -10,7 +10,7 @@ v2_import: docs/migration/v2-import-ledger.md
 ---
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
-> **件数確定**: technical は技術要求 7 節 (§1〜§7) で確定 (根拠: 2026-05-28 v2 HELIX-workflows 設計概念参照、`docs/migration/v2-import-ledger.md §5.1 A-21 / §6`)。
+> **件数確定**: technical は技術要求 7 節 (§1〜§7) で確定 (根拠: 2026-05-28 v2 legacy source-workflows 設計概念参照、`docs/migration/v2-import-ledger.md §5.1 A-21 / §6`)。
 > **L3 接続規約**: `next_pair_freeze: L4`。L4 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
 
 # UT-TDD Agent Harness — L1 技術要求 (technical)
@@ -19,12 +19,12 @@ v2_import: docs/migration/v2-import-ledger.md
 
 | 項目 | 内容 | 根拠 |
 |------|------|------|
-| **実装言語** | TypeScript (Bun runtime) | ADR-001: HELIX は設計概念のみ取り込み、内部は TS で全面再実装 |
+| **実装言語** | TypeScript (Bun runtime) | ADR-001: legacy source は設計概念のみ取り込み、内部は TS で全面再実装 |
 | **対象 OS** | Windows / macOS / Linux 全て第一級サポート | NFR-01 cross-platform native |
 | **AI ランタイム** | Claude Code + Codex hybrid を主軸 (standalone / claude-only / codex-only / hybrid の 4 mode) | NFR-03 AI mode 非依存 |
 | **統制対象 repo 言語** | 非依存 (全種類) | NFR-04 言語非依存 |
 | **harness state** | ファイルベース (`.ut-tdd/` 配下) | 現行方針。DB は L2/L4 で検討 |
-| **HELIX vendor** | `vendor/helix-source/` に snapshot 隔離、read-only | CLAUDE.md 禁止事項 |
+| **source reference snapshot** | migration reference として snapshot 隔離、read-only | CLAUDE.md 禁止事項 |
 | **shell entrypoint** | `scripts/ut-tdd` (bash) / `scripts/ut-tdd.ps1` (PowerShell) | Windows ネイティブ対応 |
 | **テスト** | vitest (`tests/*.test.ts`) | ADR-001 TS/Bun 準拠 |
 | **reasoning model selection** | task × drive × L 別に model + reasoning effort を動的選定 (FR-L1-37)、L3 で具体的 model 候補確定 | FR-L1-37 連動 |
@@ -49,9 +49,9 @@ Phase B のサーバー同期 (PGlite + ElectricSQL 候補) は L3/L4 forward ca
 
 | 制約 | 内容 |
 |------|------|
-| **HELIX vendor snapshot** | `vendor/helix-source/` は read-only。productizing 時は設計概念だけを参照し、UT-TDD 所有パスで TS/Bun として再実装 |
+| **source reference snapshot** | read-only。productizing 時は設計概念だけを参照し、UT-TDD 所有パスで TS/Bun として再実装 |
 | **`.ut-tdd/` state** | UT-TDD runtime state の正本。大半は gitignored |
-| **`.helix/` state** | 移行中の HELIX 由来 state。通常は Git 追跡しない。UT-TDD 正本 state にはしない |
+| **legacy local state** | migration evidence のみ。通常は Git 追跡しない。UT-TDD 正本 state にはしない |
 | **開発者規模** | チーム規模 2-5 名 + AI スロット 3 を想定 (B1=b / BR-02)。single-developer mode も互換維持 |
 | **運用者ロール** | `.ut-tdd/` 直接編集 / `gate-checks.yaml` 更新 / hook 有効化のみ可。gate サインオフ / PLAN 削除は不可 (S-04) |
 | **Windows sandbox** | Codex 内 PowerShell が 8009001d で起動失敗。大きな input は task ファイル埋め込みで回避 |
@@ -161,8 +161,8 @@ R0-R4 + RGC (Reverse Gateway Closure) を Reverse 専用ではなく **共通 cl
 
 | L4 carry CLI | 内容 | 出典 |
 |---|---|---|
-| `ut-tdd bench` (I-1) | observability-metrics dashboard の bench コマンド (helix-bench 翻案、FR-L1-20 連動、L4 CLI 設計 sub-doc) | observability-metrics.md / functional §1.1 |
-| `ut-tdd pr` (I-1) | CI/PR gate 連携 (helix-pr 翻案、FR-L1-17 連動、L4 CLI 設計 sub-doc) | ci-pr-workflow.md / functional §1.1 |
+| `ut-tdd bench` (I-1) | observability-metrics dashboard の bench コマンド (legacy bench command 翻案、FR-L1-20 連動、L4 CLI 設計 sub-doc) | observability-metrics.md / functional §1.1 |
+| `ut-tdd pr` (I-1) | CI/PR gate 連携 (legacy PR command 翻案、FR-L1-17 連動、L4 CLI 設計 sub-doc) | ci-pr-workflow.md / functional §1.1 |
 | `ut-tdd cutover` (I-2) | Recovery 収束専用 cutover_orchestrator 翻案。**lock 機構**: ファイルベース実装 (JSON lockfile + DB metadata) または better-sqlite3 advisory lock を L4 で判断 (ADR-001 better-sqlite3 検討時) | recovery-workflow.md / functional §1.1 |
 | UT-TDD W Phase 合流 state (I-4) | drive=agent (FR-L1-28、two-stage-agent-design.md) が確定したら Phase 1/2 → L10 合流状態を `phase.yaml` に追記 (`phase_merge` フィールド) | two-stage-agent-design.md |
 

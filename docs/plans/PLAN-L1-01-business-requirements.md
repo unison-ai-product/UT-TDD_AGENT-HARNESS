@@ -47,14 +47,14 @@ review_evidence:
 
 ## §0 本 PLAN の役割
 
-本 PLAN は `業務要求 (business)` sub-doc を v2 HELIX-workflows 正本 §1-§10 構造で起票する工程を管理する。中間準備 + 工程表 + 実装計画を内蔵し、進捗を追跡可能にする。
+本 PLAN は `業務要求 (business)` sub-doc を V2 source snapshot reference の L1 sub-doc 構造を UT-TDD 正本へ再定義する形で起票する工程を管理する。中間準備 + 工程表 + 実装計画を内蔵し、進捗を追跡可能にする。
 
 旧 PLAN-L1-01 (v1.1 形式、5 sub-doc 全件を単一 PLAN で扱っていた) からの分割移行 (requirements §1.10.G.5 (a))。business 以外の内容は PLAN-L1-02〜05 へ移管済。
 
 ## §1 入力 (上流からの baton)
 
 - L0 企画書: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
-- v2 HELIX-workflows 正本: `vendor/helix-source/docs/v2/process/L01-requirements-and-operational-test-design.md`
+- 翻案元 reference: V2 source snapshot requirements process doc
 - v2 取り込み軌跡: `docs/migration/v2-import-ledger.md` §5 / §6
 - 被覆監査結果 (2026-05-28): §3 レジストリに業務要求 (BR-01〜19 + NFR-11〜15 + UX-01〜03) を確定済
 
