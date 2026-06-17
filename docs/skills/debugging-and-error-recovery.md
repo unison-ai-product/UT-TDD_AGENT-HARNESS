@@ -11,26 +11,122 @@ applies_to:
     - L11
     - L12
   drive_models:
+    - Recovery
+    - Incident
     - Forward
     - Add-feature
     - Reverse
-    - Recovery
-    - Incident
 ---
 
 # debugging and error recovery
 
-This is a UT-TDD Agent Harness skill document. Use it with the repository workflow, ut-tdd commands, and .ut-tdd/ state.
+Detection-to-routing protocol for defects and failures in UT-TDD (FR-L1-08
+defect detection, FR-L1-10 recovery routing, FR-L1-16 incident classification).
+This skill covers the triage and routing phase — once root cause is confirmed
+and a PLAN is open, apply the error-fix skill for the fix itself.
 
-## Scope
+## When to load this skill
 
-- Applies to the layers and drive models declared in frontmatter.
-- Supports design, implementation, review, verification, or handover work according to skill_type.
-- Treats docs/skills/ as the canonical skill catalog for this repository.
+- `ut-tdd doctor` exits non-zero and the root cause is not obvious.
+- `bun run test`, `bun run typecheck`, or `bun run lint` fails on CI or locally.
+- A runtime error appears in `.ut-tdd/` state or a hook entrypoint.
+- An agent subagent output is inconsistent with expected harness state.
+- A forced stop or unexpected session termination occurred (highest-severity
+  Recovery signal).
 
-## Operating Rules
+## Detection sources and their meaning
 
-- Read the relevant repository docs and target files before editing.
-- Keep changes scoped to the requested workflow and existing design boundaries.
-- Use deterministic ut-tdd validation, TypeScript/Bun checks, and focused tests.
-- Record handover or evidence in .ut-tdd/ when a task crosses session or runtime boundaries.
+| Signal | Tool | First action |
+|--------|------|--------------|
+| `ut-tdd doctor` non-zero | `ut-tdd doctor` | Read full output — never `| tail` |
+| CI harness-check red | CI log | Identify sub-gate (typecheck / lint / test / doctor) |
+| `.ut-tdd/` state inconsistency | `ut-tdd status` | Compare expected vs actual state |
+| Hook entrypoint status null | `ut-tdd doctor` | Verify `PATH` includes System32 (Windows) |
+| Subagent output mismatch | `git status` + file read | Check actual files, not agent narrative |
+
+Always read the **full** output of a failing command. Truncating with `| head`
+or `| tail` hides the root error — this has caused repeated false-diagnoses
+where a downstream error message was treated as the root cause.
+
+## Triage protocol
+
+### Step 1 — classify the failure
+
+Determine whether the failure is:
+
+- **Environmental** — PATH, missing runtime, `.ut-tdd/` directory permissions,
+  `CLAUDE_PROJECT_DIR` not set. Check `ut-tdd doctor` environment checks first.
+- **Governance** — orphaned PLAN, missing design doc, broken dependency link,
+  schema mismatch. Check `ut-tdd doctor` governance checks and `ut-tdd plan lint`.
+- **Implementation** — a logic error in `src/`. Confirm with `bun run test` and
+  a targeted test run.
+- **Test oracle** — a test is asserting the wrong thing, or a false-green was
+  accepted. Confirm by reading the test and the spec it should be testing.
+
+Do not move to Step 2 until the class is clear. Misclassifying environmental
+as implementation is a common source of wasted work.
+
+### Step 2 — route to the correct PLAN type
+
+| Class | Route |
+|-------|-------|
+| Environmental | Recovery PLAN; fix environment, add a `ut-tdd doctor` check for future detection |
+| Governance | Recovery PLAN or inline fix depending on severity; update the relevant design doc |
+| Implementation defect | Recovery PLAN (if severity warrants) or error-fix skill inline |
+| Incident (production / user-visible) | Incident PLAN; priority over all other work |
+
+A forced stop by the user is classified as Incident-level Recovery regardless
+of apparent technical severity.
+
+### Step 3 — reproduce before routing
+
+Before opening a PLAN, confirm the failure is reproducible:
+
+```
+bun run typecheck
+bun run lint
+bun run test
+ut-tdd doctor
+ut-tdd status
+```
+
+Record the exact failing command, the first error line, and the HEAD SHA in the
+PLAN's `review_evidence` field. "It failed earlier but I can't reproduce it"
+is not a valid PLAN basis — diagnose the flakiness first.
+
+## Recovery routing checklist
+
+- [ ] Failure class identified (environmental / governance / implementation /
+  oracle).
+- [ ] Failure is reproducible on current HEAD.
+- [ ] Failing command and first error line recorded in PLAN or `.ut-tdd/audit/`.
+- [ ] Correct PLAN type opened (Recovery / Incident / inline fix).
+- [ ] Root cause documented — what condition allowed the defect, not only what
+  the symptom was.
+- [ ] Prevention measure identified for after the fix (see error-fix skill).
+
+## Doctor signal catalogue
+
+Common `ut-tdd doctor` non-zero causes and their meaning:
+
+- **plan-governance**: orphaned PLAN, missing `requires` target, broken pair.
+  Read the full governance output; each line is a separate violation.
+- **readability**: mojibake marker (`U+FFFD`, half-width kana) detected in a
+  doc. Do not attempt to reconstruct from a lossy conversion — restore from
+  git history before the encoding error was introduced.
+- **env-path**: `PATH` is missing a required directory. On Windows, verify
+  `System32` is present; `ut-tdd doctor` will emit the missing segment.
+- **descent-obligation**: an L7 source file has no paired L5/L6 design doc.
+  Do not create a stub doc to pass the check — write the actual design.
+
+## Anti-patterns
+
+- Treating `ut-tdd doctor` green as "nothing is wrong" — doctor checks
+  structural governance; a false-green gate (coverage without substance) can
+  co-exist with a real defect.
+- Fixing the symptom without identifying root cause — the Recovery exit contract
+  requires a prevention measure, not only a symptom removal.
+- Opening a new PLAN without a reproducible failure — creates governance noise
+  and makes future triage harder.
+- Diagnosing from agent narrative output — always verify with `git status`,
+  file reads, and `ut-tdd status` against actual harness state.
