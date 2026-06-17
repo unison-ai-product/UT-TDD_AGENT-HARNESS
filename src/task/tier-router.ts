@@ -10,7 +10,8 @@
  *   - T0 (opus / gpt-5.5) は明示許可ゲート: 指名 role (tl/qa/uiux) + 明示トリガでのみ発火。
  *   - 主 provider (detectMode().currentRuntime) でクロス分岐し、Codex/GPT も Claude と対称。
  */
-import type { RuntimeDetection } from "../runtime/detect";
+import { type AdapterPlan, buildAdapterPlan } from "../runtime/adapter";
+import type { ExecutionMode, RuntimeDetection } from "../runtime/detect";
 import type { TaskDifficulty } from "../team/model-policy";
 import { type ClassifyTaskInput, classifyTask } from "./classify";
 
@@ -145,17 +146,19 @@ export function route(
   options: RouteOptions = {},
 ): RoutingDecision {
   const c = classifyTask(input.task);
-  const provider: Provider = options.primary ?? (detection.currentRuntime as Provider) ?? "claude";
+  const primary: Provider = options.primary ?? (detection.currentRuntime as Provider) ?? "claude";
   const archetype = ROLE_ARCHETYPE[input.role];
   const tier = tierFor(input.role, c.difficulty, c.risk_flags);
   const policy = reviewPolicy(c.difficulty, c.risk_flags);
   // 主 provider から「創出=主 / 判断=相手」のクロス切替を自動導出 (assignCross 配線)。
-  const cross = assignCross(detection, provider);
+  const cross = assignCross(detection, primary);
+  // 役割を実 provider へ配置 (クロス接続): ワーカー=創出側(主)、相談/検証=判断側(相手)。
+  const placed: Provider = archetype === "worker" ? cross.execution : cross.judgement;
   const base: Omit<RoutingDecision, "model" | "status" | "reason"> = {
     role: input.role,
     archetype,
     tier,
-    provider,
+    provider: placed,
     reviewEntry: policy.reviewEntry,
     gate: policy.gate,
     crossReview: detection.mode === "hybrid" && policy.crossReview,
@@ -179,7 +182,7 @@ export function route(
     }
   }
 
-  return { ...base, model: resolveModel(input.role, tier, provider), status: "ready" };
+  return { ...base, model: resolveModel(input.role, tier, placed), status: "ready" };
 }
 
 export interface CrossAssign {
@@ -195,7 +198,16 @@ export interface CrossAssign {
 export function assignCross(detection: RuntimeDetection, worker?: Provider): CrossAssign {
   const primary: Provider = worker ?? (detection.currentRuntime as Provider) ?? "claude";
   if (detection.mode === "hybrid") {
-    return { execution: primary, judgement: other(primary), review_kind: "cross_agent" };
+    // 連携状態 (hybrid): 実装 (創出) と検証 (判断) を明示的に別 provider にする (PO 指示)。
+    const assignment: CrossAssign = {
+      execution: primary,
+      judgement: other(primary),
+      review_kind: "cross_agent",
+    };
+    if (assignment.execution === assignment.judgement) {
+      throw new Error("invariant violation: hybrid は実装と検証を別 provider にする必要があります");
+    }
+    return assignment;
   }
   const only: Provider = detection.mode === "codex-only" ? "codex" : "claude";
   return { execution: only, judgement: only, review_kind: "intra_runtime_subagent" };
@@ -222,4 +234,21 @@ export function roster(): RosterBinding[] {
       codex: TIER_TABLE[tier].codex,
     };
   });
+}
+
+/**
+ * 決定 → 実行層ブリッジ (接続)。RoutingDecision を、配置済み provider の adapter 実行プラン
+ * (command / args / available) へ変換する。blocked (T0 未承認) は実行不可なので null を返す
+ * (fail-close)。これが難易度ルーターの決定を team/provider dispatch へ繋ぐ接続点。
+ */
+export function routeToAdapterPlan(
+  decision: RoutingDecision,
+  task: string,
+  mode: ExecutionMode,
+): AdapterPlan | null {
+  if (decision.status !== "ready" || decision.model === null) return null;
+  return buildAdapterPlan(
+    { provider: decision.provider, role: decision.role, task, model: decision.model },
+    mode,
+  );
 }

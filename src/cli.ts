@@ -81,7 +81,13 @@ import {
 } from "./state-db/projection-writer";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
 import { classifyTask } from "./task/classify";
-import { type Provider, type RouterRole, roster, route } from "./task/tier-router";
+import {
+  type Provider,
+  type RouterRole,
+  roster,
+  route,
+  routeToAdapterPlan,
+} from "./task/tier-router";
 import { recommendTeamLaunch } from "./team/launch-policy";
 import { buildTeamRunPlan, executeTeamRunPlan, loadTeamDefinition } from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
@@ -1405,6 +1411,7 @@ task
   .option("--files <list>", "comma-separated affected file paths")
   .option("--primary <provider>", "override primary provider (claude|codex)")
   .option("--allow-frontier", "explicitly authorize T0 (opus/gpt-5.5)")
+  .option("--execute", "bridge the decision to the provider adapter plan (dry-run command)")
   .option("--mode <mode>", "override execution mode for tests")
   .option("--json", "JSON output")
   .action(
@@ -1416,6 +1423,7 @@ task
       files?: string;
       primary?: string;
       allowFrontier?: boolean;
+      execute?: boolean;
       mode?: ReturnType<typeof detectMode>["mode"];
       json?: boolean;
     }) => {
@@ -1451,14 +1459,25 @@ task
           auth: { explicit: Boolean(opts.allowFrontier) },
         },
       );
+      const adapterPlan = opts.execute ? routeToAdapterPlan(decision, text, detection.mode) : null;
       if (opts.json) {
-        process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);
+        process.stdout.write(`${JSON.stringify({ decision, adapterPlan }, null, 2)}\n`);
         return;
       }
       process.stdout.write(
         `task route: role=${decision.role} archetype=${decision.archetype} tier=${decision.tier} provider=${decision.provider} model=${decision.model ?? "(blocked)"} status=${decision.status} review=${decision.reviewEntry} gate=${decision.gate} crossReview=${decision.crossReview} switch=${decision.cross.execution}>${decision.cross.judgement}(${decision.cross.review_kind}) difficulty=${decision.difficulty} risk=[${decision.riskFlags.join(",")}]\n`,
       );
       if (decision.reason) process.stdout.write(`  - ${decision.reason}\n`);
+      if (opts.execute) {
+        if (adapterPlan) {
+          process.stdout.write(
+            `  dispatch: provider=${adapterPlan.provider} available=${adapterPlan.available} command=${adapterPlan.command} args=[${adapterPlan.args.join(" ")}]\n`,
+          );
+        } else {
+          process.stdout.write("  dispatch: not executable (T0 explicit-permission gate)\n");
+          process.exitCode = 1;
+        }
+      }
     },
   );
 

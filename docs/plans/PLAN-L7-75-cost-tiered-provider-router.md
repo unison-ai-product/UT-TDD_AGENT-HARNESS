@@ -75,9 +75,18 @@ New `src/task/tier-router.ts` composing existing contracts (placed under
   cross-provider switch (creation=primary / judgement=other in hybrid,
   intra_runtime_subagent otherwise) from `currentRuntime`, surfaced as
   `switch=<exec>>(<judge>)` in the CLI.
+- Role placement (cross connection): `route` places worker roles on the
+  execution provider (primary) and consult/verify roles on the judgement
+  provider (other in hybrid), so the role's model resolves on the provider it
+  actually runs on. In hybrid `assignCross` enforces an explicit
+  implementation≠review provider separation (fail-close, PO directive).
+- Decision→execution bridge: `routeToAdapterPlan(decision, task, mode)` converts
+  a ready decision into the placed provider's adapter invocation (command/args),
+  returning null for a blocked (T0-gated) decision. Exposed via
+  `ut-tdd task route --execute` (dry-run command).
 - Vitest coverage for every invariant.
 
-Out of scope (follow-up): wiring the cross-provider switch into the actual
+Out of scope (follow-up): wiring the bridge into the actual
 `ut-tdd team run --execute` member spawn (team run still uses explicit YAML
 engine assignment + validateTeamRun); reconciling `model-policy.ts` frontier
 model id (gpt-5.4 → gpt-5.5) with this tier table; L6 function-spec back-fill.
@@ -97,6 +106,10 @@ model id (gpt-5.4 → gpt-5.5) with this tier table; L6 function-spec back-fill.
 
 ## 4. Status
 
-Draft. Implemented and verified 2026-06-17 (10 Vitest cases + CLI smoke).
-`assignCross` is wired into `route()`, so the primary→other cross-provider
-switch is auto-derived and surfaced (no longer an unwired library function).
+Draft. Implemented and verified 2026-06-17 (12 Vitest cases + CLI smoke).
+`assignCross` is wired into `route()`, roles are placed on their cross provider
+(worker=execution / consult-verify=judgement), hybrid enforces an explicit
+impl≠review separation, and `routeToAdapterPlan` bridges a ready decision to the
+provider adapter invocation (`ut-tdd task route --execute`). The decision and
+single-role execution layers are connected; team-run member spawn remains the
+follow-up integration.

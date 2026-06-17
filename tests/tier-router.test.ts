@@ -9,6 +9,7 @@ import {
   resolveModel,
   roster,
   route,
+  routeToAdapterPlan,
   TIER_TABLE,
   tierFor,
 } from "../src/task/tier-router";
@@ -160,5 +161,42 @@ describe("U-TIER: cost-tiered provider router", () => {
       det("claude-only", "claude"),
     );
     expect(single.cross.review_kind).toBe("intra_runtime_subagent");
+  });
+
+  it("U-TIER-011: routeToAdapterPlan が決定を provider adapter プランへ接続する", () => {
+    const ready = route(
+      { role: "se", task: { text: "rename a field" } },
+      det("codex-only", "codex"),
+    );
+    const plan = routeToAdapterPlan(ready, "rename a field", "codex-only");
+    expect(plan).not.toBeNull();
+    expect(plan?.provider).toBe("codex");
+    expect(plan?.command).toBe("codex");
+    expect(plan?.args).toContain("gpt-5.3-codex-spark");
+
+    // blocked (T0 未承認) は実行不可 → null (fail-close)。
+    const blocked = route(
+      { role: "tl", task: { text: "design the api boundary" } },
+      det("claude-only", "claude"),
+    );
+    expect(blocked.status).toBe("blocked-needs-approval");
+    expect(routeToAdapterPlan(blocked, "design the api boundary", "claude-only")).toBeNull();
+  });
+
+  it("U-TIER-012: 連携状態(hybrid)は実装と検証を明示的に別 provider にする", () => {
+    const impl = route({ role: "se", task: { text: "rename a field" } }, det("hybrid", "claude"));
+    const review = route(
+      { role: "qa", task: { text: "rename a field" } },
+      det("hybrid", "claude"),
+      {
+        auth: { explicit: true },
+      },
+    );
+    // impl=ワーカー=主(claude)、review=検証=相手(codex) で明示的に別 provider。
+    expect(impl.provider).toBe("claude");
+    expect(review.provider).toBe("codex");
+    expect(impl.provider).not.toBe(review.provider);
+    expect(impl.cross.review_kind).toBe("cross_agent");
+    expect(review.cross.review_kind).toBe("cross_agent");
   });
 });
