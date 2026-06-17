@@ -64,12 +64,16 @@ const REQUIRED = [
 ] satisfies readonly RequiredProjectHook[];
 
 const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
+const LEGACY_ENV_PREFIX = ["HE", "LIX_"].join("");
 const FORBIDDEN_PATH_RE = new RegExp(
   [
     "ai-dev-kit-vscode",
     `vendor/${LEGACY_RUNTIME_NAME}-source`,
     String.raw`\.${LEGACY_RUNTIME_NAME}`,
     String.raw`C:\\Users\\micro`,
+    `${LEGACY_ENV_PREFIX}[A-Z0-9_]*`,
+    String.raw`\b${LEGACY_RUNTIME_NAME}\s+(?:codex|claude|plan|gate|handover)\b`,
+    `pmo-${LEGACY_RUNTIME_NAME}-`,
   ].join("|"),
   "i",
 );
@@ -100,6 +104,15 @@ export function analyzeProjectHooks(docs: ProjectHookDoc[]): ProjectHookResult {
       continue;
     }
     const hooks = settings.hooks ?? {};
+    for (const [event, entries] of Object.entries(hooks)) {
+      for (const entry of entries ?? []) {
+        for (const hook of entry.hooks ?? []) {
+          if (FORBIDDEN_PATH_RE.test(hook.command ?? "")) {
+            violations.push({ file: doc.file, hook: event, reason: "forbidden_path" });
+          }
+        }
+      }
+    }
     for (const required of REQUIRED) {
       const entries = hooks[required.event] ?? [];
       const found = entries.some(

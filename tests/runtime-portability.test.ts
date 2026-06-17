@@ -123,4 +123,34 @@ describe("runtime-portability lint", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("U-RPORT-006: rejects legacy runtime markers in product runtime surfaces", () => {
+    const legacyName = ["he", "lix"].join("");
+    const legacyEnv = ["HE", "LIX_CODEX_BIN"].join("");
+    const result = analyzeRuntimePortability([
+      ...validDocs,
+      {
+        path: "src/runtime/adapter.ts",
+        text: `const bin = process.env.${legacyEnv};`,
+      },
+      {
+        path: "src/team/run.ts",
+        text: `export const command = "${legacyName} codex --role worker";`,
+      },
+      {
+        path: "src/runtime/detect.ts",
+        text: `export const statePath = ".${legacyName}/state";`,
+      },
+      {
+        path: ".claude/hooks/agent-guard.ts",
+        text: `export const reviewer = "pmo-${legacyName}-explorer";`,
+      },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.rule)).toEqual(
+      expect.arrayContaining(["legacy-runtime-marker"]),
+    );
+    expect(result.violations.filter((v) => v.rule === "legacy-runtime-marker")).toHaveLength(4);
+  });
 });

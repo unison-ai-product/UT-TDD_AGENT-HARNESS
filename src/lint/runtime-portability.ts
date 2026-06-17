@@ -29,6 +29,17 @@ const LOCAL_ABSOLUTE_PATH_PATTERN =
   /(?:[A-Za-z]:\\Users\\|\/home\/|\/Users\/|~\/ai-dev-kit-vscode)/;
 const SHELL_RUNTIME_PATTERN =
   /\b(?:spawn|spawnSync|exec|execSync|execFile|execFileSync)\s*\(\s*["'`](?:bash|sh|python|python3|powershell|pwsh|cmd(?:\.exe)?)(?:["'`]|\s)/;
+const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
+const LEGACY_ENV_PREFIX = ["HE", "LIX_"].join("");
+const LEGACY_RUNTIME_MARKER_PATTERN = new RegExp(
+  [
+    `${LEGACY_ENV_PREFIX}[A-Z0-9_]*`,
+    String.raw`\b${LEGACY_RUNTIME_NAME}\s+(?:codex|claude|plan|gate|handover)\b`,
+    String.raw`\.${LEGACY_RUNTIME_NAME}(?:[\\/]|$)`,
+    `pmo-${LEGACY_RUNTIME_NAME}-`,
+  ].join("|"),
+  "i",
+);
 
 function lineOf(text: string, pattern: RegExp): number {
   const lines = text.split(/\r?\n/);
@@ -231,6 +242,17 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
       line: lineOf(doc.text, LOCAL_ABSOLUTE_PATH_PATTERN),
       rule: "local-absolute-path",
       message: "Current runtime surfaces must not embed user-local absolute paths.",
+    });
+  }
+  if (
+    (path.startsWith("src/") || path.startsWith(".claude/hooks/") || path.startsWith("scripts/")) &&
+    LEGACY_RUNTIME_MARKER_PATTERN.test(doc.text)
+  ) {
+    violations.push({
+      path,
+      line: lineOf(doc.text, LEGACY_RUNTIME_MARKER_PATTERN),
+      rule: "legacy-runtime-marker",
+      message: "Current runtime surfaces must not reintroduce legacy runtime env, state, command, or agent markers.",
     });
   }
   return violations;

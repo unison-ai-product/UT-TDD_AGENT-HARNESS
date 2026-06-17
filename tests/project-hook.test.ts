@@ -80,4 +80,23 @@ describe("project-hook lint", () => {
       reason: "forbidden_path",
     });
   });
+
+  it("rejects legacy runtime commands in any project hook command", () => {
+    const settings = JSON.parse(
+      readFileSync(join(process.cwd(), ".claude", "settings.json"), "utf8"),
+    ) as { hooks: Record<string, unknown> };
+    const legacyName = ["he", "lix"].join("");
+    settings.hooks.Notification = [{ hooks: [{ command: `${legacyName} codex --role worker` }] }];
+
+    const result = analyzeProjectHooks([
+      { file: ".claude/settings.json", content: JSON.stringify(settings) },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContainEqual({
+      file: ".claude/settings.json",
+      hook: "Notification",
+      reason: "forbidden_path",
+    });
+  });
 });
