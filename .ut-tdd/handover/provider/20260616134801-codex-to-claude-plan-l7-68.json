@@ -1,0 +1,33 @@
+{
+  "schema_version": "provider-handover.v1",
+  "handover_kind": "mechanical",
+  "handover_id": "20260616134801-codex-to-claude-plan-l7-68",
+  "from": "codex",
+  "to": "claude",
+  "active_plan": "PLAN-L7-68",
+  "budget": "No further expansion this session. Worktree intentionally uncommitted for ClaudeCode verification. Do not remove tracked vendor/helix-source without an explicit repo policy decision.",
+  "context": {
+    "summary": "Runtime legacy cleanup paused with uncommitted changes. Docs now clarify UT-TDD vs source snapshot boundaries. runtime-portability and project-hook now fail on legacy env, state, command, and agent markers. doctor is green after db rebuild.",
+    "next_actions": [
+      "Review uncommitted diff across docs and lint/tests; check mechanical wording replacements before commit.",
+      "Run: bun test tests/runtime-portability.test.ts tests/project-hook.test.ts tests/asset-drift.test.ts tests/rule-drift.test.ts; bun run typecheck; bun run src\\\\cli.ts doctor.",
+      "Decide cleanup policy: runtime/local cleanup is safe; tracked vendor/helix-source is read-only reference and should only be removed via explicit repo policy change.",
+      "If accepted, commit docs cleanup plus detector hardening together, then push branch codex/harden-automation-team-launch."
+    ],
+    "files": [
+      "src/lint/runtime-portability.ts",
+      "tests/runtime-portability.test.ts",
+      "src/lint/project-hook.ts",
+      "tests/project-hook.test.ts",
+      "docs/governance/repository-structure.md",
+      "docs/governance/ut-tdd-agent-harness-concept_v3.1.md",
+      "docs/design/harness/L1-requirements/functional-requirements.md",
+      "docs/plans/PLAN-DISCOVERY-03-skill-design.md",
+      "docs/process/modes/discovery.md",
+      "docs/process/modes/reverse.md",
+      "docs/process/modes/scrum.md",
+      "docs/process/modes/incident.md"
+    ]
+  },
+  "created_at": "2026-06-16T13:48:01.708Z"
+}
