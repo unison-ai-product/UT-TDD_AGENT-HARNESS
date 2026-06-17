@@ -91,8 +91,7 @@ For every new or updated entry in `package.json`:
       free of PII (names, email addresses, machine identifiers beyond repo-relative
       paths).
 - [ ] No half-width kana, U+FFFD, or mojibake markers in new documentation files.
-      Run a targeted grep before commit: `rg "�|\\x{FF}" docs/` should return
-      empty.
+      Run a targeted readability scan before commit; the canonical detector is the doctor readability gate, which fails closed on half-width kana and U+FFFD replacement characters.
 
 ## Hardening attestation record
 
