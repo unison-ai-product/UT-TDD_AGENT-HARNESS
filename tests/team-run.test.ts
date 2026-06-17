@@ -3,13 +3,46 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadSlots, nodeAgentSlotsDeps } from "../src/runtime/agent-slots";
+import type { RuntimeDetection } from "../src/runtime/detect";
 import type { TeamDefinition } from "../src/schema/team";
+import { routeTeamMembers } from "../src/task/tier-router";
 import {
   buildTeamRunPlan,
   executeTeamRunPlan,
+  type MemberPlacement,
   providerFromEngine,
   validateTeamRun,
 } from "../src/team/run";
+
+const hybrid = (currentRuntime: "claude" | "codex"): RuntimeDetection => ({
+  mode: "hybrid",
+  claude: true,
+  codex: true,
+  currentRuntime,
+  availableRuntimes: [],
+  missingRuntimes: [],
+});
+
+/** CLI と同じ routings → placements 変換 (tier-router 決定を team run へ橋渡し)。 */
+function placementsFor(
+  team: TeamDefinition,
+  detection: RuntimeDetection,
+  options: { primary: "claude" | "codex"; allowFrontier?: boolean },
+): (MemberPlacement | null)[] {
+  const routings = routeTeamMembers(
+    team.members.map((m) => ({ role: m.role, task: m.task })),
+    detection,
+    { primary: options.primary, auth: options.allowFrontier ? { explicit: true } : undefined },
+  );
+  return routings.map((r): MemberPlacement | null => {
+    if (!r.routed || !r.decision) return null;
+    const d = r.decision;
+    if (d.status !== "ready" || !d.model) {
+      return { provider: d.provider, model: "", blockedReason: d.reason ?? "blocked" };
+    }
+    return { provider: d.provider, model: d.model };
+  });
+}
 
 const baseTeam = (members: TeamDefinition["members"]): TeamDefinition => ({
   name: "review-team",
@@ -336,5 +369,71 @@ describe("team run validation", () => {
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
+  });
+
+  it("routes a hybrid team through the tier-router cross placement (worker=primary / reviewer=other)", () => {
+    const team = baseTeam([
+      { role: "se", engine: "codex-se", task: "rename a field", serialize_after: undefined },
+      { role: "qa", engine: "qa-test", task: "verify coverage", serialize_after: "se" },
+    ]);
+    const placements = placementsFor(team, hybrid("claude"), {
+      primary: "claude",
+      allowFrontier: true,
+    });
+    const result = buildTeamRunPlan(team, "hybrid", { placements });
+
+    expect(result.ok).toBe(true);
+    const se = result.members.find((m) => m.role === "se");
+    const qa = result.members.find((m) => m.role === "qa");
+    // ワーカー(se)=主(claude)/軽量 tier、検証(qa)=相手(codex)/フロンティアで明示的に別 provider。
+    expect(se?.provider).toBe("claude");
+    expect(se?.model_selection.model).toBe("claude-haiku-4-5");
+    expect(qa?.provider).toBe("codex");
+    expect(qa?.model_selection.model).toBe("gpt-5.5");
+    expect(se?.provider).not.toBe(qa?.provider);
+    expect(se?.adapter?.command).toBe("claude");
+    expect(qa?.adapter?.command).toBe("codex");
+  });
+
+  it("blocks a routed frontier reviewer without explicit permission (fail-close)", () => {
+    const team = baseTeam([
+      { role: "se", engine: "codex-se", task: "rename a field" },
+      { role: "qa", engine: "qa-test", task: "verify coverage", serialize_after: "se" },
+    ]);
+    const placements = placementsFor(team, hybrid("claude"), { primary: "claude" });
+    const result = buildTeamRunPlan(team, "hybrid", { execute: true, placements });
+
+    expect(result.ok).toBe(false);
+    expect(result.messages.some((m) => m.startsWith("member blocked by frontier gate: qa"))).toBe(
+      true,
+    );
+    const qa = result.members.find((m) => m.role === "qa");
+    expect(qa?.executable).toBe(false);
+    expect(qa?.adapter).toBeUndefined();
+    // ワーカーは明示許可不要で配置される (主=claude)。
+    const se = result.members.find((m) => m.role === "se");
+    expect(se?.provider).toBe("claude");
+    expect(se?.executable).toBe(true);
+  });
+
+  it("flips the routed worker to the codex primary when codex hosts the session", () => {
+    const team = baseTeam([
+      { role: "se", engine: "pmo-sonnet", task: "rename a field" },
+      { role: "tl", engine: "codex-tl", task: "review slice A", serialize_after: "se" },
+    ]);
+    const placements = placementsFor(team, hybrid("codex"), {
+      primary: "codex",
+      allowFrontier: true,
+    });
+    const result = buildTeamRunPlan(team, "hybrid", { placements });
+
+    expect(result.ok).toBe(true);
+    const se = result.members.find((m) => m.role === "se");
+    const tl = result.members.find((m) => m.role === "tl");
+    // 主=codex なので worker(se)=codex、相談(tl)=相手(claude)=フロンティア(opus)。
+    expect(se?.provider).toBe("codex");
+    expect(se?.model_selection.model).toBe("gpt-5.3-codex-spark");
+    expect(tl?.provider).toBe("claude");
+    expect(tl?.model_selection.model).toBe("claude-opus-4-8");
   });
 });

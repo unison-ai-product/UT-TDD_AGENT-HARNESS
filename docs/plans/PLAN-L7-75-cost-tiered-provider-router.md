@@ -84,12 +84,25 @@ New `src/task/tier-router.ts` composing existing contracts (placed under
   a ready decision into the placed provider's adapter invocation (command/args),
   returning null for a blocked (T0-gated) decision. Exposed via
   `ut-tdd task route --execute` (dry-run command).
+- Team integration (`ut-tdd team run --route`): `routeTeamMembers` runs each team
+  member through the router; the CLI maps the decisions to a per-member
+  `MemberPlacement` (provider / tier model / frontier-gate `blockedReason`) and
+  injects them into `buildTeamRunPlan`. The placement overrides the YAML engine
+  default, so the team's actual member spawn is driven by the cross placement
+  (worker=primary / consult-verify=other) and the cost-tiered model. T0 reviewer
+  members fail-close (`--allow-frontier` required); `validateTeamRun` validates
+  the placed providers, keeping the hybrid worker≠reviewer separation. The router
+  lives under `src/task/` and is wired in at the CLI composition root (not via a
+  `team→task` import) so the `task→team` edge stays one-directional / acyclic.
 - Vitest coverage for every invariant.
 
-Out of scope (follow-up): wiring the bridge into the actual
-`ut-tdd team run --execute` member spawn (team run still uses explicit YAML
-engine assignment + validateTeamRun); reconciling `model-policy.ts` frontier
-model id (gpt-5.4 → gpt-5.5) with this tier table; L6 function-spec back-fill.
+Out of scope (follow-up): reconciling `model-policy.ts` frontier model id
+(gpt-5.4 → gpt-5.5) with this tier table; L6 function-spec back-fill.
+
+Touched (extension of existing modules, not new artifacts): `src/team/run.ts`
+(`MemberPlacement` seam + placement-aware `validateTeamRun`), `src/cli.ts`
+(`team run --route/--primary/--allow-frontier`), `tests/team-run.test.ts`
+(routed cross-placement + frontier fail-close).
 
 ## 3. Acceptance Criteria
 
@@ -106,10 +119,13 @@ model id (gpt-5.4 → gpt-5.5) with this tier table; L6 function-spec back-fill.
 
 ## 4. Status
 
-Draft. Implemented and verified 2026-06-17 (12 Vitest cases + CLI smoke).
-`assignCross` is wired into `route()`, roles are placed on their cross provider
-(worker=execution / consult-verify=judgement), hybrid enforces an explicit
-impl≠review separation, and `routeToAdapterPlan` bridges a ready decision to the
-provider adapter invocation (`ut-tdd task route --execute`). The decision and
-single-role execution layers are connected; team-run member spawn remains the
-follow-up integration.
+Draft. Implemented and verified 2026-06-17 (Vitest U-TIER-001..015 + routed
+team-run cases + CLI smoke). `assignCross` is wired into `route()`, roles are
+placed on their cross provider (worker=execution / consult-verify=judgement),
+hybrid enforces an explicit impl≠review separation, and `routeToAdapterPlan`
+bridges a ready single-role decision to the provider adapter invocation
+(`ut-tdd task route --execute`). The team layer is now connected too:
+`ut-tdd team run --route` derives each member's provider + tier model from the
+router (worker=primary / consult-verify=other), fail-closes T0 reviewers without
+`--allow-frontier`, and drives the existing slot-based member spawn. Remaining
+follow-up: model-policy frontier id reconciliation + L6 function-spec back-fill.

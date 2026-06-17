@@ -26,6 +26,17 @@ export interface TeamValidationResult {
   messages: string[];
 }
 
+/**
+ * member ごとの配置オーバーライド (PLAN-L7-75 統合)。tier-router の決定を team run へ
+ * 注入するための seam。provider/model を engine 既定より優先し、T0 ゲートで止まった member は
+ * blockedReason を持つ (実行不可 / fail-close)。null は engine ベース既定にフォールバックする。
+ */
+export interface MemberPlacement {
+  provider: TeamProvider;
+  model: string;
+  blockedReason?: string;
+}
+
 export interface TeamMemberLaunch {
   index: number;
   role: string;
@@ -179,33 +190,45 @@ export function loadTeamDefinition(path: string): TeamDefinition {
   return teamDefinitionSchema.parse(parseYaml(readFileSync(path, "utf8")));
 }
 
-export function validateTeamRun(team: TeamDefinition, mode: ExecutionMode): TeamValidationResult {
+/** member の実効 provider: placement オーバーライドがあれば優先、無ければ engine 既定。 */
+function memberProvider(
+  member: TeamMember,
+  placement: MemberPlacement | null | undefined,
+): TeamProvider {
+  return placement?.provider ?? providerFromEngine(member.engine);
+}
+
+export function validateTeamRun(
+  team: TeamDefinition,
+  mode: ExecutionMode,
+  placements?: (MemberPlacement | null)[],
+): TeamValidationResult {
   const messages: string[] = [];
   if (mode !== "hybrid") messages.push("team run requires hybrid mode");
 
-  const providers = [...new Set(team.members.map((m) => providerFromEngine(m.engine)))];
+  const placed = team.members.map((member, index) => ({
+    role: member.role,
+    provider: memberProvider(member, placements?.[index]),
+  }));
+
+  const providers = [...new Set(placed.map((p) => p.provider))];
   const runtimeProviders = providers.filter((p) => p === "claude" || p === "codex");
   if (mode === "hybrid" && new Set(runtimeProviders).size < 2) {
     messages.push("hybrid team run requires both claude and codex members");
   }
 
   const seenRoleProvider = new Set<string>();
-  for (const member of team.members) {
-    const provider = providerFromEngine(member.engine);
-    const key = `${member.role}:${provider}`;
+  for (const member of placed) {
+    const key = `${member.role}:${member.provider}`;
     if (seenRoleProvider.has(key)) {
       messages.push(`duplicate role/provider assignment: ${key}`);
     }
     seenRoleProvider.add(key);
   }
 
-  const workerProviders = new Set(
-    team.members.filter((m) => m.role === "se").map((m) => providerFromEngine(m.engine)),
-  );
+  const workerProviders = new Set(placed.filter((m) => m.role === "se").map((m) => m.provider));
   const reviewerProviders = new Set(
-    team.members
-      .filter((m) => m.role === "tl" || m.role === "qa")
-      .map((m) => providerFromEngine(m.engine)),
+    placed.filter((m) => m.role === "tl" || m.role === "qa").map((m) => m.provider),
   );
   if (mode === "hybrid" && workerProviders.size > 0 && reviewerProviders.size > 0) {
     const hasCrossProvider = [...workerProviders].some(
@@ -223,28 +246,31 @@ export function validateTeamRun(team: TeamDefinition, mode: ExecutionMode): Team
 export function buildTeamRunPlan(
   team: TeamDefinition,
   mode: ExecutionMode,
-  input: { execute?: boolean; planId?: string } = {},
+  input: { execute?: boolean; planId?: string; placements?: (MemberPlacement | null)[] } = {},
 ): TeamRunPlan {
-  const validation = validateTeamRun(team, mode);
+  const validation = validateTeamRun(team, mode, input.placements);
   const forceSequential =
     mustSerialize(team.serialization) || team.members.some((m) => m.serialize_after);
   const strategy = forceSequential ? "sequential" : team.strategy;
   const messages = [...validation.messages];
 
   const unorderedMembers = team.members.map((member, index): TeamMemberLaunch => {
-    const provider = providerFromEngine(member.engine);
+    const placement = input.placements?.[index] ?? null;
+    const blocked = placement?.blockedReason;
+    const provider = memberProvider(member, placement);
     const modelSelection = selectTeamModel({
       provider,
       role: member.role,
       engine: member.engine,
       task: member.task,
       difficulty: member.difficulty,
-      model: member.model,
+      // placement (tier-router) のモデルを engine 既定より優先。空文字 (blocked) は無視。
+      model: placement?.model || member.model,
       effort: member.effort,
     });
     const prompt = buildMemberPrompt(team, member, modelSelection);
     const adapter =
-      provider === "claude" || provider === "codex"
+      !blocked && (provider === "claude" || provider === "codex")
         ? buildAdapterPlan(
             {
               provider,
@@ -268,14 +294,25 @@ export function buildTeamRunPlan(
       model_selection: modelSelection,
       serialize_after: member.serialize_after,
       adapter,
-      executable: Boolean(adapter?.available),
+      executable: !blocked && Boolean(adapter?.available),
     };
   });
   const members = orderMembersByDependencies({ members: unorderedMembers, messages });
 
+  // T0 (frontier) ゲートで止まった member は fail-close: 明示許可 (--allow-frontier) が要る。
+  for (const member of members) {
+    const blockedReason = input.placements?.[member.index]?.blockedReason;
+    if (blockedReason) {
+      messages.push(
+        `member blocked by frontier gate: ${member.role}:${member.engine} (${blockedReason})`,
+      );
+    }
+  }
+
   if (input.execute) {
     for (const member of members) {
-      if (!member.executable) {
+      const blocked = input.placements?.[member.index]?.blockedReason;
+      if (!blocked && !member.executable) {
         messages.push(
           `member is not executable through runtime adapter: ${member.role}:${member.engine}`,
         );

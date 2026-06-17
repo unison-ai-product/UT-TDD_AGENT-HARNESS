@@ -213,6 +213,41 @@ export function assignCross(detection: RuntimeDetection, worker?: Provider): Cro
   return { execution: only, judgement: only, review_kind: "intra_runtime_subagent" };
 }
 
+/** role が router 管理対象 (5 役) か。po=人間 / aim=未採用 は false (engine fallback)。 */
+export function isRouterRole(role: string): role is RouterRole {
+  return role in ROLE_ARCHETYPE;
+}
+
+export interface TeamMemberRouting {
+  index: number;
+  role: string;
+  /** router 管理 role なら true。false は engine ベース fallback (po/aim 等)。 */
+  routed: boolean;
+  decision?: RoutingDecision;
+}
+
+/**
+ * team member 群を router に通し、各 member の配置決定 (provider / model / T0 ゲート) を返す。
+ * これを team run の placement オーバーライドへ流し込むと、チーム実行が主→相手のクロス配置
+ * (ワーカー=主 / 相談・検証=相手) と原則安くの tier モデルで駆動される (PLAN-L7-75 §2 統合)。
+ * router 非対象 role (po/aim) は routed=false で engine ベースに委ねる。
+ */
+export function routeTeamMembers(
+  members: { role: string; task: string }[],
+  detection: RuntimeDetection,
+  options: RouteOptions = {},
+): TeamMemberRouting[] {
+  return members.map((member, index) => {
+    if (!isRouterRole(member.role)) return { index, role: member.role, routed: false };
+    return {
+      index,
+      role: member.role,
+      routed: true,
+      decision: route({ role: member.role, task: { text: member.task } }, detection, options),
+    };
+  });
+}
+
 export interface RosterBinding {
   role: RouterRole;
   archetype: Archetype;

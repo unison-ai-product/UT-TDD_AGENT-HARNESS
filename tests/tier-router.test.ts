@@ -4,11 +4,13 @@ import {
   assignCross,
   FRONTIER_MODELS,
   FRONTIER_ROLES,
+  isRouterRole,
   other,
   ROLE_ARCHETYPE,
   resolveModel,
   roster,
   route,
+  routeTeamMembers,
   routeToAdapterPlan,
   TIER_TABLE,
   tierFor,
@@ -198,5 +200,47 @@ describe("U-TIER: cost-tiered provider router", () => {
     expect(impl.provider).not.toBe(review.provider);
     expect(impl.cross.review_kind).toBe("cross_agent");
     expect(review.cross.review_kind).toBe("cross_agent");
+  });
+
+  it("U-TIER-013: isRouterRole は 5 役のみ true (po/aim は engine fallback)", () => {
+    for (const role of ["tl", "qa", "uiux", "se", "docs"]) expect(isRouterRole(role)).toBe(true);
+    for (const role of ["po", "aim", "unknown"]) expect(isRouterRole(role)).toBe(false);
+  });
+
+  it("U-TIER-014: routeTeamMembers が team をクロス配置へ通す (ワーカー=主 / 検証=相手)", () => {
+    const members = [
+      { role: "se", task: "rename a field" },
+      { role: "qa", task: "verify coverage" },
+      { role: "po", task: "decide" },
+    ];
+    const routings = routeTeamMembers(members, det("hybrid", "claude"), {
+      primary: "claude",
+      auth: { explicit: true },
+    });
+    // se=ワーカー=主(claude)。
+    expect(routings[0].routed).toBe(true);
+    expect(routings[0].decision?.provider).toBe("claude");
+    expect(routings[0].decision?.model).toBe("claude-haiku-4-5");
+    // qa=検証=相手(codex)、明示許可ありで T0 ready。
+    expect(routings[1].routed).toBe(true);
+    expect(routings[1].decision?.provider).toBe("codex");
+    expect(routings[1].decision?.model).toBe("gpt-5.5");
+    expect(routings[1].decision?.status).toBe("ready");
+    // po=router 非対象 → routed=false (engine fallback)。
+    expect(routings[2].routed).toBe(false);
+    expect(routings[2].decision).toBeUndefined();
+  });
+
+  it("U-TIER-015: routeTeamMembers は明示許可なしで T0 検証 member を block (fail-close)", () => {
+    const routings = routeTeamMembers(
+      [{ role: "qa", task: "verify coverage" }],
+      det("hybrid", "claude"),
+      {
+        primary: "claude",
+      },
+    );
+    expect(routings[0].decision?.status).toBe("blocked-needs-approval");
+    expect(routings[0].decision?.model).toBeNull();
+    expect(routings[0].decision?.provider).toBe("codex");
   });
 });

@@ -47,7 +47,7 @@ import {
   releaseOldestGuardSlot,
   sweepStaleGuardSlots,
 } from "./runtime/agent-slots";
-import { detectMode } from "./runtime/detect";
+import { detectMode, type RuntimeDetection } from "./runtime/detect";
 import {
   type ClassifyResult,
   emitClassifyRequest,
@@ -86,10 +86,16 @@ import {
   type RouterRole,
   roster,
   route,
+  routeTeamMembers,
   routeToAdapterPlan,
 } from "./task/tier-router";
 import { recommendTeamLaunch } from "./team/launch-policy";
-import { buildTeamRunPlan, executeTeamRunPlan, loadTeamDefinition } from "./team/run";
+import {
+  buildTeamRunPlan,
+  executeTeamRunPlan,
+  loadTeamDefinition,
+  type MemberPlacement,
+} from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
 import { buildCommandCatalog } from "./workflow/contracts";
 import { evaluateAutomationReadiness } from "./workflow/readiness";
@@ -1531,6 +1537,12 @@ team
   .option("--mode <mode>", "override execution mode for tests")
   .option("--plan <id>", "PLAN id to attach to provider adapter metadata")
   .option("--execute", "execute provider adapters; default is dry-run planning only")
+  .option(
+    "--route",
+    "tier-router でクロス配置 (ワーカー=主 / 相談・検証=相手) と原則安く tier モデルを導出",
+  )
+  .option("--primary <provider>", "クロス分岐の主 provider (claude/codex)。--route 時に使用")
+  .option("--allow-frontier", "T0 (opus/gpt-5.5) の相談・検証 member を明示許可 (--route 時)")
   .option("--json", "JSON output")
   .action(
     async (opts: {
@@ -1538,24 +1550,48 @@ team
       mode?: ReturnType<typeof detectMode>["mode"];
       plan?: string;
       execute?: boolean;
+      route?: boolean;
+      primary?: Provider;
+      allowFrontier?: boolean;
       json?: boolean;
     }) => {
       try {
         const mode = opts.mode ?? detectMode().mode;
         const definition = loadTeamDefinition(opts.definition);
+        let placements: (MemberPlacement | null)[] | undefined;
+        if (opts.route) {
+          const base = detectMode();
+          const detection: RuntimeDetection = { ...base, mode };
+          const primary = opts.primary ?? base.currentRuntime ?? "claude";
+          const auth = opts.allowFrontier ? { explicit: true } : undefined;
+          const routings = routeTeamMembers(
+            definition.members.map((m) => ({ role: m.role, task: m.task })),
+            detection,
+            { primary, auth },
+          );
+          placements = routings.map((r): MemberPlacement | null => {
+            if (!r.routed || !r.decision) return null;
+            const d = r.decision;
+            if (d.status !== "ready" || !d.model) {
+              return { provider: d.provider, model: "", blockedReason: d.reason ?? "blocked" };
+            }
+            return { provider: d.provider, model: d.model };
+          });
+        }
         const result = buildTeamRunPlan(definition, mode, {
           execute: Boolean(opts.execute),
           planId: opts.plan,
+          placements,
         });
         if (!opts.execute) {
           if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
           else {
             process.stdout.write(
-              `team ${definition.name}: ${result.ok ? "ok" : "failed"} mode=${mode} strategy=${result.strategy} dry-run\n`,
+              `team ${definition.name}: ${result.ok ? "ok" : "failed"} mode=${mode} strategy=${result.strategy}${opts.route ? " routed" : ""} dry-run\n`,
             );
             for (const member of result.members) {
               process.stdout.write(
-                `  - ${member.role}:${member.engine} provider=${member.provider}${member.adapter ? ` command=${member.adapter.command}` : ""}\n`,
+                `  - ${member.role}:${member.engine} provider=${member.provider} model=${member.model_selection.model}${member.adapter ? ` command=${member.adapter.command}` : ""}\n`,
               );
             }
             for (const m of result.messages) process.stdout.write(`  - ${m}\n`);
