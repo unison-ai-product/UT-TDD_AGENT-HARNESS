@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -7,8 +7,15 @@ import {
   buildProviderInvocation,
   isProviderCommandSpawnable,
   providerAvailable,
+  resolveClaudeNativeCommand,
   resolveCodexNativeCommand,
 } from "../src/runtime/adapter";
+
+/** 指定パスの親ディレクトリまで作成し、空の実行ファイルを置く。 */
+function touchBinary(path: string): void {
+  mkdirSync(join(path, ".."), { recursive: true });
+  writeFileSync(path, "");
+}
 
 describe("runtime adapter plan", () => {
   it("checks provider availability by execution mode", () => {
@@ -113,6 +120,52 @@ describe("runtime adapter plan", () => {
       expect(invocation.shell).toBe(true);
       expect(invocation.command).toContain(`"${explicit}"`);
       expect(invocation.command).toContain('"hello world"');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-ADAPTER-005: picks the semver-newest native Claude, not the lexicographic-largest (A-137 #6)", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-adapter-claude-ver-"));
+    try {
+      const codeRoot = join(root, "Claude", "claude-code");
+      // 字句順では "1.9.0" > "1.10.0" だが、実際の最新は 1.10.0。
+      touchBinary(join(codeRoot, "1.9.0", "claude.exe"));
+      touchBinary(join(codeRoot, "1.10.0", "claude.exe"));
+      touchBinary(join(codeRoot, "1.2.3", "claude.exe"));
+
+      const resolved = resolveClaudeNativeCommand({
+        platform: "win32",
+        env: { APPDATA: root, USERPROFILE: root },
+      });
+
+      expect(resolved).toBe(join(codeRoot, "1.10.0", "claude.exe"));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-ADAPTER-006: compares semver across mixed sources, ignoring path-prefix and platform suffix (A-137 #6)", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-adapter-claude-mixed-"));
+    try {
+      const codeRoot = join(root, "Claude", "claude-code");
+      touchBinary(join(codeRoot, "1.0.0", "claude.exe"));
+      const vscodeExt = join(
+        root,
+        ".vscode",
+        "extensions",
+        "anthropic.claude-code-1.2.0-win32-x64",
+      );
+      const vscodeBinary = join(vscodeExt, "resources", "native-binary", "claude.exe");
+      touchBinary(vscodeBinary);
+
+      const resolved = resolveClaudeNativeCommand({
+        platform: "win32",
+        env: { APPDATA: root, USERPROFILE: root },
+      });
+
+      // appData 1.0.0 < vscode 1.2.0 → mixed-source でも semver 最新 (vscode) を選ぶ。
+      expect(resolved).toBe(vscodeBinary);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

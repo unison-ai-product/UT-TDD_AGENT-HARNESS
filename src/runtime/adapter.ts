@@ -60,6 +60,52 @@ function newestExisting(paths: string[]): string | null {
   return existing.length > 0 ? (existing.sort().at(-1) ?? null) : null;
 }
 
+/** ソースごとに version を抽出済みの native バイナリ候補 (A-137 #6)。 */
+interface VersionedCandidate {
+  path: string;
+  version: string;
+}
+
+/**
+ * semver 様文字列の数値コア要素を取り出す (`1.10.0-win32-x64` → `[1, 10, 0]`)。
+ * pre-release / build / platform suffix (`-` / `+` 以降) は比較対象外。解析不能要素は 0。
+ */
+function parseVersion(version: string): number[] {
+  const core = version.split(/[-+]/, 1)[0] ?? version;
+  return core.split(".").map((part) => {
+    const parsed = Number.parseInt(part, 10);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  });
+}
+
+/** semver 数値比較 (a が古いと負)。要素数が違えば不足分を 0 とみなす。 */
+function compareVersion(a: string, b: string): number {
+  const left = parseVersion(a);
+  const right = parseVersion(b);
+  const length = Math.max(left.length, right.length);
+  for (let index = 0; index < length; index++) {
+    const diff = (left[index] ?? 0) - (right[index] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+/**
+ * 実在する候補から semver 最新の native バイナリを選ぶ (A-137 #6)。
+ * 字句順 sort は `1.10.0 < 1.9.0` と誤判定し、mixed-source ではパス接頭辞が比較を
+ * 支配して最新を取り逃すため、各候補の抽出済み version を数値 semver 比較する。
+ * 同 version は配列先頭 (= 優先ソース) を維持する安定選択。
+ */
+function newestVersioned(candidates: VersionedCandidate[]): string | null {
+  const existing = candidates.filter((candidate) => existsSync(candidate.path));
+  if (existing.length === 0) return null;
+  let best = existing[0];
+  for (const candidate of existing.slice(1)) {
+    if (compareVersion(candidate.version, best.version) > 0) best = candidate;
+  }
+  return best.path;
+}
+
 function firstOnPath(command: string, opts: ProviderCommandResolutionOptions = {}): string | null {
   const platform = opts.platform ?? process.platform;
   const env = opts.env ?? process.env;
@@ -88,21 +134,28 @@ export function resolveClaudeNativeCommand(
     const appData =
       env.APPDATA ?? (env.USERPROFILE ? join(env.USERPROFILE, "AppData", "Roaming") : null);
     const appDataRoot = appData ? join(appData, "Claude", "claude-code") : null;
-    const appDataCandidates =
+    const appDataCandidates: VersionedCandidate[] =
       appDataRoot && existsSync(appDataRoot)
-        ? readdirSync(appDataRoot).map((version) => join(appDataRoot, version, "claude.exe"))
+        ? readdirSync(appDataRoot).map((version) => ({
+            path: join(appDataRoot, version, "claude.exe"),
+            version,
+          }))
         : [];
 
     const home = env.USERPROFILE ?? env.HOME;
     const vscodeRoot = home ? join(home, ".vscode", "extensions") : null;
-    const vscodeCandidates =
+    const vscodePrefix = "anthropic.claude-code-";
+    const vscodeCandidates: VersionedCandidate[] =
       vscodeRoot && existsSync(vscodeRoot)
         ? readdirSync(vscodeRoot)
-            .filter((name) => name.startsWith("anthropic.claude-code-"))
-            .map((name) => join(vscodeRoot, name, "resources", "native-binary", "claude.exe"))
+            .filter((name) => name.startsWith(vscodePrefix))
+            .map((name) => ({
+              path: join(vscodeRoot, name, "resources", "native-binary", "claude.exe"),
+              version: name.slice(vscodePrefix.length),
+            }))
         : [];
 
-    const native = newestExisting([...appDataCandidates, ...vscodeCandidates]);
+    const native = newestVersioned([...appDataCandidates, ...vscodeCandidates]);
     if (native) return native;
   }
 
