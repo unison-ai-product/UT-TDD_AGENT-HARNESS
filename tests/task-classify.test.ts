@@ -34,6 +34,26 @@ describe("U-FR-L1-39: classifyTask public surface", () => {
     expect(result.findings.some((f) => f.code === "escalation-risk")).toBe(false);
   });
 
+  it("matches risk terms as whole words, not substrings of innocent words", () => {
+    // "reproduction"⊃"production", "schematic"⊃"schema", "secretary"⊃"secret".
+    for (const text of [
+      "investigate the crash reproduction steps",
+      "update the schematic diagram for the parser",
+      "the secretary dashboard needs a new column",
+    ]) {
+      const result = classifyTask({ text });
+      expect(result.risk_flags).toEqual([]);
+      expect(result.findings.some((f) => f.code === "escalation-risk")).toBe(false);
+    }
+  });
+
+  it("keeps safety-relevant plural risk terms flagged", () => {
+    const result = classifyTask({ text: "rotate the credentials and process payments" });
+    expect(result.risk_flags).toContain("credential");
+    expect(result.risk_flags).toContain("payment");
+    expect(result.findings.some((f) => f.code === "escalation-risk")).toBe(true);
+  });
+
   it("scales size with affected-file count", () => {
     const small = classifyTask({ text: "tweak one file", affected_files: ["a.ts"] });
     const large = classifyTask({

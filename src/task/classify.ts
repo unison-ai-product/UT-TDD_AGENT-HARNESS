@@ -71,6 +71,17 @@ const RISK_TERMS = [
   "external api",
 ];
 
+// Match each risk term as a whole word (with an optional trailing plural), not a
+// raw substring. Substring matching wrongly flagged "production" inside
+// "reproduction", "schema" inside "schematic", and "secret" inside "secretary" —
+// the same false-positive class the bare-"auth"/"author" exclusion already guards.
+// The trailing `s?` keeps safety-relevant plurals (credentials, payments, schemas)
+// so the escalation signal does not regress into false negatives.
+const RISK_PATTERNS: { term: string; pattern: RegExp }[] = RISK_TERMS.map((term) => ({
+  term,
+  pattern: new RegExp(`\\b${term}s?\\b`, "i"),
+}));
+
 const UNCERTAINTY_TERMS = [
   "unsure",
   "uncertain",
@@ -91,8 +102,7 @@ function inferKind(text: string): TaskKind {
 }
 
 function riskFlags(text: string): string[] {
-  const lower = text.toLowerCase();
-  return RISK_TERMS.filter((term) => lower.includes(term));
+  return RISK_PATTERNS.filter(({ pattern }) => pattern.test(text)).map(({ term }) => term);
 }
 
 function inferUncertainty(text: string): number {
