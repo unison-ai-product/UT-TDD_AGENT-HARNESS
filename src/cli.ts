@@ -81,6 +81,7 @@ import {
 } from "./state-db/projection-writer";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
 import { classifyTask } from "./task/classify";
+import { type Provider, type RouterRole, roster, route } from "./task/tier-router";
 import { recommendTeamLaunch } from "./team/launch-policy";
 import { buildTeamRunPlan, executeTeamRunPlan, loadTeamDefinition } from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
@@ -1389,6 +1390,94 @@ task
       }
     },
   );
+
+const ROUTER_ROLES: readonly RouterRole[] = ["tl", "qa", "uiux", "se", "docs"];
+
+task
+  .command("route")
+  .description(
+    "route a task to a role tier/provider (難易度ルーター: archetype × difficulty × 主 provider)",
+  )
+  .requiredOption("--role <role>", `router role: ${ROUTER_ROLES.join("|")}`)
+  .option("--text <text>", "task text")
+  .option("--text-file <path>", "read task text from file")
+  .option("--plan <path>", "read task text from a PLAN file")
+  .option("--files <list>", "comma-separated affected file paths")
+  .option("--primary <provider>", "override primary provider (claude|codex)")
+  .option("--allow-frontier", "explicitly authorize T0 (opus/gpt-5.5)")
+  .option("--mode <mode>", "override execution mode for tests")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      role: string;
+      text?: string;
+      textFile?: string;
+      plan?: string;
+      files?: string;
+      primary?: string;
+      allowFrontier?: boolean;
+      mode?: ReturnType<typeof detectMode>["mode"];
+      json?: boolean;
+    }) => {
+      if (!ROUTER_ROLES.includes(opts.role as RouterRole)) {
+        process.stderr.write(`task route requires --role in ${ROUTER_ROLES.join("|")}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      const text = resolveTaskText({ task: opts.text, taskFile: opts.textFile ?? opts.plan });
+      if (text === null || text.trim().length === 0) {
+        process.stderr.write("task route requires exactly one of --text, --text-file, or --plan\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (opts.primary && opts.primary !== "claude" && opts.primary !== "codex") {
+        process.stderr.write("task route --primary must be claude or codex\n");
+        process.exitCode = 1;
+        return;
+      }
+      const affected_files = opts.files
+        ? opts.files
+            .split(",")
+            .map((f) => f.trim())
+            .filter(Boolean)
+        : undefined;
+      const base = detectMode();
+      const detection = opts.mode ? { ...base, mode: opts.mode } : base;
+      const decision = route(
+        { role: opts.role as RouterRole, task: { text, affected_files } },
+        detection,
+        {
+          primary: opts.primary as Provider | undefined,
+          auth: { explicit: Boolean(opts.allowFrontier) },
+        },
+      );
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);
+        return;
+      }
+      process.stdout.write(
+        `task route: role=${decision.role} archetype=${decision.archetype} tier=${decision.tier} provider=${decision.provider} model=${decision.model ?? "(blocked)"} status=${decision.status} review=${decision.reviewEntry} gate=${decision.gate} cross=${decision.crossReview} difficulty=${decision.difficulty} risk=[${decision.riskFlags.join(",")}]\n`,
+      );
+      if (decision.reason) process.stdout.write(`  - ${decision.reason}\n`);
+    },
+  );
+
+task
+  .command("roster")
+  .description("list the symmetric dual-provider role roster (10 bindings)")
+  .option("--json", "JSON output")
+  .action((opts: { json?: boolean }) => {
+    const bindings = roster();
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(bindings, null, 2)}\n`);
+      return;
+    }
+    for (const b of bindings) {
+      process.stdout.write(
+        `roster: role=${b.role} archetype=${b.archetype} claude=${b.claude} codex=${b.codex}\n`,
+      );
+    }
+  });
 
 const team = program.command("team").description("team orchestration");
 team
