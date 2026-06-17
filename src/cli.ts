@@ -80,6 +80,7 @@ import {
   rebuildHarnessDb,
 } from "./state-db/projection-writer";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
+import { classifyTask } from "./task/classify";
 import { recommendTeamLaunch } from "./team/launch-policy";
 import { buildTeamRunPlan, executeTeamRunPlan, loadTeamDefinition } from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
@@ -1345,6 +1346,47 @@ program
         for (const m of result.messages) process.stdout.write(`  - ${m}\n`);
       }
       process.exitCode = result.passed ? 0 : 1;
+    },
+  );
+
+const task = program
+  .command("task")
+  .description("task classification (FR-L1-39: kind/drive/size/complexity/risk)");
+task
+  .command("classify")
+  .description("classify a task into kind / drive / size / complexity / difficulty / risk")
+  .option("--text <text>", "task text")
+  .option("--text-file <path>", "read task text from file")
+  .option("--plan <path>", "read task text from a PLAN file")
+  .option("--files <list>", "comma-separated affected file paths")
+  .option("--json", "JSON output")
+  .action(
+    (opts: { text?: string; textFile?: string; plan?: string; files?: string; json?: boolean }) => {
+      const text = resolveTaskText({ task: opts.text, taskFile: opts.textFile ?? opts.plan });
+      if (text === null || text.trim().length === 0) {
+        process.stderr.write(
+          "task classify requires exactly one of --text, --text-file, or --plan\n",
+        );
+        process.exitCode = 1;
+        return;
+      }
+      const affected_files = opts.files
+        ? opts.files
+            .split(",")
+            .map((f) => f.trim())
+            .filter(Boolean)
+        : undefined;
+      const result = classifyTask({ text, affected_files });
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+        return;
+      }
+      process.stdout.write(
+        `task classify: kind=${result.kind} drive=${result.drive}(${result.drive_confidence}) size=${result.size} complexity=${result.complexity_score} difficulty=${result.difficulty} risk=[${result.risk_flags.join(",")}]\n`,
+      );
+      for (const f of result.findings) {
+        process.stdout.write(`  - ${f.severity}: ${f.code} ${f.message}\n`);
+      }
     },
   );
 
