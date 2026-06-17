@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
 
 export interface ReadabilityDoc {
   path: string;
@@ -21,11 +21,17 @@ export interface ReadabilityResult {
 const MOJIBAKE_MARKERS: { marker: string; pattern: RegExp }[] = [
   { marker: "replacement-character", pattern: /\uFFFD/ },
   { marker: "em-space-before-ascii", pattern: /\u2001(?=[A-Za-z])/ },
-  // Curated high-signal UTF-8/CP932 mojibake tokens observed in A-106/A-110/A-111.
-  // This is intentionally heuristic; confirmed docs must be restored, not guessed.
+  // Halfwidth katakana / halfwidth punctuation (U+FF61–U+FF9F) is the CP932 single-byte
+  // (0xA1–0xDF) artifact range. UT-TDD prose uses fullwidth Japanese only, so any halfwidth
+  // form is a high-recall CP932-mojibake signal. This catches the 工程表→蟾･遞玖｡ｨ /
+  // 直列→逶ｴ蛻余 class that the curated kanji list below missed (PLAN-M-00/01, 2026-06-17).
+  { marker: "halfwidth-katakana", pattern: /[｡-ﾟ]/ },
+  // Curated high-signal UTF-8/CP932 mojibake tokens observed in A-106/A-110/A-111 and the
+  // PLAN-M cutover docs (蟾=工, 逶=直). This is intentionally heuristic; confirmed docs must be
+  // restored from a clean source or reconstructed from context, not guessed.
   {
     marker: "cp932-mojibake",
-    pattern: /窶|繝|縺|荳|螳|譁|竊|笞|莉|蜀|邨|逅|逕|隱|髢|雋|譛|蠑|蟄|莠|蛹|螟|蜿|谿|豁|竍/,
+    pattern: /窶|繝|縺|荳|螳|譁|竊|笞|莉|蜀|邨|逅|逕|隱|髢|雋|譛|蠑|蟄|莠|蛹|螟|蜿|谿|豁|竍|蟾|逶/,
   },
 ];
 
@@ -79,9 +85,45 @@ export function loadFreezeReadabilityDocs(repoRoot: string = process.cwd()): Rea
   return [...l6Docs, ...pmReviewPlans];
 }
 
+function walkMarkdown(dir: string, repoRoot: string, acc: ReadabilityDoc[]): void {
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    let st: ReturnType<typeof statSync>;
+    try {
+      st = statSync(full);
+    } catch {
+      continue;
+    }
+    if (st.isDirectory()) {
+      walkMarkdown(full, repoRoot, acc);
+      continue;
+    }
+    if (!name.endsWith(".md")) continue;
+    acc.push({ path: relative(repoRoot, full), text: readFileSync(full, "utf8") });
+  }
+}
+
+// Canonical instruction prose outside docs/ that must also stay mojibake-free.
+const ROOT_READABILITY_DOCS = ["README.md", "CLAUDE.md", "AGENTS.md", join(".claude", "CLAUDE.md")];
+
+// System-wide readability band: every active UT-TDD prose surface (full docs/ tree + canonical
+// root instruction docs). vendor source snapshot and legacy local state are intentionally
+// excluded — they are read-only migration material that may legitimately quote source-era
+// encodings, so scanning them would create false positives, not protect active prose.
+export function loadSystemReadabilityDocs(repoRoot: string = process.cwd()): ReadabilityDoc[] {
+  const acc: ReadabilityDoc[] = [];
+  const docsDir = join(repoRoot, "docs");
+  if (existsSync(docsDir)) walkMarkdown(docsDir, repoRoot, acc);
+  for (const rel of ROOT_READABILITY_DOCS) {
+    const full = join(repoRoot, rel);
+    if (existsSync(full)) acc.push({ path: rel, text: readFileSync(full, "utf8") });
+  }
+  return acc.sort((a, b) => a.path.localeCompare(b.path));
+}
+
 export function readabilityMessages(result: ReadabilityResult): string[] {
   if (result.ok) {
-    return [`readability — OK (freeze review docs ${result.checked}件 mojibake marker 0)`];
+    return [`readability — OK (prose docs ${result.checked}件 mojibake marker 0)`];
   }
   const sample = result.violations
     .slice(0, 8)

@@ -57,9 +57,13 @@ export interface PlanGovernanceResult {
 }
 
 const SERIAL_REASONS = ["file_conflict", "downstream_dependency", "shared_state"] as const;
-const MODE_PATTERN = /\[(並列|直列)\]|\[(荳ｦ蛻|逶ｴ蛻)/;
-const SERIAL_MODE_PATTERN = /\[直列\]|\[逶ｴ蛻/;
-const REVIEW_PATTERN = /review|レビュー|繝ｬ繝薙Η繝ｼ|self|pmo-sonnet/i;
+// Correct forms only. Mojibake variants are no longer tolerated here: readability lint
+// (loadSystemReadabilityDocs) now fail-closes on CP932 mojibake across the whole prose tree,
+// so a corrupted schedule heading is caught as a mojibake violation rather than silently
+// accepted as a valid mode marker.
+const MODE_PATTERN = /\[(並列|直列)\]/;
+const SERIAL_MODE_PATTERN = /\[直列\]/;
+const REVIEW_PATTERN = /review|レビュー|self|pmo-sonnet/i;
 
 const DESIGN_LAYERS_REQUIRING_SUB_DOC = new Set(["L1", "L2", "L3", "L4", "L5", "L6"]);
 const VALID_SUB_DOCS: Record<string, Set<string>> = {
@@ -90,11 +94,7 @@ function section(content: string, start: RegExp, end: RegExp): string {
 }
 
 export function extractScheduleSection(content: string): string {
-  return section(
-    content,
-    /^##\s*(?:§|ﾂｧ)?3\b[^\n]*(工程表|蟾･遞玖｡ｨ|陝ｾ・･驕樒事・｡・ｨ)[^\n]*\n/m,
-    /^##\s/m,
-  );
+  return section(content, /^##\s*§?3\b[^\n]*工程表[^\n]*\n/m, /^##\s/m);
 }
 
 function stepBlocks(schedule: string): { heading: string; body: string }[] {
@@ -129,7 +129,7 @@ export function analyzePlanSchedule(docs: PlanScheduleDoc[]): PlanScheduleResult
       if (REVIEW_PATTERN.test(step.heading)) hasReview = true;
     }
     if (!hasReview) violations.push({ file: doc.file, reason: "missing_review_step" });
-    if (!/^##\s*(?:§|ﾂｧ)?3\.1[^\n]*(実装計画|螳溯｣・ｨ育判|陞ｳ貅ｯ)/m.test(doc.content)) {
+    if (!/^##\s*§?3\.1[^\n]*実装計画/m.test(doc.content)) {
       violations.push({ file: doc.file, reason: "missing_impl_plan" });
     }
   }

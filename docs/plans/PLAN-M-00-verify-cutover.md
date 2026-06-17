@@ -81,21 +81,21 @@ Completion here means the bands are no longer invisible parked work and the loca
 - `harness.db` records seven L8-L14 `workflow_runs`, seven matching `gate_runs`, and `coverage` rows for program coverage, reached gates, and review evidence.
 - `.ut-tdd/audit/A-132-l8-l14-verification-band-execution.md` records the local execution boundary and explicitly marks production deploy / post-deploy observation as out of scope.
 
-## 3. 蟾･遞玖｡ｨ
+## 3. 工程表
 
-### Step 1: [逶ｴ蛻余] verification band roadmap registration
+### Step 1: [直列] verification band roadmap registration
 
 Serial reason: downstream_dependency.
 
 Register this plan as the L8-L14 verification band host. The band represents right-arm verification execution planning across integration, system, UX, UAT, deployment acceptance, post-deploy verification, and operational feedback.
 
-### Step 2: [逶ｴ蛻余] cutover backfill route registration
+### Step 2: [直列] cutover backfill route registration
 
 Serial reason: downstream_dependency.
 
 Create the paired cutover roadmap (`PLAN-M-01-cutover-backfill`) and make this master depend on it through the second verification gate. The route turns the stale cutover strategy doc from a free-form carry into a registered roadmap item.
 
-### Step 3: [逶ｴ蛻余] machine verification
+### Step 3: [直列] machine verification
 
 Serial reason: downstream_dependency.
 
@@ -106,13 +106,13 @@ Run roadmap, doctor, review-evidence, and DB projection checks. Required evidenc
 - `bun run src/cli.ts doctor` surfaces `roadmap-rollup` with no frontier.
 - `review-evidence` remains OK for confirmed design plans.
 
-### Step 4: [逶ｴ蛻余] review and handover
+### Step 4: [直列] review and handover
 
 Serial reason: shared_state.
 
 Record intra-runtime review evidence and update `.ut-tdd/handover/CURRENT.json` so the next action points beyond this plan.
 
-## 3.1 螳溯｣・ｨ育判
+## 3.1 実装計画
 
 - No new TypeScript feature behavior is required beyond test coverage for the existing roadmap registry.
 - The implementation uses current `roadmap.layer` string matching; no schema migration is required because `roadmap.layer` already accepts arbitrary strings and `PROGRAM_BANDS.cutover.layers` contains `cutover`.

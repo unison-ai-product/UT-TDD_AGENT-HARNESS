@@ -128,7 +128,7 @@ import {
 import { analyzePropagation, loadPropagationDocs, propagationMessages } from "../lint/propagation";
 import {
   analyzeReadability,
-  loadFreezeReadabilityDocs,
+  loadSystemReadabilityDocs,
   readabilityMessages,
 } from "../lint/readability";
 import {
@@ -970,10 +970,10 @@ export function checkReadability(repoRoot: string): { messages: string[]; ok: bo
     return { messages: ["readability - violation: repo root could not be read"], ok: false };
   }
   try {
-    const r = analyzeReadability(loadFreezeReadabilityDocs(repoRoot));
+    const r = analyzeReadability(loadSystemReadabilityDocs(repoRoot));
     return { messages: readabilityMessages(r), ok: r.checked > 0 && r.ok };
   } catch {
-    return { messages: ["readability — ⚠ freeze review docs を読めない"], ok: false };
+    return { messages: ["readability — ⚠ prose docs を読めない"], ok: false };
   }
 }
 

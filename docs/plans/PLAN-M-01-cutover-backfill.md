@@ -77,33 +77,33 @@ Out of scope:
 - Modifying vendor snapshot files.
 - Changing credentials, infrastructure, repository protection, or external service configuration.
 
-## 3. 蟾･遞玖｡ｨ
+## 3. 工程表
 
-### Step 1: [逶ｴ蛻余] stale strategy evidence capture
+### Step 1: [直列] stale strategy evidence capture
 
 Serial reason: downstream_dependency.
 
 Use ADR-001, A-130, and the migration inventory to define the stale condition: legacy runtime paths, Python code-port assumptions, or old source command routes must not remain as executable UT-TDD guidance.
 
-### Step 2: [逶ｴ蛻余] cutover roadmap registration
+### Step 2: [直列] cutover roadmap registration
 
 Serial reason: downstream_dependency.
 
 Register `roadmap.layer: cutover` so `PROGRAM_BANDS.cutover` is covered by a concrete roadmap instead of parked carry text.
 
-### Step 3: [逶ｴ蛻余] verification
+### Step 3: [直列] verification
 
 Serial reason: downstream_dependency.
 
 Run roadmap and doctor checks to prove the cutover band is covered and no frontier remains from parked cutover work.
 
-### Step 4: [逶ｴ蛻余] review
+### Step 4: [直列] review
 
 Serial reason: shared_state.
 
 Record review evidence. The review scope is intentionally limited to backfill registration and must not be read as approval to perform production cutover.
 
-## 3.1 螳溯｣・ｨ育判
+## 3.1 実装計画
 
 - The backfill route is a documentation and roadmap registration change.
 - `docs/migration/helix-to-ut-tdd-cutover-strategy.md` is now backfilled to current UT-TDD-owned execution/state rules.
