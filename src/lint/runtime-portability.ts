@@ -252,7 +252,8 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
       path,
       line: lineOf(doc.text, LEGACY_RUNTIME_MARKER_PATTERN),
       rule: "legacy-runtime-marker",
-      message: "Current runtime surfaces must not reintroduce legacy runtime env, state, command, or agent markers.",
+      message:
+        "Current runtime surfaces must not reintroduce legacy runtime env, state, command, or agent markers.",
     });
   }
   return violations;
