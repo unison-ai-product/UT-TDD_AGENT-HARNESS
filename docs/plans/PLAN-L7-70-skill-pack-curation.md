@@ -5,10 +5,19 @@ kind: impl
 layer: L7
 drive: agent
 parent_design: docs/design/harness/L5-detailed-design/module-decomposition.md
-status: draft
+status: confirmed
 created: 2026-06-17
 updated: 2026-06-17
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: claude-opus-4-8
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-17"
+    tests_green_at: "2026-06-17"
+    verdict: pass
+    scope: "Skill substance curation closed: 54 packs all carry UT-TDD substance (0 generic stubs), valid skill.v1 routing frontmatter, real ut-tdd commands only, 0 legacy terms, readability 0 markers. pmo-tech-docs subagents authored per requirement-mapped batches; PM verified via asset catalog, doctor, readability/asset-drift gates, byte-level U+FFFD scan, and full Vitest (685)."
+    worker_model: sonnet
+    reviewer_model: claude-opus-4-8
 agent_slots:
   - role: tl
     slot_label: "TL - skill pack UT-TDD substance curate (catalog frontmatter + body)"
@@ -108,5 +117,18 @@ Multi-batch; `generates` is extended per batch as packs land.
 
 ## 5. Status
 
-In progress. Batch 1 authored 2026-06-17. Substance pass and prunes continue in
-later batches under this PLAN.
+Confirmed 2026-06-17. Substance pass complete across 4 batches:
+
+- Batch 1: 6 new packs (deprecation-cutover, ci-gate-design, harness-observability,
+  data-migration, ci-deploy-and-rollback, browser-testing) + search-index SSoT fix.
+- Batch 2: 5 substance rewrites (gate-planning, research, documentation-and-adrs,
+  design-doc, agent-cost-design).
+- Batch 3: 36 substance rewrites (review/security, test/impl, design/api/db,
+  agents/context, planning, Reverse series).
+- Batch 4: 4 substance rewrites (poc, debt-register, project-management,
+  requirements-handover) + 2 new packs (incident-runbook, llm-agent-routing) +
+  SKILL_MAP rewritten as the real catalog index + prune of 4 (ai-coding,
+  quality-lv5, source-driven-development, SKILL_MAP-draft).
+
+Result: 54 packs, all UT-TDD substance, 0 generic stubs. This satisfies the fork
+plan §8(1) skill-curation + substance-pass component of the vendor-removal gate.
