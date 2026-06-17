@@ -1524,3 +1524,113 @@ all permitted by §8(2)/§2.2 — none blocks the completed migration:
 
 <!-- TODO(human): 壊さない注意 -->
 
+---
+
+# Session Handover — 2026-06-17
+
+## §1 PLAN サマリ
+
+- `PLAN-L7-68` (troubleshoot): PLAN-L7-68 (troubleshoot): provider dispatch portability and handover split
+- `PLAN-L7-70-skill-pack-curation` (impl): PLAN-L7-70 (impl): skill pack の UT-TDD substance curate (FR-L1-47 / FR-L1-12)
+- `PLAN-L7-71-slash-commands` (impl): PLAN-L7-71 (impl): .claude/commands slash-command transplant (FR-L1-12)
+- `PLAN-L7-72` (impl): PLAN-L7-72 (impl): ut-tdd task classify public CLI (FR-L1-39)
+- `PLAN-L7-73-claude-native-semver-resolution` (troubleshoot): PLAN-L7-73 (troubleshoot): semver-newest native Claude resolution (A-137 #6)
+- `PLAN-L7-74-task-risk-whole-word-match` (troubleshoot): PLAN-L7-74 (troubleshoot): whole-word escalation-risk matching in task classify
+- `PLAN-L7-75-cost-tiered-provider-router` (impl): PLAN-L7-75 (impl): cost-tiered dual-provider role router (§7.8.7.1 / §1.8 / FR-L1-39)
+
+## §2 成果物 (commit / files)
+
+- `PLAN-L7-68`
+  - commit: 8d31c3c
+- `PLAN-L7-70-skill-pack-curation`
+  - commit: 2082273
+  - commit: 88e6a3e
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\skills\gate-planning.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\skills\research.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\skills\documentation-and-adrs.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\skills\design-doc.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\skills\agent-cost-design.md
+- `PLAN-L7-71-slash-commands`
+  - commit: 7305fe7
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\plans\PLAN-L7-72-task-classify-cli.md
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\task\classify.ts
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\tests\task-classify.test.ts
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\cli.ts
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\state-db\projection-writer.ts
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\plans\PLAN-L7-72-task-classify-cli.md
+- `PLAN-L7-72`
+  - commit: 6c72630
+  - commit: 78ad74a
+  - commit: b0021c7
+  - commit: de3f5d6
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\design\harness\L4-basic-design\architecture.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\state-db\projection-writer.ts
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\tests\projection-writer.test.ts
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\migration\helix-fork-completion-plan.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\governance\repository-structure.md
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\state-db\index.ts
+- `PLAN-L7-73-claude-native-semver-resolution`
+  - commit: 0cd08f8
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\src\task\classify.ts
+  - file: Edit c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\tests\task-classify.test.ts
+  - file: Write c:\Users\micro\OneDrive\Desktop\UT-TDD-agent-harness\docs\plans\PLAN-L7-74-task-risk-whole-word-match.md
+- `PLAN-L7-74-task-risk-whole-word-match`
+  - commit: ca73ea7
+  - commit: 42cdc8c
+  - file: Write C:\Users\micro\.claude\projects\c--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness\memory\project_cross_review_…
+  - file: Edit C:\Users\micro\.claude\projects\c--Users-micro-OneDrive-Desktop-UT-TDD-agent-harness\memory\MEMORY.md
+- `PLAN-L7-75-cost-tiered-provider-router`
+  - commit: f48546d
+  - commit: 601810b
+
+## §3 Next Action
+
+**PLAN-L7-75 (cost-tiered dual-provider role router) は完了・push 済み。** 本 session は
+Opus 実行 (PO 直接ディレクト)。branch `codex/harden-automation-team-launch`、実 git commit:
+
+1. `3cd1112` — 決定→実行層 接続: `route()` が役割を実 provider へ配置 (ワーカー=創出/主、
+   相談・検証=判断/相手)、`routeToAdapterPlan` が ready 決定を adapter 実行プランへ橋渡し
+   (`ut-tdd task route --execute`)。hybrid は実装≠検証を明示分離 (assignCross fail-close)。
+2. `f8bc02e` — team 統合: `ut-tdd team run --route` が `routeTeamMembers` 決定を per-member
+   `MemberPlacement` (配置 provider / tier モデル / frontier ゲート) へ写像し `buildTeamRunPlan`
+   に注入。worker=主 / 相談・検証=相手 のクロス配置が実 member spawn を駆動。T0 検証 member は
+   `--allow-frontier` なしで fail-close (exit 1)。`validateTeamRun` は配置 provider で検証。
+3. `60548cf` — frontier model id 整合 (codex `gpt-5.4`→`gpt-5.5`、`TIER_TABLE.T0` を単一正本に)
+   + L6 function-spec back-fill (router の機能契約 addendum、U-TIER-001..015)。
+
+検証: typecheck / Biome / **Vitest 715** / doctor exit 0 (change-impact OK・dependency-drift
+**cycles 0**・readability mojibake 0) すべて green。working tree クリーン、origin 同期。
+
+次手: PO が `codex/harden-automation-team-launch` の `main` マージ可否を判断。任意で
+`ut-tdd team run --route` を team suggest の自動 definition 生成へも接続 (現状は明示 YAML team)。
+
+## §4 carry (未了・先送り)
+
+PLAN-L7-75 の out-of-scope はゼロ化済み。残るは任意エンリッチメント (どれも非ブロック):
+
+- **model-id 正本の一元化**: `tier-router` の `TIER_TABLE` と `model-policy` の
+  `modelForProvider` を 1 つの共有定数モジュールへ統合し、将来の drift を構造的に防ぐ
+  (現状は値で reconcile 済だが source は二重)。`task→team` 循環回避のため共有先は
+  team/task いずれも依存しない leaf に置くこと。
+- **handover 同日累積**: 本ファイルは同一日付セクションを追記する仕様で現在 6 セクション
+  重複。append→最新置換 or per-run ファイル分割を workflow-improvement (Add-feature) で。
+- 旧 fork-completion handover (本ファイル先頭 §3-§6) の Phase-1 carry は別途継続。
+
+## §5 未了 PO 判断
+
+- `codex/harden-automation-team-launch` を `main` へマージするか (router 一式 + 既往コミット)。
+- 新規 team で `--route` (router クロス配置) を既定にするか、明示 YAML engine を既定に残すか。
+
+## §6 壊さない / 再発させない
+
+- `tier-router` は `src/task/` に置く。**`src/team/*` から import するな** —
+  `classify→model-policy` で既に `task→team` edge があり、`team→task` を足すと module 循環が
+  再発する。配置決定は CLI 合成点で計算し `MemberPlacement` として team へ渡す。
+  dependency-drift gate が cycles 0 を機械強制。
+- 不変条件を緩めるな: ワーカーは T0 に絶対到達しない (`resolveModel` throw) / T0 は明示許可
+  ゲート (指名フロンティア role + explicit auth) / hybrid は実装≠検証を別 provider
+  (`assignCross` 同一なら throw)。
+- frontier model id は `TIER_TABLE.T0` (claude-opus-4-8 / gpt-5.5) が単一正本。
+  `model-policy` "frontier" family もこれに一致させる。codex frontier に `gpt-5.4` (=T1) を
+  戻すな。
+
