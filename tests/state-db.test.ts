@@ -14,6 +14,17 @@ import { ensureHarnessSchema, harnessDbStatus } from "../src/state-db/maintenanc
 import { migrate, missingTables, rowCounts, tableNames } from "../src/state-db/migration";
 
 /**
+ * bun:sqlite releases the OS file handle on GC finalization rather than synchronously on
+ * close(), so on Windows a plain rmSync of the temp repo right after close() can hit EBUSY
+ * (the harness.db file is still mapped). Force GC where the runtime exposes it, then remove
+ * with retries. node:sqlite releases on close(), so the GC hook is a Bun-only no-op there.
+ */
+function cleanupRepo(repo: string): void {
+  (globalThis as { Bun?: { gc: (sync: boolean) => void } }).Bun?.gc(true);
+  rmSync(repo, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
+}
+
+/**
  * IT-DB-01: harness.db state-db foundation。
  * table 作成 (registry-driven migration) + idempotent upsert 基盤 + DB path guard。
  * 設計 pair: docs/test-design/harness/L8-integration-test-design.md IT-DB-01。
@@ -188,7 +199,7 @@ describe("IT-DB-01: db status / rebuild maintenance", () => {
       expect(s.tableCount).toBe(0);
       expect(s.expectedVersion).toBe(SCHEMA_VERSION);
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      cleanupRepo(repo);
     }
   });
 
@@ -210,7 +221,7 @@ describe("IT-DB-01: db status / rebuild maintenance", () => {
       const again = ensureHarnessSchema(repo);
       expect(again.migration.applied).toBe(false);
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      cleanupRepo(repo);
     }
   });
 });
