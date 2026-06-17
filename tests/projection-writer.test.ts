@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSecretLike, openHarnessDb } from "../src/state-db/index";
+import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
 import { rebuildHarnessDb, recordProjectionEvent } from "../src/state-db/projection-writer";
 
@@ -173,6 +173,46 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
       });
     } finally {
       db.close();
+    }
+  });
+
+  it("rebuildHarnessDb is atomic: a mid-rebuild failure rolls back, leaving the prior projection intact", () => {
+    const real = openHarnessDb(":memory:");
+    try {
+      // Baseline: a successful rebuild populates plan_registry.
+      const baseline = rebuildHarnessDb({ repoRoot: process.cwd(), db: real });
+      expect(baseline.ok).toBe(true);
+      const before = rowCounts(real).plan_registry;
+      expect(before).toBeGreaterThan(0);
+
+      // Inject a failure once the projection starts writing plan_registry — this is
+      // *after* truncateProjectionTables has emptied the tables. Without a transaction
+      // boundary the rebuild would leave plan_registry truncated (0 rows).
+      let injected = false;
+      const flaky: HarnessDb = {
+        path: real.path,
+        driver: real.driver,
+        exec: (sql) => real.exec(sql),
+        prepare: (sql) => {
+          if (!injected && /INSERT INTO plan_registry\b/i.test(sql)) {
+            injected = true;
+            throw new Error("injected mid-rebuild failure");
+          }
+          return real.prepare(sql);
+        },
+        userVersion: () => real.userVersion(),
+        setUserVersion: (v) => real.setUserVersion(v),
+        close: () => {},
+      };
+      expect(() => rebuildHarnessDb({ repoRoot: process.cwd(), db: flaky })).toThrow(
+        /injected mid-rebuild failure/,
+      );
+      expect(injected).toBe(true);
+
+      // The prior projection must survive: the truncate is rolled back, not committed.
+      expect(rowCounts(real).plan_registry).toBe(before);
+    } finally {
+      real.close();
     }
   });
 

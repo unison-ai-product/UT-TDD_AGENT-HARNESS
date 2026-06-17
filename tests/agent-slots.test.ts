@@ -1,3 +1,5 @@
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -8,6 +10,7 @@ import {
   listActiveSlots,
   listStaleSlots,
   loadSlots,
+  nodeAgentSlotsDeps,
   peakParallel,
   recordGuardFire,
   releaseOldestGuardSlot,
@@ -295,5 +298,27 @@ describe("U-FR-L1-46 resolveRosterCapability", () => {
         evidence_path: "",
       },
     ]);
+  });
+});
+
+describe("U-SLOT-009 nodeAgentSlotsDeps atomic write", () => {
+  it("round-trips state through the real fs deps and leaves no temp file behind", () => {
+    const dir = mkdtempSync(join(tmpdir(), "agent-slots-"));
+    try {
+      const deps = nodeAgentSlotsDeps(dir);
+      const a = fireSlot({ agent_kind: "pmo-sonnet", slot_source: "agent_guard" }, deps);
+      const b = fireSlot({ agent_kind: "codex-se", slot_source: "team_runner" }, deps);
+      releaseSlot({ slotId: a.slot_id, status: "completed", exitCode: 0 }, deps);
+      releaseSlot({ slotId: b.slot_id, status: "failed", exitCode: 1 }, deps);
+
+      const stateDir = join(dir, ".ut-tdd", "state");
+      const onDisk = JSON.parse(readFileSync(join(stateDir, "agent-slots.json"), "utf8")) as Slot[];
+      expect(onDisk).toHaveLength(2);
+      expect(onDisk.map((s) => s.status)).toEqual(["completed", "failed"]);
+      // The atomic-write temp files (`*.tmp-<pid>-<seq>`) must be renamed/cleaned, never leaked.
+      expect(readdirSync(stateDir).filter((name) => name.includes(".tmp-"))).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

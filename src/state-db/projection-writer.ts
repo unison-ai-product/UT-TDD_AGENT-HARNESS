@@ -2474,40 +2474,50 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
   const db = input.db ?? openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
   try {
     migrate(db);
-    truncateProjectionTables(db);
     const relationGraph = input.relationGraph ?? defaultRelationGraphProjection(repoRoot);
     const documentExports = input.documentExports ?? defaultDocumentExportProjection(repoRoot);
-    const plans = projectPlans(repoRoot, db);
-    projectDriveRuns(repoRoot, db, plans);
-    projectHookEvents(repoRoot, db, plans);
-    projectReviewModelRuns(repoRoot, db, plans);
-    projectRoadmapRollup(repoRoot, db);
-    projectReviewEvidenceRegistry(repoRoot, db);
-    projectGuardrailInvariantAdvisories(db);
-    projectDescentObligations(repoRoot, db);
-    projectVerificationBandExecution(db);
-    projectAutomationAssets(repoRoot, db);
-    projectSkillTelemetry(db, plans);
-    projectSkillMetrics(db);
-    projectSkillEvaluations(db);
-    projectPocEvaluations(db);
-    projectModelEvaluations(db, repoRoot);
-    projectOperationalMetrics(db);
-    projectRelationGraph(db, relationGraph);
-    projectGraphSnapshot(db, relationGraph);
-    projectImpactRules(db);
-    projectCurrentImpactResults(repoRoot, db, relationGraph);
-    projectVerificationCatalogs(repoRoot, db);
-    projectDocumentExportCatalogs(db);
-    projectDocumentExports(db, documentExports);
-    projectVerificationEvidence(db, input.verificationEvidence);
-    projectTestCaseCatalog(repoRoot, db);
-    projectFeedbackEvents(db);
-    projectTroubleEvents(db);
-    projectRetryEvents(db);
-    projectIssueQueue(db);
-    projectIssueApprovalGuardrails(db);
-    projectImprovementLog(db);
+    // Atomic rebuild: truncate + re-project run inside a single transaction so a
+    // mid-rebuild failure rolls back to the prior committed projection instead of
+    // leaving the DB truncated or half-populated (DB rebuild atomicity).
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      truncateProjectionTables(db);
+      const plans = projectPlans(repoRoot, db);
+      projectDriveRuns(repoRoot, db, plans);
+      projectHookEvents(repoRoot, db, plans);
+      projectReviewModelRuns(repoRoot, db, plans);
+      projectRoadmapRollup(repoRoot, db);
+      projectReviewEvidenceRegistry(repoRoot, db);
+      projectGuardrailInvariantAdvisories(db);
+      projectDescentObligations(repoRoot, db);
+      projectVerificationBandExecution(db);
+      projectAutomationAssets(repoRoot, db);
+      projectSkillTelemetry(db, plans);
+      projectSkillMetrics(db);
+      projectSkillEvaluations(db);
+      projectPocEvaluations(db);
+      projectModelEvaluations(db, repoRoot);
+      projectOperationalMetrics(db);
+      projectRelationGraph(db, relationGraph);
+      projectGraphSnapshot(db, relationGraph);
+      projectImpactRules(db);
+      projectCurrentImpactResults(repoRoot, db, relationGraph);
+      projectVerificationCatalogs(repoRoot, db);
+      projectDocumentExportCatalogs(db);
+      projectDocumentExports(db, documentExports);
+      projectVerificationEvidence(db, input.verificationEvidence);
+      projectTestCaseCatalog(repoRoot, db);
+      projectFeedbackEvents(db);
+      projectTroubleEvents(db);
+      projectRetryEvents(db);
+      projectIssueQueue(db);
+      projectIssueApprovalGuardrails(db);
+      projectImprovementLog(db);
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
     const counts = rowCounts(db);
     return {
       ok: true,

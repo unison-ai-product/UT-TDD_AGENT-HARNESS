@@ -14,7 +14,7 @@
  * 全関数 fail-open (never throws): 記録の失敗でワークフローを止めない。
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 export type SlotStatus = "running" | "completed" | "failed" | "cancelled";
@@ -401,13 +401,29 @@ export function resolveRosterCapability(input: RosterCapabilityInput): RosterCap
 export function nodeAgentSlotsDeps(repoRoot: string): AgentSlotsDeps {
   // M-1: idSeq を closure に閉じ込め module 状態を持たない (テスト間リセット不能を回避)。
   let idSeq = 0;
+  let writeSeq = 0;
   return {
     repoRoot,
     now: () => new Date().toISOString(),
     readText: (p) => (existsSync(p) ? readFileSync(p, "utf8") : null),
     writeText: (p, c) => {
       mkdirSync(dirname(p), { recursive: true });
-      writeFileSync(p, c, "utf8");
+      // Atomic write: stage to a unique temp file then rename over the target so a
+      // concurrent hook (PreToolUse agent-guard / SubagentStop) or a crash mid-write
+      // never leaves a torn/partial JSON that loadSlots would discard as corrupt.
+      // pid + 単調 seq で temp 名衝突回避 (Math.random に依存しない)。
+      const tmp = `${p}.tmp-${process.pid}-${writeSeq++}`;
+      try {
+        writeFileSync(tmp, c, "utf8");
+        renameSync(tmp, p);
+      } catch (error) {
+        try {
+          if (existsSync(tmp)) rmSync(tmp);
+        } catch {
+          // best-effort cleanup; fall through to surface the original error
+        }
+        throw error;
+      }
     },
     // 単調増加 seq + ISO 時刻で衝突回避 (Math.random に依存しない)。
     newId: () => `slot-${new Date().toISOString().replace(/[^0-9]/g, "")}-${idSeq++}`,

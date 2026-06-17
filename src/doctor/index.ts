@@ -21,6 +21,7 @@ import {
   analyzeChangeSetIntegrity,
   changeImpactMessages,
   changeSetIntegrityMessages,
+  isGitRepository,
   loadChangedFiles,
 } from "../lint/change-impact";
 import {
@@ -585,6 +586,11 @@ export function checkChangeImpact(repoRoot: string): { messages: string[]; ok: b
   if (!existsSync(repoRoot)) {
     return { messages: ["change-impact - violation: repo root could not be read"], ok: false };
   }
+  // 非 git (ZIP 展開のみ) では change-impact は適用不能 → skip (ok)。git は在るが status が
+  // 壊れる実エラーは下の catch で fail-close を維持する。CI は常に git repo なので影響なし。
+  if (!isGitRepository(repoRoot)) {
+    return { messages: ["change-impact — skipped (not a git repository)"], ok: true };
+  }
   try {
     const r = analyzeChangeImpact({ changedFiles: loadChangedFiles(repoRoot) });
     return { messages: changeImpactMessages(r), ok: r.ok };
@@ -599,6 +605,10 @@ export function checkChangeSetIntegrity(repoRoot: string): { messages: string[];
       messages: ["change-set-integrity - violation: repo root could not be read"],
       ok: false,
     };
+  }
+  // 非 git では変更集合を確定できない → skip (change-impact と同じ非 git fail-open 方針)。
+  if (!isGitRepository(repoRoot)) {
+    return { messages: ["change-set-integrity — skipped (not a git repository)"], ok: true };
   }
   try {
     const dependencyDrift = analyzeDependencyDrift(loadDependencyDriftInput(repoRoot));

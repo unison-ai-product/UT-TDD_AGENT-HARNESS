@@ -586,6 +586,21 @@ describe("runDoctor", () => {
     }
   });
 
+  it("skips change-impact / change-set-integrity in a non-git directory instead of failing closed", () => {
+    // ZIP 展開のみ (非 git) の利用環境: git status が引けないだけで doctor を落とさない。
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-nongit-"));
+    try {
+      const impact = checkChangeImpact(root);
+      const integrity = checkChangeSetIntegrity(root);
+      expect(impact.ok).toBe(true);
+      expect(impact.messages.join("\n")).toMatch(/skipped \(not a git repository\)/);
+      expect(integrity.ok).toBe(true);
+      expect(integrity.messages.join("\n")).toMatch(/skipped \(not a git repository\)/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps all hard gates wired into runDoctor hard-gate aggregation", () => {
     const source = readFileSync(join(process.cwd(), "src", "doctor", "index.ts"), "utf8");
     const okExpression = source.match(/return\s+\{\s+ok:([\s\S]*?),\s+messages:\s+\[/)?.[1] ?? "";

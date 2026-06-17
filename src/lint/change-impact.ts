@@ -218,6 +218,24 @@ export function loadChangedFiles(repoRoot: string = process.cwd()): string[] {
   return parseGitPorcelain(output);
 }
 
+/**
+ * repoRoot が git work-tree かを判定する。ZIP 展開のみ (非 git) の利用環境では change-impact
+ * は「適用不能」なので fail-close でなく skip させるための前段ガード (tracked-canonical /
+ * runtime-portability が既に採る非 git fail-open 慣行に揃える)。git は在るが status が壊れる等の
+ * 実エラーは引き続き呼び出し側で fail-close する。
+ */
+export function isGitRepository(repoRoot: string = process.cwd()): boolean {
+  try {
+    const out = execFileSync("git", ["-C", repoRoot, "rev-parse", "--is-inside-work-tree"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return out.trim() === "true";
+  } catch {
+    return false;
+  }
+}
+
 export function changeImpactMessages(result: ChangeImpactResult): string[] {
   if (result.sourceFiles.length === 0) {
     return ["change-impact — OK (src changes なし)"];
