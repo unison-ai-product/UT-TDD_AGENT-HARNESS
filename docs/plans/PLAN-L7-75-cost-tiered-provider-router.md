@@ -59,7 +59,8 @@ worker→frontier fail-close, and no explicit-permission gate for frontier model
 
 ## 2. Scope
 
-New `src/team/tier-router.ts` composing existing contracts:
+New `src/task/tier-router.ts` composing existing contracts (placed under
+`src/task/` so the `task→team` import edge stays one-directional / acyclic):
 
 - 3 archetype (`consult` / `worker` / `verify`) mapped per role
   (tl/uiux=consult, qa=verify, se/docs=worker).
@@ -69,12 +70,17 @@ New `src/team/tier-router.ts` composing existing contracts:
   `resolveModel` (worker→T0 throws, fail-close invariant), `route` (difficulty
   router with the T0 explicit-permission gate), `assignCross` (primary→other
   cross-branch), `roster` (10-binding symmetric view).
-- `ut-tdd task route` / `ut-tdd task roster` CLI surfaces.
+- `ut-tdd task route` / `ut-tdd task roster` CLI surfaces. `route` wires
+  `assignCross` into the decision (`cross` field): it auto-derives the
+  cross-provider switch (creation=primary / judgement=other in hybrid,
+  intra_runtime_subagent otherwise) from `currentRuntime`, surfaced as
+  `switch=<exec>>(<judge>)` in the CLI.
 - Vitest coverage for every invariant.
 
-Out of scope (follow-up): wiring the router into `ut-tdd team run --execute`
-member dispatch and reconciling `model-policy.ts` frontier model id (gpt-5.4 →
-gpt-5.5) with this tier table; L6 function-spec back-fill of the router.
+Out of scope (follow-up): wiring the cross-provider switch into the actual
+`ut-tdd team run --execute` member spawn (team run still uses explicit YAML
+engine assignment + validateTeamRun); reconciling `model-policy.ts` frontier
+model id (gpt-5.4 → gpt-5.5) with this tier table; L6 function-spec back-fill.
 
 ## 3. Acceptance Criteria
 
@@ -91,4 +97,6 @@ gpt-5.5) with this tier table; L6 function-spec back-fill of the router.
 
 ## 4. Status
 
-Draft. Implemented and verified 2026-06-17 (9 Vitest cases + CLI smoke).
+Draft. Implemented and verified 2026-06-17 (10 Vitest cases + CLI smoke).
+`assignCross` is wired into `route()`, so the primary→other cross-provider
+switch is auto-derived and surfaced (no longer an unwired library function).

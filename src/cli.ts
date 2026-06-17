@@ -1456,7 +1456,7 @@ task
         return;
       }
       process.stdout.write(
-        `task route: role=${decision.role} archetype=${decision.archetype} tier=${decision.tier} provider=${decision.provider} model=${decision.model ?? "(blocked)"} status=${decision.status} review=${decision.reviewEntry} gate=${decision.gate} cross=${decision.crossReview} difficulty=${decision.difficulty} risk=[${decision.riskFlags.join(",")}]\n`,
+        `task route: role=${decision.role} archetype=${decision.archetype} tier=${decision.tier} provider=${decision.provider} model=${decision.model ?? "(blocked)"} status=${decision.status} review=${decision.reviewEntry} gate=${decision.gate} crossReview=${decision.crossReview} switch=${decision.cross.execution}>${decision.cross.judgement}(${decision.cross.review_kind}) difficulty=${decision.difficulty} risk=[${decision.riskFlags.join(",")}]\n`,
       );
       if (decision.reason) process.stdout.write(`  - ${decision.reason}\n`);
     },

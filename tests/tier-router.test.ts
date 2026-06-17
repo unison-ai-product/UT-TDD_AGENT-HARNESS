@@ -133,4 +133,32 @@ describe("U-TIER: cost-tiered provider router", () => {
     expect(codexDriven.provider).toBe("codex");
     expect(codexDriven.model).toBe("gpt-5.3-codex-spark");
   });
+
+  it("U-TIER-010: route が主→相手のプロバイダ切替を自動配線する (assignCross wired)", () => {
+    const claudeDriven = route(
+      { role: "se", task: { text: "rename a field" } },
+      det("hybrid", "claude"),
+    );
+    expect(claudeDriven.cross).toEqual({
+      execution: "claude",
+      judgement: "codex",
+      review_kind: "cross_agent",
+    });
+
+    const codexDriven = route(
+      { role: "se", task: { text: "rename a field" } },
+      det("hybrid", "codex"),
+    );
+    expect(codexDriven.cross).toEqual({
+      execution: "codex",
+      judgement: "claude",
+      review_kind: "cross_agent",
+    });
+
+    const single = route(
+      { role: "se", task: { text: "rename a field" } },
+      det("claude-only", "claude"),
+    );
+    expect(single.cross.review_kind).toBe("intra_runtime_subagent");
+  });
 });

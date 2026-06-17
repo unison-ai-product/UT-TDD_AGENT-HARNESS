@@ -100,6 +100,8 @@ export interface RoutingDecision {
   reviewEntry: ReviewEntry;
   gate: boolean;
   crossReview: boolean;
+  /** 主→相手のプロバイダ切替割付 (creation=主 / judgement=相手、§7.8.7.1)。 */
+  cross: CrossAssign;
   status: RoutingStatus;
   reason?: string;
   difficulty: TaskDifficulty;
@@ -147,6 +149,8 @@ export function route(
   const archetype = ROLE_ARCHETYPE[input.role];
   const tier = tierFor(input.role, c.difficulty, c.risk_flags);
   const policy = reviewPolicy(c.difficulty, c.risk_flags);
+  // 主 provider から「創出=主 / 判断=相手」のクロス切替を自動導出 (assignCross 配線)。
+  const cross = assignCross(detection, provider);
   const base: Omit<RoutingDecision, "model" | "status" | "reason"> = {
     role: input.role,
     archetype,
@@ -155,6 +159,7 @@ export function route(
     reviewEntry: policy.reviewEntry,
     gate: policy.gate,
     crossReview: detection.mode === "hybrid" && policy.crossReview,
+    cross,
     difficulty: c.difficulty,
     riskFlags: c.risk_flags,
   };
