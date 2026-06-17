@@ -30,6 +30,29 @@ Repository runtime has **no** load-bearing dependency on `vendor/helix-source/`
 (no `src/**` or `tests/**` reference it). Removal is functionally safe; the only
 hard coupling is the tracked-canonical SSoT (`repository-structure.md`).
 
+## 1.5 Migration criterion (PO directive 2026-06-17)
+
+Curation/transplant is **requirements-driven, not HELIX-driven**. A HELIX asset
+is in scope ONLY if it maps to an existing UT-TDD requirement (`FR-L1-*` / `BR-*`),
+drive model (be / fe / fullstack / db / agent), or mode. The UT-TDD
+requirement/design is the source of truth; HELIX is at most loose reference,
+never the source.
+
+- If a capability is **not** in UT-TDD's requirements / drive models → do **not**
+  import it. Un-required HELIX behavior is untraceable scope creep and can only be
+  a **degrade** risk.
+- If UT-TDD already owns the capability with its **own** design (Scrum / Incident /
+  Recovery / Reverse modes etc.), do **not** import the HELIX skill version — it is
+  a separate, divergent design and importing it degrades the UT-TDD one. Author the
+  UT-TDD skill from the UT-TDD mode/requirement instead.
+
+Net effect: skill curation itself is the requirement (`FR-L1-47` skill-pack正本 +
+`FR-L1-12` injection); this criterion scopes WHICH packs (drive/mode/FR-mapped only)
+and forbids HELIX-shaped imports. §2 below is read as "which UT-TDD requirement /
+drive area lacks a pack, authored from UT-TDD design" — not "which HELIX skills to
+port". The §2.1 items stand only where each traces to a drive/mode/FR; the
+disciplined curation step re-confirms that trace per pack and drops any that do not.
+
 ## 2. Skills — complete the migration
 
 ### 2.1 Migrate-now (20) — UT-TDD-relevant, not yet curated
@@ -74,11 +97,13 @@ HELIX personal-project / web-product specific: `advanced/i18n`,
 `common/performance`, `common/visual-design`, `design-tools/{character,graphic,pptx}`,
 `tools/ide-tools`, `workflow/{compliance,dev-setup}`, `writing/{explain,japanese,presentation,social}`.
 
-Nuance to confirm with PO: `agent-skills/helix-scrum`, `workflow/incident`,
-`workflow/postmortem` are tagged out-of-scope because UT-TDD already owns
-`docs/process/modes/{scrum,incident,recovery}.md`, but a UT-TDD-adapted skill
-pack (e.g. `ut-tdd-scrum.md`) would be migrate-now if the process-mode doc is
-treated as the trigger surface. **Decision needed.**
+**Resolved (PO 2026-06-17): do NOT import.** `agent-skills/helix-scrum`,
+`workflow/incident`, `workflow/postmortem` are mode-duplicates — UT-TDD already
+owns Scrum (`FR-L1-23`), Incident (`FR-L1-16`), and Recovery (`FR-L1-10`) with its
+own drive-model design in `docs/process/modes/{scrum,incident,recovery}.md`.
+Importing the HELIX versions would introduce a divergent design = degrade. If a
+skill pack is wanted for these surfaces, it is **authored from the UT-TDD mode/FR**,
+with HELIX as at most loose reference — never ported (per §1.5).
 
 ### 2.4 Doc-drift fix (skills)
 
@@ -135,9 +160,13 @@ reference allowlisted agents):
   - `pretooluse-opus-repo-block` → guard PM/Opus from direct repo code edits
     (matches the "implement via Codex, not Opus" directive); transplant if Opus
     direct-edit recurs.
-  - `sessionstart-history-injection` / `userpromptsubmit-context-bundle` →
-    context auto-injection; **design decision** vs the existing handover
-    `CURRENT.json` model before transplanting.
+- **Not needed (PO 2026-06-17): `sessionstart-history-injection` /
+  `userpromptsubmit-context-bundle`.** Session continuity is already a UT-TDD
+  requirement met by its own design — handover `CURRENT.json` (`FR-L1-42`),
+  session-log digest (`FR-L1-07`), layer-context injection (`FR-L1-12`), and the
+  memory system. A parallel HELIX per-prompt injection mechanism would duplicate
+  that design (and bloat context, which the repo deliberately trims). No distinct
+  requirement justifies it → degrade risk; do not transplant.
 - **Obsolete (3):** `pretooluse-askuserquestion` (UT-TDD bans AskUserQuestion),
   `pretooluse-codex-slot-check` (helix.db slots), HTTP-API job slots. Drop.
 
@@ -172,25 +201,33 @@ PR automation (UT-TDD uses `ut-tdd status` + `gh`).
 
 ## 8. Vendor-removal readiness gate
 
-`vendor/helix-source/` may be removed once **all** hold:
+No special "import complete" declaration is needed. The snapshot is just the
+read-only reference we kept while rebuilding in UT-TDD; nothing's runtime uses it.
+Delete it once the **requirement-backed** work that still references it is done:
 
-1. Phase 1 migrate-now items landed and the §2.5 substance pass is green.
-2. PO confirms §2.3 out-of-scope (and §2.2 defer) skills + obsolete tools are
-   genuinely not needed going forward (explicit "import complete" decision).
-3. `repository-structure.md` updated (drop `vendor/helix-source/` from the
-   tracked list + structure tree) and `tracked-canonical` lint stays green.
-4. The ~20 historical doc references (migration/archive/audit) are either left as
+1. The §1.5-scoped (drive/mode/FR-mapped) skill packs are curated and the §2.5
+   substance pass is green.
+2. The §6 pending TS re-implementations that use HELIX libs as reference are
+   landed (or explicitly re-scoped as defer/never).
+3. `repository-structure.md` updated (drop `vendor/helix-source/` from the tracked
+   list + structure tree) and `tracked-canonical` lint stays green.
+4. The ~20 historical doc references (migration/archive/audit) are left as
    acknowledged dangling history or updated.
 
-Until then, keep the snapshot: it is the reference for the pending §6 TS
-re-implementations and the §2 skill curation.
+Until then, keep the snapshot — it is the reference source for (1) and (2). After
+that, it is dead weight and gets removed in one commit. That is the whole of the
+"vendor removal" question; there is no separate gate beyond finishing the
+requirement-backed migration.
 
-## 9. Open decisions for PO
+## 9. Decisions (PO 2026-06-17)
 
-- §2.3 nuance: adapt `helix-scrum` / `incident` / `postmortem` to UT-TDD packs, or
-  leave the process-mode docs as the only surface?
-- §5: context auto-injection hooks vs the existing handover model — adopt or skip?
-- §8.2: declare HELIX import complete (enables vendor removal) or keep phased?
+- **Mode-duplicate skills (helix-scrum / incident / postmortem): do NOT import**
+  (§2.3) — UT-TDD owns these modes; importing the HELIX versions = degrade.
+- **Context auto-injection hooks: do NOT transplant** (§5) — handover + session-log
+  + memory already meet the session-continuity requirement; a parallel mechanism
+  is duplicate/degrade and bloats context.
+- **Vendor removal:** no declaration step; remove when §8 (1)–(2) — the
+  requirement-backed migration — is finished. Until then, keep it.
 
 ## 10. Next step
 
