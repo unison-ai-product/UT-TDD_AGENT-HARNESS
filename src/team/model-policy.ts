@@ -98,7 +98,9 @@ function modelForProvider(input: { provider: TeamProvider; engine: string; model
 } {
   if (input.provider === "local") return { model: "local", source: "policy" };
   if (input.provider === "codex") {
-    if (input.modelFamily === "frontier") return { model: "gpt-5.4", source: "policy" };
+    // frontier = 最上位帯。tier-router TIER_TABLE.T0.codex (= gpt-5.5) を単一正本に整合させる。
+    // 旧 gpt-5.4 は T1 (ワーカー専門) であり、claude frontier=opus(T0) との非対称を生んでいた。
+    if (input.modelFamily === "frontier") return { model: "gpt-5.5", source: "policy" };
     if (input.modelFamily === "codex") return { model: "gpt-5.3-codex", source: "policy" };
     return { model: "gpt-5.3-codex-spark", source: "policy" };
   }

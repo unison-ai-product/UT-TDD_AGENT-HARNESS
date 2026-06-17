@@ -96,13 +96,18 @@ New `src/task/tier-router.ts` composing existing contracts (placed under
   `team→task` import) so the `task→team` edge stays one-directional / acyclic.
 - Vitest coverage for every invariant.
 
-Out of scope (follow-up): reconciling `model-policy.ts` frontier model id
-(gpt-5.4 → gpt-5.5) with this tier table; L6 function-spec back-fill.
+Follow-up closed (2026-06-17): `model-policy.ts` frontier model id reconciled
+(codex `gpt-5.4` → `gpt-5.5`) so the legacy `selectTeamModel` "frontier" family
+agrees with `TIER_TABLE.T0` (the single source of frontier ids); L6 function-spec
+back-fill added (function-spec.md "2026-06-17 Cost-Tiered Dual-Provider Role
+Router Addendum", U-TIER-001..015 contracts). No remaining out-of-scope items.
 
 Touched (extension of existing modules, not new artifacts): `src/team/run.ts`
 (`MemberPlacement` seam + placement-aware `validateTeamRun`), `src/cli.ts`
-(`team run --route/--primary/--allow-frontier`), `tests/team-run.test.ts`
-(routed cross-placement + frontier fail-close).
+(`team run --route/--primary/--allow-frontier`), `src/team/model-policy.ts`
+(frontier id reconcile), `tests/team-run.test.ts` (routed cross-placement +
+frontier fail-close), `tests/team-model-policy.test.ts` (frontier id),
+`docs/design/harness/L6-function-design/function-spec.md` (L6 back-fill).
 
 ## 3. Acceptance Criteria
 
@@ -127,5 +132,7 @@ bridges a ready single-role decision to the provider adapter invocation
 (`ut-tdd task route --execute`). The team layer is now connected too:
 `ut-tdd team run --route` derives each member's provider + tier model from the
 router (worker=primary / consult-verify=other), fail-closes T0 reviewers without
-`--allow-frontier`, and drives the existing slot-based member spawn. Remaining
-follow-up: model-policy frontier id reconciliation + L6 function-spec back-fill.
+`--allow-frontier`, and drives the existing slot-based member spawn. The two
+follow-ups are now closed: the model-policy frontier id is reconciled to the tier
+table and the L6 function-spec is back-filled (function-spec.md addendum). No
+remaining out-of-scope items.
