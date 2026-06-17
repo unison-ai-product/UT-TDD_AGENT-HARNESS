@@ -235,3 +235,39 @@ Codex authors `PLAN-*` tickets per Phase-1 stream (skills curate batch,
 `.claude/commands` transplant, hook re-implementation, task-classify + scrum/reverse
 TS modules), each with its V-model pair and review evidence. This document is the
 driving gap list; it is not itself a PLAN ticket.
+
+## 11. Execution status (2026-06-17, PO directed Opus to execute — Codex at limit)
+
+The vendor-removal gate (§8) is satisfied and the snapshot is removed this session.
+
+- **§8(1) skill curation + substance: DONE.** `PLAN-L7-70` (confirmed). 54 packs,
+  all UT-TDD substance, 0 generic stubs; `§2.1` migrate-now curated; `§1.5` prune of
+  4 non-mapped / HELIX-shaped packs (`ai-coding`, `quality-lv5`,
+  `source-driven-development`, obsolete `SKILL_MAP-draft`); `SKILL_MAP` rewritten as
+  the real catalog index. A pre-existing search-index false-positive secret guard was
+  fixed along the way.
+- **§4 slash commands: DONE.** `PLAN-L7-71`. `.claude/commands/` created with P0/P1
+  (ship, sdd-review, sdd-plan, spec, test, build, code-simplify). `§4` P2
+  `innovation-*` deferred (invoke `pdm-*`).
+- **§6 P0 task classify: DONE.** `PLAN-L7-72`. `src/task/classify.ts` +
+  `ut-tdd task classify` CLI over the existing `scoreTaskComplexity` (FR-L1-39) /
+  `classifyDrive` (FR-L1-41) / `inferTaskDifficulty` contracts; module back-filled
+  into architecture §3.1.
+- **§8(2) re-scope (explicit defer/never), as §8(2) permits:**
+  - `§6 P0` scrum / reverse **runtime** commands (`ut-tdd scrum` / `ut-tdd reverse`):
+    DEFER. Large mode state machines; the lint surfaces (`scrum-reverse`, `plan lint`,
+    `vmodel lint`) already exist and the skill packs are authored from
+    `docs/process/modes/`. Land in a later Phase-1 wave.
+  - `§6 P0/P1` `ut-tdd task estimate`, audit CLI, guard family, escalation CLI, E2E
+    harness: DEFER (W9/W12/W13/W17 wave-gated).
+  - `§5` hooks (plan-auto-register projection trigger, design-doc web-search guard):
+    DEFER as Phase-1 follow-up; not a vendor-removal blocker. The PO-resolved
+    "do-not-transplant" hooks (§5/§9) stay dropped.
+  - `§2.2` defer skills (FE/UI + ops packs): DEFER until their wave (central UI
+    Phase B / W12) activates, per §2.2.
+- **§8(3) repository-structure.md: updated** to drop `vendor/helix-source/` from the
+  tracked list and the structure tree.
+- **§8(4) doc references: left as acknowledged dangling history.** ~31 tracked docs
+  (archive / migration / handover / Discovery PLAN `references:`) mention the snapshot;
+  none is a runtime or gating dependency (no `src/**` / `tests/**` reference; no PLAN
+  `requires/parent/parent_design`). They remain as historical record per §8(4).

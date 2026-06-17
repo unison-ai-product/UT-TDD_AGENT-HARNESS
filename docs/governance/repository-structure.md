@@ -74,9 +74,6 @@ UT-TDD-agent-harness/
 │
 ├── ai-agent-harness-directory-reference.md  # ディレクトリ横断参照資料 (tracked、参照用で正本でない)
 │
-├── vendor/
-│   └── source snapshot/             # ★ source reference snapshot (read-only、直接編集禁止)
-│
 └── legacy local state            # gitignored、正本にしない
 ```
 
@@ -99,7 +96,6 @@ UT-TDD-agent-harness/
 | runtime state | `.ut-tdd/` (state/cache/logs/handover CURRENT/tmp/local*) | generated。**docs 目的で追跡しない** (CLAUDE.md 禁止事項) |
 | 監査証跡 | `.ut-tdd/audit/*.md` / `.ut-tdd/audit/reports/*.md` / `.ut-tdd/evidence/` / `.ut-tdd/handover/provider/` | **tracked** (PO 決定 2026-06-10、A-128 F-1)。audit = A-NNN 監査記録、evidence = 正規化 JSON (secret/PII/raw transcript 禁止)。runtime state と区別する |
 | 横断参照資料 | `ai-agent-harness-directory-reference.md` | tracked。参照用であり配置正本は本書 |
-| 参照 snapshot | `vendor/helix-source/` | **read-only**。概念のみ参照、コードは port しない・直接編集しない |
 
 ## 3. V-model 4 artifact の配置 (中核ルール、concept v3.1 §2.3)
 
@@ -122,12 +118,11 @@ UT-TDD-agent-harness/
 ## 5. tracked / gitignored
 
 - **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
-- **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `vendor/helix-source/` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `ai-agent-harness-directory-reference.md` (PO 決定 2026-06-10、A-128 F-1 / IMP-127)
+- **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `ai-agent-harness-directory-reference.md` (PO 決定 2026-06-10、A-128 F-1 / IMP-127)
 
 ## 6. 境界
 
 - **正本**: `docs/governance/*` + `docs/adr/*` + `docs/process/*` (工程/駆動モデル定義) + `src/` (TS core)。
-- **read-only**: `vendor/helix-source/`（概念参照のみ）。
 - **generated / 非正本**: `.ut-tdd/state` `dist/` `node_modules/` legacy local state。
 - **historical**: `docs/archive/`（旧版）/ `docs/migration/`（移行資料、code-port 部は superseded）。
 
@@ -135,7 +130,6 @@ UT-TDD-agent-harness/
 
 - `src/` core に bash / Python を持ち込まない（ADR-001。OS 差は `scripts/` の薄い wrapper に閉じる）。
 - enum / 契約を `src/schema/` 以外で再定義しない。
-- `vendor/helix-source/` を直接編集しない（実行ロジックは UT-TDD 所有パスへ概念から TS/Bun 再実装し、markdown/docs/templates は curate して正本化する）。
 - `.ut-tdd/` **runtime state** (state/cache/logs/tmp/handover CURRENT/local*) を docs 目的で Git 追跡しない。**監査証跡** (`audit/*.md` / `audit/reports/*.md` / `evidence/` / `handover/provider/`) は例外として tracked (§5、A-128 F-1)。
 - source process reference を工程定義の正本として参照しない (正本 = `docs/process/`)。
 - 日本語ファイル名を使わない。
