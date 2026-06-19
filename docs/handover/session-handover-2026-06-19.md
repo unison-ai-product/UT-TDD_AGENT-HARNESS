@@ -428,48 +428,63 @@ PO 直接指摘 2 件 (handover pointer drift / 注入の溜まりすぎ) を **
 ## §2 成果物 (commit / files)
 
 - (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
+- commit `69d3227` feat(status,review-guard): PLAN-L7-84 + PLAN-L7-85 (12 files)
+- commit `583bbc6` docs(handover): 完了記録
 
 ## §3 Next Action
 
-<!-- TODO(human): 順序付き次手 -->
+PO「両方修正を」を受け、handover §5 に繰越されていた **2 件の PO 残差を実装で解消**
+(本 session commit `69d3227` + `583bbc6`、全 green・push 済、main=`583bbc6`)。
+
+1. **PLAN-L7-84 (impl) — `status --json` の `nextAction` フィールド (A-138 ITEM-1 carry discharge)**:
+   既存 6 フィールド (camelCase 公開契約) に `nextAction` を additive 付加。正式フィールド名は
+   **PO 判断不要**だった = 既存が全て camelCase ゆえ規約上 `nextAction` に一意決定。値域 =
+   mode→judgment-gate guidance (`standalone`=`human-review-required:` / 単一runtime=
+   `single-runtime:` intra_runtime_subagent / `hybrid`=`cross-review-ready:`)、先頭 token で
+   機械 switch でき ASCII のみ。`nextActionForMode` 純関数 + `NEXT_ACTION_BY_MODE` SSoT。
+   requirements §6 を carry→**current**、function-spec §1.2 back-fill。U-DETECT-001..005。
+2. **PLAN-L7-85 (troubleshoot) — 委譲レビュー read-only 強制 + commit前 staged-diff 機械化 (IMP-137)**:
+   `src/runtime/review-guard.ts` (新規・純関数: read-only ロール分類 / working-tree mutation 検知 /
+   assessment / message / staged summary)。git/fs 端点なしで module-boundary (runtime↛lint) 順守。
+   `ut-tdd <provider> --role <read-only> --execute` が spawn 前後を assess し warning surface
+   (**fail-open**=委譲成果を殺さない)。`ut-tdd review --staged` が staged 集合+doctor を **fail-close**。
+   `loadStagedFiles`/`parseStagedNames` を change-impact に追加。U-RGUARD-001..012。
+
+検証: typecheck / Biome / Vitest **779/779** / doctor EXIT=0 / db rebuild。独立 code-reviewer
+subagent (sonnet) + PM 自己レビュー。**commit 前に新ツール `ut-tdd review --staged` を dogfood**
+(staged=12 / doctor=ok / 不要混入0 = IMP-137 で作った規律を自分に適用)。
+
+次 session: 新規実装の手待ちなし。残るは §5 (繰越 PO 判断、本 session 範囲外)。
 
 ## §4 carry (未了・先送り)
 
-<!-- TODO(human): carry -->
+- AI-decidable carry は本 session で**全消化** (next_action / IMP-137 機械化の両方)。新規実装の残件なし。
+- **review-guard 既知境界** (繰越メモ): `detectWorkingTreeMutation` は path-presence ベースゆえ、
+  session 前から dirty なファイルへの追加編集は検知しない (IMP-137 の実 failure mode = clean な
+  共有ファイルへの off-task 編集は捕捉)。content-hash 検知 / staged との session 跨ぎ cross-reference
+  永続化は PLAN-L7-85 Out of scope = 必要なら future enrichment (solo 可)。
+- 軽微 (繰越): CURRENT.json `digest_summary.failures: 1` は履歴 digest の記録値 (現行 779 green、回帰でない)。
 
 ## §5 未了 PO 判断
 
-<!-- TODO(human): escalation -->
+- 本 session で繰越 PO 残差は解消済み。新規の PO 判断は無し。
+- (参考) review-guard の content-hash 化 / staged cross-reference 永続化を将来やるかは、必要が
+  生じた時点で判断 (現状は path-presence + doctor fail-close で IMP-137 の実 failure mode を被覆)。
 
 ## §6 壊さない / 再発させない
 
-<!-- TODO(human): 壊さない注意 -->
-
----
-
-# Session Handover — 2026-06-19
-
-## §1 PLAN サマリ
-
-- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
-
-## §2 成果物 (commit / files)
-
-- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
-
-## §3 Next Action
-
-<!-- TODO(human): 順序付き次手 -->
-
-## §4 carry (未了・先送り)
-
-<!-- TODO(human): carry -->
-
-## §5 未了 PO 判断
-
-<!-- TODO(human): escalation -->
-
-## §6 壊さない / 再発させない
-
-<!-- TODO(human): 壊さない注意 -->
+- **`status --json` の既存 6 camelCase フィールドは公開契約**。`nextAction` は additive・後方互換で
+  足した。フィールド名は snake_case 別名を付けない (既存 6 が camelCase の SSoT、PLAN-L7-84)。
+- **machine surface (status --json 等) の文字列は ASCII**。`nextAction` 値を日本語化すると
+  公開 JSON 契約を崩し、machine-surface-language lint の射程にも入る (今回 ASCII で実装)。
+- **review-guard は純関数で git/fs 端点を持たない** (I/O は cli の loadChangedFiles/loadStagedFiles)。
+  runtime↛lint の module-boundary と dependency-drift cycles 0 を壊すので、review-guard に git 呼び出しや
+  lint import を足すな (PLAN-L7-85)。
+- **execute パスの review-guard は fail-open** (exit 不変・warning のみ)。レビュー成果を殺さず混入を
+  staged 前に弾く設計。ここを fail-close に変えると正当な委譲まで止まる。staged 側 (`review --staged`) が
+  fail-close 担当。
+- **PLAN 追加/status 変更後は `ut-tdd db rebuild`** をしないと plan-governance / drive-db-registration が
+  stale で doctor 赤化 (回帰でない、[[project_codex_branch_ci_verification]])。今回も rebuild 済。
+- **kind=impl は `parent_design` 必須** (master_hub 除く)。PLAN-L7-84 で一度 invalid_frontmatter に
+  なり function-spec を parent_design に指定して解消した (schema §1.1.parent_design)。
 
