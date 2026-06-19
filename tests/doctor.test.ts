@@ -8,6 +8,7 @@ import {
   checkBackfillResult,
   checkChangeImpact,
   checkChangeSetIntegrity,
+  checkCodexWrapperParity,
   checkCodingRules,
   checkCycleP4Verification,
   checkDbProjectionCoverage,
@@ -59,6 +60,35 @@ const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
 const slotStatePath = join("/repo", ".ut-tdd", "state", "agent-slots.json");
 const currentPlanPath = join("/repo", ".ut-tdd", "state", "current-plan");
 const digestDir = join("/repo", ".ut-tdd", "logs", "plan");
+
+function codexWrapperParityFiles(root: string, overrides: Record<string, string> = {}) {
+  const file = (relativePath: string) => join(root, ...relativePath.split("/"));
+  return new Map<string, string>(
+    Object.entries({
+      ".claude/settings.json": [
+        "{",
+        '  "hooks": {',
+        '    "SessionStart": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" session start" }] }],',
+        '    "PostToolUse": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" hook post-tool-use" }] }],',
+        '    "Stop": [{ "hooks": [{ "command": "bun \\"$CLAUDE_PROJECT_DIR/src/cli.ts\\" session summary" }] }]',
+        "  }",
+        "}",
+      ].join("\n"),
+      "src/runtime/adapter.ts": [
+        'const args = isCodex ? ["exec", "-"] : ["--print", "--input-format", "text"];',
+        "return { stdin: intent.task, plan_id: intent.planId };",
+      ].join("\n"),
+      "tests/runtime-hook-entrypoints.test.ts": [
+        "ut-tdd codex --execute records the same session lifecycle through the adapter wrapper",
+        "ut-tdd codex --task-file feeds file content through the same adapter wrapper",
+        "ut-tdd codex --plan records wrapper lifecycle without forwarding plan flags to Codex",
+      ].join("\n"),
+      "tests/runtime-adapter.test.ts": "U-ADAPTER-007\nU-ADAPTER-008",
+      "docs/test-design/harness/L7-unit-test-design.md": "U-ADAPTER-009",
+      ...overrides,
+    }).map(([relativePath, text]) => [file(relativePath), text]),
+  );
+}
 
 function deps(over: Partial<DoctorDeps> & { files?: Map<string, string> } = {}): DoctorDeps {
   const files = over.files ?? new Map<string, string>();
@@ -532,6 +562,40 @@ describe("runDoctor", () => {
     }
   });
 
+  it("U-ADAPTER-009: surfaces Claude hook / Codex wrapper parity as a doctor hard gate", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-codex-parity-"));
+    try {
+      const result = checkCodexWrapperParity(
+        deps({ repoRoot: root, files: codexWrapperParityFiles(root) }),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.messages.join("\n")).toContain("codex-wrapper-parity - OK");
+      expect(result.messages.join("\n")).toContain("codex=ut-tdd-wrapper-lifecycle");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-ADAPTER-009: fails closed when Codex wrapper lifecycle evidence is missing", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-codex-parity-missing-"));
+    try {
+      const result = checkCodexWrapperParity(
+        deps({
+          repoRoot: root,
+          files: codexWrapperParityFiles(root, {
+            "tests/runtime-hook-entrypoints.test.ts": "Claude settings only",
+          }),
+        }),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("Codex wrapper lifecycle test missing");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails closed when hard-gate checker inputs cannot be read", () => {
     const missingRoot = join(tmpdir(), `ut-tdd-doctor-missing-${Date.now()}-nope`);
     const checks = [
@@ -569,6 +633,7 @@ describe("runDoctor", () => {
       ["l6-fr-coverage", checkL6FrCoverage(missingRoot)],
       ["readability", checkReadability(missingRoot)],
       ["project-hook", checkProjectHooks(missingRoot)],
+      ["codex-wrapper-parity", checkCodexWrapperParity(deps({ repoRoot: missingRoot }))],
       ["l6-completion", checkL6Completion(missingRoot)],
       ["l7-completion", checkL7Completion(missingRoot)],
       ["verification-groups", checkVerificationGroupsResult(missingRoot)],
@@ -641,6 +706,7 @@ describe("runDoctor", () => {
       "l6FrCoverage",
       "readability",
       "projectHooks",
+      "codexWrapperParity",
       "l6Completion",
       "l7Completion",
       "verificationGroups",
