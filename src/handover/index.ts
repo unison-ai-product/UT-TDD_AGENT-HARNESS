@@ -591,25 +591,32 @@ export function checkHandoverBypass(deps: HandoverDeps): string[] {
  * 中間 entry を 1 行 breadcrumb へ畳む** (剪定分は git 履歴に全保全 = no silent cap)。
  * breadcrumb は `# Session Handover` に一致しないので `countHandoverEntries`/`doc_entry_count`
  * の bypass 検知契約は不変。圧縮不要 (entry 数 ≤ maxEntries-1 / header 不在) は入力をそのまま返す。
+ * **idempotent**: 過去の prune で挿入した breadcrumb は再 prune 前に除去する。さもないと breadcrumb が
+ * 保持 anchor (entry[0]) の slice 末尾へ吸収され、同日反復 handover で breadcrumb が線形累積する
+ * (cross_agent review 指摘、PLAN-L7-83)。
  */
 export function boundSameDayEntries(md: string, maxEntries: number): string {
+  // entry 数 (= header 数) が上限内なら圧縮不要 = 入力不変 (breadcrumb 除去もしない)。
+  if (countHandoverEntries(md) <= maxEntries - 1) return md;
+  // 既存 breadcrumb (+ その直前 separator) を除去してから再 prune (idempotent、累積防止)。
+  const stripped = md.replace(/\n+---\n+<!-- ut-tdd handover:[^\n]*-->/g, "");
   const positions: number[] = [];
   const re = /^# Session Handover\b/gm;
-  let m: RegExpExecArray | null = re.exec(md);
+  let m: RegExpExecArray | null = re.exec(stripped);
   while (m !== null) {
     positions.push(m.index);
-    m = re.exec(md);
+    m = re.exec(stripped);
   }
   const count = positions.length;
-  // append 後に maxEntries を超えないため、既存は (maxEntries-1) entry まで許容。
-  if (count <= maxEntries - 1) return md;
   const entries = positions.map((p, i) =>
-    md.slice(p, i + 1 < positions.length ? positions[i + 1] : md.length).replace(/\s*$/, ""),
+    stripped
+      .slice(p, i + 1 < positions.length ? positions[i + 1] : stripped.length)
+      .replace(/\s*$/, ""),
   );
   const keepRecent = Math.max(0, maxEntries - 2);
   const retain = new Set<number>([0]);
   for (let i = count - keepRecent; i < count; i++) if (i > 0) retain.add(i);
-  const preamble = positions[0] > 0 ? md.slice(0, positions[0]).replace(/\s*$/, "") : "";
+  const preamble = positions[0] > 0 ? stripped.slice(0, positions[0]).replace(/\s*$/, "") : "";
   const prunedCount = count - retain.size;
   const parts: string[] = [];
   if (preamble) parts.push(preamble);

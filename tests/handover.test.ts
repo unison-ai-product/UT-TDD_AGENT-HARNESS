@@ -545,6 +545,20 @@ describe("U-HOVER-014 boundSameDayEntries / runHandover 累積上限 (PLAN-L7-83
     expect(countHandoverEntries(out)).toBe(MAX_SAME_DAY_ENTRIES - 1);
   });
 
+  // cross_agent review 指摘 (PLAN-L7-83): 既存 breadcrumb が anchor へ吸収され線形累積しないこと。
+  it("idempotent: 既存 breadcrumb を含む md を再 prune しても breadcrumb は 1 個のまま", () => {
+    const bc = /累積抑制のため剪定/g;
+    // 1 回目の prune (breadcrumb 1 個挿入)。
+    const once = boundSameDayEntries(makeMd(MAX_SAME_DAY_ENTRIES + 2), MAX_SAME_DAY_ENTRIES);
+    expect((once.match(bc) ?? []).length).toBe(1);
+    // once に新エントリを append して再び超過させ、2 回目の prune。
+    const grown = `${once.replace(/\s*$/, "")}\n\n---\n\n# Session Handover — 2026-06-04\n\n## §3 Next Action\n\n- new\n`;
+    const twice = boundSameDayEntries(grown, MAX_SAME_DAY_ENTRIES);
+    // 旧 breadcrumb は除去され新 breadcrumb 1 個のみ (累積しない)。
+    expect((twice.match(bc) ?? []).length).toBe(1);
+    expect(countHandoverEntries(twice)).toBe(MAX_SAME_DAY_ENTRIES - 1);
+  });
+
   it("runHandover を反復しても同日 doc は MAX_SAME_DAY_ENTRIES を超えない", () => {
     const deps = mockDeps();
     deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
@@ -563,6 +577,8 @@ describe("U-HOVER-014 boundSameDayEntries / runHandover 累積上限 (PLAN-L7-83
     const finalMd = deps.files.get(join("/repo", docRel)) ?? "";
     expect(countHandoverEntries(finalMd)).toBe(MAX_SAME_DAY_ENTRIES); // 定常 = 上限
     expect(finalMd).toContain("累積抑制のため剪定"); // 剪定が起きた証跡
+    // breadcrumb は累積せず常に 1 個 (idempotent、cross_agent review 指摘)。
+    expect((finalMd.match(/累積抑制のため剪定/g) ?? []).length).toBe(1);
   });
 });
 

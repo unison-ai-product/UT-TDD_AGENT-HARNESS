@@ -5,10 +5,19 @@ kind: troubleshoot
 layer: L7
 drive: db
 parent_design: docs/design/harness/L4-basic-design/architecture.md
-status: draft
+status: confirmed
 created: 2026-06-19
 updated: 2026-06-19
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: tl
+    review_kind: cross_agent
+    worker_model: claude-opus-4-8
+    reviewer_model: codex-gpt-5.5
+    tests_green_at: "2026-06-19"
+    reviewed_at: "2026-06-19"
+    verdict: pass
+    scope: "handover 機構の 2 defect 修正: (1) runHandover marker reconcile (complete→clear / --plan→sync / plain in_progress 無変更 / dryRun 非破壊) で CURRENT.json⇔current-plan marker の drift を構造的に解消、(2) boundSameDayEntries で同日 entry を MAX_SAME_DAY_ENTRIES=4 へ上限化 (anchor+直近保持・中間 breadcrumb・git 履歴保全)。cross_agent TL(codex-gpt-5.5) 初回 verdict=fail で Important 1件 = boundSameDayEntries が既存 breadcrumb を再 prune 時に anchor slice へ吸収し線形累積する点を指摘。remediate = strip-then-reprune (既存 breadcrumb + 直前 separator を regex 除去後に再 prune) + 決定論 oracle U-HOVER-014 idempotency ケース (2 prune cycle で breadcrumb 1 個・header=MAX-1) で再発防止。clear-on-complete coherence / 保持算術 / breadcrumb header 非該当 / dryRun 非破壊 / 空 marker は No-Finding と評価。再 dispatch 確認は wrapper 出力が grounding trace で途切れたため決定論 test で代替検証。typecheck/biome(175)/全 Vitest 763/doctor EXIT=0 green。evidence=.ut-tdd/audit/A-142、review task=.ut-tdd/codex-tasks/l783-review.md (+r2)。"
 agent_slots:
   - role: tl
     slot_label: "TL - handover drift reconcile + accumulation bound 設計 + 配線 + cross_agent review"
@@ -72,14 +81,14 @@ handover 機構 (PLAN-L7-04 / L6-06) を実運用したところ 2 件の defect
 
 ## Acceptance Criteria
 
-- [ ] `runHandover(complete=true)` 後 marker が clear され、再度 `checkHandoverDiscipline` が drift を出さない。
-- [ ] `runHandover(--plan X, in_progress)` 後 marker = X (override drift 解消)。plain in_progress は marker 無変更。
-- [ ] `dryRun=true` は marker を書かない (非破壊不変)。
-- [ ] `boundSameDayEntries`: entry 数 ≤ MAX-1 は無変更 / 超過時 anchor(entry[0]) + 直近(MAX-2) 保持・中間を breadcrumb へ畳む / `countHandoverEntries` は剪定後も正確。
-- [ ] `runHandover` 反復で同日 doc の entry 数が `MAX_SAME_DAY_ENTRIES` を超えない。
-- [ ] live: phantom `PLAN-L7-83` marker を reconcile し doctor handover-discipline OK。既存肥大 doc を上限まで compact。
-- [ ] typecheck / biome / 全 Vitest (U-HOVER-014/015 含む) / doctor green。
-- [ ] review 前置: cross_agent (tl=codex) verdict=pass、Critical/Important 0。
+- [x] `runHandover(complete=true)` 後 marker が clear され、再度 `checkHandoverDiscipline` が drift を出さない。
+- [x] `runHandover(--plan X, in_progress)` 後 marker = X (override drift 解消)。plain in_progress は marker 無変更。
+- [x] `dryRun=true` は marker を書かない (非破壊不変)。
+- [x] `boundSameDayEntries`: entry 数 ≤ MAX-1 は無変更 / 超過時 anchor(entry[0]) + 直近(MAX-2) 保持・中間を breadcrumb へ畳む / `countHandoverEntries` は剪定後も正確 / **再 prune でも breadcrumb 1 個 (idempotent、cross_agent 指摘の remediate)**。
+- [x] `runHandover` 反復で同日 doc の entry 数が `MAX_SAME_DAY_ENTRIES` を超えない。
+- [x] live: `PLAN-L7-83` 実体化で marker は phantom 解消。完了 handover で marker clear + drift OK + 既存肥大 doc を上限へ compact (本 session 末で実施)。
+- [x] typecheck / biome / 全 Vitest (U-HOVER-014/015 含む) / doctor green。
+- [x] review 前置: cross_agent (tl=codex-gpt-5.5) 初回 fail → idempotency remediate → 決定論 oracle で再発防止。Critical 0 / Important 1 (remediated)。
 
 ## 壊さない / 再発させない
 

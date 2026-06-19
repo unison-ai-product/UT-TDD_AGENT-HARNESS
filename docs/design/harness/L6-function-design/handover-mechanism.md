@@ -186,8 +186,11 @@ header は 1 エントリ 1 個を維持する**ので `countHandoverEntries`/`d
 が **append 前に**同日 entry を上限 `MAX_SAME_DAY_ENTRIES` へ圧縮する。A-138 の「1 ファイル 1 registry anchor」を
 尊重し、**anchor (entry[0]、full §1) + 直近 (maxEntries-2) entry を残し、中間 entry を 1 行 breadcrumb へ畳む**
 (剪定分は git 履歴に全保全 = no silent cap、件数を breadcrumb で明示)。breadcrumb は `# Session Handover` に
-一致しないので header 数 = bypass 検知契約は不変。oracle U-HOVER-014 が「≤maxEntries-1/header 不在は無変更・
-超過は anchor+直近保持で header=maxEntries-1・breadcrumb は header 非該当・runHandover 反復で ≤MAX_SAME_DAY_ENTRIES」を検査。
+一致しないので header 数 = bypass 検知契約は不変。**idempotent**: 過去 prune の breadcrumb は再 prune 前に
+除去する (さもないと breadcrumb が保持 anchor=entry[0] の slice 末尾へ吸収され、同日反復 handover で線形累積
+する — cross_agent review (codex) 指摘)。oracle U-HOVER-014 が「≤maxEntries-1/header 不在は無変更・
+超過は anchor+直近保持で header=maxEntries-1・breadcrumb は header 非該当・反復 prune でも breadcrumb 1 個・
+runHandover 反復で ≤MAX_SAME_DAY_ENTRIES」を検査。
 
 **pointer-drift の恒久解消 (marker reconcile、PLAN-L7-83)**: 「今どこ」は CURRENT.json (機械ポインタ) と
 `.ut-tdd/state/current-plan` marker の 2 source を持つ。従来 `checkHandoverDiscipline` は両者の drift を
