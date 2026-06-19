@@ -510,3 +510,74 @@ PLAN 実体を読んで残差を特定した。
 - **委譲 subagent の最終 narration を成果証拠にするな** ([[feedback_verify_delegated_agent_output_by_files]])。
   今回 code-reviewer 第 1 run が maxTurns で narration truncate → **verdict-first** で再 run し実 verdict を取得した。
 
+---
+
+# Session Handover — 2026-06-19
+
+## §1 PLAN サマリ
+
+- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
+
+## §2 成果物 (commit / files)
+
+- commit `cacb7fe` fix(merged-plan-status): detect merged non-src deliverables (PLAN-L7-86、4 files)
+
+## §3 Next Action — L7 実装の真の完了度 (PO「完了処理ができてないだけか確定させろ」回答)
+
+**重要な是正**: 前報告の「残なし／完了」は誤りだった。原因 = doctor green と handover 要約を
+実体と思い込み PLAN を読まなかったこと。本 entry で **PLAN 完了 ≠ 層完了 ≠ プロジェクト完了** を
+弁別して実態を確定する。
+
+### (1) L7 実装の完了度 = 「層として完了」ではない
+- **confirmed/completed L7 PLAN は完了**。だが L7 には **記録済みの未了**が残っている:
+  - **明示 defer (実装が"あとで発生"する正規記録)**: `PLAN-L7-48` recordGuardrailDecision 本番配線
+    (auth-gated, owner=PO)、`PLAN-L7-71` P2 innovation commands (後回しバッチ)。他に
+    explicit_l7_defer/under-design を持つ PLAN 計 ~12 (L4/L6/L7/RECOVERY)。これらは
+    「shipped でない＝後で実装」を owner/condition 付きで記録した正規 deferral。
+- **なぜ"実装フェーズなのに後で実装"が起きるか**: このリポは waterfall でなく
+  **L7 実装先行 → L3 要件は Reverse で back-fill** (bottom-up)。加えて PLAN 単位の明示 defer がある。
+  ゆえに「実装フェーズ完了」という締まった状態は存在しない。「PLAN の commit 範囲は完了」が正確な単位。
+
+### (2) 検出不備を実コードで確定 → 根治 (PO「ハーネスDBが検出ちゃんとやってない」)
+- **根因**: `merged-plan-status` gate は「generated artifact が merged なのに PLAN が draft」を
+  捕まえる設計なのに、`generatesSrcPaths` が `src/*.ts` のみ filter。L7-71 の出荷物は
+  `.claude/commands/*.md` ゆえ素通り = **当 gate 自身が absence-blind**。だから L7-71 drift が
+  doctor green のまま埋もれ、PO が手で PLAN を読むまで発見できなかった。
+- **根治 (commit `cacb7fe`, PLAN-L7-86)**: `generatesMergedDeliverablePaths` +
+  `DELIVERABLE_ROOTS=[src/,tests/,scripts/,.claude/]` (docs//.ut-tdd/ 除外)。regression test 2 本。
+  blast radius 0 (現存 draft 5 本は全て非 artifact-kind)。**これで今後は同型 drift を機械が fail-close**。
+- **残る検出不備 = IMP-139 (observed)**: status/handover/harness.db が「層内の非終端 PLAN 数 /
+  open defer 数 / PLAN完了≠層完了」を**正の集計シグナル**として surface しない。ゆえに defer や
+  非 artifact-kind draft は依然 grep 依存。これは status --json 公開契約変更を伴うので別 PLAN。
+
+### (3) 現存の未了 (全体・既存・L7 ゴール外だが「現状報告」の対象)
+- **draft PLAN 5 本 (全て非L7・非 artifact-kind)**: `DISCOVERY-03/05` (poc・検証中で draft 正常な可能性)、
+  `L3-04/05` (add-design・upstream 要件 reconciliation)、`RECOVERY-02` (recovery)。
+  各が drift か真未着手かは**未判定** (次の triage 候補)。
+- これらは merged-plan-status (修正後) では flag されない (非 artifact-kind ゆえ正しく対象外)。
+
+## §4 carry (未了・先送り)
+
+- **IMP-139** (observed): 未了の正の集計を status/handover/harness.db に surface する機構。owner=PO/設計判断。
+- **5 本の非L7 draft の triage**: drift (実体済) か真未着手かを 1 本ずつ実体で確定する (本 session 未実施)。
+- **明示 defer ~12 件**: 各 owner/condition で正規記録済。discharge は各 condition 成立時。
+- 軽微: stale agent-slot 1 件 (subagent 由来、`.ut-tdd/state/agent-slots.json`=untracked、doctor advisory)。
+
+## §5 未了 PO 判断
+
+- **commit 群を main へ push 済か確認**: 本 entry 時点で `cacb7fe` まで push 予定 (§最終検証後)。
+- **IMP-139 (未了集計 surface) を実装するか + status --json 契約変更の可否** (公開契約ゆえ PO 判断)。
+- **L7-52 recordGuardrailDecision 本番配線方針** (auth-gated, owner=PO, solo 確定禁止) — 据え置き。
+
+## §6 壊さない / 再発させない
+
+- **「doctor green = 完了」と読むな**。doctor は draft PLAN を roadmap span に計上せず、明示 defer も
+  failure にしない (意図的)。完了主張は **PLAN status を実際に読んで** PLAN単位/層単位/defer を弁別せよ
+  ([[feedback_coverage_not_substance]] / [[project_descent_absence_blindness]])。今 session の発端は
+  この誤読だった。
+- **merged-plan-status は出荷物ルート (src/tests/scripts/.claude) 全体で検出する** (PLAN-L7-86)。
+  `src/*.ts` 限定に戻すと `.claude` 等の非 src deliverable を merge した draft PLAN の drift を再び見逃す。
+- **明示 defer は under-design ではない** (CLAUDE.md)。owner/condition 付きで PLAN に記録された
+  「後で実装」は正規。ただし IMP-139 が入るまで一覧 surface は grep 依存。
+- **PLAN 追加/status 変更後は `ut-tdd db rebuild`** (plan-registry-fingerprint stale で doctor 赤化)。
+
