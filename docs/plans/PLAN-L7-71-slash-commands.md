@@ -5,10 +5,19 @@ kind: impl
 layer: L7
 drive: agent
 parent_design: docs/design/harness/L5-detailed-design/module-decomposition.md
-status: draft
+status: confirmed
 created: 2026-06-17
-updated: 2026-06-17
+updated: 2026-06-19
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: PM (Opus) verification (intra_runtime_subagent)
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-19"
+    tests_green_at: "2026-06-19"
+    verdict: pass
+    scope: "Phase-1 slash command transplant (.claude/commands/{ship,sdd-review,sdd-plan,spec,test,build,code-simplify}.md、commit 7305fe7) の status drift (draft のまま放置) を解消し confirmed 化。AC を機械再検証: ①7 ファイル全て実在・description frontmatter 有 ②legacy-term scan (helix/HELIX_/ai-dev-kit) = 0 hit ③全ファイルが実在 ut-tdd command (review/gate/status/plan lint/doctor) を参照 ④allowlisted subagent のみ参照。typecheck/Biome/Vitest 785/doctor EXIT=0。P2 (innovation-{tech,marketing,synthesize}) は §4 で明示 defer (本 confirmed の scope 外)。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-opus-4-8
 agent_slots:
   - role: tl
     slot_label: "TL - slash command transplant (UT-TDD adaptation)"
@@ -77,4 +86,18 @@ Commands are re-authored for UT-TDD, HELIX as loose reference only:
 
 ## 4. Status
 
-Draft. Phase-1 commands authored 2026-06-17; P2 innovation commands deferred.
+Confirmed 2026-06-19. Phase-1 commands (P0+P1: ship, sdd-review, sdd-plan,
+spec, test, build, code-simplify) were authored and committed 2026-06-17
+(`7305fe7`); the PLAN status had drifted at `draft` despite the work being
+complete and the commands being live. Re-verified against §3 acceptance criteria
+(all 7 files exist with a `description` frontmatter, zero legacy terms, only real
+`ut-tdd` commands and allowlisted agents referenced) and flipped to confirmed.
+
+**Explicit deferral (formal carry):** the P2 innovation commands
+(`innovation-tech`, `innovation-marketing`, `innovation-synthesize`, invoking the
+`pdm-*` agents) are intentionally out of this PLAN's scope.
+
+- owner: PM (Opus) / PO (人間)
+- condition: author the P2 innovation commands in a later batch when the
+  innovation-agent workflow surface (pdm-* invocation contract) is exercised.
+  Until then this is a recorded deferral, not an under-design gap.

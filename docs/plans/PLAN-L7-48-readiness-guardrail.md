@@ -87,3 +87,19 @@ L7 完全実装監査 (PLAN-L7-52 C-1) で「`recordGuardrailDecision` が本番
 - **defer 根拠 (auth-gated、solo 確定禁止)**: この配線は **authorization / human-signoff semantics の確定 + automation-readiness gate への本番影響**を伴う。CLAUDE.md Guard Rule「認証・認可・本番影響・human-signoff は人間確認なしに仕様確定しない」に直接該当するため PM solo で確定しない。
 - **現状の安全性 (active な漏洩リスクなし)**: 本番の `guardrail_decisions` 書込 (`projectIssueApprovalGuardrails`) は `SECRET_PATTERN` SSoT 経由で secret-safe (PLAN-L7-52 WBS-03)。`recordGuardrailDecision` の安全ロジックは単体テスト済 (tests/readiness-guardrail.test.ts: secret-reject 4族 / human-required 昇格・非降格)。
 - **owner / condition**: owner = PO。condition = PO が配線方針 (どの decision source を ledger 経由にするか / issue 承認 vocabulary との統合 or 分離) を確定後、`rebuildHarnessDb` の projection に配線して本 defer を discharge する。それまで `recordGuardrailDecision` は単体テスト済の ledger library として保持。
+
+### Re-verification (2026-06-19, PM substance check — 前監査リスクの裏取り)
+
+PO 依頼でこの defer のリスク封じ込めを実コードで再照合した (宣言でなく中身):
+
+- **未配線は事実**: `recordGuardrailDecision(` の caller は定義元 (`src/guardrail/ledger.ts`) と
+  `tests/readiness-guardrail.test.ts` のみ。本番 decision source からの呼出は無い (監査指摘どおり)。
+- **active な漏洩リスクは無い (裏取り済)**: 本番の `guardrail_decisions` 書込は
+  `projectIssueApprovalGuardrails` (`rebuildHarnessDb` に配線) 経由で、全 projection 列が
+  `SECRET_PATTERN` 列ガード (`projection-writer.ts` の secret 検出) を通る = secret-safe。安全不変
+  条件 (same-model→block / human-required→block / secret-reject) は `inspectGuardrailInvariants`
+  (`src/state-db/guardrail-invariants.ts`) に SSoT 抽出され、write 経路 (fail-close) と projection
+  advisory 経路 (`projectGuardrailInvariantAdvisories`、warn-first、`rebuildHarnessDb` に配線) が
+  共有。単体テスト被覆済。
+- **残るのは PO 所有の auth-gated 配線方針判断のみ**。隠れ穴は無い。CLAUDE.md の escalation 境界
+  (認可・human-signoff) と `solo 確定禁止` により PM が独断配線しない方針を維持。本 defer は据え置き。
