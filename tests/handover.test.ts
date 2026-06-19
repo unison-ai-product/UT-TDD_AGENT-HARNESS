@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  boundSameDayEntries,
   buildPointer,
   checkHandoverBypass,
   checkHandoverDiscipline,
@@ -13,6 +14,7 @@ import {
   handoverStale,
   inferPlanFromCommit,
   latestSessionId,
+  MAX_SAME_DAY_ENTRIES,
   type PlanDigestRef,
   readPointer,
   renderHandoverScaffold,
@@ -500,6 +502,121 @@ describe("U-HOVER-007 runHandover", () => {
     );
     const r = runHandover({ date: "2026-06-08", dryRun: true }, deps);
     expect(r.content).toContain("(add-impl)"); // unknown でなく実 kind
+  });
+});
+
+describe("U-HOVER-014 boundSameDayEntries / runHandover 累積上限 (PLAN-L7-83)", () => {
+  /** n エントリの同日 md を組む (anchor=entry[0] に一意 marker)。 */
+  function makeMd(n: number): string {
+    const entries: string[] = [];
+    for (let i = 0; i < n; i++) {
+      entries.push(
+        `# Session Handover — 2026-06-04\n\n## §1 PLAN サマリ\n\nENTRY-${i}-BODY\n\n## §3 Next Action\n\n- e${i}`,
+      );
+    }
+    return `${entries.join("\n\n---\n\n")}\n`;
+  }
+
+  it("entry 数 ≤ MAX-1 → 無変更 (剪定しない)", () => {
+    const md = makeMd(MAX_SAME_DAY_ENTRIES - 1);
+    expect(boundSameDayEntries(md, MAX_SAME_DAY_ENTRIES)).toBe(md);
+  });
+
+  it("# Session Handover header が無い md → 無変更", () => {
+    const md = "# 既存 entry\n\n本文\n";
+    expect(boundSameDayEntries(md, MAX_SAME_DAY_ENTRIES)).toBe(md);
+  });
+
+  it("超過 → anchor(entry[0]) + 直近(MAX-2) 保持・中間を breadcrumb へ畳む・header 数 = MAX-1", () => {
+    const n = MAX_SAME_DAY_ENTRIES + 2; // 確実に超過
+    const out = boundSameDayEntries(makeMd(n), MAX_SAME_DAY_ENTRIES);
+    // 追記前に MAX-1 まで圧縮 (このあと runHandover が 1 件 append して MAX になる)。
+    expect(countHandoverEntries(out)).toBe(MAX_SAME_DAY_ENTRIES - 1);
+    expect(out).toContain("ENTRY-0-BODY"); // anchor 保持
+    expect(out).toContain(`ENTRY-${n - 1}-BODY`); // 直近保持
+    expect(out).toContain(`ENTRY-${n - 2}-BODY`); // 直近保持
+    expect(out).not.toContain("ENTRY-1-BODY"); // 中間は剪定
+    expect(out).toContain("累積抑制のため剪定"); // breadcrumb 明示 (silent cap でない)
+  });
+
+  it("breadcrumb は # Session Handover に一致せず countHandoverEntries 契約を壊さない", () => {
+    const out = boundSameDayEntries(makeMd(MAX_SAME_DAY_ENTRIES + 3), MAX_SAME_DAY_ENTRIES);
+    // breadcrumb 行を含んでも header count は保持エントリ数のみ。
+    expect(countHandoverEntries(out)).toBe(MAX_SAME_DAY_ENTRIES - 1);
+  });
+
+  it("runHandover を反復しても同日 doc は MAX_SAME_DAY_ENTRIES を超えない", () => {
+    const deps = mockDeps();
+    deps.files.set(currentPlanPath, "PLAN-L7-04-handover-mechanism");
+    deps.files.set(
+      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
+      JSON.stringify(digest()),
+    );
+    const docRel = join("docs", "handover", "session-handover-2026-06-04.md");
+    for (let i = 0; i < MAX_SAME_DAY_ENTRIES + 4; i++) {
+      const r = runHandover({ date: "2026-06-04" }, deps);
+      const md = deps.files.get(join("/repo", docRel)) ?? "";
+      expect(countHandoverEntries(md)).toBeLessThanOrEqual(MAX_SAME_DAY_ENTRIES);
+      // pointer.doc_entry_count は md の header 数と一致 (bypass 照合契約不変)。
+      expect(r.pointer.doc_entry_count).toBe(countHandoverEntries(md));
+    }
+    const finalMd = deps.files.get(join("/repo", docRel)) ?? "";
+    expect(countHandoverEntries(finalMd)).toBe(MAX_SAME_DAY_ENTRIES); // 定常 = 上限
+    expect(finalMd).toContain("累積抑制のため剪定"); // 剪定が起きた証跡
+  });
+});
+
+describe("U-HOVER-015 runHandover marker reconcile (drift 恒久解消、PLAN-L7-83)", () => {
+  function seededMarker(plan = "PLAN-L7-04-handover-mechanism"): ReturnType<typeof mockDeps> {
+    const deps = mockDeps();
+    deps.files.set(currentPlanPath, plan);
+    deps.files.set(
+      join(digestDir, "PLAN-L7-04-handover-mechanism.digest.json"),
+      JSON.stringify(digest()),
+    );
+    return deps;
+  }
+
+  it("complete=true → marker を clear し checkHandoverDiscipline が drift を出さない", () => {
+    const deps = seededMarker();
+    runHandover(
+      { date: "2026-06-04", complete: true, planId: "PLAN-L7-04-handover-mechanism" },
+      deps,
+    );
+    // marker は空 = clear (resolveActivePlan → null)。
+    const sdeps: SessionLogDeps = {
+      repoRoot: "/repo",
+      now: () => NOW,
+      appendLine: () => {},
+      readText: (p) => deps.files.get(p) ?? null,
+      writeText: () => {},
+      currentBranch: () => null,
+      listDir: () => [],
+    };
+    expect(resolveActivePlan(sdeps)).toBeNull();
+    // 完了後は active plan 無し → discipline は drift を含む警告ゼロ。
+    expect(checkHandoverDiscipline(deps).some((w) => w.includes("drift"))).toBe(false);
+  });
+
+  it("in_progress + --plan X → marker を X へ同期 (override drift 解消)", () => {
+    const deps = seededMarker("PLAN-L7-04-handover-mechanism");
+    runHandover({ date: "2026-06-04", planId: "PLAN-L7-99-other" }, deps);
+    expect((deps.files.get(currentPlanPath) ?? "").split("\n")[0]).toBe("PLAN-L7-99-other");
+  });
+
+  it("plain in_progress (--plan 無し) → marker 無変更 (無駄書きしない)", () => {
+    const deps = seededMarker("PLAN-L7-04-handover-mechanism");
+    runHandover({ date: "2026-06-04" }, deps);
+    expect(deps.files.get(currentPlanPath)).toBe("PLAN-L7-04-handover-mechanism");
+  });
+
+  it("dryRun → marker を書かない (非破壊不変)", () => {
+    const deps = seededMarker("PLAN-L7-04-handover-mechanism");
+    runHandover(
+      { date: "2026-06-04", complete: true, planId: "PLAN-L7-04-handover-mechanism", dryRun: true },
+      deps,
+    );
+    expect(deps.files.get(currentPlanPath)).toBe("PLAN-L7-04-handover-mechanism");
   });
 });
 

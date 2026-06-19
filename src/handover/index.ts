@@ -108,6 +108,14 @@ export interface HandoverDeps {
 const HANDOVER_DIR = join(".ut-tdd", "handover");
 const POINTER_PATH = join(HANDOVER_DIR, "CURRENT.json");
 const PLAN_DIGEST_DIR = join(".ut-tdd", "logs", "plan");
+/** current-plan marker の相対 path (PLAN-L7-83: drift reconcile 時の `written` 計上に使う)。 */
+const CURRENT_PLAN_REL = join(".ut-tdd", "state", "current-plan");
+
+/**
+ * PLAN-L7-83: 同日 markdown の累積上限。runHandover は 1 件 append する前提なので、
+ * append 後に entry 数がこの値を超えないよう、append 前に既存を (MAX-1) まで圧縮する。
+ */
+export const MAX_SAME_DAY_ENTRIES = 4;
 
 /** resolveHandoverScope の絞り込みオプション (IMP-048、後方互換: 無指定は dedup のみ)。 */
 export interface HandoverScopeOpts {
@@ -576,9 +584,55 @@ export function checkHandoverBypass(deps: HandoverDeps): string[] {
 }
 
 /**
+ * U-HOVER-014: 同日 markdown の累積上限化 (純関数、PLAN-L7-83)。
+ * runHandover が 1 件 append する前提で、append 後に `# Session Handover` entry 数が
+ * `maxEntries` を超えないよう既存を `(maxEntries-1)` まで圧縮する。A-138 の「1 ファイル 1
+ * registry anchor」を尊重し、**anchor (entry[0]、full §1) + 直近 (maxEntries-2) entry を残し、
+ * 中間 entry を 1 行 breadcrumb へ畳む** (剪定分は git 履歴に全保全 = no silent cap)。
+ * breadcrumb は `# Session Handover` に一致しないので `countHandoverEntries`/`doc_entry_count`
+ * の bypass 検知契約は不変。圧縮不要 (entry 数 ≤ maxEntries-1 / header 不在) は入力をそのまま返す。
+ */
+export function boundSameDayEntries(md: string, maxEntries: number): string {
+  const positions: number[] = [];
+  const re = /^# Session Handover\b/gm;
+  let m: RegExpExecArray | null = re.exec(md);
+  while (m !== null) {
+    positions.push(m.index);
+    m = re.exec(md);
+  }
+  const count = positions.length;
+  // append 後に maxEntries を超えないため、既存は (maxEntries-1) entry まで許容。
+  if (count <= maxEntries - 1) return md;
+  const entries = positions.map((p, i) =>
+    md.slice(p, i + 1 < positions.length ? positions[i + 1] : md.length).replace(/\s*$/, ""),
+  );
+  const keepRecent = Math.max(0, maxEntries - 2);
+  const retain = new Set<number>([0]);
+  for (let i = count - keepRecent; i < count; i++) if (i > 0) retain.add(i);
+  const preamble = positions[0] > 0 ? md.slice(0, positions[0]).replace(/\s*$/, "") : "";
+  const prunedCount = count - retain.size;
+  const parts: string[] = [];
+  if (preamble) parts.push(preamble);
+  let breadcrumbInserted = false;
+  for (let i = 0; i < count; i++) {
+    if (retain.has(i)) {
+      parts.push(entries[i]);
+    } else if (!breadcrumbInserted) {
+      parts.push(
+        `<!-- ut-tdd handover: ${prunedCount} 件の同日中間エントリを累積抑制のため剪定 (git 履歴に保全) -->`,
+      );
+      breadcrumbInserted = true;
+    }
+  }
+  return `${parts.join("\n\n---\n\n")}\n`;
+}
+
+/**
  * U-HOVER-007: orchestration。scope → scaffold → md 追記/新規 (dry-run は書かない) → CURRENT.json 更新。
  * complete=true → status=completed + active_plan = args.planId ?? scope.active_plan。
  * dry-run 非破壊 (written=[]) / 既存 md は追記 (上書きしない) / CURRENT.json は単一上書き。
+ * PLAN-L7-83: append 前に boundSameDayEntries で同日 entry を上限へ圧縮し、書込後に current-plan
+ * marker を pointer へ reconcile する (complete→clear / --plan→sync) ので drift は構造的に残らない。
  */
 export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverResult {
   const scope = resolveHandoverScope(deps, {
@@ -597,9 +651,11 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
   };
   // 追記後の最終 md (dryRun でも would-be 内容で entry 数を算出 = bypass 照合基準)。docAbs read は非破壊。
   // 同日 2 件目以降 (existing 非 null) は §1/§2 を slim 化して累積肥大を抑える (A-138 ITEM-4、header 数不変)。
+  // PLAN-L7-83: さらに append 前に entry 数を上限へ圧縮し、同日 doc の無制限肥大を防ぐ。
   const existing = deps.readText(docAbs);
-  const content = renderHandoverScaffold(doc, { slimSummary: existing != null });
-  const next = existing ? `${existing.replace(/\s*$/, "")}\n\n---\n\n${content}\n` : `${content}\n`;
+  const bounded = existing != null ? boundSameDayEntries(existing, MAX_SAME_DAY_ENTRIES) : existing;
+  const content = renderHandoverScaffold(doc, { slimSummary: bounded != null });
+  const next = bounded ? `${bounded.replace(/\s*$/, "")}\n\n---\n\n${content}\n` : `${content}\n`;
   // IMP-078 gap①: generated_by 署名 + entry 数を刻む (手書き bypass を checkHandoverBypass が検知できる)。
   const pointer: HandoverPointer = {
     ...buildPointer({ scope: effectiveScope, latestDoc: docRel, status, now: deps.now() }),
@@ -613,6 +669,18 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
     written.push(docRel);
     writePointer(pointer, deps);
     written.push(POINTER_PATH);
+    // PLAN-L7-83: drift 恒久解消。CURRENT.json を書いたら current-plan marker も coherent に保つ。
+    // complete → marker clear (完了 = active plan 無し → resolveActivePlan→null → drift 判定対象外)。
+    // --plan 明示の in_progress → marker をその plan へ同期 (override 由来の drift を防ぐ)。
+    // plain in_progress (--plan 無し) は marker=scope source なので無変更 (無駄書き回避)。
+    const sdeps = toSessionDeps(deps);
+    if (status === "completed") {
+      setActivePlan(null, sdeps);
+      written.push(CURRENT_PLAN_REL);
+    } else if (args.planId) {
+      setActivePlan(args.planId, sdeps);
+      written.push(CURRENT_PLAN_REL);
+    }
   }
   return { content, pointer, written };
 }

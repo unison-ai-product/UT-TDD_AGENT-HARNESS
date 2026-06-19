@@ -181,6 +181,24 @@ if (isCommit) {
 header は 1 エントリ 1 個を維持する**ので `countHandoverEntries`/`doc_entry_count` の手書き bypass 検知契約
 (§2.7 gap①) は不変。oracle U-HOVER-013 が「slim で plan list 省略 + header 数不変 + §3-§6 維持」を fail-close 検査。
 
+**累積上限化 (bounded entries、PLAN-L7-83)**: slim だけでは §3-§6 + entry 自体が積み増し続け、同日 doc が
+無制限に肥大する (実例: 2026-06-19 doc は 1 日 6 entries / 1004 行)。よって `boundSameDayEntries(md, maxEntries)`
+が **append 前に**同日 entry を上限 `MAX_SAME_DAY_ENTRIES` へ圧縮する。A-138 の「1 ファイル 1 registry anchor」を
+尊重し、**anchor (entry[0]、full §1) + 直近 (maxEntries-2) entry を残し、中間 entry を 1 行 breadcrumb へ畳む**
+(剪定分は git 履歴に全保全 = no silent cap、件数を breadcrumb で明示)。breadcrumb は `# Session Handover` に
+一致しないので header 数 = bypass 検知契約は不変。oracle U-HOVER-014 が「≤maxEntries-1/header 不在は無変更・
+超過は anchor+直近保持で header=maxEntries-1・breadcrumb は header 非該当・runHandover 反復で ≤MAX_SAME_DAY_ENTRIES」を検査。
+
+**pointer-drift の恒久解消 (marker reconcile、PLAN-L7-83)**: 「今どこ」は CURRENT.json (機械ポインタ) と
+`.ut-tdd/state/current-plan` marker の 2 source を持つ。従来 `checkHandoverDiscipline` は両者の drift を
+**warn するのみ**で reconcile せず、marker を別 PLAN (実例: PLAN file 不在の phantom) へ立てたまま別 PLAN を完了すると
+drift が毎 session 再報告された。よって handover を 2 source の単一 writer とし、`runHandover` は CURRENT.json を
+書くと同時に marker を pointer へ合わせる: **`complete=true` → marker を clear** (完了 = active plan 無し →
+`resolveActivePlan→null` → §2.4 I-2 の drift 判定対象外と整合) / **`--plan` 明示の in_progress → marker を
+その plan へ同期** (override 由来 drift を防ぐ) / **plain in_progress (`--plan` 無し) → marker=scope source ゆえ
+無変更** (無駄書き回避)。`dryRun` は marker を書かない (非破壊不変)。これで drift は handover 後に構造的に発生し得ない。
+oracle U-HOVER-015 が 4 経路を fail-close 検査。
+
 ## §2.7 品質増分 (IMP-078、PLAN-L6-16 add-design) — 5 gap の機能設計
 
 > 本機構を実 session で運用したところ 5 つの品質 gap (enforcement gap 含む) を検出 (PO 指摘「ハンドオーバーってこういう時に入らないの?」)。柱 2 (doc×機械厳格化) / 柱 3 (自動化で state 管理) に照らし、いずれも機械担保を増分する。
@@ -197,7 +215,7 @@ header は 1 エントリ 1 個を維持する**ので `countHandoverEntries`/`d
 
 ## §3 ③ 単体テスト設計とのペア (G6 pair freeze 対象)
 
-generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + §1.5 **U-SLOG-006** (active-plan stale / commit hash)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) + §2.6 の slimSummary を被覆 (孤児 0)。trace は G7 で双方向凍結。
+generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + **U-HOVER-014〜015** (PLAN-L7-83 累積上限化 `boundSameDayEntries` + marker reconcile) + §1.5 **U-SLOG-006** (active-plan stale / commit hash)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) + §2.6 の slimSummary / boundSameDayEntries / marker reconcile を被覆 (孤児 0)。trace は G7 で双方向凍結。
 
 ## §4 carry / 次工程
 
