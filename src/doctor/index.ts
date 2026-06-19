@@ -73,6 +73,11 @@ import {
   loadDriveModelPassageDocs,
 } from "../lint/drive-model-passage";
 import {
+  analyzeFeedbackLog,
+  feedbackLogMessages,
+  loadFeedbackLogInput,
+} from "../lint/feedback-log";
+import {
   analyzeFrRoadmapCoverageWithRoot,
   frRoadmapCoverageMessages,
   loadFrRoadmapCoverageDocs,
@@ -1095,6 +1100,25 @@ export function checkReadability(repoRoot: string): { messages: string[]; ok: bo
   }
 }
 
+/**
+ * feedback-log のドメスティック化規律を hard gate 検査 (IMP-085、A-138 ITEM-3)。
+ * docs/feedback-log.md 不在は fail-open (任意ドキュメント)、repo root 不在は fail-close。
+ */
+export function checkFeedbackLog(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["feedback-log - violation: repo root could not be read"], ok: false };
+  }
+  if (!existsSync(join(repoRoot, "docs/feedback-log.md"))) {
+    return { messages: ["feedback-log — OK (docs/feedback-log.md 不在 = 適用なし)"], ok: true };
+  }
+  try {
+    const r = analyzeFeedbackLog(loadFeedbackLogInput(repoRoot));
+    return { messages: feedbackLogMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["feedback-log — ⚠ docs/feedback-log.md を読めない"], ok: false };
+  }
+}
+
 /** V-model 層群の Forward freeze 完了 (検証サイクル発火タイミング) を hard gate として検査する。 */
 export function checkL6Completion(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!canLoadL6CompletionInputs(repoRoot)) {
@@ -1376,6 +1400,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const codexWrapperParity = checkCodexWrapperParity(deps);
   const l6FrCoverage = checkL6FrCoverage(deps.repoRoot);
   const readability = checkReadability(deps.repoRoot);
+  const feedbackLog = checkFeedbackLog(deps.repoRoot);
   const l6Completion = checkL6Completion(deps.repoRoot);
   const l7Completion = checkL7Completion(deps.repoRoot);
   const roadmap = checkRoadmap(deps.repoRoot);
@@ -1424,6 +1449,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       cycleP4Verification.ok &&
       l6FrCoverage.ok &&
       readability.ok &&
+      feedbackLog.ok &&
       projectHooks.ok &&
       codexWrapperParity.ok &&
       l6Completion.ok &&
@@ -1476,6 +1502,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...codexWrapperParity.messages.map((m) => `doctor: ${m}`),
       ...l6FrCoverage.messages.map((m) => `doctor: ${m}`),
       ...readability.messages.map((m) => `doctor: ${m}`),
+      ...feedbackLog.messages.map((m) => `doctor: ${m}`),
       ...l6Completion.messages.map((m) => `doctor: ${m}`),
       ...l7Completion.messages.map((m) => `doctor: ${m}`),
       ...reviewEvidence.messages.map((m) => `doctor: ${m}`),
