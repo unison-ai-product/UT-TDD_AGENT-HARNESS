@@ -36,6 +36,32 @@ export interface SkillRecommendation {
   recommended_at: string;
 }
 
+/**
+ * 3-bucket 出力 (A-138 ITEM-2 PO 残課題、TL 素案を PO 承認 = TL 結果に合わせる)。
+ * flat ranked list の **additive view** (既存 flat 出力は不変、`--buckets` 時のみ再編成)。
+ *  - `required`    : layer + drive_model 双方が強く一致 (gate/workflow 文脈に直結) = score ≥ 0.8
+ *  - `recommended` : 品質・安全に強く寄与するが必須でない = 0.5 ≤ score < 0.8
+ *  - `optional`    : 補助的・状況依存 = 0 < score < 0.5
+ * 閾値は score band を正本とする (scoreSkill の layer+drive_model+review 加点設計に対応)。
+ */
+export interface SkillBuckets {
+  required: SkillRecommendation[];
+  recommended: SkillRecommendation[];
+  optional: SkillRecommendation[];
+}
+
+export const SKILL_BUCKET_THRESHOLDS = { required: 0.8, recommended: 0.5 } as const;
+
+export function bucketRecommendations(rows: SkillRecommendation[]): SkillBuckets {
+  const buckets: SkillBuckets = { required: [], recommended: [], optional: [] };
+  for (const row of rows) {
+    if (row.score >= SKILL_BUCKET_THRESHOLDS.required) buckets.required.push(row);
+    else if (row.score >= SKILL_BUCKET_THRESHOLDS.recommended) buckets.recommended.push(row);
+    else buckets.optional.push(row);
+  }
+  return buckets;
+}
+
 export interface SkillInvocation {
   skill_invocation_id: string;
   session_id: string;

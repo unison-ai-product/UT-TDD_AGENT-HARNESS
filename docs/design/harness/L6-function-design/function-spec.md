@@ -610,9 +610,15 @@ FR-L1-12 (`suggestSkillInjection`) / FR-L1-47 (`recommendSkills`) の公開 CLI 
   synthetic `SkillScoringContext` (`layer=""` / `workflowMode = workflowModeForKind(kind)`) を作って
   PLAN 版と同じ `rankSkills` に通す。`scoreSkill` は `SkillScoringContext` (layer/drive/workflowMode) を取り、
   PLAN 版・text 版で共有 (重複排除)。`reference` は `text:<slug>` sentinel。
-- **契約不変**: 出力は現行 flat ranked rows (rank/score/reason) を維持 (**3-bucket 化は PO 残課題**)。
+- **契約不変**: 既定出力は現行 flat ranked rows (rank/score/reason) を維持。
   `--plan` / `--text` は **相互排他** (どちらか一方必須、両方/無は exit 1)。`--record` は **`--plan` 専用**
-  (未登録 text を DB へ書かない、fail-close)。後方互換: 既存 `--plan` 呼び出し・出力は不変。
+  (未登録 text を DB へ書かない、fail-close)。後方互換: 既存 `--plan` 呼び出し・既定出力は不変。
+- **3-bucket 出力 (`--buckets`、A-138 ITEM-2 PO 残課題 → PO「TL 結果に合わせる」で確定)**: flat ranked rows を
+  `bucketRecommendations` で **required / recommended / optional** に再編成する **additive view**。score band を正本と
+  する閾値 `SKILL_BUCKET_THRESHOLDS` = required ≥ 0.8 (layer+drive_model 双方一致 = gate/workflow 直結) /
+  recommended ≥ 0.5 (品質寄与) / それ未満 = optional (補助)。`--buckets` 無指定時は flat (既定不変)。
+  TL(Codex) 素案の bucket 名・意味論を採用、閾値は scoreSkill の加点設計に対応。oracle: skill-recommend
+  bucketRecommendations test。
 - `skills→task` import は一方向 (dependency-drift cycles 0)。oracle: `tests/skill-recommend.test.ts`
   (recommendSkillsForText の flat-list + risk reason)。`workflowModeForKind`: reverse→Reverse / poc→Discovery /
   refactor→Refactor / troubleshoot→Recovery / それ以外→Forward。

@@ -71,6 +71,7 @@ import {
 import { findReference } from "./search/index";
 import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
 import {
+  bucketRecommendations,
   recommendSkillsForPlan,
   recommendSkillsForText,
   recordSkillRecommendations,
@@ -878,42 +879,67 @@ skill
   .option("--plan <id>", "PLAN id (harness.db plan/layer/drive context)")
   .option("--text <task>", "free-text task (classify → context; mutually exclusive with --plan)")
   .option("--record", "write recommendations to harness.db (--plan only)")
+  .option("--buckets", "group ranked rows into required/recommended/optional (additive view)")
   .option("--json", "JSON output")
-  .action((opts: { plan?: string; text?: string; record?: boolean; json?: boolean }) => {
-    // A-138 ITEM-2: --plan / --text のどちらか一方が必須 (相互排他、flat ranked list は不変)。
-    if (Boolean(opts.plan) === Boolean(opts.text)) {
-      process.stderr.write("skill suggest requires exactly one of --plan or --text\n");
-      process.exitCode = 1;
-      return;
-    }
-    // 自由文は登録 PLAN でないので DB record 不可 (--record は --plan 専用)。
-    if (opts.text && opts.record) {
-      process.stderr.write("--record requires --plan (free-text task is not a registered PLAN)\n");
-      process.exitCode = 1;
-      return;
-    }
-    const repoRoot = process.cwd();
-    const db = openHarnessDb(opts.record ? defaultHarnessDbPath(repoRoot) : ":memory:", {
-      repoRoot,
-    });
-    try {
-      rebuildHarnessDb({ repoRoot, db });
-      const rows = opts.plan
-        ? recommendSkillsForPlan(db, opts.plan)
-        : recommendSkillsForText(db, opts.text ?? "");
-      if (opts.record) recordSkillRecommendations(db, rows);
-      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
-      else {
-        for (const row of rows) {
-          process.stdout.write(
-            `${row.plan_id} ${row.skill_id}: rank=${row.rank} score=${row.score} reason=${row.reason}\n`,
-          );
-        }
+  .action(
+    (opts: {
+      plan?: string;
+      text?: string;
+      record?: boolean;
+      buckets?: boolean;
+      json?: boolean;
+    }) => {
+      // A-138 ITEM-2: --plan / --text のどちらか一方が必須 (相互排他、flat ranked list は不変)。
+      if (Boolean(opts.plan) === Boolean(opts.text)) {
+        process.stderr.write("skill suggest requires exactly one of --plan or --text\n");
+        process.exitCode = 1;
+        return;
       }
-    } finally {
-      db.close();
-    }
-  });
+      // 自由文は登録 PLAN でないので DB record 不可 (--record は --plan 専用)。
+      if (opts.text && opts.record) {
+        process.stderr.write(
+          "--record requires --plan (free-text task is not a registered PLAN)\n",
+        );
+        process.exitCode = 1;
+        return;
+      }
+      const repoRoot = process.cwd();
+      const db = openHarnessDb(opts.record ? defaultHarnessDbPath(repoRoot) : ":memory:", {
+        repoRoot,
+      });
+      try {
+        rebuildHarnessDb({ repoRoot, db });
+        const rows = opts.plan
+          ? recommendSkillsForPlan(db, opts.plan)
+          : recommendSkillsForText(db, opts.text ?? "");
+        if (opts.record) recordSkillRecommendations(db, rows);
+        // A-138 ITEM-2 PO 残課題: --buckets で required/recommended/optional に再編成 (additive、flat は既定)。
+        if (opts.buckets) {
+          const buckets = bucketRecommendations(rows);
+          if (opts.json) process.stdout.write(`${JSON.stringify(buckets, null, 2)}\n`);
+          else {
+            for (const tier of ["required", "recommended", "optional"] as const) {
+              process.stdout.write(`# ${tier}\n`);
+              for (const row of buckets[tier]) {
+                process.stdout.write(
+                  `  ${row.skill_id}: score=${row.score} reason=${row.reason}\n`,
+                );
+              }
+            }
+          }
+        } else if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+        else {
+          for (const row of rows) {
+            process.stdout.write(
+              `${row.plan_id} ${row.skill_id}: rank=${row.rank} score=${row.score} reason=${row.reason}\n`,
+            );
+          }
+        }
+      } finally {
+        db.close();
+      }
+    },
+  );
 
 program
   .command("review")

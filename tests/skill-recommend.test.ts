@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  bucketRecommendations,
   inferSkillInvocations,
   recommendSkillsForPlan,
   recommendSkillsForText,
@@ -274,6 +275,30 @@ describe("skill recommendation telemetry", () => {
     } finally {
       db.close();
     }
+  });
+
+  // A-138 ITEM-2 PO 残課題: 3-bucket 出力 (TL 素案を PO 承認、score band で分類)。
+  it("bucketRecommendations: score band で required/recommended/optional に分類", () => {
+    const mk = (skill_id: string, score: number) => ({
+      skill_recommendation_id: skill_id,
+      session_id: "",
+      plan_id: "P",
+      skill_id,
+      rank: 1,
+      score,
+      reason: "",
+      recommended_at: "",
+    });
+    const buckets = bucketRecommendations([
+      mk("hi", 0.9),
+      mk("edge-req", 0.8),
+      mk("mid", 0.6),
+      mk("edge-rec", 0.5),
+      mk("low", 0.3),
+    ]);
+    expect(buckets.required.map((r) => r.skill_id)).toEqual(["hi", "edge-req"]);
+    expect(buckets.recommended.map((r) => r.skill_id)).toEqual(["mid", "edge-rec"]);
+    expect(buckets.optional.map((r) => r.skill_id)).toEqual(["low"]);
   });
 
   it("records recommendations but does not auto-register invocations before review evidence exists", () => {
