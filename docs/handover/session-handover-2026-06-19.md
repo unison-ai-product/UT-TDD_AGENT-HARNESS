@@ -363,59 +363,9 @@ AI-decidable・非ブロック (PO 確認なしで着手可、Codex クロスレ
 
 ---
 
+---
+
 <!-- ut-tdd handover: 1 件の同日中間エントリを累積抑制のため剪定 (git 履歴に保全) -->
-
----
-
-# Session Handover — 2026-06-19
-
-## §1 PLAN サマリ
-
-- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
-
-## §2 成果物 (commit / files)
-
-- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
-
-## §3 Next Action
-
-PO 直接指摘 2 件 (handover pointer drift / 注入の溜まりすぎ) を **PLAN-L7-83 で恒久解消**
-(commit `9e6d4cc` + `0299064`、main へ未マージ・本 branch 先行)。
-
-1. **drift 恒久解消 (`9e6d4cc`)** — `runHandover` を CURRENT.json⇔current-plan marker の単一 writer 化:
-   complete→marker clear / `--plan`→sync / plain in_progress 無変更 / dryRun 非破壊。drift は handover 後に
-   構造的に発生し得ない。根因 = 前 session が phantom `PLAN-L7-83` marker を立て別 PLAN 完了後も移さなかった。
-2. **累積上限化 (`9e6d4cc`)** — `boundSameDayEntries` が同日 entry を `MAX_SAME_DAY_ENTRIES=4` へ圧縮
-   (anchor + 直近保持・中間 breadcrumb・git 履歴に全保全)。本 doc が live 実証: **6 entries/1004 行 → 4/508 行**。
-3. **cross_agent 指摘 remediate (`0299064`)** — TL(codex-gpt-5.5) が breadcrumb idempotency 欠陥を検出
-   → strip-then-reprune + 決定論 oracle U-HOVER-014 で再発防止。A-142。
-4. **live reconcile** — 完了 handover で marker clear + drift OK + 肥大 doc compact を実証。
-
-次 session: ①`9e6d4cc`/`0299064` の main 反映 (PO 判断)。②下記 §5 の既存 PO residual (本 PLAN とは無関係、繰越)。
-
-## §4 carry (未了・先送り)
-
-- 本 PLAN (L7-83) は AI-decidable 全消化。新規実装の残件なし。
-- 軽微 (繰越): CURRENT.json `digest_summary.failures: 1` は履歴 digest の記録 failure 件数 (現行 test は
-  762/762 green、回帰でない)。telemetry 由来の集計値で、必要なら別途 digest 棚卸し。
-
-## §5 未了 PO 判断 (繰越・本 PLAN 外)
-
-- next_action status field の PLAN 化優先度 + `status --json` 正式フィールド名 (前 session からの繰越)。
-- review read-only 強制 + commit 前 staged-diff 確認の機械化 (IMP-137、Codex overstep 再発防止)。
-
-## §6 壊さない / 再発させない
-
-- **handover は CURRENT.json と current-plan marker の単一 writer** (PLAN-L7-83)。complete で marker を
-  clear / `--plan` で sync する契約を緩めると 2 source が再び無秩序に乖離し drift が常態化する。
-- **`boundSameDayEntries` は idempotent を保て** — 再 prune 前に既存 breadcrumb を strip しないと breadcrumb が
-  anchor (entry[0]) slice へ吸収され線形累積する (cross_agent 指摘、U-HOVER-014 idempotency oracle が fail-close)。
-- **bounded entries は git 履歴前提の lossy compaction**。中間 entry の重要メモは直近 entry の §6 へ
-  carry-forward せよ (剪定され得る)。breadcrumb で件数を明示し silent cap にしない。
-- **PLAN 追加/status 変更後は `ut-tdd db rebuild`** をしないと drive-db-registration / plan-governance が
-  stale で doctor・live-repo guard test が赤化する (回帰でない、[[project_codex_branch_ci_verification]])。
-
----
 
 ---
 
@@ -487,4 +437,76 @@ subagent (sonnet) + PM 自己レビュー。**commit 前に新ツール `ut-tdd 
   stale で doctor 赤化 (回帰でない、[[project_codex_branch_ci_verification]])。今回も rebuild 済。
 - **kind=impl は `parent_design` 必須** (master_hub 除く)。PLAN-L7-84 で一度 invalid_frontmatter に
   なり function-spec を parent_design に指定して解消した (schema §1.1.parent_design)。
+
+---
+
+---
+
+# Session Handover — 2026-06-19
+
+## §1 PLAN サマリ
+
+- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
+
+## §2 成果物 (commit / files)
+
+- commit `a571b5d` feat(readability): runtime-artifact mojibake guard (PLAN-L7-69、5 files)
+- commit `e4d7de6` docs(plans): confirm L7-71 drift + L7-52 guardrail re-verification (2 files)
+
+## §3 Next Action
+
+本 session (Opus 実行 / PO `/goal` ディレクト) で **「L7 未実装はない?」の問いから出た 3 件を是正・完遂**。
+doctor green は draft PLAN を span 計上せず映さない (absence-blindness、[[feedback_coverage_not_substance]]) ため、
+PLAN 実体を読んで残差を特定した。
+
+1. **PLAN-L7-69 (impl) 実装・confirmed** (`a571b5d`) — runtime-readability hard gate。prose band
+   (`loadSystemReadabilityDocs`) が `docs/` のみ走査で塞げない最高リスク面 = `.ut-tdd/audit/**/*.md` +
+   `.ut-tdd/handover/**/*.json` (provider cross-agent payload) の mojibake を検知。
+   `loadRuntimeArtifactReadabilityDocs` + `checkRuntimeReadability` (fail-open on absence / fail-close on
+   marker / fail-close on unreadable root)。raw JSON text を既存 MOJIBAKE_MARKERS で走査。negative fixture
+   4 種 (audit md / provider JSON halfwidth-katakana / U+FFFD / clean pass)。既存 .ut-tdd は mojibake 0 で green。
+2. **PLAN-L7-71 (impl) status drift 解消・confirmed** (`e4d7de6`) — Phase-1 slash command 7 本は `7305fe7`
+   で実装済・稼働中だが PLAN が draft 放置 (bookkeeping drift)。AC を機械再検証 (legacy term 0 / 実 ut-tdd
+   command 参照 / description frontmatter 有) し confirmed 化。P2 innovation-* は明示 defer 化。
+3. **PLAN-L7-52 C-1 (`recordGuardrailDecision`) 裏取り** (`e4d7de6`、PLAN-L7-48 §Deferred に記録) — production
+   未配線は事実だが **active な漏洩リスク無し** をコードで確認: 本番書込 `projectIssueApprovalGuardrails` は
+   `SECRET_PATTERN` 列ガード通過で secret-safe / 不変条件は `inspectGuardrailInvariants` SSoT を write(fail-close)
+   と projection advisory(warn) が共有・単体テスト済。残るは PO 所有 auth-gated の配線方針判断のみ。隠れ穴無し。
+
+検証: typecheck / Biome / Vitest **785/785** / doctor **EXIT=0** / db rebuild 2 回。code-reviewer
+(sonnet, intra_runtime_subagent) verdict=**pass-with-nits・Critical 0**。**未 push** (main が origin/main より
+**2 commit 先行**: `a571b5d`, `e4d7de6`)。次 session 起点: ①下記 §5 の push 判断。②§4 の carry。
+
+## §4 carry (未了・先送り)
+
+- **L7-71 P2 innovation commands** (新規明示 defer): `innovation-{tech,marketing,synthesize}` (pdm-* 招集)。
+  owner=PM/PO、condition=pdm-* invocation 契約を実際に使う段で author。under-design でない (記録済 defer)。
+- **前 session 繰越 carry の実状照合** ([[feedback_verify_carry_status_against_code]]): 旧 handover §4 の
+  **D#3 (session digest event-watermark)→`PLAN-L7-80` で confirmed 済 / D#5 (MCP launch argv)→`PLAN-L7-79`
+  で confirmed 済**。= もう open でない (旧 carry は stale だった)。残りうるは **C#8 (`status --json` の doc 整合)**
+  のみ — 対応 PLAN 未確認ゆえ着手前にコード/PLAN 照合。
+- 軽微: `CURRENT.json` `digest_summary.failures:1` は履歴 digest 記録値 (現行 785 green、回帰でない)。
+  stale agent-slot 1 件 (本 session の subagent 由来、`.ut-tdd/state/agent-slots.json`=untracked runtime
+  state、doctor は EXIT=0 で advisory のみ)。
+
+## §5 未了 PO 判断
+
+- **`a571b5d` / `e4d7de6` を main へ push するか** (現在 origin/main より 2 commit 先行・未 push)。
+  CI=harness-check は local で typecheck/Biome/Vitest 785/doctor EXIT=0 を全 green 確認済。
+- **L7-52 `recordGuardrailDecision` の production 配線方針** (auth-gated、owner=PO、solo 確定禁止)。
+  今 session は裏取りのみで据え置き。配線するなら PO が decision-source / issue 承認 vocabulary 統合を確定後。
+
+## §6 壊さない / 再発させない
+
+- **runtime-readability は `.ut-tdd/audit`(.md) + `.ut-tdd/handover`(.json) のみ走査**。vendor snapshot /
+  `legacy local state/` は除外 (source 由来 encoding を quote しうる = false-positive 化を避ける、PLAN-L7-69 §3)。
+  **fail-open on absence は意図** (generated state — 不在は壊れでなく clean bootstrap)。prose band の checked>0
+  非対称はこの理由で正当。
+- **`walkFiles` の `statSync` skip は元 `walkMarkdown` 継承で fail-close を弱めない** — 選択ファイルは
+  `readFileSync`→`checkRuntimeReadability` の catch で fail-close。propagate に変えると live dir の race
+  (readdir↔statSync 間の削除) で doctor が flaky 化する。
+- **PLAN 追加/status 変更後は `ut-tdd db rebuild`** (plan-registry-fingerprint stale で doctor /
+  drive-db-registration が赤化、回帰でない、[[project_codex_branch_ci_verification]])。本 session も 2 回 rebuild。
+- **委譲 subagent の最終 narration を成果証拠にするな** ([[feedback_verify_delegated_agent_output_by_files]])。
+  今回 code-reviewer 第 1 run が maxTurns で narration truncate → **verdict-first** で再 run し実 verdict を取得した。
 
