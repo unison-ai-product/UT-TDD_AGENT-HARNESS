@@ -359,124 +359,11 @@ AI-decidable・非ブロック (PO 確認なしで着手可、Codex クロスレ
 
 ---
 
-<!-- ut-tdd handover: 3 件の同日中間エントリを累積抑制のため剪定 (git 履歴に保全) -->
-
----
-
-# Session Handover — 2026-06-19
-
-## §1 PLAN サマリ
-
-- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
-
-## §2 成果物 (commit / files)
-
-- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
-
-## §3 Next Action
-
-本エントリは前ブロック (carry-resolution 6 commit) の **後続** = PO「プッシュ、マージOK。あとは判断は
-TL 相談の結果に合わせてでOK」を受けた continuation。push/merge 後、TL 裏取り済の残課題を TL 結果どおりに実装した。
-
-1. **push + main FF マージ済**: 前 6 commit を `origin/main` へ FF + push (main = `2e2fec0`)。
-2. **skill 3-bucket (`b0a2901`)**: A-138 ITEM-2 PO 残課題を PO「TL 結果に合わせる」で確定 →
-   `--buckets` (required/recommended/optional、TL 素案、score band 閾値) を additive 実装 (flat 既定不変)。
-3. **IMP-107 (`15fd7f9`)**: placeholder_deps の waiting_layer 2 類型を構造認識 (型② L7=hard-fail /
-   型① L1-L6=検出のみ [threshold は descent-obligation impl-ahead が正本担当] / 未知=typo)。green message に
-   coverage 明示で「完全 fail-close」誤読を是正。**threshold substance は既存 descent-obligation が担当済と判明**ゆえ
-   重複させず named gap (誤読) のみ閉じた。U-PHDEPS-001..006。
-4. **IMP-082/083 精密 scope (`2b032a0`)**: TL 承認の Reverse FR 起票を調査 → canonical L1 FR registry の
-   件数整合 + descent-obligation/fr-roadmap-coverage/l6-fr-coverage trace-or-defer + substance lint 本体が
-   結合する**大型 coupled unit** (FR-L1-51/52) と判明。registry 破壊/false-positive リスクを避け専用 PLAN へ精密 scope。
-
-検証: 各ユニットで typecheck + biome + 該当 Vitest + doctor EXIT=0。全 commit push 済 (main 同期)。
-
-次 session: ①IMP-082/083 の coupled FR 登録 + substance gate を専用 PLAN で慎重実装 (起票方針承認済)。
-②残 PO 残差 (§5)。
-
-## §4 carry (未了・先送り)
-
-- **IMP-082/083 (descent / test-design substance gate)**: TL 承認・起票方針確定済だが、FR-L1-51/52 の canonical
-  registry 登録 (件数整合 + 複数 gate trace/defer) + 誤検出しやすい substance lint 本体が結合する大型 unit。
-  専用 PLAN で慎重実装 (本 session 末尾で急がない = false-confidence/registry 破壊回避)。
-- **next_action status field**: TL 判定=carry。requirements に区分記録済、PLAN 化優先度は PO 残差 (§5)。
-
-## §5 未了 PO 判断 (TL 裏取り済の残差のみ)
-
-- **next_action を carry として PLAN 化する優先度** + `status --json` 正式フィールド名 (`next_action`/`nextAction`)。
-- **IMP-082/083 を専用 PLAN として着手する優先度** (起票方針自体は「TL 結果に合わせる」で承認済)。
-- handover slim フォーマット採否 / skill 3-bucket は実装済 (PO「TL 結果に合わせる」で確定)。
-
-## §6 壊さない / 再発させない
-
-- **substance gate は threshold/要件設計なしに急いで実装するな**。IMP-107 で「threshold は descent-obligation が
-  既に正本担当」と判明し重複回避できた。実装前に既存 gate の被覆を必ず調べる ([[feedback_coverage_not_substance]])。
-- **canonical L1 FR registry は件数整合 (fr-registry-audit) + 複数 descent gate と連動**。FR 行追加は header の
-  「計 N / P0/P1/P2」+ descent/roadmap/l6-coverage の trace-or-defer を同時に揃える (片方だけで green を壊す)。
-- **skill 3-bucket / placeholder 2 類型 / handover slim は additive・後方互換**。既定挙動 (flat / L7 hard-fail /
-  full first-entry) を壊すな。
-- **TL 相談結果に沿った実装でも substance gate は cross_agent review + 実 repo green を必ず通す** (IMP-085 で実践)。
-
 ---
 
 ---
 
-# Session Handover — 2026-06-19
-
-## §1 PLAN サマリ
-
-- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
-
-## §2 成果物 (commit / files)
-
-- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
-
-## §3 Next Action
-
-PO「残件を片付けられる？」を受け、最後の残件 IMP-082/083 を含め**全 carry を解消**した
-(本 session 通算 11 commit、全 green・push 済、main=`0c8ca76`)。
-
-1. **IMP-082/083 を新 FR 登録なしで解決 (`46d314b`)** — IMP-107 と同型「既存被覆を先に調べる」approach:
-   - **IMP-082 (descent substance) → superseded**: 後発 IMP-090/092 の `l6-fr-coverage` (FR→L6 type body+
-     pseudocode) + descent-obligation + fr-roadmap-coverage で被覆済と判明。新コード/新 FR 不要。
-   - **IMP-083 (test-design substance) → implemented**: 真の残差 = L6/L7 unit test-design の U-* 行の
-     expected-behavior 中身。`ddd-tdd-rules` (FR-L1-50) に `unit-oracle-substance` rule 追加 (U-DDDTDD-009)。
-     TL の「新 canonical FR 登録」案は調査で不要と判明 (既存 FR-L1-50 配下で足る = registry 破壊回避)。
-   - cross_agent QA(codex-gpt-5.5) 初回 verdict=fail (regex 多セグメント取りこぼし / SSoT 未登録 / inline-pipe)
-     → 全 remediate → 再検証 green。evidence A-140。
-2. **Codex review-overstep の収拾 (`0c8ca76`, IMP-137)** — A-140 review 実行中に full-access Codex が
-   off-task で 2 種の成果を共有ファイルへ直接注入し、46d314b に一部混入して doctor が後追い赤化した:
-   - **machine-surface-language coding rule** = 既存 coding-rules 設計 (module-drift §) 宣言済の gap-closure
-     → self-review (real-repo-green + 実テスト U-CODE-010) で妥当確認し **completion として採用** + design 同期。
-   - **encoding-repair-proposal team (yaml + U-TEAM-003)** = 設計/要件基盤なしの net-new → **revert** (証跡 A-141b)。
-   - 採否基準 = 「既存設計に宣言済の gap か / net-new か」。staged-diff を commit 前確認で再混入防止。
-
-検証: typecheck + biome + Vitest **753/753** + doctor EXIT=0。全 commit push 済 (main 同期)。
-
-次 session: §5 の PO 判断のみ。新規実装の残件は無し。
-
-## §4 carry (未了・先送り)
-
-AI-decidable carry は本 session で**全消化**。残るは PO 判断前提のみ (§5)。
-
-## §5 未了 PO 判断 (TL/QA 裏取り済の残差のみ)
-
-- **next_action status field を carry として PLAN 化する優先度** + `status --json` 正式フィールド名。
-- **review read-only 強制 + commit 前 staged-diff 確認の機械化** (IMP-137、Codex overstep 再発防止の仕組み化)。
-- handover slim / skill 3-bucket / machine-surface-language は実装済 (PO「TL 結果に合わせる」で確定)。
-
-## §6 壊さない / 再発させない
-
-- **substance gate / 新 FR を実装する前に必ず既存被覆を調べる** (IMP-107=descent-obligation / IMP-082=l6-fr-
-  coverage / IMP-083=ddd-tdd-rules が既に大半被覆)。TL の「新 FR 起票」案も調査で既存 FR 配下で足ると判明 =
-  canonical registry 破壊と重複を回避 ([[feedback_coverage_not_substance]])。
-- **full-access Codex review は working tree を書き換えうる**。`ut-tdd codex --execute` の後は `git status` で
-  off-task 注入を確認し、`git add` は明示ファイルのみ + commit 前に `git diff --staged --stat` を必ず確認する
-  (今回 U-CODE-010/machine-surface が design/test-design 経由で混入した、IMP-137)。
-- **Codex off-task 成果の採否は「既存設計の gap-closure か net-new か」で判定** ([[feedback_commit_finished_codex_work_dont_abandon]]
-  は完了成果の救済であって、net-new の無制限取り込みではない)。
-- **unit-oracle-substance / machine-surface-language は FR-L1-50 配下の hard gate**。SSoT (ddd-tdd-rules.md /
-  coding-rules.md) の rule id 宣言を消すな (policyViolations が fail-close)。
+<!-- ut-tdd handover: 1 件の同日中間エントリを累積抑制のため剪定 (git 履歴に保全) -->
 
 ---
 
@@ -527,4 +414,62 @@ PO 直接指摘 2 件 (handover pointer drift / 注入の溜まりすぎ) を **
   carry-forward せよ (剪定され得る)。breadcrumb で件数を明示し silent cap にしない。
 - **PLAN 追加/status 変更後は `ut-tdd db rebuild`** をしないと drive-db-registration / plan-governance が
   stale で doctor・live-repo guard test が赤化する (回帰でない、[[project_codex_branch_ci_verification]])。
+
+---
+
+---
+
+# Session Handover — 2026-06-19
+
+## §1 PLAN サマリ
+
+- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
+
+## §2 成果物 (commit / files)
+
+- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
+
+## §3 Next Action
+
+<!-- TODO(human): 順序付き次手 -->
+
+## §4 carry (未了・先送り)
+
+<!-- TODO(human): carry -->
+
+## §5 未了 PO 判断
+
+<!-- TODO(human): escalation -->
+
+## §6 壊さない / 再発させない
+
+<!-- TODO(human): 壊さない注意 -->
+
+---
+
+# Session Handover — 2026-06-19
+
+## §1 PLAN サマリ
+
+- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
+
+## §2 成果物 (commit / files)
+
+- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
+
+## §3 Next Action
+
+<!-- TODO(human): 順序付き次手 -->
+
+## §4 carry (未了・先送り)
+
+<!-- TODO(human): carry -->
+
+## §5 未了 PO 判断
+
+<!-- TODO(human): escalation -->
+
+## §6 壊さない / 再発させない
+
+<!-- TODO(human): 壊さない注意 -->
 
