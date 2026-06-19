@@ -3,8 +3,10 @@ import {
   analyzeReadability,
   loadFreezeReadabilityDocs,
   loadL6ReadabilityDocs,
+  loadRuntimeArtifactReadabilityDocs,
   loadSystemReadabilityDocs,
   readabilityMessages,
+  runtimeReadabilityMessages,
 } from "../src/lint/readability";
 
 describe("readability lint (freeze doc mojibake guard)", () => {
@@ -60,5 +62,68 @@ describe("readability lint (freeze doc mojibake guard)", () => {
     expect(paths).toContain("docs/plans/PLAN-L5-06-skill.md");
     expect(paths).toContain("docs/plans/PLAN-L5-07-drift.md");
     expect(analyzeReadability(docs).violations).toEqual([]);
+  });
+});
+
+describe("runtime-artifact readability guard (PLAN-L7-69: .ut-tdd audit/handover)", () => {
+  it("loader spans .ut-tdd/audit markdown + .ut-tdd/handover JSON and the real artifacts are mojibake-free", () => {
+    const docs = loadRuntimeArtifactReadabilityDocs();
+    const paths = docs.map((doc) => doc.path.replaceAll("\\", "/"));
+    // CURRENT.json is the always-present handover pointer; provider/ holds the
+    // cross-agent JSON payloads. The audit dir holds the A-NNN markdown ledger.
+    expect(paths).toContain(".ut-tdd/handover/CURRENT.json");
+    expect(paths.some((p) => p.startsWith(".ut-tdd/audit/") && p.endsWith(".md"))).toBe(true);
+    expect(
+      paths.some((p) => p.startsWith(".ut-tdd/handover/provider/") && p.endsWith(".json")),
+    ).toBe(true);
+    expect(analyzeReadability(docs).violations).toEqual([]);
+  });
+
+  it("fails on unreadable handover/audit markdown (negative fixture)", () => {
+    const result = analyzeReadability([
+      { path: ".ut-tdd/audit/A-999-corrupt.md", text: "# audit\n逕ｨ隱樊峩譁ｰ corrupt line\n" },
+    ]);
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.marker)).toContain("cp932-mojibake");
+  });
+
+  it("fails on provider JSON whose string field contains a mojibake marker (negative fixture)", () => {
+    const corruptProviderJson = JSON.stringify({
+      from: "codex",
+      to: "claude",
+      summary: "蟾･遞玖｡ｨ was corrupted by CP932 round-trip",
+    });
+    const result = analyzeReadability([
+      { path: ".ut-tdd/handover/provider/corrupt.json", text: corruptProviderJson },
+    ]);
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.marker)).toContain("halfwidth-katakana");
+  });
+
+  it("fails on a U+FFFD replacement character in provider JSON (negative fixture)", () => {
+    const result = analyzeReadability([
+      { path: ".ut-tdd/handover/provider/repl.json", text: '{"summary":"plan �"}' },
+    ]);
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.marker)).toContain("replacement-character");
+  });
+
+  it("passes clean ASCII handover JSON and fullwidth-only Japanese audit text", () => {
+    const result = analyzeReadability([
+      { path: ".ut-tdd/handover/CURRENT.json", text: '{"active_plan":"PLAN-L7-69","status":"ok"}' },
+      { path: ".ut-tdd/audit/A-100-clean.md", text: "# 監査\n工程表は直列で実行する。\n" },
+    ]);
+    expect(result.ok).toBe(true);
+    expect(result.violations).toEqual([]);
+  });
+
+  it("formats a distinct doctor message labeled runtime-readability", () => {
+    const ok = runtimeReadabilityMessages(analyzeReadability([]));
+    expect(ok[0]).toContain("runtime-readability — OK");
+    const bad = runtimeReadabilityMessages(
+      analyzeReadability([{ path: ".ut-tdd/handover/provider/x.json", text: '{"s":"窶"}' }]),
+    );
+    expect(bad[0]).toContain("runtime-readability — ⚠ mojibake markers 1件");
+    expect(bad[0]).toContain(".ut-tdd/handover/provider/x.json:1:cp932-mojibake");
   });
 });

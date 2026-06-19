@@ -134,8 +134,10 @@ import {
 import { analyzePropagation, loadPropagationDocs, propagationMessages } from "../lint/propagation";
 import {
   analyzeReadability,
+  loadRuntimeArtifactReadabilityDocs,
   loadSystemReadabilityDocs,
   readabilityMessages,
+  runtimeReadabilityMessages,
 } from "../lint/readability";
 import {
   analyzeReviewEvidence,
@@ -1101,6 +1103,29 @@ export function checkReadability(repoRoot: string): { messages: string[]; ok: bo
 }
 
 /**
+ * Expanded mojibake guard for generated runtime artifacts outside docs/
+ * (PLAN-L7-69): .ut-tdd/audit/** markdown and .ut-tdd/handover/** JSON
+ * (cross-agent provider payloads included). Fail-open on absence — a fresh
+ * repo with no runtime artifacts has nothing to corrupt — and fail-close on
+ * any mojibake marker so a corrupted handover/audit/provider-JSON cannot pass
+ * silently. repo root unreadable is fail-close.
+ */
+export function checkRuntimeReadability(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["runtime-readability - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeReadability(loadRuntimeArtifactReadabilityDocs(repoRoot));
+    return { messages: runtimeReadabilityMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["runtime-readability — ⚠ .ut-tdd artifacts を読めない"], ok: false };
+  }
+}
+
+/**
  * feedback-log のドメスティック化規律を hard gate 検査 (IMP-085、A-138 ITEM-3)。
  * docs/feedback-log.md 不在は fail-open (任意ドキュメント)、repo root 不在は fail-close。
  */
@@ -1400,6 +1425,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const codexWrapperParity = checkCodexWrapperParity(deps);
   const l6FrCoverage = checkL6FrCoverage(deps.repoRoot);
   const readability = checkReadability(deps.repoRoot);
+  const runtimeReadability = checkRuntimeReadability(deps.repoRoot);
   const feedbackLog = checkFeedbackLog(deps.repoRoot);
   const l6Completion = checkL6Completion(deps.repoRoot);
   const l7Completion = checkL7Completion(deps.repoRoot);
@@ -1449,6 +1475,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       cycleP4Verification.ok &&
       l6FrCoverage.ok &&
       readability.ok &&
+      runtimeReadability.ok &&
       feedbackLog.ok &&
       projectHooks.ok &&
       codexWrapperParity.ok &&
@@ -1502,6 +1529,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...codexWrapperParity.messages.map((m) => `doctor: ${m}`),
       ...l6FrCoverage.messages.map((m) => `doctor: ${m}`),
       ...readability.messages.map((m) => `doctor: ${m}`),
+      ...runtimeReadability.messages.map((m) => `doctor: ${m}`),
       ...feedbackLog.messages.map((m) => `doctor: ${m}`),
       ...l6Completion.messages.map((m) => `doctor: ${m}`),
       ...l7Completion.messages.map((m) => `doctor: ${m}`),

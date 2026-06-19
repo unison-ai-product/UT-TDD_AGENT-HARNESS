@@ -85,22 +85,38 @@ export function loadFreezeReadabilityDocs(repoRoot: string = process.cwd()): Rea
   return [...l6Docs, ...pmReviewPlans];
 }
 
-function walkMarkdown(dir: string, repoRoot: string, acc: ReadabilityDoc[]): void {
+interface WalkContext {
+  repoRoot: string;
+  extensions: readonly string[];
+  acc: ReadabilityDoc[];
+}
+
+function walkFiles(dir: string, ctx: WalkContext): void {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     let st: ReturnType<typeof statSync>;
     try {
       st = statSync(full);
     } catch {
+      // A statSync failure here is a transient race on live generated state
+      // (entry deleted between readdir and statSync) — skip rather than crash
+      // the whole gate, matching the original walkMarkdown contract. This does
+      // NOT weaken fail-close: any file we DO select is read with readFileSync
+      // below, whose failure propagates to checkRuntimeReadability's catch and
+      // turns the gate red.
       continue;
     }
     if (st.isDirectory()) {
-      walkMarkdown(full, repoRoot, acc);
+      walkFiles(full, ctx);
       continue;
     }
-    if (!name.endsWith(".md")) continue;
-    acc.push({ path: relative(repoRoot, full), text: readFileSync(full, "utf8") });
+    if (!ctx.extensions.some((ext) => name.endsWith(ext))) continue;
+    ctx.acc.push({ path: relative(ctx.repoRoot, full), text: readFileSync(full, "utf8") });
   }
+}
+
+function walkMarkdown(dir: string, repoRoot: string, acc: ReadabilityDoc[]): void {
+  walkFiles(dir, { repoRoot, extensions: [".md"], acc });
 }
 
 // Canonical instruction prose outside docs/ that must also stay mojibake-free.
@@ -131,5 +147,44 @@ export function readabilityMessages(result: ReadabilityResult): string[] {
     .join(", ");
   return [
     `readability — ⚠ mojibake markers ${result.violations.length}件 (${sample})。confirmed doc は復元してから freeze する (IMP-089/091)`,
+  ];
+}
+
+// Generated runtime artifacts that must stay readable even though they live
+// outside docs/. handover/audit text and cross-agent provider JSON are the
+// highest-risk mojibake surface (Codex-generated payloads), yet the prose band
+// only covers docs/. PLAN-L7-69 §2-3 extends the guard here: .ut-tdd/audit/**
+// markdown + .ut-tdd/handover/** JSON (provider cross-agent payloads included).
+// .ut-tdd/ is active product-owned runtime state, NOT a vendor source snapshot,
+// so scanning it is safe — historical vendor snapshots and legacy local state
+// live elsewhere and stay excluded (PLAN-L7-69 §3 scoping AC).
+const RUNTIME_READABILITY_DIRS: { rel: string; extensions: readonly string[] }[] = [
+  { rel: join(".ut-tdd", "audit"), extensions: [".md"] },
+  { rel: join(".ut-tdd", "handover"), extensions: [".json"] },
+];
+
+export function loadRuntimeArtifactReadabilityDocs(
+  repoRoot: string = process.cwd(),
+): ReadabilityDoc[] {
+  const acc: ReadabilityDoc[] = [];
+  for (const { rel, extensions } of RUNTIME_READABILITY_DIRS) {
+    const dir = join(repoRoot, rel);
+    if (existsSync(dir)) walkFiles(dir, { repoRoot, extensions, acc });
+  }
+  return acc.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+export function runtimeReadabilityMessages(result: ReadabilityResult): string[] {
+  if (result.ok) {
+    return [
+      `runtime-readability — OK (.ut-tdd audit/handover artifacts ${result.checked}件 mojibake marker 0)`,
+    ];
+  }
+  const sample = result.violations
+    .slice(0, 8)
+    .map((v) => `${v.path}:${v.line}:${v.marker}`)
+    .join(", ");
+  return [
+    `runtime-readability — ⚠ mojibake markers ${result.violations.length}件 (${sample})。provider JSON / audit は clean source から復元する (PLAN-L7-69)`,
   ];
 }
