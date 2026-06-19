@@ -355,3 +355,68 @@ AI-decidable・非ブロック (PO 確認なしで着手可、Codex クロスレ
   レビューへ逸れる ([[feedback_cross_review_before_po_escalation]])。判断系は self-review→
   相手 provider クロスレビュー→残差のみ PO の順 (hybrid で直接 PO に振るな)。
 
+---
+
+# Session Handover — 2026-06-19
+
+## §1 PLAN サマリ
+
+- `PLAN-L7-78-claude-stdin-prompt-dispatch` (troubleshoot): PLAN-L7-78 (troubleshoot): claude dispatch delivers prompts via stdin so native tool markup cannot leak through argv
+
+## §2 成果物 (commit / files)
+
+- `PLAN-L7-78-claude-stdin-prompt-dispatch`
+  - commit: 2382def
+
+## §3 Next Action
+
+本 session (Opus 実行 / PO 直接ディレクト / goal=「すべて完了まで進めて」) の実完了:
+
+1. **PLAN-L7-78 (claude stdin dispatch) を commit `2382def` で確定し main へ FF マージ・push 済**
+   (main = origin/main = `2382def`、L7-77/78 反映完了 = handover §5 の PO 判断クローズ)。
+2. **§4 AI-decidable carry を 3 件すべて remediate (commit `cfee430`)**:
+   - **C#8** docs(requirements): `status --json` の doc を現行実装 (RuntimeDetection 6
+     フィールド、camelCase) に整合。richer fields は forward として残し区分は #7 (PO) へ。
+   - **D#5 / PLAN-L7-79** fix(verification-profile): 生成 MCP launcher の argv を
+     tokenize (command head + args tail)。oracle U-MCPPROFILE-013。
+   - **D#3 / PLAN-L7-80** fix(session-log): plan digest を session 別 high-watermark
+     で増分計上 (複数 Stop での過少計上を解消) + pre-L7-80 digest migration。oracle U-SLOG-008。
+3. **TL クロスレビュー 2 本完遂** (live `ut-tdd codex --role tl --task-file … --execute`):
+   disposition (agree/agree/adjust) → concrete impl 差分 (D#5/D#3 とも verdict pass、
+   claude-opus-4-8 worker / codex-gpt-5 reviewer = 真の cross_agent)。
+4. 検証: typecheck + biome(171) + full Vitest **722/722** + doctor (readability mojibake 0 /
+   review-evidence cross_agent OK / impl・oracle trace NEW orphan 0) green。
+
+次 session の起点: ①下記 §4 の minor carry (任意 enrichment)。②#7/#9 の PO 判断 (§5)。
+
+## §4 carry (未了・先送り)
+
+AI-decidable §4 carry (C#8/D#5/D#3) は本 session で全クローズ。残るは軽微 (任意 enrichment、solo 可):
+
+- **model-id 一元化**: `TIER_TABLE` (team router) ⇔ `model-policy` の model ID 定義が二重。
+  SSoT 化で typo/drift 防止。review_evidence の reviewer_model も `codex-gpt-5` 表記で統一中。
+- **handover 同日累積**: `runHandover` が同日 doc に `---` 区切りで追記 (`src/handover/index.ts:577`)。
+  本ファイルも複数エントリで肥大。dedup/単一エントリ化は別 PLAN 余地。
+
+## §5 未了 PO 判断
+
+- **#7 (Q2) requirements の current/future/carry taxonomy**: `status --json` の richer fields
+  (`optional_adapters`/`enabled_commands`/`disabled_commands`/`next_action`) を current/future/carry の
+  どれに区分し実装着地させるか (要件から落とすか) は**ガバナンス意味**を変える → PO 確定後 AI が機械適用。
+  C#8 では「未実装事実の記録」に留め、要件は黙って削除していない。
+- **#9 (Q4) `skill suggest` 公開 I/O 契約**: `--text` 入力 / 3-bucket 出力の追加は**製品契約**変更 → PO/API 判断。
+
+## §6 壊さない / 再発させない
+
+- **session digest は完全な per-session ログをファイル順で渡す前提** (PLAN-L7-80)。`compressPlanDigest`
+  の high-watermark は append-only ファイル順 = 時系列 = 計上順に依存。呼び出し側が増分だけ渡すと
+  watermark で skip される (現 `onSessionEnd` は全行読込なので成立、Codex review risk #1)。
+- **生成 MCP config の args は tokenized argv** (PLAN-L7-79)。`args:[profile.command]` の display 文字列
+  詰め込みに戻すな (executable 二重・launcher 不能が再発)。`executable` は probe ヒントで command head と
+  異なりうる (wrapper command)、args に使うな。
+- **Bash ツールは POSIX のみ** ([[feedback_bash_tool_posix_not_powershell]])。`$null`/`2>$null`/`$env:` を
+  混ぜるとコマンド失敗。spawn 系は `export PATH="$PATH:/c/Windows/System32"` 前置。
+- **判断系は self-review → 相手 provider クロスレビュー → 残差のみ PO** ([[feedback_cross_review_before_po_escalation]])。
+  live codex review は DESK REVIEW 制約 + 対象コード/diff を front-load (逸れ防止)。
+- **codex/claude dispatch のプロンプトは stdin** (PLAN-L7-77/78)。args に戻すな (複数行・メタ文字・tool markup 漏れ再発)。
+
