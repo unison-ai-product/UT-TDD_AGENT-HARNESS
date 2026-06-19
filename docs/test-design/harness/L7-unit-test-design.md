@@ -317,8 +317,9 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-MCPPROFILE-011 | `planExternalProfileActivation` trigger routing | UI/GitHub/DB/API/MCP-profile signals produce required probe/smoke/human-approval steps before run. |
 | U-MCPPROFILE-012 | no implicit activation | profile recommendation does not install packages, enable servers, or run external tools without explicit `allow_external` / approved workflow evidence. |
 | U-MCPPROFILE-013 | `renderGeneratedMcpConfig` launcher argv (PLAN-L7-79) | generated `mcpServers.<id>` carries a tokenized argv: `command` is the command head and `args` is the remaining tokens. The whole command string is never packed into a single `args` element, and the probe-hint `executable` is never re-included in `args` (e.g. `command:"bun"`, `args:["run","test"]`, not `args:["bun run test"]`). |
+| U-MCPPROFILE-014 | `probeVerificationProfile` launcher readiness (PLAN-L7-79 follow-up) | when a generated launcher command head differs from the profile's executable probe hint, probe readiness checks that launcher too; package/executable readiness alone cannot mark the profile ready if the generated command cannot launch. |
 
-> **Status (PLAN-L7-33, 2026-06-11; PLAN-L7-79, 2026-06-19)**: U-MCPPROFILE-001..013 promoted to green `it` in `tests/verification-profile.test.ts` against `src/lint/verification-profile.ts` — catalog/profile metadata, Docker MCP Toolkit readiness metadata, generated local MCP config rendering (incl. tokenized launcher argv, U-MCPPROFILE-013), safety findings, and activation planning are pure and do not install packages, enable servers, run external tools, or write committed MCP config.
+> **Status (PLAN-L7-33, 2026-06-11; PLAN-L7-79, 2026-06-19)**: U-MCPPROFILE-001..014 promoted to green `it` in `tests/verification-profile.test.ts` against `src/lint/verification-profile.ts` — catalog/profile metadata, Docker MCP Toolkit readiness metadata, generated local MCP config rendering (incl. tokenized launcher argv, U-MCPPROFILE-013), launcher readiness probing (U-MCPPROFILE-014), safety findings, and activation planning are pure and do not install packages, enable servers, run external tools, or write committed MCP config.
 
 ### §1.16.1d U-DOCEXPORT (A-126 canonical document export)
 
@@ -529,7 +530,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - **L7 entry (TDD Red)**: 全 U-* を vitest 単体テストに先行変換 (FR-02、Red 先行、未実装理由のみで fail 可)
 - **L7 実装**: function-spec WBS (§5) の Sprint L7.1〜L7.7 を Red→Green→3点R で実装。DbC docstring (`@edge-*`) を実関数へ転記
 - **G7 trace freeze**: 4 artifact 双方向 12 edge 凍結時に本書 U ↔ L6 設計の trace 確定
-- **外部ツーリング family carry 更新 (A-128 F-2 / IMP-128、2026-06-11)**: §1.16.1a の **U-RELGRAPH-001..010 は PLAN-L7-32 / PLAN-L7-36 で実テスト化済み**、§1.16.1b の **U-TOOLADAPTER-001..010 は PLAN-L7-34 で実テスト化済み**、§1.16.1c の **U-MCPPROFILE-001..013 は PLAN-L7-33 / PLAN-L7-79 で実テスト化済み**、§1.16.1d の **U-DOCEXPORT-001..012 は PLAN-L7-35 で実テスト化済み**。外部ツーリング family の正規 defer は 0。
+- **外部ツーリング family carry 更新 (A-128 F-2 / IMP-128、2026-06-11)**: §1.16.1a の **U-RELGRAPH-001..010 は PLAN-L7-32 / PLAN-L7-36 で実テスト化済み**、§1.16.1b の **U-TOOLADAPTER-001..010 は PLAN-L7-34 で実テスト化済み**、§1.16.1c の **U-MCPPROFILE-001..014 は PLAN-L7-33 / PLAN-L7-79 で実テスト化済み**、§1.16.1d の **U-DOCEXPORT-001..012 は PLAN-L7-35 で実テスト化済み**。外部ツーリング family の正規 defer は 0。
 
 ### 2026-06-08 Residual Review Closure Test Addendum
 

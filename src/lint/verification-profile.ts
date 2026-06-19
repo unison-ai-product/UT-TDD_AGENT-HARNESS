@@ -474,6 +474,10 @@ function tokenizeCommand(command: string): string[] {
     .filter((token) => token.length > 0);
 }
 
+function profileCommandHead(profile: VerificationProfile): string | null {
+  return tokenizeCommand(profile.command)[0] ?? null;
+}
+
 export function renderGeneratedMcpConfig(input: GeneratedMcpConfigInput): GeneratedMcpConfigResult {
   const findings: VerificationProfileFinding[] = [];
   const targetPath = input.targetPath ?? ".ut-tdd/local/mcp.generated.json";
@@ -830,6 +834,14 @@ export function probeVerificationProfile(
       name: "executable",
       ok: deps.commandOk(profile.executable, ["--version"]),
       message: `${profile.executable} --version`,
+    });
+  }
+  const launcher = profileCommandHead(profile);
+  if (launcher && launcher !== profile.executable) {
+    checks.push({
+      name: "launcher",
+      ok: deps.commandOk(launcher, ["--help"]),
+      message: `${launcher} --help`,
     });
   }
   if (profile.packageName) {

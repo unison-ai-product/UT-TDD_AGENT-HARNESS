@@ -17,6 +17,22 @@ review_evidence:
     scope: "renderGeneratedMcpConfig no longer packs the whole profile command string into a single args element. A tokenizeCommand helper splits profile.command into command head + argv tail so the executable is never re-included in args (command=\"bun\", args=[\"run\",\"test\"], not args=[\"bun run test\"]). The probe-hint executable is only a fallback for the command word, never for args. Codex cross-review (claude-opus-4-8 worker, codex-gpt-5 reviewer) verdict pass: args is derived only from command tokens after the head; wrapper commands whose head differs from executable resolve correctly; the plain whitespace tokenizer matches the profile-command contract. Regression oracle U-MCPPROFILE-013 asserts the tokenized argv and that args never equals the whole command string."
     worker_model: claude-opus-4-8
     reviewer_model: codex-gpt-5
+  - reviewer: gpt-5.4-mini
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-19"
+    tests_green_at: "2026-06-19"
+    verdict: pass
+    scope: "Follow-up: Codex design/implementation review of the tokenize fix found a probe false-confidence gap — probeVerificationProfile only checked the probe-hint executable (e.g. bun) while renderGeneratedMcpConfig launches the command head (e.g. ut-tdd for wrapper profiles), so probe readiness did not cover the generated launcher's launchability. Codex added profileCommandHead + a `launcher` readiness check (commandOk(head, [--help]) when head differs from executable) and oracle U-MCPPROFILE-014. gpt-5.4-mini qualitative subagent review was also run for design/implementation alignment and HELIX separation. Result: the launcher-readiness fix is covered by L6/L7 design/test updates and full regression is green; residual broader design issue is that single-runtime checklist enforcement is split between gate and doctor, to be handled by a separate review-evidence/gate unification PLAN."
+    worker_model: codex-gpt-5
+    reviewer_model: gpt-5.4-mini
+  - reviewer: claude-opus-4-8
+    review_kind: cross_agent
+    reviewed_at: "2026-06-19"
+    tests_green_at: "2026-06-19"
+    verdict: pass
+    scope: "Cross-provider review of the codex→claude provider handover for the launcher-readiness follow-up. Claude (reviewer) read the diff and verified: the new `launcher` probe check validates exactly the command head renderGeneratedMcpConfig emits (`profileCommandHead`), so probe readiness now covers the generated config's launchability (closes the false-confidence gap where probe only checked the `executable` hint while wrapper profiles launch a different head such as ut-tdd); the `head !== executable` guard avoids redundant checks for runner-backed profiles; existing probe tests (testcontainers docker-unavailable, mcp-inspector refusal) stay green; U-MCPPROFILE-014 cites the explicit oracle id. typecheck + biome + full Vitest + doctor (readability/review-evidence/trace) green. Deeper item — profile.command is a display/template string with placeholders for non-runner MCP-server profiles, so the generated config remains an approximate suggestion — is deferred to a separate design PLAN."
+    worker_model: codex-gpt-5
+    reviewer_model: claude-opus-4-8
 agent_slots:
   - role: tl
     slot_label: "TL - MCP launcher argv tokenization reliability fix"
@@ -96,3 +112,13 @@ string); post-fix it is the tokenized tail and the executable is not re-included
 Confirmed. Implemented and cross-reviewed 2026-06-19. Disposition (D#5) was
 TL-approved before implementation; the concrete diff was Codex cross-reviewed
 (verdict pass) with the caller-invariant risks documented.
+
+Follow-up (2026-06-19, codex→claude provider handover): Codex review of the
+tokenize fix surfaced a probe false-confidence gap (probe checked only the
+executable hint, not the generated launcher command head). Codex added a
+`launcher` readiness check (oracle U-MCPPROFILE-014). Two gpt-5.4-mini
+qualitative subagent reviews were also run: one for design/implementation
+alignment and one for HELIX separation. The probe now validates the same command
+head the generated config launches. Residual broader item — single-runtime
+checklist enforcement is split between `gate` and `doctor` surfaces — is
+deferred to a separate review-evidence/gate unification PLAN, not closed here.

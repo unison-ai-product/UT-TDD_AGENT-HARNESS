@@ -205,9 +205,24 @@ describe("verification profile recommendation", () => {
     expect(result?.messages.join(" ")).toContain("disabled by default");
     expect(result?.messages.join(" ")).toContain("--allow-external");
   });
+
+  it("U-MCPPROFILE-014: marks profiles not ready when the generated launcher command is unavailable", () => {
+    const result = probeVerificationProfile(
+      "mcp-inspector-smoke",
+      deps({ commandOk: (command) => command !== "ut-tdd" }),
+    );
+
+    expect(result?.ready).toBe(false);
+    expect(result?.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "executable", ok: true, message: "bun --version" }),
+        expect.objectContaining({ name: "launcher", ok: false, message: "ut-tdd --help" }),
+      ]),
+    );
+  });
 });
 
-describe("MCP profile config and safety (U-MCPPROFILE-001..012)", () => {
+describe("MCP profile config and safety (U-MCPPROFILE-001..014)", () => {
   it("U-MCPPROFILE-001: catalog contains complete researched candidates with source URLs and trigger signals", () => {
     const catalog = catalogVerificationProfiles();
     const ids = catalog.profiles.map((profile) => profile.id);
