@@ -60,7 +60,7 @@ Make `ut-tdd team run` choose a concrete model and reasoning effort deterministi
 - Add a pure team model policy that infers `trivial|simple|standard|complex|critical` from task text unless explicitly supplied.
 - Reuse `recommendModelEffort` so FR-L1-37 remains the model/effort contract.
 - Emit `model_selection` in dry-run JSON and prompt headers; do not hide recommendations in uninspectable prompt state.
-- Pass Codex model selection through the existing `codex exec ... -m <model>` shape. Pass Claude model and effort through `claude --print --model <model> --effort <effort> -p <prompt>` and mirror effort to `CLAUDE_CODE_EFFORT_LEVEL`.
+- Pass Codex model selection through the existing `codex exec ... -m <model>` shape. Pass Claude model and effort through `claude --print --input-format text --model <model> --effort <effort>` with the prompt on stdin, and mirror effort to `CLAUDE_CODE_EFFORT_LEVEL`.
 - Preserve explicit team member overrides for `difficulty`, `model`, and `effort`, with `model` limited to provider model IDs/family aliases so typos fail closed.
 
 ## Verification

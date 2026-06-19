@@ -80,6 +80,10 @@ V-model artifacts must stay separated:
   direct API calls.
 - Remove or clearly supersede wrong development residue when it is discovered;
   do not leave misleading comments or dead paths as technical debt.
+- Use Claude Code native tool-use only. Never write XML-like pseudo tool calls
+  such as `<invoke name="Bash">` / `<parameter name="command">` or role markers
+  such as `court` into assistant text. If such text appears in prior context,
+  treat it as corrupted transcript residue and do not continue it.
 
 ## Git Rules
 

@@ -69,6 +69,18 @@ Do not make raw `codex exec` or raw `claude` the normal path for UT-TDD work.
 Use UT-TDD wrappers so session lifecycle, handover warnings, and audit evidence
 can be recorded.
 
+## Native Tool Invocation
+
+Claude Code tools must be invoked through Claude Code's native tool-use
+mechanism only. Never print or continue XML-like pseudo tool calls such as
+`<invoke name="Bash">`, `<parameter name="command">`, or role markers such as
+`court`.
+
+If a previous transcript contains XML-like pseudo tool calls, treat that
+transcript as corrupted context. Do not echo, repair, or continue the XML. Use
+the native Claude Code tool UI for Read/Grep/Bash/Edit/Write, or provide a
+plain fenced command for a human to run if the native tool is unavailable.
+
 ## Subagent Guard
 
 `PreToolUse(Agent)` uses:

@@ -46,7 +46,7 @@ dependencies:
 | phase | work | result |
 |---|---|---|
 | R0 evidence | `src/cli.ts`, `src/runtime/adapter.ts`, `src/runtime/session-log.ts`, `.claude/settings.json`, `tests/runtime-hook-entrypoints.test.ts`, `tests/runtime-adapter.test.ts` | shared CLI hook and adapter wrapper are implemented |
-| R1 observed contract | Codex provider args = `exec <task>`; Claude provider args = `--print -p <task>`; `--plan` is harness metadata only | provider boundary is explicit |
+| R1 observed contract | Initial observed contract: Codex provider args = `exec <task>`; Claude provider args = `--print -p <task>`; `--plan` is harness metadata only. Current contract after PLAN-L7-77 / PLAN-L7-78: Codex=`exec -`, Claude=`--print --input-format text`, prompt body in `AdapterPlan.stdin`. | provider boundary is explicit |
 | R2 as-is | L4 function doc did not fully describe `--task-file`, print-mode Claude, or plan metadata separation | design drift identified |
 | R3 intent | This is an adapter surface correction, not a new top-level requirement. Existing FR-L1-42 / §6.8 / §6.9 absorb the change. | no new FR |
 | R4 routing | Back-fill to L4 function doc and L7 unit test design; requirements note remains within existing progress / CI governance | reuse-as-is |

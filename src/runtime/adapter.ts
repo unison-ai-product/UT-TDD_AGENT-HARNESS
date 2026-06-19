@@ -250,25 +250,25 @@ export function isProviderCommandSpawnable(
 export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): AdapterPlan {
   const available = providerAvailable(intent.provider, mode);
   const isCodex = intent.provider === "codex";
-  // codex: プロンプトは args に載せず stdin で渡す (`codex exec -` は instructions を
-  // stdin から読む、codex exec --help)。Windows .cmd の cmd.exe shell-wrap による
-  // 改行/メタ文字切り詰めを構造的に回避する。claude は claude.exe = shell-wrap されない
-  // ので従来どおり `--print … -p <task>` で inline。
+  // Current contract: both providers receive task text via stdin. Args carry only
+  // fixed flags, model/effort metadata, and provider-specific stdin sentinels.
+  // Codex uses `codex exec -`; Claude uses `claude --print --input-format text`.
+  // In both cases, the user task remains in stdin instead of argv.
   const args = isCodex
     ? ["exec", ...(intent.model ? ["-m", intent.model] : []), "-"]
     : [
         "--print",
+        "--input-format",
+        "text",
         ...(intent.model ? ["--model", intent.model] : []),
         ...(intent.effort ? ["--effort", intent.effort] : []),
-        "-p",
-        intent.task,
       ];
   return {
     provider: intent.provider,
     available,
     command: isCodex ? "codex" : "claude",
     args,
-    ...(isCodex ? { stdin: intent.task } : {}),
+    stdin: intent.task,
     ...(intent.provider === "claude" && intent.effort
       ? { env: { CLAUDE_CODE_EFFORT_LEVEL: intent.effort } }
       : {}),

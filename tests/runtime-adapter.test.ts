@@ -54,7 +54,7 @@ describe("runtime adapter plan", () => {
     expect(plan.messages[0]).toContain("not available");
   });
 
-  it("builds claude command plan with Claude Code print-mode args", () => {
+  it("builds claude command plan with Claude Code print-mode stdin", () => {
     const plan = buildAdapterPlan(
       {
         provider: "claude",
@@ -70,13 +70,14 @@ describe("runtime adapter plan", () => {
     expect(plan.command).toBe("claude");
     expect(plan.args).toEqual([
       "--print",
+      "--input-format",
+      "text",
       "--model",
       "claude-sonnet-4-6",
       "--effort",
       "medium",
-      "-p",
-      "review",
     ]);
+    expect(plan.stdin).toBe("review");
     expect(plan.model).toBe("claude-sonnet-4-6");
     expect(plan.effort).toBe("medium");
     expect(plan.env).toEqual({ CLAUDE_CODE_EFFORT_LEVEL: "medium" });
@@ -226,12 +227,27 @@ describe("runtime adapter plan", () => {
     }
   });
 
-  it("U-ADAPTER-007: claude prompt stays inline (claude.exe is not shell-wrapped) — no stdin", () => {
+  it("U-ADAPTER-008: delivers the claude prompt via stdin so native tool markup cannot leak through argv", () => {
+    const multiline =
+      'review\n<invoke name="Bash"><parameter name="command">git status</parameter></invoke>';
     const plan = buildAdapterPlan(
-      { provider: "claude", role: "tl", task: "review this", model: "claude-sonnet-4-6" },
+      { provider: "claude", role: "tl", task: multiline, model: "claude-sonnet-4-6" },
       "hybrid",
     );
-    expect(plan.stdin).toBeUndefined();
-    expect(plan.args).toContain("review this");
+    expect(plan.stdin).toBe(multiline);
+    expect(plan.args).toContain("--print");
+    expect(plan.args).toContain("--input-format");
+    expect(plan.args).toContain("text");
+    expect(plan.args).not.toContain("-p");
+    expect(plan.args).not.toContain(multiline);
+
+    const invocation = buildProviderInvocation({
+      provider: "claude",
+      command: "claude",
+      args: plan.args,
+      opts: { platform: "win32", env: { SystemRoot: "C:\\Windows" } },
+    });
+    expect(invocation.command).not.toContain("<invoke");
+    expect(invocation.command).not.toContain("\n");
   });
 });

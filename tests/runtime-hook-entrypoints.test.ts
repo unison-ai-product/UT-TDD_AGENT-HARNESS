@@ -58,14 +58,14 @@ function writeFakeClaude(binDir: string): string {
     const path = join(binDir, "claude.cmd");
     writeFileSync(
       path,
-      `@echo off\r\necho %* > claude-called.txt\r\n(echo raw=%${rawEnv}%)> claude-env.txt\r\n(echo reason=%${reasonEnv}%)>> claude-env.txt\r\nexit /b 0\r\n`,
+      `@echo off\r\necho %* > claude-called.txt\r\nfindstr "^" > claude-stdin.txt\r\n(echo raw=%${rawEnv}%)> claude-env.txt\r\n(echo reason=%${reasonEnv}%)>> claude-env.txt\r\nexit /b 0\r\n`,
     );
     return path;
   }
   const path = join(binDir, "claude");
   writeFileSync(
     path,
-    `#!/bin/sh\necho "$@" > claude-called.txt\nprintf "raw=%s\\nreason=%s\\n" "$${rawEnv}" "$${reasonEnv}" > claude-env.txt\nexit 0\n`,
+    `#!/bin/sh\necho "$@" > claude-called.txt\ncat > claude-stdin.txt\nprintf "raw=%s\\nreason=%s\\n" "$${rawEnv}" "$${reasonEnv}" > claude-env.txt\nexit 0\n`,
   );
   chmodSync(path, 0o755);
   return path;
@@ -288,8 +288,12 @@ describe("runtime hook entrypoints", () => {
       expect(digest.event_counts.session_end).toBe(1);
       const called = readFileSync(join(cwd, "claude-called.txt"), "utf8");
       expect(called).toContain("--print");
-      expect(called).toContain("-p");
-      expect(called).toContain("review explicit plan");
+      expect(called).toContain("--input-format");
+      expect(called).toContain("text");
+      expect(called).not.toMatch(/(^|\s)"?-p"?(\s|$)/);
+      expect(called).not.toContain("review explicit plan");
+      const stdinText = readFileSync(join(cwd, "claude-stdin.txt"), "utf8");
+      expect(stdinText).toContain("review explicit plan");
       expect(called).not.toContain("--role");
       expect(called).not.toContain("--task");
       expect(called).not.toContain("--plan-id");

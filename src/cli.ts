@@ -1253,6 +1253,8 @@ function runtimeCommand(provider: AdapterProvider): Command {
           args: plan.args,
         });
         const child = spawnSync(invocation.command, invocation.args, {
+          // Provider prompts are passed through stdin; argv carries only fixed
+          // command flags so shell metacharacters and tool markup stay inert.
           // codex はプロンプトを stdin で受ける (plan.stdin)。cmd.exe shell-wrap が
           // 引数の改行/メタ文字を切り詰めるのを回避する (PLAN-L7-77)。
           input: plan.stdin,
@@ -1611,6 +1613,8 @@ team
               const child = spawn(invocation.command, invocation.args, {
                 cwd: process.cwd(),
                 env: adapterExecutionEnv(provider, env),
+                // Provider prompts are passed through stdin; argv carries only fixed
+                // command flags so shell metacharacters and tool markup stay inert.
                 // codex はプロンプトを stdin で受ける (cmd.exe shell-wrap 回避、PLAN-L7-77)。
                 stdio: stdin === undefined ? ioMode : ["pipe", ioMode, ioMode],
                 shell: invocation.shell ?? false,

@@ -85,7 +85,8 @@ Out of scope:
   `args` contains `exec` and the `-` stdin sentinel and never the prompt text.
 - A multi-line / metacharacter prompt does not appear in the
   `buildProviderInvocation` wrapped cmd.exe command string for codex.
-- Claude plan is unchanged: task stays in `-p <task>`, `plan.stdin` is undefined.
+- Claude was unchanged in this PLAN; PLAN-L7-78 supersedes that follow-up by
+  moving Claude task text to `plan.stdin`.
 - typecheck / Biome / full Vitest / `ut-tdd doctor` stay green; src traces to this
   PLAN `generates`.
 - Live re-confirmation: a multi-line `codex exec` through `ut-tdd codex --execute`

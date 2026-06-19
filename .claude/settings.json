@@ -21,7 +21,7 @@
             "type": "command",
             "command": "bun \"$CLAUDE_PROJECT_DIR/src/cli.ts\" session start",
             "timeout": 5,
-            "statusMessage": "session-log: セッション開始記録 (fail-open)"
+            "statusMessage": "session-log: session start (fail-open)"
           }
         ]
       }
@@ -34,7 +34,7 @@
             "type": "command",
             "command": "bun \"$CLAUDE_PROJECT_DIR/src/cli.ts\" hook post-tool-use",
             "timeout": 5,
-            "statusMessage": "session-log: イベント記録 (fail-open)"
+            "statusMessage": "session-log: post tool use (fail-open)"
           }
         ]
       }
@@ -46,7 +46,7 @@
             "type": "command",
             "command": "bun \"$CLAUDE_PROJECT_DIR/src/cli.ts\" session summary",
             "timeout": 5,
-            "statusMessage": "session-log: PLAN 単位ダイジェスト圧縮 (fail-open)"
+            "statusMessage": "session-log: PLAN digest summary (fail-open)"
           }
         ]
       }
@@ -58,7 +58,7 @@
             "type": "command",
             "command": "bun \"$CLAUDE_PROJECT_DIR/src/cli.ts\" hook subagent-stop",
             "timeout": 5,
-            "statusMessage": "agent-slots: subagent 終了で slot を release (fail-open)"
+            "statusMessage": "agent-slots: release subagent slot (fail-open)"
           }
         ]
       }

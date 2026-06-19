@@ -58,7 +58,7 @@ dependencies:
 - `--task-file` を追加し、task 本文を file から読む。
 - Windows で Claude Code native binary を解決し、bash shim / PATH guard の不安定さを回避する。
 - `.claude/settings.json` を shared CLI entrypoint へ切り替え、`.claude/hooks/session-log.ts` を shim 化する。
-- `src/runtime/adapter.ts` は provider args を Codex=`exec <task>`、Claude=`--print -p <task>` にし、`plan_id` は provider args ではなく `AdapterPlan.plan_id` に保持する。
+- `src/runtime/adapter.ts` は provider args を Codex=`exec <task>`、Claude=`--print -p <task>` にする初期契約で開始した。PLAN-L7-77 / PLAN-L7-78 以降の現在契約は Codex=`exec -`、Claude=`--print --input-format text`、prompt 本文は `AdapterPlan.stdin` に保持し、`plan_id` は provider args ではなく `AdapterPlan.plan_id` に保持する。
 
 ## §3.1 実装計画（情報源明記）
 

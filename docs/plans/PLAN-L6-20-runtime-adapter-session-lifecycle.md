@@ -48,7 +48,7 @@ dependencies:
 - `SessionHookInput.plan_id` を許容し、adapter wrapper が明示 PLAN を digest に渡せるようにする。
 - `ut-tdd codex|claude --execute` は provider 起動前後に SessionStart / PostToolUse / Stop を記録し、handover warnings を surface する。
 - `--task-file` を追加し、Windows ARG_MAX 回避を provider 非依存の adapter contract にする。
-- `--plan` は harness metadata として保持し、provider CLI には `--plan-id` を渡さない。Codex は `codex exec <task>`、Claude は `claude --print -p <task>` を使う。
+- `--plan` は harness metadata として保持し、provider CLI には `--plan-id` を渡さない。初期実装は Codex=`codex exec <task>`、Claude=`claude --print -p <task>` だったが、PLAN-L7-77 / PLAN-L7-78 で prompt 本文は両 provider とも stdin へ移した。
 - Superseded by PLAN-L7-68: provider execution no longer emits legacy raw-wrapper env names. Native provider resolution and `UT_TDD_CODEX_BIN` / `UT_TDD_CLAUDE_BIN` are the supported execution path.
 
 ## §3.1 実装計画（情報源明記）
