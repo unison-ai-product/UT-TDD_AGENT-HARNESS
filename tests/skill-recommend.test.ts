@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   inferSkillInvocations,
   recommendSkillsForPlan,
+  recommendSkillsForText,
   recordSkillInvocations,
   recordSkillRecommendations,
 } from "../src/skills/recommend";
@@ -218,6 +219,58 @@ describe("skill recommendation telemetry", () => {
         skill_id: "skill:l7-scrum-feedback-review",
         reason: "layer=L7; technical_drive=scrum; drive_model=Scrum; kind=add-impl",
       });
+    } finally {
+      db.close();
+    }
+  });
+
+  // A-138 ITEM-2: --text additive surface (flat ranked list, --plan 不要)。
+  it("recommendSkillsForText: 自由文を classify して flat ranked list を返す (PLAN 未登録不要)", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      // PLAN は一切 seed しない — text path は plan_registry を引かない。
+      seedSkill(db, {
+        asset_id: "skill:reverse-routing-review",
+        trigger: "reverse routing review",
+        capability: "reverse back-fill lint quality checklist",
+        applies_drive_models: "Reverse",
+      });
+      seedSkill(db, {
+        asset_id: "skill:scrum-feedback",
+        trigger: "scrum sprint feedback",
+        capability: "scrum sprint feedback checklist",
+        applies_drive_models: "Scrum",
+      });
+
+      const rows = recommendSkillsForText(db, "reverse back-fill the L3 requirements as-is", {
+        recordedAt: "2026-06-19T00:00:00.000Z",
+        limit: 1,
+      });
+      expect(rows).toHaveLength(1);
+      // kind=reverse → drive_model=Reverse なので reverse skill が上位、reference=text:<slug>。
+      expect(rows[0]).toMatchObject({ skill_id: "skill:reverse-routing-review", rank: 1 });
+      expect(rows[0].plan_id).toMatch(/^text:/);
+      expect(rows[0].reason).toContain("source=text");
+      expect(rows[0].reason).toContain("drive_model=Reverse");
+    } finally {
+      db.close();
+    }
+  });
+
+  it("recommendSkillsForText: risk 語を含む自由文は reason に risk フラグを載せる", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      seedSkill(db, {
+        asset_id: "skill:review-checklist",
+        trigger: "review checklist",
+        capability: "quality review checklist",
+      });
+      const rows = recommendSkillsForText(db, "implement production payment migration", {
+        limit: 1,
+      });
+      expect(rows[0].reason).toMatch(/risk=.*payment/);
     } finally {
       db.close();
     }

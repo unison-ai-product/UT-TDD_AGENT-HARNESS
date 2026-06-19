@@ -70,7 +70,11 @@ import {
 } from "./runtime/session-log";
 import { findReference } from "./search/index";
 import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
-import { recommendSkillsForPlan, recordSkillRecommendations } from "./skills/recommend";
+import {
+  recommendSkillsForPlan,
+  recommendSkillsForText,
+  recordSkillRecommendations,
+} from "./skills/recommend";
 import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index";
 import { harnessDbStatus } from "./state-db/maintenance";
 import { migrate } from "./state-db/migration";
@@ -870,18 +874,33 @@ telemetry
 const skill = program.command("skill").description("skill recommendation and invocation telemetry");
 skill
   .command("suggest")
-  .description("suggest skills for a PLAN from harness.db plan/layer/drive context")
-  .requiredOption("--plan <id>", "PLAN id")
-  .option("--record", "write recommendations to harness.db")
+  .description("suggest skills for a PLAN id or a free-text task from harness.db context")
+  .option("--plan <id>", "PLAN id (harness.db plan/layer/drive context)")
+  .option("--text <task>", "free-text task (classify → context; mutually exclusive with --plan)")
+  .option("--record", "write recommendations to harness.db (--plan only)")
   .option("--json", "JSON output")
-  .action((opts: { plan: string; record?: boolean; json?: boolean }) => {
+  .action((opts: { plan?: string; text?: string; record?: boolean; json?: boolean }) => {
+    // A-138 ITEM-2: --plan / --text のどちらか一方が必須 (相互排他、flat ranked list は不変)。
+    if (Boolean(opts.plan) === Boolean(opts.text)) {
+      process.stderr.write("skill suggest requires exactly one of --plan or --text\n");
+      process.exitCode = 1;
+      return;
+    }
+    // 自由文は登録 PLAN でないので DB record 不可 (--record は --plan 専用)。
+    if (opts.text && opts.record) {
+      process.stderr.write("--record requires --plan (free-text task is not a registered PLAN)\n");
+      process.exitCode = 1;
+      return;
+    }
     const repoRoot = process.cwd();
     const db = openHarnessDb(opts.record ? defaultHarnessDbPath(repoRoot) : ":memory:", {
       repoRoot,
     });
     try {
       rebuildHarnessDb({ repoRoot, db });
-      const rows = recommendSkillsForPlan(db, opts.plan);
+      const rows = opts.plan
+        ? recommendSkillsForPlan(db, opts.plan)
+        : recommendSkillsForText(db, opts.text ?? "");
       if (opts.record) recordSkillRecommendations(db, rows);
       if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
       else {

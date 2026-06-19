@@ -1,5 +1,6 @@
 import type { HarnessDb } from "../state-db/index";
 import { upsertRow } from "../state-db/index";
+import { classifyTask } from "../task/classify";
 
 export interface PlanSkillContext {
   plan_id: string;
@@ -7,6 +8,21 @@ export interface PlanSkillContext {
   drive: string;
   kind: string;
   status: string;
+}
+
+/**
+ * scoreSkill / rankSkills が要求する正規化済みスコアリング文脈。PLAN 由来 (recommendSkillsForPlan) と
+ * 自由文 由来 (recommendSkillsForText) の双方が同じ文脈型へ落ちることで、`--text` を flat ranked list の
+ * まま additive に足せる (A-138 ITEM-2、cross_agent TL 裏取り済: flat-list 維持 / 3-bucket は PO 残課題)。
+ */
+interface SkillScoringContext {
+  /** recommendation の plan_id 欄に入る参照子 (PLAN id か `text:<slug>` sentinel)。 */
+  reference: string;
+  layer: string;
+  drive: string;
+  kind: string;
+  workflowMode: string;
+  reason: string;
 }
 
 export interface SkillRecommendation {
@@ -52,7 +68,33 @@ function workflowModeForPlan(planId: string): string {
   return "Forward";
 }
 
-function scoreSkill(plan: PlanSkillContext, asset: Record<string, unknown>): number {
+/** TaskKind → workflow drive model (自由文 suggest の drive_model 推定、A-138 ITEM-2)。 */
+function workflowModeForKind(kind: string): string {
+  switch (kind) {
+    case "reverse":
+      return "Reverse";
+    case "poc":
+      return "Discovery";
+    case "refactor":
+      return "Refactor";
+    case "troubleshoot":
+      return "Recovery";
+    default:
+      return "Forward"; // design / add-feature / unknown
+  }
+}
+
+/** 自由文 → 安定参照子 (`text:<slug>`)。Date/random 不使用 (決定論)。 */
+function textReference(text: string): string {
+  const slug = text
+    .slice(0, 48)
+    .replace(/[^A-Za-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+  return `text:${slug || "task"}`;
+}
+
+function scoreSkill(ctx: SkillScoringContext, asset: Record<string, unknown>): number {
   const text = [
     asset.asset_id,
     asset.path,
@@ -71,14 +113,47 @@ function scoreSkill(plan: PlanSkillContext, asset: Record<string, unknown>): num
   const appliesDriveModels = String(asset.applies_drive_models ?? "")
     .split(",")
     .filter(Boolean);
-  const workflowMode = workflowModeForPlan(plan.plan_id);
   let score = 0.2;
-  if (appliesLayers.includes(plan.layer)) score += 0.35;
-  if (appliesDriveModels.includes(workflowMode)) score += 0.35;
-  if (text.includes(plan.drive.toLowerCase())) score += 0.1;
+  if (ctx.layer && appliesLayers.includes(ctx.layer)) score += 0.35;
+  if (appliesDriveModels.includes(ctx.workflowMode)) score += 0.35;
+  if (ctx.drive && text.includes(ctx.drive.toLowerCase())) score += 0.1;
   if (/review|checklist|quality|test|lint/.test(text)) score += 0.25;
   if (/skill/.test(String(asset.asset_type ?? ""))) score += 0.1;
   return Math.min(1, Number(score.toFixed(2)));
+}
+
+/** 文脈非依存の共通ランキング: skill asset をスコアし top-N の SkillRecommendation を返す。 */
+function rankSkills(
+  db: HarnessDb,
+  ctx: SkillScoringContext,
+  options: { limit?: number; recordedAt?: string },
+): SkillRecommendation[] {
+  const assets = db
+    .prepare("SELECT * FROM automation_assets WHERE asset_type = ? ORDER BY asset_id")
+    .all("skill");
+  const recommendedAt = options.recordedAt ?? nowIso();
+  return assets
+    .map((asset) => ({ asset, score: scoreSkill(ctx, asset) }))
+    .filter((entry) => entry.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        String(a.asset.asset_id ?? "").localeCompare(String(b.asset.asset_id ?? "")),
+    )
+    .slice(0, options.limit ?? 5)
+    .map((entry, index) => {
+      const skillId = String(entry.asset.asset_id ?? "");
+      return {
+        skill_recommendation_id: stableId("skill-rec", `${ctx.reference}:${skillId}`),
+        session_id: "",
+        plan_id: ctx.reference,
+        skill_id: skillId,
+        rank: index + 1,
+        score: entry.score,
+        reason: ctx.reason,
+        recommended_at: recommendedAt,
+      };
+    });
 }
 
 export function recommendSkillsForPlan(
@@ -90,35 +165,45 @@ export function recommendSkillsForPlan(
     .prepare("SELECT plan_id, layer, drive, kind, status FROM plan_registry WHERE plan_id = ?")
     .get(planId) as PlanSkillContext | undefined;
   if (!plan) return [];
-  const assets = db
-    .prepare("SELECT * FROM automation_assets WHERE asset_type = ? ORDER BY asset_id")
-    .all("skill");
-  const recommendedAt = options.recordedAt ?? nowIso();
-  return assets
-    .map((asset) => ({
-      asset,
-      score: scoreSkill(plan, asset),
-    }))
-    .filter((entry) => entry.score > 0)
-    .sort(
-      (a, b) =>
-        b.score - a.score ||
-        String(a.asset.asset_id ?? "").localeCompare(String(b.asset.asset_id ?? "")),
-    )
-    .slice(0, options.limit ?? 5)
-    .map((entry, index) => {
-      const skillId = String(entry.asset.asset_id ?? "");
-      return {
-        skill_recommendation_id: stableId("skill-rec", `${planId}:${skillId}`),
-        session_id: "",
-        plan_id: planId,
-        skill_id: skillId,
-        rank: index + 1,
-        score: entry.score,
-        reason: `layer=${plan.layer}; technical_drive=${plan.drive}; drive_model=${workflowModeForPlan(plan.plan_id)}; kind=${plan.kind}`,
-        recommended_at: recommendedAt,
-      };
-    });
+  const workflowMode = workflowModeForPlan(plan.plan_id);
+  return rankSkills(
+    db,
+    {
+      reference: plan.plan_id,
+      layer: plan.layer,
+      drive: plan.drive,
+      kind: plan.kind,
+      workflowMode,
+      reason: `layer=${plan.layer}; technical_drive=${plan.drive}; drive_model=${workflowMode}; kind=${plan.kind}`,
+    },
+    options,
+  );
+}
+
+/**
+ * 自由文タスクから skill を suggest する additive サーフェス (A-138 ITEM-2、`--text`)。`classifyTask` で
+ * kind/drive/risk を導き synthetic 文脈へ落とす。PLAN registry を引かないので layer は空 (layer ボーナス無し)。
+ * 出力は PLAN 版と同じ flat ranked list (3-bucket 化は PO 残課題)。未登録タスクなので DB record はしない。
+ */
+export function recommendSkillsForText(
+  db: HarnessDb,
+  taskText: string,
+  options: { limit?: number; recordedAt?: string } = {},
+): SkillRecommendation[] {
+  const c = classifyTask({ text: taskText });
+  const workflowMode = workflowModeForKind(c.kind);
+  return rankSkills(
+    db,
+    {
+      reference: textReference(taskText),
+      layer: "",
+      drive: c.drive,
+      kind: c.kind,
+      workflowMode,
+      reason: `source=text; technical_drive=${c.drive}; drive_model=${workflowMode}; kind=${c.kind}; risk=${c.risk_flags.join("|") || "none"}`,
+    },
+    options,
+  );
 }
 
 export function recordSkillRecommendations(
