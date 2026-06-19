@@ -218,6 +218,24 @@ export function loadChangedFiles(repoRoot: string = process.cwd()): string[] {
   return parseGitPorcelain(output);
 }
 
+/** `git diff --cached --name-only` の出力をパース (1 行 1 path、staged 集合)。 */
+export function parseStagedNames(output: string): string[] {
+  return output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => norm(line));
+}
+
+/** commit にステージ済みのファイル一覧 (commit 前 staged-diff 確認の機械化、IMP-137)。 */
+export function loadStagedFiles(repoRoot: string = process.cwd()): string[] {
+  const output = execFileSync("git", ["-C", repoRoot, "diff", "--cached", "--name-only"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  return parseStagedNames(output);
+}
+
 /**
  * repoRoot が git work-tree かを判定する。ZIP 展開のみ (非 git) の利用環境では change-impact
  * は「適用不能」なので fail-close でなく skip させるための前段ガード (tracked-canonical /

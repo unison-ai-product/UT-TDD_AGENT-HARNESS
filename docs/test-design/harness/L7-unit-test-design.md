@@ -612,3 +612,30 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 |---|---|---|
 | U-ADAPTER-007 | `buildAdapterPlan` / `buildProviderInvocation` | codex の plan はプロンプトを `args` でなく `plan.stdin` に載せ、`args` は `exec` + `-` (stdin sentinel) のみでプロンプト本文を含まない (`codex exec -` は instructions を stdin から読む)。改行 + cmd.exe メタ文字 (`< > \| ( )`) を含むプロンプトは、Windows `.cmd` の shell-wrap 後の cmd.exe コマンド文字列にも現れず、改行で切り詰められない。Red→Green: pre-fix はプロンプトが args + wrapped 文字列に埋め込まれ truncatable。 |
 | U-ADAPTER-008 | `buildAdapterPlan` / `buildProviderInvocation` / `ut-tdd claude --execute` | claude の plan は `--print --input-format text` を固定 argv とし、prompt 本文を `plan.stdin` で渡す。`-p <task>` は使わず、`<invoke name="Bash">...` 形式の native tool markup や改行を含む task text は argv / provider invocation string に現れない。fake Claude wrapper は stdin に task 本文を受け取り、session lifecycle digest は従来どおり `session_start` / `tool_use` / `session_end` を記録する。 |
+
+## PLAN-L7-84 Status nextAction Field Addendum
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-DETECT-001 | `nextActionForMode` / `NEXT_ACTION_BY_MODE` | 4 mode (standalone / claude-only / codex-only / hybrid) 全てに対し SSoT `NEXT_ACTION_BY_MODE` の値を返し、空でない。`ut-tdd status --json` は 6 検出フィールドに `nextAction` を additive 付加する (camelCase 公開契約、A-138 ITEM-1)。 |
+| U-DETECT-002 | `nextActionForMode("standalone")` | `human-review-required:` 接頭で始まる — AI レビュアー不在ゆえ判断ゲートは人間レビュー必須 (自動 pass 不可、concept §189 / requirements §2001)。 |
+| U-DETECT-003 | `nextActionForMode("claude-only" / "codex-only")` | `single-runtime:` 接頭で始まり `intra_runtime_subagent` 証跡を要求する (単一 runtime fallback)。 |
+| U-DETECT-004 | `nextActionForMode("hybrid")` | `cross-review-ready:` 接頭で始まる — judgment ゲートを別 runtime/model 族へ回す。 |
+| U-DETECT-005 | `nextActionForMode` value-domain | 各値は先頭 token (`:` 手前) で機械 switch でき、後続が人間可読。公開 JSON 契約ゆえ ASCII のみ (machine-surface-language と整合)。 |
+
+## PLAN-L7-85 Review Read-Only Guard Addendum
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-RGUARD-001 | `isReadOnlyDelegationRole` | 相談/検証 archetype (tl/qa/uiux) + review エイリアス (reviewer/review/security/audit) は read-only=true (§1.8 role taxonomy、判断側は実装代行しない、IMP-137)。 |
+| U-RGUARD-002 | `isReadOnlyDelegationRole` | worker (se/docs)・未知ロールは read-only=false (誤検知回避 — guard はレビュー session のみ対象)。 |
+| U-RGUARD-003 | `isReadOnlyDelegationRole` | ロール照合は trim + 大小無視で正規化。 |
+| U-RGUARD-004 | `detectWorkingTreeMutation` | after にあって before に無い path を session 由来の変更として返す (sorted + unique、決定論)。 |
+| U-RGUARD-005 | `detectWorkingTreeMutation` | 新規変更なし → 空配列。 |
+| U-RGUARD-006 | `assessReviewSession` | read-only ロールが working tree を変更したら `violation=true` + `mutatedPaths` 記録。 |
+| U-RGUARD-007 | `assessReviewSession` | worker ロールの変更は正当ゆえ `violation=false` (mutatedPaths は記録)。 |
+| U-RGUARD-008 | `assessReviewSession` | read-only ロールが tree を変更しなければ `violation=false`。 |
+| U-RGUARD-009 | `reviewGuardMessages` | violation 時、変更パス一覧 + IMP-137 再発防止ガイダンス (staged 前に inspect/revert) を 2 行で surface。 |
+| U-RGUARD-010 | `reviewGuardMessages` | 非 violation → 空 (worker / clean は無音)。 |
+| U-RGUARD-011 | `summarizeStagedReview` | staged 集合は sorted/unique、suspect = staged ∩ review-mutated (混入疑い)、suspect 非空で ok=false (commit 前 staged-diff の機械化)。 |
+| U-RGUARD-012 | `summarizeStagedReview` | review-mutated 未提供 → suspect 空 + ok=true (純列挙)。 |

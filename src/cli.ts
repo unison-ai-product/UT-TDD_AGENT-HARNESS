@@ -23,7 +23,7 @@ import {
   runHandover,
   setActivePlanCli,
 } from "./handover/index";
-import { loadChangedFiles } from "./lint/change-impact";
+import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact";
 import {
   analyzeRelationImpact,
   collectRelationGraphProjection,
@@ -47,7 +47,7 @@ import {
   releaseOldestGuardSlot,
   sweepStaleGuardSlots,
 } from "./runtime/agent-slots";
-import { detectMode, type RuntimeDetection } from "./runtime/detect";
+import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect";
 import {
   type ClassifyResult,
   emitClassifyRequest,
@@ -62,6 +62,12 @@ import {
   readProviderHandoverCurrent,
   runProviderHandover,
 } from "./runtime/provider-handover";
+import {
+  assessReviewSession,
+  isReadOnlyDelegationRole,
+  reviewGuardMessages,
+  summarizeStagedReview,
+} from "./runtime/review-guard";
 import {
   dispatch,
   nodeDeps,
@@ -120,6 +126,16 @@ function gitHead(): string | null {
     return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
   } catch {
     return null;
+  }
+}
+
+/** review-guard 用: loadChangedFiles を fail-open でラップ (非 git / 一時失敗で委譲を壊さない、IMP-137)。 */
+function safeLoadChangedFiles(repoRoot: string): string[] {
+  try {
+    return loadChangedFiles(repoRoot);
+  } catch {
+    // guard probe は best-effort。git が無い/失敗しても委譲本体は止めない (fail-open)。
+    return [];
   }
 }
 
@@ -223,12 +239,16 @@ program
   .option("--json", "JSON で出力")
   .action((opts: { json?: boolean }) => {
     const d = detectMode();
+    const nextAction = nextActionForMode(d.mode);
     if (opts.json) {
-      process.stdout.write(`${JSON.stringify(d, null, 2)}\n`);
+      // 既存 6 フィールド (camelCase 公開契約) に nextAction を additive に付加する
+      // (A-138 ITEM-1、PLAN-L7-84、taxonomy=current)。判断ゲートの進め方を機械/人間へ提示。
+      process.stdout.write(`${JSON.stringify({ ...d, nextAction }, null, 2)}\n`);
     } else {
       process.stdout.write(
         `mode: ${d.mode}  (claude=${d.claude}, codex=${d.codex}, current=${d.currentRuntime ?? "-"})\n`,
       );
+      process.stdout.write(`next: ${nextAction}\n`);
     }
   });
 
@@ -945,11 +965,38 @@ program
   .command("review")
   .description("prepare a deterministic review packet for the current worktree")
   .option("--uncommitted", "review uncommitted git changes")
+  .option("--staged", "confirm the staged set before commit (IMP-137 staged-diff gate)")
   .option("--json", "JSON output")
-  .action((opts: { uncommitted?: boolean; json?: boolean }) => {
+  .action((opts: { uncommitted?: boolean; staged?: boolean; json?: boolean }) => {
+    if (opts.staged) {
+      // commit 前 staged-diff 確認の機械化 (IMP-137): staged 集合を surface し doctor を回す。
+      // 意図しない混入を staged 段階で弾く (doctor 失敗 / suspect 検出で fail-close)。
+      const staged = loadStagedFiles(process.cwd());
+      const summary = summarizeStagedReview(staged);
+      const doctor = runDoctor();
+      const ok = doctor.ok && summary.ok;
+      const stagedOutput = {
+        scope: "staged",
+        ok,
+        staged: summary.staged,
+        suspect: summary.suspect,
+        doctorOk: doctor.ok,
+        doctorMessages: doctor.messages,
+      };
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(stagedOutput, null, 2)}\n`);
+      } else {
+        process.stdout.write(
+          `review staged: ${ok ? "ok" : "failed"} staged=${summary.staged.length} doctor=${doctor.ok ? "ok" : "failed"}\n`,
+        );
+        for (const path of summary.staged) process.stdout.write(`  + ${path}\n`);
+      }
+      process.exitCode = ok ? 0 : 1;
+      return;
+    }
     if (!opts.uncommitted) {
       process.stderr.write(
-        "review requires --uncommitted for the current implementation surface\n",
+        "review requires --uncommitted or --staged for the current implementation surface\n",
       );
       process.exitCode = 1;
       return;
@@ -1292,6 +1339,10 @@ function runtimeCommand(provider: AdapterProvider): Command {
         };
         runSessionStartSideEffects(repoRoot, startInput, deps);
         dispatch(startInput, deps, "SessionStart");
+        // review-guard (IMP-137): read-only (相談/検証) ロールの委譲 session が working tree を
+        // 変更したら検知するため、spawn 前の変更パスを snapshot する。
+        const guardActive = isReadOnlyDelegationRole(opts.role);
+        const treeBefore = guardActive ? safeLoadChangedFiles(repoRoot) : [];
         const invocation = buildProviderInvocation({
           provider,
           command: plan.command,
@@ -1310,6 +1361,16 @@ function runtimeCommand(provider: AdapterProvider): Command {
         if (child.error) {
           // spawn 自体の失敗 (ENOENT 等) は status=null のまま沈黙するため理由を surface する (A-128 F-5 / IMP-130(d))。
           process.stderr.write(`${provider}: failed to launch (${String(child.error)})\n`);
+        }
+        if (guardActive) {
+          // read-only 委譲が tree を変更したら warning で surface する (検知/隔離、IMP-137)。
+          // exit code は変えない (レビュー成果は有効でも、混入を staged 前に弾く規律へ繋ぐ)。
+          const assessment = assessReviewSession({
+            role: opts.role,
+            before: treeBefore,
+            after: safeLoadChangedFiles(repoRoot),
+          });
+          for (const m of reviewGuardMessages(assessment)) process.stderr.write(`${m}\n`);
         }
         dispatch(
           {
