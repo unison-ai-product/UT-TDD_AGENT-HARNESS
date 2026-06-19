@@ -461,6 +461,19 @@ function envReference(value: string): string {
   return value.startsWith("env:") ? `\${${value.slice(4)}}` : "<redacted>";
 }
 
+/**
+ * Split a profile command string into an argv array (executable + arguments).
+ * Whitespace-delimited; empty tokens dropped. Profile commands are plain
+ * whitespace-separated words (no shell quoting), so this is sufficient for the
+ * generated MCP launcher `{command, args}` contract (PLAN-L7-79).
+ */
+function tokenizeCommand(command: string): string[] {
+  return command
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token.length > 0);
+}
+
 export function renderGeneratedMcpConfig(input: GeneratedMcpConfigInput): GeneratedMcpConfigResult {
   const findings: VerificationProfileFinding[] = [];
   const targetPath = input.targetPath ?? ".ut-tdd/local/mcp.generated.json";
@@ -512,9 +525,17 @@ export function renderGeneratedMcpConfig(input: GeneratedMcpConfigInput): Genera
         env[name] = envReference(value);
       }
     }
+    // PLAN-L7-79: the generated MCP config feeds an external launcher whose
+    // contract is `{command, args}` where args is a tokenized argv array, not a
+    // single display string. Tokenize `profile.command` so the executable is not
+    // re-included in args (e.g. command="bun", args=["run","test"] instead of
+    // command="bun", args=["bun run test"]). `executable` is only a PATH-probe
+    // hint (it can differ from the command head, e.g. wrapper commands) so it is
+    // a defensive fallback for the command word, never the args.
+    const [launchCommand, ...launchArgs] = tokenizeCommand(profile.command);
     servers[profile.id] = {
-      command: profile.executable ?? profile.command.split(" ")[0],
-      args: [profile.command],
+      command: launchCommand ?? profile.executable ?? profile.command,
+      args: launchArgs,
       env,
       mounts,
       disabled: !profile.defaultEnabled,

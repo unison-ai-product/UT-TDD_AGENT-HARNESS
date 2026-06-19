@@ -8,7 +8,7 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-03-session-log.md
 ---
 
-> **L6 contract marker**: `recordEvent(input: SessionHookInput) => void` and `compressPlanDigest(input: PlanDigestInput) => PlanDigest` are the unit-test-granularity contracts. DbC pre/post/invariant maps hook/session events and PLAN digest generation to U-SLOG-001..007.
+> **L6 contract marker**: `recordEvent(input: SessionHookInput) => void` and `compressPlanDigest(input: PlanDigestInput) => PlanDigest` are the unit-test-granularity contracts. DbC pre/post/invariant maps hook/session events and PLAN digest generation to U-SLOG-001..008.
 
 
 ## 2026-06-09 Runtime Adapter Lifecycle Addendum
@@ -55,6 +55,7 @@ interface PlanDigest {
   commits: string[];                        // commit hash (取得可能時)
   failures: { ts: string; summary: string }[];
   updated_at: string;
+  session_watermarks?: Record<string, number>;  // PLAN-L7-80: session 別 畳み済み event 件数 (再 summarize 増分のみ計上)。pre-L7-80 digest は省略 = migration で updated_at から seed
 }
 ```
 
@@ -70,7 +71,7 @@ interface PlanDigest {
 | `resolveActivePlan` | `(deps: SessionLogDeps) => string \| null` | — | state ファイル `.ut-tdd/state/current-plan` 優先 → **state 無き時の fallback** として branch 名 capture (regex `/^(?:add\|design\|feature\|reverse\|hotfix\|poc\|refactor)\/(.+)$/`、§6.1 branch↔kind 整合) をそのまま採用 (厳密突合は state 側が持つ) → 解決不能は `null`。**throw しない** |
 | `onSessionStart` | `(input, deps) => number` | — | session_start event を append。常に `0`、I/O 失敗でも throw しない (fail-open)。**③ U-SLOG-005 で被覆** |
 | `recordEvent` | `(input: SessionHookInput, deps: SessionLogDeps) => void` | — | `.ut-tdd/logs/session/<session_id>.jsonl` へ 1 行 append。**never throws (fail-open)** — I/O / 解析失敗は握りつぶし warn |
-| `compressPlanDigest` | `(events: SessionEvent[], planId: string, prev?: PlanDigest) => PlanDigest` | — | **純関数 (I/O なし)**。planId の events を集計。`prev` とマージ (PLAN は複数 session 跨ぎ)。同一 (plan, session) 再適用で **idempotent** |
+| `compressPlanDigest` | `(events: SessionEvent[], planId: string, prev?: PlanDigest) => PlanDigest` | — | **純関数 (I/O なし)**。planId の events を集計。`prev` とマージ (PLAN は複数 session 跨ぎ)。再適用は **event 単位 high-watermark** で idempotent (`session_watermarks[sid]` 件数を超える増分のみ計上 = 同一 session の複数回 summarize でも過少計上しない、PLAN-L7-80 / U-SLOG-008)。pre-L7-80 digest は `updated_at` から watermark を seed (migration、既計上分の再計上なし) |
 | `onPostToolUse` | `(input, deps) => number` | — | tool_use (commit 検出時 commit) event を append。常に `0` |
 | `onStop` | `(input, deps) => number` | — | session の events を plan_id 別に `compressPlanDigest` し `.ut-tdd/logs/plan/<plan_id>.digest.json` を更新。**plan_id=null のみの session は digest を書かない (skip、m-3)**。常に `0` |
 

@@ -1436,7 +1436,7 @@ scripts/
 | `hybrid` | Claude Code runtime と Codex CLI の両方を検出 | `team run` / role delegation / cross-agent handover を有効化 |
 | `standalone` | どちらも未検出 | `setup` / `doctor` / `plan lint` / `vmodel lint` / `gate` のローカル検証のみ有効化 |
 
-`runtime.json` は generated state とし、Git 管理しない。`ut-tdd status --json` は `mode`, `available_runtimes`, `missing_runtimes`, `optional_adapters`, `enabled_commands`, `disabled_commands`, `next_action` を返す。
+`runtime.json` は generated state とし、Git 管理しない。`ut-tdd status --json` の**現行実装**は `RuntimeDetection` をそのまま返す = `mode`, `claude`, `codex`, `currentRuntime`, `availableRuntimes`, `missingRuntimes` (`src/runtime/detect.ts`、function-spec §6 型表)。camelCase のこの 6 フィールドが公開サーフェス契約 (実装を正本とし、フィールド名は保存する)。`optional_adapters` / `enabled_commands` / `disabled_commands` / `next_action` の付加と snake_case 別名は**未実装の forward 要件**であり、これらを current / future / carry のどれに区分し実装着地させるか (または要件から落とすか) は requirements taxonomy の PO 判断に委ねる (本 sentence では未実装事実のみ記録し、要件を黙って削除しない)。
 
 ### 複数 AI orchestration
 

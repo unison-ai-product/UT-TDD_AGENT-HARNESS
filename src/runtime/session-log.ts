@@ -47,6 +47,12 @@ export interface PlanDigest {
   commits: string[];
   failures: { ts: string; summary: string }[];
   updated_at: string;
+  // PLAN-L7-80: per-session high-watermark = how many of that session's
+  // matching events have already been folded into this digest. Lets a session
+  // that is summarized more than once (e.g. multiple Stop hooks) count only its
+  // incremental events instead of dropping them all. Optional for backward
+  // compatibility with pre-L7-80 digests (migration seeds it from updated_at).
+  session_watermarks?: Record<string, number>;
 }
 
 export interface SessionHookInput {
@@ -121,6 +127,7 @@ function emptyDigest(planId: string): PlanDigest {
     commits: [],
     failures: [],
     updated_at: "",
+    session_watermarks: {},
   };
 }
 
@@ -209,7 +216,36 @@ export function recordEvent(ev: SessionEvent, deps: SessionLogDeps): void {
 }
 
 /**
- * U-SLOG-003: 純関数。session-guard で同一 (plan, session) 再適用に idempotent。
+ * PLAN-L7-80 migration: a pre-L7-80 digest has no `session_watermarks`. The old
+ * code folded whole sessions, so every matching event with `ts <= updated_at`
+ * for an already-folded session was counted. Seed each folded session's
+ * watermark to that leading count (events are appended in chronological order,
+ * so `ts <= updated_at` events are the contiguous leading ones) so they are not
+ * re-counted on the first post-migration run.
+ */
+function initialSessionWatermarks(
+  base: PlanDigest,
+  events: SessionEvent[],
+  planId: string,
+): Record<string, number> {
+  if (base.session_watermarks) return { ...base.session_watermarks };
+  const seed: Record<string, number> = {};
+  if (!base.updated_at) return seed;
+  const foldedSessions = new Set(base.sessions);
+  for (const ev of events) {
+    if (ev.plan_id !== planId) continue;
+    if (!foldedSessions.has(ev.session_id)) continue;
+    if (ev.ts <= base.updated_at) seed[ev.session_id] = (seed[ev.session_id] ?? 0) + 1;
+  }
+  return seed;
+}
+
+/**
+ * U-SLOG-003 / U-SLOG-008: 純関数。再適用は **event 単位の high-watermark** で
+ * idempotent (PLAN-L7-80)。`session_watermarks[sid]` = その session の matching
+ * event を何件まで畳み済みか。同一 session が再 summarize されても、watermark を
+ * 超える増分だけ計上し、旧実装の「session 単位 fold = 2 回目以降を全 skip」による
+ * 過少計上を避ける。events は append-only ログのファイル順 = 計上順。
  * updated_at は max(prev, events) で巻き戻り禁止。failures は ts キーで dedupe。
  */
 export function compressPlanDigest(
@@ -218,28 +254,39 @@ export function compressPlanDigest(
   prev?: PlanDigest,
 ): PlanDigest {
   const base = prev ? structuredClone(prev) : emptyDigest(planId);
-  const folded = new Set(base.sessions);
   const files = new Set(base.files_touched);
   const commits = new Set(base.commits);
   const failByTs = new Map(base.failures.map((f) => [f.ts, f]));
   const tsList: string[] = base.updated_at ? [base.updated_at] : [];
+  const sessions = new Set(base.sessions);
+  // Migration: a pre-L7-80 digest has no session_watermarks. Seed them from the
+  // events already reflected in `base` (sessions previously folded, ts within the
+  // recorded updated_at), so those events are not re-counted on the first run.
+  const watermarks = initialSessionWatermarks(base, events, planId);
 
+  const seenPerSession = new Map<string, number>();
   for (const ev of events) {
     if (ev.plan_id !== planId) continue;
     tsList.push(ev.ts);
-    if (folded.has(ev.session_id)) continue; // 既に畳んだ session = 再計上しない
+    sessions.add(ev.session_id);
+    const index = seenPerSession.get(ev.session_id) ?? 0;
+    seenPerSession.set(ev.session_id, index + 1);
+    if (index < (watermarks[ev.session_id] ?? 0)) continue; // 畳み済み (high-watermark)
     base.event_counts[ev.event_type] = (base.event_counts[ev.event_type] ?? 0) + 1;
     if (ev.target && isPath(ev.target)) files.add(ev.target);
     if (ev.event_type === "commit" && ev.target) commits.add(ev.target);
     if (ev.outcome === "error") failByTs.set(ev.ts, { ts: ev.ts, summary: sanitize(ev.target) });
   }
-  for (const ev of events) if (ev.plan_id === planId) folded.add(ev.session_id);
+  for (const [sid, count] of seenPerSession) {
+    watermarks[sid] = Math.max(watermarks[sid] ?? 0, count);
+  }
 
-  base.sessions = [...folded];
+  base.sessions = [...sessions];
   base.files_touched = [...files];
   base.commits = [...commits];
   base.failures = [...failByTs.values()].sort((a, b) => a.ts.localeCompare(b.ts));
   base.updated_at = tsList.length ? tsList.reduce((a, b) => (a > b ? a : b)) : "";
+  base.session_watermarks = watermarks;
   return base;
 }
 

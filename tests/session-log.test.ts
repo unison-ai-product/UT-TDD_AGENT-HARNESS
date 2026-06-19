@@ -7,6 +7,7 @@ import {
   onPostToolUse,
   onSessionStart,
   onStop,
+  type PlanDigest,
   recordEvent,
   resolveActivePlan,
   type SessionEvent,
@@ -142,6 +143,75 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
       },
     ];
     expect(compressPlanDigest(errs, "P").failures.length).toBe(1);
+  });
+
+  it("U-SLOG-008: event 単位 high-watermark — 再 summarize された session の増分を計上 (PLAN-L7-80)", () => {
+    const firstStop: SessionEvent[] = [
+      {
+        ts: "2026-06-19T00:00:01Z",
+        session_id: "s1",
+        plan_id: "P",
+        event_type: "tool_use",
+        target: "src/a.ts",
+      },
+      {
+        ts: "2026-06-19T00:00:02Z",
+        session_id: "s1",
+        plan_id: "P",
+        event_type: "tool_use",
+        target: "src/b.ts",
+      },
+    ];
+    const d1 = compressPlanDigest(firstStop, "P");
+    expect(d1.event_counts.tool_use).toBe(2);
+    expect(d1.session_watermarks).toEqual({ s1: 2 });
+
+    // 同一 session が 2 件 append された状態で再び Stop (ログが伸びた)。
+    const secondStop: SessionEvent[] = [
+      ...firstStop,
+      {
+        ts: "2026-06-19T00:00:03Z",
+        session_id: "s1",
+        plan_id: "P",
+        event_type: "tool_use",
+        target: "src/c.ts",
+      },
+      {
+        ts: "2026-06-19T00:00:04Z",
+        session_id: "s1",
+        plan_id: "P",
+        event_type: "commit",
+        target: "deadbeef",
+      },
+    ];
+    const d2 = compressPlanDigest(secondStop, "P", d1);
+    // 増分 (ts=03,04) を計上。旧 session-fold バグなら 2 のまま (過少計上)。
+    expect(d2.event_counts.tool_use).toBe(3);
+    expect(d2.event_counts.commit).toBe(1);
+    expect(d2.session_watermarks).toEqual({ s1: 4 });
+    expect(d2.files_touched).toEqual(["src/a.ts", "src/b.ts", "src/c.ts"]);
+    expect(d2.commits).toEqual(["deadbeef"]);
+
+    // 増分なしの 3 回目 = idempotent (二重計上しない)。
+    const d3 = compressPlanDigest(secondStop, "P", d2);
+    expect(d3.event_counts.tool_use).toBe(3);
+    expect(d3.event_counts.commit).toBe(1);
+
+    // migration: pre-L7-80 digest (session_watermarks 無し / session 単位 fold) は
+    // 既計上分 (ts <= updated_at) を再計上せず、新規分のみ計上する。
+    const legacy: PlanDigest = {
+      plan_id: "P",
+      sessions: ["s1"],
+      event_counts: { tool_use: 2 },
+      files_touched: ["src/a.ts", "src/b.ts"],
+      commits: [],
+      failures: [],
+      updated_at: "2026-06-19T00:00:02Z",
+    };
+    const migrated = compressPlanDigest(secondStop, "P", legacy);
+    expect(migrated.event_counts.tool_use).toBe(3); // 2 legacy + 1 new (ts=03)、4 でない
+    expect(migrated.event_counts.commit).toBe(1); // new (ts=04)
+    expect(migrated.session_watermarks).toEqual({ s1: 4 });
   });
 
   it("U-SLOG-004: onStop は plan 別 digest 生成 / plan_id=null のみは書かない / 常に 0", () => {
