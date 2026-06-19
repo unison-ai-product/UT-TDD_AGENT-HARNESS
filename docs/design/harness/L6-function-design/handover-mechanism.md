@@ -173,6 +173,14 @@ if (isCommit) {
 
 既存 `docs/handover/session-handover-*.md` の節構成 (現在地 / PLAN サマリ / 成果物 / Next Action / carry / 壊さない) と互換。
 
+**同日累積の slim 化 (A-138 ITEM-4、cross_agent TL 裏取り済)**: `runHandover` は同日 doc が既存なら
+`---` 区切りで追記する (per-session の記録を残すため上書きしない)。だが unscoped 生成では §1 (全 PLAN registry)
+と §2 (全 file 一覧) が毎エントリ反復し肥大する (実例: 2026-06-19 doc は 3 エントリ 823 行)。よって
+`renderHandoverScaffold(doc, { slimSummary })` を持ち、**同日 2 件目以降 (existing 非 null)** は §1/§2 を
+「初出エントリ参照」の slim stub へ縮約する (§3-§6 は per-session 固有のため全文)。**`# Session Handover`
+header は 1 エントリ 1 個を維持する**ので `countHandoverEntries`/`doc_entry_count` の手書き bypass 検知契約
+(§2.7 gap①) は不変。oracle U-HOVER-013 が「slim で plan list 省略 + header 数不変 + §3-§6 維持」を fail-close 検査。
+
 ## §2.7 品質増分 (IMP-078、PLAN-L6-16 add-design) — 5 gap の機能設計
 
 > 本機構を実 session で運用したところ 5 つの品質 gap (enforcement gap 含む) を検出 (PO 指摘「ハンドオーバーってこういう時に入らないの?」)。柱 2 (doc×機械厳格化) / 柱 3 (自動化で state 管理) に照らし、いずれも機械担保を増分する。
@@ -189,7 +197,7 @@ if (isCommit) {
 
 ## §3 ③ 単体テスト設計とのペア (G6 pair freeze 対象)
 
-generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + §1.5 **U-SLOG-006** (active-plan stale / commit hash)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) を被覆 (孤児 0)。trace は G7 で双方向凍結。
+generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + §1.5 **U-SLOG-006** (active-plan stale / commit hash)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) + §2.6 の slimSummary を被覆 (孤児 0)。trace は G7 で双方向凍結。
 
 ## §4 carry / 次工程
 

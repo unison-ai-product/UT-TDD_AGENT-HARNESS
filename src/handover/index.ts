@@ -328,24 +328,47 @@ export function scaffoldFromDigests(
 
 const TODO = (s: string): string => `<!-- TODO(human): ${s} -->`;
 
+/** render オプション (A-138 ITEM-4: 同日累積の slim 化、cross_agent TL 裏取り済)。 */
+export interface HandoverRenderOpts {
+  /**
+   * 同日 2 件目以降のエントリで §1 PLAN サマリ / §2 成果物を「初出エントリ参照」の slim stub へ縮約する。
+   * §1 は全 PLAN registry の反復が肥大の主因 (unscoped 生成時)、§2 も full file 一覧で重複するため。
+   * `# Session Handover` header は 1 エントリ 1 個を維持するので `countHandoverEntries`/`doc_entry_count`
+   * の bypass 検知契約は不変 (A-138 ITEM-4 で TL/Codex が header 数不変を裏取り)。§3-§6 は per-session 固有
+   * のため slim 化しない。
+   */
+  slimSummary?: boolean;
+}
+
 /**
  * U-HOVER-004: 純関数。§6.8.5 の 6 セクション markdown を render。③-⑥ は TODO placeholder。
  * 自由テキスト (summary / deliverables) に sanitize を再適用 (defense-in-depth、tracked md への流出ゼロ)。
+ * slimSummary=true のとき §1/§2 を参照 stub に縮約する (同日累積の肥大抑制、A-138 ITEM-4)。
  */
-export function renderHandoverScaffold(doc: HandoverDoc): string {
+export function renderHandoverScaffold(doc: HandoverDoc, opts: HandoverRenderOpts = {}): string {
   const lines: string[] = [];
   lines.push(`# Session Handover — ${doc.date}`, "");
   lines.push("## §1 PLAN サマリ", "");
-  if (doc.plans.length === 0) lines.push("- (digest なし)");
-  for (const p of doc.plans) {
-    lines.push(`- \`${sanitize(p.plan_id)}\` (${sanitize(p.kind)}): ${sanitize(p.summary)}`);
+  if (opts.slimSummary) {
+    lines.push(
+      "- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)",
+    );
+  } else {
+    if (doc.plans.length === 0) lines.push("- (digest なし)");
+    for (const p of doc.plans) {
+      lines.push(`- \`${sanitize(p.plan_id)}\` (${sanitize(p.kind)}): ${sanitize(p.summary)}`);
+    }
   }
   lines.push("", "## §2 成果物 (commit / files)", "");
-  if (doc.deliverables.length === 0) lines.push("- (なし)");
-  for (const d of doc.deliverables) {
-    lines.push(`- \`${sanitize(d.plan_id)}\``);
-    for (const c of d.commits) lines.push(`  - commit: ${sanitize(c)}`);
-    for (const f of d.files) lines.push(`  - file: ${sanitize(f)}`);
+  if (opts.slimSummary) {
+    lines.push("- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)");
+  } else {
+    if (doc.deliverables.length === 0) lines.push("- (なし)");
+    for (const d of doc.deliverables) {
+      lines.push(`- \`${sanitize(d.plan_id)}\``);
+      for (const c of d.commits) lines.push(`  - commit: ${sanitize(c)}`);
+      for (const f of d.files) lines.push(`  - file: ${sanitize(f)}`);
+    }
   }
   lines.push("", "## §3 Next Action", "", TODO("順序付き次手"), "");
   lines.push("## §4 carry (未了・先送り)", "", TODO("carry"), "");
@@ -564,7 +587,6 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
   });
   const planMeta = scope.digests.map((d) => readPlanMeta(d.plan_id, deps));
   const doc = scaffoldFromDigests(scope.digests, planMeta, args.date);
-  const content = renderHandoverScaffold(doc);
 
   const docRel = join("docs", "handover", `session-handover-${args.date}.md`);
   const docAbs = join(deps.repoRoot, docRel);
@@ -574,7 +596,9 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
     digests: scope.digests,
   };
   // 追記後の最終 md (dryRun でも would-be 内容で entry 数を算出 = bypass 照合基準)。docAbs read は非破壊。
+  // 同日 2 件目以降 (existing 非 null) は §1/§2 を slim 化して累積肥大を抑える (A-138 ITEM-4、header 数不変)。
   const existing = deps.readText(docAbs);
+  const content = renderHandoverScaffold(doc, { slimSummary: existing != null });
   const next = existing ? `${existing.replace(/\s*$/, "")}\n\n---\n\n${content}\n` : `${content}\n`;
   // IMP-078 gap①: generated_by 署名 + entry 数を刻む (手書き bypass を checkHandoverBypass が検知できる)。
   const pointer: HandoverPointer = {

@@ -190,6 +190,27 @@ describe("U-HOVER-004 renderHandoverScaffold", () => {
     expect(md).not.toContain("secret123");
     expect(md).toContain("token=***");
   });
+
+  // A-138 ITEM-4: slimSummary は §1/§2 を参照 stub に縮約 (同日累積の肥大抑制)。
+  it("U-HOVER-013: slimSummary=true で §1/§2 は参照 stub・plan list 省略・§3-§6 全文・header 1 個", () => {
+    const doc = scaffoldFromDigests(
+      [digest()],
+      [{ plan_id: "PLAN-L7-04-handover-mechanism", kind: "add-impl", title: "FULL TITLE TOKEN" }],
+      "2026-06-04",
+    );
+    const full = renderHandoverScaffold(doc);
+    const slim = renderHandoverScaffold(doc, { slimSummary: true });
+    // full は plan サマリ本体を含むが slim は参照 stub に縮約 (title が出ない)。
+    expect(full).toContain("FULL TITLE TOKEN");
+    expect(slim).not.toContain("FULL TITLE TOKEN");
+    expect(slim).toContain("同日 first entry 参照");
+    // §1/§2 の見出しと §3-§6 は slim でも維持。
+    for (const s of ["§1 PLAN サマリ", "§2 成果物", "§3 Next Action", "§6 壊さない"]) {
+      expect(slim).toContain(s);
+    }
+    // bypass 検知契約: `# Session Handover` header は slim でも 1 個 (countHandoverEntries 不変)。
+    expect(countHandoverEntries(slim)).toBe(1);
+  });
 });
 
 describe("U-HOVER-005 handoverStale", () => {
@@ -437,6 +458,24 @@ describe("U-HOVER-007 runHandover", () => {
     const pointer = JSON.parse(deps.files.get(pointerPath) ?? "{}");
     expect(pointer.status).toBe("completed");
     expect(pointer.active_plan).toBe("PLAN-L7-04-handover-mechanism");
+  });
+
+  // A-138 ITEM-4: 同日 2 件目 (existing 非 null) は slim 化、doc_entry_count は header 数と整合。
+  it("U-HOVER-013: 同日 2 件目エントリは §1/§2 slim 化、doc_entry_count=2 (header 数一致)", () => {
+    const deps = seeded();
+    const docRel = join("docs", "handover", "session-handover-2026-06-04.md");
+    // 1 件目を runHandover 自身で生成 (full)。
+    const first = runHandover({ date: "2026-06-04" }, deps);
+    expect(first.pointer.doc_entry_count).toBe(1);
+    // 2 件目を追記 (slim)。
+    const second = runHandover({ date: "2026-06-04" }, deps);
+    const md = deps.files.get(join("/repo", docRel)) ?? "";
+    expect(countHandoverEntries(md)).toBe(2); // header 2 個
+    expect(second.pointer.doc_entry_count).toBe(2); // pointer も 2 (bypass 照合不変)
+    expect(md).toContain("同日 first entry 参照"); // 2 件目は slim stub
+    // 2 件目の content は plan サマリ本体 (kind 行) を持たない = 縮約済。
+    expect(second.content).toContain("同日 first entry 参照");
+    expect(second.content).toContain("§3 Next Action");
   });
 
   // IMP-078 gap①: runHandover は generated_by 署名 + doc_entry_count を刻む。
