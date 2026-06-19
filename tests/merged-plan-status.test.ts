@@ -111,4 +111,90 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
     const result = checkMergedPlanStatus(join(tmpdir(), "ut-tdd-merged-plan-nope-zzz"));
     expect(result.ok).toBe(false);
   });
+
+  // Regression for the L7-71 detection hole (2026-06-19): an impl PLAN that ships a
+  // non-src deliverable (.claude/commands/*.md) and is left draft must be flagged.
+  // The pre-fix gate only counted src/*.ts, so this class of drift slipped through.
+  function writePlanWithDeliverable(
+    root: string,
+    name: string,
+    status: string,
+    deliverablePath: string,
+  ): void {
+    writeFileSync(
+      join(root, "docs", "plans", name),
+      [
+        "---",
+        `plan_id: ${name.replace(/\.md$/, "")}`,
+        `status: ${status}`,
+        "kind: impl",
+        "generates:",
+        `  - artifact_path: docs/plans/${name}`,
+        "    artifact_type: markdown_doc",
+        `  - artifact_path: ${deliverablePath}`,
+        "    artifact_type: markdown_doc",
+        "---",
+        "",
+        "body",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+  }
+
+  it("flags a draft impl PLAN that ships a merged .claude/ deliverable (non-src), not just src/*.ts", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-merged-plan-claude-"));
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      mkdirSync(join(root, ".claude", "commands"), { recursive: true });
+      writeFileSync(join(root, ".claude", "commands", "ship.md"), "# ship\n", "utf8");
+      // draft impl PLAN whose ONLY deliverable is a committed .claude/ asset -> must flag
+      writePlanWithDeliverable(root, "PLAN-TEST-71-cmd.md", "draft", ".claude/commands/ship.md");
+      // draft impl PLAN whose .claude/ deliverable does NOT exist yet -> no violation (in-progress)
+      writePlanWithDeliverable(root, "PLAN-TEST-72-wip.md", "draft", ".claude/commands/none.md");
+
+      const result = checkMergedPlanStatus(root);
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("PLAN-TEST-71-cmd");
+      expect(result.messages.join("\n")).not.toContain("PLAN-TEST-72-wip");
+
+      const input = loadMergedPlanStatusInput(root);
+      const flagged = input.plans.find((p) => p.planId === "PLAN-TEST-71-cmd");
+      expect(flagged?.mergedArtifacts).toContain(".claude/commands/ship.md");
+      // the PLAN's own docs/ artifact must NOT count as a merged deliverable
+      expect(flagged?.mergedArtifacts).not.toContain("docs/plans/PLAN-TEST-71-cmd.md");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not flag a draft design PLAN even if it ships a docs/ artifact (kind + docs/ excluded)", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-merged-plan-design-"));
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      mkdirSync(join(root, "docs", "design"), { recursive: true });
+      writeFileSync(join(root, "docs", "design", "x.md"), "# design\n", "utf8");
+      writeFileSync(
+        join(root, "docs", "plans", "PLAN-TEST-73-design.md"),
+        [
+          "---",
+          "plan_id: PLAN-TEST-73-design",
+          "status: draft",
+          "kind: add-design",
+          "generates:",
+          "  - artifact_path: docs/design/x.md",
+          "    artifact_type: markdown_doc",
+          "---",
+          "",
+          "body",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const result = checkMergedPlanStatus(root);
+      expect(result.ok).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
