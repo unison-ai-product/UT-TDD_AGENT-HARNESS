@@ -1,6 +1,33 @@
 import { recommendModelEffort } from "../workflow/contracts";
 import type { TeamProvider } from "./run";
 
+/**
+ * 正本モデル ID カタログ (SSoT)。tier-router の `TIER_TABLE` と本ファイルの `modelForProvider`
+ * は同じ ID を二重に literal で持っていた (PLAN-L7-58 carry: typo/drift の温床)。両者がこの 1 箇所を
+ * 参照することで ID 定義を一元化する。team→task は無く tier-router(task)→model-policy(team) の
+ * 既存一方向 edge なので、ここに置いても循環しない。
+ *
+ * 価格表 (`src/state-db/token-tracker.ts`) は外部 pricing 由来の別正本 (pro/mini/nano を含む superset)
+ * なので統合しない — router の roster とは関心が異なる。
+ */
+export const MODEL_IDS = {
+  claude: {
+    opus: "claude-opus-4-8",
+    sonnet: "claude-sonnet-4-6",
+    haiku: "claude-haiku-4-5",
+  },
+  codex: {
+    /** T0 フロンティア (相談/検証の最上位帯)。 */
+    frontier: "gpt-5.5",
+    /** T1 ワーカー専門。 */
+    worker: "gpt-5.4",
+    /** T2 ワーカー軽量 (原則安く)。 */
+    spark: "gpt-5.3-codex-spark",
+    /** codex-family エンジン指定時の専用モデル (model-policy 専用、roster 外)。 */
+    codex: "gpt-5.3-codex",
+  },
+} as const;
+
 export const TASK_DIFFICULTIES = ["trivial", "simple", "standard", "complex", "critical"] as const;
 export type TaskDifficulty = (typeof TASK_DIFFICULTIES)[number];
 
@@ -98,20 +125,21 @@ function modelForProvider(input: { provider: TeamProvider; engine: string; model
 } {
   if (input.provider === "local") return { model: "local", source: "policy" };
   if (input.provider === "codex") {
-    // frontier = 最上位帯。tier-router TIER_TABLE.T0.codex (= gpt-5.5) を単一正本に整合させる。
-    // 旧 gpt-5.4 は T1 (ワーカー専門) であり、claude frontier=opus(T0) との非対称を生んでいた。
-    if (input.modelFamily === "frontier") return { model: "gpt-5.5", source: "policy" };
-    if (input.modelFamily === "codex") return { model: "gpt-5.3-codex", source: "policy" };
-    return { model: "gpt-5.3-codex-spark", source: "policy" };
+    // frontier = 最上位帯。tier-router TIER_TABLE.T0.codex (= MODEL_IDS.codex.frontier) と同一正本。
+    // 旧 gpt-5.4 (= worker) は T1 (ワーカー専門) であり、claude frontier=opus(T0) との非対称を生んでいた。
+    if (input.modelFamily === "frontier")
+      return { model: MODEL_IDS.codex.frontier, source: "policy" };
+    if (input.modelFamily === "codex") return { model: MODEL_IDS.codex.codex, source: "policy" };
+    return { model: MODEL_IDS.codex.spark, source: "policy" };
   }
 
   const engine = input.engine.toLowerCase();
-  if (engine.includes("opus")) return { model: "claude-opus-4-8", source: "engine" };
-  if (engine.includes("haiku")) return { model: "claude-haiku-4-5", source: "engine" };
-  if (engine.includes("sonnet")) return { model: "claude-sonnet-4-6", source: "engine" };
-  if (input.modelFamily === "frontier") return { model: "claude-opus-4-8", source: "policy" };
-  if (input.modelFamily === "codex") return { model: "claude-sonnet-4-6", source: "policy" };
-  return { model: "claude-haiku-4-5", source: "policy" };
+  if (engine.includes("opus")) return { model: MODEL_IDS.claude.opus, source: "engine" };
+  if (engine.includes("haiku")) return { model: MODEL_IDS.claude.haiku, source: "engine" };
+  if (engine.includes("sonnet")) return { model: MODEL_IDS.claude.sonnet, source: "engine" };
+  if (input.modelFamily === "frontier") return { model: MODEL_IDS.claude.opus, source: "policy" };
+  if (input.modelFamily === "codex") return { model: MODEL_IDS.claude.sonnet, source: "policy" };
+  return { model: MODEL_IDS.claude.haiku, source: "policy" };
 }
 
 export function selectTeamModel(input: {

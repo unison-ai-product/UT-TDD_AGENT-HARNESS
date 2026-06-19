@@ -569,10 +569,16 @@ import edge を一方向 (acyclic) に保つ (cycle 回避は dependency-drift g
 
 3 archetype (役割の根本種別): **相談 (consult)** = tl/uiux (上位帯エスカレーション・プランナー、read-only)、
 **ワーカー (worker)** = se/docs (実装・文書、下位帯)、**検証 (verify)** = qa (テスト通過後カバレッジ相談、上位帯)。
-ティア表 (単一正本 `TIER_TABLE`): T0 = `{claude: claude-opus-4-8, codex: gpt-5.5}` (フロンティア/明示許可)、
+ティア表 `TIER_TABLE`: T0 = `{claude: claude-opus-4-8, codex: gpt-5.5}` (フロンティア/明示許可)、
 T1 = `{claude: claude-sonnet-4-6, codex: gpt-5.4}` (ワーカー専門)、T2 = `{claude: claude-haiku-4-5,
-codex: gpt-5.3-codex-spark}` (ワーカー軽量)。`TIER_TABLE.T0` が **フロンティア model id の単一正本**であり、
-`src/team/model-policy.ts` の `modelForProvider` "frontier" family もこの id (opus-4-8 / gpt-5.5) に整合する。
+codex: gpt-5.3-codex-spark}` (ワーカー軽量)。
+
+**モデル id 単一正本 (`MODEL_IDS`、PLAN-L7-58 carry 解消)**: model id 文字列の正本は `src/team/model-policy.ts`
+の `MODEL_IDS` カタログ 1 箇所であり、`TIER_TABLE` (tier-router) と `modelForProvider` (model-policy) は
+両方ともこの catalog を参照して合成する。従来は両者が同じ id literal を二重に持ち typo/drift の温床だった。
+`MODEL_IDS.codex.frontier` = `gpt-5.5` (= `TIER_TABLE.T0.codex` = `modelForProvider` "frontier" family) のように
+1 値 1 定義へ収束させた。oracle U-MODELID-001..004 が「合成一致」と「生 literal 不在」を fail-close で検査する
+(価格表 `src/state-db/token-tracker.ts` は外部 pricing 由来の superset で別正本、統合対象外)。
 
 | 関数 (実 export) | signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|

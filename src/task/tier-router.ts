@@ -12,7 +12,7 @@
  */
 import { type AdapterPlan, buildAdapterPlan } from "../runtime/adapter";
 import type { ExecutionMode, RuntimeDetection } from "../runtime/detect";
-import type { TaskDifficulty } from "../team/model-policy";
+import { MODEL_IDS, type TaskDifficulty } from "../team/model-policy";
 import { type ClassifyTaskInput, classifyTask } from "./classify";
 
 export type Provider = "claude" | "codex";
@@ -34,11 +34,12 @@ export const ROLE_ARCHETYPE: Record<RouterRole, Archetype> = {
 /**
  * ティア表: tier × provider → model。Claude と Codex/GPT を対称に定義する。
  * T0 = フロンティア (明示許可)、T1 = ワーカー専門、T2 = ワーカー軽量 (原則安く)。
+ * モデル ID は `MODEL_IDS` (model-policy の SSoT) から合成する — literal 二重定義を排し drift を防ぐ。
  */
 export const TIER_TABLE: Record<Tier, Record<Provider, string>> = {
-  T0: { claude: "claude-opus-4-8", codex: "gpt-5.5" },
-  T1: { claude: "claude-sonnet-4-6", codex: "gpt-5.4" },
-  T2: { claude: "claude-haiku-4-5", codex: "gpt-5.3-codex-spark" },
+  T0: { claude: MODEL_IDS.claude.opus, codex: MODEL_IDS.codex.frontier },
+  T1: { claude: MODEL_IDS.claude.sonnet, codex: MODEL_IDS.codex.worker },
+  T2: { claude: MODEL_IDS.claude.haiku, codex: MODEL_IDS.codex.spark },
 };
 
 /** 上位帯モデル集合 (明示許可ゲート対象)。 */
