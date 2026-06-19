@@ -16,6 +16,7 @@ function baseInputs(overrides: Partial<DddTddInputs> = {}): DddTddInputs {
 - id: red-first-evidence
 - id: test-oracle-strength
 - id: integration-gwt
+- id: unit-oracle-substance
 - id: DDD-INV-001; oracle: U-DDDTDD-002
 `,
       ruleIds: [
@@ -24,6 +25,7 @@ function baseInputs(overrides: Partial<DddTddInputs> = {}): DddTddInputs {
         "red-first-evidence",
         "test-oracle-strength",
         "integration-gwt",
+        "unit-oracle-substance",
       ],
     },
     workflowDocs: [
@@ -162,6 +164,7 @@ describe("U-DDDTDD DDD/TDD strictness lint", () => {
 - id: red-first-evidence
 - id: test-oracle-strength
 - id: integration-gwt
+- id: unit-oracle-substance
 - tests/weak-oracle.test.ts:2 test-oracle-strength
 `,
           ruleIds: [
@@ -170,6 +173,7 @@ describe("U-DDDTDD DDD/TDD strictness lint", () => {
             "red-first-evidence",
             "test-oracle-strength",
             "integration-gwt",
+            "unit-oracle-substance",
           ],
         },
         docs: [
@@ -198,6 +202,22 @@ describe("U-DDDTDD DDD/TDD strictness lint", () => {
   it("formats doctor messages with path and rule samples", () => {
     const result = analyzeDddTddRules(baseInputs({ l7Text: "" }));
     expect(dddTddRulesMessages(result)[0]).toContain("invariant-test-trace");
+  });
+
+  // U-DDDTDD-009 (IMP-083 残差): L7 unit test-design の U-* 行が骨格 (空/trivial expected) なら違反。
+  it("detects skeletal unit test-design U-* rows (unit-oracle-substance, IMP-083)", () => {
+    const skeleton = analyzeDddTddRules(
+      baseInputs({ l7Text: "| U-ID | function | expected |\n| U-FOO-001 | f | - |" }),
+    );
+    expect(skeleton.ok).toBe(false);
+    expect(skeleton.violations.map((v) => v.rule)).toContain("unit-oracle-substance");
+    // ヘッダ行 (U-ID) と substantive 行は違反にしない (false-positive 回避)。
+    const real = analyzeDddTddRules(
+      baseInputs({
+        l7Text: "| U-ID | function | expected |\n| U-FOO-002 | f | 同入力→同出力、orphans==[] |",
+      }),
+    );
+    expect(real.violations.map((v) => v.rule)).not.toContain("unit-oracle-substance");
   });
 
   it("real repo guard has no DDD/TDD strictness violations", () => {

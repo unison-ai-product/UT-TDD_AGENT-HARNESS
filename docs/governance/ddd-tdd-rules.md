@@ -32,6 +32,10 @@ ddd_tdd_rules:
     enforcement: hard
     owner: src/lint/ddd-tdd-rules.ts
     intent: L8 IT-* rows must carry Given/When/Then granularity.
+  - id: unit-oracle-substance
+    enforcement: hard
+    owner: src/lint/ddd-tdd-rules.ts
+    intent: L7 unit test-design U-*-NNN rows must describe a real expected behavior (non-skeleton), not only a link/citation (IMP-083 residual).
 ```
 
 ## Domain Boundary Map

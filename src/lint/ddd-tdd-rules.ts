@@ -67,6 +67,7 @@ const REQUIRED_RULE_IDS = [
   "red-first-evidence",
   "test-oracle-strength",
   "integration-gwt",
+  "unit-oracle-substance",
 ];
 
 const REQUIRED_WORKFLOW_DOCS: WorkflowRequirement[] = [
@@ -452,6 +453,44 @@ function integrationGwtViolations(l8Text: string): DddTddViolation[] {
   return violations;
 }
 
+/** L7 unit test-design table の expected-behavior 列で skeleton (骨格) とみなすマーカー / 最小実質長。 */
+const UNIT_ORACLE_MIN_SUBSTANCE = 6;
+const UNIT_ORACLE_SKELETON = /^(-|—|todo|tbd|placeholder|骨格|n\/a|wip)$/i;
+
+/**
+ * IMP-083 残差 (test-design substance): L6/L7 unit test-design の U-* oracle 行が**実ケースの
+ * expected behavior** を持つ (空骨格でない) ことを検査する。pair-freeze は link 存在、oracle-test-trace
+ * は citation、test-oracle-strength は test コードの assert を見るが、**unit test-design の U-* 行の
+ * 期待結果セル中身**は従来どの gate も見なかった (freeze 時の骨格凍結を素通り)。FR-L1-50 (oracle strength)
+ * 配下の追加 rule。末尾数字の oracle id (`U-…-NNN`、多セグメント `U-FR-L1-21-01` 等も含む) のみ対象 =
+ * `U-ID` ヘッダ行を除外 (false-positive 回避、QA review Critical 反映)。expected-behavior は ID+target 列を
+ * 除く残り全セルを連結して評価する (inline `|` で expected が分割されても拾う、QA review Minor 反映)。
+ */
+function unitOracleSubstanceViolations(l7Text: string): DddTddViolation[] {
+  const path = normalizePath(join("docs", "test-design", "harness", "L7-unit-test-design.md"));
+  const violations: DddTddViolation[] = [];
+  for (const [index, line] of l7Text.split(/\r?\n/).entries()) {
+    // 多セグメント oracle id を許容しつつ末尾 `-NNN` 必須 (`U-ID` ヘッダは末尾数字なしで除外)。
+    if (!/^\|\s*U-[A-Z0-9-]+-[0-9]+\s*\|/.test(line)) continue;
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    const id = cells[0] ?? "U row";
+    // expected behavior = ID(0) + target(1) を除く残りセル連結 (inline pipe 分割を再結合)。
+    const substance = cells.slice(2).join(" ").trim();
+    if (substance.length < UNIT_ORACLE_MIN_SUBSTANCE || UNIT_ORACLE_SKELETON.test(substance)) {
+      violations.push({
+        path,
+        line: index + 1,
+        rule: "unit-oracle-substance",
+        message: `${id} unit test-design row must describe a real expected behavior (non-skeleton).`,
+      });
+    }
+  }
+  return violations;
+}
+
 export function analyzeDddTddRules(inputs: DddTddInputs): DddTddResult {
   const violations: DddTddViolation[] = [];
   violations.push(...policyViolations(inputs.policy));
@@ -461,6 +500,7 @@ export function analyzeDddTddRules(inputs: DddTddInputs): DddTddResult {
   violations.push(...redFirstViolations(inputs.plans));
   violations.push(...testOracleViolations(inputs.docs));
   violations.push(...integrationGwtViolations(inputs.l8Text));
+  violations.push(...unitOracleSubstanceViolations(inputs.l7Text));
   const baseline = baselineDebtKeys(inputs.policy);
   const activeViolations = violations.filter((violation) => !baseline.has(violationKey(violation)));
   return {

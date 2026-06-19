@@ -1824,7 +1824,7 @@ DDD/TDD strictness は `docs/governance/ddd-tdd-rules.md` を SSoT とし、doma
 - [x] Integration GWT: L8 IT-* row は Given/When/Then を持つ。
 - [x] Workflow placement: Forward L6 / Add-feature / mode index は `DDD-TDD-WORKFLOW` anchor と SSoT 参照を持つ。
 - [x] 定量チェックと定性レビューの使い分け: `vitest` / lint / doctor が green になってから review evidence を付ける。重要 gate / freeze / TDD evidence は `tests_green_at` と reviewer evidence を抱き合わせ、片方だけで confirmed にしない。
-- [x] 機械検出は `src/lint/ddd-tdd-rules.ts` + doctor `checkDddTddRules` で hard failure とする。対応 oracle は L7 `U-DDDTDD-001..008` と FR-L1-50。
+- [x] 機械検出は `src/lint/ddd-tdd-rules.ts` + doctor `checkDddTddRules` で hard failure とする。対応 oracle は L7 `U-DDDTDD-001..009` と FR-L1-50。
 
 ---
 

@@ -382,6 +382,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-CODE-007 | workflow placement | `loadCodingWorkflowDocs` + `analyzeCodingRules` detects missing `CODING-RULE-WORKFLOW` / SSoT references in Forward, Add-feature, and mode index docs |
 | U-CODE-008 | structured error handling | source catch block with undocumented empty body or rethrow-only body -> `structured-error-handling` violation |
 | U-CODE-009 | module boundary | disallowed reverse dependency such as `src/lint/*` importing `../runtime/*` -> `module-boundary` violation |
+| U-CODE-010 | machine surface language | machine-facing CLI/doctor/lint/gate message line with Japanese-only decision words and no ASCII token (`OK`, `violation`, `warning`, `skipped`, `note`, `error`, `ready`, `not ready`) -> `machine-surface-language` violation; Japanese explanatory prose after the ASCII token remains allowed |
 
 ### U-DDDTDD Addendum (DDD/TDD strictness)
 
@@ -397,6 +398,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DDDTDD-006 | workflow placement | Forward, Add-feature, or mode index doc missing `DDD-TDD-WORKFLOW` / SSoT reference -> violation |
 | U-DDDTDD-007 | domain boundary | disallowed reverse dependency such as `src/lint/*` importing runtime/doctor/CLI feature modules -> violation |
 | U-DDDTDD-008 | real repo guard | `loadDddTddInputs(process.cwd())` + `analyzeDddTddRules` returns violations `[]`; `doctor` surfaces `ddd-tdd-rules` and links `ok` |
+| U-DDDTDD-009 | unit-oracle-substance (IMP-083 残差) | L7 unit test-design の `U-XXX-NNN` 行 (末尾数字 = `U-ID` ヘッダ除外) の expected-behavior セルが空 / trivial (< 6 字) / skeleton marker (`-`/TODO/骨格 等) -> violation。substantive 行は非違反 (false-positive 回避) |
 
 ### §1.16.2 U-READABILITY (freeze doc readability lint、A-110 / IMP-089)
 
@@ -508,7 +510,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - **module-drift.md §2-§3 関数 (parseListedModules/scanActualModules/analyzeModuleDrift/loadModuleDocs/moduleDriftMessages) → U-MDRIFT-001〜005** (add-feature 差分、PLAN-L7-16/IMP-075。moduleDriftMessages は U-MDRIFT-003/004 経路 + 専用 assert で被覆、loadModuleDocs は U-MDRIFT-005 実 repo ガードに内包。孤児 0)
 - **module-drift.md asset-drift alias (loadAssetDriftInput/analyzeAssetDrift/assetDriftMessages/checkAssetDrift) → U-ASSETDRIFT-001〜006** (内部資産 + prompt template cutover 差分、FR-L1-49。legacy source path residue / legacy command residue / docs-skills vacancy / guard allowlist missing を doctor hard guard。孤児 0)
 - **module-drift.md change-impact addendum (analyzeChangeImpact/parseGitPorcelain/loadChangedFiles/changeImpactMessages) → U-CHGIMPACT-001〜004** (コード変更に対する設計・テスト更新漏れ検出。doctor hard guard。孤児 0)
-- **module-drift.md coding-rules addendum (analyzeCodingRules/loadCodingRuleDocs/loadCodingWorkflowDocs/codingRulesMessages/checkCodingRules) → U-CODE-001〜009** (requirements-level coding rule SSoT + workflow placement + error/module-boundary の機械検出。doctor hard guard。孤児 0)
+- **module-drift.md coding-rules addendum (analyzeCodingRules/loadCodingRuleDocs/loadCodingWorkflowDocs/codingRulesMessages/checkCodingRules) → U-CODE-001〜010** (requirements-level coding rule SSoT + workflow placement + error/module-boundary + machine-surface-language の機械検出。doctor hard guard。孤児 0)
 - **module-drift.md DDD/TDD strictness addendum (analyzeDddTddRules/loadDddTddInputs/dddTddRulesMessages/checkDddTddRules) → U-DDDTDD-001〜008** (DDD/TDD SSoT + workflow placement + Red-first evidence + test oracle + integration GWT の機械検出。doctor hard guard。孤児 0)
 - **team.ts §2.2 schema / 関数 (teamDefinitionSchema/mustSerialize) + team/launch-policy.ts → U-TEAM-001〜003** (add-feature 差分、IMP-050。孤児 0)
 - **backfill-pairing.md §2.3 関数 (parseRequires/parseGlossaryTerms/normalizeTerm/parsePlan/analyzeBackfill/loadBackfillDocs/backfillMessages/checkBackfill) → U-BACKFILL-001〜006** (add-feature 差分、IMP-051。normalizeTerm は parseGlossaryTerms/analyzeBackfill の内部パス経由で被覆。checkBackfill は doctor/index.ts の try-catch ラッパーで U-BACKFILL-006 実 repo ガードに内包。孤児 0)
