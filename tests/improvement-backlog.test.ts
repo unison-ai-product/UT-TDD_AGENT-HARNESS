@@ -41,6 +41,23 @@ describe("improvement backlog (作業ログ → 機能化 pipeline)", () => {
     expect(result.incompleteRows).toEqual([]);
   });
 
+  it("IMP らしき行が parse されず黙って skip される absence-blindness が 0 (unparseable = [])", () => {
+    expect(result.unparseableRows).toEqual([]);
+  });
+
+  it("`→suffix` 等で ID regex を外れた行を unparseableRows で surface する (parse 黙殺の検出)", () => {
+    const md = [
+      "## §1 backlog",
+      "| ID | 観測日 | 文脈 | 不備・改善 | 自動化候補 | status | 紐付け |",
+      "|---|---|---|---|---|---|---|",
+      "| **IMP-200** | 2026-06-19 | ctx | issue | lint | observed | link |",
+      "| **IMP-200→enforced** | 2026-06-19 | ctx | issue | lint | verified | link |",
+    ].join("\n");
+    const r = analyzeImprovementBacklog(md);
+    expect(r.total).toBe(1); // 正規 ID 行のみ parse される
+    expect(r.unparseableRows).toEqual(["IMP-200→enforced"]); // 黙殺されず surface
+  });
+
   it("pipeline 状態が集計される (verified seed + open 改善候補が両方存在)", () => {
     expect(result.byStatus.verified).toBeGreaterThanOrEqual(3); // A-56/57/58 の done seed
     expect(result.openCount).toBeGreaterThanOrEqual(1); // 機能化待ちが残っている

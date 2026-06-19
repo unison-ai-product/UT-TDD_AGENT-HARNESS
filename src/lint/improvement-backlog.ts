@@ -8,6 +8,8 @@
  *  - ID 形式 (IMP-NNN) + 一意性
  *  - status / 自動化候補 が enum 内
  *  - 必須 7 列の充足
+ *  - IMP らしき行 (`| **IMP…`) が parse されず黙って skip される absence-blindness の検出
+ *    (`→suffix` で ID regex を外すと行ごと未検証になる穴を塞ぐ、[[project_descent_absence_blindness]])
  */
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -74,11 +76,29 @@ export interface ImprovementBacklogResult {
   invalidStatus: { id: string; status: string }[];
   invalidCandidate: { id: string; candidate: string }[];
   incompleteRows: string[];
+  /**
+   * §1 で IMP エントリ行に見える (`| **IMP…**`) のに parseBacklogEntries が
+   * 抽出できなかった行のラベル。`**IMP-064→enforced**` のように ID に `→suffix`
+   * を付けると ID regex を外れて行ごと黙って skip され、status / 構造が一切検証
+   * されない absence-blindness になる ([[project_descent_absence_blindness]])。
+   * 不在を違反として surface する (進捗注記は原 entry の status 更新で表現する)。
+   */
+  unparseableRows: string[];
 }
 
 export function analyzeImprovementBacklog(md?: string): ImprovementBacklogResult {
   const src = md ?? loadBacklog();
   const entries = parseBacklogEntries(src);
+
+  // absence-blindness guard: a line that looks like an IMP entry row but is not
+  // parsed by parseBacklogEntries (same id regex) is silently dropped today.
+  const sec = src.match(/## §1 backlog[\s\S]*$/)?.[0] ?? "";
+  const unparseableRows: string[] = [];
+  for (const line of sec.split("\n")) {
+    if (!/^\|\s*\*\*IMP/.test(line)) continue; // candidate IMP entry row
+    if (/^\|\s*\*\*(IMP-[\w-]+)\*\*\s*\|/.test(line)) continue; // parseBacklogEntries extracts it
+    unparseableRows.push(line.match(/\*\*([^*]+)\*\*/)?.[1]?.trim() ?? line.trim().slice(0, 48));
+  }
 
   const byStatus: Record<BacklogStatus, number> = {
     observed: 0,
@@ -130,5 +150,6 @@ export function analyzeImprovementBacklog(md?: string): ImprovementBacklogResult
     invalidStatus,
     invalidCandidate,
     incompleteRows,
+    unparseableRows,
   };
 }
