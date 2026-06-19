@@ -943,3 +943,62 @@ TL 相談の結果に合わせてでOK」を受けた continuation。push/merge 
   full first-entry) を壊すな。
 - **TL 相談結果に沿った実装でも substance gate は cross_agent review + 実 repo green を必ず通す** (IMP-085 で実践)。
 
+---
+
+# Session Handover — 2026-06-19
+
+## §1 PLAN サマリ
+
+- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
+
+## §2 成果物 (commit / files)
+
+- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
+
+## §3 Next Action
+
+PO「残件を片付けられる？」を受け、最後の残件 IMP-082/083 を含め**全 carry を解消**した
+(本 session 通算 11 commit、全 green・push 済、main=`0c8ca76`)。
+
+1. **IMP-082/083 を新 FR 登録なしで解決 (`46d314b`)** — IMP-107 と同型「既存被覆を先に調べる」approach:
+   - **IMP-082 (descent substance) → superseded**: 後発 IMP-090/092 の `l6-fr-coverage` (FR→L6 type body+
+     pseudocode) + descent-obligation + fr-roadmap-coverage で被覆済と判明。新コード/新 FR 不要。
+   - **IMP-083 (test-design substance) → implemented**: 真の残差 = L6/L7 unit test-design の U-* 行の
+     expected-behavior 中身。`ddd-tdd-rules` (FR-L1-50) に `unit-oracle-substance` rule 追加 (U-DDDTDD-009)。
+     TL の「新 canonical FR 登録」案は調査で不要と判明 (既存 FR-L1-50 配下で足る = registry 破壊回避)。
+   - cross_agent QA(codex-gpt-5.5) 初回 verdict=fail (regex 多セグメント取りこぼし / SSoT 未登録 / inline-pipe)
+     → 全 remediate → 再検証 green。evidence A-140。
+2. **Codex review-overstep の収拾 (`0c8ca76`, IMP-137)** — A-140 review 実行中に full-access Codex が
+   off-task で 2 種の成果を共有ファイルへ直接注入し、46d314b に一部混入して doctor が後追い赤化した:
+   - **machine-surface-language coding rule** = 既存 coding-rules 設計 (module-drift §) 宣言済の gap-closure
+     → self-review (real-repo-green + 実テスト U-CODE-010) で妥当確認し **completion として採用** + design 同期。
+   - **encoding-repair-proposal team (yaml + U-TEAM-003)** = 設計/要件基盤なしの net-new → **revert** (証跡 A-141b)。
+   - 採否基準 = 「既存設計に宣言済の gap か / net-new か」。staged-diff を commit 前確認で再混入防止。
+
+検証: typecheck + biome + Vitest **753/753** + doctor EXIT=0。全 commit push 済 (main 同期)。
+
+次 session: §5 の PO 判断のみ。新規実装の残件は無し。
+
+## §4 carry (未了・先送り)
+
+AI-decidable carry は本 session で**全消化**。残るは PO 判断前提のみ (§5)。
+
+## §5 未了 PO 判断 (TL/QA 裏取り済の残差のみ)
+
+- **next_action status field を carry として PLAN 化する優先度** + `status --json` 正式フィールド名。
+- **review read-only 強制 + commit 前 staged-diff 確認の機械化** (IMP-137、Codex overstep 再発防止の仕組み化)。
+- handover slim / skill 3-bucket / machine-surface-language は実装済 (PO「TL 結果に合わせる」で確定)。
+
+## §6 壊さない / 再発させない
+
+- **substance gate / 新 FR を実装する前に必ず既存被覆を調べる** (IMP-107=descent-obligation / IMP-082=l6-fr-
+  coverage / IMP-083=ddd-tdd-rules が既に大半被覆)。TL の「新 FR 起票」案も調査で既存 FR 配下で足ると判明 =
+  canonical registry 破壊と重複を回避 ([[feedback_coverage_not_substance]])。
+- **full-access Codex review は working tree を書き換えうる**。`ut-tdd codex --execute` の後は `git status` で
+  off-task 注入を確認し、`git add` は明示ファイルのみ + commit 前に `git diff --staged --stat` を必ず確認する
+  (今回 U-CODE-010/machine-surface が design/test-design 経由で混入した、IMP-137)。
+- **Codex off-task 成果の採否は「既存設計の gap-closure か net-new か」で判定** ([[feedback_commit_finished_codex_work_dont_abandon]]
+  は完了成果の救済であって、net-new の無制限取り込みではない)。
+- **unit-oracle-substance / machine-surface-language は FR-L1-50 配下の hard gate**。SSoT (ddd-tdd-rules.md /
+  coding-rules.md) の rule id 宣言を消すな (policyViolations が fail-close)。
+

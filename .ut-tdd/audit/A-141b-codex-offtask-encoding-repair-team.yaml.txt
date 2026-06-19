@@ -1,0 +1,47 @@
+# Parallel read-only proposal team for mojibake / encoding repair.
+#
+# This team does not repair files directly. Each member receives an assigned
+# file/span bundle and returns candidate replacements with confidence and risk.
+name: encoding-repair-proposal
+strategy: parallel
+max_parallel: 3
+serialization:
+  file_conflict: false
+  downstream_dependency: false
+  shared_state: false
+members:
+  - role: docs
+    engine: pmo-haiku
+    difficulty: simple
+    model: claude-haiku-4-5
+    effort: low
+    task: >
+      Read only the assigned file/span bundle. For each suspected mojibake span,
+      evaluate the supplied A->B candidate against nearby prose context. Output
+      JSON only with findings[{file,line,original,replacement,confidence,reason,risk}]
+      and skipped[{file,line,text,reason}]. Do not edit files, do not apply
+      patches, do not perform broad replacements, and mark low confidence cases
+      as needs_human.
+  - role: qa
+    engine: claude-qa
+    difficulty: simple
+    model: claude-haiku-4-5
+    effort: low
+    task: >
+      Independently inspect the assigned file/span bundle for mojibake and
+      encoding boundary risks. Output JSON only with findings[{file,line,original,
+      replacement,confidence,reason,risk}] and skipped[{file,line,text,reason}].
+      Do not edit files, do not apply patches, and flag any case where multiple
+      replacements could fit the surrounding context as needs_human.
+  - role: se
+    engine: codex-se
+    difficulty: simple
+    model: gpt-5.3-codex-spark
+    effort: low
+    task: >
+      Review the assigned file/span bundle from an implementation-safety angle.
+      Accept only local, context-supported A->B candidates. Output JSON only with
+      findings[{file,line,original,replacement,confidence,reason,risk}] and
+      skipped[{file,line,text,reason}]. Do not edit files, do not apply patches,
+      do not rewrite unrelated text, and mark structural or semantic uncertainty
+      as needs_human.
