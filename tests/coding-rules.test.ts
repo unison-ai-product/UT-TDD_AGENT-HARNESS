@@ -65,6 +65,7 @@ export function tooMany(a: string, b: string, c: string, d: string): unknown {
       "coding-policy-missing-rule",
       "coding-policy-missing-rule",
       "coding-policy-missing-rule",
+      "coding-policy-missing-rule",
       "coding-policy-unknown-rule",
     ]);
   });
@@ -81,6 +82,7 @@ export function tooMany(a: string, b: string, c: string, d: string): unknown {
           "max-source-params",
           "structured-error-handling",
           "module-boundary",
+          "machine-surface-language",
         ],
       },
       [
@@ -132,6 +134,24 @@ export function rethrowOnly(): void {
     ]);
     expect(result.ok).toBe(false);
     expect(result.violations.map((v) => v.rule)).toContain("module-boundary");
+  });
+
+  it("U-CODE-010: detects machine-facing status messages without ASCII decision tokens", () => {
+    const result = analyzeCodingRules([
+      {
+        path: "src/lint/bad-language.ts",
+        scope: "source",
+        text: 'export function badMessages(): string[] { return ["bad-rule — 警告: 日本語だけの判定語"]; }',
+      },
+      {
+        path: "src/lint/good-language.ts",
+        scope: "source",
+        text: 'export function goodMessages(): string[] { return ["good-rule - warning: 日本語の説明を続けてもよい"]; }',
+      },
+    ]);
+
+    expect(result.violations.map((v) => v.rule)).toEqual(["machine-surface-language"]);
+    expect(result.violations[0].path).toBe("src/lint/bad-language.ts");
   });
 
   it("real repo guard has no coding-rule violations", () => {

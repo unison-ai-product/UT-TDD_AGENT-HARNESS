@@ -1,0 +1,153 @@
+diff --git a/docs/governance/coding-rules.md b/docs/governance/coding-rules.md
+index d613b7b..81d89de 100644
+--- a/docs/governance/coding-rules.md
++++ b/docs/governance/coding-rules.md
+@@ -50,8 +50,33 @@ coding_rules:
+       severity: error
+       scope: ["source"]
+       description: "Core modules must not import against the defined dependency direction; move shared logic to lower-level modules."
++    - id: machine-surface-language
++      severity: error
++      scope: ["source", "test"]
++      description: "Machine-facing CLI, doctor, lint, gate, JSON, env, status, and oracle surfaces must use stable ASCII English decision tokens."
+ ```
+ 
++## Machine Surface Language
++
++Machine-readable and machine-parsed surfaces use stable ASCII English tokens.
++Human prose may be Japanese, but the decision word that tools, agents, logs, and
++tests rely on must not depend on Japanese text or symbols.
++
++Required ASCII decision tokens include:
++
++- `OK`
++- `violation`
++- `warning`
++- `skipped`
++- `note`
++- `error`
++- `ready` / `not ready`
++
++This applies to CLI output, `doctor` messages, lint/gate messages, JSON keys,
++environment variable names, rule IDs, oracle IDs, status words, and test
++assertions over those surfaces. Japanese explanation may follow the token, but
++the token itself remains ASCII.
++
+ ## Human Notes
+ 
+ - `bun run typecheck`, `bun run lint`, `npx vitest run`, and `ut-tdd doctor` are the minimum verification set for TypeScript core changes.
+diff --git a/src/lint/coding-rules.ts b/src/lint/coding-rules.ts
+index b2196b8..54751ae 100644
+--- a/src/lint/coding-rules.ts
++++ b/src/lint/coding-rules.ts
+@@ -52,6 +52,7 @@ const REQUIRED_RULE_IDS = [
+   "max-source-params",
+   "structured-error-handling",
+   "module-boundary",
++  "machine-surface-language",
+ ];
+ const REQUIRED_WORKFLOW_DOCS: WorkflowDocRequirement[] = [
+   {
+@@ -118,6 +119,11 @@ const SUPPRESSION_TOKENS = [
+ ];
+ const SUPPRESSION_PATTERN = new RegExp(SUPPRESSION_TOKENS.join("|"));
+ const KEBAB_TS_FILE_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.test)?\.ts$/;
++const MACHINE_SURFACE_LINE_PATTERN =
++  /^\s*(?:doctor:\s*)?[a-z][a-z0-9-]*(?:\s+[a-z0-9-]+)?\s*(?:-|—)/i;
++const NON_ASCII_DECISION_WORD_PATTERN = /警告|成功|失敗|承認|却下|未完了|完了/;
++const ASCII_DECISION_TOKEN_PATTERN =
++  /\b(OK|violation|warning|skipped|note|error|ready|not ready|completed|confirmed|draft|accepted|rejected|blocked|PASS|FAIL|green|red)\b/i;
+ const DISALLOWED_SOURCE_IMPORTS: Record<string, Set<string>> = {
+   lint: new Set([
+     "cli",
+@@ -177,6 +183,28 @@ function catchHasComment(block: ts.Block, sourceFile: ts.SourceFile): boolean {
+   return text.includes("//") || text.includes("/*");
+ }
+ 
++function machineSurfaceText(node: ts.Node, sourceFile: ts.SourceFile): string | null {
++  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
++  if (!ts.isTemplateExpression(node)) return null;
++  return node.getText(sourceFile).slice(1, -1);
++}
++
++function violatesMachineSurfaceLanguage(text: string): boolean {
++  if (!MACHINE_SURFACE_LINE_PATTERN.test(text)) return false;
++  if (!NON_ASCII_DECISION_WORD_PATTERN.test(text)) return false;
++  return !ASCII_DECISION_TOKEN_PATTERN.test(text);
++}
++
++function isTestTitleLiteral(node: ts.Node): boolean {
++  if (!ts.isStringLiteral(node) && !ts.isNoSubstitutionTemplateLiteral(node)) return false;
++  const parent = node.parent;
++  if (!ts.isCallExpression(parent) || parent.arguments[0] !== node) return false;
++  return (
++    ts.isIdentifier(parent.expression) &&
++    ["describe", "it", "test"].includes(parent.expression.text)
++  );
++}
++
+ function collectTsDocs(
+   repoRoot: string,
+   relDir: string,
+@@ -342,6 +370,16 @@ export function analyzeCodingRules(
+           message: "Use unknown, a generic, or a concrete type instead of explicit any.",
+         });
+       }
++      const surfaceText = machineSurfaceText(node, sourceFile);
++      if (surfaceText && !isTestTitleLiteral(node) && violatesMachineSurfaceLanguage(surfaceText)) {
++        violations.push({
++          path: doc.path,
++          line: lineOf(sourceFile, node.getStart(sourceFile)),
++          rule: "machine-surface-language",
++          message:
++            "Machine-facing status messages must carry ASCII English decision tokens such as OK, violation, warning, skipped, or note.",
++        });
++      }
+       if (doc.scope === "source" && isFunctionLike(node) && node.parameters.length > 3) {
+         violations.push({
+           path: doc.path,
+diff --git a/tests/coding-rules.test.ts b/tests/coding-rules.test.ts
+index f026bd2..e4093b4 100644
+--- a/tests/coding-rules.test.ts
++++ b/tests/coding-rules.test.ts
+@@ -65,6 +65,7 @@ export function tooMany(a: string, b: string, c: string, d: string): unknown {
+       "coding-policy-missing-rule",
+       "coding-policy-missing-rule",
+       "coding-policy-missing-rule",
++      "coding-policy-missing-rule",
+       "coding-policy-unknown-rule",
+     ]);
+   });
+@@ -81,6 +82,7 @@ export function tooMany(a: string, b: string, c: string, d: string): unknown {
+           "max-source-params",
+           "structured-error-handling",
+           "module-boundary",
++          "machine-surface-language",
+         ],
+       },
+       [
+@@ -134,6 +136,24 @@ export function rethrowOnly(): void {
+     expect(result.violations.map((v) => v.rule)).toContain("module-boundary");
+   });
+ 
++  it("U-CODE-010: detects machine-facing status messages without ASCII decision tokens", () => {
++    const result = analyzeCodingRules([
++      {
++        path: "src/lint/bad-language.ts",
++        scope: "source",
++        text: 'export function badMessages(): string[] { return ["bad-rule — 警告: 日本語だけの判定語"]; }',
++      },
++      {
++        path: "src/lint/good-language.ts",
++        scope: "source",
++        text: 'export function goodMessages(): string[] { return ["good-rule - warning: 日本語の説明を続けてもよい"]; }',
++      },
++    ]);
++
++    expect(result.violations.map((v) => v.rule)).toEqual(["machine-surface-language"]);
++    expect(result.violations[0].path).toBe("src/lint/bad-language.ts");
++  });
++
+   it("real repo guard has no coding-rule violations", () => {
+     const result = analyzeCodingRules(
+       loadCodingRuleDocs(process.cwd()),

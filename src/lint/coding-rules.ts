@@ -52,6 +52,7 @@ const REQUIRED_RULE_IDS = [
   "max-source-params",
   "structured-error-handling",
   "module-boundary",
+  "machine-surface-language",
 ];
 const REQUIRED_WORKFLOW_DOCS: WorkflowDocRequirement[] = [
   {
@@ -118,6 +119,11 @@ const SUPPRESSION_TOKENS = [
 ];
 const SUPPRESSION_PATTERN = new RegExp(SUPPRESSION_TOKENS.join("|"));
 const KEBAB_TS_FILE_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.test)?\.ts$/;
+const MACHINE_SURFACE_LINE_PATTERN =
+  /^\s*(?:doctor:\s*)?[a-z][a-z0-9-]*(?:\s+[a-z0-9-]+)?\s*(?:-|—)/i;
+const NON_ASCII_DECISION_WORD_PATTERN = /警告|成功|失敗|承認|却下|未完了|完了/;
+const ASCII_DECISION_TOKEN_PATTERN =
+  /\b(OK|violation|warning|skipped|note|error|ready|not ready|completed|confirmed|draft|accepted|rejected|blocked|PASS|FAIL|green|red)\b/i;
 const DISALLOWED_SOURCE_IMPORTS: Record<string, Set<string>> = {
   lint: new Set([
     "cli",
@@ -175,6 +181,28 @@ function catchHasOnlyThrow(block: ts.Block): boolean {
 function catchHasComment(block: ts.Block, sourceFile: ts.SourceFile): boolean {
   const text = block.getFullText(sourceFile);
   return text.includes("//") || text.includes("/*");
+}
+
+function machineSurfaceText(node: ts.Node, sourceFile: ts.SourceFile): string | null {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (!ts.isTemplateExpression(node)) return null;
+  return node.getText(sourceFile).slice(1, -1);
+}
+
+function violatesMachineSurfaceLanguage(text: string): boolean {
+  if (!MACHINE_SURFACE_LINE_PATTERN.test(text)) return false;
+  if (!NON_ASCII_DECISION_WORD_PATTERN.test(text)) return false;
+  return !ASCII_DECISION_TOKEN_PATTERN.test(text);
+}
+
+function isTestTitleLiteral(node: ts.Node): boolean {
+  if (!ts.isStringLiteral(node) && !ts.isNoSubstitutionTemplateLiteral(node)) return false;
+  const parent = node.parent;
+  if (!ts.isCallExpression(parent) || parent.arguments[0] !== node) return false;
+  return (
+    ts.isIdentifier(parent.expression) &&
+    ["describe", "it", "test"].includes(parent.expression.text)
+  );
 }
 
 function collectTsDocs(
@@ -340,6 +368,16 @@ export function analyzeCodingRules(
           line: lineOf(sourceFile, node.getStart(sourceFile)),
           rule: "no-explicit-any",
           message: "Use unknown, a generic, or a concrete type instead of explicit any.",
+        });
+      }
+      const surfaceText = machineSurfaceText(node, sourceFile);
+      if (surfaceText && !isTestTitleLiteral(node) && violatesMachineSurfaceLanguage(surfaceText)) {
+        violations.push({
+          path: doc.path,
+          line: lineOf(sourceFile, node.getStart(sourceFile)),
+          rule: "machine-surface-language",
+          message:
+            "Machine-facing status messages must carry ASCII English decision tokens such as OK, violation, warning, skipped, or note.",
         });
       }
       if (doc.scope === "source" && isFunctionLike(node) && node.parameters.length > 3) {

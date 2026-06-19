@@ -50,7 +50,32 @@ coding_rules:
       severity: error
       scope: ["source"]
       description: "Core modules must not import against the defined dependency direction; move shared logic to lower-level modules."
+    - id: machine-surface-language
+      severity: error
+      scope: ["source", "test"]
+      description: "Machine-facing CLI, doctor, lint, gate, JSON, env, status, and oracle surfaces must use stable ASCII English decision tokens."
 ```
+
+## Machine Surface Language
+
+Machine-readable and machine-parsed surfaces use stable ASCII English tokens.
+Human prose may be Japanese, but the decision word that tools, agents, logs, and
+tests rely on must not depend on Japanese text or symbols.
+
+Required ASCII decision tokens include:
+
+- `OK`
+- `violation`
+- `warning`
+- `skipped`
+- `note`
+- `error`
+- `ready` / `not ready`
+
+This applies to CLI output, `doctor` messages, lint/gate messages, JSON keys,
+environment variable names, rule IDs, oracle IDs, status words, and test
+assertions over those surfaces. Japanese explanation may follow the token, but
+the token itself remains ASCII.
 
 ## Human Notes
 
