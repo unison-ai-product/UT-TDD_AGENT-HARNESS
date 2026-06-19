@@ -1253,7 +1253,10 @@ function runtimeCommand(provider: AdapterProvider): Command {
           args: plan.args,
         });
         const child = spawnSync(invocation.command, invocation.args, {
-          stdio: "inherit",
+          // codex はプロンプトを stdin で受ける (plan.stdin)。cmd.exe shell-wrap が
+          // 引数の改行/メタ文字を切り詰めるのを回避する (PLAN-L7-77)。
+          input: plan.stdin,
+          stdio: plan.stdin === undefined ? "inherit" : ["pipe", "inherit", "inherit"],
           env: adapterExecutionEnv(provider, plan.env),
           shell: invocation.shell ?? false,
         });
@@ -1601,15 +1604,21 @@ team
         }
         const execution = await executeTeamRunPlan(result, {
           slots: nodeAgentSlotsDeps(process.cwd()),
-          runCommand: ({ command, args, provider, env }) =>
+          runCommand: ({ command, args, provider, env, stdin }) =>
             new Promise((resolve) => {
               const invocation = buildProviderInvocation({ provider, command, args });
+              const ioMode = opts.json ? "ignore" : "inherit";
               const child = spawn(invocation.command, invocation.args, {
                 cwd: process.cwd(),
                 env: adapterExecutionEnv(provider, env),
-                stdio: opts.json ? "ignore" : "inherit",
+                // codex はプロンプトを stdin で受ける (cmd.exe shell-wrap 回避、PLAN-L7-77)。
+                stdio: stdin === undefined ? ioMode : ["pipe", ioMode, ioMode],
                 shell: invocation.shell ?? false,
               });
+              if (stdin !== undefined) {
+                child.stdin?.write(stdin);
+                child.stdin?.end();
+              }
               child.on("error", () => resolve({ exitCode: null }));
               child.on("close", (code) => resolve({ exitCode: code }));
             }),

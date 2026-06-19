@@ -192,4 +192,46 @@ describe("runtime adapter plan", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("U-ADAPTER-007: delivers the codex prompt via stdin so Windows .cmd shell-wrapping cannot truncate it", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-adapter-codex-stdin-"));
+    try {
+      const explicit = join(root, "codex.cmd");
+      writeFileSync(explicit, "");
+      // 改行 + cmd.exe メタ文字 (< > | ( )) を含む実プロンプトは、引数経由だと
+      // shell:true の cmd.exe で 1 行目に切り詰められる。stdin 経由なら無傷。
+      const multiline = "line one\nline two has <name> and | and (paren)";
+      const plan = buildAdapterPlan(
+        { provider: "codex", role: "qa", task: multiline, model: "gpt-5.5" },
+        "hybrid",
+      );
+
+      // プロンプトは stdin で帯域外に運ぶ。positional 引数には載せない。
+      expect(plan.stdin).toBe(multiline);
+      expect(plan.args).not.toContain(multiline);
+      expect(plan.args).toContain("exec");
+      expect(plan.args).toContain("-"); // codex exec [PROMPT]: '-' = stdin から読む
+
+      // .cmd shell ラップに乗らないプロンプトは cmd.exe が破壊しようがない。
+      const invocation = buildProviderInvocation({
+        provider: "codex",
+        command: "codex",
+        args: plan.args,
+        opts: { platform: "win32", env: { SystemRoot: "C:\\Windows", UT_TDD_CODEX_BIN: explicit } },
+      });
+      expect(invocation.command).not.toContain("line two");
+      expect(invocation.command).not.toContain("\n");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-ADAPTER-007: claude prompt stays inline (claude.exe is not shell-wrapped) — no stdin", () => {
+    const plan = buildAdapterPlan(
+      { provider: "claude", role: "tl", task: "review this", model: "claude-sonnet-4-6" },
+      "hybrid",
+    );
+    expect(plan.stdin).toBeUndefined();
+    expect(plan.args).toContain("review this");
+  });
 });

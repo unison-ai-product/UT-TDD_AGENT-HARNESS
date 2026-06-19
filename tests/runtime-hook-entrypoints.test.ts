@@ -37,14 +37,14 @@ function writeFakeCodex(binDir: string): string {
     const path = join(binDir, "codex.cmd");
     writeFileSync(
       path,
-      `@echo off\r\necho %* > codex-called.txt\r\n(echo raw=%${rawEnv}%)> codex-env.txt\r\n(echo reason=%${reasonEnv}%)>> codex-env.txt\r\nexit /b 0\r\n`,
+      `@echo off\r\necho %* > codex-called.txt\r\nfindstr "^" > codex-stdin.txt\r\n(echo raw=%${rawEnv}%)> codex-env.txt\r\n(echo reason=%${reasonEnv}%)>> codex-env.txt\r\nexit /b 0\r\n`,
     );
     return path;
   }
   const path = join(binDir, "codex");
   writeFileSync(
     path,
-    `#!/bin/sh\necho "$@" > codex-called.txt\nprintf "raw=%s\\nreason=%s\\n" "$${rawEnv}" "$${reasonEnv}" > codex-env.txt\nexit 0\n`,
+    `#!/bin/sh\necho "$@" > codex-called.txt\ncat > codex-stdin.txt\nprintf "raw=%s\\nreason=%s\\n" "$${rawEnv}" "$${reasonEnv}" > codex-env.txt\nexit 0\n`,
   );
   chmodSync(path, 0o755);
   return path;
@@ -192,7 +192,9 @@ describe("runtime hook entrypoints", () => {
       expect(digest.event_counts.tool_use).toBe(1);
       const called = readFileSync(join(cwd, "codex-called.txt"), "utf8");
       expect(called).toContain("exec");
-      expect(called).toContain("implement from task file");
+      // プロンプトは args でなく stdin で渡る (PLAN-L7-77、cmd.exe shell-wrap の改行切り詰め回避)。
+      const stdinText = readFileSync(join(cwd, "codex-stdin.txt"), "utf8");
+      expect(stdinText).toContain("implement from task file");
       const envText = readFileSync(join(cwd, "codex-env.txt"), "utf8");
       expect(envText).not.toContain("raw=1");
       expect(envText).not.toContain("reason=ut-tdd-runtime-adapter-wrapper");

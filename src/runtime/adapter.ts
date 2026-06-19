@@ -20,6 +20,12 @@ export interface AdapterPlan {
   available: boolean;
   command: string;
   args: string[];
+  /**
+   * codex はプロンプトを stdin で帯域外に渡す。Windows で codex は `.cmd` に解決され
+   * buildProviderInvocation が shell:true の cmd.exe 文字列へ畳むため、引数に載せた
+   * 複数行/メタ文字プロンプトが 1 行目で切れる。stdin 経由なら cmd.exe が破壊できない。
+   */
+  stdin?: string;
   env?: Record<string, string>;
   dry_run: boolean;
   plan_id?: string;
@@ -243,21 +249,26 @@ export function isProviderCommandSpawnable(
 
 export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): AdapterPlan {
   const available = providerAvailable(intent.provider, mode);
-  const args =
-    intent.provider === "codex"
-      ? ["exec", intent.task, ...(intent.model ? ["-m", intent.model] : [])]
-      : [
-          "--print",
-          ...(intent.model ? ["--model", intent.model] : []),
-          ...(intent.effort ? ["--effort", intent.effort] : []),
-          "-p",
-          intent.task,
-        ];
+  const isCodex = intent.provider === "codex";
+  // codex: プロンプトは args に載せず stdin で渡す (`codex exec -` は instructions を
+  // stdin から読む、codex exec --help)。Windows .cmd の cmd.exe shell-wrap による
+  // 改行/メタ文字切り詰めを構造的に回避する。claude は claude.exe = shell-wrap されない
+  // ので従来どおり `--print … -p <task>` で inline。
+  const args = isCodex
+    ? ["exec", ...(intent.model ? ["-m", intent.model] : []), "-"]
+    : [
+        "--print",
+        ...(intent.model ? ["--model", intent.model] : []),
+        ...(intent.effort ? ["--effort", intent.effort] : []),
+        "-p",
+        intent.task,
+      ];
   return {
     provider: intent.provider,
     available,
-    command: intent.provider === "codex" ? "codex" : "claude",
+    command: isCodex ? "codex" : "claude",
     args,
+    ...(isCodex ? { stdin: intent.task } : {}),
     ...(intent.provider === "claude" && intent.effort
       ? { env: { CLAUDE_CODE_EFFORT_LEVEL: intent.effort } }
       : {}),

@@ -88,6 +88,8 @@ export interface TeamRunnerDeps {
     args: string[];
     provider: AdapterProvider;
     env?: Record<string, string>;
+    /** codex はプロンプトを stdin で受ける (cmd.exe shell-wrap 回避、PLAN-L7-77)。 */
+    stdin?: string;
   }) => Promise<{ exitCode: number | null }>;
 }
 
@@ -362,6 +364,7 @@ async function executeMember(
       args: member.adapter.args,
       provider: member.adapter.provider,
       env: member.adapter.env,
+      stdin: member.adapter.stdin,
     });
     const status: SlotStatus = run.exitCode === 0 ? "completed" : "failed";
     releaseSlot({ slotId: slot.slot_id, status, exitCode: run.exitCode }, deps.slots);
