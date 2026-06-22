@@ -36,6 +36,15 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 
 # PLAN-L7-86 (troubleshoot): merged-plan-status deliverable-scope expansion
 
+> **訂正 / 一部 supersede (PLAN-L7-87、2026-06-22)**: 本 PLAN の review_evidence と §3 AC が
+> 「kind filter (impl/add-impl/refactor) は既存ゆえ design/poc/reverse の false-positive は
+> 出ない」「現存 draft 5 本は全て非 artifact-kind ゆえ blast radius 0」と記したのは **誤記**。
+> これは false-positive の不在ではなく **false-negative (本物の drift の見逃し) を「問題なし」と
+> 誤って framing** したもの。実際には DISCOVERY-05 (poc) / L3-04 / L3-05 (add-design) が出荷物
+> (src) を merge 済のまま draft 放置されており、kind filter がそれを盲点として隠していた。
+> PLAN-L7-87 が kind filter を撤去 (deliverable-driven 化) してこの盲点を根治し、3 件の drift を
+> confirmed 化した。本 PLAN の path-scope 拡張 (src/*.ts → 出荷物ルート) 自体は有効・不変。
+
 ## 0. Objective
 
 `merged-plan-status` gate (PLAN-L7-54) が捕まえるべき「merged したのに draft 放置」
