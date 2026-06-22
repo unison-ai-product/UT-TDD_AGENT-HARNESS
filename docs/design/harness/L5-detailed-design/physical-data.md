@@ -425,3 +425,24 @@ Initial export profiles:
 - `doc-xlsx-workbook`: multi-sheet workbook via ExcelJS or SheetJS optional renderer.
 - `doc-pptx-deck`: concept/requirements/design/ADR/PLAN/test-design deck via PptxGenJS optional renderer.
 - `doc-d2-pptx-diagram`: graph/architecture/workflow diagram deck output via D2 optional renderer.
+
+### §9.8 Screen entity and FR/BR→screen trace projection (IMP-140)
+
+IMP-140: the 15 screens (PM/HM/GD) and their FR/BR→screen trace lived only in the `screen-list.md` / `screen-requirements.md` doc source and were not in harness.db. This projection makes HM-04 (DB browse), HM-01 (feature-list → screen-requirement), and PM-06 (design-doc viewer) DB-driven instead of doc-only. Screens are not-implemented (NFR-08, src/web is Phase B).
+
+| table | primary key | required columns | purpose |
+|---|---|---|---|
+| `screens` | `screen_id` | `name`, `category`, `url`, `l1_ref`, `status`, `implemented`, `indexed_at` | 15 screens projected from `screen-list.md` §1 (画面 ID / 名 / カテゴリ / URL / L1 参照). `implemented=0` / `status=not-implemented` (NFR-08). |
+| `screen_trace` | `screen_trace_id` | `screen_id`, `requirement_id`, `requirement_kind`, `relation`, `source` | FR/BR/UX → screen reverse-trace edges projected from `screen-requirements.md` §5.5. `requirement_kind` ∈ {fr, br, ux}. Powers HM-01 feature-list → screen-requirement navigation from the DB. |
+
+Required indexes:
+
+- `idx_screens_category(category, screen_id)`.
+- `idx_screen_trace_screen(screen_id, requirement_kind)`.
+
+Invariants:
+
+- `screens` row count equals the screen-requirements §1 declared count (15 = PM 6 + HM 8 + GD 1); the `doc-consistency` gate counts the same doc source.
+- Every `screen_trace.screen_id` references a `screens.screen_id` (no orphan trace edge).
+- `screens.implemented=0` until src/web (Phase B); flipping requires NFR-08 implementation-truthfulness evidence.
+- Source of truth remains the docs; this projection is a derived read model rebuilt deterministically by `ut-tdd db rebuild` (no separate authoring surface).

@@ -240,6 +240,50 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
     }
   });
 
+  it("IMP-140: projects 15 screens and FR/BR→screen trace from doc source on rebuild", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      const result = rebuildHarnessDb({ repoRoot: process.cwd(), db });
+      expect(result.ok).toBe(true);
+
+      // 15 screens (PM 6 + HM 8 + GD 1) projected from screen-list.md §1.
+      const screenCount = (db.prepare("SELECT COUNT(*) AS n FROM screens").get() as { n: number }).n;
+      expect(screenCount).toBe(15);
+
+      // PM-06 設計書ビューア with its project-scoped URL, not-implemented (NFR-08, Phase B).
+      const pm06 = db
+        .prepare("SELECT category, url, implemented FROM screens WHERE screen_id = ?")
+        .get("PM-06") as { category: string; url: string; implemented: number } | undefined;
+      expect(pm06?.category).toBe("PM");
+      expect(pm06?.url).toBe("/project/:case/designs");
+      expect(pm06?.implemented).toBe(0);
+
+      // FR/BR→screen trace edges (screen-requirements §5.5) make 機能一覧→画面要求 DB-queryable.
+      const traceCount = (
+        db.prepare("SELECT COUNT(*) AS n FROM screen_trace").get() as { n: number }
+      ).n;
+      expect(traceCount).toBeGreaterThan(0);
+      const hm01Frs = db
+        .prepare(
+          "SELECT requirement_id FROM screen_trace WHERE screen_id = ? AND requirement_kind = 'fr' ORDER BY requirement_id",
+        )
+        .all("HM-01") as { requirement_id: string }[];
+      expect(hm01Frs.map((row) => row.requirement_id)).toContain("FR-L1-33");
+
+      // No orphan trace: every screen_trace.screen_id resolves to a screens row.
+      const orphan = (
+        db
+          .prepare(
+            "SELECT COUNT(*) AS n FROM screen_trace t LEFT JOIN screens s ON s.screen_id = t.screen_id WHERE s.screen_id IS NULL",
+          )
+          .get() as { n: number }
+      ).n;
+      expect(orphan).toBe(0);
+    } finally {
+      db.close();
+    }
+  });
+
   it("rebuildHarnessDb deterministically projects plans and Phase3 outputs without source mutation", () => {
     const db = openHarnessDb(":memory:");
     try {

@@ -15,7 +15,7 @@
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
 
@@ -826,6 +826,33 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("indexed_at"),
     ],
   },
+  // --- §9.11 screen projection (IMP-140): screen entity + FR/BR→画面 trace を doc 正本から projection ---
+  // source = screen-list.md §1 (画面 ID/名/カテゴリ/URL/L1参照) + screen-requirements.md §5.5 (画面→BR/UX/FR-L1 逆 trace)。
+  // HM-04 (DB 閲覧) / HM-01 (機能一覧→画面) / PM-06 (設計書ビューア) の DB 駆動を可能にする (従来 doc-only)。
+  {
+    name: "screens",
+    columns: [
+      pk("screen_id"),
+      col("name"),
+      col("category"),
+      col("url"),
+      col("l1_ref"),
+      col("status"),
+      col("implemented", "INTEGER"),
+      col("indexed_at"),
+    ],
+  },
+  {
+    name: "screen_trace",
+    columns: [
+      pk("screen_trace_id"),
+      col("screen_id"),
+      col("requirement_id"),
+      col("requirement_kind"),
+      col("relation"),
+      col("source"),
+    ],
+  },
 ];
 
 /** §9.3 で宣言された projection index。 */
@@ -993,6 +1020,12 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     name: "idx_model_evaluations_rate",
     table: "model_evaluations",
     columns: ["success_rate", "evaluated_at"],
+  },
+  { name: "idx_screens_category", table: "screens", columns: ["category", "screen_id"] },
+  {
+    name: "idx_screen_trace_screen",
+    table: "screen_trace",
+    columns: ["screen_id", "requirement_kind"],
   },
 ];
 

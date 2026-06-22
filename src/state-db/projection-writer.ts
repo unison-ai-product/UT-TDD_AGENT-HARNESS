@@ -2468,6 +2468,135 @@ function projectImprovementLog(db: HarnessDb): void {
   }
 }
 
+/** screen-list.md §1 の画面表 (画面 ID / 名 / カテゴリ / URL / L1 参照) を行に分解する。 */
+function parseScreenListRows(content: string): Array<{
+  screenId: string;
+  name: string;
+  category: string;
+  url: string;
+  l1Ref: string;
+}> {
+  const rows: Array<{
+    screenId: string;
+    name: string;
+    category: string;
+    url: string;
+    l1Ref: string;
+  }> = [];
+  for (const line of content.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|")) continue;
+    const cells = trimmed
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+    if (cells.length < 5) continue;
+    const screenId = cells[0].replace(/\*\*/g, "").trim();
+    if (!/^(?:PM|HM|GD)-\d+$/.test(screenId)) continue;
+    rows.push({
+      screenId,
+      name: cells[1],
+      category: cells[2],
+      url: cells[3].replace(/`/g, "").trim(),
+      l1Ref: cells[4],
+    });
+  }
+  return rows;
+}
+
+/** screen-requirements.md §5.5 (画面 → BR/UX/FR-L1 逆 trace) を画面×要求の edge に分解する。 */
+function parseScreenTraceRows(content: string): Array<{
+  screenId: string;
+  requirementId: string;
+  kind: string;
+}> {
+  const out: Array<{ screenId: string; requirementId: string; kind: string }> = [];
+  const start = content.search(/^###?\s+§5\.5/m);
+  if (start < 0) return out;
+  // heading 行の直後から次の見出しまでを §5.5 セクションとする (現 heading を再マッチしないよう改行後から探索)。
+  const afterHeading = content.indexOf("\n", start);
+  const rest = content.slice(afterHeading < 0 ? start : afterHeading + 1);
+  const nextSection = rest.search(/^###?\s+/m);
+  const section = nextSection < 0 ? rest : rest.slice(0, nextSection);
+  for (const line of section.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("|")) continue;
+    const cells = trimmed
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+    if (cells.length < 3) continue;
+    const screenId = cells[0].replace(/\*\*/g, "").trim();
+    if (!/^(?:PM|HM|GD)-\d+$/.test(screenId)) continue;
+    for (const cell of [cells[1], cells[2]]) {
+      for (const raw of cell.split("/")) {
+        const id = raw.replace(/\*\*/g, "").trim();
+        if (!/^(?:BR-\d+|UX-\d+|FR-L1-\d+)$/.test(id)) continue;
+        const kind = id.startsWith("FR-L1") ? "fr" : id.startsWith("BR") ? "br" : "ux";
+        out.push({ screenId, requirementId: id, kind });
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * IMP-140: 画面 entity と FR/BR→画面 trace を doc 正本 (screen-list §1 + screen-requirements §5.5)
+ * から harness.db に projection する。従来 screen は doc-only で DB に無く、HM-04 (DB 閲覧) /
+ * HM-01 (機能一覧→画面) / PM-06 (設計書ビューア) を DB 駆動できなかった。実画面は未実装 (NFR-08)
+ * ゆえ status=not-implemented / implemented=0 で投影する。
+ */
+function projectScreens(repoRoot: string, db: HarnessDb): void {
+  const screenListPath = join(repoRoot, "docs", "design", "harness", "L2-screen", "screen-list.md");
+  if (!existsSync(screenListPath)) return;
+  const listContent = readFileSync(screenListPath, "utf8");
+  const indexedAt =
+    frontmatterValue(listContent, "updated") || frontmatterValue(listContent, "created");
+  for (const screen of parseScreenListRows(listContent)) {
+    recordProjectionEvent(db, {
+      table: "screens",
+      id: screen.screenId,
+      row: {
+        screen_id: screen.screenId,
+        name: screen.name,
+        category: screen.category,
+        url: screen.url,
+        l1_ref: screen.l1Ref,
+        status: "not-implemented",
+        implemented: 0,
+        indexed_at: indexedAt,
+      },
+    });
+  }
+  const screenReqPath = join(
+    repoRoot,
+    "docs",
+    "design",
+    "harness",
+    "L1-requirements",
+    "screen-requirements.md",
+  );
+  if (!existsSync(screenReqPath)) return;
+  const reqContent = readFileSync(screenReqPath, "utf8");
+  for (const trace of parseScreenTraceRows(reqContent)) {
+    const traceId = stableId("screen-trace", `${trace.screenId}:${trace.requirementId}`);
+    recordProjectionEvent(db, {
+      table: "screen_trace",
+      id: traceId,
+      row: {
+        screen_trace_id: traceId,
+        screen_id: trace.screenId,
+        requirement_id: trace.requirementId,
+        requirement_kind: trace.kind,
+        relation: "trace",
+        source: "screen-requirements §5.5",
+      },
+    });
+  }
+}
+
 export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarnessDbResult {
   const repoRoot = input.repoRoot ?? process.cwd();
   const ownsDb = input.db === undefined;
@@ -2513,6 +2642,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       projectIssueQueue(db);
       projectIssueApprovalGuardrails(db);
       projectImprovementLog(db);
+      projectScreens(repoRoot, db);
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
