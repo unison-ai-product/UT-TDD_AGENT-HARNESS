@@ -3,7 +3,7 @@
 - **Status**: accepted
 - **Date**: 2026-06-01
 - **Deciders**: PM (Opus) + PO (ユーザー)
-- **関連**: `ADR-001` (TS 再実装) / [ADR-003](./ADR-003-runtime-adapter-boundary-subscription-cli.md) (runtime adapter 境界、IMP-031 Web サーバ境界) / [ADR-004](./ADR-004-internal-asset-ts-control-boundary.md) (内部資産 TS 制御境界) / `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` §2.1.0 (ルール同一性) / `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` (配布単位、本 ADR D1 で置換) / `docs/design/harness/L1-requirements/screen-requirements.md` (14 画面) / `docs/migration/helix-to-ut-tdd-cutover-strategy.md` / `../../ai-agent-harness-directory-reference.md` (PO 作成 参考、repo root 直下・正本外、3 層モデル)
+- **関連**: `ADR-001` (TS 再実装) / [ADR-003](./ADR-003-runtime-adapter-boundary-subscription-cli.md) (runtime adapter 境界、IMP-031 Web サーバ境界) / [ADR-004](./ADR-004-internal-asset-ts-control-boundary.md) (内部資産 TS 制御境界) / `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` §2.1.0 (ルール同一性) / `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` (配布単位、本 ADR D1 で置換) / `docs/design/harness/L1-requirements/screen-requirements.md` (15 画面、PM-06 設計書ビューア含む) / `docs/migration/helix-to-ut-tdd-cutover-strategy.md` / `../../ai-agent-harness-directory-reference.md` (PO 作成 参考、repo root 直下・正本外、3 層モデル)
 
 ## Context
 
@@ -26,7 +26,7 @@
 ### D2. Web UI = 中央・全 project 横断の管理ツール (team server)
 
 - Web UI は **project-local でなく中央 (team server)**。**全員の GitHub project 群を data backbone として読み**、harness 工程の粒度で**詳細可視化**する (PLAN/gate 証跡 / V-model 4 artifact trace / 工程進捗 / harness 診断 / audit)。「GitHub native 可視化の harness 工程・詳細版」。
-- 14 画面 (screen-requirements: PM-01〜05 案件横断 / HM-01〜08 harness 改善・診断 / GD-01) を **チーム全体・中央**へ昇格。PM-01 の既存「4 階層プルダウン×案件横断」がこの中央横断像と整合。
+- 15 画面 (screen-requirements: PM-01〜06 案件横断 (PM-06 設計書ビューア = 2026-06-22 追加) / HM-01〜08 harness 改善・診断 / GD-01) を **チーム全体・中央**へ昇格。PM-01 の既存「4 階層プルダウン×案件横断」がこの中央横断像と整合。
 - **UI から CLI 直接発動しない**: CLI コマンドの copy 提供に留める (screen-requirements S5=b は Recovery/interrupt の CLI コマンドコピーに特化、本 ADR は UI 直接実行禁止を中央 UI 全体方針として採用)。
 - backend 実装方式 (Bun HTTP server 等) と通信境界詳細は **L2 設計に carry** (ADR-003 IMP-031 の延長として設計)。本 ADR は「中央/team server・GitHub backbone」の**配置方針**を固定する。
 

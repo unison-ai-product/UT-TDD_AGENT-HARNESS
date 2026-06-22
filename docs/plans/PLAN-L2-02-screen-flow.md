@@ -36,6 +36,14 @@ review_evidence:
     scope: "L2 screen-flow content 本材料化 (status confirmed 昇格は G2 freeze 時、gate-confirm IMP-079 遵守ゆえ placeholder 維持)。L1 §2 6 遷移シナリオを正本に、旧 placeholder の drift (シナリオ 2/5/6 が L1 §2 と乖離) を訂正し再構築。各遷移エッジに trigger/条件/ステート保持/戻る挙動 + auto 表示 + カテゴリ間 deep-link を L2 設計として付与。read-only/S5=b/S6=a 整合を pmo-sonnet が確認。pair=wireframe.md。doctor green。"
     worker_model: claude-opus-4-8
     reviewer_model: claude-sonnet-4-6
+  - reviewer: pmo-sonnet (intra_runtime_subagent)
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-22"
+    tests_green_at: "2026-06-22"
+    verdict: approve
+    scope: "PM-06 設計書ビューア増分 (2026-06-22 PO 指示)。screen-flow.md §2 に PM-06 supporting navigation (PM-02/PM-04↔PM-06、PM 内 deep-link、6 コアシナリオ外) + §5 に HM-01 機能一覧→PM-06 横断 deep-link (機能一覧から画面要求を辿る、PO 指示) を追加。全 trigger read-only (S5=b)。pmo-sonnet が L1 §2 6 シナリオ非破壊・read-only 整合を確認 (approve-with-fixes→件数残骸 fix 済)。doctor green。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
 ---
 
 # PLAN-L2-02 (design): L2 画面遷移 screen-flow 本起票

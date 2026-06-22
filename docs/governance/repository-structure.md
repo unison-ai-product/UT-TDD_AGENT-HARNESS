@@ -28,7 +28,7 @@ UT-TDD-agent-harness/
 │   ├── vmodel/                   #   V-model 4 artifact trace
 │   ├── runtime/                  #   mode 検出 (standalone/claude-only/codex-only/hybrid) / orchestration
 │   ├── doctor/                   #   統合検証 / 横断検出
-│   └── web/                      #   [予定] 中央 Web UI service (14 画面 / 全 project 横断 / GitHub backbone、ADR-005 D2。backend 詳細は L2 設計)
+│   └── web/                      #   [予定] 中央 Web UI service (15 画面 / 全 project 横断 / GitHub backbone、ADR-005 D2。backend 詳細は L2 設計)
 ├── tests/                        # ★ ④ テストコード (vitest、*.test.ts、src を mirror)
 ├── scripts/                      # ★ 薄い OS entrypoint のみ (core logic を置かない)
 │   ├── ut-tdd                    #   POSIX / Git Bash
@@ -85,7 +85,7 @@ UT-TDD-agent-harness/
 |------|--------|--------|
 | harness TS core (機能) | `src/<domain>/` | **機能の home**。domain 別 (cli/schema/plan/vmodel/runtime/doctor/web)。新機能はどの domain 配下かを要件 (L3) で確定してから追加。**bash / Python を core に置かない** (ADR-001) |
 | 工程 / 駆動モデル定義 | `docs/process/` | **工程(L0-L14)定義 + 駆動モデル(Forward/Scrum/Reverse/Recovery/Add-feature/Retrofit/Refactor/Research)正本**。「どの工程/駆動を増やすか」は要件 (L3) で決め本 dir に置く (本 session の発端 gap を解消)。既存 `docs/governance/recovery-workflow.md` は **`docs/process/modes/recovery.md` へ統合完了 (2026-06-04、IMP-060)** = recovery 正本は `docs/process/modes/recovery.md`。recovery-workflow.md は superseded (historical、冒頭 banner) |
-| 中央 Web UI service | `src/web/` | [予定] 全 project 横断の管理 UI (14 画面、GitHub backbone、ADR-005 D2)。backend 配置・通信境界は L2 設計 (ADR-003 §IMP-031 参照) |
+| 中央 Web UI service | `src/web/` | [予定] 全 project 横断の管理 UI (15 画面、GitHub backbone、ADR-005 D2)。backend 配置・通信境界は L2 設計 (ADR-003 §IMP-031 参照) |
 | テストコード | `tests/` | vitest、`*.test.ts`、src を mirror |
 | OS entrypoint | `scripts/` | **薄い wrapper のみ**。compiled binary or `bun run` を呼ぶだけで、core logic を持たない |
 | enum / 契約 | `src/schema/` | **zod 単一正本**。enum を複数箇所に再定義しない (drift 防止、requirements §1.10 F) |
@@ -155,7 +155,7 @@ harness の配置は 3 層で分離する。本書 §1 canonical ツリーは **
 |----|------|------|---------|
 | **① engine repo (単一真実)** | harness engine + ルール + 工程/駆動モデル定義 (本 repo) | **GitHub repo**。consume 側は git dependency で **tag-pin** (`bun add github:<org>/ut-tdd-agent-harness#<tag>`、devDependencies にコミット) | tag を bump (`bun update`)。社内既定 = tag-pin + 定期 bump |
 | **② project 投影 (adapter)** | consume 側 project に展開される `CLAUDE.md` / `.claude/` / `AGENTS.md` 等 | `ut-tdd setup` が engine から **投影**。内容を複製せず engine を参照する adapter | engine の tag bump に追従 |
-| **③ 中央 UI service** | 全 project 横断の管理 Web UI (14 画面) | **中央 / team server**。各 project の GitHub repo を data backbone に読む (project-local でない) | UI service コード自体も engine と同 GitHub repo (`src/web/`) で管理 |
+| **③ 中央 UI service** | 全 project 横断の管理 Web UI (15 画面) | **中央 / team server**。各 project の GitHub repo を data backbone に読む (project-local でない) | UI service コード自体も engine と同 GitHub repo (`src/web/`) で管理 |
 
 - **public npm publish しない** (社内コード、GitHub-pull で足りる)。
 - **engine は tool 非依存 package**: CLI / CI (Layer B-remote `.github/workflows`) / Codex / 将来ツールが同一 engine を GitHub から取得 (ルール同一性、concept §2.1.0)。Claude plugin は **任意の補助配信チャネル**で主軸でない (ADR-005 D3)。

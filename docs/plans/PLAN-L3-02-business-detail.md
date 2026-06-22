@@ -90,7 +90,7 @@ PLAN-L3-01 (FR 一般詳細化) とスコープを分離し、本 PLAN は **Lea
 |----|--------------|--------|--------|
 | U-BR21-5 | HM-08 データソース | business-detail §5 / HM-08 連動 | 🆕 **4 ソース全件統合** (invocation_log / detector_runs / gate_runs / plan_registry)。理由: 単一ソースだと評価指標 5 件全件カバー不能、4 ソース統合で必要十分 |
 | U-BR21-6 | HM-08 表示頻度 | business-detail §5 | 🆕 **集計済データを 30 秒ポーリング表示**。理由: S2=b (全画面 30 秒ポーリング既決) 整合、生計算は cost 過大、集計バッチ + ポーリングが現実解 |
-| U-BR21-7 | AI 指示 copy UI 必須化 | business-detail §5 / HM-08 操作要素 | 🆕 **必須化**。理由: CC2 horizontal 原則 (screen §3.1 横断原則・全 14 画面適用)、HM-08 のみ例外化する根拠なし |
+| U-BR21-7 | AI 指示 copy UI 必須化 | business-detail §5 / HM-08 操作要素 | 🆕 **必須化**。理由: CC2 horizontal 原則 (screen §3.1 横断原則・全 15 画面適用)、HM-08 のみ例外化する根拠なし |
 
 ### 3.3 Phase B carry 範囲確定
 

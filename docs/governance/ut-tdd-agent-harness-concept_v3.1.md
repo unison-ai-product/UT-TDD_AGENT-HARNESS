@@ -689,7 +689,7 @@ G1 exit → L2 画面設計 (G2) へ進行
 | ルール | 検証内容 | fail 動作 |
 |--------|----------|-----------|
 | **R1** | BR-01〜08 + UX-01〜03 + BR-21 + BR-22 (計 13 件) が最低 1 画面に紐付く | block |
-| **R2** | 全 14 画面 (PM/HM/GD-NN) が最低 1 つの BR/UX/FR-L1 に紐付く | block |
+| **R2** | 全 15 画面 (PM/HM/GD-NN) が最低 1 つの BR/UX/FR-L1 に紐付く | block |
 | **R3** | FR-L1 P0 19 件のみ最低 1 画面に紐付く (P1/P2 は warn、DD2=a) | block (P0) / warn (P1-P2) |
 | **R4** | screen 関連 PLAN `dependencies.requires` に business + functional を明示列挙 | warn |
 

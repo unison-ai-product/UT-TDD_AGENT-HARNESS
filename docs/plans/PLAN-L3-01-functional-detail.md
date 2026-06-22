@@ -61,9 +61,9 @@ L1 FR-L1-* は「業務的に何が必要か」を宣言レベルで列挙した
 
 - L0 企画書: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
 - L1 機能要求 (確定済): `docs/design/harness/L1-requirements/functional-requirements.md` (現行 47 件、P0:19 / P1:23 / P2:5)
-- L1 画面要求 (確定済): `docs/design/harness/L1-requirements/screen-requirements.md` (14 画面 PM/HM/GD + §5 G1-trace マトリクス)
+- L1 画面要求 (確定済): `docs/design/harness/L1-requirements/screen-requirements.md` (15 画面 PM/HM/GD + §5 G1-trace マトリクス)
 - L1 業務要求: `docs/design/harness/L1-requirements/business-requirements.md` (BR-01〜08 + UX-01〜03 + BR-21 + §3.3.2 人間主導原則)
-- L2 画面設計 placeholder: `docs/design/harness/L2-screen/` (PM/HM/GD 14 画面の L2 接続点)
+- L2 画面設計 placeholder: `docs/design/harness/L2-screen/` (PM/HM/GD 15 画面の L2 接続点)
 - v2 取り込み軌跡: `docs/migration/v2-import-ledger.md` §5 (A-25〜A-41)
 - HELIX-workflows L3 process: `vendor/helix-source/docs/v2/process/L03-functional-requirements.md` (参考)
 

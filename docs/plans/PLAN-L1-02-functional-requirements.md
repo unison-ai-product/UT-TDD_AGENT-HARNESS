@@ -201,4 +201,4 @@ FR-L1-01〜35 全件は `docs/migration/v2-import-ledger.md §6` で確定済 (P
 - **FR-L1 → L3 FR-* 詳細化**: FR-L1 現行 47 件 (L1 要求) → L3 FR-*/AC-* (L3 要件 + 受入条件) への詳細化。PLAN-L3-01 が現行 47 件を `dependencies.requires` に列挙する
 - **P0 19 件の優先実装順**: L3 FR-* 起票時に P0 → P1 → P2 の順で詳細化。FR-L1-01 / FR-L1-05 / FR-L1-09 を先行。内訳は HELIX 由来 FR-L1-01〜18 + L3 back-propagation 由来 FR-L1-45
 - **上流 baton carry**: §5 整備の L0 baton 項目対応表 (46 件版) → L3 PLAN §1 入力として引き継ぎ
-- **G1-trace 機械検証 R3 (PO 承認 2026-05-28、DD2=a、2026-06-02 BR-22 fullback 更新、2026-06-09 FR-L1-50 追加)**: FR-L1 P0 19 件は §1 表「対応画面」列で screen 14 画面に紐付き済 (孤児 P0 0)。P1 23 件 / P2 5 件は warn 程度で紐付け推奨 (孤児許容)。L3 起票時は現行 47 件の画面 trace を継承し維持する
+- **G1-trace 機械検証 R3 (PO 承認 2026-05-28、DD2=a、2026-06-02 BR-22 fullback 更新、2026-06-09 FR-L1-50 追加)**: FR-L1 P0 19 件は §1 表「対応画面」列で screen 15 画面に紐付き済 (孤児 P0 0)。P1 23 件 / P2 5 件は warn 程度で紐付け推奨 (孤児許容)。L3 起票時は現行 47 件の画面 trace を継承し維持する

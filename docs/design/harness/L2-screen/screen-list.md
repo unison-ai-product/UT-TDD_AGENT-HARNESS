@@ -14,12 +14,12 @@ updated: 2026-06-22
 
 # L2 画面一覧 (screen-list)
 
-> **SSoT 参照**: 画面要求 (14 画面 PM/HM/GD) の正本は L1 [screen-requirements.md](../L1-requirements/screen-requirements.md)。本 doc は L1 で確定した画面群に **L2 設計確定項目 (URL 設計 / ID↔URL 1:1 / 認証認可 / ステート保持)** を付与する。用語独自定義は行わない (anti-corruption layer)。
+> **SSoT 参照**: 画面要求 (15 画面 PM/HM/GD) の正本は L1 [screen-requirements.md](../L1-requirements/screen-requirements.md)。本 doc は L1 で確定した画面群に **L2 設計確定項目 (URL 設計 / ID↔URL 1:1 / 認証認可 / ステート保持)** を付与する。用語独自定義は行わない (anti-corruption layer)。
 > **V-pair (IMP-039/058)**: 本 doc の ③ ペアは `wireframe.md` (mock、右腕 L10)。`next_pair_freeze: L10`。
-> **実装状態**: 全 14 画面は not-implemented (NFR-08 実装宣言の真実性、src/web 実装は Phase B)。
+> **実装状態**: 全 15 画面は not-implemented (NFR-08 実装宣言の真実性、src/web 実装は Phase B)。
 > **配置 (ADR-005 D2)**: 中央・全 project 横断の team 管理 UI。GitHub project repo を data backbone とし、Phase A local dashboard が bootstrap。
 
-## §1 画面一覧 (14 画面 = PM 5 + HM 8 + GD 1)
+## §1 画面一覧 (15 画面 = PM 6 + HM 8 + GD 1)
 
 3 カテゴリ Bounded Context (DDD): **PM** (Project Management、案件遂行・毎日) / **HM** (Harness Management、harness 改善・必要時) / **GD** (Guide & Docs、静的参照)。
 
@@ -30,6 +30,7 @@ updated: 2026-06-22
 | PM-03 | Gate + 詰まり要因ビュー | PM | `/project/:case/gates` | screen §1.PM.03 |
 | PM-04 | Trace ビュー | PM | `/project/:case/trace` | screen §1.PM.04 |
 | PM-05 | Handover ビュー | PM | `/project/:case/handover` | screen §1.PM.05 |
+| PM-06 | 設計書ビューア | PM | `/project/:case/designs` | screen §1.PM.06 |
 | HM-01 | 機能一覧ビュー | HM | `/harness/features` | screen §1.HM.01 |
 | HM-02 | カバレッジヒートマップビュー | HM | `/harness/coverage` | screen §1.HM.02 |
 | HM-03 | 配線図ビュー | HM | `/harness/wiring` | screen §1.HM.03 |
@@ -51,7 +52,7 @@ updated: 2026-06-22
 
 | カテゴリ | 閲覧可ペルソナ | 操作可 | 根拠 |
 |---|---|---|---|
-| PM (5) | PO + 運用者 (HM) | 表示・遷移・CLI テキストコピーのみ (UI 直接実行禁止 S5=b) | screen CC2 人間主導 + AI 補助 |
+| PM (6) | PO + 運用者 (HM) | 表示・遷移・CLI テキストコピーのみ (UI 直接実行禁止 S5=b)。PM-06 設計書ビューアも read-only プレビュー (編集なし) | screen CC2 人間主導 + AI 補助 |
 | HM (8) | 運用者主 (PO も可) | 同上 (Recovery/interrupt も CLI コマンド文字列コピーのみ、発動は CLI 受付) | screen §1.HM / S5=b |
 | GD (1) | 全ペルソナ | 参照のみ (静的) | screen §1.GD |
 
@@ -68,7 +69,7 @@ updated: 2026-06-22
 
 ## §5 L1↔L2 trace + 次工程
 
-- 上流: L1 [screen-requirements.md](../L1-requirements/screen-requirements.md) §1 (14 画面) + §2 (遷移) + 4 横断原則 (CC1-CC4) + G1-trace R1-R4 通過済。
+- 上流: L1 [screen-requirements.md](../L1-requirements/screen-requirements.md) §1 (15 画面) + §2 (遷移) + 4 横断原則 (CC1-CC4) + G1-trace R1-R4 通過済。
 - L2 内連携: 本 screen-list (ID/URL/認可/state) → [screen-flow.md](./screen-flow.md) (遷移) → [ui-element.md](./ui-element.md) (UI 部品) → [wireframe.md](./wireframe.md) (レイアウト = ③ pair)。
 - 下流: L10 UX refinement (High-Fi 判断) → src/web 実装 (Phase B)。
 - pair: `wireframe.md` (mock = ③ test design、L2↔L10 右腕)。

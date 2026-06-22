@@ -48,7 +48,11 @@ S6 Doctor 検出→Trace 修正:    HM-07 → PM-04 → PM-02 → HM-07   (HM↔
 | HM-07 → PM-04 | エラー行 → trace 切れ確認 | doctor 検出あり | 対象 trace key (query) | breadcrumb HM-07 |
 | PM-04 → PM-02 | trace ノード → 対象 sub-doc | — | `:case` + `:L` | breadcrumb PM-04 |
 | PM-02 → HM-07 | 「doctor 再実行で収束確認」 | 修正後 | — | — (S6 ループ) |
+| PM-02 → PM-06 | 「設計書プレビュー」リンク (sub-doc 行) | — | `:case` + layer/sub-doc (query) | breadcrumb PM-02 |
+| PM-04 → PM-06 | trace ノード → 対象 doc 本文プレビュー | — | `:case` + 対象 doc path (query) | breadcrumb PM-04 |
+| PM-06 → PM-04 | doc の「trace 確認」deep-link | — | 対象 trace key | breadcrumb PM-06 |
 
+> **PM-06 supporting navigation**: PM-02/PM-04 ↔ PM-06 設計書ビューアは **PM 内 supporting deep-link** (L1 §7.2、設計書本文プレビュー目的)。L1 §2 の 6 コアシナリオには含めない (本質は別画面の補助参照)。PM-06 も read-only (S5=b、編集なし)。
 > **trigger 種別**: 全 trigger は **クリック / リンク (read-only ナビゲーション)** または **auto 表示** に限る。副作用は持たない (S5=b: 実処理は CLI コマンド文字列コピー経由、UI 直接実行なし)。
 > **S4 共有エッジ (L1 §2 シナリオ 4 の末尾)**: S4 は `PM-05→PM-02` の後、`PM-02→PM-03` (遷移条件: **前回中断 gate の状態確認**) → `PM-03→PM-01` (目的: **4 階層プルダウンで現在 phase 確認**) を S1 と同一エッジで辿る (上表の S1 行を再利用、遷移条件のみ S4 文脈で異なる)。
 
@@ -72,6 +76,7 @@ L1 §2 の横断シナリオ (S2/S3/S5/S6) を deep-link として一般化:
 - **PM → HM**: 案件文脈 (gate fail / incident / doctor 検出) から harness 全体ビューへ (`:case` を query で携行)。
 - **HM → GD**: 診断結果から静的ガイド (troubleshooting / architecture) へ (`:category`)。
 - **GD / HM → PM**: 修正後の再判定・収束確認で案件文脈へ復帰。
+- **HM → PM (機能 ↔ 画面要求、PO 2026-06-22)**: **HM-01 機能一覧** の FR-L1 行から **PM-06 設計書ビューア** へ deep-link し、その FR の **対応画面要求** (screen §5 trace) と screen-requirements 本文をプレビュー。「画面要求を機能一覧からも辿れる」導線 (対象 FR-L1 id + screen doc path を query 携行、browser back で HM-01 復帰)。
 
 ## §6 L1↔L2 trace + 次工程
 

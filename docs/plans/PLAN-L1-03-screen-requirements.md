@@ -35,6 +35,14 @@ review_evidence:
     tests_green_at: "2026-06-04"
     verdict: approve
     scope: "A-100 L0-L3 refreeze sign-off (pmo-sonnet + PO、claude-only intra_runtime_subagent)"
+  - reviewer: pmo-sonnet
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-22"
+    tests_green_at: "2026-06-22"
+    verdict: approve
+    scope: "v4 PM-06 設計書ビューア追加 (14→15 画面)。screen-requirements §1.PM.06 + §5 trace (R2 逆 trace PM-06=BR-01/BR-07/FR-L1-01/FR-L1-32) + L14 OT-47 pair back-propagation。pmo-sonnet verdict=approve-with-fixes (孤児 0 / read-only S5=b / BR-FR 実在 / status=placeholder 確認)、指摘の件数残骸 14→15 を全 doc で修正完了。doctor doc-consistency screens=15 green。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
 ---
 
 # PLAN-L1-03: 画面要求 起票工程 (v3)
@@ -52,6 +60,12 @@ review_evidence:
 - 3 カテゴリ Bounded Context 分離 (PM = 案件遂行 / HM = harness 改善 / GD = 静的ガイド)
 - PM 画面群 V-model 駆動再設計 (PM-01 4 階層プルダウン: 俯瞰 / 工程 / 割当 / 詳細)
 - §3 表示要望に 4 横断原則追加 (人間主導 + AI 補助 / 詳細データテーブル必須 / AI 指示 copy-paste / 問題箇所視覚化)
+
+**v4 改訂内容 (2026-06-22、PO 指示で PM-06 追加)**:
+- 以下 v3 記述中の「14 画面」は v3 (2026-05-28) 時点の history。**現行件数は 15 画面** (SSoT = screen-requirements.md §1)。
+- **PM-06 設計書ビューア追加**: プロジェクト単位で L0-L14 設計書 (Markdown/YAML/Mermaid) を見やすくレンダリングしプレビューする read-only 画面 (URL `/project/:case/designs`、カテゴリ PM)。
+- trace 反映: §5.5 逆 trace に PM-06=BR-01/BR-07/FR-L1-01/FR-L1-32 / §5.6 R2 / §6 ペルソナ / §7 BC・deep-link を 15 画面へ更新。L1↔L14 pair = OT-47 で back-propagation 量閉じ (孤児 SR=0 維持)。
+- pmo-sonnet review approve-with-fixes → 件数残骸 (14→15) 全 doc 修正済 + doctor doc-consistency screens=15 green。
 
 **注意**: L1 画面要求は「業務要求視点の必要画面列挙 + データ表示要望」。UI 具体化 (レイアウト / ワイヤーフレーム / UI 要素) は L2 画面設計 4 sub-doc に委ねる。
 
@@ -193,6 +207,7 @@ S2=b 30 秒ポーリング / S3=b PLAN ビュー パース構造化 / S5=b Recov
 - [x] 専門サブエージェント review 通過 (acdc5ccd + 4 追加 subagent + Step J/K/L、2026-05-28)
 - [x] **G1-trace 機械検証 R1-R4 通過** (DD1=a / DD2=a PO 承認 2026-05-28、2026-06-02 BR-22 fullback 更新): R1 全 BR/UX 13 件画面紐付き ✅ / R2 全 14 画面業務根拠紐付き ✅ / R3 FR-L1 P0 19 件全件画面紐付き ✅ / R4 screen sub-doc requires 整合 ✅。SSoT: §5 trace マトリクス
 - [x] **G1 readiness: status = ready-for-G1-signoff** (v5 確定、14 画面 + 4 横断原則 + Bounded Context + G1-trace 全件 PO 承認済 2026-05-28)
+- [x] **v4 (2026-06-22)**: PM-06 設計書ビューア追加で **15 画面**、§5.5 逆 trace に PM-06 紐付け (孤児 0)、L14 OT-47 pair back-propagation、doctor doc-consistency screens=15 green
 
 ## §7 carry / 次工程 (L2 / L3) への引き継ぎ
 

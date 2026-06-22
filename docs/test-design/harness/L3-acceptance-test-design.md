@@ -110,7 +110,7 @@ updated: 2026-06-02
 | **AT-FR-27-01** | (A-50 workflow core) AC-FR-27-01 (Research ADR 正常) | research-memo + ADR draft / generates=adr_snapshot 自動 | vitest research test |
 | **AT-FR-27-02** | AC-FR-27-02 (generates 欠落) | research + generates なし → fail-close | vitest schema test |
 | **AT-FR-27-03** | AC-FR-27-03 (ADR 候補なし) | research-memo のみで完了 / status=completed / audit | vitest research test |
-| **AT-FR-29-01** | (A-50 workflow core) AC-FR-29-01 (L2 画面設計起票) | `ut-tdd plan draft --layer L2 --sub-doc screen-list` → 起票 + 14 画面 baton 確認 | vitest plan + L2 test |
+| **AT-FR-29-01** | (A-50 workflow core) AC-FR-29-01 (L2 画面設計起票) | `ut-tdd plan draft --layer L2 --sub-doc screen-list` → 起票 + 15 画面 baton 確認 | vitest plan + L2 test |
 | **AT-FR-29-02** | AC-FR-29-02 (G1 未通過で L2) | G1 未通過 + L2 PLAN 起票 → fail-close V-model 順序違反 | vitest gate + plan test |
 | **AT-FR-29-03** | AC-FR-29-03 (wireframe 外部依頼) | 外部成果物戻り → 要件 back-propagation (G1-trace 再検証) → L10 へ | vitest L2 + back-prop test (carry placeholder) |
 | **AT-FR-30-01** | (A-50 workflow core) AC-FR-30-01 (L10 token SSOT) | L9 G9 通過後 + L10 起票 → tokens.yaml 生成 + a11y script | vitest plan + L10 test |
