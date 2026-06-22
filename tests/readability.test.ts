@@ -69,12 +69,20 @@ describe("runtime-artifact readability guard (PLAN-L7-69: .ut-tdd audit/handover
   it("loader spans .ut-tdd/audit markdown + .ut-tdd/handover JSON and the real artifacts are mojibake-free", () => {
     const docs = loadRuntimeArtifactReadabilityDocs();
     const paths = docs.map((doc) => doc.path.replaceAll("\\", "/"));
-    // CURRENT.json is the always-present handover pointer; provider/ holds the
-    // cross-agent JSON payloads. The audit dir holds the A-NNN markdown ledger.
-    expect(paths).toContain(".ut-tdd/handover/CURRENT.json");
+    // Assert on TRACKED runtime evidence only: the A-NNN audit markdown ledger and
+    // the cross-agent provider JSON payloads are committed, so they are present in a
+    // fresh CI checkout. CURRENT.json is the handover pointer but is gitignored
+    // (.ut-tdd/handover/CURRENT.*) — it exists locally but NOT in CI, so asserting
+    // its presence here was a local-green/CI-red trap. Its handling is covered by the
+    // fixture tests below (clean + replacement-character cases). The loader's
+    // fail-open-on-absence design means an absent CURRENT.json is correct, not a gap.
     expect(paths.some((p) => p.startsWith(".ut-tdd/audit/") && p.endsWith(".md"))).toBe(true);
     expect(
       paths.some((p) => p.startsWith(".ut-tdd/handover/provider/") && p.endsWith(".json")),
+    ).toBe(true);
+    // loader scope: every loaded path stays within the two runtime-evidence roots.
+    expect(
+      paths.every((p) => p.startsWith(".ut-tdd/audit/") || p.startsWith(".ut-tdd/handover/")),
     ).toBe(true);
     expect(analyzeReadability(docs).violations).toEqual([]);
   });
