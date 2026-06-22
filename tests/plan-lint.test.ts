@@ -166,6 +166,19 @@ describe("plan schedule lint (IMP-081)", () => {
     expect(reasons).toContain("skip_sub_doc_reason");
   });
 
+  it("U-PLANGOV-006: L4 標準成果物カタログ拡張 (report/batch/notification/code-value) を plan lint が valid sub_doc として受理", () => {
+    const newTypes = ["report", "batch", "notification", "code-value"];
+    const docs = newTypes.map((t, i) => planDoc(`PLAN-L4-8${i}-${t}`, { layer: "L4", subDoc: t }));
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+    expect(reasons).not.toContain("invalid_sub_doc");
+
+    // schema 単一正本由来 (重複コピー撤去) ゆえ L4 専用: L2 へ置くと invalid_sub_doc
+    const l2 = analyzePlanGovernance([
+      planDoc("PLAN-L2-89-report", { layer: "L2", subDoc: "report" }),
+    ]);
+    expect(l2.violations.map((v) => v.reason)).toContain("invalid_sub_doc");
+  });
+
   it("U-PLANGOV-003: parent/requires/parent_design cross-record checks fail closed", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-governance-"));
     try {

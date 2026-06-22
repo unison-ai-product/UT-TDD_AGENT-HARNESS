@@ -417,13 +417,16 @@ VALID_SUB_DOCS = {
   L1: ["business", "functional", "screen", "technical", "nfr"],                          # 5 種
   L2: ["screen-list", "screen-flow", "wireframe", "ui-element"],                          # 4 種
   L3: ["business-requirement", "functional-requirement", "nfr-grade"],                    # 3 種
-  L4: ["architecture", "function", "screen", "data", "external-if"],                      # 5 種
+  L4: ["architecture", "function", "screen", "data", "external-if",
+       "report", "batch", "notification", "code-value"],                                  # 5 コア + 4 標準成果物
   L5: ["internal-processing", "module-decomposition", "physical-data", "if-detail"],      # 4 種
   L6: ["function-spec", "class-design", "edge-case"],                                     # 3 種
 }
 ```
 
 PLAN ID 命名は `PLAN-L<N>-<NN>-<sub-doc-slug>` (例: `PLAN-L1-03-screen-requirements`、`PLAN-L4-02-function`)。NN は layer × sub-doc を跨いだ通し連番 (sub-doc が決まれば slug で識別可)。
+
+> **L4 標準成果物カタログ拡張 (2026-06-22、`report`/`batch`/`notification`/`code-value`)**: L4 基本設計 = 外部設計。[document-system-map.md](./document-system-map.md) §1 が業界標準 (IPA 共通フレーム 2013) で grounding する外部設計成果物は「**画面 / 帳票 / IF / データ / 業務処理**」。画面は L2 (画面専用層) が持つため、残る標準成果物 = `report` (帳票)・`batch` (バッチ)・`notification` (メール/通知)・`code-value` (コード値一覧) を L4 へ追加し SI 標準成果物カタログを完成させる。これらは §G.13 の「**② プロダクト選択**」(当該成果物を産出する製品のみ起票。CLI/BE-only 等の不産出製品は `skip_sub_doc[].reason` で省略) であり、製品非依存の ① 必須ではない。当初「downstream プロダクト形状確定後」と carry されていたが、標準成果物は業界標準で確定済 = 自己スコープ (harness 自身が帳票を持たない) を理由にした先送りは [[judge-tooling-by-mission-not-self-scope]] に反するため本拡張で解消 (PO 指示 2026-06-22「カタログ拡張の完遂」)。正本は `src/schema/index.ts` の `VALID_SUB_DOCS` (本表は §正本同期方針に従いそれを mirror)。
 
 > **内部資産拡張 sub-doc (REVERSE-01 V4 注記、2026-06-04)**: harness 自身が統制する内部資産 (roster / skill-pack / drift-lint) は、上記コア sub-doc enum とは別の **拡張 sub-doc** として L4/L5 に存在する (実 PLAN: `PLAN-L4-10〜13` (internal-asset-master/roster/skill-pack/drift-lint) / `PLAN-L5-05〜07` (roster/skill/drift))。これらは製品ドメインの設計 sub-doc でなく harness メタ資産のため、コア `VALID_SUB_DOCS[L4|L5]` の件数確定 (5/4 種) には含めず、**拡張点**として別管理する。lint engine 実装時は `VALID_SUB_DOCS` を「コア + 内部資産拡張」の 2 群で持つ (件数 audit はコア群で行い、拡張群は allow-list 追加)。
 

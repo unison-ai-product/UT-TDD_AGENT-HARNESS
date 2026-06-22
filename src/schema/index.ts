@@ -45,11 +45,22 @@ export const VALID_LAYERS = [
 export const layerSchema = z.enum(VALID_LAYERS);
 export type Layer = z.infer<typeof layerSchema>;
 
+// L4 標準成果物カタログ = 外部設計成果物。report/batch/notification/code-value の grounding と
+// 区分 (② プロダクト選択) は docs/governance/document-system-map.md §1b を正本とする。
 export const VALID_SUB_DOCS = {
   L1: ["business", "functional", "nfr", "technical", "screen"],
   L2: ["screen-list", "screen-flow", "ui-element", "wireframe"],
   L3: ["business", "functional", "nfr"],
-  L4: ["data", "architecture", "function", "external-if"],
+  L4: [
+    "data",
+    "architecture",
+    "function",
+    "external-if",
+    "report",
+    "batch",
+    "notification",
+    "code-value",
+  ],
   L5: ["physical-data", "module-decomposition", "internal-processing", "if-detail"],
   L6: ["function-spec", "class-design", "edge-case"],
 } as const;
@@ -67,6 +78,10 @@ export const VALID_SUB_DOC_VALUES = [
   "architecture",
   "function",
   "external-if",
+  "report",
+  "batch",
+  "notification",
+  "code-value",
   "physical-data",
   "module-decomposition",
   "internal-processing",

@@ -207,6 +207,38 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
     );
     expect(ok.success).toBe(true);
   });
+  it("L4 標準成果物カタログ拡張: report/batch/notification/code-value は L4 valid・L2 invalid (§1.10.G.1)", () => {
+    const l4 = (subDoc: string) =>
+      implBase({
+        plan_id: "PLAN-L4-98-catalog",
+        kind: "design",
+        layer: "L4",
+        parent_design: undefined,
+        sub_doc: subDoc,
+        generates: [
+          {
+            artifact_path: `docs/design/harness/L4-basic-design/${subDoc}.md`,
+            artifact_type: "design_doc",
+          },
+        ],
+      });
+    for (const t of ["report", "batch", "notification", "code-value"]) {
+      expect(frontmatterSchema.safeParse(l4(t)).success).toBe(true);
+    }
+    // L4 専用カタログ: L2 (画面層) では invalid
+    const l2Report = implBase({
+      plan_id: "PLAN-L2-98-catalog",
+      kind: "design",
+      layer: "L2",
+      parent_design: undefined,
+      sub_doc: "report",
+      generates: [
+        { artifact_path: "docs/design/harness/L2-screen/report.md", artifact_type: "design_doc" },
+      ],
+    });
+    expect(frontmatterSchema.safeParse(l2Report).success).toBe(false);
+  });
+
   it("kind=impl の master_hub は工程表ハブとして parent_design 不要", () => {
     const r = frontmatterSchema.safeParse(
       implBase({

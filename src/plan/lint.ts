@@ -4,6 +4,7 @@ import { parse as parseYaml } from "yaml";
 import { analyzeG1Trace, g1TraceMessages, g1TraceOk, loadG1TraceDocs } from "../lint/g1-trace";
 import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3-trace";
 import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter";
+import { VALID_SUB_DOCS as SCHEMA_VALID_SUB_DOCS } from "../schema/index";
 
 export interface LintResult {
   ok: boolean;
@@ -66,14 +67,11 @@ const SERIAL_MODE_PATTERN = /\[直列\]/;
 const REVIEW_PATTERN = /review|レビュー|self|pmo-sonnet/i;
 
 const DESIGN_LAYERS_REQUIRING_SUB_DOC = new Set(["L1", "L2", "L3", "L4", "L5", "L6"]);
-const VALID_SUB_DOCS: Record<string, Set<string>> = {
-  L1: new Set(["business", "functional", "nfr", "technical", "screen"]),
-  L2: new Set(["screen-list", "screen-flow", "ui-element", "wireframe"]),
-  L3: new Set(["business", "functional", "nfr"]),
-  L4: new Set(["data", "architecture", "function", "external-if"]),
-  L5: new Set(["physical-data", "module-decomposition", "internal-processing", "if-detail"]),
-  L6: new Set(["function-spec", "class-design", "edge-case"]),
-};
+// 単一正本 = src/schema/index.ts の VALID_SUB_DOCS (要件 §1.10.G.1: schema が VALID_* の正本)。
+// ここに並行コピーを置くと catalog 拡張時に drift するため Set 化して派生のみ持つ。
+const VALID_SUB_DOCS: Record<string, Set<string>> = Object.fromEntries(
+  Object.entries(SCHEMA_VALID_SUB_DOCS).map(([layer, subDocs]) => [layer, new Set(subDocs)]),
+);
 const INTERNAL_ASSET_EXTENSION_PLAN_IDS = new Set([
   "PLAN-L4-10-internal-asset-master",
   "PLAN-L4-11-roster",
