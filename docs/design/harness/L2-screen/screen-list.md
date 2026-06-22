@@ -13,6 +13,10 @@ created: 2026-05-28
 updated: 2026-06-22
 ---
 
+## PLAN-L7-102 Review Back-Fill: 404 Path Safety
+
+404 ページに表示する URL path は通常画面と同じ `escapeHtml` 経路を通す。未知 path はユーザー入力扱いとし、HTML として解釈しない。
+
 # L2 画面一覧 (screen-list)
 
 > **SSoT 参照**: 画面要求 (15 画面 PM/HM/GD) の正本は L1 [screen-requirements.md](../L1-requirements/screen-requirements.md)。本 doc は L1 で確定した画面群に **L2 設計確定項目 (URL 設計 / ID↔URL 1:1 / 認証認可 / ステート保持)** を付与する。用語独自定義は行わない (anti-corruption layer)。

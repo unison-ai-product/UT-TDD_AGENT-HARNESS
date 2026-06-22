@@ -584,6 +584,12 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - U-L6COMP-004: `analyzeL6Completion` reports `freezeInputReady=true` when L6 trace/substance inputs are complete even if docs/plans/L7/G6 are still draft before the G6 audit.
 - U-L6COMP-005: post-G6 `kind=add-design` PLAN drafts do not reopen base L6 completion; add-feature completeness is handled by backfill/pair/review evidence.
 
+## PLAN-L7-102 Web Dashboard Phase B Addendum
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-WEB-014 | `handleRequest` 404 branch | Unknown URL paths are reflected only after `escapeHtml`; a path such as `/x/<script>alert(1)</script>` must not appear as executable HTML in the 404 body. |
+
 ## PLAN-L7-68 Provider Dispatch Addendum
 
 | U-ID | Target | Oracle |
