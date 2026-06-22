@@ -31,7 +31,7 @@ describe("doc consistency (doc 間整合の自動化)", () => {
 
   it("チェック2 画面ID実在: functional §1 の対応画面 ID が screen で全件定義済 (orphan = 0)", () => {
     const screen = checkScreenIdValidity(docs.l1Functional, docs.screen);
-    expect(screen.definedScreens.length).toBe(14); // PM 5 + HM 8 + GD 1
+    expect(screen.definedScreens.length).toBe(15); // PM 6 + HM 8 + GD 1 (PM-06 設計書ビューア)
     expect(screen.referenced.length).toBeGreaterThan(0);
     expect(screen.orphans).toEqual([]);
   });
@@ -47,6 +47,6 @@ describe("doc consistency (doc 間整合の自動化)", () => {
     expect(result.carryOrphans).toEqual([]);
     expect(result.screenIdOrphans).toEqual([]);
     expect(result.nfrCount.mismatch).toBe(false);
-    expect(result.definedScreenCount).toBe(14);
+    expect(result.definedScreenCount).toBe(15);
   });
 });

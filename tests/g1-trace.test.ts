@@ -17,8 +17,9 @@ describe("G1-trace coverage (business/screen/functional)", () => {
     expect(business.size).toBe(13);
     expect(business.has("BR-21")).toBe(true);
     expect(business.has("BR-22")).toBe(true);
-    expect(screens.size).toBe(14);
+    expect(screens.size).toBe(15);
     expect(screens.has("PM-01")).toBe(true);
+    expect(screens.has("PM-06")).toBe(true); // 設計書ビューア (2026-06-22 PO 指示で追加)
     expect(screens.has("HM-08")).toBe(true);
     expect(screens.has("GD-01")).toBe(true);
   });
