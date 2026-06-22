@@ -6,9 +6,11 @@ import {
   capWithBreadcrumb,
   checkHandoverBypass,
   checkHandoverDiscipline,
+  checkHandoverOutstandingAnchor,
   countHandoverEntries,
   dedupeDigests,
   GENERATED_BY,
+  HANDOVER_OUTSTANDING_MARKER,
   type HandoverDeps,
   type HandoverPointer,
   type HandoverScope,
@@ -214,6 +216,57 @@ describe("U-HOVER-004 renderHandoverScaffold", () => {
     }
     // bypass 検知契約: `# Session Handover` header は slim でも 1 個 (countHandoverEntries 不変)。
     expect(countHandoverEntries(slim)).toBe(1);
+  });
+});
+
+// PLAN-L7-98 (Q1): §5 未了 PO 判断 を outstanding surface (機械事実) で seed + fail-close anchor。
+describe("U-HOVER-017 §5 outstanding seed + anchor gate (PLAN-L7-98)", () => {
+  const outstanding = {
+    nonTerminalPlansByLayer: { L7: 2 },
+    nonTerminalPlansTotal: 2,
+    openDefers: 1,
+  };
+
+  it("outstanding 指定で §5 に機械集計 marker + 件数を出力する", () => {
+    const doc = scaffoldFromDigests([digest()], [], "2026-06-04");
+    const md = renderHandoverScaffold(doc, { outstanding });
+    expect(md).toContain(HANDOVER_OUTSTANDING_MARKER);
+    expect(md).toContain("non-terminal PLANs=2");
+    expect(md).toContain("open defers=1");
+  });
+
+  it("outstanding 未指定なら従来の §5 TODO (後方互換、marker なし)", () => {
+    const md = renderHandoverScaffold(scaffoldFromDigests([digest()], [], "2026-06-04"));
+    expect(md).not.toContain(HANDOVER_OUTSTANDING_MARKER);
+    expect(md).toContain("§5 未了 PO 判断");
+  });
+
+  function withDoc(md: string | null): ReturnType<typeof mockDeps> {
+    const deps = mockDeps();
+    deps.files.set(pointerPath, JSON.stringify({ latest_doc: "docs/handover/h.md" }));
+    if (md != null) deps.files.set(join("/repo", "docs", "handover", "h.md"), md);
+    return deps;
+  }
+
+  it("pointer 不在は skip (ok)", () => {
+    expect(checkHandoverOutstandingAnchor(mockDeps()).ok).toBe(true);
+  });
+
+  it("§5 に marker があれば ok", () => {
+    const md = `# Session Handover — 2026-06-04\n\n## §5 未了 PO 判断\n\n> ${HANDOVER_OUTSTANDING_MARKER}: non-terminal PLANs=0; open defers=1\n\n## §6 x\n`;
+    expect(checkHandoverOutstandingAnchor(withDoc(md)).ok).toBe(true);
+  });
+
+  it("§5 に marker が無ければ fail-close (前任 prose 転記の false-state 防止)", () => {
+    const md = `# Session Handover — 2026-06-04\n\n## §5 未了 PO 判断\n\n- DISCOVERY-03 PO サインオフ待ち\n\n## §6 x\n`;
+    const r = checkHandoverOutstandingAnchor(withDoc(md));
+    expect(r.ok).toBe(false);
+    expect(r.messages[0]).toContain("機械集計行");
+  });
+
+  it("複数 entry は最後の entry の §5 を見る (古い entry の marker では通さない)", () => {
+    const md = `# Session Handover — 2026-06-04\n\n## §5 未了 PO 判断\n\n> ${HANDOVER_OUTSTANDING_MARKER}: x\n\n---\n\n# Session Handover — 2026-06-04\n\n## §5 未了 PO 判断\n\n- 待ち prose のみ\n\n## §6 x\n`;
+    expect(checkHandoverOutstandingAnchor(withDoc(md)).ok).toBe(false);
   });
 });
 

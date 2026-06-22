@@ -8,6 +8,16 @@ Separation of responsibilities:
 - `.claude/CLAUDE.md`: Claude Code runtime / hook policy.
 - `AGENTS.md`: Codex CLI project rules.
 
+## コミュニケーション (報連相)
+
+チャット上の報連相 (報告・連絡・相談) は **日本語** で行う (PO ルール、2026-06-22)。
+進捗報告・調査結論・選択肢提示・確認依頼など PO へ向けた chat 出力は日本語を既定とし、
+見出し・箇条書きラベルも日本語を優先する。これは Claude / Codex 両ランタイム共通のルール
+(`CLAUDE.md` / `.claude/CLAUDE.md` と同一)。
+
+ただし成果物はそれぞれの規約に従う: コード/識別子/commit message は従来どおり、ファイル名は
+英語 (文字化け回避)、技術用語・コマンド・PLAN ID・パスは原語のまま埋め込んでよい (無理に和訳しない)。
+
 ## Core Reads
 
 For work in this repository, read the repository-owned sources below and follow
@@ -115,10 +125,24 @@ Do not add legacy commands as current company/product execution paths.
 
 - Read target files before editing them.
 - Match existing code structure, naming, and test placement.
-- Treat existing uncommitted changes as user work; do not revert them without
+- Treat existing uncommitted changes and **commits made by the other runtime
+  (Claude)** as legitimate work; do not revert/reset/checkout them without
   explicit instruction.
 - Do not write secrets, PII, or credentials into docs, rules, examples, or audit
   evidence.
+
+## Git Rules (hybrid 多ランタイム協調)
+
+- Use Conventional Commits. Stage explicit paths only (`git add <path>`; never
+  `git add -A` / `git add .`).
+- **history を書き換える前に `git log` / `git reflog` を確認**し、もう一方のランタイム
+  (Claude) の commit を `reset` / `revert` / `checkout` / force で破棄・デグレさせない。
+  working tree の foreign 変更は既定で「相手ランタイムの正規作業」とみなす。判断不能なら
+  revert せず PO 確認。
+- 自分の成果は相手の commit の上に積み、相手のファイルに触れない。
+- **commit 直前に `git status` + `git diff --staged` (or `ut-tdd review --staged` /
+  `--uncommitted`)** で、authored した意図ファイルのみが staged であることを検証する。
+- push 済み履歴は破壊しない。
 
 ## Test Rules
 

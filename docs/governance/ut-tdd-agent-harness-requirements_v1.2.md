@@ -260,7 +260,14 @@ validator は `(kind, workflow_phase)` ペアが本表に存在しなければ f
 | `troubleshoot` | `be / fe / fullstack / db / agent` (障害対象 work の専門職) |
 | `research` | `be / fe / fullstack / db / agent` |
 
-validator は本表で組み合わせ違反を fail-close (matrix 機械検証は `src/schema` 側で将来実装、現状 enum 検証のみ)。
+validator は本表で組み合わせ違反を fail-close。**機械強制の実態 (2026-06-22 に doc↔impl drift 是正)**:
+本 matrix は全 12 kind × 全 5 drive を許容する (禁止セル無し) ため、`driveSchema` (`src/schema/index.ts`
+の `z.enum(VALID_DRIVES)` = 専門職 5 種) が「drive ∈ 専門職」を fail-close するだけで matrix のセル制約は
+網羅される。表中の唯一の非自明制約「**add-design/add-impl の drive は親 PLAN と一致必須**」は
+`analyzePlanGovernance` (`src/plan/lint.ts`) の `parent_drive_mismatch` が既に fail-close 強制している
+(親 drive=fullstack は包摂ゆえ許容)。したがって kind × drive matrix は「将来実装」でなく**現状で機械強制済**
+(driveSchema + parent_drive_mismatch)。「駆動モデル (kind、§2.5) と専門職 (drive) の軸分離」も完了済
+(VALID_DRIVES から旧 mode 値 scrum/reverse/poc/troubleshoot を除去、PLAN-DISCOVERY-04 V7)。
 
 ## 1.7 VALID_ARTIFACT_TYPES (19 種、test_design / test_code 分離済)
 

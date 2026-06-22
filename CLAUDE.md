@@ -46,6 +46,15 @@ Design and implementation should be judged by these pillars:
    reduces risk or cost.
 6. Strict verification: no completion claim without tests or explicit evidence.
 
+## コミュニケーション (報連相)
+
+チャット上の報連相 (報告・連絡・相談) は **日本語** で行う (PO ルール、2026-06-22)。
+進捗報告・調査結論・選択肢提示・確認依頼など PO へ向けた chat 出力は日本語を既定とし、
+見出し・箇条書きラベルも日本語を優先する。
+
+ただし成果物はそれぞれの規約に従う: コード/識別子/commit message は従来どおり、ファイル名は
+英語 (文字化け回避)、技術用語・コマンド・PLAN ID・パスは原語のまま埋め込んでよい (無理に和訳しない)。
+
 ## Canonical Docs
 
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
@@ -93,6 +102,23 @@ V-model artifacts must stay separated:
 - Push at coherent PLAN / task boundaries when requested.
 - CI is `harness-check`: typecheck, Vitest, Biome lint, and doctor.
 - Review evidence is required before confirmation gates where applicable.
+
+### Hybrid 多ランタイム commit 協調 (Claude ↔ Codex、必須)
+
+実運用では **Codex (もう一方のランタイム) が並行に作業を進め、コミットまで完了させる**。Claude は
+その成果を絶対にデグレさせてはならない ([[feedback-commit-finished-codex-work-dont-abandon]])。
+
+- **history を書き換える前に必ず `git log` / `git reflog` を確認**し、自分が作っていない commit
+  (相手ランタイムの成果) が無いか調べる。**他ランタイムの commit を `reset` / `revert` / `checkout` /
+  force で破棄・デグレさせない**。working tree の foreign 変更は **既定で「相手ランタイムの正規作業」と
+  みなす** (overstep と決めつけない)。判断が付かなければ revert せず PO へ確認する。
+- 自分の成果は **相手の commit の上に積む** (rebase/stack)。相手のファイルには触れず、自分の意図ファイル
+  のみを path 明示で stage する (`git add <path>`、`git add -A` / `git add .` 禁止)。
+- **commit 直前に `git status` + `git diff --staged` (or `ut-tdd review --staged` / `--uncommitted`) を
+  確認**し、自分が authored した意図ファイルのみが staged であることを検証する。
+- push は origin と相手の commit を含めて整合する状態でのみ行う。push 済み履歴は決して破壊しない。
+- 真に off-task な overstep (相手ランタイムの作業でも自分の作業でもない net-new) と疑う場合でも、
+  **revert する前に PO 確認**を取り、IMP で記録する (完了済み成果を捨てる誤判定を防ぐ)。
 
 ## Canonical Commands
 

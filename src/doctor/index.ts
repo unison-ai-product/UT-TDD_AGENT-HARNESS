@@ -10,6 +10,7 @@ import {
   checkHandoverBypass,
   checkHandoverCompletionWording,
   checkHandoverDiscipline,
+  checkHandoverOutstandingAnchor,
   type HandoverDeps,
   type HandoverPointer,
   handoverStale,
@@ -1671,6 +1672,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const frRegistryAudit = checkFrRegistryAudit(deps.repoRoot);
   const improvementBacklog = checkImprovementBacklog(deps.repoRoot);
   const lintWiring = checkLintWiring(deps.repoRoot);
+  const handoverOutstanding = checkHandoverOutstandingAnchor(handoverDeps(deps));
   return {
     ok:
       backfill.ok &&
@@ -1729,7 +1731,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       entityCoverage.ok &&
       frRegistryAudit.ok &&
       improvementBacklog.ok &&
-      lintWiring.ok,
+      lintWiring.ok &&
+      handoverOutstanding.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
       checkHandover(deps),
@@ -1792,6 +1795,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...frRegistryAudit.messages.map((m) => `doctor: ${m}`),
       ...improvementBacklog.messages.map((m) => `doctor: ${m}`),
       ...lintWiring.messages.map((m) => `doctor: ${m}`),
+      ...handoverOutstanding.messages.map((m) => `doctor: ${m}`),
     ],
   };
 }

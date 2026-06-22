@@ -239,6 +239,17 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
     expect(frontmatterSchema.safeParse(l2Report).success).toBe(false);
   });
 
+  it("drive は専門職 5 種のみ・mode 値 (駆動モデル) を拒否する (§1.6 軸分離、DISCOVERY-04 V7)", () => {
+    // 専門職 5 種は通る (kind 非依存の許容 matrix = 全 kind × 全 drive)。
+    for (const drive of ["be", "fe", "fullstack", "db", "agent"]) {
+      expect(frontmatterSchema.safeParse(implBase({ drive })).success).toBe(true);
+    }
+    // 旧 mode 値 (駆動モデル/状況。drive でない) は fail = 軸分離が崩れていない証拠。
+    for (const mode of ["scrum", "reverse", "poc", "troubleshoot", "recovery"]) {
+      expect(frontmatterSchema.safeParse(implBase({ drive: mode })).success).toBe(false);
+    }
+  });
+
   it("kind=impl の master_hub は工程表ハブとして parent_design 不要", () => {
     const r = frontmatterSchema.safeParse(
       implBase({

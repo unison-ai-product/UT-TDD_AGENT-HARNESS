@@ -13,7 +13,11 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { computeOutstandingWork, type OutstandingWork } from "../lint/outstanding";
+import {
+  computeOutstandingWork,
+  type OutstandingWork,
+  outstandingSummaryLine,
+} from "../lint/outstanding";
 import {
   activePlanStale,
   inferPlanFromCommit,
@@ -365,7 +369,17 @@ export interface HandoverRenderOpts {
    * slimSummary=true のときは §1/§2 が参照 stub なので無関係 (cap 不発)。
    */
   maxSummaryPlans?: number;
+  /**
+   * PLAN-L7-98 (Q1): §5 未了 PO 判断 を機械事実 (outstanding surface) で seed する。
+   * 渡されたとき §5 に machine 集計行 (HANDOVER_OUTSTANDING_MARKER) を出力し、その下に human TODO を置く。
+   * §5 は handover で唯一機械裏付け不在のセクションで、前任 prose の転記で「実在しない PO 判断」が
+   * 累積した根因 ([[feedback_verify_carry_status_against_code]])。machine 行を常駐させ false-state を可視化する。
+   */
+  outstanding?: OutstandingWork;
 }
+
+/** PLAN-L7-98 (Q1): §5 に常駐させる機械集計行の marker。doctor がこの presence を fail-close する。 */
+export const HANDOVER_OUTSTANDING_MARKER = "機械集計 (outstanding)";
 
 /** capWithBreadcrumb の描画 callbacks (max-source-params 準拠で 1 object に束ねる)。 */
 export interface CapRender<T> {
@@ -432,7 +446,21 @@ export function renderHandoverScaffold(doc: HandoverDoc, opts: HandoverRenderOpt
   }
   lines.push("", "## §3 Next Action", "", TODO("順序付き次手"), "");
   lines.push("## §4 carry (未了・先送り)", "", TODO("carry"), "");
-  lines.push("## §5 未了 PO 判断", "", TODO("escalation"), "");
+  lines.push("## §5 未了 PO 判断", "");
+  if (opts.outstanding) {
+    // PLAN-L7-98 (Q1): 機械事実で §5 を seed。前任 prose の転記でなく state から導出した行を常駐させ、
+    // terminal な PLAN / implemented な IMP を「待ち」と書く false-state を可視化・上書きする。
+    lines.push(
+      `> ${HANDOVER_OUTSTANDING_MARKER}: ${sanitize(outstandingSummaryLine(opts.outstanding).replace(/^outstanding:\s*/, ""))}`,
+      "> ↑ `ut-tdd status` / CURRENT.json と同一の機械事実。これに反する「待ち/未了」記述は false-state。",
+      "> 実在する未了 = 非終端 PLAN + open defer のみ。terminal な PLAN / implemented な IMP を pending に書かない。",
+      "",
+      TODO("上記機械集計に対する PO 判断の補足 (実在する未了のみ)"),
+      "",
+    );
+  } else {
+    lines.push(TODO("escalation"), "");
+  }
   lines.push("## §6 壊さない / 再発させない", "", TODO("壊さない注意"), "");
   return lines.join("\n");
 }
@@ -568,6 +596,62 @@ export function checkHandoverDiscipline(deps: HandoverDeps, maxHours = 24): stri
     );
   }
   return warnings;
+}
+
+/**
+ * PLAN-L7-98 (Q1): 複数 entry md の「最後の # Session Handover entry」内の `## ... <token> ...`
+ * セクション本文を返す (純関数)。token 不在は null。
+ */
+export function latestEntrySection(md: string, token: string): string | null {
+  const headers = [...md.matchAll(/^#\s+Session Handover\b.*$/gm)];
+  const entry = headers.length > 0 ? md.slice(headers[headers.length - 1].index ?? 0) : md;
+  const m = entry.match(new RegExp(`^##\\s*[^\\n]*${token}[^\\n]*$`, "m"));
+  if (!m || m.index === undefined) return null;
+  const rest = entry.slice(m.index + m[0].length);
+  const next = rest.search(/^##\s/m);
+  return next < 0 ? rest : rest.slice(0, next);
+}
+
+/**
+ * PLAN-L7-98 (Q1): 最新 handover の §5 未了 PO 判断 が機械集計行 (HANDOVER_OUTSTANDING_MARKER) を
+ * 持つかを fail-close 検証する。§5 は handover で唯一機械裏付け不在のセクションで、前任 prose の
+ * 転記で「実在しない PO 判断」が累積した根因 ([[feedback_verify_carry_status_against_code]])。
+ * machine 行の常駐を強制し、terminal な PLAN を「待ち」と書く false-state が機械事実に矛盾して
+ * 残れないようにする。pointer/doc 不在は対象外 (handover-discipline が担う)。I/O 失敗は fail-close。
+ */
+export function checkHandoverOutstandingAnchor(deps: HandoverDeps): {
+  messages: string[];
+  ok: boolean;
+} {
+  const pointer = readPointer(deps);
+  if (!pointer?.latest_doc) {
+    return { messages: ["handover-outstanding — skipped (handover 未生成)"], ok: true };
+  }
+  const md = deps.readText(join(deps.repoRoot, pointer.latest_doc));
+  if (md == null) {
+    return {
+      messages: [`handover-outstanding — violation: ${pointer.latest_doc} を読めない`],
+      ok: false,
+    };
+  }
+  const section = latestEntrySection(md, "§5");
+  if (section == null) {
+    return {
+      messages: [
+        `handover-outstanding — violation: 最新 entry に §5 未了 PO 判断 が無い (${pointer.latest_doc})`,
+      ],
+      ok: false,
+    };
+  }
+  if (!section.includes(HANDOVER_OUTSTANDING_MARKER)) {
+    return {
+      messages: [
+        `handover-outstanding — violation: 最新 handover §5 に機械集計行 (${HANDOVER_OUTSTANDING_MARKER}) が無い → \`ut-tdd handover\` で再生成し machine 事実で §5 を seed (前任 prose 転記の false-state 防止)`,
+      ],
+      ok: false,
+    };
+  }
+  return { messages: ["handover-outstanding — OK (§5 が機械集計行で anchor 済)"], ok: true };
 }
 
 /** CURRENT.json を JSON 上書き (単一機械ポインタ、append しない)。 */
@@ -713,7 +797,11 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
   // PLAN-L7-83: さらに append 前に entry 数を上限へ圧縮し、同日 doc の無制限肥大を防ぐ。
   const existing = deps.readText(docAbs);
   const bounded = existing != null ? boundSameDayEntries(existing, MAX_SAME_DAY_ENTRIES) : existing;
-  const content = renderHandoverScaffold(doc, { slimSummary: bounded != null });
+  // PLAN-L7-98 (Q1): 未了の正の集計を 1 回計算し、§5 seed と CURRENT.json の両方で共有する。
+  // §5 を機械事実 (outstanding) で seed することで「前任 prose の転記」由来の false-state を機械が
+  // 上書きする (§5 は handover で唯一機械裏付け不在だった = 実在しない PO 判断が残る根因)。
+  const outstanding = computeOutstandingWork(deps.repoRoot);
+  const content = renderHandoverScaffold(doc, { slimSummary: bounded != null, outstanding });
   const next = bounded ? `${bounded.replace(/\s*$/, "")}\n\n---\n\n${content}\n` : `${content}\n`;
   // IMP-078 gap①: generated_by 署名 + entry 数を刻む (手書き bypass を checkHandoverBypass が検知できる)。
   const pointer: HandoverPointer = {
@@ -721,7 +809,7 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
     generated_by: GENERATED_BY,
     doc_entry_count: countHandoverEntries(next),
     // IMP-139: 未了の正の集計を CURRENT.json へ additive 記録 (session 再開時に「完了主張」を機械照合可能に)。
-    outstanding: computeOutstandingWork(deps.repoRoot),
+    outstanding,
   };
 
   const written: string[] = [];

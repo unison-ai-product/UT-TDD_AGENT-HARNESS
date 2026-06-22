@@ -127,3 +127,11 @@ schema を単一正本とする。
   無き AI 由来の先送りだった ([[feedback_verify_carry_status_against_code]])。
 - **PLAN 追加/status 変更後は `ut-tdd db rebuild`** (plan-registry-fingerprint stale 回避、
   [[project_codex_branch_ci_verification]])。
+
+## 6. 駆動モデル back-fill ペアリング (PO 監査 2026-06-22 是正)
+
+本 PLAN は `VALID_SUB_DOCS` (exported 契約) を変更した。`KIND_BACKFILL[troubleshoot]="conditional"` =
+契約変更を伴う conditional kind は Reverse 合流が必要 (warn)。当初その合流を省いていた (駆動モデルの
+緩い使用、PO「駆動モデルは正しく使われている？」で指摘) ため、**`PLAN-REVERSE-46-deliverable-catalog-extension`**
+で back-fill 合流を formal に登録した (本 PLAN を requires)。契約変更 → 設計/governance 正本への
+back-fill が駆動モデルとして正しく 1 サイクル閉じている ([[feedback_impl_must_backfill_to_design]])。
