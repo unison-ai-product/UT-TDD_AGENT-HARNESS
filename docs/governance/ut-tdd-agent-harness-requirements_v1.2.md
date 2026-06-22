@@ -909,6 +909,12 @@ R4 outcome の `promotion_strategy` で PoC / 検証成果物の扱いを明示:
       戻した機械証跡を持つ。2026-06-22 以降の新規/更新 PLAN は `plan-governance`
       `reverse_fullback_backprop_missing` で fail-close。既存 legacy 欠落は監査表で debt 管理し、修正時に
       generates 追加または reverse_type 再分類を行う。
+- [ ] `kind in [refactor, retrofit, troubleshoot]` の confirmed/completed PLAN が Reverse PLAN から `requires`
+      されていない場合、2026-06-22 以降の新規/更新 PLAN は `backprop_decision: not_required` と
+      10 文字以上の `backprop_decision_reason` を持つ。契約・挙動・要件・設計・テスト設計の意味が変わる場合は
+      `not_required` を宣言せず Reverse PLAN を起票する。欠落時は `backfill-pairing`
+      `conditionalDecisionMissing` で fail-close。既存 legacy 欠落は
+      `docs/governance/conditional-backfill-decision-audit-2026-06-22.md` で debt 管理する。
 - [ ] `promotion_strategy=reuse-as-is` は trace / test / security 条件が揃わなければ exit 1
 - [ ] `promotion_strategy in [reuse-as-is, reuse-with-hardening]` でも feature PR で Forward gate を通さなければ main merge 不可
 - [ ] poc/* ブランチから main への直 PR は §6.4 で物理ブロック

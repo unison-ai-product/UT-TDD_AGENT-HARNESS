@@ -91,6 +91,8 @@ const frontmatterBaseSchema = z.object({
   /** §6.8.2 Issue 起点スパイン: 解決対象 GitHub Issue 番号 (任意、Phase 0-B で recommended)。
    *  feature/hotfix branch の close 漏れ機械検知 + PR `Closes #NN` 連携に使う。 */
   github_issue_id: z.number().int().positive().nullable().optional(),
+  backprop_decision: z.enum(["not_required"]).optional(),
+  backprop_decision_reason: z.string().optional(),
   /** migration import trace reference (optional migration ledger path) */
   v2_import: z.string().optional(),
   /** review 前置エビデンス (requirements §7.8.7 / .claude/CLAUDE.md MUST、IMP-071)。

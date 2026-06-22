@@ -35,11 +35,45 @@ export const KIND_BACKFILL: Record<string, BackfillReq> = {
   recovery: "none",
 };
 
+export const CONDITIONAL_BACKFILL_DECISION_ENFORCEMENT_DATE = "2026-06-22";
+
+export const LEGACY_CONDITIONAL_BACKFILL_DEBT_PLAN_IDS = new Set<string>([
+  "PLAN-L7-05-biome-debt",
+  "PLAN-L7-68-provider-dispatch-portability",
+  "PLAN-L7-69-encoding-corruption-expanded-guard",
+  "PLAN-L7-73-claude-native-semver-resolution",
+  "PLAN-L7-74-task-risk-whole-word-match",
+  "PLAN-L7-76-review-remediation-reliability",
+  "PLAN-L7-77-codex-stdin-prompt-dispatch",
+  "PLAN-L7-78-claude-stdin-prompt-dispatch",
+  "PLAN-L7-79-mcp-launcher-argv-tokenization",
+  "PLAN-L7-80-session-digest-event-watermark",
+  "PLAN-L7-81-codex-wrapper-parity-gate",
+  "PLAN-L7-83-handover-drift-and-accumulation",
+  "PLAN-L7-85-review-readonly-guard",
+  "PLAN-L7-86-merged-plan-status-deliverable-scope",
+  "PLAN-L7-87-merged-plan-status-kind-independent",
+  "PLAN-L7-88-handover-summary-injection-cap",
+  "PLAN-L7-89-plan-errata-supersession-gate",
+  "PLAN-L7-90-ci-readability-gitignored-artifact",
+  "PLAN-L7-91-hollow-deliverable-detection",
+  "PLAN-L7-92-plan-body-substance-gate",
+  "PLAN-L7-93-plan-completion-drift-gate",
+  "PLAN-L7-95-lint-wiring-meta-gate",
+  "PLAN-L7-96-screen-db-projection",
+  "PLAN-L7-98-handover-outstanding-reconciliation",
+  "PLAN-L7-99-sub-doc-catalog-drift-gate",
+  "PLAN-L7-100-standard-deliverable-section-structure",
+]);
+
 export interface ParsedPlan {
   file: string;
   plan_id: string;
   kind: string;
   status: string;
+  updated: string;
+  backpropDecision: string;
+  backpropDecisionReason: string;
   /** dependencies.requires の path 群 (Reverse が impl を requires する向きを辿る)。 */
   requires: string[];
   /** §6 用語更新 で宣言された用語 (太字 **term** の先頭)。 */
@@ -51,6 +85,8 @@ export interface BackfillResult {
   reverseOrphans: { plan_id: string; kind: string }[];
   /** conditional kind で Reverse 未リンク (人間判断推奨、warn)。 */
   conditionalPending: { plan_id: string; kind: string }[];
+  /** conditional kind with neither Reverse nor explicit no-backprop decision. */
+  conditionalDecisionMissing: { plan_id: string; kind: string }[];
   /** §6 用語更新 で宣言したが L0 §10 用語集に未 merge な (plan_id, term)。 */
   glossaryGaps: { plan_id: string; term: string }[];
   ok: boolean;
@@ -83,9 +119,23 @@ export function parsePlan(file: string, content: string): ParsedPlan {
     plan_id: fmValue(content, "plan_id") ?? file.replace(/\.md$/, ""),
     kind: fmValue(content, "kind") ?? "unknown",
     status: fmValue(content, "status") ?? "unknown",
+    updated: fmValue(content, "updated") ?? fmValue(content, "created") ?? "",
+    backpropDecision: fmValue(content, "backprop_decision") ?? "",
+    backpropDecisionReason: fmValue(content, "backprop_decision_reason") ?? "",
     requires: parseRequires(content),
     glossaryTerms: parseGlossaryTerms(content),
   };
+}
+
+export function hasNoBackpropDecision(plan: ParsedPlan): boolean {
+  return (
+    plan.backpropDecision === "not_required" && plan.backpropDecisionReason.trim().length >= 10
+  );
+}
+
+export function requiresConditionalBackfillDecision(plan: ParsedPlan): boolean {
+  if ((plan.updated || "") < CONDITIONAL_BACKFILL_DECISION_ENFORCEMENT_DATE) return false;
+  return !LEGACY_CONDITIONAL_BACKFILL_DEBT_PLAN_IDS.has(plan.plan_id);
 }
 
 /**
@@ -110,12 +160,18 @@ export function analyzeBackfill(plans: ParsedPlan[], glossaryText: string): Back
 
   const reverseOrphans: { plan_id: string; kind: string }[] = [];
   const conditionalPending: { plan_id: string; kind: string }[] = [];
+  const conditionalDecisionMissing: { plan_id: string; kind: string }[] = [];
   for (const p of active) {
     const req = KIND_BACKFILL[p.kind] ?? "none";
     if (req === "none") continue;
     if (isBackfilled(p)) continue;
     if (req === "required") reverseOrphans.push({ plan_id: p.plan_id, kind: p.kind });
-    else conditionalPending.push({ plan_id: p.plan_id, kind: p.kind });
+    else if (hasNoBackpropDecision(p)) continue;
+    else if (requiresConditionalBackfillDecision(p)) {
+      conditionalDecisionMissing.push({ plan_id: p.plan_id, kind: p.kind });
+    } else {
+      conditionalPending.push({ plan_id: p.plan_id, kind: p.kind });
+    }
   }
 
   const glossaryGaps: { plan_id: string; term: string }[] = [];
@@ -132,8 +188,12 @@ export function analyzeBackfill(plans: ParsedPlan[], glossaryText: string): Back
   return {
     reverseOrphans,
     conditionalPending,
+    conditionalDecisionMissing,
     glossaryGaps,
-    ok: reverseOrphans.length === 0 && glossaryGaps.length === 0,
+    ok:
+      reverseOrphans.length === 0 &&
+      conditionalDecisionMissing.length === 0 &&
+      glossaryGaps.length === 0,
   };
 }
 
@@ -171,6 +231,12 @@ export function backfillMessages(result: BackfillResult): string[] {
     const gaps = result.glossaryGaps.map((g) => `${g.term}(${g.plan_id})`).join(", ");
     msgs.push(
       `backfill — ⚠ §6 用語更新 が L0 §10 へ未 merge ${result.glossaryGaps.length} 件 (${gaps}): living glossary back-merge を実施`,
+    );
+  }
+  if (result.conditionalDecisionMissing.length > 0) {
+    const ids = result.conditionalDecisionMissing.map((o) => o.plan_id).join(", ");
+    msgs.push(
+      `backfill - violation: conditional kind without Reverse/no-backprop decision ${result.conditionalDecisionMissing.length} 件 (${ids}): add Reverse PLAN or set backprop_decision=not_required with backprop_decision_reason`,
     );
   }
   if (result.conditionalPending.length > 0) {

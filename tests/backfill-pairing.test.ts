@@ -16,6 +16,9 @@ function plan(over: Partial<ParsedPlan> = {}): ParsedPlan {
     plan_id: "PLAN-L7-99-x",
     kind: "add-impl",
     status: "confirmed",
+    updated: "2026-06-21",
+    backpropDecision: "",
+    backpropDecisionReason: "",
     requires: [],
     glossaryTerms: [],
     ...over,
@@ -152,6 +155,56 @@ describe("U-BACKFILL-004 analyzeBackfill", () => {
       glossary,
     );
     expect(r.reverseOrphans).toEqual([]);
+  });
+});
+
+describe("U-BACKFILL-004b conditional backprop decision gate", () => {
+  const glossary = "agent-slot peak_parallel";
+
+  it("conditional kind updated after enforcement without Reverse or no-backprop decision fails", () => {
+    const r = analyzeBackfill(
+      [plan({ plan_id: "PLAN-L7-104-x", kind: "refactor", updated: "2026-06-22" })],
+      glossary,
+    );
+    expect(r.conditionalDecisionMissing).toEqual([{ plan_id: "PLAN-L7-104-x", kind: "refactor" }]);
+    expect(r.conditionalPending).toEqual([]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("conditional kind can explicitly declare no design backprop required", () => {
+    const r = analyzeBackfill(
+      [
+        plan({
+          plan_id: "PLAN-L7-104-x",
+          kind: "refactor",
+          updated: "2026-06-22",
+          backpropDecision: "not_required",
+          backpropDecisionReason: "internal cleanup only; no contract or design change",
+        }),
+      ],
+      glossary,
+    );
+    expect(r.conditionalDecisionMissing).toEqual([]);
+    expect(r.conditionalPending).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("legacy conditional debt remains a warning baseline", () => {
+    const r = analyzeBackfill(
+      [
+        plan({
+          plan_id: "PLAN-L7-100-standard-deliverable-section-structure",
+          kind: "troubleshoot",
+          updated: "2026-06-22",
+        }),
+      ],
+      glossary,
+    );
+    expect(r.conditionalDecisionMissing).toEqual([]);
+    expect(r.conditionalPending).toEqual([
+      { plan_id: "PLAN-L7-100-standard-deliverable-section-structure", kind: "troubleshoot" },
+    ]);
+    expect(r.ok).toBe(true);
   });
 });
 
