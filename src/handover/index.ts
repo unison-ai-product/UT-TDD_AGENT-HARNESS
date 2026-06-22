@@ -117,6 +117,17 @@ const CURRENT_PLAN_REL = join(".ut-tdd", "state", "current-plan");
  */
 export const MAX_SAME_DAY_ENTRIES = 4;
 
+/**
+ * PLAN-L7-88: 1 エントリの §1 PLAN サマリ / §2 成果物に載せる PLAN 件数の上限 (注入コントロール)。
+ * session-scope 解決に失敗すると collectScope が全 digest へ fallback し (空 handover 回避)、§1/§2 が
+ * **全 PLAN registry をダンプ**して context を肥大させる (1 anchor entry ~295 行)。registry の正本は
+ * `ut-tdd status` / harness.db であり、handover は session 進捗の入れ物なので、上限超は先頭 N 件 +
+ * 「+M more」breadcrumb へ畳む (no silent cap、剪定分は status/db で参照可)。session-scope が効いた
+ * 通常時は doc.plans が小さく cap は発火しない = 退行なし。slimSummary (同日2件目+) / boundSameDayEntries
+ * (4 entry cap) と直交し合成する。
+ */
+export const MAX_SUMMARY_PLANS = 12;
+
 /** resolveHandoverScope の絞り込みオプション (IMP-048、後方互換: 無指定は dedup のみ)。 */
 export interface HandoverScopeOpts {
   /** active_plan が解決できたとき、同 family (bare ⊂ slug) の digest のみへ絞る。 */
@@ -346,6 +357,28 @@ export interface HandoverRenderOpts {
    * のため slim 化しない。
    */
   slimSummary?: boolean;
+  /**
+   * PLAN-L7-88: §1/§2 に載せる PLAN 件数の上限 (注入コントロール)。未指定/0 以下は MAX_SUMMARY_PLANS。
+   * slimSummary=true のときは §1/§2 が参照 stub なので無関係 (cap 不発)。
+   */
+  maxSummaryPlans?: number;
+}
+
+/** capWithBreadcrumb の描画 callbacks (max-source-params 準拠で 1 object に束ねる)。 */
+export interface CapRender<T> {
+  renderItem: (item: T) => string[];
+  breadcrumb: (remaining: number) => string;
+}
+
+/**
+ * U-HOVER-016 (PLAN-L7-88): items を max 件まで残し、超過分は breadcrumb 1 行へ畳む純関数。
+ * max≤0 は無制限 (cap 無効)。breadcrumb は超過時のみ付く (no silent cap)。
+ */
+export function capWithBreadcrumb<T>(items: readonly T[], max: number, r: CapRender<T>): string[] {
+  if (max <= 0 || items.length <= max) return items.flatMap((item) => r.renderItem(item));
+  const kept = items.slice(0, max).flatMap((item) => r.renderItem(item));
+  kept.push(r.breadcrumb(items.length - max));
+  return kept;
 }
 
 /**
@@ -354,6 +387,7 @@ export interface HandoverRenderOpts {
  * slimSummary=true のとき §1/§2 を参照 stub に縮約する (同日累積の肥大抑制、A-138 ITEM-4)。
  */
 export function renderHandoverScaffold(doc: HandoverDoc, opts: HandoverRenderOpts = {}): string {
+  const cap = opts.maxSummaryPlans ?? MAX_SUMMARY_PLANS;
   const lines: string[] = [];
   lines.push(`# Session Handover — ${doc.date}`, "");
   lines.push("## §1 PLAN サマリ", "");
@@ -361,22 +395,37 @@ export function renderHandoverScaffold(doc: HandoverDoc, opts: HandoverRenderOpt
     lines.push(
       "- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)",
     );
+  } else if (doc.plans.length === 0) {
+    lines.push("- (digest なし)");
   } else {
-    if (doc.plans.length === 0) lines.push("- (digest なし)");
-    for (const p of doc.plans) {
-      lines.push(`- \`${sanitize(p.plan_id)}\` (${sanitize(p.kind)}): ${sanitize(p.summary)}`);
-    }
+    // PLAN-L7-88: 上限超 (= scope fallback で全 registry 化) は先頭 N + breadcrumb へ畳む。
+    lines.push(
+      ...capWithBreadcrumb(doc.plans, cap, {
+        renderItem: (p) => [
+          `- \`${sanitize(p.plan_id)}\` (${sanitize(p.kind)}): ${sanitize(p.summary)}`,
+        ],
+        breadcrumb: (n) =>
+          `- (+ ${n} more PLAN — 全 registry は \`ut-tdd status\` / harness.db を参照)`,
+      }),
+    );
   }
   lines.push("", "## §2 成果物 (commit / files)", "");
   if (opts.slimSummary) {
     lines.push("- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)");
+  } else if (doc.deliverables.length === 0) {
+    lines.push("- (なし)");
   } else {
-    if (doc.deliverables.length === 0) lines.push("- (なし)");
-    for (const d of doc.deliverables) {
-      lines.push(`- \`${sanitize(d.plan_id)}\``);
-      for (const c of d.commits) lines.push(`  - commit: ${sanitize(c)}`);
-      for (const f of d.files) lines.push(`  - file: ${sanitize(f)}`);
-    }
+    lines.push(
+      ...capWithBreadcrumb(doc.deliverables, cap, {
+        renderItem: (d) => [
+          `- \`${sanitize(d.plan_id)}\``,
+          ...d.commits.map((c) => `  - commit: ${sanitize(c)}`),
+          ...d.files.map((f) => `  - file: ${sanitize(f)}`),
+        ],
+        breadcrumb: (n) =>
+          `- (+ ${n} more PLAN の成果物 — 全 registry は \`ut-tdd status\` / harness.db を参照)`,
+      }),
+    );
   }
   lines.push("", "## §3 Next Action", "", TODO("順序付き次手"), "");
   lines.push("## §4 carry (未了・先送り)", "", TODO("carry"), "");

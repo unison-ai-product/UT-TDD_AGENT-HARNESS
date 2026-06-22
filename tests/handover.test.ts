@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   boundSameDayEntries,
   buildPointer,
+  capWithBreadcrumb,
   checkHandoverBypass,
   checkHandoverDiscipline,
   countHandoverEntries,
@@ -15,6 +16,7 @@ import {
   inferPlanFromCommit,
   latestSessionId,
   MAX_SAME_DAY_ENTRIES,
+  MAX_SUMMARY_PLANS,
   type PlanDigestRef,
   readPointer,
   renderHandoverScaffold,
@@ -212,6 +214,75 @@ describe("U-HOVER-004 renderHandoverScaffold", () => {
     }
     // bypass 検知契約: `# Session Handover` header は slim でも 1 個 (countHandoverEntries 不変)。
     expect(countHandoverEntries(slim)).toBe(1);
+  });
+});
+
+// PLAN-L7-88: 1 エントリの §1/§2 に載せる PLAN 件数の上限 (注入コントロール / 圧縮)。
+describe("U-HOVER-016 capWithBreadcrumb + renderHandoverScaffold summary cap (PLAN-L7-88)", () => {
+  const cb = {
+    renderItem: (x: string) => [`- ${x}`],
+    breadcrumb: (n: number) => `- (+ ${n} more)`,
+  };
+
+  it("capWithBreadcrumb: 上限超は先頭 N + breadcrumb 1 行 (no silent cap)、件数は残数を明示", () => {
+    const out = capWithBreadcrumb(["a", "b", "c", "d", "e"], 2, cb);
+    expect(out).toEqual(["- a", "- b", "- (+ 3 more)"]);
+  });
+
+  it("capWithBreadcrumb: 上限以下は全件・breadcrumb なし / max<=0 は無制限", () => {
+    const items = ["a", "b"];
+    expect(capWithBreadcrumb(items, 5, cb)).toEqual(["- a", "- b"]);
+    expect(capWithBreadcrumb(items, 0, cb)).toEqual(["- a", "- b"]);
+  });
+
+  function bigDoc(planCount: number) {
+    const digests: PlanDigestRef[] = [];
+    const meta: { plan_id: string; kind: string; title: string }[] = [];
+    for (let i = 0; i < planCount; i++) {
+      const id = `PLAN-CAP-${String(i).padStart(2, "0")}-x`;
+      digests.push(digest({ plan_id: id, commits: [`c${i}`], files_touched: [`src/f${i}.ts`] }));
+      meta.push({ plan_id: id, kind: "impl", title: `title ${i}` });
+    }
+    return scaffoldFromDigests(digests, meta, "2026-06-22");
+  }
+
+  it("renderHandoverScaffold: PLAN 数が上限超 (= scope fallback で全 registry) なら §1/§2 が cap + breadcrumb", () => {
+    const doc = bigDoc(MAX_SUMMARY_PLANS + 8);
+    const md = renderHandoverScaffold(doc);
+    // §1 breadcrumb に残数 8 が出る (full registry はダンプしない)。
+    expect(md).toContain("+ 8 more PLAN");
+    expect(md).toContain("ut-tdd status");
+    // 末尾 (上限外) の PLAN id は本文に出ない = 肥大しない。
+    const lastId = `PLAN-CAP-${String(MAX_SUMMARY_PLANS + 7).padStart(2, "0")}-x`;
+    expect(md).not.toContain(lastId);
+    // 先頭 PLAN は残る。
+    expect(md).toContain("PLAN-CAP-00-x");
+  });
+
+  it("renderHandoverScaffold: session-scope が効いた通常時 (PLAN 少) は cap 不発・全件・breadcrumb なし", () => {
+    const doc = bigDoc(3);
+    const md = renderHandoverScaffold(doc);
+    expect(md).not.toContain("more PLAN");
+    for (let i = 0; i < 3; i++) expect(md).toContain(`PLAN-CAP-0${i}-x`);
+  });
+
+  it("renderHandoverScaffold: maxSummaryPlans=0 は cap 無効 (後方互換 escape hatch)", () => {
+    const doc = bigDoc(MAX_SUMMARY_PLANS + 5);
+    const md = renderHandoverScaffold(doc, { maxSummaryPlans: 0 });
+    expect(md).not.toContain("more PLAN");
+    const lastId = `PLAN-CAP-${String(MAX_SUMMARY_PLANS + 4).padStart(2, "0")}-x`;
+    expect(md).toContain(lastId);
+  });
+
+  // reviewer I-1: slimSummary と cap の合成 — slim は §1/§2 を stub 化するので cap は不発
+  // (plan list 自体を描かない)。branch 順が将来反転しても回帰で検知できるよう明示する。
+  it("renderHandoverScaffold: slimSummary=true は plans > 上限でも stub・cap 不発・header 1 個", () => {
+    const doc = bigDoc(MAX_SUMMARY_PLANS + 5);
+    const md = renderHandoverScaffold(doc, { slimSummary: true });
+    expect(md).toContain("同日 first entry 参照");
+    expect(md).not.toContain("more PLAN");
+    expect(md).not.toContain("PLAN-CAP-00-x");
+    expect(countHandoverEntries(md)).toBe(1);
   });
 });
 
