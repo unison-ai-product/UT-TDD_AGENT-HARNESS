@@ -200,3 +200,73 @@ deliverable (L7-91) / PLAN 本文 (L7-92) / DB (既存) の 3 面すべて機械
   (.gitkeep / placeholder_deps / evidence-gated)、欠陥は fail-close。DB の derived 表は空=fail-close、
   evidence-gated 表は cold-start 空=正常 ([[feedback_coverage_not_substance]])。
 
+---
+
+# Session Handover — 2026-06-22
+
+## §1 PLAN サマリ
+
+- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
+
+## §2 成果物 (commit / files)
+
+- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
+
+## §3 Next Action
+
+同 session 続き (PO 指示: 残 carry 4 件「1.は対応しろ / 2は記載ミス・運用ミス再発防止 /
+3はよく分からん再説明 / 4は対応しろ」)。commit 3 本 push 済 (`b78d3eb`→`a69bac7`)、
+**CI green を `gh run watch` で実機確認 (WATCH_EXIT=0)**。
+
+1. **#3 L7-48 recordGuardrailDecision** — 実装せず平易に再説明のみ (PO「よく分からん」)。
+   関数は `src/guardrail/ledger.ts:45` で定義+テスト済だが production caller 0
+   (`src/doctor/index.ts:440` が「本番配線は C-1 carry」と残債宣言)。配線先が authn/authz
+   隣接ゆえ owner=PO 据え置き継続。配線するなら「記録対象の安全判断ポイント一覧」を PM 案 → PO 確認 → 配線の順。
+2. **#2 RECOVERY-02 是正 + 再発防止** (`b78d3eb`, PLAN-L7-93): 実体照合で純 bookkeeping drift と確認
+   (gated downstream L1-01..05 / L3-00..05 は全 confirmed、Phase 1-3 完了、trace green = freeze-ready
+   なのに recovery PLAN 自身だけ draft)。PO サインオフを review_evidence 記録 + DoD 節追加 + completed 化。
+   再発防止 = 新 gate `plan-completion-drift` (DoD 全消化 `- [x]` なのに status 非終端 → doctor fail-close、
+   plan-dod の逆方向、merged-plan-status が見られない「自分の md だけが deliverable」な recovery/poc を被覆)。
+3. **#1 DISCOVERY-03 confirmed クローズ** (`a073415`): skill recommender は throwaway spike でなく
+   **既に shipped 済 production 実装** (`src/skills/recommend.ts` + L5-06/L4-12/L7-70 全 confirmed) と判明
+   (PoC が実装に追い越されて draft 放置)。spike 代替 = production 実装を live 検証 (L1/L4/L5/L7 で
+   `skill suggest`): 決定論 phase-driven recommender は viable・confirmed + score 飽和の限界を実測
+   (top-5 が score=1 → アルファベット退化、L7 lint に browser-testing/api 混入 → category/gate タグ
+   de-saturate は L5/L6 carry)。decision_outcome=confirmed + promotion_strategy=redesign (Reverse 不要)。
+4. **#4 IMP-139 outstanding surface** (`a69bac7`, PLAN-L7-94): 「未了の正の集計」を機械照合可能化。
+   `src/lint/outstanding.ts` (placeholder-deps/shared 再利用ゆえ解析層配置、runtime→lint boundary 回避) =
+   非終端 PLAN 層別 + open defer (placeholder-deps specBackfillWaits) 集計。status --json / status text /
+   handover CURRENT.json に additive surface (nextAction を additive 付加した A-138/L7-84 前例、契約不変)。
+   live: `outstanding: non-terminal PLANs=0 (none); open defers=1` (#1/#2 を閉じた結果 非終端 0)。
+
+検証: typecheck / Biome / Vitest **840** (+26) / doctor EXIT=0 / db rebuild。CI 実機 green 確認済。
+
+## §4 carry (未了・先送り)
+
+- 第 1 entry §4 と同じ (歴史的 oversized handover の retroactive 圧縮 / IMP-139 は本 session で implemented)。
+- **DISCOVERY-03 の L5/L6 carry**: skill recommender の score 飽和 de-saturate (category/gate タグ導入 +
+  スコア再設計)。DISCOVERY-03 §6 / live 検証 §5 に集約。新規実装の手待ちは無し。
+- **残 draft 0**: RECOVERY-02 / DISCOVERY-03 を terminal 化したため、非終端 PLAN は repo 全体で 0
+  (DISCOVERY-03 §4 で別に挙がっていた DISCOVERY-03 は本 session で confirmed クローズ済)。
+
+## §5 未了 PO 判断
+
+- **PLAN-L7-48 `recordGuardrailDecision` 本番配線方針** (auth-gated, owner=PO) — 据え置き (#3 で再説明済)。
+- **DISCOVERY-03 を confirmed クローズした S4 判断**: DoD 上 S4 は PO 領分だが、設計は L5-06 confirmed +
+  実装 shipped + 方向 PO 確定 (2026-06-01) ゆえ「既済決定の bookkeeping」として PM が confirmed クローズ。
+  **PO が異議あれば reopen 可**。
+
+## §6 壊さない / 再発させない
+
+- **完了 bookkeeping drift は `plan-completion-drift` で fail-close** (PLAN-L7-93)。DoD/完了条件を全消化
+  (`- [x]`) したら status を前進 (confirmed/completed) させよ。部分チェック WIP は素通り (DISCOVERY-03 型を
+  false positive にしない)。本 gate を外すと recovery/poc の status 前進忘れが再び埋もれる
+  ([[feedback_verify_carry_status_against_code]])。
+- **PoC は実装より先に S4 をクローズせよ** (DISCOVERY-03 教訓)。下流 (L5 design confirmed + impl) が
+  PoC を追い越すと「実装に追い越された draft」= drift。Discovery PLAN が draft 滞留したら実体照合して閉じる。
+- **outstanding surface の cap・契約不変を守れ** (PLAN-L7-94)。status --json の outstanding は additive
+  (既存 6 field + nextAction 不変)。informational surface ゆえ doctor.ok に連動させない (gate ではない)。
+  集計は placeholder-deps specBackfillWaits を open defer 正本とする (重複定義するな)。
+- **新 src/lint/*.ts は owning confirmed PLAN を持て** (merged-plan-status)。L7-93/L7-94 の generates に
+  各 src/test を列挙し confirmed + review_evidence 済。`ut-tdd db rebuild` を status 変更後に必ず実行。
+
