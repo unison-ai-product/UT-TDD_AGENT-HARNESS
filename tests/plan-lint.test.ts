@@ -57,6 +57,24 @@ function planDoc(
   };
 }
 
+function dbProgressPlanDoc(id: string, generatedPaths: string[]) {
+  const generates = generatedPaths
+    .map((artifactPath) => {
+      const artifactType =
+        artifactPath.endsWith(".ts") || artifactPath.endsWith(".tsx")
+          ? "source_module"
+          : artifactPath.includes("/tests/") || artifactPath.startsWith("tests/")
+            ? "test_code"
+            : "markdown_doc";
+      return `  - artifact_path: ${artifactPath}\n    artifact_type: ${artifactType}`;
+    })
+    .join("\n");
+  return {
+    file: `docs/plans/${id}.md`,
+    content: `---\nplan_id: ${id}\ntitle: "${id}: artifact_progress red/yellow/green DB projection"\nkind: add-impl\nlayer: L7\ndrive: db\nstatus: confirmed\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ngenerates:\n${generates}\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n\nAdd artifact_progress progress color semantics for red/yellow/green.\n`,
+  };
+}
+
 describe("plan schedule lint (IMP-081)", () => {
   it("U-PLANSCH-001: §工程表 section を抽出する", () => {
     expect(extractScheduleSection(compliant)).toContain("Step 1");
@@ -249,6 +267,45 @@ describe("plan schedule lint (IMP-081)", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("U-PLANGOV-007: progress color DB projection requires Reverse and upstream design backprop", () => {
+    const docs = [
+      dbProgressPlanDoc("PLAN-L7-98-progress-leak", [
+        "docs/plans/PLAN-L7-98-progress-leak.md",
+        "src/schema/harness-db.ts",
+        "src/state-db/projection-writer.ts",
+        "tests/projection-writer.test.ts",
+      ]),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("db_projection_backprop_missing");
+  });
+
+  it("U-PLANGOV-008: progress color DB projection passes with fullback and V-model coverage", () => {
+    const docs = [
+      dbProgressPlanDoc("PLAN-L7-98-progress-covered", [
+        "docs/plans/PLAN-L7-98-progress-covered.md",
+        "docs/plans/PLAN-REVERSE-98-progress-covered.md",
+        "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+        "docs/design/harness/L1-requirements/functional-requirements.md",
+        "docs/design/harness/L1-requirements/screen-requirements.md",
+        "docs/design/harness/L3-functional/functional-requirements.md",
+        "docs/design/harness/L4-basic-design/function.md",
+        "docs/design/harness/L5-detailed-design/physical-data.md",
+        "docs/design/harness/L6-function-design/function-spec.md",
+        "docs/design/harness/L6-function-design/fr-unit-coverage.md",
+        "src/schema/harness-db.ts",
+        "src/state-db/projection-writer.ts",
+        "tests/projection-writer.test.ts",
+      ]),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("db_projection_backprop_missing");
   });
 
   it("U-PLANSCH-011: active gate docs do not point to stale trace/stub commands", () => {

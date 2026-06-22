@@ -47,7 +47,8 @@ export interface PlanGovernanceViolation {
     | "parent_drive_mismatch"
     | "requires_missing"
     | "requires_not_ready"
-    | "parent_design_missing";
+    | "parent_design_missing"
+    | "db_projection_backprop_missing";
   detail?: string;
 }
 
@@ -192,6 +193,10 @@ function normalizePlanRef(ref: string): string {
   return basename.endsWith(".md") ? basename.slice(0, -3) : basename;
 }
 
+function normalizeArtifactPath(ref: string): string {
+  return ref.replaceAll("\\", "/");
+}
+
 function isPlanRef(ref: string): boolean {
   const normalized = ref.replaceAll("\\", "/");
   return normalizePlanRef(normalized).startsWith("PLAN-") || normalized.includes("/docs/plans/");
@@ -204,6 +209,62 @@ function pathExists(repoRoot: string | undefined, ref: string): boolean {
 
 function boolField(value: unknown): boolean {
   return value === true;
+}
+
+function generatedArtifactPaths(raw: Record<string, unknown>): string[] {
+  if (!Array.isArray(raw.generates)) return [];
+  return raw.generates
+    .map((entry) =>
+      entry && typeof entry === "object"
+        ? stringField((entry as Record<string, unknown>).artifact_path)
+        : null,
+    )
+    .filter((path): path is string => Boolean(path))
+    .map(normalizeArtifactPath);
+}
+
+const DB_PROJECTION_BACKPROP_REQUIRED_GENERATES = [
+  "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+  "docs/design/harness/L1-requirements/functional-requirements.md",
+  "docs/design/harness/L1-requirements/screen-requirements.md",
+  "docs/design/harness/L3-functional/functional-requirements.md",
+  "docs/design/harness/L4-basic-design/function.md",
+  "docs/design/harness/L5-detailed-design/physical-data.md",
+  "docs/design/harness/L6-function-design/function-spec.md",
+  "docs/design/harness/L6-function-design/fr-unit-coverage.md",
+];
+
+function isProgressColorProjectionPlan(
+  raw: Record<string, unknown>,
+  content: string,
+  generatedPaths: string[],
+): boolean {
+  const layer = stringField(raw.layer);
+  const drive = stringField(raw.drive);
+  const kind = stringField(raw.kind);
+  if (layer !== "L7" || drive !== "db" || (kind !== "impl" && kind !== "add-impl")) return false;
+
+  const touchesProjection =
+    generatedPaths.includes("src/schema/harness-db.ts") ||
+    generatedPaths.includes("src/state-db/projection-writer.ts");
+  if (!touchesProjection) return false;
+
+  const searchable = `${stringField(raw.title) ?? ""}\n${content}`;
+  return /artifact_progress|progress color|red\/yellow\/green|赤黄緑|赤\/黄\/緑/i.test(searchable);
+}
+
+function hasReverseBackpropEvidence(
+  generatedPaths: string[],
+  deps: Record<string, unknown>,
+): boolean {
+  const refs = [...generatedPaths, ...stringArray(deps.requires)];
+  return refs.some((ref) => {
+    const normalized = normalizeArtifactPath(ref);
+    return (
+      normalized.includes("/PLAN-REVERSE-") ||
+      normalizePlanRef(normalized).startsWith("PLAN-REVERSE-")
+    );
+  });
 }
 
 function schemaIssueSummary(issue: {
@@ -226,7 +287,7 @@ export function analyzePlanGovernance(
   const violations: PlanGovernanceViolation[] = [];
   const parsed = new Map<
     string,
-    { file: string; raw: Record<string, unknown>; parsed?: Frontmatter }
+    { file: string; content: string; raw: Record<string, unknown>; parsed?: Frontmatter }
   >();
   const byPlanId = new Map<string, string[]>();
 
@@ -249,6 +310,7 @@ export function analyzePlanGovernance(
       byPlanId.set(planId, [...(byPlanId.get(planId) ?? []), doc.file]);
       parsed.set(doc.file, {
         file: doc.file,
+        content: doc.content,
         raw,
         ...(schemaResult.success ? { parsed: schemaResult.data } : {}),
       });
@@ -264,7 +326,7 @@ export function analyzePlanGovernance(
 
   const byRef = new Map<
     string,
-    { file: string; raw: Record<string, unknown>; parsed?: Frontmatter }
+    { file: string; content: string; raw: Record<string, unknown>; parsed?: Frontmatter }
   >();
   for (const entry of parsed.values()) {
     const planId = stringField(entry.raw.plan_id);
@@ -313,6 +375,23 @@ export function analyzePlanGovernance(
       raw.dependencies && typeof raw.dependencies === "object"
         ? (raw.dependencies as Record<string, unknown>)
         : {};
+    const generatedPaths = generatedArtifactPaths(raw);
+    if (isProgressColorProjectionPlan(raw, entry.content, generatedPaths)) {
+      const missing = DB_PROJECTION_BACKPROP_REQUIRED_GENERATES.filter(
+        (path) => !generatedPaths.includes(path),
+      );
+      if (!hasReverseBackpropEvidence(generatedPaths, deps)) {
+        missing.unshift("docs/plans/PLAN-REVERSE-*.md");
+      }
+      if (missing.length > 0) {
+        violations.push({
+          file: entry.file,
+          reason: "db_projection_backprop_missing",
+          detail: missing.join(", "),
+        });
+      }
+    }
+
     const parent = stringField(deps.parent);
     if ((kind === "add-design" || kind === "add-impl") && parent) {
       const parentRecord = byRef.get(normalizePlanRef(parent));
