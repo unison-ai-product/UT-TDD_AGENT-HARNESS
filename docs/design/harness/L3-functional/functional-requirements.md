@@ -14,7 +14,7 @@ updated: 2026-05-28
 ---
 
 > **SSoT 参照**: ユビキタス言語 = L0 概念層 §10 用語集 / Bounded Context = L0 §2.5 (9-mode) + screen sub-doc §6 (PM/HM/GD 3 カテゴリ) / 業界標準整合 = ISO/IEC/IEEE 29148 (要件記述) + BDD Given-When-Then (AC 形式) + ISTQB Foundation Level (境界値分析)。
-> **件数確定**: L3 FR は **26 件** = P0 18 件 (FR-01〜18、L1 FR-L1-01〜18 と 1:1 対応) + FR-45 (P0、doc-reviewer back-propagation A-49) + workflow core 7 件 (FR-23〜30、A-50 で L3 直接詳細化)。残 P1 9 件 + P2 5 件は L4 carry (§3 / §3.1)。BR-21 経路 (FR-L1-36 / FR-L1-38 / FR-L1-43 + 関連 P2) は business-detail.md 担当 (重複回避)。FR-L1-36 / FR-L1-38 / FR-L1-43 はすべて PLAN-L7-53 で実装済み (2026-06-15)。g3-trace lint の l3Fr=26 と一致。
+> **件数確定**: L3 FR は **26 件** = P0 18 件 (FR-01〜18、L1 FR-L1-01〜18 と 1:1 対応) + FR-45 (P0、doc-reviewer back-propagation A-49) + workflow core 7 件 (FR-23〜30、A-50 で L3 直接詳細化)。残 P1 10 件 + P2 5 件は L4 carry (§3 / §3.1)。BR-21 経路 (FR-L1-36 / FR-L1-38 / FR-L1-43 + 関連 P2) は business-detail.md 担当 (重複回避)。FR-L1-36 / FR-L1-38 / FR-L1-43 はすべて PLAN-L7-53 で実装済み (2026-06-15)。g3-trace lint の l3Fr=26 と一致。
 > **AC 件数**: 全 FR で AC 最低 3 件 (正常 / 異常 / 境界)、計 54+ AC を予定。**人間判断点 列必須** (CC2 carry)。
 > **L12 接続規約**: `next_pair_freeze: L12`。L12 受入テスト設計は本 sub-doc の全 AC を AT-* で被覆 (孤児 AC = 0)。
 > **正規式モデル (PLAN-RECOVERY-02、2026-06-04)**: L3 要件の検証本質 = **本番受入** (本番環境で FR+AC が満たせるか、L12 で実施。データ実在性エスカレーションの本番 band)。画面要求は L1 (screen sub-doc) が担い L3 では起こさない (L2=L1 フェーズ分離)。
@@ -25,7 +25,7 @@ updated: 2026-05-28
 
 L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) を L3 機能要件 (FR-*、システム視点の「何を満たすべきか」) に詳細化する sub-doc。各 FR に **入出力 / 振る舞い / 受入条件 (AC)** を確定し、L7 実装スプリント (TDD Red) の入力として機械検証可能な粒度に整える。
 
-スコープ: **L3 FR 26 件** = P0 18 件 (FR-01〜18) + FR-45 (P0、back-propagation) + workflow core 7 件 (FR-23〜30、A-50 で「ワークフロー = harness ガードレール」として L3 直接詳細化)。残 P1 9 件は L4 基本設計で carry (§3.1)、P2 5 件 + BR-21 経路は PLAN-L3-02 (business-detail) に委譲。
+スコープ: **L3 FR 26 件** = P0 18 件 (FR-01〜18) + FR-45 (P0、back-propagation) + workflow core 7 件 (FR-23〜30、A-50 で「ワークフロー = harness ガードレール」として L3 直接詳細化)。残 P1 10 件は L4 基本設計で carry (§3.1)、P2 5 件 + BR-21 経路は PLAN-L3-02 (business-detail) に委譲。
 
 ## §2 FR-* + AC-* 一覧 (本体)
 
@@ -723,6 +723,7 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 | FR-L1-37/39/40/41/42/44 (model 推挙 / 難易度 / drive 別 state / drive 自動判定 / provider 引継ぎ / onboarding) | P1 | L4 carry | drive 軸拡張は L4 データ設計連動 / onboarding は L4 設計連動 |
 | FR-L1-46 / FR-L1-47 / FR-L1-48 / FR-L1-49 (内部資産 UT-TDD 化: subagent roster / skill pack curate / command CLI 化 / drift lint) | P1 | L4-L6 carry | BR-22 派生、Recovery PLAN-RECOVERY-01。roster=W6/W7・skill pack=W10・command=W11/W12/W16・drift lint=IMP-033 (L6-L7)。棚卸 = internal-asset-inventory.md |
 | FR-L1-50 (DDD/TDD strictness automation) | P1 | L6-L8 Add-feature carry | PO directed 2026-06-09。domain boundary / invariant trace / Red-first evidence / oracle strength / integration GWT を PLAN-L6-26..30 / PLAN-L7-27..31 / PLAN-REVERSE-26..30 で機械化 |
+| FR-L1-51 (artifact progress color projection) | P1 | L4-L7 fullback carry | PLAN-L7-56 で実装が先行した artifact 単位の赤/黄/緑進捗を、PLAN-REVERSE-56 で L1 要件・L4 機能・L5 physical-data へ fullback。green は linked test + dependency clear、yellow は実装中/未テスト、red は依存未確認/未回収 |
 | FR-L1-05/06/07/17/18/19/20/24/49/50 A-124 extension | P1 | L5-L7 Add-feature carry + Phase 4 DB implementation | 横断 relation graph、impact expansion、diagram export、tool adapter normalization を requirements §6.8.9 / physical-data §9.5 / ADR-002 A-124 addendum で back-propagation。`ut-tdd graph impact` / `ut-tdd graph export` / optional dependency-cruiser・Knip・Madge・Graphviz・Mermaid・D2 adapter を後続 PLAN で機械化 |
 | FR-L1-05/06/07/17/18/19/20/24/45/49/50 A-125 extension | P1 | L5-L7 Add-feature carry + Phase 4 DB implementation | MCP server profile、MCP Inspector smoke、external verification profile recommendation、profile security gate を requirements §6.8.10 / physical-data §9.6 / ADR-002 A-125 addendum で back-propagation。`ut-tdd mcp profile` / `ut-tdd mcp inspect` / `ut-tdd verify recommend` / `ut-tdd verify run` を後続 PLAN で機械化 |
 | FR-L1-05/06/07/17/18/20/24/33/45/50 A-126 extension | P1 | L5-L7 Add-feature carry + Phase 4 DB implementation | 企画・要件定義・詳細設計・PLAN・ADR・テスト設計の正本ドキュメントを CSV / Markdown summary / XLSX / PPTX へ変換する document export を requirements §6.8.11 / physical-data §9.7 / ADR-002 A-126 addendum で back-propagation。`ut-tdd export docs --kind ... --format ...` を後続 PLAN で機械化 |
@@ -744,6 +745,7 @@ A-50 で workflow core 7 件 (FR-L1-23/24/25/26/27/29/30) を L3 直接詳細化
 | FR-L1-42 (provider 引継ぎ) | implemented 2026-06-08 (`provider-handover.v1`) | Claude ↔ Codex の context+PLAN+budget 連携渡し |
 | FR-L1-44 (onboarding) | PLAN-L4-NN-onboarding | 既存 repo への harness baseline 確立、`.ut-tdd/` 初期 baseline |
 | FR-L1-50 (DDD/TDD strictness automation) | PLAN-L6-26..30 / PLAN-L7-27..31 / PLAN-REVERSE-26..30 | DDD/TDD SSoT、workflow anchor、Red-first evidence、test oracle、integration GWT を機械検出し、重要 gate では定量 evidence と定性 review evidence を抱き合わせる |
+| FR-L1-51 (artifact progress color projection) | PLAN-L7-56 / PLAN-REVERSE-56 | artifact ごとの進捗色を `artifact_progress` として DB projection 化し、依存未確認/未回収を red、実装中/未テストを yellow、linked test + dependency clear を green として機械検索可能にする |
 | FR-L1-02/06/07/17/18/20/45/50 A-122 extension | PLAN-L5-08 + A-122 addendum / Phase 3-4 seed IMP-107..116 | UT evidence history (`test_cases/test_runs/test_results/test_flake_events`)、GreenDefinition、Bun `bun:sqlite` collector/rebuild/migration、CI/hook/OS evidence matrix を requirements-level acceptance として束ねる。新 FR 採番ではなく既存 FR の DB/自動化/定量+定性 bundle 強化 |
 | FR-L1-05/06/07/17/18/19/20/24/49/50 A-124 extension | PLAN-L5-08 + A-124 addendum / Phase 4 seed IMP-118..120 | `graph_nodes/dependency_edges/impact_rules/impact_results/tool_runs/diagram_artifacts/graph_snapshots` を DB projection に追加し、変更ファイルから関連設計・コード・テスト・DB・図を列挙する。外部ツールは optional adapter、gate は正規化DB rowで判定 |
 | FR-L1-05/06/07/17/18/19/20/24/45/49/50 A-125 extension | PLAN-L5-08 + A-125 addendum / Phase 4 seed IMP-121..124 | `mcp_server_profiles/mcp_profile_triggers/mcp_server_runs/verification_profiles/verification_recommendations/external_tool_findings` を DB projection に追加し、relation graph impact から MCP / browser / DB container / API mock / GitHub workflow verification profile を推薦・検証・記録する。 |

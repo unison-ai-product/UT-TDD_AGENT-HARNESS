@@ -30,6 +30,7 @@ Added requirement bundle mapping:
 | Search-cost reduction through reference graph/search index | FR-L1-33, FR-L1-34, FR-L1-48, FR-L1-49 | asset catalog, capability gap prioritization, command catalog, asset drift detection |
 | Mechanical quality feedback and dependency/finding detection | FR-L1-05, FR-L1-17, FR-L1-18, FR-L1-19, FR-L1-45, FR-L1-49 | gate evidence, review evidence, module/asset drift, feedback events, doc review tier |
 | DDD/TDD strictness automation | FR-L1-50 | domain boundary, invariant trace, Red-first evidence, oracle strength, integration GWT |
+| Artifact progress color projection | FR-L1-51 | artifact red/yellow/green derivation from linked tests, dependency impact, and recovery/fullback evidence |
 
 | FR | L6 spec | unit contract | unit oracle |
 |---|---|---|---|
@@ -83,3 +84,4 @@ Added requirement bundle mapping:
 | FR-L1-48 | docs/design/harness/L6-function-design/function-spec.md | `buildCommandCatalog` maps internal command assets to UT-TDD CLI subcommand contracts. | U-FR-L1-48 |
 | FR-L1-49 | docs/design/harness/L6-function-design/module-drift.md | `analyzeAssetDrift` detects legacy source path/runtime residue, empty docs-skills, nested agent-memory residue, and roster/guard drift. | U-FR-L1-49 |
 | FR-L1-50 | docs/design/harness/L6-function-design/module-drift.md | `analyzeDddTddRules` detects DDD/TDD SSoT drift, domain-boundary imports, invariant oracle gaps, missing Red-first evidence, weak test oracles, and L8 GWT gaps. | U-FR-L1-50 |
+| FR-L1-51 | docs/design/harness/L6-function-design/function-spec.md | `deriveArtifactProgressDecision` and `projectArtifactProgress` derive red/yellow/green artifact rows from linked test evidence, dependency impact, and recovery PLANs without treating DB rows as authoring source. | U-FR-L1-51 |

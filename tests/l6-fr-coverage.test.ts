@@ -123,8 +123,8 @@ describe("L6 FR coverage (FR registry -> unit-level function spec)", () => {
 
   it("real repo covers every FR-L1 row with an L6 spec and U-* oracle", () => {
     const result = analyzeL6FrCoverage(loadL6FrCoverageDocs());
-    expect(result.totalFr).toBe(50);
-    expect(result.covered).toBe(50);
+    expect(result.totalFr).toBe(51);
+    expect(result.covered).toBe(51);
     expect(result.missing).toEqual([]);
     expect(result.unknown).toEqual([]);
     expect(result.incomplete).toEqual([]);

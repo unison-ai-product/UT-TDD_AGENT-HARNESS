@@ -1174,6 +1174,9 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 **組合せ原則**: state DB = 「正本の進捗」、log = 「事実の裏付け」、handover = 「判断の継続」。3 者を突合して進捗を多面管理する (DB だけでは『なぜ/次』が、log だけでは『正本 state』が、handover だけでは『機械保証』が欠ける)。**session-log の PLAN ダイジェストは log→handover の橋渡し (§6.8.5 入力) かつ state DB 登録 (FR-L1-07 hook) のトリガ**でもあり、3 層の結節点になる。**digest の活性化** = `.ut-tdd/state/current-plan` を `ut-tdd plan use <id>` で設定すること (`resolveActivePlan` の入力)。solo/main 直開発では branch から PLAN を読めず plan_id が null になり digest が生成されない Gap があるため、この明示設定で結節点を活性化する (PLAN-L7-04、`resolveActivePlan` 本体は不変)。
 
 
+
+**artifact progress color projection (FR-L1-51 / PLAN-L7-56 / PLAN-REVERSE-56)**: `harness.db` は artifact 単位の進捗色を derived projection として保持しなければならない。`red` は依存関係未確認、未回収の impact、または実装に対する要件/基本設計/詳細設計/テスト back-propagation 欠落を示す。`yellow` は実装中、recovery 中、または linked test evidence 未確認を示す。`green` は linked test ID/path が存在し、依存 impact が clear であることを示す。色は手入力の status ではなく、source artifact、covered-by test edge、impact_results、recovery PLAN から再構築できる derived state とする。
+
 ### §6.8.7 DB reference-feedback and automation foundation bundle (2026-06-08)
 
 以下を FR-L1-05/06/07/09/12/13/17/18/19/20/33/37/39/40/41/45/46/47/48/49 の束ね要件として扱う。これは V-model state の保存だけではなく、機械チェック結果・駆動モデル別実行・ログ・skill/model telemetry・workflow 自動化 readiness・guardrail 安全判定・skill/roster/command 文書基盤を SQLite projection DB に投影し、抜け漏れ・依存関係・ゆがみの検出と検索コスト低減に使う要求である。
@@ -1186,6 +1189,7 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 | フィードバック機構になる | lint/doctor/vmodel/gate/review の機械結果は `findings` と `quality_signals` に並び、同種反復・未解決・依存詰まりを `feedback_events` として再計画入力にできる。 |
 | 探すコストを下げる | PLAN/artifact/finding/skill/model/session の検索用 projection を持ち、`ut-tdd find` 相当の CLI が path/ID/reason/evidence を返せる。 |
 | workflow 自動化 readiness を判定できる | Forward/Add-feature/Reverse/Recovery などの workflow run、gate/CI/doctor 結果、blocked/human-required 状態を同じ `plan_id` / `session_id` / `drive_run_id` で参照できる。 |
+| artifact progress を赤黄緑で検索できる | `artifact_progress` projection は `artifact_path`, `artifact_type`, `state`, `color`, `linked_test_ids`, `linked_test_paths`, `dependency_checked`, `open_dependency_impacts`, `recovery_plan_ids`, `reason` を持ち、`ut-tdd progress artifacts` 相当の CLI が赤/黄/緑と根拠を返せる。green は linked test + dependency clear を必須とし、上位設計反映漏れや依存未確認は red として残る。 |
 | guardrail の安全性を証跡化できる | agent-guard、review_evidence、same-model approval 禁止、tests-before-review、escalation 境界、human signoff の判定結果を `guardrail_decisions` 相当の projection として持ち、silent pass を finding 化できる。 |
 | skill/roster/command docs を自動化基盤として catalog 化できる | skill/roster/command docs の path、trigger、role/capability、drift status、recommendation reason、search token を catalog projection として持ち、空 catalog・legacy source 前提残存・guard 不整合を検出できる。 |
 | UT evidence history を query できる (A-122 / IMP-109) | `test_cases / test_runs / test_results / test_artifact_edges / test_flake_events` 相当の projection を持ち、どの UT がどの PLAN / FR / U-* oracle / artifact を証明したか、いつ green だったか、flake や duration regression があるかを参照できる。 |

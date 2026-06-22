@@ -317,6 +317,13 @@ Required edge kinds:
 - `projects_to`: source doc/state/log projects into a DB table.
 - `visualizes`: diagram artifact visualizes a graph snapshot or scope.
 
+`artifact_progress` color semantics (FR-L1-51 / PLAN-L7-56 / PLAN-REVERSE-56):
+
+- `red`: `dependency_checked = 0`, `open_dependency_impacts > 0`, or the changed artifact has missing required design/requirement/test back-propagation according to impact expansion. This includes "implementation exists but L1/L3/L4/L5 registration is missing".
+- `yellow`: implementation or recovery work exists, but linked test evidence is absent or not yet green. New artifacts enter the projection as yellow until dependency and test evidence are available.
+- `green`: `linked_test_count > 0`, `linked_test_ids` / `linked_test_paths` identify the evidence, `dependency_checked = 1`, and `open_dependency_impacts = 0`.
+- `recovery_plan_ids` records recovery/fullback PLANs that are actively returning red/yellow artifacts to green. It is evidence, not an override; color still follows the derived rules above.
+
 Required indexes:
 
 - `idx_graph_node_type_subject(node_type, subject_id)`.

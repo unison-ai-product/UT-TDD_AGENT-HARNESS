@@ -10,7 +10,7 @@ v2_import: docs/migration/v2-import-ledger.md
 ---
 
 > **SSoT 参照**: ユビキタス言語 = [L0 概念層 §10 用語集](../../../governance/ut-tdd-agent-harness-concept_v3.1.md#10-用語集) / 業界標準整合 = L0 §11 / Bounded Context = L0 §2.5 9-mode。本 doc は L0 を parent_doc reference とし、用語独自定義は行わない (anti-corruption layer)。
-> **件数確定**: functional は **FR-L1-50 件で確定 (P0: 19 / P1: 23 / P2: 8)** (A-49 ledger で FR-L1-45 doc-reviewer back-propagation 追加、2026-05-28)。内訳: FR-L1-01〜35 は v2 source snapshot reference 設計概念参照 (v2-import-ledger §5.1 A-24 / §6)、FR-L1-37/39/40/41/42/44 は PO directed 新規 6 件 (2026-05-28)、**FR-L1-45 は L3 back-propagation 由来 (A-47 Critical C-02 → A-49 で L1 反映、BR-08 派生 P0)**、**FR-L1-50 は DDD/TDD strictness automation 追加 (PO directed 2026-06-09、IMP-097..101)**、**FR-L1-36 は P2 から昇格 (skill evaluation 実装済み、PLAN-L7-53、2026-06-15)**、**FR-L1-43 は P2 から昇格 (PoC success measurement 実装済み、PLAN-L7-53、2026-06-15)**、**FR-L1-38 は P2 から昇格 (model evaluation 実装済み、PLAN-L7-53、2026-06-15)**。
+> **件数確定**: functional は **FR-L1-51 件で確定 (P0: 19 / P1: 24 / P2: 8)** (A-49 ledger で FR-L1-45 doc-reviewer back-propagation 追加、2026-05-28)。内訳: FR-L1-01〜35 は v2 source snapshot reference 設計概念参照 (v2-import-ledger §5.1 A-24 / §6)、FR-L1-37/39/40/41/42/44 は PO directed 新規 6 件 (2026-05-28)、**FR-L1-45 は L3 back-propagation 由来 (A-47 Critical C-02 → A-49 で L1 反映、BR-08 派生 P0)**、**FR-L1-50 は DDD/TDD strictness automation 追加 (PO directed 2026-06-09、IMP-097..101)**、**FR-L1-51 は artifact progress color projection 追加 (PLAN-L7-56 / PLAN-REVERSE-56、2026-06-22)**、**FR-L1-36 は P2 から昇格 (skill evaluation 実装済み、PLAN-L7-53、2026-06-15)**、**FR-L1-43 は P2 から昇格 (PoC success measurement 実装済み、PLAN-L7-53、2026-06-15)**、**FR-L1-38 は P2 から昇格 (model evaluation 実装済み、PLAN-L7-53、2026-06-15)**。
 > **L3 接続規約**: `next_pair_freeze: L3`。L3 PLAN は本 sub-doc 全件を `dependencies.requires` に列挙する。
 
 # UT-TDD Agent Harness — L1 機能要求 (functional)
@@ -19,7 +19,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 ## §1 機能一覧
 
-FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/40/41/42/44: PO directed 新規 6 件 (2026-05-28)。FR-L1-45: L3→L1 back-propagation (A-49、2026-05-28)。FR-L1-46〜49: 内部資産 UT-TDD 化 (BR-22 派生、Recovery PLAN-RECOVERY-01 / A-79、2026-05-29)。FR-L1-50: DDD/TDD strictness automation (PO directed 2026-06-09)。FR-L1-36: P2 carry から昇格 (PLAN-L7-53 実装済み、2026-06-15)。FR-L1-43: P2 carry から昇格 (PLAN-L7-53 実装済み、2026-06-15)。FR-L1-38: P2 carry から昇格 (PLAN-L7-53 実装済み、2026-06-15)。**計 50 件**:
+FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/40/41/42/44: PO directed 新規 6 件 (2026-05-28)。FR-L1-45: L3→L1 back-propagation (A-49、2026-05-28)。FR-L1-46〜49: 内部資産 UT-TDD 化 (BR-22 派生、Recovery PLAN-RECOVERY-01 / A-79、2026-05-29)。FR-L1-50: DDD/TDD strictness automation (PO directed 2026-06-09)。FR-L1-51: artifact progress color projection (PLAN-L7-56 / PLAN-REVERSE-56、2026-06-22)。FR-L1-36: P2 carry から昇格 (PLAN-L7-53 実装済み、2026-06-15)。FR-L1-43: P2 carry から昇格 (PLAN-L7-53 実装済み、2026-06-15)。FR-L1-38: P2 carry から昇格 (PLAN-L7-53 実装済み、2026-06-15)。**計 51 件**:
 
 | FR-L1-NN | 機能要求名 (1 行) | 出典 doc | 必要 input | 出力 output | 重要度 | 対応画面 (G1-trace) |
 |---|---|---|---|---|---|---|
@@ -73,6 +73,7 @@ FR-L1-01〜35: v2-import-ledger §6 より転写 (1:1 コピー)。FR-L1-37/39/4
 | **FR-L1-48** | 内部資産 command の ut-tdd CLI subcommand 化 (dashboard / asset / builder 等) | A-77 棚卸 / rebuild map W11/W12/W16 / BR-22 | legacy CLI binaries 70 件 / docs/commands 19 件 | `ut-tdd` subcommand 体系 | P1 | HM-02 |
 | **FR-L1-49** | 内部資産 drift lint (legacy absolute path残存 / docs-skills 空 / roster↔guard 整合の機械検証) | A-77 棚卸 / IMP-033 rule engine / BR-22 | roster / skill pack / guard allowlist | drift 検出レポート (fail-close) | P1 | HM-07 |
 | **FR-L1-50** | DDD/TDD 厳格化 automation (domain boundary / invariant trace / Red-first evidence / oracle strength / integration GWT) | PO directed 2026-06-09 / IMP-097..101 | DDD/TDD rule SSoT、PLAN evidence、source/test docs、L7/L8 test-design | doctor lint findings、workflow anchor、L7 oracle、L8 GWT compliance | P1 | HM-07 / PM-04 |
+| **FR-L1-51** | artifact progress color projection (実装中 / 依存未確認 / テスト済みを harness.db で赤黄緑に正規化) | PLAN-L7-56 / PLAN-REVERSE-56 (2026-06-22) | source artifact、covered-by test edge、impact_results、recovery PLAN | `artifact_progress` projection、`ut-tdd progress artifacts` rows、linked test/dependency reason | P1 | HM-04 / PM-01 |
 
 ### §1.0.1 source internal asset機能カバレッジ監査 (2026-06-02)
 
@@ -123,6 +124,7 @@ L3 詳細化フェーズで発生した「L1 に存在しない新概念」を L
 | 新 FR-L1-ID | 業務要求由来 | 優先度 | L3 詳細化先 | 追加理由 |
 |------------|------------|--------|------------|---------|
 | **FR-L1-45** | BR-08 (doc 品質継続レビュー) | P0 | L3 FR-45 (functional §2) | A-47 pmo-sonnet matrix で「BR-08 対応 FR が L3 に不在 = G3 lint 孤児」検出。L3 で FR 起草 + L1 back-propagation |
+| **FR-L1-51** | BR-20 / BR-06 / BR-07 (state DB + progress visibility + trace drift) | P1 | L3 carry / L4 function block / L5 physical-data | PLAN-L7-56 で artifact_progress が L5/L7 に先行実装され、上位の要件・機能一覧・基本設計が赤状態だったため PLAN-REVERSE-56 で fullback |
 
 **back-propagation 手順** (business §10.1.1 entity と同様):
 1. L3 詳細化フェーズで新概念発見
@@ -257,7 +259,7 @@ BR-* と FR-L1-* の対応表:
 | BR-07 | FR-L1-03, FR-L1-18 | 双方向 trace + デグレ横断検出 (ratchet 3 軸) |
 | BR-08 | FR-L1-09, **FR-L1-45** | AI ガード + **doc-reviewer 必須召喚 (A-49 で FR-L1-45 として L3 back-propagation 追加、P0)** |
 | BR-13〜19 (Audit framework 由来) | FR-L1-04, FR-L1-05, FR-L1-17 | PLAN kind / static gate / CI 連携 |
-| BR-20 (local DB) | FR-L1-06 | V モデル本線 state 一元管理 |
+| BR-20 (local DB) | FR-L1-06, FR-L1-51 | V モデル本線 state 一元管理 + artifact progress color projection |
 | BR-20 (ダッシュボード Phase A) | FR-L1-20 | 観測・計測層 (Phase A: local DB + local dashboard) |
 | BR-20 (ダッシュボード Phase B) | FR-L1-20 + L3 forward carry | server sync + telemetry + self-improvement (Phase B、§5 末 carry) |
 | BR-21 (AI 実行成果評価) | FR-L1-36 (昇格済み) / FR-L1-38 (昇格済み) / FR-L1-43 (昇格済み) | スキル評価 (PLAN-L7-53 実装済み) / model 評価 (PLAN-L7-53 実装済み) / PoC サクセス計測 (PLAN-L7-53 実装済み) |
@@ -302,7 +304,8 @@ doc-reviewer (pmo-sonnet とは責務分離した doc 品質専用 read-only rev
 | DB projection 実装 profile を固定する (A-122) | FR-L1-06 / FR-L1-07 / FR-L1-17 / FR-L1-18 / FR-L1-20 | DB が projection であることは定義済みだが、Bun `bun:sqlite`、schema_version、deterministic rebuild、migration fixture、doctor integration の受入条件が requirements 側に薄い | requirements §6.8.7 / physical-data §9.4 / IMP-110 |
 | CI / hook / OS evidence matrix を残す (A-122) | FR-L1-07 / FR-L1-17 / FR-L1-18 / FR-L1-20 | Windows PowerShell / Bash / Bun / Claude hook / CI の green evidence を同じ profile で比較できず、片側 smoke 欠落が定性レビュー頼みになる | requirements §6.8.7 / GreenDefinition / IMP-114 |
 | 横断 relation graph / impact expansion / 図化を DB projection 化する (A-124) | FR-L1-05 / FR-L1-06 / FR-L1-07 / FR-L1-17 / FR-L1-18 / FR-L1-19 / FR-L1-20 / FR-L1-24 / FR-L1-49 / FR-L1-50 | `module-drift` / `asset-drift` / `change-impact` は局所検査であり、変更ファイルから関連 FR/PLAN/design/test/DB table/diagram を列挙できない。外部ツールを導入しても gate SSoT と DB projection に接続されなければ全体一貫性を保証できない | requirements §6.8.9 / physical-data §9.5 / ADR-002 A-124 addendum / IMP-118..120 |
+| artifact progress を赤黄緑で DB projection 化する (PLAN-L7-56 / PLAN-REVERSE-56) | FR-L1-01 / FR-L1-02 / FR-L1-03 / FR-L1-06 / FR-L1-18 / FR-L1-20 / FR-L1-51 | 実装済み artifact が上位設計・依存確認・テスト証跡と連動していない場合、人間の記憶や会話に依存して更新漏れが起きる。artifact ごとの「赤=依存未確認/未回収」「黄=実装中/未テスト」「緑=linked test + dependency clear」を DB で問える粒度が不足 | requirements §6.8.6 / §6.8.7 / physical-data §9.5 / PLAN-L7-56 |
 | MCP server / 外部テスト基盤 profile を workflow trigger 化する (A-125) | FR-L1-05 / FR-L1-06 / FR-L1-07 / FR-L1-17 / FR-L1-18 / FR-L1-19 / FR-L1-20 / FR-L1-24 / FR-L1-45 / FR-L1-49 / FR-L1-50 | Playwright MCP / GitHub MCP / MCP Inspector / Docker MCP Toolkit / Vitest Browser Mode / Testcontainers / MSW などは検証環境を強化できるが、profile・allow-list・trigger・DB evidence 化がないと権限肥大と gate 外実行になる | requirements §6.8.10 / physical-data §9.6 / ADR-002 A-125 addendum / IMP-121..124 |
 | 正本ドキュメントを spreadsheet / Excel / PPTX へ変換する (A-126) | FR-L1-05 / FR-L1-06 / FR-L1-07 / FR-L1-17 / FR-L1-18 / FR-L1-20 / FR-L1-24 / FR-L1-33 / FR-L1-45 / FR-L1-50 | 企画・要件定義・詳細設計・PLAN・ADR・テスト設計は Markdown 正本として存在するが、人間レビュー向けの表計算 / Excel / PPTX 変換 surface がない。変換物が正本化すると trace と gate truth が崩れるため、source anchor と DB projection で派生物として扱う必要がある | requirements §6.8.11 / physical-data §9.7 / ADR-002 A-126 addendum / IMP-126 |
 
-不足判定: 要求は既存 FR に入っている。**本当はできるが気づいていないだけ**の領域は、FR-L1-05/06/07/09/12/13/17/18/19/20/33/37/39/40/41/45/46/47/48/49 に分散済みだった。A-122 で追加確認した UT evidence / GreenDefinition / DB collector / CI matrix は FR-L1-02/06/07/17/18/20/45/50 の拡張要求として扱い、新 FR 採番はしない。A-124 の横断 relation graph / 図化 / tool adapter も FR-L1-05/06/07/17/18/19/20/24/49/50 の DB reference-feedback + automation + drift lint 拡張として扱い、新 FR 採番はしない。A-125 の MCP server / 外部テスト基盤 profile / workflow trigger も FR-L1-05/06/07/17/18/19/20/24/45/49/50 の automation + verification evidence + security gate 拡張として扱い、新 FR 採番はしない。A-126 の正本ドキュメント export も FR-L1-05/06/07/17/18/20/24/33/45/50 の documentation + DB projection + review evidence 拡張として扱い、新 FR 採番はしない。未充足は、これらを **一体の DB reference-feedback + automation-foundation + UT evidence history + cross-artifact relation graph + external verification profile + canonical document export 機構として受入条件化し、L5/L6 詳細設計へ同じ参照粒度で落とすこと**だった。PLAN-L5-08、A-122 addendum、A-124 addendum、A-125 addendum、A-126 addendum で L5/L6 へ add-design として降下する。
+不足判定: 多くの要求は既存 FR に入っている。**本当はできるが気づいていないだけ**の領域は、FR-L1-05/06/07/09/12/13/17/18/19/20/33/37/39/40/41/45/46/47/48/49 に分散済みだった。A-122 で追加確認した UT evidence / GreenDefinition / DB collector / CI matrix は FR-L1-02/06/07/17/18/20/45/50 の拡張要求として扱い、新 FR 採番はしない。A-124 の横断 relation graph / 図化 / tool adapter も FR-L1-05/06/07/17/18/19/20/24/49/50 の DB reference-feedback + automation + drift lint 拡張として扱い、新 FR 採番はしない。A-125 の MCP server / 外部テスト基盤 profile / workflow trigger も FR-L1-05/06/07/17/18/19/20/24/45/49/50 の automation + verification evidence + security gate 拡張として扱い、新 FR 採番はしない。A-126 の正本ドキュメント export も FR-L1-05/06/07/17/18/20/24/33/45/50 の documentation + DB projection + review evidence 拡張として扱い、新 FR 採番はしない。PLAN-L7-56 の artifact progress color projection は、artifact 単位の赤黄緑状態という user-visible な進捗管理 semantics を追加したため **FR-L1-51 として新規採番**し、PLAN-REVERSE-56 で requirements / L1 / L3 / L4 / L5 へ fullback する。未充足は、これらを **一体の DB reference-feedback + automation-foundation + UT evidence history + cross-artifact relation graph + external verification profile + canonical document export + artifact progress color projection 機構として受入条件化し、L5/L6 詳細設計へ同じ参照粒度で落とすこと**だった。PLAN-L5-08、A-122 addendum、A-124 addendum、A-125 addendum、A-126 addendum、PLAN-L7-56 / PLAN-REVERSE-56 で L5/L6/L7 へ add-design / fullback として降下する。

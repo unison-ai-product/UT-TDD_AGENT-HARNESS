@@ -17,7 +17,7 @@ v2_import: docs/migration/v2-import-ledger.md
 
 # UT-TDD Agent Harness — L4 基本設計: 機能設計 (Function)
 
-L3 functional の FR 26 件 + P1 carry 9 件を **機能 building block** (arc42 §5) に分解する (PLAN-L4-03-function)。各機能は architecture.md の module に配置され、data.md の集約を操作する。
+L3 functional の FR 26 件 + P1 carry 10 件を **機能 building block** (arc42 §5) に分解する (PLAN-L4-03-function)。各機能は architecture.md の module に配置され、data.md の集約を操作する。
 
 ## §1 機能カテゴリ分類
 
@@ -228,7 +228,7 @@ L4 は外部設計 (what/形状) で確定。以下は altitude 上 L4 の範囲
 
 > **IMP-013 接続明示**: FR-L1-20 の観測値 (invocation_log = AI 呼び出し記録 / accuracy_score = 判定精度 / gate_evidence = ゲート証跡) は、**Phase A で `.ut-tdd/audit/*.jsonl` に append-only 記録** (data.md §8 Evaluation 集約) され、**business-detail §2 (BR-21 計測対象定義) の入力 + §5 (Learning Engine 集計) の経路**となる。AC-FR-BR21-02 (business-detail) の Phase A 前提 = 「観測層が記録のみ稼働、学習エンジン本実装は Phase B」と整合。観測 (Phase A) と学習 (Phase B、FR-L1-19) を分離。
 
-## §6 P1 carry 9 件の機能 building block 着地先
+## §6 P1 carry 10 件の機能 building block 着地先
 
 L3 §3.1 の P1 carry を L4 sub-PLAN として機能境界を割り当て (§3.1 表と 1:1)。
 
@@ -243,6 +243,7 @@ L3 §3.1 の P1 carry を L4 sub-PLAN として機能境界を割り当て (§3.
 | FR-L1-41 (drive 自動判定) | PLAN/コード/拡張子 → drive 分類 → routing | PLAN-L4-NN-drive-auto-classify | runtime(detect) |
 | FR-L1-42 (provider 引継ぎ) | Claude↔Codex context+PLAN+budget 連携 | implemented 2026-06-08 (`provider-handover.v1`) | runtime(adapter) |
 | FR-L1-44 (onboarding) | 既存 repo へ harness baseline 確立 | PLAN-L4-NN-onboarding | cli(setup) |
+| FR-L1-51 (artifact progress color projection) | source/test/impact/recovery を `artifact_progress` 赤黄緑 state に正規化 | PLAN-L7-56 / PLAN-REVERSE-56 | state-db/projection-writer + cli(progress) |
 
 > P2 (FR-L1-31〜35) は PLAN-L4-NN-infra-readiness、Phase B (FR-L1-19/20) は telemetry carry (data.md §9)。sub-PLAN の `NN` 採番は各起票時に確定。
 
@@ -274,4 +275,4 @@ This L4 function sub-doc is the machine-readable L3->L4 landing point for the fu
 | FR-L1-01 / FR-L1-02 / FR-L1-04 / FR-L1-05 / FR-L1-06 / FR-L1-07 / FR-L1-09 / FR-L1-10 / FR-L1-11 / FR-L1-13 / FR-L1-14 / FR-L1-15 / FR-L1-16 / FR-L1-17 / FR-L1-18 | Function categories C1-C11 and CLI command surface |
 | FR-L1-23 / FR-L1-24 / FR-L1-25 / FR-L1-26 / FR-L1-27 / FR-L1-29 / FR-L1-30 | Workflow orchestration function blocks |
 | FR-L1-36 / FR-L1-38 / FR-L1-43 | BR-21 / business-detail Phase B evaluation hooks carried through workflow/evaluation blocks |
-| FR-L1-45 / FR-L1-50 | doc-review and DDD/TDD strictness guard blocks |
+| FR-L1-45 / FR-L1-50 / FR-L1-51 | doc-review, DDD/TDD strictness guard, and artifact progress projection blocks |
