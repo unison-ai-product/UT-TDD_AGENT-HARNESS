@@ -45,6 +45,53 @@ describe("analyzePlanArtifactExistence", () => {
     });
     expect(r.ok).toBe(true);
   });
+
+  // PLAN-L7-91: hollow (実在するが空) も false-completion として flag する。
+  it("flags a completed PLAN whose declared artifact exists but is hollow (empty)", () => {
+    const r = analyzePlanArtifactExistence({
+      plans: [
+        {
+          planId: "PLAN-H",
+          status: "completed",
+          missingArtifacts: [],
+          hollowArtifacts: ["src/h.ts"],
+        },
+      ],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.violations[0]?.planId).toBe("PLAN-H");
+    expect(r.violations[0]?.hollow).toEqual(["src/h.ts"]);
+  });
+
+  it("reports phantom and hollow distinctly for the same PLAN", () => {
+    const r = analyzePlanArtifactExistence({
+      plans: [
+        {
+          planId: "PLAN-PH",
+          status: "completed",
+          missingArtifacts: ["src/gone.ts"],
+          hollowArtifacts: ["src/empty.ts"],
+        },
+      ],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.violations[0]?.missing).toEqual(["src/gone.ts"]);
+    expect(r.violations[0]?.hollow).toEqual(["src/empty.ts"]);
+  });
+
+  it("does not flag a draft PLAN with a hollow artifact (WIP stub allowed until completion)", () => {
+    const r = analyzePlanArtifactExistence({
+      plans: [
+        {
+          planId: "PLAN-WIP2",
+          status: "draft",
+          missingArtifacts: [],
+          hollowArtifacts: ["src/stub.ts"],
+        },
+      ],
+    });
+    expect(r.ok).toBe(true);
+  });
 });
 
 describe("loadPlanArtifactExistenceInput + checkPlanArtifactExistence", () => {
@@ -92,6 +139,34 @@ describe("loadPlanArtifactExistenceInput + checkPlanArtifactExistence", () => {
       expect(phantom?.missingArtifacts).toContain("src/phantom.ts");
       // draft PLAN is pre-filtered out of the loader input entirely
       expect(input.plans.find((p) => p.planId === "PLAN-TEST-94-wip")).toBeUndefined();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("detects a completed PLAN whose generated artifact exists but is empty (hollow), and exempts .gitkeep", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-artifact-hollow-"));
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      mkdirSync(join(root, "src"), { recursive: true });
+      mkdirSync(join(root, ".ut-tdd", "cache"), { recursive: true });
+      // exists but whitespace-only → hollow
+      writeFileSync(join(root, "src", "hollow.ts"), "   \n\t\n", "utf8");
+      // intentional empty placeholder → exempt
+      writeFileSync(join(root, ".ut-tdd", "cache", ".gitkeep"), "", "utf8");
+      writePlan(root, "PLAN-TEST-91-hollow.md", "completed", "src/hollow.ts");
+      writePlan(root, "PLAN-TEST-91b-keep.md", "completed", ".ut-tdd/cache/.gitkeep");
+
+      const result = checkPlanArtifactExistence(root);
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("PLAN-TEST-91-hollow");
+      expect(result.messages.join("\n")).toContain("hollow");
+      expect(result.messages.join("\n")).not.toContain("PLAN-TEST-91b-keep");
+
+      const input = loadPlanArtifactExistenceInput(root);
+      const hollow = input.plans.find((p) => p.planId === "PLAN-TEST-91-hollow");
+      expect(hollow?.hollowArtifacts).toContain("src/hollow.ts");
+      expect(hollow?.missingArtifacts).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

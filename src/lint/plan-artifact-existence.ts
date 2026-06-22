@@ -1,7 +1,12 @@
 /**
  * plan-artifact-existence lint — 「PLAN が confirmed/completed/accepted (= 完了宣言) なのに、その
- * `generates` で宣言した artifact がディスク上に実在しない」phantom-artifact / false-completion を
- * 機械検出する (hard、doctor.ok 連動)。
+ * `generates` で宣言した artifact がディスク上に実在しない (phantom) / 実在するが中身が空 (hollow)」
+ * false-completion を機械検出する (hard、doctor.ok 連動)。
+ *
+ * PLAN-L7-91 (PO「中身空っぽを見つけたときの対処法」2026-06-22): phantom (不在) に加え hollow (実在
+ * するが非空白 0 = 中身空っぽ) も検出する。declare したファイルを空のまま commit すると existsSync は
+ * true ゆえ phantom 検査を素通りするが、完了宣言の deliverable が空 = substance 不在の false-completion
+ * (coverage ≠ substance)。`.gitkeep` は意図的空 placeholder なので除外する。
  *
  * 動機 (PO /goal 2026-06-15、絶対的 absence-blindness 掃討): merged-plan-status (PLAN-L7-54) は
  * 「artifact が merge 済みなのに PLAN が draft」を検出するが、その **鏡像** = 「PLAN は完了済みなのに
@@ -31,14 +36,19 @@ import { parse as parseYaml } from "yaml";
 import { loadReviewPlans } from "./review-evidence";
 import { normalizePath } from "./shared";
 
-/** 完了宣言とみなす status。これらは generates 全件が実在すべき。 */
+/** 完了宣言とみなす status。これらは generates 全件が実在 + 非空であるべき。 */
 const COMPLETED_STATUSES: ReadonlySet<string> = new Set(["confirmed", "completed", "accepted"]);
+
+/** 意図的に空であってよい placeholder の basename (hollow 検査の除外)。 */
+const HOLLOW_EXEMPT_BASENAMES: ReadonlySet<string> = new Set([".gitkeep"]);
 
 export interface PlanArtifactRow {
   planId: string;
   status: string;
   /** generates で宣言され、かつ repo に実在しない (= phantom) artifact パス集合。 */
   missingArtifacts: string[];
+  /** generates で宣言され、実在するが中身が空 (非空白 0 = hollow) の artifact パス集合。 */
+  hollowArtifacts?: string[];
 }
 
 export interface PlanArtifactExistenceInput {
@@ -48,7 +58,10 @@ export interface PlanArtifactExistenceInput {
 export interface PlanArtifactExistenceViolation {
   planId: string;
   status: string;
-  artifacts: string[];
+  /** 実在しない (phantom)。 */
+  missing: string[];
+  /** 実在するが空 (hollow)。 */
+  hollow: string[];
 }
 
 export interface PlanArtifactExistenceResult {
@@ -56,15 +69,32 @@ export interface PlanArtifactExistenceResult {
   ok: boolean;
 }
 
-/** 完了 status かつ generates に不在 artifact を含む PLAN を violation として返す。 */
+/** 完了 status かつ generates に不在 (phantom) / 空 (hollow) artifact を含む PLAN を violation として返す。 */
 export function analyzePlanArtifactExistence(
   input: PlanArtifactExistenceInput,
 ): PlanArtifactExistenceResult {
   const violations = input.plans
-    .filter((p) => COMPLETED_STATUSES.has(p.status.toLowerCase()) && p.missingArtifacts.length > 0)
-    .map((p) => ({ planId: p.planId, status: p.status, artifacts: p.missingArtifacts }))
+    .filter((p) => COMPLETED_STATUSES.has(p.status.toLowerCase()))
+    .map((p) => ({
+      planId: p.planId,
+      status: p.status,
+      missing: p.missingArtifacts,
+      hollow: p.hollowArtifacts ?? [],
+    }))
+    .filter((v) => v.missing.length > 0 || v.hollow.length > 0)
     .sort((a, b) => a.planId.localeCompare(b.planId));
   return { violations, ok: violations.length === 0 };
+}
+
+/** 実在するファイルが hollow (非空白 0 = 中身空っぽ) か。.gitkeep 等は除外。読めない/バイナリは hollow 扱いしない。 */
+function isHollowFile(repoRoot: string, p: string): boolean {
+  const base = p.split("/").pop() ?? "";
+  if (HOLLOW_EXEMPT_BASENAMES.has(base)) return false;
+  try {
+    return !/\S/.test(readFileSync(join(repoRoot, p), "utf8"));
+  } catch {
+    return false; // 読めない (権限/バイナリ) は hollow と断定しない (fail-open、phantom 側が拾う)
+  }
 }
 
 interface PlanFrontmatterGenerates {
@@ -108,20 +138,26 @@ export function loadPlanArtifactExistenceInput(repoRoot: string): PlanArtifactEx
     } catch {
       continue;
     }
-    const missingArtifacts = generatesArtifactPaths(content).filter(
-      (p) => !existsSync(join(repoRoot, p)),
+    const declared = generatesArtifactPaths(content);
+    const missingArtifacts = declared.filter((p) => !existsSync(join(repoRoot, p)));
+    const hollowArtifacts = declared.filter(
+      (p) => existsSync(join(repoRoot, p)) && isHollowFile(repoRoot, p),
     );
-    plans.push({ planId: rp.plan_id, status: rp.status, missingArtifacts });
+    plans.push({ planId: rp.plan_id, status: rp.status, missingArtifacts, hollowArtifacts });
   }
   return { plans };
 }
 
 export function planArtifactExistenceMessages(r: PlanArtifactExistenceResult): string[] {
   if (r.ok) {
-    return ["plan-artifact-existence — OK (完了 status の全 PLAN で generates artifact が実在)"];
+    return [
+      "plan-artifact-existence — OK (完了 status の全 PLAN で generates artifact が実在 + 非空)",
+    ];
   }
-  return r.violations.map(
-    (v) =>
-      `plan-artifact-existence - violation: PLAN ${v.planId} は status=${v.status} (完了宣言) なのに generates artifact が不在: ${v.artifacts.join(", ")} → artifact を作成するか PLAN を draft に戻せ`,
-  );
+  return r.violations.map((v) => {
+    const parts: string[] = [];
+    if (v.missing.length > 0) parts.push(`不在 (phantom): ${v.missing.join(", ")}`);
+    if (v.hollow.length > 0) parts.push(`空 (hollow): ${v.hollow.join(", ")}`);
+    return `plan-artifact-existence - violation: PLAN ${v.planId} は status=${v.status} (完了宣言) なのに ${parts.join(" / ")} → artifact を作成/充填するか PLAN を draft に戻せ`;
+  });
 }
