@@ -167,3 +167,79 @@ doc-consistency screens=15・db-projection-coverage OK)。pmo-sonnet (intra_runt
 - **PLAN 追加/status 変更後は `ut-tdd db rebuild`** (plan-registry-fingerprint stale で doctor 赤化、
   回帰でない、[[project_codex_branch_ci_verification]])。
 
+---
+
+# Session Handover — 2026-06-22
+
+## §1 PLAN サマリ
+
+- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
+
+## §2 成果物 (commit / files)
+
+- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
+
+## §3 Next Action
+
+本 session (Opus / PO `/goal`「キャリー対応カタログ拡張の完遂。PO 判断って本当に存在するのか？調べろ。」)
+で **SI 標準成果物カタログ拡張の完遂 (PLAN-L7-97)** と **「PO 判断待ち」項目の実在性監査** を実施。
+main 直 commit 2 本 (`d0821ae`, `077aa87`)。
+
+1. **カタログ拡張を完遂** (`077aa87`、PLAN-L7-97): L4 外部設計の標準成果物 4 型
+   (`report`/`batch`/`notification`/`code-value`) を `VALID_SUB_DOCS` へ追加。あわせて
+   `src/plan/lint.ts` の重複 `VALID_SUB_DOCS` を撤去し schema 由来へ一本化 (要件 line 406「schema=
+   単一正本」を実装で担保、catalog 拡張 drift 根治)。要件 §1.10.G.1 + document-system-map §1/§1b に
+   IPA 共通フレーム grounding を反映。substance test = 4 型 L4 valid / L2 invalid (schema + plan lint
+   両経路、U-PLANGOV-006)。
+2. **「PO 判断」実在性監査** (§5 に結論): handover が「未了 PO 判断」と称した 4 項目を `ut-tdd status`
+   (非終端 PLAN=0 / open defers=1) + git + 実ファイルで照合。**3 項目が false-state、実在は 1 項目のみ**。
+3. **誤った carry 先送りの是正**: カタログ拡張の「別議題 (downstream プロダクト形状確定後)」は git 上
+   PO 発言の裏付け無き AI 由来の先送り (自己スコープ論法、PO 否定済の
+   [[feedback_judge_tooling_by_mission_not_self_scope]] 違反) と判明。業界標準で確定可能ゆえ実装で解消。
+
+検証: typecheck / Biome check / Vitest **852** / doctor **EXIT=0** / db rebuild。code-reviewer
+(sonnet, intra_runtime_subagent) **VERDICT=pass・Critical 0**。露呈した既存 drift は IMP-141 へ登録。
+
+> 重要な自戒: セッション開始時の `doctor | tail -20; echo $?` の EXIT=0 は **tail の exit** で doctor の
+> ものでなかった (pipe masking、[[feedback_dont_tail_lint_ci_output]])。実 doctor は handover-discipline
+> drift で advisory 表示があったが EXIT には影響せず。検証は pipe 末尾でなく対象コマンドの exit を直接取る。
+
+## §4 carry (未了・先送り)
+
+- **要件 §1.10.G.1 ↔ schema VALID_SUB_DOCS の既存 drift** (IMP-141): L3 slug
+  (`business-requirement` vs schema `business`)・L4 `screen` 残留。本拡張が plan/lint 単一正本化で露呈
+  させた既存問題。正本どちらに寄せるかは PO 判断 (schema=正本が line 406 の建付け)。silent fix せず
+  IMP-141 で追跡。drift 自動照合 doctor gate も検討候補。
+- **各標準成果物の sub-doc 必須 § 構造定義** (要件 §G.6 の report/batch/notification/code-value 版) =
+  当該成果物を実際に起票する downstream 製品 PLAN 着手時に back-fill (vocabulary 追加が先、本 session 射程外)。
+- 既存 carry (src/web Phase B 画面 UI / `screens.implemented` flip / PLAN-L7-48 `recordGuardrailDecision`
+  配線) は不変。
+
+## §5 未了 PO 判断
+
+**監査結論: 前 handover が「未了 PO 判断」と列挙した 4 項目のうち 3 項目は false-state、実在は 1 項目のみ。**
+
+- ❌ **残 draft 2 本 (DISCOVERY-03 / RECOVERY-02、PO サインオフ待ち)** → 両方とも実ファイル
+  `status: completed`。repo に draft PLAN は 0 本 (`ut-tdd status` 非終端=0 と一致)。**実在しない**。
+- ❌ **IMP-139 (status --json 契約変更の PO 判断)** → backlog 上 `implemented` (PLAN-L7-94 が
+  additive・契約不変で解決済)。**実在しない**。
+- ❌ **標準成果物カタログ拡張 (別議題・downstream 形状確定後)** → AI 由来の自己スコープ先送り。本 session
+  で実装解消。**PO 判断ではなかった**。
+- ✅ **PLAN-L7-48 `recordGuardrailDecision` 本番配線** → `open defers=1` の実体。CLAUDE.md Guard Rule
+  (認可・human-signoff は人間確認必須) に正当に該当する**唯一の実在 PO 判断** (owner=PO、auth-gated)。
+- ✅ (副次) **IMP-141 の doc↔schema drift をどちらに寄せるか** = 本 session で新たに表面化した PO 判断
+  (schema=正本の建付けに従えば要件表を schema へ寄せる)。
+
+## §6 壊さない / 再発させない
+
+- **`VALID_SUB_DOCS` の正本は `src/schema/index.ts` 1 箇所** (PLAN-L7-97)。plan/lint.ts に再びローカル
+  コピーを置くな (catalog 拡張で片肺 drift 再発)。要件 §1.10.G.1 表はそれを mirror する従属物。
+- **標準成果物カタログの要否は土台のミッション (別 SI 製品開発) で測る**。harness 自身が帳票/バッチ/
+  メールを持たないことを理由に「不要・別議題」と先送りするな ([[feedback_judge_tooling_by_mission_not_self_scope]])。
+- **carry に「別議題 / PO 判断待ち」と書くなら PO 発言の出所を git/doc で裏取りせよ**。本 session の監査で
+  3/4 が裏付け無き false-state だった ([[feedback_verify_carry_status_against_code]])。報告前に
+  `ut-tdd status` (非終端 PLAN / open defer) と実ファイルで機械照合する。
+- **検証は pipe 末尾の exit でなく対象コマンドの exit を直接取る** (`cmd; echo $?`、`| tail` は exit を
+  masking、[[feedback_dont_tail_lint_ci_output]])。
+- **PLAN 追加/status 変更後は `ut-tdd db rebuild`** (plan-registry-fingerprint stale 回避)。
+
