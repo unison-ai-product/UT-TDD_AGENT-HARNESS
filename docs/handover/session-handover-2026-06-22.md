@@ -100,3 +100,52 @@ handover 肥大の注入コントロール** を完遂。main 直 commit 2 本 (
 - **PLAN 追加/status 変更後は `ut-tdd db rebuild`** (plan-registry-fingerprint stale で doctor 赤化、
   回帰でない、[[project_codex_branch_ci_verification]])。本 session も複数回 rebuild 済。
 
+---
+
+# Session Handover — 2026-06-22
+
+## §1 PLAN サマリ
+
+- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
+
+## §2 成果物 (commit / files)
+
+- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
+
+## §3 Next Action
+
+同 session 続き (PO「プランの誤記表の対策」+「GitHub harness-check 失敗」)。commit 5 本を
+main へ push 済 (`5b53c88`→`4e9d077`)、**CI green 復旧を `gh run watch` で実機確認 (exit 0)**。
+
+1. **誤記対策** (`9ac1887` + `4e9d077`, PLAN-L7-89): PLAN に書かれた誤った主張への対策。
+   誘因 = L7-86 の review_evidence が「false-positive 出ない / blast radius 0」と断定したが
+   実は false-negative の盲点だった。(a) 即時: L7-86 に訂正 supersede 注記 (`9ac1887`)。
+   (b) 規律明文化 (.claude/CLAUDE.md): falsifiable な safety 主張はテスト引用必須 / 誤記は
+   後継 supersedes + 原 PLAN 訂正注記。(c) 機械強制: schema `supersedes:` + doctor
+   `plan-supersession` (hard) が「supersede 先実在 + 双方向 back-reference」を fail-close。
+   prose 真偽自体は機械化しない (false-confidence の罠回避)。L7-87→L7-86 で適用。
+2. **CI green 復旧** (`48977b4`, PLAN-L7-90): harness-check は 2026-06-19 12:35 以降ずっと赤
+   だった (私の session 以前から)。原因 = L7-69 の readability テストが gitignored の
+   `.ut-tdd/handover/CURRENT.json` 実在を hard assert = local-green/CI-red 罠。tracked evidence
+   (audit md / provider json) + loader scope のみ検査するよう修正。
+
+検証: typecheck / Biome / Vitest **804** / doctor EXIT=0 / db rebuild。**CI 実機 green 確認済**。
+
+## §4 carry (未了・先送り)
+
+- 第 1 entry §4 と同じ (歴史的 oversized handover の retroactive 圧縮 / 残 draft 2 本 / IMP-139)。
+- 新規実装の手待ちなし。
+
+## §5 未了 PO 判断
+
+- 第 1 entry §5 と同じ (L7-48 recordGuardrailDecision 配線 / IMP-139)。本 entry の commit は push 済。
+
+## §6 壊さない / 再発させない
+
+- **test は tracked artifact のみに依存させる** (PLAN-L7-90)。gitignored runtime state
+  (`.ut-tdd/handover/CURRENT.*` 等) の実在を assert すると CI (fresh checkout) だけ赤になる
+  (local green ≠ CI green、[[project_codex_branch_ci_verification]])。push 前に CI を実機確認せよ。
+- **PLAN の safety/completeness 主張はテスト引用で裏付ける** (PLAN-L7-89)。「blast radius 0」等の
+  prose 断定は機械が真偽を見ない。誤記訂正は `supersedes:` 宣言 + 原 PLAN 訂正注記で双方向化
+  (plan-supersession gate が fail-close)。`supersedes` を消すと errata の片肺放置を見逃す。
+
