@@ -4,9 +4,18 @@ title: "PLAN-L3-04: upstream FR residual schedule reconciliation"
 kind: add-design
 layer: L3
 drive: fullstack
-status: draft
+status: confirmed
 created: 2026-06-12
-updated: 2026-06-12
+updated: 2026-06-22
+review_evidence:
+  - reviewer: PM (Opus) verification (intra_runtime_subagent)
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-22"
+    tests_green_at: "2026-06-22"
+    verdict: pass
+    scope: "add-design 増分 (upstream FR residual → V-model closure table + 9-mode drive-model passage certificate + rule-automation-closure 表) の status drift (src merge 済なのに draft 放置) を解消し confirmed 化。成果物 src/lint/{rule-automation-closure,drive-model-passage,fr-roadmap-coverage}.ts + src/handover/index.ts は 2026-06-12 (239cb32) で merge 済。機械再検証: ①4 src module 全実在 ②doctor に配線 load-bearing (rule-automation-closure / drive-model-passage / fr-roadmap-coverage 各 doctor refs ≥3) ③§2.3 rule-automation-closure 表は全 5 行 closed (automation owner 実在) ④Vitest 787/787 green / doctor EXIT=0。AC §4 (A-133 audit 実在 / drive-model passage 9 mode / DB registration gate / rule automation owner) は merged + wired + tested で充足。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-opus-4-8
 agent_slots:
   - role: tl
     slot_label: "TL - upstream FR residual to V-model WBS reconciliation"

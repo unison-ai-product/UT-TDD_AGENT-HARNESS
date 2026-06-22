@@ -34,9 +34,33 @@ describe("analyzeMergedPlanStatus", () => {
     expect(r.ok).toBe(true);
   });
 
-  it("does not flag non-artifact kinds (design/poc) even if draft", () => {
+  // PLAN-L7-87 (2026-06-22): kind no longer gates detection. A poc dogfood spike
+  // (DISCOVERY-05) or add-design (L3-04/L3-05) that ships merged src must be flagged when
+  // left draft. The pre-fix kind filter assumed design/poc/reverse never merge deliverables,
+  // which is false and let 3 draft-with-merged-src PLANs slip through doctor green.
+  it("flags ANY kind (incl design/poc/add-design) when it ships merged src while draft", () => {
     const r = analyzeMergedPlanStatus({
-      plans: [{ planId: "PLAN-D", status: "draft", kind: "design", mergedArtifacts: ["src/d.ts"] }],
+      plans: [
+        { planId: "PLAN-POC", status: "draft", kind: "poc", mergedArtifacts: ["src/schema/x.ts"] },
+        {
+          planId: "PLAN-AD",
+          status: "draft",
+          kind: "add-design",
+          mergedArtifacts: ["src/lint/y.ts"],
+        },
+        { planId: "PLAN-DS", status: "draft", kind: "design", mergedArtifacts: ["src/d.ts"] },
+      ],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.violations.map((v) => v.planId)).toEqual(["PLAN-AD", "PLAN-DS", "PLAN-POC"]);
+  });
+
+  it("still does not flag a draft PLAN of any kind whose deliverable is NOT merged", () => {
+    const r = analyzeMergedPlanStatus({
+      plans: [
+        { planId: "PLAN-POC-WIP", status: "draft", kind: "poc", mergedArtifacts: [] },
+        { planId: "PLAN-AD-WIP", status: "draft", kind: "add-design", mergedArtifacts: [] },
+      ],
     });
     expect(r.ok).toBe(true);
   });
@@ -168,7 +192,7 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
     }
   });
 
-  it("does not flag a draft design PLAN even if it ships a docs/ artifact (kind + docs/ excluded)", () => {
+  it("does not flag a draft design PLAN that ships only a docs/ artifact (docs/ excluded, kind-independent)", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-merged-plan-design-"));
     try {
       mkdirSync(join(root, "docs", "plans"), { recursive: true });
@@ -193,6 +217,44 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
       );
       const result = checkMergedPlanStatus(root);
       expect(result.ok).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // PLAN-L7-87 (2026-06-22): the real drift — a draft add-design/poc PLAN that merged a src/
+  // deliverable. The pre-fix gate skipped these by kind; it must now flag them by deliverable.
+  it("flags a draft add-design PLAN whose merged deliverable is a src/ module (kind-independent)", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-merged-plan-adsrc-"));
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      mkdirSync(join(root, "src", "lint"), { recursive: true });
+      writeFileSync(join(root, "src", "lint", "y.ts"), "export const y = 1;\n", "utf8");
+      writeFileSync(
+        join(root, "docs", "plans", "PLAN-TEST-87-adsrc.md"),
+        [
+          "---",
+          "plan_id: PLAN-TEST-87-adsrc",
+          "status: draft",
+          "kind: add-design",
+          "generates:",
+          "  - artifact_path: docs/plans/PLAN-TEST-87-adsrc.md",
+          "    artifact_type: markdown_doc",
+          "  - artifact_path: src/lint/y.ts",
+          "    artifact_type: source_module",
+          "---",
+          "",
+          "body",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const result = checkMergedPlanStatus(root);
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("PLAN-TEST-87-adsrc");
+      const input = loadMergedPlanStatusInput(root);
+      const flagged = input.plans.find((p) => p.planId === "PLAN-TEST-87-adsrc");
+      expect(flagged?.mergedArtifacts).toContain("src/lint/y.ts");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -3,13 +3,24 @@ plan_id: PLAN-DISCOVERY-05-roadmap-registration
 title: "PLAN-DISCOVERY-05 (kind=poc): 工程表 (gated layer-decomposition roadmap) を第一級・機械登録エンティティ化する metamodel 検証"
 kind: poc
 layer: cross
-workflow_phase: S1
+workflow_phase: S4
 scrum_type: design-spike
 drive: fullstack
-status: draft
+status: confirmed
+decision_outcome: confirmed  # S4 = 工程表=第一級機械登録エンティティ化の PoC 採用。dogfood 成功 + 採用 (roadmap-registry が doctor で load-bearing 稼働) + concept §10 promote 済 (RECOVERY-04/REVERSE-44) を実体で確認、PO goal directive (2026-06-22「A の 3 本の drift 解消」) で授権。promotion_strategy=reuse-with-hardening。
+promotion_strategy: reuse-with-hardening
 created: 2026-06-10
-updated: 2026-06-10
+updated: 2026-06-22
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: PM (Opus) verification (intra_runtime_subagent)
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-22"
+    tests_green_at: "2026-06-22"
+    verdict: pass
+    scope: "poc (工程表 = gated layer-decomposition roadmap を第一級・機械登録エンティティ化) の S4 status drift (spike src merge 済なのに draft 放置) を解消し confirmed 化。spike 成果物 src/schema/roadmap.ts + src/lint/roadmap-registry.ts + tests/roadmap.test.ts は 2026-06-12 (239cb32) で merge 済 + doctor checkRoadmap (roadmap-rollup / program-coverage / 各 band の gate+span) として load-bearing 稼働中。S4 exit 義務 (§3 段4: confirmed → concept §2.5/§10 へ promote) は既に discharge 済 = concept §10 glossary (行 1134-1138) が 工程表/roadmap・§工程表・human/AI plane・全プログラム被覆・program rollup を定義し、まさに src/schema/roadmap.ts + src/lint/roadmap-registry.ts を機械登録機構として明記 (RECOVERY-04 / REVERSE-44 経由)。= dogfood 成功 + 採用 + promote 済 + load-bearing。Vitest 787/787 green / doctor EXIT=0。decision_outcome=confirmed / promotion_strategy=reuse-with-hardening。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-opus-4-8
 agent_slots:
   - role: aim
     slot_label: "AIM — 工程表登録 metamodel の新方向性策定 + L1 接続判断"
