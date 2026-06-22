@@ -281,13 +281,15 @@ main 直 commit 2 本 (`d0821ae`, `077aa87`)。
    review gate 機能を完成させ commit (`51da004`、12 ファイル) まで終えていたのに、私がそれを「自分が知らない
    foreign 変更 = overstep」と**誤判定し reset/revert で一時デグレ**させた ([[feedback_commit_finished_codex_work_dont_abandon]]
    の再発、PO「codex 側はコミットまで終わってる。勝手にデグレさせんなよ」)。`git log`/reflog で Codex commit と
-   判明し HEAD=51da004 へ復元 + 12 ファイル原状回復、私の Q1/Q2 はその上に積み直し。push 済み履歴
-   (origin/main=018db35) は無傷。GitHub 運用ルールを「hybrid 多ランタイム協調 = 相手 commit を破壊しない /
-   history 書換前に git log 確認」へ書き換え (CLAUDE.md/AGENTS.md)。
+   判明し HEAD=51da004 へ復元 + 12 ファイル原状回復、私の Q1/Q2 はその上に積み直し。**Codex は 51da004 を
+   commit だけでなく origin へ push 済み**だった (origin/main=51da004) = 私が local を 018db35 へ reset したのは
+   origin より後ろに戻す危険操作で、force-push していたら Codex の push 済み成果を消すところだった (force-push
+   はせず fast-forward 復元ゆえ origin は無傷)。GitHub 運用ルールを「hybrid 多ランタイム協調 = 相手 commit を
+   破壊しない / history 書換前に git log + origin 確認 / 相手成果の上に積む」へ書き換え (CLAUDE.md/AGENTS.md)。
 
-検証: db rebuild / typecheck / Biome check / doctor (handover-outstanding OK) green。Vitest は runDoctor 系
-2-8 件が full 並列で flaky (doctor.test.ts 単独=32/32 pass、doctor CLI 安定=0、既知 [[project_codex_branch_ci_verification]])。
-**Codex commit 51da004 を base に私の作業を 1 commit で上積みし push** (origin へ Codex + 私の両方を反映)。
+検証: db rebuild / typecheck / Biome check / doctor (handover-outstanding OK) / Vitest 862/862 green。
+**Codex commit 51da004 を base に私の作業を 1 commit (`d768c29`) で上積みし push** (origin/main: 51da004 → d768c29、
+Codex + 私の両方を反映、sync 0/0)。
 
 ## §4 carry (未了・先送り)
 
