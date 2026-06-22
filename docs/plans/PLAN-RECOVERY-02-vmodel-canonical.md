@@ -4,10 +4,27 @@ title: "PLAN-RECOVERY-02 (recovery): V-model 定義の前提欠落 — 正規式
 kind: recovery
 layer: cross
 drive: fullstack
-status: draft
+status: completed
 created: 2026-06-04
-updated: 2026-06-04
+updated: 2026-06-22
 owner: PM (Opus) / PO (人間)
+review_evidence:
+  - reviewer: PO (人間) sign-off
+    review_kind: human
+    reviewed_at: "2026-06-22"
+    tests_green_at: "2026-06-04"
+    verdict: pass
+    scope: "PO 2026-06-22『2 はそもそも通過してないとおかしい段階だろ。ただの記載ミスか運用ミスだろ』= L0-L3 freeze (G0.5/G1/G2/G3) の PO サインオフ付与。Phase 1-3 (定義 doc / WF / 既存資産) は commit db79a3e→096a40e で正規式整合完了、gated downstream (L1-01..05 / L3-00..05) は全て status=confirmed、機械 trace (g3-trace / fr-registry / doc-consistency / vitest) green = freeze-ready が既済だったのに recovery PLAN 自身の status だけが draft に取り残された運用ミス (= 完了 bookkeeping drift)。本サインオフで L0-L3 freeze 確定 + status draft→completed。再発防止は plan-completion-drift gate ([[PLAN-L7-93]], DoD 全消化なのに status 非終端を fail-close) で機械化。"
+    worker_model: human
+    reviewer_model: human
+  - reviewer: pmo-sonnet (intra_runtime_subagent)
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-04"
+    tests_green_at: "2026-06-04"
+    verdict: pass
+    scope: "Phase 1-3 境界 review (正規式モデルの網羅性 / 非破壊性 / エスカレーション列挙順を右腕工程順へ統一)。single-agent mode ゆえ cross-agent 不在を記録。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
 agent_slots:
   - role: aim
     slot_label: "AIM — recovery 観点 (正規式モデルの網羅性 / 非破壊性 / 再発防止 = V-model 定義の anchor 化) のレビュー"
@@ -109,3 +126,16 @@ v2_import: docs/migration/v2-import-ledger.md
 - **用語更新 (§G.9 相当)**: 「価値検証」「3 点合算」「データ実在性エスカレーション」「本番受入」「実データ検証」「L2=L1 フェーズ分離」を living glossary へ追加。
 - **CI チェック追加案 (IMP)**: 定義 drift (concept §2.3 表 ↔ requirements §1.4 ↔ overview §4 の V-pair / 検証本質の不一致) を `ut-tdd plan lint` / vmodel lint の検証候補に追加。improvement-backlog へ IMP 起票。
 - **「アップデート」非モデルの規律化**: 定義の ad-hoc 編集 (update) を禁じ、定義修正は必ず駆動モデルを通す規律を CLAUDE.md / process に明記する候補。
+- **完了 bookkeeping drift の機械化 (2026-06-22 実装済)**: 本 PLAN は Phase 1-3 完了 + gated downstream 全 confirmed + freeze-ready なのに status=draft に取り残され、毎 session「未了」として再報告された (= 「ただの記載ミス / 運用ミス」)。merged-plan-status は出荷物 (src/tests/scripts/.claude) しか見ず自分の md だけが deliverable の recovery PLAN を構造的に見逃した。再発防止として `plan-completion-drift` gate ([[PLAN-L7-93]]) を新設 = DoD/完了条件を全消化 (`- [x]`) したのに status が非終端なら doctor fail-close。本 PLAN は §8 DoD を追加し本 gate の被覆下に置いた。
+
+## §8 完了条件 (DoD)
+
+- [x] **Phase 1** — 定義 doc (concept §2.3 / requirements §1.4 / gate-design / document-system-map) を正規式整合 (非破壊)。
+- [x] **Phase 2** — ワークフロー (overview §4 / forward L00-L06・L07・L08-L14 / gates.md) を正規式整合 (谷 3 点合算 / 右腕エスカレーション / L2=L1 分離)。
+- [x] **Phase 3** — 既存資産 (L0 価値検証の位置づけ / L1・L3 design・test-design 整合 / 画面要求の L1 内包)。
+- [x] **要件定義 (L3) 修正 + L1 上流整合** — 本番受入の検証本質・画面要求の L1 内包前提を反映 (FR 内容不変)。
+- [x] **固定 review Step** — 各 Phase 完了時の intra_runtime_subagent review (pmo-sonnet) 前置 + cross-agent 不在記録。
+- [x] **機械 trace green** — g3-trace / fr-registry / doc-consistency / vitest が green = freeze-ready。
+- [x] **gated downstream 確定** — L1-01..05 / L3-00..05 PLAN が全て status=confirmed。
+- [x] **L0-L3 freeze (G0.5/G1/G2/G3) の PO サインオフ** — PO 2026-06-22 付与 (review_evidence)。
+- [x] **再発防止** — 完了 bookkeeping drift を `plan-completion-drift` gate ([[PLAN-L7-93]]) で機械化。

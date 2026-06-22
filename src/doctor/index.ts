@@ -130,6 +130,11 @@ import {
   loadPlanBodySubstanceInput,
   planBodySubstanceMessages,
 } from "../lint/plan-body-substance";
+import {
+  analyzePlanCompletionDrift,
+  loadPlanCompletionDriftInput,
+  planCompletionDriftMessages,
+} from "../lint/plan-completion-drift";
 import { analyzePlanDod, loadPlanDodDocs, planDodMessages } from "../lint/plan-dod";
 import {
   analyzePlanSupersession,
@@ -357,6 +362,26 @@ export function checkPlanBodySubstance(repoRoot: string): { messages: string[]; 
     return { messages: planBodySubstanceMessages(r), ok: r.ok };
   } catch {
     return { messages: ["plan-body-substance - violation: PLAN could not be read"], ok: false };
+  }
+}
+
+/**
+ * DoD 全消化済なのに status 非終端の PLAN を surface (PLAN-L7-93、hard fail)。完了 bookkeeping drift
+ * (作業完了 + gated downstream confirmed なのに recovery/poc PLAN 自身が draft 放置) → ok=false。
+ * I/O 失敗も violation にして fail-close する。
+ */
+export function checkPlanCompletionDrift(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["plan-completion-drift - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzePlanCompletionDrift(loadPlanCompletionDriftInput(repoRoot));
+    return { messages: planCompletionDriftMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["plan-completion-drift - violation: PLAN could not be read"], ok: false };
   }
 }
 
@@ -1439,6 +1464,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const scrumRev = checkScrumReverse(deps.repoRoot);
   const planSupersession = checkPlanSupersession(deps.repoRoot);
   const planBodySubstance = checkPlanBodySubstance(deps.repoRoot);
+  const planCompletionDrift = checkPlanCompletionDrift(deps.repoRoot);
   const propagation = checkPropagation(deps.repoRoot);
   const reviewEvidence = checkReviewEvidence(deps.repoRoot);
   const pairFreeze = checkPairFreeze(deps.repoRoot);
@@ -1492,6 +1518,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       scrumRev.ok &&
       planSupersession.ok &&
       planBodySubstance.ok &&
+      planCompletionDrift.ok &&
       propagation.ok &&
       reviewEvidence.ok &&
       guardrailInvariants.ok &&
@@ -1548,6 +1575,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...scrumRev.messages.map((m) => `doctor: ${m}`),
       ...planSupersession.messages.map((m) => `doctor: ${m}`),
       ...planBodySubstance.messages.map((m) => `doctor: ${m}`),
+      ...planCompletionDrift.messages.map((m) => `doctor: ${m}`),
       ...propagation.messages.map((m) => `doctor: ${m}`),
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
       ...moduleDrift.messages.map((m) => `doctor: ${m}`),
