@@ -167,6 +167,7 @@ G3/G4/G5 で運用した audit を正式 spec 化。各ゲートは以下 4 軸 
 - **IMP-033** (cross-check rule engine) として L7 実装を起票。
 - **L6 carry**: ルール型のアルゴリズム (レジストリ構築 / ルール解決 / 適用 / 差分レポート) を機能設計で pseudocode 化 (IEEE 1016 §5.7)。
 - **L7 carry**: engine 実装 + 既存 5 lint のリファクタ吸収 + `gate-checks.yaml` + `ut-tdd gate`/`doctor` 配線。ADR-002 (dependency-drift) / IMP-001/002/003/006 / **FR-L1-49 (asset-drift、A-85)** を本エンジンのルール型として統合。
+  - **partial discharge (PLAN-L7-95)**: この carry のうち **「`doctor` 配線」部分**を先行 discharge。`doc-consistency` / `entity-coverage` / `fr-registry-audit` / `improvement-backlog` の 4 audit を standalone で `ut-tdd doctor` へ実配線 (helper 再利用のみで本体 audit が inert だった死蔵を解消)。あわせて **IMP-006 (lint-coverage-map)** を `src/lint/lint-wiring.ts` meta-gate として実装 = 「全 `src/lint/*` は runtime 経路から到達可能 or DEFERRED 登録済み」を fail-close (死蔵ルールの再発防止)。汎用 engine 本体 + `gate-checks.yaml` + rule-type 吸収は **IMP-033 に残置** (standalone 配線はエンジン到来時に rule instance へ移行可能、互換)。
 
 ### §7.1 新規 FR を起こさない判断 (記録)
 

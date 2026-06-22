@@ -63,6 +63,7 @@ import {
   loadFrUnitCoverageOracles,
   loadTraceKeyedArtifacts,
 } from "../lint/descent-obligation";
+import { analyzeDocConsistency, loadDocConsistencyDocs } from "../lint/doc-consistency";
 import {
   analyzeDriveDbRegistration,
   driveDbRegistrationMessages,
@@ -72,11 +73,13 @@ import {
   driveModelPassageMessages,
   loadDriveModelPassageDocs,
 } from "../lint/drive-model-passage";
+import { analyzeEntityCoverage, loadBusiness as loadEntityBusiness } from "../lint/entity-coverage";
 import {
   analyzeFeedbackLog,
   feedbackLogMessages,
   loadFeedbackLogInput,
 } from "../lint/feedback-log";
+import { analyzeFrRegistry, loadFrDocs as loadFrRegistryDocs } from "../lint/fr-registry-audit";
 import {
   analyzeFrRoadmapCoverageWithRoot,
   frRoadmapCoverageMessages,
@@ -88,6 +91,10 @@ import {
   implPlanTraceMessages,
   loadImplPlanTraceInput,
 } from "../lint/impl-plan-trace";
+import {
+  analyzeImprovementBacklog,
+  loadBacklog as loadImprovementBacklog,
+} from "../lint/improvement-backlog";
 import {
   analyzeL6Completion,
   canLoadL6CompletionInputs,
@@ -104,6 +111,7 @@ import {
   l7CompletionMessages,
   loadL7CompletionDocs,
 } from "../lint/l7-completion";
+import { analyzeLintWiring, lintWiringMessages, loadLintWiringInput } from "../lint/lint-wiring";
 import {
   analyzeMergedPlanStatus,
   loadMergedPlanStatusInput,
@@ -1456,6 +1464,149 @@ export function nodeDoctorDeps(repoRoot: string): DoctorDeps {
   };
 }
 
+/**
+ * doc-consistency lint を hard gate 検査 (PLAN-L7-95、要件 §G.11 の「自動検証」配線)。
+ * carry 整合 / screen-id 妥当性 / NFR 件数宣言-実数を fail-close。I/O 失敗も violation。
+ */
+export function checkDocConsistency(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeDocConsistency(loadDocConsistencyDocs(repoRoot));
+    const bad = r.carryOrphans.length + r.screenIdOrphans.length + (r.nfrCount.mismatch ? 1 : 0);
+    if (bad === 0) {
+      return {
+        messages: [
+          `doc-consistency — OK (carry/screen-id/NFR 整合, screens=${r.definedScreenCount}, NFR=${r.nfrCount.actual})`,
+        ],
+        ok: true,
+      };
+    }
+    return {
+      messages: [
+        `doc-consistency — violation: carryOrphans=${r.carryOrphans.length}, screenIdOrphans=${r.screenIdOrphans.length}, nfrMismatch=${r.nfrCount.mismatch} (declared=${r.nfrCount.declared}/actual=${r.nfrCount.actual})`,
+      ],
+      ok: false,
+    };
+  } catch {
+    return {
+      messages: ["doc-consistency — violation: L1/L3/screen docs could not be read"],
+      ok: false,
+    };
+  }
+}
+
+/**
+ * entity-coverage lint を hard gate 検査 (PLAN-L7-95)。business §10.1 primary entity と
+ * L3 派生 entity の重複 0 を fail-close。I/O 失敗も violation。
+ */
+export function checkEntityCoverage(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeEntityCoverage(loadEntityBusiness(repoRoot));
+    if (r.duplicates.length === 0) {
+      return {
+        messages: [
+          `entity-coverage — OK (primary/L3-derived entity 整合, total=${r.totalCount}, dup 0)`,
+        ],
+        ok: true,
+      };
+    }
+    return {
+      messages: [
+        `entity-coverage — violation: duplicate entity=${r.duplicates.length} (${r.duplicates.join(", ")})`,
+      ],
+      ok: false,
+    };
+  } catch {
+    return { messages: ["entity-coverage — violation: business doc could not be read"], ok: false };
+  }
+}
+
+/**
+ * fr-registry-audit lint を hard gate 検査 (PLAN-L7-95、要件 §1.10.G.10 の「漏れ監査自動化」配線)。
+ * FR-L1 registry の 5 型漏れ (登録/欠番/属性/件数/画面被覆) を fail-close。I/O 失敗も violation。
+ */
+export function checkFrRegistryAudit(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeFrRegistry(loadFrRegistryDocs(repoRoot));
+    const bad =
+      r.unregistered.length +
+      r.unexplainedGaps.length +
+      r.attributeOrphans.length +
+      r.countMismatches.length +
+      r.screenCoverageOrphans.length;
+    if (bad === 0) {
+      return {
+        messages: [
+          `fr-registry-audit — OK (FR-L1 registry 5 型漏れ 0, registered=${r.totals.registered})`,
+        ],
+        ok: true,
+      };
+    }
+    return {
+      messages: [
+        `fr-registry-audit — violation: unregistered=${r.unregistered.length}, gaps=${r.unexplainedGaps.length}, attr=${r.attributeOrphans.length}, count=${r.countMismatches.length}, screen=${r.screenCoverageOrphans.length}`,
+      ],
+      ok: false,
+    };
+  } catch {
+    return {
+      messages: ["fr-registry-audit — violation: L1/L3/screen docs could not be read"],
+      ok: false,
+    };
+  }
+}
+
+/**
+ * improvement-backlog lint を hard gate 検査 (PLAN-L7-95、要件 §1.10.G.12 の「構造健全性検証」配線)。
+ * IMP 行の malformed/dup/invalid status・candidate/incomplete/unparseable を fail-close。
+ */
+export function checkImprovementBacklog(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeImprovementBacklog(loadImprovementBacklog(repoRoot));
+    const bad =
+      r.malformedIds.length +
+      r.duplicateIds.length +
+      r.invalidStatus.length +
+      r.invalidCandidate.length +
+      r.incompleteRows.length +
+      r.unparseableRows.length;
+    if (bad === 0) {
+      return {
+        messages: [
+          `improvement-backlog — OK (backlog 書式健全, entries=${r.total}, open=${r.openCount}, 死蔵行 0)`,
+        ],
+        ok: true,
+      };
+    }
+    return {
+      messages: [
+        `improvement-backlog — violation: malformed=${r.malformedIds.length}, dup=${r.duplicateIds.length}, invalidStatus=${r.invalidStatus.length}, invalidCandidate=${r.invalidCandidate.length}, incomplete=${r.incompleteRows.length}, unparseable=${r.unparseableRows.length}`,
+      ],
+      ok: false,
+    };
+  } catch {
+    return {
+      messages: ["improvement-backlog — violation: docs/improvement-backlog.md could not be read"],
+      ok: false,
+    };
+  }
+}
+
+/**
+ * lint-wiring meta-gate を hard gate 検査 (PLAN-L7-95、IMP-006)。
+ * すべての src/lint module が runtime 経路から到達可能 or DEFERRED 登録済みを fail-close。
+ */
+export function checkLintWiring(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeLintWiring(loadLintWiringInput(repoRoot));
+    return { messages: lintWiringMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["lint-wiring — violation: src/lint modules could not be scanned"],
+      ok: false,
+    };
+  }
+}
+
 // CLI entrypoint は process.cwd() = repoRoot を想定 (deps 未指定時)。test は deps 注入で固定。
 export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): LintResult {
   const d = detectMode();
@@ -1512,6 +1663,11 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const guardrailInvariants = checkGuardrailInvariants(deps.repoRoot);
   const dbProjectionCoverage = checkDbProjectionCoverage(deps.repoRoot);
   const dbProjectionIngestion = checkDbProjectionIngestion(deps.repoRoot);
+  const docConsistency = checkDocConsistency(deps.repoRoot);
+  const entityCoverage = checkEntityCoverage(deps.repoRoot);
+  const frRegistryAudit = checkFrRegistryAudit(deps.repoRoot);
+  const improvementBacklog = checkImprovementBacklog(deps.repoRoot);
+  const lintWiring = checkLintWiring(deps.repoRoot);
   return {
     ok:
       backfill.ok &&
@@ -1565,7 +1721,12 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       dependencyDrift.ok &&
       regressionExpansion.ok &&
       dbProjectionCoverage.ok &&
-      dbProjectionIngestion.ok,
+      dbProjectionIngestion.ok &&
+      docConsistency.ok &&
+      entityCoverage.ok &&
+      frRegistryAudit.ok &&
+      improvementBacklog.ok &&
+      lintWiring.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
       checkHandover(deps),
@@ -1623,6 +1784,11 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...regressionExpansion.messages.map((m) => `doctor: ${m}`),
       ...dbProjectionCoverage.messages.map((m) => `doctor: ${m}`),
       ...dbProjectionIngestion.messages.map((m) => `doctor: ${m}`),
+      ...docConsistency.messages.map((m) => `doctor: ${m}`),
+      ...entityCoverage.messages.map((m) => `doctor: ${m}`),
+      ...frRegistryAudit.messages.map((m) => `doctor: ${m}`),
+      ...improvementBacklog.messages.map((m) => `doctor: ${m}`),
+      ...lintWiring.messages.map((m) => `doctor: ${m}`),
     ],
   };
 }

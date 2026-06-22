@@ -49,7 +49,7 @@
 | **IMP-003** | 2026-05-29 | A-22 / G.2 | PLAN frontmatter `parent_design` / `pair_artifact` / `related_l0` の path を fs 実在検証 | lint | triaged | requirements §1.10.G.11 第2弾 |
 | **IMP-004** | 2026-05-29 | A-55 | 既存 PLAN (PLAN-L1-* 〜 L5-*) の plan_id (層別 `PLAN-L<N>-<NN>-slug`) が planIdSchema regex (`PLAN-\d{3}` のみ) 不適合 → plan lint 有効化で全件 reject。**PO 決定 (2026-05-29) = (a) 層別 ID を正本** (requirements §395 と一致) とし frontmatter.ts regex を層別対応へ拡張 + テスト | lint | triaged | A-72 決定(a) / L7 frontmatter regex 拡張 |
 | **IMP-005** | 2026-05-29 | A-58 retro | ledger / backlog の改善項目を `.ut-tdd/audit/failure_log.jsonl` へ自動連携する経路が無い (手書きのみ) | FR / policy | observed | FR-L1-19 / FR-L1-20 |
-| **IMP-006** | 2026-05-29 | A-58 retro | 4 lint (g3-trace / entity-coverage / fr-registry / doc-consistency) の被覆範囲を一覧する lint-coverage-map が無い | doc | observed | HM-01 / HM-02 |
+| **IMP-006** | 2026-05-29 | A-58 retro | 4 lint (g3-trace / entity-coverage / fr-registry / doc-consistency) の被覆範囲を一覧する lint-coverage-map が無い | lint | implemented | PLAN-L7-95 / `src/lint/lint-wiring.ts` (lint-wiring meta-gate = 全 src/lint module を reachable-or-DEFERRED で fail-close、死蔵ルール検出) / HM-01 / HM-02 |
 | **IMP-007** | 2026-05-29 | A-53 | commit 後に code-reviewer が不備を発見する手戻り。pre-commit / CI で自動発動する hook 化 (ut-tdd CLI 整備後) | policy | observed | A-53 / .claude hook |
 | **IMP-008** | 2026-05-29 | A-57 | FR registry の `導入工程` (provenance) を `出典 doc` 列から正規化列へ昇格 (現状は自由記述に内包) | doc | observed | requirements §1.10.G.10 |
 | **IMP-009** | 2026-05-29 | A-54 / A-57 / A-58 | code-reviewer subagent の最終 verdict が途中切れする (SendMessage 不可)。冒頭サマリ強制 / 出力分割で緩和 | policy | observed | A-54 / A-57 / A-58 |

@@ -270,6 +270,23 @@ describe("runDoctor", () => {
     expect(r.messages.some((m) => m.includes("doctor: skill-assignment - OK"))).toBe(true);
   });
 
+  // PLAN-L7-95: the 4 previously-inert lint audits + the lint-wiring meta-gate must be
+  // invoked by runDoctor (invocation fence — guards against re-introducing the absence-blindness
+  // where a lint module is reachable/tested but its audit never runs in a runtime path).
+  it("invokes the 4 newly-wired lint audits + lint-wiring meta-gate in doctor output", () => {
+    const r = runDoctor();
+    expect(r.ok).toBe(true);
+    for (const gate of [
+      "doctor: doc-consistency — OK",
+      "doctor: entity-coverage — OK",
+      "doctor: fr-registry-audit — OK",
+      "doctor: improvement-backlog — OK",
+      "doctor: lint-wiring — OK",
+    ]) {
+      expect(r.messages.some((m) => m.includes(gate))).toBe(true);
+    }
+  });
+
   it("includes G1/G3 trace gates in doctor output", () => {
     const r = runDoctor();
     expect(r.ok).toBe(true);

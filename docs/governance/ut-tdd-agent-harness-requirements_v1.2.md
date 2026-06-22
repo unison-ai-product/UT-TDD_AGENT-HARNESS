@@ -521,7 +521,7 @@ L0 → L1 → L4 のドメイン継承チェーンを `ut-tdd plan lint` (sub_do
 
 ##### G.10 機能一覧 (FR registry) 漏れ監査 + 登録機構 (構想書 §3.1.2.2 / A-57)
 
-機能一覧 (L1 functional §1) を FR registry の**単一 SSoT** とし、`ut-tdd plan lint` / `src/lint/fr-registry-audit.ts` で **漏れ監査を自動化**する (手動 audit A-51/52/54 の lint 化)。漏れ 5 型は doc 間 ID 整合で自動判定:
+機能一覧 (L1 functional §1) を FR registry の**単一 SSoT** とし、`ut-tdd doctor` (`fr-registry-audit` gate) / `src/lint/fr-registry-audit.ts` で **漏れ監査を自動化**する (手動 audit A-51/52/54 の lint 化、doctor 配線は PLAN-L7-95)。漏れ 5 型は doc 間 ID 整合で自動判定:
 
 - [ ] **型1 登録漏れ** = screen §5 trace / L3 functional で参照される FR-L1-NN が §1 table に未登録 (carry/forward 宣言済みを除く) → exit 1
 - [ ] **型2 欠番漏れ** = FR-L1 連番の gap で carry/forward 宣言の無いもの (現 36/38/43 は宣言済 = OK) → exit 1
@@ -536,7 +536,7 @@ L0 → L1 → L4 のドメイン継承チェーンを `ut-tdd plan lint` (sub_do
 
 ##### G.11 doc 間整合チェック (doc-consistency lint、構想書 §3.1.2.2 / A-58)
 
-doc 間の整合を `src/lint/doc-consistency.ts` で自動検証 = L3 到達までの手動 audit (A-51/52/54) の機械化。retro (ledger mine) で「手戻りの大半は既に 3 lint 化済 (g3-trace/entity-coverage/fr-registry-audit)、残自動化可は本 G.11 へ集約」と確認。
+doc 間の整合を `src/lint/doc-consistency.ts` で自動検証 (`ut-tdd doctor` の `doc-consistency` gate として配線、PLAN-L7-95) = L3 到達までの手動 audit (A-51/52/54) の機械化。retro (ledger mine) で「手戻りの大半は既に 3 lint 化済 (g3-trace/entity-coverage/fr-registry-audit)、残自動化可は本 G.11 へ集約」と確認。
 
 **第1弾 (実装済、現状 clean)**:
 
@@ -553,7 +553,7 @@ doc 間の整合を `src/lint/doc-consistency.ts` で自動検証 = L3 到達ま
 
 ##### G.12 improvement backlog (作業ログ → 機能化 pipeline、構想書 §3.1.2.2 / A-59)
 
-「作業中に発見した不備・改善を蓄積 → triage → 機能化」する living backlog。SSoT = `docs/improvement-backlog.md` §1。FR-L1-19 (Learning Engine) 本実装までの**手動の橋渡し**。`src/lint/improvement-backlog.ts` で構造健全性を検証:
+「作業中に発見した不備・改善を蓄積 → triage → 機能化」する living backlog。SSoT = `docs/improvement-backlog.md` §1。FR-L1-19 (Learning Engine) 本実装までの**手動の橋渡し**。`src/lint/improvement-backlog.ts` で構造健全性を検証 (`ut-tdd doctor` の `improvement-backlog` gate として配線、PLAN-L7-95):
 
 - [ ] entry ID が `IMP-NNN` 形式 + 一意 (malformed / duplicate → exit 1)
 - [ ] `status` ∈ {observed, triaged, implemented, verified} (enum 外 → exit 1)
