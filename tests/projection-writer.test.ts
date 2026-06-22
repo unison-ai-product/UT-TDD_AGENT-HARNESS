@@ -247,7 +247,8 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
       expect(result.ok).toBe(true);
 
       // 15 screens (PM 6 + HM 8 + GD 1) projected from screen-list.md §1.
-      const screenCount = (db.prepare("SELECT COUNT(*) AS n FROM screens").get() as { n: number }).n;
+      const screenCount = (db.prepare("SELECT COUNT(*) AS n FROM screens").get() as { n: number })
+        .n;
       expect(screenCount).toBe(15);
 
       // PM-06 設計書ビューア with its project-scoped URL, not-implemented (NFR-08, Phase B).
