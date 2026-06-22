@@ -102,52 +102,9 @@ handover 肥大の注入コントロール** を完遂。main 直 commit 2 本 (
 
 ---
 
-# Session Handover — 2026-06-22
+---
 
-## §1 PLAN サマリ
-
-- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
-
-## §2 成果物 (commit / files)
-
-- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
-
-## §3 Next Action
-
-同 session 続き (PO「プランの誤記表の対策」+「GitHub harness-check 失敗」)。commit 5 本を
-main へ push 済 (`5b53c88`→`4e9d077`)、**CI green 復旧を `gh run watch` で実機確認 (exit 0)**。
-
-1. **誤記対策** (`9ac1887` + `4e9d077`, PLAN-L7-89): PLAN に書かれた誤った主張への対策。
-   誘因 = L7-86 の review_evidence が「false-positive 出ない / blast radius 0」と断定したが
-   実は false-negative の盲点だった。(a) 即時: L7-86 に訂正 supersede 注記 (`9ac1887`)。
-   (b) 規律明文化 (.claude/CLAUDE.md): falsifiable な safety 主張はテスト引用必須 / 誤記は
-   後継 supersedes + 原 PLAN 訂正注記。(c) 機械強制: schema `supersedes:` + doctor
-   `plan-supersession` (hard) が「supersede 先実在 + 双方向 back-reference」を fail-close。
-   prose 真偽自体は機械化しない (false-confidence の罠回避)。L7-87→L7-86 で適用。
-2. **CI green 復旧** (`48977b4`, PLAN-L7-90): harness-check は 2026-06-19 12:35 以降ずっと赤
-   だった (私の session 以前から)。原因 = L7-69 の readability テストが gitignored の
-   `.ut-tdd/handover/CURRENT.json` 実在を hard assert = local-green/CI-red 罠。tracked evidence
-   (audit md / provider json) + loader scope のみ検査するよう修正。
-
-検証: typecheck / Biome / Vitest **804** / doctor EXIT=0 / db rebuild。**CI 実機 green 確認済**。
-
-## §4 carry (未了・先送り)
-
-- 第 1 entry §4 と同じ (歴史的 oversized handover の retroactive 圧縮 / 残 draft 2 本 / IMP-139)。
-- 新規実装の手待ちなし。
-
-## §5 未了 PO 判断
-
-- 第 1 entry §5 と同じ (L7-48 recordGuardrailDecision 配線 / IMP-139)。本 entry の commit は push 済。
-
-## §6 壊さない / 再発させない
-
-- **test は tracked artifact のみに依存させる** (PLAN-L7-90)。gitignored runtime state
-  (`.ut-tdd/handover/CURRENT.*` 等) の実在を assert すると CI (fresh checkout) だけ赤になる
-  (local green ≠ CI green、[[project_codex_branch_ci_verification]])。push 前に CI を実機確認せよ。
-- **PLAN の safety/completeness 主張はテスト引用で裏付ける** (PLAN-L7-89)。「blast radius 0」等の
-  prose 断定は機械が真偽を見ない。誤記訂正は `supersedes:` 宣言 + 原 PLAN 訂正注記で双方向化
-  (plan-supersession gate が fail-close)。`supersedes` を消すと errata の片肺放置を見逃す。
+<!-- ut-tdd handover: 1 件の同日中間エントリを累積抑制のため剪定 (git 履歴に保全) -->
 
 ---
 
@@ -199,6 +156,8 @@ deliverable (L7-91) / PLAN 本文 (L7-92) / DB (既存) の 3 面すべて機械
 - **「空」は由来で分類する** (一律 fail でも一律無視でもない): 意図的空はマーカー必須
   (.gitkeep / placeholder_deps / evidence-gated)、欠陥は fail-close。DB の derived 表は空=fail-close、
   evidence-gated 表は cold-start 空=正常 ([[feedback_coverage_not_substance]])。
+
+---
 
 ---
 
@@ -269,4 +228,61 @@ deliverable (L7-91) / PLAN 本文 (L7-92) / DB (既存) の 3 面すべて機械
   集計は placeholder-deps specBackfillWaits を open defer 正本とする (重複定義するな)。
 - **新 src/lint/*.ts は owning confirmed PLAN を持て** (merged-plan-status)。L7-93/L7-94 の generates に
   各 src/test を列挙し confirmed + review_evidence 済。`ut-tdd db rebuild` を status 変更後に必ず実行。
+
+---
+
+# Session Handover — 2026-06-22
+
+## §1 PLAN サマリ
+
+- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
+
+## §2 成果物 (commit / files)
+
+- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
+
+## §3 Next Action
+
+PO `/goal` 全数監査 (実装もれ / DB 異常 / DB 自動登録 / ルール整備不備) → 発見した
+**死蔵ルール (tested-green だが runtime 実行経路から audit 未呼出)** を fix。commit `b9463e7`
+push 済、CI harness-check (run 27932536333) = **success** を `gh run watch` で実機確認 (WATCH_EXIT=0)。
+
+1. **監査結論**: 機械ゲートは全 green (typecheck / Biome / Vitest 849 / doctor EXIT=0) +
+   DB は自動登録 clean (orphan trace_edges 0、14 自動投影表 populated、rebuild 決定論) +
+   rule-drift OK。だが substance 監査 ([[feedback_coverage_not_substance]]) で「inert ルール」を発見。
+2. **fix (PLAN-L7-95, IMP-006)**: `src/lint/lint-wiring.ts` meta-gate = 全 `src/lint/*` は
+   `src/cli.ts` から到達可能 or `DEFERRED_LINTS` 理由付き登録のいずれか (fail-close、stale も violation)。
+   inert だった 4 audit (`doc-consistency` 完全 / `entity-coverage` 完全 / `fr-registry-audit` helper
+   再利用で audit inert / `improvement-backlog` 同) を doctor へ実配線 (live violation 0、blast radius 0)。
+   回帰二重化 = meta-gate (module 到達性) + doctor invocation fence (配線済 audit の実行継続を assert)。
+3. **review**: code-reviewer (sonnet, intra_runtime_subagent) が「comment / 文字列内 `from ...` を
+   IMPORT_SPEC が誤マッチ → 死蔵 module を偽 wired 化し得る」correctness 懸念を指摘 → `stripComments` +
+   `extractImportSpecs` を純関数化し comment 除去で remediate + 専用テスト。修正後も live 分類不変
+   (wired=52, deferred=1, 死蔵 0 = 偽 wired は元々無し)。
+4. **doc back-fill**: 要件 §G.10/§G.11/§G.12 に doctor 配線明示、gate-design §7 を IMP-033 配線部分の
+   partial discharge と注記、improvement-backlog IMP-006 を implemented 化。
+
+## §4 carry (未了・先送り)
+
+- **IMP-033 汎用 cross-check rule engine 本体 + 5 lint の rule-type 吸収** = 未着手 (本 PLAN は
+  standalone 配線まで discharge、エンジン到来時に rule instance へ移行可能)。
+- **tool-adapter** (adapter-probe 純関数ライブラリ、`DEFERRED_LINTS` 登録) / **recordGuardrailDecision**
+  (L7-48、auth-gated owner=PO) = honest に tracked-deferred、死蔵ではない (meta-gate / L7-48 carry で追跡)。
+- 歴史的 oversized handover doc の retroactive 圧縮 = 不変 (前 entry §4)。
+
+## §5 未了 PO 判断
+
+- **PLAN-L7-48 `recordGuardrailDecision` 本番配線方針** (auth-gated, owner=PO) — 据え置き。
+- それ以外、本 session の成果物は全 commit + push 済 (`b9463e7`)、CI green 確認済。
+
+## §6 壊さない / 再発させない
+
+- **lint-wiring の `RUNTIME_ENTRYPOINTS` / `DEFERRED_LINTS` を緩めるな** (PLAN-L7-95)。実行ルートを
+  足すと死蔵を見逃す。DEFERRED は理由必須 + stale (到達可能) を fail-close (allowlist 片肺放置を防ぐ)。
+- **4 audit の doctor 配線を外すな**。外すと要件 §G.10/11/12 の「自動検証する」が再び嘘になる。
+  doctor invocation fence (`tests/doctor.test.ts`) が外しを検出する。
+- **lint-wiring の import 抽出は comment 除去必須** (reviewer 指摘)。コメントアウト import を偽 edge に
+  すると死蔵 module を偽 wired 化して meta-gate が無意味化する。
+- **PLAN 追加/status 変更後は `ut-tdd db rebuild`** (plan-registry-fingerprint stale 回避、
+  [[project_codex_branch_ci_verification]])。
 
