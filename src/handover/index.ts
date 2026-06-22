@@ -13,6 +13,7 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { computeOutstandingWork, type OutstandingWork } from "../lint/outstanding";
 import {
   activePlanStale,
   inferPlanFromCommit,
@@ -46,6 +47,8 @@ export interface HandoverPointer {
   generated_by?: string;
   /** IMP-078 gap①: 生成時の markdown entry 数 (手書き追記 = 増分 mismatch 検知)。 */
   doc_entry_count?: number;
+  /** IMP-139: 未了の正の集計 (非終端 PLAN 層別 + open defer) の additive surface。 */
+  outstanding?: OutstandingWork;
 }
 
 /** runHandover が CURRENT.json に刻む生成元署名 (手書き bypass 検知の基準値、単一正本)。 */
@@ -717,6 +720,8 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
     ...buildPointer({ scope: effectiveScope, latestDoc: docRel, status, now: deps.now() }),
     generated_by: GENERATED_BY,
     doc_entry_count: countHandoverEntries(next),
+    // IMP-139: 未了の正の集計を CURRENT.json へ additive 記録 (session 再開時に「完了主張」を機械照合可能に)。
+    outstanding: computeOutstandingWork(deps.repoRoot),
   };
 
   const written: string[] = [];

@@ -24,6 +24,7 @@ import {
   setActivePlanCli,
 } from "./handover/index";
 import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact";
+import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding";
 import {
   analyzeRelationImpact,
   collectRelationGraphProjection,
@@ -240,15 +241,19 @@ program
   .action((opts: { json?: boolean }) => {
     const d = detectMode();
     const nextAction = nextActionForMode(d.mode);
+    // IMP-139: 未了の正の集計 (非終端 PLAN 層別 + open defer) を additive に surface し
+    // 「doctor green = 完了」誤読を機械照合可能にする (gate ではない informational surface)。
+    const outstanding = computeOutstandingWork(process.cwd());
     if (opts.json) {
-      // 既存 6 フィールド (camelCase 公開契約) に nextAction を additive に付加する
-      // (A-138 ITEM-1、PLAN-L7-84、taxonomy=current)。判断ゲートの進め方を機械/人間へ提示。
-      process.stdout.write(`${JSON.stringify({ ...d, nextAction }, null, 2)}\n`);
+      // 既存 6 フィールド (camelCase 公開契約) に nextAction + outstanding を additive に付加する
+      // (A-138 ITEM-1、PLAN-L7-84、IMP-139、taxonomy=current)。判断ゲートの進め方 + 未了量を提示。
+      process.stdout.write(`${JSON.stringify({ ...d, nextAction, outstanding }, null, 2)}\n`);
     } else {
       process.stdout.write(
         `mode: ${d.mode}  (claude=${d.claude}, codex=${d.codex}, current=${d.currentRuntime ?? "-"})\n`,
       );
       process.stdout.write(`next: ${nextAction}\n`);
+      process.stdout.write(`${outstandingSummaryLine(outstanding)}\n`);
     }
   });
 
