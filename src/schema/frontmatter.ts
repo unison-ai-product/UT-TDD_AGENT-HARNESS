@@ -119,6 +119,11 @@ const frontmatterBaseSchema = z.object({
       }),
     )
     .optional(),
+  /** PLAN-L7-89: 本 PLAN が誤記/誤った前提を訂正・無効化する先行 PLAN の plan_id 群 (errata back-link)。
+   *  confirmed PLAN の主張が後で誤りと判明したとき、後継が `supersedes: [先行 plan_id]` を宣言し、
+   *  先行 PLAN は本 PLAN の plan_id を訂正注記として持つ (双方向)。doctor plan-supersession が
+   *  「宣言された supersede 先が実在 + 相互 back-reference 済」を fail-close 強制する (誤記の silent 放置を塞ぐ)。 */
+  supersedes: z.array(z.string()).optional(),
 });
 
 /** layer=cross を取る横断駆動 kind (Discovery=poc / Reverse=reverse / Recovery=recovery) */

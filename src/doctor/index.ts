@@ -127,6 +127,11 @@ import {
 } from "../lint/plan-artifact-existence";
 import { analyzePlanDod, loadPlanDodDocs, planDodMessages } from "../lint/plan-dod";
 import {
+  analyzePlanSupersession,
+  loadSupersedePlans,
+  planSupersessionMessages,
+} from "../lint/plan-supersession";
+import {
   analyzeProjectHooks,
   loadProjectHookDocs,
   projectHookMessages,
@@ -312,6 +317,22 @@ export function checkScrumReverse(repoRoot: string): { messages: string[]; ok: b
     return { messages: scrumReverseMessages(r), ok: r.ok };
   } catch {
     return { messages: ["scrum-reverse - violation: PLAN could not be read"], ok: false };
+  }
+}
+
+/**
+ * PLAN errata の双方向整合を surface (PLAN-L7-89、hard fail)。`supersedes` 宣言の先が実在しない /
+ * 原 PLAN に訂正 back-reference が無い → ok=false。I/O 失敗も violation にして fail-close する。
+ */
+export function checkPlanSupersession(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["plan-supersession - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzePlanSupersession(loadSupersedePlans(repoRoot));
+    return { messages: planSupersessionMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["plan-supersession - violation: PLAN could not be read"], ok: false };
   }
 }
 
@@ -1392,6 +1413,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   // handover / agent-slots are warning surfaces. Verification profile is a hard gate.
   const backfill = checkBackfillResult(deps.repoRoot);
   const scrumRev = checkScrumReverse(deps.repoRoot);
+  const planSupersession = checkPlanSupersession(deps.repoRoot);
   const propagation = checkPropagation(deps.repoRoot);
   const reviewEvidence = checkReviewEvidence(deps.repoRoot);
   const pairFreeze = checkPairFreeze(deps.repoRoot);
@@ -1443,6 +1465,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
     ok:
       backfill.ok &&
       scrumRev.ok &&
+      planSupersession.ok &&
       propagation.ok &&
       reviewEvidence.ok &&
       guardrailInvariants.ok &&
@@ -1497,6 +1520,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       checkAgentSlots(doctorSlotsDeps(deps)),
       ...backfill.messages.map((m) => `doctor: ${m}`),
       ...scrumRev.messages.map((m) => `doctor: ${m}`),
+      ...planSupersession.messages.map((m) => `doctor: ${m}`),
       ...propagation.messages.map((m) => `doctor: ${m}`),
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
       ...moduleDrift.messages.map((m) => `doctor: ${m}`),

@@ -8,6 +8,8 @@ status: confirmed
 created: 2026-06-22
 updated: 2026-06-22
 owner: PM (Opus) / PO (人間)
+supersedes:
+  - PLAN-L7-86-merged-plan-status-deliverable-scope
 review_evidence:
   - reviewer: PM (Opus) verification (intra_runtime_subagent)
     review_kind: intra_runtime_subagent

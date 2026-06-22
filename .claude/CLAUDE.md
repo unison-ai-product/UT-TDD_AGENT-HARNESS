@@ -47,6 +47,19 @@ PLAN requirements:
   where relevant.
 - Review evidence is recorded before asking for confirmation gates.
 
+PLAN claim discipline (errata countermeasure, PLAN-L7-89):
+
+- A falsifiable safety / completeness claim in `review_evidence` or AC — e.g.
+  "blast radius 0", "no false positives", "N green", "fully covered" — must
+  cite the test or command that substantiates it, not be asserted in prose.
+  The mechanical substitute for a prose claim is a real-repo regression test
+  (the gate run against the repo), never a sentence (`coding ≠ substance`).
+- When a confirmed PLAN's claim is later found wrong, do not silently overwrite
+  it: the successor PLAN declares `supersedes: [<old plan_id>]` and the
+  superseded PLAN gets a correction note naming the successor. `doctor
+  plan-supersession` fail-closes if a declared supersede target is missing or
+  lacks the reciprocal back-reference (errata stay bidirectional).
+
 Use `ut-tdd plan lint`, targeted tests, and `ut-tdd doctor`.
 
 ## Runtime And Delegation
