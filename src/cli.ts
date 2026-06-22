@@ -799,6 +799,47 @@ db.command("rebuild")
     );
   });
 
+const progress = program.command("progress").description("artifact progress read model");
+progress
+  .command("artifacts")
+  .description("list DB-backed artifact progress colors")
+  .option("--json", "JSON output")
+  .option("--color <color>", "filter by color: red, yellow, or green")
+  .action((opts: { json?: boolean; color?: string }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      migrate(db);
+      const color = opts.color?.trim().toLowerCase();
+      const rows =
+        color != null && color.length > 0
+          ? db
+              .prepare(
+                "SELECT artifact_path, artifact_type, state, color, linked_test_count, dependency_checked, open_dependency_impacts, linked_test_paths, reason, indexed_at FROM artifact_progress WHERE color = ? ORDER BY artifact_path",
+              )
+              .all(color)
+          : db
+              .prepare(
+                "SELECT artifact_path, artifact_type, state, color, linked_test_count, dependency_checked, open_dependency_impacts, linked_test_paths, reason, indexed_at FROM artifact_progress ORDER BY CASE color WHEN 'red' THEN 0 WHEN 'yellow' THEN 1 ELSE 2 END, artifact_path",
+              )
+              .all();
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
+        return;
+      }
+      if (rows.length === 0) {
+        process.stdout.write("artifact progress: no rows (run `ut-tdd db rebuild` first)\n");
+        return;
+      }
+      for (const row of rows as Array<Record<string, unknown>>) {
+        process.stdout.write(
+          `${row.color} ${row.artifact_path} ${row.state} tests=${row.linked_test_count} deps=${row.dependency_checked} impacts=${row.open_dependency_impacts} - ${row.reason}\n`,
+        );
+      }
+    } finally {
+      db.close();
+    }
+  });
+
 program
   .command("find <query>")
   .description("search harness.db reference index")

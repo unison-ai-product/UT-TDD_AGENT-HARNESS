@@ -302,6 +302,7 @@ The DB must make cross-cutting impact analysis queryable. The authoring sources 
 | `dependency_edges` | `edge_id` | `from_node_id`, `to_node_id`, `edge_kind`, `strength`, `source`, `evidence_path`, `is_expected`, `is_actual`, `indexed_at` | Store import/reference/test/projection/implementation edges and distinguish design-declared expected edges from observed actual edges. |
 | `impact_rules` | `impact_rule_id` | `trigger_edge_kind`, `trigger_node_type`, `required_node_type`, `required_action`, `severity`, `gate`, `enabled` | Convert relation edges into required co-change, review, test, Reverse, or diagram-refresh actions. |
 | `impact_results` | `impact_result_id` | `change_set_id`, `root_node_id`, `impacted_node_id`, `required_action`, `status`, `reason`, `evidence_path`, `computed_at` | Persist one computed impact expansion for a diff/session/PLAN. |
+| `artifact_progress` | `artifact_path` | `artifact_type`, `artifact_hash`, `state`, `color`, `linked_test_ids`, `linked_test_paths`, `linked_test_count`, `dependency_checked`, `open_dependency_impacts`, `recovery_plan_ids`, `reason`, `indexed_at` | Persist rebuildable artifact progress color rows: red for unchecked/open dependency impact, yellow for implemented but unverified or recovery, green for linked-test verified artifacts. |
 | `tool_runs` | `tool_run_id` | `tool_name`, `tool_version`, `command`, `input_scope`, `exit_code`, `started_at`, `completed_at`, `evidence_path` | Record optional adapter runs such as dependency-cruiser, Knip, Madge, Graphviz, Mermaid, or D2. |
 | `diagram_artifacts` | `diagram_id` | `graph_snapshot_id`, `format`, `path`, `renderer`, `scope`, `created_at`, `evidence_path` | Store generated Mermaid/DOT/D2/SVG/PNG diagram outputs as traceable artifacts. |
 | `graph_snapshots` | `graph_snapshot_id` | `scope`, `node_count`, `edge_count`, `hash`, `created_at`, `source_digest` | Make diagrams and impact results reproducible from a stable graph snapshot. |
@@ -323,6 +324,8 @@ Required indexes:
 - `idx_dependency_from_kind(from_node_id, edge_kind)`.
 - `idx_dependency_to_kind(to_node_id, edge_kind)`.
 - `idx_impact_change_status(change_set_id, status)`.
+- `idx_artifact_progress_color(color, state)`.
+- `idx_artifact_progress_tests(linked_test_count, dependency_checked)`.
 - `idx_tool_name_scope(tool_name, input_scope)`.
 - `idx_diagram_scope_format(scope, format)`.
 

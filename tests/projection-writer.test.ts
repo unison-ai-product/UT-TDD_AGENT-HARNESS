@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
-import { rebuildHarnessDb, recordProjectionEvent } from "../src/state-db/projection-writer";
+import {
+  deriveArtifactProgressDecision,
+  rebuildHarnessDb,
+  recordProjectionEvent,
+} from "../src/state-db/projection-writer";
 
 interface VerificationWorkflowRow {
   phase: string;
@@ -38,6 +42,38 @@ describe("SECRET_PATTERN word-boundary anchoring", () => {
 });
 
 describe("IT-DB-01/02: harness.db projection writer", () => {
+  it("derives artifact progress colors from dependency checks and linked tests", () => {
+    expect(
+      deriveArtifactProgressDecision({
+        linkedTestCount: 0,
+        dependencyChecked: false,
+        openDependencyImpacts: 0,
+      }),
+    ).toMatchObject({ state: "dependency_unchecked", color: "red" });
+    expect(
+      deriveArtifactProgressDecision({
+        linkedTestCount: 0,
+        dependencyChecked: true,
+        openDependencyImpacts: 0,
+      }),
+    ).toMatchObject({ state: "implemented_unverified", color: "yellow" });
+    expect(
+      deriveArtifactProgressDecision({
+        linkedTestCount: 1,
+        dependencyChecked: true,
+        openDependencyImpacts: 0,
+      }),
+    ).toMatchObject({ state: "verified", color: "green" });
+    expect(
+      deriveArtifactProgressDecision({
+        linkedTestCount: 1,
+        dependencyChecked: true,
+        openDependencyImpacts: 0,
+        recoveryPlanIds: ["PLAN-REVERSE-56"],
+      }),
+    ).toMatchObject({ state: "recovering", color: "yellow" });
+  });
+
   it("records normalized projection events idempotently and keeps rows joinable by plan_id", () => {
     const db = openHarnessDb(":memory:");
     try {
@@ -235,6 +271,64 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
       expect(rowCounts(db).document_export_datasets).toBeGreaterThan(0);
       expect(rowCounts(db).test_cases).toBeGreaterThan(0);
       expect(rowCounts(db).test_artifact_edges).toBeGreaterThan(0);
+      expect(rowCounts(db).artifact_progress).toBeGreaterThan(0);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("projects artifact progress rows as green with linked tests and yellow without tests", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      const result = rebuildHarnessDb({
+        repoRoot: process.cwd(),
+        db,
+        relationGraph: {
+          nodes: [
+            { id: "source:src/covered.ts", kind: "source", path: "src/covered.ts" },
+            { id: "source:src/new-file.ts", kind: "source", path: "src/new-file.ts" },
+            { id: "test:tests/covered.test.ts", kind: "test", path: "tests/covered.test.ts" },
+          ],
+          edges: [
+            {
+              from: "source:src/covered.ts",
+              to: "test:tests/covered.test.ts",
+              kind: "covered-by",
+            },
+          ],
+          verificationProfiles: [],
+          findings: [],
+        },
+      });
+
+      expect(result.ok).toBe(true);
+      const covered = db
+        .prepare(
+          "SELECT color, state, linked_test_count, dependency_checked FROM artifact_progress WHERE artifact_path = ?",
+        )
+        .get("src/covered.ts") as
+        | { color: string; state: string; linked_test_count: number; dependency_checked: number }
+        | undefined;
+      const newFile = db
+        .prepare(
+          "SELECT color, state, linked_test_count, dependency_checked FROM artifact_progress WHERE artifact_path = ?",
+        )
+        .get("src/new-file.ts") as
+        | { color: string; state: string; linked_test_count: number; dependency_checked: number }
+        | undefined;
+
+      expect(covered).toMatchObject({
+        color: "green",
+        state: "verified",
+        linked_test_count: 1,
+        dependency_checked: 1,
+      });
+      expect(newFile).toMatchObject({
+        color: "yellow",
+        state: "implemented_unverified",
+        linked_test_count: 0,
+        dependency_checked: 1,
+      });
     } finally {
       db.close();
     }

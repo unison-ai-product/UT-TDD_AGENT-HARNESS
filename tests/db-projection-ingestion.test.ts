@@ -43,6 +43,7 @@ describe("db projection ingestion detector", () => {
       document_export_datasets: 1,
       test_cases: 1,
       test_artifact_edges: 1,
+      artifact_progress: 1,
     });
 
     expect(result.ok).toBe(false);
@@ -75,6 +76,7 @@ describe("db projection ingestion detector", () => {
       document_export_datasets: 1,
       test_cases: 1,
       test_artifact_edges: 1,
+      artifact_progress: 1,
     });
 
     expect(result.ok).toBe(false);

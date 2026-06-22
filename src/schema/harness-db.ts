@@ -15,7 +15,7 @@
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 16;
+export const SCHEMA_VERSION = 17;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
 
@@ -497,6 +497,24 @@ export const HARNESS_DB_TABLES: TableDef[] = [
     ],
   },
   {
+    name: "artifact_progress",
+    columns: [
+      pk("artifact_path"),
+      col("artifact_type"),
+      col("artifact_hash"),
+      col("state"),
+      col("color"),
+      col("linked_test_ids"),
+      col("linked_test_paths"),
+      col("linked_test_count", "INTEGER"),
+      col("dependency_checked", "INTEGER"),
+      col("open_dependency_impacts", "INTEGER"),
+      col("recovery_plan_ids"),
+      col("reason"),
+      col("indexed_at"),
+    ],
+  },
+  {
     name: "tool_runs",
     columns: [
       pk("tool_run_id"),
@@ -920,6 +938,16 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     name: "idx_impact_change_status",
     table: "impact_results",
     columns: ["change_set_id", "status"],
+  },
+  {
+    name: "idx_artifact_progress_color",
+    table: "artifact_progress",
+    columns: ["color", "state"],
+  },
+  {
+    name: "idx_artifact_progress_tests",
+    table: "artifact_progress",
+    columns: ["linked_test_count", "dependency_checked"],
   },
   {
     name: "idx_tool_name_scope",

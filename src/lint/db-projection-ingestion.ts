@@ -35,6 +35,10 @@ export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirem
   { table: "document_export_datasets", reason: "canonical document dataset is derived from docs" },
   { table: "test_cases", reason: "test case catalog is derived from tests/**/*.test.ts" },
   { table: "test_artifact_edges", reason: "test artifact edges are derived from test imports" },
+  {
+    table: "artifact_progress",
+    reason: "artifact progress colors are derived from relation graph, tests, and impact results",
+  },
 ];
 
 export const EVIDENCE_GATED_DB_PROJECTION_TABLES = [

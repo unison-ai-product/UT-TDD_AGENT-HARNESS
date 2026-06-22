@@ -86,6 +86,61 @@ interface ProjectedPlan {
   updatedAt: string;
 }
 
+export type ArtifactProgressColor = "red" | "yellow" | "green";
+export type ArtifactProgressState =
+  | "dependency_unchecked"
+  | "implemented_unverified"
+  | "recovering"
+  | "verified";
+
+export interface ArtifactProgressDecisionInput {
+  linkedTestCount: number;
+  dependencyChecked: boolean;
+  openDependencyImpacts: number;
+  recoveryPlanIds?: string[];
+}
+
+export interface ArtifactProgressDecision {
+  state: ArtifactProgressState;
+  color: ArtifactProgressColor;
+  reason: string;
+}
+
+export function deriveArtifactProgressDecision(
+  input: ArtifactProgressDecisionInput,
+): ArtifactProgressDecision {
+  const recoveryPlanIds = input.recoveryPlanIds ?? [];
+  if (recoveryPlanIds.length > 0) {
+    return {
+      state: "recovering",
+      color: "yellow",
+      reason: `recovery in progress: ${recoveryPlanIds.join(",")}`,
+    };
+  }
+  if (!input.dependencyChecked || input.openDependencyImpacts > 0) {
+    return {
+      state: "dependency_unchecked",
+      color: "red",
+      reason:
+        input.openDependencyImpacts > 0
+          ? `${input.openDependencyImpacts} open dependency impact(s)`
+          : "dependency check is missing",
+    };
+  }
+  if (input.linkedTestCount > 0) {
+    return {
+      state: "verified",
+      color: "green",
+      reason: "linked test evidence exists and dependency impact is clear",
+    };
+  }
+  return {
+    state: "implemented_unverified",
+    color: "yellow",
+    reason: "implemented artifact has no linked test evidence yet",
+  };
+}
+
 interface PlanDigestProjection {
   plan_id: string;
   sessions?: string[];
@@ -1235,6 +1290,67 @@ function projectCurrentImpactResults(
       subjectId: finding.nodeId ?? finding.message,
       source: "relation-impact",
       evidencePath: finding.evidencePath,
+    });
+  }
+}
+
+function projectArtifactProgress(db: HarnessDb, graph: RelationGraphProjection | undefined): void {
+  if (!graph) return;
+  const indexedAt = nowIso();
+  const sourceNodes = graph.nodes
+    .filter((node) => node.kind === "source" && node.path)
+    .sort((a, b) => String(a.path).localeCompare(String(b.path)));
+  const edgesBySource = new Map<string, typeof graph.edges>();
+  for (const edge of graph.edges) {
+    if (edge.kind !== "covered-by") continue;
+    const list = edgesBySource.get(edge.from) ?? [];
+    list.push(edge);
+    edgesBySource.set(edge.from, list);
+  }
+  for (const node of sourceNodes) {
+    const artifactPath = node.path ?? node.id.replace(/^source:/, "");
+    const linkedTestIds = (edgesBySource.get(node.id) ?? [])
+      .map((edge) => edge.to)
+      .filter((id) => graph.nodes.some((candidate) => candidate.id === id))
+      .sort();
+    const linkedTestPaths = linkedTestIds
+      .map((id) => graph.nodes.find((candidate) => candidate.id === id)?.path ?? id)
+      .sort();
+    const openDependencyImpacts = scalarNumber(
+      db,
+      "SELECT COUNT(*) AS value FROM impact_results WHERE status = 'open' AND (root_node_id = ? OR impacted_node_id = ?)",
+      [node.id, node.id],
+    );
+    const decision = deriveArtifactProgressDecision({
+      linkedTestCount: linkedTestIds.length,
+      dependencyChecked: openDependencyImpacts === 0,
+      openDependencyImpacts,
+    });
+    const artifactHash = stableHash(
+      JSON.stringify({
+        path: artifactPath,
+        tests: linkedTestIds,
+        impacts: openDependencyImpacts,
+      }),
+    );
+    recordProjectionEvent(db, {
+      table: "artifact_progress",
+      id: artifactPath,
+      row: {
+        artifact_path: artifactPath,
+        artifact_type: "source",
+        artifact_hash: artifactHash,
+        state: decision.state,
+        color: decision.color,
+        linked_test_ids: linkedTestIds.join(","),
+        linked_test_paths: linkedTestPaths.join(","),
+        linked_test_count: linkedTestIds.length,
+        dependency_checked: openDependencyImpacts === 0 ? 1 : 0,
+        open_dependency_impacts: openDependencyImpacts,
+        recovery_plan_ids: "",
+        reason: decision.reason,
+        indexed_at: indexedAt,
+      },
     });
   }
 }
@@ -2631,6 +2747,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       projectGraphSnapshot(db, relationGraph);
       projectImpactRules(db);
       projectCurrentImpactResults(repoRoot, db, relationGraph);
+      projectArtifactProgress(db, relationGraph);
       projectVerificationCatalogs(repoRoot, db);
       projectDocumentExportCatalogs(db);
       projectDocumentExports(db, documentExports);
