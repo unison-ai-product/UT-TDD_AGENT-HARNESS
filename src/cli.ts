@@ -109,6 +109,7 @@ import {
   type MemberPlacement,
 } from "./team/run";
 import { lintVmodel } from "./vmodel/lint";
+import { startWebServer } from "./web/server";
 import { buildCommandCatalog } from "./workflow/contracts";
 import { evaluateAutomationReadiness } from "./workflow/readiness";
 
@@ -264,6 +265,15 @@ program
     const r = runDoctor();
     for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
+  });
+
+program
+  .command("web")
+  .description("中央 UI (read-only ダッシュボード) を local 起動 (ADR-005 D2 Phase A、Bun 必須)")
+  .option("--port <port>", "listen port", "4173")
+  .action((opts: { port?: string }) => {
+    const handle = startWebServer({ port: Number(opts.port ?? 4173), repoRoot: process.cwd() });
+    process.stdout.write(`UT-TDD 中央 UI (read-only) → http://localhost:${handle.port}/projects\n`);
   });
 
 const mcp = program.command("mcp").description("MCP and external verification profile catalog");

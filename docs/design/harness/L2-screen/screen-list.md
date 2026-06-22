@@ -8,6 +8,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L10
 plan: docs/plans/PLAN-L2-01-screen-list.md
+implemented_screens: "PM-01 PM-02 PM-03 PM-04 PM-05 PM-06 HM-01 HM-02 HM-03 HM-04 HM-05 HM-06 HM-07 HM-08 GD-01"  # PLAN-L7-102 src/web Phase B 実装済 (read-only ダッシュボード)
 created: 2026-05-28
 updated: 2026-06-22
 ---
@@ -16,7 +17,7 @@ updated: 2026-06-22
 
 > **SSoT 参照**: 画面要求 (15 画面 PM/HM/GD) の正本は L1 [screen-requirements.md](../L1-requirements/screen-requirements.md)。本 doc は L1 で確定した画面群に **L2 設計確定項目 (URL 設計 / ID↔URL 1:1 / 認証認可 / ステート保持)** を付与する。用語独自定義は行わない (anti-corruption layer)。
 > **V-pair (IMP-039/058)**: 本 doc の ③ ペアは `wireframe.md` (mock、右腕 L10)。`next_pair_freeze: L10`。
-> **実装状態**: 全 15 画面は not-implemented (NFR-08 実装宣言の真実性、src/web 実装は Phase B)。
+> **実装状態**: 全 15 画面を **src/web Phase B で実装済** (read-only ダッシュボード、PLAN-L7-102、frontmatter `implemented_screens` で projection に反映)。中央 server 同期 (VPS / GitHub webhook) は ADR-005 D2 で direction-only・auth-gated ゆえ別途。L10 High-Fi UX refinement は後続。
 > **配置 (ADR-005 D2)**: 中央・全 project 横断の team 管理 UI。GitHub project repo を data backbone とし、Phase A local dashboard が bootstrap。
 
 ## §1 画面一覧 (15 画面 = PM 6 + HM 8 + GD 1)

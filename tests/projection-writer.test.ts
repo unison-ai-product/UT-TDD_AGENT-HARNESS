@@ -345,13 +345,13 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
         .n;
       expect(screenCount).toBe(15);
 
-      // PM-06 設計書ビューア with its project-scoped URL, not-implemented (NFR-08, Phase B).
+      // PM-06 設計書ビューア with its project-scoped URL, implemented by src/web Phase B.
       const pm06 = db
         .prepare("SELECT category, url, implemented FROM screens WHERE screen_id = ?")
         .get("PM-06") as { category: string; url: string; implemented: number } | undefined;
       expect(pm06?.category).toBe("PM");
       expect(pm06?.url).toBe("/project/:case/designs");
-      expect(pm06?.implemented).toBe(0);
+      expect(pm06?.implemented).toBe(1);
 
       // FR/BR→screen trace edges (screen-requirements §5.5) make 機能一覧→画面要求 DB-queryable.
       const traceCount = (

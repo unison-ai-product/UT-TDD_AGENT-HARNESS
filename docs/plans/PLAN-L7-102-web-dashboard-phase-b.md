@@ -4,7 +4,7 @@ title: "PLAN-L7-102 (impl): src/web 中央 UI Phase B — 15 画面 read-only �
 kind: impl
 layer: L7
 drive: fe
-status: draft
+status: confirmed
 created: 2026-06-22
 updated: 2026-06-22
 owner: PM (Opus) / PO (人間)
@@ -19,12 +19,28 @@ parent_design: docs/design/harness/L2-screen/screen-list.md
 generates:
   - artifact_path: docs/plans/PLAN-L7-102-web-dashboard-phase-b.md
     artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L2-screen/screen-list.md
+    artifact_type: design_doc
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/projection-writer.ts
+    artifact_type: source_module
+  - artifact_path: tests/projection-writer.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires:
     - PLAN-L2-01-screen-list
     - PLAN-L7-96-screen-db-projection
-review_evidence: []
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-22"
+    tests_green_at: "2026-06-22"
+    verdict: approve
+    scope: "src/web dashboard, ut-tdd web CLI bootstrap, screen implemented projection, and targeted Vitest evidence"
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
 ---
 
 # PLAN-L7-102 (impl): src/web 中央 UI Phase B — 15 画面 read-only ダッシュボード

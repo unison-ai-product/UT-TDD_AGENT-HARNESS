@@ -2661,8 +2661,11 @@ function parseScreenTraceRows(content: string): Array<{
 /**
  * IMP-140: 画面 entity と FR/BR→画面 trace を doc 正本 (screen-list §1 + screen-requirements §5.5)
  * から harness.db に projection する。従来 screen は doc-only で DB に無く、HM-04 (DB 閲覧) /
- * HM-01 (機能一覧→画面) / PM-06 (設計書ビューア) を DB 駆動できなかった。実画面は未実装 (NFR-08)
- * ゆえ status=not-implemented / implemented=0 で投影する。
+ * HM-01 (機能一覧→画面) / PM-06 (設計書ビューア) を DB 駆動できなかった。
+ *
+ * PLAN-L7-102 (src/web Phase B): 実装済画面は screen-list frontmatter `implemented_screens`
+ * (空白区切りの画面 ID 列) で宣言し implemented=1 / status=implemented で投影する。NFR-08 実装真実性 =
+ * src/web に render が在る画面のみ implemented とし、宣言外は not-implemented を維持する。
  */
 function projectScreens(repoRoot: string, db: HarnessDb): void {
   const screenListPath = join(repoRoot, "docs", "design", "harness", "L2-screen", "screen-list.md");
@@ -2670,7 +2673,14 @@ function projectScreens(repoRoot: string, db: HarnessDb): void {
   const listContent = readFileSync(screenListPath, "utf8");
   const indexedAt =
     frontmatterValue(listContent, "updated") || frontmatterValue(listContent, "created");
+  const implementedSet = new Set(
+    frontmatterValue(listContent, "implemented_screens")
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
   for (const screen of parseScreenListRows(listContent)) {
+    const isImplemented = implementedSet.has(screen.screenId);
     recordProjectionEvent(db, {
       table: "screens",
       id: screen.screenId,
@@ -2680,8 +2690,8 @@ function projectScreens(repoRoot: string, db: HarnessDb): void {
         category: screen.category,
         url: screen.url,
         l1_ref: screen.l1Ref,
-        status: "not-implemented",
-        implemented: 0,
+        status: isImplemented ? "implemented" : "not-implemented",
+        implemented: isImplemented ? 1 : 0,
         indexed_at: indexedAt,
       },
     });
