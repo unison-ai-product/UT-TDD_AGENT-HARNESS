@@ -196,6 +196,16 @@ import {
   skillAssignmentMessages,
 } from "../lint/skill-assignment";
 import {
+  analyzeSubDocCatalogDrift,
+  loadSubDocCatalogDriftInput,
+  subDocCatalogDriftMessages,
+} from "../lint/sub-doc-catalog-drift";
+import {
+  analyzeSubDocSectionStructure,
+  loadSubDocSectionStructureInput,
+  subDocSectionStructureMessages,
+} from "../lint/sub-doc-section-structure";
+import {
   analyzeTelemetryClosure,
   loadTelemetryClosureDocs,
   telemetryClosureMessages,
@@ -1276,6 +1286,47 @@ export function checkImplPlanTrace(repoRoot: string): { messages: string[]; ok: 
   }
 }
 
+/** 要件 §G.1 sub-doc 表 ⊆⊇ schema VALID_SUB_DOCS の正本同期を hard gate として検査する (IMP-141)。 */
+export function checkSubDocCatalogDrift(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["sub-doc-catalog-drift - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeSubDocCatalogDrift(loadSubDocCatalogDriftInput(repoRoot));
+    return { messages: subDocCatalogDriftMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["sub-doc-catalog-drift - violation: requirements doc could not be read"],
+      ok: false,
+    };
+  }
+}
+
+/** L4 標準成果物 (report/batch/notification/code-value) の必須 § 構造を hard gate として検査する (§G.6.1)。 */
+export function checkSubDocSectionStructure(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["sub-doc-section-structure - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeSubDocSectionStructure(loadSubDocSectionStructureInput(repoRoot));
+    return { messages: subDocSectionStructureMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["sub-doc-section-structure - violation: docs/plans could not be read"],
+      ok: false,
+    };
+  }
+}
+
 /** git tracked top-level ⊆ repository-structure.md canonical の突合を hard gate として検査する。 */
 export function checkTrackedCanonical(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
@@ -1661,6 +1712,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const implPlanTrace = checkImplPlanTrace(deps.repoRoot);
   const oracleTestTrace = checkOracleTestTrace(deps.repoRoot);
   const trackedCanonical = checkTrackedCanonical(deps.repoRoot);
+  const subDocCatalogDrift = checkSubDocCatalogDrift(deps.repoRoot);
+  const subDocSectionStructure = checkSubDocSectionStructure(deps.repoRoot);
   const verificationGroups = checkVerificationGroupsResult(deps.repoRoot);
   const dependencyDrift = checkDependencyDrift(deps.repoRoot);
   const regressionExpansion = checkRegressionExpansion(deps.repoRoot, dependencyDrift.result);
@@ -1723,6 +1776,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       implPlanTrace.ok &&
       oracleTestTrace.ok &&
       trackedCanonical.ok &&
+      subDocCatalogDrift.ok &&
+      subDocSectionStructure.ok &&
       dependencyDrift.ok &&
       regressionExpansion.ok &&
       dbProjectionCoverage.ok &&
@@ -1786,6 +1841,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...implPlanTrace.messages.map((m) => `doctor: ${m}`),
       ...oracleTestTrace.messages.map((m) => `doctor: ${m}`),
       ...trackedCanonical.messages.map((m) => `doctor: ${m}`),
+      ...subDocCatalogDrift.messages.map((m) => `doctor: ${m}`),
+      ...subDocSectionStructure.messages.map((m) => `doctor: ${m}`),
       ...dependencyDrift.messages.map((m) => `doctor: ${m}`),
       ...regressionExpansion.messages.map((m) => `doctor: ${m}`),
       ...dbProjectionCoverage.messages.map((m) => `doctor: ${m}`),
