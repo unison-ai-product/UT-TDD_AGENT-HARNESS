@@ -3,7 +3,7 @@
  * Bun.serve / 任意の HTTP 層から呼ばれる純粋な request→response 変換。
  */
 import type { HarnessDb } from "./db";
-import { layout } from "./render";
+import { escapeHtml, layout } from "./render";
 import { parseQuery, resolveRoute } from "./router";
 import { navItems } from "./screens";
 
@@ -23,7 +23,7 @@ export function handleRequest(db: HarnessDb, urlString: string): WebResponse {
       title: "404",
       activeId: "",
       nav,
-      body: `<h1>404 — 画面が見つかりません</h1><p class="sub">${url.pathname}</p><p><a href="/projects">PM-01 俯瞰へ</a></p>`,
+      body: `<h1>404 — 画面が見つかりません</h1><p class="sub">${escapeHtml(url.pathname)}</p><p><a href="/projects">PM-01 俯瞰へ</a></p>`,
     });
     return { status: 404, contentType: "text/html; charset=utf-8", body };
   }

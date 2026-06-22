@@ -21,6 +21,12 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L2-screen/screen-list.md
     artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
+  - artifact_path: src/web/app.ts
+    artifact_type: source_module
+  - artifact_path: tests/web.test.ts
+    artifact_type: test_code
   - artifact_path: src/cli.ts
     artifact_type: source_module
   - artifact_path: src/state-db/projection-writer.ts
@@ -41,6 +47,14 @@ review_evidence:
     scope: "src/web dashboard, ut-tdd web CLI bootstrap, screen implemented projection, and targeted Vitest evidence"
     worker_model: codex
     reviewer_model: codex-intra-runtime
+  - reviewer: code-reviewer (intra_runtime_subagent)
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-22"
+    tests_green_at: "2026-06-22"
+    verdict: approve
+    scope: "src/web 15画面 read-only ダッシュボード (render/db/screens/router/app/server) + ut-tdd web CLI + implemented flip の Opus 実装に対する code-reviewer (sonnet) 確認。VERDICT=pass / Critical 0。Important I-1 = 404 ページの url.pathname が escapeHtml 未適用 (reflected XSS、local 限定・低severity) を検出し app.ts を escapeHtml(url.pathname) で修正 + 回帰テスト U-WEB-014 追加。実証 = vitest 901 green (web 14、SQL injection は isSafeTableName + parameterized、read-only 不変) + 実 server smoke 7経路 200/404。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
 ---
 
 # PLAN-L7-102 (impl): src/web 中央 UI Phase B — 15 画面 read-only ダッシュボード
@@ -60,16 +74,16 @@ ADR-005 D2 の中央 UI を、まず **Phase A = local read-only ダッシュボ
 - **`src/web/router.ts`**: URL↔画面 ID 1:1 解決 (`:param` 抽出、純関数、screen-list §2)。
 - **`src/web/app.ts`**: request→response 変換 (server 非依存・test 可能)。未知 path=404。
 - **`src/web/server.ts`**: Bun.serve アダプタ (per-request open、@types/bun 不使用で globalThis 経由型付け)。
-- **test** (`tests/web.test.ts`): render 純関数 / router 15 画面 1:1 + 404 / app (in-memory db) U-WEB-001..013。
+- **test** (`tests/web.test.ts`): render 純関数 / router 15 画面 1:1 + 404 / app (in-memory db) U-WEB-001..014。
 
 ## 2. Acceptance Criteria
 
 - [x] 15 画面すべてが URL 解決し 200 描画、ID↔URL 1:1 (router test + 実 server smoke 7 経路)。
 - [x] 全画面 read-only (副作用 API なし、action=CLI コピーのみ、screen-list §3 S5=b)。
 - [x] 実 harness.db に対し end-to-end 描画確認 (smoke: /projects 5KB, L7 工程 18KB, doctor 24KB, HM-04 browse, 404)。
-- [x] typecheck (tsc) / biome EXIT=0 / vitest web 13 passed (real-repo + in-memory fixture = substance, PLAN-L7-89)。
-- [ ] intra_runtime_subagent review approve (ws5)。
-- [ ] doctor EXIT=0 (impl-plan-trace / coding-rules / module-drift 含む)。
+- [x] typecheck (tsc) / biome EXIT=0 / vitest web 14 passed (real-repo + in-memory fixture = substance, PLAN-L7-89)。
+- [x] intra_runtime_subagent review approve (codex-intra-runtime + code-reviewer sonnet、VERDICT=pass、Important I-1 404 XSS 修正済)。
+- [x] doctor EXIT=0 (impl-plan-trace / coding-rules / module-drift 含む)。
 
 ## 3. Out of scope (carry / 後続)
 

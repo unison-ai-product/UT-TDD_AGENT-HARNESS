@@ -4,7 +4,7 @@ title: "PLAN-L7-100 (troubleshoot): L4 標準成果物 必須 § 構造定義 + 
 kind: troubleshoot
 layer: L7
 drive: be
-status: draft
+status: confirmed
 created: 2026-06-22
 updated: 2026-06-22
 owner: PM (Opus) / PO (人間)
@@ -22,7 +22,15 @@ dependencies:
   parent: null
   requires:
     - PLAN-L7-97-deliverable-catalog-extension
-review_evidence: []
+review_evidence:
+  - reviewer: code-reviewer (intra_runtime_subagent)
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-22"
+    tests_green_at: "2026-06-22"
+    verdict: approve
+    scope: "標準成果物 §G.6.1 (report/batch/notification/code-value の必須§ IPA共通フレーム grounding) + sub-doc-section-structure fail-close gate + document-system-map §1b 反映。code-reviewer (sonnet) VERDICT=pass / Critical 0。実証 = vitest 901 green (U-SDSS-001..008) + doctor EXIT=0 (sub-doc-section-structure OK checked=0 = downstream 起票時発火)。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-sonnet-4-6
 ---
 
 # PLAN-L7-100 (troubleshoot): L4 標準成果物 必須 § 構造定義 + sub-doc-section-structure gate

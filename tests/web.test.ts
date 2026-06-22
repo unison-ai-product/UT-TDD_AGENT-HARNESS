@@ -113,4 +113,14 @@ describe("app (request→response over harness.db) U-WEB-010..013", () => {
     expect(res.status).toBe(200);
     expect(res.body).toContain("先頭 100 行");
   });
+
+  it("U-WEB-014: 404 ページは反映 path を escapeHtml する (reflected XSS 防止、code-reviewer Important)", () => {
+    const db = openHarnessDb(":memory:");
+    // URL は pathname の <> を %エンコードするため、path で生存する & が escape されることで検証する。
+    const res = handleRequest(db, "/ghost&page");
+    db.close();
+    expect(res.status).toBe(404);
+    expect(res.body).toContain("&amp;");
+    expect(res.body).not.toContain("/ghost&page");
+  });
 });
