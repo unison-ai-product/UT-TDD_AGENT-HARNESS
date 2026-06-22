@@ -48,6 +48,7 @@ export interface PlanGovernanceViolation {
     | "requires_missing"
     | "requires_not_ready"
     | "parent_design_missing"
+    | "artifact_type_mismatch"
     | "db_projection_backprop_missing"
     | "reverse_fullback_backprop_missing";
   detail?: string;
@@ -212,16 +213,24 @@ function boolField(value: unknown): boolean {
   return value === true;
 }
 
-function generatedArtifactPaths(raw: Record<string, unknown>): string[] {
+function generatedArtifacts(raw: Record<string, unknown>): { path: string; type: string }[] {
   if (!Array.isArray(raw.generates)) return [];
   return raw.generates
-    .map((entry) =>
-      entry && typeof entry === "object"
-        ? stringField((entry as Record<string, unknown>).artifact_path)
-        : null,
-    )
-    .filter((path): path is string => Boolean(path))
-    .map(normalizeArtifactPath);
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const record = entry as Record<string, unknown>;
+      const path = stringField(record.artifact_path);
+      const type = stringField(record.artifact_type);
+      return path && type ? { path: normalizeArtifactPath(path), type } : null;
+    })
+    .filter((artifact): artifact is { path: string; type: string } => Boolean(artifact));
+}
+
+function expectedArtifactTypeForPath(path: string): string | null {
+  if (path.startsWith("docs/design/")) return "design_doc";
+  if (path.startsWith("docs/test-design/")) return "test_design";
+  if (path.startsWith("docs/plans/")) return "markdown_doc";
+  return null;
 }
 
 const DB_PROJECTION_BACKPROP_REQUIRED_GENERATES = [
@@ -400,7 +409,18 @@ export function analyzePlanGovernance(
       raw.dependencies && typeof raw.dependencies === "object"
         ? (raw.dependencies as Record<string, unknown>)
         : {};
-    const generatedPaths = generatedArtifactPaths(raw);
+    const generatedArtifactsList = generatedArtifacts(raw);
+    const generatedPaths = generatedArtifactsList.map((artifact) => artifact.path);
+    for (const artifact of generatedArtifactsList) {
+      const expectedType = expectedArtifactTypeForPath(artifact.path);
+      if (expectedType && artifact.type !== expectedType) {
+        violations.push({
+          file: entry.file,
+          reason: "artifact_type_mismatch",
+          detail: `${artifact.path}: ${artifact.type} != ${expectedType}`,
+        });
+      }
+    }
     if (reverseFullbackNeedsGeneratedBackprop(raw) && !generatedPaths.some(isBackpropArtifact)) {
       violations.push({
         file: entry.file,

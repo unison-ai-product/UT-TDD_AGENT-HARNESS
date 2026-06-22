@@ -22,19 +22,19 @@ generates:
   - artifact_path: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
     artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L1-requirements/functional-requirements.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
   - artifact_path: docs/design/harness/L1-requirements/screen-requirements.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
   - artifact_path: docs/design/harness/L3-functional/functional-requirements.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
   - artifact_path: docs/design/harness/L4-basic-design/function.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
   - artifact_path: docs/design/harness/L5-detailed-design/physical-data.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
   - artifact_path: docs/design/harness/L6-function-design/function-spec.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
   - artifact_path: docs/design/harness/L6-function-design/fr-unit-coverage.md
-    artifact_type: markdown_doc
+    artifact_type: design_doc
   - artifact_path: src/schema/harness-db.ts
     artifact_type: source_module
   - artifact_path: src/state-db/projection-writer.ts

@@ -293,7 +293,7 @@ validator は本表で組み合わせ違反を fail-close。**機械強制の実
 | `github_config` | GitHub 関連設定 (CODEOWNERS / PR template 等) | — |
 | `other` | 上記に該当しないもの | — |
 
-> **artifact_path × artifact_type 整合ルール (PLAN-DISCOVERY-04 V12)**: `generates[].artifact_path` が **`docs/design/` 配下なら `artifact_type=design_doc`** (① 設計、§2.1)、**`docs/test-design/` 配下なら `test_design`** (③)、`docs/plans/` への自己参照 (master hub 等) は `markdown_doc`。validator は将来 path→type 機械検証を追加 (現状 enum 検証のみ)。kind=design (L1-L6) の child PLAN は設計成果物を `design_doc` で宣言する (`markdown_doc` は hub 自己参照専用)。
+> **artifact_path × artifact_type 整合ルール (PLAN-DISCOVERY-04 V12)**: `generates[].artifact_path` が **`docs/design/` 配下なら `artifact_type=design_doc`** (① 設計、§2.1)、**`docs/test-design/` 配下なら `test_design`** (③)、`docs/plans/` への自己参照 (master hub 等) は `markdown_doc`。validator は `plan-governance` の `artifact_type_mismatch` で path→type 不整合を fail-close する。kind=design (L1-L6) の child PLAN は設計成果物を `design_doc` で宣言する (`markdown_doc` は hub 自己参照専用)。
 
 ## 1.8 VALID_ROLES (7 種) + 必須 role 条件 (R-I3 fix)
 

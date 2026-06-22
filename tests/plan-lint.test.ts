@@ -40,6 +40,7 @@ function planDoc(
     subDoc?: string | null;
     dependencies?: string;
     parentDesign?: string;
+    generates?: string;
     extra?: string;
   } = {},
 ) {
@@ -51,21 +52,26 @@ function planDoc(
   const dependencies = overrides.dependencies ?? "  parent: null\n  requires: []\n  blocks: []";
   const parentDesign = overrides.parentDesign ? `parent_design: ${overrides.parentDesign}\n` : "";
   const subDocLine = subDoc ? `sub_doc: ${subDoc}\n` : "";
+  const generates = overrides.generates ?? "[]";
   return {
     file: `docs/plans/${id}.md`,
-    content: `---\nplan_id: ${id}\ntitle: "${id}"\nkind: ${kind}\nlayer: ${layer}\ndrive: ${drive}\nstatus: ${status}\n${subDocLine}${parentDesign}agent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ngenerates: []\ndependencies:\n${dependencies}\n${overrides.extra ?? ""}---\n\n## body\n`,
+    content: `---\nplan_id: ${id}\ntitle: "${id}"\nkind: ${kind}\nlayer: ${layer}\ndrive: ${drive}\nstatus: ${status}\n${subDocLine}${parentDesign}agent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ngenerates: ${generates}\ndependencies:\n${dependencies}\n${overrides.extra ?? ""}---\n\n## body\n`,
   };
+}
+
+function fixtureArtifactType(artifactPath: string): string {
+  if (artifactPath.startsWith("docs/design/")) return "design_doc";
+  if (artifactPath.startsWith("docs/test-design/")) return "test_design";
+  if (artifactPath.startsWith("docs/plans/")) return "markdown_doc";
+  if (artifactPath.endsWith(".ts") || artifactPath.endsWith(".tsx")) return "source_module";
+  if (artifactPath.includes("/tests/") || artifactPath.startsWith("tests/")) return "test_code";
+  return "markdown_doc";
 }
 
 function dbProgressPlanDoc(id: string, generatedPaths: string[]) {
   const generates = generatedPaths
     .map((artifactPath) => {
-      const artifactType =
-        artifactPath.endsWith(".ts") || artifactPath.endsWith(".tsx")
-          ? "source_module"
-          : artifactPath.includes("/tests/") || artifactPath.startsWith("tests/")
-            ? "test_code"
-            : "markdown_doc";
+      const artifactType = fixtureArtifactType(artifactPath);
       return `  - artifact_path: ${artifactPath}\n    artifact_type: ${artifactType}`;
     })
     .join("\n");
@@ -85,7 +91,10 @@ function reverseFullbackPlanDoc(
       ? "[]"
       : `\n${generatedPaths
           .map(
-            (artifactPath) => `  - artifact_path: ${artifactPath}\n    artifact_type: markdown_doc`,
+            (artifactPath) =>
+              `  - artifact_path: ${artifactPath}\n    artifact_type: ${fixtureArtifactType(
+                artifactPath,
+              )}`,
           )
           .join("\n")}`;
   return {
@@ -362,6 +371,60 @@ describe("plan schedule lint (IMP-081)", () => {
     const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
 
     expect(reasons).not.toContain("reverse_fullback_backprop_missing");
+  });
+
+  it("U-PLANGOV-012: docs/design generated artifacts must use design_doc", () => {
+    const docs = [
+      planDoc("PLAN-L7-99-design-type-mismatch", {
+        kind: "add-impl",
+        layer: "L7",
+        subDoc: null,
+        generates:
+          "\n  - artifact_path: docs/design/harness/L4-basic-design/function.md\n    artifact_type: markdown_doc",
+      }),
+    ];
+
+    const r = analyzePlanGovernance(docs);
+    const mismatch = r.violations.find((v) => v.reason === "artifact_type_mismatch");
+
+    expect(r.violations.map((v) => v.reason)).toContain("artifact_type_mismatch");
+    expect(mismatch?.detail).toContain("design_doc");
+  });
+
+  it("U-PLANGOV-013: docs/test-design generated artifacts must use test_design", () => {
+    const docs = [
+      planDoc("PLAN-L7-99-test-design-type-mismatch", {
+        kind: "add-impl",
+        layer: "L7",
+        subDoc: null,
+        generates:
+          "\n  - artifact_path: docs/test-design/harness/L7-unit-test-design.md\n    artifact_type: markdown_doc",
+      }),
+    ];
+
+    const r = analyzePlanGovernance(docs);
+    const mismatch = r.violations.find((v) => v.reason === "artifact_type_mismatch");
+
+    expect(r.violations.map((v) => v.reason)).toContain("artifact_type_mismatch");
+    expect(mismatch?.detail).toContain("test_design");
+  });
+
+  it("U-PLANGOV-014: docs/plans generated artifacts remain markdown_doc", () => {
+    const docs = [
+      planDoc("PLAN-L7-99-plan-type-mismatch", {
+        kind: "add-impl",
+        layer: "L7",
+        subDoc: null,
+        generates:
+          "\n  - artifact_path: docs/plans/PLAN-L7-99-plan-type-mismatch.md\n    artifact_type: design_doc",
+      }),
+    ];
+
+    const r = analyzePlanGovernance(docs);
+    const mismatch = r.violations.find((v) => v.reason === "artifact_type_mismatch");
+
+    expect(r.violations.map((v) => v.reason)).toContain("artifact_type_mismatch");
+    expect(mismatch?.detail).toContain("markdown_doc");
   });
 
   it("U-PLANSCH-011: active gate docs do not point to stale trace/stub commands", () => {
