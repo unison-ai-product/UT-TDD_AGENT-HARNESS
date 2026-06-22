@@ -180,7 +180,27 @@ describe("cross-review semantic 強制 (IMP-076)", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("U-XREVIEW-004: 非 cross_agent (intra_runtime_subagent) は model 同一/欠落でも対象外", () => {
+  it("U-XREVIEW-004: cross_agent は同一 provider の別 model でも violation", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-SAME-PROVIDER",
+        crossEntries: [
+          {
+            review_kind: "cross_agent",
+            worker_model: "claude-opus-4-8",
+            reviewer_model: "claude-sonnet-4-6",
+          },
+        ],
+        hasEvidence: true,
+      }),
+    ]);
+    expect(r.crossReviewViolations).toEqual([
+      { plan_id: "PLAN-SAME-PROVIDER", reason: "same_provider" },
+    ]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("U-XREVIEW-005: 非 cross_agent (intra_runtime_subagent) は model 同一/欠落でも対象外", () => {
     const r = analyzeReviewEvidence([
       plan({
         plan_id: "PLAN-D",
@@ -200,7 +220,7 @@ describe("cross-review semantic 強制 (IMP-076)", () => {
     expect(r.ok).toBe(true);
   });
 
-  it("U-XREVIEW-005: extractReviewEntries — frontmatter yaml から review_kind/worker_model/reviewer_model 抽出", () => {
+  it("U-XREVIEW-006: extractReviewEntries — frontmatter yaml から review_kind/worker_model/reviewer_model 抽出", () => {
     const content = `---
 plan_id: PLAN-E
 review_evidence:

@@ -305,4 +305,75 @@ describe("runtime hook entrypoints", () => {
       rmSync(cwd, { recursive: true, force: true });
     }
   });
+
+  it("ut-tdd team run --execute records lifecycle for each provider member", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-team-wrapper-"));
+    const binDir = join(cwd, "bin");
+    try {
+      const fakeCodex = writeFakeCodex(binDir);
+      const fakeClaude = writeFakeClaude(binDir);
+      mkdirSync(join(cwd, ".ut-tdd", "teams"), { recursive: true });
+      writeFileSync(
+        join(cwd, ".ut-tdd", "teams", "speed.yaml"),
+        [
+          "name: speed",
+          "strategy: sequential",
+          "max_parallel: 2",
+          "members:",
+          "  - role: se",
+          "    engine: codex-se",
+          "    task: implement team lifecycle",
+          "  - role: tl",
+          "    engine: pmo-sonnet",
+          "    task: review team lifecycle",
+        ].join("\n"),
+      );
+      const env = {
+        PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
+        UT_TDD_CODEX_BIN: fakeCodex,
+        UT_TDD_CLAUDE_BIN: fakeClaude,
+      };
+
+      const run = runCli(
+        cwd,
+        [
+          "team",
+          "run",
+          "--definition",
+          ".ut-tdd/teams/speed.yaml",
+          "--mode",
+          "hybrid",
+          "--execute",
+          "--plan",
+          "PLAN-L4-79-team-wrapper",
+          "--json",
+        ],
+        undefined,
+        env,
+      );
+      expect(run.status).toBe(0);
+
+      const digest = JSON.parse(
+        readFileSync(
+          join(cwd, ".ut-tdd", "logs", "plan", "PLAN-L4-79-team-wrapper.digest.json"),
+          "utf8",
+        ),
+      );
+      expect(digest.plan_id).toBe("PLAN-L4-79-team-wrapper");
+      expect(digest.sessions).toHaveLength(2);
+      expect(digest.sessions).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/^codex-team-/),
+          expect.stringMatching(/^claude-team-/),
+        ]),
+      );
+      expect(digest.event_counts.session_start).toBe(2);
+      expect(digest.event_counts.tool_use).toBe(2);
+      expect(digest.event_counts.session_end).toBe(2);
+      expect(readFileSync(join(cwd, "codex-called.txt"), "utf8")).toContain("exec");
+      expect(readFileSync(join(cwd, "claude-called.txt"), "utf8")).toContain("--print");
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
 });

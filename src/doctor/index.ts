@@ -516,7 +516,10 @@ export function checkGuardrailInvariants(repoRoot: string): { messages: string[]
           // secret-evidence / human-required-without-evidence は review_kind 非依存で評価される
           // (この review_evidence 経路では evidence_path=plan.file(非 secret) / decision=allow 固定の
           //  ため発火条件を満たさないが、SSoT のロジック自体は適用されている)。
-          if (v.rule === "same-model-self-review" && entry.review_kind !== "cross_agent") {
+          if (
+            (v.rule === "same-model-self-review" || v.rule === "same-provider-cross-review") &&
+            entry.review_kind !== "cross_agent"
+          ) {
             continue;
           }
           violations.push({

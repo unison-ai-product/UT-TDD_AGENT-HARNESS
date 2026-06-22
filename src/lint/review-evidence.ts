@@ -15,6 +15,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
+import { type CrossAgentModelIssue, checkCrossAgentModelPair } from "../schema";
 import { fmValue } from "./shared";
 
 /**
@@ -63,6 +64,12 @@ export interface ReviewEvidenceResult {
   testBeforeReviewViolations: { plan_id: string; reason: string }[];
   staleApprovalViolations: { plan_id: string; reason: string }[];
   ok: boolean;
+}
+
+function reviewViolationReason(issue: CrossAgentModelIssue | undefined): string {
+  if (issue === "same_provider") return "same_provider";
+  if (issue === "unknown_provider") return "unknown_provider";
+  return "same_model_or_missing";
 }
 
 /**
@@ -140,8 +147,12 @@ export function analyzeReviewEvidence(plans: ParsedReviewPlan[]): ReviewEvidence
     // cross_agent distinctness (IMP-076、kind/status 非依存 = cross_agent を称する全 entry が対象)
     for (const e of p.crossEntries ?? []) {
       if (e.review_kind !== "cross_agent") continue;
-      if (!e.worker_model || !e.reviewer_model || e.worker_model === e.reviewer_model) {
-        crossReviewViolations.push({ plan_id: p.plan_id, reason: "same_model_or_missing" });
+      const modelCheck = checkCrossAgentModelPair(e.worker_model, e.reviewer_model);
+      if (!modelCheck.ok) {
+        crossReviewViolations.push({
+          plan_id: p.plan_id,
+          reason: reviewViolationReason(modelCheck.issue),
+        });
         break; // 1 PLAN 1 violation で十分 (surface 目的)
       }
     }
@@ -217,7 +228,7 @@ export function reviewEvidenceMessages(result: ReviewEvidenceResult): string[] {
   if (result.crossReviewViolations.length > 0) {
     const ids = result.crossReviewViolations.map((v) => v.plan_id).join(", ");
     out.push(
-      `review-evidence — ⚠ cross_agent review なのに worker≡reviewer の同一 model / model 欠落 ${result.crossReviewViolations.length} 件 (${ids}): same_model_approval 違反 (concept §2.1.2.1)。worker_model ≠ reviewer_model を記録 (IMP-076)`,
+      `review-evidence — ⚠ cross_agent review なのに worker/reviewer が同一 model・同一 provider・model 欠落 ${result.crossReviewViolations.length} 件 (${ids}): cross_agent は claude vs codex の別 provider を記録 (IMP-076)`,
     );
   }
   if (result.testBeforeReviewViolations.length > 0) {

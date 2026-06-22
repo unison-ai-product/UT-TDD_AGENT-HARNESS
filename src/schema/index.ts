@@ -244,3 +244,75 @@ export const recommendedCommandV1Schema = z.object({
   }),
 });
 export type RecommendedCommandV1 = z.infer<typeof recommendedCommandV1Schema>;
+
+export type ModelProvider = "claude" | "codex" | "unknown";
+
+export type CrossAgentModelIssue =
+  | "missing_model"
+  | "same_model"
+  | "same_provider"
+  | "unknown_provider";
+
+export interface CrossAgentModelCheck {
+  ok: boolean;
+  issue?: CrossAgentModelIssue;
+  workerProvider: ModelProvider;
+  reviewerProvider: ModelProvider;
+}
+
+export function modelProviderFromId(modelId: string | undefined): ModelProvider {
+  const normalized = modelId?.trim().toLowerCase() ?? "";
+  if (!normalized) return "unknown";
+  if (
+    normalized.startsWith("claude") ||
+    normalized.startsWith("anthropic") ||
+    normalized.includes("sonnet") ||
+    normalized.includes("opus") ||
+    normalized.includes("haiku")
+  ) {
+    return "claude";
+  }
+  if (normalized.startsWith("codex") || normalized.startsWith("gpt-")) {
+    return "codex";
+  }
+  return "unknown";
+}
+
+export function checkCrossAgentModelPair(
+  workerModel: string | undefined,
+  reviewerModel: string | undefined,
+): CrossAgentModelCheck {
+  const worker = workerModel?.trim();
+  const reviewer = reviewerModel?.trim();
+  const workerProvider = modelProviderFromId(worker);
+  const reviewerProvider = modelProviderFromId(reviewer);
+
+  if (!worker || !reviewer) {
+    return { ok: false, issue: "missing_model", workerProvider, reviewerProvider };
+  }
+  if (worker === reviewer) {
+    return { ok: false, issue: "same_model", workerProvider, reviewerProvider };
+  }
+  if (workerProvider === "unknown" || reviewerProvider === "unknown") {
+    return { ok: false, issue: "unknown_provider", workerProvider, reviewerProvider };
+  }
+  if (workerProvider === reviewerProvider) {
+    return { ok: false, issue: "same_provider", workerProvider, reviewerProvider };
+  }
+  return { ok: true, workerProvider, reviewerProvider };
+}
+
+export function crossAgentModelIssueMessage(check: CrossAgentModelCheck): string {
+  switch (check.issue) {
+    case "missing_model":
+      return "cross_agent review requires workerModel and reviewerModel";
+    case "same_model":
+      return "same_model_approval forbidden: workerModel equals reviewerModel";
+    case "same_provider":
+      return "cross_agent review requires different providers (claude vs codex)";
+    case "unknown_provider":
+      return "cross_agent review requires recognizable claude/codex provider model ids";
+    default:
+      return "cross_agent review model pair is invalid";
+  }
+}

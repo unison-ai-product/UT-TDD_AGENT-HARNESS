@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import type { ExecutionMode } from "../runtime/detect";
+import { checkCrossAgentModelPair, crossAgentModelIssueMessage } from "../schema";
 
 export const JUDGMENT_GATES = ["G0.5", "G2", "G4", "G5", "G6", "G7", "R4"] as const;
 export const REQUIRED_CHECKLIST_IDS = ["DOC", "TST", "COD", "XR", "DEP", "DUP", "MOD"] as const;
@@ -90,11 +91,8 @@ export function evaluateGateReview(input: GateReviewInput): GateReviewResult {
     const messages: string[] = [];
     if (input.reviewKind !== "cross_agent")
       messages.push("hybrid judgment gate requires cross_agent review");
-    if (!input.workerModel || !input.reviewerModel) {
-      messages.push("cross_agent review requires workerModel and reviewerModel");
-    } else if (input.workerModel === input.reviewerModel) {
-      messages.push("same_model_approval forbidden: workerModel equals reviewerModel");
-    }
+    const modelCheck = checkCrossAgentModelPair(input.workerModel, input.reviewerModel);
+    if (!modelCheck.ok) messages.push(crossAgentModelIssueMessage(modelCheck));
     return {
       gate: input.gate,
       mode: input.mode,

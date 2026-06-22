@@ -56,8 +56,8 @@ export function detectMode(deps: RuntimeDetectionDeps = {}): RuntimeDetection {
   const inClaude = env.CLAUDECODE === "1";
   const inCodex = Boolean(env.CODEX_SANDBOX ?? env.CODEX_HOME);
 
-  const claude = inClaude || providerSpawnable("claude", env);
-  const codex = inCodex || providerSpawnable("codex", env);
+  const claude = providerSpawnable("claude", env);
+  const codex = providerSpawnable("codex", env);
 
   let mode: ExecutionMode;
   if (claude && codex) mode = "hybrid";

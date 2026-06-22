@@ -32,6 +32,18 @@ describe("gate review tier", () => {
     expect(same.messages.join("\n")).toContain("same_model_approval");
   });
 
+  it("rejects same-provider different-model cross-agent review in hybrid mode", () => {
+    const result = evaluateGateReview({
+      gate: "G4",
+      mode: "hybrid",
+      reviewKind: "cross_agent",
+      workerModel: "claude-opus-4-8",
+      reviewerModel: "claude-sonnet-4-6",
+    });
+    expect(result.passed).toBe(false);
+    expect(result.messages.join("\n")).toContain("different providers");
+  });
+
   it("fails single-runtime judgment gate without checklist evidence", () => {
     const result = evaluateGateReview({ gate: "G4", mode: "codex-only" });
     expect(result.passed).toBe(false);

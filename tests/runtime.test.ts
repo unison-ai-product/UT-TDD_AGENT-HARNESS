@@ -34,16 +34,18 @@ describe("detectMode (requirements_v1.2 §7.1)", () => {
     });
   });
 
-  it("keeps current runtime env signals available even without a successful probe", () => {
+  it("keeps current runtime env signals separate from provider availability", () => {
     const d = detectMode({
       env: { CODEX_HOME: "/tmp/codex" },
       isProviderSpawnable: () => false,
     });
 
     expect(d).toMatchObject({
-      mode: "codex-only",
-      codex: true,
+      mode: "standalone",
+      codex: false,
       currentRuntime: "codex",
+      availableRuntimes: [],
+      missingRuntimes: ["claude", "codex"],
     });
   });
 });

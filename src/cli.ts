@@ -1715,14 +1715,25 @@ team
           process.exitCode = result.ok ? 0 : 1;
           return;
         }
+        let teamSessionSeq = 0;
+        const repoRoot = process.cwd();
+        const sessionDeps = nodeDeps(repoRoot, gitBranch, gitHead);
         const execution = await executeTeamRunPlan(result, {
-          slots: nodeAgentSlotsDeps(process.cwd()),
+          slots: nodeAgentSlotsDeps(repoRoot),
           runCommand: ({ command, args, provider, env, stdin }) =>
             new Promise((resolve) => {
+              const sessionId = `${provider}-team-${Date.now()}-${teamSessionSeq++}`;
+              const startInput: SessionHookInput = {
+                hook_event_name: "SessionStart",
+                session_id: sessionId,
+                ...(opts.plan ? { plan_id: opts.plan } : {}),
+              };
+              runSessionStartSideEffects(repoRoot, startInput, sessionDeps);
+              dispatch(startInput, sessionDeps, "SessionStart");
               const invocation = buildProviderInvocation({ provider, command, args });
               const ioMode = opts.json ? "ignore" : "inherit";
               const child = spawn(invocation.command, invocation.args, {
-                cwd: process.cwd(),
+                cwd: repoRoot,
                 env: adapterExecutionEnv(provider, env),
                 // Provider prompts are passed through stdin; argv carries only fixed
                 // command flags so shell metacharacters and tool markup stay inert.
@@ -1734,10 +1745,38 @@ team
                 child.stdin?.write(stdin);
                 child.stdin?.end();
               }
-              child.on("error", () => resolve({ exitCode: null }));
-              child.on("close", (code) => resolve({ exitCode: code }));
+              let finalized = false;
+              const finish = (exitCode: number | null) => {
+                if (finalized) return;
+                finalized = true;
+                dispatch(
+                  {
+                    hook_event_name: "PostToolUse",
+                    session_id: sessionId,
+                    ...(opts.plan ? { plan_id: opts.plan } : {}),
+                    tool_name: provider,
+                    tool_input: { command: `${command} ${args.join(" ")}` },
+                    tool_response: { outcome: exitCode === 0 ? "ok" : "error" },
+                  },
+                  sessionDeps,
+                  "PostToolUse",
+                );
+                dispatch(
+                  {
+                    hook_event_name: "Stop",
+                    session_id: sessionId,
+                    ...(opts.plan ? { plan_id: opts.plan } : {}),
+                  },
+                  sessionDeps,
+                  "Stop",
+                );
+                resolve({ exitCode });
+              };
+              child.on("error", () => finish(null));
+              child.on("close", (code) => finish(code));
             }),
         });
+        writeHandoverWarnings();
         if (opts.json) process.stdout.write(`${JSON.stringify(execution, null, 2)}\n`);
         else {
           process.stdout.write(

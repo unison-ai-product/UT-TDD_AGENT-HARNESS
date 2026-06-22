@@ -56,6 +56,19 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
     });
     expect(crossModel.violations).toHaveLength(0);
 
+    const sameProvider = inspectGuardrailInvariants({
+      plan_id: "P",
+      session_id: "",
+      guardrail: "review-self-review",
+      decision: "allow",
+      mode: "review",
+      evidence_path: "docs/plans/P.md",
+      reviewer_model: "claude-sonnet-4-6",
+      worker_model: "claude-opus-4-8",
+    });
+    expect(sameProvider.violations.map((v) => v.rule)).toContain("same-provider-cross-review");
+    expect(sameProvider.normalizedDecision).toBe("block");
+
     // blank model strings must NOT be read as "same model" — passed as undefined upstream.
     const blank = inspectGuardrailInvariants({
       plan_id: "P",
@@ -80,7 +93,7 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
     );
   });
 
-  it("projects an advisory finding only for genuine same-model self-review", () => {
+  it("projects advisory findings for same-model and same-provider review evidence", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -93,6 +106,17 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
           worker_model: "claude-opus-4-8",
           reviewer_model: "claude-opus-4-8",
           source: "docs/plans/PLAN-SELF-REVIEW-A.md",
+        }),
+      });
+      upsertRow(db, {
+        table: "review_evidence_registry",
+        primaryKey: "review_evidence_id",
+        row: reviewEvidenceRow({
+          review_evidence_id: "review-evidence:PLAN-SAME-PROVIDER-B",
+          plan_id: "PLAN-SAME-PROVIDER-B",
+          worker_model: "claude-opus-4-8",
+          reviewer_model: "claude-sonnet-4-6",
+          source: "docs/plans/PLAN-SAME-PROVIDER-B.md",
         }),
       });
       upsertRow(db, {
@@ -128,10 +152,20 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
       }>;
 
       const advisories = findings.filter((f) => f.source === "guardrail-invariant-advisory");
-      expect(advisories).toHaveLength(1);
-      expect(advisories[0]?.kind).toContain("same-model-self-review");
+      expect(advisories).toHaveLength(2);
+      expect(advisories.map((a) => a.kind)).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("same-model-self-review"),
+          expect.stringContaining("same-provider-cross-review"),
+        ]),
+      );
       // traceability lives in evidence_path (readiness does not scan it)...
-      expect(advisories[0]?.evidence_path).toBe("docs/plans/PLAN-SELF-REVIEW-A.md");
+      expect(advisories.map((a) => a.evidence_path)).toEqual(
+        expect.arrayContaining([
+          "docs/plans/PLAN-SELF-REVIEW-A.md",
+          "docs/plans/PLAN-SAME-PROVIDER-B.md",
+        ]),
+      );
       // ...while subject_id is plan-id-free so it cannot flip automation readiness.
       for (const finding of findings) {
         expect(finding.subject_id).not.toContain("PLAN-SELF-REVIEW-A");

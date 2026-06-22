@@ -1,3 +1,4 @@
+import { checkCrossAgentModelPair } from "../schema";
 import { isSecretLike } from "./index";
 
 // Pure guardrail-decision invariant logic. Lives in state-db (next to the
@@ -26,6 +27,7 @@ export interface GuardrailDecisionInput {
 export type GuardrailInvariantRule =
   | "secret-evidence"
   | "same-model-self-review"
+  | "same-provider-cross-review"
   | "human-required-without-evidence";
 
 export interface GuardrailInvariantViolation {
@@ -39,11 +41,10 @@ export interface GuardrailInvariantInspection {
 }
 
 function normalizeDecision(input: GuardrailDecisionInput): GuardrailDecisionValue {
-  const sameModel =
-    input.reviewer_model !== undefined &&
-    input.worker_model !== undefined &&
-    input.reviewer_model === input.worker_model;
-  if (sameModel) return "block";
+  if (input.reviewer_model !== undefined && input.worker_model !== undefined) {
+    const modelCheck = checkCrossAgentModelPair(input.worker_model, input.reviewer_model);
+    if (modelCheck.issue === "same_model" || modelCheck.issue === "same_provider") return "block";
+  }
   if (input.decision === "human-required" && !input.evidence_path) return "block";
   if (input.human_signoff_required && !input.evidence_path) return "block";
   return input.decision;
@@ -69,15 +70,19 @@ export function inspectGuardrailInvariants(
       detail: "evidence_path contains a secret-like value",
     });
   }
-  if (
-    input.reviewer_model !== undefined &&
-    input.worker_model !== undefined &&
-    input.reviewer_model === input.worker_model
-  ) {
-    violations.push({
-      rule: "same-model-self-review",
-      detail: `reviewer_model equals worker_model (${input.reviewer_model})`,
-    });
+  if (input.reviewer_model !== undefined && input.worker_model !== undefined) {
+    const modelCheck = checkCrossAgentModelPair(input.worker_model, input.reviewer_model);
+    if (modelCheck.issue === "same_model") {
+      violations.push({
+        rule: "same-model-self-review",
+        detail: `reviewer_model equals worker_model (${input.reviewer_model})`,
+      });
+    } else if (modelCheck.issue === "same_provider") {
+      violations.push({
+        rule: "same-provider-cross-review",
+        detail: `reviewer_model and worker_model resolve to the same provider (${modelCheck.reviewerProvider})`,
+      });
+    }
   }
   if (input.decision === "human-required" && !input.evidence_path) {
     violations.push({
