@@ -149,3 +149,54 @@ main へ push 済 (`5b53c88`→`4e9d077`)、**CI green 復旧を `gh run watch` 
   prose 断定は機械が真偽を見ない。誤記訂正は `supersedes:` 宣言 + 原 PLAN 訂正注記で双方向化
   (plan-supersession gate が fail-close)。`supersedes` を消すと errata の片肺放置を見逃す。
 
+---
+
+# Session Handover — 2026-06-22
+
+## §1 PLAN サマリ
+
+- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
+
+## §2 成果物 (commit / files)
+
+- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
+
+## §3 Next Action
+
+同 session 続き (PO「中身空っぽを見つけたときの対処法 / DB 上の取り扱い」→「入れて」)。
+commit 2 本 push 済 (`9538e07`, `0c376fe`)、各 **CI green を `gh run watch` で実機確認 (exit 0)**。
+
+1. **hollow deliverable 検出** (`9538e07`, PLAN-L7-91): `plan-artifact-existence` を phantom (不在)
+   に加え hollow (実在するが非空白 0 = 中身空っぽ) も fail-close。完了 status PLAN の generates が
+   空ファイルだと existsSync を素通りしていた穴を根治。`.gitkeep` 除外、読めない/バイナリは hollow
+   断定しない、draft の WIP stub は対象外。blast radius 0 (全 tracked 空ファイル 0 を scan 確認)。
+2. **PLAN 本文 substance 検出** (`0c376fe`, PLAN-L7-92): concept AP-13「本文 0 行・declare のみは
+   無効」を機械強制。新 lint `plan-body-substance` が frontmatter + タイトルのみで本文実体行 0 の
+   declare-only hollow PLAN を fail-close。閾値は AP-13 literal (本文 0 行) ゆえ terse PLAN を罰しない
+   (実リポ最小 6 実体行 = blast radius 0)。
+
+調査で判明した既存の DB 扱い: `db-projection-ingestion` が「空」を provenance で 2 分類済
+(派生 14 表 = 空なら fail-close / evidence-gated 12 表 = cold-start 空は正常)。= 「中身空っぽ」は
+deliverable (L7-91) / PLAN 本文 (L7-92) / DB (既存) の 3 面すべて機械検出下に入った。
+
+検証: typecheck / Biome / Vitest **818** / doctor EXIT=0 / db rebuild。各 push で CI 実機 green 確認。
+
+## §4 carry (未了・先送り)
+
+- 第 1 entry §4 と同じ (歴史的 oversized handover の retroactive 圧縮 / 残 draft 2 本 / IMP-139)。
+- 新規実装の手待ちなし。「中身空っぽ」3 面は完備。
+
+## §5 未了 PO 判断
+
+- 第 1 entry §5 と同じ (L7-48 recordGuardrailDecision 配線 / IMP-139)。本 entry の commit は全 push 済。
+
+## §6 壊さない / 再発させない
+
+- **完了 status PLAN の deliverable は「実在」かつ「非空」** (PLAN-L7-91)。空ファイルを commit して
+  完了宣言するな。`.gitkeep` 等の意図的空は exempt 済 (basename allowlist)。
+- **PLAN は本文実体行を持て** (PLAN-L7-92、AP-13)。frontmatter + タイトルのみの declare-only PLAN は
+  無効。`plan-body-substance` は先頭 h1 のみ skip ゆえ §節/prose を 1 行でも書けば通る。
+- **「空」は由来で分類する** (一律 fail でも一律無視でもない): 意図的空はマーカー必須
+  (.gitkeep / placeholder_deps / evidence-gated)、欠陥は fail-close。DB の derived 表は空=fail-close、
+  evidence-gated 表は cold-start 空=正常 ([[feedback_coverage_not_substance]])。
+
