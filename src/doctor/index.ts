@@ -188,6 +188,11 @@ import {
   loadRuntimePortabilityDocs,
   runtimePortabilityMessages,
 } from "../lint/runtime-portability";
+import {
+  analyzeScreenImplPairFreeze,
+  loadScreenImplPairFreezeInput,
+  screenImplPairFreezeMessages,
+} from "../lint/screen-impl-pair-freeze";
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
 import { fmValue } from "../lint/shared";
 import {
@@ -1327,6 +1332,25 @@ export function checkSubDocSectionStructure(repoRoot: string): {
   }
 }
 
+/** 画面実装宣言 (implemented_screens) が検証ペア (next_pair_freeze) の段階順を破っていないか hard gate。 */
+export function checkScreenImplPairFreeze(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["screen-impl-pair-freeze - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeScreenImplPairFreeze(loadScreenImplPairFreezeInput(repoRoot));
+    return { messages: screenImplPairFreezeMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["screen-impl-pair-freeze - violation: screen-list.md could not be read"],
+      ok: false,
+    };
+  }
+}
+
 /** git tracked top-level ⊆ repository-structure.md canonical の突合を hard gate として検査する。 */
 export function checkTrackedCanonical(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
@@ -1716,6 +1740,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const trackedCanonical = checkTrackedCanonical(deps.repoRoot);
   const subDocCatalogDrift = checkSubDocCatalogDrift(deps.repoRoot);
   const subDocSectionStructure = checkSubDocSectionStructure(deps.repoRoot);
+  const screenImplPairFreeze = checkScreenImplPairFreeze(deps.repoRoot);
   const verificationGroups = checkVerificationGroupsResult(deps.repoRoot);
   const dependencyDrift = checkDependencyDrift(deps.repoRoot);
   const regressionExpansion = checkRegressionExpansion(deps.repoRoot, dependencyDrift.result);
@@ -1780,6 +1805,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       trackedCanonical.ok &&
       subDocCatalogDrift.ok &&
       subDocSectionStructure.ok &&
+      screenImplPairFreeze.ok &&
       dependencyDrift.ok &&
       regressionExpansion.ok &&
       dbProjectionCoverage.ok &&
@@ -1845,6 +1871,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...trackedCanonical.messages.map((m) => `doctor: ${m}`),
       ...subDocCatalogDrift.messages.map((m) => `doctor: ${m}`),
       ...subDocSectionStructure.messages.map((m) => `doctor: ${m}`),
+      ...screenImplPairFreeze.messages.map((m) => `doctor: ${m}`),
       ...dependencyDrift.messages.map((m) => `doctor: ${m}`),
       ...regressionExpansion.messages.map((m) => `doctor: ${m}`),
       ...dbProjectionCoverage.messages.map((m) => `doctor: ${m}`),

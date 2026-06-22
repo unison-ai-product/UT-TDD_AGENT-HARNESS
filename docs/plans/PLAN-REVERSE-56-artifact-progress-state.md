@@ -12,6 +12,19 @@ updated: 2026-06-22
 owner: Codex
 forward_routing: L5
 promotion_strategy: reuse-as-is
+backprop_scope:
+  - layer: requirements
+    decision: updated
+    evidence_path: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
+    reason: "Requirements define the artifact progress color contract."
+  - layer: L4-basic-design
+    decision: updated
+    evidence_path: docs/design/harness/L4-basic-design/function.md
+    reason: "Basic design records the artifact progress projection building block."
+  - layer: L5-detailed-design
+    decision: updated
+    evidence_path: docs/design/harness/L5-detailed-design/physical-data.md
+    reason: "Detailed design records the physical artifact progress state semantics."
 agent_slots:
   - role: tl
     slot_label: "TL - artifact progress fullback review"

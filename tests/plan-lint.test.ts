@@ -84,7 +84,7 @@ function dbProgressPlanDoc(id: string, generatedPaths: string[]) {
 function reverseFullbackPlanDoc(
   id: string,
   generatedPaths: string[],
-  overrides: { updated?: string; status?: string } = {},
+  overrides: { updated?: string; status?: string; extra?: string } = {},
 ) {
   const generates =
     generatedPaths.length === 0
@@ -99,9 +99,22 @@ function reverseFullbackPlanDoc(
           .join("\n")}`;
   return {
     file: `docs/plans/${id}.md`,
-    content: `---\nplan_id: ${id}\ntitle: "${id}: reverse fullback fixture"\nkind: reverse\nlayer: cross\nworkflow_phase: R4\nconfirmed_reverse_type: fullback\ndrive: fullstack\nstatus: ${overrides.status ?? "confirmed"}\ncreated: 2026-06-22\nupdated: ${overrides.updated ?? "2026-06-22"}\nowner: fixture\nforward_routing: L5\npromotion_strategy: reuse-as-is\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ngenerates: ${generates}\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n`,
+    content: `---\nplan_id: ${id}\ntitle: "${id}: reverse fullback fixture"\nkind: reverse\nlayer: cross\nworkflow_phase: R4\nconfirmed_reverse_type: fullback\ndrive: fullstack\nstatus: ${overrides.status ?? "confirmed"}\ncreated: 2026-06-22\nupdated: ${overrides.updated ?? "2026-06-22"}\nowner: fixture\nforward_routing: L5\npromotion_strategy: reuse-as-is\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ngenerates: ${generates}\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n${overrides.extra ?? ""}---\n\n## body\n`,
   };
 }
+
+const fullbackScope = `backprop_scope:
+  - layer: requirements
+    decision: updated
+    evidence_path: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
+    reason: "Requirements record the fullback governance change."
+  - layer: L4-basic-design
+    decision: not_impacted
+    reason: "The change does not alter external basic design behavior."
+  - layer: L5-detailed-design
+    decision: not_impacted
+    reason: "The change does not alter detailed internal design behavior."
+`;
 
 describe("plan schedule lint (IMP-081)", () => {
   it("U-PLANSCH-001: §工程表 section を抽出する", () => {
@@ -350,15 +363,20 @@ describe("plan schedule lint (IMP-081)", () => {
 
   it("U-PLANGOV-010: new R4 fullback passes when generated backprop artifact is present", () => {
     const docs = [
-      reverseFullbackPlanDoc("PLAN-REVERSE-198-with-backprop", [
-        "docs/plans/PLAN-REVERSE-198-with-backprop.md",
-        "docs/design/harness/L5-detailed-design/physical-data.md",
-      ]),
+      reverseFullbackPlanDoc(
+        "PLAN-REVERSE-198-with-backprop",
+        [
+          "docs/plans/PLAN-REVERSE-198-with-backprop.md",
+          "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+        ],
+        { extra: fullbackScope },
+      ),
     ];
 
     const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
 
     expect(reasons).not.toContain("reverse_fullback_backprop_missing");
+    expect(reasons).not.toContain("reverse_fullback_scope_missing");
   });
 
   it("U-PLANGOV-011: legacy R4 fullback debt remains observable but is not retroactively hard-failed", () => {
@@ -371,6 +389,38 @@ describe("plan schedule lint (IMP-081)", () => {
     const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
 
     expect(reasons).not.toContain("reverse_fullback_backprop_missing");
+  });
+
+  it("U-PLANGOV-011b: new R4 fullback requires explicit requirements/L4/L5 backprop scope", () => {
+    const docs = [
+      reverseFullbackPlanDoc("PLAN-REVERSE-198-missing-scope", [
+        "docs/plans/PLAN-REVERSE-198-missing-scope.md",
+        "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+      ]),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("reverse_fullback_scope_missing");
+  });
+
+  it("U-PLANGOV-011c: updated backprop scope must cite a generated evidence path", () => {
+    const docs = [
+      reverseFullbackPlanDoc(
+        "PLAN-REVERSE-198-stale-scope",
+        [
+          "docs/plans/PLAN-REVERSE-198-stale-scope.md",
+          "docs/design/harness/L5-detailed-design/physical-data.md",
+        ],
+        { extra: fullbackScope },
+      ),
+    ];
+
+    const violation = analyzePlanGovernance(docs).violations.find(
+      (v) => v.reason === "reverse_fullback_scope_missing",
+    );
+
+    expect(violation?.detail).toContain("requirements:missing_generated_evidence");
   });
 
   it("U-PLANGOV-012: docs/design generated artifacts must use design_doc", () => {

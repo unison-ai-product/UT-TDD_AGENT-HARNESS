@@ -12,6 +12,17 @@ updated: 2026-06-22
 owner: Codex
 forward_routing: L5
 promotion_strategy: reuse-as-is
+backprop_scope:
+  - layer: requirements
+    decision: updated
+    evidence_path: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
+    reason: "Requirements define the conditional backfill decision gate."
+  - layer: L4-basic-design
+    decision: not_impacted
+    reason: "The governance gate does not change external runtime function design."
+  - layer: L5-detailed-design
+    decision: not_impacted
+    reason: "The governance gate does not change detailed runtime data or module design."
 agent_slots:
   - role: tl
     slot_label: "TL - conditional backfill rule review"

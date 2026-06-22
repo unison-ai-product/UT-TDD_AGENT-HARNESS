@@ -909,6 +909,11 @@ R4 outcome の `promotion_strategy` で PoC / 検証成果物の扱いを明示:
       戻した機械証跡を持つ。2026-06-22 以降の新規/更新 PLAN は `plan-governance`
       `reverse_fullback_backprop_missing` で fail-close。既存 legacy 欠落は監査表で debt 管理し、修正時に
       generates 追加または reverse_type 再分類を行う。
+- [ ] `confirmed_reverse_type=fullback` かつ `workflow_phase=R4` の confirmed/completed PLAN は、`backprop_scope`
+      に `requirements` / `L4-basic-design` / `L5-detailed-design` を列挙し、各層を `updated` / `not_impacted` /
+      `deferred` のいずれかで分類する。`updated` は同じ PLAN の `generates` に含まれる `evidence_path` を必須とする。
+      欠落時は `plan-governance` の `reverse_fullback_scope_missing` で fail-closeし、基本設計・詳細設計を見たか
+      どうかが人間記憶だけに残る状態を禁止する。
 - [ ] `kind in [refactor, retrofit, troubleshoot]` の confirmed/completed PLAN が Reverse PLAN から `requires`
       されていない場合、2026-06-22 以降の新規/更新 PLAN は `backprop_decision: not_required` と
       10 文字以上の `backprop_decision_reason` を持つ。契約・挙動・要件・設計・テスト設計の意味が変わる場合は

@@ -50,7 +50,8 @@ export interface PlanGovernanceViolation {
     | "parent_design_missing"
     | "artifact_type_mismatch"
     | "db_projection_backprop_missing"
-    | "reverse_fullback_backprop_missing";
+    | "reverse_fullback_backprop_missing"
+    | "reverse_fullback_scope_missing";
   detail?: string;
 }
 
@@ -244,6 +245,12 @@ const DB_PROJECTION_BACKPROP_REQUIRED_GENERATES = [
   "docs/design/harness/L6-function-design/fr-unit-coverage.md",
 ];
 const REVERSE_FULLBACK_BACKPROP_ENFORCEMENT_DATE = "2026-06-22";
+const REQUIRED_REVERSE_FULLBACK_SCOPE_LAYERS = [
+  "requirements",
+  "L4-basic-design",
+  "L5-detailed-design",
+] as const;
+const VALID_REVERSE_FULLBACK_SCOPE_DECISIONS = new Set(["updated", "not_impacted", "deferred"]);
 
 function isProgressColorProjectionPlan(
   raw: Record<string, unknown>,
@@ -284,6 +291,48 @@ function isBackpropArtifact(path: string): boolean {
     path.startsWith("docs/governance/") ||
     path.startsWith("docs/test-design/")
   );
+}
+
+function reverseFullbackScopeViolations(
+  raw: Record<string, unknown>,
+  generatedPaths: string[],
+): string[] {
+  const scope = raw.backprop_scope;
+  if (!Array.isArray(scope)) {
+    return REQUIRED_REVERSE_FULLBACK_SCOPE_LAYERS.map((layer) => `${layer}:missing`);
+  }
+
+  const byLayer = new Map<string, Record<string, unknown>>();
+  for (const entry of scope) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const record = entry as Record<string, unknown>;
+    const layer = stringField(record.layer);
+    if (layer) byLayer.set(layer, record);
+  }
+
+  const missing: string[] = [];
+  for (const layer of REQUIRED_REVERSE_FULLBACK_SCOPE_LAYERS) {
+    const entry = byLayer.get(layer);
+    if (!entry) {
+      missing.push(`${layer}:missing`);
+      continue;
+    }
+    const decision = stringField(entry.decision);
+    const reason = stringField(entry.reason);
+    if (!decision || !VALID_REVERSE_FULLBACK_SCOPE_DECISIONS.has(decision)) {
+      missing.push(`${layer}:invalid_decision`);
+    }
+    if (!reason || reason.length < 10) {
+      missing.push(`${layer}:missing_reason`);
+    }
+    if (decision === "updated") {
+      const evidencePath = stringField(entry.evidence_path);
+      if (!evidencePath || !generatedPaths.includes(normalizeArtifactPath(evidencePath))) {
+        missing.push(`${layer}:missing_generated_evidence`);
+      }
+    }
+  }
+  return missing;
 }
 
 function reverseFullbackNeedsGeneratedBackprop(raw: Record<string, unknown>): boolean {
@@ -427,6 +476,16 @@ export function analyzePlanGovernance(
         reason: "reverse_fullback_backprop_missing",
         detail: "fullback R4 must generate docs/design, docs/governance, or docs/test-design",
       });
+    }
+    if (reverseFullbackNeedsGeneratedBackprop(raw)) {
+      const missingScope = reverseFullbackScopeViolations(raw, generatedPaths);
+      if (missingScope.length > 0) {
+        violations.push({
+          file: entry.file,
+          reason: "reverse_fullback_scope_missing",
+          detail: missingScope.join(", "),
+        });
+      }
     }
 
     if (isProgressColorProjectionPlan(raw, entry.content, generatedPaths)) {
