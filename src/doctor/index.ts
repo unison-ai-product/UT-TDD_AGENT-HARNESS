@@ -125,6 +125,11 @@ import {
   loadPlanArtifactExistenceInput,
   planArtifactExistenceMessages,
 } from "../lint/plan-artifact-existence";
+import {
+  analyzePlanBodySubstance,
+  loadPlanBodySubstanceInput,
+  planBodySubstanceMessages,
+} from "../lint/plan-body-substance";
 import { analyzePlanDod, loadPlanDodDocs, planDodMessages } from "../lint/plan-dod";
 import {
   analyzePlanSupersession,
@@ -333,6 +338,25 @@ export function checkPlanSupersession(repoRoot: string): { messages: string[]; o
     return { messages: planSupersessionMessages(r), ok: r.ok };
   } catch {
     return { messages: ["plan-supersession - violation: PLAN could not be read"], ok: false };
+  }
+}
+
+/**
+ * PLAN 本文 substance を surface (PLAN-L7-92、hard fail)。frontmatter + タイトルのみで本文実体行 0 の
+ * declare-only hollow PLAN (concept AP-13 無効) → ok=false。I/O 失敗も violation にして fail-close する。
+ */
+export function checkPlanBodySubstance(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["plan-body-substance - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzePlanBodySubstance(loadPlanBodySubstanceInput(repoRoot));
+    return { messages: planBodySubstanceMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["plan-body-substance - violation: PLAN could not be read"], ok: false };
   }
 }
 
@@ -1414,6 +1438,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const backfill = checkBackfillResult(deps.repoRoot);
   const scrumRev = checkScrumReverse(deps.repoRoot);
   const planSupersession = checkPlanSupersession(deps.repoRoot);
+  const planBodySubstance = checkPlanBodySubstance(deps.repoRoot);
   const propagation = checkPropagation(deps.repoRoot);
   const reviewEvidence = checkReviewEvidence(deps.repoRoot);
   const pairFreeze = checkPairFreeze(deps.repoRoot);
@@ -1466,6 +1491,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       backfill.ok &&
       scrumRev.ok &&
       planSupersession.ok &&
+      planBodySubstance.ok &&
       propagation.ok &&
       reviewEvidence.ok &&
       guardrailInvariants.ok &&
@@ -1521,6 +1547,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...backfill.messages.map((m) => `doctor: ${m}`),
       ...scrumRev.messages.map((m) => `doctor: ${m}`),
       ...planSupersession.messages.map((m) => `doctor: ${m}`),
+      ...planBodySubstance.messages.map((m) => `doctor: ${m}`),
       ...propagation.messages.map((m) => `doctor: ${m}`),
       ...pairFreeze.messages.map((m) => `doctor: ${m}`),
       ...moduleDrift.messages.map((m) => `doctor: ${m}`),
