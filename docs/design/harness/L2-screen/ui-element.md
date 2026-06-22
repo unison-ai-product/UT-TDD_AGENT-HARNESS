@@ -1,7 +1,7 @@
 ---
 layer: L2
 sub_doc: ui-element
-status: placeholder  # 内容は本材料化済 (PLAN-L2-03)。confirmed 昇格は G2 freeze (PO サインオフ、PLAN-L2-00 Step 4) 時。gate-confirm (IMP-079) 遵守。
+status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。本材料化 PLAN-L2-03。③ pair=wireframe self (L2↔L10)。
 pair_artifact: docs/design/harness/L2-screen/wireframe.md  # mock が L2 設計群の③ペア (IMP-039/058)
 parent_doc: docs/design/harness/L1-requirements/screen-requirements.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

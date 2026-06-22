@@ -1,7 +1,7 @@
 ---
 layer: L2
 sub_doc: wireframe
-status: placeholder  # Low-Fi は本材料化済 (PLAN-L2-04)。confirmed 昇格は G2 freeze (PO サインオフ、PLAN-L2-00 Step 4) 時。gate-confirm (IMP-079) 遵守。
+status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。Low-Fi 材料化 PLAN-L2-04。③ pair=self (L2↔L10)。
 default_policy: low-fi-in-harness
 high_fi_policy: case-by-case (harness 内保持 OR 外部依頼のいずれか、ケース別判断)
 pair_artifact: self  # wireframe mock 自体が L2⇔L10 の③ペア (L10 独立 doc 不要、IMP-039/058)。vmodel-lint は self を孤児扱いしない
