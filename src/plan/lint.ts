@@ -48,7 +48,8 @@ export interface PlanGovernanceViolation {
     | "requires_missing"
     | "requires_not_ready"
     | "parent_design_missing"
-    | "db_projection_backprop_missing";
+    | "db_projection_backprop_missing"
+    | "reverse_fullback_backprop_missing";
   detail?: string;
 }
 
@@ -233,6 +234,7 @@ const DB_PROJECTION_BACKPROP_REQUIRED_GENERATES = [
   "docs/design/harness/L6-function-design/function-spec.md",
   "docs/design/harness/L6-function-design/fr-unit-coverage.md",
 ];
+const REVERSE_FULLBACK_BACKPROP_ENFORCEMENT_DATE = "2026-06-22";
 
 function isProgressColorProjectionPlan(
   raw: Record<string, unknown>,
@@ -265,6 +267,29 @@ function hasReverseBackpropEvidence(
       normalizePlanRef(normalized).startsWith("PLAN-REVERSE-")
     );
   });
+}
+
+function isBackpropArtifact(path: string): boolean {
+  return (
+    path.startsWith("docs/design/") ||
+    path.startsWith("docs/governance/") ||
+    path.startsWith("docs/test-design/")
+  );
+}
+
+function reverseFullbackNeedsGeneratedBackprop(raw: Record<string, unknown>): boolean {
+  const kind = stringField(raw.kind);
+  const phase = stringField(raw.workflow_phase);
+  const reverseType = stringField(raw.confirmed_reverse_type);
+  const status = stringField(raw.status);
+  const updated = stringField(raw.updated) ?? stringField(raw.created) ?? "";
+  return (
+    kind === "reverse" &&
+    phase === "R4" &&
+    reverseType === "fullback" &&
+    (status === "confirmed" || status === "completed") &&
+    updated >= REVERSE_FULLBACK_BACKPROP_ENFORCEMENT_DATE
+  );
 }
 
 function schemaIssueSummary(issue: {
@@ -376,6 +401,14 @@ export function analyzePlanGovernance(
         ? (raw.dependencies as Record<string, unknown>)
         : {};
     const generatedPaths = generatedArtifactPaths(raw);
+    if (reverseFullbackNeedsGeneratedBackprop(raw) && !generatedPaths.some(isBackpropArtifact)) {
+      violations.push({
+        file: entry.file,
+        reason: "reverse_fullback_backprop_missing",
+        detail: "fullback R4 must generate docs/design, docs/governance, or docs/test-design",
+      });
+    }
+
     if (isProgressColorProjectionPlan(raw, entry.content, generatedPaths)) {
       const missing = DB_PROJECTION_BACKPROP_REQUIRED_GENERATES.filter(
         (path) => !generatedPaths.includes(path),

@@ -904,6 +904,11 @@ R4 outcome の `promotion_strategy` で PoC / 検証成果物の扱いを明示:
 - [ ] R1 phase の PLAN は §3.3 の R1 実施対象 `confirmed_reverse_type` のみ許容 (skip 対象は exit 1)
 - [ ] R4 完了 PLAN は `forward_routing` を必須 (§3.4 の 5 値: L1 / L3 / L4 / L5 / gap-only)
 - [ ] R4 完了 PLAN は `promotion_strategy` を必須 (§3.4 の 4 値)
+- [ ] `confirmed_reverse_type=fullback` かつ `workflow_phase=R4` の confirmed/completed PLAN は、`generates`
+      に `docs/design/` / `docs/governance/` / `docs/test-design/` のいずれかを含め、設計・要件・テスト設計へ
+      戻した機械証跡を持つ。2026-06-22 以降の新規/更新 PLAN は `plan-governance`
+      `reverse_fullback_backprop_missing` で fail-close。既存 legacy 欠落は監査表で debt 管理し、修正時に
+      generates 追加または reverse_type 再分類を行う。
 - [ ] `promotion_strategy=reuse-as-is` は trace / test / security 条件が揃わなければ exit 1
 - [ ] `promotion_strategy in [reuse-as-is, reuse-with-hardening]` でも feature PR で Forward gate を通さなければ main merge 不可
 - [ ] poc/* ブランチから main への直 PR は §6.4 で物理ブロック

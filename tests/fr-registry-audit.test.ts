@@ -16,15 +16,15 @@ describe("FR registry audit (機能一覧 漏れ監査)", () => {
   const docs = loadFrDocs();
   const result = analyzeFrRegistry(docs);
 
-  it("§1 機能一覧 table を 50 行構造化抽出 (P0:19 / P1:23 / P2:8、FR-L1-36/38/43 が P2 carry から昇格 PLAN-L7-53)", () => {
+  it("§1 機能一覧 table を 51 行構造化抽出 (P0:19 / P1:24 / P2:8、FR-L1-51 artifact progress 追加 PLAN-L7-56/REVERSE-56)", () => {
     const rows = parseFrRows(docs.l1Functional);
-    expect(rows.length).toBe(50);
-    expect(result.totals).toEqual({ registered: 50, p0: 19, p1: 23, p2: 8 });
+    expect(rows.length).toBe(51);
+    expect(result.totals).toEqual({ registered: 51, p0: 19, p1: 24, p2: 8 });
   });
 
-  it("header の件数確定宣言 (計 50 / P0 19 / P1 23 / P2 8) を抽出", () => {
+  it("header の件数確定宣言 (計 51 / P0 19 / P1 24 / P2 8) を抽出", () => {
     const declared = extractDeclaredCounts(docs.l1Functional);
-    expect(declared).toEqual({ total: 50, p0: 19, p1: 23, p2: 8 });
+    expect(declared).toEqual({ total: 51, p0: 19, p1: 24, p2: 8 });
   });
 
   it("carry/forward 宣言の欠番 = {} (空) を認識 (FR-L1-36/38/43 は登録済のため除外)", () => {

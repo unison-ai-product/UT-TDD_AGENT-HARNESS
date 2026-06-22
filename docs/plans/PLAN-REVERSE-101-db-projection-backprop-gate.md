@@ -20,6 +20,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-L7-101-db-projection-backprop-gate.md
     artifact_type: markdown_doc
+  - artifact_path: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
+    artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-101-db-projection-backprop-gate.md
   requires:
@@ -63,6 +65,10 @@ touch the DB schema/projection writer and introduce progress color semantics wit
 - L4 function design;
 - L5 physical-data semantics;
 - L6 function spec and FR/unit coverage.
+
+The follow-up R4 gate added on 2026-06-22 also requires fullback Reverse PLANs to name their
+actual design/governance/test-design backprop target in `generates`, preventing a PLAN from
+claiming fullback while only generating its own markdown record.
 
 ## DoD
 

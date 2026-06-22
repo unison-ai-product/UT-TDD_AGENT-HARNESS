@@ -75,6 +75,25 @@ function dbProgressPlanDoc(id: string, generatedPaths: string[]) {
   };
 }
 
+function reverseFullbackPlanDoc(
+  id: string,
+  generatedPaths: string[],
+  overrides: { updated?: string; status?: string } = {},
+) {
+  const generates =
+    generatedPaths.length === 0
+      ? "[]"
+      : `\n${generatedPaths
+          .map(
+            (artifactPath) => `  - artifact_path: ${artifactPath}\n    artifact_type: markdown_doc`,
+          )
+          .join("\n")}`;
+  return {
+    file: `docs/plans/${id}.md`,
+    content: `---\nplan_id: ${id}\ntitle: "${id}: reverse fullback fixture"\nkind: reverse\nlayer: cross\nworkflow_phase: R4\nconfirmed_reverse_type: fullback\ndrive: fullstack\nstatus: ${overrides.status ?? "confirmed"}\ncreated: 2026-06-22\nupdated: ${overrides.updated ?? "2026-06-22"}\nowner: fixture\nforward_routing: L5\npromotion_strategy: reuse-as-is\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ngenerates: ${generates}\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n`,
+  };
+}
+
 describe("plan schedule lint (IMP-081)", () => {
   it("U-PLANSCH-001: §工程表 section を抽出する", () => {
     expect(extractScheduleSection(compliant)).toContain("Step 1");
@@ -306,6 +325,43 @@ describe("plan schedule lint (IMP-081)", () => {
     const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
 
     expect(reasons).not.toContain("db_projection_backprop_missing");
+  });
+
+  it("U-PLANGOV-009: new R4 fullback requires generated design/governance/test-design backprop", () => {
+    const docs = [
+      reverseFullbackPlanDoc("PLAN-REVERSE-198-no-backprop", [
+        "docs/plans/PLAN-REVERSE-198-no-backprop.md",
+      ]),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("reverse_fullback_backprop_missing");
+  });
+
+  it("U-PLANGOV-010: new R4 fullback passes when generated backprop artifact is present", () => {
+    const docs = [
+      reverseFullbackPlanDoc("PLAN-REVERSE-198-with-backprop", [
+        "docs/plans/PLAN-REVERSE-198-with-backprop.md",
+        "docs/design/harness/L5-detailed-design/physical-data.md",
+      ]),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("reverse_fullback_backprop_missing");
+  });
+
+  it("U-PLANGOV-011: legacy R4 fullback debt remains observable but is not retroactively hard-failed", () => {
+    const docs = [
+      reverseFullbackPlanDoc("PLAN-REVERSE-198-legacy", [], {
+        updated: "2026-06-21",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("reverse_fullback_backprop_missing");
   });
 
   it("U-PLANSCH-011: active gate docs do not point to stale trace/stub commands", () => {
