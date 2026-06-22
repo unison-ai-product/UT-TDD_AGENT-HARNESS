@@ -102,17 +102,11 @@ handover 肥大の注入コントロール** を完遂。main 直 commit 2 本 (
 
 ---
 
----
+<!-- ut-tdd handover: 同日中間スタブエントリを累積抑制のため剪定 (git 履歴に保全) -->
 
 ---
 
----
-
-<!-- ut-tdd handover: 1 件の同日中間エントリを累積抑制のため剪定 (git 履歴に保全) -->
-
----
-
-# Session Handover — 2026-06-22
+# Session Handover — 2026-06-22 (L2 G2 freeze + screen DB projection)
 
 ## §1 PLAN サマリ
 
@@ -124,104 +118,52 @@ handover 肥大の注入コントロール** を完遂。main 直 commit 2 本 (
 
 ## §3 Next Action
 
-PO `/goal` 全数監査 (実装もれ / DB 異常 / DB 自動登録 / ルール整備不備) → 発見した
-**死蔵ルール (tested-green だが runtime 実行経路から audit 未呼出)** を fix。commit `b9463e7`
-push 済、CI harness-check (run 27932536333) = **success** を `gh run watch` で実機確認 (WATCH_EXIT=0)。
+本 session (Opus / PO `/goal`「L2はいったん閉じて。どうせ画面モックだろ？そして2は完遂させる。」) で
+**L2 G2 freeze + harness.db への screen projection (IMP-140 完遂)** を実施し、全成果を main へ push 済
+(`7c3c49b..a9a7a52` + 本 handover commit)。
 
-1. **監査結論**: 機械ゲートは全 green (typecheck / Biome / Vitest 849 / doctor EXIT=0) +
-   DB は自動登録 clean (orphan trace_edges 0、14 自動投影表 populated、rebuild 決定論) +
-   rule-drift OK。だが substance 監査 ([[feedback_coverage_not_substance]]) で「inert ルール」を発見。
-2. **fix (PLAN-L7-95, IMP-006)**: `src/lint/lint-wiring.ts` meta-gate = 全 `src/lint/*` は
-   `src/cli.ts` から到達可能 or `DEFERRED_LINTS` 理由付き登録のいずれか (fail-close、stale も violation)。
-   inert だった 4 audit (`doc-consistency` 完全 / `entity-coverage` 完全 / `fr-registry-audit` helper
-   再利用で audit inert / `improvement-backlog` 同) を doctor へ実配線 (live violation 0、blast radius 0)。
-   回帰二重化 = meta-gate (module 到達性) + doctor invocation fence (配線済 audit の実行継続を assert)。
-3. **review**: code-reviewer (sonnet, intra_runtime_subagent) が「comment / 文字列内 `from ...` を
-   IMPORT_SPEC が誤マッチ → 死蔵 module を偽 wired 化し得る」correctness 懸念を指摘 → `stripComments` +
-   `extractImportSpecs` を純関数化し comment 除去で remediate + 専用テスト。修正後も live 分類不変
-   (wired=52, deferred=1, 死蔵 0 = 偽 wired は元々無し)。
-4. **doc back-fill**: 要件 §G.10/§G.11/§G.12 に doctor 配線明示、gate-design §7 を IMP-033 配線部分の
-   partial discharge と注記、improvement-backlog IMP-006 を implemented 化。
+1. **L2 を G2 freeze で閉じた** (`6bf6a4e`): 「どうせ画面モック」の PO サインオフを `gate-design.md §2`
+   台帳に G2=✅ PASS で記録し、L2 4 sub-doc (screen-list/flow/ui-element/wireframe) を
+   placeholder→confirmed 化。verification [L0-L3] が 12/12 confirmed・孤児0、program-coverage park 0
+   に解消 (park マスキング解除)。
+2. **PM-06 設計書ビューア追加** (`efeafec`): 画面要求 SSoT に 15 画面目 (PM-06、URL=/project/:case/designs、
+   BR-01/BR-07/FR-L1-01/FR-L1-32) を追加。HM-01 機能一覧→画面要求 deep-link も追加 (PO Ask①「画面要求は
+   機能一覧からも出せ」)。
+3. **DB を完遂** (`2dd789b`、PLAN-L7-96 / IMP-140): screen と FR/BR→画面 trace が doc-only で harness.db
+   未 projection だった gap を実装で解消。`screens` + `screen_trace` を schema registry へ追加
+   (SCHEMA_VERSION 15→16、1-place 契約)、`projectScreens` を rebuild transaction に配線。実データ =
+   screens 15 行 / screen_trace 83 edges (fr52/br25/ux6) / 孤児0、**機能一覧→画面要求が DB クエリ可能**に。
+4. **自己検出した回帰を修正** (`54d3416`): PM-06 commit (efeafec) で doctor のみ回し full vitest を回さず、
+   `g1-trace.test.ts`/`doc-consistency.test.ts` のハードコード画面数 fixture (14) 更新を漏らし 3 fail。
+   14→15 に修正し 850/850 green。[[feedback_dont_tail_lint_ci_output]] の「push 前フル検証」を徹底すべきだった。
 
-## §4 carry (未了・先送り)
-
-- **IMP-033 汎用 cross-check rule engine 本体 + 5 lint の rule-type 吸収** = 未着手 (本 PLAN は
-  standalone 配線まで discharge、エンジン到来時に rule instance へ移行可能)。
-- **tool-adapter** (adapter-probe 純関数ライブラリ、`DEFERRED_LINTS` 登録) / **recordGuardrailDecision**
-  (L7-48、auth-gated owner=PO) = honest に tracked-deferred、死蔵ではない (meta-gate / L7-48 carry で追跡)。
-- 歴史的 oversized handover doc の retroactive 圧縮 = 不変 (前 entry §4)。
-
-## §5 未了 PO 判断
-
-- **PLAN-L7-48 `recordGuardrailDecision` 本番配線方針** (auth-gated, owner=PO) — 据え置き。
-- それ以外、本 session の成果物は全 commit + push 済 (`b9463e7`)、CI green 確認済。
-
-## §6 壊さない / 再発させない
-
-- **lint-wiring の `RUNTIME_ENTRYPOINTS` / `DEFERRED_LINTS` を緩めるな** (PLAN-L7-95)。実行ルートを
-  足すと死蔵を見逃す。DEFERRED は理由必須 + stale (到達可能) を fail-close (allowlist 片肺放置を防ぐ)。
-- **4 audit の doctor 配線を外すな**。外すと要件 §G.10/11/12 の「自動検証する」が再び嘘になる。
-  doctor invocation fence (`tests/doctor.test.ts`) が外しを検出する。
-- **lint-wiring の import 抽出は comment 除去必須** (reviewer 指摘)。コメントアウト import を偽 edge に
-  すると死蔵 module を偽 wired 化して meta-gate が無意味化する。
-- **PLAN 追加/status 変更後は `ut-tdd db rebuild`** (plan-registry-fingerprint stale 回避、
-  [[project_codex_branch_ci_verification]])。
-
----
-
----
-
-# Session Handover — 2026-06-22
-
-## §1 PLAN サマリ
-
-- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
-
-## §2 成果物 (commit / files)
-
-- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
-
-## §3 Next Action
-
-<!-- TODO(human): 順序付き次手 -->
+検証: typecheck (tsc) / Biome lint EXIT=0 / Vitest **850/850** / doctor **EXIT=0** (g1-trace screens=15・
+doc-consistency screens=15・db-projection-coverage OK)。pmo-sonnet (intra_runtime_subagent) review approve
+(PLAN-L7-96)。**push 済** (`a9a7a52` まで origin/main 反映、本 handover が後続 commit)。
 
 ## §4 carry (未了・先送り)
 
-<!-- TODO(human): carry -->
+- **src/web 画面表示 UI** (HM-04 DB 閲覧 / HM-01 機能一覧 / PM-06 設計書ビューア) = Phase B。本 session は
+  DB read model projection まで。`screens.implemented` の flip は src/web 実装後 (NFR-08 実装真実性ゆえ今は 0)。
+- **SI 標準成果物カタログ拡張** (帳票・バッチ・メール・コード値一覧の sub_doc typing) = 別議題
+  (PLAN-L2-00 §5、PO 未着手)。
+- 既存 carry (IMP-139 / PLAN-L7-48 `recordGuardrailDecision` 配線 / 残 draft) は不変
+  ([[feedback_verify_carry_status_against_code]] で都度照合)。
 
 ## §5 未了 PO 判断
 
-<!-- TODO(human): escalation -->
+- 本 session 成果は全 commit + push 済。残 PO 判断は前 entry から不変 (PLAN-L7-48 本番配線方針 / IMP-139)。
+- `screens.implemented` flip タイミング (= src/web Phase B 着手時) — 据え置き。
 
 ## §6 壊さない / 再発させない
 
-<!-- TODO(human): 壊さない注意 -->
-
----
-
-# Session Handover — 2026-06-22
-
-## §1 PLAN サマリ
-
-- (同日 first entry 参照 — 全 PLAN registry は本ファイル冒頭エントリ §1 に記載、本 session 固有の進捗は §3 へ)
-
-## §2 成果物 (commit / files)
-
-- (同日 first entry 参照 — 本 session の commit/file は §3 Next Action に記載)
-
-## §3 Next Action
-
-<!-- TODO(human): 順序付き次手 -->
-
-## §4 carry (未了・先送り)
-
-<!-- TODO(human): carry -->
-
-## §5 未了 PO 判断
-
-<!-- TODO(human): escalation -->
-
-## §6 壊さない / 再発させない
-
-<!-- TODO(human): 壊さない注意 -->
+- **screen-list §1 / screen-requirements §5.5 の表構造を崩すな** (PLAN-L7-96)。
+  `parseScreenListRows`/`parseScreenTraceRows` が cell 位置・heading 境界に依存。崩すと projection が
+  静かに 0 行化する (regression test `projection-writer.test` IMP-140 が検出)。
+- **画面数を変えたら full vitest を回す** (efeafec の回帰)。`g1-trace.test.ts:20` /
+  `doc-consistency.test.ts:34,50` にハードコード画面数 fixture がある。doctor は doc から動的計数するため
+  ここを素通りする ([[feedback_dont_tail_lint_ci_output]])。
+- **`SCHEMA_VERSION` を表追加なしで戻すな** (screens/screen_trace、PLAN-L7-44 master の 1-place 契約)。
+- **PLAN 追加/status 変更後は `ut-tdd db rebuild`** (plan-registry-fingerprint stale で doctor 赤化、
+  回帰でない、[[project_codex_branch_ci_verification]])。
 
