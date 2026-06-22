@@ -1245,7 +1245,7 @@ L5/L6 降下先: `docs/plans/PLAN-L5-08-harness-db-feedback.md`、`docs/design/h
 
 **完了判定**: 下位 L で発見した追加・起票が `requires_design_normalization` / `requires_requirement_backprop` / `requires_concept_policy` のまま未処理なら、元 PLAN を `completed` / `confirmed` と呼ばない。やむを得ず先行実装する場合は `add-design` / `add-impl` と `reverse/*` の pairing を明示し、未完了 carry ではなく back-prop 未了として handover に残す。
 
-**記録項目**: PLAN §7 機能要求更新、audit record、または `docs/improvement-backlog.md` は `backprop_decision`、`reverse_type`、`target_layer`、`upstream_docs`、`evidence_path`、`closure_status` を持つ。`ut-tdd doctor` / `plan-lint` は将来 IMP-117 で、下位 L 由来の追加起票がこの分類を持たない場合に hard-gate し、G7 / accept では fail-close へ昇格する。
+**記録項目**: PLAN §7 機能要求更新、audit record、または `docs/improvement-backlog.md` は `backprop_decision`、`reverse_type`、`target_layer`、`upstream_docs`、`evidence_path`、`closure_status` を持つ。`ut-tdd doctor` は `improvement-backlog` lint の `missingBackpropClassification` で、下位 L 由来の追加起票がこの分類を持たない場合に hard-gate する。G7 / accept では分類未記録を fail-close として扱う。
 
 **未承認 L7 着手の扱い (PLAN-RECOVERY-03)**: `src/**` 追加・変更など L7 実装相当の作業を、parent L6 design / L7 PLAN / TDD Red entry / pair artifact なしに開始した場合は `agent_runaway` 相当の Recovery 事象として扱う。封じ込めでは未承認 source 差分を残さず、Recovery で reopen point を確定した後、Reverse `fullback` で本節・backlog・必要な workflow rule へ戻す。active goal や継続作業を理由に、この back-prop を省略してはならない。
 

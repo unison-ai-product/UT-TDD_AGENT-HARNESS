@@ -68,4 +68,51 @@ describe("improvement backlog (作業ログ → 機能化 pipeline)", () => {
         result.byStatus.verified,
     );
   });
+
+  it("lower-layer Reverse backprop rows require machine-readable classification fields", () => {
+    const md = [
+      "## §1 backlog",
+      "| ID | 隕ｳ貂ｬ譌･ | 譁・ц | 荳榊ｙ繝ｻ謾ｹ蝟・| 閾ｪ蜍募喧蛟呵｣・| status | 邏蝉ｻ倥￠ |",
+      "|---|---|---|---|---|---|---|",
+      "| **IMP-201** | 2026-06-22 | A-123 lower-layer Reverse back-propagation | 下位 L で追加・改善起票を発見しても分類が無い。 | lint | observed | future lint |",
+    ].join("\n");
+
+    const r = analyzeImprovementBacklog(md);
+
+    expect(r.missingBackpropClassification).toEqual([
+      {
+        id: "IMP-201",
+        missing: [
+          "backprop_decision",
+          "reverse_type",
+          "target_layer",
+          "upstream_docs",
+          "evidence_path",
+          "closure_status",
+        ],
+      },
+    ]);
+  });
+
+  it("lower-layer Reverse backprop rows pass when all classification fields are present", () => {
+    const issue = [
+      "下位 L で追加・改善起票を発見。",
+      "**backprop_decision**=`requires_requirement_backprop`、",
+      "**reverse_type**=`fullback`、",
+      "**target_layer**=`requirements/process/backlog`、",
+      "**upstream_docs**=`requirements §6.8.8`、",
+      "**evidence_path**=`docs/plans/PLAN-X.md`、",
+      "**closure_status**=`routed_to_future_lint`。",
+    ].join("");
+    const md = [
+      "## §1 backlog",
+      "| ID | 隕ｳ貂ｬ譌･ | 譁・ц | 荳榊ｙ繝ｻ謾ｹ蝟・| 閾ｪ蜍募喧蛟呵｣・| status | 邏蝉ｻ倥￠ |",
+      "|---|---|---|---|---|---|---|",
+      `| **IMP-202** | 2026-06-22 | A-123 lower-layer Reverse back-propagation | ${issue} | lint | observed | future lint |`,
+    ].join("\n");
+
+    const r = analyzeImprovementBacklog(md);
+
+    expect(r.missingBackpropClassification).toEqual([]);
+  });
 });

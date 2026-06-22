@@ -1612,7 +1612,8 @@ export function checkFrRegistryAudit(repoRoot: string): { messages: string[]; ok
 
 /**
  * improvement-backlog lint を hard gate 検査 (PLAN-L7-95、要件 §1.10.G.12 の「構造健全性検証」配線)。
- * IMP 行の malformed/dup/invalid status・candidate/incomplete/unparseable を fail-close。
+ * IMP 行の malformed/dup/invalid status・candidate/incomplete/unparseable と
+ * lower-layer backprop 分類欠落を fail-close。
  */
 export function checkImprovementBacklog(repoRoot: string): { messages: string[]; ok: boolean } {
   try {
@@ -1623,18 +1624,19 @@ export function checkImprovementBacklog(repoRoot: string): { messages: string[];
       r.invalidStatus.length +
       r.invalidCandidate.length +
       r.incompleteRows.length +
-      r.unparseableRows.length;
+      r.unparseableRows.length +
+      r.missingBackpropClassification.length;
     if (bad === 0) {
       return {
         messages: [
-          `improvement-backlog — OK (backlog 書式健全, entries=${r.total}, open=${r.openCount}, 死蔵行 0)`,
+          `improvement-backlog — OK (backlog 書式健全, entries=${r.total}, open=${r.openCount}, 死蔵行 0, backprop分類欠落 0)`,
         ],
         ok: true,
       };
     }
     return {
       messages: [
-        `improvement-backlog — violation: malformed=${r.malformedIds.length}, dup=${r.duplicateIds.length}, invalidStatus=${r.invalidStatus.length}, invalidCandidate=${r.invalidCandidate.length}, incomplete=${r.incompleteRows.length}, unparseable=${r.unparseableRows.length}`,
+        `improvement-backlog — violation: malformed=${r.malformedIds.length}, dup=${r.duplicateIds.length}, invalidStatus=${r.invalidStatus.length}, invalidCandidate=${r.invalidCandidate.length}, incomplete=${r.incompleteRows.length}, unparseable=${r.unparseableRows.length}, missingBackpropClassification=${r.missingBackpropClassification.length}`,
       ],
       ok: false,
     };

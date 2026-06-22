@@ -84,6 +84,29 @@ export interface ImprovementBacklogResult {
    * 不在を違反として surface する (進捗注記は原 entry の status 更新で表現する)。
    */
   unparseableRows: string[];
+  missingBackpropClassification: { id: string; missing: string[] }[];
+}
+
+const BACKPROP_CLASSIFICATION_FIELDS = [
+  "backprop_decision",
+  "reverse_type",
+  "target_layer",
+  "upstream_docs",
+  "evidence_path",
+  "closure_status",
+] as const;
+
+function needsBackpropClassification(entry: BacklogEntry): boolean {
+  const text = `${entry.context}\n${entry.issue}\n${entry.link}`;
+  return /下位\s*L|lower-layer|back-?prop|backprop_decision|Reverse back-prop/i.test(text);
+}
+
+function missingBackpropFields(entry: BacklogEntry): string[] {
+  const text = `${entry.issue}\n${entry.link}`;
+  return BACKPROP_CLASSIFICATION_FIELDS.filter((field) => {
+    const pattern = new RegExp(`(?:\\*\\*)?${field}(?:\\*\\*)?\\s*=`);
+    return !pattern.test(text);
+  });
 }
 
 export function analyzeImprovementBacklog(md?: string): ImprovementBacklogResult {
@@ -112,6 +135,7 @@ export function analyzeImprovementBacklog(md?: string): ImprovementBacklogResult
   const invalidStatus: { id: string; status: string }[] = [];
   const invalidCandidate: { id: string; candidate: string }[] = [];
   const incompleteRows: string[] = [];
+  const missingBackpropClassification: { id: string; missing: string[] }[] = [];
 
   for (const e of entries) {
     if (!ID_REGEX.test(e.id)) malformedIds.push(e.id);
@@ -136,6 +160,11 @@ export function analyzeImprovementBacklog(md?: string): ImprovementBacklogResult
     if (e.cellCount < 7 || !e.date || !e.context || !e.issue || !e.link) {
       incompleteRows.push(e.id);
     }
+
+    if (needsBackpropClassification(e)) {
+      const missing = missingBackpropFields(e);
+      if (missing.length > 0) missingBackpropClassification.push({ id: e.id, missing });
+    }
   }
 
   const openCount = entries.length - byStatus.verified;
@@ -151,5 +180,6 @@ export function analyzeImprovementBacklog(md?: string): ImprovementBacklogResult
     invalidCandidate,
     incompleteRows,
     unparseableRows,
+    missingBackpropClassification,
   };
 }
