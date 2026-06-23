@@ -159,3 +159,32 @@ All modes use the coding-rule SSoT as a workflow artifact.
 - SSoT: `docs/governance/ddd-tdd-rules.md`
 - Mode-specific changes still inherit domain-boundary, invariant trace, Red-first evidence, oracle-strength, and integration GWT checks.
 - Quantitative checks and qualitative review are separate steps, but freeze-significant decisions require both.
+## TDD-STYLE-DRIVE-FIRING
+
+The drive models do not all use the same Red/Green shape, but several can be
+managed as TDD-style loops. The common rule is:
+
+- Red: a test, design, dependency, DB projection, or evidence gap is observed.
+- Yellow: a PLAN/target exists, but the regression/design/dependency fence is
+  not closed.
+- Green: the paired evidence IDs exist, required commands pass, relation impact
+  is closed, and review happens after Green evidence.
+
+| Target | Fit | Red trigger sources |
+| --- | --- | --- |
+| Forward design / `kind=design` | strong | `descent_obligation_missing`, `pair_artifact_missing`, `test_design_missing` |
+| Add-feature | strong | `feature_addition`, `scope_extension`, `acceptance_gap` |
+| Refactor | strong | `code_smell`, `structural`, `debt_degradation`, `artifact_progress_red` |
+| Reverse | strong | `drift`, `schema_contract_gap`, `as_is_test_design_missing` |
+| Retrofit | strong | `dependency_outdated`, `upgrade`, `config_drift`, stale `dependency_edges` |
+| Recovery / Incident | strong | `regression_dev`, `regression_prod`, `forced_stop`, failing `quality_signals` |
+| screen-design | strong | `screen_requirement_gap`, `wireframe_missing`, `screen_impl_pair_gap` |
+| frontend-design | strong | `a11y_regression`, `visual_regression`, `token_drift`, UX feedback |
+| Discovery / Scrum | partial | uncertainty or user feedback converted to hypothesis/increment verification |
+| Research | weak | decision evidence and ADR readiness, not a normal Red-Green loop |
+
+DB firing sources are `findings`, `quality_signals`, `feedback_events`,
+`graph_nodes`, `dependency_edges`, `impact_results`, and `artifact_progress`.
+They create workflow signals or PLAN inputs only; they do not directly rewrite
+authored PLAN/docs/source. The machine-readable contract is
+`classifyDriveTddFits` in `src/workflow/contracts.ts`.

@@ -1,79 +1,129 @@
-> **正本化済** (PLAN-REVERSE-01 で DISCOVERY-04 dogfood 実績から正本化、2026-06-04)。docs/process は forward/modes/gates の運用正本。規範変更は concept/requirements (上位正本) 先行 → 本 dir へ反映する。
-
-# Refactor 駆動モデル
-
-出典: concept v3.1 §2.5 (Refactor mode) / §2.6.1 (signal→mode routing) / requirements v1.2 §1.3 VALID_KINDS / §1.6 kind×drive matrix / §1.8 必須 role
-
+---
+canonical: true
+process_doc: mode
+mode: Refactor
+kind: refactor
+layer: L7
+status: confirmed
+updated: 2026-06-23
 ---
 
-## 1. 概要
+# Refactor Mode
 
-振る舞いを変えず内部構造を改善する mode。機能追加でもバグ修正でもない **純粋な技術的負債解消**。
+Refactor mode is the behaviour-invariant brush-up workflow for existing code.
+It removes structural debt without adding functional scope, changing public
+contracts, or changing persisted state semantics.
 
-| 項目 | 値 |
-|------|-----|
+Sources of truth:
+
+- concept v3.1 section 2.5 and 2.6
+- requirements v1.2 section 1.3, 1.6, 1.8, 6.8.9
+- FR-L1-25
+- `docs/skills/refactoring.md`
+- `src/workflow/contracts.ts#assertRefactorInvariant`
+
+## 1. Entry Contract
+
+| Field | Value |
+| --- | --- |
 | kind | `refactor` |
 | drive | `be` / `fe` / `fullstack` / `db` / `agent` |
 | layer | `L7` |
-| workflow_phase | **禁止** (phase なし) |
-| owner | `se` + `tl` |
-| 承認者 | — (人間サインオフ不要) |
-| 自動 routing signal | `debt_degradation` / `code_smell` / `structural` |
+| workflow_phase | forbidden |
+| owner roles | `se` + `tl` |
+| branch prefix | `refactor/*` |
+| signals | `debt_degradation` / `code_smell` / `structural` |
 
----
+Refactor is not a feature path. If the work adds a new observable function,
+changes a public CLI/API contract, changes `.ut-tdd/` state schema, changes
+`harness.db` schema, or changes expected user behaviour, stop Refactor and route
+to Add-feature, Retrofit, Troubleshoot, or Incident.
 
-## 2. phase / フロー構成
+## 2. TDD Brush-up Loop
 
-```
-保護網整備 → 小ステップ変更 → テスト緑確認 → commit → 反復
-```
+Refactor uses a TDD-like loop, but its Red is a structural smell or dependency
+risk, not a new functional requirement.
 
-| Step | 内容 | 成果物 |
-|------|------|--------|
-| 1. 保護網整備 | テストが無ければゴールデンマスターで現挙動を固定 | テストコード (④) |
-| 2. 小ステップ変更 | 一度に大きく変えず、責務分離・命名改善・重複排除を小刻みに | 実装差分 (②) |
-| 3. テスト緑確認 | 各ステップで `vitest run` / `ut-tdd gate G7` (既存テスト) を実行 | CI pass 記録 |
-| 4. commit | ステップごとに `refactor(scope): ...` メッセージで記録 | commit log |
-| 5. 反復 | 目標負債解消まで 1-4 を繰り返す | — |
+| State | Meaning | Required evidence |
+| --- | --- | --- |
+| Red | The target has unresolved structural debt, missing dependency check, failed regression, or behavior drift. | finding, graph impact row, failed test, or open feedback event |
+| Yellow | Refactor target is registered and protected by an identified regression fence, but the brush-up step is not complete. | PLAN plus changed artifact list and intended test IDs |
+| Green | Behaviour is unchanged and every changed artifact is covered by linked regression test IDs. | green command evidence, `test_ids`, relation impact closed, review after tests |
 
----
+The cycle is:
 
-## 3. exit 条件
+1. Register target: name the code smell, affected files, observable boundary,
+   and expected dependency impact.
+2. Establish regression fence: run or add characterization coverage before the
+   structural change. The green state must name the test IDs.
+3. Make one structural change: rename, extract, split, deduplicate, or remove
+   dead code in a small step.
+4. Verify: run targeted tests, typecheck/lint when relevant, and `ut-tdd doctor`.
+5. Review after green: qualitative review only happens after quantitative green
+   command evidence exists.
+6. Repeat or close: repeat from step 3 until the registered debt is closed.
 
-| 条件 | 検証方法 |
-|------|---------|
-| 振る舞い不変 | L8/L9 既存テスト全件緑維持 |
-| 負債解消 | PLAN 起票時に記述した対象 (code_smell / structural) の解消記録 |
-| 4 artifact trace 維持 | G7 directed edge (② ↔ ③ / ② ↔ ④) が欠落しないこと |
+## 3. Database-triggered Refactor
 
----
+Refactor can be fired from `harness.db`; it does not need to rely on a human
+remembering that cleanup is due.
 
-## 4. Forward 合流点
+Allowed trigger sources:
 
-- **L7 内部改善のみ** — L1 要求・L4 設計は不変。合流先の設計文書を書き換えない。
-- L8/L9 は保護網として**流用** (追加 test design 不要)。
-- 振る舞い変化が判明した場合は直ちに中断 → 機能追加なら Add-feature、開発中バグなら `troubleshoot`、本番障害なら Incident へ切替。
+- `findings`: structural lint, dead code, naming drift, dependency direction
+  violation, or stale generated artifact.
+- `quality_signals`: repeated warning/failure on the same artifact or oracle.
+- `feedback_events`: unresolved improvement/debt signal selected during
+  handover or takeover.
+- `graph_nodes` / `dependency_edges` / `impact_results`: relation-graph impact
+  showing missing sibling tests, missing design contract review, or stale
+  upstream/downstream dependency.
+- `artifact_progress`: red/yellow artifacts whose reason is structural debt,
+  missing dependency check, or missing linked test ID.
 
----
+The database is a projection, not an authoring source. A DB trigger creates a
+Refactor candidate or PLAN input; the PLAN document and source artifacts remain
+the canonical authored state.
 
-## 5. 必須 role / 承認者
+## 4. Dependency and Impact Rule
 
-| role | 責務 |
-|------|------|
-| `se` | 実装変更主体 (worker class) |
-| `tl` | リファクタ方針レビュー・G7 確認 (frontier-reviewer class) |
+Before Green, changed files must be checked through the relation graph when the
+projection is available.
 
-人間サインオフは不要。ただし L8/L9 が赤になった場合は tl が判断ゲートを持つ。
+Required impact closure:
 
----
+- Source change has sibling test or explicit characterization-test evidence.
+- Source change reviews the L6 behavioural contract when a
+  `behavioral-contract` edge exists.
+- Design/test-design changes update the paired artifact or record a no-change
+  reason.
+- DB table or projection changes are not Refactor unless state semantics remain
+  unchanged; otherwise route to Retrofit or Add-feature.
+- Any relation-graph finding that blocks behavior confidence keeps the target
+  Red.
 
-## 6. 他 mode との連鎖 / 注意
+## 5. Exit Conditions
 
-| 状況 | 遷移先 |
-|------|--------|
-| 機能を追加したくなった | Add-feature へ切替 |
-| バグを直したくなった | 開発中は `troubleshoot`、本番障害は Incident へ切替 |
-| 依存・基盤の更新が必要 | Retrofit へ切替 (Refactor より広い) |
-| `code_smell` signal が自動検出 | detection-routing 経由で本 mode に自動 routing (§2.6.1) |
+A Refactor PLAN can be closed only when all of these hold:
 
-注: kind=refactor の PLAN は `parent_design` 任意、`workflow_phase` フィールドを持ってはならない (validator fail-close)。
+- `assertRefactorInvariant` passes with unchanged before/after behaviour.
+- Regression evidence has at least one linked `test_id`.
+- Required green commands have `exit_code=0` and evidence paths.
+- Relation impact has no open action that affects the changed files.
+- Review evidence is recorded after the green commands.
+- No new functional scope, public contract, or persistence schema was added.
+- If module structure changed, L5/L6 design docs are updated or a concrete
+  no-backprop decision is recorded.
+
+## 6. Mode Switching
+
+| Observed change | Route |
+| --- | --- |
+| New behavior or new public surface | Add-feature |
+| Broken existing behavior during brush-up | Troubleshoot or Recovery |
+| Dependency/runtime upgrade | Retrofit |
+| Production regression | Incident |
+| Contract or requirements drift discovered | Reverse |
+
+Refactor is complete only when it returns to Forward/G7 with behavior invariant
+and test-ID-linked green evidence.

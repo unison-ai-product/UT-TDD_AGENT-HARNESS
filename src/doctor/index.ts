@@ -88,6 +88,7 @@ import {
   loadFrRoadmapCoverageDocs,
 } from "../lint/fr-roadmap-coverage";
 import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
+import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import {
   analyzeImplPlanTrace,
   implPlanTraceMessages,
@@ -169,7 +170,6 @@ import {
   loadReviewPlans,
   reviewEvidenceMessages,
 } from "../lint/review-evidence";
-import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import {
   analyzeRightArmGatePlanning,
   loadRightArmGatePlanningInput,
@@ -1157,7 +1157,7 @@ export function checkCodexWrapperParity(deps: DoctorDeps): { messages: string[];
   if (!/\?\s*\[\s*"exec"[\s\S]*"-"\s*\]/.test(adapter)) {
     violations.push("Codex adapter args must use fixed `exec -` stdin sentinel");
   }
-  if (!/stdin:\s*intent\.task/.test(adapter)) {
+  if (!/stdin:\s*(intent\.task|formatAdapterPrompt\(intent\.task,)/.test(adapter)) {
     violations.push("Codex/Claude adapter task text must be carried by stdin");
   }
   if (!/plan_id:\s*intent\.planId/.test(adapter)) {

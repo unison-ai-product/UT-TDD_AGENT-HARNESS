@@ -173,6 +173,42 @@ describe("team run validation", () => {
     expect(result.members[0].prompt).toContain("reasoning_effort: high");
   });
 
+  it("passes provider-neutral skill injection to every runtime adapter", () => {
+    const result = buildTeamRunPlan(
+      {
+        name: "speed-team",
+        strategy: "parallel",
+        max_parallel: 2,
+        members: [
+          { role: "se", engine: "codex-se", task: "implement slice A" },
+          { role: "tl", engine: "pmo-sonnet", task: "review slice A" },
+        ],
+      },
+      "hybrid",
+      {
+        contextInjection: {
+          required_paths: ["docs/skills/refactoring.md"],
+          optional_paths: ["docs/skills/review-checklist.yaml"],
+        },
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.members.map((member) => member.adapter?.context_injection)).toEqual([
+      {
+        required_paths: ["docs/skills/refactoring.md"],
+        optional_paths: ["docs/skills/review-checklist.yaml"],
+      },
+      {
+        required_paths: ["docs/skills/refactoring.md"],
+        optional_paths: ["docs/skills/review-checklist.yaml"],
+      },
+    ]);
+    expect(
+      result.members.every((member) => member.adapter?.stdin?.includes("refactoring.md")),
+    ).toBe(true);
+  });
+
   it("keeps dependent team members on the same flow but schedules them sequentially", () => {
     const result = buildTeamRunPlan(
       {

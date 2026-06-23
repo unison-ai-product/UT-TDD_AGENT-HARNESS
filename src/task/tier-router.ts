@@ -10,7 +10,11 @@
  *   - T0 (opus / gpt-5.5) は明示許可ゲート: 指名 role (tl/qa/uiux) + 明示トリガでのみ発火。
  *   - 主 provider (detectMode().currentRuntime) でクロス分岐し、Codex/GPT も Claude と対称。
  */
-import { type AdapterPlan, buildAdapterPlan } from "../runtime/adapter";
+import {
+  type AdapterContextInjection,
+  type AdapterPlan,
+  buildAdapterPlan,
+} from "../runtime/adapter";
 import type { ExecutionMode, RuntimeDetection } from "../runtime/detect";
 import { MODEL_IDS, type TaskDifficulty } from "../team/model-policy";
 import { type ClassifyTaskInput, classifyTask } from "./classify";
@@ -280,11 +284,17 @@ export function roster(): RosterBinding[] {
 export function routeToAdapterPlan(
   decision: RoutingDecision,
   task: string,
-  mode: ExecutionMode,
+  options: { mode: ExecutionMode; contextInjection?: AdapterContextInjection },
 ): AdapterPlan | null {
   if (decision.status !== "ready" || decision.model === null) return null;
   return buildAdapterPlan(
-    { provider: decision.provider, role: decision.role, task, model: decision.model },
-    mode,
+    {
+      provider: decision.provider,
+      role: decision.role,
+      task,
+      model: decision.model,
+      contextInjection: options.contextInjection,
+    },
+    options.mode,
   );
 }

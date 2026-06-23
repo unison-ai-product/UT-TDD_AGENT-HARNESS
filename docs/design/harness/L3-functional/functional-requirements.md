@@ -587,6 +587,21 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 - **When**: refactor PLAN 起票
 - **Then**: warn `Warning: test 保護網が薄い (coverage 60% 未満、refactor リスク高)` / 起票続行可 / next_action `先に test 補強 PLAN 起票推奨`
 
+#### AC-FR-25-04 (正常系: TDD brush-up green requires test IDs)
+- **Given**: kind=refactor PLAN が既存振る舞いを変えずに構造変更を完了した
+- **When**: `assertRefactorInvariant` を評価する
+- **Then**: before/after behavior が一致し、regression exit_code=0 で、少なくとも 1 件の regression `test_id` が紐づく場合のみ Green とする
+
+#### AC-FR-25-05 (DB trigger: relation graph / feedback 起点)
+- **Given**: `harness.db` の `findings` / `quality_signals` / `feedback_events` / `impact_results` / `artifact_progress` に structural debt、missing dependency check、missing linked test ID のいずれかが記録されている
+- **When**: Refactor 候補を抽出する
+- **Then**: `debt_degradation` / `code_smell` / `structural` signal として kind=refactor PLAN 入力を生成でき、source docs は直接書き換えない
+
+#### AC-FR-25-06 (異常系: dependency impact 未解消)
+- **Given**: refactor 対象ファイルに relation-graph の open action が残っている
+- **When**: PLAN を Green / completed 扱いにしようとする
+- **Then**: Red のまま維持し、required action (sibling test / L6 contract review / paired design update / DB rebuild check) を evidence として返す
+
 ---
 
 ### FR-26: Retrofit ワークフロー (workflow core、A-50、段階移行)
@@ -895,3 +910,38 @@ A-125 requirements back-propagation: MCP server profiles, external verification 
 ## A-126 BACKPROP NOTE
 
 A-126 requirements back-propagation: canonical document export for concept/planning, requirements, detailed design, PLAN, ADR, and test-design documents has been returned to L1 functional §7 and requirements §6.8.11. L5 physical-data §9.7 defines the DB projection tables and invariants. L6/L7 follow-up work must implement document structure parsing, export dataset generation, built-in CSV/Markdown rendering, optional XLSX/PPTX renderer readiness, and artifact stale detection as extensions of existing FR-L1-05/06/07/17/18/20/24/33/45/50, without allocating new FR IDs.
+## TDD-drive extension: 駆動モデル別 TDD 適性と DB 発火
+
+- **L1 upstream**: FR-L1-08 / FR-L1-25 / FR-L1-29 / FR-L1-30
+- **Input**: drive/mode, `findings`, `quality_signals`, `feedback_events`,
+  `graph_nodes`, `dependency_edges`, `impact_results`, `artifact_progress`
+- **Output**: TDD compatibility (`strong` / `partial` / `weak`), Red triggers,
+  Yellow state, Green requirements
+- **Behavior**: `classifyDriveTddFits` returns the TDD-style fit for every drive
+  model and design specialty. DB projection rows may fire workflow signals or
+  PLAN inputs, but DB remains a projection and must not directly edit authored
+  PLAN/docs/source.
+
+### AC-FR-TDD-01: strong targets
+
+- **Given**: mode = design / add-feature / refactor / reverse / retrofit /
+  recovery / incident / screen-design / frontend-design
+- **When**: `classifyDriveTddFits` evaluates the modes
+- **Then**: each returns `compatibility=strong` with Red trigger sources,
+  Yellow state, and Green requirements.
+
+### AC-FR-TDD-02: partial / weak targets
+
+- **Given**: mode = discovery / scrum / research
+- **When**: TDD compatibility is evaluated
+- **Then**: discovery/scrum return `partial`, research returns `weak`; they are
+  not treated as normal Red-Green-Refactor completion loops.
+
+### AC-FR-TDD-03: DB-triggered Red
+
+- **Given**: DB projection has structural debt, design gap, dependency impact,
+  a11y/VRT/token drift, regression, or artifact progress red/yellow
+- **When**: workflow signal generation runs
+- **Then**: the row can become a Red trigger for the matching drive/mode and a
+  PLAN input, while authored source remains unchanged until an explicit PLAN
+  updates it.

@@ -8,6 +8,7 @@ import {
   catalogExistingAssets,
   catalogSkills,
   classifyDrive,
+  classifyDriveTddFits,
   computeUtHistorySignals,
   decideDiscoveryS4,
   detectFrontendDrift,
@@ -295,9 +296,16 @@ describe("L7 workflow contract implementations", () => {
       assertRefactorInvariant({
         before: "same",
         after: "same",
-        regression: { exit_code: 0, evidence_path: "test.log" },
+        regression: { exit_code: 0, evidence_path: "test.log", test_ids: ["U-FR-L1-25"] },
       }).unchanged,
     ).toBe(true);
+    const refactorWithoutTestId = assertRefactorInvariant({
+      before: "same",
+      after: "same",
+      regression: { exit_code: 0, evidence_path: "test.log" },
+    });
+    expect(refactorWithoutTestId.ok).toBe(false);
+    expect(refactorWithoutTestId.findings.map((f) => f.code)).toContain("refactor-test-id-missing");
     expect(evaluateRetrofitMatrix({ migration: "m", config: "c", rollback: "r" }).readiness).toBe(
       "ready",
     );
@@ -326,6 +334,17 @@ describe("L7 workflow contract implementations", () => {
         ux: "u",
       }).complete,
     ).toBe(true);
+    const tddFits = classifyDriveTddFits({
+      modes: ["design", "add-feature", "refactor", "screen-design", "frontend-design"],
+    });
+    expect(tddFits.ok).toBe(true);
+    expect(tddFits.fits.every((fit) => fit.compatibility === "strong")).toBe(true);
+    expect(tddFits.fits.find((fit) => fit.mode === "design")?.red_triggers).toContain(
+      "descent_obligation_missing",
+    );
+    expect(
+      tddFits.fits.find((fit) => fit.mode === "frontend-design")?.green_requirements,
+    ).toContain("vrt");
     expect(
       validateFolderRules({
         path: "docs/plans/PLAN.md",

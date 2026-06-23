@@ -106,12 +106,13 @@ This table is the function-spec-side descent for rows in `fr-unit-coverage.md` w
 | FR-L1-19 | `emitFeedbackEvents` | emitFeedbackEvents(input: EmitFeedbackEventsInput, deps: EmitFeedbackEventsDeps) => EmitFeedbackEventsResult | normalized findings and quality signals are supplied. | repeated gaps, unresolved blockers, dependency stalls, and regressions become feedback events. | feedback events do not edit or approve PLANs. | U-FR-L1-19 |
 | FR-L1-22 | `detectFrontendDrift` | detectFrontendDrift(input: DetectFrontendDriftInput, deps: DetectFrontendDriftDeps) => DetectFrontendDriftResult | mock/token/a11y/visual/state evidence roots are supplied or explicitly absent. | returns deterministic drift signals with evidence paths. | absent optional roots are explicit, not silent pass. | U-FR-L1-22 |
 | FR-L1-23 | `routeScrumFullback` | routeScrumFullback(input: RouteScrumFullbackInput, deps: RouteScrumFullbackDeps) => RouteScrumFullbackResult | increment evidence and S4 decision are present. | returns Forward target(s) and required back-fill artifacts. | only confirmed increments can enter Forward. | U-FR-L1-23 |
-| FR-L1-25 | `assertRefactorInvariant` | assertRefactorInvariant(input: AssertRefactorInvariantInput, deps: AssertRefactorInvariantDeps) => AssertRefactorInvariantResult | before/after behavior evidence and regression results are present. | pass only when external behavior is unchanged and regression evidence is green. | refactor cannot introduce new functional scope. | U-FR-L1-25 |
+| FR-L1-25 | `assertRefactorInvariant` | assertRefactorInvariant(input: AssertRefactorInvariantInput, deps: AssertRefactorInvariantDeps) => AssertRefactorInvariantResult | before/after behavior evidence, regression results, and linked regression `test_ids` are present. | pass only when external behavior is unchanged, regression evidence is green, and at least one test ID is linked. | refactor cannot introduce new functional scope or close without test-ID-linked green evidence. | U-FR-L1-25 |
 | FR-L1-26 | `evaluateRetrofitMatrix` | evaluateRetrofitMatrix(input: EvaluateRetrofitMatrixInput, deps: EvaluateRetrofitMatrixDeps) => EvaluateRetrofitMatrixResult | migration/config/rollback fixtures are supplied. | returns readiness classification and blocking evidence. | staged migration cannot be ready without rollback evidence. | U-FR-L1-26 |
 | FR-L1-27 | `evaluateResearchDecision` | evaluateResearchDecision(input: EvaluateResearchDecisionInput, deps: EvaluateResearchDecisionDeps) => EvaluateResearchDecisionResult | research memo, source list, and ADR candidate are supplied. | returns decision-ready or blocked with missing evidence. | research output cannot bypass ADR or requirement trace. | U-FR-L1-27 |
 | FR-L1-28 | `mergeTwoStageAgentDesign` | mergeTwoStageAgentDesign(input: MergeTwoStageAgentDesignInput, deps: MergeTwoStageAgentDesignDeps) => MergeTwoStageAgentDesignResult | Phase 1/2 design artifacts and drive=agent handoff evidence are present. | returns merged design state or explicit gap list. | merged output preserves layer boundaries and cannot copy provider transcripts. | U-FR-L1-28 |
 | FR-L1-29 | `validateScreenDesignWorkflow` | validateScreenDesignWorkflow(input: ValidateScreenDesignWorkflowInput, deps: ValidateScreenDesignWorkflowDeps) => ValidateScreenDesignWorkflowResult | IA, screen list, flow, wireframe/mock, and componentization outputs are supplied. | pass only when screen design artifacts and pair traces are complete. | UI workflow cannot be marked complete from backend-only evidence. | U-FR-L1-29 |
 | FR-L1-30 | `validateFrontendDesignWorkflow` | validateFrontendDesignWorkflow(input: ValidateFrontendDesignWorkflowInput, deps: ValidateFrontendDesignWorkflowDeps) => ValidateFrontendDesignWorkflowResult | visual design, token SSoT, a11y, VRT, and UX evidence are supplied. | returns pass or missing artifact list for frontend polish gates. | accessibility and token evidence remain first-class, not advisory text. | U-FR-L1-30 |
+| FR-L1-08 / FR-L1-25 / FR-L1-29 / FR-L1-30 | `classifyDriveTddFits` | classifyDriveTddFits(input?: { modes?: string[] }, deps: ClassifyDriveTddFitsDeps) => ClassifyDriveTddFitsResult | drive/mode names are supplied or omitted for all. | returns TDD compatibility, Red trigger sources, Yellow state, and Green requirements for each drive model / design specialty. | classification is advisory/read-only and cannot mark a PLAN complete. | U-FR-L1-08 / U-FR-L1-25 / U-FR-L1-29 / U-FR-L1-30 |
 | FR-L1-32 | `validateFolderRules` | validateFolderRules(input: ValidateFolderRulesInput, deps: ValidateFolderRulesDeps) => ValidateFolderRulesResult | path registry and artifact kind are supplied. | returns violations for misplaced process docs/tests/state. | folder policy is checked without rewriting files. | U-FR-L1-32 |
 | FR-L1-33 | `catalogExistingAssets` | catalogExistingAssets(input: CatalogExistingAssetsInput, deps: CatalogExistingAssetsDeps) => CatalogExistingAssetsResult | approved asset roots are supplied. | classifies command/skill/detector/template/state/hook/doc/test assets by coverage status. | catalog stores metadata only; prompt bodies and secrets stay in source docs. | U-FR-L1-33 |
 | FR-L1-34 | `prioritizeCapabilityGaps` | prioritizeCapabilityGaps(input: PrioritizeCapabilityGapsInput, deps: PrioritizeCapabilityGapsDeps) => PrioritizeCapabilityGapsResult | asset catalog, workflow impact, and missing route/recover signals are supplied. | returns deterministic priority order with reason. | priority is advisory until converted into a PLAN. | U-FR-L1-34 |
@@ -170,6 +171,7 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `mergeTwoStageAgentDesign` | `MergeTwoStageAgentDesignInput { phase1; phase2; handoff } -> MergeTwoStageAgentDesignResult extends ContractResult { merged? }` | implemented in `src/workflow/contracts.ts`; preserve layer boundaries and redact provider transcript content |
 | `validateScreenDesignWorkflow` | `ValidateScreenDesignWorkflowInput { ia; screens; flow; wireframe; mock; components } -> ValidateScreenDesignWorkflowResult extends ContractResult { complete }` | implemented in `src/workflow/contracts.ts`; backend-only evidence cannot complete screen design |
 | `validateFrontendDesignWorkflow` | `ValidateFrontendDesignWorkflowInput { visual; tokens; a11y; vrt; ux } -> ValidateFrontendDesignWorkflowResult extends ContractResult { complete }` | implemented in `src/workflow/contracts.ts`; a11y/token/VRT are first-class evidence |
+| `classifyDriveTddFits` | `ClassifyDriveTddFitsInput { modes? } -> ClassifyDriveTddFitsResult extends ContractResult { fits[] }` | implemented in `src/workflow/contracts.ts`; uses DB/projected signal names as Red trigger vocabulary but does not mutate DB or PLANs |
 | `validateFolderRules` | `ValidateFolderRulesInput { path; artifact_kind; registry } -> ValidateFolderRulesResult extends ContractResult { violations[] }` | implemented in `src/workflow/contracts.ts`; check placement without rewriting files |
 | `catalogExistingAssets` | `CatalogExistingAssetsInput { roots: string[] } -> CatalogExistingAssetsResult extends ContractResult { assets: AssetCatalogEntry[] }` | implemented in `src/workflow/contracts.ts`; catalog metadata only, no prompt bodies/secrets |
 | `prioritizeCapabilityGaps` | `PrioritizeCapabilityGapsInput { assets; workflow_impact; missing_routes } -> PrioritizeCapabilityGapsResult { priorities[] }` | implemented in `src/workflow/contracts.ts`; priority is advisory until converted to PLAN |
@@ -627,3 +629,29 @@ FR-L1-12 (`suggestSkillInjection`) / FR-L1-47 (`recommendSkills`) の公開 CLI 
 - `skills→task` import は一方向 (dependency-drift cycles 0)。oracle: `tests/skill-recommend.test.ts`
   (recommendSkillsForText の flat-list + risk reason)。`workflowModeForKind`: reverse→Reverse / poc→Discovery /
   refactor→Refactor / troubleshoot→Recovery / それ以外→Forward。
+## 2026-06-23 dynamic skill injection materialization Addendum (PLAN-L7-135)
+
+FR-L1-12 / FR-L1-47 is not closed by recommendation rows alone. The runtime
+contract has two steps:
+
+- `buildSkillInjectionSet(db, recommendations, { generatedAt? })` returns
+  `SkillInjectionSet { plan_id, generated_at, entries[], required_paths[],
+  optional_paths[], missing_skill_ids[] }`. Entries contain `skill_id`,
+  `skill_path`, `tier` (`required|recommended|optional`), `inject_at`
+  (`before_work|on_demand`), `reason`, `rank`, and `score`.
+- `buildAdapterPlan(intent, mode)` accepts `contextInjection` and appends the
+  scoped paths to provider stdin under `UT-TDD context injection`. Codex and
+  Claude share the same adapter contract; argv remains fixed command flags and
+  never carries prompt bodies or skill bodies.
+
+CLI wiring:
+
+- `ut-tdd skill suggest --plan <id> --inject --json` emits the manifest without
+  writing DB rows unless `--record` is also present.
+- `ut-tdd codex|claude --plan <id> ...` resolves skill injection from
+  `harness.db` projection and passes it into the adapter plan.
+- `ut-tdd team run --plan <id> ...` passes the same injection to every runtime
+  member adapter, preserving worker/reviewer provider separation.
+- `ut-tdd task route --plan <path> --execute` extracts `plan_id` from the PLAN
+  file, resolves the same injection manifest, and passes it through
+  `routeToAdapterPlan(..., { contextInjection })` after cost-tier routing.

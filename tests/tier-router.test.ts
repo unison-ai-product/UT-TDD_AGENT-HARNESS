@@ -170,11 +170,20 @@ describe("U-TIER: cost-tiered provider router", () => {
       { role: "se", task: { text: "rename a field" } },
       det("codex-only", "codex"),
     );
-    const plan = routeToAdapterPlan(ready, "rename a field", "codex-only");
+    const plan = routeToAdapterPlan(ready, "rename a field", { mode: "codex-only" });
     expect(plan).not.toBeNull();
     expect(plan?.provider).toBe("codex");
     expect(plan?.command).toBe("codex");
     expect(plan?.args).toContain("gpt-5.3-codex-spark");
+    const injected = routeToAdapterPlan(ready, "rename a field", {
+      mode: "codex-only",
+      contextInjection: {
+        required_paths: ["docs/skills/refactoring.md"],
+        optional_paths: [],
+      },
+    });
+    expect(injected?.context_injection?.required_paths).toEqual(["docs/skills/refactoring.md"]);
+    expect(injected?.stdin).toContain("docs/skills/refactoring.md");
 
     // blocked (T0 未承認) は実行不可 → null (fail-close)。
     const blocked = route(
@@ -182,7 +191,9 @@ describe("U-TIER: cost-tiered provider router", () => {
       det("claude-only", "claude"),
     );
     expect(blocked.status).toBe("blocked-needs-approval");
-    expect(routeToAdapterPlan(blocked, "design the api boundary", "claude-only")).toBeNull();
+    expect(
+      routeToAdapterPlan(blocked, "design the api boundary", { mode: "claude-only" }),
+    ).toBeNull();
   });
 
   it("U-TIER-012: 連携状態(hybrid)は実装と検証を明示的に別 provider にする", () => {

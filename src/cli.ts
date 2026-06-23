@@ -5,7 +5,14 @@
  * status / doctor / plan lint / vmodel lint / gate / runtime adapter を集約する。
  */
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
@@ -44,12 +51,23 @@ import {
   verificationRecommendationMermaid,
 } from "./lint/verification-profile";
 import { lintPlanWithGate } from "./plan/lint";
-import { type AdapterProvider, buildAdapterPlan, buildProviderInvocation } from "./runtime/adapter";
+import {
+  type AdapterContextInjection,
+  type AdapterProvider,
+  buildAdapterPlan,
+  buildProviderInvocation,
+} from "./runtime/adapter";
 import {
   nodeAgentSlotsDeps,
   releaseOldestGuardSlot,
   sweepStaleGuardSlots,
 } from "./runtime/agent-slots";
+import {
+  attemptsFromSessionEvents,
+  evaluateAttemptEscalation,
+  renderEscalationSignals,
+  selectPrecedingSessionFile,
+} from "./runtime/attempt-escalation";
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect";
 import {
   type ClassifyResult,
@@ -74,13 +92,16 @@ import {
 import {
   dispatch,
   nodeDeps,
+  parseSessionEvents,
   resolveActivePlan,
   type SessionHookInput,
+  safeName,
 } from "./runtime/session-log";
 import { findReference } from "./search/index";
 import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
 import {
   bucketRecommendations,
+  buildSkillInjectionSet,
   recommendSkillsForPlan,
   recommendSkillsForText,
   recordSkillRecommendations,
@@ -182,6 +203,38 @@ function resolveTaskText(opts: { task?: string; taskFile?: string }): string | n
   return opts.task ?? null;
 }
 
+function resolveSkillContextInjection(
+  planId: string | undefined,
+): AdapterContextInjection | undefined {
+  if (!planId) return undefined;
+  const repoRoot = process.cwd();
+  const db = openHarnessDb(":memory:", { repoRoot });
+  try {
+    rebuildHarnessDb({ repoRoot, db });
+    const recommendations = recommendSkillsForPlan(db, planId);
+    const injection = buildSkillInjectionSet(db, recommendations);
+    if (injection.required_paths.length === 0 && injection.optional_paths.length === 0) {
+      return undefined;
+    }
+    return {
+      required_paths: injection.required_paths,
+      optional_paths: injection.optional_paths,
+    };
+  } finally {
+    db.close();
+  }
+}
+
+function planIdFromPath(path: string | undefined): string | undefined {
+  if (!path) return undefined;
+  try {
+    const raw = readFileSync(path, "utf8");
+    return raw.match(/^plan_id:\s*([^\r\n]+)/m)?.[1]?.trim();
+  } catch {
+    return undefined;
+  }
+}
+
 function readHookInput(defaultEvent: string, sessionId?: string): SessionHookInput {
   const raw = process.stdin.isTTY ? "" : readStdin();
   const normalized = raw.replace(/^\uFEFF/, "").trim();
@@ -219,6 +272,32 @@ function runSessionStartSideEffects(
     // fail-open: lifecycle maintenance must not block the runtime.
   }
   surfaceTakeoverFeedbackToStdout(repoRoot);
+  surfaceAttemptEscalationToStdout(repoRoot, input.session_id);
+}
+
+/**
+ * 引き継ぎ (SessionStart) 時に **直前 session** の連続失敗ループ (Iron Law escalation) を surface
+ * する (PLAN-RECOVERY-05 item 2、Q2=b)。harness.db には書かず、直前 session の jsonl ログを都度
+ * 再導出する (core rebuild の入力境界を広げない)。現セッションを除いた最新 1 ファイルのみを読むため
+ * 古い失敗は再浮上しない。独立した fail-open: ログ不在 / 破損で runtime を止めない。
+ */
+function surfaceAttemptEscalationToStdout(repoRoot: string, currentSessionId?: string): void {
+  try {
+    const dir = join(repoRoot, ".ut-tdd", "logs", "session");
+    if (!existsSync(dir)) return;
+    const files = readdirSync(dir)
+      .filter((name) => name.endsWith(".jsonl"))
+      .map((name) => ({ name, mtimeMs: statSync(join(dir, name)).mtimeMs }));
+    const currentName = currentSessionId ? `${safeName(currentSessionId)}.jsonl` : undefined;
+    const preceding = selectPrecedingSessionFile(files, currentName);
+    if (!preceding) return;
+    const events = parseSessionEvents(readFileSync(join(dir, preceding), "utf8"));
+    const signals = evaluateAttemptEscalation(attemptsFromSessionEvents(events));
+    const block = renderEscalationSignals(signals);
+    if (block) process.stdout.write(block);
+  } catch {
+    // fail-open: escalation surface は best-effort。
+  }
 }
 
 /**
@@ -1012,6 +1091,7 @@ skill
   .option("--text <task>", "free-text task (classify → context; mutually exclusive with --plan)")
   .option("--record", "write recommendations to harness.db (--plan only)")
   .option("--buckets", "group ranked rows into required/recommended/optional (additive view)")
+  .option("--inject", "emit provider context injection manifest (skill paths only)")
   .option("--json", "JSON output")
   .action(
     (opts: {
@@ -1019,6 +1099,7 @@ skill
       text?: string;
       record?: boolean;
       buckets?: boolean;
+      inject?: boolean;
       json?: boolean;
     }) => {
       // A-138 ITEM-2: --plan / --text のどちらか一方が必須 (相互排他、flat ranked list は不変)。
@@ -1045,6 +1126,22 @@ skill
           ? recommendSkillsForPlan(db, opts.plan)
           : recommendSkillsForText(db, opts.text ?? "");
         if (opts.record) recordSkillRecommendations(db, rows);
+        if (opts.inject) {
+          const injection = buildSkillInjectionSet(db, rows);
+          if (opts.json) process.stdout.write(`${JSON.stringify(injection, null, 2)}\n`);
+          else {
+            process.stdout.write(`${injection.plan_id} skill injection\n`);
+            for (const entry of injection.entries) {
+              process.stdout.write(
+                `  ${entry.tier} ${entry.inject_at} ${entry.skill_id} -> ${entry.skill_path} reason=${entry.reason}\n`,
+              );
+            }
+            for (const skillId of injection.missing_skill_ids) {
+              process.stdout.write(`  missing ${skillId}\n`);
+            }
+          }
+          return;
+        }
         // A-138 ITEM-2 PO 残課題: --buckets で required/recommended/optional に再編成 (additive、flat は既定)。
         if (opts.buckets) {
           const buckets = bucketRecommendations(rows);
@@ -1585,6 +1682,7 @@ function runtimeCommand(provider: AdapterProvider): Command {
           return;
         }
         const mode = detectMode().mode;
+        const contextInjection = resolveSkillContextInjection(opts.plan);
         const plan = buildAdapterPlan(
           {
             provider,
@@ -1592,6 +1690,7 @@ function runtimeCommand(provider: AdapterProvider): Command {
             task,
             planId: opts.plan,
             execute: Boolean(opts.execute),
+            contextInjection,
           },
           mode,
         );
@@ -1851,7 +1950,12 @@ task
           auth: { explicit: Boolean(opts.allowFrontier) },
         },
       );
-      const adapterPlan = opts.execute ? routeToAdapterPlan(decision, text, detection.mode) : null;
+      const adapterPlan = opts.execute
+        ? routeToAdapterPlan(decision, text, {
+            mode: detection.mode,
+            contextInjection: resolveSkillContextInjection(planIdFromPath(opts.plan)),
+          })
+        : null;
       if (opts.json) {
         process.stdout.write(`${JSON.stringify({ decision, adapterPlan }, null, 2)}\n`);
         return;
@@ -1968,6 +2072,7 @@ team
           execute: Boolean(opts.execute),
           planId: opts.plan,
           placements,
+          contextInjection: resolveSkillContextInjection(opts.plan),
         });
         if (!opts.execute) {
           if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

@@ -13,6 +13,12 @@ export interface AdapterIntent {
   model?: string;
   effort?: string;
   execute?: boolean;
+  contextInjection?: AdapterContextInjection;
+}
+
+export interface AdapterContextInjection {
+  required_paths: string[];
+  optional_paths: string[];
 }
 
 export interface AdapterPlan {
@@ -31,6 +37,7 @@ export interface AdapterPlan {
   plan_id?: string;
   model?: string;
   effort?: string;
+  context_injection?: AdapterContextInjection;
   messages: string[];
 }
 
@@ -268,7 +275,7 @@ export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): Ad
     available,
     command: isCodex ? "codex" : "claude",
     args,
-    stdin: intent.task,
+    stdin: formatAdapterPrompt(intent.task, intent.contextInjection),
     ...(intent.provider === "claude" && intent.effort
       ? { env: { CLAUDE_CODE_EFFORT_LEVEL: intent.effort } }
       : {}),
@@ -276,8 +283,22 @@ export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): Ad
     plan_id: intent.planId,
     model: intent.model,
     effort: intent.effort,
+    context_injection: intent.contextInjection,
     messages: available
       ? [intent.execute ? "adapter execution allowed" : "adapter dry-run plan"]
       : [`${intent.provider} is not available in ${mode} mode`],
   };
+}
+
+function formatAdapterPrompt(task: string, injection?: AdapterContextInjection): string {
+  const required = injection?.required_paths ?? [];
+  const optional = injection?.optional_paths ?? [];
+  if (required.length === 0 && optional.length === 0) return task;
+  return [
+    task,
+    "",
+    "UT-TDD context injection:",
+    ...required.map((path) => `- required skill: ${path}`),
+    ...optional.map((path) => `- optional skill: ${path}`),
+  ].join("\n");
 }

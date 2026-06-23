@@ -406,6 +406,8 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
       (L7→Reverse と Reverse→L7 の双方向 pairing)。片方向のみの場合は `backfill-pairing` の
       `reverseLinkMissing` で fail-close する。
 - [ ] **`kind` が `refactor`/`retrofit`/`troubleshoot` (conditional)** は契約/挙動変更時に Reverse 要 (doctor note、人間判断)。`impl`/`design`/`add-design`/`poc`/`reverse`/`recovery` は back-fill 不要。
+- [ ] **`kind=refactor` の Green 条件** は before/after behavior 一致、regression exit_code=0、linked regression `test_id` 1 件以上、relation-graph impact closure、review after green を満たすこと。`harness.db` の `findings` / `quality_signals` / `feedback_events` / `impact_results` / `artifact_progress` は Refactor 発火元として扱えるが、DB は projection であり PLAN/doc/source の正本を直接置換しない。
+- [ ] **TDD型駆動モデル分類**: Forward design / Add-feature / Refactor / Reverse / Retrofit / Recovery / Incident / screen-design / frontend-design は TDD型 strong、Discovery / Scrum は hypothesis/increment 検証として partial、Research は decision evidence 型として weak とする。Red 発火点は `findings` / `quality_signals` / `feedback_events` / `graph_nodes` / `dependency_edges` / `impact_results` / `artifact_progress` の projection から生成できるが、発火結果は PLAN 入力または workflow signal であり、DB が authored source を直接更新してはならない。
 - [ ] 既存 conditional back-fill debt の allowlist は
       `docs/governance/conditional-backfill-decision-audit-2026-06-22.md` の Legacy Debt 表と完全一致する。
       片側だけに存在する場合は `backfill-pairing` の `legacyAuditGaps` で fail-close する。
@@ -1770,6 +1772,14 @@ JSON 出力:
 | `task classify` | `fast-checker` / rule-based | `L` / `XL` / confidence < 0.7 → `frontier-reviewer` review |
 | `task estimate` | rule-based + `fast-checker` | risk_factor ≥ 1.6 or production impact → `frontier-reviewer` review |
 | `skill suggest` | `fast-checker` / rule-based | missing required skill or vendor_candidate → `tl` review |
+
+> **Dynamic skill injection materialization (PLAN-L7-135, 2026-06-23)**:
+> `ut-tdd skill suggest --inject --json` MUST return a provider-neutral manifest
+> containing skill paths/reasons only. `ut-tdd codex --plan ...`, `ut-tdd
+> claude --plan ...`, `ut-tdd team run --plan ...`, and `ut-tdd task route
+> --plan ... --execute` MUST materialize that manifest into provider stdin, not
+> argv, so Claude and Codex receive identical scoped context without loading all
+> `docs/skills/*` bodies.
 
 ## 7.3 vmodel_validator I/O 仕様 (R-I7 fix で exit code 3 段階明記)
 

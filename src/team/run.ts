@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
-import { type AdapterPlan, type AdapterProvider, buildAdapterPlan } from "../runtime/adapter";
+import {
+  type AdapterContextInjection,
+  type AdapterPlan,
+  type AdapterProvider,
+  buildAdapterPlan,
+} from "../runtime/adapter";
 import {
   type AgentSlotsDeps,
   fireSlot,
@@ -248,7 +253,12 @@ export function validateTeamRun(
 export function buildTeamRunPlan(
   team: TeamDefinition,
   mode: ExecutionMode,
-  input: { execute?: boolean; planId?: string; placements?: (MemberPlacement | null)[] } = {},
+  input: {
+    execute?: boolean;
+    planId?: string;
+    placements?: (MemberPlacement | null)[];
+    contextInjection?: AdapterContextInjection;
+  } = {},
 ): TeamRunPlan {
   const validation = validateTeamRun(team, mode, input.placements);
   const forceSequential =
@@ -282,6 +292,7 @@ export function buildTeamRunPlan(
               model: modelSelection.model,
               effort: modelSelection.reasoning_effort,
               execute: input.execute,
+              contextInjection: input.contextInjection,
             },
             mode,
           )

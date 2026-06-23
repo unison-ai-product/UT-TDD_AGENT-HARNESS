@@ -51,6 +51,27 @@ export interface SkillBuckets {
 }
 
 export const SKILL_BUCKET_THRESHOLDS = { required: 0.8, recommended: 0.5 } as const;
+export type SkillInjectionTier = keyof SkillBuckets;
+export type SkillInjectionTiming = "before_work" | "on_demand";
+
+export interface SkillInjectionEntry {
+  skill_id: string;
+  skill_path: string;
+  tier: SkillInjectionTier;
+  inject_at: SkillInjectionTiming;
+  reason: string;
+  rank: number;
+  score: number;
+}
+
+export interface SkillInjectionSet {
+  plan_id: string;
+  generated_at: string;
+  entries: SkillInjectionEntry[];
+  required_paths: string[];
+  optional_paths: string[];
+  missing_skill_ids: string[];
+}
 
 export function bucketRecommendations(rows: SkillRecommendation[]): SkillBuckets {
   const buckets: SkillBuckets = { required: [], recommended: [], optional: [] };
@@ -60,6 +81,60 @@ export function bucketRecommendations(rows: SkillRecommendation[]): SkillBuckets
     else buckets.optional.push(row);
   }
   return buckets;
+}
+
+function skillAssetPath(db: HarnessDb, skillId: string): string | undefined {
+  const row = db
+    .prepare("SELECT path FROM automation_assets WHERE asset_type = ? AND asset_id = ?")
+    .get("skill", skillId) as { path?: string } | undefined;
+  return row?.path ? String(row.path) : undefined;
+}
+
+export function buildSkillInjectionSet(
+  db: HarnessDb,
+  recommendations: SkillRecommendation[],
+  options: { generatedAt?: string } = {},
+): SkillInjectionSet {
+  const buckets = bucketRecommendations(recommendations);
+  const entries: SkillInjectionEntry[] = [];
+  const missingSkillIds: string[] = [];
+  const generatedAt = options.generatedAt ?? nowIso();
+  const planId = recommendations[0]?.plan_id ?? "";
+
+  for (const tier of ["required", "recommended", "optional"] as const) {
+    for (const recommendation of buckets[tier]) {
+      const skillPath = skillAssetPath(db, recommendation.skill_id);
+      if (!skillPath) {
+        missingSkillIds.push(recommendation.skill_id);
+        continue;
+      }
+      entries.push({
+        skill_id: recommendation.skill_id,
+        skill_path: skillPath,
+        tier,
+        inject_at: tier === "optional" ? "on_demand" : "before_work",
+        reason: recommendation.reason,
+        rank: recommendation.rank,
+        score: recommendation.score,
+      });
+    }
+  }
+
+  const requiredPaths = entries
+    .filter((entry) => entry.inject_at === "before_work")
+    .map((entry) => entry.skill_path);
+  const optionalPaths = entries
+    .filter((entry) => entry.inject_at === "on_demand")
+    .map((entry) => entry.skill_path);
+
+  return {
+    plan_id: planId,
+    generated_at: generatedAt,
+    entries,
+    required_paths: requiredPaths,
+    optional_paths: optionalPaths,
+    missing_skill_ids: missingSkillIds,
+  };
 }
 
 export interface SkillInvocation {

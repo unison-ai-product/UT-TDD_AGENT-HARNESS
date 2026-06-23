@@ -87,6 +87,47 @@ describe("L7 CLI surface closure", () => {
     expect(JSON.parse(run.stdout)).toEqual([]);
   }, 15_000);
 
+  it("exposes skill injection as a provider-neutral JSON manifest", () => {
+    const run = runCli([
+      "skill",
+      "suggest",
+      "--text",
+      "refactor regression test",
+      "--inject",
+      "--json",
+    ]);
+    const payload = JSON.parse(run.stdout);
+
+    expect(run.status).toBe(0);
+    expect(payload).toMatchObject({
+      plan_id: "text:refactor-regression-test",
+      missing_skill_ids: [],
+    });
+    expect(payload.entries.length).toBeGreaterThan(0);
+    expect(payload.entries.every((entry: { skill_path: string }) => entry.skill_path)).toBe(true);
+    expect(payload.required_paths.length).toBeGreaterThan(0);
+  }, 20_000);
+
+  it("passes plan skill injection through task route adapter plans", () => {
+    const run = runCli([
+      "task",
+      "route",
+      "--role",
+      "se",
+      "--plan",
+      join(repoRoot, "docs", "plans", "PLAN-L7-135-dynamic-skill-injection-materialization.md"),
+      "--mode",
+      "codex-only",
+      "--execute",
+      "--json",
+    ]);
+    const payload = JSON.parse(run.stdout);
+
+    expect(run.status).toBe(0);
+    expect(payload.adapterPlan.context_injection.required_paths.length).toBeGreaterThan(0);
+    expect(payload.adapterPlan.stdin).toContain("UT-TDD context injection:");
+  }, 20_000);
+
   it("exposes builder catalog as a JSON command surface", () => {
     const run = runCli(["builder", "catalog", "--json"]);
     const payload = JSON.parse(run.stdout);

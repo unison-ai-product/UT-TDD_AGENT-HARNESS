@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bucketRecommendations,
+  buildSkillInjectionSet,
   inferSkillInvocations,
   recommendSkillsForPlan,
   recommendSkillsForText,
@@ -299,6 +300,85 @@ describe("skill recommendation telemetry", () => {
     expect(buckets.required.map((r) => r.skill_id)).toEqual(["hi", "edge-req"]);
     expect(buckets.recommended.map((r) => r.skill_id)).toEqual(["mid", "edge-rec"]);
     expect(buckets.optional.map((r) => r.skill_id)).toEqual(["low"]);
+  });
+
+  it("buildSkillInjectionSet: provider context manifest returns scoped skill paths", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      seedSkill(db, {
+        asset_id: "skill:must-load",
+        trigger: "required skill",
+        capability: "quality review checklist",
+      });
+      seedSkill(db, {
+        asset_id: "skill:on-demand",
+        trigger: "optional skill",
+        capability: "supporting notes",
+        applies_layers: "",
+        applies_drive_models: "",
+      });
+      const recommendations = [
+        {
+          skill_recommendation_id: "rec:must-load",
+          session_id: "",
+          plan_id: "PLAN-L7-99-inject",
+          skill_id: "skill:must-load",
+          rank: 1,
+          score: 0.9,
+          reason: "layer=L7; drive_model=Forward",
+          recommended_at: "2026-06-23T00:00:00.000Z",
+        },
+        {
+          skill_recommendation_id: "rec:on-demand",
+          session_id: "",
+          plan_id: "PLAN-L7-99-inject",
+          skill_id: "skill:on-demand",
+          rank: 2,
+          score: 0.3,
+          reason: "layer=L7; drive_model=Forward",
+          recommended_at: "2026-06-23T00:00:00.000Z",
+        },
+        {
+          skill_recommendation_id: "rec:missing",
+          session_id: "",
+          plan_id: "PLAN-L7-99-inject",
+          skill_id: "skill:missing",
+          rank: 3,
+          score: 0.9,
+          reason: "missing catalog row",
+          recommended_at: "2026-06-23T00:00:00.000Z",
+        },
+      ];
+
+      const injection = buildSkillInjectionSet(db, recommendations, {
+        generatedAt: "2026-06-23T00:01:00.000Z",
+      });
+
+      expect(injection).toMatchObject({
+        plan_id: "PLAN-L7-99-inject",
+        generated_at: "2026-06-23T00:01:00.000Z",
+        required_paths: ["docs/skills/must-load.yaml"],
+        optional_paths: ["docs/skills/on-demand.yaml"],
+        missing_skill_ids: ["skill:missing"],
+      });
+      expect(injection.entries).toEqual([
+        expect.objectContaining({
+          skill_id: "skill:must-load",
+          tier: "required",
+          inject_at: "before_work",
+          skill_path: "docs/skills/must-load.yaml",
+        }),
+        expect.objectContaining({
+          skill_id: "skill:on-demand",
+          tier: "optional",
+          inject_at: "on_demand",
+          skill_path: "docs/skills/on-demand.yaml",
+        }),
+      ]);
+    } finally {
+      db.close();
+    }
   });
 
   it("records recommendations but does not auto-register invocations before review evidence exists", () => {

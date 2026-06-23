@@ -54,6 +54,31 @@ describe("runtime adapter plan", () => {
     expect(plan.messages[0]).toContain("not available");
   });
 
+  it("injects scoped skill paths into provider stdin without moving task text to argv", () => {
+    const plan = buildAdapterPlan(
+      {
+        provider: "codex",
+        role: "se",
+        task: "implement",
+        contextInjection: {
+          required_paths: ["docs/skills/refactoring.md"],
+          optional_paths: ["docs/skills/review-checklist.yaml"],
+        },
+      },
+      "hybrid",
+    );
+
+    expect(plan.stdin).toContain("implement");
+    expect(plan.stdin).toContain("UT-TDD context injection:");
+    expect(plan.stdin).toContain("- required skill: docs/skills/refactoring.md");
+    expect(plan.stdin).toContain("- optional skill: docs/skills/review-checklist.yaml");
+    expect(plan.context_injection).toEqual({
+      required_paths: ["docs/skills/refactoring.md"],
+      optional_paths: ["docs/skills/review-checklist.yaml"],
+    });
+    expect(plan.args).not.toContain("docs/skills/refactoring.md");
+  });
+
   it("builds claude command plan with Claude Code print-mode stdin", () => {
     const plan = buildAdapterPlan(
       {
