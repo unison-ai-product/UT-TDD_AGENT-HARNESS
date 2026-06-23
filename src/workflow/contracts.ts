@@ -326,6 +326,7 @@ export interface RouteEvalResult extends ContractResult {
   suggest_command: string;
   recommended_command: RecommendedCommandV1 | null;
   approval: RouteApprovalResult;
+  escalation_boundaries: RouteEscalationBoundary[];
   exit_code: 0 | 1 | 2;
 }
 
@@ -366,6 +367,11 @@ export interface RouteConfigViolation {
   evidence: string;
 }
 
+export interface RouteEscalationBoundary {
+  term: string;
+  evidence: string;
+}
+
 const ROUTE_CONFIG_FORBIDDEN_PATTERNS: {
   code: RouteConfigViolation["code"];
   pattern: RegExp;
@@ -377,6 +383,25 @@ const ROUTE_CONFIG_FORBIDDEN_PATTERNS: {
     pattern: /(?:[A-Za-z]:\\Users\\[^\\\s"']+|\/Users\/[^/\s"']+|~\/)/,
   },
 ];
+
+const ROUTE_ESCALATION_PATTERNS: { term: string; pattern: RegExp }[] = [
+  "authentication",
+  "authorization",
+  "payment",
+  "billing",
+  "credential",
+  "secret",
+  "pii",
+  "license",
+  "production",
+  "destructive",
+  "migration",
+  "schema",
+  "external api",
+].map((term) => ({
+  term,
+  pattern: new RegExp(`\\b${term}s?\\b`, "i"),
+}));
 
 export function validateRouteConfigText(input: {
   path: string;
@@ -392,6 +417,13 @@ export function validateRouteConfigText(input: {
   return violations;
 }
 
+export function detectRouteEscalationBoundaries(text: string): RouteEscalationBoundary[] {
+  return ROUTE_ESCALATION_PATTERNS.flatMap(({ term, pattern }) => {
+    const match = text.match(pattern);
+    return match ? [{ term, evidence: match[0] ?? term }] : [];
+  });
+}
+
 function routeCondition(input: { mode: string; signal: string; drift_type?: string }): string {
   const signal = input.signal.toLowerCase();
   if (
@@ -404,18 +436,26 @@ function routeCondition(input: { mode: string; signal: string; drift_type?: stri
   return input.mode;
 }
 
-function resolveApproval(
-  route: { mode: string; requiresApproval: boolean },
-  input: { signal: string; drift_type?: string },
-  policy?: RouteApprovalPolicy,
-): RouteApprovalResult {
-  const condition = routeCondition({
-    mode: route.mode,
-    signal: input.signal,
-    drift_type: input.drift_type,
-  });
+function resolveApproval(params: {
+  route: { mode: string; requiresApproval: boolean };
+  input: { signal: string; drift_type?: string };
+  policy?: RouteApprovalPolicy;
+  escalationBoundaries?: RouteEscalationBoundary[];
+}): RouteApprovalResult {
+  const { input, policy, route } = params;
+  const escalationBoundaries = params.escalationBoundaries ?? [];
+  const condition =
+    escalationBoundaries.length > 0
+      ? "escalation"
+      : routeCondition({
+          mode: route.mode,
+          signal: input.signal,
+          drift_type: input.drift_type,
+        });
   const required =
-    route.requiresApproval || (route.mode === "retrofit" && condition === "config_drift");
+    route.requiresApproval ||
+    escalationBoundaries.length > 0 ||
+    (route.mode === "retrofit" && condition === "config_drift");
   if (!required) {
     return {
       required: false,
@@ -435,7 +475,7 @@ function resolveApproval(
     };
   }
   const rule = policy.rules.find(
-    (r) => r.mode === route.mode && (!r.condition || r.condition === condition),
+    (r) => (r.mode === route.mode || r.mode === "*") && (!r.condition || r.condition === condition),
   );
   if (!rule) {
     return {
@@ -448,7 +488,11 @@ function resolveApproval(
   }
   const approved = new Set(
     (policy.approvals ?? [])
-      .filter((a) => a.mode === route.mode && (!a.condition || a.condition === rule.condition))
+      .filter(
+        (a) =>
+          (a.mode === route.mode || a.mode === "*") &&
+          (!a.condition || a.condition === rule.condition),
+      )
       .map((a) => a.approver),
   );
   const missing = rule.required_approvers.filter((approver) => !approved.has(approver));
@@ -584,10 +628,12 @@ export function evaluateRouteCommand(input: {
         approved_by: [],
         missing_approvers: [],
       },
+      escalation_boundaries: [],
       exit_code: 1,
     };
   }
   const normalized = input.signal.trim().toLowerCase();
+  const escalationBoundaries = detectRouteEscalationBoundaries(input.signal);
   const routeMap = [...(input.route_map ?? []), ...ROUTE_SIGNAL_MAP];
   const route = routeMap.find((entry) => entry.tokens.some((token) => normalized.includes(token)));
   if (!route) {
@@ -608,10 +654,16 @@ export function evaluateRouteCommand(input: {
         approved_by: [],
         missing_approvers: [],
       },
+      escalation_boundaries: escalationBoundaries,
       exit_code: 2,
     };
   }
-  const approval = resolveApproval(route, input, input.approval_policy);
+  const approval = resolveApproval({
+    route,
+    input,
+    policy: input.approval_policy,
+    escalationBoundaries,
+  });
   const recommendedCandidate = {
     schema_version: "v1",
     command: route.command,
@@ -644,6 +696,7 @@ export function evaluateRouteCommand(input: {
       suggest_command: route.command,
       recommended_command: null,
       approval,
+      escalation_boundaries: escalationBoundaries,
       exit_code: 1,
     };
   }
@@ -663,6 +716,7 @@ export function evaluateRouteCommand(input: {
         : route.command,
     recommended_command: recommendedParsed.data,
     approval,
+    escalation_boundaries: escalationBoundaries,
     exit_code: approvalFinding ? 1 : 0,
   };
 }

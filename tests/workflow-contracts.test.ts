@@ -209,6 +209,30 @@ describe("L7 workflow contract implementations", () => {
     });
     expect(routeConfigBlocked.exit_code).toBe(1);
     expect(routeConfigBlocked.recommended_command).toBeNull();
+    const escalationBlocked = evaluateRouteCommand({
+      signal: "feature_addition payment support",
+    });
+    expect(escalationBlocked.exit_code).toBe(1);
+    expect(escalationBlocked.mode).toBe("add-feature");
+    expect(escalationBlocked.escalation_boundaries.map((b) => b.term)).toContain("payment");
+    expect(escalationBlocked.approval.status).toBe("policy_missing");
+    expect(escalationBlocked.recommended_command?.safety.requires_human_approval).toBe(true);
+    const escalationApproved = evaluateRouteCommand({
+      signal: "feature_addition payment support",
+      approval_policy: {
+        rules: [{ mode: "*", condition: "escalation", required_approvers: ["po"] }],
+        approvals: [
+          {
+            mode: "*",
+            condition: "escalation",
+            approver: "po",
+            approved_at: "2026-06-23T00:00:00.000Z",
+          },
+        ],
+      },
+    });
+    expect(escalationApproved.exit_code).toBe(0);
+    expect(escalationApproved.approval.status).toBe("approved");
     expect(
       recordCrossCuttingEvent({
         type: "drift",
