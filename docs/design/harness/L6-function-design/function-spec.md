@@ -61,6 +61,17 @@ buckets without changing the stored severity:
 taxonomy. `ut-tdd feedback list --json` remains the raw audit path for consumers
 that need individual queue rows.
 
+### 2026-06-23 Read-only Quality / Branch Audit Addendum
+
+Hardcode/security/debt detection and large branch cleanup are surfaced as
+read-only audits first. They do not mutate source files, Git branches, remotes,
+or harness state.
+
+| Function | Signature | pre | post / oracle |
+|---|---|---|---|
+| `runQualityAudit` | `(repoRoot, opts) => QualityAuditResult` | repo root is readable; archive/migration/runtime-state paths are excluded by default | returns `gate` findings for secret-like or dangerous execution risks, `actionable` findings for hardcoded path/endpoint/model/provider and legacy runtime references, and `telemetry` findings for TODO/FIXME markers; text output is summarized and JSON remains raw enough for tooling |
+| `loadBranchAudit` | `(repoRoot, opts) => BranchAuditResult` | git local refs are readable | classifies local branches as `keep`, `delete-candidate`, or `review` using current/protected/gone/merged/stale evidence; it never deletes or rewrites branches |
+
 ## 2026-06-09 MCP Profile Config / Safety Addendum (A-125 / PLAN-L6-32)
 
 This addendum lowers requirements §6.8.10 and the A-125 research memo into L6 function contracts for MCP profile catalog hardening. It does not authorize profile execution by itself; it defines the pure checks and generated-config rules that a later L7 implementation must satisfy.

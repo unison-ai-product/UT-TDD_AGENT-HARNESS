@@ -18,6 +18,8 @@ import { join } from "node:path";
 import { Command } from "commander";
 import { parse as parseYaml } from "yaml";
 import { catalogAutomationAssets } from "./assets/catalog";
+import { loadBranchAudit, renderBranchAudit } from "./audit/branches";
+import { renderQualityAudit, runQualityAudit } from "./audit/quality";
 import { runDoctor } from "./doctor";
 import { computeSkillMetrics, emitFeedbackEvents } from "./feedback/engine";
 import {
@@ -2179,6 +2181,55 @@ team
       }
     },
   );
+
+const audit = program.command("audit").description("read-only repository audits");
+
+audit
+  .command("quality")
+  .description("detect hardcoded values, security risks, and technical debt markers")
+  .option("--json", "JSON output")
+  .option("--include-docs", "include non-archive docs in the scan")
+  .option("--include-tests", "include tests in the scan")
+  .option("--limit <n>", "maximum findings in text output", (value) => Number.parseInt(value, 10))
+  .action(
+    (opts: { json?: boolean; includeDocs?: boolean; includeTests?: boolean; limit?: number }) => {
+      const result = runQualityAudit(process.cwd(), {
+        includeDocs: Boolean(opts.includeDocs),
+        includeTests: Boolean(opts.includeTests),
+        limit: Number.isFinite(opts.limit) ? opts.limit : undefined,
+      });
+      if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else process.stdout.write(renderQualityAudit(result));
+      process.exitCode = result.ok ? 0 : 1;
+    },
+  );
+
+const branch = program.command("branch").description("read-only branch maintenance helpers");
+
+branch
+  .command("audit")
+  .description("classify local branches before manual cleanup")
+  .option("--json", "JSON output")
+  .option("--stale-days <n>", "age threshold for stale review candidates", (value) =>
+    Number.parseInt(value, 10),
+  )
+  .option("--limit <n>", "maximum rows in text output", (value) => Number.parseInt(value, 10))
+  .action((opts: { json?: boolean; staleDays?: number; limit?: number }) => {
+    try {
+      const result = loadBranchAudit(process.cwd(), {
+        staleDays: Number.isFinite(opts.staleDays) ? opts.staleDays : undefined,
+      });
+      if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else {
+        process.stdout.write(
+          renderBranchAudit(result, Number.isFinite(opts.limit) ? opts.limit : undefined),
+        );
+      }
+    } catch (error) {
+      process.stderr.write(`branch audit failed: ${String(error)}\n`);
+      process.exitCode = 1;
+    }
+  });
 
 const feedback = program
   .command("feedback")

@@ -111,6 +111,8 @@ external-if.md (what/形状) の **how = adapter 詳細契約**を確定する (
 | `ut-tdd find <query>` | Search PLAN/artifact/finding/skill/model/session references through `search_index` and exact ID tables. | Ranked rows: `{subject_type, subject_id, path, reason, evidence_path}`. |
 | `ut-tdd metrics skill` | Read skill recommendation/invocation projections and compute firing/acceptance rates. | Aggregates by layer/drive/plan; no transcript body. |
 | `ut-tdd feedback list` | List feedback events generated from repeated findings and quality signals. | Text output groups open rows into `gate` / `actionable` / telemetry summaries; `--json` returns raw open rows with next_action references. |
+| `ut-tdd audit quality` | Read-only scan for hardcoded values, security risks, and technical debt markers. | Text/JSON summary grouped into `gate` / `actionable` / `telemetry`; default excludes archive, migration, and test fixtures unless explicitly requested. |
+| `ut-tdd branch audit` | Read-only local branch cleanup inventory. | Classifies branches as keep, delete-candidate, or review using current/protected/gone/merged/stale evidence; never deletes branches. |
 | `ut-tdd automation readiness` | Query workflow readiness from `workflow_runs`, gate/doctor projections, and open findings. | Ready/blocked/human-required rows with blocking evidence paths. |
 | `ut-tdd guardrail status` | Query guardrail decisions for agent-guard, review evidence, escalation, and human signoff boundaries. | Decisions by plan/session with mode, policy, and evidence path; no provider transcript body. |
 | `ut-tdd asset catalog` | Query skill/roster/command docs catalog and drift status. | Asset rows with path, asset_type, trigger/capability summary, drift status, and indexed_at. |

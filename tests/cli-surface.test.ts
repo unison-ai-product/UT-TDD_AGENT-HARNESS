@@ -202,6 +202,26 @@ describe("L7 CLI surface closure", () => {
     }
   });
 
+  it("exposes quality audit as a JSON command surface", () => {
+    const run = runCli(["audit", "quality", "--json"]);
+    const payload = JSON.parse(run.stdout);
+
+    expect(run.status).toBe(0);
+    expect(payload).toHaveProperty("byBucket");
+    expect(payload.byBucket).toHaveProperty("gate");
+    expect(payload).toHaveProperty("byCode");
+  }, 20_000);
+
+  it("exposes branch audit as a read-only JSON command surface", () => {
+    const run = runCli(["branch", "audit", "--json"]);
+    const payload = JSON.parse(run.stdout);
+
+    expect(run.status).toBe(0);
+    expect(payload).toHaveProperty("byStatus");
+    expect(payload.byStatus).toHaveProperty("delete-candidate");
+    expect(Array.isArray(payload.rows)).toBe(true);
+  }, 20_000);
+
   it("exposes team run as a shared Claude/Codex dry-run launch plan", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-team-"));
     try {
