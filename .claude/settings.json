@@ -12,6 +12,18 @@
             "blockOnFailure": true
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts\"",
+            "timeout": 5,
+            "statusMessage": "work guard: block edits to foreign uncommitted files unless explicitly bypassed",
+            "blockOnFailure": true
+          }
+        ]
       }
     ],
     "SessionStart": [

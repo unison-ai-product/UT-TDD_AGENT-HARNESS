@@ -23,6 +23,7 @@ Active hooks in `.claude/settings.json` must call package-local UT-TDD commands
 only. Do not enable hooks that depend on personal legacy runtime paths.
 
 - `PreToolUse(Agent)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"`
+- `PreToolUse(Edit|Write|MultiEdit)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts"`
 - `SessionStart`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start`
 - `PostToolUse(Edit|Write|MultiEdit|Bash)`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use`
 - `Stop`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session summary`
@@ -136,6 +137,10 @@ as read-only material.
 - Escalate before changing authentication, authorization, payments, PII,
   licenses, production infrastructure, destructive operations, or external API
   assumptions.
+- `PreToolUse(Edit|Write|MultiEdit)` blocks edits to uncommitted files not
+  touched by the current Claude session. This prevents one runtime from
+  overwriting the other runtime's in-flight work. Override only with
+  `UT_TDD_ALLOW_FOREIGN_EDIT=1` and record the reason in the session.
 - Do not treat `legacy local state/` as active runtime state.
 - Do not write secrets, PII, or credentials into docs, examples, or audit
   evidence.

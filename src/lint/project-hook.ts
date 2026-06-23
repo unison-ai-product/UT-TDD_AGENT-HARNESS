@@ -53,6 +53,12 @@ const REQUIRED = [
     commandParts: [".claude/hooks/agent-guard.ts"],
     blockOnFailure: true,
   },
+  {
+    event: "PreToolUse",
+    matcher: "Edit|Write|MultiEdit",
+    commandParts: [".claude/hooks/work-guard.ts"],
+    blockOnFailure: true,
+  },
   { event: "SessionStart", commandParts: ["src/cli.ts", "session start"] },
   {
     event: "PostToolUse",

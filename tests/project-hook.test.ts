@@ -45,6 +45,15 @@ describe("project-hook lint", () => {
                   },
                 ],
               },
+              {
+                matcher: "Edit|Write|MultiEdit",
+                hooks: [
+                  {
+                    command: 'bun "$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts"',
+                    blockOnFailure: true,
+                  },
+                ],
+              },
             ],
             SessionStart: [
               {
