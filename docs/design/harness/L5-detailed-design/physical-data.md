@@ -273,7 +273,7 @@ Phase 2 close review found that the DB design can already project workflow, guar
 | table | primary key | required columns | purpose |
 |---|---|---|---|
 | `test_cases` | `test_case_id` | `test_file`, `test_name`, `oracle_id`, `plan_id`, `fr_id`, `artifact_id`, `kind`, `first_seen_at`, `last_seen_at` | Make each UT oracle queryable by PLAN/FR/artifact. |
-| `test_runs` | `test_run_id` | `session_id`, `plan_id`, `command`, `runner`, `runtime`, `os`, `shell`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `green_definition_id` | Record one executed quantitative test command, especially Bun/vitest/doctor/lint runs. |
+| `test_runs` | `test_run_id` | `session_id`, `plan_id`, `command`, `runner`, `runtime`, `os`, `shell`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `output_digest`, `green_definition_id` | Record one executed quantitative test command, especially Bun/vitest/doctor/lint runs. `review_evidence.green_commands[]` is the frontmatter source for PLAN-local green command projection. |
 | `test_results` | `test_result_id` | `test_run_id`, `test_case_id`, `status`, `duration_ms`, `failure_digest`, `started_at`, `completed_at` | Track pass/fail/skip/todo by case and run. |
 | `test_artifact_edges` | `edge_id` | `test_case_id`, `artifact_id`, `edge_kind`, `plan_id`, `source_path` | Join test evidence back to V-model trace without overloading `trace_edges`. |
 | `test_flake_events` | `flake_event_id` | `test_case_id`, `window`, `pass_count`, `fail_count`, `flake_score`, `computed_at`, `evidence_path` | Surface unstable tests and duration regressions as quality signals. |
@@ -284,6 +284,7 @@ Required UT-derived metrics:
 - `ut_plan_green_rate = count(test_runs where plan_id=X and exit_code=0) / count(test_runs where plan_id=X)`.
 - `ut_flake_score` is computed from alternating pass/fail history and stored in `test_flake_events`; non-zero score creates a `quality_signals` row.
 - `green_definition_compliance = every test_runs.green_definition_id resolves and every required command in that definition has exit_code=0`.
+- `review_green_command_compliance = every 2026-06-23-or-later confirmed/completed review_evidence entry has at least one projected test_runs row with exit_code=0, evidence_path, and output_digest`.
 
 Implementation constraints:
 

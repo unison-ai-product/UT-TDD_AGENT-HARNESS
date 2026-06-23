@@ -30,7 +30,7 @@ plan: docs/plans/PLAN-L6-14-test-before-review.md
 - **Postcondition**: `testBeforeReviewViolations: {plan_id, reason}[]`。**status=confirmed/completed の review_evidence を持つ全 entry (kind/駆動モデル 非依存)** について:
   - `tests_green_at` 欠落 → violation (`missing_tests_green_at`)。
   - `tests_green_at > reviewed_at` → violation (`review_before_test`、ISO 日付辞書順比較)。
-- **Invariant**: review_evidence を持つ全 confirmed PLAN (全駆動モデル) で `tests_green_at ≤ reviewed_at`。`ok = missing==0 && crossReviewViolations==0 && testBeforeReviewViolations==0`。
+- **Invariant**: review_evidence を持つ全 confirmed PLAN (全駆動モデル) で `tests_green_at ≤ reviewed_at`。2026-06-23 以降に更新された confirmed/completed の review_evidence は `green_commands[]` を持ち、各 command が exit 0 / evidence path / output digest を持つ。`ok = missing==0 && crossReviewViolations==0 && testBeforeReviewViolations==0 && greenCommandViolations==0`。
 - draft (未確定) は対象外。
 
 ## §4 doctor 配線
@@ -50,18 +50,18 @@ plan: docs/plans/PLAN-L6-14-test-before-review.md
 ## §7 carry
 
 - 段階導入: warn-first 不採用 (実 repo 38 entry を同 feature で back-fill 済 → 即 presence hard)。以後 review 証跡を足すとき tests_green_at 必須。
-- 「green の定義」(どの定量検証セットが green か = vitest 全回帰 / doctor exit 0 / 該当 lint) の厳密 schema 化は **A-122 / IMP-108** で Phase 2 pre-close carry として起票済み。現状は時刻の前後関係のみ機械検査、green 内容は人手記録。
+- 「green の定義」(どの定量検証セットが green か = vitest 全回帰 / doctor exit 0 / 該当 lint) の最小 schema 化は **A-122 / IMP-108** として着地済み。2026-06-23 以降に更新された confirmed/completed の `review_evidence` は `green_commands[]` を持たないと doctor が fail-close する。`green_definition_id` による profile 解決と DB projection は後続 carry。
 
 ## §8 GreenDefinition addendum (A-122 / IMP-108)
 
-`tests_green_at <= reviewed_at` は定量検証が定性レビューより前に実行されたことだけを保証する。Phase 4 DB projection と Phase 3 workflow automation では、review evidence に次の `green_definition_id` を追加し、どの定量 profile が green だったかを機械再現できるようにする。
+`tests_green_at <= reviewed_at` は定量検証が定性レビューより前に実行されたことだけを保証する。IMP-108 では最小着地として `review_evidence[].green_commands[]` を追加し、どの command が green だったかを plan frontmatter から機械検査する。Phase 4 DB projection と Phase 3 workflow automation では、review evidence に次の `green_definition_id` を追加し、どの定量 profile が green だったかをより厳密に再現できるようにする。
 
 ```ts
 type GreenCommandKind =
+  | "unit_test"
+  | "integration_test"
   | "typecheck"
   | "lint"
-  | "unit_test"
-  | "targeted_test"
   | "doctor"
   | "vmodel_lint"
   | "smoke";
@@ -72,8 +72,7 @@ type GreenCommandEvidence = {
   runner: "bun" | "powershell" | "bash" | "ci";
   scope: "full" | "targeted" | "changed-files" | "gate";
   exit_code: 0;
-  started_at: string;
-  completed_at: string;
+  completed_at?: string;
   evidence_path: string;
   output_digest: string;
 };
@@ -91,5 +90,6 @@ DbC:
 
 - Precondition: `profile` is chosen from changed artifact kinds and Test Rules; Bun/TypeScript core changes require at least `typecheck`, `lint`, and relevant `unit_test`.
 - Postcondition: `computed_green_at` is the max `completed_at` of all required commands, and every required command has `exit_code=0`.
-- Invariant: a `review_evidence` entry may be `confirmed` only when `green_definition_id` resolves and `computed_green_at <= reviewed_at`.
+- Current invariant: a 2026-06-23-or-later confirmed/completed `review_evidence` entry must have at least one `green_commands[]` entry with allowed kind/runner/scope, `exit_code=0`, evidence path, and `sha256:` output digest.
+- Future invariant: a `review_evidence` entry may be `confirmed` only when `green_definition_id` resolves and `computed_green_at <= reviewed_at`.
 - Projection: `GreenCommandEvidence` maps to `test_runs` / `quality_signals` in `physical-data.md` §9.4. Missing evidence becomes a finding rather than a warning.

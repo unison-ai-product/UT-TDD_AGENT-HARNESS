@@ -36,8 +36,20 @@ export interface ReviewEntry {
   reviewed_at?: string;
   /** 定量検証 (vitest/doctor/lint) green 時刻。tests_green_at ≤ reviewed_at が不変条件 (IMP-077)。 */
   tests_green_at?: string;
+  green_commands?: GreenCommandEvidence[];
   worker_model?: string;
   reviewer_model?: string;
+}
+
+export interface GreenCommandEvidence {
+  kind: string;
+  command: string;
+  runner: string;
+  scope: string;
+  exit_code: number | null;
+  evidence_path: string;
+  output_digest: string;
+  completed_at?: string;
 }
 
 export interface ParsedReviewPlan {
@@ -45,6 +57,7 @@ export interface ParsedReviewPlan {
   plan_id: string;
   kind: string;
   status: string;
+  updated: string;
   /** frontmatter に review_evidence の entry が 1 件以上あるか。 */
   hasEvidence: boolean;
   /**
@@ -62,9 +75,23 @@ export interface ReviewEvidenceResult {
   crossReviewViolations: { plan_id: string; reason: string }[];
   /** 定量テスト→定性レビュー順序違反 (tests_green_at 欠落 or > reviewed_at、全駆動モデル普遍、IMP-077)。 */
   testBeforeReviewViolations: { plan_id: string; reason: string }[];
+  greenCommandViolations: { plan_id: string; reason: string }[];
   staleApprovalViolations: { plan_id: string; reason: string }[];
   ok: boolean;
 }
+
+const GREEN_COMMAND_ENFORCEMENT_DATE = "2026-06-23";
+const GREEN_COMMAND_KINDS = new Set([
+  "unit_test",
+  "integration_test",
+  "typecheck",
+  "lint",
+  "doctor",
+  "vmodel_lint",
+  "smoke",
+]);
+const GREEN_COMMAND_RUNNERS = new Set(["bun", "powershell", "bash", "ci"]);
+const GREEN_COMMAND_SCOPES = new Set(["full", "targeted", "changed-files", "gate"]);
 
 function reviewViolationReason(issue: CrossAgentModelIssue | undefined): string {
   if (issue === "same_provider") return "same_provider";
@@ -102,6 +129,22 @@ export function extractReviewEntries(content: string): ReviewEntry[] {
         if (typeof e.verdict === "string") entry.verdict = e.verdict;
         if (typeof e.reviewed_at === "string") entry.reviewed_at = e.reviewed_at;
         if (typeof e.tests_green_at === "string") entry.tests_green_at = e.tests_green_at;
+        if (Array.isArray(e.green_commands)) {
+          entry.green_commands = e.green_commands
+            .filter(
+              (cmd): cmd is Record<string, unknown> => typeof cmd === "object" && cmd !== null,
+            )
+            .map((cmd) => ({
+              kind: typeof cmd.kind === "string" ? cmd.kind : "",
+              command: typeof cmd.command === "string" ? cmd.command : "",
+              runner: typeof cmd.runner === "string" ? cmd.runner : "",
+              scope: typeof cmd.scope === "string" ? cmd.scope : "",
+              exit_code: typeof cmd.exit_code === "number" ? cmd.exit_code : null,
+              evidence_path: typeof cmd.evidence_path === "string" ? cmd.evidence_path : "",
+              output_digest: typeof cmd.output_digest === "string" ? cmd.output_digest : "",
+              ...(typeof cmd.completed_at === "string" ? { completed_at: cmd.completed_at } : {}),
+            }));
+        }
         if (typeof e.worker_model === "string") entry.worker_model = e.worker_model;
         if (typeof e.reviewer_model === "string") entry.reviewer_model = e.reviewer_model;
         return entry;
@@ -117,9 +160,40 @@ export function parseReviewPlan(file: string, content: string): ParsedReviewPlan
     plan_id: fmValue(content, "plan_id") ?? file.replace(/\.md$/, ""),
     kind: fmValue(content, "kind") ?? "unknown",
     status: fmValue(content, "status") ?? "unknown",
+    updated: fmValue(content, "updated") ?? fmValue(content, "created") ?? "",
     hasEvidence: hasReviewEvidence(content),
     crossEntries: extractReviewEntries(content),
   };
+}
+
+function requiresGreenCommands(plan: ParsedReviewPlan): boolean {
+  return (
+    STATUS_REVIEW_REQUIRED.has(plan.status) &&
+    plan.updated >= GREEN_COMMAND_ENFORCEMENT_DATE &&
+    (plan.crossEntries ?? []).length > 0
+  );
+}
+
+function greenCommandViolationReason(entry: ReviewEntry): string | null {
+  const commands = entry.green_commands ?? [];
+  if (commands.length === 0) return "missing_green_commands";
+  for (const command of commands) {
+    if (!GREEN_COMMAND_KINDS.has(command.kind)) return "invalid_kind";
+    if (!command.command.trim()) return "missing_command";
+    if (!GREEN_COMMAND_RUNNERS.has(command.runner)) return "invalid_runner";
+    if (!GREEN_COMMAND_SCOPES.has(command.scope)) return "invalid_scope";
+    if (command.exit_code !== 0) return "nonzero_exit_code";
+    if (!command.evidence_path.trim()) return "missing_evidence_path";
+    if (!/^sha256:[a-f0-9]{16,64}$/i.test(command.output_digest)) return "invalid_output_digest";
+    if (
+      entry.tests_green_at &&
+      command.completed_at &&
+      command.completed_at > entry.tests_green_at
+    ) {
+      return "completed_after_tests_green_at";
+    }
+  }
+  return null;
 }
 
 /**
@@ -133,6 +207,7 @@ export function analyzeReviewEvidence(plans: ParsedReviewPlan[]): ReviewEvidence
   const missing: { plan_id: string; kind: string }[] = [];
   const crossReviewViolations: { plan_id: string; reason: string }[] = [];
   const testBeforeReviewViolations: { plan_id: string; reason: string }[] = [];
+  const greenCommandViolations: { plan_id: string; reason: string }[] = [];
   const staleApprovalViolations: { plan_id: string; reason: string }[] = [];
   for (const p of plans) {
     if (p.status === "archived") continue;
@@ -178,16 +253,27 @@ export function analyzeReviewEvidence(plans: ParsedReviewPlan[]): ReviewEvidence
         }
       }
     }
+    if (requiresGreenCommands(p)) {
+      for (const e of p.crossEntries ?? []) {
+        const reason = greenCommandViolationReason(e);
+        if (reason) {
+          greenCommandViolations.push({ plan_id: p.plan_id, reason });
+          break;
+        }
+      }
+    }
   }
   return {
     missing,
     crossReviewViolations,
     testBeforeReviewViolations,
+    greenCommandViolations,
     staleApprovalViolations,
     ok:
       missing.length === 0 &&
       crossReviewViolations.length === 0 &&
       testBeforeReviewViolations.length === 0 &&
+      greenCommandViolations.length === 0 &&
       staleApprovalViolations.length === 0,
   };
 }
@@ -212,6 +298,7 @@ export function reviewEvidenceMessages(result: ReviewEvidenceResult): string[] {
     result.missing.length === 0 &&
     result.crossReviewViolations.length === 0 &&
     result.testBeforeReviewViolations.length === 0 &&
+    result.greenCommandViolations.length === 0 &&
     result.staleApprovalViolations.length === 0
   ) {
     return [
@@ -235,6 +322,12 @@ export function reviewEvidenceMessages(result: ReviewEvidenceResult): string[] {
     const ids = result.testBeforeReviewViolations.map((v) => v.plan_id).join(", ");
     out.push(
       `review-evidence — ⚠ 定量テスト→定性レビュー順序違反 ${result.testBeforeReviewViolations.length} 件 (${ids}): tests_green_at 欠落 or > reviewed_at。定量テスト green 後にレビュー (全駆動モデル普遍、IMP-077)`,
+    );
+  }
+  if (result.greenCommandViolations.length > 0) {
+    const ids = result.greenCommandViolations.map((v) => `${v.plan_id}:${v.reason}`).join(", ");
+    out.push(
+      `review-evidence — ⚠ green command evidence 欠落/不正 ${result.greenCommandViolations.length} 件 (${ids}): 2026-06-23 以降の confirmed review_evidence は green_commands に kind/command/runner/scope/exit_code/evidence_path/output_digest を記録 (IMP-108)`,
     );
   }
   if (result.staleApprovalViolations.length > 0) {

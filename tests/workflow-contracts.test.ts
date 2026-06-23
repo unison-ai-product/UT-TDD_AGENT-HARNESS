@@ -69,6 +69,7 @@ describe("L7 workflow contract implementations", () => {
           completed_at: "2026-06-12T00:01:00.000Z",
           exit_code: 0,
           evidence_path: ".ut-tdd/evidence/test.json",
+          output_digest: "sha256:0123456789abcdef",
           cases: [
             {
               oracle_id: "U-FR-L1-06",
@@ -89,6 +90,10 @@ describe("L7 workflow contract implementations", () => {
         "test_artifact_edges",
       ]);
       expect(db.prepare("SELECT COUNT(*) AS n FROM test_runs").get()?.n).toBe(1);
+      expect(
+        db.prepare("SELECT output_digest FROM test_runs WHERE plan_id = ?").get("PLAN-L7-X")
+          ?.output_digest,
+      ).toBe("sha256:0123456789abcdef");
       expect(db.prepare("SELECT COUNT(*) AS n FROM test_artifact_edges").get()?.n).toBe(1);
     } finally {
       db.close();

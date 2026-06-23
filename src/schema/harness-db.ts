@@ -254,6 +254,7 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("completed_at"),
       col("exit_code", "INTEGER"),
       col("evidence_path"),
+      col("output_digest"),
       col("green_definition_id"),
       col("status"),
     ],

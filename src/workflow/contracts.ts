@@ -78,6 +78,7 @@ export interface TestRunEvidenceInput {
   completed_at: string;
   exit_code: number;
   evidence_path: string;
+  output_digest?: string;
   cases?: TestCaseEvidence[];
 }
 
@@ -97,6 +98,9 @@ export function recordTestRunEvidence(
   if (!Number.isInteger(input.exit_code)) {
     findings.push(finding("invalid-exit-code", "exit_code must be an integer"));
   }
+  const outputDigest =
+    input.output_digest ??
+    stableHash(`${input.command}:${input.evidence_path}:${input.completed_at}`);
   const testRunId = stableId(
     "test-run",
     `${input.plan_id ?? "no-plan"}:${input.command}:${input.started_at}`,
@@ -116,6 +120,7 @@ export function recordTestRunEvidence(
         completed_at: input.completed_at,
         exit_code: input.exit_code,
         evidence_path: input.evidence_path,
+        output_digest: outputDigest,
         status: input.exit_code === 0 ? "passed" : "failed",
       },
     });

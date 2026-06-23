@@ -15,9 +15,120 @@ const plan = (o: Partial<ParsedReviewPlan>): ParsedReviewPlan => ({
   plan_id: "PLAN-X",
   kind: "design",
   status: "confirmed",
+  updated: "2026-06-05",
   hasEvidence: false,
   crossEntries: [],
   ...o,
+});
+
+describe("green command evidence (IMP-108)", () => {
+  it("U-GREENDEF-001: legacy timestamp-only review evidence remains valid before enforcement", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-LEGACY-GREEN",
+        updated: "2026-06-22",
+        hasEvidence: true,
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-06-22",
+            tests_green_at: "2026-06-22",
+          },
+        ],
+      }),
+    ]);
+
+    expect(r.greenCommandViolations).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("U-GREENDEF-002: new confirmed review evidence requires green_commands", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-NEW-GREEN-MISSING",
+        updated: "2026-06-23",
+        hasEvidence: true,
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-06-23",
+            tests_green_at: "2026-06-23",
+          },
+        ],
+      }),
+    ]);
+
+    expect(r.greenCommandViolations).toEqual([
+      { plan_id: "PLAN-NEW-GREEN-MISSING", reason: "missing_green_commands" },
+    ]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("U-GREENDEF-003: new confirmed review evidence accepts structured green command evidence", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-NEW-GREEN-OK",
+        updated: "2026-06-23",
+        hasEvidence: true,
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-06-23",
+            tests_green_at: "2026-06-23",
+            green_commands: [
+              {
+                kind: "unit_test",
+                command: "bun test tests/review-evidence.test.ts",
+                runner: "bun",
+                scope: "targeted",
+                exit_code: 0,
+                evidence_path: "tests/review-evidence.test.ts",
+                output_digest: "sha256:0123456789abcdef",
+                completed_at: "2026-06-23",
+              },
+            ],
+          },
+        ],
+      }),
+    ]);
+
+    expect(r.greenCommandViolations).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("U-GREENDEF-004: nonzero green command exit code fails", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-NEW-GREEN-BAD",
+        updated: "2026-06-23",
+        hasEvidence: true,
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-06-23",
+            tests_green_at: "2026-06-23",
+            green_commands: [
+              {
+                kind: "doctor",
+                command: "bun run src/cli.ts doctor",
+                runner: "bun",
+                scope: "gate",
+                exit_code: 1,
+                evidence_path: "docs/plans/PLAN-L7-108-review-green-command-evidence.md",
+                output_digest: "sha256:0123456789abcdef",
+                completed_at: "2026-06-23",
+              },
+            ],
+          },
+        ],
+      }),
+    ]);
+
+    expect(r.greenCommandViolations).toEqual([
+      { plan_id: "PLAN-NEW-GREEN-BAD", reason: "nonzero_exit_code" },
+    ]);
+    expect(r.ok).toBe(false);
+  });
 });
 
 describe("stale approval cleanup (IMP-080)", () => {

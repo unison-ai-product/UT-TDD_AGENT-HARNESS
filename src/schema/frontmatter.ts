@@ -112,6 +112,28 @@ const frontmatterBaseSchema = z.object({
          *  `tests_green_at ≤ reviewed_at` (定量テスト→定性レビュー) が全駆動モデル普遍の不変条件
          *  (未検証成果物をレビューしない)。当初 optional、実 repo back-fill 後 presence hard。 */
         tests_green_at: z.string().optional(),
+        green_commands: z
+          .array(
+            z.object({
+              kind: z.enum([
+                "unit_test",
+                "integration_test",
+                "typecheck",
+                "lint",
+                "doctor",
+                "vmodel_lint",
+                "smoke",
+              ]),
+              command: z.string().min(1),
+              runner: z.enum(["bun", "powershell", "bash", "ci"]),
+              scope: z.enum(["full", "targeted", "changed-files", "gate"]),
+              exit_code: z.literal(0),
+              completed_at: z.string().optional(),
+              evidence_path: z.string().min(1),
+              output_digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
+            }),
+          )
+          .optional(),
         /** cross-review semantic 強制 (IMP-076): レビュー対象成果物を産出した model /
          *  reviewer の model。review_kind=cross_agent では両者 present かつ相異が必須
          *  (same_model_approval: forbidden、concept §2.1.2.1)。単体 runtime は相異 model を
