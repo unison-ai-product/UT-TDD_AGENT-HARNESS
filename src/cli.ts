@@ -109,6 +109,7 @@ import {
   loadTeamDefinition,
   type MemberPlacement,
 } from "./team/run";
+import { formatVmodelInjection, resolveVmodelInjection } from "./vmodel/injection";
 import { lintVmodel } from "./vmodel/lint";
 import { startWebServer } from "./web/server";
 import { buildCommandCatalog } from "./workflow/contracts";
@@ -1360,6 +1361,29 @@ vmodel
     const r = lintVmodel(path);
     for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
+  });
+vmodel
+  .command("show <drive> <layer>")
+  .description("show drive x layer V-model context")
+  .option("--injection", "show layer-context injection")
+  .option("--json", "JSON output")
+  .action((drive: string, layer: string, opts: { injection?: boolean; json?: boolean }) => {
+    if (!opts.injection) {
+      process.stderr.write("vmodel show currently requires --injection\n");
+      process.exitCode = 1;
+      return;
+    }
+    try {
+      const injection = resolveVmodelInjection(drive, layer);
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(injection, null, 2)}\n`);
+        return;
+      }
+      for (const line of formatVmodelInjection(injection)) process.stdout.write(`${line}\n`);
+    } catch (e) {
+      process.stderr.write(`invalid vmodel injection input: ${String(e)}\n`);
+      process.exitCode = 1;
+    }
   });
 
 function runtimeCommand(provider: AdapterProvider): Command {

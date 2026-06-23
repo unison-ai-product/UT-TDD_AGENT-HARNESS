@@ -201,7 +201,7 @@ L4 は外部設計 (what/形状) で確定。以下は altitude 上 L4 の範囲
 
 - 各 mode の **CLI subcommand signature / エラー型 / リトライ** → L5 D-API (IMP-018、external-if §7 境界と整合)。
 - 駆動モデルの **状態遷移 pseudocode / 内部処理** → L6 機能設計 (IEEE 1016 §5.7、IMP-019)。
-- **orchestration_mode の cell matrix (drive×layer → 5値の具体割当)** → requirements §1/§7 (concept §2.6.4、現状 stub)。**注入機構・execution mode 別の縮退規則・review tier は §3.6 で外部設計済**、defer は cell の具体割当値のみ (under-design でなく値の確定待ち)。
+- **orchestration_mode の cell matrix (drive×layer → 5値の具体割当)** → requirements §1/§7 (concept §2.6.4)。**L7 着地 (2026-06-23)**: `ut-tdd vmodel show <drive> <layer> --injection` が `owner_role` / `mandatory_agents` / `recommended_skills` / `recommended_commands` / `orchestration_mode` を返す公開 surface として実装済み。execution mode 別の縮退実行 (`degraded_from` / `degraded_to`) は requirements §7.8.7 の別受入条件に残る。
 - **Scrum 6 type × Reverse 5 type の 30-cell routing matrix** → requirements §3 (concept §4.4、現状 stub)。
 - **Scrum 出口の L8-L14 直接合流禁止 (IMP-044、F-4)** → 機械着地先 = `ForwardRouting` enum (`VALID_FORWARD_ROUTING` = L1/L3/L4/L5/gap-only、L7/L8-L14 を含めない、data.md §3) + doctor `checkScrumReverse` (Reverse 経由を強制)。enum 値が L8-L14 を構造的に排除する = under-design でなく実装済の値域制約。本 carry は「§3.7 で着地先を明示」する記録。
 - **Recovery 再発防止 artifact schema** → 後続 PLAN (recovery.md §4 carry)。
