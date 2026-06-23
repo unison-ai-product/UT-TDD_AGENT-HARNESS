@@ -423,6 +423,24 @@ describe("plan schedule lint (IMP-081)", () => {
     expect(violation?.detail).toContain("requirements:missing_generated_evidence");
   });
 
+  it("U-PLANGOV-011d: new fullback body cannot claim an ungenerated backprop artifact path", () => {
+    const doc = reverseFullbackPlanDoc(
+      "PLAN-REVERSE-198-claimed-artifact",
+      [
+        "docs/plans/PLAN-REVERSE-198-claimed-artifact.md",
+        "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+      ],
+      { extra: fullbackScope },
+    );
+    doc.content = `${doc.content}\n## R4 Routing\n\nBack-fill also updates docs/test-design/harness/L7-unit-test-design.md.\n`;
+
+    const violation = analyzePlanGovernance([doc]).violations.find(
+      (v) => v.reason === "reverse_fullback_claimed_artifact_missing",
+    );
+
+    expect(violation?.detail).toContain("docs/test-design/harness/L7-unit-test-design.md");
+  });
+
   it("U-PLANGOV-012: docs/design generated artifacts must use design_doc", () => {
     const docs = [
       planDoc("PLAN-L7-99-design-type-mismatch", {

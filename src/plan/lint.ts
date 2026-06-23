@@ -51,6 +51,7 @@ export interface PlanGovernanceViolation {
     | "artifact_type_mismatch"
     | "db_projection_backprop_missing"
     | "reverse_fullback_backprop_missing"
+    | "reverse_fullback_claimed_artifact_missing"
     | "reverse_fullback_scope_missing";
   detail?: string;
 }
@@ -350,6 +351,16 @@ function reverseFullbackNeedsGeneratedBackprop(raw: Record<string, unknown>): bo
   );
 }
 
+function claimedBackpropArtifacts(content: string): string[] {
+  const refs = new Set<string>();
+  for (const match of content.matchAll(
+    /\bdocs\/(?:design|governance|test-design)\/[^\s`'")\]]+/g,
+  )) {
+    refs.add(normalizeArtifactPath(match[0]).replace(/[.,;:]+$/, ""));
+  }
+  return [...refs];
+}
+
 function schemaIssueSummary(issue: {
   path: (string | number)[];
   code: string;
@@ -478,6 +489,16 @@ export function analyzePlanGovernance(
       });
     }
     if (reverseFullbackNeedsGeneratedBackprop(raw)) {
+      const missingClaimedArtifacts = claimedBackpropArtifacts(entry.content).filter(
+        (path) => !generatedPaths.includes(path),
+      );
+      if (missingClaimedArtifacts.length > 0) {
+        violations.push({
+          file: entry.file,
+          reason: "reverse_fullback_claimed_artifact_missing",
+          detail: missingClaimedArtifacts.join(", "),
+        });
+      }
       const missingScope = reverseFullbackScopeViolations(raw, generatedPaths);
       if (missingScope.length > 0) {
         violations.push({
