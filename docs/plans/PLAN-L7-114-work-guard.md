@@ -13,6 +13,8 @@ backprop_decision_reason: "This is a developer-local Claude hook guard that enfo
 agent_slots:
   - role: tl
     slot_label: "TL - foreign uncommitted work guard"
+  - role: aim
+    slot_label: "AIM - troubleshoot classification and runtime guard review"
 generates:
   - artifact_path: docs/plans/PLAN-L7-114-work-guard.md
     artifact_type: markdown_doc

@@ -49,6 +49,7 @@ export interface PlanGovernanceViolation {
     | "requires_not_ready"
     | "parent_design_missing"
     | "artifact_type_mismatch"
+    | "missing_required_agent_role"
     | "db_projection_backprop_missing"
     | "reverse_fullback_backprop_missing"
     | "reverse_fullback_claimed_artifact_missing"
@@ -230,6 +231,36 @@ function generatedArtifacts(raw: Record<string, unknown>): { path: string; type:
     .filter((artifact): artifact is { path: string; type: string } => Boolean(artifact));
 }
 
+function agentRoles(raw: Record<string, unknown>): Set<string> {
+  if (!Array.isArray(raw.agent_slots)) return new Set();
+  return new Set(
+    raw.agent_slots
+      .map((entry) => {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+        return stringField((entry as Record<string, unknown>).role);
+      })
+      .filter((role): role is string => Boolean(role)),
+  );
+}
+
+function requiredAgentRoleViolations(raw: Record<string, unknown>): string[] {
+  const status = stringField(raw.status);
+  const updated = stringField(raw.updated) ?? stringField(raw.created) ?? "";
+  if (status === "archived" || updated < REQUIRED_AGENT_ROLE_ENFORCEMENT_DATE) return [];
+
+  const kind = stringField(raw.kind);
+  const phase = stringField(raw.workflow_phase);
+  const roles = agentRoles(raw);
+  const missing: string[] = [];
+  if ((kind === "poc" || kind === "recovery" || kind === "troubleshoot") && !roles.has("aim")) {
+    missing.push(`${kind}:aim`);
+  }
+  if (kind === "reverse" && phase === "R3" && !roles.has("po")) {
+    missing.push("reverse:R3:po");
+  }
+  return missing;
+}
+
 function expectedArtifactTypeForPath(path: string): string | null {
   if (path.startsWith("docs/design/")) return "design_doc";
   if (path.startsWith("docs/test-design/")) return "test_design";
@@ -250,6 +281,7 @@ const DB_PROJECTION_BACKPROP_REQUIRED_GENERATES = [
 const REVERSE_FULLBACK_BACKPROP_ENFORCEMENT_DATE = "2026-06-22";
 const REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE = "2026-06-23";
 const REVERSE_R4_ROUTE_BACKPROP_ENFORCEMENT_DATE = "2026-06-23";
+const REQUIRED_AGENT_ROLE_ENFORCEMENT_DATE = "2026-06-23";
 const REQUIRED_REVERSE_FULLBACK_SCOPE_LAYERS = [
   "requirements",
   "L4-basic-design",
@@ -480,6 +512,15 @@ export function analyzePlanGovernance(
     const subDoc = stringField(raw.sub_doc);
     const isMasterHub = boolField(raw.master_hub);
     const isInternalAssetExtension = INTERNAL_ASSET_EXTENSION_PLAN_IDS.has(planId);
+
+    const missingRoles = requiredAgentRoleViolations(raw);
+    if (missingRoles.length > 0) {
+      violations.push({
+        file: entry.file,
+        reason: "missing_required_agent_role",
+        detail: missingRoles.join(", "),
+      });
+    }
 
     if (kind === "design" && layer && DESIGN_LAYERS_REQUIRING_SUB_DOC.has(layer) && !isMasterHub) {
       if (!subDoc) {

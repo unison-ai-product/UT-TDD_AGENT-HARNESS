@@ -383,6 +383,9 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
 #### D. 必須 role
 
 - [ ] §1.8 の必須 role 条件をすべて満たす (kind/layer/drive/gate ごとの必須 role が agent_slots に存在)
+- [ ] 2026-06-23 以降の新規/更新 PLAN は、`kind=poc/recovery/troubleshoot` なら `agent_slots[].role=aim`、
+      `kind=reverse + workflow_phase=R3` なら `agent_slots[].role=po` を持つ。欠落時は
+      `plan-governance` の `missing_required_agent_role` で fail-closeする。
 
 #### E. dependencies
 

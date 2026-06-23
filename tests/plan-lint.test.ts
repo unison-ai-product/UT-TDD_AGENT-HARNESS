@@ -557,6 +557,59 @@ describe("plan schedule lint (IMP-081)", () => {
     expect(reasons).not.toContain("reverse_r4_route_backprop_missing");
   });
 
+  it("U-PLANGOV-011k: new drive-model PLANs require mandatory agent roles", () => {
+    const docs = [
+      {
+        file: "docs/plans/PLAN-DISCOVERY-198-poc-role.md",
+        content: `---\nplan_id: PLAN-DISCOVERY-198-poc-role\ntitle: "PLAN-DISCOVERY-198: poc role"\nkind: poc\nlayer: cross\ndrive: fullstack\nstatus: confirmed\ncreated: 2026-06-23\nupdated: 2026-06-23\nworkflow_phase: S2\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n`,
+      },
+      {
+        file: "docs/plans/PLAN-RECOVERY-198-recovery-role.md",
+        content: `---\nplan_id: PLAN-RECOVERY-198-recovery-role\ntitle: "PLAN-RECOVERY-198: recovery role"\nkind: recovery\nlayer: cross\ndrive: fullstack\nstatus: confirmed\ncreated: 2026-06-23\nupdated: 2026-06-23\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n`,
+      },
+      {
+        file: "docs/plans/PLAN-L7-198-troubleshoot-role.md",
+        content: `---\nplan_id: PLAN-L7-198-troubleshoot-role\ntitle: "PLAN-L7-198: troubleshoot role"\nkind: troubleshoot\nlayer: L7\ndrive: fullstack\nstatus: confirmed\ncreated: 2026-06-23\nupdated: 2026-06-23\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n`,
+      },
+      {
+        file: "docs/plans/PLAN-REVERSE-198-r3-role.md",
+        content: `---\nplan_id: PLAN-REVERSE-198-r3-role\ntitle: "PLAN-REVERSE-198: R3 role"\nkind: reverse\nlayer: cross\ndrive: fullstack\nstatus: confirmed\ncreated: 2026-06-23\nupdated: 2026-06-23\nworkflow_phase: R3\nconfirmed_reverse_type: design\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n`,
+      },
+    ];
+
+    const violations = analyzePlanGovernance(docs).violations.filter(
+      (v) => v.reason === "missing_required_agent_role",
+    );
+
+    expect(violations.map((v) => v.detail)).toEqual([
+      "poc:aim",
+      "recovery:aim",
+      "troubleshoot:aim",
+      "reverse:R3:po",
+    ]);
+  });
+
+  it("U-PLANGOV-011l: mandatory role gate passes with required roles and spares legacy debt", () => {
+    const docs = [
+      {
+        file: "docs/plans/PLAN-DISCOVERY-198-poc-role-ok.md",
+        content: `---\nplan_id: PLAN-DISCOVERY-198-poc-role-ok\ntitle: "PLAN-DISCOVERY-198: poc role ok"\nkind: poc\nlayer: cross\ndrive: fullstack\nstatus: confirmed\ncreated: 2026-06-23\nupdated: 2026-06-23\nworkflow_phase: S2\nagent_slots:\n  - role: aim\n    slot_label: "AIM - fixture"\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n`,
+      },
+      {
+        file: "docs/plans/PLAN-REVERSE-198-r3-role-ok.md",
+        content: `---\nplan_id: PLAN-REVERSE-198-r3-role-ok\ntitle: "PLAN-REVERSE-198: R3 role ok"\nkind: reverse\nlayer: cross\ndrive: fullstack\nstatus: confirmed\ncreated: 2026-06-23\nupdated: 2026-06-23\nworkflow_phase: R3\nconfirmed_reverse_type: design\nagent_slots:\n  - role: po\n    slot_label: "PO - fixture"\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n`,
+      },
+      {
+        file: "docs/plans/PLAN-DISCOVERY-198-legacy-poc-role.md",
+        content: `---\nplan_id: PLAN-DISCOVERY-198-legacy-poc-role\ntitle: "PLAN-DISCOVERY-198: legacy poc role"\nkind: poc\nlayer: cross\ndrive: fullstack\nstatus: confirmed\ncreated: 2026-06-22\nupdated: 2026-06-22\nworkflow_phase: S2\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n`,
+      },
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("missing_required_agent_role");
+  });
+
   it("U-PLANGOV-012: docs/design generated artifacts must use design_doc", () => {
     const docs = [
       planDoc("PLAN-L7-99-design-type-mismatch", {

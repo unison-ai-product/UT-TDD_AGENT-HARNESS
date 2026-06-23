@@ -13,6 +13,8 @@ backprop_decision_reason: "This records an errata and test expectation correctio
 agent_slots:
   - role: tl
     slot_label: "TL - PLAN-L7-102 errata"
+  - role: aim
+    slot_label: "AIM - troubleshoot classification and recurrence guard review"
 generates:
   - artifact_path: docs/plans/PLAN-L7-113-plan-l7-102-errata.md
     artifact_type: markdown_doc
