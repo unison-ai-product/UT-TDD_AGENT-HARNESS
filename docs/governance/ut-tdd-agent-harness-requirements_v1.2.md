@@ -923,6 +923,11 @@ R4 outcome の `promotion_strategy` で PoC / 検証成果物の扱いを明示:
       その path を `generates` に列挙する。`design` / `code` / `normalization` reverse が設計・governance・
       test-design への反映を本文だけで主張する状態は `plan-governance` の
       `reverse_r4_claimed_artifact_missing` で fail-closeする。
+- [ ] 2026-06-23 以降の新規/更新 `confirmed_reverse_type!=fullback` R4 PLAN が `forward_routing=L1..L6`
+      の設計層へ戻る場合、`docs/design/` / `docs/governance/` / `docs/test-design/` のいずれかを
+      `generates` に含めるか、`backprop_decision: not_required` と 10 文字以上の
+      `backprop_decision_reason` で設計・要件・テスト設計への反映不要を明示する。欠落時は
+      `plan-governance` の `reverse_r4_route_backprop_missing` で fail-closeする。
 - [ ] `kind in [refactor, retrofit, troubleshoot]` の confirmed/completed PLAN が Reverse PLAN から `requires`
       されていない場合、2026-06-22 以降の新規/更新 PLAN は `backprop_decision: not_required` と
       10 文字以上の `backprop_decision_reason` を持つ。契約・挙動・要件・設計・テスト設計の意味が変わる場合は

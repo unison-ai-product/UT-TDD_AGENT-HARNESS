@@ -53,6 +53,7 @@ export interface PlanGovernanceViolation {
     | "reverse_fullback_backprop_missing"
     | "reverse_fullback_claimed_artifact_missing"
     | "reverse_r4_claimed_artifact_missing"
+    | "reverse_r4_route_backprop_missing"
     | "reverse_fullback_scope_missing";
   detail?: string;
 }
@@ -248,6 +249,7 @@ const DB_PROJECTION_BACKPROP_REQUIRED_GENERATES = [
 ];
 const REVERSE_FULLBACK_BACKPROP_ENFORCEMENT_DATE = "2026-06-22";
 const REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE = "2026-06-23";
+const REVERSE_R4_ROUTE_BACKPROP_ENFORCEMENT_DATE = "2026-06-23";
 const REQUIRED_REVERSE_FULLBACK_SCOPE_LAYERS = [
   "requirements",
   "L4-basic-design",
@@ -366,6 +368,29 @@ function reverseR4NeedsClaimedArtifactConsistency(raw: Record<string, unknown>):
     (status === "confirmed" || status === "completed") &&
     updated >= REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE
   );
+}
+
+function reverseR4NeedsRouteBackpropEvidence(raw: Record<string, unknown>): boolean {
+  const kind = stringField(raw.kind);
+  const phase = stringField(raw.workflow_phase);
+  const reverseType = stringField(raw.confirmed_reverse_type);
+  const status = stringField(raw.status);
+  const updated = stringField(raw.updated) ?? stringField(raw.created) ?? "";
+  const route = stringField(raw.forward_routing) ?? "";
+  return (
+    kind === "reverse" &&
+    phase === "R4" &&
+    reverseType !== "fullback" &&
+    (status === "confirmed" || status === "completed") &&
+    updated >= REVERSE_R4_ROUTE_BACKPROP_ENFORCEMENT_DATE &&
+    /^L[1-6]\b/.test(route)
+  );
+}
+
+function hasExplicitNoBackpropDecision(raw: Record<string, unknown>): boolean {
+  const decision = stringField(raw.backprop_decision);
+  const reason = stringField(raw.backprop_decision_reason);
+  return decision === "not_required" && Boolean(reason && reason.length >= 10);
 }
 
 function claimedBackpropArtifacts(content: string): string[] {
@@ -536,6 +561,18 @@ export function analyzePlanGovernance(
           detail: missingClaimedArtifacts.join(", "),
         });
       }
+    }
+    if (
+      reverseR4NeedsRouteBackpropEvidence(raw) &&
+      !generatedPaths.some(isBackpropArtifact) &&
+      !hasExplicitNoBackpropDecision(raw)
+    ) {
+      violations.push({
+        file: entry.file,
+        reason: "reverse_r4_route_backprop_missing",
+        detail:
+          "R4 route to L1-L6 must generate an upstream artifact or declare backprop_decision=not_required",
+      });
     }
 
     if (isProgressColorProjectionPlan(raw, entry.content, generatedPaths)) {

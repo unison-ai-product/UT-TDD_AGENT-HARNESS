@@ -107,7 +107,7 @@ function reverseR4PlanDoc(
   id: string,
   reverseType: string,
   generatedPaths: string[],
-  overrides: { updated?: string; status?: string; body?: string } = {},
+  overrides: { updated?: string; status?: string; body?: string; extra?: string } = {},
 ) {
   const generates =
     generatedPaths.length === 0
@@ -122,7 +122,7 @@ function reverseR4PlanDoc(
           .join("\n")}`;
   return {
     file: `docs/plans/${id}.md`,
-    content: `---\nplan_id: ${id}\ntitle: "${id}: reverse R4 fixture"\nkind: reverse\nlayer: cross\nworkflow_phase: R4\nconfirmed_reverse_type: ${reverseType}\ndrive: fullstack\nstatus: ${overrides.status ?? "confirmed"}\ncreated: 2026-06-23\nupdated: ${overrides.updated ?? "2026-06-23"}\nowner: fixture\nforward_routing: L5\npromotion_strategy: reuse-as-is\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ngenerates: ${generates}\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n\n${overrides.body ?? ""}\n`,
+    content: `---\nplan_id: ${id}\ntitle: "${id}: reverse R4 fixture"\nkind: reverse\nlayer: cross\nworkflow_phase: R4\nconfirmed_reverse_type: ${reverseType}\ndrive: fullstack\nstatus: ${overrides.status ?? "confirmed"}\ncreated: 2026-06-23\nupdated: ${overrides.updated ?? "2026-06-23"}\nowner: fixture\nforward_routing: L5\npromotion_strategy: reuse-as-is\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ngenerates: ${generates}\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n${overrides.extra ?? ""}---\n\n## body\n\n${overrides.body ?? ""}\n`,
   };
 }
 
@@ -512,6 +512,49 @@ describe("plan schedule lint (IMP-081)", () => {
     const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
 
     expect(reasons).not.toContain("reverse_r4_claimed_artifact_missing");
+  });
+
+  it("U-PLANGOV-011h: new non-fullback R4 route to design layer requires backprop evidence", () => {
+    const docs = [
+      reverseR4PlanDoc("PLAN-REVERSE-198-design-route-no-backprop", "design", [
+        "docs/plans/PLAN-REVERSE-198-design-route-no-backprop.md",
+      ]),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("reverse_r4_route_backprop_missing");
+  });
+
+  it("U-PLANGOV-011i: new non-fullback R4 route passes with upstream generated artifact", () => {
+    const docs = [
+      reverseR4PlanDoc("PLAN-REVERSE-198-design-route-generated", "design", [
+        "docs/plans/PLAN-REVERSE-198-design-route-generated.md",
+        "docs/design/harness/L5-detailed-design/physical-data.md",
+      ]),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("reverse_r4_route_backprop_missing");
+  });
+
+  it("U-PLANGOV-011j: new non-fullback R4 route passes with explicit no-backprop decision", () => {
+    const docs = [
+      reverseR4PlanDoc(
+        "PLAN-REVERSE-198-design-route-not-required",
+        "normalization",
+        ["docs/plans/PLAN-REVERSE-198-design-route-not-required.md"],
+        {
+          extra:
+            'backprop_decision: not_required\nbackprop_decision_reason: "naming normalization only; no requirements or design meaning changed"\n',
+        },
+      ),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("reverse_r4_route_backprop_missing");
   });
 
   it("U-PLANGOV-012: docs/design generated artifacts must use design_doc", () => {
