@@ -5,6 +5,7 @@ import {
   KIND_BACKFILL,
   loadBackfillDocs,
   type ParsedPlan,
+  parseConditionalBackfillAuditPlanIds,
   parseGlossaryTerms,
   parsePlan,
   parseRequires,
@@ -256,6 +257,39 @@ describe("U-BACKFILL-004b conditional backprop decision gate", () => {
   });
 });
 
+describe("U-BACKFILL-004c legacy conditional audit sync", () => {
+  const glossary = "agent-slot peak_parallel";
+
+  it("fails when the legacy conditional allowlist is missing from the audit table", () => {
+    const r = analyzeBackfill([], glossary, new Set());
+
+    expect(r.legacyAuditGaps).toContainEqual({
+      plan_id: "PLAN-L7-05-biome-debt",
+      location: "audit",
+    });
+    expect(r.ok).toBe(false);
+  });
+
+  it("fails when the audit table contains an entry outside the allowlist", () => {
+    const r = analyzeBackfill([], glossary, new Set(["PLAN-L7-999-unknown-legacy"]));
+
+    expect(r.legacyAuditGaps).toContainEqual({
+      plan_id: "PLAN-L7-999-unknown-legacy",
+      location: "allowlist",
+    });
+    expect(r.ok).toBe(false);
+  });
+
+  it("parses legacy audit table PLAN ids", () => {
+    const ids = parseConditionalBackfillAuditPlanIds(`| PLAN | kind | observed issue |
+|---|---|---|
+| PLAN-L7-05-biome-debt | refactor | No Reverse link. |
+`);
+
+    expect(ids).toEqual(new Set(["PLAN-L7-05-biome-debt"]));
+  });
+});
+
 describe("U-BACKFILL-005 backfillMessages", () => {
   it("孤児なし → OK / 孤児あり → warn 文言", () => {
     expect(backfillMessages(analyzeBackfill([], "")).some((m) => m.includes("OK"))).toBe(true);
@@ -267,15 +301,17 @@ describe("U-BACKFILL-005 backfillMessages", () => {
 describe("U-BACKFILL-006 実 repo の back-fill 完全性 (回帰ガード)", () => {
   it("docs/plans/ 全 add-impl が Reverse 合流済 + §6 用語が L0 §10 に merge 済 (required orphan 0 / glossary gap 0)", () => {
     const docs = loadBackfillDocs();
-    const r = analyzeBackfill(docs.plans, docs.glossaryText);
+    const r = analyzeBackfill(docs.plans, docs.glossaryText, docs.auditedLegacyIds);
     // 失敗時に具体 PLAN/term を出して直せるように
     expect({
       reverseOrphans: r.reverseOrphans,
       reverseLinkMissing: r.reverseLinkMissing,
+      legacyAuditGaps: r.legacyAuditGaps,
       glossaryGaps: r.glossaryGaps,
     }).toEqual({
       reverseOrphans: [],
       reverseLinkMissing: [],
+      legacyAuditGaps: [],
       glossaryGaps: [],
     });
   });

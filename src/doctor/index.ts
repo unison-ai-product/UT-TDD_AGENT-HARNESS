@@ -325,7 +325,7 @@ export function checkAgentSlots(deps: AgentSlotsDeps): string {
 export function checkBackfillResult(repoRoot: string): { messages: string[]; ok: boolean } {
   try {
     const docs = loadBackfillDocs(repoRoot);
-    const r = analyzeBackfill(docs.plans, docs.glossaryText);
+    const r = analyzeBackfill(docs.plans, docs.glossaryText, docs.auditedLegacyIds);
     return { messages: backfillMessages(r), ok: r.ok };
   } catch {
     return { messages: ["backfill - violation: PLAN/glossary could not be read"], ok: false };

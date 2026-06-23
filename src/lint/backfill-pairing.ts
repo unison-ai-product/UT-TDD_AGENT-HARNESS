@@ -65,6 +65,7 @@ export interface ParsedPlan {
 export interface BackfillResult {
   reverseOrphans: { plan_id: string; kind: string }[];
   reverseLinkMissing: { plan_id: string; reverse_plan_id: string }[];
+  legacyAuditGaps: { plan_id: string; location: "allowlist" | "audit" }[];
   conditionalPending: { plan_id: string; kind: string }[];
   conditionalDecisionMissing: { plan_id: string; kind: string }[];
   glossaryGaps: { plan_id: string; term: string }[];
@@ -87,6 +88,12 @@ export function parseGlossaryTerms(content: string): string[] {
   );
   if (!sec) return [];
   return [...sec[1].matchAll(/^\s*-\s*\*\*(.+?)\*\*/gm)].map((x) => x[1].trim());
+}
+
+export function parseConditionalBackfillAuditPlanIds(content: string): Set<string> {
+  return new Set(
+    [...content.matchAll(/^\|\s*(PLAN-[A-Za-z0-9-]+)\s*\|/gm)].map((match) => match[1]),
+  );
 }
 
 export function parsePlan(file: string, content: string): ParsedPlan {
@@ -133,7 +140,11 @@ function refMatchesPlan(ref: string, plan: ParsedPlan): boolean {
   );
 }
 
-export function analyzeBackfill(plans: ParsedPlan[], glossaryText: string): BackfillResult {
+export function analyzeBackfill(
+  plans: ParsedPlan[],
+  glossaryText: string,
+  auditedLegacyIds?: Set<string>,
+): BackfillResult {
   const active = plans.filter((p) => p.status !== "archived");
   const reverseRequires = new Set<string>();
   const reverseBackfillers = new Map<string, string[]>();
@@ -152,6 +163,7 @@ export function analyzeBackfill(plans: ParsedPlan[], glossaryText: string): Back
 
   const reverseOrphans: { plan_id: string; kind: string }[] = [];
   const reverseLinkMissing: { plan_id: string; reverse_plan_id: string }[] = [];
+  const legacyAuditGaps: { plan_id: string; location: "allowlist" | "audit" }[] = [];
   const conditionalPending: { plan_id: string; kind: string }[] = [];
   const conditionalDecisionMissing: { plan_id: string; kind: string }[] = [];
 
@@ -186,15 +198,29 @@ export function analyzeBackfill(plans: ParsedPlan[], glossaryText: string): Back
     }
   }
 
+  if (auditedLegacyIds) {
+    for (const planId of LEGACY_CONDITIONAL_BACKFILL_DEBT_PLAN_IDS) {
+      if (!auditedLegacyIds.has(planId))
+        legacyAuditGaps.push({ plan_id: planId, location: "audit" });
+    }
+    for (const planId of auditedLegacyIds) {
+      if (!LEGACY_CONDITIONAL_BACKFILL_DEBT_PLAN_IDS.has(planId)) {
+        legacyAuditGaps.push({ plan_id: planId, location: "allowlist" });
+      }
+    }
+  }
+
   return {
     reverseOrphans,
     reverseLinkMissing,
+    legacyAuditGaps,
     conditionalPending,
     conditionalDecisionMissing,
     glossaryGaps,
     ok:
       reverseOrphans.length === 0 &&
       reverseLinkMissing.length === 0 &&
+      legacyAuditGaps.length === 0 &&
       conditionalDecisionMissing.length === 0 &&
       glossaryGaps.length === 0,
   };
@@ -203,6 +229,7 @@ export function analyzeBackfill(plans: ParsedPlan[], glossaryText: string): Back
 export interface BackfillDocs {
   plans: ParsedPlan[];
   glossaryText: string;
+  auditedLegacyIds: Set<string>;
 }
 
 export function loadBackfillDocs(repoRoot: string = process.cwd()): BackfillDocs {
@@ -218,7 +245,11 @@ export function loadBackfillDocs(repoRoot: string = process.cwd()): BackfillDocs
   );
   const glossaryText =
     concept.match(/#\s*(?:§|ﾂｧ)10[\s\S]*?(?=\n#\s*(?:§|ﾂｧ)11|$)/)?.[0] ?? concept;
-  return { plans, glossaryText };
+  const audit = readFileSync(
+    join(repoRoot, "docs", "governance", "conditional-backfill-decision-audit-2026-06-22.md"),
+    "utf8",
+  );
+  return { plans, glossaryText, auditedLegacyIds: parseConditionalBackfillAuditPlanIds(audit) };
 }
 
 export function backfillMessages(result: BackfillResult): string[] {
@@ -235,6 +266,12 @@ export function backfillMessages(result: BackfillResult): string[] {
       .join(", ");
     msgs.push(
       `backfill - violation: required add-impl missing bidirectional Reverse requires ${result.reverseLinkMissing.length}件 (${ids})`,
+    );
+  }
+  if (result.legacyAuditGaps.length > 0) {
+    const ids = result.legacyAuditGaps.map((o) => `${o.plan_id}:${o.location}`).join(", ");
+    msgs.push(
+      `backfill - violation: legacy conditional backfill audit drift ${result.legacyAuditGaps.length}件 (${ids})`,
     );
   }
   if (result.glossaryGaps.length > 0) {
