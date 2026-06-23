@@ -139,8 +139,11 @@ as read-only material.
   assumptions.
 - `PreToolUse(Edit|Write|MultiEdit)` blocks edits to uncommitted files not
   touched by the current Claude session. This prevents one runtime from
-  overwriting the other runtime's in-flight work. Override only with
-  `UT_TDD_ALLOW_FOREIGN_EDIT=1` and record the reason in the session.
+  overwriting the other runtime's in-flight work. Override with
+  `UT_TDD_ALLOW_FOREIGN_EDIT=1` (env, human/out-of-band) or, mid-session, by
+  writing a non-empty reason to `.ut-tdd/state/foreign-edit-override`; marker
+  bypasses are audited to `.ut-tdd/logs/foreign-edit-overrides.jsonl`. An empty
+  marker does not bypass (no silent override without a recorded reason).
 - Do not treat `legacy local state/` as active runtime state.
 - Do not write secrets, PII, or credentials into docs, examples, or audit
   evidence.

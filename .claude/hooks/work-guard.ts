@@ -17,10 +17,14 @@
  * 全 Edit を止めない。block は「衝突を確実に検知できた時」のみ。
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { evaluateWorkGuard, normalizeRepoRelative } from "../../src/runtime/work-guard";
+import {
+  evaluateWorkGuard,
+  normalizeRepoRelative,
+  resolveForeignEditOverride,
+} from "../../src/runtime/work-guard";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = process.env.CLAUDE_PROJECT_DIR ?? join(here, "..", "..");
@@ -64,6 +68,28 @@ function sessionTouchedFiles(sessionId: string): string[] {
   return touched;
 }
 
+const OVERRIDE_MARKER = join(repoRoot, ".ut-tdd", "state", "foreign-edit-override");
+const OVERRIDE_AUDIT = join(repoRoot, ".ut-tdd", "logs", "foreign-edit-overrides.jsonl");
+
+/** agent-accessible override marker (`.ut-tdd/state/foreign-edit-override`) の本文 (=理由) を読む。 */
+function readOverrideMarker(): string | null {
+  try {
+    return existsSync(OVERRIDE_MARKER) ? readFileSync(OVERRIDE_MARKER, "utf8") : null;
+  } catch {
+    return null;
+  }
+}
+
+/** marker 経由 override を durable log へ追記 (silent bypass を許さない = 証跡を残す)。 */
+function auditOverride(entry: { target: string; reason: string; sessionId: string }): void {
+  try {
+    mkdirSync(dirname(OVERRIDE_AUDIT), { recursive: true });
+    appendFileSync(OVERRIDE_AUDIT, `${JSON.stringify({ ts: new Date().toISOString(), ...entry })}\n`);
+  } catch {
+    // audit 失敗は override 自体を妨げない (fail-open)。
+  }
+}
+
 // fail-open: 検証不能 (stdin/JSON/git/state) は exit 0。block は衝突を確証できた時のみ。
 let input: { tool_input?: { file_path?: string; path?: string }; session_id?: string };
 try {
@@ -76,12 +102,20 @@ try {
 try {
   const targetRaw = input.tool_input?.file_path ?? input.tool_input?.path ?? "";
   const target = targetRaw ? normalizeRepoRelative(targetRaw, repoRoot) : "";
+  const override = resolveForeignEditOverride({
+    env: process.env.UT_TDD_ALLOW_FOREIGN_EDIT,
+    markerReason: readOverrideMarker(),
+  });
   const result = evaluateWorkGuard({
     targetPath: target,
     uncommittedFiles: gitUncommittedFiles(),
     sessionTouchedFiles: sessionTouchedFiles(input.session_id ?? "unknown"),
-    bypass: process.env.UT_TDD_ALLOW_FOREIGN_EDIT === "1",
+    bypass: override.bypass,
   });
+  if (override.source === "marker" && target) {
+    // agent-accessible override は silent にせず durable に audit する (証跡を残す)。
+    auditOverride({ target, reason: override.reason, sessionId: input.session_id ?? "unknown" });
+  }
   if (result.decision === "block") {
     process.stderr.write(`${result.message}\n`);
     process.exit(2);

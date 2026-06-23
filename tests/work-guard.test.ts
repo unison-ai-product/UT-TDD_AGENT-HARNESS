@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { evaluateWorkGuard, normalizeRepoRelative } from "../src/runtime/work-guard";
+import {
+  evaluateWorkGuard,
+  normalizeRepoRelative,
+  resolveForeignEditOverride,
+} from "../src/runtime/work-guard";
 
 describe("work guard (PLAN-L7-114) — 作業衝突ガードレール", () => {
   it("blocks editing an uncommitted file this session never touched (他ランタイムの in-flight)", () => {
@@ -87,5 +91,31 @@ describe("work guard (PLAN-L7-114) — 作業衝突ガードレール", () => {
       bypass: false,
     });
     expect(result.decision).toBe("block");
+  });
+});
+
+describe("foreign-edit override resolution (PLAN-L7-114 correction)", () => {
+  it("bypasses via env UT_TDD_ALLOW_FOREIGN_EDIT=1", () => {
+    const r = resolveForeignEditOverride({ env: "1" });
+    expect(r.bypass).toBe(true);
+    expect(r.source).toBe("env");
+  });
+
+  it("bypasses via a marker file with a non-empty reason (agent-accessible)", () => {
+    const r = resolveForeignEditOverride({ markerReason: "completing Codex orphan-impl per review" });
+    expect(r.bypass).toBe(true);
+    expect(r.source).toBe("marker");
+    expect(r.reason).toBe("completing Codex orphan-impl per review");
+  });
+
+  it("does NOT bypass on an empty/whitespace marker (no silent bypass without a reason)", () => {
+    expect(resolveForeignEditOverride({ markerReason: "   \n" }).bypass).toBe(false);
+    expect(resolveForeignEditOverride({ markerReason: null }).bypass).toBe(false);
+    expect(resolveForeignEditOverride({}).source).toBe("none");
+  });
+
+  it("prefers env over marker as the source when both are present", () => {
+    const r = resolveForeignEditOverride({ env: "1", markerReason: "marker reason" });
+    expect(r.source).toBe("env");
   });
 });

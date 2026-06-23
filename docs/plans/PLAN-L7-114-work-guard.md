@@ -104,6 +104,10 @@ in `tests/work-guard.test.ts` (session-log prefixed target -> repo-relative). Fo
 dogfooding the Iron Law (PLAN-RECOVERY-05): the guard blocked an own-session edit, and
 root-causing instead of overriding blindly surfaced the normalization bug.
 
-> Remaining gap (carry): the `UT_TDD_ALLOW_FOREIGN_EDIT` override is an env var the agent
-> cannot set mid-session through tool calls. An agent-accessible override path (e.g. a
-> marker file) is still needed for intentional foreign edits.
+Resolved (2026-06-23): an agent-accessible override path was added alongside the env var.
+Writing a non-empty reason to `.ut-tdd/state/foreign-edit-override` (gitignored runtime
+state, writable mid-session via the Write tool) bypasses the guard; an empty/whitespace
+marker does not (no silent bypass without a reason). Every marker bypass is appended to
+`.ut-tdd/logs/foreign-edit-overrides.jsonl` (ts/target/reason/session) so it leaves an
+audit trail. Pure resolver `resolveForeignEditOverride` + hook marker read/audit, covered
+by `tests/work-guard.test.ts`.

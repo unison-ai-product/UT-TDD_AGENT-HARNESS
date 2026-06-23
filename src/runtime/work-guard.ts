@@ -80,3 +80,36 @@ export function evaluateWorkGuard(input: WorkGuardInput): WorkGuardResult {
   }
   return { decision: "pass", reason: "clean-or-own", message: "" };
 }
+
+export interface ForeignEditOverride {
+  bypass: boolean;
+  /** どこから override したか (audit 用)。 */
+  source: "env" | "marker" | "none";
+  /** override 理由 (marker は本文、env は固定文言)。none は空。 */
+  reason: string;
+}
+
+/**
+ * foreign-edit override を解決する純関数 (agent-accessible 経路、PLAN-L7-114 correction)。
+ *
+ * override は 2 経路:
+ *  - `env`: `UT_TDD_ALLOW_FOREIGN_EDIT=1` (人間が out-of-band で設定)。
+ *  - `marker`: `.ut-tdd/state/foreign-edit-override` に **非空の理由** を書く。env はセッション中に
+ *    agent が設定できないため、agent が意図的に foreign 編集する時はこの marker を使う。理由が空の
+ *    marker は override 不成立 (silent bypass を許さない = 必ず理由を残す)。
+ *
+ * hook は marker bypass を durable log へ追記して audit する (証跡を残す)。
+ */
+export function resolveForeignEditOverride(opts: {
+  env?: string;
+  markerReason?: string | null;
+}): ForeignEditOverride {
+  if (opts.env === "1") {
+    return { bypass: true, source: "env", reason: "UT_TDD_ALLOW_FOREIGN_EDIT=1" };
+  }
+  const reason = (opts.markerReason ?? "").trim();
+  if (reason) {
+    return { bypass: true, source: "marker", reason };
+  }
+  return { bypass: false, source: "none", reason: "" };
+}
