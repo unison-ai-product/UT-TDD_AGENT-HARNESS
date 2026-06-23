@@ -27,7 +27,9 @@
 
 ## §4 carry (未了・先送り)
 
-- 現在の機械集計上の carry はなし。
+- **PLAN-DISCOVERY-06 (orchestrator-rule parity): 実装を明日へ延期** (PO 2026-06-23「plan 起票だけ、実装は明日」)。spike 完了済 = Codex は **Claude 互換 hook** (`hooks.json`、`PreToolUse`/`PostToolUse`/`SessionStart`、`deny` で blocking、repo 相対 `./hooks.json`) を持つと codex.exe binary 文字列 + figma plugin の `hooks.json` 実例で確認。明日の実装 = guard SSoT + materializer (`.claude/settings.json` ⊕ repo `hooks.json` を 1 ソースから emit) + rule-drift を「marker でなく挙動 parity」へ拡張。詳細 = `docs/plans/PLAN-DISCOVERY-06-orchestrator-rule-parity.md` §5/§6。global `~/.codex/` 書込みは不要 (repo-local hooks.json で足りる)。
+- 本 spike で PLAN-DISCOVERY-06 (draft) を追加したため `ut-tdd status` の non-terminal PLAN は 0→1 (意図的・明日 impl→confirmed で解消)。
+- 上記以外に機械集計上の carry はなし。
 - `green-command-digest` は既存 historical digest mismatch を note として出すが、doctor は fail していない。hard 化前の是正候補として別管理。
 - `docs/handover/session-handover-2026-06-22.md` に残っていた stale な同日追記は現状態の正本ではない。現在の正本は本ファイルと `.ut-tdd/handover/CURRENT.json`。
 
