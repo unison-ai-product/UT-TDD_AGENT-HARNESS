@@ -60,9 +60,9 @@ export function evaluateAttemptEscalation(
         subject,
         failureCount,
         message:
-          `${failureCount} consecutive failed attempts on ${subject} — STOP. ` +
+          `${failureCount} consecutive failed attempts on ${subject} - STOP. ` +
           `Iron Law: investigate the root cause / question the architecture before another fix ` +
-          `(systematic-debugging)。症状追いのスパイラルを止め、Recovery/troubleshoot へ。`,
+          `(systematic-debugging). Break the symptom-chasing spiral; route to Recovery/troubleshoot.`,
       });
     }
   }
