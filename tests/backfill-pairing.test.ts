@@ -158,6 +158,54 @@ describe("U-BACKFILL-004 analyzeBackfill", () => {
   });
 });
 
+describe("U-BACKFILL-004a required backfill bidirectional pairing", () => {
+  const glossary = "agent-slot peak_parallel";
+
+  it("new required add-impl must also require its Reverse backfill PLAN", () => {
+    const plans = [
+      plan({
+        plan_id: "PLAN-L7-108-green-evidence",
+        kind: "add-impl",
+        updated: "2026-06-23",
+      }),
+      plan({
+        plan_id: "PLAN-REVERSE-108-green-evidence",
+        kind: "reverse",
+        requires: ["docs/plans/PLAN-L7-108-green-evidence.md"],
+      }),
+    ];
+    const r = analyzeBackfill(plans, glossary);
+    expect(r.reverseOrphans).toEqual([]);
+    expect(r.reverseLinkMissing).toEqual([
+      {
+        plan_id: "PLAN-L7-108-green-evidence",
+        reverse_plan_id: "PLAN-REVERSE-108-green-evidence",
+      },
+    ]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("new required add-impl passes when the Reverse pairing is bidirectional", () => {
+    const plans = [
+      plan({
+        plan_id: "PLAN-L7-108-green-evidence",
+        kind: "add-impl",
+        updated: "2026-06-23",
+        requires: ["docs/plans/PLAN-REVERSE-108-green-evidence.md"],
+      }),
+      plan({
+        plan_id: "PLAN-REVERSE-108-green-evidence",
+        kind: "reverse",
+        requires: ["docs/plans/PLAN-L7-108-green-evidence.md"],
+      }),
+    ];
+    const r = analyzeBackfill(plans, glossary);
+    expect(r.reverseOrphans).toEqual([]);
+    expect(r.reverseLinkMissing).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe("U-BACKFILL-004b conditional backprop decision gate", () => {
   const glossary = "agent-slot peak_parallel";
 
@@ -212,7 +260,7 @@ describe("U-BACKFILL-005 backfillMessages", () => {
   it("孤児なし → OK / 孤児あり → warn 文言", () => {
     expect(backfillMessages(analyzeBackfill([], "")).some((m) => m.includes("OK"))).toBe(true);
     const orphan = analyzeBackfill([plan({ plan_id: "PLAN-L7-50-o", kind: "add-impl" })], "");
-    expect(backfillMessages(orphan).some((m) => m.includes("Reverse 無き impl"))).toBe(true);
+    expect(backfillMessages(orphan).some((m) => m.includes("without Reverse backfill"))).toBe(true);
   });
 });
 
@@ -221,8 +269,13 @@ describe("U-BACKFILL-006 実 repo の back-fill 完全性 (回帰ガード)", ()
     const docs = loadBackfillDocs();
     const r = analyzeBackfill(docs.plans, docs.glossaryText);
     // 失敗時に具体 PLAN/term を出して直せるように
-    expect({ reverseOrphans: r.reverseOrphans, glossaryGaps: r.glossaryGaps }).toEqual({
+    expect({
+      reverseOrphans: r.reverseOrphans,
+      reverseLinkMissing: r.reverseLinkMissing,
+      glossaryGaps: r.glossaryGaps,
+    }).toEqual({
       reverseOrphans: [],
+      reverseLinkMissing: [],
       glossaryGaps: [],
     });
   });

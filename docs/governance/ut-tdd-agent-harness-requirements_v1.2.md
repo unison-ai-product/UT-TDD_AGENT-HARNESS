@@ -402,6 +402,9 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
 > 駆動モデルは「設計ドキュメントまで戻す」までが 1 サイクル。bottom-up build した impl を上位設計/governance へ Reverse 合流させ、§6 用語更新を L0 §10 用語集へ back-merge する完全性を機械検証する。要否マトリクスの正本 = `src/lint/backfill-pairing.ts` `KIND_BACKFILL`。
 
 - [ ] **`kind=add-impl` (back-fill required) は、`kind=reverse` PLAN の `dependencies.requires` から参照される** (Reverse 合流の pairing)。参照無し = 「Reverse 無き impl」→ doctor hard violation (fail-close)。
+- [ ] 2026-06-23 以降の新規/更新 **`kind=add-impl` は、対応する `kind=reverse` PLAN を自身の `dependencies.requires` にも列挙する**
+      (L7→Reverse と Reverse→L7 の双方向 pairing)。片方向のみの場合は `backfill-pairing` の
+      `reverseLinkMissing` で fail-close する。
 - [ ] **`kind` が `refactor`/`retrofit`/`troubleshoot` (conditional)** は契約/挙動変更時に Reverse 要 (doctor note、人間判断)。`impl`/`design`/`add-design`/`poc`/`reverse`/`recovery` は back-fill 不要。
 - [ ] **全 PLAN の `§6 用語更新` で宣言した語が L0 §10 用語集 (`concept_v3.1.md`) に存在** (living glossary back-merge、§G.9 と連動)。未 merge → doctor hard violation。
 - 機構: `ut-tdd doctor` の `backfill —` 行が `reverseOrphans` / `glossaryGaps` / `conditionalPending` を surface。lint engine (`src/plan/lint.ts`) 実装時に exit code 連動 (fail-close) へ昇格予定。
