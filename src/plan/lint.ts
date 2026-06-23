@@ -52,6 +52,7 @@ export interface PlanGovernanceViolation {
     | "db_projection_backprop_missing"
     | "reverse_fullback_backprop_missing"
     | "reverse_fullback_claimed_artifact_missing"
+    | "reverse_r4_claimed_artifact_missing"
     | "reverse_fullback_scope_missing";
   detail?: string;
 }
@@ -246,6 +247,7 @@ const DB_PROJECTION_BACKPROP_REQUIRED_GENERATES = [
   "docs/design/harness/L6-function-design/fr-unit-coverage.md",
 ];
 const REVERSE_FULLBACK_BACKPROP_ENFORCEMENT_DATE = "2026-06-22";
+const REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE = "2026-06-23";
 const REQUIRED_REVERSE_FULLBACK_SCOPE_LAYERS = [
   "requirements",
   "L4-basic-design",
@@ -348,6 +350,21 @@ function reverseFullbackNeedsGeneratedBackprop(raw: Record<string, unknown>): bo
     reverseType === "fullback" &&
     (status === "confirmed" || status === "completed") &&
     updated >= REVERSE_FULLBACK_BACKPROP_ENFORCEMENT_DATE
+  );
+}
+
+function reverseR4NeedsClaimedArtifactConsistency(raw: Record<string, unknown>): boolean {
+  const kind = stringField(raw.kind);
+  const phase = stringField(raw.workflow_phase);
+  const reverseType = stringField(raw.confirmed_reverse_type);
+  const status = stringField(raw.status);
+  const updated = stringField(raw.updated) ?? stringField(raw.created) ?? "";
+  return (
+    kind === "reverse" &&
+    phase === "R4" &&
+    reverseType !== "fullback" &&
+    (status === "confirmed" || status === "completed") &&
+    updated >= REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE
   );
 }
 
@@ -505,6 +522,18 @@ export function analyzePlanGovernance(
           file: entry.file,
           reason: "reverse_fullback_scope_missing",
           detail: missingScope.join(", "),
+        });
+      }
+    }
+    if (reverseR4NeedsClaimedArtifactConsistency(raw)) {
+      const missingClaimedArtifacts = claimedBackpropArtifacts(entry.content).filter(
+        (path) => !generatedPaths.includes(path),
+      );
+      if (missingClaimedArtifacts.length > 0) {
+        violations.push({
+          file: entry.file,
+          reason: "reverse_r4_claimed_artifact_missing",
+          detail: missingClaimedArtifacts.join(", "),
         });
       }
     }

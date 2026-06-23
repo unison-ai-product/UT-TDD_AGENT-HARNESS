@@ -60,6 +60,28 @@ contains at least one upstream artifact. They still lack the stronger
 | PLAN-REVERSE-21-fr-unit-coverage | confirmed | L5 | L6 function design, L7 unit test design | No `backprop_scope`; requirements/L4/L5 impact decisions are implicit. |
 | PLAN-REVERSE-31-codex-l7-overstep | confirmed | L5 | requirements, backlog, recovery process | No `backprop_scope`; process/backlog backprop is visible, but requirements/L4/L5 impact decisions are implicit. |
 
+### Non-Fullback R4 Reverse Artifact Claim Missing
+
+Follow-up sweep on 2026-06-23 found a related but distinct pattern outside
+`confirmed_reverse_type=fullback`: R4 Reverse PLANs whose bodies cite a
+`docs/design/`, `docs/governance/`, or `docs/test-design/` artifact path that is
+not present in `generates`. These were outside the fullback-only gate even when
+they used wording such as reverse back-fill or routed a design/governance
+normalization back to a Forward layer.
+
+From 2026-06-23 onward, new or updated non-fullback R4 Reverse PLANs are guarded
+by `plan-governance` reason `reverse_r4_claimed_artifact_missing`.
+
+| PLAN | reverse_type | route | missing claimed artifact(s) |
+|---|---|---|---|
+| PLAN-REVERSE-12-review-evidence | design | gap-only | `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` |
+| PLAN-REVERSE-36-verification-cycle-gate-naming | normalization | L3 | `docs/design/harness/L3-functional/roadmap.md` |
+| PLAN-REVERSE-40-orphan-governance | design | L5 | `docs/design/harness/L1-requirements/functional-requirements.md` |
+| PLAN-REVERSE-41-substance-lints | design | L5 | `docs/design/harness/L1-requirements/functional-requirements.md`, `docs/governance/repository-structure.md`, `docs/test-design/harness/L7-unit-test-design.md` |
+| PLAN-REVERSE-42-regression-dependency-drift | code | L5 | `docs/design/harness/L3-functional/roadmap.md`, `docs/design/harness/L6-function-design/function-spec.md`, `docs/governance/gate-design.md` |
+| PLAN-REVERSE-44-roadmap-definition-design | design | L4 | `docs/design/harness/L4-basic-design/`, `docs/design/harness/L6-function-design/`, `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`, `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` |
+| PLAN-REVERSE-46-deliverable-catalog-extension | normalization | L4 | `docs/governance/document-system-map.md`, `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`, `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` |
+
 ### Current Sweep Summary
 
 As of 2026-06-23, confirmed/completed R4 fullback PLANs are classified as:
@@ -69,6 +91,10 @@ As of 2026-06-23, confirmed/completed R4 fullback PLANs are classified as:
 | Generated upstream artifact + `backprop_scope` present | 9 | Current compliant shape. |
 | Generated upstream artifact present, `backprop_scope` missing | 3 | Legacy trace is partial; scope decisions must be backfilled or the PLAN must be reclassified. |
 | No generated upstream artifact and no `backprop_scope` | 23 | Legacy debt from the original audit table. |
+
+Non-fullback R4 Reverse sweep also found 7 confirmed/completed PLANs with
+ungenerated literal upstream artifact claims. These are legacy debt under the
+new `reverse_r4_claimed_artifact_missing` guard.
 
 ## Current Remediation
 

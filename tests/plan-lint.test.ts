@@ -103,6 +103,29 @@ function reverseFullbackPlanDoc(
   };
 }
 
+function reverseR4PlanDoc(
+  id: string,
+  reverseType: string,
+  generatedPaths: string[],
+  overrides: { updated?: string; status?: string; body?: string } = {},
+) {
+  const generates =
+    generatedPaths.length === 0
+      ? "[]"
+      : `\n${generatedPaths
+          .map(
+            (artifactPath) =>
+              `  - artifact_path: ${artifactPath}\n    artifact_type: ${fixtureArtifactType(
+                artifactPath,
+              )}`,
+          )
+          .join("\n")}`;
+  return {
+    file: `docs/plans/${id}.md`,
+    content: `---\nplan_id: ${id}\ntitle: "${id}: reverse R4 fixture"\nkind: reverse\nlayer: cross\nworkflow_phase: R4\nconfirmed_reverse_type: ${reverseType}\ndrive: fullstack\nstatus: ${overrides.status ?? "confirmed"}\ncreated: 2026-06-23\nupdated: ${overrides.updated ?? "2026-06-23"}\nowner: fixture\nforward_routing: L5\npromotion_strategy: reuse-as-is\nagent_slots:\n  - role: tl\n    slot_label: "TL - fixture"\ngenerates: ${generates}\ndependencies:\n  parent: null\n  requires: []\n  blocks: []\n---\n\n## body\n\n${overrides.body ?? ""}\n`,
+  };
+}
+
 const fullbackScope = `backprop_scope:
   - layer: requirements
     decision: updated
@@ -439,6 +462,56 @@ describe("plan schedule lint (IMP-081)", () => {
     );
 
     expect(violation?.detail).toContain("docs/test-design/harness/L7-unit-test-design.md");
+  });
+
+  it("U-PLANGOV-011e: new non-fullback R4 reverse cannot claim an ungenerated upstream artifact path", () => {
+    const docs = [
+      reverseR4PlanDoc(
+        "PLAN-REVERSE-198-design-claimed-artifact",
+        "design",
+        ["docs/plans/PLAN-REVERSE-198-design-claimed-artifact.md"],
+        {
+          body: "R4 routes the design update to docs/governance/document-system-map.md.",
+        },
+      ),
+    ];
+
+    const violation = analyzePlanGovernance(docs).violations.find(
+      (v) => v.reason === "reverse_r4_claimed_artifact_missing",
+    );
+
+    expect(violation?.detail).toContain("docs/governance/document-system-map.md");
+  });
+
+  it("U-PLANGOV-011f: new non-fullback R4 reverse passes when claimed upstream artifact is generated", () => {
+    const docs = [
+      reverseR4PlanDoc(
+        "PLAN-REVERSE-198-design-generated-artifact",
+        "design",
+        [
+          "docs/plans/PLAN-REVERSE-198-design-generated-artifact.md",
+          "docs/governance/document-system-map.md",
+        ],
+        { body: "R4 routes the design update to docs/governance/document-system-map.md." },
+      ),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("reverse_r4_claimed_artifact_missing");
+  });
+
+  it("U-PLANGOV-011g: legacy non-fullback R4 reverse claimed-artifact debt is not retroactively failed", () => {
+    const docs = [
+      reverseR4PlanDoc("PLAN-REVERSE-198-legacy-design-claim", "design", [], {
+        updated: "2026-06-22",
+        body: "Legacy body cites docs/governance/document-system-map.md.",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("reverse_r4_claimed_artifact_missing");
   });
 
   it("U-PLANGOV-012: docs/design generated artifacts must use design_doc", () => {
