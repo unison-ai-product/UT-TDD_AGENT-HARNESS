@@ -154,6 +154,9 @@ describe("L7 workflow contract implementations", () => {
 
   it("implements routing, workflow, FE/design, asset, model, drive, skill, and command contracts", () => {
     expect(routeSignalToMode({ signal: "reverse gap" }).candidates).toEqual(["reverse"]);
+    expect(routeSignalToMode({ signal: "drift", drive: "agent" }).candidates[0]).toBe("reverse");
+    expect(routeSignalToMode({ signal: "regression_prod" }).candidates[0]).toBe("incident");
+    expect(routeSignalToMode({ signal: "new_requirement" }).candidates[0]).toBe("add-feature");
     const routeEval = evaluateRouteCommand({ signal: "reverse gap" });
     expect(routeEval.mode).toBe("reverse");
     expect(routeEval.exit_code).toBe(0);
@@ -168,6 +171,13 @@ describe("L7 workflow contract implementations", () => {
     expect(blockedRoute.approval.status).toBe("policy_missing");
     expect(blockedRoute.suggest_command).toBe("ut-tdd doctor");
     expect(blockedRoute.recommended_command?.safety.requires_human_approval).toBe(true);
+    for (const signal of ["production_incident", "hotfix_required", "regression_prod"]) {
+      const incidentRoute = evaluateRouteCommand({ signal });
+      expect(incidentRoute.mode).toBe("incident");
+      expect(incidentRoute.exit_code).toBe(1);
+      expect(incidentRoute.approval.required).toBe(true);
+      expect(incidentRoute.recommended_command?.command).toBe("ut-tdd doctor");
+    }
     const approvedRoute = evaluateRouteCommand({
       signal: "forced_stop",
       approval_policy: {
@@ -180,6 +190,11 @@ describe("L7 workflow contract implementations", () => {
     });
     expect(approvedRoute.exit_code).toBe(0);
     expect(approvedRoute.approval.status).toBe("approved");
+    const driftRoute = evaluateRouteCommand({ signal: "drift", drift_type: "schema" });
+    expect(driftRoute.mode).toBe("reverse");
+    expect(driftRoute.recommended_command?.args).toMatchObject({ drift_type: "schema" });
+    const additiveInterruptRoute = evaluateRouteCommand({ signal: "new_requirement" });
+    expect(additiveInterruptRoute.mode).toBe("add-feature");
     const legacyCommandRoute = evaluateRouteCommand({
       signal: "legacy override",
       route_map: [

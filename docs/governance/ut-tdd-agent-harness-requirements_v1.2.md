@@ -1966,7 +1966,7 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 | `dependency_outdated` / `upgrade` / `config_drift` | retrofit | upgrade は preflight |
 | `agent_runaway` / `context_exhaustion` / `regression_dev` / `runaway` / `forced_stop` | recovery | human approval。`forced_stop` = ユーザー強制停止 (ESC/Ctrl+C/Stop) = 高 severity 負シグナル (concept §2.6.1、PLAN-L6-04/L7-02 dangling-turn 推定で検出) |
 | `production_incident` / `hotfix_required` / `regression_prod` | incident | env=prod 必須、human approval |
-| `feature_addition` / `scope_extension` | add_feature | |
+| `feature_addition` / `scope_extension` | add-feature | §1.3 `kind=add-feature` と同じ正規表記 |
 | `user_feedback_iteration` / `requirement_continuous_refinement` | scrum | |
 | `requirement_undefined` / `feasibility_unknown` / `success_condition_unclear` / `design_uncertain` | discovery | 4 象限 P2 (uncertainty 高×impact 低) で Discovery 先行。上流委譲。**`design_uncertain` = 確証なき設計** (紙上で実現性・妥当性が確定できない設計、concept §2.5 / PLAN-DISCOVERY-01 S4 confirmed)。**在層で閉じる `design_gap` (下記 interrupt 分岐 → Forward spot 修正) とは区別**: 設計の確証が PoC を要するなら Discovery、層内で確定できるなら Forward |
 | `tech_decision_required` / `option_comparison_needed` / `adr_required` | research | 机上調査で完結 (PoC 不要)。作れるか不明→discovery / 既存実装調査→reverse に切替 |
@@ -1978,7 +1978,7 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 |------|-------------|
 | `agent_runaway` / `context_exhaustion` を併発 (重大・暴走) | recovery (承認必須) |
 | 要件未確定・実現性不透明に昇格 | discovery (前段) |
-| 軽微な追加要件 (`new_requirement` / `po_change`、影響限定) | add_feature |
+| 軽微な追加要件 (`new_requirement` / `po_change`、影響限定) | add-feature |
 | 設計ギャップ (`design_gap` / `constraint`、当該 layer で閉じる) | Forward 該当 layer で spot 修正 (mode 化せず) |
 
 > **`runaway` は `agent_runaway` の alias** (同義、recovery へ routing)。route-map では正規名 `agent_runaway` に正規化する。
@@ -1986,6 +1986,7 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 - `env=prod` または regression 系は Incident / Recovery を優先する。
 - priority/action は uncertainty × impact の 4 象限で決める (P0=緊急 routing / P1=即 PLAN / P2=Discovery 先行 / P3=suggest_only)。
 - signal が本表に無い場合は `exit 2` (not-available) + 上流委譲手順を stderr に返す (fail ではなく明示フォールバック)。
+- 複数 token が同時に一致する場合は **最長 token 一致を優先**する。例: `regression_prod` は汎用 `regression` より具体的な incident token として解決し、`forced_stop` は汎用 `stop` より具体的な recovery token として解決する。
 
 ## 7.8.2 RecommendedCommandV1 schema 要件
 
@@ -2054,6 +2055,7 @@ interrupt / debt / drift-check / readiness と doctor 検出器 (relation-graph 
 ## 7.8.6 受入条件 (配線)
 
 - [x] `ut-tdd route eval --signal <s> --format json` が RecommendedCommandV1 (schema_version/command/args/safety) を返す (`src/workflow/contracts.ts` + `src/cli.ts`, 2026-06-23)
+- [x] §7.8.1 の route token は実装 route-map で coverage される。`drift` は reverse、incident signal (`production_incident` / `hotfix_required` / `regression_prod`) は `mode=incident`、軽微な `new_requirement` / `po_change` は add-feature に解決し、helper `routeSignalToMode` も同じ最長一致 route-map を使う。incident は human approval 未承認なら exit 1 になる (`src/workflow/contracts.ts`, 2026-06-23)
 - [x] `command` が legacy runtime command name を含めば exit 1、`ut-tdd` 始まりのみ許可 (`recommendedCommandV1Schema` + route-map fail-close, 2026-06-23)
 - [x] `requires_human_approval: true` で承認者ポリシー未解決または未承認なら exit 1 + 承認記録を audit に残す (`src/workflow/contracts.ts` + `.ut-tdd/audit/route-approval.jsonl`, 2026-06-23)
 - [x] `ut-tdd route eval` が escalation 境界を `escalation_boundaries[]` として検出し、mode に依存せず `requires_human_approval=true` / 未承認 exit 1 にする (`src/workflow/contracts.ts`, 2026-06-23)

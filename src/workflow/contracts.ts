@@ -302,17 +302,15 @@ export function routeSignalToMode(input: {
   current_plan?: string;
   drive?: string;
 }): ContractResult & { candidates: string[] } {
-  const signal = input.signal.toLowerCase();
-  const candidates =
-    signal.includes("reverse") || signal.includes("gap")
-      ? ["reverse"]
-      : signal.includes("poc") || signal.includes("discovery")
-        ? ["poc", "scrum"]
-        : signal.includes("incident") || signal.includes("stop")
-          ? ["recovery", "incident"]
-          : input.drive
-            ? [input.drive]
-            : [];
+  const normalized = input.signal.trim().toLowerCase();
+  const candidates = ROUTE_SIGNAL_MAP.map((entry, index) => ({
+    entry,
+    index,
+    matchLength: routeMatchLength(entry, normalized),
+  }))
+    .filter((candidate) => candidate.matchLength > 0)
+    .sort((a, b) => b.matchLength - a.matchLength || a.index - b.index)
+    .map((candidate) => candidate.entry.mode);
   const findings =
     candidates.length === 0
       ? [finding("no-route", "unknown signal has no route", { severity: "warn" })]
@@ -507,14 +505,14 @@ function resolveApproval(params: {
 
 const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
   {
-    tokens: ["regression", "failure", "doctor"],
+    tokens: ["failure", "doctor"],
     mode: "reverse",
     command: "ut-tdd task classify",
     preflight: true,
     requiresApproval: false,
   },
   {
-    tokens: ["reverse", "gap", "design_gap"],
+    tokens: ["drift", "reverse", "gap", "design_gap"],
     mode: "reverse",
     command: "ut-tdd task classify",
     preflight: true,
@@ -568,14 +566,14 @@ const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
     requiresApproval: false,
   },
   {
-    tokens: ["incident", "stop"],
+    tokens: ["production_incident", "hotfix_required", "regression_prod", "incident", "stop"],
     mode: "incident",
     command: "ut-tdd doctor",
     preflight: true,
     requiresApproval: true,
   },
   {
-    tokens: ["feature_addition", "scope_extension", "add-feature"],
+    tokens: ["feature_addition", "scope_extension", "new_requirement", "po_change", "add-feature"],
     mode: "add-feature",
     command: "ut-tdd task classify",
     preflight: true,
@@ -589,13 +587,22 @@ const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
     requiresApproval: false,
   },
   {
-    tokens: ["interrupt", "po_change", "new_requirement", "constraint"],
+    tokens: ["interrupt", "constraint"],
     mode: "forward",
     command: "ut-tdd task classify",
     preflight: true,
     requiresApproval: false,
   },
 ];
+
+function routeMatchLength(entry: RouteSignalEntry, normalizedSignal: string): number {
+  return Math.max(
+    0,
+    ...entry.tokens.map((token) =>
+      normalizedSignal.includes(token.toLowerCase()) ? token.length : 0,
+    ),
+  );
+}
 
 export function evaluateRouteCommand(input: {
   signal: string;
@@ -635,7 +642,10 @@ export function evaluateRouteCommand(input: {
   const normalized = input.signal.trim().toLowerCase();
   const escalationBoundaries = detectRouteEscalationBoundaries(input.signal);
   const routeMap = [...(input.route_map ?? []), ...ROUTE_SIGNAL_MAP];
-  const route = routeMap.find((entry) => entry.tokens.some((token) => normalized.includes(token)));
+  const route = routeMap
+    .map((entry, index) => ({ entry, index, matchLength: routeMatchLength(entry, normalized) }))
+    .filter((candidate) => candidate.matchLength > 0)
+    .sort((a, b) => b.matchLength - a.matchLength || a.index - b.index)[0]?.entry;
   if (!route) {
     return {
       ...result([
