@@ -112,7 +112,7 @@ import {
 import { formatVmodelInjection, resolveVmodelInjection } from "./vmodel/injection";
 import { lintVmodel } from "./vmodel/lint";
 import { startWebServer } from "./web/server";
-import { buildCommandCatalog } from "./workflow/contracts";
+import { buildCommandCatalog, evaluateRouteCommand } from "./workflow/contracts";
 import { evaluateAutomationReadiness } from "./workflow/readiness";
 
 function gitBranch(): string | null {
@@ -1384,6 +1384,32 @@ vmodel
       process.stderr.write(`invalid vmodel injection input: ${String(e)}\n`);
       process.exitCode = 1;
     }
+  });
+
+const routeCommand = program.command("route").description("signal routing");
+routeCommand
+  .command("eval")
+  .description("evaluate a signal into a mode and RecommendedCommandV1")
+  .requiredOption("--signal <signal>", "observed signal")
+  .option("--env <env>", "runtime environment")
+  .option("--drift-type <type>", "drift subtype")
+  .option("--format <format>", "output format: text or json", "text")
+  .action((opts: { signal: string; env?: string; driftType?: string; format?: string }) => {
+    const evaluated = evaluateRouteCommand({
+      signal: opts.signal,
+      env: opts.env,
+      drift_type: opts.driftType,
+    });
+    if (opts.format === "json") {
+      process.stdout.write(`${JSON.stringify(evaluated, null, 2)}\n`);
+    } else if (evaluated.recommended_command) {
+      process.stdout.write(`mode=${evaluated.mode}\n`);
+      process.stdout.write(`suggest_command=${evaluated.suggest_command}\n`);
+      process.stdout.write(`command=${evaluated.recommended_command.command}\n`);
+    } else {
+      process.stderr.write(`${evaluated.suggest_command}\n`);
+    }
+    process.exitCode = evaluated.exit_code;
   });
 
 function runtimeCommand(provider: AdapterProvider): Command {

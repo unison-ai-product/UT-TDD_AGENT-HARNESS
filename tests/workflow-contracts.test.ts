@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { recommendedCommandV1Schema } from "../src/schema/index";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import {
@@ -14,6 +15,7 @@ import {
   evaluateGreenDefinition,
   evaluateResearchDecision,
   evaluateRetrofitMatrix,
+  evaluateRouteCommand,
   mergeTwoStageAgentDesign,
   prioritizeCapabilityGaps,
   recommendModelEffort,
@@ -151,6 +153,15 @@ describe("L7 workflow contract implementations", () => {
 
   it("implements routing, workflow, FE/design, asset, model, drive, skill, and command contracts", () => {
     expect(routeSignalToMode({ signal: "reverse gap" }).candidates).toEqual(["reverse"]);
+    const routeEval = evaluateRouteCommand({ signal: "reverse gap" });
+    expect(routeEval.mode).toBe("reverse");
+    expect(routeEval.exit_code).toBe(0);
+    expect(routeEval.recommended_command?.command).toBe("ut-tdd task classify");
+    expect(recommendedCommandV1Schema.safeParse(routeEval.recommended_command).success).toBe(true);
+    expect(routeEval.suggest_command).toContain("reverse gap");
+    const unknownRoute = evaluateRouteCommand({ signal: "unmapped-special-case" });
+    expect(unknownRoute.exit_code).toBe(2);
+    expect(unknownRoute.recommended_command).toBeNull();
     expect(
       recordCrossCuttingEvent({
         type: "drift",

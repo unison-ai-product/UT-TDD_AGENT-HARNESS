@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { type RecommendedCommandV1, recommendedCommandV1Schema } from "../schema/index";
 import type { HarnessDb } from "../state-db/index";
 import { upsertRow } from "../state-db/index";
 
@@ -317,6 +318,143 @@ export function routeSignalToMode(input: {
       ? [finding("no-route", "unknown signal has no route", { severity: "warn" })]
       : [];
   return { ...result(findings), candidates };
+}
+
+export interface RouteEvalResult extends ContractResult {
+  signal: string;
+  mode: string | null;
+  suggest_command: string;
+  recommended_command: RecommendedCommandV1 | null;
+  exit_code: 0 | 2;
+}
+
+const ROUTE_SIGNAL_MAP: { tokens: string[]; mode: string; command: string; preflight: boolean }[] =
+  [
+    {
+      tokens: ["regression", "failure", "doctor"],
+      mode: "reverse",
+      command: "ut-tdd task classify",
+      preflight: true,
+    },
+    {
+      tokens: ["reverse", "gap", "design_gap"],
+      mode: "reverse",
+      command: "ut-tdd task classify",
+      preflight: true,
+    },
+    {
+      tokens: ["agent_runaway", "runaway", "context_exhaustion", "forced_stop", "regression_dev"],
+      mode: "recovery",
+      command: "ut-tdd doctor",
+      preflight: true,
+    },
+    {
+      tokens: ["dependency_outdated", "upgrade", "config_drift"],
+      mode: "retrofit",
+      command: "ut-tdd doctor",
+      preflight: true,
+    },
+    {
+      tokens: ["debt_degradation", "code_smell", "structural", "debt"],
+      mode: "refactor",
+      command: "ut-tdd task classify",
+      preflight: true,
+    },
+    {
+      tokens: [
+        "requirement_undefined",
+        "feasibility_unknown",
+        "success_condition_unclear",
+        "design_uncertain",
+      ],
+      mode: "discovery",
+      command: "ut-tdd task classify",
+      preflight: true,
+    },
+    {
+      tokens: ["poc", "discovery"],
+      mode: "discovery",
+      command: "ut-tdd task classify",
+      preflight: true,
+    },
+    {
+      tokens: ["user_feedback_iteration", "requirement_continuous_refinement", "scrum"],
+      mode: "scrum",
+      command: "ut-tdd task classify",
+      preflight: true,
+    },
+    {
+      tokens: ["incident", "stop"],
+      mode: "incident",
+      command: "ut-tdd doctor",
+      preflight: true,
+    },
+    {
+      tokens: ["feature_addition", "scope_extension", "add-feature"],
+      mode: "add-feature",
+      command: "ut-tdd task classify",
+      preflight: true,
+    },
+    {
+      tokens: ["tech_decision_required", "option_comparison_needed", "adr_required", "research"],
+      mode: "research",
+      command: "ut-tdd task classify",
+      preflight: true,
+    },
+    {
+      tokens: ["interrupt", "po_change", "new_requirement", "constraint"],
+      mode: "forward",
+      command: "ut-tdd task classify",
+      preflight: true,
+    },
+  ];
+
+export function evaluateRouteCommand(input: {
+  signal: string;
+  env?: string;
+  drift_type?: string;
+}): RouteEvalResult {
+  const normalized = input.signal.trim().toLowerCase();
+  const route = ROUTE_SIGNAL_MAP.find((entry) =>
+    entry.tokens.some((token) => normalized.includes(token)),
+  );
+  if (!route) {
+    return {
+      ...result([
+        finding("no-route", "unknown signal has no route; escalate upstream before PLAN creation", {
+          severity: "warn",
+        }),
+      ]),
+      signal: input.signal,
+      mode: null,
+      suggest_command: "upstream delegation required: define route-map entry before PLAN creation",
+      recommended_command: null,
+      exit_code: 2,
+    };
+  }
+  const recommended = recommendedCommandV1Schema.parse({
+    schema_version: "v1",
+    command: route.command,
+    args: {
+      signal: input.signal,
+      mode: route.mode,
+      ...(input.env ? { env: input.env } : {}),
+      ...(input.drift_type ? { drift_type: input.drift_type } : {}),
+    },
+    safety: {
+      auto_apply: false,
+      requires_human_approval: false,
+      requires_preflight: route.preflight,
+    },
+  });
+  return {
+    ...result([], ["src/workflow/contracts.ts"]),
+    signal: input.signal,
+    mode: route.mode,
+    suggest_command: `${route.command} --text "${input.signal}"`,
+    recommended_command: recommended,
+    exit_code: 0,
+  };
 }
 
 export function recordCrossCuttingEvent(input: {

@@ -2051,7 +2051,7 @@ interrupt / debt / drift-check / readiness と doctor 検出器 (relation-graph 
 
 ## 7.8.6 受入条件 (配線)
 
-- [ ] `ut-tdd route eval --signal <s> --format json` が RecommendedCommandV1 (schema_version/command/args/safety) を返す
+- [x] `ut-tdd route eval --signal <s> --format json` が RecommendedCommandV1 (schema_version/command/args/safety) を返す (`src/workflow/contracts.ts` + `src/cli.ts`, 2026-06-23)
 - [ ] `command` が legacy runtime command name を含めば exit 1、`ut-tdd` 始まりのみ許可
 - [ ] `requires_human_approval: true` で承認者ポリシー未解決または未承認なら exit 1 + 承認記録を audit に残す
 - [x] `ut-tdd vmodel show <drive> <layer> --injection` が 5 注入 key を返し、`orchestration_mode` は VALID_ORCHESTRATION_MODES のいずれか (`src/vmodel/injection.ts`, 2026-06-23)
