@@ -44,6 +44,14 @@ describe("change-impact lint", () => {
     ).toEqual(["src/a.ts", "src/new.ts", "tests/a.test.ts"]);
   });
 
+  it("ignores transient harness DB journal files from git porcelain paths", () => {
+    expect(
+      parseGitPorcelain(
+        "?? .ut-tdd/harness.db-journal\n?? .ut-tdd/harness.db-wal\n?? .ut-tdd/harness.db-shm\n M docs/handover/session-handover-2026-06-22.md\n",
+      ),
+    ).toEqual(["docs/handover/session-handover-2026-06-22.md"]);
+  });
+
   it("warns when only one artifact category is touched", () => {
     const result = analyzeChangeSetIntegrity({
       changedFiles: ["docs/design/harness/L6-function-design/foo.md"],

@@ -63,6 +63,10 @@ function norm(path: string): string {
   return path.replaceAll("\\", "/").trim();
 }
 
+function isTransientHarnessDbFile(path: string): boolean {
+  return /^\.ut-tdd\/harness\.db-(journal|shm|wal)$/.test(norm(path));
+}
+
 function isSource(path: string): boolean {
   return /^src\/.+\.(ts|tsx)$/.test(path);
 }
@@ -207,7 +211,8 @@ export function parseGitPorcelain(output: string): string[] {
       const rawPath = line.slice(3);
       const renamed = rawPath.includes(" -> ") ? rawPath.split(" -> ").at(-1) : rawPath;
       return norm(renamed ?? rawPath);
-    });
+    })
+    .filter((path) => !isTransientHarnessDbFile(path));
 }
 
 export function loadChangedFiles(repoRoot: string = process.cwd()): string[] {
