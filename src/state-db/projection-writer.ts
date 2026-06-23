@@ -290,6 +290,7 @@ function recordFinding(
 
 function checkResolvablePlanJoin(db: HarnessDb, table: string, row: Record<string, unknown>): void {
   if (table === "plan_registry") return;
+  if (table === "feedback_events") return;
   const planId = asString(row.plan_id);
   if (!planId || planExists(db, planId)) return;
   const pk = primaryKeyOf(tableDef(table));

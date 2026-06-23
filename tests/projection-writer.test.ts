@@ -221,6 +221,38 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
     }
   });
 
+  it("does not turn feedback_events queue rows into unresolved join findings", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+
+      recordProjectionEvent(db, {
+        table: "feedback_events",
+        id: "feedback:queue-row",
+        row: {
+          feedback_event_id: "feedback:queue-row",
+          finding_id: "",
+          plan_id: "PLAN-L7-46-missing",
+          source_table: "quality_signals",
+          source_id: "signal-1",
+          source_color: "",
+          signal_type: "skill_firing_rate",
+          severity: "info",
+          status: "open",
+          next_action: "review quality signal signal-1",
+          created_at: "2026-06-23T00:00:00.000Z",
+        },
+      });
+
+      const finding = db
+        .prepare("SELECT kind FROM findings WHERE subject_id = ?")
+        .get("feedback_events:feedback:queue-row");
+      expect(finding).toBeUndefined();
+    } finally {
+      db.close();
+    }
+  });
+
   it("rebuildHarnessDb is atomic: a mid-rebuild failure rolls back, leaving the prior projection intact", () => {
     const real = openHarnessDb(":memory:");
     try {

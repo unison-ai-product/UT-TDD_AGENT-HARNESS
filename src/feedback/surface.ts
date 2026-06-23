@@ -15,6 +15,7 @@ export interface SurfacedFeedback {
   severity: string;
   plan_id: string;
   next_action: string;
+  bucket: FeedbackSurfaceBucket;
 }
 
 export interface TakeoverFeedbackResult {
@@ -22,14 +23,50 @@ export interface TakeoverFeedbackResult {
   total: number;
   /** Count by normalized severity. */
   bySeverity: Record<string, number>;
-  /** Stable severity/id ordered items after applying the display limit. */
+  /** Count by display bucket. */
+  byBucket: Record<FeedbackSurfaceBucket, number>;
+  /** Count by signal type for telemetry items that are intentionally summarized. */
+  telemetryBySignal: Record<string, number>;
+  /** Stable bucket/severity/id ordered non-telemetry items after applying the display limit. */
   items: SurfacedFeedback[];
 }
 
-const SEVERITY_RANK: Record<string, number> = { fail: 0, warn: 1, info: 2 };
+export type FeedbackSurfaceBucket = "gate" | "actionable" | "telemetry";
+
+export interface FeedbackEventRowLike {
+  feedback_event_id?: unknown;
+  signal_type?: unknown;
+  severity?: unknown;
+  plan_id?: unknown;
+  next_action?: unknown;
+}
+
+const BUCKET_RANK: Record<FeedbackSurfaceBucket, number> = { gate: 0, actionable: 1, telemetry: 2 };
+const SEVERITY_RANK: Record<string, number> = { error: 0, fail: 0, warn: 1, info: 2 };
+
+const TELEMETRY_SIGNAL_TYPES = new Set([
+  "artifact_progress_yellow",
+  "drive_firing_rate",
+  "large-document-split",
+  "missing-test-oracle-id",
+  "skill_acceptance_rate",
+  "skill_firing_rate",
+  "trouble_event_rate",
+  "workflow_human_required_rate",
+]);
 
 function severityRank(severity: string): number {
   return SEVERITY_RANK[severity] ?? SEVERITY_RANK.warn;
+}
+
+export function classifyFeedbackBucket(input: {
+  severity: string;
+  signal_type: string;
+}): FeedbackSurfaceBucket {
+  const severity = input.severity.toLowerCase();
+  if (severity === "error" || severity === "fail") return "gate";
+  if (severity === "info" || TELEMETRY_SIGNAL_TYPES.has(input.signal_type)) return "telemetry";
+  return "actionable";
 }
 
 function feedbackId(prefix: string, subject: string): string {
@@ -38,6 +75,50 @@ function feedbackId(prefix: string, subject: string): string {
 
 function planIdOf(subject: string): string {
   return subject.startsWith("PLAN-") ? subject : "";
+}
+
+function renderGroupedItems(items: SurfacedFeedback[], indent = "    "): string[] {
+  const groups = new Map<
+    string,
+    {
+      bucket: FeedbackSurfaceBucket;
+      severity: string;
+      signalType: string;
+      count: number;
+      planIds: Set<string>;
+      nextAction: string;
+    }
+  >();
+  for (const item of items) {
+    const key = `${item.bucket}:${item.severity}:${item.signal_type}`;
+    const group = groups.get(key) ?? {
+      bucket: item.bucket,
+      severity: item.severity,
+      signalType: item.signal_type,
+      count: 0,
+      planIds: new Set<string>(),
+      nextAction: item.next_action,
+    };
+    group.count += 1;
+    if (item.plan_id) group.planIds.add(item.plan_id);
+    groups.set(key, group);
+  }
+  return [...groups.values()]
+    .sort(
+      (a, b) =>
+        BUCKET_RANK[a.bucket] - BUCKET_RANK[b.bucket] ||
+        severityRank(a.severity) - severityRank(b.severity) ||
+        b.count - a.count ||
+        a.signalType.localeCompare(b.signalType),
+    )
+    .map((group) => {
+      const plans = [...group.planIds].slice(0, 3);
+      const planText =
+        plans.length > 0
+          ? ` [${plans.join(", ")}${group.planIds.size > plans.length ? ", ..." : ""}]`
+          : "";
+      return `${indent}- (${group.severity}) ${group.signalType}${planText}: count=${group.count}; ${group.nextAction}`;
+    });
 }
 
 /**
@@ -65,6 +146,10 @@ export function selectTakeoverFeedback(
       severity: String(finding.severity ?? "warn"),
       plan_id: planIdOf(subject),
       next_action: `review finding ${finding.finding_id ?? subject}`,
+      bucket: classifyFeedbackBucket({
+        severity: String(finding.severity ?? "warn"),
+        signal_type: String(finding.kind ?? "finding"),
+      }),
     });
   }
 
@@ -81,11 +166,16 @@ export function selectTakeoverFeedback(
       severity: String(signal.status ?? "warn") === "fail" ? "warn" : "info",
       plan_id: planIdOf(subject),
       next_action: `review quality signal ${signal.signal_id ?? subject}`,
+      bucket: classifyFeedbackBucket({
+        severity: String(signal.status ?? "warn") === "fail" ? "warn" : "info",
+        signal_type: String(signal.metric ?? "quality_signal"),
+      }),
     });
   }
 
   items.sort(
     (a, b) =>
+      BUCKET_RANK[a.bucket] - BUCKET_RANK[b.bucket] ||
       severityRank(a.severity) - severityRank(b.severity) ||
       a.feedback_event_id.localeCompare(b.feedback_event_id),
   );
@@ -95,7 +185,21 @@ export function selectTakeoverFeedback(
     bySeverity[item.severity] = (bySeverity[item.severity] ?? 0) + 1;
   }
 
-  return { total: items.length, bySeverity, items: items.slice(0, limit) };
+  const byBucket: Record<FeedbackSurfaceBucket, number> = {
+    gate: 0,
+    actionable: 0,
+    telemetry: 0,
+  };
+  const telemetryBySignal: Record<string, number> = {};
+  for (const item of items) {
+    byBucket[item.bucket] += 1;
+    if (item.bucket === "telemetry") {
+      telemetryBySignal[item.signal_type] = (telemetryBySignal[item.signal_type] ?? 0) + 1;
+    }
+  }
+
+  const surfaced = items.filter((item) => item.bucket !== "telemetry").slice(0, limit);
+  return { total: items.length, bySeverity, byBucket, telemetryBySignal, items: surfaced };
 }
 
 export function renderTakeoverFeedback(result: TakeoverFeedbackResult): string {
@@ -105,14 +209,74 @@ export function renderTakeoverFeedback(result: TakeoverFeedbackResult): string {
     .map((sev) => `${sev}=${result.bySeverity[sev]}`)
     .join(" ");
   const lines = [
-    `harness.db feedback (open=${result.total}; ${counts}) - source=DB, not prose handover`,
+    `harness.db feedback (open=${result.total}; gate=${result.byBucket.gate} actionable=${result.byBucket.actionable} telemetry=${result.byBucket.telemetry}; ${counts}) - source=DB, not prose handover`,
   ];
-  for (const item of result.items) {
-    const plan = item.plan_id ? ` [${item.plan_id}]` : "";
-    lines.push(`  - (${item.severity}) ${item.signal_type}${plan}: ${item.next_action}`);
+  const gateItems = result.items.filter((item) => item.bucket === "gate");
+  const actionableItems = result.items.filter((item) => item.bucket === "actionable");
+  if (gateItems.length > 0) lines.push("  gate:");
+  lines.push(...renderGroupedItems(gateItems));
+  if (actionableItems.length > 0) lines.push("  actionable:");
+  lines.push(...renderGroupedItems(actionableItems));
+  const hiddenActionable = result.byBucket.gate + result.byBucket.actionable - result.items.length;
+  if (hiddenActionable > 0) {
+    lines.push(`  - (+${hiddenActionable} more actionable - ut-tdd feedback list --emit)`);
   }
-  if (result.total > result.items.length) {
-    lines.push(`  - (+${result.total - result.items.length} more - ut-tdd feedback list --emit)`);
+  if (result.byBucket.telemetry > 0) {
+    const topTelemetry = Object.entries(result.telemetryBySignal)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 5)
+      .map(([signal, count]) => `${signal}=${count}`)
+      .join(" ");
+    lines.push(`  telemetry summarized: ${topTelemetry}`);
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+export function renderFeedbackEventRows(rows: FeedbackEventRowLike[], limit = 20): string {
+  const items = rows.map((row) => {
+    const severity = String(row.severity ?? "warn");
+    const signalType = String(row.signal_type ?? "feedback");
+    return {
+      feedback_event_id: String(row.feedback_event_id ?? ""),
+      signal_type: signalType,
+      severity,
+      plan_id: String(row.plan_id ?? ""),
+      next_action: String(row.next_action ?? ""),
+      bucket: classifyFeedbackBucket({ severity, signal_type: signalType }),
+    } satisfies SurfacedFeedback;
+  });
+  const byBucket: Record<FeedbackSurfaceBucket, number> = { gate: 0, actionable: 0, telemetry: 0 };
+  const telemetryBySignal: Record<string, number> = {};
+  for (const item of items) {
+    byBucket[item.bucket] += 1;
+    if (item.bucket === "telemetry") {
+      telemetryBySignal[item.signal_type] = (telemetryBySignal[item.signal_type] ?? 0) + 1;
+    }
+  }
+  const nonTelemetry = items
+    .filter((item) => item.bucket !== "telemetry")
+    .sort(
+      (a, b) =>
+        BUCKET_RANK[a.bucket] - BUCKET_RANK[b.bucket] ||
+        severityRank(a.severity) - severityRank(b.severity) ||
+        a.feedback_event_id.localeCompare(b.feedback_event_id),
+    );
+  const lines = [
+    `feedback events: total=${items.length} gate=${byBucket.gate} actionable=${byBucket.actionable} telemetry=${byBucket.telemetry}`,
+  ];
+  const grouped = renderGroupedItems(nonTelemetry, "  ");
+  lines.push(...grouped.slice(0, limit));
+  const hiddenGroups = grouped.length - limit;
+  if (hiddenGroups > 0) {
+    lines.push(`  - (+${hiddenGroups} more actionable signal groups; use --json for raw rows)`);
+  }
+  if (byBucket.telemetry > 0) {
+    const topTelemetry = Object.entries(telemetryBySignal)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 5)
+      .map(([signal, count]) => `${signal}=${count}`)
+      .join(" ");
+    lines.push(`  telemetry summarized: ${topTelemetry}`);
   }
   return `${lines.join("\n")}\n`;
 }

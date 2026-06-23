@@ -40,6 +40,27 @@ Unit oracle families:
 - U-FR-L1-12 / U-FR-L1-46 / U-FR-L1-47 cover skill recommendation, roster capability, and skill metric inputs.
 - U-FR-L1-33 / U-FR-L1-34 / U-FR-L1-48 / U-FR-L1-49 cover search/reference reduction, command cataloging, and asset drift detection.
 
+### 2026-06-23 Feedback Surface Taxonomy Addendum
+
+`feedback_events` is a notification queue derived from findings, quality signals,
+and artifact progress. It is not an authoring source and must not create
+additional `unresolved-join` findings when queue rows carry a best-effort
+`plan_id`. The resolvable PLAN join guard applies to source projection tables,
+not to the notification queue itself.
+
+Human-facing feedback surfaces must classify open rows into three display
+buckets without changing the stored severity:
+
+| Bucket | Rule | Surface behavior |
+|---|---|---|
+| `gate` | severity is `error` or `fail` | Show first, grouped by `signal_type`, because these can block acceptance. |
+| `actionable` | non-telemetry `warn` rows | Show grouped by `signal_type` with counts and representative next action. |
+| `telemetry` | `info` rows and high-volume measurement signals such as `artifact_progress_yellow`, `missing-test-oracle-id`, `skill_firing_rate`, and `skill_acceptance_rate` | Do not list per-row in takeover output; summarize by signal counts. |
+
+`selectTakeoverFeedback` and text `ut-tdd feedback list` output use this
+taxonomy. `ut-tdd feedback list --json` remains the raw audit path for consumers
+that need individual queue rows.
+
 ## 2026-06-09 MCP Profile Config / Safety Addendum (A-125 / PLAN-L6-32)
 
 This addendum lowers requirements §6.8.10 and the A-125 research memo into L6 function contracts for MCP profile catalog hardening. It does not authorize profile execution by itself; it defines the pure checks and generated-config rules that a later L7 implementation must satisfy.

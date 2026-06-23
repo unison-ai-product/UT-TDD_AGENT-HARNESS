@@ -20,7 +20,11 @@ import { parse as parseYaml } from "yaml";
 import { catalogAutomationAssets } from "./assets/catalog";
 import { runDoctor } from "./doctor";
 import { computeSkillMetrics, emitFeedbackEvents } from "./feedback/engine";
-import { renderTakeoverFeedback, selectTakeoverFeedback } from "./feedback/surface";
+import {
+  renderFeedbackEventRows,
+  renderTakeoverFeedback,
+  selectTakeoverFeedback,
+} from "./feedback/surface";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { evaluateStaticGate } from "./gate/static";
 import { loadRelationGraphSourceSet } from "./graph/loader";
@@ -2192,15 +2196,11 @@ feedback
     const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
     try {
       if (opts.emit) emitFeedbackEvents(db);
-      const rows = db.prepare("SELECT * FROM feedback_events ORDER BY created_at").all();
+      const rows = db
+        .prepare("SELECT * FROM feedback_events WHERE status = 'open' ORDER BY created_at")
+        .all();
       if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
-      else {
-        for (const row of rows) {
-          process.stdout.write(
-            `${row.feedback_event_id ?? ""} ${row.signal_type ?? ""}: ${row.next_action ?? ""}\n`,
-          );
-        }
-      }
+      else process.stdout.write(renderFeedbackEventRows(rows));
     } finally {
       db.close();
     }
