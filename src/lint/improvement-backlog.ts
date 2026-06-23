@@ -42,7 +42,7 @@ export function loadBacklog(repoRoot: string = ROOT): string {
 
 /** §1 backlog table の行を構造化抽出 */
 export function parseBacklogEntries(md: string): BacklogEntry[] {
-  const sec = md.match(/## §1 backlog[\s\S]*$/)?.[0] ?? "";
+  const sec = md.match(/## §1 backlog[\s\S]*$/)?.[0] ?? md;
   const entries: BacklogEntry[] = [];
   for (const line of sec.split("\n")) {
     const idMatch = line.match(/^\|\s*\*\*(IMP-[\w-]+)\*\*\s*\|/);
@@ -115,7 +115,7 @@ export function analyzeImprovementBacklog(md?: string): ImprovementBacklogResult
 
   // absence-blindness guard: a line that looks like an IMP entry row but is not
   // parsed by parseBacklogEntries (same id regex) is silently dropped today.
-  const sec = src.match(/## §1 backlog[\s\S]*$/)?.[0] ?? "";
+  const sec = src.match(/## §1 backlog[\s\S]*$/)?.[0] ?? src;
   const unparseableRows: string[] = [];
   for (const line of sec.split("\n")) {
     if (!/^\|\s*\*\*IMP/.test(line)) continue; // candidate IMP entry row

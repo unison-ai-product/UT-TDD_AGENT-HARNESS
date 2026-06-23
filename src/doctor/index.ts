@@ -170,6 +170,11 @@ import {
   reviewEvidenceMessages,
 } from "../lint/review-evidence";
 import {
+  analyzeRightArmGatePlanning,
+  loadRightArmGatePlanningInput,
+  rightArmGatePlanningMessages,
+} from "../lint/right-arm-gate-planning";
+import {
   analyzeProgramCoverage,
   checkSpanExistence,
   computeGateProgress,
@@ -1692,6 +1697,18 @@ export function checkImprovementBacklog(repoRoot: string): { messages: string[];
  * lint-wiring meta-gate を hard gate 検査 (PLAN-L7-95、IMP-006)。
  * すべての src/lint module が runtime 経路から到達可能 or DEFERRED 登録済みを fail-close。
  */
+export function checkRightArmGatePlanning(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const r = analyzeRightArmGatePlanning(loadRightArmGatePlanningInput(repoRoot));
+    return { messages: rightArmGatePlanningMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["right-arm-gate-planning - violation: G8-G14 carry docs could not be read"],
+      ok: false,
+    };
+  }
+}
+
 export function checkLintWiring(repoRoot: string): { messages: string[]; ok: boolean } {
   try {
     const r = analyzeLintWiring(loadLintWiringInput(repoRoot));
@@ -1768,6 +1785,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const entityCoverage = checkEntityCoverage(deps.repoRoot);
   const frRegistryAudit = checkFrRegistryAudit(deps.repoRoot);
   const improvementBacklog = checkImprovementBacklog(deps.repoRoot);
+  const rightArmGatePlanning = checkRightArmGatePlanning(deps.repoRoot);
   const lintWiring = checkLintWiring(deps.repoRoot);
   const handoverOutstanding = checkHandoverOutstandingAnchor(handoverDeps(deps));
   return {
@@ -1832,6 +1850,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       entityCoverage.ok &&
       frRegistryAudit.ok &&
       improvementBacklog.ok &&
+      rightArmGatePlanning.ok &&
       lintWiring.ok &&
       handoverOutstanding.ok,
     messages: [
@@ -1899,6 +1918,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...entityCoverage.messages.map((m) => `doctor: ${m}`),
       ...frRegistryAudit.messages.map((m) => `doctor: ${m}`),
       ...improvementBacklog.messages.map((m) => `doctor: ${m}`),
+      ...rightArmGatePlanning.messages.map((m) => `doctor: ${m}`),
       ...lintWiring.messages.map((m) => `doctor: ${m}`),
       ...handoverOutstanding.messages.map((m) => `doctor: ${m}`),
     ],
