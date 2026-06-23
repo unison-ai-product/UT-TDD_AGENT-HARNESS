@@ -1191,7 +1191,7 @@ UT-TDD の全作業は **問題 / ギャップ起点**である。Forward 自体
 | sub-doc 分割時 (L1-L6) | 子 sub-doc PLAN は **Master hub branch から派生**し、子 PR は Master hub PR にまとめて (squash) merge。子ごとに別 Issue/別 branch にしない (並行 merge 衝突回避) |
 | 既存バグの顕在化 | **別 Issue + 別 PR** で扱い、進行中 PR に混ぜない (運用ルール書 §2 踏襲) |
 
-PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended) を持たせ、`plan-lint` が「feature/* / hotfix/* branch の PLAN に `github_issue_id` 設定」を warn、Issue close 漏れ (merge 済なのに Issue open) を機械検知する (§8.6 失敗変換ループの一部)。PR body は `Closes #<github_issue_id>` を必須フィールドとする。
+PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended) を持たせ、`branch-kind-check` が「feature/* / hotfix/* branch の PLAN に `github_issue_id` 設定」を warn、Issue close 漏れ (merge 済なのに Issue open) を機械検知する (§8.6 失敗変換ループの一部)。PR body は `Closes #<github_issue_id>` を必須フィールドとする。
 
 ### 6.8.3 status × kind/mode × freeze → git アクション対応
 
@@ -1869,6 +1869,7 @@ output:
 - [ ] `branch-kind-check` が §7.4 の判定ロジックに従い fail-close (echo WARN ではない)
 - [ ] `branch-kind-check` が PLAN 必須 branch で touched PLAN 0 件なら exit 1
 - [ ] `branch-kind-check` が `docs/*` / `chore/*` を例外として skip (exit 0)
+- [ ] `branch-kind-check` が `feature/*` / `hotfix/*` の PLAN `github_issue_id` 未設定を warning として surface
 - [ ] pre-commit / pre-push / CI の責任分離 (§7.5) を守る
 - [ ] `ut-tdd self-test --smoke` はネットワーク不要・外部 AI runtime 不要で通る
 - [ ] PR merge gate は GitHub Actions `harness-check` のみを正本とし、ローカル hook 成否だけを merge 条件にしない

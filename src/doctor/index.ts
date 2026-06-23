@@ -17,6 +17,7 @@ import {
 } from "../handover/index";
 import { analyzeAssetDrift, assetDriftMessages, loadAssetDriftInput } from "../lint/asset-drift";
 import { analyzeBackfill, backfillMessages, loadBackfillDocs } from "../lint/backfill-pairing";
+import { analyzeBranchKind, branchKindMessages, loadBranchKindInput } from "../lint/branch-kind";
 import {
   analyzeChangeImpact,
   analyzeChangeSetIntegrity,
@@ -753,6 +754,21 @@ export function checkVerificationProfile(repoRoot: string): { messages: string[]
   } catch {
     return {
       messages: ["verification-profile - violation: changed file graph could not be read"],
+      ok: false,
+    };
+  }
+}
+
+export function checkBranchKind(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["branch-kind-check - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeBranchKind(loadBranchKindInput(repoRoot));
+    return { messages: branchKindMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["branch-kind-check - violation: branch/check input could not be read"],
       ok: false,
     };
   }
@@ -1709,6 +1725,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const changeImpact = checkChangeImpact(deps.repoRoot);
   const changeSetIntegrity = checkChangeSetIntegrity(deps.repoRoot);
   const verificationProfile = checkVerificationProfile(deps.repoRoot);
+  const branchKind = checkBranchKind(deps.repoRoot);
   const codingRules = checkCodingRules(deps.repoRoot);
   const dddTddRules = checkDddTddRules(deps.repoRoot);
   const runtimePortability = checkRuntimePortability(deps.repoRoot);
@@ -1773,6 +1790,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       changeImpact.ok &&
       changeSetIntegrity.ok &&
       verificationProfile.ok &&
+      branchKind.ok &&
       codingRules.ok &&
       dddTddRules.ok &&
       runtimePortability.ok &&
@@ -1837,6 +1855,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...changeImpact.messages.map((m) => `doctor: ${m}`),
       ...changeSetIntegrity.messages.map((m) => `doctor: ${m}`),
       ...verificationProfile.messages.map((m) => `doctor: ${m}`),
+      ...branchKind.messages.map((m) => `doctor: ${m}`),
       ...codingRules.messages.map((m) => `doctor: ${m}`),
       ...dddTddRules.messages.map((m) => `doctor: ${m}`),
       ...runtimePortability.messages.map((m) => `doctor: ${m}`),

@@ -287,6 +287,12 @@ describe("runDoctor", () => {
     }
   });
 
+  it("includes branch-kind-check in doctor output", () => {
+    const r = runDoctor();
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: branch-kind-check - OK"))).toBe(true);
+  });
+
   it("includes G1/G3 trace gates in doctor output", () => {
     const r = runDoctor();
     expect(r.ok).toBe(true);
