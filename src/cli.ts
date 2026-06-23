@@ -210,7 +210,11 @@ function resolveSkillContextInjection(
   const repoRoot = process.cwd();
   const db = openHarnessDb(":memory:", { repoRoot });
   try {
-    rebuildHarnessDb({ repoRoot, db });
+    try {
+      rebuildHarnessDb({ repoRoot, db });
+    } catch {
+      return undefined;
+    }
     const recommendations = recommendSkillsForPlan(db, planId);
     const injection = buildSkillInjectionSet(db, recommendations);
     if (injection.required_paths.length === 0 && injection.optional_paths.length === 0) {

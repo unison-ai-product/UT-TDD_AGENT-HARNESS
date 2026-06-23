@@ -655,3 +655,18 @@ CLI wiring:
 - `ut-tdd task route --plan <path> --execute` extracts `plan_id` from the PLAN
   file, resolves the same injection manifest, and passes it through
   `routeToAdapterPlan(..., { contextInjection })` after cost-tier routing.
+
+## 2026-06-23 Linux/POSIX wrapper readiness Addendum
+
+Runtime entrypoints remain TypeScript/Bun first, with thin OS wrappers only.
+`scripts/ut-tdd` is the Linux/POSIX `sh` entrypoint: it enables `set -e`,
+executes `dist/ut-tdd` when the compiled binary exists, and otherwise falls back
+to `bun run "$ROOT/src/cli.ts" "$@"`. The wrapper must not introduce Bash-only
+syntax, Python runtime dispatch, or legacy runtime names.
+
+Dynamic skill context injection for `ut-tdd codex|claude --plan` is
+opportunistic at runtime startup. If the current working tree cannot rebuild a
+harness DB projection, for example a temp repo used by hook/adapter smoke tests,
+the adapter execution continues without a `UT-TDD context injection` block. The
+task prompt and lifecycle digest still complete normally; missing injection is
+observable as absent context, not as adapter launch failure.

@@ -35,7 +35,7 @@ const validDocs: RuntimePortabilityDoc[] = [
   { path: ".claude/hooks/session-log.ts", text: "export const hook = true;" },
   {
     path: "scripts/ut-tdd",
-    text: '#!/usr/bin/env sh\nROOT="$(pwd)"\nexec "$ROOT/dist/ut-tdd" "$@"\nexec bun run "$ROOT/src/cli.ts" "$@"\n',
+    text: '#!/usr/bin/env sh\nset -e\nROOT="$(pwd)"\nexec "$ROOT/dist/ut-tdd" "$@"\nexec bun run "$ROOT/src/cli.ts" "$@"\n',
   },
   {
     path: "scripts/ut-tdd.ps1",
@@ -101,6 +101,20 @@ describe("runtime-portability lint", () => {
     const result = analyzeRuntimePortability(loadRuntimePortabilityDocs(process.cwd()));
 
     expect(result.violations).toEqual([]);
+  });
+
+  it("U-RPORT-004A: POSIX entrypoint remains a thin sh wrapper for Linux", () => {
+    const docs = loadRuntimePortabilityDocs(process.cwd());
+    const wrapper = docs.find((doc) => doc.path === "scripts/ut-tdd")?.text;
+
+    expect(wrapper).toBeDefined();
+    expect(wrapper?.split(/\r?\n/).slice(0, 3)).toEqual([
+      "#!/usr/bin/env sh",
+      expect.stringContaining("POSIX entrypoint"),
+      "set -e",
+    ]);
+    expect(wrapper).toContain('exec "$ROOT/dist/ut-tdd" "$@"');
+    expect(wrapper).toContain('exec bun run "$ROOT/src/cli.ts" "$@"');
   });
 
   it("U-RPORT-005: scans untracked runtime files during active Windows setup work", () => {

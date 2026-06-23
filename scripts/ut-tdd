@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# UT-TDD thin POSIX entrypoint (ADR-001). compiled binary 優先、無ければ bun run。
+# UT-TDD thin POSIX entrypoint (ADR-001). compiled binary first, fallback to bun run.
 set -e
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 if [ -x "$ROOT/dist/ut-tdd" ]; then

@@ -244,6 +244,9 @@ describe("runtime hook entrypoints", () => {
       expect(called).toContain("exec");
       expect(called).not.toContain("--plan-id");
       expect(called).not.toContain("PLAN-L4-77-adapter");
+      const stdinText = readFileSync(join(cwd, "codex-stdin.txt"), "utf8");
+      expect(stdinText).toContain("implement explicit plan");
+      expect(stdinText).not.toContain("UT-TDD context injection");
     } finally {
       rmSync(cwd, { recursive: true, force: true });
     }
