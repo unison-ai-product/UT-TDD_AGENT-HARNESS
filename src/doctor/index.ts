@@ -169,6 +169,7 @@ import {
   loadReviewPlans,
   reviewEvidenceMessages,
 } from "../lint/review-evidence";
+import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import {
   analyzeRightArmGatePlanning,
   loadRightArmGatePlanningInput,
@@ -1788,6 +1789,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const rightArmGatePlanning = checkRightArmGatePlanning(deps.repoRoot);
   const lintWiring = checkLintWiring(deps.repoRoot);
   const handoverOutstanding = checkHandoverOutstandingAnchor(handoverDeps(deps));
+  // advisory (非ブロック): green_command digest が evidence_path 実 hash と一致するか (fake substance 可視化、PLAN-L7-132)。
+  const greenCommandDigest = checkGreenCommandDigests(deps.repoRoot);
   return {
     ok:
       backfill.ok &&
@@ -1921,6 +1924,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...rightArmGatePlanning.messages.map((m) => `doctor: ${m}`),
       ...lintWiring.messages.map((m) => `doctor: ${m}`),
       ...handoverOutstanding.messages.map((m) => `doctor: ${m}`),
+      ...greenCommandDigest.messages.map((m) => `doctor: ${m}`),
     ],
   };
 }
