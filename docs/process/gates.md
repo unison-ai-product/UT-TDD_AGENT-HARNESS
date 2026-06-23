@@ -6,6 +6,11 @@
 
 ---
 
+G8-G14 planning route (current): PLAN-L7-130-right-arm-gate-planning /
+PLAN-REVERSE-130-right-arm-gate-planning. `right-arm-gate-planning` is the
+doctor hard gate that prevents the G8-G14 carry from returning to an unplanned
+state.
+
 ## 1. gate 一覧表
 
 | gate | タイミング (L 遷移) | 確認対象 | fail 時動作 |
