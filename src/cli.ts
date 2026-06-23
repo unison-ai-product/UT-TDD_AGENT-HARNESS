@@ -963,12 +963,12 @@ progress
         color != null && color.length > 0
           ? db
               .prepare(
-                "SELECT artifact_path, artifact_type, state, color, linked_test_count, dependency_checked, open_dependency_impacts, linked_test_paths, reason, indexed_at FROM artifact_progress WHERE color = ? ORDER BY artifact_path",
+                "SELECT artifact_path, artifact_type, state, color, linked_test_count, passed_test_run_count, dependency_checked, dependency_check_run_id, open_dependency_impacts, linked_test_paths, passed_test_run_ids, recovery_plan_ids, reason, indexed_at FROM artifact_progress WHERE color = ? ORDER BY artifact_path",
               )
               .all(color)
           : db
               .prepare(
-                "SELECT artifact_path, artifact_type, state, color, linked_test_count, dependency_checked, open_dependency_impacts, linked_test_paths, reason, indexed_at FROM artifact_progress ORDER BY CASE color WHEN 'red' THEN 0 WHEN 'yellow' THEN 1 ELSE 2 END, artifact_path",
+                "SELECT artifact_path, artifact_type, state, color, linked_test_count, passed_test_run_count, dependency_checked, dependency_check_run_id, open_dependency_impacts, linked_test_paths, passed_test_run_ids, recovery_plan_ids, reason, indexed_at FROM artifact_progress ORDER BY CASE color WHEN 'red' THEN 0 WHEN 'yellow' THEN 1 ELSE 2 END, artifact_path",
               )
               .all();
       if (opts.json) {
@@ -981,7 +981,7 @@ progress
       }
       for (const row of rows as Array<Record<string, unknown>>) {
         process.stdout.write(
-          `${row.color} ${row.artifact_path} ${row.state} tests=${row.linked_test_count} deps=${row.dependency_checked} impacts=${row.open_dependency_impacts} - ${row.reason}\n`,
+          `${row.color} ${row.artifact_path} ${row.state} tests=${row.linked_test_count} passed_runs=${row.passed_test_run_count} deps=${row.dependency_checked} check=${row.dependency_check_run_id} impacts=${row.open_dependency_impacts} recovery=${row.recovery_plan_ids} - ${row.reason}\n`,
         );
       }
     } finally {

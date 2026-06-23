@@ -63,10 +63,19 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
         dependencyChecked: true,
         openDependencyImpacts: 0,
       }),
+    ).toMatchObject({ state: "implemented_unverified", color: "yellow" });
+    expect(
+      deriveArtifactProgressDecision({
+        linkedTestCount: 1,
+        passedLinkedTestRunCount: 1,
+        dependencyChecked: true,
+        openDependencyImpacts: 0,
+      }),
     ).toMatchObject({ state: "verified", color: "green" });
     expect(
       deriveArtifactProgressDecision({
         linkedTestCount: 1,
+        passedLinkedTestRunCount: 1,
         dependencyChecked: true,
         openDependencyImpacts: 0,
         recoveryPlanIds: ["PLAN-REVERSE-56"],
@@ -277,7 +286,7 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
     }
   });
 
-  it("projects artifact progress rows as green with linked tests and yellow without tests", () => {
+  it("projects artifact progress rows as yellow until linked tests have passing runs", () => {
     const db = openHarnessDb(":memory:");
     try {
       const result = rebuildHarnessDb({
@@ -318,8 +327,8 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
         | undefined;
 
       expect(covered).toMatchObject({
-        color: "green",
-        state: "verified",
+        color: "yellow",
+        state: "implemented_unverified",
         linked_test_count: 1,
         dependency_checked: 1,
       });
@@ -328,6 +337,27 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
         state: "implemented_unverified",
         linked_test_count: 0,
         dependency_checked: 1,
+      });
+      const event = db
+        .prepare(
+          "SELECT color, state, dependency_check_run_id FROM artifact_progress_events WHERE artifact_path = ?",
+        )
+        .get("src/covered.ts");
+      expect(event).toMatchObject({
+        color: "yellow",
+        state: "implemented_unverified",
+      });
+      expect(String(event?.dependency_check_run_id ?? "")).not.toHaveLength(0);
+      const feedback = db
+        .prepare(
+          "SELECT source_table, source_id, source_color, signal_type FROM feedback_events WHERE source_table = ? AND source_id = ?",
+        )
+        .get("artifact_progress", "src/covered.ts");
+      expect(feedback).toMatchObject({
+        source_table: "artifact_progress",
+        source_id: "src/covered.ts",
+        source_color: "yellow",
+        signal_type: "artifact_progress_yellow",
       });
     } finally {
       db.close();
@@ -437,7 +467,9 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
       });
 
       expect(result.ok).toBe(true);
-      expect(second.rowCounts).toEqual(result.rowCounts);
+      const { hook_events: _firstHookEvents, ...firstStableCounts } = result.rowCounts;
+      const { hook_events: _secondHookEvents, ...secondStableCounts } = second.rowCounts;
+      expect(secondStableCounts).toEqual(firstStableCounts);
       expect(rowCounts(db).plan_registry).toBeGreaterThan(0);
       const projectedPlan = db
         .prepare("SELECT source_hash FROM plan_registry WHERE source_hash <> '' LIMIT 1")

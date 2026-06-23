@@ -95,7 +95,10 @@ export type ArtifactProgressState =
 
 export interface ArtifactProgressDecisionInput {
   linkedTestCount: number;
+  passedLinkedTestRunCount?: number;
   dependencyChecked: boolean;
+  dependencyCheckRunId?: string;
+  dependencyCheckedAt?: string;
   openDependencyImpacts: number;
   recoveryPlanIds?: string[];
 }
@@ -127,11 +130,18 @@ export function deriveArtifactProgressDecision(
           : "dependency check is missing",
     };
   }
-  if (input.linkedTestCount > 0) {
+  if ((input.passedLinkedTestRunCount ?? 0) > 0) {
     return {
       state: "verified",
       color: "green",
-      reason: "linked test evidence exists and dependency impact is clear",
+      reason: "linked test run passed and dependency impact is clear",
+    };
+  }
+  if (input.linkedTestCount > 0) {
+    return {
+      state: "implemented_unverified",
+      color: "yellow",
+      reason: "linked test exists but no passing test run is recorded",
     };
   }
   return {
@@ -1325,43 +1335,127 @@ function projectCurrentImpactResults(
   }
 }
 
+const PROGRESS_NODE_KINDS = new Set(["source", "design", "test-design", "plan", "requirement"]);
+
+function artifactProgressType(kind: string): string {
+  return kind === "source" ? "source" : kind;
+}
+
+function passedTestRunsForPaths(db: HarnessDb, testPaths: string[]): string[] {
+  const ids = new Set<string>();
+  for (const path of testPaths) {
+    const like = `%${path.replace(/\\/g, "/")}%`;
+    const rows = db
+      .prepare(
+        `SELECT test_run_id
+         FROM test_runs
+         WHERE exit_code = 0
+           AND (evidence_path = ? OR command LIKE ?)
+         ORDER BY completed_at, test_run_id`,
+      )
+      .all(path, like);
+    for (const row of rows) ids.add(String(row.test_run_id ?? ""));
+  }
+  return [...ids].filter(Boolean).sort();
+}
+
+function activeRecoveryPlanIds(db: HarnessDb): string[] {
+  const rows = db
+    .prepare(
+      `SELECT plan_id
+       FROM plan_registry
+       WHERE kind IN ('reverse', 'recovery', 'refactor')
+         AND status NOT IN ('confirmed', 'completed', 'accepted')
+       ORDER BY plan_id`,
+    )
+    .all();
+  return rows.map((row) => String(row.plan_id ?? "")).filter(Boolean);
+}
+
+function nodeRecoveryPlanIds(
+  activePlans: string[],
+  openDependencyImpacts: number,
+  artifactPath: string,
+): string[] {
+  if (openDependencyImpacts <= 0 || activePlans.length === 0) return [];
+  const slug = artifactPath
+    .split("/")
+    .at(-1)
+    ?.replace(/\.[^.]+$/, "")
+    .toLowerCase();
+  const direct = slug ? activePlans.filter((planId) => planId.toLowerCase().includes(slug)) : [];
+  return direct.length > 0 ? direct : activePlans;
+}
+
 function projectArtifactProgress(db: HarnessDb, graph: RelationGraphProjection | undefined): void {
   if (!graph) return;
   const indexedAt = nowIso();
-  const sourceNodes = graph.nodes
-    .filter((node) => node.kind === "source" && node.path)
+  const dependencyCheckRunId = stableId(
+    "dependency-check",
+    stableHash(JSON.stringify({ nodes: graph.nodes.length, edges: graph.edges.length })),
+  );
+  const progressNodes = graph.nodes
+    .filter((node) => PROGRESS_NODE_KINDS.has(node.kind) && node.path)
     .sort((a, b) => String(a.path).localeCompare(String(b.path)));
-  const edgesBySource = new Map<string, typeof graph.edges>();
+  const coveredByEdges = new Map<string, typeof graph.edges>();
+  const pairedEdges = new Map<string, typeof graph.edges>();
   for (const edge of graph.edges) {
-    if (edge.kind !== "covered-by") continue;
-    const list = edgesBySource.get(edge.from) ?? [];
-    list.push(edge);
-    edgesBySource.set(edge.from, list);
+    if (edge.kind === "covered-by") {
+      const list = coveredByEdges.get(edge.from) ?? [];
+      list.push(edge);
+      coveredByEdges.set(edge.from, list);
+    }
+    if (edge.kind === "pairs") {
+      for (const endpoint of [edge.from, edge.to]) {
+        const list = pairedEdges.get(endpoint) ?? [];
+        list.push(edge);
+        pairedEdges.set(endpoint, list);
+      }
+    }
   }
-  for (const node of sourceNodes) {
-    const artifactPath = node.path ?? node.id.replace(/^source:/, "");
-    const linkedTestIds = (edgesBySource.get(node.id) ?? [])
+  const activeRecoveries = activeRecoveryPlanIds(db);
+  for (const node of progressNodes) {
+    const artifactPath = node.path ?? node.id.replace(/^[^:]+:/, "");
+    const linkedTestIds = (coveredByEdges.get(node.id) ?? [])
       .map((edge) => edge.to)
       .filter((id) => graph.nodes.some((candidate) => candidate.id === id))
       .sort();
-    const linkedTestPaths = linkedTestIds
+    const pairedTestDesignIds = (pairedEdges.get(node.id) ?? [])
+      .map((edge) => (edge.from === node.id ? edge.to : edge.from))
+      .filter((id) => graph.nodes.some((candidate) => candidate.id === id))
+      .sort();
+    const linkedIds = [...new Set([...linkedTestIds, ...pairedTestDesignIds])].sort();
+    const linkedTestPaths = linkedIds
       .map((id) => graph.nodes.find((candidate) => candidate.id === id)?.path ?? id)
+      .filter((path) => path)
       .sort();
     const openDependencyImpacts = scalarNumber(
       db,
       "SELECT COUNT(*) AS value FROM impact_results WHERE status = 'open' AND (root_node_id = ? OR impacted_node_id = ?)",
       [node.id, node.id],
     );
-    const decision = deriveArtifactProgressDecision({
-      linkedTestCount: linkedTestIds.length,
-      dependencyChecked: openDependencyImpacts === 0,
+    const passedTestRunIds = passedTestRunsForPaths(db, linkedTestPaths);
+    const recoveryPlanIds = nodeRecoveryPlanIds(
+      activeRecoveries,
       openDependencyImpacts,
+      artifactPath,
+    );
+    const decision = deriveArtifactProgressDecision({
+      linkedTestCount: linkedIds.length,
+      passedLinkedTestRunCount: passedTestRunIds.length,
+      dependencyChecked: true,
+      dependencyCheckRunId,
+      dependencyCheckedAt: indexedAt,
+      openDependencyImpacts,
+      recoveryPlanIds,
     });
     const artifactHash = stableHash(
       JSON.stringify({
         path: artifactPath,
-        tests: linkedTestIds,
+        tests: linkedIds,
+        passedRuns: passedTestRunIds,
         impacts: openDependencyImpacts,
+        recoveryPlanIds,
       }),
     );
     recordProjectionEvent(db, {
@@ -1369,18 +1463,49 @@ function projectArtifactProgress(db: HarnessDb, graph: RelationGraphProjection |
       id: artifactPath,
       row: {
         artifact_path: artifactPath,
-        artifact_type: "source",
+        artifact_type: artifactProgressType(node.kind),
         artifact_hash: artifactHash,
         state: decision.state,
         color: decision.color,
-        linked_test_ids: linkedTestIds.join(","),
+        linked_test_ids: linkedIds.join(","),
         linked_test_paths: linkedTestPaths.join(","),
-        linked_test_count: linkedTestIds.length,
-        dependency_checked: openDependencyImpacts === 0 ? 1 : 0,
+        linked_test_count: linkedIds.length,
+        passed_test_run_ids: passedTestRunIds.join(","),
+        passed_test_run_count: passedTestRunIds.length,
+        dependency_checked: 1,
+        dependency_check_run_id: dependencyCheckRunId,
+        dependency_checked_at: indexedAt,
+        dependency_check_source: "relation-impact",
         open_dependency_impacts: openDependencyImpacts,
-        recovery_plan_ids: "",
+        recovery_plan_ids: recoveryPlanIds.join(","),
         reason: decision.reason,
         indexed_at: indexedAt,
+      },
+    });
+    recordProjectionEvent(db, {
+      table: "artifact_progress_events",
+      id: stableId("artifact-progress-event", `${artifactPath}:${artifactHash}`),
+      row: {
+        artifact_progress_event_id: stableId(
+          "artifact-progress-event",
+          `${artifactPath}:${artifactHash}`,
+        ),
+        artifact_path: artifactPath,
+        artifact_type: artifactProgressType(node.kind),
+        previous_color: "",
+        color: decision.color,
+        state: decision.state,
+        trigger:
+          decision.color === "red"
+            ? "dependency-impact"
+            : decision.color === "yellow"
+              ? "verification-needed"
+              : "test-run-passed",
+        test_run_ids: passedTestRunIds.join(","),
+        dependency_check_run_id: dependencyCheckRunId,
+        recovery_plan_ids: recoveryPlanIds.join(","),
+        reason: decision.reason,
+        occurred_at: indexedAt,
       },
     });
   }
@@ -2384,6 +2509,9 @@ function projectFeedbackEvents(db: HarnessDb): void {
         feedback_event_id: id,
         finding_id: findingId,
         plan_id: subject.startsWith("PLAN-") ? subject : "",
+        source_table: "findings",
+        source_id: findingId || subject,
+        source_color: "",
         signal_type: String(finding.kind ?? "finding"),
         severity: String(finding.severity ?? "warn"),
         status: "open",
@@ -2405,10 +2533,51 @@ function projectFeedbackEvents(db: HarnessDb): void {
         feedback_event_id: id,
         finding_id: "",
         plan_id: subject.startsWith("PLAN-") ? subject : "",
+        source_table: "quality_signals",
+        source_id: signalId || subject,
+        source_color: "",
         signal_type: String(signal.metric ?? "quality_signal"),
         severity: String(signal.status ?? "warn") === "fail" ? "warn" : "info",
         status: "open",
         next_action: `review quality signal ${signalId || subject}`,
+        created_at: createdAt,
+      },
+    });
+  }
+  for (const progress of db
+    .prepare(
+      `SELECT artifact_path, color, state, reason, recovery_plan_ids
+       FROM artifact_progress
+       WHERE color IN ('red', 'yellow')
+       ORDER BY CASE color WHEN 'red' THEN 0 ELSE 1 END, artifact_path`,
+    )
+    .all()) {
+    const artifactPath = String(progress.artifact_path ?? "");
+    const color = String(progress.color ?? "");
+    const state = String(progress.state ?? "");
+    const reason = String(progress.reason ?? "");
+    const recoveryPlanIds = String(progress.recovery_plan_ids ?? "");
+    const id = stableId("feedback:artifact-progress", `${artifactPath}:${color}:${state}`);
+    const action =
+      color === "red"
+        ? `trigger dependency/reverse recovery for ${artifactPath}: ${reason}`
+        : recoveryPlanIds
+          ? `continue recovery workflow for ${artifactPath}: ${recoveryPlanIds}`
+          : `run linked tests or add test evidence for ${artifactPath}: ${reason}`;
+    recordProjectionEvent(db, {
+      table: "feedback_events",
+      id,
+      row: {
+        feedback_event_id: id,
+        finding_id: "",
+        plan_id: "",
+        source_table: "artifact_progress",
+        source_id: artifactPath,
+        source_color: color,
+        signal_type: `artifact_progress_${color}`,
+        severity: color === "red" ? "warn" : "info",
+        status: "open",
+        next_action: action,
         created_at: createdAt,
       },
     });

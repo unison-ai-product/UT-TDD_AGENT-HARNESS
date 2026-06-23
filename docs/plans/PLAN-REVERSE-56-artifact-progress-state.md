@@ -8,7 +8,7 @@ confirmed_reverse_type: fullback
 drive: db
 status: confirmed
 created: 2026-06-22
-updated: 2026-06-22
+updated: 2026-06-23
 owner: Codex
 forward_routing: L5
 promotion_strategy: reuse-as-is
@@ -87,6 +87,12 @@ schema/projection/CLI/test implementation.
 
 L6 follow-up is also complete: `function-spec.md` defines `deriveArtifactProgressDecision` /
 `projectArtifactProgress`, and `fr-unit-coverage.md` maps FR-L1-51 to U-FR-L1-51.
+
+2026-06-23 hardening closes the workflow-coupling gap inside the same fullback scope:
+`artifact_progress` now requires linked passing `test_runs` evidence for green, records
+relation-impact check metadata, covers source/design/test-design/plan/requirement nodes, records
+recovery PLAN links, and mirrors red/yellow rows into `feedback_events` as DB-triggerable workflow
+inputs.
 
 ## DoD
 

@@ -670,3 +670,22 @@ harness DB projection, for example a temp repo used by hook/adapter smoke tests,
 the adapter execution continues without a `UT-TDD context injection` block. The
 task prompt and lifecycle digest still complete normally; missing injection is
 observable as absent context, not as adapter launch failure.
+
+## 2026-06-23 artifact progress workflow trigger Addendum
+
+`deriveArtifactProgressDecision(input)` uses test-run and dependency-check
+evidence, not only static test links:
+
+- `red`: dependency check missing or open dependency impacts remain.
+- `yellow`: recovery is active, no linked test exists, or linked tests exist but
+  no passing `test_runs` row is connected.
+- `green`: at least one linked passing `test_runs` row exists and dependency
+  impact is checked clean.
+
+`projectArtifactProgress(db, graph)` projects file-backed source/design/
+test-design/plan/requirement nodes. It records `dependency_check_run_id`,
+`dependency_checked_at`, `passed_test_run_ids`, `passed_test_run_count`, and
+`recovery_plan_ids`. The projection also writes rebuildable
+`artifact_progress_events` rows and mirrors red/yellow rows into
+`feedback_events` with `source_table="artifact_progress"` so workflow routing can
+start from DB state.

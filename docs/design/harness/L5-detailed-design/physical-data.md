@@ -305,7 +305,8 @@ The DB must make cross-cutting impact analysis queryable. The authoring sources 
 | `dependency_edges` | `edge_id` | `from_node_id`, `to_node_id`, `edge_kind`, `strength`, `source`, `evidence_path`, `is_expected`, `is_actual`, `indexed_at` | Store import/reference/test/projection/implementation edges and distinguish design-declared expected edges from observed actual edges. |
 | `impact_rules` | `impact_rule_id` | `trigger_edge_kind`, `trigger_node_type`, `required_node_type`, `required_action`, `severity`, `gate`, `enabled` | Convert relation edges into required co-change, review, test, Reverse, or diagram-refresh actions. |
 | `impact_results` | `impact_result_id` | `change_set_id`, `root_node_id`, `impacted_node_id`, `required_action`, `status`, `reason`, `evidence_path`, `computed_at` | Persist one computed impact expansion for a diff/session/PLAN. |
-| `artifact_progress` | `artifact_path` | `artifact_type`, `artifact_hash`, `state`, `color`, `linked_test_ids`, `linked_test_paths`, `linked_test_count`, `dependency_checked`, `open_dependency_impacts`, `recovery_plan_ids`, `reason`, `indexed_at` | Persist rebuildable artifact progress color rows: red for unchecked/open dependency impact, yellow for implemented but unverified or recovery, green for linked-test verified artifacts. |
+| `artifact_progress` | `artifact_path` | `artifact_type`, `artifact_hash`, `state`, `color`, `linked_test_ids`, `linked_test_paths`, `linked_test_count`, `passed_test_run_ids`, `passed_test_run_count`, `dependency_checked`, `dependency_check_run_id`, `dependency_checked_at`, `dependency_check_source`, `open_dependency_impacts`, `recovery_plan_ids`, `reason`, `indexed_at` | Persist rebuildable artifact progress color rows: red for unchecked/open dependency impact, yellow for implemented but unverified or recovery, green for artifacts with linked passing test runs. |
+| `artifact_progress_events` | `artifact_progress_event_id` | `artifact_path`, `artifact_type`, `previous_color`, `color`, `state`, `trigger`, `test_run_ids`, `dependency_check_run_id`, `recovery_plan_ids`, `reason`, `occurred_at` | Rebuildable event view for workflow triggers derived from artifact progress rows. |
 | `tool_runs` | `tool_run_id` | `tool_name`, `tool_version`, `command`, `input_scope`, `exit_code`, `started_at`, `completed_at`, `evidence_path` | Record optional adapter runs such as dependency-cruiser, Knip, Madge, Graphviz, Mermaid, or D2. |
 | `diagram_artifacts` | `diagram_id` | `graph_snapshot_id`, `format`, `path`, `renderer`, `scope`, `created_at`, `evidence_path` | Store generated Mermaid/DOT/D2/SVG/PNG diagram outputs as traceable artifacts. |
 | `graph_snapshots` | `graph_snapshot_id` | `scope`, `node_count`, `edge_count`, `hash`, `created_at`, `source_digest` | Make diagrams and impact results reproducible from a stable graph snapshot. |
@@ -323,9 +324,11 @@ Required edge kinds:
 `artifact_progress` color semantics (FR-L1-51 / PLAN-L7-56 / PLAN-REVERSE-56):
 
 - `red`: `dependency_checked = 0`, `open_dependency_impacts > 0`, or the changed artifact has missing required design/requirement/test back-propagation according to impact expansion. This includes "implementation exists but L1/L3/L4/L5 registration is missing".
-- `yellow`: implementation or recovery work exists, but linked test evidence is absent or not yet green. New artifacts enter the projection as yellow until dependency and test evidence are available.
-- `green`: `linked_test_count > 0`, `linked_test_ids` / `linked_test_paths` identify the evidence, `dependency_checked = 1`, and `open_dependency_impacts = 0`.
-- `recovery_plan_ids` records recovery/fullback PLANs that are actively returning red/yellow artifacts to green. It is evidence, not an override; color still follows the derived rules above.
+- `yellow`: implementation or recovery work exists, but linked test evidence is absent or no linked passing `test_runs` row exists. New artifacts enter the projection as yellow until dependency and test-run evidence are available.
+- `green`: `passed_test_run_count > 0`, `passed_test_run_ids` identify the passing `test_runs` rows, `dependency_checked = 1`, and `open_dependency_impacts = 0`.
+- `dependency_check_run_id` / `dependency_checked_at` record the relation-impact check that justified the dependency state. `dependency_checked=1` is not inferred from "no rows" alone.
+- `recovery_plan_ids` records active recovery/fullback/refactor PLANs that are returning red/yellow artifacts to green. Active recovery changes red impact rows to yellow recovering rows; closure still requires green test-run evidence and clean dependency impact.
+- `feedback_events.source_table/source_id/source_color` records red/yellow `artifact_progress` rows as workflow trigger inputs so recovery/reverse/refactor work can be started from DB state instead of prose handover.
 
 Required indexes:
 
@@ -335,7 +338,9 @@ Required indexes:
 - `idx_dependency_to_kind(to_node_id, edge_kind)`.
 - `idx_impact_change_status(change_set_id, status)`.
 - `idx_artifact_progress_color(color, state)`.
-- `idx_artifact_progress_tests(linked_test_count, dependency_checked)`.
+- `idx_artifact_progress_tests(passed_test_run_count, dependency_checked)`.
+- `idx_artifact_progress_events_path(artifact_path, occurred_at)`.
+- `idx_feedback_source(source_table, source_id)`.
 - `idx_tool_name_scope(tool_name, input_scope)`.
 - `idx_diagram_scope_format(scope, format)`.
 

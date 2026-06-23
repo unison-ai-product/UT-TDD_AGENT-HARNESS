@@ -15,7 +15,7 @@
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 17;
+export const SCHEMA_VERSION = 18;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
 
@@ -218,6 +218,9 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       pk("feedback_event_id"),
       col("finding_id"),
       col("plan_id"),
+      col("source_table"),
+      col("source_id"),
+      col("source_color"),
       col("signal_type"),
       col("severity"),
       col("status"),
@@ -508,11 +511,33 @@ export const HARNESS_DB_TABLES: TableDef[] = [
       col("linked_test_ids"),
       col("linked_test_paths"),
       col("linked_test_count", "INTEGER"),
+      col("passed_test_run_ids"),
+      col("passed_test_run_count", "INTEGER"),
       col("dependency_checked", "INTEGER"),
+      col("dependency_check_run_id"),
+      col("dependency_checked_at"),
+      col("dependency_check_source"),
       col("open_dependency_impacts", "INTEGER"),
       col("recovery_plan_ids"),
       col("reason"),
       col("indexed_at"),
+    ],
+  },
+  {
+    name: "artifact_progress_events",
+    columns: [
+      pk("artifact_progress_event_id"),
+      col("artifact_path"),
+      col("artifact_type"),
+      col("previous_color"),
+      col("color"),
+      col("state"),
+      col("trigger"),
+      col("test_run_ids"),
+      col("dependency_check_run_id"),
+      col("recovery_plan_ids"),
+      col("reason"),
+      col("occurred_at"),
     ],
   },
   {
@@ -948,7 +973,17 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
   {
     name: "idx_artifact_progress_tests",
     table: "artifact_progress",
-    columns: ["linked_test_count", "dependency_checked"],
+    columns: ["passed_test_run_count", "dependency_checked"],
+  },
+  {
+    name: "idx_artifact_progress_events_path",
+    table: "artifact_progress_events",
+    columns: ["artifact_path", "occurred_at"],
+  },
+  {
+    name: "idx_feedback_source",
+    table: "feedback_events",
+    columns: ["source_table", "source_id"],
   },
   {
     name: "idx_tool_name_scope",
