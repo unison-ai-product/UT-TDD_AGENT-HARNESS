@@ -102,7 +102,9 @@ describe("foreign-edit override resolution (PLAN-L7-114 correction)", () => {
   });
 
   it("bypasses via a marker file with a non-empty reason (agent-accessible)", () => {
-    const r = resolveForeignEditOverride({ markerReason: "completing Codex orphan-impl per review" });
+    const r = resolveForeignEditOverride({
+      markerReason: "completing Codex orphan-impl per review",
+    });
     expect(r.bypass).toBe(true);
     expect(r.source).toBe("marker");
     expect(r.reason).toBe("completing Codex orphan-impl per review");

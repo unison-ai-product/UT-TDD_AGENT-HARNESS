@@ -6,7 +6,10 @@ import {
 } from "../src/lint/green-command-digest";
 import type { ParsedReviewPlan } from "../src/lint/review-evidence";
 
-function plan(planId: string, greenCommands: { evidence_path: string; output_digest: string }[]): ParsedReviewPlan {
+function plan(
+  planId: string,
+  greenCommands: { evidence_path: string; output_digest: string }[],
+): ParsedReviewPlan {
   return {
     file: `docs/plans/${planId}.md`,
     plan_id: planId,
@@ -54,7 +57,11 @@ describe("green-command-digest (PLAN-L7-132) — digest 実体検査", () => {
 
   it("flags a fake/placeholder digest as digest-mismatch (the L7-110/114 hole)", () => {
     const mismatches = auditGreenCommandDigests(
-      [plan("PLAN-FAKE", [{ evidence_path: "tests/real.test.ts", output_digest: "sha256:110feedbac000001" }])],
+      [
+        plan("PLAN-FAKE", [
+          { evidence_path: "tests/real.test.ts", output_digest: "sha256:110feedbac000001" },
+        ]),
+      ],
       deps,
     );
     expect(mismatches).toHaveLength(1);
@@ -64,7 +71,11 @@ describe("green-command-digest (PLAN-L7-132) — digest 実体検査", () => {
 
   it("flags a missing evidence_path file", () => {
     const mismatches = auditGreenCommandDigests(
-      [plan("PLAN-GONE", [{ evidence_path: "tests/missing.test.ts", output_digest: "sha256:abc123abc123abc1" }])],
+      [
+        plan("PLAN-GONE", [
+          { evidence_path: "tests/missing.test.ts", output_digest: "sha256:abc123abc123abc1" },
+        ]),
+      ],
       deps,
     );
     expect(mismatches).toHaveLength(1);
@@ -83,7 +94,13 @@ describe("green-command-digest (PLAN-L7-132) — digest 実体検査", () => {
   it("renders an OK message when clean and a note when mismatched (non-breaking advisory)", () => {
     expect(greenCommandDigestMessages([])[0]).toContain("OK");
     const note = greenCommandDigestMessages([
-      { plan_id: "PLAN-FAKE", evidence_path: "tests/real.test.ts", claimed: "sha256:dead", actual: "sha256:beef", reason: "digest-mismatch" },
+      {
+        plan_id: "PLAN-FAKE",
+        evidence_path: "tests/real.test.ts",
+        claimed: "sha256:dead",
+        actual: "sha256:beef",
+        reason: "digest-mismatch",
+      },
     ])[0];
     expect(note).toContain("note:");
     expect(note).toContain("PLAN-FAKE");

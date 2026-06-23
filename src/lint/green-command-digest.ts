@@ -100,7 +100,8 @@ export function greenCommandDigestMessages(mismatches: DigestMismatch[]): string
   }
   const shown = mismatches.slice(0, DIGEST_NOTE_CAP);
   const detail = shown.map((m) => `${m.plan_id}:${m.evidence_path} (${m.reason})`).join(", ");
-  const more = mismatches.length > shown.length ? ` (+${mismatches.length - shown.length} more)` : "";
+  const more =
+    mismatches.length > shown.length ? ` (+${mismatches.length - shown.length} more)` : "";
   const planCount = new Set(mismatches.map((m) => m.plan_id)).size;
   return [
     `green-command-digest — note: ${mismatches.length} 件の output_digest が evidence_path の実 hash と不一致 ` +
