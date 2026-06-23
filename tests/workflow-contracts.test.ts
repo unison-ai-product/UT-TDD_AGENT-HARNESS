@@ -30,6 +30,7 @@ import {
   suggestSkillInjection,
   validateFolderRules,
   validateFrontendDesignWorkflow,
+  validateRouteConfigText,
   validateScreenDesignWorkflow,
 } from "../src/workflow/contracts";
 
@@ -194,6 +195,20 @@ describe("L7 workflow contract implementations", () => {
     expect(legacyCommandRoute.exit_code).toBe(1);
     expect(legacyCommandRoute.recommended_command).toBeNull();
     expect(legacyCommandRoute.findings[0]?.code).toBe("legacy-runtime-command");
+    const routeConfigViolations = validateRouteConfigText({
+      path: ".ut-tdd/config/route-map.yaml",
+      text: "source: legacy DB\nowner: C:\\Users\\micro\\legacy\n",
+    });
+    expect(routeConfigViolations.map((v) => v.code)).toEqual([
+      "legacy-db-dependency",
+      "personal-absolute-path",
+    ]);
+    const routeConfigBlocked = evaluateRouteCommand({
+      signal: "reverse gap",
+      route_config_violations: routeConfigViolations,
+    });
+    expect(routeConfigBlocked.exit_code).toBe(1);
+    expect(routeConfigBlocked.recommended_command).toBeNull();
     expect(
       recordCrossCuttingEvent({
         type: "drift",

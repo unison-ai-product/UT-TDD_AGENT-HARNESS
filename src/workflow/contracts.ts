@@ -360,6 +360,38 @@ export interface RouteSignalEntry {
   requiresApproval: boolean;
 }
 
+export interface RouteConfigViolation {
+  code: "legacy-db-dependency" | "personal-absolute-path";
+  path: string;
+  evidence: string;
+}
+
+const ROUTE_CONFIG_FORBIDDEN_PATTERNS: {
+  code: RouteConfigViolation["code"];
+  pattern: RegExp;
+}[] = [
+  { code: "legacy-db-dependency", pattern: /\blegacy\s*(?:DB|database)\b/i },
+  { code: "legacy-db-dependency", pattern: /\blegacy[_-]?db\b/i },
+  {
+    code: "personal-absolute-path",
+    pattern: /(?:[A-Za-z]:\\Users\\[^\\\s"']+|\/Users\/[^/\s"']+|~\/)/,
+  },
+];
+
+export function validateRouteConfigText(input: {
+  path: string;
+  text: string;
+}): RouteConfigViolation[] {
+  const violations: RouteConfigViolation[] = [];
+  for (const { code, pattern } of ROUTE_CONFIG_FORBIDDEN_PATTERNS) {
+    const match = input.text.match(pattern);
+    if (match) {
+      violations.push({ code, path: input.path, evidence: match[0] ?? "" });
+    }
+  }
+  return violations;
+}
+
 function routeCondition(input: { mode: string; signal: string; drift_type?: string }): string {
   const signal = input.signal.toLowerCase();
   if (
@@ -527,7 +559,34 @@ export function evaluateRouteCommand(input: {
   drift_type?: string;
   approval_policy?: RouteApprovalPolicy;
   route_map?: RouteSignalEntry[];
+  route_config_violations?: RouteConfigViolation[];
 }): RouteEvalResult {
+  if (input.route_config_violations && input.route_config_violations.length > 0) {
+    return {
+      ...result(
+        input.route_config_violations.map((violation) =>
+          finding(
+            violation.code,
+            "route configuration must not depend on legacy DB or personal absolute paths",
+            { evidencePath: violation.path },
+          ),
+        ),
+        input.route_config_violations.map((violation) => violation.path),
+      ),
+      signal: input.signal,
+      mode: null,
+      suggest_command: "fix route-map configuration before PLAN creation",
+      recommended_command: null,
+      approval: {
+        required: false,
+        status: "not_required",
+        required_approvers: [],
+        approved_by: [],
+        missing_approvers: [],
+      },
+      exit_code: 1,
+    };
+  }
   const normalized = input.signal.trim().toLowerCase();
   const routeMap = [...(input.route_map ?? []), ...ROUTE_SIGNAL_MAP];
   const route = routeMap.find((entry) => entry.tokens.some((token) => normalized.includes(token)));

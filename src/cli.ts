@@ -117,8 +117,10 @@ import {
   buildCommandCatalog,
   evaluateRouteCommand,
   type RouteApprovalPolicy,
+  type RouteConfigViolation,
   type RouteEvalResult,
   type RouteSignalEntry,
+  validateRouteConfigText,
 } from "./workflow/contracts";
 import { evaluateAutomationReadiness } from "./workflow/readiness";
 
@@ -1448,28 +1450,36 @@ function appendRouteApprovalAudit(repoRoot: string, evaluated: RouteEvalResult):
   return auditPath;
 }
 
-function loadRouteMap(repoRoot: string, explicitPath?: string): RouteSignalEntry[] | undefined {
+function loadRouteMap(
+  repoRoot: string,
+  explicitPath?: string,
+): { routes?: RouteSignalEntry[]; violations: RouteConfigViolation[] } {
   const routeMapPath = explicitPath ?? join(repoRoot, ".ut-tdd", "config", "route-map.yaml");
-  if (!existsSync(routeMapPath)) return undefined;
-  const parsed = parseYaml(readFileSync(routeMapPath, "utf8")) as {
+  if (!existsSync(routeMapPath)) return { violations: [] };
+  const text = readFileSync(routeMapPath, "utf8");
+  const violations = validateRouteConfigText({ path: routeMapPath, text });
+  const parsed = parseYaml(text) as {
     routes?: Partial<RouteSignalEntry>[];
   };
-  if (!Array.isArray(parsed.routes)) return undefined;
-  return parsed.routes
-    .filter(
-      (route) =>
-        route &&
-        Array.isArray(route.tokens) &&
-        typeof route.mode === "string" &&
-        typeof route.command === "string",
-    )
-    .map((route) => ({
-      tokens: route.tokens?.map(String) ?? [],
-      mode: String(route.mode),
-      command: String(route.command),
-      preflight: route.preflight !== false,
-      requiresApproval: route.requiresApproval === true,
-    }));
+  if (!Array.isArray(parsed.routes)) return { violations };
+  return {
+    violations,
+    routes: parsed.routes
+      .filter(
+        (route) =>
+          route &&
+          Array.isArray(route.tokens) &&
+          typeof route.mode === "string" &&
+          typeof route.command === "string",
+      )
+      .map((route) => ({
+        tokens: route.tokens?.map(String) ?? [],
+        mode: String(route.mode),
+        command: String(route.command),
+        preflight: route.preflight !== false,
+        requiresApproval: route.requiresApproval === true,
+      })),
+  };
 }
 
 const routeCommand = program.command("route").description("signal routing");
@@ -1490,12 +1500,14 @@ routeCommand
       format?: string;
     }) => {
       const repoRoot = process.cwd();
+      const routeMap = loadRouteMap(repoRoot, opts.routeMap);
       const evaluated = evaluateRouteCommand({
         signal: opts.signal,
         env: opts.env,
         drift_type: opts.driftType,
         approval_policy: loadRouteApprovalPolicy(repoRoot),
-        route_map: loadRouteMap(repoRoot, opts.routeMap),
+        route_map: routeMap.routes,
+        route_config_violations: routeMap.violations,
       });
       const auditPath =
         evaluated.exit_code === 1 ? appendRouteApprovalAudit(repoRoot, evaluated) : "";
