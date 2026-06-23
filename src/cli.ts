@@ -12,6 +12,7 @@ import { Command } from "commander";
 import { catalogAutomationAssets } from "./assets/catalog";
 import { runDoctor } from "./doctor";
 import { computeSkillMetrics, emitFeedbackEvents } from "./feedback/engine";
+import { renderTakeoverFeedback, selectTakeoverFeedback } from "./feedback/surface";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { evaluateStaticGate } from "./gate/static";
 import { loadRelationGraphSourceSet } from "./graph/loader";
@@ -206,6 +207,27 @@ function runSessionStartSideEffects(
     sweepStaleGuardSlots(nodeAgentSlotsDeps(repoRoot));
   } catch {
     // fail-open: lifecycle maintenance must not block the runtime.
+  }
+  surfaceTakeoverFeedbackToStdout(repoRoot);
+}
+
+/**
+ * 引き継ぎ (SessionStart) 時に harness.db の open feedback をエージェントへ surface する
+ * (PLAN-L7-110)。stale な prose handover や、共有 working tree の都度計測ではなく、DB を
+ * 正本として feedback を「受け取る」経路。独立した fail-open: Codex の並行 db rebuild と競合して
+ * ロックされても、引き継ぎ維持処理 (上) も runtime も阻害しない。
+ */
+function surfaceTakeoverFeedbackToStdout(repoRoot: string): void {
+  try {
+    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+    try {
+      const block = renderTakeoverFeedback(selectTakeoverFeedback(db));
+      if (block) process.stdout.write(block);
+    } finally {
+      db.close();
+    }
+  } catch {
+    // fail-open: feedback surface は best-effort。DB 不在 / ロック / 破損で runtime を止めない。
   }
 }
 

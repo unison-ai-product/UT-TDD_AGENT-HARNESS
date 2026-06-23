@@ -120,6 +120,18 @@ V-model artifacts must stay separated:
 - 真に off-task な overstep (相手ランタイムの作業でも自分の作業でもない net-new) と疑う場合でも、
   **revert する前に PO 確認**を取り、IMP で記録する (完了済み成果を捨てる誤判定を防ぐ)。
 
+### 引き継ぎ・検証の基準点 = HEAD (共有 tree を測るな、必須)
+
+引き継ぎ (session takeover) と検証の基準点は **commit/push 済の HEAD ただ一つ**。hybrid では
+working tree を相手ランタイムが常時書き換えるため、full tree の計測値 (テスト件数等) は transient で
+非正本。これを「repo の状態」として報告するな。
+
+- **検証は HEAD (+ 自分の意図変更のみ) に固定**する。他ランタイムの未コミット scratch を基準へ混ぜない。
+  測定値が動いたら、相手を疑う前に「自分が動く面を測っていないか」を先に疑う (foreign tree の transient を
+  相手の退行と帰責するのは誤り)。
+- **引き継ぎ feedback は harness.db から受け取る** (`feedback_events`、SessionStart で surface、
+  PLAN-L7-110)。stale 化する prose handover を現状把握の正本にしない。CURRENT.json / prose は補助。
+
 ## Canonical Commands
 
 - Setup: `ut-tdd setup`

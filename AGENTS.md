@@ -143,6 +143,11 @@ Do not add legacy commands as current company/product execution paths.
 - **commit 直前に `git status` + `git diff --staged` (or `ut-tdd review --staged` /
   `--uncommitted`)** で、authored した意図ファイルのみが staged であることを検証する。
 - push 済み履歴は破壊しない。
+- **引き継ぎ・検証の基準点は commit/push 済 HEAD ただ一つ**。hybrid では working tree を
+  相手ランタイムが常時書き換えるため、full tree の計測値は transient で非正本。検証は HEAD
+  (+ 自分の意図変更のみ) に固定し、測定値が動いたら相手を疑う前に自分の baseline を疑う
+  (foreign tree の transient を相手の退行と帰責しない)。引き継ぎ feedback は harness.db
+  (`feedback_events`、PLAN-L7-110) から受け取り、stale 化する prose handover を正本にしない。
 
 ## Test Rules
 

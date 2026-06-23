@@ -216,6 +216,19 @@ oracle U-HOVER-015 が 4 経路を fail-close 検査。
 
 **配線**: `checkHandoverBypass` は Stop hook (session-log.ts) が `checkHandoverDiscipline` と併せて stderr surface (fail-open)。enforcement の hard 化 (doctor.ok 連動) は plan lint engine 実装時に検討 (現状 surface)。
 
+## §2.8 引き継ぎ feedback surface (PLAN-L7-110) — DB を正本に受け取る
+
+> 本機構を実 session の引き継ぎで運用したところ、引き継ぎ手が **prose handover (stale 化する) と共有 working tree の都度計測 (hybrid で他ランタイムが書き換え続けるため transient なノイズを掴む)** に頼り、現状を取り違えた (PO 指摘「なんで引き継ぎがちゃんとできないんだ」「そのざまだとチーム開発でトラブルが出る」)。根因は引き継ぎ基準点を commit/push 済 HEAD でなく生きた tree に置いたこと。柱 3 (自動 state/feedback) に照らし、引き継ぎは **harness.db を正本に feedback を機械で受け取る** ことで担保する。
+
+`findings` / `quality_signals` → `emitFeedbackEvents` → `feedback_events` (受信箱) の projection は既存 (PLAN-L7-47) だが、**貯まった feedback を引き継ぎ時にエージェントへ届ける receive 経路が欠落**していた (DB に入るが読まれない)。本増分はその receive 側:
+
+| 関数 (`src/feedback/surface.ts`) | 機械担保 |
+|---|---|
+| `selectTakeoverFeedback(db, {limit})` | 現在の open findings / warn\|fail signals を read-only で読み、severity 降順 (fail→warn→info) → id 昇順で安定ソートし `total` / `bySeverity` / limit 適用 `items` を返す。SessionStart で write-lock 競合を起こさないため `feedback_events` へは書き込まない |
+| `renderTakeoverFeedback(result)` | open=0 なら空文字 (引き継ぎ時にノイズを出さない)。それ以外は機械可読な集計行 `📥 harness.db feedback (open=N; ...)` + 上位 N + 残件 breadcrumb |
+
+**配線**: `runSessionStartSideEffects` (cli.ts) が SessionStart hook で `surfaceTakeoverFeedbackToStdout` を **独立 fail-open** で呼び、block を stdout へ surface (= エージェントの context へ feedback が「入る」)。db 不在 / ロック (他ランタイムの並行 rebuild) / 破損でも引き継ぎ維持処理と runtime を阻害しない。これにより引き継ぎは prose ではなく DB から feedback を受け取る。
+
 ## §3 ③ 単体テスト設計とのペア (G6 pair freeze 対象)
 
 generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + **U-HOVER-014〜015** (PLAN-L7-83 累積上限化 `boundSameDayEntries` + marker reconcile) + §1.5 **U-SLOG-006** (active-plan stale / commit hash)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) + §2.6 の slimSummary / boundSameDayEntries / marker reconcile を被覆 (孤児 0)。trace は G7 で双方向凍結。
