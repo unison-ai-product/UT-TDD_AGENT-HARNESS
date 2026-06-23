@@ -162,6 +162,23 @@ describe("L7 workflow contract implementations", () => {
     const unknownRoute = evaluateRouteCommand({ signal: "unmapped-special-case" });
     expect(unknownRoute.exit_code).toBe(2);
     expect(unknownRoute.recommended_command).toBeNull();
+    const blockedRoute = evaluateRouteCommand({ signal: "forced_stop" });
+    expect(blockedRoute.exit_code).toBe(1);
+    expect(blockedRoute.approval.status).toBe("policy_missing");
+    expect(blockedRoute.suggest_command).toBe("ut-tdd doctor");
+    expect(blockedRoute.recommended_command?.safety.requires_human_approval).toBe(true);
+    const approvedRoute = evaluateRouteCommand({
+      signal: "forced_stop",
+      approval_policy: {
+        rules: [{ mode: "recovery", required_approvers: ["tl", "po"] }],
+        approvals: [
+          { mode: "recovery", approver: "tl", approved_at: "2026-06-23T00:00:00.000Z" },
+          { mode: "recovery", approver: "po", approved_at: "2026-06-23T00:00:00.000Z" },
+        ],
+      },
+    });
+    expect(approvedRoute.exit_code).toBe(0);
+    expect(approvedRoute.approval.status).toBe("approved");
     expect(
       recordCrossCuttingEvent({
         type: "drift",

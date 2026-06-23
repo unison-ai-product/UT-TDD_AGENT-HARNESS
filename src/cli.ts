@@ -5,10 +5,11 @@
  * status / doctor / plan lint / vmodel lint / gate / runtime adapter を集約する。
  */
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
+import { parse as parseYaml } from "yaml";
 import { catalogAutomationAssets } from "./assets/catalog";
 import { runDoctor } from "./doctor";
 import { computeSkillMetrics, emitFeedbackEvents } from "./feedback/engine";
@@ -112,7 +113,12 @@ import {
 import { formatVmodelInjection, resolveVmodelInjection } from "./vmodel/injection";
 import { lintVmodel } from "./vmodel/lint";
 import { startWebServer } from "./web/server";
-import { buildCommandCatalog, evaluateRouteCommand } from "./workflow/contracts";
+import {
+  buildCommandCatalog,
+  evaluateRouteCommand,
+  type RouteApprovalPolicy,
+  type RouteEvalResult,
+} from "./workflow/contracts";
 import { evaluateAutomationReadiness } from "./workflow/readiness";
 
 function gitBranch(): string | null {
@@ -1386,6 +1392,61 @@ vmodel
     }
   });
 
+function loadRouteApprovalPolicy(repoRoot: string): RouteApprovalPolicy | undefined {
+  const policyPath = join(repoRoot, ".ut-tdd", "config", "approval-policy.yaml");
+  if (!existsSync(policyPath)) return undefined;
+  const parsed = parseYaml(readFileSync(policyPath, "utf8")) as Partial<RouteApprovalPolicy>;
+  if (!Array.isArray(parsed.rules)) return undefined;
+  return {
+    rules: parsed.rules
+      .filter(
+        (rule) => rule && typeof rule.mode === "string" && Array.isArray(rule.required_approvers),
+      )
+      .map((rule) => ({
+        mode: String(rule.mode),
+        ...(typeof rule.condition === "string" ? { condition: rule.condition } : {}),
+        required_approvers: rule.required_approvers.map(String),
+      })),
+    approvals: Array.isArray(parsed.approvals)
+      ? parsed.approvals
+          .filter(
+            (approval) =>
+              approval &&
+              typeof approval.mode === "string" &&
+              typeof approval.approver === "string" &&
+              typeof approval.approved_at === "string",
+          )
+          .map((approval) => ({
+            mode: String(approval.mode),
+            ...(typeof approval.condition === "string" ? { condition: approval.condition } : {}),
+            approver: String(approval.approver),
+            approved_at: String(approval.approved_at),
+            ...(typeof approval.subject === "string" ? { subject: approval.subject } : {}),
+          }))
+      : [],
+  };
+}
+
+function appendRouteApprovalAudit(repoRoot: string, evaluated: RouteEvalResult): string {
+  const auditDir = join(repoRoot, ".ut-tdd", "audit");
+  mkdirSync(auditDir, { recursive: true });
+  const auditPath = join(auditDir, "route-approval.jsonl");
+  appendFileSync(
+    auditPath,
+    `${JSON.stringify({
+      event: "route_approval_blocked",
+      occurred_at: new Date().toISOString(),
+      signal: evaluated.signal,
+      mode: evaluated.mode,
+      approval_status: evaluated.approval.status,
+      required_approvers: evaluated.approval.required_approvers,
+      missing_approvers: evaluated.approval.missing_approvers,
+      recommended_command: evaluated.recommended_command,
+    })}\n`,
+  );
+  return auditPath;
+}
+
 const routeCommand = program.command("route").description("signal routing");
 routeCommand
   .command("eval")
@@ -1395,17 +1456,24 @@ routeCommand
   .option("--drift-type <type>", "drift subtype")
   .option("--format <format>", "output format: text or json", "text")
   .action((opts: { signal: string; env?: string; driftType?: string; format?: string }) => {
+    const repoRoot = process.cwd();
     const evaluated = evaluateRouteCommand({
       signal: opts.signal,
       env: opts.env,
       drift_type: opts.driftType,
+      approval_policy: loadRouteApprovalPolicy(repoRoot),
     });
+    const auditPath =
+      evaluated.exit_code === 1 ? appendRouteApprovalAudit(repoRoot, evaluated) : "";
     if (opts.format === "json") {
-      process.stdout.write(`${JSON.stringify(evaluated, null, 2)}\n`);
+      process.stdout.write(
+        `${JSON.stringify(auditPath ? { ...evaluated, audit_path: auditPath } : evaluated, null, 2)}\n`,
+      );
     } else if (evaluated.recommended_command) {
       process.stdout.write(`mode=${evaluated.mode}\n`);
       process.stdout.write(`suggest_command=${evaluated.suggest_command}\n`);
       process.stdout.write(`command=${evaluated.recommended_command.command}\n`);
+      if (auditPath) process.stderr.write(`human approval blocked; audit=${auditPath}\n`);
     } else {
       process.stderr.write(`${evaluated.suggest_command}\n`);
     }

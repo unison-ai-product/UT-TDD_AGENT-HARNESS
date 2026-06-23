@@ -2053,7 +2053,7 @@ interrupt / debt / drift-check / readiness と doctor 検出器 (relation-graph 
 
 - [x] `ut-tdd route eval --signal <s> --format json` が RecommendedCommandV1 (schema_version/command/args/safety) を返す (`src/workflow/contracts.ts` + `src/cli.ts`, 2026-06-23)
 - [ ] `command` が legacy runtime command name を含めば exit 1、`ut-tdd` 始まりのみ許可
-- [ ] `requires_human_approval: true` で承認者ポリシー未解決または未承認なら exit 1 + 承認記録を audit に残す
+- [x] `requires_human_approval: true` で承認者ポリシー未解決または未承認なら exit 1 + 承認記録を audit に残す (`src/workflow/contracts.ts` + `.ut-tdd/audit/route-approval.jsonl`, 2026-06-23)
 - [x] `ut-tdd vmodel show <drive> <layer> --injection` が 5 注入 key を返し、`orchestration_mode` は VALID_ORCHESTRATION_MODES のいずれか (`src/vmodel/injection.ts`, 2026-06-23)
 - [ ] 配線 config / 検出器が legacy `legacy DB` / 個人絶対パスに依存しない (`.ut-tdd/` YAML/JSON state + `.ut-tdd/harness.db` projection DB のみ)
 

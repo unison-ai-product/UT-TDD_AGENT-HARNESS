@@ -325,94 +325,205 @@ export interface RouteEvalResult extends ContractResult {
   mode: string | null;
   suggest_command: string;
   recommended_command: RecommendedCommandV1 | null;
-  exit_code: 0 | 2;
+  approval: RouteApprovalResult;
+  exit_code: 0 | 1 | 2;
 }
 
-const ROUTE_SIGNAL_MAP: { tokens: string[]; mode: string; command: string; preflight: boolean }[] =
-  [
-    {
-      tokens: ["regression", "failure", "doctor"],
-      mode: "reverse",
-      command: "ut-tdd task classify",
-      preflight: true,
-    },
-    {
-      tokens: ["reverse", "gap", "design_gap"],
-      mode: "reverse",
-      command: "ut-tdd task classify",
-      preflight: true,
-    },
-    {
-      tokens: ["agent_runaway", "runaway", "context_exhaustion", "forced_stop", "regression_dev"],
-      mode: "recovery",
-      command: "ut-tdd doctor",
-      preflight: true,
-    },
-    {
-      tokens: ["dependency_outdated", "upgrade", "config_drift"],
-      mode: "retrofit",
-      command: "ut-tdd doctor",
-      preflight: true,
-    },
-    {
-      tokens: ["debt_degradation", "code_smell", "structural", "debt"],
-      mode: "refactor",
-      command: "ut-tdd task classify",
-      preflight: true,
-    },
-    {
-      tokens: [
-        "requirement_undefined",
-        "feasibility_unknown",
-        "success_condition_unclear",
-        "design_uncertain",
-      ],
-      mode: "discovery",
-      command: "ut-tdd task classify",
-      preflight: true,
-    },
-    {
-      tokens: ["poc", "discovery"],
-      mode: "discovery",
-      command: "ut-tdd task classify",
-      preflight: true,
-    },
-    {
-      tokens: ["user_feedback_iteration", "requirement_continuous_refinement", "scrum"],
-      mode: "scrum",
-      command: "ut-tdd task classify",
-      preflight: true,
-    },
-    {
-      tokens: ["incident", "stop"],
-      mode: "incident",
-      command: "ut-tdd doctor",
-      preflight: true,
-    },
-    {
-      tokens: ["feature_addition", "scope_extension", "add-feature"],
-      mode: "add-feature",
-      command: "ut-tdd task classify",
-      preflight: true,
-    },
-    {
-      tokens: ["tech_decision_required", "option_comparison_needed", "adr_required", "research"],
-      mode: "research",
-      command: "ut-tdd task classify",
-      preflight: true,
-    },
-    {
-      tokens: ["interrupt", "po_change", "new_requirement", "constraint"],
-      mode: "forward",
-      command: "ut-tdd task classify",
-      preflight: true,
-    },
-  ];
+export interface RouteApprovalPolicy {
+  rules: {
+    mode: string;
+    condition?: string;
+    required_approvers: string[];
+  }[];
+  approvals?: {
+    mode: string;
+    condition?: string;
+    approver: string;
+    approved_at: string;
+    subject?: string;
+  }[];
+}
+
+export interface RouteApprovalResult {
+  required: boolean;
+  status: "not_required" | "approved" | "policy_missing" | "approval_missing";
+  required_approvers: string[];
+  approved_by: string[];
+  missing_approvers: string[];
+}
+
+function routeCondition(input: { mode: string; signal: string; drift_type?: string }): string {
+  const signal = input.signal.toLowerCase();
+  if (
+    input.mode === "retrofit" &&
+    (input.drift_type === "config_drift" || signal.includes("config_drift"))
+  ) {
+    return "config_drift";
+  }
+  if (input.mode === "incident") return "env=prod";
+  return input.mode;
+}
+
+function resolveApproval(
+  route: { mode: string; requiresApproval: boolean },
+  input: { signal: string; drift_type?: string },
+  policy?: RouteApprovalPolicy,
+): RouteApprovalResult {
+  const condition = routeCondition({
+    mode: route.mode,
+    signal: input.signal,
+    drift_type: input.drift_type,
+  });
+  const required =
+    route.requiresApproval || (route.mode === "retrofit" && condition === "config_drift");
+  if (!required) {
+    return {
+      required: false,
+      status: "not_required",
+      required_approvers: [],
+      approved_by: [],
+      missing_approvers: [],
+    };
+  }
+  if (!policy) {
+    return {
+      required: true,
+      status: "policy_missing",
+      required_approvers: [],
+      approved_by: [],
+      missing_approvers: [],
+    };
+  }
+  const rule = policy.rules.find(
+    (r) => r.mode === route.mode && (!r.condition || r.condition === condition),
+  );
+  if (!rule) {
+    return {
+      required: true,
+      status: "policy_missing",
+      required_approvers: [],
+      approved_by: [],
+      missing_approvers: [],
+    };
+  }
+  const approved = new Set(
+    (policy.approvals ?? [])
+      .filter((a) => a.mode === route.mode && (!a.condition || a.condition === rule.condition))
+      .map((a) => a.approver),
+  );
+  const missing = rule.required_approvers.filter((approver) => !approved.has(approver));
+  return {
+    required: true,
+    status: missing.length === 0 ? "approved" : "approval_missing",
+    required_approvers: rule.required_approvers,
+    approved_by: rule.required_approvers.filter((approver) => approved.has(approver)),
+    missing_approvers: missing,
+  };
+}
+
+const ROUTE_SIGNAL_MAP: {
+  tokens: string[];
+  mode: string;
+  command: string;
+  preflight: boolean;
+  requiresApproval: boolean;
+}[] = [
+  {
+    tokens: ["regression", "failure", "doctor"],
+    mode: "reverse",
+    command: "ut-tdd task classify",
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
+    tokens: ["reverse", "gap", "design_gap"],
+    mode: "reverse",
+    command: "ut-tdd task classify",
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
+    tokens: ["agent_runaway", "runaway", "context_exhaustion", "forced_stop", "regression_dev"],
+    mode: "recovery",
+    command: "ut-tdd doctor",
+    preflight: true,
+    requiresApproval: true,
+  },
+  {
+    tokens: ["dependency_outdated", "upgrade", "config_drift"],
+    mode: "retrofit",
+    command: "ut-tdd doctor",
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
+    tokens: ["debt_degradation", "code_smell", "structural", "debt"],
+    mode: "refactor",
+    command: "ut-tdd task classify",
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
+    tokens: [
+      "requirement_undefined",
+      "feasibility_unknown",
+      "success_condition_unclear",
+      "design_uncertain",
+    ],
+    mode: "discovery",
+    command: "ut-tdd task classify",
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
+    tokens: ["poc", "discovery"],
+    mode: "discovery",
+    command: "ut-tdd task classify",
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
+    tokens: ["user_feedback_iteration", "requirement_continuous_refinement", "scrum"],
+    mode: "scrum",
+    command: "ut-tdd task classify",
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
+    tokens: ["incident", "stop"],
+    mode: "incident",
+    command: "ut-tdd doctor",
+    preflight: true,
+    requiresApproval: true,
+  },
+  {
+    tokens: ["feature_addition", "scope_extension", "add-feature"],
+    mode: "add-feature",
+    command: "ut-tdd task classify",
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
+    tokens: ["tech_decision_required", "option_comparison_needed", "adr_required", "research"],
+    mode: "research",
+    command: "ut-tdd task classify",
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
+    tokens: ["interrupt", "po_change", "new_requirement", "constraint"],
+    mode: "forward",
+    command: "ut-tdd task classify",
+    preflight: true,
+    requiresApproval: false,
+  },
+];
 
 export function evaluateRouteCommand(input: {
   signal: string;
   env?: string;
   drift_type?: string;
+  approval_policy?: RouteApprovalPolicy;
 }): RouteEvalResult {
   const normalized = input.signal.trim().toLowerCase();
   const route = ROUTE_SIGNAL_MAP.find((entry) =>
@@ -429,9 +540,17 @@ export function evaluateRouteCommand(input: {
       mode: null,
       suggest_command: "upstream delegation required: define route-map entry before PLAN creation",
       recommended_command: null,
+      approval: {
+        required: false,
+        status: "not_required",
+        required_approvers: [],
+        approved_by: [],
+        missing_approvers: [],
+      },
       exit_code: 2,
     };
   }
+  const approval = resolveApproval(route, input, input.approval_policy);
   const recommended = recommendedCommandV1Schema.parse({
     schema_version: "v1",
     command: route.command,
@@ -443,17 +562,27 @@ export function evaluateRouteCommand(input: {
     },
     safety: {
       auto_apply: false,
-      requires_human_approval: false,
+      requires_human_approval: approval.required,
       requires_preflight: route.preflight,
     },
   });
+  const approvalFinding =
+    approval.status === "policy_missing"
+      ? finding("approval-policy-missing", "human approval policy is missing or unresolved")
+      : approval.status === "approval_missing"
+        ? finding("approval-missing", "required human approval is missing")
+        : null;
   return {
-    ...result([], ["src/workflow/contracts.ts"]),
+    ...result(approvalFinding ? [approvalFinding] : [], ["src/workflow/contracts.ts"]),
     signal: input.signal,
     mode: route.mode,
-    suggest_command: `${route.command} --text "${input.signal}"`,
+    suggest_command:
+      route.command === "ut-tdd task classify"
+        ? `${route.command} --text "${input.signal}"`
+        : route.command,
     recommended_command: recommended,
-    exit_code: 0,
+    approval,
+    exit_code: approvalFinding ? 1 : 0,
   };
 }
 
