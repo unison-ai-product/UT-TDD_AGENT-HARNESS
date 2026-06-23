@@ -38,8 +38,14 @@ export function normalizeRepoRelative(path: string, repoRoot: string): string {
   const unify = (p: string) => p.replace(/\\/g, "/").replace(/\/+$/, "");
   const target = unify(path.trim());
   const root = unify(repoRoot.trim());
-  if (root && target.toLowerCase().startsWith(`${root.toLowerCase()}/`)) {
-    return target.slice(root.length + 1);
+  if (root) {
+    // session-log の target は "Write c:\\...\\repo\\src\\x.ts" のように tool 名プレフィックス +
+    // 絶対パスで記録される。startsWith では prefix で外れるため、repoRoot を **部分一致** で探し、
+    // その直後から repo-relative を取る (裸の絶対パスは idx=0 で従来と同一挙動 = 後方互換)。
+    const idx = target.toLowerCase().indexOf(`${root.toLowerCase()}/`);
+    if (idx >= 0) {
+      return target.slice(idx + root.length + 1);
+    }
   }
   return target.replace(/^\.\//, "");
 }

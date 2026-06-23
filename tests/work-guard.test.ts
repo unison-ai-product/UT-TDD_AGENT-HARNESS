@@ -66,6 +66,14 @@ describe("work guard (PLAN-L7-114) — 作業衝突ガードレール", () => {
       "src/feedback/surface.ts",
     );
     expect(normalizeRepoRelative("src/cli.ts", repoRoot)).toBe("src/cli.ts");
+    // Regression: session-log target は "Write <abspath>" の tool 名プレフィックス付きで記録される。
+    // repoRoot を部分一致で探さないと prefix で外れ、自分の touch を見落として全 uncommitted を誤 block する。
+    expect(
+      normalizeRepoRelative(
+        "Write C:\\Users\\dev\\UT-TDD-agent-harness\\src\\runtime\\attempt-escalation.ts",
+        repoRoot,
+      ),
+    ).toBe("src/runtime/attempt-escalation.ts");
   });
 
   it("blocks the real collision shape from this session (Codex's surface.ts vs my plan/lint.ts)", () => {

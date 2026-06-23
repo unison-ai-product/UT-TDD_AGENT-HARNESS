@@ -90,3 +90,20 @@ recorded that path as touched.
 - Clean files and files already touched by the current session pass.
 - Project hook lint requires the work guard.
 - Typecheck and targeted tests pass.
+
+## Correction note (2026-06-23, PLAN-RECOVERY-05 dogfood)
+
+The AC "files already touched by the current session pass" was not actually met by
+the first implementation. `normalizeRepoRelative` resolved repo-relative paths with
+`startsWith(repoRoot)`, but the session log records `target` with a tool-name prefix
+(e.g. `"Write c:\\...\\repo\\src\\x.ts"`). The prefix defeated `startsWith`, so the
+session-touched set never matched git-porcelain paths and the guard false-blocked the
+agent's own uncommitted files. Fixed by matching `repoRoot` as a substring (`indexOf`),
+tolerating the prefix; bare absolute paths keep identical behavior. Regression test added
+in `tests/work-guard.test.ts` (session-log prefixed target -> repo-relative). Found by
+dogfooding the Iron Law (PLAN-RECOVERY-05): the guard blocked an own-session edit, and
+root-causing instead of overriding blindly surfaced the normalization bug.
+
+> Remaining gap (carry): the `UT_TDD_ALLOW_FOREIGN_EDIT` override is an env var the agent
+> cannot set mid-session through tool calls. An agent-accessible override path (e.g. a
+> marker file) is still needed for intentional foreign edits.
