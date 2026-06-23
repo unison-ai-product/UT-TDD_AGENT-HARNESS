@@ -64,6 +64,22 @@ function writeFakeProvider(binDir: string, name: "codex" | "claude"): string {
 }
 
 describe("L7 CLI surface closure", () => {
+  it("exposes plan complete as the completed handover lifecycle entrypoint", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-plan-complete-"));
+    try {
+      const use = runCliIn(root, ["plan", "use", "PLAN-L7-04-handover-mechanism"]);
+      expect(use.status).toBe(0);
+
+      const complete = runCliIn(root, ["plan", "complete", "--dry-run"]);
+      expect(complete.status).toBe(0);
+      expect(complete.stdout).toContain("plan complete:");
+      expect(complete.stdout).toContain("status=completed");
+      expect(complete.stdout).toContain("(dry-run)");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 15_000);
+
   it("exposes skill suggest as a JSON command surface", () => {
     const run = runCli(["skill", "suggest", "--plan", "PLAN-NO-SUCH", "--json"]);
 

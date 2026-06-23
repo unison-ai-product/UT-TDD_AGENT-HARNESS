@@ -661,6 +661,30 @@ plan
     process.stdout.write(opts.clear ? "current-plan: cleared\n" : `current-plan: ${id}\n`);
   });
 
+plan
+  .command("complete [id]")
+  .description("active PLAN を completed handover として記録し、current-plan を clear")
+  .option("--dry-run", "handover を生成するが書き込まない")
+  .option("--scope-active", "active plan family の digest のみで handover を生成")
+  .action((id: string | undefined, opts: { dryRun?: boolean; scopeActive?: boolean }) => {
+    const date = new Date().toISOString().slice(0, 10);
+    const deps = nodeHandoverDeps(process.cwd());
+    const r = runHandover(
+      {
+        date,
+        dryRun: Boolean(opts.dryRun),
+        complete: true,
+        scopeToActive: Boolean(opts.scopeActive),
+        ...(id ? { planId: id } : {}),
+      },
+      deps,
+    );
+    process.stdout.write(
+      `plan complete: active=${r.pointer.active_plan ?? "-"} status=${r.pointer.status}${opts.dryRun ? " (dry-run)" : ""}\n`,
+    );
+    for (const w of r.written) process.stdout.write(`  + ${w}\n`);
+  });
+
 const handover = program
   .command("handover")
   .description(
