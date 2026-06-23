@@ -19,6 +19,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import { classifyVerificationVerb } from "./verb-classify";
 
 export type SessionEventType =
   | "session_start"
@@ -98,6 +99,13 @@ export function summarize(input: SessionHookInput): string {
   const tool = input.tool_name ?? "";
   const ti = input.tool_input ?? {};
   const path = (ti.file_path ?? ti.path ?? ti.notebook_path) as string | undefined;
+  // Bash は引数を残さず固定の検証 verb token だけを hint にする (PLAN-RECOVERY-05 item 2)。
+  // attempt-escalation が「同じ検証コマンドの連続失敗」を grouping できるよう、command を
+  // whitelist verb (vitest/tsc/doctor/lint/...) に分類して埋める。未分類/非 Bash は従来どおり。
+  if (tool === "Bash" && !path) {
+    const verb = classifyVerificationVerb(String(ti.command ?? ""));
+    return sanitize(`${tool} (${verb ?? "bash"})`);
+  }
   const hint = path ? String(path) : tool === "Bash" ? "(bash)" : "";
   return sanitize(`${tool} ${hint}`.trim());
 }
@@ -213,6 +221,25 @@ export function recordEvent(ev: SessionEvent, deps: SessionLogDeps): void {
   } catch {
     // fail-open: ログ失敗で作業を止めない
   }
+}
+
+/** session_id の jsonl ログ path (`.ut-tdd/logs/session/<safeName>.jsonl`)。 */
+export function sessionLogFile(repoRoot: string, sessionId: string): string {
+  return join(repoRoot, ".ut-tdd", "logs", "session", `${safeName(sessionId)}.jsonl`);
+}
+
+/** jsonl raw を SessionEvent[] へ。壊れた行は skip (fail-open)。 */
+export function parseSessionEvents(raw: string): SessionEvent[] {
+  const events: SessionEvent[] = [];
+  for (const line of raw.split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      events.push(JSON.parse(line) as SessionEvent);
+    } catch {
+      /* 壊れた行は skip (fail-open) */
+    }
+  }
+  return events;
 }
 
 /**
@@ -358,15 +385,7 @@ export function onStop(input: SessionHookInput, deps: SessionLogDeps): number {
     const file = join(deps.repoRoot, ".ut-tdd", "logs", "session", `${safeName(sid)}.jsonl`);
     const raw = deps.readText(file);
     if (!raw) return 0;
-    const events: SessionEvent[] = [];
-    for (const line of raw.split("\n")) {
-      if (!line.trim()) continue;
-      try {
-        events.push(JSON.parse(line) as SessionEvent);
-      } catch {
-        /* 壊れた行は skip (fail-open) */
-      }
-    }
+    const events = parseSessionEvents(raw);
     const plans = new Set(
       events.map((e) => e.plan_id).filter((p): p is string => p !== null && p !== undefined),
     );

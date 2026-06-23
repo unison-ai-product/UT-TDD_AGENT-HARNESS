@@ -8,6 +8,7 @@ import {
   onSessionStart,
   onStop,
   type PlanDigest,
+  parseSessionEvents,
   recordEvent,
   resolveActivePlan,
   type SessionEvent,
@@ -15,6 +16,7 @@ import {
   type SessionLogDeps,
   sanitize,
   setActivePlan,
+  summarize,
 } from "../src/runtime/session-log";
 
 /** in-memory file store の mock deps (now 固定で決定論)。 */
@@ -298,5 +300,44 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     const log2 = deps2.files.get(sessionPath("s1")) ?? "";
     expect(log2).toContain('"event_type":"commit"');
     expect(log2).not.toContain('"target"');
+  });
+
+  // PLAN-RECOVERY-05 item 2: Bash の検証 verb を target に分類して残す (引数は残さない)。
+  it("U-SLOG-007: summarize classifies Bash into a verb token; unclassified stays (bash)", () => {
+    expect(
+      summarize({ tool_name: "Bash", tool_input: { command: "bun run vitest run tests/x" } }),
+    ).toBe("Bash (vitest)");
+    expect(summarize({ tool_name: "Bash", tool_input: { command: "bun run typecheck" } })).toBe(
+      "Bash (tsc)",
+    );
+    expect(summarize({ tool_name: "Bash", tool_input: { command: "git status" } })).toBe(
+      "Bash (bash)",
+    );
+    // file 系ツールは従来どおり path のみ。
+    expect(summarize({ tool_name: "Write", tool_input: { file_path: "src/a.ts" } })).toBe(
+      "Write src/a.ts",
+    );
+  });
+
+  it("U-SLOG-007b: onPostToolUse persists the classified verb (no argument leak)", () => {
+    const deps = mockDeps();
+    deps.files.set(statePath, "PLAN-RECOVERY-05");
+    onPostToolUse(
+      {
+        session_id: "s1",
+        tool_name: "Bash",
+        tool_input: { command: "bun run vitest run tests/secret.ts" },
+      },
+      deps,
+    );
+    const log = deps.files.get(sessionPath("s1")) ?? "";
+    expect(log).toContain('"target":"Bash (vitest)"');
+    expect(log).not.toContain("secret.ts"); // 引数は残さない
+  });
+
+  it("parseSessionEvents parses jsonl and skips corrupted lines (fail-open)", () => {
+    const raw = `${JSON.stringify({ ts: "1", session_id: "s", plan_id: null, event_type: "tool_use", target: "a" })}\n{bad json\n\n${JSON.stringify({ ts: "2", session_id: "s", plan_id: null, event_type: "tool_use", target: "b" })}\n`;
+    const events = parseSessionEvents(raw);
+    expect(events.map((e) => e.target)).toEqual(["a", "b"]);
   });
 });

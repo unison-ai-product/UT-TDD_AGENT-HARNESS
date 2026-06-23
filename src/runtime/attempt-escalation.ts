@@ -74,8 +74,13 @@ export function evaluateAttemptEscalation(
 /**
  * session 生ログ events から attempt 列を抽出する。
  *
- * tool_use イベントのうち target (対象 path 等) と outcome (ok/error) を持つものを試行とみなす。
- * 時系列順を保持するため events の順序をそのまま使う (連続失敗判定の前提)。
+ * tool_use イベントのうち target (対象 path / 検証 verb) と outcome (ok/error) を持つものを試行と
+ * みなす。時系列順を保持するため events の順序をそのまま使う (連続失敗判定の前提)。
+ *
+ * **未分類 Bash (`target` が `(bash)` 終端) は除外** する。session-log は Bash の verb を
+ * 分類して `"Bash (vitest)"` 等で残す (verb-classify) が、whitelist 外のコマンドは `"Bash (bash)"`
+ * となる。これらを 1 subject にまとめると無関係コマンドの連続失敗を 1 ループ扱いして誤検知する
+ * ため対象外にする (Codex cross-review: 未分類は強引に併合しない、PLAN-RECOVERY-05)。
  */
 export function attemptsFromSessionEvents(events: SessionEvent[]): AttemptRecord[] {
   const records: AttemptRecord[] = [];
@@ -83,7 +88,51 @@ export function attemptsFromSessionEvents(events: SessionEvent[]): AttemptRecord
     if (event.event_type !== "tool_use") continue;
     if (!event.target) continue;
     if (event.outcome !== "ok" && event.outcome !== "error") continue;
+    if (event.target.endsWith("(bash)")) continue; // 未分類 Bash は escalation 対象外
     records.push({ subject: event.target, outcome: event.outcome });
   }
   return records;
+}
+
+/** session ログファイルの選択用メタ (name = `<id>.jsonl`、mtimeMs = 更新時刻)。 */
+export interface SessionFileMeta {
+  name: string;
+  mtimeMs: number;
+}
+
+/**
+ * 引き継ぎ surface 用に **直前 session** のログファイルを 1 つだけ選ぶ純関数。
+ *
+ * Q2=b (Codex cross-review): durable な finding 化はせず、SessionStart で直前 session を都度
+ * 再導出する。古い失敗の再浮上 (stale 累積) を避けるため **現セッションを除いた中で最新 (mtime 最大)
+ * の 1 ファイルだけ** を返す。候補が無ければ null。
+ */
+export function selectPrecedingSessionFile(
+  files: SessionFileMeta[],
+  currentSessionFileName?: string,
+): string | null {
+  let best: SessionFileMeta | null = null;
+  for (const f of files) {
+    if (!f.name.endsWith(".jsonl")) continue;
+    if (currentSessionFileName && f.name === currentSessionFileName) continue;
+    if (!best || f.mtimeMs > best.mtimeMs) best = f;
+  }
+  return best?.name ?? null;
+}
+
+/**
+ * escalation signals を引き継ぎ surface 向けテキストブロックに整形する。signal が無ければ空文字
+ * (出力しない)。文面は「直すな」ではなく「STOP → root cause を疑え → 検証反復を止めろ」へ誘導する。
+ */
+export function renderEscalationSignals(signals: EscalationSignal[]): string {
+  if (signals.length === 0) return "";
+  const lines = [
+    `attempt-escalation (Iron Law) warning - 直前 session で ${signals.length} 件の連続失敗ループを検出 (STOP / 根本原因を疑え):`,
+  ];
+  for (const s of signals) {
+    lines.push(
+      `  - ${s.subject}: ${s.failureCount} consecutive failures - STOP, question the root cause`,
+    );
+  }
+  return `${lines.join("\n")}\n`;
 }
