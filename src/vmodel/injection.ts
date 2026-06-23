@@ -1,3 +1,4 @@
+import type { ExecutionMode } from "../runtime/detect";
 import {
   type Drive,
   driveSchema,
@@ -16,6 +17,10 @@ export interface VmodelInjection {
   recommended_skills: string[];
   recommended_commands: string[];
   orchestration_mode: OrchestrationMode;
+  execution_mode?: ExecutionMode;
+  degraded_from?: OrchestrationMode;
+  degraded_to?: OrchestrationMode;
+  degradation_reason?: string;
 }
 
 const DRIVE_OWNER: Record<Drive, Role> = {
@@ -61,13 +66,43 @@ function mandatoryAgentsFor(drive: Drive, layer: Layer): string[] {
   return [...agents].sort();
 }
 
-export function resolveVmodelInjection(drive: string, layer: string): VmodelInjection {
+function degradedMode(
+  orchestrationMode: OrchestrationMode,
+  executionMode?: ExecutionMode,
+): OrchestrationMode | null {
+  if (!executionMode || executionMode === "hybrid") return null;
+  if (executionMode === "standalone") {
+    return orchestrationMode === "pm_lead" ? null : "pm_lead";
+  }
+  if (executionMode === "claude-only") {
+    if (orchestrationMode === "claude_judge_codex_impl") return "claude_design_impl";
+    if (orchestrationMode === "codex_impl_qa_verify") return "claude_design_impl";
+    return null;
+  }
+  if (executionMode === "codex-only") {
+    if (
+      orchestrationMode === "claude_judge" ||
+      orchestrationMode === "claude_design_impl" ||
+      orchestrationMode === "claude_judge_codex_impl"
+    ) {
+      return "codex_impl_qa_verify";
+    }
+  }
+  return null;
+}
+
+export function resolveVmodelInjection(
+  drive: string,
+  layer: string,
+  options: { executionMode?: ExecutionMode } = {},
+): VmodelInjection {
   const parsedDrive = driveSchema.parse(drive);
   const parsedLayer = layerSchema.parse(layer);
   const mode = orchestrationFor(parsedDrive, parsedLayer);
   orchestrationModeSchema.parse(mode);
+  const degradedTo = degradedMode(mode, options.executionMode);
 
-  return {
+  const injection: VmodelInjection = {
     drive: parsedDrive,
     layer: parsedLayer,
     owner_role: DRIVE_OWNER[parsedDrive],
@@ -75,7 +110,14 @@ export function resolveVmodelInjection(drive: string, layer: string): VmodelInje
     recommended_skills: DRIVE_SKILLS[parsedDrive],
     recommended_commands: LAYER_COMMANDS[parsedLayer] ?? ["ut-tdd status", "ut-tdd doctor"],
     orchestration_mode: mode,
+    ...(options.executionMode ? { execution_mode: options.executionMode } : {}),
   };
+  if (degradedTo) {
+    injection.degraded_from = mode;
+    injection.degraded_to = degradedTo;
+    injection.degradation_reason = `orchestration_mode ${mode} requires a runtime unavailable in ${options.executionMode}`;
+  }
+  return injection;
 }
 
 export function formatVmodelInjection(injection: VmodelInjection): string[] {
@@ -86,5 +128,9 @@ export function formatVmodelInjection(injection: VmodelInjection): string[] {
     `recommended_skills=${injection.recommended_skills.join(",")}`,
     `recommended_commands=${injection.recommended_commands.join(" | ")}`,
     `orchestration_mode=${injection.orchestration_mode}`,
+    ...(injection.execution_mode ? [`execution_mode=${injection.execution_mode}`] : []),
+    ...(injection.degraded_from ? [`degraded_from=${injection.degraded_from}`] : []),
+    ...(injection.degraded_to ? [`degraded_to=${injection.degraded_to}`] : []),
+    ...(injection.degradation_reason ? [`degradation_reason=${injection.degradation_reason}`] : []),
   ];
 }

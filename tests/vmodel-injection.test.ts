@@ -22,6 +22,20 @@ describe("vmodel layer-context injection", () => {
     expect(injection.mandatory_agents).toContain("frontier-reviewer");
   });
 
+  it("records execution-mode degradation without silent fallback", () => {
+    const injection = resolveVmodelInjection("agent", "L7", { executionMode: "claude-only" });
+
+    expect(injection.orchestration_mode).toBe("claude_judge_codex_impl");
+    expect(injection.execution_mode).toBe("claude-only");
+    expect(injection.degraded_from).toBe("claude_judge_codex_impl");
+    expect(injection.degraded_to).toBe("claude_design_impl");
+    expect(injection.degradation_reason).toContain("claude-only");
+
+    const hybrid = resolveVmodelInjection("agent", "L7", { executionMode: "hybrid" });
+    expect(hybrid.degraded_from).toBeUndefined();
+    expect(hybrid.degraded_to).toBeUndefined();
+  });
+
   it("rejects invalid drive or layer values", () => {
     expect(() => resolveVmodelInjection("reverse", "L7")).toThrow();
     expect(() => resolveVmodelInjection("db", "L15")).toThrow();
