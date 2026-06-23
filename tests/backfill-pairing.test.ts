@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzeBackfill,
+  BACKFILL_RESULT_KEYS,
   backfillMessages,
   KIND_BACKFILL,
   loadBackfillDocs,
@@ -295,6 +298,25 @@ describe("U-BACKFILL-005 backfillMessages", () => {
     expect(backfillMessages(analyzeBackfill([], "")).some((m) => m.includes("OK"))).toBe(true);
     const orphan = analyzeBackfill([plan({ plan_id: "PLAN-L7-50-o", kind: "add-impl" })], "");
     expect(backfillMessages(orphan).some((m) => m.includes("without Reverse backfill"))).toBe(true);
+  });
+});
+
+describe("U-BACKFILL-005b backfill result docs sync", () => {
+  it("requirements and concept list all machine backfill result keys", () => {
+    const root = process.cwd();
+    const requirements = readFileSync(
+      join(root, "docs", "governance", "ut-tdd-agent-harness-requirements_v1.2.md"),
+      "utf8",
+    );
+    const concept = readFileSync(
+      join(root, "docs", "governance", "ut-tdd-agent-harness-concept_v3.1.md"),
+      "utf8",
+    );
+
+    for (const key of BACKFILL_RESULT_KEYS) {
+      expect(requirements).toContain(key);
+      expect(concept).toContain(key);
+    }
   });
 });
 

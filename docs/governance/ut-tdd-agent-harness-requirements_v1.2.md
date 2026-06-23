@@ -410,7 +410,9 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
       `docs/governance/conditional-backfill-decision-audit-2026-06-22.md` の Legacy Debt 表と完全一致する。
       片側だけに存在する場合は `backfill-pairing` の `legacyAuditGaps` で fail-close する。
 - [ ] **全 PLAN の `§6 用語更新` で宣言した語が L0 §10 用語集 (`concept_v3.1.md`) に存在** (living glossary back-merge、§G.9 と連動)。未 merge → doctor hard violation。
-- 機構: `ut-tdd doctor` の `backfill —` 行が `reverseOrphans` / `glossaryGaps` / `conditionalPending` を surface。lint engine (`src/plan/lint.ts`) 実装時に exit code 連動 (fail-close) へ昇格予定。
+- 機構: `ut-tdd doctor` の `backfill` 行が `reverseOrphans` / `reverseLinkMissing` / `legacyAuditGaps` /
+  `glossaryGaps` / `conditionalPending` / `conditionalDecisionMissing` を surface し、hard violation は
+  doctor exit code に連動する。
 
 #### E3. 全プログラム被覆 (program coverage / PLAN-RECOVERY-04、`ut-tdd doctor` program-coverage)
 

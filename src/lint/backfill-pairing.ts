@@ -72,6 +72,15 @@ export interface BackfillResult {
   ok: boolean;
 }
 
+export const BACKFILL_RESULT_KEYS = [
+  "reverseOrphans",
+  "reverseLinkMissing",
+  "legacyAuditGaps",
+  "conditionalPending",
+  "conditionalDecisionMissing",
+  "glossaryGaps",
+] as const satisfies readonly (keyof Omit<BackfillResult, "ok">)[];
+
 export function normalizeTerm(term: string): string {
   return term.split(/\s*\/\s*|\s*[(（]/u)[0].trim();
 }
