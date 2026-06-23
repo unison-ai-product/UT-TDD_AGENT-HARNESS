@@ -286,6 +286,8 @@ Required UT-derived metrics:
 - `green_definition_compliance = every test_runs.green_definition_id resolves and every required command in that definition has exit_code=0`.
 - `review_green_command_compliance = every 2026-06-23-or-later confirmed/completed review_evidence entry has at least one projected test_runs row with exit_code=0, evidence_path, and output_digest`.
 
+Current implementation note (2026-06-23): `projectReviewEvidenceRegistry` projects `review_evidence.green_commands[]` into `test_runs` during deterministic harness.db rebuild. General UT runner ingestion, flake history, and duration regression projection remain separate IMP-109 scope.
+
 Implementation constraints:
 
 - Bun is the default execution runtime. The collector reads Bun/vitest JSON output when available and falls back to command/evidence digests when individual case data is unavailable.

@@ -716,6 +716,37 @@ function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
         indexed_at: indexedAt,
       },
     });
+    for (const [entryIndex, entry] of plan.crossEntries.entries()) {
+      for (const [commandIndex, command] of (entry.green_commands ?? []).entries()) {
+        const completedAt = command.completed_at ?? entry.tests_green_at ?? entry.reviewed_at ?? "";
+        const testRunId = stableId(
+          "test-run",
+          `${plan.plan_id}:${entryIndex}:${commandIndex}:${command.command}:${command.evidence_path}:${completedAt}`,
+        );
+        recordProjectionEvent(db, {
+          table: "test_runs",
+          id: testRunId,
+          row: {
+            test_run_id: testRunId,
+            session_id: "",
+            plan_id: plan.plan_id,
+            command: command.command,
+            runner: command.runner,
+            runtime: "",
+            os: "",
+            shell: "",
+            scope: command.scope,
+            started_at: "",
+            completed_at: completedAt,
+            exit_code: command.exit_code ?? -1,
+            evidence_path: command.evidence_path,
+            output_digest: command.output_digest,
+            green_definition_id: "",
+            status: command.exit_code === 0 ? "passed" : "failed",
+          },
+        });
+      }
+    }
   }
 }
 
