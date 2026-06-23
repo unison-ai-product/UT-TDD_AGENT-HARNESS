@@ -352,6 +352,14 @@ export interface RouteApprovalResult {
   missing_approvers: string[];
 }
 
+export interface RouteSignalEntry {
+  tokens: string[];
+  mode: string;
+  command: string;
+  preflight: boolean;
+  requiresApproval: boolean;
+}
+
 function routeCondition(input: { mode: string; signal: string; drift_type?: string }): string {
   const signal = input.signal.toLowerCase();
   if (
@@ -421,13 +429,7 @@ function resolveApproval(
   };
 }
 
-const ROUTE_SIGNAL_MAP: {
-  tokens: string[];
-  mode: string;
-  command: string;
-  preflight: boolean;
-  requiresApproval: boolean;
-}[] = [
+const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
   {
     tokens: ["regression", "failure", "doctor"],
     mode: "reverse",
@@ -524,11 +526,11 @@ export function evaluateRouteCommand(input: {
   env?: string;
   drift_type?: string;
   approval_policy?: RouteApprovalPolicy;
+  route_map?: RouteSignalEntry[];
 }): RouteEvalResult {
   const normalized = input.signal.trim().toLowerCase();
-  const route = ROUTE_SIGNAL_MAP.find((entry) =>
-    entry.tokens.some((token) => normalized.includes(token)),
-  );
+  const routeMap = [...(input.route_map ?? []), ...ROUTE_SIGNAL_MAP];
+  const route = routeMap.find((entry) => entry.tokens.some((token) => normalized.includes(token)));
   if (!route) {
     return {
       ...result([
@@ -551,7 +553,7 @@ export function evaluateRouteCommand(input: {
     };
   }
   const approval = resolveApproval(route, input, input.approval_policy);
-  const recommended = recommendedCommandV1Schema.parse({
+  const recommendedCandidate = {
     schema_version: "v1",
     command: route.command,
     args: {
@@ -565,7 +567,27 @@ export function evaluateRouteCommand(input: {
       requires_human_approval: approval.required,
       requires_preflight: route.preflight,
     },
-  });
+  };
+  const recommendedParsed = recommendedCommandV1Schema.safeParse(recommendedCandidate);
+  if (!recommendedParsed.success) {
+    return {
+      ...result(
+        [
+          finding(
+            "legacy-runtime-command",
+            "recommended command must start with ut-tdd; legacy runtime command names are forbidden",
+          ),
+        ],
+        ["src/workflow/contracts.ts"],
+      ),
+      signal: input.signal,
+      mode: route.mode,
+      suggest_command: route.command,
+      recommended_command: null,
+      approval,
+      exit_code: 1,
+    };
+  }
   const approvalFinding =
     approval.status === "policy_missing"
       ? finding("approval-policy-missing", "human approval policy is missing or unresolved")
@@ -580,7 +602,7 @@ export function evaluateRouteCommand(input: {
       route.command === "ut-tdd task classify"
         ? `${route.command} --text "${input.signal}"`
         : route.command,
-    recommended_command: recommended,
+    recommended_command: recommendedParsed.data,
     approval,
     exit_code: approvalFinding ? 1 : 0,
   };

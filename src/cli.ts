@@ -118,6 +118,7 @@ import {
   evaluateRouteCommand,
   type RouteApprovalPolicy,
   type RouteEvalResult,
+  type RouteSignalEntry,
 } from "./workflow/contracts";
 import { evaluateAutomationReadiness } from "./workflow/readiness";
 
@@ -1447,6 +1448,30 @@ function appendRouteApprovalAudit(repoRoot: string, evaluated: RouteEvalResult):
   return auditPath;
 }
 
+function loadRouteMap(repoRoot: string, explicitPath?: string): RouteSignalEntry[] | undefined {
+  const routeMapPath = explicitPath ?? join(repoRoot, ".ut-tdd", "config", "route-map.yaml");
+  if (!existsSync(routeMapPath)) return undefined;
+  const parsed = parseYaml(readFileSync(routeMapPath, "utf8")) as {
+    routes?: Partial<RouteSignalEntry>[];
+  };
+  if (!Array.isArray(parsed.routes)) return undefined;
+  return parsed.routes
+    .filter(
+      (route) =>
+        route &&
+        Array.isArray(route.tokens) &&
+        typeof route.mode === "string" &&
+        typeof route.command === "string",
+    )
+    .map((route) => ({
+      tokens: route.tokens?.map(String) ?? [],
+      mode: String(route.mode),
+      command: String(route.command),
+      preflight: route.preflight !== false,
+      requiresApproval: route.requiresApproval === true,
+    }));
+}
+
 const routeCommand = program.command("route").description("signal routing");
 routeCommand
   .command("eval")
@@ -1454,31 +1479,41 @@ routeCommand
   .requiredOption("--signal <signal>", "observed signal")
   .option("--env <env>", "runtime environment")
   .option("--drift-type <type>", "drift subtype")
+  .option("--route-map <path>", "route-map YAML override")
   .option("--format <format>", "output format: text or json", "text")
-  .action((opts: { signal: string; env?: string; driftType?: string; format?: string }) => {
-    const repoRoot = process.cwd();
-    const evaluated = evaluateRouteCommand({
-      signal: opts.signal,
-      env: opts.env,
-      drift_type: opts.driftType,
-      approval_policy: loadRouteApprovalPolicy(repoRoot),
-    });
-    const auditPath =
-      evaluated.exit_code === 1 ? appendRouteApprovalAudit(repoRoot, evaluated) : "";
-    if (opts.format === "json") {
-      process.stdout.write(
-        `${JSON.stringify(auditPath ? { ...evaluated, audit_path: auditPath } : evaluated, null, 2)}\n`,
-      );
-    } else if (evaluated.recommended_command) {
-      process.stdout.write(`mode=${evaluated.mode}\n`);
-      process.stdout.write(`suggest_command=${evaluated.suggest_command}\n`);
-      process.stdout.write(`command=${evaluated.recommended_command.command}\n`);
-      if (auditPath) process.stderr.write(`human approval blocked; audit=${auditPath}\n`);
-    } else {
-      process.stderr.write(`${evaluated.suggest_command}\n`);
-    }
-    process.exitCode = evaluated.exit_code;
-  });
+  .action(
+    (opts: {
+      signal: string;
+      env?: string;
+      driftType?: string;
+      routeMap?: string;
+      format?: string;
+    }) => {
+      const repoRoot = process.cwd();
+      const evaluated = evaluateRouteCommand({
+        signal: opts.signal,
+        env: opts.env,
+        drift_type: opts.driftType,
+        approval_policy: loadRouteApprovalPolicy(repoRoot),
+        route_map: loadRouteMap(repoRoot, opts.routeMap),
+      });
+      const auditPath =
+        evaluated.exit_code === 1 ? appendRouteApprovalAudit(repoRoot, evaluated) : "";
+      if (opts.format === "json") {
+        process.stdout.write(
+          `${JSON.stringify(auditPath ? { ...evaluated, audit_path: auditPath } : evaluated, null, 2)}\n`,
+        );
+      } else if (evaluated.recommended_command) {
+        process.stdout.write(`mode=${evaluated.mode}\n`);
+        process.stdout.write(`suggest_command=${evaluated.suggest_command}\n`);
+        process.stdout.write(`command=${evaluated.recommended_command.command}\n`);
+        if (auditPath) process.stderr.write(`human approval blocked; audit=${auditPath}\n`);
+      } else {
+        process.stderr.write(`${evaluated.suggest_command}\n`);
+      }
+      process.exitCode = evaluated.exit_code;
+    },
+  );
 
 function runtimeCommand(provider: AdapterProvider): Command {
   return program

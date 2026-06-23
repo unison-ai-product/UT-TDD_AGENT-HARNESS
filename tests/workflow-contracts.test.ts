@@ -179,6 +179,21 @@ describe("L7 workflow contract implementations", () => {
     });
     expect(approvedRoute.exit_code).toBe(0);
     expect(approvedRoute.approval.status).toBe("approved");
+    const legacyCommandRoute = evaluateRouteCommand({
+      signal: "legacy override",
+      route_map: [
+        {
+          tokens: ["legacy"],
+          mode: "reverse",
+          command: "helix reverse",
+          preflight: true,
+          requiresApproval: false,
+        },
+      ],
+    });
+    expect(legacyCommandRoute.exit_code).toBe(1);
+    expect(legacyCommandRoute.recommended_command).toBeNull();
+    expect(legacyCommandRoute.findings[0]?.code).toBe("legacy-runtime-command");
     expect(
       recordCrossCuttingEvent({
         type: "drift",
