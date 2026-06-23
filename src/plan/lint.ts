@@ -50,6 +50,7 @@ export interface PlanGovernanceViolation {
     | "parent_design_missing"
     | "artifact_type_mismatch"
     | "missing_required_agent_role"
+    | "kind_layer_mismatch"
     | "db_projection_backprop_missing"
     | "reverse_fullback_backprop_missing"
     | "reverse_fullback_claimed_artifact_missing"
@@ -261,6 +262,32 @@ function requiredAgentRoleViolations(raw: Record<string, unknown>): string[] {
   return missing;
 }
 
+function kindLayerViolations(raw: Record<string, unknown>): string[] {
+  const status = stringField(raw.status);
+  const updated = stringField(raw.updated) ?? stringField(raw.created) ?? "";
+  if (status === "archived" || updated < KIND_LAYER_ENFORCEMENT_DATE) return [];
+  if (boolField(raw.master_hub)) return [];
+
+  const kind = stringField(raw.kind);
+  const layer = stringField(raw.layer);
+  if (!kind || !layer) return [];
+
+  const designLayers = new Set(["L1", "L2", "L3", "L4", "L5", "L6"]);
+  const addDesignLayers = new Set(["L3", "L4", "L5", "L6"]);
+  const researchLayers = new Set(["L1", "L2", "L3", "L4"]);
+  const l7Only = new Set(["impl", "add-impl", "refactor", "retrofit", "troubleshoot"]);
+
+  if (kind === "design" && !designLayers.has(layer)) return [`design:${layer}:expected_L1-L6`];
+  if (kind === "add-design" && !addDesignLayers.has(layer)) {
+    return [`add-design:${layer}:expected_L3-L6`];
+  }
+  if (l7Only.has(kind) && layer !== "L7") return [`${kind}:${layer}:expected_L7`];
+  if (kind === "research" && !researchLayers.has(layer)) {
+    return [`research:${layer}:expected_L1-L4`];
+  }
+  return [];
+}
+
 function expectedArtifactTypeForPath(path: string): string | null {
   if (path.startsWith("docs/design/")) return "design_doc";
   if (path.startsWith("docs/test-design/")) return "test_design";
@@ -282,6 +309,7 @@ const REVERSE_FULLBACK_BACKPROP_ENFORCEMENT_DATE = "2026-06-22";
 const REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE = "2026-06-23";
 const REVERSE_R4_ROUTE_BACKPROP_ENFORCEMENT_DATE = "2026-06-23";
 const REQUIRED_AGENT_ROLE_ENFORCEMENT_DATE = "2026-06-23";
+const KIND_LAYER_ENFORCEMENT_DATE = "2026-06-23";
 const REQUIRED_REVERSE_FULLBACK_SCOPE_LAYERS = [
   "requirements",
   "L4-basic-design",
@@ -519,6 +547,14 @@ export function analyzePlanGovernance(
         file: entry.file,
         reason: "missing_required_agent_role",
         detail: missingRoles.join(", "),
+      });
+    }
+    const invalidKindLayers = kindLayerViolations(raw);
+    if (invalidKindLayers.length > 0) {
+      violations.push({
+        file: entry.file,
+        reason: "kind_layer_mismatch",
+        detail: invalidKindLayers.join(", "),
       });
     }
 

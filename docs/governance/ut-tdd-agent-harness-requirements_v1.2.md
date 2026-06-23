@@ -379,6 +379,10 @@ validator は `requires` の各 PLAN の `status=completed` を機械検証。
 - [ ] §1.5 `(kind, workflow_phase)` ペアが許可表に存在
 - [ ] §1.6 `(kind, drive)` ペアが kind × drive 許可 matrix に存在 (R-I2)
 - [ ] `kind=add-*` の場合、`drive` が親 PLAN の `drive` と一致
+- [ ] 2026-06-23 以降の新規/更新 PLAN は authoring `kind` と `layer` を一致させる。
+      `kind=design` は `L1`-`L6`、`kind=add-design` は `L3`-`L6`、`kind=impl/add-impl/refactor/retrofit/troubleshoot` は `L7`、
+      `kind=research` は `L1`-`L4` のみ許可する (`master_hub=true` は複数 layer を束ねる hub として例外)。
+      欠落時は `plan-governance` の `kind_layer_mismatch` で fail-close する。
 
 #### D. 必須 role
 

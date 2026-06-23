@@ -610,6 +610,98 @@ describe("plan schedule lint (IMP-081)", () => {
     expect(reasons).not.toContain("missing_required_agent_role");
   });
 
+  it("U-PLANGOV-011m: new PLANs must use kind-compatible authoring layers", () => {
+    const docs = [
+      planDoc("PLAN-L12-198-design-right-arm", {
+        kind: "design",
+        layer: "L12",
+        subDoc: null,
+        extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+      planDoc("PLAN-L6-198-troubleshoot-left-arm", {
+        kind: "troubleshoot",
+        layer: "L6",
+        subDoc: null,
+        extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+      planDoc("PLAN-L7-198-add-design-runtime", {
+        kind: "add-design",
+        layer: "L7",
+        subDoc: null,
+        extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+      planDoc("PLAN-L6-198-add-impl-design", {
+        kind: "add-impl",
+        layer: "L6",
+        subDoc: null,
+        extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+      planDoc("PLAN-L7-198-research-runtime", {
+        kind: "research",
+        layer: "L7",
+        subDoc: null,
+        extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+    ];
+
+    const violations = analyzePlanGovernance(docs).violations.filter(
+      (v) => v.reason === "kind_layer_mismatch",
+    );
+
+    expect(violations.map((v) => v.detail)).toEqual([
+      "design:L12:expected_L1-L6",
+      "troubleshoot:L6:expected_L7",
+      "add-design:L7:expected_L3-L6",
+      "add-impl:L6:expected_L7",
+      "research:L7:expected_L1-L4",
+    ]);
+  });
+
+  it("U-PLANGOV-011n: kind-compatible layers and master hubs pass", () => {
+    const docs = [
+      planDoc("PLAN-L4-198-design-ok", {
+        kind: "design",
+        layer: "L4",
+        subDoc: "function",
+        extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+      planDoc("PLAN-L7-198-refactor-ok", {
+        kind: "refactor",
+        layer: "L7",
+        subDoc: null,
+        extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+      planDoc("PLAN-L6-198-add-design-ok", {
+        kind: "add-design",
+        layer: "L6",
+        subDoc: null,
+        extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+      planDoc("PLAN-L7-198-add-impl-ok", {
+        kind: "add-impl",
+        layer: "L7",
+        subDoc: null,
+        extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+      planDoc("PLAN-L3-198-research-ok", {
+        kind: "research",
+        layer: "L3",
+        subDoc: null,
+        extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+      planDoc("PLAN-M-198-master-hub", {
+        kind: "design",
+        layer: "L14",
+        subDoc: null,
+        extra: "created: 2026-06-23\nupdated: 2026-06-23\nmaster_hub: true\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("kind_layer_mismatch");
+  });
+
   it("U-PLANGOV-012: docs/design generated artifacts must use design_doc", () => {
     const docs = [
       planDoc("PLAN-L7-99-design-type-mismatch", {
