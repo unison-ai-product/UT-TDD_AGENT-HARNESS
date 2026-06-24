@@ -30,6 +30,17 @@ export interface WorkGuardResult {
   message: string;
 }
 
+export interface WorkGuardTargetResult extends WorkGuardResult {
+  targetPath: string;
+}
+
+export interface WorkGuardTargetsResult {
+  decision: "pass" | "block";
+  reason: WorkGuardResult["reason"];
+  results: WorkGuardTargetResult[];
+  blocked: WorkGuardTargetResult | null;
+}
+
 /**
  * Windows 絶対パス / バックスラッシュ / repoRoot 接頭辞を repo-relative forward-slash へ正規化。
  * git porcelain と Claude tool_input.file_path の表記差を吸収する (NFR-01 cross-platform)。
@@ -79,6 +90,47 @@ export function evaluateWorkGuard(input: WorkGuardInput): WorkGuardResult {
     };
   }
   return { decision: "pass", reason: "clean-or-own", message: "" };
+}
+
+export function evaluateWorkGuardTargets(input: {
+  targetPaths: string[];
+  uncommittedFiles: string[];
+  sessionTouchedFiles: string[];
+  bypass: boolean;
+}): WorkGuardTargetsResult {
+  const uniqueTargets = [...new Set(input.targetPaths.filter((target) => target.length > 0))];
+  if (uniqueTargets.length === 0) {
+    return {
+      decision: "pass",
+      reason: "no-target",
+      results: [],
+      blocked: null,
+    };
+  }
+  const results = uniqueTargets.map((targetPath): WorkGuardTargetResult => {
+    const result = evaluateWorkGuard({
+      targetPath,
+      uncommittedFiles: input.uncommittedFiles,
+      sessionTouchedFiles: input.sessionTouchedFiles,
+      bypass: input.bypass,
+    });
+    return { ...result, targetPath };
+  });
+  const blocked = results.find((result) => result.decision === "block") ?? null;
+  if (blocked) {
+    return {
+      decision: "block",
+      reason: blocked.reason,
+      results,
+      blocked,
+    };
+  }
+  return {
+    decision: "pass",
+    reason: results.some((result) => result.reason === "bypass") ? "bypass" : "clean-or-own",
+    results,
+    blocked: null,
+  };
 }
 
 /**

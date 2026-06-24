@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   evaluateWorkGuard,
+  evaluateWorkGuardTargets,
   extractEditTargets,
   normalizeRepoRelative,
   resolveForeignEditOverride,
@@ -92,6 +93,28 @@ describe("work guard (PLAN-L7-114) — 作業衝突ガードレール", () => {
       bypass: false,
     });
     expect(result.decision).toBe("block");
+  });
+
+  it("blocks a multi-target preflight when any target is foreign-uncommitted", () => {
+    const result = evaluateWorkGuardTargets({
+      targetPaths: ["src/own.ts", "src/foreign.ts", "src/clean.ts"],
+      uncommittedFiles: ["src/own.ts", "src/foreign.ts"],
+      sessionTouchedFiles: ["src/own.ts"],
+      bypass: false,
+    });
+    expect(result.decision).toBe("block");
+    expect(result.blocked?.targetPath).toBe("src/foreign.ts");
+  });
+
+  it("passes a no-target preflight so hosted callers can dry-run safely", () => {
+    const result = evaluateWorkGuardTargets({
+      targetPaths: [],
+      uncommittedFiles: ["src/foreign.ts"],
+      sessionTouchedFiles: [],
+      bypass: false,
+    });
+    expect(result.decision).toBe("pass");
+    expect(result.reason).toBe("no-target");
   });
 });
 

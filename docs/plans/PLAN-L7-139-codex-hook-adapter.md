@@ -24,7 +24,11 @@ generates:
     artifact_type: json_config
   - artifact_path: src/lint/codex-hook-adapter.ts
     artifact_type: source_module
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
   - artifact_path: tests/codex-hook-adapter.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/work-guard.test.ts
     artifact_type: test_code
 dependencies:
   parent: null
@@ -197,8 +201,12 @@ verified TRUE against the real `codex.exe` 0.128.0 binary and addressed:
 - **Hosted API tool enforcement**: repo files cannot make the surrounding
   platform call `.codex/hooks.json` before its injected developer tools. True
   mechanical enforcement for this chat/API path requires platform-level hook
-  support or removal of the raw `apply_patch` surface; repo-side policy can only
-  document and test the limitation.
+  support or removal of the raw `apply_patch` surface. As a repo-side
+  countermeasure, `ut-tdd guard preflight` runs the same `work-guard` decision
+  before hosted/API edits: it accepts explicit targets, patch files, or stdin
+  apply_patch bodies, returns exit 2 on foreign uncommitted targets, and reports
+  `apiToolPathEnforced=false` so callers do not confuse preflight with mechanical
+  hook interception.
 - **`spawn_agent` guard**: design a Codex agent-guard analog (allowlist / model
   policy for the `spawn_agent` tool family) and wire it into `.codex/hooks.json`.
 - **SSoT materializer**: emit `.claude/settings.json` and `.codex/hooks.json` from one

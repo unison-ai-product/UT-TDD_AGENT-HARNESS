@@ -103,6 +103,12 @@ import {
   type SessionHookInput,
   safeName,
 } from "./runtime/session-log";
+import {
+  evaluateWorkGuardTargets,
+  extractEditTargets,
+  normalizeRepoRelative,
+  resolveForeignEditOverride,
+} from "./runtime/work-guard";
 import { findReference } from "./search/index";
 import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
 import {
@@ -261,6 +267,30 @@ function readHookInput(defaultEvent: string, sessionId?: string): SessionHookInp
     hook_event_name: parsed.hook_event_name ?? defaultEvent,
     session_id: sessionId ?? parsed.session_id ?? "ut-tdd-cli",
   };
+}
+
+function sessionTouchedFilesForGuard(repoRoot: string, sessionId: string | undefined): string[] {
+  if (!sessionId) return [];
+  const safe = sessionId.replace(/[\\/]+/g, "_");
+  const file = join(repoRoot, ".ut-tdd", "logs", "session", `${safe}.jsonl`);
+  if (!existsSync(file)) return [];
+  const touched: string[] = [];
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const ev = JSON.parse(line) as { target?: string };
+      if (ev.target) touched.push(normalizeRepoRelative(ev.target, repoRoot));
+    } catch {
+      // Ignore malformed session-log rows; preflight should keep checking other rows.
+    }
+  }
+  return touched;
+}
+
+function guardTargetsFromPatchText(patchText: string, repoRoot: string): string[] {
+  return extractEditTargets({ input: patchText }).map((target) =>
+    normalizeRepoRelative(target, repoRoot),
+  );
 }
 
 function writeHandoverWarnings(): void {
@@ -719,6 +749,70 @@ hook
         : "agent-slots: no running guard slot to release\n",
     );
   });
+
+const guard = program.command("guard").description("manual guard checks for non-hooked runtimes");
+guard
+  .command("preflight")
+  .description("run work-guard before hosted/API edits that cannot execute repo-local Codex hooks")
+  .option("--target <path...>", "repo-relative or absolute target path(s) to edit")
+  .option("--patch-file <path>", "patch file to scan for apply_patch headers")
+  .option("--stdin", "read an apply_patch body from stdin")
+  .option("--session <id>", "session_id used to load already-touched files")
+  .option("--json", "JSON output")
+  .option("--allow-foreign-edit", "intentional bypass; equivalent to an explicit guard override")
+  .action(
+    (opts: {
+      target?: string[];
+      patchFile?: string;
+      stdin?: boolean;
+      session?: string;
+      json?: boolean;
+      allowForeignEdit?: boolean;
+    }) => {
+      const repoRoot = process.cwd();
+      const targetPaths = (opts.target ?? []).map((target) =>
+        normalizeRepoRelative(target, repoRoot),
+      );
+      if (opts.patchFile) {
+        targetPaths.push(
+          ...guardTargetsFromPatchText(readFileSync(opts.patchFile, "utf8"), repoRoot),
+        );
+      }
+      if (opts.stdin) {
+        targetPaths.push(...guardTargetsFromPatchText(readStdin(), repoRoot));
+      }
+      const override = resolveForeignEditOverride({
+        env: opts.allowForeignEdit ? "1" : process.env.UT_TDD_ALLOW_FOREIGN_EDIT,
+      });
+      const result = evaluateWorkGuardTargets({
+        targetPaths,
+        uncommittedFiles: loadChangedFiles(repoRoot),
+        sessionTouchedFiles: sessionTouchedFilesForGuard(repoRoot, opts.session),
+        bypass: override.bypass,
+      });
+      if (opts.json) {
+        process.stdout.write(
+          `${JSON.stringify(
+            {
+              ...result,
+              override,
+              apiToolPathEnforced: false,
+              note: "hosted/API tools do not execute .codex/hooks.json; guard preflight is the repo-side substitute",
+            },
+            null,
+            2,
+          )}\n`,
+        );
+      } else if (result.blocked) {
+        process.stderr.write(`${result.blocked.message}\n`);
+      } else {
+        process.stdout.write(
+          `guard preflight: pass (${result.reason}, targets=${result.results.length})\n`,
+        );
+      }
+      process.exitCode = result.decision === "block" ? 2 : 0;
+    },
+  );
 
 const plan = program.command("plan").description("PLAN 操作");
 plan
