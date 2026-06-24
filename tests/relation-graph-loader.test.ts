@@ -116,4 +116,37 @@ describe("loadRelationGraphSourceSet", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("materializes a requirement node for every FR a plan derives from (no dangling derives-from)", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-req-"));
+    try {
+      buildRepo(root); // PLAN-TEST-01 derives-from FR-L1-99 (no FR registry doc in this tmp repo)
+      const sourceSet = loadRelationGraphSourceSet(root);
+      // requirement node must exist for the referenced FR even without a registry doc (union of refs)
+      expect(sourceSet.requirements?.map((r) => r.id)).toContain("FR-L1-99");
+      const projection = collectRelationGraphProjection(sourceSet);
+      const result = analyzeRelationImpact({ changedPaths: [], projection });
+      const staleEdges = result.findings.filter((f) => f.code === "stale-edge");
+      expect(staleEdges.map((f) => f.message)).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+// PLAN-L7-142: real-repo regression fence for the relation-graph loader coverage gap.
+// 合成 fixture ではなく実 loadRelationGraphSourceSet(process.cwd()) を通し、derives-from
+// (plan→requirement) / pairs (design→test-design) / generates (plan→source) の端点 node が
+// すべて実在し stale-edge == 0 であることを機械保証する (coverage≠substance、PLAN-L7-32 の
+// loader が requirement node を一切 materialize しなかった回帰の再発防止)。
+describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () => {
+  it("has zero stale-edge findings through the real loader and materializes requirement nodes", () => {
+    const projection = collectRelationGraphProjection(loadRelationGraphSourceSet(process.cwd()));
+    const result = analyzeRelationImpact({ changedPaths: [], projection });
+    const staleEdges = result.findings.filter((f) => f.code === "stale-edge");
+    // failure surfaces the dangling "from -[kind]-> to" edges directly.
+    expect(staleEdges.map((f) => f.message)).toEqual([]);
+    const requirementNodes = projection.nodes.filter((n) => n.kind === "requirement");
+    expect(requirementNodes.length).toBeGreaterThan(0);
+  });
 });

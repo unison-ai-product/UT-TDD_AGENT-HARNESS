@@ -18,11 +18,13 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
+import { loadFrDocs, parseFrRows } from "../lint/fr-registry-audit";
 import { loadImplPlanTraceInput } from "../lint/impl-plan-trace";
 import type {
   DesignDocInput,
   PlanInput,
   RelationGraphSourceSet,
+  RequirementInput,
   SourceFileInput,
   TestDesignDocInput,
   TestFileInput,
@@ -129,8 +131,24 @@ function buildCoveredByMap(
 
 interface PlanFrontmatter {
   plan_id?: string;
+  status?: string;
   generates?: { artifact_path?: string; artifact_type?: string }[];
   dependencies?: { requires?: string[] };
+}
+
+/** requirement node の provenance path (FR-L1 SSoT)。change-impact 突合の基準。 */
+const FR_REGISTRY_DOC = "docs/design/harness/L1-requirements/functional-requirements.md";
+
+/**
+ * FR-L1 レジストリ (SSoT) の登録 FR id 集合を fail-open で読む。
+ * relation graph の requirement node 供給に使う (PLAN-L7-32 loader の被覆欠落是正、PLAN-L7-142)。
+ */
+function loadRegistryFrIds(repoRoot: string): string[] {
+  try {
+    return parseFrRows(loadFrDocs(repoRoot).l1Functional).map((r) => r.id);
+  } catch {
+    return [];
+  }
 }
 
 function parsePlanFrontmatter(content: string): PlanFrontmatter {
@@ -192,6 +210,8 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
   // loadReviewPlans は docs/plans 不在で throw する (fail-close) ため、loader の fail-open
   // 原則を保つために全体を try/catch で包む (docs/plans 不在 repo = 空 plans)。
   const plans: PlanInput[] = [];
+  // plan が derives-from する全 requirement id を集約 (requirement node 供給用、stale-edge 是正)。
+  const referencedReqs = new Set<string>();
   try {
     const reviewPlans = loadReviewPlans(repoRoot);
     const plansDir = join(repoRoot, "docs", "plans");
@@ -203,6 +223,9 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
         // fail-open
       }
       const fm = parsePlanFrontmatter(content);
+      // archived plan は live graph に edge/node を出さない (historical、generates が削除済 artifact を
+      // 指して dangling 化するのを防ぐ)。status は frontmatter から判定 (PLAN-L7-142)。
+      if (fm.status === "archived") continue;
       // generates: src/*.ts artifact のみ抽出 (generates edge = plan→source)
       const generatesSrc = (fm.generates ?? [])
         .map((g) => g.artifact_path ?? "")
@@ -211,6 +234,7 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
       const fmRequires = (fm.dependencies?.requires ?? []).filter((r) => /^FR-L\d+-\d+$/.test(r));
       const bodyRefs = extractFrRefs(content);
       const allRefs = [...new Set([...fmRequires, ...bodyRefs])];
+      for (const r of allRefs) referencedReqs.add(r);
       plans.push({
         id: rp.plan_id,
         path: `docs/plans/${rp.file}`,
@@ -222,16 +246,30 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
     // fail-open: docs/plans 不在は空 plans
   }
 
+  // requirement node 供給 (PLAN-L7-32 loader の被覆欠落是正、PLAN-L7-142):
+  // FR-L1 レジストリ (SSoT) ∪ plan が実参照する FR id。前者で SSoT 完全性、後者で
+  // derives-from edge の端点を確実に実在化 (body-ref など未登録 FR でも dangling を出さない)。
+  const requirementIds = [...new Set([...loadRegistryFrIds(repoRoot), ...referencedReqs])];
+  const requirements: RequirementInput[] = requirementIds.map((id) => ({
+    id,
+    path: FR_REGISTRY_DOC,
+  }));
+
   // 7. designDocs: loadPairDocs → PairDoc を DesignDocInput に写像
   const designDocs: DesignDocInput[] = [];
   try {
     const pairDocs = loadPairDocs(repoRoot);
     for (const d of pairDocs) {
       if (!d.path.startsWith("docs/design/")) continue;
+      // pairs edge は design → test-design node。pairArtifact が docs/test-design/ を指す時のみ張る。
+      // L2-screen 等の self / wireframe (docs/design 配下の mock) は vmodel 上の正当な group/self pair
+      // だが test-design node ではないため、test-design への pairs edge にすると dangling 化する
+      // (PLAN-L7-142、loader が vmodel の self/group-pair を盲目変換していた是正)。
+      const pairs = d.pairArtifact?.startsWith("docs/test-design/") ? d.pairArtifact : undefined;
       designDocs.push({
         id: d.path, // path を安定 ID として使用
         path: d.path,
-        pairs: d.pairArtifact ?? undefined,
+        pairs,
       });
     }
   } catch {
@@ -259,6 +297,7 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
   }
 
   return {
+    requirements,
     sourceFiles,
     tests,
     plans,
