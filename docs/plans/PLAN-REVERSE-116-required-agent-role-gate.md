@@ -52,7 +52,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T12:32:00+09:00"
         evidence_path: tests/plan-lint.test.ts
-        output_digest: "sha256:1161161161161161"
+        output_digest: "sha256:f05c44ce57f60c83b5099bd2d8b81cffaab88950eeed4b6cbeb6e9648ba63a2d"
       - kind: lint
         command: "bun run src\\cli.ts plan lint --gate governance"
         runner: bun
@@ -60,7 +60,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T12:32:00+09:00"
         evidence_path: src/plan/lint.ts
-        output_digest: "sha256:1161161161161162"
+        output_digest: "sha256:4e39ab5e789f3b9041f3be9243c1d0292183f0ad2675b5ff4b3c0f7097cee456"
 ---
 
 # PLAN-REVERSE-116: required agent role gate

@@ -55,7 +55,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T12:28:00+09:00"
         evidence_path: tests/work-guard.test.ts
-        output_digest: "sha256:1141141141141141"
+        output_digest: "sha256:3da72c354611ce02d6791ee88edaf838f59679ba3d48115c478ecc19be2a3555"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -63,7 +63,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T12:29:00+09:00"
         evidence_path: src/runtime/work-guard.ts
-        output_digest: "sha256:1141141141141142"
+        output_digest: "sha256:ad589a73486d347838c5b913d7746df7b8037a50c2e97baa29790b2c22b8c81b"
 ---
 
 # PLAN-L7-114: Claude/Codex foreign work guard

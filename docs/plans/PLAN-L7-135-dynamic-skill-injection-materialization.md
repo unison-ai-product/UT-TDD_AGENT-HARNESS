@@ -67,7 +67,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: tests/skill-recommend.test.ts
-        output_digest: "sha256:a6a91e6d525acfd91ad51f61c7cde4a2cf1a53171109548a9e8ff1e37a0e86b8"
+        output_digest: "sha256:5ff2a93bed92158fd45d452d57bc26f9594b9051bf00947f6f918b4aeb1f4df1"
       - kind: unit_test
         command: "bun run vitest run tests\\skill-recommend.test.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts tests\\tier-router.test.ts tests\\doctor.test.ts tests\\cli-surface.test.ts -t \"routeToAdapterPlan|codex-wrapper-parity|skill|inject|shared Claude/Codex launch plan|provider-neutral|stdin|task route\""
         runner: bun
@@ -75,7 +75,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: tests/runtime-adapter.test.ts
-        output_digest: "sha256:77a73cf0120efafc8679fc7a8ed57e7b0f7d0e357ed41abba5ce0c2771a0c077"
+        output_digest: "sha256:71241ef8dbb099303c5384529944b4fb075f14e5851b6985134c00227789893a"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -83,7 +83,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: src/runtime/adapter.ts
-        output_digest: "sha256:b4edbc7c304d747d8e816a4cee85f0a744334f91668a64034d067ccc5814e65a"
+        output_digest: "sha256:743adb74802644ad04a3f086f77e3191dbe2f1ecdee2699599a917859d76dfc2"
       - kind: lint
         command: "bunx biome check src\\runtime\\adapter.ts src\\team\\run.ts src\\task\\tier-router.ts src\\doctor\\index.ts src\\cli.ts src\\skills\\recommend.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts tests\\tier-router.test.ts tests\\doctor.test.ts tests\\skill-recommend.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -91,7 +91,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: src/skills/recommend.ts
-        output_digest: "sha256:ca03d4be0354e7c497cd1eeb90c8c9ad9abdcdd734ba173b7912f45f8263f553"
+        output_digest: "sha256:d8e9694551877c339a13b30e725366febb8ed15edf21308b56a8caf11a21c0bc"
 ---
 
 # PLAN-L7-135: Dynamic skill injection materialization

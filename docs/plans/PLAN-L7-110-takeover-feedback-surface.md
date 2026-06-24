@@ -53,7 +53,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T23:42:00+09:00"
         evidence_path: tests/feedback-surface.test.ts
-        output_digest: "sha256:110feedbac000001"
+        output_digest: "sha256:4570446c9a5e5e03db0cf255344d7e424f451ec427f19cfe6251ab9eb636e10c"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -61,7 +61,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T23:43:00+09:00"
         evidence_path: src/feedback/surface.ts
-        output_digest: "sha256:110feedbac000002"
+        output_digest: "sha256:f6f615294ef69259ab96911db3154cd4bb9b7edf1e727d6eaba20a42e635648a"
 ---
 
 # PLAN-L7-110: takeover feedback surface from harness.db

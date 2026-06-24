@@ -55,7 +55,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T17:05:00+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:1261261261261264"
+        output_digest: "sha256:059ef9f190b9f9d3ebb788f34a5ce67ff43dd58749c66422a73bfe3d178eb49b"
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -63,7 +63,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T17:05:00+09:00"
         evidence_path: src/workflow/contracts.ts
-        output_digest: "sha256:1261261261261265"
+        output_digest: "sha256:c255c2d521dc672b954d41c1c03fc55e57a8adcb6d8195e00526ba5929ad4d40"
 ---
 
 # PLAN-REVERSE-126: route config dependency gate fullback

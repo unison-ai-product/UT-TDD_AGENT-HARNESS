@@ -55,7 +55,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T14:20:00+09:00"
         evidence_path: tests/vmodel-injection.test.ts
-        output_digest: "sha256:1221221221221224"
+        output_digest: "sha256:2f96c00b1a8110ee1717e291a594c68faa1eb0a9d6fe711ee5b157b3b88ff920"
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -63,7 +63,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T14:20:00+09:00"
         evidence_path: src/vmodel/injection.ts
-        output_digest: "sha256:1221221221221225"
+        output_digest: "sha256:09dfbf69280399fc50b720af5b68e4ee8b22e3d28d484997df818edcfceb9a10"
 ---
 
 # PLAN-REVERSE-122: vmodel injection show fullback

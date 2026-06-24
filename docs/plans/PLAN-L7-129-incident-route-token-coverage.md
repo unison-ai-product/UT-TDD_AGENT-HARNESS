@@ -47,7 +47,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T15:45:00+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:1291291291291291"
+        output_digest: "sha256:059ef9f190b9f9d3ebb788f34a5ce67ff43dd58749c66422a73bfe3d178eb49b"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -55,7 +55,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T15:45:00+09:00"
         evidence_path: tsconfig.json
-        output_digest: "sha256:1291291291291292"
+        output_digest: "sha256:290e679c492d7c229373061b313ab332394da783b08c9eff85bbb81275f96afc"
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -63,7 +63,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T15:45:00+09:00"
         evidence_path: src/workflow/contracts.ts
-        output_digest: "sha256:1291291291291293"
+        output_digest: "sha256:c255c2d521dc672b954d41c1c03fc55e57a8adcb6d8195e00526ba5929ad4d40"
 ---
 
 # PLAN-L7-129: route token coverage

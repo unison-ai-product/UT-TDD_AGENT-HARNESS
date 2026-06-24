@@ -51,7 +51,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-24T12:17:00+09:00"
         evidence_path: src/runtime/work-guard.ts
-        output_digest: "sha256:6d57e819eac7b231197d777acd17711d47f84c9c5b27111231430c80b339a640"
+        output_digest: "sha256:ad589a73486d347838c5b913d7746df7b8037a50c2e97baa29790b2c22b8c81b"
       - kind: unit_test
         command: "bun run vitest run tests/work-guard.test.ts"
         runner: bun
@@ -59,7 +59,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-24T12:17:00+09:00"
         evidence_path: tests/work-guard.test.ts
-        output_digest: "sha256:13f1602517fa389c6b42782de4b211caa0dfc2aeb8b5c5d7ebc25afc680aa0a7"
+        output_digest: "sha256:3da72c354611ce02d6791ee88edaf838f59679ba3d48115c478ecc19be2a3555"
       - kind: unit_test
         command: "bun run vitest run tests/codex-hook-adapter.test.ts"
         runner: bun
@@ -67,7 +67,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-24T12:17:00+09:00"
         evidence_path: tests/codex-hook-adapter.test.ts
-        output_digest: "sha256:80bddef0c565e3888532757910a9c2d4935baf48fc5d03e7e068bbfbe6f107e4"
+        output_digest: "sha256:83186df7b0ca979c9ef97b4e54156f8881cff3458232300b6203e8f828903d6c"
 ---
 
 # PLAN-L7-139: Codex hook adapter (orchestrator-rule parity)

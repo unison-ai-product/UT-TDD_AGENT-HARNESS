@@ -49,7 +49,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T17:35:00+09:00"
         evidence_path: tests/vmodel-injection.test.ts
-        output_digest: "sha256:1271271271271271"
+        output_digest: "sha256:2f96c00b1a8110ee1717e291a594c68faa1eb0a9d6fe711ee5b157b3b88ff920"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -57,7 +57,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T17:35:00+09:00"
         evidence_path: tsconfig.json
-        output_digest: "sha256:1271271271271272"
+        output_digest: "sha256:290e679c492d7c229373061b313ab332394da783b08c9eff85bbb81275f96afc"
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -65,7 +65,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T17:35:00+09:00"
         evidence_path: src/vmodel/injection.ts
-        output_digest: "sha256:1271271271271273"
+        output_digest: "sha256:09dfbf69280399fc50b720af5b68e4ee8b22e3d28d484997df818edcfceb9a10"
 ---
 
 # PLAN-L7-127: orchestration degradation record

@@ -52,7 +52,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T13:45:00+09:00"
         evidence_path: tests/backfill-pairing.test.ts
-        output_digest: "sha256:1201201201201201"
+        output_digest: "sha256:4677eff98f8f122d395b94c7f70527358f358152a310e93d926a60ad3cc46512"
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -60,7 +60,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T13:45:00+09:00"
         evidence_path: src/lint/backfill-pairing.ts
-        output_digest: "sha256:1201201201201202"
+        output_digest: "sha256:cb69e5f9425f57492a0760eb7574201d4d361689feb2229db46d773509485b07"
 ---
 
 # PLAN-REVERSE-120: backfill result doc sync

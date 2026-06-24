@@ -47,7 +47,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T15:54:00+09:00"
         evidence_path: tests/attempt-escalation.test.ts
-        output_digest: "sha256:57441128bc568377bc888ffe6caba7a74b431ee0ca28c386485a85cea821f9ba"
+        output_digest: "sha256:8f0c3329489e7f351ddc53dd318dc57abed9e45f3f0e355381ea4fe1916999b6"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -55,7 +55,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T15:54:00+09:00"
         evidence_path: tsconfig.json
-        output_digest: "sha256:56779b596caffacac585215fe4d199022242cd6e02a54544ff54049564c5db03"
+        output_digest: "sha256:290e679c492d7c229373061b313ab332394da783b08c9eff85bbb81275f96afc"
       - kind: lint
         command: "bunx biome check src\\runtime\\attempt-escalation.ts tests\\attempt-escalation.test.ts"
         runner: bun
@@ -63,7 +63,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T15:54:00+09:00"
         evidence_path: src/runtime/attempt-escalation.ts
-        output_digest: "sha256:acc7b8544ce71bd365b51eb171c891fcfc1a736a97fddc8845b8d0a53ca56d5b"
+        output_digest: "sha256:f727200a8a3c7fef3ce8f2ca97db6c9fb813085deaf9fbf955b9cd8fc5761ecb"
   - reviewer: codex (cross-provider desk review)
     review_kind: cross_agent
     reviewed_at: "2026-06-23"

@@ -45,7 +45,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23"
         evidence_path: tests/green-command-digest.test.ts
-        output_digest: "sha256:ea1e5a40de30ab4c477bb25054a39dfe1db4108981ad74394e4d6b4ca5fc58d9"
+        output_digest: "sha256:4c10eca9258ffe560b0eb420d9ecac699ad0e7423b519f09cdf6db81e0000018"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -53,7 +53,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23"
         evidence_path: src/lint/green-command-digest.ts
-        output_digest: "sha256:f6d812731e5b956b07fb022c9c49896a91a4d747f30c92f1fdc9eaa8a54fc361"
+        output_digest: "sha256:898a7a236a2873fdbd0df6b380331fcd70774334af71abd3bd6fb721d721a7f4"
 ---
 
 # PLAN-L7-132 (impl): green_command digest 実体検査
