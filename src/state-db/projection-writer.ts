@@ -293,6 +293,14 @@ function checkResolvablePlanJoin(db: HarnessDb, table: string, row: Record<strin
   if (table === "feedback_events") return;
   const planId = asString(row.plan_id);
   if (!planId || planExists(db, planId)) return;
+  // A plan_id column can carry a free-form WORK-CONTEXT label that is not a single
+  // concrete PLAN foreign key and legitimately resolves to no registry row:
+  //   - an audit-cycle id (e.g. "A-136-cycle-p4-verification-audit"), or
+  //   - a compound "PLAN-a+b+c" label spanning several PLANs.
+  // hook_events records whichever work was active, so these are non-FK labels, not
+  // dangling references. A concrete single "PLAN-..." id that does not resolve
+  // (deleted/renamed) is still flagged (PLAN-L7-144).
+  if (/^A-\d/.test(planId) || planId.includes("+")) return;
   const pk = primaryKeyOf(tableDef(table));
   const subject = `${table}:${String(row[pk] ?? "")}`;
   recordFinding(db, {
@@ -799,16 +807,20 @@ export function projectGuardrailInvariantAdvisories(db: HarnessDb): void {
       worker_model: workerModel ? workerModel : undefined,
     };
     for (const violation of inspectGuardrailInvariants(input).violations) {
-      // review_kind scoping (mirror the doctor hard gate, src/doctor/index.ts
-      // checkGuardrailInvariants + concept §2.1.2.1, PLAN-L7-143):
-      // same-provider-cross-review is — by name and design — only a defect for a
-      // review that CLAIMS cross-runtime independence (review_kind=cross_agent).
-      // For intra_runtime_subagent (the accepted single-runtime review tier) a
-      // shared provider is STRUCTURALLY FORCED, so surfacing it is pure noise.
-      // same-model-self-review is intentionally NOT scoped: a model reviewing its
-      // own exact output is avoidable in any tier (e.g. opus worker + sonnet
-      // reviewer), so its warn nudge stays broader than the hard block.
-      if (violation.rule === "same-provider-cross-review" && reviewKind !== "cross_agent") {
+      // review_kind scoping mirrors the doctor hard gate (src/doctor/index.ts
+      // checkGuardrailInvariants) and concept §2.1.2.1: same-model AND same-provider
+      // are defects ONLY for a review that CLAIMS cross-runtime independence
+      // (review_kind=cross_agent). intra_runtime_subagent is the design-sanctioned
+      // Tier ② single-runtime substitute whose review is same-model by definition
+      // (§2.1.2.1: "②は同一モデルである事実を必ず記録...cross-provider 要件には数えない"),
+      // so neither rule is a defect there. secret-evidence /
+      // human-required-without-evidence stay review_kind-independent. Full
+      // projection-gate parity — PLAN-L7-144 corrects PLAN-L7-143's same-model asymmetry.
+      if (
+        (violation.rule === "same-provider-cross-review" ||
+          violation.rule === "same-model-self-review") &&
+        reviewKind !== "cross_agent"
+      ) {
         continue;
       }
       recordFinding(db, {

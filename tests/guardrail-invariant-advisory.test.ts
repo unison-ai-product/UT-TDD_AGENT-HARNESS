@@ -97,18 +97,32 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
-      // same-model self-review is NOT review_kind-scoped (avoidable in any tier),
-      // so an intra_runtime_subagent same-model review still surfaces an advisory.
+      // same-model on a cross_agent review IS a real defect: it claims cross-runtime
+      // independence yet the reviewer is the SAME model -> advisory fires.
       upsertRow(db, {
         table: "review_evidence_registry",
         primaryKey: "review_evidence_id",
         row: reviewEvidenceRow({
-          review_evidence_id: "review-evidence:PLAN-SELF-REVIEW-A",
-          plan_id: "PLAN-SELF-REVIEW-A",
+          review_evidence_id: "review-evidence:PLAN-SAME-MODEL-CROSS",
+          plan_id: "PLAN-SAME-MODEL-CROSS",
+          review_kind: "cross_agent",
+          worker_model: "claude-opus-4-8",
+          reviewer_model: "claude-opus-4-8",
+          source: "docs/plans/PLAN-SAME-MODEL-CROSS.md",
+        }),
+      });
+      // same-model on an intra_runtime_subagent review is the design-sanctioned Tier ②
+      // substitute (concept §2.1.2.1, same model by definition) -> advisory suppressed.
+      upsertRow(db, {
+        table: "review_evidence_registry",
+        primaryKey: "review_evidence_id",
+        row: reviewEvidenceRow({
+          review_evidence_id: "review-evidence:PLAN-SAME-MODEL-INTRA",
+          plan_id: "PLAN-SAME-MODEL-INTRA",
           review_kind: "intra_runtime_subagent",
           worker_model: "claude-opus-4-8",
           reviewer_model: "claude-opus-4-8",
-          source: "docs/plans/PLAN-SELF-REVIEW-A.md",
+          source: "docs/plans/PLAN-SAME-MODEL-INTRA.md",
         }),
       });
       // same-provider on a cross_agent review IS a real defect (claims cross-runtime
@@ -173,7 +187,8 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
       }>;
 
       const advisories = findings.filter((f) => f.source === "guardrail-invariant-advisory");
-      // same-model(intra) + same-provider(cross_agent) fire; same-provider(intra) is suppressed.
+      // only the cross_agent same-model + cross_agent same-provider fire; both
+      // intra_runtime_subagent reviews are suppressed (design-sanctioned Tier ②).
       expect(advisories).toHaveLength(2);
       expect(advisories.map((a) => a.kind)).toEqual(
         expect.arrayContaining([
@@ -184,18 +199,21 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
       // traceability lives in evidence_path (readiness does not scan it)...
       expect(advisories.map((a) => a.evidence_path)).toEqual(
         expect.arrayContaining([
-          "docs/plans/PLAN-SELF-REVIEW-A.md",
+          "docs/plans/PLAN-SAME-MODEL-CROSS.md",
           "docs/plans/PLAN-SAME-PROVIDER-B.md",
         ]),
       );
-      // ...and the intra_runtime_subagent same-provider review surfaces NO advisory
-      // (forced single-runtime condition is not a defect — projection-gate parity).
+      // ...and neither intra_runtime_subagent review surfaces an advisory
+      // (same-model / same-provider in Tier ② are design-sanctioned, not defects).
+      expect(advisories.map((a) => a.evidence_path)).not.toContain(
+        "docs/plans/PLAN-SAME-MODEL-INTRA.md",
+      );
       expect(advisories.map((a) => a.evidence_path)).not.toContain(
         "docs/plans/PLAN-SAME-PROVIDER-INTRA.md",
       );
       // ...while subject_id is plan-id-free so it cannot flip automation readiness.
       for (const finding of findings) {
-        expect(finding.subject_id).not.toContain("PLAN-SELF-REVIEW-A");
+        expect(finding.subject_id).not.toContain("PLAN-SAME-MODEL-CROSS");
       }
     } finally {
       db.close();
@@ -239,6 +257,7 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
         row: reviewEvidenceRow({
           review_evidence_id: "review-evidence:PLAN-SELF-REVIEW-A",
           plan_id: "PLAN-SELF-REVIEW-A",
+          review_kind: "cross_agent",
           worker_model: "claude-opus-4-8",
           reviewer_model: "claude-opus-4-8",
           source: "docs/plans/PLAN-SELF-REVIEW-A.md",

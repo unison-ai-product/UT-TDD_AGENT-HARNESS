@@ -221,6 +221,44 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
     }
   });
 
+  it("does NOT flag work-context plan_id labels (audit-cycle id / compound) as unresolved joins (PLAN-L7-144)", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      // hook_events carries the active WORK CONTEXT, which can be a non-PLAN label:
+      // an audit-cycle id, or a compound "PLAN-a+b+c" spanning several PLANs. Neither
+      // is a single-PLAN foreign key, so neither is a dangling reference.
+      for (const [id, planId] of [
+        ["audit-ctx", "A-136-cycle-p4-verification-audit"],
+        ["compound-ctx", "PLAN-L7-47+48+49-db-feedback-audit-close"],
+      ] as const) {
+        recordProjectionEvent(db, {
+          table: "model_runs",
+          id,
+          row: {
+            run_id: id,
+            runtime: "codex",
+            model: "gpt-5.4",
+            role: "se",
+            drive: "db",
+            plan_id: planId,
+            started_at: "2026-06-11T00:02:00.000Z",
+            completed_at: "2026-06-11T00:03:00.000Z",
+            evidence_path: ".ut-tdd/evidence/run.json",
+          },
+        });
+      }
+      const flagged = db
+        .prepare(
+          "SELECT COUNT(*) AS n FROM findings WHERE kind = 'unresolved-join' AND subject_id IN (?, ?)",
+        )
+        .get("model_runs:audit-ctx", "model_runs:compound-ctx") as { n: number };
+      expect(flagged.n).toBe(0);
+    } finally {
+      db.close();
+    }
+  });
+
   it("does not turn feedback_events queue rows into unresolved join findings", () => {
     const db = openHarnessDb(":memory:");
     try {

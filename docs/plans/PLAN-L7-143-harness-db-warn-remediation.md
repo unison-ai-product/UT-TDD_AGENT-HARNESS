@@ -100,6 +100,14 @@ dependencies:
 
 # PLAN-L7-143 (troubleshoot): harness.db actionable-warn remediation
 
+> **訂正 (errata, 2026-06-24)**: 本 PLAN の §2/§5/§7 で採用した
+> 「same-model-self-review advisory は意図的に scoping しない (asymmetry)」という判断は
+> **誤り**で、**PLAN-L7-144 が full projection-gate parity に訂正**した。concept §2.1.2.1 は
+> intra_runtime_subagent (Tier ②) の同一モデルを設計上 sanctioned としており、advisory が
+> それを叩くのは設計・doctor hard gate と矛盾していた。same-model も same-provider と同じく
+> `review_kind=cross_agent` 限定が正しい。本 PLAN の他の成果 (Fix1 redaction `\b` /
+> Fix2 test registration / Fix3 same-provider scoping) は正しく、有効なまま存続する。
+
 ## 0. 検出 (harness.db feedback_events、PO「包めて進めて」2026-06-24)
 
 `ut-tdd feedback list` の actionable(warn)上位に3つの修正対象 debt が滞留していた。
