@@ -27,7 +27,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-24T17:44:00+09:00"
         evidence_path: tests/guardrail-invariant-advisory.test.ts
-        output_digest: "sha256:b24996c4af96d4737ef27c6df3130ffff5e118c566fd96b8eeb434680ab92325"
+        output_digest: "sha256:6db39c54697b5f638deb7972368e178458385cdb68a047d5da5e362e97c5ae23"
   - reviewer: codex-gpt-5.x
     review_kind: cross_agent
     reviewed_at: "2026-06-24T17:57:00+09:00"
@@ -44,7 +44,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-24T17:44:00+09:00"
         evidence_path: tests/guardrail-invariant-advisory.test.ts
-        output_digest: "sha256:b24996c4af96d4737ef27c6df3130ffff5e118c566fd96b8eeb434680ab92325"
+        output_digest: "sha256:6db39c54697b5f638deb7972368e178458385cdb68a047d5da5e362e97c5ae23"
 agent_slots:
   - role: tl
     slot_label: "TL — document-export redact + guardrail advisory scoping"
