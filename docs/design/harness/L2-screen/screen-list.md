@@ -8,9 +8,9 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L10
 plan: docs/plans/PLAN-L2-01-screen-list.md
-implemented_screens: ""  # 実装未確定 (PLAN-L7-108): src/web は ui-element §2 設計部品 (HierarchyPulldown/HeatmapGrid/LayerTemplate 等) に未適合の prototype。L10 High-Fi/UX → 設計適合実装 まで全 15 画面 not-implemented。premature flip は screen-impl-pair-freeze gate が fail-close。
+implemented_screens: ""  # 実装未確定 (再起票 PLAN-L7-141): L7-102 の src/web prototype は ui-element §2 設計部品 (HierarchyPulldown/HeatmapGrid/LayerTemplate 等) 未適合の table-dumper だったため 2026-06-24 に破棄 (L7-102 archived)。L10 High-Fi/UX → component-derived 実装 まで全 15 画面 not-implemented。premature flip は screen-impl-pair-freeze gate が fail-close。
 created: 2026-05-28
-updated: 2026-06-22
+updated: 2026-06-24
 ---
 
 ## PLAN-L7-102 Review Back-Fill: 404 Path Safety

@@ -23,8 +23,11 @@ generates:
 dependencies:
   parent: null
   requires:
-    - docs/plans/PLAN-L7-102-web-dashboard-phase-b.md
     - docs/plans/PLAN-L7-89-plan-errata-supersession-gate.md
+  references:
+    # L7-102 は 2026-06-24 に prototype 破棄で archived (後継=PLAN-L7-141)。本 errata は
+    # その L7-102 を対象とする履歴リンクのため requires (ready 必須) でなく references にする。
+    - docs/plans/PLAN-L7-102-web-dashboard-phase-b.md
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent

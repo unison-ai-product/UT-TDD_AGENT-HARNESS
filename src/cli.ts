@@ -145,7 +145,6 @@ import {
 } from "./team/run";
 import { formatVmodelInjection, resolveVmodelInjection } from "./vmodel/injection";
 import { lintVmodel } from "./vmodel/lint";
-import { startWebServer } from "./web/server";
 import {
   buildCommandCatalog,
   evaluateRouteCommand,
@@ -418,14 +417,8 @@ program
     process.exitCode = r.ok ? 0 : 1;
   });
 
-program
-  .command("web")
-  .description("中央 UI (read-only ダッシュボード) を local 起動 (ADR-005 D2 Phase A、Bun 必須)")
-  .option("--port <port>", "listen port", "4173")
-  .action((opts: { port?: string }) => {
-    const handle = startWebServer({ port: Number(opts.port ?? 4173), repoRoot: process.cwd() });
-    process.stdout.write(`UT-TDD 中央 UI (read-only) → http://localhost:${handle.port}/projects\n`);
-  });
+// `web` command は PLAN-L7-102 prototype (table-dumper) 破棄に伴い撤去 (2026-06-24)。
+// component-derived な中央UI 再実装は PLAN-L7-141 で再配線する。
 
 const mcp = program.command("mcp").description("MCP and external verification profile catalog");
 const mcpProfile = mcp.command("profile").description("verification profile catalog");
