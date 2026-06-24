@@ -321,6 +321,58 @@ export function buildPointer(input: BuildPointerInput): HandoverPointer {
 }
 
 /**
+ * PLAN-L7-145 (handover #1): files_touched entry の絶対パスを repo-relative へ変換。
+ * entry は "Verb <path>" 形 (例 `Write <abspath>` / `Edit <relpath>`) か bare path。
+ * Claude hook は絶対パスを、Codex hook は相対パスを記録するため混在する。RENDER 時に正規化
+ * すれば既存の汚染 digest も含めて一掃できる。
+ *
+ * Windows の casing 差を吸収する: process.cwd() は大文字ドライブ `C:\...` を返すが、ディスク上の
+ * 記録は小文字 `c:\...` が支配的 (実測 421 件小文字 vs 36 件大文字)。よって prefix 一致判定は
+ * **case-insensitive** にし、出力は元 casing を保持する (sliced original)。repo 外の path
+ * (`~/.codex` 等) は無改変、sibling-prefix 誤一致は `${root}/` 境界で防ぐ。fail-open (never throws)。
+ */
+// repo 外の絶対パスから user-home prefix (drive + ユーザー名セグメント) を `~/` にマスクする。
+// (パターン literal は runtime-portability の local-absolute-path lint を自己発火させないよう
+//  コメントに素書きしない — LEGACY_RUNTIME_NAME と同方針。)
+const HOME_PREFIX_RE = /^([A-Za-z]:)?\/(?:Users|home)\/[^/]+\//i;
+
+export function relativizeTouchedFile(entry: string, repoRoot: string): string {
+  try {
+    const sp = entry.indexOf(" ");
+    const hasVerb = sp > 0 && !/[\\/]/.test(entry.slice(0, sp));
+    const verb = hasVerb ? entry.slice(0, sp) : "";
+    const rawPath = hasVerb ? entry.slice(sp + 1) : entry;
+    const normPath = rawPath.replace(/\\/g, "/");
+    const withVerb = (p: string): string => (verb ? `${verb} ${p}` : p);
+    // 1. repo 配下の絶対パス → repo-relative (case-insensitive prefix で Windows casing 吸収、元 casing 保持)。
+    if (repoRoot) {
+      const normRoot = repoRoot.replace(/\\/g, "/").replace(/\/+$/, "");
+      if (normRoot && normPath.toLowerCase().startsWith(`${normRoot.toLowerCase()}/`)) {
+        const rel = normPath.slice(normRoot.length + 1);
+        if (rel) return withVerb(rel);
+      }
+    }
+    // 2. repo 外の絶対パス (Temp / ~/.codex 等) は user-home prefix を ~ にマスク (username 漏洩防止)。
+    const masked = normPath.replace(HOME_PREFIX_RE, "~/");
+    if (masked !== normPath) return withVerb(masked);
+    return entry;
+  } catch {
+    return entry;
+  }
+}
+
+/**
+ * PLAN-L7-145 (handover #1): doc.deliverables[].files を repo-relative 化 + 重複除去 (in-place)。
+ * runHandover が scaffold 後に呼ぶ (個人絶対パス漏洩防止)。scaffoldFromDigests を 3 引数のまま
+ * 保つため (max-source-params)、relativize は本 post-step に分離。
+ */
+export function relativizeDeliverableFiles(doc: HandoverDoc, repoRoot: string): void {
+  for (const d of doc.deliverables) {
+    d.files = [...new Set(d.files.map((f) => relativizeTouchedFile(f, repoRoot)))];
+  }
+}
+
+/**
  * U-HOVER-003: 純関数。digest → deliverables / planMeta → plans.summary。
  * ③-⑥ (next_actions/carry/po_decisions/do_not_break) は空配列 = human 記入のため scaffold しない。
  */
@@ -784,6 +836,8 @@ export function runHandover(args: HandoverArgs, deps: HandoverDeps): HandoverRes
   });
   const planMeta = scope.digests.map((d) => readPlanMeta(d.plan_id, deps));
   const doc = scaffoldFromDigests(scope.digests, planMeta, args.date);
+  // PLAN-L7-145: deliverables の絶対パスを repo-relative 化 + home-mask (個人パス漏洩防止)。
+  relativizeDeliverableFiles(doc, deps.repoRoot);
 
   const docRel = join("docs", "handover", `session-handover-${args.date}.md`);
   const docAbs = join(deps.repoRoot, docRel);

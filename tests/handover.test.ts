@@ -21,6 +21,8 @@ import {
   MAX_SUMMARY_PLANS,
   type PlanDigestRef,
   readPointer,
+  relativizeDeliverableFiles,
+  relativizeTouchedFile,
   renderHandoverScaffold,
   resolveHandoverScope,
   runHandover,
@@ -83,6 +85,83 @@ function digest(over: Partial<PlanDigestRef> = {}): PlanDigestRef {
     ...over,
   };
 }
+
+describe("PLAN-L7-145 handover #1: relativizeTouchedFile (absolute-path leak fix)", () => {
+  const WINROOT = "C:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness";
+
+  it("relativizes a Windows abs path whose casing MISMATCHES repoRoot (lowercase entry vs uppercase cwd)", () => {
+    // process.cwd() returns uppercase 'C:\\...'; on-disk digests store lowercase 'c:\\...'.
+    // A case-sensitive compare would leave the leak intact — this is the regression that matters.
+    const entry = "Write c:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness\\src\\a.ts";
+    expect(relativizeTouchedFile(entry, WINROOT)).toBe("Write src/a.ts");
+  });
+
+  it("relativizes when casing mismatches the other direction (uppercase entry vs lowercase root)", () => {
+    const entry = "Edit C:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness\\src\\b.ts";
+    const lowerRoot = "c:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness";
+    expect(relativizeTouchedFile(entry, lowerRoot)).toBe("Edit src/b.ts");
+  });
+
+  it("relativizes a POSIX abs path with verb, and a bare path without verb", () => {
+    expect(relativizeTouchedFile("Edit /repo/src/cli.ts", "/repo")).toBe("Edit src/cli.ts");
+    expect(relativizeTouchedFile("/repo/src/cli.ts", "/repo")).toBe("src/cli.ts");
+  });
+
+  it("leaves already-relative / sibling-prefix / empty-root / non-home-abs entries untouched", () => {
+    expect(relativizeTouchedFile("Edit src/cli.ts", "/repo")).toBe("Edit src/cli.ts");
+    // sibling-prefix false match guarded by the trailing "/"
+    expect(relativizeTouchedFile("/repo-other/x.ts", "/repo")).toBe("/repo-other/x.ts");
+    expect(relativizeTouchedFile("Edit /repo/src/a.ts", "")).toBe("Edit /repo/src/a.ts");
+    // an absolute path NOT under a user home and NOT under repo stays as-is
+    expect(relativizeTouchedFile("/opt/tool/x.ts", "/repo")).toBe("/opt/tool/x.ts");
+  });
+
+  it("masks the user-home prefix of out-of-repo personal paths (no username leak)", () => {
+    // outside repo but under the user home (Temp scratch, ~/.codex) -> home prefix masked to ~
+    expect(relativizeTouchedFile("Write c:\\Users\\micro\\.codex\\config.toml", WINROOT)).toBe(
+      "Write ~/.codex/config.toml",
+    );
+    expect(
+      relativizeTouchedFile("Write c:\\Users\\micro\\AppData\\Local\\Temp\\dbq.ts", WINROOT),
+    ).toBe("Write ~/AppData/Local/Temp/dbq.ts");
+    expect(relativizeTouchedFile("Edit /Users/micro/scratch/y.ts", "/repo")).toBe(
+      "Edit ~/scratch/y.ts",
+    );
+    expect(relativizeTouchedFile("/home/micro/scratch/z.ts", "/repo")).toBe("~/scratch/z.ts");
+  });
+
+  it("is fail-open on odd input (never throws)", () => {
+    expect(relativizeTouchedFile("", "/repo")).toBe("");
+    expect(relativizeTouchedFile("   ", "/repo")).toBe("   ");
+  });
+
+  it("relativizeDeliverableFiles renders NO drive-letter home-dir path and dedupes mixed casing (negative assertion)", () => {
+    const doc = scaffoldFromDigests(
+      [
+        digest({
+          plan_id: "PLAN-X",
+          files_touched: [
+            "Write c:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness\\src\\a.ts",
+            "Write C:\\Users\\micro\\OneDrive\\Desktop\\UT-TDD-agent-harness\\src\\a.ts",
+            "Write c:\\Users\\micro\\.codex\\config.toml",
+          ],
+        }),
+      ],
+      [],
+      "2026-06-24",
+    );
+    relativizeDeliverableFiles(doc, WINROOT);
+    const serialized = JSON.stringify(doc);
+    // NO username-bearing personal path (drive-letter home or /Users|/home) survives anywhere
+    expect(/[A-Za-z]:[\\/]Users[\\/]micro/.test(serialized)).toBe(false);
+    expect(serialized.includes("Users/micro")).toBe(false);
+    const files = doc.deliverables[0]?.files ?? [];
+    // both casings of src/a.ts collapse to one relativized entry (dedup)
+    expect(files.filter((f) => f === "Write src/a.ts").length).toBe(1);
+    // out-of-repo path keeps its shape but the home prefix is masked
+    expect(files).toContain("Write ~/.codex/config.toml");
+  });
+});
 
 describe("U-HOVER-001 resolveHandoverScope", () => {
   it("current-plan 有 → active_plan 解決 / digest 群を集約", () => {
