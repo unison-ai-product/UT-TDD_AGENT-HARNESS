@@ -18,6 +18,11 @@ credentials.json
 !.ut-tdd/state/.gitkeep
 .ut-tdd/handover/CURRENT.*
 .ut-tdd/handover/*.bak
+# Auto-generated CURRENT handover prose (regenerated each `ut-tdd handover`, mirrors the
+# gitignored CURRENT.json, and currently embeds absolute local paths in its digest). It is
+# runtime scratch — the canonical handover is harness.db feedback_events. Already-tracked
+# historical handover docs stay tracked (gitignore never untracks). PLAN-L7-144 follow-up.
+docs/handover/session-handover-*.md
 .ut-tdd/logs/
 .ut-tdd/adapters/local*.yaml
 .ut-tdd/teams/local*.yaml
