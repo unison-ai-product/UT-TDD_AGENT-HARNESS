@@ -12,13 +12,15 @@ backprop_decision: not_required
 backprop_decision_reason: "Developer-local runtime guard parity: gives the Codex CLI the same repo-local foreign-edit / session-lifecycle hooks Claude already has, enforcing the existing hybrid Git rule. It does not change product requirements or runtime user behavior (mirrors PLAN-L7-114-work-guard, which is the Claude side of the same guard)."
 agent_slots:
   - role: tl
-    slot_label: "TL - Codex hook adapter (repo-local hooks.json, parity gate)"
+    slot_label: "TL - Codex hook adapter (repo-local .codex/hooks.json, parity gate)"
   - role: aim
     slot_label: "AIM - troubleshoot classification + cross-runtime guard parity review"
 generates:
   - artifact_path: docs/plans/PLAN-L7-139-codex-hook-adapter.md
     artifact_type: markdown_doc
-  - artifact_path: hooks.json
+  - artifact_path: .codex/hooks.json
+    artifact_type: json_config
+  - artifact_path: .codex/config.toml
     artifact_type: json_config
   - artifact_path: src/lint/codex-hook-adapter.ts
     artifact_type: source_module
@@ -96,10 +98,22 @@ payload field names shared with Claude). This PLAN lands the implementation.
 
 ## What it does
 
-- **`hooks.json`** (repo root): Codex hook adapter mirroring the Claude guards,
+- **`.codex/hooks.json`**: Codex hook adapter mirroring the Claude guards,
   reusing the SAME TypeScript entrypoints (`.claude/hooks/work-guard.ts`,
   `bun src/cli.ts session ...`) with NO logic fork. Repo-relative; never writes
   global `~/.codex/`.
+- **`.codex/config.toml`**: enables project-local hooks explicitly with
+  `[features].hooks = true`; Codex loads project `.codex/` layers only for
+  trusted projects.
+- **Explicit scope boundary**: `.codex/hooks.json` is a Codex CLI / Codex IDE
+  project-local hook source. It does **not** intercept hosted API/developer
+  tool calls supplied by the surrounding chat runtime (for example this
+  session's `apply_patch`). A live smoke on 2026-06-24 confirmed that this
+  session's API-provided `apply_patch` can edit an untracked file without the
+  repo hook firing, while the same payload sent directly to
+  `.claude/hooks/work-guard.ts` exits 2 and blocks. Therefore `doctor`
+  must not imply that `.codex/hooks.json` mechanically guards all Codex-branded
+  execution surfaces.
 - **Matcher mapping** (Codex tool names differ from Claude; a literal copy would
   never fire = false parity. Confirmed from the `codex.exe` 0.128.0 binary):
   - `Edit|Write|MultiEdit` -> `apply_patch|write_file` (work-guard).
@@ -127,7 +141,7 @@ payload field names shared with Claude). This PLAN lands the implementation.
     `spawn_agent` semantics (model inheritance, `agent_role`, canonical task name)
     differ from Claude's `subagent_type`.
 - **`src/lint/codex-hook-adapter.ts` + doctor `codex-hook-adapter`**: fail-close
-  parity check that `hooks.json` declares the same guard entrypoints as
+  parity check that `.codex/hooks.json` declares the same guard entrypoints as
   `.claude/settings.json` with Codex matchers, `blockOnFailure` on the guard, no
   `$CLAUDE_PROJECT_DIR` (Codex would not expand it), and no global `~/.codex/`
   reference. Hardened per review: only `type==="command"` hooks satisfy a guard,
@@ -155,7 +169,7 @@ verified TRUE against the real `codex.exe` 0.128.0 binary and addressed:
 
 ## Acceptance criteria
 
-1. Codex `hooks.json` exists at repo root, mirroring the Claude guard
+1. Codex `.codex/hooks.json` exists, mirroring the Claude guard
    entrypoints with Codex matchers. (U-CXHOOK-001)
 2. `doctor` `codex-hook-adapter` fails closed when the Codex adapter diverges
    from the Claude hook config (missing guard, literal-copy matcher, dropped
@@ -169,6 +183,9 @@ verified TRUE against the real `codex.exe` 0.128.0 binary and addressed:
 5. `subagent-stop` documented genuinely N/A; `spawn_agent` recorded as a real,
    currently-unguarded **deferred** surface (not N/A); shared guard logic
    verified runtime-agnostic. (U-CXHOOK-011, U-CXHOOK-012)
+6. `doctor` surfaces the hosted API/developer-tool limitation explicitly:
+   `.codex/hooks.json` covers direct Codex CLI/IDE sessions, but not this
+   chat/runtime's injected `apply_patch` tool path.
 
 ## Follow-ups (hardening, not confirmation blockers)
 
@@ -177,8 +194,13 @@ verified TRUE against the real `codex.exe` 0.128.0 binary and addressed:
   `tool_input` key carrying the patch (binary-inspected, not yet observed live).
   `write_file` payload still also unconfirmed live. Low residual risk because
   `extractEditTargets` is payload-key-agnostic.
+- **Hosted API tool enforcement**: repo files cannot make the surrounding
+  platform call `.codex/hooks.json` before its injected developer tools. True
+  mechanical enforcement for this chat/API path requires platform-level hook
+  support or removal of the raw `apply_patch` surface; repo-side policy can only
+  document and test the limitation.
 - **`spawn_agent` guard**: design a Codex agent-guard analog (allowlist / model
-  policy for the `spawn_agent` tool family) and wire it into `hooks.json`.
-- **SSoT materializer**: emit `.claude/settings.json` and `hooks.json` from one
+  policy for the `spawn_agent` tool family) and wire it into `.codex/hooks.json`.
+- **SSoT materializer**: emit `.claude/settings.json` and `.codex/hooks.json` from one
   source (`ut-tdd setup`) instead of two hand-maintained adapters; currently the
   `codex-hook-adapter` drift gate keeps them in sync.

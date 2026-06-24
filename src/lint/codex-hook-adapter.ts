@@ -106,6 +106,7 @@ export interface CodexHookResult {
   checked: number;
   violations: CodexHookViolation[];
   ok: boolean;
+  apiToolPathEnforced: false;
 }
 
 interface HookCommand {
@@ -143,13 +144,23 @@ function commandHas(command: string, parts: readonly string[]): boolean {
 
 export function analyzeCodexHookAdapter(input: { codexHooksJson: string | null }): CodexHookResult {
   if (input.codexHooksJson === null) {
-    return { checked: 0, violations: [{ reason: "missing_hooks_json" }], ok: false };
+    return {
+      checked: 0,
+      violations: [{ reason: "missing_hooks_json" }],
+      ok: false,
+      apiToolPathEnforced: false,
+    };
   }
   let parsed: CodexHooksFile;
   try {
     parsed = JSON.parse(input.codexHooksJson) as CodexHooksFile;
   } catch {
-    return { checked: 0, violations: [{ reason: "malformed_json" }], ok: false };
+    return {
+      checked: 0,
+      violations: [{ reason: "malformed_json" }],
+      ok: false,
+      apiToolPathEnforced: false,
+    };
   }
 
   const violations: CodexHookViolation[] = [];
@@ -202,11 +213,16 @@ export function analyzeCodexHookAdapter(input: { codexHooksJson: string | null }
     }
   }
 
-  return { checked: CODEX_REQUIRED.length, violations, ok: violations.length === 0 };
+  return {
+    checked: CODEX_REQUIRED.length,
+    violations,
+    ok: violations.length === 0,
+    apiToolPathEnforced: false,
+  };
 }
 
 export function loadCodexHookAdapterInput(repoRoot: string): { codexHooksJson: string | null } {
-  const target = join(repoRoot, "hooks.json");
+  const target = join(repoRoot, ".codex", "hooks.json");
   return {
     codexHooksJson: existsSync(target) ? readFileSync(target, "utf8") : null,
   };
@@ -215,7 +231,8 @@ export function loadCodexHookAdapterInput(repoRoot: string): { codexHooksJson: s
 export function codexHookAdapterMessages(result: CodexHookResult): string[] {
   if (result.ok) {
     return [
-      `codex-hook-adapter - OK (checked=${result.checked}, Codex hooks.json shares Claude guard entrypoints; matcher=apply_patch|write_file, subagent-stop=N/A, spawn_agent surface=deferred follow-up)`,
+      `codex-hook-adapter - OK (checked=${result.checked}, .codex/hooks.json shares Claude guard entrypoints; matcher=apply_patch|write_file, subagent-stop=N/A, spawn_agent surface=deferred follow-up)`,
+      "codex-hook-adapter - note: .codex/hooks.json covers direct Codex CLI/IDE sessions only; hosted API/developer apply_patch tools do not execute through the Codex hook engine and are not repo-enforceable",
     ];
   }
   const sample = result.violations

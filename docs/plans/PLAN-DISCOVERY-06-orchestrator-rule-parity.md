@@ -95,7 +95,7 @@ hybrid 規律) は **「どの orchestrator が回しても効く」= orchestrat
   実 hook 実行で確認する (プロトコル形は一致確認済、フィールド名は実走で最終確認)。
 
 **S4 recommendation = ADOPT (reuse-with-hardening)**。orchestrator-rule SSoT + materializer
-(`.claude/settings.json` ⊕ repo `hooks.json` を 1 ソースから emit) + rule-drift の挙動 parity 拡張へ進む。
+(`.claude/settings.json` ⊕ repo `.codex/hooks.json` を 1 ソースから emit) + rule-drift の挙動 parity 拡張へ進む。
 本実装は L6 設計 → L7 impl の別 PLAN を切る。
 
 ## 6. 壊さない / 再発させない

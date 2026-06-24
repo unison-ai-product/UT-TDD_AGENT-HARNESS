@@ -11,7 +11,7 @@ import { REQUIRED as CLAUDE_REQUIRED } from "../src/lint/project-hook";
 import { evaluateAgentGuard } from "../src/runtime/agent-guard";
 import { evaluateWorkGuard } from "../src/runtime/work-guard";
 
-/** repo-root hooks.json と同型の有効な Codex adapter fixture (mutate して fail-close を検証)。 */
+/** .codex/hooks.json と同型の有効な Codex adapter fixture (mutate して fail-close を検証)。 */
 function validCodexHooks(): Record<string, unknown> {
   return {
     hooks: {
@@ -38,11 +38,15 @@ function validCodexHooks(): Record<string, unknown> {
 const json = (o: unknown): string => JSON.stringify(o);
 
 describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139)", () => {
-  it("U-CXHOOK-001: 実 repo の hooks.json は Claude ガードと parity (real-repo 回帰ガード)", () => {
+  it("U-CXHOOK-001: 実 repo の .codex/hooks.json は Claude ガードと parity (real-repo 回帰ガード)", () => {
     const r = analyzeCodexHookAdapter(loadCodexHookAdapterInput(process.cwd()));
     expect(r.ok).toBe(true);
     expect(r.violations).toEqual([]);
-    expect(codexHookAdapterMessages(r)[0]).toContain("codex-hook-adapter - OK");
+    expect(r.apiToolPathEnforced).toBe(false);
+    expect(codexHookAdapterMessages(r)[0]).toContain(".codex/hooks.json shares");
+    expect(codexHookAdapterMessages(r).join("\n")).toContain(
+      "hosted API/developer apply_patch tools do not execute through the Codex hook engine",
+    );
   });
 
   it("U-CXHOOK-002: 有効な adapter fixture は ok", () => {

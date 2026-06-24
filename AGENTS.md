@@ -115,8 +115,8 @@ Do not add legacy commands as current company/product execution paths.
 
 ## Hooks (Codex orchestrator parity)
 
-Codex enforces the same guardrails as Claude through a repo-local `hooks.json`
-at the repository root (PLAN-L7-139). It is **repo-relative only**; never write
+Codex enforces the same guardrails as Claude through repo-local
+`.codex/hooks.json` (PLAN-L7-139). It is **repo-relative only**; never write
 hook config to global `~/.codex/`. It reuses the SAME TypeScript hook entrypoints
 as Claude (`.claude/hooks/work-guard.ts`, `src/cli.ts session ...`) with NO logic
 fork — the guard logic lives in `src/runtime/*.ts` and is runtime-agnostic.
@@ -141,10 +141,18 @@ Codex tool names differ from Claude, so matchers are mapped (not copied):
   surface), **not** an absent one. Wiring it needs a Codex allowlist/model design
   because `spawn_agent` semantics differ from Claude's `subagent_type`.
 
-`hooks.json` parity with `.claude/settings.json` is machine-checked by `doctor`
+`.codex/hooks.json` parity with `.claude/settings.json` is machine-checked by `doctor`
 `codex-hook-adapter`, which fails closed if a guard diverges, drops
 `blockOnFailure`, depends on `$CLAUDE_PROJECT_DIR`, or references global
 `~/.codex/`.
+
+Scope boundary: `.codex/hooks.json` guards direct Codex CLI / Codex IDE sessions
+only. Hosted API/developer tools supplied by the surrounding chat runtime (such
+as this environment's `apply_patch`) do not execute through the Codex hook
+engine, so repo hooks cannot mechanically intercept them. In that surface,
+Codex must treat the hook as non-enforcing and perform explicit git/status
+preflight before edits; do not claim mechanical hook coverage for API tool
+calls.
 
 ## Skills
 
