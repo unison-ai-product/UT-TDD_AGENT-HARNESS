@@ -29,6 +29,8 @@ credentials.json
 # Codex 委譲タスク入力 (transient、PM が貼る目標プロンプト)
 .ut-tdd/codex-tasks/
 .tools/
+# 外部 DL の設計テンプレ研究素材 (transient scratch、アーキ境界外・成果物でない)
+downloads/
 
 # HELIX runtime state
 .helix/
