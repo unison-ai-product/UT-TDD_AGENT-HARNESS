@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   evaluateWorkGuard,
+  extractEditTargets,
   normalizeRepoRelative,
   resolveForeignEditOverride,
 } from "../src/runtime/work-guard";
@@ -91,6 +92,61 @@ describe("work guard (PLAN-L7-114) — 作業衝突ガードレール", () => {
       bypass: false,
     });
     expect(result.decision).toBe("block");
+  });
+});
+
+describe("extractEditTargets (PLAN-L7-139) — Codex apply_patch / Claude file_path 両対応", () => {
+  it("Claude Edit/Write/MultiEdit の tool_input.file_path を返す", () => {
+    expect(extractEditTargets({ file_path: "src/cli.ts" })).toEqual(["src/cli.ts"]);
+  });
+
+  it("tool_input.path (Codex write_file) を返す", () => {
+    expect(extractEditTargets({ path: "src/x.ts" })).toEqual(["src/x.ts"]);
+  });
+
+  it("apply_patch の patch 本文から全ファイルパスを抽出する (複数ファイル: Update/Add/Delete)", () => {
+    // 偽パリティ回帰: file_path を持たない apply_patch でガードが no-op しないことの substance test。
+    const patch = [
+      "*** Begin Patch",
+      "*** Update File: src/a.ts",
+      "@@ def x():",
+      "-old",
+      "+new",
+      "*** Add File: src/b.ts",
+      "+hello",
+      "*** Delete File: src/c.ts",
+      "*** End Patch",
+    ].join("\n");
+    expect([...extractEditTargets({ input: patch })].sort()).toEqual(
+      ["src/a.ts", "src/b.ts", "src/c.ts"].sort(),
+    );
+  });
+
+  it("apply_patch が command 配列形 ({command:['apply_patch', <patch>]}) でも抽出する", () => {
+    const patch = "*** Begin Patch\n*** Update File: src/d.ts\n@@\n+x\n*** End Patch";
+    expect(extractEditTargets({ command: ["apply_patch", patch] })).toEqual(["src/d.ts"]);
+  });
+
+  it("rename (Update File + Move to) の移動元・移動先を両方とも抽出する", () => {
+    const patch =
+      "*** Begin Patch\n*** Update File: old/x.ts\n*** Move to: new/x.ts\n*** End Patch";
+    expect([...extractEditTargets({ input: patch })].sort()).toEqual(
+      ["new/x.ts", "old/x.ts"].sort(),
+    );
+  });
+
+  it("file_path がある時は content 本文の apply_patch 例文を誤抽出しない (false-block 防止)", () => {
+    const docContent = "Example: *** Update File: docs/example.md\n+text";
+    expect(extractEditTargets({ file_path: "docs/guide.md", content: docContent })).toEqual([
+      "docs/guide.md",
+    ]);
+  });
+
+  it("file_path も patch も無い入力は空配列 (no-target fail-open)", () => {
+    expect(extractEditTargets({ command: "ls -la" })).toEqual([]);
+    expect(extractEditTargets(null)).toEqual([]);
+    expect(extractEditTargets("just a string")).toEqual([]);
+    expect(extractEditTargets(undefined)).toEqual([]);
   });
 });
 

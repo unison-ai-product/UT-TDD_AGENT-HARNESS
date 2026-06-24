@@ -46,7 +46,7 @@ interface RequiredProjectHook {
   blockOnFailure?: boolean;
 }
 
-const REQUIRED = [
+export const REQUIRED = [
   {
     event: "PreToolUse",
     matcher: "Agent",
@@ -71,7 +71,7 @@ const REQUIRED = [
 
 const LEGACY_RUNTIME_NAME = ["he", "lix"].join("");
 const LEGACY_ENV_PREFIX = ["HE", "LIX_"].join("");
-const FORBIDDEN_PATH_RE = new RegExp(
+export const FORBIDDEN_PATH_RE = new RegExp(
   [
     "ai-dev-kit-vscode",
     `vendor/${LEGACY_RUNTIME_NAME}-source`,

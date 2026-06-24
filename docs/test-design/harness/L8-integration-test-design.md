@@ -151,3 +151,22 @@ DDD/TDD strictness automation (`src/lint/ddd-tdd-rules.ts` / `integration-gwt`) 
 | IT-DOCEXPORT-01 | Concept, requirements, detailed design, PLAN, ADR, and test-design fixtures with headings, tables, IDs, and evidence links. | Canonical document export projection is built. | Source paths, section IDs, FR/AC/AT IDs, PLAN IDs, ADR IDs, status fields, and evidence links appear in deterministic dataset rows. | markdown docs -> document parser -> export dataset boundary. | No ID loss; unsupported document family becomes a finding. | Missing source path, malformed table, duplicate section ID, unsupported family. |
 | IT-DOCEXPORT-02 | A document export dataset and CSV/Markdown/XLSX/PPTX profile requests. | Export renderer boundary is invoked. | CSV and Markdown render as built-in outputs; XLSX/PPTX/D2 requests require renderer readiness and otherwise return findings. | export dataset -> renderer profile -> artifact metadata boundary. | No implicit package install; redaction runs before renderer. | Missing ExcelJS/SheetJS/PptxGenJS/D2, secret-like field, oversized document. |
 | IT-DOCEXPORT-03 | Generated document export artifact metadata and a changed source document digest. | Export artifact freshness is checked. | `document_export_artifacts` rows are marked current or stale based on source snapshot hash. | document export projection -> stale checker -> review/handover boundary. | Stale Office/spreadsheet artifacts cannot be treated as current evidence. | Source digest mismatch, deleted source doc, manually edited export file. |
+
+## Appendix C: Proposal Document Coverage Integration Addendum
+
+Pair = `src/task/classify.ts#classifyProposalDocumentCoverage` and
+`docs/design/harness/L3-functional/functional-requirements.md`
+FR-L1-39 addendum.
+
+These integration cases verify the boundary where proposal text becomes a
+required design/test-design document set. The rule is intentionally additive:
+each matched pattern contributes its own documents, evidence, and gates. A later
+LLM summary may add rationale, but it must not remove the deterministic
+requirements produced here.
+
+| IT-ID | Given | When | Then | Fixture / Boundary | Assertions | Negative / Edge |
+|---|---|---|---|---|---|---|
+| IT-DOCCOV-01 | Proposal text mentioning screen UI, API, DB, batch/report, async job, notification, security/privacy, observability/audit, release, and NFR terms. | `ut-tdd task classify --design-docs --json` is run. | `document_coverage.patterns` contains every matching pack and `granularity` is the highest matched level. | CLI -> task classifier -> JSON serializer boundary. | Required design docs, test docs, evidence, and gates are unioned without duplicates. | Overlapping keywords, repeated words, mixed English/Japanese terms. |
+| IT-DOCCOV-02 | Proposal text that says the work is minor/simple and asks to skip design. | Document coverage classification is evaluated. | Shrinkage wording becomes a finding only; required documents are not removed and granularity is not lowered. | proposal parser -> guardrail evaluator boundary. | `llm-shrinkage-ignored` is emitted and required-doc count stays additive. | "not needed", "skip", Japanese minor/omit terms, low drive confidence. |
+| IT-DOCCOV-03 | Discovery/research proposal text plus candidate external templates. | Research adoption mapping is produced. | Adoptable templates are split into `incorporate`, `reference`, `exclude`, or `ut-tdd-specific`. | research mapping -> coverage output boundary. | Marketing/vendor templates are rejected; UT-TDD workflow/agent templates stay UT-TDD-specific. | Vendor-specific formats, generic marketing templates, untestable checklist prose. |
+| IT-DOCCOV-04 | A proposal classified with security/privacy, migration, or other escalation-sensitive terms. | Coverage classification combines `classifyTask` findings with document packs. | Granularity reaches at least G4 and human/risk evidence is required. | task risk classifier -> document coverage boundary. | `nfr`, `technical-requirements`, `system-test-design`, and approval evidence are present. | Low confidence drive, multiple risk terms, missing affected files. |

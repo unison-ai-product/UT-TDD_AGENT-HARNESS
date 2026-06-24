@@ -113,6 +113,39 @@ different runtime / model family when feasible. In single-runtime modes, record
 
 Do not add legacy commands as current company/product execution paths.
 
+## Hooks (Codex orchestrator parity)
+
+Codex enforces the same guardrails as Claude through a repo-local `hooks.json`
+at the repository root (PLAN-L7-139). It is **repo-relative only**; never write
+hook config to global `~/.codex/`. It reuses the SAME TypeScript hook entrypoints
+as Claude (`.claude/hooks/work-guard.ts`, `src/cli.ts session ...`) with NO logic
+fork — the guard logic lives in `src/runtime/*.ts` and is runtime-agnostic.
+
+Codex tool names differ from Claude, so matchers are mapped (not copied):
+
+- `Edit|Write|MultiEdit` (Claude) -> `apply_patch|write_file` (Codex) for the
+  foreign-edit `work-guard`. Codex's `apply_patch` is **freeform** and carries no
+  `file_path` field — the edited paths live in the patch body
+  (`*** Update File:` / `*** Add File:` / `*** Delete File:` / `*** Move to:`,
+  multi-file). `work-guard` parses those headers so the foreign-edit block
+  actually fires for `apply_patch` (Codex's primary edit tool), not just
+  `write_file`.
+- `Bash` (Claude) -> `exec_command|local_shell` (Codex) for `PostToolUse`
+  session logging.
+- `subagent-stop` (`SubagentStop`) has **no Codex surface** and is genuinely N/A:
+  codex.exe 0.128.0 exposes only `PreToolUse` / `PostToolUse` / `SessionStart` /
+  `Stop` / `UserPromptSubmit` hook events (no `SubagentStop`).
+- `agent-guard` (`Agent`) is **not yet wired** for Codex. Codex DOES have a
+  sub-agent surface (`spawn_agent` / `wait_agent` / `list_agents` tools), so an
+  agent-guard analog is a **deferred follow-up** (a real, currently-unguarded
+  surface), **not** an absent one. Wiring it needs a Codex allowlist/model design
+  because `spawn_agent` semantics differ from Claude's `subagent_type`.
+
+`hooks.json` parity with `.claude/settings.json` is machine-checked by `doctor`
+`codex-hook-adapter`, which fails closed if a guard diverges, drops
+`blockOnFailure`, depends on `$CLAUDE_PROJECT_DIR`, or references global
+`~/.codex/`.
+
 ## Skills
 
 - Read only the relevant `SKILL.md` for matching triggers.

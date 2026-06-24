@@ -22,8 +22,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   evaluateWorkGuard,
+  extractEditTargets,
   normalizeRepoRelative,
   resolveForeignEditOverride,
+  type WorkGuardResult,
 } from "../../src/runtime/work-guard";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -91,7 +93,9 @@ function auditOverride(entry: { target: string; reason: string; sessionId: strin
 }
 
 // fail-open: 検証不能 (stdin/JSON/git/state) は exit 0。block は衝突を確証できた時のみ。
-let input: { tool_input?: { file_path?: string; path?: string }; session_id?: string };
+// tool_input は Claude (file_path) と Codex apply_patch (freeform patch 本文) で形が違うため unknown で受け、
+// extractEditTargets で両形を吸収する (PLAN-L7-139)。
+let input: { tool_input?: unknown; session_id?: string };
 try {
   const raw = await readStdin();
   input = JSON.parse(raw || "{}");
@@ -100,24 +104,39 @@ try {
 }
 
 try {
-  const targetRaw = input.tool_input?.file_path ?? input.tool_input?.path ?? "";
-  const target = targetRaw ? normalizeRepoRelative(targetRaw, repoRoot) : "";
+  // apply_patch は複数ファイルを 1 patch で編集しうる。全対象を評価し、1 つでも foreign なら block。
+  const targets = extractEditTargets(input.tool_input)
+    .map((t) => normalizeRepoRelative(t, repoRoot))
+    .filter((t) => t.length > 0);
   const override = resolveForeignEditOverride({
     env: process.env.UT_TDD_ALLOW_FOREIGN_EDIT,
     markerReason: readOverrideMarker(),
   });
-  const result = evaluateWorkGuard({
-    targetPath: target,
-    uncommittedFiles: gitUncommittedFiles(),
-    sessionTouchedFiles: sessionTouchedFiles(input.session_id ?? "unknown"),
-    bypass: override.bypass,
-  });
-  if (override.source === "marker" && target) {
-    // agent-accessible override は silent にせず durable に audit する (証跡を残す)。
-    auditOverride({ target, reason: override.reason, sessionId: input.session_id ?? "unknown" });
+  const uncommitted = gitUncommittedFiles();
+  const touched = sessionTouchedFiles(input.session_id ?? "unknown");
+  let blocked: WorkGuardResult | null = null;
+  for (const target of targets) {
+    const result = evaluateWorkGuard({
+      targetPath: target,
+      uncommittedFiles: uncommitted,
+      sessionTouchedFiles: touched,
+      bypass: override.bypass,
+    });
+    if (result.decision === "block") {
+      blocked = result;
+      break;
+    }
   }
-  if (result.decision === "block") {
-    process.stderr.write(`${result.message}\n`);
+  if (override.source === "marker" && targets.length > 0) {
+    // agent-accessible override は silent にせず durable に audit する (証跡を残す)。
+    auditOverride({
+      target: targets.join(", "),
+      reason: override.reason,
+      sessionId: input.session_id ?? "unknown",
+    });
+  }
+  if (blocked) {
+    process.stderr.write(`${blocked.message}\n`);
     process.exit(2);
   }
   process.exit(0);

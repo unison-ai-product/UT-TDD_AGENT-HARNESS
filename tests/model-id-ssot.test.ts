@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { TIER_TABLE } from "../src/task/tier-router";
-import { MODEL_IDS, selectTeamModel } from "../src/team/model-policy";
+import { MODEL_IDS, PROPOSAL_SUBAGENT_LANES, selectTeamModel } from "../src/team/model-policy";
 
 /**
  * U-MODELID: model-id SSoT (PLAN-L7-58 carry)。
@@ -68,5 +68,29 @@ describe("U-MODELID: model-id SSoT", () => {
     for (const id of ALL_IDS) {
       expect(quotedOccurrences("src/team/model-policy.ts", id)).toBe(1);
     }
+  });
+
+  it("U-MODELID-005: proposal subagent lanes use MODEL_IDS and keep mini out of execution TIER_TABLE", () => {
+    expect(PROPOSAL_SUBAGENT_LANES["T2-mini"]).toMatchObject({
+      model: MODEL_IDS.codex.mini,
+      max_parallel: 4,
+      closing_authority: false,
+      ownership: expect.stringContaining("disjoint"),
+    });
+    expect(PROPOSAL_SUBAGENT_LANES["T2-spark"]).toMatchObject({
+      model: MODEL_IDS.codex.spark,
+      max_parallel: 3,
+      closing_authority: false,
+      ownership: expect.stringContaining("disjoint"),
+    });
+    expect(PROPOSAL_SUBAGENT_LANES["T0-frontier"]).toMatchObject({
+      model: MODEL_IDS.codex.frontier,
+      max_parallel: 1,
+      closing_authority: true,
+      ownership: expect.stringContaining("single"),
+    });
+    expect(Object.values(TIER_TABLE).some((tier) => tier.codex === MODEL_IDS.codex.mini)).toBe(
+      false,
+    );
   });
 });

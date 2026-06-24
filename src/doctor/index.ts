@@ -27,6 +27,11 @@ import {
   loadChangedFiles,
 } from "../lint/change-impact";
 import {
+  analyzeCodexHookAdapter,
+  codexHookAdapterMessages,
+  loadCodexHookAdapterInput,
+} from "../lint/codex-hook-adapter";
+import {
   analyzeCodingRules,
   codingRulesMessages,
   loadCodingRuleDocs,
@@ -159,6 +164,11 @@ import {
 } from "../lint/project-hook";
 import { analyzePropagation, loadPropagationDocs, propagationMessages } from "../lint/propagation";
 import {
+  analyzeProposalDocumentCoverage,
+  loadProposalDocumentCoverageLintInput,
+  proposalDocumentCoverageMessages,
+} from "../lint/proposal-document-coverage";
+import {
   analyzeReadability,
   loadRuntimeArtifactReadabilityDocs,
   loadSystemReadabilityDocs,
@@ -251,6 +261,7 @@ import {
 } from "../state-db/guardrail-invariants";
 import { openHarnessDb } from "../state-db/index";
 import { rebuildHarnessDb } from "../state-db/projection-writer";
+import { classifyProposalDocumentCoverage } from "../task/classify";
 import {
   analyzePairFreeze,
   analyzeVerificationGroups,
@@ -1089,6 +1100,21 @@ export function checkProjectHooks(repoRoot: string): { messages: string[]; ok: b
   }
 }
 
+export function checkCodexHookAdapter(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["codex-hook-adapter - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeCodexHookAdapter(loadCodexHookAdapterInput(repoRoot));
+    return { messages: codexHookAdapterMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["codex-hook-adapter - violation: Codex hooks.json could not be read"],
+      ok: false,
+    };
+  }
+}
+
 export function checkCodexWrapperParity(deps: DoctorDeps): { messages: string[]; ok: boolean } {
   if (!existsSync(deps.repoRoot)) {
     return {
@@ -1722,6 +1748,29 @@ export function checkLintWiring(repoRoot: string): { messages: string[]; ok: boo
   }
 }
 
+export function checkProposalDocumentCoverage(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["proposal-document-coverage - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeProposalDocumentCoverage(
+      loadProposalDocumentCoverageLintInput(repoRoot, classifyProposalDocumentCoverage),
+    );
+    return { messages: proposalDocumentCoverageMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["proposal-document-coverage - violation: document coverage routing could not run"],
+      ok: false,
+    };
+  }
+}
+
 // CLI entrypoint は process.cwd() = repoRoot を想定 (deps 未指定時)。test は deps 注入で固定。
 export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): LintResult {
   const d = detectMode();
@@ -1762,6 +1811,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const telemetryClosure = checkTelemetryClosure(deps.repoRoot);
   const cycleP4Verification = checkCycleP4Verification(deps.repoRoot);
   const projectHooks = checkProjectHooks(deps.repoRoot);
+  const codexHookAdapter = checkCodexHookAdapter(deps.repoRoot);
   const codexWrapperParity = checkCodexWrapperParity(deps);
   const l6FrCoverage = checkL6FrCoverage(deps.repoRoot);
   const readability = checkReadability(deps.repoRoot);
@@ -1788,6 +1838,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const improvementBacklog = checkImprovementBacklog(deps.repoRoot);
   const rightArmGatePlanning = checkRightArmGatePlanning(deps.repoRoot);
   const lintWiring = checkLintWiring(deps.repoRoot);
+  const proposalDocumentCoverage = checkProposalDocumentCoverage(deps.repoRoot);
   const handoverOutstanding = checkHandoverOutstandingAnchor(handoverDeps(deps));
   // advisory (非ブロック): green_command digest が evidence_path 実 hash と一致するか (fake substance 可視化、PLAN-L7-132)。
   const greenCommandDigest = checkGreenCommandDigests(deps.repoRoot);
@@ -1834,6 +1885,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       runtimeReadability.ok &&
       feedbackLog.ok &&
       projectHooks.ok &&
+      codexHookAdapter.ok &&
       codexWrapperParity.ok &&
       l6Completion.ok &&
       l7Completion.ok &&
@@ -1855,6 +1907,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       improvementBacklog.ok &&
       rightArmGatePlanning.ok &&
       lintWiring.ok &&
+      proposalDocumentCoverage.ok &&
       handoverOutstanding.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
@@ -1896,6 +1949,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...telemetryClosure.messages.map((m) => `doctor: ${m}`),
       ...cycleP4Verification.messages.map((m) => `doctor: ${m}`),
       ...projectHooks.messages.map((m) => `doctor: ${m}`),
+      ...codexHookAdapter.messages.map((m) => `doctor: ${m}`),
       ...codexWrapperParity.messages.map((m) => `doctor: ${m}`),
       ...l6FrCoverage.messages.map((m) => `doctor: ${m}`),
       ...readability.messages.map((m) => `doctor: ${m}`),
@@ -1923,6 +1977,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...improvementBacklog.messages.map((m) => `doctor: ${m}`),
       ...rightArmGatePlanning.messages.map((m) => `doctor: ${m}`),
       ...lintWiring.messages.map((m) => `doctor: ${m}`),
+      ...proposalDocumentCoverage.messages.map((m) => `doctor: ${m}`),
       ...handoverOutstanding.messages.map((m) => `doctor: ${m}`),
       ...greenCommandDigest.messages.map((m) => `doctor: ${m}`),
     ],

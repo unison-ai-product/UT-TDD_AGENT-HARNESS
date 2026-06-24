@@ -48,6 +48,7 @@ export interface TeamMemberLaunch {
   engine: string;
   provider: TeamProvider;
   task: string;
+  ownership?: string;
   prompt: string;
   model_selection: TeamModelSelection;
   serialize_after?: string;
@@ -127,6 +128,7 @@ function buildMemberPrompt(
     `selected_model: ${selection.model}`,
     `reasoning_effort: ${selection.reasoning_effort}`,
     `selection_evidence: ${selection.evidence_path}`,
+    member.ownership ? `ownership: ${member.ownership}` : null,
     "",
     "Task:",
     member.task,
@@ -135,7 +137,9 @@ function buildMemberPrompt(
     "- You are not alone in the codebase. Do not revert edits made by others.",
     "- Keep your work scoped to this assigned task and report changed files.",
     "- If you are reviewing, report findings first with file/line references.",
-  ].join("\n");
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
 }
 
 function dependencyKey(member: TeamMemberLaunch): string {
@@ -225,12 +229,16 @@ export function validateTeamRun(
   }
 
   const seenRoleProvider = new Set<string>();
+  const seenRoleProviderOwnership = new Set<string>();
   for (const member of placed) {
     const key = `${member.role}:${member.provider}`;
-    if (seenRoleProvider.has(key)) {
+    const ownership = team.members[placed.indexOf(member)]?.ownership?.trim();
+    const ownershipKey = `${key}:${ownership ?? ""}`;
+    if (seenRoleProvider.has(key) && (!ownership || seenRoleProviderOwnership.has(ownershipKey))) {
       messages.push(`duplicate role/provider assignment: ${key}`);
     }
     seenRoleProvider.add(key);
+    if (ownership) seenRoleProviderOwnership.add(ownershipKey);
   }
 
   const workerProviders = new Set(placed.filter((m) => m.role === "se").map((m) => m.provider));
@@ -303,6 +311,7 @@ export function buildTeamRunPlan(
       engine: member.engine,
       provider,
       task: member.task,
+      ownership: member.ownership,
       prompt,
       model_selection: modelSelection,
       serialize_after: member.serialize_after,
