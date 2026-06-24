@@ -23,6 +23,7 @@ export const MODEL_IDS = {
     worker: "gpt-5.4",
     /** T2 ワーカー軽量 (原則安く)。 */
     spark: "gpt-5.3-codex-spark",
+    mini: "gpt-5.4-mini",
     /** codex-family エンジン指定時の専用モデル (model-policy 専用、roster 外)。 */
     codex: "gpt-5.3-codex",
   },
@@ -45,6 +46,52 @@ export interface TeamModelSelection {
   effort_source: "explicit" | "policy";
   evidence_path: string;
 }
+
+export type ProposalSubagentLaneName = "T2-mini" | "T2-spark" | "T1-worker" | "T0-frontier";
+
+export interface ProposalSubagentLane {
+  tier: ProposalSubagentLaneName;
+  model: string;
+  max_parallel: number;
+  closing_authority: boolean;
+  ownership: string;
+  guard: string;
+}
+
+export const PROPOSAL_SUBAGENT_LANES: Record<ProposalSubagentLaneName, ProposalSubagentLane> = {
+  "T2-mini": {
+    tier: "T2-mini",
+    model: MODEL_IDS.codex.mini,
+    max_parallel: 4,
+    closing_authority: false,
+    ownership: "disjoint research sources, template families, or documentation sections",
+    guard: "read-only or disjoint documentation/research edits; cannot reduce required coverage",
+  },
+  "T2-spark": {
+    tier: "T2-spark",
+    model: MODEL_IDS.codex.spark,
+    max_parallel: 3,
+    closing_authority: false,
+    ownership: "disjoint low-risk files, lint rules, or targeted tests",
+    guard: "owned files only; no production, security, migration, or external API changes",
+  },
+  "T1-worker": {
+    tier: "T1-worker",
+    model: MODEL_IDS.codex.worker,
+    max_parallel: 2,
+    closing_authority: false,
+    ownership: "disjoint implementation slices with paired design and test-design updates",
+    guard: "must update paired design and test-design evidence before review",
+  },
+  "T0-frontier": {
+    tier: "T0-frontier",
+    model: MODEL_IDS.codex.frontier,
+    max_parallel: 1,
+    closing_authority: true,
+    ownership: "single judgement owner for risk, routing, or approval decision",
+    guard: "requires explicit frontier approval and human/risk evidence",
+  },
+};
 
 const CRITICAL_TERMS = [
   "auth",

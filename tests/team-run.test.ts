@@ -6,6 +6,8 @@ import { loadSlots, nodeAgentSlotsDeps } from "../src/runtime/agent-slots";
 import type { RuntimeDetection } from "../src/runtime/detect";
 import type { TeamDefinition } from "../src/schema/team";
 import { routeTeamMembers } from "../src/task/tier-router";
+import { classifyProposalDocumentCoverage } from "../src/task/classify";
+import { recommendTeamLaunch } from "../src/team/launch-policy";
 import {
   buildTeamRunPlan,
   executeTeamRunPlan,
@@ -171,6 +173,36 @@ describe("team run validation", () => {
       effort_source: "explicit",
     });
     expect(result.members[0].prompt).toContain("reasoning_effort: high");
+  });
+
+  it("builds an executable proposal coverage team from mini/spark lanes without executing frontier judgement", () => {
+    const task = "Rename a local docs helper and update README wording.";
+    const coverage = classifyProposalDocumentCoverage({ text: task });
+    const recommendation = recommendTeamLaunch({
+      task,
+      mode: "hybrid",
+      proposalSubagents: coverage.recommended_subagents,
+    });
+
+    expect(recommendation.should_launch).toBe(true);
+    expect(recommendation.definition?.name).toBe("proposal-coverage-team");
+    expect(recommendation.definition?.max_parallel).toBe(7);
+    const members = recommendation.definition?.members ?? [];
+    expect(members.filter((member) => member.model === "gpt-5.4-mini")).toHaveLength(4);
+    expect(members.filter((member) => member.model === "gpt-5.3-codex-spark")).toHaveLength(3);
+    expect(members.some((member) => member.model === "gpt-5.5")).toBe(false);
+    expect(members.every((member) => member.ownership)).toBe(true);
+    expect(members.some((member) => member.engine === "pmo-sonnet")).toBe(true);
+
+    const plan = buildTeamRunPlan(recommendation.definition as TeamDefinition, "hybrid");
+    expect(plan.ok).toBe(true);
+    expect(plan.strategy).toBe("sequential");
+    expect(plan.members.filter((member) => member.model_selection.model === "gpt-5.4-mini"))
+      .toHaveLength(4);
+    expect(
+      plan.members.filter((member) => member.model_selection.model === "gpt-5.3-codex-spark"),
+    ).toHaveLength(3);
+    expect(plan.members.some((member) => member.prompt.includes("ownership:"))).toBe(true);
   });
 
   it("passes provider-neutral skill injection to every runtime adapter", () => {

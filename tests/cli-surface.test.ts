@@ -128,6 +128,60 @@ describe("L7 CLI surface closure", () => {
     expect(payload.adapterPlan.stdin).toContain("UT-TDD context injection:");
   }, 20_000);
 
+  it("keeps proposal advisory lanes aligned with executable task routing", () => {
+    const classify = runCli([
+      "task",
+      "classify",
+      "--design-docs",
+      "--json",
+      "--text",
+      "Rename a local docs helper and update README wording.",
+    ]);
+    const route = runCli([
+      "task",
+      "route",
+      "--role",
+      "se",
+      "--primary",
+      "codex",
+      "--mode",
+      "codex-only",
+      "--json",
+      "--text",
+      "rename a field",
+    ]);
+    const classifyPayload = JSON.parse(classify.stdout);
+    const routePayload = JSON.parse(route.stdout);
+
+    expect(classify.status).toBe(0);
+    expect(route.status).toBe(0);
+    expect(classifyPayload.document_coverage.recommended_subagents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          tier: "T2-mini",
+          model: "gpt-5.4-mini",
+          parallel_slots: 4,
+          closing_authority: false,
+          ownership: expect.stringContaining("disjoint"),
+        }),
+        expect.objectContaining({
+          tier: "T2-spark",
+          model: "gpt-5.3-codex-spark",
+          parallel_slots: 3,
+          closing_authority: false,
+          ownership: expect.stringContaining("disjoint"),
+        }),
+      ]),
+    );
+    expect(routePayload.decision).toMatchObject({
+      role: "se",
+      tier: "T2",
+      model: "gpt-5.3-codex-spark",
+      status: "ready",
+    });
+    expect(routePayload.decision.model).not.toBe("gpt-5.4-mini");
+  }, 20_000);
+
   it("exposes builder catalog as a JSON command surface", () => {
     const run = runCli(["builder", "catalog", "--json"]);
     const payload = JSON.parse(run.stdout);
@@ -288,6 +342,52 @@ describe("L7 CLI surface closure", () => {
       payload.definition.members.map((member: { provider?: string; role: string }) => member.role),
     ).toEqual(["se", "tl", "qa"]);
   });
+
+  it("exposes proposal document coverage lanes as a parallel team suggestion", () => {
+    const run = runCli([
+      "team",
+      "suggest",
+      "--task",
+      "Rename a local docs helper and update README wording.",
+      "--mode",
+      "hybrid",
+      "--design-docs",
+      "--json",
+    ]);
+    const payload = JSON.parse(run.stdout);
+
+    expect(run.status).toBe(0);
+    expect(payload).toMatchObject({
+      should_launch: true,
+      mode: "hybrid",
+      trigger: "difficulty",
+    });
+    expect(payload.document_coverage.recommended_subagents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ tier: "T2-mini", parallel_slots: 4 }),
+        expect.objectContaining({ tier: "T2-spark", parallel_slots: 3 }),
+      ]),
+    );
+    expect(payload.definition).toMatchObject({
+      name: "proposal-coverage-team",
+      strategy: "parallel",
+      max_parallel: 7,
+    });
+    expect(
+      payload.definition.members.filter((member: { model?: string }) => member.model === "gpt-5.4-mini"),
+    ).toHaveLength(4);
+    expect(
+      payload.definition.members.filter(
+        (member: { model?: string }) => member.model === "gpt-5.3-codex-spark",
+      ),
+    ).toHaveLength(3);
+    expect(payload.definition.members.some((member: { model?: string }) => member.model === "gpt-5.5")).toBe(
+      false,
+    );
+    expect(payload.definition.members.every((member: { ownership?: string }) => member.ownership)).toBe(
+      true,
+    );
+  }, 20_000);
 
   it("executes team run through fake Claude/Codex adapters while keeping JSON machine-readable", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-team-exec-"));

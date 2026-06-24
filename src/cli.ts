@@ -121,7 +121,7 @@ import {
   rebuildHarnessDb,
 } from "./state-db/projection-writer";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
-import { classifyTask } from "./task/classify";
+import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify";
 import {
   type Provider,
   type RouterRole,
@@ -1867,9 +1867,17 @@ task
   .option("--text-file <path>", "read task text from file")
   .option("--plan <path>", "read task text from a PLAN file")
   .option("--files <list>", "comma-separated affected file paths")
+  .option("--design-docs", "derive required design/test documents from proposal text")
   .option("--json", "JSON output")
   .action(
-    (opts: { text?: string; textFile?: string; plan?: string; files?: string; json?: boolean }) => {
+    (opts: {
+      text?: string;
+      textFile?: string;
+      plan?: string;
+      files?: string;
+      designDocs?: boolean;
+      json?: boolean;
+    }) => {
       const text = resolveTaskText({ task: opts.text, taskFile: opts.textFile ?? opts.plan });
       if (text === null || text.trim().length === 0) {
         process.stderr.write(
@@ -1884,6 +1892,45 @@ task
             .map((f) => f.trim())
             .filter(Boolean)
         : undefined;
+      if (opts.designDocs) {
+        const result = {
+          task: classifyTask({ text, affected_files }),
+          document_coverage: classifyProposalDocumentCoverage({ text, affected_files }),
+        };
+        if (opts.json) {
+          process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+          return;
+        }
+        const coverage = result.document_coverage;
+        process.stdout.write(
+          `task design-docs: granularity=${coverage.granularity} patterns=[${coverage.patterns.join(",")}] escalators=[${coverage.escalators.join(",")}]\n`,
+        );
+        process.stdout.write("  design docs:\n");
+        for (const d of coverage.required_design_docs) {
+          process.stdout.write(`    - ${d.id}: ${d.path}\n`);
+        }
+        process.stdout.write("  test docs:\n");
+        for (const d of coverage.required_test_docs) {
+          process.stdout.write(`    - ${d.id}: ${d.path}\n`);
+        }
+        process.stdout.write("  research adoption:\n");
+        for (const r of coverage.research_adoption) {
+          process.stdout.write(`    - ${r.pattern}: ${r.disposition} (${r.reason})\n`);
+        }
+        for (const r of coverage.research_rejections) {
+          process.stdout.write(`    - ${r.pattern}: ${r.disposition} (${r.reason})\n`);
+        }
+        process.stdout.write("  recommended subagents:\n");
+        for (const a of coverage.recommended_subagents) {
+          process.stdout.write(
+            `    - ${a.role}: ${a.tier} ${a.model} slots=${a.parallel_slots} closing=${a.closing_authority} ownership=${a.ownership} (${a.purpose}; guard=${a.guard})\n`,
+          );
+        }
+        for (const f of coverage.findings) {
+          process.stdout.write(`  - ${f.severity}: ${f.code} ${f.message}\n`);
+        }
+        return;
+      }
       const result = classifyTask({ text, affected_files });
       if (opts.json) {
         process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
@@ -2010,13 +2057,27 @@ team
   .description("recommend whether a task should launch a Claude/Codex team")
   .requiredOption("--task <text>", "task text to classify")
   .option("--mode <mode>", "override execution mode for tests")
+  .option("--design-docs", "derive a parallel proposal-document coverage team from design-doc lanes")
   .option("--json", "JSON output")
   .action(
-    (opts: { task: string; mode?: ReturnType<typeof detectMode>["mode"]; json?: boolean }) => {
+    (opts: {
+      task: string;
+      mode?: ReturnType<typeof detectMode>["mode"];
+      designDocs?: boolean;
+      json?: boolean;
+    }) => {
       const mode = opts.mode ?? detectMode().mode;
-      const result = recommendTeamLaunch({ task: opts.task, mode });
+      const coverage = opts.designDocs
+        ? classifyProposalDocumentCoverage({ text: opts.task })
+        : undefined;
+      const result = recommendTeamLaunch({
+        task: opts.task,
+        mode,
+        proposalSubagents: coverage?.recommended_subagents,
+      });
+      const output = coverage ? { ...result, document_coverage: coverage } : result;
       if (opts.json) {
-        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+        process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
       } else {
         process.stdout.write(
           `team suggest: ${result.should_launch ? "launch" : "single-agent"} mode=${result.mode} difficulty=${result.difficulty} trigger=${result.trigger}\n`,

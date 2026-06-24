@@ -96,6 +96,7 @@ describe("loadLintWiringInput (live repo regression fence)", () => {
       "fr-registry-audit",
       "improvement-backlog",
       "lint-wiring",
+      "proposal-document-coverage",
     ]) {
       expect(r.wired).toContain(m);
     }

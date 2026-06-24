@@ -58,6 +58,7 @@ export const teamMemberSchema = z.object({
   difficulty: taskDifficultySchema.optional(),
   model: modelOverrideSchema.optional(),
   effort: reasoningEffortSchema.optional(),
+  ownership: z.string().optional(),
   /** この member を前段に直列化する理由 (parallel 戦略でも個別に直列化指定可)。 */
   serialize_after: z.string().optional(),
 });

@@ -922,6 +922,29 @@ A-126 requirements back-propagation: canonical document export for concept/plann
   PLAN inputs, but DB remains a projection and must not directly edit authored
   PLAN/docs/source.
 
+### FR-L1-39 addendum: proposal document coverage classification
+
+- **Function**: `classifyProposalDocumentCoverage`
+- **Purpose**: derive the minimum design/test-design document pack from proposal
+  or task text before implementation work starts.
+- **Output**: additive required design docs, required test-design docs, required
+  evidence, gates, research adoption decisions, rejected research inputs,
+  escalators, guardrails, and findings.
+- **Coverage packs**: screen/UI, business flow, frontend design, UX/usability,
+  API/IF, data/DB, batch/report, report output, async/job flow,
+  notification/message, common component, security/privacy,
+  error/observability/audit, ops/release/migration, NFR/quality, test design,
+  backend function, workflow/gate, agent orchestration, discovery, and baseline.
+- **Research split**: external templates are separated into `incorporate`,
+  `reference`, `ut-tdd-specific`, and `exclude`. Template material may add
+  required evidence, but it cannot remove UT-TDD-required documents.
+- **Test-design routing**:
+  `docs/test-design/harness/proposal-document-coverage-routing.md` defines the
+  L7/L8/L9/L12/L14 test-design response for each coverage pack and tier.
+- **Guardrail**: LLM or prose claims such as `minor`, `simple`, `skip`, or
+  `not needed` are findings only. They do not lower granularity or remove
+  required artifacts.
+
 ### AC-FR-TDD-01: strong targets
 
 - **Given**: mode = design / add-feature / refactor / reverse / retrofit /
