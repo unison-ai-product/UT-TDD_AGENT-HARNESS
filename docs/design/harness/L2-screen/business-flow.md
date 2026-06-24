@@ -1,7 +1,7 @@
 ---
 layer: L2
 sub_doc: screen-flow
-status: draft
+status: confirmed
 artifact_role: supplemental_business_flow
 parent_doc: docs/design/harness/L1-requirements/business-requirements.md
 related_screen_doc: docs/design/harness/L1-requirements/screen-requirements.md

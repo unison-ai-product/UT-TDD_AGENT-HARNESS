@@ -377,4 +377,28 @@ describe("U-FR-L1-39: classifyTask public surface", () => {
     );
     expect(result.recommended_subagents.some((a) => a.tier === "T2-spark")).toBe(false);
   });
+
+  it("keeps proposal subagent recommendation metadata stable", () => {
+    const result = classifyProposalDocumentCoverage({
+      text: "Research screen templates and API test design coverage.",
+    });
+    expect(result.recommended_subagents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: "docs",
+          tier: "T2-mini",
+          parallel_slots: 4,
+          closing_authority: false,
+          guard: expect.stringContaining("cannot reduce required coverage"),
+        }),
+        expect.objectContaining({
+          role: "se",
+          tier: "T1-worker",
+          parallel_slots: 2,
+          closing_authority: false,
+          ownership: expect.stringContaining("disjoint"),
+        }),
+      ]),
+    );
+  });
 });

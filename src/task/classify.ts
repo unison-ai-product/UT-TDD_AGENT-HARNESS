@@ -1699,13 +1699,14 @@ function rejectedResearchForText(normalizedText: string): ResearchAdoptionDecisi
   ).map(({ decision }) => decision);
 }
 
-function subagent(
-  role: RecommendedSubagentRole,
-  tier: RecommendedSubagentTier,
-  purpose: string,
-  parallelizable: boolean,
-  reason: string,
-): RecommendedSubagent {
+function subagent(input: {
+  role: RecommendedSubagentRole;
+  tier: RecommendedSubagentTier;
+  purpose: string;
+  parallelizable: boolean;
+  reason: string;
+}): RecommendedSubagent {
+  const { role, tier, purpose, parallelizable, reason } = input;
   const lane = PROPOSAL_SUBAGENT_LANES[tier];
   return {
     role,
@@ -1747,13 +1748,13 @@ function recommendedSubagentsForCoverage(input: {
     ].includes(pattern),
   );
   const recommendations: RecommendedSubagent[] = [
-    subagent(
-      "docs",
-      "T2-mini",
-      "template research, adoption split, and document inventory expansion",
-      true,
-      "research and catalog work is broad but low-risk, so mini is the default cost-saving lane",
-    ),
+    subagent({
+      role: "docs",
+      tier: "T2-mini",
+      purpose: "template research, adoption split, and document inventory expansion",
+      parallelizable: true,
+      reason: "research and catalog work is broad but low-risk, so mini is the default cost-saving lane",
+    }),
   ];
 
   const cheapWorker =
@@ -1762,67 +1763,67 @@ function recommendedSubagentsForCoverage(input: {
       ["trivial", "simple"].includes(input.task.difficulty));
   if (cheapWorker) {
     recommendations.push(
-      subagent(
-        "se",
-        "T2-spark",
-        "bounded low-risk implementation or lint/test patch",
-        true,
-        "small stable work can use spark for speed while keeping reviewer gates light",
-      ),
+      subagent({
+        role: "se",
+        tier: "T2-spark",
+        purpose: "bounded low-risk implementation or lint/test patch",
+        parallelizable: true,
+        reason: "small stable work can use spark for speed while keeping reviewer gates light",
+      }),
     );
   }
 
   if (implementationHeavy || input.escalators.includes("multi_pattern_union")) {
     recommendations.push(
-      subagent(
-        "se",
-        "T1-worker",
-        "cross-artifact implementation or classifier/lint wiring",
-        true,
-        "multi-document or implementation-heavy work needs the normal worker tier",
-      ),
+      subagent({
+        role: "se",
+        tier: "T1-worker",
+        purpose: "cross-artifact implementation or classifier/lint wiring",
+        parallelizable: true,
+        reason: "multi-document or implementation-heavy work needs the normal worker tier",
+      }),
     );
   }
 
   if (uiux) {
     recommendations.push(
-      subagent(
-        "uiux",
-        risky ? "T0-frontier" : "T2-mini",
-        "screen, usability, accessibility, and visual evidence review",
-        !risky,
-        risky
-        ? "risky UI/UX work needs high-tier judgement"
-        : "UI/UX template review can run cheaply as a sidecar",
-      ),
+      subagent({
+        role: "uiux",
+        tier: risky ? "T0-frontier" : "T2-mini",
+        purpose: "screen, usability, accessibility, and visual evidence review",
+        parallelizable: !risky,
+        reason: risky
+          ? "risky UI/UX work needs high-tier judgement"
+          : "UI/UX template review can run cheaply as a sidecar",
+      }),
     );
   }
 
   if (risky || discovery) {
     recommendations.push(
-      subagent(
-        "qa",
-        risky ? "T0-frontier" : "T1-worker",
-        risky
+      subagent({
+        role: "qa",
+        tier: risky ? "T0-frontier" : "T1-worker",
+        purpose: risky
           ? "risk gate, negative test, and approval-evidence review"
           : "research decision and oracle sufficiency review",
-        false,
-        risky
-        ? "G4/G5 risk cannot be closed by a cheap worker alone"
-        : "discovery needs judgement before scope can shrink",
-      ),
+        parallelizable: false,
+        reason: risky
+          ? "G4/G5 risk cannot be closed by a cheap worker alone"
+          : "discovery needs judgement before scope can shrink",
+      }),
     );
   }
 
   if (input.escalators.includes("low_drive_confidence")) {
     recommendations.push(
-      subagent(
-        "tl",
-        "T0-frontier",
-        "routing decision when drive classification is uncertain",
-        false,
-        "unclear routing must increase judgement rather than reduce documents",
-      ),
+      subagent({
+        role: "tl",
+        tier: "T0-frontier",
+        purpose: "routing decision when drive classification is uncertain",
+        parallelizable: false,
+        reason: "unclear routing must increase judgement rather than reduce documents",
+      }),
     );
   }
 

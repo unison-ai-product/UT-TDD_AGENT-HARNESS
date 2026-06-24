@@ -1,7 +1,7 @@
 ---
 layer: L2
 sub_doc: screen-list
-status: draft
+status: confirmed
 artifact_role: supplemental_screen_detail
 parent_doc: docs/design/harness/L1-requirements/screen-requirements.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
