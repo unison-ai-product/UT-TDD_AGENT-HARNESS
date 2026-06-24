@@ -81,6 +81,70 @@ export function evaluateWorkGuard(input: WorkGuardInput): WorkGuardResult {
   return { decision: "pass", reason: "clean-or-own", message: "" };
 }
 
+/**
+ * `apply_patch` (Codex freeform) の patch 本文ヘッダ。1 patch に複数ファイルセクションが入る。
+ * rename は `*** Update File: <old>` + `*** Move to: <new>` の 2 パスを持つ (両方を編集対象とみなす)。
+ */
+const PATCH_HEADER_RE =
+  /\*\*\*[ \t]+(?:Update File|Add File|Delete File|Move to):[ \t]*([^\r\n]+)/g;
+
+function collectStringLeaves(value: unknown, out: string[]): void {
+  if (typeof value === "string") {
+    out.push(value);
+  } else if (Array.isArray(value)) {
+    for (const v of value) collectStringLeaves(v, out);
+  } else if (value && typeof value === "object") {
+    for (const v of Object.values(value)) collectStringLeaves(v, out);
+  }
+}
+
+function stripPathQuotes(p: string): string {
+  return p
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .trim();
+}
+
+/**
+ * tool_input から編集対象パス群を抽出する純関数 (runtime-agnostic, PLAN-L7-139)。
+ *
+ * Claude `Edit|Write|MultiEdit` と Codex `write_file` は `tool_input.file_path` / `.path` を運ぶが、
+ * Codex の主編集ツール `apply_patch` は **freeform** で、編集対象パスは patch 本文のヘッダ
+ * (`*** Update File:` / `*** Add File:` / `*** Delete File:` / `*** Move to:`) に埋め込まれる
+ * (複数ファイル可)。`tool_input.file_path` だけを見ると apply_patch では undefined になり work-guard が
+ * 黙って no-op = 偽パリティになる (Codex cross-runtime review Critical, codex.exe 0.128.0 実機で確認)。
+ *
+ * 抽出順:
+ *  1. `file_path` / `path` があればそれ (= Claude/write_file 形)。この場合 content 本文は走査しない
+ *     (doc が apply_patch 例文を含むと誤抽出して false-block するため)。
+ *  2. file_path が無い = apply_patch (freeform)。tool_input の string leaf を走査し patch ヘッダから
+ *     全ファイルパスを抽出する (正確な arg key (`input` / `command[]` 等) はランタイムで揺れるため
+ *     leaf 全走査が安全)。どちらも取れなければ空配列 (= work-guard は no-target で fail-open)。
+ */
+export function extractEditTargets(toolInput: unknown): string[] {
+  if (toolInput && typeof toolInput === "object" && !Array.isArray(toolInput)) {
+    const obj = toolInput as Record<string, unknown>;
+    const explicit: string[] = [];
+    for (const key of ["file_path", "path"]) {
+      const v = obj[key];
+      if (typeof v === "string" && v.trim()) explicit.push(v.trim());
+    }
+    if (explicit.length > 0) return [...new Set(explicit)];
+  }
+  const strings: string[] = [];
+  collectStringLeaves(toolInput, strings);
+  const targets: string[] = [];
+  for (const s of strings) {
+    if (!s.includes("*** ")) continue;
+    PATCH_HEADER_RE.lastIndex = 0;
+    for (let m = PATCH_HEADER_RE.exec(s); m !== null; m = PATCH_HEADER_RE.exec(s)) {
+      const p = stripPathQuotes(m[1]);
+      if (p) targets.push(p);
+    }
+  }
+  return [...new Set(targets)];
+}
+
 export interface ForeignEditOverride {
   bypass: boolean;
   /** どこから override したか (audit 用)。 */

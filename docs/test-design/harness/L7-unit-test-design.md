@@ -613,6 +613,26 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 |---|---|---|
 | U-ADAPTER-009 | `checkCodexWrapperParity` / `runDoctor` | Claude Code project hooks and Codex wrapper parity are checked explicitly. Claude hook evidence must come from `.claude/settings.json`; Codex evidence must come from `ut-tdd codex --execute` / `--task-file` / `--plan ... --execute` lifecycle tests and stdin adapter oracles, not from assuming `.claude` hooks apply to Codex. `doctor` surfaces `codex-wrapper-parity - OK` and fail-closes when any side is missing. |
 
+> Scope note (PLAN-L7-139): U-ADAPTER-009 covers the **delegation** path — how the
+> harness drives Codex as a worker via `ut-tdd codex`. It deliberately does NOT
+> assume `.claude` hooks apply to Codex. The complementary **direct / interactive**
+> path (a developer running `codex` in this repo) is covered by an explicit
+> repo-local `hooks.json` adapter, checked by `codex-hook-adapter` (U-CXHOOK
+> below). The two are different surfaces; neither supersedes the other.
+
+## PLAN-L7-139 Codex Hook Adapter Parity Addendum
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-CXHOOK-001 | `analyzeCodexHookAdapter` / `loadCodexHookAdapterInput` | Real-repo regression: the committed repo-root `hooks.json` shares the Claude guard entrypoints with Codex matchers and returns `ok:true` (`codex-hook-adapter - OK`). Substantiates the parity claim against the actual repo, not prose. |
+| U-CXHOOK-002 | `analyzeCodexHookAdapter` | Missing `hooks.json` (`missing_hooks_json`) and malformed JSON (`malformed_json`) both fail closed. |
+| U-CXHOOK-003 | `analyzeCodexHookAdapter` | A literal copy of the Claude matcher (`Edit\|Write\|MultiEdit`) fails closed (`missing_hook`) because it never fires under Codex tool names — guards against silent false-parity (coverage≠substance). |
+| U-CXHOOK-004 | `analyzeCodexHookAdapter` | Dropping `blockOnFailure` on `work-guard` (`missing_block_on_failure`), using `$CLAUDE_PROJECT_DIR` in a Codex command (`claude_project_dir_in_codex`), and referencing global `~/.codex/` (`global_codex_path`) each fail closed. |
+| U-CXHOOK-005 | `CODEX_REQUIRED` / `REQUIRED` (project-hook) | Every Codex guard entrypoint also exists in the Claude `REQUIRED` set (bidirectional: no silent fork between adapters; `entrypoint_drift` otherwise). |
+| U-CXHOOK-006 | `CODEX_NOT_APPLICABLE` / `CODEX_DEFERRED_SURFACE` / `evaluateWorkGuard` / `evaluateAgentGuard` | Disposition is honest, not blanket-N/A (cross-runtime review correction): `subagent-stop` is genuinely N/A (codex.exe 0.128.0 has no `SubagentStop` event), but `agent-guard` is **not** N/A — Codex's `spawn_agent` sub-agent tool family exists, so it is recorded as a real, currently-unguarded **deferred** surface. The shared guard logic is runtime-agnostic (foreign-edit blocks; non-allowlisted subagent blocks) so parity is structural, not a per-runtime fork. |
+| U-CXHOOK-007 | `extractEditTargets` (`src/runtime/work-guard.ts`) | False-parity regression (Critical, cross-runtime REJECT): Codex `apply_patch` is freeform with no `tool_input.file_path`, so paths must be parsed from the patch body (`*** Update/Add/Delete File:` / `*** Move to:`, multi-file). `extractEditTargets` returns explicit `file_path`/`path` for Claude/`write_file`, all patch-body paths for apply_patch (incl. command-array form), and does NOT misextract from doc `content` when an explicit `file_path` is present (false-block guard). |
+| U-CXHOOK-008 | `analyzeCodexHookAdapter` | Analyzer hardening (cross-runtime review Important): a non-`command` hook does not satisfy a guard (`type==="command"` required), and a script-path that only appears as a substring of another token (e.g. `src/cli.tsx` vs `src/cli.ts`) does not satisfy a guard (token-exact matching). |
+
 ## PLAN-L7-77 Codex Stdin Prompt Dispatch Addendum
 
 | U-ID | Target | Oracle |
