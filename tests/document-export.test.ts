@@ -95,6 +95,30 @@ describe("canonical document export (U-DOCEXPORT-001..012)", () => {
     expect(dataset.findings.map((finding) => finding.code)).toContain("redacted-sensitive-field");
   });
 
+  it("U-DOCEXPORT-005b: innocent hyphenated words (task-/risk-/desk-) are NOT over-redacted (PLAN-L7-143)", () => {
+    const dataset = buildDocumentExportDataset({
+      projections: [
+        parseCanonicalDocumentStructure({
+          family: "plan",
+          sourcePath: "docs/plans/PLAN-Y.md",
+          // `sk-` appears only as a substring of task-/risk-/desk-; the `\b`-anchored
+          // pattern must leave these intact and emit NO redacted-sensitive-field finding.
+          content: "# PLAN-Y\n\ntask-classify and risk-policy via desk-review of task-complexity",
+        }),
+      ],
+      format: "markdown",
+    });
+
+    const serialized = JSON.stringify(dataset);
+    expect(serialized).toContain("task-classify");
+    expect(serialized).toContain("risk-policy");
+    expect(serialized).toContain("desk-review");
+    expect(serialized).not.toContain("<redacted>");
+    expect(dataset.findings.map((finding) => finding.code)).not.toContain(
+      "redacted-sensitive-field",
+    );
+  });
+
   it("U-DOCEXPORT-006: large documents split by section instead of truncating", () => {
     const content = ["# Big", ...Array.from({ length: 6 }, (_, i) => `## S${i}\nbody`)].join("\n");
     const dataset = buildDocumentExportDataset({

@@ -238,8 +238,14 @@ export function parseCanonicalDocumentStructure(
 }
 
 function redactText(text: string): { text: string; redacted: boolean } {
+  // `\b` word boundary so the `sk-` API-key pattern only matches a token that
+  // STARTS with `sk-` (a real key is a standalone token: `sk-...` / `sk-ant-...`).
+  // Without it the bare `sk-[...]+` matched the `sk-` substring inside innocent
+  // hyphenated words (`task-classify` -> `sk-classify`, `risk-policy` ->
+  // `sk-policy`, `desk-review` -> `sk-review`), over-redacting 16 canonical docs
+  // (same false-positive class as PLAN-L7-74's whole-word risk match, PLAN-L7-143).
   const redacted = text
-    .replace(/sk-[A-Za-z0-9_-]+/g, "<redacted>")
+    .replace(/\bsk-[A-Za-z0-9_-]+/g, "<redacted>")
     .replace(/rawMcpResponse\s*:\s*\S+/gi, "<redacted>");
   return { text: redacted, redacted: redacted !== text };
 }

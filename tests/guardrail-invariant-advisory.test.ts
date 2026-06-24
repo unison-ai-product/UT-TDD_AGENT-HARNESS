@@ -97,26 +97,46 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
+      // same-model self-review is NOT review_kind-scoped (avoidable in any tier),
+      // so an intra_runtime_subagent same-model review still surfaces an advisory.
       upsertRow(db, {
         table: "review_evidence_registry",
         primaryKey: "review_evidence_id",
         row: reviewEvidenceRow({
           review_evidence_id: "review-evidence:PLAN-SELF-REVIEW-A",
           plan_id: "PLAN-SELF-REVIEW-A",
+          review_kind: "intra_runtime_subagent",
           worker_model: "claude-opus-4-8",
           reviewer_model: "claude-opus-4-8",
           source: "docs/plans/PLAN-SELF-REVIEW-A.md",
         }),
       });
+      // same-provider on a cross_agent review IS a real defect (claims cross-runtime
+      // independence yet shares a provider) -> advisory fires.
       upsertRow(db, {
         table: "review_evidence_registry",
         primaryKey: "review_evidence_id",
         row: reviewEvidenceRow({
           review_evidence_id: "review-evidence:PLAN-SAME-PROVIDER-B",
           plan_id: "PLAN-SAME-PROVIDER-B",
+          review_kind: "cross_agent",
           worker_model: "claude-opus-4-8",
           reviewer_model: "claude-sonnet-4-6",
           source: "docs/plans/PLAN-SAME-PROVIDER-B.md",
+        }),
+      });
+      // same-provider on an intra_runtime_subagent review is STRUCTURALLY FORCED
+      // (single runtime) -> advisory is suppressed (PLAN-L7-143 projection-gate parity).
+      upsertRow(db, {
+        table: "review_evidence_registry",
+        primaryKey: "review_evidence_id",
+        row: reviewEvidenceRow({
+          review_evidence_id: "review-evidence:PLAN-SAME-PROVIDER-INTRA",
+          plan_id: "PLAN-SAME-PROVIDER-INTRA",
+          review_kind: "intra_runtime_subagent",
+          worker_model: "claude-opus-4-8",
+          reviewer_model: "claude-sonnet-4-6",
+          source: "docs/plans/PLAN-SAME-PROVIDER-INTRA.md",
         }),
       });
       upsertRow(db, {
@@ -125,6 +145,7 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
         row: reviewEvidenceRow({
           review_evidence_id: "review-evidence:PLAN-CROSS-B",
           plan_id: "PLAN-CROSS-B",
+          review_kind: "cross_agent",
           worker_model: "claude-opus-4-8",
           reviewer_model: "gpt-5.4",
         }),
@@ -152,6 +173,7 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
       }>;
 
       const advisories = findings.filter((f) => f.source === "guardrail-invariant-advisory");
+      // same-model(intra) + same-provider(cross_agent) fire; same-provider(intra) is suppressed.
       expect(advisories).toHaveLength(2);
       expect(advisories.map((a) => a.kind)).toEqual(
         expect.arrayContaining([
@@ -165,6 +187,11 @@ describe("IT-GUARDRAIL-ADVISORY-01: projection-based invariant advisories", () =
           "docs/plans/PLAN-SELF-REVIEW-A.md",
           "docs/plans/PLAN-SAME-PROVIDER-B.md",
         ]),
+      );
+      // ...and the intra_runtime_subagent same-provider review surfaces NO advisory
+      // (forced single-runtime condition is not a defect — projection-gate parity).
+      expect(advisories.map((a) => a.evidence_path)).not.toContain(
+        "docs/plans/PLAN-SAME-PROVIDER-INTRA.md",
       );
       // ...while subject_id is plan-id-free so it cannot flip automation readiness.
       for (const finding of findings) {

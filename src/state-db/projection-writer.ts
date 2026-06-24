@@ -779,13 +779,14 @@ export function projectGuardrailInvariantAdvisories(db: HarnessDb): void {
   // undefined so blank evidence never false-positives as same-model.
   const rows = db
     .prepare(
-      "SELECT review_evidence_id, plan_id, reviewer_model, worker_model, source FROM review_evidence_registry ORDER BY review_evidence_id",
+      "SELECT review_evidence_id, plan_id, reviewer_model, worker_model, review_kind, source FROM review_evidence_registry ORDER BY review_evidence_id",
     )
     .all();
   for (const row of rows) {
     const reviewEvidenceId = String(row.review_evidence_id ?? "");
     const reviewerModel = String(row.reviewer_model ?? "");
     const workerModel = String(row.worker_model ?? "");
+    const reviewKind = String(row.review_kind ?? "");
     const evidencePath = String(row.source ?? "");
     const input: GuardrailDecisionInput = {
       plan_id: String(row.plan_id ?? ""),
@@ -798,6 +799,18 @@ export function projectGuardrailInvariantAdvisories(db: HarnessDb): void {
       worker_model: workerModel ? workerModel : undefined,
     };
     for (const violation of inspectGuardrailInvariants(input).violations) {
+      // review_kind scoping (mirror the doctor hard gate, src/doctor/index.ts
+      // checkGuardrailInvariants + concept §2.1.2.1, PLAN-L7-143):
+      // same-provider-cross-review is — by name and design — only a defect for a
+      // review that CLAIMS cross-runtime independence (review_kind=cross_agent).
+      // For intra_runtime_subagent (the accepted single-runtime review tier) a
+      // shared provider is STRUCTURALLY FORCED, so surfacing it is pure noise.
+      // same-model-self-review is intentionally NOT scoped: a model reviewing its
+      // own exact output is avoidable in any tier (e.g. opus worker + sonnet
+      // reviewer), so its warn nudge stays broader than the hard block.
+      if (violation.rule === "same-provider-cross-review" && reviewKind !== "cross_agent") {
+        continue;
+      }
       recordFinding(db, {
         kind: `guardrail-invariant-advisory:${violation.rule}`,
         severity: "warn",
