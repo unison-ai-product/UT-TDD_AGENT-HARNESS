@@ -47,6 +47,25 @@ Legacy entries below remain visible debt until each entry is either:
 | PLAN-L7-99-sub-doc-catalog-drift-gate | refactor | No Reverse link or no-backprop decision recorded. |
 | PLAN-L7-100-standard-deliverable-section-structure | troubleshoot | No Reverse link or no-backprop decision recorded. |
 
+## Resolution (2026-06-24)
+
+25 of the 26 legacy entries above were dispositioned by recording
+`backprop_decision: not_required` plus a concrete reason in each PLAN: every one
+is internal harness self-application tooling (lint gate / runtime dispatch /
+guard / governance mechanism) that hardens the harness's own enforcement and
+does not change the product's external requirement / design / test-design
+contract, so there is no upstream backprop target. After this, the
+`backfill-pairing` advisory `conditional kind may require Reverse` no longer
+lists them.
+
+The remaining entry, `PLAN-L7-96-screen-db-projection`, is intentionally left
+open here: it belongs to the central-UI / screen work slated for discard and
+requirements re-issue, and is resolved under that effort (archive removes it
+from the active-plan scan).
+
+The table rows are retained so the `legacyAuditGaps` allowlist↔audit sync check
+stays green; they record historical baseline, not open debt.
+
 ## Current Remediation
 
 `src/lint/backfill-pairing.ts` treats the table above as the legacy baseline and

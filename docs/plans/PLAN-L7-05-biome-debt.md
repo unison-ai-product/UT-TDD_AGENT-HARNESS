@@ -7,6 +7,8 @@ drive: fullstack
 status: confirmed
 created: 2026-06-04
 updated: 2026-06-04
+backprop_decision: not_required
+backprop_decision_reason: "Internal harness self-application tooling (lint gate / runtime dispatch / guard / governance mechanism); hardens the harness's own enforcement and does not change the product's external requirement / design / test-design contract, so there is no upstream backprop target."
 owner: PM (Opus) / PO (人間)
 backfill_required: false  # refactor 機能不変 (dead code 削除 + biome --write、契約/挙動の変更なし) → KIND_BACKFILL conditional で Reverse 不要。doctor backfill 行は note のみ。
 agent_slots:

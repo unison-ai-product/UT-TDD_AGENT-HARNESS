@@ -8,6 +8,8 @@ parent_design: docs/design/harness/L4-basic-design/architecture.md
 status: confirmed
 created: 2026-06-19
 updated: 2026-06-19
+backprop_decision: not_required
+backprop_decision_reason: "Internal harness self-application tooling (lint gate / runtime dispatch / guard / governance mechanism); hardens the harness's own enforcement and does not change the product's external requirement / design / test-design contract, so there is no upstream backprop target."
 owner: PM (Opus) / PO (人間)
 review_evidence:
   - reviewer: tl
