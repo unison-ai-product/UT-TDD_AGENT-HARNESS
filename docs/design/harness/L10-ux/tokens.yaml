@@ -1,0 +1,149 @@
+# =============================================================================
+# L10 UX refinement — デザイントークン SSOT (Single Source of Truth)
+# =============================================================================
+# 正本 = 本ファイル (FR-30 / AC-FR-30-01: `docs/design/harness/L10-ux/tokens.yaml`)。
+# L2 ui-element §3 (デザイントークン L2 確定方針) が「具体値 (hex/px) の High-Fi 確定は
+# L10 へ委譲」と明記した分を、本ファイルが具体値で確定する。src/web (Phase B、PLAN-L7-141
+# Step 2-4) はこの token を唯一の出典として参照し、ハードコード色/寸法を持たない。
+#
+# スコープ制約 (L2 ui-element §3-§5 から継承):
+#   - light モードのみ (Q30、dark は Phase B 持ち越し)
+#   - 日本語固定 (Q31)
+#   - Desktop 専用 (S9=a、min-width 前提)
+#
+# a11y 目標 (FR-30 出力 = a11y チェック、IMP-020 = WCAG 2.2 AA reference):
+#   - 通常テキスト  : コントラスト比 >= 4.5:1
+#   - 大テキスト/UI : コントラスト比 >= 3:1
+#   下の `contrast_target` は設計目標。実レンダリング比の検証は FR-30 の a11y script が
+#   実装時 (Phase B) に行う (宣言でなく機械実測、coverage != substance)。
+#
+# token 名の一意性 = AC-FR-30-02 (token 二重定義 fail-close) を満たすため、全 leaf key は
+# group prefix と合わせて一意 (例: color.fg.default は 1 箇所のみ)。
+# =============================================================================
+version: 1
+layer: L10
+mode: light
+upstream_fr: FR-30 (FR-L1-30)
+
+# -----------------------------------------------------------------------------
+# color — 状態色 5 値 (L2 ui-element §1 「状態種別の標準 5 値」= ok/warn/error/empty/loading)
+# 各状態は fg (テキスト/アイコン/ボーダー) と bg (淡色 fill) のペアを持つ。
+# StatusBadge は「色のみに依存しない」(§4 a11y) ため、必ず fg 色 + アイコン + ラベルを併記
+# (visual-design.md §3 参照)。fill 上の fg はコントラスト >= 4.5:1 を満たす値域で選定。
+# -----------------------------------------------------------------------------
+color:
+  # 基本前景・背景・面
+  fg:
+    default: "#1F2328"      # 本文。on canvas(#FFFFFF) contrast_target ~16:1 (AAA)
+    muted: "#656D76"        # 副次テキスト/メタ。on canvas contrast_target >= 4.5:1 (AA 通常)
+    onAccent: "#FFFFFF"     # accent 面上のテキスト。on accent.emphasis contrast_target >= 4.5:1
+  canvas:
+    default: "#FFFFFF"      # ページ背景
+    subtle: "#F6F8FA"       # パネル/ヘッダ/テーブル zebra
+    inset: "#EFF2F5"        # コードブロック/inset 領域
+  border:
+    default: "#D0D7DE"      # テーブル罫線/区切り。on canvas contrast_target >= 3:1 (UI)
+    muted: "#D8DEE4"
+
+  # 状態 5 値 (StatusBadge.level / cell ハイライト / gate 色分け、CC3)
+  status:
+    ok:
+      fg: "#1A7F37"         # 緑。on canvas / on ok.bg contrast_target >= 4.5:1
+      bg: "#DAFBE1"
+      icon: "check-circle"  # アイコン名 (色のみ依存回避、§4)。glyph 例: 🟢/✓
+    warn:
+      fg: "#9A6700"         # 琥珀。黄系は AA が厳しいため text は暗い琥珀を使用
+      bg: "#FFF8C5"
+      icon: "alert"         # glyph 例: 🟡/△
+    error:
+      fg: "#CF222E"         # 赤。on canvas / on error.bg contrast_target >= 4.5:1
+      bg: "#FFEBE9"
+      icon: "x-circle"      # glyph 例: 🔴/✕
+    empty:
+      fg: "#57606A"         # 灰 (データ無し)。text 用途は AA 通常を満たす濃度
+      bg: "#EFF2F5"
+      icon: "dash"          # glyph 例: ⬜/—
+    loading:
+      fg: "#57606A"         # 灰 + モーション (spinner)。色のみに意味を持たせない
+      bg: "#EFF2F5"
+      icon: "sync"          # glyph 例: 🔄
+
+  # 強調 (NextActionCard / gate fail / active 遷移)。色 + ウェイトで強調 = 色のみ非依存 (§4)
+  accent:
+    fg: "#0969DA"           # リンク/active/next-action。on canvas contrast_target >= 4.5:1
+    emphasis: "#0969DA"     # ボタン/強調面の背景
+    subtle: "#DDF4FF"       # active 行 / 選択中 cell の淡色 fill
+  danger:
+    emphasis: "#CF222E"     # gate fail 強調 (error.fg と同値だが用途別名、強調面/ボーダー)
+
+# -----------------------------------------------------------------------------
+# space — 4px ベースの間隔スケール (Desktop 高密度、CC3 raw data 優先)
+# -----------------------------------------------------------------------------
+space:
+  base: 4                   # px
+  s1: 4
+  s2: 8
+  s3: 12
+  s4: 16
+  # s5(20)/s7(28) は意図省略 (現状未使用、4px グリッドの粗ステップで足りる)。28 が要る場合は
+  # size.table.rowHeight / size.control.height (=28) を参照し、新 space key を増やさない。
+  s6: 24
+  s8: 32
+
+# -----------------------------------------------------------------------------
+# size — レイアウト/コンポーネント寸法 (Desktop 専用、横スクロール許容で raw data 粒度)
+# -----------------------------------------------------------------------------
+size:
+  layout:
+    minWidth: 1024          # Desktop 前提の最小幅 (S9=a)
+    gutter: 16              # レイアウト gutter (= space.s4)
+    contentMaxWidth: none   # 高密度コンポーネント (HeatmapGrid/WiringDiagram/TraceGraph) は横スクロール許容
+  table:
+    rowHeight: 28           # 高密度行 (raw data 多数行、CC3)
+    cellPadX: 8             # = space.s2
+    cellPadY: 6
+  control:
+    height: 28              # FilterBar/プルダウン/ボタンの標準高 (>= minTarget を満たす)
+    minTarget: 24           # WCAG 2.2 SC 2.5.8 Target Size (Minimum)。height(28)>=24 は満たすが
+                            # width 軸も各操作部品が >= 24 CSS px を確保すること (24x24 領域、間隔含む)
+  radius:
+    sm: 4                   # バッジ/ボタン角丸
+    md: 6                   # パネル/カード角丸
+
+# -----------------------------------------------------------------------------
+# type — タイポグラフィ (日本語固定 Q31、CLI/コード/ASCII 図は等幅 = UX-03 CLI 一貫)
+# -----------------------------------------------------------------------------
+type:
+  font:
+    body: "'Hiragino Kaku Gothic ProN','Noto Sans JP','Yu Gothic UI',sans-serif"
+    mono: "'SFMono-Regular','Consolas','Noto Sans Mono','Courier New',monospace"
+  fontSize:
+    body: 14                # px 標準本文
+    small: 12               # メタ/補助
+    h1: 20
+    h2: 16
+    code: 13                # CLI/コード/frontmatter
+  lineHeight:
+    body: 1.5
+    dense: 1.35             # 高密度テーブル
+  weight:
+    regular: 400
+    medium: 500
+    bold: 600               # 強調 (色のみ非依存の片翼)
+
+# -----------------------------------------------------------------------------
+# focus — フォーカス可視 (§4 「フォーカスリングを維持」、Desktop keyboard 利用者)
+# -----------------------------------------------------------------------------
+focus:
+  ringColor: "#0969DA"      # = accent.fg
+  ringWidth: 2              # px
+  ringOffset: 2             # px
+  ringStyle: solid
+
+# -----------------------------------------------------------------------------
+# motion — ポーリング/ローディング (S2=b 30 秒ポーリング、WebSocket 不使用)
+# -----------------------------------------------------------------------------
+motion:
+  pollIntervalSec: 30       # PollingIndicator default (S2=b、B8 <= 5 分)
+  spinnerDurationMs: 1000   # loading spinner 1 回転
+  reducedMotion: respect    # prefers-reduced-motion 尊重 (spinner を静的アイコンへ)

@@ -70,7 +70,8 @@ prototype コード (`src/web/*.ts`) と `tests/web.test.ts`、`cli web` command
 ## 4. Schedule
 
 - mode: serial。
-- Step 1: L10 (UX refinement / High-Fi mock) 到達確認 (未了なら L10 設計を先に起票)。
+- Step 1 ✓ (2026-06-24): **L10 設計を起票・authored + cross-reviewed**。`docs/design/harness/L10-ux/`
+  (visual-design.md + tokens.yaml)。L2→L10 の設計降下完遂 (§6)。confirmed 昇格は G10 PO サインオフ。
 - Step 2: ui-element §2 部品の render 実装。
 - Step 3: 画面 → router/app/server 配線 + tests。
 - Step 4: review → confirmed。
@@ -80,3 +81,23 @@ prototype コード (`src/web/*.ts`) と `tests/web.test.ts`、`cli web` command
 - table-dumper への逆戻りを `screen-impl-pair-freeze` + 本 AC で塞ぐ。
 - `screen` projection (L7-96) と L2 設計群は破棄対象でない (read-model / 設計は保持・要件を正すのみ)。
 - L10 を飛ばさない (段階順を破った L7-102 の再発防止)。
+
+## 6. L10 設計降下完遂 記録 (2026-06-24、Step 1)
+
+L2 ui-element §2 部品から component-derived で L10 UX-refinement 設計を authored し、L2→L10 の設計降下を
+完遂した (read-only + CLI コピー S5=b 前提を維持)。
+
+**成果物**:
+- `docs/design/harness/L10-ux/visual-design.md` — 15 画面の component-derived High-Fi 設計 (§4 部品 / §5 画面合成 = table-dumper 不在の確認 / §3.4 a11y WCAG 2.2 AA / §6 visual regression)。
+- `docs/design/harness/L10-ux/tokens.yaml` — デザイントークン SSOT (FR-30、WCAG 2.2 AA 目標、token 名一意 = AC-FR-30-02 充足)。
+
+**review_evidence (intra_runtime_subagent)**:
+- reviewer: code-reviewer (claude-sonnet-4-6) / worker: claude-opus-4-8 (PM)。hybrid だが Codex live dispatch は別途任意 (本 land は sonnet cross-review を採用)。
+- reviewed_at: 2026-06-24 / verdict: **APPROVE (Critical 0)**。
+- scope: component-derived (汎用テーブル 1 枚で代替不能、§5) / L2 grounding (新規部品・画面の発明なし) / token 健全性 (一意・5 状態・WCAG AA 目標) / a11y (WCAG 2.2 AA) / 誠実性 (status=draft、implemented 詐称なし)。
+- Important 3 件 解決済: I-1 (`SeverityBadge`=`StatusBadge` alias 明記 + §5 HM-07 に StatusBadge 追記) / I-2 (HM-04・HM-07 の「再実行トリガー」を S5=b の `CopyButton`(CLI 文字列) と明記、L2 §2 脱落の High-Fi 補完) / I-3 (WCAG 2.2 と AC-FR-30-03 の 2.1 不一致 → oracle 更新を visual-design §7 governance carry に列挙)。Minor 4 件 (M-1〜M-4) 反映済。
+- 緑証跡: 本 commit 時点で doctor EXIT 0 / plan lint EXIT 0 (検証ログ参照)。
+
+**次工程**: G10 (UX 磨き完了) PO サインオフ → L10 doc `confirmed` 昇格 → Step 2-4 (実装)。
+中央UI「フロント編集/送信」方向 (PO 2026-06-24) が確定すれば、本 L10 設計に edit/submit affordance を
+back-prop する (read-only 維持の最小形 = 既存 `CopyButton`/`NextActionCard` の指示生成への延長)。
