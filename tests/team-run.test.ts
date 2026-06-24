@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import { loadSlots, nodeAgentSlotsDeps } from "../src/runtime/agent-slots";
 import type { RuntimeDetection } from "../src/runtime/detect";
 import type { TeamDefinition } from "../src/schema/team";
-import { routeTeamMembers } from "../src/task/tier-router";
 import { classifyProposalDocumentCoverage } from "../src/task/classify";
+import { routeTeamMembers } from "../src/task/tier-router";
 import { recommendTeamLaunch } from "../src/team/launch-policy";
 import {
   buildTeamRunPlan,
@@ -197,8 +197,9 @@ describe("team run validation", () => {
     const plan = buildTeamRunPlan(recommendation.definition as TeamDefinition, "hybrid");
     expect(plan.ok).toBe(true);
     expect(plan.strategy).toBe("sequential");
-    expect(plan.members.filter((member) => member.model_selection.model === "gpt-5.4-mini"))
-      .toHaveLength(4);
+    expect(
+      plan.members.filter((member) => member.model_selection.model === "gpt-5.4-mini"),
+    ).toHaveLength(4);
     expect(
       plan.members.filter((member) => member.model_selection.model === "gpt-5.3-codex-spark"),
     ).toHaveLength(3);

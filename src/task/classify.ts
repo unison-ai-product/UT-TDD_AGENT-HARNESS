@@ -1753,7 +1753,8 @@ function recommendedSubagentsForCoverage(input: {
       tier: "T2-mini",
       purpose: "template research, adoption split, and document inventory expansion",
       parallelizable: true,
-      reason: "research and catalog work is broad but low-risk, so mini is the default cost-saving lane",
+      reason:
+        "research and catalog work is broad but low-risk, so mini is the default cost-saving lane",
     }),
   ];
 

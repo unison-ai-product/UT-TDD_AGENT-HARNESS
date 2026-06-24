@@ -374,19 +374,21 @@ describe("L7 CLI surface closure", () => {
       max_parallel: 7,
     });
     expect(
-      payload.definition.members.filter((member: { model?: string }) => member.model === "gpt-5.4-mini"),
+      payload.definition.members.filter(
+        (member: { model?: string }) => member.model === "gpt-5.4-mini",
+      ),
     ).toHaveLength(4);
     expect(
       payload.definition.members.filter(
         (member: { model?: string }) => member.model === "gpt-5.3-codex-spark",
       ),
     ).toHaveLength(3);
-    expect(payload.definition.members.some((member: { model?: string }) => member.model === "gpt-5.5")).toBe(
-      false,
-    );
-    expect(payload.definition.members.every((member: { ownership?: string }) => member.ownership)).toBe(
-      true,
-    );
+    expect(
+      payload.definition.members.some((member: { model?: string }) => member.model === "gpt-5.5"),
+    ).toBe(false);
+    expect(
+      payload.definition.members.every((member: { ownership?: string }) => member.ownership),
+    ).toBe(true);
   }, 20_000);
 
   it("executes team run through fake Claude/Codex adapters while keeping JSON machine-readable", () => {

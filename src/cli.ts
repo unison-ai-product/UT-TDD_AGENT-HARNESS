@@ -2057,7 +2057,10 @@ team
   .description("recommend whether a task should launch a Claude/Codex team")
   .requiredOption("--task <text>", "task text to classify")
   .option("--mode <mode>", "override execution mode for tests")
-  .option("--design-docs", "derive a parallel proposal-document coverage team from design-doc lanes")
+  .option(
+    "--design-docs",
+    "derive a parallel proposal-document coverage team from design-doc lanes",
+  )
   .option("--json", "JSON output")
   .action(
     (opts: {

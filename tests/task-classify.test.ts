@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { MODEL_IDS, PROPOSAL_SUBAGENT_LANES } from "../src/team/model-policy";
 import { classifyProposalDocumentCoverage, classifyTask } from "../src/task/classify";
+import { MODEL_IDS, PROPOSAL_SUBAGENT_LANES } from "../src/team/model-policy";
 
 describe("U-FR-L1-39: classifyTask public surface", () => {
   it("infers kind from task verbs (most-specific pattern wins)", () => {

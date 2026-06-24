@@ -150,8 +150,7 @@ function buildProposalDefinition(input: {
       if (!lane.closing_authority && firstParallelEngine === undefined) {
         firstParallelEngine = engine;
       }
-      const ownership =
-        slots === 1 ? lane.ownership : `${lane.ownership}; shard ${i + 1}/${slots}`;
+      const ownership = slots === 1 ? lane.ownership : `${lane.ownership}; shard ${i + 1}/${slots}`;
       members.push(
         memberWithOptionalSerialization({
           role: lane.role,

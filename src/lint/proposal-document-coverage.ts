@@ -236,7 +236,9 @@ export function analyzeProposalDocumentCoverage(
       }
     }
 
-    for (const gate of scenario.expectedPatterns.flatMap((pattern) => expectedGateByPattern(pattern))) {
+    for (const gate of scenario.expectedPatterns.flatMap((pattern) =>
+      expectedGateByPattern(pattern),
+    )) {
       if (!coverage.required_gates.includes(gate)) {
         violations.push({
           kind: "missing-required-gate",
