@@ -559,6 +559,19 @@ const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
     requiresApproval: false,
   },
   {
+    // 画面後付け駆動の入口 (backend 主軸 system に UI を足す)。出口は Discovery 合成 → Forward L3-L6。
+    tokens: [
+      "screen_addition_to_backend",
+      "design_bottomup",
+      "backend_derived_screen",
+      "add_ui_to_backend",
+    ],
+    mode: "design-bottomup",
+    command: "ut-tdd task classify",
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
     tokens: ["user_feedback_iteration", "requirement_continuous_refinement", "scrum"],
     mode: "scrum",
     command: "ut-tdd task classify",
@@ -1055,6 +1068,28 @@ const DRIVE_TDD_FITS: DriveTddFit[] = [
     red_triggers: ["a11y_regression", "visual_regression", "token_drift", "ux_feedback"],
     yellow_state: "L10 UX artifacts exist but a11y/VRT/token evidence is incomplete",
     green_requirements: ["visual", "tokens", "a11y", "vrt", "ux_review"],
+  },
+  {
+    // 画面後付け駆動: backend 主軸 system に UI を足す。① FE要件 elicitation は新規
+    // (src/workflow/design-elicitation.ts)、② mock 具体化 / ③ Forward 降下は Discovery 合成で再利用。
+    mode: "design-bottomup",
+    compatibility: "strong",
+    red_triggers: [
+      "screen_requirement_gap",
+      "ui_detail_gap",
+      "screen_spec_gap",
+      "backend_derived_screen",
+    ],
+    yellow_state:
+      "backend から FE 要件を derive したが L3/L5/L6 設計 body が不在 (mock 具体化 / Forward 降下が未完)",
+    green_requirements: [
+      "fe_requirement_elicited",
+      "screen_mock",
+      "screen_functional",
+      "ui_detail",
+      "screen_spec",
+      "discovery_s4",
+    ],
   },
   {
     mode: "discovery",
