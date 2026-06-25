@@ -47,10 +47,14 @@ export type Layer = z.infer<typeof layerSchema>;
 
 // L4 標準成果物カタログ = 外部設計成果物。report/batch/notification/code-value の grounding と
 // 区分 (② プロダクト選択) は docs/governance/document-system-map.md §1b を正本とする。
+// FE/UI 設計 doc カタログ (左腕、各 L の per-layer フロント設計 doc) の grounding は §1c を正本とする:
+//   L1 screen / L2 screen-*+ui-element / L3 screen-functional / L4 ui-standard / L5 ui-detail / L6 screen-spec。
+//   screen-functional/ui-detail/screen-spec は ② プロダクト選択 (UI 有時) で、body 実体化は段階順に後続
+//   (PLAN-L4-14 §4、vocabulary 登録が先・必須 § 構造定義は body 起票時、PLAN-L7-97 §4 と同方針)。
 export const VALID_SUB_DOCS = {
   L1: ["business", "functional", "nfr", "technical", "screen"],
   L2: ["screen-list", "screen-flow", "ui-element", "wireframe"],
-  L3: ["business", "functional", "nfr"],
+  L3: ["business", "functional", "nfr", "screen-functional"],
   L4: [
     "data",
     "architecture",
@@ -62,8 +66,8 @@ export const VALID_SUB_DOCS = {
     "notification",
     "code-value",
   ],
-  L5: ["physical-data", "module-decomposition", "internal-processing", "if-detail"],
-  L6: ["function-spec", "class-design", "edge-case"],
+  L5: ["physical-data", "module-decomposition", "internal-processing", "if-detail", "ui-detail"],
+  L6: ["function-spec", "class-design", "edge-case", "screen-spec"],
 } as const;
 export const VALID_SUB_DOC_VALUES = [
   "business",
@@ -88,9 +92,12 @@ export const VALID_SUB_DOC_VALUES = [
   "module-decomposition",
   "internal-processing",
   "if-detail",
+  "ui-detail",
   "function-spec",
   "class-design",
   "edge-case",
+  "screen-functional",
+  "screen-spec",
 ] as const;
 export const subDocSchema = z.enum(VALID_SUB_DOC_VALUES);
 export type SubDoc = z.infer<typeof subDocSchema>;

@@ -92,6 +92,11 @@ import {
   frRoadmapCoverageMessages,
   loadFrRoadmapCoverageDocs,
 } from "../lint/fr-roadmap-coverage";
+import {
+  analyzeFrontendDesignCoverage,
+  frontendDesignCoverageMessages,
+  loadFrontendDesignCoverageInput,
+} from "../lint/frontend-design-coverage";
 import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
 import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import {
@@ -1748,6 +1753,27 @@ export function checkLintWiring(repoRoot: string): { messages: string[]; ok: boo
   }
 }
 
+export function checkFrontendDesignCoverage(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["frontend-design-coverage - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeFrontendDesignCoverage(loadFrontendDesignCoverageInput(repoRoot));
+    return { messages: frontendDesignCoverageMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["frontend-design-coverage - violation: FE design coverage check could not run"],
+      ok: false,
+    };
+  }
+}
+
 export function checkProposalDocumentCoverage(repoRoot: string): {
   messages: string[];
   ok: boolean;
@@ -1839,6 +1865,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const rightArmGatePlanning = checkRightArmGatePlanning(deps.repoRoot);
   const lintWiring = checkLintWiring(deps.repoRoot);
   const proposalDocumentCoverage = checkProposalDocumentCoverage(deps.repoRoot);
+  const frontendDesignCoverage = checkFrontendDesignCoverage(deps.repoRoot);
   const handoverOutstanding = checkHandoverOutstandingAnchor(handoverDeps(deps));
   // advisory (非ブロック): green_command digest が evidence_path 実 hash と一致するか (fake substance 可視化、PLAN-L7-132)。
   const greenCommandDigest = checkGreenCommandDigests(deps.repoRoot);
@@ -1908,6 +1935,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       rightArmGatePlanning.ok &&
       lintWiring.ok &&
       proposalDocumentCoverage.ok &&
+      frontendDesignCoverage.ok &&
       handoverOutstanding.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
@@ -1978,6 +2006,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...rightArmGatePlanning.messages.map((m) => `doctor: ${m}`),
       ...lintWiring.messages.map((m) => `doctor: ${m}`),
       ...proposalDocumentCoverage.messages.map((m) => `doctor: ${m}`),
+      ...frontendDesignCoverage.messages.map((m) => `doctor: ${m}`),
       ...handoverOutstanding.messages.map((m) => `doctor: ${m}`),
       ...greenCommandDigest.messages.map((m) => `doctor: ${m}`),
     ],

@@ -93,4 +93,17 @@ describe("loadSubDocCatalogDriftInput real repo (U-SDCD-007)", () => {
     expect(input.requirement.L4 ?? []).toContain("ui-standard");
     expect(analyzeSubDocCatalogDrift(input).ok).toBe(true);
   });
+
+  it("U-SDCD-010: L3/L5/L6 FE 設計 doc slug が登録され schema↔要件 §G.1 で drift 0 (PLAN-L4-14 §4)", () => {
+    // §1c FE カバレッジ定義の slot 段階 = screen-functional(L3)/ui-detail(L5)/screen-spec(L6) を
+    // schema + 要件 §G.1 両方に登録 (3 点同期)。② プロダクト選択 (UI 有時)、body は段階順で後続。
+    expect(VALID_SUB_DOCS.L3 as readonly string[]).toContain("screen-functional");
+    expect(VALID_SUB_DOCS.L5 as readonly string[]).toContain("ui-detail");
+    expect(VALID_SUB_DOCS.L6 as readonly string[]).toContain("screen-spec");
+    const input = loadSubDocCatalogDriftInput(process.cwd());
+    expect(input.requirement.L3 ?? []).toContain("screen-functional");
+    expect(input.requirement.L5 ?? []).toContain("ui-detail");
+    expect(input.requirement.L6 ?? []).toContain("screen-spec");
+    expect(analyzeSubDocCatalogDrift(input).ok).toBe(true);
+  });
 });
