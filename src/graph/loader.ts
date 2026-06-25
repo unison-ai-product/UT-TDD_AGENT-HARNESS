@@ -15,7 +15,7 @@
  * fail-open 原則: 各ディレクトリ不在 / parse 失敗は空集合として扱う (既存 loader と同一方針)。
  * sanitization invariant: raw MCP response / browser trace / secret / credential を行へ複製しない。
  */
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { type Dirent, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { loadFrDocs, parseFrRows } from "../lint/fr-registry-audit";
@@ -53,6 +53,23 @@ function walkTs(dir: string, repoRoot: string, acc: string[]): void {
     if (st.isDirectory()) {
       walkTs(full, repoRoot, acc);
     } else if (e.endsWith(".ts")) {
+      acc.push(normalizePath(relative(repoRoot, full)));
+    }
+  }
+}
+
+function walkMd(dir: string, repoRoot: string, acc: string[]): void {
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkMd(full, repoRoot, acc);
+    } else if (entry.name.endsWith(".md")) {
       acc.push(normalizePath(relative(repoRoot, full)));
     }
   }
@@ -138,6 +155,16 @@ interface PlanFrontmatter {
 
 /** requirement node の provenance path (FR-L1 SSoT)。change-impact 突合の基準。 */
 const FR_REGISTRY_DOC = "docs/design/harness/L1-requirements/functional-requirements.md";
+
+const TOP_LEVEL_REFERENCE_DOCS = ["ai-agent-harness-directory-reference.md"] as const;
+
+function addDesignDocIfAbsent(designDocs: DesignDocInput[], path: string): void {
+  if (designDocs.some((d) => d.path === path)) return;
+  designDocs.push({
+    id: path,
+    path,
+  });
+}
 
 /**
  * FR-L1 レジストリ (SSoT) の登録 FR id 集合を fail-open で読む。
@@ -277,21 +304,36 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
   }
 
   // 8. testDesignDocs: docs/test-design/**/*.md 走査
+  const processDocs: string[] = [];
+  walkMd(join(repoRoot, "docs", "process"), repoRoot, processDocs);
+  for (const path of processDocs) {
+    addDesignDocIfAbsent(designDocs, path);
+  }
+
+  const agentDocs: string[] = [];
+  walkMd(join(repoRoot, ".claude", "agents"), repoRoot, agentDocs);
+  for (const path of agentDocs) {
+    addDesignDocIfAbsent(designDocs, path);
+  }
+
+  const reviewDocs: string[] = [];
+  walkMd(join(repoRoot, ".ut-tdd", "review"), repoRoot, reviewDocs);
+  for (const path of reviewDocs) {
+    addDesignDocIfAbsent(designDocs, path);
+  }
+
+  for (const path of TOP_LEVEL_REFERENCE_DOCS) {
+    addDesignDocIfAbsent(designDocs, path);
+  }
+
   const testDesignDocs: TestDesignDocInput[] = [];
   try {
     const tdDir = join(repoRoot, "docs", "test-design");
-    const collectMd = (dir: string): void => {
-      for (const e of readdirSync(dir, { withFileTypes: true })) {
-        const full = join(dir, e.name);
-        if (e.isDirectory()) {
-          collectMd(full);
-        } else if (e.name.endsWith(".md")) {
-          const rel = normalizePath(relative(repoRoot, full));
-          testDesignDocs.push({ id: rel, path: rel });
-        }
-      }
-    };
-    collectMd(tdDir);
+    const paths: string[] = [];
+    walkMd(tdDir, repoRoot, paths);
+    for (const path of paths) {
+      testDesignDocs.push({ id: path, path });
+    }
   } catch {
     // fail-open
   }

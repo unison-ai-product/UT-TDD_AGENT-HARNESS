@@ -1,6 +1,20 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import {
+  ADAPTER_AVAILABLE_MESSAGE,
+  ADAPTER_CONTEXT_HEADER,
+  ADAPTER_DRY_RUN_MESSAGE,
+  CLAUDE_EFFORT_ENV,
+  CLAUDE_EFFORT_FLAG,
+  CLAUDE_MODEL_FLAG,
+  CLAUDE_STDIN_ARGS,
+  CODEX_MODEL_FLAG,
+  CODEX_STDIN_ARGS,
+  OPTIONAL_SKILL_LABEL,
+  REQUIRED_SKILL_LABEL,
+  unavailableProviderMessage,
+} from "./adapter-policy";
 import type { ExecutionMode } from "./detect";
 
 export type AdapterProvider = "claude" | "codex";
@@ -262,13 +276,15 @@ export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): Ad
   // Codex uses `codex exec -`; Claude uses `claude --print --input-format text`.
   // In both cases, the user task remains in stdin instead of argv.
   const args = isCodex
-    ? ["exec", ...(intent.model ? ["-m", intent.model] : []), "-"]
+    ? [
+        CODEX_STDIN_ARGS[0],
+        ...(intent.model ? [CODEX_MODEL_FLAG, intent.model] : []),
+        CODEX_STDIN_ARGS[1],
+      ]
     : [
-        "--print",
-        "--input-format",
-        "text",
-        ...(intent.model ? ["--model", intent.model] : []),
-        ...(intent.effort ? ["--effort", intent.effort] : []),
+        ...CLAUDE_STDIN_ARGS,
+        ...(intent.model ? [CLAUDE_MODEL_FLAG, intent.model] : []),
+        ...(intent.effort ? [CLAUDE_EFFORT_FLAG, intent.effort] : []),
       ];
   return {
     provider: intent.provider,
@@ -277,7 +293,7 @@ export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): Ad
     args,
     stdin: formatAdapterPrompt(intent.task, intent.contextInjection),
     ...(intent.provider === "claude" && intent.effort
-      ? { env: { CLAUDE_CODE_EFFORT_LEVEL: intent.effort } }
+      ? { env: { [CLAUDE_EFFORT_ENV]: intent.effort } }
       : {}),
     dry_run: !intent.execute,
     plan_id: intent.planId,
@@ -285,8 +301,8 @@ export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): Ad
     effort: intent.effort,
     context_injection: intent.contextInjection,
     messages: available
-      ? [intent.execute ? "adapter execution allowed" : "adapter dry-run plan"]
-      : [`${intent.provider} is not available in ${mode} mode`],
+      ? [intent.execute ? ADAPTER_AVAILABLE_MESSAGE : ADAPTER_DRY_RUN_MESSAGE]
+      : [unavailableProviderMessage(intent.provider, mode)],
   };
 }
 
@@ -297,8 +313,8 @@ function formatAdapterPrompt(task: string, injection?: AdapterContextInjection):
   return [
     task,
     "",
-    "UT-TDD context injection:",
-    ...required.map((path) => `- required skill: ${path}`),
-    ...optional.map((path) => `- optional skill: ${path}`),
+    ADAPTER_CONTEXT_HEADER,
+    ...required.map((path) => `- ${REQUIRED_SKILL_LABEL}: ${path}`),
+    ...optional.map((path) => `- ${OPTIONAL_SKILL_LABEL}: ${path}`),
   ].join("\n");
 }

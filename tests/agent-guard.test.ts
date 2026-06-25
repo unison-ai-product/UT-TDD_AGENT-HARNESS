@@ -7,10 +7,12 @@ import {
   type ResolvedFamily,
   SUBAGENT_ALLOWLIST,
 } from "../src/runtime/agent-guard";
+import { AGENT_GUARD_BYPASS_HINT, AGENT_TOOL_NAME } from "../src/runtime/agent-guard-policy";
 
 const FAMILIES: Record<string, ResolvedFamily> = {
   "pmo-sonnet": "sonnet",
   "pmo-haiku": "haiku",
+  "refactor-scout": "haiku",
   "pdm-tech-innovation": "opus",
   "code-reviewer": "sonnet",
 };
@@ -46,6 +48,11 @@ describe("normalizeModelFamily", () => {
 });
 
 describe("evaluateAgentGuard", () => {
+  it("loads guard policy from the externalized policy module", () => {
+    expect(AGENT_TOOL_NAME).toBe("Agent");
+    expect(AGENT_GUARD_BYPASS_HINT).toContain("UT_TDD_ALLOW_RAW_AGENT");
+  });
+
   it("passes non-Agent tools untouched", () => {
     expect(evaluateAgentGuard({ tool_name: "Bash" }, ctx()).code).toBe(0);
     expect(evaluateAgentGuard({ tool_name: "Edit" }, ctx()).code).toBe(0);
@@ -89,6 +96,9 @@ describe("evaluateAgentGuard", () => {
     ).toBe(0);
     expect(
       evaluateAgentGuard(agent({ subagent_type: "pmo-haiku", model: "haiku" }), ctx()).code,
+    ).toBe(0);
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "refactor-scout", model: "haiku" }), ctx()).code,
     ).toBe(0);
   });
 

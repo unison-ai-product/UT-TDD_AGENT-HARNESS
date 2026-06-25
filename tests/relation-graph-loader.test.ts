@@ -16,7 +16,10 @@ import {
 function buildRepo(root: string): void {
   mkdirSync(join(root, "docs", "plans"), { recursive: true });
   mkdirSync(join(root, "docs", "design", "harness"), { recursive: true });
+  mkdirSync(join(root, "docs", "process", "modes"), { recursive: true });
   mkdirSync(join(root, "docs", "test-design", "harness"), { recursive: true });
+  mkdirSync(join(root, ".claude", "agents"), { recursive: true });
+  mkdirSync(join(root, ".ut-tdd", "review"), { recursive: true });
   mkdirSync(join(root, "src", "widget"), { recursive: true });
   mkdirSync(join(root, "tests"), { recursive: true });
 
@@ -65,6 +68,33 @@ function buildRepo(root: string): void {
     ["---", "layer: L6", "status: confirmed", "---", "", "test design body", ""].join("\n"),
     "utf8",
   );
+  writeFileSync(
+    join(root, "docs", "process", "modes", "refactor.md"),
+    [
+      "---",
+      "canonical: true",
+      "process_doc: mode",
+      "mode: Refactor",
+      "kind: refactor",
+      "layer: L7",
+      "status: confirmed",
+      "---",
+      "",
+      "process mode body",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(root, ".claude", "agents", "refactor-scout.md"),
+    ["---", "name: refactor-scout", "model: haiku", "---", "", "agent prompt body", ""].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(root, ".ut-tdd", "review", "cross-review-l7-157.md"),
+    ["# Cross review", "", "Read-only review task body.", ""].join("\n"),
+    "utf8",
+  );
 }
 
 describe("loadRelationGraphSourceSet", () => {
@@ -87,6 +117,35 @@ describe("loadRelationGraphSourceSet", () => {
       const design = sourceSet.designDocs?.find((d) => d.path.endsWith("widget-design.md"));
       expect(design?.pairs).toBe("docs/test-design/harness/widget-test-design.md");
 
+      const processMode = sourceSet.designDocs?.find(
+        (d) => d.path === "docs/process/modes/refactor.md",
+      );
+      expect(processMode).toMatchObject({
+        id: "docs/process/modes/refactor.md",
+        path: "docs/process/modes/refactor.md",
+      });
+      const agentDoc = sourceSet.designDocs?.find(
+        (d) => d.path === ".claude/agents/refactor-scout.md",
+      );
+      expect(agentDoc).toMatchObject({
+        id: ".claude/agents/refactor-scout.md",
+        path: ".claude/agents/refactor-scout.md",
+      });
+      const reviewDoc = sourceSet.designDocs?.find(
+        (d) => d.path === ".ut-tdd/review/cross-review-l7-157.md",
+      );
+      expect(reviewDoc).toMatchObject({
+        id: ".ut-tdd/review/cross-review-l7-157.md",
+        path: ".ut-tdd/review/cross-review-l7-157.md",
+      });
+      const topLevelReference = sourceSet.designDocs?.find(
+        (d) => d.path === "ai-agent-harness-directory-reference.md",
+      );
+      expect(topLevelReference).toMatchObject({
+        id: "ai-agent-harness-directory-reference.md",
+        path: "ai-agent-harness-directory-reference.md",
+      });
+
       // projection + impact: changing the source surfaces its owning plan + sibling test
       const projection = collectRelationGraphProjection(sourceSet);
       const impact = analyzeRelationImpact({
@@ -96,6 +155,46 @@ describe("loadRelationGraphSourceSet", () => {
       expect(impact.changedNodes.map((n) => n.id)).toContain("source:src/widget/core.ts");
       expect(impact.impacted.map((n) => n.id)).toContain("plan:PLAN-TEST-01-widget");
       expect(impact.impacted.map((n) => n.id)).toContain("test:tests/core.test.ts");
+
+      const processImpact = analyzeRelationImpact({
+        changedPaths: ["docs/process/modes/refactor.md"],
+        projection,
+      });
+      expect(processImpact.ok).toBe(true);
+      expect(processImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:docs/process/modes/refactor.md",
+      );
+      expect(processImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
+      const agentImpact = analyzeRelationImpact({
+        changedPaths: [".claude/agents/refactor-scout.md"],
+        projection,
+      });
+      expect(agentImpact.ok).toBe(true);
+      expect(agentImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:.claude/agents/refactor-scout.md",
+      );
+      expect(agentImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
+      const reviewImpact = analyzeRelationImpact({
+        changedPaths: [".ut-tdd/review/cross-review-l7-157.md"],
+        projection,
+      });
+      expect(reviewImpact.ok).toBe(true);
+      expect(reviewImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:.ut-tdd/review/cross-review-l7-157.md",
+      );
+      expect(reviewImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
+      const referenceImpact = analyzeRelationImpact({
+        changedPaths: ["ai-agent-harness-directory-reference.md"],
+        projection,
+      });
+      expect(referenceImpact.ok).toBe(true);
+      expect(referenceImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:ai-agent-harness-directory-reference.md",
+      );
+      expect(referenceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
       // export: mermaid is always emittable and contains the changed source node
       const diagram = exportRelationDiagram({ snapshot: projection, format: "mermaid" });
@@ -148,5 +247,32 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     expect(staleEdges.map((f) => f.message)).toEqual([]);
     const requirementNodes = projection.nodes.filter((n) => n.kind === "requirement");
     expect(requirementNodes.length).toBeGreaterThan(0);
+    const agentImpact = analyzeRelationImpact({
+      changedPaths: [".claude/agents/refactor-scout.md"],
+      projection,
+    });
+    expect(agentImpact.ok).toBe(true);
+    expect(agentImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:.claude/agents/refactor-scout.md",
+    );
+    expect(agentImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const reviewImpact = analyzeRelationImpact({
+      changedPaths: [".ut-tdd/review/cross-review-l7-157.md"],
+      projection,
+    });
+    expect(reviewImpact.ok).toBe(true);
+    expect(reviewImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:.ut-tdd/review/cross-review-l7-157.md",
+    );
+    expect(reviewImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const referenceImpact = analyzeRelationImpact({
+      changedPaths: ["ai-agent-harness-directory-reference.md"],
+      projection,
+    });
+    expect(referenceImpact.ok).toBe(true);
+    expect(referenceImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:ai-agent-harness-directory-reference.md",
+    );
+    expect(referenceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
   });
 });

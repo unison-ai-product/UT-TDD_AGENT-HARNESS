@@ -4,11 +4,16 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   HARNESS_DB_TABLE_BY_NAME,
-  HARNESS_DB_TABLES,
   primaryKeyOf,
   SCHEMA_VERSION,
   schemaDdl,
 } from "../src/schema/harness-db";
+import { HARNESS_DB_INDEXES, HARNESS_DB_TABLES } from "../src/schema/harness-db-catalog";
+import { HARNESS_DB_INDEXES as SECTION_HARNESS_DB_INDEXES } from "../src/schema/harness-db-indexes";
+import { col, pk } from "../src/schema/harness-db-table-builders";
+import { HARNESS_DB_CORE_TABLES } from "../src/schema/harness-db-tables-core";
+import { HARNESS_DB_EVALUATION_TABLES } from "../src/schema/harness-db-tables-evaluation";
+import { HARNESS_DB_GRAPH_EXPORT_TABLES } from "../src/schema/harness-db-tables-graph";
 import { assertWithinUtTdd, openHarnessDb, upsertRow } from "../src/state-db/index";
 import { ensureHarnessSchema, harnessDbStatus } from "../src/state-db/maintenance";
 import { migrate, missingTables, rowCounts, tableNames } from "../src/state-db/migration";
@@ -52,6 +57,18 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
     expect(result.fromVersion).toBe(0);
     expect(result.toVersion).toBe(SCHEMA_VERSION);
     expect(db.userVersion()).toBe(SCHEMA_VERSION);
+    expect(pk("fixture_id")).toMatchObject({ name: "fixture_id", primaryKey: true });
+    expect(col("fixture_count", "INTEGER")).toEqual({ name: "fixture_count", type: "INTEGER" });
+    expect(HARNESS_DB_TABLES.map((t) => t.name)).toEqual(
+      [
+        ...HARNESS_DB_CORE_TABLES,
+        ...HARNESS_DB_GRAPH_EXPORT_TABLES,
+        ...HARNESS_DB_EVALUATION_TABLES,
+      ].map((t) => t.name),
+    );
+    expect(HARNESS_DB_INDEXES.map((i) => i.name)).toEqual(
+      SECTION_HARNESS_DB_INDEXES.map((i) => i.name),
+    );
 
     const present = tableNames(db);
     for (const table of HARNESS_DB_TABLES) {

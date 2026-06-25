@@ -14,8 +14,8 @@ import {
   runSetup,
   type SetupDeps,
   type SetupState,
-  type TemplateSet,
 } from "../src/setup/index";
+import type { TemplateSet } from "../src/setup/templates";
 
 /** in-memory file store + gh 呼び出し記録の mock deps (now 固定で決定論)。 */
 function mockDeps(

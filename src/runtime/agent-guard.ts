@@ -10,24 +10,11 @@
  * This module is pure. The hook shim owns stdin and filesystem access.
  */
 
+import { AGENT_GUARD_BYPASS_HINT, AGENT_TOOL_NAME, SUBAGENT_ALLOWLIST } from "./agent-guard-policy";
+
 export type ModelFamily = "haiku" | "sonnet" | "opus";
 
-/** Allowed subagent_type values for Claude Code Agent calls. */
-export const SUBAGENT_ALLOWLIST: ReadonlySet<string> = new Set([
-  "pmo-sonnet",
-  "pmo-haiku",
-  "pmo-project-explorer",
-  "pmo-project-scout",
-  "pmo-tech-docs",
-  "pmo-tech-fork",
-  "pmo-tech-news",
-  "pdm-tech-innovation",
-  "pdm-marketing-innovation",
-  "pdm-innovation-manager",
-  "code-reviewer",
-  "security-audit",
-  "qa-test",
-]);
+export { SUBAGENT_ALLOWLIST } from "./agent-guard-policy";
 
 export interface AgentGuardInput {
   tool_name?: string;
@@ -60,13 +47,10 @@ export function normalizeModelFamily(raw: string | null | undefined): ModelFamil
   return hits.length === 1 ? hits[0] : null;
 }
 
-const BYPASS_HINT =
-  "Set UT_TDD_ALLOW_RAW_AGENT=1 only with an explicit reason recorded in the final report.";
-
 const ALLOWLIST_TEXT = [...SUBAGENT_ALLOWLIST].join(" ");
 
 export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContext): GuardDecision {
-  if (input.tool_name !== "Agent") return { code: 0 };
+  if (input.tool_name !== AGENT_TOOL_NAME) return { code: 0 };
 
   const ti = input.tool_input ?? {};
   const subagentType = (ti.subagent_type ?? "").trim();
@@ -83,7 +67,7 @@ export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContex
 
   if (!subagentType) {
     return blockOrBypass(
-      `[ut-tdd-guard] BLOCK: Agent call is missing subagent_type.\nAllowed: ${ALLOWLIST_TEXT}\n${BYPASS_HINT}`,
+      `[ut-tdd-guard] BLOCK: Agent call is missing subagent_type.\nAllowed: ${ALLOWLIST_TEXT}\n${AGENT_GUARD_BYPASS_HINT}`,
     );
   }
 
@@ -91,7 +75,7 @@ export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContex
     return blockOrBypass(
       `[ut-tdd-guard] BLOCK: subagent_type=${subagentType} is not allowlisted.\n` +
         `Allowed: ${ALLOWLIST_TEXT}\n` +
-        `Use an approved subagent or route provider work through ut-tdd codex --role ...\n${BYPASS_HINT}`,
+        `Use an approved subagent or route provider work through ut-tdd codex --role ...\n${AGENT_GUARD_BYPASS_HINT}`,
     );
   }
 
@@ -112,7 +96,7 @@ export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContex
   if (!model) {
     return blockOrBypass(
       `[ut-tdd-guard] BLOCK: subagent_type=${subagentType} call is missing model.\n` +
-        `Use model: "${family}".\n${BYPASS_HINT}`,
+        `Use model: "${family}".\n${AGENT_GUARD_BYPASS_HINT}`,
     );
   }
 
@@ -127,7 +111,7 @@ export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContex
       `[ut-tdd-guard] BLOCK: model override detected.\n` +
         `  subagent_type: ${subagentType}\n` +
         `  allowed family: ${family}\n` +
-        `  requested model: ${model} (family: ${requested})\n${BYPASS_HINT}`,
+        `  requested model: ${model} (family: ${requested})\n${AGENT_GUARD_BYPASS_HINT}`,
     );
   }
 

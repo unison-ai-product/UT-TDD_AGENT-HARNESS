@@ -27,7 +27,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-24T17:30:00+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:53ada67ecdf0a18c88fb960170fea4176e4f847c3cf8f58a924b47dc5d35de85"
+        output_digest: "sha256:5112791a83d264b22d09eedb396f07cb8cb4eff15cf0e09265ebff59ce957b08"
 agent_slots:
   - role: tl
     slot_label: "TL — relation-graph loader requirement node 供給実装"

@@ -1,28 +1,26 @@
 import { createHash } from "node:crypto";
-import { type RecommendedCommandV1, recommendedCommandV1Schema } from "../schema/index";
 import type { HarnessDb } from "../state-db/index";
 import { upsertRow } from "../state-db/index";
+import { DRIVE_TDD_FITS, type DriveTddFit } from "./contracts-policy";
+import type {
+  CommandEvidence,
+  ContractResult,
+  Finding,
+  ProjectionRef,
+  Severity,
+  TestRunEvidenceInput,
+} from "./contracts-types";
 
-export type Severity = "info" | "warn" | "error";
-
-export interface Finding {
-  code: string;
-  severity: Severity;
-  evidence_path: string;
-  message: string;
-}
-
-export interface ContractResult {
-  ok: boolean;
-  findings: Finding[];
-  evidence_paths: string[];
-}
-
-export interface ProjectionRef {
-  table: string;
-  id: string;
-  evidence_path: string;
-}
+export type { DriveTddFit, TddCompatibility } from "./contracts-policy";
+export type {
+  CommandEvidence,
+  ContractResult,
+  Finding,
+  ProjectionRef,
+  Severity,
+  TestCaseEvidence,
+  TestRunEvidenceInput,
+} from "./contracts-types";
 
 function finding(
   code: string,
@@ -59,28 +57,6 @@ function nonEmpty<T>(values: T[] | undefined): T[] {
 
 function containsSecret(value: string): boolean {
   return /(sk-[A-Za-z0-9_-]+|ghp_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)/.test(value);
-}
-
-export interface TestCaseEvidence {
-  oracle_id?: string;
-  name: string;
-  status: "passed" | "failed" | "skipped";
-  duration_ms?: number;
-  message?: string;
-  artifact_path?: string;
-}
-
-export interface TestRunEvidenceInput {
-  plan_id?: string;
-  command: string;
-  runner: string;
-  scope: string;
-  started_at: string;
-  completed_at: string;
-  exit_code: number;
-  evidence_path: string;
-  output_digest?: string;
-  cases?: TestCaseEvidence[];
 }
 
 export function recordTestRunEvidence(
@@ -205,13 +181,6 @@ export function recordTestRunEvidence(
   };
 }
 
-export interface CommandEvidence {
-  kind: string;
-  completed_at: string;
-  exit_code: number;
-  evidence_path: string;
-}
-
 export function evaluateGreenDefinition(input: {
   profile: string;
   required_commands: string[];
@@ -297,453 +266,20 @@ export function computeUtHistorySignals(input: {
   };
 }
 
-export function routeSignalToMode(input: {
-  signal: string;
-  current_plan?: string;
-  drive?: string;
-}): ContractResult & { candidates: string[] } {
-  const normalized = input.signal.trim().toLowerCase();
-  const candidates = ROUTE_SIGNAL_MAP.map((entry, index) => ({
-    entry,
-    index,
-    matchLength: routeMatchLength(entry, normalized),
-  }))
-    .filter((candidate) => candidate.matchLength > 0)
-    .sort((a, b) => b.matchLength - a.matchLength || a.index - b.index)
-    .map((candidate) => candidate.entry.mode);
-  const findings =
-    candidates.length === 0
-      ? [finding("no-route", "unknown signal has no route", { severity: "warn" })]
-      : [];
-  return { ...result(findings), candidates };
-}
-
-export interface RouteEvalResult extends ContractResult {
-  signal: string;
-  mode: string | null;
-  suggest_command: string;
-  recommended_command: RecommendedCommandV1 | null;
-  approval: RouteApprovalResult;
-  escalation_boundaries: RouteEscalationBoundary[];
-  exit_code: 0 | 1 | 2;
-}
-
-export interface RouteApprovalPolicy {
-  rules: {
-    mode: string;
-    condition?: string;
-    required_approvers: string[];
-  }[];
-  approvals?: {
-    mode: string;
-    condition?: string;
-    approver: string;
-    approved_at: string;
-    subject?: string;
-  }[];
-}
-
-export interface RouteApprovalResult {
-  required: boolean;
-  status: "not_required" | "approved" | "policy_missing" | "approval_missing";
-  required_approvers: string[];
-  approved_by: string[];
-  missing_approvers: string[];
-}
-
-export interface RouteSignalEntry {
-  tokens: string[];
-  mode: string;
-  command: string;
-  preflight: boolean;
-  requiresApproval: boolean;
-}
-
-export interface RouteConfigViolation {
-  code: "legacy-db-dependency" | "personal-absolute-path";
-  path: string;
-  evidence: string;
-}
-
-export interface RouteEscalationBoundary {
-  term: string;
-  evidence: string;
-}
-
-const ROUTE_CONFIG_FORBIDDEN_PATTERNS: {
-  code: RouteConfigViolation["code"];
-  pattern: RegExp;
-}[] = [
-  { code: "legacy-db-dependency", pattern: /\blegacy\s*(?:DB|database)\b/i },
-  { code: "legacy-db-dependency", pattern: /\blegacy[_-]?db\b/i },
-  {
-    code: "personal-absolute-path",
-    pattern: /(?:[A-Za-z]:\\Users\\[^\\\s"']+|\/Users\/[^/\s"']+|~\/)/,
-  },
-];
-
-const ROUTE_ESCALATION_PATTERNS: { term: string; pattern: RegExp }[] = [
-  "authentication",
-  "authorization",
-  "payment",
-  "billing",
-  "credential",
-  "secret",
-  "pii",
-  "license",
-  "production",
-  "destructive",
-  "migration",
-  "schema",
-  "external api",
-].map((term) => ({
-  term,
-  pattern: new RegExp(`\\b${term}s?\\b`, "i"),
-}));
-
-export function validateRouteConfigText(input: {
-  path: string;
-  text: string;
-}): RouteConfigViolation[] {
-  const violations: RouteConfigViolation[] = [];
-  for (const { code, pattern } of ROUTE_CONFIG_FORBIDDEN_PATTERNS) {
-    const match = input.text.match(pattern);
-    if (match) {
-      violations.push({ code, path: input.path, evidence: match[0] ?? "" });
-    }
-  }
-  return violations;
-}
-
-export function detectRouteEscalationBoundaries(text: string): RouteEscalationBoundary[] {
-  return ROUTE_ESCALATION_PATTERNS.flatMap(({ term, pattern }) => {
-    const match = text.match(pattern);
-    return match ? [{ term, evidence: match[0] ?? term }] : [];
-  });
-}
-
-function routeCondition(input: { mode: string; signal: string; drift_type?: string }): string {
-  const signal = input.signal.toLowerCase();
-  if (
-    input.mode === "retrofit" &&
-    (input.drift_type === "config_drift" || signal.includes("config_drift"))
-  ) {
-    return "config_drift";
-  }
-  if (input.mode === "incident") return "env=prod";
-  return input.mode;
-}
-
-function resolveApproval(params: {
-  route: { mode: string; requiresApproval: boolean };
-  input: { signal: string; drift_type?: string };
-  policy?: RouteApprovalPolicy;
-  escalationBoundaries?: RouteEscalationBoundary[];
-}): RouteApprovalResult {
-  const { input, policy, route } = params;
-  const escalationBoundaries = params.escalationBoundaries ?? [];
-  const condition =
-    escalationBoundaries.length > 0
-      ? "escalation"
-      : routeCondition({
-          mode: route.mode,
-          signal: input.signal,
-          drift_type: input.drift_type,
-        });
-  const required =
-    route.requiresApproval ||
-    escalationBoundaries.length > 0 ||
-    (route.mode === "retrofit" && condition === "config_drift");
-  if (!required) {
-    return {
-      required: false,
-      status: "not_required",
-      required_approvers: [],
-      approved_by: [],
-      missing_approvers: [],
-    };
-  }
-  if (!policy) {
-    return {
-      required: true,
-      status: "policy_missing",
-      required_approvers: [],
-      approved_by: [],
-      missing_approvers: [],
-    };
-  }
-  const rule = policy.rules.find(
-    (r) => (r.mode === route.mode || r.mode === "*") && (!r.condition || r.condition === condition),
-  );
-  if (!rule) {
-    return {
-      required: true,
-      status: "policy_missing",
-      required_approvers: [],
-      approved_by: [],
-      missing_approvers: [],
-    };
-  }
-  const approved = new Set(
-    (policy.approvals ?? [])
-      .filter(
-        (a) =>
-          (a.mode === route.mode || a.mode === "*") &&
-          (!a.condition || a.condition === rule.condition),
-      )
-      .map((a) => a.approver),
-  );
-  const missing = rule.required_approvers.filter((approver) => !approved.has(approver));
-  return {
-    required: true,
-    status: missing.length === 0 ? "approved" : "approval_missing",
-    required_approvers: rule.required_approvers,
-    approved_by: rule.required_approvers.filter((approver) => approved.has(approver)),
-    missing_approvers: missing,
-  };
-}
-
-const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
-  {
-    tokens: ["failure", "doctor"],
-    mode: "reverse",
-    command: "ut-tdd task classify",
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["drift", "reverse", "gap", "design_gap"],
-    mode: "reverse",
-    command: "ut-tdd task classify",
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["agent_runaway", "runaway", "context_exhaustion", "forced_stop", "regression_dev"],
-    mode: "recovery",
-    command: "ut-tdd doctor",
-    preflight: true,
-    requiresApproval: true,
-  },
-  {
-    tokens: ["dependency_outdated", "upgrade", "config_drift"],
-    mode: "retrofit",
-    command: "ut-tdd doctor",
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["debt_degradation", "code_smell", "structural", "debt"],
-    mode: "refactor",
-    command: "ut-tdd task classify",
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: [
-      "requirement_undefined",
-      "feasibility_unknown",
-      "success_condition_unclear",
-      "design_uncertain",
-    ],
-    mode: "discovery",
-    command: "ut-tdd task classify",
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["poc", "discovery"],
-    mode: "discovery",
-    command: "ut-tdd task classify",
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    // 画面後付け駆動の入口 (backend 主軸 system に UI を足す)。出口は Discovery 合成 → Forward L3-L6。
-    tokens: [
-      "screen_addition_to_backend",
-      "design_bottomup",
-      "backend_derived_screen",
-      "add_ui_to_backend",
-    ],
-    mode: "design-bottomup",
-    command: "ut-tdd task classify",
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["user_feedback_iteration", "requirement_continuous_refinement", "scrum"],
-    mode: "scrum",
-    command: "ut-tdd task classify",
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["production_incident", "hotfix_required", "regression_prod", "incident", "stop"],
-    mode: "incident",
-    command: "ut-tdd doctor",
-    preflight: true,
-    requiresApproval: true,
-  },
-  {
-    tokens: ["feature_addition", "scope_extension", "new_requirement", "po_change", "add-feature"],
-    mode: "add-feature",
-    command: "ut-tdd task classify",
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["tech_decision_required", "option_comparison_needed", "adr_required", "research"],
-    mode: "research",
-    command: "ut-tdd task classify",
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["interrupt", "constraint"],
-    mode: "forward",
-    command: "ut-tdd task classify",
-    preflight: true,
-    requiresApproval: false,
-  },
-];
-
-function routeMatchLength(entry: RouteSignalEntry, normalizedSignal: string): number {
-  return Math.max(
-    0,
-    ...entry.tokens.map((token) =>
-      normalizedSignal.includes(token.toLowerCase()) ? token.length : 0,
-    ),
-  );
-}
-
-export function evaluateRouteCommand(input: {
-  signal: string;
-  env?: string;
-  drift_type?: string;
-  approval_policy?: RouteApprovalPolicy;
-  route_map?: RouteSignalEntry[];
-  route_config_violations?: RouteConfigViolation[];
-}): RouteEvalResult {
-  if (input.route_config_violations && input.route_config_violations.length > 0) {
-    return {
-      ...result(
-        input.route_config_violations.map((violation) =>
-          finding(
-            violation.code,
-            "route configuration must not depend on legacy DB or personal absolute paths",
-            { evidencePath: violation.path },
-          ),
-        ),
-        input.route_config_violations.map((violation) => violation.path),
-      ),
-      signal: input.signal,
-      mode: null,
-      suggest_command: "fix route-map configuration before PLAN creation",
-      recommended_command: null,
-      approval: {
-        required: false,
-        status: "not_required",
-        required_approvers: [],
-        approved_by: [],
-        missing_approvers: [],
-      },
-      escalation_boundaries: [],
-      exit_code: 1,
-    };
-  }
-  const normalized = input.signal.trim().toLowerCase();
-  const escalationBoundaries = detectRouteEscalationBoundaries(input.signal);
-  const routeMap = [...(input.route_map ?? []), ...ROUTE_SIGNAL_MAP];
-  const route = routeMap
-    .map((entry, index) => ({ entry, index, matchLength: routeMatchLength(entry, normalized) }))
-    .filter((candidate) => candidate.matchLength > 0)
-    .sort((a, b) => b.matchLength - a.matchLength || a.index - b.index)[0]?.entry;
-  if (!route) {
-    return {
-      ...result([
-        finding("no-route", "unknown signal has no route; escalate upstream before PLAN creation", {
-          severity: "warn",
-        }),
-      ]),
-      signal: input.signal,
-      mode: null,
-      suggest_command: "upstream delegation required: define route-map entry before PLAN creation",
-      recommended_command: null,
-      approval: {
-        required: false,
-        status: "not_required",
-        required_approvers: [],
-        approved_by: [],
-        missing_approvers: [],
-      },
-      escalation_boundaries: escalationBoundaries,
-      exit_code: 2,
-    };
-  }
-  const approval = resolveApproval({
-    route,
-    input,
-    policy: input.approval_policy,
-    escalationBoundaries,
-  });
-  const recommendedCandidate = {
-    schema_version: "v1",
-    command: route.command,
-    args: {
-      signal: input.signal,
-      mode: route.mode,
-      ...(input.env ? { env: input.env } : {}),
-      ...(input.drift_type ? { drift_type: input.drift_type } : {}),
-    },
-    safety: {
-      auto_apply: false,
-      requires_human_approval: approval.required,
-      requires_preflight: route.preflight,
-    },
-  };
-  const recommendedParsed = recommendedCommandV1Schema.safeParse(recommendedCandidate);
-  if (!recommendedParsed.success) {
-    return {
-      ...result(
-        [
-          finding(
-            "legacy-runtime-command",
-            "recommended command must start with ut-tdd; legacy runtime command names are forbidden",
-          ),
-        ],
-        ["src/workflow/contracts.ts"],
-      ),
-      signal: input.signal,
-      mode: route.mode,
-      suggest_command: route.command,
-      recommended_command: null,
-      approval,
-      escalation_boundaries: escalationBoundaries,
-      exit_code: 1,
-    };
-  }
-  const approvalFinding =
-    approval.status === "policy_missing"
-      ? finding("approval-policy-missing", "human approval policy is missing or unresolved")
-      : approval.status === "approval_missing"
-        ? finding("approval-missing", "required human approval is missing")
-        : null;
-  return {
-    ...result(approvalFinding ? [approvalFinding] : [], ["src/workflow/contracts.ts"]),
-    signal: input.signal,
-    mode: route.mode,
-    suggest_command:
-      route.command === "ut-tdd task classify"
-        ? `${route.command} --text "${input.signal}"`
-        : route.command,
-    recommended_command: recommendedParsed.data,
-    approval,
-    escalation_boundaries: escalationBoundaries,
-    exit_code: approvalFinding ? 1 : 0,
-  };
-}
-
+export type {
+  RouteApprovalPolicy,
+  RouteApprovalResult,
+  RouteConfigViolation,
+  RouteEscalationBoundary,
+  RouteEvalResult,
+  RouteSignalEntry,
+} from "./routing-contracts";
+export {
+  detectRouteEscalationBoundaries,
+  evaluateRouteCommand,
+  routeSignalToMode,
+  validateRouteConfigText,
+} from "./routing-contracts";
 export function recordCrossCuttingEvent(input: {
   type: string;
   subject_id: string;
@@ -770,34 +306,20 @@ export function recordCrossCuttingEvent(input: {
   };
 }
 
-export function suggestSkillInjection(input: {
-  task: string;
-  layer: string;
-  drive: string;
-  catalog: { skill_id: string; triggers?: string[]; layers?: string[]; drives?: string[] }[];
-}): ContractResult & { candidates: { skill_id: string; score: number; reason: string }[] } {
-  const task = input.task.toLowerCase();
-  const candidates = input.catalog
-    .map((skill) => {
-      let score = 0;
-      if (skill.layers?.includes(input.layer)) score += 0.35;
-      if (skill.drives?.includes(input.drive)) score += 0.35;
-      if (skill.triggers?.some((trigger) => task.includes(trigger.toLowerCase()))) score += 0.3;
-      return {
-        skill_id: skill.skill_id,
-        score: Number(score.toFixed(2)),
-        reason: `layer=${input.layer}; drive=${input.drive}`,
-      };
-    })
-    .filter((c) => c.score > 0)
-    .sort((a, b) => b.score - a.score || a.skill_id.localeCompare(b.skill_id));
-  const findings =
-    input.catalog.length === 0
-      ? [finding("missing-catalog", "skill catalog is empty", { severity: "warn" })]
-      : [];
-  return { ...result(findings), candidates };
-}
-
+export {
+  buildCommandCatalog,
+  catalogExistingAssets,
+  catalogSkills,
+  classifyDrive,
+  prioritizeCapabilityGaps,
+  recommendModelEffort,
+  recommendSkills,
+  renderFoundationReadiness,
+  resolveDriveStatePartition,
+  scoreTaskComplexity,
+  suggestSkillInjection,
+  validateFolderRules,
+} from "./contracts-extras";
 export function enforceForwardOrder(input: {
   layer: string;
   gate: string;
@@ -985,135 +507,6 @@ export function validateFrontendDesignWorkflow(input: Record<string, unknown>) {
   );
 }
 
-export type TddCompatibility = "strong" | "partial" | "weak";
-
-export interface DriveTddFit {
-  mode: string;
-  compatibility: TddCompatibility;
-  red_triggers: string[];
-  yellow_state: string;
-  green_requirements: string[];
-}
-
-const DRIVE_TDD_FITS: DriveTddFit[] = [
-  {
-    mode: "design",
-    compatibility: "strong",
-    red_triggers: ["descent_obligation_missing", "pair_artifact_missing", "test_design_missing"],
-    yellow_state: "design PLAN exists but pair/test-design/trace is incomplete",
-    green_requirements: ["design_doc", "test_design", "trace_edge", "review_after_green"],
-  },
-  {
-    mode: "add-feature",
-    compatibility: "strong",
-    red_triggers: ["feature_addition", "scope_extension", "acceptance_gap"],
-    yellow_state: "add-design/add-impl pair exists but G7/Reverse back-fill is still open",
-    green_requirements: [
-      "add_design",
-      "add_impl",
-      "regression_green",
-      "reverse_backfill_if_needed",
-    ],
-  },
-  {
-    mode: "refactor",
-    compatibility: "strong",
-    red_triggers: ["code_smell", "structural", "debt_degradation", "artifact_progress_red"],
-    yellow_state: "refactor target registered and regression fence is being established",
-    green_requirements: ["behavior_unchanged", "linked_test_ids", "relation_impact_closed"],
-  },
-  {
-    mode: "reverse",
-    compatibility: "strong",
-    red_triggers: ["drift", "schema_contract_gap", "as_is_test_design_missing"],
-    yellow_state: "R0-R3 evidence exists but R4 routing/back-prop is incomplete",
-    green_requirements: [
-      "as_is_design",
-      "intent_confirmed",
-      "forward_routing",
-      "backprop_artifacts",
-    ],
-  },
-  {
-    mode: "retrofit",
-    compatibility: "strong",
-    red_triggers: ["dependency_outdated", "upgrade", "config_drift", "dependency_edges_stale"],
-    yellow_state: "migration matrix exists but rollback/regression evidence is incomplete",
-    green_requirements: ["migration", "config", "rollback", "regression_green"],
-  },
-  {
-    mode: "recovery",
-    compatibility: "strong",
-    red_triggers: ["regression_dev", "forced_stop", "agent_runaway", "quality_signal_fail"],
-    yellow_state: "root cause and reopen point are known but recurrence guard is incomplete",
-    green_requirements: ["root_cause", "recovery_test", "guard_or_rule", "handover"],
-  },
-  {
-    mode: "incident",
-    compatibility: "strong",
-    red_triggers: ["production_incident", "hotfix_required", "regression_prod"],
-    yellow_state: "hotfix is contained but postmortem/recovery back-fill is incomplete",
-    green_requirements: ["prod_regression_green", "hotfix_verified", "postmortem", "recovery_plan"],
-  },
-  {
-    mode: "screen-design",
-    compatibility: "strong",
-    red_triggers: ["screen_requirement_gap", "wireframe_missing", "screen_impl_pair_gap"],
-    yellow_state: "L2 screen artifacts exist but flow/wireframe/component trace is incomplete",
-    green_requirements: ["screen_list", "screen_flow", "wireframe", "ui_elements", "pair_trace"],
-  },
-  {
-    mode: "frontend-design",
-    compatibility: "strong",
-    red_triggers: ["a11y_regression", "visual_regression", "token_drift", "ux_feedback"],
-    yellow_state: "L10 UX artifacts exist but a11y/VRT/token evidence is incomplete",
-    green_requirements: ["visual", "tokens", "a11y", "vrt", "ux_review"],
-  },
-  {
-    // 画面後付け駆動: backend 主軸 system に UI を足す。① FE要件 elicitation は新規
-    // (src/workflow/design-elicitation.ts)、② mock 具体化 / ③ Forward 降下は Discovery 合成で再利用。
-    mode: "design-bottomup",
-    compatibility: "strong",
-    red_triggers: [
-      "screen_requirement_gap",
-      "ui_detail_gap",
-      "screen_spec_gap",
-      "backend_derived_screen",
-    ],
-    yellow_state:
-      "backend から FE 要件を derive したが L3/L5/L6 設計 body が不在 (mock 具体化 / Forward 降下が未完)",
-    green_requirements: [
-      "fe_requirement_elicited",
-      "screen_mock",
-      "screen_functional",
-      "ui_detail",
-      "screen_spec",
-      "discovery_s4",
-    ],
-  },
-  {
-    mode: "discovery",
-    compatibility: "partial",
-    red_triggers: ["requirement_undefined", "feasibility_unknown", "success_condition_unclear"],
-    yellow_state: "hypothesis and PoC are running",
-    green_requirements: ["hypothesis_verified", "decision_outcome", "reverse_or_forward_route"],
-  },
-  {
-    mode: "scrum",
-    compatibility: "partial",
-    red_triggers: ["user_feedback_iteration", "requirement_continuous_refinement"],
-    yellow_state: "increment exists but S4 decision/fullback is incomplete",
-    green_requirements: ["increment_verified", "s4_decision", "reverse_fullback"],
-  },
-  {
-    mode: "research",
-    compatibility: "weak",
-    red_triggers: ["tech_decision_required", "option_comparison_needed", "adr_required"],
-    yellow_state: "options are being compared",
-    green_requirements: ["research_memo", "sources", "adr_candidate"],
-  },
-];
-
 export function classifyDriveTddFits(input: { modes?: string[] } = {}): ContractResult & {
   fits: DriveTddFit[];
 } {
@@ -1129,193 +522,4 @@ export function classifyDriveTddFits(input: { modes?: string[] } = {}): Contract
         ]
       : [];
   return { ...result(findings), fits };
-}
-
-export function validateFolderRules(input: {
-  path: string;
-  artifact_kind: string;
-  registry: Record<string, string[]>;
-}): ContractResult & { violations: string[] } {
-  const allowed = input.registry[input.artifact_kind] ?? [];
-  const valid = allowed.some((prefix) => input.path.replaceAll("\\", "/").startsWith(prefix));
-  const violations = valid ? [] : [`${input.artifact_kind}:${input.path}`];
-  return { ...result(valid ? [] : [finding("folder-rule-violation", violations[0])]), violations };
-}
-
-export function catalogExistingAssets(input: {
-  roots: { path: string; type: string; content?: string }[];
-}): ContractResult & { assets: { asset_id: string; path: string; type: string }[] } {
-  const assets = input.roots.map((root) => ({
-    asset_id: stableId(root.type, root.path),
-    path: root.path,
-    type: root.type,
-  }));
-  const findings =
-    assets.length === 0 ? [finding("empty-assets", "no assets found", { severity: "warn" })] : [];
-  return { ...result(findings), assets };
-}
-
-export function prioritizeCapabilityGaps(input: {
-  assets: { asset_id: string }[];
-  workflow_impact: Record<string, number>;
-  missing_routes: string[];
-}): { priorities: { gap: string; score: number }[] } {
-  const assetCount = Math.max(1, input.assets.length);
-  return {
-    priorities: input.missing_routes
-      .map((gap) => ({
-        gap,
-        score: Number(((input.workflow_impact[gap] ?? 1) / assetCount).toFixed(2)),
-      }))
-      .sort((a, b) => b.score - a.score || a.gap.localeCompare(b.gap)),
-  };
-}
-
-export function renderFoundationReadiness(input: {
-  categories: { name: string; implemented?: boolean; designed?: boolean }[];
-}): ContractResult & { implemented: string[]; designed: string[]; missing: string[] } {
-  const implemented = input.categories.filter((c) => c.implemented).map((c) => c.name);
-  const designed = input.categories.filter((c) => !c.implemented && c.designed).map((c) => c.name);
-  const missing = input.categories.filter((c) => !c.implemented && !c.designed).map((c) => c.name);
-  return {
-    ...result(
-      missing.map((name) =>
-        finding("foundation-missing", `${name} is missing`, { severity: "warn" }),
-      ),
-    ),
-    implemented,
-    designed,
-    missing,
-  };
-}
-
-export function recommendModelEffort(input: {
-  task: string;
-  drive: string;
-  layer: string;
-  size: "S" | "M" | "L";
-  uncertainty: number;
-}): { model_family: string; reasoning_effort: "low" | "medium" | "high"; evidence_path: string } {
-  const high = input.size === "L" || input.uncertainty >= 0.7;
-  const medium = input.size === "M" || input.uncertainty >= 0.35;
-  return {
-    model_family: high ? "frontier" : medium ? "codex" : "fast",
-    reasoning_effort: high ? "high" : medium ? "medium" : "low",
-    evidence_path: `${input.layer}:${input.drive}:${stableId("task", input.task)}`,
-  };
-}
-
-export function scoreTaskComplexity(input: {
-  size: number;
-  dependencies: number;
-  uncertainty?: number;
-  affected_artifacts: number;
-}): { score: number; class: "S" | "M" | "L"; findings: Finding[] } {
-  const findings =
-    input.uncertainty === undefined
-      ? [finding("unknown-uncertainty", "uncertainty is unknown", { severity: "warn" })]
-      : [];
-  const score =
-    input.size +
-    input.dependencies * 2 +
-    input.affected_artifacts +
-    (input.uncertainty ?? 0.5) * 10;
-  return {
-    score: Number(score.toFixed(2)),
-    class: score >= 18 ? "L" : score >= 9 ? "M" : "S",
-    findings,
-  };
-}
-
-export function resolveDriveStatePartition(input: {
-  drive: string;
-  mode: string;
-  kind: string;
-  layer: string;
-  plan_id?: string;
-  session_id?: string;
-}): { partition_path: string; skip_sub_doc: string[] } {
-  const id = input.plan_id ?? input.session_id ?? "unscoped";
-  return {
-    partition_path: `.ut-tdd/drive/${input.drive}/${input.mode}/${id}`,
-    skip_sub_doc: input.kind === "poc" ? ["L8", "L9"] : [],
-  };
-}
-
-export function classifyDrive(input: {
-  plan: string;
-  code_delta?: string[];
-  dependency_delta?: string[];
-}): { drive: string; confidence: number; findings: Finding[] } {
-  const text =
-    `${input.plan} ${(input.code_delta ?? []).join(" ")} ${(input.dependency_delta ?? []).join(" ")}`.toLowerCase();
-  const drive = text.includes("db")
-    ? "db"
-    : text.includes("frontend") || text.includes("ui")
-      ? "frontend"
-      : text.includes("agent")
-        ? "agent"
-        : "fullstack";
-  const confidence = drive === "fullstack" ? 0.6 : 0.85;
-  return {
-    drive,
-    confidence,
-    findings:
-      confidence < 0.7
-        ? [
-            finding("low-drive-confidence", "drive classification has low confidence", {
-              severity: "warn",
-            }),
-          ]
-        : [],
-  };
-}
-
-export function catalogSkills(input: {
-  skill_docs: { path: string; name?: string; triggers?: string[] }[];
-}): ContractResult & { skills: { skill_id: string; path: string; triggers: string[] }[] } {
-  const skills = input.skill_docs.map((doc) => ({
-    skill_id: stableId("skill", doc.name ?? doc.path),
-    path: doc.path,
-    triggers: doc.triggers ?? [],
-  }));
-  return {
-    ...result(
-      skills.length === 0
-        ? [finding("empty-skill-catalog", "skill catalog is empty", { severity: "warn" })]
-        : [],
-    ),
-    skills,
-  };
-}
-
-export function recommendSkills(input: {
-  task: string;
-  layer: string;
-  drive: string;
-  catalog: { skill_id: string; triggers?: string[]; layers?: string[]; drives?: string[] }[];
-}) {
-  const recommendation = suggestSkillInjection(input);
-  return { recommendations: recommendation.candidates, findings: recommendation.findings };
-}
-
-export function buildCommandCatalog(input: {
-  command_docs: { path: string; command: string; description?: string }[];
-  cli_surface: string[];
-}): ContractResult & { commands: { command_id: string; command: string; path: string }[] } {
-  const surface = new Set(input.cli_surface);
-  const commands = input.command_docs.map((doc) => ({
-    command_id: stableId("command", doc.command),
-    command: doc.command,
-    path: doc.path,
-  }));
-  const findings = commands
-    .filter((cmd) => !surface.has(cmd.command))
-    .map((cmd) =>
-      finding("command-not-on-cli-surface", `${cmd.command} is not on CLI surface`, {
-        evidencePath: cmd.path,
-        severity: "warn",
-      }),
-    );
-  return { ...result(findings), commands };
 }

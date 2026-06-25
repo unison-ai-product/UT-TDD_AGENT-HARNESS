@@ -1,11 +1,18 @@
+import { randomUUID } from "node:crypto";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { deriveArtifactProgressDecision } from "../src/state-db/artifact-progress-decision";
+import { projectRefactorCandidateSignals } from "../src/state-db/feedback-projections";
 import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
+import { rebuildHarnessDb, recordProjectionEvent } from "../src/state-db/projection-writer";
 import {
-  deriveArtifactProgressDecision,
-  rebuildHarnessDb,
-  recordProjectionEvent,
-} from "../src/state-db/projection-writer";
+  REFACTOR_CANDIDATE_THRESHOLDS,
+  REFACTOR_POLICY_TERMS,
+} from "../src/state-db/refactor-candidate-policy";
+import { analyzeRefactorCandidates } from "../src/state-db/refactor-candidates";
 
 interface VerificationWorkflowRow {
   phase: string;
@@ -42,6 +49,334 @@ describe("SECRET_PATTERN word-boundary anchoring", () => {
 });
 
 describe("IT-DB-01/02: harness.db projection writer", () => {
+  it("detects typed refactor candidates for split, extraction, dedupe, and externalization", () => {
+    expect(REFACTOR_CANDIDATE_THRESHOLDS.splitModuleLines).toBe(700);
+    expect(REFACTOR_POLICY_TERMS).toContain("subagent");
+
+    const longFunction = Array.from({ length: 121 }, (_, i) => `  total += ${i};`).join("\n");
+    const duplicateBody = Array.from({ length: 10 }, (_, i) => `  value += ${i};`).join("\n");
+    const repeatedLiteral = "copy this generated command before continuing";
+    const candidates = analyzeRefactorCandidates([
+      {
+        path: "src/large.ts",
+        content: `${Array.from({ length: 25 }, (_, i) => `export const v${i} = ${i};`).join("\n")}`,
+      },
+      {
+        path: "src/functions.ts",
+        content: `
+function tooLarge() {
+  let total = 0;
+${longFunction}
+  return total;
+}
+function duplicateOne() {
+  let value = 0;
+${duplicateBody}
+  return value;
+}
+function duplicateTwo() {
+  let value = 0;
+${duplicateBody}
+  return value;
+}
+export function literals() {
+  return [
+    "${repeatedLiteral}",
+    "${repeatedLiteral}",
+    "${repeatedLiteral}",
+    "${repeatedLiteral}",
+    "${repeatedLiteral}",
+    "${repeatedLiteral}",
+  ];
+}
+`,
+      },
+    ]);
+
+    expect(candidates.map((candidate) => candidate.kind)).toEqual(
+      expect.arrayContaining([
+        "split-module",
+        "extract-helper",
+        "deduplicate-function",
+        "externalize-literal",
+      ]),
+    );
+    expect(
+      analyzeRefactorCandidates([
+        {
+          path: "src/noise.ts",
+          content: `
+export const noise = [
+  "docs/test-design/harness/L7-unit-test-design.md",
+  "docs/test-design/harness/L7-unit-test-design.md",
+  "docs/test-design/harness/L7-unit-test-design.md",
+  "docs/test-design/harness/L7-unit-test-design.md",
+  "docs/test-design/harness/L7-unit-test-design.md",
+  "docs/test-design/harness/L7-unit-test-design.md",
+  "evidence_path",
+  "evidence_path",
+  "evidence_path",
+  "evidence_path",
+  "evidence_path",
+  "evidence_path",
+  "--session <id>",
+  "--session <id>",
+  "--session <id>",
+  "--session <id>",
+  "--session <id>",
+  "--session <id>",
+];
+`,
+        },
+      ]).filter((candidate) => candidate.kind === "externalize-literal"),
+    ).toHaveLength(0);
+
+    const exportOnly = analyzeRefactorCandidates([
+      {
+        path: "src/public-surface.ts",
+        content: Array.from({ length: 26 }, (_, i) => `export const value${i} = ${i};`).join("\n"),
+      },
+    ]).find((candidate) => candidate.kind === "split-module");
+    expect(exportOnly).toMatchObject({
+      score: 26,
+      threshold: 24,
+      confidence: "medium",
+    });
+    const manyExports = analyzeRefactorCandidates([
+      {
+        path: "src/schema-catalog.ts",
+        content: Array.from({ length: 53 }, (_, i) => `export const schema${i} = ${i};`).join("\n"),
+      },
+    ]).find((candidate) => candidate.kind === "split-module");
+    expect(manyExports).toMatchObject({
+      score: 53,
+      threshold: 24,
+      confidence: "medium",
+    });
+    const schemaIndexCatalog = analyzeRefactorCandidates([
+      {
+        path: "src/schema/index.ts",
+        content: Array.from({ length: 53 }, (_, i) => `export const schema${i} = ${i};`).join("\n"),
+      },
+    ]).find((candidate) => candidate.kind === "split-module");
+    expect(schemaIndexCatalog).toBeUndefined();
+    const declarativeCatalog = analyzeRefactorCandidates([
+      {
+        path: "src/task/proposal-coverage-data.ts",
+        content: [
+          "export const CATALOG = [",
+          ...Array.from({ length: 900 }, (_, i) => `  { id: ${i} },`),
+          "];",
+        ].join("\n"),
+      },
+    ]).find((candidate) => candidate.kind === "split-module");
+    expect(declarativeCatalog).toMatchObject({
+      score: expect.any(Number),
+      threshold: 700,
+      confidence: "medium",
+    });
+    const shortFunctionOrchestrator = analyzeRefactorCandidates([
+      {
+        path: "src/doctor/index.ts",
+        content: Array.from(
+          { length: 260 },
+          (_, i) => `function check${i}() {\n  return ${i};\n}`,
+        ).join("\n"),
+      },
+    ]).find((candidate) => candidate.kind === "split-module");
+    expect(shortFunctionOrchestrator).toMatchObject({
+      score: expect.any(Number),
+      threshold: 700,
+      confidence: "medium",
+    });
+    const largeFunctionModule = analyzeRefactorCandidates([
+      {
+        path: "src/large-orchestrator.ts",
+        content: `export function tooLarge() {\n${Array.from(
+          { length: 900 },
+          (_, i) => `  returnValue += ${i};`,
+        ).join("\n")}\n}`,
+      },
+    ]).find((candidate) => candidate.kind === "split-module");
+    expect(largeFunctionModule).toMatchObject({
+      score: expect.any(Number),
+      threshold: 700,
+      confidence: "high",
+    });
+    const policyExternalization = analyzeRefactorCandidates([
+      {
+        path: "src/team/stage-injection.ts",
+        content: `
+export function subagentInjectionForStage(stage: string) {
+  if (stage === "design") return { subagent: "pmo-sonnet", inject: ["design-doc"] };
+  if (stage === "implement") return { subagent: "be-logic", inject: ["testing"] };
+  if (stage === "review") return { subagent: "code-reviewer", inject: ["review"] };
+  return { subagent: "refactor-scout", inject: ["refactor"] };
+}
+`,
+      },
+    ]).find((candidate) => candidate.kind === "externalize-policy");
+    expect(policyExternalization).toMatchObject({
+      threshold: 5,
+      confidence: "high",
+    });
+    const broadOrchestratorPolicyNoise = analyzeRefactorCandidates([
+      {
+        path: "src/cli.ts",
+        content: [
+          ...Array.from(
+            { length: 48 },
+            (_, i) => `if (phase === "phase-${i}") return routeModelTierProfileSkillAgent(${i});`,
+          ),
+          "export function routeModelTierProfileSkillAgent(value: number) { return value; }",
+        ].join("\n"),
+      },
+    ]).filter((candidate) => candidate.kind === "externalize-policy");
+    expect(broadOrchestratorPolicyNoise).toHaveLength(0);
+    const detectorSelfNoise = analyzeRefactorCandidates([
+      {
+        path: "src/state-db/refactor-candidates.ts",
+        content: `
+import { REFACTOR_POLICY_TERMS } from "./refactor-candidate-policy";
+export function collectExternalizedPolicyCandidates(text: string) {
+  if (text.includes("stage")) return REFACTOR_POLICY_TERMS;
+  if (text.includes("phase")) return REFACTOR_POLICY_TERMS;
+  if (text.includes("route")) return REFACTOR_POLICY_TERMS;
+  if (text.includes("approval")) return REFACTOR_POLICY_TERMS;
+  if (text.includes("model")) return REFACTOR_POLICY_TERMS;
+  if (text.includes("tier")) return REFACTOR_POLICY_TERMS;
+  if (text.includes("profile")) return REFACTOR_POLICY_TERMS;
+  if (text.includes("skill")) return REFACTOR_POLICY_TERMS;
+  if (text.includes("subagent")) return REFACTOR_POLICY_TERMS;
+  return [];
+}
+`,
+      },
+    ]).filter((candidate) => candidate.kind === "externalize-policy");
+    expect(detectorSelfNoise).toHaveLength(0);
+    const externalizedPolicyPair = analyzeRefactorCandidates([
+      {
+        path: "src/runtime/agent-guard.ts",
+        content: `
+export function evaluateAgentGuard(input: { stage: string; route: string; model: string }) {
+  if (input.stage === "design") return input.route;
+  if (input.stage === "review") return input.model;
+  if (input.stage === "agent") return "subagent";
+  if (input.stage === "approval") return "approved";
+  return "policy";
+}
+`,
+      },
+      {
+        path: "src/runtime/agent-guard-policy.ts",
+        content: 'export const AGENT_POLICY = ["design", "review", "approval"];',
+      },
+    ]).filter((candidate) => candidate.kind === "externalize-policy");
+    expect(externalizedPolicyPair).toHaveLength(0);
+  });
+
+  it("projects refactor candidates into quality signals and feedback events", () => {
+    const repoRoot = join(tmpdir(), `ut-tdd-refactor-candidate-${randomUUID()}`);
+    try {
+      mkdirSync(join(repoRoot, "src"), { recursive: true });
+      mkdirSync(join(repoRoot, "docs", "plans"), { recursive: true });
+      writeFileSync(
+        join(repoRoot, "src", "fixture.ts"),
+        Array.from({ length: 950 }, (_, i) => `function check${i}() {\n  return ${i};\n}`).join(
+          "\n",
+        ),
+      );
+
+      const db = openHarnessDb(":memory:", { repoRoot });
+      try {
+        const result = rebuildHarnessDb({
+          repoRoot,
+          db,
+          relationGraph: { nodes: [], edges: [], verificationProfiles: [], findings: [] },
+          documentExports: {
+            document_export_runs: [],
+            document_export_datasets: [],
+            document_export_artifacts: [],
+            findings: [],
+            actionsTaken: [],
+            ok: true,
+          },
+          verificationEvidence: {
+            verification_profiles: [],
+            verification_recommendations: [],
+            mcp_server_runs: [],
+            external_tool_findings: [],
+            findings: [],
+            ok: true,
+          },
+        });
+        expect(result.ok).toBe(true);
+
+        const signal = db
+          .prepare(
+            "SELECT source, metric, subject_id, status FROM quality_signals WHERE source = ?",
+          )
+          .get("refactor-candidate-detector");
+        expect(signal).toMatchObject({
+          source: "refactor-candidate-detector",
+          metric: "refactor_candidate:split-module",
+          subject_id: "src/fixture.ts",
+          status: "warn",
+        });
+
+        const feedback = db
+          .prepare(
+            "SELECT source_table, signal_type, next_action FROM feedback_events WHERE signal_type = ?",
+          )
+          .get("refactor_candidate:split-module");
+        expect(feedback).toMatchObject({
+          source_table: "quality_signals",
+          signal_type: "refactor_candidate:split-module",
+        });
+        expect(String(feedback?.next_action ?? "")).toContain("review quality signal");
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("projects refactor candidate signals through the externalized feedback projection module", () => {
+    const repoRoot = join(tmpdir(), `ut-tdd-refactor-signal-${randomUUID()}`);
+    try {
+      mkdirSync(join(repoRoot, "src"), { recursive: true });
+      writeFileSync(
+        join(repoRoot, "src", "fixture.ts"),
+        Array.from({ length: 950 }, (_, i) => `function check${i}() {\n  return ${i};\n}`).join(
+          "\n",
+        ),
+      );
+
+      const events: Array<{ table: string; row: Record<string, unknown> }> = [];
+      projectRefactorCandidateSignals(repoRoot, {} as HarnessDb, {
+        nowIso: () => "2026-06-25T00:00:00.000Z",
+        stableId: (prefix, value) => `${prefix}:${value}`,
+        recordProjectionEvent: (_db, event) => events.push({ table: event.table, row: event.row }),
+      });
+
+      expect(events).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            table: "quality_signals",
+            row: expect.objectContaining({
+              source: "refactor-candidate-detector",
+              metric: "refactor_candidate:split-module",
+              status: "warn",
+            }),
+          }),
+        ]),
+      );
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
   it("derives artifact progress colors from dependency checks and linked tests", () => {
     expect(
       deriveArtifactProgressDecision({

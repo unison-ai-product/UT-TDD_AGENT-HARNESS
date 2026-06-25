@@ -15,10 +15,10 @@ import {
   recordGuardFire,
   releaseOldestGuardSlot,
   releaseSlot,
-  resolveRosterCapability,
   type Slot,
   sweepStaleGuardSlots,
 } from "../src/runtime/agent-slots";
+import { resolveRosterCapability } from "../src/runtime/agent-slots-roster";
 
 const statePath = join("/repo", ".ut-tdd", "state", "agent-slots.json");
 

@@ -1,5 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  DEFAULT_PROPOSAL_COVERAGE_SCENARIOS,
+  PROPOSAL_ROUTING_DOC_PATH,
+  REQUIRED_EVIDENCE_BY_PATTERN,
+  REQUIRED_GATE_BY_PATTERN,
+  REQUIRED_ROUTING_DOC_MARKERS,
+  REQUIRED_ROUTING_ORACLES,
+  REQUIRED_SUBAGENT_GUARD_MARKERS,
+} from "./proposal-document-coverage-policy";
 
 export interface ProposalDocumentCoverageLintInput {
   repoRoot: string;
@@ -54,54 +63,11 @@ export interface ProposalDocumentCoverageLintResult {
   violations: ProposalDocumentCoverageViolation[];
 }
 
-const ROUTING_DOC_PATH = "docs/test-design/harness/proposal-document-coverage-routing.md";
-
-const DEFAULT_SCENARIOS: ProposalDocumentCoverageScenario[] = [
-  {
-    id: "ui-ux-api-data",
-    text: "Build a screen UI form with UX research, user journey, usability test, frontend tokens, API, DB schema, backend function and common component.",
-    expectedPatterns: [
-      "screen-ui",
-      "frontend-design",
-      "ux-research-usability",
-      "api-if",
-      "data-db",
-      "backend-function",
-      "common-component",
-    ],
-  },
-  {
-    id: "batch-report-async-notification",
-    text: "Add batch CSV report output with async queue, dead-letter retry and email notification.",
-    expectedPatterns: ["batch-report", "report-output", "async-job-flow", "notification-message"],
-  },
-  {
-    id: "risk-ops-nfr",
-    text: "Add security privacy permissions, audit log, monitoring, NFR, release rollback and migration plan.",
-    expectedPatterns: [
-      "security-privacy",
-      "error-observability-audit",
-      "ops-release-migration",
-      "nfr-quality",
-    ],
-  },
-  {
-    id: "test-design",
-    text: "Create a test plan, acceptance test, system test, regression procedure and operational test coverage.",
-    expectedPatterns: ["test-design"],
-  },
-  {
-    id: "workflow-agent-discovery",
-    text: "Research discovery for workflow gate, agent orchestration, provider handover and team run.",
-    expectedPatterns: ["workflow-gate", "agent-orchestration", "discovery"],
-  },
-];
-
 export function loadProposalDocumentCoverageLintInput(
   repoRoot: string,
   classifyCoverage: ProposalDocumentCoverageClassifier,
 ): ProposalDocumentCoverageLintInput {
-  const routingDoc = join(repoRoot, ROUTING_DOC_PATH);
+  const routingDoc = join(repoRoot, PROPOSAL_ROUTING_DOC_PATH);
   return {
     repoRoot,
     classifyCoverage,
@@ -117,39 +83,6 @@ function existsRepoPath(repoRoot: string, repoRelativePath: string): boolean {
   return existsSync(join(repoRoot, repoRelativePath));
 }
 
-const REQUIRED_EVIDENCE_BY_PATTERN: Record<string, string[]> = {
-  "screen-ui": ["screen_trace"],
-  "ux-research-usability": ["usability_test_plan", "ux_findings_trace"],
-  "api-if": ["contract_tests"],
-  "data-db": ["migration_plan"],
-  "batch-report": ["idempotency"],
-  "report-output": ["output_layout"],
-  "async-job-flow": ["retry_dead_letter_policy"],
-  "notification-message": ["recipient_rules"],
-  "security-privacy": ["role_permission_matrix", "human_security_approval"],
-  "error-observability-audit": ["audit_log_schema", "redaction_policy"],
-  "ops-release-migration": ["rollback_plan", "migration_rehearsal"],
-  "nfr-quality": ["nfr_grade"],
-  "test-design": ["oracle_matrix", "requirements_traceability"],
-  "workflow-gate": ["gate_contract"],
-  "agent-orchestration": ["runtime_routing", "handover_evidence"],
-  discovery: ["hypothesis", "s4_decision"],
-};
-
-const REQUIRED_GATE_BY_PATTERN: Record<string, string[]> = {
-  "screen-ui": ["screen-design-workflow"],
-  "api-if": ["if-contract-review"],
-  "data-db": ["data-contract-review"],
-  "security-privacy": ["security-privacy-review"],
-  "error-observability-audit": ["error-observability-audit-review"],
-  "ops-release-migration": ["ops-release-migration-review"],
-  "nfr-quality": ["nfr-quality-review"],
-  "test-design": ["test-design-coverage-review"],
-  "workflow-gate": ["workflow-gate-review"],
-  "agent-orchestration": ["agent-runtime-review"],
-  discovery: ["discovery-s4-decision"],
-};
-
 function expectedEvidenceByPattern(pattern: string): string[] {
   return REQUIRED_EVIDENCE_BY_PATTERN[pattern] ?? [];
 }
@@ -161,14 +94,14 @@ function expectedGateByPattern(pattern: string): string[] {
 export function analyzeProposalDocumentCoverage(
   input: ProposalDocumentCoverageLintInput,
 ): ProposalDocumentCoverageLintResult {
-  const scenarios = input.scenarios ?? DEFAULT_SCENARIOS;
+  const scenarios = input.scenarios ?? DEFAULT_PROPOSAL_COVERAGE_SCENARIOS;
   const violations: ProposalDocumentCoverageViolation[] = [];
   const checkedPatterns: string[] = [];
 
   if (input.routingDocText === null) {
     violations.push({
       kind: "missing-routing-doc",
-      path: ROUTING_DOC_PATH,
+      path: PROPOSAL_ROUTING_DOC_PATH,
       detail: "proposal document coverage routing doc is missing",
     });
   }
@@ -191,13 +124,13 @@ export function analyzeProposalDocumentCoverage(
       !coverage.required_test_docs.some(
         (document) =>
           document.id === "proposal-document-coverage-routing" &&
-          document.path === ROUTING_DOC_PATH,
+          document.path === PROPOSAL_ROUTING_DOC_PATH,
       )
     ) {
       violations.push({
         kind: "missing-cross-layer-routing-doc",
         scenario: scenario.id,
-        path: ROUTING_DOC_PATH,
+        path: PROPOSAL_ROUTING_DOC_PATH,
         detail: "cross-layer routing test-design doc is not required",
       });
     }
@@ -268,55 +201,34 @@ export function analyzeProposalDocumentCoverage(
       if (!input.routingDocText.includes(`\`${pattern}\``)) {
         violations.push({
           kind: "missing-routing-marker",
-          path: ROUTING_DOC_PATH,
+          path: PROPOSAL_ROUTING_DOC_PATH,
           detail: `routing doc does not mention classified pattern ${pattern}`,
         });
       }
     }
-    for (const marker of ["L7", "L8", "L9", "L12", "L14", "LLM wording", "coverage floor"]) {
+    for (const marker of REQUIRED_ROUTING_DOC_MARKERS) {
       if (!input.routingDocText.includes(marker)) {
         violations.push({
           kind: "missing-routing-marker",
-          path: ROUTING_DOC_PATH,
+          path: PROPOSAL_ROUTING_DOC_PATH,
           detail: `routing doc does not mention required marker ${marker}`,
         });
       }
     }
-    for (const oracle of [
-      "DOCROUTE-U-01",
-      "DOCROUTE-U-02",
-      "DOCROUTE-U-03",
-      "DOCROUTE-U-04",
-      "DOCROUTE-U-05",
-      "DOCROUTE-U-06",
-      "DOCROUTE-U-07",
-      "DOCROUTE-U-08",
-      "DOCROUTE-IT-01",
-      "DOCROUTE-IT-02",
-      "DOCROUTE-IT-03",
-      "DOCROUTE-ST-01",
-    ]) {
+    for (const oracle of REQUIRED_ROUTING_ORACLES) {
       if (!input.routingDocText.includes(oracle)) {
         violations.push({
           kind: "missing-routing-oracle",
-          path: ROUTING_DOC_PATH,
+          path: PROPOSAL_ROUTING_DOC_PATH,
           detail: `routing doc does not mention required oracle ${oracle}`,
         });
       }
     }
-    for (const marker of [
-      "T2-mini",
-      "T2-spark",
-      "T0-frontier",
-      "parallel_slots",
-      "ownership",
-      "closing_authority=false",
-      "cannot close G4/G5 risk",
-    ]) {
+    for (const marker of REQUIRED_SUBAGENT_GUARD_MARKERS) {
       if (!input.routingDocText.includes(marker)) {
         violations.push({
           kind: "missing-subagent-guard",
-          path: ROUTING_DOC_PATH,
+          path: PROPOSAL_ROUTING_DOC_PATH,
           detail: `routing doc does not mention subagent guard ${marker}`,
         });
       }

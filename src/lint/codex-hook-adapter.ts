@@ -22,34 +22,12 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { CODEX_REQUIRED } from "./codex-hook-adapter-policy";
 import { REQUIRED as CLAUDE_REQUIRED, FORBIDDEN_PATH_RE } from "./project-hook";
 
-/** Codex で発火面を持つガードのパリティ要件。entrypoint は Claude `REQUIRED` と共有 (SSoT)。 */
-interface CodexRequiredHook {
-  id: string;
-  event: string;
-  matcher?: string;
-  commandParts: readonly string[];
-  blockOnFailure?: boolean;
-}
+export { CODEX_REQUIRED };
 
-export const CODEX_REQUIRED = [
-  {
-    id: "work-guard",
-    event: "PreToolUse",
-    matcher: "apply_patch|write_file",
-    commandParts: [".claude/hooks/work-guard.ts"],
-    blockOnFailure: true,
-  },
-  { id: "session-start", event: "SessionStart", commandParts: ["src/cli.ts", "session start"] },
-  {
-    id: "post-tool-use",
-    event: "PostToolUse",
-    matcher: "apply_patch|write_file|exec_command|local_shell",
-    commandParts: ["src/cli.ts", "hook post-tool-use"],
-  },
-  { id: "session-summary", event: "Stop", commandParts: ["src/cli.ts", "session summary"] },
-] satisfies readonly CodexRequiredHook[];
+/** Codex で発火面を持つガードのパリティ要件。entrypoint は Claude `REQUIRED` と共有 (SSoT)。 */
 
 /**
  * Claude のガード entrypoint のうち、Codex に **対応 event/面が存在しない** もの (真の N/A)。

@@ -45,7 +45,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T12:21:00+09:00"
         evidence_path: tests/plan-lint.test.ts
-        output_digest: "sha256:f05c44ce57f60c83b5099bd2d8b81cffaab88950eeed4b6cbeb6e9648ba63a2d"
+        output_digest: "sha256:ba64ea807951fdf6b3c3d0891e5525afe5b32e9599129db35e6870da0706826d"
       - kind: lint
         command: "bun run src\\cli.ts plan lint --gate governance"
         runner: bun
@@ -53,7 +53,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T12:21:00+09:00"
         evidence_path: src/plan/lint.ts
-        output_digest: "sha256:4e39ab5e789f3b9041f3be9243c1d0292183f0ad2675b5ff4b3c0f7097cee456"
+        output_digest: "sha256:40c960d0d4d0b49ef3aff27e12291b7a5851077e6fdcf7aca1868bdf0d964510"
 ---
 
 # PLAN-L7-115: Reverse R4 route backprop gate

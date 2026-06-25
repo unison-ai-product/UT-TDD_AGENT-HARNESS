@@ -85,6 +85,29 @@ The database is a projection, not an authoring source. A DB trigger creates a
 Refactor candidate or PLAN input; the PLAN document and source artifacts remain
 the canonical authored state.
 
+Detector-driven candidates must be triaged before they are treated as Refactor
+Red/Yellow work:
+
+- Review a representative candidate sample and record obvious false-positive
+  classes before closing the detector or acting on the queue.
+- Keep lower-confidence candidates in `quality_signals` for audit visibility;
+  do not automatically promote them to `feedback_events`.
+- Promote only high-confidence, ranked candidates to open feedback, and cap the
+  promoted set so handover is actionable.
+- When a real brush-up is executed from a detector hit, review whether the hit
+  selected a useful boundary and update the detector/process if the actual
+  refactor exposes a better precision rule.
+
+`refactor-scout` is the advisory subagent for this triage. It may inspect code,
+classify candidates, propose PLAN inputs, and name verification fences, but it
+must not implement changes. Implementation remains with SE/TL Refactor work.
+
+`externalize-policy` is a first-class Refactor candidate when stage/phase,
+route, approval, model tier, profile, skill, subagent, or injection rules are
+embedded as code branches instead of a catalog, config file, or dedicated policy
+module. Stage-based subagent or skill injection rules are included in this
+category.
+
 ## 4. Dependency and Impact Rule
 
 Before Green, changed files must be checked through the relation graph when the

@@ -67,7 +67,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-24T12:17:00+09:00"
         evidence_path: tests/codex-hook-adapter.test.ts
-        output_digest: "sha256:83186df7b0ca979c9ef97b4e54156f8881cff3458232300b6203e8f828903d6c"
+        output_digest: "sha256:1ceda71cb69dd8a28f189cb62259086592c11669432074de76010e7466a0da2e"
 ---
 
 # PLAN-L7-139: Codex hook adapter (orchestrator-rule parity)

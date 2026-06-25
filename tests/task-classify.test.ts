@@ -1,9 +1,49 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { classifyProposalDocumentCoverage, classifyTask } from "../src/task/classify";
+import {
+  BASELINE_DOCUMENT_PACK,
+  KIND_PATTERNS,
+  PROPOSAL_COVERAGE_GUARDRAILS,
+  RISK_TERMS,
+} from "../src/task/classify-policy";
+import { DOCUMENT_PACKS } from "../src/task/proposal-coverage-data";
+import { doc, LEVEL_RANK } from "../src/task/proposal-document-pack-types";
+import { DOCUMENT_PACKS_CORE } from "../src/task/proposal-document-packs-core";
+import { DOCUMENT_PACKS_OPERATIONS } from "../src/task/proposal-document-packs-operations";
+import {
+  RESEARCH_ADOPTION_BY_PATTERN,
+  RESEARCH_REJECTION_KEYWORDS,
+} from "../src/task/proposal-research-data";
 import { MODEL_IDS, PROPOSAL_SUBAGENT_LANES } from "../src/team/model-policy";
 
 describe("U-FR-L1-39: classifyTask public surface", () => {
+  it("loads proposal coverage rules from the externalized data catalog", () => {
+    expect(DOCUMENT_PACKS.length).toBeGreaterThan(0);
+    expect(DOCUMENT_PACKS.length).toBe(
+      DOCUMENT_PACKS_CORE.length + DOCUMENT_PACKS_OPERATIONS.length,
+    );
+    expect(DOCUMENT_PACKS.map((pack) => pack.pattern)).toContain("agent-orchestration");
+    expect(LEVEL_RANK.G3).toBeGreaterThan(LEVEL_RANK.G2);
+    expect(doc("x", "docs/x.md", "reason")).toEqual({
+      id: "x",
+      path: "docs/x.md",
+      reason: "reason",
+    });
+    expect(RESEARCH_ADOPTION_BY_PATTERN["agent-orchestration"]?.disposition).toBe(
+      "ut-tdd-specific",
+    );
+    expect(RESEARCH_REJECTION_KEYWORDS.map((entry) => entry.decision.pattern)).toContain(
+      "llm-minimal-design-claim",
+    );
+    expect(KIND_PATTERNS.map((entry) => entry.kind)).toContain("refactor");
+    expect(RISK_TERMS).toContain("authentication");
+    expect(BASELINE_DOCUMENT_PACK.pattern).toBe("baseline");
+    expect(PROPOSAL_COVERAGE_GUARDRAILS).toContain(
+      "cheap-subagents-cannot-close-risk-or-shrink-coverage",
+    );
+  });
+
   it("infers kind from task verbs (most-specific pattern wins)", () => {
     expect(classifyTask({ text: "refactor the projection writer" }).kind).toBe("refactor");
     expect(classifyTask({ text: "fix the failing doctor gate" }).kind).toBe("troubleshoot");

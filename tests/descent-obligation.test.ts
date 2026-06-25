@@ -4,8 +4,6 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzeDescentObligations,
-  DEFAULT_DESCENT_ADJACENCY,
-  type DeferEntry,
   descentObligationMessages,
   filterSubstanceVerifiedAdvisories,
   generateObligations,
@@ -13,8 +11,12 @@ import {
   loadDescentAdjacency,
   loadFrUnitCoverageOracles,
   loadTraceKeyedArtifacts,
-  type TraceKeyedArtifact,
 } from "../src/lint/descent-obligation";
+import {
+  DEFAULT_DESCENT_ADJACENCY,
+  type DeferEntry,
+  type TraceKeyedArtifact,
+} from "../src/lint/descent-obligation-types";
 
 const a = (
   over: Partial<TraceKeyedArtifact> & Pick<TraceKeyedArtifact, "traceKey" | "layer" | "role">,

@@ -21,6 +21,24 @@ import {
   teamDefinitionSchema,
 } from "../schema/team";
 import { selectTeamModel, type TeamModelSelection } from "./model-policy";
+import {
+  dependencyFailedMessage,
+  duplicateRoleProviderMessage,
+  frontierBlockedMessage,
+  memberNotExecutableMessage,
+  serializeAfterTargetAmbiguousMessage,
+  serializeAfterTargetNotFoundMessage,
+  TEAM_MEMBER_PROMPT_HEADER,
+  TEAM_MEMBER_RULES,
+  TEAM_MEMBER_RULES_HEADER,
+  TEAM_MEMBER_TASK_HEADER,
+  TEAM_RUN_DRY_RUN_EXECUTION_MESSAGE,
+  TEAM_RUN_NOT_EXECUTABLE_MESSAGE,
+  TEAM_RUN_REQUIRES_BOTH_RUNTIMES_MESSAGE,
+  TEAM_RUN_REQUIRES_CROSS_PROVIDER_REVIEW_MESSAGE,
+  TEAM_RUN_REQUIRES_HYBRID_MESSAGE,
+  teamDependencyCycleMessage,
+} from "./run-policy";
 
 export type TeamProvider = AdapterProvider | "local";
 
@@ -120,7 +138,7 @@ function buildMemberPrompt(
   selection: TeamModelSelection,
 ): string {
   return [
-    `UT-TDD team member: ${member.role}`,
+    `${TEAM_MEMBER_PROMPT_HEADER}: ${member.role}`,
     `team: ${team.name}`,
     `engine: ${member.engine}`,
     `difficulty: ${selection.difficulty}`,
@@ -130,13 +148,11 @@ function buildMemberPrompt(
     `selection_evidence: ${selection.evidence_path}`,
     member.ownership ? `ownership: ${member.ownership}` : null,
     "",
-    "Task:",
+    TEAM_MEMBER_TASK_HEADER,
     member.task,
     "",
-    "Rules:",
-    "- You are not alone in the codebase. Do not revert edits made by others.",
-    "- Keep your work scoped to this assigned task and report changed files.",
-    "- If you are reviewing, report findings first with file/line references.",
+    TEAM_MEMBER_RULES_HEADER,
+    ...TEAM_MEMBER_RULES.map((rule) => `- ${rule}`),
   ]
     .filter((line): line is string => line !== null)
     .join("\n");
@@ -169,7 +185,7 @@ function orderMembersByDependencies(input: {
   const visit = (member: TeamMemberLaunch): void => {
     if (visited.has(member.index)) return;
     if (visiting.has(member.index)) {
-      input.messages.push(`team dependency cycle detected at ${dependencyKey(member)}`);
+      input.messages.push(teamDependencyCycleMessage(dependencyKey(member)));
       return;
     }
     visiting.add(member.index);
@@ -177,11 +193,11 @@ function orderMembersByDependencies(input: {
       const dependency = findDependency(input.members, member.serialize_after);
       if (dependency === null) {
         input.messages.push(
-          `serialize_after target not found for ${dependencyKey(member)}: ${member.serialize_after}`,
+          serializeAfterTargetNotFoundMessage(dependencyKey(member), member.serialize_after),
         );
       } else if (dependency === "ambiguous") {
         input.messages.push(
-          `serialize_after target is ambiguous for ${dependencyKey(member)}: ${member.serialize_after}`,
+          serializeAfterTargetAmbiguousMessage(dependencyKey(member), member.serialize_after),
         );
       } else {
         visit(dependency);
@@ -215,7 +231,7 @@ export function validateTeamRun(
   placements?: (MemberPlacement | null)[],
 ): TeamValidationResult {
   const messages: string[] = [];
-  if (mode !== "hybrid") messages.push("team run requires hybrid mode");
+  if (mode !== "hybrid") messages.push(TEAM_RUN_REQUIRES_HYBRID_MESSAGE);
 
   const placed = team.members.map((member, index) => ({
     role: member.role,
@@ -225,7 +241,7 @@ export function validateTeamRun(
   const providers = [...new Set(placed.map((p) => p.provider))];
   const runtimeProviders = providers.filter((p) => p === "claude" || p === "codex");
   if (mode === "hybrid" && new Set(runtimeProviders).size < 2) {
-    messages.push("hybrid team run requires both claude and codex members");
+    messages.push(TEAM_RUN_REQUIRES_BOTH_RUNTIMES_MESSAGE);
   }
 
   const seenRoleProvider = new Set<string>();
@@ -235,7 +251,7 @@ export function validateTeamRun(
     const ownership = team.members[placed.indexOf(member)]?.ownership?.trim();
     const ownershipKey = `${key}:${ownership ?? ""}`;
     if (seenRoleProvider.has(key) && (!ownership || seenRoleProviderOwnership.has(ownershipKey))) {
-      messages.push(`duplicate role/provider assignment: ${key}`);
+      messages.push(duplicateRoleProviderMessage(key));
     }
     seenRoleProvider.add(key);
     if (ownership) seenRoleProviderOwnership.add(ownershipKey);
@@ -251,7 +267,7 @@ export function validateTeamRun(
         worker !== "local" && [...reviewerProviders].some((reviewer) => reviewer !== worker),
     );
     if (!hasCrossProvider) {
-      messages.push("hybrid team run requires worker and reviewer on different providers");
+      messages.push(TEAM_RUN_REQUIRES_CROSS_PROVIDER_REVIEW_MESSAGE);
     }
   }
 
@@ -325,9 +341,7 @@ export function buildTeamRunPlan(
   for (const member of members) {
     const blockedReason = input.placements?.[member.index]?.blockedReason;
     if (blockedReason) {
-      messages.push(
-        `member blocked by frontier gate: ${member.role}:${member.engine} (${blockedReason})`,
-      );
+      messages.push(frontierBlockedMessage(`${member.role}:${member.engine}`, blockedReason));
     }
   }
 
@@ -335,9 +349,7 @@ export function buildTeamRunPlan(
     for (const member of members) {
       const blocked = input.placements?.[member.index]?.blockedReason;
       if (!blocked && !member.executable) {
-        messages.push(
-          `member is not executable through runtime adapter: ${member.role}:${member.engine}`,
-        );
+        messages.push(memberNotExecutableMessage(`${member.role}:${member.engine}`));
       }
     }
   }
@@ -426,7 +438,7 @@ export async function executeTeamRunPlan(
       team: plan.team,
       strategy: plan.strategy,
       executions: [],
-      messages: ["team run plan is dry-run; rebuild with execute=true before execution"],
+      messages: [TEAM_RUN_DRY_RUN_EXECUTION_MESSAGE],
     };
   }
   if (!plan.ok || !plan.executable) {
@@ -436,7 +448,7 @@ export async function executeTeamRunPlan(
       team: plan.team,
       strategy: plan.strategy,
       executions: [],
-      messages: plan.messages.length > 0 ? plan.messages : ["team run plan is not executable"],
+      messages: plan.messages.length > 0 ? plan.messages : [TEAM_RUN_NOT_EXECUTABLE_MESSAGE],
     };
   }
 
@@ -460,7 +472,7 @@ export async function executeTeamRunPlan(
           slot_id: null,
           exit_code: null,
           status: "failed",
-          skipped_reason: `dependency failed: ${member.serialize_after}`,
+          skipped_reason: dependencyFailedMessage(member.serialize_after),
         });
         failedDependencies.add(member.role);
         failedDependencies.add(member.engine);

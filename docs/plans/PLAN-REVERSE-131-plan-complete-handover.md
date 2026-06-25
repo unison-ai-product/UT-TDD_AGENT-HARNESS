@@ -64,7 +64,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T16:10:00+09:00"
         evidence_path: tests/handover.test.ts
-        output_digest: "sha256:1dd2dfd53d89ca70200ea11e5a5e12de84ba9eb3843981e5b253331fa85c4b42"
+        output_digest: "sha256:5596878ff001a5c197ff25b4eb4720e577de62f801d6bae0fcab27b6baf642bd"
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -72,7 +72,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T16:10:00+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:06753bbcdcef1ee1ec588c6711a835717e268188f1b39bc2dea5db3f34ffe65f"
+        output_digest: "sha256:2ac1411a52e41387dd6378b62f4b4b6b1ad9522f03639a5eb8f735c06a122aa0"
 ---
 
 # PLAN-REVERSE-131: plan complete handover fullback

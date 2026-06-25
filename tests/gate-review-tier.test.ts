@@ -4,12 +4,19 @@ import {
   REQUIRED_CHECKLIST_IDS,
   type ReviewChecklist,
 } from "../src/gate/review-tier";
+import { isNaiveSelfReviewKind, JUDGMENT_GATES } from "../src/gate/review-tier-policy";
 
 const passingChecklist = (): ReviewChecklist => ({
   items: REQUIRED_CHECKLIST_IDS.map((id) => ({ id, status: "pass", evidence: `${id} checked` })),
 });
 
 describe("gate review tier", () => {
+  it("loads judgment gate policy from the externalized policy module", () => {
+    expect(JUDGMENT_GATES).toContain("G4");
+    expect(REQUIRED_CHECKLIST_IDS).toContain("TST");
+    expect(isNaiveSelfReviewKind("self-review")).toBe(true);
+  });
+
   it("passes hybrid judgment gate only with cross-agent distinct models", () => {
     const ok = evaluateGateReview({
       gate: "G4",

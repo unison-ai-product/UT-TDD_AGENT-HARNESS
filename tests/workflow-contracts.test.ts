@@ -4,10 +4,6 @@ import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import {
   assertRefactorInvariant,
-  buildCommandCatalog,
-  catalogExistingAssets,
-  catalogSkills,
-  classifyDrive,
   classifyDriveTddFits,
   computeUtHistorySignals,
   decideDiscoveryS4,
@@ -16,24 +12,34 @@ import {
   evaluateGreenDefinition,
   evaluateResearchDecision,
   evaluateRetrofitMatrix,
-  evaluateRouteCommand,
   mergeTwoStageAgentDesign,
+  recordCrossCuttingEvent,
+  recordTestRunEvidence,
+  routeReverseR4,
+  routeScrumFullback,
+  validateFrontendDesignWorkflow,
+  validateScreenDesignWorkflow,
+} from "../src/workflow/contracts";
+import {
+  buildCommandCatalog,
+  catalogExistingAssets,
+  catalogSkills,
+  classifyDrive,
   prioritizeCapabilityGaps,
   recommendModelEffort,
   recommendSkills,
-  recordCrossCuttingEvent,
-  recordTestRunEvidence,
   renderFoundationReadiness,
   resolveDriveStatePartition,
-  routeReverseR4,
-  routeScrumFullback,
-  routeSignalToMode,
   suggestSkillInjection,
   validateFolderRules,
-  validateFrontendDesignWorkflow,
+} from "../src/workflow/contracts-extras";
+import { DRIVE_TDD_FITS } from "../src/workflow/contracts-policy";
+import type { ContractResult as SidecarContractResult } from "../src/workflow/contracts-types";
+import {
+  evaluateRouteCommand,
+  routeSignalToMode,
   validateRouteConfigText,
-  validateScreenDesignWorkflow,
-} from "../src/workflow/contracts";
+} from "../src/workflow/routing-contracts";
 
 // @ut-tdd-trace FR-L1-06
 // @ut-tdd-trace FR-L1-08
@@ -257,14 +263,16 @@ describe("L7 workflow contract implementations", () => {
         evidence_path: "evidence.md",
       }).ok,
     ).toBe(true);
-    expect(
-      suggestSkillInjection({
-        task: "test doctor",
-        layer: "L7",
-        drive: "agent",
-        catalog: [{ skill_id: "testing", triggers: ["test"], layers: ["L7"], drives: ["agent"] }],
-      }).candidates[0]?.skill_id,
-    ).toBe("testing");
+    const skillInjection: SidecarContractResult & {
+      candidates: { skill_id: string; score: number; reason: string }[];
+    } = suggestSkillInjection({
+      task: "test doctor",
+      layer: "L7",
+      drive: "agent",
+      catalog: [{ skill_id: "testing", triggers: ["test"], layers: ["L7"], drives: ["agent"] }],
+    });
+    expect(skillInjection.ok).toBe(true);
+    expect(skillInjection.candidates[0]?.skill_id).toBe("testing");
     expect(
       enforceForwardOrder({
         layer: "L7",
@@ -337,6 +345,7 @@ describe("L7 workflow contract implementations", () => {
     const tddFits = classifyDriveTddFits({
       modes: ["design", "add-feature", "refactor", "screen-design", "frontend-design"],
     });
+    expect(DRIVE_TDD_FITS.map((fit) => fit.mode)).toContain("design-bottomup");
     expect(tddFits.ok).toBe(true);
     expect(tddFits.fits.every((fit) => fit.compatibility === "strong")).toBe(true);
     expect(tddFits.fits.find((fit) => fit.mode === "design")?.red_triggers).toContain(

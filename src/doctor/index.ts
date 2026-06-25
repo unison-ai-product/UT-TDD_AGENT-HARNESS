@@ -1131,6 +1131,7 @@ export function checkCodexWrapperParity(deps: DoctorDeps): { messages: string[];
   const requiredFiles = [
     join(deps.repoRoot, ".claude", "settings.json"),
     join(deps.repoRoot, "src", "runtime", "adapter.ts"),
+    join(deps.repoRoot, "src", "runtime", "adapter-policy.ts"),
     join(deps.repoRoot, "tests", "runtime-hook-entrypoints.test.ts"),
     join(deps.repoRoot, "tests", "runtime-adapter.test.ts"),
     join(deps.repoRoot, "docs", "test-design", "harness", "L7-unit-test-design.md"),
@@ -1150,9 +1151,10 @@ export function checkCodexWrapperParity(deps: DoctorDeps): { messages: string[];
 
   const settings = reads.get(requiredFiles[0]) ?? "";
   const adapter = reads.get(requiredFiles[1]) ?? "";
-  const hookTests = reads.get(requiredFiles[2]) ?? "";
-  const adapterTests = reads.get(requiredFiles[3]) ?? "";
-  const testDesign = reads.get(requiredFiles[4]) ?? "";
+  const adapterPolicy = reads.get(requiredFiles[2]) ?? "";
+  const hookTests = reads.get(requiredFiles[3]) ?? "";
+  const adapterTests = reads.get(requiredFiles[4]) ?? "";
+  const testDesign = reads.get(requiredFiles[5]) ?? "";
   const violations: string[] = [];
   const settingStrings: string[] = [];
   try {
@@ -1185,7 +1187,10 @@ export function checkCodexWrapperParity(deps: DoctorDeps): { messages: string[];
     }
   }
 
-  if (!/\?\s*\[\s*"exec"[\s\S]*"-"\s*\]/.test(adapter)) {
+  const adapterUsesCodexPolicy =
+    adapter.includes("CODEX_STDIN_ARGS") &&
+    adapterPolicy.includes('CODEX_STDIN_ARGS = ["exec", "-"]');
+  if (!/\?\s*\[\s*"exec"[\s\S]*"-"\s*\]/.test(adapter) && !adapterUsesCodexPolicy) {
     violations.push("Codex adapter args must use fixed `exec -` stdin sentinel");
   }
   if (!/stdin:\s*(intent\.task|formatAdapterPrompt\(intent\.task,)/.test(adapter)) {

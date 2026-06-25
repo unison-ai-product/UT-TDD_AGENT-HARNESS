@@ -7,6 +7,7 @@ import {
   codexHookAdapterMessages,
   loadCodexHookAdapterInput,
 } from "../src/lint/codex-hook-adapter";
+import { CODEX_REQUIRED as CODEX_REQUIRED_POLICY } from "../src/lint/codex-hook-adapter-policy";
 import { REQUIRED as CLAUDE_REQUIRED } from "../src/lint/project-hook";
 import { evaluateAgentGuard } from "../src/runtime/agent-guard";
 import { evaluateWorkGuard } from "../src/runtime/work-guard";
@@ -37,6 +38,11 @@ function validCodexHooks(): Record<string, unknown> {
 
 const json = (o: unknown): string => JSON.stringify(o);
 
+const assertExternalizedCodexRequiredPolicy = (): void => {
+  expect(CODEX_REQUIRED_POLICY.map((hook) => hook.id)).toContain("work-guard");
+  expect(CODEX_REQUIRED_POLICY).toEqual(CODEX_REQUIRED);
+};
+
 describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139)", () => {
   it("U-CXHOOK-001: 実 repo の .codex/hooks.json は Claude ガードと parity (real-repo 回帰ガード)", () => {
     const r = analyzeCodexHookAdapter(loadCodexHookAdapterInput(process.cwd()));
@@ -50,6 +56,7 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139)", () => {
   });
 
   it("U-CXHOOK-002: 有効な adapter fixture は ok", () => {
+    assertExternalizedCodexRequiredPolicy();
     expect(analyzeCodexHookAdapter({ codexHooksJson: json(validCodexHooks()) }).ok).toBe(true);
   });
 

@@ -2,9 +2,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import type { ExecutionMode } from "../runtime/detect";
 import { checkCrossAgentModelPair, crossAgentModelIssueMessage } from "../schema";
+import {
+  isNaiveSelfReviewKind,
+  JUDGMENT_GATES,
+  REQUIRED_CHECKLIST_IDS,
+} from "./review-tier-policy";
 
-export const JUDGMENT_GATES = ["G0.5", "G2", "G4", "G5", "G6", "G7", "R4"] as const;
-export const REQUIRED_CHECKLIST_IDS = ["DOC", "TST", "COD", "XR", "DEP", "DUP", "MOD"] as const;
+export { JUDGMENT_GATES, REQUIRED_CHECKLIST_IDS } from "./review-tier-policy";
 
 export type ReviewKind = "cross_agent" | "intra_runtime_subagent" | "human";
 export type ChecklistStatus = "pass" | "fail" | "n-a";
@@ -60,10 +64,6 @@ function validateChecklist(checklist: ReviewChecklist | null | undefined): strin
   return messages;
 }
 
-function isNaiveSelfReview(kind: string | undefined): boolean {
-  return kind === "self_review" || kind === "self-review" || kind === "naive_self_review";
-}
-
 export function evaluateGateReview(input: GateReviewInput): GateReviewResult {
   if (!isJudgmentGate(input.gate)) {
     return {
@@ -76,7 +76,7 @@ export function evaluateGateReview(input: GateReviewInput): GateReviewResult {
     };
   }
 
-  if (isNaiveSelfReview(input.reviewKind)) {
+  if (isNaiveSelfReviewKind(input.reviewKind)) {
     return {
       gate: input.gate,
       mode: input.mode,

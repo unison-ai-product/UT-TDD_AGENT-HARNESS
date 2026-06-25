@@ -10,6 +10,8 @@ import {
   planGovernanceMessages,
   planScheduleMessages,
 } from "../src/plan/lint";
+import { READY_DEPENDENCY_STATUSES } from "../src/plan/lint-policy";
+import type { LintResult as SidecarLintResult } from "../src/plan/lint-types";
 
 const compliant = `---
 plan_id: PLAN-X
@@ -180,9 +182,10 @@ describe("plan schedule lint (IMP-081)", () => {
   });
 
   it("U-PLANSCH-007: --gate G3-trace runs the trace lint", () => {
-    const r = lintPlanWithGate(undefined, process.cwd(), "G3-trace");
+    const r: SidecarLintResult = lintPlanWithGate(undefined, process.cwd(), "G3-trace");
     expect(r.ok).toBe(true);
     expect(r.messages[0]).toContain("g3-trace - OK");
+    expect(READY_DEPENDENCY_STATUSES.has("confirmed")).toBe(true);
   });
 
   it("U-PLANSCH-008: --gate G3-trace fails closed when required docs are missing", () => {

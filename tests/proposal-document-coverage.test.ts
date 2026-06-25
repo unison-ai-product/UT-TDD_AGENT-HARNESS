@@ -7,6 +7,10 @@ import {
   loadProposalDocumentCoverageLintInput,
   proposalDocumentCoverageMessages,
 } from "../src/lint/proposal-document-coverage";
+import {
+  DEFAULT_PROPOSAL_COVERAGE_SCENARIOS,
+  PROPOSAL_ROUTING_DOC_PATH,
+} from "../src/lint/proposal-document-coverage-policy";
 import { classifyProposalDocumentCoverage } from "../src/task/classify";
 
 describe("proposal document coverage lint", () => {
@@ -28,6 +32,10 @@ describe("proposal document coverage lint", () => {
       ]),
     );
     expect(proposalDocumentCoverageMessages(result)[0]).toContain("OK");
+    expect(PROPOSAL_ROUTING_DOC_PATH).toBe(
+      "docs/test-design/harness/proposal-document-coverage-routing.md",
+    );
+    expect(DEFAULT_PROPOSAL_COVERAGE_SCENARIOS.length).toBeGreaterThan(0);
   });
 
   it("fails closed when the routing document is missing", () => {

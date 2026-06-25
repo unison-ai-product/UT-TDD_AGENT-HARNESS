@@ -15,6 +15,15 @@ import {
   providerFromEngine,
   validateTeamRun,
 } from "../src/team/run";
+import {
+  dependencyFailedMessage,
+  duplicateRoleProviderMessage,
+  serializeAfterTargetAmbiguousMessage,
+  serializeAfterTargetNotFoundMessage,
+  TEAM_MEMBER_PROMPT_HEADER,
+  TEAM_RUN_REQUIRES_CROSS_PROVIDER_REVIEW_MESSAGE,
+  TEAM_RUN_REQUIRES_HYBRID_MESSAGE,
+} from "../src/team/run-policy";
 
 const hybrid = (currentRuntime: "claude" | "codex"): RuntimeDetection => ({
   mode: "hybrid",
@@ -78,7 +87,7 @@ describe("team run validation", () => {
       "codex-only",
     );
     expect(result.ok).toBe(false);
-    expect(result.messages).toContain("team run requires hybrid mode");
+    expect(result.messages).toContain(TEAM_RUN_REQUIRES_HYBRID_MESSAGE);
   });
 
   it("fails hybrid team with same-provider worker and reviewer", () => {
@@ -90,9 +99,7 @@ describe("team run validation", () => {
       "hybrid",
     );
     expect(result.ok).toBe(false);
-    expect(result.messages).toContain(
-      "hybrid team run requires worker and reviewer on different providers",
-    );
+    expect(result.messages).toContain(TEAM_RUN_REQUIRES_CROSS_PROVIDER_REVIEW_MESSAGE);
   });
 
   it("fails duplicate role/provider assignments", () => {
@@ -105,7 +112,7 @@ describe("team run validation", () => {
       "hybrid",
     );
     expect(result.ok).toBe(false);
-    expect(result.messages).toContain("duplicate role/provider assignment: se:codex");
+    expect(result.messages).toContain(duplicateRoleProviderMessage("se:codex"));
   });
 
   it("builds a shared Claude/Codex launch plan from the same team member flow", () => {
@@ -126,7 +133,7 @@ describe("team run validation", () => {
     expect(result.dry_run).toBe(true);
     expect(result.strategy).toBe("parallel");
     expect(result.members.map((m) => m.provider)).toEqual(["codex", "claude"]);
-    expect(result.members.every((m) => m.prompt.includes("UT-TDD team member"))).toBe(true);
+    expect(result.members.every((m) => m.prompt.includes(TEAM_MEMBER_PROMPT_HEADER))).toBe(true);
     expect(result.members[0].model_selection.model).toBe("gpt-5.3-codex");
     expect(result.members[0].adapter).toMatchObject({
       command: "codex",
@@ -281,7 +288,7 @@ describe("team run validation", () => {
       "hybrid",
     );
     expect(missing.ok).toBe(false);
-    expect(missing.messages).toContain("serialize_after target not found for tl:pmo-sonnet: qa");
+    expect(missing.messages).toContain(serializeAfterTargetNotFoundMessage("tl:pmo-sonnet", "qa"));
 
     const ambiguous = buildTeamRunPlan(
       {
@@ -298,7 +305,7 @@ describe("team run validation", () => {
     );
     expect(ambiguous.ok).toBe(false);
     expect(ambiguous.messages).toContain(
-      "serialize_after target is ambiguous for tl:pmo-sonnet: se",
+      serializeAfterTargetAmbiguousMessage("tl:pmo-sonnet", "se"),
     );
   });
 
@@ -391,7 +398,7 @@ describe("team run validation", () => {
       expect(execution.executions[1]).toMatchObject({
         role: "tl",
         status: "failed",
-        skipped_reason: "dependency failed: se",
+        skipped_reason: dependencyFailedMessage("se"),
       });
     } finally {
       rmSync(repo, { recursive: true, force: true });

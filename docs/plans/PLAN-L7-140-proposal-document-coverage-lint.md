@@ -67,7 +67,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-24T12:06:05+09:00"
         evidence_path: tests/proposal-document-coverage.test.ts
-        output_digest: "sha256:ab170c1e195dbcdf42ca1a671a6ed10d396e95ca1a02f20191f47d6e8b2a30f2"
+        output_digest: "sha256:b83eb982966a0e6fa019a4fd2bf59e2284cec83a168268f5c845e34243fb8fb1"
 ---
 
 # PLAN-L7-140: Proposal Document Coverage Routing And Lint

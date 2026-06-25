@@ -2,19 +2,21 @@ import { describe, expect, it } from "vitest";
 import type { RuntimeDetection } from "../src/runtime/detect";
 import {
   assignCross,
-  FRONTIER_MODELS,
-  FRONTIER_ROLES,
   isRouterRole,
-  other,
-  ROLE_ARCHETYPE,
-  resolveModel,
   roster,
   route,
   routeTeamMembers,
   routeToAdapterPlan,
+} from "../src/task/tier-router";
+import {
+  FRONTIER_MODELS,
+  FRONTIER_ROLES,
+  other,
+  ROLE_ARCHETYPE,
+  resolveModel,
   TIER_TABLE,
   tierFor,
-} from "../src/task/tier-router";
+} from "../src/task/tier-router-policy";
 
 function det(
   mode: RuntimeDetection["mode"],

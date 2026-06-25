@@ -12,11 +12,12 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeRelationImpact,
   collectRelationGraphProjection,
-  collectVerificationEvidenceProjection,
   exportRelationDiagram,
   type RelationGraphSourceSet,
   type RelationImpactActionKind,
 } from "../src/lint/relation-graph";
+import { collectVerificationEvidenceProjection } from "../src/lint/relation-graph-evidence";
+import type { RelationGraphProjection as SidecarRelationGraphProjection } from "../src/lint/relation-graph-types";
 
 describe("collectRelationGraphProjection (U-RELGRAPH-001..003)", () => {
   it("U-RELGRAPH-001: requirements/PLAN/design/test-design/source/test fixtures が安定 node ID + typed edge を生成し (kind,id,path) 重複行ゼロ", () => {
@@ -42,7 +43,7 @@ describe("collectRelationGraphProjection (U-RELGRAPH-001..003)", () => {
       tests: [{ path: "tests/relation-graph.test.ts" }],
     };
 
-    const projection = collectRelationGraphProjection(input);
+    const projection: SidecarRelationGraphProjection = collectRelationGraphProjection(input);
 
     // 安定 node ID = `${kind}:${key}`
     const ids = projection.nodes.map((n) => n.id);

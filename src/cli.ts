@@ -156,6 +156,12 @@ import {
 } from "./workflow/contracts";
 import { evaluateAutomationReadiness } from "./workflow/readiness";
 
+const HOOK_EVENT_SESSION_START = "SessionStart";
+const SAVE_EVIDENCE_OPTION_DESCRIPTION = "persist normalized evidence for DB collector";
+const SESSION_OPTION_DESCRIPTION = "session_id (defaults to stdin session_id or ut-tdd-cli)";
+const MODE_OVERRIDE_OPTION_DESCRIPTION = "override execution mode for tests";
+const TASK_FILE_OPTION_DESCRIPTION = "read task text from file";
+
 function gitBranch(): string | null {
   try {
     return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
@@ -427,7 +433,7 @@ mcpProfile
   .description("list MCP / external verification profiles")
   .option("--all", "include builtin profiles")
   .option("--json", "JSON output")
-  .option("--save-evidence", "persist normalized evidence for DB collector")
+  .option("--save-evidence", SAVE_EVIDENCE_OPTION_DESCRIPTION)
   .action((opts: { all?: boolean; json?: boolean; saveEvidence?: boolean }) => {
     const deps = nodeVerificationProbeDeps(process.cwd());
     const profiles = listVerificationProfiles().filter(
@@ -452,7 +458,7 @@ mcpProfile
   .command("probe <name>")
   .description("probe whether a verification profile is configured and runnable")
   .option("--json", "JSON output")
-  .option("--save-evidence", "persist normalized evidence for DB collector")
+  .option("--save-evidence", SAVE_EVIDENCE_OPTION_DESCRIPTION)
   .action((name: string, opts: { json?: boolean; saveEvidence?: boolean }) => {
     const deps = nodeVerificationProbeDeps(process.cwd());
     const result = probeVerificationProfile(name, deps);
@@ -483,7 +489,7 @@ mcp
   .option("--method <method>", "MCP method to inspect", "tools/list")
   .option("--allow-external", "allow disabled external MCP inspection after review")
   .option("--json", "JSON output")
-  .option("--save-evidence", "persist normalized evidence for DB collector")
+  .option("--save-evidence", SAVE_EVIDENCE_OPTION_DESCRIPTION)
   .action(
     (
       name: string,
@@ -519,7 +525,7 @@ verify
   .description("recommend verification profiles from changed files and emit an impact graph")
   .option("--changed <path...>", "changed path(s); defaults to git status --porcelain")
   .option("--format <format>", "text / json / mermaid", "text")
-  .option("--save-evidence", "persist normalized evidence for DB collector")
+  .option("--save-evidence", SAVE_EVIDENCE_OPTION_DESCRIPTION)
   .action(
     (opts: {
       changed?: string[];
@@ -567,7 +573,7 @@ verify
   .option("--dry-run", "print runnable command without executing")
   .option("--allow-external", "allow disabled-by-default external profile execution after review")
   .option("--json", "JSON output")
-  .option("--save-evidence", "persist normalized evidence for DB collector")
+  .option("--save-evidence", SAVE_EVIDENCE_OPTION_DESCRIPTION)
   .action(
     (opts: {
       profile: string;
@@ -663,20 +669,20 @@ const session = program.command("session").description("session-log runtime even
 session
   .command("start")
   .description("record SessionStart through the shared session-log core")
-  .option("--session <id>", "session_id (defaults to stdin session_id or ut-tdd-cli)")
+  .option("--session <id>", SESSION_OPTION_DESCRIPTION)
   .action((opts: { session?: string }) => {
-    const input = readHookInput("SessionStart", opts.session);
+    const input = readHookInput(HOOK_EVENT_SESSION_START, opts.session);
     const repoRoot = process.cwd();
     const deps = nodeDeps(repoRoot, gitBranch, gitHead);
     runSessionStartSideEffects(repoRoot, input, deps);
-    dispatch(input, deps, "SessionStart");
+    dispatch(input, deps, HOOK_EVENT_SESSION_START);
     process.stdout.write(`session-log: start ${input.session_id ?? "ut-tdd-cli"}\n`);
   });
 
 session
   .command("summary")
   .description("compress session events into PLAN digest and surface handover discipline warnings")
-  .option("--session <id>", "session_id (defaults to stdin session_id or ut-tdd-cli)")
+  .option("--session <id>", SESSION_OPTION_DESCRIPTION)
   .action((opts: { session?: string }) => {
     const input = readHookInput("Stop", opts.session);
     dispatch(input, nodeDeps(process.cwd(), gitBranch, gitHead), "Stop");
@@ -688,7 +694,7 @@ const hook = program.command("hook").description("package-local hook entrypoints
 hook
   .command("post-tool-use")
   .description("record PostToolUse through the shared session-log core")
-  .option("--session <id>", "session_id (defaults to stdin session_id or ut-tdd-cli)")
+  .option("--session <id>", SESSION_OPTION_DESCRIPTION)
   .option("--tool <name>", "tool_name override")
   .option("--path <path>", "file_path/path target hint")
   .option("--command <command>", "Bash command target hint")
@@ -1759,7 +1765,7 @@ function runtimeCommand(provider: AdapterProvider): Command {
     .description(`${provider} runtime adapter command`)
     .requiredOption("--role <role>", "delegation role")
     .option("--task <text>", "task text")
-    .option("--task-file <path>", "read task text from file")
+    .option("--task-file <path>", TASK_FILE_OPTION_DESCRIPTION)
     .option("--plan <id>", "PLAN id")
     .option("--execute", "execute provider CLI instead of dry-run")
     .option("--json", "JSON output")
@@ -1804,12 +1810,12 @@ function runtimeCommand(provider: AdapterProvider): Command {
         const repoRoot = process.cwd();
         const deps = nodeDeps(repoRoot, gitBranch, gitHead);
         const startInput: SessionHookInput = {
-          hook_event_name: "SessionStart",
+          hook_event_name: HOOK_EVENT_SESSION_START,
           session_id: sessionId,
           ...(opts.plan ? { plan_id: opts.plan } : {}),
         };
         runSessionStartSideEffects(repoRoot, startInput, deps);
-        dispatch(startInput, deps, "SessionStart");
+        dispatch(startInput, deps, HOOK_EVENT_SESSION_START);
         // review-guard (IMP-137): read-only (相談/検証) ロールの委譲 session が working tree を
         // 変更したら検知するため、spawn 前の変更パスを snapshot する。
         const guardActive = isReadOnlyDelegationRole(opts.role);
@@ -1876,7 +1882,7 @@ runtimeCommand("claude");
 program
   .command("gate <id>")
   .description("mode-aware gate review-tier and deterministic static checks")
-  .option("--mode <mode>", "override execution mode for tests")
+  .option("--mode <mode>", MODE_OVERRIDE_OPTION_DESCRIPTION)
   .option("--review-kind <kind>", "cross_agent / intra_runtime_subagent / human")
   .option("--worker-model <model>", "worker provider/model id")
   .option("--reviewer-model <model>", "reviewer provider/model id")
@@ -1951,7 +1957,7 @@ task
   .command("classify")
   .description("classify a task into kind / drive / size / complexity / difficulty / risk")
   .option("--text <text>", "task text")
-  .option("--text-file <path>", "read task text from file")
+  .option("--text-file <path>", TASK_FILE_OPTION_DESCRIPTION)
   .option("--plan <path>", "read task text from a PLAN file")
   .option("--files <list>", "comma-separated affected file paths")
   .option("--design-docs", "derive required design/test documents from proposal text")
@@ -2041,13 +2047,13 @@ task
   )
   .requiredOption("--role <role>", `router role: ${ROUTER_ROLES.join("|")}`)
   .option("--text <text>", "task text")
-  .option("--text-file <path>", "read task text from file")
+  .option("--text-file <path>", TASK_FILE_OPTION_DESCRIPTION)
   .option("--plan <path>", "read task text from a PLAN file")
   .option("--files <list>", "comma-separated affected file paths")
   .option("--primary <provider>", "override primary provider (claude|codex)")
   .option("--allow-frontier", "explicitly authorize T0 (opus/gpt-5.5)")
   .option("--execute", "bridge the decision to the provider adapter plan (dry-run command)")
-  .option("--mode <mode>", "override execution mode for tests")
+  .option("--mode <mode>", MODE_OVERRIDE_OPTION_DESCRIPTION)
   .option("--json", "JSON output")
   .action(
     (opts: {
@@ -2143,7 +2149,7 @@ team
   .command("suggest")
   .description("recommend whether a task should launch a Claude/Codex team")
   .requiredOption("--task <text>", "task text to classify")
-  .option("--mode <mode>", "override execution mode for tests")
+  .option("--mode <mode>", MODE_OVERRIDE_OPTION_DESCRIPTION)
   .option(
     "--design-docs",
     "derive a parallel proposal-document coverage team from design-doc lanes",
@@ -2185,7 +2191,7 @@ team
   .command("run")
   .description("validate, plan, and optionally execute a hybrid team run")
   .requiredOption("--definition <path>", "team definition YAML")
-  .option("--mode <mode>", "override execution mode for tests")
+  .option("--mode <mode>", MODE_OVERRIDE_OPTION_DESCRIPTION)
   .option("--plan <id>", "PLAN id to attach to provider adapter metadata")
   .option("--execute", "execute provider adapters; default is dry-run planning only")
   .option(
@@ -2260,12 +2266,12 @@ team
             new Promise((resolve) => {
               const sessionId = `${provider}-team-${Date.now()}-${teamSessionSeq++}`;
               const startInput: SessionHookInput = {
-                hook_event_name: "SessionStart",
+                hook_event_name: HOOK_EVENT_SESSION_START,
                 session_id: sessionId,
                 ...(opts.plan ? { plan_id: opts.plan } : {}),
               };
               runSessionStartSideEffects(repoRoot, startInput, sessionDeps);
-              dispatch(startInput, sessionDeps, "SessionStart");
+              dispatch(startInput, sessionDeps, HOOK_EVENT_SESSION_START);
               const invocation = buildProviderInvocation({ provider, command, args });
               const ioMode = opts.json ? "ignore" : "inherit";
               const child = spawn(invocation.command, invocation.args, {

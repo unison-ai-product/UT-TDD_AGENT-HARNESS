@@ -1,6 +1,13 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  GENERATED_BY as SIDECAR_GENERATED_BY,
+  HANDOVER_OUTSTANDING_MARKER as SIDECAR_HANDOVER_OUTSTANDING_MARKER,
+  MAX_SAME_DAY_ENTRIES as SIDECAR_MAX_SAME_DAY_ENTRIES,
+  MAX_SUMMARY_PLANS as SIDECAR_MAX_SUMMARY_PLANS,
+} from "../src/handover/handover-constants";
+import type { HandoverDoc as SidecarHandoverDoc } from "../src/handover/handover-types";
+import {
   boundSameDayEntries,
   buildPointer,
   capWithBreadcrumb,
@@ -73,6 +80,18 @@ function mockSessionDeps(files: Map<string, string>): SessionLogDeps & { removed
 const digestDir = join("/repo", ".ut-tdd", "logs", "plan");
 const currentPlanPath = join("/repo", ".ut-tdd", "state", "current-plan");
 const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
+
+describe("PLAN-L7-173 handover sidecars", () => {
+  it("re-exported constants and sidecar document type stay aligned", () => {
+    expect(SIDECAR_GENERATED_BY).toBe(GENERATED_BY);
+    expect(SIDECAR_HANDOVER_OUTSTANDING_MARKER).toBe(HANDOVER_OUTSTANDING_MARKER);
+    expect(SIDECAR_MAX_SAME_DAY_ENTRIES).toBe(MAX_SAME_DAY_ENTRIES);
+    expect(SIDECAR_MAX_SUMMARY_PLANS).toBe(MAX_SUMMARY_PLANS);
+
+    const doc: SidecarHandoverDoc = scaffoldFromDigests([digest()], [], "2026-06-24");
+    expect(doc.plans[0]?.plan_id).toBe("PLAN-L7-04-handover-mechanism");
+  });
+});
 
 function digest(over: Partial<PlanDigestRef> = {}): PlanDigestRef {
   return {

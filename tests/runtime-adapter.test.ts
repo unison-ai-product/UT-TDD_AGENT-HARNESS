@@ -10,6 +10,14 @@ import {
   resolveClaudeNativeCommand,
   resolveCodexNativeCommand,
 } from "../src/runtime/adapter";
+import {
+  ADAPTER_CONTEXT_HEADER,
+  CLAUDE_EFFORT_ENV,
+  CLAUDE_STDIN_ARGS,
+  CODEX_MODEL_FLAG,
+  CODEX_STDIN_ARGS,
+  REQUIRED_SKILL_LABEL,
+} from "../src/runtime/adapter-policy";
 
 /** 指定パスの親ディレクトリまで作成し、空の実行ファイルを置く。 */
 function touchBinary(path: string): void {
@@ -39,8 +47,8 @@ describe("runtime adapter plan", () => {
     expect(plan.available).toBe(true);
     expect(plan.dry_run).toBe(true);
     expect(plan.command).toBe("codex");
-    expect(plan.args).toContain("exec");
-    expect(plan.args).toContain("-m");
+    expect(plan.args).toContain(CODEX_STDIN_ARGS[0]);
+    expect(plan.args).toContain(CODEX_MODEL_FLAG);
     expect(plan.args).toContain("gpt-5.3-codex");
     expect(plan.args).not.toContain("--plan-id");
     expect(plan.model).toBe("gpt-5.3-codex");
@@ -69,8 +77,8 @@ describe("runtime adapter plan", () => {
     );
 
     expect(plan.stdin).toContain("implement");
-    expect(plan.stdin).toContain("UT-TDD context injection:");
-    expect(plan.stdin).toContain("- required skill: docs/skills/refactoring.md");
+    expect(plan.stdin).toContain(ADAPTER_CONTEXT_HEADER);
+    expect(plan.stdin).toContain(`- ${REQUIRED_SKILL_LABEL}: docs/skills/refactoring.md`);
     expect(plan.stdin).toContain("- optional skill: docs/skills/review-checklist.yaml");
     expect(plan.context_injection).toEqual({
       required_paths: ["docs/skills/refactoring.md"],
@@ -94,9 +102,7 @@ describe("runtime adapter plan", () => {
     expect(plan.available).toBe(true);
     expect(plan.command).toBe("claude");
     expect(plan.args).toEqual([
-      "--print",
-      "--input-format",
-      "text",
+      ...CLAUDE_STDIN_ARGS,
       "--model",
       "claude-sonnet-4-6",
       "--effort",
@@ -105,7 +111,7 @@ describe("runtime adapter plan", () => {
     expect(plan.stdin).toBe("review");
     expect(plan.model).toBe("claude-sonnet-4-6");
     expect(plan.effort).toBe("medium");
-    expect(plan.env).toEqual({ CLAUDE_CODE_EFFORT_LEVEL: "medium" });
+    expect(plan.env).toEqual({ [CLAUDE_EFFORT_ENV]: "medium" });
     expect(plan.args).not.toContain("--role");
     expect(plan.args).not.toContain("--task");
     expect(plan.args).not.toContain("PLAN-L4-99-x");

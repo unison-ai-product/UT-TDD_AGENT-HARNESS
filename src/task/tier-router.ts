@@ -16,8 +16,29 @@ import {
   buildAdapterPlan,
 } from "../runtime/adapter";
 import type { ExecutionMode, RuntimeDetection } from "../runtime/detect";
-import { MODEL_IDS, type TaskDifficulty } from "../team/model-policy";
+import type { TaskDifficulty } from "../team/model-policy";
 import { type ClassifyTaskInput, classifyTask } from "./classify";
+import {
+  FRONTIER_ROLES,
+  other,
+  type ReviewEntry,
+  ROLE_ARCHETYPE,
+  resolveModel,
+  reviewPolicy,
+  TIER_TABLE,
+  tierFor,
+} from "./tier-router-policy";
+
+export type { ReviewEntry } from "./tier-router-policy";
+export {
+  FRONTIER_MODELS,
+  FRONTIER_ROLES,
+  other,
+  ROLE_ARCHETYPE,
+  resolveModel,
+  TIER_TABLE,
+  tierFor,
+} from "./tier-router-policy";
 
 export type Provider = "claude" | "codex";
 export type Archetype = "consult" | "worker" | "verify";
@@ -26,75 +47,12 @@ export type Tier = "T0" | "T1" | "T2";
 /** §1.8 VALID_ROLES のうち agent 化する 5 役 (po=人間 / aim=未採用)。 */
 export type RouterRole = "tl" | "qa" | "uiux" | "se" | "docs";
 
-/** role → archetype。相談/検証 = 上位帯、ワーカー = 下位帯。 */
-export const ROLE_ARCHETYPE: Record<RouterRole, Archetype> = {
-  tl: "consult",
-  uiux: "consult",
-  qa: "verify",
-  se: "worker",
-  docs: "worker",
-};
-
-/**
- * ティア表: tier × provider → model。Claude と Codex/GPT を対称に定義する。
- * T0 = フロンティア (明示許可)、T1 = ワーカー専門、T2 = ワーカー軽量 (原則安く)。
- * モデル ID は `MODEL_IDS` (model-policy の SSoT) から合成する — literal 二重定義を排し drift を防ぐ。
- */
-export const TIER_TABLE: Record<Tier, Record<Provider, string>> = {
-  T0: { claude: MODEL_IDS.claude.opus, codex: MODEL_IDS.codex.frontier },
-  T1: { claude: MODEL_IDS.claude.sonnet, codex: MODEL_IDS.codex.worker },
-  T2: { claude: MODEL_IDS.claude.haiku, codex: MODEL_IDS.codex.spark },
-};
-
-/** 上位帯モデル集合 (明示許可ゲート対象)。 */
-export const FRONTIER_MODELS: ReadonlySet<string> = new Set(Object.values(TIER_TABLE.T0));
-
-/** 上位帯を持てる指名 role (相談/検証)。これ以外は T0 に到達できない。 */
-export const FRONTIER_ROLES: ReadonlySet<RouterRole> = new Set(
-  (Object.keys(ROLE_ARCHETYPE) as RouterRole[]).filter((r) => ROLE_ARCHETYPE[r] !== "worker"),
-);
-
-const DIFFICULTY_RANK: Record<TaskDifficulty, number> = {
-  trivial: 0,
-  simple: 1,
-  standard: 2,
-  complex: 3,
-  critical: 4,
-};
-
-/** クロス分岐: 相手 provider。 */
-export const other = (p: Provider): Provider => (p === "claude" ? "codex" : "claude");
-
-/**
- * archetype が tier 帯を決める。ワーカー帯の中だけ難易度で T2↔T1 を振り分ける
- * (原則安く: trivial/simple かつ risk 無 → T2、それ以外 → T1)。ワーカーは T0 に行かない。
- */
-export function tierFor(role: RouterRole, difficulty: TaskDifficulty, riskFlags: string[]): Tier {
-  if (ROLE_ARCHETYPE[role] !== "worker") return "T0";
-  const cheap = DIFFICULTY_RANK[difficulty] <= DIFFICULTY_RANK.simple && riskFlags.length === 0;
-  return cheap ? "T2" : "T1";
-}
-
-/**
- * 不変条件: ワーカー role は T0 (opus/gpt-5.5) に解決できない (fail-close)。
- * 「ワーカーは下位モデル」を配線で不可能化する。
- */
-export function resolveModel(role: RouterRole, tier: Tier, provider: Provider): string {
-  if (ROLE_ARCHETYPE[role] === "worker" && tier === "T0") {
-    throw new Error(
-      `invariant violation: worker role ${role} cannot resolve to T0 (frontier opus/gpt-5.5)`,
-    );
-  }
-  return TIER_TABLE[tier][provider];
-}
-
 /** T0 発火の明示許可。explicit=false なら上位帯は block される。 */
 export interface FrontierAuth {
   explicit: boolean;
 }
 
 export type RoutingStatus = "ready" | "blocked-needs-approval";
-export type ReviewEntry = "machine" | "T2" | "T1" | "T0";
 
 export interface RoutingDecision {
   role: RouterRole;
@@ -124,21 +82,6 @@ export interface RouteOptions {
   primary?: Provider;
   /** T0 明示許可。 */
   auth?: FrontierAuth;
-}
-
-/** 難易度 × risk → 検証入口 / ゲート / cross-review (コスト階段型検証への接続)。 */
-function reviewPolicy(
-  difficulty: TaskDifficulty,
-  riskFlags: string[],
-): { reviewEntry: ReviewEntry; gate: boolean; crossReview: boolean } {
-  const rank = DIFFICULTY_RANK[difficulty];
-  const risky = riskFlags.length > 0;
-  // risk override: 危険領域は難易度に関係なく最低 T1 専門レビュー + ゲート。
-  if (rank >= 4) return { reviewEntry: "T0", gate: true, crossReview: true };
-  if (rank === 3) return { reviewEntry: "T1", gate: true, crossReview: true };
-  if (rank === 2 || risky) return { reviewEntry: "T1", gate: risky, crossReview: false };
-  if (rank === 1) return { reviewEntry: "T2", gate: false, crossReview: false };
-  return { reviewEntry: "machine", gate: false, crossReview: false };
 }
 
 /**

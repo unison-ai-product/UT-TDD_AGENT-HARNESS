@@ -15,6 +15,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, readSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
+import { BUILTIN_GITHUB_TEMPLATES, COMMON_FILES, type TemplateSet } from "./templates";
 
 export type SetupPhase = "0-A" | "0-B"; // 0-A=solo / 0-B=team
 
@@ -78,8 +79,6 @@ export interface SetupResult {
   branchProtection: { applied: boolean; reason: string };
 }
 
-export type TemplateSet = { [name: string]: string }; // テンプレ名 → 内容
-
 /** gh 実行 seam (raw token 非依存 = gh の認証状態に委ねる)。test=mock。 */
 export type GhRunner = (args: string[]) => { ok: boolean; stdout: string };
 /** 対話確認 seam。test=mock、非対話では呼ばれない。 */
@@ -100,121 +99,6 @@ export interface SetupDeps {
 const CODEOWNERS_TARGET = join(".github", "CODEOWNERS");
 const STATE_PATH = join(".ut-tdd", "state", "setup.json");
 const BP_SCRIPT = join("scripts", "setup-branch-protection.sh");
-
-export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
-  "common/harness-check.yml": [
-    "name: harness-check",
-    "on:",
-    "  push:",
-    "    branches: [main]",
-    "  pull_request:",
-    "    branches: [main]",
-    "jobs:",
-    "  harness-check:",
-    "    runs-on: ubuntu-latest",
-    "    steps:",
-    "      - uses: actions/checkout@v4",
-    "      - uses: oven-sh/setup-bun@v2",
-    "      - run: bun install --frozen-lockfile",
-    "      - run: bun run typecheck",
-    "      - run: bun run test",
-    "",
-  ].join("\n"),
-  "common/commitlint.config.js":
-    "module.exports = { extends: ['@commitlint/config-conventional'] };\n",
-  "common/escalation-stale.yml": [
-    "name: escalation-stale",
-    "on:",
-    "  schedule:",
-    "    - cron: '0 0 * * 1'",
-    "jobs:",
-    "  noop:",
-    "    runs-on: ubuntu-latest",
-    "    steps:",
-    "      - run: echo escalation policy placeholder",
-    "",
-  ].join("\n"),
-  "common/recovery.md":
-    "# Recovery\n\nDescribe the broken invariant, evidence, and rollback path.\n",
-  "common/add-feature.md":
-    "# Add Feature\n\nDescribe objective, scope, tests, and review evidence.\n",
-  "common/PULL_REQUEST_TEMPLATE.md":
-    "## Summary\n\n## Verification\n\n## Review evidence\n\nCloses #\n",
-  "team/CODEOWNERS": [
-    "* {{TL_TEAM}}",
-    "/docs/ {{PO_TEAM}}",
-    "/src/ {{TL_TEAM}}",
-    "/tests/ {{QA_TEAM}}",
-    "",
-  ].join("\n"),
-  "team/setup-branch-protection.sh": [
-    "#!/usr/bin/env bash",
-    "set -euo pipefail",
-    'REPO="$' + '{1:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"',
-    'echo "Apply branch protection to $' + '{REPO}/main"',
-    'read -r -p "Continue? [y/N] " ans',
-    '[[ "$' + '{ans}" == "y" || "$' + '{ans}" == "Y" ]] || exit 1',
-    'gh api -X PUT "repos/$' + '{REPO}/branches/main/protection" \\',
-    '  -H "Accept: application/vnd.github+json" \\',
-    "  --input - <<'JSON'",
-    "{",
-    '  "required_status_checks": { "strict": true, "checks": [ { "context": "harness-check" } ] },',
-    '  "enforce_admins": true,',
-    '  "required_pull_request_reviews": { "required_approving_review_count": 1 },',
-    '  "restrictions": null',
-    "}",
-    "JSON",
-    "",
-  ].join("\n"),
-};
-
-/** A 種別 (共通) GeneratedFile + 対応テンプレ名。 */
-const COMMON_FILES: { template: string; file: GeneratedFile }[] = [
-  {
-    template: "common/harness-check.yml",
-    file: {
-      path: join(".github", "workflows", "harness-check.yml"),
-      category: "A",
-      purpose: "CI (typecheck + 回帰)",
-    },
-  },
-  {
-    template: "common/commitlint.config.js",
-    file: { path: "commitlint.config.js", category: "A", purpose: "Conventional Commits 強制" },
-  },
-  {
-    template: "common/escalation-stale.yml",
-    file: {
-      path: join(".github", "workflows", "escalation-stale.yml"),
-      category: "A",
-      purpose: "スパイン滞留 Issue 自動起票",
-    },
-  },
-  {
-    template: "common/recovery.md",
-    file: {
-      path: join(".github", "ISSUE_TEMPLATE", "recovery.md"),
-      category: "A",
-      purpose: "Recovery Issue テンプレ",
-    },
-  },
-  {
-    template: "common/add-feature.md",
-    file: {
-      path: join(".github", "ISSUE_TEMPLATE", "add-feature.md"),
-      category: "A",
-      purpose: "Add-feature Issue テンプレ",
-    },
-  },
-  {
-    template: "common/PULL_REQUEST_TEMPLATE.md",
-    file: {
-      path: join(".github", "PULL_REQUEST_TEMPLATE.md"),
-      category: "A",
-      purpose: "PR テンプレ",
-    },
-  },
-];
 
 /**
  * U-SETUP-001: gh で owner 種別 / collaborator 数 / 既存 protection を読む。**never throws**。

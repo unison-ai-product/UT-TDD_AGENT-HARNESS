@@ -13,141 +13,71 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import {
-  computeOutstandingWork,
-  type OutstandingWork,
-  outstandingSummaryLine,
-} from "../lint/outstanding";
+import { computeOutstandingWork, outstandingSummaryLine } from "../lint/outstanding";
 import {
   activePlanStale,
   inferPlanFromCommit,
   nodeDeps,
-  type PlanDigest,
   resolveActivePlan,
   type SessionLogDeps,
   sanitize,
   setActivePlan,
 } from "../runtime/session-log";
+import {
+  CURRENT_PLAN_REL,
+  GENERATED_BY,
+  HANDOVER_OUTSTANDING_MARKER,
+  MAX_SAME_DAY_ENTRIES,
+  MAX_SUMMARY_PLANS,
+  PLAN_DIGEST_DIR,
+  POINTER_PATH,
+} from "./handover-constants";
+import type {
+  BuildPointerInput,
+  CapRender,
+  HandoverArgs,
+  HandoverDeps,
+  HandoverDoc,
+  HandoverPointer,
+  HandoverRenderOpts,
+  HandoverResult,
+  HandoverScope,
+  HandoverScopeOpts,
+  HandoverStatus,
+  PlanDigestRef,
+  PlanMeta,
+} from "./handover-types";
 
+export {
+  GENERATED_BY,
+  HANDOVER_OUTSTANDING_MARKER,
+  MAX_SAME_DAY_ENTRIES,
+  MAX_SUMMARY_PLANS,
+} from "./handover-constants";
+export type {
+  BuildPointerInput,
+  CapRender,
+  HandoverArgs,
+  HandoverDeps,
+  HandoverDoc,
+  HandoverPointer,
+  HandoverRenderOpts,
+  HandoverResult,
+  HandoverScope,
+  HandoverScopeOpts,
+  HandoverStatus,
+  PlanDigestRef,
+  PlanMeta,
+} from "./handover-types";
 // Gap B 活性化 API を handover 表層からも再 export (CLI が import するため)。
 export { inferPlanFromCommit, resolveActivePlan, setActivePlan };
 
-export type HandoverStatus = "in_progress" | "completed";
-
-/** .ut-tdd/logs/plan/<id>.digest.json の読取 subset (session-log PlanDigest 互換)。 */
-export type PlanDigestRef = Pick<
-  PlanDigest,
-  "plan_id" | "sessions" | "commits" | "files_touched" | "failures" | "updated_at"
->;
-
-/** .ut-tdd/handover/CURRENT.json — 機械ポインタ (gitignored、単一 SSoT)。 */
-export interface HandoverPointer {
-  active_plan: string | null;
-  status: HandoverStatus;
-  latest_doc: string | null;
-  digest_summary: { commits: number; files: number; failures: number } | null;
-  updated_at: string;
-  /** IMP-078 gap①: ut-tdd handover 由来の証跡 (手書き bypass 検知)。手書き pointer は欠落。 */
-  generated_by?: string;
-  /** IMP-078 gap①: 生成時の markdown entry 数 (手書き追記 = 増分 mismatch 検知)。 */
-  doc_entry_count?: number;
-  /** IMP-139: 未了の正の集計 (非終端 PLAN 層別 + open defer) の additive surface。 */
-  outstanding?: OutstandingWork;
-}
-
-/** runHandover が CURRENT.json に刻む生成元署名 (手書き bypass 検知の基準値、単一正本)。 */
-export const GENERATED_BY = "ut-tdd-handover";
-
-/** handover markdown の `# Session Handover` entry 数を数える (bypass 検知の照合値)。 */
 export function countHandoverEntries(md: string | null): number {
   if (!md) return 0;
   return (md.match(/^# Session Handover\b/gm) ?? []).length;
 }
 
 /** markdown 1 entry の論理内容 (③-⑥ は human placeholder)。 */
-export interface HandoverDoc {
-  date: string;
-  plans: { plan_id: string; kind: string; summary: string }[];
-  deliverables: { plan_id: string; commits: string[]; files: string[] }[];
-  next_actions: string[];
-  carry: string[];
-  po_decisions: string[];
-  do_not_break: string[];
-}
-
-export interface PlanMeta {
-  plan_id: string;
-  kind: string;
-  title: string;
-}
-
-export interface HandoverScope {
-  active_plan: string | null;
-  digests: PlanDigestRef[];
-}
-
-export interface HandoverArgs {
-  date: string;
-  dryRun?: boolean;
-  complete?: boolean;
-  planId?: string;
-  /** IMP-048: true なら §1-§2 を active plan family の digest のみへ絞る (multi-plan ノイズ低減)。 */
-  scopeToActive?: boolean;
-  /** IMP-078 gap④: 指定 session が触れた digest のみへ絞る (前 session の PLAN 混入を排除)。 */
-  sessionId?: string;
-}
-
-export interface HandoverResult {
-  content: string;
-  pointer: HandoverPointer;
-  written: string[];
-}
-
-/** I/O・clock 注入 (session-log / setup の deps パターン踏襲)。 */
-export interface HandoverDeps {
-  repoRoot: string;
-  now: () => string;
-  readText: (path: string) => string | null;
-  writeText: (path: string, content: string) => void;
-  listDir: (dir: string) => string[]; // handover は走査が責務 = 必須 (session-log の optional と異なる)
-}
-
-const HANDOVER_DIR = join(".ut-tdd", "handover");
-const POINTER_PATH = join(HANDOVER_DIR, "CURRENT.json");
-const PLAN_DIGEST_DIR = join(".ut-tdd", "logs", "plan");
-/** current-plan marker の相対 path (PLAN-L7-83: drift reconcile 時の `written` 計上に使う)。 */
-const CURRENT_PLAN_REL = join(".ut-tdd", "state", "current-plan");
-
-/**
- * PLAN-L7-83: 同日 markdown の累積上限。runHandover は 1 件 append する前提なので、
- * append 後に entry 数がこの値を超えないよう、append 前に既存を (MAX-1) まで圧縮する。
- */
-export const MAX_SAME_DAY_ENTRIES = 4;
-
-/**
- * PLAN-L7-88: 1 エントリの §1 PLAN サマリ / §2 成果物に載せる PLAN 件数の上限 (注入コントロール)。
- * session-scope 解決に失敗すると collectScope が全 digest へ fallback し (空 handover 回避)、§1/§2 が
- * **全 PLAN registry をダンプ**して context を肥大させる (1 anchor entry ~295 行)。registry の正本は
- * `ut-tdd status` / harness.db であり、handover は session 進捗の入れ物なので、上限超は先頭 N 件 +
- * 「+M more」breadcrumb へ畳む (no silent cap、剪定分は status/db で参照可)。session-scope が効いた
- * 通常時は doc.plans が小さく cap は発火しない = 退行なし。slimSummary (同日2件目+) / boundSameDayEntries
- * (4 entry cap) と直交し合成する。
- */
-export const MAX_SUMMARY_PLANS = 12;
-
-/** resolveHandoverScope の絞り込みオプション (IMP-048、後方互換: 無指定は dedup のみ)。 */
-export interface HandoverScopeOpts {
-  /** active_plan が解決できたとき、同 family (bare ⊂ slug) の digest のみへ絞る。 */
-  scopeToActive?: boolean;
-  /** IMP-078 gap④: 指定 session が触れた digest のみへ絞る (session 横断ノイズ排除)。 */
-  scopeToSession?: string;
-}
-
-/**
- * IMP-078 gap④: 直近 session_id を session jsonl 群から解決 (最新 event ts の session)。
- * handover CLI は session_id を直接受け取れないため、ログから「いま回している session」を推定する。
- * never throws (fail-open、解決不能は null)。
- */
 export function latestSessionId(deps: HandoverDeps): string | null {
   try {
     const dir = join(deps.repoRoot, ".ut-tdd", "logs", "session");
@@ -294,13 +224,6 @@ export function resolveHandoverScope(
  * U-HOVER-002: 純関数。digest_summary は digests 非空なら active_plan の null/非 null に関わらず集計、
  * 空のときのみ null。digest_summary=null は「digest 不在」を意味し active_plan 未設定とは独立。
  */
-export interface BuildPointerInput {
-  scope: HandoverScope;
-  latestDoc: string | null;
-  status: HandoverStatus;
-  now: string;
-}
-
 export function buildPointer(input: BuildPointerInput): HandoverPointer {
   const { scope, latestDoc, status, now } = input;
   const digest_summary =
@@ -407,42 +330,6 @@ export function scaffoldFromDigests(
 const TODO = (s: string): string => `<!-- TODO(human): ${s} -->`;
 
 /** render オプション (A-138 ITEM-4: 同日累積の slim 化、cross_agent TL 裏取り済)。 */
-export interface HandoverRenderOpts {
-  /**
-   * 同日 2 件目以降のエントリで §1 PLAN サマリ / §2 成果物を「初出エントリ参照」の slim stub へ縮約する。
-   * §1 は全 PLAN registry の反復が肥大の主因 (unscoped 生成時)、§2 も full file 一覧で重複するため。
-   * `# Session Handover` header は 1 エントリ 1 個を維持するので `countHandoverEntries`/`doc_entry_count`
-   * の bypass 検知契約は不変 (A-138 ITEM-4 で TL/Codex が header 数不変を裏取り)。§3-§6 は per-session 固有
-   * のため slim 化しない。
-   */
-  slimSummary?: boolean;
-  /**
-   * PLAN-L7-88: §1/§2 に載せる PLAN 件数の上限 (注入コントロール)。未指定/0 以下は MAX_SUMMARY_PLANS。
-   * slimSummary=true のときは §1/§2 が参照 stub なので無関係 (cap 不発)。
-   */
-  maxSummaryPlans?: number;
-  /**
-   * PLAN-L7-98 (Q1): §5 未了 PO 判断 を機械事実 (outstanding surface) で seed する。
-   * 渡されたとき §5 に machine 集計行 (HANDOVER_OUTSTANDING_MARKER) を出力し、その下に human TODO を置く。
-   * §5 は handover で唯一機械裏付け不在のセクションで、前任 prose の転記で「実在しない PO 判断」が
-   * 累積した根因 ([[feedback_verify_carry_status_against_code]])。machine 行を常駐させ false-state を可視化する。
-   */
-  outstanding?: OutstandingWork;
-}
-
-/** PLAN-L7-98 (Q1): §5 に常駐させる機械集計行の marker。doctor がこの presence を fail-close する。 */
-export const HANDOVER_OUTSTANDING_MARKER = "機械集計 (outstanding)";
-
-/** capWithBreadcrumb の描画 callbacks (max-source-params 準拠で 1 object に束ねる)。 */
-export interface CapRender<T> {
-  renderItem: (item: T) => string[];
-  breadcrumb: (remaining: number) => string;
-}
-
-/**
- * U-HOVER-016 (PLAN-L7-88): items を max 件まで残し、超過分は breadcrumb 1 行へ畳む純関数。
- * max≤0 は無制限 (cap 無効)。breadcrumb は超過時のみ付く (no silent cap)。
- */
 export function capWithBreadcrumb<T>(items: readonly T[], max: number, r: CapRender<T>): string[] {
   if (max <= 0 || items.length <= max) return items.flatMap((item) => r.renderItem(item));
   const kept = items.slice(0, max).flatMap((item) => r.renderItem(item));

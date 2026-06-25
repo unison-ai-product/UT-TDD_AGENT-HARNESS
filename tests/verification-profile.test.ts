@@ -1,15 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzeVerificationProfileGate,
-  analyzeVerificationProfileSafety,
   catalogVerificationProfiles,
   getVerificationProfile,
   inspectMcpProfile,
   listVerificationProfiles,
-  planExternalProfileActivation,
   probeVerificationProfile,
   recommendVerificationProfiles,
-  renderGeneratedMcpConfig,
   runVerificationProfile,
   saveVerificationEvidence,
   VERIFICATION_EVIDENCE_SCHEMA_VERSION,
@@ -18,6 +15,13 @@ import {
   verificationRecommendationMermaid,
   verificationRecommendationMessages,
 } from "../src/lint/verification-profile";
+import { PROFILES } from "../src/lint/verification-profile-catalog";
+import {
+  analyzeVerificationProfileSafety,
+  planExternalProfileActivation,
+  renderGeneratedMcpConfig,
+} from "../src/lint/verification-profile-safety";
+import type { VerificationProfileRunResult as SidecarVerificationProfileRunResult } from "../src/lint/verification-profile-types";
 
 function deps(over: Partial<VerificationProbeDeps> = {}): VerificationProbeDeps {
   return {
@@ -42,6 +46,12 @@ function mustProfile(id: string) {
 }
 
 describe("verification profile recommendation", () => {
+  it("loads profile definitions from the externalized catalog module", () => {
+    expect(Object.keys(PROFILES)).toEqual(
+      expect.arrayContaining(["bun-unit", "doctor", "mcp-inspector-smoke"]),
+    );
+  });
+
   it("recommends DB and browser profiles from changed files", () => {
     const result = recommendVerificationProfiles([
       "docs/design/harness/L5-detailed-design/physical-data.md",
@@ -122,7 +132,7 @@ describe("verification profile recommendation", () => {
   });
 
   it("refuses disabled external profile execution unless explicitly allowed", () => {
-    const result = runVerificationProfile(
+    const result: SidecarVerificationProfileRunResult | null = runVerificationProfile(
       "vitest-browser-playwright",
       {},
       deps({

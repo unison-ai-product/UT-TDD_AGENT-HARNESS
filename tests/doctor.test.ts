@@ -79,6 +79,7 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
         'const args = isCodex ? ["exec", "-"] : ["--print", "--input-format", "text"];',
         "return { stdin: intent.task, plan_id: intent.planId };",
       ].join("\n"),
+      "src/runtime/adapter-policy.ts": 'export const CODEX_STDIN_ARGS = ["exec", "-"] as const;',
       "tests/runtime-hook-entrypoints.test.ts": [
         "ut-tdd codex --execute records the same session lifecycle through the adapter wrapper",
         "ut-tdd codex --task-file feeds file content through the same adapter wrapper",

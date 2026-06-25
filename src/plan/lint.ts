@@ -4,93 +4,44 @@ import { parse as parseYaml } from "yaml";
 import { analyzeG1Trace, g1TraceMessages, g1TraceOk, loadG1TraceDocs } from "../lint/g1-trace";
 import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3-trace";
 import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter";
-import { VALID_SUB_DOCS as SCHEMA_VALID_SUB_DOCS } from "../schema/index";
+import {
+  DB_PROJECTION_BACKPROP_REQUIRED_GENERATES,
+  DESIGN_LAYERS_REQUIRING_SUB_DOC,
+  INTERNAL_ASSET_EXTENSION_PLAN_IDS,
+  KIND_LAYER_ENFORCEMENT_DATE,
+  MODE_PATTERN,
+  READY_DEPENDENCY_STATUSES,
+  REQUIRED_AGENT_ROLE_ENFORCEMENT_DATE,
+  REQUIRED_REVERSE_FULLBACK_SCOPE_LAYERS,
+  REVERSE_FULLBACK_BACKPROP_ENFORCEMENT_DATE,
+  REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE,
+  REVERSE_R4_ROUTE_BACKPROP_ENFORCEMENT_DATE,
+  REVIEW_PATTERN,
+  SERIAL_MODE_PATTERN,
+  SERIAL_REASONS,
+  VALID_REVERSE_FULLBACK_SCOPE_DECISIONS,
+  VALID_SUB_DOCS,
+} from "./lint-policy";
+import type {
+  LintResult,
+  PlanGovernanceDoc,
+  PlanGovernanceResult,
+  PlanGovernanceViolation,
+  PlanScheduleDoc,
+  PlanScheduleResult,
+  PlanScheduleViolation,
+} from "./lint-types";
 
-export interface LintResult {
-  ok: boolean;
-  messages: string[];
-}
-
-export interface PlanScheduleDoc {
-  file: string;
-  content: string;
-}
-
-export interface PlanScheduleViolation {
-  file: string;
-  step?: string;
-  reason: "missing_mode" | "missing_serial_reason" | "missing_review_step" | "missing_impl_plan";
-}
-
-export interface PlanScheduleResult {
-  violations: PlanScheduleViolation[];
-  checked: number;
-  ok: boolean;
-}
-
-export interface PlanGovernanceDoc {
-  file: string;
-  content: string;
-}
-
-export interface PlanGovernanceViolation {
-  file: string;
-  reason:
-    | "missing_frontmatter"
-    | "invalid_frontmatter"
-    | "duplicate_plan_id"
-    | "missing_sub_doc"
-    | "invalid_sub_doc"
-    | "duplicate_layer_sub_doc"
-    | "skip_sub_doc_reason"
-    | "parent_missing"
-    | "parent_drive_mismatch"
-    | "requires_missing"
-    | "requires_not_ready"
-    | "parent_design_missing"
-    | "artifact_type_mismatch"
-    | "missing_required_agent_role"
-    | "kind_layer_mismatch"
-    | "db_projection_backprop_missing"
-    | "reverse_fullback_backprop_missing"
-    | "reverse_fullback_claimed_artifact_missing"
-    | "reverse_r4_claimed_artifact_missing"
-    | "reverse_r4_route_backprop_missing"
-    | "reverse_fullback_scope_missing";
-  detail?: string;
-}
-
-export interface PlanGovernanceResult {
-  violations: PlanGovernanceViolation[];
-  checked: number;
-  ok: boolean;
-}
-
-const SERIAL_REASONS = ["file_conflict", "downstream_dependency", "shared_state"] as const;
-// Correct forms only. Mojibake variants are no longer tolerated here: readability lint
-// (loadSystemReadabilityDocs) now fail-closes on CP932 mojibake across the whole prose tree,
-// so a corrupted schedule heading is caught as a mojibake violation rather than silently
-// accepted as a valid mode marker.
-const MODE_PATTERN = /\[(並列|直列)\]/;
-const SERIAL_MODE_PATTERN = /\[直列\]/;
-const REVIEW_PATTERN = /review|レビュー|self|pmo-sonnet/i;
-
-const DESIGN_LAYERS_REQUIRING_SUB_DOC = new Set(["L1", "L2", "L3", "L4", "L5", "L6"]);
-// 単一正本 = src/schema/index.ts の VALID_SUB_DOCS (要件 §1.10.G.1: schema が VALID_* の正本)。
-// ここに並行コピーを置くと catalog 拡張時に drift するため Set 化して派生のみ持つ。
-const VALID_SUB_DOCS: Record<string, Set<string>> = Object.fromEntries(
-  Object.entries(SCHEMA_VALID_SUB_DOCS).map(([layer, subDocs]) => [layer, new Set(subDocs)]),
-);
-const INTERNAL_ASSET_EXTENSION_PLAN_IDS = new Set([
-  "PLAN-L4-10-internal-asset-master",
-  "PLAN-L4-11-roster",
-  "PLAN-L4-12-skill-pack",
-  "PLAN-L4-13-drift-lint",
-  "PLAN-L5-05-roster",
-  "PLAN-L5-06-skill",
-  "PLAN-L5-07-drift",
-]);
-const READY_DEPENDENCY_STATUSES = new Set(["confirmed", "completed"]);
+export type {
+  LintResult,
+  PlanGovernanceDoc,
+  PlanGovernanceResult,
+  PlanGovernanceViolation,
+  PlanGovernanceViolationReason,
+  PlanScheduleDoc,
+  PlanScheduleResult,
+  PlanScheduleViolation,
+} from "./lint-types";
 
 function section(content: string, start: RegExp, end: RegExp): string {
   const m = content.match(start);
@@ -294,28 +245,6 @@ function expectedArtifactTypeForPath(path: string): string | null {
   if (path.startsWith("docs/plans/")) return "markdown_doc";
   return null;
 }
-
-const DB_PROJECTION_BACKPROP_REQUIRED_GENERATES = [
-  "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
-  "docs/design/harness/L1-requirements/functional-requirements.md",
-  "docs/design/harness/L1-requirements/screen-requirements.md",
-  "docs/design/harness/L3-functional/functional-requirements.md",
-  "docs/design/harness/L4-basic-design/function.md",
-  "docs/design/harness/L5-detailed-design/physical-data.md",
-  "docs/design/harness/L6-function-design/function-spec.md",
-  "docs/design/harness/L6-function-design/fr-unit-coverage.md",
-];
-const REVERSE_FULLBACK_BACKPROP_ENFORCEMENT_DATE = "2026-06-22";
-const REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE = "2026-06-23";
-const REVERSE_R4_ROUTE_BACKPROP_ENFORCEMENT_DATE = "2026-06-23";
-const REQUIRED_AGENT_ROLE_ENFORCEMENT_DATE = "2026-06-23";
-const KIND_LAYER_ENFORCEMENT_DATE = "2026-06-23";
-const REQUIRED_REVERSE_FULLBACK_SCOPE_LAYERS = [
-  "requirements",
-  "L4-basic-design",
-  "L5-detailed-design",
-] as const;
-const VALID_REVERSE_FULLBACK_SCOPE_DECISIONS = new Set(["updated", "not_impacted", "deferred"]);
 
 function isProgressColorProjectionPlan(
   raw: Record<string, unknown>,

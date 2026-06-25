@@ -10,155 +10,52 @@
  * 本 span = collect (U-RELGRAPH-001..003) + analyzeRelationImpact (004..006)。
  * exportRelationDiagram / verification-evidence-projection (PLAN-L7-36) は別 span。
  */
+
+import type {
+  DiagramArtifact,
+  ExportRelationDiagramInput,
+  RelationEdge,
+  RelationEdgeKind,
+  RelationFinding,
+  RelationGraphProjection,
+  RelationGraphSourceSet,
+  RelationImpactAction,
+  RelationImpactInput,
+  RelationImpactResult,
+  RelationNode,
+  RelationNodeKind,
+  VerificationEvidenceInput,
+  VerificationProfileRow,
+} from "./relation-graph-types";
 import { normalizePath } from "./shared";
 
-/** projection node の種別。L6-31 契約の node kind 列に対応する。 */
-export type RelationNodeKind =
-  | "requirement"
-  | "plan"
-  | "design"
-  | "test-design"
-  | "source"
-  | "test"
-  | "db-table"
-  | "verification-profile"
-  | "external-tool"
-  | "diagram";
-
-/** typed edge の種別 (artifact 間の関係)。 */
-export type RelationEdgeKind =
-  | "derives-from" // plan -> requirement
-  | "generates" // plan -> source
-  | "pairs" // design -> test-design
-  | "covered-by" // source -> test
-  | "upstream" // db-table -> requirement/adr/plan
-  | "behavioral-contract"; // design -> source (設計変更が source test を要求する印)
-
-export type RelationFindingCode =
-  | "orphan-table"
-  | "redacted-evidence"
-  | "unavailable-adapter"
-  | "invalid-evidence"
-  | "external-not-allowed"
-  | "missing-projection" // 変更 path に対応 node が projection に無い (impact 解析不能)
-  | "stale-edge" // edge の端点 node が projection に存在しない (整合崩れ)
-  | "missing-test-coverage"; // source 変更 node に sibling test edge が無い
-
-export interface RelationNode {
-  /** 安定 node ID = `${kind}:${key}`。 */
-  id: string;
-  kind: RelationNodeKind;
-  /** repo-relative path (file-backed node のみ)。 */
-  path?: string;
-  /** 表示用 label (任意)。 */
-  label?: string;
-}
-
-export interface RelationEdge {
-  from: string;
-  to: string;
-  kind: RelationEdgeKind;
-}
-
-export interface RelationFinding {
-  code: RelationFindingCode;
-  severity: "error" | "warn" | "info";
-  message: string;
-  nodeId?: string;
-  evidencePath?: string;
-}
-
-export interface RequirementInput {
-  id: string;
-  path?: string;
-}
-
-export interface PlanInput {
-  id: string;
-  path?: string;
-  /** 紐づく requirement id 集合 (derives-from edge)。 */
-  requirements?: string[];
-  /** 生成する source path 集合 (generates edge)。 */
-  generates?: string[];
-}
-
-export interface DesignDocInput {
-  id: string;
-  path: string;
-  /** ペアとなる test-design id (pairs edge)。 */
-  pairs?: string;
-  /** この設計が behavioral contract を持つ source path 集合 (behavioral-contract edge)。
-   *  設定すると、その design 変更は source test 追加を要求する (U-RELGRAPH-005 conditional)。 */
-  behavioralContract?: string[];
-}
-
-export interface TestDesignDocInput {
-  id: string;
-  path: string;
-}
-
-export interface SourceFileInput {
-  path: string;
-  /** この source を覆う test path 集合 (covered-by edge)。 */
-  tests?: string[];
-}
-
-export interface TestFileInput {
-  path: string;
-}
-
-export interface DbTableInput {
-  name: string;
-  /** 上流 node ID 集合 (`requirement:...` / `plan:...` / `adr:...` 等)。空なら orphan finding。 */
-  upstream?: string[];
-  /** physical-data / migration doc path (file-backed)。変更 path 突合用 (U-RELGRAPH-005)。 */
-  path?: string;
-}
-
-/**
- * A-125 verification evidence の text/metadata fixture。raw な機微フィールドは
- * projection へ複製せず、classification / count / evidence path / redacted summary のみ残す。
- */
-export interface VerificationEvidenceInput {
-  id: string;
-  evidencePath: string;
-  classification: string;
-  summary?: string;
-  /** 以下は機微 raw payload。projection 行へ複製しない (redact + count のみ)。 */
-  rawMcpResponse?: string;
-  browserTrace?: string;
-  providerTranscript?: string;
-  secret?: string;
-  screenshotBlob?: string;
-}
-
-export interface RelationGraphSourceSet {
-  requirements?: RequirementInput[];
-  plans?: PlanInput[];
-  designDocs?: DesignDocInput[];
-  testDesignDocs?: TestDesignDocInput[];
-  sourceFiles?: SourceFileInput[];
-  tests?: TestFileInput[];
-  dbTables?: DbTableInput[];
-  verificationEvidence?: VerificationEvidenceInput[];
-}
-
-/** sanitized verification-profile projection 行 (raw payload を持たない)。 */
-export interface VerificationProfileRow {
-  nodeId: string;
-  classification: string;
-  evidencePath: string;
-  redactedSummary: string;
-  /** redact した機微フィールド数。 */
-  redactedFieldCount: number;
-}
-
-export interface RelationGraphProjection {
-  nodes: RelationNode[];
-  edges: RelationEdge[];
-  verificationProfiles: VerificationProfileRow[];
-  findings: RelationFinding[];
-}
+export type {
+  DbTableInput,
+  DesignDocInput,
+  DiagramArtifact,
+  ExportRelationDiagramInput,
+  PlanInput,
+  RelationDiagramAdapter,
+  RelationDiagramFormat,
+  RelationEdge,
+  RelationEdgeKind,
+  RelationFinding,
+  RelationFindingCode,
+  RelationGraphProjection,
+  RelationGraphSourceSet,
+  RelationImpactAction,
+  RelationImpactActionKind,
+  RelationImpactInput,
+  RelationImpactResult,
+  RelationNode,
+  RelationNodeKind,
+  RequirementInput,
+  SourceFileInput,
+  TestDesignDocInput,
+  TestFileInput,
+  VerificationEvidenceInput,
+  VerificationProfileRow,
+} from "./relation-graph-types";
 
 function nodeId(kind: RelationNodeKind, key: string): string {
   return `${kind}:${key}`;
@@ -333,42 +230,6 @@ function sortFindings(list: RelationFinding[]): RelationFinding[] {
 // ---- analyzeRelationImpact (U-RELGRAPH-004..006) -------------------------------
 
 /** 変更が要求する follow-up action の種別。 */
-export type RelationImpactActionKind =
-  | "require-sibling-test"
-  | "review-design-contract"
-  | "review-l7-oracle"
-  | "update-plan"
-  | "reverse-backprop"
-  | "update-paired-artifact"
-  | "update-plan-dod"
-  | "record-trace-freeze-evidence"
-  | "rebuild-db-table"
-  | "review-upstream";
-
-export interface RelationImpactAction {
-  kind: RelationImpactActionKind;
-  /** action が関係する node ID (変更 node または波及先)。 */
-  nodeId: string;
-  reason: string;
-}
-
-export interface RelationImpactInput {
-  /** repo-relative の変更 path 集合。 */
-  changedPaths: string[];
-  /** collectRelationGraphProjection が返した projection。 */
-  projection: RelationGraphProjection;
-}
-
-export interface RelationImpactResult {
-  /** 変更 path に直接対応する node。 */
-  changedNodes: RelationNode[];
-  /** edge を辿って波及する node。 */
-  impacted: RelationNode[];
-  actions: RelationImpactAction[];
-  findings: RelationFinding[];
-  ok: boolean;
-}
-
 interface GraphIndex {
   nodeById: Map<string, RelationNode>;
   edgesFrom: Map<string, RelationEdge[]>;
@@ -657,23 +518,6 @@ export function analyzeRelationImpact(input: RelationImpactInput): RelationImpac
 
 // ---- PLAN-L7-36: exportRelationDiagram (U-RELGRAPH-007..008) ------------------
 
-export type RelationDiagramFormat = "mermaid" | "dot" | "d2";
-export type RelationDiagramAdapter = Exclude<RelationDiagramFormat, "mermaid">;
-
-export interface ExportRelationDiagramInput {
-  snapshot: RelationGraphProjection;
-  format: RelationDiagramFormat;
-  availableAdapters?: RelationDiagramAdapter[];
-}
-
-export interface DiagramArtifact {
-  format: RelationDiagramFormat;
-  content: string;
-  findings: RelationFinding[];
-  ok: boolean;
-  invokedAdapters: RelationDiagramAdapter[];
-}
-
 function diagramNodeId(id: string): string {
   return id.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
@@ -766,320 +610,4 @@ export function exportRelationDiagram(input: ExportRelationDiagramInput): Diagra
   };
 }
 
-// ---- PLAN-L7-36: collectVerificationEvidenceProjection (U-RELGRAPH-009..010) ---
-
-export interface VerificationProfileProjectionRow {
-  verification_profile_id: string;
-  name: string;
-  profile_type: string;
-  package_refs?: string[];
-  requires_docker?: boolean;
-  requires_browser?: boolean;
-  requires_network?: boolean;
-  green_definition_id?: string;
-  trigger_signals?: string[];
-  enabled?: boolean;
-  evidence_path: string;
-}
-
-export interface VerificationRecommendationProjectionRow {
-  verification_recommendation_id: string;
-  change_set_id: string;
-  plan_id: string;
-  profile_id: string;
-  profile_kind: string;
-  reason: string;
-  source_rule: string;
-  accepted: boolean;
-  evidence_path: string;
-}
-
-export interface McpServerRunProjectionRow {
-  mcp_run_id: string;
-  mcp_profile_id: string;
-  session_id?: string;
-  plan_id?: string;
-  command: string;
-  method: string;
-  tool_name?: string;
-  started_at?: string;
-  completed_at?: string;
-  exit_code?: number;
-  evidence_path: string;
-  normalized_status: string;
-}
-
-export interface ExternalToolFindingProjectionRow {
-  external_finding_id: string;
-  source_run_id: string;
-  source_kind: string;
-  finding_type: string;
-  severity: "error" | "warn" | "info";
-  subject_id?: string;
-  path?: string;
-  status?: string;
-  digest?: string;
-  evidence_path: string;
-}
-
-export interface VerificationEvidenceProjection {
-  verification_profiles: VerificationProfileProjectionRow[];
-  verification_recommendations: VerificationRecommendationProjectionRow[];
-  mcp_server_runs: McpServerRunProjectionRow[];
-  external_tool_findings: ExternalToolFindingProjectionRow[];
-  findings: RelationFinding[];
-  ok: boolean;
-}
-
-type EvidenceRecord = Record<string, unknown>;
-
-function asRecord(value: unknown): EvidenceRecord | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as EvidenceRecord)
-    : null;
-}
-
-function stringValue(record: EvidenceRecord, key: string): string | undefined {
-  const value = record[key];
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function booleanValue(record: EvidenceRecord, key: string): boolean | undefined {
-  return typeof record[key] === "boolean" ? record[key] : undefined;
-}
-
-function numberValue(record: EvidenceRecord, key: string): number | undefined {
-  const value = record[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function stringArrayValue(record: EvidenceRecord, key: string): string[] | undefined {
-  const value = record[key];
-  if (!Array.isArray(value)) return undefined;
-  const strings = value.filter((v): v is string => typeof v === "string" && v.length > 0);
-  return strings.length > 0 ? strings : undefined;
-}
-
-function evidenceFinding(
-  code: Extract<RelationFindingCode, "invalid-evidence" | "external-not-allowed">,
-  message: string,
-  evidencePath?: string,
-): RelationFinding {
-  return {
-    code,
-    severity: "error",
-    message,
-    evidencePath,
-  };
-}
-
-function projectProfile(
-  profile: EvidenceRecord,
-  evidencePath: string,
-): VerificationProfileProjectionRow | null {
-  const id = stringValue(profile, "id");
-  const name = stringValue(profile, "name");
-  const profileType = stringValue(profile, "profile_type");
-  if (!id || !name || !profileType) return null;
-  return {
-    verification_profile_id: id,
-    name,
-    profile_type: profileType,
-    package_refs: stringArrayValue(profile, "package_refs"),
-    requires_docker: booleanValue(profile, "requires_docker"),
-    requires_browser: booleanValue(profile, "requires_browser"),
-    requires_network: booleanValue(profile, "requires_network"),
-    green_definition_id: stringValue(profile, "green_definition_id"),
-    trigger_signals: stringArrayValue(profile, "trigger_signals"),
-    enabled: booleanValue(profile, "enabled"),
-    evidence_path: evidencePath,
-  };
-}
-
-function projectRecommendation(
-  recommendation: EvidenceRecord,
-  evidencePath: string,
-): VerificationRecommendationProjectionRow | null {
-  const id = stringValue(recommendation, "id");
-  const changeSetId = stringValue(recommendation, "change_set_id");
-  const planId = stringValue(recommendation, "plan_id");
-  const profileId = stringValue(recommendation, "profile_id");
-  const profileKind = stringValue(recommendation, "profile_kind");
-  const reason = stringValue(recommendation, "reason");
-  const sourceRule = stringValue(recommendation, "source_rule");
-  if (!id || !changeSetId || !planId || !profileId || !profileKind || !reason || !sourceRule)
-    return null;
-  return {
-    verification_recommendation_id: id,
-    change_set_id: changeSetId,
-    plan_id: planId,
-    profile_id: profileId,
-    profile_kind: profileKind,
-    reason,
-    source_rule: sourceRule,
-    accepted: booleanValue(recommendation, "accepted") ?? false,
-    evidence_path: evidencePath,
-  };
-}
-
-function projectMcpRun(
-  run: EvidenceRecord,
-  evidencePath: string,
-): McpServerRunProjectionRow | null {
-  const id = stringValue(run, "id");
-  const profileId = stringValue(run, "profile_id");
-  const command = stringValue(run, "command");
-  const method = stringValue(run, "method");
-  const status = stringValue(run, "normalized_status");
-  if (!id || !profileId || !command || !method || !status) return null;
-  return {
-    mcp_run_id: id,
-    mcp_profile_id: profileId,
-    session_id: stringValue(run, "session_id"),
-    plan_id: stringValue(run, "plan_id"),
-    command,
-    method,
-    tool_name: stringValue(run, "tool_name"),
-    started_at: stringValue(run, "started_at"),
-    completed_at: stringValue(run, "completed_at"),
-    exit_code: numberValue(run, "exit_code"),
-    evidence_path: evidencePath,
-    normalized_status: status,
-  };
-}
-
-function projectFinding(
-  finding: EvidenceRecord,
-  evidencePath: string,
-): ExternalToolFindingProjectionRow | null {
-  const id = stringValue(finding, "id");
-  const sourceRunId = stringValue(finding, "source_run_id");
-  const sourceKind = stringValue(finding, "source_kind");
-  const findingType = stringValue(finding, "finding_type");
-  const severity = stringValue(finding, "severity");
-  if (!id || !sourceRunId || !sourceKind || !findingType) return null;
-  const normalizedSeverity =
-    severity === "error" || severity === "warn" || severity === "info" ? severity : "warn";
-  return {
-    external_finding_id: id,
-    source_run_id: sourceRunId,
-    source_kind: sourceKind,
-    finding_type: findingType,
-    severity: normalizedSeverity,
-    subject_id: stringValue(finding, "subject_id"),
-    path: stringValue(finding, "path"),
-    status: stringValue(finding, "status"),
-    digest: stringValue(finding, "digest"),
-    evidence_path: evidencePath,
-  };
-}
-
-export function collectVerificationEvidenceProjection(
-  records: unknown[],
-): VerificationEvidenceProjection {
-  const verificationProfiles: VerificationProfileProjectionRow[] = [];
-  const verificationRecommendations: VerificationRecommendationProjectionRow[] = [];
-  const mcpServerRuns: McpServerRunProjectionRow[] = [];
-  const externalToolFindings: ExternalToolFindingProjectionRow[] = [];
-  const findings: RelationFinding[] = [];
-
-  for (const raw of records) {
-    const record = asRecord(raw);
-    const evidencePath = record ? stringValue(record, "evidence_path") : undefined;
-    if (!record || record.schema_version !== "verification-evidence-v1" || !evidencePath) {
-      findings.push(
-        evidenceFinding(
-          "invalid-evidence",
-          "verification evidence must include schema_version=verification-evidence-v1 and evidence_path",
-          evidencePath,
-        ),
-      );
-      continue;
-    }
-
-    const profile = asRecord(record.profile);
-    if (profile) {
-      const row = projectProfile(profile, evidencePath);
-      if (row) verificationProfiles.push(row);
-      else
-        findings.push(
-          evidenceFinding(
-            "invalid-evidence",
-            "verification profile row is missing required fields",
-            evidencePath,
-          ),
-        );
-    }
-
-    const recommendation = asRecord(record.recommendation);
-    if (recommendation) {
-      const row = projectRecommendation(recommendation, evidencePath);
-      if (row) verificationRecommendations.push(row);
-      else
-        findings.push(
-          evidenceFinding(
-            "invalid-evidence",
-            "verification recommendation row is missing required fields",
-            evidencePath,
-          ),
-        );
-    }
-
-    const mcpRun = asRecord(record.mcp_run);
-    if (mcpRun && record.allow_external === false) {
-      findings.push(
-        evidenceFinding(
-          "external-not-allowed",
-          "external MCP/tool run evidence was supplied while allow_external=false",
-          evidencePath,
-        ),
-      );
-      continue;
-    }
-    if (mcpRun) {
-      const row = projectMcpRun(mcpRun, evidencePath);
-      if (row) mcpServerRuns.push(row);
-      else
-        findings.push(
-          evidenceFinding(
-            "invalid-evidence",
-            "mcp_server_runs row is missing required fields",
-            evidencePath,
-          ),
-        );
-    }
-
-    const rawFindings = record.findings;
-    if (Array.isArray(rawFindings)) {
-      for (const rawFinding of rawFindings) {
-        const findingRecord = asRecord(rawFinding);
-        const row = findingRecord ? projectFinding(findingRecord, evidencePath) : null;
-        if (row) externalToolFindings.push(row);
-        else
-          findings.push(
-            evidenceFinding(
-              "invalid-evidence",
-              "external_tool_findings row is missing required fields",
-              evidencePath,
-            ),
-          );
-      }
-    }
-  }
-
-  const sortedFindings = sortFindings(findings);
-  return {
-    verification_profiles: verificationProfiles.sort((a, b) =>
-      a.verification_profile_id.localeCompare(b.verification_profile_id),
-    ),
-    verification_recommendations: verificationRecommendations.sort((a, b) =>
-      a.verification_recommendation_id.localeCompare(b.verification_recommendation_id),
-    ),
-    mcp_server_runs: mcpServerRuns.sort((a, b) => a.mcp_run_id.localeCompare(b.mcp_run_id)),
-    external_tool_findings: externalToolFindings.sort((a, b) =>
-      a.external_finding_id.localeCompare(b.external_finding_id),
-    ),
-    findings: sortedFindings,
-    ok: !sortedFindings.some((f) => f.severity === "error"),
-  };
-}
+export * from "./relation-graph-evidence";
