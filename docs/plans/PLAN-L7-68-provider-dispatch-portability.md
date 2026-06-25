@@ -43,8 +43,6 @@ generates:
     artifact_type: test_code
   - artifact_path: docs/handover/handover-mechanical-explicit.md
     artifact_type: markdown_doc
-  - artifact_path: docs/handover/session-handover-2026-06-16.md
-    artifact_type: markdown_doc
   - artifact_path: .ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md
     artifact_type: markdown_doc
 dependencies:

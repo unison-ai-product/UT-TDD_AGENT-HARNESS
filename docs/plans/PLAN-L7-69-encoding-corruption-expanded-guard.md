@@ -39,7 +39,6 @@ dependencies:
   parent: docs/plans/PLAN-L7-68-provider-dispatch-portability.md
   requires:
     - docs/improvement-backlog.md
-    - docs/handover/session-handover-2026-06-16.md
     - .ut-tdd/audit/A-137-unusable-provider-dispatch-audit.md
 ---
 
