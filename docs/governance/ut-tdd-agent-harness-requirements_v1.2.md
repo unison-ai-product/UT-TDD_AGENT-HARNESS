@@ -441,8 +441,8 @@ VALID_SUB_DOCS = {
   L1: ["business", "functional", "screen", "technical", "nfr"],                          # 5 種
   L2: ["screen-list", "screen-flow", "wireframe", "ui-element"],                          # 4 種
   L3: ["business", "functional", "nfr"],                                                  # 3 種 (slug は schema 正本: -requirement/-grade 接尾辞は付けない)
-  L4: ["data", "architecture", "function", "external-if",
-       "report", "batch", "notification", "code-value"],                                  # 4 コア + 4 標準成果物 (screen は L2 専用層が持つ)
+  L4: ["data", "architecture", "function", "external-if", "ui-standard",
+       "report", "batch", "notification", "code-value"],                                  # 4 コア + 5 標準成果物 (screen は L2 専用層が持つ。ui-standard = FE 設計標準 = data の FE 対)
   L5: ["internal-processing", "module-decomposition", "physical-data", "if-detail"],      # 4 種
   L6: ["function-spec", "class-design", "edge-case"],                                     # 3 種
 }
@@ -453,6 +453,8 @@ VALID_SUB_DOCS = {
 PLAN ID 命名は `PLAN-L<N>-<NN>-<sub-doc-slug>` (例: `PLAN-L1-03-screen-requirements`、`PLAN-L4-02-function`)。NN は layer × sub-doc を跨いだ通し連番 (sub-doc が決まれば slug で識別可)。
 
 > **L4 標準成果物カタログ拡張 (2026-06-22、`report`/`batch`/`notification`/`code-value`)**: L4 基本設計 = 外部設計。[document-system-map.md](./document-system-map.md) §1 が業界標準 (IPA 共通フレーム 2013) で grounding する外部設計成果物は「**画面 / 帳票 / IF / データ / 業務処理**」。画面は L2 (画面専用層) が持つため、残る標準成果物 = `report` (帳票)・`batch` (バッチ)・`notification` (メール/通知)・`code-value` (コード値一覧) を L4 へ追加し SI 標準成果物カタログを完成させる。これらは §G.13 の「**② プロダクト選択**」(当該成果物を産出する製品のみ起票。CLI/BE-only 等の不産出製品は `skip_sub_doc[].reason` で省略) であり、製品非依存の ① 必須ではない。当初「downstream プロダクト形状確定後」と carry されていたが、標準成果物は業界標準で確定済 = 自己スコープ (harness 自身が帳票を持たない) を理由にした先送りは [[judge-tooling-by-mission-not-self-scope]] に反するため本拡張で解消 (PO 指示 2026-06-22「カタログ拡張の完遂」)。正本は `src/schema/index.ts` の `VALID_SUB_DOCS` (本表は §正本同期方針に従いそれを mirror)。
+
+> **L4 FE 設計標準 `ui-standard` 追加 (2026-06-24、PLAN-L4-14)**: 外部設計成果物「画面」は L2 (画面一覧/遷移/UI 要素/wireframe = 画面の棚卸し) が持つが、**再利用 FE 設計標準 (UI 設計標準 + UI 部品カタログ + design tokens=色)** の降下先が L4 に無かった = 「部品/色がどこに降りるか未定義」の穴 (PO 指摘 2026-06-24)。業界標準 (Nablarch 方式設計/開発標準/設計標準 = `UI標準(画面)` + `UI部品カタログ` + `共通コンポーネント設計標準`、`DB設計標準` と同階層) では FE 設計標準は方式設計 (= 当方 L4) に降りる。よって `data` (DB 設計標準) の FE 対応物として `ui-standard` を L4 へ追加する。区分 = 「**② プロダクト選択 (UI 有時)**」(BE-only/no-UI は `skip_sub_doc[].reason` で省略)。L10 (UX 磨き) は `V_MODEL_PAIRS` L2↔L10 のとおり impl **後**の検証ペアであり、impl 前に要る FE 設計標準の降下先ではない (document-system-map §1 L10 行 = 「FE デザイン確定 / UX 検証 WCAG」)。正本は `src/schema/index.ts` の `VALID_SUB_DOCS`。
 
 > **内部資産拡張 sub-doc (REVERSE-01 V4 注記、2026-06-04)**: harness 自身が統制する内部資産 (roster / skill-pack / drift-lint) は、上記コア sub-doc enum とは別の **拡張 sub-doc** として L4/L5 に存在する (実 PLAN: `PLAN-L4-10〜13` (internal-asset-master/roster/skill-pack/drift-lint) / `PLAN-L5-05〜07` (roster/skill/drift))。これらは製品ドメインの設計 sub-doc でなく harness メタ資産のため、コア `VALID_SUB_DOCS[L4|L5]` の件数確定 (5/4 種) には含めず、**拡張点**として別管理する。lint engine 実装時は `VALID_SUB_DOCS` を「コア + 内部資産拡張」の 2 群で持つ (件数 audit はコア群で行い、拡張群は allow-list 追加)。
 

@@ -42,12 +42,13 @@ PO 元来の狙い「全員で進捗・設計書を共有して見る」(ADR-005
 本 PLAN は新規発明でなく、**既に L2 で確定した画面設計を起点に descent** する ([[feedback_central_ui_kouteihyou_mission_not_coverage]])。
 
 - **L2 (起点・G2 freeze 済)**: [screen-list](../design/harness/L2-screen/screen-list.md) 15 画面 / [screen-flow](../design/harness/L2-screen/screen-flow.md) / [ui-element](../design/harness/L2-screen/ui-element.md) §2 部品 / [wireframe](../design/harness/L2-screen/wireframe.md)。read-only + CLI コピーのみ (S5=b)、ID↔URL 1:1、30 秒ポーリング (S2=b)。
-- **L10 (UX refinement ✓ 2026-06-24)**: [visual-design](../design/harness/L10-ux/visual-design.md) + [tokens.yaml](../design/harness/L10-ux/tokens.yaml)。component-derived High-Fi (PLAN-L7-141 §6 で設計降下完遂)。
+- **L4 FE 設計標準 (ui-standard ✓ 2026-06-24、PLAN-L4-14)**: [ui-standard](../design/harness/L4-basic-design/ui-standard.md) + [tokens.yaml](../design/harness/L4-basic-design/tokens.yaml)。component-derived 再利用 FE 設計標準 (部品/色)。`data`=DB 設計標準の FE 対応物 (document-system-map §1b)。
 - **src/web 実装**: [PLAN-L7-141](./PLAN-L7-141-web-dashboard-component-derived.md)(component-derived 15 画面、read-only)。本 PLAN の `requires`。
+- **L10 UX 磨き (impl 後)**: 実装済 UI を磨き WCAG 検証 (L2 の右腕ペア)。配信・実装の前提ではない。
 - **本 PLAN (L7-146)**: その read-only UI を **無料 serverless で配信し全 project 横断・多人数で共有**する delivery 層 (ADR-005 D2 Phase B server sync を無料・read-only に具体化)。
 
-> descent 順: `L2 設計(✓) → L10 UX(✓) → read-only src/web 実装(L7-141) → 無料 serverless 配信/共有(本 PLAN)`。
-> L2/L10 を飛ばして配信や実装に着手しない (L7-102 table-dumper 失敗の再発防止)。
+> descent 順 (PLAN-L4-14 §3.3): `L2 画面設計(✓) → L4 FE 設計標準 ui-standard(✓) → L6 機能設計 → read-only src/web 実装(L7-141) → 無料 serverless 配信/共有(本 PLAN) → L10 UX 磨き(impl後)`。
+> L2/L4 設計標準を飛ばして配信や実装に着手しない (L7-102 table-dumper 失敗の再発防止)。
 
 ## 2. Scope
 
@@ -76,7 +77,7 @@ PO 元来の狙い「全員で進捗・設計書を共有して見る」(ADR-005
 ## 4. Schedule
 
 - mode: serial。
-- Step 0 ✓: L2 画面設計 (G2 freeze) + L10 UX 設計 (2026-06-24) の descent 確認 = 起点 (本 PLAN の前提、再設計しない)。
+- Step 0 ✓: L2 画面設計 (G2 freeze) + L4 FE 設計標準 ui-standard (2026-06-24、PLAN-L4-14) の descent 確認 = 起点 (本 PLAN の前提、再設計しない)。
 - Step 1: read-only src/web の component-derived 実装到達確認 ([PLAN-L7-141](./PLAN-L7-141-web-dashboard-component-derived.md))。未了なら L7-141 を先に進める (配信は実装の後)。
 - Step 2: Cloudflare Pages(静的 SPA) + Workers Free(read API) の最小配信骨格。`workers.dev` で公開、独自ドメインは任意。
 - Step 3: GitHub webhook(HMAC) → Worker → D1/KV projection 同期 + 定期 reconcile cron。secret 非投影を fail-close で配線。
@@ -86,7 +87,7 @@ PO 元来の狙い「全員で進捗・設計書を共有して見る」(ADR-005
 ## 5. 壊さない / 再発させない
 
 - **read-only 不変条件を保持**: S5=b / S-01 / CC2 / ADR-005 D2 を変えない。本 PLAN は配信層のみで、UI に書込/実行 API を一切足さない。足すなら別 PLAN + 要件改定 + escalation。
-- **L2/L10 を飛ばさない**: 配信は L2→L10→実装 (L7-141) の descent の下流。段階順違反 (L7-102) を再発させない。
+- **L2/L4 設計標準を飛ばさない**: 配信は `L2→L4 ui-standard→L6→実装 (L7-141)` の descent の下流。段階順違反 (L7-102) を再発させない。L10 (UX 磨き) は impl 後。
 - **正本は git/GitHub**: 中央の D1/KV projection は非正本 (再構築可能)。生成物を正本化しない。
 - **無料枠を超えたら明示**: 超過時 (req/日・DO/WebSocket・編集ジョブ追加) は $5 Paid または別 PLAN へ昇格を doc 化。silent に課金面へ踏み込まない。
 

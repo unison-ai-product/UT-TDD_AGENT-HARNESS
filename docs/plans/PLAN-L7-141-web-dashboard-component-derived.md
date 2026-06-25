@@ -37,8 +37,13 @@ dependencies:
 設計部品 (`HierarchyPulldown` / `HeatmapGrid` / `LayerTemplate` 等) から降ろさず、harness.db を
 `SELECT` して汎用テーブル描画する **table-dumper prototype** だった (中央UIの mission=工程管理表を
 測れない、[[feedback_central_ui_kouteihyou_mission_not_coverage]])。さらに画面 V-model 鎖
-`L2 設計+Low-Fi mock → L10 UX refinement/High-Fi mock → src/web 実装` の **L10 を飛ばして**
-実装に着手していた。よって prototype を破棄し、要件 (component-derived + 段階順) を正して再起票する。
+`L2 画面設計 → L4 FE 設計標準 (ui-standard) → L6 機能設計 → src/web 実装 → L10 UX 磨き(impl後)` の
+**設計標準 (部品/色) を飛ばして** 実装に着手していた。よって prototype を破棄し、要件 (component-derived +
+段階順) を正して再起票する。
+
+> **descent 是正 (PLAN-L4-14、2026-06-24)**: 再利用 FE 設計標準 (部品/色/tokens) は L10 ではなく **L4
+> `ui-standard`** に降りる (`data`=DB 設計標準の FE 対応物、document-system-map §1b)。L10 は impl **後**の
+> UX 磨き/WCAG 検証 (L2 の右腕ペア)。本 PLAN の前提を §3.3 PLAN-L4-14 の canonical descent 鎖へ更新する。
 
 L7-102 は本 PLAN が `supersedes` で引き継ぐ (errata 規律、.claude/CLAUDE.md / PLAN-L7-89)。
 prototype コード (`src/web/*.ts`) と `tests/web.test.ts`、`cli web` command は破棄済 (本 PLAN 着手時に
@@ -47,7 +52,8 @@ prototype コード (`src/web/*.ts`) と `tests/web.test.ts`、`cli web` command
 ## 1. 要件 (正した前提)
 
 1. **component-derived**: 各画面は L2 ui-element §2 の設計部品から構成する。汎用 table dumper 禁止。
-2. **段階順 (V-model)**: `L2 → L10 (UX refinement / High-Fi mock) → impl`。L10 pair-freeze 到達まで
+2. **段階順 (V-model、PLAN-L4-14 §3.3)**: `L2 画面設計(G2) → L4 ui-standard (FE 設計標準) → L6 機能設計
+   → src/web 実装 → L10 UX 磨き(impl後)`。L4 FE 設計標準 (ui-standard + tokens) 到達まで
    `implemented_screens` を立てない (`screen-impl-pair-freeze` gate が fail-close)。
 3. **mission で測る**: 完遂判定は工程管理表 (mission) で行う。描画数や implemented flip の coverage で
    「Phase B 完遂」と名乗らない ([[feedback_coverage_not_substance]])。
@@ -58,20 +64,21 @@ prototype コード (`src/web/*.ts`) と `tests/web.test.ts`、`cli web` command
 
 - `src/web/` を ui-element §2 部品ベースで再構築 (render 部品 → 画面 → router/app/server)。
 - `cli web` command 再配線、`tests/web.test.ts` を部品単位で再設計。
-- L10 (UX refinement) 設計が未到達なら本 PLAN はそこで block (段階順を破らない)。
+- L4 FE 設計標準 (ui-standard、PLAN-L4-14) が未到達なら本 PLAN はそこで block (段階順を破らない)。
 
 ## 3. Acceptance Criteria
 
 - 15 画面が ui-element §2 部品から構成され、table-dumper 描画が無い。
-- `screen-impl-pair-freeze` gate green かつ L10 到達後にのみ `implemented_screens` を宣言。
+- `screen-impl-pair-freeze` gate green かつ L4 FE 設計標準 (ui-standard) 到達後にのみ `implemented_screens` を宣言。
 - mission (工程管理表) で進捗が測れる。
 - doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
 
 ## 4. Schedule
 
 - mode: serial。
-- Step 1 ✓ (2026-06-24): **L10 設計を起票・authored + cross-reviewed**。`docs/design/harness/L10-ux/`
-  (visual-design.md + tokens.yaml)。L2→L10 の設計降下完遂 (§6)。confirmed 昇格は G10 PO サインオフ。
+- Step 1 ✓ (2026-06-24): **FE 設計標準を authored + cross-reviewed**。当初 `docs/design/harness/L10-ux/`
+  に置いたが PLAN-L4-14 で **L4 `ui-standard.md` + `tokens.yaml`** へ re-home (層配置是正、§6)。confirmed 昇格は
+  G4 PO サインオフ (L4 基本設計凍結)。
 - Step 2: ui-element §2 部品の render 実装。
 - Step 3: 画面 → router/app/server 配線 + tests。
 - Step 4: review → confirmed。
@@ -80,16 +87,19 @@ prototype コード (`src/web/*.ts`) と `tests/web.test.ts`、`cli web` command
 
 - table-dumper への逆戻りを `screen-impl-pair-freeze` + 本 AC で塞ぐ。
 - `screen` projection (L7-96) と L2 設計群は破棄対象でない (read-model / 設計は保持・要件を正すのみ)。
-- L10 を飛ばさない (段階順を破った L7-102 の再発防止)。
+- L4 FE 設計標準 (ui-standard) を飛ばさない (段階順を破った L7-102 の再発防止)。L10 (UX 磨き) は impl 後。
 
-## 6. L10 設計降下完遂 記録 (2026-06-24、Step 1)
+## 6. FE 設計標準 降下完遂 記録 (2026-06-24、Step 1。PLAN-L4-14 で L4 へ re-home)
 
-L2 ui-element §2 部品から component-derived で L10 UX-refinement 設計を authored し、L2→L10 の設計降下を
-完遂した (read-only + CLI コピー S5=b 前提を維持)。
+L2 ui-element §2 部品から component-derived で FE 設計標準を authored した (read-only + CLI コピー S5=b
+前提を維持)。**当初 L10 に置いたが、再利用 FE 設計標準 (部品/色/tokens) は impl 前に要る方式設計/開発標準
+のため L4 へ降ろすのが正しい (PLAN-L4-14、`data`=DB 設計標準の FE 対応物、document-system-map §1b)**。
+よって substance を L4 へ re-home し、L10 は impl 後の UX 磨き placeholder とした。
 
-**成果物**:
-- `docs/design/harness/L10-ux/visual-design.md` — 15 画面の component-derived High-Fi 設計 (§4 部品 / §5 画面合成 = table-dumper 不在の確認 / §3.4 a11y WCAG 2.2 AA / §6 visual regression)。
-- `docs/design/harness/L10-ux/tokens.yaml` — デザイントークン SSOT (FR-30、WCAG 2.2 AA 目標、token 名一意 = AC-FR-30-02 充足)。
+**成果物 (PLAN-L4-14 で L4 へ re-home 済)**:
+- `docs/design/harness/L4-basic-design/ui-standard.md` — 15 画面の component-derived FE 設計標準 (§4 UI 部品カタログ / §5 画面合成 = table-dumper 不在の確認 / §3.4 a11y WCAG 2.2 AA / §6 visual regression 方針)。
+- `docs/design/harness/L4-basic-design/tokens.yaml` — デザイントークン SSOT (FR-30、WCAG 2.2 AA 目標、token 名一意)。
+- `docs/design/harness/L10-ux/visual-design.md` — impl 後 UX 磨き/WCAG 検証の placeholder へ reframe。
 
 **review_evidence (intra_runtime_subagent)**:
 - reviewer: code-reviewer (claude-sonnet-4-6) / worker: claude-opus-4-8 (PM)。hybrid だが Codex live dispatch は別途任意 (本 land は sonnet cross-review を採用)。

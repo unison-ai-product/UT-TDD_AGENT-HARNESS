@@ -1,35 +1,41 @@
 # =============================================================================
-# L10 UX refinement — デザイントークン SSOT (Single Source of Truth)
+# L4 FE 設計標準 — デザイントークン SSOT (Single Source of Truth)
 # =============================================================================
-# 正本 = 本ファイル (FR-30 / AC-FR-30-01: `docs/design/harness/L10-ux/tokens.yaml`)。
-# L2 ui-element §3 (デザイントークン L2 確定方針) が「具体値 (hex/px) の High-Fi 確定は
-# L10 へ委譲」と明記した分を、本ファイルが具体値で確定する。src/web (Phase B、PLAN-L7-141
-# Step 2-4) はこの token を唯一の出典として参照し、ハードコード色/寸法を持たない。
+# 正本 = 本ファイル (`docs/design/harness/L4-basic-design/tokens.yaml`、PLAN-L4-14)。
+# 色/寸法/タイポの具体値 (hex/px) を確定する **再利用 FE 設計標準** = `data` (DB 設計標準) の
+# FE 対応物。L2 ui-element §3 (デザイントークン L2 確定方針) が「具体値の確定は下流へ委譲」と
+# した分を本ファイルが確定する。src/web (L7、PLAN-L7-141) はこの token を唯一の出典として参照し、
+# ハードコード色/寸法を持たない。
+#
+# 層配置 (PLAN-L4-14 で是正): design tokens は impl **前**に要る FE 設計標準のため L4 (方式設計/
+# 開発標準、Nablarch UI標準/部品カタログと同階層) に降ろす。L10 (UX 磨き) は impl **後**に実装済
+# UI を磨き WCAG 検証する L2 の右腕ペア (V_MODEL_PAIRS L2↔L10) であり、本 token の降下先ではない。
+# (旧 `docs/design/harness/L10-ux/tokens.yaml` を本パスへ re-home、d8a5d2c の層誤配置を是正。)
 #
 # スコープ制約 (L2 ui-element §3-§5 から継承):
-#   - light モードのみ (Q30、dark は Phase B 持ち越し)
+#   - light モードのみ (Q30、dark は後続持ち越し)
 #   - 日本語固定 (Q31)
 #   - Desktop 専用 (S9=a、min-width 前提)
 #
-# a11y 目標 (FR-30 出力 = a11y チェック、IMP-020 = WCAG 2.2 AA reference):
+# a11y 目標 (WCAG 2.2 AA reference、IMP-020):
 #   - 通常テキスト  : コントラスト比 >= 4.5:1
 #   - 大テキスト/UI : コントラスト比 >= 3:1
-#   下の `contrast_target` は設計目標。実レンダリング比の検証は FR-30 の a11y script が
-#   実装時 (Phase B) に行う (宣言でなく機械実測、coverage != substance)。
+#   下の `contrast_target` は設計目標。実レンダリング比の検証は a11y script が実装時 (L7) に
+#   実レンダリングで行う (宣言でなく機械実測、coverage != substance)。
 #
-# token 名の一意性 = AC-FR-30-02 (token 二重定義 fail-close) を満たすため、全 leaf key は
-# group prefix と合わせて一意 (例: color.fg.default は 1 箇所のみ)。
+# token 名の一意性: token 二重定義 fail-close を満たすため、全 leaf key は group prefix と
+# 合わせて一意 (例: color.fg.default は 1 箇所のみ)。
 # =============================================================================
 version: 1
-layer: L10
+layer: L4
 mode: light
 upstream_fr: FR-30 (FR-L1-30)
 
 # -----------------------------------------------------------------------------
 # color — 状態色 5 値 (L2 ui-element §1 「状態種別の標準 5 値」= ok/warn/error/empty/loading)
 # 各状態は fg (テキスト/アイコン/ボーダー) と bg (淡色 fill) のペアを持つ。
-# StatusBadge は「色のみに依存しない」(§4 a11y) ため、必ず fg 色 + アイコン + ラベルを併記
-# (visual-design.md §3 参照)。fill 上の fg はコントラスト >= 4.5:1 を満たす値域で選定。
+# StatusBadge は「色のみに依存しない」(ui-standard §a11y) ため、必ず fg 色 + アイコン + ラベルを
+# 併記。fill 上の fg はコントラスト >= 4.5:1 を満たす値域で選定。
 # -----------------------------------------------------------------------------
 color:
   # 基本前景・背景・面
@@ -50,7 +56,7 @@ color:
     ok:
       fg: "#1A7F37"         # 緑。on canvas / on ok.bg contrast_target >= 4.5:1
       bg: "#DAFBE1"
-      icon: "check-circle"  # アイコン名 (色のみ依存回避、§4)。glyph 例: 🟢/✓
+      icon: "check-circle"  # アイコン名 (色のみ依存回避)。glyph 例: 🟢/✓
     warn:
       fg: "#9A6700"         # 琥珀。黄系は AA が厳しいため text は暗い琥珀を使用
       bg: "#FFF8C5"
@@ -68,7 +74,7 @@ color:
       bg: "#EFF2F5"
       icon: "sync"          # glyph 例: 🔄
 
-  # 強調 (NextActionCard / gate fail / active 遷移)。色 + ウェイトで強調 = 色のみ非依存 (§4)
+  # 強調 (NextActionCard / gate fail / active 遷移)。色 + ウェイトで強調 = 色のみ非依存
   accent:
     fg: "#0969DA"           # リンク/active/next-action。on canvas contrast_target >= 4.5:1
     emphasis: "#0969DA"     # ボタン/強調面の背景
@@ -132,7 +138,7 @@ type:
     bold: 600               # 強調 (色のみ非依存の片翼)
 
 # -----------------------------------------------------------------------------
-# focus — フォーカス可視 (§4 「フォーカスリングを維持」、Desktop keyboard 利用者)
+# focus — フォーカス可視 (a11y 「フォーカスリングを維持」、Desktop keyboard 利用者)
 # -----------------------------------------------------------------------------
 focus:
   ringColor: "#0969DA"      # = accent.fg

@@ -84,4 +84,13 @@ describe("loadSubDocCatalogDriftInput real repo (U-SDCD-007)", () => {
     const input = loadSubDocCatalogDriftInput(process.cwd());
     expect(input.schema).toBe(VALID_SUB_DOCS);
   });
+
+  it("U-SDCD-009: L4 FE 設計標準 ui-standard が登録され schema↔要件 §G.1 で drift 0 (PLAN-L4-14、data の FE 対)", () => {
+    // 部品/色の降下先 = L4 ui-standard (document-system-map §1b/§1c)。data (DB 設計標準) と同階層に
+    // 登録され、要件 §G.1 mirror とも一致することを実 repo で回帰固定する (coverage != substance、散文でなく gate)。
+    expect(VALID_SUB_DOCS.L4 as readonly string[]).toContain("ui-standard");
+    const input = loadSubDocCatalogDriftInput(process.cwd());
+    expect(input.requirement.L4 ?? []).toContain("ui-standard");
+    expect(analyzeSubDocCatalogDrift(input).ok).toBe(true);
+  });
 });
