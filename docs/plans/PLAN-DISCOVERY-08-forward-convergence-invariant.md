@@ -3,10 +3,12 @@ plan_id: PLAN-DISCOVERY-08-forward-convergence-invariant
 title: "PLAN-DISCOVERY-08 (kind=poc): forward-convergence 不変条件 — 別フローの最終実態が Forward に集約されるまで freeze 不成立を機械強制する metamodel 検証 (集約義務の網羅化 + freeze gate 完全性)"
 kind: poc
 layer: cross
-workflow_phase: S3
+workflow_phase: S4
 scrum_type: design-spike
 drive: be
 status: confirmed
+decision_outcome: confirmed
+promotion_strategy: reuse-with-hardening
 created: 2026-06-26
 updated: 2026-06-26
 owner: PM (Opus) / PO (人間)

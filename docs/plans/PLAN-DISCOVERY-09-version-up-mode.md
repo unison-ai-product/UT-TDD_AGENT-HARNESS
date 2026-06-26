@@ -3,10 +3,12 @@ plan_id: PLAN-DISCOVERY-09-version-up-mode
 title: "PLAN-DISCOVERY-09 (kind=poc): version-up 駆動モデル — 将来版へ保全 (deferred-but-committed-future) する mode。中央UI(画面) を第一ケースに「いまは入れないが将来的に入れる」を明示・機械追跡する"
 kind: poc
 layer: cross
-workflow_phase: S1
+workflow_phase: S4
 scrum_type: design-spike
 drive: be
-status: draft
+status: confirmed
+decision_outcome: confirmed
+promotion_strategy: reuse-with-hardening
 created: 2026-06-26
 updated: 2026-06-26
 owner: PM (Opus) / PO (人間)
@@ -29,6 +31,32 @@ dependencies:
     - docs/plans/PLAN-L7-141-web-dashboard-component-derived.md
     - docs/plans/PLAN-L7-146-serverless-readonly-share.md
     - docs/plans/PLAN-L7-157-distribution-clean-pull.md
+review_evidence:
+  - reviewer: codex
+    review_kind: cross_agent
+    reviewed_at: "2026-06-26T15:30:00+09:00"
+    tests_green_at: "2026-06-26T15:20:00+09:00"
+    verdict: approve
+    worker_model: claude-opus-4-8
+    reviewer_model: gpt-5.5
+    scope: "version-up 駆動モデル (frontmatter version_target = status=draft 限定 + ledger 照合 / forward-convergence の version-up-parked bucket / outstanding 分離 / UI 141/146 適用) を別 runtime (Codex gpt-5.5, role=tl) が desk review。verdict=APPROVE-WITH-CHANGES (Critical 0、証跡 .ut-tdd/review/cross-review-versionup-and-s4-failclose.md)。Critical (version_target status=draft 限定 / landing 除外禁止 / ledger label) 反映済。正本 back-merge = PLAN-REVERSE-140。"
+    green_commands:
+      - kind: unit_test
+        command: "bunx vitest run tests/forward-convergence.test.ts (version-up parked + guards)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-26T15:20:00+09:00"
+        evidence_path: tests/forward-convergence.test.ts
+        output_digest: "sha256:636c6cc0fecc57a60dab02d5272c4b28932a22250ca3dd28f2bfd5d8af5447da"
+      - kind: unit_test
+        command: "bunx vitest run tests/outstanding.test.ts (active draft / version-up parked 分離)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-26T15:20:00+09:00"
+        evidence_path: tests/outstanding.test.ts
+        output_digest: "sha256:6cd0c414c6d50bff523e284608cc3df8640c4b0bc3b658f95fa1f87060600155"
 ---
 
 # PLAN-DISCOVERY-09 (kind=poc): version-up 駆動モデル
