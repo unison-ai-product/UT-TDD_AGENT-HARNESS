@@ -78,7 +78,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T16:30:00+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:632bbe8c01fd68fcfa20c36224844e8054b0279776228639160b90433505aa0d"
+        output_digest: "sha256:e9abdbe2dea079dbdca64208b8e28a941e489e0105170e57642403237c975eeb"
 ---
 
 # PLAN-REVERSE-130: right-arm gate planning fullback

@@ -86,6 +86,11 @@ import {
   feedbackLogMessages,
   loadFeedbackLogInput,
 } from "../lint/feedback-log";
+import {
+  analyzeForwardConvergence,
+  forwardConvergenceMessages,
+  loadConvergenceDocs,
+} from "../lint/forward-convergence";
 import { analyzeFrRegistry, loadFrDocs as loadFrRegistryDocs } from "../lint/fr-registry-audit";
 import {
   analyzeFrRoadmapCoverageWithRoot,
@@ -1758,6 +1763,25 @@ export function checkLintWiring(repoRoot: string): { messages: string[]; ok: boo
   }
 }
 
+/**
+ * forward-convergence (report-only, PLAN-DISCOVERY-08 PoC spike): spine-外 kind=impl の landed 未集約を
+ * surface する。doctor.ok とは連動させない (fail-close 昇格は S4 ADOPT 後)。例外時も surface のみ。
+ */
+export function checkForwardConvergence(repoRoot: string): { messages: string[]; ok: boolean } {
+  try {
+    const docs = loadConvergenceDocs(repoRoot);
+    const r = analyzeForwardConvergence(docs.plans, docs.roadmapSpanIds, docs.reverseReferencedIds);
+    return { messages: forwardConvergenceMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: [
+        "forward-convergence — note: PLAN を読めず spine-外集約を検査できない [report-only]",
+      ],
+      ok: true,
+    };
+  }
+}
+
 export function checkFrontendDesignCoverage(repoRoot: string): {
   messages: string[];
   ok: boolean;
@@ -1874,6 +1898,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const handoverOutstanding = checkHandoverOutstandingAnchor(handoverDeps(deps));
   // advisory (非ブロック): green_command digest が evidence_path 実 hash と一致するか (fake substance 可視化、PLAN-L7-132)。
   const greenCommandDigest = checkGreenCommandDigests(deps.repoRoot);
+  // advisory (非ブロック): spine-外 kind=impl の landed 未集約を surface (PLAN-DISCOVERY-08 PoC、report-only)。
+  const forwardConvergence = checkForwardConvergence(deps.repoRoot);
   return {
     ok:
       backfill.ok &&
@@ -2014,6 +2040,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...frontendDesignCoverage.messages.map((m) => `doctor: ${m}`),
       ...handoverOutstanding.messages.map((m) => `doctor: ${m}`),
       ...greenCommandDigest.messages.map((m) => `doctor: ${m}`),
+      ...forwardConvergence.messages.map((m) => `doctor: ${m}`),
     ],
   };
 }

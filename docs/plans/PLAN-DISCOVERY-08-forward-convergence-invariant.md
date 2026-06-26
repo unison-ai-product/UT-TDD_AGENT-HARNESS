@@ -3,10 +3,10 @@ plan_id: PLAN-DISCOVERY-08-forward-convergence-invariant
 title: "PLAN-DISCOVERY-08 (kind=poc): forward-convergence 不変条件 — 別フローの最終実態が Forward に集約されるまで freeze 不成立を機械強制する metamodel 検証 (集約義務の網羅化 + freeze gate 完全性)"
 kind: poc
 layer: cross
-workflow_phase: S1
+workflow_phase: S3
 scrum_type: design-spike
 drive: be
-status: draft
+status: confirmed
 created: 2026-06-26
 updated: 2026-06-26
 owner: PM (Opus) / PO (人間)
@@ -20,6 +20,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-DISCOVERY-08-forward-convergence-invariant.md
     artifact_type: markdown_doc
+  - artifact_path: src/lint/forward-convergence.ts
+    artifact_type: source_module
+  - artifact_path: tests/forward-convergence.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires:
@@ -28,6 +32,32 @@ dependencies:
     - docs/plans/PLAN-L7-157-distribution-clean-pull.md
     - docs/plans/PLAN-L7-141-web-dashboard-component-derived.md
     - docs/plans/PLAN-L7-146-serverless-readonly-share.md
+review_evidence:
+  - reviewer: codex
+    review_kind: cross_agent
+    reviewed_at: "2026-06-26T14:52:00+09:00"
+    tests_green_at: "2026-06-26T14:49:00+09:00"
+    verdict: approve
+    worker_model: claude-opus-4-8
+    reviewer_model: gpt-5.5
+    scope: "別 runtime (Codex gpt-5.5, role=tl) が PM=opus の forward-convergence analyzer 実装 (src/lint/forward-convergence.ts + test + doctor report-only 配線) を desk review。verdict=APPROVE-WITH-CHANGES (Critical 0)。判定語彙 (spine内外/landed/local_impl_only)・SSoT 非重複 (poc=scrum-reverse / add-impl 等=backfill / impl=本 analyzer) を支持。baseline 2 件 (PLAN-L7-147 / PLAN-L7-62) は真陽性と確認。Important (docs/process・docs/adr parent_design を spine-外とする回帰テスト追加) を反映済 (15 tests)。Minor (not_required 理由長を S4 で schema 明記) は Step5 follow-up。前段の診断/方向性 desk review (.ut-tdd/review/cross-review-forward-convergence-invariant.md、総合 AGREE) も同 runtime。"
+    green_commands:
+      - kind: unit_test
+        command: "bunx vitest run tests/forward-convergence.test.ts (15 tests: spine接続×5 / landed-disposition×2 / 分類×6 / parse+messages×2)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-26T14:49:00+09:00"
+        evidence_path: tests/forward-convergence.test.ts
+        output_digest: "sha256:437031b8b883e0e1f7e1d712542f8296d0cbb54e154fae4682a49f553101bfdf"
+      - kind: unit_test
+        command: "bunx vitest run tests/forward-convergence.test.ts (analyzer 本体 analyzeForwardConvergence/isSpineConnected/hasLocalImplOnlyDisposition 実挙動)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-26T14:49:00+09:00"
+        evidence_path: src/lint/forward-convergence.ts
+        output_digest: "sha256:5034b1e9230801920336ef2a1138241a7ae76467f9eed7708511943cd96579d9"
 ---
 
 # PLAN-DISCOVERY-08 (kind=poc): forward-convergence 不変条件
@@ -105,17 +135,37 @@ fail-close する SSoT ではない**。
 
 ## 4. Acceptance Criteria (falsifiable / コマンド引用、prose 禁止)
 
-> 本 PLAN は status=draft (PoC 未実施)。下記 AC は S2 で充足する**目標**であり、現時点で達成済とは主張しない。
-
 - **AC-1 engine green**: `bunx vitest run tests/forward-convergence.test.ts` exit 0。
-- **AC-2 判定語彙**: analyzer が spine 外 impl/poc を 4 区分に分類し、各 unconverged-landed が grounding
+- **AC-2 判定語彙**: analyzer が spine 外 impl を 4 区分に分類し、各 unconverged-landed が grounding
   (接続不在) を伴う (test の分類ケース)。
-- **AC-3 baseline 実測**: analyzer を現リポへ適用し `unconverged-landed` の件数を出力 (実測値を §後記に記録、0 を仮定しない)。
+- **AC-3 baseline 実測**: analyzer を現リポへ適用し `unconverged-landed` の件数を出力 (実測値を下記に記録、0 を仮定しない)。
 - **AC-4 false-positive 非発火**: parent_design/requires/roadmap span 接続済 impl を flag しない、かつ
   draft/deferred を violation にしない (test の負系ケース)。
 - **AC-5 SSoT 非重複**: descent-obligation/impl-plan-trace と別々に同じ判定を再実装していない (クロスレビューで支持)。
 - **AC-6 無回帰**: `ut-tdd doctor` exit 0 / `bun run test` (vitest 全量) green / `ut-tdd plan lint` / `bun run lint` /
   `bun run typecheck` 通過。
+
+### AC 充足状況 (confirmed scope = Step 1-4 = analyzer engine + report-only surface + baseline + cross-review、2026-06-26)
+
+- **AC-1 ✓**: `tests/forward-convergence.test.ts` 15 tests green。
+- **AC-2 ✓ / AC-4 ✓**: 分類ケース + 負系 (spine 接続済 flag せず / draft-deferred を violation にせず /
+  local-impl-only 許可 / scope 外 kind 無視) + Codex Important 反映の境界回帰 (docs/process・docs/adr parent_design=spine-外)。
+- **AC-3 ✓ baseline 実測値**: 現リポの `unconverged-landed` = **2 件** ——
+  `PLAN-L7-147-refactor-candidate-detector` (parent_design=docs/process/modes/refactor.md) /
+  `PLAN-L7-62-runtime-portability-guard` (parent_design=docs/adr/ADR-001)。いずれも L6 設計 / L1-L6 Forward PLAN
+  へ降下せず backprop_decision も無い landed impl = 真陽性 (Codex 確認)。その他 spine-internal 33 / converged 0 /
+  local-impl-only 0 / draft-deferred 0。これらの disposition (Forward 集約 or local_impl_only) は **Step 5 = S4 PO 判断**。
+- **AC-5 ✓**: scope=kind:impl のみ。poc=scrum-reverse / add-impl 等=backfill に委譲し二重計上なし (Codex 支持)。
+  requires=backfill-pairing.parseRequires / reverse links=scrum-reverse.parseLinks / roadmap span=roadmap-registry を再利用。
+- **AC-6 ✓**: `bun run typecheck` exit 0 / `bunx biome check` (新 3 file) クリーン / `ut-tdd plan lint` exit 0 /
+  `bun run test` (vitest 全量) exit 0 / `ut-tdd doctor` exit 0。
+- review: Codex (gpt-5.5, role=tl) cross_agent = APPROVE-WITH-CHANGES (Critical 0)。Important 反映済、Minor は Step5 follow-up
+  (frontmatter `review_evidence` 参照)。
+
+> **本 PLAN の confirmed scope = Step 1-4 (analyzer engine + report-only doctor surface + baseline + cross-review)**。
+> Step 5 (S4 decision = 不変条件の正本化 + KIND_BACKFILL/freeze gate への fail-close 接続 + modes/requirements/L6/L7
+> back-merge + 157/141/146 再分類 + baseline 2 件の disposition) は **decision_outcome 未設定 = PO-gated の後続スコープ**。
+> 本 confirm は engine + report-only surface の着地のみを意味する (DISCOVERY-07 と同パターン)。
 
 ## 5. §工程表 schedule (並列/直列 明示、review step 必須)
 
