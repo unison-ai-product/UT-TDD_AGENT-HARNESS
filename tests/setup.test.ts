@@ -297,16 +297,38 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     });
     expect(runSetup({ dryRun: true, applyBranchProtection: false }, c).phase).toBe("0-B");
 
-    // ③ フラグ無し + 非対話 → 0-A fallback
+    // ③ フラグ無し + 非対話 → 0-A fallback (record は本実行=dryRun:false でのみ起きる)
     const nb = mockDeps({ templates: baseTemplates, isInteractive: false, gh: ghTeam });
-    const r3 = runSetup({ dryRun: true, applyBranchProtection: false }, nb);
+    const r3 = runSetup({ dryRun: false, applyBranchProtection: false }, nb);
     expect(r3.phase).toBe("0-A");
     expect(JSON.parse(nb.files.get(statePath) as string).decidedBy).toBe("fallback");
 
-    // ④ apply=true + 非対話 → branchProtection.applied=false
+    // ④ apply=true + 非対話 → branchProtection.applied=false (本実行で precondition 評価)
     const a = mockDeps({ templates: baseTemplates, isInteractive: false, gh: ghTeam });
-    const r4 = runSetup({ phase: "0-B", dryRun: true, applyBranchProtection: true }, a);
+    const r4 = runSetup({ phase: "0-B", dryRun: false, applyBranchProtection: true }, a);
     expect(r4.branchProtection.applied).toBe(false);
     expect(r4.branchProtection.reason).toBe("non-interactive");
+  });
+
+  it("U-SETUP-008: dryRun=true は副作用ゼロ (state 非書込 / gh 非呼出 / branch protection 非適用)", () => {
+    // dry-run は preview のみ。--apply-branch-protection を併用しても remote へ進まない。
+    const d = mockDeps({
+      templates: baseTemplates,
+      isInteractive: true,
+      gh: ghTeam,
+      confirm: () => true,
+    });
+    const r = runSetup({ phase: "0-B", dryRun: true, applyBranchProtection: true }, d);
+    // state SSoT を書かない
+    expect(d.files.get(statePath)).toBeUndefined();
+    // 生成物 (CODEOWNERS 等) も書かない (path 一覧は返るが file store は空)
+    expect(d.files.get(codeownersPath)).toBeUndefined();
+    expect(r.written.length).toBeGreaterThan(0); // preview は path を列挙する
+    // detectProjectScale の read-only gh は許容するが、applyBranchProtection の
+    // mutating 経路 (auth status / -X PUT) には決して入らない。
+    expect(d.ghCalls).not.toContainEqual(["auth", "status"]);
+    expect(d.ghCalls.some((call) => call.includes("PUT"))).toBe(false);
+    // branch protection は dry-run 理由で skip
+    expect(r.branchProtection).toEqual({ applied: false, reason: "dry-run" });
   });
 });

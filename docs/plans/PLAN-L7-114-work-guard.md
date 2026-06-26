@@ -55,7 +55,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T12:28:00+09:00"
         evidence_path: tests/work-guard.test.ts
-        output_digest: "sha256:3da72c354611ce02d6791ee88edaf838f59679ba3d48115c478ecc19be2a3555"
+        output_digest: "sha256:5ff89dd03a0e6ec91733514d7c94ee10a7bf2dbe8b148a24c73d779a0681c35b"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun

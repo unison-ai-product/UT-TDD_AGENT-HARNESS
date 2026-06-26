@@ -1802,10 +1802,14 @@ function runtimeCommand(provider: AdapterProvider): Command {
           process.exitCode = 1;
           return;
         }
-        if (opts.json || !opts.execute) {
+        // dry-run (非 execute) は plan JSON を出して終了。plan.dry_run は execute=false ゆえ true。
+        // --json は出力形式であって実行抑止ではない (team run と同契約)。--execute --json は
+        // 実行まで進み、末尾で実行結果 JSON (dry_run=false, exit_code) を返す。
+        if (!opts.execute) {
           process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
           return;
         }
+        const jsonOut = Boolean(opts.json);
         const sessionId = `${provider}-${Date.now()}`;
         const repoRoot = process.cwd();
         const deps = nodeDeps(repoRoot, gitBranch, gitHead);
@@ -1831,7 +1835,12 @@ function runtimeCommand(provider: AdapterProvider): Command {
           // codex はプロンプトを stdin で受ける (plan.stdin)。cmd.exe shell-wrap が
           // 引数の改行/メタ文字を切り詰めるのを回避する (PLAN-L7-77)。
           input: plan.stdin,
-          stdio: plan.stdin === undefined ? "inherit" : ["pipe", "inherit", "inherit"],
+          // json 時は provider の stdout を fd 2 (stderr) へ逃がし、parent stdout を実行結果 JSON
+          // 専用に保つ (機械パース可能性を守る)。非 json は従来どおり stdout を inherit。
+          stdio:
+            plan.stdin === undefined
+              ? ["inherit", jsonOut ? 2 : "inherit", "inherit"]
+              : ["pipe", jsonOut ? 2 : "inherit", "inherit"],
           env: adapterExecutionEnv(provider, plan.env),
           shell: invocation.shell ?? false,
         });
@@ -1871,6 +1880,12 @@ function runtimeCommand(provider: AdapterProvider): Command {
           "Stop",
         );
         writeHandoverWarnings();
+        if (jsonOut) {
+          // 実行が起きたことを正直に反映する実行結果 JSON。plan.dry_run は execute=true ゆえ false。
+          process.stdout.write(
+            `${JSON.stringify({ ...plan, executed: true, exit_code: child.status ?? null }, null, 2)}\n`,
+          );
+        }
         process.exitCode = child.status ?? 1;
       },
     );

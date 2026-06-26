@@ -143,7 +143,10 @@ as read-only material.
   `UT_TDD_ALLOW_FOREIGN_EDIT=1` (env, human/out-of-band) or, mid-session, by
   writing a non-empty reason to `.ut-tdd/state/foreign-edit-override`; marker
   bypasses are audited to `.ut-tdd/logs/foreign-edit-overrides.jsonl`. An empty
-  marker does not bypass (no silent override without a recorded reason).
+  marker does not bypass (no silent override without a recorded reason). The
+  marker is **one-shot**: it is consumed (deleted) on the foreign edit it
+  authorizes, so a stale marker cannot keep bypassing the guard. The env
+  override is human-managed and not consumed.
 - Do not treat `legacy local state/` as active runtime state.
 - Do not write secrets, PII, or credentials into docs, examples, or audit
   evidence.

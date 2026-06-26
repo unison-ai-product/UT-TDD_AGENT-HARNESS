@@ -12,12 +12,15 @@
  *
  * stdin: { tool_name, tool_input: { file_path }, session_id }。
  * exit:  0 = pass / 2 = block。
- * override: UT_TDD_ALLOW_FOREIGN_EDIT=1 (意図的に相手ファイルへ積む時のみ、理由を記録)。
+ * override: UT_TDD_ALLOW_FOREIGN_EDIT=1 (env、人間が out-of-band で設定) か、`.ut-tdd/state/
+ *   foreign-edit-override` に非空の理由を書く marker。marker は **one-shot**: foreign 編集を伴う
+ *   1 tool-call で消費 (削除) する。古い marker が残って「今回だけの例外」が「以後ずっと例外」に
+ *   ならないようにする (env override は人間管理ゆえ消費しない)。
  * 内部エラー (git 失敗 / parse 失敗 / state 不明) は **fail-open** (exit 0): ガードの不調で
  * 全 Edit を止めない。block は「衝突を確実に検知できた時」のみ。
  */
 import { execFileSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -92,6 +95,18 @@ function auditOverride(entry: { target: string; reason: string; sessionId: strin
   }
 }
 
+/**
+ * marker を one-shot 消費する (使用後に削除)。これで stale marker が以後の foreign edit を
+ * 恒久バイパスし続けるのを防ぐ。次の foreign 編集には新しい理由 marker が要る。
+ */
+function consumeOverrideMarker(): void {
+  try {
+    rmSync(OVERRIDE_MARKER, { force: true });
+  } catch {
+    // 削除失敗は block 判断に影響させない (fail-open)。次回 marker が残っても audit は残る。
+  }
+}
+
 // fail-open: 検証不能 (stdin/JSON/git/state) は exit 0。block は衝突を確証できた時のみ。
 // tool_input は Claude (file_path) と Codex apply_patch (freeform patch 本文) で形が違うため unknown で受け、
 // extractEditTargets で両形を吸収する (PLAN-L7-139)。
@@ -134,6 +149,8 @@ try {
       reason: override.reason,
       sessionId: input.session_id ?? "unknown",
     });
+    // 使用したら marker を消費 (one-shot)。残置による恒久バイパスを防ぐ。
+    consumeOverrideMarker();
   }
   if (blocked) {
     process.stderr.write(`${blocked.message}\n`);

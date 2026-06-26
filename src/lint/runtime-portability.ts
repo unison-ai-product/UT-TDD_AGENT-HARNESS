@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { normalizePath } from "./shared";
 
@@ -284,6 +284,26 @@ export function analyzeRuntimePortability(docs: RuntimePortabilityDoc[]): Runtim
   return { checked: docs.length, violations, ok: violations.length === 0 };
 }
 
+/**
+ * git が無い環境 (zip / tarball 配布、`.git` 不在) 用の filesystem fallback。
+ * git ls-files と同じ走査面 (root の3ファイル + src/.claude/hooks/scripts 配下) を列挙する。
+ * 既知 prefix のみ降下するので node_modules / dist / .git を走査しない。
+ */
+function walkRuntimeFiles(repoRoot: string): string[] {
+  const acc: string[] = ["package.json", "tsconfig.json", "bun.lock"];
+  const descend = (rel: string): void => {
+    const abs = join(repoRoot, rel);
+    if (!existsSync(abs)) return;
+    for (const entry of readdirSync(abs, { withFileTypes: true })) {
+      const childRel = `${rel}/${entry.name}`;
+      if (entry.isDirectory()) descend(childRel);
+      else acc.push(childRel);
+    }
+  };
+  for (const prefix of ["src", ".claude/hooks", "scripts"]) descend(prefix);
+  return acc;
+}
+
 export function loadRuntimePortabilityDocs(
   repoRoot: string = process.cwd(),
 ): RuntimePortabilityDoc[] {
@@ -296,7 +316,9 @@ export function loadRuntimePortabilityDocs(
       .split(/\r?\n/)
       .filter(Boolean);
   } catch {
-    files = ["package.json", "tsconfig.json"];
+    // git 不在/失敗時は filesystem を直接走査する (検査面を package.json/tsconfig.json だけに
+    // 縮退させない = 配布物でも src/scripts/hooks を被覆する)。
+    files = walkRuntimeFiles(repoRoot);
   }
   return files
     .map(normalizePath)

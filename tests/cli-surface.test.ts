@@ -465,4 +465,44 @@ describe("L7 CLI surface closure", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("executes codex adapter under --execute --json and reports dry_run:false honestly", () => {
+    // 回帰: 旧実装は --execute --json で provider を起動せず dry_run:false の plan JSON だけ
+    // 返していた (実行していないのに実行済みに見える機械判定の罠)。実行 + 正直な JSON を要求する。
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-adapter-exec-"));
+    try {
+      const binDir = join(root, "bin");
+      mkdirSync(binDir);
+      const fakeCodex = writeFakeProvider(binDir, "codex");
+      const fakeClaude = writeFakeProvider(binDir, "claude");
+      const currentPath = process.env.PATH ?? process.env.Path ?? "";
+      const testPath = `${binDir}${process.platform === "win32" ? ";" : ":"}${currentPath}`;
+      const env = {
+        ...process.env,
+        PATH: testPath,
+        Path: testPath,
+        UT_TDD_CODEX_BIN: fakeCodex,
+        UT_TDD_CLAUDE_BIN: fakeClaude,
+      };
+      const run = runCliIn(
+        root,
+        ["codex", "--role", "se", "--task", "implement slice A", "--execute", "--json"],
+        env,
+      );
+
+      // provider の stdout (noisy-codex) は fd2(stderr) へ逃がし、stdout は実行結果 JSON 専用に保つ。
+      expect(run.stdout).not.toContain("noisy-codex");
+      const payload = JSON.parse(run.stdout);
+      expect(payload).toMatchObject({
+        provider: "codex",
+        executed: true,
+        dry_run: false,
+        exit_code: 0,
+      });
+      // provider が実際に起動した証跡 (env dump)。「実行せず JSON だけ」だと生成されない。
+      expect(readFileSync(join(root, "codex-env.txt"), "utf8")).toContain("args=");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 20_000);
 });

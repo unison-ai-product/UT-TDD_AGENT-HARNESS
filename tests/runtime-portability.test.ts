@@ -167,4 +167,32 @@ describe("runtime-portability lint", () => {
     );
     expect(result.violations.filter((v) => v.rule === "legacy-runtime-marker")).toHaveLength(4);
   });
+
+  it("U-RPORT-007: scans src/scripts via filesystem when git is unavailable (zip/tarball)", () => {
+    // .git を作らない = git ls-files が失敗し filesystem fallback に落ちる経路 (配布物の検査面欠落回帰)。
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-rport-nogit-"));
+    try {
+      mkdirSync(join(root, "src", "state-db"), { recursive: true });
+      writeFileSync(join(root, "package.json"), validDocs[0].text);
+      writeFileSync(join(root, "tsconfig.json"), validDocs[1].text);
+      writeFileSync(join(root, "src", "state-db", "index.ts"), validDocs[2].text);
+      writeFileSync(join(root, "src", "legacy.py"), "print('zip drift')\n");
+
+      const docs = loadRuntimePortabilityDocs(root);
+
+      // fallback でも src/ が検査面に含まれる (package.json/tsconfig.json だけに縮退しない)。
+      expect(docs.map((doc) => doc.path)).toEqual(
+        expect.arrayContaining([
+          "package.json",
+          "tsconfig.json",
+          "src/state-db/index.ts",
+          "src/legacy.py",
+        ]),
+      );
+      const result = analyzeRuntimePortability(docs);
+      expect(result.violations.map((violation) => violation.path)).toContain("src/legacy.py");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

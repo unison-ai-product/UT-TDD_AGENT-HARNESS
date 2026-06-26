@@ -325,6 +325,7 @@ export function applyBranchProtection(
  * U-SETUP-007: orchestration。phase = フラグ > confirm(recommend(detect)) > fallback(solo)。
  * 確定 → record → plan → emit → (apply は opt-in)。非対話+フラグ無し → 0-A。
  * invariant: --apply-branch-protection は対話のみ有効 (applyBranchProtection の precondition が保証)。
+ * invariant: dryRun=true は副作用ゼロ (state 非書込・remote 非適用、branchProtection.reason="dry-run")。
  */
 export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
   const scale = detectProjectScale(deps);
@@ -347,10 +348,16 @@ export function runSetup(args: SetupArgs, deps: SetupDeps): SetupResult {
     decidedBy = "fallback";
   }
 
-  recordSetupState({ phase, decidedAt: deps.now(), decidedBy, signals: scale }, deps);
+  // dry-run は副作用ゼロ契約 (CLI help「書き込まない」)。state 書込も remote 適用も行わない。
+  // emit は plan.dryRun で既に非書込だが、record/apply は dryRun を見ないため runSetup 側で封鎖する。
+  if (!args.dryRun) {
+    recordSetupState({ phase, decidedAt: deps.now(), decidedBy, signals: scale }, deps);
+  }
   const plan = planSetup(phase, { teams: args.teams, dryRun: args.dryRun });
   const written = emitSetup(plan, deps.templates, deps);
-  const branchProtection = applyBranchProtection(plan, deps, { apply: args.applyBranchProtection });
+  const branchProtection = args.dryRun
+    ? { applied: false, reason: "dry-run" }
+    : applyBranchProtection(plan, deps, { apply: args.applyBranchProtection });
   return { phase, written, branchProtection };
 }
 

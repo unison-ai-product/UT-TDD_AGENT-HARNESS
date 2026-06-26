@@ -1,3 +1,7 @@
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   evaluateWorkGuard,
@@ -6,6 +10,29 @@ import {
   normalizeRepoRelative,
   resolveForeignEditOverride,
 } from "../src/runtime/work-guard";
+
+const hookRepoRoot = process.cwd();
+const workGuardHook = join(hookRepoRoot, ".claude", "hooks", "work-guard.ts");
+
+/** work-guard hook を temp repo の cwd で spawn する (win32 は System32 canonical な cmd 経由)。 */
+function runWorkGuardHook(cwd: string, input: unknown) {
+  const stdin = JSON.stringify(input);
+  if (process.platform === "win32") {
+    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+    return spawnSync(cmdExe, ["/d", "/c", "bun", workGuardHook], {
+      cwd,
+      encoding: "utf8",
+      env: { ...process.env, CLAUDE_PROJECT_DIR: cwd },
+      input: stdin,
+    });
+  }
+  return spawnSync("bun", [workGuardHook], {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, CLAUDE_PROJECT_DIR: cwd },
+    input: stdin,
+  });
+}
 
 describe("work guard (PLAN-L7-114) — 作業衝突ガードレール", () => {
   it("blocks editing an uncommitted file this session never touched (他ランタイムの in-flight)", () => {
@@ -199,4 +226,37 @@ describe("foreign-edit override resolution (PLAN-L7-114 correction)", () => {
     const r = resolveForeignEditOverride({ env: "1", markerReason: "marker reason" });
     expect(r.source).toBe("env");
   });
+});
+
+describe("work-guard hook marker is one-shot (stale marker は恒久バイパスしない)", () => {
+  it("consumes the override marker after one foreign edit; the next identical edit re-blocks", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-workguard-marker-"));
+    try {
+      // git repo + untracked foreign file = このセッションが触っていない uncommitted ファイル。
+      execFileSync("git", ["init"], { cwd, stdio: "ignore" });
+      writeFileSync(join(cwd, "foreign.ts"), "export const x = 1;\n");
+      const markerPath = join(cwd, ".ut-tdd", "state", "foreign-edit-override");
+      mkdirSync(join(cwd, ".ut-tdd", "state"), { recursive: true });
+      writeFileSync(markerPath, "completing Codex orphan-impl per review");
+
+      const input = { session_id: "s-test", tool_input: { file_path: "foreign.ts" } };
+
+      // 1回目: marker により foreign 編集を許可 (exit 0) し、marker を消費する。
+      const first = runWorkGuardHook(cwd, input);
+      expect(first.status).toBe(0);
+      expect(existsSync(markerPath)).toBe(false); // one-shot 消費
+      // audit 証跡は残す (silent bypass を許さない)。
+      const audit = readFileSync(
+        join(cwd, ".ut-tdd", "logs", "foreign-edit-overrides.jsonl"),
+        "utf8",
+      );
+      expect(audit).toContain("completing Codex orphan-impl per review");
+
+      // 2回目: marker は消費済み → bypass 無し → 同じ foreign 編集が block される (exit 2)。
+      const second = runWorkGuardHook(cwd, input);
+      expect(second.status).toBe(2);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  }, 20_000);
 });
