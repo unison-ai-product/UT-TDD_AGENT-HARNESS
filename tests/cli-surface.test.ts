@@ -228,29 +228,39 @@ describe("L7 CLI surface closure", () => {
   });
 
   it("exposes clean distribution planning with preflight, rollback, and contract metadata", () => {
-    const run = runCli(["distribution", "plan", "--tag", "v0.1.0", "--json"]);
-    const payload = JSON.parse(run.stdout);
+    const binDir = mkdtempSync(join(tmpdir(), "ut-tdd-cli-dist-"));
+    try {
+      const fakeCodex = writeFakeProvider(binDir, "codex");
+      const run = runCliIn(repoRoot, ["distribution", "plan", "--tag", "v0.1.0", "--json"], {
+        ...process.env,
+        UT_TDD_CODEX_BIN: fakeCodex,
+      });
+      const payload = JSON.parse(run.stdout);
 
-    expect(run.status).toBe(0);
-    expect(payload).toMatchObject({
-      ok: true,
-      actualCutRequiresPoApproval: true,
-      export: {
+      expect(run.status).toBe(0);
+      expect(payload).toMatchObject({
         ok: true,
-        channel: "clean-repo-plus-signed-tarball",
-        sourceTag: "v0.1.0",
-      },
-      readiness: {
-        ok: true,
-      },
-    });
-    expect(payload.export.artifactPaths).toContain("LICENSE");
-    expect(payload.export.artifactPaths).not.toContain(
-      "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
-    );
-    expect(payload.readiness.rollback.managedPaths).toContain("AGENTS.md");
-    expect(payload.readiness.contracts.tagPin).toContain("#v0.1.0");
-    expect(payload.readiness.ci.forkPullRequestSecrets).toBe("not-required");
+        actualCutRequiresPoApproval: true,
+        export: {
+          ok: true,
+          channel: "clean-repo-plus-signed-tarball",
+          sourceTag: "v0.1.0",
+        },
+        readiness: {
+          ok: true,
+        },
+      });
+      expect(payload.export.artifactPaths).toContain("LICENSE");
+      expect(payload.export.artifactPaths).not.toContain(
+        "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
+      );
+      expect(payload.readiness.rollback.managedPaths).toContain("AGENTS.md");
+      expect(payload.readiness.contracts.tagPin).toContain("#v0.1.0");
+      expect(payload.readiness.ci.forkPullRequestSecrets).toBe("not-required");
+    } finally {
+      rmSync(join(repoRoot, "codex-env.txt"), { force: true });
+      rmSync(binDir, { recursive: true, force: true });
+    }
   }, 20_000);
 
   it("exposes telemetry scan as a JSON command surface without provider CLI execution", () => {
