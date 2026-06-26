@@ -22,6 +22,7 @@ UT-TDD-agent-harness/
 ├── bun.lock                      # Bun lockfile (tracked)
 ├── vitest.config.ts              # Vitest coverage reporter config (G7 coverage-summary evidence)
 ├── .gitattributes                # 改行正規化 (eol=lf、*.ps1 は crlf)
+├── .editorconfig                 # editor/agent shared whitespace and newline defaults
 ├── .gitignore
 │
 ├── src/                          # ★ harness TS core (実装 = ② 実装コード)
@@ -120,7 +121,7 @@ UT-TDD-agent-harness/
 ## 5. tracked / gitignored
 
 - **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
-- **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/` (PO 決定 2026-06-10 tracked 化 / 2026-06-25 docs/reference へ移設、A-128 F-1 / IMP-127)
+- **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/` (PO 決定 2026-06-10 tracked 化 / 2026-06-25 docs/reference へ移設、A-128 F-1 / IMP-127)
 
 ## 6. 境界
 
@@ -143,13 +144,13 @@ UT-TDD-agent-harness/
 
 JS/TS は「1 ツール = 1 設定ファイル」で root に config が溜まりやすい。**フォルダに隠す**のはツールが root を探すため不可（壊れる）。代わりに **ツールを減らす + package.json に集約** で抑える。
 
-- **root config の下限**（避けられない）: `package.json` / `tsconfig.json` / `bun.lock`。
+- **root config の下限**（避けられない）: `package.json` / `tsconfig.json` / `bun.lock` / `.editorconfig` (cross-editor newline/whitespace contract)。
 - **lint + format = Biome 1 枚 (`biome.json`)**。**eslint + prettier を別々に足さない**（plugin/ignore で 4-6 枚に増えるのを防ぐ）。`bun run lint` / `bun run format`。
 - **test = vitest**。`vitest.config.ts` は G7 coverage-summary evidence (`json-summary`) を生成するための tracked exception とする。
 - commitlint 等 **config-in-package.json 対応**のツールは package.json のキーに入れ、新規 dotfile を作らない。
 - **新ツール導入時の判断順**: ① 既存ツール (Biome / Bun / tsc) で代替できるか → ② package.json に同居できるか → ③ どうしても単独 config が要るか。①②で済むなら root に新ファイルを増やさない。
 
-→ root config は **`package.json` / `tsconfig.json` / `bun.lock` / `biome.json` / `vitest.config.ts` の 5 枚で頭打ち**に保つ。
+→ root config は **`package.json` / `tsconfig.json` / `bun.lock` / `.editorconfig` / `biome.json` / `vitest.config.ts` の 6 枚で頭打ち**に保つ。
 
 ## 9. 配布 3 層モデル (ADR-005)
 
