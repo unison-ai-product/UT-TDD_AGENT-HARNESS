@@ -6,7 +6,7 @@ layer: L7
 drive: fe
 status: draft
 created: 2026-06-24
-updated: 2026-06-24
+updated: 2026-06-26
 owner: PM (Opus) / PO (人間)
 parent_design: docs/design/harness/L2-screen/screen-list.md
 supersedes:
@@ -30,6 +30,18 @@ dependencies:
 ---
 
 # PLAN-L7-141 (impl): src/web 中央UI 再実装 (component-derived)
+
+## 優先度: 後回し / deferred (PO 2026-06-26)
+
+PO 決定 (2026-06-26): **中央UI (画面) は後回し**。先に **配布 (clean distribution channel) を別PCで使える状態に
+する** ことを優先する (PO「UI は後回しで配布できるようにしたい」「UI は後程でいい」)。
+
+- 本 PLAN は `status=draft` のまま **deferred** とする。破棄 (archived) **ではない** — UI は「後で」やる。
+- 配布の active track = [[PLAN-L7-157-distribution-clean-pull]] (R2: 中央UI/画面 = L7-141/146 は配布物に
+  **同梱しない** = 画面なしで配布。本 deferral と整合)。同系列の serverless 共有も後回し
+  ([[PLAN-L7-146-serverless-readonly-share]])。
+- 再開条件: 配布チャネルが PO 承認・着地した後、PO 指示で本 PLAN を再開する。
+- 非終端 (draft) のまま残るため `ut-tdd status` の outstanding には引き続き計上される (後回し = 完了ではない)。
 
 ## 0. なぜ再起票か (PO 2026-06-24「画面のほうは一度破棄。使い物にならないから要件を正して再起票」)
 
