@@ -170,3 +170,32 @@ requirements produced here.
 | IT-DOCCOV-02 | Proposal text that says the work is minor/simple and asks to skip design. | Document coverage classification is evaluated. | Shrinkage wording becomes a finding only; required documents are not removed and granularity is not lowered. | proposal parser -> guardrail evaluator boundary. | `llm-shrinkage-ignored` is emitted and required-doc count stays additive. | "not needed", "skip", Japanese minor/omit terms, low drive confidence. |
 | IT-DOCCOV-03 | Discovery/research proposal text plus candidate external templates. | Research adoption mapping is produced. | Adoptable templates are split into `incorporate`, `reference`, `exclude`, or `ut-tdd-specific`. | research mapping -> coverage output boundary. | Marketing/vendor templates are rejected; UT-TDD workflow/agent templates stay UT-TDD-specific. | Vendor-specific formats, generic marketing templates, untestable checklist prose. |
 | IT-DOCCOV-04 | A proposal classified with security/privacy, migration, or other escalation-sensitive terms. | Coverage classification combines `classifyTask` findings with document packs. | Granularity reaches at least G4 and human/risk evidence is required. | task risk classifier -> document coverage boundary. | `nfr`, `technical-requirements`, `system-test-design`, and approval evidence are present. | Low confidence drive, multiple risk terms, missing affected files. |
+
+## §6 G8-WORKFLOW: integration verification workflow
+
+This section defines the executable workflow granularity for closing L8/G8. It
+keeps the confirmed IT-* case design above, but adds the missing layer that turns
+case rows into a repeatable verification process. The model follows the common
+test strategy -> test plan -> test condition / coverage item -> test procedure
+-> evidence -> exit gate chain, mapped to UT-TDD artifacts.
+
+| Workflow key | G8 contract |
+|---|---|
+| `test_strategy` | Risk-based integration verification for L5 contracts. Prioritize changed module, state, adapter, asset, DB, search, feedback, automation, guardrail, relation graph, document export, and proposal coverage boundaries. |
+| `test_plan` | For each L8 slice, select the impacted IT-* rows, declare mandatory / optional / deferred status, and bind each selected row to test files, doctor checks, or verification profiles before execution. |
+| `test_conditions` | Every selected IT-* row must retain Given / When / Then, fixture or boundary setup, assertions, and negative / edge coverage. Missing GWT granularity is a design failure, not an execution skip. |
+| `coverage_items` | Coverage is measured by selected IT-* IDs, source boundary, paired L5 contract, executable evidence path, and explicit defer reason where applicable. |
+| `test_procedures` | Procedures are concrete commands such as targeted `vitest`, `bun run src\cli.ts doctor`, DB rebuild/projection checks, or verification-profile commands. Procedures must be runnable without external production mutation unless the slice is explicitly gated. |
+| `execution_evidence` | The integration evidence manifest records command, exit code, IT-* IDs, evidence path, selected/deferred counts, and failure routing. Green unit tests alone do not close G8 unless the manifest maps them to IT-* coverage. |
+| `exit_criteria` | G8 passes only when all mandatory selected IT-* rows have passing evidence, all defers are explicit and not past their waiting layer, no blocking doctor lint remains, and review evidence is recorded for gate-significant changes. |
+| `defect_routing` | Failure routes to L8 correction when the test/evidence is wrong, Reverse when L5/L6 contract is wrong, Refactor when integration structure is weak, Recovery when a regression is found, and Incident for production-impacting failures. |
+
+Minimum G8 close profile for the first L8 ascent:
+
+| Profile item | Mandatory evidence |
+|---|---|
+| Strategy and plan | This `G8-WORKFLOW` section plus the concrete child PLAN scope. |
+| Selection | At least one coherent boundary family such as IT-MODULE + IT-STATE, or a justified higher-risk family such as IT-ADAPTER / IT-DB. |
+| Procedure | Targeted test command(s) and `doctor` after wiring. |
+| Evidence | Integration evidence manifest or PLAN `review_evidence.green_commands` that names the selected IT-* IDs. |
+| Exit | `g8-integration-workflow` doctor check OK and no selected mandatory IT-* failure. |

@@ -11,6 +11,14 @@ PLAN-REVERSE-130-right-arm-gate-planning. `right-arm-gate-planning` is the
 doctor hard gate that prevents the G8-G14 carry from returning to an unplanned
 state.
 
+G8-WORKFLOW minimum mechanization (PLAN-L8 ascent): G8 is no longer closed by
+IT-* row presence alone. A passing G8 slice requires an integration evidence
+manifest, selected IT-* coverage, executable test procedures, and explicit
+exit blocks for missing evidence, stale defers, or failed mandatory IT cases.
+The required gate artifact is an integration evidence manifest.
+The source of workflow granularity is
+`docs/test-design/harness/L8-integration-test-design.md` §6 G8-WORKFLOW.
+
 ## 1. gate 一覧表
 
 | gate | タイミング (L 遷移) | 確認対象 | fail 時動作 |

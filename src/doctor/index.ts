@@ -104,6 +104,12 @@ import {
   frontendDesignCoverageMessages,
   loadFrontendDesignCoverageInput,
 } from "../lint/frontend-design-coverage";
+import {
+  analyzeG8IntegrationWorkflow,
+  canLoadG8IntegrationWorkflowInput,
+  g8IntegrationWorkflowMessages,
+  loadG8IntegrationWorkflowInput,
+} from "../lint/g8-integration-workflow";
 import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
 import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import {
@@ -1843,6 +1849,29 @@ export function checkProposalDocumentCoverage(repoRoot: string): {
 }
 
 // CLI entrypoint は process.cwd() = repoRoot を想定 (deps 未指定時)。test は deps 注入で固定。
+export function checkG8IntegrationWorkflow(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  if (!canLoadG8IntegrationWorkflowInput(repoRoot)) {
+    return {
+      messages: [
+        "g8-integration-workflow - violation: L8 test design or gates.md could not be read",
+      ],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeG8IntegrationWorkflow(loadG8IntegrationWorkflowInput(repoRoot));
+    return { messages: g8IntegrationWorkflowMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["g8-integration-workflow - violation: G8 workflow check could not run"],
+      ok: false,
+    };
+  }
+}
+
 export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): LintResult {
   const d = detectMode();
   // handover / agent-slots are warning surfaces. Verification profile is a hard gate.
@@ -1908,6 +1937,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const frRegistryAudit = checkFrRegistryAudit(deps.repoRoot);
   const improvementBacklog = checkImprovementBacklog(deps.repoRoot);
   const rightArmGatePlanning = checkRightArmGatePlanning(deps.repoRoot);
+  const g8IntegrationWorkflow = checkG8IntegrationWorkflow(deps.repoRoot);
   const lintWiring = checkLintWiring(deps.repoRoot);
   const proposalDocumentCoverage = checkProposalDocumentCoverage(deps.repoRoot);
   const frontendDesignCoverage = checkFrontendDesignCoverage(deps.repoRoot);
@@ -1981,6 +2011,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       frRegistryAudit.ok &&
       improvementBacklog.ok &&
       rightArmGatePlanning.ok &&
+      g8IntegrationWorkflow.ok &&
       lintWiring.ok &&
       proposalDocumentCoverage.ok &&
       frontendDesignCoverage.ok &&
@@ -2054,6 +2085,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...frRegistryAudit.messages.map((m) => `doctor: ${m}`),
       ...improvementBacklog.messages.map((m) => `doctor: ${m}`),
       ...rightArmGatePlanning.messages.map((m) => `doctor: ${m}`),
+      ...g8IntegrationWorkflow.messages.map((m) => `doctor: ${m}`),
       ...lintWiring.messages.map((m) => `doctor: ${m}`),
       ...proposalDocumentCoverage.messages.map((m) => `doctor: ${m}`),
       ...frontendDesignCoverage.messages.map((m) => `doctor: ${m}`),
