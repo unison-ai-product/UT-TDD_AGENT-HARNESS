@@ -7,8 +7,13 @@ import {
   codexHookAdapterMessages,
   loadCodexHookAdapterInput,
 } from "../src/lint/codex-hook-adapter";
-import { CODEX_REQUIRED as CODEX_REQUIRED_POLICY } from "../src/lint/codex-hook-adapter-policy";
+import {
+  CODEX_DEFERRED_SURFACE as CODEX_DEFERRED_SURFACE_POLICY,
+  CODEX_NOT_APPLICABLE as CODEX_NOT_APPLICABLE_POLICY,
+  CODEX_REQUIRED as CODEX_REQUIRED_POLICY,
+} from "../src/lint/codex-hook-adapter-policy";
 import { REQUIRED as CLAUDE_REQUIRED } from "../src/lint/project-hook";
+import { analyzeReadability } from "../src/lint/readability";
 import { evaluateAgentGuard } from "../src/runtime/agent-guard";
 import { evaluateWorkGuard } from "../src/runtime/work-guard";
 
@@ -58,6 +63,17 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139)", () => {
   it("U-CXHOOK-002: 有効な adapter fixture は ok", () => {
     assertExternalizedCodexRequiredPolicy();
     expect(analyzeCodexHookAdapter({ codexHooksJson: json(validCodexHooks()) }).ok).toBe(true);
+  });
+
+  it("U-CXHOOK-002b: policy prose is mojibake-free", () => {
+    const policyText = [
+      ...CODEX_NOT_APPLICABLE_POLICY.map((item) => item.reason),
+      ...CODEX_DEFERRED_SURFACE_POLICY.map((item) => item.reason),
+    ].join("\n");
+    expect(
+      analyzeReadability([{ path: "src/lint/codex-hook-adapter-policy.ts", text: policyText }])
+        .violations,
+    ).toEqual([]);
   });
 
   it("U-CXHOOK-003: hooks.json 不在は fail-close (missing_hooks_json)", () => {
