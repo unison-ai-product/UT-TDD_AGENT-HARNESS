@@ -11,7 +11,7 @@ provider の API キーは、リポジトリに置かない。
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Bun](https://img.shields.io/badge/Bun-%E2%89%A51.3-000000?style=for-the-badge&logo=bun&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-672%20passing-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-passing-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)
 ![Biome](https://img.shields.io/badge/Biome-lint%20%2B%20format-60A5FA?style=for-the-badge&logo=biome&logoColor=white)
 
 ![Platform](https://img.shields.io/badge/platform-Windows%20·%20macOS%20·%20Linux-555?style=flat-square)

@@ -1882,8 +1882,18 @@ function runtimeCommand(provider: AdapterProvider): Command {
         writeHandoverWarnings();
         if (jsonOut) {
           // 実行が起きたことを正直に反映する実行結果 JSON。plan.dry_run は execute=true ゆえ false。
+          // signal 終了時は exit_code=null になるため signal も併記する (機械判定が exit/signal を区別できる)。
           process.stdout.write(
-            `${JSON.stringify({ ...plan, executed: true, exit_code: child.status ?? null }, null, 2)}\n`,
+            `${JSON.stringify(
+              {
+                ...plan,
+                executed: true,
+                exit_code: child.status ?? null,
+                signal: child.signal ?? null,
+              },
+              null,
+              2,
+            )}\n`,
           );
         }
         process.exitCode = child.status ?? 1;

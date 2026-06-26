@@ -498,6 +498,8 @@ describe("L7 CLI surface closure", () => {
         executed: true,
         dry_run: false,
         exit_code: 0,
+        // 正常終了は signal=null (signal 終了時のみ exit_code=null + signal 名が入る)。
+        signal: null,
       });
       // provider が実際に起動した証跡 (env dump)。「実行せず JSON だけ」だと生成されない。
       expect(readFileSync(join(root, "codex-env.txt"), "utf8")).toContain("args=");
