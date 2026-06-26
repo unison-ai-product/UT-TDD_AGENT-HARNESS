@@ -145,6 +145,13 @@ describe("loadRelationGraphSourceSet", () => {
         id: "docs/reference/ai-agent-harness-directory-reference.md",
         path: "docs/reference/ai-agent-harness-directory-reference.md",
       });
+      const governanceDoc = sourceSet.designDocs?.find(
+        (d) => d.path === "docs/governance/repository-structure.md",
+      );
+      expect(governanceDoc).toMatchObject({
+        id: "docs/governance/repository-structure.md",
+        path: "docs/governance/repository-structure.md",
+      });
 
       // projection + impact: changing the source surfaces its owning plan + sibling test
       const projection = collectRelationGraphProjection(sourceSet);
@@ -195,6 +202,16 @@ describe("loadRelationGraphSourceSet", () => {
         "design:docs/reference/ai-agent-harness-directory-reference.md",
       );
       expect(referenceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
+      const governanceImpact = analyzeRelationImpact({
+        changedPaths: ["docs/governance/repository-structure.md"],
+        projection,
+      });
+      expect(governanceImpact.ok).toBe(true);
+      expect(governanceImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:docs/governance/repository-structure.md",
+      );
+      expect(governanceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
       // export: mermaid is always emittable and contains the changed source node
       const diagram = exportRelationDiagram({ snapshot: projection, format: "mermaid" });
@@ -274,5 +291,14 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
       "design:docs/reference/ai-agent-harness-directory-reference.md",
     );
     expect(referenceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const governanceImpact = analyzeRelationImpact({
+      changedPaths: ["docs/governance/repository-structure.md"],
+      projection,
+    });
+    expect(governanceImpact.ok).toBe(true);
+    expect(governanceImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/governance/repository-structure.md",
+    );
+    expect(governanceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
   });
 });

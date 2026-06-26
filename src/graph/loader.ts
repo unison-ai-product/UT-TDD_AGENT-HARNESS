@@ -157,6 +157,7 @@ interface PlanFrontmatter {
 const FR_REGISTRY_DOC = "docs/design/harness/L1-requirements/functional-requirements.md";
 
 const REFERENCE_DOCS = ["docs/reference/ai-agent-harness-directory-reference.md"] as const;
+const GOVERNANCE_DOCS = ["docs/governance/repository-structure.md"] as const;
 
 function addDesignDocIfAbsent(designDocs: DesignDocInput[], path: string): void {
   if (designDocs.some((d) => d.path === path)) return;
@@ -323,6 +324,10 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
   }
 
   for (const path of REFERENCE_DOCS) {
+    addDesignDocIfAbsent(designDocs, path);
+  }
+
+  for (const path of GOVERNANCE_DOCS) {
     addDesignDocIfAbsent(designDocs, path);
   }
 
