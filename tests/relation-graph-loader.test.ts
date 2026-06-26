@@ -95,6 +95,11 @@ function buildRepo(root: string): void {
     ["# Cross review", "", "Read-only review task body.", ""].join("\n"),
     "utf8",
   );
+  writeFileSync(
+    join(root, ".editorconfig"),
+    ["root = true", "", "[*]", "charset = utf-8", ""].join("\n"),
+    "utf8",
+  );
 }
 
 describe("loadRelationGraphSourceSet", () => {
@@ -213,6 +218,14 @@ describe("loadRelationGraphSourceSet", () => {
       );
       expect(governanceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
+      const editorconfigImpact = analyzeRelationImpact({
+        changedPaths: [".editorconfig"],
+        projection,
+      });
+      expect(editorconfigImpact.ok).toBe(true);
+      expect(editorconfigImpact.changedNodes.map((n) => n.id)).toContain("design:.editorconfig");
+      expect(editorconfigImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
       // export: mermaid is always emittable and contains the changed source node
       const diagram = exportRelationDiagram({ snapshot: projection, format: "mermaid" });
       expect(diagram.ok).toBe(true);
@@ -300,5 +313,12 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
       "design:docs/governance/repository-structure.md",
     );
     expect(governanceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const editorconfigImpact = analyzeRelationImpact({
+      changedPaths: [".editorconfig"],
+      projection,
+    });
+    expect(editorconfigImpact.ok).toBe(true);
+    expect(editorconfigImpact.changedNodes.map((n) => n.id)).toContain("design:.editorconfig");
+    expect(editorconfigImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
   });
 });
