@@ -33,12 +33,14 @@ This addendum lowers requirements §6.8.6/§6.8.7 and L5 `physical-data.md` §9 
 | `recordTestRunEvidence` | `(input: TestRunEvidenceInput, deps: HarnessDbDeps) => ProjectionRowRef[]` | command evidence has runner/scope/timestamps/exit code/evidence path; repo root and DB path resolve under `.ut-tdd/` | upserts `test_runs`, optional `test_cases`, `test_results`, and `test_artifact_edges`; missing `plan_id`/`oracle_id` creates findings, not silent pass |
 | `evaluateGreenDefinition` | `(input: GreenDefinitionInput, deps: HarnessDbDeps) => GreenDefinitionResult` | profile and required command kinds are known for changed artifact kinds | returns computed green time, missing commands, non-zero exits, and DB projection refs; confirmed review evidence is valid only when result is green and `computed_green_at <= reviewed_at` |
 | `computeUtHistorySignals` | `(input: UtHistoryInput, deps: HarnessDbDeps) => QualitySignal[]` | test run/result rows are normalized; zero denominators are explicit | computes oracle coverage, plan green rate, flake score, duration regression, and green-definition compliance; non-green signals join `findings` |
+| `analyzeRefactorCandidates` | `(inputs: RefactorCandidateInput[]) => RefactorCandidate[]` (ranked by `candidateRank`; inputs from `loadRefactorCandidateInputs(repoRoot)`) | source module/function inputs are normalized; structural thresholds (module size, body length, duplicate-body hash, literal repeat count) are explicit | deterministically detects four behavior-invariant refactor candidate kinds — `split-module` / `extract-helper` / `deduplicate-function` / `externalize-literal` — and projects them into `quality_signals` (`metric=refactor_candidate:<kind>`) and the `feedback_events` surface; additive projection over existing tables (schema unchanged); empty/zero inputs are explicit, not fabricated candidates (PLAN-L7-147 / Reverse back-fill PLAN-REVERSE-141) |
 
 Unit oracle families:
 
 - U-FR-L1-06 / U-FR-L1-19 / U-FR-L1-20 / U-FR-L1-40 / U-FR-L1-41 cover projection write/rebuild, drive partitioning, and feedback event generation.
 - U-FR-L1-12 / U-FR-L1-46 / U-FR-L1-47 cover skill recommendation, roster capability, and skill metric inputs.
 - U-FR-L1-33 / U-FR-L1-34 / U-FR-L1-48 / U-FR-L1-49 cover search/reference reduction, command cataloging, and asset drift detection.
+- `analyzeRefactorCandidates` (refactor candidate detector) is an additive `quality_signals`/`feedback_events` projection under the same projection oracle family (U-FR-L1-06/19/20/40/41); its four-kind detection is covered by `tests/projection-writer.test.ts` (L7 descent: `docs/test-design/harness/L7-unit-test-design.md`).
 
 ### 2026-06-23 Feedback Surface Taxonomy Addendum
 

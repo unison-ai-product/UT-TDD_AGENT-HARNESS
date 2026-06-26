@@ -496,6 +496,23 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DESC-007 | `analyzeDescentObligations` (park) | 上流が park/placeholder→descent obligation を生成しない (pair-freeze park 規約と整合、E6) |
 | U-DESC-008 | `descentObligationMessages` + 実 repo ガード | unmet/impl-ahead を reason+traceKey+layer で文言化 / **実 repo で skill subsystem の片肺が unmet または impl-ahead として surface される** (Phase 0 = 現存 drop 一掃検出、是正後 0 へ収束) |
 
+### §1.23 Refactor candidate detector projection descent (PLAN-L7-147 / PLAN-REVERSE-141、IMP-146)
+
+> ペア = `function-spec.md` Harness DB projection addendum の `analyzeRefactorCandidates`。Refactor mode の
+> DB-trigger 候補面 (`PLAN-L7-133` workflow の下位 capability) を `quality_signals`
+> (`metric=refactor_candidate:<kind>`) / `feedback_events` へ projection する detector の L7 descent。
+> forward-convergence 集約 (Reverse back-fill `PLAN-REVERSE-141`) で本 descent を補い、impl PLAN を converged 化した。
+
+- detector は既存テーブルへの additive projection (schema 不変) ゆえ、新規番号 oracle を増やさず
+  **projection oracle family (U-FR-L1-06 / U-FR-L1-19 / U-FR-L1-20 / U-FR-L1-40 / U-FR-L1-41)** の被覆下に置く
+  (新 `U-XXX-NNN` ID を作らない = oracle-test-trace の偽 linkage を生まない)。
+- substance (実体) は `tests/projection-writer.test.ts` が担う: 4 candidate kind
+  (`split-module` / `extract-helper` / `deduplicate-function` / `externalize-literal`) の検出、`candidateRank`
+  順序、`projectRefactorCandidateSignals` による `quality_signals`/`feedback_events` projection、空入力で
+  candidate を捏造しないこと、を green `it` で被覆 (PLAN-L7-147 AC「4 kind すべてを純 detector test が被覆」)。
+- 関連 detector 後続 (`PLAN-L7-148`/`150`/`151`/`152`/`153`/`158`) は本 descent を基点とする (module extraction /
+  closure sweep / precision+policy extraction)。
+
 ## §2 量閉じ一覧 (L6 設計 → U 被覆、孤児チェック)
 
 - function-spec §1 関数 → U-FUNC-01〜04

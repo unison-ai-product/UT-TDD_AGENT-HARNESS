@@ -42,12 +42,16 @@ export const VERSION_UP_ALLOWED_TARGETS = new Set<string>(["future", "v2"]);
  * fail-close 前から存在する未集約 landed impl の audited 債務 (PLAN-DISCOVERY-08 Step5、baseline 2026-06-26)。
  * gate は NEW 違反のみ fail-close し、ここに列挙した既存債務は grandfather する (backfill-pairing の
  * LEGACY_CONDITIONAL_BACKFILL_DEBT_PLAN_IDS と同型)。allowlist ↔ audit doc の双方向一致は別 hard check で担保。
- * 最終 disposition (Forward 集約 / local_impl_only) は follow-up (Codex: version-up 扱い不可、landed 済のため)。
+ *
+ * IMP-146 で baseline 2 件を解消済 (= allowlist 空、Codex cross-review AGREE、2026-06-26):
+ *  - PLAN-L7-62-runtime-portability-guard  → L1 nfr.md (NFR-04/NFR-01) への descent link で spine-internal 化 (trace correction)。
+ *  - PLAN-L7-147-refactor-candidate-detector → PLAN-REVERSE-141 が L6 function-spec / L7 test-design へ detector 仕様を
+ *    back-fill し当該 PLAN を参照 = converged (Forward 集約)。
+ * 解消履歴は `docs/governance/forward-convergence-legacy-debt-audit.md` §解消済 を SSoT とする。
+ * 新規 legacy 債務を grandfather する場合のみここへ追加し、audit doc 表行と双方向一致させること。
+ * grandfather 機構自体は legacyDebt 引数注入でテスト被覆する (空 allowlist と機構テストを分離)。
  */
-export const FORWARD_CONVERGENCE_LEGACY_DEBT = new Set<string>([
-  "PLAN-L7-147-refactor-candidate-detector",
-  "PLAN-L7-62-runtime-portability-guard",
-]);
+export const FORWARD_CONVERGENCE_LEGACY_DEBT = new Set<string>([]);
 
 export type ConvergenceBucket =
   | "spine-internal"
@@ -132,6 +136,21 @@ export function hasLocalImplOnlyDisposition(plan: ConvergencePlan): boolean {
 }
 
 /**
+ * unconverged-landed を audited legacy debt (grandfather) と NEW 違反 (fail-close 対象) に分割する純関数。
+ * grandfather 機構を allowlist 注入でテスト可能にしつつ analyzeForwardConvergence の引数増 (max-source-params)
+ * を避けるため独立関数に切り出す。default = 実 allowlist (IMP-146 後は空)。
+ */
+export function partitionConvergenceDebt(
+  unconvergedLanded: string[],
+  legacyDebt: ReadonlySet<string> = FORWARD_CONVERGENCE_LEGACY_DEBT,
+): { legacyDebt: string[]; newViolations: string[] } {
+  return {
+    legacyDebt: unconvergedLanded.filter((id) => legacyDebt.has(id)),
+    newViolations: unconvergedLanded.filter((id) => !legacyDebt.has(id)),
+  };
+}
+
+/**
  * spine-外 impl の Forward 集約状態を分類 (純関数、I/O なし)。
  * @param plans 全 active PLAN
  * @param roadmapSpanIds 登録工程表の span plan_id 集合 (spine 接続判定)
@@ -198,13 +217,14 @@ export function analyzeForwardConvergence(
   const pick = (b: ConvergenceBucket): string[] =>
     classifications.filter((c) => c.bucket === b).map((c) => c.plan_id);
   const unconvergedLanded = pick("unconverged-landed");
-  // legacy (audited grandfather) と new (fail-close 対象) に分割。ok は new のみで決める。
-  const legacyDebt = unconvergedLanded.filter((id) => FORWARD_CONVERGENCE_LEGACY_DEBT.has(id));
-  const newViolations = unconvergedLanded.filter((id) => !FORWARD_CONVERGENCE_LEGACY_DEBT.has(id));
+  // legacy (audited grandfather) と new (fail-close 対象) に分割 (ok は new のみで決める)。
+  // 分割は partitionConvergenceDebt 純関数へ委譲し、grandfather 機構を allowlist 注入でテスト可能にしつつ
+  // analyzeForwardConvergence の引数増 (max-source-params) を避ける。
+  const { legacyDebt: legacyDebtIds, newViolations } = partitionConvergenceDebt(unconvergedLanded);
   return {
     classifications,
     unconvergedLanded,
-    legacyDebt,
+    legacyDebt: legacyDebtIds,
     newViolations,
     draftDeferred: pick("draft-deferred"),
     versionUpParked: pick("version-up-parked"),
@@ -292,13 +312,12 @@ export interface LegacyAuditDriftResult {
   ok: boolean;
 }
 
-export function analyzeLegacyAuditDrift(auditedPlanIds: Set<string>): LegacyAuditDriftResult {
-  const missingInAudit = [...FORWARD_CONVERGENCE_LEGACY_DEBT].filter(
-    (id) => !auditedPlanIds.has(id),
-  );
-  const missingInAllowlist = [...auditedPlanIds].filter(
-    (id) => !FORWARD_CONVERGENCE_LEGACY_DEBT.has(id),
-  );
+export function analyzeLegacyAuditDrift(
+  auditedPlanIds: Set<string>,
+  allowlist: ReadonlySet<string> = FORWARD_CONVERGENCE_LEGACY_DEBT,
+): LegacyAuditDriftResult {
+  const missingInAudit = [...allowlist].filter((id) => !auditedPlanIds.has(id));
+  const missingInAllowlist = [...auditedPlanIds].filter((id) => !allowlist.has(id));
   return {
     missingInAudit,
     missingInAllowlist,

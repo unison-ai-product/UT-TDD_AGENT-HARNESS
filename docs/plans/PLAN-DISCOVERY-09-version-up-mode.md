@@ -48,7 +48,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T15:20:00+09:00"
         evidence_path: tests/forward-convergence.test.ts
-        output_digest: "sha256:636c6cc0fecc57a60dab02d5272c4b28932a22250ca3dd28f2bfd5d8af5447da"
+        output_digest: "sha256:f069920038d511eb8f00e6aaa1fa6fa223062f237b21e88085e7ba8f13e8e9d5"
       - kind: unit_test
         command: "bunx vitest run tests/outstanding.test.ts (active draft / version-up parked 分離)"
         runner: bun

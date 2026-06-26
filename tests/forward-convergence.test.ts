@@ -11,6 +11,7 @@ import {
   isValidVersionUp,
   parseConvergencePlan,
   parseLegacyAuditPlanIds,
+  partitionConvergenceDebt,
 } from "../src/lint/forward-convergence";
 
 function plan(overrides: Partial<ConvergencePlan> = {}): ConvergencePlan {
@@ -27,7 +28,10 @@ function plan(overrides: Partial<ConvergencePlan> = {}): ConvergencePlan {
   };
 }
 
-const LEGACY_ID = [...FORWARD_CONVERGENCE_LEGACY_DEBT][0];
+// IMP-146 で実 allowlist は空 (baseline 2 件解消済) ゆえ、grandfather/drift 機構は合成 allowlist を
+// 注入してテストする (機構テストを「実 baseline に件数があるか」から分離 = 解消後も機構を被覆)。
+const SYNTH_LEGACY = "PLAN-L7-SYNTH-legacy-debt";
+const SYNTH_ALLOWLIST = new Set([SYNTH_LEGACY]);
 
 describe("forward-convergence: spine 接続判定", () => {
   it("roadmap span 登録は spine-internal", () => {
@@ -189,21 +193,38 @@ describe("forward-convergence: parse + messages", () => {
 });
 
 describe("forward-convergence: fail-close (legacy grandfather + NEW gate)", () => {
-  it("legacy debt は grandfather (ok を落とさず legacyDebt へ)", () => {
-    const r = analyzeForwardConvergence([plan({ plan_id: LEGACY_ID })], new Set(), new Set());
-    expect(r.legacyDebt).toEqual([LEGACY_ID]);
-    expect(r.newViolations).toEqual([]);
-    expect(r.ok).toBe(true);
+  it("partitionConvergenceDebt: legacy は grandfather、NEW は fail-close 対象へ分割 (機構、synth allowlist)", () => {
+    const split = partitionConvergenceDebt([SYNTH_LEGACY, "PLAN-L7-999-orphan"], SYNTH_ALLOWLIST);
+    expect(split.legacyDebt).toEqual([SYNTH_LEGACY]);
+    expect(split.newViolations).toEqual(["PLAN-L7-999-orphan"]);
   });
 
-  it("NEW 違反は fail-close (ok=false)、legacy と共存しても NEW のみで判定", () => {
+  it("legacy のみ (synth allowlist) なら NEW 違反 0 = ok を落とさない grandfather", () => {
+    const split = partitionConvergenceDebt([SYNTH_LEGACY], SYNTH_ALLOWLIST);
+    expect(split.legacyDebt).toEqual([SYNTH_LEGACY]);
+    expect(split.newViolations).toEqual([]);
+  });
+
+  it("NEW 違反は analyzeForwardConvergence で fail-close (ok=false)", () => {
     const r = analyzeForwardConvergence(
-      [plan({ plan_id: LEGACY_ID }), plan({ plan_id: "PLAN-L7-999-orphan" })],
+      [plan({ plan_id: "PLAN-L7-999-orphan" })],
       new Set(),
       new Set(),
     );
-    expect(r.legacyDebt).toEqual([LEGACY_ID]);
     expect(r.newViolations).toEqual(["PLAN-L7-999-orphan"]);
+    expect(r.ok).toBe(false);
+  });
+
+  it("IMP-146 解消済: 実 allowlist は空 (= grandfather 残債務 0、synth id も NEW 違反化)", () => {
+    // baseline 2 件 (L7-62 trace correction / L7-147 Reverse converged) を解消し allowlist 空化。
+    expect(FORWARD_CONVERGENCE_LEGACY_DEBT.size).toBe(0);
+    // 実 allowlist (default 引数) では合成 legacy id も grandfather されず NEW 違反 = fail-close。
+    const split = partitionConvergenceDebt([SYNTH_LEGACY]);
+    expect(split.legacyDebt).toEqual([]);
+    expect(split.newViolations).toEqual([SYNTH_LEGACY]);
+    const r = analyzeForwardConvergence([plan({ plan_id: SYNTH_LEGACY })], new Set(), new Set());
+    expect(r.legacyDebt).toEqual([]);
+    expect(r.newViolations).toEqual([SYNTH_LEGACY]);
     expect(r.ok).toBe(false);
   });
 });
@@ -238,17 +259,22 @@ describe("forward-convergence: version-up parked (Codex Critical guards)", () =>
 });
 
 describe("forward-convergence: legacy audit drift (allowlist ↔ audit doc)", () => {
-  it("allowlist と audit doc が一致なら ok", () => {
-    const audited = new Set(FORWARD_CONVERGENCE_LEGACY_DEBT);
-    expect(analyzeLegacyAuditDrift(audited).ok).toBe(true);
+  it("allowlist と audit doc が一致なら ok (合成 allowlist)", () => {
+    expect(analyzeLegacyAuditDrift(new Set([SYNTH_LEGACY]), SYNTH_ALLOWLIST).ok).toBe(true);
   });
 
-  it("audit doc 未記載 / allowlist 未登録 を双方向検出", () => {
-    const r1 = analyzeLegacyAuditDrift(new Set());
-    expect(r1.missingInAudit.length).toBe(FORWARD_CONVERGENCE_LEGACY_DEBT.size);
+  it("実 allowlist (IMP-146 後=空) は audit doc 表行も空で一致 = ok", () => {
+    // 実 allowlist 空 × audit 表行空 → 双方向一致 (loadLegacyAuditDrift と同経路)。
+    expect(analyzeLegacyAuditDrift(new Set()).ok).toBe(true);
+  });
+
+  it("audit doc 未記載 / allowlist 未登録 を双方向検出 (合成 allowlist)", () => {
+    const r1 = analyzeLegacyAuditDrift(new Set(), SYNTH_ALLOWLIST);
+    expect(r1.missingInAudit).toEqual([SYNTH_LEGACY]);
     expect(r1.ok).toBe(false);
     const r2 = analyzeLegacyAuditDrift(
-      new Set([...FORWARD_CONVERGENCE_LEGACY_DEBT, "PLAN-L7-000-extra"]),
+      new Set([...SYNTH_ALLOWLIST, "PLAN-L7-000-extra"]),
+      SYNTH_ALLOWLIST,
     );
     expect(r2.missingInAllowlist).toEqual(["PLAN-L7-000-extra"]);
     expect(r2.ok).toBe(false);

@@ -51,7 +51,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T14:49:00+09:00"
         evidence_path: tests/forward-convergence.test.ts
-        output_digest: "sha256:636c6cc0fecc57a60dab02d5272c4b28932a22250ca3dd28f2bfd5d8af5447da"
+        output_digest: "sha256:f069920038d511eb8f00e6aaa1fa6fa223062f237b21e88085e7ba8f13e8e9d5"
       - kind: unit_test
         command: "bunx vitest run tests/forward-convergence.test.ts (analyzer 本体 analyzeForwardConvergence/isSpineConnected/hasLocalImplOnlyDisposition 実挙動)"
         runner: bun
@@ -59,7 +59,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T14:49:00+09:00"
         evidence_path: src/lint/forward-convergence.ts
-        output_digest: "sha256:e6e5e9341b604d637d419223afb9b23022d1f8094a82213d59c00c764740b8bd"
+        output_digest: "sha256:51d23f4db4ee7890a4d75606a7cd4567ca64a0b58f44587d57f215297124cb28"
 ---
 
 # PLAN-DISCOVERY-08 (kind=poc): forward-convergence 不変条件
