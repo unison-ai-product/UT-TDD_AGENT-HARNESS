@@ -64,7 +64,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T16:10:00+09:00"
         evidence_path: tests/handover.test.ts
-        output_digest: "sha256:5596878ff001a5c197ff25b4eb4720e577de62f801d6bae0fcab27b6baf642bd"
+        output_digest: "sha256:a8880464cc076556fa02321fb205e95af3c1908155f125861cd23b8560f8f9f8"
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun

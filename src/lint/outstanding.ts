@@ -33,6 +33,11 @@ export interface OutstandingWork {
   nonTerminalPlansByLayer: Record<string, number>;
   /** 非終端 PLAN 総数。 */
   nonTerminalPlansTotal: number;
+  /** 非終端のうち version-up parked (version_target 付き draft) 数 (PLAN-DISCOVERY-09)。
+   *  「将来版へ保全」を active draft (WIP) と分離して surface する (green に埋めない)。 */
+  versionUpParked: number;
+  /** active draft (= 非終端 − version-up parked)。WIP の実数。 */
+  activeDraftTotal: number;
   /** open な spec-backfill placeholder_deps carry 数 (IMP-139 b)。 */
   openDefers: number;
 }
@@ -40,21 +45,27 @@ export interface OutstandingWork {
 export interface OutstandingPlanRow {
   layer: string;
   status: string;
+  /** version-up parked マーカー (PLAN-DISCOVERY-09)。null = 通常。 */
+  versionTarget?: string | null;
 }
 
 /**
- * 非終端 PLAN の layer 別集計 + open defer 数を組む純関数。archived と終端 status は未了から除外する。
+ * 非終端 PLAN の layer 別集計 + version-up parked 分離 + open defer 数を組む純関数。
+ * archived と終端 status は未了から除外する。version-up parked は非終端に含めるが別途分離計上する。
  */
 export function analyzeOutstandingWork(
   plans: OutstandingPlanRow[],
   openDefers: number,
 ): OutstandingWork {
   const byLayer: Record<string, number> = {};
+  let versionUpParked = 0;
   for (const p of plans) {
     const s = p.status.toLowerCase();
     if (s === "archived" || TERMINAL_STATUSES.has(s)) continue;
     const layer = p.layer.trim() || "unknown";
     byLayer[layer] = (byLayer[layer] ?? 0) + 1;
+    // version-up parked = draft + version_target (landed には schema が付与を禁ずる)。
+    if (s === "draft" && (p.versionTarget ?? "").trim().length > 0) versionUpParked++;
   }
   // 決定論順 (layer key 昇順) で再構築する (出力安定性)。
   const ordered: Record<string, number> = {};
@@ -63,6 +74,8 @@ export function analyzeOutstandingWork(
   return {
     nonTerminalPlansByLayer: ordered,
     nonTerminalPlansTotal: total,
+    versionUpParked,
+    activeDraftTotal: Math.max(0, total - versionUpParked),
     openDefers: Math.max(0, openDefers),
   };
 }
@@ -83,6 +96,7 @@ export function loadOutstandingPlanRows(repoRoot: string): OutstandingPlanRow[] 
     rows.push({
       layer: fmValue(content, "layer") ?? "unknown",
       status: fmValue(content, "status") ?? "unknown",
+      versionTarget: fmValue(content, "version_target") ?? null,
     });
   }
   return rows;
@@ -106,5 +120,9 @@ export function outstandingSummaryLine(o: OutstandingWork): string {
     Object.entries(o.nonTerminalPlansByLayer)
       .map(([layer, n]) => `${layer}:${n}`)
       .join(", ") || "none";
-  return `outstanding: non-terminal PLANs=${o.nonTerminalPlansTotal} (${byLayer}); open defers=${o.openDefers}`;
+  const versionUp =
+    o.versionUpParked > 0
+      ? `; version-up parked=${o.versionUpParked} (active draft=${o.activeDraftTotal})`
+      : "";
+  return `outstanding: non-terminal PLANs=${o.nonTerminalPlansTotal} (${byLayer})${versionUp}; open defers=${o.openDefers}`;
 }

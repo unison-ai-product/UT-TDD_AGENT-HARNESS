@@ -89,7 +89,9 @@ import {
 import {
   analyzeForwardConvergence,
   forwardConvergenceMessages,
+  legacyAuditDriftMessages,
   loadConvergenceDocs,
+  loadLegacyAuditDrift,
 } from "../lint/forward-convergence";
 import { analyzeFrRegistry, loadFrDocs as loadFrRegistryDocs } from "../lint/fr-registry-audit";
 import {
@@ -1764,8 +1766,8 @@ export function checkLintWiring(repoRoot: string): { messages: string[]; ok: boo
 }
 
 /**
- * forward-convergence (report-only, PLAN-DISCOVERY-08 PoC spike): spine-外 kind=impl の landed 未集約を
- * surface する。doctor.ok とは連動させない (fail-close 昇格は S4 ADOPT 後)。例外時も surface のみ。
+ * forward-convergence (fail-close, PLAN-DISCOVERY-08 Step5): spine-外 kind=impl の NEW 未集約 landed を
+ * gate する。legacy debt allowlist は grandfather (ok を落とさず surface)。例外時は fail-close。
  */
 export function checkForwardConvergence(repoRoot: string): { messages: string[]; ok: boolean } {
   try {
@@ -1774,10 +1776,24 @@ export function checkForwardConvergence(repoRoot: string): { messages: string[];
     return { messages: forwardConvergenceMessages(r), ok: r.ok };
   } catch {
     return {
-      messages: [
-        "forward-convergence — note: PLAN を読めず spine-外集約を検査できない [report-only]",
-      ],
-      ok: true,
+      messages: ["forward-convergence — violation: PLAN を読めず spine-外集約を検査できない"],
+      ok: false,
+    };
+  }
+}
+
+/** legacy debt allowlist ↔ audit doc の双方向一致 hard check (Codex Critical B)。 */
+export function checkForwardConvergenceAudit(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  try {
+    const r = loadLegacyAuditDrift(repoRoot);
+    return { messages: legacyAuditDriftMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["forward-convergence-audit — violation: legacy debt audit を検査できない"],
+      ok: false,
     };
   }
 }
@@ -1898,8 +1914,9 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const handoverOutstanding = checkHandoverOutstandingAnchor(handoverDeps(deps));
   // advisory (非ブロック): green_command digest が evidence_path 実 hash と一致するか (fake substance 可視化、PLAN-L7-132)。
   const greenCommandDigest = checkGreenCommandDigests(deps.repoRoot);
-  // advisory (非ブロック): spine-外 kind=impl の landed 未集約を surface (PLAN-DISCOVERY-08 PoC、report-only)。
+  // fail-close: spine-外 kind=impl の NEW 未集約 landed を gate (PLAN-DISCOVERY-08 Step5)。legacy は grandfather。
   const forwardConvergence = checkForwardConvergence(deps.repoRoot);
+  const forwardConvergenceAudit = checkForwardConvergenceAudit(deps.repoRoot);
   return {
     ok:
       backfill.ok &&
@@ -1967,6 +1984,8 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       lintWiring.ok &&
       proposalDocumentCoverage.ok &&
       frontendDesignCoverage.ok &&
+      forwardConvergence.ok &&
+      forwardConvergenceAudit.ok &&
       handoverOutstanding.ok,
     messages: [
       `doctor: mode=${d.mode} (claude=${d.claude}, codex=${d.codex})`,
@@ -2041,6 +2060,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...handoverOutstanding.messages.map((m) => `doctor: ${m}`),
       ...greenCommandDigest.messages.map((m) => `doctor: ${m}`),
       ...forwardConvergence.messages.map((m) => `doctor: ${m}`),
+      ...forwardConvergenceAudit.messages.map((m) => `doctor: ${m}`),
     ],
   };
 }

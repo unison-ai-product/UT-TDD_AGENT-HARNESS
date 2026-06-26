@@ -1,5 +1,5 @@
 /**
- * forward-convergence lint — PLAN-DISCOVERY-08 (poc spike、report-only)。
+ * forward-convergence lint — PLAN-DISCOVERY-08 (Step5 = fail-close)。
  *
  * 不変条件 (PO 2026-06-26): Forward (L0-L14 spine) = きれいな最終正本。別フローの最終実態は必ず
  * Forward へ集約 (backprop_decision 経由の合流 / Reverse back-fill) される。未集約の別フローが宙に浮いた
@@ -10,8 +10,9 @@
  *  - add-impl / refactor / retrofit / troubleshoot → backfill-pairing.ts (KIND_BACKFILL)
  * 本 analyzer はそのどちらも見ていない**残ギャップ = kind=impl の spine-外 landed 未集約**のみを担う。
  *
- * report-only (PoC): doctor では surface するが doctor.ok を gate しない。fail-close 昇格と
- * KIND_BACKFILL/freeze gate への接続は S4 ADOPT 後 (規範変更 = concept/requirements 先行、modes README)。
+ * fail-close (Step5): doctor.ok を gate する (NEW unconverged-landed=0)。baseline 既存債務は
+ * FORWARD_CONVERGENCE_LEGACY_DEBT で grandfather し、allowlist↔audit doc 一致を別 hard check で担保。
+ * version_target (PLAN-DISCOVERY-09 version-up) 付き draft は将来版へ保全 = deferred(version-up) 種別。
  *
  * 純関数 (analyzeForwardConvergence) + I/O loader (loadConvergenceDocs) を分離 (lint 共通様式)。
  */
@@ -31,9 +32,27 @@ const LANDED_STATUSES = new Set<string>(["confirmed", "completed"]);
 /** backprop_decision のうち「Forward 集約不要」を明示的に成立させる disposition (§6.8.8)。 */
 const LOCAL_IMPL_ONLY_DECISIONS = new Set<string>(["local_impl_only", "not_required"]);
 
+/**
+ * version-up parked の許可 target ledger (PLAN-DISCOVERY-09)。`version_target` は任意文字列でなく
+ * この台帳に照合する (Codex Critical: 曖昧 label で集約逃れを作らない)。S4 で requirements 側へ正本化する。
+ */
+export const VERSION_UP_ALLOWED_TARGETS = new Set<string>(["future", "v2"]);
+
+/**
+ * fail-close 前から存在する未集約 landed impl の audited 債務 (PLAN-DISCOVERY-08 Step5、baseline 2026-06-26)。
+ * gate は NEW 違反のみ fail-close し、ここに列挙した既存債務は grandfather する (backfill-pairing の
+ * LEGACY_CONDITIONAL_BACKFILL_DEBT_PLAN_IDS と同型)。allowlist ↔ audit doc の双方向一致は別 hard check で担保。
+ * 最終 disposition (Forward 集約 / local_impl_only) は follow-up (Codex: version-up 扱い不可、landed 済のため)。
+ */
+export const FORWARD_CONVERGENCE_LEGACY_DEBT = new Set<string>([
+  "PLAN-L7-147-refactor-candidate-detector",
+  "PLAN-L7-62-runtime-portability-guard",
+]);
+
 export type ConvergenceBucket =
   | "spine-internal"
   | "draft-deferred"
+  | "version-up-parked"
   | "local-impl-only"
   | "converged"
   | "unconverged-landed";
@@ -46,6 +65,8 @@ export interface ConvergencePlan {
   requires: string[];
   backpropDecision: string;
   backpropDecisionReason: string;
+  /** version-up parked マーカー (将来版へ保全)。null = 通常。 */
+  versionTarget: string | null;
 }
 
 export interface ConvergenceClassification {
@@ -56,18 +77,35 @@ export interface ConvergenceClassification {
 
 export interface ForwardConvergenceResult {
   classifications: ConvergenceClassification[];
-  /** landed × spine-外 × 未集約 = freeze を塞ぐべき違反候補 (本 spike の baseline)。 */
+  /** landed × spine-外 × 未集約 = Forward 未集約の全件 (legacy + new)。 */
   unconvergedLanded: string[];
-  /** spine-外だが未 landing = 将来作業。違反でなく outstanding として surface する。 */
+  /** unconvergedLanded のうち audited legacy debt (grandfather、ok を落とさない)。 */
+  legacyDebt: string[];
+  /** unconvergedLanded のうち新規違反 (= fail-close 対象、ok を落とす)。 */
+  newViolations: string[];
+  /** spine-外で未 landing かつ version_target なし = 通常の将来作業 (active draft、outstanding)。 */
   draftDeferred: string[];
+  /** spine-外で未 landing かつ version_target 付き = 将来版へ保全 (version-up、PLAN-DISCOVERY-09)。 */
+  versionUpParked: string[];
   /** 明示理由付きで Forward 集約不要と判定された landed (§6.8.8 local_impl_only)。 */
   localImplOnly: string[];
   /** Reverse 合流で Forward へ集約済の landed。 */
   converged: string[];
   /** spine に接続済 (= 既に Forward 降下済) で集約義務なし。 */
   spineInternal: string[];
-  /** report-only: ok = 未集約 landed が 0。doctor.ok とは連動させない (PoC)。 */
+  /** fail-close: ok = 新規違反 (legacy 除く) が 0。doctor.ok と連動する (PLAN-DISCOVERY-08 Step5)。 */
   ok: boolean;
+}
+
+/**
+ * version-up parked として有効か (Codex Critical guards):
+ *  ① version_target が ledger に存在 ② status=draft (landed には付与不可、landing-time 除外禁止)。
+ * landed (confirmed/completed) で version_target が付いていても version-up とは認めない (= 通常の集約判定へ)。
+ */
+export function isValidVersionUp(plan: ConvergencePlan): boolean {
+  if (!plan.versionTarget) return false;
+  if (plan.status !== "draft") return false;
+  return VERSION_UP_ALLOWED_TARGETS.has(plan.versionTarget);
 }
 
 /** parent_design / requires / roadmap span のいずれかで Forward に接続しているか。 */
@@ -117,13 +155,23 @@ export function analyzeForwardConvergence(
       continue;
     }
     if (!isLanded(p)) {
-      classifications.push({
-        plan_id: p.plan_id,
-        bucket: "draft-deferred",
-        reason: `spine-外だが未 landing (status=${p.status})。将来作業 = outstanding`,
-      });
+      // 未 landing: version-up parked (将来版へ保全) か通常の active draft か。
+      if (isValidVersionUp(p)) {
+        classifications.push({
+          plan_id: p.plan_id,
+          bucket: "version-up-parked",
+          reason: `version_target=${p.versionTarget} で将来版へ保全 (PLAN-DISCOVERY-09)`,
+        });
+      } else {
+        classifications.push({
+          plan_id: p.plan_id,
+          bucket: "draft-deferred",
+          reason: `spine-外だが未 landing (status=${p.status})。将来作業 = active draft`,
+        });
+      }
       continue;
     }
+    // landed: version_target が付いていても version-up とは認めない (Codex Critical: landing-time 除外禁止)。
     if (hasLocalImplOnlyDisposition(p)) {
       classifications.push({
         plan_id: p.plan_id,
@@ -150,14 +198,20 @@ export function analyzeForwardConvergence(
   const pick = (b: ConvergenceBucket): string[] =>
     classifications.filter((c) => c.bucket === b).map((c) => c.plan_id);
   const unconvergedLanded = pick("unconverged-landed");
+  // legacy (audited grandfather) と new (fail-close 対象) に分割。ok は new のみで決める。
+  const legacyDebt = unconvergedLanded.filter((id) => FORWARD_CONVERGENCE_LEGACY_DEBT.has(id));
+  const newViolations = unconvergedLanded.filter((id) => !FORWARD_CONVERGENCE_LEGACY_DEBT.has(id));
   return {
     classifications,
     unconvergedLanded,
+    legacyDebt,
+    newViolations,
     draftDeferred: pick("draft-deferred"),
+    versionUpParked: pick("version-up-parked"),
     localImplOnly: pick("local-impl-only"),
     converged: pick("converged"),
     spineInternal: pick("spine-internal"),
-    ok: unconvergedLanded.length === 0,
+    ok: newViolations.length === 0,
   };
 }
 
@@ -177,6 +231,7 @@ export function parseConvergencePlan(file: string, content: string): Convergence
     requires: parseRequires(content),
     backpropDecision: fmValue(content, "backprop_decision") ?? "",
     backpropDecisionReason: fmValue(content, "backprop_decision_reason") ?? "",
+    versionTarget: fmValue(content, "version_target") ?? null,
   };
 }
 
@@ -208,17 +263,82 @@ export function loadConvergenceDocs(repoRoot: string = process.cwd()): Convergen
   return { plans, roadmapSpanIds, reverseReferencedIds };
 }
 
-/** doctor / CLI 向け surface (report-only。doctor.ok は gate しない、PoC)。 */
+/** doctor / CLI 向け surface (fail-close: NEW 違反で ok=false。legacy debt は grandfather だが常時 surface)。 */
 export function forwardConvergenceMessages(result: ForwardConvergenceResult): string[] {
   const tail =
     `spine-internal ${result.spineInternal.length} / converged ${result.converged.length} / ` +
-    `local-impl-only ${result.localImplOnly.length} / draft-deferred ${result.draftDeferred.length}`;
+    `local-impl-only ${result.localImplOnly.length} / version-up ${result.versionUpParked.length} / ` +
+    `draft-deferred ${result.draftDeferred.length}`;
+  const legacy =
+    result.legacyDebt.length > 0
+      ? ` / legacy debt ${result.legacyDebt.length} (grandfather: ${result.legacyDebt.join(", ")})`
+      : "";
   if (result.ok) {
-    return [`forward-convergence — OK (未集約 landed impl 0; ${tail}) [report-only, PoC]`];
+    return [`forward-convergence — OK (NEW 未集約 landed impl 0; ${tail}${legacy})`];
   }
   return [
-    `forward-convergence — ⚠ 未集約 landed impl ${result.unconvergedLanded.length} 件 ` +
-      `(${result.unconvergedLanded.join(", ")}): spine-外で Forward 集約 (backprop_decision / Reverse 合流) 未。` +
-      `${tail} [report-only — S4 ADOPT で fail-close 接続、PLAN-DISCOVERY-08]`,
+    `forward-convergence — violation: NEW 未集約 landed impl ${result.newViolations.length} 件 ` +
+      `(${result.newViolations.join(", ")}): spine-外で Forward 集約 (backprop_decision / Reverse 合流 / version-up parked) 未。` +
+      `${tail}${legacy}`,
   ];
+}
+
+/** legacy debt allowlist ↔ audit doc の双方向一致 (Codex Critical B: allowlist/audit drift は別 hard check)。 */
+export interface LegacyAuditDriftResult {
+  /** allowlist にあるが audit doc 未記載。 */
+  missingInAudit: string[];
+  /** audit doc にあるが allowlist 未登録。 */
+  missingInAllowlist: string[];
+  ok: boolean;
+}
+
+export function analyzeLegacyAuditDrift(auditedPlanIds: Set<string>): LegacyAuditDriftResult {
+  const missingInAudit = [...FORWARD_CONVERGENCE_LEGACY_DEBT].filter(
+    (id) => !auditedPlanIds.has(id),
+  );
+  const missingInAllowlist = [...auditedPlanIds].filter(
+    (id) => !FORWARD_CONVERGENCE_LEGACY_DEBT.has(id),
+  );
+  return {
+    missingInAudit,
+    missingInAllowlist,
+    ok: missingInAudit.length === 0 && missingInAllowlist.length === 0,
+  };
+}
+
+/** audit doc (markdown table) から `PLAN-...` 行頭セルを抽出 (backfill-pairing と同方式)。 */
+export function parseLegacyAuditPlanIds(content: string): Set<string> {
+  return new Set([...content.matchAll(/^\|\s*(PLAN-[A-Za-z0-9-]+)\s*\|/gm)].map((m) => m[1]));
+}
+
+export function loadLegacyAuditDrift(repoRoot: string = process.cwd()): LegacyAuditDriftResult {
+  let audited = new Set<string>();
+  try {
+    const content = readFileSync(
+      join(repoRoot, "docs", "governance", "forward-convergence-legacy-debt-audit.md"),
+      "utf8",
+    );
+    audited = parseLegacyAuditPlanIds(content);
+  } catch {
+    // audit doc 不在 = allowlist 全件 missing として drift surface (無音 OK にしない)。
+  }
+  return analyzeLegacyAuditDrift(audited);
+}
+
+export function legacyAuditDriftMessages(result: LegacyAuditDriftResult): string[] {
+  if (result.ok) {
+    return [
+      `forward-convergence-audit — OK (legacy debt allowlist ↔ audit doc 双方向一致, ${FORWARD_CONVERGENCE_LEGACY_DEBT.size} 件)`,
+    ];
+  }
+  const parts: string[] = [];
+  if (result.missingInAudit.length > 0)
+    parts.push(
+      `audit doc 未記載 ${result.missingInAudit.length} (${result.missingInAudit.join(", ")})`,
+    );
+  if (result.missingInAllowlist.length > 0)
+    parts.push(
+      `allowlist 未登録 ${result.missingInAllowlist.length} (${result.missingInAllowlist.join(", ")})`,
+    );
+  return [`forward-convergence-audit — violation: ${parts.join("; ")}`];
 }

@@ -322,6 +322,8 @@ describe("U-HOVER-017 §5 outstanding seed + anchor gate (PLAN-L7-98)", () => {
   const outstanding = {
     nonTerminalPlansByLayer: { L7: 2 },
     nonTerminalPlansTotal: 2,
+    versionUpParked: 0,
+    activeDraftTotal: 2,
     openDefers: 1,
   };
 

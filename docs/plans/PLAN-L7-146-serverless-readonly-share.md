@@ -5,6 +5,7 @@ kind: impl
 layer: L7
 drive: fullstack
 status: draft
+version_target: future
 created: 2026-06-24
 updated: 2026-06-26
 owner: PM (Opus) / PO (人間)

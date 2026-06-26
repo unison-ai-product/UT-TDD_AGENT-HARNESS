@@ -93,6 +93,10 @@ const frontmatterBaseSchema = z.object({
   github_issue_id: z.number().int().positive().nullable().optional(),
   backprop_decision: z.enum(["not_required"]).optional(),
   backprop_decision_reason: z.string().optional(),
+  /** PLAN-DISCOVERY-09 version-up: 将来版へ保全 (deferred-but-committed-future) する PLAN のマーカー。
+   *  status=draft でのみ有効 (landed には付与不可、Codex Critical: landing-time 除外禁止)。label は
+   *  version-up ledger に照合する (forward-convergence.ts VERSION_UP_ALLOWED_TARGETS)。 */
+  version_target: z.string().optional(),
   /** migration import trace reference (optional migration ledger path) */
   v2_import: z.string().optional(),
   /** review 前置エビデンス (requirements §7.8.7 / .claude/CLAUDE.md MUST、IMP-071)。
@@ -317,6 +321,16 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
       code: custom,
       path: ["layer"],
       message: "kind=charter は layer=L0 のみ (§1.3 / §2.1.1)",
+    });
+  }
+
+  // PLAN-DISCOVERY-09: version_target (version-up parked) は status=draft のみ有効 (landed 除外禁止)
+  if (fm.version_target && fm.status !== "draft") {
+    ctx.addIssue({
+      code: custom,
+      path: ["version_target"],
+      message:
+        "version_target は status=draft のみ有効 (landed=confirmed/completed には付与不可、PLAN-DISCOVERY-09)",
     });
   }
 

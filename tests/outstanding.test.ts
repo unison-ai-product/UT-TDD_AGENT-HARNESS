@@ -61,6 +61,8 @@ describe("outstandingSummaryLine", () => {
       outstandingSummaryLine({
         nonTerminalPlansByLayer: { L7: 2, cross: 1 },
         nonTerminalPlansTotal: 3,
+        versionUpParked: 0,
+        activeDraftTotal: 3,
         openDefers: 1,
       }),
     ).toBe("outstanding: non-terminal PLANs=3 (L7:2, cross:1); open defers=1");
@@ -71,6 +73,8 @@ describe("outstandingSummaryLine", () => {
       outstandingSummaryLine({
         nonTerminalPlansByLayer: {},
         nonTerminalPlansTotal: 0,
+        versionUpParked: 0,
+        activeDraftTotal: 0,
         openDefers: 0,
       }),
     ).toBe("outstanding: non-terminal PLANs=0 (none); open defers=0");

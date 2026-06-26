@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzeForwardConvergence,
+  analyzeLegacyAuditDrift,
   type ConvergencePlan,
+  FORWARD_CONVERGENCE_LEGACY_DEBT,
   forwardConvergenceMessages,
   hasLocalImplOnlyDisposition,
   isLanded,
   isSpineConnected,
+  isValidVersionUp,
   parseConvergencePlan,
+  parseLegacyAuditPlanIds,
 } from "../src/lint/forward-convergence";
 
 function plan(overrides: Partial<ConvergencePlan> = {}): ConvergencePlan {
@@ -18,9 +22,12 @@ function plan(overrides: Partial<ConvergencePlan> = {}): ConvergencePlan {
     requires: [],
     backpropDecision: "",
     backpropDecisionReason: "",
+    versionTarget: null,
     ...overrides,
   };
 }
+
+const LEGACY_ID = [...FORWARD_CONVERGENCE_LEGACY_DEBT][0];
 
 describe("forward-convergence: spine 接続判定", () => {
   it("roadmap span 登録は spine-internal", () => {
@@ -168,15 +175,87 @@ describe("forward-convergence: parse + messages", () => {
     expect(p.backpropDecision).toBe("local_impl_only");
   });
 
-  it("messages: ok は report-only 文言、violation は件数 + ids", () => {
+  it("messages: ok は OK 文言、violation は NEW 件数 + ids", () => {
     const okMsg = forwardConvergenceMessages(analyzeForwardConvergence([], new Set(), new Set()));
     expect(okMsg[0]).toContain("forward-convergence — OK");
-    expect(okMsg[0]).toContain("report-only");
 
     const badMsg = forwardConvergenceMessages(
       analyzeForwardConvergence([plan({ plan_id: "PLAN-L7-999-orphan" })], new Set(), new Set()),
     );
-    expect(badMsg[0]).toContain("未集約 landed impl 1 件");
+    expect(badMsg[0]).toContain("violation");
+    expect(badMsg[0]).toContain("NEW 未集約 landed impl 1 件");
     expect(badMsg[0]).toContain("PLAN-L7-999-orphan");
+  });
+});
+
+describe("forward-convergence: fail-close (legacy grandfather + NEW gate)", () => {
+  it("legacy debt は grandfather (ok を落とさず legacyDebt へ)", () => {
+    const r = analyzeForwardConvergence([plan({ plan_id: LEGACY_ID })], new Set(), new Set());
+    expect(r.legacyDebt).toEqual([LEGACY_ID]);
+    expect(r.newViolations).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("NEW 違反は fail-close (ok=false)、legacy と共存しても NEW のみで判定", () => {
+    const r = analyzeForwardConvergence(
+      [plan({ plan_id: LEGACY_ID }), plan({ plan_id: "PLAN-L7-999-orphan" })],
+      new Set(),
+      new Set(),
+    );
+    expect(r.legacyDebt).toEqual([LEGACY_ID]);
+    expect(r.newViolations).toEqual(["PLAN-L7-999-orphan"]);
+    expect(r.ok).toBe(false);
+  });
+});
+
+describe("forward-convergence: version-up parked (Codex Critical guards)", () => {
+  it("draft + ledger label = version-up parked (draft-deferred でない)", () => {
+    expect(isValidVersionUp(plan({ status: "draft", versionTarget: "future" }))).toBe(true);
+    const r = analyzeForwardConvergence(
+      [plan({ plan_id: "PLAN-L7-141-x", status: "draft", versionTarget: "future" })],
+      new Set(),
+      new Set(),
+    );
+    expect(r.versionUpParked).toEqual(["PLAN-L7-141-x"]);
+    expect(r.draftDeferred).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("landed + version_target は version-up と認めない (landing-time 除外禁止)", () => {
+    expect(isValidVersionUp(plan({ status: "confirmed", versionTarget: "future" }))).toBe(false);
+    const r = analyzeForwardConvergence(
+      [plan({ plan_id: "PLAN-L7-998-x", status: "confirmed", versionTarget: "future" })],
+      new Set(),
+      new Set(),
+    );
+    expect(r.versionUpParked).toEqual([]);
+    expect(r.unconvergedLanded).toEqual(["PLAN-L7-998-x"]);
+  });
+
+  it("ledger 外 label は version-up parked にしない", () => {
+    expect(isValidVersionUp(plan({ status: "draft", versionTarget: "whenever" }))).toBe(false);
+  });
+});
+
+describe("forward-convergence: legacy audit drift (allowlist ↔ audit doc)", () => {
+  it("allowlist と audit doc が一致なら ok", () => {
+    const audited = new Set(FORWARD_CONVERGENCE_LEGACY_DEBT);
+    expect(analyzeLegacyAuditDrift(audited).ok).toBe(true);
+  });
+
+  it("audit doc 未記載 / allowlist 未登録 を双方向検出", () => {
+    const r1 = analyzeLegacyAuditDrift(new Set());
+    expect(r1.missingInAudit.length).toBe(FORWARD_CONVERGENCE_LEGACY_DEBT.size);
+    expect(r1.ok).toBe(false);
+    const r2 = analyzeLegacyAuditDrift(
+      new Set([...FORWARD_CONVERGENCE_LEGACY_DEBT, "PLAN-L7-000-extra"]),
+    );
+    expect(r2.missingInAllowlist).toEqual(["PLAN-L7-000-extra"]);
+    expect(r2.ok).toBe(false);
+  });
+
+  it("parseLegacyAuditPlanIds が table 行頭の PLAN id を抽出", () => {
+    const md = "| plan_id | x |\n|---|---|\n| PLAN-L7-147-refactor-candidate-detector | impl |\n";
+    expect(parseLegacyAuditPlanIds(md).has("PLAN-L7-147-refactor-candidate-detector")).toBe(true);
   });
 });
