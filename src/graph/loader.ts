@@ -75,6 +75,23 @@ function walkMd(dir: string, repoRoot: string, acc: string[]): void {
   }
 }
 
+function walkJson(dir: string, repoRoot: string, acc: string[]): void {
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkJson(full, repoRoot, acc);
+    } else if (entry.name.endsWith(".json")) {
+      acc.push(normalizePath(relative(repoRoot, full)));
+    }
+  }
+}
+
 /**
  * tests/**\/*.ts を走査し、各テストファイルの import 文を解析して
  * "covered src path → test path" の逆引き map を構築する。
@@ -328,6 +345,16 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
   const reviewDocs: string[] = [];
   walkMd(join(repoRoot, ".ut-tdd", "review"), repoRoot, reviewDocs);
   for (const path of reviewDocs) {
+    addDesignDocIfAbsent(designDocs, path);
+  }
+
+  const integrationEvidenceDocs: string[] = [];
+  walkJson(
+    join(repoRoot, ".ut-tdd", "evidence", "g8-integration"),
+    repoRoot,
+    integrationEvidenceDocs,
+  );
+  for (const path of integrationEvidenceDocs) {
     addDesignDocIfAbsent(designDocs, path);
   }
 
