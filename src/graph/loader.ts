@@ -156,7 +156,7 @@ interface PlanFrontmatter {
 /** requirement node の provenance path (FR-L1 SSoT)。change-impact 突合の基準。 */
 const FR_REGISTRY_DOC = "docs/design/harness/L1-requirements/functional-requirements.md";
 
-const TOP_LEVEL_REFERENCE_DOCS = ["ai-agent-harness-directory-reference.md"] as const;
+const REFERENCE_DOCS = ["docs/reference/ai-agent-harness-directory-reference.md"] as const;
 
 function addDesignDocIfAbsent(designDocs: DesignDocInput[], path: string): void {
   if (designDocs.some((d) => d.path === path)) return;
@@ -322,7 +322,7 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
     addDesignDocIfAbsent(designDocs, path);
   }
 
-  for (const path of TOP_LEVEL_REFERENCE_DOCS) {
+  for (const path of REFERENCE_DOCS) {
     addDesignDocIfAbsent(designDocs, path);
   }
 

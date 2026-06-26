@@ -3,7 +3,7 @@
 - **Status**: accepted
 - **Date**: 2026-06-01
 - **Deciders**: PM (Opus) + PO (ユーザー)
-- **関連**: `ADR-001` (TS 再実装) / [ADR-003](./ADR-003-runtime-adapter-boundary-subscription-cli.md) (runtime adapter 境界、IMP-031 Web サーバ境界) / [ADR-004](./ADR-004-internal-asset-ts-control-boundary.md) (内部資産 TS 制御境界) / `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` §2.1.0 (ルール同一性) / `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` (配布単位、本 ADR D1 で置換) / `docs/design/harness/L1-requirements/screen-requirements.md` (15 画面、PM-06 設計書ビューア含む) / `docs/migration/helix-to-ut-tdd-cutover-strategy.md` / `../../ai-agent-harness-directory-reference.md` (PO 作成 参考、repo root 直下・正本外、3 層モデル)
+- **関連**: `ADR-001` (TS 再実装) / [ADR-003](./ADR-003-runtime-adapter-boundary-subscription-cli.md) (runtime adapter 境界、IMP-031 Web サーバ境界) / [ADR-004](./ADR-004-internal-asset-ts-control-boundary.md) (内部資産 TS 制御境界) / `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` §2.1.0 (ルール同一性) / `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` (配布単位、本 ADR D1 で置換) / `docs/design/harness/L1-requirements/screen-requirements.md` (15 画面、PM-06 設計書ビューア含む) / `docs/migration/helix-to-ut-tdd-cutover-strategy.md` / `../reference/ai-agent-harness-directory-reference.md` (PO 作成 参考、docs/reference 配下・正本外、3 層モデル)
 
 ## Context
 

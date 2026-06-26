@@ -138,12 +138,12 @@ describe("loadRelationGraphSourceSet", () => {
         id: ".ut-tdd/review/cross-review-l7-157.md",
         path: ".ut-tdd/review/cross-review-l7-157.md",
       });
-      const topLevelReference = sourceSet.designDocs?.find(
-        (d) => d.path === "ai-agent-harness-directory-reference.md",
+      const referenceDoc = sourceSet.designDocs?.find(
+        (d) => d.path === "docs/reference/ai-agent-harness-directory-reference.md",
       );
-      expect(topLevelReference).toMatchObject({
-        id: "ai-agent-harness-directory-reference.md",
-        path: "ai-agent-harness-directory-reference.md",
+      expect(referenceDoc).toMatchObject({
+        id: "docs/reference/ai-agent-harness-directory-reference.md",
+        path: "docs/reference/ai-agent-harness-directory-reference.md",
       });
 
       // projection + impact: changing the source surfaces its owning plan + sibling test
@@ -187,12 +187,12 @@ describe("loadRelationGraphSourceSet", () => {
       expect(reviewImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
       const referenceImpact = analyzeRelationImpact({
-        changedPaths: ["ai-agent-harness-directory-reference.md"],
+        changedPaths: ["docs/reference/ai-agent-harness-directory-reference.md"],
         projection,
       });
       expect(referenceImpact.ok).toBe(true);
       expect(referenceImpact.changedNodes.map((n) => n.id)).toContain(
-        "design:ai-agent-harness-directory-reference.md",
+        "design:docs/reference/ai-agent-harness-directory-reference.md",
       );
       expect(referenceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
@@ -266,12 +266,12 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     );
     expect(reviewImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const referenceImpact = analyzeRelationImpact({
-      changedPaths: ["ai-agent-harness-directory-reference.md"],
+      changedPaths: ["docs/reference/ai-agent-harness-directory-reference.md"],
       projection,
     });
     expect(referenceImpact.ok).toBe(true);
     expect(referenceImpact.changedNodes.map((n) => n.id)).toContain(
-      "design:ai-agent-harness-directory-reference.md",
+      "design:docs/reference/ai-agent-harness-directory-reference.md",
     );
     expect(referenceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
   });

@@ -44,7 +44,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:46:41+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:5112791a83d264b22d09eedb396f07cb8cb4eff15cf0e09265ebff59ce957b08"
+        output_digest: "sha256:f4bc7a9d39177c0a93e412aad4ff3148f2874469ae8e0f90f87c1d73a8c9bf22"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -52,7 +52,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:47:06+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:e7242726f8553fbf28aa8fd2b872fca88369547ad19640c1cbb3d11b4c65fafc"
+        output_digest: "sha256:538f04f58b4688cfede079cc27c97078765d902efa9e67ba7b91f5c17c577dc3"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -60,7 +60,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:46:51+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:e7242726f8553fbf28aa8fd2b872fca88369547ad19640c1cbb3d11b4c65fafc"
+        output_digest: "sha256:538f04f58b4688cfede079cc27c97078765d902efa9e67ba7b91f5c17c577dc3"
       - kind: smoke
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
@@ -68,7 +68,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:47:25+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:e7242726f8553fbf28aa8fd2b872fca88369547ad19640c1cbb3d11b4c65fafc"
+        output_digest: "sha256:538f04f58b4688cfede079cc27c97078765d902efa9e67ba7b91f5c17c577dc3"
 ---
 
 # PLAN-L7-156: top-level reference doc graph node
@@ -79,17 +79,22 @@ Prevent the relation graph DB gate from reporting `missing-projection` when a
 tracked top-level reference document is deleted or otherwise changed while the
 file is absent from the working tree.
 
+> **訂正 (PO 2026-06-25)**: 対象参照 doc を repo 直下から `docs/reference/ai-agent-harness-directory-reference.md`
+> へ移設。loader 定数 `TOP_LEVEL_REFERENCE_DOCS` → `REFERENCE_DOCS` に改称し新パスを指す (本 PLAN 名・objective の
+> "top-level" は歴史的呼称)。node は引き続き materialize される (パスのみ変更)。loader.ts / test 更新に伴う
+> green_commands digest は green 再実行のうえ再整合済。
+
 ## Scope
 
 - Add known top-level tracked reference docs to the relation graph source set as
   design nodes.
 - Preserve existing process-doc and agent-doc graph coverage.
 - Add fixture and real-repo regression checks for
-  `ai-agent-harness-directory-reference.md`.
+  `docs/reference/ai-agent-harness-directory-reference.md`.
 
 ## Acceptance Criteria
 
-- `ai-agent-harness-directory-reference.md` materializes as a relation graph
+- `docs/reference/ai-agent-harness-directory-reference.md` materializes as a relation graph
   node even when absent from the fixture repository.
 - Change impact analysis for that path does not emit `missing-projection`.
 - Targeted relation graph loader tests, typecheck, lint, DB rebuild, and doctor
