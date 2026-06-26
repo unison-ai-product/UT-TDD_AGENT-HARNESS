@@ -1292,6 +1292,15 @@ L5/L6 降下先: `docs/plans/PLAN-L5-08-harness-db-feedback.md`、`docs/design/h
 
 **例**: A-122 の UT evidence history / GreenDefinition / Harness DB projection は単なる L5/L6 carry ではなく、既存 FR-L1-05/06/07/17/18/20/45/50 の `requires_requirement_backprop` 拡張として L1/L3/requirements へ back-propagation 済みと扱う。
 
+#### §6.8.8.1 Forward-convergence fail-close (別フロー集約の機械強制、PLAN-DISCOVERY-08)
+
+§6.8.8 の back-prop 原則を機械強制する。Forward (L0-L14 spine) は「きれいな最終正本 (製本)」であり、別フローの最終実態が Forward へ集約されるまで freeze (= 最終正本成立) を主張してはならない。
+
+- **不変条件**: spine-外 (parent_design が `docs/design/` を含まず、requires が L1-L6 設計 PLAN / `docs/design/` を指さず、roadmap span 未登録) の `kind=impl` が landed (status=confirmed/completed) かつ backprop_decision / Reverse 合流 / version-up parked のいずれも無い場合、**NEW unconverged-landed = fail-close 違反**とする。`ut-tdd doctor` の `forward-convergence` gate が hard-fail する。
+- **SSoT 非重複**: poc confirmed の集約は scrum-reverse (IMP-064)、add-impl/refactor/retrofit/troubleshoot は §6.8.8 の back-prop decision (KIND_BACKFILL) が担う。forward-convergence は残ギャップ (kind=impl spine-外 landed) のみを担い、判定を二重実装しない。
+- **legacy debt**: fail-close 化以前から存在した未集約は `FORWARD_CONVERGENCE_LEGACY_DEBT` allowlist で grandfather し、`docs/governance/forward-convergence-legacy-debt-audit.md` との双方向一致を `forward-convergence-audit` hard check で担保する (免除でなく繰延。最終 disposition = Forward 集約 or `local_impl_only`、version-up 不可 = landed 済)。
+- **version-up parked**: `version_target` (status=draft 限定、landed 付与禁止) を持つ将来版保全は正当な deferred 種別であり違反でない (§2.5 version-up mode、`version_deferral` signal §7.8.1、PLAN-DISCOVERY-09)。
+
 ### §6.8.9 Cross-artifact relation graph / visualization / tool adapters (A-124, 2026-06-09)
 
 UT-TDD は「1 つを直したら、関連する設計・コード・テスト・DB projection・PLAN・FR も合わせて直す」ために、横断 relation graph を `harness.db` projection として持つ。これは authoring source ではなく、docs / source / tests / PLAN / state / logs から再構築できる derived graph である。
@@ -1982,6 +1991,7 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 | `agent_runaway` / `context_exhaustion` / `regression_dev` / `runaway` / `forced_stop` | recovery | human approval。`forced_stop` = ユーザー強制停止 (ESC/Ctrl+C/Stop) = 高 severity 負シグナル (concept §2.6.1、PLAN-L6-04/L7-02 dangling-turn 推定で検出) |
 | `production_incident` / `hotfix_required` / `regression_prod` | incident | env=prod 必須、human approval |
 | `feature_addition` / `scope_extension` | add-feature | §1.3 `kind=add-feature` と同じ正規表記 |
+| `version_deferral` | version-up | capability を将来版へ保全 (今スコープ外・破棄しない)。`version_target` 付き draft で起票、活性化時に add-feature で Forward 合流 (§2.5 version-up、PLAN-DISCOVERY-09) |
 | `user_feedback_iteration` / `requirement_continuous_refinement` | scrum | |
 | `requirement_undefined` / `feasibility_unknown` / `success_condition_unclear` / `design_uncertain` | discovery | 4 象限 P2 (uncertainty 高×impact 低) で Discovery 先行。上流委譲。**`design_uncertain` = 確証なき設計** (紙上で実現性・妥当性が確定できない設計、concept §2.5 / PLAN-DISCOVERY-01 S4 confirmed)。**在層で閉じる `design_gap` (下記 interrupt 分岐 → Forward spot 修正) とは区別**: 設計の確証が PoC を要するなら Discovery、層内で確定できるなら Forward |
 | `tech_decision_required` / `option_comparison_needed` / `adr_required` | research | 机上調査で完結 (PoC 不要)。作れるか不明→discovery / 既存実装調査→reverse に切替 |
