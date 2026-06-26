@@ -29,11 +29,69 @@ const itRows = Array.from(
   (_, i) => `| IT-MODULE-${String(i + 1).padStart(2, "0")} | Given | When | Then |`,
 ).join("\n");
 
+const validManifest = {
+  manifest_path: ".ut-tdd/evidence/g8-integration/test.json",
+  schema_version: "g8-integration-evidence-v1",
+  gate: "G8",
+  profile: "it-module-state-minimum",
+  plan_id: "PLAN-L7-169-g8-integration-evidence-manifest",
+  selected_it_ids: ["IT-MODULE-01", "IT-MODULE-02", "IT-STATE-01", "IT-STATE-02"],
+  mandatory_it_ids: ["IT-MODULE-01", "IT-MODULE-02", "IT-STATE-01", "IT-STATE-02"],
+  deferred_it_ids: [],
+  commands: [
+    {
+      command_id: "cmd-module-state-targeted",
+      command:
+        "bun run vitest run tests\\dependency-drift.test.ts tests\\lint-wiring.test.ts tests\\agent-slots.test.ts tests\\workflow-contracts.test.ts",
+      runner: "bun",
+      scope: "targeted",
+      exit_code: 0,
+      evidence_path: "tests/g8-integration-workflow.test.ts",
+      output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      it_ids: ["IT-MODULE-01", "IT-MODULE-02", "IT-STATE-01", "IT-STATE-02"],
+    },
+  ],
+  coverage: [
+    {
+      it_id: "IT-MODULE-01",
+      status: "passed",
+      evidence_paths: ["tests/dependency-drift.test.ts"],
+      command_ids: ["cmd-module-state-targeted"],
+    },
+    {
+      it_id: "IT-MODULE-02",
+      status: "passed",
+      evidence_paths: ["tests/lint-wiring.test.ts"],
+      command_ids: ["cmd-module-state-targeted"],
+    },
+    {
+      it_id: "IT-STATE-01",
+      status: "passed",
+      evidence_paths: ["tests/agent-slots.test.ts"],
+      command_ids: ["cmd-module-state-targeted"],
+    },
+    {
+      it_id: "IT-STATE-02",
+      status: "passed",
+      evidence_paths: ["tests/workflow-contracts.test.ts"],
+      command_ids: ["cmd-module-state-targeted"],
+    },
+  ],
+  exit_criteria: {
+    all_mandatory_passed: true,
+    failed_mandatory_count: 0,
+    stale_defer_count: 0,
+    doctor_check: "g8-integration-workflow",
+  },
+};
+
 describe("g8-integration-workflow lint", () => {
   it("fails when L8 has IT rows but no executable G8 workflow granularity", () => {
     const result = analyzeG8IntegrationWorkflow({
+      repoRoot: process.cwd(),
       l8TestDesign: itRows,
       gatesMd: "G8 remains concept-only.",
+      evidenceManifests: [],
     });
 
     expect(result.ok).toBe(false);
@@ -42,14 +100,56 @@ describe("g8-integration-workflow lint", () => {
     expect(g8IntegrationWorkflowMessages(result)[0]).toContain("violation");
   });
 
-  it("passes when L8 workflow and G8 gate markers are explicit", () => {
+  it("fails when workflow markers exist but the integration evidence manifest is missing", () => {
     const result = analyzeG8IntegrationWorkflow({
+      repoRoot: process.cwd(),
       l8TestDesign: `${workflowBlock}\n${itRows}`,
       gatesMd: gateBlock,
+      evidenceManifests: [],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContain(
+      "G8 integration evidence manifest is missing under .ut-tdd/evidence/g8-integration",
+    );
+  });
+
+  it("fails when mandatory IT coverage is not passed", () => {
+    const result = analyzeG8IntegrationWorkflow({
+      repoRoot: process.cwd(),
+      l8TestDesign: `${workflowBlock}\n${itRows}`,
+      gatesMd: gateBlock,
+      evidenceManifests: [
+        {
+          ...validManifest,
+          coverage: validManifest.coverage.map((entry) =>
+            entry.it_id === "IT-STATE-02" ? { ...entry, status: "failed" } : entry,
+          ),
+          exit_criteria: {
+            ...validManifest.exit_criteria,
+            all_mandatory_passed: false,
+            failed_mandatory_count: 1,
+          },
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.join("\n")).toContain("mandatory coverage IT-STATE-02 is not passed");
+  });
+
+  it("passes when L8 workflow, G8 gate markers, and IT evidence manifest are explicit", () => {
+    const result = analyzeG8IntegrationWorkflow({
+      repoRoot: process.cwd(),
+      l8TestDesign: `${workflowBlock}\n${itRows}`,
+      gatesMd: gateBlock,
+      evidenceManifests: [validManifest],
     });
 
     expect(result.ok).toBe(true);
     expect(result.itCaseCount).toBe(10);
+    expect(result.manifestCount).toBe(1);
+    expect(result.selectedItCount).toBe(4);
     expect(g8IntegrationWorkflowMessages(result)[0]).toContain("OK");
   });
 

@@ -53,6 +53,27 @@ describe("U-SLOT-001 loadSlots", () => {
     deps.files.set(statePath, JSON.stringify({ not: "array" }));
     expect(loadSlots(deps)).toEqual([]);
   });
+
+  it("invalid slot shapes fail closed through schema validation", () => {
+    const deps = mockDeps();
+    deps.files.set(
+      statePath,
+      JSON.stringify([
+        {
+          slot_id: "slot-1",
+          agent_kind: "codex",
+          role: null,
+          slot_source: "unknown",
+          fired_at: "2026-06-04T00:00:00.000Z",
+          released_at: null,
+          status: "running",
+          exit_code: null,
+        },
+      ]),
+    );
+
+    expect(loadSlots(deps)).toEqual([]);
+  });
 });
 
 describe("U-SLOT-002 fireSlot / releaseSlot", () => {

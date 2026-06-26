@@ -159,6 +159,46 @@ export function resolveDriveStatePartition(input: {
   };
 }
 
+export function validateDriveStatePartitions(input: {
+  partitions: { drive: string; partition_path: string; artifact_ids: string[] }[];
+  allowed_cross_drive_artifacts?: string[];
+}): ContractResult & { duplicate_artifact_ids: string[] } {
+  const allowed = new Set(input.allowed_cross_drive_artifacts ?? []);
+  const byArtifact = new Map<string, Set<string>>();
+  for (const partition of input.partitions) {
+    if (
+      !partition.partition_path
+        .replaceAll("\\", "/")
+        .startsWith(`.ut-tdd/drive/${partition.drive}/`)
+    ) {
+      return {
+        ...result([
+          finding("drive-partition-path-mismatch", "partition path does not match drive", {
+            evidencePath: partition.partition_path,
+          }),
+        ]),
+        duplicate_artifact_ids: [],
+      };
+    }
+    for (const artifactId of partition.artifact_ids) {
+      if (!byArtifact.has(artifactId)) byArtifact.set(artifactId, new Set());
+      byArtifact.get(artifactId)?.add(partition.drive);
+    }
+  }
+  const duplicateArtifactIds = [...byArtifact.entries()]
+    .filter(([artifactId, drives]) => drives.size > 1 && !allowed.has(artifactId))
+    .map(([artifactId]) => artifactId)
+    .sort();
+  return {
+    ...result(
+      duplicateArtifactIds.map((artifactId) =>
+        finding("cross-drive-artifact-contamination", `${artifactId} appears in multiple drives`),
+      ),
+    ),
+    duplicate_artifact_ids: duplicateArtifactIds,
+  };
+}
+
 export function classifyDrive(input: {
   plan: string;
   code_delta?: string[];

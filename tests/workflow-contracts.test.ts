@@ -31,6 +31,7 @@ import {
   renderFoundationReadiness,
   resolveDriveStatePartition,
   suggestSkillInjection,
+  validateDriveStatePartitions,
   validateFolderRules,
 } from "../src/workflow/contracts-extras";
 import { DRIVE_TDD_FITS } from "../src/workflow/contracts-policy";
@@ -395,6 +396,59 @@ describe("L7 workflow contract implementations", () => {
         plan_id: "PLAN-X",
       }).partition_path,
     ).toContain(".ut-tdd/drive/db/Forward/PLAN-X");
+    const dbPartition = resolveDriveStatePartition({
+      drive: "db",
+      mode: "Forward",
+      kind: "impl",
+      layer: "L7",
+      plan_id: "PLAN-DB",
+    });
+    const agentPartition = resolveDriveStatePartition({
+      drive: "agent",
+      mode: "Forward",
+      kind: "impl",
+      layer: "L7",
+      plan_id: "PLAN-AGENT",
+    });
+    expect(
+      validateDriveStatePartitions({
+        partitions: [
+          { drive: "db", partition_path: dbPartition.partition_path, artifact_ids: ["db-only"] },
+          {
+            drive: "agent",
+            partition_path: agentPartition.partition_path,
+            artifact_ids: ["agent-only"],
+          },
+        ],
+      }).ok,
+    ).toBe(true);
+    const contaminated = validateDriveStatePartitions({
+      partitions: [
+        { drive: "db", partition_path: dbPartition.partition_path, artifact_ids: ["shared"] },
+        {
+          drive: "agent",
+          partition_path: agentPartition.partition_path,
+          artifact_ids: ["shared"],
+        },
+      ],
+    });
+    expect(contaminated.ok).toBe(false);
+    expect(contaminated.findings.map((finding) => finding.code)).toContain(
+      "cross-drive-artifact-contamination",
+    );
+    expect(
+      validateDriveStatePartitions({
+        allowed_cross_drive_artifacts: ["shared"],
+        partitions: [
+          { drive: "db", partition_path: dbPartition.partition_path, artifact_ids: ["shared"] },
+          {
+            drive: "agent",
+            partition_path: agentPartition.partition_path,
+            artifact_ids: ["shared"],
+          },
+        ],
+      }).ok,
+    ).toBe(true);
     expect(
       catalogSkills({ skill_docs: [{ path: "s.md", triggers: ["test"] }] }).skills,
     ).toHaveLength(1);

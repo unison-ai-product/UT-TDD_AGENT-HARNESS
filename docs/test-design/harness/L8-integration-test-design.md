@@ -197,5 +197,5 @@ Minimum G8 close profile for the first L8 ascent:
 | Strategy and plan | This `G8-WORKFLOW` section plus the concrete child PLAN scope. |
 | Selection | At least one coherent boundary family such as IT-MODULE + IT-STATE, or a justified higher-risk family such as IT-ADAPTER / IT-DB. |
 | Procedure | Targeted test command(s) and `doctor` after wiring. |
-| Evidence | Integration evidence manifest or PLAN `review_evidence.green_commands` that names the selected IT-* IDs. |
+| Evidence | Integration evidence manifest under `.ut-tdd/evidence/g8-integration/*.json`, or PLAN `review_evidence.green_commands` that names the selected IT-* IDs. |
 | Exit | `g8-integration-workflow` doctor check OK and no selected mandatory IT-* failure. |

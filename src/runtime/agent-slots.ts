@@ -16,6 +16,7 @@
 
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { z } from "zod";
 
 export type {
   RosterCapabilityEntry,
@@ -56,6 +57,17 @@ export const DEFAULT_MAX_PARALLEL = 8;
 export const DEFAULT_STALE_MINUTES = 5;
 
 const STATE_REL = join(".ut-tdd", "state", "agent-slots.json");
+const slotSchema = z.object({
+  slot_id: z.string().min(1),
+  agent_kind: z.string().min(1),
+  role: z.string().nullable(),
+  slot_source: z.enum(["agent_guard", "team_runner", "manual"]),
+  fired_at: z.string().min(1),
+  released_at: z.string().nullable(),
+  status: z.enum(["running", "completed", "failed", "cancelled"]),
+  exit_code: z.number().nullable(),
+});
+const slotsSchema = z.array(slotSchema);
 
 function statePath(repoRoot: string): string {
   return join(repoRoot, STATE_REL);
@@ -67,7 +79,8 @@ export function loadSlots(deps: AgentSlotsDeps): Slot[] {
     const raw = deps.readText(statePath(deps.repoRoot));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Slot[]) : [];
+    const result = slotsSchema.safeParse(parsed);
+    return result.success ? result.data : [];
   } catch {
     return [];
   }

@@ -1,0 +1,91 @@
+{
+  "schema_version": "g8-integration-evidence-v1",
+  "gate": "G8",
+  "profile": "it-module-state-minimum",
+  "plan_id": "PLAN-L7-169-g8-integration-evidence-manifest",
+  "selected_it_ids": [
+    "IT-MODULE-01",
+    "IT-MODULE-02",
+    "IT-STATE-01",
+    "IT-STATE-02"
+  ],
+  "mandatory_it_ids": [
+    "IT-MODULE-01",
+    "IT-MODULE-02",
+    "IT-STATE-01",
+    "IT-STATE-02"
+  ],
+  "deferred_it_ids": [],
+  "commands": [
+    {
+      "command_id": "cmd-module-state-targeted",
+      "command": "bun run vitest run tests\\dependency-drift.test.ts tests\\lint-wiring.test.ts tests\\agent-slots.test.ts tests\\workflow-contracts.test.ts tests\\g8-integration-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/g8-integration-workflow.test.ts",
+      "output_digest": "sha256:fa256d0890c52c151aa718e56146b0830df23c20fa2dd6eb83b28452347b864d",
+      "it_ids": [
+        "IT-MODULE-01",
+        "IT-MODULE-02",
+        "IT-STATE-01",
+        "IT-STATE-02"
+      ]
+    }
+  ],
+  "coverage": [
+    {
+      "it_id": "IT-MODULE-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/dependency-drift.test.ts"
+      ],
+      "command_ids": [
+        "cmd-module-state-targeted"
+      ],
+      "notes": "Dependency drift tests cover allowed graph, disallowed module dependency, and deterministic cycle detection."
+    },
+    {
+      "it_id": "IT-MODULE-02",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/lint-wiring.test.ts",
+        "src/lint/g8-integration-workflow.ts"
+      ],
+      "command_ids": [
+        "cmd-module-state-targeted"
+      ],
+      "notes": "Lint wiring and G8 integration workflow keep load/analyze separation and runtime reachability visible."
+    },
+    {
+      "it_id": "IT-STATE-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/agent-slots.test.ts",
+        "src/runtime/agent-slots.ts"
+      ],
+      "command_ids": [
+        "cmd-module-state-targeted"
+      ],
+      "notes": "Agent slot state round-trips through real FS deps and invalid slot shapes fail closed through schema validation."
+    },
+    {
+      "it_id": "IT-STATE-02",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/workflow-contracts.test.ts",
+        "src/workflow/contracts-extras.ts"
+      ],
+      "command_ids": [
+        "cmd-module-state-targeted"
+      ],
+      "notes": "Drive state partitions are generated per drive and unauthorized cross-drive artifact reuse is detected."
+    }
+  ],
+  "exit_criteria": {
+    "all_mandatory_passed": true,
+    "failed_mandatory_count": 0,
+    "stale_defer_count": 0,
+    "doctor_check": "g8-integration-workflow"
+  }
+}
