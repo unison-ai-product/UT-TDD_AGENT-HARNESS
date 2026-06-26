@@ -1,0 +1,149 @@
+{
+  "schema_version": "g8-integration-evidence-v1",
+  "gate": "G8",
+  "profile": "it-adapter-asset-expansion",
+  "plan_id": "PLAN-L7-171-g8-adapter-asset-evidence",
+  "selected_it_ids": [
+    "IT-ADAPTER-01",
+    "IT-ASSET-01",
+    "IT-ASSET-02",
+    "IT-ASSET-03",
+    "IT-ASSET-04",
+    "IT-ASSET-05",
+    "IT-ASSET-06",
+    "IT-ASSET-07"
+  ],
+  "mandatory_it_ids": [
+    "IT-ASSET-05",
+    "IT-ASSET-06"
+  ],
+  "deferred_it_ids": [
+    "IT-ADAPTER-02",
+    "IT-ADAPTER-03"
+  ],
+  "commands": [
+    {
+      "command_id": "cmd-adapter-asset-targeted",
+      "command": "bun run vitest run tests\\runtime-adapter.test.ts tests\\skill-recommend.test.ts tests\\asset-drift.test.ts tests\\asset-catalog.test.ts tests\\placeholder-deps.test.ts tests\\agent-guard.test.ts tests\\agent-slots.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/skill-recommend.test.ts",
+      "output_digest": "sha256:5ff2a93bed92158fd45d452d57bc26f9594b9051bf00947f6f918b4aeb1f4df1",
+      "it_ids": [
+        "IT-ADAPTER-01",
+        "IT-ASSET-01",
+        "IT-ASSET-02",
+        "IT-ASSET-03",
+        "IT-ASSET-04",
+        "IT-ASSET-05",
+        "IT-ASSET-06",
+        "IT-ASSET-07"
+      ]
+    }
+  ],
+  "coverage": [
+    {
+      "it_id": "IT-ADAPTER-01",
+      "status": "partial",
+      "evidence_paths": [
+        "tests/runtime-adapter.test.ts",
+        "src/runtime/adapter.ts"
+      ],
+      "command_ids": [
+        "cmd-adapter-asset-targeted"
+      ],
+      "notes": "Covers provider-neutral AdapterPlan construction; InvokeResult/mock provider normalization remains unproven."
+    },
+    {
+      "it_id": "IT-ASSET-01",
+      "status": "partial",
+      "evidence_paths": [
+        "tests/asset-catalog.test.ts",
+        "src/assets/catalog.ts"
+      ],
+      "command_ids": [
+        "cmd-adapter-asset-targeted"
+      ],
+      "notes": "Covers roster docs catalog through automation_assets/search_index; direct roster list CLI registry proof remains partial."
+    },
+    {
+      "it_id": "IT-ASSET-02",
+      "status": "partial",
+      "evidence_paths": [
+        "tests/agent-guard.test.ts",
+        "tests/asset-drift.test.ts"
+      ],
+      "command_ids": [
+        "cmd-adapter-asset-targeted"
+      ],
+      "notes": "Covers guard allowlist and missing allowlisted agent fail-close; roster check CLI/name-mismatch proof remains partial."
+    },
+    {
+      "it_id": "IT-ASSET-03",
+      "status": "partial",
+      "evidence_paths": [
+        "tests/agent-slots.test.ts",
+        "src/runtime/agent-slots-roster.ts"
+      ],
+      "command_ids": [
+        "cmd-adapter-asset-targeted"
+      ],
+      "notes": "Covers roster capability resolver; import graph reverse dependency proof remains partial."
+    },
+    {
+      "it_id": "IT-ASSET-04",
+      "status": "partial",
+      "evidence_paths": [
+        "tests/asset-catalog.test.ts",
+        "src/assets/catalog.ts"
+      ],
+      "command_ids": [
+        "cmd-adapter-asset-targeted"
+      ],
+      "notes": "Covers skill catalog projection from docs/skills; optional-root empty evidence remains partial."
+    },
+    {
+      "it_id": "IT-ASSET-05",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/skill-recommend.test.ts",
+        "src/skills/recommend.ts"
+      ],
+      "command_ids": [
+        "cmd-adapter-asset-targeted"
+      ],
+      "notes": "Skill recommender and injection set cover plan/text context, layer and drive-model selection, buckets, and provider context manifest."
+    },
+    {
+      "it_id": "IT-ASSET-06",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/asset-drift.test.ts",
+        "src/lint/asset-drift.ts"
+      ],
+      "command_ids": [
+        "cmd-adapter-asset-targeted"
+      ],
+      "notes": "Asset-drift checks legacy path, command, runtime residue, empty skills, missing allowlisted agents, and real repo green path."
+    },
+    {
+      "it_id": "IT-ASSET-07",
+      "status": "partial",
+      "evidence_paths": [
+        "tests/placeholder-deps.test.ts",
+        "src/lint/placeholder-deps.ts"
+      ],
+      "command_ids": [
+        "cmd-adapter-asset-targeted"
+      ],
+      "notes": "Covers visible placeholder carry and L7 impl-state hard-fail; full current-layer threshold remains delegated to descent-obligation."
+    }
+  ],
+  "exit_criteria": {
+    "all_mandatory_passed": true,
+    "failed_mandatory_count": 0,
+    "stale_defer_count": 0,
+    "doctor_check": "g8-integration-workflow"
+  }
+}

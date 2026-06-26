@@ -85,6 +85,49 @@ const validManifest = {
   },
 };
 
+const assetManifest = {
+  manifest_path: ".ut-tdd/evidence/g8-integration/asset.json",
+  schema_version: "g8-integration-evidence-v1",
+  gate: "G8",
+  profile: "it-asset-expansion",
+  plan_id: "PLAN-L7-171-g8-adapter-asset-evidence",
+  selected_it_ids: ["IT-ASSET-05", "IT-ASSET-06"],
+  mandatory_it_ids: ["IT-ASSET-05", "IT-ASSET-06"],
+  deferred_it_ids: [],
+  commands: [
+    {
+      command_id: "cmd-asset-targeted",
+      command: "bun run vitest run tests\\skill-recommend.test.ts tests\\asset-drift.test.ts",
+      runner: "bun",
+      scope: "targeted",
+      exit_code: 0,
+      evidence_path: "tests/skill-recommend.test.ts",
+      output_digest: "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      it_ids: ["IT-ASSET-05", "IT-ASSET-06"],
+    },
+  ],
+  coverage: [
+    {
+      it_id: "IT-ASSET-05",
+      status: "passed",
+      evidence_paths: ["tests/skill-recommend.test.ts"],
+      command_ids: ["cmd-asset-targeted"],
+    },
+    {
+      it_id: "IT-ASSET-06",
+      status: "passed",
+      evidence_paths: ["tests/asset-drift.test.ts"],
+      command_ids: ["cmd-asset-targeted"],
+    },
+  ],
+  exit_criteria: {
+    all_mandatory_passed: true,
+    failed_mandatory_count: 0,
+    stale_defer_count: 0,
+    doctor_check: "g8-integration-workflow",
+  },
+};
+
 describe("g8-integration-workflow lint", () => {
   it("fails when L8 has IT rows but no executable G8 workflow granularity", () => {
     const result = analyzeG8IntegrationWorkflow({
@@ -151,6 +194,33 @@ describe("g8-integration-workflow lint", () => {
     expect(result.manifestCount).toBe(1);
     expect(result.selectedItCount).toBe(4);
     expect(g8IntegrationWorkflowMessages(result)[0]).toContain("OK");
+  });
+
+  it("passes when required IT families are satisfied across split manifests", () => {
+    const result = analyzeG8IntegrationWorkflow({
+      repoRoot: process.cwd(),
+      l8TestDesign: `${workflowBlock}\n${itRows}`,
+      gatesMd: gateBlock,
+      evidenceManifests: [validManifest, assetManifest],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.manifestCount).toBe(2);
+    expect(result.selectedItCount).toBe(6);
+    expect(result.mandatoryItCount).toBe(6);
+  });
+
+  it("fails when required IT families are missing across all manifests", () => {
+    const result = analyzeG8IntegrationWorkflow({
+      repoRoot: process.cwd(),
+      l8TestDesign: `${workflowBlock}\n${itRows}`,
+      gatesMd: gateBlock,
+      evidenceManifests: [assetManifest],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContain("G8 selected IT coverage missing IT-MODULE- family");
+    expect(result.violations).toContain("G8 mandatory IT coverage missing IT-STATE- family");
   });
 
   it("live repo keeps the G8 workflow contract present", () => {

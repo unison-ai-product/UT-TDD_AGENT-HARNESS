@@ -213,14 +213,6 @@ function validateManifest(
   if (!manifest.profile || !manifest.plan_id) {
     violations.push(`${manifest.manifest_path}: profile and plan_id are required`);
   }
-  for (const prefix of REQUIRED_IT_FAMILY_PREFIXES) {
-    if (!manifest.selected_it_ids.some((itId) => itId.startsWith(prefix))) {
-      violations.push(`${manifest.manifest_path}: selected IT coverage missing ${prefix} family`);
-    }
-    if (!manifest.mandatory_it_ids.some((itId) => itId.startsWith(prefix))) {
-      violations.push(`${manifest.manifest_path}: mandatory IT coverage missing ${prefix} family`);
-    }
-  }
   if (manifest.commands.length === 0) {
     violations.push(`${manifest.manifest_path}: commands must not be empty`);
   }
@@ -339,6 +331,14 @@ export function analyzeG8IntegrationWorkflow(
   }
   if (input.evidenceManifests.length === 0) {
     violations.push(`G8 integration evidence manifest is missing under ${EVIDENCE_DIR}`);
+  }
+  for (const prefix of REQUIRED_IT_FAMILY_PREFIXES) {
+    if (![...selectedItIds].some((itId) => itId.startsWith(prefix))) {
+      violations.push(`G8 selected IT coverage missing ${prefix} family`);
+    }
+    if (![...mandatoryItIds].some((itId) => itId.startsWith(prefix))) {
+      violations.push(`G8 mandatory IT coverage missing ${prefix} family`);
+    }
   }
   for (const manifest of input.evidenceManifests) {
     violations.push(...validateManifest(manifest, input.repoRoot));
