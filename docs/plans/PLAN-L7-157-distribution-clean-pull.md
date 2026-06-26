@@ -4,9 +4,9 @@ title: "PLAN-L7-157 (impl): 配布物を作る — GitHub から自己開発プ�
 kind: impl
 layer: L7
 drive: be
-status: draft
+status: confirmed
 created: 2026-06-25
-updated: 2026-06-25
+updated: 2026-06-26
 owner: PM (Opus) / PO (人間)
 parent_design: docs/design/harness/L1-requirements/technical-requirements.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -21,6 +21,38 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-157-distribution-clean-pull.md
     artifact_type: markdown_doc
+  - artifact_path: src/setup/index.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/templates.ts
+    artifact_type: source_module
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
+  - artifact_path: tests/setup.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/cli-surface.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/distribution-acceptance.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/templates/adapter/AGENTS.md
+    artifact_type: template
+  - artifact_path: docs/templates/adapter/CLAUDE.md
+    artifact_type: template
+  - artifact_path: docs/templates/adapter/.claude/CLAUDE.md
+    artifact_type: template
+  - artifact_path: docs/templates/adapter/.claude/settings.json
+    artifact_type: template
+  - artifact_path: LICENSE
+    artifact_type: doc_update
+  - artifact_path: package.json
+    artifact_type: config
+  - artifact_path: docs/design/harness/L6-function-design/setup-solo-team.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
+  - artifact_path: docs/test-design/harness/L3-acceptance-test-design.md
+    artifact_type: test_design
+  - artifact_path: docs/governance/repository-structure.md
+    artifact_type: doc_update
 dependencies:
   parent: null
   requires:
@@ -32,6 +64,64 @@ dependencies:
     - docs/plans/PLAN-DISCOVERY-01-workflow-metamodel.md
     - docs/plans/PLAN-L6-06-handover-mechanism.md
     - docs/plans/PLAN-L7-04-handover-mechanism.md
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-26T19:36:48+09:00"
+    tests_green_at: "2026-06-26T19:36:48+09:00"
+    verdict: approve
+    scope: "Close PLAN-L7-157 by adding clean distribution planning, adapter projection, preflight/readiness, rollback, tag-pin contract, CI self-sufficiency, monorepo smoke metadata, and MIT license."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\setup.test.ts tests\\cli-surface.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-26T18:37:05+09:00"
+        evidence_path: tests/setup.test.ts
+        output_digest: "sha256:bc3e71d18106161f895a895c91a98bf5976675a103edb2387a346e68aed4142b"
+      - kind: unit_test
+        command: "bun run vitest run tests\\setup.test.ts tests\\cli-surface.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-26T18:37:05+09:00"
+        evidence_path: tests/cli-surface.test.ts
+        output_digest: "sha256:41fc71e2f15560d2afc456e431e6b1176965977f8cf3b66323f7d9a663182aa5"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-26T18:35:12+09:00"
+        evidence_path: src/setup/index.ts
+        output_digest: "sha256:dd3ce89791be3cb7394a69b3c19c79abe44c0fb2604a312808c70e0e7c20ceff"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-26T18:37:05+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:b386146fc6c686d935edf57838f264a36ec0e582d52be8c923fb4066e413e228"
+      - kind: smoke
+        command: "bun src\\cli.ts distribution plan --tag v0.1.0 --json"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-26T18:38:19+09:00"
+        evidence_path: src/setup/index.ts
+        output_digest: "sha256:dd3ce89791be3cb7394a69b3c19c79abe44c0fb2604a312808c70e0e7c20ceff"
+      - kind: smoke
+        command: "bun run vitest run tests\\distribution-acceptance.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-26T19:36:48+09:00"
+        evidence_path: tests/distribution-acceptance.test.ts
+        output_digest: "sha256:e897b11cfffafe9dc295467b9bb8ba97629899ad41c86f035925431a4b0251d1"
 ---
 
 # PLAN-L7-157 (impl): clean 配布物 (dogfood 非搭載・画面なし・別PCで使える)

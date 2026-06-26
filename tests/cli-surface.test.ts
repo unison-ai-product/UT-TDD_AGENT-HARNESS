@@ -227,6 +227,32 @@ describe("L7 CLI surface closure", () => {
     expect(run.stderr).toContain("explicit human-approved runbook");
   });
 
+  it("exposes clean distribution planning with preflight, rollback, and contract metadata", () => {
+    const run = runCli(["distribution", "plan", "--tag", "v0.1.0", "--json"]);
+    const payload = JSON.parse(run.stdout);
+
+    expect(run.status).toBe(0);
+    expect(payload).toMatchObject({
+      ok: true,
+      actualCutRequiresPoApproval: true,
+      export: {
+        ok: true,
+        channel: "clean-repo-plus-signed-tarball",
+        sourceTag: "v0.1.0",
+      },
+      readiness: {
+        ok: true,
+      },
+    });
+    expect(payload.export.artifactPaths).toContain("LICENSE");
+    expect(payload.export.artifactPaths).not.toContain(
+      "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
+    );
+    expect(payload.readiness.rollback.managedPaths).toContain("AGENTS.md");
+    expect(payload.readiness.contracts.tagPin).toContain("#v0.1.0");
+    expect(payload.readiness.ci.forkPullRequestSecrets).toBe("not-required");
+  }, 20_000);
+
   it("exposes telemetry scan as a JSON command surface without provider CLI execution", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-telemetry-"));
     try {

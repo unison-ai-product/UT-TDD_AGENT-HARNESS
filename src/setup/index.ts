@@ -79,6 +79,48 @@ export interface SetupResult {
   branchProtection: { applied: boolean; reason: string };
 }
 
+export interface CleanDistributionPlan {
+  ok: boolean;
+  channel: "clean-repo-plus-signed-tarball";
+  sourceTag: string;
+  cleanRepo: string;
+  artifactPaths: string[];
+  excludedPaths: string[];
+  missingRequired: string[];
+  denylistViolations: string[];
+  releaseIntegrity: {
+    required: boolean;
+    artifacts: string[];
+  };
+}
+
+export interface ConsumerReadinessPlan {
+  ok: boolean;
+  checks: { name: string; ok: boolean; message: string }[];
+  mode: "standalone" | "claude-only" | "codex-only" | "hybrid";
+  workspace: {
+    repoRoot: string;
+    packageRoot: string;
+    monorepo: boolean;
+  };
+  ci: {
+    workflow: string;
+    requires: string[];
+    forkPullRequestSecrets: "not-required";
+  };
+  rollback: {
+    managedPaths: string[];
+    backupRequired: boolean;
+    commands: string[];
+  };
+  contracts: {
+    semver: string;
+    tagPin: string;
+    stable: string[];
+  };
+  smokeScenarios: string[];
+}
+
 /** gh 実行 seam (raw token 非依存 = gh の認証状態に委ねる)。test=mock。 */
 export type GhRunner = (args: string[]) => { ok: boolean; stdout: string };
 /** 対話確認 seam。test=mock、非対話では呼ばれない。 */
@@ -99,6 +141,55 @@ export interface SetupDeps {
 const CODEOWNERS_TARGET = join(".github", "CODEOWNERS");
 const STATE_PATH = join(".ut-tdd", "state", "setup.json");
 const BP_SCRIPT = join("scripts", "setup-branch-protection.sh");
+const MANAGED_START = "<!-- UT-TDD:managed:start -->";
+const MANAGED_END = "<!-- UT-TDD:managed:end -->";
+const MERGEABLE_ADAPTER_DOCS = new Set(["AGENTS.md", "CLAUDE.md", join(".claude", "CLAUDE.md")]);
+const CLEAN_REQUIRED_PATHS = [
+  "README.md",
+  "LICENSE",
+  "package.json",
+  "src/cli.ts",
+  "src/setup/index.ts",
+  "docs/templates/adapter/AGENTS.md",
+  "docs/templates/adapter/CLAUDE.md",
+  "docs/templates/adapter/.claude/CLAUDE.md",
+  "docs/templates/adapter/.claude/settings.json",
+];
+const CLEAN_DENY_PREFIXES = [
+  ".ut-tdd/",
+  "docs/plans/",
+  "docs/design/harness/",
+  "docs/test-design/",
+  "docs/handover/",
+  "docs/archive/",
+  "src/web/",
+  "vendor/",
+  "legacy local state/",
+];
+const CLEAN_ALLOW_PREFIXES = [
+  "docs/adr/",
+  "docs/governance/",
+  "docs/process/",
+  "docs/reference/",
+  "docs/skills/",
+  "docs/templates/adapter/",
+  "docs/templates/github/",
+  "scripts/",
+  "src/",
+  "tests/",
+];
+const CLEAN_ALLOW_FILES = new Set([
+  ".editorconfig",
+  ".gitattributes",
+  ".github/workflows/harness-check.yml",
+  "LICENSE",
+  "README.md",
+  "biome.json",
+  "bun.lock",
+  "package.json",
+  "tsconfig.json",
+  "vitest.config.ts",
+]);
 
 /**
  * U-SETUP-001: gh で owner 種別 / collaborator 数 / 既存 protection を読む。**never throws**。
@@ -227,7 +318,191 @@ function renderArtifacts(
 function templateNameFor(targetPath: string): string {
   if (targetPath === CODEOWNERS_TARGET) return "team/CODEOWNERS";
   if (targetPath === BP_SCRIPT) return "team/setup-branch-protection.sh";
+  if (targetPath === "AGENTS.md") return "adapter/AGENTS.md";
+  if (targetPath === "CLAUDE.md") return "adapter/CLAUDE.md";
+  if (targetPath === join(".claude", "CLAUDE.md")) return "adapter/.claude/CLAUDE.md";
+  if (targetPath === join(".claude", "settings.json")) return "adapter/.claude/settings.json";
   return `common/${basename(targetPath)}`;
+}
+
+function mergeManagedBlock(existing: string | null, rendered: string): string | null {
+  if (existing === null) return rendered;
+  const start = rendered.indexOf(MANAGED_START);
+  const end = rendered.indexOf(MANAGED_END);
+  if (start === -1 || end === -1 || end < start) return null;
+  const managed = rendered.slice(start, end + MANAGED_END.length);
+  const existingStart = existing.indexOf(MANAGED_START);
+  const existingEnd = existing.indexOf(MANAGED_END);
+  if (existingStart !== -1 && existingEnd !== -1 && existingEnd >= existingStart) {
+    const next =
+      existing.slice(0, existingStart) + managed + existing.slice(existingEnd + MANAGED_END.length);
+    return next.endsWith("\n") ? next : `${next}\n`;
+  }
+  const prefix = existing.endsWith("\n") ? existing : `${existing}\n`;
+  return `${prefix}\n${managed}\n`;
+}
+
+function normalizeDistributionPath(path: string): string {
+  return path.replace(/\\/g, "/").replace(/^\.\/+/, "");
+}
+
+function isDeniedCleanPath(path: string): boolean {
+  const p = normalizeDistributionPath(path);
+  return CLEAN_DENY_PREFIXES.some((prefix) => p === prefix.slice(0, -1) || p.startsWith(prefix));
+}
+
+function isAllowedCleanPath(path: string): boolean {
+  const p = normalizeDistributionPath(path);
+  if (CLEAN_ALLOW_FILES.has(p)) return true;
+  return CLEAN_ALLOW_PREFIXES.some((prefix) => p.startsWith(prefix));
+}
+
+function hasMinimumBun(version: string, minimum = "1.3.0"): boolean {
+  const parse = (v: string): number[] => {
+    const match = v.match(/\d+(?:\.\d+){0,2}/)?.[0] ?? "0";
+    return match.split(".").map((n) => Number.parseInt(n, 10));
+  };
+  const a = parse(version);
+  const b = parse(minimum);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const av = a[i] ?? 0;
+    const bv = b[i] ?? 0;
+    if (av !== bv) return av > bv;
+  }
+  return true;
+}
+
+export function buildCleanDistributionPlan(input: {
+  paths: string[];
+  sourceTag?: string;
+  cleanRepo?: string;
+}): CleanDistributionPlan {
+  const sourceTag = input.sourceTag ?? "unreleased";
+  const cleanRepo = input.cleanRepo ?? "UNISON-TECHNOLOGY/ut-tdd-agent-harness-clean";
+  const normalized = [...new Set(input.paths.map(normalizeDistributionPath))].sort();
+  const artifactPaths = normalized.filter(
+    (path) => isAllowedCleanPath(path) && !isDeniedCleanPath(path),
+  );
+  const artifactSet = new Set(artifactPaths);
+  const missingRequired = CLEAN_REQUIRED_PATHS.filter((path) => !artifactSet.has(path));
+  const denylistViolations = artifactPaths.filter(isDeniedCleanPath);
+  const excludedPaths = normalized.filter((path) => !artifactSet.has(path));
+  return {
+    ok: missingRequired.length === 0 && denylistViolations.length === 0,
+    channel: "clean-repo-plus-signed-tarball",
+    sourceTag,
+    cleanRepo,
+    artifactPaths,
+    excludedPaths,
+    missingRequired,
+    denylistViolations,
+    releaseIntegrity: {
+      required: true,
+      artifacts: [`${sourceTag}.tar.gz`, `${sourceTag}.tar.gz.sha256`, `${sourceTag}.tar.gz.sig`],
+    },
+  };
+}
+
+export function buildConsumerReadinessPlan(input: {
+  bunVersion: string | null;
+  hasGit: boolean;
+  hasGh: boolean;
+  hasClaude: boolean;
+  hasCodex: boolean;
+  repoRoot: string;
+  packageRoot?: string;
+  tag?: string;
+}): ConsumerReadinessPlan {
+  const bunOk = Boolean(input.bunVersion && hasMinimumBun(input.bunVersion));
+  const mode =
+    input.hasClaude && input.hasCodex
+      ? "hybrid"
+      : input.hasClaude
+        ? "claude-only"
+        : input.hasCodex
+          ? "codex-only"
+          : "standalone";
+  const runtimeOk = input.hasClaude || input.hasCodex;
+  const checks = [
+    {
+      name: "bun>=1.3",
+      ok: bunOk,
+      message: bunOk ? `Bun ${input.bunVersion}` : "Install Bun 1.3 or newer before setup",
+    },
+    {
+      name: "git",
+      ok: input.hasGit,
+      message: input.hasGit ? "git available" : "Install git before tag-pin updates",
+    },
+    {
+      name: "gh",
+      ok: input.hasGh,
+      message: input.hasGh
+        ? "gh available"
+        : "Install gh for GitHub setup; local setup can continue",
+    },
+    {
+      name: "runtime-cli",
+      ok: runtimeOk,
+      message: runtimeOk
+        ? `mode=${mode}`
+        : "Install or login to claude or codex before review gates",
+    },
+  ];
+  const packageRoot = input.packageRoot ?? input.repoRoot;
+  const tag = input.tag ?? "v0.1.0";
+  return {
+    ok: bunOk && input.hasGit && runtimeOk,
+    checks,
+    mode,
+    workspace: {
+      repoRoot: input.repoRoot,
+      packageRoot,
+      monorepo:
+        normalizeDistributionPath(packageRoot) !== normalizeDistributionPath(input.repoRoot),
+    },
+    ci: {
+      workflow: ".github/workflows/harness-check.yml",
+      requires: [
+        "actions/checkout@v4",
+        "oven-sh/setup-bun@v2",
+        "bun install --frozen-lockfile",
+        "bun run typecheck",
+        "bun run test",
+      ],
+      forkPullRequestSecrets: "not-required",
+    },
+    rollback: {
+      managedPaths: [
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".claude/CLAUDE.md",
+        ".claude/settings.json",
+        ".github/workflows/harness-check.yml",
+        ".ut-tdd/state/setup.json",
+      ],
+      backupRequired: true,
+      commands: [`git switch ${tag}`, "ut-tdd setup --dry-run", "ut-tdd setup --solo"],
+    },
+    contracts: {
+      semver: "0.x may add capabilities; breaking public contract changes require migration notes",
+      tagPin: `github:UNISON-TECHNOLOGY/ut-tdd-agent-harness-clean#${tag}`,
+      stable: [
+        "CLI surface",
+        "adapter managed markers",
+        ".ut-tdd state schema",
+        "hook event schema",
+        "team yaml schema",
+      ],
+    },
+    smokeScenarios: [
+      "clean repo -> setup --dry-run -> doctor",
+      "brownfield repo -> setup twice -> consumer lines preserved",
+      "tag bump -> setup --dry-run -> rollback command available",
+      "consumer CI -> harness-check green without repository secrets",
+      "monorepo package root -> adapter paths remain repo-root scoped",
+    ],
+  };
 }
 
 /**
@@ -240,7 +515,17 @@ export function emitSetup(plan: SetupPlan, templates: TemplateSet, deps: SetupDe
   const written: string[] = [];
   for (const r of rendered) {
     const abs = join(deps.repoRoot, r.path);
-    const exists = deps.readText(abs) !== null;
+    const existing = deps.readText(abs);
+    const exists = existing !== null;
+    if (exists && MERGEABLE_ADAPTER_DOCS.has(r.path)) {
+      const merged = mergeManagedBlock(existing, r.content);
+      if (merged === null) continue;
+      if (merged !== existing) {
+        deps.writeText(abs, merged);
+        written.push(r.path);
+      }
+      continue;
+    }
     if (exists && !deps.confirm(`${r.path} は既存です。上書きしますか？`)) continue;
     deps.writeText(abs, r.content);
     written.push(r.path);
@@ -397,17 +682,19 @@ function nodeConfirm(message: string): boolean {
 
 /** docs/templates/github/{common,team}/ 配下を TemplateSet (相対名→内容) に読み込む。 */
 export function loadTemplates(repoRoot: string): TemplateSet {
-  const root = join(repoRoot, "docs", "templates", "github");
   const set: TemplateSet = { ...BUILTIN_GITHUB_TEMPLATES };
-  const walk = (dir: string): void => {
+  const walk = (root: string, dir: string, prefix = ""): void => {
     if (!existsSync(dir)) return;
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const abs = join(dir, entry.name);
-      if (entry.isDirectory()) walk(abs);
-      else set[relative(root, abs).split(sep).join("/")] = readFileSync(abs, "utf8");
+      if (entry.isDirectory()) walk(root, abs, prefix);
+      else set[`${prefix}${relative(root, abs).split(sep).join("/")}`] = readFileSync(abs, "utf8");
     }
   };
-  walk(root);
+  const githubRoot = join(repoRoot, "docs", "templates", "github");
+  walk(githubRoot, githubRoot);
+  const adapterRoot = join(repoRoot, "docs", "templates", "adapter");
+  walk(adapterRoot, adapterRoot, "adapter/");
   return set;
 }
 

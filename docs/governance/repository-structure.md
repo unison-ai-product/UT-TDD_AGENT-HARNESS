@@ -139,6 +139,8 @@ UT-TDD-agent-harness/
 
 ## 8. config 最小化方針 (root の散らかり防止)
 
+- `LICENSE`: MIT License (UNISON-TECHNOLOGY). 配布条件の canonical top-level file として tracked に含める。
+
 JS/TS は「1 ツール = 1 設定ファイル」で root に config が溜まりやすい。**フォルダに隠す**のはツールが root を探すため不可（壊れる）。代わりに **ツールを減らす + package.json に集約** で抑える。
 
 - **root config の下限**（避けられない）: `package.json` / `tsconfig.json` / `bun.lock`。

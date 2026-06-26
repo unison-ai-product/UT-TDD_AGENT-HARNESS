@@ -110,7 +110,13 @@ import {
   resolveForeignEditOverride,
 } from "./runtime/work-guard";
 import { findReference } from "./search/index";
-import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
+import {
+  buildCleanDistributionPlan,
+  buildConsumerReadinessPlan,
+  nodeSetupDeps,
+  runSetup,
+  type SetupArgs,
+} from "./setup/index";
 import {
   bucketRecommendations,
   buildSkillInjectionSet,
@@ -188,6 +194,25 @@ function safeLoadChangedFiles(repoRoot: string): string[] {
     // guard probe は best-effort。git が無い/失敗しても委譲本体は止めない (fail-open)。
     return [];
   }
+}
+
+function collectDistributionCandidatePaths(repoRoot: string): string[] {
+  const ignored = new Set([".git", "node_modules", "dist"]);
+  const out: string[] = [];
+  const walk = (dir: string, prefix = ""): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (ignored.has(entry.name)) continue;
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const abs = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(abs, rel);
+      } else {
+        out.push(rel);
+      }
+    }
+  };
+  walk(repoRoot);
+  return out.sort();
 }
 
 function optionFromCommandChain<T>(cmd: Command, key: string): T | undefined {
@@ -2559,6 +2584,67 @@ program
       }
     },
   );
+
+const distribution = program.command("distribution").description("clean distribution planning");
+distribution
+  .command("plan")
+  .description("emit the clean export, preflight, rollback, and contract plan")
+  .option("--tag <tag>", "source/release tag", gitHead() ?? "unreleased")
+  .option(
+    "--clean-repo <name>",
+    "clean distribution repository",
+    "UNISON-TECHNOLOGY/ut-tdd-agent-harness-clean",
+  )
+  .option("--package-root <path>", "consumer package root; defaults to repo root")
+  .option("--json", "JSON output")
+  .action((opts: { tag?: string; cleanRepo?: string; packageRoot?: string; json?: boolean }) => {
+    const repoRoot = process.cwd();
+    const detection = detectMode();
+    let bunVersion: string | null = null;
+    try {
+      bunVersion = execFileSync("bun", ["--version"], { encoding: "utf8" }).trim();
+    } catch {
+      bunVersion = null;
+    }
+    const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
+    const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
+    const exportPlan = buildCleanDistributionPlan({
+      paths: collectDistributionCandidatePaths(repoRoot),
+      sourceTag: opts.tag,
+      cleanRepo: opts.cleanRepo,
+    });
+    const readiness = buildConsumerReadinessPlan({
+      bunVersion,
+      hasGit,
+      hasGh,
+      hasClaude: detection.claude,
+      hasCodex: detection.codex,
+      repoRoot,
+      packageRoot: opts.packageRoot ? join(repoRoot, opts.packageRoot) : repoRoot,
+      tag: opts.tag,
+    });
+    const output = {
+      ok: exportPlan.ok && readiness.ok,
+      export: exportPlan,
+      readiness,
+      actualCutRequiresPoApproval: true,
+    };
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+      return;
+    }
+    process.stdout.write(
+      `distribution plan: ${output.ok ? "ok" : "blocked"} channel=${exportPlan.channel} tag=${exportPlan.sourceTag}\n`,
+    );
+    process.stdout.write(`  clean-repo: ${exportPlan.cleanRepo}\n`);
+    process.stdout.write(`  artifact-paths: ${exportPlan.artifactPaths.length}\n`);
+    process.stdout.write(`  excluded-paths: ${exportPlan.excludedPaths.length}\n`);
+    process.stdout.write(
+      `  readiness: ${readiness.ok ? "ok" : "blocked"} mode=${readiness.mode}\n`,
+    );
+    process.stdout.write("  actual-cut: requires PO approval\n");
+    process.exitCode = output.ok ? 0 : 1;
+  });
 
 program.parseAsync(process.argv).catch((e: unknown) => {
   process.stderr.write(`${String(e)}\n`);

@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ut-tdd session start",
+            "timeout": 5,
+            "statusMessage": "session-log: session start (fail-open)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ut-tdd hook post-tool-use",
+            "timeout": 5,
+            "statusMessage": "session-log: post tool use (fail-open)"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ut-tdd session summary",
+            "timeout": 5,
+            "statusMessage": "session-log: PLAN digest summary (fail-open)"
+          }
+        ]
+      }
+    ]
+  }
+}
