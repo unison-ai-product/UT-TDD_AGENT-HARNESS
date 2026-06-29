@@ -2740,6 +2740,7 @@ distribution
     }
     const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
     const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
+    const hasUtTddCli = spawnSync("ut-tdd", ["--help"], { stdio: "ignore" }).status === 0;
     const exportPlan = buildCleanDistributionPlan({
       paths: collectDistributionCandidatePaths(repoRoot),
       sourceTag: opts.tag,
@@ -2749,6 +2750,7 @@ distribution
       bunVersion,
       hasGit,
       hasGh,
+      hasUtTddCli,
       hasClaude: detection.claude,
       hasCodex: detection.codex,
       repoRoot,

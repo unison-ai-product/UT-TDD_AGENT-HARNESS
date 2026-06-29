@@ -432,6 +432,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       bunVersion: "1.3.2",
       hasGit: true,
       hasGh: false,
+      hasUtTddCli: true,
       hasClaude: false,
       hasCodex: true,
       repoRoot: "/repo",
@@ -443,6 +444,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(ready.mode).toBe("codex-only");
     expect(ready.workspace.monorepo).toBe(true);
     expect(ready.checks.find((c) => c.name === "gh")).toMatchObject({ ok: false });
+    expect(ready.checks.find((c) => c.name === "ut-tdd-cli")).toMatchObject({ ok: true });
     expect(ready.ci.requires).toContain("bun run test");
     expect(ready.rollback.backupRequired).toBe(true);
     expect(ready.rollback.managedPaths).toContain("AGENTS.md");
@@ -461,6 +463,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       bunVersion: "1.2.9",
       hasGit: false,
       hasGh: false,
+      hasUtTddCli: false,
       hasClaude: false,
       hasCodex: false,
       repoRoot: "/repo",
@@ -470,6 +473,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "bun>=1.3",
       "git",
       "gh",
+      "ut-tdd-cli",
       "runtime-cli",
     ]);
   });

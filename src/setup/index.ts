@@ -417,6 +417,7 @@ export function buildConsumerReadinessPlan(input: {
   bunVersion: string | null;
   hasGit: boolean;
   hasGh: boolean;
+  hasUtTddCli?: boolean;
   hasClaude: boolean;
   hasCodex: boolean;
   repoRoot: string;
@@ -452,6 +453,14 @@ export function buildConsumerReadinessPlan(input: {
         : "Install gh for GitHub setup; local setup can continue",
     },
     {
+      name: "ut-tdd-cli",
+      ok: input.hasUtTddCli ?? true,
+      message:
+        (input.hasUtTddCli ?? true)
+          ? "ut-tdd resolves on PATH for projected hooks"
+          : "Run `bun link` in the harness package and `bun link ut-tdd` in the consumer repo before setup",
+    },
+    {
       name: "runtime-cli",
       ok: runtimeOk,
       message: runtimeOk
@@ -462,7 +471,7 @@ export function buildConsumerReadinessPlan(input: {
   const packageRoot = input.packageRoot ?? input.repoRoot;
   const tag = input.tag ?? "v0.1.0";
   return {
-    ok: bunOk && input.hasGit && runtimeOk,
+    ok: bunOk && input.hasGit && (input.hasUtTddCli ?? true) && runtimeOk,
     checks,
     mode,
     workspace: {

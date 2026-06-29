@@ -99,7 +99,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T18:37:05+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:6531d7ecd29c3ff8148e8e2da0ab146873ff90b181c0f6b2d36ad810ee7da30b"
+        output_digest: "sha256:64b15536b25c4b174d842c60e8568f6144d53d8689be9934025b701cb3de5666"
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -115,7 +115,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T18:35:12+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:8cad68db0707454abb0db79a267c16e9debbd0717247a03ce8267c155c346609"
+        output_digest: "sha256:f4600980db7852b3a068338c9d5550e2afcef41a57cd9a8fe9bfc7a57e5de321"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -123,7 +123,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T18:37:05+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:dbd7aa15770bc52c0abdb9861c537a18541ea978b2b2c6112af2f43d5142b2d1"
+        output_digest: "sha256:77f299b947f51b266b65b0dd7e30e03b2eec57f8cecf4144a5bf4a4e77b111ae"
       - kind: smoke
         command: "bun src\\cli.ts distribution plan --tag v0.1.0 --json"
         runner: bun
@@ -131,7 +131,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T18:38:19+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:8cad68db0707454abb0db79a267c16e9debbd0717247a03ce8267c155c346609"
+        output_digest: "sha256:f4600980db7852b3a068338c9d5550e2afcef41a57cd9a8fe9bfc7a57e5de321"
       - kind: smoke
         command: "bun run vitest run tests\\distribution-acceptance.test.ts"
         runner: bun
@@ -140,6 +140,39 @@ review_evidence:
         completed_at: "2026-06-26T19:36:48+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
         output_digest: "sha256:f3a7dc28d3e4ccfe11e9553265177f1c1e6ed104d07c97600ed2864bfa97d83f"
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-29T19:34:00+09:00"
+    tests_green_at: "2026-06-29T19:34:00+09:00"
+    verdict: approve
+    scope: "Hardens consumer readiness so generated Claude/Codex hooks that invoke bare ut-tdd fail-close unless the ut-tdd CLI is spawnable on PATH."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\setup.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-29T19:33:44+09:00"
+        evidence_path: tests/setup.test.ts
+        output_digest: "sha256:64b15536b25c4b174d842c60e8568f6144d53d8689be9934025b701cb3de5666"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-29T19:33:55+09:00"
+        evidence_path: src/setup/index.ts
+        output_digest: "sha256:f4600980db7852b3a068338c9d5550e2afcef41a57cd9a8fe9bfc7a57e5de321"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-29T19:33:47+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:77f299b947f51b266b65b0dd7e30e03b2eec57f8cecf4144a5bf4a4e77b111ae"
 ---
 
 # PLAN-L7-157 (impl): clean 配布物 (dogfood 非搭載・画面なし・別PCで使える)
