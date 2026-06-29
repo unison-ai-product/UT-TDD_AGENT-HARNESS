@@ -128,6 +128,7 @@ function buildRepo(root: string): void {
     ["root = true", "", "[*]", "charset = utf-8", ""].join("\n"),
     "utf8",
   );
+  writeFileSync(join(root, "README.md"), "# Fixture README\n", "utf8");
 }
 
 describe("loadRelationGraphSourceSet", () => {
@@ -198,6 +199,11 @@ describe("loadRelationGraphSourceSet", () => {
       expect(governanceDoc).toMatchObject({
         id: "docs/governance/repository-structure.md",
         path: "docs/governance/repository-structure.md",
+      });
+      const readmeDoc = sourceSet.designDocs?.find((d) => d.path === "README.md");
+      expect(readmeDoc).toMatchObject({
+        id: "README.md",
+        path: "README.md",
       });
 
       // projection + impact: changing the source surfaces its owning plan + sibling test
@@ -279,6 +285,14 @@ describe("loadRelationGraphSourceSet", () => {
         "design:docs/governance/repository-structure.md",
       );
       expect(governanceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
+      const readmeImpact = analyzeRelationImpact({
+        changedPaths: ["README.md"],
+        projection,
+      });
+      expect(readmeImpact.ok).toBe(true);
+      expect(readmeImpact.changedNodes.map((n) => n.id)).toContain("design:README.md");
+      expect(readmeImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
       const editorconfigImpact = analyzeRelationImpact({
         changedPaths: [".editorconfig"],
@@ -393,6 +407,13 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
       "design:docs/governance/repository-structure.md",
     );
     expect(governanceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const readmeImpact = analyzeRelationImpact({
+      changedPaths: ["README.md"],
+      projection,
+    });
+    expect(readmeImpact.ok).toBe(true);
+    expect(readmeImpact.changedNodes.map((n) => n.id)).toContain("design:README.md");
+    expect(readmeImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const editorconfigImpact = analyzeRelationImpact({
       changedPaths: [".editorconfig"],
       projection,

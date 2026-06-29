@@ -175,6 +175,7 @@ const FR_REGISTRY_DOC = "docs/design/harness/L1-requirements/functional-requirem
 
 const REFERENCE_DOCS = ["docs/reference/ai-agent-harness-directory-reference.md"] as const;
 const GOVERNANCE_DOCS = ["docs/governance/repository-structure.md"] as const;
+const ROOT_CANONICAL_DOCS = ["README.md"] as const;
 const ROOT_CONFIG_DOCS = [
   ".editorconfig",
   ".gitattributes",
@@ -360,6 +361,15 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
 
   for (const path of GOVERNANCE_DOCS) {
     addDesignDocIfAbsent(designDocs, path);
+  }
+
+  for (const path of ROOT_CANONICAL_DOCS) {
+    try {
+      statSync(join(repoRoot, path));
+      addDesignDocIfAbsent(designDocs, path);
+    } catch {
+      // fail-open: optional root canonical docs may be absent in fixtures.
+    }
   }
 
   for (const path of ROOT_CONFIG_DOCS) {
