@@ -4,8 +4,7 @@ title: "PLAN-L7-194 (impl): green-command-digest を advisory → runDoctor.ok �
 kind: impl
 layer: L7
 drive: be
-status: draft
-version_target: future
+status: confirmed
 created: 2026-06-29
 updated: 2026-06-29
 owner: PM (Opus) / PO (人間)
@@ -19,6 +18,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-194-green-command-digest-hard-gate.md
     artifact_type: markdown_doc
+  - artifact_path: src/doctor/index.ts
+    artifact_type: source_module
+  - artifact_path: tests/doctor.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires:
@@ -27,6 +30,32 @@ dependencies:
   references:
     - .ut-tdd/audit/A-145-03-verification-gate-engine.md
     - .ut-tdd/audit/A-144-03-verification-evidence-integrity.md
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-29T22:55:00+09:00"
+    tests_green_at: "2026-06-29T22:55:00+09:00"
+    verdict: approve
+    scope: "green-command-digest is now included in runDoctor.ok hard-gate aggregation; mismatches force real-repo doctor false until rerun-bound digest evidence is corrected."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run test tests\\doctor.test.ts tests\\green-command-digest.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-29T22:55:00+09:00"
+        evidence_path: tests/doctor.test.ts
+        output_digest: "sha256:33020f27b413367999c48d68f94939c589551ff71e0f600606c1bd0471f927b5"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-29T22:55:00+09:00"
+        evidence_path: src/doctor/index.ts
+        output_digest: "sha256:c335922ccdb448a10ec315097268f14125723d6dceab08ea5562d87e74217128"
 ---
 
 # PLAN-L7-194 (impl): green-command-digest を hard gate へ昇格
