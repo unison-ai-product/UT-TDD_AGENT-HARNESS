@@ -46,7 +46,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:14:00+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:07fd6b9c6fcbabf2c893a28eb0f49f4da7f83f276b88befdbfd7b8c4b5daee51"
+        output_digest: "sha256:49a3731aead9ced7f2533912c25dcd714c165b407c7cdb134f1d27ffae7208c8"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -62,7 +62,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:14:05+09:00"
         evidence_path: src/state-db/projection-writer.ts
-        output_digest: "sha256:3ec94213b5788a3dbce52c375a7dcbf01593c233c47d8afcd88e55da869ff4af"
+        output_digest: "sha256:5fe7e619252bb9637163e01916815852487e1c8880cc5adc3e2b39a81ee91e47"
 ---
 
 # PLAN-L7-152: artifact progress decision extraction

@@ -4,7 +4,7 @@
 - **scope**: consolidate the independent judge findings across distribution, verification evidence, DB telemetry, design coverage, and drive-model workflow.
 - **basis**: committed HEAD after local remediation through `6d1dc0d test: refresh cli distribution green evidence`.
 - **local status**: `status --json` reports hybrid mode, `nonTerminalPlansByLayer.L7=10`, `activeDraftTotal=0`, `openDefers=0`.
-- **doctor excerpt**: `plan-governance`, `drive-db-registration`, `l14-close-audit`, `l7-completion`, and `review-evidence` OK; `green-command-digest` still reports 16 advisory mismatches across 12 PLANs.
+- **doctor excerpt**: `plan-governance`, `drive-db-registration`, `l14-close-audit`, `l7-completion`, and `review-evidence` OK. After the follow-up evidence rerun and digest binding, `green-command-digest` reports 0 mismatches.
 
 ## Judge verdict
 
@@ -18,7 +18,7 @@ Local closure can be treated as honest only when the claim is scoped as local. F
 |---|---|---|---|---|
 | A146-1 | HIGH | distribution | Consumer adapter must ship enforced guard governance, not only roster and command definitions. | Partially remediated in `src/setup/templates.ts`: portable `ut-tdd hook agent-guard`, `work-guard`, and SubagentStop release commands are projected for Claude; Codex work-guard is projected, while Codex agent-guard remains a known deferred surface because Codex subagent semantics differ. |
 | A146-2 | HIGH | distribution / OS | Adapter hooks use bare `ut-tdd`; install flow must ensure `ut-tdd` resolves on consumer PATH. | Remediated in the setup/distribution readiness model and covered by `tests/distribution-acceptance.test.ts`; latest digest evidence refreshed in `6d1dc0d`. Actual public consumer install remains external/post-publication. |
-| A146-3 | HIGH | verification evidence | `green-evidence-integrity=closed` cannot rely on hash restamp alone. Green commands must be re-run and tied to the digest update. | Partially remediated. Runtime telemetry and CLI/distribution evidence were re-run and committed in `304a586` and `6d1dc0d`. Remaining doctor note: 16 mismatches across 12 PLANs. |
+| A146-3 | HIGH | verification evidence | `green-evidence-integrity=closed` cannot rely on hash restamp alone. Green commands must be re-run and tied to the digest update. | Locally remediated for the known mismatch set. Runtime telemetry and CLI/distribution evidence were re-run in `304a586` and `6d1dc0d`; the remaining projection/doctor/verb-classify evidence was re-run on 2026-06-29 and rebound to actual file hashes. |
 | A146-4 | HIGH | DB registration | Operation telemetry had facade/hollow tables: skill invocations, test runs, guardrail decisions, and model cost/token surfaces were not cleanly separated by runtime provenance. | Partially remediated by `f301c09`, `102706c`, and `674c59f`. `db-telemetry-provenance` no longer appears as partial in doctor, but `test_runs` still reflects projected green-command evidence and requires the L7-188 capture strategy before stronger claims. |
 | A146-5 | MED-HIGH | distribution curation | Blanket `docs/governance/` allowlisting risks leaking dogfood audit/process documents into the clean package. | Open. Requires per-document curation or deny patterns for dogfood audit material. |
 | A146-6 | MED | design coverage | FE design coverage has a strong definition, but L3/L5/L6 FE bodies remain unpopulated or pending; current gate mostly checks presence/drift. | Open and tracked as population/substance work. Not a consumer blocker for using the workflow model, but it blocks claiming full FE design population. |
@@ -46,7 +46,7 @@ Local closure can be treated as honest only when the claim is scoped as local. F
 
 These items block stronger close claims:
 
-- `green-command-digest`: 16 advisory mismatches remain. They must be corrected by re-running the corresponding green commands, not by mechanical restamp.
+- `green-command-digest`: no known mismatches remain after the 2026-06-29 rerun/binding pass. Keep the gate advisory until the L7-188 capture strategy distinguishes runtime test provenance from projected plan evidence.
 - Distribution curation: replace broad governance allowlisting with curated allow/deny policy for clean package docs.
 - Runtime compatibility: confirm Claude subagent hook matcher against the target Claude Code CLI environment.
 - Entry enforcement: implement or explicitly defer machine checks for `kind x drive` and `signal -> mode`.

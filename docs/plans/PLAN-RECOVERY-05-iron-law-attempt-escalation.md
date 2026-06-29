@@ -88,7 +88,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23"
         evidence_path: src/runtime/verb-classify.ts
-        output_digest: "sha256:ee3149813ab470a5490091f41410c3df61d5e8ee47414ab98d0a898d061c94de"
+        output_digest: "sha256:778d0146279fd05a2b526674840f37133d45834c2500a3f6b98836bc7345d79d"
       - kind: lint
         command: "npx biome check src/runtime/verb-classify.ts src/runtime/attempt-escalation.ts src/runtime/session-log.ts src/cli.ts"
         runner: bun
