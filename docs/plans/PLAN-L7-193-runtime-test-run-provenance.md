@@ -37,8 +37,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T20:27:00+09:00"
-    tests_green_at: "2026-06-29T20:27:00+09:00"
+    reviewed_at: "2026-06-29T21:24:13+09:00"
+    tests_green_at: "2026-06-29T21:24:13+09:00"
     verdict: approve
     scope: "Project runtime-provenance test_runs from real session-log Bash verification events while ignoring non-verification Bash tool use."
     worker_model: codex
@@ -49,25 +49,25 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T20:26:09+09:00"
+        completed_at: "2026-06-29T21:24:13+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:52a8755b1c37999c40d877ccf8217f246b136419e56d9182d9a4f9e090f6009a"
+        output_digest: "sha256:49a3731aead9ced7f2533912c25dcd714c165b407c7cdb134f1d27ffae7208c8"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-29T20:25:52+09:00"
+        completed_at: "2026-06-29T21:24:13+09:00"
         evidence_path: src/state-db/projection-writer.ts
-        output_digest: "sha256:fcef1233a8fc86fe1ba2f271554be588d30f70eb7cba4b1d12c94e6174bdc674"
+        output_digest: "sha256:5fe7e619252bb9637163e01916815852487e1c8880cc5adc3e2b39a81ee91e47"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-29T20:21:03+09:00"
+        completed_at: "2026-06-29T21:24:13+09:00"
         evidence_path: src/state-db/projection-writer.ts
-        output_digest: "sha256:fcef1233a8fc86fe1ba2f271554be588d30f70eb7cba4b1d12c94e6174bdc674"
+        output_digest: "sha256:5fe7e619252bb9637163e01916815852487e1c8880cc5adc3e2b39a81ee91e47"
 ---
 
 # PLAN-L7-193: Runtime test_run provenance from session logs
