@@ -165,6 +165,13 @@ const CLEAN_DENY_PREFIXES = [
   "vendor/",
   "legacy local state/",
 ];
+const CLEAN_DENY_FILES = new Set([
+  "docs/governance/conditional-backfill-decision-audit-2026-06-22.md",
+  "docs/governance/forward-convergence-legacy-debt-audit.md",
+  "docs/governance/reverse-fullback-backprop-audit-2026-06-22.md",
+  "docs/governance/runtime-parity-l0-l3-design-audit-2026-06-02.md",
+  "docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md",
+]);
 const CLEAN_ALLOW_PREFIXES = [
   "docs/adr/",
   "docs/process/",
@@ -358,7 +365,10 @@ function normalizeDistributionPath(path: string): string {
 
 function isDeniedCleanPath(path: string): boolean {
   const p = normalizeDistributionPath(path);
-  return CLEAN_DENY_PREFIXES.some((prefix) => p === prefix.slice(0, -1) || p.startsWith(prefix));
+  return (
+    CLEAN_DENY_FILES.has(p) ||
+    CLEAN_DENY_PREFIXES.some((prefix) => p === prefix.slice(0, -1) || p.startsWith(prefix))
+  );
 }
 
 function isAllowedCleanPath(path: string): boolean {

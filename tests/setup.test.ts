@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -45,6 +45,25 @@ function mockDeps(
 
 const codeownersPath = join("/repo", ".github", "CODEOWNERS");
 const statePath = join("/repo", ".ut-tdd", "state", "setup.json");
+
+function walkRepoCandidatePaths(root: string): string[] {
+  const ignored = new Set([".git", "node_modules", "dist"]);
+  const out: string[] = [];
+  const walk = (dir: string, prefix = ""): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (ignored.has(entry.name)) continue;
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const abs = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(abs, rel);
+      } else {
+        out.push(rel.replace(/\\/g, "/"));
+      }
+    }
+  };
+  walk(root);
+  return out.sort();
+}
 
 /** org + 4 collaborators + protection あり + admin を返す gh mock。 */
 const ghTeam = (args: string[]): { ok: boolean; stdout: string } => {
@@ -425,6 +444,26 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "v0.1.0.tar.gz.sha256",
       "v0.1.0.tar.gz.sig",
     ]);
+  });
+
+  it("U-SETUP-011b: real clean distribution artifact excludes dogfood governance audit documents", () => {
+    const plan = buildCleanDistributionPlan({
+      sourceTag: "v0.1.0",
+      paths: walkRepoCandidatePaths(process.cwd()),
+    });
+    const dogfoodGovernanceDocs = [
+      "docs/governance/conditional-backfill-decision-audit-2026-06-22.md",
+      "docs/governance/forward-convergence-legacy-debt-audit.md",
+      "docs/governance/reverse-fullback-backprop-audit-2026-06-22.md",
+      "docs/governance/runtime-parity-l0-l3-design-audit-2026-06-02.md",
+      "docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md",
+    ];
+
+    expect(plan.ok).toBe(true);
+    for (const path of dogfoodGovernanceDocs) {
+      expect(plan.artifactPaths).not.toContain(path);
+      expect(plan.excludedPaths).toContain(path);
+    }
   });
 
   it("U-SETUP-012: consumer readiness covers preflight, rollback, contracts, CI, and monorepo root", () => {
