@@ -4,6 +4,7 @@ import {
   type DependencyDriftInput,
   dependencyDriftMessages,
   expandRegressionScope,
+  loadDependencyDriftInput,
 } from "../src/lint/dependency-drift";
 
 const input: DependencyDriftInput = {
@@ -122,5 +123,86 @@ describe("dependency-drift and regression expansion (PLAN-REVERSE-42)", () => {
 
     expect(scope.ok).toBe(true);
     expect(scope.testPaths).toEqual(["tests/runtime-hook-entrypoints.test.ts"]);
+  });
+
+  it("IT-ASSET-03: runtime may import the roster boundary through agent-slots only", () => {
+    const result = analyzeDependencyDrift({
+      sourceDocs: [
+        {
+          path: "src/runtime/agent-slots.ts",
+          text: 'export { resolveRosterCapability } from "./agent-slots-roster";',
+        },
+        {
+          path: "src/runtime/agent-slots-roster.ts",
+          text: "export const resolveRosterCapability = () => 'ok';",
+        },
+        {
+          path: "src/runtime/agent-guard.ts",
+          text: "export const guard = true;",
+        },
+      ],
+      testDocs: [],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.sourceFileEdges).toContainEqual({
+      from: "src/runtime/agent-slots.ts",
+      to: "src/runtime/agent-slots-roster.ts",
+    });
+    expect(result.findings).not.toContainEqual(
+      expect.objectContaining({ code: "runtime-roster-boundary" }),
+    );
+  });
+
+  it("IT-ASSET-03: roster reverse imports and guard-to-roster imports fail closed", () => {
+    const result = analyzeDependencyDrift({
+      sourceDocs: [
+        {
+          path: "src/runtime/agent-slots-roster.ts",
+          text: 'import { guard } from "./agent-guard"; export const roster = guard;',
+        },
+        {
+          path: "src/runtime/agent-guard.ts",
+          text: 'import { roster } from "./agent-slots-roster"; export const guard = roster;',
+        },
+      ],
+      testDocs: [],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "runtime-roster-boundary",
+          fromPath: "src/runtime/agent-slots-roster.ts",
+          toPath: "src/runtime/agent-guard.ts",
+        }),
+        expect.objectContaining({
+          code: "runtime-roster-boundary",
+          fromPath: "src/runtime/agent-guard.ts",
+          toPath: "src/runtime/agent-slots-roster.ts",
+        }),
+      ]),
+    );
+  });
+
+  it("IT-ASSET-03: real repo keeps runtime roster boundary acyclic and one-way", () => {
+    const result = analyzeDependencyDrift(loadDependencyDriftInput(process.cwd()));
+
+    expect(result.findings).not.toContainEqual(
+      expect.objectContaining({ code: "runtime-roster-boundary" }),
+    );
+    expect(result.sourceFileEdges).toContainEqual({
+      from: "src/runtime/agent-slots.ts",
+      to: "src/runtime/agent-slots-roster.ts",
+    });
+    expect(
+      result.sourceFileEdges.filter((edge) => edge.to === "src/runtime/agent-slots-roster.ts"),
+    ).toEqual([
+      {
+        from: "src/runtime/agent-slots.ts",
+        to: "src/runtime/agent-slots-roster.ts",
+      },
+    ]);
   });
 });

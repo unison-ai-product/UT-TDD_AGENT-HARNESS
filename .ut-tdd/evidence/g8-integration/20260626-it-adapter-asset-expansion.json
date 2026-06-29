@@ -16,6 +16,7 @@
   "mandatory_it_ids": [
     "IT-ASSET-01",
     "IT-ASSET-02",
+    "IT-ASSET-03",
     "IT-ASSET-05",
     "IT-ASSET-06"
   ],
@@ -54,6 +55,18 @@
       "it_ids": [
         "IT-ASSET-01",
         "IT-ASSET-02"
+      ]
+    },
+    {
+      "command_id": "cmd-roster-boundary-targeted",
+      "command": "bun run vitest run tests\\dependency-drift.test.ts tests\\agent-slots.test.ts tests\\g8-integration-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/dependency-drift.test.ts",
+      "output_digest": "sha256:27155d10c52c95cda5006062aa099a49e7bf97f27420356464ed42e34939aeca",
+      "it_ids": [
+        "IT-ASSET-03"
       ]
     }
   ],
@@ -104,15 +117,19 @@
     },
     {
       "it_id": "IT-ASSET-03",
-      "status": "partial",
+      "status": "passed",
       "evidence_paths": [
         "tests/agent-slots.test.ts",
-        "src/runtime/agent-slots-roster.ts"
+        "tests/dependency-drift.test.ts",
+        "src/runtime/agent-slots.ts",
+        "src/runtime/agent-slots-roster.ts",
+        "src/lint/dependency-drift.ts"
       ],
       "command_ids": [
-        "cmd-adapter-asset-targeted"
+        "cmd-adapter-asset-targeted",
+        "cmd-roster-boundary-targeted"
       ],
-      "notes": "Covers roster capability resolver; import graph reverse dependency proof remains partial."
+      "notes": "Covers roster capability resolver plus file-level dependency direction: runtime agent-slots may import roster, roster must not import runtime/guard, guard must not import roster, and real repo has exactly one runtime-to-roster edge."
     },
     {
       "it_id": "IT-ASSET-04",

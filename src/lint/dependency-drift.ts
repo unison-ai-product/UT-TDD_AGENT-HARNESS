@@ -1,10 +1,11 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import ts from "typescript";
 import { importedSourceModule, normalizePath, sourceModule } from "./shared";
 
 export type DependencyDriftFindingCode =
   | "disallowed-module-dependency"
+  | "runtime-roster-boundary"
   | "module-cycle"
   | "missing-regression-test";
 
@@ -25,6 +26,8 @@ export interface DependencyDriftFinding {
   path?: string;
   fromModule?: string;
   toModule?: string;
+  fromPath?: string;
+  toPath?: string;
   cycle?: string[];
   module?: string;
 }
@@ -41,6 +44,7 @@ export interface DependencyDriftResult {
   testDocs: DependencyDoc[];
   moduleEdges: ModuleEdge[];
   fileEdges: ModuleEdge[];
+  sourceFileEdges: ModuleEdge[];
   testCoverage: ModuleEdge[];
   findings: DependencyDriftFinding[];
 }
@@ -158,6 +162,48 @@ function resolveImportedModule(fromPath: string, specifier: string): string | nu
   return sourceModule(resolvedParts.join("/"));
 }
 
+function resolveImportedSourcePath(fromPath: string, specifier: string): string | null {
+  if (!specifier.startsWith(".")) return null;
+  const resolved = normalizePath(join(dirname(fromPath), specifier));
+  if (resolved.endsWith(".ts")) return resolved;
+  return `${resolved}.ts`;
+}
+
+function isRosterBoundary(path: string): boolean {
+  return normalizePath(path) === "src/runtime/agent-slots-roster.ts";
+}
+
+function isAgentSlotsBoundary(path: string): boolean {
+  return normalizePath(path) === "src/runtime/agent-slots.ts";
+}
+
+function isGuardBoundary(path: string): boolean {
+  const normalized = normalizePath(path);
+  return (
+    normalized === "src/runtime/agent-guard.ts" ||
+    normalized === "src/runtime/agent-guard-policy.ts"
+  );
+}
+
+function isRuntimeSource(path: string): boolean {
+  return normalizePath(path).startsWith("src/runtime/");
+}
+
+function runtimeRosterBoundaryViolation(fromPath: string, toPath: string): string | null {
+  const from = normalizePath(fromPath);
+  const to = normalizePath(toPath);
+  if (isRosterBoundary(from) && isRuntimeSource(to) && !isRosterBoundary(to)) {
+    return "roster must not import runtime or guard modules";
+  }
+  if (isGuardBoundary(from) && isRosterBoundary(to)) {
+    return "agent guard must not import roster directly";
+  }
+  if (isRuntimeSource(from) && isRosterBoundary(to) && !isAgentSlotsBoundary(from)) {
+    return "only agent-slots may import the roster boundary";
+  }
+  return null;
+}
+
 function uniqueSortedEdges(edges: ModuleEdge[]): ModuleEdge[] {
   const seen = new Map<string, ModuleEdge>();
   for (const edge of edges) {
@@ -201,6 +247,7 @@ function disallowed(from: string, to: string, allowed?: Record<string, string[]>
 
 export function analyzeDependencyDrift(input: DependencyDriftInput): DependencyDriftResult {
   const fileEdges: ModuleEdge[] = [];
+  const sourceFileEdges: ModuleEdge[] = [];
   const moduleEdges: ModuleEdge[] = [];
   const testCoverage: ModuleEdge[] = [];
   const findings: DependencyDriftFinding[] = [];
@@ -213,6 +260,21 @@ export function analyzeDependencyDrift(input: DependencyDriftInput): DependencyD
       if (to == null) continue;
       fileEdges.push({ from: doc.path, to: `${to}:${spec}` });
       moduleEdges.push({ from, to });
+      const toPath = resolveImportedSourcePath(doc.path, spec);
+      if (toPath != null) {
+        sourceFileEdges.push({ from: doc.path, to: toPath });
+        const boundaryViolation = runtimeRosterBoundaryViolation(doc.path, toPath);
+        if (boundaryViolation != null) {
+          findings.push({
+            code: "runtime-roster-boundary",
+            severity: "error",
+            path: doc.path,
+            fromPath: doc.path,
+            toPath,
+            message: boundaryViolation,
+          });
+        }
+      }
       if (from !== to && disallowed(from, to, input.allowed)) {
         findings.push({
           code: "disallowed-module-dependency",
@@ -252,6 +314,7 @@ export function analyzeDependencyDrift(input: DependencyDriftInput): DependencyD
     testDocs: input.testDocs,
     moduleEdges: stableModuleEdges,
     fileEdges: uniqueSortedEdges(fileEdges),
+    sourceFileEdges: uniqueSortedEdges(sourceFileEdges),
     testCoverage: uniqueSortedEdges(testCoverage),
     findings: findings.sort((a, b) =>
       (a.message + (a.path ?? "")).localeCompare(b.message + (b.path ?? "")),
