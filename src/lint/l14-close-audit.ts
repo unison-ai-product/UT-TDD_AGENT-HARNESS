@@ -79,10 +79,79 @@ const EXPECTED_ITEMS = [
 ] as const;
 
 const REQUIRED_EVIDENCE_BY_ITEM: Partial<Record<(typeof EXPECTED_ITEMS)[number], string[]>> = {
+  "workflow-definition": [
+    "docs/process/forward/L08-L14-verification-phase.md",
+    "docs/process/forward/overview.md",
+    "src/lint/roadmap-registry.ts",
+    "tests/roadmap.test.ts",
+  ],
+  "system-foundation": [
+    "src/doctor/index.ts",
+    "tests/doctor.test.ts",
+    "src/lint/runtime-portability.ts",
+    "tests/runtime-portability.test.ts",
+    "package.json",
+  ],
+  "claude-codex-parity": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".claude/CLAUDE.md",
+    "src/lint/codex-hook-adapter.ts",
+    "tests/codex-hook-adapter.test.ts",
+    "tests/runtime-hook-entrypoints.test.ts",
+  ],
+  "clean-distribution-package": [
+    "src/setup/index.ts",
+    "tests/setup.test.ts",
+    "tests/distribution-acceptance.test.ts",
+    "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
+    "docs/templates/adapter/.claude/settings.json",
+    "docs/templates/adapter/.codex/hooks.json",
+    "README.md",
+    "LICENSE",
+  ],
   "version-up-nonbreaking": [
+    "src/setup/index.ts",
+    "tests/setup.test.ts",
     "docs/process/modes/version-up.md",
+    "docs/plans/PLAN-REVERSE-140-forward-convergence-version-up-backfill.md",
     "docs/plans/PLAN-L7-141-web-dashboard-component-derived.md",
     "docs/plans/PLAN-L7-146-serverless-readonly-share.md",
+  ],
+  "brownfield-onboarding": [
+    "src/setup/index.ts",
+    "tests/setup.test.ts",
+    "docs/templates/adapter/AGENTS.md",
+    "docs/templates/adapter/CLAUDE.md",
+    "docs/templates/adapter/.claude/settings.json",
+  ],
+  "cross-project-test-workflow": [
+    "tests/distribution-acceptance.test.ts",
+    "tests/runtime-portability.test.ts",
+    "src/setup/index.ts",
+    ".github/workflows/harness-check.yml",
+  ],
+  "l1-l2-mock-roundtrip": [
+    "docs/design/harness/L2-screen/wireframe.md",
+    "docs/design/harness/L2-screen/screen-list.md",
+    "src/lint/screen-impl-pair-freeze.ts",
+    "src/lint/doc-consistency.ts",
+    "tests/screen-impl-pair-freeze.test.ts",
+    "tests/projection-writer.test.ts",
+  ],
+  "l10-ux-close": [
+    "docs/design/harness/L10-ux/visual-design.md",
+    ".ut-tdd/evidence/g10-ux/20260629-ux-minimum.json",
+    "src/lint/g10-ux-workflow.ts",
+    "tests/g10-ux-workflow.test.ts",
+    "tests/screen-impl-pair-freeze.test.ts",
+  ],
+  "drive-model-bookbinding": [
+    "docs/design/harness/L4-basic-design/function.md",
+    "docs/process/modes/README.md",
+    "src/lint/forward-convergence.ts",
+    "tests/forward-convergence.test.ts",
+    "src/lint/drive-model-passage.ts",
   ],
   "green-evidence-integrity": [
     "src/lint/green-command-digest.ts",
@@ -169,11 +238,14 @@ function evidencePaths(text: string): string[] {
     if (!value) continue;
     if (
       value.startsWith(".ut-tdd/") ||
+      value.startsWith(".claude/") ||
+      value.startsWith(".codex/") ||
       value.startsWith("docs/") ||
       value.startsWith("src/") ||
       value.startsWith("tests/") ||
       value.startsWith(".github/") ||
       value === "package.json" ||
+      value === "LICENSE" ||
       value === "README.md" ||
       value === "AGENTS.md" ||
       value === "CLAUDE.md"
