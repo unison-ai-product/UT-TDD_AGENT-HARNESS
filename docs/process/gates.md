@@ -19,6 +19,14 @@ The required gate artifact is an integration evidence manifest.
 The source of workflow granularity is
 `docs/test-design/harness/L8-integration-test-design.md` §6 G8-WORKFLOW.
 
+G9-WORKFLOW minimum mechanization (PLAN-L9 ascent): G9 is no longer closed by
+ST-* row presence alone. A passing G9 slice requires a system evidence
+manifest, selected ST-* coverage across ST-DATA / ST-ARCH / ST-FUNC / ST-ASSET
+/ ST-EXT families, executable test procedures, and explicit exit blocks for
+missing evidence, stale defers, or failed mandatory ST cases. The required gate
+artifact is a system evidence manifest. The source of workflow granularity is
+`docs/test-design/harness/L9-system-test-design.md` §6 G9-WORKFLOW.
+
 ## 1. gate 一覧表
 
 | gate | タイミング (L 遷移) | 確認対象 | fail 時動作 |

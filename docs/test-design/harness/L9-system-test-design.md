@@ -114,3 +114,14 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 - **L7 実装**: 全 ST-* を vitest 統合テスト / GHA workflow に変換 (TDD 強制 FR-02、Red 先行)
 - **L8 接続**: 統合テスト設計 (module 間 contract test) は L5 詳細設計 (D-API) 確定後に L8 で展開、L9 はその上位の system test
 - **G7 trace freeze**: 4 artifact 双方向 12 edge の凍結時に本書 ST ↔ L4 設計の trace を確定
+
+## §6 G9-WORKFLOW
+
+test_strategy: risk-based system verification tied to L4 basic-design contracts.
+test_plan: select ST cases by system behavior family and cross-module workflow risk.
+test_conditions: each selected ST case has Given/When/Then and whole-system fixture.
+coverage_items: ST-* coverage is mapped to data, architecture, function, asset, and external-boundary families.
+test_procedures: run the mapped vitest/doctor/CI commands and capture exit codes.
+execution_evidence: system evidence manifest records command, ST IDs, paths, and result.
+exit_criteria: all mandatory selected ST cases pass or explicit defer exists.
+defect_routing: failed ST cases route to L9 correction, Reverse, Refactor, Recovery, or Incident by scope.

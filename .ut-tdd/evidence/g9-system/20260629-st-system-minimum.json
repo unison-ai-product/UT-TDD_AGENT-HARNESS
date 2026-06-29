@@ -1,0 +1,108 @@
+{
+  "schema_version": "g9-system-evidence-v1",
+  "gate": "G9",
+  "profile": "st-system-minimum",
+  "plan_id": "PLAN-L7-179-g9-system-workflow",
+  "selected_st_ids": [
+    "ST-DATA-05",
+    "ST-ARCH-01",
+    "ST-FUNC-04",
+    "ST-ASSET-02",
+    "ST-EXT-02"
+  ],
+  "mandatory_st_ids": [
+    "ST-DATA-05",
+    "ST-ARCH-01",
+    "ST-FUNC-04",
+    "ST-ASSET-02",
+    "ST-EXT-02"
+  ],
+  "deferred_st_ids": [],
+  "commands": [
+    {
+      "command_id": "cmd-system-minimum-targeted",
+      "command": "bun run vitest run tests\\review-evidence.test.ts tests\\dependency-drift.test.ts tests\\workflow-contracts.test.ts tests\\asset-drift.test.ts tests\\runtime-adapter.test.ts tests\\g9-system-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/g9-system-workflow.test.ts",
+      "output_digest": "sha256:0aa507e8771f2ee1376fab667ef5f09aa54d1032af799306d8cc6f369331cb27",
+      "st_ids": [
+        "ST-DATA-05",
+        "ST-ARCH-01",
+        "ST-FUNC-04",
+        "ST-ASSET-02",
+        "ST-EXT-02"
+      ]
+    }
+  ],
+  "coverage": [
+    {
+      "st_id": "ST-DATA-05",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/review-evidence.test.ts",
+        "src/lint/review-evidence.ts"
+      ],
+      "command_ids": [
+        "cmd-system-minimum-targeted"
+      ],
+      "notes": "System-level review-evidence invariant: confirmed/completed design and implementation plans without review evidence fail closed through doctor."
+    },
+    {
+      "st_id": "ST-ARCH-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/dependency-drift.test.ts",
+        "src/lint/dependency-drift.ts"
+      ],
+      "command_ids": [
+        "cmd-system-minimum-targeted"
+      ],
+      "notes": "System-level architecture dependency direction evidence: runtime roster boundaries remain acyclic and one-way."
+    },
+    {
+      "st_id": "ST-FUNC-04",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/workflow-contracts.test.ts",
+        "src/workflow/routing-contracts.ts"
+      ],
+      "command_ids": [
+        "cmd-system-minimum-targeted"
+      ],
+      "notes": "System-level signal-to-mode routing evidence, including priority, approval, escalation, and recommended command boundaries."
+    },
+    {
+      "st_id": "ST-ASSET-02",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/asset-drift.test.ts",
+        "src/lint/asset-drift.ts"
+      ],
+      "command_ids": [
+        "cmd-system-minimum-targeted"
+      ],
+      "notes": "System-level roster and guard allowlist drift evidence: missing or inconsistent internal assets fail closed."
+    },
+    {
+      "st_id": "ST-EXT-02",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/runtime-adapter.test.ts",
+        "src/runtime/adapter.ts",
+        "src/runtime/adapter-policy.ts"
+      ],
+      "command_ids": [
+        "cmd-system-minimum-targeted"
+      ],
+      "notes": "System-level external boundary degradation evidence across Claude/Codex availability and provider error policy."
+    }
+  ],
+  "exit_criteria": {
+    "all_mandatory_passed": true,
+    "failed_mandatory_count": 0,
+    "stale_defer_count": 0,
+    "doctor_check": "g9-system-workflow"
+  }
+}

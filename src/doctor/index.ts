@@ -110,6 +110,12 @@ import {
   g8IntegrationWorkflowMessages,
   loadG8IntegrationWorkflowInput,
 } from "../lint/g8-integration-workflow";
+import {
+  analyzeG9SystemWorkflow,
+  canLoadG9SystemWorkflowInput,
+  g9SystemWorkflowMessages,
+  loadG9SystemWorkflowInput,
+} from "../lint/g9-system-workflow";
 import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
 import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import {
@@ -1872,6 +1878,27 @@ export function checkG8IntegrationWorkflow(repoRoot: string): {
   }
 }
 
+export function checkG9SystemWorkflow(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  if (!canLoadG9SystemWorkflowInput(repoRoot)) {
+    return {
+      messages: ["g9-system-workflow - violation: L9 test design or gates.md could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeG9SystemWorkflow(loadG9SystemWorkflowInput(repoRoot));
+    return { messages: g9SystemWorkflowMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["g9-system-workflow - violation: G9 workflow check could not run"],
+      ok: false,
+    };
+  }
+}
+
 export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): LintResult {
   const d = detectMode();
   // handover / agent-slots are warning surfaces. Verification profile is a hard gate.
@@ -1938,6 +1965,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const improvementBacklog = checkImprovementBacklog(deps.repoRoot);
   const rightArmGatePlanning = checkRightArmGatePlanning(deps.repoRoot);
   const g8IntegrationWorkflow = checkG8IntegrationWorkflow(deps.repoRoot);
+  const g9SystemWorkflow = checkG9SystemWorkflow(deps.repoRoot);
   const lintWiring = checkLintWiring(deps.repoRoot);
   const proposalDocumentCoverage = checkProposalDocumentCoverage(deps.repoRoot);
   const frontendDesignCoverage = checkFrontendDesignCoverage(deps.repoRoot);
@@ -2012,6 +2040,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       improvementBacklog.ok &&
       rightArmGatePlanning.ok &&
       g8IntegrationWorkflow.ok &&
+      g9SystemWorkflow.ok &&
       lintWiring.ok &&
       proposalDocumentCoverage.ok &&
       frontendDesignCoverage.ok &&
@@ -2086,6 +2115,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...improvementBacklog.messages.map((m) => `doctor: ${m}`),
       ...rightArmGatePlanning.messages.map((m) => `doctor: ${m}`),
       ...g8IntegrationWorkflow.messages.map((m) => `doctor: ${m}`),
+      ...g9SystemWorkflow.messages.map((m) => `doctor: ${m}`),
       ...lintWiring.messages.map((m) => `doctor: ${m}`),
       ...proposalDocumentCoverage.messages.map((m) => `doctor: ${m}`),
       ...frontendDesignCoverage.messages.map((m) => `doctor: ${m}`),
