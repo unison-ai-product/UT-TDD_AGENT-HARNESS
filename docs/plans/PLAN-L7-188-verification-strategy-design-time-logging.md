@@ -22,6 +22,34 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-188-verification-strategy-design-time-logging.md
     artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-144-judge-audit-index.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-144-01-distribution-packaging.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-144-02-runtime-config-security.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-144-03-verification-evidence-integrity.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-144-04-db-registration-projection.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-144-05-design-doc-coverage.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-144-06-drive-models.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-145-feature-review-index.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-145-01-distribution-packaging.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-145-02-runtime-config-delegation.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-145-03-verification-gate-engine.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-145-04-db-registration-projection.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-145-05-design-doc-coverage.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-145-06-drive-models-workflow.md
+    artifact_type: markdown_doc
 dependencies:
   parent: null
   requires:
