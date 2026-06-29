@@ -108,6 +108,53 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
       message: "TypeScript strictness must be enforced by tsc --noEmit.",
     });
   }
+  if (!/\bvitest\s+run\b/.test(pkg.scripts?.test ?? "")) {
+    violations.push({
+      path,
+      line: 1,
+      rule: "package-missing-vitest-full-suite",
+      message: "Full test suite must use the Vitest runner through a named package script.",
+    });
+  }
+  if (
+    !/\bvitest\s+run\b/.test(pkg.scripts?.["test:fast"] ?? "") ||
+    !pkg.scripts?.["test:fast"]?.includes("--exclude tests/projection-writer.test.ts") ||
+    !pkg.scripts?.["test:fast"]?.includes("--exclude tests/cli-surface.test.ts")
+  ) {
+    violations.push({
+      path,
+      line: 1,
+      rule: "package-missing-fast-test-lane",
+      message:
+        "Fast local verification must have a named Vitest script excluding heavy DB/CLI lanes.",
+    });
+  }
+  if (
+    !/\bdb\s+rebuild\b/.test(pkg.scripts?.["test:db"] ?? "") ||
+    !/\bvitest\s+run\b/.test(pkg.scripts?.["test:db"] ?? "") ||
+    !pkg.scripts?.["test:db"]?.includes("tests/db-projection-ingestion.test.ts") ||
+    !pkg.scripts?.["test:db"]?.includes("tests/drive-db-registration.test.ts") ||
+    !pkg.scripts?.["test:db"]?.includes("tests/projection-writer.test.ts")
+  ) {
+    violations.push({
+      path,
+      line: 1,
+      rule: "package-missing-db-test-lane",
+      message: "DB projection verification must have a named Vitest lane.",
+    });
+  }
+  if (
+    !/\bvitest\s+run\b/.test(pkg.scripts?.["test:cli"] ?? "") ||
+    !pkg.scripts?.["test:cli"]?.includes("tests/cli-surface.test.ts") ||
+    !pkg.scripts?.["test:cli"]?.includes("tests/runtime-hook-entrypoints.test.ts")
+  ) {
+    violations.push({
+      path,
+      line: 1,
+      rule: "package-missing-cli-test-lane",
+      message: "CLI/runtime verification must have a named Vitest lane.",
+    });
+  }
   if (
     !/\bvitest\s+run\b/.test(pkg.scripts?.["test:node-fallback"] ?? "") ||
     !pkg.scripts?.["test:node-fallback"]?.includes("tests/state-db.test.ts") ||

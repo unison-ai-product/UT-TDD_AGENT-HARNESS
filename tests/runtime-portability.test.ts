@@ -18,6 +18,12 @@ const validDocs: RuntimePortabilityDoc[] = [
       engines: { bun: ">=1.3" },
       scripts: {
         build: "bun build src/cli.ts --compile --outfile dist/ut-tdd",
+        test: "vitest run",
+        "test:fast":
+          "vitest run --exclude tests/cli-surface.test.ts --exclude tests/drive-db-registration.test.ts --exclude tests/projection-writer.test.ts",
+        "test:db":
+          "bun run src/cli.ts db rebuild && vitest run tests/db-projection-ingestion.test.ts tests/drive-db-registration.test.ts tests/projection-writer.test.ts",
+        "test:cli": "vitest run tests/cli-surface.test.ts tests/runtime-hook-entrypoints.test.ts",
         "test:node-fallback": "vitest run tests/state-db.test.ts tests/runtime-portability.test.ts",
         typecheck: "tsc --noEmit",
       },
@@ -71,6 +77,32 @@ describe("runtime-portability lint", () => {
         "hook-non-typescript-file",
         "script-wrapper-unapproved",
         "source-shell-runtime",
+      ]),
+    );
+  });
+
+  it("U-RPORT-008: requires Vitest full, fast, DB, and CLI test lanes", () => {
+    const packageDoc = validDocs.find((doc) => doc.path === "package.json");
+    const pkg = JSON.parse(packageDoc?.text ?? "{}") as {
+      scripts?: Record<string, string>;
+    };
+    delete pkg.scripts?.test;
+    delete pkg.scripts?.["test:fast"];
+    delete pkg.scripts?.["test:db"];
+    delete pkg.scripts?.["test:cli"];
+
+    const result = analyzeRuntimePortability([
+      ...validDocs.filter((doc) => doc.path !== "package.json"),
+      { path: "package.json", text: JSON.stringify(pkg) },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.rule)).toEqual(
+      expect.arrayContaining([
+        "package-missing-vitest-full-suite",
+        "package-missing-fast-test-lane",
+        "package-missing-db-test-lane",
+        "package-missing-cli-test-lane",
       ]),
     );
   });

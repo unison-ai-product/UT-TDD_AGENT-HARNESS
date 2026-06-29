@@ -30,7 +30,7 @@ updated: 2026-05-28
 #### AC-NFR-01 (正常系)
 - **Given**: PR で TypeScript ファイル変更
 - **When**: GHA matrix (windows-latest / macos-latest / ubuntu-latest) で CI 実行
-- **Then**: 3 OS 全件で `bun test` + `ut-tdd plan lint` pass / 3 OS で同等結果
+- **Then**: 3 OS 全件で `bun run test` + `ut-tdd plan lint` pass / 3 OS で同等結果
 
 #### AC-NFR-06 (異常系)
 - **Given**: agent-guard で許可リスト外 subagent_type 指定 (例: `be-api`)

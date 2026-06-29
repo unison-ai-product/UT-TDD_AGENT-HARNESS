@@ -335,6 +335,9 @@ managed なアダプタ呼び出しでは、ハーネスは legacy の raw-provi
 ```powershell
 bun run typecheck
 bun run lint
+bun run test:fast
+bun run test:db
+bun run test:cli
 bun run test
 bun run test:node-fallback
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\ut-tdd.ps1 doctor
