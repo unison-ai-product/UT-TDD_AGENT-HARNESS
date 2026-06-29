@@ -416,6 +416,33 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
       "design:.claude/agents/refactor-scout.md",
     );
     expect(agentImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const adapterAgentImpact = analyzeRelationImpact({
+      changedPaths: ["docs/templates/adapter/.claude/agents/ut-tdd-tl.md"],
+      projection,
+    });
+    expect(adapterAgentImpact.ok).toBe(true);
+    expect(adapterAgentImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/templates/adapter/.claude/agents/ut-tdd-tl.md",
+    );
+    expect(adapterAgentImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const adapterCommandImpact = analyzeRelationImpact({
+      changedPaths: ["docs/templates/adapter/.claude/commands/ut-tdd-status.md"],
+      projection,
+    });
+    expect(adapterCommandImpact.ok).toBe(true);
+    expect(adapterCommandImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/templates/adapter/.claude/commands/ut-tdd-status.md",
+    );
+    expect(adapterCommandImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const adapterCodexHookImpact = analyzeRelationImpact({
+      changedPaths: ["docs/templates/adapter/.codex/hooks.json"],
+      projection,
+    });
+    expect(adapterCodexHookImpact.ok).toBe(true);
+    expect(adapterCodexHookImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/templates/adapter/.codex/hooks.json",
+    );
+    expect(adapterCodexHookImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const reviewImpact = analyzeRelationImpact({
       changedPaths: [".ut-tdd/review/cross-review-l7-157.md"],
       projection,

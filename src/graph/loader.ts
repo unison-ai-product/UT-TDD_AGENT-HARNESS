@@ -92,6 +92,27 @@ function walkJson(dir: string, repoRoot: string, acc: string[]): void {
   }
 }
 
+function walkAdapterTemplateFiles(dir: string, repoRoot: string, acc: string[]): void {
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkAdapterTemplateFiles(full, repoRoot, acc);
+    } else if (
+      entry.name.endsWith(".md") ||
+      entry.name.endsWith(".json") ||
+      entry.name.endsWith(".toml")
+    ) {
+      acc.push(normalizePath(relative(repoRoot, full)));
+    }
+  }
+}
+
 /**
  * tests/**\/*.ts を走査し、各テストファイルの import 文を解析して
  * "covered src path → test path" の逆引き map を構築する。
@@ -340,6 +361,16 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
   const agentDocs: string[] = [];
   walkMd(join(repoRoot, ".claude", "agents"), repoRoot, agentDocs);
   for (const path of agentDocs) {
+    addDesignDocIfAbsent(designDocs, path);
+  }
+
+  const adapterTemplateDocs: string[] = [];
+  walkAdapterTemplateFiles(
+    join(repoRoot, "docs", "templates", "adapter"),
+    repoRoot,
+    adapterTemplateDocs,
+  );
+  for (const path of adapterTemplateDocs) {
     addDesignDocIfAbsent(designDocs, path);
   }
 

@@ -46,7 +46,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:34:43+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:9ace7173778d9bff145f35de04c7497f30afe8f20b61742cfc9fe263aa967985"
+        output_digest: "sha256:2cd13824089171ce59ccceae767e6b6196a46f1cca15452f222829ed2ef53533"
       - kind: unit_test
         command: "bun run vitest run tests\\relation-graph-loader.test.ts"
         runner: bun
@@ -54,7 +54,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:34:43+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:886fb656d14c62daa44ae0de950746537db15eedd9cbff7a86875623bcce6250"
+        output_digest: "sha256:38742cdac160309248b272d64816e393e784055b4c1cf8977b6f528da43c0491"
 ---
 
 # PLAN-L7-165: review artifact graph node coverage
