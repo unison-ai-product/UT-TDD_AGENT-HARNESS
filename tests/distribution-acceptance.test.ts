@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -52,6 +60,23 @@ function writeFakeCodex(root: string): string {
   return path;
 }
 
+function writeLocalUtTddShim(root: string): string {
+  const binDir = join(root, ".fake-bin");
+  mkdirSync(binDir, { recursive: true });
+  if (process.platform === "win32") {
+    const path = join(binDir, "ut-tdd.cmd");
+    writeFileSync(path, '@echo off\r\nbun "%~dp0..\\src\\cli.ts" %*\r\n', "utf8");
+    return path;
+  }
+  const path = join(binDir, "ut-tdd");
+  writeFileSync(path, '#!/bin/sh\nexec bun "$(dirname "$0")/../src/cli.ts" "$@"\n', {
+    encoding: "utf8",
+    mode: 0o755,
+  });
+  chmodSync(path, 0o755);
+  return path;
+}
+
 describe("clean distribution local acceptance smoke", () => {
   it("U-SETUP-013 / AT-DIST-001: clean artifact installs and exposes the same core CLI surfaces", () => {
     const plan = buildCleanDistributionPlan({
@@ -72,7 +97,12 @@ describe("clean distribution local acceptance smoke", () => {
       }
 
       const fakeCodex = writeFakeCodex(cleanRoot);
-      const env = { ...process.env, UT_TDD_CODEX_BIN: fakeCodex };
+      writeLocalUtTddShim(cleanRoot);
+      const env = {
+        ...process.env,
+        UT_TDD_CODEX_BIN: fakeCodex,
+        PATH: `${join(cleanRoot, ".fake-bin")}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`,
+      };
 
       const install = runBun(cleanRoot, ["install", "--frozen-lockfile"], env);
       expect(install.status, install.stderr || install.stdout).toBe(0);

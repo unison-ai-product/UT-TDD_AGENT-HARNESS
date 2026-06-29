@@ -295,7 +295,7 @@ Required UT-derived metrics:
 - `green_definition_compliance = every test_runs.green_definition_id resolves and every required command in that definition has exit_code=0`.
 - `review_green_command_compliance = every 2026-06-23-or-later confirmed/completed review_evidence entry has at least one projected test_runs row with exit_code=0, evidence_path, and output_digest`.
 
-Current implementation note (2026-06-23): `projectReviewEvidenceRegistry` projects `review_evidence.green_commands[]` into `test_runs` during deterministic harness.db rebuild. General UT runner ingestion, flake history, and duration regression projection remain separate IMP-109 scope.
+Current implementation note (2026-06-29): `projectReviewEvidenceRegistry` projects `review_evidence.green_commands[]` into `test_runs` during deterministic harness.db rebuild with empty `session_id` (projection-only evidence). `projectHookEvents` additionally derives runtime-provenance `test_runs` rows from session-log `tool_use` events when the sanitized Bash target is a recognized verification verb (`vitest`, `test`, `tsc`, `doctor`, `lint`, or `eslint`) and preserves the non-empty `session_id` plus the session JSONL `evidence_path`. General UT runner ingestion, flake history, and duration regression projection remain separate IMP-109 scope.
 
 Implementation constraints:
 

@@ -14,7 +14,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
   - role: se
     slot_label: "SE (Codex 委譲) — modelOverrideSchema を厳格 validation 化、adapter の shell:true を引数配列 spawn へ、injection regression test"
-  - role: security-audit
+  - role: qa
     slot_label: "security-audit (Claude cross-runtime judge、必須) — injection 面・shell 無効化・既存正当 model 互換を OWASP 視点で検証。security 変更ゆえ別 runtime judge を front-load"
 generates:
   - artifact_path: docs/plans/PLAN-L7-195-model-override-injection-hardening.md

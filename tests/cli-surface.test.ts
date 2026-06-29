@@ -63,6 +63,21 @@ function writeFakeProvider(binDir: string, name: "codex" | "claude"): string {
   return path;
 }
 
+function writeFakeUtTdd(binDir: string): string {
+  if (process.platform === "win32") {
+    const path = join(binDir, "ut-tdd.cmd");
+    writeFileSync(path, "@echo off\r\necho ut-tdd 0.0.0\r\nexit /b 0\r\n", "utf8");
+    return path;
+  }
+  const path = join(binDir, "ut-tdd");
+  writeFileSync(path, "#!/bin/sh\necho ut-tdd 0.0.0\nexit 0\n", {
+    encoding: "utf8",
+    mode: 0o755,
+  });
+  chmodSync(path, 0o755);
+  return path;
+}
+
 describe("L7 CLI surface closure", () => {
   it("exposes plan complete as the completed handover lifecycle entrypoint", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-plan-complete-"));
@@ -231,9 +246,11 @@ describe("L7 CLI surface closure", () => {
     const binDir = mkdtempSync(join(tmpdir(), "ut-tdd-cli-dist-"));
     try {
       const fakeCodex = writeFakeProvider(binDir, "codex");
+      writeFakeUtTdd(binDir);
       const run = runCliIn(repoRoot, ["distribution", "plan", "--tag", "v0.1.0", "--json"], {
         ...process.env,
         UT_TDD_CODEX_BIN: fakeCodex,
+        PATH: `${binDir}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`,
       });
       const payload = JSON.parse(run.stdout);
 

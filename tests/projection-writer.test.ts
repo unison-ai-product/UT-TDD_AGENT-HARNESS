@@ -7,7 +7,11 @@ import { deriveArtifactProgressDecision } from "../src/state-db/artifact-progres
 import { projectRefactorCandidateSignals } from "../src/state-db/feedback-projections";
 import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
-import { rebuildHarnessDb, recordProjectionEvent } from "../src/state-db/projection-writer";
+import {
+  projectRuntimeTestRunFromSessionEvent,
+  rebuildHarnessDb,
+  recordProjectionEvent,
+} from "../src/state-db/projection-writer";
 import {
   REFACTOR_CANDIDATE_THRESHOLDS,
   REFACTOR_POLICY_TERMS,
@@ -473,6 +477,89 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(joined).toMatchObject({
         gate_id: "G-L7DB.B",
         plan_id: "PLAN-L7-46-projection-writer",
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("projects runtime test_runs from session-log verification events with session provenance", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      recordProjectionEvent(db, {
+        table: "plan_registry",
+        id: "PLAN-L7-193-runtime-test-run-provenance",
+        row: {
+          plan_id: "PLAN-L7-193-runtime-test-run-provenance",
+          kind: "impl",
+          layer: "L7",
+          drive: "db",
+          status: "confirmed",
+          title: "runtime test run provenance",
+          source_path: "docs/plans/PLAN-L7-193-runtime-test-run-provenance.md",
+          source_hash: "sha256:test",
+          updated_at: "2026-06-29T00:00:00Z",
+        },
+      });
+      const plans = new Map([
+        [
+          "PLAN-L7-193-runtime-test-run-provenance",
+          {
+            planId: "PLAN-L7-193-runtime-test-run-provenance",
+            kind: "impl",
+            layer: "L7",
+            drive: "db",
+            status: "confirmed",
+            updatedAt: "2026-06-29T00:00:00Z",
+          },
+        ],
+      ]);
+
+      projectRuntimeTestRunFromSessionEvent({
+        db,
+        plans,
+        event: {
+          ts: "2026-06-29T00:01:00Z",
+          session_id: "session-runtime-1",
+          plan_id: "PLAN-L7-193-runtime-test-run-provenance",
+          event_type: "tool_use",
+          tool: "Bash",
+          target: "Bash (vitest)",
+          outcome: "ok",
+        },
+        evidencePath: ".ut-tdd/logs/session/session-runtime-1.jsonl",
+      });
+      projectRuntimeTestRunFromSessionEvent({
+        db,
+        plans,
+        event: {
+          ts: "2026-06-29T00:02:00Z",
+          session_id: "session-runtime-1",
+          plan_id: "PLAN-L7-193-runtime-test-run-provenance",
+          event_type: "tool_use",
+          tool: "Bash",
+          target: "Bash (git)",
+          outcome: "ok",
+        },
+        evidencePath: ".ut-tdd/logs/session/session-runtime-1.jsonl",
+      });
+
+      const rows = db
+        .prepare(
+          "SELECT session_id, command, runner, runtime, scope, exit_code, status, evidence_path FROM test_runs",
+        )
+        .all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        session_id: "session-runtime-1",
+        command: "Bash (vitest)",
+        runner: "bun",
+        runtime: "hook-session-log",
+        scope: "runtime-hook",
+        exit_code: 0,
+        status: "passed",
+        evidence_path: ".ut-tdd/logs/session/session-runtime-1.jsonl",
       });
     } finally {
       db.close();

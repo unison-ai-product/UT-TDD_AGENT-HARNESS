@@ -117,6 +117,7 @@ interface SessionLogProjection {
   plan_id?: string | null;
   event_type?: string;
   tool?: string;
+  target?: string;
   outcome?: string;
 }
 
@@ -489,6 +490,7 @@ function projectHookEvents(
             evidence_path: relPath,
           },
         });
+        projectRuntimeTestRunFromSessionEvent({ db, plans, event, evidencePath: relPath });
       }
     }
   }
@@ -521,6 +523,56 @@ function projectHookEvents(
       },
     });
   }
+}
+
+function verificationVerbFromSessionTarget(event: SessionLogProjection): string | null {
+  if (event.event_type !== "tool_use" || event.tool !== "Bash") return null;
+  const match = String(event.target ?? "").match(/^Bash \(([^)]+)\)$/);
+  if (!match) return null;
+  const verb = match[1];
+  return ["doctor", "eslint", "lint", "test", "tsc", "vitest"].includes(verb) ? verb : null;
+}
+
+export interface RuntimeTestRunProjectionInput {
+  db: HarnessDb;
+  plans: Map<string, ProjectedPlan>;
+  event: SessionLogProjection;
+  evidencePath: string;
+}
+
+export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProjectionInput): void {
+  const { db, plans, event, evidencePath } = input;
+  if (!event.session_id || !event.plan_id || !event.ts) return;
+  const verb = verificationVerbFromSessionTarget(event);
+  if (!verb) return;
+  const planId = resolveProjectedPlanId(plans, event.plan_id);
+  const status = event.outcome === "error" ? "failed" : "passed";
+  const testRunId = stableId(
+    "test-run-runtime",
+    `${event.session_id}:${planId}:${event.ts}:${verb}:${event.outcome ?? ""}`,
+  );
+  recordProjectionEvent(db, {
+    table: "test_runs",
+    id: testRunId,
+    row: {
+      test_run_id: testRunId,
+      session_id: event.session_id,
+      plan_id: planId,
+      command: event.target ?? `Bash (${verb})`,
+      runner: verb === "doctor" ? "ut-tdd" : "bun",
+      runtime: "hook-session-log",
+      os: "",
+      shell: "bash",
+      scope: "runtime-hook",
+      started_at: event.ts,
+      completed_at: event.ts,
+      exit_code: status === "passed" ? 0 : 1,
+      evidence_path: evidencePath,
+      output_digest: "",
+      green_definition_id: "",
+      status,
+    },
+  });
 }
 
 function runtimeForModel(model: string): string {
