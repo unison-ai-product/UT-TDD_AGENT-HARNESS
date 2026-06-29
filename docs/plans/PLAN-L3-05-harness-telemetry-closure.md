@@ -19,28 +19,28 @@ review_evidence:
         scope: targeted
         exit_code: 0
         evidence_path: tests/l14-close-audit.test.ts
-        output_digest: "sha256:cb3c53f80274d43f3dab516ef42d7937c159a0e16ca8003eb92145d3bd431a23"
+        output_digest: "sha256:08dd5af9b26fda59310ed4fd51b083acae8e559166697457e0ea3fdbd300b255"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
         evidence_path: src/lint/l14-close-audit.ts
-        output_digest: "sha256:4a3280c9a9deb6779028cd65517366a1e3a55ce945de7602d8b2e496ad003907"
+        output_digest: "sha256:f0d4e096ac06f54ed0f22b8b7ee9f632af3a376b066b7a1121dd3532e1dbf7f7"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
         evidence_path: src/lint/l14-close-audit.ts
-        output_digest: "sha256:4a3280c9a9deb6779028cd65517366a1e3a55ce945de7602d8b2e496ad003907"
+        output_digest: "sha256:f0d4e096ac06f54ed0f22b8b7ee9f632af3a376b066b7a1121dd3532e1dbf7f7"
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
         scope: gate
         exit_code: 0
         evidence_path: .ut-tdd/audit/A-143-l14-close-system-foundation-audit.md
-        output_digest: "sha256:366ba52a56ad8306a55e14008184ed685cc66ba1bbae1d43e05cac36f1b170af"
+        output_digest: "sha256:3bd5560a139539aa5f9184b1937597d6de56e5ec87c4b30872789e4294e9ff65"
     verdict: pass
     scope: "add-design 増分 (telemetry / self-improvement closure audit + 4 lint + dynamic skill recommender) の status drift (src merge 済なのに draft 放置) を解消し confirmed 化。成果物 src/lint/{telemetry-closure,cycle-p4-verification,skill-assignment,project-hook}.ts + src/skills/recommend.ts + src/doctor 配線 + 6 test は 2026-06-12 (239cb32) で merge 済。機械再検証: ①全 src module 実在 ②doctor の hard gate として稼働 (skill-assignment hard gate / Cycle P4 closure audit hard gate / telemetry-closure 各 doctor refs ≥3) ③skills/recommend は cli.ts + workflow/contracts.ts に配線 ④Vitest 787/787 green / doctor EXIT=0。AC §3 (A-134 audit / doctor が non-closed rows を surface / 各 self-improvement 領域が evidence 無しでは closed にできない fail-close) は merged + wired + tested で充足。"
     worker_model: claude-opus-4-8

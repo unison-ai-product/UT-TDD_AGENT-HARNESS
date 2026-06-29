@@ -575,7 +575,8 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - U-L14CLOSE-003: open boundary rows (`partial`, `human_required`, `external_required`, `parked_future`) require a non-empty next action.
 - U-L14CLOSE-004: evidence cells must contain existing repo-relative paths under approved evidence roots.
 - U-L14CLOSE-005: the live repository A-143 audit loads through `loadL14CloseAuditDocs` and matches the required row order.
-- U-L14CLOSE-006: missing A-143 audit source is a hard violation message, not a silent skip.
+- U-L14CLOSE-006: item-specific hardening evidence for version-up boundaries and green evidence integrity must be present, not only generic existing paths.
+- U-L14CLOSE-007: missing A-143 audit source is a hard violation message, not a silent skip.
 
 ### 2026-06-09 Runtime Adapter Lifecycle Test Addendum
 

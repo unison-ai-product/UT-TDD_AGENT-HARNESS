@@ -34,6 +34,7 @@ export interface L14CloseAuditViolation {
     | "missing_expected_item"
     | "unknown_status"
     | "missing_evidence_path"
+    | "missing_required_evidence_path"
     | "partial_without_gap"
     | "open_without_next_action";
 }
@@ -75,6 +76,20 @@ const EXPECTED_ITEMS = [
   "release-publication-boundary",
   "green-evidence-integrity",
 ] as const;
+
+const REQUIRED_EVIDENCE_BY_ITEM: Partial<Record<(typeof EXPECTED_ITEMS)[number], string[]>> = {
+  "version-up-nonbreaking": [
+    "docs/process/modes/version-up.md",
+    "docs/plans/PLAN-L7-141-web-dashboard-component-derived.md",
+    "docs/plans/PLAN-L7-146-serverless-readonly-share.md",
+  ],
+  "green-evidence-integrity": [
+    "src/lint/green-command-digest.ts",
+    "tests/green-command-digest.test.ts",
+    "docs/plans/PLAN-L7-132-green-command-digest-integrity.md",
+    "docs/plans/PLAN-L7-174-green-command-digest-correction.md",
+  ],
+};
 
 function section(content: string): string {
   const match = content.match(SECTION_RE);
@@ -181,6 +196,11 @@ export function analyzeL14CloseAudit(
       const paths = evidencePaths(evidence);
       if (paths.length === 0 || paths.some((path) => !pathExists(repoRoot, path))) {
         violations.push({ file: doc.file, item, reason: "missing_evidence_path" });
+      }
+      const requiredPaths =
+        REQUIRED_EVIDENCE_BY_ITEM[item as (typeof EXPECTED_ITEMS)[number]] ?? [];
+      if (requiredPaths.some((path) => !paths.includes(path))) {
+        violations.push({ file: doc.file, item, reason: "missing_required_evidence_path" });
       }
       if (status === "partial" && /^(none|n\/a|なし)$/i.test(gap.trim())) {
         violations.push({ file: doc.file, item, reason: "partial_without_gap" });
