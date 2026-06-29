@@ -138,7 +138,10 @@ provenance from deterministic projection. In provenance-enforced mode,
 closed when their populated rows are projection-only (`runtime_rows=0` and
 `projection_rows>0`). Default doctor may surface this as a partial migration
 state until runtime capture is wired, but verification-strategy close cannot
-treat projection-only telemetry as substance.
+treat projection-only telemetry as substance. Doctor overlays runtime
+Claude/Codex session usage on its in-memory rebuild and projects valued
+`model_runs` rows from JSONL token/cost telemetry; deterministic `db rebuild`
+remains a source projection and does not scan user runtime logs.
 
 ## §3 値オブジェクトの物理表現 + SubDoc zod 化 (IMP-026)
 

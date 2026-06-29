@@ -304,6 +304,8 @@ describe("L7 CLI surface closure", () => {
       });
       expect(payload.claudeDir).toBe(join(root, "missing-claude"));
       expect(payload.codexDir).toBe(join(root, "missing-codex"));
+      expect(run.stderr).not.toContain("claude");
+      expect(run.stderr).not.toContain("codex");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

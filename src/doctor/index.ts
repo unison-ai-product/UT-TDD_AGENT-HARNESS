@@ -5,6 +5,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import {
   checkHandoverBypass,
@@ -297,7 +298,8 @@ import {
 } from "../state-db/guardrail-invariants";
 import type { HarnessDb } from "../state-db/index";
 import { openHarnessDb } from "../state-db/index";
-import { rebuildHarnessDb } from "../state-db/projection-writer";
+import { projectTokenUsage, rebuildHarnessDb } from "../state-db/projection-writer";
+import { loadRuntimeSessionUsage } from "../state-db/token-tracker";
 import { classifyProposalDocumentCoverage } from "../task/classify";
 import {
   analyzePairFreeze,
@@ -953,6 +955,14 @@ function loadDbTelemetryProvenanceStats(db: HarnessDb): DbTelemetryProvenanceSta
   ];
 }
 
+function projectRuntimeModelTelemetryForDoctor(db: HarnessDb): void {
+  const claudeDir =
+    process.env.UT_TDD_CLAUDE_SESSIONS_DIR ?? join(homedir(), ".claude", "projects");
+  const codexDir = process.env.UT_TDD_CODEX_SESSIONS_DIR ?? join(homedir(), ".codex", "sessions");
+  const usages = loadRuntimeSessionUsage({ claudeDirs: [claudeDir], codexDirs: [codexDir] });
+  projectTokenUsage(db, usages);
+}
+
 export function checkDbProjectionIngestion(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
     return {
@@ -964,6 +974,7 @@ export function checkDbProjectionIngestion(repoRoot: string): { messages: string
     const db = openHarnessDb(":memory:", { repoRoot });
     try {
       const rebuilt = rebuildHarnessDb({ repoRoot, db });
+      projectRuntimeModelTelemetryForDoctor(db);
       const result = analyzeDbProjectionIngestion(
         rebuilt.rowCounts,
         undefined,
