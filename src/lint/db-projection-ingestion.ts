@@ -3,10 +3,30 @@ export interface DbProjectionIngestionRequirement {
   reason: string;
 }
 
+export interface DbTelemetryProvenanceStats {
+  table: string;
+  rows: number;
+  runtimeRows: number;
+  projectionRows: number;
+  emptySessionRows: number;
+  valuedRows: number;
+}
+
+export interface DbTelemetryProvenanceFinding {
+  table: string;
+  reason: string;
+  rows: number;
+  runtimeRows: number;
+  projectionRows: number;
+  emptySessionRows: number;
+  valuedRows: number;
+}
+
 export interface DbProjectionIngestionResult {
   checked: number;
   missingRows: DbProjectionIngestionRequirement[];
   optionalEvidenceTables: string[];
+  telemetryProvenance: DbTelemetryProvenanceFinding[];
   rowCounts: Record<string, number>;
   ok: boolean;
 }
@@ -56,19 +76,60 @@ export const EVIDENCE_GATED_DB_PROJECTION_TABLES = [
   "retry_events",
 ];
 
+export const TELEMETRY_PROVENANCE_REQUIREMENTS: DbProjectionIngestionRequirement[] = [
+  {
+    table: "skill_invocations",
+    reason:
+      "skill firing telemetry must include runtime session provenance, not only auto-projected review evidence",
+  },
+  {
+    table: "test_runs",
+    reason:
+      "test execution telemetry must distinguish runtime executions from projected green-command evidence",
+  },
+  {
+    table: "guardrail_decisions",
+    reason:
+      "guardrail telemetry must include runtime session provenance for fired safety decisions",
+  },
+  {
+    table: "model_runs",
+    reason:
+      "model telemetry must include captured token/cost rows, not only review-evidence model projections",
+  },
+];
+
 export function analyzeDbProjectionIngestion(
   rowCounts: Record<string, number>,
   requirements: DbProjectionIngestionRequirement[] = AUTOMATIC_DB_PROJECTION_REQUIREMENTS,
+  telemetryStats: DbTelemetryProvenanceStats[] = [],
 ): DbProjectionIngestionResult {
   const missingRows = requirements.filter(
     (requirement) => (rowCounts[requirement.table] ?? 0) <= 0,
   );
+  const statsByTable = new Map(telemetryStats.map((stats) => [stats.table, stats]));
+  const telemetryProvenance = TELEMETRY_PROVENANCE_REQUIREMENTS.flatMap((requirement) => {
+    const stats = statsByTable.get(requirement.table);
+    if (!stats || stats.rows <= 0 || stats.runtimeRows > 0) return [];
+    return [
+      {
+        table: requirement.table,
+        reason: requirement.reason,
+        rows: stats.rows,
+        runtimeRows: stats.runtimeRows,
+        projectionRows: stats.projectionRows,
+        emptySessionRows: stats.emptySessionRows,
+        valuedRows: stats.valuedRows,
+      },
+    ];
+  });
   return {
     checked: requirements.length,
     missingRows,
     optionalEvidenceTables: EVIDENCE_GATED_DB_PROJECTION_TABLES.filter(
       (table) => (rowCounts[table] ?? 0) <= 0,
     ),
+    telemetryProvenance,
     rowCounts,
     ok: requirements.length > 0 && missingRows.length === 0,
   };
@@ -76,9 +137,20 @@ export function analyzeDbProjectionIngestion(
 
 export function dbProjectionIngestionMessages(result: DbProjectionIngestionResult): string[] {
   if (result.ok) {
-    return [
+    const messages = [
       `db-projection-ingestion - OK (${result.checked} automatic projection tables populated; evidence-gated zero tables: ${result.optionalEvidenceTables.length})`,
     ];
+    if (result.telemetryProvenance.length > 0) {
+      messages.push(
+        `db-telemetry-provenance - partial (${result.telemetryProvenance.length} populated telemetry tables have no runtime provenance)`,
+      );
+      for (const item of result.telemetryProvenance) {
+        messages.push(
+          `telemetry table ${item.table}: rows=${item.rows}, runtime_rows=${item.runtimeRows}, projection_rows=${item.projectionRows}, empty_session_rows=${item.emptySessionRows}, valued_rows=${item.valuedRows} - ${item.reason}`,
+        );
+      }
+    }
+    return messages;
   }
   const messages = ["db-projection-ingestion - violation"];
   for (const item of result.missingRows) {

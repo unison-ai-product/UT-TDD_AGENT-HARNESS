@@ -50,6 +50,7 @@ import {
 } from "../lint/db-projection-coverage";
 import {
   analyzeDbProjectionIngestion,
+  type DbTelemetryProvenanceStats,
   dbProjectionIngestionMessages,
 } from "../lint/db-projection-ingestion";
 import { analyzeDddTddRules, dddTddRulesMessages, loadDddTddInputs } from "../lint/ddd-tdd-rules";
@@ -294,6 +295,7 @@ import {
   type GuardrailDecisionInput,
   inspectGuardrailInvariants,
 } from "../state-db/guardrail-invariants";
+import type { HarnessDb } from "../state-db/index";
 import { openHarnessDb } from "../state-db/index";
 import { rebuildHarnessDb } from "../state-db/projection-writer";
 import { classifyProposalDocumentCoverage } from "../task/classify";
@@ -875,6 +877,82 @@ export function checkDbProjectionCoverage(repoRoot: string): { messages: string[
   }
 }
 
+function telemetryStatsRow(db: HarnessDb, table: string, sql: string): DbTelemetryProvenanceStats {
+  const row = db.prepare(sql).get() ?? {};
+  return {
+    table,
+    rows: Number(row.rows ?? 0),
+    runtimeRows: Number(row.runtime_rows ?? 0),
+    projectionRows: Number(row.projection_rows ?? 0),
+    emptySessionRows: Number(row.empty_session_rows ?? 0),
+    valuedRows: Number(row.valued_rows ?? 0),
+  };
+}
+
+function loadDbTelemetryProvenanceStats(db: HarnessDb): DbTelemetryProvenanceStats[] {
+  return [
+    telemetryStatsRow(
+      db,
+      "skill_invocations",
+      `SELECT COUNT(*) AS rows,
+              SUM(CASE WHEN COALESCE(session_id, '') <> ''
+                        AND COALESCE(source, '') NOT LIKE 'auto-projection%'
+                       THEN 1 ELSE 0 END) AS runtime_rows,
+              SUM(CASE WHEN COALESCE(source, '') LIKE 'auto-projection%'
+                         OR COALESCE(session_id, '') = ''
+                       THEN 1 ELSE 0 END) AS projection_rows,
+              SUM(CASE WHEN COALESCE(session_id, '') = '' THEN 1 ELSE 0 END) AS empty_session_rows,
+              0 AS valued_rows
+         FROM skill_invocations`,
+    ),
+    telemetryStatsRow(
+      db,
+      "test_runs",
+      `SELECT COUNT(*) AS rows,
+              SUM(CASE WHEN COALESCE(session_id, '') <> '' THEN 1 ELSE 0 END) AS runtime_rows,
+              SUM(CASE WHEN COALESCE(session_id, '') = '' THEN 1 ELSE 0 END) AS projection_rows,
+              SUM(CASE WHEN COALESCE(session_id, '') = '' THEN 1 ELSE 0 END) AS empty_session_rows,
+              SUM(CASE WHEN COALESCE(output_digest, '') <> '' THEN 1 ELSE 0 END) AS valued_rows
+         FROM test_runs`,
+    ),
+    telemetryStatsRow(
+      db,
+      "guardrail_decisions",
+      `SELECT COUNT(*) AS rows,
+              SUM(CASE WHEN COALESCE(session_id, '') <> '' THEN 1 ELSE 0 END) AS runtime_rows,
+              SUM(CASE WHEN COALESCE(session_id, '') = '' THEN 1 ELSE 0 END) AS projection_rows,
+              SUM(CASE WHEN COALESCE(session_id, '') = '' THEN 1 ELSE 0 END) AS empty_session_rows,
+              0 AS valued_rows
+         FROM guardrail_decisions`,
+    ),
+    telemetryStatsRow(
+      db,
+      "model_runs",
+      `SELECT COUNT(*) AS rows,
+              SUM(CASE WHEN input_tokens IS NOT NULL
+                         OR output_tokens IS NOT NULL
+                         OR cached_input_tokens IS NOT NULL
+                         OR reasoning_tokens IS NOT NULL
+                         OR cost_usd IS NOT NULL
+                       THEN 1 ELSE 0 END) AS runtime_rows,
+              SUM(CASE WHEN input_tokens IS NULL
+                         AND output_tokens IS NULL
+                         AND cached_input_tokens IS NULL
+                         AND reasoning_tokens IS NULL
+                         AND cost_usd IS NULL
+                       THEN 1 ELSE 0 END) AS projection_rows,
+              0 AS empty_session_rows,
+              SUM(CASE WHEN input_tokens IS NOT NULL
+                         OR output_tokens IS NOT NULL
+                         OR cached_input_tokens IS NOT NULL
+                         OR reasoning_tokens IS NOT NULL
+                         OR cost_usd IS NOT NULL
+                       THEN 1 ELSE 0 END) AS valued_rows
+         FROM model_runs`,
+    ),
+  ];
+}
+
 export function checkDbProjectionIngestion(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
     return {
@@ -886,7 +964,11 @@ export function checkDbProjectionIngestion(repoRoot: string): { messages: string
     const db = openHarnessDb(":memory:", { repoRoot });
     try {
       const rebuilt = rebuildHarnessDb({ repoRoot, db });
-      const result = analyzeDbProjectionIngestion(rebuilt.rowCounts);
+      const result = analyzeDbProjectionIngestion(
+        rebuilt.rowCounts,
+        undefined,
+        loadDbTelemetryProvenanceStats(db),
+      );
       return { messages: dbProjectionIngestionMessages(result), ok: result.ok };
     } finally {
       db.close();

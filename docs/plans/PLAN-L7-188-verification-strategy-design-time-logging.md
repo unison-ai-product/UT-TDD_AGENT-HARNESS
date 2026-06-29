@@ -97,3 +97,15 @@ PO 決定 (2026-06-29): いまはクローズへ向けた **配布準備** を�
 ## 4. 壊さない / 再発させない
 - projection を verified と名乗らせない (coverage ≠ substance を検証側で再発させない)。
 - observability は設計義務であり後付けにしない。実走しない実装を accept しない。
+
+## 2026-06-29 Codex partial landing: DB telemetry provenance surface
+
+- Added `db-telemetry-provenance - partial` output to doctor through
+  `src/lint/db-projection-ingestion.ts` and `src/doctor/index.ts`.
+- The gate still fail-closes empty automatic projection tables, but now also
+  distinguishes populated telemetry tables that have no runtime provenance:
+  `skill_invocations`, `test_runs`, `guardrail_decisions`, and `model_runs`.
+- This is a visibility/provenance hardening slice, not the full runtime capture
+  implementation. Runtime skill firing, runtime test execution capture,
+  guardrail decision capture, and token/cost ingestion remain PLAN-L7-188
+  follow-up work before a full verification-strategy close.

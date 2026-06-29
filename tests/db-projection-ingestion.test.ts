@@ -82,4 +82,56 @@ describe("db projection ingestion detector", () => {
     expect(result.ok).toBe(false);
     expect(result.missingRows.map((row) => row.table)).toEqual(["trace_edges"]);
   });
+
+  it("surfaces populated telemetry tables that have only projection provenance", () => {
+    const result = analyzeDbProjectionIngestion(
+      {
+        graph_nodes: 1,
+        dependency_edges: 1,
+        trace_edges: 1,
+        graph_snapshots: 1,
+        impact_rules: 1,
+        verification_profiles: 1,
+        mcp_server_profiles: 1,
+        mcp_profile_triggers: 1,
+        document_export_profiles: 1,
+        document_export_triggers: 1,
+        document_export_runs: 1,
+        document_export_datasets: 1,
+        test_cases: 1,
+        test_artifact_edges: 1,
+        artifact_progress: 1,
+        skill_invocations: 7,
+        model_runs: 3,
+      },
+      undefined,
+      [
+        {
+          table: "skill_invocations",
+          rows: 7,
+          runtimeRows: 0,
+          projectionRows: 7,
+          emptySessionRows: 7,
+          valuedRows: 0,
+        },
+        {
+          table: "model_runs",
+          rows: 3,
+          runtimeRows: 0,
+          projectionRows: 3,
+          emptySessionRows: 0,
+          valuedRows: 0,
+        },
+      ],
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.telemetryProvenance.map((row) => row.table)).toEqual([
+      "skill_invocations",
+      "model_runs",
+    ]);
+    expect(dbProjectionIngestionMessages(result).join("\n")).toContain(
+      "db-telemetry-provenance - partial",
+    );
+  });
 });
