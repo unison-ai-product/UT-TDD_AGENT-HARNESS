@@ -60,6 +60,7 @@ function jsonDoc<T>(doc: RuntimePortabilityDoc | undefined): T | null {
 
 function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePortabilityViolation[] {
   const pkg = jsonDoc<{
+    bin?: string | Record<string, string>;
     type?: string;
     engines?: { bun?: string; node?: string };
     scripts?: Record<string, string>;
@@ -98,6 +99,16 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
       line: 1,
       rule: "package-missing-compiled-build",
       message: "Build script must produce the compiled cross-platform core binary.",
+    });
+  }
+  const binPath = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.["ut-tdd"];
+  if (binPath !== "./src/cli.ts") {
+    violations.push({
+      path,
+      line: 1,
+      rule: "package-bin-not-source-cli",
+      message:
+        "Package bin.ut-tdd must point at ./src/cli.ts so bun link exposes the CLI before a local dist build.",
     });
   }
   if (!/\btsc\s+--noEmit\b/.test(pkg.scripts?.typecheck ?? "")) {

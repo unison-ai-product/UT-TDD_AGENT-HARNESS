@@ -34,7 +34,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T14:43:00+09:00"
         evidence_path: tests/runtime-portability.test.ts
-        output_digest: "sha256:5a2a4a64c94334bddd84f505a38d23514b23664a6f92f2fea268af0c74d4b4d3"
+        output_digest: "sha256:5792d29d443c60c5eb2fe686ed411d3c988bcda25e7d898cf93a0a065b70c632"
       - kind: unit_test
         command: "bun run test:fast"
         runner: bun
@@ -42,7 +42,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T14:47:00+09:00"
         evidence_path: package.json
-        output_digest: "sha256:2a2ae24df3662d784c4bfc19437d52c3dcaba3ceb4f4aa51797e43f5181cdac7"
+        output_digest: "sha256:0a194c5d845331d01ce8605e758f40021142f2de295226386ae08b6a9fc8596e"
       - kind: unit_test
         command: "bun run test:db"
         runner: bun
@@ -50,7 +50,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T14:51:00+09:00"
         evidence_path: package.json
-        output_digest: "sha256:2a2ae24df3662d784c4bfc19437d52c3dcaba3ceb4f4aa51797e43f5181cdac7"
+        output_digest: "sha256:0a194c5d845331d01ce8605e758f40021142f2de295226386ae08b6a9fc8596e"
       - kind: unit_test
         command: "bun run test:cli"
         runner: bun
@@ -58,7 +58,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T14:52:00+09:00"
         evidence_path: package.json
-        output_digest: "sha256:2a2ae24df3662d784c4bfc19437d52c3dcaba3ceb4f4aa51797e43f5181cdac7"
+        output_digest: "sha256:0a194c5d845331d01ce8605e758f40021142f2de295226386ae08b6a9fc8596e"
       - kind: unit_test
         command: "bun run test"
         runner: bun
@@ -66,7 +66,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T15:00:38+09:00"
         evidence_path: package.json
-        output_digest: "sha256:2a2ae24df3662d784c4bfc19437d52c3dcaba3ceb4f4aa51797e43f5181cdac7"
+        output_digest: "sha256:0a194c5d845331d01ce8605e758f40021142f2de295226386ae08b6a9fc8596e"
 agent_slots:
   - role: tl
     slot_label: "TL - test lane granularity"

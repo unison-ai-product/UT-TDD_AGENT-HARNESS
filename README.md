@@ -158,7 +158,6 @@ worker と reviewer を**別 provider**(Codex ↔ Claude)に割り当てるこ�
 
 ```powershell
 bun install
-bun run build
 bun link
 
 # ハーネス状態を受け取りたい既存プロジェクトのディレクトリで
@@ -168,9 +167,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\ut-tdd.ps1 doctor
 ```
 
 The generated Claude/Codex hooks call bare `ut-tdd ...`, so `ut-tdd` must resolve on
-the consumer repository PATH. For local clean-package validation, run `bun link`
-once in this harness checkout, then `bun link ut-tdd` in each consumer repository
-before `ut-tdd setup`.
+the consumer repository PATH. `bin.ut-tdd` points at `src/cli.ts`, so `bun link`
+works immediately after `bun install`; `bun run build` is only needed when preparing
+the compiled release binary.
 
 ## ⚙️ セットアップ
 
@@ -218,7 +217,6 @@ before `ut-tdd setup`.
 
 ```powershell
 bun install
-bun run build
 ```
 
 次に、ハーネス状態を受け取りたい既存プロジェクトのディレクトリで setup を実行します:

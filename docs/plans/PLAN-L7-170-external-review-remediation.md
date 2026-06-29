@@ -81,7 +81,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:42:00+09:00"
         evidence_path: tests/runtime-portability.test.ts
-        output_digest: "sha256:5a2a4a64c94334bddd84f505a38d23514b23664a6f92f2fea268af0c74d4b4d3"
+        output_digest: "sha256:5792d29d443c60c5eb2fe686ed411d3c988bcda25e7d898cf93a0a065b70c632"
       - kind: unit_test
         command: "bun run vitest run tests/work-guard.test.ts"
         runner: bun
@@ -113,7 +113,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:44:20+09:00"
         evidence_path: src/lint/runtime-portability.ts
-        output_digest: "sha256:ddc3d38724afe184757dd66da47ede42ce419a839010b0545b6ed5237f833e13"
+        output_digest: "sha256:6bfff017db581847b6553b6edf208fd7a0285a420bac96322d7798b4cd12cfe6"
       - kind: unit_test
         command: "bun run vitest run tests/work-guard.test.ts"
         runner: bun

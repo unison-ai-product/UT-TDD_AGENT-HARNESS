@@ -15,6 +15,7 @@ const validDocs: RuntimePortabilityDoc[] = [
     path: "package.json",
     text: JSON.stringify({
       type: "module",
+      bin: { "ut-tdd": "./src/cli.ts" },
       engines: { bun: ">=1.3" },
       scripts: {
         build: "bun build src/cli.ts --compile --outfile dist/ut-tdd",
@@ -119,6 +120,7 @@ describe("runtime-portability lint", () => {
       expect.arrayContaining([
         "package-missing-esm",
         "package-missing-bun-engine",
+        "package-bin-not-source-cli",
         "package-missing-compiled-build",
         "package-missing-node-fallback-smoke",
         "package-missing-typecheck",
@@ -133,6 +135,22 @@ describe("runtime-portability lint", () => {
     const result = analyzeRuntimePortability(loadRuntimePortabilityDocs(process.cwd()));
 
     expect(result.violations).toEqual([]);
+  });
+
+  it("U-RPORT-009: rejects bin contracts that require dist before bun link", () => {
+    const packageDoc = validDocs.find((doc) => doc.path === "package.json");
+    const pkg = JSON.parse(packageDoc?.text ?? "{}") as {
+      bin?: Record<string, string>;
+    };
+    pkg.bin = { "ut-tdd": "./dist/ut-tdd" };
+
+    const result = analyzeRuntimePortability([
+      ...validDocs.filter((doc) => doc.path !== "package.json"),
+      { path: "package.json", text: JSON.stringify(pkg) },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.rule)).toContain("package-bin-not-source-cli");
   });
 
   it("U-RPORT-004A: POSIX entrypoint remains a thin sh wrapper for Linux", () => {
