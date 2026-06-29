@@ -184,6 +184,29 @@ describe("g9-system-workflow lint", () => {
     expect(g9SystemWorkflowMessages(result)[0]).toContain("OK");
   });
 
+  it("allows GitHub Actions workflow paths as CI-boundary evidence", () => {
+    const result = analyzeG9SystemWorkflow({
+      repoRoot: process.cwd(),
+      l9TestDesign: `${workflowBlock}\n${stRows}`,
+      gatesMd: gateBlock,
+      evidenceManifests: [
+        {
+          ...validManifest,
+          commands: validManifest.commands.map((command) => ({
+            ...command,
+            evidence_path: ".github/workflows/harness-check.yml",
+          })),
+          coverage: validManifest.coverage.map((entry) => ({
+            ...entry,
+            evidence_paths: [".github/workflows/harness-check.yml"],
+          })),
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
   it("live repo keeps the G9 workflow contract present", () => {
     const result = analyzeG9SystemWorkflow(loadG9SystemWorkflowInput());
 

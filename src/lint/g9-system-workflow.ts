@@ -85,7 +85,13 @@ const REQUIRED_ST_FAMILY_PREFIXES = [
 ] as const;
 const EVIDENCE_MANIFEST_SCHEMA = "g9-system-evidence-v1";
 const EVIDENCE_DIR = ".ut-tdd/evidence/g9-system";
-const ALLOWED_EVIDENCE_PREFIXES = [".ut-tdd/evidence/", "docs/", "src/", "tests/"] as const;
+const ALLOWED_EVIDENCE_PREFIXES = [
+  ".github/workflows/",
+  ".ut-tdd/evidence/",
+  "docs/",
+  "src/",
+  "tests/",
+] as const;
 
 type JsonRecord = Record<string, unknown>;
 

@@ -1,0 +1,497 @@
+{
+  "schema_version": "g9-system-evidence-v1",
+  "gate": "G9",
+  "profile": "st-system-expanded",
+  "plan_id": "PLAN-L7-181-g9-system-coverage-expansion",
+  "selected_st_ids": [
+    "ST-DATA-01",
+    "ST-DATA-02",
+    "ST-DATA-03",
+    "ST-DATA-04",
+    "ST-DATA-05",
+    "ST-ARCH-01",
+    "ST-ARCH-02",
+    "ST-ARCH-03",
+    "ST-ARCH-04",
+    "ST-FUNC-01",
+    "ST-FUNC-01b",
+    "ST-FUNC-02",
+    "ST-FUNC-03",
+    "ST-FUNC-04",
+    "ST-FUNC-05",
+    "ST-FUNC-06",
+    "ST-FUNC-07",
+    "ST-ASSET-01",
+    "ST-ASSET-02",
+    "ST-ASSET-03",
+    "ST-ASSET-05",
+    "ST-ASSET-06",
+    "ST-ASSET-07",
+    "ST-EXT-01",
+    "ST-EXT-02",
+    "ST-EXT-03",
+    "ST-EXT-04"
+  ],
+  "mandatory_st_ids": [
+    "ST-DATA-01",
+    "ST-DATA-02",
+    "ST-DATA-03",
+    "ST-DATA-04",
+    "ST-DATA-05",
+    "ST-ARCH-01",
+    "ST-ARCH-02",
+    "ST-ARCH-03",
+    "ST-ARCH-04",
+    "ST-FUNC-01",
+    "ST-FUNC-01b",
+    "ST-FUNC-02",
+    "ST-FUNC-03",
+    "ST-FUNC-04",
+    "ST-FUNC-05",
+    "ST-FUNC-06",
+    "ST-FUNC-07",
+    "ST-ASSET-01",
+    "ST-ASSET-02",
+    "ST-ASSET-03",
+    "ST-ASSET-05",
+    "ST-ASSET-06",
+    "ST-ASSET-07",
+    "ST-EXT-01",
+    "ST-EXT-02",
+    "ST-EXT-03",
+    "ST-EXT-04"
+  ],
+  "deferred_st_ids": [
+    "ST-ASSET-04"
+  ],
+  "commands": [
+    {
+      "command_id": "cmd-st-data-targeted",
+      "command": "bun run vitest run tests\\gate-static.test.ts tests\\vmodel-pair.test.ts tests\\impl-plan-trace.test.ts tests\\entity-coverage.test.ts tests\\review-evidence.test.ts tests\\g9-system-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/gate-static.test.ts",
+      "output_digest": "sha256:4830898f4dd9b8132ecd4d071ab89c8c46eecde288b5bd0efaa2ecb12bb87b0e",
+      "st_ids": [
+        "ST-DATA-01",
+        "ST-DATA-02",
+        "ST-DATA-03",
+        "ST-DATA-04",
+        "ST-DATA-05"
+      ]
+    },
+    {
+      "command_id": "cmd-st-arch-targeted",
+      "command": "bun run vitest run tests\\dependency-drift.test.ts tests\\agent-guard.test.ts tests\\cli-surface.test.ts tests\\doctor.test.ts tests\\g9-system-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/dependency-drift.test.ts",
+      "output_digest": "sha256:27155d10c52c95cda5006062aa099a49e7bf97f27420356464ed42e34939aeca",
+      "st_ids": [
+        "ST-ARCH-01",
+        "ST-ARCH-02",
+        "ST-ARCH-03",
+        "ST-ARCH-04"
+      ]
+    },
+    {
+      "command_id": "cmd-st-func-targeted",
+      "command": "bun run vitest run tests\\workflow-contracts.test.ts tests\\drive-model-passage.test.ts tests\\forward-convergence.test.ts tests\\backfill-pairing.test.ts tests\\gate-review-tier.test.ts tests\\skill-recommend.test.ts tests\\team-run.test.ts tests\\g9-system-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/workflow-contracts.test.ts",
+      "output_digest": "sha256:1bbf522aeef22c2bc258bd92cd102fda3c5a2315d257cf4fd95f939034bf7692",
+      "st_ids": [
+        "ST-FUNC-01",
+        "ST-FUNC-01b",
+        "ST-FUNC-02",
+        "ST-FUNC-03",
+        "ST-FUNC-04",
+        "ST-FUNC-05",
+        "ST-FUNC-06",
+        "ST-FUNC-07"
+      ]
+    },
+    {
+      "command_id": "cmd-st-asset-targeted",
+      "command": "bun run vitest run tests\\asset-catalog.test.ts tests\\asset-drift.test.ts tests\\agent-slots.test.ts tests\\cli-surface.test.ts tests\\skill-recommend.test.ts tests\\workflow-contracts.test.ts tests\\g9-system-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/asset-catalog.test.ts",
+      "output_digest": "sha256:ee7d6328665e0d264e4d182669d63665a5223754247be413c4b5022776e42631",
+      "st_ids": [
+        "ST-ASSET-01",
+        "ST-ASSET-02",
+        "ST-ASSET-03",
+        "ST-ASSET-05",
+        "ST-ASSET-06",
+        "ST-ASSET-07"
+      ]
+    },
+    {
+      "command_id": "cmd-st-ext-targeted",
+      "command": "bun run vitest run tests\\runtime-adapter.test.ts tests\\agent-guard.test.ts tests\\codex-hook-adapter.test.ts tests\\runtime-hook-entrypoints.test.ts tests\\dependency-drift.test.ts tests\\g9-system-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/runtime-adapter.test.ts",
+      "output_digest": "sha256:c660ed89dfe6fe167981c3e9bdf0e02396ed855b36b677e1898c63f9d33cc463",
+      "st_ids": [
+        "ST-EXT-01",
+        "ST-EXT-02",
+        "ST-EXT-04"
+      ]
+    },
+    {
+      "command_id": "cmd-st-ext-ci",
+      "command": "github-actions harness-check success on pushed commit",
+      "runner": "github-actions",
+      "scope": "ci",
+      "exit_code": 0,
+      "evidence_path": ".github/workflows/harness-check.yml",
+      "output_digest": "sha256:7cf0cfd9fa472809cd5cb2b4d8121291840027bcb46db31b2838fdc5bad6e581",
+      "st_ids": [
+        "ST-EXT-03"
+      ]
+    }
+  ],
+  "coverage": [
+    {
+      "st_id": "ST-DATA-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/gate-static.test.ts",
+        "tests/vmodel-pair.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-data-targeted"
+      ],
+      "notes": "Static gates and V-model pair checks fail closed when downstream verification artifacts are missing."
+    },
+    {
+      "st_id": "ST-DATA-02",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/vmodel-pair.test.ts",
+        "src/vmodel/lint.ts"
+      ],
+      "command_ids": [
+        "cmd-st-data-targeted"
+      ],
+      "notes": "V-model pair freeze validates the design to test-design pair set and rejects orphaned pairs."
+    },
+    {
+      "st_id": "ST-DATA-03",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/impl-plan-trace.test.ts",
+        "tests/plan-artifact-existence.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-data-targeted"
+      ],
+      "notes": "Plan generated artifacts and implementation trace remain machine-checked by doctor."
+    },
+    {
+      "st_id": "ST-DATA-04",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/entity-coverage.test.ts",
+        "src/schema/index.ts"
+      ],
+      "command_ids": [
+        "cmd-st-data-targeted"
+      ],
+      "notes": "Schema-derived entity coverage and registry checks prevent enum/state drift."
+    },
+    {
+      "st_id": "ST-DATA-05",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/review-evidence.test.ts",
+        "src/lint/review-evidence.ts"
+      ],
+      "command_ids": [
+        "cmd-st-data-targeted"
+      ],
+      "notes": "Confirmed design and implementation plans without review evidence fail closed."
+    },
+    {
+      "st_id": "ST-ARCH-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/dependency-drift.test.ts",
+        "src/lint/dependency-drift.ts"
+      ],
+      "command_ids": [
+        "cmd-st-arch-targeted"
+      ],
+      "notes": "Module dependency direction and cycle checks remain fail-closed."
+    },
+    {
+      "st_id": "ST-ARCH-02",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/doctor.test.ts",
+        "tests/gate-static.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-arch-targeted"
+      ],
+      "notes": "Doctor and static gate surfaces aggregate hard gates with exit-code preserving behavior."
+    },
+    {
+      "st_id": "ST-ARCH-03",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/agent-guard.test.ts",
+        "src/runtime/agent-guard.ts"
+      ],
+      "command_ids": [
+        "cmd-st-arch-targeted"
+      ],
+      "notes": "Agent guard model and allowlist validation remains fail-closed."
+    },
+    {
+      "st_id": "ST-ARCH-04",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/cli-surface.test.ts",
+        "src/cli.ts"
+      ],
+      "command_ids": [
+        "cmd-st-arch-targeted"
+      ],
+      "notes": "CLI surfaces exercise status, doctor, plan, routing, and team command integration."
+    },
+    {
+      "st_id": "ST-FUNC-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/drive-model-passage.test.ts",
+        "tests/workflow-contracts.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-func-targeted"
+      ],
+      "notes": "Drive model passage and workflow contracts validate end-to-end mode transitions."
+    },
+    {
+      "st_id": "ST-FUNC-01b",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/forward-convergence.test.ts",
+        "src/lint/forward-convergence.ts"
+      ],
+      "command_ids": [
+        "cmd-st-func-targeted"
+      ],
+      "notes": "Forward convergence verifies correct return to the Forward spine."
+    },
+    {
+      "st_id": "ST-FUNC-02",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/relation-graph-loader.test.ts",
+        "tests/gate-static.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-func-targeted"
+      ],
+      "notes": "Plan, hook, registry, gate, trace, and detector chains are represented through relation graph and gate tests."
+    },
+    {
+      "st_id": "ST-FUNC-03",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/review-evidence.test.ts",
+        "tests/gate-static.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-func-targeted"
+      ],
+      "notes": "Review-before-close and gate checks block implementation claims without green evidence."
+    },
+    {
+      "st_id": "ST-FUNC-04",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/workflow-contracts.test.ts",
+        "src/workflow/routing-contracts.ts"
+      ],
+      "command_ids": [
+        "cmd-st-func-targeted"
+      ],
+      "notes": "Signal to mode routing priority and interruption contracts are covered."
+    },
+    {
+      "st_id": "ST-FUNC-05",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/workflow-contracts.test.ts",
+        "tests/backfill-pairing.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-func-targeted"
+      ],
+      "notes": "Mode versus kind split and frontmatter dependency pairing remain checked."
+    },
+    {
+      "st_id": "ST-FUNC-06",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/gate-review-tier.test.ts",
+        "tests/team-run.test.ts",
+        "tests/review-evidence.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-func-targeted"
+      ],
+      "notes": "Execution mode review tier, human-required fallback, and cross/intra runtime review semantics are checked."
+    },
+    {
+      "st_id": "ST-FUNC-07",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/skill-recommend.test.ts",
+        "tests/team-run.test.ts",
+        "src/skills/recommend.ts"
+      ],
+      "command_ids": [
+        "cmd-st-func-targeted"
+      ],
+      "notes": "Skill recommendation and provider-neutral injection use plan context without global skill loading."
+    },
+    {
+      "st_id": "ST-ASSET-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/asset-catalog.test.ts",
+        "src/runtime/agent-slots-roster.ts"
+      ],
+      "command_ids": [
+        "cmd-st-asset-targeted"
+      ],
+      "notes": "Roster registry scanning and catalog projection cover agent metadata SSoT behavior."
+    },
+    {
+      "st_id": "ST-ASSET-02",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/asset-catalog.test.ts",
+        "tests/agent-guard.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-asset-targeted"
+      ],
+      "notes": "Roster and guard allowlist consistency is checked in catalog and guard tests."
+    },
+    {
+      "st_id": "ST-ASSET-03",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/cli-surface.test.ts",
+        "src/cli.ts"
+      ],
+      "command_ids": [
+        "cmd-st-asset-targeted"
+      ],
+      "notes": "Roster list/check and asset-related CLI surfaces are exposed as JSON command surfaces."
+    },
+    {
+      "st_id": "ST-ASSET-05",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/workflow-contracts.test.ts",
+        "tests/skill-recommend.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-asset-targeted"
+      ],
+      "notes": "Skill catalog, recommendation, and injection building blocks remain covered."
+    },
+    {
+      "st_id": "ST-ASSET-06",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/asset-drift.test.ts",
+        "src/lint/asset-drift.ts"
+      ],
+      "command_ids": [
+        "cmd-st-asset-targeted"
+      ],
+      "notes": "Internal asset drift lint fails closed on legacy residue and missing allowlist docs."
+    },
+    {
+      "st_id": "ST-ASSET-07",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/agent-slots.test.ts",
+        "tests/asset-drift.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-asset-targeted"
+      ],
+      "notes": "Roster capability resolution and guard drift checks are linked."
+    },
+    {
+      "st_id": "ST-EXT-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/agent-guard.test.ts",
+        "tests/runtime-adapter.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-ext-targeted"
+      ],
+      "notes": "AI runtime invocation remains behind guard and adapter contracts."
+    },
+    {
+      "st_id": "ST-EXT-02",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/runtime-adapter.test.ts",
+        "src/runtime/adapter-policy.ts"
+      ],
+      "command_ids": [
+        "cmd-st-ext-targeted"
+      ],
+      "notes": "Runtime availability and degradation behavior are covered."
+    },
+    {
+      "st_id": "ST-EXT-03",
+      "status": "passed",
+      "evidence_paths": [
+        ".github/workflows/harness-check.yml",
+        "tests/doctor.test.ts"
+      ],
+      "command_ids": [
+        "cmd-st-ext-ci"
+      ],
+      "notes": "The CI boundary is represented by the harness-check workflow and verified by the pushed GitHub Actions run."
+    },
+    {
+      "st_id": "ST-EXT-04",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/dependency-drift.test.ts",
+        "src/runtime/adapter.ts",
+        "src/runtime/adapter-policy.ts"
+      ],
+      "command_ids": [
+        "cmd-st-ext-targeted"
+      ],
+      "notes": "Provider SDK isolation and dependency direction are checked through adapter and dependency tests."
+    }
+  ],
+  "exit_criteria": {
+    "all_mandatory_passed": true,
+    "failed_mandatory_count": 0,
+    "stale_defer_count": 0,
+    "doctor_check": "g9-system-workflow"
+  }
+}
