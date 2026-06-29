@@ -117,6 +117,19 @@ the current `evidence_path` SHA256 contract. The bound verification target is
 that `green-command-digest` reports zero mismatches before the correction is
 committed.
 
+## 2026-06-29 Relation-Graph Evidence Rerun
+
+After the relation graph loader gained repo-local hook/config projection nodes,
+14 stale `green_commands[].output_digest` values remained for
+`src/graph/loader.ts` and `tests/relation-graph-loader.test.ts`. This packet
+first re-ran:
+
+- `bun run test tests\relation-graph-loader.test.ts tests\relation-graph.test.ts tests\db-projection-ingestion.test.ts`
+
+The run passed 21 tests across 3 files. Only after that green run, the 14
+digest values reported by `checkGreenCommandDigests(process.cwd())` were aligned
+to the current evidence file hashes.
+
 ## Acceptance Criteria
 
 - `tests/green-command-digest.test.ts`, typecheck, lint, DB rebuild, and doctor
