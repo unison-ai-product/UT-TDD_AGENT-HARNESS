@@ -78,7 +78,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:2a08f62b3f8de0104c840e9941a3c33fc6b4c26e66e0ba47070f6398d93d6590"
+        output_digest: "sha256:1bbf522aeef22c2bc258bd92cd102fda3c5a2315d257cf4fd95f939034bf7692"
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun

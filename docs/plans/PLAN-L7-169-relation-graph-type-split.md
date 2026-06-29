@@ -50,7 +50,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T21:16:39+09:00"
         evidence_path: tests/relation-graph.test.ts
-        output_digest: "sha256:8fc2b804d2261a292e8088835576e390f1e01ad14d1729b1131d78b1efe7b0c8"
+        output_digest: "sha256:248104e6101b259da78ff312b9d5cca334a37fbc250cc66c648cccb7de6efa68"
       - kind: unit_test
         command: "bun run vitest run tests\\relation-graph-loader.test.ts"
         runner: bun
@@ -58,7 +58,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T21:16:43+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:8b119a0324d46bf51628db846951cb9745c10bcb15f7017cc970e3b66a49af2b"
+        output_digest: "sha256:9ace7173778d9bff145f35de04c7497f30afe8f20b61742cfc9fe263aa967985"
       - kind: unit_test
         command: "bun run vitest run tests\\relation-graph.test.ts"
         runner: bun
@@ -66,7 +66,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T21:16:39+09:00"
         evidence_path: src/lint/relation-graph.ts
-        output_digest: "sha256:50db752915d778c7e590d6748fde1eaa73b2ddb22a80aa2e80c4ab6db356dca1"
+        output_digest: "sha256:34334815cdd2d49774e5440183696027be684e82472c6317e73c0dc4b8825de1"
       - kind: unit_test
         command: "bun run vitest run tests\\relation-graph.test.ts"
         runner: bun
@@ -90,7 +90,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T21:17:02+09:00"
         evidence_path: src/lint/relation-graph.ts
-        output_digest: "sha256:50db752915d778c7e590d6748fde1eaa73b2ddb22a80aa2e80c4ab6db356dca1"
+        output_digest: "sha256:34334815cdd2d49774e5440183696027be684e82472c6317e73c0dc4b8825de1"
 ---
 
 # PLAN-L7-169: relation graph type split

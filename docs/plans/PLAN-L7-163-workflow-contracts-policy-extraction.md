@@ -46,7 +46,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:11:58+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:2a08f62b3f8de0104c840e9941a3c33fc6b4c26e66e0ba47070f6398d93d6590"
+        output_digest: "sha256:1bbf522aeef22c2bc258bd92cd102fda3c5a2315d257cf4fd95f939034bf7692"
       - kind: unit_test
         command: "bun run vitest run tests\\workflow-contracts.test.ts"
         runner: bun
@@ -54,7 +54,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:11:58+09:00"
         evidence_path: src/workflow/contracts.ts
-        output_digest: "sha256:fff49252866a549ac96498c868bc193410867829a119f1a93d9d52e36551e791"
+        output_digest: "sha256:6caf60cac4a0d40cc4c6a2f46b26f92f2e6707958f3462c0c643b21ad1af7fd8"
       - kind: unit_test
         command: "bun run vitest run tests\\workflow-contracts.test.ts"
         runner: bun
@@ -70,7 +70,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:15:00+09:00"
         evidence_path: src/workflow/contracts.ts
-        output_digest: "sha256:fff49252866a549ac96498c868bc193410867829a119f1a93d9d52e36551e791"
+        output_digest: "sha256:6caf60cac4a0d40cc4c6a2f46b26f92f2e6707958f3462c0c643b21ad1af7fd8"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -78,7 +78,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:15:00+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:2a08f62b3f8de0104c840e9941a3c33fc6b4c26e66e0ba47070f6398d93d6590"
+        output_digest: "sha256:1bbf522aeef22c2bc258bd92cd102fda3c5a2315d257cf4fd95f939034bf7692"
 ---
 
 # PLAN-L7-163: workflow contracts policy extraction

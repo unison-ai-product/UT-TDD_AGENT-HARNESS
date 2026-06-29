@@ -47,7 +47,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T13:36:00+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:8fcb9eb3733149b75f5f552d3a88b3fcd8f0f6b51fa4fa7531f82f2113d04550"
+        output_digest: "sha256:9ace7173778d9bff145f35de04c7497f30afe8f20b61742cfc9fe263aa967985"
 ---
 
 # PLAN-L7-182: README relation graph projection

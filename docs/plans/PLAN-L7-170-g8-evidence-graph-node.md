@@ -47,7 +47,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T21:05:00+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:0e15ab9cd21665d4e29cddcca5ff78714a4ca4801a7e37754a38cc57c55458ca"
+        output_digest: "sha256:9ace7173778d9bff145f35de04c7497f30afe8f20b61742cfc9fe263aa967985"
       - kind: unit_test
         command: "bun run vitest run tests\\relation-graph-loader.test.ts"
         runner: bun
@@ -55,7 +55,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T21:05:00+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:0b826984a99a3760f8e94fe3fade2d525978387788548757dff4969b61951d5b"
+        output_digest: "sha256:886fb656d14c62daa44ae0de950746537db15eedd9cbff7a86875623bcce6250"
 ---
 
 # PLAN-L7-170: G8 evidence graph node coverage

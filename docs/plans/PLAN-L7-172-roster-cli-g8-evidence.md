@@ -53,7 +53,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T10:23:26+09:00"
         evidence_path: tests/asset-catalog.test.ts
-        output_digest: "sha256:2beb5bbfc435447a43b9a17028f6ff1f3fdb0ed85520d091137ce2ed2224c7e1"
+        output_digest: "sha256:ee7d6328665e0d264e4d182669d63665a5223754247be413c4b5022776e42631"
 ---
 
 # PLAN-L7-172: roster CLI G8 evidence closure

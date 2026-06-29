@@ -55,7 +55,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T20:30:00+09:00"
         evidence_path: tests/g8-integration-workflow.test.ts
-        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        output_digest: "sha256:2eab00f92a5bda76ff43a4b215d4620c117939e3221f808603492b5c7ed77d91"
 ---
 
 # PLAN-L7-168: G8 integration workflow granularity

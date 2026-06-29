@@ -47,7 +47,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T13:05:00+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:d09ad60585e0306200147720871f07d89014bbc2abb8ed374f0eac49a855f0c6"
+        output_digest: "sha256:9ace7173778d9bff145f35de04c7497f30afe8f20b61742cfc9fe263aa967985"
 ---
 
 # PLAN-L7-180: G9 evidence relation graph projection

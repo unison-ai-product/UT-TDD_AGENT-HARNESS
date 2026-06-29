@@ -62,7 +62,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T16:48:56+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:54a0128ece0ed84a75ca94323c74181c81089262a4ef81d406621640215a82dd"
+        output_digest: "sha256:07fd6b9c6fcbabf2c893a28eb0f49f4da7f83f276b88befdbfd7b8c4b5daee51"
       - kind: unit_test
         command: "bun run vitest run tests\\tier-router.test.ts tests\\model-id-ssot.test.ts tests\\agent-guard.test.ts tests\\projection-writer.test.ts"
         runner: bun
@@ -86,7 +86,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:00:41+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:8b119a0324d46bf51628db846951cb9745c10bcb15f7017cc970e3b66a49af2b"
+        output_digest: "sha256:9ace7173778d9bff145f35de04c7497f30afe8f20b61742cfc9fe263aa967985"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -94,7 +94,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T16:49:22+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:d4194530fe20b96ef4740ccdf70dbe323771ee2dfc3a4529b9e580e86602cffc"
+        output_digest: "sha256:886fb656d14c62daa44ae0de950746537db15eedd9cbff7a86875623bcce6250"
       - kind: smoke
         command: "bun run src\\cli.ts db rebuild"
         runner: bun

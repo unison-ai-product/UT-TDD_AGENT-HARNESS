@@ -88,7 +88,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: tests/runtime-adapter.test.ts
-        output_digest: "sha256:6b44d631e7c6bcc39784a825d2ac0f4e72a2d0fc9758b420fb915b691244f95a"
+        output_digest: "sha256:c660ed89dfe6fe167981c3e9bdf0e02396ed855b36b677e1898c63f9d33cc463"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -96,7 +96,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: src/runtime/adapter.ts
-        output_digest: "sha256:29ce38af802aed290df9ccd3bd38897cf77ced160e84a82518ea6aaa495cc3f2"
+        output_digest: "sha256:fd744456923aca733ea2e6958609d32f7da521947cd1c5be7505d96e8c6d98c4"
 ---
 
 # PLAN-REVERSE-135: Dynamic skill injection materialization fullback

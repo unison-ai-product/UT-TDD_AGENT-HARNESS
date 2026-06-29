@@ -46,7 +46,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:26:25+09:00"
         evidence_path: tests/agent-slots.test.ts
-        output_digest: "sha256:4ba79df8616947d7aa79bb8e118432be118bca2df24ba1f73780c08634c1e9ff"
+        output_digest: "sha256:2c90f1df8bda38848baf626da364b9c5a4891e99834f56134c8ed6f452cef977"
       - kind: unit_test
         command: "bun run vitest run tests\\agent-slots.test.ts"
         runner: bun
@@ -54,7 +54,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:26:25+09:00"
         evidence_path: src/runtime/agent-slots.ts
-        output_digest: "sha256:314909224372631dfcf07978c2349ca272f7c5658fa7c0af415d51067a330d38"
+        output_digest: "sha256:d1f4edb6684c79b5dcce88d2f6ba14c315b9575e448b9b599fbd04abf8c54172"
       - kind: unit_test
         command: "bun run vitest run tests\\agent-slots.test.ts"
         runner: bun
@@ -70,7 +70,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:26:37+09:00"
         evidence_path: src/runtime/agent-slots.ts
-        output_digest: "sha256:314909224372631dfcf07978c2349ca272f7c5658fa7c0af415d51067a330d38"
+        output_digest: "sha256:d1f4edb6684c79b5dcce88d2f6ba14c315b9575e448b9b599fbd04abf8c54172"
 ---
 
 # PLAN-L7-164: agent slots roster resolver split

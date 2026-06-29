@@ -96,7 +96,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T21:20:00+09:00"
         evidence_path: tests/g8-integration-workflow.test.ts
-        output_digest: "sha256:fa256d0890c52c151aa718e56146b0830df23c20fa2dd6eb83b28452347b864d"
+        output_digest: "sha256:2eab00f92a5bda76ff43a4b215d4620c117939e3221f808603492b5c7ed77d91"
 ---
 
 # PLAN-REVERSE-169: G8 evidence manifest fullback

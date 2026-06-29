@@ -65,7 +65,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:40:00+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:91f2a2d6bd146b908ca47168a8102ca955f709e0c2d9df911336d818975998c5"
+        output_digest: "sha256:bc3e71d18106161f895a895c91a98bf5976675a103edb2387a346e68aed4142b"
       - kind: unit_test
         command: "bun run vitest run tests/cli-surface.test.ts"
         runner: bun
@@ -73,7 +73,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:41:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:02dfec21181e8478f0ba3da13c010c8f155d45c9202ef008eb13fcbf3364dfb5"
+        output_digest: "sha256:da7a8bcf83c33107f83f7e47f9b64f20ebb9ee0ce4392df0c7bf12b3a9001dd9"
       - kind: unit_test
         command: "bun run vitest run tests/runtime-portability.test.ts"
         runner: bun
@@ -81,7 +81,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:42:00+09:00"
         evidence_path: tests/runtime-portability.test.ts
-        output_digest: "sha256:d5760a2295325537bab5c8c43333b48628cc796f541b0ec2d22b63da850aa883"
+        output_digest: "sha256:5a2a4a64c94334bddd84f505a38d23514b23664a6f92f2fea268af0c74d4b4d3"
       - kind: unit_test
         command: "bun run vitest run tests/work-guard.test.ts"
         runner: bun
@@ -97,7 +97,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:44:00+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:be796648c6b7a34bcc93f007ad7a6b9c4c5ac0765a42f243b10b3b7378f2147b"
+        output_digest: "sha256:760092d256596c0e8b9bbaeae77e5e37d5cca0acb85925c84e2049666f7904d6"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -105,7 +105,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:44:10+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:517832835f03fa606ae79b8709c6d4bd0e229b4461303aa6616cad8d92b87a2c"
+        output_digest: "sha256:dd3ce89791be3cb7394a69b3c19c79abe44c0fb2604a312808c70e0e7c20ceff"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -113,7 +113,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:44:20+09:00"
         evidence_path: src/lint/runtime-portability.ts
-        output_digest: "sha256:3b4ed93f78c9f90bf917bc12720c0ef2df85c56017ebc57e3cd284adf2de975d"
+        output_digest: "sha256:ddc3d38724afe184757dd66da47ede42ce419a839010b0545b6ed5237f833e13"
       - kind: unit_test
         command: "bun run vitest run tests/work-guard.test.ts"
         runner: bun
@@ -129,7 +129,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:45:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:517832835f03fa606ae79b8709c6d4bd0e229b4461303aa6616cad8d92b87a2c"
+        output_digest: "sha256:dd3ce89791be3cb7394a69b3c19c79abe44c0fb2604a312808c70e0e7c20ceff"
 ---
 
 # PLAN-L7-170: 外部レビュー remediation (4 findings + digest 再stamp)
