@@ -348,13 +348,9 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
     addDesignDocIfAbsent(designDocs, path);
   }
 
-  const integrationEvidenceDocs: string[] = [];
-  walkJson(
-    join(repoRoot, ".ut-tdd", "evidence", "g8-integration"),
-    repoRoot,
-    integrationEvidenceDocs,
-  );
-  for (const path of integrationEvidenceDocs) {
+  const evidenceDocs: string[] = [];
+  walkJson(join(repoRoot, ".ut-tdd", "evidence"), repoRoot, evidenceDocs);
+  for (const path of evidenceDocs) {
     addDesignDocIfAbsent(designDocs, path);
   }
 
