@@ -14,6 +14,7 @@
     "IT-ASSET-07"
   ],
   "mandatory_it_ids": [
+    "IT-ADAPTER-01",
     "IT-ASSET-01",
     "IT-ASSET-02",
     "IT-ASSET-03",
@@ -94,20 +95,33 @@
       "it_ids": [
         "IT-ASSET-07"
       ]
+    },
+    {
+      "command_id": "cmd-adapter-invoke-result-targeted",
+      "command": "bun run vitest run tests\\runtime-adapter.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/runtime-adapter.test.ts",
+      "output_digest": "sha256:6d8a6b0faeac5d0a2aad8a3575c84d04f65340372fd8396694955c2cace56ee7",
+      "it_ids": [
+        "IT-ADAPTER-01"
+      ]
     }
   ],
   "coverage": [
     {
       "it_id": "IT-ADAPTER-01",
-      "status": "partial",
+      "status": "passed",
       "evidence_paths": [
         "tests/runtime-adapter.test.ts",
         "src/runtime/adapter.ts"
       ],
       "command_ids": [
-        "cmd-adapter-asset-targeted"
+        "cmd-adapter-asset-targeted",
+        "cmd-adapter-invoke-result-targeted"
       ],
-      "notes": "Covers provider-neutral AdapterPlan construction; InvokeResult/mock provider normalization remains unproven."
+      "notes": "Covers provider-neutral AdapterPlan construction plus mock provider ProviderRunResult to provider-independent InvokeResult normalization, including success, missing-output malformed payload, and launch-error provider_error fail-closed paths."
     },
     {
       "it_id": "IT-ASSET-01",

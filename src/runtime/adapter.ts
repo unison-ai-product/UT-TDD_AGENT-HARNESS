@@ -55,6 +55,40 @@ export interface AdapterPlan {
   messages: string[];
 }
 
+export type AdapterErrorClass = "provider_error" | "malformed_output";
+
+export interface ProviderRunResult {
+  status: number | null;
+  signal?: string | null;
+  stdout?: string | Buffer | null;
+  stderr?: string | Buffer | null;
+  error?: unknown;
+}
+
+export type InvokeResult =
+  | {
+      ok: true;
+      provider: AdapterProvider;
+      plan_id?: string;
+      command: string;
+      args: string[];
+      exit_code: number;
+      output: string;
+      stderr: string;
+    }
+  | {
+      ok: false;
+      provider: AdapterProvider;
+      plan_id?: string;
+      command: string;
+      args: string[];
+      exit_code: number | null;
+      signal: string | null;
+      error_class: AdapterErrorClass;
+      message: string;
+      stderr: string;
+    };
+
 export interface ProviderCommandResolutionOptions {
   env?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
@@ -303,6 +337,68 @@ export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): Ad
     messages: available
       ? [intent.execute ? ADAPTER_AVAILABLE_MESSAGE : ADAPTER_DRY_RUN_MESSAGE]
       : [unavailableProviderMessage(intent.provider, mode)],
+  };
+}
+
+function bufferToString(value: string | Buffer | null | undefined): string {
+  if (Buffer.isBuffer(value)) return value.toString("utf8");
+  return value ?? "";
+}
+
+export function normalizeInvokeResult(plan: AdapterPlan, run: ProviderRunResult): InvokeResult {
+  const stderr = bufferToString(run.stderr);
+  if (run.error) {
+    return {
+      ok: false,
+      provider: plan.provider,
+      plan_id: plan.plan_id,
+      command: plan.command,
+      args: plan.args,
+      exit_code: run.status,
+      signal: run.signal ?? null,
+      error_class: "provider_error",
+      message: String(run.error),
+      stderr,
+    };
+  }
+  if (run.status !== 0) {
+    return {
+      ok: false,
+      provider: plan.provider,
+      plan_id: plan.plan_id,
+      command: plan.command,
+      args: plan.args,
+      exit_code: run.status,
+      signal: run.signal ?? null,
+      error_class: "provider_error",
+      message: stderr.trim() || `${plan.provider} exited with status ${run.status ?? "null"}`,
+      stderr,
+    };
+  }
+  const output = bufferToString(run.stdout).trim();
+  if (!output) {
+    return {
+      ok: false,
+      provider: plan.provider,
+      plan_id: plan.plan_id,
+      command: plan.command,
+      args: plan.args,
+      exit_code: run.status,
+      signal: run.signal ?? null,
+      error_class: "malformed_output",
+      message: "provider returned success without output",
+      stderr,
+    };
+  }
+  return {
+    ok: true,
+    provider: plan.provider,
+    plan_id: plan.plan_id,
+    command: plan.command,
+    args: plan.args,
+    exit_code: run.status,
+    output,
+    stderr,
   };
 }
 

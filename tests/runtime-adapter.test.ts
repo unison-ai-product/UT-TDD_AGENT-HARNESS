@@ -6,6 +6,7 @@ import {
   buildAdapterPlan,
   buildProviderInvocation,
   isProviderCommandSpawnable,
+  normalizeInvokeResult,
   providerAvailable,
   resolveClaudeNativeCommand,
   resolveCodexNativeCommand,
@@ -280,5 +281,75 @@ describe("runtime adapter plan", () => {
     });
     expect(invocation.command).not.toContain("<invoke");
     expect(invocation.command).not.toContain("\n");
+  });
+
+  it("IT-ADAPTER-01: normalizes a mock provider success into provider-independent InvokeResult", () => {
+    const plan = buildAdapterPlan(
+      {
+        provider: "codex",
+        role: "se",
+        task: "implement adapter boundary",
+        planId: "PLAN-L7-176-adapter-invoke-result-g8-evidence",
+      },
+      "hybrid",
+    );
+
+    const result = normalizeInvokeResult(plan, {
+      status: 0,
+      stdout: Buffer.from("done\n"),
+      stderr: Buffer.from("note\n"),
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      provider: "codex",
+      plan_id: "PLAN-L7-176-adapter-invoke-result-g8-evidence",
+      command: "codex",
+      exit_code: 0,
+      output: "done",
+      stderr: "note\n",
+    });
+    if (result.ok) {
+      expect(result.args).toEqual(plan.args);
+    }
+  });
+
+  it("IT-ADAPTER-01: fails closed when a successful provider returns missing output", () => {
+    const plan = buildAdapterPlan(
+      { provider: "claude", role: "tl", task: "review", planId: "PLAN-L7-176" },
+      "hybrid",
+    );
+
+    const result = normalizeInvokeResult(plan, { status: 0, stdout: "   \n", stderr: "" });
+
+    expect(result).toMatchObject({
+      ok: false,
+      provider: "claude",
+      plan_id: "PLAN-L7-176",
+      exit_code: 0,
+      error_class: "malformed_output",
+      message: "provider returned success without output",
+    });
+  });
+
+  it("IT-ADAPTER-01: carries provider launch errors as provider_error without throwing", () => {
+    const plan = buildAdapterPlan({ provider: "codex", role: "se", task: "run" }, "hybrid");
+
+    const result = normalizeInvokeResult(plan, {
+      status: null,
+      signal: null,
+      error: new Error("ENOENT codex"),
+      stderr: "missing binary",
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      provider: "codex",
+      exit_code: null,
+      signal: null,
+      error_class: "provider_error",
+      message: "Error: ENOENT codex",
+      stderr: "missing binary",
+    });
   });
 });
