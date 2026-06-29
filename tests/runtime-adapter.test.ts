@@ -17,6 +17,7 @@ import {
   CLAUDE_STDIN_ARGS,
   CODEX_MODEL_FLAG,
   CODEX_STDIN_ARGS,
+  mapAdapterErrorPolicy,
   REQUIRED_SKILL_LABEL,
 } from "../src/runtime/adapter-policy";
 
@@ -350,6 +351,125 @@ describe("runtime adapter plan", () => {
       error_class: "provider_error",
       message: "Error: ENOENT codex",
       stderr: "missing binary",
+    });
+  });
+
+  it("IT-ADAPTER-02: degrades an absent provider only when fallback is allowed", () => {
+    const degraded = mapAdapterErrorPolicy({
+      kind: "absent",
+      provider: "codex",
+      retryable: false,
+      message: "codex binary not found",
+    });
+    expect(degraded).toMatchObject({
+      ok: true,
+      action: "degrade",
+      exit_code: 0,
+      severity: "warn",
+      next_action: expect.stringContaining("downgrade mode"),
+    });
+
+    const blocked = mapAdapterErrorPolicy(
+      {
+        kind: "absent",
+        provider: "claude",
+        retryable: false,
+        message: "claude binary not found",
+      },
+      { degradationAllowed: false },
+    );
+    expect(blocked).toMatchObject({
+      ok: false,
+      action: "fail-close",
+      exit_code: 1,
+      severity: "error",
+      next_action: expect.stringContaining("install or enable claude"),
+    });
+  });
+
+  it("IT-ADAPTER-02: fails closed on authentication errors with provider login guidance", () => {
+    const decision = mapAdapterErrorPolicy({
+      kind: "auth",
+      provider: "codex",
+      retryable: false,
+      message: "codex is not logged in",
+    });
+
+    expect(decision).toMatchObject({
+      ok: false,
+      action: "fail-close",
+      exit_code: 1,
+      severity: "error",
+      next_action: "run codex login and retry",
+    });
+  });
+
+  it("IT-ADAPTER-02: retries rate limits only until exhaustion", () => {
+    const retry = mapAdapterErrorPolicy({
+      kind: "rate-limit",
+      provider: "claude",
+      retryable: true,
+      message: "plan limit reached",
+    });
+    expect(retry).toMatchObject({
+      ok: false,
+      action: "retry",
+      exit_code: 75,
+      severity: "warn",
+    });
+
+    const exhausted = mapAdapterErrorPolicy(
+      {
+        kind: "rate-limit",
+        provider: "claude",
+        retryable: true,
+        message: "plan limit reached",
+      },
+      { retryExhausted: true },
+    );
+    expect(exhausted).toMatchObject({
+      ok: false,
+      action: "fail-close",
+      exit_code: 1,
+      severity: "error",
+      next_action: expect.stringContaining("retry exhaustion"),
+    });
+  });
+
+  it("IT-ADAPTER-02: skips timed-out items after the bounded retry budget", () => {
+    const decision = mapAdapterErrorPolicy(
+      {
+        kind: "timeout",
+        provider: "codex",
+        retryable: true,
+        message: "provider timed out",
+      },
+      { retryExhausted: true },
+    );
+
+    expect(decision).toMatchObject({
+      ok: true,
+      action: "skip",
+      exit_code: 0,
+      severity: "warn",
+      next_action: expect.stringContaining("skip the affected item"),
+    });
+  });
+
+  it("IT-ADAPTER-02: fails closed on unknown provider errors", () => {
+    const decision = mapAdapterErrorPolicy({
+      kind: "unknown",
+      provider: "claude",
+      retryable: false,
+      message: "unexpected provider stderr",
+    });
+
+    expect(decision).toMatchObject({
+      ok: false,
+      action: "fail-close",
+      exit_code: 1,
+      severity: "error",
+      next_action: expect.stringContaining("classify"),
     });
   });
 });

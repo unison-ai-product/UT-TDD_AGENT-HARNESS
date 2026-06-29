@@ -5,6 +5,7 @@
   "plan_id": "PLAN-L7-171-g8-adapter-asset-evidence",
   "selected_it_ids": [
     "IT-ADAPTER-01",
+    "IT-ADAPTER-02",
     "IT-ASSET-01",
     "IT-ASSET-02",
     "IT-ASSET-03",
@@ -15,6 +16,7 @@
   ],
   "mandatory_it_ids": [
     "IT-ADAPTER-01",
+    "IT-ADAPTER-02",
     "IT-ASSET-01",
     "IT-ASSET-02",
     "IT-ASSET-03",
@@ -24,7 +26,6 @@
     "IT-ASSET-07"
   ],
   "deferred_it_ids": [
-    "IT-ADAPTER-02",
     "IT-ADAPTER-03"
   ],
   "commands": [
@@ -107,6 +108,18 @@
       "it_ids": [
         "IT-ADAPTER-01"
       ]
+    },
+    {
+      "command_id": "cmd-adapter-error-policy-targeted",
+      "command": "bun run vitest run tests\\runtime-adapter.test.ts tests\\g8-integration-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/runtime-adapter.test.ts",
+      "output_digest": "sha256:c660ed89dfe6fe167981c3e9bdf0e02396ed855b36b677e1898c63f9d33cc463",
+      "it_ids": [
+        "IT-ADAPTER-02"
+      ]
     }
   ],
   "coverage": [
@@ -122,6 +135,18 @@
         "cmd-adapter-invoke-result-targeted"
       ],
       "notes": "Covers provider-neutral AdapterPlan construction plus mock provider ProviderRunResult to provider-independent InvokeResult normalization, including success, missing-output malformed payload, and launch-error provider_error fail-closed paths."
+    },
+    {
+      "it_id": "IT-ADAPTER-02",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/runtime-adapter.test.ts",
+        "src/runtime/adapter-policy.ts"
+      ],
+      "command_ids": [
+        "cmd-adapter-error-policy-targeted"
+      ],
+      "notes": "Covers adapter error-policy mapping for absent/auth/rate-limit/timeout/unknown provider errors. Absent degrades only when allowed, auth and unknown fail closed, rate-limit retries until exhaustion then fails, and timeout skips the affected item after bounded retry exhaustion."
     },
     {
       "it_id": "IT-ASSET-01",
