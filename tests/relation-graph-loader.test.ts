@@ -19,6 +19,7 @@ function buildRepo(root: string): void {
   mkdirSync(join(root, "docs", "process", "modes"), { recursive: true });
   mkdirSync(join(root, "docs", "test-design", "harness"), { recursive: true });
   mkdirSync(join(root, ".claude", "agents"), { recursive: true });
+  mkdirSync(join(root, ".codex"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "evidence", "g8-integration"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "evidence", "g9-system"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "evidence", "g10-ux"), { recursive: true });
@@ -146,6 +147,11 @@ function buildRepo(root: string): void {
   writeFileSync(
     join(root, ".editorconfig"),
     ["root = true", "", "[*]", "charset = utf-8", ""].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(root, ".codex", "hooks.json"),
+    JSON.stringify({ hooks: { PreToolUse: [] } }, null, 2),
     "utf8",
   );
   writeFileSync(join(root, "README.md"), "# Fixture README\n", "utf8");
@@ -356,6 +362,14 @@ describe("loadRelationGraphSourceSet", () => {
       expect(editorconfigImpact.changedNodes.map((n) => n.id)).toContain("design:.editorconfig");
       expect(editorconfigImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
+      const codexHooksImpact = analyzeRelationImpact({
+        changedPaths: [".codex/hooks.json"],
+        projection,
+      });
+      expect(codexHooksImpact.ok).toBe(true);
+      expect(codexHooksImpact.changedNodes.map((n) => n.id)).toContain("design:.codex/hooks.json");
+      expect(codexHooksImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
       // export: mermaid is always emittable and contains the changed source node
       const diagram = exportRelationDiagram({ snapshot: projection, format: "mermaid" });
       expect(diagram.ok).toBe(true);
@@ -520,5 +534,12 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     expect(editorconfigImpact.ok).toBe(true);
     expect(editorconfigImpact.changedNodes.map((n) => n.id)).toContain("design:.editorconfig");
     expect(editorconfigImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const codexHooksImpact = analyzeRelationImpact({
+      changedPaths: [".codex/hooks.json"],
+      projection,
+    });
+    expect(codexHooksImpact.ok).toBe(true);
+    expect(codexHooksImpact.changedNodes.map((n) => n.id)).toContain("design:.codex/hooks.json");
+    expect(codexHooksImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
   });
 });

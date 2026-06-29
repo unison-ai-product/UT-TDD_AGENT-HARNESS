@@ -198,6 +198,9 @@ const REFERENCE_DOCS = ["docs/reference/ai-agent-harness-directory-reference.md"
 const GOVERNANCE_DOCS = ["docs/governance/repository-structure.md"] as const;
 const ROOT_CANONICAL_DOCS = ["README.md"] as const;
 const ROOT_CONFIG_DOCS = [
+  ".claude/settings.json",
+  ".codex/config.toml",
+  ".codex/hooks.json",
   ".editorconfig",
   ".gitattributes",
   "biome.json",
