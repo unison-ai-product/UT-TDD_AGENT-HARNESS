@@ -491,6 +491,12 @@ function projectHookEvents(
           },
         });
         projectRuntimeTestRunFromSessionEvent({ db, plans, event, evidencePath: relPath });
+        projectRuntimeGuardrailDecisionFromSessionEvent({
+          db,
+          plans,
+          event,
+          evidencePath: relPath,
+        });
       }
     }
   }
@@ -540,6 +546,13 @@ export interface RuntimeTestRunProjectionInput {
   evidencePath: string;
 }
 
+export interface RuntimeGuardrailDecisionProjectionInput {
+  db: HarnessDb;
+  plans: Map<string, ProjectedPlan>;
+  event: SessionLogProjection;
+  evidencePath: string;
+}
+
 export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProjectionInput): void {
   const { db, plans, event, evidencePath } = input;
   if (!event.session_id || !event.plan_id || !event.ts) return;
@@ -571,6 +584,34 @@ export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProje
       output_digest: "",
       green_definition_id: "",
       status,
+    },
+  });
+}
+
+export function projectRuntimeGuardrailDecisionFromSessionEvent(
+  input: RuntimeGuardrailDecisionProjectionInput,
+): void {
+  const { db, plans, event, evidencePath } = input;
+  if (!event.session_id || !event.plan_id || !event.ts) return;
+  if (event.event_type !== "forced_stop") return;
+  const planId = resolveProjectedPlanId(plans, event.plan_id);
+  const guardrailDecisionId = stableId(
+    "guardrail-runtime",
+    `${event.session_id}:${planId}:${event.ts}:forced-stop:${event.outcome ?? ""}`,
+  );
+  recordProjectionEvent(db, {
+    table: "guardrail_decisions",
+    id: guardrailDecisionId,
+    row: {
+      guardrail_decision_id: guardrailDecisionId,
+      plan_id: planId,
+      session_id: event.session_id,
+      guardrail: "forced-stop",
+      decision: "block",
+      mode: "runtime-hook",
+      human_signoff_required: 0,
+      evidence_path: evidencePath,
+      decided_at: event.ts,
     },
   });
 }

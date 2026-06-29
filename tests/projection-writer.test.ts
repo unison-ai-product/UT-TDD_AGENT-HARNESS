@@ -8,6 +8,7 @@ import { projectRefactorCandidateSignals } from "../src/state-db/feedback-projec
 import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
 import {
+  projectRuntimeGuardrailDecisionFromSessionEvent,
   projectRuntimeTestRunFromSessionEvent,
   rebuildHarnessDb,
   recordProjectionEvent,
@@ -560,6 +561,86 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
         exit_code: 0,
         status: "passed",
         evidence_path: ".ut-tdd/logs/session/session-runtime-1.jsonl",
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("projects runtime guardrail_decisions from forced-stop session events only", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      recordProjectionEvent(db, {
+        table: "plan_registry",
+        id: "PLAN-L7-200-runtime-guardrail-provenance",
+        row: {
+          plan_id: "PLAN-L7-200-runtime-guardrail-provenance",
+          kind: "impl",
+          layer: "L7",
+          drive: "db",
+          status: "confirmed",
+          title: "runtime guardrail provenance",
+          source_path: "docs/plans/PLAN-L7-200-runtime-guardrail-provenance.md",
+          source_hash: "sha256:test",
+          updated_at: "2026-06-29T00:00:00Z",
+        },
+      });
+      const plans = new Map([
+        [
+          "PLAN-L7-200-runtime-guardrail-provenance",
+          {
+            planId: "PLAN-L7-200-runtime-guardrail-provenance",
+            kind: "impl",
+            layer: "L7",
+            drive: "db",
+            status: "confirmed",
+            updatedAt: "2026-06-29T00:00:00Z",
+          },
+        ],
+      ]);
+
+      projectRuntimeGuardrailDecisionFromSessionEvent({
+        db,
+        plans,
+        event: {
+          ts: "2026-06-29T00:01:00Z",
+          session_id: "session-guardrail-1",
+          plan_id: "PLAN-L7-200-runtime-guardrail-provenance",
+          event_type: "forced_stop",
+          outcome: "error",
+        },
+        evidencePath: ".ut-tdd/logs/session/session-guardrail-1.jsonl",
+      });
+      projectRuntimeGuardrailDecisionFromSessionEvent({
+        db,
+        plans,
+        event: {
+          ts: "2026-06-29T00:02:00Z",
+          session_id: "session-guardrail-1",
+          plan_id: "PLAN-L7-200-runtime-guardrail-provenance",
+          event_type: "tool_use",
+          tool: "Bash",
+          target: "Bash (git)",
+          outcome: "ok",
+        },
+        evidencePath: ".ut-tdd/logs/session/session-guardrail-1.jsonl",
+      });
+
+      const rows = db
+        .prepare(
+          "SELECT session_id, guardrail, decision, mode, human_signoff_required, evidence_path, decided_at FROM guardrail_decisions",
+        )
+        .all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        session_id: "session-guardrail-1",
+        guardrail: "forced-stop",
+        decision: "block",
+        mode: "runtime-hook",
+        human_signoff_required: 0,
+        evidence_path: ".ut-tdd/logs/session/session-guardrail-1.jsonl",
+        decided_at: "2026-06-29T00:01:00Z",
       });
     } finally {
       db.close();

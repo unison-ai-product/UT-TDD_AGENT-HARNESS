@@ -141,7 +141,11 @@ state until runtime capture is wired, but verification-strategy close cannot
 treat projection-only telemetry as substance. Doctor overlays runtime
 Claude/Codex session usage on its in-memory rebuild and projects valued
 `model_runs` rows from JSONL token/cost telemetry; deterministic `db rebuild`
-remains a source projection and does not scan user runtime logs.
+remains a source projection and does not scan user runtime logs. Session-log
+`forced_stop` events are runtime safety decisions and project into
+`guardrail_decisions` with non-empty `session_id`, `mode=runtime-hook`, and the
+session JSONL as evidence; ordinary `tool_use` events must not fabricate
+guardrail telemetry.
 
 ## §3 値オブジェクトの物理表現 + SubDoc zod 化 (IMP-026)
 
