@@ -41,6 +41,16 @@ generates:
     artifact_type: template
   - artifact_path: docs/templates/adapter/.claude/settings.json
     artifact_type: template
+  - artifact_path: docs/templates/adapter/.codex/config.toml
+    artifact_type: template
+  - artifact_path: docs/templates/adapter/.codex/hooks.json
+    artifact_type: template
+  - artifact_path: docs/templates/adapter/.claude/agents/ut-tdd-tl.md
+    artifact_type: template
+  - artifact_path: docs/templates/adapter/.claude/commands/ut-tdd-status.md
+    artifact_type: template
+  - artifact_path: docs/templates/adapter/.claude/commands/ut-tdd-test.md
+    artifact_type: template
   - artifact_path: LICENSE
     artifact_type: doc_update
   - artifact_path: package.json
@@ -81,7 +91,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T18:37:05+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:bc3e71d18106161f895a895c91a98bf5976675a103edb2387a346e68aed4142b"
+        output_digest: "sha256:b1245c6c8110617c60f46cc104336474c7dd8e1c15c53b9b5c97d85b0abeafc0"
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -97,7 +107,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T18:35:12+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:dd3ce89791be3cb7394a69b3c19c79abe44c0fb2604a312808c70e0e7c20ceff"
+        output_digest: "sha256:dc3d12167b43a3265898caa59a0d4f69f5005774aa7b366ca29392610636c82f"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -113,7 +123,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T18:38:19+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:dd3ce89791be3cb7394a69b3c19c79abe44c0fb2604a312808c70e0e7c20ceff"
+        output_digest: "sha256:dc3d12167b43a3265898caa59a0d4f69f5005774aa7b366ca29392610636c82f"
       - kind: smoke
         command: "bun run vitest run tests\\distribution-acceptance.test.ts"
         runner: bun
@@ -121,7 +131,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T19:36:48+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
-        output_digest: "sha256:e897b11cfffafe9dc295467b9bb8ba97629899ad41c86f035925431a4b0251d1"
+        output_digest: "sha256:2a8f68b836c8e8f6077c24e29687e352b5e30787e3a80c7dec8773204b3b0cf9"
 ---
 
 # PLAN-L7-157 (impl): clean 配布物 (dogfood 非搭載・画面なし・別PCで使える)

@@ -35,6 +35,7 @@ export interface L14CloseAuditViolation {
     | "unknown_status"
     | "missing_evidence_path"
     | "missing_required_evidence_path"
+    | "missing_boundary_marker"
     | "partial_without_gap"
     | "open_without_next_action";
 }
@@ -89,6 +90,47 @@ const REQUIRED_EVIDENCE_BY_ITEM: Partial<Record<(typeof EXPECTED_ITEMS)[number],
     "docs/plans/PLAN-L7-132-green-command-digest-integrity.md",
     "docs/plans/PLAN-L7-174-green-command-digest-correction.md",
   ],
+};
+
+const REQUIRED_BOUNDARY_MARKERS_BY_ITEM: Partial<
+  Record<(typeof EXPECTED_ITEMS)[number], { gap: string[]; nextAction: string[] }>
+> = {
+  "claude-codex-parity": {
+    gap: ["hosted/api"],
+    nextAction: ["hosted/api", "preflight"],
+  },
+  "clean-distribution-package": {
+    gap: ["clean public repo", "signed tarball"],
+    nextAction: ["po approval"],
+  },
+  "version-up-nonbreaking": {
+    gap: ["released tag"],
+    nextAction: ["tag-pin", "rollback"],
+  },
+  "l11-uat-boundary": {
+    gap: ["po", "uat"],
+    nextAction: ["po uat"],
+  },
+  "l12-release-acceptance-boundary": {
+    gap: ["approved release target", "human signoff"],
+    nextAction: ["release acceptance"],
+  },
+  "l13-post-deploy-boundary": {
+    gap: ["public", "consumer deployment"],
+    nextAction: ["after publication", "post-deploy"],
+  },
+  "l14-ops-feedback-boundary": {
+    gap: ["real operations data", "released consumer project"],
+    nextAction: ["post-release operations", "feedback_events"],
+  },
+  "l8-l14-right-arm": {
+    gap: ["po final signoff", "post-deploy"],
+    nextAction: ["po signoff", "post-deploy"],
+  },
+  "release-publication-boundary": {
+    gap: ["clean github repo", "tag push", "signed tarball"],
+    nextAction: ["po approval", "checksums", "signature"],
+  },
 };
 
 function section(content: string): string {
@@ -146,6 +188,11 @@ function pathExists(repoRoot: string, path: string): boolean {
   return existsSync(join(repoRoot, path));
 }
 
+function hasAllMarkers(text: string, markers: string[]): boolean {
+  const normalized = text.toLowerCase();
+  return markers.every((marker) => normalized.includes(marker.toLowerCase()));
+}
+
 export function analyzeL14CloseAudit(
   docs: L14CloseAuditDoc[],
   repoRoot: string = process.cwd(),
@@ -201,6 +248,15 @@ export function analyzeL14CloseAudit(
         REQUIRED_EVIDENCE_BY_ITEM[item as (typeof EXPECTED_ITEMS)[number]] ?? [];
       if (requiredPaths.some((path) => !paths.includes(path))) {
         violations.push({ file: doc.file, item, reason: "missing_required_evidence_path" });
+      }
+      const requiredBoundary =
+        REQUIRED_BOUNDARY_MARKERS_BY_ITEM[item as (typeof EXPECTED_ITEMS)[number]];
+      if (
+        requiredBoundary &&
+        (!hasAllMarkers(gap, requiredBoundary.gap) ||
+          !hasAllMarkers(nextAction, requiredBoundary.nextAction))
+      ) {
+        violations.push({ file: doc.file, item, reason: "missing_boundary_marker" });
       }
       if (status === "partial" && /^(none|n\/a|なし)$/i.test(gap.trim())) {
         violations.push({ file: doc.file, item, reason: "partial_without_gap" });

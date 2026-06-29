@@ -1,0 +1,42 @@
+{
+  "$comment": "UT-TDD Codex adapter hooks. Hosted/API tool surfaces still require explicit `ut-tdd guard preflight` before edits because repo-local Codex hooks do not execute there.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ut-tdd session start",
+            "timeout": 5,
+            "statusMessage": "session-log: session start (fail-open)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|write_file|exec_command|local_shell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ut-tdd hook post-tool-use",
+            "timeout": 5,
+            "statusMessage": "session-log: post tool use (fail-open)"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ut-tdd session summary",
+            "timeout": 5,
+            "statusMessage": "session-log: PLAN digest summary (fail-open)"
+          }
+        ]
+      }
+    ]
+  }
+}

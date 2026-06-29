@@ -16,20 +16,20 @@ const compliant = `# A-TEST
 |---|---|---|---|---|---|
 | workflow-definition | Workflow docs are coherent to L14. | \`tests/l14-close-audit.test.ts\` | none | keep doctor wired | \`closed\` |
 | system-foundation | Core gates prove system foundation. | \`tests/l14-close-audit.test.ts\` | none | keep doctor wired | \`closed\` |
-| claude-codex-parity | Claude and Codex both work. | \`tests/l14-close-audit.test.ts\` | none | keep doctor wired | \`closed\` |
-| clean-distribution-package | Clean package can install. | \`tests/l14-close-audit.test.ts\` | none | keep acceptance smoke | \`closed\` |
-| version-up-nonbreaking | Version bump is nonbreaking. | \`tests/l14-close-audit.test.ts\`, \`docs/process/modes/version-up.md\`, \`docs/plans/PLAN-L7-141-web-dashboard-component-derived.md\`, \`docs/plans/PLAN-L7-146-serverless-readonly-share.md\` | publication not run | require release approval | \`external_required\` |
+| claude-codex-parity | Claude and Codex both work. | \`tests/l14-close-audit.test.ts\` | Codex hosted/API tools cannot be repo-hook intercepted | keep hosted/API Codex preflight visible | \`partial\` |
+| clean-distribution-package | Clean package can install. | \`tests/l14-close-audit.test.ts\` | clean public repo and signed tarball are not published | require PO approval | \`external_required\` |
+| version-up-nonbreaking | Version bump is nonbreaking. | \`tests/l14-close-audit.test.ts\`, \`docs/process/modes/version-up.md\`, \`docs/plans/PLAN-L7-141-web-dashboard-component-derived.md\`, \`docs/plans/PLAN-L7-146-serverless-readonly-share.md\` | released tag does not exist | run tag-pin rollback smoke | \`external_required\` |
 | brownfield-onboarding | Existing project is preserved. | \`tests/l14-close-audit.test.ts\` | none | keep setup tests | \`closed\` |
 | cross-project-test-workflow | Tests work outside dogfood repo. | \`tests/l14-close-audit.test.ts\` | true external repo not mutated | run after publication | \`partial\` |
 | l1-l2-mock-roundtrip | L2 mock feeds back into L1. | \`tests/l14-close-audit.test.ts\` | prototype review not run | require L1 back-prop when high-fi exists | \`partial\` |
 | l10-ux-close | L10 UX close is explicit. | \`tests/l14-close-audit.test.ts\` | none | keep G10 workflow gate | \`closed\` |
 | l11-uat-boundary | L11 UAT boundary is explicit. | \`tests/l14-close-audit.test.ts\` | PO UAT not run locally | require PO UAT evidence | \`human_required\` |
-| l12-release-acceptance-boundary | L12 acceptance boundary is explicit. | \`tests/l14-close-audit.test.ts\` | release acceptance not run locally | require release acceptance evidence | \`human_required\` |
-| l13-post-deploy-boundary | L13 post-deploy boundary is explicit. | \`tests/l14-close-audit.test.ts\` | post-deploy env not available | record post-deploy observation | \`external_required\` |
-| l14-ops-feedback-boundary | L14 operational feedback boundary is explicit. | \`tests/l14-close-audit.test.ts\` | real operations cycle not observed | feed operations evidence into next cycle | \`partial\` |
+| l12-release-acceptance-boundary | L12 acceptance boundary is explicit. | \`tests/l14-close-audit.test.ts\` | approved release target and human signoff are missing | require release acceptance evidence | \`human_required\` |
+| l13-post-deploy-boundary | L13 post-deploy boundary is explicit. | \`tests/l14-close-audit.test.ts\` | public consumer deployment is not available | after publication record post-deploy observation | \`external_required\` |
+| l14-ops-feedback-boundary | L14 operational feedback boundary is explicit. | \`tests/l14-close-audit.test.ts\` | real operations data from a released consumer project is not available | feed post-release operations into feedback_events | \`partial\` |
 | drive-model-bookbinding | Drive models merge back to V-model. | \`tests/l14-close-audit.test.ts\` | none | keep convergence lint | \`closed\` |
-| l8-l14-right-arm | Right arm is locally closed. | \`tests/l14-close-audit.test.ts\` | production signoff external | PO signoff after release cut | \`human_required\` |
-| release-publication-boundary | Release publication is controlled. | \`tests/l14-close-audit.test.ts\` | tag/tarball not published | perform only after PO approval | \`external_required\` |
+| l8-l14-right-arm | Right arm is locally closed. | \`tests/l14-close-audit.test.ts\` | PO final signoff and post-deploy evidence are external | PO signoff after post-deploy evidence | \`human_required\` |
+| release-publication-boundary | Release publication is controlled. | \`tests/l14-close-audit.test.ts\` | clean GitHub repo, tag push, and signed tarball are not published | perform only after PO approval and record checksums plus signature | \`external_required\` |
 | green-evidence-integrity | Green evidence is trustworthy. | \`tests/l14-close-audit.test.ts\`, \`src/lint/green-command-digest.ts\`, \`tests/green-command-digest.test.ts\`, \`docs/plans/PLAN-L7-132-green-command-digest-integrity.md\`, \`docs/plans/PLAN-L7-174-green-command-digest-correction.md\` | historical digest mismatch remains | correct before hardening | \`partial\` |
 `;
 
@@ -137,5 +137,20 @@ describe("l14-close-audit", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("U-L14CLOSE-008: fails boundary rows that drop the required external or human marker", () => {
+    const content = compliant.replace(
+      "clean public repo and signed tarball are not published",
+      "release work remains",
+    );
+    const result = analyzeL14CloseAudit([{ file: "A.md", content }], process.cwd());
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContainEqual({
+      file: "A.md",
+      item: "clean-distribution-package",
+      reason: "missing_boundary_marker",
+    });
   });
 });
