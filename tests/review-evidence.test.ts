@@ -129,6 +129,39 @@ describe("green command evidence (IMP-108)", () => {
     ]);
     expect(r.ok).toBe(false);
   });
+
+  it("U-GREENDEF-005: new green command evidence requires completed_at", () => {
+    const r = analyzeReviewEvidence([
+      plan({
+        plan_id: "PLAN-NEW-GREEN-NO-COMPLETED-AT",
+        updated: "2026-06-23",
+        hasEvidence: true,
+        crossEntries: [
+          {
+            review_kind: "intra_runtime_subagent",
+            reviewed_at: "2026-06-23",
+            tests_green_at: "2026-06-23",
+            green_commands: [
+              {
+                kind: "doctor",
+                command: "bun run src/cli.ts doctor",
+                runner: "bun",
+                scope: "gate",
+                exit_code: 0,
+                evidence_path: "docs/plans/PLAN-L7-108-review-green-command-evidence.md",
+                output_digest: "sha256:0123456789abcdef",
+              },
+            ],
+          },
+        ],
+      }),
+    ]);
+
+    expect(r.greenCommandViolations).toEqual([
+      { plan_id: "PLAN-NEW-GREEN-NO-COMPLETED-AT", reason: "missing_completed_at" },
+    ]);
+    expect(r.ok).toBe(false);
+  });
 });
 
 describe("stale approval cleanup (IMP-080)", () => {

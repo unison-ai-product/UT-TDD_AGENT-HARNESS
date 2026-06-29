@@ -183,6 +183,7 @@ function greenCommandViolationReason(entry: ReviewEntry): string | null {
     if (!GREEN_COMMAND_RUNNERS.has(command.runner)) return "invalid_runner";
     if (!GREEN_COMMAND_SCOPES.has(command.scope)) return "invalid_scope";
     if (command.exit_code !== 0) return "nonzero_exit_code";
+    if (!command.completed_at?.trim()) return "missing_completed_at";
     if (!command.evidence_path.trim()) return "missing_evidence_path";
     if (!/^sha256:[a-f0-9]{16,64}$/i.test(command.output_digest)) return "invalid_output_digest";
     if (

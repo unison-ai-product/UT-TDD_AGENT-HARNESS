@@ -28,17 +28,17 @@ The repository is locally closed for the current L8-L14 verification band and sy
 | drive-model-bookbinding | Does V-model Forward absorb other drive-model design groups into a bookbound program record? | `docs/design/harness/L4-basic-design/function.md`, `docs/process/modes/README.md`, `src/lint/forward-convergence.ts`, `tests/forward-convergence.test.ts`, `src/lint/drive-model-passage.ts` | none for current registered modes and convergence rules | Keep forward-convergence and drive-model-passage doctor gates hard as new modes are added | `closed` |
 | l8-l14-right-arm | Are L8-L14 closed under the current local workflow definition? | `.ut-tdd/audit/A-132-l8-l14-verification-band-execution.md`, `.ut-tdd/audit/A-136-cycle-p4-verification-audit.md`, `docs/plans/PLAN-M-00-verify-cutover.md`, `tests/projection-writer.test.ts` | L12/L13 production deploy, post-deploy observation, and PO final signoff are human/external | Do not claim production release close until PO signoff and post-deploy evidence are recorded | `human_required` |
 | release-publication-boundary | Is final distribution packaging complete as a public release artifact? | `docs/plans/PLAN-L7-157-distribution-clean-pull.md`, `src/setup/index.ts`, `tests/distribution-acceptance.test.ts`, `LICENSE` | clean GitHub repo creation, tag push, signed tarball, checksum, and signature are external publication actions | Perform public release cut only after explicit PO approval and record artifact checksums/signature | `external_required` |
-| green-evidence-integrity | Are green command evidence records strong enough for final hard close? | `src/lint/green-command-digest.ts`, `tests/green-command-digest.test.ts`, `docs/plans/PLAN-L7-132-green-command-digest-integrity.md`, `docs/plans/PLAN-L7-174-green-command-digest-correction.md` | none for current tracked green command evidence | Keep `green-command-digest` at OK before hardening the advisory into a hard close condition | `closed` |
+| green-evidence-integrity | Are green command evidence records strong enough for final hard close? | `src/lint/green-command-digest.ts`, `tests/green-command-digest.test.ts`, `docs/plans/PLAN-L7-132-green-command-digest-integrity.md`, `docs/plans/PLAN-L7-174-green-command-digest-correction.md` | digest/hash consistency is clean, but the prior digest restamp record did not itself prove each listed green command was rerun on the current files | keep `green-command-digest` green, require `completed_at`, and keep this row `partial` until rerun evidence and digest correction are bundled in the same close packet | `partial` |
 
 ## Current Command Evidence
 
-- `bun run src\cli.ts status --json`: active draft `0`, open defers `0`, non-terminal L7 `2`, both `versionUpParked`.
-- `bun run src\cli.ts doctor`: all hard gates pass; `l14-close-audit` checks 17 rows (`closed=8`, `partial=2`, `external_required=4`, `human_required=3`) and `green-command-digest` reports OK.
-- `bun run vitest run tests\l14-close-audit.test.ts`: 1 file / 8 tests passed after expanding item-specific evidence hardening.
-- `bun run typecheck`: passed after the item-specific L14 evidence hardening.
-- `bun run lint`: passed after the item-specific L14 evidence hardening.
-- `bun run test`: 117 test files / 1185 tests passed after expanding item-specific L14 evidence hardening.
-- `checkGreenCommandDigests(process.cwd())`: mismatches `0`, message `green-command-digest — OK`.
+- `bun run src\cli.ts status --json`: active draft `0`, open defers `0`, non-terminal L7 `5`, all `versionUpParked`.
+- `bun run src\cli.ts doctor`: all hard gates pass; `green-command-digest` reports OK as digest/file-hash integrity only. It must not be read as proof that every listed green command was rerun after a mechanical digest restamp.
+- `bun run vitest run tests\review-evidence.test.ts tests\green-command-digest.test.ts tests\l14-close-audit.test.ts`: 3 files / 37 tests passed after adding `completed_at` enforcement and downgrading green evidence integrity to `partial`.
+- `bun run typecheck`: passed after the green evidence integrity hardening.
+- `bun run lint`: passed after the green evidence integrity hardening.
+- `bun run test`: 117 test files / 1186 tests passed after adding the `missing_completed_at` regression test.
+- `checkGreenCommandDigests(process.cwd())`: mismatches `0`, message `green-command-digest — OK`; this proves current `output_digest` values match each `evidence_path` hash, not command execution freshness by itself.
 - `bun run src\cli.ts db rebuild --json`: `ok=true`, `graph_nodes=900`, `dependency_edges=886`, `impact_results=31`, `findings` output empty.
 - `feedback_events`: prior `missing-projection` error for `.ut-tdd/audit/A-143-l14-close-system-foundation-audit.md` is resolved after projecting `.ut-tdd/audit/*.md` into the relation graph.
 - `harness.db feedback`: open `1209`, gate `0`, actionable `0`, telemetry `1209`, info `1209`; no open error/critical gate feedback remains after DB rebuild.

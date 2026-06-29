@@ -6,7 +6,7 @@ layer: L7
 drive: db
 status: confirmed
 created: 2026-06-23
-updated: 2026-06-23
+updated: 2026-06-29
 owner: Codex
 parent_design: docs/design/harness/L6-function-design/test-before-review.md
 agent_slots:
@@ -48,21 +48,21 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-23"
-    tests_green_at: "2026-06-23"
+    reviewed_at: "2026-06-29T18:29:00+09:00"
+    tests_green_at: "2026-06-29T18:28:00+09:00"
     verdict: approve
     scope: "IMP-108 green command evidence gate: review_evidence requires structured command evidence for 2026-06-23+ confirmed/completed entries; schema, lint, design, requirements, and tests updated together."
     worker_model: codex
     reviewer_model: codex-intra-runtime
     green_commands:
       - kind: unit_test
-        command: "bun test tests\\review-evidence.test.ts"
+        command: "bun run vitest run tests\\review-evidence.test.ts tests\\green-command-digest.test.ts tests\\l14-close-audit.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-23"
+        completed_at: "2026-06-29T18:21:55+09:00"
         evidence_path: tests/review-evidence.test.ts
-        output_digest: "sha256:dfbf0e3feee78280b464dbae6e28bc3b5c0a652e416c6587f14c2d90c95f6af2"
+        output_digest: "sha256:a54a0444a84a8a07210153bee3f37b248a7d7f5348fa259d2c253cf54f69ef88"
       - kind: unit_test
         command: "bun test tests\\frontmatter.test.ts"
         runner: bun
@@ -84,9 +84,9 @@ review_evidence:
         runner: bun
         scope: gate
         exit_code: 0
-        completed_at: "2026-06-23"
+        completed_at: "2026-06-29T18:28:00+09:00"
         evidence_path: src/lint/review-evidence.ts
-        output_digest: "sha256:e4709a1807e1532f2b31d9baa54773707355859ae06acd73e7214b434e830d44"
+        output_digest: "sha256:f37c67db0233d5b6c8c5e5c6b04be5aa9ad9ae9190ed7b49283d0d173f5851b8"
 ---
 
 # PLAN-L7-108: Review green command evidence gate
