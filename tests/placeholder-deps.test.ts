@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { analyzeDescentObligations } from "../src/lint/descent-obligation";
+import { DEFAULT_DESCENT_ADJACENCY } from "../src/lint/descent-obligation-types";
 import {
   analyzePlaceholderDeps,
   type PlaceholderDepsDoc,
@@ -63,5 +65,97 @@ describe("U-PHDEPS: placeholder_deps 2-type recognition (IMP-107)", () => {
     expect(msg).toContain("L7 impl-state waits=0");
     expect(msg).toContain("spec-backfill waits=1");
     expect(msg).toContain("descent-obligation");
+  });
+  it("IT-ASSET-07: unresolved placeholders remain visible before threshold and fail after materialization", () => {
+    const visibleCarry = analyzePlaceholderDeps([
+      doc("- FR-L1-47 placeholder_deps waiting_layer:L6 owner:tl waiting_spec: skill spec"),
+    ]);
+    expect(visibleCarry.ok).toBe(true);
+    expect(visibleCarry.specBackfillWaits).toBe(1);
+    expect(placeholderDepsMessages(visibleCarry).join("\n")).toContain(
+      "threshold=descent-obligation",
+    );
+
+    const beforeWaitingLayer = analyzeDescentObligations(
+      [
+        {
+          traceKey: "FR-L1-47",
+          layer: "L6",
+          role: "design",
+          path: "docs/design/harness/L6-function-design/skill.md",
+          status: "active",
+        },
+      ],
+      DEFAULT_DESCENT_ADJACENCY,
+      [
+        {
+          traceKey: "FR-L1-47",
+          fromLayer: "L6",
+          waitingLayer: "L7",
+          waitingSpec: "placeholder_deps waiting_layer:L7 owner:tl",
+          dischargeCondition: "materialize L7 implementation and remove placeholder",
+          owner: "tl",
+        },
+      ],
+    );
+    expect(beforeWaitingLayer.ok).toBe(true);
+    expect(beforeWaitingLayer.obligations).toContainEqual(
+      expect.objectContaining({
+        traceKey: "FR-L1-47",
+        requiredLayer: "L7",
+        status: "deferred",
+      }),
+    );
+
+    const afterMaterialization = analyzeDescentObligations(
+      [
+        {
+          traceKey: "FR-L1-47",
+          layer: "L6",
+          role: "design",
+          path: "docs/design/harness/L6-function-design/skill.md",
+          status: "active",
+        },
+        {
+          traceKey: "FR-L1-47",
+          layer: "L7",
+          role: "source",
+          path: "src/skills/recommend.ts",
+          status: "active",
+        },
+        {
+          traceKey: "FR-L1-47",
+          layer: "L7",
+          role: "test-design",
+          path: "docs/test-design/harness/L7-unit-test-design.md",
+          status: "active",
+        },
+      ],
+      DEFAULT_DESCENT_ADJACENCY,
+      [
+        {
+          traceKey: "FR-L1-47",
+          fromLayer: "L6",
+          waitingLayer: "L7",
+          waitingSpec: "placeholder_deps waiting_layer:L7 owner:tl",
+          dischargeCondition: "materialize L7 implementation and remove placeholder",
+          owner: "tl",
+        },
+      ],
+    );
+    expect(afterMaterialization.ok).toBe(false);
+    expect(afterMaterialization.implAhead).toContainEqual(
+      expect.objectContaining({
+        traceKey: "FR-L1-47",
+        waitingLayer: "L7",
+        landedAt: "L7",
+      }),
+    );
+
+    const staleImplState = analyzePlaceholderDeps([
+      doc("- placeholder_deps: {waiting_layer:L7, waiting_spec: stale implementation bridge}"),
+    ]);
+    expect(staleImplState.ok).toBe(false);
+    expect(staleImplState.implStateWaits).toBe(1);
   });
 });

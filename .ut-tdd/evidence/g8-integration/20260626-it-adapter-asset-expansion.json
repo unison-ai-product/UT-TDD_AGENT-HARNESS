@@ -19,7 +19,8 @@
     "IT-ASSET-03",
     "IT-ASSET-04",
     "IT-ASSET-05",
-    "IT-ASSET-06"
+    "IT-ASSET-06",
+    "IT-ASSET-07"
   ],
   "deferred_it_ids": [
     "IT-ADAPTER-02",
@@ -80,6 +81,18 @@
       "output_digest": "sha256:ee7d6328665e0d264e4d182669d63665a5223754247be413c4b5022776e42631",
       "it_ids": [
         "IT-ASSET-04"
+      ]
+    },
+    {
+      "command_id": "cmd-placeholder-threshold-targeted",
+      "command": "bun run vitest run tests\\placeholder-deps.test.ts tests\\descent-obligation.test.ts tests\\g8-integration-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/placeholder-deps.test.ts",
+      "output_digest": "sha256:875f561b93958f2886aee99c08b502556e0684fe32dd4038f700d0b8add09916",
+      "it_ids": [
+        "IT-ASSET-07"
       ]
     }
   ],
@@ -183,15 +196,18 @@
     },
     {
       "it_id": "IT-ASSET-07",
-      "status": "partial",
+      "status": "passed",
       "evidence_paths": [
         "tests/placeholder-deps.test.ts",
-        "src/lint/placeholder-deps.ts"
+        "tests/descent-obligation.test.ts",
+        "src/lint/placeholder-deps.ts",
+        "src/lint/descent-obligation.ts"
       ],
       "command_ids": [
-        "cmd-adapter-asset-targeted"
+        "cmd-adapter-asset-targeted",
+        "cmd-placeholder-threshold-targeted"
       ],
-      "notes": "Covers visible placeholder carry and L7 impl-state hard-fail; full current-layer threshold remains delegated to descent-obligation."
+      "notes": "Covers visible carry before waiting layer, L7 impl-state hard-fail in placeholder-deps, and descent-obligation impl-ahead failure when materialized L7 implementation leaves a waiting placeholder unresolved."
     }
   ],
   "exit_criteria": {
