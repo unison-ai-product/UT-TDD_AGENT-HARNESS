@@ -149,6 +149,11 @@ import {
   l7CompletionMessages,
   loadL7CompletionDocs,
 } from "../lint/l7-completion";
+import {
+  analyzeL14CloseAudit,
+  l14CloseAuditMessages,
+  loadL14CloseAuditDocs,
+} from "../lint/l14-close-audit";
 import { analyzeLintWiring, lintWiringMessages, loadLintWiringInput } from "../lint/lint-wiring";
 import {
   analyzeMergedPlanStatus,
@@ -1115,6 +1120,21 @@ export function checkCycleP4Verification(repoRoot: string): { messages: string[]
   }
 }
 
+export function checkL14CloseAudit(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["l14-close-audit - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeL14CloseAudit(loadL14CloseAuditDocs(repoRoot), repoRoot);
+    return { messages: l14CloseAuditMessages(r), ok: r.checked > 0 && r.ok };
+  } catch {
+    return {
+      messages: ["l14-close-audit - violation: A-143 audit could not be read"],
+      ok: false,
+    };
+  }
+}
+
 export function checkProjectHooks(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
     return { messages: ["project-hook - violation: repo root could not be read"], ok: false };
@@ -1964,6 +1984,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const frRoadmapCoverage = checkFrRoadmapCoverage(deps.repoRoot);
   const telemetryClosure = checkTelemetryClosure(deps.repoRoot);
   const cycleP4Verification = checkCycleP4Verification(deps.repoRoot);
+  const l14CloseAudit = checkL14CloseAudit(deps.repoRoot);
   const projectHooks = checkProjectHooks(deps.repoRoot);
   const codexHookAdapter = checkCodexHookAdapter(deps.repoRoot);
   const codexWrapperParity = checkCodexWrapperParity(deps);
@@ -2041,6 +2062,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       frRoadmapCoverage.ok &&
       telemetryClosure.ok &&
       cycleP4Verification.ok &&
+      l14CloseAudit.ok &&
       l6FrCoverage.ok &&
       readability.ok &&
       runtimeReadability.ok &&
@@ -2115,6 +2137,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
       ...frRoadmapCoverage.messages.map((m) => `doctor: ${m}`),
       ...telemetryClosure.messages.map((m) => `doctor: ${m}`),
       ...cycleP4Verification.messages.map((m) => `doctor: ${m}`),
+      ...l14CloseAudit.messages.map((m) => `doctor: ${m}`),
       ...projectHooks.messages.map((m) => `doctor: ${m}`),
       ...codexHookAdapter.messages.map((m) => `doctor: ${m}`),
       ...codexWrapperParity.messages.map((m) => `doctor: ${m}`),

@@ -26,9 +26,13 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: .ut-tdd/audit/A-136-cycle-p4-verification-audit.md
     artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-143-l14-close-system-foundation-audit.md
+    artifact_type: markdown_doc
   - artifact_path: src/lint/telemetry-closure.ts
     artifact_type: source_module
   - artifact_path: src/lint/cycle-p4-verification.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/l14-close-audit.ts
     artifact_type: source_module
   - artifact_path: src/lint/skill-assignment.ts
     artifact_type: source_module
@@ -47,6 +51,8 @@ generates:
   - artifact_path: tests/telemetry-closure.test.ts
     artifact_type: test_code
   - artifact_path: tests/cycle-p4-verification.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/l14-close-audit.test.ts
     artifact_type: test_code
   - artifact_path: tests/skill-assignment.test.ts
     artifact_type: test_code

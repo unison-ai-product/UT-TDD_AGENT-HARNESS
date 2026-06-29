@@ -22,6 +22,7 @@ function buildRepo(root: string): void {
   mkdirSync(join(root, ".ut-tdd", "evidence", "g8-integration"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "evidence", "g9-system"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "evidence", "g10-ux"), { recursive: true });
+  mkdirSync(join(root, ".ut-tdd", "audit"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "review"), { recursive: true });
   mkdirSync(join(root, "src", "widget"), { recursive: true });
   mkdirSync(join(root, "tests"), { recursive: true });
@@ -96,6 +97,11 @@ function buildRepo(root: string): void {
   writeFileSync(
     join(root, ".ut-tdd", "review", "cross-review-l7-157.md"),
     ["# Cross review", "", "Read-only review task body.", ""].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(root, ".ut-tdd", "audit", "A-143-l14-close-system-foundation-audit.md"),
+    ["# A-143", "", "L14 close audit body.", ""].join("\n"),
     "utf8",
   );
   writeFileSync(
@@ -186,6 +192,13 @@ describe("loadRelationGraphSourceSet", () => {
         id: ".ut-tdd/review/cross-review-l7-157.md",
         path: ".ut-tdd/review/cross-review-l7-157.md",
       });
+      const auditDoc = sourceSet.designDocs?.find(
+        (d) => d.path === ".ut-tdd/audit/A-143-l14-close-system-foundation-audit.md",
+      );
+      expect(auditDoc).toMatchObject({
+        id: ".ut-tdd/audit/A-143-l14-close-system-foundation-audit.md",
+        path: ".ut-tdd/audit/A-143-l14-close-system-foundation-audit.md",
+      });
       const g8EvidenceDoc = sourceSet.designDocs?.find(
         (d) => d.path === ".ut-tdd/evidence/g8-integration/test-manifest.json",
       );
@@ -266,6 +279,16 @@ describe("loadRelationGraphSourceSet", () => {
         "design:.ut-tdd/review/cross-review-l7-157.md",
       );
       expect(reviewImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
+      const auditImpact = analyzeRelationImpact({
+        changedPaths: [".ut-tdd/audit/A-143-l14-close-system-foundation-audit.md"],
+        projection,
+      });
+      expect(auditImpact.ok).toBe(true);
+      expect(auditImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:.ut-tdd/audit/A-143-l14-close-system-foundation-audit.md",
+      );
+      expect(auditImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
       const g8EvidenceImpact = analyzeRelationImpact({
         changedPaths: [".ut-tdd/evidence/g8-integration/test-manifest.json"],
@@ -402,6 +425,15 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
       "design:.ut-tdd/review/cross-review-l7-157.md",
     );
     expect(reviewImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const auditImpact = analyzeRelationImpact({
+      changedPaths: [".ut-tdd/audit/A-143-l14-close-system-foundation-audit.md"],
+      projection,
+    });
+    expect(auditImpact.ok).toBe(true);
+    expect(auditImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:.ut-tdd/audit/A-143-l14-close-system-foundation-audit.md",
+    );
+    expect(auditImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const g8EvidenceImpact = analyzeRelationImpact({
       changedPaths: [".ut-tdd/evidence/g8-integration/20260626-it-module-state-minimum.json"],
       projection,
