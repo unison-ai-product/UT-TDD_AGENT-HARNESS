@@ -568,6 +568,15 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - U-RDRIFT-003: real repo AGENTS / CLAUDE adapter docs have no required marker drift.
 - U-RDRIFT-004: `analyzeRuleDrift` reports forbidden legacy adapter markers for old runtime command routing, env prefixes, local state paths, and agent names; real repo AGENTS / CLAUDE adapter docs have zero forbidden markers.
 
+### 2026-06-29 L14 Close Audit Oracle Addendum
+
+- U-L14CLOSE-001: `analyzeL14CloseAudit` accepts a complete A-143 matrix only when all expected close rows exist, including L10 UX, L11 UAT, L12 release acceptance, L13 post-deploy, and L14 operations feedback boundaries.
+- U-L14CLOSE-002: missing expected rows produce `missing_expected_item` instead of allowing broad prose close claims.
+- U-L14CLOSE-003: open boundary rows (`partial`, `human_required`, `external_required`, `parked_future`) require a non-empty next action.
+- U-L14CLOSE-004: evidence cells must contain existing repo-relative paths under approved evidence roots.
+- U-L14CLOSE-005: the live repository A-143 audit loads through `loadL14CloseAuditDocs` and matches the required row order.
+- U-L14CLOSE-006: missing A-143 audit source is a hard violation message, not a silent skip.
+
 ### 2026-06-09 Runtime Adapter Lifecycle Test Addendum
 
 - U-SLOG-007 extends the shared CLI and adapter wrapper oracle: explicit `--plan <id>` lifecycle runs must produce a plan digest with `session_start`, `tool_use`, and `session_end` counts for `<id>`.

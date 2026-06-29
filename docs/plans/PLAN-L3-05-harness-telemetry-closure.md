@@ -6,12 +6,41 @@ layer: L3
 drive: fullstack
 status: confirmed
 created: 2026-06-12
-updated: 2026-06-22
+updated: 2026-06-29
 review_evidence:
   - reviewer: PM (Opus) verification (intra_runtime_subagent)
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-22"
     tests_green_at: "2026-06-22"
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\l14-close-audit.test.ts tests\\g10-ux-workflow.test.ts tests\\screen-impl-pair-freeze.test.ts tests\\projection-writer.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        evidence_path: tests/l14-close-audit.test.ts
+        output_digest: "sha256:cb3c53f80274d43f3dab516ef42d7937c159a0e16ca8003eb92145d3bd431a23"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        evidence_path: src/lint/l14-close-audit.ts
+        output_digest: "sha256:4a3280c9a9deb6779028cd65517366a1e3a55ce945de7602d8b2e496ad003907"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        evidence_path: src/lint/l14-close-audit.ts
+        output_digest: "sha256:4a3280c9a9deb6779028cd65517366a1e3a55ce945de7602d8b2e496ad003907"
+      - kind: doctor
+        command: "bun run src\\cli.ts doctor"
+        runner: bun
+        scope: gate
+        exit_code: 0
+        evidence_path: .ut-tdd/audit/A-143-l14-close-system-foundation-audit.md
+        output_digest: "sha256:366ba52a56ad8306a55e14008184ed685cc66ba1bbae1d43e05cac36f1b170af"
     verdict: pass
     scope: "add-design 増分 (telemetry / self-improvement closure audit + 4 lint + dynamic skill recommender) の status drift (src merge 済なのに draft 放置) を解消し confirmed 化。成果物 src/lint/{telemetry-closure,cycle-p4-verification,skill-assignment,project-hook}.ts + src/skills/recommend.ts + src/doctor 配線 + 6 test は 2026-06-12 (239cb32) で merge 済。機械再検証: ①全 src module 実在 ②doctor の hard gate として稼働 (skill-assignment hard gate / Cycle P4 closure audit hard gate / telemetry-closure 各 doctor refs ≥3) ③skills/recommend は cli.ts + workflow/contracts.ts に配線 ④Vitest 787/787 green / doctor EXIT=0。AC §3 (A-134 audit / doctor が non-closed rows を surface / 各 self-improvement 領域が evidence 無しでは closed にできない fail-close) は merged + wired + tested で充足。"
     worker_model: claude-opus-4-8
@@ -135,3 +164,5 @@ This PLAN treats UT-TDD as a TDD team standardization development harness. It cr
 G3 status: pass for this implementation scope.
 
 Reason: closure audit, doctor lint, runtime skill recommendation projection, skill invocation telemetry, operational quality signals, feedback event emission, trouble taxonomy, retry diagnostics, improvement log, GitHub dry-run issue queue, issue back-reference columns, human approval guardrail telemetry, and project-local hook drift detection are implemented. Actual GitHub mutation is outside this implementation scope; queue and externally supplied back-reference behavior are covered by tests.
+
+2026-06-29 L10-L14 close audit extension: `l14-close-audit` now requires 17 explicit rows, including `l10-ux-close`, `l11-uat-boundary`, `l12-release-acceptance-boundary`, `l13-post-deploy-boundary`, and `l14-ops-feedback-boundary`. This keeps workflow-definition improvement, L2/L10 mock promotion, UAT, release acceptance, post-deploy observation, and operations feedback from being hidden inside a broad L14 close claim. Verification evidence: `bun run vitest run tests\l14-close-audit.test.ts tests\g10-ux-workflow.test.ts tests\screen-impl-pair-freeze.test.ts tests\projection-writer.test.ts`, `bun run typecheck`, `bun run lint`, `bun run src\cli.ts doctor`, `bun run test`, `bun run src\cli.ts status --json`, and `bun run src\cli.ts db rebuild --json`.

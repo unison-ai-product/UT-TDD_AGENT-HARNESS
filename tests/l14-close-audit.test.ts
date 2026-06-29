@@ -22,6 +22,11 @@ const compliant = `# A-TEST
 | brownfield-onboarding | Existing project is preserved. | \`tests/l14-close-audit.test.ts\` | none | keep setup tests | \`closed\` |
 | cross-project-test-workflow | Tests work outside dogfood repo. | \`tests/l14-close-audit.test.ts\` | true external repo not mutated | run after publication | \`partial\` |
 | l1-l2-mock-roundtrip | L2 mock feeds back into L1. | \`tests/l14-close-audit.test.ts\` | prototype review not run | require L1 back-prop when high-fi exists | \`partial\` |
+| l10-ux-close | L10 UX close is explicit. | \`tests/l14-close-audit.test.ts\` | none | keep G10 workflow gate | \`closed\` |
+| l11-uat-boundary | L11 UAT boundary is explicit. | \`tests/l14-close-audit.test.ts\` | PO UAT not run locally | require PO UAT evidence | \`human_required\` |
+| l12-release-acceptance-boundary | L12 acceptance boundary is explicit. | \`tests/l14-close-audit.test.ts\` | release acceptance not run locally | require release acceptance evidence | \`human_required\` |
+| l13-post-deploy-boundary | L13 post-deploy boundary is explicit. | \`tests/l14-close-audit.test.ts\` | post-deploy env not available | record post-deploy observation | \`external_required\` |
+| l14-ops-feedback-boundary | L14 operational feedback boundary is explicit. | \`tests/l14-close-audit.test.ts\` | real operations cycle not observed | feed operations evidence into next cycle | \`partial\` |
 | drive-model-bookbinding | Drive models merge back to V-model. | \`tests/l14-close-audit.test.ts\` | none | keep convergence lint | \`closed\` |
 | l8-l14-right-arm | Right arm is locally closed. | \`tests/l14-close-audit.test.ts\` | production signoff external | PO signoff after release cut | \`human_required\` |
 | release-publication-boundary | Release publication is controlled. | \`tests/l14-close-audit.test.ts\` | tag/tarball not published | perform only after PO approval | \`external_required\` |
@@ -29,15 +34,15 @@ const compliant = `# A-TEST
 `;
 
 describe("l14-close-audit", () => {
-  it("accepts the complete L14 close audit inventory", () => {
+  it("U-L14CLOSE-001: accepts the complete L14 close audit inventory", () => {
     const result = analyzeL14CloseAudit([{ file: "A.md", content: compliant }], process.cwd());
 
     expect(result.ok).toBe(true);
-    expect(result.rows).toHaveLength(12);
+    expect(result.rows).toHaveLength(17);
     expect(l14CloseAuditMessages(result)[0]).toContain("OK");
   });
 
-  it("fails when an expected audit item is missing", () => {
+  it("U-L14CLOSE-002: fails when an expected audit item is missing", () => {
     const content = compliant.replace(
       "| green-evidence-integrity | Green evidence is trustworthy. | `tests/l14-close-audit.test.ts` | historical digest mismatch remains | correct before hardening | `partial` |\n",
       "",
@@ -52,7 +57,7 @@ describe("l14-close-audit", () => {
     });
   });
 
-  it("fails open rows without a next action", () => {
+  it("U-L14CLOSE-003: fails open rows without a next action", () => {
     const content = compliant.replace("correct before hardening | `partial`", "none | `partial`");
     const result = analyzeL14CloseAudit([{ file: "A.md", content }], process.cwd());
 
@@ -64,7 +69,7 @@ describe("l14-close-audit", () => {
     });
   });
 
-  it("fails evidence paths that do not exist", () => {
+  it("U-L14CLOSE-004: fails evidence paths that do not exist", () => {
     const content = compliant.replace("`tests/l14-close-audit.test.ts`", "`docs/missing.md`");
     const result = analyzeL14CloseAudit([{ file: "A.md", content }], process.cwd());
 
@@ -76,7 +81,7 @@ describe("l14-close-audit", () => {
     });
   });
 
-  it("loads and validates the current A-143 audit", () => {
+  it("U-L14CLOSE-005: loads and validates the current A-143 audit", () => {
     const docs = loadL14CloseAuditDocs(process.cwd());
     const result = analyzeL14CloseAudit(docs, process.cwd());
 
@@ -91,6 +96,11 @@ describe("l14-close-audit", () => {
       "brownfield-onboarding",
       "cross-project-test-workflow",
       "l1-l2-mock-roundtrip",
+      "l10-ux-close",
+      "l11-uat-boundary",
+      "l12-release-acceptance-boundary",
+      "l13-post-deploy-boundary",
+      "l14-ops-feedback-boundary",
       "drive-model-bookbinding",
       "l8-l14-right-arm",
       "release-publication-boundary",
@@ -98,7 +108,7 @@ describe("l14-close-audit", () => {
     ]);
   });
 
-  it("reports missing audit file as a violation", () => {
+  it("U-L14CLOSE-006: reports missing audit file as a violation", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-l14-audit-"));
     try {
       mkdirSync(join(root, ".ut-tdd", "audit"), { recursive: true });
