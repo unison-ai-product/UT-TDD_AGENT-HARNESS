@@ -22,6 +22,7 @@ const VERB_RULES: ReadonlyArray<readonly [RegExp, string]> = [
   [/\bvitest\b/, "vitest"],
   [/\b(typecheck|tsc)\b/, "tsc"],
   [/\bdoctor\b/, "doctor"],
+  [/\bskill\s+suggest\b/, "skill"],
   [/\bbiome\b/, "lint"],
   [/\beslint\b/, "eslint"],
   // script alias (ツール名がコマンドに現れない `bun run test` / `npm run lint` 形)。

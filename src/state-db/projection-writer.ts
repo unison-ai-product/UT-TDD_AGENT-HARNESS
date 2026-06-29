@@ -553,6 +553,13 @@ export interface RuntimeGuardrailDecisionProjectionInput {
   evidencePath: string;
 }
 
+export interface RuntimeSkillInvocationProjectionInput {
+  db: HarnessDb;
+  plans: Map<string, ProjectedPlan>;
+  event: SessionLogProjection;
+  evidencePath: string;
+}
+
 export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProjectionInput): void {
   const { db, plans, event, evidencePath } = input;
   if (!event.session_id || !event.plan_id || !event.ts) return;
@@ -614,6 +621,83 @@ export function projectRuntimeGuardrailDecisionFromSessionEvent(
       decided_at: event.ts,
     },
   });
+}
+
+function skillVerbFromSessionTarget(event: SessionLogProjection): boolean {
+  return (
+    event.event_type === "tool_use" && event.tool === "Bash" && event.target === "Bash (skill)"
+  );
+}
+
+export function projectRuntimeSkillInvocationFromSessionEvent(
+  input: RuntimeSkillInvocationProjectionInput,
+): void {
+  const { db, plans, event } = input;
+  if (!event.session_id || !event.plan_id || !event.ts) return;
+  if (!skillVerbFromSessionTarget(event)) return;
+  const planId = resolveProjectedPlanId(plans, event.plan_id);
+  const plan = plans.get(planId);
+  if (!plan) return;
+  const assets = db
+    .prepare("SELECT * FROM automation_assets WHERE asset_type = ? ORDER BY asset_id")
+    .all("skill")
+    .filter((asset) => !String(asset.skill_type ?? "").startsWith("skill-map"));
+  const ranked = assets
+    .map((asset) => ({ asset, score: skillScore(plan, asset) }))
+    .filter((entry) => entry.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        String(a.asset.asset_id ?? "").localeCompare(String(b.asset.asset_id ?? "")),
+    )
+    .slice(0, 5);
+  for (const entry of ranked) {
+    const skillId = String(entry.asset.asset_id ?? "");
+    const invId = stableId(
+      "skill-inv-runtime",
+      `${event.session_id}:${planId}:${event.ts}:${skillId}`,
+    );
+    recordProjectionEvent(db, {
+      table: "skill_invocations",
+      id: invId,
+      row: {
+        skill_invocation_id: invId,
+        session_id: event.session_id,
+        plan_id: planId,
+        skill_id: skillId,
+        layer: plan.layer,
+        drive: plan.drive,
+        fired_at: event.ts,
+        source: "runtime-hook:skill-suggest",
+        accepted: event.outcome === "error" ? 0 : 1,
+      },
+    });
+  }
+}
+
+function projectRuntimeSkillInvocationsFromSessionLogs(
+  repoRoot: string,
+  db: HarnessDb,
+  plans: Map<string, ProjectedPlan>,
+): void {
+  const sessionDir = join(repoRoot, ".ut-tdd", "logs", "session");
+  if (!existsSync(sessionDir)) return;
+  for (const file of readdirSync(sessionDir)
+    .filter((name) => name.endsWith(".jsonl"))
+    .sort()) {
+    const path = join(sessionDir, file);
+    const relPath = normalizePath(relative(repoRoot, path));
+    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      let event: SessionLogProjection;
+      try {
+        event = JSON.parse(line) as SessionLogProjection;
+      } catch {
+        continue;
+      }
+      projectRuntimeSkillInvocationFromSessionEvent({ db, plans, event, evidencePath: relPath });
+    }
+  }
 }
 
 function runtimeForModel(model: string): string {
@@ -2731,6 +2815,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       projectDescentObligations(repoRoot, db);
       projectVerificationBandExecution(db);
       projectAutomationAssets(repoRoot, db);
+      projectRuntimeSkillInvocationsFromSessionLogs(repoRoot, db, plans);
       projectSkillTelemetry(db, plans);
       projectSkillMetrics(db);
       projectSkillEvaluations(db);

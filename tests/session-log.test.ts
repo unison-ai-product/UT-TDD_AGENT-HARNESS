@@ -76,6 +76,12 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     expect(sanitize("Bash token=abcdef123")).toBe("Bash token=***");
     expect(sanitize("x".repeat(200)).length).toBeLessThanOrEqual(120);
     expect(sanitize(undefined)).toBe("");
+    expect(
+      summarize({
+        tool_name: "Bash",
+        tool_input: { command: "bun run src/cli.ts skill suggest --plan PLAN-L7-201 --json" },
+      }),
+    ).toBe("Bash (skill)");
   });
 
   it("U-SLOG-003: compressPlanDigest 集計 + idempotent + updated_at 巻き戻りなし + failures ts dedupe", () => {

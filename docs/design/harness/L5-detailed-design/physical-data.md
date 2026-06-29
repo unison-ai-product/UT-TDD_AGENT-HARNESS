@@ -145,7 +145,10 @@ remains a source projection and does not scan user runtime logs. Session-log
 `forced_stop` events are runtime safety decisions and project into
 `guardrail_decisions` with non-empty `session_id`, `mode=runtime-hook`, and the
 session JSONL as evidence; ordinary `tool_use` events must not fabricate
-guardrail telemetry.
+guardrail telemetry. Session-log `Bash (skill)` events are runtime skill
+suggestion/use telemetry and project into `skill_invocations` with non-empty
+`session_id` and `source=runtime-hook:skill-suggest`; generic `Bash (bash)`
+events remain ignored so invocation metrics are not fabricated.
 
 ## §3 値オブジェクトの物理表現 + SubDoc zod 化 (IMP-026)
 
