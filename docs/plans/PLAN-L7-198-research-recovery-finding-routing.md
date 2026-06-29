@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L7-193-research-recovery-finding-routing
-title: "PLAN-L7-193 (impl): Research/監査 finding → 分類 router → Recovery 起票配線 — 監査/調査が見つけた regression/premise-gap を Recovery(機械強制+L14)へ、機能欠落を Add-feature/Refactor へ起票。新 mode を足さず既存 Research+Recovery を route eval で接続。A-144/A-145 の VER-1/DB-1 が初回起票候補"
+plan_id: PLAN-L7-198-research-recovery-finding-routing
+title: "PLAN-L7-198 (impl): Research/監査 finding → 分類 router → Recovery 起票配線 — 監査/調査が見つけた regression/premise-gap を Recovery(機械強制+L14)へ、機能欠落を Add-feature/Refactor へ起票。新 mode を足さず既存 Research+Recovery を route eval で接続。A-144/A-145 の VER-1/DB-1 が初回起票候補"
 kind: impl
 layer: L7
 drive: be
@@ -17,7 +17,7 @@ agent_slots:
   - role: tl
     slot_label: "TL — 新 mode/kind/signal を増やさない(既存 regression_dev 接続)・全 finding を Recovery に押し込まない・Recovery exit の prose 止まり禁止を緩めないレビュー"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-193-research-recovery-finding-routing.md
+  - artifact_path: docs/plans/PLAN-L7-198-research-recovery-finding-routing.md
     artifact_type: markdown_doc
 dependencies:
   parent: null
@@ -30,7 +30,7 @@ dependencies:
     - .ut-tdd/audit/A-144-judge-audit-index.md
 ---
 
-# PLAN-L7-193 (impl): Research/監査 finding → Recovery 起票配線
+# PLAN-L7-198 (impl): Research/監査 finding → Recovery 起票配線
 
 ## 優先度: version-up parked / 将来版へ保全 (PO 2026-06-29)
 
