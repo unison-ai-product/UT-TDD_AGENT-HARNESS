@@ -77,4 +77,4 @@ Close the direct L8 evidence gap for `IT-ADAPTER-02`: adapter provider errors ar
 
 ## Residual L8 Partial Coverage
 
-- `IT-ADAPTER-03` remains deferred for D-CONTRACT DSL fixture loading and validation.
+- `IT-ADAPTER-03` was closed by `PLAN-L7-178-d-contract-dsl-g8-evidence`.

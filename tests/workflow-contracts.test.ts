@@ -17,6 +17,7 @@ import {
   recordTestRunEvidence,
   routeReverseR4,
   routeScrumFullback,
+  validateDContractDsl,
   validateFrontendDesignWorkflow,
   validateScreenDesignWorkflow,
 } from "../src/workflow/contracts";
@@ -466,5 +467,91 @@ describe("L7 workflow contract implementations", () => {
         cli_surface: ["db status"],
       }).ok,
     ).toBe(true);
+  });
+
+  it("IT-ADAPTER-03: validates D-CONTRACT mode-routing and gate-checks DSL before execution", () => {
+    const validModeRouting = `
+routes:
+  - signal: drift
+    mode: reverse
+    priority: 10
+    next: [feature_addition]
+  - signal: feature_addition
+    mode: add-feature
+    priority: 1
+`;
+    const validGateChecks = `
+gates:
+  G8:
+    - check_id: g8-integration-workflow
+      assertion: mandatory integration tests pass
+      next_action:
+        schema_version: v1
+        command: ut-tdd doctor
+        args:
+          check: g8-integration-workflow
+        safety:
+          auto_apply: false
+          requires_human_approval: false
+          requires_preflight: true
+`;
+
+    const valid = validateDContractDsl({
+      modeRoutingText: validModeRouting,
+      gateChecksText: validGateChecks,
+      requiredGateIds: ["G8"],
+    });
+    expect(valid.ok).toBe(true);
+    expect(valid.mode_routing?.routes.map((route) => route.mode)).toEqual([
+      "reverse",
+      "add-feature",
+    ]);
+    expect(valid.gate_checks?.gates.G8?.[0]?.next_action.command).toBe("ut-tdd doctor");
+
+    const unknownMode = validateDContractDsl({
+      modeRoutingText: validModeRouting.replace("mode: reverse", "mode: unsupported"),
+      gateChecksText: validGateChecks,
+      requiredGateIds: ["G8"],
+    });
+    expect(unknownMode.ok).toBe(false);
+    expect(unknownMode.findings.map((finding) => finding.code)).toContain("d-contract-schema");
+    expect(unknownMode.mode_routing).toBeNull();
+
+    const missingGate = validateDContractDsl({
+      modeRoutingText: validModeRouting,
+      gateChecksText: validGateChecks,
+      requiredGateIds: ["G8", "G9"],
+    });
+    expect(missingGate.ok).toBe(false);
+    expect(missingGate.findings.map((finding) => finding.code)).toContain(
+      "d-contract-missing-gate",
+    );
+
+    const circularRouting = validateDContractDsl({
+      modeRoutingText: `
+routes:
+  - signal: drift
+    mode: reverse
+    next: [feature_addition]
+  - signal: feature_addition
+    mode: add-feature
+    next: [drift]
+`,
+      gateChecksText: validGateChecks,
+      requiredGateIds: ["G8"],
+    });
+    expect(circularRouting.ok).toBe(false);
+    expect(circularRouting.findings.map((finding) => finding.code)).toContain(
+      "d-contract-routing-cycle",
+    );
+
+    const legacyCommand = validateDContractDsl({
+      modeRoutingText: validModeRouting,
+      gateChecksText: validGateChecks.replace("command: ut-tdd doctor", "command: helix doctor"),
+      requiredGateIds: ["G8"],
+    });
+    expect(legacyCommand.ok).toBe(false);
+    expect(legacyCommand.findings.map((finding) => finding.code)).toContain("d-contract-schema");
+    expect(legacyCommand.gate_checks).toBeNull();
   });
 });

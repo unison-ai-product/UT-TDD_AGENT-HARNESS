@@ -6,6 +6,7 @@
   "selected_it_ids": [
     "IT-ADAPTER-01",
     "IT-ADAPTER-02",
+    "IT-ADAPTER-03",
     "IT-ASSET-01",
     "IT-ASSET-02",
     "IT-ASSET-03",
@@ -17,6 +18,7 @@
   "mandatory_it_ids": [
     "IT-ADAPTER-01",
     "IT-ADAPTER-02",
+    "IT-ADAPTER-03",
     "IT-ASSET-01",
     "IT-ASSET-02",
     "IT-ASSET-03",
@@ -25,9 +27,7 @@
     "IT-ASSET-06",
     "IT-ASSET-07"
   ],
-  "deferred_it_ids": [
-    "IT-ADAPTER-03"
-  ],
+  "deferred_it_ids": [],
   "commands": [
     {
       "command_id": "cmd-adapter-asset-targeted",
@@ -120,6 +120,18 @@
       "it_ids": [
         "IT-ADAPTER-02"
       ]
+    },
+    {
+      "command_id": "cmd-d-contract-dsl-targeted",
+      "command": "bun run vitest run tests\\workflow-contracts.test.ts tests\\g8-integration-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/workflow-contracts.test.ts",
+      "output_digest": "sha256:1bbf522aeef22c2bc258bd92cd102fda3c5a2315d257cf4fd95f939034bf7692",
+      "it_ids": [
+        "IT-ADAPTER-03"
+      ]
     }
   ],
   "coverage": [
@@ -147,6 +159,19 @@
         "cmd-adapter-error-policy-targeted"
       ],
       "notes": "Covers adapter error-policy mapping for absent/auth/rate-limit/timeout/unknown provider errors. Absent degrades only when allowed, auth and unknown fail closed, rate-limit retries until exhaustion then fails, and timeout skips the affected item after bounded retry exhaustion."
+    },
+    {
+      "it_id": "IT-ADAPTER-03",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/workflow-contracts.test.ts",
+        "src/workflow/routing-contracts.ts",
+        "src/workflow/contracts.ts"
+      ],
+      "command_ids": [
+        "cmd-d-contract-dsl-targeted"
+      ],
+      "notes": "Covers D-CONTRACT DSL loading and zod validation for mode-routing.yaml and gate-checks.yaml fixtures. Valid DSL parses deterministically; unknown mode, missing gate, circular routing, and legacy/non-ut-tdd next_action commands fail before execution."
     },
     {
       "it_id": "IT-ASSET-01",

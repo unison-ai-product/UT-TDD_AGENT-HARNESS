@@ -278,6 +278,7 @@ export {
   detectRouteEscalationBoundaries,
   evaluateRouteCommand,
   routeSignalToMode,
+  validateDContractDsl,
   validateRouteConfigText,
 } from "./routing-contracts";
 export function recordCrossCuttingEvent(input: {
