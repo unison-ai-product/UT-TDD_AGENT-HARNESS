@@ -40,7 +40,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T18:07:00+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:77a9c2337dbcd738256e85dd6c0bc6c948672d76157f6e31b201b287634099f0"
+        output_digest: "sha256:7bb6aee216bf6d0b39f84048044ae3764d6356c57f62f740ddc2d628f7c3c7f4"
       - kind: smoke
         command: "bun run vitest run tests\\setup.test.ts tests\\distribution-acceptance.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -64,7 +64,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T18:07:00+09:00"
         evidence_path: src/setup/templates.ts
-        output_digest: "sha256:be9e51b240117cddc4d0032e77bb57527118df55849066dde1580329f88efdda"
+        output_digest: "sha256:f424989bfc9351de34748b6563637ec55545c061936a4c2fa81970d334094d1c"
 generates:
   - artifact_path: docs/plans/PLAN-L7-190-distribution-runtime-asset-projection.md
     artifact_type: markdown_doc

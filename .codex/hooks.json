@@ -3,6 +3,18 @@
   "hooks": {
     "PreToolUse": [
       {
+        "matcher": "spawn_agent|spawn_agents_on_csv",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun .claude/hooks/agent-guard.ts",
+            "timeout": 5,
+            "statusMessage": "agent guard: block non-allowlisted Codex subagent spawns unless explicitly bypassed (Codex parity)",
+            "blockOnFailure": true
+          }
+        ]
+      },
+      {
         "matcher": "apply_patch|write_file",
         "hooks": [
           {

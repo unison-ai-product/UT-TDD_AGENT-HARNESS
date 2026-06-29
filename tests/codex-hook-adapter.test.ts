@@ -28,6 +28,12 @@ function validCodexHooks(): Record<string, unknown> {
             { type: "command", command: "bun .claude/hooks/work-guard.ts", blockOnFailure: true },
           ],
         },
+        {
+          matcher: "spawn_agent|spawn_agents_on_csv",
+          hooks: [
+            { type: "command", command: "bun .claude/hooks/agent-guard.ts", blockOnFailure: true },
+          ],
+        },
       ],
       SessionStart: [{ hooks: [{ type: "command", command: "bun src/cli.ts session start" }] }],
       PostToolUse: [
@@ -147,20 +153,16 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139)", () => {
     }
   });
 
-  it("U-CXHOOK-011: subagent-stop のみ真の N/A。agent-guard は N/A でなく『実在するが未ガード』の deferred surface", () => {
+  it("U-CXHOOK-011: subagent-stop stays N/A while Codex spawn_agent is guarded", () => {
     const naEntrypoints = CODEX_NOT_APPLICABLE.map((n) => n.entrypoint);
     expect(naEntrypoints).toContain("src/cli.ts hook subagent-stop");
-    // 当初 agent-guard を「面が無い N/A」と書いたのは誤り (spawn_agent 族が実在)。N/A から外れていること。
-    expect(naEntrypoints).not.toContain(".claude/hooks/agent-guard.ts");
     for (const n of CODEX_NOT_APPLICABLE) expect(n.reason.length).toBeGreaterThan(0);
-    // spawn_agent 面は「実在するが未ガード」の deferred follow-up として契約に残す (gap でも N/A でもない)。
-    const deferred = CODEX_DEFERRED_SURFACE.map((d) => d.surface).join(" ");
-    expect(deferred).toContain("spawn_agent");
-    for (const d of CODEX_DEFERRED_SURFACE) {
-      expect(d.claude_analog).toBe(".claude/hooks/agent-guard.ts");
-      expect(d.reason.length).toBeGreaterThan(0);
-    }
-    // 真の N/A (subagent-stop) のみなので Codex hooks.json に SubagentStop hook が無くても parity は ok。
+    expect(CODEX_DEFERRED_SURFACE).toEqual([]);
+    expect(CODEX_REQUIRED.find((hook) => hook.id === "agent-guard")).toMatchObject({
+      event: "PreToolUse",
+      matcher: "spawn_agent|spawn_agents_on_csv",
+      blockOnFailure: true,
+    });
     expect(analyzeCodexHookAdapter({ codexHooksJson: json(validCodexHooks()) }).ok).toBe(true);
   });
 

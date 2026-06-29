@@ -53,14 +53,11 @@ export const CODEX_NOT_APPLICABLE = [
  * agent_role / canonical task_name) が異なり別設計を要するため、本 PLAN scope 外の follow-up とする。
  * 「面が無い」ではなく「面は在るが未ガード」であることを契約として残す。
  */
-export const CODEX_DEFERRED_SURFACE = [
-  {
-    surface: "spawn_agent / wait_agent / list_agents / close_agent / spawn_agents_on_csv",
-    claude_analog: ".claude/hooks/agent-guard.ts",
-    reason:
-      "Codex の sub-agent ツール族は PreToolUse tool_name として実在するが、agent-guard 相当の allowlist/model 検査は別設計が必要なため PLAN-L7-139 の follow-up として繰り延べ (未ガードの既知残面)",
-  },
-] as const;
+export const CODEX_DEFERRED_SURFACE: readonly {
+  surface: string;
+  claude_analog: string;
+  reason: string;
+}[] = [];
 
 /** `~/.codex/` 等 global Codex 設定への参照 (repo-relative 原則違反) を検出。 */
 const CODEX_GLOBAL_RE = /(?:^|[\s"'=])(?:~|\$HOME|%USERPROFILE%)?[\\/]?\.codex[\\/]/i;
@@ -209,7 +206,7 @@ export function loadCodexHookAdapterInput(repoRoot: string): { codexHooksJson: s
 export function codexHookAdapterMessages(result: CodexHookResult): string[] {
   if (result.ok) {
     return [
-      `codex-hook-adapter - OK (checked=${result.checked}, .codex/hooks.json shares Claude guard entrypoints; matcher=apply_patch|write_file, subagent-stop=N/A, spawn_agent surface=deferred follow-up)`,
+      `codex-hook-adapter - OK (checked=${result.checked}, .codex/hooks.json shares Claude guard entrypoints; matcher=spawn_agent|spawn_agents_on_csv + apply_patch|write_file, subagent-stop=N/A)`,
       "codex-hook-adapter - note: .codex/hooks.json covers direct Codex CLI/IDE sessions only; hosted API/developer apply_patch tools do not execute through the Codex hook engine and are not repo-enforceable",
     ];
   }

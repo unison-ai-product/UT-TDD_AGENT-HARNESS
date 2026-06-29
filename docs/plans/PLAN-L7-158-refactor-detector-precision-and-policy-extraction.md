@@ -74,7 +74,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T18:43:35+09:00"
         evidence_path: tests/agent-guard.test.ts
-        output_digest: "sha256:ecf0aa1c3b6c484550d8f08489c175aefd1fe4614c477bfa6195fb0cc92fb018"
+        output_digest: "sha256:61ccce881ae834d258758e47f85a4af20a731feeb73811fa5a019c55fca59443"
       - kind: unit_test
         command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -90,7 +90,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T18:23:31+09:00"
         evidence_path: tests/agent-guard.test.ts
-        output_digest: "sha256:ecf0aa1c3b6c484550d8f08489c175aefd1fe4614c477bfa6195fb0cc92fb018"
+        output_digest: "sha256:61ccce881ae834d258758e47f85a4af20a731feeb73811fa5a019c55fca59443"
       - kind: unit_test
         command: "bun run vitest run tests\\agent-guard.test.ts tests\\workflow-contracts.test.ts tests\\cli-surface.test.ts"
         runner: bun

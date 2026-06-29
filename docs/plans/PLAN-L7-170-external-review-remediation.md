@@ -65,7 +65,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:40:00+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:77a9c2337dbcd738256e85dd6c0bc6c948672d76157f6e31b201b287634099f0"
+        output_digest: "sha256:7bb6aee216bf6d0b39f84048044ae3764d6356c57f62f740ddc2d628f7c3c7f4"
       - kind: unit_test
         command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun

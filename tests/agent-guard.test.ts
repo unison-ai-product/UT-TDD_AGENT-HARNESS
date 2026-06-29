@@ -72,6 +72,22 @@ describe("evaluateAgentGuard", () => {
     expect(evaluateAgentGuard({ tool_name: "Task", tool_input: {} }, ctx()).code).toBe(2);
   });
 
+  it("treats Codex spawn_agent as a guarded subagent spawn surface", () => {
+    expect(
+      evaluateAgentGuard(
+        { tool_name: "spawn_agent", tool_input: { subagent_type: "pmo-sonnet", model: "sonnet" } },
+        ctx(),
+      ).code,
+    ).toBe(0);
+    expect(
+      evaluateAgentGuard(
+        { tool_name: "spawn_agent", tool_input: { agent: "pmo-sonnet", model_family: "sonnet" } },
+        ctx(),
+      ).code,
+    ).toBe(0);
+    expect(evaluateAgentGuard({ tool_name: "spawn_agent", tool_input: {} }, ctx()).code).toBe(2);
+  });
+
   it("blocks null / omitted tool_input (fail-close)", () => {
     expect(evaluateAgentGuard({ tool_name: "Agent", tool_input: null }, ctx()).code).toBe(2);
     expect(evaluateAgentGuard({ tool_name: "Agent" }, ctx()).code).toBe(2);

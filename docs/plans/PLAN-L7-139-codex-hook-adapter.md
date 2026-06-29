@@ -67,7 +67,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-24T12:17:00+09:00"
         evidence_path: tests/codex-hook-adapter.test.ts
-        output_digest: "sha256:a068692d6ad82311b908e1bef8464eebeb2a526ce144f4805070c6b60d866406"
+        output_digest: "sha256:cac7af4022bdcc150395b3ab2ed6295d167485c3508f99224f817bb5ca3c128d"
 ---
 
 # PLAN-L7-139: Codex hook adapter (orchestrator-rule parity)
@@ -209,6 +209,20 @@ verified TRUE against the real `codex.exe` 0.128.0 binary and addressed:
   hook interception.
 - **`spawn_agent` guard**: design a Codex agent-guard analog (allowlist / model
   policy for the `spawn_agent` tool family) and wire it into `.codex/hooks.json`.
+
+## 2026-06-29 follow-up discharge
+
+The deferred `spawn_agent` guard surface is now locally wired:
+
+- `.codex/hooks.json` includes `PreToolUse` matcher `spawn_agent|spawn_agents_on_csv`
+  with `bun .claude/hooks/agent-guard.ts` and `blockOnFailure: true`.
+- Consumer adapter templates include the portable equivalent
+  `ut-tdd hook agent-guard`.
+- `evaluateAgentGuard` recognizes Codex `spawn_agent` / `spawn_agents_on_csv`
+  and accepts `subagent_type`, `agent_type`, `agent`, `role`, or `name` as the
+  subagent identifier plus `model` / `model_family`.
+- `codex-hook-adapter` no longer reports `spawn_agent` as a deferred surface;
+  only `SubagentStop` remains N/A for Codex.
 - **SSoT materializer**: emit `.claude/settings.json` and `.codex/hooks.json` from one
   source (`ut-tdd setup`) instead of two hand-maintained adapters; currently the
   `codex-hook-adapter` drift gate keeps them in sync.

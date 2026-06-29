@@ -299,6 +299,12 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       expect(codex.hooks.PreToolUse).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
+            matcher: "spawn_agent|spawn_agents_on_csv",
+            hooks: [
+              expect.objectContaining({ command: "ut-tdd hook agent-guard", blockOnFailure: true }),
+            ],
+          }),
+          expect.objectContaining({
             matcher: "apply_patch|write_file",
             hooks: [
               expect.objectContaining({ command: "ut-tdd hook work-guard", blockOnFailure: true }),

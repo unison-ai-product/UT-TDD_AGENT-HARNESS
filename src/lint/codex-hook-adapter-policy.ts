@@ -6,7 +6,20 @@ interface CodexRequiredHook {
   blockOnFailure?: boolean;
 }
 
+interface CodexDeferredSurface {
+  surface: string;
+  claude_analog: string;
+  reason: string;
+}
+
 export const CODEX_REQUIRED = [
+  {
+    id: "agent-guard",
+    event: "PreToolUse",
+    matcher: "spawn_agent|spawn_agents_on_csv",
+    commandParts: [".claude/hooks/agent-guard.ts"],
+    blockOnFailure: true,
+  },
   {
     id: "work-guard",
     event: "PreToolUse",
@@ -32,14 +45,7 @@ export const CODEX_NOT_APPLICABLE = [
   },
 ] as const;
 
-export const CODEX_DEFERRED_SURFACE = [
-  {
-    surface: "spawn_agent / wait_agent / list_agents / close_agent / spawn_agents_on_csv",
-    claude_analog: ".claude/hooks/agent-guard.ts",
-    reason:
-      "Codex の sub-agent ツール族は PreToolUse tool_name として実在するが、agent-guard 相当の allowlist/model 検査は別設計が必要なため PLAN-L7-139 の follow-up として繰り延べ (未ガードの既知残面)",
-  },
-] as const;
+export const CODEX_DEFERRED_SURFACE: readonly CodexDeferredSurface[] = [];
 
 /** `~/.codex/` 等 global Codex 設定への参照 (repo-relative 原則違反) を検出。 */
 export const CODEX_GLOBAL_RE = /(?:^|[\s"'=])(?:~|\$HOME|%USERPROFILE%)?[\\/]?\.codex[\\/]/i;
