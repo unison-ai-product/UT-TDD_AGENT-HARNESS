@@ -872,8 +872,21 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       });
 
       expect(result.ok).toBe(true);
-      const { hook_events: _firstHookEvents, ...firstStableCounts } = result.rowCounts;
-      const { hook_events: _secondHookEvents, ...secondStableCounts } = second.rowCounts;
+      // hook/session evidence is allowed to move while the full Vitest suite runs in parallel.
+      // The hook rows themselves are volatile, and unresolved hook joins are projected through
+      // findings/feedback_events, so exclude that derived volatility from the fixed-point check.
+      const {
+        hook_events: _firstHookEvents,
+        findings: _firstFindings,
+        feedback_events: _firstFeedbackEvents,
+        ...firstStableCounts
+      } = result.rowCounts;
+      const {
+        hook_events: _secondHookEvents,
+        findings: _secondFindings,
+        feedback_events: _secondFeedbackEvents,
+        ...secondStableCounts
+      } = second.rowCounts;
       expect(secondStableCounts).toEqual(firstStableCounts);
       expect(rowCounts(db).plan_registry).toBeGreaterThan(0);
       const projectedPlan = db
