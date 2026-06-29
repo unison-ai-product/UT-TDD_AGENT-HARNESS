@@ -4,8 +4,8 @@
 
 ### AI 実装エージェントを、チーム開発で _安全に_ 使うための検証・開発基盤
 
-**V-model** × **駆動モデル** が **`harness.db`** を通じてサイクルを回し、品質を機械で守る。
-provider の API キーは、リポジトリに置かない。
+**V-model** × **駆動モデル** が **`harness.db`** を通じてサイクルを回し、品質を機械で守ります。
+provider の API キーは、リポジトリに置きません。
 
 <br>
 
@@ -28,20 +28,18 @@ provider の API キーは、リポジトリに置かない。
 
 ## 🔥 なぜ作ったのか
 
-AI エージェントって、**とりあえず作ろうとする**じゃないですか。
+AI エージェントは、**とりあえず動くものを作ろうとします**。
 
-しかも出来上がっても、こっちはコードを隅々まで読んでるわけじゃないじゃないですか。
-だから後になって「うわ、これ…」ってなるやつ、絶対あるじゃないですか。
+しかも、出来上がったコードをこちらが隅々まで読んでいるわけではありません。
+そのため後になって「これは…」と気づく問題が、どうしても出てきます。
 
-そういうの、いい加減 **しばき回したくなる** じゃないですか。
-テストと証跡で締め上げて、「完了しました」を二度と鵜呑みにしない ── そんな仕組みが欲しかったんですよ。
-
-—— で、そうして生まれたのが **UT-TDD Agent Harness** なんです。
+テストと証跡で締め上げ、「完了しました」を二度と鵜呑みにしない ── そうした仕組みが欲しかったのです。
+そうして生まれたのが、**UT-TDD Agent Harness** です。
 
 > [!NOTE]
-> 要するに、**AI の「完了しました」をテストと機械チェックで殴り返す基盤** なんですよ。
-> V-model/TDD ガバナンス・`doctor`・ハンドオーバー・provider アダプタ・Claude/Codex チーム委譲を、**API キーをリポジトリに置かず**ローカルの TypeScript/Bun で回します。
-> しかもこれ、完成品じゃなくて **「土台」** なんです ── その上で動くプロダクト開発を、安全にするための地面ってわけです。
+> ひとことで言えば、**AI の「完了しました」をテストと機械チェックで検証し直すための基盤** です。
+> V-model / TDD ガバナンス・`doctor`・ハンドオーバー・provider アダプタ・Claude / Codex のチーム委譲を、**API キーをリポジトリに置かず**ローカルの TypeScript / Bun で回します。
+> そしてこれは完成品ではなく、**「土台」** です ── その上で動くプロダクト開発を、安全にするための地面にあたります。
 
 ## 🧱 6 本の柱
 
@@ -56,9 +54,9 @@ AI エージェントって、**とりあえず作ろうとする**じゃない�
 
 ## 🥊 しばくべし AI の○○行動
 
-AI の悪癖、あるあるじゃないですか。だから一個ずつ、対応する機能で迎え撃つんですよ。
+AI には、ありがちな悪癖があります。その一つひとつを、対応する機能で迎え撃ちます。
 
-| しばくべき AI の○○行動 | これ、あるじゃないですか | しばく機能 |
+| しばくべき AI の○○行動 | よくある症状 | しばく機能 |
 |---|---|---|
 | 🤖 **完了詐称行動** | 「完了しました!」と言うが、証跡は無い | `ut-tdd doctor` / 厳格検証 ── テスト・証跡なしに完了を通さない |
 | 🏃 **見切り発車行動** | 考えるより先に手が動き、とりあえず作る | `ut-tdd task classify` → `team suggest` ── 着手前に難易度と編成を判定 |
@@ -189,13 +187,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\ut-tdd.ps1 doctor
 | `ut-tdd doctor` | ガバナンス一括検証(gate / trace / drift / roadmap) |
 | `ut-tdd db rebuild --json` | `harness.db` の再投影 |
 | `ut-tdd plan lint` | PLAN の schema / 依存検証 |
+| `ut-tdd vmodel lint` | V-model trace(設計 ⇔ テストの pair)の検証 |
 | `ut-tdd review --uncommitted` | 未コミット変更のレビューパケット生成 |
 | `ut-tdd task classify --text "…"` | タスク難易度の分類 |
 | `ut-tdd skill suggest --plan <path>` | PLAN に対するスキル提案 |
 | `ut-tdd team suggest --task "…"` | チーム起動要否の判定 |
 | `ut-tdd team run --definition <yaml>` | チーム launch plan の構築 / 実行 |
+| `ut-tdd codex --role <role> --task "…"` / `ut-tdd claude …` | provider 委譲(worker / reviewer)。`--execute` で実 CLI 起動、既定は dry-run |
+| `ut-tdd route eval --signal <signal>` | signal を mode / 推奨コマンドへ routing |
 | `ut-tdd handover` | ハンドオーバー(機械 + 明示)の生成 |
+| `ut-tdd feedback list` / `pending` | `harness.db` の引き継ぎ feedback / Recovery 起票候補を surface |
+| `ut-tdd graph impact` / `export` | クロス成果物リレーショングラフの影響分析 / 図出力(mermaid / dot) |
+| `ut-tdd verify recommend` / `run --profile <id>` | 変更ファイルからの検証プロファイル推奨 / 実行(`mcp profile list` で一覧) |
 | `ut-tdd telemetry scan --json` | コストテレメトリの走査 |
+| `ut-tdd distribution plan` | clean 配布の export / preflight / rollback 計画(実カットは PO 承認が必要) |
 
 <details>
 <summary><b>📦 対象リポジトリへの導入(詳細)</b></summary>
@@ -317,6 +322,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\ut-tdd.ps1 team su
 
 <br>
 
+通常の入口は `ut-tdd codex` / `ut-tdd claude`(`--role` 委譲ラッパ)です。raw な `codex exec` / `claude --print` を直接の常用経路にはしません。以下は、そのラッパが内部で起動する provider CLI の形です。
+
 model が選択されている場合、Codex は `codex exec <task> -m <model>` として起動します。Claude は `claude --print --model <model> --effort <low|medium|high> -p <prompt>` として起動し、同じ effort 値を `CLAUDE_CODE_EFFORT_LEVEL` でも受け取ります。Codex の reasoning effort は決定論的に選択され、対応する Codex CLI の effort フラグが確定するまでは証跡 / プロンプトのメタデータに記録されます。
 
 managed なアダプタ呼び出しでは、ハーネスは legacy の raw-provider ガード環境マーカーを provider 実行前に**剥がし、それらを渡しません**。provider の認証情報は各公式 CLI のログインが保持し続けます。
@@ -339,5 +346,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\ut-tdd.ps1 doctor
 
 <div align="center">
 <br>
-<sub><b>UT-TDD Agent Harness</b> — TypeScript core · ADR-001<br>土台が、その上で動くプロダクト開発を安全にする。</sub>
+<sub><b>UT-TDD Agent Harness</b> — TypeScript core · ADR-001<br>土台が、その上で動くプロダクト開発を安全にします。</sub>
 </div>
