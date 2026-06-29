@@ -243,6 +243,55 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     }
   });
 
+  it("U-SETUP-004c: built-in adapter templates ship enforced portable guard hooks", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-setup-templates-"));
+    const templates = loadTemplates(repo);
+    try {
+      const claude = JSON.parse(templates["adapter/.claude/settings.json"]) as {
+        hooks: Record<
+          string,
+          { matcher?: string; hooks: { command: string; blockOnFailure?: boolean }[] }[]
+        >;
+      };
+      const codex = JSON.parse(templates["adapter/.codex/hooks.json"]) as {
+        hooks: Record<
+          string,
+          { matcher?: string; hooks: { command: string; blockOnFailure?: boolean }[] }[]
+        >;
+      };
+
+      expect(claude.hooks.PreToolUse).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            matcher: "Agent|Task",
+            hooks: [
+              expect.objectContaining({ command: "ut-tdd hook agent-guard", blockOnFailure: true }),
+            ],
+          }),
+          expect.objectContaining({
+            matcher: "Edit|Write|MultiEdit",
+            hooks: [
+              expect.objectContaining({ command: "ut-tdd hook work-guard", blockOnFailure: true }),
+            ],
+          }),
+        ]),
+      );
+      expect(claude.hooks.SubagentStop[0].hooks[0].command).toBe("ut-tdd hook subagent-stop");
+      expect(codex.hooks.PreToolUse).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            matcher: "apply_patch|write_file",
+            hooks: [
+              expect.objectContaining({ command: "ut-tdd hook work-guard", blockOnFailure: true }),
+            ],
+          }),
+        ]),
+      );
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
   it("U-SETUP-009: planSetup projects clean adapter templates for brownfield consumers", () => {
     const plan = planSetup("0-A", { dryRun: true });
     expect(plan.files).toEqual(
@@ -324,6 +373,14 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         "src/web/page.tsx",
         ".codex/hooks.json",
         ".claude/settings.json",
+        "docs/governance/README.md",
+        "docs/governance/ut-tdd-agent-harness-concept_v3.1.md",
+        "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+        "docs/governance/conditional-backfill-decision-audit-2026-06-22.md",
+        "docs/governance/forward-convergence-legacy-debt-audit.md",
+        "docs/governance/reverse-fullback-backprop-audit-2026-06-22.md",
+        "docs/governance/runtime-parity-l0-l3-design-audit-2026-06-02.md",
+        "docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md",
         "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
         "docs/design/harness/L6-function-design/setup-solo-team.md",
         ".ut-tdd/handover/CURRENT.json",
@@ -338,9 +395,29 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(plan.artifactPaths).toContain("docs/templates/adapter/.claude/agents/code-reviewer.md");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/.claude/commands/build.md");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/.claude/agents/ut-tdd-tl.md");
+    expect(plan.artifactPaths).toContain("docs/governance/README.md");
+    expect(plan.artifactPaths).toContain("docs/governance/ut-tdd-agent-harness-concept_v3.1.md");
+    expect(plan.artifactPaths).toContain(
+      "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+    );
     expect(plan.artifactPaths).not.toContain("src/web/page.tsx");
     expect(plan.artifactPaths).not.toContain(".codex/hooks.json");
     expect(plan.artifactPaths).not.toContain(".claude/settings.json");
+    expect(plan.artifactPaths).not.toContain(
+      "docs/governance/conditional-backfill-decision-audit-2026-06-22.md",
+    );
+    expect(plan.artifactPaths).not.toContain(
+      "docs/governance/forward-convergence-legacy-debt-audit.md",
+    );
+    expect(plan.artifactPaths).not.toContain(
+      "docs/governance/reverse-fullback-backprop-audit-2026-06-22.md",
+    );
+    expect(plan.artifactPaths).not.toContain(
+      "docs/governance/runtime-parity-l0-l3-design-audit-2026-06-02.md",
+    );
+    expect(plan.artifactPaths).not.toContain(
+      "docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md",
+    );
     expect(plan.artifactPaths).not.toContain("docs/plans/PLAN-L7-157-distribution-clean-pull.md");
     expect(plan.artifactPaths).not.toContain(".ut-tdd/handover/CURRENT.json");
     expect(plan.releaseIntegrity.artifacts).toEqual([

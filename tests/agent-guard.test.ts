@@ -62,6 +62,16 @@ describe("evaluateAgentGuard", () => {
     expect(evaluateAgentGuard(agent({}), ctx()).code).toBe(2);
   });
 
+  it("treats Task as a Claude subagent tool alias", () => {
+    expect(
+      evaluateAgentGuard(
+        { tool_name: "Task", tool_input: { subagent_type: "pmo-sonnet", model: "sonnet" } },
+        ctx(),
+      ).code,
+    ).toBe(0);
+    expect(evaluateAgentGuard({ tool_name: "Task", tool_input: {} }, ctx()).code).toBe(2);
+  });
+
   it("blocks null / omitted tool_input (fail-close)", () => {
     expect(evaluateAgentGuard({ tool_name: "Agent", tool_input: null }, ctx()).code).toBe(2);
     expect(evaluateAgentGuard({ tool_name: "Agent" }, ctx()).code).toBe(2);

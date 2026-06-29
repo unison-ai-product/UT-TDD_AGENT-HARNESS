@@ -10,7 +10,11 @@
  * This module is pure. The hook shim owns stdin and filesystem access.
  */
 
-import { AGENT_GUARD_BYPASS_HINT, AGENT_TOOL_NAME, SUBAGENT_ALLOWLIST } from "./agent-guard-policy";
+import {
+  AGENT_GUARD_BYPASS_HINT,
+  AGENT_TOOL_NAMES,
+  SUBAGENT_ALLOWLIST,
+} from "./agent-guard-policy";
 
 export type ModelFamily = "haiku" | "sonnet" | "opus";
 
@@ -50,7 +54,7 @@ export function normalizeModelFamily(raw: string | null | undefined): ModelFamil
 const ALLOWLIST_TEXT = [...SUBAGENT_ALLOWLIST].join(" ");
 
 export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContext): GuardDecision {
-  if (input.tool_name !== AGENT_TOOL_NAME) return { code: 0 };
+  if (!AGENT_TOOL_NAMES.has(input.tool_name ?? "")) return { code: 0 };
 
   const ti = input.tool_input ?? {};
   const subagentType = (ti.subagent_type ?? "").trim();

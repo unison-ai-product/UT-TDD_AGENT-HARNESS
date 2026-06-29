@@ -6,7 +6,7 @@ layer: L7
 drive: be
 status: confirmed
 created: 2026-06-25
-updated: 2026-06-26
+updated: 2026-06-29
 owner: PM (Opus) / PO (人間)
 parent_design: docs/design/harness/L1-requirements/technical-requirements.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -27,7 +27,13 @@ generates:
     artifact_type: source_module
   - artifact_path: src/cli.ts
     artifact_type: source_module
+  - artifact_path: src/runtime/agent-guard.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/agent-guard-policy.ts
+    artifact_type: source_module
   - artifact_path: tests/setup.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/agent-guard.test.ts
     artifact_type: test_code
   - artifact_path: tests/cli-surface.test.ts
     artifact_type: test_code
@@ -52,6 +58,8 @@ generates:
   - artifact_path: docs/templates/adapter/.claude/commands/ut-tdd-test.md
     artifact_type: template
   - artifact_path: LICENSE
+    artifact_type: doc_update
+  - artifact_path: README.md
     artifact_type: doc_update
   - artifact_path: package.json
     artifact_type: config
@@ -336,6 +344,15 @@ PO 指示: 「リファクタ後に、**画面なし** で、**現在の自己�
 - Step 4 (serial): 全シナリオ smoke — clean clone→setup→doctor green / 既存非空→setup→破壊なし / 旧版→custom→更新→
   破壊なし / 2 回 setup = no-op / uninstall→非 managed 無傷 / consumer CI green / contract test 互換。
 - Step 5 (serial): PO 承認 → 初回 tag/release。
+
+## 5.1 2026-06-29 correction: shipped enforcement and clean curation
+
+- Adapter enforcement now projects portable CLI hook entrypoints instead of repo-local dogfood scripts:
+  `.claude/settings.json` ships `ut-tdd hook agent-guard`, `ut-tdd hook work-guard`, and `ut-tdd hook subagent-stop`;
+  `.codex/hooks.json` ships `ut-tdd hook work-guard` for direct Codex edit tools.
+- The agent guard accepts both `Agent` and `Task` tool names so Claude SDK/CLI naming drift does not silently bypass the guard.
+- Clean export no longer allows the whole `docs/governance/` prefix. Public methodology docs are curated per file, while dogfood audit / migration records remain excluded.
+- README install flow now states the PATH contract explicitly: run `bun link` in the harness package and `bun link ut-tdd` in each consumer repo before `ut-tdd setup`, because generated hooks invoke bare `ut-tdd`.
 
 ## 6. 壊さない / 再発させない
 

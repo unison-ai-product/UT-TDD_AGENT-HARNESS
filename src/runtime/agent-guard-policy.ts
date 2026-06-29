@@ -20,3 +20,4 @@ export const AGENT_GUARD_BYPASS_HINT =
   "Set UT_TDD_ALLOW_RAW_AGENT=1 only with an explicit reason recorded in the final report.";
 
 export const AGENT_TOOL_NAME = "Agent";
+export const AGENT_TOOL_NAMES: ReadonlySet<string> = new Set(["Agent", "Task"]);

@@ -67,9 +67,16 @@ import {
   buildAdapterPlan,
   buildProviderInvocation,
 } from "./runtime/adapter";
+import {
+  type AgentGuardInput,
+  evaluateAgentGuard,
+  normalizeModelFamily,
+  type ResolvedFamily,
+} from "./runtime/agent-guard";
 import { SUBAGENT_ALLOWLIST } from "./runtime/agent-guard-policy";
 import {
   nodeAgentSlotsDeps,
+  recordGuardFire,
   releaseOldestGuardSlot,
   sweepStaleGuardSlots,
 } from "./runtime/agent-slots";
@@ -324,6 +331,30 @@ function sessionTouchedFilesForGuard(repoRoot: string, sessionId: string | undef
 
 function guardTargetsFromPatchText(patchText: string, repoRoot: string): string[] {
   return extractEditTargets({ input: patchText }).map((target) =>
+    normalizeRepoRelative(target, repoRoot),
+  );
+}
+
+function parseHookInput<T>(raw: string): T | null {
+  try {
+    return JSON.parse(raw.replace(/^\uFEFF/, "") || "{}") as T;
+  } catch {
+    return null;
+  }
+}
+
+function resolveAgentFamilyFromRepo(repoRoot: string, subagentType: string): ResolvedFamily {
+  const md = join(repoRoot, ".claude", "agents", `${subagentType}.md`);
+  if (!existsSync(md)) return "missing";
+  const content = readFileSync(md, "utf8");
+  const fm = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!fm) return "unknown";
+  const modelLine = fm[1].match(/^model:[ \t]*(\S+)/m);
+  return normalizeModelFamily(modelLine?.[1]?.trim()) ?? "unknown";
+}
+
+function hookTargetPaths(input: { tool_input?: unknown } | null, repoRoot: string): string[] {
+  return extractEditTargets(input?.tool_input).map((target) =>
     normalizeRepoRelative(target, repoRoot),
   );
 }
@@ -762,6 +793,59 @@ hook
       process.stdout.write(`session-log: post-tool-use ${input.session_id ?? "ut-tdd-cli"}\n`);
     },
   );
+
+hook
+  .command("agent-guard")
+  .description("PreToolUse(Agent|Task): enforce subagent allowlist and declared model family")
+  .action(() => {
+    const repoRoot = process.cwd();
+    const input = parseHookInput<AgentGuardInput>(readStdin());
+    if (!input) {
+      process.stderr.write("[ut-tdd-guard] BLOCK: malformed hook JSON (fail-close)\n");
+      process.exitCode = 2;
+      return;
+    }
+    const decision = evaluateAgentGuard(input, {
+      resolveAgentFamily: (subagentType) => resolveAgentFamilyFromRepo(repoRoot, subagentType),
+      allowRaw: process.env.UT_TDD_ALLOW_RAW_AGENT === "1",
+    });
+    if (decision.message) process.stderr.write(`${decision.message}\n`);
+    if (decision.code === 0 && input.tool_input?.subagent_type) {
+      try {
+        recordGuardFire(
+          { agentKind: input.tool_input.subagent_type },
+          nodeAgentSlotsDeps(repoRoot),
+        );
+      } catch {
+        // Slot telemetry is advisory; guard enforcement already passed.
+      }
+    }
+    process.exitCode = decision.code;
+  });
+
+hook
+  .command("work-guard")
+  .description("PreToolUse(Edit|Write|MultiEdit/apply_patch|write_file): block foreign edits")
+  .action(() => {
+    const repoRoot = process.cwd();
+    const input = parseHookInput<{ tool_input?: unknown; session_id?: string }>(readStdin());
+    if (!input) {
+      // Work guard remains fail-open on malformed hook I/O, matching the repo-local shim.
+      process.exitCode = 0;
+      return;
+    }
+    const override = resolveForeignEditOverride({
+      env: process.env.UT_TDD_ALLOW_FOREIGN_EDIT,
+    });
+    const result = evaluateWorkGuardTargets({
+      targetPaths: hookTargetPaths(input, repoRoot),
+      uncommittedFiles: loadChangedFiles(repoRoot),
+      sessionTouchedFiles: sessionTouchedFilesForGuard(repoRoot, input.session_id),
+      bypass: override.bypass,
+    });
+    if (result.blocked) process.stderr.write(`${result.blocked.message}\n`);
+    process.exitCode = result.decision === "block" ? 2 : 0;
+  });
 
 hook
   .command("subagent-stop")
