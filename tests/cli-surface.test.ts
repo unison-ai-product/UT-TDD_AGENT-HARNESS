@@ -302,6 +302,24 @@ describe("L7 CLI surface closure", () => {
     expect(payload).toHaveProperty("byCode");
   }, 20_000);
 
+  it("exposes roster list and check as JSON command surfaces", () => {
+    const list = runCli(["roster", "list", "--json"]);
+    const listed = JSON.parse(list.stdout);
+    const check = runCli(["roster", "check", "--json"]);
+    const checked = JSON.parse(check.stdout);
+
+    expect(list.status).toBe(0);
+    expect(listed.ok).toBe(true);
+    expect(listed.count).toBeGreaterThanOrEqual(14);
+    expect(listed.entries.map((entry: { id: string }) => entry.id)).toContain("pmo-sonnet");
+
+    expect(check.status).toBe(0);
+    expect(checked.ok).toBe(true);
+    expect(checked.missingFromRoster).toEqual([]);
+    expect(checked.nameMismatches).toEqual([]);
+    expect(checked.allowlistedPresent).toBe(14);
+  }, 20_000);
+
   it("exposes branch audit as a read-only JSON command surface", () => {
     const run = runCli(["branch", "audit", "--json"]);
     const payload = JSON.parse(run.stdout);

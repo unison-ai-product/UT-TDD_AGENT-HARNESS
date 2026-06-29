@@ -23,6 +23,34 @@ export interface AssetCatalogResult {
   findings: AssetCatalogFinding[];
 }
 
+export interface RosterRegistryEntry {
+  id: string;
+  name: string;
+  path: string;
+  model: string;
+  model_family: "haiku" | "sonnet" | "opus" | "unknown";
+  allowlisted: boolean;
+}
+
+export interface RosterListResult {
+  ok: boolean;
+  entries: RosterRegistryEntry[];
+  count: number;
+}
+
+export interface RosterNameMismatch {
+  id: string;
+  name: string;
+  path: string;
+}
+
+export interface RosterCheckResult extends RosterListResult {
+  allowlistedPresent: number;
+  missingFromRoster: string[];
+  nameMismatches: RosterNameMismatch[];
+  nonAllowlisted: string[];
+}
+
 interface AssetSource {
   type: "skill" | "roster" | "command";
   root: string;
@@ -67,6 +95,24 @@ function metadataFromContent(path: string, content: string): Record<string, unkn
   return parsed && typeof parsed === "object" && !Array.isArray(parsed)
     ? (parsed as Record<string, unknown>)
     : {};
+}
+
+function filenameStem(path: string): string {
+  return (
+    path
+      .replaceAll("\\", "/")
+      .split("/")
+      .at(-1)
+      ?.replace(/\.(md|ya?ml)$/i, "") ?? path
+  );
+}
+
+function modelFamily(raw: string): RosterRegistryEntry["model_family"] {
+  const hits: RosterRegistryEntry["model_family"][] = [];
+  if (/\bhaiku\b/i.test(raw)) hits.push("haiku");
+  if (/\bsonnet\b/i.test(raw)) hits.push("sonnet");
+  if (/\bopus\b/i.test(raw)) hits.push("opus");
+  return hits.length === 1 ? hits[0] : "unknown";
 }
 
 function stringList(value: unknown): string[] {
@@ -217,5 +263,64 @@ export function catalogAutomationAssets(input: CatalogAutomationAssetsInput): As
     findings: findings.sort(
       (a, b) => a.kind.localeCompare(b.kind) || a.subject_id.localeCompare(b.subject_id),
     ),
+  };
+}
+
+export function listRosterRegistry(input: {
+  repoRoot?: string;
+  allowlist?: Iterable<string>;
+}): RosterListResult {
+  const repoRoot = input.repoRoot ?? process.cwd();
+  const allowlist = new Set(input.allowlist ?? []);
+  const root = join(repoRoot, ".claude", "agents");
+  const entries = assetFiles(root)
+    .filter((path) => /\.md$/i.test(path))
+    .map((path): RosterRegistryEntry => {
+      const content = readFileSync(path, "utf8");
+      const metadata = metadataFromContent(path, content);
+      const rel = normalizeRel(relative(repoRoot, path));
+      const id = filenameStem(path);
+      const name = typeof metadata.name === "string" && metadata.name ? metadata.name : id;
+      const model = typeof metadata.model === "string" ? metadata.model : "";
+      return {
+        id,
+        name,
+        path: rel,
+        model,
+        model_family: modelFamily(model),
+        allowlisted: allowlist.has(id),
+      };
+    })
+    .sort((a, b) => a.id.localeCompare(b.id));
+  return {
+    ok: entries.length > 0,
+    entries,
+    count: entries.length,
+  };
+}
+
+export function checkRosterConsistency(input: {
+  repoRoot?: string;
+  allowlist: Iterable<string>;
+}): RosterCheckResult {
+  const allowlist = [...input.allowlist].sort();
+  const listed = listRosterRegistry({ repoRoot: input.repoRoot, allowlist });
+  const byId = new Map(listed.entries.map((entry) => [entry.id, entry]));
+  const missingFromRoster = allowlist.filter((id) => !byId.has(id));
+  const nameMismatches = listed.entries
+    .filter((entry) => entry.name !== entry.id)
+    .map((entry) => ({ id: entry.id, name: entry.name, path: entry.path }));
+  const nonAllowlisted = listed.entries
+    .filter((entry) => !entry.allowlisted)
+    .map((entry) => entry.id)
+    .sort();
+  const allowlistedPresent = allowlist.length - missingFromRoster.length;
+  return {
+    ...listed,
+    ok: listed.ok && missingFromRoster.length === 0 && nameMismatches.length === 0,
+    allowlistedPresent,
+    missingFromRoster,
+    nameMismatches,
+    nonAllowlisted,
   };
 }

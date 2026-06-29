@@ -14,6 +14,8 @@
     "IT-ASSET-07"
   ],
   "mandatory_it_ids": [
+    "IT-ASSET-01",
+    "IT-ASSET-02",
     "IT-ASSET-05",
     "IT-ASSET-06"
   ],
@@ -40,6 +42,19 @@
         "IT-ASSET-06",
         "IT-ASSET-07"
       ]
+    },
+    {
+      "command_id": "cmd-roster-cli-targeted",
+      "command": "bun run vitest run tests\\asset-catalog.test.ts tests\\cli-surface.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/asset-catalog.test.ts",
+      "output_digest": "sha256:2beb5bbfc435447a43b9a17028f6ff1f3fdb0ed85520d091137ce2ed2224c7e1",
+      "it_ids": [
+        "IT-ASSET-01",
+        "IT-ASSET-02"
+      ]
     }
   ],
   "coverage": [
@@ -57,27 +72,35 @@
     },
     {
       "it_id": "IT-ASSET-01",
-      "status": "partial",
+      "status": "passed",
       "evidence_paths": [
         "tests/asset-catalog.test.ts",
-        "src/assets/catalog.ts"
+        "tests/cli-surface.test.ts",
+        "src/assets/catalog.ts",
+        "src/cli.ts"
       ],
       "command_ids": [
-        "cmd-adapter-asset-targeted"
+        "cmd-adapter-asset-targeted",
+        "cmd-roster-cli-targeted"
       ],
-      "notes": "Covers roster docs catalog through automation_assets/search_index; direct roster list CLI registry proof remains partial."
+      "notes": "Covers roster markdown scan into deterministic filename-stem registry rows plus ut-tdd roster list JSON surface."
     },
     {
       "it_id": "IT-ASSET-02",
-      "status": "partial",
+      "status": "passed",
       "evidence_paths": [
+        "tests/asset-catalog.test.ts",
+        "tests/cli-surface.test.ts",
+        "src/assets/catalog.ts",
+        "src/cli.ts",
         "tests/agent-guard.test.ts",
         "tests/asset-drift.test.ts"
       ],
       "command_ids": [
-        "cmd-adapter-asset-targeted"
+        "cmd-adapter-asset-targeted",
+        "cmd-roster-cli-targeted"
       ],
-      "notes": "Covers guard allowlist and missing allowlisted agent fail-close; roster check CLI/name-mismatch proof remains partial."
+      "notes": "Covers roster check vs guard allowlist, missingFromRoster=0/nameMismatches=0 real-repo pass, and injected missing/name mismatch fail-close."
     },
     {
       "it_id": "IT-ASSET-03",
