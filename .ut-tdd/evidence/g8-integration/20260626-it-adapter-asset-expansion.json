@@ -17,6 +17,7 @@
     "IT-ASSET-01",
     "IT-ASSET-02",
     "IT-ASSET-03",
+    "IT-ASSET-04",
     "IT-ASSET-05",
     "IT-ASSET-06"
   ],
@@ -67,6 +68,18 @@
       "output_digest": "sha256:27155d10c52c95cda5006062aa099a49e7bf97f27420356464ed42e34939aeca",
       "it_ids": [
         "IT-ASSET-03"
+      ]
+    },
+    {
+      "command_id": "cmd-skill-catalog-targeted",
+      "command": "bun run vitest run tests\\asset-catalog.test.ts tests\\g8-integration-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/asset-catalog.test.ts",
+      "output_digest": "sha256:ee7d6328665e0d264e4d182669d63665a5223754247be413c4b5022776e42631",
+      "it_ids": [
+        "IT-ASSET-04"
       ]
     }
   ],
@@ -133,15 +146,16 @@
     },
     {
       "it_id": "IT-ASSET-04",
-      "status": "partial",
+      "status": "passed",
       "evidence_paths": [
         "tests/asset-catalog.test.ts",
         "src/assets/catalog.ts"
       ],
       "command_ids": [
-        "cmd-adapter-asset-targeted"
+        "cmd-adapter-asset-targeted",
+        "cmd-skill-catalog-targeted"
       ],
-      "notes": "Covers skill catalog projection from docs/skills; optional-root empty evidence remains partial."
+      "notes": "Covers docs/skills/**/*.md scan into an in-memory skill catalog, optional missing roots reported as info empty-with-evidence, malformed metadata and duplicate skill IDs fail closed, and no .ut-tdd persistent state is created."
     },
     {
       "it_id": "IT-ASSET-05",

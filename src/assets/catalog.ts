@@ -11,7 +11,13 @@ export interface CatalogAutomationAssetsInput {
 }
 
 export interface AssetCatalogFinding {
-  kind: "asset-drift" | "empty-catalog" | "invalid-root";
+  kind:
+    | "asset-drift"
+    | "empty-catalog"
+    | "invalid-root"
+    | "optional-root-empty"
+    | "invalid-skill-metadata"
+    | "duplicate-skill-id";
   severity: "error" | "warn" | "info";
   subject_id: string;
   evidence_path: string;
@@ -21,6 +27,23 @@ export interface AssetCatalogResult {
   ok: boolean;
   assets: string[];
   findings: AssetCatalogFinding[];
+}
+
+export interface SkillCatalogEntry {
+  id: string;
+  name: string;
+  path: string;
+  skill_type: string;
+  applies_layers: string[];
+  applies_drive_models: string[];
+}
+
+export interface SkillCatalogResult {
+  ok: boolean;
+  entries: SkillCatalogEntry[];
+  findings: AssetCatalogFinding[];
+  scannedRoots: string[];
+  optionalRoots: string[];
 }
 
 export interface RosterRegistryEntry {
@@ -97,6 +120,18 @@ function metadataFromContent(path: string, content: string): Record<string, unkn
     : {};
 }
 
+function metadataResultFromContent(
+  path: string,
+  content: string,
+): { ok: true; metadata: Record<string, unknown> } | { ok: false; message: string } {
+  try {
+    return { ok: true, metadata: metadataFromContent(path, content) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { ok: false, message };
+  }
+}
+
 function filenameStem(path: string): string {
   return (
     path
@@ -107,12 +142,118 @@ function filenameStem(path: string): string {
   );
 }
 
+function skillCatalogEntry(
+  repoRoot: string,
+  path: string,
+): SkillCatalogEntry | AssetCatalogFinding {
+  const rel = normalizeRel(relative(repoRoot, path));
+  const content = readFileSync(path, "utf8");
+  const metadata = metadataResultFromContent(path, content);
+  if (!metadata.ok) {
+    return {
+      kind: "invalid-skill-metadata",
+      severity: "error",
+      subject_id: rel,
+      evidence_path: rel,
+    };
+  }
+  const appliesTo =
+    metadata.metadata.applies_to && typeof metadata.metadata.applies_to === "object"
+      ? (metadata.metadata.applies_to as Record<string, unknown>)
+      : {};
+  const name =
+    (typeof metadata.metadata.name === "string" ? metadata.metadata.name.trim() : "") ||
+    filenameStem(path);
+  const skillType =
+    typeof metadata.metadata.skill_type === "string" ? metadata.metadata.skill_type.trim() : "";
+  return {
+    id: `skill:${name}`,
+    name,
+    path: rel,
+    skill_type: skillType,
+    applies_layers: stringList(appliesTo.layers).sort(),
+    applies_drive_models: stringList(appliesTo.drive_models).sort(),
+  };
+}
+
 function modelFamily(raw: string): RosterRegistryEntry["model_family"] {
   const hits: RosterRegistryEntry["model_family"][] = [];
   if (/\bhaiku\b/i.test(raw)) hits.push("haiku");
   if (/\bsonnet\b/i.test(raw)) hits.push("sonnet");
   if (/\bopus\b/i.test(raw)) hits.push("opus");
   return hits.length === 1 ? hits[0] : "unknown";
+}
+
+export function scanSkillCatalog(
+  input: { repoRoot?: string; root?: string; optionalRoots?: string[] } = {},
+): SkillCatalogResult {
+  const repoRoot = input.repoRoot ?? process.cwd();
+  const root = input.root ?? "docs/skills";
+  const optionalRoots = [...(input.optionalRoots ?? [])].sort();
+  const findings: AssetCatalogFinding[] = [];
+  const entries: SkillCatalogEntry[] = [];
+
+  const requiredRoot = join(repoRoot, root);
+  for (const path of assetFiles(requiredRoot).filter((path) => /\.md$/i.test(path))) {
+    const entry = skillCatalogEntry(repoRoot, path);
+    if ("kind" in entry) findings.push(entry);
+    else entries.push(entry);
+  }
+
+  for (const optionalRoot of optionalRoots) {
+    const absoluteRoot = join(repoRoot, optionalRoot);
+    const files = assetFiles(absoluteRoot).filter((path) => /\.md$/i.test(path));
+    if (files.length === 0) {
+      findings.push({
+        kind: "optional-root-empty",
+        severity: "info",
+        subject_id: optionalRoot,
+        evidence_path: optionalRoot,
+      });
+      continue;
+    }
+    for (const path of files) {
+      const entry = skillCatalogEntry(repoRoot, path);
+      if ("kind" in entry) findings.push(entry);
+      else entries.push(entry);
+    }
+  }
+
+  const seen = new Map<string, SkillCatalogEntry>();
+  for (const entry of entries) {
+    const previous = seen.get(entry.id);
+    if (previous != null) {
+      findings.push({
+        kind: "duplicate-skill-id",
+        severity: "error",
+        subject_id: entry.id,
+        evidence_path: `${previous.path},${entry.path}`,
+      });
+      continue;
+    }
+    seen.set(entry.id, entry);
+  }
+
+  if (entries.length === 0) {
+    findings.push({
+      kind: "empty-catalog",
+      severity: "warn",
+      subject_id: "skill_catalog",
+      evidence_path: root,
+    });
+  }
+
+  return {
+    ok: !findings.some(
+      (finding) => finding.severity === "error" || finding.kind === "empty-catalog",
+    ),
+    entries: [...seen.values()].sort((a, b) => a.id.localeCompare(b.id)),
+    findings: findings.sort(
+      (a, b) => a.kind.localeCompare(b.kind) || a.subject_id.localeCompare(b.subject_id),
+    ),
+    scannedRoots: [root],
+    optionalRoots,
+  };
 }
 
 function stringList(value: unknown): string[] {

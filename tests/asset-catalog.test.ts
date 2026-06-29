@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -6,6 +6,7 @@ import {
   catalogAutomationAssets,
   checkRosterConsistency,
   listRosterRegistry,
+  scanSkillCatalog,
 } from "../src/assets/catalog";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
@@ -103,6 +104,112 @@ describe("IT-ASSET-DB-01: automation asset catalog", () => {
       db.close();
       rmSync(repo, { recursive: true, force: true });
     }
+  });
+});
+
+describe("IT-ASSET-04: in-memory skill catalog scan", () => {
+  it("scans docs/skills markdown into an in-memory catalog without persistent .ut-tdd state", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-skill-catalog-"));
+    try {
+      mkdirSync(join(repo, "docs", "skills"), { recursive: true });
+      writeFileSync(
+        join(repo, "docs", "skills", "testing.md"),
+        [
+          "---",
+          "schema_version: skill.v1",
+          "name: testing",
+          "skill_type: testing",
+          "applies_to:",
+          "  layers: [L7, L8]",
+          "  drive_models: [Forward, Reverse]",
+          "---",
+          "# testing",
+        ].join("\n"),
+      );
+
+      const result = scanSkillCatalog({
+        repoRoot: repo,
+        optionalRoots: ["docs/skills/optional"],
+      });
+
+      expect(result.ok).toBe(true);
+      expect(result.entries).toEqual([
+        {
+          id: "skill:testing",
+          name: "testing",
+          path: "docs/skills/testing.md",
+          skill_type: "testing",
+          applies_layers: ["L7", "L8"],
+          applies_drive_models: ["Forward", "Reverse"],
+        },
+      ]);
+      expect(result.findings).toEqual([
+        {
+          kind: "optional-root-empty",
+          severity: "info",
+          subject_id: "docs/skills/optional",
+          evidence_path: "docs/skills/optional",
+        },
+      ]);
+      expect(existsSync(join(repo, ".ut-tdd"))).toBe(false);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed on malformed metadata and duplicate skill IDs", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-skill-catalog-"));
+    try {
+      mkdirSync(join(repo, "docs", "skills", "nested"), { recursive: true });
+      writeFileSync(
+        join(repo, "docs", "skills", "one.md"),
+        ["---", "name: duplicate", "skill_type: testing", "---", "# one"].join("\n"),
+      );
+      writeFileSync(
+        join(repo, "docs", "skills", "nested", "two.md"),
+        ["---", "name: duplicate", "skill_type: testing", "---", "# two"].join("\n"),
+      );
+      writeFileSync(
+        join(repo, "docs", "skills", "bad.md"),
+        ["---", "name: [unterminated", "---", "# bad"].join("\n"),
+      );
+
+      const result = scanSkillCatalog({ repoRoot: repo });
+
+      expect(result.ok).toBe(false);
+      expect(result.findings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "duplicate-skill-id",
+            subject_id: "skill:duplicate",
+          }),
+          expect.objectContaining({
+            kind: "invalid-skill-metadata",
+            evidence_path: "docs/skills/bad.md",
+          }),
+        ]),
+      );
+      expect(existsSync(join(repo, ".ut-tdd"))).toBe(false);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  it("real repo has a non-empty docs/skills markdown catalog and no optional-root blocker", () => {
+    const result = scanSkillCatalog({
+      repoRoot: process.cwd(),
+      optionalRoots: ["docs/skills/optional"],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.entries.length).toBeGreaterThan(40);
+    expect(result.entries.map((entry) => entry.path)).toContain("docs/skills/testing.md");
+    expect(result.findings).toContainEqual({
+      kind: "optional-root-empty",
+      severity: "info",
+      subject_id: "docs/skills/optional",
+      evidence_path: "docs/skills/optional",
+    });
   });
 });
 
