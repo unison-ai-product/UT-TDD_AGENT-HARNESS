@@ -134,6 +134,8 @@ describe("team run validation", () => {
     expect(result.strategy).toBe("parallel");
     expect(result.members.map((m) => m.provider)).toEqual(["codex", "claude"]);
     expect(result.members.every((m) => m.prompt.includes(TEAM_MEMBER_PROMPT_HEADER))).toBe(true);
+    expect(result.members[0].prompt).toContain("provider: codex");
+    expect(result.members[1].prompt).toContain("provider: claude");
     expect(result.members[0].model_selection.model).toBe("gpt-5.3-codex");
     expect(result.members[0].adapter).toMatchObject({
       command: "codex",

@@ -35,7 +35,7 @@ review_evidence:
     reviewed_at: "2026-06-25T20:00:37+09:00"
     tests_green_at: "2026-06-25T20:00:37+09:00"
     verdict: approve
-    scope: "Extract team run prompt, validation, frontier block, and dependency failure policy strings into a sidecar module."
+    scope: "Extract team run prompt, validation, frontier block, and dependency failure policy strings into a sidecar module. Follow-up: team member prompts expose resolved provider separately from model_family so cross-provider review evidence is unambiguous."
     worker_model: codex
     reviewer_model: codex-intra-runtime
     green_commands:
@@ -46,7 +46,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:58:58+09:00"
         evidence_path: tests/team-run.test.ts
-        output_digest: "sha256:0555481a666c100e151eeacd39fb081ac704791bd1ca5c2ff38bbca3d2f3dcda"
+        output_digest: "sha256:48679da7a5a6db9c2bce6753cf353943e40f0865b240244fff4a3f4c966f70d9"
       - kind: unit_test
         command: "bun run vitest run tests\\team-run.test.ts"
         runner: bun
@@ -54,7 +54,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:58:58+09:00"
         evidence_path: src/team/run.ts
-        output_digest: "sha256:f1e73952f85bbba8c2389e00404d31e783a5056951e5c7cc0113996fba4935bb"
+        output_digest: "sha256:a31e6a97262d7a4beaabfcf0ad0e8ddfbcf20771c445d82f2d92eb3d5c96a634"
       - kind: unit_test
         command: "bun run vitest run tests\\team-run.test.ts"
         runner: bun
@@ -70,7 +70,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:00:37+09:00"
         evidence_path: src/team/run.ts
-        output_digest: "sha256:f1e73952f85bbba8c2389e00404d31e783a5056951e5c7cc0113996fba4935bb"
+        output_digest: "sha256:a31e6a97262d7a4beaabfcf0ad0e8ddfbcf20771c445d82f2d92eb3d5c96a634"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -78,7 +78,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:00:37+09:00"
         evidence_path: tests/team-run.test.ts
-        output_digest: "sha256:0555481a666c100e151eeacd39fb081ac704791bd1ca5c2ff38bbca3d2f3dcda"
+        output_digest: "sha256:48679da7a5a6db9c2bce6753cf353943e40f0865b240244fff4a3f4c966f70d9"
 ---
 
 # PLAN-L7-162: team run policy extraction
@@ -94,6 +94,8 @@ prompt and validation policy strings from `src/team/run.ts`.
   messages, and dependency failure messages to `src/team/run-policy.ts`.
 - Keep `src/team/run.ts` responsible for team construction, dependency ordering,
   adapter planning, and execution.
+- Keep team member prompts explicit about resolved `provider` so cross-provider
+  review evidence cannot confuse provider routing with model-family selection.
 - Add direct test coverage for the sidecar policy through existing team run
   tests.
 

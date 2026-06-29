@@ -141,6 +141,7 @@ function buildMemberPrompt(
     `${TEAM_MEMBER_PROMPT_HEADER}: ${member.role}`,
     `team: ${team.name}`,
     `engine: ${member.engine}`,
+    `provider: ${selection.provider}`,
     `difficulty: ${selection.difficulty}`,
     `model_family: ${selection.model_family}`,
     `selected_model: ${selection.model}`,
