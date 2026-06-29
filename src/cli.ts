@@ -2212,7 +2212,7 @@ task
         return;
       }
       process.stdout.write(
-        `task classify: kind=${result.kind} drive=${result.drive}(${result.drive_confidence}) size=${result.size} complexity=${result.complexity_score} difficulty=${result.difficulty} risk=[${result.risk_flags.join(",")}]\n`,
+        `task classify: kind=${result.kind} drive=${result.drive}(${result.drive_confidence}) mode=${result.route.mode ?? "-"} route_exit=${result.route.exit_code} approval=${result.route.approval_status} size=${result.size} complexity=${result.complexity_score} difficulty=${result.difficulty} risk=[${result.risk_flags.join(",")}]\n`,
       );
       for (const f of result.findings) {
         process.stdout.write(`  - ${f.severity}: ${f.code} ${f.message}\n`);

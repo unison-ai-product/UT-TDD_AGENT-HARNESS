@@ -189,3 +189,10 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 - **ADR-002/003 候補**の起票判断 = G4 前の PO/TL レビュー
 - **CI lint 配線** (doctor + lint + test の自動発火) = local gate 実装済み。外部 CI service 配備は infrastructure / ops 配備範囲
 - **plan-id-schema lint** (Plan 集約 ID 検証) = 第2弾 lint (IMP-004)
+## 2026-06-29 Task-Classify Route Addendum
+
+`classifyTask()` also surfaces the `signal -> mode` route metadata from
+`evaluateRouteCommand`: `route.mode`, `route.exit_code`, approval status, and
+escalation boundaries. This makes `ut-tdd task classify` a route-aware work
+entry point. Full fail-close routing remains owned by `ut-tdd route eval` and
+later work-entry integration.

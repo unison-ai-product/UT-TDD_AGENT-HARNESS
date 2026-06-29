@@ -70,6 +70,19 @@ describe("U-FR-L1-39: classifyTask public surface", () => {
     expect(result.findings.some((f) => f.code === "escalation-risk")).toBe(true);
   });
 
+  it("surfaces signal-to-mode routing at the task entry point", () => {
+    const additive = classifyTask({ text: "new_requirement add payment support" });
+    expect(additive.route.mode).toBe("add-feature");
+    expect(additive.route.recommended_command).toBe("ut-tdd task classify");
+    expect(additive.route.requires_human_approval).toBe(true);
+    expect(additive.route.approval_status).toBe("policy_missing");
+    expect(additive.route.escalation_boundaries).toContain("payment");
+
+    const unknown = classifyTask({ text: "ponder the universe" });
+    expect(unknown.route.mode).toBeNull();
+    expect(unknown.route.exit_code).toBe(2);
+  });
+
   it("does not flag the legitimate word 'author' as an auth risk", () => {
     const result = classifyTask({ text: "author the design doc for the catalog" });
     expect(result.risk_flags).toEqual([]);

@@ -123,7 +123,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T18:37:05+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:77f299b947f51b266b65b0dd7e30e03b2eec57f8cecf4144a5bf4a4e77b111ae"
+        output_digest: "sha256:08f6d0e9ec8b80e81faf4e7e6eba263c67df34d88bffc7658a3d4bc15deae56f"
       - kind: smoke
         command: "bun src\\cli.ts distribution plan --tag v0.1.0 --json"
         runner: bun
@@ -172,7 +172,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T19:33:47+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:77f299b947f51b266b65b0dd7e30e03b2eec57f8cecf4144a5bf4a4e77b111ae"
+        output_digest: "sha256:08f6d0e9ec8b80e81faf4e7e6eba263c67df34d88bffc7658a3d4bc15deae56f"
 ---
 
 # PLAN-L7-157 (impl): clean 配布物 (dogfood 非搭載・画面なし・別PCで使える)
