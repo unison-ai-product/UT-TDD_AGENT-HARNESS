@@ -474,6 +474,19 @@ function dedupeActions(list: RelationImpactAction[]): RelationImpactAction[] {
  * projection に node が無い変更 path / 端点欠落 edge は finding + ok=false にし、
  * 弱い analyzeChangeImpact へ無音で fallback しない (U-RELGRAPH-006)。
  */
+function nodesForChangedPath(path: string, nodeByPath: Map<string, RelationNode>): RelationNode[] {
+  const exact = nodeByPath.get(path);
+  if (exact) {
+    return [exact];
+  }
+
+  const childPrefix = `${path.replace(/\/+$/u, "")}/`;
+  return [...nodeByPath.entries()]
+    .filter(([nodePath]) => nodePath.startsWith(childPrefix))
+    .map(([, node]) => node)
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
 export function analyzeRelationImpact(input: RelationImpactInput): RelationImpactResult {
   const index = buildIndex(input.projection);
   const nodeByPath = new Map<string, RelationNode>();
@@ -490,8 +503,8 @@ export function analyzeRelationImpact(input: RelationImpactInput): RelationImpac
 
   for (const raw of input.changedPaths) {
     const path = normalizePath(raw);
-    const node = nodeByPath.get(path);
-    if (!node) {
+    const nodes = nodesForChangedPath(path, nodeByPath);
+    if (nodes.length === 0) {
       findings.push({
         code: "missing-projection",
         severity: "error",
@@ -499,11 +512,13 @@ export function analyzeRelationImpact(input: RelationImpactInput): RelationImpac
       });
       continue;
     }
-    changedNodes.push(node);
-    const expansion = expandNode(node, index);
-    impacted.push(...expansion.impacted);
-    actions.push(...expansion.actions);
-    findings.push(...expansion.findings);
+    for (const node of nodes) {
+      changedNodes.push(node);
+      const expansion = expandNode(node, index);
+      impacted.push(...expansion.impacted);
+      actions.push(...expansion.actions);
+      findings.push(...expansion.findings);
+    }
   }
 
   const sortedFindings = sortFindings(findings);

@@ -21,6 +21,7 @@ function buildRepo(root: string): void {
   mkdirSync(join(root, ".claude", "agents"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "evidence", "g8-integration"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "evidence", "g9-system"), { recursive: true });
+  mkdirSync(join(root, ".ut-tdd", "evidence", "g10-ux"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "review"), { recursive: true });
   mkdirSync(join(root, "src", "widget"), { recursive: true });
   mkdirSync(join(root, "tests"), { recursive: true });
@@ -124,6 +125,19 @@ function buildRepo(root: string): void {
     "utf8",
   );
   writeFileSync(
+    join(root, ".ut-tdd", "evidence", "g10-ux", "test-manifest.json"),
+    JSON.stringify(
+      {
+        schema_version: "g10-ux-evidence-v1",
+        gate: "G10",
+        profile: "fixture",
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+  writeFileSync(
     join(root, ".editorconfig"),
     ["root = true", "", "[*]", "charset = utf-8", ""].join("\n"),
     "utf8",
@@ -185,6 +199,13 @@ describe("loadRelationGraphSourceSet", () => {
       expect(g9EvidenceDoc).toMatchObject({
         id: ".ut-tdd/evidence/g9-system/test-manifest.json",
         path: ".ut-tdd/evidence/g9-system/test-manifest.json",
+      });
+      const g10EvidenceDoc = sourceSet.designDocs?.find(
+        (d) => d.path === ".ut-tdd/evidence/g10-ux/test-manifest.json",
+      );
+      expect(g10EvidenceDoc).toMatchObject({
+        id: ".ut-tdd/evidence/g10-ux/test-manifest.json",
+        path: ".ut-tdd/evidence/g10-ux/test-manifest.json",
       });
       const referenceDoc = sourceSet.designDocs?.find(
         (d) => d.path === "docs/reference/ai-agent-harness-directory-reference.md",
@@ -265,6 +286,16 @@ describe("loadRelationGraphSourceSet", () => {
         "design:.ut-tdd/evidence/g9-system/test-manifest.json",
       );
       expect(g9EvidenceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
+      const g10EvidenceDirImpact = analyzeRelationImpact({
+        changedPaths: [".ut-tdd/evidence/g10-ux"],
+        projection,
+      });
+      expect(g10EvidenceDirImpact.ok).toBe(true);
+      expect(g10EvidenceDirImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:.ut-tdd/evidence/g10-ux/test-manifest.json",
+      );
+      expect(g10EvidenceDirImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
       const referenceImpact = analyzeRelationImpact({
         changedPaths: ["docs/reference/ai-agent-harness-directory-reference.md"],
@@ -389,6 +420,15 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
       "design:.ut-tdd/evidence/g9-system/20260629-st-system-minimum.json",
     );
     expect(g9EvidenceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const g10EvidenceDirImpact = analyzeRelationImpact({
+      changedPaths: [".ut-tdd/evidence/g10-ux"],
+      projection,
+    });
+    expect(g10EvidenceDirImpact.ok).toBe(true);
+    expect(g10EvidenceDirImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:.ut-tdd/evidence/g10-ux/20260629-ux-minimum.json",
+    );
+    expect(g10EvidenceDirImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const referenceImpact = analyzeRelationImpact({
       changedPaths: ["docs/reference/ai-agent-harness-directory-reference.md"],
       projection,

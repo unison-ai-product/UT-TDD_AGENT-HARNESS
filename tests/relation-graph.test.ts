@@ -261,6 +261,35 @@ describe("analyzeRelationImpact (U-RELGRAPH-004..006)", () => {
     expect(physical.impacted.map((n) => n.id)).toContain("requirement:FR-1");
   });
 
+  it("U-RELGRAPH-005B: changed directory paths expand to projected child nodes without silent fallback", () => {
+    const projection = collectRelationGraphProjection({
+      designDocs: [
+        {
+          id: ".ut-tdd/evidence/g10-ux/manifest.json",
+          path: ".ut-tdd/evidence/g10-ux/manifest.json",
+        },
+      ],
+    });
+
+    const evidenceDir = analyzeRelationImpact({
+      changedPaths: [".ut-tdd/evidence/g10-ux"],
+      projection,
+    });
+    expect(evidenceDir.ok).toBe(true);
+    expect(evidenceDir.changedNodes.map((n) => n.id)).toEqual([
+      "design:.ut-tdd/evidence/g10-ux/manifest.json",
+    ]);
+    expect(evidenceDir.findings.map((f) => f.code)).not.toContain("missing-projection");
+
+    const unknownDir = analyzeRelationImpact({
+      changedPaths: [".ut-tdd/evidence/unknown-gate"],
+      projection,
+    });
+    expect(unknownDir.ok).toBe(false);
+    expect(unknownDir.changedNodes).toEqual([]);
+    expect(unknownDir.findings.map((f) => f.code)).toContain("missing-projection");
+  });
+
   it("U-RELGRAPH-006: projection coverage 欠落 (graph projection なし / stale edge) は ok=false + finding、analyzeChangeImpact へ無音 fallback しない", () => {
     const projection = collectRelationGraphProjection({
       sourceFiles: [
