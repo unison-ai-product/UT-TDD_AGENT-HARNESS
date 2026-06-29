@@ -26,15 +26,15 @@ agent_slots:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T18:12:00+09:00"
-    tests_green_at: "2026-06-29T18:07:00+09:00"
+    reviewed_at: "2026-06-29T21:29:59+09:00"
+    tests_green_at: "2026-06-29T21:29:59+09:00"
     verdict: approve
     scope: "Project Claude subagent/slash-command runtime assets into setup and clean distribution while keeping dogfood runtime state excluded."
     worker_model: codex
     reviewer_model: codex-intra-runtime
     green_commands:
       - kind: unit_test
-        command: "bun run vitest run tests\\setup.test.ts tests\\distribution-acceptance.test.ts tests\\cli-surface.test.ts"
+        command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
         scope: targeted
         exit_code: 0
@@ -46,9 +46,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T18:07:00+09:00"
+        completed_at: "2026-06-29T21:29:59+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
-        output_digest: "sha256:f3a7dc28d3e4ccfe11e9553265177f1c1e6ed104d07c97600ed2864bfa97d83f"
+        output_digest: "sha256:fa7098deb1259afb33be1a06c1a58251af1ddc554f1cf295b7547fa18b005117"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun

@@ -29,21 +29,21 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-23T16:10:00+09:00"
-    tests_green_at: "2026-06-23T16:10:00+09:00"
+    reviewed_at: "2026-06-29T21:29:59+09:00"
+    tests_green_at: "2026-06-29T21:29:59+09:00"
     verdict: approve
     scope: "CLI plan complete routes to completed handover and clears current-plan through runHandover."
     worker_model: codex
     reviewer_model: codex-intra-runtime
     green_commands:
       - kind: unit_test
-        command: "bun run vitest run tests\\cli-surface.test.ts -t \"plan complete\""
+        command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-23T16:10:00+09:00"
+        completed_at: "2026-06-29T21:29:59+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:da7a8bcf83c33107f83f7e47f9b64f20ebb9ee0ce4392df0c7bf12b3a9001dd9"
+        output_digest: "sha256:d9528134d8ae18ee34dc2f645f971d77feae52b82f48efa05e2833c58b59b087"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun

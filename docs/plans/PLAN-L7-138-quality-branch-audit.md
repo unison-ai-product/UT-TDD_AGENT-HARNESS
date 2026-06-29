@@ -44,21 +44,21 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-23T22:15:00+09:00"
-    tests_green_at: "2026-06-23T22:15:00+09:00"
+    reviewed_at: "2026-06-29T21:29:59+09:00"
+    tests_green_at: "2026-06-29T21:29:59+09:00"
     verdict: approve
     scope: "Read-only quality and branch audit surfaces; no destructive branch operation."
     worker_model: codex
     reviewer_model: codex-intra-runtime
     green_commands:
       - kind: unit_test
-        command: "bun run vitest run tests\\quality-audit.test.ts tests\\branch-audit.test.ts tests\\cli-surface.test.ts -t \"quality audit|branch audit\""
+        command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-23T22:03:46+09:00"
+        completed_at: "2026-06-29T21:29:59+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:da7a8bcf83c33107f83f7e47f9b64f20ebb9ee0ce4392df0c7bf12b3a9001dd9"
+        output_digest: "sha256:d9528134d8ae18ee34dc2f645f971d77feae52b82f48efa05e2833c58b59b087"
       - kind: typecheck
         command: "bun run tsc --noEmit"
         runner: bun

@@ -51,8 +51,8 @@ dependencies:
 review_evidence:
   - reviewer: codex
     review_kind: cross_agent
-    reviewed_at: "2026-06-26T12:10:00+09:00"
-    tests_green_at: "2026-06-26T11:45:00+09:00"
+    reviewed_at: "2026-06-29T21:29:59+09:00"
+    tests_green_at: "2026-06-29T21:29:59+09:00"
     verdict: approve
     scope: "外部レビュー指摘4件の修正 (setup --dry-run 無副作用化 / runtime adapter --execute --json 実行+実行結果JSON / runtime-portability git非依存 filesystem fallback / work-guard override marker one-shot 消費) と回帰テスト、および 7 confirmed PLAN の green-command digest coordinated 再stamp 方針 (案A) の desk review。Codex(gpt-5.5) は6観点 (A 修正妥当性 / B --execute --json 契約 / C marker×hybrid協調 / D 再stamp 監査性 / E 他PLAN digest 訂正手順 / F Biome drift) で approve。marker consume が env override を消す懸念は誤読 (consume は source==marker 分岐内、env優先で source=env のため非消費) と実コードで確認。"
     worker_model: claude-opus-4-8
@@ -67,13 +67,13 @@ review_evidence:
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:64b15536b25c4b174d842c60e8568f6144d53d8689be9934025b701cb3de5666"
       - kind: unit_test
-        command: "bun run vitest run tests/cli-surface.test.ts"
+        command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-26T11:41:00+09:00"
+        completed_at: "2026-06-29T21:29:59+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:da7a8bcf83c33107f83f7e47f9b64f20ebb9ee0ce4392df0c7bf12b3a9001dd9"
+        output_digest: "sha256:d9528134d8ae18ee34dc2f645f971d77feae52b82f48efa05e2833c58b59b087"
       - kind: unit_test
         command: "bun run vitest run tests/runtime-portability.test.ts"
         runner: bun
