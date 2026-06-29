@@ -70,7 +70,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23"
         evidence_path: tests/frontmatter.test.ts
-        output_digest: "sha256:5ef62e98c92039bfc63a5e760a0e7235c768832c7752f18dd6ddb44e9b2be655"
+        output_digest: "sha256:3fe83386c27d73b3c364c254a78c6a17791e8ebad3668d7387545a0016df12cb"
       - kind: unit_test
         command: "bun test tests\\workflow-contracts.test.ts"
         runner: bun

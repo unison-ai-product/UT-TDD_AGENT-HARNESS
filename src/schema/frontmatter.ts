@@ -161,6 +161,15 @@ const WORKFLOW_KINDS = new Set<string>(["poc", "reverse"]);
 
 const custom = z.ZodIssueCode.custom;
 
+const ALLOWED_LAYER_BY_KIND: Record<string, readonly string[]> = {
+  design: ["L1", "L2", "L3", "L4", "L5", "L6"],
+  impl: ["L7"],
+  refactor: ["L7"],
+  retrofit: ["L7"],
+  troubleshoot: ["L7"],
+  research: ["L1", "L2", "L3", "L4"],
+};
+
 /**
  * §1.1 排他制約 + §1.1.parent_design + charter(L0) + §1.10 E を fail-close 検証する frontmatter schema。
  */
@@ -356,6 +365,15 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
       code: custom,
       path: ["layer"],
       message: "kind=add-impl は layer=L7 (§1.3 実装追補、§1.1)",
+    });
+  }
+
+  const allowedLayers = ALLOWED_LAYER_BY_KIND[fm.kind];
+  if (allowedLayers && !fm.master_hub && fm.layer && !allowedLayers.includes(fm.layer)) {
+    ctx.addIssue({
+      code: custom,
+      path: ["layer"],
+      message: `kind=${fm.kind} は layer ∈ {${allowedLayers.join(",")}} (§1.10 kind×layer authoring guard)`,
     });
   }
 });
