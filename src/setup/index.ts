@@ -150,15 +150,9 @@ const CLEAN_REQUIRED_PATHS = [
   "package.json",
   "src/cli.ts",
   "src/setup/index.ts",
-  "docs/templates/adapter/AGENTS.md",
-  "docs/templates/adapter/CLAUDE.md",
-  "docs/templates/adapter/.codex/config.toml",
-  "docs/templates/adapter/.codex/hooks.json",
-  "docs/templates/adapter/.claude/CLAUDE.md",
-  "docs/templates/adapter/.claude/agents/ut-tdd-tl.md",
-  "docs/templates/adapter/.claude/commands/ut-tdd-status.md",
-  "docs/templates/adapter/.claude/commands/ut-tdd-test.md",
-  "docs/templates/adapter/.claude/settings.json",
+  ...COMMON_FILES.filter((entry) => entry.template.startsWith("adapter/")).map(
+    (entry) => `docs/templates/${entry.template}`,
+  ),
 ];
 const CLEAN_DENY_PREFIXES = [
   ".ut-tdd/",
@@ -308,7 +302,7 @@ function renderArtifacts(
   const out: { path: string; content: string }[] = [];
   for (const f of plan.files) {
     const name = templateNameFor(f.path);
-    let content = templates[name] ?? "";
+    let content = templates[name] ?? BUILTIN_GITHUB_TEMPLATES[name] ?? "";
     if (f.path === CODEOWNERS_TARGET && plan.teams) {
       content = content
         .replace(/\{\{TL_TEAM\}\}/g, plan.teams.tl)
@@ -479,16 +473,7 @@ export function buildConsumerReadinessPlan(input: {
     },
     rollback: {
       managedPaths: [
-        "AGENTS.md",
-        "CLAUDE.md",
-        ".codex/config.toml",
-        ".codex/hooks.json",
-        ".claude/CLAUDE.md",
-        ".claude/agents/ut-tdd-tl.md",
-        ".claude/commands/ut-tdd-status.md",
-        ".claude/commands/ut-tdd-test.md",
-        ".claude/settings.json",
-        ".github/workflows/harness-check.yml",
+        ...COMMON_FILES.map((entry) => normalizeDistributionPath(entry.file.path)),
         ".ut-tdd/state/setup.json",
       ],
       backupRequired: true,

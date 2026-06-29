@@ -17,7 +17,7 @@ import {
   type SetupDeps,
   type SetupState,
 } from "../src/setup/index";
-import type { TemplateSet } from "../src/setup/templates";
+import { COMMON_FILES, type TemplateSet } from "../src/setup/templates";
 
 /** in-memory file store + gh 呼び出し記録の mock deps (now 固定で決定論)。 */
 function mockDeps(
@@ -253,15 +253,19 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         expect.objectContaining({ path: join(".codex", "hooks.json"), category: "A" }),
         expect.objectContaining({ path: join(".claude", "CLAUDE.md"), category: "A" }),
         expect.objectContaining({
-          path: join(".claude", "agents", "ut-tdd-tl.md"),
+          path: join(".claude", "agents", "code-reviewer.md"),
+          category: "A",
+        }),
+        expect.objectContaining({
+          path: join(".claude", "agents", "qa-test.md"),
+          category: "A",
+        }),
+        expect.objectContaining({
+          path: join(".claude", "commands", "build.md"),
           category: "A",
         }),
         expect.objectContaining({
           path: join(".claude", "commands", "ut-tdd-status.md"),
-          category: "A",
-        }),
-        expect.objectContaining({
-          path: join(".claude", "commands", "ut-tdd-test.md"),
           category: "A",
         }),
         expect.objectContaining({ path: join(".claude", "settings.json"), category: "A" }),
@@ -276,7 +280,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         "CLAUDE.md",
         join(".codex", "hooks.json"),
         join(".claude", "CLAUDE.md"),
-        join(".claude", "agents", "ut-tdd-tl.md"),
+        join(".claude", "agents", "code-reviewer.md"),
+        join(".claude", "commands", "build.md"),
       ]),
     );
     for (const p of preview) expect(p).not.toContain("UT-TDD-agent-harness");
@@ -313,16 +318,10 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         "package.json",
         "src/cli.ts",
         "src/setup/index.ts",
+        ...COMMON_FILES.filter((entry) => entry.template.startsWith("adapter/")).map(
+          (entry) => `docs/templates/${entry.template}`,
+        ),
         "src/web/page.tsx",
-        "docs/templates/adapter/AGENTS.md",
-        "docs/templates/adapter/CLAUDE.md",
-        "docs/templates/adapter/.codex/config.toml",
-        "docs/templates/adapter/.codex/hooks.json",
-        "docs/templates/adapter/.claude/CLAUDE.md",
-        "docs/templates/adapter/.claude/agents/ut-tdd-tl.md",
-        "docs/templates/adapter/.claude/commands/ut-tdd-status.md",
-        "docs/templates/adapter/.claude/commands/ut-tdd-test.md",
-        "docs/templates/adapter/.claude/settings.json",
         ".codex/hooks.json",
         ".claude/settings.json",
         "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
@@ -336,6 +335,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(plan.artifactPaths).toContain("LICENSE");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/AGENTS.md");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/.codex/hooks.json");
+    expect(plan.artifactPaths).toContain("docs/templates/adapter/.claude/agents/code-reviewer.md");
+    expect(plan.artifactPaths).toContain("docs/templates/adapter/.claude/commands/build.md");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/.claude/agents/ut-tdd-tl.md");
     expect(plan.artifactPaths).not.toContain("src/web/page.tsx");
     expect(plan.artifactPaths).not.toContain(".codex/hooks.json");
@@ -368,6 +369,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(ready.ci.requires).toContain("bun run test");
     expect(ready.rollback.backupRequired).toBe(true);
     expect(ready.rollback.managedPaths).toContain("AGENTS.md");
+    expect(ready.rollback.managedPaths).toContain(".claude/agents/code-reviewer.md");
+    expect(ready.rollback.managedPaths).toContain(".claude/commands/build.md");
     expect(ready.contracts.tagPin).toContain("#v0.1.0");
     expect(ready.contracts.stable).toContain("adapter managed markers");
     expect(ready.smokeScenarios).toEqual(

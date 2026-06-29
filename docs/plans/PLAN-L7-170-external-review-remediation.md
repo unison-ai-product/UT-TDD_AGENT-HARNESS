@@ -65,7 +65,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:40:00+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:b1245c6c8110617c60f46cc104336474c7dd8e1c15c53b9b5c97d85b0abeafc0"
+        output_digest: "sha256:8bc2bf108f9f5f112f456d6cb1b5d26c849b413c5d47aab9b36c2b6e123c7a07"
       - kind: unit_test
         command: "bun run vitest run tests/cli-surface.test.ts"
         runner: bun
@@ -105,7 +105,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:44:10+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:dc3d12167b43a3265898caa59a0d4f69f5005774aa7b366ca29392610636c82f"
+        output_digest: "sha256:5f5196d61b85fe3a934b6a4a12336c65992f8ac83d529ca59dd513c57ab91e6c"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -129,7 +129,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T11:45:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:dc3d12167b43a3265898caa59a0d4f69f5005774aa7b366ca29392610636c82f"
+        output_digest: "sha256:5f5196d61b85fe3a934b6a4a12336c65992f8ac83d529ca59dd513c57ab91e6c"
 ---
 
 # PLAN-L7-170: 外部レビュー remediation (4 findings + digest 再stamp)

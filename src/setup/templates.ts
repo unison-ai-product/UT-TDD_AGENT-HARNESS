@@ -3,7 +3,130 @@ import type { GeneratedFile } from "./index";
 
 export type TemplateSet = { [name: string]: string };
 
+const CLAUDE_AGENT_TEMPLATES = [
+  ["be-api", "Backend API reviewer for route, contract, and integration concerns."],
+  ["be-logic", "Backend domain logic reviewer for invariants, boundaries, and TDD fit."],
+  [
+    "code-reviewer",
+    "Read-only senior engineering reviewer for correctness, security, and maintainability.",
+  ],
+  ["db-schema", "Database schema reviewer for migrations, indexes, and data contracts."],
+  ["devops-deploy", "CI, deployment, rollback, and release-readiness reviewer."],
+  [
+    "pdm-innovation-manager",
+    "Product management reviewer for opportunity, scope, and portfolio fit.",
+  ],
+  ["pdm-marketing-innovation", "Market and user-value reviewer for product framing and adoption."],
+  [
+    "pdm-tech-innovation",
+    "Technical product reviewer for feasibility, platform leverage, and risk.",
+  ],
+  ["pmo-haiku", "Lightweight PMO reviewer for concise status, blockers, and next action."],
+  ["pmo-project-explorer", "Project discovery reviewer for goals, constraints, and evidence gaps."],
+  ["pmo-project-scout", "Project triage reviewer for backlog, ownership, and workflow routing."],
+  [
+    "pmo-sonnet",
+    "PMO reviewer for plan structure, handover quality, and cross-document consistency.",
+  ],
+  ["pmo-tech-docs", "Technical documentation reviewer for ADR, process, and governance quality."],
+  ["pmo-tech-fork", "Fork, extraction, and distribution reviewer for clean-room boundaries."],
+  ["pmo-tech-news", "Technical research reviewer for external signals and dated source checks."],
+  ["qa-test", "Quality reviewer for test strategy, oracle strength, and regression scope."],
+  [
+    "refactor-scout",
+    "Refactoring reviewer for complexity, duplication, and low-risk extraction candidates.",
+  ],
+  ["security-audit", "Security reviewer for auth, secrets, PII, and threat-model concerns."],
+  [
+    "ut-tdd-tl",
+    "Technical-lead reviewer for UT-TDD workflow, gates, tests, and release readiness.",
+  ],
+] as const;
+
+const CLAUDE_COMMAND_TEMPLATES = [
+  ["build", "Implement against a frozen UT-TDD spec/test design."],
+  ["code-simplify", "Identify the smallest safe simplification for the selected code."],
+  ["sdd-plan", "Create a spec-driven UT-TDD plan before implementation."],
+  ["sdd-review", "Review a spec/design against UT-TDD trace and gate requirements."],
+  ["ship", "Prepare release evidence, rollback notes, and final verification."],
+  ["spec", "Author a spec-first design before any implementation."],
+  ["test", "Run targeted UT-TDD verification for the current change."],
+] as const;
+
+function agentTemplate(name: string, description: string): string {
+  return [
+    "---",
+    `name: ${name}`,
+    `description: ${description}`,
+    "tools: Read, Grep, Glob, Bash",
+    "---",
+    "",
+    "Act as a consumer-safe UT-TDD subagent for the current repository.",
+    "",
+    "Required baseline:",
+    "- Read `AGENTS.md`, `CLAUDE.md`, and `.claude/CLAUDE.md` when present.",
+    "- Use `ut-tdd status` and `ut-tdd doctor` as local state evidence.",
+    "- Report findings before summaries, with file and command evidence.",
+    "- Do not write secrets, credentials, PII, or machine-local absolute paths.",
+    "- Prefer read-only review unless the user explicitly asks for implementation.",
+    "",
+  ].join("\n");
+}
+
+function commandTemplate(name: string, description: string): string {
+  return [
+    "---",
+    `description: ${description}`,
+    'argument-hint: "<target>"',
+    "---",
+    "",
+    `Command: ${name}`,
+    "",
+    "Target: $ARGUMENTS",
+    "",
+    "Use repository-local UT-TDD commands. Start with `ut-tdd status --json`, run the narrow verification for the target, and finish with `ut-tdd doctor` when workflow or gate behavior is affected.",
+    "",
+  ].join("\n");
+}
+
+const CLAUDE_AGENT_TEMPLATE_SET: TemplateSet = Object.fromEntries(
+  CLAUDE_AGENT_TEMPLATES.map(([name, description]) => [
+    `adapter/.claude/agents/${name}.md`,
+    agentTemplate(name, description),
+  ]),
+);
+
+const CLAUDE_COMMAND_TEMPLATE_SET: TemplateSet = Object.fromEntries(
+  CLAUDE_COMMAND_TEMPLATES.map(([name, description]) => [
+    `adapter/.claude/commands/${name}.md`,
+    commandTemplate(name, description),
+  ]),
+);
+
+const CLAUDE_AGENT_FILES: { template: string; file: GeneratedFile }[] = CLAUDE_AGENT_TEMPLATES.map(
+  ([name]) => ({
+    template: `adapter/.claude/agents/${name}.md`,
+    file: {
+      path: join(".claude", "agents", `${name}.md`),
+      category: "A",
+      purpose: `Claude subagent template: ${name}`,
+    },
+  }),
+);
+
+const CLAUDE_COMMAND_FILES: { template: string; file: GeneratedFile }[] =
+  CLAUDE_COMMAND_TEMPLATES.map(([name]) => ({
+    template: `adapter/.claude/commands/${name}.md`,
+    file: {
+      path: join(".claude", "commands", `${name}.md`),
+      category: "A",
+      purpose: `Claude slash command template: ${name}`,
+    },
+  }));
+
 export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
+  ...CLAUDE_AGENT_TEMPLATE_SET,
+  ...CLAUDE_COMMAND_TEMPLATE_SET,
   "adapter/AGENTS.md": [
     "<!-- UT-TDD:managed:start -->",
     "# UT-TDD Agent Harness Adapter",
@@ -141,22 +264,6 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "}",
     "",
   ].join("\n"),
-  "adapter/.claude/agents/ut-tdd-tl.md": [
-    "---",
-    "name: ut-tdd-tl",
-    "description: Technical-lead reviewer for UT-TDD workflow, gates, tests, and release readiness.",
-    "tools: Read, Grep, Glob, Bash",
-    "---",
-    "",
-    "Act as a read-only technical lead for the current UT-TDD slice.",
-    "",
-    "Required checks:",
-    "- Read `AGENTS.md`, `CLAUDE.md`, and `.claude/CLAUDE.md` when present.",
-    "- Use `ut-tdd status` and `ut-tdd doctor` as the local source of truth.",
-    "- Review design, test evidence, rollback, brownfield impact, and handover state.",
-    "- Report findings before summaries. Do not mutate files.",
-    "",
-  ].join("\n"),
   "adapter/.claude/commands/ut-tdd-status.md": [
     "---",
     "description: Show UT-TDD status and doctor output",
@@ -291,14 +398,8 @@ export const COMMON_FILES: { template: string; file: GeneratedFile }[] = [
       purpose: "Claude hook settings for UT-TDD CLI entrypoints",
     },
   },
-  {
-    template: "adapter/.claude/agents/ut-tdd-tl.md",
-    file: {
-      path: join(".claude", "agents", "ut-tdd-tl.md"),
-      category: "A",
-      purpose: "Claude subagent template for UT-TDD technical-lead review",
-    },
-  },
+  ...CLAUDE_AGENT_FILES,
+  ...CLAUDE_COMMAND_FILES,
   {
     template: "adapter/.claude/commands/ut-tdd-status.md",
     file: {

@@ -107,6 +107,15 @@ describe("clean distribution local acceptance smoke", () => {
       expect(distributionJson.export.artifactPaths).toContain(
         "docs/templates/adapter/.claude/agents/ut-tdd-tl.md",
       );
+      expect(distributionJson.export.artifactPaths).toContain(
+        "docs/templates/adapter/.claude/agents/code-reviewer.md",
+      );
+      expect(distributionJson.export.artifactPaths).toContain(
+        "docs/templates/adapter/.claude/agents/qa-test.md",
+      );
+      expect(distributionJson.export.artifactPaths).toContain(
+        "docs/templates/adapter/.claude/commands/build.md",
+      );
       expect(distributionJson.export.artifactPaths).not.toContain(
         "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
       );

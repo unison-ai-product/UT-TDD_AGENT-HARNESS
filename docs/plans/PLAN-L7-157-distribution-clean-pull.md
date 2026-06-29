@@ -91,7 +91,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T18:37:05+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:b1245c6c8110617c60f46cc104336474c7dd8e1c15c53b9b5c97d85b0abeafc0"
+        output_digest: "sha256:8bc2bf108f9f5f112f456d6cb1b5d26c849b413c5d47aab9b36c2b6e123c7a07"
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -107,7 +107,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T18:35:12+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:dc3d12167b43a3265898caa59a0d4f69f5005774aa7b366ca29392610636c82f"
+        output_digest: "sha256:5f5196d61b85fe3a934b6a4a12336c65992f8ac83d529ca59dd513c57ab91e6c"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -123,7 +123,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T18:38:19+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:dc3d12167b43a3265898caa59a0d4f69f5005774aa7b366ca29392610636c82f"
+        output_digest: "sha256:5f5196d61b85fe3a934b6a4a12336c65992f8ac83d529ca59dd513c57ab91e6c"
       - kind: smoke
         command: "bun run vitest run tests\\distribution-acceptance.test.ts"
         runner: bun
@@ -131,7 +131,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T19:36:48+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
-        output_digest: "sha256:2a8f68b836c8e8f6077c24e29687e352b5e30787e3a80c7dec8773204b3b0cf9"
+        output_digest: "sha256:f3a7dc28d3e4ccfe11e9553265177f1c1e6ed104d07c97600ed2864bfa97d83f"
 ---
 
 # PLAN-L7-157 (impl): clean 配布物 (dogfood 非搭載・画面なし・別PCで使える)
