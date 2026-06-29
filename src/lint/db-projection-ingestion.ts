@@ -27,9 +27,19 @@ export interface DbProjectionIngestionResult {
   missingRows: DbProjectionIngestionRequirement[];
   optionalEvidenceTables: string[];
   telemetryProvenance: DbTelemetryProvenanceFinding[];
+  enforceTelemetryProvenance: boolean;
   rowCounts: Record<string, number>;
   ok: boolean;
 }
+
+export interface DbProjectionIngestionOptions {
+  telemetryStats?: DbTelemetryProvenanceStats[];
+  enforceTelemetryProvenance?: boolean;
+}
+
+type DbProjectionIngestionTelemetryInput =
+  | DbTelemetryProvenanceStats[]
+  | DbProjectionIngestionOptions;
 
 export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirement[] = [
   {
@@ -102,8 +112,13 @@ export const TELEMETRY_PROVENANCE_REQUIREMENTS: DbProjectionIngestionRequirement
 export function analyzeDbProjectionIngestion(
   rowCounts: Record<string, number>,
   requirements: DbProjectionIngestionRequirement[] = AUTOMATIC_DB_PROJECTION_REQUIREMENTS,
-  telemetryStats: DbTelemetryProvenanceStats[] = [],
+  telemetryInput: DbProjectionIngestionTelemetryInput = [],
 ): DbProjectionIngestionResult {
+  const telemetryStats = Array.isArray(telemetryInput)
+    ? telemetryInput
+    : (telemetryInput.telemetryStats ?? []);
+  const enforceTelemetryProvenance =
+    !Array.isArray(telemetryInput) && telemetryInput.enforceTelemetryProvenance === true;
   const missingRows = requirements.filter(
     (requirement) => (rowCounts[requirement.table] ?? 0) <= 0,
   );
@@ -130,8 +145,12 @@ export function analyzeDbProjectionIngestion(
       (table) => (rowCounts[table] ?? 0) <= 0,
     ),
     telemetryProvenance,
+    enforceTelemetryProvenance,
     rowCounts,
-    ok: requirements.length > 0 && missingRows.length === 0,
+    ok:
+      requirements.length > 0 &&
+      missingRows.length === 0 &&
+      (!enforceTelemetryProvenance || telemetryProvenance.length === 0),
   };
 }
 
@@ -155,6 +174,16 @@ export function dbProjectionIngestionMessages(result: DbProjectionIngestionResul
   const messages = ["db-projection-ingestion - violation"];
   for (const item of result.missingRows) {
     messages.push(`empty automatic projection table ${item.table}: ${item.reason}`);
+  }
+  if (result.enforceTelemetryProvenance && result.telemetryProvenance.length > 0) {
+    messages.push(
+      `db-telemetry-provenance - violation (${result.telemetryProvenance.length} populated telemetry tables have no runtime provenance)`,
+    );
+    for (const item of result.telemetryProvenance) {
+      messages.push(
+        `projection-only telemetry table ${item.table}: rows=${item.rows}, runtime_rows=${item.runtimeRows}, projection_rows=${item.projectionRows}, empty_session_rows=${item.emptySessionRows}, valued_rows=${item.valuedRows} - ${item.reason}`,
+      );
+    }
   }
   return messages;
 }

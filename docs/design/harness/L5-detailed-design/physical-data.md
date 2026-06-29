@@ -131,6 +131,15 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 
 物理不変条件: `trace_edges` の orphan 0、`coverage.status=fail` の gate fail-close、`findings.status=open` の severity 別 gate 判定、`model_runs.plan_id` と `plan_registry.plan_id` の参照整合を doctor / vmodel lint が検証する。`plan_registry.source_hash` は PLAN markdown 全文の sha256 で、persisted `harness.db` と現在の `docs/plans/*.md` の fingerprint 不一致は `drive-db-registration` hard gate で stale として扱う。projection は自動生成だが、検出対象の機械 SSoT として扱い、入力 state との不一致は `findings` に保存する。
 
+Telemetry provenance invariant (PLAN-L7-188): populated telemetry tables used
+to claim "fired", "used", "executed", or "works" must distinguish runtime
+provenance from deterministic projection. In provenance-enforced mode,
+`skill_invocations`, `test_runs`, `guardrail_decisions`, and `model_runs` fail
+closed when their populated rows are projection-only (`runtime_rows=0` and
+`projection_rows>0`). Default doctor may surface this as a partial migration
+state until runtime capture is wired, but verification-strategy close cannot
+treat projection-only telemetry as substance.
+
 ## §3 値オブジェクトの物理表現 + SubDoc zod 化 (IMP-026)
 
 data.md §3 の 12 値オブジェクトは全て **enum string** で物理表現 (JSON では文字列)。

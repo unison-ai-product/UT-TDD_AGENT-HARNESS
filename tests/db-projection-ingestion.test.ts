@@ -134,4 +134,47 @@ describe("db projection ingestion detector", () => {
       "db-telemetry-provenance - partial",
     );
   });
+
+  it("fails closed on projection-only telemetry when provenance enforcement is enabled", () => {
+    const result = analyzeDbProjectionIngestion(
+      {
+        graph_nodes: 1,
+        dependency_edges: 1,
+        trace_edges: 1,
+        graph_snapshots: 1,
+        impact_rules: 1,
+        verification_profiles: 1,
+        mcp_server_profiles: 1,
+        mcp_profile_triggers: 1,
+        document_export_profiles: 1,
+        document_export_triggers: 1,
+        document_export_runs: 1,
+        document_export_datasets: 1,
+        test_cases: 1,
+        test_artifact_edges: 1,
+        artifact_progress: 1,
+        test_runs: 9,
+      },
+      undefined,
+      {
+        telemetryStats: [
+          {
+            table: "test_runs",
+            rows: 9,
+            runtimeRows: 0,
+            projectionRows: 9,
+            emptySessionRows: 9,
+            valuedRows: 9,
+          },
+        ],
+        enforceTelemetryProvenance: true,
+      },
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.telemetryProvenance.map((row) => row.table)).toEqual(["test_runs"]);
+    expect(dbProjectionIngestionMessages(result).join("\n")).toContain(
+      "db-telemetry-provenance - violation",
+    );
+  });
 });

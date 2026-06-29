@@ -57,6 +57,7 @@ dependencies:
   references:
     - docs/plans/PLAN-L7-70-skill-pack-curation.md
     - docs/plans/PLAN-L5-08-harness-db-feedback.md
+    - docs/plans/PLAN-L7-192-db-telemetry-provenance-enforcement.md
 ---
 
 # PLAN-L7-188 (impl): 検証戦略 (設計時ログ + L7 debug 実走 + projection fail-close gate)
@@ -137,3 +138,15 @@ PO 決定 (2026-06-29): いまはクローズへ向けた **配布準備** を�
   implementation. Runtime skill firing, runtime test execution capture,
   guardrail decision capture, and token/cost ingestion remain PLAN-L7-188
   follow-up work before a full verification-strategy close.
+
+## 2026-06-29 Codex partial landing: provenance-enforced ingestion mode
+
+- Added `enforceTelemetryProvenance` to `analyzeDbProjectionIngestion` so
+  projection-only telemetry can fail-close when a verification profile or future
+  doctor mode needs substance, not just presence.
+- The current default doctor remains in migration-compatible partial mode
+  because runtime capture rows for `skill_invocations`, `test_runs`,
+  `guardrail_decisions`, and `model_runs` are not fully wired yet.
+- This closes the checker-contract gap only. The remaining implementation work
+  is runtime provenance capture and rebuild-time ingestion from durable session
+  sources.
