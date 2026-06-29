@@ -27,6 +27,14 @@ missing evidence, stale defers, or failed mandatory ST cases. The required gate
 artifact is a system evidence manifest. The source of workflow granularity is
 `docs/test-design/harness/L9-system-test-design.md` §6 G9-WORKFLOW.
 
+G10-WORKFLOW minimum mechanization (PLAN-L10 ascent): G10 is no longer closed by
+placeholder UX prose alone. A passing G10 slice requires a UX evidence manifest,
+selected UXV-* coverage across UXV-VISUAL / UXV-TOKEN / UXV-A11Y / UXV-VRT /
+UXV-REVIEW families, executable test or review procedures, and explicit exit
+blocks for missing evidence, stale defers, or failed mandatory UXV cases. The
+required gate artifact is a UX evidence manifest. The source of workflow
+granularity is `docs/design/harness/L10-ux/visual-design.md` §6 G10-WORKFLOW.
+
 ## 1. gate 一覧表
 
 | gate | タイミング (L 遷移) | 確認対象 | fail 時動作 |
@@ -41,13 +49,13 @@ artifact is a system evidence manifest. The source of workflow granularity is
 | **G7** | L7 完了 | 4 artifact trace freeze: ① 4 artifact 揃い / ② 必須 8 directed edge 全充足 / ③ coverage ≥ 80% — **3 条件いずれか欠落 → exit 1** (§2.2 R-C3 fix) | exit 1 → L7 差分修正 |
 | **G8** | L8 完了 | 結合テスト品質 (概念定義、機械化は将来 PLAN) | block → L8 修正 |
 | **G9** | L9 完了 | 総合テスト品質 (概念定義、機械化は将来 PLAN) | block → L9 修正 |
-| **G10** | L10 完了 | UX 磨き品質 (概念定義) | block → L10 修正 |
+| **G10** | L10 完了 | UX 磨き品質 + G10-WORKFLOW evidence manifest | block → L10 修正 |
 | **G11** | L11 完了 | 総合レビュー + UAT (概念定義) | block → L11 修正 |
 | **G12** | L12 完了 | デプロイ + 受入テスト通過 | block → L12 修正 |
 | **G13** | L13 完了 | デプロイ後検証 (概念定義) | block → L13 修正 |
 | **G14** | L14 完了 | 運用検証 (概念定義) | block → L14 修正 |
 
-注: G8-G14 の機械検証条件は概念定義に留まる。機械化は将来の個別 PLAN で詳細設計する (§2.2 末尾)。全 Reverse は confirmed 化済 (2026-06-04) だが G8-G14 機械化 PLAN は**未起票のまま** = carry。起票自体は Phase 3 (L7 自動化) / Phase 5 以降でよいが、carry の所在を living で追えるよう `docs/improvement-backlog.md` の **IMP-052** (observed) に登録した。起票時に当該 PLAN_ID をここへリンクで埋める。G1-G7 は §2.2 段階 A/B で機械化済み (または計画済み)。
+注: G8-G10 は minimum workflow lint + evidence manifest で機械化済み。G11-G14 の機械検証条件はまだ概念定義に留まる。残機械化は将来の個別 PLAN で詳細設計する (§2.2 末尾)。全 Reverse は confirmed 化済 (2026-06-04) で、G8-G14 機械化 route は `right-arm-gate-planning` で PLAN 参照を維持する。G1-G7 は §2.2 段階 A/B で機械化済み (または計画済み)。
 
 > **正規式モデル (PLAN-RECOVERY-02、2026-06-04、非破壊)**: 各 gate の V-pair は対応する検証本質を凍結/検証する — L6 単体 / L5 結合 / L4 総合 / L3 本番受入 / L2 実データ検証 / L1 運用 / **L0 価値検証 (G0.5 + L14→L0 feedback、従来ペア無しの穴埋め)**。右腕 = データ実在性エスカレーション (合成→本番→運用→価値)。番号・既存ゲートは据え置き。正本 = gate-design.md / concept §2.3 / overview §4。
 

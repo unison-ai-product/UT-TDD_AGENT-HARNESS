@@ -1,0 +1,107 @@
+{
+  "schema_version": "g10-ux-evidence-v1",
+  "gate": "G10",
+  "profile": "ux-minimum",
+  "plan_id": "PLAN-L7-184-g10-ux-workflow",
+  "selected_uxv_ids": [
+    "UXV-VISUAL-01",
+    "UXV-TOKEN-01",
+    "UXV-A11Y-01",
+    "UXV-VRT-01",
+    "UXV-REVIEW-01"
+  ],
+  "mandatory_uxv_ids": [
+    "UXV-VISUAL-01",
+    "UXV-TOKEN-01",
+    "UXV-A11Y-01",
+    "UXV-VRT-01",
+    "UXV-REVIEW-01"
+  ],
+  "deferred_uxv_ids": [],
+  "commands": [
+    {
+      "command_id": "cmd-ux-minimum-targeted",
+      "command": "bun run vitest run tests\\frontend-design-coverage.test.ts tests\\workflow-contracts.test.ts tests\\screen-impl-pair-freeze.test.ts tests\\g10-ux-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/g10-ux-workflow.test.ts",
+      "output_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "uxv_ids": [
+        "UXV-VISUAL-01",
+        "UXV-TOKEN-01",
+        "UXV-A11Y-01",
+        "UXV-VRT-01",
+        "UXV-REVIEW-01"
+      ]
+    }
+  ],
+  "coverage": [
+    {
+      "uxv_id": "UXV-VISUAL-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/frontend-design-coverage.test.ts",
+        "docs/design/harness/L10-ux/visual-design.md"
+      ],
+      "command_ids": [
+        "cmd-ux-minimum-targeted"
+      ],
+      "notes": "G10 visual evidence is now a doctor-checked workflow contract rather than placeholder prose."
+    },
+    {
+      "uxv_id": "UXV-TOKEN-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/workflow-contracts.test.ts",
+        "docs/design/harness/L4-basic-design/tokens.yaml"
+      ],
+      "command_ids": [
+        "cmd-ux-minimum-targeted"
+      ],
+      "notes": "Frontend-design green requirements and token SSoT remain linked to executable workflow contracts."
+    },
+    {
+      "uxv_id": "UXV-A11Y-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/workflow-contracts.test.ts",
+        "docs/design/harness/L4-basic-design/ui-standard.md"
+      ],
+      "command_ids": [
+        "cmd-ux-minimum-targeted"
+      ],
+      "notes": "A11y evidence is required by the frontend-design workflow and L4 UI standard before G10 close."
+    },
+    {
+      "uxv_id": "UXV-VRT-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/screen-impl-pair-freeze.test.ts",
+        "src/lint/screen-impl-pair-freeze.ts"
+      ],
+      "command_ids": [
+        "cmd-ux-minimum-targeted"
+      ],
+      "notes": "Screen implementation claims remain blocked until the L2 to L10 pair freeze path is explicit."
+    },
+    {
+      "uxv_id": "UXV-REVIEW-01",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/g10-ux-workflow.test.ts",
+        "src/lint/g10-ux-workflow.ts"
+      ],
+      "command_ids": [
+        "cmd-ux-minimum-targeted"
+      ],
+      "notes": "G10 review exit criteria are captured in the UX evidence manifest and doctor lint."
+    }
+  ],
+  "exit_criteria": {
+    "all_mandatory_passed": true,
+    "failed_mandatory_count": 0,
+    "stale_defer_count": 0,
+    "doctor_check": "g10-ux-workflow"
+  }
+}

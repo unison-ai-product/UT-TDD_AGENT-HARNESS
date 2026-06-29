@@ -39,3 +39,22 @@ test-design doc は作らない)。
 
 - 上流: [L2 wireframe](../L2-screen/wireframe.md) (mock = self-pair) + [L4 ui-standard](../L4-basic-design/ui-standard.md) (FE 設計標準) + L7 src/web 実装。
 - 下流: G10 UX 承認 → L11 総合レビュー+UAT。
+
+## §6 G10-WORKFLOW
+
+test_strategy: risk-based UX verification tied to L2 screen contracts and L4 FE design standards.
+test_plan: select UXV cases by visual, token, accessibility, visual-regression, and UX-review risk.
+test_conditions: each selected UXV case has a concrete rendered or reviewable evidence path.
+coverage_items: UXV-* coverage is mapped to visual, token, a11y, VRT, and UX review families.
+test_procedures: run the mapped vitest/doctor/render/review commands and capture exit codes.
+execution_evidence: UX evidence manifest records command, UXV IDs, paths, and result.
+exit_criteria: all mandatory selected UXV cases pass or explicit defer exists.
+defect_routing: failed UXV cases route to L10 correction, L2/L4 back-prop, Reverse, or Incident by scope.
+
+| UXV ID | Given | When | Then |
+|---|---|---|---|
+| UXV-VISUAL-01 | L2 wireframe and L4 UI standard exist | G10 visual review is selected | Evidence links the visual decision to a concrete screen/component artifact |
+| UXV-TOKEN-01 | L4 tokens.yaml is the FE token SSoT | G10 token verification is selected | Evidence proves the token contract is reachable from workflow/FE coverage checks |
+| UXV-A11Y-01 | WCAG/a11y expectations exist in L4 UI standard | G10 accessibility verification is selected | Evidence links a11y requirements to executable or reviewable checks |
+| UXV-VRT-01 | visual regression is a required frontend-design green signal | G10 VRT verification is selected | Evidence blocks G10 close without a visual-regression path or explicit defer |
+| UXV-REVIEW-01 | UX polish requires judgement beyond row presence | G10 review is selected | Evidence records the review route and exit criteria before L11 handoff |
