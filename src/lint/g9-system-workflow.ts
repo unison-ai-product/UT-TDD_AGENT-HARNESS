@@ -92,6 +92,7 @@ const ALLOWED_EVIDENCE_PREFIXES = [
   "src/",
   "tests/",
 ] as const;
+const ST_ROW_ID_RE = /^\|\s*\*{0,2}(ST-[A-Z]+-[A-Za-z0-9-]+)/;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -209,6 +210,17 @@ function hasAllowedEvidencePrefix(path: string): boolean {
   return ALLOWED_EVIDENCE_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
 
+function extractDesignedStIds(l9TestDesign: string): string[] {
+  return [
+    ...new Set(
+      l9TestDesign
+        .split(/\r?\n/)
+        .map((line) => line.match(ST_ROW_ID_RE)?.[1])
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ].sort();
+}
+
 function validateManifest(
   manifest: G9SystemEvidenceManifest,
   repoRoot: string | undefined,
@@ -312,14 +324,18 @@ function validateManifest(
 export function analyzeG9SystemWorkflow(input: G9SystemWorkflowInput): G9SystemWorkflowResult {
   const missingWorkflowMarkers = missingMarkers(input.l9TestDesign, WORKFLOW_MARKERS);
   const missingGateMarkers = missingMarkers(input.gatesMd, GATE_MARKERS);
-  const stCaseCount = new Set([...input.l9TestDesign.matchAll(/\bST-[A-Z0-9-]+/g)].map((m) => m[0]))
-    .size;
+  const designedStIds = extractDesignedStIds(input.l9TestDesign);
+  const stCaseCount = designedStIds.length;
   const selectedStIds = new Set(
     input.evidenceManifests.flatMap((manifest) => manifest.selected_st_ids),
   );
   const mandatoryStIds = new Set(
     input.evidenceManifests.flatMap((manifest) => manifest.mandatory_st_ids),
   );
+  const deferredStIds = new Set(
+    input.evidenceManifests.flatMap((manifest) => manifest.deferred_st_ids),
+  );
+  const coveredDesignedStIds = new Set([...mandatoryStIds, ...deferredStIds]);
   const violations: string[] = [];
 
   if (missingWorkflowMarkers.length > 0) {
@@ -339,6 +355,21 @@ export function analyzeG9SystemWorkflow(input: G9SystemWorkflowInput): G9SystemW
   }
   if (input.evidenceManifests.length === 0) {
     violations.push(`G9 system evidence manifest is missing under ${EVIDENCE_DIR}`);
+  }
+  for (const stId of designedStIds) {
+    if (!coveredDesignedStIds.has(stId)) {
+      violations.push(`G9 designed ST row lacks mandatory/deferred evidence: ${stId}`);
+    }
+  }
+  for (const stId of [...mandatoryStIds]) {
+    if (!selectedStIds.has(stId)) {
+      violations.push(`G9 mandatory ST row is not selected: ${stId}`);
+    }
+  }
+  for (const stId of [...deferredStIds]) {
+    if (!designedStIds.includes(stId)) {
+      violations.push(`G9 deferred ST row is not defined in L9 design: ${stId}`);
+    }
   }
   for (const prefix of REQUIRED_ST_FAMILY_PREFIXES) {
     if (![...selectedStIds].some((stId) => stId.startsWith(prefix))) {

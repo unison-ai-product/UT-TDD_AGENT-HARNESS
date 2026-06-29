@@ -27,6 +27,13 @@ missing evidence, stale defers, or failed mandatory ST cases. The required gate
 artifact is a system evidence manifest. The source of workflow granularity is
 `docs/test-design/harness/L9-system-test-design.md` §6 G9-WORKFLOW.
 
+G9 full-row evidence rule (PLAN-L9 ascent): family-spanning ST-* coverage is the
+minimum shape only. A passing G9 slice also requires every designed ST-* row in
+`docs/test-design/harness/L9-system-test-design.md` to appear in the system
+evidence manifest as either `mandatory_st_ids` with passing coverage or
+`deferred_st_ids` with an explicit non-stale defer. Missing row evidence is a
+doctor-blocking gate failure.
+
 G10-WORKFLOW minimum mechanization (PLAN-L10 ascent): G10 is no longer closed by
 placeholder UX prose alone. A passing G10 slice requires a UX evidence manifest,
 selected UXV-* coverage across UXV-VISUAL / UXV-TOKEN / UXV-A11Y / UXV-VRT /

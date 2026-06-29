@@ -33,6 +33,18 @@ const stRows = [
   "| ST-EXT-01 | Given | When | Then |",
   "| ST-EXT-02 | Given | When | Then |",
 ].join("\n");
+const stRowIds = [
+  "ST-DATA-01",
+  "ST-DATA-02",
+  "ST-ARCH-01",
+  "ST-ARCH-02",
+  "ST-FUNC-01",
+  "ST-FUNC-04",
+  "ST-ASSET-01",
+  "ST-ASSET-02",
+  "ST-EXT-01",
+  "ST-EXT-02",
+];
 
 const validManifest = {
   manifest_path: ".ut-tdd/evidence/g9-system/test.json",
@@ -96,6 +108,22 @@ const validManifest = {
   },
 };
 
+const fullRowManifest = {
+  ...validManifest,
+  selected_st_ids: stRowIds,
+  mandatory_st_ids: stRowIds,
+  commands: validManifest.commands.map((command) => ({
+    ...command,
+    st_ids: stRowIds,
+  })),
+  coverage: stRowIds.map((stId) => ({
+    st_id: stId,
+    status: "passed",
+    evidence_paths: ["tests/g9-system-workflow.test.ts"],
+    command_ids: ["cmd-system-minimum-targeted"],
+  })),
+};
+
 describe("g9-system-workflow lint", () => {
   it("fails when L9 has ST rows but no executable G9 workflow granularity", () => {
     const result = analyzeG9SystemWorkflow({
@@ -132,12 +160,12 @@ describe("g9-system-workflow lint", () => {
       gatesMd: gateBlock,
       evidenceManifests: [
         {
-          ...validManifest,
-          coverage: validManifest.coverage.map((entry) =>
+          ...fullRowManifest,
+          coverage: fullRowManifest.coverage.map((entry) =>
             entry.st_id === "ST-FUNC-04" ? { ...entry, status: "failed" } : entry,
           ),
           exit_criteria: {
-            ...validManifest.exit_criteria,
+            ...fullRowManifest.exit_criteria,
             all_mandatory_passed: false,
             failed_mandatory_count: 1,
           },
@@ -169,18 +197,39 @@ describe("g9-system-workflow lint", () => {
     expect(result.violations).toContain("G9 mandatory ST coverage missing ST-EXT- family");
   });
 
+  it("fails when a designed ST row has neither mandatory evidence nor an explicit defer", () => {
+    const result = analyzeG9SystemWorkflow({
+      repoRoot: process.cwd(),
+      l9TestDesign: `${workflowBlock}\n${stRows}`,
+      gatesMd: gateBlock,
+      evidenceManifests: [
+        {
+          ...fullRowManifest,
+          selected_st_ids: stRowIds.filter((stId) => stId !== "ST-ARCH-02"),
+          mandatory_st_ids: stRowIds.filter((stId) => stId !== "ST-ARCH-02"),
+          coverage: fullRowManifest.coverage.filter((entry) => entry.st_id !== "ST-ARCH-02"),
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContain(
+      "G9 designed ST row lacks mandatory/deferred evidence: ST-ARCH-02",
+    );
+  });
+
   it("passes when L9 workflow, G9 gate markers, and ST evidence manifest are explicit", () => {
     const result = analyzeG9SystemWorkflow({
       repoRoot: process.cwd(),
       l9TestDesign: `${workflowBlock}\n${stRows}`,
       gatesMd: gateBlock,
-      evidenceManifests: [validManifest],
+      evidenceManifests: [fullRowManifest],
     });
 
     expect(result.ok).toBe(true);
     expect(result.stCaseCount).toBe(10);
     expect(result.manifestCount).toBe(1);
-    expect(result.selectedStCount).toBe(5);
+    expect(result.selectedStCount).toBe(10);
     expect(g9SystemWorkflowMessages(result)[0]).toContain("OK");
   });
 
@@ -191,12 +240,12 @@ describe("g9-system-workflow lint", () => {
       gatesMd: gateBlock,
       evidenceManifests: [
         {
-          ...validManifest,
-          commands: validManifest.commands.map((command) => ({
+          ...fullRowManifest,
+          commands: fullRowManifest.commands.map((command) => ({
             ...command,
             evidence_path: ".github/workflows/harness-check.yml",
           })),
-          coverage: validManifest.coverage.map((entry) => ({
+          coverage: fullRowManifest.coverage.map((entry) => ({
             ...entry,
             evidence_paths: [".github/workflows/harness-check.yml"],
           })),
