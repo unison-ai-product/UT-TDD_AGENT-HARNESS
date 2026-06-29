@@ -6,7 +6,7 @@ layer: L7
 drive: db
 status: confirmed
 created: 2026-06-25
-updated: 2026-06-25
+updated: 2026-06-29
 owner: Codex
 parent_design: docs/process/modes/refactor.md
 backprop_decision: not_required
@@ -57,6 +57,39 @@ review_evidence:
         completed_at: "2026-06-25T22:34:00+09:00"
         evidence_path: src/lint/green-command-digest.ts
         output_digest: "sha256:898a7a236a2873fdbd0df6b380331fcd70774334af71abd3bd6fb721d721a7f4"
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-29T19:18:36+09:00"
+    tests_green_at: "2026-06-29T19:18:36+09:00"
+    verdict: approve
+    scope: "Re-ran green-command-digest/review-evidence tests plus lint/typecheck, then aligned 24 stale green_commands output_digest values to current evidence_path SHA256 in the same correction packet."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\green-command-digest.test.ts tests\\review-evidence.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-29T19:18:23+09:00"
+        evidence_path: tests/green-command-digest.test.ts
+        output_digest: "sha256:4c10eca9258ffe560b0eb420d9ecac699ad0e7423b519f09cdf6db81e0000018"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-29T19:18:23+09:00"
+        evidence_path: src/lint/green-command-digest.ts
+        output_digest: "sha256:898a7a236a2873fdbd0df6b380331fcd70774334af71abd3bd6fb721d721a7f4"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-29T19:18:36+09:00"
+        evidence_path: src/lint/green-command-digest.ts
+        output_digest: "sha256:898a7a236a2873fdbd0df6b380331fcd70774334af71abd3bd6fb721d721a7f4"
 ---
 
 # PLAN-L7-174: green command digest correction
@@ -73,6 +106,16 @@ their declared `evidence_path`.
 - Mechanically update only `output_digest` values where the evidence file exists
   and the current hash differs.
 - Keep the correction behavior aligned with `src/lint/green-command-digest.ts`.
+
+## 2026-06-29 Rerun-Bound Correction
+
+An independent review found the prior digest correction could be read as a pure
+restamp because the updated hashes were not bundled with same-cycle green
+reruns. This correction packet re-ran the digest/review-evidence tests, lint,
+and typecheck, then aligned 24 stale `green_commands[].output_digest` values to
+the current `evidence_path` SHA256 contract. The bound verification target is
+that `green-command-digest` reports zero mismatches before the correction is
+committed.
 
 ## Acceptance Criteria
 
