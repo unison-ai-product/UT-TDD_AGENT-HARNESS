@@ -49,8 +49,9 @@ export type Layer = z.infer<typeof layerSchema>;
 // 区分 (② プロダクト選択) は docs/governance/document-system-map.md §1b を正本とする。
 // FE/UI 設計 doc カタログ (左腕、各 L の per-layer フロント設計 doc) の grounding は §1c を正本とする:
 //   L1 screen / L2 screen-*+ui-element / L3 screen-functional / L4 ui-standard / L5 ui-detail / L6 screen-spec。
-//   screen-functional/ui-detail/screen-spec は ② プロダクト選択 (UI 有時) で、body 実体化は段階順に後続
-//   (PLAN-L4-14 §4、vocabulary 登録が先・必須 § 構造定義は body 起票時、PLAN-L7-97 §4 と同方針)。
+//   screen-functional/ui-detail/screen-spec は ② プロダクト選択 (UI 有時)。
+//   Harness central UI body docs were populated by PLAN-L3-06 / PLAN-L5-09 / PLAN-L6-36
+//   after PLAN-L4-14 registered the vocabulary first.
 export const VALID_SUB_DOCS = {
   L1: ["business", "functional", "nfr", "technical", "screen"],
   L2: ["screen-list", "screen-flow", "ui-element", "wireframe"],

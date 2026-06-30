@@ -100,6 +100,8 @@ describe("analyzeFrontendDesignCoverage (U-FEDC-001..006)", () => {
     });
     expect(frontendDesignCoverageMessages(r)[0]).toContain("frontend-design-coverage — OK");
     expect(frontendDesignCoverageMessages(r)[0]).toContain("drift 0");
+    expect(r.presentBodies).toBe(6);
+    expect(r.pendingBodies).toBe(0);
   });
 });
 
@@ -114,5 +116,8 @@ describe("loadFrontendDesignCoverageInput real repo (U-FEDC-007)", () => {
     expect(VALID_SUB_DOCS.L3 as readonly string[]).toContain("screen-functional");
     expect(VALID_SUB_DOCS.L5 as readonly string[]).toContain("ui-detail");
     expect(VALID_SUB_DOCS.L6 as readonly string[]).toContain("screen-spec");
+    expect(FE_COVERAGE_MAP.find((e) => e.layer === "L3")?.body).toBe("present");
+    expect(FE_COVERAGE_MAP.find((e) => e.layer === "L5")?.body).toBe("present");
+    expect(FE_COVERAGE_MAP.find((e) => e.layer === "L6")?.body).toBe("present");
   });
 });

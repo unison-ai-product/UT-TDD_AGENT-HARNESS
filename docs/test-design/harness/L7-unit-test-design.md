@@ -699,3 +699,15 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-RGUARD-010 | `reviewGuardMessages` | 非 violation → 空 (worker / clean は無音)。 |
 | U-RGUARD-011 | `summarizeStagedReview` | staged 集合は sorted/unique、suspect = staged ∩ review-mutated (混入疑い)、suspect 非空で ok=false (commit 前 staged-diff の機械化)。 |
 | U-RGUARD-012 | `summarizeStagedReview` | review-mutated 未提供 → suspect 空 + ok=true (純列挙)。 |
+## PLAN-L6-36 Screen Spec Addendum
+
+This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6 FE per-screen function specification for the 15 central dashboard screens and keeps the UI read-only/copy-only boundary testable at function level.
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-SCREEN-001 | `parseScreenQuery(input) => ScreenQuery` | Missing or invalid query values normalize to documented defaults for PM/HM/GD screen routes. |
+| U-SCREEN-002 | `validateScreenQuery(query) => ValidationResult` | Unknown screen id, layer, status, and unsafe document path are deterministic validation errors. |
+| U-SCREEN-003 | `handleScreenEvent(event, state) => ScreenEventResult` | Events return only navigation, filter, expand, refresh, or copy results; shell/provider/file-write execution is forbidden. |
+| U-SCREEN-004 | `loadScreenViewModel(projectId, query) => ViewState` | loading, ok, empty, stale, and error states remain distinct and use L4 state semantics. |
+| U-SCREEN-005 | `classifyTelemetryProvenance(row) => TelemetryProvenance` | Runtime claims are rejected unless runtime source/session fields exist; projection/advisory rows remain labelled. |
+| U-SCREEN-006 | `buildRouteRegistry(screens) => RouteRegistry` | Route registry contains exactly 15 screen ids and no duplicate route paths. |

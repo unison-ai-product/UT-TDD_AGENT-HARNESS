@@ -5,15 +5,15 @@
   landed after A-146 (the consolidated substance-gap audit) and re-classify each A-146 finding.
 - **successor of**: [A-146](A-146-substance-gap-consolidated-remediation.md). A-146 stays the
   point-in-time record at its own baseline; this audit supersedes its dispositions where noted.
-- **baseline**: committed local stack through `HEAD = e83ba60 docs: refresh post remediation audit evidence`.
-- **git state (material)**: `main` is **18 commits ahead of `origin/main`**. Local verification is
-  current; remote CI/release verification is not current until the stack is pushed and checked.
+- **baseline**: current local remediation stack including A146-6 FE body population.
+- **git state (material)**: local verification is current; remote CI/release verification is not
+  current until the stack is pushed and checked.
 - **method**: baseline fixed to committed HEAD. Hybrid working-tree changes outside this audit are
   excluded unless explicitly mentioned.
 
 ## Current local gate results
 
-- `bun run test`: **117 files passed / 1203 tests passed** on Windows
+- `bun run test`: **117 files passed / 1204 tests passed** on Windows
   (`U-ADAPTER-009` Windows `.cmd` provider path included).
 - `bun run typecheck`: clean.
 - `bun run lint`: clean (`biome check src tests`, 273 files).
@@ -24,6 +24,7 @@
   - `runtime-portability - OK`;
   - `readability - OK`;
   - `green-command-digest - OK`;
+  - `frontend-design-coverage - OK (body present 6 / pending 0)`;
   - `drive-db-registration - OK`.
 - `bun src\cli.ts doctor --strict-telemetry-provenance`: clean; projection-only telemetry is
   fail-closable when strict provenance is required.
@@ -41,7 +42,7 @@
 | A146-3 | Green evidence integrity relied on digest restamp instead of re-run. | `green-command-digest` is a doctor hard gate and reports OK; current full test/typecheck/lint/doctor were re-run on this baseline. Runtime-vs-projection telemetry is handled by the L7-188 stack. | **Resolved locally.** |
 | A146-4 | DB operation telemetry mixed runtime provenance with projection facade. | `PLAN-L7-188` is confirmed and binds the landed slices: strict provenance fail-close (`PLAN-L7-192` / `PLAN-L7-205`), runtime `test_runs` from session logs (`PLAN-L7-193`), runtime model telemetry (`PLAN-L7-199`), runtime guardrail decisions (`PLAN-L7-200`), and runtime skill invocations (`PLAN-L7-201`). `doctor --strict-telemetry-provenance` is clean; `telemetry scan --json` persisted 129258 runtime model rows. | **Resolved locally.** Projection rows still exist intentionally as review-evidence history, but fired/used/works claims have a strict runtime-provenance path. |
 | A146-5 | Clean distribution allowlist leaked dogfood governance/audit material. | `tests/setup.test.ts` includes clean artifact denial of dogfood governance audit docs and passes; doctor `asset-drift`, `readability`, and distribution acceptance are green. | **Resolved locally.** |
-| A146-6 | FE design L3/L5/L6 bodies remain pending / coverage is presence-heavy. | `frontend-design-coverage` remains green but explicitly reports body present 3 / pending 3. | **Open / parked population work.** Not a current consumer setup blocker, but blocks a claim of full FE design population. |
+| A146-6 | FE design L3/L5/L6 bodies remain pending / coverage is presence-heavy. | PLAN-L3-06 / PLAN-L5-09 / PLAN-L6-36 added confirmed body docs for L3 `screen-functional`, L5 `ui-detail`, and L6 `screen-spec`; `frontend-design-coverage` now reports body present 6 / pending 0; `l6-completion` and `oracle-test-trace` are green after adding `U-SCREEN-*` L7 oracle citation. | **Resolved locally.** This closes the FE left-arm body population gap for the harness central UI. |
 | A146-7 | Entry selection could degrade (`signal -> mode`, `kind x layer/drive`). | `task classify` route metadata and frontmatter `kind x layer` fail-close are in place; doctor `plan-governance`, `branch-kind-check`, and `drive-model-passage` green. | **Resolved for surfaced authoring gates.** Full automatic fail-close at every future work-entry surface is still future integration. |
 | A146-8 | Claude subagent matcher could miss `Task` vs `Agent`; Codex spawn surface needed guard parity. | `.claude/settings.json` uses `Agent|Task`; `AGENT_TOOL_NAMES` includes `Agent`, `Task`, `spawn_agent`, and `spawn_agents_on_csv`; `.codex/hooks.json` guards Codex spawn verbs. | **Resolved locally.** Target-runtime release proof remains external/post-publication. |
 
@@ -90,11 +91,10 @@ reports handover OK.
 - **L12/L13/release/UAT:** still external/human-required. Current evidence does not include push,
   CI on the new remote HEAD, signed release artifact, tag publication, or real post-publication
   consumer install.
-- **Known local carry:** A146-6 FE design body population/substance checks.
+- **Known local carry:** none from A-146 remains open locally. Release/publication proof is still
+  external/human-required.
 
 ## Next recommended slice
 
 1. Push the corrected stack and wait for CI to verify the new remote HEAD.
 2. Publish/verify the clean distribution artifact and tag if release close is being attempted.
-3. Populate or explicitly defer the remaining FE L3/L5/L6 design bodies before claiming full FE
-   design population.

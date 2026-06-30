@@ -1,8 +1,8 @@
 # A-146 - Consolidated substance-gap remediation audit
 
 > **Superseded-in-part by [A-147](A-147-post-a146-remediation-verification.md) (2026-06-30).**
-> A-147 verifies the post-A-146 remediation stack through `e83ba60` and re-classifies findings
-> 1/2/3/4/5/7/8 as locally remediated. It also records that the earlier Windows provider-spawn
+> A-147 verifies the post-A-146 remediation stack and re-classifies findings
+> 1/2/3/4/5/6/7/8 as locally remediated. It also records that the earlier Windows provider-spawn
 > regression is fixed locally by `12f7c9e`, while push/CI/release publication remains external.
 > This document stays the point-in-time record at its own baseline.
 
@@ -27,7 +27,7 @@ Local closure can be treated as honest only when the claim is scoped as local. F
 | A146-3 | HIGH | verification evidence | `green-evidence-integrity=closed` cannot rely on hash restamp alone. Green commands must be re-run and tied to the digest update. | Locally remediated for the known mismatch set. Runtime telemetry and CLI/distribution evidence were re-run in `304a586` and `6d1dc0d`; the remaining projection/doctor/verb-classify evidence was re-run on 2026-06-29 and rebound to actual file hashes. |
 | A146-4 | HIGH | DB registration | Operation telemetry had facade/hollow tables: skill invocations, test runs, guardrail decisions, and model cost/token surfaces were not cleanly separated by runtime provenance. | Partially remediated by `f301c09`, `102706c`, and `674c59f`. `db-telemetry-provenance` no longer appears as partial in doctor, but `test_runs` still reflects projected green-command evidence and requires the L7-188 capture strategy before stronger claims. |
 | A146-5 | MED-HIGH | distribution curation | Blanket `docs/governance/` allowlisting risks leaking dogfood audit/process documents into the clean package. | Open. Requires per-document curation or deny patterns for dogfood audit material. |
-| A146-6 | MED | design coverage | FE design coverage has a strong definition, but L3/L5/L6 FE bodies remain unpopulated or pending; current gate mostly checks presence/drift. | Open and tracked as population/substance work. Not a consumer blocker for using the workflow model, but it blocks claiming full FE design population. |
+| A146-6 | MED | design coverage | FE design coverage has a strong definition, but L3/L5/L6 FE bodies remain unpopulated or pending; current gate mostly checks presence/drift. | Superseded by A-147: locally remediated through PLAN-L3-06 / PLAN-L5-09 / PLAN-L6-36, `frontend-design-coverage` body present 6 / pending 0, and `U-SCREEN-*` L7 oracle citation. |
 | A146-7 | MED | drive/workflow | Drive-model exits are strongly converged, but entry selection (`signal -> mode`, `kind x drive/layer`) can degrade if authoring metadata is inconsistent. | Partially remediated. `drive` is already constrained to the 5 specialist values and the requirements matrix has no forbidden kind-drive cells; `kind x layer` authoring is now fail-closed for normal PLANs with a `master_hub` exception. `signal -> mode` routing is implemented by `route eval` and is now surfaced through `task classify` as entry-point route metadata; full automatic fail-close at every work-entry surface remains a later integration step. |
 | A146-8 | MED | runtime compatibility | Claude `Agent` matcher may be environment-dependent if standard CLI surfaces subagents as `Task`; guard can silently miss the intended tool. | Open for runtime confirmation. Must not be claimed closed without target-runtime evidence. |
 

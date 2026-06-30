@@ -8,7 +8,7 @@ drive: fe
 status: confirmed
 created: 2026-06-24
 updated: 2026-06-25
-status_note: "PLAN status=confirmed は『定義作業 + L4 cell 実体化 + descent 是正 + §1c 定義の slot 段階完遂 (L3/L5/L6 FE vocabulary 登録 + frontend-design-coverage gate) が完了し intra_runtime review 済』を示す。各 design doc (ui-standard.md / §1c) の confirmed 昇格は別途 G4 PO サインオフ。L3/L5/L6 body 起票 (作成段階) は §8 のとおり後続。"
+status_note: "PLAN status=confirmed は『定義作業 + L4 cell 実体化 + descent 是正 + §1c 定義の slot 段階完遂 (L3/L5/L6 FE vocabulary 登録 + frontend-design-coverage gate) が完了し intra_runtime review 済』を示す。各 design doc (ui-standard.md / §1c) の confirmed 昇格は別途 G4 PO サインオフ。L3/L5/L6 body 起票 (作成段階) は PLAN-L3-06 / PLAN-L5-09 / PLAN-L6-36 で 2026-06-30 に消化済み。"
 owner: PM (Opus) / PO (人間)
 agent_slots:
   - role: tl
@@ -72,7 +72,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T10:54:00+09:00"
         evidence_path: src/schema/index.ts
-        output_digest: "sha256:2c535f3241bf59576cb9a436acf37284e40f70dd49535df1fed9e9c73638badb"
+        output_digest: "sha256:c990a76b1df98eb4d1f1c41acc168db9fb1c7e40dc8fb2d67c9f3292aac3f5f8"
 ---
 
 # PLAN-L4-14 (design/ui-standard): L4 FE 設計標準 (部品/色の降下先確定)
@@ -219,12 +219,12 @@ test-design coverage (proposal-document-coverage-routing §2 `frontend-design` �
 descent 鎖 marker の存在。`FE_COVERAGE_MAP` 配列が §1c 表と 1:1 同期 (drift で fail-close)。
 回帰 = `tests/frontend-design-coverage.test.ts` U-FEDC-001..008 + 実 repo U-FEDC-007。
 
-### §8.3 残 = body 起票 (作成段階、後続、IMP backlog)
+### §8.3 body 起票 carry (作成段階、2026-06-30 消化済み)
 
 L3 `screen-functional` / L5 `ui-detail` / L6 `screen-spec` の **本文 (body)** は per-layer design PLAN
 (`kind=design`) で起票し、起票時に各型の必須 § 構造を定義する (§1c の方針)。draft body を frozen 層 dir に
 置くと層完了ゲートが落ちるため、owning PLAN を confirmed にして起票する (L4 `ui-standard` が踏んだ手順)。
-本 §8 では vocabulary + gate (定義の機械強制) まで = slot 完遂。body 作成は IMP backlog で追跡。
+本 §8 では vocabulary + gate (定義の機械強制) まで = slot 完遂だった。body 作成 carry は後続の PLAN-L3-06 / PLAN-L5-09 / PLAN-L6-36 で消化し、`frontend-design-coverage` は body present 6 / pending 0 を要求する。
 
 ### §8.4 review_evidence (§8 追補、intra_runtime fallback)
 
