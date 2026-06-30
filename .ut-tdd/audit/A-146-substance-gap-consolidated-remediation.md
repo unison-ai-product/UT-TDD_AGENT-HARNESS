@@ -1,5 +1,11 @@
 # A-146 - Consolidated substance-gap remediation audit
 
+> **Superseded-in-part by [A-147](A-147-post-a146-remediation-verification.md) (2026-06-30).**
+> A-147 verifies the post-A-146 remediation stack through `4fbdc9c` and re-classifies findings
+> 1/2/3/5/7/8 as locally remediated. It also records that the earlier Windows provider-spawn
+> regression is fixed locally by `12f7c9e`, while push/CI/release publication remains external.
+> This document stays the point-in-time record at its own baseline.
+
 - **date**: 2026-06-29
 - **scope**: consolidate the independent judge findings across distribution, verification evidence, DB telemetry, design coverage, and drive-model workflow.
 - **basis**: committed HEAD after local remediation through `6d1dc0d test: refresh cli distribution green evidence`.
