@@ -319,6 +319,10 @@ export interface DoctorDeps {
   listDir: (dir: string) => string[];
 }
 
+export interface DoctorOptions {
+  strictTelemetryProvenance?: boolean;
+}
+
 function handoverDeps(deps: DoctorDeps): HandoverDeps {
   return {
     repoRoot: deps.repoRoot,
@@ -963,7 +967,10 @@ function projectRuntimeModelTelemetryForDoctor(db: HarnessDb): void {
   projectTokenUsage(db, usages);
 }
 
-export function checkDbProjectionIngestion(repoRoot: string): { messages: string[]; ok: boolean } {
+export function checkDbProjectionIngestion(
+  repoRoot: string,
+  options: DoctorOptions = {},
+): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
     return {
       messages: ["db-projection-ingestion - violation: repo root could not be read"],
@@ -975,11 +982,10 @@ export function checkDbProjectionIngestion(repoRoot: string): { messages: string
     try {
       const rebuilt = rebuildHarnessDb({ repoRoot, db });
       projectRuntimeModelTelemetryForDoctor(db);
-      const result = analyzeDbProjectionIngestion(
-        rebuilt.rowCounts,
-        undefined,
-        loadDbTelemetryProvenanceStats(db),
-      );
+      const result = analyzeDbProjectionIngestion(rebuilt.rowCounts, undefined, {
+        telemetryStats: loadDbTelemetryProvenanceStats(db),
+        enforceTelemetryProvenance: options.strictTelemetryProvenance === true,
+      });
       return { messages: dbProjectionIngestionMessages(result), ok: result.ok };
     } finally {
       db.close();
@@ -2039,7 +2045,10 @@ export function checkG10UxWorkflow(repoRoot: string): {
   }
 }
 
-export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): LintResult {
+export function runDoctor(
+  deps: DoctorDeps = nodeDoctorDeps(process.cwd()),
+  options: DoctorOptions = {},
+): LintResult {
   const d = detectMode();
   // handover / agent-slots are warning surfaces. Verification profile is a hard gate.
   const backfill = checkBackfillResult(deps.repoRoot);
@@ -2099,7 +2108,7 @@ export function runDoctor(deps: DoctorDeps = nodeDoctorDeps(process.cwd())): Lin
   const regressionExpansion = checkRegressionExpansion(deps.repoRoot, dependencyDrift.result);
   const guardrailInvariants = checkGuardrailInvariants(deps.repoRoot);
   const dbProjectionCoverage = checkDbProjectionCoverage(deps.repoRoot);
-  const dbProjectionIngestion = checkDbProjectionIngestion(deps.repoRoot);
+  const dbProjectionIngestion = checkDbProjectionIngestion(deps.repoRoot, options);
   const docConsistency = checkDocConsistency(deps.repoRoot);
   const entityCoverage = checkEntityCoverage(deps.repoRoot);
   const frRegistryAudit = checkFrRegistryAudit(deps.repoRoot);

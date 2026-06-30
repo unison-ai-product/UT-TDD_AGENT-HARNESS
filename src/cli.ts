@@ -478,8 +478,14 @@ program
 program
   .command("doctor")
   .description("統合検証 (doctor / gate / trace / drift / roadmap)")
-  .action(() => {
-    const r = runDoctor();
+  .option(
+    "--strict-telemetry-provenance",
+    "fail closed when populated telemetry tables have only projection provenance",
+  )
+  .action((opts: { strictTelemetryProvenance?: boolean }) => {
+    const r = runDoctor(undefined, {
+      strictTelemetryProvenance: opts.strictTelemetryProvenance === true,
+    });
     for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
   });

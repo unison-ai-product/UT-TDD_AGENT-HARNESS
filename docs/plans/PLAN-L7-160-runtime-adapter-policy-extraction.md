@@ -82,7 +82,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:30:24+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:c335922ccdb448a10ec315097268f14125723d6dceab08ea5562d87e74217128"
+        output_digest: "sha256:a42059bcf23f1730c26a408c981b084ca87517a650feb46bdd06ca066c7b7517"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
