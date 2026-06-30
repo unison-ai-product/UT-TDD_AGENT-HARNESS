@@ -40,8 +40,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T10:20:00+09:00"
-    tests_green_at: "2026-06-30T10:17:40+09:00"
+    reviewed_at: "2026-06-30T10:43:30+09:00"
+    tests_green_at: "2026-06-30T10:42:58+09:00"
     verdict: approve
     scope: "PLAN-L7-195 model override injection hardening: strict model token validation plus Windows .cmd provider invocation with Node shell=false."
     worker_model: codex
@@ -60,9 +60,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T10:17:40+09:00"
+        completed_at: "2026-06-30T10:42:58+09:00"
         evidence_path: tests/team-schema.test.ts
-        output_digest: "sha256:aee993763262216a6f333f99f0d4fa426e2fbe68dedf5f87990e2eb12763caed"
+        output_digest: "sha256:39e64a5d87d7cfc4417ac5b94c67c574d12695bed0c7f027950ae4604965f676"
       - kind: unit_test
         command: "bun run test tests\\team-schema.test.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts"
         runner: bun
@@ -84,9 +84,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T10:17:40+09:00"
+        completed_at: "2026-06-30T10:39:47+09:00"
         evidence_path: src/schema/team.ts
-        output_digest: "sha256:da9778b8d4ee59808b100dc151cdd9d5e6715f96ed9c25c76958f309aba460a0"
+        output_digest: "sha256:bf18b8132eee3fddfdb1e4405a1c876915596a9a152debed9d9ba8ee54e64519"
 ---
 
 # PLAN-L7-195 (impl): model override injection hardening (Security)

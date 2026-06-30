@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_TEAM_PARALLEL,
   modelOverrideSchema,
   mustSerialize,
   type SerializationReason,
@@ -15,7 +16,17 @@ describe("U-TEAM-001 teamDefinitionSchema", () => {
   it("strategy/max_parallel の default 適用", () => {
     const parsed = teamDefinitionSchema.parse(valid);
     expect(parsed.strategy).toBe("sequential");
-    expect(parsed.max_parallel).toBe(8);
+    expect(parsed.max_parallel).toBe(MAX_TEAM_PARALLEL);
+    expect(
+      teamDefinitionSchema.parse({ ...valid, max_parallel: MAX_TEAM_PARALLEL }).max_parallel,
+    ).toBe(MAX_TEAM_PARALLEL);
+  });
+
+  it("max_parallel rejects values above the runtime slot cap", () => {
+    expect(() =>
+      teamDefinitionSchema.parse({ ...valid, max_parallel: MAX_TEAM_PARALLEL + 1 }),
+    ).toThrow();
+    expect(() => teamDefinitionSchema.parse({ ...valid, max_parallel: 1000 })).toThrow();
   });
 
   it("members 空 → reject", () => {

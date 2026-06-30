@@ -110,7 +110,7 @@ export const teamMemberSchema = z.object({
 export const teamDefinitionSchema = z.object({
   name: z.string().min(1),
   strategy: teamStrategySchema.default("sequential"),  // source reference の team_runner と同じ安全側デフォルト
-  max_parallel: z.number().int().positive().default(8),
+  max_parallel: z.number().int().positive().max(8).default(8),
   serialization: serializationReasonSchema.optional(), // チーム全体の直列化根拠 (3 条件)
   members: z.array(teamMemberSchema).min(1),           // 空 → reject (zod fail-close)
 });

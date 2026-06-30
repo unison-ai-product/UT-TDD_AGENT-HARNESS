@@ -1,75 +1,118 @@
 ---
 plan_id: PLAN-L7-196-runtime-config-hardening
-title: "PLAN-L7-196 (impl): runtime-config hardening — team max_parallel に上限(.max) を付与(資源枯渇防止、SEC-3)、agent-guard matcher の環境差(\"Agent\" vs 標準 \"Task\")を consumer template/doc で吸収し可搬化(SEC-4)。A-144/A-145 SEC-3/SEC-4"
+title: "PLAN-L7-196 (impl): runtime config hardening for team parallel cap and Claude guard matcher portability"
 kind: impl
 layer: L7
 drive: be
-status: draft
-version_target: future
+status: confirmed
 created: 2026-06-29
-updated: 2026-06-29
-owner: PM (Opus) / PO (人間)
+updated: 2026-06-30
+owner: Codex
 parent_design: docs/design/harness/L6-function-design/agent-slots.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
   - role: se
-    slot_label: "SE (Codex 委譲) — max_parallel に .max() cap、agent-guard matcher の環境差を consumer template/doc に吸収、回帰 test"
+    slot_label: "Codex SE - cap team max_parallel and harden Claude guard matcher portability"
   - role: tl
-    slot_label: "TL (Claude cross-runtime judge) — 既存 default 8 互換・dogfood matcher 据え置き・consumer 可搬性のみ調整であることをレビュー"
+    slot_label: "Codex TL - verify runtime config hardening evidence"
 generates:
   - artifact_path: docs/plans/PLAN-L7-196-runtime-config-hardening.md
     artifact_type: markdown_doc
+  - artifact_path: src/schema/team.ts
+    artifact_type: source_module
+  - artifact_path: tests/team-schema.test.ts
+    artifact_type: test_code
+  - artifact_path: src/lint/project-hook.ts
+    artifact_type: source_module
+  - artifact_path: .claude/settings.json
+    artifact_type: config
+  - artifact_path: docs/templates/adapter/.claude/settings.json
+    artifact_type: template
+  - artifact_path: docs/design/harness/L6-function-design/agent-slots.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
-  parent: null
+  parent: docs/design/harness/L6-function-design/agent-slots.md
   requires:
     - docs/plans/PLAN-L7-64-team-runner-launch.md
+    - docs/plans/PLAN-L7-157-distribution-clean-pull.md
   references:
-    - .ut-tdd/audit/A-145-02-runtime-config-delegation.md
     - .ut-tdd/audit/A-144-02-runtime-config-security.md
+    - .ut-tdd/audit/A-145-02-runtime-config-delegation.md
+review_evidence:
+  - reviewer: local-vitest
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-30T10:43:30+09:00"
+    tests_green_at: "2026-06-30T10:42:58+09:00"
+    verdict: approve
+    scope: "PLAN-L7-196 runtime config hardening: max_parallel cap plus Claude guard matcher and consumer template enforcement."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    notes:
+      - "team schema rejects max_parallel above the runtime cap and preserves default 8."
+      - "project/setup/codex hook regression tests keep current and consumer adapter hook contracts green."
+      - "SEC-3 closed by MAX_TEAM_PARALLEL=8 and zod .max(MAX_TEAM_PARALLEL)."
+      - "SEC-4 closed for current dogfood config by Agent|Task matcher and for consumer template by portable ut-tdd guard hooks."
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\team-schema.test.ts tests\\project-hook.test.ts tests\\setup.test.ts tests\\codex-hook-adapter.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T10:39:47+09:00"
+        evidence_path: tests/team-schema.test.ts
+        output_digest: "sha256:39e64a5d87d7cfc4417ac5b94c67c574d12695bed0c7f027950ae4604965f676"
+      - kind: unit_test
+        command: "bun run vitest run tests\\team-schema.test.ts tests\\project-hook.test.ts tests\\setup.test.ts tests\\codex-hook-adapter.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T10:39:47+09:00"
+        evidence_path: src/lint/project-hook.ts
+        output_digest: "sha256:e7644618bd16aa587f614da0622ae3055472c44e390084a34d15e89f223e2dc9"
+      - kind: unit_test
+        command: "bun run vitest run tests\\team-schema.test.ts tests\\project-hook.test.ts tests\\setup.test.ts tests\\codex-hook-adapter.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T10:39:47+09:00"
+        evidence_path: docs/templates/adapter/.claude/settings.json
+        output_digest: "sha256:13863397854b7ded840c54dab2a0fd16ea7ccddae0e5a70bb896121a26de50fd"
 ---
 
-# PLAN-L7-196 (impl): runtime-config hardening (SEC-3 / SEC-4)
+# PLAN-L7-196 Runtime Config Hardening
 
-## 優先度: version-up parked / 将来版へ保全 (PO 2026-06-29)
+## Finding
 
-PO 決定 (2026-06-29): 配布クローズ優先で将来版へ保全 (`status=draft` + `version_target: future`)。
-堅牢性・可搬性の改善で、SEC-2 のような injection 面ではない (中 severity)。
+A-144/A-145 identified two runtime configuration gaps:
 
-## 0. 前提 (調査結論 2026-06-29)
+- SEC-3: `.ut-tdd/teams/*.yaml` accepted unbounded `max_parallel`, so a malformed or hostile team definition could request excessive provider launches.
+- SEC-4: the dogfood Claude `agent-guard` hook matched only `Agent`, while Claude runtime surfaces can differ between `Agent` and `Task`.
 
-- **SEC-3**: `src/schema/team.ts:71` `max_parallel: z.number().int().positive().default(8)` に **`.max()` 上限なし**。
-  過大値で並列起動が資源枯渇を招き得る (DoS 的、自リポ運用)。
-- **SEC-4**: `.claude/settings.json:5` の agent-guard `"matcher": "Agent"` は本環境固有で、**標準 Claude Code CLI は
-  `"Task"`**。consumer に matcher 差が伝播すると guard が発火しない可搬性欠陥 (cross-ref A-145-02、DIST-1)。
+The distribution audit also showed that consumer adapter settings must ship enforced guard hooks, not only session logging.
 
-## 1. Scope
+## Scope
 
-### IN (本 PLAN)
-- `max_parallel` に **`.max(N)` 上限**を付与 (妥当上限を決め、超過を reject)。
-- agent-guard matcher の **環境差を consumer adapter template / doc で吸収** (consumer は正しい matcher で guard が
-  発火するように)。dogfood の現行 matcher は据え置き。
+Implemented in this PLAN:
 
-### OUT (本 PLAN では作らない)
-- guard ロジック自体の変更 (allowlist / model 検証は別 PLAN・既存)。
-- dogfood の `.claude/settings.json` matcher 変更 (本環境では現行が正)。
-- SEC-2 (model injection、L7-195) / SEC-1 (CODEOWNERS、L7-197) — 別 PLAN。
-- いま実装すること (version-up parked)。
+- Add `MAX_TEAM_PARALLEL = 8` and enforce it with `z.number().int().positive().max(MAX_TEAM_PARALLEL).default(MAX_TEAM_PARALLEL)`.
+- Add regression coverage that default/explicit `8` is accepted and values above `8` are rejected.
+- Change the repo-local Claude agent guard matcher from `Agent` to `Agent|Task`.
+- Change the project hook lint SSoT to require `Agent|Task`.
+- Add portable `ut-tdd hook agent-guard`, `ut-tdd hook work-guard`, and `ut-tdd hook subagent-stop` entries to `docs/templates/adapter/.claude/settings.json`.
+- Back-fill the L6 design and L7 unit-test design with the new `max_parallel` cap oracle.
 
-## 2. Acceptance Criteria
-- `max_parallel` 上限超過値が schema で **reject** される unit test green。既存 default 8 は通る。
-- consumer adapter template が **環境に依らず guard を発火**させる matcher を持つ (template test / doc 整合)。
-- dogfood の guard 挙動は不変 (現行 matcher 据え置き)。
-- doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
+Out of scope:
 
-## 3. Schedule
-- mode: serial。
-- Step 0: max_parallel の妥当上限と matcher の環境マトリクス (Agent/Task) を確定。
-- Step 1: `team.ts` に `.max()` 付与 + reject test。
-- Step 2: consumer adapter template/doc に matcher 環境差吸収 + 整合 test。
-- Step 3: dogfood 不変確認 → review (cross-runtime judge) → confirmed。
+- External clean repository publication and tag push.
+- Live standard-Claude-Code CLI proof of whether the tool name is `Task`; this plan fail-closes by accepting both names.
+- SEC-1 CODEOWNERS/team placeholder hardening.
 
-## 4. 壊さない / 再発させない
-- 既存 default 8・正当並列数を壊さない (互換 test)。
-- dogfood matcher を据え置く (consumer 可搬性のみ調整)。
-- guard ロジック本体に触れない (本 PLAN は config 堅牢化のみ)。
-- version-up parked。
+## Acceptance
+
+- `max_parallel` above `8` is rejected at schema parse time.
+- Current dogfood `.claude/settings.json` and `project-hook` lint agree on `Agent|Task`.
+- Consumer adapter template contains enforced portable Claude guard hooks.
+- Targeted runtime config tests pass.
+- Full doctor/lint/typecheck/digest verification is recorded before commit.

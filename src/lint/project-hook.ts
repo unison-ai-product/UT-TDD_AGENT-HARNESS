@@ -49,7 +49,7 @@ interface RequiredProjectHook {
 export const REQUIRED = [
   {
     event: "PreToolUse",
-    matcher: "Agent",
+    matcher: "Agent|Task",
     commandParts: [".claude/hooks/agent-guard.ts"],
     blockOnFailure: true,
   },
