@@ -76,7 +76,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T18:11:57+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:1bbf522aeef22c2bc258bd92cd102fda3c5a2315d257cf4fd95f939034bf7692"
+        output_digest: "sha256:2517ed3ae8331803d1ecd330ee6e6a483be111b5cb43b5701343032949725561"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun

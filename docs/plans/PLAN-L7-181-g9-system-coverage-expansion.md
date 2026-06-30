@@ -66,7 +66,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T13:22:00+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:1bbf522aeef22c2bc258bd92cd102fda3c5a2315d257cf4fd95f939034bf7692"
+        output_digest: "sha256:2517ed3ae8331803d1ecd330ee6e6a483be111b5cb43b5701343032949725561"
       - kind: unit_test
         command: "bun run vitest run tests\\asset-catalog.test.ts tests\\asset-drift.test.ts tests\\agent-slots.test.ts tests\\cli-surface.test.ts tests\\skill-recommend.test.ts tests\\workflow-contracts.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun

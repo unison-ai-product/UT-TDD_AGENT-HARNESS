@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -406,6 +406,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         "docs/governance/reverse-fullback-backprop-audit-2026-06-22.md",
         "docs/governance/runtime-parity-l0-l3-design-audit-2026-06-02.md",
         "docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md",
+        "docs/governance/future-release-audit-2026-06-30.md",
+        "docs/governance/product-runtime-parity-check.md",
+        "docs/governance/customer-extraction-plan.md",
         "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
         "docs/design/harness/L6-function-design/setup-solo-team.md",
         ".ut-tdd/handover/CURRENT.json",
@@ -443,6 +446,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(plan.artifactPaths).not.toContain(
       "docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md",
     );
+    expect(plan.artifactPaths).not.toContain("docs/governance/future-release-audit-2026-06-30.md");
+    expect(plan.artifactPaths).not.toContain("docs/governance/product-runtime-parity-check.md");
+    expect(plan.artifactPaths).not.toContain("docs/governance/customer-extraction-plan.md");
     expect(plan.artifactPaths).not.toContain("docs/plans/PLAN-L7-157-distribution-clean-pull.md");
     expect(plan.artifactPaths).not.toContain(".ut-tdd/handover/CURRENT.json");
     expect(plan.releaseIntegrity.artifacts).toEqual([
@@ -470,6 +476,16 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       expect(plan.artifactPaths).not.toContain(path);
       expect(plan.excludedPaths).toContain(path);
     }
+
+    const textArtifacts = plan.artifactPaths.filter((path) =>
+      /\.(?:md|ts|json|toml|ya?ml|js|txt)$/.test(path),
+    );
+    const legacyRuntimeName = "he" + "lix";
+    const legacyNamePattern = new RegExp(`\\b${legacyRuntimeName}\\b`, "i");
+    const legacyNameHits = textArtifacts.filter((path) =>
+      legacyNamePattern.test(readFileSync(join(process.cwd(), path), "utf8")),
+    );
+    expect(legacyNameHits).toEqual([]);
   });
 
   it("U-SETUP-012: consumer readiness covers preflight, rollback, contracts, CI, and monorepo root", () => {

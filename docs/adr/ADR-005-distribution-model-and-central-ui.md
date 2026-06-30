@@ -3,13 +3,13 @@
 - **Status**: accepted
 - **Date**: 2026-06-01
 - **Deciders**: PM (Opus) + PO (ユーザー)
-- **関連**: `ADR-001` (TS 再実装) / [ADR-003](./ADR-003-runtime-adapter-boundary-subscription-cli.md) (runtime adapter 境界、IMP-031 Web サーバ境界) / [ADR-004](./ADR-004-internal-asset-ts-control-boundary.md) (内部資産 TS 制御境界) / `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` §2.1.0 (ルール同一性) / `docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md` (配布単位、本 ADR D1 で置換) / `docs/design/harness/L1-requirements/screen-requirements.md` (15 画面、PM-06 設計書ビューア含む) / `docs/migration/helix-to-ut-tdd-cutover-strategy.md` / `../reference/ai-agent-harness-directory-reference.md` (PO 作成 参考、docs/reference 配下・正本外、3 層モデル)
+- **関連**: `ADR-001` (TS 再実装) / [ADR-003](./ADR-003-runtime-adapter-boundary-subscription-cli.md) (runtime adapter 境界、IMP-031 Web サーバ境界) / [ADR-004](./ADR-004-internal-asset-ts-control-boundary.md) (内部資産 TS 制御境界) / `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` §2.1.0 (ルール同一性) / superseded distribution plan (配布単位、本 ADR D1 で置換) / `docs/design/harness/L1-requirements/screen-requirements.md` (15 画面、PM-06 設計書ビューア含む) / archived source cutover notes / `../reference/ai-agent-harness-directory-reference.md` (PO 作成 参考、docs/reference 配下・正本外、3 層モデル)
 
 ## Context
 
 2026-06-01 セッションで「L7-L14 工程定義 → 駆動モデル → ディレクトリ構成」を辿る中、**より上流の前提 = 「ハーネスをどう配布し、更新をどう享受し、Web UI をどこに置くか」が要件定義されていない**ことが判明 (PO 指摘)。この基盤未定義のため、ディレクトリ構成も工程/駆動モデルの置き場も決まらず収束しなかった。
 
-確定済の周辺事実: extraction-plan は配布を「repo template / setup script」とだけ記述 (global 個人 workspace = legacy global workspace 方式は否定)、ただし **global 中央 / npm / plugin / version-pin 更新は未定義**。screen-requirements に **14 画面 Web UI** (PM 案件横断 / HM harness 診断 / GD) が PO 承認済 (2026-05-28) だが backend 配置は未確定 (IMP-031 で将来境界として予告)。UT-TDD は **社内開発チーム配布パッケージ** (legacy single-user workspace 前提と対比)。
+確定済の周辺事実: superseded distribution plan は配布を「repo template / setup script」とだけ記述 (global 個人 workspace = legacy global workspace 方式は否定)、ただし **global 中央 / npm / plugin / version-pin 更新は未定義**。screen-requirements に **14 画面 Web UI** (PM 案件横断 / HM harness 診断 / GD) が PO 承認済 (2026-05-28) だが backend 配置は未確定 (IMP-031 で将来境界として予告)。UT-TDD は **社内開発チーム配布パッケージ** (legacy single-user workspace 前提と対比)。
 
 「ハーネスの単一真実 (指示/skill/agent/工程/駆動モデル定義 + TS engine) = リファレンス §④の `.ai/` の役割」であり、`CLAUDE.md`/`.claude/`/`AGENTS.md` は各ツールへ供給する **adapter**。
 
@@ -48,7 +48,7 @@
 |----|------|------|
 | public npm publish | 却下 | 社内コードを公開不要。GitHub-pull で足りる |
 | Claude plugin を配布主軸 | 却下 | CI 不可 + Claude 専用 (multi-tool 崩す)。補助チャネルに留める (D3) |
-| repo-template コミット (extraction-plan §配布単位) | 却下 | 中央更新享受なし (PO 要望に反)。各 repo が diverge。extraction-plan の当該記述は本 ADR D1 で置換 |
+| repo-template コミット (superseded distribution plan §配布単位) | 却下 | 中央更新享受なし (PO 要望に反)。各 repo が diverge。superseded distribution plan の当該記述は本 ADR D1 で置換 |
 | global 個人 workspace (legacy global workspace 方式) | 却下 | 単一ユーザー前提。チームでルール diverge |
 | Web UI を project-local | 却下 | 全 project 横断のチーム管理が成立しない |
 

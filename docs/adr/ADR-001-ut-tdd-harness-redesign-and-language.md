@@ -3,7 +3,7 @@
 - **Status**: accepted
 - **Date**: 2026-05-27
 - **Deciders**: PM (Opus) + PO (ユーザー)
-- **関連**: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` / `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` / `docs/migration/helix-to-ut-tdd-cutover-strategy.md`
+- **関連**: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` / `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` / archived source cutover notes
 
 ## Context
 
@@ -74,4 +74,4 @@ TypeScript と Python の技術差は本ツール (型付きルール/検証/ル
 ## Follow-ups
 
 - 着手前に **tl-advisor (Codex、別 runtime) の adversarial cross-check** を実施する (governance §設計提案 / 本 repo は Codex CLI 検出済み)。
-- 本 ADR は cutover-strategy の「drive runtime (helix CLI) 置換は最後」方針を、UT-TDD 独自実装 (TS) として具体化する。
+- 本 ADR は source cutover notes の「drive runtime 置換は最後」方針を、UT-TDD 独自実装 (TS) として具体化する。

@@ -210,7 +210,7 @@ describe("L7 workflow contract implementations", () => {
         {
           tokens: ["legacy"],
           mode: "reverse",
-          command: "helix reverse",
+          command: "legacy-cli reverse",
           preflight: true,
           requiresApproval: false,
         },
@@ -547,7 +547,10 @@ routes:
 
     const legacyCommand = validateDContractDsl({
       modeRoutingText: validModeRouting,
-      gateChecksText: validGateChecks.replace("command: ut-tdd doctor", "command: helix doctor"),
+      gateChecksText: validGateChecks.replace(
+        "command: ut-tdd doctor",
+        "command: legacy-cli doctor",
+      ),
       requiredGateIds: ["G8"],
     });
     expect(legacyCommand.ok).toBe(false);

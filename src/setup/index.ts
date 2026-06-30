@@ -172,6 +172,12 @@ const CLEAN_DENY_FILES = new Set([
   "docs/governance/runtime-parity-l0-l3-design-audit-2026-06-02.md",
   "docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md",
 ]);
+const CLEAN_DENY_PATTERNS = [
+  /^docs\/governance\/.*-audit(?:-|\.md$)/i,
+  /^docs\/governance\/.*legacy-debt.*\.md$/i,
+  /^docs\/governance\/.*runtime-parity.*\.md$/i,
+  /^docs\/governance\/.*extraction-plan.*\.md$/i,
+];
 const CLEAN_ALLOW_PREFIXES = [
   "docs/adr/",
   "docs/process/",
@@ -367,6 +373,7 @@ function isDeniedCleanPath(path: string): boolean {
   const p = normalizeDistributionPath(path);
   return (
     CLEAN_DENY_FILES.has(p) ||
+    CLEAN_DENY_PATTERNS.some((pattern) => pattern.test(p)) ||
     CLEAN_DENY_PREFIXES.some((prefix) => p === prefix.slice(0, -1) || p.startsWith(prefix))
   );
 }
