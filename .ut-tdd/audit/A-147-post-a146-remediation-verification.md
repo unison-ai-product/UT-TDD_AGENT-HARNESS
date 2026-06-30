@@ -5,8 +5,8 @@
   landed after A-146 (the consolidated substance-gap audit) and re-classify each A-146 finding.
 - **successor of**: [A-146](A-146-substance-gap-consolidated-remediation.md). A-146 stays the
   point-in-time record at its own baseline; this audit supersedes its dispositions where noted.
-- **baseline**: committed local `HEAD = 4fbdc9c docs: park central ui vscode delivery plan`.
-- **git state (material)**: `main` is **17 commits ahead of `origin/main`**. Local verification is
+- **baseline**: committed local stack through `HEAD = e83ba60 docs: refresh post remediation audit evidence`.
+- **git state (material)**: `main` is **18 commits ahead of `origin/main`**. Local verification is
   current; remote CI/release verification is not current until the stack is pushed and checked.
 - **method**: baseline fixed to committed HEAD. Hybrid working-tree changes outside this audit are
   excluded unless explicitly mentioned.
@@ -25,6 +25,10 @@
   - `readability - OK`;
   - `green-command-digest - OK`;
   - `drive-db-registration - OK`.
+- `bun src\cli.ts doctor --strict-telemetry-provenance`: clean; projection-only telemetry is
+  fail-closable when strict provenance is required.
+- `bun src\cli.ts telemetry scan --json`: persisted runtime model telemetry from Claude/Codex
+  session logs (`totalRuns=129258`, `knownCostUsd=15157.78208`, `runsWithoutCost=8069`).
 - `bun src\cli.ts status --json`: `nonTerminalPlansTotal=6`, all `versionUpParked=6`;
   `activeDraftTotal=0`; `openDefers=0`.
 
@@ -34,8 +38,8 @@
 |---|---|---|---|
 | A146-1 | Shipped adapter lacked enforced guard governance. | `.claude/settings.json` wires `Agent|Task` to agent-guard; `.codex/hooks.json` wires `spawn_agent|spawn_agents_on_csv` to the same guard and `apply_patch|write_file` to work-guard. `doctor codex-hook-adapter` OK; `tests/agent-guard.test.ts` and `tests/codex-hook-adapter.test.ts` pass. | **Resolved locally.** Hosted/API tool surfaces remain explicitly outside repo-hook enforcement and are disclosed by doctor. |
 | A146-2 | Consumer install/PATH could fail because hooks call bare `ut-tdd`. | `package.json` has `bin.ut-tdd = ./src/cli.ts`; setup/distribution tests pass, including `U-SETUP-013 / AT-DIST-001` clean artifact install and CLI surface smoke. | **Resolved locally.** Public consumer install remains post-publication evidence. |
-| A146-3 | Green evidence integrity relied on digest restamp instead of re-run. | `green-command-digest` is a doctor hard gate and reports OK; current full test/typecheck/lint/doctor were re-run on this baseline. | **Resolved at gate level.** Stronger runtime-vs-projection test provenance remains A146-4 / L7-188 carry. |
-| A146-4 | DB operation telemetry mixed runtime provenance with projection facade. | `doctor --strict-telemetry-provenance` exists and was added as a CLI surface; regular doctor green. `test_runs` still includes projected green-command evidence by design. | **Partial / carry.** The projection-vs-runtime distinction is now surfaced, but full runtime test-run capture is still L7-188 work. |
+| A146-3 | Green evidence integrity relied on digest restamp instead of re-run. | `green-command-digest` is a doctor hard gate and reports OK; current full test/typecheck/lint/doctor were re-run on this baseline. Runtime-vs-projection telemetry is handled by the L7-188 stack. | **Resolved locally.** |
+| A146-4 | DB operation telemetry mixed runtime provenance with projection facade. | `PLAN-L7-188` is confirmed and binds the landed slices: strict provenance fail-close (`PLAN-L7-192` / `PLAN-L7-205`), runtime `test_runs` from session logs (`PLAN-L7-193`), runtime model telemetry (`PLAN-L7-199`), runtime guardrail decisions (`PLAN-L7-200`), and runtime skill invocations (`PLAN-L7-201`). `doctor --strict-telemetry-provenance` is clean; `telemetry scan --json` persisted 129258 runtime model rows. | **Resolved locally.** Projection rows still exist intentionally as review-evidence history, but fired/used/works claims have a strict runtime-provenance path. |
 | A146-5 | Clean distribution allowlist leaked dogfood governance/audit material. | `tests/setup.test.ts` includes clean artifact denial of dogfood governance audit docs and passes; doctor `asset-drift`, `readability`, and distribution acceptance are green. | **Resolved locally.** |
 | A146-6 | FE design L3/L5/L6 bodies remain pending / coverage is presence-heavy. | `frontend-design-coverage` remains green but explicitly reports body present 3 / pending 3. | **Open / parked population work.** Not a current consumer setup blocker, but blocks a claim of full FE design population. |
 | A146-7 | Entry selection could degrade (`signal -> mode`, `kind x layer/drive`). | `task classify` route metadata and frontmatter `kind x layer` fail-close are in place; doctor `plan-governance`, `branch-kind-check`, and `drive-model-passage` green. | **Resolved for surfaced authoring gates.** Full automatic fail-close at every future work-entry surface is still future integration. |
@@ -86,14 +90,11 @@ reports handover OK.
 - **L12/L13/release/UAT:** still external/human-required. Current evidence does not include push,
   CI on the new remote HEAD, signed release artifact, tag publication, or real post-publication
   consumer install.
-- **Known local carries:** A146-4 runtime-vs-projection telemetry provenance strategy and A146-6
-  FE design body population/substance checks.
+- **Known local carry:** A146-6 FE design body population/substance checks.
 
 ## Next recommended slice
 
 1. Push the corrected stack and wait for CI to verify the new remote HEAD.
 2. Publish/verify the clean distribution artifact and tag if release close is being attempted.
-3. Continue L7-188 runtime test-run provenance so projected green-command evidence cannot be
-   confused with actual runtime test telemetry.
-4. Populate or explicitly defer the remaining FE L3/L5/L6 design bodies before claiming full FE
+3. Populate or explicitly defer the remaining FE L3/L5/L6 design bodies before claiming full FE
    design population.

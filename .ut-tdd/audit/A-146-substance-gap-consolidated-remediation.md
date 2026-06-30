@@ -1,8 +1,8 @@
 # A-146 - Consolidated substance-gap remediation audit
 
 > **Superseded-in-part by [A-147](A-147-post-a146-remediation-verification.md) (2026-06-30).**
-> A-147 verifies the post-A-146 remediation stack through `4fbdc9c` and re-classifies findings
-> 1/2/3/5/7/8 as locally remediated. It also records that the earlier Windows provider-spawn
+> A-147 verifies the post-A-146 remediation stack through `e83ba60` and re-classifies findings
+> 1/2/3/4/5/7/8 as locally remediated. It also records that the earlier Windows provider-spawn
 > regression is fixed locally by `12f7c9e`, while push/CI/release publication remains external.
 > This document stays the point-in-time record at its own baseline.
 
