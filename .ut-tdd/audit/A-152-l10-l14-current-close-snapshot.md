@@ -11,11 +11,14 @@ Latest local commands:
 - `bun src\cli.ts status --json`: `activeDraftTotal=0`, `openDefers=0`, `nonTerminalPlansTotal=7`, `versionUpParked=7`.
 - `bun src\cli.ts feedback list --emit`: `total=1797`, `gate=0`, `actionable=0`, `telemetry=1797`.
   - telemetry summary: `artifact_progress_yellow=743`, `missing-test-oracle-id=600`, `skill_acceptance_rate=225`, `skill_firing_rate=225`, `large-document-split=1`.
-- `bun src\cli.ts db rebuild`: projection OK, `rows=34505`.
+- `bun src\cli.ts db rebuild`: projection OK, `rows=34431`.
+- `bun run vitest run tests\setup.test.ts tests\cli-surface.test.ts --reporter=dot`: 2 test files / 35 tests passed.
+- `$env:PATH="$env:USERPROFILE\.bun\bin;$env:APPDATA\npm\node_modules\bun\bin;$env:PATH"; ut-tdd --help`: OK.
+- `$env:PATH="$env:USERPROFILE\.bun\bin;$env:APPDATA\npm\node_modules\bun\bin;$env:PATH"; bun src\cli.ts distribution plan --json`: `ok=true`.
 - `bun run test`: 119 test files / 1220 tests passed.
 - `bun src\cli.ts doctor`: OK, including `pair-freeze`, `l6-completion`, `l7-completion`, `frontend-design-coverage`, `green-command-digest`, and `forward-convergence`.
 - `bun src\cli.ts doctor --strict-telemetry-provenance`: OK.
-- `bun src\cli.ts distribution plan --json`: export curation OK, but readiness blocked on `ut-tdd-cli` in the current shell. `bun link` registered `ut-tdd`, yet bare `ut-tdd status --json` still failed in this Windows/npm-Bun environment because the linked executable could not resolve a Bun binary. This is a consumer-hook substance gap, not a green close condition.
+- `bun src\cli.ts distribution plan --json`: export curation OK. Default shell readiness remains blocked on `ut-tdd-cli` and now reports detected candidate paths. With a hook-equivalent PATH including `~\.bun\bin` and `%APPDATA%\npm\node_modules\bun\bin`, `ut-tdd --help` and `distribution plan --json` both pass locally.
 
 ## Local close conclusion
 
@@ -41,7 +44,7 @@ The 2026-06-30 independent review converges on one rule: structural coverage, po
 
 | severity | area | finding | current disposition |
 |---|---|---|---|
-| HIGH | distribution | Consumer hooks call bare `ut-tdd`, but `bun link`/PATH presence does not prove the command runs. | Blocked in current shell; `distribution plan` now reports the observed `ut-tdd --help` failure and this snapshot no longer claims green readiness. |
+| HIGH | distribution | Consumer hooks call bare `ut-tdd`, but `bun link`/PATH presence does not prove the command runs. | Default shell remains blocked, but `distribution plan` now reports candidate paths and the hook-equivalent PATH smoke proves local `ut-tdd --help` can pass when both Bun global bin and real Bun binary directories are present. |
 | HIGH | distribution | Shipped adapter must include enforced guard hooks, not only subagent/command definitions. | Implemented for portable `ut-tdd hook agent-guard`, `work-guard`, and Claude `SubagentStop`; still requires real consumer hook firing evidence after publication. |
 | HIGH | evidence integrity | Digest restamp must not be treated as green-command re-execution. | `doctor --strict-telemetry-provenance` and this audit distinguish digest/projection evidence from runtime proof; full hardening remains under PLAN-L7-188/192/193 follow-up scope. |
 | HIGH | DB telemetry | Some telemetry tables are projection/hollow (`skill_invocations`, `test_runs`, `guardrail_decisions`, model cost/tokens). | Strict telemetry provenance is green for current gate semantics, but runtime capture closure is not claimed. |
@@ -75,7 +78,7 @@ Each parked PLAN carries:
 Local distribution readiness is split:
 
 - **Green locally**: clean setup/export curation, dogfood governance-document exclusion, adapter templates for Claude and Codex, shipped guard hook wiring through `ut-tdd hook ...` entrypoints, MIT license with UNISON-TECHNOLOGY copyright, and design/governance/ADR Japanese-language gate.
-- **Blocked on substance**: bare `ut-tdd` consumer execution is not proven in the current shell. The generated hooks are correct to call `ut-tdd ...`, but the consumer environment must prove `ut-tdd --help` succeeds after install/link. The current Windows/npm-Bun setup shows that `bun link` presence alone is insufficient.
+- **Locally proven with explicit PATH**: bare `ut-tdd` consumer execution passes when the hook shell PATH includes both Bun's global bin (`~\.bun\bin`) and the real Bun binary directory (`%APPDATA%\npm\node_modules\bun\bin` in this npm-installed Bun environment). The generated hooks are correct to call `ut-tdd ...`, but a default shell without those PATH entries still blocks readiness.
 - **Telemetry caveat**: `hook_events` is genuine runtime telemetry, while some DB tables are projection or hollow telemetry by design. `doctor --strict-telemetry-provenance` now distinguishes projection-only telemetry, but this snapshot does not claim full runtime capture for skill invocations, guardrail decisions, or model cost/tokens.
 
 Full release close still requires external/publication evidence:

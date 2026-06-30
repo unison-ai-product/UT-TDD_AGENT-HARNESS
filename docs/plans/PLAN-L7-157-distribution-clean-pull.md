@@ -87,6 +87,39 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-30T20:41:00+09:00"
+    tests_green_at: "2026-06-30T20:40:20+09:00"
+    verdict: approve
+    scope: "Consumer PATH readiness now distinguishes link registration from executable substance: default shell reports detected candidate paths, and a hook-equivalent PATH including Bun global bin plus the real Bun binary directory makes `ut-tdd --help` and `distribution plan` pass."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\setup.test.ts tests\\cli-surface.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T20:40:20+09:00"
+        evidence_path: tests/setup.test.ts
+        output_digest: "sha256:ea0224e0f382481080f49cfe13f82e3677dee84dc515d26bc081b9c7770a397a"
+      - kind: smoke
+        command: "$env:PATH=\"$env:USERPROFILE\\.bun\\bin;$env:APPDATA\\npm\\node_modules\\bun\\bin;$env:PATH\"; ut-tdd --help"
+        runner: powershell
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T20:38:55+09:00"
+        evidence_path: README.md
+        output_digest: "sha256:90da5c53ebd6888c53cd90bc27d780b70aa1b3d26a5b28743e855907103a4ba8"
+      - kind: smoke
+        command: "$env:PATH=\"$env:USERPROFILE\\.bun\\bin;$env:APPDATA\\npm\\node_modules\\bun\\bin;$env:PATH\"; bun src\\cli.ts distribution plan --json"
+        runner: powershell
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T20:39:02+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:7fdb1a5dd61770d3aeba45cfb6fea08535c198858ab752bb12eabf73afbef6ab"
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-29T21:29:59+09:00"
     tests_green_at: "2026-06-29T21:29:59+09:00"
     verdict: approve

@@ -2823,11 +2823,19 @@ distribution
     const hasUtTddCli = utTddCli.status === 0;
     const utTddCliObserved =
       utTddCli.error?.message || utTddCli.stderr.trim() || `exit ${utTddCli.status ?? "unknown"}`;
+    const utTddCliHints = [
+      join(homedir(), ".bun", "bin", "ut-tdd.exe"),
+      join(homedir(), ".bun", "bin", "ut-tdd"),
+      process.env.APPDATA ? join(process.env.APPDATA, "npm", "node_modules", "bun", "bin") : "",
+    ].filter((p) => p && existsSync(p));
     const utTddCliMessage = hasUtTddCli
       ? undefined
       : [
           "Bare `ut-tdd --help` must succeed before setup because generated Claude/Codex hooks call `ut-tdd ...`.",
           `Observed: ${utTddCliObserved}`,
+          utTddCliHints.length > 0
+            ? `Detected candidate path(s): ${utTddCliHints.join(", ")}. Ensure Bun's global bin directory and the real Bun binary directory are both on the hook shell PATH.`
+            : "Ensure Bun's global bin directory and the real Bun binary directory are both on the hook shell PATH.",
         ].join(" ");
     const exportPlan = buildCleanDistributionPlan({
       paths: collectDistributionCandidatePaths(repoRoot),

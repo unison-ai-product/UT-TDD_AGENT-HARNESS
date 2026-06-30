@@ -479,7 +479,8 @@ export function buildConsumerReadinessPlan(input: {
           : (input.utTddCliMessage ??
             [
               "Bare `ut-tdd --help` must succeed before setup because generated Claude/Codex hooks call `ut-tdd ...`.",
-              "Run `bun link` in the harness package and `bun link ut-tdd` in the consumer repo, then ensure Bun's binary directory is on PATH.",
+              "Run `bun link` in the harness package and `bun link ut-tdd` in the consumer repo.",
+              "Ensure Bun's global bin directory and the real Bun binary directory are both on the hook shell PATH.",
               "On Windows, npm-installed Bun shims may not satisfy Bun link executables; verify the actual `ut-tdd --help` command in the consumer shell.",
             ].join(" ")),
     },

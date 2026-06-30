@@ -177,8 +177,15 @@ ut-tdd --help
 ```
 
 On Windows, if Bun was installed through npm shims, `bun link` may create an
-`ut-tdd` executable that is present on PATH but cannot find a Bun binary. Treat that
-as not ready until `ut-tdd --help` exits successfully.
+`ut-tdd` executable that exists under `~\.bun\bin` but is not visible to the
+hook shell, or is visible but cannot find a real `bun.exe`. Add both Bun's global
+bin directory and the real Bun binary directory to PATH before treating setup as
+ready. For an npm-installed Bun on Windows, the local verification shape is:
+
+```powershell
+$env:PATH="$env:USERPROFILE\.bun\bin;$env:APPDATA\npm\node_modules\bun\bin;$env:PATH"
+ut-tdd --help
+```
 
 ## ⚙️ セットアップ
 

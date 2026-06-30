@@ -543,6 +543,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
       "npm-installed Bun shims may not satisfy Bun link executables",
     );
+    expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
+      "real Bun binary directory",
+    );
   });
 
   it("U-SETUP-005: recordSetupState signals 4 フィールド strip / 上書き / token 非含", () => {
