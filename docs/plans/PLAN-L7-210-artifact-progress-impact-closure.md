@@ -24,6 +24,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: .ut-tdd/audit/A-151-green-command-digest-rerun-bind.md
     artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-152-l10-l14-current-close-snapshot.md
+    artifact_type: markdown_doc
   - artifact_path: src/state-db/projection-writer.ts
     artifact_type: source_module
   - artifact_path: tests/projection-writer.test.ts
@@ -64,12 +66,13 @@ review_evidence:
 
 ## 目的
 
-`artifact_progress_red` が、実際には PLAN の review evidence と green evidence に束ねられた変更まで open dependency impact として残していた。これは「未確認の変更」と「証跡付きの変更」を区別できず、feedback の actionable surface を過大にする。
+`artifact_progress_red` が、実際には PLAN の review evidence と green evidence に束ねられた変更まで open dependency impact として残る問題を閉じる。
+これにより「未確認の変更」と「証跡付きの変更」を区別し、feedback の actionable surface を過大にしない。
 
 ## 対応
 
-- relation-impact の closure 判定を、単一 owner の上書き map ではなく複数生成 PLAN から証跡付き PLAN を探す方式にする。
-- `approve_after_fixes` / `pass-with-fixes` を既存 review evidence の成功 verdict として扱う。
+- relation-impact の closure 判定を、単一 owner の上書き map ではなく、複数の生成元 PLAN から証跡付き PLAN を探す方式にする。
+- `approve_after_fixes` / `pass-with-fixes` を成功 verdict として扱う。
 - PLAN 自体に対する `update-plan` action は、その PLAN に successful review evidence があれば closed にする。
 - 証跡のない PLAN や生成関係のない artifact は open のまま残す。
 
@@ -78,8 +81,9 @@ review_evidence:
 - `bun run vitest run tests\projection-writer.test.ts --reporter=dot` が pass する。
 - `bun run typecheck` が pass する。
 - `bun src\cli.ts db rebuild` が pass する。
-- `bun src\cli.ts feedback list --emit` の gate は 0 のまま、artifact-progress actionable が証跡付き変更で過剰に増えない。
+- `bun src\cli.ts feedback list --emit` の gate は 0 のままで、artifact-progress actionable が証跡付き変更で過剰に増えない。
 
 ## 境界
 
-この PLAN は local projection の feedback 精度を上げる。remote CI、tag、署名 tarball、公開 GitHub repo、post-publication consumer UAT は外部必須のまま残る。
+この PLAN は local projection の feedback 精度を上げる。
+remote CI、tag、署名 tarball、公開 GitHub repo、post-publication consumer UAT は外部必須のまま残る。

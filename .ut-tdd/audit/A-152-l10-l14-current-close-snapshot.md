@@ -9,8 +9,9 @@
 Latest local commands:
 
 - `bun src\cli.ts status --json`: `activeDraftTotal=0`, `openDefers=0`, `nonTerminalPlansTotal=7`, `versionUpParked=7`.
-- `bun src\cli.ts feedback list --emit`: `gate=0`, `actionable=0`; remaining rows are telemetry/info.
-- `bun src\cli.ts db rebuild`: projection OK, `rows=34225`.
+- `bun src\cli.ts feedback list --emit`: `total=1805`, `gate=0`, `actionable=0`, `telemetry=1805`.
+  - telemetry summary: `artifact_progress_yellow=741`, `missing-test-oracle-id=600`, `skill_acceptance_rate=230`, `skill_firing_rate=230`, `large-document-split=1`.
+- `bun src\cli.ts db rebuild`: projection OK, `rows=34350`.
 - `bun src\cli.ts doctor`: OK, including `pair-freeze`, `l6-completion`, `l7-completion`, `frontend-design-coverage`, `green-command-digest`, and `forward-convergence`.
 - `bun src\cli.ts doctor --strict-telemetry-provenance`: OK.
 
@@ -23,6 +24,14 @@ L10-L14 are locally closeable only in the scoped sense below:
 - **L12 release acceptance**: local distribution and setup gates are green, but clean release acceptance on an approved release target remains `human_required`.
 - **L13 post-deploy**: no released consumer deployment exists in this local run; post-deploy observation remains `external_required`.
 - **L14 operations feedback**: local feedback projection gates are green; real released-consumer operations data remains `external_required`.
+
+## Feedback telemetry boundary
+
+Current `feedback_events` open rows are measurement telemetry, not gate/actionable blockers:
+
+- `missing-test-oracle-id` is an info-level catalog-quality signal. It tracks test cases that do not expose a `U-*` oracle id after direct-name and enclosing `describe("U-*")` inheritance. It remains useful backlog telemetry for test catalog quality, but it is intentionally summarized and does not block L10-L14 local close.
+- `skill_firing_rate` and `skill_acceptance_rate` are info-level skill telemetry signals. They are feedback-loop measurements, not release gates.
+- `artifact_progress_yellow` means implemented artifacts lack linked test evidence or are otherwise not fully green at artifact granularity. With `gate=0/actionable=0`, these rows do not represent open red recovery work for the current close.
 
 ## Parked work
 
