@@ -30,6 +30,7 @@ Local workflow structure is strong: V-model layers, drive-model exit convergence
 - This keeps dependency impact as substance-aware telemetry: unowned or unevidenced changes remain open; owned and reviewed changes stop producing false red dependency feedback.
 - Consumer adapter templates now include portable enforced guard hooks for Claude and Codex (`ut-tdd hook agent-guard`, `ut-tdd hook work-guard`, and Claude `ut-tdd hook subagent-stop`) and keep real repo `.claude/.codex` dogfood settings out of clean distribution artifacts.
 - VSCode / IDE settings are intentionally local suggestions rather than distributed runtime state: `.vscode/mcp.json` is not written by generated MCP config, and `.vscode/` is outside the clean distribution allowlist.
+- Follow-up judge findings on workflow coverage, drive-model entry/certificate boundaries, and telemetry provenance are consolidated in `.ut-tdd/audit/A-154-workflow-drive-telemetry-substance-audit.md`.
 
 ## Additional judge findings on workflow coverage, drive model, and DB telemetry
 
