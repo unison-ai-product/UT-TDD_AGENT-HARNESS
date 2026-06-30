@@ -15,7 +15,9 @@ import {
 // の edge を生む source set を返すこと、純関数と結合して impact/export が動くことを検証する。
 function buildRepo(root: string): void {
   mkdirSync(join(root, "docs", "plans"), { recursive: true });
+  mkdirSync(join(root, "docs", "adr"), { recursive: true });
   mkdirSync(join(root, "docs", "design", "harness"), { recursive: true });
+  mkdirSync(join(root, "docs", "governance"), { recursive: true });
   mkdirSync(join(root, "docs", "process", "modes"), { recursive: true });
   mkdirSync(join(root, "docs", "test-design", "harness"), { recursive: true });
   mkdirSync(join(root, ".claude", "agents"), { recursive: true });
@@ -28,6 +30,16 @@ function buildRepo(root: string): void {
   mkdirSync(join(root, "src", "widget"), { recursive: true });
   mkdirSync(join(root, "tests"), { recursive: true });
 
+  writeFileSync(
+    join(root, "docs", "adr", "ADR-001-test-decision.md"),
+    ["# ADR-001 Test Decision", "", "Fixture ADR body.", ""].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(root, "docs", "governance", "README.md"),
+    ["# Governance", "", "Fixture governance README body.", ""].join("\n"),
+    "utf8",
+  );
   writeFileSync(
     join(root, "docs", "plans", "PLAN-TEST-01-widget.md"),
     [
@@ -191,6 +203,13 @@ describe("loadRelationGraphSourceSet", () => {
         id: ".claude/agents/refactor-scout.md",
         path: ".claude/agents/refactor-scout.md",
       });
+      const adrDoc = sourceSet.designDocs?.find(
+        (d) => d.path === "docs/adr/ADR-001-test-decision.md",
+      );
+      expect(adrDoc).toMatchObject({
+        id: "docs/adr/ADR-001-test-decision.md",
+        path: "docs/adr/ADR-001-test-decision.md",
+      });
       const reviewDoc = sourceSet.designDocs?.find(
         (d) => d.path === ".ut-tdd/review/cross-review-l7-157.md",
       );
@@ -240,6 +259,13 @@ describe("loadRelationGraphSourceSet", () => {
         id: "docs/governance/repository-structure.md",
         path: "docs/governance/repository-structure.md",
       });
+      const governanceReadmeDoc = sourceSet.designDocs?.find(
+        (d) => d.path === "docs/governance/README.md",
+      );
+      expect(governanceReadmeDoc).toMatchObject({
+        id: "docs/governance/README.md",
+        path: "docs/governance/README.md",
+      });
       const readmeDoc = sourceSet.designDocs?.find((d) => d.path === "README.md");
       expect(readmeDoc).toMatchObject({
         id: "README.md",
@@ -275,6 +301,16 @@ describe("loadRelationGraphSourceSet", () => {
         "design:.claude/agents/refactor-scout.md",
       );
       expect(agentImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
+      const adrImpact = analyzeRelationImpact({
+        changedPaths: ["docs/adr/ADR-001-test-decision.md"],
+        projection,
+      });
+      expect(adrImpact.ok).toBe(true);
+      expect(adrImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:docs/adr/ADR-001-test-decision.md",
+      );
+      expect(adrImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
       const reviewImpact = analyzeRelationImpact({
         changedPaths: [".ut-tdd/review/cross-review-l7-157.md"],
@@ -345,6 +381,17 @@ describe("loadRelationGraphSourceSet", () => {
         "design:docs/governance/repository-structure.md",
       );
       expect(governanceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+      const governanceReadmeImpact = analyzeRelationImpact({
+        changedPaths: ["docs/governance/README.md"],
+        projection,
+      });
+      expect(governanceReadmeImpact.ok).toBe(true);
+      expect(governanceReadmeImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:docs/governance/README.md",
+      );
+      expect(governanceReadmeImpact.findings.map((f) => f.code)).not.toContain(
+        "missing-projection",
+      );
 
       const readmeImpact = analyzeRelationImpact({
         changedPaths: ["README.md"],
@@ -457,6 +504,33 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
       "design:docs/templates/adapter/.codex/hooks.json",
     );
     expect(adapterCodexHookImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const adr001Impact = analyzeRelationImpact({
+      changedPaths: ["docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md"],
+      projection,
+    });
+    expect(adr001Impact.ok).toBe(true);
+    expect(adr001Impact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md",
+    );
+    expect(adr001Impact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const adr005Impact = analyzeRelationImpact({
+      changedPaths: ["docs/adr/ADR-005-distribution-model-and-central-ui.md"],
+      projection,
+    });
+    expect(adr005Impact.ok).toBe(true);
+    expect(adr005Impact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/adr/ADR-005-distribution-model-and-central-ui.md",
+    );
+    expect(adr005Impact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const governanceReadmeImpact = analyzeRelationImpact({
+      changedPaths: ["docs/governance/README.md"],
+      projection,
+    });
+    expect(governanceReadmeImpact.ok).toBe(true);
+    expect(governanceReadmeImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/governance/README.md",
+    );
+    expect(governanceReadmeImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const reviewImpact = analyzeRelationImpact({
       changedPaths: [".ut-tdd/review/cross-review-l7-157.md"],
       projection,

@@ -44,7 +44,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:46:41+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:43b3176663c9d9870da56853788560c2a771410e2e38e1960a74f578a2675f19"
+        output_digest: "sha256:271036785140e3c3f36dac8ccb4c348bae2e049f18b478c66103abe558bb3eb5"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -52,7 +52,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:47:06+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:c84fbf110e8ba9b8f5d0fa64fed06e9edd4c1ba2ccb4a61159d31bf267d11530"
+        output_digest: "sha256:6c0409915d954271986f4f8eabe69fcdfc5a899cec4974fbb0fb29fa7c03c3f3"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -60,7 +60,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:46:51+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:c84fbf110e8ba9b8f5d0fa64fed06e9edd4c1ba2ccb4a61159d31bf267d11530"
+        output_digest: "sha256:6c0409915d954271986f4f8eabe69fcdfc5a899cec4974fbb0fb29fa7c03c3f3"
       - kind: smoke
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
@@ -68,7 +68,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:47:25+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:c84fbf110e8ba9b8f5d0fa64fed06e9edd4c1ba2ccb4a61159d31bf267d11530"
+        output_digest: "sha256:6c0409915d954271986f4f8eabe69fcdfc5a899cec4974fbb0fb29fa7c03c3f3"
 ---
 
 # PLAN-L7-156: top-level reference doc graph node
