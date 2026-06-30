@@ -488,9 +488,14 @@ program
     "--strict-telemetry-provenance",
     "fail closed when populated telemetry tables have only projection provenance",
   )
-  .action((opts: { strictTelemetryProvenance?: boolean }) => {
+  .option(
+    "--strict-green-command-digest",
+    "fail closed when green command digests do not match their evidence files",
+  )
+  .action((opts: { strictTelemetryProvenance?: boolean; strictGreenCommandDigest?: boolean }) => {
     const r = runDoctor(undefined, {
       strictTelemetryProvenance: opts.strictTelemetryProvenance === true,
+      strictGreenCommandDigest: opts.strictGreenCommandDigest === true,
     });
     for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;

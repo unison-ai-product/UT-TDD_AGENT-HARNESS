@@ -115,6 +115,7 @@ describe("L7 CLI surface closure", () => {
 
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("--strict-telemetry-provenance");
+    expect(run.stdout).toContain("--strict-green-command-digest");
   }, 15_000);
 
   it("exposes skill injection as a provider-neutral JSON manifest", () => {

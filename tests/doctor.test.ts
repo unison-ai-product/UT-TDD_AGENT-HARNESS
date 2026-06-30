@@ -750,9 +750,9 @@ describe("runDoctor", () => {
       "trackedCanonical",
       "dependencyDrift",
       "regressionExpansion",
+      "greenCommandDigest",
     ];
 
     expect(expectedHardGates.filter((name) => !okExpression.includes(`${name}.ok`))).toEqual([]);
-    expect(okExpression).not.toContain("greenCommandDigest.ok");
   });
 });

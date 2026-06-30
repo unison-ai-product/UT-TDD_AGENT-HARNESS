@@ -6,7 +6,7 @@ layer: L7
 drive: be
 status: confirmed
 created: 2026-06-29
-updated: 2026-06-29
+updated: 2026-06-30
 owner: PM (Opus) / PO (人間)
 parent_design: docs/design/harness/L6-function-design/review-evidence.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -20,7 +20,11 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/doctor/index.ts
     artifact_type: source_module
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
   - artifact_path: tests/doctor.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/cli-surface.test.ts
     artifact_type: test_code
 dependencies:
   parent: null
@@ -31,6 +35,39 @@ dependencies:
     - .ut-tdd/audit/A-145-03-verification-gate-engine.md
     - .ut-tdd/audit/A-144-03-verification-evidence-integrity.md
 review_evidence:
+  - reviewer: codex-cli
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-30T21:22:00+09:00"
+    tests_green_at: "2026-06-30T21:21:30+09:00"
+    verdict: approve
+    scope: "Corrected PLAN-L7-194 from normal-doctor hard gate to opt-in strict verification. Normal doctor remains local-close green; `doctor --strict-green-command-digest` fail-closes while stale digest evidence remains."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\doctor.test.ts tests\\cli-surface.test.ts tests\\green-command-digest.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T21:20:00+09:00"
+        evidence_path: tests/doctor.test.ts
+        output_digest: "sha256:38c828573c69c9456aa714bd88c2197ead8fbad2827547f909bccf2c610c8d0a"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-30T21:21:00+09:00"
+        evidence_path: src/doctor/index.ts
+        output_digest: "sha256:5ac0f730cffa4dfd61371bee4b3d6d8323fa894a6c98160b6ff871917401dd56"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-30T21:21:00+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:42e43cabd56246b7830b59900f2d9a0445014763ff494598dc2421cbe3fc9e94"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-29T22:55:00+09:00"

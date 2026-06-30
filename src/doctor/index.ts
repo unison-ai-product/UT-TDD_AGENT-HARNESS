@@ -326,6 +326,7 @@ export interface DoctorDeps {
 
 export interface DoctorOptions {
   strictTelemetryProvenance?: boolean;
+  strictGreenCommandDigest?: boolean;
 }
 
 function handoverDeps(deps: DoctorDeps): HandoverDeps {
@@ -2145,7 +2146,10 @@ export function runDoctor(
     ...greenCommandDigestResult,
     // PLAN-L7-132 intentionally exposes digest mismatches as advisory evidence until
     // a hardening plan can bind each digest update to a same-packet green re-run.
-    ok: true,
+    ok:
+      options.strictGreenCommandDigest === true
+        ? greenCommandDigestResult.mismatches.length === 0
+        : true,
   };
   // fail-close: spine-外 kind=impl の NEW 未集約 landed を gate (PLAN-DISCOVERY-08 Step5)。legacy は grandfather。
   const forwardConvergence = checkForwardConvergence(deps.repoRoot);
@@ -2222,6 +2226,7 @@ export function runDoctor(
       lintWiring.ok &&
       proposalDocumentCoverage.ok &&
       frontendDesignCoverage.ok &&
+      greenCommandDigest.ok &&
       forwardConvergence.ok &&
       forwardConvergenceAudit.ok &&
       handoverOutstanding.ok,
