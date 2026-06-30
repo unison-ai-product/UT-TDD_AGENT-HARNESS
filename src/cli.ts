@@ -2000,6 +2000,7 @@ function runtimeCommand(provider: AdapterProvider): Command {
               : ["pipe", jsonOut ? 2 : "inherit", "inherit"],
           env: adapterExecutionEnv(provider, plan.env),
           shell: invocation.shell ?? false,
+          windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
         });
         if (child.error) {
           // spawn 自体の失敗 (ENOENT 等) は status=null のまま沈黙するため理由を surface する (A-128 F-5 / IMP-130(d))。
@@ -2464,6 +2465,7 @@ team
                 // codex はプロンプトを stdin で受ける (cmd.exe shell-wrap 回避、PLAN-L7-77)。
                 stdio: stdin === undefined ? ioMode : ["pipe", ioMode, ioMode],
                 shell: invocation.shell ?? false,
+                windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
               });
               if (stdin !== undefined) {
                 child.stdin?.write(stdin);

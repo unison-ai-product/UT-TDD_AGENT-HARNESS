@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -151,8 +151,36 @@ describe("runtime adapter plan", () => {
       });
 
       expect(invocation.command).toBe("C:\\Windows\\System32\\cmd.exe");
-      expect(invocation.args).toEqual(["/d", "/s", "/c", `"${explicit}" "exec" "hello world"`]);
+      expect(invocation.args).toEqual(["/d", "/s", "/c", `""${explicit}" "exec" "hello world""`]);
       expect(invocation.shell).toBe(false);
+      expect(invocation.windowsVerbatimArguments).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-ADAPTER-009: probes Windows .cmd providers with spaces in the path", () => {
+    if (process.platform !== "win32") return;
+    const root = mkdtempSync(join(tmpdir(), "ut adapter cmd probe "));
+    try {
+      const explicit = join(root, "codex.cmd");
+      const calledPath = join(root, "called.txt");
+      writeFileSync(
+        explicit,
+        ["@echo off", `echo args=%* > "${calledPath}"`, "exit /b 0", ""].join("\r\n"),
+      );
+
+      const ok = isProviderCommandSpawnable("codex", {
+        platform: "win32",
+        env: {
+          ...process.env,
+          SystemRoot: process.env.SystemRoot ?? "C:\\Windows",
+          UT_TDD_CODEX_BIN: explicit,
+        },
+      });
+
+      expect(ok).toBe(true);
+      expect(readFileSync(calledPath, "utf8")).toContain("--version");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

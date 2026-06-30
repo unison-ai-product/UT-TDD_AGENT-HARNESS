@@ -98,6 +98,7 @@ export interface ProviderInvocation {
   command: string;
   args: string[];
   shell?: boolean;
+  windowsVerbatimArguments?: boolean;
 }
 
 export interface ProviderInvocationInput {
@@ -262,8 +263,8 @@ function windowsCommandProcessor(opts: ProviderCommandResolutionOptions = {}): s
   return env.ComSpec ?? join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
 }
 
-function quoteCmdArg(arg: string): string {
-  return `"${arg.replace(/"/g, '\\"')}"`;
+function quoteCmdToken(arg: string): string {
+  return `"${arg.replace(/"/g, '""')}"`;
 }
 
 export function buildProviderInvocation(input: ProviderInvocationInput): ProviderInvocation {
@@ -271,10 +272,12 @@ export function buildProviderInvocation(input: ProviderInvocationInput): Provide
   const platform = opts.platform ?? process.platform;
   const resolved = resolveProviderCommand(provider, command, opts);
   if (platform === "win32" && isWindowsCommandScript(resolved)) {
+    const innerCommand = [quoteCmdToken(resolved), ...args.map(quoteCmdToken)].join(" ");
     return {
       command: windowsCommandProcessor(opts),
-      args: ["/d", "/s", "/c", [quoteCmdArg(resolved), ...args.map(quoteCmdArg)].join(" ")],
+      args: ["/d", "/s", "/c", `"${innerCommand}"`],
       shell: false,
+      windowsVerbatimArguments: true,
     };
   }
   return { command: resolved, args, shell: false };
@@ -298,6 +301,7 @@ export function isProviderCommandSpawnable(
         env: probeEnv,
         stdio: "ignore",
         shell: invocation.shell ?? false,
+        windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
       }));
   try {
     return runProbe(invocation.command, invocation.args, env).status === 0;

@@ -50,7 +50,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:16:59+09:00"
         evidence_path: tests/runtime-adapter.test.ts
-        output_digest: "sha256:0cedb685f30b70e6c1faf09ec35b65077ed17294bcff7671e16b28803417a460"
+        output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
       - kind: unit_test
         command: "bun run vitest run tests\\runtime-adapter.test.ts"
         runner: bun
@@ -58,7 +58,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:16:59+09:00"
         evidence_path: src/runtime/adapter.ts
-        output_digest: "sha256:6bec09186fd5ec5ac661d1ea28ede5267b47605d0d53cd8dbb180444de0e32f9"
+        output_digest: "sha256:331fcf4747f9ca0f3b7b1bf9456ad50f77630c309c047bd81097e367ede41101"
       - kind: unit_test
         command: "bun run vitest run tests\\runtime-adapter.test.ts"
         runner: bun
@@ -90,7 +90,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:32:10+09:00"
         evidence_path: src/runtime/adapter.ts
-        output_digest: "sha256:6bec09186fd5ec5ac661d1ea28ede5267b47605d0d53cd8dbb180444de0e32f9"
+        output_digest: "sha256:331fcf4747f9ca0f3b7b1bf9456ad50f77630c309c047bd81097e367ede41101"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -98,7 +98,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:32:10+09:00"
         evidence_path: tests/runtime-adapter.test.ts
-        output_digest: "sha256:0cedb685f30b70e6c1faf09ec35b65077ed17294bcff7671e16b28803417a460"
+        output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
 ---
 
 # PLAN-L7-160: runtime adapter policy extraction
