@@ -48,8 +48,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-25T17:02:30+09:00"
-    tests_green_at: "2026-06-25T17:02:30+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Refactor Scout advisory agent, externalize-policy detector heuristic, and tier-router policy extraction."
     worker_model: codex
@@ -92,9 +92,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T16:49:22+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:6fe7f7a2cb52a2aa7445d9877d93e45763884736cfcec82661641e0de3afc939"
+        output_digest: "sha256:b94ec857486716eaf5037aeaed684a88b660e7d624dc71f67fadc411e1b65f77"
       - kind: smoke
         command: "bun run src\\cli.ts db rebuild"
         runner: bun

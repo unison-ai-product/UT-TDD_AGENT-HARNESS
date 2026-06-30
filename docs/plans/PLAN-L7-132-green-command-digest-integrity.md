@@ -31,8 +31,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-cli
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T20:25:30+09:00"
-    tests_green_at: "2026-06-30T20:25:25+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Preserve the PLAN-L7-132 advisory boundary: green-command-digest remains visible in doctor output, but no longer participates in runDoctor.ok hard-gate aggregation. This prevents mechanical digest restamps from masquerading as same-packet green reruns while keeping the mismatch evidence surfaced."
     worker_model: codex-gpt-5
@@ -43,25 +43,25 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T20:25:25+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/doctor.test.ts
-        output_digest: "sha256:77300ffe752b9b698bc90f333eb86fb8b670d6e6d97f85544904a534dfff7ad1"
+        output_digest: "sha256:38c828573c69c9456aa714bd88c2197ead8fbad2827547f909bccf2c610c8d0a"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T20:24:41+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:d23da84e8105a26ed689d9750a4da407a437a52e4beb38f1c288821e23cf35ef"
+        output_digest: "sha256:5ac0f730cffa4dfd61371bee4b3d6d8323fa894a6c98160b6ff871917401dd56"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T20:24:33+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:d23da84e8105a26ed689d9750a4da407a437a52e4beb38f1c288821e23cf35ef"
+        output_digest: "sha256:5ac0f730cffa4dfd61371bee4b3d6d8323fa894a6c98160b6ff871917401dd56"
   - reviewer: code-reviewer (intra_runtime_subagent)
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-23"

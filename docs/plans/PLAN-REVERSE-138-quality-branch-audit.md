@@ -62,8 +62,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T20:17:36+09:00"
-    tests_green_at: "2026-06-30T20:17:36+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Read-only quality and branch audit reverse backfill remains coherent after current CLI change; destructive branch operations remain out of scope."
     worker_model: codex
@@ -90,9 +90,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T20:17:36+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:7b4150df5f4e50929909b7bc34d55699f9d34da471d05bae8249679d76fde896"
+        output_digest: "sha256:0ad713f57f467d7ebb0d341f6914af3290bea4df50619182d76e450772f9874a"
 ---
 
 # PLAN-REVERSE-138: read-only quality and branch audit backfill

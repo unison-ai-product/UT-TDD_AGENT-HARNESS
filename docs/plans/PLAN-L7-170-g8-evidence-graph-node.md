@@ -33,8 +33,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-26T21:05:00+09:00"
-    tests_green_at: "2026-06-26T21:05:00+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Materialize .ut-tdd/evidence/g8-integration/*.json artifacts as relation graph nodes so G8 evidence changes remain analyzable by change-impact."
     worker_model: codex
@@ -53,9 +53,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-26T21:05:00+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:6fe7f7a2cb52a2aa7445d9877d93e45763884736cfcec82661641e0de3afc939"
+        output_digest: "sha256:b94ec857486716eaf5037aeaed684a88b660e7d624dc71f67fadc411e1b65f77"
 ---
 
 # PLAN-L7-170: G8 evidence graph node coverage

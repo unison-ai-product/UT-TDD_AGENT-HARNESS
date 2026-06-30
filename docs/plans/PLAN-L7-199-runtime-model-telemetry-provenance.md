@@ -36,8 +36,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T20:52:00+09:00"
-    tests_green_at: "2026-06-29T20:52:00+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Overlay runtime Claude/Codex JSONL token telemetry into doctor provenance checks so model_runs are no longer hollow review-evidence-only telemetry."
     worker_model: codex
@@ -48,25 +48,25 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T20:50:08+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:7b4150df5f4e50929909b7bc34d55699f9d34da471d05bae8249679d76fde896"
+        output_digest: "sha256:0ad713f57f467d7ebb0d341f6914af3290bea4df50619182d76e450772f9874a"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-29T20:47:33+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:ac43ef4e9baf529ccf18d5973145108919c89da4805fd1147a7ba669f00165af"
+        output_digest: "sha256:5ac0f730cffa4dfd61371bee4b3d6d8323fa894a6c98160b6ff871917401dd56"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-29T20:47:33+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:ac43ef4e9baf529ccf18d5973145108919c89da4805fd1147a7ba669f00165af"
+        output_digest: "sha256:5ac0f730cffa4dfd61371bee4b3d6d8323fa894a6c98160b6ff871917401dd56"
 ---
 
 # PLAN-L7-199: Runtime model telemetry provenance in doctor

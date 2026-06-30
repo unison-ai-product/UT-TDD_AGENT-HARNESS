@@ -56,8 +56,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-23T16:30:00+09:00"
-    tests_green_at: "2026-06-23T16:30:00+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "R4 fullback for IMP-052 route mechanization."
     worker_model: codex
@@ -76,9 +76,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-23T16:30:00+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:ac43ef4e9baf529ccf18d5973145108919c89da4805fd1147a7ba669f00165af"
+        output_digest: "sha256:5ac0f730cffa4dfd61371bee4b3d6d8323fa894a6c98160b6ff871917401dd56"
 ---
 
 # PLAN-REVERSE-130: right-arm gate planning fullback

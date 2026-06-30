@@ -26,6 +26,10 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/cli-surface.test.ts
     artifact_type: test_code
+  - artifact_path: .ut-tdd/audit/A-153-green-command-digest-backlog.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-154-workflow-drive-telemetry-substance-audit.md
+    artifact_type: markdown_doc
 dependencies:
   parent: null
   requires:
@@ -40,7 +44,7 @@ review_evidence:
     reviewed_at: "2026-06-30T21:22:00+09:00"
     tests_green_at: "2026-06-30T21:21:30+09:00"
     verdict: approve
-    scope: "Corrected PLAN-L7-194 from normal-doctor hard gate to opt-in strict verification. Normal doctor remains local-close green; `doctor --strict-green-command-digest` fail-closes while stale digest evidence remains."
+    scope: "Corrected PLAN-L7-194 from normal-doctor hard gate to opt-in strict verification, then closed the stale digest backlog through A-153 rerun-bound correction. Normal doctor remains local-close green; `doctor --strict-green-command-digest` is the strict evidence-integrity gate."
     worker_model: codex-gpt-5
     reviewer_model: codex-gpt-5
     green_commands:
@@ -70,8 +74,8 @@ review_evidence:
         output_digest: "sha256:42e43cabd56246b7830b59900f2d9a0445014763ff494598dc2421cbe3fc9e94"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T22:55:00+09:00"
-    tests_green_at: "2026-06-29T22:55:00+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "green-command-digest is now included in runDoctor.ok hard-gate aggregation; mismatches force real-repo doctor false until rerun-bound digest evidence is corrected."
     worker_model: codex
@@ -90,9 +94,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-29T22:55:00+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:ac43ef4e9baf529ccf18d5973145108919c89da4805fd1147a7ba669f00165af"
+        output_digest: "sha256:5ac0f730cffa4dfd61371bee4b3d6d8323fa894a6c98160b6ff871917401dd56"
 ---
 
 # PLAN-L7-194 (impl): green-command-digest を hard gate へ昇格

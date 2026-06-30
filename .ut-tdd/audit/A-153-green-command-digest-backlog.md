@@ -1,26 +1,29 @@
-# A-153 - green-command digest backlog classification
+# A-153 - green-command digest backlog correction
 
 - **date**: 2026-06-30
 - **scope**: `ut-tdd doctor --strict-green-command-digest` backlog after `dd5092e`.
-- **boundary**: classification only. This file does not restamp historical `output_digest` values.
+- **boundary**: rerun-bound correction record. This file does not claim release/UAT close.
 
 ## Summary
 
-`ut-tdd doctor --strict-green-command-digest` currently fail-closes because 63
-`review_evidence.green_commands` rows no longer match the current hash of their
-`evidence_path`.
+`ut-tdd doctor --strict-green-command-digest` previously fail-closed because 63
+`review_evidence.green_commands` rows no longer matched the current hash of their
+`evidence_path`. The backlog has now been corrected by rerunning the command
+groups below and updating the affected `completed_at` / `output_digest` rows in
+the same correction packet.
 
-This is intentionally not corrected by mechanical restamp. Most mismatches are
+This was intentionally not corrected by mechanical restamp. Most mismatches were
 historical evidence rows whose referenced source or test files changed after the
-original green run. A hash-only update would make digest equality look like fresh
-command execution, repeating the projection/substance problem called out in
-A-150.
+original green run. The correction packet therefore reran the listed commands
+before rebinding digests, preserving the projection/substance boundary called out
+in A-150.
 
 Current classification:
 
 | metric | value |
 | --- | ---: |
-| mismatch rows | 63 |
+| mismatch rows before correction | 63 |
+| mismatch rows after correction | 0 |
 | affected PLANs | 28 |
 | affected evidence files | 9 |
 
@@ -36,11 +39,13 @@ Affected evidence files:
 - `tests/doctor.test.ts`
 - `tests/setup.test.ts`
 
-## Exact Command Groups
+## Rerun Command Groups
 
-The backlog collapses to the command groups below. A future correction packet
-must run the exact command, update the corresponding `completed_at`, and update
-only the digest rows covered by that same run.
+The backlog collapsed to the command groups below. The correction packet ran
+each executable group, updated the corresponding `completed_at`, and updated
+only the digest rows covered by that same run. The `distribution package` row
+used a real temporary output directory in place of the recorded `<temp>` marker,
+while preserving the same package operation.
 
 | count | command |
 | ---: | --- |
@@ -74,10 +79,14 @@ only the digest rows covered by that same run.
 
 ## Disposition
 
-Local L10-L14 close remains valid under normal `ut-tdd doctor` because the stale
-digest rows are surfaced as advisory evidence, not silently ignored.
+Local L10-L14 close now has strict green-command digest evidence rebound to the
+current file state through rerun-bound correction.
 
-`--strict-green-command-digest` remains red by design until a dedicated
-rerun-bound correction packet is executed. The correction packet must not update
-hashes without command reruns and must not claim that digest equality alone
-proves runtime substance.
+Verification:
+
+- all command groups above: pass
+- `bun -e "checkGreenCommandDigests(...)"`: mismatch count 0
+- `bun src\cli.ts doctor --strict-green-command-digest`: green-command-digest OK; a subsequent `db rebuild` is required after PLAN frontmatter edits so DB fingerprints match the updated sources
+
+Future corrections must keep this rule: do not update hashes without command
+reruns, and do not claim that digest equality alone proves runtime substance.

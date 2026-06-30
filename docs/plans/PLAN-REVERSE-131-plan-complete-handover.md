@@ -50,8 +50,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-23T16:10:00+09:00"
-    tests_green_at: "2026-06-23T16:10:00+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "R4 fullback for plan complete handover CLI lifecycle entrypoint."
     worker_model: codex
@@ -70,9 +70,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-23T16:10:00+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:350ada3bdc25f12571f5e4c4e9aa77eb7ab2b869fdb83f0a337a59b67da6cc0e"
+        output_digest: "sha256:42e43cabd56246b7830b59900f2d9a0445014763ff494598dc2421cbe3fc9e94"
 ---
 
 # PLAN-REVERSE-131: plan complete handover fullback

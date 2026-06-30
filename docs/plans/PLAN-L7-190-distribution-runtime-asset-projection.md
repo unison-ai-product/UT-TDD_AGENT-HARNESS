@@ -26,8 +26,8 @@ agent_slots:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T21:29:59+09:00"
-    tests_green_at: "2026-06-29T21:29:59+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Project Claude subagent/slash-command runtime assets into setup and clean distribution while keeping dogfood runtime state excluded."
     worker_model: codex
@@ -38,9 +38,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T18:07:00+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:b2ecea5711e42b44c51983476b5c2850b9f33f6605b2005444d07cc50e174ecb"
+        output_digest: "sha256:ea0224e0f382481080f49cfe13f82e3677dee84dc515d26bc081b9c7770a397a"
       - kind: smoke
         command: "bun run vitest run tests\\setup.test.ts tests\\distribution-acceptance.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -54,9 +54,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-29T18:07:00+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:3f596607761cd1ad596b671903f7355626cf8a9eb7a1fc60af933c59d2f8c1e7"
+        output_digest: "sha256:93ef1c5aac32640863c505a626081f971f19c971c6d90db46d94be51f776a4b7"
       - kind: lint
         command: "bun run lint"
         runner: bun

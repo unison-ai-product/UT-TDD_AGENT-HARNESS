@@ -87,8 +87,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T20:57:30+09:00"
-    tests_green_at: "2026-06-30T20:55:37+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Local release artifact proof now creates a clean tarball, sha256 checksum, and manifest without publishing or signing. Signature and publication remain explicit external approval boundaries."
     worker_model: codex
@@ -99,21 +99,21 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T20:55:37+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:ac7000e502ff107dc98547093278829c4d2c0d41a422d01ed153f13cb9949325"
+        output_digest: "sha256:0ad713f57f467d7ebb0d341f6914af3290bea4df50619182d76e450772f9874a"
       - kind: smoke
         command: "bun src\\cli.ts distribution package --tag v0.1.0 --out <temp> --json"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T20:55:26+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:347fdc16f528a08ed6f2cd9c42f9ec716119de05d0b009732a67b343d08aa6d4"
+        output_digest: "sha256:42e43cabd56246b7830b59900f2d9a0445014763ff494598dc2421cbe3fc9e94"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T20:41:00+09:00"
-    tests_green_at: "2026-06-30T20:40:20+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Consumer PATH readiness now distinguishes link registration from executable substance: default shell reports detected candidate paths, and a hook-equivalent PATH including Bun global bin plus the real Bun binary directory makes `ut-tdd --help` and `distribution plan` pass."
     worker_model: codex
@@ -132,21 +132,21 @@ review_evidence:
         runner: powershell
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T20:38:55+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: README.md
-        output_digest: "sha256:90da5c53ebd6888c53cd90bc27d780b70aa1b3d26a5b28743e855907103a4ba8"
+        output_digest: "sha256:39b43f6f8710355d579998a35d889f9f73d414c22227027b103a5b68b56e04f5"
       - kind: smoke
         command: "$env:PATH=\"$env:USERPROFILE\\.bun\\bin;$env:APPDATA\\npm\\node_modules\\bun\\bin;$env:PATH\"; bun src\\cli.ts distribution plan --json"
         runner: powershell
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T20:39:02+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:7fdb1a5dd61770d3aeba45cfb6fea08535c198858ab752bb12eabf73afbef6ab"
+        output_digest: "sha256:42e43cabd56246b7830b59900f2d9a0445014763ff494598dc2421cbe3fc9e94"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T21:29:59+09:00"
-    tests_green_at: "2026-06-29T21:29:59+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Close PLAN-L7-157 by adding clean distribution planning, adapter projection, preflight/readiness, rollback, tag-pin contract, CI self-sufficiency, monorepo smoke metadata, and MIT license."
     worker_model: codex
@@ -157,41 +157,41 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-26T18:37:05+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:b2ecea5711e42b44c51983476b5c2850b9f33f6605b2005444d07cc50e174ecb"
+        output_digest: "sha256:ea0224e0f382481080f49cfe13f82e3677dee84dc515d26bc081b9c7770a397a"
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts tests\\cli-surface.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T21:29:59+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:7b4150df5f4e50929909b7bc34d55699f9d34da471d05bae8249679d76fde896"
+        output_digest: "sha256:0ad713f57f467d7ebb0d341f6914af3290bea4df50619182d76e450772f9874a"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-26T18:35:12+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:3f596607761cd1ad596b671903f7355626cf8a9eb7a1fc60af933c59d2f8c1e7"
+        output_digest: "sha256:93ef1c5aac32640863c505a626081f971f19c971c6d90db46d94be51f776a4b7"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-26T18:37:05+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:350ada3bdc25f12571f5e4c4e9aa77eb7ab2b869fdb83f0a337a59b67da6cc0e"
+        output_digest: "sha256:42e43cabd56246b7830b59900f2d9a0445014763ff494598dc2421cbe3fc9e94"
       - kind: smoke
         command: "bun src\\cli.ts distribution plan --tag v0.1.0 --json"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-26T18:38:19+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:3f596607761cd1ad596b671903f7355626cf8a9eb7a1fc60af933c59d2f8c1e7"
+        output_digest: "sha256:93ef1c5aac32640863c505a626081f971f19c971c6d90db46d94be51f776a4b7"
       - kind: smoke
         command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -202,8 +202,8 @@ review_evidence:
         output_digest: "sha256:54254cf3b1376b6ce0d641ebf3e872c2e4f0982f16085afa9282624cf488d0f7"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T19:34:00+09:00"
-    tests_green_at: "2026-06-29T19:34:00+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Hardens consumer readiness so generated Claude/Codex hooks that invoke bare ut-tdd fail-close unless the ut-tdd CLI is spawnable on PATH."
     worker_model: codex
@@ -214,29 +214,29 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T19:33:44+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:b2ecea5711e42b44c51983476b5c2850b9f33f6605b2005444d07cc50e174ecb"
+        output_digest: "sha256:ea0224e0f382481080f49cfe13f82e3677dee84dc515d26bc081b9c7770a397a"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-29T19:33:55+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:3f596607761cd1ad596b671903f7355626cf8a9eb7a1fc60af933c59d2f8c1e7"
+        output_digest: "sha256:93ef1c5aac32640863c505a626081f971f19c971c6d90db46d94be51f776a4b7"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-29T19:33:47+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:350ada3bdc25f12571f5e4c4e9aa77eb7ab2b869fdb83f0a337a59b67da6cc0e"
+        output_digest: "sha256:42e43cabd56246b7830b59900f2d9a0445014763ff494598dc2421cbe3fc9e94"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T20:17:36+09:00"
-    tests_green_at: "2026-06-30T20:17:36+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Consumer readiness warning now records observed bare ut-tdd failure; Windows wrapper metadata is included in the distribution plan without claiming public release readiness."
     worker_model: codex
@@ -255,17 +255,17 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T20:11:21+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:36411d2c9a4b569d0b7e3465b7eb60baed55d874dd90be5af4835459ea77017e"
+        output_digest: "sha256:93ef1c5aac32640863c505a626081f971f19c971c6d90db46d94be51f776a4b7"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T20:11:21+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:7a8237a7381b881c8c3e5dc88fda0b98b57b0482114e632117f27832930c0924"
+        output_digest: "sha256:42e43cabd56246b7830b59900f2d9a0445014763ff494598dc2421cbe3fc9e94"
 ---
 
 # PLAN-L7-157: clean distribution pull channel
