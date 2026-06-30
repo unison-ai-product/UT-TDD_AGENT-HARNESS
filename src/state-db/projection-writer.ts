@@ -1948,12 +1948,33 @@ function planGeneratedPathMap(repoRoot: string): Map<string, string> {
   return map;
 }
 
-function extractTestNames(content: string): string[] {
-  const names = new Set<string>();
+interface ExtractedTestCase {
+  name: string;
+  oracleId: string;
+}
+
+function extractTestCases(content: string): ExtractedTestCase[] {
+  const describeOracles = [...content.matchAll(/\bdescribe\s*\(\s*["'`]([^"'`]+)["'`]/g)]
+    .map((match) => ({
+      index: match.index ?? 0,
+      oracleId: match[1]?.match(/\bU-[A-Z0-9-]+\b/)?.[0] ?? "",
+    }))
+    .filter((entry) => entry.oracleId);
+  const cases = new Map<string, ExtractedTestCase>();
   for (const match of content.matchAll(/\b(?:it|test)\s*\(\s*["'`]([^"'`]+)["'`]/g)) {
-    names.add(match[1]);
+    const name = match[1];
+    if (!name) continue;
+    const directOracle = name.match(/\bU-[A-Z0-9-]+\b/)?.[0] ?? "";
+    const inheritedOracle =
+      directOracle ||
+      describeOracles.filter((entry) => entry.index < (match.index ?? 0)).at(-1)?.oracleId ||
+      "";
+    const existing = cases.get(name);
+    if (!existing || (!existing.oracleId && inheritedOracle)) {
+      cases.set(name, { name, oracleId: inheritedOracle });
+    }
   }
-  return [...names].sort();
+  return [...cases.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function importedSourcePaths(content: string): string[] {
@@ -1977,9 +1998,9 @@ function projectTestCaseCatalog(repoRoot: string, db: HarnessDb): void {
     const content = readFileSync(path, "utf8");
     const planId = planByPath.get(rel) ?? "";
     const sources = importedSourcePaths(content);
-    const names = extractTestNames(content);
-    for (const [index, name] of names.entries()) {
-      const oracleId = name.match(/\bU-[A-Z0-9-]+\b/)?.[0] ?? "";
+    const testCases = extractTestCases(content);
+    for (const [index, testCase] of testCases.entries()) {
+      const { name, oracleId } = testCase;
       const testCaseId = stableId("test-case", `${rel}:${index}:${stableHash(name)}`);
       recordProjectionEvent(db, {
         table: "test_cases",

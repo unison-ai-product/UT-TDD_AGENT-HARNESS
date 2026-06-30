@@ -954,6 +954,10 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rowCounts(db).test_cases).toBeGreaterThan(0);
       expect(rowCounts(db).test_artifact_edges).toBeGreaterThan(0);
       expect(rowCounts(db).artifact_progress).toBeGreaterThan(0);
+      const inheritedOracle = db
+        .prepare("SELECT COUNT(*) AS count FROM test_cases WHERE test_file = ? AND oracle_id = ?")
+        .get("tests/handover.test.ts", "U-HOVER-001") as { count: number } | undefined;
+      expect(inheritedOracle?.count ?? 0).toBeGreaterThan(0);
     } finally {
       db.close();
     }
