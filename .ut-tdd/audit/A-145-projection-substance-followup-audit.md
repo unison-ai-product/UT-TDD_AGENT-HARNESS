@@ -1,56 +1,55 @@
 # A-145 projection / substance follow-up audit
 
-## 判定
+- **date**: 2026-06-30
+- **scope**: ClaudeCode independent findings on L7-L14 local close readiness.
+- **boundary**: This is a local verification record. It does not claim public release, tag push, signed tarball publication, or post-publication consumer UAT.
 
-2026-06-30 の外部 judge 所見を統合する。全体テーマは `projection != substance` である。
-ローカル閉鎖の骨格は維持できるが、full close / production release close ではない。
+## Summary
 
-## 高優先の是正対象
+The repeated issue across the findings is `projection != substance`.
+Local close can be defended only where the repo has executable gates, runtime provenance, clean distribution smoke, or explicit external/human boundaries.
 
-| id | severity | area | finding | disposition |
+## Findings and disposition
+
+| id | severity | area | finding | current disposition |
 | --- | --- | --- | --- | --- |
-| F-01 | HIGH | distribution | 配布 adapter が enforced guard (`agent-guard` / `work-guard` / `SubagentStop`) を十分に同梱していない。roster は届くが governance enforcement が consumer 側で弱い。 | remediated locally for distributed templates; keep hosted/API Codex hook caveat |
-| F-02 | HIGH | distribution / OS | adapter hook は bare `ut-tdd` を起動するが、install flow が PATH / linked binary を保証しない。consumer hook 不発のリスクがある。 | partially remediated: README documents `bun link`, readiness fails when bare `ut-tdd` is absent, and clean smoke now executes bare `ut-tdd`; external install packaging still required |
-| F-03 | HIGH | green evidence | digest restamp は hash 一致だけを証明し、green command の再実行を証明しない。 | this audit binds rerun evidence for the current CI fix; broader hardening remains partial |
-| F-04 | HIGH | DB telemetry | `skill_invocations` / `test_runs` / `guardrail_decisions` / model cost telemetry が projection facade または hollow schema になっている。 | follow-up required |
-| F-05 | MED-HIGH | clean package | blanket `docs/governance/` allow が dogfood audit docs を配布へ漏らす可能性がある。 | remediated locally by per-file allow / dogfood deny patterns and real clean distribution regression |
-| F-06 | MED | design coverage | FE 設計 / FE 右腕検証の body substance が不足し、coverage gate は presence 寄りである。 | tracked as population / substance backlog |
-| F-07 | MED | drive model | `signal -> mode` と `kind x drive` の入口適合が advisory 寄り。Research / Recovery の実体収束も soft。 | follow-up required |
-| F-08 | MED | Claude / Codex adapter | `Agent` matcher など runtime tool-name 前提が環境依存。CLI / SDK 差分で空振りし得る。 | follow-up required |
+| F-01 | HIGH | distribution | Distributed adapters shipped subagent/command definitions without enforced guard parity. | Remediated locally. Adapter templates now ship portable `ut-tdd hook agent-guard`, `ut-tdd hook work-guard`, and Claude `ut-tdd hook subagent-stop`; Codex covers `spawn_agent|spawn_agents_on_csv` and `apply_patch|write_file` with `blockOnFailure=true`. Hosted/API Codex tools remain outside repo hook enforcement. |
+| F-02 | HIGH | distribution / OS | Adapter hooks invoke bare `ut-tdd`, so consumer PATH/global-link setup must exist before hooks can fire. | Partially remediated. README/setup document `bun link`, readiness checks fail/warn when bare `ut-tdd` is missing, and clean distribution smoke executes bare `ut-tdd status --json`. Release installer/global package publication remains external. |
+| F-03 | HIGH | green evidence | Digest restamp proves hash equality, not command rerun. | Partially remediated for the current CI fix by bundling targeted reruns with digest rebinding. Broader hardening remains: restamp and rerun must stay coupled in future verification cycles. |
+| F-04 | HIGH | DB telemetry | `skill_invocations`, `test_runs`, `guardrail_decisions`, and `model_runs` could look populated while carrying only projection or hollow schema rows. | Remediated locally for the verification cycle. `PLAN-L7-188` child slices distinguish runtime rows from projection rows; `doctor --strict-telemetry-provenance` fail-closes projection-only telemetry; runtime session/log projection exists for test, guardrail, skill, and model telemetry. Persisted DB after `telemetry scan --json`: `skill_invocations` runtime=5/projection=1700, `test_runs` runtime=401/projection=396, `guardrail_decisions` runtime=40/projection=2, `model_runs` runtime=112852/projection=528. Deterministic `db rebuild` intentionally remains source-projection-only, so strict close must include doctor strict and/or telemetry scan evidence. |
+| F-05 | MED-HIGH | clean package | Blanket `docs/governance/` allow could leak dogfood audit docs into distribution. | Remediated locally. Clean distribution uses per-file allow and dogfood deny/curation patterns; setup and distribution tests cover excluded dogfood governance docs. |
+| F-06 | MED | design coverage | FE design and FE right-arm verification body substance may lag behind presence coverage. | Tracked as population/substance backlog. FE left-arm slots now report body present 6/pending 0; FE right-arm L8/L9/L11/L12/L14 population remains a dogfood product gap, not a consumer distribution blocker. |
+| F-07 | MED | drive model | Entry-side `signal -> mode` and route selection can be advisory compared with exit convergence. | Partially remediated. Specialist drive enum, add-* parent drive compatibility, version deferral routing, and version-target parked certificates are now gated. Remaining gap: general newly authored PLANs do not yet require a route-eval certificate for every entry signal, and Research/Recovery absorption stays soft unless landed through downstream artifacts. |
+| F-08 | MED | Claude / Codex adapter | Runtime tool-name differences such as `Agent` vs `Task` can silently miss guard hooks. | Remediated locally for known Claude split: adapter template uses `Agent|Task`. Real consumer hook firing remains post-publication smoke. |
 
 ## Current CI remediation binding
 
-PR #2 の GitHub Actions failure は次の2件だった。
+PR #2 GitHub Actions failure had two immediate causes:
 
-- `tests/runtime-adapter.test.ts`: Windows simulation on Linux CI で `path.join` が `C:\Windows/System32/cmd.exe` を生成した。
-- `tests/cli-surface.test.ts`: `ut-tdd-tl` 追加後の allowlisted command count が 14 のままだった。
+- `tests/runtime-adapter.test.ts`: Windows simulation on Linux CI used platform `path.join`, producing mixed separators such as `C:\Windows/System32/cmd.exe`.
+- `tests/cli-surface.test.ts`: the allowlisted command count was still 14 after adding `ut-tdd-tl`.
 
-本差分では次を修正した。
+Local remediation:
 
-- `src/runtime/adapter.ts`: simulated `win32` branch では `win32.join` を使い、`where.exe` / `cmd.exe` の path separator を Windows 形式に固定する。
-- `tests/cli-surface.test.ts`: allowlisted command count を 15 に更新する。
+- `src/runtime/adapter.ts` uses `win32.join` for simulated Windows paths.
+- `tests/cli-surface.test.ts` updates the allowlisted command count to 15.
 
-## Rerun evidence bundled with digest rebinding
-
-digest のみを更新せず、対象ファイルに対応する green command を同じ remediation cycle で再実行した。
+Targeted rerun evidence bundled with digest rebinding:
 
 | command | result |
 | --- | --- |
 | `bun run vitest run tests\runtime-adapter.test.ts tests\cli-surface.test.ts tests\distribution-acceptance.test.ts --reporter=dot` | PASS: 3 files / 42 tests |
-| `bun run typecheck` | PASS before this audit packet; rerun again before commit |
-| `bun run lint` | PASS before this audit packet; rerun again before commit |
+| `bun run vitest run tests\db-projection-ingestion.test.ts tests\projection-writer.test.ts tests\doctor.test.ts tests\cli-surface.test.ts --reporter=dot` | PASS: 4 files / 78 tests |
+| `bun src\cli.ts doctor --strict-telemetry-provenance` | PASS |
+| `bun src\cli.ts telemetry scan --json` | PASS: 136905 runs ingested |
 
-`green-command-digest` mismatch は `src/runtime/adapter.ts` と `tests/cli-surface.test.ts` の実 hash 変更に由来する。上記 rerun の後に、該当する `output_digest` を現ファイル hash へ rebinding した。
+## Remaining boundary
 
-This audit does not claim final production close. It records a local CI remediation packet and preserves F-01..F-08 as follow-up substance gaps.
+Local L7-L14 close remains defensible when strict doctor, DB rebuild or scan evidence, digest, feedback, and targeted tests are green.
+Full production close still requires external/publication work:
 
-## Follow-up remediation update
-
-2026-06-30 follow-up で、配布 template と clean distribution smoke を強化した。
-
-- `docs/templates/adapter/.codex/hooks.json` に portable `PreToolUse` guard を追加し、consumer 側でも `ut-tdd hook agent-guard` / `ut-tdd hook work-guard` が `blockOnFailure=true` で発火する形へ揃えた。
-- `tests/distribution-acceptance.test.ts` は clean artifact 上で bare `ut-tdd status --json` を PATH から実行し、配布 hook の前提である bare CLI 解決を smoke する。
-- 同じ smoke で clean artifact 内の `docs/templates/adapter/.codex/hooks.json` を読み、`spawn_agent|spawn_agents_on_csv` と `apply_patch|write_file` の portable guard が存在することを検査する。
-- `tests/setup.test.ts` の `U-SETUP-004c` は built-in adapter template 側の Claude/Codex portable guard を、`U-SETUP-011b` は dogfood governance audit docs の除外を検査している。
-
-残る境界: hosted/API Codex tool surface は repo-local Codex hook engine を通らないため、`ut-tdd guard preflight` と明示運用 caveat が必要である。また public package / tag / signed tarball と、consumer が実際に `bun link` なしで導入できる release installer は外部公開操作として未実施である。
+- clean public GitHub distribution repository or release branch
+- remote CI on the published state
+- tag push and signed tarball/package publication
+- post-publication consumer install smoke
+- real consumer Claude/Codex hook, subagent, and command enforcement smoke
