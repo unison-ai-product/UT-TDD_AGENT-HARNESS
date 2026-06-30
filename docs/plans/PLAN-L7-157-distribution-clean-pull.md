@@ -87,6 +87,31 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-30T20:57:30+09:00"
+    tests_green_at: "2026-06-30T20:55:37+09:00"
+    verdict: approve
+    scope: "Local release artifact proof now creates a clean tarball, sha256 checksum, and manifest without publishing or signing. Signature and publication remain explicit external approval boundaries."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\cli-surface.test.ts -t \"distribution\" --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T20:55:37+09:00"
+        evidence_path: tests/cli-surface.test.ts
+        output_digest: "sha256:ac7000e502ff107dc98547093278829c4d2c0d41a422d01ed153f13cb9949325"
+      - kind: smoke
+        command: "bun src\\cli.ts distribution package --tag v0.1.0 --out <temp> --json"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T20:55:26+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:347fdc16f528a08ed6f2cd9c42f9ec716119de05d0b009732a67b343d08aa6d4"
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-30T20:41:00+09:00"
     tests_green_at: "2026-06-30T20:40:20+09:00"
     verdict: approve

@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -286,6 +294,46 @@ describe("L7 CLI surface closure", () => {
       rmSync(binDir, { recursive: true, force: true });
     }
   }, 20_000);
+
+  it("creates a local clean distribution tarball and checksum without publishing", () => {
+    const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-package-out-"));
+    try {
+      const run = runCliIn(repoRoot, [
+        "distribution",
+        "package",
+        "--tag",
+        "v0.1.0",
+        "--out",
+        outDir,
+        "--json",
+      ]);
+      const payload = JSON.parse(run.stdout);
+
+      expect(run.status, run.stderr || run.stdout).toBe(0);
+      expect(payload).toMatchObject({
+        ok: true,
+        actualPublishRequiresPoApproval: true,
+        artifacts: {
+          signatureRequired: true,
+          signatureCreated: false,
+        },
+        export: {
+          ok: true,
+          sourceTag: "v0.1.0",
+        },
+      });
+      expect(existsSync(payload.artifacts.tarball)).toBe(true);
+      expect(existsSync(payload.artifacts.checksum)).toBe(true);
+      expect(existsSync(payload.artifacts.manifest)).toBe(true);
+      expect(existsSync(payload.artifacts.signature)).toBe(false);
+      expect(readFileSync(payload.artifacts.checksum, "utf8")).toContain("v0.1.0.tar.gz");
+      const manifest = JSON.parse(readFileSync(payload.artifacts.manifest, "utf8"));
+      expect(manifest.signatureCreated).toBe(false);
+      expect(manifest.artifactCount).toBeGreaterThan(100);
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  }, 30_000);
 
   it("exposes telemetry scan as a JSON command surface without provider CLI execution", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-telemetry-"));

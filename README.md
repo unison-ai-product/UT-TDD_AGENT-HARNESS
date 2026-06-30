@@ -223,6 +223,7 @@ ut-tdd --help
 | `ut-tdd verify recommend` / `run --profile <id>` | 変更ファイルからの検証プロファイル推奨 / 実行(`mcp profile list` で一覧) |
 | `ut-tdd telemetry scan --json` | コストテレメトリの走査 |
 | `ut-tdd distribution plan` | clean 配布の export / preflight / rollback 計画(実カットは PO 承認が必要) |
+| `ut-tdd distribution package --out .ut-tdd/release` | clean 配布 tarball / sha256 / manifest をローカル生成(署名・公開は外部承認が必要) |
 
 <details>
 <summary><b>📦 対象リポジトリへの導入(詳細)</b></summary>

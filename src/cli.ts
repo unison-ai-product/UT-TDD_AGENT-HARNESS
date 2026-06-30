@@ -5,17 +5,21 @@
  * status / doctor / plan lint / vmodel lint / gate / runtime adapter を集約する。
  */
 import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   appendFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readdirSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { basename, dirname, isAbsolute, join } from "node:path";
 import { Command } from "commander";
 import { parse as parseYaml } from "yaml";
 import {
@@ -2875,6 +2879,110 @@ distribution
     );
     process.stdout.write("  actual-cut: requires PO approval\n");
     process.exitCode = output.ok ? 0 : 1;
+  });
+
+distribution
+  .command("package")
+  .description("create a local clean tarball and sha256 checksum without publishing")
+  .option("--tag <tag>", "source/release tag", gitHead() ?? "unreleased")
+  .option(
+    "--clean-repo <name>",
+    "clean distribution repository",
+    "UNISON-TECHNOLOGY/ut-tdd-agent-harness-clean",
+  )
+  .option("--out <dir>", "output directory for local release artifacts", ".ut-tdd/release")
+  .option("--json", "JSON output")
+  .action((opts: { tag?: string; cleanRepo?: string; out?: string; json?: boolean }) => {
+    const repoRoot = process.cwd();
+    const exportPlan = buildCleanDistributionPlan({
+      paths: collectDistributionCandidatePaths(repoRoot),
+      sourceTag: opts.tag,
+      cleanRepo: opts.cleanRepo,
+    });
+    const outDir = opts.out
+      ? isAbsolute(opts.out)
+        ? opts.out
+        : join(repoRoot, opts.out)
+      : join(repoRoot, ".ut-tdd", "release");
+    const artifactStem = exportPlan.sourceTag.replace(/[^A-Za-z0-9._-]+/g, "-");
+    const tarball = join(outDir, `${artifactStem}.tar.gz`);
+    const checksum = `${tarball}.sha256`;
+    const manifest = join(outDir, `${artifactStem}.manifest.json`);
+    const signature = `${tarball}.sig`;
+    const stage = mkdtempSync(join(tmpdir(), "ut-tdd-clean-package-"));
+    let tarResult: ReturnType<typeof spawnSync> | null = null;
+    try {
+      mkdirSync(outDir, { recursive: true });
+      for (const rel of exportPlan.artifactPaths) {
+        const from = join(repoRoot, ...rel.split("/"));
+        const to = join(stage, ...rel.split("/"));
+        mkdirSync(dirname(to), { recursive: true });
+        cpSync(from, to, { recursive: true });
+      }
+      tarResult = spawnSync("tar", ["-czf", tarball, "-C", stage, "."], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      if (tarResult.status === 0) {
+        const digest = createHash("sha256").update(readFileSync(tarball)).digest("hex");
+        writeFileSync(checksum, `${digest}  ${basename(tarball)}\n`, "utf8");
+        writeFileSync(
+          manifest,
+          `${JSON.stringify(
+            {
+              ok: exportPlan.ok,
+              sourceTag: exportPlan.sourceTag,
+              cleanRepo: exportPlan.cleanRepo,
+              tarball,
+              checksum,
+              signature,
+              signatureRequired: true,
+              signatureCreated: false,
+              artifactCount: exportPlan.artifactPaths.length,
+              missingRequired: exportPlan.missingRequired,
+              denylistViolations: exportPlan.denylistViolations,
+            },
+            null,
+            2,
+          )}\n`,
+          "utf8",
+        );
+      }
+    } finally {
+      rmSync(stage, { recursive: true, force: true });
+    }
+    const ok =
+      exportPlan.ok && tarResult?.status === 0 && existsSync(tarball) && existsSync(checksum);
+    const output = {
+      ok,
+      export: exportPlan,
+      artifacts: {
+        tarball,
+        checksum,
+        manifest,
+        signature,
+        signatureRequired: true,
+        signatureCreated: false,
+      },
+      tar: {
+        exitCode: tarResult?.status ?? null,
+        stderr: tarResult?.stderr ?? "",
+      },
+      actualPublishRequiresPoApproval: true,
+    };
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+      process.exitCode = ok ? 0 : 1;
+      return;
+    }
+    process.stdout.write(
+      `distribution package: ${ok ? "ok" : "blocked"} tag=${exportPlan.sourceTag}\n`,
+    );
+    process.stdout.write(`  tarball: ${tarball}\n`);
+    process.stdout.write(`  checksum: ${checksum}\n`);
+    process.stdout.write("  signature: required but not created (external signing boundary)\n");
+    process.stdout.write("  publish: requires PO approval\n");
+    process.exitCode = ok ? 0 : 1;
   });
 
 program.parseAsync(process.argv).catch((e: unknown) => {
