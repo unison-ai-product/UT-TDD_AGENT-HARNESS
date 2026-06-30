@@ -1,4 +1,5 @@
-# UT-TDD thin Windows PowerShell entrypoint (ADR-001). compiled binary 優先、無ければ bun run。
+# UT-TDD thin Windows PowerShell entrypoint (ADR-001).
+# Prefer the compiled binary when present; otherwise run the TypeScript CLI through Bun.
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $bin = Join-Path $root "dist\ut-tdd.exe"

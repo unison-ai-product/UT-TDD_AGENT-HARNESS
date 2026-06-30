@@ -537,6 +537,12 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "ut-tdd-cli",
       "runtime-cli",
     ]);
+    expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
+      "Bare `ut-tdd --help` must succeed before setup",
+    );
+    expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
+      "npm-installed Bun shims may not satisfy Bun link executables",
+    );
   });
 
   it("U-SETUP-005: recordSetupState signals 4 フィールド strip / 上書き / token 非含", () => {

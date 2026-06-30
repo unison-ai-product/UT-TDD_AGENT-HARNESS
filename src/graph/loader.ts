@@ -209,6 +209,8 @@ const ROOT_CONFIG_DOCS = [
   ".gitattributes",
   "biome.json",
   "package.json",
+  "scripts/ut-tdd",
+  "scripts/ut-tdd.ps1",
   "tsconfig.json",
   "vitest.config.ts",
 ] as const;

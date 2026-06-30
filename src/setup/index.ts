@@ -435,6 +435,7 @@ export function buildConsumerReadinessPlan(input: {
   hasGit: boolean;
   hasGh: boolean;
   hasUtTddCli?: boolean;
+  utTddCliMessage?: string;
   hasClaude: boolean;
   hasCodex: boolean;
   repoRoot: string;
@@ -475,7 +476,12 @@ export function buildConsumerReadinessPlan(input: {
       message:
         (input.hasUtTddCli ?? true)
           ? "ut-tdd resolves on PATH for projected hooks"
-          : "Run `bun link` in the harness package and `bun link ut-tdd` in the consumer repo before setup",
+          : (input.utTddCliMessage ??
+            [
+              "Bare `ut-tdd --help` must succeed before setup because generated Claude/Codex hooks call `ut-tdd ...`.",
+              "Run `bun link` in the harness package and `bun link ut-tdd` in the consumer repo, then ensure Bun's binary directory is on PATH.",
+              "On Windows, npm-installed Bun shims may not satisfy Bun link executables; verify the actual `ut-tdd --help` command in the consumer shell.",
+            ].join(" ")),
     },
     {
       name: "runtime-cli",

@@ -169,7 +169,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\ut-tdd.ps1 doctor
 The generated Claude/Codex hooks call bare `ut-tdd ...`, so `ut-tdd` must resolve on
 the consumer repository PATH. `bin.ut-tdd` points at `src/cli.ts`, so `bun link`
 works immediately after `bun install`; `bun run build` is only needed when preparing
-the compiled release binary.
+the compiled release binary. Before running `setup`, verify the same shell that will
+run Claude/Codex hooks can execute:
+
+```powershell
+ut-tdd --help
+```
+
+On Windows, if Bun was installed through npm shims, `bun link` may create an
+`ut-tdd` executable that is present on PATH but cannot find a Bun binary. Treat that
+as not ready until `ut-tdd --help` exits successfully.
 
 ## ⚙️ セットアップ
 

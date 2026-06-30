@@ -63,6 +63,8 @@ generates:
     artifact_type: doc_update
   - artifact_path: package.json
     artifact_type: config
+  - artifact_path: scripts/ut-tdd.ps1
+    artifact_type: script
   - artifact_path: docs/design/harness/L6-function-design/setup-solo-team.md
     artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
@@ -173,6 +175,39 @@ review_evidence:
         completed_at: "2026-06-29T19:33:47+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:350ada3bdc25f12571f5e4c4e9aa77eb7ab2b869fdb83f0a337a59b67da6cc0e"
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-30T20:17:36+09:00"
+    tests_green_at: "2026-06-30T20:17:36+09:00"
+    verdict: approve
+    scope: "Consumer readiness warning now records observed bare ut-tdd failure; Windows wrapper metadata is included in the distribution plan without claiming public release readiness."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\setup.test.ts tests\\cli-surface.test.ts tests\\distribution-acceptance.test.ts tests\\runtime-portability.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T20:11:21+09:00"
+        evidence_path: tests/runtime-portability.test.ts
+        output_digest: "sha256:5792d29d443c60c5eb2fe686ed411d3c988bcda25e7d898cf93a0a065b70c632"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-30T20:11:21+09:00"
+        evidence_path: src/setup/index.ts
+        output_digest: "sha256:36411d2c9a4b569d0b7e3465b7eb60baed55d874dd90be5af4835459ea77017e"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-30T20:11:21+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:7a8237a7381b881c8c3e5dc88fda0b98b57b0482114e632117f27832930c0924"
 ---
 
 # PLAN-L7-157: clean distribution pull channel

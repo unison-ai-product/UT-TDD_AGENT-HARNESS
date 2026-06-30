@@ -2816,7 +2816,19 @@ distribution
     }
     const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
     const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
-    const hasUtTddCli = spawnSync("ut-tdd", ["--help"], { stdio: "ignore" }).status === 0;
+    const utTddCli = spawnSync("ut-tdd", ["--help"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const hasUtTddCli = utTddCli.status === 0;
+    const utTddCliObserved =
+      utTddCli.error?.message || utTddCli.stderr.trim() || `exit ${utTddCli.status ?? "unknown"}`;
+    const utTddCliMessage = hasUtTddCli
+      ? undefined
+      : [
+          "Bare `ut-tdd --help` must succeed before setup because generated Claude/Codex hooks call `ut-tdd ...`.",
+          `Observed: ${utTddCliObserved}`,
+        ].join(" ");
     const exportPlan = buildCleanDistributionPlan({
       paths: collectDistributionCandidatePaths(repoRoot),
       sourceTag: opts.tag,
@@ -2827,6 +2839,7 @@ distribution
       hasGit,
       hasGh,
       hasUtTddCli,
+      utTddCliMessage,
       hasClaude: detection.claude,
       hasCodex: detection.codex,
       repoRoot,

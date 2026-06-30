@@ -59,6 +59,40 @@ dependencies:
   parent: docs/plans/PLAN-L7-138-quality-branch-audit.md
   requires:
     - docs/plans/PLAN-L7-138-quality-branch-audit.md
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-30T20:17:36+09:00"
+    tests_green_at: "2026-06-30T20:17:36+09:00"
+    verdict: approve
+    scope: "Read-only quality and branch audit reverse backfill remains coherent after current CLI change; destructive branch operations remain out of scope."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\quality-audit.test.ts tests\\branch-audit.test.ts tests\\cli-surface.test.ts -t \"quality audit|branch audit\" --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T20:17:36+09:00"
+        evidence_path: tests/quality-audit.test.ts
+        output_digest: "sha256:67ff3c7faa901eb99914661b2b5b16fdc8c7ffee66d028c6e362891631b10c58"
+      - kind: unit_test
+        command: "bun run vitest run tests\\quality-audit.test.ts tests\\branch-audit.test.ts tests\\cli-surface.test.ts -t \"quality audit|branch audit\" --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T20:17:36+09:00"
+        evidence_path: tests/branch-audit.test.ts
+        output_digest: "sha256:83860fcceb15d570c46c5e156b1345fddc5170685f10ff1c99b35fa66aee33a1"
+      - kind: unit_test
+        command: "bun run vitest run tests\\quality-audit.test.ts tests\\branch-audit.test.ts tests\\cli-surface.test.ts -t \"quality audit|branch audit\" --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T20:17:36+09:00"
+        evidence_path: tests/cli-surface.test.ts
+        output_digest: "sha256:7b4150df5f4e50929909b7bc34d55699f9d34da471d05bae8249679d76fde896"
 ---
 
 # PLAN-REVERSE-138: read-only quality and branch audit backfill
