@@ -48,7 +48,9 @@ type PlanGovernanceViolationReason =
   | "reverse_r4_route_backprop_missing"
   | "reverse_fullback_scope_missing"
   | "version_route_certificate_missing"
-  | "version_route_certificate_mismatch";
+  | "version_route_certificate_mismatch"
+  | "route_certificate_missing"
+  | "route_certificate_mismatch";
 
 interface PlanGovernanceViolation {
   file: string;

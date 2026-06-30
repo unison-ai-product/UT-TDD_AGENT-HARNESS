@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { recommendedCommandV1Schema } from "../src/schema/index";
+import { routeSignalCandidates } from "../src/schema/route-map";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import {
@@ -162,6 +163,8 @@ describe("L7 workflow contract implementations", () => {
   });
 
   it("implements routing, workflow, FE/design, asset, model, drive, skill, and command contracts", () => {
+    expect(routeSignalCandidates("feature_addition")).toEqual(["add-feature"]);
+    expect(routeSignalCandidates("version_deferral")).toEqual(["version-up"]);
     expect(routeSignalToMode({ signal: "reverse gap" }).candidates).toEqual(["reverse"]);
     expect(routeSignalToMode({ signal: "drift", drive: "agent" }).candidates[0]).toBe("reverse");
     expect(routeSignalToMode({ signal: "regression_prod" }).candidates[0]).toBe("incident");

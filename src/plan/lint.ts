@@ -4,6 +4,7 @@ import { parse as parseYaml } from "yaml";
 import { analyzeG1Trace, g1TraceMessages, g1TraceOk, loadG1TraceDocs } from "../lint/g1-trace";
 import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3-trace";
 import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter";
+import { routeSignalCandidates } from "../schema/route-map";
 import {
   DB_PROJECTION_BACKPROP_REQUIRED_GENERATES,
   DESIGN_LAYERS_REQUIRING_SUB_DOC,
@@ -17,6 +18,7 @@ import {
   REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE,
   REVERSE_R4_ROUTE_BACKPROP_ENFORCEMENT_DATE,
   REVIEW_PATTERN,
+  ROUTE_CERTIFICATE_ENFORCEMENT_DATE,
   SERIAL_MODE_PATTERN,
   SERIAL_REASONS,
   VALID_REVERSE_FULLBACK_SCOPE_DECISIONS,
@@ -280,6 +282,51 @@ function versionRouteCertificateViolations(raw: Record<string, unknown>): {
   return violations;
 }
 
+function routeCertificateViolations(raw: Record<string, unknown>): {
+  reason: "route_certificate_missing" | "route_certificate_mismatch";
+  detail: string;
+}[] {
+  const created = stringField(raw.created);
+  if (!created || created < ROUTE_CERTIFICATE_ENFORCEMENT_DATE) return [];
+  if (stringField(raw.status) === "archived") return [];
+
+  const signal = stringField(raw.route_signal);
+  const mode = stringField(raw.route_mode);
+  const violations: {
+    reason: "route_certificate_missing" | "route_certificate_mismatch";
+    detail: string;
+  }[] = [];
+
+  if (!signal) {
+    violations.push({
+      reason: "route_certificate_missing",
+      detail: `created>=${ROUTE_CERTIFICATE_ENFORCEMENT_DATE} requires route_signal`,
+    });
+  }
+  if (!mode) {
+    violations.push({
+      reason: "route_certificate_missing",
+      detail: `created>=${ROUTE_CERTIFICATE_ENFORCEMENT_DATE} requires route_mode`,
+    });
+  }
+  if (!signal || !mode) return violations;
+
+  const candidates = routeSignalCandidates(signal);
+  if (candidates.length === 0) {
+    violations.push({
+      reason: "route_certificate_mismatch",
+      detail: `route_signal=${signal} has no route candidate`,
+    });
+  } else if (!candidates.includes(mode)) {
+    violations.push({
+      reason: "route_certificate_mismatch",
+      detail: `route_signal=${signal} candidates=${candidates.join("|")} route_mode=${mode}`,
+    });
+  }
+
+  return violations;
+}
+
 function expectedArtifactTypeForPath(path: string): string | null {
   if (path.startsWith("docs/design/")) return "design_doc";
   if (path.startsWith("docs/test-design/")) return "test_design";
@@ -528,6 +575,9 @@ export function analyzePlanGovernance(
       });
     }
     for (const violation of versionRouteCertificateViolations(raw)) {
+      violations.push({ file: entry.file, ...violation });
+    }
+    for (const violation of routeCertificateViolations(raw)) {
       violations.push({ file: entry.file, ...violation });
     }
 

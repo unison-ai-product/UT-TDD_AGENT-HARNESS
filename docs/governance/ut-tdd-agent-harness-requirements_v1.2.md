@@ -2013,6 +2013,7 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 - priority/action は uncertainty × impact の 4 象限で決める (P0=緊急 routing / P1=即 PLAN / P2=Discovery 先行 / P3=suggest_only)。
 - signal が本表に無い場合は `exit 2` (not-available) + 上流委譲手順を stderr に返す (fail ではなく明示フォールバック)。
 - 複数 token が同時に一致する場合は **最長 token 一致を優先**する。例: `regression_prod` は汎用 `regression` より具体的な incident token として解決し、`forced_stop` は汎用 `stop` より具体的な recovery token として解決する。
+- **PLAN 入口 certificate**: 2026-07-01 以降に作成する non-archived PLAN は frontmatter に `route_signal` と `route_mode` を記録する。`route_signal` は本表の token/alias、`route_mode` は `ut-tdd route eval` / `routeSignalCandidates` が返す候補 mode と一致しなければならない。不一致または欠落は `plan-governance` の `route_certificate_missing` / `route_certificate_mismatch` で fail-close する。既存 PLAN は遡及 backfill せず、future authoring の入口適合を強制する。
 
 ## 7.8.2 RecommendedCommandV1 schema 要件
 

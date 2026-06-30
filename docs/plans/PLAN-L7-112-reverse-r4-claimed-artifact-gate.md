@@ -35,8 +35,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-23T23:55:00+09:00"
-    tests_green_at: "2026-06-23T23:54:00+09:00"
+    reviewed_at: "2026-06-30T22:30:00+09:00"
+    tests_green_at: "2026-06-30T22:29:00+09:00"
     verdict: approve
     scope: "Reverse R4 claimed artifact path lint for non-fullback reverse types."
     worker_model: codex
@@ -47,17 +47,17 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-23T23:53:00+09:00"
+        completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: tests/plan-lint.test.ts
-        output_digest: "sha256:df3fd213a06f05be1cb8e3ad0d771b0d164538598d617b3a53ec333ef0dc9fb6"
+        output_digest: "sha256:5200049532ce0cb4b1210298bb346151ea184c90ff89440a0ef71b831eaf1653"
       - kind: lint
         command: "bun run src\\cli.ts plan lint --gate governance"
         runner: bun
         scope: gate
         exit_code: 0
-        completed_at: "2026-06-23T23:54:00+09:00"
+        completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: src/plan/lint.ts
-        output_digest: "sha256:937ff982b0c5b3fac499a9d78e745dadeb12dae1e49801aaf7a04c5a4fc3ff66"
+        output_digest: "sha256:096c894039dd0664cd7a60bcc6b417da34883587a278a16362296ccbb3bdf020"
 ---
 
 # PLAN-L7-112: Reverse R4 claimed artifact gate

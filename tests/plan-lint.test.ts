@@ -759,6 +759,57 @@ describe("plan schedule lint (IMP-081)", () => {
     expect(reasons).not.toContain("version_route_certificate_mismatch");
   });
 
+  it("U-PLANGOV-011r: new plans require a route certificate after the route enforcement date", () => {
+    const docs = [
+      planDoc("PLAN-L7-230-new-without-route", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra: "created: 2026-07-01\nupdated: 2026-07-01\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("route_certificate_missing");
+  });
+
+  it("U-PLANGOV-011s: new plan route certificate fails closed when signal and mode disagree", () => {
+    const docs = [
+      planDoc("PLAN-L7-231-new-route-drift", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra:
+          "route_signal: version_deferral\nroute_mode: recovery\ncreated: 2026-07-01\nupdated: 2026-07-01\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("route_certificate_mismatch");
+  });
+
+  it("U-PLANGOV-011t: new plan route certificate passes when route eval maps signal to mode", () => {
+    const docs = [
+      planDoc("PLAN-L7-232-new-route-ok", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra:
+          "route_signal: version_deferral\nroute_mode: version-up\ncreated: 2026-07-01\nupdated: 2026-07-01\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("route_certificate_missing");
+    expect(reasons).not.toContain("route_certificate_mismatch");
+  });
+
   it("U-PLANGOV-012: docs/design generated artifacts must use design_doc", () => {
     const docs = [
       planDoc("PLAN-L7-99-design-type-mismatch", {
