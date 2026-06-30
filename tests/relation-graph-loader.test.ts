@@ -531,6 +531,15 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
       "design:docs/governance/README.md",
     );
     expect(governanceReadmeImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const documentSystemMapImpact = analyzeRelationImpact({
+      changedPaths: ["docs/governance/document-system-map.md"],
+      projection,
+    });
+    expect(documentSystemMapImpact.ok).toBe(true);
+    expect(documentSystemMapImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/governance/document-system-map.md",
+    );
+    expect(documentSystemMapImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const reviewImpact = analyzeRelationImpact({
       changedPaths: [".ut-tdd/review/cross-review-l7-157.md"],
       projection,

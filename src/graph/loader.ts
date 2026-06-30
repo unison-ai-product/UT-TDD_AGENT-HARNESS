@@ -197,6 +197,7 @@ const FR_REGISTRY_DOC = "docs/design/harness/L1-requirements/functional-requirem
 const REFERENCE_DOCS = ["docs/reference/ai-agent-harness-directory-reference.md"] as const;
 const GOVERNANCE_DOCS = [
   "docs/governance/README.md",
+  "docs/governance/document-system-map.md",
   "docs/governance/repository-structure.md",
 ] as const;
 const ROOT_CANONICAL_DOCS = ["README.md"] as const;
