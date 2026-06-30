@@ -5,6 +5,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -45,6 +46,19 @@ function runBun(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.en
     });
   }
   return spawnSync("bun", args, { cwd, encoding: "utf8", env, timeout: 120_000 });
+}
+
+function runBareUtTdd(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
+  if (process.platform === "win32") {
+    const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+    return spawnSync(cmdExe, ["/d", "/c", "ut-tdd", ...args], {
+      cwd,
+      encoding: "utf8",
+      env,
+      timeout: 120_000,
+    });
+  }
+  return spawnSync("ut-tdd", args, { cwd, encoding: "utf8", env, timeout: 120_000 });
 }
 
 function writeFakeCodex(root: string): string {
@@ -111,6 +125,35 @@ describe("clean distribution local acceptance smoke", () => {
       expect(status.status, status.stderr || status.stdout).toBe(0);
       const statusJson = JSON.parse(status.stdout);
       expect(statusJson.availableRuntimes).toContain("codex");
+
+      const bareStatus = runBareUtTdd(cleanRoot, ["status", "--json"], env);
+      expect(bareStatus.status, bareStatus.stderr || bareStatus.stdout).toBe(0);
+      expect(JSON.parse(bareStatus.stdout).availableRuntimes).toContain("codex");
+
+      const codexHooks = JSON.parse(
+        readFileSync(join(cleanRoot, "docs/templates/adapter/.codex/hooks.json"), "utf8"),
+      ) as {
+        hooks: Record<
+          string,
+          { matcher?: string; hooks: { command: string; blockOnFailure?: boolean }[] }[]
+        >;
+      };
+      expect(codexHooks.hooks.PreToolUse).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            matcher: "spawn_agent|spawn_agents_on_csv",
+            hooks: [
+              expect.objectContaining({ command: "ut-tdd hook agent-guard", blockOnFailure: true }),
+            ],
+          }),
+          expect.objectContaining({
+            matcher: "apply_patch|write_file",
+            hooks: [
+              expect.objectContaining({ command: "ut-tdd hook work-guard", blockOnFailure: true }),
+            ],
+          }),
+        ]),
+      );
 
       const distribution = runBun(
         cleanRoot,

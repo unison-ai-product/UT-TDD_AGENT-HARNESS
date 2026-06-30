@@ -48,7 +48,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T21:29:59+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
-        output_digest: "sha256:fa7098deb1259afb33be1a06c1a58251af1ddc554f1cf295b7547fa18b005117"
+        output_digest: "sha256:54254cf3b1376b6ce0d641ebf3e872c2e4f0982f16085afa9282624cf488d0f7"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
