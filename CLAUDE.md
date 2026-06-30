@@ -55,6 +55,11 @@ Design and implementation should be judged by these pillars:
 ただし成果物はそれぞれの規約に従う: コード/識別子/commit message は従来どおり、ファイル名は
 英語 (文字化け回避)、技術用語・コマンド・PLAN ID・パスは原語のまま埋め込んでよい (無理に和訳しない)。
 
+**ドキュメント本文 (`docs/` 配下の PLAN / ADR / design / test-design / governance 等) は日本語で書く**
+(PO ルール、2026-06-30。Claude / Codex 両ランタイム共通)。コード・識別子・コマンド・PLAN ID・パスは
+英語/原語のまま。Windows 文字化けは UTF-8 化 (`.editorconfig` charset=utf-8 / `.gitattributes` eol=lf) と
+`readability` gate (mojibake fail-close) で防ぐ前提であり、**文字化け回避を理由に doc を英語化しない**。
+
 ## Canonical Docs
 
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
