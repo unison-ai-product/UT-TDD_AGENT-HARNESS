@@ -343,7 +343,7 @@ describe("L7 CLI surface closure", () => {
     expect(checked.ok).toBe(true);
     expect(checked.missingFromRoster).toEqual([]);
     expect(checked.nameMismatches).toEqual([]);
-    expect(checked.allowlistedPresent).toBe(14);
+    expect(checked.allowlistedPresent).toBe(15);
   }, 20_000);
 
   it("exposes branch audit as a read-only JSON command surface", () => {

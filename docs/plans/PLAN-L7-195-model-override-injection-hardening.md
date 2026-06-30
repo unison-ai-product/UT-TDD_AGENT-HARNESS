@@ -78,7 +78,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T10:17:40+09:00"
         evidence_path: src/runtime/adapter.ts
-        output_digest: "sha256:331fcf4747f9ca0f3b7b1bf9456ad50f77630c309c047bd81097e367ede41101"
+        output_digest: "sha256:91e14872daecee813cb26ca822f18b72fd1f4c41534cbdcfd493557a916e2454"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun

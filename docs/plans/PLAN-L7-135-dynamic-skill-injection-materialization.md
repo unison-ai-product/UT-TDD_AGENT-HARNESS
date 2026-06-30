@@ -83,7 +83,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: src/runtime/adapter.ts
-        output_digest: "sha256:331fcf4747f9ca0f3b7b1bf9456ad50f77630c309c047bd81097e367ede41101"
+        output_digest: "sha256:91e14872daecee813cb26ca822f18b72fd1f4c41534cbdcfd493557a916e2454"
       - kind: lint
         command: "bunx biome check src\\runtime\\adapter.ts src\\team\\run.ts src\\task\\tier-router.ts src\\doctor\\index.ts src\\cli.ts src\\skills\\recommend.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts tests\\tier-router.test.ts tests\\doctor.test.ts tests\\skill-recommend.test.ts tests\\cli-surface.test.ts"
         runner: bun

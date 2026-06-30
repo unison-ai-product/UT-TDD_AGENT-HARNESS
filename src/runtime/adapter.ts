@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, win32 } from "node:path";
 import {
   ADAPTER_AVAILABLE_MESSAGE,
   ADAPTER_CONTEXT_HEADER,
@@ -171,7 +171,9 @@ function firstOnPath(command: string, opts: ProviderCommandResolutionOptions = {
   const platform = opts.platform ?? process.platform;
   const env = opts.env ?? process.env;
   const finder =
-    platform === "win32" ? join(env.SystemRoot ?? "C:\\Windows", "System32", "where.exe") : "which";
+    platform === "win32"
+      ? win32.join(env.SystemRoot ?? "C:\\Windows", "System32", "where.exe")
+      : "which";
   try {
     const found = execFileSync(finder, [command], { encoding: "utf8", env })
       .split(/\r?\n/)
@@ -260,7 +262,7 @@ function isWindowsCommandScript(command: string): boolean {
 
 function windowsCommandProcessor(opts: ProviderCommandResolutionOptions = {}): string {
   const env = opts.env ?? process.env;
-  return env.ComSpec ?? join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+  return env.ComSpec ?? win32.join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
 }
 
 function quoteCmdToken(arg: string): string {
