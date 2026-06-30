@@ -717,6 +717,7 @@ describe("runDoctor", () => {
       "changeSetIntegrity",
       "verificationProfile",
       "codingRules",
+      "designLanguage",
       "dddTddRules",
       "runtimePortability",
       "dbProjectionCoverage",

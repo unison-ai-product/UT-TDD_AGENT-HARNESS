@@ -49,7 +49,7 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 
 > **CLI framework 注記 (確定)**: ADR-001 が保留していた「oclif または commander」は **commander に確定** ([ADR-006](../../../adr/ADR-006-cli-framework-commander.md)、accepted 2026-06-05)。oclif は重量級構成が「薄い entrypoint + compiled core」方針に過剰として却下。`src/cli.ts` の実装確定を ADR-006 が追認記録 (IMP-070 resolved)。
 
-## §3 building block view (arc42 §5)
+## §3 building block view 構成ビュー (arc42 §5)
 
 ### §3.1 Level 1 — サブシステム (`src/` トップ)
 
@@ -99,7 +99,7 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 | 集約 (data.md §2) | 主担当 module | 検証 lint / guard | state (`.ut-tdd/`) |
 |---|---|---|---|
 | **Plan** | plan + schema(frontmatter) | plan lint / (plan-id-schema 第2弾) | `plan_registry/*.json` + `docs/plans/*.md` |
-| **Artifact** (pair/trace/AC/AT) | vmodel + lint(g3-trace) | vmodel lint / g3-trace (R3 AC↔AT) | `artifact/` + `artifact/trace/` |
+| **Artifact** (pair/trace/AC/AT) | vmodel + lint(g3-trace) の artifact 集約 | vmodel lint / g3-trace (R3 AC↔AT) | `artifact/` + `artifact/trace/` |
 | **Workflow** (phase/gate) | doctor + schema | doctor (工程順序 D-03) | `phase.yaml` / `gate_runs` |
 | **Handover** | **handover module** (`src/handover/`、実装済 PLAN-L6-06/L7-04) | doctor (CURRENT.json stale 判定) | `handover/CURRENT.json` |
 | **Evaluation** (Phase B) | (将来 `telemetry` module、L6 carry / IMP-019) | improvement-backlog (橋渡し) | `audit/*.jsonl` |
@@ -164,10 +164,10 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 # ADR-NNN: <タイトル>
 - Status: proposed | accepted | superseded by ADR-MMM
 - Date / Deciders / 関連
-## Context     (背景・制約・課題)
-## Decision    (採択した方式)
-## Alternatives considered  (却下案 + 理由)
-## Consequences  (+/- 結果、carry)
+## 背景     (制約・課題)
+## 決定    (採択した方式)
+## 検討した代替案  (却下案 + 理由)
+## 結果  (+/- 結果、carry)
 ```
 
 | ADR | 状態 | 扱い |
@@ -189,10 +189,6 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 - **ADR-002/003 候補**の起票判断 = G4 前の PO/TL レビュー
 - **CI lint 配線** (doctor + lint + test の自動発火) = local gate 実装済み。外部 CI service 配備は infrastructure / ops 配備範囲
 - **plan-id-schema lint** (Plan 集約 ID 検証) = 第2弾 lint (IMP-004)
-## 2026-06-29 Task-Classify Route Addendum
+## 2026-06-29 Task-Classify Route 追補
 
-`classifyTask()` also surfaces the `signal -> mode` route metadata from
-`evaluateRouteCommand`: `route.mode`, `route.exit_code`, approval status, and
-escalation boundaries. This makes `ut-tdd task classify` a route-aware work
-entry point. Full fail-close routing remains owned by `ut-tdd route eval` and
-later work-entry integration.
+`classifyTask()` は `evaluateRouteCommand` 由来の `signal -> mode` route metadata も surface する。対象は `route.mode`、`route.exit_code`、approval status、escalation boundary である。これにより `ut-tdd task classify` は route-aware な work entry point になる。完全な fail-close routing は引き続き `ut-tdd route eval` と後続の work-entry integration が所有する。

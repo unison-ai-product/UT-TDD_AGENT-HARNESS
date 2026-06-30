@@ -63,7 +63,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T12:10:05+09:00"
         evidence_path: tests/doctor.test.ts
-        output_digest: "sha256:33020f27b413367999c48d68f94939c589551ff71e0f600606c1bd0471f927b5"
+        output_digest: "sha256:38c828573c69c9456aa714bd88c2197ead8fbad2827547f909bccf2c610c8d0a"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -79,7 +79,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T11:58:50+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:4c1aefc85b519c354e44cf89b6830c8222ceb88365dccd2d07a8f2b862480537"
+        output_digest: "sha256:350ada3bdc25f12571f5e4c4e9aa77eb7ab2b869fdb83f0a337a59b67da6cc0e"
 ---
 
 # PLAN-L7-203: Windows provider .cmd spawn quoting

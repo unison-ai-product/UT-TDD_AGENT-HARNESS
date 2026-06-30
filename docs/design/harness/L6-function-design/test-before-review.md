@@ -7,7 +7,7 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 plan: docs/plans/PLAN-L6-14-test-before-review.md
 ---
 
-> **L6 contract marker**: `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` is the unit-test-granularity contract. DbC pre/post/invariant maps tests_green_at <= reviewed_at ordering to U-TORDER-001..005.
+> **L6 contract marker**: `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` は unit-test-granularity contract である。DbC pre/post/invariant は `tests_green_at <= reviewed_at` ordering を U-TORDER-001..005 へ対応させる。
 
 
 > **SSoT 参照**: 品質保証二軸 (定量テスト × 定性レビュー) = concept 柱6 / review tier = [concept §2.1.2.1](../../../governance/ut-tdd-agent-harness-concept_v3.1.md) / 駆動モデル exit = [L4 function §3.1](../L4-basic-design/function.md) / 実装 = `src/lint/review-evidence.ts`。IMP-071 (presence) / IMP-076 (cross_agent distinctness) の続きで **時間順序** (テスト→レビュー) を確定 (IMP-077)。
@@ -26,7 +26,7 @@ plan: docs/plans/PLAN-L6-14-test-before-review.md
 
 ## §3 判定関数 (analyzeReviewEvidence 拡張) — DbC
 
-- **Precondition**: parsed review_evidence entry (reviewed_at + tests_green_at)。
+- **Precondition**: parsed review_evidence entry (reviewed_at + tests_green_at) を入力とする。
 - **Postcondition**: `testBeforeReviewViolations: {plan_id, reason}[]`。**status=confirmed/completed の review_evidence を持つ全 entry (kind/駆動モデル 非依存)** について:
   - `tests_green_at` 欠落 → violation (`missing_tests_green_at`)。
   - `tests_green_at > reviewed_at` → violation (`review_before_test`、ISO 日付辞書順比較)。
@@ -52,7 +52,7 @@ plan: docs/plans/PLAN-L6-14-test-before-review.md
 - 段階導入: warn-first 不採用 (実 repo 38 entry を同 feature で back-fill 済 → 即 presence hard)。以後 review 証跡を足すとき tests_green_at 必須。
 - 「green の定義」(どの定量検証セットが green か = vitest 全回帰 / doctor exit 0 / 該当 lint) の最小 schema 化は **A-122 / IMP-108** として着地済み。2026-06-23 以降に更新された confirmed/completed の `review_evidence` は `green_commands[]` を持たないと doctor が fail-close する。`green_definition_id` による profile 解決と DB projection は後続 carry。
 
-## §8 GreenDefinition addendum (A-122 / IMP-108)
+## §8 GreenDefinition 追補 (A-122 / IMP-108)
 
 `tests_green_at <= reviewed_at` は定量検証が定性レビューより前に実行されたことだけを保証する。IMP-108 では最小着地として `review_evidence[].green_commands[]` を追加し、どの command が green だったかを plan frontmatter から機械検査する。Phase 4 DB projection と Phase 3 workflow automation では、review evidence に次の `green_definition_id` を追加し、どの定量 profile が green だったかをより厳密に再現できるようにする。
 
@@ -88,8 +88,8 @@ type GreenDefinition = {
 
 DbC:
 
-- Precondition: `profile` is chosen from changed artifact kinds and Test Rules; Bun/TypeScript core changes require at least `typecheck`, `lint`, and relevant `unit_test`.
-- Postcondition: `computed_green_at` is the max `completed_at` of all required commands, and every required command has `exit_code=0`.
-- Current invariant: a 2026-06-23-or-later confirmed/completed `review_evidence` entry must have at least one `green_commands[]` entry with allowed kind/runner/scope, `exit_code=0`, evidence path, and `sha256:` output digest.
-- Future invariant: a `review_evidence` entry may be `confirmed` only when `green_definition_id` resolves and `computed_green_at <= reviewed_at`.
-- Projection: `GreenCommandEvidence` maps to `test_runs` / `quality_signals` in `physical-data.md` §9.4. Missing evidence becomes a finding rather than a warning.
+- Precondition: `profile` は changed artifact kind と Test Rules から選ばれる。Bun/TypeScript core change は少なくとも `typecheck`、`lint`、関連する `unit_test` を要求する。
+- Postcondition: `computed_green_at` は全 required command の `completed_at` 最大値であり、すべての required command は `exit_code=0` を持つ。
+- Current invariant: 2026-06-23 以降に confirmed/completed になった `review_evidence` entry は、allowed kind/runner/scope、`exit_code=0`、evidence path、`sha256:` output digest を持つ `green_commands[]` entry を 1 件以上持つ。
+- Future invariant: `review_evidence` entry は、`green_definition_id` が解決し `computed_green_at <= reviewed_at` の場合だけ `confirmed` になれる。
+- Projection: `GreenCommandEvidence` は `physical-data.md` §9.4 の `test_runs` / `quality_signals` へ map する。missing evidence は warning ではなく finding にする。

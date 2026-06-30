@@ -44,7 +44,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T14:05:55+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:78ce69d4b918cdeff0774af84fea9a6e15d84d8575760d985d0a433c9f638a1e"
+        output_digest: "sha256:0fe467c17fa13c617e69dccb8d31840b144ff35a4a5548b5ac4f4ff83bd6ee31"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -60,7 +60,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T14:05:55+09:00"
         evidence_path: src/state-db/projection-writer.ts
-        output_digest: "sha256:a012f9d5ad6c4fdcc9de0efbf86d8c4f245a027e8cd8dc576fcb0e0ae744fc6f"
+        output_digest: "sha256:326f24654b12f741d2c380bf2ff4999a5680a54ba849faf9e26966e0bf18ee85"
 ---
 
 # PLAN-L7-147: refactor candidate detector projection

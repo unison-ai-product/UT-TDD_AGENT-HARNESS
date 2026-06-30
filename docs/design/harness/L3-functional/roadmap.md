@@ -235,7 +235,7 @@ PO 指示「要件定義の後に検証/改善ロードマップ構築フェー�
 ## §7 関連 doc
 
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` (L0 構想、§2.3 V-model)
-- `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` (§1.4 layers / §1.10.G.12 backlog→ledger / §2.2 gate)
+- `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` (§1.4 layers、§1.10.G.12 backlog→ledger、§2.2 gate を参照)
 - `docs/design/harness/L3-functional/` (本書が属する L3 設計層 sub-doc 群)
 - `docs/process/forward/overview.md` (V-model 概要、PROVISIONAL spike)
 - `docs/improvement-backlog.md` (機能一覧 = 改善サイクルの sink)

@@ -66,7 +66,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T13:22:00+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:2517ed3ae8331803d1ecd330ee6e6a483be111b5cb43b5701343032949725561"
+        output_digest: "sha256:b8e59b160eeed05c1a8c88438fe0cc5c2d7114fe812e9d1ae5a479b440248c9d"
       - kind: unit_test
         command: "bun run vitest run tests\\asset-catalog.test.ts tests\\asset-drift.test.ts tests\\agent-slots.test.ts tests\\cli-surface.test.ts tests\\skill-recommend.test.ts tests\\workflow-contracts.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun
@@ -74,7 +74,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T13:19:00+09:00"
         evidence_path: tests/asset-catalog.test.ts
-        output_digest: "sha256:ee7d6328665e0d264e4d182669d63665a5223754247be413c4b5022776e42631"
+        output_digest: "sha256:01f47022dbd0fd7d9613b693f6822a6fbef10956560d13977383bbfce8c1f3f0"
       - kind: unit_test
         command: "bun run vitest run tests\\runtime-adapter.test.ts tests\\agent-guard.test.ts tests\\codex-hook-adapter.test.ts tests\\runtime-hook-entrypoints.test.ts tests\\dependency-drift.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun

@@ -8,11 +8,11 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-04-forced-stop-feedback.md
 ---
 
-> **L6 contract marker**: `classifyFeedback(input: FeedbackInput) => FeedbackClassification` and `recordFeedback(input: FeedbackRecordInput) => FeedbackRecordResult` are the unit-test-granularity contracts. DbC pre/post/invariant maps forced-stop evidence to U-FSF-001..007.
+> **L6 contract marker**: `classifyFeedback(input: FeedbackInput) => FeedbackClassification` と `recordFeedback(input: FeedbackRecordInput) => FeedbackRecordResult` は unit-test-granularity contracts である。DbC pre/post/invariant は forced-stop evidence を U-FSF-001..007 に対応づける。
 
 <!--
 ① 設計 (L6 機能設計) — forced-stop フィードバック機能。
-PLAN: PLAN-L6-04-forced-stop-feedback (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.6 U-FSF。
+PLAN: PLAN-L6-04-forced-stop-feedback (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.6 U-FSF を対応先とする。
 実装 (②): src/runtime/forced-stop.ts + src/runtime/session-log.ts 拡張 + src/cli (ut-tdd feedback classify) (PLAN-L7-02-forced-stop-feedback, add-impl)。
 土台: session-log (session-log.md)。Recovery 接続: concept §2.5 / §2.6.1 (後段 Reverse で forced_stop signal 正本化)。
 -->

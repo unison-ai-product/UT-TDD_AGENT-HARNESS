@@ -46,7 +46,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T14:06:54+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:059140121829947cc7b3c0e1940d21979c5277249e7e4b94c6d5a87de3da111b"
+        output_digest: "sha256:a908543ff9311bf2418ba5df9d4eca41522aae4ac24a67e5bf935ffbd4dab907"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -54,29 +54,20 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T14:06:53+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:055b93545785609a87658ed82d16a4c8ccc23efe860c3796369dea983f98e76d"
+        output_digest: "sha256:6fe7f7a2cb52a2aa7445d9877d93e45763884736cfcec82661641e0de3afc939"
 ---
 
-# PLAN-L7-206: relation graph node coverage for document-system-map
+# PLAN-L7-206: governance document system map node
 
-## Objective
+## 背景
 
-Resolve the DB feedback gate:
+`docs/governance/document-system-map.md` は L0-L14 の成果物体系と V-pair を定義する正本であり、relation graph projection から欠けると workflow 定義の影響分析ができない。
 
-`missing-projection: changed-path-docs-governance-document-system-map.md-has-no-relation-graph-node-impact-cannot-be-analyzed-no-silent-change-impact-fallback`
+## 範囲
 
-The detector is correct. A changed governance document must have a relation graph node so graph impact can fail closed instead of falling back to weaker change-set heuristics.
+relation graph loader が governance document system map を design node として materialize することを確認する。これにより workflow 定義や文書体系の変更が DB feedback で追跡可能になる。
 
-## Scope
+## 受け入れ条件
 
-- Add `docs/governance/document-system-map.md` to the relation graph loader's governance document node allowlist.
-- Keep the existing relation graph schema and impact expansion semantics unchanged.
-- Add a real-repo regression assertion that `analyzeRelationImpact` maps the changed path to `design:docs/governance/document-system-map.md` and does not emit `missing-projection`.
-
-## Verification
-
-- `bun run vitest run tests\relation-graph-loader.test.ts --reporter=dot` passes.
-- `bun run typecheck` passes.
-- `bun run lint` passes.
-- `bun src\cli.ts db rebuild` passes and rebuilds the projection.
-- `bun src\cli.ts doctor --strict-telemetry-provenance` passes, including `green-command-digest — OK`.
+- `docs/governance/document-system-map.md` の change impact が `missing-projection` にならない。
+- relation graph loader test、typecheck、lint、DB rebuild、doctor strict telemetry provenance が通る。

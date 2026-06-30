@@ -9,7 +9,7 @@ created: 2026-06-05
 plan: docs/plans/PLAN-L6-12-review-evidence.md
 ---
 
-> **L6 contract marker**: `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` is the unit-test-granularity contract. DbC pre/post/invariant maps review evidence presence and tier checks to U-REVIEW-001..008.
+> **L6 contract marker**: `analyzeReviewEvidence(input: ReviewEvidenceInput) => ReviewEvidenceResult` は unit-test-granularity contract である。DbC pre/post/invariant は review evidence presence と tier checks を U-REVIEW-001..008 に対応づける。
 
 
 # review-evidence lint — 機能設計 (① / PLAN-L6-12、IMP-071)
@@ -22,7 +22,7 @@ plan: docs/plans/PLAN-L6-12-review-evidence.md
 
 **スコープ外**: review の中身の質判定 (人間/agent の責務)。本 lint は「review 前置が記録されたか」の presence のみを機械保証する。
 
-## §1 schema: review_evidence (frontmatter)
+## §1 schema: review_evidence (frontmatter) の定義
 
 `src/schema/frontmatter.ts` に optional array で追加。1 PLAN に複数 entry (初回 review + freeze 後の増分追補) を append する。
 
@@ -50,7 +50,7 @@ analyzeReviewEvidence(plans: ParsedReviewPlan[]) -> { missing, ok }
 - **Postcondition**: `missing` = 対象 kind × 対象 status × `hasEvidence=false` の {plan_id, kind} 群。`ok = missing.length===0`。
 - **hasReviewEvidence(content)**: `review_evidence:` ブロック直後に `- reviewer:` entry が ≥1 ある presence のみ検出 (shape 検証は zod frontmatterSchema が担う、二重実装回避)。
 
-## §3 I/O loader + messages
+## §3 I/O loader と messages の定義
 
 - `loadReviewPlans(repoRoot)`: `docs/plans/` を flat 列挙し **`.md` かつ `PLAN-` prefix** のみ対象 (サブディレクトリ archive/_template はディレクトリエントリ=拡張子なしで除外 + prefix ガードで二重防御)、`parseReviewPlan` で {plan_id, kind, status, hasEvidence} に。
 - `reviewEvidenceMessages(result)`: missing 0 → `"OK"` / missing あり → 件数 + plan_id 列 + 「review_evidence に reviewer/review_kind/verdict を記録」。

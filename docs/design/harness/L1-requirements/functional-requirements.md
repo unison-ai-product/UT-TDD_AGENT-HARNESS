@@ -228,7 +228,7 @@ drift/劣化/暴走 シグナル検出 (FR-L1-08)
   → 収束後 Forward 合流ポイント確定 (FR-L1-10)
 ```
 
-### Trace + Inventory + Query
+### trace / inventory / query の要求
 
 ```
 ut-tdd trace
@@ -285,11 +285,11 @@ doc-reviewer (pmo-sonnet とは責務分離した doc 品質専用 read-only rev
 - v2 import ledger (FR-L1 全件出典): `docs/migration/v2-import-ledger.md §6`
 - L14 運用テスト設計: `docs/test-design/harness/L1-operational-test-design.md`
 - L1 技術要求: `docs/design/harness/L1-requirements/technical-requirements.md`
-## §7 Request/Requirement Bundle: DB Reference Feedback + Automation Foundation (2026-06-08)
+## §7 request/requirement bundle: DB reference feedback + automation foundation の要求 (2026-06-08)
 
 ユーザー要求「機械的なチェックとDB参照構造で抜け漏れ・依存関係・ゆがみを検出し、V-modelだけでなく各駆動モデル、各ログ、スキル発火率までデータ化して検索コストも下げる」は、既存 FR-L1 では複数行に分散している。以下を束ねて Phase A の L5 降下対象にする。
 
-| User request | Covered FR-L1 | Current gap | L5 descent |
+| user request | 対応 FR-L1 | 現在の gap | L5 descent |
 |---|---|---|---|
 | V-model 製本 state を SQLite に自動登録し、ゆがみ・漏れを並べて検出する | FR-L1-06 / FR-L1-07 / FR-L1-18 / FR-L1-20 | `harness.db` の投影 table はあるが、品質 signal と feedback event の束ね方が薄い | physical-data §9 / internal-processing Appendix B / L8 IT-DB |
 | V-model 以外の駆動モデルごとの状態・実行結果も保存する | FR-L1-08 / FR-L1-37 / FR-L1-39 / FR-L1-40 / FR-L1-41 | drive と mode の違いは定義済みだが、`drive_runs` / `mode_transition` と各 log の join key が L5 で未明確 | physical-data §9.2 / module-decomposition Appendix B |

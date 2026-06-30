@@ -49,7 +49,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T10:58:46+09:00"
         evidence_path: tests/asset-catalog.test.ts
-        output_digest: "sha256:ee7d6328665e0d264e4d182669d63665a5223754247be413c4b5022776e42631"
+        output_digest: "sha256:01f47022dbd0fd7d9613b693f6822a6fbef10956560d13977383bbfce8c1f3f0"
 ---
 
 # PLAN-L7-174: skill catalog G8 evidence closure

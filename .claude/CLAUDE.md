@@ -127,6 +127,7 @@ Allowlist:
 - `code-reviewer`
 - `security-audit`
 - `qa-test`
+- `ut-tdd-tl`
 
 Source-snapshot exploration is not an active Claude Code subagent route. Use
 project-focused agents for repository inspection and treat migration snapshots

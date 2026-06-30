@@ -54,7 +54,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T11:13:07+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:059140121829947cc7b3c0e1940d21979c5277249e7e4b94c6d5a87de3da111b"
+        output_digest: "sha256:a908543ff9311bf2418ba5df9d4eca41522aae4ac24a67e5bf935ffbd4dab907"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -62,7 +62,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T11:13:07+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:055b93545785609a87658ed82d16a4c8ccc23efe860c3796369dea983f98e76d"
+        output_digest: "sha256:6fe7f7a2cb52a2aa7445d9877d93e45763884736cfcec82661641e0de3afc939"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -70,7 +70,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T11:12:38+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:055b93545785609a87658ed82d16a4c8ccc23efe860c3796369dea983f98e76d"
+        output_digest: "sha256:6fe7f7a2cb52a2aa7445d9877d93e45763884736cfcec82661641e0de3afc939"
 ---
 
 # PLAN-L7-202: ADR and Governance README Relation Graph Projection

@@ -104,6 +104,7 @@ const D_CONTRACT_MODES = [
   "scrum",
   "incident",
   "add-feature",
+  "version-up",
   "research",
 ] as const;
 
@@ -471,6 +472,13 @@ const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
   {
     tokens: ["feature_addition", "scope_extension", "new_requirement", "po_change", "add-feature"],
     mode: "add-feature",
+    command: ROUTE_COMMAND_TASK_CLASSIFY,
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
+    tokens: ["version_deferral", "version-up", "version_up", "future_version"],
+    mode: "version-up",
     command: ROUTE_COMMAND_TASK_CLASSIFY,
     preflight: true,
     requiresApproval: false,

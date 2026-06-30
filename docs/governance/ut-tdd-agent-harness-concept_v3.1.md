@@ -373,7 +373,7 @@ v2.1 では「4 artifact pair freeze」が実装前後を跨いで曖昧だっ�
 | セキュリティ段階 | 統合先 | 具体 tool |
 |---|---|---|
 | Develop | Forward G4 基本設計ゲート (threat model 確認) | (人間判断) |
-| Commit | pre-commit hook + commitlint | gitleaks / commitlint |
+| Commit | pre-commit hook + commitlint | gitleaks / commitlint による検査 |
 | Build | workflows の SAST / SCA / Secret Scan | trivy (SCA) / codeql (SAST) — Phase 2 で追加 |
 | Deploy | Incident mode の incident-log + Protected Branch (L12 デプロイ) | `gh` CLI |
 | Operate | escalation L0-L3 で異常検知 + L13/L14 (デプロイ後検証・運用検証) フェーズで Sentry/Uptime Robot/Dependabot アラートをチーム共有 audit へ記録。個人 `failure_log.jsonl` は local advisory に限定 | Sentry / Uptime Robot / Dependabot |
@@ -415,7 +415,7 @@ mode と工程を「絵」で終わらせず自動で繋ぐ仕組み。V2 の ro
 
 | signal | mode | 備考 |
 |--------|------|------|
-| `drift` (drift_type=schema/contract) | Reverse | normalization |
+| `drift` (drift_type=schema/contract) | Reverse | normalization 経路 |
 | `debt_degradation` / `code_smell` / `structural` | Refactor | |
 | `dependency_outdated` / `upgrade` / `config_drift` | Retrofit | upgrade は preflight 要 |
 | `agent_runaway` / `context_exhaustion` / `regression_dev` / `runaway` / `forced_stop` | Recovery | 承認必須。`forced_stop` = ユーザー強制停止 (ESC/Ctrl+C/Stop) = 高 severity 負シグナル (罵倒・強否定・同論点での連続停止を含む。罵倒のみが基準ではない)。専用 hook 不在のため dangling-turn 推定で検出 (PLAN-L6-04/L7-02)。提示まで自動・起票は人間 yes |
@@ -879,7 +879,7 @@ merge → 既存 PLAN との双方向 reference 更新
 
 P0/P1 インシデント発生時、または AI session 中の認識ずれ・session 断絶からの再開のために、通常経路を一時迂回する経路。
 
-## 6.2 recovery kind
+## 6.2 recovery kind の扱い
 
 session 断絶・認識ずれからの再開を文書化するための kind。`agent_slots` に `aim` を必須化し、本文に **7 必須セクション** (事故記録 / 議論順序 / 認識訂正履歴 / 中間結論 / context 再構築 / 再開ポイント / 再発防止) を持つ。
 
@@ -1027,7 +1027,7 @@ v2.1 では `failure_log.jsonl` を「git 管理対象」かつ「pre-push hook 
 
 mode は §2.5 の 9-mode。旧「経路 1/2/3 + 補助 1」を mode 名へ読み替えた。
 
-| | Forward | Reverse / Scrum / Discovery | Add-feature | Recovery / Incident |
+| 役割 | Forward | Reverse / Scrum / Discovery | Add-feature | Recovery / Incident |
 |---|---|---|---|---|
 | **po** | L1 業務要求 / L3 受入条件 / G1·G3 / L11 UAT / L12 受入 | **R3 Intent 検証** / Discovery 成功条件 | (通常は不要) | P0/P1 で連絡 / Recovery スコープ承認 |
 | **tl** | G0.5 企画突合 / L4-L6 設計 / G4-G6 | S4 decide / R1-R2 / R4 routing | 既存 doc 整合判断 | 技術対応指揮 / リオープン確認 |
@@ -1081,7 +1081,7 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 
 # §10 用語集 (ユビキタス言語 SSoT / living glossary)
 
-## §10.0 coding-rule governance terms
+## §10.0 coding-rule governance 用語
 
 | 用語 | 定義 |
 |---|---|
@@ -1181,9 +1181,9 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **4 artifact trace freeze** | L7 実装完了時に 4 artifact 揃いと双方向 trace 6 pair を凍結するルール (G7 で発火) |
 | **双方向 trace 6 pair** | 4 artifact の組み合わせ 6 pair それぞれを双方向 reference で結ぶ (実装上は 12 directed edge) |
 | **逆ピラミッド** | ① ② が存在するが ③ ④ が無い / 不完全な状態 (G6/G7 で fail-close) |
-| **Scrum 6 type** | hypothesis-test / tech-spike / design-spike / perf-spike / security-spike / ux-spike |
-| **Reverse 5 type** | code / design / upgrade / normalization / fullback |
-| **30 cell matrix** | Scrum 6 type × Reverse 5 type の自動 routing 表 (R1 skip 列を含む) |
+| **Scrum 6 type** | hypothesis-test / tech-spike / design-spike / perf-spike / security-spike / ux-spike の 6 種 |
+| **Reverse 5 type** | code / design / upgrade / normalization / fullback の 5 種 |
+| **30 cell matrix** | Scrum 6 type × Reverse 5 type の自動 routing 表 (R1 skip 列を含む 30 セル) |
 | **R3 Intent 検証** | 発注元 (po) が Reverse R3 で意図仮説を直接検証するステップ |
 | **PLAN** | 工程ルール doc。frontmatter + 本文 |
 | **PLAN-MM-NNN** | Master Plan。複数子 PLAN を親 hub として束ねる設計プラン |
@@ -1244,42 +1244,42 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 ### V-model + 4 artifact 双方向 trace
 
 - NASA SW Engineering Handbook Appendix (V&V 構造)
-- IEEE Wikipedia: V-model (software development)
+- IEEE Wikipedia: V-model (software development) の解説
 - DO-178C 開発ライフサイクル仕様
-- Parasoft: ISO 26262 Requirements Traceability
+- Parasoft: ISO 26262 Requirements Traceability の解説
 - CMMI v2.0 SP 1.4 Requirements Management
 - IEEE 829-2008 テスト成果物
 - ISO/IEC/IEEE 29119-2 テスト設計仕様
 
-### Scrum + Reverse engineering
+### Scrum + Reverse engineering の参考
 
-- Scrum.org — What is a Spike?
+- Scrum.org — What is a Spike? の解説
 - Agile Alliance — Spikes
-- Martin Fowler — Exploratory Testing
-- SAFe — Spikes (enabler spike)
-- Mike Cohn — Spikes (time-box + validated)
-- Basecamp Shape Up — Uncertainty Reduction
-- OMG MOF 2.0 — Model-Driven Architecture
+- Martin Fowler — Exploratory Testing の解説
+- SAFe — Spikes (enabler spike) の解説
+- Mike Cohn — Spikes (time-box + validated) の解説
+- Basecamp Shape Up — Uncertainty Reduction の解説
+- OMG MOF 2.0 — Model-Driven Architecture の解説
 - arc42 — Reverse Engineering Integration
 
 ### GitHub Actions + ブランチパイプライン
 
 - Conventional Commits v1.0.0 specification
-- commitlint official docs — @commitlint/config-conventional
-- GitHub branch protection rules — required status checks
-- GitHub Actions — workflow syntax / job ids / status check names
-- CODEOWNERS syntax and examples
-- Atlassian — Branch per feature workflow
+- commitlint official docs — @commitlint/config-conventional の設定参考
+- GitHub branch protection rules — required status checks の設定参考
+- GitHub Actions — workflow syntax / job ids / status check names の設定参考
+- CODEOWNERS syntax and examples の設定参考
+- Atlassian — Branch per feature workflow の運用参考
 
 ### 3 層抽象化 + エスカレーション (参考、interpreter は採用せず)
 
 - AWS Step Functions — State Machine Abstraction (参考のみ)
 - Temporal.io Workflow Abstraction (参考のみ)
 - Prefect Flows & Tasks (参考のみ)
-- PagerDuty Escalation Policy Design
-- AWS Incident Manager Escalation Plans
-- Martin Fowler: Approval Workflow Pattern
-- Google SRE — Escalation chapter
+- PagerDuty Escalation Policy Design の参考
+- AWS Incident Manager Escalation Plans の参考
+- Martin Fowler: Approval Workflow Pattern の参考
+- Google SRE — Escalation chapter の参考
 - LaunchDarkly Flag Lifecycle (30/90 日閾値)
 
 ---

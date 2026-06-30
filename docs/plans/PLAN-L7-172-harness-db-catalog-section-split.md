@@ -80,7 +80,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T21:53:34+09:00"
         evidence_path: src/schema/harness-db-tables-core.ts
-        output_digest: "sha256:656786a4ff4422f7c38429075cd3cb8688c64fa5b8385f30d35d1dee0050453d"
+        output_digest: "sha256:6a437565d1f63733b9ea0f9fdd2558b60fe4bb1ffc0ecb01583423ce84083576"
       - kind: unit_test
         command: "bun run vitest run tests\\state-db.test.ts tests\\db-projection-ingestion.test.ts"
         runner: bun

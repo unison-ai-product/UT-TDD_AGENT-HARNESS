@@ -61,13 +61,13 @@ Reverse / Scrum / V-model 全層 DB / detailed telemetry は、初期パッケ�
 TS/Bun 再実装時の機能参照は以下を優先する。
 
 - PLAN / frontmatter / schema / lint
-- V-model lint / trace validator
-- task classify / effort classify / skill suggest
-- team runner / model registry / budget policy
+- V-model lint / trace validator の再実装
+- task classify / effort classify / skill suggest の再実装
+- team runner / model registry / budget policy の再実装
 - handover / transcript summary
-- doctor / setup / recovery check
+- doctor / setup / recovery check の再実装
 - Claude hook / agent templates
-- GitHub workflow / hook snippets
+- GitHub workflow / hook snippets の再実装
 
 詳細な段階再実装順は `docs/migration/helix-source-inventory.md` の High-impact Reuse Backlog、実行単位の能力参照は `docs/migration/helix-porting-map.md` を参照する。同 map は ADR-001 により code-port 計画としては superseded であり、TS 再実装時の機能インベントリとしてのみ使う。
 

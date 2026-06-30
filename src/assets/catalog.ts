@@ -34,6 +34,7 @@ export interface SkillCatalogEntry {
   name: string;
   path: string;
   skill_type: string;
+  category: string;
   applies_layers: string[];
   applies_drive_models: string[];
 }
@@ -166,11 +167,14 @@ function skillCatalogEntry(
     filenameStem(path);
   const skillType =
     typeof metadata.metadata.skill_type === "string" ? metadata.metadata.skill_type.trim() : "";
+  const category =
+    typeof metadata.metadata.category === "string" ? metadata.metadata.category.trim() : "";
   return {
     id: `skill:${name}`,
     name,
     path: rel,
     skill_type: skillType,
+    category,
     applies_layers: stringList(appliesTo.layers).sort(),
     applies_drive_models: stringList(appliesTo.drive_models).sort(),
   };
@@ -337,8 +341,17 @@ export function catalogAutomationAssets(input: CatalogAutomationAssetsInput): As
         rel;
       const status = driftStatus(content);
       const assetId = `${source.type}:${name}`;
-      const trigger =
+      const category = source.type === "skill" ? String(metadata.category ?? "").trim() : "";
+      const domainTags = source.type === "skill" ? stringList(metadata.domain_tags) : [];
+      const industry =
+        source.type === "skill" && typeof metadata.industry === "string"
+          ? metadata.industry.trim()
+          : "";
+      const baseTrigger =
         frontmatterValue(content, "triggers") || frontmatterValue(content, "description");
+      // domain_tags / industry は situation 索引子なので trigger に畳み込み、scoreSkill の
+      // metadata 重なり (de-saturate) と FTS tokens の双方へ流す (skill-index.md §5)。
+      const trigger = [baseTrigger, domainTags.join(" "), industry].filter(Boolean).join(" ");
       const role = frontmatterValue(content, "role") || (source.type === "roster" ? name : "");
       const capability =
         frontmatterValue(content, "description") || `${source.type} metadata from ${rel}`;
@@ -358,6 +371,7 @@ export function catalogAutomationAssets(input: CatalogAutomationAssetsInput): As
           role,
           capability,
           skill_type: skillType,
+          category,
           applies_layers: appliesLayers,
           applies_drive_models: appliesDriveModels,
           drift_status: status,
@@ -369,7 +383,7 @@ export function catalogAutomationAssets(input: CatalogAutomationAssetsInput): As
         subject_id: assetId,
         path: rel,
         title: name,
-        tokens: `${source.type} ${trigger} ${role} ${capability} ${skillType} ${appliesLayers} ${appliesDriveModels}`,
+        tokens: `${source.type} ${trigger} ${role} ${capability} ${skillType} ${category} ${appliesLayers} ${appliesDriveModels}`,
         summary: `${source.type} ${status}`,
         updated_at: indexedAt,
       });

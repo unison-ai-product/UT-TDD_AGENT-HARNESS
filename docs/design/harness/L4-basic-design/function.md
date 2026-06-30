@@ -28,7 +28,7 @@ L3 FR 26 件 (FR-01〜18 + FR-45 + FR-23〜27 / FR-29 / FR-30) を 11 カテゴ�
 | **C1 PLAN 管理** | FR-01 / FR-04 / FR-24 | Plan | cli + plan + schema |
 | **C2 TDD・gate・trace** | FR-02 / FR-03 / FR-05 / FR-13 | Artifact / Workflow | cli + vmodel + doctor |
 | **C3 state・hook** | FR-06 / FR-07 | Plan / Artifact / Workflow (state hook 横断、data.md §8) | runtime + (将来 hook) |
-| **C4 mode routing** | FR-08 | Workflow | runtime(detect) + doctor |
+| **C4 mode routing（mode 経路制御）** | FR-08 | Workflow | runtime(detect) + doctor |
 | **C5 workflow エンジン** | FR-13〜16 / FR-23〜27 / FR-29 / FR-30 | Plan / Workflow | `src/workflow/contracts.ts` + `src/workflow/readiness.ts` |
 | **C6 AI ガード** | FR-09 | (操作なし、検証) | runtime(agent-guard、既存) |
 | **C7 検出 doctor** | FR-18 / FR-11 | 全集約 (横断) | doctor + lint |
@@ -53,7 +53,7 @@ ADR-004 の **層1 markdown 正本 / 層2 TS 統制**境界に従う。TS は ma
 | **command** | 層2 (TS) | cli (§2 内部資産 command) | 内部資産操作の CLI subcommand (roster 一覧 / 整合確認 / asset カタログ)。各 subcommand の関数粒度は L6 で確定 (back-fill) |
 
 > **roster ↔ guard の関係 (依存方向、Critical-1 是正)**: agent-guard.ts は既存実装 (subagent_type allowlist 15 + model family 一致、fail-close)。roster registry はその allowlist の **設計上の SSoT** を `.claude/agents/*.md` 群から構築する層 (依存先 = schema/fs のみ、guard に依存しない)。統合は **agent-guard (runtime) が roster を読む = `runtime → roster` の一方向**で実現 (循環なし、architecture §3.1)。
-> **roster / guard integration status (Critical-2 closure)**: agent-guard keeps the fail-close allowlist enforcement path. The roster capability resolver is implemented as `src/runtime/agent-slots.ts#resolveRosterCapability`, guard/asset consistency is checked through `src/lint/asset-drift.ts`, and stale L7-waiting placeholders are blocked by the dedicated `placeholder-deps` doctor gate. The former implementation-state bridge is closed.
+> **roster / guard integration status (Critical-2 closure) の整理**: agent-guard は fail-close allowlist enforcement path を維持する。roster capability resolver は `src/runtime/agent-slots.ts#resolveRosterCapability` として実装済みで、guard/asset consistency は `src/lint/asset-drift.ts` で確認し、stale L7-waiting placeholders は専用の `placeholder-deps` doctor gate で block する。以前の implementation-state bridge は close 済み。
 > **粒度 (L4=L9 総合テスト)**: 本 §1.1 は「内部資産 roster が system として動く」を L9 総合テスト粒度で束ねる。各 subcommand signature / capability resolver アルゴリズム / model family 解決の関数粒度は **L5 (module 結合) → L6 (関数仕様=単体テスト設計) で段階分解** (PLAN-L4-11 §3、L5 を挟む)。L4 で書けない関数仕様は placeholder + 依存 (`waiting_layer: L6`) として残し back-fill (PLAN-L4-10 §0.1)。
 
 ### §1.2 C2 trace の descent-obligation building block (FR-03 / FR-L1-03、PLAN-L6-35 add-design)
@@ -165,16 +165,16 @@ screen-design / frontend-design は**独立した駆動モデルでなく、Forw
 
 | 対象 | TDD適性 | Red 発火点 | Green 条件 |
 | --- | --- | --- | --- |
-| Forward design / `kind=design` | strong | `descent_obligation_missing` / `pair_artifact_missing` / `test_design_missing` | design doc + test-design + trace edge + review after green |
-| Add-feature (`add-design` + `add-impl`) | strong | `feature_addition` / `scope_extension` / `acceptance_gap` | add-design + add-impl + regression green + Reverse back-fill if needed |
-| Refactor | strong | `code_smell` / `structural` / `debt_degradation` / `artifact_progress_red` | behavior unchanged + linked test IDs + relation impact closed |
-| Reverse | strong | `drift` / `schema_contract_gap` / `as_is_test_design_missing` | as-is design + intent confirmed + forward routing + backprop artifacts |
-| Retrofit | strong | `dependency_outdated` / `upgrade` / `config_drift` / stale `dependency_edges` | migration + config + rollback + regression green |
-| Recovery / Incident | strong | `regression_dev` / `regression_prod` / `forced_stop` / quality failure | reproduction or recovery test + guard/rule + postmortem/handover |
-| screen-design | strong | `screen_requirement_gap` / `wireframe_missing` / `screen_impl_pair_gap` | screen list + flow + wireframe + UI elements + pair trace |
-| frontend-design | strong | `a11y_regression` / `visual_regression` / `token_drift` / UX feedback | visual + tokens + a11y + VRT + UX review |
-| Discovery / Scrum | partial | uncertainty / user feedback | hypothesis or increment verified + decision + Forward/Reverse route |
-| Research | weak | technical decision required / ADR required | memo + sources + ADR candidate |
+| Forward design / `kind=design` | strong | `descent_obligation_missing` / `pair_artifact_missing` / `test_design_missing` | design doc + test-design + trace edge + green 後 review |
+| Add-feature (`add-design` + `add-impl`) | strong | `feature_addition` / `scope_extension` / `acceptance_gap` | add-design + add-impl + regression green + 必要時 Reverse back-fill |
+| Refactor | strong | `code_smell` / `structural` / `debt_degradation` / `artifact_progress_red` | behavior unchanged + linked test IDs + relation impact closed を確認 |
+| Reverse | strong | `drift` / `schema_contract_gap` / `as_is_test_design_missing` | as-is design + intent confirmed + forward routing + backprop artifacts を揃える |
+| Retrofit | strong | `dependency_outdated` / `upgrade` / `config_drift` / stale `dependency_edges` | migration + config + rollback + regression green を確認 |
+| Recovery / Incident | strong | `regression_dev` / `regression_prod` / `forced_stop` / quality failure | reproduction または recovery test + guard/rule + postmortem/handover |
+| screen-design | strong | `screen_requirement_gap` / `wireframe_missing` / `screen_impl_pair_gap` | screen list + flow + wireframe + UI elements + pair trace を確認 |
+| frontend-design | strong | `a11y_regression` / `visual_regression` / `token_drift` / UX feedback | visual + tokens + a11y + VRT + UX review を確認 |
+| Discovery / Scrum | partial | uncertainty / user feedback | hypothesis または increment verified + decision + Forward/Reverse route |
+| Research | weak | technical decision required / ADR required | memo + sources + ADR candidate を残す |
 
 DB発火点は `findings`、`quality_signals`、`feedback_events`、`graph_nodes`、`dependency_edges`、`impact_results`、`artifact_progress` を使う。DB は projection であり正本ではないため、発火結果は PLAN 入力または workflow signal とし、設計文書や PLAN の authored state を直接置換しない。機械契約は `src/workflow/contracts.ts#classifyDriveTddFits` が提供する。
 
@@ -185,15 +185,14 @@ DB発火点は `findings`、`quality_signals`、`feedback_events`、`graph_nodes
 - **入力**: PLAN context (`kind` / `layer` / `drive` / task 文 / 現在 step)。
 - **出力**: 該当 skill の ranked 推挙 + **注入規約** (どの skill を どの step で注入するか)。**全 skill を常時ロードしない** (柱 4 = 必要工程でのみ注入)。override 制御は `L3-injection.yaml` 相当 (AC-FR-12-01〜03)。
 
-**Provider materialization (PLAN-L7-135, 2026-06-23)**: `ut-tdd skill suggest --inject --json`
-is the provider-neutral context manifest. It emits skill paths and reasons only
-(`required_paths`, `optional_paths`, `missing_skill_ids`), never skill bodies.
-`ut-tdd codex --plan ...` / `ut-tdd claude --plan ...` and `ut-tdd team run
---plan ...` materialize the same manifest into adapter stdin under `UT-TDD
-context injection`, so Claude and Codex receive identical scoped skill context
-while argv remains fixed command metadata. `ut-tdd task route --plan ... --execute`
-uses the same materialization path after cost-tier/model routing, so difficulty
-routing and skill injection meet in the provider adapter plan.
+**Provider materialization (PLAN-L7-135, 2026-06-23) の外部形状**: `ut-tdd skill suggest --inject --json`
+は provider-neutral context manifest である。出力するのは skill paths と reasons のみ
+(`required_paths`, `optional_paths`, `missing_skill_ids`) で、skill bodies は出さない。
+`ut-tdd codex --plan ...` / `ut-tdd claude --plan ...` と `ut-tdd team run
+--plan ...` は、同じ manifest を `UT-TDD context injection` として adapter stdin に materialize する。
+そのため Claude と Codex は同一 scope の skill context を受け取り、argv は固定 command metadata のままにする。
+`ut-tdd task route --plan ... --execute` も cost-tier/model routing 後に同じ materialization path を使うため、
+difficulty routing と skill injection は provider adapter plan で合流する。
 - **担当 building block**: 将来 `src/skills/` (architecture.md §3.1) + orchestration module。判定アルゴリズム (capability resolver) は L6 carry。
 
 ### §3.5 担当 building block / 制御フロー (外部設計)
@@ -300,13 +299,13 @@ architecture.md §3 の依存方向 (schema 一方向・循環禁止) と整合�
 - P1 sub-PLAN 9 件 = L4 詳細 PLAN として個別起票 (本 doc では機能境界のみ、§6)
 - 観測層 (FR-L1-20) の値オブジェクト/state schema = L5 physical-data (data.md §9 carry)
 - mode-routing.yaml / gate-checks.yaml の DSL schema = L5 D-CONTRACT
-## Appendix B: L4 trace coverage addendum (descent-obligation)
+## Appendix B: L4 trace coverage 追補 (descent-obligation)
 
-This L4 function sub-doc is the machine-readable L3->L4 landing point for the functional building-block coverage below. The rows are trace coverage for existing function / CLI / workflow / guard content, not new feature scope.
+この L4 function sub-doc は、下記 functional building-block coverage の machine-readable な L3->L4 landing point である。各行は既存 function / CLI / workflow / guard content の trace coverage であり、新規 feature scope ではない。
 
-| trace set | L4 receiving block |
+| trace set | L4 受け取り block |
 |---|---|
-| FR-L1-01 / FR-L1-02 / FR-L1-04 / FR-L1-05 / FR-L1-06 / FR-L1-07 / FR-L1-09 / FR-L1-10 / FR-L1-11 / FR-L1-13 / FR-L1-14 / FR-L1-15 / FR-L1-16 / FR-L1-17 / FR-L1-18 | Function categories C1-C11 and CLI command surface |
-| FR-L1-23 / FR-L1-24 / FR-L1-25 / FR-L1-26 / FR-L1-27 / FR-L1-29 / FR-L1-30 | Workflow orchestration function blocks |
-| FR-L1-36 / FR-L1-38 / FR-L1-43 | BR-21 / business-detail Phase B evaluation hooks carried through workflow/evaluation blocks |
-| FR-L1-45 / FR-L1-50 / FR-L1-51 | doc-review, DDD/TDD strictness guard, and artifact progress projection blocks |
+| FR-L1-01 / FR-L1-02 / FR-L1-04 / FR-L1-05 / FR-L1-06 / FR-L1-07 / FR-L1-09 / FR-L1-10 / FR-L1-11 / FR-L1-13 / FR-L1-14 / FR-L1-15 / FR-L1-16 / FR-L1-17 / FR-L1-18 | Function categories C1-C11 と CLI command surface |
+| FR-L1-23 / FR-L1-24 / FR-L1-25 / FR-L1-26 / FR-L1-27 / FR-L1-29 / FR-L1-30 | Workflow orchestration function blocks を受け取る |
+| FR-L1-36 / FR-L1-38 / FR-L1-43 | BR-21 / business-detail Phase B evaluation hooks を workflow/evaluation blocks 経由で carry |
+| FR-L1-45 / FR-L1-50 / FR-L1-51 | doc-review、DDD/TDD strictness guard、artifact progress projection blocks を受け取る |

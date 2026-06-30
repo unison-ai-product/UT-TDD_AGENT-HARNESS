@@ -8,18 +8,18 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-03-session-log.md
 ---
 
-> **L6 contract marker**: `recordEvent(input: SessionHookInput) => void` and `compressPlanDigest(input: PlanDigestInput) => PlanDigest` are the unit-test-granularity contracts. DbC pre/post/invariant maps hook/session events and PLAN digest generation to U-SLOG-001..008.
+> **L6 contract marker**: `recordEvent(input: SessionHookInput) => void` と `compressPlanDigest(input: PlanDigestInput) => PlanDigest` は unit-test-granularity contract である。DbC pre/post/invariant は hook/session event と PLAN digest generation を U-SLOG-001..008 へ対応させる。
 
 
-## 2026-06-09 Runtime Adapter Lifecycle Addendum
+## 2026-06-09 Runtime Adapter Lifecycle 追補
 
-- `onStop(input, deps)` records one `session_end` event with `input.plan_id ?? resolveActivePlan(deps)` before compressing the session jsonl into plan digests.
-- The adapter wrapper passes its explicit `--plan` value only to the session-log lifecycle input, not to provider CLI args.
-- A plan digest produced through `ut-tdd codex|claude --execute --plan <id>` must include `session_start`, `tool_use`, and `session_end` counts for `<id>`.
+- `onStop(input, deps)` は session jsonl を plan digest へ compress する前に、`input.plan_id ?? resolveActivePlan(deps)` 付きの `session_end` event を 1 件記録する。
+- adapter wrapper は明示 `--plan` value を session-log lifecycle input にだけ渡し、provider CLI args へは渡さない。
+- `ut-tdd codex|claude --execute --plan <id>` で生成される plan digest は、`<id>` 向けの `session_start`、`tool_use`、`session_end` count を含む必要がある。
 
 <!--
 ① 設計 (L6 機能設計) — session-log 機能。
-PLAN: PLAN-L6-03-session-log (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.5 U-SLOG。
+PLAN: PLAN-L6-03-session-log (add-design)。pair (③) は docs/test-design/harness/L7-unit-test-design.md §1.5 U-SLOG を指す。
 実装 (②): src/runtime/session-log.ts + src/cli.ts session/hook entrypoints + .claude/hooks/session-log.ts backward-compatible shim (PLAN-L7-01-session-log, add-impl)。
 正本機能: 要件定義書 §6.8 (Issue 起点スパイン) / §6.9 のローカル観測側。
 -->
@@ -116,7 +116,7 @@ compressPlanDigest(events, planId, prev):
 
 ## §6 fail-open 設計 (agent-guard fail-close との対比)
 
-| | agent-guard | session-log |
+| 比較項目 | agent-guard | session-log |
 |--|-------------|-------------|
 | 失敗時 | exit 2 (block)、`blockOnFailure: true` | **exit 0 (pass)**、blockOnFailure なし |
 | stdin/JSON 失敗 | block (検証不能を pass させない) | warn して 0 (ログがワークフローを止めない) |
@@ -125,5 +125,5 @@ compressPlanDigest(events, planId, prev):
 ## §7 V-pair / トレース
 
 - ③ pair: `docs/test-design/harness/L7-unit-test-design.md §1.5 U-SLOG` (G6 pair freeze 対象)
-- ② impl: `src/runtime/session-log.ts` + `src/cli.ts` session/hook entrypoints (`.claude/hooks/session-log.ts` backward-compatible shim) (PLAN-L7-01)
+- ② 実装: `src/runtime/session-log.ts` + `src/cli.ts` session/hook entrypoints (`.claude/hooks/session-log.ts` backward-compatible shim) (PLAN-L7-01)
 - 上位整合: 本機能の **要件 (L3) 表現は後段 Reverse (R0-R4) で back-fill / 修正** (PO 方針、bottom-up build → 上位整合)。

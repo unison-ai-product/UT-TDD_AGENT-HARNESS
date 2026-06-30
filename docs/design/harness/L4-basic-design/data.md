@@ -59,17 +59,17 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 
 | 値オブジェクト | 値域 | src/schema |
 |---|---|---|
-| Kind | charter/impl/design/poc/reverse/add-design/add-impl/refactor/retrofit/recovery/troubleshoot/research (12) | `VALID_KINDS` |
+| Kind（種別） | charter/impl/design/poc/reverse/add-design/add-impl/refactor/retrofit/recovery/troubleshoot/research の 12 種 | `VALID_KINDS` |
 | Layer | L0-L14 + cross (16) | `VALID_LAYERS` |
 | Drive | be/fe/fullstack/db/agent (5、専門職のみ) | `VALID_DRIVES` |
-| WorkflowPhase | S0-S4 (kind=poc) / R0-R4 (kind=reverse) (10) | `VALID_WORKFLOW_PHASES` |
+| WorkflowPhase（工程） | S0-S4 (kind=poc) / R0-R4 (kind=reverse) の 10 種 | `VALID_WORKFLOW_PHASES` |
 | ArtifactType | 19 種 (source_module 含む) | `VALID_ARTIFACT_TYPES` |
-| DecisionOutcome | confirmed/rejected/pivot (3) | `VALID_DECISION_OUTCOMES` |
-| PromotionStrategy | reuse-as-is/reuse-with-hardening/redesign/discard (4) | `VALID_PROMOTION_STRATEGIES` |
+| DecisionOutcome（判断結果） | confirmed/rejected/pivot の 3 種 | `VALID_DECISION_OUTCOMES` |
+| PromotionStrategy（昇格方針） | reuse-as-is/reuse-with-hardening/redesign/discard の 4 種 | `VALID_PROMOTION_STRATEGIES` |
 | ForwardRouting | L1/L3/L4/L5/gap-only (5) | `VALID_FORWARD_ROUTING` |
-| Role | po/tl/qa/aim/uiux/se/docs (7) | `VALID_ROLES` |
-| OrchestrationMode | pm_lead/claude_judge/claude_judge_codex_impl/codex_impl_qa_verify/claude_design_impl (5) | `VALID_ORCHESTRATION_MODES` |
-| ReverseType | code/design/upgrade/normalization/fullback (5) | `VALID_REVERSE_TYPES` |
+| Role（役割） | po/tl/qa/aim/uiux/se/docs の 7 種 | `VALID_ROLES` |
+| OrchestrationMode（編成モード） | pm_lead/claude_judge/claude_judge_codex_impl/codex_impl_qa_verify/claude_design_impl の 5 種 | `VALID_ORCHESTRATION_MODES` |
+| ReverseType（逆流種別） | code/design/upgrade/normalization/fullback の 5 種 | `VALID_REVERSE_TYPES` |
 | SubDoc | 層別 (L1-L6) | `VALID_SUB_DOCS` / `subDocSchema` / `frontmatterSchema` layer×sub_doc superRefine |
 
 > mode / drive は単独の identity を持たず属性として埋め込むため **値オブジェクト** (entity ではない)。
@@ -95,7 +95,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 
 - **plan.status**: `draft → (TL approve) → active → done → archived` (failは archived + carry note)
 - **gate**: `pending → pass | fail` (fail → 該当 mode へ routing、FR-L1-08)
-- **freeze** (pair/trace): `pending → frozen` (G1/G3/G4/G5/G6 pair、G7 trace)
+- **freeze（凍結）** (pair/trace): `pending → frozen` (G1/G3/G4/G5/G6 pair、G7 trace)
 - **decision_outcome** (poc): `null → confirmed | rejected | pivot` (S4 でのみ確定)
 - **handover**: `current → consumed | stale` (CURRENT.json は最新 1 件)
 
@@ -106,7 +106,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | Artifact | **逆ピラミッド禁止**: design + impl が存在すれば test_design + test_code も存在 | G6/G7 fail-close |
 | Artifact | pair は V-model 6 組のいずれか (L1↔L14/L2↔L10/L3↔L12/L4↔L9/L5↔L8/L6↔L7) | `V_MODEL_PAIRS` |
 | Artifact | FR-L1 registry: 参照される FR-L1 ⊆ 登録済 (§1 機能一覧) | fr-registry-audit 型1 |
-| Plan | kind=poc → workflow_phase ∈ {S0-S4} ∧ layer=cross | frontmatter superRefine |
+| Plan | kind=poc → workflow_phase ∈ {S0-S4} ∧ layer=cross | frontmatter superRefine で検証 |
 | Plan | kind=reverse ∧ R4 → forward_routing ∧ promotion_strategy 必須 | frontmatter superRefine |
 | Plan | kind=design ∧ layer∈[L1-L6] → sub_doc 必須 ∧ ∈ VALID_SUB_DOCS[layer] | G.1/G.3 |
 | Plan | agent_slot.model ∈ allowlist、opus は pdm-* のみ | agent-guard |
@@ -130,17 +130,17 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | 集約 / 概念 | `.ut-tdd/` 永続化 | 形式 |
 |---|---|---|
 | Plan | `plan_registry/<plan_id>.json` + 本文 `docs/plans/*.md` | JSON + markdown |
-| Artifact / trace | `artifact/` + `artifact/trace/` | JSON (edge list) |
-| Workflow (phase/gate) | `phase.yaml` + `gate_runs` | YAML / JSON-lines |
+| Artifact / trace（成果物と trace） | `artifact/` + `artifact/trace/` | JSON (edge list) |
+| Workflow (phase/gate)（工程と gate） | `phase.yaml` + `gate_runs` | YAML / JSON-lines |
 | mode | `mode.yaml` | YAML |
 | Handover | `handover/CURRENT.json` | JSON (最新 1 件) |
-| Evaluation (Phase B) | `audit/` (invocation_log / accuracy_score / kpi) | JSON-lines |
+| Evaluation (Phase B)（評価） | `audit/` (invocation_log / accuracy_score / kpi) | JSON-lines |
 | 監査 | `audit/failure_log.jsonl` (local) / チーム共有 audit (別経路) | JSON-lines |
 | 内部資産 roster / skill catalog | **永続化なし** (`.claude/agents/*.md` / `docs/skills/**/*.md` が唯一正本、TS が scan-on-demand で in-memory 構築) | markdown (fs 正本、ADR-004 層1) |
 
 **src/schema 突合**: 上記値オブジェクト (§3) は `src/schema/index.ts` の zod enum を SSoT とし、state の JSON/YAML は読込時に zod でバリデート。齟齬検出は `ut-tdd doctor check_business_entity_coverage` (L1 §10.2 carry) で機械化。**§3 値オブジェクト 12 種は src/schema enum と 1:1 一致 (齟齬 0)。SubDoc は requirements §1.10.G.1 spec から `VALID_SUB_DOCS` / `subDocSchema` / layer×sub_doc superRefine へ着地済み (IMP-026)**。
 
-### §8.1 SQLite projection DB (`.ut-tdd/harness.db`)
+### §8.1 SQLite projection DB（投影DB） (`.ut-tdd/harness.db`)
 
 `.ut-tdd/harness.db` は YAML/JSON state と docs を読み込んで正規化する projection DB であり、legacy DB schema は再利用しない。役割は V-model の製本化、別駆動 model の実行結果保存、trace/coverage/finding の横断照合、doctor/vmodel lint の fail-close 入力である。
 

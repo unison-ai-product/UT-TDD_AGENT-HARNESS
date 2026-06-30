@@ -6,6 +6,8 @@ layer: L7
 drive: fullstack
 status: draft
 version_target: future
+route_signal: version_deferral
+route_mode: version-up
 created: 2026-06-30
 updated: 2026-06-30
 owner: PM / PO

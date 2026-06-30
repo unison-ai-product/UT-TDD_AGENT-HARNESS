@@ -239,6 +239,47 @@ function kindLayerViolations(raw: Record<string, unknown>): string[] {
   return [];
 }
 
+function versionRouteCertificateViolations(raw: Record<string, unknown>): {
+  reason: "version_route_certificate_missing" | "version_route_certificate_mismatch";
+  detail: string;
+}[] {
+  if (!stringField(raw.version_target)) return [];
+  if (stringField(raw.status) !== "draft") return [];
+
+  const signal = stringField(raw.route_signal);
+  const mode = stringField(raw.route_mode);
+  const violations: {
+    reason: "version_route_certificate_missing" | "version_route_certificate_mismatch";
+    detail: string;
+  }[] = [];
+
+  if (!signal) {
+    violations.push({
+      reason: "version_route_certificate_missing",
+      detail: "version_target requires route_signal=version_deferral",
+    });
+  } else if (signal !== "version_deferral") {
+    violations.push({
+      reason: "version_route_certificate_mismatch",
+      detail: `route_signal=${signal} expected version_deferral`,
+    });
+  }
+
+  if (!mode) {
+    violations.push({
+      reason: "version_route_certificate_missing",
+      detail: "version_target requires route_mode=version-up",
+    });
+  } else if (mode !== "version-up") {
+    violations.push({
+      reason: "version_route_certificate_mismatch",
+      detail: `route_mode=${mode} expected version-up`,
+    });
+  }
+
+  return violations;
+}
+
 function expectedArtifactTypeForPath(path: string): string | null {
   if (path.startsWith("docs/design/")) return "design_doc";
   if (path.startsWith("docs/test-design/")) return "test_design";
@@ -485,6 +526,9 @@ export function analyzePlanGovernance(
         reason: "kind_layer_mismatch",
         detail: invalidKindLayers.join(", "),
       });
+    }
+    for (const violation of versionRouteCertificateViolations(raw)) {
+      violations.push({ file: entry.file, ...violation });
     }
 
     if (kind === "design" && layer && DESIGN_LAYERS_REQUIRING_SUB_DOC.has(layer) && !isMasterHub) {

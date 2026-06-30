@@ -690,7 +690,7 @@ L1 機能要求 (FR-L1-*、ユーザー視点の「何の機能が必要か」) 
 
 #### AC-FR-30-02 (異常系: token 二重定義)
 - **Given**: L10 で既存 token 名と衝突 (例: `color.primary` 重複)
-- **When**: token SSOT lint
+- **When**: token SSOT lint を実行
 - **Then**: fail-close `Error: token 名衝突 (color.primary は既定義、FR-30)` / 終了コード 1
 
 #### AC-FR-30-03 (境界系: a11y warn 多発)
@@ -899,72 +899,52 @@ screen §5 G1-trace マトリクスを継承し、L3 FR-* × 15 画面 (PM/HM/GD
 > 1. PLAN 起票時に Web 検索 + OSS フォーク + pdm 調査を組み込む process 改善 (現状: PLAN-L3-01〜03 §3 ヒアリング項目に Step 0 = 外部調査を追加)
 > 2. agent-guard に opus pdm-* 系の追加制約 (明示 --allow 必要、weekly quota 保護)
 > 両件、別 commit で governance に反映予定。
-## A-124 BACKPROP NOTE
+## A-124 back-propagation 注記
 
-A-124 requirements back-propagation: cross-artifact relation graph, impact expansion, diagram export, and tool adapter normalization have been returned to L1 functional §7 and requirements §6.8.9. L5 physical-data §9.5 defines the DB projection tables and invariants. L6/L7 follow-up work must implement graph impact, graph export, and optional tool adapter normalization as extensions of existing FR-L1-05/06/07/17/18/19/20/24/49/50, without allocating new FR IDs.
+A-124 requirements back-propagation として、cross-artifact relation graph、impact expansion、diagram export、tool adapter normalization を L1 functional §7 と requirements §6.8.9 へ戻した。L5 physical-data §9.5 は DB projection table と invariant を定義する。L6/L7 follow-up work は新しい FR ID を採番せず、既存 FR-L1-05/06/07/17/18/19/20/24/49/50 の extension として graph impact、graph export、optional tool adapter normalization を実装する。
 
-## A-125 BACKPROP NOTE
+## A-125 back-propagation 注記
 
-A-125 requirements back-propagation: MCP server profiles, external verification profiles, MCP Inspector smoke, profile-trigger automation, and profile security gates have been returned to L1 functional §7 and requirements §6.8.10. L5 physical-data §9.6 defines the DB projection tables and invariants. L6/L7 follow-up work must implement profile probing, Inspector smoke, verification recommendation, and allow-listed verification runs as extensions of existing FR-L1-05/06/07/17/18/19/20/24/45/49/50, without allocating new FR IDs.
+A-125 requirements back-propagation として、MCP server profile、external verification profile、MCP Inspector smoke、profile-trigger automation、profile security gate を L1 functional §7 と requirements §6.8.10 へ戻した。L5 physical-data §9.6 は DB projection table と invariant を定義する。L6/L7 follow-up work は新しい FR ID を採番せず、既存 FR-L1-05/06/07/17/18/19/20/24/45/49/50 の extension として profile probing、Inspector smoke、verification recommendation、allow-listed verification run を実装する。
 
-## A-126 BACKPROP NOTE
+## A-126 back-propagation 注記
 
-A-126 requirements back-propagation: canonical document export for concept/planning, requirements, detailed design, PLAN, ADR, and test-design documents has been returned to L1 functional §7 and requirements §6.8.11. L5 physical-data §9.7 defines the DB projection tables and invariants. L6/L7 follow-up work must implement document structure parsing, export dataset generation, built-in CSV/Markdown rendering, optional XLSX/PPTX renderer readiness, and artifact stale detection as extensions of existing FR-L1-05/06/07/17/18/20/24/33/45/50, without allocating new FR IDs.
+A-126 requirements back-propagation として、concept/planning、requirements、detailed design、PLAN、ADR、test-design document の canonical document export を L1 functional §7 と requirements §6.8.11 へ戻した。L5 physical-data §9.7 は DB projection table と invariant を定義する。L6/L7 follow-up work は新しい FR ID を採番せず、既存 FR-L1-05/06/07/17/18/20/24/33/45/50 の extension として document structure parsing、export dataset generation、built-in CSV/Markdown rendering、optional XLSX/PPTX renderer readiness、artifact stale detection を実装する。
 ## TDD-drive extension: 駆動モデル別 TDD 適性と DB 発火
 
-- **L1 upstream**: FR-L1-08 / FR-L1-25 / FR-L1-29 / FR-L1-30
+- **L1 上流**: FR-L1-08 / FR-L1-25 / FR-L1-29 / FR-L1-30
 - **Input**: drive/mode, `findings`, `quality_signals`, `feedback_events`,
   `graph_nodes`, `dependency_edges`, `impact_results`, `artifact_progress`
-- **Output**: TDD compatibility (`strong` / `partial` / `weak`), Red triggers,
-  Yellow state, Green requirements
-- **Behavior**: `classifyDriveTddFits` returns the TDD-style fit for every drive
-  model and design specialty. DB projection rows may fire workflow signals or
-  PLAN inputs, but DB remains a projection and must not directly edit authored
-  PLAN/docs/source.
+- **出力**: TDD compatibility (`strong` / `partial` / `weak`)、Red trigger、
+  Yellow state、Green requirement を返す。
+- **振る舞い**: `classifyDriveTddFits` は各 drive model と design specialty の TDD-style fit を返す。
+  DB projection row は workflow signal や PLAN input を発火できるが、DB は projection のままであり、
+  authored source である PLAN/docs/source を直接編集してはならない。
 
-### FR-L1-39 addendum: proposal document coverage classification
+### FR-L1-39 追補: proposal document coverage classification
 
 - **Function**: `classifyProposalDocumentCoverage`
-- **Purpose**: derive the minimum design/test-design document pack from proposal
-  or task text before implementation work starts.
-- **Output**: additive required design docs, required test-design docs, required
-  evidence, gates, research adoption decisions, rejected research inputs,
-  escalators, guardrails, and findings.
-- **Coverage packs**: screen/UI, business flow, frontend design, UX/usability,
-  API/IF, data/DB, batch/report, report output, async/job flow,
-  notification/message, common component, security/privacy,
-  error/observability/audit, ops/release/migration, NFR/quality, test design,
-  backend function, workflow/gate, agent orchestration, discovery, and baseline.
-- **Research split**: external templates are separated into `incorporate`,
-  `reference`, `ut-tdd-specific`, and `exclude`. Template material may add
-  required evidence, but it cannot remove UT-TDD-required documents.
-- **Test-design routing**:
-  `docs/test-design/harness/proposal-document-coverage-routing.md` defines the
-  L7/L8/L9/L12/L14 test-design response for each coverage pack and tier.
-- **Guardrail**: LLM or prose claims such as `minor`, `simple`, `skip`, or
-  `not needed` are findings only. They do not lower granularity or remove
-  required artifacts.
+- **目的**: 実装作業の開始前に、proposal または task text から最小の design/test-design document pack を導出する。
+- **出力**: additive required design docs、required test-design docs、required evidence、gate、research adoption decision、rejected research input、escalator、guardrail、finding を返す。
+- **Coverage pack**: screen/UI、business flow、frontend design、UX/usability、API/IF、data/DB、batch/report、report output、async/job flow、notification/message、common component、security/privacy、error/observability/audit、ops/release/migration、NFR/quality、test design、backend function、workflow/gate、agent orchestration、discovery、baseline を扱う。
+- **Research split**: external template は `incorporate`、`reference`、`ut-tdd-specific`、`exclude` に分離する。Template material は required evidence を追加できるが、UT-TDD-required document を削除できない。
+- **Test-design routing**: `docs/test-design/harness/proposal-document-coverage-routing.md` は各 coverage pack と tier に対する L7/L8/L9/L12/L14 test-design response を定義する。
+- **Guardrail**: `minor`、`simple`、`skip`、`not needed` などの LLM/prose claim は finding のみであり、granularity を下げたり required artifact を除去したりしない。
 
-### AC-FR-TDD-01: strong targets
+### AC-FR-TDD-01: strong target の確認
 
-- **Given**: mode = design / add-feature / refactor / reverse / retrofit /
-  recovery / incident / screen-design / frontend-design
-- **When**: `classifyDriveTddFits` evaluates the modes
-- **Then**: each returns `compatibility=strong` with Red trigger sources,
-  Yellow state, and Green requirements.
+- **Given**: mode = design / add-feature / refactor / reverse / retrofit / recovery / incident / screen-design / frontend-design を入力する。
+- **When**: `classifyDriveTddFits` が各 mode を評価する。
+- **Then**: 各 mode は Red trigger source、Yellow state、Green requirement とともに `compatibility=strong` を返す。
 
-### AC-FR-TDD-02: partial / weak targets
+### AC-FR-TDD-02: partial / weak target の確認
 
-- **Given**: mode = discovery / scrum / research
-- **When**: TDD compatibility is evaluated
-- **Then**: discovery/scrum return `partial`, research returns `weak`; they are
-  not treated as normal Red-Green-Refactor completion loops.
+- **Given**: mode = discovery / scrum / research を入力する。
+- **When**: TDD compatibility を評価する。
+- **Then**: discovery/scrum は `partial`、research は `weak` を返し、通常の Red-Green-Refactor completion loop として扱わない。
 
-### AC-FR-TDD-03: DB-triggered Red
+### AC-FR-TDD-03: DB-triggered Red の確認
 
-- **Given**: DB projection has structural debt, design gap, dependency impact,
-  a11y/VRT/token drift, regression, or artifact progress red/yellow
-- **When**: workflow signal generation runs
-- **Then**: the row can become a Red trigger for the matching drive/mode and a
-  PLAN input, while authored source remains unchanged until an explicit PLAN
-  updates it.
+- **Given**: DB projection に structural debt、design gap、dependency impact、a11y/VRT/token drift、regression、artifact progress red/yellow が存在する。
+- **When**: workflow signal generation を実行する。
+- **Then**: 該当 row は対応する drive/mode の Red trigger と PLAN input になり得るが、明示的な PLAN が更新するまで authored source は変更されない。

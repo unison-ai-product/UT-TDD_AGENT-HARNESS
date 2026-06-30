@@ -705,6 +705,60 @@ describe("plan schedule lint (IMP-081)", () => {
     expect(reasons).not.toContain("kind_layer_mismatch");
   });
 
+  it("U-PLANGOV-011o: version_target drafts require a version-up route certificate", () => {
+    const docs = [
+      planDoc("PLAN-L7-198-version-parked", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        status: "draft",
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra: "version_target: future\ncreated: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("version_route_certificate_missing");
+  });
+
+  it("U-PLANGOV-011p: version_target route certificate fails closed on signal or mode drift", () => {
+    const docs = [
+      planDoc("PLAN-L7-198-version-parked-wrong-route", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        status: "draft",
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra:
+          "version_target: future\nroute_signal: incident\nroute_mode: recovery\ncreated: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("version_route_certificate_mismatch");
+  });
+
+  it("U-PLANGOV-011q: version_target route certificate passes with version_deferral/version-up", () => {
+    const docs = [
+      planDoc("PLAN-L7-198-version-parked-ok", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        status: "draft",
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra:
+          "version_target: future\nroute_signal: version_deferral\nroute_mode: version-up\ncreated: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("version_route_certificate_missing");
+    expect(reasons).not.toContain("version_route_certificate_mismatch");
+  });
+
   it("U-PLANGOV-012: docs/design generated artifacts must use design_doc", () => {
     const docs = [
       planDoc("PLAN-L7-99-design-type-mismatch", {

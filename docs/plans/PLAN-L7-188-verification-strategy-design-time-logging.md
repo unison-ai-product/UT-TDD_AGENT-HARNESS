@@ -64,7 +64,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T11:49:21+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:78ce69d4b918cdeff0774af84fea9a6e15d84d8575760d985d0a433c9f638a1e"
+        output_digest: "sha256:0fe467c17fa13c617e69dccb8d31840b144ff35a4a5548b5ac4f4ff83bd6ee31"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -72,7 +72,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T11:49:21+09:00"
         evidence_path: src/state-db/projection-writer.ts
-        output_digest: "sha256:a012f9d5ad6c4fdcc9de0efbf86d8c4f245a027e8cd8dc576fcb0e0ae744fc6f"
+        output_digest: "sha256:326f24654b12f741d2c380bf2ff4999a5680a54ba849faf9e26966e0bf18ee85"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -80,7 +80,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T11:49:21+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:a42059bcf23f1730c26a408c981b084ca87517a650feb46bdd06ca066c7b7517"
+        output_digest: "sha256:ac43ef4e9baf529ccf18d5973145108919c89da4805fd1147a7ba669f00165af"
 ---
 
 # PLAN-L7-188: Verification strategy with runtime provenance gates

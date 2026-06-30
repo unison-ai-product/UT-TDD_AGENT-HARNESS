@@ -46,7 +46,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:11:58+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:2517ed3ae8331803d1ecd330ee6e6a483be111b5cb43b5701343032949725561"
+        output_digest: "sha256:b8e59b160eeed05c1a8c88438fe0cc5c2d7114fe812e9d1ae5a479b440248c9d"
       - kind: unit_test
         command: "bun run vitest run tests\\workflow-contracts.test.ts"
         runner: bun
@@ -78,7 +78,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:15:00+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:2517ed3ae8331803d1ecd330ee6e6a483be111b5cb43b5701343032949725561"
+        output_digest: "sha256:b8e59b160eeed05c1a8c88438fe0cc5c2d7114fe812e9d1ae5a479b440248c9d"
 ---
 
 # PLAN-L7-163: workflow contracts policy extraction

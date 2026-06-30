@@ -87,7 +87,7 @@ type DescentResult = {
 
 降下 (左腕) と V-pair (右腕) を機械可読 rule に落とす。`condition` が生成トリガ:
 
-| from | to | kind | condition | note |
+| from | to | kind | 条件 | note |
 |---|---|---|---|---|
 | L1 | L3 | descent | active | 要求 FR が active なら要件 (FR-*/AC-*) が在るべき |
 | L3 | L4 | descent | active | 要件が active なら基本設計が在るべき |

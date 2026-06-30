@@ -114,7 +114,7 @@ IPA 共通フレーム 2013 (SLCP-JCF) では次が**同義**として扱われ�
 > | L5 | `ui-detail` | ② プロダクト選択 (UI 有時) | ✓ `VALID_SUB_DOCS[L5]` | ✓ `docs/design/harness/L5-detailed-design/ui-detail.md` |
 > | L6 | `screen-spec` | ② プロダクト選択 (UI 有時) | ✓ `VALID_SUB_DOCS[L6]` | ✓ `docs/design/harness/L6-function-design/screen-spec.md` |
 >
-> **2026-06-30 update (PLAN-L3-06 / PLAN-L5-09 / PLAN-L6-36)**: the L3/L5/L6 FE bodies are now present for the harness central UI. `frontend-design-coverage` therefore reports body present 6 / pending 0 and checks the actual file paths above.
+> **2026-06-30 update (PLAN-L3-06 / PLAN-L5-09 / PLAN-L6-36)**: harness central UI の L3/L5/L6 FE bodies は現時点で存在する。`frontend-design-coverage` は body present 6 / pending 0 を報告し、上記の実 file path を検査する。
 >
 > **残り = body 起票→作成 (作成段階)**: L3 `screen-functional` / L5 `ui-detail` / L6 `screen-spec` の本文は
 > per-layer design PLAN (`kind=design`) で起票し、起票時に各型の必須 § 構造を定義する (`report`/`batch` を
@@ -194,6 +194,6 @@ IPA 共通フレーム 2013 (SLCP-JCF) では次が**同義**として扱われ�
 - IEEE 1016-2009 (SDD): https://standards.ieee.org/ieee/1016/4502/
 - ISO/IEC/IEEE 29119-3:2021 (テスト設計): https://www.iso.org/standard/79429.html
 - BDD / Gherkin (Given-When-Then): Cucumber 公式
-- Bertrand Meyer "Applying Design by Contract" (1992): https://se.inf.ethz.ch/~meyer/publications/computer/contract.pdf
+- Bertrand Meyer「Design by Contract の適用」(1992): https://se.inf.ethz.ch/~meyer/publications/computer/contract.pdf
 - ISO/IEC 25010:2011 SQuaRE (品質特性): concept §3.1.2.1 で IPA × ISO 25010 二軸タグ済
 - NASA SW Engineering Handbook / DO-178C (V&V trace): 双方向 trace の概念根拠

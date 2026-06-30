@@ -724,6 +724,7 @@ PRで指摘されたバグも同様に再現テストを書く
 
 ### リグレッションテスト記述例
 
+```python
 def test_regression_234_email_with_leading_space():
     """
     Regression for #234.
@@ -737,6 +738,7 @@ def test_regression_234_email_with_leading_space():
     """
     response = login(" test@example.com ", "password")
     assert response.success == True
+```
 
 ### リグレッションテストの管理
 
@@ -797,6 +799,7 @@ docstring に背景・期待動作を必ず記載
 
 ### シークレットを git から削除する手順
 
+```bash
 # 1. 該当ファイルを履歴から削除
 git filter-repo --path <ファイルパス> --invert-paths
 
@@ -806,6 +809,7 @@ git push origin --force --all
 # 3. シークレットを無効化(必須・最優先)
 #   - GitHub Settings から該当 Secret を削除
 #   - 該当サービス側で API キーを無効化
+```
 #   - 新しい認証情報を発行
 
 # 4. インシデント報告書を作成
@@ -1193,9 +1197,9 @@ Slack DM(直接)
 | P0/P1/P2/P3 | インシデントの重要度レベル |
 | ポストモーテム | インシデント後の振り返り・学習 |
 | MTTR | Mean Time To Recovery。平均復旧時間 |
-| SAST | Static Application Security Testing |
-| SCA | Software Composition Analysis |
-| IRP | Incident Response Plan |
+| SAST | 静的アプリケーションセキュリティテスト (Static Application Security Testing) |
+| SCA | ソフトウェア構成分析 (Software Composition Analysis) |
+| IRP | Incident Response Plan。インシデント対応計画 |
 
 # 付録B. 関連ドキュメント
 

@@ -139,6 +139,7 @@ describe("IT-ASSET-04: in-memory skill catalog scan", () => {
           name: "testing",
           path: "docs/skills/testing.md",
           skill_type: "testing",
+          category: "",
           applies_layers: ["L7", "L8"],
           applies_drive_models: ["Forward", "Reverse"],
         },
@@ -321,13 +322,14 @@ describe("IT-ASSET-01/02: roster registry and guard consistency", () => {
         "code-reviewer",
         "security-audit",
         "qa-test",
+        "ut-tdd-tl",
       ],
     });
 
     expect(result.ok).toBe(true);
     expect(result.missingFromRoster).toEqual([]);
     expect(result.nameMismatches).toEqual([]);
-    expect(result.allowlistedPresent).toBe(14);
+    expect(result.allowlistedPresent).toBe(15);
     expect(result.nonAllowlisted).toEqual(["be-api", "be-logic", "db-schema", "devops-deploy"]);
   });
 });

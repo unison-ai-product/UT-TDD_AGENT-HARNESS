@@ -72,6 +72,11 @@ import {
   loadFrUnitCoverageOracles,
   loadTraceKeyedArtifacts,
 } from "../lint/descent-obligation";
+import {
+  analyzeDesignLanguage,
+  designLanguageMessages,
+  loadDesignLanguageDocs,
+} from "../lint/design-language";
 import { analyzeDocConsistency, loadDocConsistencyDocs } from "../lint/doc-consistency";
 import {
   analyzeDriveDbRegistration,
@@ -847,6 +852,18 @@ export function checkCodingRules(repoRoot: string): { messages: string[]; ok: bo
     return { messages: codingRulesMessages(r), ok: r.ok };
   } catch {
     return { messages: ["coding-rules — violation: TS coding rule lint could not run"], ok: false };
+  }
+}
+
+export function checkDesignLanguage(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["design-language - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeDesignLanguage(loadDesignLanguageDocs(repoRoot));
+    return { messages: designLanguageMessages(r), ok: r.ok };
+  } catch {
+    return { messages: ["design-language - violation: design docs could not be read"], ok: false };
   }
 }
 
@@ -2070,6 +2087,7 @@ export function runDoctor(
   const verificationProfile = checkVerificationProfile(deps.repoRoot);
   const branchKind = checkBranchKind(deps.repoRoot);
   const codingRules = checkCodingRules(deps.repoRoot);
+  const designLanguage = checkDesignLanguage(deps.repoRoot);
   const dddTddRules = checkDddTddRules(deps.repoRoot);
   const runtimePortability = checkRuntimePortability(deps.repoRoot);
   const ruleDrift = checkRuleDrift(deps.repoRoot);
@@ -2152,6 +2170,7 @@ export function runDoctor(
       verificationProfile.ok &&
       branchKind.ok &&
       codingRules.ok &&
+      designLanguage.ok &&
       dddTddRules.ok &&
       runtimePortability.ok &&
       ruleDrift.ok &&
@@ -2228,6 +2247,7 @@ export function runDoctor(
       ...verificationProfile.messages.map((m) => `doctor: ${m}`),
       ...branchKind.messages.map((m) => `doctor: ${m}`),
       ...codingRules.messages.map((m) => `doctor: ${m}`),
+      ...designLanguage.messages.map((m) => `doctor: ${m}`),
       ...dddTddRules.messages.map((m) => `doctor: ${m}`),
       ...runtimePortability.messages.map((m) => `doctor: ${m}`),
       ...ruleDrift.messages.map((m) => `doctor: ${m}`),

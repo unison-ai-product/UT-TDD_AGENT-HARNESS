@@ -97,6 +97,8 @@ const frontmatterBaseSchema = z.object({
    *  status=draft でのみ有効 (landed には付与不可、Codex Critical: landing-time 除外禁止)。label は
    *  version-up ledger に照合する (forward-convergence.ts VERSION_UP_ALLOWED_TARGETS)。 */
   version_target: z.string().optional(),
+  route_signal: z.string().optional(),
+  route_mode: z.string().optional(),
   /** migration import trace reference (optional migration ledger path) */
   v2_import: z.string().optional(),
   /** review 前置エビデンス (requirements §7.8.7 / .claude/CLAUDE.md MUST、IMP-071)。

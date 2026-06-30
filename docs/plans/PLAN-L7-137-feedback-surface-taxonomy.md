@@ -39,6 +39,32 @@ dependencies:
   requires:
     - docs/plans/PLAN-L7-44-harness-db-master.md
     - docs/plans/PLAN-L7-110-takeover-feedback-surface.md
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-30T17:05:00+09:00"
+    tests_green_at: "2026-06-30T17:05:00+09:00"
+    verdict: approve
+    scope: "Rebind feedback-surface projection ownership after artifact-progress dependency impact closure; no product behavior change beyond current projection evidence."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\projection-writer.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T17:00:12+09:00"
+        evidence_path: tests/projection-writer.test.ts
+        output_digest: "sha256:0fe467c17fa13c617e69dccb8d31840b144ff35a4a5548b5ac4f4ff83bd6ee31"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-30T17:00:12+09:00"
+        evidence_path: src/state-db/projection-writer.ts
+        output_digest: "sha256:326f24654b12f741d2c380bf2ff4999a5680a54ba849faf9e26966e0bf18ee85"
 ---
 
 # PLAN-L7-137 (troubleshoot): summarize feedback surface by actionability

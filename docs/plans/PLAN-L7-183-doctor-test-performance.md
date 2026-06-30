@@ -44,7 +44,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T13:55:00+09:00"
         evidence_path: tests/doctor.test.ts
-        output_digest: "sha256:33020f27b413367999c48d68f94939c589551ff71e0f600606c1bd0471f927b5"
+        output_digest: "sha256:38c828573c69c9456aa714bd88c2197ead8fbad2827547f909bccf2c610c8d0a"
 ---
 
 # PLAN-L7-183: doctor test performance

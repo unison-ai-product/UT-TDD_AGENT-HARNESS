@@ -62,7 +62,7 @@ external-if.md (what/形状) の **how = adapter 詳細契約**を確定する (
 | `timeout` | 該当 skip + warn (AC-FR-18-03) | warn + 他結果集約 |
 | `unknown` | fail-close (安全側) | `Error: 外部呼出失敗 (<service>, <message>)` + exit 1 |
 
-## §5 D-CONTRACT DSL schema
+## §5 D-CONTRACT DSL schema（スキーマ）
 
 | DSL file | schema 概要 | 関連 |
 |---|---|---|
@@ -102,19 +102,19 @@ external-if.md (what/形状) の **how = adapter 詳細契約**を確定する (
 - **D-CONTRACT DSL 実装** (mode-routing.yaml / gate-checks.yaml + loader) = L7
 - **provider 引継ぎ** (FR-L1-42、context+budget 連携) = `provider-handover.v1` package (`ut-tdd handover provider export/status`) と接続
 - **sprint check の VCS 参照** (TDD trace の git changed-files / review scope): `loadChangedFiles` を `verify recommend`、`review --uncommitted`、doctor `change-impact`、`regression-expansion` が共有する。git log/blame の深掘りは optional evidence enrichment とし、L7 完遂の隠れ carry にしない。
-## Appendix B: DB/Search CLI Contracts (PLAN-L5-08)
+## Appendix B: DB/Search CLI contract（契約、PLAN-L5-08）
 
-| CLI surface | contract | output |
+| CLI surface | contract（契約） | output（出力） |
 |---|---|---|
-| `ut-tdd db status` | Open `.ut-tdd/harness.db`, report schema version, projection freshness, and orphan counts. | JSON/text summary with non-secret metadata only. |
-| `ut-tdd db rebuild` | Rebuild projection DB from docs/state/log digests. | Exit 0 when rebuild is deterministic; exit 1 on unreadable source or schema mismatch. |
-| `ut-tdd find <query>` | Search PLAN/artifact/finding/skill/model/session references through `search_index` and exact ID tables. | Ranked rows: `{subject_type, subject_id, path, reason, evidence_path}`. |
-| `ut-tdd metrics skill` | Read skill recommendation/invocation projections and compute firing/acceptance rates. | Aggregates by layer/drive/plan; no transcript body. |
-| `ut-tdd feedback list` | List feedback events generated from repeated findings and quality signals. | Text output groups open rows into `gate` / `actionable` / telemetry summaries; `--json` returns raw open rows with next_action references. |
-| `ut-tdd audit quality` | Read-only scan for hardcoded values, security risks, and technical debt markers. | Text/JSON summary grouped into `gate` / `actionable` / `telemetry`; default excludes archive, migration, and test fixtures unless explicitly requested. |
-| `ut-tdd branch audit` | Read-only local branch cleanup inventory. | Classifies branches as keep, delete-candidate, or review using current/protected/gone/merged/stale evidence; never deletes branches. |
-| `ut-tdd automation readiness` | Query workflow readiness from `workflow_runs`, gate/doctor projections, and open findings. | Ready/blocked/human-required rows with blocking evidence paths. |
-| `ut-tdd guardrail status` | Query guardrail decisions for agent-guard, review evidence, escalation, and human signoff boundaries. | Decisions by plan/session with mode, policy, and evidence path; no provider transcript body. |
-| `ut-tdd asset catalog` | Query skill/roster/command docs catalog and drift status. | Asset rows with path, asset_type, trigger/capability summary, drift status, and indexed_at. |
+| `ut-tdd db status` | `.ut-tdd/harness.db` を open し、schema version、projection freshness、orphan count を報告する。 | secret を含まない metadata の JSON/text summary のみ。 |
+| `ut-tdd db rebuild` | docs/state/log digest から projection DB を再構築する。 | rebuild が deterministic なら exit 0、source unreadable または schema mismatch なら exit 1。 |
+| `ut-tdd find <query>` | `search_index` と exact ID table から PLAN/artifact/finding/skill/model/session reference を検索する。 | ranked rows: `{subject_type, subject_id, path, reason, evidence_path}`。 |
+| `ut-tdd metrics skill` | skill recommendation/invocation projection を読み、firing/acceptance rate を算出する。 | layer/drive/plan 別 aggregate。transcript body は出さない。 |
+| `ut-tdd feedback list` | repeated finding と quality signal から生成された feedback event を一覧化する。 | text output は open row を `gate` / `actionable` / telemetry summary に grouping する。`--json` は next_action reference 付き raw open rows を返す。 |
+| `ut-tdd audit quality` | hardcoded value、security risk、technical debt marker を read-only scan する。 | Text/JSON summary を `gate` / `actionable` / `telemetry` に group する。明示指定がない限り archive、migration、test fixture は除外する。 |
+| `ut-tdd branch audit` | local branch cleanup inventory を read-only で作成する。 | current/protected/gone/merged/stale evidence により branch を keep、delete-candidate、review に分類する。branch は削除しない。 |
+| `ut-tdd automation readiness` | `workflow_runs`、gate/doctor projection、open finding から workflow readiness を query する。 | blocking evidence path 付き ready/blocked/human-required rows。 |
+| `ut-tdd guardrail status` | agent-guard、review evidence、escalation、human signoff boundary の guardrail decision を query する。 | plan/session 別 decision、mode、policy、evidence path。provider transcript body は出さない。 |
+| `ut-tdd asset catalog` | skill/roster/command docs catalog と drift status を query する。 | path、asset_type、trigger/capability summary、drift status、indexed_at を持つ asset rows。 |
 
-Security contract: these commands must never print provider transcript body, secrets, credentials, or PII. They may print redacted summaries, evidence paths, hashes, IDs, and counts.
+Security contract（安全契約）: これらの command は provider transcript body、secret、credential、PII を出力してはならない。redacted summary、evidence path、hash、ID、count は出力してよい。

@@ -1,4 +1,4 @@
-# UT-TDD GitHub / GHA Audit Framework (PO declared)
+# UT-TDD GitHub / GHA audit framework（PO 宣言）
 
 > **status**: PO declared 2026-05-28。L1 業務要求の入力として `../plans/PLAN-L1-01-business-requirements.md §3.7` で扱う。下流で BR-13〜19 + NFR-11 等として L1 正本に分解する。
 > **役割**: PR/merge 時点の CI 検問 (7-Gate pipeline) の運用要件。V-model のフェーズ進捗ゲート (G0.5〜G14) とは別軸 (PR ごとに発火) で、両者は補完関係。
@@ -146,7 +146,7 @@ required_tests:
 (本文: 概要 / 目的 / フロント仕様 / サービス仕様 / データ仕様 / 非対象 / 更新履歴)
 ```
 
-## 4. Document Gate
+## 4. Document Gate（ドキュメント gate）
 
 Document Gateでは、必要なドキュメントが存在するかを確認する。
 
@@ -214,7 +214,7 @@ Domain Gateでは、ドキュメントの中身を業務概念・責務・境界
 ### 用語: 「応募者」と「候補者」が混在
 ### 責務: CSV整形処理がフロントに漏れている可能性
 ### 境界: 権限管理機能 F-005 への依存を明記する必要あり
-## Decision: TLレビュー必須
+## 決定: TLレビュー必須
 ```
 
 ## 6. テスト駆動実装
@@ -252,7 +252,7 @@ Test Gate 確認項目:
 * テスト pass
 * 失敗テスト無視なし
 
-## 7. Implementation Gate
+## 7. Implementation Gate（実装 gate）
 
 実装が仕様とテストを満たしているかを確認。
 
@@ -316,7 +316,7 @@ src/{features, components, services, lib, types, utils}/
 - main直接push / 仕様外のついで修正 / .env コミット / secrets/credentials 変更 / 認証・権限の無断変更 / DB migration の自動マージ / GHA 設定の無断変更
 ```
 
-## 10. Coding Rule Gate
+## 10. Coding Rule Gate（コーディングルール gate）
 
 Coding Rule Gate で `docs/coding-rules.md` 遵守を確認:
 - 命名規則 / レイヤー責務 / import / エラーハンドリング / 型定義 / テスト配置 / 禁止事項
@@ -363,7 +363,7 @@ PR Gate 確認:
 - rollback-plan 存在
 - 未解決リスクなし
 
-## 13. Merge Gate
+## 13. Merge Gate（マージ gate）
 
 | 判定      | 処理           |
 | ------- | ------------ |

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -1038,6 +1039,103 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       });
     } finally {
       db.close();
+    }
+  });
+
+  it("closes working-tree relation impacts when the owning PLAN has review and green evidence", () => {
+    const repoRoot = join(tmpdir(), `ut-tdd-impact-closure-${randomUUID()}`);
+    mkdirSync(join(repoRoot, "docs", "plans"), { recursive: true });
+    mkdirSync(join(repoRoot, "docs", "design"), { recursive: true });
+    execFileSync("git", ["init"], { cwd: repoRoot, stdio: "ignore" });
+    writeFileSync(
+      join(repoRoot, "docs", "design", "contract.md"),
+      "# Contract\n\n設計本文。\n",
+      "utf8",
+    );
+    writeFileSync(
+      join(repoRoot, "docs", "plans", "PLAN-L7-999-impact-closure.md"),
+      `---
+plan_id: PLAN-L7-999-impact-closure
+title: "PLAN-L7-999: Impact closure fixture"
+kind: impl
+layer: L7
+drive: db
+status: confirmed
+created: 2026-06-30
+updated: 2026-06-30
+generates:
+  - artifact_path: docs/design/contract.md
+    artifact_type: design_doc
+review_evidence:
+  - reviewer: codex-fixture
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-30T00:00:00Z"
+    tests_green_at: "2026-06-30T00:00:00Z"
+    verdict: approve
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\\\fixture.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T00:00:00Z"
+        evidence_path: tests/fixture.test.ts
+        output_digest: "sha256:fixture"
+---
+
+# PLAN-L7-999
+
+Fixture.
+`,
+      "utf8",
+    );
+    const db = openHarnessDb(":memory:");
+    try {
+      const result = rebuildHarnessDb({
+        repoRoot,
+        db,
+        relationGraph: {
+          nodes: [
+            {
+              id: "design:docs/design/contract.md",
+              kind: "design",
+              path: "docs/design/contract.md",
+            },
+          ],
+          edges: [],
+          verificationProfiles: [],
+          findings: [],
+        },
+      });
+      expect(result.ok).toBe(true);
+      const impacts = db
+        .prepare(
+          `SELECT required_action, status, evidence_path
+           FROM impact_results
+           WHERE root_node_id = ?
+           ORDER BY required_action`,
+        )
+        .all("design:docs/design/contract.md") as Array<{
+        required_action: string;
+        status: string;
+        evidence_path: string;
+      }>;
+      expect(impacts.map((row) => [row.required_action, row.status])).toEqual([
+        ["record-trace-freeze-evidence", "closed"],
+        ["update-plan-dod", "closed"],
+      ]);
+      expect(impacts.every((row) => row.evidence_path.includes("PLAN-L7-999"))).toBe(true);
+      const progress = db
+        .prepare(
+          "SELECT color, open_dependency_impacts FROM artifact_progress WHERE artifact_path = ?",
+        )
+        .get("docs/design/contract.md") as
+        | { color: string; open_dependency_impacts: number }
+        | undefined;
+      expect(progress).toMatchObject({ color: "yellow", open_dependency_impacts: 0 });
+    } finally {
+      db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
     }
   });
 

@@ -45,7 +45,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T23:57:00+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:78ce69d4b918cdeff0774af84fea9a6e15d84d8575760d985d0a433c9f638a1e"
+        output_digest: "sha256:0fe467c17fa13c617e69dccb8d31840b144ff35a4a5548b5ac4f4ff83bd6ee31"
 ---
 
 # PLAN-L7-113: PLAN-L7-102 screen implementation errata

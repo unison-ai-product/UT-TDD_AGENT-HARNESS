@@ -42,19 +42,19 @@ test-design doc は作らない)。
 
 ## §6 G10-WORKFLOW
 
-test_strategy: risk-based UX verification tied to L2 screen contracts and L4 FE design standards.
-test_plan: select UXV cases by visual, token, accessibility, visual-regression, and UX-review risk.
-test_conditions: each selected UXV case has a concrete rendered or reviewable evidence path.
-coverage_items: UXV-* coverage is mapped to visual, token, a11y, VRT, and UX review families.
-test_procedures: run the mapped vitest/doctor/render/review commands and capture exit codes.
-execution_evidence: UX evidence manifest records command, UXV IDs, paths, and result.
-exit_criteria: all mandatory selected UXV cases pass or explicit defer exists.
-defect_routing: failed UXV cases route to L10 correction, L2/L4 back-prop, Reverse, or Incident by scope.
+test_strategy: L2 screen contracts と L4 FE design standards に紐づく risk-based UX verification。
+test_plan: visual、token、accessibility、visual-regression、UX-review risk により UXV case を選択する。
+test_conditions: 選択した各 UXV case は具体的な rendered evidence または reviewable evidence path を持つ。
+coverage_items: UXV-* coverage は visual、token、a11y、VRT、UX review family へ map する。
+test_procedures: 対応する vitest/doctor/render/review command を実行し、exit code を記録する。
+execution_evidence: UX evidence manifest は command、UXV ID、path、result を記録する。
+exit_criteria: 必須の選択済み UXV case はすべて pass、または明示的な defer を持つ。
+defect_routing: 失敗した UXV case は scope に応じて L10 correction、L2/L4 back-prop、Reverse、Incident へ route する。
 
-| UXV ID | Given | When | Then |
+| UXV ID | 前提 | 操作 | 期待結果 |
 |---|---|---|---|
-| UXV-VISUAL-01 | L2 wireframe and L4 UI standard exist | G10 visual review is selected | Evidence links the visual decision to a concrete screen/component artifact |
-| UXV-TOKEN-01 | L4 tokens.yaml is the FE token SSoT | G10 token verification is selected | Evidence proves the token contract is reachable from workflow/FE coverage checks |
-| UXV-A11Y-01 | WCAG/a11y expectations exist in L4 UI standard | G10 accessibility verification is selected | Evidence links a11y requirements to executable or reviewable checks |
-| UXV-VRT-01 | visual regression is a required frontend-design green signal | G10 VRT verification is selected | Evidence blocks G10 close without a visual-regression path or explicit defer |
-| UXV-REVIEW-01 | UX polish requires judgement beyond row presence | G10 review is selected | Evidence records the review route and exit criteria before L11 handoff |
+| UXV-VISUAL-01 | L2 wireframe と L4 UI standard が存在する | G10 visual review が選択される | Evidence は visual decision を具体的な screen/component artifact に紐づける |
+| UXV-TOKEN-01 | L4 tokens.yaml が FE token SSoT である | G10 token verification が選択される | Evidence は token contract が workflow/FE coverage checks から到達可能であることを示す |
+| UXV-A11Y-01 | WCAG/a11y expectations が L4 UI standard に存在する | G10 accessibility verification が選択される | Evidence は a11y requirements を executable または reviewable checks に紐づける |
+| UXV-VRT-01 | visual regression が frontend-design の必須 green signal である | G10 VRT verification が選択される | visual-regression path または明示的 defer がなければ Evidence が G10 close を block する |
+| UXV-REVIEW-01 | UX polish は row presence を超える judgement を必要とする | G10 review が選択される | Evidence は L11 handoff 前に review route と exit criteria を記録する |

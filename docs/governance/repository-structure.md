@@ -16,6 +16,7 @@ UT-TDD-agent-harness/
 ├── .codex/                       # Codex CLI project-local config / hooks (trusted project layer)
 │   ├── config.toml               #   enables project-local hooks
 │   └── hooks.json                #   hook adapter (.claude/settings.json guard parity, PLAN-L7-139)
+├── .vscode/                      # editor workspace recommendations/settings (tracked, non-runtime)
 ├── README.md                     # project overview / onboarding entrypoint
 ├── package.json                  # Node/Bun 依存 + scripts
 ├── tsconfig.json                 # TypeScript strict
@@ -118,7 +119,7 @@ UT-TDD-agent-harness/
 - テスト設計: `docs/test-design/<feature>/<...>-test-design.md`
 - ファイル名は英語（日本語ファイル名は Windows 文字化け回避のため禁止）
 
-## 5. tracked / gitignored
+## 5. tracked / gitignored の境界
 
 - **gitignored**: `node_modules/` `dist/` `*.tsbuildinfo` `coverage/` / `.ut-tdd/` runtime state (state/cache/logs/tmp/handover CURRENT.*・*.bak/audit *.jsonl・escalation_state.json、local*) / legacy local state / `__pycache__` / `docs/plans/*.lock` / `CLAUDE.local.md` `AGENTS.override.md` `.claude/settings.local.json` / secret 系 (`.env*` `*.key` `*.pem` `credentials.json`)
 - **tracked**: `src/` `tests/` `docs/` (archive 含む) `scripts/` `package.json` `tsconfig.json` `bun.lock` `vitest.config.ts` `.gitattributes` `.editorconfig` / **監査証跡** `.ut-tdd/audit/*.md` `.ut-tdd/audit/reports/*.md` `.ut-tdd/evidence/` `.ut-tdd/handover/provider/` / **参照資料** `docs/reference/` (PO 決定 2026-06-10 tracked 化 / 2026-06-25 docs/reference へ移設、A-128 F-1 / IMP-127)

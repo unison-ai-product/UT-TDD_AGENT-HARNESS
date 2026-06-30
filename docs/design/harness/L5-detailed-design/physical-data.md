@@ -107,7 +107,7 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 | `context` | object | 任意 | session 引継ぎ |
 | `created` | string(ts) | 必須 | stale 判定基準 |
 
-### §2.6 Evaluation (`audit/*.jsonl`、Phase B)
+### §2.6 評価 (`audit/*.jsonl`、Phase B)
 
 | フィールド | 型 | 必須/任意 | 制約 |
 |---|---|---|---|
@@ -115,40 +115,23 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 | `invocation_log` | array | 任意 | AI 呼び出し記録 (FR-L1-20、append-only) |
 | `scores` | object | 任意 | accuracy_score / kpi (Phase B) |
 
-### §2.7 SQLite projection DB (`harness.db`)
+### §2.7 SQLite projection DB の定義 (`harness.db`)
 
 `harness.db` は legacy DB schema を流用せず、YAML/JSON state と docs を正規化して V-model feedback loop に使う projection DB。Bun runtime では `bun:sqlite` を第一候補とし、Node 互換が必要な adapter のみ `better-sqlite3` を検討する。
 
 | table | primary key | 主な列 | 入力 |
 |---|---|---|---|
 | `plan_registry` | `plan_id` | `kind`, `layer`, `sub_doc`, `drive`, `status`, `parent`, `updated_at`, `decision_outcome`, `source_hash` | `docs/plans/*.md`, `.ut-tdd/plan_registry/*.json` |
-| `artifact_registry` | `artifact_id` | `artifact_type`, `path`, `pair_artifact`, `status`, `updated_at` | docs/test-design, source catalog, trace state |
-| `model_runs` | `run_id` | `runtime`, `model`, `role`, `drive`, `plan_id`, `started_at`, `completed_at`, `evidence_path` | Codex / Claude / worker / reviewer execution evidence |
+| `artifact_registry` | `artifact_id` | `artifact_type`, `path`, `pair_artifact`, `status`, `updated_at` | docs/test-design、source catalog、trace state を入力とする。 |
+| `model_runs` | `run_id` | `runtime`, `model`, `role`, `drive`, `plan_id`, `started_at`, `completed_at`, `evidence_path` | Codex / Claude / worker / reviewer の execution evidence を記録する。 |
 | `trace_edges` | `edge_id` | `from_artifact`, `to_artifact`, `edge_kind`, `plan_id`, `status` | artifact trace state |
-| `coverage` | `coverage_id` | `scope`, `subject_id`, `metric`, `value`, `threshold`, `status` | test coverage / trace coverage / plan coverage |
-| `findings` | `finding_id` | `kind`, `severity`, `subject_id`, `source`, `status`, `evidence_path` | doctor / vmodel lint / review findings |
+| `coverage` | `coverage_id` | `scope`, `subject_id`, `metric`, `value`, `threshold`, `status` | test coverage / trace coverage / plan coverage を保存する。 |
+| `findings` | `finding_id` | `kind`, `severity`, `subject_id`, `source`, `status`, `evidence_path` | doctor / vmodel lint / review findings を保存する。 |
 | `gate_runs` | `gate_run_id` | `gate_id`, `plan_id`, `status`, `checked_at`, `evidence_path` | `.ut-tdd/gate_runs/*.json`, CI evidence |
 
 物理不変条件: `trace_edges` の orphan 0、`coverage.status=fail` の gate fail-close、`findings.status=open` の severity 別 gate 判定、`model_runs.plan_id` と `plan_registry.plan_id` の参照整合を doctor / vmodel lint が検証する。`plan_registry.source_hash` は PLAN markdown 全文の sha256 で、persisted `harness.db` と現在の `docs/plans/*.md` の fingerprint 不一致は `drive-db-registration` hard gate で stale として扱う。projection は自動生成だが、検出対象の機械 SSoT として扱い、入力 state との不一致は `findings` に保存する。
 
-Telemetry provenance invariant (PLAN-L7-188): populated telemetry tables used
-to claim "fired", "used", "executed", or "works" must distinguish runtime
-provenance from deterministic projection. In provenance-enforced mode,
-`skill_invocations`, `test_runs`, `guardrail_decisions`, and `model_runs` fail
-closed when their populated rows are projection-only (`runtime_rows=0` and
-`projection_rows>0`). Default doctor may surface this as a partial migration
-state until runtime capture is wired, but verification-strategy close cannot
-treat projection-only telemetry as substance. Doctor overlays runtime
-Claude/Codex session usage on its in-memory rebuild and projects valued
-`model_runs` rows from JSONL token/cost telemetry; deterministic `db rebuild`
-remains a source projection and does not scan user runtime logs. Session-log
-`forced_stop` events are runtime safety decisions and project into
-`guardrail_decisions` with non-empty `session_id`, `mode=runtime-hook`, and the
-session JSONL as evidence; ordinary `tool_use` events must not fabricate
-guardrail telemetry. Session-log `Bash (skill)` events are runtime skill
-suggestion/use telemetry and project into `skill_invocations` with non-empty
-`session_id` and `source=runtime-hook:skill-suggest`; generic `Bash (bash)`
-events remain ignored so invocation metrics are not fabricated.
+telemetry provenance invariant (PLAN-L7-188): 「fired」「used」「executed」「works」を主張するために使う populated telemetry table は、runtime provenance と deterministic projection を区別する。provenance-enforced mode では、`skill_invocations`、`test_runs`、`guardrail_decisions`、`model_runs` が projection-only row (`runtime_rows=0` かつ `projection_rows>0`) だけで populated されている場合は fail-close する。default doctor は runtime capture 配線まで partial migration state として surface してよいが、verification-strategy close は projection-only telemetry を substance として扱えない。doctor は in-memory rebuild に runtime Claude/Codex session usage を overlay し、JSONL token/cost telemetry から値付き `model_runs` row を project する。deterministic `db rebuild` は source projection のままであり、user runtime log は scan しない。session-log `forced_stop` event は runtime safety decision であり、non-empty `session_id`、`mode=runtime-hook`、session JSONL evidence を持つ `guardrail_decisions` へ project する。通常の `tool_use` event は guardrail telemetry を fabricate してはならない。session-log `Bash (skill)` event は runtime skill suggestion/use telemetry であり、non-empty `session_id` と `source=runtime-hook:skill-suggest` を持つ `skill_invocations` へ project する。generic `Bash (bash)` event は invocation metrics を fabricate しないように ignore する。
 
 ## §3 値オブジェクトの物理表現 + SubDoc zod 化 (IMP-026)
 
@@ -232,32 +215,32 @@ export const VALID_SUB_DOCS = {
 - **`placeholder_deps` + ペア未充足検知** (A-84、PO back-fill 整合保証): Artifact schema に `placeholder_deps: array<{waiting_layer, waiting_spec}>` を追加し、doctor / vmodel lint で「設計 artifact に対の test_design artifact 不在 or `placeholder_deps` 未解消 → fail-close」を実装する。back-fill 完了で解消、V-model 最終整合 (孤児0) を DB 側で機械保証。FR-L1-49 drift lint と同じ IMP-033 rule engine に rule 型として登録。**Current status**: active design/test-design docs の L7 待ち `placeholder_deps` と旧「未実装」記述は `src/lint/placeholder-deps.ts` + doctor hard gate で fail-close 済み。**`waiting_layer` の2類型 (A-85 self-review I-3)**: ① **spec back-fill 型** (`waiting_layer` = 設計層、例 L6) = 対のテスト設計を*書く*のに上位仕様 (関数 signature 等) 確定待ち (例 ST-ASSET-04)。② **実装状態解消型** (`waiting_layer` = L7) = テスト設計は書けているが検証対象の状態が実装/コンテンツ整備で初めて materialize する (例 ST-ASSET-05 skill curate 完了 / ST-ASSET-07 guard→roster 切替)。**2類型認識の機械化 (IMP-107、2026-06-19)**: `src/lint/placeholder-deps.ts` が両類型を構造認識する — 型② (L7) の active doc 残存は **hard-fail** (repo は L7 到達済ゆえ解消されるべき)、型① (L1-L6) は item 単位の正当な carry でありうるため **検出数のみ surface** (band freeze ≠ item spec 確定、false-positive 回避)、未知 `waiting_layer` (L0-L14 外) は typo として hard-fail。**型①の threshold** (= IT-ASSET-07「waiting_layer 到達後の未解消 = failure」) は `descent-obligation` lint の impl-ahead 検査 (defer ledger: impl 未着地=deferred carry / 着地済+未 discharge=unmet 違反) が**正本担当**し重複させない。green message は「L7 waits=0 / spec-backfill waits=N [threshold=descent-obligation]」と coverage を明示し、「green = placeholder_deps 完全 fail-close」の誤読を塞ぐ。oracle U-PHDEPS-001..006。
 - **物理 schema の object 型詳細** (agent_slots/generates/dependencies の入れ子型) は L7 実装時に zod object で確定
 - evaluation_batch (Phase B) の物理 schema は Phase B telemetry 着手時に詳細化
-## §9 Harness DB Reference-Feedback Projection (PLAN-L5-08)
+## §9 Harness DB 参照フィードバック projection (PLAN-L5-08)
 
-PLAN-L5-08 adds the missing L5 slice for the user requirement that SQLite is not just storage, but a reference-feedback mechanism. The DB remains a projection of docs/state/logs, not the authoring source for governance docs.
+PLAN-L5-08 は、SQLite を単なる storage ではなく reference-feedback mechanism とする user requirement に対し、欠けていた L5 slice を追加する。DB は docs/state/logs の projection であり、governance docs の authoring source ではない。
 
-External reinforcement: SQLite FTS5 supports external/contentless index patterns, so `search_index` is specified as rebuildable projection rather than primary content storage. OpenTelemetry semantic conventions support using named events with attributes for logs/traces/metrics correlation. W3C PROV frames provenance around entity/activity/agent, which maps here to artifact/run/agent or skill.
+外部根拠: SQLite FTS5 は external/contentless index pattern を support するため、`search_index` は primary content storage ではなく rebuildable projection として指定する。OpenTelemetry semantic conventions は logs/traces/metrics correlation のために attribute 付き named event を使える。W3C PROV は provenance を entity/activity/agent で捉えるため、ここでは artifact/run/agent または skill に map する。
 
-### §9.1 projection table expansion
+### §9.1 projection table 拡張
 
-| table | primary key | required columns | purpose |
+| table | 主キー | 必須 columns | 目的 |
 |---|---|---|---|
-| `drive_runs` | `drive_run_id` | `plan_id`, `session_id`, `drive`, `mode`, `layer`, `kind`, `started_at`, `completed_at`, `status` | Track every drive/model execution lane, including non-V-model modes. |
-| `hook_events` | `event_id` | `session_id`, `plan_id`, `hook_name`, `event_type`, `occurred_at`, `digest`, `evidence_path` | Join SessionStart/PostToolUse/Stop, gate, and PLAN events into state projection. |
-| `skill_invocations` | `skill_invocation_id` | `session_id`, `plan_id`, `skill_id`, `layer`, `drive`, `fired_at`, `source`, `accepted` | Persist actual skill firing events. |
-| `skill_recommendations` | `skill_recommendation_id` | `session_id`, `plan_id`, `skill_id`, `rank`, `score`, `reason`, `recommended_at` | Persist the denominator for skill firing rate and recommendation quality. |
-| `feedback_events` | `feedback_event_id` | `finding_id`, `plan_id`, `signal_type`, `severity`, `status`, `next_action`, `created_at` | Convert repeated findings and drift into replanning input. |
-| `quality_signals` | `signal_id` | `source`, `subject_id`, `metric`, `value`, `threshold`, `status`, `computed_at` | Store machine-check metrics: orphan count, coverage, stale approval, gate-confirm coupling, schedule lint. |
-| `search_index` | `search_id` | `subject_type`, `subject_id`, `path`, `title`, `tokens`, `summary`, `updated_at` | Reduce lookup cost for PLAN/artifact/finding/skill/model/session queries. |
-| `workflow_runs` | `workflow_run_id` | `plan_id`, `drive_run_id`, `workflow`, `phase`, `ready_status`, `blocked_reason`, `human_required`, `checked_at` | Make workflow automation readiness queryable and data-backed. |
-| `guardrail_decisions` | `guardrail_decision_id` | `plan_id`, `session_id`, `guardrail`, `decision`, `mode`, `human_signoff_required`, `evidence_path`, `decided_at` | Persist safety decisions for agent-guard, review evidence, escalation, and same-model approval checks. |
-| `automation_assets` | `asset_id` | `asset_type`, `path`, `trigger`, `role`, `capability`, `drift_status`, `indexed_at` | Catalog skill/roster/command docs as automation inputs and search subjects. |
+| `drive_runs` | `drive_run_id` | `plan_id`, `session_id`, `drive`, `mode`, `layer`, `kind`, `started_at`, `completed_at`, `status` | V-model 以外の mode を含む drive/model 実行 lane を記録する。 |
+| `hook_events` | `event_id` | `session_id`, `plan_id`, `hook_name`, `event_type`, `occurred_at`, `digest`, `evidence_path` | SessionStart/PostToolUse/Stop、gate、PLAN event を state projection へ結合する。 |
+| `skill_invocations` | `skill_invocation_id` | `session_id`, `plan_id`, `skill_id`, `layer`, `drive`, `fired_at`, `source`, `accepted` | 実際に発火した skill event を永続化する。 |
+| `skill_recommendations` | `skill_recommendation_id` | `session_id`, `plan_id`, `skill_id`, `rank`, `score`, `reason`, `recommended_at` | skill firing rate と recommendation quality の denominator を永続化する。 |
+| `feedback_events` | `feedback_event_id` | `finding_id`, `plan_id`, `signal_type`, `severity`, `status`, `next_action`, `created_at` | 繰り返し finding と drift を replanning input へ変換する。 |
+| `quality_signals` | `signal_id` | `source`, `subject_id`, `metric`, `value`, `threshold`, `status`, `computed_at` | orphan count、coverage、stale approval、gate-confirm coupling、schedule lint などの machine-check metrics を保存する。 |
+| `search_index` | `search_id` | `subject_type`, `subject_id`, `path`, `title`, `tokens`, `summary`, `updated_at` | PLAN/artifact/finding/skill/model/session query の lookup cost を下げる。 |
+| `workflow_runs` | `workflow_run_id` | `plan_id`, `drive_run_id`, `workflow`, `phase`, `ready_status`, `blocked_reason`, `human_required`, `checked_at` | workflow automation readiness を query 可能かつ data-backed にする。 |
+| `guardrail_decisions` | `guardrail_decision_id` | `plan_id`, `session_id`, `guardrail`, `decision`, `mode`, `human_signoff_required`, `evidence_path`, `decided_at` | agent-guard、review evidence、escalation、same-model approval check の safety decision を永続化する。 |
+| `automation_assets` | `asset_id` | `asset_type`, `path`, `trigger`, `role`, `capability`, `drift_status`, `indexed_at` | skill/roster/command docs を automation input と search subject として catalog 化する。 |
 
-Existing tables in §2.7 remain required. New rows must reference existing `plan_registry`, `artifact_registry`, `model_runs`, `findings`, or `gate_runs` when such source IDs exist. Missing join keys become `findings` rows instead of silent skips.
+§2.7 の existing table は引き続き必須とする。source ID が存在する場合、new row は既存の `plan_registry`、`artifact_registry`、`model_runs`、`findings`、`gate_runs` を参照する。join key 欠落は silent skip ではなく `findings` row にする。
 
-### §9.2 skill/model metrics
+### §9.2 skill/model metrics の定義
 
-Skill firing rate is computed from persisted rows, not from chat memory:
+skill firing rate は chat memory ではなく persisted row から計算する。
 
 - `skill_firing_rate = count(skill_invocations where fired) / count(skill_recommendations)`
 - `skill_acceptance_rate = count(skill_invocations where accepted=true) / count(skill_invocations)`
@@ -265,11 +248,11 @@ Skill firing rate is computed from persisted rows, not from chat memory:
 - `automation_readiness = workflow_runs.ready_status + open findings by plan/workflow + guardrail_decisions.decision`
 - `guardrail_block_rate = count(guardrail_decisions where decision=block) / count(guardrail_decisions)`
 
-The DB stores IDs, reasons, scores, and redacted summaries only. Raw provider transcript, secret, credential, and PII are out of scope.
+DB が保存するのは ID、reason、score、redacted summary のみにする。raw provider transcript、secret、credential、PII は scope 外とする。
 
-### §9.3 indexes and invariants
+### §9.3 index と invariant
 
-Required indexes:
+必須 index:
 
 - `idx_plan_layer_drive_status(plan_id, layer, drive, status)`
 - `idx_trace_from_to(from_artifact, to_artifact)`
@@ -278,78 +261,78 @@ Required indexes:
 - `idx_skill_plan_skill(plan_id, skill_id, fired_at)`
 - `idx_search_subject(subject_type, subject_id)`
 
-Invariants:
+不変条件:
 
-- Every `drive_runs`, `hook_events`, `skill_*`, `feedback_events`, and `quality_signals` row has `plan_id` or `session_id`.
-- Every `workflow_runs`, `guardrail_decisions`, and `automation_assets` row has either a source path or evidence path, and non-ready automation never appears as ready without a closing finding.
-- Every non-green lint/doctor/vmodel/gate result is representable as `findings` plus optional `quality_signals`.
-- `search_index` is rebuildable from docs/state/logs and can be deleted/rebuilt without changing authoritative state.
+- すべての `drive_runs`、`hook_events`、`skill_*`、`feedback_events`、`quality_signals` row は `plan_id` または `session_id` を持つ。
+- すべての `workflow_runs`、`guardrail_decisions`、`automation_assets` row は source path または evidence path のいずれかを持ち、non-ready automation は closing finding なしに ready として現れない。
+- すべての non-green lint/doctor/vmodel/gate result は `findings` と optional `quality_signals` で表現できる。
+- `search_index` は docs/state/logs から rebuild 可能であり、authoritative state を変更せず delete/rebuild できる。
 
-### §9.4 UT evidence history projection (A-122 / IMP-109)
+### §9.4 UT evidence history projection の定義 (A-122 / IMP-109)
 
-Phase 2 close review found that the DB design can already project workflow, guardrail, skill, and quality signals, but it cannot yet answer UT-specific feedback questions. Add the following projection tables before Phase 4 DB implementation starts. They remain derived data; the authoring sources are test files, PLAN artifacts, vitest/Bun output, CI logs, and `.ut-tdd/` evidence.
+Phase 2 close review では、DB design が workflow、guardrail、skill、quality signal を既に project できる一方で、UT-specific feedback question にはまだ答えられないことが判明した。Phase 4 DB implementation 開始前に、以下の projection table を追加する。これらは derived data のままであり、authoring source は test file、PLAN artifact、vitest/Bun output、CI log、`.ut-tdd/` evidence とする。
 
-| table | primary key | required columns | purpose |
+| table | 主キー | 必須 columns | 目的 |
 |---|---|---|---|
-| `test_cases` | `test_case_id` | `test_file`, `test_name`, `oracle_id`, `plan_id`, `fr_id`, `artifact_id`, `kind`, `first_seen_at`, `last_seen_at` | Make each UT oracle queryable by PLAN/FR/artifact. |
-| `test_runs` | `test_run_id` | `session_id`, `plan_id`, `command`, `runner`, `runtime`, `os`, `shell`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `output_digest`, `green_definition_id` | Record one executed quantitative test command, especially Bun/vitest/doctor/lint runs. `review_evidence.green_commands[]` is the frontmatter source for PLAN-local green command projection. |
-| `test_results` | `test_result_id` | `test_run_id`, `test_case_id`, `status`, `duration_ms`, `failure_digest`, `started_at`, `completed_at` | Track pass/fail/skip/todo by case and run. |
-| `test_artifact_edges` | `edge_id` | `test_case_id`, `artifact_id`, `edge_kind`, `plan_id`, `source_path` | Join test evidence back to V-model trace without overloading `trace_edges`. |
-| `test_flake_events` | `flake_event_id` | `test_case_id`, `window`, `pass_count`, `fail_count`, `flake_score`, `computed_at`, `evidence_path` | Surface unstable tests and duration regressions as quality signals. |
+| `test_cases` | `test_case_id` | `test_file`, `test_name`, `oracle_id`, `plan_id`, `fr_id`, `artifact_id`, `kind`, `first_seen_at`, `last_seen_at` | 各 UT oracle を PLAN/FR/artifact で query 可能にする。 |
+| `test_runs` | `test_run_id` | `session_id`, `plan_id`, `command`, `runner`, `runtime`, `os`, `shell`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `output_digest`, `green_definition_id` | 実行済みの定量 test command を 1 run として記録する。主対象は Bun/vitest/doctor/lint run である。`review_evidence.green_commands[]` は PLAN-local green command projection の frontmatter source とする。 |
+| `test_results` | `test_result_id` | `test_run_id`, `test_case_id`, `status`, `duration_ms`, `failure_digest`, `started_at`, `completed_at` | case と run ごとの pass/fail/skip/todo を追跡する。 |
+| `test_artifact_edges` | `edge_id` | `test_case_id`, `artifact_id`, `edge_kind`, `plan_id`, `source_path` | `trace_edges` を過負荷にせず、test evidence を V-model trace へ戻す。 |
+| `test_flake_events` | `flake_event_id` | `test_case_id`, `window`, `pass_count`, `fail_count`, `flake_score`, `computed_at`, `evidence_path` | 不安定 test と duration regression を quality signal として surface する。 |
 
-Required UT-derived metrics:
+必須 UT-derived metrics:
 
-- `ut_oracle_coverage = count(test_cases where oracle_id is not null) / expected U-* oracle count by plan`.
-- `ut_plan_green_rate = count(test_runs where plan_id=X and exit_code=0) / count(test_runs where plan_id=X)`.
-- `ut_flake_score` is computed from alternating pass/fail history and stored in `test_flake_events`; non-zero score creates a `quality_signals` row.
-- `green_definition_compliance = every test_runs.green_definition_id resolves and every required command in that definition has exit_code=0`.
-- `review_green_command_compliance = every 2026-06-23-or-later confirmed/completed review_evidence entry has at least one projected test_runs row with exit_code=0, evidence_path, and output_digest`.
+- `ut_oracle_coverage = count(test_cases where oracle_id is not null) / expected U-* oracle count by plan`。
+- `ut_plan_green_rate = count(test_runs where plan_id=X and exit_code=0) / count(test_runs where plan_id=X)`。
+- `ut_flake_score` は alternating pass/fail history から計算し、`test_flake_events` に保存する。non-zero score は `quality_signals` row を作る。
+- `green_definition_compliance = every test_runs.green_definition_id resolves and every required command in that definition has exit_code=0`。
+- `review_green_command_compliance = every 2026-06-23-or-later confirmed/completed review_evidence entry has at least one projected test_runs row with exit_code=0, evidence_path, and output_digest`。
 
-Current implementation note (2026-06-29): `projectReviewEvidenceRegistry` projects `review_evidence.green_commands[]` into `test_runs` during deterministic harness.db rebuild with empty `session_id` (projection-only evidence). `projectHookEvents` additionally derives runtime-provenance `test_runs` rows from session-log `tool_use` events when the sanitized Bash target is a recognized verification verb (`vitest`, `test`, `tsc`, `doctor`, `lint`, or `eslint`) and preserves the non-empty `session_id` plus the session JSONL `evidence_path`. General UT runner ingestion, flake history, and duration regression projection remain separate IMP-109 scope.
+現在の実装注記 (2026-06-29): `projectReviewEvidenceRegistry` は deterministic harness.db rebuild 中に `review_evidence.green_commands[]` を empty `session_id` の `test_runs` へ project する (projection-only evidence)。さらに `projectHookEvents` は、sanitized Bash target が recognized verification verb (`vitest`、`test`、`tsc`、`doctor`、`lint`、`eslint`) の場合、session-log `tool_use` event から runtime-provenance `test_runs` row を derive し、non-empty `session_id` と session JSONL `evidence_path` を保持する。general UT runner ingestion、flake history、duration regression projection は別の IMP-109 scope に残す。
 
-Implementation constraints:
+実装制約:
 
-- Bun is the default execution runtime. The collector reads Bun/vitest JSON output when available and falls back to command/evidence digests when individual case data is unavailable.
-- DB writes use `bun:sqlite` in the core runtime. External adapters may use a compatibility layer only if they preserve the same schema and rebuild semantics.
-- Raw provider transcripts, secrets, and PII are never inserted. `failure_digest` is a bounded digest with redaction applied before persistence.
-- A missing `plan_id`, unresolved `oracle_id`, or green definition mismatch becomes a `findings` row; it is not silently dropped.
+- Bun を default execution runtime とする。collector は利用可能な場合 Bun/vitest JSON output を読み、individual case data が利用できない場合は command/evidence digest へ fallback する。
+- DB write は core runtime で `bun:sqlite` を使う。external adapter は同じ schema と rebuild semantics を維持する場合だけ compatibility layer を使ってよい。
+- raw provider transcript、secret、PII は挿入しない。`failure_digest` は persistence 前に redaction を適用した bounded digest とする。
+- missing `plan_id`、unresolved `oracle_id`、green definition mismatch は silent drop ではなく `findings` row にする。
 
-### §9.5 Cross-artifact relation graph and diagram projection (A-124 / IMP-118..120)
+### §9.5 cross-artifact relation graph と diagram projection (A-124 / IMP-118..120)
 
-The DB must make cross-cutting impact analysis queryable. The authoring sources remain docs, source files, test files, PLAN frontmatter, audit records, logs, and state files. The relation graph is a rebuildable projection that lets the harness answer: "if this changed, what else must be reviewed, fixed, tested, or redrawn?"
+DB は cross-cutting impact analysis を query 可能にしなければならない。authoring sources は docs、source files、test files、PLAN frontmatter、audit records、logs、state files のままとする。relation graph は rebuildable projection であり、「これが変わった場合、他に何を review / fix / test / redraw すべきか」に harness が答えられるようにする。
 
-| table | primary key | required columns | purpose |
+| table | 主キー | 必須 columns | 目的 |
 |---|---|---|---|
-| `graph_nodes` | `node_id` | `node_type`, `subject_id`, `section_id` (nullable), `path`, `name`, `layer`, `kind`, `status`, `source`, `indexed_at` | Normalize source files, modules, docs, PLANs, FR/AC/AT IDs, DB tables, tests, findings, and diagrams into graph nodes. `section_id` keeps doc-internal section granularity so impact expansion does not collapse section-level changes into whole-doc nodes (A-128 F-3 / IMP-129①). |
-| `dependency_edges` | `edge_id` | `from_node_id`, `to_node_id`, `edge_kind`, `strength`, `source`, `evidence_path`, `is_expected`, `is_actual`, `indexed_at` | Store import/reference/test/projection/implementation edges and distinguish design-declared expected edges from observed actual edges. |
-| `impact_rules` | `impact_rule_id` | `trigger_edge_kind`, `trigger_node_type`, `required_node_type`, `required_action`, `severity`, `gate`, `enabled` | Convert relation edges into required co-change, review, test, Reverse, or diagram-refresh actions. |
-| `impact_results` | `impact_result_id` | `change_set_id`, `root_node_id`, `impacted_node_id`, `required_action`, `status`, `reason`, `evidence_path`, `computed_at` | Persist one computed impact expansion for a diff/session/PLAN. |
-| `artifact_progress` | `artifact_path` | `artifact_type`, `artifact_hash`, `state`, `color`, `linked_test_ids`, `linked_test_paths`, `linked_test_count`, `passed_test_run_ids`, `passed_test_run_count`, `dependency_checked`, `dependency_check_run_id`, `dependency_checked_at`, `dependency_check_source`, `open_dependency_impacts`, `recovery_plan_ids`, `reason`, `indexed_at` | Persist rebuildable artifact progress color rows: red for unchecked/open dependency impact, yellow for implemented but unverified or recovery, green for artifacts with linked passing test runs. |
-| `artifact_progress_events` | `artifact_progress_event_id` | `artifact_path`, `artifact_type`, `previous_color`, `color`, `state`, `trigger`, `test_run_ids`, `dependency_check_run_id`, `recovery_plan_ids`, `reason`, `occurred_at` | Rebuildable event view for workflow triggers derived from artifact progress rows. |
-| `tool_runs` | `tool_run_id` | `tool_name`, `tool_version`, `command`, `input_scope`, `exit_code`, `started_at`, `completed_at`, `evidence_path` | Record optional adapter runs such as dependency-cruiser, Knip, Madge, Graphviz, Mermaid, or D2. |
-| `diagram_artifacts` | `diagram_id` | `graph_snapshot_id`, `format`, `path`, `renderer`, `scope`, `created_at`, `evidence_path` | Store generated Mermaid/DOT/D2/SVG/PNG diagram outputs as traceable artifacts. |
-| `graph_snapshots` | `graph_snapshot_id` | `scope`, `node_count`, `edge_count`, `hash`, `created_at`, `source_digest` | Make diagrams and impact results reproducible from a stable graph snapshot. |
+| `graph_nodes` | `node_id` | `node_type`, `subject_id`, `section_id` (nullable), `path`, `name`, `layer`, `kind`, `status`, `source`, `indexed_at` | source file、module、docs、PLAN、FR/AC/AT ID、DB table、test、finding、diagram を graph node に正規化する。`section_id` は doc 内 section granularity を保ち、impact expansion が section-level change を whole-doc node に潰さないようにする (A-128 F-3 / IMP-129①)。 |
+| `dependency_edges` | `edge_id` | `from_node_id`, `to_node_id`, `edge_kind`, `strength`, `source`, `evidence_path`, `is_expected`, `is_actual`, `indexed_at` | import/reference/test/projection/implementation edge を保存し、design-declared expected edge と observed actual edge を区別する。 |
+| `impact_rules` | `impact_rule_id` | `trigger_edge_kind`, `trigger_node_type`, `required_node_type`, `required_action`, `severity`, `gate`, `enabled` | relation edge を required co-change、review、test、Reverse、diagram-refresh action へ変換する。 |
+| `impact_results` | `impact_result_id` | `change_set_id`, `root_node_id`, `impacted_node_id`, `required_action`, `status`, `reason`, `evidence_path`, `computed_at` | diff/session/PLAN ごとに算出した impact expansion を 1 件として永続化する。 |
+| `artifact_progress` | `artifact_path` | `artifact_type`, `artifact_hash`, `state`, `color`, `linked_test_ids`, `linked_test_paths`, `linked_test_count`, `passed_test_run_ids`, `passed_test_run_count`, `dependency_checked`, `dependency_check_run_id`, `dependency_checked_at`, `dependency_check_source`, `open_dependency_impacts`, `recovery_plan_ids`, `reason`, `indexed_at` | rebuildable な artifact progress color row を永続化する。未検査/open dependency impact は red、実装済みだが未検証または recovery 中は yellow、passing test run に link した artifact は green とする。 |
+| `artifact_progress_events` | `artifact_progress_event_id` | `artifact_path`, `artifact_type`, `previous_color`, `color`, `state`, `trigger`, `test_run_ids`, `dependency_check_run_id`, `recovery_plan_ids`, `reason`, `occurred_at` | artifact progress row から派生した workflow trigger 用の rebuildable event view。 |
+| `tool_runs` | `tool_run_id` | `tool_name`, `tool_version`, `command`, `input_scope`, `exit_code`, `started_at`, `completed_at`, `evidence_path` | dependency-cruiser、Knip、Madge、Graphviz、Mermaid、D2 など optional adapter run を記録する。 |
+| `diagram_artifacts` | `diagram_id` | `graph_snapshot_id`, `format`, `path`, `renderer`, `scope`, `created_at`, `evidence_path` | generated Mermaid/DOT/D2/SVG/PNG diagram output を traceable artifact として保存する。 |
+| `graph_snapshots` | `graph_snapshot_id` | `scope`, `node_count`, `edge_count`, `hash`, `created_at`, `source_digest` | diagram と impact result を stable graph snapshot から再現可能にする。 |
 
-Required edge kinds:
+必須 edge kind:
 
-- `imports`: TS/JS import relation.
-- `references`: Markdown/YAML/JSON path or ID reference.
-- `declares_module`: design artifact declares a source module/building block.
-- `implements`: source module implements a PLAN/FR/artifact.
-- `tests`: test case/file exercises a source module, artifact, FR, or oracle.
-- `projects_to`: source doc/state/log projects into a DB table.
-- `visualizes`: diagram artifact visualizes a graph snapshot or scope.
+- `imports`: TS/JS import relation。
+- `references`: Markdown/YAML/JSON path または ID reference。
+- `declares_module`: design artifact が source module/building block を declare する。
+- `implements`: source module が PLAN/FR/artifact を implement する。
+- `tests`: test case/file が source module、artifact、FR、oracle を exercise する。
+- `projects_to`: source doc/state/log が DB table へ project する。
+- `visualizes`: diagram artifact が graph snapshot または scope を visualize する。
 
 `artifact_progress` color semantics (FR-L1-51 / PLAN-L7-56 / PLAN-REVERSE-56):
 
-- `red`: `dependency_checked = 0`, `open_dependency_impacts > 0`, or the changed artifact has missing required design/requirement/test back-propagation according to impact expansion. This includes "implementation exists but L1/L3/L4/L5 registration is missing".
-- `yellow`: implementation or recovery work exists, but linked test evidence is absent or no linked passing `test_runs` row exists. New artifacts enter the projection as yellow until dependency and test-run evidence are available.
-- `green`: `passed_test_run_count > 0`, `passed_test_run_ids` identify the passing `test_runs` rows, `dependency_checked = 1`, and `open_dependency_impacts = 0`.
-- `dependency_check_run_id` / `dependency_checked_at` record the relation-impact check that justified the dependency state. `dependency_checked=1` is not inferred from "no rows" alone.
-- `recovery_plan_ids` records active recovery/fullback/refactor PLANs that are returning red/yellow artifacts to green. Active recovery changes red impact rows to yellow recovering rows; closure still requires green test-run evidence and clean dependency impact.
-- `feedback_events.source_table/source_id/source_color` records red/yellow `artifact_progress` rows as workflow trigger inputs so recovery/reverse/refactor work can be started from DB state instead of prose handover.
+- `red`: `dependency_checked = 0`、`open_dependency_impacts > 0`、または changed artifact が impact expansion 上の required design/requirement/test back-propagation を欠く状態。これには「implementation は存在するが L1/L3/L4/L5 registration が欠落する」を含む。
+- `yellow`: implementation または recovery work は存在するが、linked test evidence がない、または linked passing `test_runs` row がない状態。new artifact は dependency と test-run evidence が利用可能になるまで yellow として projection に入る。
+- `green`: `passed_test_run_count > 0`、`passed_test_run_ids` が passing `test_runs` row を特定する、`dependency_checked = 1`、`open_dependency_impacts = 0` を満たす状態。
+- `dependency_check_run_id` / `dependency_checked_at` は dependency state を正当化した relation-impact check を記録する。`dependency_checked=1` は「row がない」ことだけから infer しない。
+- `recovery_plan_ids` は red/yellow artifact を green に戻す active recovery/fullback/refactor PLAN を記録する。active recovery は red impact row を yellow recovering row に変えるが、closure には green test-run evidence と clean dependency impact が必要である。
+- `feedback_events.source_table/source_id/source_color` は red/yellow `artifact_progress` row を workflow trigger input として記録し、recovery/reverse/refactor work を prose handover ではなく DB state から開始できるようにする。
 
-Required indexes:
+必須 index:
 
 - `idx_graph_node_type_subject(node_type, subject_id)`.
 - `idx_graph_path(path)`.
@@ -363,43 +346,43 @@ Required indexes:
 - `idx_tool_name_scope(tool_name, input_scope)`.
 - `idx_diagram_scope_format(scope, format)`.
 
-Invariants:
+不変条件:
 
-- Every edge references existing `graph_nodes`.
-- Every non-local source change must either produce an `impact_results` row or a `findings` row explaining why impact expansion could not run.
-- Expected-vs-actual mismatches become `findings` rows; they are not silently repaired.
-- Diagram artifacts are derived from `graph_snapshots`; deleting diagrams does not delete graph state.
-- External tool output is normalized before gate use. Tool-specific JSON/DOT/Mermaid/D2 output is evidence, not the gate source of truth.
+- すべての edge は既存の `graph_nodes` を参照する。
+- すべての non-local source change は、`impact_results` row か impact expansion を実行できなかった理由を示す `findings` row のいずれかを生成する。
+- expected-vs-actual mismatch は `findings` row になり、silent repair しない。
+- diagram artifact は `graph_snapshots` から派生する。diagram を delete しても graph state は delete しない。
+- external tool output は gate 利用前に正規化する。tool-specific JSON/DOT/Mermaid/D2 output は evidence であり、gate source of truth ではない。
 
-Tool adapter profile:
+tool adapter profile:
 
-- Core parser: TypeScript/Bun AST and Markdown/YAML scanners. This is the default SSoT path.
-- Optional dependency rule/graph: `dependency-cruiser`.
-- Optional unused dependency/export/file detector: `knip`.
-- Optional circular graph helper: `madge`.
-- Optional renderers: Graphviz DOT for large SVG/PDF/PNG, Mermaid for GitHub-readable Markdown diagrams, D2 for presentation-quality architecture diagrams.
+- core parser: TypeScript/Bun AST と Markdown/YAML scanner。これを default SSoT path とする。
+- optional dependency rule/graph は `dependency-cruiser` とする。
+- optional unused dependency/export/file detector は `knip` とする。
+- optional circular graph helper は `madge` とする。
+- optional renderer: large SVG/PDF/PNG には Graphviz DOT、GitHub-readable Markdown diagram には Mermaid、presentation-quality architecture diagram には D2 を使う。
 
-Initial impact rules:
+初期 impact rule:
 
-- A changed `src/**` node requires related design artifact, test/test-design artifact, and reverse dependencies to be reviewed.
-- A changed design/test-design doc requires paired V-model artifact and trace edge review.
-- A changed DB projection table requires its `projects_to` source docs/state/logs and dependent quality/impact queries to be reviewed.
-- A changed relation graph snapshot requires diagram artifacts in the same scope to be refreshed or marked stale.
+- changed `src/**` node は、related design artifact、test/test-design artifact、reverse dependencies の review を要求する。
+- changed design/test-design doc は、paired V-model artifact と trace edge review を要求する。
+- changed DB projection table は、対応する `projects_to` source docs/state/logs と dependent quality/impact query の review を要求する。
+- changed relation graph snapshot は、同じ scope の diagram artifact refresh または stale marking を要求する。
 
-### §9.6 MCP and external verification profile projection (A-125 / IMP-121..124)
+### §9.6 MCP と external verification profile projection (A-125 / IMP-121..124)
 
-A-125 extends the relation graph with externally installed MCP servers, plugins, and test foundations. These are not authoring sources. They are environment-dependent verification profiles whose discovery, probe result, invocation, and normalized findings must be queryable.
+A-125 は relation graph を externally installed MCP servers、plugins、test foundations へ拡張する。これらは authoring source ではない。environment-dependent verification profiles として、discovery、probe result、invocation、normalized findings を query 可能にしなければならない。
 
-| table | primary key | required columns | purpose |
+| table | 主キー | 必須 columns | 目的 |
 |---|---|---|---|
-| `mcp_server_profiles` | `mcp_profile_id` | `name`, `package_ref`, `source_url`, `transport`, `command`, `args_digest`, `allowed_tools`, `read_only`, `requires_network`, `requires_docker`, `requires_auth`, `risk_tier`, `enabled`, `source`, `indexed_at` | Catalog allowed MCP profiles such as Playwright, GitHub read-only, filesystem-workspace, git-workspace, fetch, sqlite, and Docker MCP gateway profiles. |
-| `mcp_profile_triggers` | `trigger_id` | `mcp_profile_id`, `signal`, `workflow`, `layer`, `gate`, `reason`, `enabled` | Map workflow signals to profile recommendations without relying on agent memory. |
-| `mcp_server_runs` | `mcp_run_id` | `mcp_profile_id`, `session_id`, `plan_id`, `command`, `method`, `tool_name`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `normalized_status` | Persist MCP Inspector, profile probe, and allowed MCP tool invocations. |
-| `verification_profiles` | `verification_profile_id` | `name`, `profile_type`, `package_refs`, `requires_docker`, `requires_browser`, `requires_network`, `green_definition_id`, `trigger_signals`, `enabled` | Catalog external test foundations such as Vitest browser + Playwright, Testcontainers, and MSW. |
-| `verification_recommendations` | `verification_recommendation_id` | `change_set_id`, `plan_id`, `profile_id`, `profile_kind`, `reason`, `source_rule`, `accepted`, `created_at` | Store which MCP/test profiles relation-graph impact expansion recommended for a change. |
-| `external_tool_findings` | `external_finding_id` | `source_run_id`, `source_kind`, `finding_type`, `severity`, `subject_id`, `path`, `status`, `digest`, `created_at` | Normalize MCP, browser, container, and mock/test profile output into gate-queryable findings. |
+| `mcp_server_profiles` | `mcp_profile_id` | `name`, `package_ref`, `source_url`, `transport`, `command`, `args_digest`, `allowed_tools`, `read_only`, `requires_network`, `requires_docker`, `requires_auth`, `risk_tier`, `enabled`, `source`, `indexed_at` | Playwright、GitHub read-only、filesystem-workspace、git-workspace、fetch、sqlite、Docker MCP gateway などの allowed MCP profile を catalog 化する。 |
+| `mcp_profile_triggers` | `trigger_id` | `mcp_profile_id`, `signal`, `workflow`, `layer`, `gate`, `reason`, `enabled` | agent memory に依存せず、workflow signal を profile recommendation へ map する。 |
+| `mcp_server_runs` | `mcp_run_id` | `mcp_profile_id`, `session_id`, `plan_id`, `command`, `method`, `tool_name`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `normalized_status` | MCP Inspector、profile probe、allowed MCP tool invocation を永続化する。 |
+| `verification_profiles` | `verification_profile_id` | `name`, `profile_type`, `package_refs`, `requires_docker`, `requires_browser`, `requires_network`, `green_definition_id`, `trigger_signals`, `enabled` | Vitest browser + Playwright、Testcontainers、MSW などの external test foundation を catalog 化する。 |
+| `verification_recommendations` | `verification_recommendation_id` | `change_set_id`, `plan_id`, `profile_id`, `profile_kind`, `reason`, `source_rule`, `accepted`, `created_at` | relation-graph impact expansion が change に対して推奨した MCP/test profile を保存する。 |
+| `external_tool_findings` | `external_finding_id` | `source_run_id`, `source_kind`, `finding_type`, `severity`, `subject_id`, `path`, `status`, `digest`, `created_at` | MCP、browser、container、mock/test profile output を gate-queryable finding へ正規化する。 |
 
-Required indexes:
+必須 index:
 
 - `idx_mcp_profile_name(name)`.
 - `idx_mcp_triggers_signal(signal, workflow, gate)`.
@@ -408,36 +391,36 @@ Required indexes:
 - `idx_verification_recommendations_change(change_set_id, profile_kind, accepted)`.
 - `idx_external_tool_findings_subject(subject_id, status, severity)`.
 
-Invariants:
+不変条件:
 
-- Every enabled MCP profile has an allow-list and an explicit `risk_tier`.
-- Profiles with `requires_auth=true` cannot be enabled by repo-tracked config alone.
-- Workspace filesystem/git profiles must scope mounts or repository paths to the workspace root.
-- Browser and Docker profiles may be recommended without being available; absence becomes a `findings` row, not a silent pass.
-- `mcp_server_runs` and `verification_recommendations` join to `tool_runs` (§9.5) or `test_runs` (§9.4) when an external command actually ran (cross-section reference made explicit, A-128 F-3 / IMP-129⑤).
-- Gate decisions use normalized profile/run/finding rows. Raw MCP output, screenshots, traces, and logs remain bounded evidence artifacts.
+- enabled MCP profile はすべて allow-list と explicit `risk_tier` を持つ。
+- `requires_auth=true` の profile は repo-tracked config だけでは enable できない。
+- workspace filesystem/git profile は mount または repository path を workspace root に scope しなければならない。
+- browser と Docker profile は利用不能でも recommendation され得る。absence は silent pass ではなく `findings` row にする。
+- external command が実際に走った場合、`mcp_server_runs` と `verification_recommendations` は `tool_runs` (§9.5) または `test_runs` (§9.4) に join する (cross-section reference made explicit, A-128 F-3 / IMP-129⑤)。
+- gate decision は normalized profile/run/finding row を使う。raw MCP output、screenshot、trace、log は bounded evidence artifact に留める。
 
-Initial trigger rules:
+初期 trigger rule:
 
-- `ui_flow`, `web_target`, `browser_regression` -> recommend `playwright-mcp` and `vitest-browser-playwright`.
-- `ci_failure`, `pr_review`, `backlog_sync` -> recommend `github-mcp-readonly`; write-capable GitHub profiles require human approval.
-- `db_integration`, `migration`, `service_contract` -> recommend `testcontainers-node` plus DB projection review.
-- `api_mock_gap`, `flaky_external_api` -> recommend `msw`.
-- `mcp_server_added`, `mcp_profile_changed` -> require MCP Inspector `tools/list` smoke before accept.
+- `ui_flow`, `web_target`, `browser_regression` -> `playwright-mcp` と `vitest-browser-playwright` を推奨する。
+- `ci_failure`, `pr_review`, `backlog_sync` -> `github-mcp-readonly` を推奨する。write-capable GitHub profile は human approval を要求する。
+- `db_integration`, `migration`, `service_contract` -> `testcontainers-node` と DB projection review を推奨する。
+- `api_mock_gap`, `flaky_external_api` -> `msw` を推奨する。
+- `mcp_server_added`, `mcp_profile_changed` -> accept 前に MCP Inspector `tools/list` smoke を要求する。
 
-### §9.7 Canonical document export projection (A-126 / IMP-126)
+### §9.7 canonical document export projection の定義 (A-126 / IMP-126)
 
-A-126 adds generated spreadsheet / Excel / PPTX conversions for canonical UT-TDD documents. These outputs are not authoring sources. They are derived from concept/planning docs, requirements, detailed design, PLAN, ADR, test-design, trace rows, and normalized evidence links.
+A-126 は canonical UT-TDD document に対する generated spreadsheet / Excel / PPTX conversion を追加する。これらの output は authoring source ではない。concept/planning docs、requirements、detailed design、PLAN、ADR、test-design、trace rows、normalized evidence links から派生する。
 
-| table | primary key | required columns | purpose |
+| table | 主キー | 必須 columns | 目的 |
 |---|---|---|---|
-| `document_export_profiles` | `document_export_profile_id` | `name`, `source_doc_family`, `format`, `renderer`, `package_ref`, `source_url`, `built_in`, `requires_package`, `requires_d2`, `enabled`, `risk_tier`, `trigger_signals` | Catalog CSV, Markdown summary, XLSX, PPTX, and D2-PPTX export profiles for canonical document families. |
-| `document_export_runs` | `document_export_run_id` | `profile_id`, `session_id`, `plan_id`, `source_doc_family`, `source_paths_digest`, `source_snapshot_hash`, `redaction_profile`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `normalized_status` | Record one document conversion attempt and the source snapshot used to build it. |
-| `document_export_datasets` | `document_export_dataset_id` | `export_run_id`, `dataset_kind`, `row_count`, `column_digest`, `source_paths`, `source_section_digest`, `created_at`, `hash` | Persist the pre-render document matrix/deck dataset summary so renderer output can be reproduced or audited. |
-| `document_export_artifacts` | `document_export_artifact_id` | `export_run_id`, `format`, `path`, `renderer`, `byte_size`, `hash`, `created_at`, `evidence_path`, `stale_status` | Store generated CSV/Markdown/XLSX/PPTX artifact metadata as traceable document conversion evidence. |
-| `document_export_triggers` | `trigger_id` | `document_export_profile_id`, `signal`, `workflow`, `layer`, `gate`, `reason`, `enabled` | Map export trigger signals (requirements §6.8.11, including `document_export_profile_changed`) to export profile recommendations, symmetric to `mcp_profile_triggers` (A-128 F-3 / IMP-129④). |
+| `document_export_profiles` | `document_export_profile_id` | `name`, `source_doc_family`, `format`, `renderer`, `package_ref`, `source_url`, `built_in`, `requires_package`, `requires_d2`, `enabled`, `risk_tier`, `trigger_signals` | canonical document family 向けの CSV、Markdown summary、XLSX、PPTX、D2-PPTX export profile を catalog 化する。 |
+| `document_export_runs` | `document_export_run_id` | `profile_id`, `session_id`, `plan_id`, `source_doc_family`, `source_paths_digest`, `source_snapshot_hash`, `redaction_profile`, `started_at`, `completed_at`, `exit_code`, `evidence_path`, `normalized_status` | document conversion attempt と、その build に使った source snapshot を 1 件として記録する。 |
+| `document_export_datasets` | `document_export_dataset_id` | `export_run_id`, `dataset_kind`, `row_count`, `column_digest`, `source_paths`, `source_section_digest`, `created_at`, `hash` | renderer output を reproduce / audit できるよう、render 前の document matrix/deck dataset summary を永続化する。 |
+| `document_export_artifacts` | `document_export_artifact_id` | `export_run_id`, `format`, `path`, `renderer`, `byte_size`, `hash`, `created_at`, `evidence_path`, `stale_status` | generated CSV/Markdown/XLSX/PPTX artifact metadata を traceable document conversion evidence として保存する。 |
+| `document_export_triggers` | `trigger_id` | `document_export_profile_id`, `signal`, `workflow`, `layer`, `gate`, `reason`, `enabled` | export trigger signal (requirements §6.8.11、`document_export_profile_changed` を含む) を export profile recommendation へ map する。これは `mcp_profile_triggers` と対称である (A-128 F-3 / IMP-129④)。 |
 
-Required indexes:
+必須 index:
 
 - `idx_document_export_profile_family(source_doc_family, format, enabled)`.
 - `idx_document_export_run_family(source_doc_family, plan_id)`.
@@ -445,41 +428,41 @@ Required indexes:
 - `idx_document_export_artifact_format(format, stale_status)`.
 - `idx_document_export_triggers_signal(signal, workflow, gate)`.
 
-Invariants:
+不変条件:
 
-- Every export artifact references a `document_export_run`.
-- Every export run has source document paths, a source snapshot hash, and redaction profile.
-- Built-in CSV / Markdown table exports are available without external packages.
-- XLSX / PPTX / D2-PPTX profiles are disabled until renderer readiness is proven; missing renderer availability becomes a finding.
-- Export datasets preserve source section IDs, FR/AC/AT IDs, PLAN IDs, ADR IDs, trace IDs, status fields, and evidence links where present.
-- Export datasets are redacted before rendering. Raw provider transcripts, credentials, secrets, PII, raw MCP payloads, screenshots, and browser traces are not stored in export rows.
-- Generated files are evidence only. Canonical Markdown/docs remain source of truth.
+- export artifact はすべて `document_export_run` を参照する。
+- export run は source document paths、source snapshot hash、redaction profile を持つ。
+- built-in CSV / Markdown table export は external package なしで利用可能とする。
+- XLSX / PPTX / D2-PPTX profile は renderer readiness が証明されるまで disabled とする。renderer availability 欠落は finding にする。
+- export dataset は、存在する source section ID、FR/AC/AT ID、PLAN ID、ADR ID、trace ID、status field、evidence link を保持する。
+- export dataset は rendering 前に redact する。raw provider transcript、credential、secret、PII、raw MCP payload、screenshot、browser trace は export row に保存しない。
+- generated file は evidence に限る。canonical Markdown/docs は source of truth のままとする。
 
-Initial export profiles:
+初期 export profile:
 
-- `doc-csv-matrix`: requirements, design, PLAN, ADR, trace, and test-design matrix rows.
-- `doc-markdown-summary`: GitHub-readable conversion summary with source links.
-- `doc-xlsx-workbook`: multi-sheet workbook via ExcelJS or SheetJS optional renderer.
-- `doc-pptx-deck`: concept/requirements/design/ADR/PLAN/test-design deck via PptxGenJS optional renderer.
-- `doc-d2-pptx-diagram`: graph/architecture/workflow diagram deck output via D2 optional renderer.
+- `doc-csv-matrix`: requirements、design、PLAN、ADR、trace、test-design の matrix rows。
+- `doc-markdown-summary`: source links 付きの GitHub-readable conversion summary。
+- `doc-xlsx-workbook`: ExcelJS または SheetJS optional renderer による multi-sheet workbook。
+- `doc-pptx-deck`: PptxGenJS optional renderer による concept/requirements/design/ADR/PLAN/test-design deck。
+- `doc-d2-pptx-diagram`: D2 optional renderer による graph/architecture/workflow diagram deck output。
 
-### §9.8 Screen entity and FR/BR→screen trace projection (IMP-140)
+### §9.8 screen entity と FR/BR→screen trace projection (IMP-140)
 
-IMP-140: the 15 screens (PM/HM/GD) and their FR/BR→screen trace lived only in the `screen-list.md` / `screen-requirements.md` doc source and were not in harness.db. This projection makes HM-04 (DB browse), HM-01 (feature-list → screen-requirement), and PM-06 (design-doc viewer) DB-driven instead of doc-only. Screens are not-implemented (NFR-08, src/web is Phase B).
+IMP-140: 15 screens (PM/HM/GD) と FR/BR→screen trace は `screen-list.md` / `screen-requirements.md` doc source のみに存在し、harness.db には存在しなかった。この projection により、HM-04 (DB browse)、HM-01 (feature-list → screen-requirement)、PM-06 (design-doc viewer) は doc-only ではなく DB-driven になる。screens は not-implemented とする (NFR-08、src/web は Phase B)。
 
-| table | primary key | required columns | purpose |
+| table | 主キー | 必須 columns | 目的 |
 |---|---|---|---|
 | `screens` | `screen_id` | `name`, `category`, `url`, `l1_ref`, `status`, `implemented`, `indexed_at` | 15 screens projected from `screen-list.md` §1 (画面 ID / 名 / カテゴリ / URL / L1 参照). `implemented=0` / `status=not-implemented` (NFR-08). |
-| `screen_trace` | `screen_trace_id` | `screen_id`, `requirement_id`, `requirement_kind`, `relation`, `source` | FR/BR/UX → screen reverse-trace edges projected from `screen-requirements.md` §5.5. `requirement_kind` ∈ {fr, br, ux}. Powers HM-01 feature-list → screen-requirement navigation from the DB. |
+| `screen_trace` | `screen_trace_id` | `screen_id`, `requirement_id`, `requirement_kind`, `relation`, `source` | `screen-requirements.md` §5.5 から FR/BR/UX → screen reverse-trace edge を project する。`requirement_kind` ∈ {fr, br, ux}。HM-01 feature-list → screen-requirement navigation を DB から支える。 |
 
-Required indexes:
+必須 index:
 
 - `idx_screens_category(category, screen_id)`.
 - `idx_screen_trace_screen(screen_id, requirement_kind)`.
 
-Invariants:
+不変条件:
 
-- `screens` row count equals the screen-requirements §1 declared count (15 = PM 6 + HM 8 + GD 1); the `doc-consistency` gate counts the same doc source.
-- Every `screen_trace.screen_id` references a `screens.screen_id` (no orphan trace edge).
-- `screens.implemented=0` until src/web (Phase B); flipping requires NFR-08 implementation-truthfulness evidence.
-- Source of truth remains the docs; this projection is a derived read model rebuilt deterministically by `ut-tdd db rebuild` (no separate authoring surface).
+- `screens` row count は screen-requirements §1 の declared count (15 = PM 6 + HM 8 + GD 1) と一致する。`doc-consistency` gate も同じ doc source を数える。
+- すべての `screen_trace.screen_id` は `screens.screen_id` を参照する (orphan trace edge なし)。
+- `screens.implemented=0` は src/web (Phase B) まで維持する。反転には NFR-08 implementation-truthfulness evidence を要求する。
+- source of truth は docs のままとする。この projection は `ut-tdd db rebuild` で deterministic に rebuild される derived read model であり、別の authoring surface ではない。

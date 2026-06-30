@@ -195,31 +195,61 @@ function textReference(text: string): string {
   return `text:${slug || "task"}`;
 }
 
+/** L/駆動が空でも索引可能な category (skill-index.md §2.1)。skill-assignment と同一集合。 */
+const SITUATION_CATEGORIES = new Set<string>(["domain", "project"]);
+
+function tokenize(value: string): string[] {
+  return value
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 3);
+}
+
+/**
+ * ctx 由来 token と asset メタデータ token の重なり数に比例する graduated score (0..0.2)。
+ * skill ごとに trigger/domain_tags/capability が異なるため score が分散し、score=1 飽和と
+ * 同点アルファベット順退化を解消する (DISCOVERY-03 §5 実測限界 → skill-index.md §4 de-saturate)。
+ * 決定論: Set の重なり数のみに依存し iteration 順に非依存。
+ */
+function metadataOverlap(ctx: SkillScoringContext, asset: Record<string, unknown>): number {
+  const assetTokens = new Set(
+    tokenize(
+      [asset.trigger, asset.capability, asset.skill_type, asset.role, asset.category]
+        .map((value) => String(value ?? ""))
+        .join(" "),
+    ),
+  );
+  const ctxTokens = new Set(
+    tokenize([ctx.drive, ctx.kind, ctx.workflowMode, ctx.reference].join(" ")),
+  );
+  let matches = 0;
+  for (const token of ctxTokens) {
+    if (assetTokens.has(token)) matches += 1;
+  }
+  return Math.min(0.2, matches * 0.05);
+}
+
 function scoreSkill(ctx: SkillScoringContext, asset: Record<string, unknown>): number {
-  const text = [
-    asset.asset_id,
-    asset.path,
-    asset.trigger,
-    asset.role,
-    asset.capability,
-    asset.skill_type,
-    asset.applies_layers,
-    asset.applies_drive_models,
-  ]
-    .join(" ")
-    .toLowerCase();
   const appliesLayers = String(asset.applies_layers ?? "")
     .split(",")
     .filter(Boolean);
   const appliesDriveModels = String(asset.applies_drive_models ?? "")
     .split(",")
     .filter(Boolean);
-  let score = 0.2;
-  if (ctx.layer && appliesLayers.includes(ctx.layer)) score += 0.35;
-  if (appliesDriveModels.includes(ctx.workflowMode)) score += 0.35;
-  if (ctx.drive && text.includes(ctx.drive.toLowerCase())) score += 0.1;
-  if (/review|checklist|quality|test|lint/.test(text)) score += 0.25;
-  if (/skill/.test(String(asset.asset_type ?? ""))) score += 0.1;
+  const category = String(asset.category ?? "").trim();
+  const reviewText = [asset.skill_type, asset.trigger, asset.capability, asset.role]
+    .map((value) => String(value ?? ""))
+    .join(" ")
+    .toLowerCase();
+  const overlap = metadataOverlap(ctx, asset); // graduated メタデータ軸 (de-saturator)
+  let score = 0.15;
+  if (ctx.layer && appliesLayers.includes(ctx.layer)) score += 0.3; // L 軸
+  if (appliesDriveModels.includes(ctx.workflowMode)) score += 0.3; // 駆動軸
+  score += overlap;
+  if (/review|checklist|quality|test|lint/.test(reviewText)) score += 0.05;
+  // domain/project skill は L 軸/駆動軸が 0 点ゆえ、task が domain_tags/industry に一致したとき
+  // (overlap>0) に situation-pull で浮上させる (skill-index.md §4 の「シチュエーションで引く」経路)。
+  if (SITUATION_CATEGORIES.has(category) && overlap > 0) score += 0.1;
   return Math.min(1, Number(score.toFixed(2)));
 }
 

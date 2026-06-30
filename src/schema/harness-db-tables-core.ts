@@ -382,6 +382,7 @@ export const HARNESS_DB_CORE_TABLES: TableDef[] = [
       col("role"),
       col("capability"),
       col("skill_type"),
+      col("category"),
       col("applies_layers"),
       col("applies_drive_models"),
       col("drift_status"),

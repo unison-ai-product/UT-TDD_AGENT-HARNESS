@@ -58,7 +58,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T18:23:38+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:78ce69d4b918cdeff0774af84fea9a6e15d84d8575760d985d0a433c9f638a1e"
+        output_digest: "sha256:0fe467c17fa13c617e69dccb8d31840b144ff35a4a5548b5ac4f4ff83bd6ee31"
       - kind: unit_test
         command: "bun run vitest run tests\\cli.test.ts tests\\agent-guard.test.ts"
         runner: bun
@@ -74,7 +74,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T18:43:35+09:00"
         evidence_path: tests/agent-guard.test.ts
-        output_digest: "sha256:61ccce881ae834d258758e47f85a4af20a731feeb73811fa5a019c55fca59443"
+        output_digest: "sha256:d63d4b93fa5ff137ea1dd3b44177af15915c7274fa4d84d2b2b2fc99c0d71f7c"
       - kind: unit_test
         command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -90,7 +90,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T18:23:31+09:00"
         evidence_path: tests/agent-guard.test.ts
-        output_digest: "sha256:61ccce881ae834d258758e47f85a4af20a731feeb73811fa5a019c55fca59443"
+        output_digest: "sha256:d63d4b93fa5ff137ea1dd3b44177af15915c7274fa4d84d2b2b2fc99c0d71f7c"
       - kind: unit_test
         command: "bun run vitest run tests\\agent-guard.test.ts tests\\workflow-contracts.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -98,7 +98,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T18:23:31+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:2517ed3ae8331803d1ecd330ee6e6a483be111b5cb43b5701343032949725561"
+        output_digest: "sha256:b8e59b160eeed05c1a8c88438fe0cc5c2d7114fe812e9d1ae5a479b440248c9d"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -114,7 +114,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T18:24:02+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:4c1aefc85b519c354e44cf89b6830c8222ceb88365dccd2d07a8f2b862480537"
+        output_digest: "sha256:350ada3bdc25f12571f5e4c4e9aa77eb7ab2b869fdb83f0a337a59b67da6cc0e"
 ---
 
 # PLAN-L7-158: refactor detector precision and policy extraction

@@ -12,9 +12,10 @@ import {
   readdirSync,
   readFileSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { Command } from "commander";
 import { parse as parseYaml } from "yaml";
 import {
@@ -136,6 +137,7 @@ import {
   recommendSkillsForText,
   recordSkillRecommendations,
 } from "./skills/recommend";
+import { type SkillCategory, scaffoldSkill } from "./skills/scaffold";
 import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index";
 import { harnessDbStatus } from "./state-db/maintenance";
 import { migrate } from "./state-db/migration";
@@ -1390,6 +1392,72 @@ skill
       } finally {
         db.close();
       }
+    },
+  );
+
+skill
+  .command("new")
+  .description("scaffold a skill.v1 pack (skill-index.md §2; workflow/domain/project)")
+  .requiredOption("--name <slug>", "skill name (slugified)")
+  .option("--category <category>", "workflow | domain | project", "workflow")
+  .option("--skill-type <type>", "finer sub-type (default = category)")
+  .option("--layers <list>", "comma-separated layers (workflow)")
+  .option("--drive-models <list>", "comma-separated drive models (workflow)")
+  .option("--domain-tags <list>", "comma-separated domain tags (domain)")
+  .option("--industry <name>", "industry/project tag (project)")
+  .option("--description <text>", "one-line trigger/description")
+  .option("--force", "overwrite an existing file on name collision")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      name: string;
+      category: string;
+      skillType?: string;
+      layers?: string;
+      driveModels?: string;
+      domainTags?: string;
+      industry?: string;
+      description?: string;
+      force?: boolean;
+      json?: boolean;
+    }) => {
+      const repoRoot = process.cwd();
+      const splitList = (value?: string): string[] =>
+        (value ?? "")
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean);
+      const result = scaffoldSkill(
+        {
+          name: opts.name,
+          category: opts.category as SkillCategory,
+          skillType: opts.skillType,
+          layers: splitList(opts.layers),
+          driveModels: splitList(opts.driveModels),
+          domainTags: splitList(opts.domainTags),
+          industry: opts.industry,
+          description: opts.description,
+        },
+        { exists: (rel) => existsSync(join(repoRoot, rel)) },
+      );
+      const collision = result.findings.some((f) => f.startsWith("name-collision"));
+      const otherFindings = result.findings.filter((f) => !f.startsWith("name-collision"));
+      // 衝突以外の finding (unknown-category / not-indexable 等) では決して書かない (fail-close)。
+      const writable = otherFindings.length === 0 && (!collision || Boolean(opts.force));
+      let written = false;
+      if (writable) {
+        const absolute = join(repoRoot, result.path);
+        mkdirSync(dirname(absolute), { recursive: true });
+        writeFileSync(absolute, result.content, "utf8");
+        written = true;
+      }
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify({ ...result, written }, null, 2)}\n`);
+      } else {
+        process.stdout.write(`${written ? "wrote" : "skipped"} ${result.path}\n`);
+        for (const finding of result.findings) process.stdout.write(`  finding: ${finding}\n`);
+      }
+      if (!written) process.exitCode = 1;
     },
   );
 

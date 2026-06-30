@@ -15,6 +15,7 @@ const FAMILIES: Record<string, ResolvedFamily> = {
   "refactor-scout": "haiku",
   "pdm-tech-innovation": "opus",
   "code-reviewer": "sonnet",
+  "ut-tdd-tl": "sonnet",
 };
 const legacyRuntimeCommand = `${["he", "lix"].join("")} codex`;
 
@@ -125,6 +126,9 @@ describe("evaluateAgentGuard", () => {
     ).toBe(0);
     expect(
       evaluateAgentGuard(agent({ subagent_type: "refactor-scout", model: "haiku" }), ctx()).code,
+    ).toBe(0);
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "ut-tdd-tl", model: "sonnet" }), ctx()).code,
     ).toBe(0);
   });
 

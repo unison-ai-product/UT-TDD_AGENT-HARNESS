@@ -47,7 +47,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T22:55:00+09:00"
         evidence_path: tests/doctor.test.ts
-        output_digest: "sha256:33020f27b413367999c48d68f94939c589551ff71e0f600606c1bd0471f927b5"
+        output_digest: "sha256:38c828573c69c9456aa714bd88c2197ead8fbad2827547f909bccf2c610c8d0a"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -55,7 +55,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T22:55:00+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:a42059bcf23f1730c26a408c981b084ca87517a650feb46bdd06ca066c7b7517"
+        output_digest: "sha256:ac43ef4e9baf529ccf18d5973145108919c89da4805fd1147a7ba669f00165af"
 ---
 
 # PLAN-L7-194 (impl): green-command-digest を hard gate へ昇格

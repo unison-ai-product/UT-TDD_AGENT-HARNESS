@@ -1,4 +1,4 @@
-# forward-convergence legacy debt audit (PLAN-DISCOVERY-08 Step5)
+# forward-convergence legacy debt audit の記録 (PLAN-DISCOVERY-08 Step5)
 
 forward-convergence 不変条件 ([[project_forward_convergence_invariant]]) を fail-close 化した時点で**既に存在していた**
 未集約 landed impl の監査台帳。gate (`src/lint/forward-convergence.ts`) は **NEW 違反のみ fail-close** し、本台帳に

@@ -5,7 +5,7 @@
 - **Deciders**: PM (Opus) + PO (ユーザー)
 - **関連**: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` / `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` / archived source cutover notes
 
-## Context
+## 背景
 
 UT-TDD Agent Harness の実体実装に着手するにあたり、2 つの基盤判断が必要になった。
 
@@ -18,7 +18,7 @@ UT-TDD Agent Harness の実体実装に着手するにあたり、2 つの基盤
 - governance 2 マスト原則 (concept §2.1.0): ① ルール同一性 (Claude/Codex が同一 core を呼び同一判定) ② hybrid 機能分散。
 - 流用ゼロのクリーン rebuild 前提のため、「既存 Python ロジックの port」優位は消える。
 
-## Decision
+## 決定
 
 > **決定の更新 (2026-06-08, [ADR-007](ADR-007-harness-db-sqlite-projection.md))**: 本 ADR は当初 state を file-based (YAML/JSON) とし SQLite を「必要時 `better-sqlite3`」として deferral していた。その後 PLAN-L5-08 / A-105 で `.ut-tdd/harness.db` を **SQLite projection / フィードバック機構 (設計の柱3)** として採用 (deferral 解除)。本文 §1/§3・技術スタック表は ADR-007 の決定を反映済み (legacy DB schema 流用却下は不変)。決定史は ADR-007 を正本とする。
 
@@ -38,7 +38,7 @@ UT-TDD Agent Harness の実体実装に着手するにあたり、2 つの基盤
 | 配布 | 開発 `tsx`、VPS へは **`bun build --compile` で単一バイナリ** 1 ファイル投下 |
 | 入口 | 薄い `ut-tdd.ps1` / `ut-tdd` が compiled core を呼ぶ (core に bash 不使用) |
 
-## Rationale (言語選定)
+## 判断理由 (言語選定)
 
 TypeScript と Python の技術差は本ツール (型付きルール/検証/ルーティングエンジン + CLI + 外部エージェント起動の orchestrator) において **僅差**と評価。流用ゼロのクリーン rebuild では Python の port 優位が無いため、判断軸ごとの傾きで決定した:
 
@@ -48,7 +48,7 @@ TypeScript と Python の技術差は本ツール (型付きルール/検証/ル
 - **戦略的 diversification**: 保守者 (PO) の常用は Python。UT-TDD は CLI + schema + subprocess 中心で奇をてらわず、**TS 学習の題材として適切**。Python に寄り切らず agent-coding ツール領域の主要言語を実プロジェクトで押さえる狙い。
 - **技術ペナルティ無し**: 上記により言語選択による技術的不利は無い。
 
-## Alternatives considered
+## 検討した代替案
 
 | 案 | 判定 | 理由 |
 |----|------|------|
@@ -56,7 +56,7 @@ TypeScript と Python の技術差は本ツール (型付きルール/検証/ル
 | Python で実装 | **不採用 (僅差)** | port 優位が消えた状態では、市場/エコシステム整合 (MCP/Claude Code 圏) と単一バイナリ配布で TS が上回る。保守者の Python フルエンシーは利点だが、戦略的 diversification と ecosystem fit を優先。**チーム保守が Python 一択化する等あれば再評価** |
 | Go 等 | 却下 | エコシステム不整合 (MCP/Claude Code 圏から外れる) |
 
-## Consequences
+## 結果
 
 - (+) `ut-tdd` TS core が**単一ルール正本**となり、Claude (`.claude/CLAUDE.md` + hook) / Codex (`AGENTS.md`) が同一 core を呼ぶ → concept §2.1.0 ルール同一性を満たす。
 - (+) bash を core から排除 → Windows/Linux 同一動作 (環境差異最小)。
@@ -71,7 +71,7 @@ TypeScript と Python の技術差は本ツール (型付きルール/検証/ル
 2. **core エンジン実装** (TS): `route` / `gate` / `vmodel` / `detect` / `plan lint` / `status` (runtime 検出: binary + probe + env)。zod schema を先に固める。
 3. **runtime adapter + コマンド呼び方整備**: Claude subagent 起動 / Codex 呼び出しを adapter に隔離し、core は正規化 intent (reviewer/worker を呼べ) のみ発行。
 
-## Follow-ups
+## 後続対応
 
 - 着手前に **tl-advisor (Codex、別 runtime) の adversarial cross-check** を実施する (governance §設計提案 / 本 repo は Codex CLI 検出済み)。
 - 本 ADR は source cutover notes の「drive runtime 置換は最後」方針を、UT-TDD 独自実装 (TS) として具体化する。

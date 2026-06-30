@@ -131,42 +131,42 @@ requirements §2.3 の ②実装↔④テスト 双方向 trace edge のうち *
 - 外部操作 (adapter 経由) の DbC = if-detail (PLAN-L5-04、IMP-018 の how 側を本 doc と分担)
 - **G5 freeze**: 本 doc の DbC (pre/post/invariant + edge docstring 形式) を G5 で凍結 (document-system-map §3)
 
-## Appendix A: L5 internal asset D-API back-fill (PLAN-L5-06 / PLAN-L5-07)
+## Appendix A: L5 内部資産 D-API back-fill (PLAN-L5-06 / PLAN-L5-07)
 
-### A.1 skill operations
+### A.1 skill 操作
 
-PLAN-L5-06 adds the following D-API contracts to the L5 internal-processing scope:
+PLAN-L5-06 は、次の D-API contract を L5 internal-processing scope へ追加する。
 
-| operation | processing flow | DbC summary |
+| 操作 | 処理フロー | DbC 要約 |
 |---|---|---|
-| `skill catalog` | scan `docs/skills/**/*.md` -> parse skill metadata -> build in-memory catalog -> return sorted catalog entries | pre: skills directory is readable or explicitly absent; post: no persistent state is written; invariant: layer-1 skill source docs are never rewritten by catalog loading |
-| `skill recommend` | load catalog -> normalize task/layer/drive context -> score candidates -> return deterministic ranked list | pre: catalog entries are parsed; post: ranking is deterministic for identical inputs; invariant: recommender has no provider/runtime side effect |
-| `skill inject` | consume recommendation set -> build layer-scoped injection list -> hand off to provider adapter intent | pre: selected skills resolve to existing docs; post: injection set contains paths + reasons, not copied skill bodies; invariant: ADR-004 layer-1/layer-2 boundary remains intact |
+| `skill catalog` | `docs/skills/**/*.md` を scan -> skill metadata を parse -> in-memory catalog を構築 -> sort 済み catalog entries を返す | pre: skills directory は readable または明示的に absent。post: persistent state は書かない。invariant: catalog loading は layer-1 skill source docs を rewrite しない |
+| `skill recommend` | catalog を load -> task/layer/drive context を normalize -> candidates を score -> deterministic ranked list を返す | pre: catalog entries は parse 済み。post: 同一入力の ranking は deterministic。invariant: recommender は provider/runtime side effect を持たない |
+| `skill inject` | recommendation set を consume -> layer-scoped injection list を作成 -> provider adapter intent へ hand off | pre: selected skills は existing docs に解決される。post: injection set は paths + reasons を含み、skill bodies は copy しない。invariant: ADR-004 layer-1/layer-2 boundary を維持する |
 
-Function-level scoring, tie-breaks, and injector schemas are L6 carry; provider prompt materialization is L7.
+Function-level scoring、tie-break、injector schema は L6 carry とする。provider prompt materialization は L7 で扱う。
 
-### A.2 asset-drift operations
+### A.2 asset-drift 操作
 
-PLAN-L5-07 adds the following D-API contracts to the L5 internal-processing scope:
+PLAN-L5-07 は、次の D-API contract を L5 internal-processing scope へ追加する。
 
-| operation | processing flow | DbC summary |
+| 操作 | 処理フロー | DbC 要約 |
 |---|---|---|
-| `asset drift check` | load enrolled asset docs -> run `asset-drift` rule predicates -> aggregate violations -> surface doctor/gate result | pre: rule registry contains `asset-drift`; post: unresolved drift produces non-green validation result; invariant: this rule does not replace dependency-drift |
-| `asset enroll` | scan `.claude/agents/*.md` and `docs/skills/**/*.md` -> normalize asset IDs -> produce registry input for rule execution | pre: scan roots are known; post: absent optional roots become empty sets with evidence, not silent success; invariant: scanner follows the `loadX -> analyzeX` lint pattern |
-| `placeholder gap check` | read placeholder dependency markers -> compare waiting layer and materialization state -> report unresolved gaps | pre: artifact metadata is readable; post: unresolved placeholder dependencies remain visible until the waiting layer is reached; invariant: gap visibility is fail-close, not manual memory |
+| `asset drift check` | enrolled asset docs を load -> `asset-drift` rule predicates を run -> violations を aggregate -> doctor/gate result として surface | pre: rule registry は `asset-drift` を含む。post: unresolved drift は non-green validation result を生む。invariant: この rule は dependency-drift を置き換えない |
+| `asset enroll` | `.claude/agents/*.md` と `docs/skills/**/*.md` を scan -> asset IDs を normalize -> rule execution 用 registry input を生成 | pre: scan roots は既知。post: optional root が absent の場合は evidence 付き empty set とし、silent success にしない。invariant: scanner は `loadX -> analyzeX` lint pattern に従う |
+| `placeholder gap check` | placeholder dependency markers を read -> waiting layer と materialization state を compare -> unresolved gaps を report | pre: artifact metadata は readable。post: waiting layer 到達まで unresolved placeholder dependencies は visible。invariant: gap visibility は fail-close であり manual memory にしない |
 
-Predicate signatures and regex details are L6 carry; rule-engine wiring is L7.
-## Appendix B: Harness DB Feedback D-API (PLAN-L5-08)
+Predicate signature と regex detail は L6 carry とする。rule-engine wiring は L7 で扱う。
+## Appendix B: Harness DB feedback D-API 機能 (PLAN-L5-08)
 
-| operation | processing flow | DbC summary |
+| 操作 | 処理フロー | DbC 要約 |
 |---|---|---|
-| `recordProjectionEvent` | receive normalized PLAN/artifact/gate/hook/model/skill/finding event -> validate IDs -> upsert projection row -> return row reference | pre: event has `plan_id` or `session_id`; post: row is queryable by ID; invariant: projection write never rewrites source docs |
-| `rebuildHarnessDb` | scan docs/state/log digests -> truncate projection tables -> replay normalized records -> recompute search index and quality signals | pre: repo root is known and DB path is under `.ut-tdd/`; post: rebuild is deterministic; invariant: no secret/raw transcript is copied |
-| `computeSkillMetrics` | read `skill_recommendations` + `skill_invocations` -> compute firing and acceptance rates by layer/drive/plan | pre: recommendation rows exist or denominator is explicit zero; post: rates are stored as `quality_signals`; invariant: missing logs become findings, not fabricated success |
-| `findReference` | parse query -> search `search_index` + direct ID tables -> return ranked references with path, ID, reason, evidence | pre: DB exists or rebuild is requested; post: result includes source table and evidence path; invariant: search is read-only |
-| `emitFeedbackEvents` | read open findings/quality signals -> group by pattern -> create feedback event and suggested next action | pre: findings are normalized; post: repeated gaps are visible as feedback events; invariant: automatic event creation does not auto-approve PLAN changes |
-| `evaluateAutomationReadiness` | read workflow/gate/doctor/CI projections -> classify each plan/workflow as ready, blocked, or human-required | pre: workflow and gate IDs are known; post: readiness row references blocking evidence; invariant: missing evidence cannot produce ready |
-| `recordGuardrailDecision` | receive normalized guardrail decision -> verify escalation/human boundary -> store decision and evidence path | pre: guardrail name and decision are known; post: block/allow/human-required is queryable; invariant: human-required cannot be downgraded by DB projection |
-| `catalogAutomationAssets` | scan skill/roster/command docs -> extract metadata -> record automation assets and drift status -> update search index | pre: source path is under approved docs/.claude roots; post: catalog rows have path and asset_type; invariant: prompt bodies and secrets are not copied |
+| `recordProjectionEvent` | normalized PLAN/artifact/gate/hook/model/skill/finding event を receive -> IDs を validate -> projection row を upsert -> row reference を返す | pre: event は `plan_id` または `session_id` を持つ。post: row は ID で queryable。invariant: projection write は source docs を rewrite しない |
+| `rebuildHarnessDb` | docs/state/log digests を scan -> projection tables を truncate -> normalized records を replay -> search index と quality signals を recompute | pre: repo root は既知で DB path は `.ut-tdd/` 配下。post: rebuild は deterministic。invariant: secret/raw transcript は copy しない |
+| `computeSkillMetrics` | `skill_recommendations` + `skill_invocations` を read -> layer/drive/plan 別の firing rate と acceptance rate を compute | pre: recommendation rows が存在する、または denominator は明示的 zero。post: rates は `quality_signals` に保存される。invariant: missing logs は findings とし、success を fabricate しない |
+| `findReference` | query を parse -> `search_index` + direct ID tables を search -> path、ID、reason、evidence 付き ranked references を返す | pre: DB が存在する、または rebuild が requested。post: result は source table と evidence path を含む。invariant: search は read-only |
+| `emitFeedbackEvents` | open findings/quality signals を read -> pattern ごとに group -> feedback event と suggested next action を作成 | pre: findings は normalized。post: repeated gaps は feedback events として visible。invariant: automatic event creation は PLAN changes を auto-approve しない |
+| `evaluateAutomationReadiness` | workflow/gate/doctor/CI projections を read -> 各 plan/workflow を ready、blocked、human-required に classify | pre: workflow と gate IDs は既知。post: readiness row は blocking evidence を参照する。invariant: missing evidence は ready を生成できない |
+| `recordGuardrailDecision` | normalized guardrail decision を receive -> escalation/human boundary を verify -> decision と evidence path を store | pre: guardrail name と decision は既知。post: block/allow/human-required は queryable。invariant: human-required は DB projection で downgrade できない |
+| `catalogAutomationAssets` | skill/roster/command docs を scan -> metadata を extract -> automation assets と drift status を record -> search index を update | pre: source path は approved docs/.claude roots 配下。post: catalog rows は path と asset_type を持つ。invariant: prompt bodies と secrets は copy しない |
 
-Failure policy: corrupt DB, migration mismatch, or projection orphan is a doctor finding. For commands whose purpose is validation, unresolved projection errors are fail-close; for passive logging hooks, the hook is fail-open but records a minimal failure event when possible.
+Failure policy: corrupt DB、migration mismatch、projection orphan は doctor finding とする。validation 目的の command では unresolved projection errors は fail-close とし、passive logging hook では hook は fail-open だが可能な限り minimal failure event を記録する。

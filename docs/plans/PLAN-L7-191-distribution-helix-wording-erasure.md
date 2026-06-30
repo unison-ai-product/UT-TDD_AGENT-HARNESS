@@ -67,7 +67,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T10:57:19+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:2517ed3ae8331803d1ecd330ee6e6a483be111b5cb43b5701343032949725561"
+        output_digest: "sha256:b8e59b160eeed05c1a8c88438fe0cc5c2d7114fe812e9d1ae5a479b440248c9d"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -91,7 +91,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T10:58:00+09:00"
         evidence_path: docs/governance/README.md
-        output_digest: "sha256:a945d37e36fba61bea1da3f122cb78153bfbd95e833473585d0d4565920ebcee"
+        output_digest: "sha256:2714e0ffd09470610e2bd55861d03012b3ed213dcbd7d9d0ac50576bb747572b"
       - kind: smoke
         command: "bun -e \"buildCleanDistributionPlan smoke: artifactCount=421, denylistViolations=[], legacy-name hits=[]\""
         runner: bun
@@ -99,7 +99,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T10:58:00+09:00"
         evidence_path: docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
-        output_digest: "sha256:483886c326955bda5957b992b8333eb98f12a27ed94370eb5d5c17f7dacb0bf6"
+        output_digest: "sha256:7a60fa3ff043ce0de969aae2dcafb4d59fd3adce0dce71864c35a87c48d40cec"
       - kind: smoke
         command: "bun -e \"buildCleanDistributionPlan smoke: artifactCount=421, denylistViolations=[], legacy-name hits=[]\""
         runner: bun
@@ -107,7 +107,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T10:58:00+09:00"
         evidence_path: docs/adr/ADR-005-distribution-model-and-central-ui.md
-        output_digest: "sha256:cd560306cd770fcc3ad24a0421d85282ab5076245f73fcda3fc5a4879b05799a"
+        output_digest: "sha256:1a2394432a0353ebfb84cd5ff74dee413b3583c9809f604c1a8bcda49f7c9321"
 ---
 
 # PLAN-L7-191: clean distribution wording and dogfood governance curation

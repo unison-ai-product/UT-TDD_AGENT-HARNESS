@@ -61,7 +61,7 @@ Phase B のサーバー同期 (PGlite + ElectricSQL 候補) は L3/L4 forward ca
 
 UT-TDD では `.ut-tdd/` 配下に以下の二層構造でデータを保持する (FR-L1-06 参照):
 
-### core tables (plan / artifact / pair / gate / phase)
+### core tables の定義 (plan / artifact / pair / gate / phase)
 
 | state | 内容 | 対応 CLI |
 |-------|------|---------|
@@ -74,7 +74,7 @@ UT-TDD では `.ut-tdd/` 配下に以下の二層構造でデータを保持す�
 | `command_catalog/` (A-52 audit I-3) | UT-TDD CLI コマンド一覧 (registry、db-integration.md 6 種の 1 つ) | `ut-tdd command` (L4 carry) |
 | `code_catalog/` (A-52 audit I-3、L4 carry) | コード AST / 検索 index (db-integration.md `code_catalog`、AST→FTS5 設計判断は ADR-001 better-sqlite3 検討時に確定) | L4 データ設計 sub-doc |
 
-### audit/event tables (invocation_log / detector_runs / gate_runs / failure_log)
+### audit/event tables の定義 (invocation_log / detector_runs / gate_runs / failure_log)
 
 | state | 内容 | 対応 CLI |
 |-------|------|---------|
@@ -87,7 +87,7 @@ UT-TDD では `.ut-tdd/` 配下に以下の二層構造でデータを保持す�
 | `recipe_store/` (A-52 audit C-1、Phase B) | Learning Engine の成功パターン蓄積 (FR-L1-19、`pattern_key` 付き event-sourced log)。**Phase B 着手条件** = `docs/design/harness/L3-functional/business-detail.md §6` 参照 (Phase A G14 通過 + KPI D-07 ≥ 50% AND 条件) | L4 データ設計 sub-doc / Phase B 実装 |
 | `accuracy_score/` (A-52 audit C-1、Phase B) | recipe 適用精度・skill 推薦精度 (FR-L1-19 / observability-metrics.md §トラブル計測)。**Phase B 着手条件** = `docs/design/harness/L3-functional/business-detail.md §6` 参照 | L4 データ設計 sub-doc / Phase B 実装 |
 
-### derived views (balance / drift)
+### derived views の定義 (balance / drift)
 
 | view | 内容 |
 |------|------|
@@ -138,7 +138,7 @@ closure event 契約: `idempotency_key = mode + plan_id + closure_event_id` + ro
 | `recommended_agents` | 推奨 subagent |
 | `recommended_skills` | 推奨 skill ファイル群 |
 | `recommended_commands` | 推奨 `ut-tdd` サブコマンド |
-| `orchestration_mode` | standalone / claude-only / codex-only / hybrid |
+| `orchestration_mode` | standalone / claude-only / codex-only / hybrid のいずれか |
 
 注入機構の目的: AI の選択空間を L 単位で限定し、迷いを排除する (FR-L1-12)。詳細設計は L4 基本設計 (方式設計 sub-doc) で確定。
 

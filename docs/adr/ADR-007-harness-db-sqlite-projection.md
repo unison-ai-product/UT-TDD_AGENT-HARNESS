@@ -5,7 +5,7 @@
 - **Deciders**: PM (Opus) + PO (ユーザー)
 - **関連**: `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` (state = YAML/JSON、SQLite は「必要時 better-sqlite3」として deferral) / `docs/plans/PLAN-L5-08-harness-db-feedback.md` / `.ut-tdd/audit/A-105-harness-db-feedback-l5.md` / `docs/design/harness/L5-detailed-design/physical-data.md` §2.7/§9 / requirements_v1.2 §6.8・functional-requirements §7 / CLAUDE.md 設計の柱3 (フィードバック機構)
 
-## Context
+## 背景
 
 ADR-001 (TS/Bun 全面再実装) は永続化を **`.ut-tdd/` file-based state (YAML/JSON)** とし、SQLite は **「必要時 `better-sqlite3`」として採用を deferral** していた (legacy `legacy DB` schema の流用却下は維持)。
 
@@ -15,7 +15,7 @@ ADR-001 本文は L5 降下に合わせて SQLite projection DB 採用へ更新�
 
 > 決定・設計は PLAN-L5-08 / A-105 / physical-data §9 で確定済。本 ADR は **新規決定でなく既決定 (deferral 解除) の記録**である (ADR-006 と同型の cleanup)。
 
-## Decision
+## 決定
 
 `.ut-tdd/harness.db` を **SQLite projection DB かつフィードバック機構**として採用する (ADR-001 の SQLite deferral を解除)。
 
@@ -24,13 +24,13 @@ ADR-001 本文は L5 降下に合わせて SQLite projection DB 採用へ更新�
 - **役割**: V-model 製本 state / 別駆動 model run / session・hook・gate log / skill 発火率 metrics / workflow automation readiness / guardrail decision ledger / asset catalog・search index / quality・feedback signal。物理 schema は physical-data §2.7 + §9 (17 projection table + index + invariant)。
 - **安全境界 (MUST)**: raw provider transcript / secret / credential / PII を DB に保存しない。ID・理由・score・redacted summary のみ。automation readiness は証跡なしに ready にしない。guardrail human-required を projection で降格しない。
 
-## Alternatives considered
+## 検討した代替案
 
 - **file-based 維持 (SQLite revert)** (却下): 当初 cross-agent review で「実装ゼロ・YAGNI」として revert を検討したが、harness.db は柱3 フィードバック機構の実体であり、設計 (L5) が実装 (L7) に先行するのは V-model で正常。「src に実装が無い」は revert 根拠にならない。横断クエリ (trace/coverage/finding/skill metrics) を file 走査で都度再計算するコストと、フィードバックループの data-backed 化要求が file-only では満たせない ([[feedback_check_pillar_before_revert]])。
 - **legacy source `legacy DB` schema 流用** (却下、ADR-001 から継続): bash 依存・個人パス・schema 不整合。UT-TDD 独自 projection schema を新設する。
 - **重量 ORM 導入** (却下): projection は軽量・再構築可能で十分。zod を SSoT に保ち、DB は投影に徹する。
 
-## Consequences
+## 結果
 
 - (+) ADR-001 の SQLite deferral を正式クローズし、in-place 反転の決定史消失 (cleanup 違反) を解消。physical-data §2.7/§9・requirements §6.8・functional-requirements §7 の harness.db 記述が ADR で grounding される。
 - (+) 柱3 (フィードバック機構) / 柱4 (skill 発火率による動的注入の学習 input) が data-backed になる土台が L5 で確定。

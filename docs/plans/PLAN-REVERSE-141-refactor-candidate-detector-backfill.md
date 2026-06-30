@@ -75,7 +75,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T16:15:00+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:78ce69d4b918cdeff0774af84fea9a6e15d84d8575760d985d0a433c9f638a1e"
+        output_digest: "sha256:0fe467c17fa13c617e69dccb8d31840b144ff35a4a5548b5ac4f4ff83bd6ee31"
       - kind: unit_test
         command: "bunx vitest run tests/forward-convergence.test.ts (L7-147 converged + allowlist 空化 + grandfather 機構注入)"
         runner: bun
@@ -91,7 +91,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T16:15:00+09:00"
         evidence_path: docs/governance/forward-convergence-legacy-debt-audit.md
-        output_digest: "sha256:01b7e1df83a2057d4e873c6f287f923d29b51f9f953e888436de259f0ae61b6f"
+        output_digest: "sha256:2d8c4cd731d65778474b64e961f882744721591aa24f6f1a801e2967b9910a4f"
 ---
 
 # PLAN-REVERSE-141: refactor candidate detector の L6/L7 descent back-fill (IMP-146)

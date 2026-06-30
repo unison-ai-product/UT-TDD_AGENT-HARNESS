@@ -33,6 +33,15 @@ export const VALID_SKILL_DRIVE_MODELS = [
   "Research",
 ] as const;
 
+/**
+ * skill category (skill-index.md §2)。workflow = L/駆動で索引 (category 省略可)。
+ * domain/project = L/駆動を持たず category + メタデータで索引する situation-pull skill。
+ */
+export const VALID_SKILL_CATEGORIES = ["workflow", "domain", "project"] as const;
+
+/** L/駆動が共に空でも category=domain/project なら索引可能 (§2.1 indexable-by-something)。 */
+const INDEXABLE_CATEGORIES = new Set<string>(["domain", "project"]);
+
 export interface SkillAssignmentDoc {
   path: string;
   metadata: Record<string, unknown>;
@@ -42,10 +51,10 @@ export interface SkillAssignmentViolation {
   path: string;
   kind:
     | "missing-skill-type"
-    | "missing-layers"
     | "unknown-layer"
-    | "missing-drive-models"
-    | "unknown-drive-model";
+    | "unknown-drive-model"
+    | "unknown-category"
+    | "not-indexable";
   value?: string;
 }
 
@@ -107,6 +116,7 @@ export function analyzeSkillAssignments(docs: SkillAssignmentDoc[]): SkillAssign
   const violations: SkillAssignmentViolation[] = [];
   const validLayers = new Set<string>(VALID_SKILL_LAYERS);
   const validDriveModels = new Set<string>(VALID_SKILL_DRIVE_MODELS);
+  const validCategories = new Set<string>(VALID_SKILL_CATEGORIES);
 
   for (const doc of docs) {
     const skillType = doc.metadata.skill_type;
@@ -118,8 +128,9 @@ export function analyzeSkillAssignments(docs: SkillAssignmentDoc[]): SkillAssign
       doc.metadata.applies_to && typeof doc.metadata.applies_to === "object"
         ? (doc.metadata.applies_to as Record<string, unknown>)
         : {};
+    // layers / drive_models は任意 (skill-index.md §2)。存在すれば値のみ検証する
+    // (旧 missing-layers / missing-drive-models は撤廃 = 強制 workflow 化の解消)。
     const layers = stringList(appliesTo.layers);
-    if (layers.length === 0) violations.push({ path: doc.path, kind: "missing-layers" });
     for (const layer of layers) {
       if (!validLayers.has(layer)) {
         violations.push({ path: doc.path, kind: "unknown-layer", value: layer });
@@ -127,9 +138,6 @@ export function analyzeSkillAssignments(docs: SkillAssignmentDoc[]): SkillAssign
     }
 
     const driveModels = stringList(appliesTo.drive_models);
-    if (driveModels.length === 0) {
-      violations.push({ path: doc.path, kind: "missing-drive-models" });
-    }
     for (const driveModel of driveModels) {
       if (!validDriveModels.has(driveModel)) {
         violations.push({
@@ -138,6 +146,19 @@ export function analyzeSkillAssignments(docs: SkillAssignmentDoc[]): SkillAssign
           value: driveModel,
         });
       }
+    }
+
+    const category = typeof doc.metadata.category === "string" ? doc.metadata.category.trim() : "";
+    if (category.length > 0 && !validCategories.has(category)) {
+      violations.push({ path: doc.path, kind: "unknown-category", value: category });
+    }
+
+    // indexable-by-something (§2.1): L+駆動 か category(domain/project) のどちらかで
+    // 索引可能でなければ死蔵 = fail-close。
+    const indexable =
+      layers.length > 0 || driveModels.length > 0 || INDEXABLE_CATEGORIES.has(category);
+    if (!indexable) {
+      violations.push({ path: doc.path, kind: "not-indexable" });
     }
   }
 
@@ -150,7 +171,7 @@ export function analyzeSkillAssignments(docs: SkillAssignmentDoc[]): SkillAssign
 
 export function skillAssignmentMessages(result: SkillAssignmentResult): string[] {
   if (result.ok) {
-    return [`skill-assignment - OK (checked=${result.checked}, layer/drive-model metadata set)`];
+    return [`skill-assignment - OK (checked=${result.checked}, indexable by L+drive or category)`];
   }
   if (result.checked === 0) {
     return ["skill-assignment - violation: docs/skills has no skill definitions"];

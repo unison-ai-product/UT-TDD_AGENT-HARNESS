@@ -5,7 +5,7 @@
 - **Deciders**: PM (Opus) + PO (ユーザー)
 - **関連**: `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` (技術スタックで「oclif または commander」を保留) / `docs/design/harness/L4-basic-design/architecture.md` §2 / `src/cli.ts` (commander 実装済) / improvement-backlog IMP-070
 
-## Context
+## 背景
 
 ADR-001 (TS/Bun 全面再実装) の技術スタック表は CLI フレームワークを **「oclif または commander」の 2 択で保留**していた。一方、実装 (`src/cli.ts`) は既に **commander で確定**しており、status / doctor / plan / vmodel サブコマンドが commander で動作している。
 
@@ -13,16 +13,16 @@ architecture.md §2 注記が「commander 実装確定済だが ADR で記録を
 
 > 動作・実装は確定済。本 ADR は **新規決定でなく既決定の記録**である (cleanup 原則: 決定したが ADR に残していない状態を解消)。
 
-## Decision
+## 決定
 
 UT-TDD harness の CLI フレームワークを **commander** に確定する。`src/cli.ts` は commander の `Command` でサブコマンドツリー (status / doctor / plan / vmodel / 将来 reverse・incident・skill・cutover 等) を構成する。
 
-## Alternatives considered
+## 検討した代替案
 
 - **oclif** (却下): プラグインアーキテクチャ・スキャフォルディングが強力だが、(a) ファイル規約ベースの重量級構成が「薄い entrypoint + compiled core」(ADR-001 §3) の方針と過剰、(b) `bun build --compile` 単一バイナリ配布との相性検証コストが高い、(c) 本 harness の CLI 表面は中規模で oclif のプラグイン機構は不要。
 - **commander** (採択): 軽量・宣言的サブコマンド・TS 型サポート良好・Bun 互換・単一バイナリ化が容易。CLI 表面の規模に対し過不足ない。
 
-## Consequences
+## 結果
 
 - (+) architecture.md §2 の floating 注記を解消、ADR-001 保留事項をクローズ (IMP-070 resolved)。
 - (+) CLI 表面の追加 (将来 reverse/incident/skill/cutover サブコマンド) は commander の同一様式で拡張でき、設計者が根拠を参照可能。

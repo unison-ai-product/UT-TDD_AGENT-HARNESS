@@ -8,11 +8,11 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-06-handover-mechanism.md
 ---
 
-> **L6 contract marker**: `runHandover(input: HandoverInput) => HandoverResult` and `checkHandoverDiscipline(input: HandoverDisciplineInput) => HandoverDisciplineResult` are the unit-test-granularity contracts. DbC pre/post/invariant maps digest, CURRENT.json, and stale/drift checks to U-HOVER-001..012.
+> **L6 contract marker**: `runHandover(input: HandoverInput) => HandoverResult` と `checkHandoverDiscipline(input: HandoverDisciplineInput) => HandoverDisciplineResult` は unit-test-granularity contracts である。DbC pre/post/invariant は digest、CURRENT.json、stale/drift checks を U-HOVER-001..012 に対応づける。
 
 <!--
 ① 設計 (L6 機能設計) — handover 記録機構 (session-log PLAN digest → handover 生成 + plan_id 活性化)。
-PLAN: PLAN-L6-06-handover-mechanism (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.8 U-HOVER。
+PLAN: PLAN-L6-06-handover-mechanism (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.8 U-HOVER を対応先とする。
 実装 (②): src/handover/index.ts + src/cli (ut-tdd handover / ut-tdd plan use) + src/runtime/session-log.ts 限定 amendment (PLAN-L7-04-handover-mechanism, add-impl, 後続)。
 土台思想: src/runtime/session-log.ts (純関数分離 / sanitize / never-throw) + src/setup/index.ts (deps 注入 / dry-run 非破壊 / state SSoT) を踏襲。
 上位整合: 要件 §6.8.5 (PLAN 完了時 handover 必須) / §6.8.6 (進捗 3 層 = state DB + log + handover、digest=結節点) / §5.3 pre-push stale (後段 Reverse で back-fill + CURRENT.md/.json 表記不整合是正)。

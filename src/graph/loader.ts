@@ -200,7 +200,7 @@ const GOVERNANCE_DOCS = [
   "docs/governance/document-system-map.md",
   "docs/governance/repository-structure.md",
 ] as const;
-const ROOT_CANONICAL_DOCS = ["README.md"] as const;
+const ROOT_CANONICAL_DOCS = ["README.md", "AGENTS.md", "CLAUDE.md", ".claude/CLAUDE.md"] as const;
 const ROOT_CONFIG_DOCS = [
   ".claude/settings.json",
   ".codex/config.toml",
@@ -371,6 +371,18 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
     addDesignDocIfAbsent(designDocs, path);
   }
 
+  const commandDocs: string[] = [];
+  walkMd(join(repoRoot, ".claude", "commands"), repoRoot, commandDocs);
+  for (const path of commandDocs) {
+    addDesignDocIfAbsent(designDocs, path);
+  }
+
+  const skillDocs: string[] = [];
+  walkMd(join(repoRoot, "docs", "skills"), repoRoot, skillDocs);
+  for (const path of skillDocs) {
+    addDesignDocIfAbsent(designDocs, path);
+  }
+
   const adapterTemplateDocs: string[] = [];
   walkAdapterTemplateFiles(
     join(repoRoot, "docs", "templates", "adapter"),
@@ -384,6 +396,12 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
   const adrDocs: string[] = [];
   walkMd(join(repoRoot, "docs", "adr"), repoRoot, adrDocs);
   for (const path of adrDocs) {
+    addDesignDocIfAbsent(designDocs, path);
+  }
+
+  const governanceDocs: string[] = [];
+  walkMd(join(repoRoot, "docs", "governance"), repoRoot, governanceDocs);
+  for (const path of governanceDocs) {
     addDesignDocIfAbsent(designDocs, path);
   }
 

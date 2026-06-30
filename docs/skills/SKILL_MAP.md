@@ -67,6 +67,24 @@ packs for the current task.
 | Git / Conventional Commits / CI | git |
 | Doc maintenance (README / runbook prose) | documentation |
 
+## Domain / project skills (indexed by category + metadata)
+
+Most packs above are **workflow skills**: bound to a V-model layer and/or drive model,
+scored by `applies_to.layers` / `applies_to.drive_models`. A second class is indexed by
+`category` + metadata instead of layer/drive (skill-index.md §1):
+
+- **domain** — transferable discipline knowledge pulled by situation, not by layer/drive
+  (e.g. `technical-writing`: writing/clarity). Tagged `category: domain` + `domain_tags`.
+- **project** — case/industry conventions. Tagged `category: project` + `industry`. These are
+  **not shipped here**; a consuming project authors them in its own skills root (ADR-005).
+
+Scaffold a new pack with `ut-tdd skill new --name <slug> --category <workflow|domain|project> ...`;
+the generator self-lints that the result is indexable-by-something before writing.
+
+| Task / signal | Pack |
+|---|---|
+| Writing quality / clarity / prose editing (any layer) | technical-writing (domain) |
+
 ## Core operating rules (apply to every pack)
 
 - Surface assumptions before non-trivial work; stop on a PLAN↔doc↔code

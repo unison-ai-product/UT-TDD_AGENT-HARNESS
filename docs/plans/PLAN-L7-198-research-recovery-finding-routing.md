@@ -6,6 +6,8 @@ layer: L7
 drive: be
 status: draft
 version_target: future
+route_signal: version_deferral
+route_mode: version-up
 created: 2026-06-29
 updated: 2026-06-29
 owner: PM (Opus) / PO (人間)

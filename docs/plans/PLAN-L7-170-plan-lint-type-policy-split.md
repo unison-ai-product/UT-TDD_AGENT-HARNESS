@@ -48,7 +48,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T21:24:52+09:00"
         evidence_path: tests/plan-lint.test.ts
-        output_digest: "sha256:ba64ea807951fdf6b3c3d0891e5525afe5b32e9599129db35e6870da0706826d"
+        output_digest: "sha256:df3fd213a06f05be1cb8e3ad0d771b0d164538598d617b3a53ec333ef0dc9fb6"
       - kind: unit_test
         command: "bun run vitest run tests\\plan-lint.test.ts"
         runner: bun
@@ -56,7 +56,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T21:24:52+09:00"
         evidence_path: src/plan/lint.ts
-        output_digest: "sha256:40c960d0d4d0b49ef3aff27e12291b7a5851077e6fdcf7aca1868bdf0d964510"
+        output_digest: "sha256:937ff982b0c5b3fac499a9d78e745dadeb12dae1e49801aaf7a04c5a4fc3ff66"
       - kind: unit_test
         command: "bun run vitest run tests\\plan-lint.test.ts"
         runner: bun
@@ -64,7 +64,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T21:24:52+09:00"
         evidence_path: src/plan/lint-types.ts
-        output_digest: "sha256:49910128a5173585aa302aec334207b42aa97ee99ca1b30c5edeed072c783e3c"
+        output_digest: "sha256:4800f15a5e8662336101ab2c2ba9ad8329539e6ea75b9b2c73d51669e1b7f022"
       - kind: unit_test
         command: "bun run vitest run tests\\plan-lint.test.ts"
         runner: bun
@@ -80,7 +80,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T21:25:03+09:00"
         evidence_path: src/plan/lint.ts
-        output_digest: "sha256:40c960d0d4d0b49ef3aff27e12291b7a5851077e6fdcf7aca1868bdf0d964510"
+        output_digest: "sha256:937ff982b0c5b3fac499a9d78e745dadeb12dae1e49801aaf7a04c5a4fc3ff66"
       - kind: lint
         command: "bun run lint"
         runner: bun

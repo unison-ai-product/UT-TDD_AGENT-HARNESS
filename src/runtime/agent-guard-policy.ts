@@ -14,6 +14,7 @@ export const SUBAGENT_ALLOWLIST: ReadonlySet<string> = new Set([
   "code-reviewer",
   "security-audit",
   "qa-test",
+  "ut-tdd-tl",
 ]);
 
 export const AGENT_GUARD_BYPASS_HINT =

@@ -1,27 +1,24 @@
-# Governance Documents
+# ガバナンス文書
 
-This directory contains the current governance documents for UT-TDD Agent Harness.
-Historical source snapshots, migration notes, and local runtime state are reference
-material only.
+このディレクトリは UT-TDD Agent Harness の現行ガバナンス文書を収める。
+過去の source snapshot、migration notes、local runtime state は参照資料に限る。
 
-## Current Source Of Truth
+## 現行の正本
 
-Claude Code, Codex, and human reviewers should read these documents for normal work:
+Claude Code、Codex、人間レビュアーは通常作業で以下を読む:
 
 1. `ut-tdd-agent-harness-concept_v3.1.md`
 2. `ut-tdd-agent-harness-requirements_v1.2.md`
 3. `../adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
 4. `repository-structure.md`
 
-> **ADR-001 boundary**: implementation is UT-TDD-owned TypeScript/Bun. Migration
-> docs and source snapshots are reference-only material for porting audits and
-> regression ideas; they are not Current Source Of Truth and are not an execution
-> route.
+> **ADR-001 境界**: 実装は UT-TDD 所有の TypeScript/Bun である。migration
+> docs と source snapshots は porting audit と regression idea の参照資料に限る。
+> これらは現行の正本でも実行経路でもない。
 
-## Reference Only
+## 参照のみ
 
-These documents support background, team operations, or upper-layer planning. They
-do not override the Current Source Of Truth list above:
+以下の文書は背景、チーム運用、上位計画を補助する。上記の現行正本を上書きしない:
 
 - `ai-dev-team-concept_v1.1.md`
 - `ai-dev-team-operations_v1.1.md`
@@ -32,9 +29,9 @@ do not override the Current Source Of Truth list above:
 - `gate-design.md`
 - `recovery-workflow.md`
 
-## Archived Or Vendor Material
+## アーカイブまたは vendor 資料
 
-Archived documents, source snapshots, migration inventories, and local legacy
-checkouts are historical evidence only. Do not use them as UT-TDD runtime state,
-execution routes, or current command paths. The current runtime command is
+archived documents、source snapshots、migration inventories、local legacy の資料群
+checkouts は過去証跡に限る。UT-TDD runtime state、実行経路、現行 command path
+として使ってはいけない。現行 runtime command は
 `ut-tdd`.
