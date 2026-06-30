@@ -622,7 +622,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-ID | Target | Oracle |
 |---|---|---|
 | U-ADAPTER-002 | `resolveCodexNativeCommand` | `UT_TDD_CODEX_BIN` is preferred over PATH lookup and Windows npm `codex.cmd` is accepted as a native provider command override. |
-| U-ADAPTER-003 | `buildProviderInvocation` | Windows `.cmd` / `.bat` provider commands are converted to a shell command string with quoted arguments, while non-script binaries keep `shell=false`. |
+| U-ADAPTER-003 | `buildProviderInvocation` | Windows `.cmd` / `.bat` provider commands are launched via canonical `cmd.exe` argument-array invocation with Node `shell=false`; non-script binaries also keep `shell=false`. |
 | U-ADAPTER-004 | `isProviderCommandSpawnable` / `detectMode` | Provider availability is true only when the resolved provider command can spawn successfully; PATH name presence alone is not enough. |
 | U-PHOVER-002 | `buildProviderHandover` | Provider handover packages include `handover_kind: "mechanical"` so machine routing data is not confused with explicit human handover. |
 

@@ -49,7 +49,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T11:42:24+09:00"
         evidence_path: tests/runtime-adapter.test.ts
-        output_digest: "sha256:c660ed89dfe6fe167981c3e9bdf0e02396ed855b36b677e1898c63f9d33cc463"
+        output_digest: "sha256:0cedb685f30b70e6c1faf09ec35b65077ed17294bcff7671e16b28803417a460"
 ---
 
 # PLAN-L7-176: adapter InvokeResult G8 evidence closure

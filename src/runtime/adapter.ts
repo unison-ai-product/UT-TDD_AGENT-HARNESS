@@ -41,9 +41,9 @@ export interface AdapterPlan {
   command: string;
   args: string[];
   /**
-   * codex はプロンプトを stdin で帯域外に渡す。Windows で codex は `.cmd` に解決され
-   * buildProviderInvocation が shell:true の cmd.exe 文字列へ畳むため、引数に載せた
-   * 複数行/メタ文字プロンプトが 1 行目で切れる。stdin 経由なら cmd.exe が破壊できない。
+   * Provider prompts are carried by stdin. Windows `.cmd` provider shims are
+   * launched via cmd.exe with Node `shell:false`; argv carries only fixed flags
+   * plus validated model metadata, never the free-form task text.
    */
   stdin?: string;
   env?: Record<string, string>;
@@ -121,15 +121,15 @@ function newestExisting(paths: string[]): string | null {
   return existing.length > 0 ? (existing.sort().at(-1) ?? null) : null;
 }
 
-/** ソースごとに version を抽出済みの native バイナリ候補 (A-137 #6)。 */
+/** Native binary candidate with a source-specific extracted version (A-137 #6). */
 interface VersionedCandidate {
   path: string;
   version: string;
 }
 
 /**
- * semver 様文字列の数値コア要素を取り出す (`1.10.0-win32-x64` → `[1, 10, 0]`)。
- * pre-release / build / platform suffix (`-` / `+` 以降) は比較対象外。解析不能要素は 0。
+ * Extract numeric semver core parts (`1.10.0-win32-x64` -> `[1, 10, 0]`).
+ * Pre-release/build/platform suffixes are ignored; unparsable parts become 0.
  */
 function parseVersion(version: string): number[] {
   const core = version.split(/[-+]/, 1)[0] ?? version;
@@ -139,7 +139,7 @@ function parseVersion(version: string): number[] {
   });
 }
 
-/** semver 数値比較 (a が古いと負)。要素数が違えば不足分を 0 とみなす。 */
+/** Numeric semver comparison; negative means `a` is older. Missing parts are 0. */
 function compareVersion(a: string, b: string): number {
   const left = parseVersion(a);
   const right = parseVersion(b);
@@ -152,10 +152,9 @@ function compareVersion(a: string, b: string): number {
 }
 
 /**
- * 実在する候補から semver 最新の native バイナリを選ぶ (A-137 #6)。
- * 字句順 sort は `1.10.0 < 1.9.0` と誤判定し、mixed-source ではパス接頭辞が比較を
- * 支配して最新を取り逃すため、各候補の抽出済み version を数値 semver 比較する。
- * 同 version は配列先頭 (= 優先ソース) を維持する安定選択。
+ * Pick the semver-newest existing native binary (A-137 #6).
+ * Lexicographic sort misorders `1.10.0` and `1.9.0`, and mixed-source paths
+ * can otherwise dominate comparison. Equal versions keep the earlier source.
  */
 function newestVersioned(candidates: VersionedCandidate[]): string | null {
   const existing = candidates.filter((candidate) => existsSync(candidate.path));
@@ -258,6 +257,11 @@ function isWindowsCommandScript(command: string): boolean {
   return /\.(cmd|bat)$/i.test(command);
 }
 
+function windowsCommandProcessor(opts: ProviderCommandResolutionOptions = {}): string {
+  const env = opts.env ?? process.env;
+  return env.ComSpec ?? join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+}
+
 function quoteCmdArg(arg: string): string {
   return `"${arg.replace(/"/g, '\\"')}"`;
 }
@@ -268,12 +272,12 @@ export function buildProviderInvocation(input: ProviderInvocationInput): Provide
   const resolved = resolveProviderCommand(provider, command, opts);
   if (platform === "win32" && isWindowsCommandScript(resolved)) {
     return {
-      command: [quoteCmdArg(resolved), ...args.map(quoteCmdArg)].join(" "),
-      args: [],
-      shell: true,
+      command: windowsCommandProcessor(opts),
+      args: ["/d", "/s", "/c", [quoteCmdArg(resolved), ...args.map(quoteCmdArg)].join(" ")],
+      shell: false,
     };
   }
-  return { command: resolved, args };
+  return { command: resolved, args, shell: false };
 }
 
 export function isProviderCommandSpawnable(

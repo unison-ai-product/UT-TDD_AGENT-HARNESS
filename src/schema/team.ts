@@ -34,7 +34,8 @@ export const modelOverrideSchema = z
   .min(1)
   .refine(
     (model) =>
-      /^(gpt-|claude-|codex-)/.test(model) || ["haiku", "sonnet", "opus", "local"].includes(model),
+      /^(?:gpt|claude|codex)-[A-Za-z0-9][A-Za-z0-9._-]*$/.test(model) ||
+      ["haiku", "sonnet", "opus", "local"].includes(model),
     {
       message:
         "model must be a known provider model id or family alias: gpt-*, claude-*, codex-*, haiku, sonnet, opus, or local",

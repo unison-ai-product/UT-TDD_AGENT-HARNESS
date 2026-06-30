@@ -102,7 +102,7 @@ export const teamMemberSchema = z.object({
   engine: z.string().min(1),   // agent_kind として slot に記録
   task: z.string().min(1),
   difficulty: taskDifficultySchema.optional(),  // 未指定時は task から決定論推定
-  model: modelOverrideSchema.optional(),        // gpt-*|claude-*|codex-*|haiku|sonnet|opus|local only
+  model: modelOverrideSchema.optional(),        // gpt-*|claude-*|codex-* safe token or haiku|sonnet|opus|local only
   effort: reasoningEffortSchema.optional(),     // low|medium|high override
   serialize_after: z.string().optional(),  // 個別直列化指定
 });
@@ -118,7 +118,7 @@ export const teamDefinitionSchema = z.object({
 
 `teamDefinitionSchema` は `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml` (`hybrid` mode) の入力である。`strategy` のデフォルトを `sequential` にするのは source reference の team runner と同じ安全側設計。
 
-**model/effort policy (FR-L1-37 landing)**: `difficulty` 未指定時は `selectTeamModel` が task keyword から `trivial|simple|standard|complex|critical` を決定論推定し、`recommendModelEffort` の `model_family` / `reasoning_effort` へ接続する。`model` / `effort` が明示された member は override として `model_selection.*_source="explicit"` に記録する。推挙は hidden prompt state ではなく `buildTeamRunPlan().members[].model_selection` と prompt header に出す。prompt header は `engine` と別に resolved `provider` を明示し、`model_family` (推奨ラベル) と runtime provider を混同しない review evidence にする。`model` override は `gpt-*|claude-*|codex-*|haiku|sonnet|opus|local` のみ zod で受理し、タイポを fail-close する。Claude は `--model` / `--effort` / `CLAUDE_CODE_EFFORT_LEVEL` に渡す。Codex は `-m` に model を渡し、effort は公式 surface を pin するまで evidence/prompt metadata に留める。
+**model/effort policy (FR-L1-37 landing)**: `difficulty` 未指定時は `selectTeamModel` が task keyword から `trivial|simple|standard|complex|critical` を決定論推定し、`recommendModelEffort` の `model_family` / `reasoning_effort` へ接続する。`model` / `effort` が明示された member は override として `model_selection.*_source="explicit"` に記録する。推挙は hidden prompt state ではなく `buildTeamRunPlan().members[].model_selection` と prompt header に出す。prompt header は `engine` と別に resolved `provider` を明示し、`model_family` (推奨ラベル) と runtime provider を混同しない review evidence にする。`model` override は `gpt-*|claude-*|codex-*` の safe token (`[A-Za-z0-9._-]` only after provider prefix) または `haiku|sonnet|opus|local` のみ zod で受理し、タイポ・path-like 値・shell metachar を fail-close する。Claude は `--model` / `--effort` / `CLAUDE_CODE_EFFORT_LEVEL` に渡す。Codex は `-m` に model を渡し、effort は公式 surface を pin するまで evidence/prompt metadata に留める。
 
 **launch policy (`ut-tdd team suggest`)**: free-form task text から subagent/team 起動可否を決定論判定する。`trivial|simple` は単独実行を既定とし、`standard|complex|critical` は `hybrid` mode で cross-provider team を推奨する。`auth|database|doctor|migration|production|runtime|schema|security|subagent|windows` 等の risk term は `hybrid` mode で team 推奨を強制する。`claude-only` / `codex-only` / `standalone` では `should_launch=false` / `trigger="unavailable"` を返し、cross-provider review を暗黙代替しない。推奨結果は `TeamLaunchRecommendation` として `difficulty` / `trigger` / `reason` / `definition` を JSON に出し、`definition` は `teamDefinitionSchema` と同一 flow で `team run` に渡せる。`complex|critical` は reviewer を `serialize_after: se` にし、`critical` は `qa` verifier を追加する。
 

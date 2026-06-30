@@ -1,24 +1,35 @@
 ---
 plan_id: PLAN-L7-195-model-override-injection-hardening
-title: "PLAN-L7-195 (impl): model override injection hardening (Security) — modelOverrideSchema の prefix-only 検証を厳格化し、runtime adapter の .cmd launch の shell:true 経路を引数配列 spawn(shell 無効)へ。不正 model 文字列(shell metachar)を reject する injection regression test。A-144/A-145 SEC-2"
+title: "PLAN-L7-195 (impl): model override injection hardening (Security) - strict modelOverrideSchema validation, Windows .cmd launch with shell=false, and injection regression tests. A-144/A-145 SEC-2"
 kind: impl
 layer: L7
 drive: be
-status: draft
-version_target: future
+status: confirmed
 created: 2026-06-29
-updated: 2026-06-29
-owner: PM (Opus) / PO (人間)
+updated: 2026-06-30
+owner: PM (Opus) / PO
 parent_design: docs/design/harness/L6-function-design/agent-slots.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
   - role: se
-    slot_label: "SE (Codex 委譲) — modelOverrideSchema を厳格 validation 化、adapter の shell:true を引数配列 spawn へ、injection regression test"
+    slot_label: "SE (Codex delegation) - strict modelOverrideSchema validation, shell=false adapter launch, injection regression tests"
   - role: qa
-    slot_label: "security-audit (Claude cross-runtime judge、必須) — injection 面・shell 無効化・既存正当 model 互換を OWASP 視点で検証。security 変更ゆえ別 runtime judge を front-load"
+    slot_label: "security-audit - injection surface, shell=false launch, and model compatibility review"
 generates:
   - artifact_path: docs/plans/PLAN-L7-195-model-override-injection-hardening.md
     artifact_type: markdown_doc
+  - artifact_path: src/schema/team.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/adapter.ts
+    artifact_type: source_module
+  - artifact_path: tests/team-schema.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/runtime-adapter.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/design/harness/L6-function-design/agent-slots.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: null
   requires:
@@ -26,58 +37,88 @@ dependencies:
   references:
     - .ut-tdd/audit/A-145-02-runtime-config-delegation.md
     - .ut-tdd/audit/A-144-02-runtime-config-security.md
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-30T10:20:00+09:00"
+    tests_green_at: "2026-06-30T10:17:40+09:00"
+    verdict: approve
+    scope: "PLAN-L7-195 model override injection hardening: strict model token validation plus Windows .cmd provider invocation with Node shell=false."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run test tests\\team-schema.test.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T10:17:40+09:00"
+        evidence_path: tests/runtime-adapter.test.ts
+        output_digest: "sha256:0cedb685f30b70e6c1faf09ec35b65077ed17294bcff7671e16b28803417a460"
+      - kind: unit_test
+        command: "bun run test tests\\team-schema.test.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T10:17:40+09:00"
+        evidence_path: tests/team-schema.test.ts
+        output_digest: "sha256:aee993763262216a6f333f99f0d4fa426e2fbe68dedf5f87990e2eb12763caed"
+      - kind: unit_test
+        command: "bun run test tests\\team-schema.test.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T10:17:40+09:00"
+        evidence_path: tests/team-run.test.ts
+        output_digest: "sha256:48679da7a5a6db9c2bce6753cf353943e40f0865b240244fff4a3f4c966f70d9"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-30T10:17:40+09:00"
+        evidence_path: src/runtime/adapter.ts
+        output_digest: "sha256:6bec09186fd5ec5ac661d1ea28ede5267b47605d0d53cd8dbb180444de0e32f9"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-06-30T10:17:40+09:00"
+        evidence_path: src/schema/team.ts
+        output_digest: "sha256:da9778b8d4ee59808b100dc151cdd9d5e6715f96ed9c25c76958f309aba460a0"
 ---
 
 # PLAN-L7-195 (impl): model override injection hardening (Security)
 
-## 優先度: version-up parked だが Security ゆえ前倒し推奨 (PO 2026-06-29)
+## 0. Finding
 
-PO 決定 (2026-06-29): 既定は将来版へ保全 (`status=draft` + `version_target: future`)。
-**ただし唯一の Security HIGH かつ creator 未着手**ゆえ、PM は **parking でなく現行クローズへ前倒し**を推奨。
-activation 判断は PO。
-
-> escalation 記録: 本 PLAN は security 隣接 (injection 面) のため、CLAUDE.md「auth/security 変更は escalate」に
-> 従い**起票時点で PO へ明示**。実装着手・activation は PO 承認後。
-
-## 0. 前提 (調査結論 2026-06-29)
-
-- `src/schema/team.ts:37` `modelOverrideSchema` = `/^(gpt-|claude-|codex-)/.test(model)` の **prefix-only**。
-  prefix さえ合えば任意後続文字列を許す (shell metachar・path 等を含み得る)。
-- `src/runtime/adapter.ts:273` が `.cmd` launch で `shell: true` を使用。shell 経由起動のため、検証を抜けた
-  model/引数文字列が **shell injection** の余地を持つ。
-- A-145-02 / A-144-02 (SEC-2) で **HIGH/Security** と判定。今回の監査範囲で唯一の security finding、
-  かつ creator (Codex) は本面に未着手。
+- `modelOverrideSchema` previously accepted any string starting with `gpt-`, `claude-`, or `codex-`, so shell metacharacters and path-like payloads could pass validation.
+- Windows `.cmd` provider shim invocation previously used `shell:true`, increasing the risk if unsafe argv ever reached the provider launch path.
+- A-144/A-145 classified this as Security HIGH and recommended closing it before broader version-up work.
 
 ## 1. Scope
 
-### IN (本 PLAN)
-- `modelOverrideSchema` を **厳格 validation** 化: prefix-only を脱し、既知 model 集合 or 厳格な文字種制約
-  (例 `^[a-z0-9][a-z0-9.\-]*$` + 既知 family allowlist) へ。shell metachar を構造的に排除。
-- runtime adapter の `.cmd` launch を **`shell: true` から引数配列 spawn (shell 無効)** へ。シェル解釈を経由しない。
-- **injection regression test**: shell metachar (`; | & $ \` 等) を含む model/引数が reject / 無害化される
-  ことを実証 (prose でなく test)。
-
-### OUT (本 PLAN では作らない)
-- 認証 / 認可 / payment / 外部 API 前提の変更 (該当せず、本 PLAN は入力 validation と spawn 安全化のみ)。
-- model family の方針変更 (既存正当値 `gpt-` / `claude-` / `codex-` は通す)。
-- いま実装すること (version-up parked。ただし Security ゆえ前倒し推奨)。
+- Tighten `modelOverrideSchema` to provider-prefixed safe tokens (`[A-Za-z0-9._-]` after the provider prefix) or exact aliases (`haiku`, `sonnet`, `opus`, `local`).
+- Launch Windows `.cmd` / `.bat` provider shims through canonical `cmd.exe` with Node `shell=false`.
+- Add regression tests for shell metacharacters and path-like model override payloads while preserving valid model ids.
 
 ## 2. Acceptance Criteria
-- shell metachar を含む不正 model 文字列が validation で **reject** される unit test green。
-- `.cmd` launch が **shell 無効 spawn** で実行され、引数が shell 解釈されない test green。
-- 既存正当 model (`gpt-*` / `claude-*` / `codex-*`) は従来どおり起動できる (互換維持 test)。
-- **security-audit (別 runtime judge) の VERDICT=pass、Critical=0** を confirmed 前に記録 (hybrid 判断分離)。
-- doctor / lint / vitest / plan lint green。
 
-## 3. Schedule
-- mode: serial。
-- Step 0: injection 面の再現 (prefix-only を抜ける文字列 + shell:true 経路) を test で固定。
-- Step 1: `modelOverrideSchema` 厳格化 (allowlist / 文字種) + adapter の shell 無効 spawn 化。
-- Step 2: injection regression + 既存互換 test。
-- Step 3: **security-audit (Claude cross-runtime) judge** → Critical 0 → review evidence → PO 承認 → confirmed。
+- Invalid model strings containing shell metacharacters are rejected by schema tests.
+- `.cmd` invocation no longer emits `shell:true` and keeps free-form task text in stdin.
+- Valid provider model ids and family aliases remain accepted.
+- doctor / lint / typecheck / targeted vitest are green.
 
-## 4. 壊さない / 再発させない
-- 既存正当 model の起動を壊さない (互換 test で保証)。
-- Security 変更ゆえ **別 runtime judge (security-audit) を front-load** (creation≠judgement、hybrid 分離)。
-- escalation: security 隣接ゆえ PO 承認後に着手・activation ([[feedback_cross_review_before_po_escalation]])。
-- version-up parked だが Security ゆえ前倒し推奨。
+## 3. Implementation / Evidence (2026-06-30)
+
+- `modelOverrideSchema` accepts only provider-prefixed safe tokens or exact family aliases.
+- `buildProviderInvocation` returns `shell:false` for both Windows command scripts and non-script binaries.
+- Regression coverage lives in `tests/team-schema.test.ts`, `tests/runtime-adapter.test.ts`, and `tests/team-run.test.ts`.
+
+Review evidence:
+
+- `bun run test tests\team-schema.test.ts tests\runtime-adapter.test.ts tests\team-run.test.ts` -> 46 passed.
+- `bun run lint` -> passed.
+- `bun run typecheck` -> passed.
+- `bun run src\cli.ts doctor` -> passed after digest/readability correction.

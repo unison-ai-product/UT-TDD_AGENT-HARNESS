@@ -132,7 +132,7 @@ describe("runtime adapter plan", () => {
     }
   });
 
-  it("U-ADAPTER-003: wraps Windows command scripts through canonical cmd.exe", () => {
+  it("U-ADAPTER-003: wraps Windows command scripts through canonical cmd.exe without shell:true", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-adapter-cmd-"));
     try {
       const explicit = join(root, "codex.cmd");
@@ -150,10 +150,9 @@ describe("runtime adapter plan", () => {
         },
       });
 
-      expect(invocation.args).toEqual([]);
-      expect(invocation.shell).toBe(true);
-      expect(invocation.command).toContain(`"${explicit}"`);
-      expect(invocation.command).toContain('"hello world"');
+      expect(invocation.command).toBe("C:\\Windows\\System32\\cmd.exe");
+      expect(invocation.args).toEqual(["/d", "/s", "/c", `"${explicit}" "exec" "hello world"`]);
+      expect(invocation.shell).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -253,8 +252,9 @@ describe("runtime adapter plan", () => {
         args: plan.args,
         opts: { platform: "win32", env: { SystemRoot: "C:\\Windows", UT_TDD_CODEX_BIN: explicit } },
       });
-      expect(invocation.command).not.toContain("line two");
-      expect(invocation.command).not.toContain("\n");
+      expect(invocation.shell).toBe(false);
+      expect(invocation.args.join(" ")).not.toContain("line two");
+      expect(invocation.args.join(" ")).not.toContain("\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
