@@ -30,10 +30,14 @@ generates:
     artifact_type: template
   - artifact_path: src/cli.ts
     artifact_type: source_module
+  - artifact_path: src/doctor/index.ts
+    artifact_type: source_module
   - artifact_path: src/setup/index.ts
     artifact_type: source_module
   - artifact_path: src/setup/templates.ts
     artifact_type: source_module
+  - artifact_path: tests/doctor.test.ts
+    artifact_type: test_code
   - artifact_path: tests/setup.test.ts
     artifact_type: test_code
   - artifact_path: tests/distribution-acceptance.test.ts
@@ -78,6 +82,47 @@ review_evidence:
         completed_at: "2026-07-01T10:40:00+09:00"
         evidence_path: src/setup/templates.ts
         output_digest: "sha256:4b3b4e6bbed5d9e07040e5074952e462e896b4ff84bad16b0fe9137dd780a12a"
+  - reviewer: codex-cli
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-01T12:09:00+09:00"
+    tests_green_at: "2026-07-01T12:08:00+09:00"
+    verdict: approve
+    scope: "setup template mapping now resolves every COMMON_FILES entry, so .codex/hooks.json and other adapter assets cannot silently render as empty common/* fallbacks. doctor --setup-smoke is a fresh-consumer profile that requires project-local wrapper files, parseable Claude/Codex hook JSON, Claude and Codex agent/work/session hook commands, Claude SubagentStop, and portable .ut-tdd/bin/ut-tdd.mjs hook paths. distribution acceptance executes setup --solo from the clean artifact, calls the generated wrapper, and runs doctor --setup-smoke."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5
+    green_commands:
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T11:59:00+09:00"
+        evidence_path: src/doctor/index.ts
+        output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T11:59:00+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:94e828bafe196f598e5cef11388e911c189fa65e4688c380d1c484767bd66092"
+      - kind: unit_test
+        command: "bun run vitest run tests\\doctor.test.ts --testNamePattern \"fresh-consumer setup smoke\" --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T12:08:00+09:00"
+        evidence_path: tests/doctor.test.ts
+        output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+      - kind: unit_test
+        command: "bun run vitest run tests\\setup.test.ts tests\\distribution-acceptance.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T12:00:00+09:00"
+        evidence_path: tests/distribution-acceptance.test.ts
+        output_digest: "sha256:fc54bdfa5c837d154c125be2f59f5d1772d29fbfce508748a3235752277e573b"
       - kind: smoke
         command: "bun src\\cli.ts distribution package --out .ut-tdd\\dist-local --json; tarball展開先から consumer setup --solo; bun .ut-tdd\\bin\\ut-tdd.mjs --help; bun .ut-tdd\\bin\\ut-tdd.mjs status --json"
         runner: powershell

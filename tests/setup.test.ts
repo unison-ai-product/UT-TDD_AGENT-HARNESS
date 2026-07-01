@@ -386,9 +386,18 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
 
     const wrapper = deps.files.get(join("/repo", ".ut-tdd", "bin", "ut-tdd.mjs"));
     expect(wrapper).toContain('const setupSourceCli = "');
-    expect(wrapper).toContain('existsSync(setupSourceCli) ? "bun" : "ut-tdd"');
+    expect(wrapper).toContain(
+      'existsSync(setupSourceCli) ? "bun" : existsSync(localBin) ? localBin : "ut-tdd"',
+    );
     expect(wrapper).toContain("[setupSourceCli, ...process.argv.slice(2)]");
     expect(wrapper).not.toContain("{{UT_TDD_SOURCE_CLI_JSON}}");
+
+    const codexHooks = deps.files.get(join("/repo", ".codex", "hooks.json"));
+    const claudeSettings = deps.files.get(join("/repo", ".claude", "settings.json"));
+    expect(codexHooks).toContain("hook agent-guard");
+    expect(claudeSettings).toContain("hook agent-guard");
+    expect(() => JSON.parse(codexHooks ?? "")).not.toThrow();
+    expect(() => JSON.parse(claudeSettings ?? "")).not.toThrow();
   });
 
   it("U-SETUP-010: emitSetup preserves consumer-owned adapter files and merges only managed blocks", () => {

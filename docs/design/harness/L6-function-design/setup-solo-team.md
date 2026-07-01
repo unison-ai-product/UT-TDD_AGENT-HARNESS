@@ -150,3 +150,9 @@ deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `no
 - hook command は repo-local `.ut-tdd/bin/ut-tdd.mjs` を経由し、consumer の PATH に bare `ut-tdd` が無くても project-local binary または setup 元 harness checkout で動く。
 - Bun 自体は hook shell の PATH に必要だが、UT-TDD harness binary は project dependency として解決する。
 - rollback 対象には `.ut-tdd/bin/ut-tdd.mjs` を含め、managed adapter と同じく再 setup で復元できる。
+
+## §7 fresh-consumer setup-smoke 契約
+
+L6 contract marker: `runDoctor(input: DoctorOptions) => LintResult` は consumer setup smoke の unit-test-granularity contract である。DbC pre は `setupSmoke === true` のとき dogfood PLAN/design/test-design を要求しないこと、post は project-local wrapper と Claude/Codex adapter hook の存在・JSON parse・portable command を検査すること、oracle は U-SETUP-014 とする。
+
+`--setup-smoke` は `.ut-tdd/bin/ut-tdd.mjs`、adapter docs/config、Claude/Codex hook JSON、Claude/Codex の `agent-guard` / `work-guard` / session lifecycle、Claude `subagent-stop`、および `$CLAUDE_PROJECT_DIR` / global `.codex` 非依存を fail-close で確認する。`emitSetup` の template 解決は `COMMON_FILES.file.path` から `COMMON_FILES.template` を正本として引き、未登録 adapter file が `common/<basename>` に落ちて空ファイルになることを禁止する。

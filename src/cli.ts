@@ -492,14 +492,25 @@ program
     "--strict-green-command-digest",
     "fail closed when green command digests do not match their evidence files",
   )
-  .action((opts: { strictTelemetryProvenance?: boolean; strictGreenCommandDigest?: boolean }) => {
-    const r = runDoctor(undefined, {
-      strictTelemetryProvenance: opts.strictTelemetryProvenance === true,
-      strictGreenCommandDigest: opts.strictGreenCommandDigest === true,
-    });
-    for (const m of r.messages) process.stdout.write(`${m}\n`);
-    process.exitCode = r.ok ? 0 : 1;
-  });
+  .option(
+    "--setup-smoke",
+    "run only the fresh-consumer setup smoke checks for wrapper and adapter hooks",
+  )
+  .action(
+    (opts: {
+      strictTelemetryProvenance?: boolean;
+      strictGreenCommandDigest?: boolean;
+      setupSmoke?: boolean;
+    }) => {
+      const r = runDoctor(undefined, {
+        strictTelemetryProvenance: opts.strictTelemetryProvenance === true,
+        strictGreenCommandDigest: opts.strictGreenCommandDigest === true,
+        setupSmoke: opts.setupSmoke === true,
+      });
+      for (const m of r.messages) process.stdout.write(`${m}\n`);
+      process.exitCode = r.ok ? 0 : 1;
+    },
+  );
 
 // `web` command は PLAN-L7-102 prototype (table-dumper) 破棄に伴い撤去 (2026-06-24)。
 // component-derived な中央UI 再実装は PLAN-L7-141 で再配線する。

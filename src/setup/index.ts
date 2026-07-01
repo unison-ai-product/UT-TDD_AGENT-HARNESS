@@ -342,6 +342,8 @@ function renderArtifacts(
 }
 
 function templateNameFor(targetPath: string): string {
+  const common = COMMON_FILES.find((entry) => entry.file.path === targetPath);
+  if (common) return common.template;
   if (targetPath === CODEOWNERS_TARGET) return "team/CODEOWNERS";
   if (targetPath === BP_SCRIPT) return "team/setup-branch-protection.sh";
   if (targetPath === "AGENTS.md") return "adapter/AGENTS.md";

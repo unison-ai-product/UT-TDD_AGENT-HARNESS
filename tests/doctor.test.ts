@@ -263,6 +263,38 @@ describe("runDoctor", () => {
     expect(r.messages.some((m) => m.includes("coding-rules"))).toBe(true);
   });
 
+  it("U-SETUP-014: supports a fresh-consumer setup smoke without requiring dogfood PLAN/design docs", () => {
+    const hookJson = JSON.stringify({
+      hooks: {
+        PreToolUse: [
+          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard" }] },
+          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard" }] },
+        ],
+        SessionStart: [{ hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session start" }] }],
+        PostToolUse: [{ hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use" }] }],
+        Stop: [
+          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session summary" }] },
+          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop" }] },
+        ],
+      },
+    });
+    const file = (path: string) => join("/repo", ...path.split("/"));
+    const files = new Map<string, string>([
+      [file(".ut-tdd/bin/ut-tdd.mjs"), "const localBin = '.ut-tdd/bin/ut-tdd.mjs';"],
+      [file("AGENTS.md"), "UT-TDD adapter"],
+      [file("CLAUDE.md"), "UT-TDD adapter"],
+      [file(".claude/CLAUDE.md"), "UT-TDD adapter"],
+      [file(".claude/settings.json"), hookJson],
+      [file(".codex/config.toml"), "hooks = true"],
+      [file(".codex/hooks.json"), hookJson],
+    ]);
+
+    const r = runDoctor(deps({ files }), { setupSmoke: true });
+
+    expect(r.ok).toBe(true);
+    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=22, failed=0)"]);
+  });
+
   it("includes asset-drift hard gate in doctor output", () => {
     const r = realRepoDoctor;
     expect(r.ok).toBe(true);
@@ -700,6 +732,7 @@ describe("runDoctor", () => {
 
   it("keeps all hard gates wired into runDoctor hard-gate aggregation", () => {
     const source = readFileSync(join(process.cwd(), "src", "doctor", "index.ts"), "utf8");
+    // The first `return { ok, messages }` must remain the normal doctor aggregation, not a profile shortcut.
     const okExpression = source.match(/return\s+\{\s+ok:([\s\S]*?),\s+messages:\s+\[/)?.[1] ?? "";
     const expectedHardGates = [
       "backfill",

@@ -92,7 +92,7 @@ function writeLocalUtTddShim(root: string): string {
 }
 
 describe("clean distribution local acceptance smoke", () => {
-  it("U-SETUP-013 / AT-DIST-001: clean artifact installs and exposes the same core CLI surfaces", () => {
+  it("U-SETUP-013 / U-SETUP-014 / AT-DIST-001: clean artifact installs and exposes the same core CLI surfaces", () => {
     const plan = buildCleanDistributionPlan({
       paths: walkCandidatePaths(repoRoot),
       sourceTag: "v0.1.0",
@@ -199,6 +199,21 @@ describe("clean distribution local acceptance smoke", () => {
         "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
       );
       expect(distributionJson.actualCutRequiresPoApproval).toBe(true);
+
+      const setup = runBun(cleanRoot, ["src/cli.ts", "setup", "--solo"], env);
+      expect(setup.status, setup.stderr || setup.stdout).toBe(0);
+
+      const wrapperHelp = runBun(cleanRoot, [".ut-tdd/bin/ut-tdd.mjs", "--help"], env);
+      expect(wrapperHelp.status, wrapperHelp.stderr || wrapperHelp.stdout).toBe(0);
+      expect(wrapperHelp.stdout).toContain("Usage: ut-tdd");
+
+      const setupSmoke = runBun(
+        cleanRoot,
+        [".ut-tdd/bin/ut-tdd.mjs", "doctor", "--setup-smoke"],
+        env,
+      );
+      expect(setupSmoke.status, setupSmoke.stderr || setupSmoke.stdout).toBe(0);
+      expect(setupSmoke.stdout).toContain("doctor: setup-smoke - OK");
 
       const typecheck = runBun(cleanRoot, ["run", "typecheck"], env);
       expect(typecheck.status, typecheck.stderr || typecheck.stdout).toBe(0);
