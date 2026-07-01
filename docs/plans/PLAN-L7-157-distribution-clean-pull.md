@@ -101,7 +101,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:0ad713f57f467d7ebb0d341f6914af3290bea4df50619182d76e450772f9874a"
+        output_digest: "sha256:02abf5e3037a0f663e7cf27af77da2d8347e771164da3b99765583fce61716c2"
       - kind: smoke
         command: "bun src\\cli.ts distribution package --tag v0.1.0 --out <temp> --json"
         runner: bun
@@ -109,7 +109,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:37a71b9f9ad4d5edc8ee77f7b29f3662ba21fde3dbec8316ddebecef77338ab1"
+        output_digest: "sha256:cf04254dce2e6074955f6e3ebb2fa4b9eac6139b78205d6b435e2e3a189a748c"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-01T16:17:00+09:00"
@@ -142,7 +142,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:37a71b9f9ad4d5edc8ee77f7b29f3662ba21fde3dbec8316ddebecef77338ab1"
+        output_digest: "sha256:cf04254dce2e6074955f6e3ebb2fa4b9eac6139b78205d6b435e2e3a189a748c"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-01T16:17:00+09:00"
@@ -167,7 +167,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:0ad713f57f467d7ebb0d341f6914af3290bea4df50619182d76e450772f9874a"
+        output_digest: "sha256:02abf5e3037a0f663e7cf27af77da2d8347e771164da3b99765583fce61716c2"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -183,7 +183,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:37a71b9f9ad4d5edc8ee77f7b29f3662ba21fde3dbec8316ddebecef77338ab1"
+        output_digest: "sha256:cf04254dce2e6074955f6e3ebb2fa4b9eac6139b78205d6b435e2e3a189a748c"
       - kind: smoke
         command: "bun src\\cli.ts distribution plan --tag v0.1.0 --json"
         runner: bun
@@ -232,7 +232,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:37a71b9f9ad4d5edc8ee77f7b29f3662ba21fde3dbec8316ddebecef77338ab1"
+        output_digest: "sha256:cf04254dce2e6074955f6e3ebb2fa4b9eac6139b78205d6b435e2e3a189a748c"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-01T16:17:00+09:00"
@@ -265,7 +265,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:37a71b9f9ad4d5edc8ee77f7b29f3662ba21fde3dbec8316ddebecef77338ab1"
+        output_digest: "sha256:cf04254dce2e6074955f6e3ebb2fa4b9eac6139b78205d6b435e2e3a189a748c"
 ---
 
 # PLAN-L7-157: clean distribution pull channel

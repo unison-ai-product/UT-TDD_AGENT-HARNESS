@@ -645,6 +645,35 @@ provider で hybrid の worker≠reviewer 分離を検証する。T0 の相談�
 invariant 要約: archetype が帯を決める / ワーカーは T0 に絶対到達しない (fail-close) / T0 は明示許可ゲート /
 hybrid は実装と検証を別 provider / Codex は Claude と対称。U-* family = U-TIER-001..015。
 
+### 2026-07-01 model / effort routing 追補
+
+PO 追加指示により、`src/team/model-policy.ts` は difficulty だけでなく task intent を deterministic に導出する。
+intent は `docs` / `research` / `implementation` / `lightweight` / `review` / `uiux` / `general` の 7 値で、
+role・engine・task text から推定する。これは provider 配置そのものを無制限に上書きするものではなく、
+既存の cross-provider router (worker=creation、consult/verify=judgement、T0 明示許可) の上で、
+選ばれた member の model/effort 既定を決める policy である。
+
+モデル系統の既定:
+
+- docs 系: Claude Sonnet 系を優先する。
+- research 系: Claude Haiku 系を優先する。
+- implementation 系: GPT/Codex 系を優先する。
+- lightweight 系: GPT/Codex の spark / mini lane を使い、並列 shard で閉鎖権限を持たせない。
+- design / implementation review: T0 reviewer として GPT frontier (`gpt-5.5`) または Claude Opus (`claude-opus-4-8`) 以上を明示許可ゲート付きで使う。
+- UI/UX 系: Claude Sonnet 系を優先し、effort は `xhigh` とする。
+
+effort 既定:
+
+- Claude 系は `high` を標準にする。
+- GPT/Codex 系は `middle` を標準にする。
+- review / critical judgement は一段上げ、GPT frontier review は `xhigh`、Claude/Opus review は `high` とする。
+- spark / mini など軽量モデル lane は `high` を標準にする。
+- UI/UX は `xhigh` を指定する。
+
+`ReasoningEffort` は後方互換の `medium` を残しつつ、PO 語彙の `middle` と `xhigh` を追加する。
+team proposal lane の mini/spark は `effort=high` で生成し、review aggregator は `high`、critical aggregator は
+`xhigh` を使う。oracle: U-TEAM-MODEL intent / effort tests、U-TEAM launch proposal lane effort tests。
+
 ## 2026-06-19 skill suggest free-text surface 追補 (A-138 ITEM-2)
 
 FR-L1-12 (`suggestSkillInjection`) / FR-L1-47 (`recommendSkills`) の公開 CLI `ut-tdd skill suggest` は
@@ -686,6 +715,18 @@ CLI wiring:
 runtime entrypoint は TypeScript/Bun first のままとし、OS wrapper は thin に限る。`scripts/ut-tdd` は Linux/POSIX `sh` entrypoint である。これは `set -e` を有効化し、compiled binary が存在する場合は `dist/ut-tdd` を実行し、それ以外は `bun run "$ROOT/src/cli.ts" "$@"` へ fallback する。wrapper は Bash-only syntax、Python runtime dispatch、legacy runtime name を導入してはならない。
 
 `ut-tdd codex|claude --plan` の dynamic skill context injection は runtime startup 時の opportunistic 動作とする。current working tree が harness DB projection を rebuild できない場合、例えば hook/adapter smoke test 用 temp repo では、adapter execution は `UT-TDD context injection` block なしで継続する。task prompt と lifecycle digest は通常通り完了する。missing injection は adapter launch failure ではなく absent context として観測可能にする。
+
+## 2026-07-01 上位モデル advisor command 追補
+
+`src/team/advisor-policy.ts` は、Sonnet-class Claude または下位 GPT/Codex model が
+orchestrator で、判断に迷う場合に上位モデルへ相談するための deterministic policy である。
+公開 CLI は `ut-tdd advisor` とし、既定は dry-run adapter plan、`--execute` 指定時だけ
+provider CLI を起動する。
+
+| 関数 / CLI | signature / command | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | Claude advisor は Opus (`claude-opus-4-8`) + `high`、Codex advisor は GPT frontier (`gpt-5.5`) + `xhigh`。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute |
+| `ut-tdd advisor` | `--task/--task-file`, `--provider`, `--current-model`, `--reason`, `--plan`, `--mode`, `--execute`, `--json` | `--task` と `--task-file` は相互排他。`provider` は `claude` / `codex` のみ。 | dry-run では adapter plan JSON を返す。`--execute` では既存 adapter 実行と同じ session logging を通して provider を起動する。 | advisor は read-only judgement prompt であり、file edit や gate close を主張しない。 | `tests/cli-surface.test.ts` |
 
 ## 2026-06-23 artifact progress workflow trigger 追補
 

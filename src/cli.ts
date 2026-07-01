@@ -68,6 +68,7 @@ import {
 import { lintPlanWithGate } from "./plan/lint";
 import {
   type AdapterContextInjection,
+  type AdapterPlan,
   type AdapterProvider,
   buildAdapterPlan,
   buildProviderInvocation,
@@ -161,6 +162,7 @@ import {
   routeTeamMembers,
   routeToAdapterPlan,
 } from "./task/tier-router";
+import { buildAdvisorDecision } from "./team/advisor-policy";
 import { recommendTeamLaunch } from "./team/launch-policy";
 import {
   buildTeamRunPlan,
@@ -2008,6 +2010,152 @@ routeCommand
         process.stderr.write(`${evaluated.suggest_command}\n`);
       }
       process.exitCode = evaluated.exit_code;
+    },
+  );
+
+function executeAdapterPlanForCli(
+  plan: AdapterPlan,
+  input: { sessionPrefix: string; role: string; planId?: string; jsonOut?: boolean },
+): { executed: true; exit_code: number | null; signal: string | null } {
+  const sessionId = `${input.sessionPrefix}-${Date.now()}`;
+  const repoRoot = process.cwd();
+  const deps = nodeDeps(repoRoot, gitBranch, gitHead);
+  const startInput: SessionHookInput = {
+    hook_event_name: HOOK_EVENT_SESSION_START,
+    session_id: sessionId,
+    ...(input.planId ? { plan_id: input.planId } : {}),
+  };
+  runSessionStartSideEffects(repoRoot, startInput, deps);
+  dispatch(startInput, deps, HOOK_EVENT_SESSION_START);
+  const invocation = buildProviderInvocation({
+    provider: plan.provider,
+    command: plan.command,
+    args: plan.args,
+  });
+  const child = spawnSync(invocation.command, invocation.args, {
+    input: plan.stdin,
+    stdio:
+      plan.stdin === undefined
+        ? ["inherit", input.jsonOut ? 2 : "inherit", "inherit"]
+        : ["pipe", input.jsonOut ? 2 : "inherit", "inherit"],
+    env: adapterExecutionEnv(plan.provider, plan.env),
+    shell: invocation.shell ?? false,
+    windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
+  });
+  if (child.error) {
+    process.stderr.write(`${plan.provider}: failed to launch (${String(child.error)})\n`);
+  }
+  dispatch(
+    {
+      hook_event_name: "PostToolUse",
+      session_id: sessionId,
+      ...(input.planId ? { plan_id: input.planId } : {}),
+      tool_name: input.role,
+      tool_input: { command: `${plan.command} ${plan.args.join(" ")}` },
+      tool_response: { outcome: child.status === 0 ? "ok" : "error" },
+    },
+    deps,
+    "PostToolUse",
+  );
+  dispatch(
+    {
+      hook_event_name: "Stop",
+      session_id: sessionId,
+      ...(input.planId ? { plan_id: input.planId } : {}),
+    },
+    deps,
+    "Stop",
+  );
+  writeHandoverWarnings();
+  return { executed: true, exit_code: child.status ?? null, signal: child.signal ?? null };
+}
+
+program
+  .command("advisor")
+  .description("upper-model advisor adapter for uncertain orchestration decisions")
+  .option("--task <text>", "task text")
+  .option("--task-file <path>", TASK_FILE_OPTION_DESCRIPTION)
+  .option("--provider <provider>", "advisor provider (claude|codex)")
+  .option("--current-model <model>", "current orchestrator model that needs advice")
+  .option("--reason <text>", "why upper-model advice is needed")
+  .option("--plan <id>", "PLAN id")
+  .option("--execute", "execute provider CLI instead of dry-run")
+  .option("--mode <mode>", MODE_OVERRIDE_OPTION_DESCRIPTION)
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      task?: string;
+      taskFile?: string;
+      provider?: string;
+      currentModel?: string;
+      reason?: string;
+      plan?: string;
+      execute?: boolean;
+      mode?: ReturnType<typeof detectMode>["mode"];
+      json?: boolean;
+    }) => {
+      const task = resolveTaskText(opts);
+      if (!task) {
+        process.stderr.write("advisor requires exactly one of --task or --task-file\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (opts.provider && opts.provider !== "claude" && opts.provider !== "codex") {
+        process.stderr.write("advisor --provider must be claude or codex\n");
+        process.exitCode = 1;
+        return;
+      }
+      const mode = opts.mode ?? detectMode().mode;
+      const decision = buildAdvisorDecision({
+        task,
+        mode,
+        provider: opts.provider as AdapterProvider | undefined,
+        currentModel: opts.currentModel,
+        reason: opts.reason,
+        planId: opts.plan,
+        execute: Boolean(opts.execute),
+        contextInjection: resolveSkillContextInjection(opts.plan),
+      });
+      if (!decision.adapterPlan.available) {
+        if (opts.json) process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);
+        else process.stderr.write(`${decision.adapterPlan.messages.join("\n")}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      if (!opts.execute) {
+        if (opts.json) process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);
+        else {
+          process.stdout.write(
+            `advisor: provider=${decision.provider} model=${decision.model} effort=${decision.effort} intent=${decision.task_intent} lower=${decision.current_model_lower_than_advisor} dry-run\n`,
+          );
+          process.stdout.write(`  - ${decision.reason}\n`);
+          process.stdout.write(
+            `  - dispatch: command=${decision.adapterPlan.command} args=[${decision.adapterPlan.args.join(" ")}]\n`,
+          );
+        }
+        return;
+      }
+      const execution = executeAdapterPlanForCli(decision.adapterPlan, {
+        sessionPrefix: `advisor-${decision.provider}`,
+        role: "advisor",
+        planId: opts.plan,
+        jsonOut: Boolean(opts.json),
+      });
+      const output = {
+        ...decision,
+        adapterPlan: {
+          ...decision.adapterPlan,
+          ...execution,
+          dry_run: false,
+        },
+      };
+      if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+      else {
+        process.stdout.write(
+          `advisor executed: provider=${decision.provider} model=${decision.model} exit=${execution.exit_code ?? "null"}\n`,
+        );
+      }
+      process.exitCode = execution.exit_code ?? 1;
     },
   );
 

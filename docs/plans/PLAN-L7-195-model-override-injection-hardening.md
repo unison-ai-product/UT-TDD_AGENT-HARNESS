@@ -40,8 +40,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T10:43:30+09:00"
-    tests_green_at: "2026-06-30T10:42:58+09:00"
+    reviewed_at: "2026-07-01T16:53:00+09:00"
+    tests_green_at: "2026-07-01T16:52:01+09:00"
     verdict: approve
     scope: "PLAN-L7-195 model override injection hardening: strict model token validation plus Windows .cmd provider invocation with Node shell=false."
     worker_model: codex
@@ -84,9 +84,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T10:39:47+09:00"
+        completed_at: "2026-07-01T16:52:01+09:00"
         evidence_path: src/schema/team.ts
-        output_digest: "sha256:bf18b8132eee3fddfdb1e4405a1c876915596a9a152debed9d9ba8ee54e64519"
+        output_digest: "sha256:5eb3c0621123ff038a984802230fe208f8a27dcfa1a94200d37a6d28f7f5fb4d"
 ---
 
 # PLAN-L7-195 (impl): model override injection hardening (Security)

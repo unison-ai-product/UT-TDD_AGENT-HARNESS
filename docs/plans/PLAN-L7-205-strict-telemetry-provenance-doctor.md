@@ -54,7 +54,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:0ad713f57f467d7ebb0d341f6914af3290bea4df50619182d76e450772f9874a"
+        output_digest: "sha256:02abf5e3037a0f663e7cf27af77da2d8347e771164da3b99765583fce61716c2"
       - kind: unit_test
         command: "bun run vitest run tests\\db-projection-ingestion.test.ts --reporter=dot"
         runner: bun

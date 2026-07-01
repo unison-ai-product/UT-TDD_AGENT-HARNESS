@@ -213,6 +213,87 @@ describe("L7 CLI surface closure", () => {
     expect(routePayload.decision.model).not.toBe("gpt-5.4-mini");
   }, 20_000);
 
+  it("exposes upper-model advisor dry-runs for lower orchestrator models", () => {
+    const run = runCli([
+      "advisor",
+      "--task",
+      "review whether the release gate is safe to close",
+      "--current-model",
+      "claude-sonnet-4-6",
+      "--mode",
+      "hybrid",
+      "--json",
+    ]);
+    const payload = JSON.parse(run.stdout);
+
+    expect(run.status).toBe(0);
+    expect(payload).toMatchObject({
+      provider: "claude",
+      model: "claude-opus-4-8",
+      effort: "high",
+      current_model_lower_than_advisor: true,
+      adapterPlan: {
+        provider: "claude",
+        model: "claude-opus-4-8",
+        effort: "high",
+        dry_run: true,
+      },
+    });
+    expect(payload.adapterPlan.stdin).toContain("upper-model advisor");
+  }, 20_000);
+
+  it("executes advisor through the selected upper Codex adapter", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-advisor-exec-"));
+    try {
+      const binDir = join(root, "bin");
+      mkdirSync(binDir);
+      const fakeCodex = writeFakeProvider(binDir, "codex");
+      const currentPath = process.env.PATH ?? process.env.Path ?? "";
+      const testPath = `${binDir}${process.platform === "win32" ? ";" : ":"}${currentPath}`;
+      const run = runCliIn(
+        root,
+        [
+          "advisor",
+          "--task",
+          "advise on uncertain implementation close",
+          "--provider",
+          "codex",
+          "--mode",
+          "codex-only",
+          "--execute",
+          "--json",
+        ],
+        {
+          ...process.env,
+          PATH: testPath,
+          Path: testPath,
+          UT_TDD_CODEX_BIN: fakeCodex,
+        },
+      );
+      const payload = JSON.parse(run.stdout);
+
+      expect(run.status).toBe(0);
+      expect(run.stdout).not.toContain("noisy-codex");
+      expect(payload).toMatchObject({
+        provider: "codex",
+        model: "gpt-5.5",
+        effort: "xhigh",
+        adapterPlan: {
+          provider: "codex",
+          model: "gpt-5.5",
+          dry_run: false,
+          executed: true,
+          exit_code: 0,
+        },
+      });
+      const codexEnv = readFileSync(join(root, "codex-env.txt"), "utf8");
+      expect(codexEnv).toContain("gpt-5.5");
+      expect(codexEnv).toContain("args=");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 20_000);
+
   it("exposes builder catalog as a JSON command surface", () => {
     const run = runCli(["builder", "catalog", "--json"]);
     const payload = JSON.parse(run.stdout);
@@ -589,7 +670,7 @@ describe("L7 CLI surface closure", () => {
         "reason=ut-tdd-runtime-adapter-wrapper",
       );
       expect(readFileSync(join(root, "claude-env.txt"), "utf8")).not.toContain("raw=1");
-      expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("effort=medium");
+      expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("effort=high");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

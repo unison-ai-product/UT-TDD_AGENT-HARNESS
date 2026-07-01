@@ -116,6 +116,24 @@ Design decisions, judgement gates, and R4 merge decisions should go through a
 different runtime / model family when feasible. In single-runtime modes, record
 `intra_runtime_subagent` as the review substitute and leave evidence.
 
+Model / effort routing defaults:
+
+- Docs work defaults to Sonnet-class Claude; research defaults to Haiku-class
+  Claude; implementation defaults to GPT/Codex-class workers.
+- Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
+  closing authority; their default effort is `high`.
+- Design/implementation review uses a top reviewer model: GPT frontier
+  (`gpt-5.5`) or Claude Opus (`claude-opus-4-8`) or above, behind the explicit
+  frontier gate.
+- UI/UX work defaults to Sonnet-class Claude with `xhigh` effort.
+- Claude-family effort defaults to `high`; GPT/Codex effort defaults to
+  `middle`; only high-judgement review/critical decisions move up to
+  `high`/`xhigh`.
+- 現在の orchestrator が Sonnet-class Claude または下位 GPT/Codex model で、
+  判断に迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使う。
+  advisor は Claude Opus (`claude-opus-4-8`) または GPT frontier (`gpt-5.5`)
+  へ dry-run/execute 可能な adapter plan を作る。実相談は `--execute` を付ける。
+
 Do not add legacy commands as current company/product execution paths.
 
 ## Hooks (Codex orchestrator parity)

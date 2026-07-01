@@ -44,3 +44,26 @@
 ## 判定
 
 `green-command-digest` の strict 整合は、hash-only restamp ではなく同一セッションの full green (`typecheck` / `lint` / 全回帰 / DB rebuild) と束ねて回復した。これは local evidence integrity の回復であり、release/UAT/post-release telemetry の外部境界は引き続き未充足として残す。
+
+## 2026-07-01 増分 rebind: model / effort / advisor routing
+
+本増分は `PLAN-L7-215-model-effort-advisor-routing` の実装後に実行した。
+hash-only restamp ではなく、次の green 実行後に `green_commands.output_digest` を
+現 `evidence_path` SHA-256 へ再束ねした。
+
+| command | result |
+| --- | --- |
+| `bun run typecheck` | pass |
+| `bun run lint` | pass |
+| `bun run vitest run tests\team-model-policy.test.ts tests\team-launch-policy.test.ts tests\team-run.test.ts tests\team-schema.test.ts tests\runtime-adapter.test.ts tests\model-id-ssot.test.ts tests\cli-surface.test.ts --reporter=dot` | pass: 7 files / 88 tests |
+| `bun src\cli.ts db rebuild --json` | pass: `ok=true` |
+
+処理結果:
+
+| item | count |
+| --- | ---: |
+| updated command entries | 22 |
+| touched PLAN files | 13 |
+
+この増分は、`src/cli.ts` / `tests/cli-surface.test.ts` 等の shared evidence files を更新したことによる
+strict digest mismatch を、同一検証サイクルの green 実行に束ねて解消するための処置である。
