@@ -357,6 +357,17 @@ managed なアダプタ呼び出しでは、ハーネスは legacy の raw-provi
 
 </details>
 
+## 📄 License
+
+MIT License.
+
+Copyright (c) 2026 UNISON-TECHNOLOGY
+
+This software may be used, copied, modified, merged, published, distributed,
+sublicensed, and/or sold, provided that the copyright notice and MIT License
+notice are included in all copies or substantial portions of the software. See
+[`LICENSE`](./LICENSE) for the full license text.
+
 ## ✅ 検証
 
 ```powershell
