@@ -158,33 +158,30 @@ worker と reviewer を**別 provider**(Codex ↔ Claude)に割り当てるこ�
 
 ```powershell
 bun install
-bun link
 
 # ハーネス状態を受け取りたい既存プロジェクトのディレクトリで
-bun link ut-tdd
 powershell -NoProfile -ExecutionPolicy Bypass -File C:\path\to\UT-TDD-agent-harness\scripts\ut-tdd.ps1 setup --solo
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\ut-tdd.ps1 doctor
+bun .ut-tdd\bin\ut-tdd.mjs doctor
 ```
 
-The generated Claude/Codex hooks call bare `ut-tdd ...`, so `ut-tdd` must resolve on
-the consumer repository PATH. `bin.ut-tdd` points at `src/cli.ts`, so `bun link`
-works immediately after `bun install`; `bun run build` is only needed when preparing
-the compiled release binary. Before running `setup`, verify the same shell that will
-run Claude/Codex hooks can execute:
+The generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...`.
+That wrapper is projected into each consumer repository by `ut-tdd setup` and
+prefers that repository's pinned `node_modules/.bin/ut-tdd` before falling back to
+a global `ut-tdd`. This keeps multiple projects on one PC from fighting over one
+global harness version. Before treating setup as ready, verify the same shell that
+will run Claude/Codex hooks can execute:
 
 ```powershell
-ut-tdd --help
+bun .ut-tdd\bin\ut-tdd.mjs --help
 ```
 
-On Windows, if Bun was installed through npm shims, `bun link` may create an
-`ut-tdd` executable that exists under `~\.bun\bin` but is not visible to the
-hook shell, or is visible but cannot find a real `bun.exe`. Add both Bun's global
-bin directory and the real Bun binary directory to PATH before treating setup as
-ready. For an npm-installed Bun on Windows, the local verification shape is:
+On Windows, Bun itself must still resolve in the hook shell. If Bun was installed
+through npm shims, add the real Bun binary directory to PATH before treating setup
+as ready. For an npm-installed Bun on Windows, the local verification shape is:
 
 ```powershell
-$env:PATH="$env:USERPROFILE\.bun\bin;$env:APPDATA\npm\node_modules\bun\bin;$env:PATH"
-ut-tdd --help
+$env:PATH="$env:APPDATA\npm\node_modules\bun\bin;$env:PATH"
+bun .ut-tdd\bin\ut-tdd.mjs --help
 ```
 
 ## ⚙️ セットアップ

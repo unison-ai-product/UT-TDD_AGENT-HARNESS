@@ -2825,11 +2825,22 @@ distribution
     }
     const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
     const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
+    const packageRoot = opts.packageRoot ? join(repoRoot, opts.packageRoot) : repoRoot;
+    const hookWrapperPath = join(packageRoot, ".ut-tdd", "bin", "ut-tdd.mjs");
+    const packageBinPath = join(
+      packageRoot,
+      "node_modules",
+      ".bin",
+      process.platform === "win32" ? "ut-tdd.cmd" : "ut-tdd",
+    );
+    const sourceSetupEntrypoint = join(packageRoot, "src", "cli.ts");
+    const hasProjectLocalUtTdd = existsSync(hookWrapperPath) || existsSync(packageBinPath);
+    const hasSourceSetupEntrypoint = existsSync(sourceSetupEntrypoint);
     const utTddCli = spawnSync("ut-tdd", ["--help"], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     });
-    const hasUtTddCli = utTddCli.status === 0;
+    const hasUtTddCli = hasProjectLocalUtTdd || hasSourceSetupEntrypoint || utTddCli.status === 0;
     const utTddCliObserved =
       utTddCli.error?.message || utTddCli.stderr.trim() || `exit ${utTddCli.status ?? "unknown"}`;
     const utTddCliHints = [
@@ -2840,11 +2851,14 @@ distribution
     const utTddCliMessage = hasUtTddCli
       ? undefined
       : [
-          "Bare `ut-tdd --help` must succeed before setup because generated Claude/Codex hooks call `ut-tdd ...`.",
+          "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...` so each project can use its own pinned UT-TDD package.",
+          `Expected wrapper: ${hookWrapperPath}`,
+          `Expected package bin: ${packageBinPath}`,
+          `Expected source setup entrypoint: ${sourceSetupEntrypoint}`,
           `Observed: ${utTddCliObserved}`,
           utTddCliHints.length > 0
-            ? `Detected candidate path(s): ${utTddCliHints.join(", ")}. Ensure Bun's global bin directory and the real Bun binary directory are both on the hook shell PATH.`
-            : "Ensure Bun's global bin directory and the real Bun binary directory are both on the hook shell PATH.",
+            ? `Detected global candidate path(s): ${utTddCliHints.join(", ")}. Prefer the project-local wrapper when multiple projects on one PC pin different harness versions.`
+            : "Add UT-TDD as a project dependency, run setup to emit the wrapper, and ensure Bun resolves on the hook shell PATH.",
         ].join(" ");
     const exportPlan = buildCleanDistributionPlan({
       paths: collectDistributionCandidatePaths(repoRoot),
@@ -2860,7 +2874,7 @@ distribution
       hasClaude: detection.claude,
       hasCodex: detection.codex,
       repoRoot,
-      packageRoot: opts.packageRoot ? join(repoRoot, opts.packageRoot) : repoRoot,
+      packageRoot,
       tag: opts.tag,
     });
     const output = {

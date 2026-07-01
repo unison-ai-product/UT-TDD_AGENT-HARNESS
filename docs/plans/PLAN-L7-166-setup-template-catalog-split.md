@@ -46,7 +46,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:ea0224e0f382481080f49cfe13f82e3677dee84dc515d26bc081b9c7770a397a"
+        output_digest: "sha256:41c2098f7f6dca491468ae7e956ec2a9186f0f48135314b78f7dfbb2c10ff897"
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts"
         runner: bun
@@ -54,7 +54,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:93ef1c5aac32640863c505a626081f971f19c971c6d90db46d94be51f776a4b7"
+        output_digest: "sha256:691fbd6492bb8a991e5acb66c022e542a0f8b5829e38f1f57326a660457d31da"
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts"
         runner: bun
@@ -62,7 +62,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:48:29+09:00"
         evidence_path: src/setup/templates.ts
-        output_digest: "sha256:f424989bfc9351de34748b6563637ec55545c061936a4c2fa81970d334094d1c"
+        output_digest: "sha256:919168e66fe75578fa18b15e5786a49ae9ee21b35fa0f0fb232e1e9e6f2737a6"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -70,7 +70,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:93ef1c5aac32640863c505a626081f971f19c971c6d90db46d94be51f776a4b7"
+        output_digest: "sha256:691fbd6492bb8a991e5acb66c022e542a0f8b5829e38f1f57326a660457d31da"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -78,7 +78,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T20:48:55+09:00"
         evidence_path: src/setup/templates.ts
-        output_digest: "sha256:f424989bfc9351de34748b6563637ec55545c061936a4c2fa81970d334094d1c"
+        output_digest: "sha256:919168e66fe75578fa18b15e5786a49ae9ee21b35fa0f0fb232e1e9e6f2737a6"
 ---
 
 # PLAN-L7-166: setup template catalog split

@@ -82,6 +82,7 @@ const ghTeam = (args: string[]): { ok: boolean; stdout: string } => {
 };
 
 const baseTemplates: TemplateSet = {
+  "common/ut-tdd.mjs": "#!/usr/bin/env bun\n",
   "adapter/AGENTS.md": [
     "<!-- UT-TDD:managed:start -->",
     "# UT-TDD Agent Harness Adapter",
@@ -284,30 +285,44 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
           expect.objectContaining({
             matcher: "Agent|Task",
             hooks: [
-              expect.objectContaining({ command: "ut-tdd hook agent-guard", blockOnFailure: true }),
+              expect.objectContaining({
+                command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+                blockOnFailure: true,
+              }),
             ],
           }),
           expect.objectContaining({
             matcher: "Edit|Write|MultiEdit",
             hooks: [
-              expect.objectContaining({ command: "ut-tdd hook work-guard", blockOnFailure: true }),
+              expect.objectContaining({
+                command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+                blockOnFailure: true,
+              }),
             ],
           }),
         ]),
       );
-      expect(claude.hooks.SubagentStop[0].hooks[0].command).toBe("ut-tdd hook subagent-stop");
+      expect(claude.hooks.SubagentStop[0].hooks[0].command).toBe(
+        "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
+      );
       expect(codex.hooks.PreToolUse).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             matcher: "spawn_agent|spawn_agents_on_csv",
             hooks: [
-              expect.objectContaining({ command: "ut-tdd hook agent-guard", blockOnFailure: true }),
+              expect.objectContaining({
+                command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+                blockOnFailure: true,
+              }),
             ],
           }),
           expect.objectContaining({
             matcher: "apply_patch|write_file",
             hooks: [
-              expect.objectContaining({ command: "ut-tdd hook work-guard", blockOnFailure: true }),
+              expect.objectContaining({
+                command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+                blockOnFailure: true,
+              }),
             ],
           }),
         ]),
@@ -322,6 +337,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(plan.files).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ path: "AGENTS.md", category: "A" }),
+        expect.objectContaining({ path: join(".ut-tdd", "bin", "ut-tdd.mjs"), category: "A" }),
         expect.objectContaining({ path: "CLAUDE.md", category: "A" }),
         expect.objectContaining({ path: join(".codex", "config.toml"), category: "A" }),
         expect.objectContaining({ path: join(".codex", "hooks.json"), category: "A" }),
@@ -351,6 +367,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(preview).toEqual(
       expect.arrayContaining([
         "AGENTS.md",
+        join(".ut-tdd", "bin", "ut-tdd.mjs"),
         "CLAUDE.md",
         join(".codex", "hooks.json"),
         join(".claude", "CLAUDE.md"),
@@ -509,10 +526,12 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(ready.ci.requires).toContain("bun run test");
     expect(ready.rollback.backupRequired).toBe(true);
     expect(ready.rollback.managedPaths).toContain("AGENTS.md");
+    expect(ready.rollback.managedPaths).toContain(".ut-tdd/bin/ut-tdd.mjs");
     expect(ready.rollback.managedPaths).toContain(".claude/agents/code-reviewer.md");
     expect(ready.rollback.managedPaths).toContain(".claude/commands/build.md");
     expect(ready.contracts.tagPin).toContain("#v0.1.0");
     expect(ready.contracts.stable).toContain("adapter managed markers");
+    expect(ready.contracts.stable).toContain("project-local .ut-tdd/bin/ut-tdd.mjs wrapper");
     expect(ready.smokeScenarios).toEqual(
       expect.arrayContaining([
         "consumer CI -> harness-check green without repository secrets",
@@ -538,13 +557,13 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "runtime-cli",
     ]);
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "Bare `ut-tdd --help` must succeed before setup",
+      "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...`",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "npm-installed Bun shims may not satisfy Bun link executables",
+      "Do not rely on a global `bun link`",
     );
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
-      "real Bun binary directory",
+      "Bun itself must still resolve",
     );
   });
 

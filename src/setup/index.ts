@@ -475,13 +475,13 @@ export function buildConsumerReadinessPlan(input: {
       ok: input.hasUtTddCli ?? true,
       message:
         (input.hasUtTddCli ?? true)
-          ? "ut-tdd resolves on PATH for projected hooks"
+          ? "project-local UT-TDD wrapper, package bin, or source setup entrypoint is available for projected hooks"
           : (input.utTddCliMessage ??
             [
-              "Bare `ut-tdd --help` must succeed before setup because generated Claude/Codex hooks call `ut-tdd ...`.",
-              "Run `bun link` in the harness package and `bun link ut-tdd` in the consumer repo.",
-              "Ensure Bun's global bin directory and the real Bun binary directory are both on the hook shell PATH.",
-              "On Windows, npm-installed Bun shims may not satisfy Bun link executables; verify the actual `ut-tdd --help` command in the consumer shell.",
+              "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...` so each project can use its own pinned UT-TDD package.",
+              "Add UT-TDD as a project dependency before setup and verify `node_modules/.bin/ut-tdd --help` or `bun .ut-tdd/bin/ut-tdd.mjs --help` in the consumer repo.",
+              "Do not rely on a global `bun link` when multiple projects on one PC may pin different harness versions.",
+              "Bun itself must still resolve on the hook shell PATH.",
             ].join(" ")),
     },
     {
@@ -521,7 +521,11 @@ export function buildConsumerReadinessPlan(input: {
         ".ut-tdd/state/setup.json",
       ],
       backupRequired: true,
-      commands: [`git switch ${tag}`, "ut-tdd setup --dry-run", "ut-tdd setup --solo"],
+      commands: [
+        `git switch ${tag}`,
+        "bun .ut-tdd/bin/ut-tdd.mjs setup --dry-run",
+        "bun .ut-tdd/bin/ut-tdd.mjs setup --solo",
+      ],
     },
     contracts: {
       semver: "0.x may add capabilities; breaking public contract changes require migration notes",
@@ -530,6 +534,7 @@ export function buildConsumerReadinessPlan(input: {
         "CLI surface",
         "adapter managed markers",
         ".ut-tdd state schema",
+        "project-local .ut-tdd/bin/ut-tdd.mjs wrapper",
         "Claude/Codex adapter hook templates",
         "Claude subagent and slash-command templates",
         "hook event schema",

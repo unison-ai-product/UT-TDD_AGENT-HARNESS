@@ -78,7 +78,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T10:39:47+09:00"
         evidence_path: docs/templates/adapter/.claude/settings.json
-        output_digest: "sha256:13863397854b7ded840c54dab2a0fd16ea7ccddae0e5a70bb896121a26de50fd"
+        output_digest: "sha256:b1d5d8176a68a35f405921e8233dbcb41cb2a5a10985e709c7e3f8ad5452e29c"
 ---
 
 # PLAN-L7-196 Runtime Config Hardening
