@@ -280,7 +280,9 @@ review_evidence:
 
 `distribution sync-plan --json` は、source repo の更新を clean artifact set に投影し、Pack repo へ反映するための非破壊計画を出す。入力は `buildCleanDistributionPlan` の artifact set であり、`docs/plans`、`docs/design/harness`、`docs/test-design`、`.ut-tdd`、runtime DB、UI は copy plan へ入らない。`docs/skills/*` は Pack repo では root `skills/*` に写像する。
 
-この command は Pack repo の staging clone path、target branch、`sourcePath -> artifactPath` copy plan、`git status`/commit/tag/push の手順を emit するだけで、clone/copy/commit/push/release は実行しない。`distribution sync-stage --json` は同じ clean artifact set をローカル staging directory へ materialize し、Pack に入らない既存ファイルを `unmanagedExistingPaths` として検出する。余剰ファイルの prune、remote mutation、署名 tarball、GitHub release publication は PO 承認後の外部操作として `release-plan` に分離する。
+この command は Pack repo の staging clone path、target branch、`sourcePath -> artifactPath` copy plan、`git status`/commit/tag/push の手順を emit するだけで、clone/copy/commit/push/release は実行しない。`distribution sync-stage --json` は同じ clean artifact set をローカル staging directory へ materialize し、Pack に入らない既存ファイルを `unmanagedExistingPaths` として検出する。
+
+`distribution sync-pack --repo-dir <Pack checkout>` は既存の Pack checkout を clean artifact set へ同期する運用コマンドである。既定では配布対象外の既存ファイルを検出した時点で fail-close し、`--prune-local` が明示された場合だけ Pack checkout 内の余剰ファイルをローカル削除する。いずれの場合も `git add` / commit / push は実行せず、次に実行すべき git command を evidence として返す。remote mutation、署名 tarball、GitHub release publication は PO 承認後の外部操作として `release-plan` に分離する。
 
 ## 0. 背景
 
