@@ -2,7 +2,7 @@
 
 - **date**: 2026-06-30
 - **scope**: current local close state for L10-L14 / distribution readiness after A-150/A-151 remediation and the 2026-06-30 projection-vs-substance audit.
-- **boundary**: local evidence only. This record does not claim public GitHub publication, remote CI, signed release artifacts, production deployment, UAT signoff, or post-publication consumer operation.
+- **boundary**: local evidence plus Pack `v0.1.0` GitHub tag/release evidence. This record does not claim signed release artifacts, production deployment, UAT signoff, or post-publication consumer operation.
 
 ## Current machine state
 
@@ -15,7 +15,9 @@ Latest local commands:
 - `bun run vitest run tests\setup.test.ts tests\cli-surface.test.ts --reporter=dot`: 2 test files / 35 tests passed.
 - `$env:PATH="$env:USERPROFILE\.bun\bin;$env:APPDATA\npm\node_modules\bun\bin;$env:PATH"; ut-tdd --help`: OK.
 - `$env:PATH="$env:USERPROFILE\.bun\bin;$env:APPDATA\npm\node_modules\bun\bin;$env:PATH"; bun src\cli.ts distribution plan --json`: `ok=true`.
-- `bun src\cli.ts distribution package --tag v0.1.0 --out <temp> --json`: local clean tarball, sha256 checksum, and manifest generated; signature remains `signatureRequired=true`, `signatureCreated=false`.
+- `bun src\cli.ts distribution package --tag v0.1.0 --out .ut-tdd/release/v0.1.0 --json`: clean tarball, sha256 checksum, and manifest generated; signature remains `signatureRequired=true`, `signatureCreated=false`.
+- Pack `v0.1.0` tag pushed and GitHub Release created with `v0.1.0.tar.gz`, `v0.1.0.tar.gz.sha256`, and `v0.1.0.manifest.json`.
+- Tag clone smoke: `git clone --depth 1 --branch v0.1.0 https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git <temp>` then `bun install --frozen-lockfile`, `bun run typecheck`, `bun run lint`, `bun src\cli.ts setup --solo`, `bun .ut-tdd\bin\ut-tdd.mjs doctor --setup-smoke`, and `status --json` all passed. Root `skills/` was present and `docs/skills` was absent.
 - `bun run test`: 119 test files / 1221 tests passed.
 - `bun src\cli.ts doctor`: OK, including `pair-freeze`, `l6-completion`, `l7-completion`, `frontend-design-coverage`, `green-command-digest`, and `forward-convergence`.
 - `bun src\cli.ts doctor --strict-telemetry-provenance`: OK.
@@ -28,7 +30,7 @@ L10-L14 are locally closeable only in the scoped sense below:
 
 - **L10 UX / mock boundary**: locally closed for the current mock stage. `screen-impl-pair-freeze`, `g10-ux-workflow`, and L1/L2/L10 trace gates are green. Future high-fidelity prototype or implementation must reopen the L1/L2/L10 pair contract.
 - **L11 UAT**: local workflow evidence is green, but user/PO UAT acceptance remains `human_required`.
-- **L12 release acceptance**: clean export/setup structure is locally tested, but release acceptance is not closed. Current readiness still requires a real shell where bare `ut-tdd --help` succeeds because shipped Claude/Codex hooks call `ut-tdd ...`.
+- **L12 release acceptance**: clean export/setup structure and Pack `v0.1.0` tag clone are tested, but release acceptance is not fully closed. Signed artifact verification and human release acceptance are still required.
 - **L13 post-deploy**: no released consumer deployment exists in this local run; post-deploy observation remains `external_required`.
 - **L14 operations feedback**: local feedback projection gates are green; real released-consumer operations data remains `external_required`.
 
@@ -81,19 +83,17 @@ Local distribution readiness is split:
 
 - **Green locally**: clean setup/export curation, dogfood governance-document exclusion, adapter templates for Claude and Codex, shipped guard hook wiring through `ut-tdd hook ...` entrypoints, MIT license with UNISON-TECHNOLOGY copyright, and design/governance/ADR Japanese-language gate.
 - **Locally proven with explicit PATH**: bare `ut-tdd` consumer execution passes when the hook shell PATH includes both Bun's global bin (`~\.bun\bin`) and the real Bun binary directory (`%APPDATA%\npm\node_modules\bun\bin` in this npm-installed Bun environment). The generated hooks are correct to call `ut-tdd ...`, but a default shell without those PATH entries still blocks readiness.
-- **Local release artifact generated**: `ut-tdd distribution package` creates the clean tarball, `.sha256`, and manifest locally. Signing (`.sig`) and publication remain external approval/key-operation boundaries.
+- **Release artifact published**: Pack `v0.1.0` GitHub Release publishes the clean tarball, `.sha256`, and manifest. Signing (`.sig`) remains an external key-operation boundary because no GPG/signing key is available in this environment.
 - **Telemetry caveat**: `hook_events` is genuine runtime telemetry, while some DB tables are projection or hollow telemetry by design. `doctor --strict-telemetry-provenance` now distinguishes projection-only telemetry, but this snapshot does not claim full runtime capture for skill invocations, guardrail decisions, or model cost/tokens.
 - **Evidence integrity**: green-command digest backlog is no longer open after A-153; future digest corrections must remain rerun-bound and must not be mechanical hash restamps.
 
-Full release close still requires external/publication evidence:
+Full release close still requires external/human evidence:
 
-- clean GitHub repository or release branch visible to consumers,
-- tag push and tag-pin install/update smoke,
-- signed tarball/checksum publication,
-- remote CI on the published state,
-- consumer install smoke from the published artifact,
+- signed tarball signature publication,
+- UAT / release acceptance signoff,
 - real Claude Code and Codex consumer hook firing, including subagent/command/guard behavior,
-- rollback/update smoke on an actual consumer project.
+- rollback/update smoke on an actual older consumer project,
+- post-release telemetry from a real consumer project.
 
 ## Supersedes stale local counts
 
