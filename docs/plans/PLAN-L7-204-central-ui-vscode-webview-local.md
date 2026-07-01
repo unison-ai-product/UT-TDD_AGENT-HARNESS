@@ -48,7 +48,7 @@ parked する方向性は、ローカル VS Code Webview extension である。
 
 ## Rationale
 
-直近の配布 close では、clean package と consumer setup の範囲を安定させることを優先する。中央 UI をここで実装すると、配布 package の純度、外部公開境界、consumer setup の単純さを崩しやすい。
+直近の配布 close では、clean package と consumer setup の境界を安定させることを優先する。中央 UI をここで実装すると、配布 package の粒度、外部公開環境、consumer setup の単純さを崩しやすい。
 
 VS Code extension は、将来の UI entry point としては低 setup で扱える。一方で、現在の close を deployment / hosting track に変えてしまわないため、ここでは方向性だけを保全する。
 
