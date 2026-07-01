@@ -134,7 +134,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: README.md
-        output_digest: "sha256:ec03ba87f43cfe98f6b7748b92b37a58db1053be47dfbef94f7633f41960c804"
+        output_digest: "sha256:d272f9b9907557cbe4612a79f97cb0f490f50725e0da83e9be42f0fff724234e"
       - kind: smoke
         command: "$env:PATH=\"$env:USERPROFILE\\.bun\\bin;$env:APPDATA\\npm\\node_modules\\bun\\bin;$env:PATH\"; bun src\\cli.ts distribution plan --json"
         runner: powershell
