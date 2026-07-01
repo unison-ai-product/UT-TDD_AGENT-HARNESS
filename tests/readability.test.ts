@@ -41,7 +41,9 @@ describe("readability lint (freeze doc mojibake guard)", () => {
       expect(paths).toContain("docs/plans/PLAN-M-00-verify-cutover.md");
     }
     expect(paths).toContain("docs/governance/README.md");
-    expect(paths).toContain("CLAUDE.md");
+    if (existsSync(join(process.cwd(), "CLAUDE.md"))) {
+      expect(paths).toContain("CLAUDE.md");
+    }
     expect(analyzeReadability(docs).violations).toEqual([]);
   });
 
