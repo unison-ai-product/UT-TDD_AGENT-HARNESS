@@ -70,6 +70,13 @@ import {
   saveVerificationEvidence,
   verificationRecommendationMermaid,
 } from "./lint/verification-profile";
+import {
+  type MemoryKind,
+  renderMemoryList,
+  renderMemorySurface,
+  selectMemoryEntries,
+  writeMemoryEntry,
+} from "./memory/index";
 import { lintPlanWithGate } from "./plan/lint";
 import {
   type AdapterContextInjection,
@@ -392,6 +399,7 @@ function runSessionStartSideEffects(
     // fail-open: lifecycle maintenance must not block the runtime.
   }
   surfaceTakeoverFeedbackToStdout(repoRoot);
+  surfaceMemoryToStdout(repoRoot);
   surfaceAttemptEscalationToStdout(repoRoot, input.session_id);
 }
 
@@ -437,6 +445,20 @@ function surfaceTakeoverFeedbackToStdout(repoRoot: string): void {
     }
   } catch {
     // fail-open: feedback surface は best-effort。DB 不在 / ロック / 破損で runtime を止めない。
+  }
+}
+
+function surfaceMemoryToStdout(repoRoot: string): void {
+  try {
+    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+    try {
+      const block = renderMemorySurface(selectMemoryEntries(db, { limit: 5 }));
+      if (block) process.stdout.write(block);
+    } finally {
+      db.close();
+    }
+  } catch {
+    // fail-open: memory surface is shared context, not a runtime blocker.
   }
 }
 
@@ -3021,6 +3043,74 @@ program
       }
     },
   );
+
+const memory = program.command("memory").description("shared cross-runtime project memory");
+memory
+  .command("add")
+  .description("write a shared memory entry under .ut-tdd/memory")
+  .requiredOption("--title <title>", "memory title")
+  .option("--kind <kind>", "project | feedback | reference | user", "project")
+  .option("--body <text>", "memory body")
+  .option("--body-file <path>", "read memory body from a UTF-8 file")
+  .option("--tags <csv>", "comma-separated tags")
+  .action(
+    (opts: { title: string; kind: string; body?: string; bodyFile?: string; tags?: string }) => {
+      const body = opts.bodyFile ? readFileSync(opts.bodyFile, "utf8") : (opts.body ?? "");
+      const tags = opts.tags
+        ? opts.tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        : [];
+      try {
+        const entry = writeMemoryEntry(process.cwd(), {
+          kind: opts.kind as MemoryKind,
+          title: opts.title,
+          body,
+          tags,
+        });
+        process.stdout.write(`memory: wrote ${entry.source_path}\n`);
+      } catch (error) {
+        process.stderr.write(`memory: ${error instanceof Error ? error.message : String(error)}\n`);
+        process.exitCode = 1;
+      }
+    },
+  );
+
+memory
+  .command("list")
+  .description("list shared memory entries from harness.db")
+  .option("--query <text>", "filter by text")
+  .option("--limit <n>", "maximum rows", "20")
+  .action((opts: { query?: string; limit?: string }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      process.stdout.write(
+        renderMemoryList(
+          selectMemoryEntries(db, { query: opts.query, limit: Number(opts.limit ?? 20) }),
+        ),
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+memory
+  .command("recall")
+  .description("render shared memory context from harness.db")
+  .option("--query <text>", "filter by text")
+  .option("--limit <n>", "maximum rows", "5")
+  .action((opts: { query?: string; limit?: string }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      const block = renderMemorySurface(
+        selectMemoryEntries(db, { query: opts.query, limit: Number(opts.limit ?? 5) }),
+      );
+      process.stdout.write(block || "memory: no entries\n");
+    } finally {
+      db.close();
+    }
+  });
 
 const distribution = program.command("distribution").description("clean distribution planning");
 distribution

@@ -230,6 +230,7 @@ PLAN-L5-08 は、SQLite を単なる storage ではなく reference-feedback mec
 | `skill_invocations` | `skill_invocation_id` | `session_id`, `plan_id`, `skill_id`, `layer`, `drive`, `fired_at`, `source`, `accepted` | 実際に発火した skill event を永続化する。 |
 | `skill_recommendations` | `skill_recommendation_id` | `session_id`, `plan_id`, `skill_id`, `rank`, `score`, `reason`, `recommended_at` | skill firing rate と recommendation quality の denominator を永続化する。 |
 | `feedback_events` | `feedback_event_id` | `finding_id`, `plan_id`, `signal_type`, `severity`, `status`, `next_action`, `created_at` | 繰り返し finding と drift を replanning input へ変換する。 |
+| `memory_entries` | `memory_id` | `kind`, `title`, `body`, `tags`, `source_path`, `updated_at`, `content_hash` | `.ut-tdd/memory/*.md` の authored memory を Claude/Codex 共有の read model として project する。SessionStart surface はこの table を read-only で読む。 |
 | `quality_signals` | `signal_id` | `source`, `subject_id`, `metric`, `value`, `threshold`, `status`, `computed_at` | orphan count、coverage、stale approval、gate-confirm coupling、schedule lint などの machine-check metrics を保存する。 |
 | `search_index` | `search_id` | `subject_type`, `subject_id`, `path`, `title`, `tokens`, `summary`, `updated_at` | PLAN/artifact/finding/skill/model/session query の lookup cost を下げる。 |
 | `workflow_runs` | `workflow_run_id` | `plan_id`, `drive_run_id`, `workflow`, `phase`, `ready_status`, `blocked_reason`, `human_required`, `checked_at` | workflow automation readiness を query 可能かつ data-backed にする。 |
@@ -259,6 +260,7 @@ DB が保存するのは ID、reason、score、redacted summary のみにする�
 - `idx_findings_subject_status(subject_id, status, severity)`
 - `idx_hook_session_plan(session_id, plan_id, occurred_at)`
 - `idx_skill_plan_skill(plan_id, skill_id, fired_at)`
+- `idx_memory_kind_updated(kind, updated_at)`
 - `idx_search_subject(subject_type, subject_id)`
 
 不変条件:

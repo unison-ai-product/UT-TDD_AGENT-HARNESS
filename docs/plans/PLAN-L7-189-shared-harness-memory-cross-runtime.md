@@ -1,27 +1,46 @@
 ---
 plan_id: PLAN-L7-189-shared-harness-memory-cross-runtime
-title: "PLAN-L7-189 (impl): HARNESS 所有の共有 memory — Claude memory の silo を解消し、Claude Code と Codex が .ut-tdd/memory(harness.db projection) を read/write で共有、SessionStart で両ランタイムへ surface。curated memory を event stream(feedback_events) の隣に置く"
+title: "PLAN-L7-189 (impl): HARNESS 共有 memory を Claude Code と Codex で共通化する"
 kind: impl
 layer: L7
 drive: be
-status: draft
-version_target: future
-route_signal: version_deferral
-route_mode: version-up
+status: confirmed
 created: 2026-06-29
-updated: 2026-06-29
-owner: PM (Opus) / PO (人間)
+updated: 2026-07-01
+owner: Codex TL / PO
 parent_design: docs/design/harness/L6-function-design/handover-mechanism.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 agent_slots:
   - role: se
-    slot_label: "SE — ut-tdd memory CRUD + .ut-tdd/memory(md authored) → harness.db memory table projection + SessionStart surface(両ランタイム)"
+    slot_label: "SE - ut-tdd memory CRUD + .ut-tdd/memory authored markdown -> harness.db projection + SessionStart surface"
   - role: tl
-    slot_label: "TL — canonical=harness.db 不変・secret/PII 非投影・project↔user scope 分離のレビュー"
+    slot_label: "TL - canonical=harness.db projection / authored=.ut-tdd/memory / secret 非投影のレビュー"
   - role: qa
-    slot_label: "QA — cross-runtime 共有(Claude write→Codex read)と surface のテスト設計"
+    slot_label: "QA - cross-runtime 共有、projection、fail-close の単体検証"
 generates:
+  - artifact_path: src/memory/index.ts
+    artifact_type: source_module
+  - artifact_path: src/secret.ts
+    artifact_type: source_module
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/projection-writer.ts
+    artifact_type: source_module
+  - artifact_path: src/schema/harness-db.ts
+    artifact_type: source_module
+  - artifact_path: src/schema/harness-db-tables-core.ts
+    artifact_type: source_module
+  - artifact_path: src/schema/harness-db-indexes.ts
+    artifact_type: source_module
+  - artifact_path: tests/memory.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/design/harness/L5-detailed-design/physical-data.md
+    artifact_type: design_doc
+  - artifact_path: docs/design/harness/L6-function-design/handover-mechanism.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
   - artifact_path: docs/plans/PLAN-L7-189-shared-harness-memory-cross-runtime.md
     artifact_type: markdown_doc
 dependencies:
@@ -31,63 +50,119 @@ dependencies:
   references:
     - docs/plans/PLAN-L6-06-handover-mechanism.md
     - docs/plans/PLAN-L5-08-harness-db-feedback.md
+review_evidence:
+  - reviewer: codex
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-01T18:34:00+09:00"
+    tests_green_at: "2026-07-01T18:34:00+09:00"
+    verdict: approve
+    notes:
+      - "Claude/Codex の共有文脈を .ut-tdd/memory authored markdown と harness.db memory_entries projection に分離した。"
+      - "SessionStart surface は feedback surface と同じ fail-open/read-only 方針で配線した。"
+      - "secret-like payload は write と parse の両方で fail-close する。"
+    green_commands:
+      - kind: lint
+        command: "bunx biome check --write src\\memory\\index.ts src\\secret.ts tests\\memory.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T18:30:16+09:00"
+        evidence_path: src/memory/index.ts
+        output_digest: "sha256:37d1aa074805b1dda71c31f761759ae5e99784ea4d4e4fb85622cfe68397e5e5"
+      - kind: unit_test
+        command: "bun run vitest run tests\\memory.test.ts tests\\dependency-drift.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T18:30:18+09:00"
+        evidence_path: tests/memory.test.ts
+        output_digest: "sha256:883c7b171a76cf86ef01d2f7a91b6245e39a67b43f694bc698aecacb9abfdc16"
+      - kind: integration_test
+        command: "bun run vitest run tests\\projection-writer.test.ts tests\\db-projection-coverage.test.ts tests\\db-projection-ingestion.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T18:22:58+09:00"
+        evidence_path: tests/projection-writer.test.ts
+        output_digest: "sha256:1a61852bc66a939e4624a516ec9b5a5a4147becd6ac8e06842b25bca7e51bd1a"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T18:30:22+09:00"
+        evidence_path: src/schema/harness-db.ts
+        output_digest: "sha256:bc3266345c2c1ff13a8e248912bbc4bd86a5bf845c2eda7330e6d65ac3010841"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T18:30:23+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:584d6a0e635a2a96ab7632ce8d4c68a65a05a53419e924c6a27ccec8896dd85f"
+      - kind: smoke
+        command: "bun src\\cli.ts db rebuild"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T18:32:00+09:00"
+        evidence_path: docs/design/harness/L4-basic-design/architecture.md
+        output_digest: "sha256:33ab09f8da631e3a58ef5fea44cb44d3b27bee5a7f3f4c8c9d418c6c5c6fb7eb"
+      - kind: doctor
+        command: "bun src\\cli.ts doctor"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T18:33:00+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:584d6a0e635a2a96ab7632ce8d4c68a65a05a53419e924c6a27ccec8896dd85f"
 ---
 
-# PLAN-L7-189 (impl): HARNESS 共有 memory (cross-runtime)
+# PLAN-L7-189 (impl): HARNESS 共有 memory
 
-## 優先度: version-up parked / 将来版へ保全 (PO 2026-06-29)
+## 0. 背景
 
-PO 決定 (2026-06-29): いまは配布クローズを優先。本 capability は破棄でなく将来版へ保全
-(`status=draft` + `version_target: future`)。現行クローズに新規挿入しない。再開条件 = クローズ着地後 PO 指示。
+Claude Code と Codex の実行中コンテキストは `feedback_events` と SessionStart surface で一部共有できるが、PO 判断、配布先、運用上の好み、過去レビューで確定した注意点のような curated memory は Claude 専用 memory や prose handover に寄りやすかった。
 
-## 0. なぜ (curated memory が一番共有されていない)
-
-現状、Claude Code と Codex の唯一の共有チャネルは harness.db `feedback_events` (1780 件、`ut-tdd session start`
-で両ランタイムへ surface、PLAN-L7-110) だが、これは **イベント列 (起きたこと)**。一方、蒸留された高価値の
-**curated memory (user/feedback/project/reference の知見)** は `~/.claude/.../memory/*.md` = **Claude 専用・
-off-repo の silo** で、**Codex から不可視**。handover prose は per-session・stale で「共有できていない感」。
-→ 一番効く知見が一番共有されていない。これは正本主義 (canonical = harness.db、prose handover を正本にしない)
-の延長で塞ぐべき gap。新発明でなく既存 SessionStart surface 機構の拡張。
+この PLAN では、共有 memory の authored source を `.ut-tdd/memory/*.md`、query/read model を `harness.db.memory_entries` として定義し、Claude Code と Codex の両方が `ut-tdd memory` CLI と SessionStart surface から同じ文脈を読めるようにする。
 
 ## 1. Scope
 
-### IN (本 PLAN)
-- **store**: `.ut-tdd/memory/*.md` (typed schema = user/feedback/project/reference、人間が diff れる authored 形、
-  リンク `[[name]]`) → harness.db `memory` table へ projection (既存「md authored → projection」パターン準拠)。
-- **CRUD**: `ut-tdd memory add/list/recall`。Claude も Codex も **この command 経由で書く**。
-- **Claude 書込経路**: Claude の memory 書込を `.ut-tdd/memory/` へ向ける (in-repo・共有・git 追跡)。既存
-  `~/.claude/.../memory/` は personal mirror として残すか移行するかは activation 時に決定。
-- **surface**: `ut-tdd session start` を拡張し feedback_events と並べて relevant memory を **両ランタイムへ surface**。
+### IN
 
-### OUT (本 PLAN では作らない)
-- いま実装すること (version-up parked)。
-- secret/PII/credential を memory へ書くこと (Safety Boundary、fail-close 必須)。
+- `.ut-tdd/memory/*.md` の authored memory 形式。
+- `memory_entries` table と `idx_memory_kind_updated` index。
+- `ut-tdd memory add/list/recall`。
+- `rebuildHarnessDb` での deterministic projection。
+- SessionStart での `harness.db memory` surface。
+- secret-like payload の fail-close。
 
-## 2. 決めどころ (activation 時に PO 確定)
-- **scope 分割**: project memory は repo `.ut-tdd/` (per-project・dogfood 非配布で正しい)。user 型 (PO の好み) は
-  cross-project なので別格納 (global 共有) にするか。
-- **既存 Claude memory 移行**: `.ut-tdd/memory/` へ移すか personal mirror として残すか。
-- **store 形式**: md+projection (推奨、人間可読) か harness.db table 一本か。
+### OUT
 
-## 3. 配布への含意
-mechanism (ut-tdd memory + table + surface) は **配布 system 側に乗る** = 「チームに cross-runtime 共有
-プロジェクト memory を与える」プロダクト機能。dogfood 都合でなく配布価値のある feature。
+- 個人 global memory の移行。
+- Claude 専用 memory file の自動同期。
+- Pack に dogfood の `.ut-tdd/memory` 内容を同梱すること。
+- raw transcript / credential / PII の保存。
 
-## 4. Acceptance Criteria
-- Claude が書いた memory を Codex が同一 SessionStart で受け取れる (cross-runtime 共有の実証)。
-- canonical = harness.db projection、authored = `.ut-tdd/memory/*.md`、prose handover を正本にしない。
-- secret/PII/raw transcript が memory に載らない (fail-close)。
-- doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
+## 2. 実装
 
-## 5. Schedule
-- mode: serial。
-- Step 0: memory schema (typed + link) と project↔user scope 方針を概念/要件へ反映。
-- Step 1: `.ut-tdd/memory/` authored 形 + harness.db `memory` table + projection。
-- Step 2: `ut-tdd memory add/list/recall` CRUD (両ランタイム共通)。
-- Step 3: SessionStart surface 拡張 (両ランタイム) + secret 非投影 fail-close。
-- Step 4: Claude 書込経路を `.ut-tdd/memory/` へ + 既存 memory 移行/mirror 決定。
-- Step 5: 検証 (cross-runtime 共有 / surface / fail-close) → review → confirmed。
+- `src/memory/index.ts` を追加し、write/load/parse/select/render を集約した。
+- `src/secret.ts` を追加し、state-db / memory / search / audit が共有する secret-like token detector を下位 module に分離した。
+- `src/schema` の registry を schema version 19 に上げ、`memory_entries` table と index を追加した。
+- `src/state-db/projection-writer.ts` に `projectMemoryEntries` を追加した。
+- `src/cli.ts` に `memory add/list/recall` と SessionStart surface を追加した。
+- L5 physical-data、L6 handover-mechanism、L7 unit-test-design へ V-pair の設計追記を行った。
+- `tests/memory.test.ts` で authored markdown、secret fail-close、DB projection、surface rendering を検証した。
 
-## 6. 壊さない / 再発させない
-- canonical = harness.db を維持。stale prose handover を現状把握の正本にしない ([[feedback_verify_carry_status_against_code]])。
-- secret/PII を outward-facing state へ載せない。
+## 3. 受け入れ結果
+
+- Claude/Codex は同じ `ut-tdd memory` CLI surface で共有 memory を扱える。
+- canonical は `harness.db.memory_entries` projection、authored source は `.ut-tdd/memory/*.md` として分離された。
+- SessionStart は feedback surface と同じ fail-open 方針で共有 memory を表示する。
+- secret-like payload は authored file 作成前、または parse 時に拒否される。
+
+## 4. 残境界
+
+- 実際の Claude memory から `.ut-tdd/memory` への移行は個人 state を触るため別判断。
+- Pack には機構を配布し、dogfood の `.ut-tdd/memory` 実データは含めない。

@@ -132,6 +132,15 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-HOVER-014 | `boundSameDayEntries` / `runHandover` 累積上限 (PLAN-L7-83) | **純関数**。entry 数 ≤ `maxEntries-1` / `# Session Handover` header 不在 → 入力をそのまま返す (圧縮不要) / 超過 → **anchor (entry[0]) + 直近 (maxEntries-2) を残し中間を 1 行 breadcrumb へ畳む** (`countHandoverEntries` = `maxEntries-1`) / **breadcrumb は header に一致せず `countHandoverEntries`/`doc_entry_count` 契約を壊さない** / breadcrumb 文言で剪定件数を明示 (no silent cap)。`runHandover`: 反復 append でも同日 doc の header 数 ≤ `MAX_SAME_DAY_ENTRIES`・定常で上限ちょうど・`doc_entry_count` は md header 数と一致 |
 | U-HOVER-015 | `runHandover` marker reconcile (drift 恒久解消、PLAN-L7-83) | **`complete=true` → `current-plan` marker を clear** (`resolveActivePlan→null`) し `checkHandoverDiscipline` が drift を出さない / **`--plan X` の in_progress → marker = X へ同期** (override 由来 drift 解消) / **plain in_progress (`--plan` 無し) → marker 無変更** (無駄書き回避) / **`dryRun=true` → marker を書かない** (非破壊不変)。reconcile した marker path は `written` に計上 (透明性) |
 
+### §1.8.1 U-MEMORY (共有 memory / PLAN-L7-189)
+
+| U-ID | 関数 / surface | oracle |
+|------|---|---|
+| U-MEMORY-001 | `writeMemoryEntry` / `loadMemoryEntries` | `.ut-tdd/memory/<kind>-<slug>.md` を authored source として書き、frontmatter (`memory_id`, `kind`, `title`, `tags`, `updated_at`) と本文を deterministic に再読込できる。 |
+| U-MEMORY-002 | `writeMemoryEntry` / `parseMemoryFile` | title/body/tags または file 全体に secret-like payload があれば fail-close し、memory file / projection row を作らない。 |
+| U-MEMORY-003 | `rebuildHarnessDb` / `projectMemoryEntries` / `selectMemoryEntries` | `.ut-tdd/memory/*.md` から `memory_entries` へ projection し、query/limit 付きで read-only に選択できる。 |
+| U-MEMORY-004 | `renderMemorySurface` / `ut-tdd memory recall` / SessionStart side effect | Claude/Codex 共通の `harness.db memory` block を出力し、空ならノイズを出さない。db 不在・破損・lock 時は fail-open で runtime を止めない。 |
+
 ### §1.9 U-SLOT (agent-slots 由来、PLAN-L7-08 / IMP-050)
 
 | U-ID | 関数 | oracle |
