@@ -417,6 +417,79 @@ describe("L7 CLI surface closure", () => {
     }
   }, 30_000);
 
+  it("exposes non-destructive release publication planning", () => {
+    const run = runCliIn(repoRoot, [
+      "distribution",
+      "release-plan",
+      "--tag",
+      "v0.1.0",
+      "--repo",
+      "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
+      "--json",
+    ]);
+    const payload = JSON.parse(run.stdout);
+
+    expect(run.status, run.stderr || run.stdout).toBe(0);
+    expect(payload).toMatchObject({
+      ok: true,
+      tag: "v0.1.0",
+      repo: "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
+      externalPublishRequiresApproval: true,
+    });
+    expect(payload.commands).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("git tag -a v0.1.0"),
+        expect.stringContaining("gh release create v0.1.0"),
+      ]),
+    );
+  });
+
+  it("exposes GitHub branch-type guard as a JSON command surface", () => {
+    const body = join(tmpdir(), `ut-tdd-pr-body-${Date.now()}.md`);
+    const commits = join(tmpdir(), `ut-tdd-commits-${Date.now()}.txt`);
+    writeFileSync(body, "## Summary\nPatch only.\n", "utf8");
+    writeFileSync(commits, "fix: patch production regression\n", "utf8");
+    try {
+      const run = runCliIn(repoRoot, [
+        "github",
+        "guard",
+        "--head-ref",
+        "hotfix/prod-regression",
+        "--base-ref",
+        "main",
+        "--pr-title",
+        "fix: patch production regression",
+        "--pr-body-file",
+        body,
+        "--commit-file",
+        commits,
+        "--json",
+      ]);
+      const payload = JSON.parse(run.stdout);
+
+      expect(run.status).toBe(1);
+      expect(payload.ok).toBe(false);
+      expect(payload.findings).toEqual(
+        expect.arrayContaining([expect.objectContaining({ code: "hotfix-postmortem-missing" })]),
+      );
+    } finally {
+      rmSync(body, { force: true });
+      rmSync(commits, { force: true });
+    }
+  });
+
+  it("rejects team setup when CODEOWNERS team slugs are omitted", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-setup-no-teams-"));
+    try {
+      const run = runCliIn(repo, ["setup", "--team", "--dry-run"]);
+
+      expect(run.status).toBe(1);
+      expect(run.stderr).toContain("--tl-team / --qa-team / --po-team");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
   it("exposes telemetry scan as a JSON command surface without provider CLI execution", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-telemetry-"));
     try {

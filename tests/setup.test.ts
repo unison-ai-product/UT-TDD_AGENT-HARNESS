@@ -251,6 +251,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       const templates = loadTemplates(repo);
       expect(templates["adapter/AGENTS.md"]).toContain("UT-TDD Agent Harness Adapter");
       expect(templates["common/harness-check.yml"]).toContain("harness-check");
+      expect(templates["common/harness-check.yml"]).toContain("github guard");
+      expect(templates["common/harness-check.yml"]).toContain("audit quality --include-tests");
+      expect(templates["common/harness-check.yml"]).toContain("ut-tdd.mjs doctor");
       expect(templates["team/CODEOWNERS"]).toContain("{{TL_TEAM}}");
       const deps = mockDeps({ repoRoot: repo, templates });
       const plan = planSetup("0-B", {

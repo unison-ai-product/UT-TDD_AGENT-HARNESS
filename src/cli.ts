@@ -38,6 +38,11 @@ import {
 } from "./feedback/surface";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { evaluateStaticGate } from "./gate/static";
+import {
+  buildReleasePublicationPlan,
+  evaluateGithubOpsGuard,
+  renderGithubOpsGuard,
+} from "./github/ops-guard";
 import { loadRelationGraphSourceSet } from "./graph/loader";
 import {
   checkHandoverBypass,
@@ -2824,6 +2829,45 @@ branch
     }
   });
 
+const github = program.command("github").description("GitHub operations guards");
+
+github
+  .command("guard")
+  .description("fail-close branch-type and commit message checks for harness-check")
+  .requiredOption("--head-ref <ref>", "PR head branch ref")
+  .requiredOption("--base-ref <ref>", "PR base branch ref")
+  .option("--pr-title <text>", "PR title")
+  .option("--pr-body-file <path>", "file containing PR body")
+  .option("--commit-file <path>", "file containing one commit subject per line")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      headRef: string;
+      baseRef: string;
+      prTitle?: string;
+      prBodyFile?: string;
+      commitFile?: string;
+      json?: boolean;
+    }) => {
+      const prBody =
+        opts.prBodyFile && existsSync(opts.prBodyFile) ? readFileSync(opts.prBodyFile, "utf8") : "";
+      const commitSubjects =
+        opts.commitFile && existsSync(opts.commitFile)
+          ? readFileSync(opts.commitFile, "utf8").split(/\r?\n/).filter(Boolean)
+          : [];
+      const result = evaluateGithubOpsGuard({
+        headRef: opts.headRef,
+        baseRef: opts.baseRef,
+        prTitle: opts.prTitle,
+        prBody,
+        commitSubjects,
+      });
+      if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else process.stdout.write(renderGithubOpsGuard(result));
+      process.exitCode = result.ok ? 0 : 1;
+    },
+  );
+
 const feedback = program
   .command("feedback")
   .description("強制停止フィードバック (forced-stop-feedback, PLAN-L7-02)");
@@ -2936,6 +2980,13 @@ program
         return;
       }
       const teamCount = [opts.tlTeam, opts.qaTeam, opts.poTeam].filter(Boolean).length;
+      if (opts.team && teamCount === 0) {
+        process.stderr.write(
+          "--team requires --tl-team / --qa-team / --po-team so generated CODEOWNERS never ships with unresolved team placeholders.\n",
+        );
+        process.exitCode = 1;
+        return;
+      }
       if (teamCount > 0 && teamCount < 3) {
         process.stderr.write(
           "--tl-team / --qa-team / --po-team は 3 つとも指定してください (CODEOWNERS の @TODO 混入防止)\n",
@@ -3067,6 +3118,35 @@ distribution
     );
     process.stdout.write("  actual-cut: requires PO approval\n");
     process.exitCode = output.ok ? 0 : 1;
+  });
+
+distribution
+  .command("release-plan")
+  .description("emit non-destructive git tag and gh release commands for human-approved publishing")
+  .requiredOption("--tag <tag>", "release tag, e.g. v0.1.0")
+  .option(
+    "--repo <name>",
+    "GitHub repository for release publication",
+    "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
+  )
+  .option("--json", "JSON output")
+  .action((opts: { tag: string; repo?: string; json?: boolean }) => {
+    const plan = buildReleasePublicationPlan({
+      tag: opts.tag,
+      repo: opts.repo ?? "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
+      dryRun: true,
+    });
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
+      process.exitCode = plan.ok ? 0 : 1;
+      return;
+    }
+    process.stdout.write(
+      `release plan: ${plan.ok ? "ok" : "blocked"} tag=${plan.tag} repo=${plan.repo}\n`,
+    );
+    for (const command of plan.commands) process.stdout.write(`  ${command}\n`);
+    process.stdout.write("  publish: requires PO approval; commands were not executed\n");
+    process.exitCode = plan.ok ? 0 : 1;
   });
 
 distribution
