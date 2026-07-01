@@ -1975,6 +1975,7 @@ routeCommand
   .requiredOption("--signal <signal>", "observed signal")
   .option("--env <env>", "runtime environment")
   .option("--drift-type <type>", "drift subtype")
+  .option("--finding-type <type>", "audit/research finding type")
   .option("--route-map <path>", "route-map YAML override")
   .option("--format <format>", "output format: text or json", "text")
   .action(
@@ -1982,6 +1983,7 @@ routeCommand
       signal: string;
       env?: string;
       driftType?: string;
+      findingType?: string;
       routeMap?: string;
       format?: string;
     }) => {
@@ -1991,6 +1993,7 @@ routeCommand
         signal: opts.signal,
         env: opts.env,
         drift_type: opts.driftType,
+        finding_type: opts.findingType,
         approval_policy: loadRouteApprovalPolicy(repoRoot),
         route_map: routeMap.routes,
         route_config_violations: routeMap.violations,
@@ -2005,6 +2008,12 @@ routeCommand
         process.stdout.write(`mode=${evaluated.mode}\n`);
         process.stdout.write(`suggest_command=${evaluated.suggest_command}\n`);
         process.stdout.write(`command=${evaluated.recommended_command.command}\n`);
+        if (evaluated.finding_route) {
+          process.stdout.write(
+            `finding_route=${evaluated.finding_route.finding_type}->${evaluated.finding_route.mode}\n`,
+          );
+          process.stdout.write(`auto_create=${String(evaluated.finding_route.auto_create)}\n`);
+        }
         if (auditPath) process.stderr.write(`human approval blocked; audit=${auditPath}\n`);
       } else {
         process.stderr.write(`${evaluated.suggest_command}\n`);
