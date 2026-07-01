@@ -84,7 +84,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T18:22:58+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:1a61852bc66a939e4624a516ec9b5a5a4147becd6ac8e06842b25bca7e51bd1a"
+        output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -100,7 +100,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T18:30:23+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:584d6a0e635a2a96ab7632ce8d4c68a65a05a53419e924c6a27ccec8896dd85f"
+        output_digest: "sha256:250e02b4a5166382853e709be499ab668b003e5492a8a2e3be2f46e77deb3e3b"
       - kind: smoke
         command: "bun src\\cli.ts db rebuild"
         runner: bun
@@ -116,7 +116,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T18:33:00+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:584d6a0e635a2a96ab7632ce8d4c68a65a05a53419e924c6a27ccec8896dd85f"
+        output_digest: "sha256:250e02b4a5166382853e709be499ab668b003e5492a8a2e3be2f46e77deb3e3b"
 ---
 
 # PLAN-L7-189 (impl): HARNESS 共有 memory

@@ -55,7 +55,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-07-01T18:02:24+09:00
         evidence_path: src/cli.ts
-        output_digest: sha256:b9f8cb9098cc6c1d681c4bf877ebba766e2947d67017404b5b11a60a8d53b501
+        output_digest: "sha256:250e02b4a5166382853e709be499ab668b003e5492a8a2e3be2f46e77deb3e3b"
       - kind: lint
         command: bun run lint
         runner: bun
@@ -63,7 +63,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-07-01T18:00:15+09:00
         evidence_path: tests/github-ops-guard.test.ts
-        output_digest: sha256:ede51495fd3cd4b174d943ff49293a3d5f33268cc2e63ca2b549f4457c25a96c
+        output_digest: "sha256:ede51495fd3cd4b174d943ff49293a3d5f33268cc2e63ca2b549f4457c25a96c"
       - kind: unit_test
         command: bun run vitest run tests/github-ops-guard.test.ts tests/setup.test.ts --reporter=dot
         runner: bun
@@ -71,7 +71,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-07-01T18:00:27+09:00
         evidence_path: tests/setup.test.ts
-        output_digest: sha256:83a605a71d22cd4d4574b683bc52280cd4b642a4a2c784268d54f2ef077bcaec
+        output_digest: "sha256:e03138134a1de98563afa34fc86f4ac9277212c7c3d079a2b0bb376984e2fbfe"
       - kind: smoke
         command: bun run vitest run tests/cli-surface.test.ts -t "release publication|GitHub branch-type|CODEOWNERS team" --reporter=dot
         runner: bun
@@ -79,7 +79,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-07-01T17:58:38+09:00
         evidence_path: tests/cli-surface.test.ts
-        output_digest: sha256:d23d17531bab890cd71543ad5bad19878d7b2747f4b122a418ac1bd23988d74d
+        output_digest: "sha256:7bc692972bec92055908a5d122a6c696d709ad23ca7865170be636886b0c3411"
       - kind: smoke
         command: bun src/cli.ts distribution release-plan --tag v0.1.0 --repo unison-ai-product/UT-TDD_AGENT-HARNESS-Pack --json
         runner: bun
@@ -87,7 +87,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-07-01T18:03:01+09:00
         evidence_path: src/github/ops-guard.ts
-        output_digest: sha256:f45fd0e718bd627d26fa834fd811d1f7ccf72d78f7c6a2ab77bc86b8c8f94164
+        output_digest: "sha256:f45fd0e718bd627d26fa834fd811d1f7ccf72d78f7c6a2ab77bc86b8c8f94164"
       - kind: smoke
         command: bun src/cli.ts audit quality --include-tests --limit 20
         runner: bun
@@ -95,7 +95,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-07-01T18:03:02+09:00
         evidence_path: tests/github-ops-guard.test.ts
-        output_digest: sha256:ede51495fd3cd4b174d943ff49293a3d5f33268cc2e63ca2b549f4457c25a96c
+        output_digest: "sha256:ede51495fd3cd4b174d943ff49293a3d5f33268cc2e63ca2b549f4457c25a96c"
 ---
 
 # PLAN-L7-197 (impl): GitHub 運用 workflow hardening

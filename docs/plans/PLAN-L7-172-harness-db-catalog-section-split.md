@@ -80,7 +80,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T21:53:34+09:00"
         evidence_path: src/schema/harness-db-tables-core.ts
-        output_digest: "sha256:6a437565d1f63733b9ea0f9fdd2558b60fe4bb1ffc0ecb01583423ce84083576"
+        output_digest: "sha256:600d956ad25ddea7625f12dcce099b348f145ce057054644393a346eeae07094"
       - kind: unit_test
         command: "bun run vitest run tests\\state-db.test.ts tests\\db-projection-ingestion.test.ts"
         runner: bun
@@ -104,7 +104,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T21:53:34+09:00"
         evidence_path: src/schema/harness-db-indexes.ts
-        output_digest: "sha256:772549881eb241e7eaab058968ddc67ab3fe3e7cdedd07c2e3c52539df3beae1"
+        output_digest: "sha256:0e84203f82c4b52d1a111e2e813e2ca6b9392324637787be2db2d656aa25c25b"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun

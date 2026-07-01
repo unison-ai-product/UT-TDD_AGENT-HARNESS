@@ -64,7 +64,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/state-db/projection-writer.ts
-        output_digest: "sha256:d56af83ff426a05c53f3f8e6c73b7a5e631f1a4bf15a928690b4ff69c35db93a"
+        output_digest: "sha256:1a61852bc66a939e4624a516ec9b5a5a4147becd6ac8e06842b25bca7e51bd1a"
 ---
 
 # PLAN-L7-137 (troubleshoot): summarize feedback surface by actionability

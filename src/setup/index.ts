@@ -144,6 +144,7 @@ const STATE_PATH = join(".ut-tdd", "state", "setup.json");
 const BP_SCRIPT = join("scripts", "setup-branch-protection.sh");
 const MANAGED_START = "<!-- UT-TDD:managed:start -->";
 const MANAGED_END = "<!-- UT-TDD:managed:end -->";
+const PACK_REPO = "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack";
 const SETUP_SOURCE_CLI = join(dirname(fileURLToPath(import.meta.url)), "..", "cli.ts");
 const MERGEABLE_ADAPTER_DOCS = new Set(["AGENTS.md", "CLAUDE.md", join(".claude", "CLAUDE.md")]);
 const CLEAN_REQUIRED_PATHS = [
@@ -434,7 +435,7 @@ export function buildCleanDistributionPlan(input: {
   cleanRepo?: string;
 }): CleanDistributionPlan {
   const sourceTag = input.sourceTag ?? "unreleased";
-  const cleanRepo = input.cleanRepo ?? "UNISON-TECHNOLOGY/ut-tdd-agent-harness-clean";
+  const cleanRepo = input.cleanRepo ?? PACK_REPO;
   const normalized = [...new Set(input.paths.map(normalizeDistributionPath))].sort();
   const includedSourcePaths = normalized.filter(
     (path) => isAllowedCleanPath(path) && !isDeniedCleanPath(path),
@@ -560,7 +561,7 @@ export function buildConsumerReadinessPlan(input: {
     },
     contracts: {
       semver: "0.x may add capabilities; breaking public contract changes require migration notes",
-      tagPin: `github:UNISON-TECHNOLOGY/ut-tdd-agent-harness-clean#${tag}`,
+      tagPin: `github:${PACK_REPO}#${tag}`,
       stable: [
         "CLI surface",
         "adapter managed markers",

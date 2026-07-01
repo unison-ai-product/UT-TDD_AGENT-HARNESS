@@ -559,6 +559,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     const nonPackDbFiles = /\.(?:db|sqlite)(?:-|$|\.)/i;
 
     expect(plan.ok).toBe(true);
+    expect(plan.cleanRepo).toBe("unison-ai-product/UT-TDD_AGENT-HARNESS-Pack");
     const sourcePaths = walkRepoCandidatePaths(process.cwd());
     for (const path of dogfoodGovernanceDocs) {
       expect(plan.artifactPaths).not.toContain(path);
@@ -607,6 +608,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(ready.rollback.managedPaths).toContain(".ut-tdd/bin/ut-tdd.mjs");
     expect(ready.rollback.managedPaths).toContain(".claude/agents/code-reviewer.md");
     expect(ready.rollback.managedPaths).toContain(".claude/commands/build.md");
+    expect(ready.contracts.tagPin).toBe(
+      "github:unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#v0.1.0",
+    );
     expect(ready.contracts.tagPin).toContain("#v0.1.0");
     expect(ready.contracts.stable).toContain("adapter managed markers");
     expect(ready.contracts.stable).toContain("project-local .ut-tdd/bin/ut-tdd.mjs wrapper");

@@ -3120,7 +3120,7 @@ distribution
   .option(
     "--clean-repo <name>",
     "clean distribution repository",
-    "UNISON-TECHNOLOGY/ut-tdd-agent-harness-clean",
+    "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
   )
   .option("--package-root <path>", "consumer package root; defaults to repo root")
   .option("--json", "JSON output")
@@ -3246,7 +3246,7 @@ distribution
   .option(
     "--clean-repo <name>",
     "clean distribution repository",
-    "UNISON-TECHNOLOGY/ut-tdd-agent-harness-clean",
+    "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
   )
   .option("--out <dir>", "output directory for local release artifacts", ".ut-tdd/release")
   .option("--json", "JSON output")

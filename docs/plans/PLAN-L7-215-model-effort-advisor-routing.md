@@ -74,7 +74,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T17:00:00+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:cf04254dce2e6074955f6e3ebb2fa4b9eac6139b78205d6b435e2e3a189a748c"
+        output_digest: "sha256:250e02b4a5166382853e709be499ab668b003e5492a8a2e3be2f46e77deb3e3b"
       - kind: unit_test
         command: "bun run vitest run tests\\team-model-policy.test.ts tests\\team-launch-policy.test.ts tests\\team-run.test.ts tests\\team-schema.test.ts tests\\runtime-adapter.test.ts tests\\model-id-ssot.test.ts tests\\cli-surface.test.ts --reporter=dot"
         runner: bun
@@ -82,7 +82,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T17:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:02abf5e3037a0f663e7cf27af77da2d8347e771164da3b99765583fce61716c2"
+        output_digest: "sha256:7bc692972bec92055908a5d122a6c696d709ad23ca7865170be636886b0c3411"
       - kind: unit_test
         command: "bun run vitest run tests\\team-model-policy.test.ts tests\\team-launch-policy.test.ts tests\\team-run.test.ts tests\\team-schema.test.ts tests\\runtime-adapter.test.ts tests\\model-id-ssot.test.ts tests\\cli-surface.test.ts --reporter=dot"
         runner: bun

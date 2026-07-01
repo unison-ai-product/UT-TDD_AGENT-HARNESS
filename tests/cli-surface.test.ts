@@ -359,6 +359,7 @@ describe("L7 CLI surface closure", () => {
           ok: true,
           channel: "clean-repo-plus-signed-tarball",
           sourceTag: "v0.1.0",
+          cleanRepo: "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
         },
         readiness: {
           ok: true,
@@ -369,6 +370,9 @@ describe("L7 CLI surface closure", () => {
         "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
       );
       expect(payload.readiness.rollback.managedPaths).toContain("AGENTS.md");
+      expect(payload.readiness.contracts.tagPin).toBe(
+        "github:unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#v0.1.0",
+      );
       expect(payload.readiness.contracts.tagPin).toContain("#v0.1.0");
       expect(payload.readiness.ci.forkPullRequestSecrets).toBe("not-required");
     } finally {
