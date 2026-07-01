@@ -44,7 +44,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-22"
         evidence_path: .ut-tdd/audit/A-143-l14-close-system-foundation-audit.md
-        output_digest: "sha256:90182e17b9922e4fca72f116b1baaaca72958774228cbf5c0712aad5df6f29d8"
+        output_digest: "sha256:535ff4e0d3b032ab69f4940d07a88f3acaf7b1065400937934a021b482b7df36"
     verdict: pass
     scope: "add-design 増分 (telemetry / self-improvement closure audit + 4 lint + dynamic skill recommender) の status drift (src merge 済なのに draft 放置) を解消し confirmed 化。成果物 src/lint/{telemetry-closure,cycle-p4-verification,skill-assignment,project-hook}.ts + src/skills/recommend.ts + src/doctor 配線 + 6 test は 2026-06-12 (239cb32) で merge 済。機械再検証: ①全 src module 実在 ②doctor の hard gate として稼働 (skill-assignment hard gate / Cycle P4 closure audit hard gate / telemetry-closure 各 doctor refs ≥3) ③skills/recommend は cli.ts + workflow/contracts.ts に配線 ④Vitest 787/787 green / doctor EXIT=0。AC §3 (A-134 audit / doctor が non-closed rows を surface / 各 self-improvement 領域が evidence 無しでは closed にできない fail-close) は merged + wired + tested で充足。"
     worker_model: claude-opus-4-8

@@ -33,7 +33,7 @@ The repository is locally closed for the current L8-L14 verification band and sy
 ## Current Command Evidence
 
 - `bun run src\cli.ts status --json`: active draft `0`, open defers `0`, non-terminal total `7` (`L6=1`, `L7=6`), all `versionUpParked`.
-- `bun src\cli.ts distribution plan --json`: `ok=true`, source tag `abd7f95`, clean channel `clean-repo-plus-signed-tarball`, readiness `ok=true`, `actualCutRequiresPoApproval=true`, and release integrity requires `abd7f95.tar.gz`, `abd7f95.tar.gz.sha256`, and `abd7f95.tar.gz.sig`. This proves the release controls are configured; it is not publication or UAT execution evidence.
+- `bun src\cli.ts distribution plan --json`: `ok=true`, clean channel `clean-repo-plus-signed-tarball`, readiness `ok=true`, `actualCutRequiresPoApproval=true`, and release integrity requires HEAD-derived `.tar.gz`, `.tar.gz.sha256`, and `.tar.gz.sig` artifacts. This proves the release controls are configured; it is not publication or UAT execution evidence.
 - `bun run src\cli.ts doctor`: all hard gates pass; `green-command-digest` reports OK as digest/file-hash integrity only. It must not be read as proof that every listed green command was rerun after a mechanical digest restamp.
 - `bun run vitest run tests\review-evidence.test.ts tests\green-command-digest.test.ts tests\l14-close-audit.test.ts`: 3 files / 37 tests passed after adding `completed_at` enforcement and downgrading green evidence integrity to `partial`.
 - `bun run typecheck`: passed after the green evidence integrity hardening.
