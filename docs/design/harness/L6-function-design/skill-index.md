@@ -104,3 +104,9 @@ return min(1, round2(score))
 - `tests/skill-recommend.test.ts`
 - `tests/asset-catalog.test.ts`
 - `tests/skill-scaffold.test.ts`
+
+## 7. 配布 repo の skill 配置
+
+開発用 repo では既存互換として `docs/skills/` を読み続ける。一方、配布用 Pack repo では利用者が直接見る開発 OS の部品として root `skills/` を優先する。`scanSkillCatalog` と `catalogAutomationAssets` は `skills/` が存在する場合はこれを標準 skill root とし、存在しない場合だけ `docs/skills/` に fallback する。
+
+この配置は「docs は説明、skills は実行時に推奨・注入される部品」という見え方を守るための配布境界である。root `skills/` と `docs/skills/` を同時に必須にはしない。重複登録を避けるため、既定 scan は片方の root だけを選ぶ。

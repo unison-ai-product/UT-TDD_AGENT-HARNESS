@@ -24,6 +24,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L6-function-design/setup-solo-team.md
     artifact_type: design_doc
+  - artifact_path: docs/design/harness/L6-function-design/skill-index.md
+    artifact_type: design_doc
   - artifact_path: docs/templates/adapter/.codex/hooks.json
     artifact_type: template
   - artifact_path: docs/templates/adapter/.claude/settings.json
@@ -34,8 +36,16 @@ generates:
     artifact_type: source_module
   - artifact_path: src/setup/index.ts
     artifact_type: source_module
+  - artifact_path: src/assets/catalog.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/asset-drift.ts
+    artifact_type: source_module
   - artifact_path: src/setup/templates.ts
     artifact_type: source_module
+  - artifact_path: .gitignore
+    artifact_type: config
+  - artifact_path: tests/asset-catalog.test.ts
+    artifact_type: test_code
   - artifact_path: tests/doctor.test.ts
     artifact_type: test_code
   - artifact_path: tests/setup.test.ts
