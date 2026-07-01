@@ -40,7 +40,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:78f08efa7a96688f5cf7dcf28c71d5876fe2e18d905a81c8ecab7484dc2e7cb4"
+        output_digest: "sha256:f3c25639d59c2daf4a646c0e46130e62f21877d2ff9e73146e2911c29ba93c2c"
       - kind: smoke
         command: "bun run vitest run tests\\setup.test.ts tests\\distribution-acceptance.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -48,7 +48,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
-        output_digest: "sha256:5534409fb6e4b4bf714ce693a09eb761690b3a09ad1f42fd8596914c8530296f"
+        output_digest: "sha256:367d0423e4b538c570dddf174113c689360a56dd303a354b6a5e1883036dc6ec"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -56,7 +56,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:da93c1807f89d1f411ba3de8c4b976282064d289b03eb36c20b7cebb596dd34f"
+        output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
       - kind: lint
         command: "bun run lint"
         runner: bun

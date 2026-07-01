@@ -101,7 +101,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:40b2d026600e6bb6a989088a24b5594326f3a0decc9b01d9266b48ffe5ac4f3e"
+        output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
       - kind: smoke
         command: "bun src\\cli.ts distribution package --tag v0.1.0 --out <temp> --json"
         runner: bun
@@ -109,7 +109,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:eccbd8a33367495b48d5c6af7651194e11bd9579a3528a888c1dab912c6981b0"
+        output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-01T16:17:00+09:00"
@@ -126,7 +126,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:78f08efa7a96688f5cf7dcf28c71d5876fe2e18d905a81c8ecab7484dc2e7cb4"
+        output_digest: "sha256:f3c25639d59c2daf4a646c0e46130e62f21877d2ff9e73146e2911c29ba93c2c"
       - kind: smoke
         command: "$env:PATH=\"$env:USERPROFILE\\.bun\\bin;$env:APPDATA\\npm\\node_modules\\bun\\bin;$env:PATH\"; ut-tdd --help"
         runner: powershell
@@ -134,7 +134,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: README.md
-        output_digest: "sha256:f9643bd29302a2b8b223499696ce635c0f78f867b7927c3f046acc73ff685ffc"
+        output_digest: "sha256:5357012ca5750d5e1a9784ce5d7e80eca2b3231ce1c00a019b02ef8a95782f58"
       - kind: smoke
         command: "$env:PATH=\"$env:USERPROFILE\\.bun\\bin;$env:APPDATA\\npm\\node_modules\\bun\\bin;$env:PATH\"; bun src\\cli.ts distribution plan --json"
         runner: powershell
@@ -142,7 +142,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:eccbd8a33367495b48d5c6af7651194e11bd9579a3528a888c1dab912c6981b0"
+        output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-01T16:17:00+09:00"
@@ -159,7 +159,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:78f08efa7a96688f5cf7dcf28c71d5876fe2e18d905a81c8ecab7484dc2e7cb4"
+        output_digest: "sha256:f3c25639d59c2daf4a646c0e46130e62f21877d2ff9e73146e2911c29ba93c2c"
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -167,7 +167,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:40b2d026600e6bb6a989088a24b5594326f3a0decc9b01d9266b48ffe5ac4f3e"
+        output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -175,7 +175,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:da93c1807f89d1f411ba3de8c4b976282064d289b03eb36c20b7cebb596dd34f"
+        output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -183,7 +183,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:eccbd8a33367495b48d5c6af7651194e11bd9579a3528a888c1dab912c6981b0"
+        output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
       - kind: smoke
         command: "bun src\\cli.ts distribution plan --tag v0.1.0 --json"
         runner: bun
@@ -191,7 +191,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:da93c1807f89d1f411ba3de8c4b976282064d289b03eb36c20b7cebb596dd34f"
+        output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
       - kind: smoke
         command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -199,7 +199,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
-        output_digest: "sha256:5534409fb6e4b4bf714ce693a09eb761690b3a09ad1f42fd8596914c8530296f"
+        output_digest: "sha256:367d0423e4b538c570dddf174113c689360a56dd303a354b6a5e1883036dc6ec"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-01T16:17:00+09:00"
@@ -216,7 +216,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:78f08efa7a96688f5cf7dcf28c71d5876fe2e18d905a81c8ecab7484dc2e7cb4"
+        output_digest: "sha256:f3c25639d59c2daf4a646c0e46130e62f21877d2ff9e73146e2911c29ba93c2c"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -224,7 +224,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:da93c1807f89d1f411ba3de8c4b976282064d289b03eb36c20b7cebb596dd34f"
+        output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -232,7 +232,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:eccbd8a33367495b48d5c6af7651194e11bd9579a3528a888c1dab912c6981b0"
+        output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-01T16:17:00+09:00"
@@ -257,7 +257,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:da93c1807f89d1f411ba3de8c4b976282064d289b03eb36c20b7cebb596dd34f"
+        output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -265,7 +265,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:eccbd8a33367495b48d5c6af7651194e11bd9579a3528a888c1dab912c6981b0"
+        output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
 ---
 
 # PLAN-L7-157: clean distribution pull channel

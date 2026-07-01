@@ -55,7 +55,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-07-01T18:02:24+09:00
         evidence_path: src/cli.ts
-        output_digest: "sha256:eccbd8a33367495b48d5c6af7651194e11bd9579a3528a888c1dab912c6981b0"
+        output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
       - kind: lint
         command: bun run lint
         runner: bun
@@ -71,7 +71,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-07-01T18:00:27+09:00
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:78f08efa7a96688f5cf7dcf28c71d5876fe2e18d905a81c8ecab7484dc2e7cb4"
+        output_digest: "sha256:f3c25639d59c2daf4a646c0e46130e62f21877d2ff9e73146e2911c29ba93c2c"
       - kind: smoke
         command: bun run vitest run tests/cli-surface.test.ts -t "release publication|GitHub branch-type|CODEOWNERS team" --reporter=dot
         runner: bun
@@ -79,7 +79,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-07-01T17:58:38+09:00
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:40b2d026600e6bb6a989088a24b5594326f3a0decc9b01d9266b48ffe5ac4f3e"
+        output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
       - kind: smoke
         command: bun src/cli.ts distribution release-plan --tag v0.1.0 --repo unison-ai-product/UT-TDD_AGENT-HARNESS-Pack --json
         runner: bun
