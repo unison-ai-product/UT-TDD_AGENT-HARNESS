@@ -4,13 +4,10 @@ title: "PLAN-L6-37 (add-design): skill 索引モデルの機能設計 — 索引
 kind: add-design
 layer: L6
 drive: agent
-status: draft
-version_target: future
-route_signal: version_deferral
-route_mode: version-up
+status: confirmed
 created: 2026-06-30
-updated: 2026-06-30
-owner: PM (Opus) / PO (人間)
+updated: 2026-07-01
+owner: PM (Opus) / PO (human)
 agent_slots:
   - role: tl
     slot_label: "TL — 索引キー (L+駆動+メタデータ) と category fallback 規約 / indexable-by-something fail-close / de-saturate スコア再設計 / 配布境界 (workflow+domain 同梱・project 利用側 author) / 既存 skill-assignment・catalog・recommend との非重複境界のレビュー (claude-only は code-reviewer 代替)"
@@ -19,6 +16,7 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
+implemented_by: docs/plans/PLAN-L7-211-skill-index-category-materialization.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 dependencies:
   parent: docs/plans/PLAN-L6-00-master.md
@@ -29,6 +27,62 @@ dependencies:
     - docs/plans/PLAN-L4-12-skill-pack.md
     - docs/adr/ADR-004-internal-asset-ts-control-boundary.md
     - docs/adr/ADR-005-distribution-model-and-central-ui.md
+review_evidence:
+  - reviewer: Codex
+    review_kind: intra_runtime_subagent
+    reviewed_at: 2026-07-01T18:12:00+09:00
+    verdict: pass
+    scope: "PLAN-L6-37 local close: skill-index design, U-SKILL-IDX/U-SKILL-NEW test design, category/indexable/de-saturate distribution boundary"
+    tests_green_at: 2026-07-01T18:12:00+09:00
+    green_commands:
+      - kind: unit_test
+        command: bun run vitest run tests/skill-assignment.test.ts tests/skill-recommend.test.ts tests/asset-catalog.test.ts tests/skill-scaffold.test.ts --reporter=dot
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-07-01T18:10:58+09:00
+        evidence_path: tests/skill-assignment.test.ts
+        output_digest: sha256:3b60f7070da1e86ff814669c0be470fa55c5816122d6c67e73e1db361dd3e7e6
+      - kind: unit_test
+        command: bun run vitest run tests/skill-assignment.test.ts tests/skill-recommend.test.ts tests/asset-catalog.test.ts tests/skill-scaffold.test.ts --reporter=dot
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-07-01T18:10:58+09:00
+        evidence_path: tests/skill-recommend.test.ts
+        output_digest: sha256:d81427f0e99ca96135340712542b7a28d8ef370aaf47fa71033b6d16ff221a76
+      - kind: unit_test
+        command: bun run vitest run tests/skill-assignment.test.ts tests/skill-recommend.test.ts tests/asset-catalog.test.ts tests/skill-scaffold.test.ts --reporter=dot
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-07-01T18:10:58+09:00
+        evidence_path: tests/asset-catalog.test.ts
+        output_digest: sha256:79fc89eec778b9e6c5d317efc8752cb2eef7e5052df7fe179965415a105bf7b4
+      - kind: unit_test
+        command: bun run vitest run tests/skill-assignment.test.ts tests/skill-recommend.test.ts tests/asset-catalog.test.ts tests/skill-scaffold.test.ts --reporter=dot
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-07-01T18:10:58+09:00
+        evidence_path: tests/skill-scaffold.test.ts
+        output_digest: sha256:c357ebd21caa8f164ea9415f364d13caa032fb25acc2fed9c0a25f0abe35e439
+      - kind: typecheck
+        command: bun run typecheck
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: 2026-07-01T18:11:04+09:00
+        evidence_path: docs/design/harness/L6-function-design/skill-index.md
+        output_digest: sha256:99f20045a262862f3f9756694cbe755819af9334668a6afe0cf2e9b43d10e18f
+      - kind: lint
+        command: bun run lint
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: 2026-07-01T18:11:02+09:00
+        evidence_path: docs/test-design/harness/L7-unit-test-design.md
+        output_digest: sha256:ab799e07168b9a4fe19da8dbdfeb19ea82c8d796723741860d1690a3d46359b0
 ---
 
 # PLAN-L6-37 (add-design): skill 索引モデルの機能設計
