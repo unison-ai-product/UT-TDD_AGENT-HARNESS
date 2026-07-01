@@ -9,8 +9,9 @@
 Latest local commands:
 
 - `bun src\cli.ts status --json`: `activeDraftTotal=0`, `openDefers=0`, `nonTerminalPlansTotal=7`, `versionUpParked=7`.
-- `bun src\cli.ts feedback list --emit`: `total=1801`, `gate=0`, `actionable=0`, `telemetry=1801`.
-  - telemetry summary: `artifact_progress_yellow=745`, `missing-test-oracle-id=601`, `skill_acceptance_rate=225`, `skill_firing_rate=225`, `refactor_candidate:split-module=2`.
+- `bun src\cli.ts feedback list --emit`: `total=1803`, `gate=0`, `actionable=0`, `telemetry=1803`.
+  - telemetry summary: `artifact_progress_yellow=749`, `missing-test-oracle-id=599`, `skill_acceptance_rate=225`, `skill_firing_rate=225`, `refactor_candidate:split-module=2`.
+  - `bun src\cli.ts progress artifacts --color red --json`: `[]`; the prior A-155 red artifact was cleared by binding A-155 into PLAN-L3-05 and the L14 close required evidence set.
 - `bun src\cli.ts db rebuild`: projection OK, `rows=34429`.
 - `bun run vitest run tests\setup.test.ts tests\cli-surface.test.ts --reporter=dot`: 2 test files / 35 tests passed.
 - `$env:PATH="$env:USERPROFILE\.bun\bin;$env:APPDATA\npm\node_modules\bun\bin;$env:PATH"; ut-tdd --help`: OK.
@@ -18,11 +19,11 @@ Latest local commands:
 - `bun src\cli.ts distribution package --tag v0.1.3 --out .ut-tdd/release/v0.1.3 --json`: clean tarball, sha256 checksum, and manifest generated; signature remains `signatureRequired=true`, `signatureCreated=false`.
 - Pack `v0.1.3` tag pushed and GitHub Release created with `v0.1.3.tar.gz`, `v0.1.3.tar.gz.sha256`, and `v0.1.3.manifest.json`.
 - Tag clone smoke: `git clone --depth 1 --branch v0.1.3 https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git <temp>` then `bun install --frozen-lockfile`, `bun run typecheck`, Pack smoke vitest, `bun run lint`, `bun src\cli.ts setup --solo`, and `bun .ut-tdd\bin\ut-tdd.mjs doctor --setup-smoke` passed. Root `skills/` was present, `src/skill-engine/` was present, and `docs/skills`, `docs/adr`, `docs/design`, `docs/test-design`, `docs/plans`, `.ut-tdd`, `src/skills`, and persisted DB files were absent.
-- GitHub PR #2 head `fe54ac5` has author/committer `unison-ai-product <253932653+unison-ai-product@users.noreply.github.com>` and CI `harness-check` success after the author-name amend.
-- `bun run test`: 119 test files / 1221 tests passed.
+- GitHub PR #2 is the source-side CI surface; the latest pushed head must keep `harness-check` green after this evidence-binding update.
+- `bun run test`: A-155 full local rerun passed 119 test files / 1231 tests.
 - `bun src\cli.ts doctor`: OK, including `pair-freeze`, `l6-completion`, `l7-completion`, `frontend-design-coverage`, `green-command-digest`, and `forward-convergence`.
 - `bun src\cli.ts doctor --strict-telemetry-provenance`: OK.
-- `bun src\cli.ts doctor --strict-green-command-digest`: green after A-153 rerun-bound digest correction.
+- `bun src\cli.ts doctor --strict-green-command-digest`: green after A-155 rerun-bound digest rebind.
 - `bun src\cli.ts distribution plan --json`: export curation OK. Default shell readiness remains blocked on `ut-tdd-cli` and now reports detected candidate paths. With a hook-equivalent PATH including `~\.bun\bin` and `%APPDATA%\npm\node_modules\bun\bin`, `ut-tdd --help` and `distribution plan --json` both pass locally.
 
 ## Local close conclusion
@@ -51,7 +52,7 @@ The 2026-06-30 independent review converges on one rule: structural coverage, po
 |---|---|---|---|
 | HIGH | distribution | Consumer hooks call bare `ut-tdd`, but `bun link`/PATH presence does not prove the command runs. | Default shell remains blocked, but `distribution plan` now reports candidate paths and the hook-equivalent PATH smoke proves local `ut-tdd --help` can pass when both Bun global bin and real Bun binary directories are present. |
 | HIGH | distribution | Shipped adapter must include enforced guard hooks, not only subagent/command definitions. | Implemented for portable `ut-tdd hook agent-guard`, `work-guard`, and Claude `SubagentStop`; still requires real consumer hook firing evidence after publication. |
-| HIGH | evidence integrity | Digest restamp must not be treated as green-command re-execution. | A-153 reran the affected command groups and rebound the 63 stale digest rows in the same packet. `doctor --strict-green-command-digest` is now green for current evidence. |
+| HIGH | evidence integrity | Digest restamp must not be treated as green-command re-execution. | A-155 reran `typecheck`, `lint`, full `bun run test`, and `db rebuild`, then rebound 131 stale green-command entries across 57 PLAN files in the same packet. `doctor --strict-green-command-digest` is now green for current evidence. |
 | HIGH | DB telemetry | Some telemetry tables are projection/hollow (`skill_invocations`, `test_runs`, `guardrail_decisions`, model cost/tokens). | Strict telemetry provenance is green for current gate semantics, but runtime capture closure is not claimed. |
 | MED-HIGH | clean export | Blanket governance/doc allowlist can leak dogfood audit docs. | `CLEAN_DENY_FILES`/patterns and tests now exclude known dogfood audit/extraction docs. |
 | MED | design coverage | FE design/test bodies are partially pending and coverage gates remain partly presence-based. | Tracked as population/substance backlog; not a consumer setup blocker, not a full design-substance close. |
@@ -86,7 +87,7 @@ Local distribution readiness is split:
 - **Locally proven with explicit PATH**: bare `ut-tdd` consumer execution passes when the hook shell PATH includes both Bun's global bin (`~\.bun\bin`) and the real Bun binary directory (`%APPDATA%\npm\node_modules\bun\bin` in this npm-installed Bun environment). The generated hooks are correct to call `ut-tdd ...`, but a default shell without those PATH entries still blocks readiness.
 - **Release artifact published**: Pack `v0.1.3` GitHub Release publishes the clean tarball, `.sha256`, and manifest. Signing (`.sig`) remains an external key-operation boundary because no GPG/signing key is available in this environment, and `gpg`, `cosign`, and `openssl` are not installed. The implementation intentionally reports `signatureCreated=false` and does not synthesize an unsigned `.sig`.
 - **Telemetry caveat**: `hook_events` is genuine runtime telemetry, while some DB tables are projection or hollow telemetry by design. `doctor --strict-telemetry-provenance` now distinguishes projection-only telemetry, but this snapshot does not claim full runtime capture for skill invocations, guardrail decisions, or model cost/tokens.
-- **Evidence integrity**: green-command digest backlog is no longer open after A-153; future digest corrections must remain rerun-bound and must not be mechanical hash restamps.
+- **Evidence integrity**: green-command digest backlog is no longer open after A-155; future digest corrections must remain rerun-bound and must not be mechanical hash restamps.
 
 Full release close still requires external/human evidence:
 

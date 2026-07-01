@@ -10,41 +10,41 @@ updated: 2026-06-29
 review_evidence:
   - reviewer: PM (Opus) verification (intra_runtime_subagent)
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-01T16:17:00+09:00"
-    tests_green_at: "2026-07-01T16:16:00+09:00"
+    reviewed_at: "2026-07-01T16:39:00+09:00"
+    tests_green_at: "2026-07-01T16:38:00+09:00"
     green_commands:
       - kind: unit_test
-        command: "bun run vitest run tests\\l14-close-audit.test.ts tests\\g10-ux-workflow.test.ts tests\\screen-impl-pair-freeze.test.ts tests\\projection-writer.test.ts"
+        command: "bun run vitest run tests\\l14-close-audit.test.ts tests\\review-evidence.test.ts tests\\green-command-digest.test.ts tests\\readability.test.ts --reporter=dot"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-01T16:15:21+09:00"
+        completed_at: "2026-07-01T16:36:09+09:00"
         evidence_path: tests/l14-close-audit.test.ts
-        output_digest: "sha256:0d13218559b2f25020c2761b53c14b80e98e87620666f0b1fc977f7a70511bf2"
+        output_digest: "sha256:a442720b163c726b4ec1945427ac2a22bffddfcbdf3f160337ee178fa2fd3084"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-01T16:15:21+09:00"
+        completed_at: "2026-07-01T16:36:09+09:00"
         evidence_path: src/lint/l14-close-audit.ts
-        output_digest: "sha256:0b51afa4020ca4ad48febeb468d63d31469ccda36a8c7fff42b3198267a6b9cb"
+        output_digest: "sha256:575789f0bcac6c7971ae5bf7fdf12f6a28d330a795c4eb01c8f1b79bb87e8419"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-01T16:15:21+09:00"
+        completed_at: "2026-07-01T16:36:09+09:00"
         evidence_path: src/lint/l14-close-audit.ts
-        output_digest: "sha256:0b51afa4020ca4ad48febeb468d63d31469ccda36a8c7fff42b3198267a6b9cb"
+        output_digest: "sha256:575789f0bcac6c7971ae5bf7fdf12f6a28d330a795c4eb01c8f1b79bb87e8419"
       - kind: doctor
-        command: "bun run src\\cli.ts doctor"
+        command: "bun src\\cli.ts doctor"
         runner: bun
         scope: gate
         exit_code: 0
-        completed_at: "2026-07-01T16:15:21+09:00"
+        completed_at: "2026-07-01T16:37:52+09:00"
         evidence_path: .ut-tdd/audit/A-143-l14-close-system-foundation-audit.md
-        output_digest: "sha256:21c381297ac041831b2c435b2cf926614ffdf1c3f12f30878bc5d55a8054f595"
+        output_digest: "sha256:4236afc0d288b0001399346bf034379f51c2f4b132914830564801ec4b71a9e2"
     verdict: pass
     scope: "add-design 増分 (telemetry / self-improvement closure audit + 4 lint + dynamic skill recommender) の status drift (src merge 済なのに draft 放置) を解消し confirmed 化。成果物 src/lint/{telemetry-closure,cycle-p4-verification,skill-assignment,project-hook}.ts + src/skill-engine/recommend.ts + src/doctor 配線 + 6 test は 2026-06-12 (239cb32) で merge 済。機械再検証: ①全 src module 実在 ②doctor の hard gate として稼働 (skill-assignment hard gate / Cycle P4 closure audit hard gate / telemetry-closure 各 doctor refs ≥3) ③skill-engine/recommend は cli.ts + workflow/contracts.ts に配線 ④Vitest 787/787 green / doctor EXIT=0。AC §3 (A-134 audit / doctor が non-closed rows を surface / 各 self-improvement 領域が evidence 無しでは closed にできない fail-close) は merged + wired + tested で充足。"
     worker_model: claude-opus-4-8
@@ -60,6 +60,8 @@ generates:
   - artifact_path: .ut-tdd/audit/A-136-cycle-p4-verification-audit.md
     artifact_type: markdown_doc
   - artifact_path: .ut-tdd/audit/A-143-l14-close-system-foundation-audit.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-155-green-command-digest-rebind-2026-07-01.md
     artifact_type: markdown_doc
   - artifact_path: src/lint/telemetry-closure.ts
     artifact_type: source_module

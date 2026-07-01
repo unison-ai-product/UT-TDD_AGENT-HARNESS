@@ -17,14 +17,14 @@
 
 ## 現 HEAD 再確認
 
-2026-06-30 の現 HEAD で次を確認した。
+2026-07-01 の現 HEAD で次を確認した。
 
 | check | result | interpretation |
 | --- | --- | --- |
 | `bun src\cli.ts status --json` | `nonTerminalPlansTotal=7`, `versionUpParked=7`, `activeDraftTotal=0`, `openDefers=0` | 非終端は future/version-up park。active draft は無い。 |
 | `bun src\cli.ts doctor --strict-telemetry-provenance` | pass | strict telemetry provenance gate は現 DB 状態で green。 |
-| `bun src\cli.ts doctor --strict-green-command-digest` | pass after A-153 correction | 63 件の stale digest backlog は rerun-bound correction で 0 件に解消。 |
-| `bun src\cli.ts feedback list --emit` | `gate=0`, `actionable=0`, `telemetry=1801` | open feedback は info telemetry。現在 close blocker ではない。 |
+| `bun src\cli.ts doctor --strict-green-command-digest` | pass after A-155 correction | 130 件 / 56 PLAN の stale digest mismatch は、full green rerun 後に 131 entries / 57 PLAN files の rerun-bound rebind として 0 件に解消。 |
+| `bun src\cli.ts feedback list --emit` | `total=1803`, `gate=0`, `actionable=0`, `telemetry=1803` | A-155 を PLAN-L3-05 generates と L14 required evidence に束ね、prior red artifact は `progress artifacts --color red --json` = `[]` まで解消。 |
 
 ## 追加所見の統合
 
@@ -36,7 +36,7 @@
 | A154-04 | medium | drive model | `drive-model-passage` は certificate 構造を検査するが、全 historical instance の実体吸収を直接再演するものではない。 | A-150-07 の residual として維持。出口 gate は強いが、certificate と実体収束の差を明記する。 |
 | A154-05 | medium | drive model | signal -> mode auto-routing と route selection は advisory/certificate 側の穴が残る。 | Remediated locally for future authoring: 2026-07-01 以降の non-archived PLAN は `route_signal` / `route_mode` が必須になり、`routeSignalCandidates(route_signal)` と不一致なら `plan-governance` が fail-close する。既存 PLAN は遡及 backfill しない。 |
 | A154-06 | high | DB telemetry | `hook_events` は genuine runtime telemetry。`skill_invocations` / `test_runs` / `guardrail_decisions` / `model_runs` は runtime row と projection row を分けないと、populated だけでは能力実動作を主張できない。 | `--strict-telemetry-provenance` が fail-close surface として実装済みで現 HEAD pass。通常 `db rebuild` だけで runtime capture close を主張しない。 |
-| A154-07 | high | green evidence | digest equality は command rerun の証明ではない。 | A-153 で全 command group を再実行し、63 件 backlog を rerun-bound correction として解消済み。今後も hash-only restamp は禁止。 |
+| A154-07 | high | green evidence | digest equality は command rerun の証明ではない。 | A-155 で `typecheck`、`lint`、全回帰、DB rebuild を再実行し、131 件 / 57 PLAN files の stale digest を同一 packet で rebind 済み。今後も hash-only restamp は禁止。 |
 | A154-08 | medium | distribution | 配布 adapter / PATH / guard / clean curation の既出所見は A-150/A-152 で現 disposition 済み。 | local package readiness は構造 green。実 consumer hook firing、tag-pin install/update、rollback/update は publication 後の external smoke。 |
 
 ## judge 結論
@@ -44,7 +44,7 @@
 ローカル閉鎖としては合格圏である。ただし、これは「配布 OS が出荷済み」ではない。
 
 - **local close**: doctor、workflow、coverage、drive-model exit convergence、strict telemetry provenance、feedback gate/actionable 0 は green。
-- **strict evidence close**: `green-command-digest` は A-153 の rerun-bound correction 後に green。hash-only restamp ではなく command rerun と同一 packet で束ねた。
+- **strict evidence close**: `green-command-digest` は A-155 の rerun-bound rebind 後に green。hash-only restamp ではなく command rerun と同一 packet で束ねた。
 - **release/UAT close**: clean GitHub repo、tag push、署名 tarball、published artifact install、実 consumer hook firing、rollback/update、UAT は external/human required。
 
 ## 次アクション
