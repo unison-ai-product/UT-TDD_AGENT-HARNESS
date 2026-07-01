@@ -65,7 +65,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:e03138134a1de98563afa34fc86f4ac9277212c7c3d079a2b0bb376984e2fbfe"
+        output_digest: "sha256:b07c5edbaf2fa7f17624c8c436e3336052c60227c8dea8c08f1cce7380f96617"
       - kind: unit_test
         command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -73,7 +73,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:7bc692972bec92055908a5d122a6c696d709ad23ca7865170be636886b0c3411"
+        output_digest: "sha256:c0c33af74e47d02355d431cbfa1a04b87b84d7db31bd852ae18ea4e6b4c636f2"
       - kind: unit_test
         command: "bun run vitest run tests/runtime-portability.test.ts"
         runner: bun
@@ -97,7 +97,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:250e02b4a5166382853e709be499ab668b003e5492a8a2e3be2f46e77deb3e3b"
+        output_digest: "sha256:88c712454d05fc8ec4a543682eedbc235ef5f08302dd358eff73defd08a27c23"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -105,7 +105,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:030151e36c3335657631865015465b686360a5c079baf3203b1b51432d592e2c"
+        output_digest: "sha256:da93c1807f89d1f411ba3de8c4b976282064d289b03eb36c20b7cebb596dd34f"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -129,7 +129,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:030151e36c3335657631865015465b686360a5c079baf3203b1b51432d592e2c"
+        output_digest: "sha256:da93c1807f89d1f411ba3de8c4b976282064d289b03eb36c20b7cebb596dd34f"
 ---
 
 # PLAN-L7-170: external review remediation

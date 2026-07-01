@@ -140,6 +140,8 @@ deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `no
 - **§6 用語 (Phase 0-A/0-B / 参加規模検出 / emit-only)**: L0 §10 用語集へ back-merge (§G.9、導入層 L6)。
 - **認可・本番影響の境界**: branch protection 適用は人間サインオフ前提 (CLAUDE.md エスカレーション境界)。仕組み化 (precondition で非対話封鎖) を §8.6 失敗→仕組みループの一部として確定。
 
+**Pack sync addendum**: `buildPackSyncPlan(exportPlan, sourcePaths, stagingDir, branch)` は clean export の artifact set だけを Pack repo staging clone へ反映するための非破壊計画である。`distribution sync-plan --json` は `sourcePath -> artifactPath` のコピー計画、Pack repo/branch、`git status`/commit/tag/push の human-approved command list、denylist/required-file check を emit するが、clone/copy/commit/push/release は実行しない。`docs/skills/*` は Pack artifact では root `skills/*` に写像し、dogfood PLAN/design/test-design/runtime DB/UI は copyPlan へ入れない。Pack repo への remote mutation、署名 tarball、GitHub release は PO 承認後の外部操作として `release-plan` と分離する。
+
 ## §6 project-local wrapper 契約
 
 1台のPCに複数の consumer project が同居する前提では、global `bun link` / global `ut-tdd` を hook の正本にしない。`ut-tdd setup` は各 project に `.ut-tdd/bin/ut-tdd.mjs` を投影し、Claude/Codex hook は `bun .ut-tdd/bin/ut-tdd.mjs ...` を呼ぶ。この wrapper は project root の `node_modules/.bin/ut-tdd` を最優先し、次に setup を実行した harness checkout の `src/cli.ts`、最後に bare `ut-tdd` へ fallback する。

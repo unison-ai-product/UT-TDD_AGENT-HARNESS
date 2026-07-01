@@ -421,6 +421,52 @@ describe("L7 CLI surface closure", () => {
     }
   }, 30_000);
 
+  it("exposes a non-destructive Pack repository sync plan", () => {
+    const run = runCliIn(repoRoot, [
+      "distribution",
+      "sync-plan",
+      "--tag",
+      "v0.1.0",
+      "--staging-dir",
+      "tmp-pack-stage",
+      "--json",
+    ]);
+    const payload = JSON.parse(run.stdout);
+
+    expect(run.status, run.stderr || run.stdout).toBe(0);
+    expect(payload).toMatchObject({
+      ok: true,
+      actualRemoteMutationRequiresPoApproval: true,
+      sync: {
+        mode: "non-destructive-sync-plan",
+        cleanRepo: "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
+        sourceTag: "v0.1.0",
+        branch: "main",
+        publishRequiresPoApproval: true,
+        destructiveRemoteMutation: false,
+      },
+    });
+    expect(payload.sync.copyPlan).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          artifactPath: "skills/SKILL_MAP.md",
+        }),
+      ]),
+    );
+    expect(
+      payload.sync.copyPlan.map((entry: { artifactPath: string }) => entry.artifactPath),
+    ).not.toContain("docs/plans/PLAN-L7-157-distribution-clean-pull.md");
+    expect(payload.sync.commands).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          "git clone https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git",
+        ),
+        expect.stringContaining("git -C "),
+        expect.stringContaining("push origin main --follow-tags"),
+      ]),
+    );
+  });
+
   it("exposes non-destructive release publication planning", () => {
     const run = runCliIn(repoRoot, [
       "distribution",

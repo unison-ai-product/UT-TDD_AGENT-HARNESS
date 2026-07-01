@@ -92,7 +92,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:7bc692972bec92055908a5d122a6c696d709ad23ca7865170be636886b0c3411"
+        output_digest: "sha256:c0c33af74e47d02355d431cbfa1a04b87b84d7db31bd852ae18ea4e6b4c636f2"
 ---
 
 # PLAN-REVERSE-138: read-only quality and branch audit backfill

@@ -143,6 +143,7 @@ import { findReference } from "./search/index";
 import {
   buildCleanDistributionPlan,
   buildConsumerReadinessPlan,
+  buildPackSyncPlan,
   cleanDistributionSourcePath,
   nodeSetupDeps,
   runSetup,
@@ -3209,6 +3210,66 @@ distribution
     process.stdout.write("  actual-cut: requires PO approval\n");
     process.exitCode = output.ok ? 0 : 1;
   });
+
+distribution
+  .command("sync-plan")
+  .description("emit a non-destructive clean Pack repository sync plan")
+  .option("--tag <tag>", "source/release tag", gitHead() ?? "unreleased")
+  .option(
+    "--clean-repo <name>",
+    "clean distribution repository",
+    "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
+  )
+  .option("--branch <name>", "Pack repository target branch", "main")
+  .option("--staging-dir <path>", "local Pack staging clone path")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      tag?: string;
+      cleanRepo?: string;
+      branch?: string;
+      stagingDir?: string;
+      json?: boolean;
+    }) => {
+      const repoRoot = process.cwd();
+      const sourcePaths = collectDistributionCandidatePaths(repoRoot);
+      const exportPlan = buildCleanDistributionPlan({
+        paths: sourcePaths,
+        sourceTag: opts.tag,
+        cleanRepo: opts.cleanRepo,
+      });
+      const stagingDir = opts.stagingDir
+        ? isAbsolute(opts.stagingDir)
+          ? opts.stagingDir
+          : join(repoRoot, opts.stagingDir)
+        : join(repoRoot, ".ut-tdd", "pack-sync", exportPlan.sourceTag);
+      const sync = buildPackSyncPlan({
+        exportPlan,
+        sourcePaths,
+        stagingDir,
+        branch: opts.branch,
+      });
+      const output = {
+        ok: sync.ok,
+        export: exportPlan,
+        sync,
+        actualRemoteMutationRequiresPoApproval: true,
+      };
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+        process.exitCode = sync.ok ? 0 : 1;
+        return;
+      }
+      process.stdout.write(
+        `distribution sync-plan: ${sync.ok ? "ok" : "blocked"} tag=${sync.sourceTag}\n`,
+      );
+      process.stdout.write(`  clean-repo: ${sync.cleanRepo}\n`);
+      process.stdout.write(`  staging-dir: ${sync.stagingDir}\n`);
+      process.stdout.write(`  copy-plan: ${sync.copyPlan.length} files\n`);
+      process.stdout.write("  remote mutation: requires PO approval; commands were not executed\n");
+      process.exitCode = sync.ok ? 0 : 1;
+    },
+  );
 
 distribution
   .command("release-plan")

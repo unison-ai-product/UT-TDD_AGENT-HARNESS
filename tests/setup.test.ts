@@ -6,6 +6,7 @@ import {
   applyBranchProtection,
   buildCleanDistributionPlan,
   buildConsumerReadinessPlan,
+  buildPackSyncPlan,
   cleanDistributionArtifactPath,
   cleanDistributionSourcePath,
   detectProjectScale,
@@ -535,6 +536,59 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "v0.1.0.tar.gz.sha256",
       "v0.1.0.tar.gz.sig",
     ]);
+  });
+
+  it("U-SETUP-011c: Pack sync plan is non-destructive and copies only clean artifacts", () => {
+    const sourcePaths = [
+      "README.md",
+      "LICENSE",
+      "package.json",
+      "src/cli.ts",
+      "src/setup/index.ts",
+      ...COMMON_FILES.filter((entry) => entry.template.startsWith("adapter/")).map(
+        (entry) => `docs/templates/${entry.template}`,
+      ),
+      "docs/governance/README.md",
+      "docs/governance/ut-tdd-agent-harness-concept_v3.1.md",
+      "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+      "docs/skills/SKILL_MAP.md",
+      "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
+      ".ut-tdd/harness.db",
+    ];
+    const exportPlan = buildCleanDistributionPlan({
+      sourceTag: "v0.1.0",
+      paths: sourcePaths,
+    });
+    const sync = buildPackSyncPlan({
+      exportPlan,
+      sourcePaths,
+      stagingDir: "/tmp/ut-tdd-pack",
+      branch: "main",
+    });
+
+    expect(sync.ok).toBe(true);
+    expect(sync.mode).toBe("non-destructive-sync-plan");
+    expect(sync.cleanRepo).toBe("unison-ai-product/UT-TDD_AGENT-HARNESS-Pack");
+    expect(sync.publishRequiresPoApproval).toBe(true);
+    expect(sync.destructiveRemoteMutation).toBe(false);
+    expect(sync.copyPlan).toContainEqual({
+      sourcePath: "docs/skills/SKILL_MAP.md",
+      artifactPath: "skills/SKILL_MAP.md",
+    });
+    expect(sync.copyPlan.map((entry) => entry.artifactPath)).not.toContain(
+      "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
+    );
+    expect(sync.copyPlan.map((entry) => entry.artifactPath)).not.toContain(".ut-tdd/harness.db");
+    expect(sync.commands).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          "git clone https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git",
+        ),
+        expect.stringContaining("git -C /tmp/ut-tdd-pack status --short"),
+        expect.stringContaining("git -C /tmp/ut-tdd-pack push origin main --follow-tags"),
+      ]),
+    );
+    expect(sync.checks).toContain("denylistViolations.length === 0");
   });
 
   it("U-SETUP-011b: real clean distribution artifact excludes dogfood governance audit documents", () => {
