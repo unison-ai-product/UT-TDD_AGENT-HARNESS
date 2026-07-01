@@ -71,7 +71,7 @@ review_evidence:
         exit_code: 0
         completed_at: 2026-07-01T18:00:27+09:00
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:f3c25639d59c2daf4a646c0e46130e62f21877d2ff9e73146e2911c29ba93c2c"
+        output_digest: "sha256:f2a4f438552f76da5592e2002a92e5a64b28dc82fe643c08e7c182f61944569f"
       - kind: smoke
         command: bun run vitest run tests/cli-surface.test.ts -t "release publication|GitHub branch-type|CODEOWNERS team" --reporter=dot
         runner: bun
