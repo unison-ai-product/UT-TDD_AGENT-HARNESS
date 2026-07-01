@@ -165,7 +165,8 @@ calls.
 - Do not bulk-load all skills.
 - Resolve `references/` relative to the skill directory.
 - Legacy-derived skill material is migration source material. UT-TDD skill docs
-  live under `docs/skills/`.
+  live under root `skills/` so runtime assets are separated from explanatory
+  `docs/` content.
 
 ## Editing Rules
 

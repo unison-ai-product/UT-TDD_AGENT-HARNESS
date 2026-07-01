@@ -89,7 +89,7 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/skill-assignment.test.ts
     artifact_type: test_code
-  - artifact_path: docs/skills/review-checklist.yaml
+  - artifact_path: skills/review-checklist.yaml
     artifact_type: skill_doc
 dependencies:
   parent: docs/plans/PLAN-L3-00-master.md

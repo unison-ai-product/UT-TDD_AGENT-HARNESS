@@ -115,3 +115,10 @@ return min(1, round2(score))
 配布用 Pack repo では root `skills/` を標準 skill root とする。`scanSkillCatalog`、`catalogAutomationAssets`、`loadSkillAssignmentDocs` は `skills/` が存在する場合にこれを標準 root とし、存在しない場合だけ `docs/skills/` に fallback する。clean export / package では、source 側に旧互換の `docs/skills/*` しか存在しない場合でも、配布 artifact path は `skills/*` へ正規化して出力する。
 
 この配置は「docs は説明、skills は実行時に推薦・注入される部品」という見え方を守るための配布境界である。root `skills/` と `docs/skills/` を同時に必須にはしない。重複登録を避けるため、実際の scan は片方の root だけを選ぶ。
+
+配布 adapter の `.claude/agents/*.md` は、roster の配布物であると同時に `agent-guard`
+の実 hook 発火で検証される runtime asset として扱う。各 subagent template は `model:`
+frontmatter を必ず持つ。`pmo-haiku` / `pmo-project-scout` / `refactor-scout` は haiku
+family、`pdm-*` は opus family、それ以外の同梱 subagent は sonnet family とする。
+filesystem template と built-in fallback は同一の model metadata を出力し、L7 unit test
+は代表 3 family (`pmo-sonnet` / `pmo-haiku` / `pdm-tech-innovation`) を固定で確認する。

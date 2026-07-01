@@ -24,17 +24,17 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-70-skill-pack-curation.md
     artifact_type: markdown_doc
-  - artifact_path: docs/skills/deprecation-cutover.md
+  - artifact_path: skills/deprecation-cutover.md
     artifact_type: markdown_doc
-  - artifact_path: docs/skills/ci-gate-design.md
+  - artifact_path: skills/ci-gate-design.md
     artifact_type: markdown_doc
-  - artifact_path: docs/skills/harness-observability.md
+  - artifact_path: skills/harness-observability.md
     artifact_type: markdown_doc
-  - artifact_path: docs/skills/data-migration.md
+  - artifact_path: skills/data-migration.md
     artifact_type: markdown_doc
-  - artifact_path: docs/skills/ci-deploy-and-rollback.md
+  - artifact_path: skills/ci-deploy-and-rollback.md
     artifact_type: markdown_doc
-  - artifact_path: docs/skills/browser-testing-and-screen-verification.md
+  - artifact_path: skills/browser-testing-and-screen-verification.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L5-06-skill.md
@@ -54,7 +54,7 @@ related_l0_extra: docs/design/harness/L1-requirements/functional-requirements.md
 ## 0. Objective
 
 Realize FR-L1-47 (skill pack の UT-TDD curate) and FR-L1-12 (L 単位 文脈注入) by
-giving `docs/skills/*.md` packs genuine UT-TDD substance: correct routing
+giving `skills/*.md` packs genuine UT-TDD substance: correct routing
 frontmatter (consumed by `src/skills/recommend.ts`) and bodies that describe the
 skill **as applied inside the UT-TDD workflow** (real `ut-tdd` commands,
 `.ut-tdd/` state, V-model layers, drive models, gates). HELIX vendor sources are

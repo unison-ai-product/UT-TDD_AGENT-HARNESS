@@ -15,7 +15,7 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-05-iron-law-attempt-escalation.md
     artifact_type: markdown_doc
-  - artifact_path: docs/skills/debugging-and-error-recovery.md
+  - artifact_path: skills/debugging-and-error-recovery.md
     artifact_type: design_doc
   - artifact_path: src/runtime/attempt-escalation.ts
     artifact_type: source_module
