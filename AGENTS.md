@@ -164,9 +164,23 @@ calls.
 - Read only the relevant `SKILL.md` for matching triggers.
 - Do not bulk-load all skills.
 - Resolve `references/` relative to the skill directory.
-- Legacy-derived skill material is migration source material. UT-TDD skill docs
-  live under root `skills/` so runtime assets are separated from explanatory
-  `docs/` content.
+- Pack / runtime skill content lives under root `skills/` so runnable skill
+  assets are separated from explanatory `docs/` content.
+- `src/skill-engine/` is TypeScript implementation code for skill
+  recommendation / injection / scaffolding. It is not a skill content directory
+  and should stay under `src/` with the rest of the harness core.
+- Legacy-derived skill material under `docs/skills/` is source-repo reference /
+  migration material unless a task explicitly targets it. Do not treat it as the
+  Pack runtime skill root.
+
+## Distribution Repository
+
+- Source development repo: `unison-ai-product/UT-TDD_AGENT-HARNESS`.
+- Clean distribution Pack repo:
+  `unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`
+  (`https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`).
+- When publishing clean Pack artifacts, push/export to the Pack repo, not back
+  into the source development repo.
 
 ## Editing Rules
 

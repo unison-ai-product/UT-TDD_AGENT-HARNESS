@@ -154,6 +154,25 @@ When multiple AI runtimes are available, separate creation from judgement. In
 single-runtime modes, record `intra_runtime_subagent` review evidence as the
 fallback.
 
+## Skills
+
+- Load only relevant skills; do not bulk-load the full catalog.
+- Pack / runtime skill content lives under root `skills/`.
+- `src/skill-engine/` is TypeScript implementation code for skill
+  recommendation / injection / scaffolding. It is not a skill content directory.
+- Legacy-derived skill material under `docs/skills/` is source-repo reference /
+  migration material unless a task explicitly targets it. Do not treat it as the
+  Pack runtime skill root.
+
+## Distribution Repository
+
+- Source development repo: `unison-ai-product/UT-TDD_AGENT-HARNESS`.
+- Clean distribution Pack repo:
+  `unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`
+  (`https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`).
+- When publishing clean Pack artifacts, push/export to the Pack repo, not back
+  into the source development repo.
+
 ## Safety Boundaries
 
 - Do not write API keys, secrets, PII, or credentials into rules, docs,
