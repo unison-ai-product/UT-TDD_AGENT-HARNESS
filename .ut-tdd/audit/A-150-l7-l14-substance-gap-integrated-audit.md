@@ -114,12 +114,22 @@ Residual boundary: deterministic `db rebuild` alone is not runtime telemetry cap
 
 ## Remaining close boundary
 
-L7-L14 can be described as locally validated only when doctor, DB rebuild, digest, feedback gate errors, and targeted tests are green. Full close still requires external/publication work:
+L7-L14 can be described as locally validated only when doctor, DB rebuild, digest, feedback gate errors, and targeted tests are green.
 
-- clean GitHub distribution repository or branch
-- remote CI on the published state
+2026-07-01 external publication evidence:
+
+- Clean GitHub distribution repository exists and is populated: `unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`.
+- Published commit: `88762478c9e4bbbf0d5621a42d40719204cdff2e` (`chore: publish clean harness pack`).
+- Published URL: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack
+- Remote CI on the published state passed: `harness-pack-check`, run `28492769730`, job `84452739072`.
+- Pack CI scope: `bun install --frozen-lockfile`, `bun run typecheck`, `vitest` distribution/runtime-portability smoke, `bun run lint`, `bun src/cli.ts setup --solo`, and `bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke`.
+- Local pre-push Pack smoke also passed for `setup --solo`, generated wrapper `--help`, and `doctor --setup-smoke`.
+
+This closes the previous publication evidence rows for clean GitHub distribution repository, remote CI on the published state, and post-publication setup smoke for the Pack repository. Full release close still requires:
+
 - tag and signed tarball publication
-- post-publication consumer install smoke
-- consumer hook/subagent/command enforcement smoke on Claude and Codex surfaces
+- PO/UAT acceptance against the published Pack repository
+- release/post-deploy observation telemetry after real consumer use
+- consumer hook/subagent/command enforcement smoke on actual Claude and Codex target surfaces
 
 Until those are completed, release/UAT close remains `external_required` / `human_required`, not product-shipped close.

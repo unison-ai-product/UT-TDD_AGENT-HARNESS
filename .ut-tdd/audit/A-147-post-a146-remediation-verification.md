@@ -69,11 +69,21 @@
 
 ### A147-2 - Local stack outruns remote CI
 
-`main` is 17 commits ahead of `origin/main`. Local gates are green, but remote CI has not verified
-this stack and release/tag artifacts have not been published from it.
+The clean distribution repository has now been published separately as
+`unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`.
+
+2026-07-01 publication evidence:
+
+- Pack repo URL: https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack
+- Pack commit: `88762478c9e4bbbf0d5621a42d40719204cdff2e`
+- Pack CI: `harness-pack-check` passed on run `28492769730`.
+- Pack CI covers frozen install, typecheck, distribution/runtime-portability smoke, lint,
+  `setup --solo`, and `doctor --setup-smoke`.
+
+Release/tag artifacts and UAT acceptance have not been published/accepted from it.
 
 **Disposition:** **External / human-required.** Do not claim production, release, or public
-distribution close until push + CI + release publication evidence exists.
+release close until tag/signature publication and UAT evidence exist.
 
 ### A147-3 - Handover pointer drift
 
@@ -88,13 +98,14 @@ reports handover OK.
   and all non-terminal L7 plans are `versionUpParked`.
 - **L8-L10 local workflow close:** acceptable for the implemented local gates: G8/G9/G10 workflow
   gates, distribution acceptance, runtime portability, provider-spawn, and doctor are green.
-- **L12/L13/release/UAT:** still external/human-required. Current evidence does not include push,
-  CI on the new remote HEAD, signed release artifact, tag publication, or real post-publication
-  consumer install.
+- **L12/L13/release/UAT:** partially externalized. Clean Pack repo publication, remote CI, and
+  setup-smoke evidence exist. Signed release artifact, tag publication, UAT acceptance, and real
+  post-release consumer telemetry remain external/human-required.
 - **Known local carry:** none from A-146 remains open locally. Release/publication proof is still
   external/human-required.
 
 ## Next recommended slice
 
-1. Push the corrected stack and wait for CI to verify the new remote HEAD.
-2. Publish/verify the clean distribution artifact and tag if release close is being attempted.
+1. Create/push the release tag from the verified Pack state if release close is being attempted.
+2. Publish the signed tarball/checksum/signature set.
+3. Record PO/UAT acceptance and post-release telemetry after real consumer use.
