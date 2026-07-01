@@ -122,3 +122,7 @@ frontmatter を必ず持つ。`pmo-haiku` / `pmo-project-scout` / `refactor-scou
 family、`pdm-*` は opus family、それ以外の同梱 subagent は sonnet family とする。
 filesystem template と built-in fallback は同一の model metadata を出力し、L7 unit test
 は代表 3 family (`pmo-sonnet` / `pmo-haiku` / `pdm-tech-innovation`) を固定で確認する。
+
+## 8. relation graph 投影
+
+root `skills/` は配布物と consumer-facing runtime asset の正規 root であるため、relation graph の design-like node として投影する。`src/graph/loader.ts` は `skills/**/*.md` を走査し、`skills/SKILL_MAP.md` の変更が `missing-projection` に落ちないことを `tests/relation-graph-loader.test.ts` の real-repo fence で確認する。
