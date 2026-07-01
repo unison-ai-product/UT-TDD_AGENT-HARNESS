@@ -142,11 +142,11 @@ deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `no
 
 ## §6 project-local wrapper 契約
 
-1台のPCに複数の consumer project が同居する前提では、global `bun link` / global `ut-tdd` を hook の正本にしない。`ut-tdd setup` は各 project に `.ut-tdd/bin/ut-tdd.mjs` を投影し、Claude/Codex hook は `bun .ut-tdd/bin/ut-tdd.mjs ...` を呼ぶ。この wrapper は project root の `node_modules/.bin/ut-tdd` を優先し、存在しない場合のみ bare `ut-tdd` へ fallback する。
+1台のPCに複数の consumer project が同居する前提では、global `bun link` / global `ut-tdd` を hook の正本にしない。`ut-tdd setup` は各 project に `.ut-tdd/bin/ut-tdd.mjs` を投影し、Claude/Codex hook は `bun .ut-tdd/bin/ut-tdd.mjs ...` を呼ぶ。この wrapper は project root の `node_modules/.bin/ut-tdd` を最優先し、次に setup を実行した harness checkout の `src/cli.ts`、最後に bare `ut-tdd` へ fallback する。
 
 不変条件:
 
 - project ごとの tag pin / devDependency を優先し、同一PC上の他 project の harness version と衝突しない。
-- hook command は repo-local `.ut-tdd/bin/ut-tdd.mjs` を経由し、consumer の PATH に bare `ut-tdd` が無くても project-local binary で動く。
+- hook command は repo-local `.ut-tdd/bin/ut-tdd.mjs` を経由し、consumer の PATH に bare `ut-tdd` が無くても project-local binary または setup 元 harness checkout で動く。
 - Bun 自体は hook shell の PATH に必要だが、UT-TDD harness binary は project dependency として解決する。
 - rollback 対象には `.ut-tdd/bin/ut-tdd.mjs` を含め、managed adapter と同じく再 setup で復元できる。

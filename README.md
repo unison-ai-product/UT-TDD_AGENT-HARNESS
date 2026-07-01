@@ -166,10 +166,12 @@ bun .ut-tdd\bin\ut-tdd.mjs doctor
 
 The generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...`.
 That wrapper is projected into each consumer repository by `ut-tdd setup` and
-prefers that repository's pinned `node_modules/.bin/ut-tdd` before falling back to
-a global `ut-tdd`. This keeps multiple projects on one PC from fighting over one
-global harness version. Before treating setup as ready, verify the same shell that
-will run Claude/Codex hooks can execute:
+prefers that repository's pinned `node_modules/.bin/ut-tdd`, then the harness
+checkout that ran setup, before falling back to a global `ut-tdd`. This keeps
+multiple projects on one PC from fighting over one global harness version while
+still allowing a cloned harness checkout to bootstrap a consumer repo. Before
+treating setup as ready, verify the same shell that will run Claude/Codex hooks
+can execute:
 
 ```powershell
 bun .ut-tdd\bin\ut-tdd.mjs --help

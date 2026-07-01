@@ -378,6 +378,19 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     for (const p of preview) expect(p).not.toContain("UT-TDD-agent-harness");
   });
 
+  it("U-SETUP-009b: built-in wrapper falls back to the setup harness source CLI", () => {
+    const deps = mockDeps();
+    const plan = planSetup("0-A", { dryRun: false });
+
+    emitSetup(plan, {}, deps);
+
+    const wrapper = deps.files.get(join("/repo", ".ut-tdd", "bin", "ut-tdd.mjs"));
+    expect(wrapper).toContain('const setupSourceCli = "');
+    expect(wrapper).toContain('existsSync(setupSourceCli) ? "bun" : "ut-tdd"');
+    expect(wrapper).toContain("[setupSourceCli, ...process.argv.slice(2)]");
+    expect(wrapper).not.toContain("{{UT_TDD_SOURCE_CLI_JSON}}");
+  });
+
   it("U-SETUP-010: emitSetup preserves consumer-owned adapter files and merges only managed blocks", () => {
     const deps = mockDeps({ templates: baseTemplates, confirm: () => false });
     deps.files.set(join("/repo", "AGENTS.md"), "# Consumer Rules\n\nKeep this line.\n");

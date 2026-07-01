@@ -59,7 +59,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:41c2098f7f6dca491468ae7e956ec2a9186f0f48135314b78f7dfbb2c10ff897"
+        output_digest: "sha256:fb9c46239d8e96fc655a493b0439f6f4ef9903af33fdb08cfff78615dc0123a1"
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts tests\\workflow-contracts.test.ts"
         runner: bun
@@ -75,7 +75,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:691fbd6492bb8a991e5acb66c022e542a0f8b5829e38f1f57326a660457d31da"
+        output_digest: "sha256:5768a8e36baee2d050a3abcd8135fb88b134df871116a835aaf48ed158e6ea9e"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -83,7 +83,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:691fbd6492bb8a991e5acb66c022e542a0f8b5829e38f1f57326a660457d31da"
+        output_digest: "sha256:5768a8e36baee2d050a3abcd8135fb88b134df871116a835aaf48ed158e6ea9e"
       - kind: smoke
         command: "bun -e \"buildCleanDistributionPlan smoke: artifactCount=421, denylistViolations=[], legacy-name hits=[]\""
         runner: bun

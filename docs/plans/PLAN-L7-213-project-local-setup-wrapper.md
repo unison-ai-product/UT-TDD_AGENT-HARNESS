@@ -47,10 +47,10 @@ dependencies:
 review_evidence:
   - reviewer: codex-cli
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-01T10:16:00+09:00"
-    tests_green_at: "2026-07-01T10:15:00+09:00"
+    reviewed_at: "2026-07-01T10:43:00+09:00"
+    tests_green_at: "2026-07-01T10:42:00+09:00"
     verdict: approve
-    scope: "Setup now projects a repo-local .ut-tdd/bin/ut-tdd.mjs wrapper and generated Claude/Codex hooks invoke it through Bun, so multiple projects on one PC can pin independent UT-TDD versions without relying on a global bun link. Distribution acceptance and setup regressions are green."
+    scope: "setup は repo-local .ut-tdd/bin/ut-tdd.mjs wrapper を投影し、generated Claude/Codex hook は Bun 経由でこれを呼ぶ。1台PC上の複数 project は global bun link に依存せず独立 version を pin できる。wrapper は consumer node_modules、setup 元 harness checkout、bare ut-tdd の順で解決する。distribution acceptance、setup regression、tarball→consumer actual setup smoke は green。"
     worker_model: codex-gpt-5
     reviewer_model: codex-gpt-5
     green_commands:
@@ -59,25 +59,33 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-01T10:15:00+09:00"
+        completed_at: "2026-07-01T10:40:00+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:41c2098f7f6dca491468ae7e956ec2a9186f0f48135314b78f7dfbb2c10ff897"
+        output_digest: "sha256:fb9c46239d8e96fc655a493b0439f6f4ef9903af33fdb08cfff78615dc0123a1"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-01T10:15:00+09:00"
+        completed_at: "2026-07-01T10:40:00+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:691fbd6492bb8a991e5acb66c022e542a0f8b5829e38f1f57326a660457d31da"
+        output_digest: "sha256:5768a8e36baee2d050a3abcd8135fb88b134df871116a835aaf48ed158e6ea9e"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-01T10:15:00+09:00"
+        completed_at: "2026-07-01T10:40:00+09:00"
         evidence_path: src/setup/templates.ts
-        output_digest: "sha256:919168e66fe75578fa18b15e5786a49ae9ee21b35fa0f0fb232e1e9e6f2737a6"
+        output_digest: "sha256:4b3b4e6bbed5d9e07040e5074952e462e896b4ff84bad16b0fe9137dd780a12a"
+      - kind: smoke
+        command: "bun src\\cli.ts distribution package --out .ut-tdd\\dist-local --json; tarball展開先から consumer setup --solo; bun .ut-tdd\\bin\\ut-tdd.mjs --help; bun .ut-tdd\\bin\\ut-tdd.mjs status --json"
+        runner: powershell
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T10:41:00+09:00"
+        evidence_path: src/setup/templates.ts
+        output_digest: "sha256:4b3b4e6bbed5d9e07040e5074952e462e896b4ff84bad16b0fe9137dd780a12a"
 ---
 
 # PLAN-L7-213: project-local setup wrapper
@@ -86,11 +94,14 @@ review_evidence:
 
 1台のPCに複数の consumer project が同居する前提では、global `bun link` / global `ut-tdd` を hook 実行の正本にすると、project ごとの version pin と衝突する。setup は各 project に repo-local wrapper を投影し、Claude/Codex hook はその wrapper 経由で project-local `node_modules/.bin/ut-tdd` を優先して起動する必要がある。
 
+consumer がまだ package dependency を持たず、clone した harness checkout から setup しただけの状態でも hook が自走できるよう、wrapper は setup 元 harness checkout の `src/cli.ts` も fallback として保持する。
+
 ## 変更
 
 - setup template に `.ut-tdd/bin/ut-tdd.mjs` を追加する。
 - Claude/Codex adapter hook template は `bun .ut-tdd/bin/ut-tdd.mjs ...` を呼ぶ。
-- `buildConsumerReadinessPlan` と `distribution plan` は project-local wrapper / package bin を主経路として扱う。
+- wrapper は consumer `node_modules/.bin/ut-tdd`、setup 元 harness checkout の `src/cli.ts`、bare `ut-tdd` の順で解決する。
+- `buildConsumerReadinessPlan` と `distribution plan` は project-local wrapper / package bin / setup 元 source entrypoint を主経路として扱う。
 - README と L6 setup design に multi-project / one-PC 前提を追記する。
 
 ## 受入
@@ -98,4 +109,5 @@ review_evidence:
 - setup preview に `.ut-tdd/bin/ut-tdd.mjs` が含まれる。
 - generated Claude/Codex hooks は bare `ut-tdd ...` ではなく project-local wrapper を呼ぶ。
 - clean distribution acceptance smoke が updated adapter hook template を検証する。
+- tarball から展開した harness checkout が consumer repo に actual setup でき、生成 wrapper から `--help` と `status --json` が動く。
 - rollback managed paths に `.ut-tdd/bin/ut-tdd.mjs` が含まれる。
