@@ -8,7 +8,7 @@
 |---|---|---|---|
 | `task classify` (+`--design-docs`) | kind/drive/size/complexity/risk + required design/test docs | `src/task/classify.ts`, `proposal-document-packs-*` | mature (43 test cases) |
 | `task route` / `task roster` | role×difficulty×provider routing; 10 dual-provider bindings | `src/task/tier-router.ts` | mature |
-| `skill suggest` | skill recommendation for PLAN/text | `src/skills/recommend.ts` | partial (no auto-fire) |
+| `skill suggest` | skill recommendation for PLAN/text | `src/skill-engine/recommend.ts` | partial (no auto-fire) |
 | coverage SSoT | `document-system-map` §1 (L0-L14 + standards + V-pairs), §1c (per-layer FE design descent) | `docs/governance/document-system-map.md` | mature (definition) |
 | gates | `descent-obligation`(substance-boundary), `pair-freeze`, `frontend-design-coverage`, `proposal-document-coverage`, `fr-registry-audit`, `entity-coverage`, `doc-consistency`, `l6-completion`, `l6-fr-coverage`(substance-boundary), `l7-completion`, `screen-impl-pair-freeze`, `sub-doc-*`, `placeholder-deps`, `roadmap`, `telemetry-closure` | `src/lint/*` | mostly presence; `l6-fr-coverage` & `descent-obligation` are substance-boundary |
 

@@ -47,7 +47,7 @@ recommender のスコアが **layer + drive_model の 2 軸**しか持たない�
 
 - [src/lint/skill-assignment.ts](../../src/lint/skill-assignment.ts) が `applies_to.drive_models` を**全 skill 必須**にしており
   (`missing-drive-models` fail-close)、駆動モデルに紐づかない skill はそもそも登録できない (=強制 workflow 化)。
-- [src/skills/recommend.ts](../../src/skills/recommend.ts) `scoreSkill` は layer 一致 +0.35 / drive 一致 +0.35 が支配的で、
+- [src/skill-engine/recommend.ts](../../src/skill-engine/recommend.ts) `scoreSkill` は layer 一致 +0.35 / drive 一致 +0.35 が支配的で、
   メタデータ (trigger/role/capability) 軸の寄与が弱い。
 - 既存 `skill_type` 値は process/orchestration/design-contract/verification/review/testing/drive-reverse… の
   **全部ワークフロー系**で、domain/project の区分が無い。
@@ -120,7 +120,7 @@ Step 1〜3 を self / code-reviewer (claude-only のため intra_runtime_subagen
 本 PLAN のスコープは **機能設計 (L6) + ③ テスト設計 (L6↔L7 V-pair) まで**。以下は**後続 add-impl PLAN** (実装):
 - `src/lint/skill-assignment.ts` の判定反転 (indexable-by-something)。
 - `src/assets/catalog.ts` の `category` 列追加 + search トークン合流 + schema (automation_assets) 変更。
-- `src/skills/recommend.ts` `scoreSkill` の de-saturate 分岐実装 + vitest。
+- `src/skill-engine/recommend.ts` `scoreSkill` の de-saturate 分岐実装 + vitest。
 - `docs/skills/*.md` 既存 pack の category 付与 (workflow は省略可、domain 候補に付与)。
 - **skill creator / scaffolder** (`ut-tdd skill new`: 規約準拠の雛形生成 + SKILL_MAP 追記 + lint 自走) は索引モデル確定後の
   別 add-feature。本 PLAN ではスコープ外として記録する (順序 = 索引モデル → creator)。
@@ -141,7 +141,7 @@ Step 1〜3 を self / code-reviewer (claude-only のため intra_runtime_subagen
 - 関連 PLAN: 親 = PLAN-L6-00-master / 上流 = PLAN-L5-06-skill (L5 module 結合) / 由来 carry = PLAN-DISCOVERY-03-skill-design §6 /
   兄弟 = PLAN-L4-12-skill-pack (L4 system) / 後続 = (別 add-impl) skill 索引 impl + (別 add-feature) skill creator
 - 関連 ADR: ADR-004 (層1 markdown 正本 / 層2 TS) / ADR-005 (配布境界) / ADR-002 (依存方向)
-- 参照: src/lint/skill-assignment.ts / src/assets/catalog.ts / src/skills/recommend.ts / docs/skills/SKILL_MAP.md
+- 参照: src/lint/skill-assignment.ts / src/assets/catalog.ts / src/skill-engine/recommend.ts / docs/skills/SKILL_MAP.md
 
 ## §6 用語更新 (living glossary delta)
 

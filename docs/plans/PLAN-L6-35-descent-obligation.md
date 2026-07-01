@@ -37,7 +37,7 @@ review_evidence:
 
 ## §0 位置づけ
 
-A-136 (Cycle P4) 完了後のクロスレビューで **skill subsystem の片肺 V-pair** を発見した: 実装 (`src/skills/recommend.ts`) とテストコードは着地済だが、**L6 単体テスト設計が不在**で、かつ skill pack content (W10 curate) も未着手。これが `impl-plan-trace` / `oracle-test-trace` / `pair-freeze` を全て素通りした。
+A-136 (Cycle P4) 完了後のクロスレビューで **skill subsystem の片肺 V-pair** を発見した: 実装 (`src/skill-engine/recommend.ts`) とテストコードは着地済だが、**L6 単体テスト設計が不在**で、かつ skill pack content (W10 curate) も未着手。これが `impl-plan-trace` / `oracle-test-trace` / `pair-freeze` を全て素通りした。
 
 根本原因 = **absence-blindness**: 既存の降下系チェックは「**宣言された link が解決するか**」しか見ず、「上流ノードから降りるべき下流ノードの必須集合」を生成しないため、**不在を違反として認識できない**。例えば `pair-freeze` (`vmodel-pair-freeze.md §2`) は **存在する design sub-doc を駆動**して各 doc の `pair_artifact` を検証する document-driven 方式であり、宣言の無い・`explicit_l7_defer` のホップは edge も孤児も出さず「ただ不在」になる。
 

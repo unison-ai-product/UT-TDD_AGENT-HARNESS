@@ -23,7 +23,7 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/design/harness/L6-function-design/function-spec.md
     artifact_type: design_doc
-  - artifact_path: src/skills/recommend.ts
+  - artifact_path: src/skill-engine/recommend.ts
     artifact_type: source_module
   - artifact_path: src/runtime/adapter.ts
     artifact_type: source_module
@@ -90,7 +90,7 @@ review_evidence:
         scope: targeted
         exit_code: 0
         completed_at: "2026-06-23T18:42:32+09:00"
-        evidence_path: src/skills/recommend.ts
+        evidence_path: src/skill-engine/recommend.ts
         output_digest: "sha256:bc70b172a9dfd750ae950eb5fb573479a8cc9932e422ae915d46662d96d5e961"
 ---
 

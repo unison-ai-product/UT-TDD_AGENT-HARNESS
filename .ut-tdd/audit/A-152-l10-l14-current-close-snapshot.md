@@ -2,7 +2,7 @@
 
 - **date**: 2026-07-01
 - **scope**: current local close state for L10-L14 / distribution readiness after A-150/A-151 remediation and the 2026-06-30 projection-vs-substance audit.
-- **boundary**: local evidence plus Pack `v0.1.1` GitHub tag/release evidence. This record does not claim signed release artifacts, production deployment, UAT signoff, or post-publication consumer operation.
+- **boundary**: local evidence plus Pack `v0.1.3` GitHub tag/release evidence. This record does not claim signed release artifacts, production deployment, UAT signoff, or post-publication consumer operation.
 
 ## Current machine state
 
@@ -15,9 +15,9 @@ Latest local commands:
 - `bun run vitest run tests\setup.test.ts tests\cli-surface.test.ts --reporter=dot`: 2 test files / 35 tests passed.
 - `$env:PATH="$env:USERPROFILE\.bun\bin;$env:APPDATA\npm\node_modules\bun\bin;$env:PATH"; ut-tdd --help`: OK.
 - `$env:PATH="$env:USERPROFILE\.bun\bin;$env:APPDATA\npm\node_modules\bun\bin;$env:PATH"; bun src\cli.ts distribution plan --json`: `ok=true`.
-- `bun src\cli.ts distribution package --tag v0.1.1 --out .ut-tdd/release/v0.1.1 --json`: clean tarball, sha256 checksum, and manifest generated; signature remains `signatureRequired=true`, `signatureCreated=false`.
-- Pack `v0.1.1` tag pushed and GitHub Release created with `v0.1.1.tar.gz`, `v0.1.1.tar.gz.sha256`, and `v0.1.1.manifest.json`.
-- Tag clone smoke: `git clone --depth 1 --branch v0.1.1 https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git <temp>` then `bun install --frozen-lockfile`, `bun src\cli.ts setup --solo`, `bun .ut-tdd\bin\ut-tdd.mjs doctor --setup-smoke`, and portable hook smoke for Codex `spawn_agent`, Claude `Task`, missing-subagent block, and `subagent-stop` passed. Root `skills/` was present and `docs/skills` was absent.
+- `bun src\cli.ts distribution package --tag v0.1.3 --out .ut-tdd/release/v0.1.3 --json`: clean tarball, sha256 checksum, and manifest generated; signature remains `signatureRequired=true`, `signatureCreated=false`.
+- Pack `v0.1.3` tag pushed and GitHub Release created with `v0.1.3.tar.gz`, `v0.1.3.tar.gz.sha256`, and `v0.1.3.manifest.json`.
+- Tag clone smoke: `git clone --depth 1 --branch v0.1.3 https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git <temp>` then `bun install --frozen-lockfile`, `bun run typecheck`, Pack smoke vitest, `bun run lint`, `bun src\cli.ts setup --solo`, and `bun .ut-tdd\bin\ut-tdd.mjs doctor --setup-smoke` passed. Root `skills/` was present, `src/skill-engine/` was present, and `docs/skills`, `docs/adr`, `docs/design`, `docs/test-design`, `docs/plans`, `.ut-tdd`, `src/skills`, and persisted DB files were absent.
 - GitHub PR #2 head `fe54ac5` has author/committer `unison-ai-product <253932653+unison-ai-product@users.noreply.github.com>` and CI `harness-check` success after the author-name amend.
 - `bun run test`: 119 test files / 1221 tests passed.
 - `bun src\cli.ts doctor`: OK, including `pair-freeze`, `l6-completion`, `l7-completion`, `frontend-design-coverage`, `green-command-digest`, and `forward-convergence`.
@@ -31,7 +31,7 @@ L10-L14 are locally closeable only in the scoped sense below:
 
 - **L10 UX / mock boundary**: locally closed for the current mock stage. `screen-impl-pair-freeze`, `g10-ux-workflow`, and L1/L2/L10 trace gates are green. Future high-fidelity prototype or implementation must reopen the L1/L2/L10 pair contract.
 - **L11 UAT**: local workflow evidence is green, but user/PO UAT acceptance remains `human_required`.
-- **L12 release acceptance**: clean export/setup structure and Pack `v0.1.1` tag clone are tested, but release acceptance is not fully closed. Signed artifact verification and human release acceptance are still required.
+- **L12 release acceptance**: clean export/setup structure and Pack `v0.1.3` tag clone are tested, but release acceptance is not fully closed. Signed artifact verification and human release acceptance are still required.
 - **L13 post-deploy**: no released consumer deployment exists in this local run; post-deploy observation remains `external_required`.
 - **L14 operations feedback**: local feedback projection gates are green; real released-consumer operations data remains `external_required`.
 
@@ -82,9 +82,9 @@ Each parked PLAN carries:
 
 Local distribution readiness is split:
 
-- **Green locally**: clean setup/export curation, dogfood governance-document exclusion, adapter templates for Claude and Codex, shipped guard hook wiring through `ut-tdd hook ...` entrypoints, MIT license with UNISON-TECHNOLOGY copyright, and design/governance/ADR Japanese-language gate.
+- **Green locally**: clean setup/export curation, dogfood governance-document exclusion, Pack-side exclusion of self-development design docs / PLANs / runtime DB state, adapter templates for Claude and Codex, shipped guard hook wiring through `ut-tdd hook ...` entrypoints, MIT license with UNISON-TECHNOLOGY copyright, and design/governance/ADR Japanese-language gate.
 - **Locally proven with explicit PATH**: bare `ut-tdd` consumer execution passes when the hook shell PATH includes both Bun's global bin (`~\.bun\bin`) and the real Bun binary directory (`%APPDATA%\npm\node_modules\bun\bin` in this npm-installed Bun environment). The generated hooks are correct to call `ut-tdd ...`, but a default shell without those PATH entries still blocks readiness.
-- **Release artifact published**: Pack `v0.1.1` GitHub Release publishes the clean tarball, `.sha256`, and manifest. Signing (`.sig`) remains an external key-operation boundary because no GPG/signing key is available in this environment, and `gpg`, `cosign`, and `openssl` are not installed. The implementation intentionally reports `signatureCreated=false` and does not synthesize an unsigned `.sig`.
+- **Release artifact published**: Pack `v0.1.3` GitHub Release publishes the clean tarball, `.sha256`, and manifest. Signing (`.sig`) remains an external key-operation boundary because no GPG/signing key is available in this environment, and `gpg`, `cosign`, and `openssl` are not installed. The implementation intentionally reports `signatureCreated=false` and does not synthesize an unsigned `.sig`.
 - **Telemetry caveat**: `hook_events` is genuine runtime telemetry, while some DB tables are projection or hollow telemetry by design. `doctor --strict-telemetry-provenance` now distinguishes projection-only telemetry, but this snapshot does not claim full runtime capture for skill invocations, guardrail decisions, or model cost/tokens.
 - **Evidence integrity**: green-command digest backlog is no longer open after A-153; future digest corrections must remain rerun-bound and must not be mechanical hash restamps.
 

@@ -48,7 +48,7 @@ generates:
     artifact_type: source_module
   - artifact_path: src/setup/templates.ts
     artifact_type: source_module
-  - artifact_path: src/skills/scaffold.ts
+  - artifact_path: src/skill-engine/scaffold.ts
     artifact_type: source_module
   - artifact_path: src/state-db/projection-writer.ts
     artifact_type: source_module

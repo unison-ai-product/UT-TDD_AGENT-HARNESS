@@ -359,7 +359,7 @@
       "evidence_paths": [
         "tests/skill-recommend.test.ts",
         "tests/team-run.test.ts",
-        "src/skills/recommend.ts"
+        "src/skill-engine/recommend.ts"
       ],
       "command_ids": [
         "cmd-st-func-targeted"

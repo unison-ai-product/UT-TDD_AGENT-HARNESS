@@ -13,7 +13,7 @@ implemented_by: docs/plans/PLAN-L7-211-skill-index-category-materialization.md
 # skill 索引モデル
 
 本書は `skill.v1` メタデータをどの軸で検出、推薦、生成するかを定義する L6 機能設計である。
-対象実装は `src/lint/skill-assignment.ts`、`src/assets/catalog.ts`、`src/skills/recommend.ts`、`src/skills/scaffold.ts`、`src/schema/harness-db-tables-core.ts` とする。
+対象実装は `src/lint/skill-assignment.ts`、`src/assets/catalog.ts`、`src/skill-engine/recommend.ts`、`src/skill-engine/scaffold.ts`、`src/schema/harness-db-tables-core.ts` とする。
 
 開発 repo では既存互換のため `docs/skills/` を読み続けられる。一方、配布用 Pack repo では利用者が直接見る開発 OS の部品として root `skills/` を標準配置とする。実装は `skills/` が存在する場合にこれを優先し、存在しない場合だけ `docs/skills/` に fallback する。
 

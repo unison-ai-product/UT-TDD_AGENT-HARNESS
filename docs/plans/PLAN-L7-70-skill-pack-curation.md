@@ -55,7 +55,7 @@ related_l0_extra: docs/design/harness/L1-requirements/functional-requirements.md
 
 Realize FR-L1-47 (skill pack の UT-TDD curate) and FR-L1-12 (L 単位 文脈注入) by
 giving `skills/*.md` packs genuine UT-TDD substance: correct routing
-frontmatter (consumed by `src/skills/recommend.ts`) and bodies that describe the
+frontmatter (consumed by `src/skill-engine/recommend.ts`) and bodies that describe the
 skill **as applied inside the UT-TDD workflow** (real `ut-tdd` commands,
 `.ut-tdd/` state, V-model layers, drive models, gates). HELIX vendor sources are
 loose reference only (ADR-001, §1.5 of the fork plan); no verbatim copies, no

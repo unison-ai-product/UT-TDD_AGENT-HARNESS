@@ -110,7 +110,7 @@ harness 自走前 (Discovery/PoC ワークフロー FR-L1-15 未実装) のた�
 - PLAN 合成 (master hub + child triage) が L1/L3/L4/L5 で機能。kind/layer/workflow_phase/decision_outcome 等 既存 schema で表現できた (層越境なし)
 - gate G_N (G1/G3/G4 + 4軸 audit) が機能。Recovery 合流時の G4 再 audit も既存機構で回った
 - ②駆動モデルの実適用: **Recovery** (PLAN-RECOVERY-01、premise gap を Step1-5 で収束・close) / **Discovery=本 PoC** / **Discovery-for-design = PLAN-DISCOVERY-02 roster** (§1.1 の初実適用 = 設計→仮実装→検証→確定 を 1 周、S2 で Codex 8009001d→PM env-forced spike、S3 で roster 核が実証成立、S4 `confirmed`+`redesign`、self-review APPROVE) が回った
-  - **Discovery-for-design 2 件目 = PLAN-DISCOVERY-03 skill** (2026-06-22 クローズ): S2/S3 で throwaway spike でなく **shipped 済 production 実装** (`src/skills/recommend.ts` + L5-06/L4-12/L7-70) を検証 vehicle に採用。決定論 phase-driven recommender が viable と live 確認 (詰まり② confirmed) + score 飽和の限界を実測 (→ L5/L6 で category/gate タグ de-saturate)。S4 `confirmed`+`redesign`。**メタモデル所見**: Discovery PLAN が draft 滞留する間に下流 (L5-06 confirmed + impl) が先行実装すると PoC が「実装に追い越される」= PoC は実装より先に S4 をクローズすべき (= 完了 bookkeeping drift の一種、再発防止 = [[PLAN-L7-93]] plan-completion-drift gate)
+  - **Discovery-for-design 2 件目 = PLAN-DISCOVERY-03 skill** (2026-06-22 クローズ): S2/S3 で throwaway spike でなく **shipped 済 production 実装** (`src/skill-engine/recommend.ts` + L5-06/L4-12/L7-70) を検証 vehicle に採用。決定論 phase-driven recommender が viable と live 確認 (詰まり② confirmed) + score 飽和の限界を実測 (→ L5/L6 で category/gate タグ de-saturate)。S4 `confirmed`+`redesign`。**メタモデル所見**: Discovery PLAN が draft 滞留する間に下流 (L5-06 confirmed + impl) が先行実装すると PoC が「実装に追い越される」= PoC は実装より先に S4 をクローズすべき (= 完了 bookkeeping drift の一種、再発防止 = [[PLAN-L7-93]] plan-completion-drift gate)
 - placeholder_deps + back-fill を DB(state) 完全性で機械保証する設計が成立 (孤児0 収束)
 
 **詰まった (= 適用エラー / メタモデル言語化不足、すべて検証が捕捉し是正):**

@@ -47,7 +47,7 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/design/harness/L6-function-design/function-spec.md
     artifact_type: design_doc
-  - artifact_path: src/skills/recommend.ts
+  - artifact_path: src/skill-engine/recommend.ts
     artifact_type: source_module
   - artifact_path: src/runtime/adapter.ts
     artifact_type: source_module

@@ -30,9 +30,9 @@ generates:
     artifact_type: source_module
   - artifact_path: src/schema/harness-db-tables-core.ts
     artifact_type: source_module
-  - artifact_path: src/skills/recommend.ts
+  - artifact_path: src/skill-engine/recommend.ts
     artifact_type: source_module
-  - artifact_path: src/skills/scaffold.ts
+  - artifact_path: src/skill-engine/scaffold.ts
     artifact_type: source_module
   - artifact_path: src/cli.ts
     artifact_type: source_module
@@ -104,7 +104,7 @@ review_evidence:
         scope: full
         exit_code: 0
         completed_at: "2026-06-30T18:00:00+09:00"
-        evidence_path: src/skills/scaffold.ts
+        evidence_path: src/skill-engine/scaffold.ts
         output_digest: "sha256:afaf09cf6cd6cffcbc63edb9daf34d0a2a2ba4cead14b5cffe73badc3982bfa5"
       - kind: unit_test
         command: "bun run vitest run tests\\skill-assignment.test.ts tests\\skill-recommend.test.ts tests\\asset-catalog.test.ts tests\\skill-scaffold.test.ts --reporter=dot"
@@ -128,7 +128,7 @@ review_evidence:
         scope: full
         exit_code: 0
         completed_at: "2026-06-30T18:00:00+09:00"
-        evidence_path: src/skills/recommend.ts
+        evidence_path: src/skill-engine/recommend.ts
         output_digest: "sha256:bc70b172a9dfd750ae950eb5fb573479a8cc9932e422ae915d46662d96d5e961"
 ---
 
@@ -137,7 +137,7 @@ review_evidence:
 ## Purpose
 
 Bind the current skill-index implementation work to an L7 owner PLAN so the new
-`src/skills/scaffold.ts` module, category-aware skill catalog/recommender
+`src/skill-engine/scaffold.ts` module, category-aware skill catalog/recommender
 changes, and dogfood adapter parity are not orphaned implementation.
 
 ## Scope

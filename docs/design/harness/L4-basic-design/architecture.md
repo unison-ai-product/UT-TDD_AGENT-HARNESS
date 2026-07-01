@@ -78,7 +78,7 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | **setup** (`src/setup/`) | repo baseline 確立 (solo/team で出し分ける GitHub 設定ファイル emit、PLAN-L6-05/L7-03 実装済) | `runSetup()` | schema / fs |
 | **web** (`src/web/`) | 中央 Web UI adapter (画面 + DB サーバ、配布=GitHub-pull + team server、[ADR-005](../../../adr/ADR-005-distribution-model-and-central-ui.md))。core CLI とは別 adapter (本体 pure 維持) | (Phase B 配備) | schema / fs |
 | **roster** (将来 `src/roster/`) | 内部資産 subagent roster registry。`.claude/agents/*.md` (層1 markdown 正本) の frontmatter を読み capability class / model family を構築、guard allowlist の SSoT (A-85、FR-L1-46、ADR-004 層2) | `loadRoster()` / `resolveCapability()` | schema / fs (loadX 端点) |
-| **skills** (将来 `src/skills/`) | 内部資産 skill catalog / recommender / injector。`docs/skills/**/*.md` (層1 正本) を読み L 別注入セットを構築 (A-85、FR-L1-47/12/37、ADR-004 層2) | `loadCatalog()` / `recommendSkill()` / `injectByLayer()` | schema / fs (loadX 端点) |
+| **skill-engine** (`src/skill-engine/`) | 内部資産 skill catalog / recommender / injector。`skills/**/*.md` / legacy `docs/skills/**/*.md` (層1 正本) を読み L 別注入セットを構築 (A-85、FR-L1-47/12/37、ADR-004 層2)。配布物では skill 本文は root `skills/`、実装 engine は `src/skill-engine/` に分離する。 | `loadCatalog()` / `recommendSkill()` / `injectByLayer()` | schema / fs (loadX 端点) |
 
 > **依存方向の原則**: すべての依存は `schema` へ向かう一方向 (schema は何にも依存しない安定核)。`cli`/`doctor` が最も外側 (副作用層)。**循環依存禁止** (D-03=0 の構造的保証)。
 > **roadmap-registry park / rollup (PLAN-REVERSE-44 Step3)**: `src/lint/roadmap-registry.ts` は `PARKED_BANDS` を単一正本として、forward 未降下の `verification` / `cutover` を `uncovered` から分離しつつ reason 付きで doctor surface する。`computeProgramRollup` は `PROGRAM_BANDS` の covered/parked/uncovered 不変条件、gate/span 進捗、未登録 band と pending 工程表 planId の frontier、`perBand` を返し、`doctor` は `roadmap-rollup —` 行で warn-first surface する。`computeGateProgress` は confirmed/completed を同等に到達計数する (IMP-132)。harness.db への rollup projection (front 返却) は別増分。
@@ -106,11 +106,11 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 | 値オブジェクト (12 種、うち 11 実装済 / SubDoc は spec のみ IMP-026) | **schema** (zod enum SSoT) | 全 lint が schema を参照 | (state 読込時に zod validate) |
 | derived_view (CQRS) | (将来 HM 画面 projection) | — | 集約 state から projection |
 
-> L7 完遂時点の module surface は cli/schema/plan/vmodel/runtime/doctor/lint/**handover/setup/export/state-db/workflow/feedback/skills/assets/audit** に着地済み。telemetry は `src/feedback/engine.ts` と `src/state-db/projection-writer.ts` の DB projection として実装し、HM/web projection (中央 UI、ADR-005) は Phase B 配備範囲として分離する。Handover は当初「将来 session module」と記載したが PLAN-L6-06/L7-04 で実装済 → 本 PLAN-L4-06 で実体へ整合 (drift back-fill)。
+> L7 完遂時点の module surface は cli/schema/plan/vmodel/runtime/doctor/lint/**handover/setup/export/state-db/workflow/feedback/skill-engine/assets/audit** に着地済み。telemetry は `src/feedback/engine.ts` と `src/state-db/projection-writer.ts` の DB projection として実装し、HM/web projection (中央 UI、ADR-005) は Phase B 配備範囲として分離する。Handover は当初「将来 session module」と記載したが PLAN-L6-06/L7-04 で実装済 → 本 PLAN-L4-06 で実体へ整合 (drift back-fill)。
 
 ### §4.1 内部資産 drift lint (A-85、FR-L1-49、IMP-033 rule 型)
 
-内部資産 (roster/skills) の整合は **IMP-033 cross-check rule engine (gate-design §4/§5) の rule 型 `asset-drift` インスタンス**として構想した。Current implementation は `src/lint/asset-drift.ts`、`src/runtime/agent-slots.ts#resolveRosterCapability`、`src/assets/catalog.ts`、`src/skills/recommend.ts`、`src/lint/placeholder-deps.ts` を持ち、`.claude/agents/*.md` / `docs/skills` / `docs/templates/prompts/*.md` を scan する。roster/skills の現行 semantic guard は doctor hard gate と unit/integration tests で fail-close する。
+内部資産 (roster/skills) の整合は **IMP-033 cross-check rule engine (gate-design §4/§5) の rule 型 `asset-drift` インスタンス**として構想した。Current implementation は `src/lint/asset-drift.ts`、`src/runtime/agent-slots.ts#resolveRosterCapability`、`src/assets/catalog.ts`、`src/skill-engine/recommend.ts`、`src/lint/placeholder-deps.ts` を持ち、`.claude/agents/*.md` / `docs/skills` / `docs/templates/prompts/*.md` を scan する。roster/skills の現行 semantic guard は doctor hard gate と unit/integration tests で fail-close する。
 
 | 検査項目 (inventory §1 / ADR-004 由来) | fail-close 条件 |
 |---|---|
@@ -121,7 +121,7 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 
 > **既存 `dependency-drift` (ADR-002) と並置**: gate-design §5 rule registry に `dependency-drift` が既存。内部資産 `asset-drift` を同列追加 (両方 IMP-033 rule)。Current hard gate sliceは legacy path residue / legacy command residue / docs-skills vacancy / guard allowlist missing agent docs を doctor 経路で fail-close 済み。active design/test-design に残った L7 待ち `placeholder_deps` は `placeholder-deps` doctor gate で fail-close する。
 >
-> **実装証跡 (concept §3.1.3.1、IMP-074)**: asset-drift hard gate は A-116 で実装済み。roster capability resolution は `src/runtime/agent-slots.ts#resolveRosterCapability`、asset catalog / skill recommendation は `src/assets/catalog.ts` / `src/skills/recommend.ts`、stale L7 placeholder の fail-close は `src/lint/placeholder-deps.ts` が担う。
+> **実装証跡 (concept §3.1.3.1、IMP-074)**: asset-drift hard gate は A-116 で実装済み。roster capability resolution は `src/runtime/agent-slots.ts#resolveRosterCapability`、asset catalog / skill recommendation は `src/assets/catalog.ts` / `src/skill-engine/recommend.ts`、stale L7 placeholder の fail-close は `src/lint/placeholder-deps.ts` が担う。
 >
 > **module-drift (設計⊇実在の包含、IMP-075) は実装済・別検査**: 上記 asset-drift current slice / remaining roster-skills carry とは別に、**「architecture §3.1 building block 集合 ⊇ `src/` 実在 module」の包含 drift** は ADR-002/IMP-032 の最小スライスとして **`src/lint/module-drift.ts` で実装済** (doctor `checkModuleDrift`、warn-first)。A-103 で handover/setup/web を「将来」のまま放置した meta-drift (impl→design back-fill 漏れ) を再発防止する回帰網 (U-MDRIFT-005 が実 repo 孤児0 を CI 担保)。import グラフ drift (循環/逆依存、knip/madge) は IMP-032 として別途 carry。
 

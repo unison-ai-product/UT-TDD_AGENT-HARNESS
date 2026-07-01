@@ -34,9 +34,9 @@ L3 FR 26 件 (FR-01〜18 + FR-45 + FR-23〜27 / FR-29 / FR-30) を 11 カテゴ�
 | **C7 検出 doctor** | FR-18 / FR-11 | 全集約 (横断) | doctor + lint |
 | **C8 CI 連携** | FR-17 | Workflow / Artifact | (将来 CI 配線) |
 | **C9 doc-review** | FR-45 | Artifact | (将来 review module) |
-| **C10 文脈注入** | FR-12 | Plan | `src/skills/recommend.ts` + `src/workflow/contracts.ts#suggestSkillInjection` |
+| **C10 文脈注入** | FR-12 | Plan | `src/skill-engine/recommend.ts` + `src/workflow/contracts.ts#suggestSkillInjection` |
 | **C11 Recovery** | FR-10 | Workflow / Handover | (将来 cutover) |
-| **C12 内部資産 (roster/skill/command)** | FR-L1-46 / FR-L1-47 / FR-L1-48 | Plan (agent_slot) のみ — roster/skill は**集約なし** (in-memory scan-on-demand、fs 正本、data.md §1/§8) | `src/runtime/agent-slots.ts#resolveRosterCapability` + `src/skills/recommend.ts` + `src/assets/catalog.ts` + cli |
+| **C12 内部資産 (roster/skill/command)** | FR-L1-46 / FR-L1-47 / FR-L1-48 | Plan (agent_slot) のみ — roster/skill は**集約なし** (in-memory scan-on-demand、fs 正本、data.md §1/§8) | `src/runtime/agent-slots.ts#resolveRosterCapability` + `src/skill-engine/recommend.ts` + `src/assets/catalog.ts` + cli |
 
 > 11 → **12 カテゴリ** (C12 = 内部資産 roster/skill/command を A-85 で追加、Recovery PLAN-RECOVERY-01 / FR-L1-46/47/48 / BR-22。**skill (FR-L1-47) の building block は architecture §3.1 skills 行 (PLAN-L4-12)**、roster/command (FR-L1-46/48) は本 doc §1.1 が正本)。L7 完遂時点の実装証跡は C2(vmodel/doctor lint 群) + C4(detect) + C5(workflow contracts/readiness) + C6(agent-guard) + C10(skill recommend/injection) + C12(roster/skill/asset catalog) + review/cutover/builder CLI surface。**26 件マップ漏れ 0** (FR-01〜18 + FR-23〜27 + FR-29 + FR-30 + FR-45)。C12 は L1 FR-L1 由来 (L3 では §3 carry 宣言、内部資産設計増分)。
 
@@ -193,7 +193,7 @@ DB発火点は `findings`、`quality_signals`、`feedback_events`、`graph_nodes
 そのため Claude と Codex は同一 scope の skill context を受け取り、argv は固定 command metadata のままにする。
 `ut-tdd task route --plan ... --execute` も cost-tier/model routing 後に同じ materialization path を使うため、
 difficulty routing と skill injection は provider adapter plan で合流する。
-- **担当 building block**: 将来 `src/skills/` (architecture.md §3.1) + orchestration module。判定アルゴリズム (capability resolver) は L6 carry。
+- **担当 building block**: 将来 `src/skill-engine/` (architecture.md §3.1) + orchestration module。判定アルゴリズム (capability resolver) は L6 carry。
 
 ### §3.5 担当 building block / 制御フロー (外部設計)
 
