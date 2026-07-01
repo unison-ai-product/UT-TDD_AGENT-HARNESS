@@ -100,7 +100,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T18:30:23+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:e4b3684a33cfee46cf4f49a89853b0f6c9edb864f4cd806a7a3fb240d5c48bf6"
+        output_digest: "sha256:eccbd8a33367495b48d5c6af7651194e11bd9579a3528a888c1dab912c6981b0"
       - kind: smoke
         command: "bun src\\cli.ts db rebuild"
         runner: bun
@@ -116,7 +116,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-01T18:33:00+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:e4b3684a33cfee46cf4f49a89853b0f6c9edb864f4cd806a7a3fb240d5c48bf6"
+        output_digest: "sha256:eccbd8a33367495b48d5c6af7651194e11bd9579a3528a888c1dab912c6981b0"
 ---
 
 # PLAN-L7-189 (impl): HARNESS 共有 memory
