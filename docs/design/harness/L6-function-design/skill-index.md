@@ -112,6 +112,6 @@ return min(1, round2(score))
 
 ## 7. 配布 repo の skill 配置
 
-配布用 Pack repo では root `skills/` を標準 skill root とする。`scanSkillCatalog`、`catalogAutomationAssets`、`loadSkillAssignmentDocs` は `skills/` が存在する場合にこれを標準 root とし、存在しない場合だけ `docs/skills/` に fallback する。
+配布用 Pack repo では root `skills/` を標準 skill root とする。`scanSkillCatalog`、`catalogAutomationAssets`、`loadSkillAssignmentDocs` は `skills/` が存在する場合にこれを標準 root とし、存在しない場合だけ `docs/skills/` に fallback する。clean export / package では、source 側に旧互換の `docs/skills/*` しか存在しない場合でも、配布 artifact path は `skills/*` へ正規化して出力する。
 
 この配置は「docs は説明、skills は実行時に推薦・注入される部品」という見え方を守るための配布境界である。root `skills/` と `docs/skills/` を同時に必須にはしない。重複登録を避けるため、実際の scan は片方の root だけを選ぶ。

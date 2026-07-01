@@ -54,6 +54,8 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/branch-kind.test.ts
     artifact_type: test_code
+  - artifact_path: tests/cli-surface.test.ts
+    artifact_type: test_code
   - artifact_path: tests/doctor.test.ts
     artifact_type: test_code
   - artifact_path: tests/setup.test.ts
