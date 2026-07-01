@@ -12,9 +12,12 @@ implemented_by: docs/plans/PLAN-L7-211-skill-index-category-materialization.md
 
 # skill 索引モデル
 
-本書は `docs/skills/` に置く `skill.v1` メタデータを、どの軸で検出、推薦、生成するかを定義する L6 機能設計である。対象実装は `src/lint/skill-assignment.ts`、`src/assets/catalog.ts`、`src/skills/recommend.ts`、`src/skills/scaffold.ts`、`src/schema/harness-db-tables-core.ts` とする。
+本書は `skill.v1` メタデータをどの軸で検出、推薦、生成するかを定義する L6 機能設計である。
+対象実装は `src/lint/skill-assignment.ts`、`src/assets/catalog.ts`、`src/skills/recommend.ts`、`src/skills/scaffold.ts`、`src/schema/harness-db-tables-core.ts` とする。
 
-> **L6 契約マーカー**: `analyzeSkillAssignments`、`scoreSkill`、`scanSkillCatalog`、`catalogAutomationAssets`、`scaffoldSkill` は unit-test 粒度の契約である。DbC の pre/post/invariant は `docs/test-design/harness/L7-unit-test-design.md` §1.24 `U-SKILL-IDX-001..008` と §1.24a `U-SKILL-NEW-001..003` に対応する。
+開発 repo では既存互換のため `docs/skills/` を読み続けられる。一方、配布用 Pack repo では利用者が直接見る開発 OS の部品として root `skills/` を標準配置とする。実装は `skills/` が存在する場合にこれを優先し、存在しない場合だけ `docs/skills/` に fallback する。
+
+> **L6 契約マーカー**: `analyzeSkillAssignments`、`scoreSkill`、`scanSkillCatalog`、`catalogAutomationAssets`、`scaffoldSkill` は unit-test 粒度の契約である。DoD の pre/post/invariant は `docs/test-design/harness/L7-unit-test-design.md` §1.24 `U-SKILL-IDX-001..008` と §1.24a `U-SKILL-NEW-001..003` に対応する。
 
 ## 1. 索引キー
 
@@ -70,15 +73,15 @@ scaffoldSkill(input: SkillScaffoldInput, deps: SkillScaffoldDeps) => SkillScaffo
 
 | 関数 | 入力 | 出力 | 不変条件 | oracle |
 |---|---|---|---|---|
-| `analyzeSkillAssignments` | skill file path と frontmatter metadata | `SkillAssignmentResult` | `docs.length > 0` かつ violation 0 のときだけ `ok=true`。未知 L 層、未知駆動、未知 category、索引不能 skill を落とす。 | U-SKILL-IDX-001..005 |
-| `scoreSkill` | task context と catalog asset | 0..1 の決定論的 score | L 層/駆動一致だけで飽和させず、metadata overlap で同点退化を分散する。同一入力は同一出力を返す。 | U-SKILL-IDX-006..007 |
-| `scanSkillCatalog` | `docs/skills/**/*.md` | skill catalog entries | skill 本文は保存せず、path、id、routing metadata、検索 token、drift finding だけを返す。 | U-SKILL-IDX-008 |
+| `analyzeSkillAssignments` | skill file path と frontmatter metadata | `SkillAssignmentResult` | `docs.length > 0` かつ violation 0 のときだけ `ok=true`。未知 L 層、未知駆動、未知 category、索引不能 skill を違反にする。 | U-SKILL-IDX-001..005 |
+| `scoreSkill` | task context と catalog asset | 0..1 の決定的 score | L 層/駆動一致だけで飽和させず、metadata overlap で同点退避する。同一入力は同一出力を返す。 | U-SKILL-IDX-006..007 |
+| `scanSkillCatalog` | `skills/**/*.md` または `docs/skills/**/*.md` | skill catalog entries | skill 本文を保存せず、path、id、routing metadata、検索 token、drift finding だけを返す。 | U-SKILL-IDX-008 |
 | `catalogAutomationAssets` | enrolled asset docs | `automation_assets` projection | `category` と `domain_tags` を projection と検索 token に反映する。 | U-SKILL-IDX-008 |
 | `scaffoldSkill` | skill 生成入力と既存 path set | 生成予定 path、content、finding | 上書きしない。生成後 frontmatter は `analyzeSkillAssignments` で indexable である。 | U-SKILL-NEW-001..003 |
 
 ## 4. 推薦スコア
 
-`scoreSkill(ctx, asset)` は次の比重で推薦候補を並べる。
+`scoreSkill(ctx, asset)` は次の比重で推薦値を並べる。
 
 ```text
 score = 0.15
@@ -94,7 +97,9 @@ return min(1, round2(score))
 
 ## 5. 配布境界
 
-`workflow` と `domain` は harness が配布する製品 skill として扱う。`project` は利用側 project 固有の拡張であり、配布 package の `docs/skills/` には同梱しない。`ut-tdd skill new --category project` は利用側 root の `.ut-tdd/skills/` を出力先とし、開発 OS の標準 skill と consumer 固有 skill を分離する。
+`workflow` と `domain` は harness が配布する製品 skill として扱う。Pack repo では root `skills/` に同梱する。`project` は利用側 project 固有の拡張であり、`ut-tdd skill new --category project` は利用側 root の `.ut-tdd/skills/` を出力先とする。これにより開発 OS の標準 skill と consumer 固有 skill を分離する。
+
+`ut-tdd skill new` の product skill 出力先は既定で `skills/` とする。既存開発 repo で `docs/skills/` を使う必要がある場合は、実装上の依存注入で `productSkillRoot` を上書きできる。
 
 ## 6. テスト対応
 
@@ -107,6 +112,6 @@ return min(1, round2(score))
 
 ## 7. 配布 repo の skill 配置
 
-開発用 repo では既存互換として `docs/skills/` を読み続ける。一方、配布用 Pack repo では利用者が直接見る開発 OS の部品として root `skills/` を優先する。`scanSkillCatalog` と `catalogAutomationAssets` は `skills/` が存在する場合はこれを標準 skill root とし、存在しない場合だけ `docs/skills/` に fallback する。
+配布用 Pack repo では root `skills/` を標準 skill root とする。`scanSkillCatalog`、`catalogAutomationAssets`、`loadSkillAssignmentDocs` は `skills/` が存在する場合にこれを標準 root とし、存在しない場合だけ `docs/skills/` に fallback する。
 
-この配置は「docs は説明、skills は実行時に推奨・注入される部品」という見え方を守るための配布境界である。root `skills/` と `docs/skills/` を同時に必須にはしない。重複登録を避けるため、既定 scan は片方の root だけを選ぶ。
+この配置は「docs は説明、skills は実行時に推薦・注入される部品」という見え方を守るための配布境界である。root `skills/` と `docs/skills/` を同時に必須にはしない。重複登録を避けるため、実際の scan は片方の root だけを選ぶ。

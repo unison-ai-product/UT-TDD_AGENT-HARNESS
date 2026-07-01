@@ -40,17 +40,29 @@ generates:
     artifact_type: source_module
   - artifact_path: src/lint/asset-drift.ts
     artifact_type: source_module
+  - artifact_path: src/lint/branch-kind.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/skill-assignment.ts
+    artifact_type: source_module
   - artifact_path: src/setup/templates.ts
+    artifact_type: source_module
+  - artifact_path: src/skills/scaffold.ts
     artifact_type: source_module
   - artifact_path: .gitignore
     artifact_type: config
   - artifact_path: tests/asset-catalog.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/branch-kind.test.ts
     artifact_type: test_code
   - artifact_path: tests/doctor.test.ts
     artifact_type: test_code
   - artifact_path: tests/setup.test.ts
     artifact_type: test_code
   - artifact_path: tests/distribution-acceptance.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/skill-assignment.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/skill-scaffold.test.ts
     artifact_type: test_code
 dependencies:
   parent: null
