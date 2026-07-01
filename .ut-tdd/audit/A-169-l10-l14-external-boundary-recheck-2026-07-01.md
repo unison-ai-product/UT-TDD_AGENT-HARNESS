@@ -1,7 +1,7 @@
 # A-169 - L10-L14 External Boundary Recheck
 
 - **date**: 2026-07-01
-- **source HEAD**: `c3152bb docs: record audit-only pack noop sync`
+- **source baseline before this evidence commit**: `c3152bb docs: record audit-only pack noop sync`
 - **pack main**: `847d3b4 test: lock source-only pack exclusions`
 - **scope**: Recheck whether any remaining L10-L14 close boundary is locally actionable after the Pack no-op sync evidence.
 
