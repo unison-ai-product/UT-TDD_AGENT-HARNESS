@@ -199,6 +199,12 @@ calls.
   (`https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`).
 - When publishing clean Pack artifacts, push/export to the Pack repo, not back
   into the source development repo.
+- Standard local propagation from this source repo to an existing Pack checkout
+  is `ut-tdd distribution sync-pack --repo-dir <Pack checkout>`.
+  Use `--prune-local` only when intentionally removing local files that are not
+  part of the clean Pack artifact set. The command must not commit or push;
+  inspect its output and perform any Pack repo commit / push as a separate,
+  human-reviewed step.
 
 ## Editing Rules
 
