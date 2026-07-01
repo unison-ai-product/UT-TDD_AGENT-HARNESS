@@ -38,3 +38,19 @@ Post-rebind check:
 ## Judgment
 
 This rebind is not a hash-only restamp. It is tied to the full local green cycle above. It still proves local evidence/file-hash integrity, not external publication, signed artifact delivery, PO UAT, or post-release telemetry.
+
+## 2026-07-01 sync-stage addendum
+
+`distribution sync-stage --json` was added after `sync-plan` so the same clean artifact set can be materialized into a local staging directory before any Pack repo push. It copies planned artifacts only, writes `.ut-tdd-pack-sync-manifest.json`, reports `unmanagedExistingPaths`, and does not prune existing files or mutate a remote.
+
+Additional green evidence:
+
+| command | result |
+| --- | --- |
+| `bun run vitest run tests\cli-surface.test.ts --reporter=dot` | pass: 1 file / 28 tests |
+| `bun run typecheck` | pass |
+| `bun run lint` | pass |
+| `bun src\cli.ts distribution sync-stage --tag v0.1.0 --out <temp> --json` | pass: `ok=true`, `copied=428`, `unmanaged=0`, `skills/SKILL_MAP.md=true`, `docs/plans=false`, `.ut-tdd/harness.db=false` |
+| `bun run test` | pass: 121 files / 1249 tests |
+
+Boundary remains unchanged: this is local materialization only. Pack push/tag/release/signature/UAT/post-release telemetry remain external or human-approved operations.

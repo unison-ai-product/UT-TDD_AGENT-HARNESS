@@ -3272,6 +3272,92 @@ distribution
   );
 
 distribution
+  .command("sync-stage")
+  .description("materialize clean Pack artifacts into a local staging directory without publishing")
+  .option("--tag <tag>", "source/release tag", gitHead() ?? "unreleased")
+  .option(
+    "--clean-repo <name>",
+    "clean distribution repository",
+    "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
+  )
+  .option("--branch <name>", "Pack repository target branch", "main")
+  .option("--out <dir>", "local staging directory", ".ut-tdd/pack-stage")
+  .option("--json", "JSON output")
+  .action(
+    (opts: { tag?: string; cleanRepo?: string; branch?: string; out?: string; json?: boolean }) => {
+      const repoRoot = process.cwd();
+      const sourcePaths = collectDistributionCandidatePaths(repoRoot);
+      const exportPlan = buildCleanDistributionPlan({
+        paths: sourcePaths,
+        sourceTag: opts.tag,
+        cleanRepo: opts.cleanRepo,
+      });
+      const outDir = opts.out
+        ? isAbsolute(opts.out)
+          ? opts.out
+          : join(repoRoot, opts.out)
+        : join(repoRoot, ".ut-tdd", "pack-stage");
+      const sync = buildPackSyncPlan({
+        exportPlan,
+        sourcePaths,
+        stagingDir: outDir,
+        branch: opts.branch,
+      });
+      mkdirSync(outDir, { recursive: true });
+      const plannedArtifacts = new Set(exportPlan.artifactPaths);
+      const unmanagedExistingPaths = collectDistributionCandidatePaths(outDir).filter(
+        (path) => !plannedArtifacts.has(path) && !path.startsWith(".git/"),
+      );
+      let copyError: string | null = null;
+      if (exportPlan.ok) {
+        try {
+          for (const rel of exportPlan.artifactPaths) {
+            const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
+            const from = join(repoRoot, ...sourceRel.split("/"));
+            const to = join(outDir, ...rel.split("/"));
+            mkdirSync(dirname(to), { recursive: true });
+            cpSync(from, to, { recursive: true });
+          }
+        } catch (error) {
+          copyError = error instanceof Error ? error.message : String(error);
+        }
+      }
+      const manifest = join(outDir, ".ut-tdd-pack-sync-manifest.json");
+      const output = {
+        ok: exportPlan.ok && copyError === null && unmanagedExistingPaths.length === 0,
+        export: exportPlan,
+        sync,
+        stage: {
+          outDir,
+          manifest,
+          copiedArtifacts:
+            copyError === null && exportPlan.ok ? exportPlan.artifactPaths.length : 0,
+          unmanagedExistingPaths,
+          copyError,
+          destructiveRemoteMutation: false,
+          actualRemoteMutationRequiresPoApproval: true,
+        },
+      };
+      writeFileSync(manifest, `${JSON.stringify(output, null, 2)}\n`, "utf8");
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+        process.exitCode = output.ok ? 0 : 1;
+        return;
+      }
+      process.stdout.write(
+        `distribution sync-stage: ${output.ok ? "ok" : "blocked"} tag=${exportPlan.sourceTag}\n`,
+      );
+      process.stdout.write(`  out: ${outDir}\n`);
+      process.stdout.write(`  copied-artifacts: ${output.stage.copiedArtifacts}\n`);
+      process.stdout.write(`  unmanaged-existing: ${unmanagedExistingPaths.length}\n`);
+      process.stdout.write(
+        "  remote mutation: requires PO approval; no push/release was executed\n",
+      );
+      process.exitCode = output.ok ? 0 : 1;
+    },
+  );
+
+distribution
   .command("release-plan")
   .description("emit non-destructive git tag and gh release commands for human-approved publishing")
   .requiredOption("--tag <tag>", "release tag, e.g. v0.1.0")

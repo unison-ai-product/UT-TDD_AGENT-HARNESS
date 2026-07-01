@@ -140,7 +140,7 @@ deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `no
 - **§6 用語 (Phase 0-A/0-B / 参加規模検出 / emit-only)**: L0 §10 用語集へ back-merge (§G.9、導入層 L6)。
 - **認可・本番影響の境界**: branch protection 適用は人間サインオフ前提 (CLAUDE.md エスカレーション境界)。仕組み化 (precondition で非対話封鎖) を §8.6 失敗→仕組みループの一部として確定。
 
-**Pack sync addendum**: `buildPackSyncPlan(exportPlan, sourcePaths, stagingDir, branch)` は clean export の artifact set だけを Pack repo staging clone へ反映するための非破壊計画である。`distribution sync-plan --json` は `sourcePath -> artifactPath` のコピー計画、Pack repo/branch、`git status`/commit/tag/push の human-approved command list、denylist/required-file check を emit するが、clone/copy/commit/push/release は実行しない。`docs/skills/*` は Pack artifact では root `skills/*` に写像し、dogfood PLAN/design/test-design/runtime DB/UI は copyPlan へ入れない。Pack repo への remote mutation、署名 tarball、GitHub release は PO 承認後の外部操作として `release-plan` と分離する。
+**Pack sync addendum**: `buildPackSyncPlan(exportPlan, sourcePaths, stagingDir, branch)` は clean export の artifact set だけを Pack repo staging clone へ反映するための非破壊計画である。`distribution sync-plan --json` は `sourcePath -> artifactPath` のコピー計画、Pack repo/branch、`git status`/commit/tag/push の human-approved command list、denylist/required-file check を emit するが、clone/copy/commit/push/release は実行しない。`distribution sync-stage --json` は同じ artifact set をローカル staging directory に materialize し、`unmanagedExistingPaths` を検出するが、既存余剰ファイルの prune や remote mutation はしない。`docs/skills/*` は Pack artifact では root `skills/*` に写像し、dogfood PLAN/design/test-design/runtime DB/UI は copyPlan/stage へ入れない。Pack repo への remote mutation、署名 tarball、GitHub release は PO 承認後の外部操作として `release-plan` と分離する。
 
 ## §6 project-local wrapper 契約
 

@@ -467,6 +467,48 @@ describe("L7 CLI surface closure", () => {
     );
   });
 
+  it("materializes clean Pack artifacts into a local staging directory without publishing", () => {
+    const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-pack-stage-"));
+    try {
+      const run = runCliIn(repoRoot, [
+        "distribution",
+        "sync-stage",
+        "--tag",
+        "v0.1.0",
+        "--out",
+        outDir,
+        "--json",
+      ]);
+      const payload = JSON.parse(run.stdout);
+
+      expect(run.status, run.stderr || run.stdout).toBe(0);
+      expect(payload).toMatchObject({
+        ok: true,
+        stage: {
+          outDir,
+          destructiveRemoteMutation: false,
+          actualRemoteMutationRequiresPoApproval: true,
+          unmanagedExistingPaths: [],
+          copyError: null,
+        },
+      });
+      expect(existsSync(join(outDir, "skills", "SKILL_MAP.md"))).toBe(true);
+      expect(existsSync(join(outDir, "docs", "templates", "adapter", "AGENTS.md"))).toBe(true);
+      expect(existsSync(join(outDir, "docs", "templates", "adapter", ".codex", "hooks.json"))).toBe(
+        true,
+      );
+      expect(
+        existsSync(join(outDir, "docs", "plans", "PLAN-L7-157-distribution-clean-pull.md")),
+      ).toBe(false);
+      expect(existsSync(join(outDir, ".ut-tdd", "harness.db"))).toBe(false);
+      expect(existsSync(payload.stage.manifest)).toBe(true);
+      const manifest = JSON.parse(readFileSync(payload.stage.manifest, "utf8"));
+      expect(manifest.stage.copiedArtifacts).toBeGreaterThan(100);
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   it("exposes non-destructive release publication planning", () => {
     const run = runCliIn(repoRoot, [
       "distribution",
