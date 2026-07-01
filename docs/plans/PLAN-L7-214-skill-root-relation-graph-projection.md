@@ -35,8 +35,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-01T15:08:00+09:00"
-    tests_green_at: "2026-07-01T15:04:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "root skills 配置を relation graph の design-like node として投影し、skills/SKILL_MAP.md の変更が missing-projection にならないことを確認する。"
     worker_model: codex
@@ -63,9 +63,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-01T15:00:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: docs/design/harness/L6-function-design/skill-index.md
-        output_digest: "sha256:d9698a922751a01c8e446bb5a985d9ff8fff28082f41e411aa4db8f0a14286b6"
+        output_digest: "sha256:99f20045a262862f3f9756694cbe755819af9334668a6afe0cf2e9b43d10e18f"
 ---
 
 # PLAN-L7-214: skill root relation graph projection

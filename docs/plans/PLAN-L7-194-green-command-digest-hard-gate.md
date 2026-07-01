@@ -41,8 +41,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-cli
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T21:22:00+09:00"
-    tests_green_at: "2026-06-30T21:21:30+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Corrected PLAN-L7-194 from normal-doctor hard gate to opt-in strict verification, then closed the stale digest backlog through A-153 rerun-bound correction. Normal doctor remains local-close green; `doctor --strict-green-command-digest` is the strict evidence-integrity gate."
     worker_model: codex-gpt-5
@@ -53,29 +53,29 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T21:20:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/doctor.test.ts
-        output_digest: "sha256:38c828573c69c9456aa714bd88c2197ead8fbad2827547f909bccf2c610c8d0a"
+        output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T21:21:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:5ac0f730cffa4dfd61371bee4b3d6d8323fa894a6c98160b6ff871917401dd56"
+        output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T21:21:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:ca2114d613f06e68a316f7b9bb21428d76ac77699ec623982f59f1ee0ad4ecd4"
+        output_digest: "sha256:37a71b9f9ad4d5edc8ee77f7b29f3662ba21fde3dbec8316ddebecef77338ab1"
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T22:02:00+09:00"
-    tests_green_at: "2026-06-30T22:01:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "green-command-digest is now included in runDoctor.ok hard-gate aggregation; mismatches force real-repo doctor false until rerun-bound digest evidence is corrected."
     worker_model: codex
@@ -86,17 +86,17 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T22:55:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/doctor.test.ts
-        output_digest: "sha256:38c828573c69c9456aa714bd88c2197ead8fbad2827547f909bccf2c610c8d0a"
+        output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T22:01:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:5ac0f730cffa4dfd61371bee4b3d6d8323fa894a6c98160b6ff871917401dd56"
+        output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
 ---
 
 # PLAN-L7-194 (impl): green-command-digest を hard gate へ昇格

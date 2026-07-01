@@ -51,8 +51,8 @@ dependencies:
 review_evidence:
   - reviewer: codex
     review_kind: cross_agent
-    reviewed_at: "2026-06-30T22:02:00+09:00"
-    tests_green_at: "2026-06-30T22:01:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "External review remediation for setup dry-run, execute-json contract, runtime portability fallback, work-guard marker one-shot, and coordinated digest rebinding."
     worker_model: claude-opus-4-8
@@ -63,9 +63,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T22:01:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:fb9c46239d8e96fc655a493b0439f6f4ef9903af33fdb08cfff78615dc0123a1"
+        output_digest: "sha256:7e2e64993a59a73f4d249e8c86efd527dfb47907aeff3ac6f08c5539cac87487"
       - kind: unit_test
         command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -95,17 +95,17 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T22:01:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:ca2114d613f06e68a316f7b9bb21428d76ac77699ec623982f59f1ee0ad4ecd4"
+        output_digest: "sha256:37a71b9f9ad4d5edc8ee77f7b29f3662ba21fde3dbec8316ddebecef77338ab1"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T22:01:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:5768a8e36baee2d050a3abcd8135fb88b134df871116a835aaf48ed158e6ea9e"
+        output_digest: "sha256:9ffba2e947d7748f2b9f69c6e25831df74c1c29a40e22de5e487c331d417f1fd"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -127,9 +127,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T22:01:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:5768a8e36baee2d050a3abcd8135fb88b134df871116a835aaf48ed158e6ea9e"
+        output_digest: "sha256:9ffba2e947d7748f2b9f69c6e25831df74c1c29a40e22de5e487c331d417f1fd"
 ---
 
 # PLAN-L7-170: external review remediation

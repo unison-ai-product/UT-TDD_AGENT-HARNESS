@@ -36,8 +36,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T13:29:00+09:00"
-    tests_green_at: "2026-06-29T13:28:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Expanded G9 system evidence manifest mapping all non-placeholder L9 ST rows to executable local test groups plus CI boundary evidence."
     worker_model: codex
@@ -56,9 +56,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T13:24:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/dependency-drift.test.ts
-        output_digest: "sha256:27155d10c52c95cda5006062aa099a49e7bf97f27420356464ed42e34939aeca"
+        output_digest: "sha256:c17e61c86a61d36ec5556b8ae43aef32249ca6d36998edc5813f300d9833c58b"
       - kind: unit_test
         command: "bun run vitest run tests\\workflow-contracts.test.ts tests\\drive-model-passage.test.ts tests\\forward-convergence.test.ts tests\\backfill-pairing.test.ts tests\\gate-review-tier.test.ts tests\\skill-recommend.test.ts tests\\team-run.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun
@@ -72,9 +72,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T13:19:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/asset-catalog.test.ts
-        output_digest: "sha256:01f47022dbd0fd7d9613b693f6822a6fbef10956560d13977383bbfce8c1f3f0"
+        output_digest: "sha256:79fc89eec778b9e6c5d317efc8752cb2eef7e5052df7fe179965415a105bf7b4"
       - kind: unit_test
         command: "bun run vitest run tests\\runtime-adapter.test.ts tests\\agent-guard.test.ts tests\\codex-hook-adapter.test.ts tests\\runtime-hook-entrypoints.test.ts tests\\dependency-drift.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun

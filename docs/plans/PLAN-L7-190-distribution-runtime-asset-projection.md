@@ -26,8 +26,8 @@ agent_slots:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T22:02:00+09:00"
-    tests_green_at: "2026-06-30T22:01:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Project Claude subagent/slash-command runtime assets into setup and clean distribution while keeping dogfood runtime state excluded."
     worker_model: codex
@@ -38,33 +38,33 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T22:01:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:fb9c46239d8e96fc655a493b0439f6f4ef9903af33fdb08cfff78615dc0123a1"
+        output_digest: "sha256:7e2e64993a59a73f4d249e8c86efd527dfb47907aeff3ac6f08c5539cac87487"
       - kind: smoke
         command: "bun run vitest run tests\\setup.test.ts tests\\distribution-acceptance.test.ts tests\\cli-surface.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T21:29:59+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
-        output_digest: "sha256:a382083d58607a9e0d8c3a171dd4eea8ef85272faf7faf39007fc792e80997cb"
+        output_digest: "sha256:5534409fb6e4b4bf714ce693a09eb761690b3a09ad1f42fd8596914c8530296f"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T22:01:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:5768a8e36baee2d050a3abcd8135fb88b134df871116a835aaf48ed158e6ea9e"
+        output_digest: "sha256:9ffba2e947d7748f2b9f69c6e25831df74c1c29a40e22de5e487c331d417f1fd"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-29T18:07:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/templates.ts
-        output_digest: "sha256:4b3b4e6bbed5d9e07040e5074952e462e896b4ff84bad16b0fe9137dd780a12a"
+        output_digest: "sha256:debf5b883a1f8a76ce421d2b0d403c442ffdbd7939f4e7f7b5d80dcbb3ac9841"
 generates:
   - artifact_path: docs/plans/PLAN-L7-190-distribution-runtime-asset-projection.md
     artifact_type: markdown_doc

@@ -13,8 +13,8 @@ backprop_decision_reason: "Relation graph loader coverage fix for requirement no
 review_evidence:
   - reviewer: codex-gpt-5.x
     review_kind: cross_agent
-    reviewed_at: "2026-06-24T17:45:00+09:00"
-    tests_green_at: "2026-06-24T17:31:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Relation graph loader requirement-node supply, archived plan filtering, pair filtering, and regression test validation."
     worker_model: claude-opus
@@ -25,9 +25,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-24T17:30:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:a908543ff9311bf2418ba5df9d4eca41522aae4ac24a67e5bf935ffbd4dab907"
+        output_digest: "sha256:e42d9d2be60e6b383cc51c291009e3e8104f2c60db8dca17737be0cfb3eb34d6"
 agent_slots:
   - role: tl
     slot_label: "TL - relation graph loader requirement-node review"

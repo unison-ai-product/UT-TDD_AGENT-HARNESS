@@ -39,8 +39,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T10:23:26+09:00"
-    tests_green_at: "2026-06-29T10:23:26+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "ut-tdd roster list/check CLI surface and G8 IT-ASSET-01/02 evidence promotion."
     worker_model: codex
@@ -51,9 +51,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T10:23:26+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/asset-catalog.test.ts
-        output_digest: "sha256:01f47022dbd0fd7d9613b693f6822a6fbef10956560d13977383bbfce8c1f3f0"
+        output_digest: "sha256:79fc89eec778b9e6c5d317efc8752cb2eef7e5052df7fe179965415a105bf7b4"
 ---
 
 # PLAN-L7-172: roster CLI G8 evidence closure

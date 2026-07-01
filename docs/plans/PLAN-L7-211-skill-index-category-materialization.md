@@ -67,8 +67,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T22:02:00+09:00"
-    tests_green_at: "2026-06-30T22:01:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Skill category/index implementation, skill new scaffolder, catalog/recommender regressions, and dogfood adapter parity for ut-tdd-tl/status/test."
     worker_model: codex
@@ -79,17 +79,17 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T18:00:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/skill-scaffold.test.ts
-        output_digest: "sha256:c859a2191db0a4e9ca36c79d3f6d6110d3857d6c57eb49f2e162aa7b69490ccb"
+        output_digest: "sha256:c357ebd21caa8f164ea9415f364d13caa032fb25acc2fed9c0a25f0abe35e439"
       - kind: unit_test
         command: "bun run vitest run tests\\skill-assignment.test.ts tests\\skill-recommend.test.ts tests\\asset-catalog.test.ts tests\\skill-scaffold.test.ts tests\\agent-guard.test.ts tests\\setup.test.ts tests\\distribution-acceptance.test.ts --reporter=dot"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T18:00:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/asset-catalog.test.ts
-        output_digest: "sha256:01f47022dbd0fd7d9613b693f6822a6fbef10956560d13977383bbfce8c1f3f0"
+        output_digest: "sha256:79fc89eec778b9e6c5d317efc8752cb2eef7e5052df7fe179965415a105bf7b4"
       - kind: unit_test
         command: "bun run vitest run tests\\skill-assignment.test.ts tests\\skill-recommend.test.ts tests\\asset-catalog.test.ts tests\\skill-scaffold.test.ts tests\\agent-guard.test.ts tests\\setup.test.ts tests\\distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -103,25 +103,25 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T18:00:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/skill-engine/scaffold.ts
-        output_digest: "sha256:afaf09cf6cd6cffcbc63edb9daf34d0a2a2ba4cead14b5cffe73badc3982bfa5"
+        output_digest: "sha256:55b7a910e8fa5d3c5251edfc2d18479f0439cfca1162b5b58ccac7825f6d034c"
       - kind: unit_test
         command: "bun run vitest run tests\\skill-assignment.test.ts tests\\skill-recommend.test.ts tests\\asset-catalog.test.ts tests\\skill-scaffold.test.ts --reporter=dot"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-30T18:25:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: docs/design/harness/L6-function-design/skill-index.md
-        output_digest: "sha256:1e5686603e5c45831ddb838785aaa5cc6052930c56ffca3adf052b6f52a558b2"
+        output_digest: "sha256:99f20045a262862f3f9756694cbe755819af9334668a6afe0cf2e9b43d10e18f"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T22:01:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:ca2114d613f06e68a316f7b9bb21428d76ac77699ec623982f59f1ee0ad4ecd4"
+        output_digest: "sha256:37a71b9f9ad4d5edc8ee77f7b29f3662ba21fde3dbec8316ddebecef77338ab1"
       - kind: lint
         command: "bun run lint"
         runner: bun

@@ -33,8 +33,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T11:12:16+09:00"
-    tests_green_at: "2026-06-29T11:12:16+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "L8 IT-ASSET-07 placeholder current-layer threshold proof and G8 evidence promotion."
     worker_model: codex
@@ -45,9 +45,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T11:12:16+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/placeholder-deps.test.ts
-        output_digest: "sha256:875f561b93958f2886aee99c08b502556e0684fe32dd4038f700d0b8add09916"
+        output_digest: "sha256:b98c8add6b5d704559dd8e692b24b152b58fd9c42b61a1fd2e1f788871d9dd1e"
 ---
 
 # PLAN-L7-175: placeholder threshold G8 evidence closure

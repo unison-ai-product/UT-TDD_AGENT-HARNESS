@@ -38,8 +38,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-23T13:45:00+09:00"
-    tests_green_at: "2026-06-23T13:45:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "R4 fullback from implemented branch-kind checker to requirements."
     worker_model: codex
@@ -50,17 +50,17 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-23T13:45:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/branch-kind.test.ts
-        output_digest: "sha256:d75b67733f22630222c3ddffdc379c691ba299b22da3109b1bb76114f93c630e"
+        output_digest: "sha256:4e6024b234c5be7f573f909f3647255982c4a2af59339e8c35d42e53f5b4537a"
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-23T13:45:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/lint/branch-kind.ts
-        output_digest: "sha256:27410a6c1ff6cad593bfa919427fb24189dd05dc1b7a63c12a15198ed6e84f08"
+        output_digest: "sha256:7ac54d3a1383784cb3d735bd8d2727833703c28138b0f77f99958b84d6805bef"
 ---
 
 # PLAN-REVERSE-121: branch-kind check fullback

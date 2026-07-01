@@ -33,8 +33,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-30T22:02:00+09:00"
-    tests_green_at: "2026-06-30T22:01:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Fix A147-1 by launching Windows .cmd provider shims through cmd.exe with a fully wrapped inner command and windowsVerbatimArguments propagated through probe, adapter execute, and team execute paths."
     worker_model: codex
@@ -61,9 +61,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T12:10:05+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/doctor.test.ts
-        output_digest: "sha256:38c828573c69c9456aa714bd88c2197ead8fbad2827547f909bccf2c610c8d0a"
+        output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -77,9 +77,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-30T22:01:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:ca2114d613f06e68a316f7b9bb21428d76ac77699ec623982f59f1ee0ad4ecd4"
+        output_digest: "sha256:37a71b9f9ad4d5edc8ee77f7b29f3662ba21fde3dbec8316ddebecef77338ab1"
 ---
 
 # PLAN-L7-203: Windows provider .cmd spawn quoting

@@ -32,8 +32,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-25T17:15:00+09:00"
-    tests_green_at: "2026-06-25T17:15:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Behavior-invariant extraction of artifact progress decision policy from projection-writer."
     worker_model: codex
@@ -44,9 +44,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T17:14:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:0fe467c17fa13c617e69dccb8d31840b144ff35a4a5548b5ac4f4ff83bd6ee31"
+        output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -60,9 +60,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T17:14:05+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/state-db/projection-writer.ts
-        output_digest: "sha256:326f24654b12f741d2c380bf2ff4999a5680a54ba849faf9e26966e0bf18ee85"
+        output_digest: "sha256:d56af83ff426a05c53f3f8e6c73b7a5e631f1a4bf15a928690b4ff69c35db93a"
 ---
 
 # PLAN-L7-152: artifact progress decision extraction

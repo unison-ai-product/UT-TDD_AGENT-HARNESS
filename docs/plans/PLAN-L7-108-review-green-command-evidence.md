@@ -48,8 +48,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T18:29:00+09:00"
-    tests_green_at: "2026-06-29T18:28:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "IMP-108 green command evidence gate: review_evidence requires structured command evidence for 2026-06-23+ confirmed/completed entries; schema, lint, design, requirements, and tests updated together."
     worker_model: codex
@@ -60,9 +60,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T18:21:55+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/review-evidence.test.ts
-        output_digest: "sha256:a54a0444a84a8a07210153bee3f37b248a7d7f5348fa259d2c253cf54f69ef88"
+        output_digest: "sha256:5fef87a0e2879c4b9bd7608c92e01a1ad0aa45cdd0578fba065f2307b81354c4"
       - kind: unit_test
         command: "bun test tests\\frontmatter.test.ts"
         runner: bun
@@ -84,9 +84,9 @@ review_evidence:
         runner: bun
         scope: gate
         exit_code: 0
-        completed_at: "2026-06-29T18:28:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/lint/review-evidence.ts
-        output_digest: "sha256:f37c67db0233d5b6c8c5e5c6b04be5aa9ad9ae9190ed7b49283d0d173f5851b8"
+        output_digest: "sha256:8ba3905fe5be6a02a3cffc590d02fc285a5c9a414dad938f4f70d7778b71db83"
 ---
 
 # PLAN-L7-108: Review green command evidence gate

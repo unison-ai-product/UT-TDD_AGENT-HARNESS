@@ -83,8 +83,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-cli
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-01T10:43:00+09:00"
-    tests_green_at: "2026-07-01T10:42:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "setup は repo-local .ut-tdd/bin/ut-tdd.mjs wrapper を投影し、generated Claude/Codex hook は Bun 経由でこれを呼ぶ。1台PC上の複数 project は global bun link に依存せず独立 version を pin できる。wrapper は consumer node_modules、setup 元 harness checkout、bare ut-tdd の順で解決する。distribution acceptance、setup regression、tarball→consumer actual setup smoke は green。"
     worker_model: codex-gpt-5
@@ -95,29 +95,29 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-01T10:40:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:fb9c46239d8e96fc655a493b0439f6f4ef9903af33fdb08cfff78615dc0123a1"
+        output_digest: "sha256:7e2e64993a59a73f4d249e8c86efd527dfb47907aeff3ac6f08c5539cac87487"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-01T10:40:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:5768a8e36baee2d050a3abcd8135fb88b134df871116a835aaf48ed158e6ea9e"
+        output_digest: "sha256:9ffba2e947d7748f2b9f69c6e25831df74c1c29a40e22de5e487c331d417f1fd"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-01T10:40:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/templates.ts
-        output_digest: "sha256:4b3b4e6bbed5d9e07040e5074952e462e896b4ff84bad16b0fe9137dd780a12a"
+        output_digest: "sha256:debf5b883a1f8a76ce421d2b0d403c442ffdbd7939f4e7f7b5d80dcbb3ac9841"
   - reviewer: codex-cli
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-01T12:09:00+09:00"
-    tests_green_at: "2026-07-01T12:08:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "setup template mapping now resolves every COMMON_FILES entry, so .codex/hooks.json and other adapter assets cannot silently render as empty common/* fallbacks. doctor --setup-smoke is a fresh-consumer profile that requires project-local wrapper files, parseable Claude/Codex hook JSON, Claude and Codex agent/work/session hook commands, Claude SubagentStop, and portable .ut-tdd/bin/ut-tdd.mjs hook paths. distribution acceptance executes setup --solo from the clean artifact, calls the generated wrapper, and runs doctor --setup-smoke."
     worker_model: codex-gpt-5
@@ -136,9 +136,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-01T11:59:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:94e828bafe196f598e5cef11388e911c189fa65e4688c380d1c484767bd66092"
+        output_digest: "sha256:37a71b9f9ad4d5edc8ee77f7b29f3662ba21fde3dbec8316ddebecef77338ab1"
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts --testNamePattern \"fresh-consumer setup smoke\" --reporter=dot"
         runner: bun
@@ -152,17 +152,17 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-01T12:00:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
-        output_digest: "sha256:fc54bdfa5c837d154c125be2f59f5d1772d29fbfce508748a3235752277e573b"
+        output_digest: "sha256:5534409fb6e4b4bf714ce693a09eb761690b3a09ad1f42fd8596914c8530296f"
       - kind: smoke
         command: "bun src\\cli.ts distribution package --out .ut-tdd\\dist-local --json; tarball展開先から consumer setup --solo; bun .ut-tdd\\bin\\ut-tdd.mjs --help; bun .ut-tdd\\bin\\ut-tdd.mjs status --json"
         runner: powershell
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-01T10:41:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/templates.ts
-        output_digest: "sha256:4b3b4e6bbed5d9e07040e5074952e462e896b4ff84bad16b0fe9137dd780a12a"
+        output_digest: "sha256:debf5b883a1f8a76ce421d2b0d403c442ffdbd7939f4e7f7b5d80dcbb3ac9841"
 ---
 
 # PLAN-L7-213: project-local setup wrapper

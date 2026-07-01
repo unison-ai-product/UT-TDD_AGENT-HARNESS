@@ -66,8 +66,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-23T18:42:32+09:00"
-    tests_green_at: "2026-06-23T18:42:32+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Reverse fullback for skill injection materialization."
     worker_model: codex
@@ -78,9 +78,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-23T18:42:32+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/skill-recommend.test.ts
-        output_digest: "sha256:94e9e868a81ec6845e784a60f06528db0e5bd9f252824801d28b6a4d3cd67fbb"
+        output_digest: "sha256:d81427f0e99ca96135340712542b7a28d8ef370aaf47fa71033b6d16ff221a76"
       - kind: unit_test
         command: "bun run vitest run tests\\skill-recommend.test.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts tests\\tier-router.test.ts tests\\doctor.test.ts tests\\cli-surface.test.ts -t \"routeToAdapterPlan|codex-wrapper-parity|skill|inject|shared Claude/Codex launch plan|provider-neutral|stdin|task route\""
         runner: bun
