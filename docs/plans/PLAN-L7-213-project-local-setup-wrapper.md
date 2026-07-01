@@ -44,9 +44,13 @@ generates:
     artifact_type: source_module
   - artifact_path: src/lint/skill-assignment.ts
     artifact_type: source_module
+  - artifact_path: src/lint/review-evidence.ts
+    artifact_type: source_module
   - artifact_path: src/setup/templates.ts
     artifact_type: source_module
   - artifact_path: src/skills/scaffold.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/projection-writer.ts
     artifact_type: source_module
   - artifact_path: .gitignore
     artifact_type: config
@@ -57,6 +61,10 @@ generates:
   - artifact_path: tests/cli-surface.test.ts
     artifact_type: test_code
   - artifact_path: tests/doctor.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/projection-writer.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/review-evidence.test.ts
     artifact_type: test_code
   - artifact_path: tests/setup.test.ts
     artifact_type: test_code
