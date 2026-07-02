@@ -24,9 +24,9 @@ generates:
     artifact_type: markdown_doc
 dependencies:
   parent: null
-  requires:
-    - docs/plans/PLAN-L7-246-feedback-event-lifecycle.md
+  requires: []
   references:
+    - docs/plans/PLAN-L7-246-feedback-event-lifecycle.md
     - src/runtime/detect.ts
     - src/feedback/surface.ts
     - .ut-tdd/audit/A-156-research-recovery-finding-route-ledger.md

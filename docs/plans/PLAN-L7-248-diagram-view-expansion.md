@@ -23,9 +23,9 @@ generates:
     artifact_type: markdown_doc
 dependencies:
   parent: null
-  requires:
-    - docs/plans/PLAN-L7-247-db-driven-diagram-generation.md
+  requires: []
   references:
+    - docs/plans/PLAN-L7-247-db-driven-diagram-generation.md
     - docs/plans/PLAN-L7-243-mode-first-class-db-projection.md
     - docs/plans/PLAN-L7-246-feedback-event-lifecycle.md
 ---
