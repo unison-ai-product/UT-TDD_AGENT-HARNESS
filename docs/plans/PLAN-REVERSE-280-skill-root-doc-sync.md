@@ -44,6 +44,7 @@ draft 起票 (A-180 S-2/S-3/S-4/S-5)。実装が先行して root を `skills/` 
 2. **dead link 修正**: `.claude/agents/refactor-scout.md:24` の `docs/skills/refactoring.md` → `skills/refactoring.md` (refactor-scout はコード側 allowlist 現役 agent)。
 3. **索引外 asset の明示**: `skills/review-checklist.yaml` (gate checklist SSoT) が skill 索引対象外であることの意図確認 (PO/TL) と、意図的なら索引外マーカーの明示。
 4. **domain_tags 空値の是正**: `skills/technical-writing.md` の `domain_tags` を実値で埋める (L6-37 の situation-pull 索引を唯一の domain skill で機能させる)。
+5. **skill 本文の実態同期 (A-180 §3b、本文査読で確定)**: (a) `skills/security.md:76-85` — `ut-tdd guardrail` を secret スキャンと誤案内 (実装は台帳表示のみ)。実在防波堤 (pre-commit hook / secret.ts) ベースへ書き直し、PLAN-L7-260 の実スキャナ landed 後にそちらへ差し替え。(b) `skills/incident-runbook.md:54-56` — `ut-tdd status` の PLAN 登録副作用という過大表現を read-only 実態へ修正。(c) `skills/context-engineering.md` の `--plan <path>`→PLAN ID 表記、`skills/harness-observability.md:45` の bare サブコマンド列挙の実行単位化 (軽微 2 件)。
 
 ## R0→R4
 

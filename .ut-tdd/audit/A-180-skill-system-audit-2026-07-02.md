@@ -44,6 +44,16 @@
 
 S-9 は単独起票せず L7-277 (品質 score の入力) と L7-263 台帳運用の scope 注記に留める (過分割回避)。
 
+## §3b 追補 (PO 深掘り 2026-07-02): 本文の実質品質 + 動的注入の実体
+
+**本文品質 (カテゴリ横断 10 本の全文査読、コマンドは src/cli.ts・package.json と突合)**: **10 本中 9 本は実質良好** — repo 固有のコマンド/ゲート名/パスが実在と一致し、一般論の再掲ではない (technical-writing のみ意図的な transferable 一般知)。ただし正確性の穴 4 件:
+
+- **S-10 [high] `skills/security.md:76-85` の `ut-tdd guardrail` 誤案内** — 「commit 前に実行し API key パターン等を検査せよ」と指示するが、実装 (`src/cli.ts:1603-1623`、orchestrator 裏取り済) は `guardrail status` = **guardrail_decisions 台帳の表示のみでスキャン機能ゼロ**。secret/PII 領域で「チェック済み」と誤認させる高リスク誤記。実在する防波堤は pre-commit git hook (staged secret regex) と `src/secret.ts` (限定パス) — skill が指す先が実態とずれている。是正は PLAN-REVERSE-280 (記述側) + PLAN-L7-260 (実スキャナ側、landed 後に skill が指せる) の分担。
+- S-11 [medium] `skills/incident-runbook.md:54-56` — `ut-tdd status` を「PLAN 登録 + Incident drive 確認」と過大表現 (実装は read-only 検出)。Sev1 対応中の誤認リスク。
+- S-12 [low] `skills/context-engineering.md` の `--plan <path>` 表記 (実際は PLAN ID) / `skills/harness-observability.md:45` の bare サブコマンド列挙 (実行単位は `metrics skill` 等)。
+
+**動的注入の実体 (orchestrator 直査)**: worker へ届くのは task 末尾の `"UT-TDD context injection:" + "- required skill: <path>"` の**ラベル行のみ** (`src/runtime/adapter.ts:426-437` / `adapter-policy.ts:11-13`)。①本文非埋込 (読むかは worker 任せ)、②**読めという命令文が無い** (bare ラベル)、③読了検証・消費証跡なし (実 runtime 発火 10 件と整合)、④経路は `--plan --execute` 委譲のみで orchestrator 自身の文脈には無注入。選定の平坦さ (S-6) と併せ、**柱 4「動的スキル注入」は現状「均一フィルタで選んだパスをヒント 1 行で添える」に留まる**。→ 配信様式 (命令文 + 小 skill の本文埋込) と消費証跡は PLAN-L7-278 スコープへ追記、記述是正 4 件は PLAN-REVERSE-280 スコープへ追記。
+
 ## §4 裏取り記録
 
 - L6-37 末尾 (`:200-213`) を orchestrator が実読 — `</content>` `</invoke>` の残渣実在を確定。
