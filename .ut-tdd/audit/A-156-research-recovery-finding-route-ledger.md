@@ -70,6 +70,10 @@ record-only (A-173 と同 disposition)。詳細は A-174。
 2. **`route eval` の入力矛盾が素通り**: `--signal` は required だが `--finding-type` 指定時は routing に使われず、`--signal code_smell --finding-type premise-gap` が矛盾のまま mode=recovery を返す (2026-07-02 実測)。A-156 対応表 (finding_type→route_signal) を CLI 側で自動解決するか、矛盾組を reject すべき (`latent-defect`)。
 3. **approval_status=policy_missing**: recovery route の承認は常に policy_missing で blocked (fail-close 自体は正当)。required_approvers が空定義のため「人間承認して起票」の正規動線が audit 上完結しない。承認 policy の定義が必要 (`feature-gap`)。
 
+## Filing Update (2026-07-02, PO /goal)
+
+PO /goal 指示により record-only disposition を解除し、A-172 / A-173 / A-174 / dogfood の全候補を修正駆動モデルで起票済み (plan lint green)。対応表の正本は `.ut-tdd/audit/A-175-architecture-audit-registry-2026-07-02.md` §2 (PLAN-RECOVERY-06/07、PLAN-L7-232〜245、PLAN-L4-15/16)。以降の状態管理は各 PLAN が正本。
+
 ## Boundary
 
 This ledger does not create Recovery PLANs automatically. It records routeable candidates only.
