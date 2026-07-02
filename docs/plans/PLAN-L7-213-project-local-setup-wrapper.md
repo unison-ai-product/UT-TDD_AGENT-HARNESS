@@ -6,7 +6,7 @@ layer: L7
 drive: be
 status: confirmed
 created: 2026-07-01
-updated: 2026-07-01
+updated: 2026-07-02
 owner: Codex / PO
 route_signal: feature_addition
 route_mode: add-feature
@@ -166,6 +166,15 @@ review_evidence:
 ---
 
 # PLAN-L7-213: project-local setup wrapper
+
+## 2026-07-02 Pack review remediation addendum
+
+`UT-TDD_AGENT-HARNESS-Pack_フルレビュー_決定版_v2.md` の配布前 P0/P1 指摘を受け、project-local wrapper と Pack 検証導線の契約を次の通り補強する。
+
+- generated wrapper は consumer `node_modules/.bin/ut-tdd` を setup 元 checkout より優先する。両方が存在する fixture で local bin が選ばれ、local bin が無い fixture では setup 元 `src/cli.ts` を `bun` 経由で実行できることを `tests/setup.test.ts` で固定する。
+- setup が生成する `.claude/agents/*.md` は `SUBAGENT_ALLOWLIST` と一致させる。`.claude/agents` の定義が allowlist 外なら `asset-drift` / roster check が fail-close する。agent-memory は定義ではないため allowlist 整合の対象外だが、legacy residue 検査対象には残す。
+- Pack workflow template は hand-written Vitest list ではなく `bun run test:pack` を呼び、clean Pack `package.json` の `test` / `test:pack` と一致させる。
+- README の検証節は Pack / consumer checkout で緑にすべき既定検証と、source development repo 専用の広い検証を分割して記述する。
 
 ## 目的
 

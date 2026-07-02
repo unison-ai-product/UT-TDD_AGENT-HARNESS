@@ -6,7 +6,7 @@ layer: L7
 drive: agent
 status: confirmed
 created: 2026-07-01
-updated: 2026-07-01
+updated: 2026-07-02
 owner: Codex
 route_signal: feature_addition
 route_mode: add-feature
@@ -102,6 +102,15 @@ review_evidence:
 ---
 
 # PLAN-L7-215 model / effort / advisor routing
+
+## 2026-07-02 Provider boundary addendum
+
+Pack review の P1/P2 指摘を受け、team schema / model policy が扱う UT-TDD 内部 effort 値と provider CLI が受け取る値を分離する。
+
+- UT-TDD schema は `low` / `medium` / `middle` / `high` / `xhigh` を受け付ける。
+- Claude provider 実行境界では `middle` を `medium`、`xhigh` を `high` に正規化し、`--effort` と `CLAUDE_CODE_EFFORT_LEVEL` へ provider-safe な値だけを渡す。
+- Codex provider では reasoning effort は launch/evidence metadata として保持し、provider CLI の未確定 effort flag へ raw に転送しない。
+- README の provider 起動例は実装契約に合わせ、Codex は `codex exec -`、Claude は `claude --print --input-format text`、タスク本文は stdin と明記する。
 
 ## 1. Scope
 
