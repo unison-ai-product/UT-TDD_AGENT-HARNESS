@@ -51,6 +51,19 @@
 
 **PO disposition (2026-07-02)**: A-173 全候補は record-only 確定 — 本サイクルでは PLAN 起票・修正作業を行わない (着手は将来の PO 指示時)。F-1 は「未着手の可能性 = park でない」扱い。
 
+## A-174 Candidates (2026-07-02, Forward 設計群+テスト設計ペア監査)
+
+record-only (A-173 と同 disposition)。詳細は A-174。
+
+| source | finding | type | candidate route | required payload |
+|---|---|---|---|---|
+| A-174 F-1 | L8/L9 右腕の citation gate 盲点: ORACLE_ID regex が 3 桁採番 U/IT のみで、2 桁採番 IT-* (IT-CONTRACT-01〜03 = tests 実装 0 件・defer 宣言なし) と ST-* 全体が素通り。未実装と明示 defer の機械区別なし | `feature-gap` | Add-feature via `feature_addition` | regex 拡張 (桁 + ST)、defer の frontmatter/機械追跡、G8/G9 close 前提の実証 gate |
+| A-174 F-2 | confirmed 設計 doc の実装宣言 drift (module-decomposition「stub」/ architecture「将来 telemetry」/ function.md C9「将来」vs L5「実装済」) — NFR-08 抵触候補 | `smell` | Refactor via `code_smell` | doc 訂正 + 実装宣言真実性 lint 候補 |
+| A-174 F-3 | nfr-grade.md の AC-NFR-02/09 が L4 carry placeholder のまま未着地 (性能/容量の数値閾値未確定) | `feature-gap` | Add-feature via `feature_addition` | L4 carry 解消の設計起票 |
+| A-174 F-4 | セキュリティ設計 slot 欠落 (NFR-17 親宣言のみ、L4 に独立節/slot なし)。ロギング横断方針も部分被覆 | `feature-gap` | Add-feature via `feature_addition` | slot 定義は PO 判断 (document-system-map + VALID_SUB_DOCS 拡張) |
+| A-174 F-5 | 設計 doc frontmatter の sub_doc が schema 外/重複 (L2 supplemental 重複、L6 skill-index / function-spec-addendum) — lint 誤判定源 | `latent-defect` | Add-feature via `feature_addition` | VALID_SUB_DOCS 拡張 or role 区別 lint |
+| A-174 F-6 | 残渣 (L7-unit-test-design「placeholder skeleton」見出し等) | `smell` | Refactor via `code_smell` | doc curation |
+
 ## Research 駆動そのものへの dogfood 所見 (A-172 実走で検出)
 
 1. **第二 exit が機械強制されていない**: A-172 を記録・commit しても finding routing 未実施のまま素通りできた (本 session が実際に素通りし、PO 指摘で是正)。finding を持つ audit doc が本 ledger / route-approval.jsonl に未接続でも doctor は沈黙する。absence-blindness の再発形であり、audit finding → routing 接続の surface / fail-close gate が候補 (`feature-gap`)。
