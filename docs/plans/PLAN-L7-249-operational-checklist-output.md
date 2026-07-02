@@ -27,6 +27,7 @@ dependencies:
     - docs/test-design/harness/L1-operational-test-design.md
     - .ut-tdd/audit/A-171-full-release-close-checklist-2026-07-01.md
     - src/doctor/index.ts
+    - .ut-tdd/audit/A-178-control-layer-gap-audit-2026-07-02.md
 ---
 
 # PLAN-L7-249 (impl): 運用チェック項目の自動出力
@@ -50,6 +51,7 @@ draft 起票 (PO 要望 2026-07-02「運用のチェック項目の出力とか�
 2. **人間境界項目**: OT-* の運用観点 + A-171 型 boundary (UAT / signing / PO サインオフ) を未チェック □ + 必要証拠欄で出力 — 機械が勝手に ✅ を付けない (人間承認の代筆禁止)。
 3. 出力は markdown (audit 配置可能な形) + `--json`。実行記録を DB へ投影 (document_export_runs 系 or 専用) し、checklist 発行履歴を追跡可能に。
 4. scope 定義は宣言的 (どの OT 帯 / どの gate / どの boundary を含むか) にして新 scope 追加を設定で可能に。
+5. **strict evidence gate の発火点設置 (A-178 G-13)**: `doctor --strict-green-command-digest` (PLAN-L7-194 で opt-in 化された fake-substance 検知) を release scope の機械判定項目に含める — 現状どの制御点からも呼ばれておらず、release checklist を定常の発火点にする。
 
 ## Steps
 

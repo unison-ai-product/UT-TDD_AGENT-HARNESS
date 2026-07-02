@@ -27,6 +27,7 @@ dependencies:
   requires: []
   references:
     - .ut-tdd/audit/A-177-orchestration-layer-audit-2026-07-02.md
+    - .ut-tdd/audit/A-178-control-layer-gap-audit-2026-07-02.md
     - docs/design/harness/L6-function-design/cross-review-enforcement.md
     - src/vmodel/injection.ts
     - src/task/tier-router.ts
@@ -44,6 +45,7 @@ draft 起票 (A-177 F-8)。**前提: 本 PLAN の着手は 2026-06-05 PO defer (
 
 - vmodel injection は drive×layer の `orchestration_mode` 5 値を返し縮退 (`degraded_from/to`) も機械化済み。しかし **cell→具体 roster (どの subagent / Codex role を実際に招集するか)** の写像が無く、orchestration_mode は「誰が判断し誰が実装するか」の抽象値に留まる。
 - `.ut-tdd/teams/` は example 1 件のみで、docs / impl / review の標準 preset が無い — Sonnet オーケストレーターが編成を都度考える = 抜け漏れの温床 (Opus 同等化の障害)。
+- **追加根拠 (A-178 G-10)**: `resolveVmodelInjection` の呼び出し元は `vmodel show` (表示) の 1 箇所のみで、mandatory_agents / recommended_skills / orchestration_mode の 5 key 注入が委譲・team run に一切流れていない (表示止まり)。本 PLAN スコープ 3 (injection 接続) がこの穴の対応先。
 
 ## スコープ
 
