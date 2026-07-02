@@ -39,6 +39,15 @@ dependencies:
 
 draft 起票 (A-177 F-4/F-6/F-7。PO 指示 2026-07-02「docs/ビジュアルは Claude、実装/テスト/レビューは GPT に寄せると ROI が高い」)。
 
+**部分 slice landed (2026-07-02, draft のまま)**: スコープ 1 の明示フラグ部分のみ先行実装 —
+`ut-tdd codex/claude --role` (`runtimeCommand`) に `--model` / `--effort` per-call 上書きを追加し、
+adapter plan (`buildAdapterPlan` の既存 intent.model/effort) へ貫通。dry-run plan と CLI surface test
+(`tests/cli-surface.test.ts` "injects per-call model/effort overrides") で固定。実走確認:
+`ut-tdd codex --role reviewer --model gpt-5.3-codex-spark --execute` で spark lane が governed 経路で
+成立 (2026-07-02、route_mode↔kind 台帳の機械照合を spark で実行し legacy=5 / draft=32 /
+promoted-ok=yes を得た)。残スコープ (intent 推定による自動注入、task route effort 貫通、routing 原則
+doc 明文化、注入監査記録) は未着手のため status は draft を維持 (着手時昇格は完遂 slice で行う)。
+
 ## 背景 — policy は実装済みだが正規経路が素通り
 
 - intent 7 値 (`inferTaskIntent`) / provider 既定 (`providerForIntent`) / effort 既定 (claude=high, codex=middle, uiux=xhigh, mini・spark=high) は `src/team/model-policy.ts` に実装済み (2026-07-01 追補、U-TEAM-MODEL oracle)。

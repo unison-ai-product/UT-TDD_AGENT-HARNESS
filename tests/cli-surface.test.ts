@@ -167,6 +167,24 @@ describe("L7 CLI surface closure", () => {
     expect(payload.required_paths.length).toBeGreaterThan(0);
   }, 20_000);
 
+  it("injects per-call model/effort overrides into adapter plans (PLAN-L7-255)", () => {
+    const run = runCli([
+      "codex",
+      "--role",
+      "reviewer",
+      "--task",
+      "mechanical ledger check",
+      "--model",
+      "gpt-5.3-codex-spark",
+    ]);
+    const payload = JSON.parse(run.stdout);
+
+    expect(run.status).toBe(0);
+    expect(payload.dry_run).toBe(true);
+    expect(payload.model).toBe("gpt-5.3-codex-spark");
+    expect(payload.args).toEqual(["exec", "-m", "gpt-5.3-codex-spark", "-"]);
+  }, 20_000);
+
   it("passes plan skill injection through task route adapter plans", () => {
     const run = runCli([
       "task",
