@@ -22,6 +22,26 @@
 | A-144-03 / A-145-03 | VER-1: green evidence integrity depended on digest restamp rather than a bound green rerun | `premise-gap` | Recovery via `regression_dev` | root cause, rerun-bound evidence guard, trace to verification gate, L14 route |
 | A-144-04 / A-145-04 | DB-1: operation telemetry tables mixed runtime provenance with projection facade/hollow columns | `premise-gap` | Recovery via `regression_dev` | root cause, provenance gate/test/schema change, trace to telemetry ingestion, L14 route |
 
+## A-172 Candidates (2026-07-02, Pack comprehensive review)
+
+`route eval` 実走証跡は `route-approval.jsonl` 2026-07-02T04:46 以降。すべて auto_create=false、人間承認待ち。
+
+| source | finding | type | candidate route | required payload |
+|---|---|---|---|---|
+| A-172 C-1 | consumer 向け生成 CI (harness-check template + builtin) が full doctor を実行するが fresh consumer で構造的に赤 (violation 123 件実測)。README の自己記述とも矛盾 | `premise-gap` | Recovery via `regression_dev` (setup/doctor リファクタ合流可) | root cause (self-application gate の consumer 混入)、consumer-profile 分離 or 生成 CI の setup-smoke 化、実 consumer smoke test、L14 route |
+| A-172 C-2 | setup 生成 hook 配線が doctor 自身の project-hook / codex-hook-adapter gate を通らない (missing_hook 11 件実測)。生成 CI wrapper も runner 上で解決不能 | `premise-gap` | Recovery via `regression_dev` (C-1 と同根・同 PLAN 可) | gate 要求と setup 生成物の整合、生成直後 doctor green の regression test、L14 route |
+| A-172 sync-pack | sync-pack が git HEAD でなく working tree を走査コピー (clean-tree 確認なし、manifest は gitHead() を名乗る)。hybrid では未コミット混入リスクが構造的 | `latent-defect` | Add-feature via `feature_addition` | clean-tree guard (dirty で fail)、sync commit 規約 (`chore: sync clean pack <sha>`) の機械強制 |
+| A-172 personal-path | FORBIDDEN_PATH_RE 等が維持者ユーザー名固定で外部環境の個人パスガードとして機能しない + 公開 fixture に個人パス残存 | `latent-defect` | Add-feature via `feature_addition` | パターン一般化 (`C:\Users\` 配下任意)、fixture の example 化、no-username-leak test の全域化 |
+| A-172 pack-tests | Pack 同梱 tests の 47/122 file が source 専用 doc 前提で実行不能のまま公開 | `feature-gap` | Add-feature via `feature_addition` | source-only 前提テストの skip ガード (存在チェック) or Pack artifact からの除外、方針は PO 判断 |
+| A-172 pack-ci-windows | Pack CI が ubuntu のみで Windows-first 主張・`.cmd` spawn 既知盲点 (A-147) と不整合 | `feature-gap` | Add-feature via `feature_addition` | windows-latest job 追加、`.cmd` 経路の CI 被覆 |
+| A-172 doc-residue | 公開 governance/process doc の自己適用残渣 (非同梱物へのデッドリンク 6+、[[feedback_*]] wikilink、repository-structure の source tree 記述、README badge internal (private)、SKILL_MAP 自己記述、estimation.md 虚偽記述ほか minor 群) | `smell` | Refactor via `code_smell` | 配布 doc curation (plain text 化 / 脚注化 / badge・記述修正)、distribution export 時の dead-link 検出 gate は Add-feature 側と要調整 |
+
+## Research 駆動そのものへの dogfood 所見 (A-172 実走で検出)
+
+1. **第二 exit が機械強制されていない**: A-172 を記録・commit しても finding routing 未実施のまま素通りできた (本 session が実際に素通りし、PO 指摘で是正)。finding を持つ audit doc が本 ledger / route-approval.jsonl に未接続でも doctor は沈黙する。absence-blindness の再発形であり、audit finding → routing 接続の surface / fail-close gate が候補 (`feature-gap`)。
+2. **`route eval` の入力矛盾が素通り**: `--signal` は required だが `--finding-type` 指定時は routing に使われず、`--signal code_smell --finding-type premise-gap` が矛盾のまま mode=recovery を返す (2026-07-02 実測)。A-156 対応表 (finding_type→route_signal) を CLI 側で自動解決するか、矛盾組を reject すべき (`latent-defect`)。
+3. **approval_status=policy_missing**: recovery route の承認は常に policy_missing で blocked (fail-close 自体は正当)。required_approvers が空定義のため「人間承認して起票」の正規動線が audit 上完結しない。承認 policy の定義が必要 (`feature-gap`)。
+
 ## Boundary
 
 This ledger does not create Recovery PLANs automatically. It records routeable candidates only.
