@@ -43,6 +43,7 @@ draft 起票 (PO /goal 2026-07-02、A-173 F-3 feature-gap)。
 
 1. 両 contract 関数の doctor 配線 (retrofit/research PLAN 検出時に評価)。
 2. lint-wiring の監視境界を enforcement 意図を持つ contract 関数へ拡張 (DEFERRED 台帳と同型の宣言必須化)。
+3. 同型資産の棚卸し (A-176 F-C): `recordGuardrailDecision` (src/guardrail/ledger.ts:45、callers 0) の disposition 確定 — review_evidence ベース gate への意図的置換なら定義を supersede、必要なら配線 (verify-intent 先行、2026-06-15 L7 監査指摘の残存確認)。
 
 ## Steps
 

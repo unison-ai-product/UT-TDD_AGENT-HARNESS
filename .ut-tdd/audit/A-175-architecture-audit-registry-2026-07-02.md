@@ -13,7 +13,7 @@
 | 3 | V-model 右腕 = テスト設計・検証帯 (L7-L14、oracle/citation/defer) | 柱6 | **済 (A-174、L8/L9 重点)** | citation gate 盲点 → PLAN-L7-244。検証 roadmap 帯の実走査は verification cycle 時 |
 | 4 | 駆動モデル (modes 11 種 + Forward、exit 強制、カタログ同期) | 柱5 実用オーケストレーション | **済 (A-173)** | back-merge 未着地 → PLAN-RECOVERY-07。exit 未強制群 → PLAN-L7-240/241/242、誤コマンド → PLAN-L7-238 |
 | 5 | Gate / lint / doctor 機械強制層 (G0.5-G14、lint-wiring) | 柱2 | **済 (A-173/A-174 で双方向突合)** | lint-wiring 76/0 green。G1-content/G2/G4/G5/G14 未配線 → PLAN-L7-242 #8、contract 未配線 → PLAN-L7-239 |
-| 6 | State DB (harness.db 投影・provenance・feedback) | 柱3 自動状態 | **部分 (A-173 F-9 で mode 投影を監査)** | mode 投影損失 → PLAN-L7-243。skill provenance 空洞は既知 (PO 2026-06-29、検証戦略雛形で対応中)。**未監査: 全テーブルの provenance 実在性横断監査** (次 round 筆頭候補) |
+| 6 | State DB (harness.db 投影・provenance・feedback・自動検出系) | 柱3 自動状態 | **済 (A-173 F-9 + A-176 焦点監査)** | mode 投影損失 → PLAN-L7-243。**feedback_events 消化 lifecycle 欠落 (全 2027 行 open 固定) → PLAN-L7-246**。guardrail ledger 宙吊り → PLAN-L7-239 追記。skill provenance 空洞は既知対応中。残未監査: provenance 実在性の全テーブル横断 (skill 縦 1 本雛形完了後) |
 | 7 | Runtime hook / adapter (Claude/Codex parity、agent-guard/work-guard) | 柱5 | **部分** (L7-139 で Codex hook parity 済。A-172 C-2 で consumer 側配線 gap 検出) | consumer 配線 → PLAN-RECOVERY-06。**未監査: hook 実発火 telemetry の実走検証** |
 | 8 | Provider delegation / team run / model routing | 柱5 | **部分** (A-137 全 remediation 済。実 AI task の live E2E は未実施) | live E2E は blocker でない既知 carry |
 | 9 | Skill engine (recommend / inject / scaffold / 発火) | 柱4 動的注入 | **既知課題管理下** (実発火 0 問題 = 検証戦略で対応中、skill 縦 1 本雛形化方針) | 既存方針に従う (本監査で新規所見なし) |
