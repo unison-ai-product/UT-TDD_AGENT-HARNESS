@@ -42,7 +42,7 @@
 | PLAN-L7-234-pack-test-skip-guards | 未着手 (open) |
 | PLAN-L7-235-pack-windows-ci-job | 未着手 (open) |
 | PLAN-L7-237-research-drive-hardening | 未着手 (open) |
-| PLAN-L7-238-retrofit-preflight-doc-command | 未着手 (open) |
+| PLAN-L7-238-retrofit-preflight-doc-command | 昇格済 promoted (2026-07-02) |
 | PLAN-L7-239-contract-enforcement-wiring | 未着手 (open) |
 | PLAN-L7-240-reverse-right-arm-exit-gate | 未着手 (open) |
 | PLAN-L7-241-human-signoff-evidence-gate | 未着手 (open) |
