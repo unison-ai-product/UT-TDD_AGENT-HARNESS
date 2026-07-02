@@ -63,7 +63,7 @@
 | PLAN-L7-259-hybrid-git-discipline-guards | 未着手 (open) |
 | PLAN-L7-260-sensitive-scan-boundary | 未着手 (open) |
 | PLAN-L7-261-escalation-boundary-detector | 未着手 (open) |
-| PLAN-L7-262-skill-telemetry-provenance | 未着手 (open) |
+| PLAN-L7-262-skill-telemetry-provenance | 昇格済 promoted (2026-07-02) |
 | PLAN-L7-269-deprecation-mode | 未着手 (open) |
 | PLAN-L7-270-spec-change-cycle | 未着手 (open) |
 | PLAN-L7-274-mutation-oracle-hardening | 未着手 (open) |

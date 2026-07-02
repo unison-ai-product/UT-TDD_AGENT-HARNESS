@@ -245,6 +245,13 @@ skill firing rate は chat memory ではなく persisted row から計算する�
 
 - `skill_firing_rate = count(skill_invocations where fired) / count(skill_recommendations)`
 - `skill_acceptance_rate = count(skill_invocations where accepted=true) / count(skill_invocations)`
+- provenance 分離 (PLAN-L7-262): 上記 2 metric の分子 (invocations) は
+  `source LIKE 'runtime-hook:%'` の実 runtime 発火のみを数える。`auto-projection:*` の
+  間接推定行は監査参照用に保持するが metrics へ混ぜない。算出 signal の `source` は
+  `skill-metrics:runtime` で算出元を明示する。session_id は空文字を許さず、rebuild 由来行は
+  `rebuild:indirect`、session 不明の CLI 経路は `cli:unknown-session` を明示する。
+  skill context 注入の成功/skip は session JSONL の `skill_injection` event として記録する
+  (silent fail-open の禁止)。
 - `model_selection_trace = model_runs.plan_id + drive_runs.drive_run_id + skill_recommendations.reason`
 - `automation_readiness = workflow_runs.ready_status + open findings by plan/workflow + guardrail_decisions.decision`
 - `guardrail_block_rate = count(guardrail_decisions where decision=block) / count(guardrail_decisions)`

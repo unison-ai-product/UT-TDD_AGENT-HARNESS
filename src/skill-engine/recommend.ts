@@ -253,11 +253,19 @@ function scoreSkill(ctx: SkillScoringContext, asset: Record<string, unknown>): n
   return Math.min(1, Number(score.toFixed(2)));
 }
 
+// PLAN-L7-262: session_id 貫通。hook 経由でない CLI 実行は UT_TDD_SESSION_ID env を
+// 引き、無ければ明示の不明 marker を使う (空文字での偽装をやめる)。
+export const UNKNOWN_RUNTIME_SESSION_ID = "cli:unknown-session";
+
+export function resolveRuntimeSessionId(env: NodeJS.ProcessEnv = process.env): string {
+  return env.UT_TDD_SESSION_ID?.trim() || UNKNOWN_RUNTIME_SESSION_ID;
+}
+
 /** 文脈非依存の共通ランキング: skill asset をスコアし top-N の SkillRecommendation を返す。 */
 function rankSkills(
   db: HarnessDb,
   ctx: SkillScoringContext,
-  options: { limit?: number; recordedAt?: string },
+  options: { limit?: number; recordedAt?: string; sessionId?: string },
 ): SkillRecommendation[] {
   const assets = db
     .prepare("SELECT * FROM automation_assets WHERE asset_type = ? ORDER BY asset_id")
@@ -276,7 +284,7 @@ function rankSkills(
       const skillId = String(entry.asset.asset_id ?? "");
       return {
         skill_recommendation_id: stableId("skill-rec", `${ctx.reference}:${skillId}`),
-        session_id: "",
+        session_id: options.sessionId ?? resolveRuntimeSessionId(),
         plan_id: ctx.reference,
         skill_id: skillId,
         rank: index + 1,
