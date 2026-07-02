@@ -29,7 +29,7 @@ generates:
     artifact_type: test_code
     evidence:
       - command: "Get-FileHash -Algorithm SHA256 -Path tests\\github-ci-policy.test.ts"
-        output_digest: "sha256:d887228a5e38dedcae795251d9e7311b987c14c0e075857901c71fb4c57c3ad7"
+        output_digest: "sha256:0320befad0631395509d280e24bbd493d3df8e9df6218b72b9cfc5bddc7132d7"
 dependencies:
   parent: null
   requires:
@@ -54,7 +54,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-02T16:25:00+09:00"
         evidence_path: tests/github-ci-policy.test.ts
-        output_digest: "sha256:d887228a5e38dedcae795251d9e7311b987c14c0e075857901c71fb4c57c3ad7"
+        output_digest: "sha256:0320befad0631395509d280e24bbd493d3df8e9df6218b72b9cfc5bddc7132d7"
 ---
 
 # PLAN-L7-259: Pack GitHub CI profile loader
