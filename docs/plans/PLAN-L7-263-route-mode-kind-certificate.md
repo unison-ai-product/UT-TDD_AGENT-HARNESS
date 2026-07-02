@@ -107,7 +107,8 @@ add-feature mode は `add-design` と `add-impl` を内包する運用で、独�
 
 - 対応表: `ROUTE_MODE_ALLOWED_KINDS` (`src/plan/lint-policy.ts`)。初期スコープは
   `add-feature -> {add-design, add-impl}` のみ (本 PLAN の候補スコープどおり)。他 mode への拡張は表追加で行う。
-  **対応表の全 mode 展開は PO 確定事項として残る (本 slice は add-feature 限定で AI 推奨のまま実装、PO gate)。**
+  **PO 確定 (2026-07-02): 対応表は当面 add-feature 限定で凍結。全 mode 先回り展開はせず、
+  back-fill 義務免除と同種の実害が観測された mode (第一候補: reverse / recovery) から個別に展開する。**
 - 検査: `routeModeKindViolations` (`src/plan/lint.ts`)、violation reason `route_mode_kind_mismatch`。
 - debt 台帳: `docs/governance/route-mode-kind-debt-audit-2026-07-02.md` (legacy landed 5 + draft debt 32)。
   コード側 allowlist との同期はテストで fail-close。

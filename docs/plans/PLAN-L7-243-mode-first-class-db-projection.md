@@ -95,9 +95,9 @@ review_evidence:
   衝突、案C (routing イベント永続化) は rebuild 決定論と相性が悪い。
 - legacy PLAN (route_mode 無し) は plan_id prefix → kind の順でフォールバック
   (`src/schema/mode-catalog.ts`)。
-- **PO gate**: 本決定は AI 推奨のまま実装した。方式の追認 (または 案B/C への差し戻し) と、
-  plan_id への駆動可読性要求 ([[feedback_drive_model_first_class_in_plan_id]]) を
-  route_mode 正本で満たすとみなすかは PO 確認事項として残る。
+- **PO gate 消化 (2026-07-02)**: PO が案A 変形 (route_mode 正本) を追認した。plan_id への
+  駆動可読性要求 ([[feedback_drive_model_first_class_in_plan_id]]) は plan_id rename でなく
+  status/中央 UI 一覧への mode 列表示で満たす方針 (必要になれば別 PLAN で起票)。
 
 ## 背景 (A-173 F-9)
 
