@@ -70,3 +70,18 @@ draft 起票 (PO 要望 2026-07-02「遷移図・シーケンス図を DB の依
 - [ ] `graph export --view screen-flow` が実 DB から遷移図 mermaid を出力 (test 固定)
 - [ ] sequence view が serialize_after 順序を正しく再現 (test 固定)
 - [ ] 生成実行が diagram_artifacts に記録され `db-projection-ingestion` が認識
+
+## Appendix: view backlog — DB 素材から描ける図種カタログ (2026-07-02 実測、PO 優先順待ち)
+
+本 PLAN のスコープ (遷移図/シーケンス図/subgraph filter) の先に、同じ生成層で追加できる view。素材件数は実 DB 計測値。
+
+| 図種 | mermaid 方言 | DB 素材 (実測) | 価値 / 備考 |
+|---|---|---|---|
+| V-model トレース図 (FR→設計→実装→テスト降下鎖の V 字可視化) | flowchart | trace_edges 1025 + descent_obligations 255 + test_artifact_edges 3116 | 柱6 の目視化。要件単位の片肺 (右腕欠落) が図で見える — 監査系 (A-174) の常設化 |
+| 工程ガント / ロードマップ進捗 | gantt | roadmap_gate_progress 20 + plan_registry 424 + drive_runs (started/completed) | 工程管理表 mission (中央 UI の本義) に直結 |
+| ER 図 (harness.db 自身) | erDiagram | schema/harness-db-tables-*.ts (57 tables、DB でなく schema 定義から生成) | physical-data.md 手書き図の自動対、schema drift の目視化 |
+| PLAN 状態遷移実績 | stateDiagram-v2 | artifact_progress_events 941 | draft→confirmed→completed の実遷移とボトルネック滞留 |
+| 変更影響波及図 (起点→影響) | flowchart 部分グラフ | impact_results 82 + impact_rules | verify recommend mermaid の拡張 (既存 view の filter 強化) |
+| routing 実績 sankey (signal→mode 流量) | sankey-beta | route-approval.jsonl + drive_runs.mode | **PLAN-L7-243 (mode 投影修正) 完了後**でないと mode 軸が不正確 |
+| 品質チャート (被覆/合否/流量) | pie / xychart-beta | coverage 10 / feedback_events (流量は **PLAN-L7-246 完了後**) / test_results **0 行 = ingest 未実装のため pass 率系は前提整備が先** | 中央 UI ダッシュボードのデータ源 |
+| gate 通過タイムライン | timeline | gate_runs 7 | freeze 履歴の時系列表示 |
