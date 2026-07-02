@@ -36,6 +36,18 @@
 | A-172 pack-ci-windows | Pack CI が ubuntu のみで Windows-first 主張・`.cmd` spawn 既知盲点 (A-147) と不整合 | `feature-gap` | Add-feature via `feature_addition` | windows-latest job 追加、`.cmd` 経路の CI 被覆 |
 | A-172 doc-residue | 公開 governance/process doc の自己適用残渣 (非同梱物へのデッドリンク 6+、[[feedback_*]] wikilink、repository-structure の source tree 記述、README badge internal (private)、SKILL_MAP 自己記述、estimation.md 虚偽記述ほか minor 群) | `smell` | Refactor via `code_smell` | 配布 doc curation (plain text 化 / 脚注化 / badge・記述修正)、distribution export 時の dead-link 検出 gate は Add-feature 側と要調整 |
 
+## A-173 Candidates (2026-07-02, 全駆動モデル精査)
+
+`route eval` 実走証跡は `route-approval.jsonl` 2026-07-02。すべて auto_create=false、人間承認待ち。詳細は A-173。
+
+| source | finding | type | candidate route | required payload |
+|---|---|---|---|---|
+| A-173 F-1 | design-bottomup mode back-merge 未着地 (機械層稼働済みだが process 正本/README 台帳/concept 9→10/passage lint 未反映。DISCOVERY-07 Step 5 = PO gate 待ちか逸脱かは PO 確認事項) | `deviation` | Recovery via `regression_dev` (PO 確認先行) | PO 判断 (Step 5 実施 or 意図的 park の明示)、back-merge 一式、passage lint EXPECTED_MODES 追加 |
+| A-173 F-2 | retrofit.md が存在しないコマンド `ut-tdd doctor --preflight upgrade` を必須手順として記載 (正: `ut-tdd guard preflight`) | `latent-defect` | Add-feature via `feature_addition` | doc 修正 + doc 内 cited-command 実在 lint 候補 |
+| A-173 F-3 | contract 関数 (evaluateRetrofitMatrix / evaluateResearchDecision) が実装+テスト済みで enforcement 未接続。lint-wiring は src/lint/* のみ監視で workflow/contracts 層が meta 盲点 | `feature-gap` | Add-feature via `feature_addition` | doctor 配線 + lint-wiring 監視境界の拡張 |
+| A-173 F-4〜F-7 | exit 条件の宣言のみ層 (Reverse ③/pair-freeze 再入、人間サインオフ証拠、incident 2-PLAN、recovery 3 要件、discovery verify/*.sh、scrum 昇華先、add-impl→Reverse、version-up activation trace、accept コマンド、G1-content/G2/G4/G5 doctor 配線) | `feature-gap` | Add-feature via `feature_addition` | 優先順は PO 判断。個別 PLAN 分割前提 (PLAN per requirement) |
+| A-173 F-8 | minor 残渣 (refactor.md stale skill path、README 9-mode 表記、ほか) | `smell` | Refactor via `code_smell` | doc curation |
+
 ## Research 駆動そのものへの dogfood 所見 (A-172 実走で検出)
 
 1. **第二 exit が機械強制されていない**: A-172 を記録・commit しても finding routing 未実施のまま素通りできた (本 session が実際に素通りし、PO 指摘で是正)。finding を持つ audit doc が本 ledger / route-approval.jsonl に未接続でも doctor は沈黙する。absence-blindness の再発形であり、audit finding → routing 接続の surface / fail-close gate が候補 (`feature-gap`)。
