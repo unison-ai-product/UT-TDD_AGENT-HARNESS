@@ -7,6 +7,8 @@
 # トリガは §6.9 の `pull_request: [main]` に加え、solo main 直開発を即 dogfood するため `push: [main]` も含める。
 #
 # 現状実装される subjob = branch-type guard + typecheck + db rebuild + 全回帰 (vitest) + biome lint + audit quality + doctor。
+# この source workflow の `bun run test` / raw vitest 全量回帰は source-only governance docs を前提にする。
+# clean Pack workflow は `docs/templates/github/common/pack-harness-check.yml` の Pack smoke test と setup-smoke doctor を使う。
 name: harness-check
 
 on:
