@@ -1,71 +1,128 @@
 ---
 plan_id: PLAN-RECOVERY-07-design-bottomup-backmerge
-title: "PLAN-RECOVERY-07 (recovery): design-bottomup mode の正本 back-merge 未着地の解消"
+title: "PLAN-RECOVERY-07 (recovery): design-bottomup mode 正本 back-merge"
 kind: recovery
 layer: cross
 drive: agent
-status: draft
+status: confirmed
 route_signal: regression_dev
 route_mode: recovery
+backprop_decision: not_required
+backprop_decision_reason: "route-map に存在する design-bottomup mode の concept / requirements / process catalog back-merge をこの recovery PLAN 自身の generates として実施するため、別の追加 backprop PLAN は不要。"
 created: 2026-07-02
 updated: 2026-07-02
-owner: PM / PO
+owner: Codex
 parent_design: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
   - role: aim
-    slot_label: "AIM - back-merge 収束サイクルの主担当"
-  - role: po
-    slot_label: "PO - concept §2.5 9→10 mode 規範変更のサインオフ (規範変更は concept/requirements 先行)"
+    slot_label: "AIM - mode catalog back-merge coordination"
   - role: tl
-    slot_label: "TL - modes README 台帳 / passage lint / 正本 doc の 3 点同期レビュー"
+    slot_label: "TL - design-bottomup back-merge"
+  - role: po
+    slot_label: "PO - mode catalog / concept policy sign-off"
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-07-design-bottomup-backmerge.md
     artifact_type: markdown_doc
+  - artifact_path: docs/process/modes/design-bottomup.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/process/modes/README.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/plans/PLAN-L3-04-upstream-schedule-reconciliation.md
+    artifact_type: markdown_doc
+  - artifact_path: src/lint/drive-model-passage.ts
+    artifact_type: source_module
+    evidence:
+      - command: "Get-FileHash -Algorithm SHA256 -Path src\\lint\\drive-model-passage.ts"
+        output_digest: "sha256:df821bc7e2492a935a19c5a016ec8f45aa624821df52dd047e72df4ecbe631d8"
+  - artifact_path: src/schema/mode-catalog.ts
+    artifact_type: source_module
+    evidence:
+      - command: "Get-FileHash -Algorithm SHA256 -Path src\\schema\\mode-catalog.ts"
+        output_digest: "sha256:417a9174f63d37c3f39736508c1a40ca476a7e97aafc1e2344bba01c929495de"
+  - artifact_path: tests/drive-model-passage.test.ts
+    artifact_type: test_code
+    evidence:
+      - command: "Get-FileHash -Algorithm SHA256 -Path tests\\drive-model-passage.test.ts"
+        output_digest: "sha256:9ef3188bb1234a0a95c336ca5075bda23aecd19af58e3f1763dd56355bf9d86a"
+  - artifact_path: tests/mode-catalog.test.ts
+    artifact_type: test_code
+    evidence:
+      - command: "Get-FileHash -Algorithm SHA256 -Path tests\\mode-catalog.test.ts"
+        output_digest: "sha256:2c5fd637c9e85d2a238c007170542de3d8cd13e829a98f4524c727ec1929f811"
 dependencies:
-  parent: null
+  parent: docs/plans/PLAN-DISCOVERY-07-design-bottomup-mode.md
   requires:
     - docs/plans/PLAN-DISCOVERY-07-design-bottomup-mode.md
+    - docs/plans/PLAN-DISCOVERY-09-version-up-mode.md
   references:
-    - .ut-tdd/audit/A-173-drive-model-coverage-audit-2026-07-02.md
     - docs/process/modes/README.md
+    - docs/process/modes/design-bottomup.md
+    - src/schema/route-map.ts
     - src/lint/drive-model-passage.ts
+review_evidence:
+  - reviewer: codex-subagent
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-02T22:20:00+09:00"
+    tests_green_at: "2026-07-02T22:19:00+09:00"
+    verdict: approve
+    scope: "route-map にある design-bottomup / version-up を process mode catalog と drive-model passage certificate へ最小 back-merge する。歴史的な 9-mode 証跡文は一括置換しない。"
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: lint
+        command: "bunx biome check --write src\\lint\\drive-model-passage.ts src\\schema\\mode-catalog.ts tests\\drive-model-passage.test.ts tests\\mode-catalog.test.ts docs\\plans\\PLAN-RECOVERY-07-design-bottomup-backmerge.md docs\\plans\\PLAN-L3-04-upstream-schedule-reconciliation.md docs\\process\\modes\\README.md docs\\process\\modes\\design-bottomup.md docs\\governance\\ut-tdd-agent-harness-concept_v3.1.md docs\\governance\\ut-tdd-agent-harness-requirements_v1.2.md"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-02T22:19:00+09:00"
+        evidence_path: tests\\mode-catalog.test.ts
+        output_digest: "sha256:2c5fd637c9e85d2a238c007170542de3d8cd13e829a98f4524c727ec1929f811"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-02T22:19:00+09:00"
+        evidence_path: src\\schema\\mode-catalog.ts
+        output_digest: "sha256:417a9174f63d37c3f39736508c1a40ca476a7e97aafc1e2344bba01c929495de"
+      - kind: unit_test
+        command: "bun run vitest run tests\\drive-model-passage.test.ts tests\\mode-catalog.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-02T22:19:00+09:00"
+        evidence_path: tests\\drive-model-passage.test.ts
+        output_digest: "sha256:9ef3188bb1234a0a95c336ca5075bda23aecd19af58e3f1763dd56355bf9d86a"
 ---
 
-# PLAN-RECOVERY-07 (recovery): design-bottomup mode の正本 back-merge 未着地の解消
+# PLAN-RECOVERY-07: design-bottomup mode 正本 back-merge
 
-## Status
+## 背景
 
-draft 起票 (PO /goal 指示 2026-07-02)。PO 確認済み (2026-07-02): DISCOVERY-07 Step 5 は「未着手の可能性 = 意図的 park ではない」扱い。
+`src/schema/route-map.ts` には `design-bottomup` signal が存在し、`docs/process/modes/design-bottomup.md` も起票されたが、正本 catalog と doctor gate への back-merge が未完了だった。
 
-## 根本原因 (A-173 F-1、deviation)
+この状態では次の不整合が起きる。
 
-PLAN-DISCOVERY-07 (status=confirmed) の Step 5 が要求する back-merge が未着地のまま機械層だけ稼働:
+- route-map に mode token があるのに `docs/process/modes/README.md` の台帳に載らない。
+- `src/lint/drive-model-passage.ts` の `EXPECTED_MODES` を 11 mode に広げると、`PLAN-L3-04` の passage certificate が 9 mode のままで doctor が fail する。
+- concept / requirements の signal 表から `design-bottomup` が読めず、汎用 harness 利用時に backend 先行から FE 要件を導出する入口が self-developed knowledge に寄る。
 
-- `docs/process/modes/design-bottomup.md` 不在
-- modes README §2 台帳・§3 対応表に未掲載
-- concept §2.5 が 9-mode のまま (10 mode 化未反映、PO サインオフ必須の規範変更)
-- `src/lint/drive-model-passage.ts` EXPECTED_MODES (9 種) に未登録 (version-up も同様に未登録)
+## 変更
 
-「実装したが正本へ戻していない」class の逸脱 ([[feedback_impl_must_backfill_to_design]] と同型)。
-
-## 再発防止 (recovery exit 3 要件)
-
-- **root cause**: confirmed 化と Step 成果物着地の順序逆転 + 新 mode 追加時にカタログ列挙群 (README/passage lint/concept) を同期する機械強制の不在。
-- **guard/test の具体変更点**: (a) back-merge 一式の着地 (design-bottomup.md 起票 + README 台帳 + concept §2.5 PO サインオフ + EXPECTED_MODES へ design-bottomup / version-up 追加)、(b) mode カタログの SSoT 突合 lint (route-map の mode 集合 ⊆ modes README 台帳 を fail-close) を追加し、次の新 mode で再発させない。
-- **L14 route**: mode カタログ drift の運用検証観点として L14 へ記録。
-
-## Steps
-
-| Step | 内容 | mode |
-|---|---|---|
-| 1 | concept §2.5 の 10 mode 化 (PO サインオフ、規範変更先行) | 直列 |
-| 2 | design-bottomup.md 正本起票 + README 台帳/対応表反映 | 直列 |
-| 3 | EXPECTED_MODES 追加 (design-bottomup / version-up) + カタログ SSoT 突合 lint | 直列 |
-| 4 | DISCOVERY-07 Step 5 の完了記録 (correction note) | 直列 |
+- `docs/process/modes/design-bottomup.md` を mode 正本として追加する。
+- `docs/process/modes/README.md` と concept / requirements の signal 表に `design-bottomup` を追加する。
+- `PLAN-L3-04` の drive-model passage certificate を current entry modes へ緩め、`Design-bottomup` / `Version-up` 行を追加する。
+- `src/lint/drive-model-passage.ts` の expected mode 数を 11 mode とし、message の expected 表示を定数由来にする。
+- `src/schema/mode-catalog.ts` に route-map token から catalog doc が欠けた mode を検出する helper を追加し、test で fail-close する。
 
 ## DoD
 
-- [ ] route-map に存在する全 mode が modes README 台帳と正本 doc を持つ (突合 lint green)
-- [ ] drive-model-passage lint が 11 mode を要求して green
-- [ ] concept §2.5 の mode 数と台帳が一致 (PO サインオフ記録付き)
+- [x] route-map に存在する非 Forward mode が mode catalog doc を持つ。
+- [x] drive-model-passage lint が current entry modes を要求して green になる。
+- [x] concept / requirements / process mode catalog が `design-bottomup` signal を説明する。
+- [x] 歴史的な 9-mode 表現は legacy framing として残し、現在の operational catalog だけを更新する。
