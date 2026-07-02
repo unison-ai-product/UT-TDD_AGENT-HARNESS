@@ -72,6 +72,19 @@ Recovery (tl+po)、Incident (三者確認)、Scrum S4 (po 受入) の人間承�
 - modes README §3 の「9-mode」表記は version-up 含め実質 10 (+design-bottomup で 11) と古い
 - green-command-digest: 102 件 stale は advisory 扱い (strict flag で fail-close 化可能、PLAN-L7-132 で意図的 soft 化)
 
+### F-9 [critical] 駆動モデルの自動 DB 保存が非可逆に損失 (PO 追加質問 2026-07-02 で検出)
+
+`harness.db` の `drive_runs.mode` は `workflowModeForPlan(planId)` (`src/state-db/projection-writer.ts`) が **plan_id 接頭辞のみ**で導出し、認識は 4 接頭辞 (`PLAN-DISCOVERY-`→Discovery / `PLAN-REVERSE-`→Reverse / `PLAN-RECOVERY-`→Recovery / `PLAN-M-`→Verification)、**残り全部 Forward** に落ちる。
+
+実測 (db rebuild 済み現 DB):
+
+- DB に存在する mode = 5 種のみ (Forward 395 / Reverse 89 / Discovery 29 / Recovery 8 / Verification 2)
+- `kind=refactor` 29 行と `kind=troubleshoot` 91 行 (計 120 行) が **mode=Forward として誤投影**
+- Scrum / Incident / Refactor / Retrofit / Add-feature / Research / version-up / design-bottomup は **DB の mode 列で表現不能**
+- `src/lint/drive-db-registration.ts` の `REQUIRED_CURRENT_MODES = [Discovery, Forward, Recovery, Reverse, Verification]` は損失関数が出せる 5 値そのもの = **lint が定義上この取りこぼしを検出できない** (coverage ≠ substance の教科書例。skillDriveModelForPlan も同型の 4 分岐)
+
+根本は既知の PO 指摘「駆動モデルは PLAN ID で読めるべき (現行 plan_id は駆動を layer に潰す)」の DB 側帰結。中央 UI の mode 別進捗集計・skill 発火条件 (applies_to.drive_models) の下流が汚染される。是正方向 (record-only、実装せず): mode の正本を plan_id 接頭辞でなく frontmatter/kind+signal 由来にする、REQUIRED_CURRENT_MODES をカタログ (modes README 台帳) と突合する等。
+
 ### 反証・棄却 (1 件)
 
 - 「checkCodingRules が doctor 未配線」(subagent 報告の critical) は**誤り**: `src/doctor/index.ts:1042` で配線済み。lint-wiring の wired=76 とも整合。抜き打ち検証で棄却。
@@ -85,7 +98,15 @@ Recovery (tl+po)、Incident (三者確認)、Scrum S4 (po 受入) の人間承�
 | F-3〜F-7 enforcement 未接続群 | `feature-gap` | Add-feature via `feature_addition` (優先順は PO 判断: F-3 配線 → F-4 Reverse 右腕 → F-5 承認証拠 → F-6 各論 → F-7 gates) |
 | F-8 minor 群 | `smell` | Refactor via `code_smell` |
 
+| F-9 DB mode 投影損失 | `latent-defect` | Add-feature via `feature_addition` |
+
 route eval 実行証跡は `route-approval.jsonl` (2026-07-02)。auto_create=false、起票は PO 承認後。
+
+## PO Decision (2026-07-02)
+
+- F-1 design-bottomup back-merge: **未着手の可能性 = 意図的 park ではない**扱いで確定 (deviation 側)。
+- F-2〜F-9 の優先順は AI 推奨 (F-3 配線 → F-2 doc 修正 → F-4 Reverse 右腕 → F-5 承認証拠) のまま記録。
+- **全所見は監査レポートとして記録のみ (record-only)。本監査サイクルでは修正作業・PLAN 起票を行わない。**着手は将来の PO 指示時。
 
 ## Boundary
 

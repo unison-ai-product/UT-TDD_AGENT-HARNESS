@@ -47,6 +47,9 @@
 | A-173 F-3 | contract 関数 (evaluateRetrofitMatrix / evaluateResearchDecision) が実装+テスト済みで enforcement 未接続。lint-wiring は src/lint/* のみ監視で workflow/contracts 層が meta 盲点 | `feature-gap` | Add-feature via `feature_addition` | doctor 配線 + lint-wiring 監視境界の拡張 |
 | A-173 F-4〜F-7 | exit 条件の宣言のみ層 (Reverse ③/pair-freeze 再入、人間サインオフ証拠、incident 2-PLAN、recovery 3 要件、discovery verify/*.sh、scrum 昇華先、add-impl→Reverse、version-up activation trace、accept コマンド、G1-content/G2/G4/G5 doctor 配線) | `feature-gap` | Add-feature via `feature_addition` | 優先順は PO 判断。個別 PLAN 分割前提 (PLAN per requirement) |
 | A-173 F-8 | minor 残渣 (refactor.md stale skill path、README 9-mode 表記、ほか) | `smell` | Refactor via `code_smell` | doc curation |
+| A-173 F-9 | drive_runs.mode が plan_id 接頭辞 4 分岐で導出され 6+ mode が表現不能、kind=refactor 29 行 + troubleshoot 91 行が Forward へ誤投影。REQUIRED_CURRENT_MODES が損失値のみ要求で検出不能 | `latent-defect` | Add-feature via `feature_addition` | mode 正本を frontmatter/kind+signal 由来へ、REQUIRED_CURRENT_MODES をカタログ突合へ、誤投影 120 行の再投影 |
+
+**PO disposition (2026-07-02)**: A-173 全候補は record-only 確定 — 本サイクルでは PLAN 起票・修正作業を行わない (着手は将来の PO 指示時)。F-1 は「未着手の可能性 = park でない」扱い。
 
 ## Research 駆動そのものへの dogfood 所見 (A-172 実走で検出)
 
