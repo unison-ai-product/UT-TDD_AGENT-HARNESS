@@ -1,3 +1,4 @@
+import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog";
 import type { HarnessDb } from "../state-db/index";
 import { upsertRow } from "../state-db/index";
 import { classifyTask } from "../task/classify";
@@ -8,6 +9,7 @@ export interface PlanSkillContext {
   drive: string;
   kind: string;
   status: string;
+  route_mode?: string;
 }
 
 /**
@@ -157,17 +159,8 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function workflowModeForPlan(planId: string): string {
-  if (planId.startsWith("PLAN-DISCOVERY-")) return "Discovery";
-  if (planId.startsWith("PLAN-REVERSE-") || /REVERSE/i.test(planId)) return "Reverse";
-  if (planId.startsWith("PLAN-RECOVERY-") || /RECOVERY/i.test(planId)) return "Recovery";
-  if (/SCRUM/i.test(planId)) return "Scrum";
-  if (/INCIDENT/i.test(planId)) return "Incident";
-  if (/REFACTOR/i.test(planId)) return "Refactor";
-  if (/RETROFIT/i.test(planId)) return "Retrofit";
-  if (/RESEARCH/i.test(planId)) return "Research";
-  return "Forward";
-}
+// PLAN-L7-243: mode 導出は route_mode 正本 + legacy フォールバックの共有カタログ
+// (src/schema/mode-catalog.ts) を使う。plan_id 文字列推測の独自分岐は廃止。
 
 /** TaskKind → workflow drive model (自由文 suggest の drive_model 推定、A-138 ITEM-2)。 */
 function workflowModeForKind(kind: string): string {
@@ -301,10 +294,16 @@ export function recommendSkillsForPlan(
   options: { limit?: number; recordedAt?: string } = {},
 ): SkillRecommendation[] {
   const plan = db
-    .prepare("SELECT plan_id, layer, drive, kind, status FROM plan_registry WHERE plan_id = ?")
+    .prepare(
+      "SELECT plan_id, layer, drive, kind, status, route_mode FROM plan_registry WHERE plan_id = ?",
+    )
     .get(planId) as PlanSkillContext | undefined;
   if (!plan) return [];
-  const workflowMode = workflowModeForPlan(plan.plan_id);
+  const workflowMode = catalogWorkflowModeForPlan({
+    planId: plan.plan_id,
+    routeMode: plan.route_mode,
+    kind: plan.kind,
+  });
   return rankSkills(
     db,
     {

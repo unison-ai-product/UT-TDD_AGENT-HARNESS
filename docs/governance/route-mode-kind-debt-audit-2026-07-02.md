@@ -47,7 +47,7 @@
 | PLAN-L7-240-reverse-right-arm-exit-gate | 未着手 (open) |
 | PLAN-L7-241-human-signoff-evidence-gate | 未着手 (open) |
 | PLAN-L7-242-mode-exit-enforcement-batch | 未着手 (open) |
-| PLAN-L7-243-mode-first-class-db-projection | 未着手 (open) |
+| PLAN-L7-243-mode-first-class-db-projection | 昇格済 promoted (2026-07-02) |
 | PLAN-L7-244-right-arm-citation-gate | 未着手 (open) |
 | PLAN-L7-245-sub-doc-schema-integrity | 未着手 (open) |
 | PLAN-L7-246-feedback-event-lifecycle | 未着手 (open) |

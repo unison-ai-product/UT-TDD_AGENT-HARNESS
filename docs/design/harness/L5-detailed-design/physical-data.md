@@ -54,6 +54,7 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 | `sub_doc` | enum\|null | 条件付き | null | design+L1-L6 で必須、`VALID_SUB_DOCS[layer]` (IMP-026) |
 | `drive` | enum | 必須 | — | `driveSchema` (5 種、専門職のみ: be/fe/fullstack/db/agent。mode 値除去済 = PLAN-DISCOVERY-04 V7 / PLAN-REVERSE-01 R3。SSoT = data.md §3 / `src/schema/index.ts`) |
 | `status` | enum | 省略可 | `"draft"` (運用既定) | `statusSchema.default("draft")` (draft/confirmed/completed/archived) |
+| `route_mode` | string | 省略可 (created>=2026-07-01 は route certificate lint で必須) | `""` | 駆動モデル宣言の正本 (mode 第一級化、PLAN-L7-243)。`drive_runs.mode` は route_mode → plan_id prefix → kind の順で導出 (`src/schema/mode-catalog.ts`) |
 | `workflow_phase` | enum\|null | 条件付き | null | kind=poc/reverse で必須、`workflowPhaseSchema` (10) |
 | `decision_outcome` | enum\|null | 条件付き | null | kind=poc+S4 で必須、`decisionOutcomeSchema` (3) |
 | `confirmed_reverse_type` | enum\|null | 条件付き | null | kind=reverse で必須、`reverseTypeSchema` (5) |
