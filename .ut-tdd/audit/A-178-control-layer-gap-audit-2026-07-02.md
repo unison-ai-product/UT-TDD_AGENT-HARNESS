@@ -69,6 +69,7 @@ fail-open/fail-close の設計整合自体は**良好**: agent-guard = fail-clos
 
 - **G-14 [high] `route_mode: add-feature` + `kind: impl` の起票慣行**: add-feature mode 正本は「add-design/add-impl を内包、独立 kind なし」、add-impl は parent 必須 + Reverse back-fill 必須 (KIND_BACKFILL=required、draft から適用)。kind=impl は backfill=none のため、この組み合わせは **add-feature 駆動の中核義務 (実装→設計 back-fill) を機械免除された形**。実測 32 本 (本日の監査起票 27 + 既存 L7-212/213/214/215/221 = 以前からの慣行)。route_mode↔kind 整合 lint が無く全て green で素通り (§1.6 kind×drive matrix 未確定の既知ギャップの実害化)。**発見者は PO** (機械も本監査の 3 系統も検出できなかった — 検査軸「宣言 vs 検出器」を PLAN frontmatter 自体に向けていなかった盲点)。
 - **PO 決定**: 選択肢 3 (仕組み化 + 段階是正) を採択。候補起票 = PLAN-L7-263 (route_mode↔kind 整合 lint、enforcement-date cutoff + 既存 32 本 debt 台帳 + 着手時昇格手順)。現時点では doctor を壊さない refactor draft として保持し、実装着手時に add-impl / Reverse pairing へ昇格する。§1.6 対応表は L7-263 Step 1 で PO 確定。
+- **G-15 [high] 根本原因の実証: draft add-impl はデッドロックで機械的に成立しない** — L7-263 を正規形 (kind=add-impl + PLAN-REVERSE-263 の双方向 requires) で起票試行し、doctor 実走で衝突を実証した: `requires_not_ready` は requires 先に `READY_DEPENDENCY_STATUSES = {confirmed, completed}` のみを許し **draft を requires にできない** (`src/plan/lint-policy.ts:21`)。一方 `KIND_BACKFILL[add-impl] = required` は **draft 段階から** REVERSE plan の requires 参照を要求する (`src/lint/backfill-pairing.ts:8,157`)。requires を張ると前者に違反、外すと reverseOrphan — 同時に満たす起票が存在しない。**32 本の kind=impl 慣行は個々の起票ミスでなくこの構造の帰結** (正規形への道が機械的に塞がっている)。解消案 (backfill 判定への parent 参照許容 / requires_not_ready の reverse-pairing エッジ例外) は PLAN-L7-263 スコープに登載済み。
 
 ## §3 裏取り記録
 

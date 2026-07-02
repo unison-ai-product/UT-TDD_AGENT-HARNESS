@@ -58,6 +58,7 @@ add-feature mode は `add-design` と `add-impl` を内包する運用で、独�
 - `route_mode: add-feature` では `kind` を `add-design` / `add-impl` に限定する。
 - 既存 PLAN への一括 hard fail は避け、enforcement date と debt 台帳を分ける。
 - debt 台帳の扱いは `PLAN-REVERSE-263-route-mode-kind-backfill.md` で設計 back-fill として検討する。
+- draft の add-impl と Reverse pairing が `requires_not_ready` / backfill-pairing でデッドロックしないよう、parent 参照許容または reverse-pairing edge 例外を検討する。
 - 実装する場合は `src/plan/lint.ts` と route map 周辺に限定し、GitHub 操作や release 操作へは広げない。
 
 ## 未着手 DoD
