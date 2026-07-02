@@ -1,0 +1,19 @@
+PLAN-L7-243 mode reprojection measurement (2026-07-02, db rebuild at HEAD 6e7e79e + audit fixes)
+
+Command:
+  bun src/cli.ts db rebuild
+  SELECT mode, COUNT(*) FROM drive_runs GROUP BY mode ORDER BY COUNT(*) DESC;
+  SELECT COUNT(*) FROM drive_runs d JOIN plan_registry p ON p.plan_id=d.plan_id
+    WHERE p.kind IN ('refactor','troubleshoot') AND d.mode='Forward';
+
+Result:
+  Add-feature=187
+  Forward=114
+  Reverse=105
+  Incident=91
+  Refactor=58
+  Discovery=29
+  Recovery=10
+  Version-up=5
+  Verification=2
+  refactor/troubleshoot Forward misprojection=0

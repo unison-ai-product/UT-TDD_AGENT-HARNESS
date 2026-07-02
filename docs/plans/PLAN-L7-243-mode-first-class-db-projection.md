@@ -75,6 +75,23 @@ review_evidence:
         completed_at: "2026-07-02T21:16:03+09:00"
         evidence_path: src/state-db/projection-writer.ts
         output_digest: "sha256:d3fbe43294b7768bf68c29ca7bc4df7ea4386734aabf32beff1f825e89a99504"
+  - reviewer: codex-cli
+    review_kind: cross_agent
+    reviewed_at: "2026-07-02T23:08:00+09:00"
+    tests_green_at: "2026-07-02T22:59:00+09:00"
+    verdict: approve
+    scope: "gpt-5.5 cross-runtime 監査 (session 019f2323)。初回 request-changes 所見 3 件の是正: (1) 9-mode 再投影実測を .ut-tdd/audit/A-173-mode-reprojection-measurement-2026-07-02.txt へ固定し green_command で cite、(2) L5 physical-data.md §2.7 plan_registry 行へ route_mode 列を back-fill、(3) design-bottomup catalog doc 写像 + map→docs 方向検査は PLAN-RECOVERY-07 back-merge (fe484b2/6e05215) で HEAD 解消済みを確認。再レビューで approve、findings なし。"
+    worker_model: claude-fable-5
+    reviewer_model: gpt-5.5
+    green_commands:
+      - kind: smoke
+        command: "bun src/cli.ts db rebuild && SELECT mode, COUNT(*) FROM drive_runs GROUP BY mode (9 modes, refactor/troubleshoot Forward misprojection=0)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-02T22:59:00+09:00"
+        evidence_path: .ut-tdd/audit/A-173-mode-reprojection-measurement-2026-07-02.txt
+        output_digest: "sha256:c66d388e3be61e1e643a0b51d6b7a347f839b6b2476ecfc304b7c2e8a9447881"
 ---
 
 # PLAN-L7-243 (add-impl): mode の第一級化と drive_runs.mode 投影損失の解消
@@ -131,6 +148,12 @@ review_evidence:
 - 再投影実測 (db rebuild 後): drive_runs は 9 mode へ分散
   (Add-feature=187 / Forward=114 / Reverse=103 / Incident=91 / Refactor=56 / Discovery=29 /
   Recovery=10 / Version-up=5 / Verification=2)、kind=refactor/troubleshoot の Forward 誤投影 0 件。
+  実測 claim の機械裏付け (gpt-5.5 監査所見の是正、2026-07-02): 再計測コマンドと結果を
+  `.ut-tdd/audit/A-173-mode-reprojection-measurement-2026-07-02.txt` に固定し、cross_agent
+  review_evidence の green_commands で cite (再計測時点は Reverse=105 / Refactor=58 と微増、
+  9 mode 分散・誤投影 0 は不変)。あわせて L5 `physical-data.md` §2.7 の plan_registry 行へ
+  `route_mode` 列を back-fill。design-bottomup の catalog doc 写像と map→docs 方向検査は
+  PLAN-RECOVERY-07 back-merge (fe484b2/6e05215) で解消済み。
 - 下流影響: skill 発火条件 (applies_drive_models 照合) は Refactor/Add-feature 等の実 mode で
   一致可能になった (tests/skill-recommend.test.ts で route_mode 宣言による選択を固定)。
 

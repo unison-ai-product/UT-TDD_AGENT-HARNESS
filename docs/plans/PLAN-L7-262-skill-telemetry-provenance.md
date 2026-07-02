@@ -57,7 +57,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-02T20:26:18+09:00"
         evidence_path: tests/skill-telemetry-provenance.test.ts
-        output_digest: "sha256:62942f915aa2c77b5c4b94e70483d9d68bbd9f2c723ca2a1fb6d69f1f3aa4f5a"
+        output_digest: "sha256:ed9153691945aae71ca89885584b471fd07546867a6d6f46c68d3e803a1f4692"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -74,6 +74,23 @@ review_evidence:
         completed_at: "2026-07-02T20:26:18+09:00"
         evidence_path: src/runtime/session-log.ts
         output_digest: "sha256:be6bbbd9de16f2a037c25b05a0ce2f281dc524104e5af6951c85c2f2f364f667"
+  - reviewer: codex-cli
+    review_kind: cross_agent
+    reviewed_at: "2026-07-02T23:08:00+09:00"
+    tests_green_at: "2026-07-02T23:01:50+09:00"
+    verdict: approve
+    scope: "gpt-5.5 cross-runtime 監査 (session 019f2323)。初回 request-changes 所見 =「session_id 空文字を全経路で廃止」claim が projectSkillTelemetry / recommendSkillsForPlan の出力行を test oracle で覆っていない。是正: tests/skill-telemetry-provenance.test.ts へ両関数の出力行 session_id 非空 assert を追加 (7/7 green)。再レビューで approve、findings なし。"
+    worker_model: claude-fable-5
+    reviewer_model: gpt-5.5
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests/skill-telemetry-provenance.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-02T23:01:50+09:00"
+        evidence_path: tests/skill-telemetry-provenance.test.ts
+        output_digest: "sha256:ed9153691945aae71ca89885584b471fd07546867a6d6f46c68d3e803a1f4692"
 ---
 
 # PLAN-L7-262 (impl): skill telemetry の provenance 分離
@@ -115,7 +132,10 @@ draft 起票 (A-178 G-8/G-9/G-11。PO 確定所見 2026-06-29「skill_invocation
   (別テーブル化でなく provenance 列 + metrics 除外方式、TL レビューで承認)。
 - session_id 貫通: rebuild 由来行は `rebuild:indirect` を明示 (`REBUILD_INDIRECT_SESSION_ID`)。
   CLI/注入経路は `UT_TDD_SESSION_ID` env → 無ければ `cli:unknown-session` (`resolveRuntimeSessionId`)。
-  空文字での偽装を全経路で廃止。
+  空文字での偽装を全経路で廃止。全経路 claim のテスト裏付け (gpt-5.5 監査所見の是正、2026-07-02):
+  `projectSkillTelemetry` の recommendations/invocations 出力行と `recommendSkillsForPlan` の
+  出力行も `tests/skill-telemetry-provenance.test.ts` で非空 session_id を直接 assert
+  (metrics/resolver/logging 経路のみだった oracle を出力行まで拡張)。
 - 注入実績記録: `resolveSkillContextInjection` は injected (required/optional 件数) /
   skipped (rebuild-failed / no-matching-skills) を `recordSkillInjectionAttempt` で session jsonl
   へ記録 (event_type=skill_injection、silent fail-open を「記録付き fail-open」へ)。
