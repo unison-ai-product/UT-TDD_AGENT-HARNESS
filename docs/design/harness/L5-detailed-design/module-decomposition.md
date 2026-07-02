@@ -171,6 +171,7 @@ PLAN-L5-08 は既存 lint/rule module を置き換えず、DB-centered reference
 |---|---|---|---|
 | `state-db` | `src/state-db/` | SQLite connection、migration、projection upsert、docs/state/logs からの rebuild。 | `state-db -> schema`。CLI adapter から import しない。 |
 | `projection-writer` | `src/state-db/projection-writer.ts` | PLAN、artifact、gate、hook、model、skill、finding record を `harness.db` row へ変換する。 | loader 由来の normalized record を消費し、provider transcript は parse しない。 |
+| `skill-projections` | `src/state-db/skill-projections.ts` | skill recommendation / invocation / evaluation 由来の telemetry・metric・evaluation projection core を保持する。 | `projection-writer` から時刻・ID・書き込み関数・drive model 判定を注入され、public rebuild wiring は `projection-writer` wrapper に残す。 |
 | `search-index` | `src/search/` | `search_index` を維持し、PLAN/artifact/finding/skill/model/session 横断の `ut-tdd find` query を提供する。 | projection DB を読む。rebuild 中のみ loader を呼び出してよい。 |
 | `feedback-engine` | `src/feedback/` | repeated finding、unresolved dependency、stale approval、skill firing rate、model selection signal を集約する。 | DB projection を読み `feedback_events` を出す。source doc は mutate しない。 |
 | `automation-readiness` | `src/workflow/readiness.ts` | workflow/gate/doctor/CI projection を join し、ready/blocked/human-required automation state を分類する。 | DB projection と gate docs を読む。workflow step は実行しない。 |
