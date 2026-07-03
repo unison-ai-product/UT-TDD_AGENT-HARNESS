@@ -57,6 +57,7 @@
 | PLAN-L7-304-plan-pending-decision-gate (v2 新規) | 未決分岐 (GR-1) の fail-close | なし |
 | PLAN-L7-305-plan-bundle-split-gate (v2 新規) | 隠れ束 (GR-2) の宣言強制と着手時分割 | なし |
 | PLAN-L7-315-scope-integrity-gate (v2 新規) | スコープ無宣言縮小の fail-close + waiver 正規化 (taxonomy B4/A3) | なし (L7-304/305 と同ファイル群 = 直列) |
+| PLAN-L7-325-goal-workflow-binding (v2 新規) | 起点=駆動モデル選定の固定: goal synth (route 記録付き goal 文生成) + drive exit-check (goal 充足の機械判定) — A-178「無記録発火」の正面対策 | **L7-242 消化後** (exit contract が正) |
 | PLAN-L7-256-model-id-ssot-drift-gate のスコープ(d) | PLAN 番号一意性 fail-close (GR-3) | なし |
 | PLAN-L7-245-sub-doc-schema-integrity | 他 PLAN の frontmatter 正当性の前提 | なし |
 | PLAN-L7-310-audit-lens-wiring (v2 新規) | 監査レンズカタログの機械配線 (PO 指摘: 最高 ROI。カタログ本体は着地済みで手動運用可) | なし |
