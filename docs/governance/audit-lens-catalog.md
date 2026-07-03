@@ -29,6 +29,10 @@
 | LENS-GG | 番人の番人 | gate/lint 自身の免除リスト・scope 限定・fail-open は健全か | A-175/A-178 |
 | LENS-UX | UI/UX 検証態勢 | 画面系の検証観点 (操作必須項目・ユーザビリティ・要求降下) は実装フェーズに耐える厚みがあるか | A-181 (PO 指摘 2026-07-03) |
 | LENS-RW | 生化 (raw-OS 純度) | Pack = 自己適用を外した生の OS は、自分史なしで起動し・自己適用の混入なしに機能するか | A-172 + PO 指摘 2026-07-03 |
+| LENS-AQ | 実装アーキテクチャ品質 | コード構造は後続エージェントが安全に拡張できるか (megafile / util 複製 / 依存方向 / 様式世代) | A-182 |
+| LENS-TQ | テスト実質 | テストは欠陥を実際に捕まえるか (oracle 強度 / mutation 耐性 / 実 repo 回帰 / oracle_id トレース) | A-182 |
+| LENS-DQ | 設計現役性 | 設計 doc は実装判断の現役資料か (stale / 未登録モジュール / PLAN→設計 doc 参照) | A-182 |
+| LENS-CX | CLI/API 契約品質 | AI が一級ユーザーの CLI として誤用できない契約か (--json / exit code / フラグ二義性) | A-182 |
 
 レンズは独立 — 3〜4 本を並列 fan-out するのが標準 (1 subagent 1 レンズ、混ぜない)。全域監査は A-175 §1 の 18 領域台帳を先に見て未監査領域を選ぶ。
 
@@ -246,6 +250,32 @@ grep -rn "ENFORCEMENT_DATE\|閾値\|baseline" src/ を列挙し、各値に「se
 > 手順: (1) {{対象資産群}} を OS 本体 / 自己適用専用 / 混入 の三分類で全数仕分けし、混入は参照先 (self PLAN ID / 監査 doc / 個人パス / self 校正閾値) を明記 (2) day-0 初期状態で誤発火または空回りする check を机上で列挙 (可能なら隔離環境で実走) (3) 数値基準の出自 (self 由来 / 普遍) を判定 (4) Pack lag (source からの遅延) の検出機構有無を確認。
 > 重要: 「source で green だから Pack でも green」は成立しない。判定は常に「自分史ゼロの消費者」を主語にせよ。
 > 出力 (日本語 markdown): §1 三分類仕分け表 §2 所見 (ID: RW-1..) §3 既存 PLAN 重複判定 (RECOVERY-06 / L7-232〜236 / L7-266/267/282 / L7-252 との差分を必ず取る)。
+
+## §8d 品質 4 レンズ: LENS-AQ / LENS-TQ / LENS-DQ / LENS-CX (A-182 で新設)
+
+運用系レンズ (CE/DV/GR/DR/DE/GG) が「ハーネスの働き方」を監査するのに対し、この 4 本は**成果物そのものの実質品質**を監査する。判定 4 軸と是正 wave の正本 = `docs/governance/harness-v2-quality-uplift-strategy.md` §1。四半期または大規模リファクタ後に 4 レーン fan-out で回し、A-182 §1 の基線と比較する。
+
+**LENS-AQ (実装アーキテクチャ) — 解釈観点**: 変更が 1 箇所に閉じるか。(1) megafile: >800 行の全数と成長 (2) util 複製: 同名/同機能関数の横断 grep (実例: frontmatter parser 15 実装、walkMarkdown 5 複製) (3) 依存方向: 逆流・cli→内層直 import (4) 様式世代: gate シグネチャの揃い (5) 暗黙 fail-open: `catch {` の意図宣言有無。
+
+```
+git ls-files 'src/*.ts' | xargs wc -l | sort -rn | head -15      # megafile
+grep -rn "function .*[fF]rontmatter\|function walkMarkdown" src   # 複製
+grep -rn "catch {" src --include="*.ts" | wc -l                   # 暗黙 fail-open
+grep -rn "as any\|@ts-ignore" src --include="*.ts" | wc -l        # 型安全
+```
+
+**LENS-TQ (テスト実質) — 解釈観点**: green の件数でなく捕捉力。(1) oracle 強度 3 分類 (厳密一致 / 存在確認 smoke / 実装ミラー) を 10 本以上精読 (2) mutation 机上試験: gate 判定を反転したら対応テストが red になるか (3) bypass 封じ: 空値・フィールド削除がテストで塞がれているか (4) 実 repo 回帰の本数 (5) oracle_id (`U-*`) 引用率。expect 密度 = expect 数 / it 数 (基線 3.19)。
+
+**LENS-DQ (設計現役性) — 解釈観点**: 「設計 doc が在る」でなく「信じて実装して事故らないか」。(1) 登録簿突合: architecture §3.1 ⊇ src 実在 (module-drift lint green の確認) + L6 設計 doc 不在モジュールの列挙 (2) 鮮度抜き取り: doc 5 本の記述 (件数/stub 宣言/関数名) を現物 Grep 突合 (3) PLAN→設計 doc 参照: 直近 confirmed PLAN の references に docs/design/ が有るか (4) 用語: L0 glossary ↔ src 識別子 10 語突合。
+
+**LENS-CX (CLI/API 契約) — 解釈観点**: 文脈を持たない AI が誤用できるか。(1) 機械可読性: 高頻度コマンドに --json と構造化 exit code が有るか (2) フラグ二義性: 同名フラグの意味揺れを grep 突合 (実例: --plan = path vs ID) (3) exit code 規律: 0/1/2 の意味が help に書かれているか (4) typo 耐性: suggestion 有無 (5) testability: ロジックが return 値で検証可能か。**所見は必ず実走で裏取りする** (A-182 で CX-9 が静的読解のみで誤検出 → 実走で棄却された前例)。
+
+**委譲プロンプト雛形 (4 レンズ共通の骨格)**:
+
+> あなたは UT-TDD Agent Harness の監査員。**read-only、Edit/Write 禁止**。{{並行作業の注意}}。
+> 任務: {{レンズ名}} の観点で {{対象}} の実質品質を監査せよ。実測項目: {{上記プローブから選択}}。
+> 既存 PLAN 重複判定: docs/plans/ の {{隣接 PLAN 群}} と突合し「既存カバー」と「未起票 gap」を分離せよ。
+> 出力 (日本語 markdown): §1 実測表 (測定コマンド付き) §2 所見リスト (ID: {{AQ|TQ|DQ|CX}}-1..、現象/実測根拠/影響/既存カバー判定/是正方向) §3 総合判定と底上げ優先順。最終メッセージがそのまま監査記録になる — 完成形で返せ。
 
 ## §9 監査運用プロトコル (fan-out の作法)
 
