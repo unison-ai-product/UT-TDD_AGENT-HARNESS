@@ -110,7 +110,7 @@ doctor のガバナンス gate 群が self-application (source repo dogfood) 前
 | 1 | ✅ consumer profile 方式の決定 (PO gate → 2026-07-03「最適な方法で」委任、案 A 採用) | 直列 |
 | 2 | ✅ 生成 CI template 修正 (`doctor --setup-smoke`) + wrapper repo-local 解決段 + hook 配線の単一定義源化 | 直列 |
 | 3 | ✅ regression test 追加 (setup 生成物 → gate green の fail-close 固定) | 直列 |
-| 4 | ☐ Pack sync + A-171 UAT 境界の再評価 (PO gate) | 直列 |
+| 4 | ✅ Pack sync (PO 承認 push `57c8fcb`、CI success) + A-171 UAT 前提解除を A-172 correction note へ記録。実 UAT の実施自体は A-171 External Close Checklist 側の残項目 | 直列 |
 
 ## 実装 (Step 2-3、2026-07-03)
 
@@ -142,5 +142,7 @@ doctor のガバナンス gate 群が self-application (source repo dogfood) 前
       A-172 実機 smoke で実測済み: checked=22, failed=0)
 - [x] clean 配布 artifact 実測 (tests/distribution-acceptance.test.ts AT-DIST-001: 実 clean export →
       `setup --solo` → wrapper 実走 green、v1.1 doc 非同梱 assert 含む)
-- [ ] A-172 C-1/C-2 に correction note を追記し、A-171 UAT 境界の前提解除を記録 (Step 4 と同時)
-- [ ] Pack sync 反映 (PO 承認の別 step、`ut-tdd distribution sync-pack` は commit/push しない)
+- [x] A-172 C-1/C-2 に correction note を追記し、A-171 UAT 境界の前提解除を記録
+      (.ut-tdd/audit/A-172 §Correction Note 2026-07-03)
+- [x] Pack sync 反映 (PO 承認 2026-07-03: Codex sync 4f3cbf0〜 + `57c8fcb chore: sync clean pack
+      fffb132` push、Pack CI success。v1.1 doc 2 件は --prune-local で除去)

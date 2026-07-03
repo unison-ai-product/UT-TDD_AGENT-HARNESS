@@ -71,3 +71,21 @@ gh run list -R unison-ai-product/UT-TDD_AGENT-HARNESS-Pack --limit 8    # 直近
 
 - 本レビューは所見の記録であり、修正 commit は含まない (PO の対応方針決定後に PLAN 経由で実施)。
 - Pack repo の公開履歴・release asset には一切手を入れていない (clone は scratchpad、読み取りのみ)。
+
+## Correction Note (2026-07-03、PLAN-RECOVERY-06 / PLAN-L7-359 / PLAN-L7-361)
+
+- **C-1 是正済み**: 生成 CI の最終 step を full doctor → `doctor --setup-smoke` へ変更 (source `9eed81b`)。
+  fresh consumer での生成 CI 全 step green を実 tarball → 実走で検証 (guard / typecheck / test 60 /
+  audit quality / setup-smoke checked=22 failed=0)。
+- **C-2 是正済み**: project-hook / codex-hook-adapter gate が setup 生成 wrapper 配線を受理
+  (単一定義源 `wrapperHookCommand`、source `9eed81b`)。fresh consumer full doctor で両 gate OK
+  (missing_hook 11 → 0)。wrapper に repo-local 解決段を追加し、CI runner 模擬 (dir 移動で埋め込み
+  絶対パス無効化) で解決成功を実証。
+- **検証で追加発見・是正** (`ec07259` / `fffb132`、PLAN-L7-361): setup 非対話ハング (blocking
+  confirm) / package tar の GNU tar 非互換 / PACK_SAFE_TEST_SCRIPT の transform 乖離 (test:pack
+  退行リスク)。
+- **Pack 反映済み**: Codex sync (`4f3cbf0` 〜) + `57c8fcb chore: sync clean pack fffb132` (PO 承認
+  push、CI success)。B 項目の v1.1 doc 2 件も Pack から prune 済み。
+- **A-171 UAT 境界への効果**: 「実 consumer が生成 CI を commit した時点で構造的 red」の前提は解除。
+  UAT 実施のブロッカーは無くなった (full doctor の consumer-profile 分離 = 案 B は L7-300 系
+  follow-up として残存、生成 CI は setup-smoke なので UAT に影響しない)。
