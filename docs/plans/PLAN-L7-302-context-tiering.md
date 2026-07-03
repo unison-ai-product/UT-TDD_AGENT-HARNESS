@@ -36,7 +36,11 @@ dependencies:
 
 ## Status
 
-**version-up parked (v2)**。A-181 CE-1。CLAUDE.md の Read Order 変更は正本変更なので活性化・設計とも PO ゲート。
+**部分 landed (2026-07-03) / 残 parked (v2)**。A-181 CE-1。PO /goal で **doc-router 部分のみ**を先行実装した (`src/context/doc-router.ts` の見出し索引エンジン + `ut-tdd context suggest --task` + regression test)。**CLAUDE.md / .claude/CLAUDE.md / AGENTS.md の Read Order tier 改訂 (canonical 正本変更 + rule-drift 3 面同期) と索引 drift 防止の常時化は parked のまま** — これらは正本変更ゆえ PO ゲート (スコープ項目 1・3、DoD 後半 2 項)。トークン縮小の実利はこの canonical 改訂で初めて出るため、doc-router 部分単体は「機構の先行整備」に留まる (fail-open で全文読みが既定、実害ゼロ)。
+
+**landed スライスの型**: 新規内部ツーリング command + pure 索引関数で、上位設計/公開 product 契約の意味を変えない refactor 扱い (先例 L7-312/314 と同型、code_smell = 11.3 万トークン常時ロード)。
+
+**既知の依存 (残スライス向け)**: `ut-tdd task classify` の kind 判定が日本語 design/refactor 文を `unknown` に落とす傾向があり、その場合 context suggest は fail-open (全文読み) になる。実効的な token 縮小には (a) canonical Read Order 改訂 (本 PLAN 残) と (b) 分類器の kind 被覆向上 (別 PLAN) の双方が要る。doc-router 自体は kind を受け取れば正しく routing する。
 
 ## 背景 (実測 2026-07-03)
 
@@ -65,10 +69,10 @@ dependencies:
 
 ## DoD
 
-- [ ] `ut-tdd context suggest` がタスク文からセクション一覧 (path + 行範囲 + 見出し) を返す (test 固定)
-- [ ] 索引が concept/requirements の実見出しから生成され、見出し改変に追随する (test 固定)
-- [ ] CLAUDE.md Read Order が tier 表記になり、`rule-drift` gate が green のまま (doctor 確認)
-- [ ] 常時 tier の合計トークンが基線 11.3 万から 1 万未満へ縮小 (wc 実測を review_evidence に記録)
+- [x] `ut-tdd context suggest` がタスク文からセクション一覧 (path + 行範囲 + 見出し) を返す (test 固定 — `tests/context-doc-router.test.ts`、kind=reverse 実 doc 統合で非空を確認)
+- [x] 索引が concept/requirements の実見出しから生成され、見出し改変に追随する (test 固定 — buildDocIndex の level/節番号/行範囲、synthetic + 実 canonical doc)
+- [ ] CLAUDE.md Read Order が tier 表記になり、`rule-drift` gate が green のまま (doctor 確認) — **parked (PO ゲート、正本変更)**
+- [ ] 常時 tier の合計トークンが基線 11.3 万から 1 万未満へ縮小 (wc 実測を review_evidence に記録) — **parked (canonical 改訂に依存)**
 
 ## 実装ノート (後続モデル向け)
 
