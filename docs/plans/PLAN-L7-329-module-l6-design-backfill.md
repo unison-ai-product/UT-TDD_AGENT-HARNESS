@@ -1,13 +1,12 @@
 ---
 plan_id: PLAN-L7-329-module-l6-design-backfill
 title: "PLAN-L7-329 (impl): L6 機能設計 doc 不在 6 モジュールの add-design back-fill (context/guardrail/graph/github/memory/secret)"
-kind: impl
+kind: add-design
 layer: L7
 drive: be
 status: draft
-version_target: v2
-route_signal: version_deferral
-route_mode: version-up
+route_signal: feature_addition
+route_mode: add-feature
 created: 2026-07-03
 updated: 2026-07-03
 owner: PM / PO
