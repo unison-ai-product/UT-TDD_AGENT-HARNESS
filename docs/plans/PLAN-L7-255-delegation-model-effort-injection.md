@@ -1,15 +1,17 @@
 ---
 plan_id: PLAN-L7-255-delegation-model-effort-injection
-title: "PLAN-L7-255 (impl): 正規委譲経路への model/effort routing 注入 (ROI routing の全経路貫通)"
-kind: impl
+title: "PLAN-L7-255 (add-impl): 正規委譲経路への model/effort routing 注入 (ROI routing の全経路貫通)"
+kind: add-impl
 layer: L7
 drive: agent
 status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-03
 owner: PM / PO
+backprop_decision: not_required
+backprop_decision_reason: "正規委譲経路への model/effort 注入は既存要求の実装であり上位要求の変更なし。trace: CLAUDE.md L167(effort 既定 routing)、.ut-tdd/audit/A-177-orchestration-layer-audit-2026-07-02.md F-4/F-6/F-7(policy 実装済・正規委譲経路への配線欠落)"
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
@@ -22,8 +24,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-255-delegation-model-effort-injection.md
     artifact_type: markdown_doc
+  - artifact_path: docs/plans/PLAN-REVERSE-255-delegation-injection-backfill.md
+    artifact_type: markdown_doc
 dependencies:
-  parent: null
+  parent: docs/plans/PLAN-L7-215-model-effort-advisor-routing.md
   requires: []
   references:
     - .ut-tdd/audit/A-177-orchestration-layer-audit-2026-07-02.md
@@ -35,7 +39,7 @@ dependencies:
     - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
-# PLAN-L7-255 (impl): 正規委譲経路への model/effort routing 注入
+# PLAN-L7-255 (add-impl): 正規委譲経路への model/effort routing 注入
 
 ## Status
 
@@ -97,3 +101,15 @@ A-183 (LENS-PY) の裏取りで、`buildAdapterPlan` の codex 分岐が effort 
 
 - codex CLI の effort 指定手段 (フラグ / config) の**実機裏取りを先行**し、存在すれば codex argv/config へ注入する。
 - 存在しなければ「codex effort は CLI から制御不能」を AGENTS.md へ意図的宣言として明記し、telemetry には「uncontrolled」を記録する (無宣言の非対称を残さない)。
+
+## 分類昇格ノート(2026-07-03)
+
+本 PLAN は `kind: impl` + `route_mode: add-feature` の debt として `ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS` に起票されていたが、以下 3 点一致により `kind: add-impl` へ昇格した:
+
+1. **frontier 相談結果**: 「正規委譲経路への routing 注入は既存要求 (CLAUDE.md の routing 規約) の実装であり、上位要求の変更は不要」と確定。
+2. **要求 trace**: CLAUDE.md L167 (effort 既定 routing) が上位根拠として既存。A-177 F-4/F-6/F-7 は policy 実装済み・正規委譲経路への配線欠落を所見として記録済み。
+3. **ハーネス debt 規則**: `route_mode: add-feature` + `kind: impl` の組み合わせは PLAN-L7-263 lint (route_mode_kind_mismatch) で draft 離脱時に fail-close となるため、着手前昇格必須。
+
+**Reverse pairing**: PLAN-REVERSE-255-delegation-injection-backfill を同時起票。上位要求は既存 trace 済みのため `backprop_decision: not_required` を宣言 (重い設計変更なし)。Reverse は back-fill not_required の確認であり、設計 doc への追記は不要と判断済み。
+
+**debt リスト残留**: 昇格後も `ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS` への残留は別フェーズ (src/plan/lint-policy.ts + debt-audit doc 更新) で解消する (本 PLAN は kind: add-impl のため route_mode_kind_mismatch lint は通過する)。

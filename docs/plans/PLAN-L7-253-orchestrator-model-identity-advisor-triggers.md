@@ -1,7 +1,7 @@
 ---
 plan_id: PLAN-L7-253-orchestrator-model-identity-advisor-triggers
-title: "PLAN-L7-253 (impl): orchestrator model 自己認識 + advisor 機械発火条件 (Claude/Codex 両 orchestrator 対称)"
-kind: impl
+title: "PLAN-L7-253 (add-impl): orchestrator model 自己認識 + advisor 機械発火条件 (Claude/Codex 両 orchestrator 対称)"
+kind: add-impl
 layer: L7
 drive: agent
 status: draft
@@ -10,6 +10,8 @@ route_mode: add-feature
 created: 2026-07-02
 updated: 2026-07-03
 owner: PM / PO
+backprop_decision: not_required
+backprop_decision_reason: "advisor 自動発火は既存要求の実装であり上位要求の変更なし。trace: CLAUDE.md L167/L170-172(Sonnet 以下は advisor を使う規約)、.ut-tdd/audit/A-177-orchestration-layer-audit-2026-07-02.md F-1/F-2(engine 完成・発火条件のみ欠落)"
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
@@ -22,8 +24,10 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-253-orchestrator-model-identity-advisor-triggers.md
     artifact_type: markdown_doc
+  - artifact_path: docs/plans/PLAN-REVERSE-253-advisor-triggers-backfill.md
+    artifact_type: markdown_doc
 dependencies:
-  parent: null
+  parent: docs/plans/PLAN-L7-215-model-effort-advisor-routing.md
   requires: []
   references:
     - .ut-tdd/audit/A-177-orchestration-layer-audit-2026-07-02.md
@@ -34,7 +38,7 @@ dependencies:
     - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
-# PLAN-L7-253 (impl): orchestrator model 自己認識 + advisor 機械発火条件
+# PLAN-L7-253 (add-impl): orchestrator model 自己認識 + advisor 機械発火条件
 
 ## Status
 
@@ -91,3 +95,15 @@ draft 起票 (A-177 F-1/F-2。PO 指示 2026-07-02「Opus アドバイザーの�
 - [ ] **GPT/Codex 系申告でも同一 trigger が発火し、相談先が gpt-5.5 になる** (test 固定 — 対称性の機械証明)
 - [ ] codex provider の実走 smoke (dry-run で可) が evidence に記録される
 - [ ] AGENTS.md に発火条件表が転記されている (PY-5 型の doc 非対称を作らない)
+
+## 分類昇格ノート(2026-07-03)
+
+本 PLAN は `kind: impl` + `route_mode: add-feature` の debt として `ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS` に起票されていたが、以下 3 点一致により `kind: add-impl` へ昇格した:
+
+1. **frontier 相談結果**: 「advisor 自動発火は既存要求 (CLAUDE.md の規約) の実装であり、上位要求の変更は不要」と確定。
+2. **要求 trace**: CLAUDE.md L167/L170-172 (Sonnet 以下は advisor を使う規約) が機械発火の上位根拠として既存。A-177 F-1/F-2 は engine 完成・発火条件のみ欠落を所見として記録済み。
+3. **ハーネス debt 規則**: `route_mode: add-feature` + `kind: impl` の組み合わせは PLAN-L7-263 lint (route_mode_kind_mismatch) で draft 離脱時に fail-close となるため、着手前昇格必須。
+
+**Reverse pairing**: PLAN-REVERSE-253-advisor-triggers-backfill を同時起票。上位要求は既存 trace 済みのため `backprop_decision: not_required` を宣言 (重い設計変更なし)。Reverse は back-fill not_required の確認であり、設計 doc への追記は不要と判断済み。
+
+**debt リスト残留**: 昇格後も `ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS` への残留は別フェーズ (src/plan/lint-policy.ts + debt-audit doc 更新) で解消する (本 PLAN は kind: add-impl のため route_mode_kind_mismatch lint は通過する)。
