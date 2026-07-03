@@ -1,13 +1,14 @@
 ---
 plan_id: PLAN-L7-328-design-stale-backfill
 title: "PLAN-L7-328 (impl): L5 module-decomposition の凍結 stale 是正 — lint 5 file/stub 記述の実態 back-fill"
-kind: impl
+kind: refactor
 layer: L7
 drive: be
 status: draft
-version_target: v2
-route_signal: version_deferral
-route_mode: version-up
+route_signal: code_smell
+route_mode: refactor
+backprop_decision: not_required
+backprop_decision_reason: "L5 module-decomposition の stale 記述を HEAD 実態へ更新するのみ。設計の意味・スコープ・上位要件は不変。固定数は書かず正本参照へ置換するため再 stale もしない。"
 created: 2026-07-03
 updated: 2026-07-03
 owner: PM / PO

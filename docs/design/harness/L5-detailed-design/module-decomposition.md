@@ -25,9 +25,9 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 |---|---|---|---|
 | **cli** | `src/cli.ts` | 実装済 (scaffold) | コマンドディスパッチ + 副作用端点 |
 | **schema** | `src/schema/index.ts` + `frontmatter.ts` | 実装済 | enum/契約の単一正本 (安定核) |
-| **lint** | `src/lint/*.ts` (5 file) | 実装済 | doc/PLAN/trace 静的検証 |
-| **plan** | `src/plan/lint.ts` | stub | PLAN lint |
-| **vmodel** | `src/vmodel/lint.ts` | stub（仮実装） | V-model 4 artifact trace lint |
+| **lint** | `src/lint/*.ts` (実数は `src/lint/` が正本、拡張継続中) | 実装済 | doc/PLAN/trace 静的検証 |
+| **plan** | `src/plan/lint.ts` | 実装済 (PLAN-L5-02 以降拡張) | PLAN lint |
+| **vmodel** | `src/vmodel/lint.ts` | 実装済 (PLAN-L5-02 以降拡張) | V-model 4 artifact trace lint |
 | **runtime** | `src/runtime/detect.ts` + `agent-guard.ts` | 実装済 | mode 検出 + agent-guard 判定 |
 | **doctor** | `src/doctor/index.ts` | 実装済 (scaffold) | 統合検証集約 |
 | **workflow** | `src/workflow/contracts.ts` + `src/workflow/readiness.ts` | 実装済 | 11 mode workflow エンジン (function §3) |
@@ -62,8 +62,8 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 
 ### §2.4 cli / plan / vmodel / doctor の配置
 - `cli.ts`: `program` (commander)。action は runtime/doctor/plan/vmodel を呼ぶ薄い dispatcher
-- `plan/lint.ts`: `LintResult` interface / `lintPlan(path?)` (stub → schema frontmatter validate を実装)
-- `vmodel/lint.ts`: `lintVmodel(path?)` (stub → 4 artifact trace を実装)
+- `plan/lint.ts`: `LintResult` interface / `lintPlan(path?)` (実装済 = schema frontmatter validate + 本文検証)
+- `vmodel/lint.ts`: `lintVmodel(path?)` (実装済 = 4 artifact trace)
 - `doctor/index.ts`: `runDoctor()` (lint 群 + state 突合を集約)
 
 ## §3 公開 IF (signature 概要)
@@ -105,7 +105,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 
 ## §6 lint 共通様式の module 構造
 
-5 lint は共通テンプレート: `HERE = dirname(fileURLToPath(import.meta.url))` → `loadX()` (repo doc を fs 読込) → `analyzeX(docs?)` (pure、docs 注入でテスト) → result object (`{orphans[], totals}`)。テストは `orphans === []` + `totals > 0` (非空虚) を assert。新 lint (plan-id-schema [IMP-004] / doc-consistency 第2弾 [IMP-001/002] / glossary-delta [G.9]) も同様式で追加。
+全 lint (実数は `src/lint/` が正本) は共通テンプレート: `HERE = dirname(fileURLToPath(import.meta.url))` → `loadX()` (repo doc を fs 読込) → `analyzeX(docs?)` (pure、docs 注入でテスト) → result object (`{orphans[], totals}`)。テストは `orphans === []` + `totals > 0` (非空虚) を assert。新 lint (plan-id-schema [IMP-004] / doc-consistency 第2弾 [IMP-001/002] / glossary-delta [G.9]) も同様式で追加。
 
 ## §7 ADR-002 候補 (依存方向ルール、G4 escalation ①)
 
@@ -136,7 +136,7 @@ PLAN-L5-06 は FR-L1-47 の L5 module-integration slice を close する。
 | recommender | task/layer/drive context から candidate skill を解決し、project state を mutate せず ranked recommendation を返す。 | catalog load 後の pure analyzer。 | L6 が scoring input と deterministic tie-break を定義する。 |
 | injector | ADR-004 layer-1/layer-2 separation を維持しながら、runtime prompt 向け layer-scoped injection set を作る。 | catalog/recommender output を消費し、skill source docs は rewrite しない。 | L7 が provider adapter で injection を materialize する。 |
 
-これは second lint/catalog subsystem を作らず、既存の `skill` module stub を具体化する。
+これは second lint/catalog subsystem を作らず、共通の差分エンジンを skill module 等へ展開する (skill module は現在実装済み)。
 
 ### A.2 asset-drift rule integration（統合）
 
