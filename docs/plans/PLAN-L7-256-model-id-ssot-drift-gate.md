@@ -109,7 +109,10 @@ A-177 F-5/F-9 で、`MODEL_IDS` を正本としているにもかかわらず、
 
 以下は PLAN-L7-256 の full scope だが、今回の小 slice では未実装として残す。
 
-- `.claude/CLAUDE.md` の allowlist 記載と `SUBAGENT_ALLOWLIST` の機械突合を `rule-drift` に追加。
+- ~~`.claude/CLAUDE.md` の allowlist 記載と `SUBAGENT_ALLOWLIST` の機械突合~~ → 2026-07-03 PO 承認で
+  doc 5 件 (be-api/be-logic/db-schema/devops-deploy/refactor-scout) を追記し、
+  `tests/model-id-ssot-drift.test.ts` U-MODELID-SSOT (d) で fail-close 化 (CI harness-check の
+  vitest で発火。`rule-drift` への組み込みは任意の将来改善)。
 - `docs/plans/` の数値 prefix 一意性 gate。
 - `src/setup/templates.ts` 以外の全 model literal を fail-close する lint rule。
 
@@ -122,6 +125,6 @@ A-177 F-5/F-9 で、`MODEL_IDS` を正本としているにもかかわらず、
 
 ## Deferred backlog
 
-- allowlist doc と code allowlist の drift を fail-close で検出する。
+- [x] allowlist doc と code allowlist の drift を fail-close で検出する (U-MODELID-SSOT (d)、2026-07-03)。
 - PLAN numeric prefix drift を fail-close で検出する。
 - `src/setup/templates.ts` 以外の model literal を lint rule で段階的に減らす。
