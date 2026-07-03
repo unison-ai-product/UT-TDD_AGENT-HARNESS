@@ -114,6 +114,11 @@ Rules:
 
 Allowlist:
 
+- `be-api`
+- `be-logic`
+- `db-schema`
+- `devops-deploy`
+- `refactor-scout`
 - `pmo-sonnet`
 - `pmo-haiku`
 - `pmo-project-explorer`
