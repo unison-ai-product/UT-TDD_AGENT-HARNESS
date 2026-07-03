@@ -55,9 +55,9 @@
 | PLAN-L7-249-operational-checklist-output | 未着手 (open) |
 | PLAN-L7-250-layer-question-catalog | 未着手 (open) |
 | PLAN-L7-251-observation-next-selector | 未着手 (open) |
-| PLAN-L7-253-orchestrator-model-identity-advisor-triggers | 未着手 (open) |
+| PLAN-L7-253-orchestrator-model-identity-advisor-triggers | 昇格済 promoted (2026-07-03) |
 | PLAN-L7-254-judgment-gate-reviewer-tier-matrix | 未着手 (open) |
-| PLAN-L7-255-delegation-model-effort-injection | 未着手 (open) |
+| PLAN-L7-255-delegation-model-effort-injection | 昇格済 promoted (2026-07-03) |
 | PLAN-L7-257-orchestration-cell-roster | 未着手 (open) |
 | PLAN-L7-258-guard-firing-evidence | 未着手 (open) |
 | PLAN-L7-259-hybrid-git-discipline-guards | 未着手 (open) |
