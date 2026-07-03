@@ -50,6 +50,10 @@ adapter plan (`buildAdapterPlan` の既存 intent.model/effort) へ貫通。dry-
 promoted-ok=yes を得た)。残スコープ (intent 推定による自動注入、task route effort 貫通、routing 原則
 doc 明文化、注入監査記録) は未着手のため status は draft を維持 (着手時昇格は完遂 slice で行う)。
 
+## PO返し (2026-07-03 Opus /goal セッション)
+
+**着手前提が未充足**。A-183 追補のとおり codex 分岐の effort argv 非注入 (PY-2) を直すには、**codex CLI が effort フラグ/config を持つかの実機裏取りが先行必須** (実機依存、Opus セッションでは不能)。**unblock 条件: codex 実機で effort 指定手段を確認 → 実装可。**
+
 ## 背景 — policy は実装済みだが正規経路が素通り
 
 - intent 7 値 (`inferTaskIntent`) / provider 既定 (`providerForIntent`) / effort 既定 (claude=high, codex=middle, uiux=xhigh, mini・spark=high) は `src/team/model-policy.ts` に実装済み (2026-07-01 追補、U-TEAM-MODEL oracle)。

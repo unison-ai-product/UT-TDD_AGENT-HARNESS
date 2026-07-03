@@ -41,6 +41,10 @@ dependencies:
 
 **version-up parked (v2)**。PO 指示 2026-07-03「Codex はオーケストレーションをあまりしない — 対策を取り、オーケストレーションさせて実装速度を上げたい」。
 
+## PO返し (2026-07-03 Opus /goal セッション)
+
+**goal 指定どおり cli.ts 登録は Codex 抽出完了後**。src/team コアは buildTeamRunPlan 等の既存資産を使うため先行可能だが、full test green が Codex の未コミット src/tests でブロックされる。**unblock 条件: Codex 沈静 + cli.ts クリーン確認。**
+
 ## 背景 (実測 2026-07-03)
 
 - **並列 subagent slot 31 件は全て Claude 側発火** (pmo-sonnet 19 / pmo-project-explorer 9 / ut-tdd-tl 3、slot_source=agent_guard)。**Codex 側の並列発火 = 0** — PO 観察をデータが裏付け。

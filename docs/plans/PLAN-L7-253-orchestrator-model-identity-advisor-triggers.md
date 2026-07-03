@@ -42,6 +42,10 @@ draft 起票 (A-177 F-1/F-2。PO 指示 2026-07-02「Opus アドバイザーの�
 
 **2026-07-03 PO 決定 (未決分岐クローズ)**: ①発火条件セットをスコープ 2 の T1〜T5 で承認 ②**GPT/Codex orchestrator にも同じ仕組みを対称展開する** (PO 指示「あとは GPT にも同じ仕組みを」) — 本 PLAN は Claude 専用でなく両 orchestrator 共通機構として実装する。実装着手の wave 判断は従来どおり PO。
 
+## PO返し (2026-07-03 Opus /goal セッション)
+
+**部分 landed = spec 確定済み・実装は Codex 沈静後**。発火条件 T1〜T7 は PO 承認済み (f554392 で未決分岐クローズ)。実装は code+tests を要し、Codex が src/doctor/state-db/tests を活発に未コミットで触る間は full test green が達成不能。src/runtime の新規モジュール (model 自己認識 + trigger 評価) は cli.ts 非依存で先行可能だが、full 検証は Codex 沈静を待つ。**unblock 条件: Codex の in-flight コミット完了 → full test green 可能に。**
+
 ## 背景
 
 - advisor エンジン (`src/team/advisor-policy.ts`) は完成済み (Claude→opus+high / Codex→gpt-5.5+xhigh、dry-run 既定、MODEL_IDS SSoT)。**発火が CLI 手動 1 経路のみ** (`buildAdvisorDecision` 呼び出し元は `src/cli.ts:2102` だけ、grep 裏取り済)。

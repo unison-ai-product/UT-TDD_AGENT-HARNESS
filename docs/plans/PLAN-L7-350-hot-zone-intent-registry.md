@@ -36,6 +36,10 @@ dependencies:
 
 **version-up parked (v2)**。A-183 所見 OR-3 (PO の追突質問 2026-07-03 への機構的回答)。PO 指示 2026-07-03。
 
+## PO返し (2026-07-03 Opus /goal セッション)
+
+**Codex 沈静後に着手が正**。新規モジュール + tests + cli.ts 登録を要し、Codex が共有 tree を高速 reset する環境では長い実装窓が wipe リスクに晒される (本セッションで docs は高速コミットで landed 成功、code+tests は窓が長く不適)。**unblock 条件: Codex の in-flight 沈静。**
+
 ## 背景 (A-183 §2)
 
 - hybrid 追突防止の現行装備は **work-guard (事後 block)** と **git status/log の人力確認 (毎回)** のみ。「これから src/cli.ts を触る」という**事前の意図宣言**を相手ランタイムへ伝える機構が無い (OR-3)。
