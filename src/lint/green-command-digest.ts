@@ -251,25 +251,40 @@ export function planDigestMigration(
 /** Node I/O 実装の履歴走査 deps。 */
 export function nodeHistoryScanDeps(repoRoot: string): HistoryScanDeps {
   const node = nodeDigestAuditDeps(repoRoot);
+  const readBlobAtCommit = node.readBlobAtCommit;
+  if (!readBlobAtCommit) {
+    throw new Error("nodeDigestAuditDeps must provide readBlobAtCommit");
+  }
+  const commitsByPath = new Map<string, string[]>();
+  const blobByCommitPath = new Map<string, BlobAtCommit>();
   return {
     commitsTouchingPath: (rel) => {
+      const gitPath = toGitPath(rel);
+      const cached = commitsByPath.get(gitPath);
+      if (cached) return cached;
       try {
-        const out = execFileSync(
-          "git",
-          ["-C", repoRoot, "log", "--format=%H", "--", toGitPath(rel)],
-          {
-            encoding: "utf8",
-            stdio: ["ignore", "pipe", "ignore"],
-            maxBuffer: 16 * 1024 * 1024,
-          },
-        );
-        return out.split(/\r?\n/).filter(Boolean);
+        const out = execFileSync("git", ["-C", repoRoot, "log", "--format=%H", "--", gitPath], {
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+          maxBuffer: 16 * 1024 * 1024,
+        });
+        const commits = out.split(/\r?\n/).filter(Boolean);
+        commitsByPath.set(gitPath, commits);
+        return commits;
       } catch {
+        commitsByPath.set(gitPath, []);
         return [];
       }
     },
-    // biome-ignore lint/style/noNonNullAssertion: nodeDigestAuditDeps は必ず readBlobAtCommit を提供する。
-    readBlobAtCommit: node.readBlobAtCommit!,
+    readBlobAtCommit: (sha, rel) => {
+      const gitPath = toGitPath(rel);
+      const key = `${sha}:${gitPath}`;
+      const cached = blobByCommitPath.get(key);
+      if (cached) return cached;
+      const blob = readBlobAtCommit(sha, gitPath);
+      blobByCommitPath.set(key, blob);
+      return blob;
+    },
     hash: node.hash,
   };
 }

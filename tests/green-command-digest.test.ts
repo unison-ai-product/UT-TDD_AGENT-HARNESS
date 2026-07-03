@@ -1,3 +1,8 @@
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   auditGreenCommandDigests,
@@ -5,6 +10,7 @@ import {
   type DigestAuditDeps,
   greenCommandDigestMessages,
   type HistoryScanDeps,
+  nodeHistoryScanDeps,
   planDigestMigration,
   toGitPath,
 } from "../src/lint/green-command-digest";
@@ -140,6 +146,7 @@ function planWithAnchor(planId: string, cmds: Partial<GreenCommandEvidence>[]): 
 }
 
 const hashOf = (s: string) => `sha256:${Buffer.from(s).toString("hex")}`;
+const realSha256Of = (s: string) => `sha256:${createHash("sha256").update(s).digest("hex")}`;
 
 describe("green-command-digest anchor 照合 (PLAN-L7-303)", () => {
   // anchor 時点の blob store: commit sha -> path -> content
@@ -278,5 +285,43 @@ describe("planDigestMigration (PLAN-L7-303 dry-run 計画器)", () => {
     );
     expect(out[0]?.disposition).toBe("already-anchored");
     expect(out[0]?.anchor_candidate).toBe("c2");
+  });
+});
+
+describe("nodeHistoryScanDeps (git 履歴走査)", () => {
+  function git(root: string, args: string[]) {
+    execFileSync("git", ["-C", root, ...args], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  }
+
+  it("Windows backslash evidence_path でも履歴 commit と blob を解決する", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-digest-history-"));
+    try {
+      git(root, ["init"]);
+      git(root, ["config", "user.email", "test@example.com"]);
+      git(root, ["config", "user.name", "UT Test"]);
+      mkdirSync(join(root, "tests"), { recursive: true });
+      const file = join(root, "tests", "real.test.ts");
+      writeFileSync(file, "green-content", "utf8");
+      git(root, ["add", "tests/real.test.ts"]);
+      git(root, ["commit", "-m", "test: add green evidence"]);
+      const sha = execFileSync("git", ["-C", root, "rev-parse", "HEAD"], {
+        encoding: "utf8",
+      }).trim();
+
+      const deps = nodeHistoryScanDeps(root);
+      const commits = deps.commitsTouchingPath("tests\\real.test.ts");
+      const blob = deps.readBlobAtCommit(sha, "tests\\real.test.ts");
+
+      expect(commits).toEqual([sha]);
+      expect(blob.kind).toBe("bytes");
+      expect(blob.kind === "bytes" ? deps.hash(blob.bytes) : "").toBe(
+        realSha256Of("green-content"),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

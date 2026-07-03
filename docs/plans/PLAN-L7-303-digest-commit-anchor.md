@@ -4,8 +4,7 @@ title: "PLAN-L7-303 (impl): green-command digest の commit anchor 化 — 経�
 kind: impl
 layer: L7
 drive: db
-status: draft
-version_target: v2
+status: confirmed
 route_signal: version_deferral
 route_mode: version-up
 created: 2026-07-03
@@ -23,6 +22,20 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-303-digest-commit-anchor.md
     artifact_type: markdown_doc
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/green-command-digest.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/review-evidence.ts
+    artifact_type: source_module
+  - artifact_path: src/schema/frontmatter.ts
+    artifact_type: source_module
+  - artifact_path: tests/green-command-digest.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/frontmatter.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/cli-surface.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
@@ -31,6 +44,40 @@ dependencies:
     - docs/governance/harness-v2-update-strategy.md
     - docs/plans/PLAN-L7-132-green-command-digest-integrity.md
     - docs/plans/PLAN-L7-194-green-command-digest-hard-gate.md
+review_evidence:
+  - reviewer: codex-subagent
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-03T14:30:00+09:00"
+    tests_green_at: "2026-07-03T14:29:00+09:00"
+    verdict: approve
+    scope: "green-command digest anchor 照合、digest-migrate dry-run、frontmatter schema、CLI surface、Windows backslash path の回帰確認。"
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-03T14:26:08+09:00"
+        evidence_path: src/schema/frontmatter.ts
+        output_digest: "sha256:acb91e3a1caca37c60ba90fe9a047779c922ad99850aca18ccedbbc1eac065dc"
+      - kind: unit_test
+        command: "bun run vitest run tests\\green-command-digest.test.ts tests\\frontmatter.test.ts tests\\cli-surface.test.ts -t \"nodeHistoryScanDeps|review_evidence.green_commands|green command digest migration\" --reporter=dot --maxWorkers=1 --minWorkers=1"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-03T14:28:19+09:00"
+        evidence_path: tests/green-command-digest.test.ts
+        output_digest: "sha256:ffcbebc519c2af70426d26fea8038fae0b5b242adb71fe49d4a4fb4b69162766"
+      - kind: lint
+        command: "bunx biome check src\\cli.ts src\\lint\\green-command-digest.ts src\\schema\\frontmatter.ts tests\\green-command-digest.test.ts tests\\frontmatter.test.ts tests\\cli-surface.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-03T14:26:08+09:00"
+        evidence_path: src/lint/green-command-digest.ts
+        output_digest: "sha256:9d33e77a6016525bbad1e039619d72415329baf3b7f5a6ed506dd3e235478eb7"
 ---
 
 # PLAN-L7-303 (impl): green-command digest の commit anchor 化
@@ -78,6 +125,12 @@ suspect = どの履歴 commit の blob も claimed digest に一致しない = o
 
 - [x] anchor_commit 付き digest が commit blob と照合され、working tree 変更で不一致にならない (test 固定 — `tests/green-command-digest.test.ts` anchor 照合、実 repo で L7-309 dogfood)
 - [x] anchor 先の内容と合わない digest (捏造) が fail する (test 固定 — anchor-digest-mismatch。unverifiable は非 fail も test 固定)
+- [x] `anchor_commit` が frontmatter schema / review parser / digest audit に通る。
+- [x] `ut-tdd plan digest-migrate` が非破壊 dry-run surface として公開されている。
+- [x] Windows backslash の evidence_path が git pathspec で誤 suspect 化しない。
+
+## 残 parked (PO ゲート)
+
 - [ ] 実リポジトリで mismatch 件数が 0 (doctor 実行の実測値を review_evidence に記録) — **parked (199 件移行 = item 3-execute の PO ゲート)**
 - [ ] mismatch 0 到達後の hard 化で、fake digest 注入 fixture が doctor exit 1 になる (real-repo regression test、L7-194 の test 資産を流用) — **parked (item 4 hard ratchet、mismatch 0 到達が前提)**
 
