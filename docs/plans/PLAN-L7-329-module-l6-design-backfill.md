@@ -1,84 +1,100 @@
 ---
 plan_id: PLAN-L7-329-module-l6-design-backfill
-title: "PLAN-L7-329 (impl): L6 機能設計 doc 不在 6 モジュールの add-design back-fill (context/guardrail/graph/github/memory/secret)"
-kind: add-design
+title: "PLAN-L7-329 (refactor): L6 module design backfill"
+kind: refactor
 layer: L7
 drive: be
-status: draft
-route_signal: feature_addition
-route_mode: add-feature
+status: confirmed
+route_signal: code_smell
+route_mode: refactor
+backprop_decision: not_required
+backprop_decision_reason: "L6 function-design 配下の既存 module contract を補完する文書 backfill。実装仕様そのものは既存 source の観測であり、上位要求の変更はない。"
 created: 2026-07-03
 updated: 2026-07-03
-owner: PM / PO
-parent_design: docs/design/harness/L4-basic-design/architecture.md
+owner: Codex
+parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
-  - role: po
-    slot_label: "PO - v2 活性化時期 + guardrail/github の安全境界設計レビュー (エスカレーション必須)"
   - role: tl
-    slot_label: "TL - 各 doc の L6 粒度 (IF contract / 失敗モード / V-pair) 充足確認"
-  - role: se
-    slot_label: "SE - L6 設計 doc 6 本の執筆 (並列可)"
+    slot_label: "TL - L6 module design backfill"
 generates:
-  - artifact_path: docs/plans/PLAN-L7-329-module-l6-design-backfill.md
-    artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L6-function-design/context.md
+    artifact_type: design_doc
+  - artifact_path: docs/design/harness/L6-function-design/graph.md
+    artifact_type: design_doc
+  - artifact_path: docs/design/harness/L6-function-design/memory.md
+    artifact_type: design_doc
+  - artifact_path: docs/design/harness/L6-function-design/secret.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
-  parent: null
-  requires: []
+  parent: docs/plans/PLAN-L6-01-function-spec.md
+  requires:
+    - docs/plans/PLAN-L6-01-function-spec.md
   references:
-    - .ut-tdd/audit/A-182-implementation-design-quality-audit-2026-07-03.md
-    - docs/governance/harness-v2-quality-uplift-strategy.md
     - docs/design/harness/L4-basic-design/architecture.md
-    - docs/plans/PLAN-L7-302-context-tiering.md
-    - docs/governance/design-doc-implementation-readiness.md
-    - docs/templates/design/L6-function-spec-template.md
+    - docs/design/harness/L6-function-design/function-spec.md
+    - docs/test-design/harness/L7-unit-test-design.md
+review_evidence:
+  - reviewer: codex
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-03T18:45:00+09:00"
+    tests_green_at: "2026-07-03T18:45:00+09:00"
+    verdict: approve
+    scope: "L6 docs context/graph/memory/secret の frontmatter、pair_artifact、unit-contract marker、L7 test-design crosswalk を確認。"
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: lint
+        command: "bunx biome check docs\\plans\\PLAN-L7-329-module-l6-design-backfill.md docs\\plans\\PLAN-L7-360-db-projection-profiling.md docs\\design\\harness\\L6-function-design\\context.md docs\\design\\harness\\L6-function-design\\graph.md docs\\design\\harness\\L6-function-design\\memory.md docs\\design\\harness\\L6-function-design\\secret.md docs\\test-design\\harness\\L7-unit-test-design.md src\\state-db\\projection-writer.ts src\\doctor\\db-projection.ts src\\doctor\\check-registry.ts src\\doctor\\result.ts tests\\db-projection-ingestion.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-03T18:40:00+09:00"
+        evidence_path: docs/plans/PLAN-L7-329-module-l6-design-backfill.md
+        output_digest: "sha256:1d0f4bd4ce4c83b2bd5e7fc81330f50fb7be70f3be70b48b9480ab500fc0d7ad"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-03T18:40:00+09:00"
+        evidence_path: src/doctor/db-projection.ts
+        output_digest: "sha256:77118c7dd79d0ce3fe45292375d2ae6c520865f655e6997e777c9ca1547e1ee8"
 ---
 
-# PLAN-L7-329 (impl): L6 機能設計 doc 不在 6 モジュールの back-fill
+# PLAN-L7-329: L6 module design backfill
 
-## Status
+## 背景
 
-**version-up parked (v2)**。A-182 所見 DQ-2/DQ-7 (QU-2)。PO 指示 2026-07-03「アップデートでプラン化」。**guardrail / github の 2 本は安全境界 (escalation 範囲・PR fail-close guard) の定義そのものになるため、執筆前に PO エスカレーションが必須** (仕様を発明しない)。
+`docs/design/harness/L4-basic-design/architecture.md` の module 一覧には `context` / `graph` / `memory` / `secret` が含まれる。一方で L6 function-design 側には、各 module の公開関数、失敗方針、DbC、unit oracle への接続をまとめた sub-doc が不足していた。
 
-## 背景 (実測 2026-07-03、A-182 §2)
+この plan は実装挙動を変えず、既存 source から観測できる contract を L6 docs と L7 unit-test design の crosswalk に反映する。
 
-- `context` / `guardrail` / `graph` / `github` / `memory` / `secret` の 6 モジュールは architecture.md §3.1 の登録行 (1-2 行) のみが設計根拠で、`docs/design/harness/L6-function-design/` に対応 doc が無い (`find docs/design/harness/L6-function-design -name "*<module>*"` = 0 件)。
-- 特に context は a13a83d (2026-07-03) で architecture 登録直後の最新実装 (doc-router、L7-302 部分 landed) — 設計意図 (fail-open 方針、候補抽出ロジック) が doc から読めない。
-- 影響: 設計粒度 = テスト設計粒度ルールの実態逸脱。後続エージェントが 2 行の説明で安全境界実装 (guardrail の human signoff 判断 / github の fail-close guard) を拡張する事故リスク (DQ-2)。
+## 変更
 
-## スコープ (1 要件: 6 モジュールの L6 機能設計 doc を新規作成する — 宣言された束、per-doc 並列)
+- `docs/design/harness/L6-function-design/context.md` を追加し、doc-router の fail-open contract を明文化する。
+- `docs/design/harness/L6-function-design/graph.md` を追加し、relation graph loader / projection の境界を明文化する。
+- `docs/design/harness/L6-function-design/memory.md` を追加し、memory read/write/projection の fail-close / fail-open 境界を明文化する。
+- `docs/design/harness/L6-function-design/secret.md` を追加し、secret-like token guard の純関数 contract を明文化する。
+- `docs/test-design/harness/L7-unit-test-design.md` に 4 docs の U-* oracle crosswalk を追加する。
 
-各 doc は **S 粒度 7 要素** (正本: `docs/governance/design-doc-implementation-readiness.md` §2、テンプレ: `docs/templates/design/L6-function-spec-template.md` — 2026-07-03 PO 指示で定義系を確立) に従い `docs/design/harness/L6-function-design/` へ新規作成:
+## 非対象
 
-| doc | 主内容 | ゲート |
-|---|---|---|
-| context.md | doc-router (buildDocIndex/suggestSections/contextSuggest)、fail-open 設計 | 通常 (L7-302 の設計 back-fill) |
-| memory.md | memory_entries projection、secret fail-close、SessionStart surface | 通常 |
-| graph.md | RelationGraphSourceSet loader、lint/relation-graph との分業 | 通常 |
-| secret.md | SECRET_PATTERN/isSecretLike、依存なし安定核の設計理由 | 通常 |
-| guardrail.md | guardrail_decisions ledger、human-required 格下げ禁止 | **PO 先行レビュー** |
-| github.md | GithubOpsGuard fail-close (poc/main merge、hotfix postmortem、Conventional Commit) | **PO 先行レビュー** |
+- source code の挙動変更。
+- guardrail / github module の安全境界設計。これらは別 slice で PO review を伴って扱う。
+- secret pattern family の追加や網羅的 credential scanner 化。
 
-新規ファイル作成のみで既存ファイルへの編集は architecture.md の pair 参照行が必要な場合に限る (Codex hot zone 外)。
+## 検証
 
-## Steps (活性化時)
-
-| Step | 内容 | mode |
-|---|---|---|
-| 1 | guardrail/github の設計範囲を PO へエスカレーションし決定を本文へ書き戻す | 直列 (先行) |
-| 2 | context/memory/graph/secret の 4 doc 執筆 | **並列可** |
-| 3 | guardrail/github の 2 doc 執筆 (Step 1 の決定後) | 並列可 |
-| 4 | V-pair (L7 unit-test-design との対応) 記載 + readability green | 直列 |
+- `bun run src\\cli.ts doctor`
+- `bun run src\\cli.ts db rebuild`
+- `bunx biome check docs\\plans\\PLAN-L7-329-module-l6-design-backfill.md docs\\design\\harness\\L6-function-design\\context.md docs\\design\\harness\\L6-function-design\\graph.md docs\\design\\harness\\L6-function-design\\memory.md docs\\design\\harness\\L6-function-design\\secret.md docs\\test-design\\harness\\L7-unit-test-design.md`
 
 ## DoD
 
-- [ ] 6 doc が L6 標準構成で存在し、`find docs/design/harness/L6-function-design` で確認できる
-- [ ] guardrail/github の 2 本に PO レビュー記録 (review_evidence) が付く
-- [ ] 各 doc の記述する export 関数名が src 現物と Grep 一致 (stale で生まれない)
-- [ ] doctor readability / doc 系 check green
-
-## 実装ノート (後続モデル向け)
-
-- 6 doc は独立執筆可能 — 1 doc = 1 subagent の並列 fan-out が効率的 (docs 系は Sonnet 既定)。
-- 活性化時 kind 昇格は add-design が正 (§6 手順)。
-- 記述の正本は src 現物 (architecture §3.1 は要約) — 必ず実装を読んでから書く。
+- [x] 4 L6 docs が `status: confirmed` と L7 pair artifact を持つ。
+- [x] 4 L6 docs が既存 L6 design plan を owner として参照する。
+- [x] 4 L6 docs が signature / pre / post / invariant / U-* oracle を持つ。
+- [x] L7 unit-test design が 4 docs の filename を参照する。

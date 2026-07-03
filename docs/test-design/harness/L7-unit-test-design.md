@@ -22,6 +22,17 @@ This L7 document remains the single pair artifact for L6 and must carry a U-* or
 
 The additional SQLite/reference-feedback/search/drive-log/skill-metric requirements are covered through `docs/design/harness/L6-function-design/fr-unit-coverage.md` and the U-FR-L1-* rows added at the end of this document. This is coverage of the function-design contract, not proof that every L7 implementation test already exists.
 
+## 2026-07-03 L6 module-design crosswalk addendum
+
+The L6 pair scope also includes module contract backfill docs added after the original G6 freeze. The following docs are paired to this test-design artifact and carry unit oracle families here:
+
+| L6 doc | oracle family | primary test surface |
+|---|---|---|
+| `docs/design/harness/L6-function-design/context.md` | U-CONTEXT-001..005 | `tests/doc-router.test.ts` or equivalent context router unit tests |
+| `docs/design/harness/L6-function-design/graph.md` | U-GRAPH-001..005 | `tests/graph-loader.test.ts`, `tests/relation-graph*.test.ts` |
+| `docs/design/harness/L6-function-design/memory.md` | U-MEMORY-001..005 | `tests/memory-*.test.ts`, `tests/projection-writer.test.ts` |
+| `docs/design/harness/L6-function-design/secret.md` | U-SECRET-001..005 | `tests/secret.test.ts` or memory secret fail-close tests |
+
 # UT-TDD Agent Harness — L7 単体テスト設計 (④ / U-*)
 
 > **layer (作成層 = V-pair key)**: L6 (機能設計) / **executed_at_layer (実施層)**: L7 (単体テスト — 実装スプリント内で TDD Red 先行) / **artifact**: ④ テスト設計 (V-model 右、② L6 機能設計 と対)
