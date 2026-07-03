@@ -29,6 +29,8 @@ dependencies:
     - .ut-tdd/audit/A-178-control-layer-gap-audit-2026-07-02.md
     - src/runtime/work-guard.ts
     - src/setup/branch-protection.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-259 (impl): hybrid git 規律の機械化

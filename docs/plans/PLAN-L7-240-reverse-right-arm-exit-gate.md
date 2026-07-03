@@ -27,6 +27,8 @@ dependencies:
     - .ut-tdd/audit/A-173-drive-model-coverage-audit-2026-07-02.md
     - docs/process/modes/reverse.md
     - src/workflow/contracts-policy.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-240 (impl): Reverse R4 exit の右腕強制

@@ -24,6 +24,8 @@ dependencies:
   references:
     - .ut-tdd/audit/A-174-forward-design-test-pair-audit-2026-07-02.md
     - src/schema/index.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-245 (impl): 設計 doc frontmatter sub_doc の schema 整合

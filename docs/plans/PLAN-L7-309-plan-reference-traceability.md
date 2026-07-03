@@ -1,13 +1,14 @@
 ---
 plan_id: PLAN-L7-309-plan-reference-traceability
-title: "PLAN-L7-309 (impl): PLAN 参照の追跡可能性 — debt 台帳リンク back-fill + lint 誘導 + 行番号 stale 検出"
-kind: impl
+title: "PLAN-L7-309 (refactor): PLAN 参照の追跡可能性 — debt 32 本への台帳リンク back-fill (L7-312/314 の残スライス)"
+kind: refactor
 layer: L7
 drive: be
-status: draft
-version_target: v2
-route_signal: version_deferral
-route_mode: version-up
+status: confirmed
+route_signal: code_smell
+route_mode: refactor
+backprop_decision: not_required
+backprop_decision_reason: "debt 32 本の dependencies.references に台帳 doc (route-mode-kind-debt-audit) と PLAN-L7-263 を機械追記するのみ。本文・スコープ・DoD・公開 contract・上位設計の意味は不変 (git diff で references 2 行 ×32 のみを保証)。lint 誘導と行番号 stale 検出は L7-312/314 で Codex が landed 済につき本 PLAN の対象外。"
 created: 2026-07-03
 updated: 2026-07-03
 owner: PM / PO
@@ -32,15 +33,35 @@ dependencies:
     - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
     - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
     - docs/plans/PLAN-L7-312-plan-reference-freshness-analyzer.md
+review_evidence:
+  - reviewer: claude-subagent
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-03T13:21:08+09:00"
+    tests_green_at: "2026-07-03T13:21:08+09:00"
+    verdict: approve
+    scope: "debt 32 本 (ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS 正本一致) の references に台帳 doc + PLAN-L7-263 を機械追記。git diff は references 2 行 ×32 = 64 挿入のみ、本文・スコープ・DoD 変更ゼロを oracle 確認。単一 runtime のため intra_runtime_subagent 証跡 (concept §2.1.2.1 fallback)。"
+    worker_model: claude-opus-4-8
+    reviewer_model: claude-intra-runtime
+    green_commands:
+      - kind: lint
+        command: "bun src/cli.ts plan lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-03T13:21:08+09:00"
+        evidence_path: docs/plans/PLAN-L7-232-sync-pack-clean-tree-guard.md
+        output_digest: "sha256:08294923c02bcbe23930745f358d836b157a2dca1fdc860adbc580e284e717e5"
 ---
 
 # PLAN-L7-309 (impl): PLAN 参照の追跡可能性
 
 ## Status
 
-**version-up parked (v2)**。A-181 GR-4/GR-5。v2 起票群の中で最小侵襲・最速回収 — wave 1 先頭を推奨。
+**confirmed / landed (2026-07-03)**。PO /goal で version-up parked から活性化し完遂。A-181 GR-4/GR-5。活性化型は先例 (Codex L7-312/314) に倣い version-up→refactor (code_smell) — 振る舞い不変の doc back-fill のため add-feature 昇格・Reverse pairing は不要 (backprop_decision=not_required)。
 
-**スコープ縮小 (2026-07-03 同日、2 段階)**: Codex が PLAN-L7-312-plan-reference-freshness-analyzer (confirmed) で lint detail の台帳誘導 + `analyzePlanReferenceFreshness` 基盤を、続けて PLAN-L7-314-plan-reference-freshness-advisory で doctor advisory 配線を実装済み。本 PLAN の残スライスは **(a) debt 32 本への references back-fill のみ** (両 PLAN が明示的に非対象とした唯一の項目)。
+**スコープ縮小 (2026-07-03 同日、2 段階)**: Codex が PLAN-L7-312-plan-reference-freshness-analyzer (confirmed) で lint detail の台帳誘導 + `analyzePlanReferenceFreshness` 基盤を、続けて PLAN-L7-314-plan-reference-freshness-advisory で doctor advisory 配線を実装済み。本 PLAN の残スライスは **(a) debt 32 本への references back-fill のみ** (両 PLAN が明示的に非対象とした唯一の項目) で、これを完遂した。
+
+**完了証跡**: debt 32 本すべてに台帳 doc + PLAN-L7-263 を追記 (grep 32/32、下記 DoD)。`git diff docs/plans/` = 64 挿入 (32×2)、`git diff | grep '^+'` の一意行は追記 2 参照のみ (本文変更ゼロ)。`bun src/cli.ts plan lint` exit 0。
 
 ## 背景 (2026-07-03 粒度監査、orchestrator 裏取り済)
 
@@ -61,8 +82,8 @@ dependencies:
 
 ## DoD
 
-- [ ] debt 32 本すべての references に台帳 doc + PLAN-L7-263 が含まれる (grep で全数確認、結果を review_evidence に記録)
-- [ ] back-fill の diff が references 追記行のみである (git diff で確認)
+- [x] debt 32 本すべての references に台帳 doc + PLAN-L7-263 が含まれる (grep で全数確認、結果を review_evidence に記録)
+- [x] back-fill の diff が references 追記行のみである (git diff で確認: `git diff | grep '^+'` の一意行 = 追記 2 参照 ×32 のみ)
 
 ## 実装ノート (後続モデル向け)
 

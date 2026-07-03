@@ -27,6 +27,8 @@ dependencies:
     - .ut-tdd/audit/A-173-drive-model-coverage-audit-2026-07-02.md
     - src/workflow/contracts.ts
     - src/lint/lint-wiring.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-239 (impl): contract 関数の doctor 配線 + lint-wiring 監視境界の拡張

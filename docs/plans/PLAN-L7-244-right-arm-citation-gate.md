@@ -26,6 +26,8 @@ dependencies:
   references:
     - .ut-tdd/audit/A-174-forward-design-test-pair-audit-2026-07-02.md
     - src/lint/oracle-test-trace.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-244 (impl): 右腕 citation gate の被覆拡張

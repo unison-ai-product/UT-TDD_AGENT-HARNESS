@@ -25,6 +25,8 @@ dependencies:
   requires: []
   references:
     - .ut-tdd/audit/A-173-drive-model-coverage-audit-2026-07-02.md
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-242 (impl): mode exit 未強制の残バッチ起票

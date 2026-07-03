@@ -31,6 +31,8 @@ dependencies:
     - .ut-tdd/audit/A-173-drive-model-coverage-audit-2026-07-02.md
     - docs/process/modes/retrofit.md
     - src/cli.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 review_evidence:
   - reviewer: codex-cli
     review_kind: cross_agent

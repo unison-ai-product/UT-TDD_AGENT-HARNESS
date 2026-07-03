@@ -40,6 +40,8 @@ dependencies:
     - src/state-db/skill-projections.ts
     - src/state-db/runtime-projections.ts
     - src/cli.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 review_evidence:
   - reviewer: ut-tdd-tl
     review_kind: intra_runtime_subagent

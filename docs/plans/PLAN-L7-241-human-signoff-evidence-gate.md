@@ -26,6 +26,8 @@ dependencies:
   references:
     - .ut-tdd/audit/A-173-drive-model-coverage-audit-2026-07-02.md
     - src/workflow/routing-contracts.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-241 (impl): 人間サインオフ証拠の PLAN body fail-close 検証

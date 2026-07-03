@@ -26,6 +26,8 @@ dependencies:
   references:
     - .ut-tdd/audit/A-172-pack-comprehensive-review-2026-07-02.md
     - tests/readability.test.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-234 (impl): Pack 同梱 source-only テストの skip ガード化

@@ -30,6 +30,8 @@ dependencies:
     - src/workflow/design-elicitation.ts
     - docs/process/gates.md
     - docs/process/modes/README.md
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-250 (impl): L 単位分岐質問カタログ + harness-native エリシテーション

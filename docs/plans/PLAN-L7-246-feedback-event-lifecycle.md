@@ -27,6 +27,8 @@ dependencies:
     - .ut-tdd/audit/A-176-db-detection-systems-audit-2026-07-02.md
     - src/state-db/feedback-projections.ts
     - src/feedback/surface.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-246 (impl): feedback_events の消化 lifecycle 完結

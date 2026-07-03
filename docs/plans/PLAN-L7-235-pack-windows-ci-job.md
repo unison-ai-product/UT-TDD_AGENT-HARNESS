@@ -24,6 +24,8 @@ dependencies:
   references:
     - .ut-tdd/audit/A-172-pack-comprehensive-review-2026-07-02.md
     - docs/templates/github/common/pack-harness-check.yml
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-235 (impl): Pack CI への windows-latest job 追加

@@ -28,6 +28,8 @@ dependencies:
     - .ut-tdd/audit/A-171-full-release-close-checklist-2026-07-01.md
     - src/doctor/index.ts
     - .ut-tdd/audit/A-178-control-layer-gap-audit-2026-07-02.md
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-249 (impl): 運用チェック項目の自動出力

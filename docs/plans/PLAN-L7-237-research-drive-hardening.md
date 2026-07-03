@@ -27,6 +27,8 @@ dependencies:
     - .ut-tdd/audit/A-156-research-recovery-finding-route-ledger.md
     - src/workflow/routing-contracts.ts
     - src/cli.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-237 (impl): research 第二 exit の機械完結

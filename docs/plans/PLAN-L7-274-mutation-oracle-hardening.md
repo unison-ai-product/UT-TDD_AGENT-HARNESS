@@ -26,6 +26,8 @@ dependencies:
   references:
     - .ut-tdd/audit/A-179-deviation-model-tdd-ddd-gap-audit-2026-07-02.md
     - src/lint/ddd-tdd-rules.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-274 (impl): 変異検証の定常化

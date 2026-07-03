@@ -31,6 +31,8 @@ dependencies:
     - src/team/model-policy.ts
     - src/task/tier-router.ts
     - src/runtime/adapter.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-255 (impl): 正規委譲経路への model/effort routing 注入

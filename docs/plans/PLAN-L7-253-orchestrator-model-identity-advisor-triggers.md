@@ -30,6 +30,8 @@ dependencies:
     - src/team/advisor-policy.ts
     - src/runtime/detect.ts
     - src/cli.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-253 (impl): orchestrator model 自己認識 + advisor 機械発火条件

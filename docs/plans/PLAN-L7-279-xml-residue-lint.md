@@ -28,6 +28,8 @@ dependencies:
     - .ut-tdd/audit/A-178-control-layer-gap-audit-2026-07-02.md
     - docs/plans/PLAN-L6-37-skill-index-category.md
     - src/lint/readability.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-279 (impl): XML 擬似ツール呼び出し残渣の検出 lint

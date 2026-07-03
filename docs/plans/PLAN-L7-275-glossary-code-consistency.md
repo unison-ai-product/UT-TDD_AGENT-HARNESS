@@ -27,6 +27,8 @@ dependencies:
     - .ut-tdd/audit/A-179-deviation-model-tdd-ddd-gap-audit-2026-07-02.md
     - .ut-tdd/audit/A-175-architecture-audit-registry-2026-07-02.md
     - src/lint/backfill-pairing.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-275 (impl): コード識別子 ↔ L0 glossary 突合

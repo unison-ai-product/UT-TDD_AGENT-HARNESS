@@ -27,6 +27,8 @@ dependencies:
     - .ut-tdd/audit/A-172-pack-comprehensive-review-2026-07-02.md
     - src/cli.ts
     - src/setup/distribution.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-232 (impl): sync-pack の clean-tree guard と sync commit 規約の機械強制

@@ -30,6 +30,8 @@ dependencies:
     - docs/process/modes/add-feature.md
     - src/lint/gate-confirm.ts
     - src/lint/review-evidence.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-270 (impl): 凍結後の仕様変更サイクル定義

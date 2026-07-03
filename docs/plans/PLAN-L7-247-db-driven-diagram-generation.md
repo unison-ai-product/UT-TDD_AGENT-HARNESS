@@ -29,6 +29,8 @@ dependencies:
     - src/lint/relation-graph.ts
     - src/lint/tool-adapter.ts
     - docs/design/harness/L2-screen/screen-flow.md
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-247 (impl): DB 依存関係からの図面自動生成

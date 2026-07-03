@@ -41,6 +41,8 @@ dependencies:
     - .ut-tdd/audit/A-173-drive-model-coverage-audit-2026-07-02.md
     - src/state-db/projection-writer.ts
     - src/lint/drive-db-registration.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 review_evidence:
   - reviewer: ut-tdd-tl
     review_kind: intra_runtime_subagent

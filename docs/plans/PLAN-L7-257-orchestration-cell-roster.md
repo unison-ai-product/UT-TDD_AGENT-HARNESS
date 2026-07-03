@@ -33,6 +33,8 @@ dependencies:
     - src/task/tier-router.ts
     - .ut-tdd/teams/example-review-team.yaml
     - docs/plans/PLAN-L7-255-delegation-model-effort-injection.md
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-257 (impl): orchestration_mode cell→roster 割当 + 標準 team preset

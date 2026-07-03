@@ -33,6 +33,8 @@ dependencies:
     - docs/plans/PLAN-L7-243-mode-first-class-db-projection.md
     - docs/plans/PLAN-L7-249-operational-checklist-output.md
     - docs/plans/PLAN-L7-250-layer-question-catalog.md
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-251 (impl): 現在観測からの進め方選択 (合成 next 層)

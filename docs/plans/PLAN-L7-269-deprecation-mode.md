@@ -30,6 +30,8 @@ dependencies:
     - docs/process/modes/README.md
     - src/schema/route-map.ts
     - src/lint/forward-convergence.ts
+    - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
+    - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
 ---
 
 # PLAN-L7-269 (add-impl): 廃止駆動モデル (deprecation)
