@@ -31,6 +31,8 @@ dependencies:
     - docs/governance/harness-v2-quality-uplift-strategy.md
     - docs/design/harness/L4-basic-design/architecture.md
     - docs/plans/PLAN-L7-302-context-tiering.md
+    - docs/governance/design-doc-implementation-readiness.md
+    - docs/templates/design/L6-function-spec-template.md
 ---
 
 # PLAN-L7-329 (impl): L6 機能設計 doc 不在 6 モジュールの back-fill
@@ -47,7 +49,7 @@ dependencies:
 
 ## スコープ (1 要件: 6 モジュールの L6 機能設計 doc を新規作成する — 宣言された束、per-doc 並列)
 
-各 doc は L6 標準構成 (frontmatter V-pair / IF contract / 失敗モード / doctor surface / carry) で `docs/design/harness/L6-function-design/` へ新規作成:
+各 doc は **S 粒度 7 要素** (正本: `docs/governance/design-doc-implementation-readiness.md` §2、テンプレ: `docs/templates/design/L6-function-spec-template.md` — 2026-07-03 PO 指示で定義系を確立) に従い `docs/design/harness/L6-function-design/` へ新規作成:
 
 | doc | 主内容 | ゲート |
 |---|---|---|
