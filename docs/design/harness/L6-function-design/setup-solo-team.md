@@ -158,3 +158,16 @@ deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `no
 L6 contract marker: `runDoctor(input: DoctorOptions) => LintResult` は consumer setup smoke の unit-test-granularity contract である。DbC pre は `setupSmoke === true` のとき dogfood PLAN/design/test-design を要求しないこと、post は project-local wrapper と Claude/Codex adapter hook の存在・JSON parse・portable command を検査すること、oracle は U-SETUP-014 とする。
 
 `--setup-smoke` は `.ut-tdd/bin/ut-tdd.mjs`、adapter docs/config、Claude/Codex hook JSON、Claude/Codex の `agent-guard` / `work-guard` / session lifecycle、Claude `subagent-stop`、および `$CLAUDE_PROJECT_DIR` / global `.codex` 非依存を fail-close で確認する。`emitSetup` の template 解決は `COMMON_FILES.file.path` から `COMMON_FILES.template` を正本として引き、未登録 adapter file が `common/<basename>` に落ちて空ファイルになることを禁止する。
+
+## §8 update-check advisory 契約 (PLAN-L7-362 back-fill)
+
+L6 contract marker: `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` (`src/setup/update-check.ts`) は導入済み consumer への新 release 通知の unit-test-granularity contract である。DbC pre は無し (**never throws**、全経路 fail-open)、post は `checked=false` のとき `updateAvailable=false` かつ `detail` に fail-open 理由が入ること、oracle は U-UPDCHK-001〜017 とする。
+
+不変条件:
+
+- **advisory であって gate ではない**: remote 不達 / release tag 無し / package.json 欠落のいずれでも throw せず、status / doctor の exit code に影響しない。`UT_TDD_SKIP_UPDATE_CHECK=1` は remote 問い合わせ自体を止める opt-out (CI / テスト決定論用) で、表示は fail-open と同じ沈黙形。
+- **基準は harness checkout であって consumer cwd ではない**: 投影導入では cwd の package.json / origin が利用者自身のプロジェクトを指すため、local version はモジュール位置から解決した harness root の package.json から読む。CLI `--version` も同一ソースから表示する。
+- **remote の正は harness root package.json の `repository.url`** (TL review 所見1): node_modules 配下へベンダリング導入された harness root は自身の `.git` を持たず、remote 名 `origin` は上位 (consumer 自身) の `.git` から誤って解決される。remote 名 `origin` への fallback は harness root 自身が `.git` を持つ場合に限り、どちらも無ければ advisory 沈黙 (consumer の origin を読まない)。`git ls-remote --tags <remote>` は認証不要・timeout 付き。
+- **TTL 24h キャッシュ**: 結果を harness root 側 `.ut-tdd/state/update-check.json` に remote キー付きで保存し、TTL 内かつ remote 一致のときだけ remote へ問い合わせない。壊れた cache は missing 扱い。remote 失敗時はキャッシュを書かず次回再試行する。
+- **表示面は `ut-tdd status` の additive 行**: text は `update:` の 1 行、`--json` は `update` フィールドを additive 付加する (既存フィールド不変、A-138 ITEM-1 / IMP-139 の前例)。CLI 配線は U-UPDCHK-015/016 が固定する。
+- 人間向けの push 通知経路 (GitHub Watch → Custom → Releases) は doc 契約 (setup-guide §4 / README) とし、機構側はこれを代替しない。
