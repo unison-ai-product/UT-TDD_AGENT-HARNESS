@@ -27,7 +27,9 @@
 
 ## §3 品質底上げ wave 構成 (起票候補台帳)
 
-方針: **Codex の hot zone (cli.ts / doctor / lint 抽出リファクタ、L7-325/326 進行中) を避けて外周から着手し、構造リファクタは Codex の抽出完了を活性化トリガーにする**。候補 ID は QU-x (quality uplift)。PLAN 番号は起票時に採番する — 本日 L7-325 衝突 (第 5 組) が発生しており、並行起票の番号予約は L7-256(d) 一意性 gate の landing まで PO 承認下で行う (§4)。
+方針: **Codex の hot zone (cli.ts / doctor / lint 抽出リファクタ、L7-325/326 進行中) を避けて外周から着手し、構造リファクタは Codex の抽出完了を活性化トリガーにする**。候補 ID は QU-x (quality uplift)。
+
+**起票済み (PO 指示 2026-07-03「アップデートでプラン化」)**: QU-1〜15 = **PLAN-L7-328〜342** (route_mode=version-up, version_target=v2, draft)。対応: QU-1→328 / QU-2→329 / QU-3→330 / QU-4→331 / QU-5→332 / QU-6→333 / QU-7→334 / QU-8→335 / QU-9→336 / QU-10→337 / QU-11→338 / QU-12→339 / QU-13→340 / QU-14→341 / QU-15→342。なお **CX-2 (doctor --json) は Codex が PLAN-L7-327 で当日実装中**のため L7-331 のスコープから除外済み。**QU-6 (L7-333) は PO 指摘 (2026-07-03 追突リスク確認) により wave Q1 から「Codex 抽出完了トリガー」へ後送**。
 
 ### Wave Q0 — docs のみ・即着手可 (コード無変更、Codex と衝突ゼロ)
 
@@ -71,16 +73,17 @@
 - **QU-11 と L7-274 の統合可否**: 既存 draft との重複起票を避ける統合判断
 - **QU-13 と Codex CLI 抽出の分担**: hot zone の主担当は Codex が自然 — Claude 側は起票のみで実装は Codex routing が候補
 
-## §4 起票運用の注記 (なぜ本監査は即ファイル化しないか)
+## §4 起票運用の記録
 
-A-181 時は起票 21 本を即日ファイル化したが、**本日 PLAN-L7-325 の番号衝突 (第 5 組) が実発生**しており、Codex が現在も新番号 (L7-326+) を消費しながら並行作業中。番号一意性 fail-close (L7-256 scope d) が未 landing の状態で 15 本並行起票するのは衝突再生産になる。よって本監査は**候補台帳 (QU-1〜15) を正本として提示し、PO の着手順決定後に、その時点の最新番号で順次起票する** — これは scope-integrity taxonomy の「宣言された延期 (出口条件付き)」であり、出口 = PO 決定 or L7-256(d) landing の早い方。
+初版 (2026-07-03 監査直後) は L7-325 番号衝突 (第 5 組) の直後だったため「候補台帳提示 → PO 決定後に採番」の宣言された延期を取った。同日 PO 指示「アップデートでプラン化」により延期の出口条件が成立し、**L7-328〜342 の 15 本を version-up (v2) parked として起票済み** (採番は Codex の L7-327 消費を確認した上で実施 — 衝突なし)。
 
-起票時の型 (route_mode=version-up, version_target=v2 は使わない — 本戦略は運用改善でなく品質是正なので、修正駆動の既定に従う):
+活性化時の kind 昇格の目安 (§6 手順、各 PLAN 実装ノートに個別記載):
 
-- QU-1/2/3 (docs) = add-design or reverse back-fill (KIND ルールどおり)
-- QU-4〜7 (小粒コード) = refactor (behavior-invariant) or add-impl (挙動追加分)
-- QU-8〜11 (gate 新設) = add-design + add-impl 対 (Reverse pairing 必須)
-- QU-12〜15 (構造) = refactor + regression fence
+- L7-328/330 (docs back-fill) = reverse back-fill 型
+- L7-329 (L6 設計 6 本) = add-design (guardrail/github は PO 先行レビュー)
+- L7-331/334 (小粒) = impl のまま or add-impl 昇格
+- L7-335〜338 (gate 新設) = add-design + add-impl 対 (Reverse pairing 必須)
+- L7-332/333/339〜341 (リファクタ) = refactor (route_signal=code_smell、Codex 先例 L7-312/314 型)
 
 ## §5 着手順の推奨 (PO への提案)
 
