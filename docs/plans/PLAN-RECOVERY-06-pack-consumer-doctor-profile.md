@@ -35,8 +35,8 @@ dependencies:
 review_evidence:
   - reviewer: claude-subagent
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-03T18:00:00+09:00"
-    tests_green_at: "2026-07-03T18:01:00+09:00"
+    reviewed_at: "2026-07-03T18:05:00+09:00"
+    tests_green_at: "2026-07-03T18:02:00+09:00"
     verdict: note
     scope: "案 A slice (C-1 生成 CI --setup-smoke / C-2 wrapper repo-local 解決 + hook 配線単一定義源 / B 項目 v1.1 allowlist 除外) の 5 軸レビュー。Critical 0、Important 1 (Codex 側 wrapper blockOnFailure negative test 欠落 → U-CXHOOK-002e で反映)、Minor 4 (HookId 型化・wrapper 相互 prefix 構造テスト・README 注記は反映、wrapper 部分存在 unit test は E2E 被覆ありのため skip 記録)。guard 弱体化なし (blockOnFailure/forbidden-path 両形式で維持) を確認。"
     worker_model: claude-fable-5
