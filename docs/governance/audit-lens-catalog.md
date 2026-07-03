@@ -28,6 +28,7 @@
 | LENS-DE | 検出器の実効性 | 検出器は実際に発火しているか。発火記録は実行由来か投影由来か | A-176/A-178/A-180 |
 | LENS-GG | 番人の番人 | gate/lint 自身の免除リスト・scope 限定・fail-open は健全か | A-175/A-178 |
 | LENS-UX | UI/UX 検証態勢 | 画面系の検証観点 (操作必須項目・ユーザビリティ・要求降下) は実装フェーズに耐える厚みがあるか | A-181 (PO 指摘 2026-07-03) |
+| LENS-RW | 生化 (raw-OS 純度) | Pack = 自己適用を外した生の OS は、自分史なしで起動し・自己適用の混入なしに機能するか | A-172 + PO 指摘 2026-07-03 |
 
 レンズは独立 — 3〜4 本を並列 fan-out するのが標準 (1 subagent 1 レンズ、混ぜない)。全域監査は A-175 §1 の 18 領域台帳を先に見て未監査領域を選ぶ。
 
@@ -214,6 +215,37 @@ SELECT model, role, COUNT(*) FROM model_runs WHERE role LIKE '%fe%' OR model LIK
 > 任務: 中央 UI ({{現段階 (例: mock 段階、L10 pair-freeze 前)}}) の UI/UX 検証態勢を監査せよ。「実装が無いから検証も無い」を許容せず、**実装フェーズ進入時に検証が追いつく態勢か**を測る。
 > 手順: (1) UXV ケース数と観点の分類 (heuristics 由来 / 業務フロー由来 / 場当たり) (2) 画面 spec 3-5 本を精読し操作必須項目 (空状態/エラー/ローディング/取消/権限/キーボード/フィードバック) の定義率を表にする (3) usability 系要求の L1→画面 AC 降下を trace (4) fe-design/fe-a11y の発火実績。
 > 出力 (日本語 markdown): §1 実測表 §2 所見 (ID: UX-1..、抜け観点 / 実装時に何が起きるか / 是正方向) §3 既存 PLAN 重複判定。
+
+## §8c LENS-RW: 生化 (raw-OS 純度)
+
+**解釈観点**: source repo は「ハーネスが自分自身を開発する場」であり、成果物には**OS 本体**と**自己適用の歴史** (481 本の PLAN、A-17x 監査、harness.db の自分史、self-repo 前提の閾値) が混在する。Pack はそこから自己適用を外した**生の OS** — 消費者は自分史ゼロ・PLAN 0 本・空 DB から起動する。生化の監査は 4 面で問う:
+
+1. **資産の三分類**: 全資産 (gate / lint / doc / skill / schema / CLI / hook) を「OS 本体 (Pack に載る)」「自己適用専用 (source に残る)」「**混入** (OS 経路に自己適用の前提が漏れている = 欠陥)」に分類する。混入の典型: OS の doc/skill が self-repo の PLAN ID・A-17x・`.ut-tdd/audit/` の自分史を参照する、gate の閾値/enforcement 日付/免除台帳が self-repo の歴史に校正されている、テストが source の個人パス/実データに依存する。
+2. **day-0 起動性**: 消費者の初期状態 (fresh checkout、空 `.ut-tdd/`、PLAN 0 本) で setup → status → doctor → 最初の PLAN 起票までが green で通るか。「self-repo では常に何かが在る」前提の check は day-0 で誤発火または空回りする (RECOVERY-06 の consumer doctor exit 1 が実例)。
+3. **閾値・基準の出自**: doctor/lint の数値基準 (advisory 閾値、baseline、cutoff 日付) が「self-repo の現状」由来か「OS として普遍」かを区別。self 由来の値が Pack に運ばれると、消費者環境で無意味な green / 誤 red を生む。
+4. **更新経路の非対称**: 消費者は sync-pack の受け手であり、source の進化からの**遅延を検出する機構が無い** (Pack lag)。OS 更新の配布 (source→Pack→consumer) と消費者側 state の互換 (schema migration) が生化の運用面。
+
+**実測プローブ**:
+
+```
+# 混入スキャン (Pack artifact set 内の自己適用参照)
+# sync-pack の対象 set を確認した上で:
+grep -rn "PLAN-L7-\|PLAN-DISCOVERY-\|A-1[0-9][0-9]\|\.ut-tdd/audit" <Pack対象のdocs/skills/> | grep -v <OS本体として正当な参照の除外>
+# 個人パス/実データ依存 (L7-233 と同型)
+grep -ri "Users.\+micro" <Pack対象>
+# day-0 起動性 (隔離環境)
+fresh checkout (or Pack checkout) で: ut-tdd setup → status → doctor を実行し exit code と誤発火を記録
+# 閾値の出自
+grep -rn "ENFORCEMENT_DATE\|閾値\|baseline" src/ を列挙し、各値に「self 由来 / 普遍」の判定列を付ける
+```
+
+**委譲プロンプト雛形**:
+
+> あなたは UT-TDD Agent Harness の監査員。**read-only、Edit/Write 禁止**。{{並行作業の注意}}。
+> 任務: Pack (自己適用を外した生の OS) の純度を監査せよ。source repo は自分自身を開発してきた歴史を持つが、消費者は自分史ゼロで起動する。
+> 手順: (1) {{対象資産群}} を OS 本体 / 自己適用専用 / 混入 の三分類で全数仕分けし、混入は参照先 (self PLAN ID / 監査 doc / 個人パス / self 校正閾値) を明記 (2) day-0 初期状態で誤発火または空回りする check を机上で列挙 (可能なら隔離環境で実走) (3) 数値基準の出自 (self 由来 / 普遍) を判定 (4) Pack lag (source からの遅延) の検出機構有無を確認。
+> 重要: 「source で green だから Pack でも green」は成立しない。判定は常に「自分史ゼロの消費者」を主語にせよ。
+> 出力 (日本語 markdown): §1 三分類仕分け表 §2 所見 (ID: RW-1..) §3 既存 PLAN 重複判定 (RECOVERY-06 / L7-232〜236 / L7-266/267/282 / L7-252 との差分を必ず取る)。
 
 ## §9 監査運用プロトコル (fan-out の作法)
 
