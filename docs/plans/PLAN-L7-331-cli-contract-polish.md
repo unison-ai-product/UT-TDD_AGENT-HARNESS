@@ -49,7 +49,7 @@ dependencies:
 
 1. `handover` action に `process.exitCode = r.ok ? 0 : 1` 相当を追加 (runHandover 戻り値の ok 相当フィールドを確認して配線)。
 2. program 初期化直後に `program.showSuggestionAfterError(true)` を追加。
-3. `route eval` に `--json` boolean を追加し `--format json` と同義に (既存 `--format` は後方互換で残す — 廃止は破壊変更につき本 PLAN でやらない)。
+3. ~~`route eval` に `--json` boolean を追加~~ — **Codex が PLAN-L7-343 (commit 2a41cb1) で当日 landed 済みにつき本 PLAN から除外** (CX-6 解消。監査→即日実装の 2 例目)。
 4. guard 系 3 コマンドの description に `exits: 0=pass, 1=error, 2=blocked` を明記。
 5. 各項目に regression test (exit code / suggest 出力 / --json 等価) を追加。
 
@@ -65,7 +65,7 @@ dependencies:
 
 - [ ] `ut-tdd handover` が失敗時に exit 1 を返す (test 固定)
 - [ ] typo コマンドで suggestion が表示される (test 固定)
-- [ ] `route eval --json` が `--format json` と同一出力 (test 固定)
+- [ ] ~~route eval --json~~ (L7-343 で landed 済み — 対象外)
 - [ ] guard 系 help に exit code 契約が表示される
 - [ ] `bun run test` full green + doctor green
 

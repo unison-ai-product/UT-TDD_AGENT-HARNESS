@@ -84,3 +84,12 @@ doc 明文化、注入監査記録) は未着手のため status は draft を�
 - [ ] `ut-tdd codex --role se` が GPT worker lane の model/effort 付き plan を生成する (test 固定)
 - [ ] `task route --execute` の spawn に effort が乗る (test 固定)
 - [ ] 判断側の族分離が注入で破られない (same_provider fail 維持、test 固定)
+
+## 2026-07-03 A-183 追補 (PY-2: codex 分岐の effort argv 非注入)
+
+A-183 (LENS-PY) の裏取りで、`buildAdapterPlan` の codex 分岐が effort を **argv に載せていない**ことを確認した (`src/runtime/adapter.ts:334-343` — codex args = `exec` / `-m <model>` / `-` のみ。claude 分岐のみ `--effort` + env)。effort は plan metadata (`effort:` フィールド) までは貫通するが実行へ届かず、AGENTS.md「GPT/Codex effort defaults to middle」が実行時無効 + telemetry の effort 記録が Codex 側で欠落する (片肺測定)。
+
+本 PLAN のスコープに以下を追加する:
+
+- codex CLI の effort 指定手段 (フラグ / config) の**実機裏取りを先行**し、存在すれば codex argv/config へ注入する。
+- 存在しなければ「codex effort は CLI から制御不能」を AGENTS.md へ意図的宣言として明記し、telemetry には「uncontrolled」を記録する (無宣言の非対称を残さない)。

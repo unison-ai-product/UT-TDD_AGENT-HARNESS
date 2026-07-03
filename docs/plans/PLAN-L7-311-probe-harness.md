@@ -76,3 +76,9 @@ dependencies:
 - guard 系 probe は hook の stdin JSON 契約に依存する — 契約は `.claude/hooks/agent-guard.ts` / `work-guard.ts` の実装から読み取り、probe fixture 側に契約バージョン注記を残す (hook 契約が変わったら probe が error で気付ける)。
 - **Windows 第一級**: hook 実行は bun spawn 経由。spawn 層を触る場合は Windows 実機で必ず実走。
 - probe の追加は「新しい fail-close 機構を作った PLAN が、対応 probe を同時に追加する」を将来の作法にする (本 PLAN の DoD ではなく、活性化後に CLAUDE.md/作法 doc へ 1 行追記を提案)。
+
+## 2026-07-03 A-183 追補 (VD-1: vendor 実 payload の fixture 再捕捉)
+
+A-183 (LENS-VD) 所見 VD-1: 本 PLAN の probe fixture は「hook 実装から読み取った契約」の自己整合性検証であり、**vendor 実体 (Claude Code / codex.exe) が実際に送る payload との突合を含まない**。file_path の構造変更時に work-guard が fail-open (targets=[] → pass) へ倒れる経路が最重シナリオ。
+
+スコープに以下を追加する: probe fixture の契約バージョンは **vendor 実バイナリからの実 payload 捕捉で更新する** (一度捕捉 → 定点再捕捉して diff)。捕捉 fixture の置き場は L7-351 (spawn_agent payload fixture) と共有する。

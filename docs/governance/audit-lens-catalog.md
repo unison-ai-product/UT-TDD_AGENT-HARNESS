@@ -33,6 +33,9 @@
 | LENS-TQ | テスト実質 | テストは欠陥を実際に捕まえるか (oracle 強度 / mutation 耐性 / 実 repo 回帰 / oracle_id トレース) | A-182 |
 | LENS-DQ | 設計現役性 | 設計 doc は実装判断の現役資料か (stale / 未登録モジュール / PLAN→設計 doc 参照) | A-182 |
 | LENS-CX | CLI/API 契約品質 | AI が一級ユーザーの CLI として誤用できない契約か (--json / exit code / フラグ二義性) | A-182 |
+| LENS-PY | ランタイム対称性 | Claude で効く統制・資産は Codex でも効くか (4 値: both / Claude-only / Codex-only / N-A × 意図的/漏れ) | A-183 (PO 指摘 2026-07-03) |
+| LENS-VD | ベンダー surface 前提 | vendor (Claude Code/Codex CLI/bun) の更新で壊れる前提はどこにあり、防御 (contract test / degradation / 無防備) はあるか | A-183 |
+| LENS-LM | 教訓機構化率 | prose 教訓 (ルール doc/戦略 doc/memory) のうち機械強制へ変換済みは何割か。「機械化済み」の自認は実装 Grep で裏取ったか | A-183 |
 
 レンズは独立 — 3〜4 本を並列 fan-out するのが標準 (1 subagent 1 レンズ、混ぜない)。全域監査は A-175 §1 の 18 領域台帳を先に見て未監査領域を選ぶ。
 
@@ -276,6 +279,36 @@ grep -rn "as any\|@ts-ignore" src --include="*.ts" | wc -l        # 型安全
 > 任務: {{レンズ名}} の観点で {{対象}} の実質品質を監査せよ。実測項目: {{上記プローブから選択}}。
 > 既存 PLAN 重複判定: docs/plans/ の {{隣接 PLAN 群}} と突合し「既存カバー」と「未起票 gap」を分離せよ。
 > 出力 (日本語 markdown): §1 実測表 (測定コマンド付き) §2 所見リスト (ID: {{AQ|TQ|DQ|CX}}-1..、現象/実測根拠/影響/既存カバー判定/是正方向) §3 総合判定と底上げ優先順。最終メッセージがそのまま監査記録になる — 完成形で返せ。
+
+## §8e 運用対称・外部前提 3 レンズ: LENS-PY / LENS-VD / LENS-LM (A-183 で新設)
+
+**LENS-PY (ランタイム対称性) — 解釈観点**: 「Claude で効くものは Codex でも効くか」を hook だけでなく**全資産** (guard/subagent/skill/memory/goal/委譲注入/doc 記載) で仕分けする。判定は 4 値 (both-effective / Claude-only / Codex-only / N-A) × 意図/漏れの 2 値。**意図的非対称は doc の宣言痕跡を必ず探す** (N-A 宣言があるものを漏れと誤判定しない)。新機構を作る PLAN は「最初から両 runtime で設計されているか」を見る。
+
+```
+# 強制面の突合
+diff <(jq keys .claude/settings.json の hooks) <(jq keys .codex/hooks.json の hooks)
+# Claude 専用資産の列挙
+ls .claude/agents .claude/agent-memory skills/ && grep -rn "skill\|agent" .codex/
+# 委譲注入の対称性 (argv 実読 — metadata 貫通と argv 到達は別)
+sed -n '/const args = isCodex/,/];/p' src/runtime/adapter.ts
+```
+
+**LENS-VD (ベンダー surface 前提) — 解釈観点**: vendor (Claude Code / codex.exe / bun / GH Actions) の更新で壊れる前提を全数列挙し、防御を 3 値判定 (contract test あり / graceful degradation あり / 無防備)。**定数を定数と突合する自己参照テストは contract test に数えない** (実バイナリ出力との突合のみが防御)。破損時に fail-open へ倒れる経路 (guard の素通り) を最重要とする。実害既往 (service_tier 型) は denylist へ reactive に蓄積する。
+
+```
+grep -n "ARGS\|FLAG" src/runtime/adapter-policy.ts   # ハードコード前提の列挙
+# 各前提: tests/ が実 CLI/--help を叩くか、定数 import で自己参照かを実読で判定
+```
+
+**LENS-LM (教訓機構化率) — 解釈観点**: prose 教訓 (CLAUDE.md 規律 / 戦略 doc はまりどころ / memory) を全数列挙し 4 値判定 (機械強制済み / 部分 / prose のみ / 強制不能=意図的)。**「機械強制済み」は実装ファイルを Grep で確認してから判定** (宣言だけで済まさない — git hooks が非追跡でローカル限定だった実例 = 機械化済み誤認)。優先順は「実害既往回数 × prose のまま」で付ける。変換率 (M/全体) を基線として記録し、次回監査で ratchet する。
+
+```
+grep -c "禁止\|しない\|必須" CLAUDE.md .claude/CLAUDE.md   # 教訓候補の粗列挙
+git ls-files .githooks .git/hooks; git config core.hooksPath  # 「hook がある」の配布実在確認
+git log --oneline | grep -i <教訓語>   # 実害既往回数の実測
+```
+
+委譲プロンプト雛形は §8d と同一骨格 (所見 ID = PY-/VD-/LM-)。CLI/実行系の所見は**実走裏取り必須** (A-183 で PY-1 の leak 実例が transient 誤検出 → 裏取りで補正された前例)。
 
 ## §9 監査運用プロトコル (fan-out の作法)
 

@@ -147,6 +147,12 @@ GR-1 該当。実装エージェントが仕様を「発明」してはならな
 5. `grep -c "status: draft" docs/plans/*.md` で draft 滞留数を確認し、PLAN-L7-307 の aging 出力と突合。
 6. 所見は A-18x 系列で .ut-tdd/audit/ へ、起票は修正駆動 (Recovery/Add-feature/Refactor) または version-up で。既存 PLAN との重複判定を必ず行う (A-181 §2 の「既存カバー」列の作法)。
 
+## §5b A-183 追補 (2026-07-03 後続監査 — 運用対称・外部前提・教訓機構化)
+
+A-183 (`.ut-tdd/audit/A-183-runtime-parity-vendor-lessons-audit-2026-07-03.md`) が本戦略の 4 軸に**運用面の劣化ベクトル 3 種**を追加した: ①ランタイム非対称 (LENS-PY — hook は L7-139 で対称化済み、残差 = effort 注入/doc 転記/実 payload 未検証)、②ベンダー surface drift (LENS-VD — 実害既往 service_tier 型、防御は自己参照テストのみ)、③教訓の prose 滞留 (LENS-LM — 機構化率実測 20%、git hooks 非追跡 = 機械化済み誤認の実例)。
+
+起票: **L7-344〜351** (vendor-contract-doctor / toolchain-pin / redaction-self-trigger / git-hooks-distribution / recoverability / dependency-license / hot-zone-registry / parity-doc-closure) + 既存 L7-255/311 へスコープ追記。wave 帰属の目安: L7-345/347/349 は wave 2 相当 (正確性の持続)、L7-344/348 は wave 3 相当 (経済性/安全)、L7-350/351 は hybrid 運用の随時。最終順序は PO。
+
 ## §6 version-up parked PLAN の活性化手順
 
 1. PO が活性化を判断 (時期と優先順)。
