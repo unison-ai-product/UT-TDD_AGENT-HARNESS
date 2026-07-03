@@ -2,7 +2,7 @@
 name: pmo-tech-news
 description: Tech News Advisor — AI / Dev tools / security / cloud の最新動向を体系的に sweep、週次 watch 想定。Sonnet medium thinking で深さを確保、tl;dr + 影響分析 + UT-TDD 反映案を返す。
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 effort: medium
 memory: project
 maxTurns: 20

@@ -2,7 +2,7 @@
 name: pmo-project-explorer
 description: Project repository explorer for detailed code, docs, config, API, DB, and design-alignment inspection before implementation.
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 effort: medium
 memory: project
 maxTurns: 20

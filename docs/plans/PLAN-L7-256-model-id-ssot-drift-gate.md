@@ -1,27 +1,43 @@
 ---
 plan_id: PLAN-L7-256-model-id-ssot-drift-gate
-title: "PLAN-L7-256 (impl): model ID / allowlist / PLAN 採番の drift 機械検査 + 現 drift 是正"
+title: "PLAN-L7-256 (impl): model ID SSoT drift gate"
 kind: impl
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: code_smell
 route_mode: refactor
+backprop_decision: not_required
+backprop_decision_reason: "既存の model routing / setup adapter template 契約の drift 是正。上位要求の意味変更はなく、MODEL_IDS SSoT と runtime asset 境界の機械オラクルを追加する小 slice。"
 created: 2026-07-02
-updated: 2026-07-02
+updated: 2026-07-03
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
-  - role: po
-    slot_label: "PO - pdm-* agent の opus 世代更新 (4-7→SSoT) の意図確認"
   - role: tl
-    slot_label: "TL - drift lint の検査対象境界 (frontmatter/template/doc/採番) レビュー"
+    slot_label: "TL - model ID drift boundary review"
   - role: se
-    slot_label: "SE - drift lint 実装 + 現 drift 是正"
+    slot_label: "SE - SSoT drift regression and current drift correction"
 generates:
   - artifact_path: docs/plans/PLAN-L7-256-model-id-ssot-drift-gate.md
     artifact_type: markdown_doc
+  - artifact_path: src/team/model-policy.ts
+    artifact_type: source_module
+  - artifact_path: src/team/advisor-policy.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/templates.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/token-tracker.ts
+    artifact_type: source_module
+  - artifact_path: tests/model-id-ssot-drift.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/setup.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/team-model-policy.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/team-run.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
@@ -31,37 +47,81 @@ dependencies:
     - src/runtime/agent-guard-policy.ts
     - src/setup/templates.ts
     - src/lint/rule-drift.ts
+review_evidence:
+  - reviewer: codex
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-03T22:16:00+09:00"
+    tests_green_at: "2026-07-03T22:15:30+09:00"
+    verdict: approve
+    scope: "MODEL_IDS SSoT drift の現 drift 是正。active .claude/agents frontmatter、docs/templates/adapter disk mirror、BUILTIN_GITHUB_TEMPLATES、team/advisor model routing、token pricing fallback を対象に、旧 model literal へ依存した oracle を MODEL_IDS 参照へ置換。full lint gate 拡張は Deferred に残す。"
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\model-id-ssot-drift.test.ts tests\\setup.test.ts tests\\team-model-policy.test.ts tests\\team-run.test.ts tests\\task-classify.test.ts tests\\token-tracker.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-03T22:12:15+09:00"
+        evidence_path: tests/model-id-ssot-drift.test.ts
+        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-03T22:12:38+09:00"
+        evidence_path: src/team/model-policy.ts
+        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-03T22:12:19+09:00"
+        evidence_path: src/setup/templates.ts
+        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
 ---
 
-# PLAN-L7-256 (impl): model ID / allowlist / PLAN 採番の drift 機械検査
+# PLAN-L7-256: model ID SSoT drift gate
 
-## Status
+## 背景
 
-draft 起票 (A-177 F-5/F-9。SSoT を謳う MODEL_IDS の検査境界が狭く、frontmatter/template/doc が drift している)。
+A-177 F-5/F-9 で、`MODEL_IDS` を正本としているにもかかわらず、runtime agent frontmatter、setup adapter template、テスト期待値が旧 model ID を個別保持して drift していることが分かった。代表例は次の通り。
 
-## 現 drift (2026-07-02 実測、裏取り済)
+- `.claude/agents/pdm-*` が `claude-opus-4-7` のまま、`MODEL_IDS.claude.opus` は `claude-opus-4-8`。
+- setup adapter template が `claude-sonnet-4-6` / `claude-haiku-4-5-20251001` / `claude-opus-4-7` を直書き。
+- team/model policy tests が旧 Sonnet literal を oracle にしており、SSoT 更新を退行扱いする。
 
-1. `.claude/agents/pdm-{tech,marketing}-innovation.md:5` / `pdm-innovation-manager.md:5` = `claude-opus-4-7`、`src/setup/templates.ts:35,40,45` も opus-4-7 — SSoT `src/team/model-policy.ts:15` = `claude-opus-4-8` と世代ずれ。
-2. haiku 系 frontmatter `claude-haiku-4-5-20251001` vs SSoT `claude-haiku-4-5` (family 一致で guard 通過するが ID 非同一)。
-3. `.claude/CLAUDE.md` Subagent Guard allowlist 列挙 (14 件) がコード正本 `src/runtime/agent-guard-policy.ts:2-22` (19 件) に対し be-api / be-logic / db-schema / devops-deploy / refactor-scout の 5 件記載漏れ。rule-drift は marker 節のみ検査で allowlist 対象外。
-4. PLAN 採番の数値 prefix 一意性が無検査 — hybrid 並行起票で `PLAN-L7-250-*` が 2 本併存 (plan_id 全体は unique で lint green)。
+## 今回の切り出し
 
-## スコープ
+過剰リファクタリングを避け、今回の slice は **現 drift 是正 + 再発防止 regression** に限定する。
 
-1. **drift lint (fail-close)**: (a) `.claude/agents/*.md` frontmatter model ↔ `MODEL_IDS` catalog 照合、(b) `src/setup/templates.ts` の model literal ↔ catalog 照合 (生 literal 排除 = U-MODELID 系の検査対象拡張)、(c) `.claude/CLAUDE.md` allowlist 列挙 ↔ `SUBAGENT_ALLOWLIST` 突合 (rule-drift 拡張)、(d) `docs/plans/` 数値 prefix 一意性 (新規起票時 fail、既存 250 重複は既知例外として台帳登録)。
-2. **現 drift 是正**: pdm-* 3 件 + templates 3 箇所の opus 世代を SSoT 参照へ更新 (4-7 据え置きが意図的なら PO 判断でその旨を frontmatter 注記)、haiku suffix 正規化、allowlist doc 5 件追記。
-3. 是正は behavior-invariant を test で確認 (agent-guard family 判定が変わらないこと)。
+- `src/team/model-policy.ts`: `MODEL_IDS.claude.sonnet` を `claude-sonnet-5` に更新。
+- `src/team/advisor-policy.ts`: 旧世代 Sonnet / Haiku current model も family 判定で advisor より下位として扱う。
+- `src/state-db/token-tracker.ts`: `claude-sonnet-5` の pricing fallback を追加。
+- `src/setup/templates.ts`: Claude/GPT model ID を `MODEL_IDS` 参照に寄せ、adapter docs に model routing defaults を明記。
+- `.claude/agents/*.md` と `docs/templates/adapter/**`: 旧 model ID を現 SSoT に同期。
+- `tests/model-id-ssot-drift.test.ts`: real repo agent frontmatter と disk template mirror が `MODEL_IDS` / built-in template と drift しないことを固定。
+- 既存 team/setup tests の旧 literal oracle を `MODEL_IDS` 参照へ置換。
 
-## Steps
+## Deferred
 
-| Step | 内容 | mode |
-|---|---|---|
-| 1 | 検査境界確定 (TL) + pdm 世代の意図確認 (PO) | 直列 |
-| 2 | drift lint 実装 (a-d) | 直列 |
-| 3 | 現 drift 是正 + regression test | 直列 |
+以下は PLAN-L7-256 の full scope だが、今回の小 slice では未実装として残す。
+
+- `.claude/CLAUDE.md` の allowlist 記載と `SUBAGENT_ALLOWLIST` の機械突合を `rule-drift` に追加。
+- `docs/plans/` の数値 prefix 一意性 gate。
+- `src/setup/templates.ts` 以外の全 model literal を fail-close する lint rule。
 
 ## DoD
 
-- [ ] MODEL_IDS 外の model literal が agents/templates に混入すると lint fail (test 固定)
-- [ ] allowlist doc↔コード乖離が fail-close で検出される (test 固定)
-- [ ] 現 drift 4 系統が解消 or 意図注記済み
+- [x] active `.claude/agents/*.md` frontmatter model が `MODEL_IDS.claude` catalog 内だけになる。
+- [x] `docs/templates/adapter/**` の disk mirror が `BUILTIN_GITHUB_TEMPLATES` と一致する。
+- [x] setup adapter agent templates が `MODEL_IDS.claude` catalog 外の model ID を出さない。
+- [x] team/model policy tests が旧 Sonnet literal ではなく `MODEL_IDS` を oracle にする。
+
+## Deferred backlog
+
+- allowlist doc と code allowlist の drift を fail-close で検出する。
+- PLAN numeric prefix drift を fail-close で検出する。
+- `src/setup/templates.ts` 以外の model literal を lint rule で段階的に減らす。

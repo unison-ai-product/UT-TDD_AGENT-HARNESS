@@ -2,7 +2,7 @@
 name: pmo-project-scout
 description: Project Repository Scout — 現在の project (cwd 配下) の code/docs/config を **軽量で目星付け** (初期 sweep + 候補列挙)。Haiku 4.5 low thinking、即応性最大。深掘りは pmo-project-explorer (Sonnet) にエスカレーション。
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: claude-haiku-4-5-20251001
+model: claude-haiku-4-5
 effort: low
 memory: project
 maxTurns: 10

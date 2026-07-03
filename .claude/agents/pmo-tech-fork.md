@@ -2,7 +2,7 @@
 name: pmo-tech-fork
 description: Tech Fork Manager — OSS/plugin/library を GitHub から探索、license/stars/maintenance/活発度を評価、UT-TDD への転用可能性レポート。BE/FE/CLI/DB ライブラリ選定の前段で使う。
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 effort: medium
 memory: project
 maxTurns: 20

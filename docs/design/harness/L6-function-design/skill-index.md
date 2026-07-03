@@ -120,8 +120,11 @@ return min(1, round2(score))
 の実 hook 発火で検証される runtime asset として扱う。各 subagent template は `model:`
 frontmatter を必ず持つ。`pmo-haiku` / `pmo-project-scout` / `refactor-scout` は haiku
 family、`pdm-*` は opus family、それ以外の同梱 subagent は sonnet family とする。
-filesystem template と built-in fallback は同一の model metadata を出力し、L7 unit test
-は代表 3 family (`pmo-sonnet` / `pmo-haiku` / `pdm-tech-innovation`) を固定で確認する。
+filesystem template と built-in fallback は同一の model metadata を出力し、model ID は
+`src/team/model-policy.ts` の `MODEL_IDS` を SSoT とする。runtime `.claude/agents/*.md`、
+`docs/templates/adapter/**` の disk mirror、built-in fallback の drift は L7 unit test
+(`tests/setup.test.ts` U-SETUP-009a / `tests/model-id-ssot-drift.test.ts` U-MODELID-SSOT)
+で固定する。
 
 ## 8. relation graph 投影
 
