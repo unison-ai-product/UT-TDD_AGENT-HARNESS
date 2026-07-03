@@ -22,6 +22,7 @@ import {
   detectProjectScale,
   emitSetup,
   loadTemplates,
+  PACK_SAFE_TEST_SCRIPT,
   type ProjectScale,
   planSetup,
   recommendPhase,
@@ -278,6 +279,16 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
+  });
+
+  // Pack の test:pack は transform の PACK_SAFE_TEST_SCRIPT が正本。source package.json 側の
+  // test:pack 更新 (例: 3dd979f の toolchain-pin 追加) が定数へ伝播し忘れると、次の sync-pack が
+  // Pack 側の既存 script を黙って退行させる (実発生 2026-07-03)。両者の一致を fail-close で固定。
+  it("U-SETUP-017: PACK_SAFE_TEST_SCRIPT stays in sync with source test:pack", () => {
+    const pkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts["test:pack"]).toBe(PACK_SAFE_TEST_SCRIPT);
   });
 
   // PLAN-L7-361: nodeConfirm は blocking readSync のため、stdin が開いたまま無音の非対話環境
