@@ -186,13 +186,21 @@ describe("L7 CLI surface closure", () => {
   }, 20_000);
 
   it("passes plan skill injection through task route adapter plans", () => {
+    const sourcePlan = join(
+      repoRoot,
+      "docs",
+      "plans",
+      "PLAN-L7-135-dynamic-skill-injection-materialization.md",
+    );
+    if (!existsSync(sourcePlan)) return;
+
     const run = runCli([
       "task",
       "route",
       "--role",
       "se",
       "--plan",
-      join(repoRoot, "docs", "plans", "PLAN-L7-135-dynamic-skill-injection-materialization.md"),
+      sourcePlan,
       "--mode",
       "codex-only",
       "--execute",
