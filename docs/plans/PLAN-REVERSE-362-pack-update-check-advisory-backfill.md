@@ -1,6 +1,6 @@
 ---
 plan_id: PLAN-REVERSE-362-pack-update-check-advisory-backfill
-title: "PLAN-REVERSE-362: Pack update-check advisory の設計 back-fill"
+title: "PLAN-REVERSE-362: Pack update-check advisory design backfill"
 kind: reverse
 layer: cross
 workflow_phase: R4
@@ -16,7 +16,7 @@ updated: 2026-07-03
 owner: PM / PO
 agent_slots:
   - role: tl
-    slot_label: "TL - update-check advisory back-fill review"
+    slot_label: "TL - update-check advisory backfill review"
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-362-pack-update-check-advisory-backfill.md
     artifact_type: markdown_doc
@@ -31,7 +31,7 @@ review_evidence:
     reviewed_at: "2026-07-03T21:02:00+09:00"
     tests_green_at: "2026-07-03T20:53:30+09:00"
     verdict: approve
-    scope: "PLAN-L7-362 実装 (update-check advisory) からの L6 setup-solo-team §8 back-fill。TL 初回 request-changes (remote の origin 継承誤読) を受けて §8 の remote 契約を repository.url 正 + hasOwnGit 限定 fallback へ更新し、実装・オラクル (U-UPDCHK-001〜017) と 1:1 一致することを再レビューで確認 (追認 approve)。"
+    scope: "PLAN-L7-362 からの L6 setup-solo-team §8 backfill。remote 正本を override / repository.url とし、origin fallback を harness root .git 保有時だけに限定する TL finding を設計へ反映。CI skip と consumer cwd 実走 oracle を含む U-UPDCHK-001..020 と一致することを確認。"
     worker_model: claude-fable-5
     reviewer_model: claude-sonnet-5
     green_commands:
@@ -45,40 +45,34 @@ review_evidence:
         output_digest: "sha256:0cb6b915706f3ec1d9f8f31c41ae3ff354eb3a07ac4f5adc3d9bbfaaeb5f1b1f"
 ---
 
-# PLAN-REVERSE-362: Pack update-check advisory の設計 back-fill
+# PLAN-REVERSE-362: Pack update-check advisory design backfill
 
 ## R0 Evidence
 
-PLAN-L7-362 が導入済み consumer 向けのバージョンアップ通知 (update-check advisory) を実装した:
-`src/setup/update-check.ts` (fail-open / harness-root 基準 / TTL 24h キャッシュ) と
-`ut-tdd status` の additive 表示 (`update:` 行 + `--json` の `update` フィールド)、
-CLI `--version` の package.json 同期。設計正本 (L6 setup-solo-team.md) にこの契約が
-無い gap を back-fill する。
+`PLAN-L7-362` は導入済み consumer に新 release を知らせる update-check advisory を実装した。実装 surface は `src/setup/update-check.ts`、`ut-tdd status` の `update:` line / JSON `update` field、CLI `--version` の package version 同期である。
 
 ## R1 Observed Gap
 
-- v0.1.4 release (A-184) で tag-pin 更新運用は成立したが、導入済み consumer が新 release の
-  存在を知る機構の設計が L6 に存在しなかった (setup-guide §4 の prose のみ)。
-- CLI `--version` が commander の固定文字列 (0.1.0) で package.json (0.1.4) と乖離しており、
-  version 表示の正本ソースが設計上未定義だった。
+L6 `setup-solo-team.md` は setup / wrapper / setup-smoke の導入契約を持っていたが、release update 通知の契約を持っていなかった。特に consumer cwd と harness checkout root の分離、vendored install で consumer origin を誤読しないこと、fail-open advisory であることが設計に未反映だった。
 
 ## R2 Alignment
 
-setup-solo-team.md の既存契約群 (§6 wrapper 契約 = consumer cwd と harness checkout の分離、
-§7 setup-smoke 契約 = fail-close な導入検査) と同じ軸に整列する。update-check は §7 と対照的に
-**fail-open な advisory** であり、gate へ昇格させないことを不変条件として明記する。
+update-check は setup-smoke と同じ consumer 導入後 surface だが、gate ではなく advisory である。したがって L6 には以下の不変条件を追加する。
+
+- status / doctor を赤にしない fail-open advisory。
+- local version は harness root `package.json`。
+- remote 正本は明示 override、次に harness root `package.json.repository.url`。
+- `origin` fallback は harness root 自身が `.git` を持つ場合のみ。
+- `UT_TDD_SKIP_UPDATE_CHECK=1` と `CI=true` は deterministic execution 用に remote 問い合わせを止める。
+- cache は harness root 側 `.ut-tdd/state/update-check.json` に remote key 付きで保存。
+- text / JSON surface は status への additive 追加。
 
 ## R3 / R4 Outcome
 
-setup-solo-team.md へ **§8 update-check advisory 契約** を追加 (contract marker:
-`checkForUpdate`、oracle U-UPDCHK-001〜017)。不変条件 = advisory 非 gate / harness-root 基準 /
-remote の正 = package.json `repository.url` (origin fallback は自身の `.git` 保有時のみ、
-TL review 所見1) / TTL 24h キャッシュ (remote キー付き) / status additive 表示 /
-GitHub Watch (Releases) は doc 契約として並置。
-forward_routing は gap-only (要件レベルの変更なし。配布運用 (A-184) の物理設計精緻化)。
+`docs/design/harness/L6-function-design/setup-solo-team.md` に §8 update-check advisory 契約を追加した。forward routing は gap-only。上位要求の意味変更はなく、Pack consumer 導入品質の設計精緻化で閉じる。
 
 ## DoD
 
-- [x] L7 実装 (update-check.ts / status 配線 / --version 同期) と L6 §8 の契約が一致する。
-- [x] fail-open 不変条件 (gate 非昇格) が設計正本に載る。
-- [x] harness-root 基準 (consumer cwd 非依存) + remote の正 (repository.url) が設計正本に載る。
+- [x] L7 実装と L6 §8 の契約が一致する。
+- [x] fail-open / non-gate の不変条件が L6 に載る。
+- [x] harness-root 基準、override / repository.url 正本、consumer origin 誤読防止が L6 に載る。
