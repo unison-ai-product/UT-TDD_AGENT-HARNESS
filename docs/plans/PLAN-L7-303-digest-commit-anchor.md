@@ -37,7 +37,19 @@ dependencies:
 
 ## Status
 
-**version-up parked (v2)**。A-181 DV-5。L7-132 (advisory 機構) / L7-194 (opt-in strict へ訂正済) の後継。**L7-194 の claim を errata 扱いにするものではない** — L7-194 は「normal doctor は green 維持 + strict flag は opt-in」への訂正を scope 注記で明示済み。本 PLAN が解くのはその先の構造問題。
+**部分 landed (2026-07-03) / 残 parked (v2)**。A-181 DV-5。L7-132 (advisory 機構) / L7-194 (opt-in strict へ訂正済) の後継。**L7-194 の claim を errata 扱いにするものではない** — L7-194 は「normal doctor は green 維持 + strict flag は opt-in」への訂正を scope 注記で明示済み。本 PLAN が解くのはその先の構造問題。
+
+**landed スライス (PO /goal 2026-07-03)**: schema 拡張 (item 1) + 照合二層化 (item 2) + migrate dry-run 計画器 (item 3 の非破壊部分) + regression test を実装した。活性化型は先例 (L7-312/314) に倣い refactor (code_smell)。**残 parked = item 3-execute (199 件の anchor_commit back-fill) と item 4 (hard ratchet)** — いずれも committed PLAN の frontmatter 改変 (監査境界) と全体 doctor 赤化リスクを伴い PO ゲート。
+
+**dogfood 実証**: 本スライスの anchor 機構を PLAN-L7-309 の review_evidence で実データ検証済 — `anchor_commit: e57f70b...` を付け、`git show e57f70b:docs/plans/PLAN-L7-232-...md` の blob hash が記録 digest と一致 (working tree が今後変わっても永続 green)。anchor 機構が実リポジトリで機能することの証跡。
+
+**migrate dry-run の実リポジトリ結果 (2026-07-03)**: `ut-tdd plan digest-migrate` を全 PLAN に走らせ、**567 green_command を recoverable=562 / suspect=4 / already-anchored=1 に分類**した。A-181 が「199 件不一致」と数えた中身は、大半 (562) が「健全な進化による正当な stale = 履歴に一致 blob あり → anchor 化で永続復旧可能」であり、真に疑わしいのは 4 件のみと判明。**suspect 4 件** (要 A-18x 個別台帳化、PO ゲート):
+- `PLAN-L7-282-pack-direct-source-only-guards` / `tests\projection-writer.test.ts`
+- `PLAN-RECOVERY-07-design-bottomup-backmerge` / `tests\mode-catalog.test.ts`, `src\schema\mode-catalog.ts`, `tests\drive-model-passage.test.ts`
+
+suspect = どの履歴 commit の blob も claimed digest に一致しない = output_digest に「ファイル hash でなくコマンド出力 hash」を入れた等の疑い (本 PLAN 実装中に L7-309 で orchestrator 自身が危うく踏みかけた誤りと同型)。捏造断定でなく「file-hash 意味論では未照合」。是正は個別調査 (item 3-execute の PO ゲート)。
+
+**Windows 第一級の副次修正**: migrate の履歴走査は git pathspec を使うため、evidence_path の backslash (`tests\foo.ts`) を `toGitPath` で forward slash に正規化し、backslash path を誤って suspect 分類しないようにした (`tests/green-command-digest.test.ts` の toGitPath 単体)。
 
 ## 背景 (実測 2026-07-03、構造分析)
 
@@ -64,10 +76,10 @@ dependencies:
 
 ## DoD
 
-- [ ] anchor_commit 付き digest が commit blob と照合され、working tree 変更で不一致にならない (test 固定)
-- [ ] anchor 先の内容と合わない digest (捏造) が fail する (test 固定)
-- [ ] 実リポジトリで mismatch 件数が 0 (doctor 実行の実測値を review_evidence に記録)
-- [ ] mismatch 0 到達後の hard 化で、fake digest 注入 fixture が doctor exit 1 になる (real-repo regression test、L7-194 の test 資産を流用)
+- [x] anchor_commit 付き digest が commit blob と照合され、working tree 変更で不一致にならない (test 固定 — `tests/green-command-digest.test.ts` anchor 照合、実 repo で L7-309 dogfood)
+- [x] anchor 先の内容と合わない digest (捏造) が fail する (test 固定 — anchor-digest-mismatch。unverifiable は非 fail も test 固定)
+- [ ] 実リポジトリで mismatch 件数が 0 (doctor 実行の実測値を review_evidence に記録) — **parked (199 件移行 = item 3-execute の PO ゲート)**
+- [ ] mismatch 0 到達後の hard 化で、fake digest 注入 fixture が doctor exit 1 になる (real-repo regression test、L7-194 の test 資産を流用) — **parked (item 4 hard ratchet、mismatch 0 到達が前提)**
 
 ## 実装ノート (後続モデル向け)
 

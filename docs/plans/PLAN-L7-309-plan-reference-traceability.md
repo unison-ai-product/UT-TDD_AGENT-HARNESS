@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-07-03T13:21:08+09:00"
         evidence_path: docs/plans/PLAN-L7-232-sync-pack-clean-tree-guard.md
         output_digest: "sha256:08294923c02bcbe23930745f358d836b157a2dca1fdc860adbc580e284e717e5"
+        anchor_commit: "e57f70bf878269168e8ba9841c34b289a6ea4641"
 ---
 
 # PLAN-L7-309 (impl): PLAN 参照の追跡可能性
