@@ -280,6 +280,50 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     }
   });
 
+  // PLAN-L7-361: nodeConfirm は blocking readSync のため、stdin が開いたまま無音の非対話環境
+  // (CI runner / tool shell) で emitSetup の上書き確認が無限待ちになった。非対話では confirm を
+  // 呼ばず既存保護 (skip) が invariant。
+  it("U-SETUP-016: non-interactive emitSetup keeps existing files without calling confirm", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-setup-nonint-"));
+    try {
+      const templates = loadTemplates(repo);
+      const wrapperPath = join("/repo", ".ut-tdd", "bin", "ut-tdd.mjs");
+      const deps = mockDeps({
+        templates,
+        isInteractive: false,
+        confirm: () => {
+          throw new Error("confirm must not be called in non-interactive mode");
+        },
+      });
+      deps.files.set(wrapperPath, "PREEXISTING-CONSUMER-CONTENT");
+
+      const plan = planSetup("0-A", { dryRun: false });
+      const written = emitSetup(plan, templates, deps);
+
+      expect(deps.files.get(wrapperPath)).toBe("PREEXISTING-CONSUMER-CONTENT");
+      expect(written).not.toContain(join(".ut-tdd", "bin", "ut-tdd.mjs"));
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  it("U-SETUP-016b: interactive confirm=yes still overwrites existing files", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-setup-int-"));
+    try {
+      const templates = loadTemplates(repo);
+      const wrapperPath = join("/repo", ".ut-tdd", "bin", "ut-tdd.mjs");
+      const deps = mockDeps({ templates, isInteractive: true, confirm: () => true });
+      deps.files.set(wrapperPath, "PREEXISTING-CONSUMER-CONTENT");
+
+      const written = emitSetup(planSetup("0-A", { dryRun: false }), templates, deps);
+
+      expect(deps.files.get(wrapperPath)).not.toBe("PREEXISTING-CONSUMER-CONTENT");
+      expect(written).toContain(join(".ut-tdd", "bin", "ut-tdd.mjs"));
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
   it("U-SETUP-004b2: source docs template keeps consumer harness-check guard strength", () => {
     const templates = loadTemplates(process.cwd());
     const workflow = templates["common/harness-check.yml"];
