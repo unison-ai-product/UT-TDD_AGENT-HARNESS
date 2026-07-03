@@ -4,7 +4,7 @@ title: "PLAN-RECOVERY-06 (recovery): Pack consumer 実動線の doctor self-appl
 kind: recovery
 layer: cross
 drive: be
-status: draft
+status: confirmed
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-02
