@@ -1,13 +1,14 @@
 ---
 plan_id: PLAN-L7-330-test-design-l6-crosswalk
 title: "PLAN-L7-330 (impl): L6 設計 21 本 ↔ L7 unit-test-design の対応表追記 (テスト設計粒度の可視化)"
-kind: impl
+kind: refactor
 layer: L7
 drive: be
 status: draft
-version_target: v2
-route_signal: version_deferral
-route_mode: version-up
+route_signal: code_smell
+route_mode: refactor
+backprop_decision: not_required
+backprop_decision_reason: "L7-unit-test-design.md へ L6↔単体テスト対応表を 1 節追記するのみ。既存 test 設計の意味は不変、可視化のみ。"
 created: 2026-07-03
 updated: 2026-07-03
 owner: PM / PO

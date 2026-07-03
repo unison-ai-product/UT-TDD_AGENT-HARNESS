@@ -749,3 +749,35 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-SCREEN-005 | `classifyTelemetryProvenance(row) => TelemetryProvenance` | Runtime claims are rejected unless runtime source/session fields exist; projection/advisory rows remain labelled. |
 | U-SCREEN-006 | `buildRouteRegistry(screens) => RouteRegistry` | Route registry contains exactly 15 screen ids and no duplicate route paths. |
 | U-SETUP-014 | `runDoctor({ setupSmoke: true })` / `tests/doctor.test.ts` / `tests/distribution-acceptance.test.ts` | fresh consumer では dogfood PLAN/design/test-design を要求せず、project-local wrapper と Claude/Codex adapter hook だけを検査する。`.ut-tdd/bin/ut-tdd.mjs` と adapter docs/config が存在し、`.claude/settings.json` と `.codex/hooks.json` が JSON parse 可能で、Claude/Codex の両方に `agent-guard` / `work-guard` / `session start` / `post-tool-use` / `session summary` が wrapper 経由で配線され、Claude には `subagent-stop` が配線される。hook command は `$CLAUDE_PROJECT_DIR` と global `.codex` に依存しない。 |
+
+## §5 L6 設計 ↔ 単体テスト設計 対応表 (PLAN-L7-330、可視化のみ、2026-07-03)
+
+> L6 設計 21 本 (`docs/design/harness/L6-function-design/*.md`) と実 `tests/` 配下の対応関係を機械的 Grep (U-ID / 関数名) で突合した棚卸し。§2 量閉じ一覧の集合的宣言 (孤児 0) を doc 単位の行に展開し、テスト設計粒度を可視化する。個別 doc 化はしない最小対処 (本 PLAN スコープ)。
+
+| L6 doc | 機能 | 対応 test ファイル | 判定 |
+|---|---|---|---|
+| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) | tests/plan-lint.test.ts, tests/vmodel-pair.test.ts, tests/agent-guard.test.ts, tests/mode-catalog.test.ts, tests/frontmatter.test.ts (U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し) | covered |
+| edge-case.md | `@edge-normal/error/boundary/throws` 4 観点 | 各 lint test の `@edge-*` 契約実装先に分散 (専用ファイル無し) | covered |
+| session-log.md | resolveActivePlan/recordEvent/compressPlanDigest/onStop/onSessionStart | tests/session-log.test.ts | covered |
+| forced-stop-feedback.md | detectDanglingTurn/recordForcedStop/classifyFeedback/recordFeedback/scanDanglingStops | tests/forced-stop.test.ts | covered |
+| setup-solo-team.md | detectProjectScale/recommendPhase/planSetup/emitSetup/recordSetupState/applyBranchProtection/runSetup | tests/setup.test.ts | covered |
+| handover-mechanism.md | resolveHandoverScope/buildPointer/scaffoldFromDigests/renderHandoverScaffold/handoverStale/runHandover | tests/handover.test.ts | covered |
+| agent-slots.md | loadSlots/fireSlot/releaseSlot/releaseOldestGuardSlot/sweepStaleGuardSlots/peakParallel/exceedsParallelLimit | tests/agent-slots.test.ts | covered |
+| governance-enforcement.md | scrum-reverse (pocOrphans/badReverseRefs) + propagation (signal 語彙一致) | tests/scrum-reverse.test.ts, tests/propagation.test.ts | covered |
+| backfill-pairing.md | parseRequires/parseGlossaryTerms/analyzeBackfill/loadBackfillDocs/checkBackfill | tests/backfill-pairing.test.ts | covered |
+| vmodel-pair-freeze.md | loadPairDocs/analyzePairFreeze (§1-§3) + analyzeVerificationGroups (§7) | tests/vmodel-pair.test.ts | covered |
+| review-evidence.md | hasReviewEvidence/parseReviewPlan/analyzeReviewEvidence/loadReviewPlans | tests/review-evidence.test.ts | covered |
+| review-evidence-stale.md | draft/降格 PLAN の stale approval 検出 (U-REVIEW-007/008) | tests/review-evidence.test.ts | covered |
+| cross-review-enforcement.md | extractReviewEntries/crossReviewViolations (U-XREVIEW) | tests/review-evidence.test.ts | covered |
+| test-before-review.md | tests_green_at ≤ reviewed_at 順序検証 (U-TORDER) | tests/review-evidence.test.ts | covered |
+| module-drift.md | parseListedModules/analyzeModuleDrift + asset-drift/change-impact/coding-rules/ddd-tdd-rules addendum | tests/module-drift.test.ts, tests/asset-drift.test.ts, tests/change-impact.test.ts, tests/coding-rules.test.ts, tests/ddd-tdd-rules.test.ts | covered |
+| descent-obligation.md | loadDescentAdjacency/generateObligations/analyzeDescentObligations | tests/descent-obligation.test.ts | covered |
+| skill-index.md | analyzeSkillAssignments/scoreSkill/scanSkillCatalog + skill new scaffolder | tests/skill-assignment.test.ts, tests/skill-scaffold.test.ts, tests/skill-recommend.test.ts | covered |
+| fr-unit-coverage.md | U-FR-L1-* FR registry ↔ L6 spec ↔ U-* oracle 被覆 | tests/l6-fr-coverage.test.ts, tests/fr-registry-audit.test.ts, tests/fr-roadmap-coverage.test.ts | covered |
+| gate-confirm.md | judgment gate と confirm 結合 (U-GCONF) | tests/gate-confirm.test.ts | covered |
+| plan-schedule-lint.md | 工程表 schedule 最小強制 (U-PLANSCH) | tests/plan-lint.test.ts | covered |
+| screen-spec.md | parseScreenQuery/validateScreenQuery/handleScreenEvent/loadScreenViewModel/buildRouteRegistry (U-SCREEN-001〜006) | tests/screen-impl-pair-freeze.test.ts は pair-freeze gate のみを被覆し、上記個別関数 (parseScreenQuery 等) を直接 Grep しても実 test 未検出 | **gap** |
+
+**gap 件数: 1 / 21** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
+
+L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。
