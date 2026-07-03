@@ -8,7 +8,8 @@
             "type": "command",
             "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts\"",
             "timeout": 5,
-            "statusMessage": "subagent allowlist + explicit-model + opus-override guard (env-independent TS)"
+            "statusMessage": "subagent allowlist + explicit-model + opus-override guard (env-independent TS)",
+            "blockOnFailure": true
           }
         ]
       },
@@ -19,7 +20,8 @@
             "type": "command",
             "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts\"",
             "timeout": 5,
-            "statusMessage": "work guard: block edits to foreign uncommitted files unless explicitly bypassed"
+            "statusMessage": "work guard: block edits to foreign uncommitted files unless explicitly bypassed",
+            "blockOnFailure": true
           }
         ]
       }
@@ -72,12 +74,6 @@
           }
         ]
       }
-    ]
-  },
-  "permissions": {
-    "allow": [
-      "Bash(git add *)",
-      "Bash(git commit -m 'chore\\(hooks\\): move auto-persisted permissions to settings.local.json *)"
     ]
   }
 }
