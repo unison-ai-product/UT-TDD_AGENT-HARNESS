@@ -92,6 +92,8 @@ PO 指摘「テスト戦略は十分だが、発見と観察、検証の手段�
 | OB-3 | **検証**の実走手段が都度発明: 「projection 単独を verified と認めない」原則 (L7-188) はあるが実走の実施手段が常設されておらず、guard/gate/hook を意図的に発火させて確かめる方法が無い。実例: skill 実発火 0 問題は実経路を誰も走らせていなかったことが原因 | A-180 / 2026-06-29 実例 | L7-258 は実運用中の発火証跡 (受動)。能動プローブは無し | **PLAN-L7-311** |
 | OB-4 | **UI/UX 検証態勢の系統的弱さ** (PO 指摘): 実稼働機会がないため画面系の検証観点が痩せたまま — UXV 5 ケース / 15 画面 (1 画面 0.33)、操作必須項目 (空状態/エラー/権限等) の spec 必須欄なし、usability 要求の画面 AC 降下なし、fe-design/fe-a11y の発火実績なし | doctor `g10-ux-workflow` 実測 + screen-impl-pair-freeze (mock 段階) | frontend-design-coverage は doc の存在/§構造のみ (`coverage ≠ substance`) | **PLAN-L7-316** + カタログ LENS-UX 追加 |
 | OB-5 | **エンコーディング検査の即時性の穴** (PO 質問): Write/Edit ツールは UTF-8 固定 + readability gate は fail-close (green: 706 docs / marker 0、本日の新規 19 ファイルも strict デコード検証で ALL CLEAN) だが、shell 経由書き込み (PowerShell 既定 UTF-16) の検出が「次の doctor まで」遅延する | utf8-check 実測 2026-07-03 | readability gate は doctor/CI 時点のみ | **PLAN-L7-317** (PostToolUse 即時検査) |
+| RW-1 | **Pack 生化観点の不在** (PO 指摘): Pack = 自己適用を外した生の OS だが、「自己適用の混入」「自分史ゼロ (day-0) での起動性」「self 校正閾値の出自」「Pack lag (source からの配布遅延)」を横断検証する観点・機構が無い。既存起票 (RECOVERY-06 / L7-233 / L7-266/267/282) は個別事例対処で系統化されていない。本監査の実測 (doctor 秒数等) もすべて source 側で、Pack consumer 側は未測定 | A-172 起票群の突合 + 配布契約 (sync-pack 手動一方向) の確認 | 個別対処のみ、横断観点なし | **カタログ LENS-RW** 追加 + **PLAN-L7-319** (purity スキャン + day-0 smoke + lag 検出)。v2 の出口 = Pack version-up を戦略 doc 補記 4 に明文化 |
+| CI-1 | **CI 失敗の還流不在が実害化** (PO 指摘): 当該 PR branch の harness-check が 2026-07-03 01:47Z から **7 連続 failure** したが、どのオーケストレータにも surface されず人手指摘で発覚。内訳 = cli-surface ×2 (delegation dry-run JSON 空、後続 commit で回復済) + cited-command-existence ×1 (`codex` コマンド未登録、**現 HEAD でも red** — Codex 進行中の CLI 抽出 L7-284〜286 領域の回帰、担当は当該作業者)。既知 carry (A-175 #14「CI 還流なし」PO 延期) の解除指示 | `gh run list` + run 28635615975 log + ローカル追試 (vitest 2 ファイル) | 無し (gh 手動確認のみ) | **PLAN-L7-320** (ci_runs ingest + SessionStart/status surface)。即効策 = 戦略 doc §4.1 に CI 確認手順を明記済み |
 
 ### 2.6 その他 triage
 
@@ -119,6 +121,10 @@ PO 指摘「テスト戦略は十分だが、発見と観察、検証の手段�
 | PLAN-L7-315-scope-integrity-gate | 回避台帳 B4/A3 | スコープ無宣言縮小の fail-close + waiver 正規化 (PO 指示 2026-07-03。当初 314、Codex 先着で 315 へ改番 — 同日 2 度目の GR-3 実例) |
 | PLAN-L7-316-ux-verification-readiness | OB-4 | UX 検証態勢 (操作必須項目の観点表 + UXV 体系 + fe-design レビュー正規化。L10 pair-freeze 連動で活性化) |
 | PLAN-L7-317-write-encoding-guard | OB-5 | 書き込み直後の UTF-8 検査を PostToolUse hook で即時化 |
+| PLAN-L7-319-raw-os-purity | RW-1 | Pack 生化純度 (混入スキャン + day-0 smoke + Pack lag 検出)。採番 318 は Codex 先着のため 319 |
+| PLAN-L7-320-ci-failure-ingestion | CI-1 | CI 成否の ingest + surface (既知 carry「CI 還流なし」の解除。着手は Codex CLI 抽出完了後) |
+| PLAN-L7-323-handover-active-plan-freshness | HV-1: active_plan が実運用で更新されず stale 値を信頼できる顔で表示 (実測: CURRENT.json=L7-26 / state=L7-31、当日実作業と無関係。原因 = 更新経路が plan use (未使用) と -m 限定 commit 推定のみ) | stale/unknown 明示 + heredoc commit 自動更新 (321/322 は Codex 先着のため 323) |
+| PLAN-L7-324-memory-compaction-trigger | MEM-1: Claude memory が 60 ファイル / 65KB / index 60 行まで無検出成長 (人手指摘で発覚 — CE-1 の memory 版) | 閾値検出 + SessionStart advisory + 標準手順資産化 (完全自動統合は不採用: memory = PO 指示の正本) |
 
 加えて非 PLAN 成果物 2 本: `docs/governance/audit-lens-catalog.md` (監査ポイント + 解釈観点 + 委譲プロンプト雛形の正本 — PO 指示「システム内に組み込む」の中身側、配線前でも手動運用可) / `docs/governance/scope-integrity-and-evasion-taxonomy.md` (スコープ低下 7 つの瞬間 + 回避の許容/非許容分類 + 仕組化の穴台帳 — PO 指示「資産として残す」の正本)。
 

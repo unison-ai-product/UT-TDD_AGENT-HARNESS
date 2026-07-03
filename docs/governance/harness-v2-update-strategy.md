@@ -25,6 +25,8 @@
 
 補記 3 (PO 指摘 2026-07-03): **UI/UX の検証・観点・デザイン判断は「実際に稼働する機会がない」ため系統的に弱い** (実測: UXV 5 ケース / 15 画面、中央 UI は mock 段階)。監査観点 = カタログ LENS-UX、是正 = PLAN-L7-316 (操作必須項目の観点表 + screen spec 必須欄 + UXV 体系 + fe-design レビュー正規化。活性化は L10 pair-freeze 進入と連動)。
 
+補記 4 (PO 指摘 2026-07-03): **Pack = 自己適用を外した「生の OS」が本当の製品であり、v2 の出口は Pack の version-up である**。source repo は工房、Pack は出荷物 — ここで直したものが Pack に反映されて初めて価値になる。生化 (自己適用の混入なし・自分史ゼロでの起動・self 校正閾値の排除) の監査観点 = カタログ LENS-RW、機械化 = PLAN-L7-319 (purity スキャン + day-0 smoke + Pack lag 検出)。**配布サイクルの正**: wave が source で landed → `ut-tdd distribution sync-pack` (人間レビュー付き) → Pack repo の version-up release。Pack lag (source からの遅延) は放置すると「腐り続けるもの」になるため、L7-319 の lag 検出が出荷忘れの番人になる。
+
 ## §2 現状基線 (2026-07-03、詳細は A-181 §1)
 
 - doctor 全走 63〜87 秒 / 起動必読 doc ≒ 11.3 万トークン (91% が requirements+concept)
@@ -70,6 +72,7 @@
 | PLAN-L7-303-digest-commit-anchor (v2 新規) | digest の commit anchor 化 → 199 件是正 → 段階 hard 化 | なし (L7-300 の増分化と独立) |
 | PLAN-L7-311-probe-harness (v2 新規) | guard/gate/hook の実走検証常設化 (検証手段の一級化) | なし (L7-258 と両輪) |
 | PLAN-L7-317-write-encoding-guard (v2 新規) | 書き込み直後の UTF-8 即時検査 (readability gate の即時化補完) | なし (readability 実装の再利用) |
+| PLAN-L7-323-handover-active-plan-freshness (v2 新規) | active_plan の stale 表示是正 + heredoc commit からの自動更新 (実測: L7-26/31 の stale 値が信頼できる顔で表示) | なし |
 
 ### Wave 3 — 経済性 (ループの固定コストを削る)
 
@@ -79,6 +82,8 @@
 | PLAN-L7-301-telemetry-retention (v2 新規) | db prune + logs rotation | L7-246 完了後 (close 済み行の prune が前提) |
 | PLAN-L7-302-context-tiering (v2 新規) | 起動必読の tier 化 (-94% 常時トークン) | なし。ただし CLAUDE.md 変更は PO 確認ゲート |
 | PLAN-L7-313-operational-baseline-sentinel (v2 新規) | 健康指標の時系列 snapshot + drift 表示 (観察の一級化) | なし (L7-300 計時後に per-check 化) |
+| PLAN-L7-320-ci-failure-ingestion (v2 新規) | CI 成否の harness.db ingest + SessionStart/status surface (既知 carry「CI 還流なし」の解除) | **Codex の CLI 抽出完了後** (src/cli.ts が hot zone のため) |
+| PLAN-L7-324-memory-compaction-trigger (v2 新規) | memory 肥大の閾値検出 + 圧縮発火 + 標準手順資産化 (Claude adapter) | なし |
 | PLAN-L7-236-audit-doc-curation | audit 100 ファイルの整理 | なし |
 
 ### Wave 4 — 適応性 (実測→routing の自己改善ループを閉じる)
@@ -90,6 +95,7 @@
 | PLAN-L7-277-skill-recommendation-discrimination | skill score 差別化 | L7-262 (landed) |
 | PLAN-L7-308-plan-archive-mechanism (v2 新規) | completed PLAN の archive 経路 (低優先) | なし |
 | PLAN-L7-316-ux-verification-readiness (v2 新規) | UX 検証態勢 (観点表 + UXV 体系 + fe-design レビュー正規化) | **L10 pair-freeze 進入と連動して活性化** (それまで parked が正) |
+| PLAN-L7-319-raw-os-purity (v2 新規) | Pack 生化純度 (混入スキャン + day-0 smoke + Pack lag 検出) — **配布サイクルの番人** | RECOVERY-06 / L7-232〜235 (wave 0 の Pack 是正群) 消化後が効率的 |
 
 ### PO 判断を先行させる PLAN (実装着手前に Try で仕様確定が必要)
 
@@ -100,7 +106,7 @@ GR-1 該当。実装エージェントが仕様を「発明」してはならな
 
 ### 4.1 draft PLAN 着手プロトコル (毎回この順で)
 
-1. `git log --oneline -10` と `git status` — 相手ランタイムの in-flight 作業を確認。foreign 変更は正規作業とみなし触らない。
+1. `git log --oneline -10` と `git status` — 相手ランタイムの in-flight 作業を確認。foreign 変更は正規作業とみなし触らない。あわせて `gh run list --limit 5` で**現 branch の CI 成否を確認** (CI 失敗は自動では届かない — L7-320 活性化までは手動確認が唯一の経路。実例: 2026-07-03 に 7 連続 failure が無通知で滞留)。
 2. PLAN 本文精読 + `dependencies.requires` の status 確認 (`ut-tdd status`)。
 3. **debt 台帳照合**: 対象 plan_id が `src/plan/lint-policy.ts` の `ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS` にあれば、着手前に kind を `add-impl` へ昇格し Reverse pairing (PLAN-REVERSE-xxx) を用意する (正本: `docs/governance/route-mode-kind-debt-audit-2026-07-02.md`、昇格実例第 1 号: PLAN-L7-263 本文)。
 4. PLAN 中の `file.ts:NNN` 行番号引用は起票時スナップショット。着手時に必ず Grep で現物を再特定する (Codex リファクタで恒常的にずれる)。
