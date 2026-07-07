@@ -97,11 +97,21 @@ fail-open 境界と staleness 閾値、L7-348 との軸分離を別ランタイ�
 → `projection-writer.ts` の rebuild に token ingest を統合 → `src/doctor/` に `checkDbCurrency` を追加し
 check-registry へ登録 → `tests/` に currency + fail-open regression を追加。Pack runtime へ反映。
 
+## §3.2 実装メモ
+
+- 2026-07-07: 最小 slice として `db-currency` doctor hard gate を追加。永続 `.ut-tdd/harness.db`
+  の `plan_registry` 件数と fingerprint を現行 `docs/plans` と突き合わせ、missing / stale count /
+  stale fingerprint を独立して fail-close する (`PLAN-L7-369-db-currency-doctor-gate`)。
+- `drive-db-registration` は stale persisted DB に引きずられないよう、persisted plan registry が
+  stale の場合は `:memory:` rebuild で登録整合を評価する。stale の責務は `db-currency` に集約する。
+- Stop hook 自動 rebuild、token ingest 統合、DB consumer 側の stale 警告は未実装。次 slice で
+  `PLAN-L7-366-takeover-surface-warn-actionable` と接続して surface 改善へ進める。
+
 ## DoD / 受入基準
 
 - [ ] Stop hook 後に on-disk harness.db が最新 session イベントを含む (`bun run src/cli.ts db rebuild`
       を手動実行せずとも queryable、test 固定)。
 - [ ] `db rebuild` / hook rebuild 後に token/cost 行が別 `telemetry scan` 無しで存在する。
-- [ ] `ut-tdd doctor` の `db-currency` が on-disk DB の staleness を検出する。
+- [x] `ut-tdd doctor` の `db-currency` が on-disk DB の staleness を検出する。
 - [ ] rebuild 例外が session 終了を妨げない (fail-open regression test green)。
 - [ ] references が PLAN-L7-348 (recoverability 軸) を明示し軸分離が記録されている。
