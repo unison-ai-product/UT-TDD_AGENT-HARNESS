@@ -122,6 +122,16 @@ FR-12〜16 / FR-23〜30 の workflow を機能単位で外部設計する。こ�
 | **design-bottomup** | add-design + add-impl (内包) | `screen_addition_to_backend` / `design_bottomup` / `backend_derived_screen` / `add_ui_to_backend` | (phase なし) backend から FE 要件を elicitation (Discovery 合成再利用、`design-elicitation` engine) → mock 具体化 (L2 screen 系 sub_doc) → add-design (L2-L6、parent 必須) → add-impl (L7、parent 必須) → 既存テスト緑 | mock/add-design が L2-L6 反映 + add-impl G7 孤児0 + 要件 (L1/L3) は Reverse back-fill (bottom-up 後追い) → **add-design L2-L6 (screen 系 sub_doc) / add-impl L7 (Add-feature 同型)** | G2 (screen pair freeze) / add-impl G7 / PO (elicitation 採否)。DISCOVERY-07 で feasibility confirmed |
 | **version-up** | add-design | `version_deferral` / `version-up` / `version_up` / `future_version` | (phase なし) 後送要件を deferral 台帳へ記録 → 次バージョン着手時に add-feature 決定表へ合流 → add-design (L3-L6) | deferral 台帳記録 (着手まで PLAN 化しない) + 着手時 add-feature 合流 → **add-design L3-L6** | 着手時 add-feature の G7。deferral 記録は台帳 lint 化 (carry) |
 
+> **version-up の kind = 合流出口 kind と parked track kind の区別 (PLAN-RECOVERY-10 Stage 1、PO 裁定 option1 2026-07-07)**:
+> 上表 kind 列の `add-design` は **着手 (次バージョン開始) 時の add-feature 合流出口の kind** を指す。一方、
+> deferral を「台帳エントリ」でなく **parked PLAN track** として保全する運用 (`version_target: future` の draft PLAN。
+> 例: PLAN-L7-141/204/248) では、その parked PLAN は **将来実装意図の placeholder として `kind: impl` を持つ**。
+> この parked `kind: impl` は `route_mode: version-up` + `version_target` により back-fill 義務 (`KIND_BACKFILL[impl]=none`)
+> を**保留**し、**着手 (`version_target` 除去 → add-feature 合流) 時に add-design/add-impl へ昇格して義務が復活**する。
+> 機械保証: `ROUTE_MODE_ALLOWED_KINDS["version-up"] = ["impl"]` (`src/plan/lint-policy.ts`) が parked `kind: impl` を許容し、
+> `version_target` を欠く version-up は「着手済」として add-feature 合流義務下に置く。これにより parked が back-fill を
+> 恒久免除する抜け穴を塞ぐ (parked ⇔ version_target 存在、が不変条件)。
+
 > **Discovery / Scrum → Reverse 昇華の機械着地先 (F-3、可視化)**: §3.1 の Discovery 出口「終点で Reverse 昇華」/ Scrum 出口「Reverse fullback で V 昇華完了まで exit しない」は **doctor `checkScrumReverse` (scrum-reverse lint) が機械 enforce 済** — 「confirmed poc は Reverse 合流済」を検査し、Reverse 無き poc 完了を surface する。出口 contract が doc-only でなく機械担保される (柱 2)。
 > **定量テスト → 定性レビュー順序 (全駆動モデル普遍、IMP-077 / IMP-108)**: 上表の各駆動モデルの状態遷移は **定量 verify step → 定性 review/サインオフ step** の順 (Discovery=S3 verify→S4 decide / Scrum=increment テスト→S3 レビュー / Reverse=③テスト設計状態確定→R4 / Incident=収束確認→postmortem / Refactor=テスト緑確認→commit / Retrofit=L8 回帰→exit / Add-feature=テスト確認→V 整合 / Research=候補比較→ADR)。共通機械アンカー = `review_evidence.tests_green_at ≤ reviewed_at` を doctor `checkReviewEvidence` が fail-close (concept §2.1.2.1 核心ルール 6)。2026-06-23 以降の confirmed/completed review evidence はさらに `review_evidence.green_commands[]` で command / runner / scope / exit_code=0 / evidence_path / output_digest を持つ。未検証成果物、または green command 証跡が再現不能な成果物をレビュー済み green と扱わせない。
 
