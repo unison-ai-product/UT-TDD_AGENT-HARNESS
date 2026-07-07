@@ -790,6 +790,28 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | plan-schedule-lint.md | 工程表 schedule 最小強制 (U-PLANSCH) | tests/plan-lint.test.ts | covered |
 | screen-spec.md | parseScreenQuery/validateScreenQuery/handleScreenEvent/loadScreenViewModel/buildRouteRegistry (U-SCREEN-001〜006) | tests/screen-impl-pair-freeze.test.ts は pair-freeze gate のみを被覆し、上記個別関数 (parseScreenQuery 等) を直接 Grep しても実 test 未検出 | **gap** |
 
+## PLAN-L6-38 Router Function Contracts Addendum (駆動モデルルーター関数契約、2026-07-07)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の `routeFiling` /
+> `analyzePlanGovernance.routeModeKindLayer` / `assertL7HasDesignAncestor` 契約 (PLAN-L6-38)。
+> 機構側は internal-processing.md Appendix C (PLAN-L5-10、↔ L8 IT-ROUTE)。実装は後続 add-impl (L7)。
+> **oracle ID 採番規律**: 正式 3 桁 oracle ID (`U-ROUTE-1XX`) は後続 add-impl 着手時に tests への
+> citation と同時に採番する (forward-citation 規律 = `oracle-test-trace` NEW gate。宣言だけ先行させて
+> 未 citation orphan を作らない)。下表の 2 桁 ID は本 addendum 内の設計参照用。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-ROUTE-R1 | `routeFiling(signal)` | 既知 token → mode は `routeSignalToMode` と一致し、`layer_band` / `allowed_kinds` が L4 §3.1 表と一致する FilingTarget を返す (照合対象は L4 §3.1 掲載 mode。拡張 2 mode = design-bottomup/version-up は L4 back-fill 完了までは C.2 暫定 band と一致で可)。 |
+| U-ROUTE-R2 | `routeFiling(signal)` (Forward 正規) | 未知 token / 例外条件不成立 → `mode=forward` を返し (default fall-through)、未知 token は warn を伴う。silent success にしない。 |
+| U-ROUTE-R3 | `routeFiling(signal)` (不変条件) | 非 forward の FilingTarget は `forward_insufficient_reason` 無しに生成されない。生成時は reason にトリガ signal が含まれる。 |
+| U-ROUTE-R4 | `routeFiling(signal)` (cold L7 禁止) | いかなる signal に対しても `(allowed_kinds=[impl] 単独, layer_band=[L7])` の filing 入口を emit しない。 |
+| U-ROUTE-R5 | `routeFiling(signal)` (競合/境界) | 失敗系 signal 競合は Incident > Recovery > Reverse > Refactor の全順序で解決。最長一致 (`regression_prod` が `regression` に吸われない)。escalation 境界 signal は mode 非依存で `requires_human_approval=true` へ昇格。 |
+| U-ROUTE-R6 | `analyzePlanGovernance.routeModeKindLayer(plan)` | `(route_mode, kind)` が L4 §3.1 layer band 外の non-archived PLAN は `route_mode_kind_layer_mismatch` で fail-close。band 内は violation 0。全 mode に適用 (add-feature 限定を撤廃)。 |
+| U-ROUTE-R7 | `analyzePlanGovernance.routeModeKindLayer(plan)` (免除) | draft-debt 台帳 entry は `promote_by` 有効期限内 + justification 記載時のみ免除。期限超過は status=draft のままでも fail-close。 |
+| U-ROUTE-R8 | `assertL7HasDesignAncestor(plan, registry)` | `layer=L7` の impl 系 PLAN (`impl`/`add-impl`) は parent 連鎖が設計層 PLAN (L4/L5/L6 の design/add-design) に到達しなければ `l7_cold_intake` で fail-close。到達すれば violation 0。 |
+| U-ROUTE-R9 | `assertL7HasDesignAncestor(plan, registry)` (two-phase intake) | 対の Reverse PLAN が draft でも intake (draft 起票) は許容。confirmed 昇格時は双方 pairing ready (相互参照解決 + Reverse 側 forward_routing 宣言) でなければ fail-close。 |
+| U-ROUTE-R10 | `routeFiling(signal)` (Reverse 出所必須) | `mode=reverse` の FilingTarget は `origin` (origin signal / origin plan_id) を必ず持つ。出所なき standalone reverse は途中導入 (既走プロジェクト onboarding) signal の場合のみ emit され、それ以外は fail-close。`requires_human_approval` は escalation 境界昇格の結果として FilingTarget 自身が保持する。 |
+
 **gap 件数: 1 / 21** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
 
 L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。

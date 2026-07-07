@@ -170,3 +170,171 @@ Predicate signature と regex detail は L6 carry とする。rule-engine wiring
 | `catalogAutomationAssets` | skill/roster/command docs を scan -> metadata を extract -> automation assets と drift status を record -> search index を update | pre: source path は approved docs/.claude roots 配下。post: catalog rows は path と asset_type を持つ。invariant: prompt bodies と secrets は copy しない |
 
 Failure policy: corrupt DB、migration mismatch、projection orphan は doctor finding とする。validation 目的の command では unresolved projection errors は fail-close とし、passive logging hook では hook は fail-open だが可能な限り minimal failure event を記録する。
+
+## Appendix C: 駆動モデルルーター内部処理 (PLAN-L5-10)
+
+> **SSoT**: 外部設計 (signal → mode / mode↔kind 非1:1 / 失敗 routing 全順序) = [function.md](../L4-basic-design/function.md) §3.1/§3.2。本 Appendix はその契約を機械的に守らせる **L5 内部処理 (モジュール/処理フロー粒度)** を確定する。関数 signature / pre-post 契約の粒度は L6 function-spec (PLAN-L6-38) へ descent し、本 doc では書かない。実装実体は `src/schema/route-map.ts` (signal 決定表) + `src/plan/lint-policy.ts` / `src/plan/lint.ts` (kind/layer 制約) + doctor check 群 (後続 add-impl)。
+>
+> **最上位原則 (PO 2026-07-07 確定): Forward 正規**。ルーティングの既定は Forward (V-model spine を設計先行で降りる正道)。非 Forward 駆動モデルは「Forward では解決できない」入口条件 (L4 §3.1 固有 signal) が立つときに限り選択され、トリガ条件を `forward_insufficient_reason` として機械記録する。本原則は [add-feature.md](../../../process/modes/add-feature.md) §1.1「経路 B = 最頻・default」の**既定の向きのみ**を supersede する (経路 B は「要件後追いで足りる」条件が立つときの条件付き経路として存続。経路 B でも add-design→add-impl の親子連鎖は従来どおり必須)。
+>
+> **原理 (両肺の役割と検証可能性設計、PO 2026-07-07)**: V-model の左肺 (≤L7) は「どういうシステムを
+> 作るか」の設計、右肺 (L8 以降) は「どうシステムを評価・検証するか」である。従って **①設計は右肺の
+> 検証本質から逆規定される**: 各左腕層の①は、対の右腕層が評価を成立させるための**ログ・計測・評価点の
+> 設計 (observability-by-design) を同梱する義務**を負い、③テスト設計はその計測点を oracle として使う。
+> 観測点が設計・実装に無ければ右肺は測れない — 検証可能性は後付けできない (FR-L1-20 観測・計測層は
+> この原理の機構面であり、「検証戦略は設計時に組む」という運用規律の設計面の根拠でもある)。
+>
+> **原理 (完備性 invariant、PO 2026-07-07)**: Forward が正規である理由は、**Forward が最終的にシステム全体を表す「設計資産 (①③) × システム実態 (②) × テスト実態 (④)」の完備集合として収束しなければならない**からである。非 Forward 駆動モデルは一時的な迂回であり、出口で必ず Forward へ合流して (concept §2.5) この完備集合へ寄与しない限り完了と認めない。ルーターがこの invariant に仕える: (i) 迂回の入口を条件ゲートで絞り (本 Appendix)、(ii) 迂回の出口合流を既存機械 gate — `forward-convergence` (未集約 landed impl 0) / pair-freeze (①⇔③ 孤児 0) / G7 4-artifact trace / `scrum-reverse` / R4 forward_routing — で強制し、(iii) cold L7 禁止 (C.3) で「設計資産に対応物を持たない実態」の発生自体を塞ぐ。設計資産・実態・テストのいずれかが欠けたままの状態は、経路を問わず終着状態ではない。
+
+### C.1 default-Forward 評価フロー
+
+routing 評価は次の 3 段で行い、fall-through の終着は常に Forward とする (mode 決定不能 = Forward、fail-open な mode 濫用を構造的に排除):
+
+| step | 処理 | 判定 |
+|---|---|---|
+| (i) 失敗系 signal 評価 | 入力 signal を L4 §3.2 失敗 routing **全順序 (Incident > Recovery > Reverse > Refactor)** で評価。複数競合時は上位を採る。token 一致は最長一致 (`regression_prod` を汎用 `regression` に吸わせない) | 一致 → 当該 mode + `forward_insufficient_reason` = 一致 signal/条件 |
+| (ii) 能動 mode 固有 signal 評価 | Retrofit / Add-feature / Scrum / Research / Discovery **+ 拡張 2 mode (design-bottomup / version-up、C.2 暫定 band)** の固有 signal (L4 §3.1 入口 signal 列 + `ROUTE_SIGNAL_MAP` の拡張 token) を評価 | 一致 → 当該 mode + `forward_insufficient_reason` = 一致 signal/条件 (拡張 2 mode の signal が fall-through で Forward に落ちることはない) |
+| (iii) fall-through | (i)(ii) いずれも不一致 (未知 token 含む) | **Forward** を返す。未知 token は warn 記録 |
+
+- **非 Forward 決定の invariant**: `forward_insufficient_reason` (トリガ signal + 「Forward では解決できない」条件) 無しに非 Forward の filing target を生成しない。
+- **audit 記録**: 非 Forward 決定は `.ut-tdd/audit/route-approval.jsonl` と同型の append-only 記録 (`.ut-tdd/audit/` 配下) に `{signal, mode, forward_insufficient_reason, decided_at}` を残す。escalation 境界 signal は従来どおり mode 非依存で `requires_human_approval=true` に昇格 (L4 §3.2、変更なし)。
+
+### C.2 routeFiling 決定表 (L4 §3.1 表 = single source)
+
+`route eval` は mode 止まりを廃止し、**filing target** `{ mode, allowed_kinds, layer_band, sub_doc_hint, pairing_obligation, forward_insufficient_reason?, origin?, requires_human_approval }` の完全形を emit する (origin = 非 Forward、特に reverse の出所参照。requires_human_approval = escalation 境界昇格の結果。invariant が参照する値はすべてこの型形状に含まれ、契約・実装・テストが同一 object を見る)。決定表は L4 §3.1 表 + §3.2 の mode↔kind 非1:1 注記から機械化する (設計判断(b): kind→layer 制約を add-feature 1 mode から**全 mode へ横展開**し、`allowed_kinds` 未定義 mode = kind 無制約の穴を塞ぐ):
+
+| mode (駆動モデル) | allowed_kinds (許可 kind) | layer_band (許可 layer 帯) | sub_doc_hint (sub_doc 指示) | pairing_obligation (ペア義務) |
+|---|---|---|---|---|
+| **forward** (既定) | design / impl | design→L1-L6 / impl→L7 (設計祖先必須、C.3) | layer 別 sub_doc (schema VALID_SUB_DOCS) | 通常 V-pair (pair-freeze) |
+| **discovery** | poc | cross | — (workflow_phase S0-S4) | confirmed poc は Reverse 昇華必須 (doctor `scrum-reverse`) |
+| **scrum** | poc | cross | — (workflow_phase S0-S4) | S4 受入 + Reverse fullback 完了まで exit 不可 (L8-L14 直接合流禁止) |
+| **reverse** | reverse | cross | — (workflow_phase R0-R4) | R4 `forward_routing` (L1/L3/L4/L5/gap-only) + 再入先 pair-freeze gate |
+| **recovery** | recovery | cross | — (phase なし) | 再発防止 doc + tl/po 人間サインオフ |
+| **incident** | troubleshoot + recovery | troubleshoot→L7 / recovery→cross | — | recovery PLAN の `requires` に troubleshoot PLAN 宣言 + 恒久策 Reverse 経由昇華 |
+| **refactor** | refactor | L7 | — | 振る舞い不変 (regression fence + linked test_id、G7 edge 維持) |
+| **retrofit** | retrofit | L7 | — | L8 回帰 + preflight (upgrade)。アーキ/DB 変更時は L4/L5 追補を連鎖 |
+| **add-feature** | add-design / add-impl | add-design→L3-L6 / add-impl→L7 | add-design→着地 layer の design sub_doc (最頻 L6 function-spec) | add-impl は対の Reverse (fullback, forward_routing=L3) pairing 必須 (KIND_BACKFILL)。`kind=impl` 単独は禁止 |
+| **research** | research | L1-L4 | — | ADR 記録 + Forward 接続先 (L1 or L4) 明記 |
+| **design-bottomup** | add-design / add-impl | add-design→L2-L6 (screen 系 sub_doc) / add-impl→L7 | L2 screen 系 sub_doc | add-feature と同型 (Reverse back-fill) |
+| **version-up** | add-design | L3-L6 | — | 後送要件の deferral 台帳記録 (着手時に add-feature 決定表へ合流) |
+
+- `design-bottomup` / `version-up` は route-map 実装 (`ROUTE_SIGNAL_MAP`) 由来の拡張 mode。L4 §3.1 表への外部設計 back-fill は L4 add-design carry とし、本表では add-feature 同型の暫定 band で fail-close する (kind 無制約に戻さない)。**本表の「single source = L4 §3.1」の正本性はこの L4 back-fill 完了で完成する** — それまで拡張 2 mode の band は暫定であり、L4 との一致検証 (U-ROUTE-R1) の照合対象は L4 §3.1 掲載 mode に限る (L5 が外部設計正本を先行拡張したままにしない = altitude/SSoT 規律)。
+- **spine 閉域後の intake 制約 (PO 2026-07-07)**: `forward` 行の plain `design` / `impl` 起票は **Forward spine の初回降下 (未閉領域) にのみ存在し得た経路**である。本 harness は既に L14 到達・`forward-convergence` 稼働済みであり、**現段階で plain `kind=impl` の L7 新規起票はそもそも成立しない (常に fail-close)**。新規の実装作業は必ず駆動モデル経由 — **add-feature (add-design→add-impl + Reverse pairing) / incident (troubleshoot) / refactor / retrofit** — で入り、出口の Forward 合流義務を負う。plain design/impl による spine 再開を許すと Forward が永遠に閉じない (完備性 invariant の帰結: 閉じた完備集合への変更は、合流義務を持つ駆動モデル経由でのみ入る)。
+- **PLAN plane の区別**: PLAN の layer は「その層の成果物をどう作るか」の作業計画 plane であり、設計内容そのものの plane とは別 — L7 PLAN は実装の手順計画なので設計の成立が前提 (C.3)、L6 PLAN は L6 設計書の作成計画である。既存の plain `kind=impl` PLAN 群 (route-mode-kind debt 台帳) は現段階ではカテゴリ不成立であり、着手時の add-impl + Reverse pairing への昇格 (C.4) が唯一の正規化経路。
+
+### C.2b stage-aware intake (Forward 進行段階が起票可能集合を決める、PO 2026-07-07)
+
+routing は signal だけでなく **Forward spine の進行段階** を入力に取り、段階ごとに起票可能な filing を
+限定する (進行段階の機械 source = roadmap rollup / forward-convergence / plan_registry):
+
+| spine 進行段階 | 起票可能な filing | 説明 |
+|---|---|---|
+| L1-L7 初回降下中 (未閉領域) | 当該未閉層の plain `design`/`impl` + 駆動モデル | spine 本体を降りる正道。**Forward は両肺の設計 doc を書く工程である**: 左肺① (どういうシステムを作るか + 計測・評価点) と右肺③+検証戦略 (どう評価・検証し、いつ L8+ 検証 PLAN を発火するか) を対で書き、pair-freeze (G1-G6) で対凍結する。右肺 doc は右腕層の資産だが、その執筆・凍結は Forward 降下の一部 |
+| **L8-L14 上昇中〜到達後 (現況)** | **検証サイクル (機械発火) + 駆動モデル**: 右腕の検証実行は verification roadmap の機械発火 (V-model layer group の Forward freeze 完了時) で駆動し、変更系は reverse / add-feature (add-design→add-impl) / refactor / retrofit / recovery / incident / discovery / research / scrum / design-bottomup / version-up (拡張 2 mode は C.2 暫定 band) のみ | plain design/impl は成立しない。**Reverse が本体設計修正の主経路になり、右腕上昇以降は Reverse 起票が構造的に増える** (設計と実態の乖離は Reverse でしか正されないため)。右腕層 (L8-L14) は④実行の場であり設計 doc を持たない — その③テスト設計は左腕ペア層の `docs/test-design/harness/*` (L1↔L14 運用 / L3↔L12 受入 / L4↔L9 総合 / L5↔L8 結合 / L6↔L7 単体) が正本。③の欠落・修正も Reverse (fullback) で左腕ペアとして back-fill する。**③を直すタイミングは常に「①を直す同一 PLAN・同一 freeze」であり、③単独の後回しスケジュールは存在しない** (Reverse は R2 ③逆復元→R4 ③状態確定が exit 条件 / add-design は pair_artifact 同時追補 / ④実行で③の誤り発覚時は defect routing でその場修正 or Reverse) |
+
+- **両肺設計の義務 (PO 2026-07-07)**: 設計は両肺に必要である。左肺 doc = どういうシステムを作るか
+  (計測・評価点の同梱義務は上記原理)。**右肺 doc = ③テスト設計 + 検証戦略 + 検証設計** の 3 点 —
+  ③ = 何を確かめるか (テストケース/oracle)、検証戦略 = いつ・何を・どの基準で L8 以降の検証 PLAN
+  として起票するか、**検証設計 = その検証を成立させる方法の設計** (検証環境・データ実在性・計測方法・
+  評価基準・実行手順 — concept §2.3「検証本質 = その設計が効いているかを、対応する環境・データ実在性で
+  検証する」の設計面)。**右肺 3 点の記述粒度は左肺ペア層の設計粒度に一致させる** (設計粒度=テスト設計
+  粒度の原則を検証戦略・検証設計へ拡張: L8 結合 = L5 のモジュール間契約粒度 / L9 総合 = L4 の方式粒度 /
+  L10 UX = L2 の画面粒度 / L12 受入 = L3 の FR/AC 粒度 / L14 運用 = L1 の業務要求粒度。左肺より粗い
+  検証設計は評価不能、細かすぎる検証設計は保守不能な過剰指定として design gate で弾く)。
+- **BDD の組み込み (PO 2026-07-07)**: 右肺 3 点は **振る舞い駆動 (BDD)** で書く。
+  (1) **記述形式 = Given/When/Then シナリオ**: ③テストケースと検証設計の実行手順は GWT の振る舞い
+  仕様として書く (既存 IT-* 表の Given/When/Then 列はこの標準の実例。integration-gwt lint が機械検査)。
+  (2) **ユビキタス言語**: シナリオの語彙は L0 glossary・左肺設計と共有し、独自語を作らない
+  (glossary/terminology 整合は既存 lint が担保)。振る舞いの主語は実装内部でなくシステムの振る舞い
+  (ユーザー/運用者/連携システムから観測可能な挙動) とする。
+  (3) **executable specification / living documentation**: 受入粒度 (L12↔L3) では FR/AC を BDD
+  シナリオとして書き、④で実行可能な仕様 = 生きた文書とする。シナリオが実行されない・実装と乖離した
+  状態は right-arm の drift として検出対象 (DDD/TDD 規律 = ddd-tdd-rules gate と対を成す BDD 面)。
+
+### C.2c 縛りルールの外部化 (project 単位 bind、PO 2026-07-07)
+
+本 Appendix の縛りルール群は harness 実装へのハードコードでなく、**project-local policy として外部化**し、
+Pack consumer が **project 単位で bind** できる形にする (route-map override / approval-policy.yaml の
+既存パターンを踏襲):
+
+| 外部化対象 | policy 表現 | 既定 |
+|---|---|---|
+| routeFiling 決定表 (C.2: mode × allowed_kinds × layer_band × pairing) | `.ut-tdd/config/` 配下の宣言 config (zod validate、fail-close) | Pack 同梱の既定表 (L4 §3.1 由来) |
+| ①⇔③ 対応表 (どの層の設計がどのテスト設計と対か) | 同上 (pair map) | V-model 正規式 (L1↔L14 / L3↔L12 / L4↔L9 / L5↔L8 / L6↔L7 / L2↔L10) |
+| 右肺 3 点セット要件 + 粒度マーカー | 同上 (必須節・マーカー語彙) | 本 Appendix C.2b の標準 |
+| stage-aware intake (spine 段階 × 起票可能集合) | 同上 | C.2b の 2 段階表 |
+| escape governance (promote_by / justification) | 台帳 audit doc + config | C.4 |
+
+- **強化のみ許容 (weaken 禁止)**: project 側の bind は既定の追加・厳格化のみ可能とし、既定ルールの
+  緩和・削除は shrinkage guard と同型の fail-close で弾く (proposal-document-coverage の
+  llm-shrinkage-ignored パターンを踏襲)。
+- **未作成は永続エラー (PO 2026-07-07)**: bind された policy は project の「作るべき成果物の宣言」で
+  あり、宣言された成果物 (両肺 doc / 3 点セット / ペア) が存在しない限り doctor は **「作ってない」
+  エラーを出し続ける** (一度きりの warn や時間経過での消音はしない — absence-blindness の根治)。
+  黙らせる方法は 2 つだけ: **作る**、または**理由付きの明示 opt-out 宣言** (project 非該当の宣言。
+  無言の欠落と区別され、opt-out 一覧は doctor 出力に常時表示されて不可視化しない)。
+- config 読込は既存規約に従う: zod validate / 不正・legacy 依存混入は exit 1 / `.ut-tdd/` 境界内。
+- 実装 carry (C.6): 決定表・pair map・粒度マーカーの config loader + 既定 config の Pack 同梱 +
+  doctor が「project bind が既定より弱くないこと」を検査する。検証戦略が右肺 doc に無ければ L8 以降の
+  PLAN は起票されず、**L8+ PLAN が存在しない = 本当に検証したかが機械的に不明** (L7 の tests が保証
+  するのは関数・機能の正常動作 = 単体のみ。システム評価 — 結合・総合・UX・受入・運用 — の実行証跡は
+  L8+ PLAN でしか担保されない)。
+- **機械的欠陥 (carry → 後続 add-impl)**: 現行 schema は L8-L14 layer を取れる kind を持たない
+  (`ALLOWED_LAYER_BY_KIND`: design→L1-L6 / impl 系→L7 / research→L1-L4 / 横断→cross)。つまり検証
+  実行 PLAN は**構造的に起票不能**であり、これが「L8 以降に PLAN が無い」の根本原因。検証 PLAN の
+  kind/layer envelope (右肺 doc の検証戦略から機械発火し、L8-L14 layer を正規に取れる kind) の新設を
+  C.6 carry に含める。検証実行の証跡は gate_runs 永続化 (PLAN-L7-363 系) と対で閉じる。
+
+- **コード修正 → Reverse 義務**: L8 以降でコード (②実態) に触れる変更は、どの駆動モデルで入った
+  場合でも、**最終的に Reverse で本体設計 (L1-L6 の L設計資産) を修正して閉じる**。本体外の設計
+  (追補・周辺 doc) は他駆動モデルで起票してよいが、L設計への影響があれば最終的に L設計を直す義務は
+  免除されない。
+- **branch/main 原理**: 駆動モデル = **設計を汚さないために切る branch**、Forward spine = **main**。
+  branch を切ったら main へ戻す (merge) のが完了条件であり、戻さない branch は完了と認めない —
+  これが「出口は必ず Forward 合流」(concept §2.5) と完備性 invariant の操作的意味である。
+- **Reverse の出所必須 invariant (PO 2026-07-07)**: Reverse は cold start しない。Reverse 起票は必ず
+  機械記録された出所 (provenance) を持つ — Discovery 終点 / Scrum increment 完了 / drift-check 検出 /
+  add-feature 経路 B の back-fill 義務 / Recovery exit の上位整合 / L8 以降のコード修正義務 — の
+  いずれかから到達する。**出所なき standalone Reverse が正当なのは「既に動いているプロジェクトへの
+  harness 途中導入」(既存未文書化資産の onboarding) ただ一つ**であり、routeFiling は reverse の
+  filing target に出所参照 (origin signal / origin PLAN) を必須で含め、出所なしは途中導入 signal の
+  場合のみ許容する (それ以外は fail-close)。
+- **処理フロー**: signal → C.1 評価 → mode 確定 → 本決定表 lookup → filing target 構築 → (非 Forward なら) `forward_insufficient_reason` 付与 + audit 記録 → emit。intake 時 (PLAN write / `route eval`) に同じ決定表で `route_mode` × `kind` × `layer` を検証し、逸脱をその場で surface する (post-hoc doctor 依存の縮小)。
+
+### C.3 layer 強制 + L7 cold intake 禁止の処理フロー
+
+| check | 処理 | fail-close 条件 |
+|---|---|---|
+| `route_mode_kind_layer` | PLAN frontmatter の `(route_mode, kind, layer)` を C.2 決定表と照合。`ROUTE_MODE_ALLOWED_KINDS` を全 mode へ拡張し、さらに kind ごとの layer band を検証 (schema `ALLOWED_LAYER_BY_KIND` の kind→layer envelope に mode 文脈を重ねる) | kind ∉ allowed_kinds、または layer ∉ layer_band → `route_mode_kind_layer_mismatch` |
+| `l7-cold-intake` (doctor) | `layer=L7` の impl 系 PLAN (`impl` / `add-impl`) について `dependencies.parent` 連鎖を registry 上で遡上し、**設計層 PLAN (L4/L5/L6 の `design`/`add-design`) への到達**を判定する。連鎖は parent → parent … の推移閉包 (循環は plan lint の循環依存 check で既に排除)。legacy landed / draft-debt 台帳 (C.4) 登載分は例外評価 | 設計祖先ゼロの cold L7 起票 → `l7_cold_intake` violation |
+
+- 現行 schema は add-\* のみ parent 必須で plain `kind=impl` は parent 不要という穴があり、これが「いきなり L7」を許してきた。本 check はその穴を塞ぐ: **設計先行 (design-first)、または add-impl + Reverse back-fill のいずれか**を構造的に強制し、feature signal に対する `kind=impl` 単独 (設計層 skip) を禁止する。
+- bottom-up の順序自由 (要件 L1/L3 の後追い back-fill、add-feature.md 経路 B) は変えない。禁止するのは「設計層 PLAN が親子連鎖のどこにも産出されない」経路のみ。
+
+### C.4 免除台帳の統治 (escape governance、draft-debt allowlist)
+
+`ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS` (lint-policy.ts) の免除を無期限 escape にしない governance 処理:
+
+| 処理 | 内容 | fail-close |
+|---|---|---|
+| `promote_by` 期限 | 台帳 (正本: `docs/governance/route-mode-kind-debt-audit-2026-07-02.md` 系 audit doc) の各 entry に `promote_by` (add-impl + Reverse pairing への昇格期限) を必須付与 | 期限超過かつ未昇格 → doctor fail-close (draft のままでも通さない) |
+| 新規追加 gate | allowlist へ新規 plan_id を追加する変更は、台帳 audit doc への `justification` (なぜ正規形で組めないか + promote_by) 追記が同一変更内に必須 | justification 無き新規 `kind=impl` + `route_mode=add-feature` 追加 → fail-close |
+| 昇格検証 | status が draft 以外へ遷移する時点で add-impl + Reverse pairing への昇格を検証 (既存 lint 挙動を維持) | 未昇格の着手 → fail-close (既存) |
+
+### C.5 add-impl two-phase intake (デッドロック解消)
+
+escape の根本原因 = draft `add-impl` の `requires_not_ready` × `KIND_BACKFILL[add-impl]=required` デッドロックを、**two-phase intake** で解く:
+
+| phase | 処理 | ready 要求 |
+|---|---|---|
+| **intake (draft)** | add-impl PLAN と対の Reverse PLAN を**同時 draft 起票可能**とする。add-impl 側の Reverse 参照は required だが、参照先 Reverse が `draft` でも intake を許容する (Reverse 側は `dependencies.parent` に add-impl PLAN を指定して pairing 成立、add-feature.md 準拠) | 参照の存在のみ (status 不問) |
+| **confirm (昇格)** | いずれかの PLAN が `confirmed` へ昇格する時点で、**双方の pairing が ready** (相互参照が解決済 + Reverse 側の forward_routing 宣言済) であることを要求する | 双方 ready でなければ昇格 fail-close |
+
+- これにより bottom-up 経路が `kind=impl` (back-fill 免除) へ逃げず `kind=add-impl` で正規に組める。invariant: intake 緩和は draft 間のみ — confirmed 以降の状態空間は従来の READY_DEPENDENCY_STATUSES 規律と同一で、緩和が完了系 gate へ漏れない。**実装 carry (C.6)**: 現行 `READY_DEPENDENCY_STATUSES` は `confirmed/completed` のみで draft 参照は `requires_not_ready` になるため、lint に **add-impl↔Reverse pairing 限定の draft 例外**を明示追加する (汎用の draft 許容にはしない)。
+
+### C.6 carry → L6 / L7
+
+- `routeFiling` / `routeModeKindLayer` / `assertL7HasDesignAncestor` / `FilingTarget` の **関数 signature + pre/post/invariant + エッジケース** = L6 function-spec 追補 (PLAN-L6-38)。
+- route-map / lint-policy / lint / doctor (`l7-cold-intake`) の**実装** = 後続 add-impl (L7)。
+- `design-bottomup` / `version-up` の L4 §3.1 外部設計 back-fill = L4 add-design carry。
+- 結合テスト設計ペア = L8-integration-test-design (pair_artifact、PLAN-L5-10 Step 4)。

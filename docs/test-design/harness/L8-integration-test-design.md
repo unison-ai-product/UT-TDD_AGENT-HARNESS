@@ -171,6 +171,20 @@ requirements produced here.
 | IT-DOCCOV-03 | Discovery/research proposal text plus candidate external templates. | Research adoption mapping is produced. | Adoptable templates are split into `incorporate`, `reference`, `exclude`, or `ut-tdd-specific`. | research mapping -> coverage output boundary. | Marketing/vendor templates are rejected; UT-TDD workflow/agent templates stay UT-TDD-specific. | Vendor-specific formats, generic marketing templates, untestable checklist prose. |
 | IT-DOCCOV-04 | A proposal classified with security/privacy, migration, or other escalation-sensitive terms. | Coverage classification combines `classifyTask` findings with document packs. | Granularity reaches at least G4 and human/risk evidence is required. | task risk classifier -> document coverage boundary. | `nfr`, `technical-requirements`, `system-test-design`, and approval evidence are present. | Low confidence drive, multiple risk terms, missing affected files. |
 
+## Appendix D: 駆動モデルルーター内部処理 結合テスト設計 (PLAN-L5-10、2026-07-07)
+
+> 設計ペア: `docs/design/harness/L5-detailed-design/internal-processing.md` Appendix C (駆動モデルルーター
+> 内部処理)。関数契約粒度の単体は L7-unit-test-design.md「PLAN-L6-38 Router Function Contracts Addendum」
+> (U-ROUTE-R1〜R10、正式 3 桁採番は add-impl 時)。本 Appendix は route eval CLI ↔ lint ↔ doctor ↔ 台帳 audit doc のモジュール間結合を扱う。
+> **実行時期**: 本 Appendix の IT-ROUTE は internal-processing.md Appendix C.6 carry の add-impl (routeFiling / 全 mode kind×layer 制約 / two-phase intake の lint 実装) が着地した後に④実行する設計である。現行実装 (`ROUTE_MODE_ALLOWED_KINDS` = add-feature のみ / `READY_DEPENDENCY_STATUSES` = confirmed/completed のみ) では IT-ROUTE-03/04 は未成立が期待値 (design-first の正常形であり、実装前 green を主張しない)。
+
+| IT-ID | Given | When | Then | Fixture / Boundary | Assertions | Negative / Edge |
+|---|---|---|---|---|---|---|
+| IT-ROUTE-01 | 既知 signal (失敗系 + 能動 + 未知 token の混在 fixture) | `ut-tdd route eval --signal <s> --format json` を実行する。 | filing target 完全形 (mode / allowed_kinds / layer_band / sub_doc_hint / pairing_obligation / forward_insufficient_reason) が JSON で返り、未知 token は `mode=forward` + warn になる。 | route eval CLI -> route-map -> filing target serializer boundary。 | 非 forward 出力は reason を必ず持つ。失敗系競合は Incident > Recovery > Reverse > Refactor。最長一致が維持される。 | 未知 token、複数 token 競合、escalation 境界 signal (approval 昇格)、legacy command 混入 route-map (exit 1)。 |
+| IT-ROUTE-02 | 非 forward 決定を返す signal fixture | route eval が非 forward mode を決定する。 | `.ut-tdd/audit/` 配下の append-only 記録に `{signal, mode, forward_insufficient_reason, decided_at}` が残る。 | route eval -> audit appender boundary。 | 記録失敗は decision を変えない (fail-open 記録 + stderr surface)。forward 決定は audit 対象外。 | audit dir 書込不可、重複 signal 連続実行 (append 冪等性)。 |
+| IT-ROUTE-03 | L4 §3.1 band 外の (route_mode, kind, layer) を持つ PLAN fixture + draft-debt 台帳 fixture | `ut-tdd plan lint` / `ut-tdd doctor` を実行する。 | band 外 PLAN は `route_mode_kind_layer_mismatch`、設計祖先なし L7 impl は `l7_cold_intake` で fail-close する。台帳 entry は promote_by 有効 + justification 時のみ免除。 | plan frontmatter loader -> lint-policy 台帳 -> doctor aggregation boundary。 | 全 mode に kind/layer 制約が効く (`allowedKinds` 未定義 fall-through が無い)。期限超過 debt は draft でも fail。 | promote_by 欠落 entry、justification 無き新規 allowlist 追加、archived PLAN (対象外)。 |
+| IT-ROUTE-04 | add-impl PLAN + 対の Reverse PLAN (双方 draft) fixture | two-phase intake で draft 起票 → 片方を confirmed へ昇格する。 | draft 間は requires_not_ready にならず intake が通り、confirmed 昇格時のみ双方 pairing ready を要求して未 ready は fail-close する。 | plan lint (requires/backfill-pairing) -> status 遷移検証 boundary。 | intake 緩和が draft 間に限定され confirmed 系 gate へ漏れない。既存 READY_DEPENDENCY_STATUSES 規律が confirmed 以降で不変。 | Reverse 参照欠落の add-impl (intake でも fail)、forward_routing 未宣言 Reverse との同時昇格。 |
+
 ## §6 G8-WORKFLOW: integration verification workflow
 
 This section defines the executable workflow granularity for closing L8/G8. It
