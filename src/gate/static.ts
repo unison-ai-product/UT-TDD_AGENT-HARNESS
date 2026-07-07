@@ -86,9 +86,14 @@ export function analyzeLayerPairGate(
   const confirmed = layerDocs.filter((doc) => doc.status === "confirmed").length;
   const placeholder = layerDocs.filter((doc) => doc.status === "placeholder").length;
   const draft = layerDocs.length - confirmed - placeholder;
+  // wireframe mock は L2↔L10 pair の ③ doc を指す (旧 self-pair は PLAN-RECOVERY-09 で撤去)
   const mockMissing =
     layer === "L2" &&
-    !layerDocs.some((doc) => doc.path.endsWith("/wireframe.md") && doc.pairArtifact === "self");
+    !layerDocs.some(
+      (doc) =>
+        doc.path.endsWith("/wireframe.md") &&
+        doc.pairArtifact === "docs/test-design/harness/L10-ux-validation-test-design.md",
+    );
   const ok = layerDocs.length > 0 && draft === 0 && orphanPaths.length === 0 && !mockMissing;
   const head = `${gate.toLowerCase()}-pair`;
   const details = `${layer} total=${layerDocs.length}, confirmed=${confirmed}, placeholder=${placeholder}, draft=${draft}, orphans=${orphanPaths.length}`;

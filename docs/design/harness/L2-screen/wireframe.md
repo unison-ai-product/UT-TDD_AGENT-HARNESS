@@ -4,7 +4,7 @@ sub_doc: wireframe
 status: confirmed  # G2 freeze (PO サインオフ 2026-06-22、gate-design §2 G2=PASS)。Low-Fi 材料化 PLAN-L2-04。③ pair=self (L2↔L10)。
 default_policy: low-fi-in-harness
 high_fi_policy: case-by-case (harness 内保持 OR 外部依頼のいずれか、ケース別判断)
-pair_artifact: self  # wireframe mock 自体が L2⇔L10 の③ペア (L10 独立 doc 不要、IMP-039/058)。vmodel-lint は self を孤児扱いしない
+pair_artifact: docs/test-design/harness/L10-ux-validation-test-design.md  # L2↔L10 pair。旧 self-pair (IMP-039/058) は PO 裁定なき作り込みとして撤去 (PLAN-RECOVERY-09)
 parent_doc: docs/design/harness/L1-requirements/screen-requirements.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md

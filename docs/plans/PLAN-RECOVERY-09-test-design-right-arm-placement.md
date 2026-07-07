@@ -109,6 +109,44 @@ targeted green / ③ `bun run typecheck` / ④ canonical 面 (src/tests/docs/des
 **(iv) rollback 手順**: 単一 commit revert (`git revert <rename-commit>`) + `db rebuild`。L10 新設
 commit も独立 revert 可能。
 
+### Step 4 手順定義 — L10 UX ③ back-fill (self-pair 根絶、2026-07-07 全数調査済み、po サインオフ待ち)
+
+**性質の確定 (PO 2026-07-07)**: 「L10 独立 test-design doc を作らない」(self-pair 規約、IMP-039/058)
+は **PO 裁定ではなく AI が監査サイクル中に発明した無承認の作り込み** (improvement-backlog 原本で
+確認: IMP-039 = 暗黙慣行の追認成文化、IMP-058 = lint 孤児誤検知を黙らせる例外発明)。よって扱いは
+「正当な旧判断の supersession」ではなく **無承認デグレの根絶**。検出機構自身が欠落を隠蔽する例外
+(absence-blindness) を撤去する。
+
+**(i) self-pair 依存の全数調査結果**:
+
+| 面 | 参照 | 扱い |
+|---|---|---|
+| 機構 | `src/vmodel/lint.ts` (`pa === "self"` 分岐 + L2 group-hub-self 分岐) / `src/lint/g10-ux-workflow.ts` (UXV 正本 = visual-design.md を parse) / `src/gate/static.ts` (G2 `mockMissing` が `pair_artifact === "self"` を要求 — **実施中の追加発見**、同 commit で新配線要求へ更新) | **撤去 / ③ doc へ repoint** (同 commit) |
+| tests | `tests/vmodel-pair.test.ts` (self fixture) / `tests/gate-static.test.ts` / `tests/g10-ux-workflow.test.ts` | 同 commit で更新 |
+| docs/design frontmatter | wireframe.md (`pair_artifact: self`) + L2 sub-doc 5 件 (business-flow/screen-detail/screen-flow/screen-list/ui-element → wireframe.md hub 参照) + visual-design.md (コメントで self-pair 主張) | 同 commit で ③ doc へ配線替え |
+| ③ 対応 L6 設計 | `docs/design/harness/L6-function-design/vmodel-pair-freeze.md` §self-pair 節 / `docs/test-design/harness/L7-unit-test-design.md` U-VPAIR-001/004 | 同 commit で撤去・書換 (design↔code drift 防止) |
+| 正本 (living) | concept_v3.1 用語集 self-pair 項 / roadmap §2 注記 / L2-screen/README / L4 function.md §screen-design 行 (self-pair 記述、実施中の追加発見) | **Step 5 fullback Reverse で抹消** (branch→main 合流、exit 条件) |
+| 歴史 PLAN / 記録 | PLAN-L6-10 / PLAN-REVERSE-10 / PLAN-L2-04 / IMP-039・058・063 行 / A-174 | 書き換えない。IMP 行と歴史 PLAN に誤り注記 (RECOVERY-09 を後継として明記、errata 双方向) |
+
+**(ii) 変更手順 (commit A、原子)**: ① `docs/test-design/harness/L10-ux-validation-test-design.md`
+新設 — frontmatter `layer: L2 / executed_at_layer: L10 / pair_artifact: docs/design/harness/L2-screen/`
+(dir 集合参照、既存 ③ doc と同型)。内容 = 3 点セット (③ = UXV 5 件を GWT で L2 画面粒度に昇華 /
+検証戦略 = G10 workflow 連鎖 + evidence manifest / 検証設計 = 環境・実データ実在性・計測・評価基準)。
+② L2 sub-doc 6 件の `pair_artifact` を ③ doc path へ配線替え (hub 経由をやめ全 doc 直接参照 =
+rule 3 双方向の正規形)。③ visual-design.md: UXV case 定義を ③ doc へ移し、設計内容 (視覚方針) のみ
+残す。pair コメントを新標準へ更新。④ `src/vmodel/lint.ts` の self 分岐 + group-hub-self 分岐を撤去、
+`src/lint/g10-ux-workflow.ts` の UXV 正本 path を ③ doc へ repoint。⑤ vmodel-pair-freeze.md /
+L7-unit U-VPAIR の該当節を同期。⑥ tests 3 件更新。⑦ `db rebuild`。命名標準 lint の追加は
+**別 commit B** (A の後)。
+
+**(iii) 検証手順 (regression fence)**: ① `doctor` full EXIT=0 (pair-freeze pair 数維持+孤児 0、
+g10-ux-workflow OK 含む) / ② `vitest run tests/vmodel-pair.test.ts tests/g10-ux-workflow.test.ts
+tests/gate-static.test.ts` green / ③ `typecheck` / ④ canonical 面 (src/tests/docs/design) で
+`pair_artifact: self`・self-pair 残存 grep 0 件 (歴史 doc / IMP 台帳を除く) / ⑤ design-language・
+readability green。
+
+**(iv) rollback 手順**: commit A 単一 revert + `db rebuild`。commit B (命名 lint) も独立 revert 可。
+
 1. 命名標準確定: `L<right>-<verification-kind>-test-design.md` を③ doc の正本命名とする。
 2. rename: L1-operational → L14-operational / L3-acceptance → L12-acceptance (git mv + 機構内
    ハードコード path の同時更新。歴史的 PLAN の pair_artifact 参照は書き換えない — 履歴改ざん禁止。

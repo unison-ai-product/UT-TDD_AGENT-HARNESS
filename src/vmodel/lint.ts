@@ -35,7 +35,7 @@ export interface PairOrphan {
 
 export interface PairFreezeResult {
   orphans: PairOrphan[];
-  /** 双方向成立した pair 数 (self-pair / L2 group 含む)。 */
+  /** 双方向成立した pair 数。 */
   pairs: number;
   ok: boolean;
 }
@@ -43,7 +43,7 @@ export interface PairFreezeResult {
 /** 検査対象外の index/living doc (basename 固定リスト、vmodel-pair-freeze.md §3)。 */
 const EXCLUDED_BASENAMES = new Set(["README.md", "roadmap.md"]);
 
-/** frontmatter 値の inline コメント (`  # ...`) を除去 (`self  # wireframe...` → `self`)。 */
+/** frontmatter 値の inline コメント (`  # ...`) を除去 (`<path>  # L2↔L10 pair` → `<path>`)。 */
 export function stripInlineComment(value: string): string {
   return value.replace(/\s+#.*$/, "").trim();
 }
@@ -95,11 +95,6 @@ export function analyzePairFreeze(docs: PairDoc[]): PairFreezeResult {
       orphans.push({ path: d.path, reason: "pair-missing", detail: `layer ${layer}` });
       continue;
     }
-    // self-pair (wireframe mock 自体が③ペア、L2⇔L10)
-    if (pa === "self") {
-      pairs++;
-      continue;
-    }
     // rule 2 ref-resolves
     const target = byPath.get(pa);
     if (!target) {
@@ -121,18 +116,8 @@ export function analyzePairFreeze(docs: PairDoc[]): PairFreezeResult {
           detail: `${pa} が ${dir} を逆参照しない`,
         });
       }
-    } else if (pa.startsWith("docs/design/")) {
-      // L2 group 参照 (→ wireframe.md)。hub が self-pair なら group 成立。
-      if (target.pairArtifact === "self") {
-        pairs++;
-      } else {
-        orphans.push({
-          path: d.path,
-          reason: "trace-orphan",
-          detail: `group hub ${pa} が self-pair でない`,
-        });
-      }
     } else {
+      // design→design 参照 (旧 L2 group hub) と self は非対応 (PLAN-RECOVERY-09 で self-pair 例外を撤去)。
       orphans.push({ path: d.path, reason: "ref-unresolved", detail: `未知の pair 形式: ${pa}` });
     }
   }

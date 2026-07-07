@@ -11,7 +11,7 @@ related_docs:
   - docs/design/harness/L2-screen/screen-flow.md
   - docs/design/harness/L2-screen/ui-element.md
   - docs/design/harness/L2-screen/wireframe.md
-pair_artifact: docs/design/harness/L2-screen/wireframe.md
+pair_artifact: docs/test-design/harness/L10-ux-validation-test-design.md  # L2↔L10 pair (旧 hub 参照は RECOVERY-09 で撤去)
 next_pair_freeze: L10
 plan: docs/plans/PLAN-L2-01-screen-list.md
 created: 2026-06-24
