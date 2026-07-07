@@ -33,7 +33,7 @@
 | PLAN-L7-215-model-effort-advisor-routing | confirmed (landed 済のため恒久免除) |
 | PLAN-L7-221-github-ci-policy-gate | confirmed (landed 済のため恒久免除) |
 
-## draft debt (32 本、着手時昇格)
+## draft debt (38 本、着手時昇格)
 
 | plan_id | 処置 (disposition) |
 |---|---|
@@ -69,6 +69,12 @@
 | PLAN-L7-274-mutation-oracle-hardening | 未着手 (open) |
 | PLAN-L7-275-glossary-code-consistency | 未着手 (open) |
 | PLAN-L7-279-xml-residue-lint | 未着手 (open) |
+| PLAN-L7-363-routine-gate-run-projection | 未着手 (open) |
+| PLAN-L7-364-reverse-stage-db-obligation | 未着手 (open) |
+| PLAN-L7-365-harness-db-currency-hook | 未着手 (open) |
+| PLAN-L7-366-takeover-surface-warn-actionable | 未着手 (open) |
+| PLAN-L7-367-refactor-candidate-lifecycle | 未着手 (open) |
+| PLAN-L7-368-design-lint-db-projection | 未着手 (open) |
 
 disposition は昇格済み時に `promoted (YYYY-MM-DD)` へ更新する (行は削除しない —
 台帳同期テストの照合対象)。
