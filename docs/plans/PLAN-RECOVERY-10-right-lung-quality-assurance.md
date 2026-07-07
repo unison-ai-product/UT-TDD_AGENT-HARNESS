@@ -33,6 +33,8 @@ dependencies:
     - docs/plans/PLAN-L6-38-router-function-contracts.md
     - docs/plans/PLAN-L7-363-routine-gate-run-projection.md
     - docs/plans/PLAN-L7-367-refactor-candidate-lifecycle.md
+    - docs/plans/PLAN-L7-336-fail-open-annotation.md
+    - .ut-tdd/audit/A-182-implementation-design-quality-audit-2026-07-03.md
     - docs/design/harness/L5-detailed-design/internal-processing.md
     - docs/test-design/harness/L8-integration-test-design.md
     - src/schema/frontmatter.ts
@@ -101,11 +103,33 @@ tl/po 人間サインオフ待ち。
 | B | `ALLOWED_LAYER_BY_KIND` (`src/schema/frontmatter.ts:167`) | design→L1-L6 / impl系→L7 / research→L1-L4。右腕 layer 不在 | `verify: [L8,L9,L10,L11,L12,L13,L14]` を追加 |
 | C | `CROSS_KINDS` (`frontmatter.ts:162`) / `WORKFLOW_KINDS` (`frontmatter.ts:164`) | poc/reverse/recovery=cross、poc/reverse=workflow | `verify` は右腕 Forward 工程 kind = **cross に入れない** (layer=cross 強制を避ける)。除外のまま維持を明示テスト化 |
 | D | plan_id token↔layer 整合 (`frontmatter.ts:32,248`) | driveTok 検査 (248) は DISCOVERY/REVERSE/RECOVERY のみ対象。**L0-L14 layer token は token↔layer 一致を検証する機構が無い** (`planIdSchema` regex は形式のみ、`PLAN-L8-90` に `layer:L12` と書いても現状素通り = pre-existing gap) | 検証 PLAN は `PLAN-L8-NN`..`PLAN-L14-NN` = 既存 layer token を使う (新 token 不要)。ただし verify は L8-L14 の 7 層に及び design(L1-L6/6層)より不一致リスク面が広いため、**L-token↔layer 一致 fail-close チェック新設**を Step 4.1 に含める (`V_MODEL_PAIRS` は現状 dead data、これを活用) |
-| E | `ROUTE_MODE_ALLOWED_KINDS` 定義 (`src/plan/lint-policy.ts:26`) + fail-open 分岐 `if (!allowedKinds) return []` (`src/plan/lint.ts:364`) | 登録は `add-feature` のみ。**実測: route_mode の実在値は add-feature 以外に refactor / version-up / reverse / recovery が多数 (~180 route_mode エントリ、大半が未登録 mode)。全て fail-open で lint を通過中** | **register-all-first**: 実在 mode (add-feature/refactor/version-up/reverse/recovery + verify) を全て登録してから未知 mode を fail-close 化 (C.7 criterion(b) registry。ただし migration-completeness を先行させる = 既存資産を壊さない) |
+| E | `ROUTE_MODE_ALLOWED_KINDS` 定義 (`src/plan/lint-policy.ts:26`) + fail-open 分岐 `if (!allowedKinds) return []` (`src/plan/lint.ts:364`) + 既存債務台帳 (`ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS` / `_DRAFT_DEBT_PLAN_IDS`) | 登録は `add-feature` のみ。**実測: refactor/version-up/reverse/recovery mode の ~180 PLAN は route_mode→kind 整合を一度も検査されず fail-open で素通り中。既存の債務台帳の存在 = 「観測された組合せ=正しい」ではない証拠** | registry を **設計 SSoT (L4 §3.1 / route-map) 由来の正しい mapping で完全化**し、mismatch を正当/債務-ledger/要修正に分類してから未知 mode を fail-close 化 (C.7 criterion(b))。**観測組合せの鵜呑み blessing は禁止**。CI/schema.test はこの新 gate に追従更新する |
 | F | 検証 roadmap 発火 (`docs/design/harness/L3-functional/roadmap.md`) | L layer group Forward freeze 後に動的発火 | verify PLAN 起票条件を roadmap 発火に対応付け (Step 5.2 の再発防止と一体) |
 | G | kind 種数を記す doc/test | requirements §1.3「12 種」、`tests/schema.test.ts:40` (`expect(VALID_KINDS).toHaveLength(12)`) | 「13 種」へ back-fill (test の件数 assert 更新 + Step 5 fullback Reverse で L 正本へ昇華) |
 | H | `REQUIRED_KIND_BY_BRANCH` + `BranchKind` union + `classifyBranchKind` (`src/lint/branch-kind.ts:48-60`、doctor fail-close gate) | branch prefix (feature/design/research/poc/reverse/add/hotfix/refactor) ごとに許可 kind 固定。**verify の枠が無く、verify PLAN を既存 prefix branch で commit すると `kind_mismatch` で doctor が意図せず fail-close、無関係 prefix では検査素通り** (cross-review C-2 新規発見) | `verify` prefix を `BranchKind`/`classifyBranchKind`/`REQUIRED_KIND_BY_BRANCH` (`verify:["verify"]`) に追加 |
 | I | `CONVERGENCE_SCOPE_KINDS` (`src/lint/forward-convergence.ts:27` = `Set(["impl"])`) | impl のみ Forward 収束義務を判定。verify PLAN が spine-外 landed で未集約でも現状検知しない (cross-review I-2) | verify を収束 scope に含めるか否かを **明示判断し記録** (含めるなら Set に追加、含めないなら別 SSoT が担う理由を注記) |
+
+### Step 4 の設計原理 (PO 指摘 2026-07-07: CI は正しい構造の帰結、負債を後送りしない)
+
+**CI green は正しい構造の帰結であって、目標にして gate を緩めるものではない。** 現状の壊れた state
+(`ROUTE_MODE_ALLOWED_KINDS` の fail-open 穴 + route_mode→kind 未検査の ~180 PLAN + 累積した債務台帳) は、
+**過去に「CI を通すためにスコープを下げた」結果として後から噴き出した負債そのもの**である。これは推測でなく
+repo 自身の監査で裏付け済: `catch{}`/`return []` 型の暗黙 fail-open は src に **202 箇所** (A-182 AQ-9)、
+「設計か握りつぶしか区別不能 = absence-blindness のコード版」と認識され、その是正すら **PLAN-L7-336 で v2 へ
+parked (再び後送り)** されている。fail-open な検証 gate は「検証したフリ」= false-confidence であり、無い gate
+より悪い。これは RECOVERY-10 の主題 (右肺 = 実際に検証する plane) の**縮図**である。
+
+したがって Step 4 は同じパターンを再生産しない:
+
+1. **fail-close を不変条件にする** (CI green ⟺ 構造的に正しい、を成立させる)。
+2. **既存 mismatch の既定処分は「構造的解消 (PLAN 修正)」**。債務台帳への登録は**有限・理由拘束・burn-down
+   期限つきの例外**に限る (台帳を新しい fail-open のゴミ捨て場にしない)。分類の内訳と burn-down を証跡化する。
+3. **再発防止を PLAN-L7-336 (fail-open 意図宣言) に接続**し、将来 gate を無言で緩めて同じ負債を再累積させない
+   (無宣言 fail-open を warn/fail 化)。L7-336 が v2 parked なら、本 recovery の再発防止スコープとして活性化
+   可否を TL/PO 判断に上げる。
+
+この結果、Step 4 のスコープは「kind を 1 種足す」に留まらず **既存 ~180 PLAN の route_mode→kind 正当性の
+棚卸し + fail-open 是正**を含む。**規模を理由にこの棚卸しを縮退させない** (縮退がこの負債を生んだ張本人)。
 
 ### Step 4.1: 検証 kind/layer envelope 新設 [直列: schema=shared_state]
 
@@ -115,21 +139,29 @@ tl/po 人間サインオフ待ち。
   2. `ALLOWED_LAYER_BY_KIND` へ `verify:[L8..L14]` 追加。
   3. `CROSS_KINDS`/`WORKFLOW_KINDS` は verify を **除外のまま維持**し、それを明示する回帰テストを追加 (無言の
      将来混入を防ぐ)。
-  4. **`ROUTE_MODE_ALLOWED_KINDS` の register-all-first 化 (C-1 対応、最重要)**: verify だけを足して
-     fail-close に切り替えると、**現在 fail-open で通っている refactor/version-up/reverse/recovery mode の
-     既存 PLAN 群が一斉に lint violation 化し `harness-check` CI を破壊する**。よって順序は必ず (i) 実在 mode
-     (add-feature/refactor/version-up/reverse/recovery/verify) を `ROUTE_MODE_ALLOWED_KINDS` へ全登録 →
-     (ii) 全登録を実 repo 回帰 (下記) で確認 → (iii) その後に `lint.ts:364` の `if (!allowedKinds) return []`
-     を fail-close へ変更。既存 debt-ledger (`ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS` /
-     `..._DRAFT_DEBT_PLAN_IDS`) の一般化可否も TL 判断に含める。
+  4. **`ROUTE_MODE_ALLOWED_KINDS` の registry 完全化 → fail-close 化 (C-1 対応、最重要)**。
+     **目的は registry の正しさであって CI 温存ではない。観測された route_mode|kind 組合せを鵜呑みで
+     allow に登録してはならない (それは fail-open の看板替えであり縮退)**。順序:
+     - (i) 各実在 mode (add-feature/refactor/version-up/reverse/recovery/verify) の allowed kinds を
+       **設計 SSoT (L4 §3.1 駆動モデル表 + route-map) から導出**して登録する (観測値からではない)。
+     - (ii) その正しい mapping で全 PLAN を検査し、炙り出た mismatch (例: `version-up|impl`・`refactor|impl`
+       等) を分類する。**既定処分は (a) 構造的解消 = PLAN 修正**。台帳登録は **(b) 有限・理由拘束・burn-down
+       期限つきの例外** のみ (ゴミ捨て場化禁止)。**(c) 正当と判断するものは SSoT mapping 側に本来含まれるべき
+       = mapping を直す**。無言 blessing 禁止、分類内訳を証跡化 (TL 判断)。
+     - (iii) 分類完了後に `lint.ts:364` の `if (!allowedKinds) return []` を fail-close へ変更。
+     - (iv) **上流設計を厳格化したのだから、下流の CI (`harness-check`) / `schema.test` / 関連テストは
+       新 gate に追従して更新する** (設計を CI に合わせて緩めない、逆向き禁止)。
+     この作業は kind taxonomy を 1 種増やす core 変更 + 既存 ~180 PLAN の route_mode→kind 正当性の棚卸しを
+     伴うため、規模は小さくない。TL がこの分類の妥当性をレビューする。
   5. `REQUIRED_KIND_BY_BRANCH`/`BranchKind`/`classifyBranchKind` (`branch-kind.ts`) に `verify` prefix
      (`verify:["verify"]`) を追加 (H 行、C-2 対応)。
   6. `CONVERGENCE_SCOPE_KINDS` に verify を含めるか否かを明示判断し注記 (I 行)。
   7. plan_id L-token↔`layer` 一致の fail-close チェックを新設 (D 行、`V_MODEL_PAIRS` 活用)。
   8. route-map schema (`src/schema/route-map.ts`) に verification route_signal/route_mode を追加。
 - **検証** (falsifiable、実 repo 回帰を必須化 = CLAUDE.md PLAN claim discipline):
-  - **`docs/plans/*.md` 全件に `ut-tdd plan lint` を実行し新規 violation 0 件** (C-1 の大量破壊が起きない実証。
-    prose 主張ではなく real-repo regression)。
+  - **`docs/plans/*.md` 全件 lint が green なのは「正しい mapping での登録 + mismatch の分類 (ledger/修正) が
+    完了した後の到達状態」**であって、通すこと自体が目的ではない (通すための blessing は不可)。green に至る前の
+    mismatch 一覧と各々の分類 (正当/債務/修正) を証跡として残す。
   - `PLAN-L8-90-...` 最小検証 PLAN を作り `ut-tdd plan lint` が受理 / 既存 12 kind の layer 制約不変。
   - 未知 route_mode (台帳に無い値) が **空許可でなく fail-close** する回帰テスト (IT-EXT-05 同型)。
   - verify PLAN を `verify/` branch で commit → `ut-tdd doctor` branch-kind が PASS、既存 prefix では
@@ -174,8 +206,10 @@ tl/po 人間サインオフ待ち。
 
 - [x] 共通影響調査を実 grep で裏取りし touch-point を A-I に列挙 (cross-review C-2/I-2 で H/I 追加)。
 - [x] Step 4.1-4.4 各々に 影響 / 手順 / 検証 / rollback を定義。
-- [x] fail-open 穴 (`ROUTE_MODE_ALLOWED_KINDS` 未知 mode) の fail-close 化を **register-all-first 順序**で
-      Step 4.1 に組込 (C.7 自己適用 + C-1 大量破壊回避)。実 repo 回帰 (全 PLAN lint 新規 violation 0) を必須検証化。
+- [x] fail-open 穴 (`ROUTE_MODE_ALLOWED_KINDS` 未知 mode) の fail-close 化を Step 4.1 に組込。**目的は
+      registry の正しさ (SSoT 由来の mapping + mismatch の明示分類) であり CI 温存ではない。観測組合せの
+      鵜呑み blessing を禁止し、上流厳格化に CI/schema.test を追従更新する旨を明記** (PO 指摘: CI ごときで
+      本来やるべき棚卸しを縮退させない)。
 - [x] cross-review (code-reviewer/Sonnet) を実施し Critical 2 (C-1 既存 PLAN 大量 fail-close / C-2 branch-kind
       未対応) + Important 4 + Minor 3 を全て手順定義へ fix-forward。
 - [ ] **tl/po 人間サインオフ** (この手順定義への承認) を review_evidence へ記録 → 記録後に本体着手 (add-impl/add-design)。
