@@ -185,6 +185,21 @@ requirements produced here.
 | IT-ROUTE-03 | L4 §3.1 band 外の (route_mode, kind, layer) を持つ PLAN fixture + draft-debt 台帳 fixture | `ut-tdd plan lint` / `ut-tdd doctor` を実行する。 | band 外 PLAN は `route_mode_kind_layer_mismatch`、設計祖先なし L7 impl は `l7_cold_intake` で fail-close する。台帳 entry は promote_by 有効 + justification 時のみ免除。 | plan frontmatter loader -> lint-policy 台帳 -> doctor aggregation boundary。 | 全 mode に kind/layer 制約が効く (`allowedKinds` 未定義 fall-through が無い)。期限超過 debt は draft でも fail。 | promote_by 欠落 entry、justification 無き新規 allowlist 追加、archived PLAN (対象外)。 |
 | IT-ROUTE-04 | add-impl PLAN + 対の Reverse PLAN (双方 draft) fixture | two-phase intake で draft 起票 → 片方を confirmed へ昇格する。 | draft 間は requires_not_ready にならず intake が通り、confirmed 昇格時のみ双方 pairing ready を要求して未 ready は fail-close する。 | plan lint (requires/backfill-pairing) -> status 遷移検証 boundary。 | intake 緩和が draft 間に限定され confirmed 系 gate へ漏れない。既存 READY_DEPENDENCY_STATUSES 規律が confirmed 以降で不変。 | Reverse 参照欠落の add-impl (intake でも fail)、forward_routing 未宣言 Reverse との同時昇格。 |
 
+## Appendix E: 変動点外部化設計 lint 結合テスト設計 (PLAN-L5-12、2026-07-07)
+
+> 設計ペア: `docs/design/harness/L5-detailed-design/internal-processing.md` Appendix C.7 (変動点外部化設計)。
+> 本 Appendix は「宣言された変動点 × 外部化設計の存在」を検査する設計時 lint の結合挙動を扱う。
+> **実行時期**: C.7 の設計時 lint 実装 (C.6 carry の add-impl) が着地した後に④実行する design-first。
+> 実装前 green は主張しない。
+
+| IT-ID | 前提 (Given) | 操作 (When) | 期待結果 (Then) | モジュール境界 | 不変条件 |
+|---|---|---|---|---|---|
+| IT-EXT-01 | 変動点を宣言し外部化設計 (config schema/registry 参照) を持つ設計 doc fixture | `ut-tdd doctor` を実行する。 | 変動点×外部化設計が揃うため green。 | design-doc loader -> 変動点マーカー parser -> 外部化存在検査 boundary。 | 外部化設計あり = green (誤検知しない)。 |
+| IT-EXT-02 | 変動点を宣言したが外部化設計が無い設計 doc fixture | `ut-tdd doctor` を実行する。 | `externalization_design_missing` が**永続エラー**として fail-close (一度きり warn でなく毎回)。 | 同上。 | 宣言変動点に外部化なし = 永続 fail (absence-blindness 根治)。時間経過で消音しない。 |
+| IT-EXT-03 | opt-out を宣言した箇所 (十分な反証理由 + TL 承認あり / 形骸理由 / TL 承認なし の 3 fixture) | `ut-tdd doctor` を実行する。 | 4 類型 (a)-(d) への反証 + TL 承認 record を持つ opt-out のみ pass。形骸理由 (実質空 / 4 類型言及なし) と TL 承認なしは fail。opt-out 一覧は常時表示。 | opt-out 台帳 + review record boundary。 | 理由付き opt-out ≠ 無言の欠落。opt-out は判定基準への反証を要し hollow rationalization を弾く。 |
+| IT-EXT-05 | registry/config は存在するが参照キー (mode/kind 等) が欠落した fixture (version-up 穴の再現) | `ut-tdd doctor` を実行する。 | 未知キーは Pack 既定へ **fail-close** し、fail-open (制約なしとして通過) しない。 | registry loader -> 既定 fallback boundary。 | 未知キー = fail-close (`if (!allowedKinds) return []` 型 fail-open の回帰ガード)。 |
+| IT-EXT-04 | 変動点宣言なしだが実体は registry/config で外部化されている箇所の fixture (過大宣言の逆) | `ut-tdd doctor` を実行する。 | 宣言が無い箇所は検査対象外 (lint は宣言駆動、全 doc を強制外部化しない = 過大外部化を強制しない)。 | 変動点マーカー parser boundary。 | lint は宣言された変動点のみ検査 (speculative generality を lint 自身が強制しない)。 |
+
 ## §6 G8-WORKFLOW: integration verification workflow
 
 This section defines the executable workflow granularity for closing L8/G8. It

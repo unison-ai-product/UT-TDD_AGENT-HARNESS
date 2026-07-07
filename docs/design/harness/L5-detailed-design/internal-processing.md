@@ -338,3 +338,52 @@ escape の根本原因 = draft `add-impl` の `requires_not_ready` × `KIND_BACK
 - route-map / lint-policy / lint / doctor (`l7-cold-intake`) の**実装** = 後続 add-impl (L7)。
 - `design-bottomup` / `version-up` の L4 §3.1 外部設計 back-fill = L4 add-design carry。
 - 結合テスト設計ペア = L8-integration-test-design (pair_artifact、PLAN-L5-10 Step 4)。
+
+### C.7 変動点外部化設計 (externalization by design、C.2c の一般化、PO 2026-07-07)
+
+> **適用範囲**: C.2c は本 router Appendix の縛りルールを外部化する具体適用。C.7 はそれを**全設計 doc の
+> 変動点へ一般化した左肺設計義務**であり、router 固有でない (観測性設計 = FR-L1-20 と同格に、設計時に
+> 「何が変わりうるか + どう外部化するか」を書く)。配置は左肺義務 locus (両肺原理 §C 冒頭 / C.2c) に
+> 合わせるが、将来 design-methodology 専用 doc を新設する場合は C.7 を移送する (forward note)。
+
+**原理**: 変動点 (variation point / hotspot) = 変更・追加が頻出する箇所。これを設計時に外部化
+(config / registry / policy) し、**外部化設計を当該設計 doc に内包**する。ハードコード → 後日 retrofit
+(self-pair = RECOVERY-09/REVERSE-12 の 3 commit / version-up band = PLAN-L4-17) という高コスト失敗
+モードの発生源を潰す。既に本標準を満たす例 = route-map override / harness-db table registry / C.2c。
+**射程の精度 (over-claim 防止)**: 本 lint が潰すのは**宣言された変動点**の発生源のみ。「変動点だと誰も気づかず宣言しなかった」(under-declaration = self-pair / version-up の実際の原因) は宣言駆動 lint では検出できないため、**下記判定基準による分類チェックを L1-L6 設計 gate の TL レビュー必須項目**とする (cross-review が under-declaration の最終防衛線)。
+
+**変動点の判定基準 (過大外部化 = speculative generality / YAGNI の防止)**: 以下のいずれかに該当する
+箇所**のみ**を変動点として宣言する。該当しない箇所 (真に固定・単一実装・普遍不変条件) は**外部化しない**
+— 変動しないものの外部化は純損失 (間接化・config-drift 検出面の増大)。
+
+| 変動点類型 | 例 | 外部化機構 |
+|---|---|---|
+| (a) project/consumer ごとに異なる | 縛りルール・承認ポリシー・閾値 | policy config (`.ut-tdd/config/`) |
+| (b) 種類が増える集合 | mode / kind / gate / rule / view / adapter / DB table | registry (単一正本 append) |
+| (c) 差し替え可能な実装 | renderer / diagram adapter / provider | adapter interface + profile |
+| (d) 閾値・語彙・対応表 | 対応表 (①⇔③ pair map) / signal 語彙 / 粒度マーカー | data-driven config |
+
+(a) と (d) の軸違い: (a) は **project 間で値が変わる** 軸、(d) は **同一 project 内で複数入力に対応する表** の軸 (両者は直交し、両方該当もあり得る)。
+
+**外部化設計の内容 (設計 doc に内包する変動点表)**: 各変動点に {① 何が変わるか / ② 外部化機構
+(config schema・registry・policy hook) / ③ 固定される契約・不変条件 (変わらない核) / ④ config 不在時の
+fail-close 既定} を宣言する。④は「config/registry が不在、**または registry 内に参照キーが無い (未知 mode/kind 等)** 場合は Pack 同梱の既定へ fail-close (安全側)」を既定とする。**未知キーの fail-open (制約なしとして通す) を禁止**する — これは version-up 穴 (`if (!allowedKinds) return []` = キー欠落時に無制約 [] を返した) の直接教訓であり、registry 型 (類型 b) の外部化設計は未知キー fail-close を必須要件とする。
+
+**理由付き opt-out**: 変動しないと判断した箇所は「非該当」を**理由付きで明示**する (無言の非外部化と
+区別。opt-out 一覧は doctor 出力に常時表示して不可視化しない)。opt-out 理由は自由記述でなく **4 類型
+(a)-(d) のいずれにも該当しない根拠**を述べる (判定基準への反証。形骸理由 = hollow rationalization の
+禁止、PLAN claim discipline と同精度)。理由不十分 (実質空 / 4 類型への言及なし) または TL 承認 record
+無しは無効 = fail。C.2c opt-out 規約を厳格化した形。
+
+**機械強制 (設計時 lint 契約、fail-close)**: 宣言された変動点に外部化設計 (config schema か registry
+参照) が無ければ doctor は**永続エラー**を出し続ける (C.2c「未作成は永続エラー」と同型、一度きり warn
+や時間経過での消音はしない = absence-blindness 根治)。黙らせる方法は 2 つだけ: **外部化を作る**、
+または**理由付き opt-out 宣言**。lint の**実装は後続 add-impl (L7) の scope** (C.6 carry)。本標準は
+C.7 の設計 + lint 契約まで。
+
+**carry (C.6 追加)**: 変動点宣言マーカー parser / 外部化存在検査の**関数 signature + pre/post/invariant
+は L6 function-spec 追補 (C.6 と同型)**、実装は後続 add-impl (L7)。外部化の存在判定は種別を問わず
+**「zod schema か registry ファイルへの相対パス参照が設計 doc 本文にあるか」の単一機械判定に統一**する
+(adapter/config/registry の grey zone を作らない)。他 layer 設計 author への周知 = coding-rules.md へ
+C.7 相互参照を追加 (Important-3 対応)。結合テスト設計 = L8 (宣言×外部化なし→fail / opt-out→pass /
+config・registry 不在→既定 fail-close / 未知キー→fail-close)。
