@@ -95,14 +95,14 @@ FR → `ut-tdd` サブコマンドの対応 (architecture.md cli module に集�
 
 > コマンドの Precondition/Postcondition (DbC 契約) は L5 D-API で確定 (§8 carry)。各 subcommand の関数粒度 signature は L6 機能設計 (=仕様設計) で単体テスト設計粒度に分解 (back-fill、PLAN-L4-11)。
 
-## §3 workflow オーケストレーション機能 (Forward spine + 9 駆動モデル + 2 工程専門)
+## §3 workflow オーケストレーション機能 (Forward spine + 11 駆動モデル + 2 工程専門)
 
-FR-12〜16 / FR-23〜30 の workflow を機能単位で外部設計する。この harness の**中核価値 = 適切なオーケストレーションで開発コストを下げる (CLAUDE.md 柱 5)** の本体であり、L4 では各 mode の **外部から見える設計 (入口 signal / 状態遷移 what / 出口 contract / 担当 building block / gate)** を確定する。状態遷移の内部ロジック (pseudocode) ・CLI signature は §3 末尾で L5/L6 へ明示 defer (正規 carry = under-design ではない)。設計の操作詳細の正本は `docs/process/modes/*.md` (9 mode spike)、本 §3 はそれを L4 外部設計粒度に確定したもの。
+FR-12〜16 / FR-23〜30 の workflow を機能単位で外部設計する。この harness の**中核価値 = 適切なオーケストレーションで開発コストを下げる (CLAUDE.md 柱 5)** の本体であり、L4 では各 mode の **外部から見える設計 (入口 signal / 状態遷移 what / 出口 contract / 担当 building block / gate)** を確定する。状態遷移の内部ロジック (pseudocode) ・CLI signature は §3 末尾で L5/L6 へ明示 defer (正規 carry = under-design ではない)。設計の操作詳細の正本は `docs/process/modes/*.md` (11 mode spike)、本 §3 はそれを L4 外部設計粒度に確定したもの。
 
-> **mode taxonomy (IMP-069 reconciled、PO 2026-06-05「Forward=spine」確定)**: canonical 構成 = **Forward spine (主線、合流先) + 駆動モデル (entry mode、9 種) + 工程専門 (screen/frontend、2)**。9 駆動モデル = `docs/process/modes/` の 9 = Discovery / Scrum / Reverse / Recovery / Incident / Refactor / Retrofit / Add-feature / **Research** (Forward を除き Research を含む)。**Forward は駆動モデルの 1 つでなく、全駆動モデルが出口で合流する終着 (spine)**。旧 §3「10 mode」(Forward を mode に算入) は解消。
-> **legacy framing との橋渡し (重要、カウント混乱防止)**: concept §2.5 の「**9-mode ecosystem**」表は別グルーピング = **Forward + 8 (Research 除く)** で数えたもの。本 §3 の「9 駆動モデル」とは **同一 universe を起点違いで数えた表記差** (9-mode = Forward 起点 / 9 駆動モデル = entry 起点 + Research)。両者の対応の正本 = `docs/process/modes/README.md §3`。L5 以降で mode を数えるときは **本 §3 の「Forward spine + 9 駆動モデル + 2 工程専門」を operational 正本**とする。L9 ST-FUNC ペアも本構成。
+> **mode taxonomy (IMP-069 reconciled、PO 2026-06-05「Forward=spine」確定 / 拡張2 mode back-fill = PLAN-L4-17)**: canonical 構成 = **Forward spine (主線、合流先) + 駆動モデル (entry mode、11 種) + 工程専門 (screen/frontend、2)**。11 駆動モデル = `docs/process/modes/` の 11 = Discovery / Scrum / Reverse / Recovery / Incident / Refactor / Retrofit / Add-feature / **Research** / **design-bottomup** / **version-up** (Forward を除く)。**Forward は駆動モデルの 1 つでなく、全駆動モデルが出口で合流する終着 (spine)**。旧 §3「10 mode」(Forward を mode に算入) は解消。concept §10.3 用語集 (駆動モデル 11 種) と一致。
+> **legacy framing との橋渡し (重要、カウント混乱防止)**: concept §2.5 の「**9-mode ecosystem**」表は別グルーピング = **Forward + 8 (Research 除く)** で数えたもの。本 §3 の「11 駆動モデル」は entry 起点で数えた現在集合 (Research + 拡張2 mode = design-bottomup / version-up を含む)。**同一 universe を起点違い・時点違いで数えた表記差** (9-mode = Forward 起点の legacy / 11 駆動モデル = entry 起点の現在集合)。両者の対応の正本 = `docs/process/modes/README.md §3`。L5 以降で mode を数えるときは **本 §3 の「Forward spine + 11 駆動モデル + 2 工程専門」を operational 正本**とする。L9 ST-FUNC ペアも本構成。
 
-### §3.1 駆動モデル (entry mode) の外部設計 — 9 種
+### §3.1 駆動モデル (entry mode) の外部設計 — 11 種
 
 各駆動モデルは状況 signal で発動し、固有 phase/step を経て、**出口で必ず Forward spine の特定 L 工程へ合流**する (concept §2.5)。kind は §1.3 VALID_KINDS、非1:1 対応は §3.2。
 
@@ -119,6 +119,8 @@ FR-12〜16 / FR-23〜30 の workflow を機能単位で外部設計する。こ�
 | **Retrofit** | retrofit | `dependency_outdated` / `upgrade` / `config_drift` | (phase なし) 5 step: 現状把握 → 影響評価 (retrofit-matrix) → 移行計画 → 段階移行 → 検証 (L8 回帰 + 性能 + DB 整合) | 回帰全件緑 + 性能維持 + DB 整合 + matrix 完了 → **L7、アーキ/DB 変更時 L4/L5 追補、要件変化時 L1/L3 (Add-feature 併用)** | `doctor --preflight upgrade` (fail-close) / G7。config_drift は **tl サインオフ必須** |
 | **Add-feature** | add-design + add-impl (内包) | `feature_addition` / `scope_extension` | (phase なし) step 集合: 影響範囲特定 → (A 要件追補 / B 後送) → add-design (parent 必須) → add-impl (parent 必須) → テスト確認 → V 整合 | 追補が工程 doc 反映 + G7 孤児0 + 既存テスト緑 + `dependencies.parent` 設定済 → **既存 parent PLAN へ接続。経路 B (最頻): G7 trace 凍結は Reverse G3 通過後まで保留** | G7 (孤児0) / 経路 B は G3 (Reverse 完了後) |
 | **Research** | research | `tech_decision_required` / `option_comparison_needed` / `adr_required` | (phase なし) 5 step: 調査課題定義 → 候補調査 → 比較評価 → ADR 記録 → research-memo | ADR (ADR-NNN) 記録完了 + Forward 接続先確定 (L1 or L4 を ADR 内に明記) + research-memo 保存 → **L4 基本設計 or L1 要求の判断材料**。「作れるか不明」→ Discovery 切替 | gate = 人間 (ADR PR レビュー)。**機械化条件は明示 defer** (G? 未割当 → IMP-052、§3.7 carry。doc-only で完了にしない) |
+| **design-bottomup** | add-design + add-impl (内包) | `screen_addition_to_backend` / `design_bottomup` / `backend_derived_screen` / `add_ui_to_backend` | (phase なし) backend から FE 要件を elicitation (Discovery 合成再利用、`design-elicitation` engine) → mock 具体化 (L2 screen 系 sub_doc) → add-design (L2-L6、parent 必須) → add-impl (L7、parent 必須) → 既存テスト緑 | mock/add-design が L2-L6 反映 + add-impl G7 孤児0 + 要件 (L1/L3) は Reverse back-fill (bottom-up 後追い) → **add-design L2-L6 (screen 系 sub_doc) / add-impl L7 (Add-feature 同型)** | G2 (screen pair freeze) / add-impl G7 / PO (elicitation 採否)。DISCOVERY-07 で feasibility confirmed |
+| **version-up** | add-design | `version_deferral` / `version-up` / `version_up` / `future_version` | (phase なし) 後送要件を deferral 台帳へ記録 → 次バージョン着手時に add-feature 決定表へ合流 → add-design (L3-L6) | deferral 台帳記録 (着手まで PLAN 化しない) + 着手時 add-feature 合流 → **add-design L3-L6** | 着手時 add-feature の G7。deferral 記録は台帳 lint 化 (carry) |
 
 > **Discovery / Scrum → Reverse 昇華の機械着地先 (F-3、可視化)**: §3.1 の Discovery 出口「終点で Reverse 昇華」/ Scrum 出口「Reverse fullback で V 昇華完了まで exit しない」は **doctor `checkScrumReverse` (scrum-reverse lint) が機械 enforce 済** — 「confirmed poc は Reverse 合流済」を検査し、Reverse 無き poc 完了を surface する。出口 contract が doc-only でなく機械担保される (柱 2)。
 > **定量テスト → 定性レビュー順序 (全駆動モデル普遍、IMP-077 / IMP-108)**: 上表の各駆動モデルの状態遷移は **定量 verify step → 定性 review/サインオフ step** の順 (Discovery=S3 verify→S4 decide / Scrum=increment テスト→S3 レビュー / Reverse=③テスト設計状態確定→R4 / Incident=収束確認→postmortem / Refactor=テスト緑確認→commit / Retrofit=L8 回帰→exit / Add-feature=テスト確認→V 整合 / Research=候補比較→ADR)。共通機械アンカー = `review_evidence.tests_green_at ≤ reviewed_at` を doctor `checkReviewEvidence` が fail-close (concept §2.1.2.1 核心ルール 6)。2026-06-23 以降の confirmed/completed review evidence はさらに `review_evidence.green_commands[]` で command / runner / scope / exit_code=0 / evidence_path / output_digest を持つ。未検証成果物、または green command 証跡が再現不能な成果物をレビュー済み green と扱わせない。
@@ -133,7 +135,7 @@ Route helper は `route eval` と同じ route-map / 最長 token 優先で解決
 Incident (env=prod 障害) > Recovery (暴走/forced_stop/dev 回帰) > Reverse (drift) > Refactor (劣化)
 ```
 
-この 4 mode は**失敗 routing の優先度を持つ** (gate fail / 劣化 signal が競合したら上位を採る。例: env=prod 障害 + drift 同時 → Incident)。他の駆動モデル (Retrofit/Add-feature/Scrum/Research/Discovery) は**固有 signal で入る能動 mode** で、上記失敗 routing 順序とは競合しない (rank=—)。
+この 4 mode は**失敗 routing の優先度を持つ** (gate fail / 劣化 signal が競合したら上位を採る。例: env=prod 障害 + drift 同時 → Incident)。他の駆動モデル (Retrofit/Add-feature/Scrum/Research/Discovery/design-bottomup/version-up) は**固有 signal で入る能動 mode** で、上記失敗 routing 順序とは競合しない (rank=—)。
 
 | 失敗 routing rank | signal 群 | → mode | 特記 |
 |---|---|---|---|
@@ -146,6 +148,8 @@ Incident (env=prod 障害) > Recovery (暴走/forced_stop/dev 回帰) > Reverse 
 | — (固有) | `user_feedback_iteration` / `requirement_continuous_refinement` | Scrum | |
 | — (固有) | `tech_decision_required` / `option_comparison_needed` / `adr_required` | Research | PoC 不要 (机上完結) |
 | — (固有) | `requirement_undefined` / `feasibility_unknown` / `success_condition_unclear` / `design_uncertain` | Discovery | uncertainty 高 = 上流委譲 |
+| — (固有) | `screen_addition_to_backend` / `design_bottomup` / `backend_derived_screen` / `add_ui_to_backend` | design-bottomup | 既存 backend から FE 派生 (DISCOVERY-07) |
+| — (固有) | `version_deferral` / `version-up` / `version_up` / `future_version` | version-up | 後送要件 deferral 台帳、着手時 add-feature 合流 |
 | 分岐 | `interrupt` (design_gap/new_requirement/constraint/po_change) | 4 方向分岐 | runaway 併発→Recovery / 要件昇格→Discovery / 軽微追加→Add-feature / 設計 gap のみ→Forward spot 修正 |
 
 **mode ↔ kind の非1:1 (§1.3 整合)**: ① Discovery と Scrum は同一 `kind=poc`、入口 (mode) で識別し frontmatter では区別しない / ② Incident は独立 kind を持たず `troubleshoot`(L7) + `recovery`(cross) の 2 PLAN に分割 (`recovery` PLAN の `dependencies.requires` に `troubleshoot` PLAN を宣言) / ③ Add-feature は `add-design`(L3-L6) + `add-impl`(L7) を内包。ID-legibility の射程は §1.10.A (横断駆動 = mode token / layer-bound = layer token + kind 識別)。
