@@ -47,20 +47,20 @@ landed off-diagonal。全て confirmed = landed 済につき恒久免除 (kind �
 
 | plan_id | mode\|kind (SSoT 期待) | 恒久免除理由 |
 |---|---|---|
-| PLAN-L7-216-setup-boundary-refactor | refactor\|impl (refactor) | confirmed landed。extraction refactor が kind=impl で landed |
-| PLAN-L7-217-doctor-setup-smoke-extraction | refactor\|impl (refactor) | confirmed landed |
-| PLAN-L7-218-setup-distribution-module-extraction | refactor\|impl (refactor) | confirmed landed |
-| PLAN-L7-220-doctor-plan-governance-extraction | refactor\|impl (refactor) | confirmed landed |
-| PLAN-L7-222-doctor-runtime-surface-extraction | refactor\|impl (refactor) | confirmed landed |
-| PLAN-L7-223-cli-distribution-registrar-extraction | refactor\|impl (refactor) | confirmed landed |
-| PLAN-L7-224-doctor-db-projection-extraction | refactor\|impl (refactor) | confirmed landed |
-| PLAN-L7-225-doctor-rule-quality-extraction | refactor\|impl (refactor) | confirmed landed |
-| PLAN-L7-226-doctor-workflow-quality-extraction | refactor\|impl (refactor) | confirmed landed |
-| PLAN-L7-227-doctor-doc-registry-extraction | refactor\|impl (refactor) | confirmed landed |
-| PLAN-L7-228-doctor-roadmap-verification-extraction | refactor\|impl (refactor) | confirmed landed |
-| PLAN-L7-256-model-id-ssot-drift-gate | refactor\|impl (refactor) | confirmed landed |
-| PLAN-L7-359-consumer-setup-profile-wiring | recovery\|refactor (recovery) | confirmed landed |
-| PLAN-L7-361-setup-noninteractive-package-tar-portability | recovery\|impl (recovery) | confirmed landed |
+| PLAN-L7-216-setup-boundary-refactor | refactor\|impl (refactor) | confirmed で landed 済。extraction refactor を kind=impl で landed した恒久免除 |
+| PLAN-L7-217-doctor-setup-smoke-extraction | refactor\|impl (refactor) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-218-setup-distribution-module-extraction | refactor\|impl (refactor) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-220-doctor-plan-governance-extraction | refactor\|impl (refactor) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-222-doctor-runtime-surface-extraction | refactor\|impl (refactor) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-223-cli-distribution-registrar-extraction | refactor\|impl (refactor) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-224-doctor-db-projection-extraction | refactor\|impl (refactor) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-225-doctor-rule-quality-extraction | refactor\|impl (refactor) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-226-doctor-workflow-quality-extraction | refactor\|impl (refactor) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-227-doctor-doc-registry-extraction | refactor\|impl (refactor) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-228-doctor-roadmap-verification-extraction | refactor\|impl (refactor) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-256-model-id-ssot-drift-gate | refactor\|impl (refactor) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-359-consumer-setup-profile-wiring | recovery\|refactor (recovery) | confirmed で landed 済のため恒久免除 |
+| PLAN-L7-361-setup-noninteractive-package-tar-portability | recovery\|impl (recovery) | confirmed で landed 済のため恒久免除 |
 
 ## draft debt (38 本、着手時昇格)
 
