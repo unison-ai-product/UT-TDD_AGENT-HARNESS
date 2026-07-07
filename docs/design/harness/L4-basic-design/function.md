@@ -156,7 +156,7 @@ screen-design / frontend-design は**独立した駆動モデルでなく、Forw
 
 | 工程専門 | 実現 FR | Forward 内位置 | 状態遷移 (what) | 出口 / gate | drive 別要否 |
 |---|---|---|---|---|---|
-| **screen-design** | FR-29 | L2 内 (G1 通過後) | 画面一覧 → 画面遷移 → wireframe → UI 要素 (4 sub-doc) | G2 凍結 → L3 進行。mock 自体が ③ ペア (`self-pair`、pair-freeze 孤児扱い外) | be/db=skip 可、fe/fullstack/agent=必須 |
+| **screen-design** | FR-29 | L2 内 (G1 通過後) | 画面一覧 → 画面遷移 → wireframe → UI 要素 (4 sub-doc) | G2 凍結 → L3 進行。③ = L10-ux-validation-test-design.md (旧 self-pair は PLAN-RECOVERY-09 で撤去) | be/db=skip 可、fe/fullstack/agent=必須 |
 | **frontend-design** | FR-30 | L10 内 (G9 通過後) | 本番実データで画面・表示が UX/ビジュアル/表現品質で成立するか磨く (右腕「実データ検証」) | G10 UX 承認 → L11。不承認 → L2 画面設計へ差し戻し | fe=厚い、be/db=薄い、fullstack=標準、agent=会話UI/デモ |
 
 ### §3.3 TDD型駆動モデルへの組み込み
