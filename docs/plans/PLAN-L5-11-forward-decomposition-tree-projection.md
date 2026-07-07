@@ -33,6 +33,7 @@ dependencies:
     - docs/design/harness/L5-detailed-design/internal-processing.md
     - docs/design/harness/L6-function-design/vmodel-pair-freeze.md
     - docs/plans/PLAN-RECOVERY-10-right-lung-quality-assurance.md
+    - docs/plans/PLAN-L7-248-diagram-view-expansion.md
     - src/lint/relation-graph.ts
     - src/state-db/projection-writer.ts
     - src/schema/harness-db-tables-graph.ts

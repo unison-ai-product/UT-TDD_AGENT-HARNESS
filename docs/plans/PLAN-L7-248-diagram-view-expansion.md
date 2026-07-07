@@ -28,6 +28,9 @@ dependencies:
     - docs/plans/PLAN-L7-247-db-driven-diagram-generation.md
     - docs/plans/PLAN-L7-243-mode-first-class-db-projection.md
     - docs/plans/PLAN-L7-246-feedback-event-lifecycle.md
+    - docs/plans/PLAN-L5-11-forward-decomposition-tree-projection.md
+    - docs/plans/PLAN-L7-204-central-ui-vscode-webview-local.md
+    - docs/plans/PLAN-L7-141-web-dashboard-component-derived.md
 ---
 
 # PLAN-L7-248 (impl): 図面 view 拡張 8 種 — 将来版アップデート track
@@ -35,6 +38,24 @@ dependencies:
 ## Status
 
 **version-up parked** (PO 指示 2026-07-02「アップデートで起票」)。`status: draft` + `version_target: future` で将来版へ明示保全。基盤 (生成層 + screen-flow/sequence) は PLAN-L7-247 が先行し、本 PLAN は活性化時に L7-247 の view 追加として実装する。
+
+### 結合 view capability の記録 (PO 指摘 2026-07-07「WBS+ガント+VSCode view は作れるか / これはアップデート起票の修正では」)
+
+PO が構想した **「WBS 工程表 + ガントチャート + VSCode view」の結合 view** は、新規 feature PLAN ではなく
+**既存の version-up parked track の組み合わせ**として本 harness に既に deferred 記録されている。本節は
+散在する3 PLAN を1つの結合 capability として discoverable に束ねる (相互参照は上記 references に登録済み):
+
+- **WBS 工程表 (行=左肺系譜 / 列=layer の分解ツリー行列)**: `PLAN-L5-11` の forward-tree matrix projection
+  (`ut-tdd status --forward-tree`) が DB 正規形のデータ層。本 view 群の WBS 素材はここから供給される
+  (L5-11 は add-design draft、確定は別サイクル)。
+- **工程ガント / V-model トレース図**: 本 PLAN の scope 表 (工程ガント = `roadmap_gate_progress` +
+  `plan_registry` + `drive_runs`、V-model トレース図 = `trace_edges` + `descent_obligations`)。
+- **VSCode view 配布**: `PLAN-L7-204` (ローカル VSCode Webview) が read-only 配布シェル、`PLAN-L7-141`
+  (中央 UI 15 画面 component-derived) が画面 track。
+
+したがって PO 質問への回答は **「新規 PLAN 不要 / version-up (アップデート) 起票で成立 / 既に parked 済み」**。
+活性化時は L5-11 の forward-tree 確定を WBS view の前提とし、工程ガント + トレース図を L7-204/L7-141 の
+VSCode/中央 UI から render する。
 
 ## スコープ (L7-247 Appendix カタログの本体、実測素材つき)
 
