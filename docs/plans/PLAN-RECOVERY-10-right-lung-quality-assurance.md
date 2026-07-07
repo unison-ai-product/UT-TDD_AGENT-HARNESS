@@ -142,8 +142,10 @@ parked (再び後送り)** されている。fail-open な検証 gate は「検�
   4. **`ROUTE_MODE_ALLOWED_KINDS` の registry 完全化 → fail-close 化 (C-1 対応、最重要)**。
      **目的は registry の正しさであって CI 温存ではない。観測された route_mode|kind 組合せを鵜呑みで
      allow に登録してはならない (それは fail-open の看板替えであり縮退)**。順序:
-     - (i) 各実在 mode (add-feature/refactor/version-up/reverse/recovery/verify) の allowed kinds を
-       **設計 SSoT (L4 §3.1 駆動モデル表 + route-map) から導出**して登録する (観測値からではない)。
+     - (i) 各実在 mode の allowed kinds を **設計 SSoT (L4 §3.1 駆動モデル表 `function.md:109`) から導出**して
+       登録する (観測値からではない)。**棚卸し済の確定 mapping = 補遺A**:
+       `add-feature→[add-design,add-impl]` / `reverse→[reverse]` / `recovery→[recovery]` /
+       `refactor→[refactor]` / `version-up→[補遺A 特記の tl/po 裁定で確定]` / `verify→[verify]`。
      - (ii) その正しい mapping で全 PLAN を検査し、炙り出た mismatch (例: `version-up|impl`・`refactor|impl`
        等) を分類する。**既定処分は (a) 構造的解消 = PLAN 修正**。台帳登録は **(b) 有限・理由拘束・burn-down
        期限つきの例外** のみ (ゴミ捨て場化禁止)。**(c) 正当と判断するものは SSoT mapping 側に本来含まれるべき
@@ -170,6 +172,73 @@ parked (再び後送り)** されている。fail-open な検証 gate は「検�
 - **rollback**: enum 値・Record entry は append-only なので revert で既存行に副作用なし。ただし手順(4)(iii)の
   fail-close 切替は独立 commit にし、既存 mode 全登録 commit と分離して revert 単位を保つ (切替のみ戻せる)。
   最小検証 PLAN・回帰テストも別 commit。
+
+### Step 4.1 補遺A: route_mode→kind 棚卸し結果 (2026-07-07 実走、全数 184 PLAN)
+
+`docs/plans/*.md` 全 567 件を frontmatter 抽出し、`route_mode` 非空の **184 PLAN** を SSoT (L4 §3.1
+駆動モデル表 `function.md:109` の「駆動モデル | kind」列) 対照で棚卸しした。**観測分布は bless せず、
+SSoT との一致/不一致を判定した** (Step 4.1(4)(ii) の (a)/(b)/(c) 分類の入力証跡)。
+
+| route_mode | SSoT kind (L4 §3.1) | 実測 kind 分布 | 判定 | 既定処分 |
+|---|---|---|---|---|
+| `reverse` | `reverse` | reverse ×20 | ✅ 完全一致 | そのまま登録 (mismatch 0) |
+| `recovery` | `recovery` | recovery ×5 / **refactor ×1 / impl ×1** | off-diagonal 2 (全 landed) | 登録 `[recovery]` + landed 2 を恒久台帳 |
+| `refactor` | `refactor` | refactor ×41 / **impl ×12** | off-diagonal 12 (全 landed) | 登録 `[refactor]` + landed 12 を恒久台帳 |
+| `add-feature` | `add-design`+`add-impl` | impl ×37 / add-impl ×13 / add-design ×7 | 既存台帳管理済 | 現行 `[add-design,add-impl]` 維持 (impl 37 は既存 LEGACY_LANDED 5 + DRAFT_DEBT 32) |
+| `version-up` | **`add-design`** | **impl ×47** (draft 46 / confirmed 1) | ⚠️ **47件全て SSoT 不一致** | **tl/po 判断ゲート (下記特記)** |
+
+**登録すべき正しい mapping (SSoT 由来、観測由来でない)**:
+`add-feature→[add-design,add-impl]` / `reverse→[reverse]` / `recovery→[recovery]` /
+`refactor→[refactor]` / `version-up→[add-design]` / `verify→[verify]` (本 PLAN 新設分)。
+
+**off-diagonal landed 14件 (kind 書き換え=履歴改ざんのため恒久台帳、既存 LEGACY_LANDED と同型)**:
+
+- `refactor|impl` ×12 (全 confirmed): PLAN-L7-216 / 217 / 218 / 220 / 222 / 223 / 224 / 225 / 226 /
+  227 / 228 (setup/doctor extraction 系) + PLAN-L7-256 (model-id-ssot-drift-gate)。
+  → kind=impl は refactor の振る舞い不変義務 (`assertRefactorInvariant` / G7 directed edge) を機械免除する
+  ため add-feature|impl と同クラスの債務。landed 済につき恒久免除 + 個別 burn-down (Reverse 起票) を台帳化。
+- `recovery|refactor` ×1: PLAN-L7-359-consumer-setup-profile-wiring (confirmed)。
+- `recovery|impl` ×1: PLAN-L7-361-setup-noninteractive-package-tar-portability (confirmed)。
+
+**特記: version-up 47件 = 単純登録不可の tl/po 判断案件 (観測鵜呑み禁止の核心)**。
+SSoT (L4 §3.1) は version-up を **kind=`add-design`** かつ「**着手まで PLAN 化しない = deferral 台帳記録**」と
+規定する。しかし repo には version-up PLAN が 47件 (全 kind=impl、うち 46 draft は version_target=future の
+parked track) 実在する。ここで観測に合わせて `version-up→[impl]` と登録するのは **fail-open の看板替え (縮退)**
+であり禁止。取り得る構造的解消は次の 3 択で、いずれも tl/po 裁定が要る:
+
+1. **route-map SSoT を「parked track の kind」概念で更新** — version-up parked は将来実装意図を impl として
+   保全し、着手時に add-feature 合流で add-design を生む、と L4 §3.1 に明文化 (現行 doc と実態の乖離を doc 側で解消)。
+2. **47件を kind=add-design へ修正** (draft 46 は default=構造的解消の対象。ただし version_target/parked 意味論の
+   再設計を伴う大工事)。
+3. **version-up を「PLAN 化しない deferral 台帳」へ寄せる** — SSoT 原文に忠実だが 47件の既存 PLAN 資産の扱いが未定義。
+
+推奨は **1 (doc 側で乖離解消)** — 47件の parked 資産を壊さず、SSoT を実態に合わせて正す方が破壊が小さい。
+ただし「parked の kind=impl が back-fill 義務を免除する」懸念 (add-feature|impl と同型) が残るため、parked 中は
+`version_target` が義務を保留し着手時に add-feature 合流で義務が復活する、という機械保証を条件に付ける。**この裁定が
+Stage 1 の登録内容 (`version-up→[?]`) を確定させる前提**であり、tl/po サインオフの必須入力とする。
+
+### Step 4.1 補遺B: 段階分け (PO 2026-07-07「fail-close 化と ~180 棚卸しを段階に分ける」裁定)
+
+規模大 (core taxonomy + 184 PLAN 監査) のため、**構造 (fail-close + 正しい mapping) を先に不変条件として据え、
+再発防止の一般化を次段**に分ける。「正しい構造の上に CI が乗る」state を壊さず積むための分割。
+
+- **Stage 1 (先行 = fail-close 構造 + register-correct)**:
+  1. `ROUTE_MODE_ALLOWED_KINDS` へ SSoT 由来 mapping を全 mode 登録 (上記正しい mapping。verify 含む)。
+  2. off-diagonal landed 14件を LEGACY_LANDED 型恒久台帳へ理由付き固定 (台帳同期テストで fail-close)。
+     `docs/governance/route-mode-kind-debt-audit-2026-07-02.md` を **拡張** (並行台帳を作らない)。
+  3. version-up 47件の処遇を tl/po 裁定 (補遺A 特記の 3 択) で確定し、`version-up→[確定kind]` を登録。
+  4. `lint.ts:364` の fail-open `if (!allowedKinds) return []` を fail-close へ切替 (独立 commit)。
+  5. CI (`harness-check`) / `schema.test` / 台帳同期テストを新 gate に追従更新。
+  6. verify kind/layer envelope (Step 4.1 手順 1-8) を同 Stage に含める (schema=shared_state で直列)。
+  - **Stage 1 完了 = 全 184 route_mode PLAN が「正しい mapping での登録 + mismatch 分類完了後」に lint green**
+    (通すための blessing でなく、構造的到達状態)。
+- **Stage 2 (次段 = L7-336 活性化 = 再発防止の一般化)**:
+  1. PLAN-L7-336 (fail-open 意図宣言) を活性化し、`ROUTE_MODE_ALLOWED_KINDS` 固有の fail-close を
+     **無宣言 fail-open 一般 (src 202 箇所, A-182 AQ-9) の warn/fail 化**へ拡張する (同じ負債の再累積防止)。
+  2. Stage 1 の version-up 裁定が「route-map 更新」だった場合の L4 §3.1 back-fill を Reverse (fullback) で
+     L 正本へ昇華 (Step 5 と統合)。
+  - **分割理由**: Stage 1 (mapping 登録 + 184 分類 + core schema + CI 更新) を 1 commit 塊にすると切り分け困難。
+    fail-close 構造を先に据え、L7-336 の一般化 (影響 202 箇所) は独立サイクルで burn-down する方が安全。
 
 ### Step 4.2: 右肺 doc 3 点セット節の標準化 [並列: doc ごと独立]
 
@@ -212,7 +281,12 @@ parked (再び後送り)** されている。fail-open な検証 gate は「検�
       本来やるべき棚卸しを縮退させない)。
 - [x] cross-review (code-reviewer/Sonnet) を実施し Critical 2 (C-1 既存 PLAN 大量 fail-close / C-2 branch-kind
       未対応) + Important 4 + Minor 3 を全て手順定義へ fix-forward。
-- [ ] **tl/po 人間サインオフ** (この手順定義への承認) を review_evidence へ記録 → 記録後に本体着手 (add-impl/add-design)。
+- [x] **route_mode→kind 棚卸しを実走** (全 567 PLAN 抽出 → 184 route_mode PLAN を SSoT 対照分類、補遺A)。
+      off-diagonal landed 14件を特定、version-up 47件を tl/po 判断案件として上申。観測鵜呑み blessing なし。
+- [x] **段階分け** (Stage 1 = fail-close 構造 + register-correct / Stage 2 = L7-336 活性化) を補遺B に定義。
+- [ ] **tl/po 人間サインオフ** — 承認対象 = (a) この手順定義 + Stage 分割、(b) **version-up 47件の処遇裁定
+      (補遺A 3 択、推奨 1)**、(c) landed off-diagonal 14件の恒久台帳化。記録後に Stage 1 本体着手
+      (add-impl/add-design)。実装は別ランタイム (Codex) / 別セッションと分担。
 
 ## Step 5: fullback (再発防止 + 上位整合)
 
