@@ -6,37 +6,37 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 plan: docs/plans/PLAN-L6-19-plan-schedule-lint.md
 ---
 
-> **L6 contract marker**: `analyzePlanSchedule(input: PlanScheduleInput) => PlanScheduleResult` is the unit-test-granularity contract. DbC pre/post/invariant maps Step parallel/serial and review-step requirements to U-PLANSCH-001..003.
+> **L6 contract marker**: `analyzePlanSchedule(input: PlanScheduleInput) => PlanScheduleResult` は unit-test-granularity contract である。DbC pre/post/invariant は Step parallel/serial と review-step requirement を U-PLANSCH-001..003 へ対応させる。
 
-# plan-schedule lint — function design (IMP-081)
+# plan-schedule lint — 機能設計 (IMP-081)
 
-## §1 Scope
+## §1 範囲
 
-This is the minimum §1.10.G.4 enforcement slice. It does not implement the full PLAN lint engine. It only checks that PLAN §工程表 has explicit step serialization metadata and a review step.
+これは最小の §1.10.G.4 enforcement slice である。full PLAN lint engine は実装しない。PLAN §工程表が明示的な step serialization metadata と review step を持つことだけを確認する。
 
-## §2 Functions
+## §2 関数
 
-| function | contract |
+| function | 契約 |
 |---|---|
-| `extractScheduleSection(content)` | Extract the §工程表 section from a PLAN body. |
-| `analyzePlanSchedule(docs)` | Check every `### Step N:` heading for `[並列]` or `[直列]`; check `[直列]` blocks for one of `file_conflict`, `downstream_dependency`, `shared_state`; require a review step heading; require `§3.1 実装計画`. |
-| `loadPlanScheduleDocs(repoRoot, target?)` | Load one PLAN or all `docs/plans/PLAN-*.md`. |
-| `planScheduleMessages(result)` | Emit OK / violation message. |
-| `lintPlan(path?, repoRoot?)` | CLI-facing wrapper. With a path, lint one PLAN; without a path, lint all plans. |
+| `extractScheduleSection(content)` | PLAN body から §工程表 section を抽出する。 |
+| `analyzePlanSchedule(docs)` | 各 `### Step N:` heading の `[並列]` / `[直列]`、`[直列]` block の `file_conflict` / `downstream_dependency` / `shared_state`、review step heading、`§3.1 実装計画` を確認する。 |
+| `loadPlanScheduleDocs(repoRoot, target?)` | 単一 PLAN または全 `docs/plans/PLAN-*.md` を読み込む。 |
+| `planScheduleMessages(result)` | OK / violation message を出力する。 |
+| `lintPlan(path?, repoRoot?)` | CLI-facing wrapper。path ありなら単一 PLAN、path なしなら全 plans を lint する。 |
 
-## §3 Doctor Behavior
+## §3 Doctor 挙動
 
-`ut-tdd plan lint` returns `ok=false` on violation. Doctor includes `plan-schedule` as a hard/fail-close gate and wires `planSchedule.ok` into `runDoctor.ok`, so PLAN schedule drift blocks both `ut-tdd plan lint` and `ut-tdd doctor`.
+`ut-tdd plan lint` は violation 時に `ok=false` を返す。Doctor は `plan-schedule` を hard/fail-close gate として含め、`planSchedule.ok` を `runDoctor.ok` へ接続する。そのため PLAN schedule drift は `ut-tdd plan lint` と `ut-tdd doctor` の両方を block する。
 
-## §4 Test Oracle
+## §4 Test Oracle 検証観点
 
-Covered by `tests/plan-lint.test.ts`:
+`tests/plan-lint.test.ts` で covered:
 
 | ID | oracle |
 |---|---|
 | U-PLANSCH-001 | §工程表 extraction |
-| U-PLANSCH-002 | compliant PLAN -> ok |
-| U-PLANSCH-003 | missing `[並列]` / `[直列]` -> violation |
-| U-PLANSCH-004 | `[直列]` without allowed reason -> violation |
-| U-PLANSCH-005 | missing review step heading -> violation |
-| U-PLANSCH-006 | missing `§3.1 実装計画` -> violation |
+| U-PLANSCH-002 | compliant PLAN → ok |
+| U-PLANSCH-003 | `[並列]` / `[直列]` 欠落 → violation |
+| U-PLANSCH-004 | `[直列]` に allowed reason がない → violation |
+| U-PLANSCH-005 | review step heading 欠落 → violation |
+| U-PLANSCH-006 | `§3.1 実装計画` 欠落 → violation |

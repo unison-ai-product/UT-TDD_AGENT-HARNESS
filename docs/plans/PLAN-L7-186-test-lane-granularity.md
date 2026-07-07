@@ -20,8 +20,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T15:00:55+09:00"
-    tests_green_at: "2026-06-29T15:00:38+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "Vitest full/fast/DB/CLI test lane scripts, runtime-portability guardrails, and verification documentation."
     worker_model: codex
@@ -34,39 +34,39 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T14:43:00+09:00"
         evidence_path: tests/runtime-portability.test.ts
-        output_digest: "sha256:5a2a4a64c94334bddd84f505a38d23514b23664a6f92f2fea268af0c74d4b4d3"
+        output_digest: "sha256:5792d29d443c60c5eb2fe686ed411d3c988bcda25e7d898cf93a0a065b70c632"
       - kind: unit_test
         command: "bun run test:fast"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T14:47:00+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: package.json
-        output_digest: "sha256:2a2ae24df3662d784c4bfc19437d52c3dcaba3ceb4f4aa51797e43f5181cdac7"
+        output_digest: "sha256:5251fbb6d57a6e788cd46b6198fb400e3de56b69a83f708738072ed0b5c49475"
       - kind: unit_test
         command: "bun run test:db"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T14:51:00+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: package.json
-        output_digest: "sha256:2a2ae24df3662d784c4bfc19437d52c3dcaba3ceb4f4aa51797e43f5181cdac7"
+        output_digest: "sha256:5251fbb6d57a6e788cd46b6198fb400e3de56b69a83f708738072ed0b5c49475"
       - kind: unit_test
         command: "bun run test:cli"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T14:52:00+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: package.json
-        output_digest: "sha256:2a2ae24df3662d784c4bfc19437d52c3dcaba3ceb4f4aa51797e43f5181cdac7"
+        output_digest: "sha256:5251fbb6d57a6e788cd46b6198fb400e3de56b69a83f708738072ed0b5c49475"
       - kind: unit_test
         command: "bun run test"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-29T15:00:38+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: package.json
-        output_digest: "sha256:2a2ae24df3662d784c4bfc19437d52c3dcaba3ceb4f4aa51797e43f5181cdac7"
+        output_digest: "sha256:5251fbb6d57a6e788cd46b6198fb400e3de56b69a83f708738072ed0b5c49475"
 agent_slots:
   - role: tl
     slot_label: "TL - test lane granularity"

@@ -8,11 +8,11 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-06-handover-mechanism.md
 ---
 
-> **L6 contract marker**: `runHandover(input: HandoverInput) => HandoverResult` and `checkHandoverDiscipline(input: HandoverDisciplineInput) => HandoverDisciplineResult` are the unit-test-granularity contracts. DbC pre/post/invariant maps digest, CURRENT.json, and stale/drift checks to U-HOVER-001..012.
+> **L6 contract marker**: `runHandover(input: HandoverInput) => HandoverResult` と `checkHandoverDiscipline(input: HandoverDisciplineInput) => HandoverDisciplineResult` は unit-test-granularity contracts である。DbC pre/post/invariant は digest、CURRENT.json、stale/drift checks を U-HOVER-001..012 に対応づける。
 
 <!--
 ① 設計 (L6 機能設計) — handover 記録機構 (session-log PLAN digest → handover 生成 + plan_id 活性化)。
-PLAN: PLAN-L6-06-handover-mechanism (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.8 U-HOVER。
+PLAN: PLAN-L6-06-handover-mechanism (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.8 U-HOVER を対応先とする。
 実装 (②): src/handover/index.ts + src/cli (ut-tdd handover / ut-tdd plan use) + src/runtime/session-log.ts 限定 amendment (PLAN-L7-04-handover-mechanism, add-impl, 後続)。
 土台思想: src/runtime/session-log.ts (純関数分離 / sanitize / never-throw) + src/setup/index.ts (deps 注入 / dry-run 非破壊 / state SSoT) を踏襲。
 上位整合: 要件 §6.8.5 (PLAN 完了時 handover 必須) / §6.8.6 (進捗 3 層 = state DB + log + handover、digest=結節点) / §5.3 pre-push stale (後段 Reverse で back-fill + CURRENT.md/.json 表記不整合是正)。
@@ -229,9 +229,22 @@ oracle U-HOVER-015 が 4 経路を fail-close 検査。
 
 **配線**: `runSessionStartSideEffects` (cli.ts) が SessionStart hook で `surfaceTakeoverFeedbackToStdout` を **独立 fail-open** で呼び、block を stdout へ surface (= エージェントの context へ feedback が「入る」)。db 不在 / ロック (他ランタイムの並行 rebuild) / 破損でも引き継ぎ維持処理と runtime を阻害しない。これにより引き継ぎは prose ではなく DB から feedback を受け取る。
 
+## §2.9 共有 memory surface (PLAN-L7-189) — Claude/Codex 共通の文脈を受け取る
+
+`feedback_events` は machine feedback の受信箱だが、PO 判断、配布先 repo、運用上の好み、過去レビューで確定した注意点のような curated memory は Claude 専用 memory や prose handover に散りやすい。これを harness 所有の共有状態へ寄せるため、authored source を `.ut-tdd/memory/*.md`、projection を `harness.db.memory_entries` とする。
+
+| 関数 / surface | 機械担保 |
+|---|---|
+| `writeMemoryEntry(repoRoot, input)` | `project` / `feedback` / `reference` / `user` の typed memory を `.ut-tdd/memory/<kind>-<slug>.md` に書く。title/body/tags は secret-like payload を fail-close し、raw transcript や credential を保存しない。 |
+| `loadMemoryEntries(repoRoot)` / `projectMemoryEntries(repoRoot, db)` | `.ut-tdd/memory/*.md` の frontmatter と本文を parse し、`memory_entries` へ deterministic projection する。authored markdown が正本、DB は rebuildable read model。 |
+| `selectMemoryEntries(db, {query, limit})` / `renderMemorySurface(entries)` | SessionStart 用の短い context block を read-only で作る。open feedback と同じく db lock / db 不在 / 破損時は fail-open で runtime を止めない。 |
+| `ut-tdd memory add/list/recall` | Claude Code と Codex が同じ CLI surface で memory を書き、db rebuild 後に同じ内容を recall できる。 |
+
+**配線**: `runSessionStartSideEffects` は `surfaceTakeoverFeedbackToStdout` の直後に `surfaceMemoryToStdout` を呼ぶ。これにより Claude/Codex のどちらで始まった session でも、同一 repo の `.ut-tdd/memory` と `harness.db` から同じ共有 memory が surface される。
+
 ## §3 ③ 単体テスト設計とのペア (G6 pair freeze 対象)
 
-generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + **U-HOVER-014〜015** (PLAN-L7-83 累積上限化 `boundSameDayEntries` + marker reconcile) + §1.5 **U-SLOG-006** (active-plan stale / commit hash)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) + §2.6 の slimSummary / boundSameDayEntries / marker reconcile を被覆 (孤児 0)。trace は G7 で双方向凍結。
+generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + **U-HOVER-014〜015** (PLAN-L7-83 累積上限化 `boundSameDayEntries` + marker reconcile) + §1.5 **U-SLOG-006** (active-plan stale / commit hash) + §1.8.1 **U-MEMORY-001〜004** (共有 memory write/load/projection/secret/surface)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) + §2.6 の slimSummary / boundSameDayEntries / marker reconcile + §2.9 の memory surface を被覆 (孤児 0)。trace は G7 で双方向凍結。
 
 ## §4 carry / 次工程
 

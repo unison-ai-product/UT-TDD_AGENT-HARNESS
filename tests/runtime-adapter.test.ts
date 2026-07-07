@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -7,6 +7,7 @@ import {
   buildProviderInvocation,
   isProviderCommandSpawnable,
   normalizeInvokeResult,
+  normalizeProviderEffort,
   providerAvailable,
   resolveClaudeNativeCommand,
   resolveCodexNativeCommand,
@@ -120,6 +121,29 @@ describe("runtime adapter plan", () => {
     expect(plan.plan_id).toBe("PLAN-L4-99-x");
   });
 
+  it("normalizes extended UT-TDD effort values at the Claude provider boundary", () => {
+    expect(normalizeProviderEffort("claude", "middle")).toBe("medium");
+    expect(normalizeProviderEffort("claude", "xhigh")).toBe("high");
+    expect(normalizeProviderEffort("codex", "xhigh")).toBe("xhigh");
+
+    const plan = buildAdapterPlan(
+      {
+        provider: "claude",
+        role: "pmo-sonnet",
+        task: "review",
+        model: "claude-sonnet-4-6",
+        effort: "xhigh",
+      },
+      "hybrid",
+    );
+
+    expect(plan.args).toContain("--effort");
+    expect(plan.args).toContain("high");
+    expect(plan.args).not.toContain("xhigh");
+    expect(plan.effort).toBe("high");
+    expect(plan.env).toEqual({ [CLAUDE_EFFORT_ENV]: "high" });
+  });
+
   it("U-ADAPTER-002: honors UT_TDD_CODEX_BIN before PATH lookup", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-adapter-codex-bin-"));
     try {
@@ -132,7 +156,7 @@ describe("runtime adapter plan", () => {
     }
   });
 
-  it("U-ADAPTER-003: wraps Windows command scripts through canonical cmd.exe", () => {
+  it("U-ADAPTER-003: wraps Windows command scripts through canonical cmd.exe without shell:true", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-adapter-cmd-"));
     try {
       const explicit = join(root, "codex.cmd");
@@ -150,10 +174,37 @@ describe("runtime adapter plan", () => {
         },
       });
 
-      expect(invocation.args).toEqual([]);
-      expect(invocation.shell).toBe(true);
-      expect(invocation.command).toContain(`"${explicit}"`);
-      expect(invocation.command).toContain('"hello world"');
+      expect(invocation.command).toBe("C:\\Windows\\System32\\cmd.exe");
+      expect(invocation.args).toEqual(["/d", "/s", "/c", `""${explicit}" "exec" "hello world""`]);
+      expect(invocation.shell).toBe(false);
+      expect(invocation.windowsVerbatimArguments).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-ADAPTER-009: probes Windows .cmd providers with spaces in the path", () => {
+    if (process.platform !== "win32") return;
+    const root = mkdtempSync(join(tmpdir(), "ut adapter cmd probe "));
+    try {
+      const explicit = join(root, "codex.cmd");
+      const calledPath = join(root, "called.txt");
+      writeFileSync(
+        explicit,
+        ["@echo off", `echo args=%* > "${calledPath}"`, "exit /b 0", ""].join("\r\n"),
+      );
+
+      const ok = isProviderCommandSpawnable("codex", {
+        platform: "win32",
+        env: {
+          ...process.env,
+          SystemRoot: process.env.SystemRoot ?? "C:\\Windows",
+          UT_TDD_CODEX_BIN: explicit,
+        },
+      });
+
+      expect(ok).toBe(true);
+      expect(readFileSync(calledPath, "utf8")).toContain("--version");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -253,8 +304,9 @@ describe("runtime adapter plan", () => {
         args: plan.args,
         opts: { platform: "win32", env: { SystemRoot: "C:\\Windows", UT_TDD_CODEX_BIN: explicit } },
       });
-      expect(invocation.command).not.toContain("line two");
-      expect(invocation.command).not.toContain("\n");
+      expect(invocation.shell).toBe(false);
+      expect(invocation.args.join(" ")).not.toContain("line two");
+      expect(invocation.args.join(" ")).not.toContain("\n");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

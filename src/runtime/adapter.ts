@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, win32 } from "node:path";
 import {
   ADAPTER_AVAILABLE_MESSAGE,
   ADAPTER_CONTEXT_HEADER,
@@ -41,9 +41,9 @@ export interface AdapterPlan {
   command: string;
   args: string[];
   /**
-   * codex はプロンプトを stdin で帯域外に渡す。Windows で codex は `.cmd` に解決され
-   * buildProviderInvocation が shell:true の cmd.exe 文字列へ畳むため、引数に載せた
-   * 複数行/メタ文字プロンプトが 1 行目で切れる。stdin 経由なら cmd.exe が破壊できない。
+   * Provider prompts are carried by stdin. Windows `.cmd` provider shims are
+   * launched via cmd.exe with Node `shell:false`; argv carries only fixed flags
+   * plus validated model metadata, never the free-form task text.
    */
   stdin?: string;
   env?: Record<string, string>;
@@ -98,6 +98,7 @@ export interface ProviderInvocation {
   command: string;
   args: string[];
   shell?: boolean;
+  windowsVerbatimArguments?: boolean;
 }
 
 export interface ProviderInvocationInput {
@@ -121,15 +122,15 @@ function newestExisting(paths: string[]): string | null {
   return existing.length > 0 ? (existing.sort().at(-1) ?? null) : null;
 }
 
-/** ソースごとに version を抽出済みの native バイナリ候補 (A-137 #6)。 */
+/** Native binary candidate with a source-specific extracted version (A-137 #6). */
 interface VersionedCandidate {
   path: string;
   version: string;
 }
 
 /**
- * semver 様文字列の数値コア要素を取り出す (`1.10.0-win32-x64` → `[1, 10, 0]`)。
- * pre-release / build / platform suffix (`-` / `+` 以降) は比較対象外。解析不能要素は 0。
+ * Extract numeric semver core parts (`1.10.0-win32-x64` -> `[1, 10, 0]`).
+ * Pre-release/build/platform suffixes are ignored; unparsable parts become 0.
  */
 function parseVersion(version: string): number[] {
   const core = version.split(/[-+]/, 1)[0] ?? version;
@@ -139,7 +140,7 @@ function parseVersion(version: string): number[] {
   });
 }
 
-/** semver 数値比較 (a が古いと負)。要素数が違えば不足分を 0 とみなす。 */
+/** Numeric semver comparison; negative means `a` is older. Missing parts are 0. */
 function compareVersion(a: string, b: string): number {
   const left = parseVersion(a);
   const right = parseVersion(b);
@@ -152,10 +153,9 @@ function compareVersion(a: string, b: string): number {
 }
 
 /**
- * 実在する候補から semver 最新の native バイナリを選ぶ (A-137 #6)。
- * 字句順 sort は `1.10.0 < 1.9.0` と誤判定し、mixed-source ではパス接頭辞が比較を
- * 支配して最新を取り逃すため、各候補の抽出済み version を数値 semver 比較する。
- * 同 version は配列先頭 (= 優先ソース) を維持する安定選択。
+ * Pick the semver-newest existing native binary (A-137 #6).
+ * Lexicographic sort misorders `1.10.0` and `1.9.0`, and mixed-source paths
+ * can otherwise dominate comparison. Equal versions keep the earlier source.
  */
 function newestVersioned(candidates: VersionedCandidate[]): string | null {
   const existing = candidates.filter((candidate) => existsSync(candidate.path));
@@ -171,7 +171,9 @@ function firstOnPath(command: string, opts: ProviderCommandResolutionOptions = {
   const platform = opts.platform ?? process.platform;
   const env = opts.env ?? process.env;
   const finder =
-    platform === "win32" ? join(env.SystemRoot ?? "C:\\Windows", "System32", "where.exe") : "which";
+    platform === "win32"
+      ? win32.join(env.SystemRoot ?? "C:\\Windows", "System32", "where.exe")
+      : "which";
   try {
     const found = execFileSync(finder, [command], { encoding: "utf8", env })
       .split(/\r?\n/)
@@ -258,8 +260,13 @@ function isWindowsCommandScript(command: string): boolean {
   return /\.(cmd|bat)$/i.test(command);
 }
 
-function quoteCmdArg(arg: string): string {
-  return `"${arg.replace(/"/g, '\\"')}"`;
+function windowsCommandProcessor(opts: ProviderCommandResolutionOptions = {}): string {
+  const env = opts.env ?? process.env;
+  return env.ComSpec ?? win32.join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+}
+
+function quoteCmdToken(arg: string): string {
+  return `"${arg.replace(/"/g, '""')}"`;
 }
 
 export function buildProviderInvocation(input: ProviderInvocationInput): ProviderInvocation {
@@ -267,13 +274,25 @@ export function buildProviderInvocation(input: ProviderInvocationInput): Provide
   const platform = opts.platform ?? process.platform;
   const resolved = resolveProviderCommand(provider, command, opts);
   if (platform === "win32" && isWindowsCommandScript(resolved)) {
+    const innerCommand = [quoteCmdToken(resolved), ...args.map(quoteCmdToken)].join(" ");
     return {
-      command: [quoteCmdArg(resolved), ...args.map(quoteCmdArg)].join(" "),
-      args: [],
-      shell: true,
+      command: windowsCommandProcessor(opts),
+      args: ["/d", "/s", "/c", `"${innerCommand}"`],
+      shell: false,
+      windowsVerbatimArguments: true,
     };
   }
-  return { command: resolved, args };
+  return { command: resolved, args, shell: false };
+}
+
+export function normalizeProviderEffort(
+  provider: AdapterProvider,
+  effort: string | undefined,
+): string | undefined {
+  if (provider !== "claude" || !effort) return effort;
+  if (effort === "middle") return "medium";
+  if (effort === "xhigh") return "high";
+  return effort;
 }
 
 export function isProviderCommandSpawnable(
@@ -294,6 +313,7 @@ export function isProviderCommandSpawnable(
         env: probeEnv,
         stdio: "ignore",
         shell: invocation.shell ?? false,
+        windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
       }));
   try {
     return runProbe(invocation.command, invocation.args, env).status === 0;
@@ -305,6 +325,7 @@ export function isProviderCommandSpawnable(
 export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): AdapterPlan {
   const available = providerAvailable(intent.provider, mode);
   const isCodex = intent.provider === "codex";
+  const providerEffort = normalizeProviderEffort(intent.provider, intent.effort);
   // Current contract: both providers receive task text via stdin. Args carry only
   // fixed flags, model/effort metadata, and provider-specific stdin sentinels.
   // Codex uses `codex exec -`; Claude uses `claude --print --input-format text`.
@@ -318,7 +339,7 @@ export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): Ad
     : [
         ...CLAUDE_STDIN_ARGS,
         ...(intent.model ? [CLAUDE_MODEL_FLAG, intent.model] : []),
-        ...(intent.effort ? [CLAUDE_EFFORT_FLAG, intent.effort] : []),
+        ...(providerEffort ? [CLAUDE_EFFORT_FLAG, providerEffort] : []),
       ];
   return {
     provider: intent.provider,
@@ -326,13 +347,13 @@ export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): Ad
     command: isCodex ? "codex" : "claude",
     args,
     stdin: formatAdapterPrompt(intent.task, intent.contextInjection),
-    ...(intent.provider === "claude" && intent.effort
-      ? { env: { [CLAUDE_EFFORT_ENV]: intent.effort } }
+    ...(intent.provider === "claude" && providerEffort
+      ? { env: { [CLAUDE_EFFORT_ENV]: providerEffort } }
       : {}),
     dry_run: !intent.execute,
     plan_id: intent.planId,
     model: intent.model,
-    effort: intent.effort,
+    effort: providerEffort,
     context_injection: intent.contextInjection,
     messages: available
       ? [intent.execute ? ADAPTER_AVAILABLE_MESSAGE : ADAPTER_DRY_RUN_MESSAGE]

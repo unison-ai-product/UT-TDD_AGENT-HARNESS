@@ -3,9 +3,22 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  buildFullDoctorCheckDefinitions,
+  collectDoctorCheckRun,
+  doctorOutputIdsForScope,
+  FULL_DOCTOR_OUTPUT_IDS,
+  resolveDoctorRunProfile,
+  selectDoctorCheckDefinitions,
+} from "../src/doctor/check-registry";
+import {
+  checkDependencyDrift as checkDependencyDriftAdapter,
+  checkRegressionExpansion as checkRegressionExpansionAdapter,
+} from "../src/doctor/dependency-regression";
+import {
   checkAgentSlots,
   checkAssetDrift,
   checkBackfillResult,
+  checkBranchKind,
   checkChangeImpact,
   checkChangeSetIntegrity,
   checkCodexWrapperParity,
@@ -18,6 +31,8 @@ import {
   checkDescentObligation,
   checkDriveDbRegistration,
   checkDriveModelPassage,
+  checkForwardConvergence,
+  checkForwardConvergenceAudit,
   checkFrRoadmapCoverage,
   checkGateConfirm,
   checkGuardrailInvariants,
@@ -34,6 +49,8 @@ import {
   checkPlaceholderDeps,
   checkPlanDod,
   checkPlanGovernance,
+  checkPlanReferenceFreshnessAdvisory,
+  checkPlanSchedule,
   checkPlanTraceGate,
   checkProjectHooks,
   checkPropagation,
@@ -52,8 +69,10 @@ import {
   checkVerificationGroupsResult,
   checkVerificationProfile,
   type DoctorDeps,
+  nodeDoctorDeps,
   runDoctor,
 } from "../src/doctor/index";
+import { buildDoctorResult } from "../src/doctor/result";
 import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots";
 
 const NOW = "2026-06-04T00:00:00.000Z";
@@ -61,6 +80,39 @@ const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
 const slotStatePath = join("/repo", ".ut-tdd", "state", "agent-slots.json");
 const currentPlanPath = join("/repo", ".ut-tdd", "state", "current-plan");
 const digestDir = join("/repo", ".ut-tdd", "logs", "plan");
+
+describe("buildDoctorResult", () => {
+  it("preserves leading messages, prefixes check messages, and fails closed on any failed check", () => {
+    const result = buildDoctorResult({
+      leadingMessages: ["doctor: mode=standalone"],
+      checks: [
+        { ok: true, messages: ["alpha - OK"] },
+        { ok: false, messages: ["beta - violation"] },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.messages).toEqual([
+      "doctor: mode=standalone",
+      "doctor: alpha - OK",
+      "doctor: beta - violation",
+    ]);
+  });
+
+  it("preserves optional timing diagnostics without changing ok/messages", () => {
+    const result = buildDoctorResult({
+      leadingMessages: ["doctor: mode=standalone"],
+      checks: [{ ok: true, messages: ["alpha - OK"] }],
+      timings: [{ id: "alpha", duration_ms: 1.25, ok: true, message_count: 1 }],
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      messages: ["doctor: mode=standalone", "doctor: alpha - OK"],
+      timings: [{ id: "alpha", duration_ms: 1.25, ok: true, message_count: 1 }],
+    });
+  });
+});
 
 function codexWrapperParityFiles(root: string, overrides: Record<string, string> = {}) {
   const file = (relativePath: string) => join(root, ...relativePath.split("/"));
@@ -263,6 +315,86 @@ describe("runDoctor", () => {
     expect(r.messages.some((m) => m.includes("coding-rules"))).toBe(true);
   });
 
+  it("U-SETUP-014: supports a fresh-consumer setup smoke without requiring dogfood PLAN/design docs", () => {
+    const hookJson = JSON.stringify({
+      hooks: {
+        PreToolUse: [
+          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard" }] },
+          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard" }] },
+        ],
+        SessionStart: [{ hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session start" }] }],
+        PostToolUse: [{ hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use" }] }],
+        Stop: [
+          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session summary" }] },
+          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop" }] },
+        ],
+      },
+    });
+    const file = (path: string) => join("/repo", ...path.split("/"));
+    const files = new Map<string, string>([
+      [file(".ut-tdd/bin/ut-tdd.mjs"), "const localBin = '.ut-tdd/bin/ut-tdd.mjs';"],
+      [file("AGENTS.md"), "UT-TDD adapter"],
+      [file("CLAUDE.md"), "UT-TDD adapter"],
+      [file(".claude/CLAUDE.md"), "UT-TDD adapter"],
+      [file(".claude/settings.json"), hookJson],
+      [file(".codex/config.toml"), "hooks = true"],
+      [file(".codex/hooks.json"), hookJson],
+    ]);
+
+    const r = runDoctor(deps({ files }), { setupSmoke: true });
+
+    expect(resolveDoctorRunProfile({ setupSmoke: true })).toMatchObject({
+      id: "consumer-setup-smoke",
+      audience: "consumer",
+      invocation: "setup-smoke",
+      setupSmoke: true,
+      outputIds: [],
+      sourceOnly: false,
+    });
+    expect(resolveDoctorRunProfile({ setupSmoke: true, scope: "toolchain" })).toMatchObject({
+      id: "consumer-setup-smoke",
+      invocation: "setup-smoke",
+      setupSmoke: true,
+    });
+    expect(r.ok).toBe(true);
+    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=22, failed=0)"]);
+  });
+
+  it("runs only the toolchain gate when doctor scope is toolchain", () => {
+    const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(process.cwd()));
+    const selected = selectDoctorCheckDefinitions(definitions, "toolchain");
+    const run = collectDoctorCheckRun(nodeDoctorDeps(process.cwd()), {
+      scope: "toolchain",
+      timing: true,
+    });
+
+    expect(resolveDoctorRunProfile()).toMatchObject({
+      id: "source-full",
+      audience: "source",
+      invocation: "registry",
+      scope: "full",
+      setupSmoke: false,
+      outputIds: FULL_DOCTOR_OUTPUT_IDS,
+      sourceOnly: true,
+    });
+    expect(resolveDoctorRunProfile({ scope: "toolchain" })).toMatchObject({
+      id: "source-toolchain",
+      audience: "source",
+      invocation: "registry",
+      scope: "toolchain",
+      setupSmoke: false,
+      outputIds: ["toolchain-pin"],
+      sourceOnly: false,
+    });
+    expect(doctorOutputIdsForScope("toolchain")).toEqual(["toolchain-pin"]);
+    expect(selected.map((definition) => definition.id)).toEqual(["toolchain-pin"]);
+    expect(run.checks).toHaveLength(1);
+    expect(run.checks[0]?.messages[0]).toContain("toolchain-pin");
+    expect(run.timings).toEqual([
+      expect.objectContaining({ id: "toolchain-pin", ok: run.checks[0]?.ok, message_count: 1 }),
+    ]);
+  });
+
   it("includes asset-drift hard gate in doctor output", () => {
     const r = realRepoDoctor;
     expect(r.ok).toBe(true);
@@ -300,6 +432,12 @@ describe("runDoctor", () => {
     expect(r.messages.some((m) => m.includes("doctor: branch-kind-check - OK"))).toBe(true);
   });
 
+  it("includes GitHub CI policy hard gate in doctor output", () => {
+    const r = realRepoDoctor;
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: github-ci-policy - OK"))).toBe(true);
+  });
+
   it("includes G1/G3 trace gates in doctor output", () => {
     const r = realRepoDoctor;
     expect(r.ok).toBe(true);
@@ -318,6 +456,76 @@ describe("runDoctor", () => {
       true,
     );
     expect(r.messages.some((m) => m.includes("doctor: plan-governance - OK"))).toBe(true);
+  });
+
+  it("keeps doctor plan gate re-exports stable after extraction", () => {
+    expect(checkPlanSchedule).toBeTypeOf("function");
+    expect(checkPlanGovernance).toBeTypeOf("function");
+    expect(checkPlanReferenceFreshnessAdvisory).toBeTypeOf("function");
+    expect(checkForwardConvergence).toBeTypeOf("function");
+    expect(checkForwardConvergenceAudit).toBeTypeOf("function");
+  });
+
+  it("keeps doctor lint gate re-exports stable after extraction", () => {
+    expect(checkModuleDrift).toBeTypeOf("function");
+    expect(checkAssetDrift).toBeTypeOf("function");
+    expect(checkSkillAssignment).toBeTypeOf("function");
+    expect(checkDescentObligation).toBeTypeOf("function");
+    expect(checkChangeImpact).toBeTypeOf("function");
+    expect(checkChangeSetIntegrity).toBeTypeOf("function");
+    expect(checkVerificationProfile).toBeTypeOf("function");
+    expect(checkBranchKind).toBeTypeOf("function");
+  });
+
+  it("keeps doctor runtime-state re-exports stable after extraction", () => {
+    expect(checkHandover).toBeTypeOf("function");
+    expect(checkHandoverDisciplineMessages).toBeTypeOf("function");
+    expect(checkAgentSlots).toBeTypeOf("function");
+    expect(nodeDoctorDeps).toBeTypeOf("function");
+  });
+
+  it("surfaces draft code-line reference freshness as a leading advisory", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-ref-fresh-"));
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "plans", "PLAN-L7-900-ref-fresh.md"),
+        [
+          "---",
+          "plan_id: PLAN-L7-900-ref-fresh",
+          'title: "PLAN-L7-900 ref fresh fixture"',
+          "kind: refactor",
+          "layer: L7",
+          "drive: be",
+          "status: draft",
+          "created: 2026-06-20",
+          "updated: 2026-06-20",
+          "agent_slots:",
+          "  - role: tl",
+          '    slot_label: "TL - fixture"',
+          "generates: []",
+          "dependencies:",
+          "  parent: null",
+          "  requires: []",
+          "  blocks: []",
+          "  references: []",
+          "---",
+          "",
+          "See src/missing.ts:1 before implementation.",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const messages = checkPlanReferenceFreshnessAdvisory(root);
+
+      expect(
+        messages.some((message) => message.includes("plan-reference-freshness - advisory")),
+      ).toBe(true);
+      expect(messages.every((message) => message.startsWith("doctor: "))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("surfaces dependency-drift and regression expansion instead of scaffold stub", () => {
@@ -644,6 +852,7 @@ describe("runDoctor", () => {
       ["change-impact", checkChangeImpact(missingRoot)],
       ["change-set-integrity", checkChangeSetIntegrity(missingRoot)],
       ["verification-profile", checkVerificationProfile(missingRoot)],
+      ["branch-kind", checkBranchKind(missingRoot)],
       ["coding-rules", checkCodingRules(missingRoot)],
       ["ddd-tdd-rules", checkDddTddRules(missingRoot)],
       ["runtime-portability", checkRuntimePortability(missingRoot)],
@@ -683,6 +892,20 @@ describe("runDoctor", () => {
     }
   });
 
+  it("keeps extracted dependency/regression doctor adapters fail-closed", () => {
+    const missingRoot = join(tmpdir(), `ut-tdd-doctor-dependency-missing-${Date.now()}-nope`);
+
+    expect(checkDependencyDriftAdapter(missingRoot)).toMatchObject({
+      ok: false,
+      result: null,
+      messages: ["dependency-drift - violation: repo root could not be read"],
+    });
+    expect(checkRegressionExpansionAdapter(missingRoot, null)).toMatchObject({
+      ok: false,
+      messages: ["regression-expansion - violation: repo root could not be read"],
+    });
+  });
+
   it("skips change-impact / change-set-integrity in a non-git directory instead of failing closed", () => {
     // ZIP 展開のみ (非 git) の利用環境: git status が引けないだけで doctor を落とさない。
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-nongit-"));
@@ -699,58 +922,112 @@ describe("runDoctor", () => {
   });
 
   it("keeps all hard gates wired into runDoctor hard-gate aggregation", () => {
-    const source = readFileSync(join(process.cwd(), "src", "doctor", "index.ts"), "utf8");
-    const okExpression = source.match(/return\s+\{\s+ok:([\s\S]*?),\s+messages:\s+\[/)?.[1] ?? "";
+    const indexSource = readFileSync(join(process.cwd(), "src", "doctor", "index.ts"), "utf8");
+    const registrySource = readFileSync(
+      join(process.cwd(), "src", "doctor", "check-registry.ts"),
+      "utf8",
+    );
+    const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(process.cwd()));
+    const checkIds = definitions.map((definition) => definition.id);
+    const outputIds = [...FULL_DOCTOR_OUTPUT_IDS];
+    expect(indexSource).toContain("resolveDoctorRunProfile");
+    expect(indexSource).toContain("const profile = resolveDoctorRunProfile(options)");
+    expect(indexSource).toContain('if (profile.invocation === "setup-smoke")');
+    expect(indexSource).toContain(
+      "const { checks, timings } = collectDoctorCheckRun(deps, options)",
+    );
+    expect(registrySource).toContain("export function collectDoctorCheckRun");
+    expect(registrySource).toContain("export function collectDoctorChecks");
+    expect(registrySource).toContain("export function buildFullDoctorCheckDefinitions");
+    expect(registrySource).toContain("export function resolveDoctorRunProfile");
+    expect(registrySource).toContain("export function selectDoctorCheckDefinitions");
+    expect(registrySource).toContain('export type DoctorScope = "full" | "toolchain"');
     const expectedHardGates = [
       "backfill",
-      "scrumRev",
+      "scrum-reverse",
       "propagation",
-      "pairFreeze",
-      "moduleDrift",
-      "mergedPlanStatus",
-      "reviewEvidence",
-      "guardrailInvariants",
-      "assetDrift",
-      "skillAssignment",
-      "descentObligation",
-      "changeImpact",
-      "changeSetIntegrity",
-      "verificationProfile",
-      "codingRules",
-      "dddTddRules",
-      "runtimePortability",
-      "dbProjectionCoverage",
-      "dbProjectionIngestion",
-      "ruleDrift",
-      "gateConfirm",
-      "planSchedule",
-      "planGovernance",
-      "planDod",
-      "placeholderDeps",
-      "g1Trace",
-      "g3Trace",
-      "ruleAutomationClosure",
-      "driveModelPassage",
-      "driveDbRegistration",
-      "frRoadmapCoverage",
-      "telemetryClosure",
-      "cycleP4Verification",
-      "l6FrCoverage",
+      "pair-freeze",
+      "module-drift",
+      "merged-plan-status",
+      "review-evidence",
+      "guardrail-invariants",
+      "asset-drift",
+      "skill-assignment",
+      "descent-obligation",
+      "change-impact",
+      "change-set-integrity",
+      "verification-profile",
+      "branch-kind-check",
+      "coding-rules",
+      "design-language",
+      "ddd-tdd-rules",
+      "runtime-portability",
+      "db-projection-coverage",
+      "db-projection-ingestion",
+      "rule-drift",
+      "gate-confirm",
+      "plan-schedule",
+      "plan-governance",
+      "plan-dod",
+      "placeholder-deps",
+      "g1-trace",
+      "g3-trace",
+      "rule-automation-closure",
+      "drive-model-passage",
+      "drive-db-registration",
+      "fr-roadmap-coverage",
+      "telemetry-closure",
+      "cycle-p4-verification",
+      "l6-fr-coverage",
       "readability",
-      "runtimeReadability",
-      "projectHooks",
-      "codexWrapperParity",
-      "l6Completion",
-      "l7Completion",
-      "verificationGroups",
+      "runtime-readability",
+      "project-hook",
+      "codex-wrapper-parity",
+      "toolchain-pin",
+      "l6-completion",
+      "l7-completion",
+      "verification-groups",
       "roadmap",
-      "implPlanTrace",
-      "oracleTestTrace",
-      "trackedCanonical",
-      "dependencyDrift",
-      "regressionExpansion",
+      "impl-plan-trace",
+      "oracle-test-trace",
+      "tracked-canonical",
+      "dependency-drift",
+      "regression-expansion",
+      "green-command-digest",
     ];
 
-    expect(expectedHardGates.filter((name) => !okExpression.includes(`${name}.ok`))).toEqual([]);
+    expect(new Set(checkIds).size).toBe(checkIds.length);
+    expect(new Set(outputIds).size).toBe(outputIds.length);
+    expect(checkIds).toEqual(expect.arrayContaining(outputIds));
+    expect(
+      selectDoctorCheckDefinitions(definitions, "full").map((definition) => definition.id),
+    ).toEqual(checkIds);
+    expect(doctorOutputIdsForScope("full")).toEqual(outputIds);
+    expect(outputIds).toEqual(expect.arrayContaining(expectedHardGates));
+    expect(checkIds).not.toContain("plan-reference-freshness");
+    expect(outputIds).not.toContain("plan-reference-freshness");
+    expect(registrySource).not.toContain("checkPlanReferenceFreshnessAdvisory");
+    const definitionsById = new Map(definitions.map((definition) => [definition.id, definition]));
+    for (const definition of definitions) {
+      for (const requiredId of definition.requires ?? []) {
+        const required = definitionsById.get(requiredId);
+        expect(required).toBeDefined();
+        expect(checkIds.indexOf(requiredId)).toBeLessThan(checkIds.indexOf(definition.id));
+        expect(required?.profiles).toEqual(expect.arrayContaining([...definition.profiles]));
+      }
+    }
+    expect(checkIds.indexOf("review-evidence")).toBeLessThan(checkIds.indexOf("pair-freeze"));
+    expect(outputIds.indexOf("l7-completion")).toBeLessThan(outputIds.indexOf("review-evidence"));
+    expect(checkIds.indexOf("guardrail-invariants")).toBeGreaterThan(
+      checkIds.indexOf("regression-expansion"),
+    );
+    expect(outputIds.indexOf("guardrail-invariants")).toBeLessThan(
+      outputIds.indexOf("verification-groups"),
+    );
+    expect(
+      definitions.find((definition) => definition.id === "regression-expansion"),
+    ).toMatchObject({
+      requires: ["dependency-drift"],
+    });
   });
 });

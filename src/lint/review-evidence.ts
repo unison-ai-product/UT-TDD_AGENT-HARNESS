@@ -12,7 +12,7 @@
  * 実 repo 履歴 15 件 back-fill 完了 = missing 0 安定を確認後に hard 昇格)。
  * 純関数 (analyze) + I/O loader を分離 (backfill-pairing / vmodel-pair と同方針)。
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { type CrossAgentModelIssue, checkCrossAgentModelPair } from "../schema";
@@ -50,6 +50,12 @@ export interface GreenCommandEvidence {
   evidence_path: string;
   output_digest: string;
   completed_at?: string;
+  /**
+   * green 記録時点の HEAD commit SHA (PLAN-L7-303)。存在すれば digest 照合先を「現在の working tree」
+   * ではなく「その commit の blob」に固定する = 証跡が永続検証可能になり、コードの健全な進化で
+   * digest が経年 stale 化しなくなる。省略時は従来どおり working tree と照合 (後方互換)。
+   */
+  anchor_commit?: string;
 }
 
 export interface ParsedReviewPlan {
@@ -143,6 +149,9 @@ export function extractReviewEntries(content: string): ReviewEntry[] {
               evidence_path: typeof cmd.evidence_path === "string" ? cmd.evidence_path : "",
               output_digest: typeof cmd.output_digest === "string" ? cmd.output_digest : "",
               ...(typeof cmd.completed_at === "string" ? { completed_at: cmd.completed_at } : {}),
+              ...(typeof cmd.anchor_commit === "string"
+                ? { anchor_commit: cmd.anchor_commit }
+                : {}),
             }));
         }
         if (typeof e.worker_model === "string") entry.worker_model = e.worker_model;
@@ -282,6 +291,7 @@ export function analyzeReviewEvidence(plans: ParsedReviewPlan[]): ReviewEvidence
 /** docs/plans/*.md (archive/template 除く) を読み込む。 */
 export function loadReviewPlans(repoRoot: string = process.cwd()): ParsedReviewPlan[] {
   const plansDir = join(repoRoot, "docs", "plans");
+  if (!existsSync(plansDir)) return [];
   const plans: ParsedReviewPlan[] = [];
   for (const f of readdirSync(plansDir)) {
     // PLAN-*.md のみ対象。サブディレクトリ (archive/_template) は readdirSync が拡張子なし

@@ -1,0 +1,86 @@
+---
+plan_id: PLAN-L7-222-doctor-runtime-surface-extraction
+title: "PLAN-L7-222 (impl): Doctor runtime surface extraction"
+kind: impl
+layer: L7
+drive: be
+status: confirmed
+created: 2026-07-02
+updated: 2026-07-02
+owner: Codex
+route_signal: code_smell
+route_mode: refactor
+parent_design: docs/design/harness/L6-function-design/governance-enforcement.md
+related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+agent_slots:
+  - role: se
+    slot_label: "Codex - doctor runtime surface extraction"
+  - role: qa
+    slot_label: "Codex - doctor regression fence"
+generates:
+  - artifact_path: docs/plans/PLAN-L7-222-doctor-runtime-surface-extraction.md
+    artifact_type: markdown_doc
+  - artifact_path: src/doctor/runtime-surface.ts
+    artifact_type: source_module
+  - artifact_path: src/doctor/index.ts
+    artifact_type: source_module
+  - artifact_path: tests/doctor-runtime-surface.test.ts
+    artifact_type: test_code
+dependencies:
+  parent: docs/plans/PLAN-L7-220-doctor-plan-governance-extraction.md
+  requires:
+    - docs/plans/PLAN-L7-81-codex-wrapper-parity-gate.md
+    - docs/plans/PLAN-L7-221-github-ci-policy-gate.md
+references:
+  - src/doctor/index.ts
+  - src/doctor/runtime-surface.ts
+  - tests/doctor.test.ts
+  - tests/doctor-runtime-surface.test.ts
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-02T12:31:00+09:00"
+    tests_green_at: "2026-07-02T12:31:00+09:00"
+    verdict: approve
+    scope: "Doctor runtime/GitHub surface refactor: project-hook, github-ci-policy, codex-hook-adapter, and codex-wrapper-parity checks move out of src/doctor/index.ts while preserving runDoctor hard gate wiring and exported check functions."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-02T12:31:00+09:00"
+        evidence_path: src/doctor/runtime-surface.ts
+        output_digest: "sha256:52c7e86d11b7acfffa162d3b055c240d21c20dc23fd39b8a34a9708a5e7a8c7d"
+      - kind: unit_test
+        command: "bun run vitest run tests\\doctor-runtime-surface.test.ts tests\\doctor.test.ts --testNamePattern \"doctor runtime surface|codex-wrapper-parity|GitHub CI policy|project-hook|missing root\" --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-02T12:31:00+09:00"
+        evidence_path: tests/doctor-runtime-surface.test.ts
+        output_digest: "sha256:1b42e63205e4c1258c1894a562e6d7f1ef139e785a832d2d973d50051c94c698"
+---
+
+# PLAN-L7-222: Doctor runtime surface extraction
+
+## 目的
+
+`src/doctor/index.ts` は runDoctor の集約責務に加えて、GitHub / Codex / project hook 連携の個別検査まで抱えている。前回 slice で PLAN governance と setup-smoke を切り出したが、runtime surface 系の hard gate はまだ `index.ts` に残っており、doctor の肥大化と変更時の blast radius を広げている。
+
+この slice では runtime/GitHub surface の check 関数を `src/doctor/runtime-surface.ts` に分離し、`index.ts` は import/re-export と runDoctor wiring の責務に寄せる。
+
+## 変更
+
+- `checkProjectHooks` / `checkGithubCiPolicy` / `checkCodexHookAdapter` / `checkCodexWrapperParity` を `src/doctor/runtime-surface.ts` へ移す。
+- `DoctorDeps` への依存を避けるため、runtime surface 側は `RuntimeSurfaceDeps` として必要最小限の `repoRoot` / `readText` だけを受け取る。
+- `src/doctor/index.ts` は既存 public export を維持するため、同名関数を re-export する。
+- `runDoctor` の hard gate wiring と message order は変更しない。
+
+## デグレ対策
+
+- `tests/doctor-runtime-surface.test.ts` で切り出し先モジュールを直接検証し、`tests/doctor.test.ts` の既存 import 経路も維持する。
+- full doctor で `github-ci-policy` / `codex-hook-adapter` / `codex-wrapper-parity` が OK のまま出力されることを確認する。
+- `impl-plan-trace` により新規 `src/doctor/runtime-surface.ts` が PLAN generates へ接続されることを確認する。

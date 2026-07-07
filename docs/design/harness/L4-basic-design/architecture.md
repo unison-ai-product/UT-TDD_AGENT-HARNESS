@@ -49,13 +49,14 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 
 > **CLI framework 注記 (確定)**: ADR-001 が保留していた「oclif または commander」は **commander に確定** ([ADR-006](../../../adr/ADR-006-cli-framework-commander.md)、accepted 2026-06-05)。oclif は重量級構成が「薄い entrypoint + compiled core」方針に過剰として却下。`src/cli.ts` の実装確定を ADR-006 が追認記録 (IMP-070 resolved)。
 
-## §3 building block view (arc42 §5)
+## §3 building block view 構成ビュー (arc42 §5)
 
 ### §3.1 Level 1 — サブシステム (`src/` トップ)
 
 | building block | 責務 | 公開 IF | 依存先 |
 |---|---|---|---|
 | **cli** (`src/cli.ts`) | コマンドディスパッチ (status/doctor/plan/vmodel...)。副作用 (stdout/exitCode) の唯一の置き場 | `program` (commander) | runtime / doctor / plan / vmodel / (lint) |
+| **context** (`src/context/`) | canonical doc のセクション索引とタスク別 reading suggestion を提供する context routing 層。常時必読 doc を役割相応の section read に縮小するための補助 surface (fail-open、全文読み推奨へ戻せる) | `buildDocIndex()` / `suggestSections()` / `contextSuggest()` | task / fs |
 | **schema** (`src/schema/`) | enum・契約・frontmatter の **単一正本** (zod)。値オブジェクト (data.md §3) の機械的 SSoT | `VALID_*` 定数 / frontmatter スキーマ | (なし — 依存の末端 = 安定核) |
 | **lint** (`src/lint/`) | doc/PLAN/trace の静的検証群 (g3-trace / entity-coverage / fr-registry / doc-consistency / improvement-backlog / backfill-pairing / scrum-reverse / propagation / review-evidence / **roadmap-registry**)。**hard 判定 (doctor.ok 連動) の対象集合は `src/doctor/index.ts` が正本** (設計 doc に固定数を直書きしない、§6 m-4)。<br>**工程表メタモデル** (`roadmap-registry.ts` + `schema/roadmap.ts`): 工程表 (roadmap) = **人間向け全プログラム進行台帳** (機能群=結合テスト粒度、human/AI plane = 工程表:人間自己割当 / PLAN:AI オーケストレーション、定義正本 concept §10.2)。`analyzeProgramCoverage` が **全プログラム被覆** (forward 全バンド `PROGRAM_BANDS` の工程表登録) を doctor へ surface (未登録 = 「実装どこまで?」frontier、warn-first)。フロント (中央UI) へは harness.db projection 経由 (PLAN-RECOVERY-04 定義 / REVERSE-44 設計書) | `analyzeX(opt?)` pure 関数群 / `analyzeProgramCoverage` | schema (一部) / fs (loadX) |
 | **export** (`src/export/`) | canonical doc から派生 export dataset / render artifact projection を作る pure 変換層。CSV/Markdown は内蔵 renderer、XLSX/PPTX は renderer readiness finding に閉じる (PLAN-L7-35) | `parseCanonicalDocumentStructure()` / `buildDocumentExportDataset()` / `renderDocumentExport()` / `recordDocumentExportArtifact()` | schema (path normalization) |
@@ -66,7 +67,8 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | **guardrail** (`src/guardrail/`) | agent-guard / review / escalation / human signoff の判断を `guardrail_decisions` へ正規化する ledger。human-required を DB projection で格下げしない (PLAN-L7-48) | `recordGuardrailDecision()` | state-db |
 | **assets** (`src/assets/`) | skill / roster / command docs を metadata catalog として `automation_assets` / `search_index` へ projection する。prompt body は保存しない (PLAN-L7-49) | `catalogAutomationAssets()` | state-db / fs |
 | **audit** (`src/audit/`) | hardcode/security/debt と branch cleanup inventory を read-only に分類する maintenance audit 層。破壊操作は CLI scope 外に置き、gate/actionable/telemetry 表示 discipline に揃える (PLAN-L7-138) | `runQualityAudit()` / `loadBranchAudit()` | state-db (secret pattern) / git read-only |
-| **graph** (`src/graph/`) | cross-artifact relation graph の repo→`RelationGraphSourceSet` loader (I/O 組み立て層、PLAN-L7-32 §9 / ADR-002 A-124)。pure projection/impact/export は `src/lint/relation-graph.ts`、本 module は既存 loader (impl-plan-trace / review-evidence / vmodel pair) を再利用して doc/source graph を組む。配布用 `docs/templates/adapter/` の Claude/Codex hook・subagent・command template も graph node とし、clean distribution 変更が missing-projection へ落ちないようにする。`ut-tdd graph impact/export` CLI の供給元 | `loadRelationGraphSourceSet()` | lint / vmodel / fs |
+| **github** (`src/github/`) | GitHub Actions / PR branch-type / release publication plan の運用 guard。`poc/*` main merge、postmortem 無し `hotfix/*`、非 Conventional Commit subject を fail-close し、tag / GitHub Release は非破壊 plan として外部公開境界を明示する。 | `evaluateGithubOpsGuard()` / `buildReleasePublicationPlan()` | git metadata / PR metadata |
+| **graph** (`src/graph/`) | cross-artifact relation graph の repo→`RelationGraphSourceSet` loader (I/O 組み立て層、PLAN-L7-32 §9 / ADR-002 A-124)。pure projection/impact/export は `src/lint/relation-graph.ts`、本 module は既存 loader (impl-plan-trace / review-evidence / vmodel pair) を再利用して doc/source graph を組む。配布用 `docs/templates/adapter/` の Claude/Codex hook・subagent・command template、および repo-local `.claude/settings.json` / `.codex/config.toml` / `.codex/hooks.json` も graph node とし、hook/config 変更が missing-projection へ落ちないようにする。`ut-tdd graph impact/export` CLI の供給元 | `loadRelationGraphSourceSet()` | lint / vmodel / fs |
 | **plan** (`src/plan/`) | PLAN frontmatter + 本文の lint | `lintPlan(path?)` | schema |
 | **vmodel** (`src/vmodel/`) | V-model 4 artifact 双方向 trace lint | `lintVmodel(path?)` | schema |
 | **runtime** (`src/runtime/`) | 実行モード検出 (detect) + runtime adapter dry-run plan + provider handover + agent-guard 判定本体 + agent-slots (並列 slot 記録、IMP-050) + forced-stop (強制停止推定、IMP-068) + session-log (session 観測、IMP-068) | `detectMode()` / `buildAdapterPlan()` / `runProviderHandover()` / `agent-guard` / `agent-slots` / `forced-stop` / `session-log` | schema (allowlist) / roster (将来、実装後に切替。現状ハードコード相当、§3.1 note + §4.1 移行段階) |
@@ -75,10 +77,12 @@ UT-TDD harness は **AI 実装エージェント (Claude Code / Codex) を統制
 | **task** (`src/task/`) | FR-L1-39 タスク分類の公開 CLI 面。既存契約 (`scoreTaskComplexity` = FR-L1-39 / `classifyDrive` = FR-L1-41) + `inferTaskDifficulty` を合成し kind/drive/size/complexity/difficulty/risk を構造化出力 (`ut-tdd task classify`)。escalation-sensitive 領域 (auth/payments/PII/migration/schema/production) を risk flag 化し plan lint/gate/skill suggest の入力にする | `classifyTask()` | workflow / team |
 | **doctor** (`src/doctor/`) | 統合検証 (lint 群 + state 突合の集約) | `runDoctor()` | lint / runtime / schema |
 | **handover** (`src/handover/`) | session 引き継ぎ (CURRENT.json 生成/consume/stale 判定、prefill scope、PLAN-L6-06/L7-04 実装済) | `runHandover()` | schema / fs |
+| **memory** (`src/memory/`) | `.ut-tdd/memory/*.md` を authored source とする Claude/Codex 共有 memory。`memory_entries` へ deterministic projection し、SessionStart で read-only/fail-open に surface する。secret-like payload は write/parse 時に fail-close する (PLAN-L7-189)。 | `writeMemoryEntry()` / `loadMemoryEntries()` / `selectMemoryEntries()` / `renderMemorySurface()` | secret / state-db type / fs |
+| **secret** (`src/secret.ts`) | projection、memory、audit、search が共有する secret-like token detector。低レベル module から参照できるよう依存なしに保ち、state-db への逆依存 cycle を作らない。 | `SECRET_PATTERN` / `isSecretLike()` | none |
 | **setup** (`src/setup/`) | repo baseline 確立 (solo/team で出し分ける GitHub 設定ファイル emit、PLAN-L6-05/L7-03 実装済) | `runSetup()` | schema / fs |
 | **web** (`src/web/`) | 中央 Web UI adapter (画面 + DB サーバ、配布=GitHub-pull + team server、[ADR-005](../../../adr/ADR-005-distribution-model-and-central-ui.md))。core CLI とは別 adapter (本体 pure 維持) | (Phase B 配備) | schema / fs |
 | **roster** (将来 `src/roster/`) | 内部資産 subagent roster registry。`.claude/agents/*.md` (層1 markdown 正本) の frontmatter を読み capability class / model family を構築、guard allowlist の SSoT (A-85、FR-L1-46、ADR-004 層2) | `loadRoster()` / `resolveCapability()` | schema / fs (loadX 端点) |
-| **skills** (将来 `src/skills/`) | 内部資産 skill catalog / recommender / injector。`docs/skills/**/*.md` (層1 正本) を読み L 別注入セットを構築 (A-85、FR-L1-47/12/37、ADR-004 層2) | `loadCatalog()` / `recommendSkill()` / `injectByLayer()` | schema / fs (loadX 端点) |
+| **skill-engine** (`src/skill-engine/`) | 内部資産 skill catalog / recommender / injector。`skills/**/*.md` / legacy `docs/skills/**/*.md` (層1 正本) を読み L 別注入セットを構築 (A-85、FR-L1-47/12/37、ADR-004 層2)。配布物では skill 本文は root `skills/`、実装 engine は `src/skill-engine/` に分離する。 | `loadCatalog()` / `recommendSkill()` / `injectByLayer()` | schema / fs (loadX 端点) |
 
 > **依存方向の原則**: すべての依存は `schema` へ向かう一方向 (schema は何にも依存しない安定核)。`cli`/`doctor` が最も外側 (副作用層)。**循環依存禁止** (D-03=0 の構造的保証)。
 > **roadmap-registry park / rollup (PLAN-REVERSE-44 Step3)**: `src/lint/roadmap-registry.ts` は `PARKED_BANDS` を単一正本として、forward 未降下の `verification` / `cutover` を `uncovered` から分離しつつ reason 付きで doctor surface する。`computeProgramRollup` は `PROGRAM_BANDS` の covered/parked/uncovered 不変条件、gate/span 進捗、未登録 band と pending 工程表 planId の frontier、`perBand` を返し、`doctor` は `roadmap-rollup —` 行で warn-first surface する。`computeGateProgress` は confirmed/completed を同等に到達計数する (IMP-132)。harness.db への rollup projection (front 返却) は別増分。
@@ -99,18 +103,18 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 | 集約 (data.md §2) | 主担当 module | 検証 lint / guard | state (`.ut-tdd/`) |
 |---|---|---|---|
 | **Plan** | plan + schema(frontmatter) | plan lint / (plan-id-schema 第2弾) | `plan_registry/*.json` + `docs/plans/*.md` |
-| **Artifact** (pair/trace/AC/AT) | vmodel + lint(g3-trace) | vmodel lint / g3-trace (R3 AC↔AT) | `artifact/` + `artifact/trace/` |
+| **Artifact** (pair/trace/AC/AT) | vmodel + lint(g3-trace) の artifact 集約 | vmodel lint / g3-trace (R3 AC↔AT) | `artifact/` + `artifact/trace/` |
 | **Workflow** (phase/gate) | doctor + schema | doctor (工程順序 D-03) | `phase.yaml` / `gate_runs` |
 | **Handover** | **handover module** (`src/handover/`、実装済 PLAN-L6-06/L7-04) | doctor (CURRENT.json stale 判定) | `handover/CURRENT.json` |
 | **Evaluation** (Phase B) | (将来 `telemetry` module、L6 carry / IMP-019) | improvement-backlog (橋渡し) | `audit/*.jsonl` |
 | 値オブジェクト (12 種、うち 11 実装済 / SubDoc は spec のみ IMP-026) | **schema** (zod enum SSoT) | 全 lint が schema を参照 | (state 読込時に zod validate) |
 | derived_view (CQRS) | (将来 HM 画面 projection) | — | 集約 state から projection |
 
-> L7 完遂時点の module surface は cli/schema/plan/vmodel/runtime/doctor/lint/**handover/setup/export/state-db/workflow/feedback/skills/assets/audit** に着地済み。telemetry は `src/feedback/engine.ts` と `src/state-db/projection-writer.ts` の DB projection として実装し、HM/web projection (中央 UI、ADR-005) は Phase B 配備範囲として分離する。Handover は当初「将来 session module」と記載したが PLAN-L6-06/L7-04 で実装済 → 本 PLAN-L4-06 で実体へ整合 (drift back-fill)。
+> L7 完遂時点の module surface は cli/schema/plan/vmodel/runtime/doctor/lint/**handover/setup/export/state-db/workflow/feedback/skill-engine/assets/audit** に着地済み。telemetry は `src/feedback/engine.ts` と `src/state-db/projection-writer.ts` の DB projection として実装し、HM/web projection (中央 UI、ADR-005) は Phase B 配備範囲として分離する。Handover は当初「将来 session module」と記載したが PLAN-L6-06/L7-04 で実装済 → 本 PLAN-L4-06 で実体へ整合 (drift back-fill)。
 
 ### §4.1 内部資産 drift lint (A-85、FR-L1-49、IMP-033 rule 型)
 
-内部資産 (roster/skills) の整合は **IMP-033 cross-check rule engine (gate-design §4/§5) の rule 型 `asset-drift` インスタンス**として構想した。Current implementation は `src/lint/asset-drift.ts`、`src/runtime/agent-slots.ts#resolveRosterCapability`、`src/assets/catalog.ts`、`src/skills/recommend.ts`、`src/lint/placeholder-deps.ts` を持ち、`.claude/agents/*.md` / `docs/skills` / `docs/templates/prompts/*.md` を scan する。roster/skills の現行 semantic guard は doctor hard gate と unit/integration tests で fail-close する。
+内部資産 (roster/skills) の整合は **IMP-033 cross-check rule engine (gate-design §4/§5) の rule 型 `asset-drift` インスタンス**として構想した。Current implementation は `src/lint/asset-drift.ts`、`src/runtime/agent-slots.ts#resolveRosterCapability`、`src/assets/catalog.ts`、`src/skill-engine/recommend.ts`、`src/lint/placeholder-deps.ts` を持ち、`.claude/agents/*.md` / `docs/skills` / `docs/templates/prompts/*.md` を scan する。roster/skills の現行 semantic guard は doctor hard gate と unit/integration tests で fail-close する。
 
 | 検査項目 (inventory §1 / ADR-004 由来) | fail-close 条件 |
 |---|---|
@@ -121,7 +125,7 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 
 > **既存 `dependency-drift` (ADR-002) と並置**: gate-design §5 rule registry に `dependency-drift` が既存。内部資産 `asset-drift` を同列追加 (両方 IMP-033 rule)。Current hard gate sliceは legacy path residue / legacy command residue / docs-skills vacancy / guard allowlist missing agent docs を doctor 経路で fail-close 済み。active design/test-design に残った L7 待ち `placeholder_deps` は `placeholder-deps` doctor gate で fail-close する。
 >
-> **実装証跡 (concept §3.1.3.1、IMP-074)**: asset-drift hard gate は A-116 で実装済み。roster capability resolution は `src/runtime/agent-slots.ts#resolveRosterCapability`、asset catalog / skill recommendation は `src/assets/catalog.ts` / `src/skills/recommend.ts`、stale L7 placeholder の fail-close は `src/lint/placeholder-deps.ts` が担う。
+> **実装証跡 (concept §3.1.3.1、IMP-074)**: asset-drift hard gate は A-116 で実装済み。roster capability resolution は `src/runtime/agent-slots.ts#resolveRosterCapability`、asset catalog / skill recommendation は `src/assets/catalog.ts` / `src/skill-engine/recommend.ts`、stale L7 placeholder の fail-close は `src/lint/placeholder-deps.ts` が担う。
 >
 > **module-drift (設計⊇実在の包含、IMP-075) は実装済・別検査**: 上記 asset-drift current slice / remaining roster-skills carry とは別に、**「architecture §3.1 building block 集合 ⊇ `src/` 実在 module」の包含 drift** は ADR-002/IMP-032 の最小スライスとして **`src/lint/module-drift.ts` で実装済** (doctor `checkModuleDrift`、warn-first)。A-103 で handover/setup/web を「将来」のまま放置した meta-drift (impl→design back-fill 漏れ) を再発防止する回帰網 (U-MDRIFT-005 が実 repo 孤児0 を CI 担保)。import グラフ drift (循環/逆依存、knip/madge) は IMP-032 として別途 carry。
 
@@ -148,7 +152,7 @@ data.md の 5 集約 (構造) を src/ building block (実行) に配置する�
 | **subagent guard** | `PreToolUse(Agent)` = `bun .claude/hooks/agent-guard.ts` (環境非依存 TS、判定本体 `src/runtime/agent-guard.ts`)、fail-close (block=exit 2、`blockOnFailure:true`) | **有効** |
 | **session-log / forced-stop** | `SessionStart` / `PostToolUse(Edit\|Write\|Bash)` / `Stop` = `bun src/cli.ts session start` / `hook post-tool-use` / `session summary` (判定本体 `src/runtime/session-log.ts` + `forced-stop.ts`)、fail-OPEN (ログ失敗で作業を止めない) | **有効** (IMP-068) |
 | **commit-msg hook** | git `commit-msg` hook が Conventional Commits を fail-close 強制 (`feat\|fix\|docs\|...`、.claude/CLAUDE.md / [[project_commit_msg_hook]]) | **有効** |
-| **orchestrator-rule parity (Codex)** | Claude Code の hook 強制面 (work-guard / session-lifecycle) を **Codex 側 repo-local `.codex/hooks.json`** へ materialize し、両 orchestrator が同一 guard を機械強制する (PLAN-DISCOVERY-06 spike が ADOPT 判定 → PLAN-L7-139 で実装)。判定本体 = `src/lint/codex-hook-adapter.ts` + work-guard の `src/runtime/work-guard.ts#extractEditTargets` (runtime 非依存 pure fn)。**偽パリティ caveat** (literal copy では発火しない): ① Codex `apply_patch` は freeform で `tool_input.file_path` 不在 (パスは patch 本文 → `extractEditTargets` で抽出)、② matcher tool 名差 (`apply_patch\|write_file` / `exec_command\|local_shell`)、③ `agent-guard` は N/A でなく `spawn_agent` 族の deferred surface、`subagent-stop` のみ真の N/A。scope = direct Codex CLI/IDE の repo-local hook (hosted/API runtime の apply_patch は intercept 対象外) | **有効** (repo-local、global `~/.codex/` 書込みなし) |
+| **orchestrator-rule parity (Codex)** | Claude Code の hook 強制面 (agent-guard / work-guard / session-lifecycle) を **Codex 側 repo-local `.codex/hooks.json`** へ materialize し、両 orchestrator が同一 guard を機械強制する (PLAN-DISCOVERY-06 spike が ADOPT 判定 → PLAN-L7-139 で実装)。判定本体 = `src/lint/codex-hook-adapter.ts` + work-guard の `src/runtime/work-guard.ts#extractEditTargets` + agent-guard の `src/runtime/agent-guard.ts` (runtime 非依存 pure fn)。**偽パリティ caveat** (literal copy では発火しない): ① Codex `apply_patch` は freeform で `tool_input.file_path` 不在 (パスは patch 本文 → `extractEditTargets` で抽出)、② matcher tool 名差 (`spawn_agent\|spawn_agents_on_csv` / `apply_patch\|write_file` / `exec_command\|local_shell`)、③ `subagent-stop` のみ真の N/A。scope = direct Codex CLI/IDE の repo-local hook (hosted/API runtime の apply_patch は intercept 対象外) | **有効** (repo-local、global `~/.codex/` 書込みなし) |
 | その他 hook | PreToolUse(Write/Bash/WebSearch) 等 → package-local `ut-tdd` command | **未有効** (CLI 整備後、目標形は .claude/CLAUDE.md「Target UT-TDD Hooks」) |
 | **CI lint** | g1/g3-trace、pair-freeze、plan/vmodel、doctor hard gates を fail-close 実行 | local gate は `bun run src/cli.ts doctor` + `bun run lint` + `bun run test` で担保。外部 CI service 配備は infrastructure 配備範囲であり、L7 完遂の隠れ carry にしない |
 | entrypoint | `scripts/ut-tdd` (POSIX) / `ut-tdd.ps1` (Windows) は薄く compiled core を呼ぶだけ (bash ロジック禁止) | ADR-001 §3 |
@@ -164,10 +168,10 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 # ADR-NNN: <タイトル>
 - Status: proposed | accepted | superseded by ADR-MMM
 - Date / Deciders / 関連
-## Context     (背景・制約・課題)
-## Decision    (採択した方式)
-## Alternatives considered  (却下案 + 理由)
-## Consequences  (+/- 結果、carry)
+## 背景     (制約・課題)
+## 決定    (採択した方式)
+## 検討した代替案  (却下案 + 理由)
+## 結果  (+/- 結果、carry)
 ```
 
 | ADR | 状態 | 扱い |
@@ -189,3 +193,6 @@ L4 方式設計 sub-doc は **ADR を必須 artifact** とする。様式 = arc4
 - **ADR-002/003 候補**の起票判断 = G4 前の PO/TL レビュー
 - **CI lint 配線** (doctor + lint + test の自動発火) = local gate 実装済み。外部 CI service 配備は infrastructure / ops 配備範囲
 - **plan-id-schema lint** (Plan 集約 ID 検証) = 第2弾 lint (IMP-004)
+## 2026-06-29 Task-Classify Route 追補
+
+`classifyTask()` は `evaluateRouteCommand` 由来の `signal -> mode` route metadata も surface する。対象は `route.mode`、`route.exit_code`、approval status、escalation boundary である。これにより `ut-tdd task classify` は route-aware な work entry point になる。完全な fail-close routing は引き続き `ut-tdd route eval` と後続の work-entry integration が所有する。

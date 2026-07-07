@@ -139,6 +139,7 @@ describe("IT-ASSET-04: in-memory skill catalog scan", () => {
           name: "testing",
           path: "docs/skills/testing.md",
           skill_type: "testing",
+          category: "",
           applies_layers: ["L7", "L8"],
           applies_drive_models: ["Forward", "Reverse"],
         },
@@ -152,6 +153,40 @@ describe("IT-ASSET-04: in-memory skill catalog scan", () => {
         },
       ]);
       expect(existsSync(join(repo, ".ut-tdd"))).toBe(false);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  it("scans root skills markdown for distribution packages", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-skill-catalog-"));
+    try {
+      mkdirSync(join(repo, "skills"), { recursive: true });
+      writeFileSync(
+        join(repo, "skills", "testing.md"),
+        [
+          "---",
+          "schema_version: skill.v1",
+          "name: testing",
+          "skill_type: testing",
+          "applies_to:",
+          "  layers: [L7]",
+          "  drive_models: [Forward]",
+          "---",
+          "# testing",
+        ].join("\n"),
+      );
+
+      const result = scanSkillCatalog({ repoRoot: repo });
+
+      expect(result.ok).toBe(true);
+      expect(result.scannedRoots).toEqual(["skills"]);
+      expect(result.entries).toEqual([
+        expect.objectContaining({
+          id: "skill:testing",
+          path: "skills/testing.md",
+        }),
+      ]);
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
@@ -195,20 +230,21 @@ describe("IT-ASSET-04: in-memory skill catalog scan", () => {
     }
   });
 
-  it("real repo has a non-empty docs/skills markdown catalog and no optional-root blocker", () => {
+  it("real repo has a non-empty skill markdown catalog and no optional-root blocker", () => {
+    const skillRoot = existsSync(join(process.cwd(), "skills")) ? "skills" : "docs/skills";
     const result = scanSkillCatalog({
       repoRoot: process.cwd(),
-      optionalRoots: ["docs/skills/optional"],
+      optionalRoots: [`${skillRoot}/optional`],
     });
 
     expect(result.ok).toBe(true);
     expect(result.entries.length).toBeGreaterThan(40);
-    expect(result.entries.map((entry) => entry.path)).toContain("docs/skills/testing.md");
+    expect(result.entries.map((entry) => entry.path)).toContain(`${skillRoot}/testing.md`);
     expect(result.findings).toContainEqual({
       kind: "optional-root-empty",
       severity: "info",
-      subject_id: "docs/skills/optional",
-      evidence_path: "docs/skills/optional",
+      subject_id: `${skillRoot}/optional`,
+      evidence_path: `${skillRoot}/optional`,
     });
   });
 });
@@ -315,19 +351,24 @@ describe("IT-ASSET-01/02: roster registry and guard consistency", () => {
         "pmo-tech-fork",
         "pmo-tech-news",
         "refactor-scout",
+        "be-api",
+        "be-logic",
+        "db-schema",
+        "devops-deploy",
         "pdm-tech-innovation",
         "pdm-marketing-innovation",
         "pdm-innovation-manager",
         "code-reviewer",
         "security-audit",
         "qa-test",
+        "ut-tdd-tl",
       ],
     });
 
     expect(result.ok).toBe(true);
     expect(result.missingFromRoster).toEqual([]);
     expect(result.nameMismatches).toEqual([]);
-    expect(result.allowlistedPresent).toBe(14);
-    expect(result.nonAllowlisted).toEqual(["be-api", "be-logic", "db-schema", "devops-deploy"]);
+    expect(result.allowlistedPresent).toBe(19);
+    expect(result.nonAllowlisted).toEqual([]);
   });
 });

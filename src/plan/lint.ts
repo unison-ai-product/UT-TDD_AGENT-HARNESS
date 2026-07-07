@@ -4,6 +4,7 @@ import { parse as parseYaml } from "yaml";
 import { analyzeG1Trace, g1TraceMessages, g1TraceOk, loadG1TraceDocs } from "../lint/g1-trace";
 import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3-trace";
 import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter";
+import { routeSignalCandidates } from "../schema/route-map";
 import {
   DB_PROJECTION_BACKPROP_REQUIRED_GENERATES,
   DESIGN_LAYERS_REQUIRING_SUB_DOC,
@@ -17,6 +18,10 @@ import {
   REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE,
   REVERSE_R4_ROUTE_BACKPROP_ENFORCEMENT_DATE,
   REVIEW_PATTERN,
+  ROUTE_CERTIFICATE_ENFORCEMENT_DATE,
+  ROUTE_MODE_ALLOWED_KINDS,
+  ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS,
+  ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS,
   SERIAL_MODE_PATTERN,
   SERIAL_REASONS,
   VALID_REVERSE_FULLBACK_SCOPE_DECISIONS,
@@ -27,6 +32,8 @@ import type {
   PlanGovernanceDoc,
   PlanGovernanceResult,
   PlanGovernanceViolation,
+  PlanReferenceFreshnessFinding,
+  PlanReferenceFreshnessResult,
   PlanScheduleDoc,
   PlanScheduleResult,
   PlanScheduleViolation,
@@ -38,10 +45,16 @@ export type {
   PlanGovernanceResult,
   PlanGovernanceViolation,
   PlanGovernanceViolationReason,
+  PlanReferenceFreshnessFinding,
+  PlanReferenceFreshnessFindingReason,
+  PlanReferenceFreshnessResult,
   PlanScheduleDoc,
   PlanScheduleResult,
   PlanScheduleViolation,
 } from "./lint-types";
+
+const ROUTE_MODE_KIND_DEBT_GUIDANCE =
+  "see docs/governance/route-mode-kind-debt-audit-2026-07-02.md and docs/plans/PLAN-L7-263-route-mode-kind-certificate.md";
 
 function section(content: string, start: RegExp, end: RegExp): string {
   const m = content.match(start);
@@ -237,6 +250,194 @@ function kindLayerViolations(raw: Record<string, unknown>): string[] {
     return [`research:${layer}:expected_L1-L4`];
   }
   return [];
+}
+
+function versionRouteCertificateViolations(raw: Record<string, unknown>): {
+  reason: "version_route_certificate_missing" | "version_route_certificate_mismatch";
+  detail: string;
+}[] {
+  if (!stringField(raw.version_target)) return [];
+  if (stringField(raw.status) !== "draft") return [];
+
+  const signal = stringField(raw.route_signal);
+  const mode = stringField(raw.route_mode);
+  const violations: {
+    reason: "version_route_certificate_missing" | "version_route_certificate_mismatch";
+    detail: string;
+  }[] = [];
+
+  if (!signal) {
+    violations.push({
+      reason: "version_route_certificate_missing",
+      detail: "version_target requires route_signal=version_deferral",
+    });
+  } else if (signal !== "version_deferral") {
+    violations.push({
+      reason: "version_route_certificate_mismatch",
+      detail: `route_signal=${signal} expected version_deferral`,
+    });
+  }
+
+  if (!mode) {
+    violations.push({
+      reason: "version_route_certificate_missing",
+      detail: "version_target requires route_mode=version-up",
+    });
+  } else if (mode !== "version-up") {
+    violations.push({
+      reason: "version_route_certificate_mismatch",
+      detail: `route_mode=${mode} expected version-up`,
+    });
+  }
+
+  return violations;
+}
+
+function routeCertificateViolations(raw: Record<string, unknown>): {
+  reason: "route_certificate_missing" | "route_certificate_mismatch";
+  detail: string;
+}[] {
+  const created = stringField(raw.created);
+  if (!created || created < ROUTE_CERTIFICATE_ENFORCEMENT_DATE) return [];
+  if (stringField(raw.status) === "archived") return [];
+
+  const signal = stringField(raw.route_signal);
+  const mode = stringField(raw.route_mode);
+  const violations: {
+    reason: "route_certificate_missing" | "route_certificate_mismatch";
+    detail: string;
+  }[] = [];
+
+  if (!signal) {
+    violations.push({
+      reason: "route_certificate_missing",
+      detail: `created>=${ROUTE_CERTIFICATE_ENFORCEMENT_DATE} requires route_signal`,
+    });
+  }
+  if (!mode) {
+    violations.push({
+      reason: "route_certificate_missing",
+      detail: `created>=${ROUTE_CERTIFICATE_ENFORCEMENT_DATE} requires route_mode`,
+    });
+  }
+  if (!signal || !mode) return violations;
+
+  const candidates = routeSignalCandidates(signal);
+  if (candidates.length === 0) {
+    violations.push({
+      reason: "route_certificate_mismatch",
+      detail: `route_signal=${signal} has no route candidate`,
+    });
+  } else if (!candidates.includes(mode)) {
+    violations.push({
+      reason: "route_certificate_mismatch",
+      detail: `route_signal=${signal} candidates=${candidates.join("|")} route_mode=${mode}`,
+    });
+  }
+
+  return violations;
+}
+
+function routeModeKindViolations(
+  raw: Record<string, unknown>,
+  planId: string,
+): { reason: "route_mode_kind_mismatch"; detail: string }[] {
+  if (stringField(raw.status) === "archived") return [];
+
+  const mode = stringField(raw.route_mode);
+  if (!mode) {
+    // debt 台帳対象の PLAN は route_mode 行の削除で免除を bypass できないよう fail-close する。
+    if (
+      ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS.has(planId) ||
+      ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS.has(planId)
+    ) {
+      return [
+        {
+          reason: "route_mode_kind_mismatch",
+          detail: `route_mode removed from ledgered debt plan (bypass attempt fails closed); ${ROUTE_MODE_KIND_DEBT_GUIDANCE}`,
+        },
+      ];
+    }
+    return [];
+  }
+  const allowedKinds = ROUTE_MODE_ALLOWED_KINDS[mode];
+  if (!allowedKinds) return [];
+
+  const kind = stringField(raw.kind) ?? "";
+  if (allowedKinds.includes(kind)) return [];
+
+  if (ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS.has(planId)) return [];
+  const status = stringField(raw.status) ?? "";
+  if (ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS.has(planId) && status === "draft") return [];
+
+  const debtNote = ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS.has(planId)
+    ? ` (debt plan must be promoted to add-impl + Reverse pairing before leaving draft; ${ROUTE_MODE_KIND_DEBT_GUIDANCE})`
+    : "";
+  return [
+    {
+      reason: "route_mode_kind_mismatch",
+      detail: `route_mode=${mode} allows kind=${allowedKinds.join("|")} but kind=${kind}${debtNote}`,
+    },
+  ];
+}
+
+const PLAN_CODE_LINE_REFERENCE_PATTERN = /\b([A-Za-z0-9_./\\-]+\.tsx?):(\d+)\b/g;
+
+function fileLineCount(path: string): number {
+  return readFileSync(path, "utf8").split(/\r?\n/).length;
+}
+
+export function analyzePlanReferenceFreshness(
+  docs: PlanGovernanceDoc[],
+  repoRoot: string = process.cwd(),
+): PlanReferenceFreshnessResult {
+  const findings: PlanReferenceFreshnessFinding[] = [];
+  for (const doc of docs) {
+    const raw = parsePlanFrontmatter(doc);
+    if (!raw || stringField(raw.status) !== "draft") continue;
+    const seen = new Set<string>();
+    for (const match of doc.content.matchAll(PLAN_CODE_LINE_REFERENCE_PATTERN)) {
+      const rawPath = normalizeArtifactPath(match[1]);
+      const line = Number(match[2]);
+      const reference = `${rawPath}:${line}`;
+      if (seen.has(reference)) continue;
+      seen.add(reference);
+      const absolutePath = join(repoRoot, rawPath);
+      if (!existsSync(absolutePath)) {
+        findings.push({
+          file: doc.file,
+          reason: "reference_path_missing",
+          reference,
+          detail: rawPath,
+        });
+        continue;
+      }
+      const lines = fileLineCount(absolutePath);
+      if (line > lines) {
+        findings.push({
+          file: doc.file,
+          reason: "reference_line_out_of_range",
+          reference,
+          detail: `${rawPath} has ${lines} lines`,
+        });
+      }
+    }
+  }
+  return { findings, checked: docs.length, ok: findings.length === 0 };
+}
+
+export function planReferenceFreshnessMessages(result: PlanReferenceFreshnessResult): string[] {
+  if (result.findings.length === 0) {
+    return [`plan-reference-freshness - OK (draft code-line refs checked=${result.checked})`];
+  }
+  const sample = result.findings
+    .slice(0, 8)
+    .map((finding) => `${finding.file}:${finding.reason}(${finding.reference}; ${finding.detail})`)
+    .join(", ");
+  return [
+    `plan-reference-freshness - advisory: ${result.findings.length} stale draft code-line reference(s) found (non-blocking)`,
+    `plan-reference-freshness - sample: ${sample}`,
+  ];
 }
 
 function expectedArtifactTypeForPath(path: string): string | null {
@@ -485,6 +686,15 @@ export function analyzePlanGovernance(
         reason: "kind_layer_mismatch",
         detail: invalidKindLayers.join(", "),
       });
+    }
+    for (const violation of versionRouteCertificateViolations(raw)) {
+      violations.push({ file: entry.file, ...violation });
+    }
+    for (const violation of routeCertificateViolations(raw)) {
+      violations.push({ file: entry.file, ...violation });
+    }
+    for (const violation of routeModeKindViolations(raw, planId)) {
+      violations.push({ file: entry.file, ...violation });
     }
 
     if (kind === "design" && layer && DESIGN_LAYERS_REQUIRING_SUB_DOC.has(layer) && !isMasterHub) {

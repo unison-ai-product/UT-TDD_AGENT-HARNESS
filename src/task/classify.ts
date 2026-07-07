@@ -4,7 +4,12 @@ import {
   type ProposalSubagentLaneName,
   type TaskDifficulty,
 } from "../team/model-policy";
-import { classifyDrive, type Finding, scoreTaskComplexity } from "../workflow/contracts";
+import {
+  classifyDrive,
+  evaluateRouteCommand,
+  type Finding,
+  scoreTaskComplexity,
+} from "../workflow/contracts";
 import {
   BASELINE_DOCUMENT_PACK,
   KIND_PATTERNS,
@@ -48,6 +53,14 @@ export interface TaskClassification {
   kind: TaskKind;
   drive: string;
   drive_confidence: number;
+  route: {
+    mode: string | null;
+    exit_code: 0 | 1 | 2;
+    recommended_command: string | null;
+    requires_human_approval: boolean;
+    approval_status: string;
+    escalation_boundaries: string[];
+  };
   size: "S" | "M" | "L";
   complexity_score: number;
   difficulty: TaskDifficulty;
@@ -168,6 +181,7 @@ export function classifyTask(input: ClassifyTaskInput): TaskClassification {
   });
   const difficulty = inferTaskDifficulty({ task: text });
   const risk = riskFlags(text);
+  const route = evaluateRouteCommand({ signal: text });
 
   const findings: Finding[] = [...drive.findings, ...complexity.findings];
   if (risk.length > 0) {
@@ -183,6 +197,14 @@ export function classifyTask(input: ClassifyTaskInput): TaskClassification {
     kind: inferKind(text),
     drive: drive.drive,
     drive_confidence: drive.confidence,
+    route: {
+      mode: route.mode,
+      exit_code: route.exit_code,
+      recommended_command: route.recommended_command?.command ?? null,
+      requires_human_approval: route.approval.required,
+      approval_status: route.approval.status,
+      escalation_boundaries: route.escalation_boundaries.map((boundary) => boundary.term),
+    },
     size: complexity.class,
     complexity_score: complexity.score,
     difficulty: difficulty.difficulty,

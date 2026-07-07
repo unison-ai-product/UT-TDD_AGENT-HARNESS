@@ -44,8 +44,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T21:29:59+09:00"
-    tests_green_at: "2026-06-29T21:29:59+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Externalize repeated route/CLI literals, extract agent guard and refactor detector policy data, and narrow medium policy candidates to precise policy surfaces."
     worker_model: codex
@@ -56,9 +56,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T18:23:38+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:07fd6b9c6fcbabf2c893a28eb0f49f4da7f83f276b88befdbfd7b8c4b5daee51"
+        output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
       - kind: unit_test
         command: "bun run vitest run tests\\cli.test.ts tests\\agent-guard.test.ts"
         runner: bun
@@ -74,15 +74,15 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T18:43:35+09:00"
         evidence_path: tests/agent-guard.test.ts
-        output_digest: "sha256:ecf0aa1c3b6c484550d8f08489c175aefd1fe4614c477bfa6195fb0cc92fb018"
+        output_digest: "sha256:d63d4b93fa5ff137ea1dd3b44177af15915c7274fa4d84d2b2b2fc99c0d71f7c"
       - kind: unit_test
         command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T21:29:59+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:d9528134d8ae18ee34dc2f645f971d77feae52b82f48efa05e2833c58b59b087"
+        output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
       - kind: unit_test
         command: "bun run vitest run tests\\agent-guard.test.ts tests\\workflow-contracts.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -90,7 +90,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T18:23:31+09:00"
         evidence_path: tests/agent-guard.test.ts
-        output_digest: "sha256:ecf0aa1c3b6c484550d8f08489c175aefd1fe4614c477bfa6195fb0cc92fb018"
+        output_digest: "sha256:d63d4b93fa5ff137ea1dd3b44177af15915c7274fa4d84d2b2b2fc99c0d71f7c"
       - kind: unit_test
         command: "bun run vitest run tests\\agent-guard.test.ts tests\\workflow-contracts.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -98,7 +98,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T18:23:31+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:1bbf522aeef22c2bc258bd92cd102fda3c5a2315d257cf4fd95f939034bf7692"
+        output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -112,9 +112,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T18:24:02+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:77f299b947f51b266b65b0dd7e30e03b2eec57f8cecf4144a5bf4a4e77b111ae"
+        output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
 ---
 
 # PLAN-L7-158: refactor detector precision and policy extraction

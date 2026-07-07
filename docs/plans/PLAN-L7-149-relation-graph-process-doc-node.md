@@ -32,10 +32,10 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-25T15:05:00+09:00"
-    tests_green_at: "2026-06-25T15:05:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
-    scope: "Relation graph loader now materializes docs/process/** as design-like nodes so DB feedback missing-projection gates are not silently bypassed."
+    scope: "Relation graph loader now materializes docs/process/** and repo-local hook/config roots (`.codex/hooks.json`, `.codex/config.toml`, `.claude/settings.json`) as design-like nodes so DB feedback missing-projection gates are not silently bypassed."
     worker_model: codex
     reviewer_model: codex-intra-runtime
     green_commands:
@@ -44,40 +44,51 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T15:04:43+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:2cd13824089171ce59ccceae767e6b6196a46f1cca15452f222829ed2ef53533"
+        output_digest: "sha256:e42d9d2be60e6b383cc51c291009e3e8104f2c60db8dca17737be0cfb3eb34d6"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T15:05:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:38742cdac160309248b272d64816e393e784055b4c1cf8977b6f528da43c0491"
+        output_digest: "sha256:7a231cb642507d46f961e0b38fbbd6807c908a3305831a79f235adcbe3152902"
 ---
 
 # PLAN-L7-149: relation graph process document node coverage
 
 ## Objective
 
-Resolve the DB feedback gate:
+Resolve the DB feedback gate family:
 
 `missing-projection: changed-path-docs-process-modes-refactor.md-has-no-relation-graph-node-impact-cannot-be-analyzed-no-silent-change-impact-fallback`
+
+2026-06-29 follow-up: the same gate shape recurred for
+`.codex/hooks.json` after Codex hook parity work. The root cause was identical:
+the relation graph loader projected adapter templates but not repo-local
+hook/config roots.
 
 ## Scope
 
 - Add `docs/process/**` Markdown files to the relation graph loader as
   design-like nodes.
+- Add repo-local `.claude/settings.json`, `.codex/config.toml`, and
+  `.codex/hooks.json` to the relation graph loader as design-like config nodes.
 - Keep the existing relation graph schema unchanged.
 - Add a regression fixture proving `docs/process/modes/refactor.md` has a graph
   node and `analyzeRelationImpact` does not emit `missing-projection`.
+- Add fixture and real-repo regression coverage proving `.codex/hooks.json` has
+  a graph node and `analyzeRelationImpact` does not emit `missing-projection`.
 
 ## Acceptance Criteria
 
 - `loadRelationGraphSourceSet` returns a node source for
   `docs/process/modes/refactor.md`.
+- `loadRelationGraphSourceSet` returns a node source for `.codex/hooks.json`.
 - `analyzeRelationImpact` succeeds for a process mode document change.
+- `analyzeRelationImpact` succeeds for a repo-local Codex hook change.
 - `bun run vitest run tests\relation-graph-loader.test.ts` passes.
 - `bun run src\cli.ts db rebuild` clears the open DB feedback gate.
 - `bun run src\cli.ts doctor` passes.

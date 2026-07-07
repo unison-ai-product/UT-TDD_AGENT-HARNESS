@@ -42,7 +42,7 @@ dependencies:
   parent: docs/plans/PLAN-L7-70-skill-pack-curation.md
   requires:
     - docs/migration/helix-fork-completion-plan.md
-    - docs/skills/SKILL_MAP.md
+    - skills/SKILL_MAP.md
   references:
     - .claude/CLAUDE.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -65,7 +65,7 @@ Commands are re-authored for UT-TDD, HELIX as loose reference only:
   status, plan lint, doctor) — never `helix` commands.
 - Reference UT-TDD allowlisted subagents only (code-reviewer, security-audit,
   qa-test, pmo-*, pdm-*); the `PreToolUse(Agent)` guard enforces this.
-- Reference the curated UT-TDD skill packs in `docs/skills/`, not legacy skill ids.
+- Reference the curated UT-TDD skill packs in `skills/`, not legacy skill ids.
 - No legacy terms (`helix`, `HELIX_`, ai-dev-kit paths).
 
 ## 2. Scope (Phase-1)

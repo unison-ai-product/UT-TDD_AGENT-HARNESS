@@ -31,8 +31,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-23T23:20:00+09:00"
-    tests_green_at: "2026-06-23T23:18:00+09:00"
+    reviewed_at: "2026-06-30T22:30:00+09:00"
+    tests_green_at: "2026-06-30T22:29:00+09:00"
     verdict: approve
     scope: "Reverse fullback claimed artifact path lint and regression test."
     worker_model: codex
@@ -43,17 +43,17 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-23T23:17:00+09:00"
+        completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: tests/plan-lint.test.ts
-        output_digest: "sha256:ba64ea807951fdf6b3c3d0891e5525afe5b32e9599129db35e6870da0706826d"
+        output_digest: "sha256:5200049532ce0cb4b1210298bb346151ea184c90ff89440a0ef71b831eaf1653"
       - kind: lint
         command: "bun run src\\cli.ts plan lint --gate governance"
         runner: bun
         scope: gate
         exit_code: 0
-        completed_at: "2026-06-23T23:18:00+09:00"
+        completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: src/plan/lint.ts
-        output_digest: "sha256:40c960d0d4d0b49ef3aff27e12291b7a5851077e6fdcf7aca1868bdf0d964510"
+        output_digest: "sha256:096c894039dd0664cd7a60bcc6b417da34883587a278a16362296ccbb3bdf020"
 ---
 
 # PLAN-L7-111: Reverse fullback claimed artifact gate

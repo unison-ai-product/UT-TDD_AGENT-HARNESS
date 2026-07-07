@@ -25,9 +25,9 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 |---|---|---|---|
 | **cli** | `src/cli.ts` | 実装済 (scaffold) | コマンドディスパッチ + 副作用端点 |
 | **schema** | `src/schema/index.ts` + `frontmatter.ts` | 実装済 | enum/契約の単一正本 (安定核) |
-| **lint** | `src/lint/*.ts` (5 file) | 実装済 | doc/PLAN/trace 静的検証 |
-| **plan** | `src/plan/lint.ts` | stub | PLAN lint |
-| **vmodel** | `src/vmodel/lint.ts` | stub | V-model 4 artifact trace lint |
+| **lint** | `src/lint/*.ts` (実数は `src/lint/` が正本、拡張継続中) | 実装済 | doc/PLAN/trace 静的検証 |
+| **plan** | `src/plan/lint.ts` | 実装済 (PLAN-L5-02 以降拡張) | PLAN lint |
+| **vmodel** | `src/vmodel/lint.ts` | 実装済 (PLAN-L5-02 以降拡張) | V-model 4 artifact trace lint |
 | **runtime** | `src/runtime/detect.ts` + `agent-guard.ts` | 実装済 | mode 検出 + agent-guard 判定 |
 | **doctor** | `src/doctor/index.ts` | 実装済 (scaffold) | 統合検証集約 |
 | **workflow** | `src/workflow/contracts.ts` + `src/workflow/readiness.ts` | 実装済 | 11 mode workflow エンジン (function §3) |
@@ -35,7 +35,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 | **telemetry** | `src/feedback/engine.ts` + `src/state-db/projection-writer.ts` | 実装済 (Phase B web 集約は別範囲) | Evaluation 集計 (Phase B、function §5) |
 | **hook** | `src/runtime/session-log.ts` + `src/runtime/agent-slots.ts` | 実装済 | 5 イベント hook (function §4) |
 | **review** | `ut-tdd review --uncommitted` + `src/lint/review-evidence.ts` | 実装済 | doc-reviewer 召喚 (FR-45) |
-| **skill** | `src/skills/recommend.ts` + `src/workflow/contracts.ts#suggestSkillInjection` | 実装済 | L 別 skill 注入 (FR-12) |
+| **skill** | `src/skill-engine/recommend.ts` + `src/workflow/contracts.ts#suggestSkillInjection` | 実装済 | L 別 skill 注入 (FR-12) |
 | **roster** | `src/runtime/agent-slots.ts#resolveRosterCapability` + `src/lint/asset-drift.ts` | 実装済 | 内部資産 subagent registry + capability/model 解決 + guard allowlist 整合 (FR-L1-46/48) |
 | **cutover** | `ut-tdd cutover --to --dry-run` | 実装済 (approval gate) | ロールバック (FR-10/26) |
 | **adapter** | `src/runtime/adapter.ts` + `src/runtime/provider-handover.ts` | 実装済 | 外部 service 隔離 (external-if §6) |
@@ -60,10 +60,10 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 - `detect.ts`: `ExecutionMode` 型 / `RuntimeDetection` interface / `detectMode()` (binary+probe+env → mode)
 - `agent-guard.ts`: `ModelFamily`/`ResolvedFamily` 型 / `AgentGuardContext`/`GuardDecision` interface / `normalizeModelFamily()` / `evaluateAgentGuard()` (判定本体、fail-close)
 
-### §2.4 cli / plan / vmodel / doctor
+### §2.4 cli / plan / vmodel / doctor の配置
 - `cli.ts`: `program` (commander)。action は runtime/doctor/plan/vmodel を呼ぶ薄い dispatcher
-- `plan/lint.ts`: `LintResult` interface / `lintPlan(path?)` (stub → schema frontmatter validate を実装)
-- `vmodel/lint.ts`: `lintVmodel(path?)` (stub → 4 artifact trace を実装)
+- `plan/lint.ts`: `LintResult` interface / `lintPlan(path?)` (実装済 = schema frontmatter validate + 本文検証)
+- `vmodel/lint.ts`: `lintVmodel(path?)` (実装済 = 4 artifact trace)
 - `doctor/index.ts`: `runDoctor()` (lint 群 + state 突合を集約)
 
 ## §3 公開 IF (signature 概要)
@@ -86,7 +86,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 - **fs 隔離**: lint の `loadX()` が fs 読込端点、`analyzeX(docs?)` は pure (テスト注入可)。fs は依存方向ルール対象外 (architecture §3 注記)
 - **副作用端点**: cli (stdout/exitCode) と hook のみが副作用を持つ。core ロジックは純粋関数
 
-## §5 L7 closure module boundary
+## §5 L7 closure module boundary（閉包境界）
 
 | module | 責務 | 配置依存 | carry |
 |---|---|---|---|
@@ -105,7 +105,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 
 ## §6 lint 共通様式の module 構造
 
-5 lint は共通テンプレート: `HERE = dirname(fileURLToPath(import.meta.url))` → `loadX()` (repo doc を fs 読込) → `analyzeX(docs?)` (pure、docs 注入でテスト) → result object (`{orphans[], totals}`)。テストは `orphans === []` + `totals > 0` (非空虚) を assert。新 lint (plan-id-schema [IMP-004] / doc-consistency 第2弾 [IMP-001/002] / glossary-delta [G.9]) も同様式で追加。
+全 lint (実数は `src/lint/` が正本) は共通テンプレート: `HERE = dirname(fileURLToPath(import.meta.url))` → `loadX()` (repo doc を fs 読込) → `analyzeX(docs?)` (pure、docs 注入でテスト) → result object (`{orphans[], totals}`)。テストは `orphans === []` + `totals > 0` (非空虚) を assert。新 lint (plan-id-schema [IMP-004] / doc-consistency 第2弾 [IMP-001/002] / glossary-delta [G.9]) も同様式で追加。
 
 ## §7 ADR-002 候補 (依存方向ルール、G4 escalation ①)
 
@@ -120,73 +120,74 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 
 - 各 module 内部関数の **アルゴリズム / pseudocode** = L6 機能設計 (IEEE 1016 §5.7、IMP-019)
 - 公開関数の **DbC pre/post** = internal-processing (PLAN-L5-03、IMP-014)
-- **L7 module 実装証跡** (workflow/session/telemetry/hook/review/skill/cutover/adapter) = `src/workflow/`、`src/handover/`、`src/runtime/`、`src/feedback/`、`src/skills/`、`src/assets/`、CLI surface、doctor hard gates
+- **L7 module 実装証跡** (workflow/session/telemetry/hook/review/skill/cutover/adapter) = `src/workflow/`、`src/handover/`、`src/runtime/`、`src/feedback/`、`src/skill-engine/`、`src/assets/`、CLI surface、doctor hard gates
 - **schema 拡張**: `subDocSchema` (IMP-026) / `planIdSchema` 層別 regex (IMP-004) = 実装済み
 - **dependency lint** (循環検出 + schema 一方向保証) = L7 (knip 候補)
 
-## Appendix A: L5 internal asset back-fill completion (PLAN-L5-06 / PLAN-L5-07)
+## Appendix A: L5 内部資産 back-fill 完了 (PLAN-L5-06 / PLAN-L5-07)
 
-### A.1 skill module integration
+### A.1 skill module integration（統合）
 
-PLAN-L5-06 closes the L5 module-integration slice for FR-L1-47.
+PLAN-L5-06 は FR-L1-47 の L5 module-integration slice を close する。
 
-| component | L5 responsibility | dependency direction | carry |
+| component | L5 responsibility（責務） | dependency direction（依存方向） | carry |
 |---|---|---|---|
-| skill catalog | Scan `docs/skills/**/*.md` as layer-1 source documents and expose an in-memory catalog; no persistent `.ut-tdd` state is introduced. | `skill -> schema/fs`; no import from runtime/guard. | L6 defines scorer and injector signatures; L7 implements catalog loading. |
-| recommender | Resolve candidate skills from task/layer/drive context and return ranked recommendations without mutating project state. | Pure analyzer after catalog load. | L6 defines scoring inputs and deterministic tie-breaks. |
-| injector | Produce layer-scoped injection sets for runtime prompts while preserving ADR-004 layer-1/layer-2 separation. | Consumes catalog/recommender output; does not rewrite skill source docs. | L7 materializes injection in provider adapters. |
+| skill catalog | `docs/skills/**/*.md` を layer-1 source document として scan し、in-memory catalog を公開する。永続 `.ut-tdd` state は導入しない。 | `skill -> schema/fs`。runtime/guard から import しない。 | L6 が scorer と injector signature を定義し、L7 が catalog loading を実装する。 |
+| recommender | task/layer/drive context から candidate skill を解決し、project state を mutate せず ranked recommendation を返す。 | catalog load 後の pure analyzer。 | L6 が scoring input と deterministic tie-break を定義する。 |
+| injector | ADR-004 layer-1/layer-2 separation を維持しながら、runtime prompt 向け layer-scoped injection set を作る。 | catalog/recommender output を消費し、skill source docs は rewrite しない。 | L7 が provider adapter で injection を materialize する。 |
 
-This concretizes the existing `skill` module stub without creating a second lint or catalog subsystem.
+これは second lint/catalog subsystem を作らず、共通の差分エンジンを skill module 等へ展開する (skill module は現在実装済み)。
 
-### A.2 asset-drift rule integration
+### A.2 asset-drift rule integration（統合）
 
-PLAN-L5-07 closes the L5 module-integration slice for FR-L1-49.
+PLAN-L5-07 は FR-L1-49 の L5 module-integration slice を close する。
 
-| integration point | L5 contract | carry |
+| integration point（統合点） | L5 contract | carry |
 |---|---|---|
-| rule registry | `asset-drift` is an IMP-033 rule instance registered in the shared rule engine, not a new standalone lint module. | L6 defines predicate signatures and regex details. |
-| doc registry auto-enroll | `.claude/agents/*.md` and `docs/skills/**/*.md` are discovered through the same `loadX -> analyzeX` pattern used by existing lint modules. | L7 implements scanner wiring. |
-| fail-close route | doctor/gate surfaces unresolved asset drift and placeholder dependency gaps as non-green validation results. | L7 connects to `runDoctor` and gate checks. |
-| dependency-drift coexistence | `asset-drift` sits beside ADR-002 dependency-drift; both are IMP-033 rule types and must not duplicate ownership. | L7 import-map implementation remains under dependency-drift. |
+| rule registry | `asset-drift` は新しい standalone lint module ではなく、shared rule engine に登録する IMP-033 rule instance とする。 | L6 が predicate signature と regex detail を定義する。 |
+| doc registry auto-enroll | `.claude/agents/*.md` と `docs/skills/**/*.md` は、既存 lint module と同じ `loadX -> analyzeX` pattern で discover する。 | L7 が scanner wiring を実装する。 |
+| fail-close route | doctor/gate は unresolved asset drift と placeholder dependency gap を non-green validation result として surface する。 | L7 が `runDoctor` と gate check へ接続する。 |
+| dependency-drift coexistence | `asset-drift` は ADR-002 dependency-drift と並ぶ。どちらも IMP-033 rule type であり、ownership を重複させない。 | L7 import-map implementation は dependency-drift 配下に残す。 |
 
-These additions complete the L5 integration boundary for skill and drift assets while leaving function-level algorithms to L6 and implementation state to L7.
+これらの追加により、skill と drift asset の L5 integration boundary を完了する。function-level algorithm は L6、implementation state は L7 に残す。
 
-### A.3 descent-obligation module integration (PLAN-L6-35 / FR-L1-03)
+### A.3 descent-obligation module integration（統合） (PLAN-L6-35 / FR-L1-03)
 
 PLAN-L6-35 closes the L5 module-integration slice for FR-L1-03's descent-completeness (抜け漏れ検出). It strengthens the existing `vmodel pair-freeze` (document-driven) into an upstream-driven, absence-detecting check.
 
-| component | L5 responsibility | dependency direction | carry |
+| component | L5 responsibility（責務） | dependency direction（依存方向） | carry |
 |---|---|---|---|
-| descent adjacency matrix | Materialize `document-system-map.md §1` (layer × artifact × V-pair) as a single machine-readable rule set; no new SSoT, it derives from governance docs. | `descent-obligation -> schema/fs`; no import from runtime/guard. | L6 defines `AdjacencyRule` shape and `condition` semantics. |
-| obligation generator | Drive obligations from upstream requirement + matrix (not from downstream self-declaration); reuse `relation-graph.ts` node/edge substrate (`requirement`/`design`/`test-design`/`source`/`test`) rather than a second graph. | Pure analyzer over loaded artifacts; consumes relation-graph projection. | L6 defines `generateObligations` / `analyzeDescentObligations` signatures and DbC. |
-| defer ledger + impl-ahead | Read open defers (`explicit_l7_defer` / `placeholder_deps`, physical-data §7); treat src-landed + undischarged design/test-design defer as an impl-ahead violation. | Pure; defers are an input, not mutated. | L6 defines defer validity and impl-ahead rule; L7 wires `descent_obligations` projection + `runDoctor`. |
+| descent adjacency matrix | `document-system-map.md §1` (layer × artifact × V-pair) を single machine-readable rule set として materialize する。新しい SSoT は作らず、governance docs から derive する。 | `descent-obligation -> schema/fs`。runtime/guard から import しない。 | L6 が `AdjacencyRule` shape と `condition` semantics を定義する。 |
+| obligation generator | upstream requirement + matrix から obligations を drive する (downstream self-declaration には依存しない)。second graph ではなく `relation-graph.ts` node/edge substrate (`requirement`/`design`/`test-design`/`source`/`test`) を reuse する。 | loaded artifacts 上の pure analyzer。relation-graph projection を consume する。 | L6 が `generateObligations` / `analyzeDescentObligations` signatures と DbC を定義する。 |
+| defer ledger + impl-ahead | open defers (`explicit_l7_defer` / `placeholder_deps`, physical-data §7) を read し、src-landed + undischarged design/test-design defer を impl-ahead violation として扱う。 | Pure。defers は input であり mutate しない。 | L6 が defer validity と impl-ahead rule を定義し、L7 が `descent_obligations` projection + `runDoctor` を wire する。 |
 
-This concretizes a new `lint/descent-obligation` module reusing the relation-graph substrate; it does not duplicate pair-freeze (which becomes the document-driven subset) or impl-plan-trace (PLAN-ID coverage). Function-level algorithms stay in L6; lint/projection/doctor wiring is L7 (add-impl, Codex 委譲).
+これは relation-graph substrate を reuse する新しい `lint/descent-obligation` module を具体化する。pair-freeze (document-driven subset になる) や impl-plan-trace (PLAN-ID coverage) は duplicate しない。Function-level algorithm は L6 に残し、lint/projection/doctor wiring は L7 (add-impl, Codex 委譲) とする。
 
-## Appendix B: Harness DB Feedback Modules (PLAN-L5-08)
+## Appendix B: Harness DB feedback module（feedback モジュール） (PLAN-L5-08)
 
-PLAN-L5-08 adds a DB-centered reference-feedback slice without replacing the existing lint/rule modules.
+PLAN-L5-08 は既存 lint/rule module を置き換えず、DB-centered reference-feedback slice を追加する。
 
-| module | path intent | responsibility | dependency direction |
+| module | path intent（配置意図） | responsibility（責務） | dependency direction（依存方向） |
 |---|---|---|---|
-| `state-db` | `src/state-db/` | SQLite connection, migration, projection upsert, rebuild from docs/state/logs. | `state-db -> schema`; no import from CLI adapters. |
-| `projection-writer` | `src/state-db/projection-writer.ts` | Convert PLAN, artifact, gate, hook, model, skill, and finding records into `harness.db` rows. | Consumes normalized records from loaders; does not parse provider transcripts. |
-| `search-index` | `src/search/` | Maintain `search_index` and serve `ut-tdd find` queries across PLAN/artifact/finding/skill/model/session. | Reads projection DB; may call loaders only during rebuild. |
-| `feedback-engine` | `src/feedback/` | Aggregate repeated findings, unresolved dependencies, stale approvals, skill firing rates, and model selection signals. | Reads DB projections and emits `feedback_events`; does not mutate source docs. |
-| `automation-readiness` | `src/workflow/readiness.ts` | Join workflow/gate/doctor/CI projections and classify ready/blocked/human-required automation states. | Reads DB projections and gate docs; does not execute workflow steps. |
-| `guardrail-ledger` | `src/guardrail/ledger.ts` | Normalize agent-guard, review evidence, escalation, and human signoff decisions into `guardrail_decisions`. | Reads policy/evidence; never bypasses human approval requirements. |
-| `asset-catalog` | `src/assets/catalog.ts` | Catalog skill/roster/command docs with trigger/capability/drift metadata for search and recommendation. | Reads markdown/YAML sources; does not persist prompt bodies beyond redacted metadata. |
+| `state-db` | `src/state-db/` | SQLite connection、migration、projection upsert、docs/state/logs からの rebuild。 | `state-db -> schema`。CLI adapter から import しない。 |
+| `projection-writer` | `src/state-db/projection-writer.ts` | PLAN、artifact、gate、hook、model、skill、finding record を `harness.db` row へ変換する。 | loader 由来の normalized record を消費し、provider transcript は parse しない。 |
+| `skill-projections` | `src/state-db/skill-projections.ts` | skill recommendation / invocation / evaluation 由来の telemetry・metric・evaluation projection core を保持する。 | `projection-writer` から時刻・ID・書き込み関数・drive model 判定を注入され、public rebuild wiring は `projection-writer` wrapper に残す。 |
+| `search-index` | `src/search/` | `search_index` を維持し、PLAN/artifact/finding/skill/model/session 横断の `ut-tdd find` query を提供する。 | projection DB を読む。rebuild 中のみ loader を呼び出してよい。 |
+| `feedback-engine` | `src/feedback/` | repeated finding、unresolved dependency、stale approval、skill firing rate、model selection signal を集約する。 | DB projection を読み `feedback_events` を出す。source doc は mutate しない。 |
+| `automation-readiness` | `src/workflow/readiness.ts` | workflow/gate/doctor/CI projection を join し、ready/blocked/human-required automation state を分類する。 | DB projection と gate docs を読む。workflow step は実行しない。 |
+| `guardrail-ledger` | `src/guardrail/ledger.ts` | agent-guard、review evidence、escalation、human signoff decision を `guardrail_decisions` へ normalize する。 | policy/evidence を読む。human approval requirement を bypass しない。 |
+| `asset-catalog` | `src/assets/catalog.ts` | search/recommendation 向け trigger/capability/drift metadata 付きで skill/roster/command docs を catalog 化する。 | markdown/YAML source を読む。redacted metadata を超えて prompt body は persist しない。 |
 
-Boundary rule: lint modules remain the first-class detectors. The DB layer records and cross-references their outputs; it does not hide failed checks by treating projection failure as success.
-## Appendix B: L5 trace coverage addendum (descent-obligation)
+boundary rule: lint modules は first-class detector のままにする。DB layer はその outputs を記録・cross-reference するが、projection failure を success 扱いして failed checks を隠してはいけない。
+## Appendix B: L5 trace coverage 追補 (descent-obligation)
 
-This L5 module-decomposition sub-doc is the machine-readable L4->L5 landing point for modules that are decomposed in §1-§5 and their appendices. The rows are trace coverage for existing module boundaries / public IF / carry notes, not new feature scope.
+この L5 module-decomposition sub-doc は、§1-§5 と付録で分解された module の machine-readable な L4->L5 landing point である。各行は existing module boundaries / public IF / carry notes の trace coverage であり、新規 feature scope ではない。
 
-| trace set | L5 receiving block |
+| trace set | L5 受け取り block |
 |---|---|
-| FR-L1-01 / FR-L1-02 / FR-L1-04 / FR-L1-05 / FR-L1-06 / FR-L1-07 / FR-L1-09 / FR-L1-10 / FR-L1-11 / FR-L1-13 / FR-L1-14 / FR-L1-15 / FR-L1-16 / FR-L1-17 / FR-L1-18 | CLI, schema, lint, runtime, doctor, workflow, guard, and recovery module IF boundaries |
-| FR-L1-23 / FR-L1-24 / FR-L1-25 / FR-L1-26 / FR-L1-27 / FR-L1-29 / FR-L1-30 | scrum/fullback, add-feature, refactor, retrofit, research, screen, and frontend workflow module boundaries |
-| FR-L1-36 / FR-L1-38 / FR-L1-43 / FR-L1-45 / FR-L1-50 | evaluation, model/PoC measurement, doc-review, and DDD/TDD strictness module boundaries |
-| FR-L1-08 / FR-L1-12 / FR-L1-19 / FR-L1-21 / FR-L1-22 / FR-L1-28 | runtime routing, skill injection, learning feedback, test perspective, FE detector, and two-stage design module boundaries |
-| FR-L1-31 / FR-L1-32 / FR-L1-33 / FR-L1-34 / FR-L1-35 | context, folder, asset mapping, integration-map, and infrastructure readiness module boundaries |
-| FR-L1-37 / FR-L1-39 / FR-L1-41 / FR-L1-44 | model recommendation, task classification, drive detection, and onboarding module boundaries |
+| FR-L1-01 / FR-L1-02 / FR-L1-04 / FR-L1-05 / FR-L1-06 / FR-L1-07 / FR-L1-09 / FR-L1-10 / FR-L1-11 / FR-L1-13 / FR-L1-14 / FR-L1-15 / FR-L1-16 / FR-L1-17 / FR-L1-18 | CLI、schema、lint、runtime、doctor、workflow、guard、recovery module IF boundaries を受け取る |
+| FR-L1-23 / FR-L1-24 / FR-L1-25 / FR-L1-26 / FR-L1-27 / FR-L1-29 / FR-L1-30 | scrum/fullback、add-feature、refactor、retrofit、research、screen、frontend workflow module boundaries を受け取る |
+| FR-L1-36 / FR-L1-38 / FR-L1-43 / FR-L1-45 / FR-L1-50 | evaluation、model/PoC measurement、doc-review、DDD/TDD strictness module boundaries を受け取る |
+| FR-L1-08 / FR-L1-12 / FR-L1-19 / FR-L1-21 / FR-L1-22 / FR-L1-28 | runtime routing、skill injection、learning feedback、test perspective、FE detector、two-stage design module boundaries を受け取る |
+| FR-L1-31 / FR-L1-32 / FR-L1-33 / FR-L1-34 / FR-L1-35 | context、folder、asset mapping、integration-map、infrastructure readiness module boundaries を受け取る |
+| FR-L1-37 / FR-L1-39 / FR-L1-41 / FR-L1-44 | model recommendation、task classification、drive detection、onboarding module boundaries を受け取る |

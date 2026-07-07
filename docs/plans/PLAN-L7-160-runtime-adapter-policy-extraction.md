@@ -36,8 +36,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-25T19:32:10+09:00"
-    tests_green_at: "2026-06-25T19:32:10+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Extract runtime adapter provider argv/env/context policy into a sidecar module without changing adapter behavior."
     worker_model: codex
@@ -50,7 +50,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:16:59+09:00"
         evidence_path: tests/runtime-adapter.test.ts
-        output_digest: "sha256:c660ed89dfe6fe167981c3e9bdf0e02396ed855b36b677e1898c63f9d33cc463"
+        output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
       - kind: unit_test
         command: "bun run vitest run tests\\runtime-adapter.test.ts"
         runner: bun
@@ -58,7 +58,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:16:59+09:00"
         evidence_path: src/runtime/adapter.ts
-        output_digest: "sha256:fd744456923aca733ea2e6958609d32f7da521947cd1c5be7505d96e8c6d98c4"
+        output_digest: "sha256:91e14872daecee813cb26ca822f18b72fd1f4c41534cbdcfd493557a916e2454"
       - kind: unit_test
         command: "bun run vitest run tests\\runtime-adapter.test.ts"
         runner: bun
@@ -72,17 +72,17 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T19:30:24+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/doctor.test.ts
-        output_digest: "sha256:05939d1dca75ba4ff27a8f39025b927ea00e626cbc0672409a34db4e054f3ca9"
+        output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts -t \"U-ADAPTER-009\""
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T19:30:24+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/doctor/index.ts
-        output_digest: "sha256:f8e8b12675ec05c278fb30cd77c5821891ee643acbce51e72a6239f71a83691e"
+        output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -90,7 +90,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:32:10+09:00"
         evidence_path: src/runtime/adapter.ts
-        output_digest: "sha256:fd744456923aca733ea2e6958609d32f7da521947cd1c5be7505d96e8c6d98c4"
+        output_digest: "sha256:91e14872daecee813cb26ca822f18b72fd1f4c41534cbdcfd493557a916e2454"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -98,7 +98,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:32:10+09:00"
         evidence_path: tests/runtime-adapter.test.ts
-        output_digest: "sha256:c660ed89dfe6fe167981c3e9bdf0e02396ed855b36b677e1898c63f9d33cc463"
+        output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
 ---
 
 # PLAN-L7-160: runtime adapter policy extraction

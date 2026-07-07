@@ -2,7 +2,7 @@
 name: pmo-haiku
 description: Lightweight PMO checker for docs, short verification passes, typos, links, and quick web-backed checks.
 tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
-model: claude-haiku-4-5-20251001
+model: claude-haiku-4-5
 effort: low
 memory: project
 maxTurns: 10

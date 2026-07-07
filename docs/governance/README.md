@@ -1,34 +1,37 @@
-# Governance Documents
+# ガバナンス文書
 
-このディレクトリは UT-TDD Agent Harness の現行正本だけを置く。
+このディレクトリは UT-TDD Agent Harness の現行ガバナンス文書を収める。
+過去の source snapshot、migration notes、local runtime state は参照資料に限る。
 
-## Current Source Of Truth
+## 現行の正本
 
-Claude Code / Codex / human reviewer は、通常タスクでは次の順に読む。
+Claude Code、Codex、人間レビュアーは通常作業で以下を読む:
 
 1. `ut-tdd-agent-harness-concept_v3.1.md`
 2. `ut-tdd-agent-harness-requirements_v1.2.md`
-3. `ut-tdd-agent-harness-extraction-plan_v0.1.md`
-4. `../adr/ADR-001-ut-tdd-harness-redesign-and-language.md` (再設計方針 + 実装言語 = TypeScript)
-5. `repository-structure.md` (リポジトリ構成ルールの正本)
+3. `../adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
+4. `repository-structure.md`
 
-> **ADR-001 連動**: 実装は **source snapshot 概念のみ取り込み + TypeScript で全面再実装**。`../migration/helix-porting-map.md` と `helix-to-ut-tdd-cutover-strategy.md` の **Python code-port 部分は superseded**。これらは source capability inventory / 再設計思想の参考として残置し、code-port 計画としては使わない (PLAN-001..004 も同様に superseded)。
+> **ADR-001 境界**: 実装は UT-TDD 所有の TypeScript/Bun である。migration
+> docs と source snapshots は porting audit と regression idea の参照資料に限る。
+> これらは現行の正本でも実行経路でもない。
 
-> **ADR-001 boundary**: implementation is UT-TDD-owned TypeScript/Bun. Migration docs and source snapshots are reference-only material for porting audits and regression ideas; they are not Current Source Of Truth and are not an execution route.
+## 参照のみ
 
-## Reference Only
+以下の文書は背景、チーム運用、上位計画を補助する。上記の現行正本を上書きしない:
 
-次の文書は背景・上位チーム運用の参考であり、UT-TDD の受入条件や実装導線の正本ではない。
+- `ai-dev-team-concept_v1.1.md` (Pack 配布対象外、source repo のみ)
+- `ai-dev-team-operations_v1.1.md` (Pack 配布対象外、source repo のみ)
+- `audit-framework.md`
+- `coding-rules.md`
+- `ddd-tdd-rules.md`
+- `document-system-map.md`
+- `gate-design.md`
+- `recovery-workflow.md`
 
-- `ai-dev-team-concept_v1.1.md`
-- `ai-dev-team-operations_v1.1.md`
+## アーカイブまたは vendor 資料
 
-## Archived Or Vendor Material
-
-旧版、参照 snapshot、個人 legacy source 原稿は正本として使わない。
-
-- 旧版は `../archive/` に置く。
-- source reference snapshot と legacy local state は直接編集しない。
-- 旧 runtime command は社内版 UT-TDD の実行導線として記述しない。現行導線は `ut-tdd` command とする。
-
-Claude Code が判断に迷った場合は、本 README と repo root の `CLAUDE.md` を優先し、archive / vendor / local runtime state を正本にしない。
+archived documents、source snapshots、migration inventories、local legacy の資料群
+checkouts は過去証跡に限る。UT-TDD runtime state、実行経路、現行 command path
+として使ってはいけない。現行 runtime command は
+`ut-tdd`.

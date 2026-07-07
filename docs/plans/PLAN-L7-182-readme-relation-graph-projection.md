@@ -33,8 +33,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T13:37:00+09:00"
-    tests_green_at: "2026-06-29T13:36:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Materialize README.md as a root canonical relation graph node so README changes do not produce missing-projection feedback."
     worker_model: codex
@@ -45,9 +45,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T13:36:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:2cd13824089171ce59ccceae767e6b6196a46f1cca15452f222829ed2ef53533"
+        output_digest: "sha256:e42d9d2be60e6b383cc51c291009e3e8104f2c60db8dca17737be0cfb3eb34d6"
 ---
 
 # PLAN-L7-182: README relation graph projection

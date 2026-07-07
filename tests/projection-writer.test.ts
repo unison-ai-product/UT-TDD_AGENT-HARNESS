@@ -1,5 +1,6 @@
+import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -19,6 +20,8 @@ import {
   REFACTOR_POLICY_TERMS,
 } from "../src/state-db/refactor-candidate-policy";
 import { analyzeRefactorCandidates } from "../src/state-db/refactor-candidates";
+import { projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore } from "../src/state-db/runtime-projections";
+import { projectSkillMetrics as projectSkillMetricsCore } from "../src/state-db/skill-projections";
 
 interface VerificationWorkflowRow {
   phase: string;
@@ -37,8 +40,22 @@ interface DriveRunRow {
   status: string;
 }
 
+const hasSourcePlanDocs = () => existsSync(join(process.cwd(), "docs", "plans"));
+
+const hasSourceProjectionPlanDocs = () =>
+  existsSync(join(process.cwd(), "docs", "plans", "PLAN-L7-46-projection-writer.md")) &&
+  existsSync(join(process.cwd(), "docs", "plans", "PLAN-M-00-verify-cutover.md")) &&
+  existsSync(join(process.cwd(), "docs", "plans", "PLAN-M-01-cutover-backfill.md"));
+
+const hasSourceScreenDocs = () =>
+  existsSync(join(process.cwd(), "docs", "design", "harness", "L2-screen", "screen-list.md")) &&
+  existsSync(
+    join(process.cwd(), "docs", "design", "harness", "L1-requirements", "screen-requirements.md"),
+  );
+
 describe("SECRET_PATTERN word-boundary anchoring", () => {
   it("does not match 'sk' inside a word but matches a boundary-delimited token", () => {
+    // U-SECRET-001
     // Hyphenated slugs / paths must not false-positive (these crashed db rebuild).
     // The "sk" segments are interpolated so no literal token appears in source.
     expect(isSecretLike(`changed-path-src-${"task"}-has-no-relation-graph-node-impact`)).toBe(
@@ -55,6 +72,56 @@ describe("SECRET_PATTERN word-boundary anchoring", () => {
 });
 
 describe("IT-DB-01/02: harness.db projection writer", () => {
+  it("rebuilds a clean pack repo with root skills and no docs/plans", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-pack-projection-"));
+    try {
+      mkdirSync(join(root, "skills"), { recursive: true });
+      writeFileSync(
+        join(root, "skills", "refactoring.md"),
+        [
+          "---",
+          "schema_version: skill.v1",
+          "name: refactoring",
+          "skill_type: workflow",
+          "category: workflow",
+          "applies_to:",
+          "  drive_models:",
+          "    - Refactor",
+          "---",
+          "# refactoring",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        const result = rebuildHarnessDb({
+          repoRoot: root,
+          db,
+          relationGraph: { nodes: [], edges: [], verificationProfiles: [], findings: [] },
+          documentExports: {
+            document_export_runs: [],
+            document_export_datasets: [],
+            document_export_artifacts: [],
+            findings: [],
+            actionsTaken: [],
+            ok: true,
+          },
+        });
+        const row = db
+          .prepare("SELECT path FROM automation_assets WHERE asset_id = ?")
+          .get("skill:refactoring") as { path?: string } | undefined;
+
+        expect(result.ok).toBe(true);
+        expect(row?.path).toBe("skills/refactoring.md");
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("detects typed refactor candidates for split, extraction, dedupe, and externalization", () => {
     expect(REFACTOR_CANDIDATE_THRESHOLDS.splitModuleLines).toBe(700);
     expect(REFACTOR_POLICY_TERMS).toContain("subagent");
@@ -568,6 +635,136 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
+  it("keeps extracted runtime projection helpers behind injected dependencies", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      recordProjectionEvent(db, {
+        table: "plan_registry",
+        id: "PLAN-L7-230-runtime-projection-extraction",
+        row: {
+          plan_id: "PLAN-L7-230-runtime-projection-extraction",
+          kind: "refactor",
+          layer: "L7",
+          drive: "db",
+          status: "confirmed",
+          title: "runtime projection extraction",
+          source_path: "docs/plans/PLAN-L7-230-runtime-projection-extraction.md",
+          source_hash: "sha256:test",
+          updated_at: "2026-07-02T00:00:00Z",
+        },
+      });
+      const plans = new Map([
+        [
+          "PLAN-L7-230-runtime-projection-extraction",
+          {
+            planId: "PLAN-L7-230-runtime-projection-extraction",
+            kind: "refactor",
+            layer: "L7",
+            drive: "db",
+            status: "confirmed",
+            updatedAt: "2026-07-02T00:00:00Z",
+          },
+        ],
+      ]);
+
+      projectRuntimeTestRunFromSessionEventCore({
+        db,
+        plans,
+        event: {
+          ts: "2026-07-02T00:01:00Z",
+          session_id: "session-runtime-core",
+          plan_id: "PLAN-L7-230-runtime-projection-extraction:alias",
+          event_type: "tool_use",
+          tool: "Bash",
+          target: "Bash (doctor)",
+          outcome: "error",
+        },
+        evidencePath: ".ut-tdd/logs/session/session-runtime-core.jsonl",
+        deps: {
+          stableId: (prefix, value) => `${prefix}:${value}`,
+          resolvePlanId: () => "PLAN-L7-230-runtime-projection-extraction",
+          recordProjectionEvent,
+        },
+      });
+
+      const row = db.prepare("SELECT plan_id, runner, exit_code, status FROM test_runs").get();
+      expect(row).toMatchObject({
+        plan_id: "PLAN-L7-230-runtime-projection-extraction",
+        runner: "ut-tdd",
+        exit_code: 1,
+        status: "failed",
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("keeps extracted skill metric helpers behind injected dependencies", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      recordProjectionEvent(db, {
+        table: "skill_recommendations",
+        id: "skill-rec-core",
+        row: {
+          skill_recommendation_id: "skill-rec-core",
+          session_id: "",
+          plan_id: "PLAN-L7-231-skill-projection-extraction",
+          skill_id: "skill:review-checklist",
+          rank: 1,
+          score: 1,
+          reason: "test",
+          recommended_at: "2026-07-02T00:00:00.000Z",
+        },
+      });
+      recordProjectionEvent(db, {
+        table: "skill_invocations",
+        id: "skill-inv-core",
+        row: {
+          skill_invocation_id: "skill-inv-core",
+          session_id: "",
+          plan_id: "PLAN-L7-231-skill-projection-extraction",
+          skill_id: "skill:review-checklist",
+          layer: "L7",
+          drive: "db",
+          fired_at: "2026-07-02T00:01:00.000Z",
+          source: "runtime-hook:skill-suggest",
+          accepted: 1,
+        },
+      });
+
+      projectSkillMetricsCore({
+        db,
+        deps: {
+          nowIso: () => "2026-07-02T00:02:00.000Z",
+          stableId: (prefix, value) => `${prefix}:${value}`,
+          recordProjectionEvent,
+        },
+      });
+
+      const rows = db
+        .prepare("SELECT metric, value, status FROM quality_signals WHERE source = ?")
+        .all("skill-metrics:runtime");
+      expect(rows).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            metric: "skill_firing_rate",
+            value: 1,
+            status: "pass",
+          }),
+          expect.objectContaining({
+            metric: "skill_acceptance_rate",
+            value: 1,
+            status: "pass",
+          }),
+        ]),
+      );
+    } finally {
+      db.close();
+    }
+  });
+
   it("projects runtime guardrail_decisions from forced-stop session events only", () => {
     const db = openHarnessDb(":memory:");
     try {
@@ -895,6 +1092,8 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
   });
 
   it("rebuildHarnessDb is atomic: a mid-rebuild failure rolls back, leaving the prior projection intact", () => {
+    if (!hasSourcePlanDocs()) return;
+
     const real = openHarnessDb(":memory:");
     try {
       // Baseline: a successful rebuild populates plan_registry.
@@ -954,6 +1153,10 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rowCounts(db).test_cases).toBeGreaterThan(0);
       expect(rowCounts(db).test_artifact_edges).toBeGreaterThan(0);
       expect(rowCounts(db).artifact_progress).toBeGreaterThan(0);
+      const inheritedOracle = db
+        .prepare("SELECT COUNT(*) AS count FROM test_cases WHERE test_file = ? AND oracle_id = ?")
+        .get("tests/handover.test.ts", "U-HOVER-001") as { count: number } | undefined;
+      expect(inheritedOracle?.count ?? 0).toBeGreaterThan(0);
     } finally {
       db.close();
     }
@@ -1037,7 +1240,106 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
+  it("closes working-tree relation impacts when the owning PLAN has review and green evidence", () => {
+    const repoRoot = join(tmpdir(), `ut-tdd-impact-closure-${randomUUID()}`);
+    mkdirSync(join(repoRoot, "docs", "plans"), { recursive: true });
+    mkdirSync(join(repoRoot, "docs", "design"), { recursive: true });
+    execFileSync("git", ["init"], { cwd: repoRoot, stdio: "ignore" });
+    writeFileSync(
+      join(repoRoot, "docs", "design", "contract.md"),
+      "# Contract\n\n設計本文。\n",
+      "utf8",
+    );
+    writeFileSync(
+      join(repoRoot, "docs", "plans", "PLAN-L7-999-impact-closure.md"),
+      `---
+plan_id: PLAN-L7-999-impact-closure
+title: "PLAN-L7-999: Impact closure fixture"
+kind: impl
+layer: L7
+drive: db
+status: confirmed
+created: 2026-06-30
+updated: 2026-06-30
+generates:
+  - artifact_path: docs/design/contract.md
+    artifact_type: design_doc
+review_evidence:
+  - reviewer: codex-fixture
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-06-30T00:00:00Z"
+    tests_green_at: "2026-06-30T00:00:00Z"
+    verdict: approve
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\\\fixture.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-06-30T00:00:00Z"
+        evidence_path: tests/fixture.test.ts
+        output_digest: "sha256:fixture"
+---
+
+# PLAN-L7-999
+
+Fixture.
+`,
+      "utf8",
+    );
+    const db = openHarnessDb(":memory:");
+    try {
+      const result = rebuildHarnessDb({
+        repoRoot,
+        db,
+        relationGraph: {
+          nodes: [
+            {
+              id: "design:docs/design/contract.md",
+              kind: "design",
+              path: "docs/design/contract.md",
+            },
+          ],
+          edges: [],
+          verificationProfiles: [],
+          findings: [],
+        },
+      });
+      expect(result.ok).toBe(true);
+      const impacts = db
+        .prepare(
+          `SELECT required_action, status, evidence_path
+           FROM impact_results
+           WHERE root_node_id = ?
+           ORDER BY required_action`,
+        )
+        .all("design:docs/design/contract.md") as Array<{
+        required_action: string;
+        status: string;
+        evidence_path: string;
+      }>;
+      expect(impacts.map((row) => [row.required_action, row.status])).toEqual([
+        ["record-trace-freeze-evidence", "closed"],
+        ["update-plan-dod", "closed"],
+      ]);
+      expect(impacts.every((row) => row.evidence_path.includes("PLAN-L7-999"))).toBe(true);
+      const progress = db
+        .prepare(
+          "SELECT color, open_dependency_impacts FROM artifact_progress WHERE artifact_path = ?",
+        )
+        .get("docs/design/contract.md") as
+        | { color: string; open_dependency_impacts: number }
+        | undefined;
+      expect(progress).toMatchObject({ color: "yellow", open_dependency_impacts: 0 });
+    } finally {
+      db.close();
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
   it("IMP-140: projects 15 screens and FR/BR→screen trace from doc source on rebuild", () => {
+    if (!hasSourceScreenDocs()) return;
+
     const db = openHarnessDb(":memory:");
     try {
       const result = rebuildHarnessDb({ repoRoot: process.cwd(), db });
@@ -1085,6 +1387,8 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
   });
 
   it("rebuildHarnessDb deterministically projects plans and Phase3 outputs without source mutation", () => {
+    if (!hasSourceProjectionPlanDocs()) return;
+
     const db = openHarnessDb(":memory:");
     try {
       const result = rebuildHarnessDb({

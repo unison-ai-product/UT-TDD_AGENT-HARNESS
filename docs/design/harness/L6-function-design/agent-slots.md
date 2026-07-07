@@ -10,7 +10,7 @@ plan: docs/plans/PLAN-L6-07-agent-slots.md
 <!--
 ① 設計 (L6 機能設計) — agent-slots 機構 (subagent/team-member の fire→release 状態記録 + 並列上限助言 + stale 検知)。
 PLAN: IMP-050 (Layer-2 オーケストレーション移植、add-feature)。
-pair (③): docs/test-design/harness/L7-unit-test-design.md §1.9 U-SLOT / §1.10 U-TEAM。
+pair (③) は docs/test-design/harness/L7-unit-test-design.md §1.9 U-SLOT / §1.10 U-TEAM を指す。
 実装 (②): src/runtime/agent-slots.ts + src/schema/team.ts。
 参照元: vendor source snapshot の agent slot / team runner 挙動。
 ADR-001 準拠: 旧 Python コードを port せず TypeScript (Bun) で全面再実装。SQLite 非採用。
@@ -52,7 +52,7 @@ ADR-001 準拠: 旧 Python コードを port せず TypeScript (Bun) で全面�
 
 ## §2 型 / schema (D-CONTRACT)
 
-### §2.1 agent-slots.ts
+### §2.1 agent-slots.ts 設計
 
 ```ts
 export type SlotStatus = "running" | "completed" | "failed" | "cancelled";
@@ -85,7 +85,7 @@ export const DEFAULT_STALE_MINUTES = 5;  // source reference の list_stale_slot
 
 **ストレージパス**: `.ut-tdd/state/agent-slots.json` (gitignored、runtime state)。
 
-### §2.2 team.ts (zod single source)
+### §2.2 team.ts (zod single source 設計)
 
 ```ts
 export const VALID_TEAM_STRATEGIES = ["sequential", "parallel"] as const;
@@ -102,7 +102,7 @@ export const teamMemberSchema = z.object({
   engine: z.string().min(1),   // agent_kind として slot に記録
   task: z.string().min(1),
   difficulty: taskDifficultySchema.optional(),  // 未指定時は task から決定論推定
-  model: modelOverrideSchema.optional(),        // gpt-*|claude-*|codex-*|haiku|sonnet|opus|local only
+  model: modelOverrideSchema.optional(),        // gpt-*|claude-*|codex-* safe token or haiku|sonnet|opus|local only
   effort: reasoningEffortSchema.optional(),     // low|medium|high override
   serialize_after: z.string().optional(),  // 個別直列化指定
 });
@@ -110,7 +110,7 @@ export const teamMemberSchema = z.object({
 export const teamDefinitionSchema = z.object({
   name: z.string().min(1),
   strategy: teamStrategySchema.default("sequential"),  // source reference の team_runner と同じ安全側デフォルト
-  max_parallel: z.number().int().positive().default(8),
+  max_parallel: z.number().int().positive().max(8).default(8),
   serialization: serializationReasonSchema.optional(), // チーム全体の直列化根拠 (3 条件)
   members: z.array(teamMemberSchema).min(1),           // 空 → reject (zod fail-close)
 });
@@ -118,7 +118,7 @@ export const teamDefinitionSchema = z.object({
 
 `teamDefinitionSchema` は `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml` (`hybrid` mode) の入力である。`strategy` のデフォルトを `sequential` にするのは source reference の team runner と同じ安全側設計。
 
-**model/effort policy (FR-L1-37 landing)**: `difficulty` 未指定時は `selectTeamModel` が task keyword から `trivial|simple|standard|complex|critical` を決定論推定し、`recommendModelEffort` の `model_family` / `reasoning_effort` へ接続する。`model` / `effort` が明示された member は override として `model_selection.*_source="explicit"` に記録する。推挙は hidden prompt state ではなく `buildTeamRunPlan().members[].model_selection` と prompt header に出す。prompt header は `engine` と別に resolved `provider` を明示し、`model_family` (推奨ラベル) と runtime provider を混同しない review evidence にする。`model` override は `gpt-*|claude-*|codex-*|haiku|sonnet|opus|local` のみ zod で受理し、タイポを fail-close する。Claude は `--model` / `--effort` / `CLAUDE_CODE_EFFORT_LEVEL` に渡す。Codex は `-m` に model を渡し、effort は公式 surface を pin するまで evidence/prompt metadata に留める。
+**model/effort policy (FR-L1-37 landing)**: `difficulty` 未指定時は `selectTeamModel` が task keyword から `trivial|simple|standard|complex|critical` を決定論推定し、`recommendModelEffort` の `model_family` / `reasoning_effort` へ接続する。`model` / `effort` が明示された member は override として `model_selection.*_source="explicit"` に記録する。推挙は hidden prompt state ではなく `buildTeamRunPlan().members[].model_selection` と prompt header に出す。prompt header は `engine` と別に resolved `provider` を明示し、`model_family` (推奨ラベル) と runtime provider を混同しない review evidence にする。`model` override は `gpt-*|claude-*|codex-*` の safe token (`[A-Za-z0-9._-]` only after provider prefix) または `haiku|sonnet|opus|local` のみ zod で受理し、タイポ・path-like 値・shell metachar を fail-close する。Claude は `--model` / `--effort` / `CLAUDE_CODE_EFFORT_LEVEL` に渡す。Codex は `-m` に model を渡し、effort は公式 surface を pin するまで evidence/prompt metadata に留める。
 
 **launch policy (`ut-tdd team suggest`)**: free-form task text から subagent/team 起動可否を決定論判定する。`trivial|simple` は単独実行を既定とし、`standard|complex|critical` は `hybrid` mode で cross-provider team を推奨する。`auth|database|doctor|migration|production|runtime|schema|security|subagent|windows` 等の risk term は `hybrid` mode で team 推奨を強制する。`claude-only` / `codex-only` / `standalone` では `should_launch=false` / `trigger="unavailable"` を返し、cross-provider review を暗黙代替しない。推奨結果は `TeamLaunchRecommendation` として `difficulty` / `trigger` / `reason` / `definition` を JSON に出し、`definition` は `teamDefinitionSchema` と同一 flow で `team run` に渡せる。`complex|critical` は reviewer を `serialize_after: se` にし、`critical` は `qa` verifier を追加する。
 
@@ -139,17 +139,17 @@ export const teamDefinitionSchema = z.object({
 | `nodeAgentSlotsDeps` | `(repoRoot: string) => AgentSlotsDeps` | 実 I/O deps。`idSeq` は closure に閉じ込め module 状態を持たない (テスト間リセット不能回避) |
 | `mustSerialize` (team.ts) | `(reason: SerializationReason\|undefined) => boolean` | **純関数**。`file_conflict \|\| downstream_dependency \|\| shared_state` の OR。`undefined → false` |
 
-### §2.3.1 FR roster capability alias
+### §2.3.1 FR roster capability alias 設計
 
-| Function | Signature | pre | post | invariant | oracle |
+| Function | Signature | 事前条件 | 事後条件 | 不変条件 | oracle |
 |---|---|---|---|---|---|
-| `resolveRosterCapability` | resolveRosterCapability(input: RosterCapabilityInput, deps: RosterCapabilityDeps) => RosterCapabilityResult | roster/slot source and requested role/capability are supplied. | returns matched capability/model class or an explicit missing-capability finding. | roster lookup never fabricates capability and never reads provider credentials. | U-FR-L1-46 |
+| `resolveRosterCapability` | resolveRosterCapability(input: RosterCapabilityInput, deps: RosterCapabilityDeps) => RosterCapabilityResult | roster/slot source と requested role/capability が supplied。 | matched capability/model class または explicit missing-capability finding を返す。 | roster lookup は capability を fabricate せず provider credentials を読まない。 | U-FR-L1-46 |
 
-Type/pseudocode substance:
+Type/pseudocode の内容:
 
-| function | type body | pseudocode / implementation_state |
+| function | type body | pseudocode / 実装状態 |
 |---|---|---|
-| `resolveRosterCapability` | `RosterCapabilityInput { role; requested_capability; slot_source; roster_snapshot } -> RosterCapabilityResult { ok; capability?; model_class?; findings[] }` | implemented by `src/runtime/agent-slots.ts`; pseudocode = normalize role/capability, search roster snapshot, return exact match or missing-capability finding, never read provider credentials |
+| `resolveRosterCapability` | `RosterCapabilityInput { role; requested_capability; slot_source; roster_snapshot } -> RosterCapabilityResult { ok; capability?; model_class?; findings[] }` | `src/runtime/agent-slots.ts` で実装済み。pseudocode = role/capability を normalize し、roster snapshot を search し、exact match または missing-capability finding を返し、provider credentials は読まない |
 
 ### §2.4 DbC 補足
 

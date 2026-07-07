@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { performance } from "node:perf_hooks";
 import { parse as parseYaml } from "yaml";
 import type { DocumentExportProjectionRows } from "../export/document-export";
 import {
@@ -34,12 +35,14 @@ import {
   catalogVerificationProfiles,
   recommendVerificationProfiles,
 } from "../lint/verification-profile";
+import { loadMemoryEntries } from "../memory/index";
 import {
   HARNESS_DB_TABLE_BY_NAME,
   HARNESS_DB_TABLES,
   primaryKeyOf,
   type TableDef,
 } from "../schema/harness-db";
+import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog";
 import { deriveArtifactProgressDecision } from "./artifact-progress-decision";
 import {
   projectFeedbackEvents,
@@ -59,6 +62,19 @@ import {
   upsertRow,
 } from "./index";
 import { migrate, rowCounts } from "./migration";
+import {
+  projectRuntimeGuardrailDecisionFromSessionEvent as projectRuntimeGuardrailDecisionFromSessionEventCore,
+  projectRuntimeSkillInvocationFromSessionEvent as projectRuntimeSkillInvocationFromSessionEventCore,
+  projectRuntimeSkillInvocationsFromSessionLogs as projectRuntimeSkillInvocationsFromSessionLogsCore,
+  projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore,
+} from "./runtime-projections";
+import {
+  PLAN_SUCCESS_STATUSES,
+  projectSkillEvaluations as projectSkillEvaluationsCore,
+  projectSkillMetrics as projectSkillMetricsCore,
+  projectSkillTelemetry as projectSkillTelemetryCore,
+  skillScore,
+} from "./skill-projections";
 import type { RunUsage } from "./token-tracker";
 
 export interface ProjectionEvent {
@@ -73,6 +89,12 @@ export interface RebuildHarnessDbInput {
   relationGraph?: RelationGraphProjection;
   documentExports?: DocumentExportProjectionRows;
   verificationEvidence?: VerificationEvidenceProjection;
+  timing?: boolean;
+}
+
+export interface ProjectionTiming {
+  id: string;
+  duration_ms: number;
 }
 
 export interface RebuildHarnessDbResult {
@@ -85,6 +107,7 @@ export interface RebuildHarnessDbResult {
     documentExports?: DocumentExportProjectionRows;
     verificationEvidence?: VerificationEvidenceProjection;
   };
+  timings?: ProjectionTiming[];
 }
 
 export {
@@ -102,6 +125,8 @@ interface ProjectedPlan {
   drive: string;
   status: string;
   updatedAt: string;
+  // route_mode frontmatter (mode 第一級化、PLAN-L7-243)。legacy PLAN / fixture は未設定可。
+  routeMode?: string;
 }
 
 interface PlanDigestProjection {
@@ -317,19 +342,17 @@ function stringList(value: unknown): string[] {
   return [];
 }
 
-function workflowModeForPlan(planId: string): string {
-  if (planId.startsWith("PLAN-DISCOVERY-")) return "Discovery";
-  if (planId.startsWith("PLAN-REVERSE-")) return "Reverse";
-  if (planId.startsWith("PLAN-RECOVERY-")) return "Recovery";
-  if (planId.startsWith("PLAN-M-")) return "Verification";
-  return "Forward";
-}
-
-function skillDriveModelForPlan(planId: string): string {
-  if (planId.startsWith("PLAN-DISCOVERY-")) return "Discovery";
-  if (planId.startsWith("PLAN-REVERSE-")) return "Reverse";
-  if (planId.startsWith("PLAN-RECOVERY-")) return "Recovery";
-  return "Forward";
+// PLAN-L7-243: mode 導出は route_mode 正本 + legacy フォールバック (mode-catalog) へ置換。
+// plan_id prefix 4 分岐のみの旧導出 (kind=refactor/troubleshoot 等の Forward 落ち) は廃止。
+function planModeResolver(plans: Map<string, ProjectedPlan>): (planId: string) => string {
+  return (planId) => {
+    const plan = plans.get(planId);
+    return catalogWorkflowModeForPlan({
+      planId,
+      routeMode: plan?.routeMode,
+      kind: plan?.kind,
+    });
+  };
 }
 
 function readJson<T>(path: string): T | null {
@@ -358,7 +381,8 @@ function projectPlans(repoRoot: string, db: HarnessDb): Map<string, ProjectedPla
     // Stored as "" when absent so the column is always TEXT (single-source: harness-db.ts §plan_registry).
     const decisionOutcome =
       frontmatterValue(content, "decision_outcome") || frontmatterValue(content, "decision") || "";
-    plans.set(planId, { planId, kind, layer, drive, status, updatedAt });
+    const routeMode = frontmatterValue(content, "route_mode");
+    plans.set(planId, { planId, kind, layer, drive, status, updatedAt, routeMode });
     const relPath = normalizePath(relative(repoRoot, path));
     recordProjectionEvent(db, {
       table: "plan_registry",
@@ -370,6 +394,7 @@ function projectPlans(repoRoot: string, db: HarnessDb): Map<string, ProjectedPla
         drive,
         status,
         parent: "",
+        route_mode: routeMode,
         updated_at: updatedAt,
         decision_outcome: decisionOutcome,
         source_hash: sourceHash,
@@ -426,7 +451,11 @@ function projectDriveRuns(
           plan_id: plan.planId,
           session_id: sessionId,
           drive: plan.drive,
-          mode: workflowModeForPlan(plan.planId),
+          mode: catalogWorkflowModeForPlan({
+            planId: plan.planId,
+            routeMode: plan.routeMode,
+            kind: plan.kind,
+          }),
           layer: plan.layer,
           kind: plan.kind,
           started_at: plan.updatedAt || digest?.updated_at || "",
@@ -531,14 +560,6 @@ function projectHookEvents(
   }
 }
 
-function verificationVerbFromSessionTarget(event: SessionLogProjection): string | null {
-  if (event.event_type !== "tool_use" || event.tool !== "Bash") return null;
-  const match = String(event.target ?? "").match(/^Bash \(([^)]+)\)$/);
-  if (!match) return null;
-  const verb = match[1];
-  return ["doctor", "eslint", "lint", "test", "tsc", "vitest"].includes(verb) ? verb : null;
-}
-
 export interface RuntimeTestRunProjectionInput {
   db: HarnessDb;
   plans: Map<string, ProjectedPlan>;
@@ -561,36 +582,12 @@ export interface RuntimeSkillInvocationProjectionInput {
 }
 
 export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProjectionInput): void {
-  const { db, plans, event, evidencePath } = input;
-  if (!event.session_id || !event.plan_id || !event.ts) return;
-  const verb = verificationVerbFromSessionTarget(event);
-  if (!verb) return;
-  const planId = resolveProjectedPlanId(plans, event.plan_id);
-  const status = event.outcome === "error" ? "failed" : "passed";
-  const testRunId = stableId(
-    "test-run-runtime",
-    `${event.session_id}:${planId}:${event.ts}:${verb}:${event.outcome ?? ""}`,
-  );
-  recordProjectionEvent(db, {
-    table: "test_runs",
-    id: testRunId,
-    row: {
-      test_run_id: testRunId,
-      session_id: event.session_id,
-      plan_id: planId,
-      command: event.target ?? `Bash (${verb})`,
-      runner: verb === "doctor" ? "ut-tdd" : "bun",
-      runtime: "hook-session-log",
-      os: "",
-      shell: "bash",
-      scope: "runtime-hook",
-      started_at: event.ts,
-      completed_at: event.ts,
-      exit_code: status === "passed" ? 0 : 1,
-      evidence_path: evidencePath,
-      output_digest: "",
-      green_definition_id: "",
-      status,
+  projectRuntimeTestRunFromSessionEventCore({
+    ...input,
+    deps: {
+      stableId,
+      resolvePlanId: (planId) => resolveProjectedPlanId(input.plans, planId),
+      recordProjectionEvent,
     },
   });
 }
@@ -598,81 +595,29 @@ export function projectRuntimeTestRunFromSessionEvent(input: RuntimeTestRunProje
 export function projectRuntimeGuardrailDecisionFromSessionEvent(
   input: RuntimeGuardrailDecisionProjectionInput,
 ): void {
-  const { db, plans, event, evidencePath } = input;
-  if (!event.session_id || !event.plan_id || !event.ts) return;
-  if (event.event_type !== "forced_stop") return;
-  const planId = resolveProjectedPlanId(plans, event.plan_id);
-  const guardrailDecisionId = stableId(
-    "guardrail-runtime",
-    `${event.session_id}:${planId}:${event.ts}:forced-stop:${event.outcome ?? ""}`,
-  );
-  recordProjectionEvent(db, {
-    table: "guardrail_decisions",
-    id: guardrailDecisionId,
-    row: {
-      guardrail_decision_id: guardrailDecisionId,
-      plan_id: planId,
-      session_id: event.session_id,
-      guardrail: "forced-stop",
-      decision: "block",
-      mode: "runtime-hook",
-      human_signoff_required: 0,
-      evidence_path: evidencePath,
-      decided_at: event.ts,
+  projectRuntimeGuardrailDecisionFromSessionEventCore({
+    ...input,
+    deps: {
+      stableId,
+      resolvePlanId: (planId) => resolveProjectedPlanId(input.plans, planId),
+      recordProjectionEvent,
     },
   });
-}
-
-function skillVerbFromSessionTarget(event: SessionLogProjection): boolean {
-  return (
-    event.event_type === "tool_use" && event.tool === "Bash" && event.target === "Bash (skill)"
-  );
 }
 
 export function projectRuntimeSkillInvocationFromSessionEvent(
   input: RuntimeSkillInvocationProjectionInput,
 ): void {
-  const { db, plans, event } = input;
-  if (!event.session_id || !event.plan_id || !event.ts) return;
-  if (!skillVerbFromSessionTarget(event)) return;
-  const planId = resolveProjectedPlanId(plans, event.plan_id);
-  const plan = plans.get(planId);
-  if (!plan) return;
-  const assets = db
-    .prepare("SELECT * FROM automation_assets WHERE asset_type = ? ORDER BY asset_id")
-    .all("skill")
-    .filter((asset) => !String(asset.skill_type ?? "").startsWith("skill-map"));
-  const ranked = assets
-    .map((asset) => ({ asset, score: skillScore(plan, asset) }))
-    .filter((entry) => entry.score > 0)
-    .sort(
-      (a, b) =>
-        b.score - a.score ||
-        String(a.asset.asset_id ?? "").localeCompare(String(b.asset.asset_id ?? "")),
-    )
-    .slice(0, 5);
-  for (const entry of ranked) {
-    const skillId = String(entry.asset.asset_id ?? "");
-    const invId = stableId(
-      "skill-inv-runtime",
-      `${event.session_id}:${planId}:${event.ts}:${skillId}`,
-    );
-    recordProjectionEvent(db, {
-      table: "skill_invocations",
-      id: invId,
-      row: {
-        skill_invocation_id: invId,
-        session_id: event.session_id,
-        plan_id: planId,
-        skill_id: skillId,
-        layer: plan.layer,
-        drive: plan.drive,
-        fired_at: event.ts,
-        source: "runtime-hook:skill-suggest",
-        accepted: event.outcome === "error" ? 0 : 1,
-      },
-    });
-  }
+  projectRuntimeSkillInvocationFromSessionEventCore({
+    ...input,
+    deps: {
+      stableId,
+      resolvePlanId: (planId) => resolveProjectedPlanId(input.plans, planId),
+      recordProjectionEvent,
+      skillScore: (plan, asset) =>
+        skillScore(plan, asset, { skillDriveModelForPlan: planModeResolver(input.plans) }),
+    },
+  });
 }
 
 function projectRuntimeSkillInvocationsFromSessionLogs(
@@ -680,24 +625,18 @@ function projectRuntimeSkillInvocationsFromSessionLogs(
   db: HarnessDb,
   plans: Map<string, ProjectedPlan>,
 ): void {
-  const sessionDir = join(repoRoot, ".ut-tdd", "logs", "session");
-  if (!existsSync(sessionDir)) return;
-  for (const file of readdirSync(sessionDir)
-    .filter((name) => name.endsWith(".jsonl"))
-    .sort()) {
-    const path = join(sessionDir, file);
-    const relPath = normalizePath(relative(repoRoot, path));
-    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
-      if (!line.trim()) continue;
-      let event: SessionLogProjection;
-      try {
-        event = JSON.parse(line) as SessionLogProjection;
-      } catch {
-        continue;
-      }
-      projectRuntimeSkillInvocationFromSessionEvent({ db, plans, event, evidencePath: relPath });
-    }
-  }
+  projectRuntimeSkillInvocationsFromSessionLogsCore({
+    repoRoot,
+    db,
+    plans,
+    deps: {
+      stableId,
+      resolvePlanId: (planId) => resolveProjectedPlanId(plans, planId),
+      recordProjectionEvent,
+      skillScore: (plan, asset) =>
+        skillScore(plan, asset, { skillDriveModelForPlan: planModeResolver(plans) }),
+    },
+  });
 }
 
 function runtimeForModel(model: string): string {
@@ -1461,9 +1400,19 @@ function projectCurrentImpactResults(
   }
   if (changedFiles.length === 0) return;
   const result = analyzeRelationImpact({ changedPaths: changedFiles, projection: graph });
+  const plansByGeneratedPath = planGeneratedPathMultiMap(repoRoot);
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
   const computedAt = nowIso();
   for (const action of result.actions) {
     const id = stableId("impact-result", `working-tree:${action.kind}:${action.nodeId}`);
+    const closure = resolvedImpactClosure({
+      db,
+      plansByGeneratedPath,
+      nodeById,
+      nodeId: action.nodeId,
+      actionKind: action.kind,
+      changedFiles,
+    });
     recordProjectionEvent(db, {
       table: "impact_results",
       id,
@@ -1473,9 +1422,9 @@ function projectCurrentImpactResults(
         root_node_id: action.nodeId,
         impacted_node_id: action.nodeId,
         required_action: action.kind,
-        status: "open",
+        status: closure.closed ? "closed" : "open",
         reason: action.reason,
-        evidence_path: "git status --porcelain",
+        evidence_path: closure.evidencePath || "git status --porcelain",
         computed_at: computedAt,
       },
     });
@@ -1489,6 +1438,44 @@ function projectCurrentImpactResults(
       evidencePath: finding.evidencePath,
     });
   }
+}
+
+function resolvedImpactClosure(input: {
+  db: HarnessDb;
+  plansByGeneratedPath: Map<string, string[]>;
+  nodeById: Map<string, { path?: string }>;
+  nodeId: string;
+  actionKind: string;
+  changedFiles: string[];
+}): { closed: boolean; evidencePath: string } {
+  const { db, plansByGeneratedPath, nodeById, nodeId, actionKind, changedFiles } = input;
+  const path = normalizePath(nodeById.get(nodeId)?.path ?? nodeId.replace(/^[^:]+:/, ""));
+  if (actionKind === "update-paired-artifact" && !changedFiles.includes(path)) {
+    return { closed: true, evidencePath: "doctor:pair-freeze" };
+  }
+  const candidatePlanIds = [
+    ...(plansByGeneratedPath.get(path) ?? []),
+    nodeId.startsWith("plan:") ? nodeId.replace(/^plan:/, "") : "",
+  ].filter(Boolean);
+  if (candidatePlanIds.length === 0) return { closed: false, evidencePath: "" };
+  const placeholders = candidatePlanIds.map(() => "?").join(", ");
+  const row = db
+    .prepare(
+      `SELECT r.source AS source
+       FROM plan_registry p
+       JOIN review_evidence_registry r ON r.plan_id = p.plan_id
+       WHERE p.plan_id IN (${placeholders})
+         AND p.status IN ('confirmed', 'completed', 'accepted')
+         AND r.has_evidence = 1
+         AND r.verdict IN ('approve', 'approve_after_fixes', 'pass', 'pass-with-fixes')
+         AND COALESCE(r.tests_green_at, '') <> ''
+       ORDER BY r.reviewed_at DESC
+       LIMIT 1`,
+    )
+    .get(...candidatePlanIds) as { source?: string } | undefined;
+  return row
+    ? { closed: true, evidencePath: row.source ?? "" }
+    : { closed: false, evidencePath: "" };
 }
 
 const PROGRESS_NODE_KINDS = new Set(["source", "design", "test-design", "plan", "requirement"]);
@@ -1932,6 +1919,15 @@ function defaultDocumentExportProjection(repoRoot: string): DocumentExportProjec
 
 function planGeneratedPathMap(repoRoot: string): Map<string, string> {
   const map = new Map<string, string>();
+  for (const [artifactPath, planIds] of planGeneratedPathMultiMap(repoRoot)) {
+    const planId = planIds.at(-1);
+    if (planId) map.set(artifactPath, planId);
+  }
+  return map;
+}
+
+function planGeneratedPathMultiMap(repoRoot: string): Map<string, string[]> {
+  const map = new Map<string, string[]>();
   for (const path of markdownFiles(join(repoRoot, "docs", "plans"))) {
     const content = readFileSync(path, "utf8");
     const planId = frontmatterValue(content, "plan_id");
@@ -1941,19 +1937,43 @@ function planGeneratedPathMap(repoRoot: string): Map<string, string> {
       if (!item || typeof item !== "object") continue;
       const artifactPath = (item as Record<string, unknown>).artifact_path;
       if (typeof artifactPath === "string" && artifactPath) {
-        map.set(normalizePath(artifactPath), planId);
+        const normalized = normalizePath(artifactPath);
+        const values = map.get(normalized) ?? [];
+        values.push(planId);
+        map.set(normalized, values);
       }
     }
   }
   return map;
 }
 
-function extractTestNames(content: string): string[] {
-  const names = new Set<string>();
+interface ExtractedTestCase {
+  name: string;
+  oracleId: string;
+}
+
+function extractTestCases(content: string): ExtractedTestCase[] {
+  const describeOracles = [...content.matchAll(/\bdescribe\s*\(\s*["'`]([^"'`]+)["'`]/g)]
+    .map((match) => ({
+      index: match.index ?? 0,
+      oracleId: match[1]?.match(/\bU-[A-Z0-9-]+\b/)?.[0] ?? "",
+    }))
+    .filter((entry) => entry.oracleId);
+  const cases = new Map<string, ExtractedTestCase>();
   for (const match of content.matchAll(/\b(?:it|test)\s*\(\s*["'`]([^"'`]+)["'`]/g)) {
-    names.add(match[1]);
+    const name = match[1];
+    if (!name) continue;
+    const directOracle = name.match(/\bU-[A-Z0-9-]+\b/)?.[0] ?? "";
+    const inheritedOracle =
+      directOracle ||
+      describeOracles.filter((entry) => entry.index < (match.index ?? 0)).at(-1)?.oracleId ||
+      "";
+    const existing = cases.get(name);
+    if (!existing || (!existing.oracleId && inheritedOracle)) {
+      cases.set(name, { name, oracleId: inheritedOracle });
+    }
   }
-  return [...names].sort();
+  return [...cases.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function importedSourcePaths(content: string): string[] {
@@ -1977,9 +1997,9 @@ function projectTestCaseCatalog(repoRoot: string, db: HarnessDb): void {
     const content = readFileSync(path, "utf8");
     const planId = planByPath.get(rel) ?? "";
     const sources = importedSourcePaths(content);
-    const names = extractTestNames(content);
-    for (const [index, name] of names.entries()) {
-      const oracleId = name.match(/\bU-[A-Z0-9-]+\b/)?.[0] ?? "";
+    const testCases = extractTestCases(content);
+    for (const [index, testCase] of testCases.entries()) {
+      const { name, oracleId } = testCase;
       const testCaseId = stableId("test-case", `${rel}:${index}:${stableHash(name)}`);
       recordProjectionEvent(db, {
         table: "test_cases",
@@ -2056,8 +2076,11 @@ function assetFiles(dir: string, extensions: RegExp): string[] {
 
 function projectAutomationAssets(repoRoot: string, db: HarnessDb): void {
   const indexedAt = nowIso();
+  const skillRoot = existsSync(join(repoRoot, "skills"))
+    ? join(repoRoot, "skills")
+    : join(repoRoot, "docs", "skills");
   const sources = [
-    { type: "skill", root: join(repoRoot, "docs", "skills"), exts: /\.(md|ya?ml)$/i },
+    { type: "skill", root: skillRoot, exts: /\.(md|ya?ml)$/i },
     { type: "roster", root: join(repoRoot, ".claude", "agents"), exts: /\.md$/i },
     { type: "command", root: join(repoRoot, "docs", "commands"), exts: /\.md$/i },
   ] as const;
@@ -2144,228 +2167,51 @@ function projectAutomationAssets(repoRoot: string, db: HarnessDb): void {
   }
 }
 
-function skillScore(plan: ProjectedPlan, asset: Record<string, unknown>): number {
-  const text = [
-    asset.asset_id,
-    asset.path,
-    asset.trigger,
-    asset.role,
-    asset.capability,
-    asset.skill_type,
-    asset.applies_layers,
-    asset.applies_drive_models,
-  ]
-    .join(" ")
-    .toLowerCase();
-  const appliesLayers = String(asset.applies_layers ?? "")
-    .split(",")
-    .filter(Boolean);
-  const appliesDriveModels = String(asset.applies_drive_models ?? "")
-    .split(",")
-    .filter(Boolean);
-  const driveModel = skillDriveModelForPlan(plan.planId);
-  let score = 0.2;
-  if (appliesLayers.includes(plan.layer)) score += 0.35;
-  if (appliesDriveModels.includes(driveModel)) score += 0.35;
-  if (text.includes(plan.drive.toLowerCase())) score += 0.1;
-  if (/review|checklist|quality|test|lint/.test(text)) score += 0.25;
-  return Math.min(1, Number(score.toFixed(2)));
-}
-
-function projectSkillTelemetry(db: HarnessDb, plans: Map<string, ProjectedPlan>): void {
-  const recordedAt = nowIso();
-  const assets = db
-    .prepare("SELECT * FROM automation_assets WHERE asset_type = ? ORDER BY asset_id")
-    .all("skill")
-    // A skill-MAP (index of skills — the W10 curate draft and the future
-    // SKILL_MAP.md) is catalogued under docs/skills for asset-drift coverage but
-    // is NOT itself a recommendable skill, so it must not enter the ranking.
-    .filter((asset) => !String(asset.skill_type ?? "").startsWith("skill-map"));
-  for (const plan of plans.values()) {
-    const ranked = assets
-      .map((asset) => ({ asset, score: skillScore(plan, asset) }))
-      .filter((entry) => entry.score > 0)
-      .sort(
-        (a, b) =>
-          b.score - a.score ||
-          String(a.asset.asset_id ?? "").localeCompare(String(b.asset.asset_id ?? "")),
-      )
-      .slice(0, 5);
-    const review = db
-      .prepare("SELECT has_evidence FROM review_evidence_registry WHERE plan_id = ?")
-      .get(plan.planId) as { has_evidence?: number } | undefined;
-    const accepted = Number(review?.has_evidence ?? 0) === 1 ? 1 : 0;
-    ranked.forEach((entry, index) => {
-      const skillId = String(entry.asset.asset_id ?? "");
-      const recId = stableId("skill-rec", `${plan.planId}:${skillId}`);
-      recordProjectionEvent(db, {
-        table: "skill_recommendations",
-        id: recId,
-        row: {
-          skill_recommendation_id: recId,
-          session_id: "",
-          plan_id: plan.planId,
-          skill_id: skillId,
-          rank: index + 1,
-          score: entry.score,
-          reason: `layer=${plan.layer}; technical_drive=${plan.drive}; drive_model=${skillDriveModelForPlan(plan.planId)}; kind=${plan.kind}`,
-          recommended_at: recordedAt,
-        },
-      });
-      if (accepted === 1) {
-        const invId = stableId("skill-inv", `${plan.planId}:${skillId}:review`);
-        recordProjectionEvent(db, {
-          table: "skill_invocations",
-          id: invId,
-          row: {
-            skill_invocation_id: invId,
-            session_id: "",
-            plan_id: plan.planId,
-            skill_id: skillId,
-            layer: plan.layer,
-            drive: plan.drive,
-            fired_at: recordedAt,
-            source: "auto-projection:review-evidence",
-            accepted,
-          },
-        });
-      }
-    });
-  }
-}
-
-function projectSkillMetrics(db: HarnessDb): void {
-  const computedAt = nowIso();
-  const rows = db
-    .prepare(
-      `SELECT r.plan_id, r.skill_id,
-              COUNT(DISTINCT r.skill_recommendation_id) AS rec,
-              COUNT(DISTINCT i.skill_invocation_id) AS inv,
-              SUM(CASE WHEN i.accepted = 1 THEN 1 ELSE 0 END) AS acc
-       FROM skill_recommendations r
-       LEFT JOIN skill_invocations i
-         ON i.plan_id = r.plan_id AND i.skill_id = r.skill_id
-       GROUP BY r.plan_id, r.skill_id`,
-    )
-    .all();
-  for (const row of rows) {
-    const rec = Number(row.rec ?? 0);
-    const inv = Number(row.inv ?? 0);
-    const acc = Number(row.acc ?? 0);
-    const planId = String(row.plan_id ?? "");
-    const skillId = String(row.skill_id ?? "");
-    const firing = rec === 0 ? 0 : inv / rec;
-    const acceptance = inv === 0 ? 0 : acc / inv;
-    for (const metric of [
-      { name: "skill_firing_rate", value: firing },
-      { name: "skill_acceptance_rate", value: acceptance },
-    ]) {
-      const signalId = stableId("skill-signal", `${planId}:${skillId}:${metric.name}`);
-      recordProjectionEvent(db, {
-        table: "quality_signals",
-        id: signalId,
-        row: {
-          signal_id: signalId,
-          source: "skill-metrics",
-          subject_id: `${planId}:${skillId}`,
-          metric: metric.name,
-          value: Number(metric.value.toFixed(4)),
-          threshold: 1,
-          status: metric.value < 1 ? "warn" : "pass",
-          computed_at: computedAt,
-        },
-      });
-    }
-  }
-}
-
-/**
- * FR-L1-36: Per-skill evaluation projection.
- *
- * skill_rating = success_count / adoption_count (0.0–1.0).
- * adoption    = distinct plan_id with accepted=1 invocation.
- * success     = adopted plans whose plan_registry.status is a success state.
- *
- * Success states rationale (hardcode-with-reason):
- * - "confirmed" and "completed" are the two terminal-success statuses in use across
- *   all docs/plans/*.md frontmatter (as of 2026-06-15: 149 confirmed, 12 completed).
- *   "draft" and "archived" are explicitly not success.  No other status values appear
- *   in the corpus.  Single source of truth: PLAN frontmatter `status:` field parsed
- *   by projectPlans above.  If new statuses are introduced they must be registered
- *   here and in the schema (CLAUDE.md: ハードコード単一正本化).
- *
- * unused_flag = 1 when no invocation has fired_at within the last 30 days from asOf.
- * AC-FR-BR21-36-01: 5 adopted plans, all 5 success → rating 1.0, unused_flag 0.
- * AC-FR-BR21-36-02: 0 adoption in last 30 days → unused_flag 1; no auto-delete.
- * Cold-start: 0 skill_invocations → 0 evaluation rows.
- */
-// Success states that count toward skill_rating numerator.  See rationale above.
-const PLAN_SUCCESS_STATUSES = ["confirmed", "completed"] as const;
-
-export function projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string }): void {
-  const evaluatedAt = opts?.asOf ?? nowIso();
-  // 30-day window: ISO timestamp 30 days before evaluatedAt.
-  const cutoff = new Date(new Date(evaluatedAt).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
-  // Adoption: distinct plan_id per skill_id with accepted=1 invocation.
-  const adoptionRows = db
-    .prepare(
-      `SELECT i.skill_id,
-              COUNT(DISTINCT i.plan_id) AS adoption_count,
-              MAX(i.fired_at) AS last_fired_at
-       FROM skill_invocations i
-       WHERE i.accepted = 1
-       GROUP BY i.skill_id`,
-    )
-    .all();
-
-  if (adoptionRows.length === 0) return; // Cold-start: nothing to write.
-
-  const successStatusPlaceholders = PLAN_SUCCESS_STATUSES.map(() => "?").join(", ");
-
-  for (const row of adoptionRows) {
-    const skillId = String(row.skill_id ?? "");
-    const adoptionCount = Number(row.adoption_count ?? 0);
-
-    // Success count: adopted plans in a success status.
-    const successRow = db
-      .prepare(
-        `SELECT COUNT(DISTINCT i.plan_id) AS success_count
-         FROM skill_invocations i
-         JOIN plan_registry p ON p.plan_id = i.plan_id
-         WHERE i.skill_id = ?
-           AND i.accepted = 1
-           AND p.status IN (${successStatusPlaceholders})`,
-      )
-      .get(skillId, ...PLAN_SUCCESS_STATUSES) as { success_count: number } | undefined;
-
-    const successCount = Number(successRow?.success_count ?? 0);
-    const skillRating = adoptionCount === 0 ? 0 : Number((successCount / adoptionCount).toFixed(4));
-
-    // unused_flag: no invocation in last 30 days from asOf.
-    const recentRow = db
-      .prepare(
-        `SELECT COUNT(*) AS cnt
-         FROM skill_invocations
-         WHERE skill_id = ? AND fired_at >= ?`,
-      )
-      .get(skillId, cutoff) as { cnt: number } | undefined;
-
-    const unusedFlag = Number(recentRow?.cnt ?? 0) === 0 ? 1 : 0;
-
+function projectMemoryEntries(repoRoot: string, db: HarnessDb): void {
+  for (const entry of loadMemoryEntries(repoRoot)) {
     recordProjectionEvent(db, {
-      table: "skill_evaluations",
-      id: skillId,
+      table: "memory_entries",
+      id: entry.memory_id,
       row: {
-        skill_id: skillId,
-        skill_rating: skillRating,
-        adoption_count: adoptionCount,
-        success_count: successCount,
-        unused_flag: unusedFlag,
-        evaluated_at: evaluatedAt,
+        memory_id: entry.memory_id,
+        kind: entry.kind,
+        title: entry.title,
+        body: entry.body,
+        tags: entry.tags.join(","),
+        source_path: normalizePath(entry.source_path),
+        updated_at: entry.updated_at,
+        content_hash: entry.content_hash,
       },
     });
   }
+}
+
+function projectSkillTelemetry(db: HarnessDb, plans: Map<string, ProjectedPlan>): void {
+  projectSkillTelemetryCore({
+    db,
+    plans,
+    deps: {
+      nowIso,
+      stableId,
+      recordProjectionEvent,
+      skillDriveModelForPlan: planModeResolver(plans),
+    },
+  });
+}
+
+function projectSkillMetrics(db: HarnessDb): void {
+  projectSkillMetricsCore({
+    db,
+    deps: { nowIso, stableId, recordProjectionEvent },
+  });
+}
+
+export function projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string }): void {
+  projectSkillEvaluationsCore({
+    db,
+    opts,
+    deps: { nowIso, recordProjectionEvent },
+  });
 }
 
 /**
@@ -2795,59 +2641,94 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
   const repoRoot = input.repoRoot ?? process.cwd();
   const ownsDb = input.db === undefined;
   const db = input.db ?? openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+  const timings: ProjectionTiming[] = [];
+  const time = <T>(id: string, run: () => T): T => {
+    if (input.timing !== true) return run();
+    const started = performance.now();
+    const result = run();
+    timings.push({ id, duration_ms: Number((performance.now() - started).toFixed(3)) });
+    return result;
+  };
   try {
-    migrate(db);
-    const relationGraph = input.relationGraph ?? defaultRelationGraphProjection(repoRoot);
-    const documentExports = input.documentExports ?? defaultDocumentExportProjection(repoRoot);
+    time("migrate", () => migrate(db));
+    const relationGraph =
+      input.relationGraph ??
+      time("load-relation-graph", () => defaultRelationGraphProjection(repoRoot));
+    const documentExports =
+      input.documentExports ??
+      time("load-document-exports", () => defaultDocumentExportProjection(repoRoot));
     // Atomic rebuild: truncate + re-project run inside a single transaction so a
     // mid-rebuild failure rolls back to the prior committed projection instead of
     // leaving the DB truncated or half-populated (DB rebuild atomicity).
     db.exec("BEGIN IMMEDIATE");
     try {
-      truncateProjectionTables(db);
-      const plans = projectPlans(repoRoot, db);
-      projectDriveRuns(repoRoot, db, plans);
-      projectHookEvents(repoRoot, db, plans);
-      projectReviewModelRuns(repoRoot, db, plans);
-      projectRoadmapRollup(repoRoot, db);
-      projectReviewEvidenceRegistry(repoRoot, db);
-      projectGuardrailInvariantAdvisories(db);
-      projectDescentObligations(repoRoot, db);
-      projectVerificationBandExecution(db);
-      projectAutomationAssets(repoRoot, db);
-      projectRuntimeSkillInvocationsFromSessionLogs(repoRoot, db, plans);
-      projectSkillTelemetry(db, plans);
-      projectSkillMetrics(db);
-      projectSkillEvaluations(db);
-      projectPocEvaluations(db);
-      projectModelEvaluations(db, repoRoot);
-      projectOperationalMetrics(db);
+      time("truncate", () => truncateProjectionTables(db));
+      const plans = time("plans", () => projectPlans(repoRoot, db));
+      time("drive-hook-model", () => {
+        projectDriveRuns(repoRoot, db, plans);
+        projectHookEvents(repoRoot, db, plans);
+        projectReviewModelRuns(repoRoot, db, plans);
+      });
+      time("roadmap-review", () => {
+        projectRoadmapRollup(repoRoot, db);
+        projectReviewEvidenceRegistry(repoRoot, db);
+        projectGuardrailInvariantAdvisories(db);
+        projectDescentObligations(repoRoot, db);
+        projectVerificationBandExecution(db);
+      });
+      time("automation-memory", () => {
+        projectAutomationAssets(repoRoot, db);
+        projectMemoryEntries(repoRoot, db);
+      });
+      time("runtime-skill-logs", () =>
+        projectRuntimeSkillInvocationsFromSessionLogs(repoRoot, db, plans),
+      );
+      time("skill-projections", () => {
+        projectSkillTelemetry(db, plans);
+        projectSkillMetrics(db);
+        projectSkillEvaluations(db);
+        projectPocEvaluations(db);
+      });
+      time("model-operational", () => {
+        projectModelEvaluations(db, repoRoot);
+        projectOperationalMetrics(db);
+      });
       const projectionDeps = { nowIso, stableId, recordProjectionEvent };
-      projectRefactorCandidateSignals(repoRoot, db, projectionDeps);
-      projectRelationGraph(db, relationGraph);
-      projectGraphSnapshot(db, relationGraph);
-      projectImpactRules(db);
-      projectCurrentImpactResults(repoRoot, db, relationGraph);
-      projectArtifactProgress(db, relationGraph);
-      projectVerificationCatalogs(repoRoot, db);
-      projectDocumentExportCatalogs(db);
-      projectDocumentExports(db, documentExports);
-      projectVerificationEvidence(db, input.verificationEvidence);
-      projectTestCaseCatalog(repoRoot, db);
-      projectFeedbackEvents(db, projectionDeps);
-      projectTroubleEvents(db, projectionDeps);
-      projectRetryEvents(db, projectionDeps);
-      projectIssueQueue(db, projectionDeps);
-      projectIssueApprovalGuardrails(db, projectionDeps);
-      projectImprovementLog(db, projectionDeps);
-      projectScreens(repoRoot, db);
-      db.exec("COMMIT");
+      time("refactor-candidates", () =>
+        projectRefactorCandidateSignals(repoRoot, db, projectionDeps),
+      );
+      time("graph-impact", () => {
+        projectRelationGraph(db, relationGraph);
+        projectGraphSnapshot(db, relationGraph);
+        projectImpactRules(db);
+        projectCurrentImpactResults(repoRoot, db, relationGraph);
+        projectArtifactProgress(db, relationGraph);
+      });
+      time("catalogs", () => {
+        projectVerificationCatalogs(repoRoot, db);
+        projectDocumentExportCatalogs(db);
+      });
+      time("document-exports", () => projectDocumentExports(db, documentExports));
+      time("verification-evidence", () =>
+        projectVerificationEvidence(db, input.verificationEvidence),
+      );
+      time("test-cases", () => projectTestCaseCatalog(repoRoot, db));
+      time("feedback", () => {
+        projectFeedbackEvents(db, projectionDeps);
+        projectTroubleEvents(db, projectionDeps);
+        projectRetryEvents(db, projectionDeps);
+        projectIssueQueue(db, projectionDeps);
+        projectIssueApprovalGuardrails(db, projectionDeps);
+        projectImprovementLog(db, projectionDeps);
+      });
+      time("screens", () => projectScreens(repoRoot, db));
+      time("commit", () => db.exec("COMMIT"));
     } catch (error) {
       db.exec("ROLLBACK");
       throw error;
     }
-    const counts = rowCounts(db);
-    return {
+    const counts = time("row-counts", () => rowCounts(db));
+    const result: RebuildHarnessDbResult = {
       ok: true,
       path: db.path,
       rowCounts: counts,
@@ -2858,6 +2739,8 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         verificationEvidence: input.verificationEvidence,
       },
     };
+    if (input.timing === true) result.timings = timings;
+    return result;
   } finally {
     if (ownsDb) db.close();
   }

@@ -29,8 +29,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T21:29:59+09:00"
-    tests_green_at: "2026-06-29T21:29:59+09:00"
+    reviewed_at: "2026-06-30T22:02:00+09:00"
+    tests_green_at: "2026-06-30T22:01:00+09:00"
     verdict: approve
     scope: "CLI plan complete routes to completed handover and clears current-plan through runHandover."
     worker_model: codex
@@ -41,9 +41,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T21:29:59+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:d9528134d8ae18ee34dc2f645f971d77feae52b82f48efa05e2833c58b59b087"
+        output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun

@@ -33,6 +33,17 @@ export const VALID_SKILL_DRIVE_MODELS = [
   "Research",
 ] as const;
 
+/**
+ * skill category (skill-index.md §2):
+ * - workflow: indexed by layer / drive model.
+ * - domain/project: indexed by category and metadata as situation-pull skills.
+ */
+export const VALID_SKILL_CATEGORIES = ["workflow", "domain", "project"] as const;
+
+/** If layer / drive model is empty, domain/project category can still make the skill indexable. */
+const INDEXABLE_CATEGORIES = new Set<string>(["domain", "project"]);
+const DEFAULT_SKILL_ROOTS = ["skills", "docs/skills"] as const;
+
 export interface SkillAssignmentDoc {
   path: string;
   metadata: Record<string, unknown>;
@@ -42,10 +53,10 @@ export interface SkillAssignmentViolation {
   path: string;
   kind:
     | "missing-skill-type"
-    | "missing-layers"
     | "unknown-layer"
-    | "missing-drive-models"
-    | "unknown-drive-model";
+    | "unknown-drive-model"
+    | "unknown-category"
+    | "not-indexable";
   value?: string;
 }
 
@@ -96,7 +107,9 @@ function stringList(value: unknown): string[] {
 }
 
 export function loadSkillAssignmentDocs(repoRoot: string): SkillAssignmentDoc[] {
-  const root = join(repoRoot, "docs", "skills");
+  const rootRel =
+    DEFAULT_SKILL_ROOTS.find((root) => existsSync(join(repoRoot, root))) ?? "docs/skills";
+  const root = join(repoRoot, rootRel);
   return skillFiles(root).map((path) => ({
     path: relative(repoRoot, path).replace(/\\/g, "/"),
     metadata: parseMetadata(path),
@@ -107,6 +120,7 @@ export function analyzeSkillAssignments(docs: SkillAssignmentDoc[]): SkillAssign
   const violations: SkillAssignmentViolation[] = [];
   const validLayers = new Set<string>(VALID_SKILL_LAYERS);
   const validDriveModels = new Set<string>(VALID_SKILL_DRIVE_MODELS);
+  const validCategories = new Set<string>(VALID_SKILL_CATEGORIES);
 
   for (const doc of docs) {
     const skillType = doc.metadata.skill_type;
@@ -119,7 +133,6 @@ export function analyzeSkillAssignments(docs: SkillAssignmentDoc[]): SkillAssign
         ? (doc.metadata.applies_to as Record<string, unknown>)
         : {};
     const layers = stringList(appliesTo.layers);
-    if (layers.length === 0) violations.push({ path: doc.path, kind: "missing-layers" });
     for (const layer of layers) {
       if (!validLayers.has(layer)) {
         violations.push({ path: doc.path, kind: "unknown-layer", value: layer });
@@ -127,9 +140,6 @@ export function analyzeSkillAssignments(docs: SkillAssignmentDoc[]): SkillAssign
     }
 
     const driveModels = stringList(appliesTo.drive_models);
-    if (driveModels.length === 0) {
-      violations.push({ path: doc.path, kind: "missing-drive-models" });
-    }
     for (const driveModel of driveModels) {
       if (!validDriveModels.has(driveModel)) {
         violations.push({
@@ -138,6 +148,17 @@ export function analyzeSkillAssignments(docs: SkillAssignmentDoc[]): SkillAssign
           value: driveModel,
         });
       }
+    }
+
+    const category = typeof doc.metadata.category === "string" ? doc.metadata.category.trim() : "";
+    if (category.length > 0 && !validCategories.has(category)) {
+      violations.push({ path: doc.path, kind: "unknown-category", value: category });
+    }
+
+    const indexable =
+      layers.length > 0 || driveModels.length > 0 || INDEXABLE_CATEGORIES.has(category);
+    if (!indexable) {
+      violations.push({ path: doc.path, kind: "not-indexable" });
     }
   }
 
@@ -150,10 +171,10 @@ export function analyzeSkillAssignments(docs: SkillAssignmentDoc[]): SkillAssign
 
 export function skillAssignmentMessages(result: SkillAssignmentResult): string[] {
   if (result.ok) {
-    return [`skill-assignment - OK (checked=${result.checked}, layer/drive-model metadata set)`];
+    return [`skill-assignment - OK (checked=${result.checked}, indexable by L+drive or category)`];
   }
   if (result.checked === 0) {
-    return ["skill-assignment - violation: docs/skills has no skill definitions"];
+    return ["skill-assignment - violation: skills or docs/skills has no skill definitions"];
   }
   return result.violations.map((v) => {
     const value = v.value ? ` value=${v.value}` : "";

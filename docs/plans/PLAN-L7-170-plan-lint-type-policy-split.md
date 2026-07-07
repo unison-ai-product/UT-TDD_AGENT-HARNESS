@@ -34,8 +34,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-25T21:25:20+09:00"
-    tests_green_at: "2026-06-25T21:25:20+09:00"
+    reviewed_at: "2026-06-30T22:30:00+09:00"
+    tests_green_at: "2026-06-30T22:29:00+09:00"
     verdict: approve
     scope: "Extract plan lint public types and policy constants to sidecar modules while preserving lint behavior and exports."
     worker_model: codex
@@ -46,49 +46,49 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T21:24:52+09:00"
+        completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: tests/plan-lint.test.ts
-        output_digest: "sha256:ba64ea807951fdf6b3c3d0891e5525afe5b32e9599129db35e6870da0706826d"
+        output_digest: "sha256:5200049532ce0cb4b1210298bb346151ea184c90ff89440a0ef71b831eaf1653"
       - kind: unit_test
         command: "bun run vitest run tests\\plan-lint.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T21:24:52+09:00"
+        completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: src/plan/lint.ts
-        output_digest: "sha256:40c960d0d4d0b49ef3aff27e12291b7a5851077e6fdcf7aca1868bdf0d964510"
+        output_digest: "sha256:096c894039dd0664cd7a60bcc6b417da34883587a278a16362296ccbb3bdf020"
       - kind: unit_test
         command: "bun run vitest run tests\\plan-lint.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T21:24:52+09:00"
+        completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: src/plan/lint-types.ts
-        output_digest: "sha256:49910128a5173585aa302aec334207b42aa97ee99ca1b30c5edeed072c783e3c"
+        output_digest: "sha256:0b8f4972983e3b227c0139f2fdb53d915b7fc131b6e1231e265646b487fbee11"
       - kind: unit_test
         command: "bun run vitest run tests\\plan-lint.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T21:24:52+09:00"
+        completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: src/plan/lint-policy.ts
-        output_digest: "sha256:ff2a6177eb10aeee0a7183ba27c2cbb6b3f9dc5c2dbf475c3d63bf57db3f64d6"
+        output_digest: "sha256:fa101e8efd6656e885186e40e25277229885aa42909ebf669d7ae3d9c17a234f"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T21:25:03+09:00"
+        completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: src/plan/lint.ts
-        output_digest: "sha256:40c960d0d4d0b49ef3aff27e12291b7a5851077e6fdcf7aca1868bdf0d964510"
+        output_digest: "sha256:096c894039dd0664cd7a60bcc6b417da34883587a278a16362296ccbb3bdf020"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T21:24:53+09:00"
+        completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: src/plan/lint-policy.ts
-        output_digest: "sha256:ff2a6177eb10aeee0a7183ba27c2cbb6b3f9dc5c2dbf475c3d63bf57db3f64d6"
+        output_digest: "sha256:fa101e8efd6656e885186e40e25277229885aa42909ebf669d7ae3d9c17a234f"
 ---
 
 # PLAN-L7-170: plan lint type and policy split

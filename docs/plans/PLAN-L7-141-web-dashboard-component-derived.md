@@ -1,14 +1,16 @@
 ---
 plan_id: PLAN-L7-141-web-dashboard-component-derived
-title: "PLAN-L7-141 (impl): src/web 中央UI 再実装 — ui-element §2 設計部品から降ろす component-derived 15画面 (L7-102 table-dumper prototype を破棄して再起票)"
+title: "PLAN-L7-141 (impl): src/web 中央 UI 再実装 — ui-element §2 設計部品から降ろす component-derived 15画面"
 kind: impl
 layer: L7
 drive: fe
 status: draft
 version_target: future
+route_signal: version_deferral
+route_mode: version-up
 created: 2026-06-24
-updated: 2026-06-26
-owner: PM (Opus) / PO (人間)
+updated: 2026-07-01
+owner: PM / PO
 parent_design: docs/design/harness/L2-screen/screen-list.md
 supersedes:
   - PLAN-L7-102-web-dashboard-phase-b
@@ -16,9 +18,9 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 agent_slots:
   - role: se
-    slot_label: "SE — src/web 中央UI を ui-element §2 部品から component-derived 実装"
+    slot_label: "SE - ui-element §2 の設計部品から src/web 中央 UI を component-derived に再実装する"
   - role: tl
-    slot_label: "TL — 実装レビュー (cross_agent / intra_runtime_subagent)"
+    slot_label: "TL - read-only / screen-impl-pair-freeze / L2-L4-L6-L10 descent review"
 generates:
   - artifact_path: docs/plans/PLAN-L7-141-web-dashboard-component-derived.md
     artifact_type: markdown_doc
@@ -28,99 +30,71 @@ dependencies:
     - docs/plans/PLAN-L2-03-ui-element.md
   references:
     - docs/plans/PLAN-L7-102-web-dashboard-phase-b.md
+    - docs/plans/PLAN-L7-146-serverless-readonly-share.md
+    - docs/plans/PLAN-L7-204-central-ui-vscode-webview-local.md
 ---
 
-# PLAN-L7-141 (impl): src/web 中央UI 再実装 (component-derived)
+# PLAN-L7-141 (impl): src/web 中央 UI 再実装 (component-derived)
 
-## 優先度: 後回し / deferred (PO 2026-06-26)
+## Status
 
-PO 決定 (2026-06-26): **中央UI (画面) は後回し**。先に **配布 (clean distribution channel) を別PCで使える状態に
-する** ことを優先する (PO「UI は後回しで配布できるようにしたい」「UI は後程でいい」)。
+本 PLAN は **future parked** である。中央 UI の実装 track を将来版へ保全するが、現在の L7 配布 close には含めない。
 
-- 本 PLAN は `status=draft` のまま **deferred** とする。破棄 (archived) **ではない** — UI は「後で」やる。
-- 配布の active track = [[PLAN-L7-157-distribution-clean-pull]] (R2: 中央UI/画面 = L7-141/146 は配布物に
-  **同梱しない** = 画面なしで配布。本 deferral と整合)。同系列の serverless 共有も後回し
-  ([[PLAN-L7-146-serverless-readonly-share]])。
-- 再開条件: 配布チャネルが PO 承認・着地した後、PO 指示で本 PLAN を再開する。
-- 非終端 (draft) のまま残るため `ut-tdd status` の outstanding には引き続き計上される (後回し = 完了ではない)。
+PO 決定 (2026-06-26): 現在の close では clean distribution channel と consumer setup の成立を優先し、中央 UI 実装は後回しにする。よって本 PLAN は `status: draft` と `version_target: future` を維持する。これは archived ではなく、将来版で再開するための明示保全である。
 
-## 0. なぜ再起票か (PO 2026-06-24「画面のほうは一度破棄。使い物にならないから要件を正して再起票」)
+current close では、Pack に `src/web` UI runtime、画面実装、Webview extension、hosted deployment artifact を含めてはならない。`status --json` では `versionUpParked` として残るが、active draft ではない。
 
-`PLAN-L7-102-web-dashboard-phase-b` (confirmed) が生んだ `src/web` は、L2 ui-element §2 の
-設計部品 (`HierarchyPulldown` / `HeatmapGrid` / `LayerTemplate` 等) から降ろさず、harness.db を
-`SELECT` して汎用テーブル描画する **table-dumper prototype** だった (中央UIの mission=工程管理表を
-測れない、[[feedback_central_ui_kouteihyou_mission_not_coverage]])。さらに画面 V-model 鎖
-`L2 画面設計 → L4 FE 設計標準 (ui-standard) → L6 機能設計 → src/web 実装 → L10 UX 磨き(impl後)` の
-**設計標準 (部品/色) を飛ばして** 実装に着手していた。よって prototype を破棄し、要件 (component-derived +
-段階順) を正して再起票する。
+## 背景
 
-> **descent 是正 (PLAN-L4-14、2026-06-24)**: 再利用 FE 設計標準 (部品/色/tokens) は L10 ではなく **L4
-> `ui-standard`** に降りる (`data`=DB 設計標準の FE 対応物、document-system-map §1b)。L10 は impl **後**の
-> UX 磨き/WCAG 検証 (L2 の右腕ペア)。本 PLAN の前提を §3.3 PLAN-L4-14 の canonical descent 鎖へ更新する。
+`PLAN-L7-102-web-dashboard-phase-b` が作った `src/web` prototype は、L2 `ui-element` §2 の設計部品から降りた UI ではなく、`harness.db` を直接 `SELECT` して表を描く table-dumper だった。中央 UI の目的は工程管理表や設計状態を製品として見せることであり、DB table の露出ではない。
 
-L7-102 は本 PLAN が `supersedes` で引き継ぐ (errata 規律、.claude/CLAUDE.md / PLAN-L7-89)。
-prototype コード (`src/web/*.ts`) と `tests/web.test.ts`、`cli web` command は破棄済 (本 PLAN 着手時に
-再生成)。`screen` projection (`PLAN-L7-96`、doc 正本→harness.db read-model) は基盤として保持。
+そのため L7-102 は archived とし、本 PLAN が後継として component-derived な 15 画面実装を保全する。
 
-## 1. 要件 (正した前提)
+## Descent
 
-1. **component-derived**: 各画面は L2 ui-element §2 の設計部品から構成する。汎用 table dumper 禁止。
-2. **段階順 (V-model、PLAN-L4-14 §3.3)**: `L2 画面設計(G2) → L4 ui-standard (FE 設計標準) → L6 機能設計
-   → src/web 実装 → L10 UX 磨き(impl後)`。L4 FE 設計標準 (ui-standard + tokens) 到達まで
-   `implemented_screens` を立てない (`screen-impl-pair-freeze` gate が fail-close)。
-3. **mission で測る**: 完遂判定は工程管理表 (mission) で行う。描画数や implemented flip の coverage で
-   「Phase B 完遂」と名乗らない ([[feedback_coverage_not_substance]])。
-4. **read-only + CLI コピー action** (screen-list §3 S5=b)、**画面ID↔URL 1:1** (screen-list §2) は L7-102 で
-   妥当だった制約として踏襲。
+再開時の正規 descent は次の順序とする。
 
-## 2. Scope (着手時)
+1. L2 screen design: `screen-list.md`、`screen-flow.md`、`wireframe.md`、`ui-element.md`。
+2. L4 FE standard: `ui-standard.md` と `tokens.yaml`。
+3. L6 screen/function design: per-screen 仕様と component 使用条件。
+4. L7 implementation: `src/web` の read-only UI。
+5. L10 UX verification: 実装後の a11y / visual / WCAG 検証。
 
-- `src/web/` を ui-element §2 部品ベースで再構築 (render 部品 → 画面 → router/app/server)。
-- `cli web` command 再配線、`tests/web.test.ts` を部品単位で再設計。
-- L4 FE 設計標準 (ui-standard、PLAN-L4-14) が未到達なら本 PLAN はそこで block (段階順を破らない)。
+L4 FE standard 到達前に `implemented_screens` を立ててはならない。premature implementation claim は `screen-impl-pair-freeze` が fail-close する。
 
-## 3. Acceptance Criteria
+## Future Scope
 
-- 15 画面が ui-element §2 部品から構成され、table-dumper 描画が無い。
-- `screen-impl-pair-freeze` gate green かつ L4 FE 設計標準 (ui-standard) 到達後にのみ `implemented_screens` を宣言。
-- mission (工程管理表) で進捗が測れる。
-- doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
+再開時に対象とするもの:
 
-## 4. Schedule
+- 15 画面を L2 `ui-element` §2 の部品から構成する。
+- table-dumper prototype ではなく、screen ID と component contract に基づく rendering を行う。
+- UI は read-only を維持する。
+- CLI copy / next-action 表示など、S5=b の範囲に収まる操作だけを扱う。
+- `src/web`、`cli web`、`tests/web.test.ts` を必要に応じて再設計する。
+- 実装済み宣言は L4/L6 設計と trace が揃った後に限る。
 
-- mode: serial。
-- Step 1 ✓ (2026-06-24): **FE 設計標準を authored + cross-reviewed**。当初 `docs/design/harness/L10-ux/`
-  に置いたが PLAN-L4-14 で **L4 `ui-standard.md` + `tokens.yaml`** へ re-home (層配置是正、§6)。confirmed 昇格は
-  G4 PO サインオフ (L4 基本設計凍結)。
-- Step 2: ui-element §2 部品の render 実装。
-- Step 3: 画面 → router/app/server 配線 + tests。
-- Step 4: review → confirmed。
+現在の close で対象外にするもの:
 
-## 5. 壊さない / 再発させない
+- UI runtime の Pack 同梱。
+- screen implementation claim。
+- hosted UI / Webview extension / Cloudflare 配布。
+- UI からの edit workflow。
+- UI からの direct AI execution。
+- L2/L4/L6/L10 を bypass した画面再発明。
 
-- table-dumper への逆戻りを `screen-impl-pair-freeze` + 本 AC で塞ぐ。
-- `screen` projection (L7-96) と L2 設計群は破棄対象でない (read-model / 設計は保持・要件を正すのみ)。
-- L4 FE 設計標準 (ui-standard) を飛ばさない (段階順を破った L7-102 の再発防止)。L10 (UX 磨き) は impl 後。
+## Re-Open Acceptance Criteria
 
-## 6. FE 設計標準 降下完遂 記録 (2026-06-24、Step 1。PLAN-L4-14 で L4 へ re-home)
+この future PLAN を再開する場合は、少なくとも次を証明する。
 
-L2 ui-element §2 部品から component-derived で FE 設計標準を authored した (read-only + CLI コピー S5=b
-前提を維持)。**当初 L10 に置いたが、再利用 FE 設計標準 (部品/色/tokens) は impl 前に要る方式設計/開発標準
-のため L4 へ降ろすのが正しい (PLAN-L4-14、`data`=DB 設計標準の FE 対応物、document-system-map §1b)**。
-よって substance を L4 へ re-home し、L10 は impl 後の UX 磨き placeholder とした。
+- 15 画面が L2 screen design と L4 UI standard から降りている。
+- table-dumper rendering が存在しない。
+- `screen-impl-pair-freeze` が green である。
+- `implemented_screens` の宣言が設計・実装・検証証跡と一致している。
+- UI は read-only で、S5=b / S-01 / CC2 を破らない。
+- L10 UX verification は実装後に実レンダリングで行う。
 
-**成果物 (PLAN-L4-14 で L4 へ re-home 済)**:
-- `docs/design/harness/L4-basic-design/ui-standard.md` — 15 画面の component-derived FE 設計標準 (§4 UI 部品カタログ / §5 画面合成 = table-dumper 不在の確認 / §3.4 a11y WCAG 2.2 AA / §6 visual regression 方針)。
-- `docs/design/harness/L4-basic-design/tokens.yaml` — デザイントークン SSOT (FR-30、WCAG 2.2 AA 目標、token 名一意)。
-- `docs/design/harness/L10-ux/visual-design.md` — impl 後 UX 磨き/WCAG 検証の placeholder へ reframe。
+## Current Close Boundary
 
-**review_evidence (intra_runtime_subagent)**:
-- reviewer: code-reviewer (claude-sonnet-4-6) / worker: claude-opus-4-8 (PM)。hybrid だが Codex live dispatch は別途任意 (本 land は sonnet cross-review を採用)。
-- reviewed_at: 2026-06-24 / verdict: **APPROVE (Critical 0)**。
-- scope: component-derived (汎用テーブル 1 枚で代替不能、§5) / L2 grounding (新規部品・画面の発明なし) / token 健全性 (一意・5 状態・WCAG AA 目標) / a11y (WCAG 2.2 AA) / 誠実性 (status=draft、implemented 詐称なし)。
-- Important 3 件 解決済: I-1 (`SeverityBadge`=`StatusBadge` alias 明記 + §5 HM-07 に StatusBadge 追記) / I-2 (HM-04・HM-07 の「再実行トリガー」を S5=b の `CopyButton`(CLI 文字列) と明記、L2 §2 脱落の High-Fi 補完) / I-3 (WCAG 2.2 と AC-FR-30-03 の 2.1 不一致 → oracle 更新を visual-design §7 governance carry に列挙)。Minor 4 件 (M-1〜M-4) 反映済。
-- 緑証跡: 本 commit 時点で doctor EXIT 0 / plan lint EXIT 0 (検証ログ参照)。
+現在の L7 close では、この PLAN は将来版へ保全された UI implementation track の記録である。配布 package の成立、consumer setup、clean Pack の境界を優先するため、ここでは実装を進めない。
 
-**次工程**: G10 (UX 磨き完了) PO サインオフ → L10 doc `confirmed` 昇格 → Step 2-4 (実装)。
-中央UI「フロント編集/送信」方向 (PO 2026-06-24) が確定すれば、本 L10 設計に edit/submit affordance を
-back-prop する (read-only 維持の最小形 = 既存 `CopyButton`/`NextActionCard` の指示生成への延長)。
+この PLAN の存在は full local close を妨げる active draft ではなく、version-up mode による deferred-but-committed-future である。

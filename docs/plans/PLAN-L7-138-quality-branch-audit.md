@@ -44,8 +44,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T21:29:59+09:00"
-    tests_green_at: "2026-06-29T21:29:59+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Read-only quality and branch audit surfaces; no destructive branch operation."
     worker_model: codex
@@ -56,17 +56,17 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T21:29:59+09:00"
+        completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
-        output_digest: "sha256:d9528134d8ae18ee34dc2f645f971d77feae52b82f48efa05e2833c58b59b087"
+        output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
       - kind: typecheck
         command: "bun run tsc --noEmit"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-23T22:03:49+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
-        output_digest: "sha256:77f299b947f51b266b65b0dd7e30e03b2eec57f8cecf4144a5bf4a4e77b111ae"
+        output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
       - kind: lint
         command: "bun run lint"
         runner: bun

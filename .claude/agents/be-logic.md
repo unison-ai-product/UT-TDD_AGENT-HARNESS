@@ -2,7 +2,7 @@
 name: be-logic
 description: ビジネスロジック実装。ドメインモデル・サービス層・ユースケース実装。レイヤードアーキテクチャでの設計・実装時に使う。
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 effort: high
 memory: project
 maxTurns: 30

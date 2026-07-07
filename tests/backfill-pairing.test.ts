@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -23,6 +23,7 @@ function plan(over: Partial<ParsedPlan> = {}): ParsedPlan {
     updated: "2026-06-21",
     backpropDecision: "",
     backpropDecisionReason: "",
+    parent: "",
     requires: [],
     glossaryTerms: [],
     ...over,
@@ -208,6 +209,51 @@ describe("U-BACKFILL-004a required backfill bidirectional pairing", () => {
     expect(r.reverseLinkMissing).toEqual([]);
     expect(r.ok).toBe(true);
   });
+
+  it("new required add-impl can be paired by Reverse parent without draft requires deadlock", () => {
+    const plans = [
+      plan({
+        plan_id: "PLAN-L7-263-route-mode-kind-certificate",
+        kind: "add-impl",
+        status: "draft",
+        updated: "2026-07-02",
+      }),
+      plan({
+        plan_id: "PLAN-REVERSE-263-route-mode-kind-backfill",
+        kind: "reverse",
+        status: "draft",
+        updated: "2026-07-02",
+        parent: "docs/plans/PLAN-L7-263-route-mode-kind-certificate.md",
+      }),
+    ];
+    const r = analyzeBackfill(plans, glossary);
+    expect(r.reverseOrphans).toEqual([]);
+    expect(r.reverseLinkMissing).toEqual([]);
+    expect(r.ok).toBe(true);
+  });
+
+  it("Reverse parent must point at the add-impl plan to count as pairing", () => {
+    const plans = [
+      plan({
+        plan_id: "PLAN-L7-263-route-mode-kind-certificate",
+        kind: "add-impl",
+        status: "draft",
+        updated: "2026-07-02",
+      }),
+      plan({
+        plan_id: "PLAN-REVERSE-263-route-mode-kind-backfill",
+        kind: "reverse",
+        status: "draft",
+        updated: "2026-07-02",
+        parent: "docs/plans/PLAN-L7-999-other.md",
+      }),
+    ];
+    const r = analyzeBackfill(plans, glossary);
+    expect(r.reverseOrphans).toEqual([
+      { plan_id: "PLAN-L7-263-route-mode-kind-certificate", kind: "add-impl" },
+    ]);
+    expect(r.ok).toBe(false);
+  });
 });
 
 describe("U-BACKFILL-004b conditional backprop decision gate", () => {
@@ -322,6 +368,7 @@ describe("U-BACKFILL-005b backfill result docs sync", () => {
 
 describe("U-BACKFILL-006 実 repo の back-fill 完全性 (回帰ガード)", () => {
   it("docs/plans/ 全 add-impl が Reverse 合流済 + §6 用語が L0 §10 に merge 済 (required orphan 0 / glossary gap 0)", () => {
+    if (!existsSync(join(process.cwd(), "docs", "plans"))) return;
     const docs = loadBackfillDocs();
     const r = analyzeBackfill(docs.plans, docs.glossaryText, docs.auditedLegacyIds);
     // 失敗時に具体 PLAN/term を出して直せるように

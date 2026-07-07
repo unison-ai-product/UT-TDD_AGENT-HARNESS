@@ -19,7 +19,7 @@ traces: FR-L1-03
 
 `pair-freeze` (`vmodel-pair-freeze.md §2`) は **存在する design sub-doc を駆動** (`designDocs = docs.filter(...)`) して各 doc の `pair_artifact` 双方向を検証する **document-driven** 方式である。これは「在る doc の link が正しいか」は見るが、「**在るべき下流/pair 成果物が無い**」を検出できない (`pair_artifact` 宣言の無いホップ・`explicit_l7_defer` のホップは loop に入らず、edge も孤児も出ない = **absence-blindness**)。
 
-A-136 後の skill 片肺 (`src/skills/recommend.ts` + テストコード着地済だが L6 単体テスト設計が不在) は、この absence-blindness ゆえに `pair-freeze` / `impl-plan-trace` (src→PLAN ID 被覆) / `oracle-test-trace` (oracle→test コード citation) を全て素通りした。
+A-136 後の skill 片肺 (`src/skill-engine/recommend.ts` + テストコード着地済だが L6 単体テスト設計が不在) は、この absence-blindness ゆえに `pair-freeze` / `impl-plan-trace` (src→PLAN ID 被覆) / `oracle-test-trace` (oracle→test コード citation) を全て素通りした。
 
 本 lint は検査の向きを反転する: **上流 (要件 FR registry) + 層隣接 obligation matrix から「存在すべき下流/pair 成果物の集合」を生成し、不在を fail-close** する。降下鎖 `要求 L1 → 要件 L3 → 基本 L4 → 詳細 L5 → 機能 L6 → 実装 L7 ⇔ 単体テスト設計` の各ホップで「上流が在るなら下流が在るべき」を機械生成し、`document-system-map.md §重要(4)` の「pair 未充足を DB 側で fail-close 検知する」意図を実体化する。
 
@@ -87,7 +87,7 @@ type DescentResult = {
 
 降下 (左腕) と V-pair (右腕) を機械可読 rule に落とす。`condition` が生成トリガ:
 
-| from | to | kind | condition | note |
+| from | to | kind | 条件 | note |
 |---|---|---|---|---|
 | L1 | L3 | descent | active | 要求 FR が active なら要件 (FR-*/AC-*) が在るべき |
 | L3 | L4 | descent | active | 要件が active なら基本設計が在るべき |

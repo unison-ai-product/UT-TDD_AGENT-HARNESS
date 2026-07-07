@@ -97,6 +97,8 @@ const frontmatterBaseSchema = z.object({
    *  status=draft でのみ有効 (landed には付与不可、Codex Critical: landing-time 除外禁止)。label は
    *  version-up ledger に照合する (forward-convergence.ts VERSION_UP_ALLOWED_TARGETS)。 */
   version_target: z.string().optional(),
+  route_signal: z.string().optional(),
+  route_mode: z.string().optional(),
   /** migration import trace reference (optional migration ledger path) */
   v2_import: z.string().optional(),
   /** review 前置エビデンス (requirements §7.8.7 / .claude/CLAUDE.md MUST、IMP-071)。
@@ -135,6 +137,7 @@ const frontmatterBaseSchema = z.object({
               completed_at: z.string().optional(),
               evidence_path: z.string().min(1),
               output_digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
+              anchor_commit: z.string().min(1).optional(),
             }),
           )
           .optional(),
@@ -160,6 +163,15 @@ const CROSS_KINDS = new Set<string>(["poc", "reverse", "recovery"]);
 const WORKFLOW_KINDS = new Set<string>(["poc", "reverse"]);
 
 const custom = z.ZodIssueCode.custom;
+
+const ALLOWED_LAYER_BY_KIND: Record<string, readonly string[]> = {
+  design: ["L1", "L2", "L3", "L4", "L5", "L6"],
+  impl: ["L7"],
+  refactor: ["L7"],
+  retrofit: ["L7"],
+  troubleshoot: ["L7"],
+  research: ["L1", "L2", "L3", "L4"],
+};
 
 /**
  * §1.1 排他制約 + §1.1.parent_design + charter(L0) + §1.10 E を fail-close 検証する frontmatter schema。
@@ -356,6 +368,15 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
       code: custom,
       path: ["layer"],
       message: "kind=add-impl は layer=L7 (§1.3 実装追補、§1.1)",
+    });
+  }
+
+  const allowedLayers = ALLOWED_LAYER_BY_KIND[fm.kind];
+  if (allowedLayers && !fm.master_hub && fm.layer && !allowedLayers.includes(fm.layer)) {
+    ctx.addIssue({
+      code: custom,
+      path: ["layer"],
+      message: `kind=${fm.kind} は layer ∈ {${allowedLayers.join(",")}} (§1.10 kind×layer authoring guard)`,
     });
   }
 });

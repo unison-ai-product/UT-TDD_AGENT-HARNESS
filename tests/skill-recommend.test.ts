@@ -7,7 +7,7 @@ import {
   recommendSkillsForText,
   recordSkillInvocations,
   recordSkillRecommendations,
-} from "../src/skills/recommend";
+} from "../src/skill-engine/recommend";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
 import { recordProjectionEvent } from "../src/state-db/projection-writer";
@@ -21,6 +21,7 @@ describe("skill recommendation telemetry", () => {
       layer: string;
       drive: string;
       status?: string;
+      route_mode?: string;
     },
   ): void {
     recordProjectionEvent(db, {
@@ -42,6 +43,7 @@ describe("skill recommendation telemetry", () => {
       capability: string;
       role?: string;
       skill_type?: string;
+      category?: string;
       applies_layers?: string;
       applies_drive_models?: string;
     },
@@ -57,6 +59,7 @@ describe("skill recommendation telemetry", () => {
         role: row.role ?? "",
         capability: row.capability,
         skill_type: row.skill_type ?? "test-skill",
+        category: row.category ?? "",
         applies_layers: row.applies_layers ?? "L7",
         applies_drive_models: row.applies_drive_models ?? "Forward",
         drift_status: "current",
@@ -172,7 +175,7 @@ describe("skill recommendation telemetry", () => {
       expect(l7[0]).toMatchObject({
         plan_id: "PLAN-L7-99-skill-layer",
         skill_id: "skill:l7-fullstack-test",
-        reason: "layer=L7; technical_drive=fullstack; drive_model=Forward; kind=add-impl",
+        reason: "layer=L7; technical_drive=fullstack; drive_model=Add-feature; kind=add-impl",
       });
     } finally {
       db.close();
@@ -188,12 +191,14 @@ describe("skill recommendation telemetry", () => {
         kind: "add-impl",
         layer: "L7",
         drive: "reverse",
+        route_mode: "reverse",
       });
       seedPlan(db, {
         plan_id: "PLAN-L7-99-scrum-skill",
         kind: "add-impl",
         layer: "L7",
         drive: "scrum",
+        route_mode: "scrum",
       });
       seedSkill(db, {
         asset_id: "skill:l7-reverse-routing-review",
@@ -221,6 +226,86 @@ describe("skill recommendation telemetry", () => {
         skill_id: "skill:l7-scrum-feedback-review",
         reason: "layer=L7; technical_drive=scrum; drive_model=Scrum; kind=add-impl",
       });
+    } finally {
+      db.close();
+    }
+  });
+
+  // U-SKILL-IDX-006: de-saturate — 同一 layer+drive の skill 群が score=1 に飽和せず metadata 重なりで弁別される。
+  it("de-saturates equal layer/drive skills via graduated metadata overlap", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      seedPlan(db, {
+        plan_id: "PLAN-L7-99-desaturate",
+        kind: "add-impl",
+        layer: "L7",
+        drive: "fullstack",
+      });
+      // 3 skill 全て applies_layers=L7 + applies_drive_models=Forward (同点になりがち)。
+      seedSkill(db, {
+        asset_id: "skill:hi-overlap",
+        trigger: "fullstack forward implementation add impl",
+        capability: "fullstack forward add impl implementation",
+      });
+      seedSkill(db, {
+        asset_id: "skill:mid-overlap",
+        trigger: "fullstack review",
+        capability: "quality review checklist",
+      });
+      seedSkill(db, {
+        asset_id: "skill:no-overlap",
+        trigger: "unrelated topic notes",
+        capability: "miscellaneous supporting notes",
+      });
+
+      const rows = recommendSkillsForPlan(db, "PLAN-L7-99-desaturate");
+      const scores = rows.map((r) => r.score);
+      // 飽和解消: 全て 1 ではなく、distinct な score に分散する (旧実装は全て 1 へ clamp)。
+      expect(new Set(scores).size).toBeGreaterThan(1);
+      expect(scores.every((s) => s <= 1)).toBe(true);
+      // overlap の多寡で順位が付く (同点アルファベット順退化でない)。
+      const byId = Object.fromEntries(rows.map((r) => [r.skill_id, r.score] as const));
+      expect(byId["skill:hi-overlap"]).toBeGreaterThan(byId["skill:mid-overlap"]);
+      expect(byId["skill:mid-overlap"]).toBeGreaterThan(byId["skill:no-overlap"]);
+    } finally {
+      db.close();
+    }
+  });
+
+  // U-SKILL-IDX-007: domain situation-pull — L/駆動を持たない domain skill が task の domain 一致で浮上する。
+  it("surfaces a domain skill (no layers/drive) when the task matches its metadata", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      // domain skill: L/駆動なし + category=domain。trigger に domain tag が畳み込まれている想定。
+      seedSkill(db, {
+        asset_id: "skill:writing-domain",
+        trigger: "writing documentation style guide",
+        capability: "writing documentation style guide quality",
+        category: "domain",
+        applies_layers: "",
+        applies_drive_models: "",
+      });
+      // control: domain と無関係 + 駆動も非 Forward (text path で浮上しない)。
+      seedSkill(db, {
+        asset_id: "skill:control-scrum",
+        trigger: "scrum sprint planning",
+        capability: "scrum backlog",
+        applies_layers: "",
+        applies_drive_models: "Scrum",
+      });
+
+      const rows = recommendSkillsForText(
+        db,
+        "improve the writing and documentation style of the guide",
+        { limit: 5 },
+      );
+      const byId = Object.fromEntries(rows.map((r) => [r.skill_id, r.score] as const));
+      expect(rows[0].skill_id).toBe("skill:writing-domain");
+      // situation-pull: metadata 重なり + category ヒットで base(0.15) を確実に超える。
+      expect(byId["skill:writing-domain"]).toBeGreaterThan(0.15);
+      expect(byId["skill:writing-domain"]).toBeGreaterThan(byId["skill:control-scrum"]);
     } finally {
       db.close();
     }

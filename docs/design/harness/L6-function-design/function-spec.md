@@ -10,173 +10,165 @@ plan: docs/plans/PLAN-L6-01-function-spec.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
-## 2026-06-09 FR Unit Coverage Addendum
+## 2026-06-09 FR 単体 coverage 追補
 
-- Before L6 can be closed, the L1 FR registry must be parsed by `fr-registry-audit` and every registered FR must be represented in `fr-unit-coverage.md`.
-- `fr-unit-coverage.md` maps each FR-L1 row to one L6 spec path, one deterministic unit contract, and one U-* oracle.
-- `src/lint/l6-fr-coverage.ts` is the mechanical guard for this rule and is wired into `ut-tdd doctor`.
-- Contracts listed in `fr-unit-coverage.md` are unit-test-granularity specifications. L7 may implement them as direct unit tests or route them through a confirmed follow-up PLAN, but it may not invent missing FR coverage at implementation time.
+- L6 を close する前に、L1 FR registry を `fr-registry-audit` で parse し、登録済み FR はすべて `fr-unit-coverage.md` に表現する。
+- `fr-unit-coverage.md` は各 FR-L1 row を、1 つの L6 spec path、1 つの deterministic unit contract、1 つの U-* oracle に対応づける。
+- `src/lint/l6-fr-coverage.ts` はこの rule の mechanical guard であり、`ut-tdd doctor` に配線されている。
+- `fr-unit-coverage.md` に列挙する contracts は unit-test-granularity specifications である。L7 は direct unit tests として実装しても、confirmed follow-up PLAN へ route してもよい。ただし implementation time に欠けている FR coverage を発明してはいけない。
 
-## 2026-06-09 Harness DB Feedback Function Addendum
+## 2026-06-09 Harness DB feedback function 追補
 
-This addendum lowers requirements §6.8.6/§6.8.7 and L5 `physical-data.md` §9 / `internal-processing.md` Appendix B to L6 function-level contracts. The SQLite DB is a rebuildable projection of docs/state/logs, not the authoring source.
+この追補は requirements §6.8.6 / §6.8.7 と L5 `physical-data.md` §9 / `internal-processing.md` Appendix B を L6 function-level contracts へ降下する。SQLite DB は docs/state/logs の rebuildable projection であり、authoring source ではない。
 
-| Function | Signature | pre | post / oracle |
+| 関数 | signature | 前提 | 事後 / oracle |
 |---|---|---|---|
-| `recordProjectionEvent` | `(event: ProjectionEvent, deps: HarnessDbDeps) => ProjectionRowRef` | `event.plan_id` or `event.session_id` is present; `deps.dbPath` resolves under `.ut-tdd/` | validates IDs, upserts the correct projection table row, returns `{table, id, evidence_path}`; never rewrites source docs |
-| `rebuildHarnessDb` | `(input: RebuildInput, deps: HarnessDbDeps) => RebuildResult` | repo root is readable; DB path is under `.ut-tdd/` | truncates projection tables, replays normalized docs/state/log digests, recomputes `search_index` and `quality_signals`; deterministic for identical inputs |
-| `computeSkillMetrics` | `(rows: SkillMetricInput) => QualitySignal[]` | recommendation/invocation rows are supplied; zero denominator is explicit | computes `fired/recommended` and `accepted/fired` by layer/drive/plan/model; missing rows become findings, not fabricated success |
-| `findReference` | `(query: ReferenceQuery, deps: HarnessDbDeps) => ReferenceHit[]` | DB exists or caller requested rebuild first | searches `search_index` plus direct ID tables and returns path, ID, reason, source table, and evidence path; read-only |
-| `emitFeedbackEvents` | `(findings: FindingRow[], signals: QualitySignal[]) => FeedbackEvent[]` | findings/signals are normalized | groups repeated gaps, unresolved blockers, dependency stalls, and quality regression patterns into feedback events; does not auto-approve PLAN changes |
-| `recordGuardrailDecision` | `(decision: GuardrailDecision, deps: HarnessDbDeps) => ProjectionRowRef` | guardrail name, decision, and evidence path are present | stores block/allow/human-required with evidence; `human-required` cannot be downgraded by projection rebuild |
+| `recordProjectionEvent` | `(event: ProjectionEvent, deps: HarnessDbDeps) => ProjectionRowRef` | `event.plan_id` または `event.session_id` が存在し、`deps.dbPath` は `.ut-tdd/` 配下に解決される。 | ID を検証し、該当 projection table row を upsert して `{table, id, evidence_path}` を返す。source docs は rewrite しない。 |
+| `rebuildHarnessDb` | `(input: RebuildInput, deps: HarnessDbDeps) => RebuildResult` | repo root は読込可能で、DB path は `.ut-tdd/` 配下にある。 | projection tables を truncate し、正規化済み docs/state/log digest を replay して `search_index` と `quality_signals` を再計算する。同一入力では deterministic。 |
+| `computeSkillMetrics` | `(rows: SkillMetricInput) => QualitySignal[]` | recommendation / invocation rows が与えられ、分母 0 は明示される。 | layer/drive/plan/model ごとに `fired/recommended` と `accepted/fired` を算出する。欠落 row は findings とし、成功を捏造しない。 |
+| `findReference` | `(query: ReferenceQuery, deps: HarnessDbDeps) => ReferenceHit[]` | DB が存在する、または caller が先に rebuild を要求している。 | `search_index` と直接 ID tables を検索し、path、ID、reason、source table、evidence path を返す。read-only とする。 |
+| `emitFeedbackEvents` | `(findings: FindingRow[], signals: QualitySignal[]) => FeedbackEvent[]` | findings / signals は正規化済みである。 | 反復 gap、未解決 blocker、dependency stall、品質 regression pattern を feedback events に集約する。PLAN 変更は自動承認しない。 |
+| `recordGuardrailDecision` | `(decision: GuardrailDecision, deps: HarnessDbDeps) => ProjectionRowRef` | guardrail 名、decision、evidence path が存在する。 | block/allow/human-required を evidence 付きで保存する。`human-required` は projection rebuild で downgrade できない。 |
 | `catalogAutomationAssets` | `(input: CatalogAutomationAssetsInput) => AssetCatalogResult`（`input = { repoRoot?: string; db: HarnessDb }`、型は `src/assets/catalog.ts` 正本、PLAN-L7-52 C-4 で実装に整合化 2026-06-15） | 承認 root は実装内定数 `SOURCES`（`docs/skills` / `.claude/agents` / `docs/commands`）を単一正本とする（caller は roots を渡さない） | skill/roster/command doc を path・trigger/capability・search token・drift status で catalog 化し `{ ok, assets: string[], findings }` を返す; prompt 本文・secret・provider transcript は copy しない; drift / empty-catalog / invalid-root は `findings` として可視化 |
-| `recordTestRunEvidence` | `(input: TestRunEvidenceInput, deps: HarnessDbDeps) => ProjectionRowRef[]` | command evidence has runner/scope/timestamps/exit code/evidence path; repo root and DB path resolve under `.ut-tdd/` | upserts `test_runs`, optional `test_cases`, `test_results`, and `test_artifact_edges`; missing `plan_id`/`oracle_id` creates findings, not silent pass |
-| `projectRuntimeTestRunFromSessionEvent` | `(input: RuntimeTestRunProjectionInput) => void` | session event came from `.ut-tdd/logs/session/*.jsonl`; `session_id`, `plan_id`, and `ts` are present | for Bash `tool_use` events whose sanitized target is a recognized verification verb, upserts one `test_runs` row with non-empty `session_id`, `runtime=hook-session-log`, `scope=runtime-hook`, the session JSONL evidence path, and pass/fail status from the hook outcome; non-verification tool events are ignored |
-| `projectRuntimeGuardrailDecisionFromSessionEvent` | `(input: RuntimeGuardrailDecisionProjectionInput) => void` | session event came from `.ut-tdd/logs/session/*.jsonl`; `session_id`, `plan_id`, and `ts` are present | for `forced_stop` events, upserts one `guardrail_decisions` row with non-empty `session_id`, `guardrail=forced-stop`, `decision=block`, `mode=runtime-hook`, and the session JSONL evidence path; non-guardrail events are ignored |
-| `projectRuntimeSkillInvocationFromSessionEvent` | `(input: RuntimeSkillInvocationProjectionInput) => void` | session event came from `.ut-tdd/logs/session/*.jsonl`; `session_id`, `plan_id`, and `ts` are present; `automation_assets` contains skill rows | for Bash `tool_use` events whose sanitized target is `Bash (skill)`, ranks the plan-context skill assets and upserts `skill_invocations` rows with non-empty `session_id`, `source=runtime-hook:skill-suggest`, and accepted status from hook outcome; generic Bash events are ignored |
-| `projectRuntimeModelTelemetryForDoctor` | `(db: HarnessDb) => void` | doctor has rebuilt an in-memory harness DB; runtime transcript directories are read from `UT_TDD_CLAUDE_SESSIONS_DIR` / `UT_TDD_CODEX_SESSIONS_DIR` or OS defaults | scans existing Claude/Codex JSONL logs without launching providers and overlays token/cost-backed `model_runs` rows for telemetry provenance evaluation; deterministic `db rebuild` remains source-only |
-| `evaluateGreenDefinition` | `(input: GreenDefinitionInput, deps: HarnessDbDeps) => GreenDefinitionResult` | profile and required command kinds are known for changed artifact kinds | returns computed green time, missing commands, non-zero exits, and DB projection refs; confirmed review evidence is valid only when result is green and `computed_green_at <= reviewed_at` |
-| `computeUtHistorySignals` | `(input: UtHistoryInput, deps: HarnessDbDeps) => QualitySignal[]` | test run/result rows are normalized; zero denominators are explicit | computes oracle coverage, plan green rate, flake score, duration regression, and green-definition compliance; non-green signals join `findings` |
-| `analyzeRefactorCandidates` | `(inputs: RefactorCandidateInput[]) => RefactorCandidate[]` (ranked by `candidateRank`; inputs from `loadRefactorCandidateInputs(repoRoot)`) | source module/function inputs are normalized; structural thresholds (module size, body length, duplicate-body hash, literal repeat count) are explicit | deterministically detects four behavior-invariant refactor candidate kinds — `split-module` / `extract-helper` / `deduplicate-function` / `externalize-literal` — and projects them into `quality_signals` (`metric=refactor_candidate:<kind>`) and the `feedback_events` surface; additive projection over existing tables (schema unchanged); empty/zero inputs are explicit, not fabricated candidates (PLAN-L7-147 / Reverse back-fill PLAN-REVERSE-141) |
+| `recordTestRunEvidence` | `(input: TestRunEvidenceInput, deps: HarnessDbDeps) => ProjectionRowRef[]` | command evidence は runner/scope/timestamps/exit code/evidence path を持つ。repo root と DB path は `.ut-tdd/` 配下に解決される。 | `test_runs` と任意の `test_cases`、`test_results`、`test_artifact_edges` を upsert する。`plan_id` / `oracle_id` 欠落は findings とし、silent pass にしない。 |
+| `projectRuntimeTestRunFromSessionEvent` | `(input: RuntimeTestRunProjectionInput) => void` | session event は `.ut-tdd/logs/session/*.jsonl` 由来で、`session_id`、`plan_id`、`ts` が存在する。 | sanitized target が既知 verification verb の Bash `tool_use` event なら、非空 `session_id`、`runtime=hook-session-log`、`scope=runtime-hook`、session JSONL evidence path、hook outcome 由来 pass/fail を持つ `test_runs` row を 1 件 upsert する。verification 以外は無視する。 |
+| `projectRuntimeGuardrailDecisionFromSessionEvent` | `(input: RuntimeGuardrailDecisionProjectionInput) => void` | session event は `.ut-tdd/logs/session/*.jsonl` 由来で、`session_id`、`plan_id`、`ts` が存在する。 | `forced_stop` event なら、非空 `session_id`、`guardrail=forced-stop`、`decision=block`、`mode=runtime-hook`、session JSONL evidence path を持つ `guardrail_decisions` row を 1 件 upsert する。guardrail 以外は無視する。 |
+| `projectRuntimeSkillInvocationFromSessionEvent` | `(input: RuntimeSkillInvocationProjectionInput) => void` | session event は `.ut-tdd/logs/session/*.jsonl` 由来で、`session_id`、`plan_id`、`ts` が存在し、`automation_assets` は skill rows を含む。 | sanitized target が `Bash (skill)` の Bash `tool_use` event なら、plan-context skill assets を rank し、非空 `session_id`、`source=runtime-hook:skill-suggest`、hook outcome 由来 accepted status を持つ `skill_invocations` rows を upsert する。generic Bash event は無視する。 |
+| `projectRuntimeModelTelemetryForDoctor` | `(db: HarnessDb) => void` | doctor が in-memory harness DB を rebuild 済みで、runtime transcript directories は `UT_TDD_CLAUDE_SESSIONS_DIR` / `UT_TDD_CODEX_SESSIONS_DIR` または OS default から読む。 | provider を起動せず既存 Claude/Codex JSONL logs を scan し、token/cost backed `model_runs` rows を telemetry provenance 評価用に overlay する。deterministic `db rebuild` は source-only のままにする。 |
+| `evaluateGreenDefinition` | `(input: GreenDefinitionInput, deps: HarnessDbDeps) => GreenDefinitionResult` | changed artifact kind に対する profile と required command kinds が既知である。 | computed green time、missing commands、non-zero exits、DB projection refs を返す。confirmed review evidence は result が green かつ `computed_green_at <= reviewed_at` の場合だけ有効。 |
+| `computeUtHistorySignals` | `(input: UtHistoryInput, deps: HarnessDbDeps) => QualitySignal[]` | test run/result rows は正規化済みで、分母 0 は明示される。 | oracle coverage、plan green rate、flake score、duration regression、green-definition compliance を算出する。non-green signals は `findings` に合流する。 |
+| `analyzeRefactorCandidates` | `(inputs: RefactorCandidateInput[]) => RefactorCandidate[]` (`candidateRank` 順、入力は `loadRefactorCandidateInputs(repoRoot)` 由来) | source module/function inputs は正規化済みで、構造 threshold (module size、body length、duplicate-body hash、literal repeat count) は明示される。 | behavior-invariant な 4 種 refactor candidate (`split-module` / `extract-helper` / `deduplicate-function` / `externalize-literal`) を deterministic に検出し、`quality_signals` (`metric=refactor_candidate:<kind>`) と `feedback_events` surface へ project する。既存 tables への additive projection で schema は変えない。空/0 入力は明示的に扱い、候補を捏造しない (PLAN-L7-147 / Reverse back-fill PLAN-REVERSE-141)。 |
 
-Unit oracle families:
+unit oracle families:
 
-- U-FR-L1-06 / U-FR-L1-19 / U-FR-L1-20 / U-FR-L1-40 / U-FR-L1-41 cover projection write/rebuild, drive partitioning, and feedback event generation.
-- U-FR-L1-12 / U-FR-L1-46 / U-FR-L1-47 cover skill recommendation, roster capability, and skill metric inputs.
-- U-FR-L1-33 / U-FR-L1-34 / U-FR-L1-48 / U-FR-L1-49 cover search/reference reduction, command cataloging, and asset drift detection.
-- `analyzeRefactorCandidates` (refactor candidate detector) is an additive `quality_signals`/`feedback_events` projection under the same projection oracle family (U-FR-L1-06/19/20/40/41); its four-kind detection is covered by `tests/projection-writer.test.ts` (L7 descent: `docs/test-design/harness/L7-unit-test-design.md`).
+- U-FR-L1-06 / U-FR-L1-19 / U-FR-L1-20 / U-FR-L1-40 / U-FR-L1-41 は projection write/rebuild、drive partitioning、feedback event generation を覆う。
+- U-FR-L1-12 / U-FR-L1-46 / U-FR-L1-47 は skill recommendation、roster capability、skill metric inputs を覆う。
+- U-FR-L1-33 / U-FR-L1-34 / U-FR-L1-48 / U-FR-L1-49 は search/reference reduction、command cataloging、asset drift detection を覆う。
+- `analyzeRefactorCandidates` (refactor candidate detector) は同じ projection oracle family (U-FR-L1-06/19/20/40/41) 配下の additive `quality_signals` / `feedback_events` projection である。4 種 detection は `tests/projection-writer.test.ts` で覆う (L7 descent: `docs/test-design/harness/L7-unit-test-design.md`)。
 
-### 2026-06-23 Feedback Surface Taxonomy Addendum
+### 2026-06-23 feedback surface taxonomy 追補
 
-`feedback_events` is a notification queue derived from findings, quality signals,
-and artifact progress. It is not an authoring source and must not create
-additional `unresolved-join` findings when queue rows carry a best-effort
-`plan_id`. The resolvable PLAN join guard applies to source projection tables,
-not to the notification queue itself.
+`feedback_events` は findings、quality signals、artifact progress から派生する notification queue である。authoring source ではなく、queue rows が best-effort の `plan_id` を持つ場合に追加の `unresolved-join` findings を作ってはいけない。resolvable PLAN join guard は source projection tables に適用し、notification queue 自体には適用しない。
 
-Human-facing feedback surfaces must classify open rows into three display
-buckets without changing the stored severity:
+human-facing feedback surfaces は stored severity を変えずに、open rows を 3 つの display buckets へ分類しなければならない:
 
-| Bucket | Rule | Surface behavior |
+| bucket | 判定 rule | surface 表示 |
 |---|---|---|
-| `gate` | severity is `error` or `fail` | Show first, grouped by `signal_type`, because these can block acceptance. |
-| `actionable` | non-telemetry `warn` rows | Show grouped by `signal_type` with counts and representative next action. |
-| `telemetry` | `info` rows and high-volume measurement signals such as `artifact_progress_yellow`, `missing-test-oracle-id`, `skill_firing_rate`, and `skill_acceptance_rate` | Do not list per-row in takeover output; summarize by signal counts. |
+| `gate` | severity が `error` または `fail` | acceptance を block し得るため、`signal_type` で group 化して先に表示する。 |
+| `actionable` | telemetry 以外の `warn` rows | `signal_type` ごとに count と代表 next action を表示する。 |
+| `telemetry` | `info` rows および `artifact_progress_yellow`、`missing-test-oracle-id`、`skill_firing_rate`、`skill_acceptance_rate` などの高頻度 measurement signals | takeover output では row ごとに列挙せず、signal count で要約する。 |
 
-`selectTakeoverFeedback` and text `ut-tdd feedback list` output use this
-taxonomy. `ut-tdd feedback list --json` remains the raw audit path for consumers
-that need individual queue rows.
+`selectTakeoverFeedback` と text `ut-tdd feedback list` output はこの taxonomy を使う。個別 queue rows が必要な consumers 向けには、`ut-tdd feedback list --json` を raw audit path として残す。
 
-### 2026-06-23 Read-only Quality / Branch Audit Addendum
+### 2026-06-23 read-only quality / branch audit 追補
 
-Hardcode/security/debt detection and large branch cleanup are surfaced as
-read-only audits first. They do not mutate source files, Git branches, remotes,
-or harness state.
+hardcode/security/debt detection と large branch cleanup は、まず read-only audits として surface する。source files、Git branches、remotes、harness state は mutate しない。
 
-| Function | Signature | pre | post / oracle |
+| 関数 | signature | 前提 | 事後 / oracle |
 |---|---|---|---|
-| `runQualityAudit` | `(repoRoot, opts) => QualityAuditResult` | repo root is readable; archive/migration/runtime-state paths are excluded by default | returns `gate` findings for secret-like or dangerous execution risks, `actionable` findings for hardcoded path/endpoint/model/provider and legacy runtime references, and `telemetry` findings for TODO/FIXME markers; text output is summarized and JSON remains raw enough for tooling |
-| `loadBranchAudit` | `(repoRoot, opts) => BranchAuditResult` | git local refs are readable | classifies local branches as `keep`, `delete-candidate`, or `review` using current/protected/gone/merged/stale evidence; it never deletes or rewrites branches |
+| `runQualityAudit` | `(repoRoot, opts) => QualityAuditResult` | repo root は読込可能で、archive/migration/runtime-state paths は既定で除外する。 | secret-like または危険な実行 risk は `gate` findings、hardcoded path/endpoint/model/provider と legacy runtime references は `actionable` findings、TODO/FIXME markers は `telemetry` findings として返す。text output は要約し、JSON は tooling に十分な raw 情報を残す。 |
+| `loadBranchAudit` | `(repoRoot, opts) => BranchAuditResult` | git local refs は読込可能である。 | current/protected/gone/merged/stale evidence により local branches を `keep`、`delete-candidate`、`review` に分類する。branch の削除や rewrite は行わない。 |
 
-## 2026-06-09 MCP Profile Config / Safety Addendum (A-125 / PLAN-L6-32)
+## 2026-06-09 MCP profile config / safety 追補 (A-125 / PLAN-L6-32)
 
-This addendum lowers requirements §6.8.10 and the A-125 research memo into L6 function contracts for MCP profile catalog hardening. It does not authorize profile execution by itself; it defines the pure checks and generated-config rules that a later L7 implementation must satisfy.
+この追補は requirements §6.8.10 と A-125 research memo を、MCP profile catalog hardening の L6 function contracts へ降下する。これ自体は profile execution を許可しない。後続 L7 implementation が満たすべき pure checks と generated-config rules を定義する。
 
-| Function | Signature | pre | post | invariant | oracle |
+| 関数 | signature | 前提 | 事後 | invariant | oracle |
 |---|---|---|---|---|---|
-| `catalogVerificationProfiles` | catalogVerificationProfiles(input: VerificationProfileCatalogInput) => VerificationProfileCatalogResult | built-in profiles and researched external candidates are supplied with source URL, package reference, trigger signals, and risk fields. | returns deterministic profile rows including Docker MCP Toolkit, MCP Inspector, Playwright MCP, GitHub read-only MCP, Vitest browser, Testcontainers, and MSW. | external profiles are disabled by default and are discovery/config metadata, not trusted execution. | U-MCPPROFILE-001..003 |
-| `renderGeneratedMcpConfig` | renderGeneratedMcpConfig(input: GeneratedMcpConfigInput) => GeneratedMcpConfigResult | selected profiles are allow-listed, workspace root is known, and secret values are represented only by env var names. | returns generated local config text and target path suggestion without writing Git-tracked secrets; each `mcpServers.<id>` carries a tokenized launcher argv (`command` = command head, `args` = remaining tokens), never the whole command string as one arg (PLAN-L7-79). | filesystem/git profiles are workspace-root scoped; user home mounts and inline tokens are violations. | U-MCPPROFILE-004..006, U-MCPPROFILE-013 |
-| `analyzeVerificationProfileSafety` | analyzeVerificationProfileSafety(input: VerificationProfileSafetyInput) => VerificationProfileSafetyResult | profile catalog, local package metadata, config text, and optional Docker profile metadata are supplied. | returns findings for unverified source, package mismatch, missing allow-list, broad toolset, write-enabled GitHub profile, global mount, credential persistence, or missing Docker controls. | official source verification and package integrity are required before `trusted`; registry/catalog presence alone is insufficient. | U-MCPPROFILE-007..010 |
-| `probeVerificationProfile` | probeVerificationProfile(id: string, deps: VerificationProbeDeps) => VerificationProbeResult \| null | profile id and command/probe dependencies are supplied. | returns readiness checks for activation, executable/package/auth prerequisites, and the generated launcher command head when it differs from the probe-hint executable. | a profile cannot be ready if the generated launcher command is unavailable, even when its package/executable probe hint is available. | U-MCPPROFILE-014 |
-| `planExternalProfileActivation` | planExternalProfileActivation(input: ExternalProfileActivationInput) => ExternalProfileActivationPlan | trigger signals, relation graph impact, profile readiness, and safety findings are supplied. | returns required probe, MCP Inspector smoke, human approval, or refusal steps for each recommended profile. | external activation is workflow evidence; it cannot silently install packages or enable MCP servers. | U-MCPPROFILE-011..012 |
+| `catalogVerificationProfiles` | catalogVerificationProfiles(input: VerificationProfileCatalogInput) => VerificationProfileCatalogResult | built-in profiles と調査済み external candidates を source URL、package reference、trigger signals、risk fields 付きで与える。 | Docker MCP Toolkit、MCP Inspector、Playwright MCP、GitHub read-only MCP、Vitest browser、Testcontainers、MSW を含む deterministic profile rows を返す。 | external profiles は既定で disabled とし、discovery/config metadata であって trusted execution ではない。 | U-MCPPROFILE-001..003 |
+| `renderGeneratedMcpConfig` | renderGeneratedMcpConfig(input: GeneratedMcpConfigInput) => GeneratedMcpConfigResult | selected profiles は allow-list 済み、workspace root は既知、secret values は env var 名だけで表す。 | Git-tracked secrets を書かず、generated local config text と target path suggestion を返す。各 `mcpServers.<id>` は tokenized launcher argv (`command` = command head、`args` = remaining tokens) を持ち、command 文字列全体を 1 arg にしない (PLAN-L7-79)。 | filesystem/git profiles は workspace-root scoped とする。user home mounts と inline tokens は violations。 | U-MCPPROFILE-004..006, U-MCPPROFILE-013 |
+| `analyzeVerificationProfileSafety` | analyzeVerificationProfileSafety(input: VerificationProfileSafetyInput) => VerificationProfileSafetyResult | profile catalog、local package metadata、config text、任意の Docker profile metadata を与える。 | unverified source、package mismatch、missing allow-list、broad toolset、write-enabled GitHub profile、global mount、credential persistence、missing Docker controls を findings として返す。 | `trusted` 前には official source verification と package integrity が必須で、registry/catalog presence だけでは不足。 | U-MCPPROFILE-007..010 |
+| `probeVerificationProfile` | probeVerificationProfile(id: string, deps: VerificationProbeDeps) => VerificationProbeResult \| null | profile id と command/probe dependencies を与える。 | activation、executable/package/auth prerequisites、probe-hint executable と異なる generated launcher command head の readiness checks を返す。 | generated launcher command が利用できなければ、package/executable probe hint が利用可能でも profile は ready にならない。 | U-MCPPROFILE-014 |
+| `planExternalProfileActivation` | planExternalProfileActivation(input: ExternalProfileActivationInput) => ExternalProfileActivationPlan | trigger signals、relation graph impact、profile readiness、safety findings を与える。 | 推奨 profile ごとに必要な probe、MCP Inspector smoke、human approval、refusal steps を返す。 | external activation は workflow evidence であり、package install や MCP server 有効化を黙って行えない。 | U-MCPPROFILE-011..012 |
 
-Safety defaults:
+安全 default:
 
-- Docker MCP Toolkit is a profile-isolation candidate and must remain optional unless Docker Desktop/toolkit availability is proven.
-- GitHub MCP defaults to read-only and narrow toolsets; write-capable profile variants require `requires_human_approval`.
-- Generated MCP config is local/environment state and must not introduce committed credentials or user-specific absolute home paths.
-- Tool/profile output is normalized into evidence/projection rows; raw MCP responses, screenshots, traces, and provider transcripts are excluded from DB rows.
+- Docker MCP Toolkit は profile-isolation candidate であり、Docker Desktop/toolkit availability が証明されるまでは optional のままにする。
+- GitHub MCP は read-only と narrow toolset を default とする。write-capable profile variant は `requires_human_approval` を要求する。
+- generated MCP config は local/environment state であり、committed credential や user-specific absolute home path を導入してはならない。
+- tool/profile output は evidence/projection row へ normalize する。raw MCP response、screenshot、trace、provider transcript は DB row から除外する。
 
-## 2026-06-09 Canonical Document Export Addendum (A-126 / PLAN-L6-34)
+## 2026-06-09 canonical document export 追補 (A-126 / PLAN-L6-34)
 
-This addendum lowers requirements §6.8.11 and the A-126 research memo into L6 function contracts for converting canonical UT-TDD documents into spreadsheet / Excel / PPTX outputs. It does not authorize Office-format generation by itself; it defines the pure document-structure and export-dataset rules that a later L7 implementation must satisfy.
+この追補は requirements §6.8.11 と A-126 research memo を、canonical UT-TDD documents を spreadsheet / Excel / PPTX outputs へ変換する L6 function contracts に降下する。これ自体は Office-format generation を許可しない。後続 L7 implementation が満たすべき pure document-structure と export-dataset rules を定義する。
 
-| Function | Signature | pre | post | invariant | oracle |
+| 関数 | signature | 前提 | 事後 | invariant | oracle |
 |---|---|---|---|---|---|
-| `parseCanonicalDocumentStructure` | parseCanonicalDocumentStructure(input: CanonicalDocumentInput) => CanonicalDocumentProjection | source docs are supplied as repo-relative paths and text; document family is one of concept, requirements, design, plan, adr, or test-design. | returns sections, headings, tables, decisions, trace IDs, status fields, evidence links, and source anchors. | canonical Markdown/docs remain source of truth; generated exports cannot introduce or drop FR/AC/AT/PLAN/ADR IDs. | U-DOCEXPORT-001..003 |
-| `buildDocumentExportDataset` | buildDocumentExportDataset(input: DocumentExportDatasetInput) => DocumentExportDataset | document projection, requested format, and export profile are supplied. | returns deterministic rows/sheets/slide-outline records with source path, section ID, ID columns, status, trace, and evidence links. | dataset is redacted before rendering; large docs split by family/section instead of truncating. | U-DOCEXPORT-004..006 |
-| `renderDocumentExport` | renderDocumentExport(input: DocumentExportRenderInput, deps: DocumentExportRendererDeps) => DocumentExportRenderResult | dataset and renderer profile are supplied; CSV/Markdown are built-in; XLSX/PPTX/D2 require readiness. | returns generated artifact metadata or a renderer-unavailable finding. | renderer execution is optional and never installs packages implicitly. | U-DOCEXPORT-007..009 |
-| `recordDocumentExportArtifact` | recordDocumentExportArtifact(input: DocumentExportArtifactInput) => DocumentExportProjectionRows | render result, source snapshot hash, redaction profile, and evidence path are supplied. | returns `document_export_runs`, `document_export_datasets`, and `document_export_artifacts` projection rows. | generated files are derived artifacts; gate truth remains canonical docs, normalized rows, and recorded human decisions. | U-DOCEXPORT-010..012 |
+| `parseCanonicalDocumentStructure` | parseCanonicalDocumentStructure(input: CanonicalDocumentInput) => CanonicalDocumentProjection | source docs は repo-relative path と text として与える。document family は concept、requirements、design、plan、adr、test-design のいずれかとする。 | section、heading、table、decision、trace ID、status field、evidence link、source anchor を返す。 | canonical Markdown/docs は source of truth のままにする。generated export は FR/AC/AT/PLAN/ADR ID を導入または drop できない。 | U-DOCEXPORT-001..003 |
+| `buildDocumentExportDataset` | buildDocumentExportDataset(input: DocumentExportDatasetInput) => DocumentExportDataset | document projection、requested format、export profile を与える。 | source path、section ID、ID column、status、trace、evidence link を持つ deterministic row/sheet/slide-outline record を返す。 | dataset は rendering 前に redact する。large docs は truncate せず family/section で split する。 | U-DOCEXPORT-004..006 |
+| `renderDocumentExport` | renderDocumentExport(input: DocumentExportRenderInput, deps: DocumentExportRendererDeps) => DocumentExportRenderResult | dataset と renderer profile を与える。CSV/Markdown は built-in、XLSX/PPTX/D2 は readiness を要求する。 | generated artifact metadata または renderer-unavailable finding を返す。 | renderer execution は optional であり、package を implicit install しない。 | U-DOCEXPORT-007..009 |
+| `recordDocumentExportArtifact` | recordDocumentExportArtifact(input: DocumentExportArtifactInput) => DocumentExportProjectionRows | render result、source snapshot hash、redaction profile、evidence path を与える。 | `document_export_runs`、`document_export_datasets`、`document_export_artifacts` projection row を返す。 | generated file は derived artifact とする。gate truth は canonical docs、normalized row、recorded human decision に残す。 | U-DOCEXPORT-010..012 |
 
-Supported document families:
+対応 document family:
 
-- concept / planning documents -> objective, value, scope, KPI, risks, decisions, roadmap;
-- requirements -> FR/AC/AT, priority, acceptance, trace, owner/status;
-- detailed design -> module/function/API/DB/contract rows, dependencies, unresolved carry;
-- PLAN -> frontmatter, dependencies, generated artifacts, DoD, evidence, blockers;
-- ADR -> decision, alternatives, consequences, follow-ups, status/date;
-- test-design -> U/IT/AT oracles, GWT rows, green definitions, missing coverage.
+- concept / planning documents は objective、value、scope、KPI、risk、decision、roadmap を扱う。
+- requirements は FR/AC/AT、priority、acceptance、trace、owner/status を扱う。
+- detailed design は module/function/API/DB/contract row、dependency、unresolved carry を扱う。
+- PLAN は frontmatter、dependency、generated artifact、DoD、evidence、blocker を扱う。
+- ADR は decision、alternative、consequence、follow-up、status/date を扱う。
+- test-design は U/IT/AT oracle、GWT row、green definition、missing coverage を扱う。
 
-Export defaults:
+export default:
 
-- CSV and Markdown summary are built-in.
-- XLSX is optional via ExcelJS or SheetJS readiness.
-- PPTX is optional via PptxGenJS readiness.
-- D2 PPTX is optional for architecture/workflow diagrams only.
+- CSV と Markdown summary は built-in とする。
+- XLSX は ExcelJS または SheetJS readiness による optional とする。
+- PPTX は PptxGenJS readiness による optional とする。
+- D2 PPTX は architecture/workflow diagram のみに対する optional とする。
 
-### FR registry function contract table
+### FR registry 関数契約表
 
-This table is the function-spec-side descent for rows in `fr-unit-coverage.md` whose L6 spec is this file. It prevents the FR matrix from becoming a prose-only coverage claim. Each row is intentionally unit-test sized: one or more named functions, a concrete signature shape, DbC pre/post/invariant, and the exact U-FR oracle.
+この table は、L6 spec が本 file である `fr-unit-coverage.md` rows の function-spec 側 descent である。FR matrix が prose-only coverage claim になることを防ぐ。各 row は意図的に unit-test size とし、1 つ以上の named functions、具体的な signature shape、DbC pre/post/invariant、正確な U-FR oracle を持つ。
 
-| FR | Function(s) | Signature | pre | post | invariant | oracle |
+<!-- machine marker for DbC gate: | Function(s) | Signature | pre | post | invariant | oracle | -->
+| FR | 関数 | signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|---|
-| FR-L1-01 | `planDraft` | planDraft(input: PlanDraftInput, deps: PlanDraftDeps) => PlanDraftResult | required IDs/paths are normalized and required evidence is present. | returns deterministic U-FR-L1-01 result; missing evidence is a violation/finding. | read-only for source docs; generated state/projection is rebuildable; no secrets or provider transcripts are stored. | U-FR-L1-01 |
-| FR-L1-02 | `sprintCheck` | sprintCheck(input: SprintCheckInput, deps: SprintCheckDeps) => SprintCheckResult | required IDs/paths are normalized and required evidence is present. | returns deterministic U-FR-L1-02 result; missing evidence is a violation/finding. | read-only for source docs; generated state/projection is rebuildable; no secrets or provider transcripts are stored. | U-FR-L1-02 |
-| FR-L1-04 | `frontmatterSchema`, `parseRequires` | frontmatterSchema(input: FrontmatterSchemaInput, deps: FrontmatterSchemaDeps) => FrontmatterSchemaResult<br>parseRequires(input: ParseRequiresInput, deps: ParseRequiresDeps) => ParseRequiresResult | required IDs/paths are normalized and required evidence is present. | returns deterministic U-FR-L1-04 result; missing evidence is a violation/finding. | read-only for source docs; generated state/projection is rebuildable; no secrets or provider transcripts are stored. | U-FR-L1-04 |
-| FR-L1-06 | `recordProjectionEvent`, `rebuildHarnessDb` | recordProjectionEvent(input: RecordProjectionEventInput, deps: RecordProjectionEventDeps) => RecordProjectionEventResult<br>rebuildHarnessDb(input: RebuildHarnessDbInput, deps: RebuildHarnessDbDeps) => RebuildHarnessDbResult | event has `plan_id` or `session_id`; `deps.dbPath` is under `.ut-tdd/`; source docs/logs are readable. | projection rows are upserted or rebuilt deterministically; `search_index` and `quality_signals` are recomputed. | DB is a rebuildable projection, not an authoring source; source docs are never rewritten. | U-FR-L1-06 |
-| FR-L1-08 | `routeSignalToMode` | routeSignalToMode(input: RouteSignalToModeInput, deps: RouteSignalToModeDeps) => RouteSignalToModeResult | signal type, evidence path, and current plan/mode context are present. | returns candidate mode(s) with reason and does not mutate workflow state. | unknown signal becomes a finding or no-route result, not silent success. | U-FR-L1-08 |
-| FR-L1-09 | `evaluateAgentGuard` | evaluateAgentGuard(input: EvaluateAgentGuardInput, deps: EvaluateAgentGuardDeps) => EvaluateAgentGuardResult | subagent/model family and allow-raw context are supplied. | returns allow/block/bypass decision with evidence; forbidden same-model or raw calls are blocked unless explicitly allowed. | no credential or provider transcript is persisted. | U-FR-L1-09 |
-| FR-L1-11 | `recordCrossCuttingEvent` | recordCrossCuttingEvent(input: RecordCrossCuttingEventInput, deps: RecordCrossCuttingEventDeps) => RecordCrossCuttingEventResult | event has type, severity, subject, and evidence path. | records interrupt/debt/drift/readiness event or returns a validation violation. | recording is append/projection only and cannot approve gates. | U-FR-L1-11 |
-| FR-L1-12 | `suggestSkillInjection` | suggestSkillInjection(input: SuggestSkillInjectionInput, deps: SuggestSkillInjectionDeps) => SuggestSkillInjectionResult | task text, layer, kind/drive, and catalog snapshot are supplied. | returns deterministic ranked skill/command candidates with reasons. | missing catalog rows become findings; recommendations never copy prompt bodies. | U-FR-L1-12 |
-| FR-L1-13 | `enforceForwardOrder` | enforceForwardOrder(input: EnforceForwardOrderInput, deps: EnforceForwardOrderDeps) => EnforceForwardOrderResult | current layer/gate and prior gate statuses are known. | returns pass only when Forward order and required gates are satisfied. | exceptions require explicit evidence and cannot silently skip blocked gates. | U-FR-L1-13 |
-| FR-L1-14 | `routeReverseR4` | routeReverseR4(input: RouteReverseR4Input, deps: RouteReverseR4Deps) => RouteReverseR4Result | reverse type, R4 evidence, `forward_routing`, and `promotion_strategy` are present. | returns the Forward target or a blocking violation. | only confirmed reverse evidence can merge into Forward. | U-FR-L1-14 |
-| FR-L1-15 | `decideDiscoveryS4` | decideDiscoveryS4(input: DecideDiscoveryS4Input, deps: DecideDiscoveryS4Deps) => DecideDiscoveryS4Result | hypothesis, PoC verification evidence, and outcome are present. | returns confirmed/rejected/pivot decision with routing requirements. | rejected/pivot cannot be treated as confirmed. | U-FR-L1-15 |
-| FR-L1-19 | `emitFeedbackEvents` | emitFeedbackEvents(input: EmitFeedbackEventsInput, deps: EmitFeedbackEventsDeps) => EmitFeedbackEventsResult | normalized findings and quality signals are supplied. | repeated gaps, unresolved blockers, dependency stalls, and regressions become feedback events. | feedback events do not edit or approve PLANs. | U-FR-L1-19 |
-| FR-L1-22 | `detectFrontendDrift` | detectFrontendDrift(input: DetectFrontendDriftInput, deps: DetectFrontendDriftDeps) => DetectFrontendDriftResult | mock/token/a11y/visual/state evidence roots are supplied or explicitly absent. | returns deterministic drift signals with evidence paths. | absent optional roots are explicit, not silent pass. | U-FR-L1-22 |
-| FR-L1-23 | `routeScrumFullback` | routeScrumFullback(input: RouteScrumFullbackInput, deps: RouteScrumFullbackDeps) => RouteScrumFullbackResult | increment evidence and S4 decision are present. | returns Forward target(s) and required back-fill artifacts. | only confirmed increments can enter Forward. | U-FR-L1-23 |
-| FR-L1-25 | `assertRefactorInvariant` | assertRefactorInvariant(input: AssertRefactorInvariantInput, deps: AssertRefactorInvariantDeps) => AssertRefactorInvariantResult | before/after behavior evidence, regression results, and linked regression `test_ids` are present. | pass only when external behavior is unchanged, regression evidence is green, and at least one test ID is linked. | refactor cannot introduce new functional scope or close without test-ID-linked green evidence. | U-FR-L1-25 |
-| FR-L1-26 | `evaluateRetrofitMatrix` | evaluateRetrofitMatrix(input: EvaluateRetrofitMatrixInput, deps: EvaluateRetrofitMatrixDeps) => EvaluateRetrofitMatrixResult | migration/config/rollback fixtures are supplied. | returns readiness classification and blocking evidence. | staged migration cannot be ready without rollback evidence. | U-FR-L1-26 |
-| FR-L1-27 | `evaluateResearchDecision` | evaluateResearchDecision(input: EvaluateResearchDecisionInput, deps: EvaluateResearchDecisionDeps) => EvaluateResearchDecisionResult | research memo, source list, and ADR candidate are supplied. | returns decision-ready or blocked with missing evidence. | research output cannot bypass ADR or requirement trace. | U-FR-L1-27 |
-| FR-L1-28 | `mergeTwoStageAgentDesign` | mergeTwoStageAgentDesign(input: MergeTwoStageAgentDesignInput, deps: MergeTwoStageAgentDesignDeps) => MergeTwoStageAgentDesignResult | Phase 1/2 design artifacts and drive=agent handoff evidence are present. | returns merged design state or explicit gap list. | merged output preserves layer boundaries and cannot copy provider transcripts. | U-FR-L1-28 |
-| FR-L1-29 | `validateScreenDesignWorkflow` | validateScreenDesignWorkflow(input: ValidateScreenDesignWorkflowInput, deps: ValidateScreenDesignWorkflowDeps) => ValidateScreenDesignWorkflowResult | IA, screen list, flow, wireframe/mock, and componentization outputs are supplied. | pass only when screen design artifacts and pair traces are complete. | UI workflow cannot be marked complete from backend-only evidence. | U-FR-L1-29 |
-| FR-L1-30 | `validateFrontendDesignWorkflow` | validateFrontendDesignWorkflow(input: ValidateFrontendDesignWorkflowInput, deps: ValidateFrontendDesignWorkflowDeps) => ValidateFrontendDesignWorkflowResult | visual design, token SSoT, a11y, VRT, and UX evidence are supplied. | returns pass or missing artifact list for frontend polish gates. | accessibility and token evidence remain first-class, not advisory text. | U-FR-L1-30 |
-| FR-L1-08 / FR-L1-25 / FR-L1-29 / FR-L1-30 | `classifyDriveTddFits` | classifyDriveTddFits(input?: { modes?: string[] }, deps: ClassifyDriveTddFitsDeps) => ClassifyDriveTddFitsResult | drive/mode names are supplied or omitted for all. | returns TDD compatibility, Red trigger sources, Yellow state, and Green requirements for each drive model / design specialty. | classification is advisory/read-only and cannot mark a PLAN complete. | U-FR-L1-08 / U-FR-L1-25 / U-FR-L1-29 / U-FR-L1-30 |
-| FR-L1-39 / FR-L1-41 | `classifyProposalDocumentCoverage` | classifyProposalDocumentCoverage(input: ClassifyTaskInput, deps: ClassifyProposalDocumentCoverageDeps) => ProposalDocumentCoverage | proposal/task text, optional affected files, and optional dependencies are supplied. | returns minimum required design docs, test-design docs, evidence, gates, research adoption decisions, rejected research inputs, and recommended subagent lanes by use-case pack. | required docs are additive; LLM/minor wording cannot remove them; unknown or low-confidence classification escalates coverage instead of shrinking it; cheap mini/spark lanes may accelerate research or bounded work but cannot close risk or reduce coverage. | U-FR-L1-39 |
+| FR-L1-01 | `planDraft` | planDraft(input: PlanDraftInput, deps: PlanDraftDeps) => PlanDraftResult | 必須 ID/path は正規化済みで、必要 evidence が存在する。 | deterministic な U-FR-L1-01 result を返す。evidence 欠落は violation/finding とする。 | source docs は read-only。generated state/projection は rebuildable。secret や provider transcript は保存しない。 | U-FR-L1-01 |
+| FR-L1-02 | `sprintCheck` | sprintCheck(input: SprintCheckInput, deps: SprintCheckDeps) => SprintCheckResult | 必須 ID/path は正規化済みで、必要 evidence が存在する。 | deterministic な U-FR-L1-02 result を返す。evidence 欠落は violation/finding とする。 | source docs は read-only。generated state/projection は rebuildable。secret や provider transcript は保存しない。 | U-FR-L1-02 |
+| FR-L1-04 | `frontmatterSchema`, `parseRequires` | frontmatterSchema(input: FrontmatterSchemaInput, deps: FrontmatterSchemaDeps) => FrontmatterSchemaResult<br>parseRequires(input: ParseRequiresInput, deps: ParseRequiresDeps) => ParseRequiresResult | 必須 ID/path は正規化済みで、必要 evidence が存在する。 | deterministic な U-FR-L1-04 result を返す。evidence 欠落は violation/finding とする。 | source docs は read-only。generated state/projection は rebuildable。secret や provider transcript は保存しない。 | U-FR-L1-04 |
+| FR-L1-06 | `recordProjectionEvent`, `rebuildHarnessDb` | recordProjectionEvent(input: RecordProjectionEventInput, deps: RecordProjectionEventDeps) => RecordProjectionEventResult<br>rebuildHarnessDb(input: RebuildHarnessDbInput, deps: RebuildHarnessDbDeps) => RebuildHarnessDbResult | event は `plan_id` または `session_id` を持つ。`deps.dbPath` は `.ut-tdd/` 配下にあり、source docs/logs は readable とする。 | projection row を deterministic に upsert または rebuild し、`search_index` と `quality_signals` を recompute する。 | DB は rebuildable projection であり authoring source ではない。source docs は rewrite しない。 | U-FR-L1-06 |
+| FR-L1-08 | `routeSignalToMode` | routeSignalToMode(input: RouteSignalToModeInput, deps: RouteSignalToModeDeps) => RouteSignalToModeResult | signal type、evidence path、current plan/mode context が存在する。 | reason 付き candidate mode(s) を返し、workflow state は mutate しない。 | unknown signal は finding または no-route result とし、silent success にしない。 | U-FR-L1-08 |
+| FR-L1-09 | `evaluateAgentGuard` | evaluateAgentGuard(input: EvaluateAgentGuardInput, deps: EvaluateAgentGuardDeps) => EvaluateAgentGuardResult | subagent/model family と allow-raw context を与える。 | evidence 付き allow/block/bypass decision を返す。禁止された same-model または raw call は明示許可がない限り block する。 | credential や provider transcript は永続化しない。 | U-FR-L1-09 |
+| FR-L1-11 | `recordCrossCuttingEvent` | recordCrossCuttingEvent(input: RecordCrossCuttingEventInput, deps: RecordCrossCuttingEventDeps) => RecordCrossCuttingEventResult | event は type、severity、subject、evidence path を持つ。 | interrupt/debt/drift/readiness event を記録、または validation violation を返す。 | recording は append/projection のみであり、gate approval はできない。 | U-FR-L1-11 |
+| FR-L1-12 | `suggestSkillInjection` | suggestSkillInjection(input: SuggestSkillInjectionInput, deps: SuggestSkillInjectionDeps) => SuggestSkillInjectionResult | task text、layer、kind/drive、catalog snapshot を与える。 | reason 付き deterministic ranked skill/command candidates を返す。 | missing catalog rows は findings とする。recommendations は prompt bodies を copy しない。 | U-FR-L1-12 |
+| FR-L1-13 | `enforceForwardOrder` | enforceForwardOrder(input: EnforceForwardOrderInput, deps: EnforceForwardOrderDeps) => EnforceForwardOrderResult | current layer/gate と prior gate statuses が既知である。 | Forward order と required gates が満たされる場合だけ pass を返す。 | exceptions は explicit evidence を要求し、blocked gates を黙って skip できない。 | U-FR-L1-13 |
+| FR-L1-14 | `routeReverseR4` | routeReverseR4(input: RouteReverseR4Input, deps: RouteReverseR4Deps) => RouteReverseR4Result | reverse type、R4 evidence、`forward_routing`、`promotion_strategy` が存在する。 | Forward target または blocking violation を返す。 | confirmed reverse evidence だけが Forward へ merge できる。 | U-FR-L1-14 |
+| FR-L1-15 | `decideDiscoveryS4` | decideDiscoveryS4(input: DecideDiscoveryS4Input, deps: DecideDiscoveryS4Deps) => DecideDiscoveryS4Result | hypothesis、PoC verification evidence、outcome が存在する。 | routing requirements 付きの confirmed/rejected/pivot decision を返す。 | rejected/pivot を confirmed として扱えない。 | U-FR-L1-15 |
+| FR-L1-19 | `emitFeedbackEvents` | emitFeedbackEvents(input: EmitFeedbackEventsInput, deps: EmitFeedbackEventsDeps) => EmitFeedbackEventsResult | normalized findings と quality signals を与える。 | repeated gaps、unresolved blockers、dependency stalls、regressions を feedback events にする。 | feedback events は PLAN を edit も approve もしない。 | U-FR-L1-19 |
+| FR-L1-22 | `detectFrontendDrift` | detectFrontendDrift(input: DetectFrontendDriftInput, deps: DetectFrontendDriftDeps) => DetectFrontendDriftResult | mock/token/a11y/visual/state evidence roots は与えられる、または明示的に absent とする。 | evidence paths 付き deterministic drift signals を返す。 | optional roots の absent は明示し、silent pass にしない。 | U-FR-L1-22 |
+| FR-L1-23 | `routeScrumFullback` | routeScrumFullback(input: RouteScrumFullbackInput, deps: RouteScrumFullbackDeps) => RouteScrumFullbackResult | increment evidence と S4 decision が存在する。 | Forward target(s) と required back-fill artifacts を返す。 | confirmed increments だけが Forward に入れる。 | U-FR-L1-23 |
+| FR-L1-25 | `assertRefactorInvariant` | assertRefactorInvariant(input: AssertRefactorInvariantInput, deps: AssertRefactorInvariantDeps) => AssertRefactorInvariantResult | before/after behavior evidence、regression results、linked regression `test_ids` が存在する。 | external behavior が不変、regression evidence が green、少なくとも 1 件の test ID が linked の場合だけ pass。 | refactor は新しい functional scope を導入できず、test-ID-linked green evidence なしに close できない。 | U-FR-L1-25 |
+| FR-L1-26 | `evaluateRetrofitMatrix` | evaluateRetrofitMatrix(input: EvaluateRetrofitMatrixInput, deps: EvaluateRetrofitMatrixDeps) => EvaluateRetrofitMatrixResult | migration/config/rollback fixtures を与える。 | readiness classification と blocking evidence を返す。 | rollback evidence なしに staged migration は ready にならない。 | U-FR-L1-26 |
+| FR-L1-27 | `evaluateResearchDecision` | evaluateResearchDecision(input: EvaluateResearchDecisionInput, deps: EvaluateResearchDecisionDeps) => EvaluateResearchDecisionResult | research memo、source list、ADR candidate を与える。 | decision-ready または missing evidence 付き blocked を返す。 | research output は ADR や requirement trace を bypass できない。 | U-FR-L1-27 |
+| FR-L1-28 | `mergeTwoStageAgentDesign` | mergeTwoStageAgentDesign(input: MergeTwoStageAgentDesignInput, deps: MergeTwoStageAgentDesignDeps) => MergeTwoStageAgentDesignResult | Phase 1/2 design artifacts と drive=agent handoff evidence が存在する。 | merged design state または explicit gap list を返す。 | merged output は layer boundaries を保持し、provider transcripts を copy できない。 | U-FR-L1-28 |
+| FR-L1-29 | `validateScreenDesignWorkflow` | validateScreenDesignWorkflow(input: ValidateScreenDesignWorkflowInput, deps: ValidateScreenDesignWorkflowDeps) => ValidateScreenDesignWorkflowResult | IA、screen list、flow、wireframe/mock、componentization outputs を与える。 | screen design artifacts と pair traces が complete の場合だけ pass。 | UI workflow は backend-only evidence から complete にできない。 | U-FR-L1-29 |
+| FR-L1-30 | `validateFrontendDesignWorkflow` | validateFrontendDesignWorkflow(input: ValidateFrontendDesignWorkflowInput, deps: ValidateFrontendDesignWorkflowDeps) => ValidateFrontendDesignWorkflowResult | visual design、token SSoT、a11y、VRT、UX evidence を与える。 | frontend polish gates に対する pass または missing artifact list を返す。 | accessibility と token evidence は first-class であり、advisory text に落とさない。 | U-FR-L1-30 |
+| FR-L1-08 / FR-L1-25 / FR-L1-29 / FR-L1-30 | `classifyDriveTddFits` | classifyDriveTddFits(input?: { modes?: string[] }, deps: ClassifyDriveTddFitsDeps) => ClassifyDriveTddFitsResult | drive/mode names は与えられる、または全件対象として省略される。 | 各 drive model / design specialty について TDD compatibility、Red trigger sources、Yellow state、Green requirements を返す。 | classification は advisory/read-only であり、PLAN complete はできない。 | U-FR-L1-08 / U-FR-L1-25 / U-FR-L1-29 / U-FR-L1-30 |
+| FR-L1-39 / FR-L1-41 | `classifyProposalDocumentCoverage` | classifyProposalDocumentCoverage(input: ClassifyTaskInput, deps: ClassifyProposalDocumentCoverageDeps) => ProposalDocumentCoverage | proposal/task text、任意の affected files、任意の dependencies を与える。 | use-case pack ごとに minimum required design docs、test-design docs、evidence、gates、research adoption decisions、rejected research inputs、recommended subagent lanes を返す。 | required docs は additive。LLM/minor wording は削除できない。unknown または low-confidence classification は coverage を縮小せず escalate する。cheap mini/spark lanes は research や bounded work を早めても、risk close や coverage 削減はできない。 | U-FR-L1-39 |
 
-Proposal-stage subagent lane names are advisory and do not replace the execution router SSoT in `tierFor` / `routeTeamMembers`. `T2-mini` is the low-cost research/document inventory lane, `T2-spark` is the low-cost bounded implementation lane, `T1-worker` is the normal implementation lane, and `T0-frontier` is gated judgement. `PROPOSAL_SUBAGENT_LANES` defines model, `parallel_slots`, `closing_authority`, and guard text for these lanes: mini/spark lanes may run multiple disjoint workers in parallel but cannot close risk or reduce required coverage; frontier judgement is single-slot and explicitly gated. Do not introduce a separate `strong` model-band label here: `strong` is already used elsewhere as a compatibility adjective, and `T1-worker` is the unambiguous cost-tier name for this contract.
+proposal-stage subagent lane names は advisory であり、`tierFor` / `routeTeamMembers` の execution router SSoT を置換しない。`T2-mini` は低コスト research/document inventory lane、`T2-spark` は低コスト bounded implementation lane、`T1-worker` は通常 implementation lane、`T0-frontier` は gated judgement である。`PROPOSAL_SUBAGENT_LANES` はこれら lane の model、`parallel_slots`、`closing_authority`、guard text を定義する。mini/spark lanes は複数の disjoint workers を並列実行できるが、risk close や required coverage 削減はできない。frontier judgement は single-slot かつ明示 gate 対象である。ここで別の `strong` model-band label を導入してはいけない。`strong` は他所で compatibility adjective として使われており、この contract では `T1-worker` が曖昧さのない cost-tier name である。
 
-`team suggest --design-docs` bridges these advisory lanes into a proposal coverage team definition. Non-closing lanes (`T2-mini`, `T2-spark`, `T1-worker`) become concrete `TeamMember` rows with model override, ownership shard, and low/medium effort. `T0-frontier` remains judgement guidance and is not emitted as an executable member, so frontier approval cannot be bypassed through `team run`; a Claude-side TL review member is added after the first parallel shard to preserve cross-provider review.
-| FR-L1-32 | `validateFolderRules` | validateFolderRules(input: ValidateFolderRulesInput, deps: ValidateFolderRulesDeps) => ValidateFolderRulesResult | path registry and artifact kind are supplied. | returns violations for misplaced process docs/tests/state. | folder policy is checked without rewriting files. | U-FR-L1-32 |
-| FR-L1-33 | `catalogExistingAssets` | catalogExistingAssets(input: CatalogExistingAssetsInput, deps: CatalogExistingAssetsDeps) => CatalogExistingAssetsResult | approved asset roots are supplied. | classifies command/skill/detector/template/state/hook/doc/test assets by coverage status. | catalog stores metadata only; prompt bodies and secrets stay in source docs. | U-FR-L1-33 |
-| FR-L1-34 | `prioritizeCapabilityGaps` | prioritizeCapabilityGaps(input: PrioritizeCapabilityGapsInput, deps: PrioritizeCapabilityGapsDeps) => PrioritizeCapabilityGapsResult | asset catalog, workflow impact, and missing route/recover signals are supplied. | returns deterministic priority order with reason. | priority is advisory until converted into a PLAN. | U-FR-L1-34 |
-| FR-L1-35 | `renderFoundationReadiness` | renderFoundationReadiness(input: RenderFoundationReadinessInput, deps: RenderFoundationReadinessDeps) => RenderFoundationReadinessResult | infrastructure category inventory is supplied. | reports implemented/designed/missing categories. | report cannot mark missing categories as implemented. | U-FR-L1-35 |
-| FR-L1-36 | `projectSkillEvaluations` | projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string }) => void | skill_invocations and plan_registry rows exist; asOf is an ISO timestamp (default = nowIso()). | writes one skill_evaluations row per skill_id with accepted=1 invocations; skill_rating = success_count / adoption_count; unused_flag = 1 when no invocation fired within 30 days of asOf; cold-start (0 invocations) writes 0 rows and never throws. | does not auto-delete unused skills; deletion is human-only; success states ("confirmed"/"completed") are documented in source and single-source-of-truth hardcoded with rationale. | U-FR-L1-36 |
-| FR-L1-43 | `projectPocEvaluations` | projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }) => void | plan_registry has kind="poc" rows with decision_outcome populated from PLAN frontmatter. | writes one poc_evaluations summary row (id="poc-evaluation:summary") with poc_success_rate = confirmed_count / total_count, confirmed_count, rejected_count, pivot_count, total_count, evaluated_at; PoC PLANs with empty decision_outcome are excluded from denominator; cold-start (0 decided PoC PLANs) writes 0 rows and never throws. | pivot counts as non-success; decision_outcome values are single-source-hardcoded with rationale; row id is always "poc-evaluation:summary" (one summary row per rebuild). | U-FR-L1-43 |
-| FR-L1-38 | `projectModelEvaluations` | projectModelEvaluations(db: HarnessDb, repoRoot: string) => void | model_runs table is populated by projectReviewModelRuns and, for token/cost telemetry, by `projectTokenUsage`; .ut-tdd/config/model-opt-in.yaml exists with enabled:true for evaluation to run; PLAN_SUCCESS_STATUSES is the single-source constant for success inference. | if opt-in disabled (file absent or enabled!=true): writes 0 rows and returns; if enabled: writes one model_evaluations row per distinct model with success_rate = success_count / run_count (join model_runs.plan_id -> plan_registry.status IN PLAN_SUCCESS_STATUSES); cold-start (0 model_runs) writes 0 rows and never throws; token/cost rows are ingested by `ut-tdd telemetry scan` via file-scan only. | cost-efficiency (tokens_per_success/cost_per_success) is discharged by PLAN-L7-57 and PLAN-L7-58; cost is computed only from local pricing tables for known models, and unpublished/unknown models keep cost_usd=null (no fabricated cost); success states are single-source-hardcoded (PLAN_SUCCESS_STATUSES). | U-FR-L1-38 |
-| FR-L1-37 | `recommendModelEffort` | recommendModelEffort(input: RecommendModelEffortInput, deps: RecommendModelEffortDeps) => RecommendModelEffortResult | task, drive, layer, size, and uncertainty signals are supplied. | returns model family and reasoning effort recommendation. | model recommendation is recorded as evidence, not hidden prompt state. | U-FR-L1-37 |
-| FR-L1-39 | `scoreTaskComplexity` | scoreTaskComplexity(input: ScoreTaskComplexityInput, deps: ScoreTaskComplexityDeps) => ScoreTaskComplexityResult | size, dependency, uncertainty, and affected artifact signals are supplied. | returns deterministic score and class. | unknown inputs produce explicit uncertainty, not low complexity. | U-FR-L1-39 |
-| FR-L1-40 | `resolveDriveStatePartition` | resolveDriveStatePartition(input: ResolveDriveStatePartitionInput, deps: ResolveDriveStatePartitionDeps) => ResolveDriveStatePartitionResult | drive/mode/kind/layer are supplied. | returns `.ut-tdd/drive/<drive>` partition and skip/defer rules. | drive state joins by plan/session and cannot contaminate other drive partitions. | U-FR-L1-40 |
-| FR-L1-41 | `classifyDrive` | classifyDrive(input: ClassifyDriveInput, deps: ClassifyDriveDeps) => ClassifyDriveResult | PLAN/code/dependency evidence is supplied. | classifies drive and orchestration mode input with confidence. | low confidence becomes finding/confirmation need, not fabricated certainty. | U-FR-L1-41 |
-| FR-L1-42 | `buildAdapterPlan` | buildAdapterPlan(input: BuildAdapterPlanInput, deps: BuildAdapterPlanDeps) => BuildAdapterPlanResult | provider, role, task, plan, and execution mode are supplied. | returns provider command plan and boundary flags without forwarding UT-TDD-only plan flags. | provider boundary separation and handover context are preserved. | U-FR-L1-42 |
-| FR-L1-47 | `catalogSkills`, `recommendSkills` | catalogSkills(input: CatalogSkillsInput, deps: CatalogSkillsDeps) => CatalogSkillsResult<br>recommendSkills(input: RecommendSkillsInput, deps: RecommendSkillsDeps) => RecommendSkillsResult | skill docs and task/layer/drive context are supplied. | returns catalog entries and deterministic recommendations. | missing metadata becomes a finding; skill source docs are not rewritten. | U-FR-L1-47 |
-| FR-L1-48 | `buildCommandCatalog` | buildCommandCatalog(input: BuildCommandCatalogInput, deps: BuildCommandCatalogDeps) => BuildCommandCatalogResult | command docs and CLI surface inputs are supplied. | maps command assets to UT-TDD CLI subcommand contracts. | search rows are rebuildable and do not become authoring source. | U-FR-L1-48 |
-| FR-L1-51 | `deriveArtifactProgressDecision`, `projectArtifactProgress` | deriveArtifactProgressDecision(input: ArtifactProgressDecisionInput) => ArtifactProgressDecision<br>projectArtifactProgress(db: HarnessDb, graph?: RelationGraphProjection) => void | source artifact nodes, covered-by test edges, impact results, and recovery PLAN IDs are normalized. | writes rebuildable `artifact_progress` rows with red/yellow/green color and linked test/dependency reason. | DB rows are derived state only; green requires linked test evidence and dependency clear; red remains for missing dependency/back-propagation. | U-FR-L1-51 |
+`team suggest --design-docs` はこれら advisory lanes を proposal coverage team definition へ橋渡しする。Non-closing lanes (`T2-mini`, `T2-spark`, `T1-worker`) は model override、ownership shard、low/medium effort を持つ具体的な `TeamMember` rows になる。`T0-frontier` は judgement guidance のままで executable member として emit しないため、frontier approval は `team run` 経由で bypass できない。cross-provider review を保持するため、最初の parallel shard 後に Claude-side TL review member を追加する。
+| FR-L1-32 | `validateFolderRules` | validateFolderRules(input: ValidateFolderRulesInput, deps: ValidateFolderRulesDeps) => ValidateFolderRulesResult | path registry と artifact kind を与える。 | misplaced process docs/tests/state に対する violations を返す。 | folder policy は file rewrite なしで検査する。 | U-FR-L1-32 |
+| FR-L1-33 | `catalogExistingAssets` | catalogExistingAssets(input: CatalogExistingAssetsInput, deps: CatalogExistingAssetsDeps) => CatalogExistingAssetsResult | approved asset roots を与える。 | command/skill/detector/template/state/hook/doc/test assets を coverage status で分類する。 | catalog は metadata だけを保存し、prompt bodies と secrets は source docs に残す。 | U-FR-L1-33 |
+| FR-L1-34 | `prioritizeCapabilityGaps` | prioritizeCapabilityGaps(input: PrioritizeCapabilityGapsInput, deps: PrioritizeCapabilityGapsDeps) => PrioritizeCapabilityGapsResult | asset catalog、workflow impact、missing route/recover signals を与える。 | reason 付き deterministic priority order を返す。 | priority は PLAN 化されるまで advisory とする。 | U-FR-L1-34 |
+| FR-L1-35 | `renderFoundationReadiness` | renderFoundationReadiness(input: RenderFoundationReadinessInput, deps: RenderFoundationReadinessDeps) => RenderFoundationReadinessResult | infrastructure category inventory を与える。 | implemented/designed/missing categories を報告する。 | report は missing categories を implemented として扱えない。 | U-FR-L1-35 |
+| FR-L1-36 | `projectSkillEvaluations` | projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string }) => void | skill_invocations と plan_registry rows が存在する。asOf は ISO timestamp (default = nowIso())。 | accepted=1 invocation を持つ skill_id ごとに `skill_evaluations` row を 1 件書く。skill_rating = success_count / adoption_count。asOf から 30 日以内に invocation がなければ unused_flag = 1。cold-start (0 invocations) は 0 rows で throw しない。 | unused skills は auto-delete しない。削除は human-only。success states ("confirmed"/"completed") は source に記録し、single-source-of-truth hardcoded とする理由を持つ。 | U-FR-L1-36 |
+| FR-L1-43 | `projectPocEvaluations` | projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }) => void | plan_registry は PLAN frontmatter 由来の decision_outcome を持つ kind="poc" rows を含む。 | `poc_evaluations` summary row (id="poc-evaluation:summary") を 1 件書く。poc_success_rate = confirmed_count / total_count、confirmed_count、rejected_count、pivot_count、total_count、evaluated_at を保持する。decision_outcome 空の PoC PLANs は分母から除外し、cold-start (0 decided PoC PLANs) は 0 rows で throw しない。 | pivot は non-success と数える。decision_outcome values は理由付き single-source-hardcoded。row id は常に "poc-evaluation:summary" (rebuild ごとに summary row 1 件)。 | U-FR-L1-43 |
+| FR-L1-38 | `projectModelEvaluations` | projectModelEvaluations(db: HarnessDb, repoRoot: string) => void | model_runs table は projectReviewModelRuns と、token/cost telemetry 用の `projectTokenUsage` で populate 済み。evaluation 実行には .ut-tdd/config/model-opt-in.yaml が enabled:true で存在する。PLAN_SUCCESS_STATUSES は success inference の single-source constant。 | opt-in disabled (file absent または enabled!=true) なら 0 rows を書いて return。有効なら distinct model ごとに success_rate = success_count / run_count (`model_runs.plan_id` → `plan_registry.status IN PLAN_SUCCESS_STATUSES`) を持つ `model_evaluations` row を書く。cold-start (0 model_runs) は 0 rows で throw しない。token/cost rows は file-scan のみで `ut-tdd telemetry scan` が取り込む。 | cost-efficiency (tokens_per_success/cost_per_success) は PLAN-L7-57 と PLAN-L7-58 で discharge 済み。cost は既知 model の local pricing tables だけで計算し、未公開/unknown models は cost_usd=null のまま (cost 捏造なし)。success states は PLAN_SUCCESS_STATUSES で single-source-hardcoded。 | U-FR-L1-38 |
+| FR-L1-37 | `recommendModelEffort` | recommendModelEffort(input: RecommendModelEffortInput, deps: RecommendModelEffortDeps) => RecommendModelEffortResult | task、drive、layer、size、uncertainty signals を与える。 | model family と reasoning effort recommendation を返す。 | model recommendation は evidence として記録し、hidden prompt state にしない。 | U-FR-L1-37 |
+| FR-L1-39 | `scoreTaskComplexity` | scoreTaskComplexity(input: ScoreTaskComplexityInput, deps: ScoreTaskComplexityDeps) => ScoreTaskComplexityResult | size、dependency、uncertainty、affected artifact signals を与える。 | deterministic score と class を返す。 | unknown inputs は explicit uncertainty を生み、low complexity と捏造しない。 | U-FR-L1-39 |
+| FR-L1-40 | `resolveDriveStatePartition` | resolveDriveStatePartition(input: ResolveDriveStatePartitionInput, deps: ResolveDriveStatePartitionDeps) => ResolveDriveStatePartitionResult | drive/mode/kind/layer を与える。 | `.ut-tdd/drive/<drive>` partition と skip/defer rules を返す。 | drive state は plan/session で join し、他 drive partitions を汚染しない。 | U-FR-L1-40 |
+| FR-L1-41 | `classifyDrive` | classifyDrive(input: ClassifyDriveInput, deps: ClassifyDriveDeps) => ClassifyDriveResult | PLAN/code/dependency evidence を与える。 | drive と orchestration mode input を confidence 付きで分類する。 | low confidence は finding/confirmation need とし、certainty を捏造しない。 | U-FR-L1-41 |
+| FR-L1-42 | `buildAdapterPlan` | buildAdapterPlan(input: BuildAdapterPlanInput, deps: BuildAdapterPlanDeps) => BuildAdapterPlanResult | provider、role、task、plan、execution mode を与える。 | UT-TDD-only plan flags を provider に転送せず、provider command plan と boundary flags を返す。 | provider boundary separation と handover context を保持する。 | U-FR-L1-42 |
+| FR-L1-47 | `catalogSkills`, `recommendSkills` | catalogSkills(input: CatalogSkillsInput, deps: CatalogSkillsDeps) => CatalogSkillsResult<br>recommendSkills(input: RecommendSkillsInput, deps: RecommendSkillsDeps) => RecommendSkillsResult | skill docs と task/layer/drive context を与える。 | catalog entry と deterministic recommendation を返す。 | missing metadata は finding にする。skill source docs は rewrite しない。 | U-FR-L1-47 |
+| FR-L1-48 | `buildCommandCatalog` | buildCommandCatalog(input: BuildCommandCatalogInput, deps: BuildCommandCatalogDeps) => BuildCommandCatalogResult | command docs と CLI surface inputs を与える。 | command assets を UT-TDD CLI subcommand contracts に対応づける。 | search rows は rebuildable であり、authoring source にはならない。 | U-FR-L1-48 |
+| FR-L1-51 | `deriveArtifactProgressDecision`, `projectArtifactProgress` | deriveArtifactProgressDecision(input: ArtifactProgressDecisionInput) => ArtifactProgressDecision<br>projectArtifactProgress(db: HarnessDb, graph?: RelationGraphProjection) => void | source artifact nodes、covered-by test edges、impact results、recovery PLAN IDs は正規化済み。 | red/yellow/green color と linked test/dependency reason を持つ rebuildable `artifact_progress` rows を書く。 | DB rows は derived state のみ。green には linked test evidence と dependency clear が必要。missing dependency/back-propagation では red が残る。 | U-FR-L1-51 |
 
-### FR registry type body / pseudocode substance
+### FR registry 型本体 / pseudocode 実体
 
-This section closes A-110 MUST-2. Rows above are L6 unit contracts; the implementation body may land in L7, but each named function now has a typed input/result body and either a pseudocode anchor or an explicit L7 defer. `explicit_l7_defer` means the L6 contract is frozen here and the L7 implementation must not invent new requirements.
+本 section は A-110 MUST-2 を close する。上記 row は L6 unit contract である。implementation body は L7 に置いてよいが、各 named function は typed input/result body と pseudocode anchor または explicit L7 defer のいずれかを持つ。`explicit_l7_defer` は L6 contract がここで freeze され、L7 implementation が新しい requirement を発明してはならないことを意味する。
 
-Common value bodies:
+共通 value body:
 
 ```ts
 type EvidencePath = string;
@@ -187,58 +179,60 @@ type ProjectionRef = { table: string; id: string; evidence_path: EvidencePath };
 type QualitySignal = { signal_type: string; subject_id: string; score?: number; evidence_path: EvidencePath };
 ```
 
-| function | type body | pseudocode / implementation_state |
+| 関数 | 型 body | pseudocode / implementation_state |
 |---|---|---|
 | `planDraft` | `PlanDraftInput { title; kind; layer; sub_doc?; generates[] } -> PlanDraftResult extends ContractResult { path; plan_id }` | implemented pseudocode §2.1 |
 | `sprintCheck` | `SprintCheckInput { target; redEvidence; greenEvidence } -> SprintCheckResult extends ContractResult { ordered }` | implemented pseudocode §2.4 |
-| `frontmatterSchema` | `unknown -> Frontmatter` | implemented zod parse; pseudocode = validate schema, return typed frontmatter or throw |
-| `parseRequires` | `ParseRequiresInput { frontmatterText; planPath } -> ParseRequiresResult extends ContractResult { requires[] }` | implemented in `analyzePlanGovernance`; parse list fields, normalize PLAN IDs/paths, emit unresolved and not-completed findings |
-| `recordProjectionEvent` | `RecordProjectionEventInput { event; source_path } -> RecordProjectionEventResult { ref: ProjectionRef }` | implemented in `src/state-db/projection-writer.ts`; validate ID, upsert projection row, return ref |
-| `rebuildHarnessDb` | `RebuildHarnessDbInput { roots[]; truncate: true } -> RebuildHarnessDbResult extends ContractResult { rows_by_table; search_rows; signals }` | implemented in `src/state-db/projection-writer.ts`; truncate projection, replay docs/state/logs, recompute `search_index` and `quality_signals` |
-| `recordTestRunEvidence` | `TestRunEvidenceInput { command; runner; scope; started_at; completed_at; exit_code; evidence_path; cases? } -> RecordTestRunEvidenceResult { refs[] }` | implemented in `src/workflow/contracts.ts`; collect Bun/vitest/doctor/lint evidence into UT history projection, redact failure digests, never persist raw provider transcripts |
-| `evaluateGreenDefinition` | `GreenDefinitionInput { profile; required_commands[]; command_evidence[]; reviewed_at? } -> GreenDefinitionResult extends ContractResult { computed_green_at?; missing[]; non_green[] }` | implemented in `src/workflow/contracts.ts`; fail when required commands are absent/non-zero or computed green time is after review time |
-| `computeUtHistorySignals` | `UtHistoryInput { plan_id?; window? } -> ComputeUtHistorySignalsResult { signals[] }` | implemented in `src/workflow/contracts.ts`; compute oracle coverage, plan green rate, flake score, duration regression, and green-definition compliance |
-| `routeSignalToMode` | `RouteSignalToModeInput { signal; current_plan?; drive? } -> RouteSignalToModeResult extends ContractResult { candidates[] }` | implemented in `src/workflow/contracts.ts`; classify signal, rank allowed modes, unknown signal becomes finding |
-| `evaluateAgentGuard` | `AgentGuardInput + AgentGuardContext -> GuardDecision` | implemented runtime guard; pseudocode = normalize model family, compare worker/reviewer boundaries, return allow/block |
-| `recordCrossCuttingEvent` | `RecordCrossCuttingEventInput { type; subject_id; severity; evidence_path } -> RecordCrossCuttingEventResult { ref: ProjectionRef }` | implemented in `src/workflow/contracts.ts`; append projection event, never approve gates |
-| `suggestSkillInjection` | `SuggestSkillInjectionInput { task; layer; drive; catalog } -> SuggestSkillInjectionResult extends ContractResult { candidates[] }` | implemented in `src/workflow/contracts.ts`; filter catalog, score triggers, return deterministic ranked skills |
-| `enforceForwardOrder` | `EnforceForwardOrderInput { layer; gate; prior_gates } -> EnforceForwardOrderResult extends ContractResult { allowed }` | implemented in `src/workflow/contracts.ts`; require prior PASS or explicit exception evidence |
-| `routeReverseR4` | `RouteReverseR4Input { reverse_type; r4_evidence; forward_routing } -> RouteReverseR4Result extends ContractResult { target_plan? }` | implemented in `src/workflow/contracts.ts`; validate confirmed reverse evidence before Forward merge |
-| `decideDiscoveryS4` | `DecideDiscoveryS4Input { hypothesis; poc_evidence; outcome } -> DecideDiscoveryS4Result extends ContractResult { decision }` | implemented in `src/workflow/contracts.ts`; reject pivot/confirmed ambiguity and record routing |
-| `emitFeedbackEvents` | `EmitFeedbackEventsInput { findings; quality_signals } -> EmitFeedbackEventsResult { events[] }` | implemented in `src/feedback/engine.ts`; group repeated gaps/stalls/regressions, never edit PLANs |
-| `detectFrontendDrift` | `DetectFrontendDriftInput { mock_root?; token_root?; a11y?; vrt? } -> DetectFrontendDriftResult extends ContractResult { drift_signals[] }` | implemented in `src/workflow/contracts.ts`; optional roots must be absent-by-contract, not silent pass |
-| `routeScrumFullback` | `RouteScrumFullbackInput { increment; s4_decision } -> RouteScrumFullbackResult extends ContractResult { forward_targets[] }` | implemented in `src/workflow/contracts.ts`; confirmed increments only |
-| `assertRefactorInvariant` | `AssertRefactorInvariantInput { before; after; regression } -> AssertRefactorInvariantResult extends ContractResult { unchanged }` | implemented in `src/workflow/contracts.ts`; compare behavior evidence and require green regression |
-| `evaluateRetrofitMatrix` | `EvaluateRetrofitMatrixInput { migration; config; rollback } -> EvaluateRetrofitMatrixResult extends ContractResult { readiness }` | implemented in `src/workflow/contracts.ts`; fail when rollback evidence is missing |
-| `evaluateResearchDecision` | `EvaluateResearchDecisionInput { memo; sources; adr_candidate? } -> EvaluateResearchDecisionResult extends ContractResult { decision_ready }` | implemented in `src/workflow/contracts.ts`; research cannot bypass ADR/requirement trace |
-| `mergeTwoStageAgentDesign` | `MergeTwoStageAgentDesignInput { phase1; phase2; handoff } -> MergeTwoStageAgentDesignResult extends ContractResult { merged? }` | implemented in `src/workflow/contracts.ts`; preserve layer boundaries and redact provider transcript content |
-| `validateScreenDesignWorkflow` | `ValidateScreenDesignWorkflowInput { ia; screens; flow; wireframe; mock; components } -> ValidateScreenDesignWorkflowResult extends ContractResult { complete }` | implemented in `src/workflow/contracts.ts`; backend-only evidence cannot complete screen design |
-| `validateFrontendDesignWorkflow` | `ValidateFrontendDesignWorkflowInput { visual; tokens; a11y; vrt; ux } -> ValidateFrontendDesignWorkflowResult extends ContractResult { complete }` | implemented in `src/workflow/contracts.ts`; a11y/token/VRT are first-class evidence |
-| `classifyDriveTddFits` | `ClassifyDriveTddFitsInput { modes? } -> ClassifyDriveTddFitsResult extends ContractResult { fits[] }` | implemented in `src/workflow/contracts.ts`; uses DB/projected signal names as Red trigger vocabulary but does not mutate DB or PLANs |
-| `classifyProposalDocumentCoverage` | `ClassifyTaskInput { text; affected_files?; dependencies? } -> ProposalDocumentCoverage { granularity; patterns[]; required_design_docs[]; required_test_docs[]; required_evidence[]; required_gates[]; research_adoption[]; research_rejections[]; escalators[]; guardrails[]; findings[] }` | implemented in `src/task/classify.ts`; maps proposal text to additive required document packs for screen/UI, UX/usability, API/IF, data/DB, batch/report, report output, async/job flow, notification/message, common component, security/privacy, error/observability/audit, ops/release/migration, NFR, test design, workflow/gate, agent orchestration, and discovery |
-| `analyzeProposalDocumentCoverage` | `ProposalDocumentCoverageLintInput { repoRoot; routingDocText; classifyCoverage; scenarios? } -> ProposalDocumentCoverageLintResult { ok; checkedScenarios; checkedPatterns[]; violations[] }` | implemented in `src/lint/proposal-document-coverage.ts`; verifies representative proposal scenarios, required document path existence, cross-layer routing doc inclusion, routing pattern markers, cross-artifact trace escalation, and shrinkage guard behavior while injecting the classifier to keep lint dependency direction neutral |
-| `validateFolderRules` | `ValidateFolderRulesInput { path; artifact_kind; registry } -> ValidateFolderRulesResult extends ContractResult { violations[] }` | implemented in `src/workflow/contracts.ts`; check placement without rewriting files |
-| `catalogExistingAssets` | `CatalogExistingAssetsInput { roots: string[] } -> CatalogExistingAssetsResult extends ContractResult { assets: AssetCatalogEntry[] }` | implemented in `src/workflow/contracts.ts`; catalog metadata only, no prompt bodies/secrets |
-| `prioritizeCapabilityGaps` | `PrioritizeCapabilityGapsInput { assets; workflow_impact; missing_routes } -> PrioritizeCapabilityGapsResult { priorities[] }` | implemented in `src/workflow/contracts.ts`; priority is advisory until converted to PLAN |
-| `renderFoundationReadiness` | `RenderFoundationReadinessInput { categories[] } -> RenderFoundationReadinessResult extends ContractResult { implemented; designed; missing }` | implemented in `src/workflow/contracts.ts`; missing categories cannot be reported implemented |
-| `recommendModelEffort` | `RecommendModelEffortInput { task; drive; layer; size; uncertainty } -> RecommendModelEffortResult { model_family; reasoning_effort; evidence_path }` | implemented in `src/workflow/contracts.ts`; recommendation is recorded evidence, not hidden prompt state |
-| `scoreTaskComplexity` | `ScoreTaskComplexityInput { size; dependencies; uncertainty; affected_artifacts } -> ScoreTaskComplexityResult { score; class; findings[] }` | implemented in `src/workflow/contracts.ts`; unknowns produce uncertainty, not low complexity |
-| `resolveDriveStatePartition` | `ResolveDriveStatePartitionInput { drive; mode; kind; layer; plan_id?; session_id? } -> ResolveDriveStatePartitionResult { partition_path; skip_sub_doc[] }` | implemented in `src/workflow/contracts.ts`; drive state joins by plan/session and never contaminates other drives |
-| `classifyDrive` | `ClassifyDriveInput { plan; code_delta?; dependency_delta? } -> ClassifyDriveResult { drive; confidence; findings[] }` | implemented in `src/workflow/contracts.ts`; low confidence requires finding/human confirmation |
-| `buildAdapterPlan` | `BuildAdapterPlanInput { provider; role; task; plan; execution_mode } -> BuildAdapterPlanResult extends ContractResult { command_plan; boundary_flags[] }` | implemented in `src/runtime/adapter.ts`; provider boundary flags are preserved |
-| `checkCodexWrapperParity` | `DoctorDeps -> { messages: string[]; ok: boolean }` | implemented in `src/doctor/index.ts`; verifies Claude hooks are project-settings based while Codex parity is provided by `ut-tdd codex --execute` wrapper lifecycle tests and stdin adapter oracles |
-| `catalogSkills` | `CatalogSkillsInput { skill_docs: SkillDocRef[] } -> CatalogSkillsResult extends ContractResult { skills: SkillCatalogEntry[] }` | implemented in `src/workflow/contracts.ts`; metadata only, source docs remain SSoT |
-| `recommendSkills` | `RecommendSkillsInput { task; layer; drive; catalog } -> RecommendSkillsResult { recommendations[]; findings[] }` | implemented in `src/workflow/contracts.ts`; missing metadata is a finding |
-| `buildCommandCatalog` | `BuildCommandCatalogInput { command_docs[]; cli_surface } -> BuildCommandCatalogResult extends ContractResult { commands[] }` | implemented in `src/workflow/contracts.ts`; search rows are rebuildable projection |
-| `projectSkillEvaluations` | `SkillEvaluationsInput { asOf?: string } -> void` | implemented in `src/state-db/projection-writer.ts`; per-skill rating/adoption/success/unused from skill_invocations + plan_registry; cold-start zero rows |
-| `projectPocEvaluations` | `PocEvaluationsInput { asOf?: string } -> void` | implemented in `src/state-db/projection-writer.ts`; one summary row: poc_success_rate = confirmed/(confirmed+rejected+pivot); cold-start (no decided PoC PLANs) zero rows; pivot is non-success |
-| `projectModelEvaluations` | `ModelEvaluationsInput { repoRoot: string } -> void` | implemented in `src/state-db/projection-writer.ts`; opt-in via .ut-tdd/config/model-opt-in.yaml (enabled:true); per-model success_rate = success_count/run_count joining model_runs -> plan_registry; cold-start zero rows; **cost-efficiency DISCHARGED** (PLAN-L7-57 token telemetry + PLAN-L7-58 cost enrichment): token efficiency from cross-runtime session JSONL via `loadRuntimeSessionUsage`/`projectTokenUsage` (CLI-less file scan), $ cost computed locally from `CLAUDE_PRICING` (Claude) and `OPENAI_PRICING` (Codex, official API pricing 2026-06-15); models without published pricing keep cost=null (no fabricated cost); ingested via `ut-tdd telemetry scan` |
-| `deriveArtifactProgressDecision` | `ArtifactProgressDecisionInput { linkedTestCount: number; dependencyChecked: boolean; openDependencyImpacts: number; recoveryPlanIds?: string[] } -> ArtifactProgressDecision { state: dependency_unchecked/implemented_unverified/verified; color: red/yellow/green; reason: string }` | implemented in `src/state-db/projection-writer.ts`; pseudocode = if dependency unchecked or open impacts then red, else if no linked tests or recovery active then yellow, else green |
-| `projectArtifactProgress` | `ArtifactProgressProjectionInput { graph?: RelationGraphProjection; db: HarnessDb } -> void` | implemented in `src/state-db/projection-writer.ts`; pseudocode = collect source nodes, count covered-by test edges, join impact_results/recovery PLANs, derive decision, upsert rebuildable `artifact_progress` rows |
+| `frontmatterSchema` | `unknown -> Frontmatter` | zod parse として実装済み。pseudocode = schema を validate し、typed frontmatter を返すか throw する。 |
+| `parseRequires` | `ParseRequiresInput { frontmatterText; planPath } -> ParseRequiresResult extends ContractResult { requires[] }` | implemented pseudocode: `analyzePlanGovernance` に実装済み。list fields を parse し、PLAN IDs/paths を normalize し、unresolved と not-completed findings を emit する。 |
+| `analyzePlanGovernance.routeCertificate` | `PlanFrontmatter { created; status; route_signal?; route_mode? } -> PlanGovernanceViolation[]` | 2026-07-01 以降に作成される non-archived PLAN は `route_signal` と `route_mode` を必須とし、`routeSignalCandidates(route_signal)` が返す mode 候補に `route_mode` が含まれなければ `route_certificate_mismatch` で fail-close する。既存 PLAN は遡及 backfill せず、future authoring の入口適合を強制する。 |
+| `analyzePlanGovernance.routeModeKind` | `PlanFrontmatter { plan_id; status; route_mode?; kind } -> PlanGovernanceViolation[]` | PLAN-L7-263。`ROUTE_MODE_ALLOWED_KINDS` の対応表 (初期スコープ: `add-feature -> {add-design, add-impl}`) に対し kind が外れる non-archived PLAN を `route_mode_kind_mismatch` で fail-close する。既存 debt は `docs/governance/route-mode-kind-debt-audit-2026-07-02.md` 台帳と同期した allowlist で免除: legacy landed (confirmed 済 5 本) は恒久免除、draft debt (32 本) は status=draft の間のみ免除し、着手時に add-impl + Reverse pairing への昇格を強制する。 |
+| `recordProjectionEvent` | `RecordProjectionEventInput { event; source_path } -> RecordProjectionEventResult { ref: ProjectionRef }` | implemented pseudocode: `src/state-db/projection-writer.ts` に実装済み。ID を validate し、projection row を upsert して ref を返す。 |
+| `rebuildHarnessDb` | `RebuildHarnessDbInput { roots[]; truncate: true } -> RebuildHarnessDbResult extends ContractResult { rows_by_table; search_rows; signals }` | implemented pseudocode: `src/state-db/projection-writer.ts` に実装済み。projection を truncate し、docs/state/logs を replay して `search_index` と `quality_signals` を recompute する。 |
+| `recordTestRunEvidence` | `TestRunEvidenceInput { command; runner; scope; started_at; completed_at; exit_code; evidence_path; cases? } -> RecordTestRunEvidenceResult { refs[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。Bun/vitest/doctor/lint evidence を UT history projection に集約し、failure digests を redact し、raw provider transcripts は永続化しない。 |
+| `evaluateGreenDefinition` | `GreenDefinitionInput { profile; required_commands[]; command_evidence[]; reviewed_at? } -> GreenDefinitionResult extends ContractResult { computed_green_at?; missing[]; non_green[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。required commands が absent/non-zero、または computed green time が review time より後なら fail する。 |
+| `computeUtHistorySignals` | `UtHistoryInput { plan_id?; window? } -> ComputeUtHistorySignalsResult { signals[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。oracle coverage、plan green rate、flake score、duration regression、green-definition compliance を compute する。 |
+| `routeSignalToMode` | `RouteSignalToModeInput { signal; current_plan?; drive? } -> RouteSignalToModeResult extends ContractResult { candidates[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。signal を classify し、allowed modes を rank する。unknown signal は finding にする。 |
+| `evaluateAgentGuard` | `AgentGuardInput + AgentGuardContext -> GuardDecision` | runtime guard として実装済み。pseudocode = model family を normalize し、worker/reviewer boundaries を compare して allow/block を返す。 |
+| `recordCrossCuttingEvent` | `RecordCrossCuttingEventInput { type; subject_id; severity; evidence_path } -> RecordCrossCuttingEventResult { ref: ProjectionRef }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。projection event を append し、gate approve はしない。 |
+| `suggestSkillInjection` | `SuggestSkillInjectionInput { task; layer; drive; catalog } -> SuggestSkillInjectionResult extends ContractResult { candidates[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。catalog を filter し、triggers を score して deterministic ranked skills を返す。 |
+| `enforceForwardOrder` | `EnforceForwardOrderInput { layer; gate; prior_gates } -> EnforceForwardOrderResult extends ContractResult { allowed }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。prior PASS または explicit exception evidence を要求する。 |
+| `routeReverseR4` | `RouteReverseR4Input { reverse_type; r4_evidence; forward_routing } -> RouteReverseR4Result extends ContractResult { target_plan? }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。Forward merge 前に confirmed reverse evidence を validate する。 |
+| `decideDiscoveryS4` | `DecideDiscoveryS4Input { hypothesis; poc_evidence; outcome } -> DecideDiscoveryS4Result extends ContractResult { decision }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。pivot/confirmed ambiguity を reject し、routing を記録する。 |
+| `emitFeedbackEvents` | `EmitFeedbackEventsInput { findings; quality_signals } -> EmitFeedbackEventsResult { events[] }` | implemented pseudocode: `src/feedback/engine.ts` に実装済み。repeated gaps/stalls/regressions を group し、PLAN は edit しない。 |
+| `detectFrontendDrift` | `DetectFrontendDriftInput { mock_root?; token_root?; a11y?; vrt? } -> DetectFrontendDriftResult extends ContractResult { drift_signals[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。optional root は silent pass ではなく absent-by-contract で扱う。 |
+| `routeScrumFullback` | `RouteScrumFullbackInput { increment; s4_decision } -> RouteScrumFullbackResult extends ContractResult { forward_targets[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。confirmed increments だけを許可する。 |
+| `assertRefactorInvariant` | `AssertRefactorInvariantInput { before; after; regression } -> AssertRefactorInvariantResult extends ContractResult { unchanged }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。behavior evidence を compare し、green regression を要求する。 |
+| `evaluateRetrofitMatrix` | `EvaluateRetrofitMatrixInput { migration; config; rollback } -> EvaluateRetrofitMatrixResult extends ContractResult { readiness }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。rollback evidence 欠落時は fail する。 |
+| `evaluateResearchDecision` | `EvaluateResearchDecisionInput { memo; sources; adr_candidate? } -> EvaluateResearchDecisionResult extends ContractResult { decision_ready }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。research は ADR/requirement trace を bypass できない。 |
+| `mergeTwoStageAgentDesign` | `MergeTwoStageAgentDesignInput { phase1; phase2; handoff } -> MergeTwoStageAgentDesignResult extends ContractResult { merged? }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。layer boundaries を保持し、provider transcript content を redact する。 |
+| `validateScreenDesignWorkflow` | `ValidateScreenDesignWorkflowInput { ia; screens; flow; wireframe; mock; components } -> ValidateScreenDesignWorkflowResult extends ContractResult { complete }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。backend-only evidence では screen design を complete にできない。 |
+| `validateFrontendDesignWorkflow` | `ValidateFrontendDesignWorkflowInput { visual; tokens; a11y; vrt; ux } -> ValidateFrontendDesignWorkflowResult extends ContractResult { complete }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。a11y/token/VRT は first-class evidence とする。 |
+| `classifyDriveTddFits` | `ClassifyDriveTddFitsInput { modes? } -> ClassifyDriveTddFitsResult extends ContractResult { fits[] }` | `src/workflow/contracts.ts` に実装済み。Red trigger vocabulary として DB/projected signal names を使うが、DB や PLAN は mutate しない。 |
+| `classifyProposalDocumentCoverage` | `ClassifyTaskInput { text; affected_files?; dependencies? } -> ProposalDocumentCoverage { granularity; patterns[]; required_design_docs[]; required_test_docs[]; required_evidence[]; required_gates[]; research_adoption[]; research_rejections[]; escalators[]; guardrails[]; findings[] }` | implemented pseudocode: `src/task/classify.ts` に実装済み。proposal text を screen/UI、UX/usability、API/IF、data/DB、batch/report、report output、async/job flow、notification/message、common component、security/privacy、error/observability/audit、ops/release/migration、NFR、test design、workflow/gate、agent orchestration、discovery 向けの additive required document packs に map する。 |
+| `analyzeProposalDocumentCoverage` | `ProposalDocumentCoverageLintInput { repoRoot; routingDocText; classifyCoverage; scenarios? } -> ProposalDocumentCoverageLintResult { ok; checkedScenarios; checkedPatterns[]; violations[] }` | implemented pseudocode: `src/lint/proposal-document-coverage.ts` に実装済み。representative proposal scenarios、required document path existence、cross-layer routing doc inclusion、routing pattern markers、cross-artifact trace escalation、shrinkage guard behavior を検証する。classifier は注入し、lint dependency direction を neutral に保つ。 |
+| `validateFolderRules` | `ValidateFolderRulesInput { path; artifact_kind; registry } -> ValidateFolderRulesResult extends ContractResult { violations[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。files を rewrite せず placement を check する。 |
+| `catalogExistingAssets` | `CatalogExistingAssetsInput { roots: string[] } -> CatalogExistingAssetsResult extends ContractResult { assets: AssetCatalogEntry[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。catalog metadata のみで、prompt bodies/secrets は保持しない。 |
+| `prioritizeCapabilityGaps` | `PrioritizeCapabilityGapsInput { assets; workflow_impact; missing_routes } -> PrioritizeCapabilityGapsResult { priorities[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。priority は PLAN 化されるまで advisory。 |
+| `renderFoundationReadiness` | `RenderFoundationReadinessInput { categories[] } -> RenderFoundationReadinessResult extends ContractResult { implemented; designed; missing }` | `src/workflow/contracts.ts` に実装済み。missing categories を implemented と報告できない。 |
+| `recommendModelEffort` | `RecommendModelEffortInput { task; drive; layer; size; uncertainty } -> RecommendModelEffortResult { model_family; reasoning_effort; evidence_path }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。recommendation は recorded evidence であり hidden prompt state ではない。 |
+| `scoreTaskComplexity` | `ScoreTaskComplexityInput { size; dependencies; uncertainty; affected_artifacts } -> ScoreTaskComplexityResult { score; class; findings[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。unknowns は uncertainty を生み、low complexity と扱わない。 |
+| `resolveDriveStatePartition` | `ResolveDriveStatePartitionInput { drive; mode; kind; layer; plan_id?; session_id? } -> ResolveDriveStatePartitionResult { partition_path; skip_sub_doc[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。drive state は plan/session で join し、他 drives を汚染しない。 |
+| `classifyDrive` | `ClassifyDriveInput { plan; code_delta?; dependency_delta? } -> ClassifyDriveResult { drive; confidence; findings[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。low confidence は finding/human confirmation を要求する。 |
+| `buildAdapterPlan` | `BuildAdapterPlanInput { provider; role; task; plan; execution_mode } -> BuildAdapterPlanResult extends ContractResult { command_plan; boundary_flags[] }` | implemented pseudocode: `src/runtime/adapter.ts` に実装済み。provider boundary flags を保持する。 |
+| `checkCodexWrapperParity` | `DoctorDeps -> { messages: string[]; ok: boolean }` | implemented pseudocode: `src/doctor/index.ts` に実装済み。Claude hooks が project-settings based であることを検証し、Codex parity は `ut-tdd codex --execute` wrapper lifecycle tests と stdin adapter oracles で提供される。 |
+| `catalogSkills` | `CatalogSkillsInput { skill_docs: SkillDocRef[] } -> CatalogSkillsResult extends ContractResult { skills: SkillCatalogEntry[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。metadata のみを扱い、source docs は SSoT のままにする。 |
+| `recommendSkills` | `RecommendSkillsInput { task; layer; drive; catalog } -> RecommendSkillsResult { recommendations[]; findings[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。missing metadata は finding にする。 |
+| `buildCommandCatalog` | `BuildCommandCatalogInput { command_docs[]; cli_surface } -> BuildCommandCatalogResult extends ContractResult { commands[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。search rows は rebuildable projection。 |
+| `projectSkillEvaluations` | `SkillEvaluationsInput { asOf?: string } -> void` | implemented pseudocode: `src/state-db/skill-projections.ts` に core 実装、`src/state-db/projection-writer.ts` に既存 public signature の wrapper を保持。skill_invocations + plan_registry から per-skill rating/adoption/success/unused を算出し、cold-start は zero rows。 |
+| `projectPocEvaluations` | `PocEvaluationsInput { asOf?: string } -> void` | implemented pseudocode: `src/state-db/projection-writer.ts` に実装済み。summary row は 1 件で、poc_success_rate = confirmed/(confirmed+rejected+pivot)。decided PoC PLANs がなければ zero rows。pivot は non-success。 |
+| `projectModelEvaluations` | `ModelEvaluationsInput { repoRoot: string } -> void` | implemented pseudocode: `src/state-db/projection-writer.ts` に実装済み。.ut-tdd/config/model-opt-in.yaml (enabled:true) で opt-in する。per-model success_rate = success_count/run_count は model_runs → plan_registry を join して算出し、cold-start は zero rows。**cost-efficiency DISCHARGED** (PLAN-L7-57 token telemetry + PLAN-L7-58 cost enrichment): cross-runtime session JSONL から `loadRuntimeSessionUsage`/`projectTokenUsage` で token efficiency を取り込み、$ cost は local `CLAUDE_PRICING` (Claude) と `OPENAI_PRICING` (Codex, official API pricing 2026-06-15) から計算する。published pricing のない model は cost=null のまま (fabricated cost なし)。取り込みは `ut-tdd telemetry scan`。 |
+| `deriveArtifactProgressDecision` | `ArtifactProgressDecisionInput { linkedTestCount: number; dependencyChecked: boolean; openDependencyImpacts: number; recoveryPlanIds?: string[] } -> ArtifactProgressDecision { state: dependency_unchecked/implemented_unverified/verified; color: red/yellow/green; reason: string }` | `src/state-db/projection-writer.ts` に実装済み。pseudocode = dependency unchecked または open impacts があれば red、linked tests なしまたは recovery active なら yellow、それ以外は green。 |
+| `projectArtifactProgress` | `ArtifactProgressProjectionInput { graph?: RelationGraphProjection; db: HarnessDb } -> void` | `src/state-db/projection-writer.ts` に実装済み。pseudocode = source nodes を collect し、covered-by test edges を count し、impact_results/recovery PLANs を join し、decision を derive して rebuildable `artifact_progress` rows を upsert する。 |
 
-## 2026-06-09 L6 Completion Readiness Addendum
+## 2026-06-09 L6 completion readiness 追補
 
-`analyzeL6Completion` is the G6 readiness aggregator. It separates `freezeInputReady` (trace/substance is ready for a G6 audit before status flip) from final `ready` (L6 completion after confirmed docs/plans, confirmed L7, and G6 PASS). It reads L6 design doc status, each L6 doc owning `plan:` reference, each L6 doc `pair_artifact`, L7 reverse references by L6 doc filename, minimum unit-contract substance markers (contract/signature, DbC or oracle, and U-* oracle family), base L6 `kind=design` PLAN status and review evidence, L7 unit-test-design status, and the G6 gate table row. Post-G6 `kind=add-design` PLANs are governed by add-feature/backfill/review evidence and do not reopen base G6 completion. The unit oracle is U-L6COMP-001..005 in `L7-unit-test-design.md`.
+`analyzeL6Completion` は G6 readiness aggregator である。`freezeInputReady` (status flip 前の G6 audit に trace/substance が ready) と final `ready` (confirmed docs/plans、confirmed L7、G6 PASS 後の L6 completion) を分離する。これは L6 design doc status、各 L6 doc の owning `plan:` reference、各 L6 doc の `pair_artifact`、L6 doc filename による L7 reverse reference、minimum unit-contract substance marker (contract/signature、DbC または oracle、U-* oracle family)、base L6 `kind=design` PLAN status と review evidence、L7 unit-test-design status、G6 gate table row を読む。Post-G6 `kind=add-design` PLAN は add-feature/backfill/review evidence で統制し、base G6 completion を reopen しない。unit oracle は `L7-unit-test-design.md` の U-L6COMP-001..005 とする。
 
 > **SSoT 参照**: module 公開 IF = [module-decomposition.md](../L5-detailed-design/module-decomposition.md) / DbC pre-post-invariant = [internal-processing.md](../L5-detailed-design/internal-processing.md) §3-§5 / 型の単一正本 = `src/schema/` / pseudocode 標準 = [document-system-map](../../../governance/document-system-map.md) §1 (IEEE 1016 §5.7)。本 doc は公開 IF に **関数 signature + アルゴリズム pseudocode + 型設計 + WBS** を付与する (L6、IEEE 1016 §5.7)。
 >
@@ -278,7 +272,7 @@ module-decomposition の公開 IF に**関数 signature・pseudocode・型・WBS
 | `evaluateAgentGuard` | `(input: AgentGuardInput, ctx: AgentGuardContext) => GuardDecision` | input.subagent_type 存在 / ctx に `resolveAgentFamily` + `allowRaw` 提供 | `decision.code ∈ {0,2}` を**返す**。`code=2` の exit 実行は hook shim (`.claude/hooks/agent-guard.ts`) の責務 — 本関数は純粋 (process.exit しない)。bypass は `bypassed=true` + message warn |
 | `resolveActivePlan` / `recordEvent` / `compressPlanDigest` / `onStop` (session-log) | `session-log.md §3` 参照 | — | **fail-OPEN** (常に 0、guard と逆)。`compressPlanDigest` は純関数・idempotent。詳細は `session-log.md` (PLAN-L6-03 add-design 差分) |
 
-### §1.3 schema / plan / vmodel / doctor
+### §1.3 schema / plan / vmodel / doctor 連携
 
 | 関数 | signature | pre | post |
 |---|---|---|---|
@@ -342,7 +336,7 @@ function traceCheck(planId):
   exit orphans == [] ? 0 : 1                       # post: fail-close
 ```
 
-### §2.4 `sprint check` (FR-02、TDD Red-first)
+### §2.4 `sprint check` (FR-02、TDD Red-first 検査)
 
 ```
 function sprintCheck(target):
@@ -397,7 +391,7 @@ type RuleResult = { ruleId, ok: boolean, violations: Violation[] }
 
 > 既存 5 lint (g3-trace/entity-coverage/fr-registry-audit/doc-consistency/improvement-backlog) は上記の rule インスタンスとして吸収 (gate-design §5)。auto-enroll = doc registry が新 doc の frontmatter (layer/sub_doc/pair_artifact) を scan し該当 rule を自動適用 (手書き lint 不要)。
 
-### §4.3 auto-enroll pseudocode
+### §4.3 自動 enroll pseudocode
 
 ```
 function buildCoverageMap():
@@ -420,7 +414,7 @@ function buildCoverageMap():
 | **L7.4** | `runDoctor` 統合 (5 lint + state 突合) | lint 群 | scaffold→本 |
 | **L7.5** | rule engine 10 型 + auto-enroll (IMP-033) | schema/lint | 実装済 (`src/lint/*` hard gates + doctor integration) |
 | **L7.6** | dependency-drift lint (built-in TS import graph、optional knip/madge は adapter insight、ADR-002/IMP-032) | runtime | 実装済 (`src/lint/dependency-drift.ts` / `tests/dependency-drift.test.ts`、PLAN-REVERSE-42) |
-| **L7.7** | L7 closure module surface (workflow/session/cutover/review/skill/asset 等) | schema | 実装済 (`src/workflow/`、`src/handover/`、`src/runtime/`、`src/skills/`、`src/assets/`、CLI surface) |
+| **L7.7** | L7 closure module surface (workflow/session/cutover/review/skill/asset 等) | schema | 実装済 (`src/workflow/`、`src/handover/`、`src/runtime/`、`src/skill-engine/`、`src/assets/`、CLI surface) |
 
 > 各 Sprint = TDD Red-first (L7 entry、§1.10 line 671)。先行 ④ 単体テストコードは L7 単体テスト設計 (pair) の U-* に対応。
 
@@ -431,19 +425,19 @@ function buildCoverageMap():
 - pseudocode (§2/§4.3) の実装 = L7 各 Sprint
 - DbC → U-* test oracle 導出 = L7 単体テスト設計 (pair、document-system-map §3)
 - **G6 freeze**: 本 doc の signature + pseudocode + 型 + WBS を G6 で凍結 (L7 の parent_design 正本)
-## Appendix B: BR-21 evaluation trace coverage addendum
+## Appendix B: BR-21 評価 trace coverage 追補
 
-The BR-21 evaluation hooks are Phase B oriented, but the function-design trace must not skip L6 once L4/L5 module boundaries name them. This addendum records the L6 contract landing points for the current evaluation surfaces; detailed algorithm expansion remains in the owning Phase B PLAN.
+BR-21 evaluation hooks は Phase B oriented だが、L4/L5 module boundaries がそれらを名指した時点で function-design trace は L6 を skip してはいけない。この追補は現行 evaluation surfaces の L6 contract landing points を記録する。詳細な algorithm expansion は担当する Phase B PLAN に残す。
 
 | trace | L6 contract landing |
 |---|---|
-| FR-L1-36 | skill evaluation input is normalized as skill metric feedback before Learning Engine aggregation |
-| FR-L1-38 | model evaluation input is normalized as model/effort quality feedback before recommendation updates |
-| FR-L1-43 | PoC success measurement input is normalized as verification outcome feedback before recipe/risk aggregation |
+| FR-L1-36 | skill evaluation input は Learning Engine aggregation 前に skill metric feedback として normalize する。 |
+| FR-L1-38 | model evaluation input は recommendation updates 前に model/effort quality feedback として normalize する。 |
+| FR-L1-43 | PoC success measurement input は recipe/risk aggregation 前に verification outcome feedback として normalize する。 |
 
-## Appendix C: L7 clean checkout DB projection invariant
+## Appendix C: L7 clean checkout DB projection 不変条件
 
-`harness-check` must run deterministic `db rebuild` before tests in a clean checkout. The projection layer must derive `hook_events` from tracked provider handover evidence when ignored local session logs are absent, and `ut-tdd skill suggest --json` must rebuild a read-only in-memory DB from source when persistent `.ut-tdd/harness.db` is absent.
+clean checkout では、`harness-check` が tests の前に deterministic `db rebuild` を実行しなければならない。ignored local session logs が無い場合、projection layer は tracked provider handover evidence から `hook_events` を導出する。また persistent `.ut-tdd/harness.db` が無い場合、`ut-tdd skill suggest --json` は source から read-only in-memory DB を rebuild しなければならない。
 
 ## Appendix D: PLAN-L7-51 同梱 lint モジュール契約 back-fill (PLAN-L7-52 C-4, 2026-06-15)
 
@@ -536,7 +530,7 @@ interface DriveDbRegistrationResult {
 }
 ```
 
-共通 invariant: `analyzeDriveDbRegistration` は純粋関数 (DB アクセスは呼び出し元の `checkDriveDbRegistration` が担う)。必須 mode リスト (`Discovery/Forward/Recovery/Reverse/Verification`) は実装内定数 `REQUIRED_CURRENT_MODES` を単一正本とし、本契約の一覧はその写し。orphan 検査は stats フィールドの正値チェックで行い、DB クエリを直接発行しない。
+共通 invariant: `analyzeDriveDbRegistration` は純粋関数 (DB アクセスは呼び出し元の `checkDriveDbRegistration` が担う)。必須 mode 集合はハードコード定数を廃止し (PLAN-L7-243)、stats 収集側が plan_registry (route_mode 正本 + legacy フォールバック、`src/schema/mode-catalog.ts` の `workflowModeForPlan`) から導出した `expectedModes` を突合する。`docs/process/modes/` の mode doc に `MODE_CATALOG_DOC_FILES` 写像が無い場合は `mode_catalog_unmapped` で fail-close する (新 mode 追加の取りこぼし防止)。legacy stats (expectedModes 未提供) のみ `LEGACY_REQUIRED_MODES` (`Discovery/Forward/Recovery/Reverse/Verification`) で従来水準を維持。orphan 検査は stats フィールドの正値チェックで行い、DB クエリを直接発行しない。
 
 ### D.5 `src/lint/fr-roadmap-coverage.ts`
 
@@ -599,7 +593,7 @@ doctor 配線 (src/doctor/index.ts):
 
 共通 invariant: `analyzeFrRoadmapCoverage` / `analyzeFrRoadmapCoverageWithRoot` は純粋関数 (fs アクセスは `analyzeFrRoadmapCoverageWithRoot` 内の `existsSync` による closure evidence 存在確認のみ; doc 読み込み端点は `loadFrRoadmapCoverageDocs` に集約)。bucket 検査の対象集合 (R1〜R9) は実装内定数 `EXPECTED_BUCKETS` を単一正本とし、本契約の列挙はその写し。`normalizeStatus` はバッククォート除去後に `VALID_STATUSES` と照合し、不一致は `unknown_status` 違反とする。open bucket の解決文言は `RESOLUTION_PATTERN` 正規表現で検証し、パターン不一致は `ambiguous_resolution` 違反とする。`closed` 行には closure evidence の対照が必須であり、evidence 行が欠落する場合は `missing_closure_evidence` 違反として `ok=false` となる。
 
-### D.6 `src/state-db/guardrail-invariants.ts` + guardrail advisory projection (PLAN-L7-52 C-1 option C, 2026-06-15)
+### D.6 `src/state-db/guardrail-invariants.ts` + guardrail advisory projection 追補 (PLAN-L7-52 C-1 option C, 2026-06-15)
 
 parent PLAN = PLAN-L7-48 / PLAN-L7-52。L7-48 監査で唯一の機能リスク = guardrail 不変条件が本番経路で参照されない silent bypass。PO 承認の **option C (warn-first / 非ブロック)** を実装。不変条件ロジックを `src/state-db/guardrail-invariants.ts` に SSoT 抽出し、書込経路 (fail-close) と projection 経路 (warn-first) が共有する。state-db 配置は `guardrail ↔ state-db` の module cycle 回避のため (dependency-drift gate)。`src/guardrail/ledger.ts` は型と `inspectGuardrailInvariants` を re-export。
 
@@ -611,7 +605,7 @@ parent PLAN = PLAN-L7-48 / PLAN-L7-52。L7-48 監査で唯一の機能リスク 
 
 invariant: option C は authz outcome を一切変えない (advisory のみ)。実ブロックする **hard-gate (option A)** は authorization/human-signoff の仕様確定に該当し PO 留保 (CLAUDE.md Guard Rule)。advisory は warn-first phased rollout の Phase 0 (descent-obligation §7 と同型)。U-* = IT-GUARDRAIL-ADVISORY-01。`same-model-self-review` の空文字非該当は blank evidence の false-positive を防ぐための必須不変条件。
 
-## 2026-06-17 Cost-Tiered Dual-Provider Role Router Addendum (PLAN-L7-75 back-fill)
+## 2026-06-17 コスト階層 Dual-Provider Role Router 追補 (PLAN-L7-75 back-fill)
 
 この addendum は §7.8.7.1 (hybrid 機能分散 MUST) / §1.8 (VALID_ROLES) / FR-L1-39 (classifyTask) を
 L6 機能契約へ降ろし、PLAN-L7-75 で実装した `src/task/tier-router.ts` の Forward 設計を back-fill する
@@ -652,7 +646,36 @@ provider で hybrid の worker≠reviewer 分離を検証する。T0 の相談�
 invariant 要約: archetype が帯を決める / ワーカーは T0 に絶対到達しない (fail-close) / T0 は明示許可ゲート /
 hybrid は実装と検証を別 provider / Codex は Claude と対称。U-* family = U-TIER-001..015。
 
-## 2026-06-19 skill suggest free-text surface Addendum (A-138 ITEM-2)
+### 2026-07-01 model / effort routing 追補
+
+PO 追加指示により、`src/team/model-policy.ts` は difficulty だけでなく task intent を deterministic に導出する。
+intent は `docs` / `research` / `implementation` / `lightweight` / `review` / `uiux` / `general` の 7 値で、
+role・engine・task text から推定する。これは provider 配置そのものを無制限に上書きするものではなく、
+既存の cross-provider router (worker=creation、consult/verify=judgement、T0 明示許可) の上で、
+選ばれた member の model/effort 既定を決める policy である。
+
+モデル系統の既定:
+
+- docs 系: Claude Sonnet 系を優先する。
+- research 系: Claude Haiku 系を優先する。
+- implementation 系: GPT/Codex 系を優先する。
+- lightweight 系: GPT/Codex の spark / mini lane を使い、並列 shard で閉鎖権限を持たせない。
+- design / implementation review: T0 reviewer として GPT frontier (`gpt-5.5`) または Claude Opus (`claude-opus-4-8`) 以上を明示許可ゲート付きで使う。
+- UI/UX 系: Claude Sonnet 系を優先し、effort は `xhigh` とする。
+
+effort 既定:
+
+- Claude 系は `high` を標準にする。
+- GPT/Codex 系は `middle` を標準にする。
+- review / critical judgement は一段上げ、GPT frontier review は `xhigh`、Claude/Opus review は `high` とする。
+- spark / mini など軽量モデル lane は `high` を標準にする。
+- UI/UX は `xhigh` を指定する。
+
+`ReasoningEffort` は後方互換の `medium` を残しつつ、PO 語彙の `middle` と `xhigh` を追加する。
+team proposal lane の mini/spark は `effort=high` で生成し、review aggregator は `high`、critical aggregator は
+`xhigh` を使う。oracle: U-TEAM-MODEL intent / effort tests、U-TEAM launch proposal lane effort tests。
+
+## 2026-06-19 skill suggest free-text surface 追補 (A-138 ITEM-2)
 
 FR-L1-12 (`suggestSkillInjection`) / FR-L1-47 (`recommendSkills`) の公開 CLI `ut-tdd skill suggest` は
 従来 `--plan <id>` (harness.db `plan_registry` 文脈) のみだった。**additive 拡張** (cross_agent TL/Codex 裏取り済)
@@ -674,63 +697,44 @@ FR-L1-12 (`suggestSkillInjection`) / FR-L1-47 (`recommendSkills`) の公開 CLI 
 - `skills→task` import は一方向 (dependency-drift cycles 0)。oracle: `tests/skill-recommend.test.ts`
   (recommendSkillsForText の flat-list + risk reason)。`workflowModeForKind`: reverse→Reverse / poc→Discovery /
   refactor→Refactor / troubleshoot→Recovery / それ以外→Forward。
-## 2026-06-23 dynamic skill injection materialization Addendum (PLAN-L7-135)
+## 2026-06-23 dynamic skill injection materialization 追補 (PLAN-L7-135)
 
-FR-L1-12 / FR-L1-47 is not closed by recommendation rows alone. The runtime
-contract has two steps:
+FR-L1-12 / FR-L1-47 は recommendation row だけでは close しない。runtime contract は 2 step とする。
 
-- `buildSkillInjectionSet(db, recommendations, { generatedAt? })` returns
-  `SkillInjectionSet { plan_id, generated_at, entries[], required_paths[],
-  optional_paths[], missing_skill_ids[] }`. Entries contain `skill_id`,
-  `skill_path`, `tier` (`required|recommended|optional`), `inject_at`
-  (`before_work|on_demand`), `reason`, `rank`, and `score`.
-- `buildAdapterPlan(intent, mode)` accepts `contextInjection` and appends the
-  scoped paths to provider stdin under `UT-TDD context injection`. Codex and
-  Claude share the same adapter contract; argv remains fixed command flags and
-  never carries prompt bodies or skill bodies.
+- `buildSkillInjectionSet(db, recommendations, { generatedAt? })` は `SkillInjectionSet { plan_id, generated_at, entries[], required_paths[], optional_paths[], missing_skill_ids[] }` を返す。entry は `skill_id`、`skill_path`、`tier` (`required|recommended|optional`)、`inject_at` (`before_work|on_demand`)、`reason`、`rank`、`score` を持つ。
+- `buildAdapterPlan(intent, mode)` は `contextInjection` を受け取り、scoped path を `UT-TDD context injection` 配下の provider stdin へ append する。Codex と Claude は同じ adapter contract を共有する。argv は fixed command flag のままとし、prompt body や skill body は持たせない。
 
 CLI wiring:
 
-- `ut-tdd skill suggest --plan <id> --inject --json` emits the manifest without
-  writing DB rows unless `--record` is also present.
-- `ut-tdd codex|claude --plan <id> ...` resolves skill injection from
-  `harness.db` projection and passes it into the adapter plan.
-- `ut-tdd team run --plan <id> ...` passes the same injection to every runtime
-  member adapter, preserving worker/reviewer provider separation.
-- `ut-tdd task route --plan <path> --execute` extracts `plan_id` from the PLAN
-  file, resolves the same injection manifest, and passes it through
-  `routeToAdapterPlan(..., { contextInjection })` after cost-tier routing.
+- `ut-tdd skill suggest --plan <id> --inject --json` は、`--record` も存在する場合を除き DB row を書かず manifest を出力する。
+- `ut-tdd codex|claude --plan <id> ...` は `harness.db` projection から skill injection を解決し、adapter plan へ渡す。
+- `ut-tdd team run --plan <id> ...` は同じ injection をすべての runtime member adapter へ渡し、worker/reviewer provider separation を維持する。
+- `ut-tdd task route --plan <path> --execute` は PLAN file から `plan_id` を抽出し、同じ injection manifest を解決し、cost-tier routing 後に `routeToAdapterPlan(..., { contextInjection })` 経由で渡す。
 
-## 2026-06-23 Linux/POSIX wrapper readiness Addendum
+## 2026-06-23 Linux/POSIX wrapper readiness 追補
 
-Runtime entrypoints remain TypeScript/Bun first, with thin OS wrappers only.
-`scripts/ut-tdd` is the Linux/POSIX `sh` entrypoint: it enables `set -e`,
-executes `dist/ut-tdd` when the compiled binary exists, and otherwise falls back
-to `bun run "$ROOT/src/cli.ts" "$@"`. The wrapper must not introduce Bash-only
-syntax, Python runtime dispatch, or legacy runtime names.
+runtime entrypoint は TypeScript/Bun first のままとし、OS wrapper は thin に限る。`scripts/ut-tdd` は Linux/POSIX `sh` entrypoint である。これは `set -e` を有効化し、compiled binary が存在する場合は `dist/ut-tdd` を実行し、それ以外は `bun run "$ROOT/src/cli.ts" "$@"` へ fallback する。wrapper は Bash-only syntax、Python runtime dispatch、legacy runtime name を導入してはならない。
 
-Dynamic skill context injection for `ut-tdd codex|claude --plan` is
-opportunistic at runtime startup. If the current working tree cannot rebuild a
-harness DB projection, for example a temp repo used by hook/adapter smoke tests,
-the adapter execution continues without a `UT-TDD context injection` block. The
-task prompt and lifecycle digest still complete normally; missing injection is
-observable as absent context, not as adapter launch failure.
+`ut-tdd codex|claude --plan` の dynamic skill context injection は runtime startup 時の opportunistic 動作とする。current working tree が harness DB projection を rebuild できない場合、例えば hook/adapter smoke test 用 temp repo では、adapter execution は `UT-TDD context injection` block なしで継続する。task prompt と lifecycle digest は通常通り完了する。missing injection は adapter launch failure ではなく absent context として観測可能にする。
 
-## 2026-06-23 artifact progress workflow trigger Addendum
+## 2026-07-01 上位モデル advisor command 追補
 
-`deriveArtifactProgressDecision(input)` uses test-run and dependency-check
-evidence, not only static test links:
+`src/team/advisor-policy.ts` は、Sonnet-class Claude または下位 GPT/Codex model が
+orchestrator で、判断に迷う場合に上位モデルへ相談するための deterministic policy である。
+公開 CLI は `ut-tdd advisor` とし、既定は dry-run adapter plan、`--execute` 指定時だけ
+provider CLI を起動する。
 
-- `red`: dependency check missing or open dependency impacts remain.
-- `yellow`: recovery is active, no linked test exists, or linked tests exist but
-  no passing `test_runs` row is connected.
-- `green`: at least one linked passing `test_runs` row exists and dependency
-  impact is checked clean.
+| 関数 / CLI | signature / command | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `buildAdvisorDecision` | `(input: AdvisorInput) => AdvisorDecision` | `task` と `mode` がある。`provider` は未指定可。 | `provider`、上位 `model`、`effort`、`task_intent`、`adapterPlan` を返す。 | Claude advisor は Opus (`claude-opus-4-8`) + `high`、Codex advisor は GPT frontier (`gpt-5.5`) + `xhigh`。下位 orchestrator からの相談は `current_model_lower_than_advisor=true` で surface する。 | U-CLI-ADVISOR dry-run / execute |
+| `ut-tdd advisor` | `--task/--task-file`, `--provider`, `--current-model`, `--reason`, `--plan`, `--mode`, `--execute`, `--json` | `--task` と `--task-file` は相互排他。`provider` は `claude` / `codex` のみ。 | dry-run では adapter plan JSON を返す。`--execute` では既存 adapter 実行と同じ session logging を通して provider を起動する。 | advisor は read-only judgement prompt であり、file edit や gate close を主張しない。 | `tests/cli-surface.test.ts` |
 
-`projectArtifactProgress(db, graph)` projects file-backed source/design/
-test-design/plan/requirement nodes. It records `dependency_check_run_id`,
-`dependency_checked_at`, `passed_test_run_ids`, `passed_test_run_count`, and
-`recovery_plan_ids`. The projection also writes rebuildable
-`artifact_progress_events` rows and mirrors red/yellow rows into
-`feedback_events` with `source_table="artifact_progress"` so workflow routing can
-start from DB state.
+## 2026-06-23 artifact progress workflow trigger 追補
+
+`deriveArtifactProgressDecision(input)` は static test link だけでなく test-run と dependency-check evidence を使う。
+
+- `red`: dependency check が missing、または open dependency impact が残っている。
+- `yellow`: recovery が active、linked test がない、または linked test はあるが passing `test_runs` row が接続されていない。
+- `green`: 1 件以上の linked passing `test_runs` row が存在し、dependency impact が clean と確認されている。
+
+`projectArtifactProgress(db, graph)` は file-backed source/design/test-design/plan/requirement node を project する。これは `dependency_check_run_id`、`dependency_checked_at`、`passed_test_run_ids`、`passed_test_run_count`、`recovery_plan_ids` を記録する。projection は rebuildable `artifact_progress_events` row も書き込み、red/yellow row を `source_table="artifact_progress"` 付きで `feedback_events` へ mirror する。これにより workflow routing は DB state から開始できる。

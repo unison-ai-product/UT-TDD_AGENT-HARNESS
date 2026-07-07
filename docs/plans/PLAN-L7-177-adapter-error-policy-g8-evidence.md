@@ -50,7 +50,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T11:56:10+09:00"
         evidence_path: tests/runtime-adapter.test.ts
-        output_digest: "sha256:c660ed89dfe6fe167981c3e9bdf0e02396ed855b36b677e1898c63f9d33cc463"
+        output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
 ---
 
 # PLAN-L7-177: adapter error policy G8 evidence closure

@@ -57,7 +57,7 @@ updated: 2026-05-28
 | **NFR-12** | machine×AI 二層 (静的 + AI レビュー) | Lv2 | KPI D-07 (AI 委譲時間率) ≥ 70% (目標値) | `.ut-tdd/audit/invocation_log/` 集計 | 直近 1 sprint D-07 ≥ 50% (Phase A) / ≥ 70% (Phase B、§6.2 BR-21 着手条件と整合) |
 | **NFR-15** | server-optional (Phase A local / Phase B server) | Lv2 | Phase A は local-only で全機能動作 / Phase B 拡張は L4 carry | Phase A: `ut-tdd doctor --server-disabled` / Phase B: ADR | Phase A: server なしで全 P0 FR 動作 / Phase B: L4 ADR |
 
-#### AC-NFR-02 (carry placeholder)
+#### AC-NFR-02 (carry placeholder の扱い)
 - **Given**: L4 ADR 未確定 (本 PLAN range 外)
 - **When**: L4 PLAN 起票時
 - **Then**: 配布形態 (npm / repo template / GitHub Packages) を ADR で確定
@@ -145,7 +145,7 @@ updated: 2026-05-28
 - **When**: `ut-tdd plan lint`
 - **Then**: fail-close `Error: role 'dev_lead' は VALID_ROLES 外 (§1.8)` / 終了コード 1
 
-#### AC-NFR-09 (L4 carry placeholder)
+#### AC-NFR-09 (L4 carry placeholder の扱い)
 - **Given**: L4 ADR で parity-check 実装方式確定
 - **When**: L4 PLAN 起票時
 - **Then**: parity check の機械検証ルール確定 (本 PLAN は機械検証必須化のみ宣言)
@@ -212,7 +212,7 @@ updated: 2026-05-28
 - **D-16 (SPACE Efficiency)** gate G2-G7 block time、NFR-13 関連
 - **D-17 (LinearB)** PLAN diff median LOC soft target 300、NFR-08 (implementation_status 真実性) 関連
 
-### §7.4.2 NFR 3-tier classification (A-46 tech-docs、L4 carry)
+### §7.4.2 NFR 3-tier classification の定義 (A-46 tech-docs、L4 carry)
 
 NFR-01〜17 + 新規 KPI を以下 3 tier に分類:
 - **tier A** (doctor 自動判定): NFR-01/04/05/06/08/13/16 等、計測コマンド + 閾値で即判定

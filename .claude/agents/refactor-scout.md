@@ -2,7 +2,7 @@
 name: refactor-scout
 description: Refactor Scout. Detects behavior-invariant refactor opportunities, especially split/extract/deduplicate/externalize-policy candidates, and returns triage plus PLAN/verification suggestions. Advisory only; does not implement code changes.
 tools: Read, Grep, Glob
-model: claude-haiku-4-5-20251001
+model: claude-haiku-4-5
 effort: low
 memory: project
 maxTurns: 10

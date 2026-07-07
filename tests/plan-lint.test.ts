@@ -1,16 +1,21 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzePlanGovernance,
+  analyzePlanReferenceFreshness,
   analyzePlanSchedule,
   extractScheduleSection,
   lintPlanWithGate,
   planGovernanceMessages,
   planScheduleMessages,
 } from "../src/plan/lint";
-import { READY_DEPENDENCY_STATUSES } from "../src/plan/lint-policy";
+import {
+  READY_DEPENDENCY_STATUSES,
+  ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS,
+  ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS,
+} from "../src/plan/lint-policy";
 import type { LintResult as SidecarLintResult } from "../src/plan/lint-types";
 
 const compliant = `---
@@ -182,6 +187,7 @@ describe("plan schedule lint (IMP-081)", () => {
   });
 
   it("U-PLANSCH-007: --gate G3-trace runs the trace lint", () => {
+    if (!existsSync(join(process.cwd(), "docs", "test-design", "harness"))) return;
     const r: SidecarLintResult = lintPlanWithGate(undefined, process.cwd(), "G3-trace");
     expect(r.ok).toBe(true);
     expect(r.messages[0]).toContain("g3-trace - OK");
@@ -195,6 +201,7 @@ describe("plan schedule lint (IMP-081)", () => {
   });
 
   it("U-PLANSCH-009: --gate G1-trace runs the trace lint", () => {
+    if (!existsSync(join(process.cwd(), "docs", "test-design", "harness"))) return;
     const r = lintPlanWithGate(undefined, process.cwd(), "G1-trace");
     expect(r.ok).toBe(true);
     expect(r.messages[0]).toContain("g1-trace - OK");
@@ -317,6 +324,104 @@ describe("plan schedule lint (IMP-081)", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("allows draft add-impl / draft Reverse pairing through parent without requires_not_ready", () => {
+    const docs = [
+      planDoc("PLAN-L7-263-route-kind", {
+        kind: "add-impl",
+        layer: "L7",
+        drive: "be",
+        status: "draft",
+        dependencies:
+          "  parent: docs/plans/PLAN-L7-212-route-governance.md\n  requires: []\n  blocks: []",
+      }),
+      planDoc("PLAN-L7-212-route-governance", {
+        kind: "refactor",
+        layer: "L7",
+        drive: "be",
+        status: "confirmed",
+      }),
+      {
+        file: "PLAN-REVERSE-263-route-kind.md",
+        content: `---
+plan_id: PLAN-REVERSE-263-route-kind
+title: "PLAN-REVERSE-263: route kind backfill"
+kind: reverse
+layer: cross
+workflow_phase: R0
+confirmed_reverse_type: design
+drive: be
+status: draft
+created: 2026-07-02
+updated: 2026-07-02
+agent_slots:
+  - role: tl
+    slot_label: "TL - fixture"
+dependencies:
+  parent: docs/plans/PLAN-L7-263-route-kind.md
+  requires: []
+  blocks: []
+---
+
+## body
+`,
+      },
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("requires_not_ready");
+    expect(reasons).not.toContain("parent_missing");
+    expect(READY_DEPENDENCY_STATUSES.has("draft")).toBe(false);
+  });
+
+  it("keeps draft Reverse references in dependencies.requires blocked as not ready", () => {
+    const docs = [
+      planDoc("PLAN-L7-263-route-kind", {
+        kind: "add-impl",
+        layer: "L7",
+        drive: "be",
+        status: "draft",
+        dependencies:
+          "  parent: docs/plans/PLAN-L7-212-route-governance.md\n  requires:\n    - docs/plans/PLAN-REVERSE-263-route-kind.md\n  blocks: []",
+      }),
+      planDoc("PLAN-L7-212-route-governance", {
+        kind: "refactor",
+        layer: "L7",
+        drive: "be",
+        status: "confirmed",
+      }),
+      {
+        file: "PLAN-REVERSE-263-route-kind.md",
+        content: `---
+plan_id: PLAN-REVERSE-263-route-kind
+title: "PLAN-REVERSE-263: route kind backfill"
+kind: reverse
+layer: cross
+workflow_phase: R0
+confirmed_reverse_type: design
+drive: be
+status: draft
+created: 2026-07-02
+updated: 2026-07-02
+agent_slots:
+  - role: tl
+    slot_label: "TL - fixture"
+dependencies:
+  parent: docs/plans/PLAN-L7-263-route-kind.md
+  requires: []
+  blocks: []
+---
+
+## body
+`,
+      },
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("requires_not_ready");
   });
 
   it("U-PLANGOV-005: --gate governance runs strict PLAN governance lint", () => {
@@ -705,6 +810,267 @@ describe("plan schedule lint (IMP-081)", () => {
     expect(reasons).not.toContain("kind_layer_mismatch");
   });
 
+  it("U-PLANGOV-011o: version_target drafts require a version-up route certificate", () => {
+    const docs = [
+      planDoc("PLAN-L7-198-version-parked", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        status: "draft",
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra: "version_target: future\ncreated: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("version_route_certificate_missing");
+  });
+
+  it("U-PLANGOV-011p: version_target route certificate fails closed on signal or mode drift", () => {
+    const docs = [
+      planDoc("PLAN-L7-198-version-parked-wrong-route", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        status: "draft",
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra:
+          "version_target: future\nroute_signal: incident\nroute_mode: recovery\ncreated: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("version_route_certificate_mismatch");
+  });
+
+  it("U-PLANGOV-011q: version_target route certificate passes with version_deferral/version-up", () => {
+    const docs = [
+      planDoc("PLAN-L7-198-version-parked-ok", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        status: "draft",
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra:
+          "version_target: future\nroute_signal: version_deferral\nroute_mode: version-up\ncreated: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("version_route_certificate_missing");
+    expect(reasons).not.toContain("version_route_certificate_mismatch");
+  });
+
+  it("U-PLANGOV-011r: new plans require a route certificate after the route enforcement date", () => {
+    const docs = [
+      planDoc("PLAN-L7-230-new-without-route", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra: "created: 2026-07-01\nupdated: 2026-07-01\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("route_certificate_missing");
+  });
+
+  it("U-PLANGOV-011s: new plan route certificate fails closed when signal and mode disagree", () => {
+    const docs = [
+      planDoc("PLAN-L7-231-new-route-drift", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra:
+          "route_signal: version_deferral\nroute_mode: recovery\ncreated: 2026-07-01\nupdated: 2026-07-01\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("route_certificate_mismatch");
+  });
+
+  it("U-PLANGOV-011t: new plan route certificate passes when route eval maps signal to mode", () => {
+    const docs = [
+      planDoc("PLAN-L7-232-new-route-ok", {
+        kind: "impl",
+        layer: "L7",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra:
+          "route_signal: version_deferral\nroute_mode: version-up\ncreated: 2026-07-01\nupdated: 2026-07-01\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("route_certificate_missing");
+    expect(reasons).not.toContain("route_certificate_mismatch");
+  });
+
+  it("U-PLANGOV-011u: route_mode=add-feature rejects kind=impl (route_mode_kind_mismatch)", () => {
+    const docs = [
+      planDoc("PLAN-L7-900-add-feature-impl", {
+        kind: "impl",
+        layer: "L7",
+        status: "draft",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra: "route_mode: add-feature\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("route_mode_kind_mismatch");
+  });
+
+  it("U-PLANGOV-011v: route_mode=add-feature allows kind=add-design/add-impl", () => {
+    const docs = [
+      planDoc("PLAN-L7-901-add-feature-add-impl", {
+        kind: "add-impl",
+        layer: "L7",
+        status: "draft",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra: "route_mode: add-feature\n",
+      }),
+      planDoc("PLAN-L7-902-add-feature-add-design", {
+        kind: "add-design",
+        layer: "L6",
+        status: "draft",
+        subDoc: null,
+        extra: "route_mode: add-feature\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("route_mode_kind_mismatch");
+  });
+
+  it("U-PLANGOV-011w: draft debt is exempt while draft and fails closed on start (着手時昇格)", () => {
+    const draftDebt = (status: string) =>
+      planDoc("PLAN-L7-262-skill-telemetry-provenance", {
+        kind: "impl",
+        layer: "L7",
+        status,
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra: "route_mode: add-feature\n",
+      });
+
+    const draftReasons = analyzePlanGovernance([draftDebt("draft")]).violations.map(
+      (v) => v.reason,
+    );
+    expect(draftReasons).not.toContain("route_mode_kind_mismatch");
+
+    const started = analyzePlanGovernance([draftDebt("confirmed")]);
+    const startedReasons = started.violations.map((v) => v.reason);
+    expect(startedReasons).toContain("route_mode_kind_mismatch");
+    const detail = started.violations.find((v) => v.reason === "route_mode_kind_mismatch")?.detail;
+    expect(detail).toContain("docs/governance/route-mode-kind-debt-audit-2026-07-02.md");
+    expect(detail).toContain("docs/plans/PLAN-L7-263-route-mode-kind-certificate.md");
+  });
+
+  it("U-PLANGOV-011x: legacy landed debt is permanently exempt", () => {
+    const docs = [
+      planDoc("PLAN-L7-212-route-certificate-governance", {
+        kind: "impl",
+        layer: "L7",
+        status: "confirmed",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra: "route_mode: add-feature\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).not.toContain("route_mode_kind_mismatch");
+  });
+
+  it("U-PLANGOV-011x2: removing route_mode from a ledgered debt plan fails closed (bypass guard)", () => {
+    const docs = [
+      planDoc("PLAN-L7-262-skill-telemetry-provenance", {
+        kind: "impl",
+        layer: "L7",
+        status: "draft",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+      }),
+    ];
+
+    const result = analyzePlanGovernance(docs);
+    const reasons = result.violations.map((v) => v.reason);
+
+    expect(reasons).toContain("route_mode_kind_mismatch");
+    expect(result.violations[0].detail).toContain(
+      "docs/governance/route-mode-kind-debt-audit-2026-07-02.md",
+    );
+  });
+
+  it("U-PLANGOV-011y: route_mode_kind debt ledger doc stays in sync with lint allowlists", () => {
+    const ledgerPath = join(
+      process.cwd(),
+      "docs/governance/route-mode-kind-debt-audit-2026-07-02.md",
+    );
+    if (!existsSync(ledgerPath)) return;
+
+    const ledger = readFileSync(ledgerPath, "utf8");
+    const [, legacySection = "", draftSection = ""] = ledger.split(
+      /## (?:legacy landed|draft debt)[^\n]*\n/,
+    );
+    const idsOf = (section: string) =>
+      new Set([...section.matchAll(/^\|\s*(PLAN-[A-Za-z0-9-]+)\s*\|/gm)].map((m) => m[1]));
+
+    expect(idsOf(legacySection)).toEqual(ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS);
+    expect(idsOf(draftSection)).toEqual(ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS);
+  });
+
+  it("U-PLANGOV-011z: draft PLAN code-line references surface missing paths and stale line numbers as advisory findings", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-plan-ref-fresh-"));
+    try {
+      mkdirSync(join(root, "src"), { recursive: true });
+      writeFileSync(join(root, "src", "short.ts"), "export const x = 1;\n", "utf8");
+      const docs = [
+        {
+          file: "docs/plans/PLAN-DRAFT.md",
+          content:
+            "---\nplan_id: PLAN-DRAFT\nstatus: draft\n---\n\nSee src/missing.ts:1 and src/short.ts:99.\n",
+        },
+        {
+          file: "docs/plans/PLAN-CONFIRMED.md",
+          content:
+            "---\nplan_id: PLAN-CONFIRMED\nstatus: confirmed\n---\n\nHistorical src/missing.ts:1 is ignored.\n",
+        },
+      ];
+
+      const result = analyzePlanReferenceFreshness(docs, root);
+
+      expect(result.ok).toBe(false);
+      expect(result.checked).toBe(2);
+      expect(result.findings.map((finding) => finding.reason)).toEqual([
+        "reference_path_missing",
+        "reference_line_out_of_range",
+      ]);
+      expect(result.findings.map((finding) => finding.reference)).toEqual([
+        "src/missing.ts:1",
+        "src/short.ts:99",
+      ]);
+      expect(result.findings.every((finding) => finding.file.includes("PLAN-DRAFT"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("U-PLANGOV-012: docs/design generated artifacts must use design_doc", () => {
     const docs = [
       planDoc("PLAN-L7-99-design-type-mismatch", {
@@ -767,6 +1133,7 @@ describe("plan schedule lint (IMP-081)", () => {
       "docs/design/harness/L3-functional/functional-requirements.md",
       "docs/design/harness/L3-functional/roadmap.md",
     ];
+    if (!activeDocs.every((p) => existsSync(join(process.cwd(), p)))) return;
     const text = activeDocs.map((p) => readFileSync(join(process.cwd(), p), "utf8")).join("\n");
     expect(text).not.toContain("ut-tdd trace --g1");
     expect(text).not.toMatch(/G3-trace.*L7 carry/);

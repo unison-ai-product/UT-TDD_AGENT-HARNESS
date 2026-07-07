@@ -16,6 +16,7 @@ import { REQUIRED as CLAUDE_REQUIRED } from "../src/lint/project-hook";
 import { analyzeReadability } from "../src/lint/readability";
 import { evaluateAgentGuard } from "../src/runtime/agent-guard";
 import { evaluateWorkGuard } from "../src/runtime/work-guard";
+import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
 
 /** .codex/hooks.json と同型の有効な Codex adapter fixture (mutate して fail-close を検証)。 */
 function validCodexHooks(): Record<string, unknown> {
@@ -26,6 +27,12 @@ function validCodexHooks(): Record<string, unknown> {
           matcher: "apply_patch|write_file",
           hooks: [
             { type: "command", command: "bun .claude/hooks/work-guard.ts", blockOnFailure: true },
+          ],
+        },
+        {
+          matcher: "spawn_agent|spawn_agents_on_csv",
+          hooks: [
+            { type: "command", command: "bun .claude/hooks/agent-guard.ts", blockOnFailure: true },
           ],
         },
       ],
@@ -63,6 +70,45 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139)", () => {
   it("U-CXHOOK-002: 有効な adapter fixture は ok", () => {
     assertExternalizedCodexRequiredPolicy();
     expect(analyzeCodexHookAdapter({ codexHooksJson: json(validCodexHooks()) }).ok).toBe(true);
+  });
+
+  // PLAN-RECOVERY-06 (A-172 C-2): setup が consumer へ生成する .codex/hooks.json (wrapper 配線)
+  // が codex-hook-adapter gate を通ることを実テンプレートで固定する (単一定義源の回帰フェンス)。
+  it("U-CXHOOK-002c: setup 生成 consumer hooks.json (wrapper 配線) は ok", () => {
+    const generated = BUILTIN_GITHUB_TEMPLATES["adapter/.codex/hooks.json"];
+    expect(generated).toBeDefined();
+
+    const r = analyzeCodexHookAdapter({ codexHooksJson: generated });
+    expect(r.ok).toBe(true);
+    expect(r.violations).toEqual([]);
+  });
+
+  it("U-CXHOOK-002e: wrapper 配線でも guard の blockOnFailure 欠落は fail-close", () => {
+    const generated = JSON.parse(BUILTIN_GITHUB_TEMPLATES["adapter/.codex/hooks.json"]) as {
+      hooks: Record<string, { matcher?: string; hooks: { blockOnFailure?: boolean }[] }[]>;
+    };
+    for (const entry of generated.hooks.PreToolUse) {
+      for (const hook of entry.hooks) {
+        delete hook.blockOnFailure;
+      }
+    }
+
+    const r = analyzeCodexHookAdapter({ codexHooksJson: JSON.stringify(generated) });
+    expect(r.ok).toBe(false);
+    expect(r.violations).toContainEqual({
+      hook: "agent-guard",
+      reason: "missing_block_on_failure",
+    });
+    expect(r.violations).toContainEqual({ hook: "work-guard", reason: "missing_block_on_failure" });
+  });
+
+  it("U-CXHOOK-002d: Claude/Codex の wrapper 配線は定義上同一 (entrypoint 分岐防止)", () => {
+    const claudeWrapperById = new Map(
+      CLAUDE_REQUIRED.map((hook) => [hook.id, hook.wrapperCommand]),
+    );
+    for (const required of CODEX_REQUIRED) {
+      expect(required.wrapperCommand).toBe(claudeWrapperById.get(required.id));
+    }
   });
 
   it("U-CXHOOK-002b: policy prose is mojibake-free", () => {
@@ -147,20 +193,16 @@ describe("codex-hook-adapter — Codex hooks.json parity (PLAN-L7-139)", () => {
     }
   });
 
-  it("U-CXHOOK-011: subagent-stop のみ真の N/A。agent-guard は N/A でなく『実在するが未ガード』の deferred surface", () => {
+  it("U-CXHOOK-011: subagent-stop stays N/A while Codex spawn_agent is guarded", () => {
     const naEntrypoints = CODEX_NOT_APPLICABLE.map((n) => n.entrypoint);
     expect(naEntrypoints).toContain("src/cli.ts hook subagent-stop");
-    // 当初 agent-guard を「面が無い N/A」と書いたのは誤り (spawn_agent 族が実在)。N/A から外れていること。
-    expect(naEntrypoints).not.toContain(".claude/hooks/agent-guard.ts");
     for (const n of CODEX_NOT_APPLICABLE) expect(n.reason.length).toBeGreaterThan(0);
-    // spawn_agent 面は「実在するが未ガード」の deferred follow-up として契約に残す (gap でも N/A でもない)。
-    const deferred = CODEX_DEFERRED_SURFACE.map((d) => d.surface).join(" ");
-    expect(deferred).toContain("spawn_agent");
-    for (const d of CODEX_DEFERRED_SURFACE) {
-      expect(d.claude_analog).toBe(".claude/hooks/agent-guard.ts");
-      expect(d.reason.length).toBeGreaterThan(0);
-    }
-    // 真の N/A (subagent-stop) のみなので Codex hooks.json に SubagentStop hook が無くても parity は ok。
+    expect(CODEX_DEFERRED_SURFACE).toEqual([]);
+    expect(CODEX_REQUIRED.find((hook) => hook.id === "agent-guard")).toMatchObject({
+      event: "PreToolUse",
+      matcher: "spawn_agent|spawn_agents_on_csv",
+      blockOnFailure: true,
+    });
     expect(analyzeCodexHookAdapter({ codexHooksJson: json(validCodexHooks()) }).ok).toBe(true);
   });
 

@@ -30,8 +30,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T13:55:00+09:00"
-    tests_green_at: "2026-06-29T13:55:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Share the expensive real-repo runDoctor result within doctor.test while preserving per-gate assertions."
     worker_model: codex
@@ -42,9 +42,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T13:55:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/doctor.test.ts
-        output_digest: "sha256:05939d1dca75ba4ff27a8f39025b927ea00e626cbc0672409a34db4e054f3ca9"
+        output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
 ---
 
 # PLAN-L7-183: doctor test performance

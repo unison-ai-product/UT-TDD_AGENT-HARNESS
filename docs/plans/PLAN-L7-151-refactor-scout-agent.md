@@ -48,8 +48,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-25T17:02:30+09:00"
-    tests_green_at: "2026-06-25T17:02:30+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Refactor Scout advisory agent, externalize-policy detector heuristic, and tier-router policy extraction."
     worker_model: codex
@@ -60,9 +60,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T16:48:56+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:07fd6b9c6fcbabf2c893a28eb0f49f4da7f83f276b88befdbfd7b8c4b5daee51"
+        output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
       - kind: unit_test
         command: "bun run vitest run tests\\tier-router.test.ts tests\\model-id-ssot.test.ts tests\\agent-guard.test.ts tests\\projection-writer.test.ts"
         runner: bun
@@ -84,17 +84,17 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T17:00:41+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:2cd13824089171ce59ccceae767e6b6196a46f1cca15452f222829ed2ef53533"
+        output_digest: "sha256:e42d9d2be60e6b383cc51c291009e3e8104f2c60db8dca17737be0cfb3eb34d6"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T16:49:22+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:38742cdac160309248b272d64816e393e784055b4c1cf8977b6f528da43c0491"
+        output_digest: "sha256:7a231cb642507d46f961e0b38fbbd6807c908a3305831a79f235adcbe3152902"
       - kind: smoke
         command: "bun run src\\cli.ts db rebuild"
         runner: bun

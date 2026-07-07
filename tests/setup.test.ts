@@ -1,14 +1,28 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildBranchProtectionPayload } from "../src/setup/branch-protection";
 import {
   applyBranchProtection,
   buildCleanDistributionPlan,
   buildConsumerReadinessPlan,
+  buildPackSyncPlan,
+  cleanDistributionArtifactPath,
+  cleanDistributionSourcePath,
   detectProjectScale,
   emitSetup,
   loadTemplates,
+  PACK_SAFE_TEST_SCRIPT,
   type ProjectScale,
   planSetup,
   recommendPhase,
@@ -16,8 +30,10 @@ import {
   runSetup,
   type SetupDeps,
   type SetupState,
+  transformCleanDistributionArtifact,
 } from "../src/setup/index";
 import { COMMON_FILES, type TemplateSet } from "../src/setup/templates";
+import { MODEL_IDS } from "../src/team/model-policy";
 
 /** in-memory file store + gh 呼び出し記録の mock deps (now 固定で決定論)。 */
 function mockDeps(
@@ -46,6 +62,25 @@ function mockDeps(
 const codeownersPath = join("/repo", ".github", "CODEOWNERS");
 const statePath = join("/repo", ".ut-tdd", "state", "setup.json");
 
+function walkRepoCandidatePaths(root: string): string[] {
+  const ignored = new Set([".git", "node_modules", "dist"]);
+  const out: string[] = [];
+  const walk = (dir: string, prefix = ""): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (ignored.has(entry.name)) continue;
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const abs = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(abs, rel);
+      } else {
+        out.push(rel.replace(/\\/g, "/"));
+      }
+    }
+  };
+  walk(root);
+  return out.sort();
+}
+
 /** org + 4 collaborators + protection あり + admin を返す gh mock。 */
 const ghTeam = (args: string[]): { ok: boolean; stdout: string } => {
   const key = args.join(" ");
@@ -63,6 +98,7 @@ const ghTeam = (args: string[]): { ok: boolean; stdout: string } => {
 };
 
 const baseTemplates: TemplateSet = {
+  "common/ut-tdd.mjs": "#!/usr/bin/env bun\n",
   "adapter/AGENTS.md": [
     "<!-- UT-TDD:managed:start -->",
     "# UT-TDD Agent Harness Adapter",
@@ -229,6 +265,9 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       const templates = loadTemplates(repo);
       expect(templates["adapter/AGENTS.md"]).toContain("UT-TDD Agent Harness Adapter");
       expect(templates["common/harness-check.yml"]).toContain("harness-check");
+      expect(templates["common/harness-check.yml"]).toContain("github guard");
+      expect(templates["common/harness-check.yml"]).toContain("audit quality --include-tests");
+      expect(templates["common/harness-check.yml"]).toContain("ut-tdd.mjs doctor --setup-smoke");
       expect(templates["team/CODEOWNERS"]).toContain("{{TL_TEAM}}");
       const deps = mockDeps({ repoRoot: repo, templates });
       const plan = planSetup("0-B", {
@@ -241,6 +280,70 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
+  });
+
+  // Pack の test:pack は transform の PACK_SAFE_TEST_SCRIPT が正本。source package.json 側の
+  // test:pack 更新 (例: 3dd979f の toolchain-pin 追加) が定数へ伝播し忘れると、次の sync-pack が
+  // Pack 側の既存 script を黙って退行させる (実発生 2026-07-03)。両者の一致を fail-close で固定。
+  it("U-SETUP-017: PACK_SAFE_TEST_SCRIPT stays in sync with source test:pack", () => {
+    const pkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts["test:pack"]).toBe(PACK_SAFE_TEST_SCRIPT);
+  });
+
+  // PLAN-L7-361: nodeConfirm は blocking readSync のため、stdin が開いたまま無音の非対話環境
+  // (CI runner / tool shell) で emitSetup の上書き確認が無限待ちになった。非対話では confirm を
+  // 呼ばず既存保護 (skip) が invariant。
+  it("U-SETUP-016: non-interactive emitSetup keeps existing files without calling confirm", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-setup-nonint-"));
+    try {
+      const templates = loadTemplates(repo);
+      const wrapperPath = join("/repo", ".ut-tdd", "bin", "ut-tdd.mjs");
+      const deps = mockDeps({
+        templates,
+        isInteractive: false,
+        confirm: () => {
+          throw new Error("confirm must not be called in non-interactive mode");
+        },
+      });
+      deps.files.set(wrapperPath, "PREEXISTING-CONSUMER-CONTENT");
+
+      const plan = planSetup("0-A", { dryRun: false });
+      const written = emitSetup(plan, templates, deps);
+
+      expect(deps.files.get(wrapperPath)).toBe("PREEXISTING-CONSUMER-CONTENT");
+      expect(written).not.toContain(join(".ut-tdd", "bin", "ut-tdd.mjs"));
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  it("U-SETUP-016b: interactive confirm=yes still overwrites existing files", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-setup-int-"));
+    try {
+      const templates = loadTemplates(repo);
+      const wrapperPath = join("/repo", ".ut-tdd", "bin", "ut-tdd.mjs");
+      const deps = mockDeps({ templates, isInteractive: true, confirm: () => true });
+      deps.files.set(wrapperPath, "PREEXISTING-CONSUMER-CONTENT");
+
+      const written = emitSetup(planSetup("0-A", { dryRun: false }), templates, deps);
+
+      expect(deps.files.get(wrapperPath)).not.toBe("PREEXISTING-CONSUMER-CONTENT");
+      expect(written).toContain(join(".ut-tdd", "bin", "ut-tdd.mjs"));
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  it("U-SETUP-004b2: source docs template keeps consumer harness-check guard strength", () => {
+    const templates = loadTemplates(process.cwd());
+    const workflow = templates["common/harness-check.yml"];
+    expect(workflow).toContain("github guard");
+    expect(workflow).toContain("bun run typecheck");
+    expect(workflow).toContain("bun run test");
+    expect(workflow).toContain("audit quality --include-tests");
+    expect(workflow).toContain("ut-tdd.mjs doctor --setup-smoke");
   });
 
   it("U-SETUP-004c: built-in adapter templates ship enforced portable guard hooks", () => {
@@ -265,28 +368,72 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
           expect.objectContaining({
             matcher: "Agent|Task",
             hooks: [
-              expect.objectContaining({ command: "ut-tdd hook agent-guard", blockOnFailure: true }),
+              expect.objectContaining({
+                command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+                blockOnFailure: true,
+              }),
             ],
           }),
           expect.objectContaining({
             matcher: "Edit|Write|MultiEdit",
             hooks: [
-              expect.objectContaining({ command: "ut-tdd hook work-guard", blockOnFailure: true }),
+              expect.objectContaining({
+                command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+                blockOnFailure: true,
+              }),
             ],
           }),
         ]),
       );
-      expect(claude.hooks.SubagentStop[0].hooks[0].command).toBe("ut-tdd hook subagent-stop");
+      expect(claude.hooks.SubagentStop[0].hooks[0].command).toBe(
+        "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop",
+      );
       expect(codex.hooks.PreToolUse).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
+            matcher: "spawn_agent|spawn_agents_on_csv",
+            hooks: [
+              expect.objectContaining({
+                command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard",
+                blockOnFailure: true,
+              }),
+            ],
+          }),
+          expect.objectContaining({
             matcher: "apply_patch|write_file",
             hooks: [
-              expect.objectContaining({ command: "ut-tdd hook work-guard", blockOnFailure: true }),
+              expect.objectContaining({
+                command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard",
+                blockOnFailure: true,
+              }),
             ],
           }),
         ]),
       );
+      expect(templates["adapter/.claude/agents/pmo-sonnet.md"]).toContain(
+        `model: ${MODEL_IDS.claude.sonnet}`,
+      );
+      expect(templates["adapter/.claude/agents/pmo-haiku.md"]).toContain(
+        `model: ${MODEL_IDS.claude.haiku}`,
+      );
+      expect(templates["adapter/.claude/agents/pdm-tech-innovation.md"]).toContain(
+        `model: ${MODEL_IDS.claude.opus}`,
+      );
+      const claudeModelCatalog = new Set<string>(Object.values(MODEL_IDS.claude));
+      const agentTemplates = Object.entries(templates).filter(([path]) =>
+        path.startsWith("adapter/.claude/agents/"),
+      );
+      expect(agentTemplates.length).toBeGreaterThan(0);
+      for (const [path, body] of agentTemplates) {
+        const model = body.match(/^model:\s*(\S+)/m)?.[1];
+        expect(model, `${path} must declare a model`).toBeTruthy();
+        expect(claudeModelCatalog.has(model ?? ""), `${path} model must come from MODEL_IDS`).toBe(
+          true,
+        );
+        expect(model, `${path} must not retain legacy model suffixes`).not.toMatch(
+          /claude-opus-4-7|claude-sonnet-4-6|20251001/,
+        );
+      }
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
@@ -297,6 +444,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(plan.files).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ path: "AGENTS.md", category: "A" }),
+        expect.objectContaining({ path: join(".ut-tdd", "bin", "ut-tdd.mjs"), category: "A" }),
         expect.objectContaining({ path: "CLAUDE.md", category: "A" }),
         expect.objectContaining({ path: join(".codex", "config.toml"), category: "A" }),
         expect.objectContaining({ path: join(".codex", "hooks.json"), category: "A" }),
@@ -326,6 +474,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(preview).toEqual(
       expect.arrayContaining([
         "AGENTS.md",
+        join(".ut-tdd", "bin", "ut-tdd.mjs"),
         "CLAUDE.md",
         join(".codex", "hooks.json"),
         join(".claude", "CLAUDE.md"),
@@ -334,6 +483,98 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       ]),
     );
     for (const p of preview) expect(p).not.toContain("UT-TDD-agent-harness");
+  });
+
+  it("U-SETUP-009b: built-in wrapper falls back to the setup Pack CLI", () => {
+    const deps = mockDeps();
+    const plan = planSetup("0-A", { dryRun: false });
+
+    emitSetup(plan, {}, deps);
+
+    const wrapper = deps.files.get(join("/repo", ".ut-tdd", "bin", "ut-tdd.mjs"));
+    expect(wrapper).toContain('const setupSourceCli = "');
+    expect(wrapper).toContain(
+      'const repoLocalHarness = existsSync(repoLocalCli) && existsSync(join(repoRoot, "src", "setup", "index.ts"));',
+    );
+    expect(wrapper).toContain(
+      "const sourceCli = repoLocalHarness ? repoLocalCli : setupSourceCli;",
+    );
+    expect(wrapper).toContain(
+      'existsSync(localBin) ? localBin : existsSync(sourceCli) ? "bun" : "ut-tdd"',
+    );
+    expect(wrapper).toContain("[sourceCli, ...process.argv.slice(2)]");
+    expect(wrapper).not.toContain("{{UT_TDD_SOURCE_CLI_JSON}}");
+
+    const codexHooks = deps.files.get(join("/repo", ".codex", "hooks.json"));
+    const claudeSettings = deps.files.get(join("/repo", ".claude", "settings.json"));
+    expect(codexHooks).toContain("hook agent-guard");
+    expect(claudeSettings).toContain("hook agent-guard");
+    expect(() => JSON.parse(codexHooks ?? "")).not.toThrow();
+    expect(() => JSON.parse(claudeSettings ?? "")).not.toThrow();
+  });
+
+  it("U-SETUP-009b2: generated wrapper prefers consumer local bin when local and setup fallback both exist", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-wrapper-local-"));
+    try {
+      const deps = mockDeps({ repoRoot: repo });
+      const plan = planSetup("0-A", { dryRun: false });
+      emitSetup(plan, {}, deps);
+      const wrapper = deps.files.get(join(repo, ".ut-tdd", "bin", "ut-tdd.mjs"));
+      expect(wrapper).toBeTruthy();
+
+      const wrapperPath = join(repo, ".ut-tdd", "bin", "ut-tdd.mjs");
+      const localBin = join(
+        repo,
+        "node_modules",
+        ".bin",
+        process.platform === "win32" ? "ut-tdd.cmd" : "ut-tdd",
+      );
+      mkdirSync(join(repo, ".ut-tdd", "bin"), { recursive: true });
+      mkdirSync(join(repo, "node_modules", ".bin"), { recursive: true });
+      writeFileSync(wrapperPath, wrapper ?? "");
+      writeFileSync(
+        localBin,
+        process.platform === "win32"
+          ? "@echo off\r\necho local-bin %*\r\nexit /b 0\r\n"
+          : '#!/usr/bin/env sh\necho local-bin "$@"\n',
+      );
+      if (process.platform !== "win32") chmodSync(localBin, 0o755);
+
+      const result = spawnSync(process.execPath, [wrapperPath, "status", "--json"], {
+        cwd: repo,
+        encoding: "utf8",
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim()).toBe("local-bin status --json");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  it("U-SETUP-009b3: generated wrapper falls back to setup Pack CLI through bun when local bin is absent", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-wrapper-source-"));
+    try {
+      const deps = mockDeps({ repoRoot: repo });
+      const plan = planSetup("0-A", { dryRun: false });
+      emitSetup(plan, {}, deps);
+      const wrapper = deps.files.get(join(repo, ".ut-tdd", "bin", "ut-tdd.mjs"));
+      expect(wrapper).toBeTruthy();
+
+      const wrapperPath = join(repo, ".ut-tdd", "bin", "ut-tdd.mjs");
+      mkdirSync(join(repo, ".ut-tdd", "bin"), { recursive: true });
+      writeFileSync(wrapperPath, wrapper ?? "");
+
+      const result = spawnSync(process.execPath, [wrapperPath, "status"], {
+        cwd: repo,
+        encoding: "utf8",
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("mode:");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
   });
 
   it("U-SETUP-010: emitSetup preserves consumer-owned adapter files and merges only managed blocks", () => {
@@ -376,14 +617,22 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         "docs/governance/README.md",
         "docs/governance/ut-tdd-agent-harness-concept_v3.1.md",
         "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+        "skills/SKILL_MAP.md",
         "docs/governance/conditional-backfill-decision-audit-2026-06-22.md",
         "docs/governance/forward-convergence-legacy-debt-audit.md",
         "docs/governance/reverse-fullback-backprop-audit-2026-06-22.md",
         "docs/governance/runtime-parity-l0-l3-design-audit-2026-06-02.md",
         "docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md",
+        "docs/governance/future-release-audit-2026-06-30.md",
+        "docs/governance/product-runtime-parity-check.md",
+        "docs/governance/customer-extraction-plan.md",
+        "docs/adr/ADR-005-distribution-model-and-central-ui.md",
         "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
         "docs/design/harness/L6-function-design/setup-solo-team.md",
+        "docs/test-design/harness/L7-unit-test-design.md",
         ".ut-tdd/handover/CURRENT.json",
+        ".ut-tdd/harness.db",
+        ".ut-tdd/harness.db-wal",
       ],
     });
 
@@ -400,6 +649,18 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(plan.artifactPaths).toContain(
       "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
     );
+    expect(cleanDistributionArtifactPath("skills/SKILL_MAP.md")).toBe("skills/SKILL_MAP.md");
+    expect(plan.artifactPaths).toContain("skills/SKILL_MAP.md");
+    expect(plan.artifactPaths).not.toContain("docs/skills/SKILL_MAP.md");
+    expect(
+      cleanDistributionSourcePath("skills/SKILL_MAP.md", ["README.md", "skills/SKILL_MAP.md"]),
+    ).toBe("skills/SKILL_MAP.md");
+    expect(
+      cleanDistributionSourcePath(".github/workflows/harness-check.yml", [
+        ".github/workflows/harness-check.yml",
+        "docs/templates/github/common/pack-harness-check.yml",
+      ]),
+    ).toBe("docs/templates/github/common/pack-harness-check.yml");
     expect(plan.artifactPaths).not.toContain("src/web/page.tsx");
     expect(plan.artifactPaths).not.toContain(".codex/hooks.json");
     expect(plan.artifactPaths).not.toContain(".claude/settings.json");
@@ -418,13 +679,218 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(plan.artifactPaths).not.toContain(
       "docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md",
     );
+    expect(plan.artifactPaths).not.toContain("docs/governance/future-release-audit-2026-06-30.md");
+    expect(plan.artifactPaths).not.toContain("docs/governance/product-runtime-parity-check.md");
+    expect(plan.artifactPaths).not.toContain("docs/governance/customer-extraction-plan.md");
+    expect(plan.artifactPaths).not.toContain(
+      "docs/adr/ADR-005-distribution-model-and-central-ui.md",
+    );
     expect(plan.artifactPaths).not.toContain("docs/plans/PLAN-L7-157-distribution-clean-pull.md");
+    expect(plan.artifactPaths).not.toContain(
+      "docs/design/harness/L6-function-design/setup-solo-team.md",
+    );
+    expect(plan.artifactPaths).not.toContain("docs/test-design/harness/L7-unit-test-design.md");
     expect(plan.artifactPaths).not.toContain(".ut-tdd/handover/CURRENT.json");
+    expect(plan.artifactPaths).not.toContain(".ut-tdd/harness.db");
+    expect(plan.artifactPaths).not.toContain(".ut-tdd/harness.db-wal");
     expect(plan.releaseIntegrity.artifacts).toEqual([
       "v0.1.0.tar.gz",
       "v0.1.0.tar.gz.sha256",
       "v0.1.0.tar.gz.sig",
     ]);
+  });
+
+  it("U-SETUP-011c: Pack sync plan is non-destructive and copies only clean artifacts", () => {
+    const sourcePaths = [
+      "README.md",
+      "LICENSE",
+      "package.json",
+      "src/cli.ts",
+      "src/setup/index.ts",
+      ...COMMON_FILES.filter((entry) => entry.template.startsWith("adapter/")).map(
+        (entry) => `docs/templates/${entry.template}`,
+      ),
+      "docs/governance/README.md",
+      "docs/governance/ut-tdd-agent-harness-concept_v3.1.md",
+      "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+      "docs/skills/SKILL_MAP.md",
+      "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
+      ".ut-tdd/harness.db",
+    ];
+    const exportPlan = buildCleanDistributionPlan({
+      sourceTag: "v0.1.0",
+      paths: sourcePaths,
+    });
+    const sync = buildPackSyncPlan({
+      exportPlan,
+      sourcePaths,
+      stagingDir: "/tmp/ut-tdd-pack",
+      branch: "main",
+    });
+
+    expect(sync.ok).toBe(true);
+    expect(sync.mode).toBe("non-destructive-sync-plan");
+    expect(sync.cleanRepo).toBe("unison-ai-product/UT-TDD_AGENT-HARNESS-Pack");
+    expect(sync.publishRequiresPoApproval).toBe(true);
+    expect(sync.destructiveRemoteMutation).toBe(false);
+    expect(sync.copyPlan).toContainEqual({
+      sourcePath: "docs/skills/SKILL_MAP.md",
+      artifactPath: "skills/SKILL_MAP.md",
+    });
+    expect(sync.copyPlan.map((entry) => entry.artifactPath)).not.toContain(
+      "docs/plans/PLAN-L7-157-distribution-clean-pull.md",
+    );
+    expect(sync.copyPlan.map((entry) => entry.artifactPath)).not.toContain(".ut-tdd/harness.db");
+    expect(sync.commands).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          "git clone https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git",
+        ),
+        expect.stringContaining("git -C /tmp/ut-tdd-pack status --short"),
+        expect.stringContaining("git -C /tmp/ut-tdd-pack add -- "),
+        expect.stringContaining("git -C /tmp/ut-tdd-pack push origin main --follow-tags"),
+      ]),
+    );
+    expect(sync.commands.find((command) => command.includes(" add -- "))).toContain('"src/cli.ts"');
+    expect(sync.commands.join("\n")).not.toContain(" add -- .");
+    expect(sync.commands.join("\n")).not.toContain(" add --all");
+    expect(sync.checks).toContain("denylistViolations.length === 0");
+  });
+
+  it("U-SETUP-011c2: source-only audit and design updates do not change Pack artifacts", () => {
+    const sourcePaths = [
+      ...walkRepoCandidatePaths(process.cwd()),
+      ".ut-tdd/audit/A-local-only.md",
+      "docs/plans/PLAN-L7-local-only.md",
+      "docs/design/harness/L6-function-design/local-only.md",
+      "docs/test-design/harness/L7-local-only.md",
+      "docs/handover/session-local-only.md",
+    ];
+    const filteredSourcePaths = sourcePaths.filter(
+      (path) =>
+        !path.startsWith(".ut-tdd/") &&
+        !path.startsWith("docs/plans/") &&
+        !path.startsWith("docs/design/harness/") &&
+        !path.startsWith("docs/test-design/") &&
+        !path.startsWith("docs/handover/"),
+    );
+
+    const withSourceOnlyDocs = buildCleanDistributionPlan({
+      sourceTag: "source-with-audit-docs",
+      paths: sourcePaths,
+    });
+    const withoutSourceOnlyDocs = buildCleanDistributionPlan({
+      sourceTag: "source-without-audit-docs",
+      paths: filteredSourcePaths,
+    });
+    const syncWithSourceOnlyDocs = buildPackSyncPlan({
+      exportPlan: withSourceOnlyDocs,
+      sourcePaths,
+      stagingDir: "/tmp/ut-tdd-pack",
+      branch: "main",
+    });
+    const syncWithoutSourceOnlyDocs = buildPackSyncPlan({
+      exportPlan: withoutSourceOnlyDocs,
+      sourcePaths: filteredSourcePaths,
+      stagingDir: "/tmp/ut-tdd-pack",
+      branch: "main",
+    });
+
+    expect(withSourceOnlyDocs.ok).toBe(true);
+    expect(withSourceOnlyDocs.artifactPaths).toEqual(withoutSourceOnlyDocs.artifactPaths);
+    expect(syncWithSourceOnlyDocs.copyPlan.map((entry) => entry.artifactPath)).toEqual(
+      syncWithoutSourceOnlyDocs.copyPlan.map((entry) => entry.artifactPath),
+    );
+    expect(withSourceOnlyDocs.excludedPaths).toEqual(
+      expect.arrayContaining([
+        ".ut-tdd/audit/A-local-only.md",
+        "docs/plans/PLAN-L7-local-only.md",
+        "docs/design/harness/L6-function-design/local-only.md",
+        "docs/test-design/harness/L7-local-only.md",
+        "docs/handover/session-local-only.md",
+      ]),
+    );
+  });
+
+  it("U-SETUP-011d: clean Pack package.json points test to Pack-safe smoke tests", () => {
+    const transformed = JSON.parse(
+      transformCleanDistributionArtifact(
+        "package.json",
+        JSON.stringify({
+          name: "ut-tdd-agent-harness",
+          scripts: {
+            test: "vitest run",
+            typecheck: "tsc --noEmit",
+          },
+        }),
+      ),
+    ) as { scripts: Record<string, string> };
+
+    expect(transformed.scripts.test).toContain("tests/distribution-acceptance.test.ts");
+    expect(transformed.scripts.test).toContain("tests/readability.test.ts");
+    expect(transformed.scripts["test:pack"]).toBe(transformed.scripts.test);
+    expect(transformed.scripts["test:source"]).toBe("vitest run");
+    expect(transformed.scripts.typecheck).toBe("tsc --noEmit");
+  });
+
+  it("U-SETUP-011e: clean Pack workflow reuses the package test:pack script", () => {
+    const transformed = transformCleanDistributionArtifact(
+      ".github/workflows/harness-check.yml",
+      readFileSync(
+        join(process.cwd(), "docs", "templates", "github", "common", "pack-harness-check.yml"),
+        "utf8",
+      ),
+    );
+
+    expect(transformed).toContain("run: bun run test:pack");
+    expect(transformed).not.toContain("tests/distribution-acceptance.test.ts");
+  });
+
+  it("U-SETUP-011b: real clean distribution artifact excludes dogfood governance audit documents", () => {
+    const plan = buildCleanDistributionPlan({
+      sourceTag: "v0.1.0",
+      paths: walkRepoCandidatePaths(process.cwd()),
+    });
+    const dogfoodGovernanceDocs = [
+      "docs/governance/conditional-backfill-decision-audit-2026-06-22.md",
+      "docs/governance/forward-convergence-legacy-debt-audit.md",
+      "docs/governance/reverse-fullback-backprop-audit-2026-06-22.md",
+      "docs/governance/runtime-parity-l0-l3-design-audit-2026-06-02.md",
+      "docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md",
+    ];
+    const nonPackPrefixes = [
+      "docs/adr/",
+      "docs/design/",
+      "docs/test-design/",
+      "docs/plans/",
+      ".ut-tdd/",
+    ];
+    const nonPackDbFiles = /\.(?:db|sqlite)(?:-|$|\.)/i;
+
+    expect(plan.ok).toBe(true);
+    expect(plan.cleanRepo).toBe("unison-ai-product/UT-TDD_AGENT-HARNESS-Pack");
+    const sourcePaths = walkRepoCandidatePaths(process.cwd());
+    for (const path of dogfoodGovernanceDocs) {
+      expect(plan.artifactPaths).not.toContain(path);
+      if (sourcePaths.includes(path)) expect(plan.excludedPaths).toContain(path);
+    }
+    expect(
+      plan.artifactPaths.filter(
+        (path) =>
+          nonPackPrefixes.some((prefix) => path.startsWith(prefix)) || nonPackDbFiles.test(path),
+      ),
+    ).toEqual([]);
+
+    const textArtifacts = plan.artifactPaths.filter((path) =>
+      /\.(?:md|ts|json|toml|ya?ml|js|txt)$/.test(path),
+    );
+    const legacyRuntimeName = "he" + "lix";
+    const legacyNamePattern = new RegExp(`\\b${legacyRuntimeName}\\b`, "i");
+    const legacyNameHits = textArtifacts.filter((path) => {
+      const sourcePath = cleanDistributionSourcePath(path, sourcePaths);
+      return legacyNamePattern.test(readFileSync(join(process.cwd(), sourcePath), "utf8"));
+    });
+    expect(legacyNameHits).toEqual([]);
   });
 
   it("U-SETUP-012: consumer readiness covers preflight, rollback, contracts, CI, and monorepo root", () => {
@@ -448,16 +914,33 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(ready.ci.requires).toContain("bun run test");
     expect(ready.rollback.backupRequired).toBe(true);
     expect(ready.rollback.managedPaths).toContain("AGENTS.md");
+    expect(ready.rollback.managedPaths).toContain(".ut-tdd/bin/ut-tdd.mjs");
     expect(ready.rollback.managedPaths).toContain(".claude/agents/code-reviewer.md");
     expect(ready.rollback.managedPaths).toContain(".claude/commands/build.md");
+    expect(ready.contracts.tagPin).toBe(
+      "github:unison-ai-product/UT-TDD_AGENT-HARNESS-Pack#v0.1.0",
+    );
     expect(ready.contracts.tagPin).toContain("#v0.1.0");
     expect(ready.contracts.stable).toContain("adapter managed markers");
+    expect(ready.contracts.stable).toContain("project-local .ut-tdd/bin/ut-tdd.mjs wrapper");
     expect(ready.smokeScenarios).toEqual(
       expect.arrayContaining([
         "consumer CI -> harness-check green without repository secrets",
         "monorepo package root -> adapter paths remain repo-root scoped",
       ]),
     );
+
+    const customRepo = buildConsumerReadinessPlan({
+      bunVersion: "1.3.0",
+      hasGit: true,
+      hasGh: true,
+      hasClaude: false,
+      hasCodex: true,
+      repoRoot: tmpdir(),
+      tag: "v9.9.9",
+      cleanRepo: "example/custom-pack",
+    });
+    expect(customRepo.contracts.tagPin).toBe("github:example/custom-pack#v9.9.9");
 
     const blocked = buildConsumerReadinessPlan({
       bunVersion: "1.2.9",
@@ -476,6 +959,15 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "ut-tdd-cli",
       "runtime-cli",
     ]);
+    expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
+      "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...`",
+    );
+    expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
+      "Do not rely on a global `bun link`",
+    );
+    expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
+      "Bun itself must still resolve",
+    );
   });
 
   it("U-SETUP-005: recordSetupState signals 4 フィールド strip / 上書き / token 非含", () => {
@@ -542,6 +1034,43 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       applied: false,
       reason: "not-admin",
     });
+
+    const ghAdminCalls: string[][] = [];
+    const ghAdmin = (args: string[]) => {
+      ghAdminCalls.push(args);
+      const key = args.join(" ");
+      if (key === "auth status") return { ok: true, stdout: "" };
+      if (key === "api repos/{owner}/{repo}")
+        return { ok: true, stdout: JSON.stringify({ permissions: { admin: true } }) };
+      if (
+        key.startsWith(
+          "api -X PUT repos/{owner}/{repo}/branches/main/protection -H Accept: application/vnd.github+json --input ",
+        )
+      )
+        return { ok: true, stdout: "" };
+      return { ok: false, stdout: "" };
+    };
+    const d4 = mockDeps({ isInteractive: true, gh: ghAdmin, confirm: () => true });
+    expect(applyBranchProtection(plan, d4, { apply: true })).toEqual({
+      applied: true,
+      reason: "applied",
+    });
+    const applyCall = ghAdminCalls.at(-1) ?? [];
+    expect(applyCall).toContain("--input");
+    expect(applyCall).not.toContain("-F");
+    expect(applyCall).not.toContain("-f");
+    const payload = JSON.parse(
+      Array.from(d4.files.entries()).find(([path]) =>
+        path.endsWith(join(".ut-tdd", "tmp", "branch-protection.json")),
+      )?.[1] ?? "{}",
+    );
+    expect(payload).toMatchObject({
+      required_status_checks: { strict: true, checks: [{ context: "harness-check" }] },
+      enforce_admins: true,
+      required_pull_request_reviews: { required_approving_review_count: 1 },
+      restrictions: null,
+    });
+    expect(payload).toEqual(buildBranchProtectionPayload());
   });
 
   it("U-SETUP-007: runSetup 優先順 (flag > confirm > fallback) + 非対話 apply 封鎖", () => {

@@ -36,8 +36,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T13:29:00+09:00"
-    tests_green_at: "2026-06-29T13:28:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Expanded G9 system evidence manifest mapping all non-placeholder L9 ST rows to executable local test groups plus CI boundary evidence."
     worker_model: codex
@@ -56,9 +56,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T13:24:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/dependency-drift.test.ts
-        output_digest: "sha256:27155d10c52c95cda5006062aa099a49e7bf97f27420356464ed42e34939aeca"
+        output_digest: "sha256:c17e61c86a61d36ec5556b8ae43aef32249ca6d36998edc5813f300d9833c58b"
       - kind: unit_test
         command: "bun run vitest run tests\\workflow-contracts.test.ts tests\\drive-model-passage.test.ts tests\\forward-convergence.test.ts tests\\backfill-pairing.test.ts tests\\gate-review-tier.test.ts tests\\skill-recommend.test.ts tests\\team-run.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun
@@ -66,15 +66,15 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T13:22:00+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:1bbf522aeef22c2bc258bd92cd102fda3c5a2315d257cf4fd95f939034bf7692"
+        output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
       - kind: unit_test
         command: "bun run vitest run tests\\asset-catalog.test.ts tests\\asset-drift.test.ts tests\\agent-slots.test.ts tests\\cli-surface.test.ts tests\\skill-recommend.test.ts tests\\workflow-contracts.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T13:19:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/asset-catalog.test.ts
-        output_digest: "sha256:ee7d6328665e0d264e4d182669d63665a5223754247be413c4b5022776e42631"
+        output_digest: "sha256:79fc89eec778b9e6c5d317efc8752cb2eef7e5052df7fe179965415a105bf7b4"
       - kind: unit_test
         command: "bun run vitest run tests\\runtime-adapter.test.ts tests\\agent-guard.test.ts tests\\codex-hook-adapter.test.ts tests\\runtime-hook-entrypoints.test.ts tests\\dependency-drift.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun
@@ -82,7 +82,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T13:22:00+09:00"
         evidence_path: tests/runtime-adapter.test.ts
-        output_digest: "sha256:c660ed89dfe6fe167981c3e9bdf0e02396ed855b36b677e1898c63f9d33cc463"
+        output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
 ---
 
 # PLAN-L7-181: G9 system coverage expansion

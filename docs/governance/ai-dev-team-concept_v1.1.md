@@ -625,7 +625,7 @@ SECURITY.md(脆弱性報告窓口)
 
 .gitignore(言語別)
 
-.github/pull_request_template.md
+pull request template: `.github/pull_request_template.md`
 
 .github/dependabot.yml
 
@@ -744,18 +744,18 @@ AI実装・保守の増員(並列度を上げる)
 | AI実装・保守 | AI実装の品質判断と運用を担う役割 |
 | TL | Tech Lead。技術責任者 |
 | QA | Quality Assurance。品質責任者 |
-| SAST | Static Application Security Testing |
-| SCA | Software Composition Analysis |
-| DAST | Dynamic Application Security Testing |
-| SBOM | Software Bill of Materials |
+| SAST | 静的アプリケーションセキュリティテスト (Static Application Security Testing) |
+| SCA | ソフトウェア構成分析 (Software Composition Analysis) |
+| DAST | 動的アプリケーションセキュリティテスト (Dynamic Application Security Testing) |
+| SBOM | ソフトウェア部品表 (Software Bill of Materials) |
 | Bus Factor | 何人いなくなったらプロジェクトが止まるかの指標 |
 | DORA メトリクス | ソフトウェア開発組織のパフォーマンス指標 |
 | IaC | Infrastructure as Code |
-| WAF | Web Application Firewall |
-| MFA | Multi-Factor Authentication |
-| RBAC | Role-Based Access Control |
-| IRP | Incident Response Plan |
-| BCP | Business Continuity Plan |
+| WAF | Web Application Firewall。Web アプリケーション防火壁 |
+| MFA | Multi-Factor Authentication。多要素認証 |
+| RBAC | Role-Based Access Control。役割ベースアクセス制御 |
+| IRP | Incident Response Plan。インシデント対応計画 |
+| BCP | Business Continuity Plan。事業継続計画 |
 | ZDR | Zero Data Retention。データ非保持契約 |
 
 # 付録B. 整備すべきファイル一覧

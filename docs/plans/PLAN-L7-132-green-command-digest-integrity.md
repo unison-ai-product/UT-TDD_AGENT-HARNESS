@@ -29,6 +29,39 @@ dependencies:
   requires:
     - PLAN-L7-108-review-green-command-evidence
 review_evidence:
+  - reviewer: codex-cli
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
+    verdict: approve
+    scope: "Preserve the PLAN-L7-132 advisory boundary: green-command-digest remains visible in doctor output, but no longer participates in runDoctor.ok hard-gate aggregation. This prevents mechanical digest restamps from masquerading as same-packet green reruns while keeping the mismatch evidence surfaced."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\doctor.test.ts tests\\green-command-digest.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T16:15:21+09:00"
+        evidence_path: tests/doctor.test.ts
+        output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T16:15:21+09:00"
+        evidence_path: src/doctor/index.ts
+        output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T16:15:21+09:00"
+        evidence_path: src/doctor/index.ts
+        output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
   - reviewer: code-reviewer (intra_runtime_subagent)
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-23"

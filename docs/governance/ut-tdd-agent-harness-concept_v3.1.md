@@ -373,7 +373,7 @@ v2.1 では「4 artifact pair freeze」が実装前後を跨いで曖昧だっ�
 | セキュリティ段階 | 統合先 | 具体 tool |
 |---|---|---|
 | Develop | Forward G4 基本設計ゲート (threat model 確認) | (人間判断) |
-| Commit | pre-commit hook + commitlint | gitleaks / commitlint |
+| Commit | pre-commit hook + commitlint | gitleaks / commitlint による検査 |
 | Build | workflows の SAST / SCA / Secret Scan | trivy (SCA) / codeql (SAST) — Phase 2 で追加 |
 | Deploy | Incident mode の incident-log + Protected Branch (L12 デプロイ) | `gh` CLI |
 | Operate | escalation L0-L3 で異常検知 + L13/L14 (デプロイ後検証・運用検証) フェーズで Sentry/Uptime Robot/Dependabot アラートをチーム共有 audit へ記録。個人 `failure_log.jsonl` は local advisory に限定 | Sentry / Uptime Robot / Dependabot |
@@ -389,6 +389,7 @@ v2.1 では「4 artifact pair freeze」が実装前後を跨いで曖昧だっ�
 | **Forward** | 要件・設計・契約が明確 | 経路 1 | 全工程 (§3) | — (本体) |
 | **Reverse** | 既存資産に逆向き事実 (drift / 未知設計) | 経路 2 (の Reverse) | tl | R4 後 → L3/L4 |
 | **Discovery** | 要件・成功条件 未確定 / 実現性 不透明 / **確証なき設計** (紙上で確定できない設計) | (新規) | po + tl | 確定後 → L1 (要求) / L3-L6 (設計確証時) |
+| **design-bottomup** (9-mode 後の追加) | backend 実装事実から FE / 画面要件を後付け導出する | (v3.1 後新規) | aim + uiux | Discovery 合成後 → L1 screen / L2 画面設計 |
 | **Refactor** | 振る舞い維持の構造改善 | (新規) | se + tl | 完了後 → 回帰確認 |
 | **Retrofit** | 依存・基盤・設定の移行/更新 | (新規) | se + tl | upgrade 後 → L4 |
 | **Recovery** | AI の逸脱・暴走・再開不能の収束 | 補助 1 | tl + po (承認必須) | 収束後 → 中断工程 |
@@ -402,6 +403,7 @@ v2.1 では「4 artifact pair freeze」が実装前後を跨いで曖昧だっ�
 - 旧「3 経路 + 4 補助軸」(§2.1) は本 9-mode に再編した。**Discovery / Refactor / Retrofit / screen-design / frontend-design が v3.1 新規追加**。
 - **Discovery の適用拡張 (PLAN-DISCOVERY-01 S4 confirmed 2026-06-04、promotion_strategy=reuse-with-hardening)**: Discovery は「要件未確定」だけでなく **確証が持てない『設計』にも適用**する。設計が紙上で確定できない (実現性・妥当性が不透明な) 場合、確証を装って Forward 凍結し後で大手戻りするのでなく、Discovery として起票し **設計→仮実装→検証→設計確定** のサイクルで確定させる。合流点は要求確定なら L1、設計確証なら L3-L6 (workflow メタモデル PoC の dogfood 実績に基づく正規反映)。
 - screen-design / frontend-design は独立経路ではなく **Forward の設計文脈内の工程専門** (L2 / L10) として運用する。
+- **design-bottomup (9-mode 後の追加、PLAN-DISCOVERY-07 / PLAN-RECOVERY-07)**: backend/API/データ/ロジックが先行し、FE/画面要件が後付けになる場合の入口。実装事実から FE 要件候補を導出し、Discovery 合成で妥当性を確認してから L1 screen / L2 画面設計へ back-merge する。新 kind は作らず `kind=poc` と `route_mode=design-bottomup` で識別する。
 - **version-up (9-mode 後の追加、PLAN-DISCOVERY-09)**: 「9-mode」は v3.1 コア集合。version-up は capability を将来版へ**保全 (preserve)** する入口 = deferred-but-committed-future。新 kind を作らず既存 kind + `status=draft` + `version_target` marker (status=draft 限定) で表す。**archived (破棄) でも plain draft (WIP) でも Add-feature (今追加) でもない第 4 の状態**。`version_target` 付き未集約は forward-convergence の正当な deferred 種別 (要件定義書 §6.8.8.1、`version_deferral` signal §7.8.1)。第一ケース = 中央UI (L7-141/146) を将来版へ保全。
 - 各 mode の入口判定・推奨コマンド・委譲は §2.6 の配線で機械化する。
 
@@ -415,13 +417,14 @@ mode と工程を「絵」で終わらせず自動で繋ぐ仕組み。V2 の ro
 
 | signal | mode | 備考 |
 |--------|------|------|
-| `drift` (drift_type=schema/contract) | Reverse | normalization |
+| `drift` (drift_type=schema/contract) | Reverse | normalization 経路 |
 | `debt_degradation` / `code_smell` / `structural` | Refactor | |
 | `dependency_outdated` / `upgrade` / `config_drift` | Retrofit | upgrade は preflight 要 |
 | `agent_runaway` / `context_exhaustion` / `regression_dev` / `runaway` / `forced_stop` | Recovery | 承認必須。`forced_stop` = ユーザー強制停止 (ESC/Ctrl+C/Stop) = 高 severity 負シグナル (罵倒・強否定・同論点での連続停止を含む。罵倒のみが基準ではない)。専用 hook 不在のため dangling-turn 推定で検出 (PLAN-L6-04/L7-02)。提示まで自動・起票は人間 yes |
 | `production_incident` / `hotfix_required` / `regression_prod` | Incident | env=prod、承認必須 |
 | `feature_addition` / `scope_extension` | Add-feature | |
 | `version_deferral` | version-up | capability を将来版へ保全 (今スコープ外・破棄しない、§2.5)。詳細は要件定義書 §7.8.1 |
+| `screen_addition_to_backend` / `design_bottomup` / `backend_derived_screen` / `add_ui_to_backend` | design-bottomup | backend 先行から FE / 画面要件を導出し、Discovery 合成後に L1 screen / L2 へ合流 (§2.5) |
 | `user_feedback_iteration` / `requirement_continuous_refinement` | Scrum | |
 | `requirement_undefined` / `feasibility_unknown` / `success_condition_unclear` / `design_uncertain` (要件未確定 / 実現性不透明 / 確証なき設計) | Discovery | 4 象限 P2、上流委譲。`design_uncertain` = 紙上で確定できない設計 (§2.5、PLAN-DISCOVERY-01 S4 confirmed) |
 | `tech_decision_required` / `option_comparison_needed` / `adr_required` | Research | 机上調査 (PoC 不要) |
@@ -879,7 +882,7 @@ merge → 既存 PLAN との双方向 reference 更新
 
 P0/P1 インシデント発生時、または AI session 中の認識ずれ・session 断絶からの再開のために、通常経路を一時迂回する経路。
 
-## 6.2 recovery kind
+## 6.2 recovery kind の扱い
 
 session 断絶・認識ずれからの再開を文書化するための kind。`agent_slots` に `aim` を必須化し、本文に **7 必須セクション** (事故記録 / 議論順序 / 認識訂正履歴 / 中間結論 / context 再構築 / 再開ポイント / 再発防止) を持つ。
 
@@ -1027,7 +1030,7 @@ v2.1 では `failure_log.jsonl` を「git 管理対象」かつ「pre-push hook 
 
 mode は §2.5 の 9-mode。旧「経路 1/2/3 + 補助 1」を mode 名へ読み替えた。
 
-| | Forward | Reverse / Scrum / Discovery | Add-feature | Recovery / Incident |
+| 役割 | Forward | Reverse / Scrum / Discovery | Add-feature | Recovery / Incident |
 |---|---|---|---|---|
 | **po** | L1 業務要求 / L3 受入条件 / G1·G3 / L11 UAT / L12 受入 | **R3 Intent 検証** / Discovery 成功条件 | (通常は不要) | P0/P1 で連絡 / Recovery スコープ承認 |
 | **tl** | G0.5 企画突合 / L4-L6 設計 / G4-G6 | S4 decide / R1-R2 / R4 routing | 既存 doc 整合判断 | 技術対応指揮 / リオープン確認 |
@@ -1081,7 +1084,7 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 
 # §10 用語集 (ユビキタス言語 SSoT / living glossary)
 
-## §10.0 coding-rule governance terms
+## §10.0 coding-rule governance 用語
 
 | 用語 | 定義 |
 |---|---|
@@ -1142,8 +1145,8 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **進め方手順書 (= PLAN)** | 工程をきれいに前へ進める段取り / 軌跡 / TODO。機能内容そのものは記述しない (それは L3 要件定義書 / 機能一覧の領域) | L0 | L1 |
 | **工程進捗プラン** | Forward V-model の背骨を L0→L14 へ進める PLAN (メタモデル ① 必須スケルトン) | L0 | — |
 | **駆動モデルプラン (駆動プラン)** | 工程進捗の途中で介在する内部ドライブ PLAN (メタモデル ② ケースバイケース)。「検証へ行く (kind=poc)」か「ドキュメントへ戻す (kind=reverse, fullback)」かで分離 | L0 | — |
-| **駆動モデル (entry mode、9 種)** | 状況 signal で発動する入口 mode の確定集合 = Discovery / Scrum / Reverse / Recovery / Incident / Refactor / Retrofit / Add-feature / Research (= `docs/process/modes/` の 9、Forward 除き Research 含む)。出口は必ず Forward spine へ合流。kind と非1:1 (Discovery/Scrum=poc / Incident=troubleshoot+recovery / Add-feature=add-design+add-impl)。**legacy「9-mode ecosystem」(下記、Forward+8・Research 除く) とは同一 universe の別グルーピング、橋渡し = modes/README §3**。L4 function §3.1 が外部設計 (入口/状態遷移/出口/担当 block/gate) を確定 | L0 | L4 |
-| **Forward spine (主線)** | L0-L14 V-model 本線。9 駆動モデルが出口で合流する終着であり、駆動モデルと並ぶ「mode の 1 つ」ではない (IMP-069 reconcile、PO 2026-06-05「Forward=spine」確定)。operational 正本 mode 構成 = Forward spine(1) + 駆動モデル(9、Research 含む) + 工程専門(screen/frontend、2) | L0 | L4 |
+| **駆動モデル (entry mode、11 種)** | 状況 signal で発動する入口 mode の現在集合 = Discovery / Scrum / Reverse / Recovery / Incident / Refactor / Retrofit / Add-feature / Research / design-bottomup / version-up (= `docs/process/modes/`、Forward 除く)。出口は必ず Forward spine へ合流。kind と非1:1 (Discovery/Scrum/design-bottomup=poc / Incident=troubleshoot+recovery / Add-feature=add-design+add-impl / version-up=既存 kind + `version_target`)。**legacy「9-mode ecosystem」(下記、Forward+8・Research 除く) とは同一 universe の別グルーピング、橋渡し = modes/README §3**。L4 function §3.1 が外部設計 (入口/状態遷移/出口/担当 block/gate) を確定 | L0 | L4 |
+| **Forward spine (主線)** | L0-L14 V-model 本線。駆動モデルが出口で合流する終着であり、駆動モデルと並ぶ「mode の 1 つ」ではない (IMP-069 reconcile、PO 2026-06-05「Forward=spine」確定)。operational 正本 mode 構成 = Forward spine(1) + 駆動モデル(11、Research / design-bottomup / version-up 含む) + 工程専門(screen/frontend、2) | L0 | L4 |
 | **triage (maturity 判定)** | item の成熟度を判定し「どの検証が要るか」を決める PLAN の役割。検証は opt-in (必須でない) | L0 | — |
 | **確証なき設計 (Discovery 適用拡張)** | 紙上で実現性・妥当性が確定できない設計。確証を装って Forward 凍結せず Discovery (kind=poc) として起票し「設計→仮実装→検証→設計確定」で確定する (§2.5、PLAN-DISCOVERY-01 S4 confirmed 2026-06-04) | L0 | L3 |
 | **検証ツールボックス** | opt-in の検証種別: Web 検証 (L0) / 概念検証 (L1) / 技術検証 (L3)。triage で必要時のみ発動、default cascade だが rigid でない | L0 | — |
@@ -1159,7 +1162,7 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | 用語 | 定義 |
 |---|---|
 | **ハーネス** | AI エージェントを安全に動かす土台 (構想書 v1.1 用語集) |
-| **9-mode ecosystem** | Forward / Reverse / Discovery / Refactor / Retrofit / Recovery / Scrum / Incident / Add-feature の 9 mode + screen-design / frontend-design の 2 工程専門 (§2.5)。旧「3 経路 + 4 補助軸」を再編した入口分類。**legacy framing = Forward を 9 に算入し Research を除く数え方**。operational 正本 (L4 function §3) は **Forward=spine + 9 駆動モデル (Research 含む) + 2 工程専門** で数える (IMP-069、橋渡し = modes/README §3、[[駆動モデル]]) |
+| **9-mode ecosystem** | Forward / Reverse / Discovery / Refactor / Retrofit / Recovery / Scrum / Incident / Add-feature の 9 mode + screen-design / frontend-design の 2 工程専門 (§2.5)。旧「3 経路 + 4 補助軸」を再編した入口分類。**legacy framing = Forward を 9 に算入し Research を除く数え方**。operational 正本 (L4 function §3) は **Forward=spine + current entry modes (Research / design-bottomup / version-up 含む) + 2 工程専門** で数える (IMP-069、橋渡し = modes/README §3、[[駆動モデル]]) |
 | **scrum-reverse lint** | PoC confirmed (promotion_strategy≠redesign) ⇔ Reverse 合流 / reverse→confirmed poc 参照の整合検査 (§1.2、IMP-064)。`src/lint/scrum-reverse.ts` |
 | **propagation lint** | concept §2.6 ⇔ requirements §7.8.1 の signal→mode 語彙一致検査 (L0⇔L3 伝播ドリフト検出、IMP-065)。`src/lint/propagation.ts` |
 | **pair-freeze lint (設計層)** | design doc (①) ⇔ test-design doc (③) の `pair_artifact` 双方向整合・孤児0 検査 (G1-G6 設計層 pair freeze の機械担保、requirements §6.8.3)。function-spec §4 rule pair-exists/ref-resolves/trace-bidir の最小実装。G7 の 4 artifact 12 directed edge trace とは別レイヤー (導入層 L6、IMP-067)。`src/vmodel/lint.ts` |
@@ -1181,9 +1184,9 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 | **4 artifact trace freeze** | L7 実装完了時に 4 artifact 揃いと双方向 trace 6 pair を凍結するルール (G7 で発火) |
 | **双方向 trace 6 pair** | 4 artifact の組み合わせ 6 pair それぞれを双方向 reference で結ぶ (実装上は 12 directed edge) |
 | **逆ピラミッド** | ① ② が存在するが ③ ④ が無い / 不完全な状態 (G6/G7 で fail-close) |
-| **Scrum 6 type** | hypothesis-test / tech-spike / design-spike / perf-spike / security-spike / ux-spike |
-| **Reverse 5 type** | code / design / upgrade / normalization / fullback |
-| **30 cell matrix** | Scrum 6 type × Reverse 5 type の自動 routing 表 (R1 skip 列を含む) |
+| **Scrum 6 type** | hypothesis-test / tech-spike / design-spike / perf-spike / security-spike / ux-spike の 6 種 |
+| **Reverse 5 type** | code / design / upgrade / normalization / fullback の 5 種 |
+| **30 cell matrix** | Scrum 6 type × Reverse 5 type の自動 routing 表 (R1 skip 列を含む 30 セル) |
 | **R3 Intent 検証** | 発注元 (po) が Reverse R3 で意図仮説を直接検証するステップ |
 | **PLAN** | 工程ルール doc。frontmatter + 本文 |
 | **PLAN-MM-NNN** | Master Plan。複数子 PLAN を親 hub として束ねる設計プラン |
@@ -1244,42 +1247,42 @@ CODEOWNERS で Layer 3 / Layer 4 が自動アサインされる (具体的 path 
 ### V-model + 4 artifact 双方向 trace
 
 - NASA SW Engineering Handbook Appendix (V&V 構造)
-- IEEE Wikipedia: V-model (software development)
+- IEEE Wikipedia: V-model (software development) の解説
 - DO-178C 開発ライフサイクル仕様
-- Parasoft: ISO 26262 Requirements Traceability
+- Parasoft: ISO 26262 Requirements Traceability の解説
 - CMMI v2.0 SP 1.4 Requirements Management
 - IEEE 829-2008 テスト成果物
 - ISO/IEC/IEEE 29119-2 テスト設計仕様
 
-### Scrum + Reverse engineering
+### Scrum + Reverse engineering の参考
 
-- Scrum.org — What is a Spike?
+- Scrum.org — What is a Spike? の解説
 - Agile Alliance — Spikes
-- Martin Fowler — Exploratory Testing
-- SAFe — Spikes (enabler spike)
-- Mike Cohn — Spikes (time-box + validated)
-- Basecamp Shape Up — Uncertainty Reduction
-- OMG MOF 2.0 — Model-Driven Architecture
+- Martin Fowler — Exploratory Testing の解説
+- SAFe — Spikes (enabler spike) の解説
+- Mike Cohn — Spikes (time-box + validated) の解説
+- Basecamp Shape Up — Uncertainty Reduction の解説
+- OMG MOF 2.0 — Model-Driven Architecture の解説
 - arc42 — Reverse Engineering Integration
 
 ### GitHub Actions + ブランチパイプライン
 
 - Conventional Commits v1.0.0 specification
-- commitlint official docs — @commitlint/config-conventional
-- GitHub branch protection rules — required status checks
-- GitHub Actions — workflow syntax / job ids / status check names
-- CODEOWNERS syntax and examples
-- Atlassian — Branch per feature workflow
+- commitlint official docs — @commitlint/config-conventional の設定参考
+- GitHub branch protection rules — required status checks の設定参考
+- GitHub Actions — workflow syntax / job ids / status check names の設定参考
+- CODEOWNERS syntax and examples の設定参考
+- Atlassian — Branch per feature workflow の運用参考
 
 ### 3 層抽象化 + エスカレーション (参考、interpreter は採用せず)
 
 - AWS Step Functions — State Machine Abstraction (参考のみ)
 - Temporal.io Workflow Abstraction (参考のみ)
 - Prefect Flows & Tasks (参考のみ)
-- PagerDuty Escalation Policy Design
-- AWS Incident Manager Escalation Plans
-- Martin Fowler: Approval Workflow Pattern
-- Google SRE — Escalation chapter
+- PagerDuty Escalation Policy Design の参考
+- AWS Incident Manager Escalation Plans の参考
+- Martin Fowler: Approval Workflow Pattern の参考
+- Google SRE — Escalation chapter の参考
 - LaunchDarkly Flag Lifecycle (30/90 日閾値)
 
 ---

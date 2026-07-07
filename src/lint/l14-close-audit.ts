@@ -158,6 +158,7 @@ const REQUIRED_EVIDENCE_BY_ITEM: Partial<Record<(typeof EXPECTED_ITEMS)[number],
     "tests/green-command-digest.test.ts",
     "docs/plans/PLAN-L7-132-green-command-digest-integrity.md",
     "docs/plans/PLAN-L7-174-green-command-digest-correction.md",
+    ".ut-tdd/audit/A-155-green-command-digest-rebind-2026-07-01.md",
   ],
 };
 
@@ -169,11 +170,11 @@ const REQUIRED_BOUNDARY_MARKERS_BY_ITEM: Partial<
     nextAction: ["hosted/api", "preflight"],
   },
   "clean-distribution-package": {
-    gap: ["clean public repo", "signed tarball"],
-    nextAction: ["po approval"],
+    gap: ["signed tarball"],
+    nextAction: ["signature"],
   },
   "version-up-nonbreaking": {
-    gap: ["released tag"],
+    gap: ["multi-version consumer upgrade"],
     nextAction: ["tag-pin", "rollback"],
   },
   "l11-uat-boundary": {
@@ -197,8 +198,8 @@ const REQUIRED_BOUNDARY_MARKERS_BY_ITEM: Partial<
     nextAction: ["po signoff", "post-deploy"],
   },
   "release-publication-boundary": {
-    gap: ["clean github repo", "tag push", "signed tarball"],
-    nextAction: ["po approval", "checksums", "signature"],
+    gap: ["signed tarball"],
+    nextAction: ["signature"],
   },
 };
 

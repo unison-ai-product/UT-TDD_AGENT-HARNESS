@@ -1,45 +1,108 @@
 import { join } from "node:path";
+// Hook 配線の単一定義源: 生成 settings.json / hooks.json の command は project-hook lint の
+// wrapper 正規形から構築する (gate 要求と setup 生成物の再乖離防止、PLAN-RECOVERY-06)。
+import { wrapperHookCommand } from "../lint/project-hook";
+// model ID は SSoT (src/team/model-policy.ts MODEL_IDS) 参照のみ。生 literal の二重保持は
+// 世代 drift の温床 (A-177 F-5 / PLAN-L7-256: templates が opus-4-7 のまま SSoT と乖離した実績)。
+import { MODEL_IDS } from "../team/model-policy";
 import type { GeneratedFile } from "./index";
 
 export type TemplateSet = { [name: string]: string };
 
+const CLAUDE_OPUS = MODEL_IDS.claude.opus;
+const CLAUDE_SONNET = MODEL_IDS.claude.sonnet;
+const CLAUDE_HAIKU = MODEL_IDS.claude.haiku;
+const GPT_FRONTIER = MODEL_IDS.codex.frontier;
+const GPT_WORKER = MODEL_IDS.codex.worker;
+const GPT_SPARK = MODEL_IDS.codex.spark;
+
 const CLAUDE_AGENT_TEMPLATES = [
-  ["be-api", "Backend API reviewer for route, contract, and integration concerns."],
-  ["be-logic", "Backend domain logic reviewer for invariants, boundaries, and TDD fit."],
+  ["be-api", "Backend API reviewer for route, contract, and integration concerns.", CLAUDE_SONNET],
+  [
+    "be-logic",
+    "Backend domain logic reviewer for invariants, boundaries, and TDD fit.",
+    CLAUDE_SONNET,
+  ],
   [
     "code-reviewer",
     "Read-only senior engineering reviewer for correctness, security, and maintainability.",
+    CLAUDE_SONNET,
   ],
-  ["db-schema", "Database schema reviewer for migrations, indexes, and data contracts."],
-  ["devops-deploy", "CI, deployment, rollback, and release-readiness reviewer."],
+  [
+    "db-schema",
+    "Database schema reviewer for migrations, indexes, and data contracts.",
+    CLAUDE_SONNET,
+  ],
+  ["devops-deploy", "CI, deployment, rollback, and release-readiness reviewer.", CLAUDE_SONNET],
   [
     "pdm-innovation-manager",
     "Product management reviewer for opportunity, scope, and portfolio fit.",
+    CLAUDE_OPUS,
   ],
-  ["pdm-marketing-innovation", "Market and user-value reviewer for product framing and adoption."],
+  [
+    "pdm-marketing-innovation",
+    "Market and user-value reviewer for product framing and adoption.",
+    CLAUDE_OPUS,
+  ],
   [
     "pdm-tech-innovation",
     "Technical product reviewer for feasibility, platform leverage, and risk.",
+    CLAUDE_OPUS,
   ],
-  ["pmo-haiku", "Lightweight PMO reviewer for concise status, blockers, and next action."],
-  ["pmo-project-explorer", "Project discovery reviewer for goals, constraints, and evidence gaps."],
-  ["pmo-project-scout", "Project triage reviewer for backlog, ownership, and workflow routing."],
+  [
+    "pmo-haiku",
+    "Lightweight PMO reviewer for concise status, blockers, and next action.",
+    CLAUDE_HAIKU,
+  ],
+  [
+    "pmo-project-explorer",
+    "Project discovery reviewer for goals, constraints, and evidence gaps.",
+    CLAUDE_SONNET,
+  ],
+  [
+    "pmo-project-scout",
+    "Project triage reviewer for backlog, ownership, and workflow routing.",
+    CLAUDE_HAIKU,
+  ],
   [
     "pmo-sonnet",
     "PMO reviewer for plan structure, handover quality, and cross-document consistency.",
+    CLAUDE_SONNET,
   ],
-  ["pmo-tech-docs", "Technical documentation reviewer for ADR, process, and governance quality."],
-  ["pmo-tech-fork", "Fork, extraction, and distribution reviewer for clean-room boundaries."],
-  ["pmo-tech-news", "Technical research reviewer for external signals and dated source checks."],
-  ["qa-test", "Quality reviewer for test strategy, oracle strength, and regression scope."],
+  [
+    "pmo-tech-docs",
+    "Technical documentation reviewer for ADR, process, and governance quality.",
+    CLAUDE_SONNET,
+  ],
+  [
+    "pmo-tech-fork",
+    "Fork, extraction, and distribution reviewer for clean-room boundaries.",
+    CLAUDE_SONNET,
+  ],
+  [
+    "pmo-tech-news",
+    "Technical research reviewer for external signals and dated source checks.",
+    CLAUDE_SONNET,
+  ],
+  [
+    "qa-test",
+    "Quality reviewer for test strategy, oracle strength, and regression scope.",
+    CLAUDE_SONNET,
+  ],
   [
     "refactor-scout",
     "Refactoring reviewer for complexity, duplication, and low-risk extraction candidates.",
+    CLAUDE_HAIKU,
   ],
-  ["security-audit", "Security reviewer for auth, secrets, PII, and threat-model concerns."],
+  [
+    "security-audit",
+    "Security reviewer for auth, secrets, PII, and threat-model concerns.",
+    CLAUDE_SONNET,
+  ],
   [
     "ut-tdd-tl",
     "Technical-lead reviewer for UT-TDD workflow, gates, tests, and release readiness.",
+    CLAUDE_SONNET,
   ],
 ] as const;
 
@@ -53,12 +116,13 @@ const CLAUDE_COMMAND_TEMPLATES = [
   ["test", "Run targeted UT-TDD verification for the current change."],
 ] as const;
 
-function agentTemplate(name: string, description: string): string {
+function agentTemplate(name: string, description: string, model: string): string {
   return [
     "---",
     `name: ${name}`,
     `description: ${description}`,
     "tools: Read, Grep, Glob, Bash",
+    `model: ${model}`,
     "---",
     "",
     "Act as a consumer-safe UT-TDD subagent for the current repository.",
@@ -90,9 +154,9 @@ function commandTemplate(name: string, description: string): string {
 }
 
 const CLAUDE_AGENT_TEMPLATE_SET: TemplateSet = Object.fromEntries(
-  CLAUDE_AGENT_TEMPLATES.map(([name, description]) => [
+  CLAUDE_AGENT_TEMPLATES.map(([name, description, model]) => [
     `adapter/.claude/agents/${name}.md`,
-    agentTemplate(name, description),
+    agentTemplate(name, description, model),
   ]),
 );
 
@@ -127,6 +191,39 @@ const CLAUDE_COMMAND_FILES: { template: string; file: GeneratedFile }[] =
 export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
   ...CLAUDE_AGENT_TEMPLATE_SET,
   ...CLAUDE_COMMAND_TEMPLATE_SET,
+  "common/ut-tdd.mjs": [
+    "#!/usr/bin/env bun",
+    'import { existsSync } from "node:fs";',
+    'import { join } from "node:path";',
+    'import { spawnSync } from "node:child_process";',
+    "",
+    "const repoRoot = process.cwd();",
+    'const localBin = join(repoRoot, "node_modules", ".bin", process.platform === "win32" ? "ut-tdd.cmd" : "ut-tdd");',
+    "// Repo-local harness source (Pack checkout topology). Resolved relative to cwd so the",
+    "// wrapper keeps working on CI runners where the setup machine's absolute path does not",
+    "// exist (A-172 C-2). Both files are required so an unrelated consumer src/cli.ts is not",
+    "// misresolved as the harness CLI.",
+    'const repoLocalCli = join(repoRoot, "src", "cli.ts");',
+    'const repoLocalHarness = existsSync(repoLocalCli) && existsSync(join(repoRoot, "src", "setup", "index.ts"));',
+    "const setupSourceCli = {{UT_TDD_SOURCE_CLI_JSON}};",
+    "const sourceCli = repoLocalHarness ? repoLocalCli : setupSourceCli;",
+    'const command = existsSync(localBin) ? localBin : existsSync(sourceCli) ? "bun" : "ut-tdd";',
+    'const args = command === "bun" ? [sourceCli, ...process.argv.slice(2)] : process.argv.slice(2);',
+    "const result = spawnSync(command, args, {",
+    '  stdio: "inherit",',
+    '  shell: process.platform === "win32",',
+    "});",
+    "",
+    "if (result.error) {",
+    '  console.error("[ut-tdd-wrapper] Failed to launch project-local ut-tdd.");',
+    '  console.error("[ut-tdd-wrapper] Add UT-TDD as a project dependency, keep the setup Pack checkout available, or verify `ut-tdd --help` in this repository shell.");',
+    "  console.error(result.error.message);",
+    "  process.exit(127);",
+    "}",
+    "",
+    "process.exit(result.status ?? 0);",
+    "",
+  ].join("\n"),
   "adapter/AGENTS.md": [
     "<!-- UT-TDD:managed:start -->",
     "# UT-TDD Agent Harness Adapter",
@@ -139,6 +236,19 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '- Codex delegation: `ut-tdd codex --role <role> --task "..."`',
     '- Claude delegation: `ut-tdd claude --role <role> --task "..."`',
     "- Team run: `ut-tdd team run --definition .ut-tdd/teams/<team>.yaml`",
+    "",
+    "## GPT / Codex runtime defaults",
+    "",
+    `- Implementation lanes default to worker-class models (\`${GPT_WORKER}\`); lightweight parallel lanes use spark-class (\`${GPT_SPARK}\`) with no closing authority.`,
+    `- Frontier judgement (\`${GPT_FRONTIER}\`) is gated: use it only for final review or high-risk decisions with explicit authorization.`,
+    "- Default reasoning effort is `middle`; raise to `high`/`xhigh` only for review or critical judgement.",
+    "- State the full task, intent, and constraints up front in one turn; avoid drip-fed instructions.",
+    "",
+    "## Discipline",
+    "",
+    "- Separate creation from judgement: review with a different runtime/model family than the author when feasible.",
+    "- No completion claim without tests or explicit verification evidence.",
+    "- Stage explicit files only; never rewrite or discard another runtime's commits.",
     "",
     "Project-owned instructions outside this managed block remain consumer-owned.",
     "<!-- UT-TDD:managed:end -->",
@@ -156,6 +266,23 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '- `ut-tdd codex --role <role> --task "..."` delegates to Codex.',
     '- `ut-tdd claude --role <role> --task "..."` delegates to Claude.',
     "",
+    "## Model routing defaults",
+    "",
+    "Route work to the cheapest model class that can own the outcome; reserve frontier",
+    "models for judgement.",
+    "",
+    "| Model class | Default use | Effort |",
+    "|---|---|---|",
+    `| Claude Opus (\`${CLAUDE_OPUS}\`) | final review, judgement gates, hardest design decisions | high / xhigh |`,
+    `| Claude Sonnet (\`${CLAUDE_SONNET}\`) | docs, design, UI/UX, structured review | high (xhigh for UI/UX) |`,
+    `| Claude Haiku (\`${CLAUDE_HAIKU}\`) | scouting, triage, lightweight parallel checks | high, small scoped tasks |`,
+    `| GPT/Codex workers (\`${GPT_WORKER}\` / \`${GPT_SPARK}\`) | implementation lanes | middle |`,
+    `| GPT frontier (\`${GPT_FRONTIER}\`) | gated top-tier review/consultation | high / xhigh |`,
+    "",
+    "- Give agents the full goal, constraints, and done-criteria in the first turn.",
+    "- Separate creation from judgement: prefer a different model family for review.",
+    "- No completion claim without tests or explicit verification evidence.",
+    "",
     "Do not put secrets, tokens, or machine-local absolute paths in adapter docs.",
     "<!-- UT-TDD:managed:end -->",
     "",
@@ -171,6 +298,17 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "- Health check: `ut-tdd doctor`",
     "- Review separation: use another runtime/model family when feasible",
     "",
+    "## Claude subagent defaults",
+    "",
+    "- Always pass an explicit `model` when spawning subagents; it must match the",
+    "  agent frontmatter family (opus / sonnet / haiku).",
+    `- Opus (\`${CLAUDE_OPUS}\`) = judgement and final review; Sonnet (\`${CLAUDE_SONNET}\`) =`,
+    `  docs/design/structured review; Haiku (\`${CLAUDE_HAIKU}\`) = scouting and triage.`,
+    "- Claude-family reasoning effort defaults to `high`; use `xhigh` only for",
+    "  high-judgement review or UI/UX work.",
+    "- Give the full task specification up front; report findings with file and",
+    "  command evidence before summaries.",
+    "",
     "<!-- UT-TDD:managed:end -->",
     "",
   ].join("\n"),
@@ -183,7 +321,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "ut-tdd hook agent-guard",',
+    `            "command": "${wrapperHookCommand("agent-guard")}",`,
     '            "timeout": 5,',
     '            "blockOnFailure": true,',
     '            "statusMessage": "agent-guard: subagent allowlist/model enforcement"',
@@ -195,7 +333,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "ut-tdd hook work-guard",',
+    `            "command": "${wrapperHookCommand("work-guard")}",`,
     '            "timeout": 5,',
     '            "blockOnFailure": true,',
     '            "statusMessage": "work-guard: foreign edit protection"',
@@ -208,7 +346,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "ut-tdd session start",',
+    `            "command": "${wrapperHookCommand("session-start")}",`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: session start (fail-open)"',
     "          }",
@@ -221,7 +359,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "ut-tdd hook post-tool-use",',
+    `            "command": "${wrapperHookCommand("post-tool-use")}",`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: post tool use (fail-open)"',
     "          }",
@@ -233,20 +371,19 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "ut-tdd session summary",',
+    `            "command": "${wrapperHookCommand("session-summary")}",`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: PLAN digest summary (fail-open)"',
     "          }",
     "        ]",
     "      }",
-    "    ]",
-    "    ,",
+    "    ],",
     '    "SubagentStop": [',
     "      {",
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "ut-tdd hook subagent-stop",',
+    `            "command": "${wrapperHookCommand("subagent-stop")}",`,
     '            "timeout": 5,',
     '            "statusMessage": "agent-slots: release oldest guard slot (fail-open)"',
     "          }",
@@ -264,11 +401,23 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '  "hooks": {',
     '    "PreToolUse": [',
     "      {",
+    '        "matcher": "spawn_agent|spawn_agents_on_csv",',
+    '        "hooks": [',
+    "          {",
+    '            "type": "command",',
+    `            "command": "${wrapperHookCommand("agent-guard")}",`,
+    '            "timeout": 5,',
+    '            "blockOnFailure": true,',
+    '            "statusMessage": "agent-guard: Codex subagent allowlist/model enforcement"',
+    "          }",
+    "        ]",
+    "      },",
+    "      {",
     '        "matcher": "apply_patch|write_file",',
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "ut-tdd hook work-guard",',
+    `            "command": "${wrapperHookCommand("work-guard")}",`,
     '            "timeout": 5,',
     '            "blockOnFailure": true,',
     '            "statusMessage": "work-guard: foreign edit protection"',
@@ -281,7 +430,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "ut-tdd session start",',
+    `            "command": "${wrapperHookCommand("session-start")}",`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: session start (fail-open)"',
     "          }",
@@ -294,7 +443,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "ut-tdd hook post-tool-use",',
+    `            "command": "${wrapperHookCommand("post-tool-use")}",`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: post tool use (fail-open)"',
     "          }",
@@ -306,7 +455,7 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     '        "hooks": [',
     "          {",
     '            "type": "command",',
-    '            "command": "ut-tdd session summary",',
+    `            "command": "${wrapperHookCommand("session-summary")}",`,
     '            "timeout": 5,',
     '            "statusMessage": "session-log: PLAN digest summary (fail-open)"',
     "          }",
@@ -350,8 +499,24 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
     "      - uses: actions/checkout@v4",
     "      - uses: oven-sh/setup-bun@v2",
     "      - run: bun install --frozen-lockfile",
+    "      - name: branch-type guard",
+    "        env:",
+    "          HEAD_REF: $" + "{{ github.head_ref || github.ref_name }}",
+    "          BASE_REF: $" + "{{ github.base_ref || 'main' }}",
+    "          PR_TITLE: $" +
+      "{{ github.event.pull_request.title || github.event.head_commit.message || '' }}",
+    "          PR_BODY: $" + "{{ github.event.pull_request.body || '' }}",
+    "        run: |",
+    "          printf '%s\\n' \"$PR_BODY\" > .ut-tdd-pr-body.txt",
+    "          git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt",
+    '          bun .ut-tdd/bin/ut-tdd.mjs github guard --head-ref "$HEAD_REF" --base-ref "$BASE_REF" --pr-title "$PR_TITLE" --pr-body-file .ut-tdd-pr-body.txt --commit-file .ut-tdd-commit-subjects.txt',
     "      - run: bun run typecheck",
     "      - run: bun run test",
+    "      - run: bun .ut-tdd/bin/ut-tdd.mjs audit quality --include-tests --limit 20",
+    "      # Consumer CI gate is doctor --setup-smoke: full doctor asserts source-repo",
+    "      # self-application state (design docs / PLAN corpus) and is structurally red",
+    "      # on a fresh consumer repository (A-172 C-1).",
+    "      - run: bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke",
     "",
   ].join("\n"),
   "common/commitlint.config.js":
@@ -403,6 +568,14 @@ export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
 };
 
 export const COMMON_FILES: { template: string; file: GeneratedFile }[] = [
+  {
+    template: "common/ut-tdd.mjs",
+    file: {
+      path: join(".ut-tdd", "bin", "ut-tdd.mjs"),
+      category: "A",
+      purpose: "Project-local UT-TDD hook wrapper",
+    },
+  },
   {
     template: "adapter/AGENTS.md",
     file: {

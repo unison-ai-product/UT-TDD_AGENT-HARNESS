@@ -5,7 +5,7 @@
 - **Deciders**: PM (Opus) + PO (ユーザー)
 - **関連**: `docs/design/harness/L4-basic-design/architecture.md` §3 / `docs/design/harness/L5-detailed-design/module-decomposition.md` §4・§7 / `docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md` / improvement-backlog IMP-032
 
-## Context
+## 背景
 
 UT-TDD harness の core が module 化する (cli/schema/lint/plan/vmodel/runtime/doctor + 将来 workflow/adapter ...) なかで、module 間の依存が複雑化する。逆依存や循環依存が混入すると保守が破綻し、テスト容易性も失われる。
 
@@ -13,18 +13,18 @@ L4 architecture §3 / L5 module-decomposition §4 で「**全依存は schema �
 
 PO 意図 (2026-05-29): UT harness の state/DB を構築する際に **依存関係の自動マップ生成機能**を入れる想定。**構想 (設計が宣言する依存方向) と実装 (実 import) でどれだけ差が出るかをチェックし、修正したい**。
 
-## Decision
+## 決定
 
 1. **依存方向ルールを正式採択**: 全依存は `schema` へ向かう一方向 (schema は何も import しない安定核)。`cli`/`doctor` が最外 (副作用層)。**循環依存禁止** (D-03=0)。`fs` (Node built-in) は依存方向ルール対象外の副作用アクセスとし、core ロジック (`analyzeX(docs?)` pure) と `loadX()` (fs 端点) を分離する。
 2. **依存マップ自動生成 + 構想 vs 実装 drift lint を機能化** (将来、IMP-032): 実 import グラフを機械生成し、設計 doc が宣言する「期待依存マップ」(architecture §3 / module-decomposition §4 を形式化したもの) と照合。乖離 (逆依存 / 循環 / 想定外 edge) を **fail-close で検出**。OSS 候補 = `knip` / `madge` (L3 §7.1 tech-fork 調査)。
 
-## Rationale
+## 判断理由
 
 - 既存 lint 群 (g3-trace / fr-registry / doc-consistency / entity-coverage) と同じ「**設計 ↔ 実装の機械的整合**」哲学。zod で enum drift を根絶したのと同様、**依存 drift をグラフ照合で根絶**する。
 - 「構想 vs 実装の差を測って修正する」= dogfooding の中核。harness 自身が自分の依存構造を監査できることは、対象リポジトリへの harness 価値の実証にもなる。
 - 循環依存は core の根幹リスク (architecture §3 の D-03=0 保証) であり、ADR で固定して将来 module 追加時の必須参照点にする価値が高い。
 
-## Alternatives considered
+## 検討した代替案
 
 | 案 | 判定 | 理由 |
 |----|------|------|
@@ -32,7 +32,7 @@ PO 意図 (2026-05-29): UT harness の state/DB を構築する際に **依存�
 | ADR 化しない (§3/§4 のまま) | 却下 | 構造の根幹で将来必ず参照される判断。履歴・却下理由が散逸する |
 | 依存方向を強制しない (自由 import) | 却下 | 循環・テスト不能・保守破綻のリスク。安定核 (schema) 設計が崩れる |
 
-## Consequences
+## 結果
 
 - (+) 依存構造が機械検証可能になり、循環・逆依存を CI/doctor で fail-close できる。
 - (+) **構想 (設計) と実装の gap を定量化・可視化し修正できる** (PO 意図の実現)。
@@ -40,143 +40,143 @@ PO 意図 (2026-05-29): UT harness の state/DB を構築する際に **依存�
 - (−) dependency-map auto-gen + drift lint の実装コスト (L7、IMP-032)。OSS (knip/madge) 流用で緩和。
 - (−) 「期待依存マップ」を設計 doc から形式化する作業が必要 (architecture §3 を機械可読形式へ)。
 
-## Follow-ups
+## 後続対応
 
 - **IMP-032** として「依存マップ自動生成 + 構想 vs 実装 drift lint」を L7 で起票。architecture §3 を「期待依存マップ」(YAML/JSON) として形式化し、実 import グラフと照合。
 - **最小スライス実装済 (IMP-075、PLAN-L7-16)**: 上記 IMP-032 (import グラフの循環/逆依存/想定外 edge 照合、knip/madge) の前段として、**「architecture §3.1 building block 集合 ⊇ `src/` 実在 module」の包含 drift** を `src/lint/module-drift.ts` (doctor `checkModuleDrift`、warn-first) で実装した。これは A-103 で発見した impl→design back-fill 漏れ (handover/setup/web を「将来」放置した meta-drift) の再発防止網 (U-MDRIFT-005 が実 repo 孤児0 を CI 担保)。**IMP-032 本体 (import グラフ drift) は引き続き carry** — module 集合包含と import edge 照合は別検査 (前者=module の有無、後者=module 間の依存方向)。
 - module-decomposition §7 の「ADR-002 候補」を本 ADR (accepted) 参照に更新。
 - L6 機能設計で drift lint のアルゴリズム (グラフ構築 + 照合 + 差分レポート) を pseudocode 化。
-## A-124 Addendum: cross-artifact graph and tool adapter selection
+## A-124 追補: 成果物横断 graph と tool adapter の選定
 
-Date: 2026-06-09
+日付: 2026-06-09
 
-The earlier ADR-002 decision covers dependency direction and the first `module-drift` slice. A-124 extends the target from module-set drift to a cross-artifact relation graph:
+先行する ADR-002 の決定は依存方向と最初の `module-drift` slice を対象にした。A-124 では対象を module 集合 drift から成果物横断 relation graph へ拡張する:
 
 - source import graph
-- design-declared expected dependencies
-- doc/PLAN/FR references
-- test-to-source and test-to-artifact edges
-- DB projection source-to-table edges
-- generated diagram artifacts
+- design が宣言する期待依存
+- doc / PLAN / FR の参照
+- test から source / artifact への edge
+- DB projection の source-to-table edge
+- 生成 diagram artifact
 
-The relation graph must be projected into `harness.db` and exported to diagrams. The DB remains a rebuildable projection, not the authoring source.
+relation graph は `harness.db` に投影し、diagram へ export できるようにする。DB は再生成可能な projection であり、authoring source ではない。
 
-### Tool research summary
+### tool 調査まとめ
 
-| tool | role | adoption stance |
+| tool | 役割 | 採用方針 |
 |---|---|---|
-| `dependency-cruiser` | Validate and visualize JS/TS dependencies with project rules. Useful for circular dependencies, forbidden dependencies, missing package dependencies, orphans, and DOT output. | Preferred optional adapter for dependency rules and graph export. |
-| `knip` | Find unused dependencies, exports, and files in TypeScript/JavaScript projects. | Optional adapter for dead-node / unused edge detection. |
-| `madge` | Generate dependency graphs and detect circular dependencies. | Optional lightweight helper, secondary to dependency-cruiser for rules. |
-| Graphviz DOT | Render large graphs to SVG/PDF/PNG. | Optional renderer for large graph snapshots and CI artifacts. |
-| Mermaid | Markdown-native diagrams that render in GitHub. | Preferred documentation diagram format for small/medium workflow and relation views. |
-| D2 | Text-to-diagram language with CLI export to SVG/PNG/PDF. | Optional renderer for cleaner architecture/review diagrams. |
+| `dependency-cruiser` | JS/TS 依存を project rules で検証・可視化する。循環依存、禁止依存、package 依存欠落、孤児、DOT 出力に有効。 | dependency rules と graph export の優先 optional adapter。 |
+| `knip` | TypeScript/JavaScript project の未使用依存、export、file を検出する。 | dead-node / unused edge 検出の optional adapter。 |
+| `madge` | dependency graph を生成し、循環依存を検出する。 | rule では dependency-cruiser を優先し、軽量補助として使う。 |
+| Graphviz DOT | 大規模 graph を SVG/PDF/PNG に render する。 | large graph snapshot と CI artifact 用の optional renderer。 |
+| Mermaid | GitHub で render できる Markdown-native diagram。 | 小〜中規模 workflow / relation view の優先 documentation diagram 形式。 |
+| D2 | SVG/PNG/PDF へ CLI export できる text-to-diagram language。 | architecture/review diagram を整える optional renderer。 |
 
-### Decision
+### 決定
 
-Do not make any external tool the source of truth. The core graph collector is TypeScript/Bun and writes normalized rows to `harness.db`. External tools are adapters:
+外部 tool を正本にしてはいけない。core graph collector は TypeScript/Bun で実装し、正規化済み row を `harness.db` に書く。外部 tool は adapter として扱う:
 
-1. Run tool.
-2. Store raw output as evidence.
-3. Normalize to `graph_nodes`, `dependency_edges`, `tool_runs`, `findings`, and `diagram_artifacts`.
-4. Gate only on normalized rows.
+1. tool を実行する。
+2. raw output を evidence として保存する。
+3. `graph_nodes`、`dependency_edges`、`tool_runs`、`findings`、`diagram_artifacts` へ正規化する。
+4. gate は正規化済み row のみを根拠にする。
 
-### First implementation slice
+### 初回実装 slice
 
-1. Build source import graph from `src/**/*.ts` and `tests/**/*.ts`.
-2. Build doc reference graph from Markdown path/ID references.
-3. Project both into `graph_nodes` and `dependency_edges`.
-4. Add `ut-tdd graph impact --changed <path>` to compute `impact_results`.
-5. Add `ut-tdd graph export --format mermaid|dot --scope <scope>`.
-6. Wire doctor to warn-first when graph projection is missing and fail-close when impact rules are enabled for G7/accept.
+1. `src/**/*.ts` と `tests/**/*.ts` から source import graph を作る。
+2. Markdown の path/ID reference から doc reference graph を作る。
+3. 両方を `graph_nodes` と `dependency_edges` に投影する。
+4. `impact_results` を算出する `ut-tdd graph impact --changed <path>` を追加する。
+5. `ut-tdd graph export --format mermaid|dot --scope <scope>` を追加する。
+6. graph projection 欠落時は doctor で warn-first、G7/accept 向け impact rules 有効時は fail-close へ配線する。
 
-## A-125 Addendum: MCP server and external verification profile selection
+## A-125 追補: MCP server と外部 verification profile の選定
 
-Date: 2026-06-09
+日付: 2026-06-09
 
-The A-124 graph tells UT-TDD what is impacted. A-125 tells it which external capability should be activated to verify the impact. Web research on 2026-06-09 selected these candidates for scope:
+A-124 graph は UT-TDD に影響範囲を伝える。A-125 は、その影響を検証するためにどの外部 capability を有効化すべきかを決める。2026-06-09 の Web research では、以下を scope 候補に選定した:
 
-| candidate | role | adoption stance |
+| candidate | 役割 | 採用方針 |
 |---|---|---|
-| MCP Registry | Discovery metadata for public MCP servers with namespace/installation metadata. | Use as metadata source only; not a security scanner. |
-| MCP Inspector | Interactive/CLI developer tool for testing and debugging MCP servers. | Preferred smoke tool for every configured MCP profile. |
-| Microsoft Playwright MCP | Browser automation MCP for exploratory automation, screenshots, and self-healing/browser-state-heavy loops. | Optional interactive verification profile; deterministic CI should prefer Playwright/Vitest tests. |
-| GitHub MCP Server | GitHub issue/PR/repo/actions/code-security toolsets. | Optional workflow automation profile; default profile must be read-only or narrow toolset. |
-| modelcontextprotocol reference servers | filesystem/git/memory/fetch/postgres/sqlite reference capabilities. | Controlled local/reference profiles only; default filesystem/git profiles must be workspace-scoped. |
-| Docker MCP Toolkit | Containerized MCP gateway with profiles, signed/attested images, OAuth handling, and runtime resource constraints. | Preferred team/enterprise runtime profile when Docker Desktop is available. |
-| Vitest Browser Mode + Playwright provider | Browser-native component/UI tests. | Optional test profile for UI/browser-targeted changes. |
-| Testcontainers for Node.js | Disposable databases/services for integration tests. | Optional test profile for DB/service contract verification when Docker is available. |
-| MSW | Browser/Node API mocking. | Optional test profile for API-bound test stabilization and fixture reuse. |
+| MCP Registry | public MCP servers の namespace / installation metadata を持つ discovery metadata。 | metadata source としてのみ使う。security scanner ではない。 |
+| MCP Inspector | MCP servers の test/debug 用 Interactive/CLI developer tool。 | 設定済み MCP profile ごとの優先 smoke tool。 |
+| Microsoft Playwright MCP | exploratory automation、screenshots、browser-state-heavy loop 向けの browser automation MCP。 | optional interactive verification profile。deterministic CI では Playwright/Vitest tests を優先する。 |
+| GitHub MCP Server | GitHub issue/PR/repo/actions/code-security toolsets。 | optional workflow automation profile。default profile は read-only または narrow toolset にする。 |
+| modelcontextprotocol reference servers | filesystem/git/memory/fetch/postgres/sqlite の reference capabilities。 | controlled local/reference profiles のみに使う。default filesystem/git profiles は workspace-scoped に限定する。 |
+| Docker MCP Toolkit | profiles、signed/attested images、OAuth handling、runtime resource constraints を持つ containerized MCP gateway。 | Docker Desktop が使える場合の優先 team/enterprise runtime profile。 |
+| Vitest Browser Mode + Playwright provider | browser-native component/UI tests。 | UI/browser-targeted changes 向け optional test profile。 |
+| Testcontainers for Node.js | integration tests 用の disposable databases/services。 | Docker が使える場合の DB/service contract verification 用 optional test profile。 |
+| MSW | Browser/Node API mocking。 | API-bound test の安定化と fixture reuse 用 optional test profile。 |
 
-### Decision
+### 決定
 
-External tools are not installed or enabled globally by default. UT-TDD will model them as **profiles**:
+外部 tool は default で global install / global enable しない。UT-TDD はそれらを **profiles** として model 化する:
 
-1. `mcp_server_profiles` / `verification_profiles` define allowed commands, package refs, risk tier, auth/network/Docker requirements, and trigger signals.
-2. Relation graph impact expansion recommends profiles via `verification_recommendations`.
-3. `ut-tdd mcp profile probe` and MCP Inspector smoke prove a profile is callable.
-4. Runs are persisted as `mcp_server_runs`, `tool_runs`, `test_runs`, and normalized `external_tool_findings`.
-5. Gate decisions use only normalized DB rows and bounded evidence files.
+1. `mcp_server_profiles` / `verification_profiles` は、許可コマンド、package refs、risk tier、auth/network/Docker 要件、trigger signals を定義する。
+2. Relation graph の影響範囲展開は、`verification_recommendations` を通じて profile を推奨する。
+3. `ut-tdd mcp profile probe` と MCP Inspector smoke は、profile が呼び出し可能であることを証明する。
+4. 実行結果は `mcp_server_runs`、`tool_runs`、`test_runs`、正規化済み `external_tool_findings` に永続化する。
+5. Gate decision は、正規化済み DB row と範囲を限定した evidence files だけを根拠にする。
 
-### Security posture
+### セキュリティ方針
 
-- Prefer read-only and narrow toolsets.
-- Do not mount home directories into filesystem/git MCP profiles.
-- Do not store credentials, raw provider transcripts, or unredacted MCP payloads in DB.
-- Treat registry/catalog metadata as discovery input, not proof of safety.
-- Docker MCP Toolkit is a preferred packaged option when its resource limits, signing/attestation, OAuth handling, and profile isolation are available.
+- read-only かつ narrow toolsets を優先する。
+- home directories を filesystem/git MCP profiles に mount してはいけない。
+- credentials、raw provider transcripts、未 redact の MCP payloads を DB に保存してはいけない。
+- registry/catalog metadata は discovery input として扱い、安全性の証明にはしない。
+- Docker MCP Toolkit は、resource limits、signing/attestation、OAuth handling、profile isolation が使える場合に優先 packaged option とする。
 
-### First implementation slice
+### 初回実装 slice
 
-1. Add profile schema and generated local config path.
-2. Implemented first slice: `ut-tdd mcp profile list --json` and `ut-tdd mcp profile probe <name>` expose catalog and readiness checks without installing packages.
-3. Implemented readiness gate: `ut-tdd mcp inspect <name> --method tools/list` combines target MCP profile checks with MCP Inspector profile checks and refuses external inspection by default. Actual Inspector server invocation remains later scope.
-4. Implemented first slice: `ut-tdd verify recommend --changed <path>` maps changed-file signals to profile triggers and can emit Mermaid impact evidence. DB-backed relation graph expansion remains separate A-124 scope.
-5. Implemented first slice: `ut-tdd verify run --profile <name> --dry-run` and built-in profile execution. Disabled external profiles require explicit `--allow-external`, package/auth/Docker readiness, and a wired runner. `--save-evidence` persists normalized JSON under `.ut-tdd/evidence/verification-profiles/`.
-6. Wire doctor warn-first for recommended-but-unavailable profiles and fail-close at G7/accept only after profile rules are enabled.
+1. profile schema と生成済み local config path を追加する。
+2. 初期 slice として、`ut-tdd mcp profile list --json` と `ut-tdd mcp profile probe <name>` が package install なしで catalog と readiness checks を公開する。
+3. readiness gate として、`ut-tdd mcp inspect <name> --method tools/list` は対象 MCP profile check と MCP Inspector profile check を組み合わせ、既定では外部 inspect を拒否する。実際の Inspector server invocation は後続 scope に残す。
+4. 初期 slice として、`ut-tdd verify recommend --changed <path>` は changed-file signals を profile triggers に対応付け、Mermaid impact evidence を出力できる。DB-backed relation graph expansion は別の A-124 scope として扱う。
+5. 初期 slice として、`ut-tdd verify run --profile <name> --dry-run` と組み込み profile execution を実装する。disabled external profiles は、明示的な `--allow-external`、package/auth/Docker readiness、配線済み runner を要求する。`--save-evidence` は正規化済み JSON を `.ut-tdd/evidence/verification-profiles/` に永続化する。
+6. doctor は、推奨されたが利用不能な profile を warn-first とし、profile rules が有効化された後だけ G7/accept で fail-close へ配線する。
 
-## A-126 Addendum: canonical document export selection
+## A-126 追補: canonical document export の選定
 
-Date: 2026-06-09
+日付: 2026-06-09
 
-A-126 extends the dependency/relation graph decision to canonical document conversion. The target is not generic review reporting; it is conversion of UT-TDD source documents into human-friendly spreadsheet / Excel / PPTX formats:
+A-126 は dependency/relation graph の決定を canonical document conversion に拡張する。対象は汎用 review reporting ではなく、UT-TDD source documents を人間が読みやすい spreadsheet / Excel / PPTX formats へ変換することである:
 
 - concept / planning documents;
-- requirements and acceptance documents;
+- requirements と acceptance documents;
 - detailed design documents;
 - PLAN and ADR documents;
-- test-design and evidence-summary documents;
-- D2 PPTX export as an optional diagram-to-deck bridge for architecture/workflow visuals.
+- test-design と evidence-summary documents;
+- D2 PPTX export は、architecture/workflow visuals 向けの optional diagram-to-deck bridge とする。
 
-### Tool research summary
+### tool 調査まとめ
 
-| tool | role | adoption stance |
+| tool | 役割 | 採用方針 |
 |---|---|---|
-| CSV / Markdown summary | Built-in conversion outputs for document matrices and summaries. | Default, no external dependency. |
-| ExcelJS | Excel workbook creation and manipulation for Node/browser with TypeScript definitions. | Optional XLSX renderer candidate for structured requirements/design/trace workbooks. |
-| SheetJS CE | Broad JavaScript spreadsheet format support. | Optional spreadsheet renderer/parser candidate when compatibility matters. |
-| PptxGenJS | JavaScript/TypeScript OOXML PowerPoint generation. | Optional PPTX renderer candidate for concept, requirements, design, ADR, PLAN, and test-design decks. |
-| D2 PPTX export | Diagram export into PPTX. | Optional diagram-to-deck renderer for architecture/workflow visuals. |
+| CSV / Markdown summary | document matrix と summary の built-in conversion output。 | default。外部依存なし。 |
+| ExcelJS | TypeScript definitions 付きの Node/browser 向け Excel workbook 作成・操作 library。 | structured requirements/design/trace workbook 用 optional XLSX renderer 候補。 |
+| SheetJS CE | 広範な JavaScript spreadsheet format support。 | compatibility が重要な場合の optional spreadsheet renderer/parser 候補。 |
+| PptxGenJS | JavaScript/TypeScript OOXML PowerPoint generation。 | concept、requirements、design、ADR、PLAN、test-design deck 用 optional PPTX renderer 候補。 |
+| D2 PPTX export | diagram を PPTX に export する機能。 | architecture/workflow visual 用 optional diagram-to-deck renderer。 |
 
-### Decision
+### 決定
 
-Generated spreadsheet/deck files are not source-of-truth documents. The source of truth is the canonical Markdown/docs plus normalized DB projection and explicit review/gate/handover evidence.
+生成された spreadsheet/deck files は source-of-truth documents ではない。正本は canonical Markdown/docs、normalized DB projection、明示的な review/gate/handover evidence である。
 
-1. Parse canonical documents into a structured document projection.
-2. Preserve source path, section ID, FR/AC/AT/PLAN/ADR IDs, status, trace, and evidence links.
-3. Build a deterministic export dataset from that projection.
-4. Redact the dataset before rendering.
-5. Render CSV / Markdown by default.
-6. Render XLSX / PPTX only through optional renderer profiles with readiness evidence.
-7. Store artifact metadata in `document_export_runs`, `document_export_datasets`, and `document_export_artifacts`.
-8. Gate on canonical docs, normalized rows, and recorded human decisions, not manually edited Office files.
+1. canonical documents を structured document projection に parse する。
+2. source path、section ID、FR/AC/AT/PLAN/ADR IDs、status、trace、evidence links を保持する。
+3. その projection から決定的な export dataset を構築する。
+4. rendering 前に dataset を redact する。
+5. CSV / Markdown は既定で render する。
+6. XLSX / PPTX は readiness evidence を持つ optional renderer profiles 経由でだけ render する。
+7. artifact metadata は `document_export_runs`、`document_export_datasets`、`document_export_artifacts` に保存する。
+8. Gate は canonical docs、normalized rows、記録済み human decisions を根拠にし、手編集された Office files は根拠にしない。
 
-### First implementation slice
+### 初回実装 slice
 
-Future L7 work may implement:
+将来の L7 work では以下を実装候補とする:
 
-1. `parseCanonicalDocumentStructure` from concept, requirements, detailed design, PLAN, ADR, and test-design docs.
-2. `buildDocumentExportDataset` for document matrices and deck outlines.
-3. `renderDocumentExport` for CSV and Markdown only.
-4. Optional renderer probes for ExcelJS / SheetJS / PptxGenJS / D2.
-5. `ut-tdd export docs --kind requirements|concept|design|plan|adr|test-design --format csv|md|xlsx|pptx` only after TDD Red and PLAN route.
+1. `parseCanonicalDocumentStructure` は concept、requirements、detailed design、PLAN、ADR、test-design docs から構造を抽出する。
+2. `buildDocumentExportDataset` は document matrices と deck outlines 向けの dataset を構築する。
+3. `renderDocumentExport` は CSV と Markdown だけを render する。
+4. ExcelJS / SheetJS / PptxGenJS / D2 向け optional renderer probes を追加する。
+5. `ut-tdd export docs --kind requirements|concept|design|plan|adr|test-design --format csv|md|xlsx|pptx` は、TDD Red と PLAN route の後だけ有効化する。

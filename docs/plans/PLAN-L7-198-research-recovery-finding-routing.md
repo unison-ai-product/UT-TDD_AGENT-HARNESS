@@ -4,10 +4,9 @@ title: "PLAN-L7-198 (impl): Research/監査 finding → 分類 router → Recove
 kind: impl
 layer: L7
 drive: be
-status: draft
-version_target: future
+status: confirmed
 created: 2026-06-29
-updated: 2026-06-29
+updated: 2026-07-01
 owner: PM (Opus) / PO (人間)
 parent_design: docs/design/harness/L6-function-design/forced-stop-feedback.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -19,6 +18,16 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-198-research-recovery-finding-routing.md
     artifact_type: markdown_doc
+  - artifact_path: src/workflow/routing-contracts.ts
+    artifact_type: source_module
+  - artifact_path: tests/workflow-contracts.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/process/modes/research.md
+    artifact_type: doc_update
+  - artifact_path: docs/process/modes/recovery.md
+    artifact_type: doc_update
+  - artifact_path: .ut-tdd/audit/A-156-research-recovery-finding-route-ledger.md
+    artifact_type: markdown_doc
 dependencies:
   parent: null
   requires:
@@ -28,13 +37,57 @@ dependencies:
     - docs/process/modes/research.md
     - .ut-tdd/audit/A-145-feature-review-index.md
     - .ut-tdd/audit/A-144-judge-audit-index.md
+review_evidence:
+  - reviewer: codex
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-01T17:27:00+09:00"
+    tests_green_at: "2026-07-01T17:25:00+09:00"
+    verdict: approve
+    scope: "Research/監査 finding を route eval で既存 Recovery/Add-feature/Refactor へ分類し、自動起票を禁止する。"
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    notes: "finding_type は signal taxonomy ではなく route eval の分類入力として実装。Recovery は既存 regression_dev に接続し、auto_create=false + human approval required を維持。"
+    green_commands:
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T17:22:39+09:00"
+        evidence_path: tsconfig.json
+        output_digest: "sha256:290e679c492d7c229373061b313ab332394da783b08c9eff85bbb81275f96afc"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T17:23:07+09:00"
+        evidence_path: biome.json
+        output_digest: "sha256:b70d2d1403c671399680ca5c783e86591fde85e10dc57c45be2c8806f0549cf7"
+      - kind: unit_test
+        command: "bun run vitest run tests\\workflow-contracts.test.ts tests\\cli-surface.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T17:24:05+09:00"
+        evidence_path: tests/workflow-contracts.test.ts
+        output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
+      - kind: smoke
+        command: "bun src\\cli.ts route eval --signal \"smell duplicated routing table\" --format json"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T17:23:07+09:00"
+        evidence_path: src/workflow/routing-contracts.ts
+        output_digest: "sha256:44626b2b9841630983407330a42858f5021252d8d257abe10ff36c57273abe0d"
 ---
 
 # PLAN-L7-198 (impl): Research/監査 finding → Recovery 起票配線
 
-## 優先度: version-up parked / 将来版へ保全 (PO 2026-06-29)
+## 優先度: locally confirmed (PO 2026-07-01)
 
 PO 決定 (2026-06-29): いまは配布クローズを優先。本対応も将来版へ保全 (`status=draft` + `version_target: future`)。
+PO 継続指示 (2026-07-01): L10-L14 close に向けてワークフロー改善も実施するため、本 PLAN を activation しローカル実装で confirmed へ移す。
 PO 案 (2026-06-29):「リサーチからリカバリー起票への配線がベスト」。本 PLAN はその配線を機械化する。
 
 > 注: 本 PLAN は「Audit を新 mode として新設」案を**棄却**した結果である。新 mode を足さず、既存
@@ -103,3 +156,16 @@ PO 案 (2026-06-29):「リサーチからリカバリー起票への配線がベ
 - 起票は人間承認 (auto-起票は agent_runaway 級リスク。起票は人間 yes を必須に)。
 - Recovery exit の prose 止まり禁止を緩めない ([[feedback_improve_means_implement_not_route]] / 仕組み化志向)。
 - version-up parked。実装は後続版、PO 指示で activation。配布クローズを止めない。
+
+## 5. 実装結果 (2026-07-01)
+
+- `route eval` / `evaluateRouteCommand` に `finding_type` 分類を追加した。
+- `regression` / `premise-gap` / `deviation` は新 signal を作らず、既存 `regression_dev` 経由で Recovery 起票候補へ接続する。
+- `feature-gap` / `latent-defect` は Add-feature、`smell` は Refactor の起票候補へ分岐する。
+- 全候補で `auto_create=false` を明示し、Recovery 系は human approval required を維持する。
+- Recovery 起票候補には `root_cause` / `prevention_change_trace` / `guard_or_test_or_rule_or_hook` / `l14_route` を必須 payload として返す。
+- A-144/A-145 の VER-1・DB-1 は `.ut-tdd/audit/A-156-research-recovery-finding-route-ledger.md` に初回候補として登録した。
+
+## 6. 検証
+
+検証コマンドは実行後に `green_commands` へ反映する。

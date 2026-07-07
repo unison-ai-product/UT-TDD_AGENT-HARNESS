@@ -18,6 +18,11 @@ Separation of responsibilities:
 ただし成果物はそれぞれの規約に従う: コード/識別子/commit message は従来どおり、ファイル名は
 英語 (文字化け回避)、技術用語・コマンド・PLAN ID・パスは原語のまま埋め込んでよい (無理に和訳しない)。
 
+**ドキュメント本文 (`docs/` 配下の PLAN / ADR / design / test-design / governance 等) は日本語で書く**
+(PO ルール、2026-06-30。Claude / Codex 両ランタイム共通)。コード・識別子・コマンド・PLAN ID・パスは
+英語/原語のまま。Windows 文字化けは UTF-8 化 (`.editorconfig` charset=utf-8 / `.gitattributes` eol=lf) と
+`readability` gate (mojibake fail-close) で防ぐ前提であり、**文字化け回避を理由に doc を英語化しない**。
+
 ## Core Reads
 
 For work in this repository, read the repository-owned sources below and follow
@@ -111,6 +116,24 @@ Design decisions, judgement gates, and R4 merge decisions should go through a
 different runtime / model family when feasible. In single-runtime modes, record
 `intra_runtime_subagent` as the review substitute and leave evidence.
 
+Model / effort routing defaults:
+
+- Docs work defaults to Sonnet-class Claude; research defaults to Haiku-class
+  Claude; implementation defaults to GPT/Codex-class workers.
+- Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
+  closing authority; their default effort is `high`.
+- Design/implementation review uses a top reviewer model: GPT frontier
+  (`gpt-5.5`) or Claude Opus (`claude-opus-4-8`) or above, behind the explicit
+  frontier gate.
+- UI/UX work defaults to Sonnet-class Claude with `xhigh` effort.
+- Claude-family effort defaults to `high`; GPT/Codex effort defaults to
+  `middle`; only high-judgement review/critical decisions move up to
+  `high`/`xhigh`.
+- 現在の orchestrator が Sonnet-class Claude または下位 GPT/Codex model で、
+  判断に迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使う。
+  advisor は Claude Opus (`claude-opus-4-8`) または GPT frontier (`gpt-5.5`)
+  へ dry-run/execute 可能な adapter plan を作る。実相談は `--execute` を付ける。
+
 Do not add legacy commands as current company/product execution paths.
 
 ## Hooks (Codex orchestrator parity)
@@ -159,8 +182,29 @@ calls.
 - Read only the relevant `SKILL.md` for matching triggers.
 - Do not bulk-load all skills.
 - Resolve `references/` relative to the skill directory.
-- Legacy-derived skill material is migration source material. UT-TDD skill docs
-  live under `docs/skills/`.
+- Pack / runtime skill content lives under root `skills/` so runnable skill
+  assets are separated from explanatory `docs/` content.
+- `src/skill-engine/` is TypeScript implementation code for skill
+  recommendation / injection / scaffolding. It is not a skill content directory
+  and should stay under `src/` with the rest of the harness core.
+- Legacy-derived skill material under `docs/skills/` is source-repo reference /
+  migration material unless a task explicitly targets it. Do not treat it as the
+  Pack runtime skill root.
+
+## Distribution Repository
+
+- Source development repo: `unison-ai-product/UT-TDD_AGENT-HARNESS`.
+- Clean distribution Pack repo:
+  `unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`
+  (`https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack`).
+- When publishing clean Pack artifacts, push/export to the Pack repo, not back
+  into the source development repo.
+- Standard local propagation from this source repo to an existing Pack checkout
+  is `ut-tdd distribution sync-pack --repo-dir <Pack checkout>`.
+  Use `--prune-local` only when intentionally removing local files that are not
+  part of the clean Pack artifact set. The command must not commit or push;
+  inspect its output and perform any Pack repo commit / push as a separate,
+  human-reviewed step.
 
 ## Editing Rules
 

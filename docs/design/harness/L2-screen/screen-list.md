@@ -13,7 +13,7 @@ created: 2026-05-28
 updated: 2026-06-24
 ---
 
-## PLAN-L7-102 Review Back-Fill: 404 Path Safety
+## PLAN-L7-102 review back-fill: 404 path safety の補足
 
 404 ページに表示する URL path は通常画面と同じ `escapeHtml` 経路を通す。未知 path はユーザー入力扱いとし、HTML として解釈しない。
 

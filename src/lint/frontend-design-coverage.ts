@@ -49,15 +49,30 @@ export const FE_COVERAGE_MAP: readonly FeCoverageLayer[] = [
     presentFile: "docs/design/harness/L2-screen/ui-element.md",
     body: "present",
   },
-  { layer: "L3", slug: "screen-functional", body: "pending" },
+  {
+    layer: "L3",
+    slug: "screen-functional",
+    presentFile: "docs/design/harness/L3-functional/screen-functional.md",
+    body: "present",
+  },
   {
     layer: "L4",
     slug: "ui-standard",
     presentFile: "docs/design/harness/L4-basic-design/ui-standard.md",
     body: "present",
   },
-  { layer: "L5", slug: "ui-detail", body: "pending" },
-  { layer: "L6", slug: "screen-spec", body: "pending" },
+  {
+    layer: "L5",
+    slug: "ui-detail",
+    presentFile: "docs/design/harness/L5-detailed-design/ui-detail.md",
+    body: "present",
+  },
+  {
+    layer: "L6",
+    slug: "screen-spec",
+    presentFile: "docs/design/harness/L6-function-design/screen-spec.md",
+    body: "present",
+  },
 ] as const;
 
 /**

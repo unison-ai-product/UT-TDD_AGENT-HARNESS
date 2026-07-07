@@ -46,7 +46,12 @@ type PlanGovernanceViolationReason =
   | "reverse_fullback_claimed_artifact_missing"
   | "reverse_r4_claimed_artifact_missing"
   | "reverse_r4_route_backprop_missing"
-  | "reverse_fullback_scope_missing";
+  | "reverse_fullback_scope_missing"
+  | "version_route_certificate_missing"
+  | "version_route_certificate_mismatch"
+  | "route_certificate_missing"
+  | "route_certificate_mismatch"
+  | "route_mode_kind_mismatch";
 
 interface PlanGovernanceViolation {
   file: string;
@@ -60,12 +65,30 @@ interface PlanGovernanceResult {
   ok: boolean;
 }
 
+type PlanReferenceFreshnessFindingReason = "reference_path_missing" | "reference_line_out_of_range";
+
+interface PlanReferenceFreshnessFinding {
+  file: string;
+  reason: PlanReferenceFreshnessFindingReason;
+  reference: string;
+  detail: string;
+}
+
+interface PlanReferenceFreshnessResult {
+  findings: PlanReferenceFreshnessFinding[];
+  checked: number;
+  ok: boolean;
+}
+
 export type {
   LintResult,
   PlanGovernanceDoc,
   PlanGovernanceResult,
   PlanGovernanceViolation,
   PlanGovernanceViolationReason,
+  PlanReferenceFreshnessFinding,
+  PlanReferenceFreshnessFindingReason,
+  PlanReferenceFreshnessResult,
   PlanScheduleDoc,
   PlanScheduleResult,
   PlanScheduleViolation,

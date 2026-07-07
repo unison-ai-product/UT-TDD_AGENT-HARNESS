@@ -92,6 +92,48 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
     );
   });
 
+  it("kind-layer authoring guard rejects right-arm layers for normal authoring kinds", () => {
+    expect(frontmatterSchema.safeParse(implBase({ kind: "impl", layer: "L8" })).success).toBe(
+      false,
+    );
+    expect(frontmatterSchema.safeParse(implBase({ kind: "refactor", layer: "L6" })).success).toBe(
+      false,
+    );
+    expect(frontmatterSchema.safeParse(implBase({ kind: "retrofit", layer: "L6" })).success).toBe(
+      false,
+    );
+    expect(
+      frontmatterSchema.safeParse(implBase({ kind: "troubleshoot", layer: "L6" })).success,
+    ).toBe(false);
+    expect(
+      frontmatterSchema.safeParse(
+        implBase({
+          plan_id: "PLAN-L5-99-research",
+          kind: "research",
+          layer: "L5",
+          parent_design: undefined,
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it("master_hub may host verification-band roadmap layers without weakening normal design guard", () => {
+    const master = implBase({
+      plan_id: "PLAN-M-99-master",
+      kind: "design",
+      layer: "L14",
+      master_hub: true,
+      parent_design: undefined,
+      agent_slots: [{ role: "tl", slot_label: "TL - master hub" }],
+      generates: [
+        { artifact_path: "docs/plans/PLAN-M-99-master.md", artifact_type: "markdown_doc" },
+      ],
+    });
+
+    expect(frontmatterSchema.safeParse(master).success).toBe(true);
+    expect(frontmatterSchema.safeParse({ ...master, master_hub: false }).success).toBe(false);
+  });
+
   it("poc は layer=cross + workflow_phase 必須、S4 は decision_outcome 必須 (§1.1)", () => {
     const pocBase = {
       plan_id: "PLAN-DISCOVERY-06-poc",
@@ -286,6 +328,7 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
                 completed_at: "2026-06-23",
                 evidence_path: "tests/review-evidence.test.ts",
                 output_digest: "sha256:0123456789abcdef",
+                anchor_commit: "e57f70bf878269168e8ba9841c34b289a6ea4641",
               },
             ],
           },

@@ -17,6 +17,8 @@ export const VALID_TEAM_STRATEGIES = ["sequential", "parallel"] as const;
 export const teamStrategySchema = z.enum(VALID_TEAM_STRATEGIES);
 export type TeamStrategy = z.infer<typeof teamStrategySchema>;
 
+export const MAX_TEAM_PARALLEL = 8;
+
 export const taskDifficultySchema = z.enum([
   "trivial",
   "simple",
@@ -26,7 +28,7 @@ export const taskDifficultySchema = z.enum([
 ]);
 export type TaskDifficulty = z.infer<typeof taskDifficultySchema>;
 
-export const reasoningEffortSchema = z.enum(["low", "medium", "high"]);
+export const reasoningEffortSchema = z.enum(["low", "medium", "middle", "high", "xhigh"]);
 export type ReasoningEffort = z.infer<typeof reasoningEffortSchema>;
 
 export const modelOverrideSchema = z
@@ -34,7 +36,8 @@ export const modelOverrideSchema = z
   .min(1)
   .refine(
     (model) =>
-      /^(gpt-|claude-|codex-)/.test(model) || ["haiku", "sonnet", "opus", "local"].includes(model),
+      /^(?:gpt|claude|codex)-[A-Za-z0-9][A-Za-z0-9._-]*$/.test(model) ||
+      ["haiku", "sonnet", "opus", "local"].includes(model),
     {
       message:
         "model must be a known provider model id or family alias: gpt-*, claude-*, codex-*, haiku, sonnet, opus, or local",
@@ -68,7 +71,7 @@ export const teamDefinitionSchema = z.object({
   name: z.string().min(1),
   strategy: teamStrategySchema.default("sequential"),
   /** 並列上限 (strategy=parallel 時)。既定は .claude/CLAUDE.md と整合の 8。 */
-  max_parallel: z.number().int().positive().default(8),
+  max_parallel: z.number().int().positive().max(MAX_TEAM_PARALLEL).default(MAX_TEAM_PARALLEL),
   /** チーム全体の直列化判定根拠 (3 条件)。 */
   serialization: serializationReasonSchema.optional(),
   members: z.array(teamMemberSchema).min(1),

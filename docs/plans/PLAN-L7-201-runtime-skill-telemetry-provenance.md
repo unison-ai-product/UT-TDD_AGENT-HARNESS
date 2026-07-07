@@ -44,8 +44,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T21:17:22+09:00"
-    tests_green_at: "2026-06-29T21:17:22+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Classify ut-tdd skill suggest as a durable session-log skill event and project runtime skill_invocations with non-empty session_id."
     worker_model: codex
@@ -56,9 +56,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T21:17:22+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:49a3731aead9ced7f2533912c25dcd714c165b407c7cdb134f1d27ffae7208c8"
+        output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
 ---
 
 # PLAN-L7-201: Runtime skill telemetry provenance

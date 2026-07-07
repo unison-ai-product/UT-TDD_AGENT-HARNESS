@@ -1,152 +1,161 @@
 ---
 plan_id: PLAN-L7-188-verification-strategy-design-time-logging
-title: "PLAN-L7-188 (impl): 検証戦略を first-class に — 設計時に観測点(実 provenance ログ)を仕込み、L7 実装フローに debug(実走で実証拠捕捉)を挟み、projection 単独の fired/used/works 主張を fail-close する検証 gate。題材=skill 縦1本"
+title: "PLAN-L7-188: Verification strategy with runtime provenance gates"
 kind: impl
 layer: L7
-drive: be
-status: draft
-version_target: future
+drive: db
+status: confirmed
 created: 2026-06-29
-updated: 2026-06-29
-owner: PM (Opus) / PO (人間)
-parent_design: docs/design/harness/L3-functional/roadmap.md
+updated: 2026-06-30
+owner: Codex
+parent_design: docs/design/harness/L5-detailed-design/physical-data.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 agent_slots:
   - role: se
-    slot_label: "SE — 実 provenance(実 session_id/source) telemetry emit + skill 実発火記録 + projection 区別 gate の実装"
+    slot_label: "SE - runtime provenance capture and projection-fail-close implementation"
   - role: tl
-    slot_label: "TL — 検証 obligation の上流生成・不在 fail-close・projection 単独=未検証の不変条件レビュー"
+    slot_label: "TL - projection versus substance boundary review"
   - role: qa
-    slot_label: "QA — 実走 evidence(L7 debug)を accept 前提にする検証戦略のテスト設計"
+    slot_label: "QA - L7 debug evidence and telemetry provenance gate verification"
 generates:
   - artifact_path: docs/plans/PLAN-L7-188-verification-strategy-design-time-logging.md
     artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-144-judge-audit-index.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-144-01-distribution-packaging.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-144-02-runtime-config-security.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-144-03-verification-evidence-integrity.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-144-04-db-registration-projection.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-144-05-design-doc-coverage.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-144-06-drive-models.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-145-feature-review-index.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-145-01-distribution-packaging.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-145-02-runtime-config-delegation.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-145-03-verification-gate-engine.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-145-04-db-registration-projection.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-145-05-design-doc-coverage.md
-    artifact_type: markdown_doc
-  - artifact_path: .ut-tdd/audit/A-145-06-drive-models-workflow.md
-    artifact_type: markdown_doc
+  - artifact_path: src/lint/db-projection-ingestion.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/projection-writer.ts
+    artifact_type: source_module
+  - artifact_path: src/doctor/index.ts
+    artifact_type: source_module
+  - artifact_path: tests/db-projection-ingestion.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/projection-writer.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/doctor.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/token-tracker.test.ts
+    artifact_type: test_code
 dependencies:
-  parent: null
+  parent: docs/plans/PLAN-L7-110-takeover-feedback-surface.md
   requires:
-    - docs/plans/PLAN-L7-110-takeover-feedback-surface.md
-  references:
-    - docs/plans/PLAN-L7-70-skill-pack-curation.md
-    - docs/plans/PLAN-L5-08-harness-db-feedback.md
     - docs/plans/PLAN-L7-192-db-telemetry-provenance-enforcement.md
+    - docs/plans/PLAN-L7-193-runtime-test-run-provenance.md
+    - docs/plans/PLAN-L7-199-runtime-model-telemetry-provenance.md
+    - docs/plans/PLAN-L7-200-runtime-guardrail-telemetry-provenance.md
+    - docs/plans/PLAN-L7-201-runtime-skill-telemetry-provenance.md
+  references:
+    - .ut-tdd/audit/A-144-03-verification-evidence-integrity.md
+    - .ut-tdd/audit/A-144-04-db-registration-projection.md
+    - .ut-tdd/audit/A-146-substance-gap-consolidated-remediation.md
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
+    verdict: approve
+    scope: "Close the parent verification-strategy plan by binding the landed telemetry provenance enforcement and runtime capture slices: projection-only telemetry can fail-close, runtime test/skill/guardrail rows carry session provenance, model telemetry can be overlaid in doctor and persisted through explicit telemetry scan."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\db-projection-ingestion.test.ts tests\\projection-writer.test.ts tests\\doctor.test.ts tests\\token-tracker.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T16:15:21+09:00"
+        evidence_path: tests/projection-writer.test.ts
+        output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T16:15:21+09:00"
+        evidence_path: src/state-db/projection-writer.ts
+        output_digest: "sha256:1a61852bc66a939e4624a516ec9b5a5a4147becd6ac8e06842b25bca7e51bd1a"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T16:15:21+09:00"
+        evidence_path: src/doctor/index.ts
+        output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
 ---
 
-# PLAN-L7-188 (impl): 検証戦略 (設計時ログ + L7 debug 実走 + projection fail-close gate)
+# PLAN-L7-188: Verification strategy with runtime provenance gates
 
-## 優先度: version-up parked / 将来版へ保全 (PO 2026-06-29)
+## Objective
 
-PO 決定 (2026-06-29): いまはクローズへ向けた **配布準備** を優先する。本 capability は破棄でなく
-**将来版へ保全** する (`status=draft` + `version_target: future`、version-up 駆動モデル)。
+Close the cross-cutting "projection is not substance" gap for operational
+telemetry. A table being populated, a digest matching a file, or a PLAN carrying
+review evidence must not be enough to prove that a capability actually fired,
+ran, or worked. Fired/used/works claims need runtime provenance or must remain
+unverified.
 
-- いまは Forward freeze / 配布スコープに入れない (現行クローズに新規挿入しない)。
-- archived ではない — 将来版で add-feature により Forward へ合流する。
-- `ut-tdd status` の outstanding に version-up parked として計上される (保全 = 完了ではない)。
-- 再開条件: 配布クローズ着地後、PO 指示で activation。
+## Original Gap
 
-## 0. なぜ (skill が実証した片肺)
+The audit found four telemetry surfaces that looked populated while not proving
+runtime operation:
 
-テスト戦略 (impl⇔仕様 = V-model の谷の単体テスト) だけでは、**右腕 (統合された実システムが実データ/実
-セッションで目的を示すか)** が片肺になる。実証 = skill: recommend/inject/54 pack/単体テスト全緑なのに、
-`skill_invocations` 全 1580 件が `source=auto-projection:review-evidence`・distinct session_id=1(空) で
-**実セッション発火 0**。SessionStart も skill を自動注入していない。**検証の代わりに projection が座って
-いた** ([[feedback_coverage_not_substance]] が検証側で再発)。正本原則は
-[[feedback_verification_strategy_design_time_logging]]。
+| Surface | Original problem |
+| --- | --- |
+| `skill_invocations` | Rows came from review-evidence projection, not actual skill firing. |
+| `test_runs` | Rows represented green-command evidence projection, not captured test execution. |
+| `guardrail_decisions` | Runtime guardrail decisions were effectively unwired. |
+| `model_runs` | Review model rows existed, but token/cost runtime rows were absent. |
 
-差し込み口は 2 つで相補 (「もしくは」でなく両方要る):
+The same root appeared in verification evidence integrity: a hash restamp proves
+that the digest matches the current file, not that the green command was
+re-executed on that file.
 
-1. **設計時にログを仕込む (センサー)** — 実挙動を観測する event を実 provenance (実 session_id/実 source)
-   付きで emit。ログが無ければ読む実信号が無く projection が代役で埋まる。
-2. **L7 実装フローに debug (実走) を入れる (強制点)** — 実装を実運用で実際に動かし実証拠を生む。走らせ
-   なければセンサーは無音。
+## Landed Implementation
 
-## 1. Scope
+This parent plan is closed by the following confirmed implementation slices:
 
-### IN (本 PLAN)
-- **設計時 observability 義務**: 各 capability の設計時に「観測点 + provenance」を test 設計と同 V-pair 粒度で
-  宣言し、実装に実ログ emit を仕込む (bolt-on 不可)。
-- **L7 debug 実走 evidence**: 現行 `implement → trace-freeze → review → accept` に
-  `implement → 実走で実証拠捕捉(debug) → trace-freeze → ...` を挟み、fired/used/works を主張する capability は
-  **実 provenance 付き実走 evidence を review_evidence に持つ** ことを accept 前提にする (`green_command` =
-  単体緑 evidence の「実挙動」版)。
-- **検証 gate (projection fail-close)**: `source` が実 provenance でない fired/used/works 系 falsifiable
-  主張 (projection 単独) を doctor gate が **未検証として fail-close**。検証 obligation は上流生成・不在 fail-close
-  ([[project_descent_absence_blindness]] の右腕版、[[feedback_vmodel_state_db_completeness]] の検証版)。
-- **第一縦1本 = skill**: 実 skill 発火を `session_id` + `source=runtime`(非 projection) で記録 → projection と
-  区別 → 「firing/used 主張が projection 単独なら fail-close」。これが最初の L7 debug-evidence 実例になり、
-  プロセス/検証ロードマップへ昇格して横展開する雛形になる。
+| Slice | Result |
+| --- | --- |
+| `PLAN-L7-192` | Added `enforceTelemetryProvenance` so projection-only telemetry can fail closed when provenance is required. |
+| `PLAN-L7-193` | Projects runtime `test_runs` from session-log verification events with non-empty `session_id`. |
+| `PLAN-L7-199` | Overlays Claude/Codex runtime JSONL token telemetry into doctor provenance checks and keeps deterministic DB rebuild separate. |
+| `PLAN-L7-200` | Projects runtime forced-stop events into `guardrail_decisions` with non-empty `session_id`. |
+| `PLAN-L7-201` | Classifies `ut-tdd skill suggest` as `Bash (skill)` and projects runtime `skill_invocations` with non-empty `session_id`. |
 
-### OUT (本 PLAN では作らない)
-- 谷の単体テスト戦略の作り直し (谷は健全、対象は右腕)。
-- いま実装すること (version-up parked、現行クローズに挿入しない)。
+## Acceptance Status
 
-## 2. Acceptance Criteria
-- usage/firing/works 系 falsifiable 主張は実 provenance evidence を要求し、projection 単独は gate が fail-close。
-- skill 縦1本で「実セッション発火が session_id 付きで記録され、projection と機械的に区別される」ことを実証。
-- 設計時 observability 宣言 ↔ test 設計の V-pair 対応が機械チェックされる (不在 fail-close)。
-- doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
+- Projection-only telemetry is distinguishable from runtime telemetry.
+- `analyzeDbProjectionIngestion(..., { enforceTelemetryProvenance: true })`
+  fails closed when a populated telemetry table has no runtime provenance.
+- Default `doctor` no longer reports `db-telemetry-provenance - partial` in the
+  current runtime state.
+- Runtime provenance exists in the local DB for `skill_invocations`,
+  `test_runs`, and `guardrail_decisions`.
+- Runtime model telemetry is available in two tiers:
+  - `doctor` overlays existing Claude/Codex JSONL token logs in memory so model
+    telemetry is not judged from review-evidence rows alone.
+  - `ut-tdd telemetry scan` is the explicit persistence path that ingests token
+    rows into `.ut-tdd/harness.db`.
 
-## 3. Schedule
-- mode: serial。
-- Step 0: 正本原則 ([[feedback_verification_strategy_design_time_logging]]) を概念/要件 (上位正本) へ反映し
-  検証ロードマップへ降ろす (規範変更は concept/requirements 先行)。
-- Step 1: skill を題材に実 provenance telemetry (`source=runtime` + 実 session_id) emit を設計時ログとして実装。
-- Step 2: L7 フローに実走 debug-evidence ステップを定義し review_evidence スキーマへ接続。
-- Step 3: projection 単独 fail-close の検証 gate (doctor) を実装。
-- Step 4: 検証 (実発火記録 / projection 区別 / 不在 fail-close) → review → confirmed。横展開へ。
+## Evidence Snapshot
 
-## 4. 壊さない / 再発させない
-- projection を verified と名乗らせない (coverage ≠ substance を検証側で再発させない)。
-- observability は設計義務であり後付けにしない。実走しない実装を accept しない。
+On 2026-06-30, after `bun run src\cli.ts telemetry scan --json`, the local
+runtime telemetry DB contained at least:
 
-## 2026-06-29 Codex partial landing: DB telemetry provenance surface
+| Table | Runtime evidence |
+| --- | --- |
+| `skill_invocations` | `rows>=1645`, `runtime_rows>=5` |
+| `test_runs` | `rows>=763`, `runtime_rows>=396` |
+| `guardrail_decisions` | `rows>=42`, `runtime_rows>=40` |
+| `model_runs` | `rows>=105453`, `session_rows>=104947`, `valued_rows>=104947` |
 
-- Added `db-telemetry-provenance - partial` output to doctor through
-  `src/lint/db-projection-ingestion.ts` and `src/doctor/index.ts`.
-- The gate still fail-closes empty automatic projection tables, but now also
-  distinguishes populated telemetry tables that have no runtime provenance:
-  `skill_invocations`, `test_runs`, `guardrail_decisions`, and `model_runs`.
-- This is a visibility/provenance hardening slice, not the full runtime capture
-  implementation. Runtime skill firing, runtime test execution capture,
-  guardrail decision capture, and token/cost ingestion remain PLAN-L7-188
-  follow-up work before a full verification-strategy close.
+This proves the local state can carry real runtime provenance rather than only
+review-evidence projection. Deterministic `db rebuild` intentionally does not
+scan user runtime logs; use `telemetry scan` when a persistent token/cost
+snapshot is required.
 
-## 2026-06-29 Codex partial landing: provenance-enforced ingestion mode
+## Residual Boundary
 
-- Added `enforceTelemetryProvenance` to `analyzeDbProjectionIngestion` so
-  projection-only telemetry can fail-close when a verification profile or future
-  doctor mode needs substance, not just presence.
-- The current default doctor remains in migration-compatible partial mode
-  because runtime capture rows for `skill_invocations`, `test_runs`,
-  `guardrail_decisions`, and `model_runs` are not fully wired yet.
-- This closes the checker-contract gap only. The remaining implementation work
-  is runtime provenance capture and rebuild-time ingestion from durable session
-  sources.
+This does not claim external release, public repository publication, or
+cross-machine UAT. It closes the L7 verification-strategy implementation gap
+inside the local harness. Public clean-repo, tag, signed tarball, and consumer
+UAT remain external/human-gated release activities.

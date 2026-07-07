@@ -10,7 +10,7 @@ plan: docs/plans/PLAN-L6-02-edge-case.md
 v2_import: docs/migration/v2-import-ledger.md
 ---
 
-> **L6 contract marker**: `deriveEdgeCaseOracle(input: EdgeCaseInput) => EdgeCaseOracle` is the unit-test-granularity contract. DbC pre/post/invariant maps each function signature to edge coverage. L7 oracle family: U-EDGE-001..005.
+> **L6 contract marker**: `deriveEdgeCaseOracle(input: EdgeCaseInput) => EdgeCaseOracle` は unit-test-granularity contract である。DbC pre/post/invariant は各 function signature を edge coverage へ対応づける。L7 oracle family は U-EDGE-001..005 とする。
 
 
 > **SSoT 参照**: 関数 signature = [function-spec.md](./function-spec.md) §1/§2 / edge docstring 枠 = [internal-processing.md](../L5-detailed-design/internal-processing.md) §7 (G5 凍結) / fail-close 形式 = internal-processing §6。本 doc は各関数に `@edge-normal/error/boundary/throws` の 4 観点を per-function 確定する (L6、IMP-014)。

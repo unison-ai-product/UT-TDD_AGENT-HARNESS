@@ -70,7 +70,7 @@ L4 FE 設計標準 = L2 の Low-Fi mock + 部品契約を、**実装 (L7 src/web
    clipboard 書込のみ。Recovery/interrupt/rollback も CLI 文字列コピーに限定。
 5. **raw data 粒度 (CC3)**: サマリのみ禁止。`DataTable` は明細行を出す。高密度 (`size.table.rowHeight=28`)。
 6. **mission で測る**: 完遂は工程管理表 (mission) で測る。描画数/implemented flip の coverage で名乗らない
-   ([[feedback_coverage_not_substance]])。
+([[feedback_coverage_not_substance]])。根拠として扱う。
 
 ## §3 トークン適用標準 (L2 ui-element §3-§4 の deferred を解決)
 
@@ -82,7 +82,7 @@ L2 ui-element §3 は「具体値 (hex/px) の確定は下流へ委譲」、§4 
 | 状態 | token (fg / bg) | アイコン (色のみ非依存) | 用途 |
 |---|---|---|---|
 | ok | `color.status.ok.fg #1A7F37` / `.bg #DAFBE1` | check-circle (🟢/✓) | 正常 gate / pass / installed |
-| warn | `color.status.warn.fg #9A6700` / `.bg #FFF8C5` | alert (🟡/△) | DEFER / partial / stale / a11y warn |
+| warn | `color.status.warn.fg #9A6700` / `.bg #FFF8C5` | alert (🟡/△) | DEFER / partial / stale / a11y warn を表す |
 | error | `color.status.error.fg #CF222E` / `.bg #FFEBE9` | x-circle (🔴/✕) | gate fail / orphan / 不正値 / デグレ |
 | empty | `color.status.empty.fg #57606A` / `.bg #EFF2F5` | dash (⬜/—) | 0 件 / 未作成 / not-implemented |
 | loading | `color.status.loading.fg #57606A` + spinner | sync (🔄) | ポーリング取得中 |
@@ -193,20 +193,20 @@ ui-element §2 部品から構成され、table-dumper 描画が無い」を設�
 
 | 画面 | 固有部品 (§4.2) | 共通部品 (§4.1) |
 |---|---|---|
-| PM-01 | HierarchyPulldown + HeatmapGrid | FilterBar, StatusBadge, PollingIndicator |
-| PM-02 | LayerTemplate + ProgressBar + StaleBadge + CarryList + ScrumStateRow | DataTable, Breadcrumb |
-| PM-03 | GateResultPanel + TroubleTable + InterruptCopyButton | DataTable, CopyButton, NextActionCard, StatusBadge |
-| PM-04 | TraceGraph + VPairStatusTable | DataTable, StatusBadge |
-| PM-05 | HandoverPanel + StaleWarningBanner + CarryDetailList | NextActionCard, CopyButton |
-| PM-06 | DesignDocTree + DocPreview + DocToc | MarkdownRenderer, YamlFrontmatterView, MermaidRenderer, CopyButton |
-| HM-01 | HierarchyPulldown + FrStatusTable | DataTable, StatusBadge, FilterBar |
-| HM-02 | CoverageHeatmap + AxisSelector | StatusBadge, CopyButton |
-| HM-03 | WiringDiagram + ConnectionDetailTable + ModeTransitionArrows | DataTable, StatusBadge |
-| HM-04 | TableExplorer + IntegrityCheckSummary | DataTable, CopyButton, StatusBadge |
-| HM-05 | InvocationLogTable + SkillInjectionTab + HookFireLogTab + GuardDecisionList | DataTable, FilterBar, StatusBadge |
-| HM-06 | RecoveryLogTable + ResumePointList + RollbackCopyButton | DataTable, CopyButton |
-| HM-07 | DoctorResultTree + SeverityBadge + DetectionCountSummary | StatusBadge, CopyButton |
-| HM-08 | KpiDashboard + RecipeList | DataTable, FilterBar, StatusBadge |
+| PM-01 | HierarchyPulldown + HeatmapGrid | FilterBar, StatusBadge, PollingIndicator を利用 |
+| PM-02 | LayerTemplate + ProgressBar + StaleBadge + CarryList + ScrumStateRow | DataTable, Breadcrumb を利用 |
+| PM-03 | GateResultPanel + TroubleTable + InterruptCopyButton | DataTable, CopyButton, NextActionCard, StatusBadge を利用 |
+| PM-04 | TraceGraph + VPairStatusTable | DataTable, StatusBadge を利用 |
+| PM-05 | HandoverPanel + StaleWarningBanner + CarryDetailList | NextActionCard, CopyButton を利用 |
+| PM-06 | DesignDocTree + DocPreview + DocToc | MarkdownRenderer, YamlFrontmatterView, MermaidRenderer, CopyButton を利用 |
+| HM-01 | HierarchyPulldown + FrStatusTable | DataTable, StatusBadge, FilterBar を利用 |
+| HM-02 | CoverageHeatmap + AxisSelector | StatusBadge, CopyButton を利用 |
+| HM-03 | WiringDiagram + ConnectionDetailTable + ModeTransitionArrows | DataTable, StatusBadge を利用 |
+| HM-04 | TableExplorer + IntegrityCheckSummary | DataTable, CopyButton, StatusBadge を利用 |
+| HM-05 | InvocationLogTable + SkillInjectionTab + HookFireLogTab + GuardDecisionList | DataTable, FilterBar, StatusBadge を利用 |
+| HM-06 | RecoveryLogTable + ResumePointList + RollbackCopyButton | DataTable, CopyButton を利用 |
+| HM-07 | DoctorResultTree + SeverityBadge + DetectionCountSummary | StatusBadge, CopyButton を利用 |
+| HM-08 | KpiDashboard + RecipeList | DataTable, FilterBar, StatusBadge を利用 |
 | GD-01 | SideNav + SearchBox | MarkdownRenderer |
 
 > 全 15 画面が L2 ui-element §2 の固有部品を必ず 1 つ以上持つ = 汎用テーブル 1 枚で画面を代替できない構造。

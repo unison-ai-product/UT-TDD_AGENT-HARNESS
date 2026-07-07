@@ -10,11 +10,16 @@ import {
 import { AGENT_GUARD_BYPASS_HINT, AGENT_TOOL_NAME } from "../src/runtime/agent-guard-policy";
 
 const FAMILIES: Record<string, ResolvedFamily> = {
+  "be-api": "sonnet",
+  "be-logic": "sonnet",
+  "db-schema": "sonnet",
+  "devops-deploy": "sonnet",
   "pmo-sonnet": "sonnet",
   "pmo-haiku": "haiku",
   "refactor-scout": "haiku",
   "pdm-tech-innovation": "opus",
   "code-reviewer": "sonnet",
+  "ut-tdd-tl": "sonnet",
 };
 const legacyRuntimeCommand = `${["he", "lix"].join("")} codex`;
 
@@ -72,13 +77,29 @@ describe("evaluateAgentGuard", () => {
     expect(evaluateAgentGuard({ tool_name: "Task", tool_input: {} }, ctx()).code).toBe(2);
   });
 
+  it("treats Codex spawn_agent as a guarded subagent spawn surface", () => {
+    expect(
+      evaluateAgentGuard(
+        { tool_name: "spawn_agent", tool_input: { subagent_type: "pmo-sonnet", model: "sonnet" } },
+        ctx(),
+      ).code,
+    ).toBe(0);
+    expect(
+      evaluateAgentGuard(
+        { tool_name: "spawn_agent", tool_input: { agent: "pmo-sonnet", model_family: "sonnet" } },
+        ctx(),
+      ).code,
+    ).toBe(0);
+    expect(evaluateAgentGuard({ tool_name: "spawn_agent", tool_input: {} }, ctx()).code).toBe(2);
+  });
+
   it("blocks null / omitted tool_input (fail-close)", () => {
     expect(evaluateAgentGuard({ tool_name: "Agent", tool_input: null }, ctx()).code).toBe(2);
     expect(evaluateAgentGuard({ tool_name: "Agent" }, ctx()).code).toBe(2);
   });
 
   it("blocks non-allowlisted subagent even with valid model", () => {
-    const d = evaluateAgentGuard(agent({ subagent_type: "be-logic", model: "sonnet" }), ctx());
+    const d = evaluateAgentGuard(agent({ subagent_type: "rogue-agent", model: "sonnet" }), ctx());
     expect(d.code).toBe(2);
     expect(d.message).toContain("not allowlisted");
     expect(d.message).toContain("ut-tdd codex --role");
@@ -102,6 +123,9 @@ describe("evaluateAgentGuard", () => {
 
   it("allows explicit model matching the agent's frontmatter family", () => {
     expect(
+      evaluateAgentGuard(agent({ subagent_type: "be-logic", model: "sonnet" }), ctx()).code,
+    ).toBe(0);
+    expect(
       evaluateAgentGuard(agent({ subagent_type: "pmo-sonnet", model: "sonnet" }), ctx()).code,
     ).toBe(0);
     expect(
@@ -109,6 +133,9 @@ describe("evaluateAgentGuard", () => {
     ).toBe(0);
     expect(
       evaluateAgentGuard(agent({ subagent_type: "refactor-scout", model: "haiku" }), ctx()).code,
+    ).toBe(0);
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "ut-tdd-tl", model: "sonnet" }), ctx()).code,
     ).toBe(0);
   });
 
@@ -133,7 +160,10 @@ describe("evaluateAgentGuard", () => {
   });
 
   it("bypasses block when allowRaw is set", () => {
-    const d = evaluateAgentGuard(agent({ subagent_type: "be-logic", model: "sonnet" }), ctx(true));
+    const d = evaluateAgentGuard(
+      agent({ subagent_type: "rogue-agent", model: "sonnet" }),
+      ctx(true),
+    );
     expect(d.code).toBe(0);
     expect(d.bypassed).toBe(true);
   });

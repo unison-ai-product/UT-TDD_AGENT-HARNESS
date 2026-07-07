@@ -289,7 +289,7 @@ validator は本表で組み合わせ違反を fail-close。**機械強制の実
 | `config` | 設定ファイル (汎用) | — |
 | `yaml_config` | YAML 設定 | — |
 | `json_config` | JSON 設定 | — |
-| `workflow_config` | GitHub Actions workflow / harness YAML | — |
+| `workflow_config` | GitHub Actions workflow / harness YAML の設定 | — |
 | `github_config` | GitHub 関連設定 (CODEOWNERS / PR template 等) | — |
 | `other` | 上記に該当しないもの | — |
 
@@ -458,6 +458,8 @@ PLAN ID 命名は `PLAN-L<N>-<NN>-<sub-doc-slug>` (例: `PLAN-L1-03-screen-requi
 > **L4 FE 設計標準 `ui-standard` 追加 (2026-06-24、PLAN-L4-14)**: 外部設計成果物「画面」は L2 (画面一覧/遷移/UI 要素/wireframe = 画面の棚卸し) が持つが、**再利用 FE 設計標準 (UI 設計標準 + UI 部品カタログ + design tokens=色)** の降下先が L4 に無かった = 「部品/色がどこに降りるか未定義」の穴 (PO 指摘 2026-06-24)。業界標準 (Nablarch 方式設計/開発標準/設計標準 = `UI標準(画面)` + `UI部品カタログ` + `共通コンポーネント設計標準`、`DB設計標準` と同階層) では FE 設計標準は方式設計 (= 当方 L4) に降りる。よって `data` (DB 設計標準) の FE 対応物として `ui-standard` を L4 へ追加する。区分 = 「**② プロダクト選択 (UI 有時)**」(BE-only/no-UI は `skip_sub_doc[].reason` で省略)。L10 (UX 磨き) は `V_MODEL_PAIRS` L2↔L10 のとおり impl **後**の検証ペアであり、impl 前に要る FE 設計標準の降下先ではない (document-system-map §1 L10 行 = 「FE デザイン確定 / UX 検証 WCAG」)。正本は `src/schema/index.ts` の `VALID_SUB_DOCS`。
 
 > **FE/UI 設計 doc カタログ vocabulary 登録 (2026-06-25、PLAN-L4-14 §4)**: [document-system-map.md](./document-system-map.md) §1c が定義する per-layer FE/UI 設計 doc カバレッジ (左腕) のうち、これまで「穴 + 未登録候補 slug」だった L3/L5/L6 の FE 設計 doc 型を `VALID_SUB_DOCS` へ登録し、定義を機械可知にする。**L3 `screen-functional`** (画面/UI 機能要件 + 画面 AC、SyRS/BDD) / **L5 `ui-detail`** (FE 内部設計 = component 分割・状態管理・routing・画面内部処理、IEEE 1016 SDD) / **L6 `screen-spec`** (per-screen 機能設計 = 項目/イベント/バリデーション/画面内遷移、Nablarch システム機能設計書(画面) 相当)。いずれも §G.13 の「**② プロダクト選択 (UI 有時)**」(UI を持つ製品のみ起票、BE-only/no-UI は `skip_sub_doc[].reason` で省略)。**vocabulary 登録が先・各型の必須 § 構造定義と body 実体化は body 起票時 (作成段階) に後続** (`report`/`batch` 等を vocabulary 先行登録した PLAN-L7-97 §4 と同方針、speculative な § 定義をしない)。正本は `src/schema/index.ts` の `VALID_SUB_DOCS`、左腕カバレッジ定義の正本は document-system-map §1c。
+>
+> **FE/UI 本文実体化 (2026-06-30、PLAN-L3-06 / PLAN-L5-09 / PLAN-L6-36)**: harness central UI は L3 `screen-functional`、L5 `ui-detail`、L6 `screen-spec` の本文を confirmed 化済み。上記の vocabulary-first rule は一般的なプロダクト選択ルールとして残すが、本プロダクトでは `frontend-design-coverage` が FE 左腕 6 本文ファイルすべてを要求し、pending 0 を報告する。
 
 > **内部資産拡張 sub-doc (REVERSE-01 V4 注記、2026-06-04)**: harness 自身が統制する内部資産 (roster / skill-pack / drift-lint) は、上記コア sub-doc enum とは別の **拡張 sub-doc** として L4/L5 に存在する (実 PLAN: `PLAN-L4-10〜13` (internal-asset-master/roster/skill-pack/drift-lint) / `PLAN-L5-05〜07` (roster/skill/drift))。これらは製品ドメインの設計 sub-doc でなく harness メタ資産のため、コア `VALID_SUB_DOCS[L4|L5]` の件数確定 (5/4 種) には含めず、**拡張点**として別管理する。lint engine 実装時は `VALID_SUB_DOCS` を「コア + 内部資産拡張」の 2 群で持つ (件数 audit はコア群で行い、拡張群は allow-list 追加)。
 
@@ -847,14 +849,14 @@ Scrum で確定した仮説 (`scrum_type` 6 種) と本実装に昇格させる�
 
 ## 3.2 30 cell の Primary mapping (推奨)
 
-|  | reverse: code | reverse: design | reverse: upgrade | reverse: normalization | reverse: fullback |
+| Scrum 種別 | reverse: code | reverse: design | reverse: upgrade | reverse: normalization | reverse: fullback |
 |--|--------------|-----------------|------------------|------------------------|-------------------|
-| **hypothesis-test** | **Primary** | Alt | Alt | Alt | Alt |
-| **tech-spike** | Alt | **Primary** | Alt | Alt | Alt |
-| **design-spike** | Alt | **Primary** | Alt | Alt | Alt |
-| **perf-spike** | Alt | Alt | **Primary** | Alt | Alt |
-| **security-spike** | **Primary** | Alt | Alt | Alt | Alt |
-| **ux-spike** | Alt | **Primary** | Alt | Alt | Alt |
+| **hypothesis-test** | **Primary 推奨** | 代替 Alt | 代替 Alt | 代替 Alt | 代替 Alt |
+| **tech-spike** | 代替 Alt | **Primary 推奨** | 代替 Alt | 代替 Alt | 代替 Alt |
+| **design-spike** | 代替 Alt | **Primary 推奨** | 代替 Alt | 代替 Alt | 代替 Alt |
+| **perf-spike** | 代替 Alt | 代替 Alt | **Primary 推奨** | 代替 Alt | 代替 Alt |
+| **security-spike** | **Primary 推奨** | 代替 Alt | 代替 Alt | 代替 Alt | 代替 Alt |
+| **ux-spike** | 代替 Alt | **Primary 推奨** | 代替 Alt | 代替 Alt | 代替 Alt |
 
 `scrum_reverse_lint` は Primary 外の選択を warning のみで許容、Alt cell でも fail にはしない。
 
@@ -872,7 +874,7 @@ Scrum で確定した仮説 (`scrum_type` 6 種) と本実装に昇格させる�
 
 R1 skip 判定は **解決済み `confirmed_reverse_type` を主キーとする** (構想書 v3.1 §4.4 確定):
 
-| confirmed_reverse_type | R1 (Observed Contracts) |
+| confirmed_reverse_type | R1 実施内容 (Observed Contracts) |
 |------------------------|--------------------------|
 | `code` | **実施** (PoC コードから契約抽出が中核) |
 | `design` | **skip** (デザイン資産起点、R2 で起こす) |
@@ -966,9 +968,9 @@ R4 outcome の `promotion_strategy` で PoC / 検証成果物の扱いを明示:
 
 ## 4.1 add-design / add-impl の禁則 (3 原則、R-I6 fix で canonical 化)
 
-### canonical diff rule
+### 正規 diff rule
 
-| 検出対象 | 検出コマンド (canonical) |
+| 検出対象 | 検出コマンド (canonical diff rule) |
 |---------|------------------------|
 | 既存設計ファイルの変更/削除 | `git diff --name-only --diff-filter=DM origin/main...HEAD -- docs/design/` |
 | 既存テストコードの変更/削除 | `git diff --name-only --diff-filter=DM origin/main...HEAD -- tests/` |
@@ -1104,7 +1106,7 @@ add-* 完了時、既存 PLAN との双方向 reference を更新:
 
 ## 6.3 harness-check 内 subjob リスト + branch type 適用 matrix (R-C8 fix)
 
-| subjob | feature | design | research | poc | reverse | add | hotfix | refactor | docs | chore |
+| subjob | feature 系 | design 系 | research 系 | poc 系 | reverse 系 | add 系 | hotfix 系 | refactor 系 | docs 系 | chore 系 |
 |--------|---------|--------|----------|-----|---------|-----|--------|----------|------|-------|
 | `plan-lint` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
 | `vmodel-lint` | ✓ | ✓ | — | — | — | ✓ | — | ✓ | — | — |
@@ -1127,7 +1129,7 @@ add-* 完了時、既存 PLAN との双方向 reference を更新:
 | 検出ロジック | PR head が `poc/*` で base が `main` なら subjob `poc-no-merge-guard` が exit 1 |
 | 例外 | なし (poc/* は S4 confirmed 後に Reverse → feature/* で再 PR する) |
 
-## 6.5 CODEOWNERS bootstrap 2-stage
+## 6.5 CODEOWNERS bootstrap 2 段階
 
 ### Phase 0-A (リポジトリ初期化、CODEOWNERS なし)
 
@@ -1248,11 +1250,11 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 **artifact progress color projection (FR-L1-51 / PLAN-L7-56 / PLAN-REVERSE-56)**: `harness.db` は artifact 単位の進捗色を derived projection として保持しなければならない。`red` は依存関係未確認、未回収の impact、または実装に対する要件/基本設計/詳細設計/テスト back-propagation 欠落を示す。`yellow` は実装中、recovery 中、または linked test evidence 未確認を示す。`green` は linked test ID/path が存在し、依存 impact が clear であることを示す。色は手入力の status ではなく、source artifact、covered-by test edge、impact_results、recovery PLAN から再構築できる derived state とする。
 
 
-### §6.8.7 DB reference-feedback and automation foundation bundle (2026-06-08)
+### §6.8.7 DB 参照 feedback と自動化基盤 bundle (2026-06-08)
 
 以下を FR-L1-05/06/07/09/12/13/17/18/19/20/33/37/39/40/41/45/46/47/48/49 の束ね要件として扱う。これは V-model state の保存だけではなく、機械チェック結果・駆動モデル別実行・ログ・skill/model telemetry・workflow 自動化 readiness・guardrail 安全判定・skill/roster/command 文書基盤を SQLite projection DB に投影し、抜け漏れ・依存関係・ゆがみの検出と検索コスト低減に使う要求である。
 
-| Requirement | Acceptance condition |
+| 要求 | 受入条件 |
 |---|---|
 | `harness.db` は参照グラフを持つ | `plan_registry / artifact_registry / trace_edges / gate_runs / coverage / findings / model_runs` に加え、`drive_runs / hook_events / skill_invocations / skill_recommendations / feedback_events / search_index / quality_signals` 相当の投影を持つ。 |
 | 全駆動モデル・各ログを PLAN/session と join できる | drive/mode/run/log/finding は `plan_id` または `session_id` の少なくとも一方を持ち、孤児は doctor が finding 化する。 |
@@ -1269,11 +1271,11 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 | CI / hook / OS evidence matrix を保持できる (A-122 / IMP-114) | PowerShell / Bash / Bun / Claude hook / CI の smoke と green command evidence を同じ projection profile で比較でき、Windows/POSIX 片側欠落を finding 化できる。 |
 | 機密を保存しない | provider transcript 本文、secret、credential、PII は保存対象外。DB は ID、digest、metadata、evidence path、redacted summary のみを持つ。 |
 
-External design references used for strengthening: SQLite FTS5 external/contentless index pattern for rebuildable search projection; OpenTelemetry semantic conventions for traces/logs/metrics/events naming; W3C PROV entity/activity/agent provenance model for reference graph thinking. These references do not introduce external runtime dependencies at L5.
+補強に使った外部設計 reference: SQLite FTS5 の external/contentless index pattern は再構築可能な検索 projection の参考、OpenTelemetry semantic conventions は traces/logs/metrics/events 命名の参考、W3C PROV entity/activity/agent provenance model は reference graph 思考の参考とする。これらは L5 時点で外部 runtime 依存を追加しない。
 
 L5/L6 降下先: `docs/plans/PLAN-L5-08-harness-db-feedback.md`、`docs/design/harness/L5-detailed-design/physical-data.md` §9 / §9.4、`module-decomposition.md` Appendix B、`internal-processing.md` Appendix B、`if-detail.md` Appendix B、`docs/design/harness/L6-function-design/test-before-review.md` §8、`docs/design/harness/L6-function-design/function-spec.md` Harness DB addendum、`docs/test-design/harness/L8-integration-test-design.md` IT-DB/IT-SEARCH/IT-FEEDBACK/IT-AUTOMATION/IT-GUARDRAIL/IT-ASSET-DB。A-122 の Phase 3/4 seed は IMP-107..116。
 
-### §6.8.8 Lower-L discovery Reverse back-propagation (全体一貫性原則、2026-06-09)
+### §6.8.8 下位 L discovery の Reverse back-propagation (全体一貫性原則、2026-06-09)
 
 下位 L (L4-L14、特に L6/L7 実装・テスト・レビュー・右腕検証) で追加機能、改善起票、受入条件変更、DB projection、guardrail、workflow rule、automation rule、または既存 FR の意味拡張を発見した場合、局所 carry だけで完了扱いしてはならない。全体一貫性のため、発見時点で PLAN / audit / improvement backlog に **back-propagation decision** を記録し、次のいずれかへ分類する。
 
@@ -1301,7 +1303,7 @@ L5/L6 降下先: `docs/plans/PLAN-L5-08-harness-db-feedback.md`、`docs/design/h
 - **legacy debt**: fail-close 化以前から存在した未集約は `FORWARD_CONVERGENCE_LEGACY_DEBT` allowlist で grandfather し、`docs/governance/forward-convergence-legacy-debt-audit.md` との双方向一致を `forward-convergence-audit` hard check で担保する (免除でなく繰延。最終 disposition = Forward 集約 or `local_impl_only`、version-up 不可 = landed 済)。
 - **version-up parked**: `version_target` (status=draft 限定、landed 付与禁止) を持つ将来版保全は正当な deferred 種別であり違反でない (§2.5 version-up mode、`version_deferral` signal §7.8.1、PLAN-DISCOVERY-09)。
 
-### §6.8.9 Cross-artifact relation graph / visualization / tool adapters (A-124, 2026-06-09)
+### §6.8.9 成果物横断 relation graph / 可視化 / tool adapters (A-124, 2026-06-09)
 
 UT-TDD は「1 つを直したら、関連する設計・コード・テスト・DB projection・PLAN・FR も合わせて直す」ために、横断 relation graph を `harness.db` projection として持つ。これは authoring source ではなく、docs / source / tests / PLAN / state / logs から再構築できる derived graph である。
 
@@ -1341,93 +1343,93 @@ UT-TDD は「1 つを直したら、関連する設計・コード・テスト�
 
 **完了判定**: A-124 の実装が入るまで、`doctor` の `relation-graph / dependency-drift / regression expansion` は scaffold stub として扱う。module/asset/change-impact の現行検査 green は、横断 impact expansion 完了の証拠ではない。
 
-### §6.8.10 MCP / external testing tool scope and workflow triggers (A-125, 2026-06-09)
+### §6.8.10 MCP / 外部テスト tool の scope と workflow trigger (A-125, 2026-06-09)
 
 A-124 の relation graph / diagram / impact expansion は、MCP server や外部テスト基盤を使うことで大幅に強化できる。ただし MCP server は host 権限・filesystem・browser・GitHub・DB へ接続し得るため、常時接続や raw tool output gate は禁止する。UT-TDD は **allow-list された tool profile を workflow trigger で必要時だけ起動し、結果を DB projection へ正規化して gate が見る**。
 
 #### 採用候補 (Web research 2026-06-09)
 
-| category | candidate | scope | adoption stance |
+| 分類 | 候補 | scope | 採用方針 |
 |---|---|---|---|
-| MCP discovery / trust | MCP Registry | 公開 MCP server metadata / install metadata / namespace verification | Candidate source for discovery metadata only. Registry metadata is not a security scan. |
-| MCP debug / test | MCP Inspector | MCP server の tools/resources/prompts 接続確認、local server smoke | Preferred verification tool for UT-TDD-owned MCP server or configured server profiles. |
-| Browser automation MCP | Microsoft Playwright MCP (`@playwright/mcp`) | exploratory browser verification, self-healing E2E investigation, screenshots | Optional interactive verification profile. Prefer Playwright CLI/tests for deterministic CI. |
-| GitHub workflow MCP | GitHub MCP Server | issues / PR / repos / actions / code_security toolsets | Optional profile for issue/PR/backlog automation; must use narrow toolsets or read-only mode by default. |
-| Reference MCP servers | filesystem / git / memory / fetch / postgres / sqlite | local file, git, memory graph, web fetch, DB inspection | Reference or controlled local profiles only; no production credential use in default profile. |
-| Containerized MCP gateway | Docker MCP Toolkit | signed/attested container images, OAuth, resource limits, profile-based MCP gateway | Preferred team/enterprise runtime profile when Docker Desktop is available. |
-| Test foundation | Vitest Browser Mode + Playwright provider | browser-native component tests and UI interaction checks | Optional L7/L8 test profile for UI/browser-targeted harness or target repos. |
-| Test foundation | Testcontainers for Node.js | disposable DB/service containers for integration/smoke tests | Optional integration-test profile when Docker is available. |
-| API mocking | MSW | reusable REST/GraphQL/WebSocket mocks for browser and Node tests | Optional mock profile for API-bound tests and fixture standardization. |
+| MCP discovery / trust | MCP Registry | 公開 MCP server metadata / install metadata / namespace verification | discovery metadata 専用の候補。Registry metadata は security scan ではない。 |
+| MCP debug / test | MCP Inspector | MCP server の tools/resources/prompts 接続確認、local server smoke | UT-TDD 管理 MCP server または構成済み server profile の優先検証 tool。 |
+| Browser automation MCP | Microsoft Playwright MCP (`@playwright/mcp`) | 探索的 browser verification、self-healing E2E investigation、screenshots | 任意の対話的 verification profile。決定的 CI では Playwright CLI/tests を優先。 |
+| GitHub workflow MCP | GitHub MCP Server | issues / PR / repos / actions / code_security toolsets | issue/PR/backlog automation 用の任意 profile。既定は狭い toolset または read-only mode。 |
+| Reference MCP servers | filesystem / git / memory / fetch / postgres / sqlite | local file、git、memory graph、web fetch、DB inspection | reference または管理済み local profile のみ。既定 profile で production credential を使わない。 |
+| Containerized MCP gateway | Docker MCP Toolkit | signed/attested container images、OAuth、resource limits、profile-based MCP gateway | Docker Desktop 利用時の team/enterprise runtime profile 優先候補。 |
+| Test foundation | Vitest Browser Mode + Playwright provider | browser-native component tests と UI interaction checks | UI/browser 対象 harness または target repo 向けの任意 L7/L8 test profile。 |
+| Test foundation | Testcontainers for Node.js | disposable DB/service containers for integration/smoke tests | Docker 利用時の任意 integration-test profile。 |
+| API mocking | MSW | browser と Node tests の reusable REST/GraphQL/WebSocket mocks | API-bound tests と fixture standardization 向けの任意 mock profile。 |
 
-#### Workflow trigger rules
+#### Workflow trigger ルール
 
-- `signal=ui_flow`, `web_target`, or `browser_regression` -> recommend `mcp_profile=playwright` and/or `test_profile=vitest-browser-playwright`.
-- `signal=external_issue`, `ci_failure`, `pr_review`, or `backlog_sync` -> recommend `mcp_profile=github-readonly` first; write toolsets require explicit human approval.
-- `signal=db_integration`, `migration`, or `service_contract` -> recommend `test_profile=testcontainers` and DB projection review.
-- `signal=api_mock_gap` or `flaky_external_api` -> recommend `test_profile=msw`.
-- `signal=mcp_server_added` or `mcp_profile_changed` -> run MCP Inspector smoke (`tools/list` minimum) and record `mcp_server_runs`.
+- `signal=ui_flow`、`web_target`、または `browser_regression` は `mcp_profile=playwright` や `test_profile=vitest-browser-playwright` を推奨する。
+- `signal=external_issue`、`ci_failure`、`pr_review`、または `backlog_sync` はまず `mcp_profile=github-readonly` を推奨し、書き込み toolset は明示的な人間承認を要求する。
+- `signal=db_integration`、`migration`、または `service_contract` は `test_profile=testcontainers` と DB projection review を推奨する。
+- `signal=api_mock_gap` または `flaky_external_api` は `test_profile=msw` を推奨する。
+- `signal=mcp_server_added` または `mcp_profile_changed` は MCP Inspector smoke (`tools/list` minimum) を実行し、`mcp_server_runs` を記録する。
 
-#### Safety and automation constraints
+#### 安全性と自動化の制約
 
-- MCP profiles are disabled by default. `ut-tdd mcp profile enable <name>` is future scope and must write a generated local config outside Git-tracked secrets.
-- Each profile has `allowed_tools`, `read_only`, `requires_network`, `requires_docker`, `requires_auth`, `secret_policy`, `risk_tier`, and `trigger_signals`.
-- Default GitHub MCP profile is read-only and enables only the minimum toolsets needed for discovery/status. PR/issue write actions require explicit `requires_human_approval`.
-- Filesystem and Git MCP profiles are restricted to the workspace root and must not receive global home-directory mounts.
-- Raw MCP responses, browser traces, screenshots, and external tool logs are evidence files. Gate decisions use normalized `tool_runs`, `mcp_server_runs`, `test_runs`, `dependency_edges`, `impact_results`, and `findings`.
+- MCP profiles は既定で disabled。`ut-tdd mcp profile enable <name>` は将来 scope とし、Git 管理 secrets の外に generated local config を書く必要がある。
+- 各 profile は `allowed_tools`、`read_only`、`requires_network`、`requires_docker`、`requires_auth`、`secret_policy`、`risk_tier`、`trigger_signals` を持つ。
+- 既定 GitHub MCP profile は read-only とし、discovery/status に必要な最小 toolset だけを有効化する。PR/issue write actions は明示的な `requires_human_approval` を要求する。
+- Filesystem と Git MCP profiles は workspace root に制限し、global home-directory mount を与えない。
+- Raw MCP responses、browser traces、screenshots、external tool logs は evidence files とする。Gate decisions は正規化済み `tool_runs`、`mcp_server_runs`、`test_runs`、`dependency_edges`、`impact_results`、`findings` を使う。
 - `mcp_server_runs` / `verification_recommendations` は **`session_id` / `plan_id` を保持**し、どの PLAN / session に紐づく外部検証かを trace 可能にする (handover / review evidence と突合できること。physical-data §9.6 カラムの要求根拠、A-128 F-3 back-fill)。
-- MCP Registry / Docker Catalog / npm / PyPI metadata can support discovery, but official source verification and package integrity checks remain required before a profile is marked `trusted`.
+- MCP Registry / Docker Catalog / npm / PyPI metadata は discovery を補助できるが、profile を `trusted` にする前に official source verification と package integrity checks を必須とする。
 
-#### Commands
+#### コマンド
 
 - `ut-tdd mcp profile list --json`
 - `ut-tdd mcp profile probe <name>`
 - `ut-tdd mcp inspect <name> --method tools/list [--allow-external]`
-- `ut-tdd verify recommend --changed <path> [--format text|json|mermaid] [--save-evidence]` -> changed-file signal graph -> recommended MCP/test profiles
-- `ut-tdd verify run --profile <name> [--dry-run] [--allow-external] [--save-evidence]` -> run built-in profiles by default; external profiles require explicit allow-list and satisfied probe checks before execution
+- `ut-tdd verify recommend --changed <path> [--format text|json|mermaid] [--save-evidence]` -> changed-file signal graph -> 推奨 MCP/test profiles
+- `ut-tdd verify run --profile <name> [--dry-run] [--allow-external] [--save-evidence]` -> 既定では built-in profiles を実行する。external profiles は実行前に明示 allow-list と probe checks の通過を要求する
 
-`--save-evidence` writes normalized JSON records under `.ut-tdd/evidence/verification-profiles/` for later DB collector/rebuild. These files are bounded metadata evidence, not raw provider transcripts or secret-bearing tool output.
+`--save-evidence` は後続 DB collector/rebuild 用の normalized JSON records を `.ut-tdd/evidence/verification-profiles/` 配下に書く。これらは bounded metadata evidence であり、raw provider transcripts や secret-bearing tool output ではない。
 
-**完了判定**: A-125 is scoped when requirements, physical data, ADR/backlog/audit, and workflow docs define candidate tools, trigger rules, safety constraints, DB projection tables, and commands. The first runtime slice is implemented when `ut-tdd mcp profile list/probe`, `ut-tdd mcp inspect` readiness gating, `ut-tdd verify recommend`, `ut-tdd verify run --dry-run`, `--save-evidence`, and `doctor` surface profile catalog / readiness / recommendation evidence. Full implementation still requires actual MCP Inspector server invocation, external profile execution evidence, and DB collector/rebuild for external verification rows.
+**完了判定**: A-125 は requirements、physical data、ADR/backlog/audit、workflow docs が candidate tools、trigger rules、安全制約、DB projection tables、commands を定義した時点で scope 済みとする。最初の runtime slice は `ut-tdd mcp profile list/probe`、`ut-tdd mcp inspect` readiness gating、`ut-tdd verify recommend`、`ut-tdd verify run --dry-run`、`--save-evidence`、`doctor` が profile catalog / readiness / recommendation evidence を surface した時点で実装済みとする。Full implementation には、実 MCP Inspector server invocation、external profile execution evidence、external verification rows 用 DB collector/rebuild がまだ必要である。
 
-### §6.8.11 Canonical document export (A-126, 2026-06-09)
+### §6.8.11 正本 document export (A-126, 2026-06-09)
 
-A-124/A-125 make relation graphs, diagrams, MCP/test profiles, and evidence queryable. Human reviewers also need spreadsheet / Excel / PPTX conversions of canonical UT-TDD documents: concept / planning, requirements, detailed design, PLAN, ADR, and test-design documents. UT-TDD therefore scopes **canonical document export** as derived artifacts.
+A-124/A-125 により relation graphs、diagrams、MCP/test profiles、evidence は query 可能になる。人間 reviewer には、正本 UT-TDD documents (concept / planning、requirements、detailed design、PLAN、ADR、test-design documents) の spreadsheet / Excel / PPTX 変換も必要になる。よって UT-TDD は **canonical document export** を derived artifacts として scope する。
 
-**Source-of-truth boundary**:
+**正本境界**:
 
-- Markdown/source documents, PLANs, ADRs, test-design docs, DB projection rows, tests, and evidence records remain authoritative.
-- CSV / Markdown summary / XLSX / PPTX files are generated conversion artifacts only.
-- Exported files must record source document paths, source section IDs, snapshot hash, renderer, format, path, redaction profile, and evidence path.
-- Deleting or manually editing an export artifact must not change harness truth. A human decision made from an export must be imported or recorded separately as review / gate / handover evidence.
+- Markdown/source documents、PLANs、ADRs、test-design docs、DB projection rows、tests、evidence records を authoritative とする。
+- CSV / Markdown summary / XLSX / PPTX files は generated conversion artifacts のみとする。
+- Exported files は source document paths、source section IDs、snapshot hash、renderer、format、path、redaction profile、evidence path を記録しなければならない。
+- export artifact の削除や手編集は harness truth を変更しない。export に基づく人間判断は review / gate / handover evidence として別途 import または記録する。
 
-**Baseline outputs**:
+**基準出力**:
 
-- `doc-csv-matrix`: built-in, zero-dependency, deterministic columns for requirements, design, PLAN, ADR, and test-design matrices.
-- `doc-markdown-summary`: built-in, GitHub-readable conversion summary with source links and section IDs.
+- `doc-csv-matrix`: built-in、zero-dependency。requirements、design、PLAN、ADR、test-design matrices 向けの deterministic columns を持つ。
+- `doc-markdown-summary`: built-in。source links と section IDs を持つ GitHub-readable conversion summary。
 
-**Optional renderer outputs**:
+**任意 renderer 出力**:
 
-- `doc-xlsx-workbook`: Excel workbook with multiple sheets for concept, requirements, design, PLAN, ADR, trace, and test-design rows. Candidate adapters: ExcelJS or SheetJS.
-- `doc-pptx-deck`: PowerPoint deck generated from concept, requirements, detailed design, PLAN, ADR, or test-design structure. Candidate adapter: PptxGenJS.
-- `doc-d2-pptx-diagram`: diagram-to-PPTX export for architecture / workflow / relation graph visuals when D2 readiness is proven.
+- `doc-xlsx-workbook`: concept、requirements、design、PLAN、ADR、trace、test-design rows の複数 sheet を持つ Excel workbook。候補 adapter は ExcelJS または SheetJS。
+- `doc-pptx-deck`: concept、requirements、detailed design、PLAN、ADR、test-design structure から生成する PowerPoint deck。候補 adapter は PptxGenJS。
+- `doc-d2-pptx-diagram`: D2 readiness が証明された場合の architecture / workflow / relation graph visuals 向け diagram-to-PPTX export。
 
-**Trigger rules**:
+**Trigger ルール**:
 
-- `requirements_export`, `fr_ac_at_matrix`, `acceptance_review` -> recommend CSV and optional XLSX.
-- `concept_export`, `planning_review`, `stakeholder_brief` -> recommend Markdown summary and optional PPTX.
-- `detailed_design_export`, `architecture_review`, `db_contract_review`, `api_contract_review` -> recommend CSV/XLSX and optional PPTX.
-- `plan_export`, `adr_export`, `test_design_export`, `handover` -> recommend Markdown summary, CSV, and optional XLSX/PPTX depending on document family.
-- `document_export_profile_changed` -> require renderer probe evidence before accept.
+- `requirements_export`、`fr_ac_at_matrix`、`acceptance_review` -> CSV と任意 XLSX を推奨する。
+- `concept_export`、`planning_review`、`stakeholder_brief` -> Markdown summary と任意 PPTX を推奨する。
+- `detailed_design_export`、`architecture_review`、`db_contract_review`、`api_contract_review` -> CSV/XLSX と任意 PPTX を推奨する。
+- `plan_export`、`adr_export`、`test_design_export`、`handover` -> document family に応じて Markdown summary、CSV、任意 XLSX/PPTX を推奨する。
+- `document_export_profile_changed` -> accept 前に renderer probe evidence を要求する。
 
-**Safety and quality constraints**:
+**安全性と品質制約**:
 
-- Exports must redact before rendering and must not include raw provider transcripts, credentials, secrets, PII, raw MCP payloads, screenshots, or browser traces unless a future human-approved policy defines a redacted attachment profile.
-- Optional renderers are disabled by default. Missing ExcelJS / SheetJS / PptxGenJS / D2 availability returns a finding, not an implicit installation.
-- Source section IDs / FR IDs / AC IDs / AT IDs / PLAN IDs / ADR IDs must remain visible in generated spreadsheet/deck output.
-- Generated spreadsheets and decks must be deterministic for the same source snapshot except for explicit timestamp metadata.
-- Large exports must chunk rows or split sheets/slides by document family or section instead of silently truncating.
+- Exports は rendering 前に redact し、将来の人間承認済み policy が redacted attachment profile を定義しない限り、raw provider transcripts、credentials、secrets、PII、raw MCP payloads、screenshots、browser traces を含めてはならない。
+- Optional renderers は既定で disabled。ExcelJS / SheetJS / PptxGenJS / D2 が無い場合は implicit installation ではなく finding を返す。
+- Source section IDs / FR IDs / AC IDs / AT IDs / PLAN IDs / ADR IDs は generated spreadsheet/deck output で見える状態を保つ。
+- Generated spreadsheets と decks は、明示 timestamp metadata を除き、同一 source snapshot から deterministic に生成されなければならない。
+- Large exports は silent truncation せず、document family または section ごとに rows chunk や sheets/slides 分割を行う。
 
-**完了判定**: A-126 is scoped when requirements, research, audit, physical-data, ADR/backlog, workflow docs, L6 function contracts, L7 unit oracles, and L6/L7/Reverse PLANs define canonical document export profiles and safety boundaries. Runtime implementation requires a future L7 TDD Red entry; this section does not authorize source changes.
+**完了判定**: A-126 は requirements、research、audit、physical-data、ADR/backlog、workflow docs、L6 function contracts、L7 unit oracles、L6/L7/Reverse PLANs が canonical document export profiles と safety boundaries を定義した時点で scope 済みとする。Runtime implementation には将来の L7 TDD Red entry が必要であり、本節は source changes を承認しない。
 
 ## 6.9 CI 起動単位とコスト方針 (GitHub Actions 無料枠制約、tech 裏取り 2026-06-02)
 
@@ -1542,7 +1544,7 @@ scripts/
 | `worker` | 実装、テスト追加、ドキュメント更新、リファクタ、機械的修正 | 実行コストと速度のバランスがよい実装向けモデルクラス | 要件・設計・受入条件を独断で変更すること |
 | `fast-checker` | lint 補助、要約、差分分類、チェックリスト生成、smoke 診断 | 低コスト高速モデルクラス | merge 可否や設計承認を出すこと |
 
-#### role × capability_class matrix
+#### role × capability_class 対応表
 
 | role | primary class | fallback | 備考 |
 |------|---------------|----------|------|
@@ -1595,7 +1597,7 @@ budgets:
 
 `frontier-reviewer` は high-cost 扱いのため、設計判断 (L4-L6) / R4 合流 / 判断ゲート (G0.5 / G2 / G4-G9) など判断品質が結果を左右する場面に限定する。通常の実装・整形・単純テスト追加に常用しない。
 
-### Optional AI IDE adapters
+### 任意 AI IDE adapters
 
 Cursor / Google Antigravity / GitHub Copilot などは、Claude Code / Codex と同列の必須 runtime にはしない。検出できるものだけ optional adapter として扱い、adapter 不在で `doctor` / `lint` / `gate` を fail にしない。
 
@@ -1668,15 +1670,15 @@ adapter は「存在する」と「harness から連携できる」を分けて�
 
 ### mode 別コマンド保証
 
-| command group | standalone | claude-only | codex-only | hybrid |
+| コマンド群 | standalone | claude-only | codex-only | hybrid |
 |---------------|------------|-------------|------------|--------|
 | `setup` / `status` / `doctor` | ✓ | ✓ | ✓ | ✓ |
 | `plan lint` / `vmodel lint` / `gate` | ✓ | ✓ | ✓ | ✓ |
 | `task classify` / `task estimate` / `skill suggest` | ✓ | ✓ | ✓ | ✓ |
-| `claude` / Claude hook guard | — | ✓ | not-available | ✓ |
+| `claude` / Claude hook guard | — | ✓ | 利用不可 not-available | ✓ |
 | `codex` | — | not-available | ✓ | ✓ |
-| `team run` | — | not-available | not-available | ✓ |
-| `handover` | local only | ✓ | ✓ | ✓ |
+| `team run` | — | 利用不可 not-available | 利用不可 not-available | ✓ |
+| `handover` | local only (ローカルのみ) | ✓ | ✓ | ✓ |
 
 `not-available` は exit 2 とし、stderr に不足 runtime と fallback command を出す。検証系コマンド (`lint` / `doctor` / `gate`) は mode 不足だけで exit 1 にしない。
 
@@ -1781,19 +1783,18 @@ JSON 出力:
 
 ### orchestration 連携
 
-| command | primary class | escalation |
+| command | primary class | escalation 条件 |
 |---------|---------------|------------|
-| `task classify` | `fast-checker` / rule-based | `L` / `XL` / confidence < 0.7 → `frontier-reviewer` review |
-| `task estimate` | rule-based + `fast-checker` | risk_factor ≥ 1.6 or production impact → `frontier-reviewer` review |
-| `skill suggest` | `fast-checker` / rule-based | missing required skill or vendor_candidate → `tl` review |
+| `task classify` | `fast-checker` / rule-based | `L` / `XL` / confidence < 0.7 なら `frontier-reviewer` review |
+| `task estimate` | rule-based + `fast-checker` | risk_factor ≥ 1.6 または production impact ありなら `frontier-reviewer` review |
+| `skill suggest` | `fast-checker` / rule-based | required skill 欠落または vendor_candidate ありなら `tl` review |
 
-> **Dynamic skill injection materialization (PLAN-L7-135, 2026-06-23)**:
-> `ut-tdd skill suggest --inject --json` MUST return a provider-neutral manifest
-> containing skill paths/reasons only. `ut-tdd codex --plan ...`, `ut-tdd
-> claude --plan ...`, `ut-tdd team run --plan ...`, and `ut-tdd task route
-> --plan ... --execute` MUST materialize that manifest into provider stdin, not
-> argv, so Claude and Codex receive identical scoped context without loading all
-> `docs/skills/*` bodies.
+> **Dynamic skill injection の実体化 (PLAN-L7-135、2026-06-23)**:
+> `ut-tdd skill suggest --inject --json` は provider-neutral manifest を返さなければならない。
+> manifest は skill paths/reasons のみを含む。`ut-tdd codex --plan ...`、`ut-tdd claude --plan ...`、
+> `ut-tdd team run --plan ...`、`ut-tdd task route --plan ... --execute` などのコマンドは、
+> その manifest を argv ではなく provider stdin に実体化しなければならない。
+> これにより Claude と Codex は `docs/skills/*` 本文全量を読まず、同一の scoped context を受け取る。
 
 ## 7.3 vmodel_validator I/O 仕様 (R-I7 fix で exit code 3 段階明記)
 
@@ -1901,7 +1902,7 @@ output:
 - [x] **rule parity test**: 同一 PLAN / diff を claude-only と codex-only で処理した際、`ut-tdd gate` / `ut-tdd plan lint` / `ut-tdd vmodel lint` の **判定結果と exit code が一致**する (runtime 差で結果が変わらない)。`ut-tdd gate` の判断ゲート review-tier は `evaluateGateReview` parity test で codex-only/claude-only 同一結果を機械検証 (2026-06-08)。
 - [x] **hybrid 機能分散 (MUST、構想書 §2.1.0)**: `ut-tdd team run` が `hybrid` で判断系 / 実行系を別 runtime に割り当て、同一 role の同一 runtime 重複・同一作業の二重実行を exit 1 で弾く (§7.1 team run 検証 7)。`validateTeamRun` が worker/reviewer provider 分離・duplicate role/provider を fail-close (2026-06-08)。
 
-### 7.6.1 Coding Rules SSoT (TypeScript core)
+### 7.6.1 Coding Rules SSoT (TypeScript core) の正本
 
 ADR-001 により `src/` core は TypeScript/Bun で実装する。coding rules は本要件定義と `docs/governance/coding-rules.md` を SSoT とし、AGENTS / CLAUDE adapter は再定義せず参照する。
 
@@ -1985,13 +1986,14 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 
 | signal | mode | 補足 |
 |--------|------|------|
-| `drift` (+drift_type=schema/contract) | reverse | normalization |
+| `drift` (+drift_type=schema/contract) | reverse | normalization 経路 |
 | `debt_degradation` / `code_smell` / `structural` | refactor | |
 | `dependency_outdated` / `upgrade` / `config_drift` | retrofit | upgrade は preflight |
 | `agent_runaway` / `context_exhaustion` / `regression_dev` / `runaway` / `forced_stop` | recovery | human approval。`forced_stop` = ユーザー強制停止 (ESC/Ctrl+C/Stop) = 高 severity 負シグナル (concept §2.6.1、PLAN-L6-04/L7-02 dangling-turn 推定で検出) |
 | `production_incident` / `hotfix_required` / `regression_prod` | incident | env=prod 必須、human approval |
 | `feature_addition` / `scope_extension` | add-feature | §1.3 `kind=add-feature` と同じ正規表記 |
 | `version_deferral` | version-up | capability を将来版へ保全 (今スコープ外・破棄しない)。`version_target` 付き draft で起票、活性化時に add-feature で Forward 合流 (§2.5 version-up、PLAN-DISCOVERY-09) |
+| `screen_addition_to_backend` / `design_bottomup` / `backend_derived_screen` / `add_ui_to_backend` | design-bottomup | backend 先行から FE / 画面要件を導出し、Discovery 合成後に L1 screen / L2 へ Forward 合流 (§2.5 design-bottomup、PLAN-DISCOVERY-07 / PLAN-RECOVERY-07) |
 | `user_feedback_iteration` / `requirement_continuous_refinement` | scrum | |
 | `requirement_undefined` / `feasibility_unknown` / `success_condition_unclear` / `design_uncertain` | discovery | 4 象限 P2 (uncertainty 高×impact 低) で Discovery 先行。上流委譲。**`design_uncertain` = 確証なき設計** (紙上で実現性・妥当性が確定できない設計、concept §2.5 / PLAN-DISCOVERY-01 S4 confirmed)。**在層で閉じる `design_gap` (下記 interrupt 分岐 → Forward spot 修正) とは区別**: 設計の確証が PoC を要するなら Discovery、層内で確定できるなら Forward |
 | `tech_decision_required` / `option_comparison_needed` / `adr_required` | research | 机上調査で完結 (PoC 不要)。作れるか不明→discovery / 既存実装調査→reverse に切替 |
@@ -2012,6 +2014,7 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 - priority/action は uncertainty × impact の 4 象限で決める (P0=緊急 routing / P1=即 PLAN / P2=Discovery 先行 / P3=suggest_only)。
 - signal が本表に無い場合は `exit 2` (not-available) + 上流委譲手順を stderr に返す (fail ではなく明示フォールバック)。
 - 複数 token が同時に一致する場合は **最長 token 一致を優先**する。例: `regression_prod` は汎用 `regression` より具体的な incident token として解決し、`forced_stop` は汎用 `stop` より具体的な recovery token として解決する。
+- **PLAN 入口 certificate**: 2026-07-01 以降に作成する non-archived PLAN は frontmatter に `route_signal` と `route_mode` を記録する。`route_signal` は本表の token/alias、`route_mode` は `ut-tdd route eval` / `routeSignalCandidates` が返す候補 mode と一致しなければならない。不一致または欠落は `plan-governance` の `route_certificate_missing` / `route_certificate_mismatch` で fail-close する。既存 PLAN は遡及 backfill せず、future authoring の入口適合を強制する。
 
 ## 7.8.2 RecommendedCommandV1 schema 要件
 
@@ -2233,11 +2236,11 @@ target_level は **冪等算出**。current_level に +1 漸進ではない。
 | **チーム共有 audit (PR/CI)** | GitHub Actions job summary + artifact / PR comment (audit 集計用、N/M 集計対象)。PR label は状態表示のみ | (Actions が管理) | CI job |
 | **状態表示** | PR label (`escalation-L2` / `escalation-L3`) | (Actions が管理) | Actions が level 昇格時に付与 |
 
-### GitHub failure corpus
+### GitHub failure corpus の扱い
 
 組織としての失敗学習は、GitHub 上の証跡から pull する。`failure_log.jsonl` は個人作業ログであり、N/M 集計や再発傾向の正本にしない。
 
-| Source | 取得例 | 用途 |
+| Source 種別 | 取得例 | 用途 |
 |--------|--------|------|
 | Workflow runs / jobs | `gh api repos/{owner}/{repo}/actions/runs` / `jobs` | CI 失敗種別、再失敗回数、対象 branch |
 | Job logs | `gh run view --log` または Actions API | vitest / lint / vmodel / branch-kind-check の failure_type 抽出 |
@@ -2324,10 +2327,10 @@ CODEOWNERS は静的 path owner のため、level に応じた動的注入は実
 - test / regression test
 - design or add-design PLAN
 - recovery PLAN / postmortem
-- debt register / deferred finding
-- skill pack update
-- orchestration policy update
-- handover note
+- debt register / deferred finding への登録
+- skill pack update への反映
+- orchestration policy update への反映
+- handover note への記録
 
 ---
 

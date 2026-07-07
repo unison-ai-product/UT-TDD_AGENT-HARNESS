@@ -1,7 +1,17 @@
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { type RecommendedCommandV1, recommendedCommandV1Schema } from "../schema/index";
+import {
+  ROUTE_COMMAND_DOCTOR,
+  ROUTE_COMMAND_TASK_CLASSIFY,
+  ROUTE_SIGNAL_MAP,
+  type RouteSignalEntry,
+  routeMatchLength,
+  routeSignalCandidates,
+} from "../schema/route-map";
 import type { ContractResult, Finding, Severity } from "./contracts";
+
+export type { RouteSignalEntry } from "../schema/route-map";
 
 function finding(
   code: string,
@@ -25,15 +35,7 @@ export function routeSignalToMode(input: {
   current_plan?: string;
   drive?: string;
 }): ContractResult & { candidates: string[] } {
-  const normalized = input.signal.trim().toLowerCase();
-  const candidates = ROUTE_SIGNAL_MAP.map((entry, index) => ({
-    entry,
-    index,
-    matchLength: routeMatchLength(entry, normalized),
-  }))
-    .filter((candidate) => candidate.matchLength > 0)
-    .sort((a, b) => b.matchLength - a.matchLength || a.index - b.index)
-    .map((candidate) => candidate.entry.mode);
+  const candidates = routeSignalCandidates(input.signal);
   const findings =
     candidates.length === 0
       ? [finding("no-route", "unknown signal has no route", { severity: "warn" })]
@@ -46,9 +48,29 @@ export interface RouteEvalResult extends ContractResult {
   mode: string | null;
   suggest_command: string;
   recommended_command: RecommendedCommandV1 | null;
+  finding_route: FindingRouteCandidate | null;
   approval: RouteApprovalResult;
   escalation_boundaries: RouteEscalationBoundary[];
   exit_code: 0 | 1 | 2;
+}
+
+export type RouteFindingType =
+  | "regression"
+  | "premise-gap"
+  | "deviation"
+  | "feature-gap"
+  | "latent-defect"
+  | "smell";
+
+export interface FindingRouteCandidate {
+  finding_type: RouteFindingType;
+  mode: "recovery" | "add-feature" | "refactor";
+  route_signal: "regression_dev" | "feature_addition" | "code_smell";
+  proposed_plan_prefix: "PLAN-RECOVERY-" | "PLAN-L7-" | "PLAN-REFACTOR-";
+  requires_human_approval: boolean;
+  auto_create: false;
+  rationale: string;
+  required_recovery_fields?: string[];
 }
 
 export interface RouteApprovalPolicy {
@@ -74,14 +96,6 @@ export interface RouteApprovalResult {
   missing_approvers: string[];
 }
 
-export interface RouteSignalEntry {
-  tokens: string[];
-  mode: string;
-  command: string;
-  preflight: boolean;
-  requiresApproval: boolean;
-}
-
 export interface RouteConfigViolation {
   code: "legacy-db-dependency" | "personal-absolute-path";
   path: string;
@@ -104,6 +118,7 @@ const D_CONTRACT_MODES = [
   "scrum",
   "incident",
   "add-feature",
+  "version-up",
   "research",
 ] as const;
 
@@ -169,9 +184,109 @@ const ROUTE_ESCALATION_PATTERNS: { term: string; pattern: RegExp }[] = [
   pattern: new RegExp(`\\b${term}s?\\b`, "i"),
 }));
 
-const ROUTE_COMMAND_TASK_CLASSIFY = "ut-tdd task classify";
-const ROUTE_COMMAND_DOCTOR = "ut-tdd doctor";
 const ROUTE_CONTRACT_EVIDENCE_PATH = "src/workflow/contracts.ts";
+
+const FINDING_ROUTE_MAP: Record<RouteFindingType, FindingRouteCandidate> = {
+  regression: {
+    finding_type: "regression",
+    mode: "recovery",
+    route_signal: "regression_dev",
+    proposed_plan_prefix: "PLAN-RECOVERY-",
+    requires_human_approval: true,
+    auto_create: false,
+    rationale:
+      "監査/調査で見つかった退行は既存 regression_dev signal 経由で Recovery 起票候補にする",
+    required_recovery_fields: [
+      "root_cause",
+      "prevention_change_trace",
+      "guard_or_test_or_rule_or_hook",
+      "l14_route",
+    ],
+  },
+  "premise-gap": {
+    finding_type: "premise-gap",
+    mode: "recovery",
+    route_signal: "regression_dev",
+    proposed_plan_prefix: "PLAN-RECOVERY-",
+    requires_human_approval: true,
+    auto_create: false,
+    rationale: "前提崩れは検証/運用の退行として Recovery 起票候補にする",
+    required_recovery_fields: [
+      "root_cause",
+      "prevention_change_trace",
+      "guard_or_test_or_rule_or_hook",
+      "l14_route",
+    ],
+  },
+  deviation: {
+    finding_type: "deviation",
+    mode: "recovery",
+    route_signal: "regression_dev",
+    proposed_plan_prefix: "PLAN-RECOVERY-",
+    requires_human_approval: true,
+    auto_create: false,
+    rationale: "定義済み workflow からの逸脱は Recovery 起票候補にする",
+    required_recovery_fields: [
+      "root_cause",
+      "prevention_change_trace",
+      "guard_or_test_or_rule_or_hook",
+      "l14_route",
+    ],
+  },
+  "feature-gap": {
+    finding_type: "feature-gap",
+    mode: "add-feature",
+    route_signal: "feature_addition",
+    proposed_plan_prefix: "PLAN-L7-",
+    requires_human_approval: false,
+    auto_create: false,
+    rationale: "機能欠落は Recovery に押し込まず Add-feature の起票候補にする",
+  },
+  "latent-defect": {
+    finding_type: "latent-defect",
+    mode: "add-feature",
+    route_signal: "feature_addition",
+    proposed_plan_prefix: "PLAN-L7-",
+    requires_human_approval: false,
+    auto_create: false,
+    rationale: "潜在欠陥は仕様化して Add-feature/実装修正へ送る",
+  },
+  smell: {
+    finding_type: "smell",
+    mode: "refactor",
+    route_signal: "code_smell",
+    proposed_plan_prefix: "PLAN-REFACTOR-",
+    requires_human_approval: false,
+    auto_create: false,
+    rationale: "構造上の smell は refactor 起票候補にする",
+  },
+};
+
+function normalizeFindingType(value: string | undefined): RouteFindingType | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase().replace(/_/g, "-");
+  return Object.hasOwn(FINDING_ROUTE_MAP, normalized) ? (normalized as RouteFindingType) : null;
+}
+
+function inferFindingType(signal: string): RouteFindingType | null {
+  const normalized = signal.toLowerCase().replace(/_/g, "-");
+  const entries = Object.keys(FINDING_ROUTE_MAP).sort((a, b) => b.length - a.length);
+  return (
+    (entries.find((entry) =>
+      new RegExp(`(?:^|[\\s:;,[({])${entry}(?:$|[\\s:;,.\\])}])`).test(normalized),
+    ) as RouteFindingType | undefined) ?? null
+  );
+}
+
+function findingRouteEntry(candidate: FindingRouteCandidate): RouteSignalEntry {
+  return {
+    tokens: [candidate.route_signal],
+    mode: candidate.mode,
+    command: candidate.mode === "recovery" ? ROUTE_COMMAND_DOCTOR : ROUTE_COMMAND_TASK_CLASSIFY,
+    preflight: true,
+    requiresApproval: candidate.requires_human_approval,
+  };
+}
 
 export function validateRouteConfigText(input: {
   path: string;
@@ -386,124 +501,11 @@ function resolveApproval(params: {
   };
 }
 
-const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
-  {
-    tokens: ["failure", "doctor"],
-    mode: "reverse",
-    command: ROUTE_COMMAND_TASK_CLASSIFY,
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["drift", "reverse", "gap", "design_gap"],
-    mode: "reverse",
-    command: ROUTE_COMMAND_TASK_CLASSIFY,
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["agent_runaway", "runaway", "context_exhaustion", "forced_stop", "regression_dev"],
-    mode: "recovery",
-    command: ROUTE_COMMAND_DOCTOR,
-    preflight: true,
-    requiresApproval: true,
-  },
-  {
-    tokens: ["dependency_outdated", "upgrade", "config_drift"],
-    mode: "retrofit",
-    command: ROUTE_COMMAND_DOCTOR,
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["debt_degradation", "code_smell", "structural", "debt"],
-    mode: "refactor",
-    command: ROUTE_COMMAND_TASK_CLASSIFY,
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: [
-      "requirement_undefined",
-      "feasibility_unknown",
-      "success_condition_unclear",
-      "design_uncertain",
-    ],
-    mode: "discovery",
-    command: ROUTE_COMMAND_TASK_CLASSIFY,
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["poc", "discovery"],
-    mode: "discovery",
-    command: ROUTE_COMMAND_TASK_CLASSIFY,
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    // 画面後付け駆動の入口 (backend 主軸 system に UI を足す)。出口は Discovery 合成 → Forward L3-L6。
-    tokens: [
-      "screen_addition_to_backend",
-      "design_bottomup",
-      "backend_derived_screen",
-      "add_ui_to_backend",
-    ],
-    mode: "design-bottomup",
-    command: ROUTE_COMMAND_TASK_CLASSIFY,
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["user_feedback_iteration", "requirement_continuous_refinement", "scrum"],
-    mode: "scrum",
-    command: ROUTE_COMMAND_TASK_CLASSIFY,
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["production_incident", "hotfix_required", "regression_prod", "incident", "stop"],
-    mode: "incident",
-    command: ROUTE_COMMAND_DOCTOR,
-    preflight: true,
-    requiresApproval: true,
-  },
-  {
-    tokens: ["feature_addition", "scope_extension", "new_requirement", "po_change", "add-feature"],
-    mode: "add-feature",
-    command: ROUTE_COMMAND_TASK_CLASSIFY,
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["tech_decision_required", "option_comparison_needed", "adr_required", "research"],
-    mode: "research",
-    command: ROUTE_COMMAND_TASK_CLASSIFY,
-    preflight: true,
-    requiresApproval: false,
-  },
-  {
-    tokens: ["interrupt", "constraint"],
-    mode: "forward",
-    command: ROUTE_COMMAND_TASK_CLASSIFY,
-    preflight: true,
-    requiresApproval: false,
-  },
-];
-
-function routeMatchLength(entry: RouteSignalEntry, normalizedSignal: string): number {
-  return Math.max(
-    0,
-    ...entry.tokens.map((token) =>
-      normalizedSignal.includes(token.toLowerCase()) ? token.length : 0,
-    ),
-  );
-}
-
 export function evaluateRouteCommand(input: {
   signal: string;
   env?: string;
   drift_type?: string;
+  finding_type?: string;
   approval_policy?: RouteApprovalPolicy;
   route_map?: RouteSignalEntry[];
   route_config_violations?: RouteConfigViolation[];
@@ -524,6 +526,7 @@ export function evaluateRouteCommand(input: {
       mode: null,
       suggest_command: "fix route-map configuration before PLAN creation",
       recommended_command: null,
+      finding_route: null,
       approval: {
         required: false,
         status: "not_required",
@@ -535,11 +538,22 @@ export function evaluateRouteCommand(input: {
       exit_code: 1,
     };
   }
-  const normalized = input.signal.trim().toLowerCase();
   const escalationBoundaries = detectRouteEscalationBoundaries(input.signal);
-  const routeMap = [...(input.route_map ?? []), ...ROUTE_SIGNAL_MAP];
+  const findingType = normalizeFindingType(input.finding_type) ?? inferFindingType(input.signal);
+  const findingRoute = findingType ? FINDING_ROUTE_MAP[findingType] : null;
+  const routeInputSignal = findingRoute?.route_signal ?? input.signal;
+  const routeInputNormalized = routeInputSignal.trim().toLowerCase();
+  const routeMap = [
+    ...(findingRoute ? [findingRouteEntry(findingRoute)] : []),
+    ...(input.route_map ?? []),
+    ...ROUTE_SIGNAL_MAP,
+  ];
   const route = routeMap
-    .map((entry, index) => ({ entry, index, matchLength: routeMatchLength(entry, normalized) }))
+    .map((entry, index) => ({
+      entry,
+      index,
+      matchLength: routeMatchLength(entry, routeInputNormalized),
+    }))
     .filter((candidate) => candidate.matchLength > 0)
     .sort((a, b) => b.matchLength - a.matchLength || a.index - b.index)[0]?.entry;
   if (!route) {
@@ -553,6 +567,7 @@ export function evaluateRouteCommand(input: {
       mode: null,
       suggest_command: "upstream delegation required: define route-map entry before PLAN creation",
       recommended_command: null,
+      finding_route: findingRoute,
       approval: {
         required: false,
         status: "not_required",
@@ -566,7 +581,7 @@ export function evaluateRouteCommand(input: {
   }
   const approval = resolveApproval({
     route,
-    input,
+    input: { ...input, signal: routeInputSignal },
     policy: input.approval_policy,
     escalationBoundaries,
   });
@@ -576,6 +591,9 @@ export function evaluateRouteCommand(input: {
     args: {
       signal: input.signal,
       mode: route.mode,
+      ...(findingRoute ? { route_signal: findingRoute.route_signal } : {}),
+      ...(findingRoute ? { finding_type: findingRoute.finding_type } : {}),
+      ...(findingRoute ? { source_signal: input.signal } : {}),
       ...(input.env ? { env: input.env } : {}),
       ...(input.drift_type ? { drift_type: input.drift_type } : {}),
     },
@@ -601,6 +619,7 @@ export function evaluateRouteCommand(input: {
       mode: route.mode,
       suggest_command: route.command,
       recommended_command: null,
+      finding_route: findingRoute,
       approval,
       escalation_boundaries: escalationBoundaries,
       exit_code: 1,
@@ -621,6 +640,7 @@ export function evaluateRouteCommand(input: {
         ? `${route.command} --text "${input.signal}"`
         : route.command,
     recommended_command: recommendedParsed.data,
+    finding_route: findingRoute,
     approval,
     escalation_boundaries: escalationBoundaries,
     exit_code: approvalFinding ? 1 : 0,

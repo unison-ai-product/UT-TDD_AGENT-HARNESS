@@ -125,11 +125,11 @@ function analyzePairFreeze(docs):
 | `verificationGroupMessages` | `(groups) => string[]` | freeze 完了 (park 表示) / Forward 進行中 の surface |
 | doctor `checkVerificationGroups` | `(repoRoot) => string[]` | hard/fail-close surface (`verificationGroups.ok` は doctor.ok 連動) |
 
-### §7.3.1 FR test-perspective alias
+### §7.3.1 FR test-perspective alias の定義
 
-| Function | Signature | pre | post | invariant | oracle |
+| Function | Signature | 前提 | 事後 | 不変条件 | oracle |
 |---|---|---|---|---|---|
-| `analyzeTestPerspectiveGate` | analyzeTestPerspectiveGate(input: TestPerspectiveInput, deps: TestPerspectiveDeps) => TestPerspectiveResult | design/test-design pair docs and declared test viewpoints are supplied. | returns missing or duplicate test perspective coverage by layer. | pair presence alone is insufficient when a required test viewpoint is absent. | U-FR-L1-21 |
+| `analyzeTestPerspectiveGate` | analyzeTestPerspectiveGate(input: TestPerspectiveInput, deps: TestPerspectiveDeps) => TestPerspectiveResult | design/test-design pair docs と declared test viewpoints を与える。 | layer ごとの missing / duplicate test perspective coverage を返す。 | required test viewpoint が欠ける場合、pair presence だけでは不十分とする。 | U-FR-L1-21 |
 
 ### §7.4 「機械発火」の範囲
 

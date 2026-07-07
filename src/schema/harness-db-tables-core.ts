@@ -13,6 +13,9 @@ export const HARNESS_DB_CORE_TABLES: TableDef[] = [
       col("drive"),
       col("status"),
       col("parent"),
+      // route_mode: PLAN frontmatter の駆動モデル宣言 (mode 第一級化、PLAN-L7-243)。
+      // legacy PLAN は "" (mode 導出は src/schema/mode-catalog.ts のフォールバックに従う)。
+      col("route_mode"),
       col("updated_at"),
       // decision_outcome: S4 verdict for PoC (kind=poc) PLANs.
       // Values: "confirmed" | "rejected" | "pivot" | "" (null/unset stored as "").
@@ -174,6 +177,19 @@ export const HARNESS_DB_CORE_TABLES: TableDef[] = [
       col("status"),
       col("next_action"),
       col("created_at"),
+    ],
+  },
+  {
+    name: "memory_entries",
+    columns: [
+      pk("memory_id"),
+      col("kind"),
+      col("title"),
+      col("body"),
+      col("tags"),
+      col("source_path"),
+      col("updated_at"),
+      col("content_hash"),
     ],
   },
   {
@@ -382,6 +398,7 @@ export const HARNESS_DB_CORE_TABLES: TableDef[] = [
       col("role"),
       col("capability"),
       col("skill_type"),
+      col("category"),
       col("applies_layers"),
       col("applies_drive_models"),
       col("drift_status"),

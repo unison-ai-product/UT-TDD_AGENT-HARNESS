@@ -24,7 +24,12 @@ export interface AgentGuardInput {
   tool_name?: string;
   tool_input?: {
     subagent_type?: string;
+    agent_type?: string;
+    agent?: string;
+    role?: string;
+    name?: string;
     model?: string;
+    model_family?: string;
   } | null;
 }
 
@@ -53,12 +58,16 @@ export function normalizeModelFamily(raw: string | null | undefined): ModelFamil
 
 const ALLOWLIST_TEXT = [...SUBAGENT_ALLOWLIST].join(" ");
 
+function firstString(...values: Array<string | undefined>): string {
+  return values.find((value) => typeof value === "string" && value.trim().length > 0)?.trim() ?? "";
+}
+
 export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContext): GuardDecision {
   if (!AGENT_TOOL_NAMES.has(input.tool_name ?? "")) return { code: 0 };
 
   const ti = input.tool_input ?? {};
-  const subagentType = (ti.subagent_type ?? "").trim();
-  const model = (ti.model ?? "").trim();
+  const subagentType = firstString(ti.subagent_type, ti.agent_type, ti.agent, ti.role, ti.name);
+  const model = firstString(ti.model, ti.model_family);
 
   const blockOrBypass = (message: string): GuardDecision =>
     ctx.allowRaw

@@ -8,11 +8,11 @@ next_pair_freeze: L7
 plan: docs/plans/PLAN-L6-05-setup-solo-team.md
 ---
 
-> **L6 contract marker**: `planSetup(input: SetupInput) => SetupPlan` and `runSetup(input: SetupInput) => SetupResult` are the unit-test-granularity contracts. DbC pre/post/invariant maps solo/team detection and setup outputs to U-SETUP-001..007.
+> **L6 contract marker**: `planSetup(input: SetupInput) => SetupPlan` と `runSetup(input: SetupInput) => SetupResult` は unit-test-granularity contracts である。DbC pre/post/invariant は solo/team detection と setup outputs を U-SETUP-001..007 に対応づける。
 
 <!--
 ① 設計 (L6 機能設計) — ut-tdd setup solo/team GitHub 設定出し分け。
-PLAN: PLAN-L6-05-setup-solo-team (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.7 U-SETUP。
+PLAN: PLAN-L6-05-setup-solo-team (add-design)。pair (③): docs/test-design/harness/L7-unit-test-design.md §1.7 U-SETUP を対応先とする。
 実装 (②): src/setup/index.ts + src/cli (ut-tdd setup) (PLAN-L7-03-setup-solo-team, add-impl, 後続)。
 土台思想: ut-tdd status の mode 検出 (src/runtime/detect.ts)「検出して提案する」を solo/team 軸へ拡張。
 上位整合: 要件 §6.5 Phase 0-A/0-B / §9.1 A/B 種別 / L4 external-if GitHub 境界 (後段 Reverse で back-fill)。
@@ -114,7 +114,7 @@ type TemplateSet = { [name: string]: string };     // テンプレ名 → 内容
 
 U-SETUP-001 (`detectProjectScale` never-throws / gh 失敗→unknown) / U-SETUP-002 (`recommendPhase` 純粋・team/solo/fallback 信号) / U-SETUP-003 (`planSetup` 0-A=A のみ / 0-B=A+CODEOWNERS+bp script / team 名注入) / U-SETUP-004 (`emitSetup` dry-run 非書込 / 期待ファイル書込 / token 非含。**内部 helper `renderArtifacts` の render 内容もここで被覆**) / U-SETUP-005 (`recordSetupState` signals 4 フィールド strip / token 非含 / 再読込同一) / U-SETUP-006 (`applyBranchProtection` apply≠true→emit-only / 非対話→non-interactive で gh 非実行 / 欠落→非実行) / U-SETUP-007 (`runSetup` フラグ>確認>fallback 優先順 + 非対話 apply 封鎖) / U-SETUP-009 (`planSetup` が adapter テンプレを含める) / U-SETUP-010 (`emitSetup` が brownfield 既存 adapter doc を非破壊 merge し、構造ファイルは confirm なしに上書きしない)。
 
-**PLAN-L7-157 distribution addendum**: `buildCleanDistributionPlan(paths, tag, cleanRepo)` is the clean export contract for R1/R2/R12/R13: it emits the clean-repo + signed-tarball channel, includes LICENSE/package/src/adapter templates including Claude/Codex hook, subagent, and command templates, excludes dogfood (`docs/plans`, `docs/design/harness`, `docs/test-design`, `.ut-tdd`) and UI (`src/web`), and fail-closes on required-file or denylist drift (U-SETUP-011). `buildConsumerReadinessPlan(host/runtime/workspace/tag signals)` is the onboarding/readiness contract for R3/R5/R6/R8/R9/R10/R16/R17: it reports Bun/git/gh/bare `ut-tdd`/runtime preflight, CI self-sufficiency, rollback managed paths, tag-pin/public contracts, monorepo package-root placement, and portability smoke scenarios without mutating the host (U-SETUP-012). Because generated Claude/Codex adapter hooks invoke bare `ut-tdd ...`, readiness fail-closes when `ut-tdd` is not spawnable on PATH; the install flow must establish the linked/package binary before `ut-tdd setup`. The local distribution acceptance smoke (U-SETUP-013 / AT-DIST-001) materializes the planned clean artifact set into a temporary repo, runs `bun install --frozen-lockfile`, then verifies `status --json`, `distribution plan --json`, and `typecheck`; source-repo full `doctor` remains out of scope until a separate consumer doctor profile exists because the clean artifact intentionally excludes dogfood PLAN/design/test-design/runtime state.
+**PLAN-L7-157 distribution addendum**: `buildCleanDistributionPlan(paths, tag, cleanRepo)` は R1/R2/R12/R13 の clean export contract である。既定の clean distribution repo は `unison-ai-product/UT-TDD_AGENT-HARNESS-Pack` であり、source development repo へ逆流させない。clean-repo + signed-tarball channel を emit し、Claude/Codex hook、subagent、command templates を含む LICENSE/package/src/adapter templates を含め、dogfood (`docs/plans`, `docs/design/harness`, `docs/test-design`, `.ut-tdd`) と UI (`src/web`) を除外し、required-file または denylist drift で fail-close する (U-SETUP-011)。`buildConsumerReadinessPlan(host/runtime/workspace/tag signals)` は R3/R5/R6/R8/R9/R10/R16/R17 の onboarding/readiness contract である。host を mutate せず、Bun/git/gh/bare `ut-tdd`/runtime preflight、CI self-sufficiency、rollback managed paths、tag-pin/public contracts、monorepo package-root placement、portability smoke scenarios を報告する (U-SETUP-012)。generated Claude/Codex adapter hooks は bare `ut-tdd ...` を invoke するため、`ut-tdd` が PATH で spawnable でない場合 readiness は fail-close する。install flow は `ut-tdd setup` 前に linked/package binary を確立しなければならない。local distribution acceptance smoke (U-SETUP-013 / AT-DIST-001) は planned clean artifact set を temporary repo に materialize し、`bun install --frozen-lockfile` を実行してから `status --json`、`distribution plan --json`、`typecheck` を検証する。clean artifact は dogfood PLAN/design/test-design/runtime state を意図的に除外するため、source-repo full `doctor` は separate consumer doctor profile ができるまで scope 外とする。
 
 > **孤児 0**: §2.3 契約関数 7 本 ↔ U-SETUP-001〜007 を 1:1 被覆。`renderArtifacts` は `emitSetup` 内部 helper のため U-SETUP-004 に内包 (独立契約でない)。
 > **freeze**: **G6 (機能設計凍結)** で ①(本書) ⇔ ③(L7-unit-test-design.md §1.7 U-SETUP) の pair を確定。**G7** で ①⇔②⇔③⇔④ の 4-artifact 双方向 trace を凍結。`next_pair_freeze: L7`。
@@ -139,3 +139,35 @@ deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `no
 - **L3 要件 (FR/AC)**: 参加規模検出 + 提案/確認/記録 + GitHub 設定出し分けの振る舞いを既存 FR 拡張で吸収 (新 FR は Reverse で要否判断、fr-registry-audit を壊さない)。
 - **§6 用語 (Phase 0-A/0-B / 参加規模検出 / emit-only)**: L0 §10 用語集へ back-merge (§G.9、導入層 L6)。
 - **認可・本番影響の境界**: branch protection 適用は人間サインオフ前提 (CLAUDE.md エスカレーション境界)。仕組み化 (precondition で非対話封鎖) を §8.6 失敗→仕組みループの一部として確定。
+
+**Pack sync addendum**: `buildPackSyncPlan(exportPlan, sourcePaths, stagingDir, branch)` は clean export の artifact set だけを Pack repo staging clone へ反映するための非破壊計画である。`distribution sync-plan --json` は `sourcePath -> artifactPath` のコピー計画、Pack repo/branch、`git status`/commit/tag/push の human-approved command list、denylist/required-file check を emit するが、clone/copy/commit/push/release は実行しない。`distribution sync-stage --json` は同じ artifact set をローカル staging directory に materialize し、`unmanagedExistingPaths` を検出するが、既存余剰ファイルの prune や remote mutation はしない。`docs/skills/*` は Pack artifact では root `skills/*` に写像し、dogfood PLAN/design/test-design/runtime DB/UI は copyPlan/stage へ入れない。Pack repo への remote mutation、署名 tarball、GitHub release は PO 承認後の外部操作として `release-plan` と分離する。
+
+## §6 project-local wrapper 契約
+
+1台のPCに複数の consumer project が同居する前提では、global `bun link` / global `ut-tdd` を hook の正本にしない。`ut-tdd setup` は各 project に `.ut-tdd/bin/ut-tdd.mjs` を投影し、Claude/Codex hook は `bun .ut-tdd/bin/ut-tdd.mjs ...` を呼ぶ。この wrapper は project root の `node_modules/.bin/ut-tdd` を最優先し、次に setup を実行した harness checkout の `src/cli.ts`、最後に bare `ut-tdd` へ fallback する。
+
+不変条件:
+
+- project ごとの tag pin / devDependency を優先し、同一PC上の他 project の harness version と衝突しない。
+- hook command は repo-local `.ut-tdd/bin/ut-tdd.mjs` を経由し、consumer の PATH に bare `ut-tdd` が無くても project-local binary または setup 元 harness checkout で動く。
+- Bun 自体は hook shell の PATH に必要だが、UT-TDD harness binary は project dependency として解決する。
+- rollback 対象には `.ut-tdd/bin/ut-tdd.mjs` を含め、managed adapter と同じく再 setup で復元できる。
+
+## §7 fresh-consumer setup-smoke 契約
+
+L6 contract marker: `runDoctor(input: DoctorOptions) => LintResult` は consumer setup smoke の unit-test-granularity contract である。DbC pre は `setupSmoke === true` のとき dogfood PLAN/design/test-design を要求しないこと、post は project-local wrapper と Claude/Codex adapter hook の存在・JSON parse・portable command を検査すること、oracle は U-SETUP-014 とする。
+
+`--setup-smoke` は `.ut-tdd/bin/ut-tdd.mjs`、adapter docs/config、Claude/Codex hook JSON、Claude/Codex の `agent-guard` / `work-guard` / session lifecycle、Claude `subagent-stop`、および `$CLAUDE_PROJECT_DIR` / global `.codex` 非依存を fail-close で確認する。`emitSetup` の template 解決は `COMMON_FILES.file.path` から `COMMON_FILES.template` を正本として引き、未登録 adapter file が `common/<basename>` に落ちて空ファイルになることを禁止する。
+
+## §8 update-check advisory 契約 (PLAN-L7-362 back-fill)
+
+L6 contract marker: `checkForUpdate(deps: UpdateCheckDeps) => UpdateCheckResult` (`src/setup/update-check.ts`) は導入済み consumer への新 release 通知の unit-test-granularity contract である。DbC pre は無し (**never throws**、全経路 fail-open)、post は `checked=false` のとき `updateAvailable=false` かつ `detail` に fail-open 理由が入ること、oracle は U-UPDCHK-001〜020 とする。
+
+不変条件:
+
+- **advisory であって gate ではない**: remote 不達 / release tag 無し / package.json 欠落のいずれでも throw せず、status / doctor の exit code に影響しない。`UT_TDD_SKIP_UPDATE_CHECK=1` または `CI=true` は remote 問い合わせ自体を止める opt-out (CI / テスト決定論用) で、表示は fail-open と同じ沈黙形。
+- **基準は harness checkout であって consumer cwd ではない**: 投影導入では cwd の package.json / origin が利用者自身のプロジェクトを指すため、local version はモジュール位置から解決した harness root の package.json から読む。CLI `--version` も同一ソースから表示する。
+- **remote の正は明示 override または harness root package.json の `repository.url`** (TL review 所見1): `UT_TDD_UPDATE_CHECK_REMOTE` は fork / mirror / private Pack channel 用の明示 override で、未設定時は `repository.url` を使う。node_modules 配下へベンダリング導入された harness root は自身の `.git` を持たず、remote 名 `origin` は上位 (consumer 自身) の `.git` から誤って解決される。remote 名 `origin` への fallback は harness root 自身が `.git` を持つ場合に限り、どちらも無ければ advisory 沈黙 (consumer の origin を読まない)。`git ls-remote --tags <remote>` は認証不要・timeout 付き。
+- **TTL 24h キャッシュ**: 結果を harness root 側 `.ut-tdd/state/update-check.json` に remote キー付きで保存し、TTL 内かつ remote 一致のときだけ remote へ問い合わせない。壊れた cache は missing 扱い。remote 失敗時はキャッシュを書かず次回再試行する。
+- **表示面は `ut-tdd status` の additive 行**: text は `update:` の 1 行、`--json` は `update` フィールドを additive 付加する (既存フィールド不変、A-138 ITEM-1 / IMP-139 の前例)。CLI 配線は U-UPDCHK-015/016 が固定する。
+- 人間向けの push 通知経路 (GitHub Watch → Custom → Releases) は doc 契約 (setup-guide §4 / README) とし、機構側はこれを代替しない。

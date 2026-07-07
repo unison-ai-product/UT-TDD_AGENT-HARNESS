@@ -32,8 +32,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-25T20:57:43+09:00"
-    tests_green_at: "2026-06-25T20:57:43+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Extract descent-obligation type definitions and default adjacency catalog to a sidecar module while preserving analyzer behavior."
     worker_model: codex
@@ -44,9 +44,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T20:56:09+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/descent-obligation.test.ts
-        output_digest: "sha256:01822bfe073715aab45d69f562d86884b2aa3497585b1031cb088dbf7c9eb589"
+        output_digest: "sha256:4bb1b6918987fa1635d44112a1a9b38b3a32021f062d9e35cf3445234427729e"
       - kind: unit_test
         command: "bun run vitest run tests\\descent-obligation.test.ts"
         runner: bun

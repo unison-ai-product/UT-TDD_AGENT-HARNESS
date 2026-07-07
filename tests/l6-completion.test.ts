@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { analyzeL6Completion, l6CompletionMessages } from "../src/lint/l6-completion";
 
@@ -160,5 +161,26 @@ describe("L6 completion readiness", () => {
 
     expect(result.ready).toBe(true);
     expect(result.draftPlans).toEqual([]);
+  });
+
+  it("cites the screen-spec U-SCREEN oracle family in L6 and L7 docs", () => {
+    const screenSpec = readFileSync(
+      "docs/design/harness/L6-function-design/screen-spec.md",
+      "utf8",
+    );
+    const l7 = readFileSync("docs/test-design/harness/L7-unit-test-design.md", "utf8");
+    const ids = [
+      "U-SCREEN-001",
+      "U-SCREEN-002",
+      "U-SCREEN-003",
+      "U-SCREEN-004",
+      "U-SCREEN-005",
+      "U-SCREEN-006",
+    ];
+
+    for (const id of ids) {
+      expect(screenSpec).toContain(id);
+      expect(l7).toContain(id);
+    }
   });
 });

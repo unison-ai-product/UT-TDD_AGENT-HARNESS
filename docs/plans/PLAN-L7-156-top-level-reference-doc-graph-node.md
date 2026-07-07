@@ -30,8 +30,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-25T17:48:30+09:00"
-    tests_green_at: "2026-06-25T17:47:25+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Materialize tracked top-level reference docs as relation graph design nodes so deletion diffs remain analyzable."
     worker_model: codex
@@ -42,60 +42,46 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T17:46:41+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
-        output_digest: "sha256:2cd13824089171ce59ccceae767e6b6196a46f1cca15452f222829ed2ef53533"
+        output_digest: "sha256:e42d9d2be60e6b383cc51c291009e3e8104f2c60db8dca17737be0cfb3eb34d6"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T17:47:06+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:38742cdac160309248b272d64816e393e784055b4c1cf8977b6f528da43c0491"
+        output_digest: "sha256:7a231cb642507d46f961e0b38fbbd6807c908a3305831a79f235adcbe3152902"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T17:46:51+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:38742cdac160309248b272d64816e393e784055b4c1cf8977b6f528da43c0491"
+        output_digest: "sha256:7a231cb642507d46f961e0b38fbbd6807c908a3305831a79f235adcbe3152902"
       - kind: smoke
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T17:47:25+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/graph/loader.ts
-        output_digest: "sha256:38742cdac160309248b272d64816e393e784055b4c1cf8977b6f528da43c0491"
+        output_digest: "sha256:7a231cb642507d46f961e0b38fbbd6807c908a3305831a79f235adcbe3152902"
 ---
 
-# PLAN-L7-156: top-level reference doc graph node
+# PLAN-L7-156: top-level reference document graph node
 
-## Objective
+## 目的
 
-Prevent the relation graph DB gate from reporting `missing-projection` when a
-tracked top-level reference document is deleted or otherwise changed while the
-file is absent from the working tree.
+tracked top-level reference document が変更または削除されたときに、relation graph DB gate が `missing-projection` を誤って出さないようにする。
 
-> **訂正 (PO 2026-06-25)**: 対象参照 doc を repo 直下から `docs/reference/ai-agent-harness-directory-reference.md`
-> へ移設。loader 定数 `TOP_LEVEL_REFERENCE_DOCS` → `REFERENCE_DOCS` に改称し新パスを指す (本 PLAN 名・objective の
-> "top-level" は歴史的呼称)。node は引き続き materialize される (パスのみ変更)。loader.ts / test 更新に伴う
-> green_commands digest は green 再実行のうえ再整合済。
+## 範囲
 
-## Scope
+`README.md`、`AGENTS.md`、`CLAUDE.md`、`.claude/CLAUDE.md` など、repository root の運用正本を relation graph source set の design node として materialize する。
 
-- Add known top-level tracked reference docs to the relation graph source set as
-  design nodes.
-- Preserve existing process-doc and agent-doc graph coverage.
-- Add fixture and real-repo regression checks for
-  `docs/reference/ai-agent-harness-directory-reference.md`.
+## 受け入れ条件
 
-## Acceptance Criteria
-
-- `docs/reference/ai-agent-harness-directory-reference.md` materializes as a relation graph
-  node even when absent from the fixture repository.
-- Change impact analysis for that path does not emit `missing-projection`.
-- Targeted relation graph loader tests, typecheck, lint, DB rebuild, and doctor
-  pass.
+- 対象 top-level document の change impact が `missing-projection` にならない。
+- `tests/relation-graph-loader.test.ts` が real repo regression fence として通る。

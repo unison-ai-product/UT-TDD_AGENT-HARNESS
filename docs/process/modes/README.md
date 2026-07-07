@@ -27,6 +27,7 @@ Forward (本体) は `../forward/` に定義する。本 dir は **Forward 以�
 | **Discovery** | [discovery.md](discovery.md) | `poc` | 専門職継承 (be/fe/fullstack/db/agent) | `cross` | **S0-S4** | po + tl | — | confirmed → L1 (要求) / L3-L6 設計 (終点で Reverse 昇華) |
 | **Scrum** | [scrum.md](scrum.md) | `poc` | 専門職継承 | `cross` | **S0-S4** | po + aim | — | S4 decide → L1 (increment は Reverse fullback で昇華) |
 | **Reverse** | [reverse.md](reverse.md) | `reverse` | 専門職継承 (逆引き対象) | `cross` | **R0-R4** | tl | po (R3 Intent 検証、§1.8 fail-close) | R4 `forward_routing` → L1/L3/L4/L5/gap-only (schema enum) |
+| **Design-bottomup** | [design-bottomup.md](design-bottomup.md) | `poc` | 専門職継承 (多くは `fe` / `fullstack`) | `cross` | **S0-S4** (Discovery 合成) | aim + uiux | — | backend-derived FE 要件 → L1 screen / L2 画面設計 |
 | **Recovery** | [recovery.md](recovery.md) | `recovery` | 専門職継承 (復旧対象、例 fullstack) | `cross` | **禁止** (phase なし) | tl + po | tl (再開点) + po (スコープ) | 収束後 → 中断工程 / 再発防止 → L14 |
 | **Incident** | [incident.md](incident.md) | `troubleshoot` + `recovery` (内包) | 専門職継承 (障害対象) | `L7` (troubleshoot) / `cross` (recovery) | 禁止 | オンコール + tl + pm | オンコール + tl + pm の三者 | 収束後 → L12/L13 / 恒久対策 → L1-L6 / postmortem → L14 |
 | **Refactor** | [refactor.md](refactor.md) | `refactor` | `be/fe/fullstack/db/agent` | `L7` | 禁止 | se + tl | — | L7 内部改善のみ (L8/L9 を保護網に流用) |
@@ -41,7 +42,7 @@ Forward (本体) は `../forward/` に定義する。本 dir は **Forward 以�
 
 ## 3. 9-mode ecosystem との対応 (concept §2.5)
 
-concept §2.5 の **9-mode** は **Forward + 上表 8 mode (Research を除く)**。本 dir の 9 ファイルは「Forward を除き Research を加えた」構成 (Forward は `../forward/`、Research は §1.3 VALID_KIND / `research/*` ブランチとして mode 化)。
+concept §2.5 の **9-mode** は legacy framing として **Forward + 上表 8 mode (Research を除く)**。本 dir は Forward を `../forward/` に置き、Research / Design-bottomup / version-up を加えた entry-mode 正本カタログとして運用する。
 
 | 区分 | mode |
 |------|------|
@@ -51,6 +52,7 @@ concept §2.5 の **9-mode** は **Forward + 上表 8 mode (Research を除く)*
 | 補助 1 系 | Recovery / Incident |
 | v3.1 新規 | Refactor / Retrofit |
 | 前段調査 | Research (§2.5 9-mode 外。kind/branch として正本) |
+| 9-mode 後の追加 | Design-bottomup / version-up |
 | **工程専門** (mode でない) | screen-design (Forward L2 内) / frontend-design (Forward L10 内) — concept §2.5、独立経路にせず Forward 設計文脈の工程専門として運用 |
 
 ---
@@ -66,6 +68,7 @@ concept §2.5 の **9-mode** は **Forward + 上表 8 mode (Research を除く)*
 | `production_incident` / `hotfix_required` / `regression_prod` (env=prod) | Incident (承認必須) |
 | `feature_addition` / `scope_extension` | Add-feature |
 | `version_deferral` (将来版へ保全) | version-up |
+| `screen_addition_to_backend` / `design_bottomup` / `backend_derived_screen` / `add_ui_to_backend` | Design-bottomup |
 | `user_feedback_iteration` / `requirement_continuous_refinement` | Scrum |
 | 要件未確定 / 実現性不透明 | Discovery |
 
@@ -78,6 +81,9 @@ concept §2.5 の **9-mode** は **Forward + 上表 8 mode (Research を除く)*
 - **出口 = Forward 合流**: どの mode も最終的に L0-L14 へ戻る。mode 固有で設計・テスト・検証を完結させない。
 - **承認境界**: Recovery / prod Incident / config_drift Retrofit は人間サインオフ必須 (§2.6.3、承認者は本台帳列)。
 - **execution mode 参照**: cross-agent review が self-review に化けないよう判断ゲートは `ut-tdd status` の execution mode を参照する (§2.6.4 / §2.1.2.1)。
+- **doc 記載コマンドの実在保証 (PLAN-L7-238)**: docs/process が backtick 引用する `ut-tdd <sub>` の
+  subcommand は CLI に実在しなければならない (`tests/cited-command-existence.test.ts` が CI fail-close)。
+  未実装コマンドを意図的に引用する行は「実装予定」または「未実装」を同一行に明記する。
 - **mode 連鎖**: Discovery 終点 → Reverse 昇華 / Scrum increment → Reverse fullback / Incident・Add-feature の前段に Discovery (要件未確定時) or Reverse (既存逆引き時) / Retrofit の影響評価前段に Reverse (`upgrade`) / Research で「作れるか不明」→ Discovery 切替 / **Add-feature (最頻) の bottom-up build (L6/L7) → 後段 Reverse fullback で L3 要件 back-fill (常態、add-feature.md §1.1 経路 B)**。
 
 ---

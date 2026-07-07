@@ -1,21 +1,21 @@
-# UT-TDD Coding Rules
+# UT-TDD コーディング規約
 
-This document is the coding-rule SSoT for the TypeScript/Bun core.
+本書は TypeScript/Bun core の coding-rule SSoT である。
 Requirements reference: `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` §7.6.1.
-Executable gate: `src/lint/coding-rules.ts` through `ut-tdd doctor`.
+実行ゲート: `src/lint/coding-rules.ts` を `ut-tdd doctor` から実行する。
 
-## Workflow Placement
+## Workflow Placement / workflow 上の位置づけ
 
-Coding-rule documentation is a workflow step, not an after-the-fact CI note.
+coding-rule 文書は workflow step であり、事後の CI note ではない。
 
-- Forward L6: before G6/G7 handoff, confirm `docs/governance/coding-rules.md` is unchanged and still applicable, or update it with the function design delta.
-- Add-feature: the `add-design` PLAN records coding-rule impact; `add-impl` starts only after the rule impact is either `unchanged` or reflected in this SSoT and paired U-CODE tests.
-- Refactor / Retrofit / Recovery / Reverse fullback: any change to implementation language, lint tool, naming, typing, error-handling style, or generated-code boundary updates this SSoT before implementation freeze.
-- Review: `bun run typecheck`, `bun run lint`, `npx vitest run`, and `ut-tdd doctor` must be green before reviewer approval.
+- Forward L6: G6/G7 handoff 前に `docs/governance/coding-rules.md` が不変で現在も適用可能か確認する。差分があれば function design delta として更新する。
+- Add-feature: `add-design` PLAN が coding-rule 影響を記録する。`add-impl` は影響が `unchanged` か、この SSoT と対応 U-CODE tests に反映済みの場合だけ開始する。
+- Refactor / Retrofit / Recovery / Reverse fullback: 実装言語、lint tool、命名、型付け、error-handling style、generated-code boundary を変える場合は implementation freeze 前にこの SSoT を更新する。
+- Review: reviewer approval 前に `bun run typecheck`、`bun run lint`、`npx vitest run`、`ut-tdd doctor` を green にする。
 
-## Machine Policy
+## 機械判定ポリシー
 
-The following block is machine-read by `loadCodingRulePolicy`. Rule IDs must match the lint implementation.
+以下の block は `loadCodingRulePolicy` が機械読取する。Rule ID は lint 実装と一致させる。
 
 ```yaml
 coding_rules:
@@ -29,40 +29,40 @@ coding_rules:
     - id: no-explicit-any
       severity: error
       scope: ["source", "test"]
-      description: "Do not use explicit any; use unknown, generics, or concrete types."
+      description: "explicit any を使わず、unknown、generics、具体型を使う。"
     - id: no-suppression-comment
       severity: error
       scope: ["source", "test"]
-      description: "Do not use TypeScript, ESLint, or Biome suppression comments."
+      description: "TypeScript、ESLint、Biome の suppression comments を使わない。"
     - id: file-name-kebab
       severity: error
       scope: ["source", "test"]
-      description: "TypeScript files must be kebab-case, kebab-case .test.ts, or index.ts."
+      description: "TypeScript ファイル名は kebab-case、kebab-case .test.ts、または index.ts にする。"
     - id: max-source-params
       severity: error
       scope: ["source"]
-      description: "Source functions, methods, constructors, and arrows must have at most 3 params; use an input object otherwise."
+      description: "source の関数、method、constructor、arrow function の引数は最大 3 個とし、それを超える場合は input object を使う。"
     - id: structured-error-handling
       severity: error
       scope: ["source"]
-      description: "Catch blocks must record, convert, return explicit failure state, or document fail-open intent; undocumented empty and rethrow-only catch blocks are prohibited."
+      description: "catch block は記録、変換、明示的な失敗 state の返却、または fail-open intent の文書化を行う。未文書化の空 catch と rethrow-only catch は禁止する。"
     - id: module-boundary
       severity: error
       scope: ["source"]
-      description: "Core modules must not import against the defined dependency direction; move shared logic to lower-level modules."
+      description: "core module は定義済み依存方向に反する import をしてはならない。共有 logic は lower-level module へ移す。"
     - id: machine-surface-language
       severity: error
       scope: ["source", "test"]
-      description: "Machine-facing CLI, doctor, lint, gate, JSON, env, status, and oracle surfaces must use stable ASCII English decision tokens."
+      description: "機械向け CLI、doctor、lint、gate、JSON、env、status、oracle surface は安定した ASCII English decision token を使う。"
 ```
 
-## Machine Surface Language
+## 機械 surface の言語
 
-Machine-readable and machine-parsed surfaces use stable ASCII English tokens.
-Human prose may be Japanese, but the decision word that tools, agents, logs, and
-tests rely on must not depend on Japanese text or symbols.
+機械読取・機械解析される surface は安定した ASCII English token を使う。
+人間向け prose は日本語でよい。ただし tools、agents、logs、tests が依存する判定語は、
+日本語文字列や記号に依存してはいけない。
 
-Required ASCII decision tokens include:
+必須 ASCII 判定 token の例:
 
 - `OK`
 - `violation`
@@ -72,15 +72,15 @@ Required ASCII decision tokens include:
 - `error`
 - `ready` / `not ready`
 
-This applies to CLI output, `doctor` messages, lint/gate messages, JSON keys,
-environment variable names, rule IDs, oracle IDs, status words, and test
-assertions over those surfaces. Japanese explanation may follow the token, but
-the token itself remains ASCII.
+これは CLI output、`doctor` messages、lint/gate messages、JSON keys、
+environment variable names、rule IDs、oracle IDs、status words、およびそれらの
+surface に対する test assertions に適用する。日本語説明は token の後に置けるが、
+token 自体は ASCII のままにする。
 
-## Human Notes
+## 人間向けメモ
 
-- `bun run typecheck`, `bun run lint`, `npx vitest run`, and `ut-tdd doctor` are the minimum verification set for TypeScript core changes.
-- Test helper arity is not capped by `max-source-params`; tests still obey no-any, no suppression comments, and naming rules.
-- Fail-open is allowed only when the catch block returns/records explicit state or documents the fail-open intent in-place; silent catch blocks and rethrow-only catch blocks are not exceptions.
-- Boundary rules are intentionally minimal in v2: `lint` stays pure, `runtime` stays below governance checks, and `schema` stays below feature modules.
-- Exceptions are not inline comments. Add a policy PLAN first, then update this SSoT and the lint tests together.
+- `bun run typecheck`、`bun run lint`、`npx vitest run`、`ut-tdd doctor` は TypeScript core 変更の最小 verification set である。
+- test helper の引数数は `max-source-params` の上限対象外とする。ただし tests も no-any、suppression comment 禁止、命名規則には従う。
+- fail-open は catch block が明示 state を返す/記録する、または fail-open intent をその場に文書化する場合だけ許可する。silent catch block と rethrow-only catch block は例外ではない。
+- boundary rules は v2 では意図的に最小とする。`lint` は pure、`runtime` は governance checks より下位、`schema` は feature modules より下位に置く。
+- 例外は inline comment で処理しない。先に policy PLAN を追加し、この SSoT と lint tests を同時に更新する。

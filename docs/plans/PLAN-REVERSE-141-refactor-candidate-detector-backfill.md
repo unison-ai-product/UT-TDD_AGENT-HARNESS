@@ -61,8 +61,8 @@ dependencies:
 review_evidence:
   - reviewer: codex
     review_kind: cross_agent
-    reviewed_at: "2026-06-26T16:20:00+09:00"
-    tests_green_at: "2026-06-26T16:15:00+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     worker_model: claude-opus-4-8
     reviewer_model: gpt-5.5
@@ -73,9 +73,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-26T16:15:00+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:07fd6b9c6fcbabf2c893a28eb0f49f4da7f83f276b88befdbfd7b8c4b5daee51"
+        output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
       - kind: unit_test
         command: "bunx vitest run tests/forward-convergence.test.ts (L7-147 converged + allowlist 空化 + grandfather 機構注入)"
         runner: bun
@@ -91,7 +91,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-26T16:15:00+09:00"
         evidence_path: docs/governance/forward-convergence-legacy-debt-audit.md
-        output_digest: "sha256:01b7e1df83a2057d4e873c6f287f923d29b51f9f953e888436de259f0ae61b6f"
+        output_digest: "sha256:2d8c4cd731d65778474b64e961f882744721591aa24f6f1a801e2967b9910a4f"
 ---
 
 # PLAN-REVERSE-141: refactor candidate detector の L6/L7 descent back-fill (IMP-146)

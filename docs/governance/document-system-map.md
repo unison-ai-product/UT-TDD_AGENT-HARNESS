@@ -90,10 +90,10 @@ IPA 共通フレーム 2013 (SLCP-JCF) では次が**同義**として扱われ�
 | **L0** 企画 | (FE 固有 doc 無し) | UI を持つ製品か否かの方針は L0 概念で言及 | — | N/A |
 | **L1** 要求定義 | 画面要求 (`screen-requirements`) | 画面一覧 (初期) + 各画面の役割 + UX 横断原則 | ISO 29148 StRS / 画面一覧(初期) | ✓ `L1-requirements/screen-requirements.md` |
 | **L2** 画面設計 | 画面一覧 (`screen-list`) / 画面遷移 (`screen-flow`) / UI 要素 (`ui-element`) / ワイヤーモック (`wireframe`) | 画面の棚卸し + 遷移 + 部品契約 + Low-Fi mock | arc42 §8 / ISO 9241 / 画面設計 + 画面モックアップ作成ガイド | ✓ `L2-screen/*` (G2 freeze 済) |
-| **L3** 要件定義 | **画面/UI の機能要件 + 画面 AC** (`screen-functional`) | 画面の振る舞い・入出力・状態遷移を SyRS/AC として確定 | ISO 29148 SyRS + BDD GWT | **slot 登録済** (`VALID_SUB_DOCS[L3]`、② プロダクト選択)、body 起票は後続 (現 `functional` は BE 中心) |
+| **L3** 要件定義 | **画面/UI の機能要件 + 画面 AC** (`screen-functional`) | 画面の振る舞い・入出力・状態遷移を SyRS/AC として確定 | ISO 29148 SyRS + BDD GWT | **body 起票済**: `docs/design/harness/L3-functional/screen-functional.md` (confirmed, PLAN-L3-06) |
 | **L4** 基本設計 | **UI 設計標準 + UI 部品カタログ + design tokens** (`ui-standard`) | 再利用 FE 設計標準 = `data` (DB 設計標準) の FE 対応物 (§1b) | Nablarch UI標準(画面)/UI部品カタログ/共通コンポーネント設計標準 | ✓ `L4-basic-design/ui-standard.md` + `tokens.yaml` (confirmed) |
-| **L5** 詳細設計 | **FE 内部設計** (`ui-detail`): コンポーネント分割 / 状態管理 / ルーティング / 画面内部処理 | 画面の内部構造を IEEE 1016 SDD 相当で詳細化 | IEEE 1016 SDD / UML | **slot 登録済** (`VALID_SUB_DOCS[L5]`、② プロダクト選択)、body 起票は後続 (現 `L5-detailed-design` は BE module/物理 DB 中心) |
-| **L6** 機能設計 | **per-screen 機能設計** (`screen-spec`): 画面ごとの項目定義 / イベント / バリデーション / 画面内遷移 | 画面 1 枚を関数仕様粒度で確定 (= L7 単体テスト設計の対) | Nablarch システム機能設計書(画面) | **slot 登録済** (`VALID_SUB_DOCS[L6]`、② プロダクト選択)、body 起票は後続 (現 `L6-function-design` は BE 関数中心) |
+| **L5** 詳細設計 | **FE 内部設計** (`ui-detail`): コンポーネント分割 / 状態管理 / ルーティング / 画面内部処理 | 画面の内部構造を IEEE 1016 SDD 相当で詳細化 | IEEE 1016 SDD / UML | **body 起票済**: `docs/design/harness/L5-detailed-design/ui-detail.md` (confirmed, PLAN-L5-09) |
+| **L6** 機能設計 | **per-screen 機能設計** (`screen-spec`): 画面ごとの項目定義 / イベント / バリデーション / 画面内遷移 | 画面 1 枚を関数仕様粒度で確定 (= L7 単体テスト設計の対) | Nablarch システム機能設計書(画面) | **body 起票済**: `docs/design/harness/L6-function-design/screen-spec.md` (confirmed, PLAN-L6-36) |
 | **L7** 実装 | `src/web` 実装コード + FE テストコード | component-derived 実装 (TDD) | ISO 12207 製造 | (L7-141 で未着手) |
 | **L8** 結合テスト | FE 結合テスト設計/実施 (UI↔API/状態境界) | 単体テスト仕様書(画面) 相当 | ISO 29119-3 / 単体テスト仕様書(画面) | `test-design/L8-integration-test-design.md` (FE 観点は未充足) |
 | **L9** 総合テスト | 画面横断 visual/a11y 一貫性の総合テスト | L4 ui-standard の対 (V-pair L4↔L9) | ISO 29119-3 | `test-design/L9-system-test-design.md` (FE 観点は未充足) |
@@ -109,10 +109,12 @@ IPA 共通フレーム 2013 (SLCP-JCF) では次が**同義**として扱われ�
 >
 > | 層 | slug | 区分 | slot | body (起票→作成) |
 > |---|---|---|---|---|
-> | L3 | `screen-functional` | ② プロダクト選択 (UI 有時) | ✓ `VALID_SUB_DOCS[L3]` | 後続 (IMP backlog) |
+> | L3 | `screen-functional` | ② プロダクト選択 (UI 有時) | ✓ `VALID_SUB_DOCS[L3]` | ✓ `docs/design/harness/L3-functional/screen-functional.md` |
 > | L4 | `ui-standard` | ② プロダクト選択 (UI 有時) | ✓ `VALID_SUB_DOCS[L4]` | ✓ `ui-standard.md` (confirmed) |
-> | L5 | `ui-detail` | ② プロダクト選択 (UI 有時) | ✓ `VALID_SUB_DOCS[L5]` | 後続 (IMP backlog) |
-> | L6 | `screen-spec` | ② プロダクト選択 (UI 有時) | ✓ `VALID_SUB_DOCS[L6]` | 後続 (IMP backlog) |
+> | L5 | `ui-detail` | ② プロダクト選択 (UI 有時) | ✓ `VALID_SUB_DOCS[L5]` | ✓ `docs/design/harness/L5-detailed-design/ui-detail.md` |
+> | L6 | `screen-spec` | ② プロダクト選択 (UI 有時) | ✓ `VALID_SUB_DOCS[L6]` | ✓ `docs/design/harness/L6-function-design/screen-spec.md` |
+>
+> **2026-06-30 update (PLAN-L3-06 / PLAN-L5-09 / PLAN-L6-36)**: harness central UI の L3/L5/L6 FE bodies は現時点で存在する。`frontend-design-coverage` は body present 6 / pending 0 を報告し、上記の実 file path を検査する。
 >
 > **残り = body 起票→作成 (作成段階)**: L3 `screen-functional` / L5 `ui-detail` / L6 `screen-spec` の本文は
 > per-layer design PLAN (`kind=design`) で起票し、起票時に各型の必須 § 構造を定義する (`report`/`batch` を
@@ -192,6 +194,6 @@ IPA 共通フレーム 2013 (SLCP-JCF) では次が**同義**として扱われ�
 - IEEE 1016-2009 (SDD): https://standards.ieee.org/ieee/1016/4502/
 - ISO/IEC/IEEE 29119-3:2021 (テスト設計): https://www.iso.org/standard/79429.html
 - BDD / Gherkin (Given-When-Then): Cucumber 公式
-- Bertrand Meyer "Applying Design by Contract" (1992): https://se.inf.ethz.ch/~meyer/publications/computer/contract.pdf
+- Bertrand Meyer「Design by Contract の適用」(1992): https://se.inf.ethz.ch/~meyer/publications/computer/contract.pdf
 - ISO/IEC 25010:2011 SQuaRE (品質特性): concept §3.1.2.1 で IPA × ISO 25010 二軸タグ済
 - NASA SW Engineering Handbook / DO-178C (V&V trace): 双方向 trace の概念根拠

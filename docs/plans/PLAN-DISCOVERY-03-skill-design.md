@@ -8,7 +8,7 @@ scrum_type: design-spike
 drive: fullstack
 status: completed
 decision_outcome: confirmed
-promotion_strategy: redesign  # §4: 決定論 phase-driven recommender は viable → 本実装は L5-06-skill (confirmed) + src/skills/recommend.ts で既に shipped 済。spike は不要だった (production impl が検証 vehicle)。redesign は Reverse 不要 (IMP-066、DISCOVERY-02 と同型)
+promotion_strategy: redesign  # §4: 決定論 phase-driven recommender は viable → 本実装は L5-06-skill (confirmed) + src/skill-engine/recommend.ts で既に shipped 済。spike は不要だった (production impl が検証 vehicle)。redesign は Reverse 不要 (IMP-066、DISCOVERY-02 と同型)
 created: 2026-06-01
 updated: 2026-06-22
 owner: PM (Opus) / PO (人間)
@@ -18,7 +18,7 @@ review_evidence:
     reviewed_at: "2026-06-22"
     tests_green_at: "2026-06-22"
     verdict: pass
-    scope: "PO『1. は対応しろ』(2026-06-22) を受け S2/S3/S4 をクローズ。詰まり② (決定論 phase-driven recommender が sensible な per-phase skill set を出すか) を、throwaway spike でなく **既に shipped 済の production 実装** (src/skills/recommend.ts: recommendSkillsForPlan、layer+drive_model スコアリング、3-bucket、ut-tdd skill suggest CLI、harness.db automation_assets 投影) に対し live 検証。L1/L4/L5/L7 の 4 PLAN で skill suggest を実行: 決定論で per-phase ranked set を出すことを確認 (詰まり② = viable・confirmed)。同時に **score 飽和の限界**を実測 (全 phase で top-5 が score=1 → 同点アルファベット順に退化、L7 lint gate に browser-testing/api が rank4-5 = per-phase 弁別が弱い)。= category/gate タグ粒度で de-saturate する L5/L6 refinement が必要 (§6 既知 carry)。設計は L5-06-skill (confirmed) + L4-12-skill-pack (confirmed) + L7-70-skill-pack-curation (catalog source 空=詰まり① を解消) で既に Forward 確定・実装済ゆえ promotion_strategy=redesign-realized。所見は §5 / DISCOVERY-01 §7.1 に記録。"
+    scope: "PO『1. は対応しろ』(2026-06-22) を受け S2/S3/S4 をクローズ。詰まり② (決定論 phase-driven recommender が sensible な per-phase skill set を出すか) を、throwaway spike でなく **既に shipped 済の production 実装** (src/skill-engine/recommend.ts: recommendSkillsForPlan、layer+drive_model スコアリング、3-bucket、ut-tdd skill suggest CLI、harness.db automation_assets 投影) に対し live 検証。L1/L4/L5/L7 の 4 PLAN で skill suggest を実行: 決定論で per-phase ranked set を出すことを確認 (詰まり② = viable・confirmed)。同時に **score 飽和の限界**を実測 (全 phase で top-5 が score=1 → 同点アルファベット順に退化、L7 lint gate に browser-testing/api が rank4-5 = per-phase 弁別が弱い)。= category/gate タグ粒度で de-saturate する L5/L6 refinement が必要 (§6 既知 carry)。設計は L5-06-skill (confirmed) + L4-12-skill-pack (confirmed) + L7-70-skill-pack-curation (catalog source 空=詰まり① を解消) で既に Forward 確定・実装済ゆえ promotion_strategy=redesign-realized。所見は §5 / DISCOVERY-01 §7.1 に記録。"
     worker_model: claude-opus-4-8
     reviewer_model: claude-opus-4-8
 agent_slots:
@@ -102,7 +102,7 @@ architecture §3.1 skills building block = `loadCatalog()` / `recommendSkill()` 
 
 ### S2 — 検証対象 (production impl、spike 代替)
 
-- `src/skills/recommend.ts`: `recommendSkillsForPlan(db, planId)` = harness.db `automation_assets`
+- `src/skill-engine/recommend.ts`: `recommendSkillsForPlan(db, planId)` = harness.db `automation_assets`
   (skill type、`applies_layers` / `applies_drive_models` / `skill_type` を docs/skills frontmatter から投影)
   を `scoreSkill` でスコア (layer 一致 +0.35 / drive_model 一致 +0.35 / category キーワード review|test|lint 等 +0.25 …)
   → top-N ranked。`bucketRecommendations` で required/recommended/optional の 3-bucket。決定論 (Date/random 不使用)。
@@ -129,7 +129,7 @@ architecture §3.1 skills building block = `loadCatalog()` / `recommendSkill()` 
 ### S4 — 設計確定 (decision_outcome = confirmed)
 
 - **confirmed**: skill module 設計 (catalog scan + 決定論 per-phase recommender + injector) は viable で、
-  既に L5-06-skill / L4-12 / L7-70 + src/skills/recommend.ts として **shipped 済**。S4 = confirmed を記録
+  既に L5-06-skill / L4-12 / L7-70 + src/skill-engine/recommend.ts として **shipped 済**。S4 = confirmed を記録
   (PO は 2026-06-01 に方向確定済 + L5-06 confirmed = 設計判断は既済、本クローズはその bookkeeping)。
 - **promotion_strategy = redesign (realized)**: spike 破棄 → 本実装で再設計、は production 実装で既に達成。
   Reverse 不要 (IMP-066、scrum-reverse REVERSE_EXEMPT_PROMOTION)。
@@ -146,7 +146,7 @@ architecture §3.1 skills building block = `loadCatalog()` / `recommendSkill()` 
 ## §7 DoD (S1→S4)
 
 - [x] **S1**: skill 設計仮説 + 核心的不確実性 (詰まり①②) を §1 に provisional 記述
-- [x] **S2**: spike 代替 = shipped 済 production 実装 (`src/skills/recommend.ts`) を検証 vehicle に採用 (§5)
+- [x] **S2**: spike 代替 = shipped 済 production 実装 (`src/skill-engine/recommend.ts`) を検証 vehicle に採用 (§5)
 - [x] **S3**: 4 phase (L1/L4/L5/L7) で `skill suggest` を live 観察、§5 に記録 (決定論で per-phase set が出る + score 飽和の限界)
 - [x] self-review (intra_runtime_subagent、PM Opus) が検証の信頼性を確認 (single-runtime mode、cross-agent 不在記録)
 - [x] **S4**: `decision_outcome=confirmed` + `promotion_strategy=redesign` (PO 方向確定 2026-06-01 + L5-06 confirmed = 設計既済の bookkeeping クローズ)

@@ -1,10 +1,16 @@
 # A-146 - Consolidated substance-gap remediation audit
 
+> **Superseded-in-part by [A-147](A-147-post-a146-remediation-verification.md) (2026-06-30).**
+> A-147 verifies the post-A-146 remediation stack and re-classifies findings
+> 1/2/3/4/5/6/7/8 as locally remediated. It also records that the earlier Windows provider-spawn
+> regression is fixed locally by `12f7c9e`, while push/CI/release publication remains external.
+> This document stays the point-in-time record at its own baseline.
+
 - **date**: 2026-06-29
 - **scope**: consolidate the independent judge findings across distribution, verification evidence, DB telemetry, design coverage, and drive-model workflow.
 - **basis**: committed HEAD after local remediation through `6d1dc0d test: refresh cli distribution green evidence`.
 - **local status**: `status --json` reports hybrid mode, `nonTerminalPlansByLayer.L7=10`, `activeDraftTotal=0`, `openDefers=0`.
-- **doctor excerpt**: `plan-governance`, `drive-db-registration`, `l14-close-audit`, `l7-completion`, and `review-evidence` OK; `green-command-digest` still reports 16 advisory mismatches across 12 PLANs.
+- **doctor excerpt**: `plan-governance`, `drive-db-registration`, `l14-close-audit`, `l7-completion`, and `review-evidence` OK. After the follow-up evidence rerun and digest binding, `green-command-digest` reports 0 mismatches.
 
 ## Judge verdict
 
@@ -16,13 +22,13 @@ Local closure can be treated as honest only when the claim is scoped as local. F
 
 | id | severity | area | finding | current disposition |
 |---|---|---|---|---|
-| A146-1 | HIGH | distribution | Consumer adapter must ship enforced guard governance, not only roster and command definitions. | Partially remediated in `src/setup/templates.ts`: portable `ut-tdd hook agent-guard`, `work-guard`, and SubagentStop release commands are projected for Claude; Codex work-guard is projected, while Codex agent-guard remains a known deferred surface because Codex subagent semantics differ. |
-| A146-2 | HIGH | distribution / OS | Adapter hooks use bare `ut-tdd`; install flow must ensure `ut-tdd` resolves on consumer PATH. | Remediated in the setup/distribution readiness model and covered by `tests/distribution-acceptance.test.ts`; latest digest evidence refreshed in `6d1dc0d`. Actual public consumer install remains external/post-publication. |
-| A146-3 | HIGH | verification evidence | `green-evidence-integrity=closed` cannot rely on hash restamp alone. Green commands must be re-run and tied to the digest update. | Partially remediated. Runtime telemetry and CLI/distribution evidence were re-run and committed in `304a586` and `6d1dc0d`. Remaining doctor note: 16 mismatches across 12 PLANs. |
+| A146-1 | HIGH | distribution | Consumer adapter must ship enforced guard governance, not only roster and command definitions. | Locally remediated in `src/setup/templates.ts` and `.codex/hooks.json`: portable `ut-tdd hook agent-guard`, `work-guard`, and SubagentStop release commands are projected for Claude; Codex now projects `spawn_agent|spawn_agents_on_csv` through agent-guard and `apply_patch|write_file` through work-guard. Hosted/API tool surfaces remain outside repo-hook interception. |
+| A146-2 | HIGH | distribution / OS | Adapter hooks use bare `ut-tdd`; install flow must ensure `ut-tdd` resolves on consumer PATH. | Locally remediated in the setup/distribution readiness model, README install flow, and package bin contract. `bin.ut-tdd` now points at `./src/cli.ts`, so `bun link` exposes the CLI before a local `dist` build; `runtime-portability` fails if this regresses. Actual public consumer install remains external/post-publication. |
+| A146-3 | HIGH | verification evidence | `green-evidence-integrity=closed` cannot rely on hash restamp alone. Green commands must be re-run and tied to the digest update. | Locally remediated for the known mismatch set. Runtime telemetry and CLI/distribution evidence were re-run in `304a586` and `6d1dc0d`; the remaining projection/doctor/verb-classify evidence was re-run on 2026-06-29 and rebound to actual file hashes. |
 | A146-4 | HIGH | DB registration | Operation telemetry had facade/hollow tables: skill invocations, test runs, guardrail decisions, and model cost/token surfaces were not cleanly separated by runtime provenance. | Partially remediated by `f301c09`, `102706c`, and `674c59f`. `db-telemetry-provenance` no longer appears as partial in doctor, but `test_runs` still reflects projected green-command evidence and requires the L7-188 capture strategy before stronger claims. |
 | A146-5 | MED-HIGH | distribution curation | Blanket `docs/governance/` allowlisting risks leaking dogfood audit/process documents into the clean package. | Open. Requires per-document curation or deny patterns for dogfood audit material. |
-| A146-6 | MED | design coverage | FE design coverage has a strong definition, but L3/L5/L6 FE bodies remain unpopulated or pending; current gate mostly checks presence/drift. | Open and tracked as population/substance work. Not a consumer blocker for using the workflow model, but it blocks claiming full FE design population. |
-| A146-7 | MED | drive/workflow | Drive-model exits are strongly converged, but entry selection (`signal -> mode`, `kind x drive`) remains advisory/presence-side. | Open. Requires machine validation of the kind/drive matrix and signal-to-mode routing. |
+| A146-6 | MED | design coverage | FE design coverage has a strong definition, but L3/L5/L6 FE bodies remain unpopulated or pending; current gate mostly checks presence/drift. | Superseded by A-147: locally remediated through PLAN-L3-06 / PLAN-L5-09 / PLAN-L6-36, `frontend-design-coverage` body present 6 / pending 0, and `U-SCREEN-*` L7 oracle citation. |
+| A146-7 | MED | drive/workflow | Drive-model exits are strongly converged, but entry selection (`signal -> mode`, `kind x drive/layer`) can degrade if authoring metadata is inconsistent. | Partially remediated. `drive` is already constrained to the 5 specialist values and the requirements matrix has no forbidden kind-drive cells; `kind x layer` authoring is now fail-closed for normal PLANs with a `master_hub` exception. `signal -> mode` routing is implemented by `route eval` and is now surfaced through `task classify` as entry-point route metadata; full automatic fail-close at every work-entry surface remains a later integration step. |
 | A146-8 | MED | runtime compatibility | Claude `Agent` matcher may be environment-dependent if standard CLI surfaces subagents as `Task`; guard can silently miss the intended tool. | Open for runtime confirmation. Must not be claimed closed without target-runtime evidence. |
 
 ## Remediation already landed
@@ -46,10 +52,10 @@ Local closure can be treated as honest only when the claim is scoped as local. F
 
 These items block stronger close claims:
 
-- `green-command-digest`: 16 advisory mismatches remain. They must be corrected by re-running the corresponding green commands, not by mechanical restamp.
+- `green-command-digest`: no known mismatches remain after the 2026-06-29 rerun/binding pass. Keep the gate advisory until the L7-188 capture strategy distinguishes runtime test provenance from projected plan evidence.
 - Distribution curation: replace broad governance allowlisting with curated allow/deny policy for clean package docs.
 - Runtime compatibility: confirm Claude subagent hook matcher against the target Claude Code CLI environment.
-- Entry enforcement: implement or explicitly defer machine checks for `kind x drive` and `signal -> mode`.
+- Entry enforcement: `kind x layer` is now machine-checked for normal PLAN authoring; `task classify` now exposes `signal -> mode` route metadata so generic task entry cannot hide the route result. Remaining work is to make every work-entry surface fail-close on that route contract where appropriate.
 - FE population: fill FE L3/L5/L6 bodies and add a substance check, or keep the gap explicitly open.
 - External operations: clean GitHub repo creation, tag push, signed tarball publish, release/UAT evidence, and post-publication consumer smoke remain external/human gated.
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { recommendedCommandV1Schema } from "../src/schema/index";
+import { routeSignalCandidates } from "../src/schema/route-map";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import {
@@ -162,10 +163,13 @@ describe("L7 workflow contract implementations", () => {
   });
 
   it("implements routing, workflow, FE/design, asset, model, drive, skill, and command contracts", () => {
+    expect(routeSignalCandidates("feature_addition")).toEqual(["add-feature"]);
+    expect(routeSignalCandidates("version_deferral")).toEqual(["version-up"]);
     expect(routeSignalToMode({ signal: "reverse gap" }).candidates).toEqual(["reverse"]);
     expect(routeSignalToMode({ signal: "drift", drive: "agent" }).candidates[0]).toBe("reverse");
     expect(routeSignalToMode({ signal: "regression_prod" }).candidates[0]).toBe("incident");
     expect(routeSignalToMode({ signal: "new_requirement" }).candidates[0]).toBe("add-feature");
+    expect(routeSignalToMode({ signal: "version_deferral" }).candidates[0]).toBe("version-up");
     const routeEval = evaluateRouteCommand({ signal: "reverse gap" });
     expect(routeEval.mode).toBe("reverse");
     expect(routeEval.exit_code).toBe(0);
@@ -204,13 +208,80 @@ describe("L7 workflow contract implementations", () => {
     expect(driftRoute.recommended_command?.args).toMatchObject({ drift_type: "schema" });
     const additiveInterruptRoute = evaluateRouteCommand({ signal: "new_requirement" });
     expect(additiveInterruptRoute.mode).toBe("add-feature");
+    const versionDeferralRoute = evaluateRouteCommand({ signal: "version_deferral" });
+    expect(versionDeferralRoute.exit_code).toBe(0);
+    expect(versionDeferralRoute.mode).toBe("version-up");
+    expect(versionDeferralRoute.recommended_command?.command).toBe("ut-tdd task classify");
+    expect(versionDeferralRoute.recommended_command?.args).toMatchObject({
+      signal: "version_deferral",
+      mode: "version-up",
+    });
+    for (const findingType of ["regression", "premise-gap", "deviation"]) {
+      const findingRoute = evaluateRouteCommand({
+        signal: `audit finding ${findingType}`,
+        finding_type: findingType,
+      });
+      expect(findingRoute.mode).toBe("recovery");
+      expect(findingRoute.exit_code).toBe(1);
+      expect(findingRoute.approval.required).toBe(true);
+      expect(findingRoute.recommended_command?.safety.requires_human_approval).toBe(true);
+      expect(findingRoute.recommended_command?.args).toMatchObject({
+        route_signal: "regression_dev",
+        finding_type: findingType,
+        source_signal: `audit finding ${findingType}`,
+      });
+      expect(findingRoute.finding_route).toMatchObject({
+        finding_type: findingType,
+        mode: "recovery",
+        route_signal: "regression_dev",
+        proposed_plan_prefix: "PLAN-RECOVERY-",
+        auto_create: false,
+      });
+      expect(findingRoute.finding_route?.required_recovery_fields).toContain("root_cause");
+      expect(findingRoute.finding_route?.required_recovery_fields).toContain("l14_route");
+    }
+    const approvedFindingRoute = evaluateRouteCommand({
+      signal: "A-144 VER-1 premise-gap",
+      approval_policy: {
+        rules: [{ mode: "recovery", required_approvers: ["tl", "po"] }],
+        approvals: [
+          { mode: "recovery", approver: "tl", approved_at: "2026-07-01T00:00:00.000Z" },
+          { mode: "recovery", approver: "po", approved_at: "2026-07-01T00:00:00.000Z" },
+        ],
+      },
+    });
+    expect(approvedFindingRoute.exit_code).toBe(0);
+    expect(approvedFindingRoute.finding_route?.finding_type).toBe("premise-gap");
+    expect(approvedFindingRoute.recommended_command?.safety.auto_apply).toBe(false);
+    const featureGapRoute = evaluateRouteCommand({ signal: "feature-gap adapter portability" });
+    expect(featureGapRoute.mode).toBe("add-feature");
+    expect(featureGapRoute.exit_code).toBe(0);
+    expect(featureGapRoute.finding_route).toMatchObject({
+      finding_type: "feature-gap",
+      mode: "add-feature",
+      route_signal: "feature_addition",
+      auto_create: false,
+    });
+    const latentDefectRoute = evaluateRouteCommand({ signal: "latent-defect hook coverage" });
+    expect(latentDefectRoute.mode).toBe("add-feature");
+    expect(latentDefectRoute.finding_route?.finding_type).toBe("latent-defect");
+    const smellRoute = evaluateRouteCommand({ signal: "smell duplicated routing table" });
+    expect(smellRoute.mode).toBe("refactor");
+    expect(smellRoute.exit_code).toBe(0);
+    expect(smellRoute.finding_route).toMatchObject({
+      finding_type: "smell",
+      mode: "refactor",
+      route_signal: "code_smell",
+      proposed_plan_prefix: "PLAN-REFACTOR-",
+      auto_create: false,
+    });
     const legacyCommandRoute = evaluateRouteCommand({
       signal: "legacy override",
       route_map: [
         {
           tokens: ["legacy"],
           mode: "reverse",
-          command: "helix reverse",
+          command: "legacy-cli reverse",
           preflight: true,
           requiresApproval: false,
         },
@@ -479,6 +550,9 @@ routes:
   - signal: feature_addition
     mode: add-feature
     priority: 1
+  - signal: version_deferral
+    mode: version-up
+    priority: 1
 `;
     const validGateChecks = `
 gates:
@@ -505,6 +579,7 @@ gates:
     expect(valid.mode_routing?.routes.map((route) => route.mode)).toEqual([
       "reverse",
       "add-feature",
+      "version-up",
     ]);
     expect(valid.gate_checks?.gates.G8?.[0]?.next_action.command).toBe("ut-tdd doctor");
 
@@ -547,7 +622,10 @@ routes:
 
     const legacyCommand = validateDContractDsl({
       modeRoutingText: validModeRouting,
-      gateChecksText: validGateChecks.replace("command: ut-tdd doctor", "command: helix doctor"),
+      gateChecksText: validGateChecks.replace(
+        "command: ut-tdd doctor",
+        "command: legacy-cli doctor",
+      ),
       requiredGateIds: ["G8"],
     });
     expect(legacyCommand.ok).toBe(false);

@@ -10,43 +10,43 @@ updated: 2026-06-29
 review_evidence:
   - reviewer: PM (Opus) verification (intra_runtime_subagent)
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-22"
-    tests_green_at: "2026-06-22"
+    reviewed_at: "2026-07-01T20:13:00+09:00"
+    tests_green_at: "2026-07-01T20:12:00+09:00"
     green_commands:
       - kind: unit_test
-        command: "bun run vitest run tests\\l14-close-audit.test.ts tests\\g10-ux-workflow.test.ts tests\\screen-impl-pair-freeze.test.ts tests\\projection-writer.test.ts"
+        command: "bun run vitest run tests\\l14-close-audit.test.ts tests\\review-evidence.test.ts tests\\green-command-digest.test.ts tests\\readability.test.ts --reporter=dot"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-22"
+        completed_at: "2026-07-01T16:36:09+09:00"
         evidence_path: tests/l14-close-audit.test.ts
-        output_digest: "sha256:f56e95465953055275181612fa5957a211c46e35351b1814818a105256c647fd"
+        output_digest: "sha256:a442720b163c726b4ec1945427ac2a22bffddfcbdf3f160337ee178fa2fd3084"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-22"
+        completed_at: "2026-07-01T16:36:09+09:00"
         evidence_path: src/lint/l14-close-audit.ts
-        output_digest: "sha256:23fc46a39a0ddeaaecd33e69aa4dfa6b9ba61dfa98a840434567cd736f84da47"
+        output_digest: "sha256:575789f0bcac6c7971ae5bf7fdf12f6a28d330a795c4eb01c8f1b79bb87e8419"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-22"
+        completed_at: "2026-07-01T16:36:09+09:00"
         evidence_path: src/lint/l14-close-audit.ts
-        output_digest: "sha256:23fc46a39a0ddeaaecd33e69aa4dfa6b9ba61dfa98a840434567cd736f84da47"
+        output_digest: "sha256:575789f0bcac6c7971ae5bf7fdf12f6a28d330a795c4eb01c8f1b79bb87e8419"
       - kind: doctor
-        command: "bun run src\\cli.ts doctor"
+        command: "bun src\\cli.ts doctor"
         runner: bun
         scope: gate
         exit_code: 0
-        completed_at: "2026-06-22"
+        completed_at: "2026-07-01T20:11:00+09:00"
         evidence_path: .ut-tdd/audit/A-143-l14-close-system-foundation-audit.md
-        output_digest: "sha256:6c1e5e828366a5cb8621469e4586f82b3f39f89203883e14f761033a97df0e98"
+        output_digest: "sha256:c4a0f96a28f9bffc5b55b939edbf7b499205b30d481027fdeeff6a997bc68386"
     verdict: pass
-    scope: "add-design 増分 (telemetry / self-improvement closure audit + 4 lint + dynamic skill recommender) の status drift (src merge 済なのに draft 放置) を解消し confirmed 化。成果物 src/lint/{telemetry-closure,cycle-p4-verification,skill-assignment,project-hook}.ts + src/skills/recommend.ts + src/doctor 配線 + 6 test は 2026-06-12 (239cb32) で merge 済。機械再検証: ①全 src module 実在 ②doctor の hard gate として稼働 (skill-assignment hard gate / Cycle P4 closure audit hard gate / telemetry-closure 各 doctor refs ≥3) ③skills/recommend は cli.ts + workflow/contracts.ts に配線 ④Vitest 787/787 green / doctor EXIT=0。AC §3 (A-134 audit / doctor が non-closed rows を surface / 各 self-improvement 領域が evidence 無しでは closed にできない fail-close) は merged + wired + tested で充足。"
+    scope: "add-design 増分 (telemetry / self-improvement closure audit + 4 lint + dynamic skill recommender) の status drift (src merge 済なのに draft 放置) を解消し confirmed 化。成果物 src/lint/{telemetry-closure,cycle-p4-verification,skill-assignment,project-hook}.ts + src/skill-engine/recommend.ts + src/doctor 配線 + 6 test は 2026-06-12 (239cb32) で merge 済。機械再検証: ①全 src module 実在 ②doctor の hard gate として稼働 (skill-assignment hard gate / Cycle P4 closure audit hard gate / telemetry-closure 各 doctor refs ≥3) ③skill-engine/recommend は cli.ts + workflow/contracts.ts に配線 ④Vitest 787/787 green / doctor EXIT=0。AC §3 (A-134 audit / doctor が non-closed rows を surface / 各 self-improvement 領域が evidence 無しでは closed にできない fail-close) は merged + wired + tested で充足。"
     worker_model: claude-opus-4-8
     reviewer_model: claude-opus-4-8
 agent_slots:
@@ -61,6 +61,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: .ut-tdd/audit/A-143-l14-close-system-foundation-audit.md
     artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-155-green-command-digest-rebind-2026-07-01.md
+    artifact_type: markdown_doc
   - artifact_path: src/lint/telemetry-closure.ts
     artifact_type: source_module
   - artifact_path: src/lint/cycle-p4-verification.ts
@@ -71,7 +73,7 @@ generates:
     artifact_type: source_module
   - artifact_path: src/lint/project-hook.ts
     artifact_type: source_module
-  - artifact_path: src/skills/recommend.ts
+  - artifact_path: src/skill-engine/recommend.ts
     artifact_type: source_module
   - artifact_path: src/doctor/index.ts
     artifact_type: source_module
@@ -89,7 +91,7 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/skill-assignment.test.ts
     artifact_type: test_code
-  - artifact_path: docs/skills/review-checklist.yaml
+  - artifact_path: skills/review-checklist.yaml
     artifact_type: skill_doc
 dependencies:
   parent: docs/plans/PLAN-L3-00-master.md

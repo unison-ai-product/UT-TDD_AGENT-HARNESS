@@ -52,7 +52,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-29T12:09:30+09:00"
         evidence_path: tests/workflow-contracts.test.ts
-        output_digest: "sha256:1bbf522aeef22c2bc258bd92cd102fda3c5a2315d257cf4fd95f939034bf7692"
+        output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
 ---
 
 # PLAN-L7-178: D-CONTRACT DSL G8 evidence closure

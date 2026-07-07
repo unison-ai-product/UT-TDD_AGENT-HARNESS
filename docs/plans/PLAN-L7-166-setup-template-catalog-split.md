@@ -32,8 +32,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-25T20:49:29+09:00"
-    tests_green_at: "2026-06-25T20:49:29+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Extract setup built-in templates and common file catalog to a sidecar module while preserving setup behavior."
     worker_model: codex
@@ -44,41 +44,41 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T20:48:29+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
-        output_digest: "sha256:64b15536b25c4b174d842c60e8568f6144d53d8689be9934025b701cb3de5666"
+        output_digest: "sha256:f2a4f438552f76da5592e2002a92e5a64b28dc82fe643c08e7c182f61944569f"
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T20:48:29+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:f4600980db7852b3a068338c9d5550e2afcef41a57cd9a8fe9bfc7a57e5de321"
+        output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T20:48:29+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/templates.ts
-        output_digest: "sha256:be9e51b240117cddc4d0032e77bb57527118df55849066dde1580329f88efdda"
+        output_digest: "sha256:be6c00ee9b0794f02d95717d3bbebe4f869fb1c5c457417cd566cc462aa57e28"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T20:48:53+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
-        output_digest: "sha256:f4600980db7852b3a068338c9d5550e2afcef41a57cd9a8fe9bfc7a57e5de321"
+        output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T20:48:55+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/templates.ts
-        output_digest: "sha256:be9e51b240117cddc4d0032e77bb57527118df55849066dde1580329f88efdda"
+        output_digest: "sha256:be6c00ee9b0794f02d95717d3bbebe4f869fb1c5c457417cd566cc462aa57e28"
 ---
 
 # PLAN-L7-166: setup template catalog split

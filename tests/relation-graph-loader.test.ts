@@ -15,10 +15,14 @@ import {
 // の edge を生む source set を返すこと、純関数と結合して impact/export が動くことを検証する。
 function buildRepo(root: string): void {
   mkdirSync(join(root, "docs", "plans"), { recursive: true });
+  mkdirSync(join(root, "docs", "adr"), { recursive: true });
   mkdirSync(join(root, "docs", "design", "harness"), { recursive: true });
+  mkdirSync(join(root, "docs", "governance"), { recursive: true });
   mkdirSync(join(root, "docs", "process", "modes"), { recursive: true });
+  mkdirSync(join(root, "skills"), { recursive: true });
   mkdirSync(join(root, "docs", "test-design", "harness"), { recursive: true });
   mkdirSync(join(root, ".claude", "agents"), { recursive: true });
+  mkdirSync(join(root, ".codex"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "evidence", "g8-integration"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "evidence", "g9-system"), { recursive: true });
   mkdirSync(join(root, ".ut-tdd", "evidence", "g10-ux"), { recursive: true });
@@ -27,6 +31,26 @@ function buildRepo(root: string): void {
   mkdirSync(join(root, "src", "widget"), { recursive: true });
   mkdirSync(join(root, "tests"), { recursive: true });
 
+  writeFileSync(
+    join(root, "docs", "adr", "ADR-001-test-decision.md"),
+    ["# ADR-001 Test Decision", "", "Fixture ADR body.", ""].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(root, "docs", "governance", "README.md"),
+    ["# Governance", "", "Fixture governance README body.", ""].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(root, "docs", "governance", "gate-design.md"),
+    ["# Gate Design", "", "Fixture governance gate body.", ""].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(root, "docs", "governance", "ai-dev-team-concept_v1.1.md"),
+    ["# AI Dev Team Concept", "", "Fixture governance concept body.", ""].join("\n"),
+    "utf8",
+  );
   writeFileSync(
     join(root, "docs", "plans", "PLAN-TEST-01-widget.md"),
     [
@@ -90,6 +114,11 @@ function buildRepo(root: string): void {
     "utf8",
   );
   writeFileSync(
+    join(root, "skills", "SKILL_MAP.md"),
+    ["# Skill Map", "", "Fixture skill catalog body.", ""].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
     join(root, ".claude", "agents", "refactor-scout.md"),
     ["---", "name: refactor-scout", "model: haiku", "---", "", "agent prompt body", ""].join("\n"),
     "utf8",
@@ -148,6 +177,11 @@ function buildRepo(root: string): void {
     ["root = true", "", "[*]", "charset = utf-8", ""].join("\n"),
     "utf8",
   );
+  writeFileSync(
+    join(root, ".codex", "hooks.json"),
+    JSON.stringify({ hooks: { PreToolUse: [] } }, null, 2),
+    "utf8",
+  );
   writeFileSync(join(root, "README.md"), "# Fixture README\n", "utf8");
 }
 
@@ -155,6 +189,7 @@ describe("loadRelationGraphSourceSet", () => {
   it("builds a source set with plan→source, source→test, design→test-design edges", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-"));
     try {
+      // U-GRAPH-001
       buildRepo(root);
       const sourceSet = loadRelationGraphSourceSet(root);
 
@@ -184,6 +219,18 @@ describe("loadRelationGraphSourceSet", () => {
       expect(agentDoc).toMatchObject({
         id: ".claude/agents/refactor-scout.md",
         path: ".claude/agents/refactor-scout.md",
+      });
+      const skillMapDoc = sourceSet.designDocs?.find((d) => d.path === "skills/SKILL_MAP.md");
+      expect(skillMapDoc).toMatchObject({
+        id: "skills/SKILL_MAP.md",
+        path: "skills/SKILL_MAP.md",
+      });
+      const adrDoc = sourceSet.designDocs?.find(
+        (d) => d.path === "docs/adr/ADR-001-test-decision.md",
+      );
+      expect(adrDoc).toMatchObject({
+        id: "docs/adr/ADR-001-test-decision.md",
+        path: "docs/adr/ADR-001-test-decision.md",
       });
       const reviewDoc = sourceSet.designDocs?.find(
         (d) => d.path === ".ut-tdd/review/cross-review-l7-157.md",
@@ -234,6 +281,27 @@ describe("loadRelationGraphSourceSet", () => {
         id: "docs/governance/repository-structure.md",
         path: "docs/governance/repository-structure.md",
       });
+      const governanceReadmeDoc = sourceSet.designDocs?.find(
+        (d) => d.path === "docs/governance/README.md",
+      );
+      expect(governanceReadmeDoc).toMatchObject({
+        id: "docs/governance/README.md",
+        path: "docs/governance/README.md",
+      });
+      const governanceGateDoc = sourceSet.designDocs?.find(
+        (d) => d.path === "docs/governance/gate-design.md",
+      );
+      expect(governanceGateDoc).toMatchObject({
+        id: "docs/governance/gate-design.md",
+        path: "docs/governance/gate-design.md",
+      });
+      const governanceConceptDoc = sourceSet.designDocs?.find(
+        (d) => d.path === "docs/governance/ai-dev-team-concept_v1.1.md",
+      );
+      expect(governanceConceptDoc).toMatchObject({
+        id: "docs/governance/ai-dev-team-concept_v1.1.md",
+        path: "docs/governance/ai-dev-team-concept_v1.1.md",
+      });
       const readmeDoc = sourceSet.designDocs?.find((d) => d.path === "README.md");
       expect(readmeDoc).toMatchObject({
         id: "README.md",
@@ -269,6 +337,16 @@ describe("loadRelationGraphSourceSet", () => {
         "design:.claude/agents/refactor-scout.md",
       );
       expect(agentImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
+      const adrImpact = analyzeRelationImpact({
+        changedPaths: ["docs/adr/ADR-001-test-decision.md"],
+        projection,
+      });
+      expect(adrImpact.ok).toBe(true);
+      expect(adrImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:docs/adr/ADR-001-test-decision.md",
+      );
+      expect(adrImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
       const reviewImpact = analyzeRelationImpact({
         changedPaths: [".ut-tdd/review/cross-review-l7-157.md"],
@@ -339,6 +417,26 @@ describe("loadRelationGraphSourceSet", () => {
         "design:docs/governance/repository-structure.md",
       );
       expect(governanceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+      const governanceReadmeImpact = analyzeRelationImpact({
+        changedPaths: ["docs/governance/README.md"],
+        projection,
+      });
+      expect(governanceReadmeImpact.ok).toBe(true);
+      expect(governanceReadmeImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:docs/governance/README.md",
+      );
+      expect(governanceReadmeImpact.findings.map((f) => f.code)).not.toContain(
+        "missing-projection",
+      );
+      const governanceGateImpact = analyzeRelationImpact({
+        changedPaths: ["docs/governance/gate-design.md"],
+        projection,
+      });
+      expect(governanceGateImpact.ok).toBe(true);
+      expect(governanceGateImpact.changedNodes.map((n) => n.id)).toContain(
+        "design:docs/governance/gate-design.md",
+      );
+      expect(governanceGateImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
       const readmeImpact = analyzeRelationImpact({
         changedPaths: ["README.md"],
@@ -355,6 +453,14 @@ describe("loadRelationGraphSourceSet", () => {
       expect(editorconfigImpact.ok).toBe(true);
       expect(editorconfigImpact.changedNodes.map((n) => n.id)).toContain("design:.editorconfig");
       expect(editorconfigImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+
+      const codexHooksImpact = analyzeRelationImpact({
+        changedPaths: [".codex/hooks.json"],
+        projection,
+      });
+      expect(codexHooksImpact.ok).toBe(true);
+      expect(codexHooksImpact.changedNodes.map((n) => n.id)).toContain("design:.codex/hooks.json");
+      expect(codexHooksImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
 
       // export: mermaid is always emittable and contains the changed source node
       const diagram = exportRelationDiagram({ snapshot: projection, format: "mermaid" });
@@ -416,6 +522,19 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
       "design:.claude/agents/refactor-scout.md",
     );
     expect(agentImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    for (const path of [".claude/commands/ut-tdd-status.md", ".claude/commands/ut-tdd-test.md"]) {
+      const impact = analyzeRelationImpact({ changedPaths: [path], projection });
+      expect(impact.ok).toBe(true);
+      expect(impact.changedNodes.map((n) => n.id)).toContain(`design:${path}`);
+      expect(impact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    }
+    const skillMapImpact = analyzeRelationImpact({
+      changedPaths: ["skills/SKILL_MAP.md"],
+      projection,
+    });
+    expect(skillMapImpact.ok).toBe(true);
+    expect(skillMapImpact.changedNodes.map((n) => n.id)).toContain("design:skills/SKILL_MAP.md");
+    expect(skillMapImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const adapterAgentImpact = analyzeRelationImpact({
       changedPaths: ["docs/templates/adapter/.claude/agents/ut-tdd-tl.md"],
       projection,
@@ -443,6 +562,42 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
       "design:docs/templates/adapter/.codex/hooks.json",
     );
     expect(adapterCodexHookImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const adr001Impact = analyzeRelationImpact({
+      changedPaths: ["docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md"],
+      projection,
+    });
+    expect(adr001Impact.ok).toBe(true);
+    expect(adr001Impact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md",
+    );
+    expect(adr001Impact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const adr005Impact = analyzeRelationImpact({
+      changedPaths: ["docs/adr/ADR-005-distribution-model-and-central-ui.md"],
+      projection,
+    });
+    expect(adr005Impact.ok).toBe(true);
+    expect(adr005Impact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/adr/ADR-005-distribution-model-and-central-ui.md",
+    );
+    expect(adr005Impact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const governanceReadmeImpact = analyzeRelationImpact({
+      changedPaths: ["docs/governance/README.md"],
+      projection,
+    });
+    expect(governanceReadmeImpact.ok).toBe(true);
+    expect(governanceReadmeImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/governance/README.md",
+    );
+    expect(governanceReadmeImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const documentSystemMapImpact = analyzeRelationImpact({
+      changedPaths: ["docs/governance/document-system-map.md"],
+      projection,
+    });
+    expect(documentSystemMapImpact.ok).toBe(true);
+    expect(documentSystemMapImpact.changedNodes.map((n) => n.id)).toContain(
+      "design:docs/governance/document-system-map.md",
+    );
+    expect(documentSystemMapImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
     const reviewImpact = analyzeRelationImpact({
       changedPaths: [".ut-tdd/review/cross-review-l7-157.md"],
       projection,
@@ -506,6 +661,26 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
       "design:docs/governance/repository-structure.md",
     );
     expect(governanceImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    for (const path of [
+      "docs/governance/ai-dev-team-concept_v1.1.md",
+      "docs/governance/ai-dev-team-operations_v1.1.md",
+      "docs/governance/audit-framework.md",
+      "docs/governance/coding-rules.md",
+      "docs/governance/conditional-backfill-decision-audit-2026-06-22.md",
+      "docs/governance/ddd-tdd-rules.md",
+      "docs/governance/forward-convergence-legacy-debt-audit.md",
+      "docs/governance/gate-design.md",
+      "docs/governance/reverse-fullback-backprop-audit-2026-06-22.md",
+      "docs/governance/runtime-parity-l0-l3-design-audit-2026-06-02.md",
+      "docs/governance/ut-tdd-agent-harness-concept_v3.1.md",
+      "docs/governance/ut-tdd-agent-harness-extraction-plan_v0.1.md",
+      "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
+    ]) {
+      const impact = analyzeRelationImpact({ changedPaths: [path], projection });
+      expect(impact.ok).toBe(true);
+      expect(impact.changedNodes.map((n) => n.id)).toContain(`design:${path}`);
+      expect(impact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    }
     const readmeImpact = analyzeRelationImpact({
       changedPaths: ["README.md"],
       projection,
@@ -513,6 +688,12 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     expect(readmeImpact.ok).toBe(true);
     expect(readmeImpact.changedNodes.map((n) => n.id)).toContain("design:README.md");
     expect(readmeImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    for (const path of ["AGENTS.md", "CLAUDE.md", ".claude/CLAUDE.md"]) {
+      const impact = analyzeRelationImpact({ changedPaths: [path], projection });
+      expect(impact.ok).toBe(true);
+      expect(impact.changedNodes.map((n) => n.id)).toContain(`design:${path}`);
+      expect(impact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    }
     const editorconfigImpact = analyzeRelationImpact({
       changedPaths: [".editorconfig"],
       projection,
@@ -520,5 +701,12 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     expect(editorconfigImpact.ok).toBe(true);
     expect(editorconfigImpact.changedNodes.map((n) => n.id)).toContain("design:.editorconfig");
     expect(editorconfigImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    const codexHooksImpact = analyzeRelationImpact({
+      changedPaths: [".codex/hooks.json"],
+      projection,
+    });
+    expect(codexHooksImpact.ok).toBe(true);
+    expect(codexHooksImpact.changedNodes.map((n) => n.id)).toContain("design:.codex/hooks.json");
+    expect(codexHooksImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
   });
 });

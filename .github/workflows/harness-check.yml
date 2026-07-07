@@ -6,9 +6,9 @@
 # 本 workflow は §6.5 Phase 0-A 相当 (配備するが Required 化はしない / solo)。
 # トリガは §6.9 の `pull_request: [main]` に加え、solo main 直開発を即 dogfood するため `push: [main]` も含める。
 #
-# 現状実装される subjob = typecheck + 全回帰 (vitest) + biome lint + doctor。
-# 以下は negative carry (実装後に subjob 追加):
-#   - commitlint / poc-no-merge-guard / hotfix-postmortem-required 等 §6.3 の branch-type subjob: PLAN で追加
+# 現状実装される subjob = branch-type guard + typecheck + db rebuild + 全回帰 (vitest) + biome lint + audit quality + doctor。
+# この source workflow の `bun run test` / raw vitest 全量回帰は source-only governance docs を前提にする。
+# clean Pack workflow は `docs/templates/github/common/pack-harness-check.yml` の Pack smoke test と setup-smoke doctor を使う。
 name: harness-check
 
 on:
@@ -39,6 +39,22 @@ jobs:
       - name: install deps (frozen)
         run: bun install --frozen-lockfile
 
+      - name: branch-type guard (commitlint / poc / hotfix)
+        env:
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
+          BASE_REF: ${{ github.base_ref || 'main' }}
+          PR_TITLE: ${{ github.event.pull_request.title || github.event.head_commit.message || '' }}
+          PR_BODY: ${{ github.event.pull_request.body || '' }}
+        run: |
+          printf '%s\n' "$PR_BODY" > .ut-tdd-pr-body.txt
+          git log --format=%s -n 20 > .ut-tdd-commit-subjects.txt
+          bun src/cli.ts github guard \
+            --head-ref "$HEAD_REF" \
+            --base-ref "$BASE_REF" \
+            --pr-title "$PR_TITLE" \
+            --pr-body-file .ut-tdd-pr-body.txt \
+            --commit-file .ut-tdd-commit-subjects.txt
+
       - name: typecheck (tsc --noEmit)
         run: bun run typecheck
 
@@ -50,6 +66,9 @@ jobs:
 
       - name: lint (biome)
         run: bun run lint
+
+      - name: audit quality (gate findings)
+        run: bun src/cli.ts audit quality --include-tests --limit 20
 
       - name: doctor (governance hard gates)
         run: bun src/cli.ts doctor

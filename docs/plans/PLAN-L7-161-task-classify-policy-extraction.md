@@ -46,7 +46,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:37:29+09:00"
         evidence_path: tests/task-classify.test.ts
-        output_digest: "sha256:5f3b411831eaf5df7f40ac95cce1623fd7f47b85ebc2ff6012b53b5610dd519d"
+        output_digest: "sha256:4354ec1766680c77a56569eb7c6fbfafdff3b568beafed6092c3da2a8375b075"
       - kind: unit_test
         command: "bun run vitest run tests\\task-classify.test.ts"
         runner: bun
@@ -54,7 +54,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:37:29+09:00"
         evidence_path: src/task/classify.ts
-        output_digest: "sha256:33574ac2f312fdc154f7aef077c47a89d433e9093b077f8e9dc93ff45502f10f"
+        output_digest: "sha256:a0e452625be7f0d0c0df7c0f89059989cb203b177edb9afd7ba27c29a0efe158"
       - kind: unit_test
         command: "bun run vitest run tests\\task-classify.test.ts"
         runner: bun
@@ -70,7 +70,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:39:00+09:00"
         evidence_path: src/task/classify.ts
-        output_digest: "sha256:33574ac2f312fdc154f7aef077c47a89d433e9093b077f8e9dc93ff45502f10f"
+        output_digest: "sha256:a0e452625be7f0d0c0df7c0f89059989cb203b177edb9afd7ba27c29a0efe158"
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -78,7 +78,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T19:39:00+09:00"
         evidence_path: tests/task-classify.test.ts
-        output_digest: "sha256:5f3b411831eaf5df7f40ac95cce1623fd7f47b85ebc2ff6012b53b5610dd519d"
+        output_digest: "sha256:4354ec1766680c77a56569eb7c6fbfafdff3b568beafed6092c3da2a8375b075"
 ---
 
 # PLAN-L7-161: task classify policy extraction

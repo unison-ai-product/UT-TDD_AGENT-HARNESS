@@ -47,7 +47,7 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/design/harness/L6-function-design/function-spec.md
     artifact_type: design_doc
-  - artifact_path: src/skills/recommend.ts
+  - artifact_path: src/skill-engine/recommend.ts
     artifact_type: source_module
   - artifact_path: src/runtime/adapter.ts
     artifact_type: source_module
@@ -66,8 +66,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-23T18:42:32+09:00"
-    tests_green_at: "2026-06-23T18:42:32+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Reverse fullback for skill injection materialization."
     worker_model: codex
@@ -78,9 +78,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-23T18:42:32+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/skill-recommend.test.ts
-        output_digest: "sha256:5ff2a93bed92158fd45d452d57bc26f9594b9051bf00947f6f918b4aeb1f4df1"
+        output_digest: "sha256:d81427f0e99ca96135340712542b7a28d8ef370aaf47fa71033b6d16ff221a76"
       - kind: unit_test
         command: "bun run vitest run tests\\skill-recommend.test.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts tests\\tier-router.test.ts tests\\doctor.test.ts tests\\cli-surface.test.ts -t \"routeToAdapterPlan|codex-wrapper-parity|skill|inject|shared Claude/Codex launch plan|provider-neutral|stdin|task route\""
         runner: bun
@@ -88,7 +88,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: tests/runtime-adapter.test.ts
-        output_digest: "sha256:c660ed89dfe6fe167981c3e9bdf0e02396ed855b36b677e1898c63f9d33cc463"
+        output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -96,7 +96,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: src/runtime/adapter.ts
-        output_digest: "sha256:fd744456923aca733ea2e6958609d32f7da521947cd1c5be7505d96e8c6d98c4"
+        output_digest: "sha256:91e14872daecee813cb26ca822f18b72fd1f4c41534cbdcfd493557a916e2454"
 ---
 
 # PLAN-REVERSE-135: Dynamic skill injection materialization fullback

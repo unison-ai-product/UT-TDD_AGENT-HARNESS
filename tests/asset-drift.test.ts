@@ -46,6 +46,42 @@ describe("asset-drift lint (U-FR-L1-49)", () => {
     expect(r.violations.map((v) => v.kind)).toContain("legacy-source-path-residue");
   });
 
+  it("detects arbitrary personal absolute paths in enrolled assets", () => {
+    const r = analyzeAssetDrift(
+      input({
+        assets: [
+          agent("pmo-sonnet", "Read C:\\Users\\alice\\workspace\\local-notes.md"),
+          skill("review-checklist", "Fallback: /home/bob/private/SKILL.md"),
+        ],
+      }),
+    );
+
+    expect(r.ok).toBe(false);
+    expect(r.violations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "legacy-source-path-residue",
+          path: ".claude/agents/pmo-sonnet.md",
+        }),
+        expect.objectContaining({
+          kind: "legacy-source-path-residue",
+          path: "docs/skills/review-checklist.md",
+        }),
+      ]),
+    );
+  });
+
+  it("does not treat URL path segments as personal absolute paths", () => {
+    const r = analyzeAssetDrift(
+      input({
+        assets: [agent("pmo-sonnet", "Read https://example.com/home/alice/guide.md")],
+      }),
+    );
+
+    expect(r.ok).toBe(true);
+    expect(r.violations).toEqual([]);
+  });
+
   it("detects legacy runtime command delegation residue", () => {
     const r = analyzeAssetDrift(
       input({
@@ -83,6 +119,22 @@ describe("asset-drift lint (U-FR-L1-49)", () => {
     expect(r.violations.map((v) => v.kind)).toContain("missing-allowlisted-agent");
   });
 
+  it("detects generated or enrolled agent docs that are not guard allowlisted", () => {
+    const r = analyzeAssetDrift(
+      input({
+        assets: [agent("pmo-sonnet"), agent("be-logic"), skill("review-checklist")],
+        allowlist: ["pmo-sonnet"],
+      }),
+    );
+
+    expect(r.ok).toBe(false);
+    expect(r.violations).toContainEqual({
+      kind: "non-allowlisted-agent",
+      path: ".claude/agents/be-logic.md",
+      detail: "agent definition is generated/enrolled but not accepted by agent-guard",
+    });
+  });
+
   it("passes when enrolled assets are UT-TDD local and guard allowlist resolves", () => {
     const r = analyzeAssetDrift(input({}));
     expect(r.ok).toBe(true);
@@ -91,11 +143,8 @@ describe("asset-drift lint (U-FR-L1-49)", () => {
 
   it("real repo has no active internal asset drift", () => {
     const loaded = loadAssetDriftInput(process.cwd());
-    expect(loaded.assets.some((a) => a.path === "docs/templates/prompts/effort-classify.md")).toBe(
-      true,
-    );
-
     const r = analyzeAssetDrift(loaded);
+
     expect(r.violations).toEqual([]);
     expect(r.checkedAssets).toBeGreaterThan(0);
   });

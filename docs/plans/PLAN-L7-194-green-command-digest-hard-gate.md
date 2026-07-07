@@ -4,10 +4,9 @@ title: "PLAN-L7-194 (impl): green-command-digest を advisory → runDoctor.ok �
 kind: impl
 layer: L7
 drive: be
-status: draft
-version_target: future
+status: confirmed
 created: 2026-06-29
-updated: 2026-06-29
+updated: 2026-06-30
 owner: PM (Opus) / PO (人間)
 parent_design: docs/design/harness/L6-function-design/review-evidence.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -19,6 +18,18 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-194-green-command-digest-hard-gate.md
     artifact_type: markdown_doc
+  - artifact_path: src/doctor/index.ts
+    artifact_type: source_module
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
+  - artifact_path: tests/doctor.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/cli-surface.test.ts
+    artifact_type: test_code
+  - artifact_path: .ut-tdd/audit/A-153-green-command-digest-backlog.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-154-workflow-drive-telemetry-substance-audit.md
+    artifact_type: markdown_doc
 dependencies:
   parent: null
   requires:
@@ -27,6 +38,65 @@ dependencies:
   references:
     - .ut-tdd/audit/A-145-03-verification-gate-engine.md
     - .ut-tdd/audit/A-144-03-verification-evidence-integrity.md
+review_evidence:
+  - reviewer: codex-cli
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
+    verdict: approve
+    scope: "Corrected PLAN-L7-194 from normal-doctor hard gate to opt-in strict verification, then closed the stale digest backlog through A-153 rerun-bound correction. Normal doctor remains local-close green; `doctor --strict-green-command-digest` is the strict evidence-integrity gate."
+    worker_model: codex-gpt-5
+    reviewer_model: codex-gpt-5
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests\\doctor.test.ts tests\\cli-surface.test.ts tests\\green-command-digest.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T16:15:21+09:00"
+        evidence_path: tests/doctor.test.ts
+        output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T16:15:21+09:00"
+        evidence_path: src/doctor/index.ts
+        output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T16:15:21+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
+    verdict: approve
+    scope: "green-command-digest is now included in runDoctor.ok hard-gate aggregation; mismatches force real-repo doctor false until rerun-bound digest evidence is corrected."
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bun run test tests\\doctor.test.ts tests\\green-command-digest.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-01T16:15:21+09:00"
+        evidence_path: tests/doctor.test.ts
+        output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-01T16:15:21+09:00"
+        evidence_path: src/doctor/index.ts
+        output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
 ---
 
 # PLAN-L7-194 (impl): green-command-digest を hard gate へ昇格

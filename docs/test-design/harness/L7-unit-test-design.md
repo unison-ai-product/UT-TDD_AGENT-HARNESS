@@ -22,6 +22,17 @@ This L7 document remains the single pair artifact for L6 and must carry a U-* or
 
 The additional SQLite/reference-feedback/search/drive-log/skill-metric requirements are covered through `docs/design/harness/L6-function-design/fr-unit-coverage.md` and the U-FR-L1-* rows added at the end of this document. This is coverage of the function-design contract, not proof that every L7 implementation test already exists.
 
+## 2026-07-03 L6 module-design crosswalk addendum
+
+The L6 pair scope also includes module contract backfill docs added after the original G6 freeze. The following docs are paired to this test-design artifact and carry unit oracle families here:
+
+| L6 doc | oracle family | primary test surface |
+|---|---|---|
+| `docs/design/harness/L6-function-design/context.md` | U-CONTEXT-001..005 | `tests/doc-router.test.ts` or equivalent context router unit tests |
+| `docs/design/harness/L6-function-design/graph.md` | U-GRAPH-001..005 | `tests/graph-loader.test.ts`, `tests/relation-graph*.test.ts` |
+| `docs/design/harness/L6-function-design/memory.md` | U-MEMORY-001..005 | `tests/memory-*.test.ts`, `tests/projection-writer.test.ts` |
+| `docs/design/harness/L6-function-design/secret.md` | U-SECRET-001..005 | `tests/secret.test.ts` or memory secret fail-close tests |
+
 # UT-TDD Agent Harness — L7 単体テスト設計 (④ / U-*)
 
 > **layer (作成層 = V-pair key)**: L6 (機能設計) / **executed_at_layer (実施層)**: L7 (単体テスト — 実装スプリント内で TDD Red 先行) / **artifact**: ④ テスト設計 (V-model 右、② L6 機能設計 と対)
@@ -107,10 +118,12 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-SETUP-006 | `applyBranchProtection` | `apply≠true` → `{applied:false, reason:"emit-only"}` (gh 呼ばれない) / **`isInteractive≠true` かつ `apply=true` → `{applied:false, reason:"non-interactive"}` (gh 呼ばれない)** / 対話下でも admin/auth/confirm 欠落 → 実行しない |
 | U-SETUP-007 | `runSetup` (orchestration) | ①フラグあり→フラグ値採用 / ②フラグ無し+対話→confirm 結果 / ③フラグ無し+非対話→`0-A` (fallback) / ④`apply=true`+非対話→`applied:false` (I-2 配線ミス検出) |
 | U-SETUP-009 | `planSetup` / `emitSetup` | `0-A` の生成計画に clean adapter テンプレ (`AGENTS.md` / `CLAUDE.md` / `.claude/CLAUDE.md` / `.claude/settings.json` / `.codex/config.toml` / `.codex/hooks.json` / `.claude/agents/ut-tdd-tl.md` / `.claude/commands/ut-tdd-status.md` / `.claude/commands/ut-tdd-test.md`) が含まれる。dry-run preview は adapter path を返し、dogfood repo 名や machine-local absolute path を含まない。 |
+| U-SETUP-009a | `loadTemplates` / built-in adapter templates | `docs/design/harness/L6-function-design/skill-index.md` の runtime asset 配布境界に従い、配布 subagent template は `model:` frontmatter を持つ。代表 3 family として `pmo-sonnet`=sonnet、`pmo-haiku`=haiku、`pdm-tech-innovation`=opus を確認し、model ID は `MODEL_IDS.claude` catalog 外に出ないことを固定する。 |
+| U-MODELID-SSOT | `.claude/agents` / `docs/templates/adapter` / `BUILTIN_GITHUB_TEMPLATES` | active agent frontmatter model は `MODEL_IDS.claude` catalog 内だけを許可する。disk template mirror は built-in fallback と一致し、旧 suffix (`claude-opus-4-7` / `claude-sonnet-4-6` / `20251001`) が再混入しないことを real-repo regression として固定する。 |
 | U-SETUP-010 | `emitSetup` | 既存 consumer `AGENTS.md` / `CLAUDE.md` / `.claude/CLAUDE.md` は既存行を verbatim 保全し、`<!-- UT-TDD:managed:start -->`〜`<!-- UT-TDD:managed:end -->` の managed block だけを追加/更新する。既存 `.claude/settings.json` は confirm なしに上書きしない。同じ setup を 2 回走らせても doc 内容は no-op。 |
 | U-SETUP-011 | `buildCleanDistributionPlan` | clean distribution channel は `clean-repo-plus-signed-tarball`。artifact path は LICENSE / package / src / adapter templates を含み、adapter templates には Claude/Codex hook・subagent・command 設定を含む。dogfood (`docs/plans` / `docs/design/harness` / `docs/test-design` / `.ut-tdd`) と root の開発用 `.claude` / `.codex` 状態、UI (`src/web`) は含まない。release integrity artifact (`tar.gz` / `sha256` / `sig`) を要求する。 |
 | U-SETUP-012 | `buildConsumerReadinessPlan` | Bun>=1.3 / git / gh / bare `ut-tdd` CLI / runtime CLI を preflight として診断し、gh は GitHub setup 用 warning、Bun/git/`ut-tdd`/runtime は blocking。生成 adapter hooks は bare `ut-tdd ...` を呼ぶため、PATH 未解決なら consumer hook 自走性を満たさず readiness を fail-close する。rollback managed paths、tag-pin contract、CI self-sufficiency、monorepo package-root 判定、全 smoke scenario を返す。 |
-| U-SETUP-013 / AT-DIST-001 | `tests/distribution-acceptance.test.ts` | Local clean distribution acceptance smoke: planned clean artifacts を temp repo にコピーし、`bun install --frozen-lockfile`、`bun src/cli.ts status --json`、`bun src/cli.ts distribution plan --tag v0.1.0 --json`、`bun run typecheck` が fake provider CLI 付きで通ること。外部 clean GitHub repo 作成 / tag push / signed tarball publish は実行しない。source repo 用 full `doctor` は dogfood PLAN/design/test-design/runtime artifact を除外する clean distribution の受け入れ条件には含めず、consumer doctor profile が必要なら別 PLAN とする。 |
+| U-SETUP-013 / AT-DIST-001 | `tests/distribution-acceptance.test.ts` | Local clean distribution acceptance smoke: planned clean artifacts を temp repo にコピーし、`bun install --frozen-lockfile`、`bun src/cli.ts status --json`、`bun src/cli.ts distribution plan --tag v0.1.0 --json`、`bun run typecheck` が fake provider CLI 付きで通ること。Pack `v0.1.0` tag / GitHub Release 後も、この local smoke は署名 tarball publish / UAT / post-release telemetry を実行しない。source repo 用 full `doctor` は dogfood PLAN/design/test-design/runtime artifact を除外する clean distribution の受け入れ条件には含めず、consumer doctor profile が必要なら別 PLAN とする。 |
 
 ### §1.8 U-HOVER (handover 記録機構由来、PLAN-L6-06 add-design / handover-mechanism.md §2-§3)
 | U-ID | 検証対象 | oracle (DbC) |
@@ -131,6 +144,15 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-HOVER-014 | `boundSameDayEntries` / `runHandover` 累積上限 (PLAN-L7-83) | **純関数**。entry 数 ≤ `maxEntries-1` / `# Session Handover` header 不在 → 入力をそのまま返す (圧縮不要) / 超過 → **anchor (entry[0]) + 直近 (maxEntries-2) を残し中間を 1 行 breadcrumb へ畳む** (`countHandoverEntries` = `maxEntries-1`) / **breadcrumb は header に一致せず `countHandoverEntries`/`doc_entry_count` 契約を壊さない** / breadcrumb 文言で剪定件数を明示 (no silent cap)。`runHandover`: 反復 append でも同日 doc の header 数 ≤ `MAX_SAME_DAY_ENTRIES`・定常で上限ちょうど・`doc_entry_count` は md header 数と一致 |
 | U-HOVER-015 | `runHandover` marker reconcile (drift 恒久解消、PLAN-L7-83) | **`complete=true` → `current-plan` marker を clear** (`resolveActivePlan→null`) し `checkHandoverDiscipline` が drift を出さない / **`--plan X` の in_progress → marker = X へ同期** (override 由来 drift 解消) / **plain in_progress (`--plan` 無し) → marker 無変更** (無駄書き回避) / **`dryRun=true` → marker を書かない** (非破壊不変)。reconcile した marker path は `written` に計上 (透明性) |
 
+### §1.8.1 U-MEMORY (共有 memory / PLAN-L7-189)
+
+| U-ID | 関数 / surface | oracle |
+|------|---|---|
+| U-MEMORY-001 | `writeMemoryEntry` / `loadMemoryEntries` | `.ut-tdd/memory/<kind>-<slug>.md` を authored source として書き、frontmatter (`memory_id`, `kind`, `title`, `tags`, `updated_at`) と本文を deterministic に再読込できる。 |
+| U-MEMORY-002 | `writeMemoryEntry` / `parseMemoryFile` | title/body/tags または file 全体に secret-like payload があれば fail-close し、memory file / projection row を作らない。 |
+| U-MEMORY-003 | `rebuildHarnessDb` / `projectMemoryEntries` / `selectMemoryEntries` | `.ut-tdd/memory/*.md` から `memory_entries` へ projection し、query/limit 付きで read-only に選択できる。 |
+| U-MEMORY-004 | `renderMemorySurface` / `ut-tdd memory recall` / SessionStart side effect | Claude/Codex 共通の `harness.db memory` block を出力し、空ならノイズを出さない。db 不在・破損・lock 時は fail-open で runtime を止めない。 |
+
 ### §1.9 U-SLOT (agent-slots 由来、PLAN-L7-08 / IMP-050)
 
 | U-ID | 関数 | oracle |
@@ -148,7 +170,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 | U-ID | 関数 | oracle |
 |------|------|--------|
-| U-TEAM-001 | `teamDefinitionSchema` | `strategy` 省略 → `"sequential"` (default) / `max_parallel` 省略 → `8` (default) / `members` 空配列 → zod throw (reject) / 不正 `role` (許可リスト外) → throw / 不正 `strategy` (`"burst"` 等) → throw / `serialize_after` + `serialization` (3 条件フィールド) を含む入力 → 受理 (`parsed.serialization.downstream_dependency===true` / `parsed.members[1].serialize_after==="se"`) |
+| U-TEAM-001 | `teamDefinitionSchema` | `strategy` 省略 → `"sequential"` (default) / `max_parallel` 省略 → `8` (default) / `max_parallel=8` → accept / `max_parallel>8` → zod throw (reject) / `members` 空配列 → zod throw (reject) / 不正 `role` (許可リスト外) → throw / 不正 `strategy` (`"burst"` 等) → throw / `serialize_after` + `serialization` (3 条件フィールド) を含む入力 → 受理 (`parsed.serialization.downstream_dependency===true` / `parsed.members[1].serialize_after==="se"`) |
 | U-TEAM-002 | `mustSerialize` | 3 条件すべて `false` → `false` / `file_conflict=true` → `true` / `downstream_dependency=true` → `true` / `shared_state=true` → `true` / `undefined` → `false` |
 | U-TEAM-003 | `recommendTeamLaunch` | `hybrid` + trivial/simple task → `should_launch=false` / `hybrid` + risk or standard+ task → `should_launch=true` with cross-provider `definition` / non-`hybrid` → `should_launch=false`, `trigger="unavailable"` |
 
@@ -518,6 +540,30 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - 関連 detector 後続 (`PLAN-L7-148`/`150`/`151`/`152`/`153`/`158`) は本 descent を基点とする (module extraction /
   closure sweep / precision+policy extraction)。
 
+### §1.24 U-SKILL-IDX (skill 索引モデル 由来、PLAN-L6-37 add-design / skill-index.md §1-§5、FR-L1-47/FR-L1-12)
+
+> ペア = `skill-index.md` §1-§5。索引キー = L + 駆動モデル + メタデータ。L/駆動が共に空の skill だけ `category`
+> (domain/project) で索引し、無索引 skill は fail-close。recommender は graduated メタデータ重なりで de-saturate。
+
+| U-ID | 対象関数 | oracle (DbC) |
+|---|---|---|
+| U-SKILL-IDX-001 | `analyzeSkillAssignments` (workflow 非破壊) | `skill_type` + `applies_to.{layers,drive_models}` を持つ skill は従来どおり ok=true・violations=[] (workflow 索引退行なし) |
+| U-SKILL-IDX-002 | `analyzeSkillAssignments` (domain 登録可) | L/駆動が共に空 + `category=domain` + `domain_tags` の skill は ok=true (**旧 lint なら missing-drive-models で落ちた**ものが通る) |
+| U-SKILL-IDX-003 | `analyzeSkillAssignments` (project 登録可) | L/駆動が共に空 + `category=project` の skill は ok=true |
+| U-SKILL-IDX-004 | `analyzeSkillAssignments` (無索引 fail-close) | L/駆動が共に空 + category 無 → `not-indexable` + ok=false (死蔵を落とす不変条件、§2.1) |
+| U-SKILL-IDX-005 | `analyzeSkillAssignments` (category 値検証) | `category` が workflow/domain/project 外 → `unknown-category` + ok=false / `skill_type` 空は依然 `missing-skill-type` / layers/drive_models の値検証 (unknown-layer/unknown-drive-model) は維持 |
+| U-SKILL-IDX-006 | `scoreSkill` (de-saturate) | 同一工程 (layer+drive 一致) で複数 skill が **score=1 に飽和せず**、metadata 重なりで弁別される (DISCOVERY-03 §5 の同点アルファベット順退化を解消) / 同入力→同出力 (決定論) |
+| U-SKILL-IDX-007 | `scoreSkill` (domain situation-pull) | L/駆動が空の domain skill は L 軸/駆動軸 0 点だが、task が `domain_tags` に一致すると metadata 重なり + category ヒットで浮上する (recommended 帯へ) |
+| U-SKILL-IDX-008 | `scanSkillCatalog` / `catalogAutomationAssets` (category 投影) | skill frontmatter の `category` が `SkillCatalogEntry.category` / `automation_assets.category` 列へ投影され、search tokens に `category` + `domain_tags` が合流する / 実 repo skill 全件が indexable (not-indexable 0) |
+
+### §1.24a `ut-tdd skill new` scaffolder (PLAN-L6-37 後続 add-feature 同梱)
+
+| U-ID | 対象関数 | oracle (DbC) |
+|---|---|---|
+| U-SKILL-NEW-001 | `scaffoldSkill` (workflow) | `--category workflow --layers L6 --drive Forward` → skill.v1 frontmatter (schema_version/name/skill_type/applies_to) 付き markdown を生成し、生成後 `analyzeSkillAssignments` が ok=true |
+| U-SKILL-NEW-002 | `scaffoldSkill` (domain) | `--category domain --domain-tags writing` → L/駆動なし + category=domain + domain_tags 付きを生成、ok=true |
+| U-SKILL-NEW-003 | `scaffoldSkill` (project 配布境界) | `--category project` の出力先は `docs/skills/` でなく利用側 root (配布境界 §6) / 既存 name と衝突する場合は上書きせず finding |
+
 ## §2 量閉じ一覧 (L6 設計 → U 被覆、孤児チェック)
 
 - function-spec §1 関数 → U-FUNC-01〜04
@@ -527,6 +573,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - **session-log.md §3 関数 (resolveActivePlan/recordEvent/compressPlanDigest/onStop/onSessionStart) + CLI hook entrypoints → U-SLOG-001〜007** (add-feature 差分、PLAN-L6-03。孤児 0)
 - **forced-stop-feedback.md §2.3 関数 (detectDanglingTurn/recordForcedStop/classifyFeedback/recordFeedback/pendingRecoveryProposals/scanDanglingStops/emitClassifyRequest) → U-FSF-001〜007** (add-feature 差分、PLAN-L6-04。孤児 0)
 - **setup-solo-team.md §2.3 契約関数 7 本 (detectProjectScale/recommendPhase/planSetup/emitSetup/recordSetupState/applyBranchProtection/runSetup) → U-SETUP-001〜007** (add-feature 差分、PLAN-L6-05。renderArtifacts は emitSetup 内部 helper = U-SETUP-004 に内包。孤児 0)
+- **skill-index.md §7 配布 repo の skill 配置 / runtime asset 境界 → U-SETUP-009a / U-MODELID-SSOT** (配布 adapter の `model:` frontmatter と `MODEL_IDS` SSoT drift を unit test で固定。孤児 0)
 - **handover-mechanism.md §2.3 関数 (resolveHandoverScope/buildPointer/scaffoldFromDigests/renderHandoverScaffold/handoverStale/writePointer/setActivePlan/inferPlanFromCommit/runHandover) → U-HOVER-001〜007** (add-feature 差分、PLAN-L6-06。writePointer は U-HOVER-007 orchestration 経路で被覆。session-log への限定 amendment = setActivePlan/inferPlanFromCommit 配線は U-HOVER-006 で被覆。孤児 0)
 - **handover IMP-048/047 差分 (sameFamilyPlan/dedupeDigests/resolveHandoverScope scopeToActive/readPointer/checkHandoverDiscipline) → U-HOVER-008〜010** (IMP-048 dedup + scopeToActive、IMP-047 readPointer/discipline。孤児 0)
 - **handover IMP-078 品質増分 (checkHandoverBypass/countHandoverEntries/resolveHandoverScope scopeToSession/latestSessionId/readPlanMeta family 解決/活性化 activePlanStale 連動) → U-HOVER-011〜012 + U-SLOG-006** (gap① bypass / gap② stale / gap③ commit hash / gap④ session-scope / gap⑤ unknown-kind。PLAN-L6-16/L7-17。readPlanMeta は U-HOVER-012 runHandover 経路に内包。孤児 0)
@@ -534,6 +581,8 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - **agent-slots.md §2.3 関数 (loadSlots/fireSlot/releaseSlot/releaseOldestGuardSlot/sweepStaleGuardSlots/listActiveSlots/listStaleSlots/peakParallel/exceedsParallelLimit/recordGuardFire) → U-SLOT-001〜008** (add-feature 差分、IMP-050 + IMP-106 SubagentStop release。nodeAgentSlotsDeps は実 I/O deps で unit では mock 代替。孤児 0)
 - **module-drift.md §2-§3 関数 (parseListedModules/scanActualModules/analyzeModuleDrift/loadModuleDocs/moduleDriftMessages) → U-MDRIFT-001〜005** (add-feature 差分、PLAN-L7-16/IMP-075。moduleDriftMessages は U-MDRIFT-003/004 経路 + 専用 assert で被覆、loadModuleDocs は U-MDRIFT-005 実 repo ガードに内包。孤児 0)
 - **module-drift.md asset-drift alias (loadAssetDriftInput/analyzeAssetDrift/assetDriftMessages/checkAssetDrift) → U-ASSETDRIFT-001〜006** (内部資産 + prompt template cutover 差分、FR-L1-49。legacy source path residue / legacy command residue / docs-skills vacancy / guard allowlist missing を doctor hard guard。孤児 0)
+- **skill-index.md §1-§5 関数 (analyzeSkillAssignments 索引反転 / scoreSkill de-saturate / scanSkillCatalog+catalogAutomationAssets の category 投影) → U-SKILL-IDX-001〜008** (add-design 差分、PLAN-L6-37。索引キー = L+駆動+メタデータ、category fallback、indexable-by-something fail-close、de-saturate。孤児 0)
+- **skill new scaffolder (scaffoldSkill) → U-SKILL-NEW-001〜003** (PLAN-L6-37 同梱 add-feature。規約準拠雛形生成 + 生成後 lint ok + 配布境界。孤児 0)
 - **module-drift.md change-impact addendum (analyzeChangeImpact/parseGitPorcelain/loadChangedFiles/changeImpactMessages) → U-CHGIMPACT-001〜004** (コード変更に対する設計・テスト更新漏れ検出。doctor hard guard。孤児 0)
 - **module-drift.md coding-rules addendum (analyzeCodingRules/loadCodingRuleDocs/loadCodingWorkflowDocs/codingRulesMessages/checkCodingRules) → U-CODE-001〜010** (requirements-level coding rule SSoT + workflow placement + error/module-boundary + machine-surface-language の機械検出。doctor hard guard。孤児 0)
 - **module-drift.md DDD/TDD strictness addendum (analyzeDddTddRules/loadDddTddInputs/dddTddRulesMessages/checkDddTddRules) → U-DDDTDD-001〜008** (DDD/TDD SSoT + workflow placement + Red-first evidence + test oracle + integration GWT の機械検出。doctor hard guard。孤児 0)
@@ -577,7 +626,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - U-L14CLOSE-005: the live repository A-143 audit loads through `loadL14CloseAuditDocs` and matches the required row order.
 - U-L14CLOSE-006: item-specific hardening evidence for workflow definition, system foundation, Claude/Codex parity, clean distribution, version-up, brownfield onboarding, cross-project workflow, L1/L2 mock roundtrip, L10 UX, drive-model bookbinding, and green evidence integrity must be present, not only generic existing paths.
 - U-L14CLOSE-007: missing A-143 audit source is a hard violation message, not a silent skip.
-- U-L14CLOSE-008: non-closed external/human/release boundary rows must keep item-specific markers in gap and next-action cells, so clean public repo, signed tarball, released tag, PO UAT/signoff, post-deploy, operations feedback, hosted/API Codex, and checksum/signature boundaries cannot be replaced by vague prose.
+- U-L14CLOSE-008: non-closed external/human/release boundary rows must keep item-specific markers in gap and next-action cells. After Pack tag/release publication, the release boundary marker is signed tarball signature rather than stale tag-push absence; PO UAT/signoff, post-deploy, operations feedback, hosted/API Codex, and signature boundaries cannot be replaced by vague prose.
 
 ### 2026-06-09 Runtime Adapter Lifecycle Test Addendum
 
@@ -622,7 +671,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-ID | Target | Oracle |
 |---|---|---|
 | U-ADAPTER-002 | `resolveCodexNativeCommand` | `UT_TDD_CODEX_BIN` is preferred over PATH lookup and Windows npm `codex.cmd` is accepted as a native provider command override. |
-| U-ADAPTER-003 | `buildProviderInvocation` | Windows `.cmd` / `.bat` provider commands are converted to a shell command string with quoted arguments, while non-script binaries keep `shell=false`. |
+| U-ADAPTER-003 | `buildProviderInvocation` | Windows `.cmd` / `.bat` provider commands are launched via canonical `cmd.exe` argument-array invocation with Node `shell=false`; non-script binaries also keep `shell=false`. |
 | U-ADAPTER-004 | `isProviderCommandSpawnable` / `detectMode` | Provider availability is true only when the resolved provider command can spawn successfully; PATH name presence alone is not enough. |
 | U-PHOVER-002 | `buildProviderHandover` | Provider handover packages include `handover_kind: "mechanical"` so machine routing data is not confused with explicit human handover. |
 
@@ -699,3 +748,48 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-RGUARD-010 | `reviewGuardMessages` | 非 violation → 空 (worker / clean は無音)。 |
 | U-RGUARD-011 | `summarizeStagedReview` | staged 集合は sorted/unique、suspect = staged ∩ review-mutated (混入疑い)、suspect 非空で ok=false (commit 前 staged-diff の機械化)。 |
 | U-RGUARD-012 | `summarizeStagedReview` | review-mutated 未提供 → suspect 空 + ok=true (純列挙)。 |
+## PLAN-L6-36 Screen Spec Addendum
+
+This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6 FE per-screen function specification for the 15 central dashboard screens and keeps the UI read-only/copy-only boundary testable at function level.
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-SCREEN-001 | `parseScreenQuery(input) => ScreenQuery` | Missing or invalid query values normalize to documented defaults for PM/HM/GD screen routes. |
+| U-SCREEN-002 | `validateScreenQuery(query) => ValidationResult` | Unknown screen id, layer, status, and unsafe document path are deterministic validation errors. |
+| U-SCREEN-003 | `handleScreenEvent(event, state) => ScreenEventResult` | Events return only navigation, filter, expand, refresh, or copy results; shell/provider/file-write execution is forbidden. |
+| U-SCREEN-004 | `loadScreenViewModel(projectId, query) => ViewState` | loading, ok, empty, stale, and error states remain distinct and use L4 state semantics. |
+| U-SCREEN-005 | `classifyTelemetryProvenance(row) => TelemetryProvenance` | Runtime claims are rejected unless runtime source/session fields exist; projection/advisory rows remain labelled. |
+| U-SCREEN-006 | `buildRouteRegistry(screens) => RouteRegistry` | Route registry contains exactly 15 screen ids and no duplicate route paths. |
+| U-SETUP-014 | `runDoctor({ setupSmoke: true })` / `tests/doctor.test.ts` / `tests/distribution-acceptance.test.ts` | fresh consumer では dogfood PLAN/design/test-design を要求せず、project-local wrapper と Claude/Codex adapter hook だけを検査する。`.ut-tdd/bin/ut-tdd.mjs` と adapter docs/config が存在し、`.claude/settings.json` と `.codex/hooks.json` が JSON parse 可能で、Claude/Codex の両方に `agent-guard` / `work-guard` / `session start` / `post-tool-use` / `session summary` が wrapper 経由で配線され、Claude には `subagent-stop` が配線される。hook command は `$CLAUDE_PROJECT_DIR` と global `.codex` に依存しない。 |
+
+## §5 L6 設計 ↔ 単体テスト設計 対応表 (PLAN-L7-330、可視化のみ、2026-07-03)
+
+> L6 設計 21 本 (`docs/design/harness/L6-function-design/*.md`) と実 `tests/` 配下の対応関係を機械的 Grep (U-ID / 関数名) で突合した棚卸し。§2 量閉じ一覧の集合的宣言 (孤児 0) を doc 単位の行に展開し、テスト設計粒度を可視化する。個別 doc 化はしない最小対処 (本 PLAN スコープ)。
+
+| L6 doc | 機能 | 対応 test ファイル | 判定 |
+|---|---|---|---|
+| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) | tests/plan-lint.test.ts, tests/vmodel-pair.test.ts, tests/agent-guard.test.ts, tests/mode-catalog.test.ts, tests/frontmatter.test.ts (U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し) | covered |
+| edge-case.md | `@edge-normal/error/boundary/throws` 4 観点 | 各 lint test の `@edge-*` 契約実装先に分散 (専用ファイル無し) | covered |
+| session-log.md | resolveActivePlan/recordEvent/compressPlanDigest/onStop/onSessionStart | tests/session-log.test.ts | covered |
+| forced-stop-feedback.md | detectDanglingTurn/recordForcedStop/classifyFeedback/recordFeedback/scanDanglingStops | tests/forced-stop.test.ts | covered |
+| setup-solo-team.md | detectProjectScale/recommendPhase/planSetup/emitSetup/recordSetupState/applyBranchProtection/runSetup | tests/setup.test.ts | covered |
+| handover-mechanism.md | resolveHandoverScope/buildPointer/scaffoldFromDigests/renderHandoverScaffold/handoverStale/runHandover | tests/handover.test.ts | covered |
+| agent-slots.md | loadSlots/fireSlot/releaseSlot/releaseOldestGuardSlot/sweepStaleGuardSlots/peakParallel/exceedsParallelLimit | tests/agent-slots.test.ts | covered |
+| governance-enforcement.md | scrum-reverse (pocOrphans/badReverseRefs) + propagation (signal 語彙一致) | tests/scrum-reverse.test.ts, tests/propagation.test.ts | covered |
+| backfill-pairing.md | parseRequires/parseGlossaryTerms/analyzeBackfill/loadBackfillDocs/checkBackfill | tests/backfill-pairing.test.ts | covered |
+| vmodel-pair-freeze.md | loadPairDocs/analyzePairFreeze (§1-§3) + analyzeVerificationGroups (§7) | tests/vmodel-pair.test.ts | covered |
+| review-evidence.md | hasReviewEvidence/parseReviewPlan/analyzeReviewEvidence/loadReviewPlans | tests/review-evidence.test.ts | covered |
+| review-evidence-stale.md | draft/降格 PLAN の stale approval 検出 (U-REVIEW-007/008) | tests/review-evidence.test.ts | covered |
+| cross-review-enforcement.md | extractReviewEntries/crossReviewViolations (U-XREVIEW) | tests/review-evidence.test.ts | covered |
+| test-before-review.md | tests_green_at ≤ reviewed_at 順序検証 (U-TORDER) | tests/review-evidence.test.ts | covered |
+| module-drift.md | parseListedModules/analyzeModuleDrift + asset-drift/change-impact/coding-rules/ddd-tdd-rules addendum | tests/module-drift.test.ts, tests/asset-drift.test.ts, tests/change-impact.test.ts, tests/coding-rules.test.ts, tests/ddd-tdd-rules.test.ts | covered |
+| descent-obligation.md | loadDescentAdjacency/generateObligations/analyzeDescentObligations | tests/descent-obligation.test.ts | covered |
+| skill-index.md | analyzeSkillAssignments/scoreSkill/scanSkillCatalog + skill new scaffolder | tests/skill-assignment.test.ts, tests/skill-scaffold.test.ts, tests/skill-recommend.test.ts | covered |
+| fr-unit-coverage.md | U-FR-L1-* FR registry ↔ L6 spec ↔ U-* oracle 被覆 | tests/l6-fr-coverage.test.ts, tests/fr-registry-audit.test.ts, tests/fr-roadmap-coverage.test.ts | covered |
+| gate-confirm.md | judgment gate と confirm 結合 (U-GCONF) | tests/gate-confirm.test.ts | covered |
+| plan-schedule-lint.md | 工程表 schedule 最小強制 (U-PLANSCH) | tests/plan-lint.test.ts | covered |
+| screen-spec.md | parseScreenQuery/validateScreenQuery/handleScreenEvent/loadScreenViewModel/buildRouteRegistry (U-SCREEN-001〜006) | tests/screen-impl-pair-freeze.test.ts は pair-freeze gate のみを被覆し、上記個別関数 (parseScreenQuery 等) を直接 Grep しても実 test 未検出 | **gap** |
+
+**gap 件数: 1 / 21** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
+
+L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。

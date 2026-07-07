@@ -239,7 +239,7 @@
       "status": "passed",
       "evidence_paths": [
         "tests/skill-recommend.test.ts",
-        "src/skills/recommend.ts"
+        "src/skill-engine/recommend.ts"
       ],
       "command_ids": [
         "cmd-adapter-asset-targeted"

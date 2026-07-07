@@ -4,7 +4,7 @@
  * 薄い OS 別 entrypoint (scripts/ut-tdd, ut-tdd.ps1) が本 core を呼ぶ。
  * status / doctor / plan lint / vmodel lint / gate / runtime adapter を集約する。
  */
-import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import {
   appendFileSync,
   existsSync,
@@ -12,9 +12,10 @@ import {
   readdirSync,
   readFileSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { Command } from "commander";
 import { parse as parseYaml } from "yaml";
 import {
@@ -24,15 +25,20 @@ import {
 } from "./assets/catalog";
 import { loadBranchAudit, renderBranchAudit } from "./audit/branches";
 import { renderQualityAudit, runQualityAudit } from "./audit/quality";
-import { runDoctor } from "./doctor";
-import { computeSkillMetrics, emitFeedbackEvents } from "./feedback/engine";
 import {
-  renderFeedbackEventRows,
-  renderTakeoverFeedback,
-  selectTakeoverFeedback,
-} from "./feedback/surface";
+  adapterExecutionEnv,
+  executeAdapterPlanForCli,
+  registerDelegationCommands,
+} from "./cli/delegation";
+import { registerDistributionCommands } from "./cli/distribution";
+import { registerFeedbackCommands } from "./cli/feedback";
+import { contextSuggest } from "./context/doc-router";
+import { runDoctor } from "./doctor";
+import { computeSkillMetrics } from "./feedback/engine";
+import { renderTakeoverFeedback, selectTakeoverFeedback } from "./feedback/surface";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { evaluateStaticGate } from "./gate/static";
+import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard";
 import { loadRelationGraphSourceSet } from "./graph/loader";
 import {
   checkHandoverBypass,
@@ -43,6 +49,7 @@ import {
   setActivePlanCli,
 } from "./handover/index";
 import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact";
+import { nodeHistoryScanDeps, planDigestMigration } from "./lint/green-command-digest";
 import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding";
 import {
   analyzeRelationImpact,
@@ -50,6 +57,7 @@ import {
   exportRelationDiagram,
   type RelationDiagramAdapter,
 } from "./lint/relation-graph";
+import { loadReviewPlans } from "./lint/review-evidence";
 import {
   inspectMcpProfile,
   listVerificationProfiles,
@@ -60,11 +68,17 @@ import {
   saveVerificationEvidence,
   verificationRecommendationMermaid,
 } from "./lint/verification-profile";
+import {
+  type MemoryKind,
+  renderMemoryList,
+  renderMemorySurface,
+  selectMemoryEntries,
+  writeMemoryEntry,
+} from "./memory/index";
 import { lintPlanWithGate } from "./plan/lint";
 import {
   type AdapterContextInjection,
   type AdapterProvider,
-  buildAdapterPlan,
   buildProviderInvocation,
 } from "./runtime/adapter";
 import {
@@ -87,30 +101,19 @@ import {
   selectPrecedingSessionFile,
 } from "./runtime/attempt-escalation";
 import { detectMode, nextActionForMode, type RuntimeDetection } from "./runtime/detect";
-import {
-  type ClassifyResult,
-  emitClassifyRequest,
-  type FeedbackCtx,
-  pendingRecoveryProposals,
-  recordFeedback,
-  scanDanglingStops,
-} from "./runtime/forced-stop";
+import { scanDanglingStops } from "./runtime/forced-stop";
 import {
   nodeProviderHandoverDeps,
   type ProviderRuntime,
   readProviderHandoverCurrent,
   runProviderHandover,
 } from "./runtime/provider-handover";
-import {
-  assessReviewSession,
-  isReadOnlyDelegationRole,
-  reviewGuardMessages,
-  summarizeStagedReview,
-} from "./runtime/review-guard";
+import { summarizeStagedReview } from "./runtime/review-guard";
 import {
   dispatch,
   nodeDeps,
   parseSessionEvents,
+  recordSkillInjectionAttempt,
   resolveActivePlan,
   type SessionHookInput,
   safeName,
@@ -122,20 +125,24 @@ import {
   resolveForeignEditOverride,
 } from "./runtime/work-guard";
 import { findReference } from "./search/index";
+import { nodeSetupDeps, runSetup, type SetupArgs } from "./setup/index";
 import {
-  buildCleanDistributionPlan,
-  buildConsumerReadinessPlan,
-  nodeSetupDeps,
-  runSetup,
-  type SetupArgs,
-} from "./setup/index";
+  checkForUpdate,
+  defaultHarnessRoot,
+  nodeUpdateCheckDeps,
+  readHarnessVersion,
+  renderUpdateLine,
+  UPDATE_CHECK_DISABLE_ENV,
+  updateCheckDisabled,
+} from "./setup/update-check";
 import {
   bucketRecommendations,
   buildSkillInjectionSet,
   recommendSkillsForPlan,
   recommendSkillsForText,
   recordSkillRecommendations,
-} from "./skills/recommend";
+} from "./skill-engine/recommend";
+import { type SkillCategory, scaffoldSkill } from "./skill-engine/scaffold";
 import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index";
 import { harnessDbStatus } from "./state-db/maintenance";
 import { migrate } from "./state-db/migration";
@@ -154,6 +161,7 @@ import {
   routeTeamMembers,
   routeToAdapterPlan,
 } from "./task/tier-router";
+import { buildAdvisorDecision } from "./team/advisor-policy";
 import { recommendTeamLaunch } from "./team/launch-policy";
 import {
   buildTeamRunPlan,
@@ -198,35 +206,6 @@ function gitHead(): string | null {
   }
 }
 
-/** review-guard 用: loadChangedFiles を fail-open でラップ (非 git / 一時失敗で委譲を壊さない、IMP-137)。 */
-function safeLoadChangedFiles(repoRoot: string): string[] {
-  try {
-    return loadChangedFiles(repoRoot);
-  } catch {
-    // guard probe は best-effort。git が無い/失敗しても委譲本体は止めない (fail-open)。
-    return [];
-  }
-}
-
-function collectDistributionCandidatePaths(repoRoot: string): string[] {
-  const ignored = new Set([".git", "node_modules", "dist"]);
-  const out: string[] = [];
-  const walk = (dir: string, prefix = ""): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (ignored.has(entry.name)) continue;
-      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
-      const abs = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(abs, rel);
-      } else {
-        out.push(rel);
-      }
-    }
-  };
-  walk(repoRoot);
-  return out.sort();
-}
-
 function optionFromCommandChain<T>(cmd: Command, key: string): T | undefined {
   let current: Command | null = cmd;
   while (current) {
@@ -262,18 +241,44 @@ function resolveSkillContextInjection(
 ): AdapterContextInjection | undefined {
   if (!planId) return undefined;
   const repoRoot = process.cwd();
+  // PLAN-L7-262: 注入の成功/skip を session jsonl へ記録する (silent fail-open をやめ、
+  // 「握った事実の記録付き fail-open」へ)。記録自体は recordEvent の fail-open に従う。
+  const logDeps = nodeDeps(repoRoot, () => null);
   const db = openHarnessDb(":memory:", { repoRoot });
   try {
     try {
       rebuildHarnessDb({ repoRoot, db });
     } catch {
+      recordSkillInjectionAttempt(
+        { plan_id: planId, status: "skipped", reason: "rebuild-failed", required: 0, optional: 0 },
+        logDeps,
+      );
       return undefined;
     }
     const recommendations = recommendSkillsForPlan(db, planId);
     const injection = buildSkillInjectionSet(db, recommendations);
     if (injection.required_paths.length === 0 && injection.optional_paths.length === 0) {
+      recordSkillInjectionAttempt(
+        {
+          plan_id: planId,
+          status: "skipped",
+          reason: "no-matching-skills",
+          required: 0,
+          optional: 0,
+        },
+        logDeps,
+      );
       return undefined;
     }
+    recordSkillInjectionAttempt(
+      {
+        plan_id: planId,
+        status: "injected",
+        required: injection.required_paths.length,
+        optional: injection.optional_paths.length,
+      },
+      logDeps,
+    );
     return {
       required_paths: injection.required_paths,
       optional_paths: injection.optional_paths,
@@ -378,6 +383,7 @@ function runSessionStartSideEffects(
     // fail-open: lifecycle maintenance must not block the runtime.
   }
   surfaceTakeoverFeedbackToStdout(repoRoot);
+  surfaceMemoryToStdout(repoRoot);
   surfaceAttemptEscalationToStdout(repoRoot, input.session_id);
 }
 
@@ -426,31 +432,26 @@ function surfaceTakeoverFeedbackToStdout(repoRoot: string): void {
   }
 }
 
-function adapterExecutionEnv(
-  provider: AdapterProvider,
-  extraEnv: Record<string, string> = {},
-): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  const legacyPrefix = ["HE", "LIX"].join("");
-  for (const key of [
-    [legacyPrefix, "ALLOW", "RAW", "CLAUDE"].join("_"),
-    [legacyPrefix, "RAW", "CLAUDE", "REASON"].join("_"),
-    [legacyPrefix, "ALLOW", "RAW", "CODEX"].join("_"),
-    [legacyPrefix, "RAW", "CODEX", "REASON"].join("_"),
-    [legacyPrefix, "CLAUDE", "BIN"].join("_"),
-    [legacyPrefix, "CODEX", "BIN"].join("_"),
-  ]) {
-    delete env[key];
+function surfaceMemoryToStdout(repoRoot: string): void {
+  try {
+    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+    try {
+      const block = renderMemorySurface(selectMemoryEntries(db, { limit: 5 }));
+      if (block) process.stdout.write(block);
+    } finally {
+      db.close();
+    }
+  } catch {
+    // fail-open: memory surface is shared context, not a runtime blocker.
   }
-  if (provider !== "claude" && provider !== "codex") return env;
-  return { ...env, ...extraEnv };
 }
 
 const program = new Command();
 program
   .name("ut-tdd")
   .description("UT-TDD Agent Harness (TypeScript core, ADR-001)")
-  .version("0.1.0");
+  // PLAN-L7-362: update-check の比較元 (harness root package.json) と同一ソースで表示する。
+  .version(readHarnessVersion(defaultHarnessRoot()));
 
 program
   .command("status")
@@ -462,27 +463,90 @@ program
     // IMP-139: 未了の正の集計 (非終端 PLAN 層別 + open defer) を additive に surface し
     // 「doctor green = 完了」誤読を機械照合可能にする (gate ではない informational surface)。
     const outstanding = computeOutstandingWork(process.cwd());
+    // PLAN-L7-362: update-check advisory (fail-open、gate ではない)。基準は harness checkout。
+    const update =
+      process.env[UPDATE_CHECK_DISABLE_ENV] === "1"
+        ? updateCheckDisabled(UPDATE_CHECK_DISABLE_ENV)
+        : process.env.CI === "true"
+          ? updateCheckDisabled("CI")
+          : checkForUpdate(nodeUpdateCheckDeps());
     if (opts.json) {
       // 既存 6 フィールド (camelCase 公開契約) に nextAction + outstanding を additive に付加する
       // (A-138 ITEM-1、PLAN-L7-84、IMP-139、taxonomy=current)。判断ゲートの進め方 + 未了量を提示。
-      process.stdout.write(`${JSON.stringify({ ...d, nextAction, outstanding }, null, 2)}\n`);
+      process.stdout.write(
+        `${JSON.stringify({ ...d, nextAction, outstanding, update }, null, 2)}\n`,
+      );
     } else {
       process.stdout.write(
         `mode: ${d.mode}  (claude=${d.claude}, codex=${d.codex}, current=${d.currentRuntime ?? "-"})\n`,
       );
       process.stdout.write(`next: ${nextAction}\n`);
       process.stdout.write(`${outstandingSummaryLine(outstanding)}\n`);
+      process.stdout.write(`${renderUpdateLine(update)}\n`);
     }
   });
 
 program
   .command("doctor")
   .description("統合検証 (doctor / gate / trace / drift / roadmap)")
-  .action(() => {
-    const r = runDoctor();
-    for (const m of r.messages) process.stdout.write(`${m}\n`);
-    process.exitCode = r.ok ? 0 : 1;
-  });
+  .option(
+    "--strict-telemetry-provenance",
+    "fail closed when populated telemetry tables have only projection provenance",
+  )
+  .option(
+    "--strict-green-command-digest",
+    "fail closed when green command digests do not match their evidence files",
+  )
+  .option(
+    "--setup-smoke",
+    "run only the fresh-consumer setup smoke checks for wrapper and adapter hooks",
+  )
+  .option("--scope <scope>", "limit doctor checks to a supported scope (full|toolchain)")
+  .option("--timing", "include per-check doctor timing diagnostics")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      strictTelemetryProvenance?: boolean;
+      strictGreenCommandDigest?: boolean;
+      setupSmoke?: boolean;
+      scope?: string;
+      timing?: boolean;
+      json?: boolean;
+    }) => {
+      const scope = opts.scope ?? "full";
+      if (scope !== "full" && scope !== "toolchain") {
+        const message = `doctor: invalid --scope "${scope}" (expected: full, toolchain)`;
+        if (opts.json) {
+          process.stdout.write(`${JSON.stringify({ ok: false, messages: [message] }, null, 2)}\n`);
+        } else {
+          process.stderr.write(`${message}\n`);
+        }
+        process.exitCode = 1;
+        return;
+      }
+      const r = runDoctor(undefined, {
+        strictTelemetryProvenance: opts.strictTelemetryProvenance === true,
+        strictGreenCommandDigest: opts.strictGreenCommandDigest === true,
+        setupSmoke: opts.setupSmoke === true,
+        scope,
+        timing: opts.timing === true,
+      });
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
+      } else {
+        for (const m of r.messages) process.stdout.write(`${m}\n`);
+        if (opts.timing === true && r.timings) {
+          const slowest = [...r.timings].sort((a, b) => b.duration_ms - a.duration_ms).slice(0, 10);
+          for (const timing of slowest) {
+            process.stdout.write(
+              `doctor: timing - ${timing.id} ${timing.duration_ms.toFixed(3)}ms messages=${timing.message_count} ok=${timing.ok}\n`,
+            );
+          }
+        }
+      }
+      process.exitCode = r.ok ? 0 : 1;
+    },
+  );
 
 // `web` command は PLAN-L7-102 prototype (table-dumper) 破棄に伴い撤去 (2026-06-24)。
 // component-derived な中央UI 再実装は PLAN-L7-141 で再配線する。
@@ -796,7 +860,9 @@ hook
 
 hook
   .command("agent-guard")
-  .description("PreToolUse(Agent|Task): enforce subagent allowlist and declared model family")
+  .description(
+    "PreToolUse(Agent|Task): enforce subagent allowlist and declared model family; exits: 0=pass, 1=error, 2=blocked",
+  )
   .action(() => {
     const repoRoot = process.cwd();
     const input = parseHookInput<AgentGuardInput>(readStdin());
@@ -825,7 +891,9 @@ hook
 
 hook
   .command("work-guard")
-  .description("PreToolUse(Edit|Write|MultiEdit/apply_patch|write_file): block foreign edits")
+  .description(
+    "PreToolUse(Edit|Write|MultiEdit/apply_patch|write_file): block foreign edits; exits: 0=pass, 1=error, 2=blocked",
+  )
   .action(() => {
     const repoRoot = process.cwd();
     const input = parseHookInput<{ tool_input?: unknown; session_id?: string }>(readStdin());
@@ -866,7 +934,9 @@ hook
 const guard = program.command("guard").description("manual guard checks for non-hooked runtimes");
 guard
   .command("preflight")
-  .description("run work-guard before hosted/API edits that cannot execute repo-local Codex hooks")
+  .description(
+    "run work-guard before hosted/API edits that cannot execute repo-local Codex hooks; exits: 0=pass, 1=error, 2=blocked",
+  )
   .option("--target <path...>", "repo-relative or absolute target path(s) to edit")
   .option("--patch-file <path>", "patch file to scan for apply_patch headers")
   .option("--stdin", "read an apply_patch body from stdin")
@@ -939,6 +1009,41 @@ plan
     const r = lintPlanWithGate(path, process.cwd(), opts?.gate);
     for (const m of r.messages) process.stdout.write(`${m}\n`);
     process.exitCode = r.ok ? 0 : 1;
+  });
+
+plan
+  .command("digest-migrate")
+  .description(
+    "green_command digest を記録時点 commit へ anchor 化する計画 (PLAN-L7-303、dry-run 既定)。" +
+      "履歴から claimed digest 一致 commit を特定し recoverable/suspect に分類する。--execute は PO ゲート (committed PLAN 改変=監査境界) につき未実装。",
+  )
+  .option("--json", "JSON 出力")
+  .action((opts: { json?: boolean }) => {
+    const repoRoot = process.cwd();
+    const candidates = planDigestMigration(
+      loadReviewPlans(repoRoot),
+      nodeHistoryScanDeps(repoRoot),
+    );
+    if (opts.json) {
+      process.stdout.write(`${JSON.stringify(candidates, null, 2)}\n`);
+      return;
+    }
+    const counts = { recoverable: 0, suspect: 0, "already-anchored": 0 } as Record<string, number>;
+    for (const c of candidates) counts[c.disposition] = (counts[c.disposition] ?? 0) + 1;
+    process.stdout.write(
+      `plan digest-migrate (dry-run) — ${candidates.length} green_command: ` +
+        `recoverable=${counts.recoverable} suspect=${counts.suspect} already-anchored=${counts["already-anchored"]}\n`,
+    );
+    for (const c of candidates.filter((x) => x.disposition !== "already-anchored")) {
+      const anchor = c.anchor_candidate
+        ? `anchor=${c.anchor_candidate.slice(0, 12)}`
+        : "anchor=none";
+      process.stdout.write(`  [${c.disposition}] ${c.plan_id} ${c.evidence_path} ${anchor}\n`);
+    }
+    process.stdout.write(
+      "\nsuspect = どの commit にも claimed 一致 blob 無し (捏造/回復不能疑い、A-18x 台帳化)。" +
+        "\n書き込み (anchor_commit back-fill) は committed PLAN 改変 = 監査境界につき PO ゲート。\n",
+    );
   });
 
 plan
@@ -1384,6 +1489,72 @@ skill
       } finally {
         db.close();
       }
+    },
+  );
+
+skill
+  .command("new")
+  .description("scaffold a skill.v1 pack (skill-index.md §2; workflow/domain/project)")
+  .requiredOption("--name <slug>", "skill name (slugified)")
+  .option("--category <category>", "workflow | domain | project", "workflow")
+  .option("--skill-type <type>", "finer sub-type (default = category)")
+  .option("--layers <list>", "comma-separated layers (workflow)")
+  .option("--drive-models <list>", "comma-separated drive models (workflow)")
+  .option("--domain-tags <list>", "comma-separated domain tags (domain)")
+  .option("--industry <name>", "industry/project tag (project)")
+  .option("--description <text>", "one-line trigger/description")
+  .option("--force", "overwrite an existing file on name collision")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      name: string;
+      category: string;
+      skillType?: string;
+      layers?: string;
+      driveModels?: string;
+      domainTags?: string;
+      industry?: string;
+      description?: string;
+      force?: boolean;
+      json?: boolean;
+    }) => {
+      const repoRoot = process.cwd();
+      const splitList = (value?: string): string[] =>
+        (value ?? "")
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean);
+      const result = scaffoldSkill(
+        {
+          name: opts.name,
+          category: opts.category as SkillCategory,
+          skillType: opts.skillType,
+          layers: splitList(opts.layers),
+          driveModels: splitList(opts.driveModels),
+          domainTags: splitList(opts.domainTags),
+          industry: opts.industry,
+          description: opts.description,
+        },
+        { exists: (rel) => existsSync(join(repoRoot, rel)) },
+      );
+      const collision = result.findings.some((f) => f.startsWith("name-collision"));
+      const otherFindings = result.findings.filter((f) => !f.startsWith("name-collision"));
+      // 衝突以外の finding (unknown-category / not-indexable 等) では決して書かない (fail-close)。
+      const writable = otherFindings.length === 0 && (!collision || Boolean(opts.force));
+      let written = false;
+      if (writable) {
+        const absolute = join(repoRoot, result.path);
+        mkdirSync(dirname(absolute), { recursive: true });
+        writeFileSync(absolute, result.content, "utf8");
+        written = true;
+      }
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify({ ...result, written }, null, 2)}\n`);
+      } else {
+        process.stdout.write(`${written ? "wrote" : "skipped"} ${result.path}\n`);
+        for (const finding of result.findings) process.stdout.write(`  finding: ${finding}\n`);
+      }
+      if (!written) process.exitCode = 1;
     },
   );
 
@@ -1878,15 +2049,19 @@ routeCommand
   .requiredOption("--signal <signal>", "observed signal")
   .option("--env <env>", "runtime environment")
   .option("--drift-type <type>", "drift subtype")
+  .option("--finding-type <type>", "audit/research finding type")
   .option("--route-map <path>", "route-map YAML override")
   .option("--format <format>", "output format: text or json", "text")
+  .option("--json", "JSON output (alias for --format json)")
   .action(
     (opts: {
       signal: string;
       env?: string;
       driftType?: string;
+      findingType?: string;
       routeMap?: string;
       format?: string;
+      json?: boolean;
     }) => {
       const repoRoot = process.cwd();
       const routeMap = loadRouteMap(repoRoot, opts.routeMap);
@@ -1894,13 +2069,14 @@ routeCommand
         signal: opts.signal,
         env: opts.env,
         drift_type: opts.driftType,
+        finding_type: opts.findingType,
         approval_policy: loadRouteApprovalPolicy(repoRoot),
         route_map: routeMap.routes,
         route_config_violations: routeMap.violations,
       });
       const auditPath =
         evaluated.exit_code === 1 ? appendRouteApprovalAudit(repoRoot, evaluated) : "";
-      if (opts.format === "json") {
+      if (opts.json || opts.format === "json") {
         process.stdout.write(
           `${JSON.stringify(auditPath ? { ...evaluated, audit_path: auditPath } : evaluated, null, 2)}\n`,
         );
@@ -1908,6 +2084,12 @@ routeCommand
         process.stdout.write(`mode=${evaluated.mode}\n`);
         process.stdout.write(`suggest_command=${evaluated.suggest_command}\n`);
         process.stdout.write(`command=${evaluated.recommended_command.command}\n`);
+        if (evaluated.finding_route) {
+          process.stdout.write(
+            `finding_route=${evaluated.finding_route.finding_type}->${evaluated.finding_route.mode}\n`,
+          );
+          process.stdout.write(`auto_create=${String(evaluated.finding_route.auto_create)}\n`);
+        }
         if (auditPath) process.stderr.write(`human approval blocked; audit=${auditPath}\n`);
       } else {
         process.stderr.write(`${evaluated.suggest_command}\n`);
@@ -1916,150 +2098,108 @@ routeCommand
     },
   );
 
-function runtimeCommand(provider: AdapterProvider): Command {
-  return program
-    .command(provider)
-    .description(`${provider} runtime adapter command`)
-    .requiredOption("--role <role>", "delegation role")
-    .option("--task <text>", "task text")
-    .option("--task-file <path>", TASK_FILE_OPTION_DESCRIPTION)
-    .option("--plan <id>", "PLAN id")
-    .option("--execute", "execute provider CLI instead of dry-run")
-    .option("--json", "JSON output")
-    .action(
-      (opts: {
-        role: string;
-        task?: string;
-        taskFile?: string;
-        plan?: string;
-        execute?: boolean;
-        json?: boolean;
-      }) => {
-        const task = resolveTaskText(opts);
-        if (!task) {
-          process.stderr.write("adapter requires exactly one of --task or --task-file\n");
-          process.exitCode = 1;
-          return;
-        }
-        const mode = detectMode().mode;
-        const contextInjection = resolveSkillContextInjection(opts.plan);
-        const plan = buildAdapterPlan(
-          {
-            provider,
-            role: opts.role,
-            task,
-            planId: opts.plan,
-            execute: Boolean(opts.execute),
-            contextInjection,
-          },
-          mode,
-        );
-        if (!plan.available) {
-          process.stderr.write(`${plan.messages.join("\n")}\n`);
-          process.exitCode = 1;
-          return;
-        }
-        // dry-run (非 execute) は plan JSON を出して終了。plan.dry_run は execute=false ゆえ true。
-        // --json は出力形式であって実行抑止ではない (team run と同契約)。--execute --json は
-        // 実行まで進み、末尾で実行結果 JSON (dry_run=false, exit_code) を返す。
-        if (!opts.execute) {
-          process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
-          return;
-        }
-        const jsonOut = Boolean(opts.json);
-        const sessionId = `${provider}-${Date.now()}`;
-        const repoRoot = process.cwd();
-        const deps = nodeDeps(repoRoot, gitBranch, gitHead);
-        const startInput: SessionHookInput = {
-          hook_event_name: HOOK_EVENT_SESSION_START,
-          session_id: sessionId,
-          ...(opts.plan ? { plan_id: opts.plan } : {}),
-        };
-        runSessionStartSideEffects(repoRoot, startInput, deps);
-        dispatch(startInput, deps, HOOK_EVENT_SESSION_START);
-        // review-guard (IMP-137): read-only (相談/検証) ロールの委譲 session が working tree を
-        // 変更したら検知するため、spawn 前の変更パスを snapshot する。
-        const guardActive = isReadOnlyDelegationRole(opts.role);
-        const treeBefore = guardActive ? safeLoadChangedFiles(repoRoot) : [];
-        const invocation = buildProviderInvocation({
-          provider,
-          command: plan.command,
-          args: plan.args,
-        });
-        const child = spawnSync(invocation.command, invocation.args, {
-          // Provider prompts are passed through stdin; argv carries only fixed
-          // command flags so shell metacharacters and tool markup stay inert.
-          // codex はプロンプトを stdin で受ける (plan.stdin)。cmd.exe shell-wrap が
-          // 引数の改行/メタ文字を切り詰めるのを回避する (PLAN-L7-77)。
-          input: plan.stdin,
-          // json 時は provider の stdout を fd 2 (stderr) へ逃がし、parent stdout を実行結果 JSON
-          // 専用に保つ (機械パース可能性を守る)。非 json は従来どおり stdout を inherit。
-          stdio:
-            plan.stdin === undefined
-              ? ["inherit", jsonOut ? 2 : "inherit", "inherit"]
-              : ["pipe", jsonOut ? 2 : "inherit", "inherit"],
-          env: adapterExecutionEnv(provider, plan.env),
-          shell: invocation.shell ?? false,
-        });
-        if (child.error) {
-          // spawn 自体の失敗 (ENOENT 等) は status=null のまま沈黙するため理由を surface する (A-128 F-5 / IMP-130(d))。
-          process.stderr.write(`${provider}: failed to launch (${String(child.error)})\n`);
-        }
-        if (guardActive) {
-          // read-only 委譲が tree を変更したら warning で surface する (検知/隔離、IMP-137)。
-          // exit code は変えない (レビュー成果は有効でも、混入を staged 前に弾く規律へ繋ぐ)。
-          const assessment = assessReviewSession({
-            role: opts.role,
-            before: treeBefore,
-            after: safeLoadChangedFiles(repoRoot),
-          });
-          for (const m of reviewGuardMessages(assessment)) process.stderr.write(`${m}\n`);
-        }
-        dispatch(
-          {
-            hook_event_name: "PostToolUse",
-            session_id: sessionId,
-            ...(opts.plan ? { plan_id: opts.plan } : {}),
-            tool_name: provider,
-            tool_input: { command: `${plan.command} ${plan.args.join(" ")}` },
-            tool_response: { outcome: child.status === 0 ? "ok" : "error" },
-          },
-          deps,
-          "PostToolUse",
-        );
-        dispatch(
-          {
-            hook_event_name: "Stop",
-            session_id: sessionId,
-            ...(opts.plan ? { plan_id: opts.plan } : {}),
-          },
-          deps,
-          "Stop",
-        );
-        writeHandoverWarnings();
-        if (jsonOut) {
-          // 実行が起きたことを正直に反映する実行結果 JSON。plan.dry_run は execute=true ゆえ false。
-          // signal 終了時は exit_code=null になるため signal も併記する (機械判定が exit/signal を区別できる)。
+program
+  .command("advisor")
+  .description("upper-model advisor adapter for uncertain orchestration decisions")
+  .option("--task <text>", "task text")
+  .option("--task-file <path>", TASK_FILE_OPTION_DESCRIPTION)
+  .option("--provider <provider>", "advisor provider (claude|codex)")
+  .option("--current-model <model>", "current orchestrator model that needs advice")
+  .option("--reason <text>", "why upper-model advice is needed")
+  .option("--plan <id>", "PLAN id")
+  .option("--execute", "execute provider CLI instead of dry-run")
+  .option("--mode <mode>", MODE_OVERRIDE_OPTION_DESCRIPTION)
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      task?: string;
+      taskFile?: string;
+      provider?: string;
+      currentModel?: string;
+      reason?: string;
+      plan?: string;
+      execute?: boolean;
+      mode?: ReturnType<typeof detectMode>["mode"];
+      json?: boolean;
+    }) => {
+      const task = resolveTaskText(opts);
+      if (!task) {
+        process.stderr.write("advisor requires exactly one of --task or --task-file\n");
+        process.exitCode = 1;
+        return;
+      }
+      if (opts.provider && opts.provider !== "claude" && opts.provider !== "codex") {
+        process.stderr.write("advisor --provider must be claude or codex\n");
+        process.exitCode = 1;
+        return;
+      }
+      const mode = opts.mode ?? detectMode().mode;
+      const decision = buildAdvisorDecision({
+        task,
+        mode,
+        provider: opts.provider as AdapterProvider | undefined,
+        currentModel: opts.currentModel,
+        reason: opts.reason,
+        planId: opts.plan,
+        execute: Boolean(opts.execute),
+        contextInjection: resolveSkillContextInjection(opts.plan),
+      });
+      if (!decision.adapterPlan.available) {
+        if (opts.json) process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);
+        else process.stderr.write(`${decision.adapterPlan.messages.join("\n")}\n`);
+        process.exitCode = 1;
+        return;
+      }
+      if (!opts.execute) {
+        if (opts.json) process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);
+        else {
           process.stdout.write(
-            `${JSON.stringify(
-              {
-                ...plan,
-                executed: true,
-                exit_code: child.status ?? null,
-                signal: child.signal ?? null,
-              },
-              null,
-              2,
-            )}\n`,
+            `advisor: provider=${decision.provider} model=${decision.model} effort=${decision.effort} intent=${decision.task_intent} lower=${decision.current_model_lower_than_advisor} dry-run\n`,
+          );
+          process.stdout.write(`  - ${decision.reason}\n`);
+          process.stdout.write(
+            `  - dispatch: command=${decision.adapterPlan.command} args=[${decision.adapterPlan.args.join(" ")}]\n`,
           );
         }
-        process.exitCode = child.status ?? 1;
-      },
-    );
-}
+        return;
+      }
+      const execution = executeAdapterPlanForCli(
+        decision.adapterPlan,
+        {
+          sessionPrefix: `advisor-${decision.provider}`,
+          toolName: "advisor",
+          planId: opts.plan,
+          jsonOut: Boolean(opts.json),
+        },
+        { gitBranch, gitHead, runSessionStartSideEffects, writeHandoverWarnings },
+      );
+      const output = {
+        ...decision,
+        adapterPlan: {
+          ...decision.adapterPlan,
+          ...execution,
+          dry_run: false,
+        },
+      };
+      if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+      else {
+        process.stdout.write(
+          `advisor executed: provider=${decision.provider} model=${decision.model} exit=${execution.exit_code ?? "null"}\n`,
+        );
+      }
+      process.exitCode = execution.exit_code ?? 1;
+    },
+  );
 
-runtimeCommand("codex");
-runtimeCommand("claude");
+registerDelegationCommands(program, {
+  gitBranch,
+  gitHead,
+  resolveTaskText,
+  resolveSkillContextInjection,
+  runSessionStartSideEffects,
+  taskFileOptionDescription: TASK_FILE_OPTION_DESCRIPTION,
+  writeHandoverWarnings,
+});
 
 program
   .command("gate <id>")
@@ -2212,7 +2352,7 @@ task
         return;
       }
       process.stdout.write(
-        `task classify: kind=${result.kind} drive=${result.drive}(${result.drive_confidence}) size=${result.size} complexity=${result.complexity_score} difficulty=${result.difficulty} risk=[${result.risk_flags.join(",")}]\n`,
+        `task classify: kind=${result.kind} drive=${result.drive}(${result.drive_confidence}) mode=${result.route.mode ?? "-"} route_exit=${result.route.exit_code} approval=${result.route.approval_status} size=${result.size} complexity=${result.complexity_score} difficulty=${result.difficulty} risk=[${result.risk_flags.join(",")}]\n`,
       );
       for (const f of result.findings) {
         process.stdout.write(`  - ${f.severity}: ${f.code} ${f.message}\n`);
@@ -2464,6 +2604,7 @@ team
                 // codex はプロンプトを stdin で受ける (cmd.exe shell-wrap 回避、PLAN-L7-77)。
                 stdio: stdin === undefined ? ioMode : ["pipe", ioMode, ioMode],
                 shell: invocation.shell ?? false,
+                windowsVerbatimArguments: invocation.windowsVerbatimArguments ?? false,
               });
               if (stdin !== undefined) {
                 child.stdin?.write(stdin);
@@ -2570,89 +2711,46 @@ branch
     }
   });
 
-const feedback = program
-  .command("feedback")
-  .description("強制停止フィードバック (forced-stop-feedback, PLAN-L7-02)");
+const github = program.command("github").description("GitHub operations guards");
 
-feedback
-  .command("list")
-  .description("emit/list harness.db feedback events")
+github
+  .command("guard")
+  .description("fail-close branch-type and commit message checks for harness-check")
+  .requiredOption("--head-ref <ref>", "PR head branch ref")
+  .requiredOption("--base-ref <ref>", "PR base branch ref")
+  .option("--pr-title <text>", "PR title")
+  .option("--pr-body-file <path>", "file containing PR body")
+  .option("--commit-file <path>", "file containing one commit subject per line")
   .option("--json", "JSON output")
-  .option(
-    "--emit",
-    "compute feedback events from current findings and quality signals before listing",
-  )
-  .action((opts: { json?: boolean; emit?: boolean }) => {
-    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
-    try {
-      if (opts.emit) emitFeedbackEvents(db);
-      const rows = db
-        .prepare("SELECT * FROM feedback_events WHERE status = 'open' ORDER BY created_at")
-        .all();
-      if (opts.json) process.stdout.write(`${JSON.stringify(rows, null, 2)}\n`);
-      else process.stdout.write(renderFeedbackEventRows(rows));
-    } finally {
-      db.close();
-    }
-  });
+  .action(
+    (opts: {
+      headRef: string;
+      baseRef: string;
+      prTitle?: string;
+      prBodyFile?: string;
+      commitFile?: string;
+      json?: boolean;
+    }) => {
+      const prBody =
+        opts.prBodyFile && existsSync(opts.prBodyFile) ? readFileSync(opts.prBodyFile, "utf8") : "";
+      const commitSubjects =
+        opts.commitFile && existsSync(opts.commitFile)
+          ? readFileSync(opts.commitFile, "utf8").split(/\r?\n/).filter(Boolean)
+          : [];
+      const result = evaluateGithubOpsGuard({
+        headRef: opts.headRef,
+        baseRef: opts.baseRef,
+        prTitle: opts.prTitle,
+        prBody,
+        commitSubjects,
+      });
+      if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      else process.stdout.write(renderGithubOpsGuard(result));
+      process.exitCode = result.ok ? 0 : 1;
+    },
+  );
 
-feedback
-  .command("classify")
-  .description(
-    "停止後メッセージを分類。既定=managed pmo-haiku への分類リクエスト emit / --apply で結果記録",
-  )
-  .option("--text <text>", "対象テキスト (省略時 stdin)")
-  .option("--session <id>", "session_id")
-  .option("--plan <id>", "plan_id (省略時 branch/state から解決)")
-  .option("--apply <json>", "ClassifyResult JSON を渡して recordFeedback (是正のみ記録)")
-  .action((opts: { text?: string; session?: string; plan?: string; apply?: string }) => {
-    const text = opts.text ?? readStdin();
-    if (!opts.apply) {
-      // 既定: 分類リクエストを emit (raw API なし、agent が pmo-haiku に渡す)
-      process.stdout.write(`${emitClassifyRequest(text)}\n`);
-      return;
-    }
-    let result: ClassifyResult;
-    try {
-      result = JSON.parse(opts.apply) as ClassifyResult;
-    } catch {
-      process.stderr.write("--apply は ClassifyResult JSON である必要があります\n");
-      process.exitCode = 1;
-      return;
-    }
-    const deps = nodeDeps(process.cwd(), gitBranch);
-    const ctx: FeedbackCtx = {
-      session_id: opts.session ?? "unknown",
-      plan_id: opts.plan ?? resolveActivePlan(deps), // 省略時 state/branch から解決
-      summary: text,
-    };
-    recordFeedback(result, ctx, deps);
-    process.stdout.write(
-      result.category === "feedback" && ctx.plan_id
-        ? `recorded: feedback (attention=${result.attention})\n`
-        : "skipped (mistake or plan_id 未解決)\n",
-    );
-  });
-
-feedback
-  .command("pending")
-  .description("Recovery 起票候補 (recovery_proposed && 未対応) を出力。agent 起動時に参照")
-  .option("--json", "JSON で出力")
-  .action((opts: { json?: boolean }) => {
-    const deps = nodeDeps(process.cwd(), gitBranch);
-    const pending = pendingRecoveryProposals(deps);
-    if (opts.json) {
-      process.stdout.write(`${JSON.stringify(pending, null, 2)}\n`);
-      return;
-    }
-    if (pending.length === 0) {
-      process.stdout.write("Recovery 起票候補なし\n");
-      return;
-    }
-    for (const p of pending) {
-      process.stdout.write(`[${p.attention}] ${p.plan_id} ${p.ts} — ${p.summary}\n`);
-    }
-  });
+registerFeedbackCommands(program);
 
 program
   .command("setup")
@@ -2682,6 +2780,13 @@ program
         return;
       }
       const teamCount = [opts.tlTeam, opts.qaTeam, opts.poTeam].filter(Boolean).length;
+      if (opts.team && teamCount === 0) {
+        process.stderr.write(
+          "--team requires --tl-team / --qa-team / --po-team so generated CODEOWNERS never ships with unresolved team placeholders.\n",
+        );
+        process.exitCode = 1;
+        return;
+      }
       if (teamCount > 0 && teamCount < 3) {
         process.stderr.write(
           "--tl-team / --qa-team / --po-team は 3 つとも指定してください (CODEOWNERS の @TODO 混入防止)\n",
@@ -2717,67 +2822,113 @@ program
     },
   );
 
-const distribution = program.command("distribution").description("clean distribution planning");
-distribution
-  .command("plan")
-  .description("emit the clean export, preflight, rollback, and contract plan")
-  .option("--tag <tag>", "source/release tag", gitHead() ?? "unreleased")
-  .option(
-    "--clean-repo <name>",
-    "clean distribution repository",
-    "UNISON-TECHNOLOGY/ut-tdd-agent-harness-clean",
-  )
-  .option("--package-root <path>", "consumer package root; defaults to repo root")
-  .option("--json", "JSON output")
-  .action((opts: { tag?: string; cleanRepo?: string; packageRoot?: string; json?: boolean }) => {
-    const repoRoot = process.cwd();
-    const detection = detectMode();
-    let bunVersion: string | null = null;
+const memory = program.command("memory").description("shared cross-runtime project memory");
+memory
+  .command("add")
+  .description("write a shared memory entry under .ut-tdd/memory")
+  .requiredOption("--title <title>", "memory title")
+  .option("--kind <kind>", "project | feedback | reference | user", "project")
+  .option("--body <text>", "memory body")
+  .option("--body-file <path>", "read memory body from a UTF-8 file")
+  .option("--tags <csv>", "comma-separated tags")
+  .action(
+    (opts: { title: string; kind: string; body?: string; bodyFile?: string; tags?: string }) => {
+      const body = opts.bodyFile ? readFileSync(opts.bodyFile, "utf8") : (opts.body ?? "");
+      const tags = opts.tags
+        ? opts.tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean)
+        : [];
+      try {
+        const entry = writeMemoryEntry(process.cwd(), {
+          kind: opts.kind as MemoryKind,
+          title: opts.title,
+          body,
+          tags,
+        });
+        process.stdout.write(`memory: wrote ${entry.source_path}\n`);
+      } catch (error) {
+        process.stderr.write(`memory: ${error instanceof Error ? error.message : String(error)}\n`);
+        process.exitCode = 1;
+      }
+    },
+  );
+
+memory
+  .command("list")
+  .description("list shared memory entries from harness.db")
+  .option("--query <text>", "filter by text")
+  .option("--limit <n>", "maximum rows", "20")
+  .action((opts: { query?: string; limit?: string }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
     try {
-      bunVersion = execFileSync("bun", ["--version"], { encoding: "utf8" }).trim();
-    } catch {
-      bunVersion = null;
+      process.stdout.write(
+        renderMemoryList(
+          selectMemoryEntries(db, { query: opts.query, limit: Number(opts.limit ?? 20) }),
+        ),
+      );
+    } finally {
+      db.close();
     }
-    const hasGit = spawnSync("git", ["--version"], { stdio: "ignore" }).status === 0;
-    const hasGh = spawnSync("gh", ["--version"], { stdio: "ignore" }).status === 0;
-    const hasUtTddCli = spawnSync("ut-tdd", ["--help"], { stdio: "ignore" }).status === 0;
-    const exportPlan = buildCleanDistributionPlan({
-      paths: collectDistributionCandidatePaths(repoRoot),
-      sourceTag: opts.tag,
-      cleanRepo: opts.cleanRepo,
-    });
-    const readiness = buildConsumerReadinessPlan({
-      bunVersion,
-      hasGit,
-      hasGh,
-      hasUtTddCli,
-      hasClaude: detection.claude,
-      hasCodex: detection.codex,
-      repoRoot,
-      packageRoot: opts.packageRoot ? join(repoRoot, opts.packageRoot) : repoRoot,
-      tag: opts.tag,
-    });
-    const output = {
-      ok: exportPlan.ok && readiness.ok,
-      export: exportPlan,
-      readiness,
-      actualCutRequiresPoApproval: true,
-    };
+  });
+
+memory
+  .command("recall")
+  .description("render shared memory context from harness.db")
+  .option("--query <text>", "filter by text")
+  .option("--limit <n>", "maximum rows", "5")
+  .action((opts: { query?: string; limit?: string }) => {
+    const db = openHarnessDb(defaultHarnessDbPath(process.cwd()), { repoRoot: process.cwd() });
+    try {
+      const block = renderMemorySurface(
+        selectMemoryEntries(db, { query: opts.query, limit: Number(opts.limit ?? 5) }),
+      );
+      process.stdout.write(block || "memory: no entries\n");
+    } finally {
+      db.close();
+    }
+  });
+
+registerDistributionCommands(program);
+
+const context = program
+  .command("context")
+  .description("startup context tiering (canonical doc section routing, PLAN-L7-302)");
+context
+  .command("suggest")
+  .description("suggest which canonical doc sections to read for a task (tier-1 dynamic load)")
+  .option("--task <text>", "free-text task (classified into kind → routed sections)")
+  .option("--task-file <path>", TASK_FILE_OPTION_DESCRIPTION)
+  .option("--json", "JSON output")
+  .action((opts: { task?: string; taskFile?: string; json?: boolean }) => {
+    const taskText = resolveTaskText(opts);
+    if (taskText === null) {
+      process.stderr.write("context suggest requires exactly one of --task or --task-file\n");
+      process.exitCode = 1;
+      return;
+    }
+    const repoRoot = process.cwd();
+    const classification = classifyTask({ text: taskText });
+    const result = contextSuggest(repoRoot, classification.kind);
     if (opts.json) {
-      process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      return;
+    }
+    if (result.fail_open) {
+      process.stdout.write(
+        `context suggest — kind=${result.kind}: 全文読み推奨 (${result.fail_open_reason})\n`,
+      );
       return;
     }
     process.stdout.write(
-      `distribution plan: ${output.ok ? "ok" : "blocked"} channel=${exportPlan.channel} tag=${exportPlan.sourceTag}\n`,
+      `context suggest — kind=${result.kind}: ${result.sections.length} セクション\n`,
     );
-    process.stdout.write(`  clean-repo: ${exportPlan.cleanRepo}\n`);
-    process.stdout.write(`  artifact-paths: ${exportPlan.artifactPaths.length}\n`);
-    process.stdout.write(`  excluded-paths: ${exportPlan.excludedPaths.length}\n`);
-    process.stdout.write(
-      `  readiness: ${readiness.ok ? "ok" : "blocked"} mode=${readiness.mode}\n`,
-    );
-    process.stdout.write("  actual-cut: requires PO approval\n");
-    process.exitCode = output.ok ? 0 : 1;
+    for (const s of result.sections) {
+      process.stdout.write(
+        `  ${s.path}:${s.start_line}-${s.end_line}  ${s.heading}  (matched: ${s.matched})\n`,
+      );
+    }
   });
 
 program.parseAsync(process.argv).catch((e: unknown) => {

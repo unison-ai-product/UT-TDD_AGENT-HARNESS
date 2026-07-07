@@ -30,8 +30,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-25T14:05:55+09:00"
-    tests_green_at: "2026-06-25T14:05:55+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "Refactor candidate detector projects typed structural candidates into quality_signals and feedback_events without schema changes."
     worker_model: codex
@@ -42,9 +42,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-25T14:05:55+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/projection-writer.test.ts
-        output_digest: "sha256:07fd6b9c6fcbabf2c893a28eb0f49f4da7f83f276b88befdbfd7b8c4b5daee51"
+        output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -58,9 +58,9 @@ review_evidence:
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-06-25T14:05:55+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/state-db/projection-writer.ts
-        output_digest: "sha256:3ec94213b5788a3dbce52c375a7dcbf01593c233c47d8afcd88e55da869ff4af"
+        output_digest: "sha256:1a61852bc66a939e4624a516ec9b5a5a4147becd6ac8e06842b25bca7e51bd1a"
 ---
 
 # PLAN-L7-147: refactor candidate detector projection

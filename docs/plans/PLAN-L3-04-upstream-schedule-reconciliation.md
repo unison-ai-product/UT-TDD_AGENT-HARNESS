@@ -102,6 +102,8 @@ The residual table must include a separate passage certificate for each drive mo
 | Retrofit | impact matrix, migration/rollback plan, regression/performance/data-integrity evidence, design/requirement route if changed, residual status |
 | Add-feature | parent PLAN, requirement row, add-design row, add-impl row, test-design oracle, WBS, implementation target, Reverse back-fill state, residual status |
 | Research | decision question, options, ADR, rejected options, research memo, Forward target, Discovery switch if feasibility remains unknown, residual status |
+| Design-bottomup | backend-derived FE requirement evidence, elicitation result, mock/Discovery reuse evidence, Forward target, residual status |
+| Version-up | version target, deferred capability evidence, activation route, Forward target, residual status |
 
 Passage rule: no drive model can be marked closed unless its row either names the Forward layer/gate it re-enters or is explicitly `gap`, `parked`, or `PO decision`.
 
@@ -138,7 +140,7 @@ Rule closure rule: if a rule has no automation owner, the row remains `gap` even
 |---|---|---|---|---|---|---|---|---|
 | WBS-L3-04-01 | Build FR residual matrix from L1/L3 carry and A-122/A-124/A-125/A-126 addenda | TL | none | 0.5d | docs | .1a | N/A | Revert this PLAN and audit doc |
 | WBS-L3-04-02 | Split residual buckets R1-R9 into child PLAN seeds or explicit park decisions | TL/PO | WBS-L3-04-01 | 0.5d | docs | .1b | N/A | Archive draft child PLANs and restore carry-only state |
-| WBS-L3-04-03 | Build drive-model passage certificate table for all 9 entry modes | TL | WBS-L3-04-01,WBS-L3-04-02 | 0.5d | docs | .2 | N/A | Keep all unresolved mode rows as gap |
+| WBS-L3-04-03 | Build drive-model passage certificate table for all current entry modes | TL | WBS-L3-04-01,WBS-L3-04-02 | 0.5d | docs | .2 | N/A | Keep all unresolved mode rows as gap |
 | WBS-L3-04-04 | Add DB registration gate: drive-model passage rows require `drive_runs` / linked projection evidence or non-closed status | TL | WBS-L3-04-03 | 0.5d | docs/src | .3 | ff_drive_model_db_registration=false | Keep rule report-only until projection writer is extended |
 | WBS-L3-04-05 | Add rule automation closure table: every text rule maps to doctor/plan-lint/vmodel/hook/DB/CI or remains gap | TL | WBS-L3-04-01..04 | 0.25d | docs/src | .4 | ff_rule_automation_closure=false | Keep text-only rules non-closed |
 | WBS-L3-04-06 | Design `fr-roadmap-coverage` lint: FR/carry/addendum -> PLAN/WBS/park plus drive-model passage row | TL | WBS-L3-04-01..05 | 0.5d | docs/src | .5 | ff_fr_roadmap_coverage_lint=false | Disable doctor wiring and keep report-only output |
@@ -151,7 +153,7 @@ Rule closure rule: if a rule has no automation owner, the row remains `gap` even
 - A-133 audit exists and states whether the V-model closes by row.
 - Handover no longer states that all L7 work has no next action.
 - Residual buckets R1-R9 are either child PLAN seeds, explicit park, or PO decision items.
-- Drive-model passage certificate rows exist for all 9 entry modes and name Forward re-entry evidence or a non-closed status.
+- Drive-model passage certificate rows exist for all current entry modes and name Forward re-entry evidence or a non-closed status.
 - Drive-model passage rows require harness.db registration evidence (`drive_runs` plus linked workflow/hook/model evidence) or remain non-closed.
 - Every newly introduced rule maps to an automation owner or remains non-closed; text-only rules cannot close a row.
 - Future automation candidate `fr-roadmap-coverage` is defined before implementation.

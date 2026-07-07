@@ -1,24 +1,37 @@
 ---
 plan_id: PLAN-L7-197-github-ops-workflow-hardening
-title: "PLAN-L7-197 (impl): GitHub 運用 workflow hardening — smell スキャン(audit quality) を harness-check CI に配線、release-version タグ運用(git tag/gh release)を追加、branch-type guard(poc-no-merge/hotfix-postmortem/commitlint)を実装、CODEOWNERS 0-team 通過(SEC-1)を fail-close。A-144/A-145 SEC-1 + 2026-06-29 GitHub-ops probe"
+title: "PLAN-L7-197 (impl): GitHub 運用 workflow hardening"
 kind: impl
 layer: L7
 drive: be
-status: draft
-version_target: future
+status: confirmed
 created: 2026-06-29
-updated: 2026-06-29
-owner: PM (Opus) / PO (人間)
+updated: 2026-07-01
+owner: PM (Opus) / PO (human)
 parent_design: docs/design/harness/L6-function-design/setup-solo-team.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
   - role: se
-    slot_label: "SE (Codex 委譲) — audit quality を CI subjob 配線(dogfood+consumer template)、release tag 運用 script/doc、branch-type guard subjob、CODEOWNERS 0-team fail-close + test"
+    slot_label: "SE (Codex): audit quality CI 配線、release-plan、branch-type guard、CODEOWNERS 0-team fail-close"
   - role: tl
-    slot_label: "TL (Claude cross-runtime judge) — 既存 CI subjob 非破壊・consumer template 整合・harness-check.yml コメントの『PLAN で追加』予定との一致をレビュー"
+    slot_label: "TL (Claude/Codex judge): CI/template 互換、外部公開境界、証跡確認"
 generates:
   - artifact_path: docs/plans/PLAN-L7-197-github-ops-workflow-hardening.md
     artifact_type: markdown_doc
+  - artifact_path: .github/workflows/harness-check.yml
+    artifact_type: github_config
+  - artifact_path: src/github/ops-guard.ts
+    artifact_type: source_module
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/templates.ts
+    artifact_type: source_module
+  - artifact_path: tests/github-ops-guard.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/cli-surface.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/setup.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires:
@@ -27,62 +40,110 @@ dependencies:
     - .ut-tdd/audit/A-145-01-distribution-packaging.md
     - .ut-tdd/audit/A-144-02-runtime-config-security.md
     - .ut-tdd/audit/A-145-03-verification-gate-engine.md
+review_evidence:
+  - reviewer: Codex
+    review_kind: intra_runtime_subagent
+    reviewed_at: 2026-07-01T18:04:58+09:00
+    verdict: pass
+    scope: "PLAN-L7-197 local close: GitHub ops guard, CI/template audit quality wiring, release-plan, CODEOWNERS 0-team fail-close"
+    tests_green_at: 2026-07-01T18:04:58+09:00
+    green_commands:
+      - kind: typecheck
+        command: bun run typecheck
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: 2026-07-01T18:02:24+09:00
+        evidence_path: src/cli.ts
+        output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+      - kind: lint
+        command: bun run lint
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: 2026-07-01T18:00:15+09:00
+        evidence_path: tests/github-ops-guard.test.ts
+        output_digest: "sha256:ede51495fd3cd4b174d943ff49293a3d5f33268cc2e63ca2b549f4457c25a96c"
+      - kind: unit_test
+        command: bun run vitest run tests/github-ops-guard.test.ts tests/setup.test.ts --reporter=dot
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-07-01T18:00:27+09:00
+        evidence_path: tests/setup.test.ts
+        output_digest: "sha256:f2a4f438552f76da5592e2002a92e5a64b28dc82fe643c08e7c182f61944569f"
+      - kind: smoke
+        command: bun run vitest run tests/cli-surface.test.ts -t "release publication|GitHub branch-type|CODEOWNERS team" --reporter=dot
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-07-01T17:58:38+09:00
+        evidence_path: tests/cli-surface.test.ts
+        output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
+      - kind: smoke
+        command: bun src/cli.ts distribution release-plan --tag v0.1.0 --repo unison-ai-product/UT-TDD_AGENT-HARNESS-Pack --json
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-07-01T18:03:01+09:00
+        evidence_path: src/github/ops-guard.ts
+        output_digest: "sha256:f45fd0e718bd627d26fa834fd811d1f7ccf72d78f7c6a2ab77bc86b8c8f94164"
+      - kind: smoke
+        command: bun src/cli.ts audit quality --include-tests --limit 20
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: 2026-07-01T18:03:02+09:00
+        evidence_path: tests/github-ops-guard.test.ts
+        output_digest: "sha256:ede51495fd3cd4b174d943ff49293a3d5f33268cc2e63ca2b549f4457c25a96c"
 ---
 
 # PLAN-L7-197 (impl): GitHub 運用 workflow hardening
 
-## 優先度: version-up parked / 将来版へ保全 (PO 2026-06-29)
+## 背景
 
-PO 決定 (2026-06-29): 配布クローズ優先で将来版へ保全 (`status=draft` + `version_target: future`)。
-本 PLAN は 2026-06-29 の GitHub-ops probe (smell 未配線 / version タグ無し / branch-type guard 未実装) の回収先。
+2026-06-29 の GitHub 運用 probe で、GitHub CI と配布テンプレートに次の穴が残っていた。
 
-## 0. 前提 (調査結論 2026-06-29)
+- `audit quality` は手動 CLI だけで、`harness-check` CI と consumer template に配線されていなかった。
+- release tag / `gh release` の運用手順が CLI から再現できず、外部公開操作との境界が曖昧だった。
+- `poc/*` / `hotfix/*` / commit subject の branch-type guard がコメント上の予定に留まっていた。
+- `setup --team` が team slug 0 件でも CODEOWNERS 生成へ進めるため、SEC-1 の 0-team 通過穴が残っていた。
 
-- **smell 未配線**: `audit quality` (`src/audit/quality.ts`: secret-like / 絶対パス / local endpoint /
-  model・provider ハードコード / TODO・FIXME・HACK・XXX) は **手動 CLI のみ**。`harness-check.yml` CI は
-  `typecheck/db rebuild/vitest/biome/doctor` の 5 つで **smell スキャン未配線**。
-- **release-version タグ無し**: `git tag`=0、`package.json` version=`0.1.0` 固定、`.github/` に release/tag 自動化なし。
-  `version_target` ledger は doc 版保全 (version-up 駆動) で git/release タグとは別物。
-- **branch-type guard 未実装**: `harness-check.yml` コメントが `commitlint / poc-no-merge-guard /
-  hotfix-postmortem-required` 等を「**PLAN で追加**」と明記 (§6.3 branch-type subjob)、未実装。
-- **SEC-1**: `src/cli.ts:2600` `teamCount>0 && teamCount<3` 条件のため **CODEOWNERS は 0-team で通過** (gate 穴)。
+## Scope
 
-## 1. Scope
+### IN
 
-### IN (本 PLAN)
-- **smell を CI に配線**: `ut-tdd audit quality` を `harness-check.yml` の subjob に追加 (dogfood) + consumer
-  CI template にも。fail-close 方針は要確定 (advisory→hard の段階化可)。
-- **release-version タグ運用**: `git tag` + `gh release` の運用 script/doc を追加 (例 `v0.1.0`)。
-  初回リリースの version 刻みを workflow 化。
-- **branch-type guard**: `poc-no-merge-guard` / `hotfix-postmortem-required` / `commitlint` を branch 種別で
-  発火する subjob として実装 (harness-check.yml コメントの予定を消化)。
-- **SEC-1**: CODEOWNERS の 0-team 通過を **fail-close** 化 (`teamCount===0` も reject、または CODEOWNERS 要件を
-  team 構成と整合)。
+- dogfood `.github/workflows/harness-check.yml` に `github guard` と `audit quality --include-tests` を追加する。
+- consumer `common/harness-check.yml` template に同じ guard / audit / doctor 経路を追加する。
+- `src/github/ops-guard.ts` に GitHub 運用 guard を実装する。
+- CLI に `github guard` と `distribution release-plan` を追加する。
+- `setup --team` は `--tl-team` / `--qa-team` / `--po-team` が 0 件または一部欠落なら fail-close する。
+- unit / CLI surface / setup template test で branch-type guard、release-plan、CODEOWNERS 0-team reject を固定する。
 
-### OUT (本 PLAN では作らない)
-- 既存 CI subjob (typecheck/test/doctor 等) の挙動変更 (追加のみ)。
-- smell ロジック自体の変更 (`audit quality` は既存、CI 配線のみ)。
-- 配布対象の切り出し方針変更 (L7-157/190/191 の領分)。
-- いま実装すること (version-up parked)。
+### OUT
 
-## 2. Acceptance Criteria
-- `audit quality` が CI subjob として実行され、smell 検出時に CI 結果へ反映 (advisory/hard は段階明記)。
-- release-version タグ運用 (git tag + gh release) が script/doc 化され、初回 `v0.x.y` を刻める。
-- branch-type guard が branch 種別 (poc/hotfix 等) で発火する test green。
-- CODEOWNERS の 0-team 通過が **reject** される test green (SEC-1 穴が閉じる)。
-- 既存 CI subjob 非破壊。consumer CI template と整合。
-- doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
+- 実 tag 作成、`git push --tags`、`gh release create` の実行。
+- Pack repo への公開、署名 tarball publish、UAT。
+- `audit quality` の検出ロジック自体の拡張。
 
-## 3. Schedule
-- mode: serial。
-- Step 0: smell の CI 段階 (advisory→hard) / release タグ運用方式 / branch-type guard の発火条件を確定。
-- Step 1: `audit quality` を harness-check + consumer CI template に配線。
-- Step 2: release-version タグ運用 script/doc 追加。
-- Step 3: branch-type guard subjob 実装 + test。
-- Step 4: CODEOWNERS 0-team fail-close + test → review (cross-runtime judge) → confirmed。
+## 実装結果
 
-## 4. 壊さない / 再発させない
-- 既存 CI subjob を壊さない (追加のみ、段階化で local-green/CI-red の急変を避ける [[project_ci_feedback_gap_and_biome_drift]])。
-- smell ロジック本体に触れない (CI 配線のみ)。
-- consumer template と dogfood CI の整合を保つ。
-- version-up parked。
+- `github guard` は次を fail-close する。
+  - `poc/*` から `main` への PR。
+  - `hotfix/*` から `main` への PR で `Postmortem` 証跡が無いもの。
+  - Conventional Commits 形式ではない commit subject。
+- `distribution release-plan` は `git tag -a`、`distribution package`、`gh release create` の command list を表示するだけで、外部公開操作は実行しない。
+- dogfood CI と consumer CI template は branch-type guard、typecheck、DB rebuild、test、lint、audit quality、doctor を同じ順序で通す。
+- `setup --team` は CODEOWNERS 用 team slug が 0 件なら即時 reject する。
+
+## Acceptance Criteria
+
+- `github guard` が `poc/*` main merge、postmortem 無し hotfix、非 Conventional Commit を検出する。
+- `distribution release-plan --tag vX.Y.Z` が非破壊の公開計画を返し、外部公開操作は human/external boundary として残す。
+- dogfood CI と consumer template の双方に `audit quality --include-tests` が配線される。
+- `setup --team --dry-run` は team slug 0 件を reject する。
+- typecheck / lint / targeted vitest / normal doctor が green。
+
+## 判定
+
+実 tag push / GitHub Release 作成 / 署名 publish / UAT は外部公開操作なので、本 PLAN の local close には含めない。

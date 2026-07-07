@@ -35,8 +35,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-06-29T10:42:41+09:00"
-    tests_green_at: "2026-06-29T10:42:41+09:00"
+    reviewed_at: "2026-07-01T16:17:00+09:00"
+    tests_green_at: "2026-07-01T16:16:00+09:00"
     verdict: approve
     scope: "L8 IT-ASSET-03 runtime/roster import-direction proof and G8 evidence promotion."
     worker_model: codex
@@ -47,9 +47,9 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-06-29T10:42:41+09:00"
+        completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/dependency-drift.test.ts
-        output_digest: "sha256:27155d10c52c95cda5006062aa099a49e7bf97f27420356464ed42e34939aeca"
+        output_digest: "sha256:c17e61c86a61d36ec5556b8ae43aef32249ca6d36998edc5813f300d9833c58b"
 ---
 
 # PLAN-L7-173: roster boundary G8 evidence closure

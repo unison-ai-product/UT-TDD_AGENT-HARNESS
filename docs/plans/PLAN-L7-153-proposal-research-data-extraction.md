@@ -46,7 +46,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-06-25T17:23:27+09:00"
         evidence_path: tests/task-classify.test.ts
-        output_digest: "sha256:5f3b411831eaf5df7f40ac95cce1623fd7f47b85ebc2ff6012b53b5610dd519d"
+        output_digest: "sha256:4354ec1766680c77a56569eb7c6fbfafdff3b568beafed6092c3da2a8375b075"
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
