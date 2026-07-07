@@ -240,6 +240,56 @@ Stage 1 の登録内容 (`version-up→[?]`) を確定させる前提**であり
   - **分割理由**: Stage 1 (mapping 登録 + 184 分類 + core schema + CI 更新) を 1 commit 塊にすると切り分け困難。
     fail-close 構造を先に据え、L7-336 の一般化 (影響 202 箇所) は独立サイクルで burn-down する方が安全。
 
+### Step 4.1 補遺C: Stage 1 patch-level 実装仕様 (サインオフ即着手用、live gate 未適用)
+
+本補遺は「手順定義の確定」を最大化するための **patch-level 仕様**であり、**本体 src への適用は tl/po
+サインオフ後**(fail-close 着手条件を維持)。version-up 裁定 (補遺A) 以外の delta は全て確定済で、裁定後の
+実行は機械的。
+
+**P1 — `src/plan/lint-policy.ts` `ROUTE_MODE_ALLOWED_KINDS` を SSoT 完全化**:
+
+```ts
+const ROUTE_MODE_ALLOWED_KINDS: Record<string, readonly string[]> = {
+  "add-feature": ["add-design", "add-impl"],   // 既存 (維持)
+  "reverse":     ["reverse"],                   // SSoT L4 §3.1、mismatch 0
+  "recovery":    ["recovery"],                  // SSoT、off-diagonal 2 は P3 台帳で免除
+  "refactor":    ["refactor"],                  // SSoT、off-diagonal 12 は P3 台帳で免除
+  "verify":      ["verify"],                    // RECOVERY-10 本体新 kind (Step 4.1 手順1-2)
+  // "version-up": <裁定>  — option1: ["impl"] + parked-guard / option2: ["add-design"] / option3: 登録せず(PLAN化しない)
+};
+```
+
+**P2 — `src/plan/lint.ts:364` を fail-open→fail-close (独立 commit)**:
+
+```ts
+const allowedKinds = ROUTE_MODE_ALLOWED_KINDS[mode];
+if (!allowedKinds) {
+  return [{ reason: "route_mode_kind_mismatch",
+    detail: `unknown route_mode=${mode} (fail-close: SSoT L4 §3.1 由来で ROUTE_MODE_ALLOWED_KINDS へ登録せよ; ${ROUTE_MODE_KIND_DEBT_GUIDANCE})` }];
+}
+```
+
+前提: P1 で全実在 mode を登録済でないと既存 PLAN が割れる(= register-correct が fail-close の論理前提)。
+version-up 未裁定のまま P2 を適用すると 47件が fail-close する硬依存があるため、**version-up 裁定は P2 の
+ブロッカー**。
+
+**P3 — off-diagonal landed 14件を恒久台帳へ (`lint.ts:369` の LEGACY_LANDED は mode 非依存で免除)**:
+`ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS` へ 14 id 追加 (refactor|impl ×12: L7-216/217/218/220/222/223/
+224/225/226/227/228/256、recovery|{refactor,impl} ×2: L7-359/361) + `route-mode-kind-debt-audit-2026-07-02.md`
+に「refactor/recovery mode の landed off-diagonal」節を**追加**(並行台帳を作らない) + `tests/plan-lint.test.ts`
+台帳同期テストの照合対象へ反映。
+
+**P4 — 下流 CI/test 追従 (逆流禁止 = 設計を CI に合わせて緩めない)**:
+`tests/schema.test.ts:40` の `toHaveLength(12)`→`13` (verify kind) / 未知 route_mode が空許可でなく fail-close
+する回帰テスト新規 (IT-EXT-05 同型) / `harness-check` は追加 gate を素通りさせず実行。
+
+**version-up 3択のコード着地 (裁定後に確定)**:
+| 裁定 | P1 の version-up 行 | 追加作業 | 破壊度 |
+|---|---|---|---|
+| option1 (route-map 更新)〔推奨〕 | `["impl"]` | parked-guard 機構 (`version_target` 有 → back-fill 義務保留、着手時 add-feature 合流で復活) + L4 §3.1 追補 | 小 (47件不変) |
+| option2 (47件を fix) | `["add-design"]` | 47 PLAN の kind 書換 + parked 意味論再設計 | 大 |
+| option3 (deferral 台帳) | 登録せず | 47件から route_mode 除去 or 別形式へ移行 | 中〜大 (資産扱い未定義) |
+
 ### Step 4.2: 右肺 doc 3 点セット節の標準化 [並列: doc ごと独立]
 
 - **影響**: `docs/test-design/harness/L8/L9/L12/L14` + L10 (RECOVERY-09 で新設済 `L10-ux-validation-test-design.md`)。
@@ -284,9 +334,16 @@ Stage 1 の登録内容 (`version-up→[?]`) を確定させる前提**であり
 - [x] **route_mode→kind 棚卸しを実走** (全 567 PLAN 抽出 → 184 route_mode PLAN を SSoT 対照分類、補遺A)。
       off-diagonal landed 14件を特定、version-up 47件を tl/po 判断案件として上申。観測鵜呑み blessing なし。
 - [x] **段階分け** (Stage 1 = fail-close 構造 + register-correct / Stage 2 = L7-336 活性化) を補遺B に定義。
-- [ ] **tl/po 人間サインオフ** — 承認対象 = (a) この手順定義 + Stage 分割、(b) **version-up 47件の処遇裁定
-      (補遺A 3 択、推奨 1)**、(c) landed off-diagonal 14件の恒久台帳化。記録後に Stage 1 本体着手
-      (add-impl/add-design)。実装は別ランタイム (Codex) / 別セッションと分担。
+- [x] **tl/po 人間サインオフ (PO「OK進めて」2026-07-07)** — 承認: (a) 手順定義 + Stage 分割、
+      (b) **version-up 47件 = option1 (route-map 更新 + parked-guard、`version-up→[impl]`)**、
+      (c) landed off-diagonal 14件の恒久台帳化。→ Stage 1 本体着手を承認。
+
+## サインオフ記録 (review_evidence)
+
+- **2026-07-07 PO 人間サインオフ「OK進めて」**: Step 4 手順定義 (補遺A/B/C) を承認。裁定:
+  version-up = **option1** (最小破壊、47件不変・可逆)、off-diagonal 14件 = 恒久台帳、Stage 1/2 分割 +
+  実装 Codex/別セッション分担を承認。本サインオフを以て Stage 1 (fail-close 構造 + register-correct) の
+  本体着手が解禁 (RECOVERY-10 Step 4 着手条件を充足)。Stage 2 (L7-336 活性化) は次段。
 
 ## Step 5: fullback (再発防止 + 上位整合)
 
