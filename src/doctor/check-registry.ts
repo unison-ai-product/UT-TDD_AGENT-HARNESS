@@ -29,6 +29,7 @@ import {
   checkPropagation,
   checkReviewEvidence,
   checkScrumReverse,
+  checkTestDesignNaming,
 } from "./plan-governance";
 import {
   checkCycleP4Verification,
@@ -149,6 +150,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "plan-completion-drift",
   "propagation",
   "pair-freeze",
+  "test-design-naming",
   "module-drift",
   "merged-plan-status",
   "plan-artifact-existence",
@@ -343,6 +345,11 @@ export function buildFullDoctorCheckDefinitions(
     { id: "propagation", profiles: fullProfile, run: () => checkPropagation(deps.repoRoot) },
     { id: "review-evidence", profiles: fullProfile, run: () => checkReviewEvidence(deps.repoRoot) },
     { id: "pair-freeze", profiles: fullProfile, run: () => checkPairFreeze(deps.repoRoot) },
+    {
+      id: "test-design-naming",
+      profiles: fullProfile,
+      run: () => checkTestDesignNaming(deps.repoRoot),
+    },
     { id: "module-drift", profiles: fullProfile, run: () => checkModuleDrift(deps.repoRoot) },
     {
       id: "merged-plan-status",

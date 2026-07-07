@@ -73,6 +73,10 @@ function analyzePairFreeze(docs):
   「wireframe mock 自体が③ペア、L10 独立 doc 不要」) は PO 裁定なき作り込みで、欠落を lint から
   隠す例外だったため撤去。L2 sub-doc は全て `docs/test-design/harness/L10-ux-validation-test-design.md`
   を直接参照する (rule 3 双方向の正規形)。`self` および design→design 参照は `ref-unresolved` 孤児。
+- **③ doc の命名標準 (PLAN-RECOVERY-09、機械検査 = doctor `test-design-naming`)**:
+  `docs/test-design/harness/` 直下は `L<右腕層>-<kebab>-test-design.md` (右腕層 = L7 谷/L8/L9/
+  L10/L12/L14) のみ許可し、frontmatter `executed_at_layer` は filename 層と一致必須。左腕層命名の
+  再流入と標準外 doc の無断追加は fail-close (明示許可: README.md / proposal-document-coverage-routing.md)。
 - test-design 側の `pair_artifact` は **ディレクトリ集合参照** (例 `docs/design/harness/L4-basic-design/`) で、design sub-doc の所在 dir を含めば双方向成立。
 - **ルート直下 doc** = `docs/design/harness/<file>.md` (例: 移行 stub `L1-business-requirements.md` = `# (moved)`) は **2 階層 sub-doc でない**ため対象外。`designLayerFromPath` は `L<N>-<topic>/<file>.md` の **2 階層構造のみ**マッチする (ルート直下 stub の暗黙除外。stub 自体の整理は別途 carry)。
 - **検算 (実 repo)**: regex マッチ 33 − EXCLUDED 3 (L2/L3 の `README.md` ×2 + `roadmap.md` ×1) = 検査対象 30 = 双方向成立 30 pair (孤児0)。全対象が pair 成立 = 見逃し0。

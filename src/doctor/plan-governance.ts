@@ -30,6 +30,11 @@ import {
 } from "../lint/review-evidence";
 import { analyzeScrumReverse, loadSrPlans, scrumReverseMessages } from "../lint/scrum-reverse";
 import {
+  analyzeTestDesignNaming,
+  loadTestDesignDocs,
+  testDesignNamingMessages,
+} from "../lint/test-design-naming";
+import {
   analyzePlanReferenceFreshness,
   lintPlan,
   lintPlanWithGate,
@@ -194,6 +199,21 @@ export function checkPairFreeze(repoRoot: string): { messages: string[]; ok: boo
   } catch {
     return {
       messages: ["pair-freeze - violation: design/test-design docs could not be read"],
+      ok: false,
+    };
+  }
+}
+
+export function checkTestDesignNaming(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["test-design-naming - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeTestDesignNaming(loadTestDesignDocs(repoRoot));
+    return { messages: testDesignNamingMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["test-design-naming - violation: test-design docs could not be read"],
       ok: false,
     };
   }

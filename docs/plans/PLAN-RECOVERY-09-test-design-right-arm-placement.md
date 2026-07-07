@@ -4,11 +4,45 @@ title: "PLAN-RECOVERY-09 (recovery): テスト設計 doc 所属層の作り込�
 kind: recovery
 layer: cross
 drive: be
-status: draft
+status: confirmed
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-07
 updated: 2026-07-07
+review_evidence:
+  - reviewer: code-reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-07T17:11:16+09:00"
+    tests_green_at: "2026-07-07T17:09:35+09:00"
+    verdict: approve
+    scope: "PLAN-RECOVERY-09 収束 (self-pair 根絶 commit A + 右腕層命名標準 lint commit B)。commit A = IMP-039/058 無承認 self-pair の撤去 (vmodel lint self/group-hub 分岐 + G2 mock gate + g10-ux 正本 repoint + L10 UX ③ doc 新設 + L6 設計/U-VPAIR 同期)。commit B = test-design-naming lint (右腕層命名 + executed_at_layer 一致 fail-close) + doctor 配線 + U-TDNAME。cross-runtime codex wrapper はプロバイダ呼び出しがハング (環境 auth/network) したため、単一ランタイム fallback の intra_runtime_subagent (code-reviewer, Sonnet) で judgement gate を実施。verdict=approve。Important 2 件 (.MD 拡張子 case-bypass の fail-close 穴 / executed_at_layer 正規表現の frontmatter 非スコープ+trailing comment 非許容) を fix-forward し、U-TDNAME-005/006 回帰 fixture を追加、再検証 green。tests_green_at は fix 後の vitest 6 green + typecheck clean 実走時刻。"
+    worker_model: claude-fable-5
+    reviewer_model: claude-sonnet-5
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests/test-design-naming.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-07T17:09:35+09:00"
+        evidence_path: src/lint/test-design-naming.ts
+        output_digest: "sha256:ca39e5d7a6f84d923c1e0db914180a6f9b45656619c2485345c48b557920bd96"
+      - kind: unit_test
+        command: "bun run vitest run tests/test-design-naming.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-07T17:09:35+09:00"
+        evidence_path: tests/test-design-naming.test.ts
+        output_digest: "sha256:2d9442ae228fdc82c0797fa42a7aa8406895de439cf63b95886aad27b426aeec"
+      - kind: vmodel_lint
+        command: "bun run vitest run tests/vmodel-pair.test.ts tests/g10-ux-workflow.test.ts tests/gate-static.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-07T17:09:35+09:00"
+        evidence_path: docs/test-design/harness/L10-ux-validation-test-design.md
+        output_digest: "sha256:e862241b25b4da0fcf02766f6fc83769677145f85190f1daa116955930ea892d"
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -22,12 +56,18 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-09-test-design-right-arm-placement.md
     artifact_type: markdown_doc
+  - artifact_path: docs/test-design/harness/L10-ux-validation-test-design.md
+    artifact_type: test_design
+  - artifact_path: src/lint/test-design-naming.ts
+    artifact_type: source_module
+  - artifact_path: tests/test-design-naming.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
   references:
-    - docs/test-design/harness/L1-operational-test-design.md
-    - docs/test-design/harness/L3-acceptance-test-design.md
+    - docs/test-design/harness/L14-operational-test-design.md
+    - docs/test-design/harness/L12-acceptance-test-design.md
     - docs/test-design/harness/L8-integration-test-design.md
     - docs/test-design/harness/L9-system-test-design.md
     - src/lint/ddd-tdd-rules.ts
