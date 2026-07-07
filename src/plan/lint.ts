@@ -361,7 +361,18 @@ function routeModeKindViolations(
     return [];
   }
   const allowedKinds = ROUTE_MODE_ALLOWED_KINDS[mode];
-  if (!allowedKinds) return [];
+  if (!allowedKinds) {
+    // PLAN-RECOVERY-10 Stage 1 P2: 未登録 route_mode を fail-open (return []) から fail-close へ。
+    // 全実在 mode (add-feature/reverse/recovery/refactor/version-up) は SSoT (L4 §3.1) から
+    // ROUTE_MODE_ALLOWED_KINDS へ登録済。未知 mode は「検査漏れの素通り」でなく違反として surface する
+    // (fail-open な検証 gate = false-confidence、無い gate より悪い)。
+    return [
+      {
+        reason: "route_mode_kind_mismatch",
+        detail: `unknown route_mode=${mode} not registered in ROUTE_MODE_ALLOWED_KINDS (fail-close; register from SSoT L4 §3.1; ${ROUTE_MODE_KIND_DEBT_GUIDANCE})`,
+      },
+    ];
+  }
 
   const kind = stringField(raw.kind) ?? "";
   if (allowedKinds.includes(kind)) return [];

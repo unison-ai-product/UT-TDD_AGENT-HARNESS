@@ -1035,6 +1035,27 @@ dependencies:
     );
   });
 
+  it("U-PLANGOV-011x3: unknown route_mode fails closed, not fail-open (RECOVERY-10 Stage 1 P2)", () => {
+    // 従来は ROUTE_MODE_ALLOWED_KINDS 未登録 mode が `if (!allowedKinds) return []` で素通り (fail-open)。
+    // Stage 1 P2 で fail-close 化: 未知 route_mode は検査漏れでなく違反として surface する。
+    const docs = [
+      planDoc("PLAN-L7-990-fabricated-unknown-route-mode", {
+        kind: "impl",
+        layer: "L7",
+        status: "draft",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra: "route_mode: bogus-unregistered-mode\n",
+      }),
+    ];
+
+    const result = analyzePlanGovernance(docs);
+    const detail = result.violations.find((v) => v.reason === "route_mode_kind_mismatch")?.detail;
+
+    expect(result.violations.map((v) => v.reason)).toContain("route_mode_kind_mismatch");
+    expect(detail).toContain("unknown route_mode=bogus-unregistered-mode");
+  });
+
   it("U-PLANGOV-011y: route_mode_kind debt ledger doc stays in sync with lint allowlists", () => {
     const ledgerPath = join(
       process.cwd(),
