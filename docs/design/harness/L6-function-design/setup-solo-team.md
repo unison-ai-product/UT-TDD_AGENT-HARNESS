@@ -158,6 +158,7 @@ deps 注入 (`GhRunner`/`FsReader`/`FsWriter`/`confirm`) は session-log の `no
 L6 contract marker: `runDoctor(input: DoctorOptions) => LintResult` は consumer setup smoke の unit-test-granularity contract である。DbC pre は `setupSmoke === true` のとき dogfood PLAN/design/test-design を要求しないこと、post は project-local wrapper と Claude/Codex adapter hook の存在・JSON parse・portable command を検査すること、oracle は U-SETUP-014 とする。
 
 `--setup-smoke` は `.ut-tdd/bin/ut-tdd.mjs`、adapter docs/config、Claude/Codex hook JSON、Claude/Codex の `agent-guard` / `work-guard` / session lifecycle、Claude `subagent-stop`、および `$CLAUDE_PROJECT_DIR` / global `.codex` 非依存を fail-close で確認する。`emitSetup` の template 解決は `COMMON_FILES.file.path` から `COMMON_FILES.template` を正本として引き、未登録 adapter file が `common/<basename>` に落ちて空ファイルになることを禁止する。
+consumer に投影する adapter docs/commands は `ut-tdd doctor --profile consumer-setup-smoke` を既定の health check として案内し、full `ut-tdd doctor` は PLAN/design/test-design を持つ source/governance repository 用として明示する。
 
 ## §8 update-check advisory 契約 (PLAN-L7-362 back-fill)
 
