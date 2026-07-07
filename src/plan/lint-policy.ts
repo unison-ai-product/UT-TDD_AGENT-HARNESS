@@ -23,8 +23,22 @@ const READY_DEPENDENCY_STATUSES = new Set(["confirmed", "completed"]);
 // PLAN-L7-263: route_mode と kind の整合表。add-feature mode は add-design /
 // add-impl を内包する運用で、kind=impl は back-fill 義務 (KIND_BACKFILL) を
 // 機械免除してしまうため許容しない (A-178 G-14)。
+//
+// PLAN-RECOVERY-10 (Stage 1, PO サインオフ 2026-07-07): 従来は add-feature のみ登録で、
+// 他 route_mode は lint.ts の fail-open (`if (!allowedKinds) return []`) により route_mode↔kind
+// 整合を一度も検査されず素通りしていた。SSoT (L4 §3.1 駆動モデル表 function.md:109 の kind 列) から
+// 全実在 mode の allowed kinds を導出して登録 (観測組合せの鵜呑み blessing でなく spec 由来)。
+// - reverse→reverse / recovery→recovery / refactor→refactor: L4 §3.1 一致。
+// - version-up→impl: option1 (PO 裁定)。parked track の実装意図を impl で保全し、着手時 add-feature
+//   合流で add-design を生む (L4 §3.1 は back-fill 側の記述、parked kind は本裁定で確定)。
+// landed 済の off-diagonal (SSoT 不一致だが confirmed) は ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS で
+// 恒久免除する (kind 書き換え=履歴改ざん回避)。
 const ROUTE_MODE_ALLOWED_KINDS: Record<string, readonly string[]> = {
   "add-feature": ["add-design", "add-impl"],
+  reverse: ["reverse"],
+  recovery: ["recovery"],
+  refactor: ["refactor"],
+  "version-up": ["impl"],
 };
 
 // 2026-07-02 時点で landed 済みの route_mode=add-feature + kind=impl 慣行。
@@ -36,6 +50,25 @@ const ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS = new Set([
   "PLAN-L7-214-skill-root-relation-graph-projection",
   "PLAN-L7-215-model-effort-advisor-routing",
   "PLAN-L7-221-github-ci-policy-gate",
+  // PLAN-RECOVERY-10 (Stage 1, 2026-07-07): refactor/recovery mode を SSoT で登録した際に
+  // 炙り出た landed off-diagonal。全て confirmed = landed 済のため恒久免除 (kind 書換=履歴改ざん回避)。
+  // 個別 burn-down (Reverse 起票) は debt-audit doc の refactor/recovery 節で追う。
+  // refactor mode + kind=impl (SSoT: refactor→refactor)。behavior-invariant 義務を免除する同クラス債務。
+  "PLAN-L7-216-setup-boundary-refactor",
+  "PLAN-L7-217-doctor-setup-smoke-extraction",
+  "PLAN-L7-218-setup-distribution-module-extraction",
+  "PLAN-L7-220-doctor-plan-governance-extraction",
+  "PLAN-L7-222-doctor-runtime-surface-extraction",
+  "PLAN-L7-223-cli-distribution-registrar-extraction",
+  "PLAN-L7-224-doctor-db-projection-extraction",
+  "PLAN-L7-225-doctor-rule-quality-extraction",
+  "PLAN-L7-226-doctor-workflow-quality-extraction",
+  "PLAN-L7-227-doctor-doc-registry-extraction",
+  "PLAN-L7-228-doctor-roadmap-verification-extraction",
+  "PLAN-L7-256-model-id-ssot-drift-gate",
+  // recovery mode + kind={refactor,impl} (SSoT: recovery→recovery)。
+  "PLAN-L7-359-consumer-setup-profile-wiring",
+  "PLAN-L7-361-setup-noninteractive-package-tar-portability",
 ]);
 
 // draft のまま起票された debt。draft の間のみ免除し、着手 (status が draft

@@ -1,6 +1,9 @@
 # route_mode↔kind 整合 debt 台帳 (2026-07-02)
 
 正本: PLAN-L7-263-route-mode-kind-certificate / A-178 G-14・G-15。
+2026-07-07 拡張 (PLAN-RECOVERY-10 Stage 1): add-feature 以外の全 route_mode (reverse/recovery/refactor/
+version-up) を SSoT (L4 §3.1) から `ROUTE_MODE_ALLOWED_KINDS` へ登録し、fail-open を fail-close 化した際の
+landed off-diagonal を本台帳へ追加。台帳は add-feature 専用でなく全 mode の route_mode↔kind 債務の正本。
 
 `route_mode: add-feature` は kind を `add-design` / `add-impl` に限定する
 (add-feature mode は両 kind を内包し、独立 kind を持たない)。`kind: impl` は
@@ -23,7 +26,9 @@
   requires は landed 後に張る — デッドロック解消 `0d55f5e`) へ昇格する。
   昇格せずに status を進めると `route_mode_kind_mismatch` で fail-close する。
 
-## legacy landed (5 本、恒久免除)
+## legacy landed (恒久免除)
+
+### add-feature mode (5 本、2026-07-02)
 
 | plan_id | 2026-07-02 時点 status |
 |---|---|
@@ -32,6 +37,30 @@
 | PLAN-L7-214-skill-root-relation-graph-projection | confirmed (landed 済のため恒久免除) |
 | PLAN-L7-215-model-effort-advisor-routing | confirmed (landed 済のため恒久免除) |
 | PLAN-L7-221-github-ci-policy-gate | confirmed (landed 済のため恒久免除) |
+
+### refactor / recovery mode (14 本、2026-07-07 PLAN-RECOVERY-10 Stage 1)
+
+PLAN-RECOVERY-10 Stage 1 で refactor/recovery mode を SSoT (L4 §3.1) から登録した際に炙り出た
+landed off-diagonal。全て confirmed = landed 済につき恒久免除 (kind 書換=履歴改ざん回避)。
+`refactor|impl` は refactor の behavior-invariant 義務を機械免除する add-feature|impl 同クラス債務。
+個別 burn-down は Reverse 起票で追う。
+
+| plan_id | mode\|kind (SSoT 期待) | 恒久免除理由 |
+|---|---|---|
+| PLAN-L7-216-setup-boundary-refactor | refactor\|impl (refactor) | confirmed landed。extraction refactor が kind=impl で landed |
+| PLAN-L7-217-doctor-setup-smoke-extraction | refactor\|impl (refactor) | confirmed landed |
+| PLAN-L7-218-setup-distribution-module-extraction | refactor\|impl (refactor) | confirmed landed |
+| PLAN-L7-220-doctor-plan-governance-extraction | refactor\|impl (refactor) | confirmed landed |
+| PLAN-L7-222-doctor-runtime-surface-extraction | refactor\|impl (refactor) | confirmed landed |
+| PLAN-L7-223-cli-distribution-registrar-extraction | refactor\|impl (refactor) | confirmed landed |
+| PLAN-L7-224-doctor-db-projection-extraction | refactor\|impl (refactor) | confirmed landed |
+| PLAN-L7-225-doctor-rule-quality-extraction | refactor\|impl (refactor) | confirmed landed |
+| PLAN-L7-226-doctor-workflow-quality-extraction | refactor\|impl (refactor) | confirmed landed |
+| PLAN-L7-227-doctor-doc-registry-extraction | refactor\|impl (refactor) | confirmed landed |
+| PLAN-L7-228-doctor-roadmap-verification-extraction | refactor\|impl (refactor) | confirmed landed |
+| PLAN-L7-256-model-id-ssot-drift-gate | refactor\|impl (refactor) | confirmed landed |
+| PLAN-L7-359-consumer-setup-profile-wiring | recovery\|refactor (recovery) | confirmed landed |
+| PLAN-L7-361-setup-noninteractive-package-tar-portability | recovery\|impl (recovery) | confirmed landed |
 
 ## draft debt (38 本、着手時昇格)
 
