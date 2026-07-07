@@ -345,6 +345,42 @@ version-up 未裁定のまま P2 を適用すると 47件が fail-close する�
   実装 Codex/別セッション分担を承認。本サインオフを以て Stage 1 (fail-close 構造 + register-correct) の
   本体着手が解禁 (RECOVERY-10 Step 4 着手条件を充足)。Stage 2 (L7-336 活性化) は次段。
 
+## Stage 1 実行結果 + 残実装 handoff (2026-07-07)
+
+**Stage 1 (fail-close 構造 + register-correct) は実行完了・commit 済**。version-up 裁定 = option1
+の design 側 pairing も完了。以降の本体は goal どおり別セッション/Codex 分担。
+
+### 完了 (commit chain、正しい gate で検証済)
+
+| commit | 内容 | 検証 |
+|---|---|---|
+| `f59748a` | route_mode→kind 棚卸し記録 (184 PLAN、補遺A) | — |
+| `c3752e4` | tl/po サインオフ + patch-level 仕様 (補遺C) | plan lint / db rebuild |
+| `9cfabf1` | P1 register-correct (SSoT 5 mode) + P3 台帳 14件 | 567 lint EXIT=0 / 55 tests |
+| `4544b17` | 台帳 doc 日本語化 (design-language gate) | design-language OK |
+| `640973e` | P2 `lint.ts:364` fail-open→fail-close + P4 未知 mode 回帰 | 567 lint / 55 tests / tsc |
+| `113c1e0` | L4 §3.1 に version-up parked kind=impl を back-fill (option1 pairing) | plan lint / design-language |
+
+- **閉じた穴**: refactor/version-up/reverse/recovery mode の ~127 PLAN が route_mode→kind 未検査で
+  素通りしていた fail-open を、SSoT 由来登録 + fail-close で構造的に解消。未登録 mode は以後違反として surface。
+- **spec 駆動**: 全登録は L4 §3.1 由来 (観測鵜呑みなし)。version-up の spec↔実態乖離 (47件 impl) は
+  option1 で SSoT (L4 §3.1) 側を parked-track 意味論で明文化して解消 (code と design 両方 pairing 済)。
+
+### 残実装 (別セッション / Codex 分担、着手条件 = 本サインオフで解禁済)
+
+1. **verify kind/layer envelope (最高リスク core taxonomy、要 full-suite 検証)** — Step 4.1 手順 1-3,5-8。
+   触る invariant: `VALID_KINDS` (`src/schema/index.ts:9`) / `ALLOWED_LAYER_BY_KIND` の consumer /
+   cross-kind ロジック (`frontmatter.ts:160-223`、verify は cross に**入れない**) / `branch-kind.ts` verify prefix /
+   `forward-convergence.ts` `CONVERGENCE_SCOPE_KINDS` / `V_MODEL_PAIRS` L-token↔layer / roadmap 発火 /
+   `tests/schema.test.ts:40` (12→13) / requirements §1.3。**L7 を実装上限と仮定する全 invariant を洗い、
+   1 変更ごとに `bun test` 全件で blast radius 実測**してから commit (append-only + 独立 commit)。
+   `ROUTE_MODE_ALLOWED_KINDS` への `verify:["verify"]` 追加は本 envelope と同 commit で。
+2. **右肺 doc 3 点セット標準化** — Step 4.2 (L8/L9/L10/L12/L14、doc ごと並列)。
+3. **gate_runs / quality-loop 配線** — Step 4.3 (L7-363 統合) / Step 4.4 (L7-367 統合)。
+4. **Step 5 fullback Reverse** — concept/requirements への「右肺=品質保証 plane」back-fill +
+   再発防止 lint (3 点セット存在 / roadmap 対応 / 粒度一致 / pair_artifact schema)。
+5. **Stage 2 = L7-336 活性化** — 無宣言 fail-open 一般 (src 202 箇所) の warn/fail 化。独立サイクル burn-down。
+
 ## Step 5: fullback (再発防止 + 上位整合)
 
 - concept §2.3 / requirements への「右肺 = 品質保証 plane」back-fill は Recovery exit 後の Reverse
