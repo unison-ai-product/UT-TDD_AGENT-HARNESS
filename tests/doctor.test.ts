@@ -1,7 +1,8 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { buildDoctorCheckDefinitionGroups } from "../src/doctor/check-definition-groups";
 import {
   buildFullDoctorCheckDefinitions,
   collectDoctorCheckRun,
@@ -303,11 +304,11 @@ describe("checkAgentSlots (doctor agent-slots surface, IMP-050)", () => {
 });
 
 describe("runDoctor", () => {
-  let realRepoDoctor: ReturnType<typeof runDoctor>;
-
-  beforeAll(() => {
-    realRepoDoctor = runDoctor();
-  }, 240_000);
+  let cachedRealRepoDoctor: ReturnType<typeof runDoctor> | null = null;
+  const realRepoDoctor = () => {
+    cachedRealRepoDoctor ??= runDoctor();
+    return cachedRealRepoDoctor;
+  };
 
   it("ok=true includes handover and agent-slots surfaces as warnings", () => {
     const r = runDoctor(deps());
@@ -352,11 +353,13 @@ describe("runDoctor", () => {
     expect(DOCTOR_RUN_PROFILE_IDS).toEqual([
       "source-full",
       "source-toolchain",
+      "consumer-toolchain",
       "consumer-setup-smoke",
     ]);
     expect(new Set(DOCTOR_RUN_PROFILE_IDS).size).toBe(DOCTOR_RUN_PROFILE_IDS.length);
     expect(Object.keys(DOCTOR_RUN_PROFILES).sort()).toEqual([...DOCTOR_RUN_PROFILE_IDS].sort());
     expect(doctorRunProfilesForAudience("consumer")).toEqual([
+      DOCTOR_RUN_PROFILES["consumer-toolchain"],
       DOCTOR_RUN_PROFILES["consumer-setup-smoke"],
     ]);
     expect(doctorRunProfilesForAudience("consumer").every(isConsumerSafeDoctorRunProfile)).toBe(
@@ -364,6 +367,7 @@ describe("runDoctor", () => {
     );
     expect(consumerSafeDoctorRunProfiles().map((profile) => profile.id)).toEqual([
       "source-toolchain",
+      "consumer-toolchain",
       "consumer-setup-smoke",
     ]);
     expect(consumerSafeDoctorRunProfiles().every(isConsumerSafeDoctorRunProfile)).toBe(true);
@@ -373,7 +377,10 @@ describe("runDoctor", () => {
     );
     expect(
       consumerSafeDoctorRunProfiles().filter((profile) => profile.audience === "consumer"),
-    ).toEqual([DOCTOR_RUN_PROFILES["consumer-setup-smoke"]]);
+    ).toEqual([
+      DOCTOR_RUN_PROFILES["consumer-toolchain"],
+      DOCTOR_RUN_PROFILES["consumer-setup-smoke"],
+    ]);
     expect(resolveDoctorRunProfile({ setupSmoke: true })).toEqual(
       DOCTOR_RUN_PROFILES["consumer-setup-smoke"],
     );
@@ -391,6 +398,12 @@ describe("runDoctor", () => {
       setupSmoke: true,
       sourceOnly: false,
     });
+    expect(resolveDoctorRunProfile({ profile: "consumer-setup-smoke" })).toEqual(
+      DOCTOR_RUN_PROFILES["consumer-setup-smoke"],
+    );
+    expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toEqual(
+      DOCTOR_RUN_PROFILES["consumer-toolchain"],
+    );
     expect(r.ok).toBe(true);
     expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=22, failed=0)"]);
   });
@@ -434,8 +447,26 @@ describe("runDoctor", () => {
       outputIds: ["toolchain-pin"],
       sourceOnly: false,
     });
+    expect(resolveDoctorRunProfile({ profile: "source-full", setupSmoke: true })).toEqual(
+      DOCTOR_RUN_PROFILES["source-full"],
+    );
+    expect(resolveDoctorRunProfile({ profile: "source-toolchain" })).toEqual(
+      DOCTOR_RUN_PROFILES["source-toolchain"],
+    );
+    expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toMatchObject({
+      id: "consumer-toolchain",
+      audience: "consumer",
+      invocation: "registry",
+      scope: "toolchain",
+      setupSmoke: false,
+      outputIds: ["toolchain-pin"],
+      sourceOnly: false,
+    });
     expect(DOCTOR_RUN_PROFILES["source-full"].outputIds).toEqual(doctorOutputIdsForScope("full"));
     expect(DOCTOR_RUN_PROFILES["source-toolchain"].outputIds).toEqual(
+      doctorOutputIdsForScope("toolchain"),
+    );
+    expect(DOCTOR_RUN_PROFILES["consumer-toolchain"].outputIds).toEqual(
       doctorOutputIdsForScope("toolchain"),
     );
     expect(doctorOutputIdsForScope("toolchain")).toEqual(["toolchain-pin"]);
@@ -448,7 +479,7 @@ describe("runDoctor", () => {
   });
 
   it("includes asset-drift hard gate in doctor output", () => {
-    const r = realRepoDoctor;
+    const r = realRepoDoctor();
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: asset-drift") && m.includes("OK"))).toBe(
       true,
@@ -456,7 +487,7 @@ describe("runDoctor", () => {
   });
 
   it("includes skill-assignment hard gate in doctor output", () => {
-    const r = realRepoDoctor;
+    const r = realRepoDoctor();
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: skill-assignment - OK"))).toBe(true);
   });
@@ -465,7 +496,7 @@ describe("runDoctor", () => {
   // invoked by runDoctor (invocation fence — guards against re-introducing the absence-blindness
   // where a lint module is reachable/tested but its audit never runs in a runtime path).
   it("invokes the 4 newly-wired lint audits + lint-wiring meta-gate in doctor output", () => {
-    const r = realRepoDoctor;
+    const r = realRepoDoctor();
     expect(r.ok).toBe(true);
     for (const gate of [
       "doctor: doc-consistency — OK",
@@ -479,19 +510,19 @@ describe("runDoctor", () => {
   });
 
   it("includes branch-kind-check in doctor output", () => {
-    const r = realRepoDoctor;
+    const r = realRepoDoctor();
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: branch-kind-check - OK"))).toBe(true);
   });
 
   it("includes GitHub CI policy hard gate in doctor output", () => {
-    const r = realRepoDoctor;
+    const r = realRepoDoctor();
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: github-ci-policy - OK"))).toBe(true);
   });
 
   it("includes G1/G3 trace gates in doctor output", () => {
-    const r = realRepoDoctor;
+    const r = realRepoDoctor();
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: g1-trace - OK"))).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: g3-trace - OK"))).toBe(true);
@@ -499,7 +530,7 @@ describe("runDoctor", () => {
 
   it("hard-gates PLAN governance once repo frontmatter debt is closed", () => {
     const governance = checkPlanGovernance(process.cwd());
-    const r = realRepoDoctor;
+    const r = realRepoDoctor();
 
     expect(governance.ok).toBe(true);
     expect(governance.messages[0]).toContain("plan-governance - OK");
@@ -581,7 +612,7 @@ describe("runDoctor", () => {
   });
 
   it("surfaces dependency-drift and regression expansion instead of scaffold stub", () => {
-    const r = realRepoDoctor;
+    const r = realRepoDoctor();
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: dependency-drift"))).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: regression-expansion"))).toBe(true);
@@ -589,7 +620,7 @@ describe("runDoctor", () => {
   });
 
   it("surfaces roadmap-rollup as a hard gate summary line", () => {
-    const r = realRepoDoctor;
+    const r = realRepoDoctor();
     const rollupLines = r.messages.filter((m) => m.startsWith("doctor: roadmap-rollup"));
 
     expect(r.ok).toBe(true);
@@ -601,7 +632,7 @@ describe("runDoctor", () => {
   });
 
   it("surfaces Cycle P4 closure audit as a hard gate", () => {
-    const r = realRepoDoctor;
+    const r = realRepoDoctor();
 
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: cycle-p4-verification - OK"))).toBe(true);
@@ -980,8 +1011,21 @@ describe("runDoctor", () => {
       join(process.cwd(), "src", "doctor", "check-registry.ts"),
       "utf8",
     );
+    const definitionsSource = readFileSync(
+      join(process.cwd(), "src", "doctor", "check-definitions.ts"),
+      "utf8",
+    );
+    const groupSource = readFileSync(
+      join(process.cwd(), "src", "doctor", "check-definition-groups.ts"),
+      "utf8",
+    );
+    const profileSource = readFileSync(join(process.cwd(), "src", "doctor", "profiles.ts"), "utf8");
+    const runnerSource = readFileSync(join(process.cwd(), "src", "doctor", "runner.ts"), "utf8");
     const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(process.cwd()));
+    const definitionGroups = buildDoctorCheckDefinitionGroups(nodeDoctorDeps(process.cwd()));
+    const flattenedGroupDefinitions = definitionGroups.flatMap((group) => group.definitions);
     const checkIds = definitions.map((definition) => definition.id);
+    const groupCheckIds = flattenedGroupDefinitions.map((definition) => definition.id);
     const outputIds = [...FULL_DOCTOR_OUTPUT_IDS];
     expect(indexSource).toContain("resolveDoctorRunProfile");
     expect(indexSource).toContain("const profile = resolveDoctorRunProfile(options)");
@@ -989,19 +1033,35 @@ describe("runDoctor", () => {
     expect(indexSource).toContain(
       "const { checks, timings } = collectDoctorCheckRun(deps, options)",
     );
-    expect(registrySource).toContain("export function collectDoctorCheckRun");
-    expect(registrySource).toContain("export function collectDoctorChecks");
-    expect(registrySource).toContain("export function buildFullDoctorCheckDefinitions");
-    expect(registrySource).toContain("export const DOCTOR_RUN_PROFILES");
-    expect(registrySource).toContain("export const DOCTOR_RUN_PROFILE_IDS");
-    expect(registrySource).toContain("export function resolveDoctorRunProfile");
-    expect(registrySource).toContain("export function doctorRunProfilesForAudience");
-    expect(registrySource).toContain("export function consumerSafeDoctorRunProfiles");
-    expect(registrySource).toContain("export function isConsumerSafeDoctorRunProfile");
-    expect(registrySource).toContain('consumerSafeDoctorRunProfile("consumer-setup-smoke")');
-    expect(registrySource).toContain('consumerSafeDoctorRunProfile("source-toolchain")');
-    expect(registrySource).toContain("export function selectDoctorCheckDefinitions");
-    expect(registrySource).toContain('export type DoctorScope = "full" | "toolchain"');
+    expect(registrySource).toContain('} from "./runner"');
+    expect(registrySource).toContain('} from "./check-definitions"');
+    expect(runnerSource).toContain("export function collectDoctorCheckRun");
+    expect(runnerSource).toContain("export function collectDoctorChecks");
+    expect(definitionsSource).toContain("export function buildFullDoctorCheckDefinitions");
+    expect(definitionsSource).toContain("buildDoctorCheckDefinitionGroups(deps, options)");
+    expect(groupSource).toContain("export function buildDoctorCheckDefinitionGroups");
+    expect(runnerSource).toContain("buildFullDoctorCheckDefinitions(deps, options)");
+    expect(definitionsSource).not.toContain("checkPlanReferenceFreshnessAdvisory");
+    expect(registrySource).toContain('} from "./profiles"');
+    expect(profileSource).toContain("export const DOCTOR_RUN_PROFILES");
+    expect(profileSource).toContain("export const DOCTOR_RUN_PROFILE_IDS");
+    expect(profileSource).toContain("export function resolveDoctorRunProfile");
+    expect(profileSource).toContain("export function doctorRunProfilesForAudience");
+    expect(profileSource).toContain("export function consumerSafeDoctorRunProfiles");
+    expect(profileSource).toContain("export function isConsumerSafeDoctorRunProfile");
+    expect(profileSource).toContain('consumerSafeDoctorRunProfile("consumer-setup-smoke")');
+    expect(profileSource).toContain('consumerSafeDoctorRunProfile("source-toolchain")');
+    expect(runnerSource).toContain("export function selectDoctorCheckDefinitions");
+    expect(profileSource).toContain('export type DoctorScope = "full" | "toolchain"');
+    expect(definitionGroups.map((group) => group.id)).toEqual([
+      "plan-governance",
+      "rules-and-process",
+      "runtime-surface",
+      "completion-and-readability",
+      "source-trace",
+      "dependency-and-db",
+      "workflow-and-final",
+    ]);
     const expectedHardGates = [
       "backfill",
       "scrum-reverse",
@@ -1058,6 +1118,8 @@ describe("runDoctor", () => {
     ];
 
     expect(new Set(checkIds).size).toBe(checkIds.length);
+    expect(groupCheckIds).toEqual(checkIds);
+    expect(new Set(definitionGroups.map((group) => group.id)).size).toBe(definitionGroups.length);
     expect(new Set(outputIds).size).toBe(outputIds.length);
     expect(checkIds).toEqual(expect.arrayContaining(outputIds));
     expect(
@@ -1090,5 +1152,15 @@ describe("runDoctor", () => {
     ).toMatchObject({
       requires: ["dependency-drift"],
     });
+    const dependencyGroupIds =
+      definitionGroups
+        .find((group) => group.id === "dependency-and-db")
+        ?.definitions.map((definition) => definition.id) ?? [];
+    expect(dependencyGroupIds).toEqual(
+      expect.arrayContaining(["dependency-drift", "regression-expansion"]),
+    );
+    expect(dependencyGroupIds.indexOf("dependency-drift")).toBeLessThan(
+      dependencyGroupIds.indexOf("regression-expansion"),
+    );
   });
 });

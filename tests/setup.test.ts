@@ -104,7 +104,9 @@ const baseTemplates: TemplateSet = {
     "# UT-TDD Agent Harness Adapter",
     "",
     "- Status: `ut-tdd status`",
-    "- Doctor: `ut-tdd doctor`",
+    "- Setup doctor: `ut-tdd doctor --profile consumer-setup-smoke`",
+    "- Toolchain doctor: `ut-tdd doctor --profile consumer-toolchain`",
+    "- Full doctor: `ut-tdd doctor` (source/governance repositories only)",
     "- Handover: `ut-tdd handover`",
     "<!-- UT-TDD:managed:end -->",
     "",
@@ -114,7 +116,8 @@ const baseTemplates: TemplateSet = {
     "# UT-TDD Agent Harness Shared Context",
     "",
     "- `ut-tdd status`",
-    "- `ut-tdd doctor`",
+    "- `ut-tdd doctor --profile consumer-setup-smoke`",
+    "- `ut-tdd doctor --profile consumer-toolchain`",
     "<!-- UT-TDD:managed:end -->",
     "",
   ].join("\n"),
@@ -264,6 +267,36 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     try {
       const templates = loadTemplates(repo);
       expect(templates["adapter/AGENTS.md"]).toContain("UT-TDD Agent Harness Adapter");
+      expect(templates["adapter/AGENTS.md"]).toContain(
+        "ut-tdd doctor --profile consumer-setup-smoke",
+      );
+      expect(templates["adapter/AGENTS.md"]).toContain(
+        "ut-tdd doctor --profile consumer-toolchain",
+      );
+      expect(templates["adapter/CLAUDE.md"]).toContain(
+        "Full `ut-tdd doctor` is for source/governance repositories",
+      );
+      expect(templates["adapter/CLAUDE.md"]).toContain(
+        "ut-tdd doctor --profile consumer-toolchain",
+      );
+      expect(templates["adapter/.claude/commands/ut-tdd-status.md"]).toContain(
+        "ut-tdd doctor --profile consumer-setup-smoke",
+      );
+      expect(templates["adapter/.claude/commands/ut-tdd-status.md"]).toContain(
+        "ut-tdd doctor --profile consumer-toolchain",
+      );
+      const claudeMarkdownTemplates = Object.entries(templates).filter(
+        ([path]) => path.startsWith("adapter/.claude/") && path.endsWith(".md"),
+      );
+      expect(claudeMarkdownTemplates.length).toBeGreaterThan(0);
+      for (const [path, body] of claudeMarkdownTemplates) {
+        expect(body, path).toContain("doctor --profile consumer-setup-smoke");
+        expect(body, path).toContain("doctor --profile consumer-toolchain");
+        expect(body, path).not.toContain("finish with `ut-tdd doctor`");
+        expect(body, path).not.toContain("Run `ut-tdd status --json` and `ut-tdd doctor`");
+        expect(body, path).not.toContain("Health check: `ut-tdd doctor`");
+        expect(body, path).not.toContain("Use `ut-tdd status` and `ut-tdd doctor`");
+      }
       expect(templates["common/harness-check.yml"]).toContain("harness-check");
       expect(templates["common/harness-check.yml"]).toContain("github guard");
       expect(templates["common/harness-check.yml"]).toContain("audit quality --include-tests");
@@ -590,7 +623,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     const agents = deps.files.get(join("/repo", "AGENTS.md")) as string;
     expect(agents).toContain("# Consumer Rules\n\nKeep this line.\n");
     expect(agents).toContain("<!-- UT-TDD:managed:start -->");
-    expect(agents).toContain("`ut-tdd doctor`");
+    expect(agents).toContain("`ut-tdd doctor --profile consumer-setup-smoke`");
+    expect(agents).toContain("`ut-tdd doctor --profile consumer-toolchain`");
     expect(deps.files.get(join("/repo", ".claude", "settings.json"))).toBe('{"consumer":true}\n');
 
     const beforeSecondRun = deps.files.get(join("/repo", "AGENTS.md"));
@@ -930,6 +964,24 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       ]),
     );
 
+    const standaloneReady = buildConsumerReadinessPlan({
+      bunVersion: "1.3.2",
+      hasGit: true,
+      hasGh: false,
+      hasUtTddCli: true,
+      hasClaude: false,
+      hasCodex: false,
+      repoRoot: "/repo",
+    });
+    expect(standaloneReady.ok).toBe(true);
+    expect(standaloneReady.mode).toBe("standalone");
+    expect(standaloneReady.checks.find((c) => c.name === "runtime-cli")).toMatchObject({
+      ok: true,
+    });
+    expect(standaloneReady.checks.find((c) => c.name === "runtime-cli")?.message).toContain(
+      "judgment gates require human review",
+    );
+
     const customRepo = buildConsumerReadinessPlan({
       bunVersion: "1.3.0",
       hasGit: true,
@@ -957,7 +1009,6 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
       "git",
       "gh",
       "ut-tdd-cli",
-      "runtime-cli",
     ]);
     expect(blocked.checks.find((c) => c.name === "ut-tdd-cli")?.message).toContain(
       "Generated Claude/Codex hooks call `bun .ut-tdd/bin/ut-tdd.mjs ...`",
