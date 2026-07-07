@@ -2,7 +2,7 @@
 layer: L1
 sub_doc: functional
 status: confirmed
-pair_artifact: docs/test-design/harness/L1-operational-test-design.md
+pair_artifact: docs/test-design/harness/L14-operational-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L3
@@ -283,7 +283,7 @@ doc-reviewer (pmo-sonnet とは責務分離した doc 品質専用 read-only rev
 - L1 業務要求: `docs/design/harness/L1-requirements/business-requirements.md`
 - L0 概念層: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
 - v2 import ledger (FR-L1 全件出典): `docs/migration/v2-import-ledger.md §6`
-- L14 運用テスト設計: `docs/test-design/harness/L1-operational-test-design.md`
+- L14 運用テスト設計: `docs/test-design/harness/L14-operational-test-design.md`
 - L1 技術要求: `docs/design/harness/L1-requirements/technical-requirements.md`
 ## §7 request/requirement bundle: DB reference feedback + automation foundation の要求 (2026-06-08)
 

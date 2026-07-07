@@ -2,7 +2,7 @@
 layer: L3
 sub_doc: nfr
 status: confirmed
-pair_artifact: docs/test-design/harness/L3-acceptance-test-design.md
+pair_artifact: docs/test-design/harness/L12-acceptance-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 related_l1_nfr: docs/design/harness/L1-requirements/nfr.md
@@ -232,6 +232,6 @@ NFR-01〜17 + 新規 KPI を以下 3 tier に分類:
 - L1 business §6.5 KPI: `docs/design/harness/L1-requirements/business-requirements.md` §6.5
 - L3 functional (FR pair): `docs/design/harness/L3-functional/functional-requirements.md`
 - L3 business-detail (BR-21 + telemetry): `docs/design/harness/L3-functional/business-detail.md`
-- L12 受入テスト: `docs/test-design/harness/L3-acceptance-test-design.md`
+- L12 受入テスト: `docs/test-design/harness/L12-acceptance-test-design.md`
 - IPA 非機能要求グレード 2018: https://www.ipa.go.jp/sec/softwareengineering/std/ent03-b.html (公式 sample 参考)
 - PLAN: `docs/plans/PLAN-L3-03-nfr-grade.md`

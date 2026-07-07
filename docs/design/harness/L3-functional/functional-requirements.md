@@ -2,7 +2,7 @@
 layer: L3
 sub_doc: functional
 status: confirmed
-pair_artifact: docs/test-design/harness/L3-acceptance-test-design.md
+pair_artifact: docs/test-design/harness/L12-acceptance-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 related_l1_functional: docs/design/harness/L1-requirements/functional-requirements.md
@@ -847,7 +847,7 @@ screen §5 G1-trace マトリクスを継承し、L3 FR-* × 15 画面 (PM/HM/GD
 - L2-screen (deep-link 接続): `docs/design/harness/L2-screen/`
 - L3 business-detail (BR-21 経路): `docs/design/harness/L3-functional/business-detail.md`
 - L3 nfr-grade (NFR 閾値): `docs/design/harness/L3-functional/nfr-grade.md`
-- L12 受入テスト設計 (W pair): `docs/test-design/harness/L3-acceptance-test-design.md`
+- L12 受入テスト設計 (W pair): `docs/test-design/harness/L12-acceptance-test-design.md`
 - L0 概念層: `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`
 - PLAN: `docs/plans/PLAN-L3-01-functional-detail.md`
 

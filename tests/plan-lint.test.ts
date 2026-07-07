@@ -1145,9 +1145,9 @@ dependencies:
 
   it("U-PLANSCH-011: active gate docs do not point to stale trace/stub commands", () => {
     const activeDocs = [
-      "docs/test-design/harness/L1-operational-test-design.md",
+      "docs/test-design/harness/L14-operational-test-design.md",
       "docs/design/harness/L3-functional/README.md",
-      "docs/test-design/harness/L3-acceptance-test-design.md",
+      "docs/test-design/harness/L12-acceptance-test-design.md",
       "docs/design/harness/L3-functional/functional-requirements.md",
       "docs/design/harness/L3-functional/roadmap.md",
     ];

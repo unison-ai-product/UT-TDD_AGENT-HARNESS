@@ -2,7 +2,7 @@
 layer: L1
 sub_doc: nfr
 status: confirmed
-pair_artifact: docs/test-design/harness/L1-operational-test-design.md
+pair_artifact: docs/test-design/harness/L14-operational-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L4

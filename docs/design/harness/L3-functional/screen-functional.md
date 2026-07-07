@@ -3,7 +3,7 @@ layer: L3
 sub_doc: screen-functional
 status: confirmed
 parent_doc: docs/design/harness/L2-screen/screen-list.md
-pair_artifact: docs/test-design/harness/L3-acceptance-test-design.md
+pair_artifact: docs/test-design/harness/L12-acceptance-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_l1_screen: docs/design/harness/L1-requirements/screen-requirements.md
 related_l2_screen_list: docs/design/harness/L2-screen/screen-list.md
