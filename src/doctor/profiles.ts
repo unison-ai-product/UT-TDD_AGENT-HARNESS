@@ -116,6 +116,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "db-projection-ingestion",
   "typed-spec-trace-closure",
   "typed-spec-ledger-body-sync",
+  "typed-spec-owned-artifact-dispersal",
   "doc-consistency",
   "entity-coverage",
   "fr-registry-audit",

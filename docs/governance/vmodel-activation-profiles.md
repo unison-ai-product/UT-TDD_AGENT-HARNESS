@@ -50,3 +50,17 @@ DB は正本ではない。本書を `activation_entries` へ投影し、工程�
 - 検出系は本書と工程管理表の join を読む。検出系の都合で `scope_status`、`target_version`、延期理由を創作しない。
 - `target_version` は ZIP 由来の wave 識別子であり、ファイル hash や外部 release 番号の代替ではない。
 - `activation_schedule_reviews` は read-model であり、正本ではない。
+
+## U11 型付きスペック所有 artifact
+
+```yaml
+spec:
+  defines:
+    - id: VMS-003
+      kind: activation-profile
+      traces_from: [VMS-001]
+      traces_to: [VMS-005]
+      tests: [TVMS-003]
+```
+
+VMS-003 は activation profile の所有 artifact で宣言される typed spec である。

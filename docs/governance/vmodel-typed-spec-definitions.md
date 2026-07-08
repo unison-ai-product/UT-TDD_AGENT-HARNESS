@@ -24,51 +24,11 @@ updated: 2026-07-08
 ```yaml
 spec:
   defines:
-    - id: VMS-001
-      kind: upgrade-charter
-      traces_to: [VMS-002, VMS-003, VMS-004]
-      tests: [TVMS-001]
-    - id: VMS-002
-      kind: schedule-authoring-source
-      traces_from: [VMS-001]
-      traces_to: [VMS-005]
-      tests: [TVMS-002]
-    - id: VMS-003
-      kind: activation-profile
-      traces_from: [VMS-001]
-      traces_to: [VMS-005]
-      tests: [TVMS-003]
     - id: VMS-004
       kind: typed-spec-authoring-source
       traces_from: [VMS-001]
       traces_to: [VMS-006]
       tests: [TVMS-004]
-    - id: VMS-005
-      kind: activation-schedule-review
-      traces_from: [VMS-002, VMS-003]
-      tests: [TVMS-005]
-    - id: VMS-006
-      kind: typed-spec-projection
-      traces_from: [VMS-004]
-      tests: [TVMS-006]
-    - id: TVMS-001
-      kind: unit-oracle
-      traces_from: [VMS-001]
-    - id: TVMS-002
-      kind: unit-oracle
-      traces_from: [VMS-002]
-    - id: TVMS-003
-      kind: unit-oracle
-      traces_from: [VMS-003]
-    - id: TVMS-004
-      kind: unit-oracle
-      traces_from: [VMS-004]
-    - id: TVMS-005
-      kind: integration-oracle
-      traces_from: [VMS-005]
-    - id: TVMS-006
-      kind: projection-oracle
-      traces_from: [VMS-006]
 ```
 
 ## 2. 解釈規則
@@ -197,3 +157,4 @@ TVMS-006 は VMS-006 の typed spec projection が DB と doctor gate に現れ�
 - `id` / `kind` / trace 配列以外の ad hoc 属性を検出系の正本にしない。
 - typed spec の宣言と既存見出し由来検出が食い違う場合は、typed spec を優先し、差分を後続 U9 の trace closure で扱う。
 - typed spec の本文実体、台帳行、V-model phase が欠ける場合は U10 の ledger/body sync で finding にする。
+- VMS-004 以外の typed spec 宣言は、各 `ledger_sources` が指す owned artifact に置く。central bootstrap doc が所有外 ID の宣言元として残る場合は U11 の owned artifact dispersal で finding にする。

@@ -167,6 +167,13 @@ export interface TypedSpecLedgerBodySyncResult {
   ok: boolean;
 }
 
+export interface TypedSpecOwnedArtifactDispersalResult {
+  typedSpecCount: number;
+  dispersedSpecCount: number;
+  findings: SpecIrFindingRow[];
+  ok: boolean;
+}
+
 interface SpecIrProjectionDeps {
   nowIso: () => string;
   recordProjectionEvent: (
@@ -902,6 +909,12 @@ function phaseRank(value: string): number | null {
   return Number(match[1]);
 }
 
+function sourceMatchesLedgerSource(sourcePath: string, ledgerSource: string): boolean {
+  const normalizedSource = normalizePath(sourcePath);
+  const normalizedLedgerSource = normalizePath(ledgerSource);
+  return normalizedSource === normalizedLedgerSource;
+}
+
 export function analyzeTypedSpecLedgerBodySync(input: {
   defs: SpecDefRow[];
   relations: SpecRelationRow[];
@@ -1011,6 +1024,40 @@ export function analyzeTypedSpecLedgerBodySync(input: {
   return {
     typedSpecCount: typedDefs.length,
     ledgerRowCount: ledgerRows.length,
+    findings,
+    ok: findings.length === 0,
+  };
+}
+
+export function analyzeTypedSpecOwnedArtifactDispersal(input: {
+  defs: SpecDefRow[];
+  sources: TypedSpecSourceSnapshot[];
+}): TypedSpecOwnedArtifactDispersalResult {
+  const typedDefs = input.defs.filter(isTypedSpecDef);
+  const ledgerRows = parseTypedSpecLedgerRows(input.sources);
+  const ledgerBySpecId = new Map(ledgerRows.map((row) => [row.specId, row]));
+  const findings: SpecIrFindingRow[] = [];
+  let dispersedSpecCount = 0;
+
+  for (const def of typedDefs) {
+    const row = ledgerBySpecId.get(def.spec_id);
+    if (!row) continue;
+    if (row.ledgerSources.some((source) => sourceMatchesLedgerSource(def.source_path, source))) {
+      dispersedSpecCount += 1;
+      continue;
+    }
+    findings.push(
+      typedSpecFinding({
+        kind: "typed-spec-owned-source-mismatch",
+        subjectId: def.spec_id,
+        evidencePath: def.source_path,
+      }),
+    );
+  }
+
+  return {
+    typedSpecCount: typedDefs.length,
+    dispersedSpecCount,
     findings,
     ok: findings.length === 0,
   };
@@ -1322,6 +1369,12 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
     ...analyzeTypedSpecLedgerBodySync({
       defs,
       relations: relationResult.relations,
+      sources,
+    }).findings,
+  );
+  findings.push(
+    ...analyzeTypedSpecOwnedArtifactDispersal({
+      defs,
       sources,
     }).findings,
   );

@@ -255,10 +255,10 @@ describe("spec IR projections", () => {
           "",
           "| spec_id | ledger_sources | v_phase |",
           "| --- | --- | --- |",
-          "| VMS-101 | docs/plans/PLAN-L6-101.md | L6 |",
-          "| VMS-102 | docs/plans/PLAN-L7-102.md | L7 |",
-          "| TVMS-101 | docs/test-design/harness/L7-unit-test-design.md | L7 |",
-          "| TVMS-102 | docs/test-design/harness/L7-unit-test-design.md | L7 |",
+          "| VMS-101 | docs/governance/vmodel-typed-spec-definitions.md | L6 |",
+          "| VMS-102 | docs/governance/vmodel-typed-spec-definitions.md | L7 |",
+          "| TVMS-101 | docs/governance/vmodel-typed-spec-definitions.md | L7 |",
+          "| TVMS-102 | docs/governance/vmodel-typed-spec-definitions.md | L7 |",
           "",
           "VMS-101 body anchor.",
           "VMS-102 body anchor.",
@@ -317,6 +317,7 @@ describe("spec IR projections", () => {
           expect.objectContaining({ kind: "typed-spec-body-missing" }),
           expect.objectContaining({ kind: "typed-spec-ledger-row-missing" }),
           expect.objectContaining({ kind: "typed-spec-phase-direction-invalid" }),
+          expect.objectContaining({ kind: "typed-spec-owned-source-mismatch" }),
         ]),
       );
     } finally {
@@ -429,6 +430,46 @@ describe("spec IR projections", () => {
           expect.objectContaining({
             kind: "typed-spec-phase-direction-invalid",
             subject_id: "VMS-301:traces_from:VMS-302",
+          }),
+        ]),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("turns centralized typed spec declarations into owned artifact mismatch findings", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-typed-owned-"));
+    try {
+      writeGovernanceDoc(
+        root,
+        "vmodel-typed-spec-definitions.md",
+        [
+          "# Typed spec ownership bad fixture",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-501",
+          "      kind: typed-source",
+          "```",
+          "",
+          "| spec_id | ledger_sources | v_phase |",
+          "| --- | --- | --- |",
+          "| VMS-501 | docs/plans/PLAN-L6-501.md | L6 |",
+          "",
+          "VMS-501 body anchor.",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-08T00:00:00.000Z");
+
+      expect(projection.findings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "typed-spec-owned-source-mismatch",
+            subject_id: "VMS-501",
+            evidence_path: "docs/governance/vmodel-typed-spec-definitions.md",
           }),
         ]),
       );

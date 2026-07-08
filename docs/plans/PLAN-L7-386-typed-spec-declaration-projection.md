@@ -88,3 +88,16 @@ dependencies:
 - real repo rebuild で `VMS-004` が `spec_defs` と `search_index` から見つかる。
 - malformed typed spec は finding になり、補完創作しない。
 - targeted vitest、`tsc --noEmit`、`db rebuild`、`doctor` が green。
+
+## U11 型付きスペック所有 artifact
+
+```yaml
+spec:
+  defines:
+    - id: VMS-006
+      kind: typed-spec-projection
+      traces_from: [VMS-004]
+      tests: [TVMS-006]
+```
+
+VMS-006 は typed spec projection 実装 PLAN の所有 artifact で宣言される typed spec である。

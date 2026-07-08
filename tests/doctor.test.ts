@@ -74,6 +74,7 @@ import {
   checkTelemetryClosure,
   checkTrackedCanonical,
   checkTypedSpecLedgerBodySync,
+  checkTypedSpecOwnedArtifactDispersal,
   checkTypedSpecTraceClosure,
   checkVerificationGroupsResult,
   checkVerificationProfile,
@@ -641,6 +642,52 @@ describe("runDoctor", () => {
     }
   });
 
+  it("surfaces typed spec owned artifact dispersal as a doctor hard gate", () => {
+    const result = checkTypedSpecOwnedArtifactDispersal(process.cwd());
+    const r = realRepoDoctor();
+
+    expect(result.ok).toBe(true);
+    expect(result.messages[0]).toContain("typed-spec-owned-artifact-dispersal - OK");
+    expect(r.ok).toBe(true);
+    expect(
+      r.messages.some((m) => m.includes("doctor: typed-spec-owned-artifact-dispersal - OK")),
+    ).toBe(true);
+  });
+
+  it("fails typed spec owned artifact dispersal when declarations remain outside ledger sources", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-typed-spec-owned-"));
+    try {
+      mkdirSync(join(root, "docs", "governance"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "governance", "vmodel-typed-spec-definitions.md"),
+        [
+          "# Typed spec ownership bad fixture",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-601",
+          "      kind: typed-source",
+          "```",
+          "",
+          "| spec_id | ledger_sources | v_phase |",
+          "| --- | --- | --- |",
+          "| VMS-601 | docs/plans/PLAN-L6-601.md | L6 |",
+          "",
+          "VMS-601 has body substance.",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = checkTypedSpecOwnedArtifactDispersal(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("typed-spec-owned-source-mismatch");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("hard-gates PLAN governance once repo frontmatter debt is closed", () => {
     const governance = checkPlanGovernance(process.cwd());
     const r = realRepoDoctor();
@@ -1056,6 +1103,7 @@ describe("runDoctor", () => {
       ["db-projection-ingestion", checkDbProjectionIngestion(missingRoot)],
       ["typed-spec-trace-closure", checkTypedSpecTraceClosure(missingRoot)],
       ["typed-spec-ledger-body-sync", checkTypedSpecLedgerBodySync(missingRoot)],
+      ["typed-spec-owned-artifact-dispersal", checkTypedSpecOwnedArtifactDispersal(missingRoot)],
       ["rule-drift", checkRuleDrift(missingRoot)],
       ["gate-confirm", checkGateConfirm(missingRoot)],
       ["plan-dod", checkPlanDod(missingRoot)],

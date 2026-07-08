@@ -895,6 +895,41 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-TYPED-SPEC-S5 | `analyzeTypedSpecLedgerBodySync(input)` | `traces_from` が後工程を指す、または `traces_to` / `tests` が上流へ戻る場合は `typed-spec-phase-direction-invalid` finding にする。 |
 | U-TYPED-SPEC-S6 | `checkTypedSpecLedgerBodySync(repoRoot)` | finding が 0 件なら `doctor: typed-spec-ledger-body-sync - OK`、1 件以上なら `violation` として `runDoctor.ok=false` に合流する。 |
 
+> `analyzeTypedSpecOwnedArtifactDispersal` / `checkTypedSpecOwnedArtifactDispersal` typed spec 所有 artifact 分散契約 (PLAN-L6-45 / PLAN-L7-389)。
+
+| ID | 対象 | 期待 |
+| --- | --- | --- |
+| U-TYPED-SPEC-O1 | `analyzeTypedSpecOwnedArtifactDispersal(input)` | `spec.defines` の `source_path` が台帳 `ledger_sources` に含まれる場合は finding を出さない。 |
+| U-TYPED-SPEC-O2 | `analyzeTypedSpecOwnedArtifactDispersal(input)` | 中央 bootstrap doc など `ledger_sources` 外の path で宣言された ID は `typed-spec-owned-source-mismatch` finding にする。 |
+| U-TYPED-SPEC-O3 | `checkTypedSpecOwnedArtifactDispersal(repoRoot)` | finding が 0 件なら `doctor: typed-spec-owned-artifact-dispersal - OK`、1 件以上なら `violation` として `runDoctor.ok=false` に合流する。 |
+
 **gap 件数: 1 / 21** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
 
 L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。
+
+## U11 型付きスペック所有 artifact
+
+```yaml
+spec:
+  defines:
+    - id: TVMS-001
+      kind: unit-oracle
+      traces_from: [VMS-001]
+    - id: TVMS-002
+      kind: unit-oracle
+      traces_from: [VMS-002]
+    - id: TVMS-003
+      kind: unit-oracle
+      traces_from: [VMS-003]
+    - id: TVMS-004
+      kind: unit-oracle
+      traces_from: [VMS-004]
+    - id: TVMS-005
+      kind: integration-oracle
+      traces_from: [VMS-005]
+    - id: TVMS-006
+      kind: projection-oracle
+      traces_from: [VMS-006]
+```
+
+TVMS-001、TVMS-002、TVMS-003、TVMS-004、TVMS-005、TVMS-006 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。

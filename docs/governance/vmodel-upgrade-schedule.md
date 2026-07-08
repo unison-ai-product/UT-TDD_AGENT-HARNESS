@@ -39,7 +39,13 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L7-387-typed-spec-trace-closure-gate | L7 |  | L6 | PLAN-L6-43-typed-spec-trace-closure | U9b: typed spec trace closure を doctor hard gate として実装 | green | confirmed |  |
 | PLAN-L6-44-typed-spec-ledger-and-body-sync | L6 | function-spec | L7 | PLAN-L7-387-typed-spec-trace-closure-gate | U10a: 台帳突合 / 本文実体突合 / V字逆流 phase 判定の契約 | green | confirmed |  |
 | PLAN-L7-388-typed-spec-ledger-body-sync-gate | L7 |  | L6 | PLAN-L6-44-typed-spec-ledger-and-body-sync | U10b: typed spec ledger/body sync を doctor hard gate として実装 | green | confirmed |  |
-| PLAN-L6-45-typed-spec-owned-artifact-dispersal | L6 | function-spec | L7 | PLAN-L7-388-typed-spec-ledger-body-sync-gate | U11a: bootstrap doc から各 owned artifact へ spec block を分散配置する契約 | yellow | planned | U10 green 後に起票 |
+| PLAN-L6-45-typed-spec-owned-artifact-dispersal | L6 | function-spec | L7 | PLAN-L7-388-typed-spec-ledger-body-sync-gate | U11a: bootstrap doc から各 owned artifact へ spec block を分散配置し、修正版ZIPの文書ローカル agent 契約を後続 U12 へ送る境界を固定 | green | confirmed |  |
+| PLAN-L7-389-typed-spec-owned-artifact-dispersal-gate | L7 |  | L6 | PLAN-L6-45-typed-spec-owned-artifact-dispersal | U11b: owned artifact 分散を doctor hard gate として実装 | green | confirmed |  |
+| PLAN-L6-46-typed-spec-phase-layer-alignment | L6 | function-spec | L7 | PLAN-L7-389-typed-spec-owned-artifact-dispersal-gate | U12a: `v_phase` と owner artifact layer/frontmatter の整合を固定する契約 | yellow | planned | U11 green 後に起票 |
+| PLAN-L6-47-agent-contract-authoring-source | L6 | function-spec | L7 | PLAN-L6-46-typed-spec-phase-layer-alignment | U12b: 修正版ZIPの `agent.read_first` / `agent.done_when` をHARNESSの authoring source 契約へ翻訳 | yellow | planned | U11 green 後に起票 |
+| PLAN-L7-390-agent-contract-detect-gate | L7 |  | L6 | PLAN-L6-47-agent-contract-authoring-source | U12c: agent 契約をDB projection / doctor gateへ接続し、done_when detect green を検出可能にする | yellow | planned | U12b 後 |
+| PLAN-L6-48-vmodel-l2-freeze-l5-verification-design | L6 | function-spec | L7 | PLAN-L7-390-agent-contract-detect-gate | U13a: 107のL2プロト合意凍結、L5検証設計整備をHARNESSのForward freeze条件へ反映 | yellow | planned | U12c 後 |
+| PLAN-L6-49-refactor-and-qa-release-gates | L6 | function-spec | L7 | PLAN-L6-48-vmodel-l2-freeze-l5-verification-design | U13b: 108リファクタ等価性テスト、109 QA Go/No-GoをRefactor/Accept/Release gateへ翻訳 | yellow | planned | U13a 後 |
 
 ## 2. 解釈規則
 
@@ -55,3 +61,17 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 - 駆動モデル選択は `routeFiling` / route mode SSoT に従い、本表は現在地と前提を渡すだけに留める。
 - `status=planned` の行は実装完了を意味しない。起票前の位置づけを明示するための計画行である。
 - 本表と projection の齟齬は doctor / detector の finding として扱い、projection 側で silent repair しない。
+
+## U11 型付きスペック所有 artifact
+
+```yaml
+spec:
+  defines:
+    - id: VMS-002
+      kind: schedule-authoring-source
+      traces_from: [VMS-001]
+      traces_to: [VMS-005]
+      tests: [TVMS-002]
+```
+
+VMS-002 は工程管理表の所有 artifact で宣言される typed spec である。

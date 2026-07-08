@@ -169,3 +169,16 @@ dependencies:
 - 旧 ZIP は作業対象外。今後の比較・引用は clean ZIP の確認結果のみを使う。
 - clean ZIP の Python tooling はそのまま product runtime に移植しない。ADR-001 に従い、UT-TDD 側は TypeScript/Bun core と `.ut-tdd/harness.db` projection へ翻案する。
 - この PLAN は `draft` のまま PO/TL 承認を待つ。承認後、U1 の L1/L3 要求・要件PLANから着手する。
+
+## U11 型付きスペック所有 artifact
+
+```yaml
+spec:
+  defines:
+    - id: VMS-001
+      kind: upgrade-charter
+      traces_to: [VMS-002, VMS-003, VMS-004]
+      tests: [TVMS-001]
+```
+
+VMS-001 は version-up charter の所有 artifact で宣言される typed spec である。
