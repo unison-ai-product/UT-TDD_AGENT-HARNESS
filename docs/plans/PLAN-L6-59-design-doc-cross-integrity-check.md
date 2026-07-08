@@ -25,7 +25,6 @@ generates:
 dependencies:
   parent: docs/plans/PLAN-L4-20-document-catalog-scale-profile-ssot.md
   requires:
-    - docs/plans/PLAN-L4-20-document-catalog-scale-profile-ssot.md
     - docs/plans/PLAN-L6-43-typed-spec-trace-closure.md
   references:
     - src/plan/lint.ts

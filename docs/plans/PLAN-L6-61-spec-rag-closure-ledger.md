@@ -26,8 +26,8 @@ dependencies:
   parent: docs/plans/PLAN-L6-43-typed-spec-trace-closure.md
   requires:
     - docs/plans/PLAN-L6-43-typed-spec-trace-closure.md
-    - docs/plans/PLAN-L6-60-trace-impact-traversal-command.md
   references:
+    - docs/plans/PLAN-L6-60-trace-impact-traversal-command.md
     - docs/plans/PLAN-L6-52-signals-schedule-live-handover.md
     - .ut-tdd/audit/A-185-vmodel-docgen-reference-mining-2026-07-07.md
 ---
