@@ -5,7 +5,14 @@
  * 1. Missing subagent_type is blocked.
  * 2. Non-allowlisted subagents are blocked.
  * 3. Missing model is blocked.
- * 4. Calls that override the model family declared in frontmatter are blocked.
+ * 4. Calls that request a model family *below* the one declared in frontmatter are
+ *    blocked (no quiet downgrade / cost-cutting). Requesting a family *at or above*
+ *    the declared floor is allowed (PLAN-L7-399): review-critical subagents
+ *    (code-reviewer / ut-tdd-tl / security-audit / qa-test) declare a sonnet floor,
+ *    but a higher-tier orchestrator (opus) must be able to escalate a review to its
+ *    own tier or above — pinning review strictly below the orchestrator inverts the
+ *    "review >= orchestrator" invariant the harness otherwise enforces via
+ *    src/task/tier-router-policy.ts's tierFor() (consult/verify roles always T0).
  *
  * This module is pure. The hook shim owns stdin and filesystem access.
  */
@@ -17,6 +24,9 @@ import {
 } from "./agent-guard-policy";
 
 export type ModelFamily = "haiku" | "sonnet" | "opus";
+
+/** Capability floor ordering. Higher rank = strictly more capable, never a valid "downgrade" target. */
+const FAMILY_RANK: Record<ModelFamily, number> = { haiku: 0, sonnet: 1, opus: 2 };
 
 export { SUBAGENT_ALLOWLIST } from "./agent-guard-policy";
 
@@ -119,11 +129,11 @@ export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContex
       `[ut-tdd-guard] BLOCK: model=${model} cannot be normalized to haiku / sonnet / opus.`,
     );
   }
-  if (requested !== family) {
+  if (FAMILY_RANK[requested] < FAMILY_RANK[family]) {
     return blockOrBypass(
-      `[ut-tdd-guard] BLOCK: model override detected.\n` +
+      `[ut-tdd-guard] BLOCK: model downgrade detected.\n` +
         `  subagent_type: ${subagentType}\n` +
-        `  allowed family: ${family}\n` +
+        `  declared floor: ${family}\n` +
         `  requested model: ${model} (family: ${requested})\n${AGENT_GUARD_BYPASS_HINT}`,
     );
   }

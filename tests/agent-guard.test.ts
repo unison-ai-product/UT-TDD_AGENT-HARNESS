@@ -139,16 +139,48 @@ describe("evaluateAgentGuard", () => {
     ).toBe(0);
   });
 
-  it("blocks opus override on a sonnet-family agent", () => {
+  // PLAN-L7-399: model family is a capability *floor*, not an exact pin. An opus-tier
+  // orchestrator must be able to escalate a review-critical subagent to its own tier
+  // (review >= orchestrator, matching tier-router's tierFor() T0-for-consult/verify
+  // invariant) instead of being stuck asking a permanently-lower-tier subagent to
+  // review its work.
+  it("allows escalating a sonnet-family agent to opus (upgrade, not a downgrade)", () => {
     const d = evaluateAgentGuard(agent({ subagent_type: "pmo-sonnet", model: "opus" }), ctx());
+    expect(d.code).toBe(0);
+  });
+
+  it("blocks haiku on a sonnet-family agent (downgrade)", () => {
+    const d = evaluateAgentGuard(agent({ subagent_type: "pmo-sonnet", model: "haiku" }), ctx());
     expect(d.code).toBe(2);
-    expect(d.message).toContain("override");
+    expect(d.message).toContain("downgrade");
+  });
+
+  it("blocks sonnet or haiku on an opus-family agent (downgrade)", () => {
+    const sonnetDowngrade = evaluateAgentGuard(
+      agent({ subagent_type: "pdm-tech-innovation", model: "sonnet" }),
+      ctx(),
+    );
+    expect(sonnetDowngrade.code).toBe(2);
+    expect(sonnetDowngrade.message).toContain("downgrade");
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "pdm-tech-innovation", model: "haiku" }), ctx())
+        .code,
+    ).toBe(2);
   });
 
   it("allows opus for an opus-frontmatter agent (pdm-*)", () => {
     expect(
       evaluateAgentGuard(agent({ subagent_type: "pdm-tech-innovation", model: "opus" }), ctx())
         .code,
+    ).toBe(0);
+  });
+
+  it("allows escalating review-critical subagents (code-reviewer/ut-tdd-tl) to opus", () => {
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "code-reviewer", model: "opus" }), ctx()).code,
+    ).toBe(0);
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "ut-tdd-tl", model: "opus" }), ctx()).code,
     ).toBe(0);
   });
 
