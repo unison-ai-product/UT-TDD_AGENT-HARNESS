@@ -861,6 +861,19 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-ACTIVATION-SCHEDULE-R3 | `analyzeSpecIrIntegrity(input)` | `scope_status=deferred|out_of_scope` の理由欠落、または `target_kind=plan` の工程表未接続を finding 化し、projection 側で工程行を創作しない。 |
 | U-ACTIVATION-SCHEDULE-R4 | `rebuildHarnessDb` / `findReference` | real repo rebuild で `activation_schedule_reviews` が populated になり、`vmodel-clean-core` や `deferred` で検索できる。 |
 
+## PLAN-L6-42 Typed Spec Declaration Addendum (2026-07-08)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の
+> `parseSpecDefs` / `parseSpecRelations` typed spec 契約 (PLAN-L6-42)。
+> `docs/governance/vmodel-typed-spec-definitions.md` の `spec.defines` を正本とし、検出を推測から宣言読み取りへ寄せる。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-TYPED-SPEC-R1 | `parseSpecDefs(input)` | `spec.defines[].id` / `kind` を `spec_defs` に投影し、`section_anchor=spec.defines:<id>` で見出し由来定義と区別する。 |
+| U-TYPED-SPEC-R2 | `parseSpecRelations(input)` | `traces_from` / `traces_to` / `tests` を `spec_relations` edge にし、参照先 ID が無ければ finding にする。 |
+| U-TYPED-SPEC-R3 | `analyzeSpecIrIntegrity(input)` | ID 形式不正、kind 欠落、重複 ID を finding 化し、projection 側で ID や kind を創作しない。 |
+| U-TYPED-SPEC-R4 | `rebuildHarnessDb` / `findReference` | real repo rebuild で typed spec 宣言が `spec_defs` と `search_index` に入り、`VMS-004` などで検索できる。 |
+
 **gap 件数: 1 / 21** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
 
 L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。

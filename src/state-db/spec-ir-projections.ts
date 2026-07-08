@@ -11,7 +11,8 @@ type SpecIrSourceKind =
   | "design_doc"
   | "test_design"
   | "schedule_doc"
-  | "activation_profile";
+  | "activation_profile"
+  | "typed_spec";
 
 interface SpecIrSource {
   kind: SpecIrSourceKind;
@@ -19,6 +20,14 @@ interface SpecIrSource {
   content: string;
   metadata: Record<string, unknown>;
   sourceHash: string;
+}
+
+interface TypedSpecDeclaration {
+  id: string;
+  kind: string;
+  traces_from: string[];
+  traces_to: string[];
+  tests: string[];
 }
 
 export interface SpecDefRow {
@@ -222,6 +231,43 @@ function slug(value: string): string {
     .slice(0, 80);
 }
 
+function typedSpecId(value: string): string {
+  return value.trim().replace(/`/g, "");
+}
+
+function typedSpecDeclarations(source: SpecIrSource): TypedSpecDeclaration[] {
+  const blocks: unknown[] = [];
+  const metadataSpec =
+    source.metadata.spec && typeof source.metadata.spec === "object"
+      ? (source.metadata.spec as Record<string, unknown>)
+      : null;
+  if (metadataSpec) blocks.push(metadataSpec);
+  for (const match of source.content.matchAll(/```ya?ml\s*\n([\s\S]*?)\n```/g)) {
+    const parsed = parseYaml(match[1]);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+    const spec = (parsed as Record<string, unknown>).spec;
+    if (spec && typeof spec === "object" && !Array.isArray(spec)) blocks.push(spec);
+  }
+  const declarations: TypedSpecDeclaration[] = [];
+  for (const block of blocks) {
+    if (!block || typeof block !== "object" || Array.isArray(block)) continue;
+    const defines = (block as Record<string, unknown>).defines;
+    if (!Array.isArray(defines)) continue;
+    for (const item of defines) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+      const raw = item as Record<string, unknown>;
+      declarations.push({
+        id: typedSpecId(stringField(raw.id)),
+        kind: stringField(raw.kind),
+        traces_from: stringList(raw.traces_from).map(typedSpecId),
+        traces_to: stringList(raw.traces_to).map(typedSpecId),
+        tests: stringList(raw.tests).map(typedSpecId),
+      });
+    }
+  }
+  return declarations;
+}
+
 function inferLayerFromPath(path: string): string {
   return path.match(/(?:^|\/)L(\d+)[-/]/)?.[0]?.match(/L\d+/)?.[0] ?? "";
 }
@@ -241,6 +287,7 @@ function inferSubDocFromPath(path: string): string {
 function sourceKind(path: string): SpecIrSourceKind | null {
   if (path === "docs/governance/vmodel-upgrade-schedule.md") return "schedule_doc";
   if (path === "docs/governance/vmodel-activation-profiles.md") return "activation_profile";
+  if (path === "docs/governance/vmodel-typed-spec-definitions.md") return "typed_spec";
   if (path.startsWith("docs/plans/")) return "plan";
   if (path.startsWith("docs/design/harness/")) return "design_doc";
   if (path.startsWith("docs/test-design/harness/")) return "test_design";
@@ -269,9 +316,11 @@ export function loadSpecIrSources(repoRoot: string): SpecIrSource[] {
     "governance",
     "vmodel-activation-profiles.md",
   );
+  const typedSpecSource = join(repoRoot, "docs", "governance", "vmodel-typed-spec-definitions.md");
   return [
     ...(existsSync(scheduleSource) ? [scheduleSource] : []),
     ...(existsSync(activationProfileSource) ? [activationProfileSource] : []),
+    ...(existsSync(typedSpecSource) ? [typedSpecSource] : []),
     ...walkMarkdown(join(repoRoot, "docs", "plans")),
     ...walkMarkdown(join(repoRoot, "docs", "design", "harness")),
     ...walkMarkdown(join(repoRoot, "docs", "test-design", "harness")),
@@ -410,6 +459,24 @@ export function parseSpecDefs(sources: SpecIrSource[], indexedAt: string): SpecD
       source_hash: source.sourceHash,
       indexed_at: indexedAt,
     });
+    for (const declaration of typedSpecDeclarations(source)) {
+      const declaredId = declaration.id || stableId("typed-spec-missing-id", source.path);
+      defs.push({
+        spec_id: declaredId,
+        spec_kind: declaration.kind || "typed-spec-missing-kind",
+        layer,
+        sub_doc: subDoc,
+        owner_artifact_id: declaredId,
+        owner_path: source.path,
+        section_anchor: `spec.defines:${declaredId}`,
+        title: declaredId,
+        lifecycle_status: sourceStatus(source),
+        plan_id: planId,
+        source_path: source.path,
+        source_hash: source.sourceHash,
+        indexed_at: indexedAt,
+      });
+    }
     if (source.kind === "plan") continue;
     for (const match of source.content.matchAll(/^(#{1,3})\s+(.+)$/gm)) {
       const title = match[2].trim();
@@ -444,6 +511,7 @@ export function parseSpecRelations(
   const byPath = new Map(
     defs.filter((def) => def.section_anchor === "document").map((def) => [def.owner_path, def]),
   );
+  const bySpecId = new Map(defs.map((def) => [def.spec_id, def]));
   const relations: SpecRelationRow[] = [];
   const findings: SpecIrFindingRow[] = [];
   const addRelation = (input: {
@@ -498,6 +566,39 @@ export function parseSpecRelations(
         relationKind: "pairs",
         evidencePath: pairArtifact,
       });
+    }
+  }
+  for (const source of sources) {
+    for (const declaration of typedSpecDeclarations(source)) {
+      const from = bySpecId.get(declaration.id);
+      if (!from) continue;
+      for (const ref of declaration.traces_from) {
+        addRelation({
+          source,
+          from,
+          to: bySpecId.get(ref),
+          relationKind: "traces_from",
+          evidencePath: ref,
+        });
+      }
+      for (const ref of declaration.traces_to) {
+        addRelation({
+          source,
+          from,
+          to: bySpecId.get(ref),
+          relationKind: "traces_to",
+          evidencePath: ref,
+        });
+      }
+      for (const ref of declaration.tests) {
+        addRelation({
+          source,
+          from,
+          to: bySpecId.get(ref),
+          relationKind: "tests",
+          evidencePath: ref,
+        });
+      }
     }
   }
   return { relations, findings };
@@ -655,7 +756,9 @@ export function analyzeSpecIrIntegrity(input: {
   const findings = [...input.relationFindings];
   const defIds = new Set(input.defs.map((def) => def.spec_id));
   const schedulePlanCounts = new Map<string, number>();
+  const specDefCounts = new Map<string, number>();
   for (const def of input.defs) {
+    specDefCounts.set(def.spec_id, (specDefCounts.get(def.spec_id) ?? 0) + 1);
     if (
       ["L1", "L2", "L3", "L4", "L5", "L6"].includes(def.layer) &&
       !isValidSubDocForLayer(def.layer, def.sub_doc)
@@ -673,6 +776,30 @@ export function analyzeSpecIrIntegrity(input: {
         evidence_path: def.source_path,
       });
     }
+    if (def.section_anchor.startsWith("spec.defines:")) {
+      if (!/^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$/.test(def.spec_id)) {
+        findings.push({
+          finding_id: stableId("finding:typed-spec-invalid-id", def.spec_id),
+          kind: "typed-spec-invalid-id",
+          severity: "warn",
+          subject_id: def.spec_id,
+          source: "spec-ir-projection",
+          status: "open",
+          evidence_path: def.source_path,
+        });
+      }
+      if (def.spec_kind === "typed-spec-missing-kind") {
+        findings.push({
+          finding_id: stableId("finding:typed-spec-kind-missing", def.spec_id),
+          kind: "typed-spec-kind-missing",
+          severity: "warn",
+          subject_id: def.spec_id,
+          source: "spec-ir-projection",
+          status: "open",
+          evidence_path: def.source_path,
+        });
+      }
+    }
     for (const value of Object.values(def)) {
       if (typeof value === "string" && isSecretLike(value)) {
         findings.push({
@@ -686,6 +813,18 @@ export function analyzeSpecIrIntegrity(input: {
         });
       }
     }
+  }
+  for (const [specId, count] of specDefCounts) {
+    if (count <= 1) continue;
+    findings.push({
+      finding_id: stableId("finding:typed-spec-duplicate-id", specId),
+      kind: "typed-spec-duplicate-id",
+      severity: "warn",
+      subject_id: specId,
+      source: "spec-ir-projection",
+      status: "open",
+      evidence_path: input.defs.find((def) => def.spec_id === specId)?.source_path ?? "",
+    });
   }
   for (const relation of input.relations) {
     if (!defIds.has(relation.from_spec_id) || !defIds.has(relation.to_spec_id)) {
@@ -830,6 +969,22 @@ export function projectSpecIr(repoRoot: string, db: HarnessDb, deps: SpecIrProje
   const projection = collectSpecIrProjection(repoRoot, deps.nowIso());
   for (const row of projection.spec_defs) {
     deps.recordProjectionEvent(db, { table: "spec_defs", id: row.spec_id, row: { ...row } });
+    if (row.section_anchor.startsWith("spec.defines:")) {
+      deps.recordProjectionEvent(db, {
+        table: "search_index",
+        id: stableId("typed-spec", row.spec_id),
+        row: {
+          search_id: stableId("typed-spec", row.spec_id),
+          subject_type: "typed_spec",
+          subject_id: row.spec_id,
+          path: row.source_path,
+          title: `${row.spec_id} ${row.spec_kind}`,
+          tokens: `${row.spec_id} ${row.spec_kind} ${row.layer} ${row.sub_doc} ${row.owner_path}`,
+          summary: `typed spec declaration from ${row.owner_path}`,
+          updated_at: row.indexed_at,
+        },
+      });
+    }
   }
   for (const row of projection.spec_relations) {
     deps.recordProjectionEvent(db, {

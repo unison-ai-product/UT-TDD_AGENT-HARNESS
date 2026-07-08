@@ -225,6 +225,111 @@ describe("spec IR projections", () => {
     }
   });
 
+  it("projects typed spec.defines declarations and declaration trace edges", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-typed-"));
+    try {
+      writeGovernanceDoc(
+        root,
+        "vmodel-typed-spec-definitions.md",
+        [
+          "# Typed spec fixture",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-101",
+          "      kind: typed-source",
+          "      traces_to: [VMS-102]",
+          "      tests: [TVMS-101]",
+          "    - id: VMS-102",
+          "      kind: typed-projection",
+          "      traces_from: [VMS-101]",
+          "    - id: TVMS-101",
+          "      kind: unit-oracle",
+          "      traces_from: [VMS-101]",
+          "```",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-08T00:00:00.000Z");
+
+      expect(projection.spec_defs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            spec_id: "VMS-101",
+            spec_kind: "typed-source",
+            section_anchor: "spec.defines:VMS-101",
+            owner_artifact_id: "VMS-101",
+            source_path: "docs/governance/vmodel-typed-spec-definitions.md",
+          }),
+          expect.objectContaining({
+            spec_id: "TVMS-101",
+            spec_kind: "unit-oracle",
+            section_anchor: "spec.defines:TVMS-101",
+          }),
+        ]),
+      );
+      expect(projection.spec_relations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            from_spec_id: "VMS-101",
+            to_spec_id: "VMS-102",
+            relation_kind: "traces_to",
+          }),
+          expect.objectContaining({
+            from_spec_id: "VMS-101",
+            to_spec_id: "TVMS-101",
+            relation_kind: "tests",
+          }),
+          expect.objectContaining({
+            from_spec_id: "TVMS-101",
+            to_spec_id: "VMS-101",
+            relation_kind: "traces_from",
+          }),
+        ]),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("turns malformed typed spec declarations into integrity findings", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-typed-bad-"));
+    try {
+      writeGovernanceDoc(
+        root,
+        "vmodel-typed-spec-definitions.md",
+        [
+          "# Typed spec bad fixture",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: bad id",
+          "      traces_to: [MISSING-001]",
+          "    - id: DUP-001",
+          "      kind: one",
+          "    - id: DUP-001",
+          "      kind: two",
+          "```",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-08T00:00:00.000Z");
+
+      expect(projection.findings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "typed-spec-invalid-id" }),
+          expect.objectContaining({ kind: "typed-spec-kind-missing" }),
+          expect.objectContaining({ kind: "typed-spec-duplicate-id" }),
+          expect.objectContaining({ kind: "spec-ir-orphan-relation" }),
+        ]),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("turns malformed schedule authoring rows into integrity findings", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-schedule-bad-"));
     try {

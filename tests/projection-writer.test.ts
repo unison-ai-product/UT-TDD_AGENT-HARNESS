@@ -1360,6 +1360,17 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(findReference(db, "vmodel-clean-core PLAN-L7-385").at(0)).toMatchObject({
         subject_type: "activation_schedule_review",
       });
+      const typedSpec = db
+        .prepare("SELECT spec_kind, section_anchor FROM spec_defs WHERE spec_id = ?")
+        .get("VMS-004") as { spec_kind: string; section_anchor: string } | undefined;
+      expect(typedSpec).toMatchObject({
+        spec_kind: "typed-spec-authoring-source",
+        section_anchor: "spec.defines:VMS-004",
+      });
+      expect(findReference(db, "VMS-004 typed-spec-authoring-source").at(0)).toMatchObject({
+        subject_type: "typed_spec",
+        subject_id: "VMS-004",
+      });
     } finally {
       db.close();
     }

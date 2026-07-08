@@ -33,8 +33,9 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L7-384-route-filing-review-surface | L7 |  | L6 | PLAN-L6-40-route-filing-review-surface | U6b: detector candidate review surfaceへFilingTarget評価結果を表示済 | green | confirmed |  |
 | PLAN-L6-41-vmodel-activation-profile-join | L6 | function-spec | L7 | PLAN-L7-384-route-filing-review-surface | U7a: activation profile と工程表 join の関数契約を固定 | green | confirmed |  |
 | PLAN-L7-385-vmodel-activation-profile-join | L7 |  | L6 | PLAN-L6-41-vmodel-activation-profile-join | U7b: activation profile と工程表をjoinしてversion-up対象/除外/延期理由を検索可能化済 | green | confirmed |  |
-| PLAN-L6-42-typed-spec-declaration-source | L6 | function-spec | L7 | PLAN-L7-385-vmodel-activation-profile-join | U8a: ZIP 99の spec.defines 型宣言をHARNESS正本へ落とす契約 | yellow | planned | U7のprofile join green 後に起票 |
-| PLAN-L7-386-typed-spec-declaration-projection | L7 |  | L6 | PLAN-L6-42-typed-spec-declaration-source | U8b: typed spec declaration をDB projectionへ接続 | yellow | planned | L6-42確定後に起票 |
+| PLAN-L6-42-typed-spec-declaration-source | L6 | function-spec | L7 | PLAN-L7-385-vmodel-activation-profile-join | U8a: ZIP 99の spec.defines 型宣言をHARNESS正本へ落とす契約を固定 | green | confirmed |  |
+| PLAN-L7-386-typed-spec-declaration-projection | L7 |  | L6 | PLAN-L6-42-typed-spec-declaration-source | U8b: typed spec declaration をDB projectionへ接続済 | green | confirmed |  |
+| PLAN-L6-43-typed-spec-trace-closure | L6 | function-spec | L7 | PLAN-L7-386-typed-spec-declaration-projection | U9a: typed spec trace closure / 双方向不一致 / 台帳突合の契約 | yellow | planned | U8 projection green 後に起票 |
 
 ## 2. 解釈規則
 

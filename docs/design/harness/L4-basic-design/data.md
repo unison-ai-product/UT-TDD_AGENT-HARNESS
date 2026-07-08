@@ -53,8 +53,8 @@ projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来�
 
 | IR entity / view | L4 分類 | 所属集約 | 正本 | DB projection での役割 |
 |---|---|---|---|---|
-| **SpecDef** | entity (子) | Artifact | docs / PLAN / test-design の frontmatter と章 anchor | `defines` された要件・設計要素・テスト設計要素を安定 ID / owner artifact / section anchor / lifecycle で検索可能にする |
-| **SpecRelation** | entity (子) | Artifact | trace 宣言 / pair 宣言 / design-to-test 参照 | `requires` / `verifies` / `pairs` / `derives` / `supersedes` を edge として保持し、未定義・未参照・missing-test・ledger mismatch を検出する |
+| **SpecDef** | entity (子) | Artifact | 所有 artifact 本文の `spec.defines` / `docs/governance/vmodel-typed-spec-definitions.md` bootstrap / docs / PLAN / test-design の frontmatter と章 anchor | `defines` された要件・設計要素・テスト設計要素を安定 ID / owner artifact / section anchor / lifecycle で検索可能にする。typed spec 宣言がある場合は見出し推測より優先する |
+| **SpecRelation** | entity (子) | Artifact | `spec.defines[].traces_from` / `traces_to` / `tests` / pair 宣言 / design-to-test 参照 | `requires` / `verifies` / `pairs` / `derives` / `supersedes` / `traces_from` / `traces_to` / `tests` を edge として保持し、未定義・未参照・missing-test・ledger mismatch を検出する |
 | **ScheduleEntry** | entity (子) | Workflow | 工程管理表 / Forward spine | current_location / V-pair / predecessor / RAG / adoption / blocked reason を保持し、現在地と次工程を明示する |
 | **ActivationEntry** | entity (子) | Workflow | activation profile / version target / 適用除外宣言 | profile ごとの in-scope / out-of-scope / defer reason / target version を保持し、駆動モデル選択を厳格化する |
 | **ActivationScheduleReview** | derived_view | (CQRS 読みモデル) | ScheduleEntry × ActivationEntry | version-up wave の対象/除外/延期理由と現在地を join し、検索と検出が profile と工程表を同時に読めるようにする |
@@ -63,6 +63,7 @@ projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来�
 不変条件:
 
 - `SpecDef` / `SpecRelation` は Artifact 集約内で完結し、Plan / Workflow を直接変更しない。
+- `spec.defines` は型付き宣言正本であり、検出系は ID / kind / trace を推測で創作しない。
 - `ScheduleEntry` / `ActivationEntry` は Workflow 集約の projection input であり、PLAN frontmatter を暗黙更新しない。
 - `ScheduleEntry` の優先順位は、専用工程管理表 → PLAN frontmatter fallback の順とする。
 - `ActivationScheduleReview` は読みモデルであり、profile / 工程表 / PLAN を暗黙更新しない。
