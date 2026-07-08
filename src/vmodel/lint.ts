@@ -23,6 +23,8 @@ export interface PairDoc {
   pairArtifact: string | null;
   /** frontmatter status (confirmed/draft/placeholder 等)。null = 欠落。検証発火の freeze 判定に使う。 */
   status: string | null;
+  nextPairFreeze?: string | null;
+  content?: string;
 }
 
 export type PairOrphanReason = "pair-missing" | "ref-unresolved" | "trace-orphan";
@@ -74,6 +76,8 @@ export function parsePairDoc(path: string, content: string): PairDoc {
     layer: fmValue(content, "layer") ?? null,
     pairArtifact: raw != null ? stripInlineComment(raw) : null,
     status: fmValue(content, "status") ?? null,
+    nextPairFreeze: fmValue(content, "next_pair_freeze") ?? null,
+    content,
   };
 }
 
@@ -168,6 +172,216 @@ export function pairFreezeMessages(result: PairFreezeResult): string[] {
     msgs.push(`pair-freeze — ⚠ ${label[reason]} ${hits.length} 件: ${list}`);
   }
   return msgs;
+}
+
+export type ForwardFreezeContractViolationReason =
+  | "l2-doc-missing"
+  | "l2-status-not-confirmed"
+  | "l2-pair-mismatch"
+  | "l2-next-freeze-mismatch"
+  | "l2-prototype-evidence-missing"
+  | "l5-doc-missing"
+  | "l5-status-not-confirmed"
+  | "l5-pair-mismatch"
+  | "l5-next-freeze-mismatch"
+  | "l8-test-design-missing"
+  | "l8-test-design-not-confirmed"
+  | "l8-pair-mismatch"
+  | "l8-execution-layer-mismatch"
+  | "l8-coverage-missing"
+  | "l8-gwt-missing";
+
+export interface ForwardFreezeContractViolation {
+  path: string;
+  reason: ForwardFreezeContractViolationReason;
+  detail: string;
+}
+
+export interface ForwardFreezeContractResult {
+  ok: boolean;
+  checked: number;
+  l2Docs: number;
+  l5Docs: number;
+  violations: ForwardFreezeContractViolation[];
+}
+
+const REQUIRED_L2_PROTOTYPE_DOCS = [
+  "docs/design/harness/L2-screen/business-flow.md",
+  "docs/design/harness/L2-screen/screen-detail.md",
+  "docs/design/harness/L2-screen/screen-flow.md",
+  "docs/design/harness/L2-screen/screen-list.md",
+  "docs/design/harness/L2-screen/ui-element.md",
+  "docs/design/harness/L2-screen/wireframe.md",
+] as const;
+
+const REQUIRED_L5_VERIFICATION_DOCS = [
+  "docs/design/harness/L5-detailed-design/if-detail.md",
+  "docs/design/harness/L5-detailed-design/internal-processing.md",
+  "docs/design/harness/L5-detailed-design/module-decomposition.md",
+  "docs/design/harness/L5-detailed-design/physical-data.md",
+  "docs/design/harness/L5-detailed-design/ui-detail.md",
+] as const;
+
+const L2_TEST_DESIGN = "docs/test-design/harness/L10-ux-validation-test-design.md";
+const L5_TEST_DESIGN = "docs/test-design/harness/L8-integration-test-design.md";
+const L5_DESIGN_DIR = "docs/design/harness/L5-detailed-design/";
+
+function normalizedStatus(doc: PairDoc | undefined): string {
+  return stripInlineComment(doc?.status ?? "").toLowerCase();
+}
+
+function normalizedNextPairFreeze(doc: PairDoc | undefined): string {
+  return stripInlineComment(doc?.nextPairFreeze ?? "");
+}
+
+function hasL2PrototypeEvidence(doc: PairDoc): boolean {
+  const text = `${doc.status ?? ""}\n${doc.content ?? ""}`;
+  return /G2 freeze|PO|サインオフ|合意|確定|prototype|プロト/.test(text);
+}
+
+function hasGwtTable(doc: PairDoc | undefined): boolean {
+  const text = doc?.content ?? "";
+  return /\|\s*IT-ID\s*\|\s*Given\s*\|\s*When\s*\|\s*Then\s*\|/.test(text);
+}
+
+export function analyzeForwardFreezeContracts(docs: PairDoc[]): ForwardFreezeContractResult {
+  const byPath = new Map(docs.map((d) => [d.path, d]));
+  const violations: ForwardFreezeContractViolation[] = [];
+
+  for (const path of REQUIRED_L2_PROTOTYPE_DOCS) {
+    const doc = byPath.get(path);
+    if (!doc) {
+      violations.push({ path, reason: "l2-doc-missing", detail: "required L2 prototype doc" });
+      continue;
+    }
+    if (normalizedStatus(doc) !== "confirmed") {
+      violations.push({
+        path,
+        reason: "l2-status-not-confirmed",
+        detail: doc.status ?? "missing status",
+      });
+    }
+    if (doc.pairArtifact !== L2_TEST_DESIGN) {
+      violations.push({
+        path,
+        reason: "l2-pair-mismatch",
+        detail: doc.pairArtifact ?? "missing pair_artifact",
+      });
+    }
+    if (normalizedNextPairFreeze(doc) !== "L10") {
+      violations.push({
+        path,
+        reason: "l2-next-freeze-mismatch",
+        detail: doc.nextPairFreeze ?? "missing next_pair_freeze",
+      });
+    }
+    if (!hasL2PrototypeEvidence(doc)) {
+      violations.push({
+        path,
+        reason: "l2-prototype-evidence-missing",
+        detail: "G2/PO/prototype agreement marker is required",
+      });
+    }
+  }
+
+  for (const path of REQUIRED_L5_VERIFICATION_DOCS) {
+    const doc = byPath.get(path);
+    if (!doc) {
+      violations.push({ path, reason: "l5-doc-missing", detail: "required L5 detail doc" });
+      continue;
+    }
+    if (normalizedStatus(doc) !== "confirmed") {
+      violations.push({
+        path,
+        reason: "l5-status-not-confirmed",
+        detail: doc.status ?? "missing status",
+      });
+    }
+    if (doc.pairArtifact !== L5_TEST_DESIGN) {
+      violations.push({
+        path,
+        reason: "l5-pair-mismatch",
+        detail: doc.pairArtifact ?? "missing pair_artifact",
+      });
+    }
+    if (normalizedNextPairFreeze(doc) !== "L8") {
+      violations.push({
+        path,
+        reason: "l5-next-freeze-mismatch",
+        detail: doc.nextPairFreeze ?? "missing next_pair_freeze",
+      });
+    }
+  }
+
+  const l8 = byPath.get(L5_TEST_DESIGN);
+  if (!l8) {
+    violations.push({
+      path: L5_TEST_DESIGN,
+      reason: "l8-test-design-missing",
+      detail: "required L8 verification design",
+    });
+  } else {
+    if (normalizedStatus(l8) !== "confirmed") {
+      violations.push({
+        path: L5_TEST_DESIGN,
+        reason: "l8-test-design-not-confirmed",
+        detail: l8.status ?? "missing status",
+      });
+    }
+    if (l8.pairArtifact !== L5_DESIGN_DIR) {
+      violations.push({
+        path: L5_TEST_DESIGN,
+        reason: "l8-pair-mismatch",
+        detail: l8.pairArtifact ?? "missing pair_artifact",
+      });
+    }
+    if (fmValue(l8.content ?? "", "executed_at_layer") !== "L8") {
+      violations.push({
+        path: L5_TEST_DESIGN,
+        reason: "l8-execution-layer-mismatch",
+        detail: fmValue(l8.content ?? "", "executed_at_layer") ?? "missing executed_at_layer",
+      });
+    }
+    for (const path of REQUIRED_L5_VERIFICATION_DOCS) {
+      const name = basename(path);
+      if (!(l8.content ?? "").includes(name)) {
+        violations.push({
+          path: L5_TEST_DESIGN,
+          reason: "l8-coverage-missing",
+          detail: name,
+        });
+      }
+    }
+    if (!hasGwtTable(l8)) {
+      violations.push({
+        path: L5_TEST_DESIGN,
+        reason: "l8-gwt-missing",
+        detail: "confirmed IT cases must include Given/When/Then",
+      });
+    }
+  }
+
+  return {
+    ok: violations.length === 0,
+    checked: REQUIRED_L2_PROTOTYPE_DOCS.length + REQUIRED_L5_VERIFICATION_DOCS.length + 1,
+    l2Docs: REQUIRED_L2_PROTOTYPE_DOCS.length,
+    l5Docs: REQUIRED_L5_VERIFICATION_DOCS.length,
+    violations,
+  };
+}
+
+export function forwardFreezeContractMessages(result: ForwardFreezeContractResult): string[] {
+  if (result.ok) {
+    return [
+      `forward-freeze-contracts - OK (checked=${result.checked}, l2=${result.l2Docs}, l5=${result.l5Docs})`,
+    ];
+  }
+  return [
+    `forward-freeze-contracts - violation (checked=${result.checked}, findings=${result.violations.length})`,
+    ...result.violations
+      .slice(0, 10)
+      .map((v) => `forward-freeze-contracts - ${v.reason}: ${v.path} (${v.detail})`),
+  ];
 }
 
 /**

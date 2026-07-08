@@ -83,6 +83,12 @@ typed_spec_ledger:
   - spec_id: VMS-009
     ledger_sources: [docs/plans/PLAN-L7-391-agent-contract-detect-gate.md]
     v_phase: L7
+  - spec_id: VMS-010
+    ledger_sources: [docs/plans/PLAN-L6-48-vmodel-l2-freeze-l5-verification-design.md]
+    v_phase: L6
+  - spec_id: VMS-011
+    ledger_sources: [docs/plans/PLAN-L7-393-vmodel-l2-freeze-l5-verification-gate.md]
+    v_phase: L7
   - spec_id: TVMS-001
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
@@ -113,6 +119,14 @@ typed_spec_ledger:
     v_phase: L7
   - spec_id: TVMS-009
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
+    v_phase: L7
+  - spec_id: TVMS-010
+    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
+    v_phase: L7
+  - spec_id: TVMS-011
+    ledger_sources:
+      - docs/test-design/harness/L7-unit-test-design.md
+      - tests/vmodel-forward-freeze-contracts.test.ts
     v_phase: L7
 ```
 
@@ -158,6 +172,14 @@ VMS-004 を上流に持ち、detect gate 実装である VMS-009 へ接続する
 
 VMS-009 は agent contract を DB projection と doctor hard gate へ接続する実装境界である。
 VMS-008 を上流に持ち、対応 oracle は TVMS-009 である。
+### VMS-010 L2/L5 凍結契約設計
+
+VMS-010 は ZIP 107 の L2 prototype agreement freeze と L5 verification design readiness を HARNESS の Forward freeze contract として定義する設計である。
+VMS-008 を上流に持ち、実装 gate である VMS-011 へ接続する。対応 oracle は TVMS-010 である。
+### VMS-011 L2/L5 凍結契約 gate
+
+VMS-011 は VMS-010 の設計を `forward-freeze-contracts` doctor gate と unit oracle へ接続する実装境界である。
+VMS-010 を上流に持ち、対応 oracle は TVMS-011 である。
 
 ### TVMS-001 単体 oracle
 
@@ -192,6 +214,12 @@ TVMS-008 は VMS-008 の agent contract authoring source が unit oracle と pro
 ### TVMS-009 agent 契約検出 oracle
 
 TVMS-009 は VMS-009 の agent contract detect gate が doctor hard gate と fail-close fixture に現れることを保証する。
+### TVMS-010 L2/L5 凍結契約設計 oracle
+
+TVMS-010 は VMS-010 の L2 prototype agreement と L5 verification design contract が L7 unit-test design に現れることを保証する。
+### TVMS-011 L2/L5 凍結契約 gate oracle
+
+TVMS-011 は VMS-011 の `forward-freeze-contracts` gate が fail-close fixture と real repo green で検証されることを保証する。
 
 ## 4. 不変条件
 

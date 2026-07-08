@@ -99,7 +99,7 @@ spec:
     - id: VMS-008
       kind: agent-contract-authoring-source
       traces_from: [VMS-004]
-      traces_to: [VMS-009]
+      traces_to: [VMS-009, VMS-010]
       tests: [TVMS-008]
 ```
 

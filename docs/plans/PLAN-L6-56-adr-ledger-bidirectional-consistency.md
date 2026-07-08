@@ -24,9 +24,9 @@ generates:
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L6-44-typed-spec-ledger-and-body-sync.md
-  requires:
-    - docs/plans/PLAN-L7-275-glossary-code-consistency.md
+  requires: []
   references:
+    - docs/plans/PLAN-L7-275-glossary-code-consistency.md
     - docs/governance/vmodel-upgrade-schedule.md
 ---
 

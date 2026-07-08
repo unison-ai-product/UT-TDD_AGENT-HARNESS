@@ -22,11 +22,15 @@ const doc = (
   layer: string | null,
   pa: string | null,
   status: string | null = null,
+  nextPairFreeze: string | null = null,
+  content = "",
 ): PairDoc => ({
   path,
   layer,
   pairArtifact: pa,
   status,
+  nextPairFreeze,
+  content,
 });
 
 describe("vmodel pair-freeze lint (U-VPAIR)", () => {

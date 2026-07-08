@@ -58,7 +58,11 @@ import {
   checkSubDocSectionStructure,
   checkTelemetryClosure,
 } from "./process-quality";
-import { checkRoadmap, checkVerificationGroupsResult } from "./roadmap-verification";
+import {
+  checkForwardFreezeContractsResult,
+  checkRoadmap,
+  checkVerificationGroupsResult,
+} from "./roadmap-verification";
 import {
   checkCodingRules,
   checkDddTddRules,
@@ -208,6 +212,9 @@ export function buildDoctorCheckDefinitionGroups(
         full("sub-doc-section-structure", () => checkSubDocSectionStructure(deps.repoRoot)),
         full("screen-impl-pair-freeze", () => checkScreenImplPairFreeze(deps.repoRoot)),
         full("verification-groups", () => checkVerificationGroupsResult(deps.repoRoot)),
+        full("forward-freeze-contracts", () =>
+          checkForwardFreezeContractsResult(deps.repoRoot),
+        ),
       ],
     },
     {

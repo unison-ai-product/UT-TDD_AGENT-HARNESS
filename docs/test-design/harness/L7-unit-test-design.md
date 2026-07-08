@@ -924,6 +924,22 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 
 L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。
 
+### TVMS-010 L2/L5 freeze contract design oracle
+
+TVMS-010 は VMS-010 の L2 prototype agreement と L5 verification design contract が L7 unit oracle として定義されることを保証する。
+
+### TVMS-011 L2/L5 freeze contract gate oracle
+
+TVMS-011 は VMS-011 の `forward-freeze-contracts` gate が fail-close fixture と real repo green で検証されることを保証する。
+
+> `analyzeForwardFreezeContracts` / `checkForwardFreezeContractsResult` L2/L5 forward freeze contract oracle (PLAN-L6-48 / PLAN-L7-393).
+| ID | Target | Oracle |
+| --- | --- | --- |
+| U-FREEZE-CONTRACT-001 | `analyzeForwardFreezeContracts(input)` | L2 prototype agreement docs and L5 verification design docs pass together when status, pair, next freeze, evidence marker, L8 coverage, and GWT table are present. |
+| U-FREEZE-CONTRACT-002 | `analyzeForwardFreezeContracts(input)` | L2 confirmed docs without G2/PO/prototype agreement evidence produce `l2-prototype-evidence-missing`. |
+| U-FREEZE-CONTRACT-003 | `analyzeForwardFreezeContracts(input)` | L8 verification design missing a L5 detail basename or GWT table produces `l8-coverage-missing` / `l8-gwt-missing`. |
+| U-FREEZE-CONTRACT-004 | `checkForwardFreezeContractsResult(repoRoot)` | Real repo returns `forward-freeze-contracts - OK` and is wired into doctor full profile. |
+
 ## U11 型付きスペック所有 artifact
 
 ```yaml
@@ -956,6 +972,12 @@ spec:
     - id: TVMS-009
       kind: projection-oracle
       traces_from: [VMS-009]
+    - id: TVMS-010
+      kind: unit-oracle
+      traces_from: [VMS-010]
+    - id: TVMS-011
+      kind: unit-oracle
+      traces_from: [VMS-011]
 ```
 
 TVMS-001、TVMS-002、TVMS-003、TVMS-004、TVMS-005、TVMS-006、TVMS-007 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。

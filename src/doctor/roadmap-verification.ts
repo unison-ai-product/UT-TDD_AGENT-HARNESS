@@ -12,7 +12,9 @@ import {
 import { fmValue } from "../lint/shared";
 import {
   analyzePairFreeze,
+  analyzeForwardFreezeContracts,
   analyzeVerificationGroups,
+  forwardFreezeContractMessages,
   loadPairDocs,
   loadVerificationPlanEvidence,
   verificationGroupMessages,
@@ -106,4 +108,19 @@ export function checkVerificationGroupsResult(repoRoot: string): {
 
 export function checkVerificationGroups(repoRoot: string): string[] {
   return checkVerificationGroupsResult(repoRoot).messages;
+}
+
+export function checkForwardFreezeContractsResult(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  try {
+    const result = analyzeForwardFreezeContracts(loadPairDocs(repoRoot));
+    return { messages: forwardFreezeContractMessages(result), ok: result.ok };
+  } catch {
+    return {
+      messages: ["forward-freeze-contracts - violation: forward freeze contract lint could not run"],
+      ok: false,
+    };
+  }
 }
