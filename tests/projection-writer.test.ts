@@ -1154,10 +1154,43 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rowCounts(db).test_cases).toBeGreaterThan(0);
       expect(rowCounts(db).test_artifact_edges).toBeGreaterThan(0);
       expect(rowCounts(db).artifact_progress).toBeGreaterThan(0);
+      expect(rowCounts(db).spec_defs).toBeGreaterThan(0);
+      expect(rowCounts(db).spec_relations).toBeGreaterThan(0);
+      expect(rowCounts(db).schedule_entries).toBeGreaterThan(0);
+      expect(rowCounts(db).activation_entries).toBeGreaterThan(0);
       const inheritedOracle = db
         .prepare("SELECT COUNT(*) AS count FROM test_cases WHERE test_file = ? AND oracle_id = ?")
         .get("tests/handover.test.ts", "U-HOVER-001") as { count: number } | undefined;
       expect(inheritedOracle?.count ?? 0).toBeGreaterThan(0);
+      const specPlan = db
+        .prepare("SELECT layer, sub_doc, lifecycle_status FROM spec_defs WHERE plan_id = ?")
+        .get("PLAN-L6-39-vmodel-spec-ir-function-contracts") as
+        | { layer: string; sub_doc: string; lifecycle_status: string }
+        | undefined;
+      expect(specPlan).toMatchObject({
+        layer: "L6",
+        sub_doc: "function-spec",
+        lifecycle_status: "confirmed",
+      });
+      const specRelation = db
+        .prepare("SELECT relation_kind FROM spec_relations WHERE plan_id = ? AND evidence_path = ?")
+        .get(
+          "PLAN-L6-39-vmodel-spec-ir-function-contracts",
+          "PLAN-L5-13-vmodel-spec-ir-physical-data",
+        ) as { relation_kind: string } | undefined;
+      expect(specRelation).toMatchObject({ relation_kind: "requires" });
+      const schedule = db
+        .prepare("SELECT v_pair, rag FROM schedule_entries WHERE plan_id = ?")
+        .get("PLAN-L6-39-vmodel-spec-ir-function-contracts") as
+        | { v_pair: string; rag: string }
+        | undefined;
+      expect(schedule).toMatchObject({ v_pair: "L7", rag: "green" });
+      const activation = db
+        .prepare("SELECT profile_id, enabled FROM activation_entries WHERE plan_id = ?")
+        .get("PLAN-L6-39-vmodel-spec-ir-function-contracts") as
+        | { profile_id: string; enabled: number }
+        | undefined;
+      expect(activation).toMatchObject({ profile_id: "drive:db:mode:add-feature", enabled: 1 });
     } finally {
       db.close();
     }

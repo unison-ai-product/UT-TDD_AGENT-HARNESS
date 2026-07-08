@@ -69,6 +69,19 @@ export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirem
     table: "artifact_progress",
     reason: "artifact progress colors are derived from relation graph, tests, and impact results",
   },
+  { table: "spec_defs", reason: "spec definitions are derived from docs, plans, and test-design" },
+  {
+    table: "spec_relations",
+    reason: "spec relations are derived from PLAN dependencies and design/test pairs",
+  },
+  {
+    table: "schedule_entries",
+    reason: "schedule entries are derived from PLAN schedule/frontmatter state",
+  },
+  {
+    table: "activation_entries",
+    reason: "activation entries are derived from route mode and drive profile declarations",
+  },
 ];
 
 export const EVIDENCE_GATED_DB_PROJECTION_TABLES = [
@@ -84,6 +97,7 @@ export const EVIDENCE_GATED_DB_PROJECTION_TABLES = [
   "document_export_artifacts",
   "model_evaluations",
   "retry_events",
+  "detector_route_candidates",
 ];
 
 export const TELEMETRY_PROVENANCE_REQUIREMENTS: DbProjectionIngestionRequirement[] = [

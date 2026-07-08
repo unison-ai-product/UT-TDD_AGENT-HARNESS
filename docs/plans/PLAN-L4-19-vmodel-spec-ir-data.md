@@ -60,7 +60,7 @@ dependencies:
     - PLAN-L4-18-roadmap-drive-selection-hardening
   blocks:
     - PLAN-L5-13-vmodel-spec-ir-physical-data
-    - PLAN-L7-vmodel-spec-ir-projection
+    - PLAN-L7-381-vmodel-spec-ir-projection
   references:
     - docs/design/harness/L1-requirements/vmodel-upgrade-requirements.md
     - docs/design/harness/L4-basic-design/data.md

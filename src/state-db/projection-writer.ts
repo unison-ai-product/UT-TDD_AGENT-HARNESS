@@ -75,6 +75,7 @@ import {
   projectSkillTelemetry as projectSkillTelemetryCore,
   skillScore,
 } from "./skill-projections";
+import { projectSpecIr } from "./spec-ir-projections";
 import type { RunUsage } from "./token-tracker";
 
 export interface ProjectionEvent {
@@ -2713,6 +2714,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectVerificationEvidence(db, input.verificationEvidence),
       );
       time("test-cases", () => projectTestCaseCatalog(repoRoot, db));
+      time("spec-ir", () => projectSpecIr(repoRoot, db, projectionDeps));
       time("feedback", () => {
         projectFeedbackEvents(db, projectionDeps);
         projectTroubleEvents(db, projectionDeps);

@@ -14,6 +14,7 @@ import { col, pk } from "../src/schema/harness-db-table-builders";
 import { HARNESS_DB_CORE_TABLES } from "../src/schema/harness-db-tables-core";
 import { HARNESS_DB_EVALUATION_TABLES } from "../src/schema/harness-db-tables-evaluation";
 import { HARNESS_DB_GRAPH_EXPORT_TABLES } from "../src/schema/harness-db-tables-graph";
+import { HARNESS_DB_SPEC_IR_TABLES } from "../src/schema/harness-db-tables-spec-ir";
 import { assertWithinUtTdd, openHarnessDb, upsertRow } from "../src/state-db/index";
 import { ensureHarnessSchema, harnessDbStatus } from "../src/state-db/maintenance";
 import { migrate, missingTables, rowCounts, tableNames } from "../src/state-db/migration";
@@ -64,10 +65,25 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
         ...HARNESS_DB_CORE_TABLES,
         ...HARNESS_DB_GRAPH_EXPORT_TABLES,
         ...HARNESS_DB_EVALUATION_TABLES,
+        ...HARNESS_DB_SPEC_IR_TABLES,
       ].map((t) => t.name),
     );
     expect(HARNESS_DB_INDEXES.map((i) => i.name)).toEqual(
       SECTION_HARNESS_DB_INDEXES.map((i) => i.name),
+    );
+    expect(HARNESS_DB_INDEXES).toEqual(
+      expect.arrayContaining([
+        {
+          name: "idx_spec_defs_owner",
+          table: "spec_defs",
+          columns: ["owner_path", "section_anchor"],
+        },
+        {
+          name: "idx_detector_candidates_filing",
+          table: "detector_route_candidates",
+          columns: ["filing_target_id", "severity", "candidate_status"],
+        },
+      ]),
     );
 
     const present = tableNames(db);
@@ -79,6 +95,35 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
       .all()
       .map((row) => String(row.name));
     expect(planRegistryColumns).toContain("source_hash");
+    const specDefsColumns = db
+      .prepare("PRAGMA table_info(spec_defs)")
+      .all()
+      .map((row) => String(row.name));
+    expect(specDefsColumns).toEqual(
+      expect.arrayContaining([
+        "spec_id",
+        "spec_kind",
+        "layer",
+        "sub_doc",
+        "owner_path",
+        "section_anchor",
+        "source_hash",
+      ]),
+    );
+    const detectorCandidateColumns = db
+      .prepare("PRAGMA table_info(detector_route_candidates)")
+      .all()
+      .map((row) => String(row.name));
+    expect(detectorCandidateColumns).toEqual(
+      expect.arrayContaining([
+        "route_candidate_id",
+        "source_table",
+        "filing_target_id",
+        "target_layer",
+        "target_sub_doc",
+        "candidate_status",
+      ]),
+    );
     expect(missingTables(db)).toEqual([]);
     db.close();
   });

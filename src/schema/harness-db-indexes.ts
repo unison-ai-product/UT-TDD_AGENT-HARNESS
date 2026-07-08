@@ -196,4 +196,60 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     table: "screen_trace",
     columns: ["screen_id", "requirement_kind"],
   },
+  {
+    name: "idx_spec_defs_owner",
+    table: "spec_defs",
+    columns: ["owner_path", "section_anchor"],
+  },
+  {
+    name: "idx_spec_defs_kind_layer_status",
+    table: "spec_defs",
+    columns: ["spec_kind", "layer", "lifecycle_status"],
+  },
+  { name: "idx_spec_defs_plan", table: "spec_defs", columns: ["plan_id"] },
+  {
+    name: "idx_spec_relations_from_kind",
+    table: "spec_relations",
+    columns: ["from_spec_id", "relation_kind"],
+  },
+  {
+    name: "idx_spec_relations_to_kind",
+    table: "spec_relations",
+    columns: ["to_spec_id", "relation_kind"],
+  },
+  {
+    name: "idx_schedule_plan_status",
+    table: "schedule_entries",
+    columns: ["plan_id", "status", "rag"],
+  },
+  {
+    name: "idx_schedule_layer_subdoc_status",
+    table: "schedule_entries",
+    columns: ["layer", "sub_doc", "status"],
+  },
+  {
+    name: "idx_activation_profile_status",
+    table: "activation_entries",
+    columns: ["profile_id", "scope_status"],
+  },
+  {
+    name: "idx_activation_version_status",
+    table: "activation_entries",
+    columns: ["target_version", "scope_status"],
+  },
+  {
+    name: "idx_detector_candidates_source",
+    table: "detector_route_candidates",
+    columns: ["source_table", "source_id"],
+  },
+  {
+    name: "idx_detector_candidates_filing",
+    table: "detector_route_candidates",
+    columns: ["filing_target_id", "severity", "candidate_status"],
+  },
+  {
+    name: "idx_detector_candidates_subject",
+    table: "detector_route_candidates",
+    columns: ["subject_id"],
+  },
 ];

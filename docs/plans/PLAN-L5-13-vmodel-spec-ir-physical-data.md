@@ -61,7 +61,7 @@ dependencies:
     - PLAN-L5-08-harness-db-feedback
   blocks:
     - PLAN-L6-39-vmodel-spec-ir-function-contracts
-    - PLAN-L7-vmodel-spec-ir-projection
+    - PLAN-L7-381-vmodel-spec-ir-projection
   references:
     - docs/design/harness/L4-basic-design/data.md
     - docs/design/harness/L4-basic-design/function.md

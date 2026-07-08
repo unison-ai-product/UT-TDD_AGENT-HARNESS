@@ -61,7 +61,7 @@ dependencies:
     - PLAN-L4-18-roadmap-drive-selection-hardening
     - PLAN-L6-38-router-function-contracts
   blocks:
-    - PLAN-L7-vmodel-spec-ir-projection
+    - PLAN-L7-381-vmodel-spec-ir-projection
   references:
     - docs/design/harness/L4-basic-design/data.md
     - docs/design/harness/L4-basic-design/function.md
