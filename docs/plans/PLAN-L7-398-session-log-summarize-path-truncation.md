@@ -8,6 +8,8 @@ status: confirmed
 created: 2026-07-08
 updated: 2026-07-08
 owner: Claude / PO
+route_signal: incident
+route_mode: incident
 backprop_decision: not_required
 backprop_decision_reason: "session-log 内部の target 文字列生成ロジック修正 (truncate 除去)。ログ schema/外部 API 変更なし、runtime user 向け挙動変更なし。"
 review_evidence:

@@ -8,13 +8,15 @@ status: confirmed
 created: 2026-07-08
 updated: 2026-07-08
 owner: Claude / PO
+route_signal: incident
+route_mode: incident
 backprop_decision: not_required
 backprop_decision_reason: "Claude Code subagent guard + agent frontmatter model floor の是正。ユーザー向け product 機能ではなく harness 自身の運用ポリシー実装。"
 review_evidence:
   - reviewer: PO
     review_kind: human
-    reviewed_at: "2026-07-08T22:20:00+09:00"
-    tests_green_at: "2026-07-08T22:18:12+09:00"
+    reviewed_at: "2026-07-08T22:24:00+09:00"
+    tests_green_at: "2026-07-08T22:23:57+09:00"
     verdict: approve
     scope: "PO 指示 (2026-07-08、原文: 「ワーカーは下位モデル、品質チェックは上位モデルの原則にして」) に基づく方針決定 + Claude 実装。agent-guard の exact-match を capability floor (downgrade block / upgrade allow) へ変更し、code-reviewer/ut-tdd-tl/security-audit/qa-test の宣言 model を opus floor へ引き上げ。"
     worker_model: claude-sonnet-5
@@ -49,13 +51,13 @@ generates:
   - artifact_path: tests/agent-guard.test.ts
     artifact_type: test_code
   - artifact_path: .claude/agents/code-reviewer.md
-    artifact_type: agent_prompt_doc
+    artifact_type: markdown_doc
   - artifact_path: .claude/agents/ut-tdd-tl.md
-    artifact_type: agent_prompt_doc
+    artifact_type: markdown_doc
   - artifact_path: .claude/agents/security-audit.md
-    artifact_type: agent_prompt_doc
+    artifact_type: markdown_doc
   - artifact_path: .claude/agents/qa-test.md
-    artifact_type: agent_prompt_doc
+    artifact_type: markdown_doc
 dependencies:
   parent: null
   requires: []

@@ -8,6 +8,8 @@ status: confirmed
 created: 2026-07-08
 updated: 2026-07-08
 owner: Claude / PO
+route_signal: incident
+route_mode: incident
 backprop_decision: not_required
 backprop_decision_reason: "Relation graph loader coverage fix for two existing docs/ root ledger files; no runtime user behavior changes, no new design surface."
 review_evidence:

@@ -993,6 +993,44 @@ dependencies:
     expect(reasons).toContain("route_mode_kind_mismatch");
   });
 
+  it("U-PLANGOV-011v3: route_mode=incident accepts troubleshoot/recovery only", () => {
+    const docs = [
+      planDoc("PLAN-L7-912-incident-troubleshoot-ok", {
+        kind: "troubleshoot",
+        layer: "L7",
+        subDoc: null,
+        extra:
+          "route_signal: incident\nroute_mode: incident\ncreated: 2026-07-08\nupdated: 2026-07-08\n",
+      }),
+      planDoc("PLAN-RECOVERY-913-incident-recovery-ok", {
+        kind: "recovery",
+        layer: "cross",
+        subDoc: null,
+        extra:
+          "route_signal: incident\nroute_mode: incident\ncreated: 2026-07-08\nupdated: 2026-07-08\n",
+      }),
+      planDoc("PLAN-L7-914-incident-wrong-kind", {
+        kind: "refactor",
+        layer: "L7",
+        subDoc: null,
+        extra:
+          "route_signal: incident\nroute_mode: incident\ncreated: 2026-07-08\nupdated: 2026-07-08\n",
+      }),
+    ];
+
+    const violations = analyzePlanGovernance(docs).violations;
+    const okDocs = new Set([
+      "docs/plans/PLAN-L7-912-incident-troubleshoot-ok.md",
+      "docs/plans/PLAN-RECOVERY-913-incident-recovery-ok.md",
+    ]);
+    const mismatchFiles = violations
+      .filter((v) => v.reason === "route_mode_kind_mismatch")
+      .map((v) => v.file);
+
+    for (const file of okDocs) expect(mismatchFiles).not.toContain(file);
+    expect(mismatchFiles).toContain("docs/plans/PLAN-L7-914-incident-wrong-kind.md");
+  });
+
   it("U-PLANGOV-011w: draft debt is exempt while draft and fails closed on start (着手時昇格)", () => {
     const draftDebt = (status: string) =>
       planDoc("PLAN-L7-262-skill-telemetry-provenance", {

@@ -29,12 +29,14 @@ const READY_DEPENDENCY_STATUSES = new Set(["confirmed", "completed"]);
 // 整合を一度も検査されず素通りしていた。SSoT (L4 §3.1 駆動モデル表 function.md:109 の kind 列) から
 // 全実在 mode の allowed kinds を導出して登録 (観測組合せの鵜呑み blessing でなく spec 由来)。
 // - reverse→reverse / recovery→recovery / refactor→refactor: L4 §3.1 一致。
+// - incident→troubleshoot|recovery: L4 §3.1 / route-filing の Incident 行に一致。
 // - version-up→impl: option1 (PO 裁定)。parked track の実装意図を impl で保全し、着手時 add-feature
 //   合流で add-design を生む (L4 §3.1 は back-fill 側の記述、parked kind は本裁定で確定)。
 // landed 済の off-diagonal (SSoT 不一致だが confirmed) は ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS で
 // 恒久免除する (kind 書き換え=履歴改ざん回避)。
 const ROUTE_MODE_ALLOWED_KINDS: Record<string, readonly string[]> = {
   "add-feature": ["add-design", "add-impl"],
+  incident: ["troubleshoot", "recovery"],
   reverse: ["reverse"],
   recovery: ["recovery"],
   refactor: ["refactor"],
