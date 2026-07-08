@@ -32,6 +32,7 @@ const populatedAutomaticProjectionCounts = {
   spec_relations: 1,
   schedule_entries: 1,
   activation_entries: 1,
+  activation_schedule_reviews: 1,
 };
 
 describe("db projection ingestion detector", () => {
@@ -52,6 +53,7 @@ describe("db projection ingestion detector", () => {
       expect(result.rowCounts.spec_relations).toBeGreaterThan(0);
       expect(result.rowCounts.schedule_entries).toBeGreaterThan(0);
       expect(result.rowCounts.activation_entries).toBeGreaterThan(0);
+      expect(result.rowCounts.activation_schedule_reviews).toBeGreaterThan(0);
     } finally {
       db.close();
     }

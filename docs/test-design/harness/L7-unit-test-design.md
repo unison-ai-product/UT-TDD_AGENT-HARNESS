@@ -848,6 +848,19 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-ROUTE-REVIEW-R3 | `reviewDetectorRouteCandidate(candidate)` | candidate snapshot と FilingTarget 完全形を併記し、`allowed_kinds` / `layer_band` / `pairing_obligation` / `requires_human_approval` を表示要約に含める。 |
 | U-ROUTE-REVIEW-R4 | `projectFeedbackEvents` / `emitFeedbackEvents` | rebuild projection 経路と `feedback list --emit` 経路の両方で同じ routeFiling review 要約が出る。source finding との二重表示はしない。 |
 
+## PLAN-L6-41 Activation Profile Schedule Join Addendum (2026-07-08)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の
+> `parseActivationEntries` / `joinActivationScheduleReviews` 契約 (PLAN-L6-41)。
+> `docs/governance/vmodel-activation-profiles.md` を第一入力にし、工程管理表と join した read-model を DB と検索へ出す。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-ACTIVATION-SCHEDULE-R1 | `parseActivationEntries(input)` | activation profile authoring row が PLAN frontmatter fallback より優先され、`scope_status` / `target_version` / `defer_reason` / `enabled` を保持する。 |
+| U-ACTIVATION-SCHEDULE-R2 | `joinActivationScheduleReviews(input)` | `activation_entries.plan_id` と `schedule_entries.plan_id` を join し、`current_location` / `rag` / `schedule_status` / `v_pair` を read-model に含める。 |
+| U-ACTIVATION-SCHEDULE-R3 | `analyzeSpecIrIntegrity(input)` | `scope_status=deferred|out_of_scope` の理由欠落、または `target_kind=plan` の工程表未接続を finding 化し、projection 側で工程行を創作しない。 |
+| U-ACTIVATION-SCHEDULE-R4 | `rebuildHarnessDb` / `findReference` | real repo rebuild で `activation_schedule_reviews` が populated になり、`vmodel-clean-core` や `deferred` で検索できる。 |
+
 **gap 件数: 1 / 21** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
 
 L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。

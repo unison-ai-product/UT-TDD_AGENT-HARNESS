@@ -57,6 +57,7 @@ projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来�
 | **SpecRelation** | entity (子) | Artifact | trace 宣言 / pair 宣言 / design-to-test 参照 | `requires` / `verifies` / `pairs` / `derives` / `supersedes` を edge として保持し、未定義・未参照・missing-test・ledger mismatch を検出する |
 | **ScheduleEntry** | entity (子) | Workflow | 工程管理表 / Forward spine | current_location / V-pair / predecessor / RAG / adoption / blocked reason を保持し、現在地と次工程を明示する |
 | **ActivationEntry** | entity (子) | Workflow | activation profile / version target / 適用除外宣言 | profile ごとの in-scope / out-of-scope / defer reason / target version を保持し、駆動モデル選択を厳格化する |
+| **ActivationScheduleReview** | derived_view | (CQRS 読みモデル) | ScheduleEntry × ActivationEntry | version-up wave の対象/除外/延期理由と現在地を join し、検索と検出が profile と工程表を同時に読めるようにする |
 | **DetectorFinding** | derived_view | (CQRS 読みモデル) | detector / doctor / review の実行結果 | artifact / relation / schedule / quality signal を route candidate 化する。FilingTarget は function §3.2.1 から導出し、検出系は layer/sub_doc/pairing を創作しない |
 
 不変条件:
@@ -64,6 +65,7 @@ projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来�
 - `SpecDef` / `SpecRelation` は Artifact 集約内で完結し、Plan / Workflow を直接変更しない。
 - `ScheduleEntry` / `ActivationEntry` は Workflow 集約の projection input であり、PLAN frontmatter を暗黙更新しない。
 - `ScheduleEntry` の優先順位は、専用工程管理表 → PLAN frontmatter fallback の順とする。
+- `ActivationScheduleReview` は読みモデルであり、profile / 工程表 / PLAN を暗黙更新しない。
 - `DetectorFinding` と DB table は読みモデルであり、authoring source ではない。
 - docs/YAML/JSON 正本と projection の齟齬は doctor finding として fail-close し、projection 側で silent repair しない。
 - FilingTarget の `allowed_kinds` / `layer_band` / `sub_doc_hint` / `pairing_obligation` は function §3.2.1 の SSoT から導出し、detector 固有 heuristic に閉じ込めない。
@@ -183,6 +185,7 @@ projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来�
 | `spec_relations` | `SpecRelation` projection。defines / requires / verifies / pairs / derives / supersedes edge を保持する |
 | `schedule_entries` | `ScheduleEntry` projection。工程管理表の現在地、V-pair、predecessor、RAG、blocked reason を保持する |
 | `activation_entries` | `ActivationEntry` projection。profile ごとの in-scope / out-of-scope / defer reason / target version を保持する |
+| `activation_schedule_reviews` | `ActivationScheduleReview` projection。activation profile と工程表を join し、version-up wave の現在地、対象/除外/延期理由を検索可能にする |
 | `detector_route_candidates` | `DetectorFinding` projection。検出結果を FilingTarget SSoT に渡す候補として保持し、起票先を DB 独自に決定しない |
 | `gate_runs` | gate 判定証跡と doctor/vmodel lint 結果 |
 

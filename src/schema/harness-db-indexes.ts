@@ -238,6 +238,16 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     columns: ["target_version", "scope_status"],
   },
   {
+    name: "idx_activation_schedule_plan_profile",
+    table: "activation_schedule_reviews",
+    columns: ["plan_id", "profile_id", "scope_status"],
+  },
+  {
+    name: "idx_activation_schedule_scope_rag",
+    table: "activation_schedule_reviews",
+    columns: ["scope_status", "rag", "enabled"],
+  },
+  {
     name: "idx_detector_candidates_source",
     table: "detector_route_candidates",
     columns: ["source_table", "source_id"],

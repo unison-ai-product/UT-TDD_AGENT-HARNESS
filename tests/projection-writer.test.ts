@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { findReference } from "../src/search/index";
 import { deriveArtifactProgressDecision } from "../src/state-db/artifact-progress-decision";
 import {
   projectFeedbackEvents,
@@ -1308,6 +1309,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rowCounts(db).spec_relations).toBeGreaterThan(0);
       expect(rowCounts(db).schedule_entries).toBeGreaterThan(0);
       expect(rowCounts(db).activation_entries).toBeGreaterThan(0);
+      expect(rowCounts(db).activation_schedule_reviews).toBeGreaterThan(0);
       const inheritedOracle = db
         .prepare("SELECT COUNT(*) AS count FROM test_cases WHERE test_file = ? AND oracle_id = ?")
         .get("tests/handover.test.ts", "U-HOVER-001") as { count: number } | undefined;
@@ -1340,7 +1342,24 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
         .get("PLAN-L6-39-vmodel-spec-ir-function-contracts") as
         | { profile_id: string; enabled: number }
         | undefined;
-      expect(activation).toMatchObject({ profile_id: "drive:db:mode:add-feature", enabled: 1 });
+      expect(activation).toMatchObject({ profile_id: "vmodel-clean-core", enabled: 1 });
+      const activationReview = db
+        .prepare(
+          "SELECT profile_id, current_location, scope_status, rag FROM activation_schedule_reviews WHERE plan_id = ?",
+        )
+        .get("PLAN-L7-385-vmodel-activation-profile-join") as
+        | { profile_id: string; current_location: string; scope_status: string; rag: string }
+        | undefined;
+      expect(activationReview).toMatchObject({
+        profile_id: "vmodel-clean-core",
+        current_location:
+          "U7b: activation profile と工程表をjoinしてversion-up対象/除外/延期理由を検索可能化済",
+        scope_status: "in_scope",
+        rag: "green",
+      });
+      expect(findReference(db, "vmodel-clean-core PLAN-L7-385").at(0)).toMatchObject({
+        subject_type: "activation_schedule_review",
+      });
     } finally {
       db.close();
     }

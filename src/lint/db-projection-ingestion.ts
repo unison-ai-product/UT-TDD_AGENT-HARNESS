@@ -82,6 +82,10 @@ export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirem
     table: "activation_entries",
     reason: "activation entries are derived from route mode and drive profile declarations",
   },
+  {
+    table: "activation_schedule_reviews",
+    reason: "activation schedule reviews join activation profiles with V-model schedule state",
+  },
 ];
 
 export const EVIDENCE_GATED_DB_PROJECTION_TABLES = [

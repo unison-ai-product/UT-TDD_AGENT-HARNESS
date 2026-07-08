@@ -149,6 +149,82 @@ describe("spec IR projections", () => {
     }
   });
 
+  it("joins activation profile authoring rows with the V-model schedule", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-activation-"));
+    try {
+      writePlan(
+        root,
+        "PLAN-L7-999-activation-fixture.md",
+        [
+          "---",
+          "plan_id: PLAN-L7-999-activation-fixture",
+          "title: Activation fixture",
+          "kind: add-impl",
+          "layer: L7",
+          "drive: db",
+          "status: confirmed",
+          "route_mode: add-feature",
+          "---",
+          "",
+          "# Activation fixture",
+        ].join("\n"),
+      );
+      writeGovernanceDoc(
+        root,
+        "vmodel-upgrade-schedule.md",
+        [
+          "# V-model schedule",
+          "",
+          "| plan_id | layer | sub_doc | v_pair | predecessor_plan_ids | current_location | rag | status | blocked_reason |",
+          "|---|---|---|---|---|---|---|---|---|",
+          "| PLAN-L7-999-activation-fixture | L7 |  | L6 | PLAN-L6-998-parent | U7: activation profile join | yellow | planned | U6 green |",
+        ].join("\n"),
+      );
+      writeGovernanceDoc(
+        root,
+        "vmodel-activation-profiles.md",
+        [
+          "# V-model activation profiles",
+          "",
+          "| profile_id | target_kind | target_id | plan_id | scope_status | target_version | defer_reason | enabled |",
+          "|---|---|---|---|---|---|---|---|",
+          "| vmodel-clean-next | plan | PLAN-L7-999-activation-fixture | PLAN-L7-999-activation-fixture | deferred | vmodel-clean-2026-07-08 | wait for U6 review surface | false |",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-08T00:00:00.000Z");
+
+      expect(projection.activation_entries).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            plan_id: "PLAN-L7-999-activation-fixture",
+            profile_id: "vmodel-clean-next",
+            scope_status: "deferred",
+            defer_reason: "wait for U6 review surface",
+            enabled: 0,
+            source_path: "docs/governance/vmodel-activation-profiles.md",
+          }),
+        ]),
+      );
+      expect(projection.activation_schedule_reviews).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            plan_id: "PLAN-L7-999-activation-fixture",
+            profile_id: "vmodel-clean-next",
+            scope_status: "deferred",
+            current_location: "U7: activation profile join",
+            rag: "yellow",
+            schedule_status: "planned",
+            layer: "L7",
+            v_pair: "L6",
+          }),
+        ]),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("turns malformed schedule authoring rows into integrity findings", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-schedule-bad-"));
     try {

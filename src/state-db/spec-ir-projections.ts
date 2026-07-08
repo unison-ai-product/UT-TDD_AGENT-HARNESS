@@ -6,7 +6,12 @@ import { isValidSubDocForLayer, V_MODEL_PAIRS } from "../schema";
 import { isSecretLike } from "../secret";
 import type { HarnessDb } from "./index";
 
-type SpecIrSourceKind = "plan" | "design_doc" | "test_design" | "schedule_doc";
+type SpecIrSourceKind =
+  | "plan"
+  | "design_doc"
+  | "test_design"
+  | "schedule_doc"
+  | "activation_profile";
 
 interface SpecIrSource {
   kind: SpecIrSourceKind;
@@ -74,6 +79,28 @@ export interface ActivationEntryRow {
   indexed_at: string;
 }
 
+export interface ActivationScheduleReviewRow {
+  activation_schedule_review_id: string;
+  profile_id: string;
+  plan_id: string;
+  schedule_entry_id: string;
+  activation_entry_id: string;
+  target_kind: string;
+  target_id: string;
+  scope_status: string;
+  enabled: number;
+  target_version: string;
+  defer_reason: string;
+  current_location: string;
+  rag: string;
+  schedule_status: string;
+  layer: string;
+  sub_doc: string;
+  v_pair: string;
+  source_path: string;
+  indexed_at: string;
+}
+
 export interface DetectorRouteCandidateRow {
   route_candidate_id: string;
   source_table: string;
@@ -107,6 +134,7 @@ export interface SpecIrProjection {
   spec_relations: SpecRelationRow[];
   schedule_entries: ScheduleEntryRow[];
   activation_entries: ActivationEntryRow[];
+  activation_schedule_reviews: ActivationScheduleReviewRow[];
   detector_route_candidates: DetectorRouteCandidateRow[];
   findings: SpecIrFindingRow[];
 }
@@ -212,6 +240,7 @@ function inferSubDocFromPath(path: string): string {
 
 function sourceKind(path: string): SpecIrSourceKind | null {
   if (path === "docs/governance/vmodel-upgrade-schedule.md") return "schedule_doc";
+  if (path === "docs/governance/vmodel-activation-profiles.md") return "activation_profile";
   if (path.startsWith("docs/plans/")) return "plan";
   if (path.startsWith("docs/design/harness/")) return "design_doc";
   if (path.startsWith("docs/test-design/harness/")) return "test_design";
@@ -234,8 +263,15 @@ function walkMarkdown(root: string): string[] {
 
 export function loadSpecIrSources(repoRoot: string): SpecIrSource[] {
   const scheduleSource = join(repoRoot, "docs", "governance", "vmodel-upgrade-schedule.md");
+  const activationProfileSource = join(
+    repoRoot,
+    "docs",
+    "governance",
+    "vmodel-activation-profiles.md",
+  );
   return [
     ...(existsSync(scheduleSource) ? [scheduleSource] : []),
+    ...(existsSync(activationProfileSource) ? [activationProfileSource] : []),
     ...walkMarkdown(join(repoRoot, "docs", "plans")),
     ...walkMarkdown(join(repoRoot, "docs", "design", "harness")),
     ...walkMarkdown(join(repoRoot, "docs", "test-design", "harness")),
@@ -284,10 +320,10 @@ function splitMarkdownTableLine(line: string): string[] {
     .replace(/^\|/, "")
     .replace(/\|$/, "")
     .split("|")
-    .map((cell) => cell.trim());
+    .map((cell) => cell.trim().replace(/^`|`$/g, ""));
 }
 
-function markdownTableRows(content: string): Record<string, string>[] {
+function markdownTableRows(content: string, requiredHeaders: string[]): Record<string, string>[] {
   const lines = content.split(/\r?\n/);
   const rows: Record<string, string>[] = [];
   for (let index = 0; index < lines.length - 2; index += 1) {
@@ -299,7 +335,7 @@ function markdownTableRows(content: string): Record<string, string>[] {
     const headers = splitMarkdownTableLine(headerLine).map((header) =>
       header.toLowerCase().replace(/`/g, ""),
     );
-    if (!headers.includes("plan_id") || !headers.includes("current_location")) continue;
+    if (!requiredHeaders.every((header) => headers.includes(header))) continue;
     for (let rowIndex = index + 2; rowIndex < lines.length; rowIndex += 1) {
       const line = lines[rowIndex];
       if (!line.trim().startsWith("|")) break;
@@ -320,7 +356,7 @@ function parseScheduleAuthoringRows(
 ): ScheduleEntryRow[] {
   const rows: ScheduleEntryRow[] = [];
   for (const source of sources.filter((item) => item.kind === "schedule_doc")) {
-    for (const row of markdownTableRows(source.content)) {
+    for (const row of markdownTableRows(source.content, ["plan_id", "current_location"])) {
       const planId = row.plan_id ?? "";
       if (!planId) continue;
       const layer = row.layer ?? "";
@@ -504,12 +540,53 @@ export function parseScheduleEntries(
   return [...authoredRows, ...fallbackRows];
 }
 
+function boolFromField(value: string, fallback: boolean): number {
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "y", "enabled", "有効"].includes(normalized)) return 1;
+  if (["0", "false", "no", "n", "disabled", "無効"].includes(normalized)) return 0;
+  return fallback ? 1 : 0;
+}
+
+function parseActivationAuthoringRows(
+  sources: SpecIrSource[],
+  indexedAt: string,
+): ActivationEntryRow[] {
+  const rows: ActivationEntryRow[] = [];
+  for (const source of sources.filter((item) => item.kind === "activation_profile")) {
+    for (const row of markdownTableRows(source.content, ["profile_id", "target_id"])) {
+      const profileId = row.profile_id ?? "";
+      const targetId = row.target_id ?? "";
+      if (!profileId || !targetId) continue;
+      const targetKind = row.target_kind || "plan";
+      const scopeStatus = row.scope_status || "in_scope";
+      const planId = row.plan_id || (targetKind === "plan" ? targetId : "");
+      rows.push({
+        activation_entry_id: stableId("activation-entry", `${profileId}:${targetKind}:${targetId}`),
+        profile_id: profileId,
+        target_kind: targetKind,
+        target_id: targetId,
+        scope_status: scopeStatus,
+        target_version: row.target_version || "",
+        defer_reason: row.defer_reason || "",
+        enabled: boolFromField(row.enabled ?? "", scopeStatus === "in_scope"),
+        source_path: source.path,
+        plan_id: planId,
+        indexed_at: indexedAt,
+      });
+    }
+  }
+  return rows;
+}
+
 export function parseActivationEntries(
   sources: SpecIrSource[],
   indexedAt: string,
 ): ActivationEntryRow[] {
-  return sources
+  const authoredRows = parseActivationAuthoringRows(sources, indexedAt);
+  const authoredPlanIds = new Set(authoredRows.map((row) => row.plan_id).filter(Boolean));
+  const fallbackRows = sources
     .filter((source) => source.kind === "plan" && sourcePlanId(source))
+    .filter((source) => !authoredPlanIds.has(sourcePlanId(source)))
     .map((source) => {
       const planId = sourcePlanId(source);
       const drive = stringField(source.metadata.drive) || "unknown";
@@ -529,6 +606,42 @@ export function parseActivationEntries(
         indexed_at: indexedAt,
       };
     });
+  return [...authoredRows, ...fallbackRows];
+}
+
+export function joinActivationScheduleReviews(input: {
+  activations: ActivationEntryRow[];
+  schedules: ScheduleEntryRow[];
+  indexedAt: string;
+}): ActivationScheduleReviewRow[] {
+  const scheduleByPlanId = new Map(input.schedules.map((schedule) => [schedule.plan_id, schedule]));
+  return input.activations.map((activation) => {
+    const schedule = scheduleByPlanId.get(activation.plan_id);
+    return {
+      activation_schedule_review_id: stableId(
+        "activation-schedule-review",
+        `${activation.activation_entry_id}:${schedule?.schedule_entry_id ?? "missing-schedule"}`,
+      ),
+      profile_id: activation.profile_id,
+      plan_id: activation.plan_id,
+      schedule_entry_id: schedule?.schedule_entry_id ?? "",
+      activation_entry_id: activation.activation_entry_id,
+      target_kind: activation.target_kind,
+      target_id: activation.target_id,
+      scope_status: activation.scope_status,
+      enabled: activation.enabled,
+      target_version: activation.target_version,
+      defer_reason: activation.defer_reason,
+      current_location: schedule?.current_location ?? "",
+      rag: schedule?.rag ?? "",
+      schedule_status: schedule?.status ?? "",
+      layer: schedule?.layer ?? "",
+      sub_doc: schedule?.sub_doc ?? "",
+      v_pair: schedule?.v_pair ?? "",
+      source_path: activation.source_path || schedule?.source_path || "",
+      indexed_at: input.indexedAt,
+    };
+  });
 }
 
 export function analyzeSpecIrIntegrity(input: {
@@ -537,6 +650,7 @@ export function analyzeSpecIrIntegrity(input: {
   relationFindings: SpecIrFindingRow[];
   schedules: ScheduleEntryRow[];
   activations: ActivationEntryRow[];
+  activationScheduleReviews: ActivationScheduleReviewRow[];
 }): SpecIrFindingRow[] {
   const findings = [...input.relationFindings];
   const defIds = new Set(input.defs.map((def) => def.spec_id));
@@ -643,6 +757,19 @@ export function analyzeSpecIrIntegrity(input: {
       });
     }
   }
+  for (const review of input.activationScheduleReviews) {
+    if (review.target_kind === "plan" && !review.schedule_entry_id) {
+      findings.push({
+        finding_id: stableId("finding:activation-schedule-missing", review.activation_entry_id),
+        kind: "activation-schedule-missing",
+        severity: "warn",
+        subject_id: review.activation_entry_id,
+        source: "spec-ir-projection",
+        status: "open",
+        evidence_path: review.source_path,
+      });
+    }
+  }
   return findings;
 }
 
@@ -675,18 +802,25 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
   const relationResult = parseSpecRelations(sources, defs, indexedAt);
   const schedules = parseScheduleEntries(sources, indexedAt);
   const activations = parseActivationEntries(sources, indexedAt);
+  const activationScheduleReviews = joinActivationScheduleReviews({
+    activations,
+    schedules,
+    indexedAt,
+  });
   const findings = analyzeSpecIrIntegrity({
     defs,
     relations: relationResult.relations,
     relationFindings: relationResult.findings,
     schedules,
     activations,
+    activationScheduleReviews,
   });
   return {
     spec_defs: defs,
     spec_relations: relationResult.relations,
     schedule_entries: schedules,
     activation_entries: activations,
+    activation_schedule_reviews: activationScheduleReviews,
     detector_route_candidates: deriveDetectorRouteCandidates(findings, indexedAt),
     findings,
   };
@@ -716,6 +850,32 @@ export function projectSpecIr(repoRoot: string, db: HarnessDb, deps: SpecIrProje
       table: "activation_entries",
       id: row.activation_entry_id,
       row: { ...row },
+    });
+  }
+  for (const row of projection.activation_schedule_reviews) {
+    deps.recordProjectionEvent(db, {
+      table: "activation_schedule_reviews",
+      id: row.activation_schedule_review_id,
+      row: { ...row },
+    });
+    deps.recordProjectionEvent(db, {
+      table: "search_index",
+      id: stableId("activation-schedule-review", row.activation_schedule_review_id),
+      row: {
+        search_id: stableId("activation-schedule-review", row.activation_schedule_review_id),
+        subject_type: "activation_schedule_review",
+        subject_id: row.activation_schedule_review_id,
+        path: row.source_path,
+        title: `${row.plan_id} ${row.profile_id} ${row.scope_status}`,
+        tokens:
+          `${row.profile_id} ${row.plan_id} ${row.scope_status} ${row.target_version} ` +
+          `${row.layer} ${row.sub_doc} ${row.v_pair} ${row.rag} ${row.schedule_status} ` +
+          `${row.current_location} ${row.defer_reason}`,
+        summary:
+          `activation profile ${row.scope_status}; enabled=${row.enabled}; ` +
+          `location=${row.current_location}`,
+        updated_at: row.indexed_at,
+      },
     });
   }
   for (const row of projection.findings) {

@@ -487,7 +487,8 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 | `spec_defs` | `spec_id` | `spec_kind`, `layer`, `sub_doc`, `owner_artifact_id`, `owner_path`, `section_anchor`, `title`, `lifecycle_status`, `plan_id`, `source_path`, `source_hash`, `indexed_at` | design docs / PLAN frontmatter / test-design headings | 要件・設計要素・テスト設計要素を安定 ID と章 anchor で検索可能にする。 |
 | `spec_relations` | `relation_id` | `from_spec_id`, `to_spec_id`, `relation_kind`, `plan_id`, `status`, `source`, `evidence_path`, `indexed_at` | trace 宣言 / pair 宣言 / design-to-test 参照 / PLAN dependencies | `defines` / `requires` / `verifies` / `pairs` / `derives` / `supersedes` を edge として保存し、未定義・未参照・missing-test・ledger mismatch を検出する。 |
 | `schedule_entries` | `schedule_entry_id` | `plan_id`, `layer`, `sub_doc`, `v_pair`, `predecessor_plan_ids`, `current_location`, `rag`, `status`, `blocked_reason`, `source_path`, `source_hash`, `indexed_at` | `docs/governance/vmodel-upgrade-schedule.md` / Forward spine / PLAN frontmatter fallback | 現在地と次工程を query 可能にし、工程表の空セル・逆流・未合流 branch を検出する。専用工程表に掲載された `plan_id` は PLAN frontmatter fallback より優先する。`predecessor_plan_ids` は comma を含まない plan_id list の serialized TEXT とする。 |
-| `activation_entries` | `activation_entry_id` | `profile_id`, `target_kind`, `target_id`, `scope_status`, `target_version`, `defer_reason`, `enabled`, `source_path`, `plan_id`, `indexed_at` | activation profile / version target / 適用除外宣言 | profile ごとの in_scope / out_of_scope / deferred を明示し、駆動モデル選択を厳格化する。 |
+| `activation_entries` | `activation_entry_id` | `profile_id`, `target_kind`, `target_id`, `scope_status`, `target_version`, `defer_reason`, `enabled`, `source_path`, `plan_id`, `indexed_at` | `docs/governance/vmodel-activation-profiles.md` / activation profile / version target / 適用除外宣言 / PLAN frontmatter fallback | profile ごとの in_scope / out_of_scope / deferred を明示し、駆動モデル選択を厳格化する。専用 activation profile に掲載された `plan_id` は PLAN frontmatter fallback より優先する。 |
+| `activation_schedule_reviews` | `activation_schedule_review_id` | `profile_id`, `plan_id`, `schedule_entry_id`, `activation_entry_id`, `target_kind`, `target_id`, `scope_status`, `enabled`, `target_version`, `defer_reason`, `current_location`, `rag`, `schedule_status`, `layer`, `sub_doc`, `v_pair`, `source_path`, `indexed_at` | `activation_entries` × `schedule_entries` | version-up wave の対象/除外/延期理由と現在地を join し、検索・検出が同じ read-model を参照できるようにする。 |
 | `detector_route_candidates` | `route_candidate_id` | `source_table`, `source_id`, `detector_id`, `finding_kind`, `severity`, `subject_kind`, `subject_id`, `filing_target_id`, `target_layer`, `target_sub_doc`, `candidate_status`, `reason`, `evidence_path`, `computed_at` | findings / quality_signals / spec_relations / schedule_entries / activation_entries | 検出結果を起票候補として保持する。`target_layer` / `target_sub_doc` は function §3.2.1 から再導出した snapshot であり、DB 独自の決定ではない。 |
 
 必須 index:
@@ -501,6 +502,8 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 - `idx_schedule_layer_subdoc_status(layer, sub_doc, status)`.
 - `idx_activation_profile_status(profile_id, scope_status)`.
 - `idx_activation_version_status(target_version, scope_status)`.
+- `idx_activation_schedule_plan_profile(plan_id, profile_id, scope_status)`.
+- `idx_activation_schedule_scope_rag(scope_status, rag, enabled)`.
 - `idx_detector_candidates_source(source_table, source_id)`.
 - `idx_detector_candidates_filing(filing_target_id, severity, candidate_status)`.
 - `idx_detector_candidates_subject(subject_id)`.
@@ -511,6 +514,7 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 - `spec_defs.layer` / `sub_doc` は `VALID_SUB_DOCS` と frontmatter schema に従う。未知 layer/sub_doc は projection で補正せず `findings` にする。
 - `schedule_entries` は工程管理表と PLAN frontmatter fallback の projection であり、PLAN status や dependencies を暗黙更新しない。工程表掲載 row は fallback row に上書きされない。
 - `activation_entries.scope_status=out_of_scope|deferred` は理由 (`defer_reason`) を必須とし、理由なし除外は `findings.kind=activation-reason-missing` とする。
+- `activation_schedule_reviews` は `activation_entries.plan_id` と `schedule_entries.plan_id` の join 結果である。工程表に存在しない `target_kind=plan` は `findings.kind=activation-schedule-missing` とし、projection 側で工程行を創作しない。
 - `detector_route_candidates` は FilingTarget 決定表ではない。candidate row は signal / subject / evidence / current_location を提供し、`route eval` は L4 function §3.2.1 の FilingTarget SSoT を読んで `allowed_kinds` / `layer_band` / `sub_doc_hint` / `pairing_obligation` を決定する。
 - raw provider transcript、secret、credential、PII、未redact payload はいずれの table にも保存しない。
 - `spec_relations` は仕様 IR の semantic edge であり、§9.5 `dependency_edges` は横断 impact graph の edge である。両者を同じ table に畳まず、後続 U4 では join で接続する。
@@ -519,6 +523,6 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 
 - U3 L7 では `src/schema/harness-db-tables-spec-ir.ts` を新設し、`harness-db-catalog.ts` / `harness-db-indexes.ts` へ registry 連結する。新 table 追加時は `SCHEMA_VERSION` を 19 から bump し、migration は append-only / rebuildable projection とする。
 - `src/state-db/projection-writer.ts` は rebuild transaction 内で `projectSpecIr(...)` 系を呼ぶ。parser/projection は `src/state-db/spec-ir-projections.ts` などへ分離し、projection-writer は orchestration に留める。
-- candidate 生成は `findings` / `quality_signals` / spec IR / schedule / activation を join するが、PLAN 起票や frontmatter 更新は行わない。
+- candidate 生成は `findings` / `quality_signals` / spec IR / schedule / activation / activation schedule review を join するが、PLAN 起票や frontmatter 更新は行わない。
 - `recordProjectionEvent` は schema にない列を保持しないため、列名 typo は U3 L7 の test で検出する。単一 PLAN を表さない値は `plan_id` に入れず、複数 plan は専用 serialized field または relation table へ逃がす。
 - L8 は IT-SPECIR-01..04 で、projection の冪等性、orphan fail-close、FilingTarget 非創作、activation 理由必須 / raw payload 非保存を検証する。
