@@ -264,6 +264,14 @@ describe("L7 CLI surface closure", () => {
     expect(run.stdout).toContain("--json");
   }, 15_000);
 
+  it("exposes typed spec closure RAG as a CLI surface", () => {
+    const run = runCli(["trace", "rag", "--help"]);
+
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain("--id <id>");
+    expect(run.stdout).toContain("--json");
+  }, 15_000);
+
   it("exposes feedback commands through the extracted registrar", () => {
     const help = runCli(["feedback", "--help"]);
     const classify = runCli(["feedback", "classify", "--text", "please review this regression"]);

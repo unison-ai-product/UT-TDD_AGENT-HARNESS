@@ -268,6 +268,16 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     columns: ["doc_type_id", "default_status"],
   },
   {
+    name: "idx_spec_rag_closure_rag_status",
+    table: "spec_rag_closure_entries",
+    columns: ["rag", "closure_status"],
+  },
+  {
+    name: "idx_spec_rag_closure_spec",
+    table: "spec_rag_closure_entries",
+    columns: ["spec_id", "requires_test"],
+  },
+  {
     name: "idx_detector_candidates_source",
     table: "detector_route_candidates",
     columns: ["source_table", "source_id"],

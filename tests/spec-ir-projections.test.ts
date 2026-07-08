@@ -2,7 +2,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { collectSpecIrProjection } from "../src/state-db/spec-ir-projections";
+import {
+  analyzeTypedSpecTraceClosure,
+  collectSpecIrProjection,
+  deriveSpecRagClosureEntries,
+} from "../src/state-db/spec-ir-projections";
 
 function writePlan(root: string, name: string, body: string): void {
   const dir = join(root, "docs", "plans");
@@ -328,6 +332,66 @@ describe("spec IR projections", () => {
           expect.objectContaining({ kind: "typed-spec-phase-layer-mismatch" }),
         ]),
       );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("derives spec RAG closure entries from typed spec relations", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-rag-"));
+    try {
+      writeGovernanceDoc(
+        root,
+        "vmodel-typed-spec-definitions.md",
+        [
+          "# Typed spec RAG fixture",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-301",
+          "      kind: typed-source",
+          "      traces_to: [VMS-302]",
+          "      tests: [TVMS-301]",
+          "    - id: VMS-302",
+          "      kind: typed-projection",
+          "      traces_from: [VMS-301]",
+          "      tests: [TVMS-302]",
+          "    - id: VMS-303",
+          "      kind: typed-source",
+          "    - id: TVMS-301",
+          "      kind: unit-oracle",
+          "      traces_from: [VMS-301]",
+          "    - id: TVMS-302",
+          "      kind: unit-oracle",
+          "      traces_from: [VMS-302]",
+          "```",
+        ].join("\n"),
+      );
+      const projection = collectSpecIrProjection(root, "2026-07-08T00:00:00.000Z");
+      const traceClosure = analyzeTypedSpecTraceClosure({
+        defs: projection.spec_defs,
+        relations: projection.spec_relations,
+      });
+      const entries = deriveSpecRagClosureEntries({
+        defs: projection.spec_defs,
+        relations: projection.spec_relations,
+        closureFindings: traceClosure.findings,
+        indexedAt: "2026-07-08T00:00:00.000Z",
+      });
+
+      expect(entries.find((entry) => entry.spec_id === "VMS-301")).toMatchObject({
+        rag: "green",
+        closure_status: "closed",
+        requires_test: 1,
+        finding_count: 0,
+      });
+      expect(entries.find((entry) => entry.spec_id === "VMS-303")).toMatchObject({
+        rag: "red",
+        closure_status: "missing_test",
+        requires_test: 1,
+        test_count: 0,
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

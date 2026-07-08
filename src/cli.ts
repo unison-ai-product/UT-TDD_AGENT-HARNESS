@@ -857,6 +857,62 @@ trace
       db.close();
     }
   });
+trace
+  .command("rag")
+  .description("list typed spec closure RAG ledger entries")
+  .option("--id <id>", "filter by spec id")
+  .option("--json", "JSON output")
+  .action((opts: { id?: string; json?: boolean }) => {
+    type TraceRagRow = {
+      spec_id: string;
+      spec_kind: string;
+      layer: string;
+      sub_doc: string;
+      rag: string;
+      closure_status: string;
+      requires_test: number;
+      upstream_count: number;
+      downstream_count: number;
+      test_count: number;
+      finding_count: number;
+      impact_summary: string;
+      source_path: string;
+      indexed_at: string;
+    };
+    const repoRoot = process.cwd();
+    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+    try {
+      migrate(db);
+      const rows = opts.id
+        ? db
+            .prepare(
+              "SELECT spec_id, spec_kind, layer, sub_doc, rag, closure_status, requires_test, upstream_count, downstream_count, test_count, finding_count, impact_summary, source_path, indexed_at FROM spec_rag_closure_entries WHERE spec_id = ? ORDER BY spec_id",
+            )
+            .all(opts.id)
+        : db
+            .prepare(
+              "SELECT spec_id, spec_kind, layer, sub_doc, rag, closure_status, requires_test, upstream_count, downstream_count, test_count, finding_count, impact_summary, source_path, indexed_at FROM spec_rag_closure_entries ORDER BY CASE rag WHEN 'red' THEN 0 WHEN 'yellow' THEN 1 ELSE 2 END, spec_id",
+            )
+            .all();
+      const typedRows = rows as TraceRagRow[];
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(typedRows, null, 2)}\n`);
+        return;
+      }
+      if (typedRows.length === 0) {
+        process.stdout.write("trace rag: no rows (run `ut-tdd db rebuild` first)\n");
+        process.exitCode = opts.id ? 1 : 0;
+        return;
+      }
+      for (const row of typedRows) {
+        process.stdout.write(
+          `${row.rag} ${row.spec_id} ${row.closure_status} tests=${row.test_count} findings=${row.finding_count} ${row.impact_summary}\n`,
+        );
+      }
+    } finally {
+      db.close();
+    }
+  });
 
 const session = program.command("session").description("session-log runtime events");
 session

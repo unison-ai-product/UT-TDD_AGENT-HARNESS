@@ -93,6 +93,11 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
           table: "document_catalog_entries",
           columns: ["doc_type_id", "default_status"],
         },
+        {
+          name: "idx_spec_rag_closure_rag_status",
+          table: "spec_rag_closure_entries",
+          columns: ["rag", "closure_status"],
+        },
       ]),
     );
 
@@ -148,6 +153,21 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
         "default_status",
         "profile_controlled",
         "skip_reason_required",
+      ]),
+    );
+    const specRagColumns = db
+      .prepare("PRAGMA table_info(spec_rag_closure_entries)")
+      .all()
+      .map((row) => String(row.name));
+    expect(specRagColumns).toEqual(
+      expect.arrayContaining([
+        "spec_rag_entry_id",
+        "spec_id",
+        "rag",
+        "closure_status",
+        "requires_test",
+        "test_count",
+        "finding_count",
       ]),
     );
     const refactorCandidateColumns = db

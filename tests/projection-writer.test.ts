@@ -1397,6 +1397,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rowCounts(db).activation_entries).toBeGreaterThan(0);
       expect(rowCounts(db).activation_schedule_reviews).toBeGreaterThan(0);
       expect(rowCounts(db).document_catalog_entries).toBeGreaterThan(0);
+      expect(rowCounts(db).spec_rag_closure_entries).toBeGreaterThan(0);
       const inheritedOracle = db
         .prepare("SELECT COUNT(*) AS count FROM test_cases WHERE test_file = ? AND oracle_id = ?")
         .get("tests/handover.test.ts", "U-HOVER-001") as { count: number } | undefined;
@@ -1471,6 +1472,23 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       });
       expect(findReference(db, "VMS-004 typed-spec-authoring-source").at(0)).toMatchObject({
         subject_type: "typed_spec",
+        subject_id: "VMS-004",
+      });
+      const specRag = db
+        .prepare(
+          "SELECT rag, closure_status, test_count, finding_count FROM spec_rag_closure_entries WHERE spec_id = ?",
+        )
+        .get("VMS-004") as
+        | { rag: string; closure_status: string; test_count: number; finding_count: number }
+        | undefined;
+      expect(specRag).toMatchObject({
+        rag: "green",
+        closure_status: "closed",
+        finding_count: 0,
+      });
+      expect(specRag?.test_count ?? 0).toBeGreaterThan(0);
+      expect(findReference(db, "VMS-004 spec closure RAG").at(0)).toMatchObject({
+        subject_type: "spec_rag_closure_entry",
         subject_id: "VMS-004",
       });
     } finally {

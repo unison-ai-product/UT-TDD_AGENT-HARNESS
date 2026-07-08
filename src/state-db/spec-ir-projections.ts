@@ -131,6 +131,24 @@ export interface DocumentCatalogEntryRow {
   indexed_at: string;
 }
 
+export interface SpecRagClosureEntryRow {
+  spec_rag_entry_id: string;
+  spec_id: string;
+  spec_kind: string;
+  layer: string;
+  sub_doc: string;
+  rag: "red" | "yellow" | "green";
+  closure_status: string;
+  requires_test: number;
+  upstream_count: number;
+  downstream_count: number;
+  test_count: number;
+  finding_count: number;
+  impact_summary: string;
+  source_path: string;
+  indexed_at: string;
+}
+
 export interface DetectorRouteCandidateRow {
   route_candidate_id: string;
   source_table: string;
@@ -177,6 +195,7 @@ export interface SpecIrProjection {
   activation_entries: ActivationEntryRow[];
   activation_schedule_reviews: ActivationScheduleReviewRow[];
   document_catalog_entries: DocumentCatalogEntryRow[];
+  spec_rag_closure_entries: SpecRagClosureEntryRow[];
   detector_route_candidates: DetectorRouteCandidateRow[];
   agent_contracts: AgentContractRow[];
   findings: SpecIrFindingRow[];
@@ -1479,6 +1498,117 @@ export function analyzeTypedSpecTraceClosure(input: {
   };
 }
 
+interface SpecFlowEdge {
+  from: string;
+  to: string;
+  relation_kind: string;
+}
+
+function typedSpecFlowEdges(relations: SpecRelationRow[], typedIds: Set<string>): SpecFlowEdge[] {
+  const edges: SpecFlowEdge[] = [];
+  for (const relation of relations) {
+    if (!typedIds.has(relation.from_spec_id) || !typedIds.has(relation.to_spec_id)) continue;
+    if (relation.relation_kind === "traces_from" || relation.relation_kind === "requires") {
+      edges.push({
+        from: relation.to_spec_id,
+        to: relation.from_spec_id,
+        relation_kind: relation.relation_kind,
+      });
+      continue;
+    }
+    if (relation.relation_kind === "pairs") continue;
+    edges.push({
+      from: relation.from_spec_id,
+      to: relation.to_spec_id,
+      relation_kind: relation.relation_kind,
+    });
+  }
+  return edges;
+}
+
+function reachableSpecIds(
+  start: string,
+  edges: SpecFlowEdge[],
+  direction: "upstream" | "downstream",
+): string[] {
+  const seen = new Set<string>([start]);
+  const queue = [start];
+  const result: string[] = [];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) continue;
+    const matches =
+      direction === "downstream"
+        ? edges.filter((edge) => edge.from === current)
+        : edges.filter((edge) => edge.to === current);
+    for (const edge of matches) {
+      const next = direction === "downstream" ? edge.to : edge.from;
+      if (seen.has(next)) continue;
+      seen.add(next);
+      result.push(next);
+      queue.push(next);
+    }
+  }
+  return result;
+}
+
+function isTypedSpecTestLike(def: SpecDefRow | undefined): boolean {
+  if (!def) return false;
+  const text = `${def.spec_id} ${def.spec_kind} ${def.title}`.toLowerCase();
+  return text.includes("test") || text.includes("oracle");
+}
+
+function typedSpecFindingCount(specId: string, findings: SpecIrFindingRow[]): number {
+  return findings.filter(
+    (finding) => finding.subject_id === specId || finding.subject_id.startsWith(`${specId}:`),
+  ).length;
+}
+
+export function deriveSpecRagClosureEntries(input: {
+  defs: SpecDefRow[];
+  relations: SpecRelationRow[];
+  closureFindings: SpecIrFindingRow[];
+  indexedAt: string;
+}): SpecRagClosureEntryRow[] {
+  const typedDefs = input.defs.filter(isTypedSpecDef);
+  const typedById = new Map(typedDefs.map((def) => [def.spec_id, def]));
+  const typedIds = new Set(typedById.keys());
+  const flowEdges = typedSpecFlowEdges(input.relations, typedIds);
+  return typedDefs.map((def) => {
+    const upstream = reachableSpecIds(def.spec_id, flowEdges, "upstream");
+    const downstream = reachableSpecIds(def.spec_id, flowEdges, "downstream");
+    const testIds = downstream.filter((id) => isTypedSpecTestLike(typedById.get(id)));
+    const requiresTest = requiresTypedSpecTest(def.spec_kind);
+    const findingCount = typedSpecFindingCount(def.spec_id, input.closureFindings);
+    const rag: SpecRagClosureEntryRow["rag"] =
+      requiresTest && testIds.length === 0 ? "red" : findingCount > 0 ? "yellow" : "green";
+    const closureStatus =
+      rag === "green"
+        ? "closed"
+        : requiresTest && testIds.length === 0
+          ? "missing_test"
+          : "partial";
+    const impactSummary = `upstream=${upstream.length};downstream=${downstream.length};tests=${testIds.length};findings=${findingCount}`;
+    return {
+      spec_rag_entry_id: stableId("spec-rag-closure", def.spec_id),
+      spec_id: def.spec_id,
+      spec_kind: def.spec_kind,
+      layer: def.layer,
+      sub_doc: def.sub_doc,
+      rag,
+      closure_status: closureStatus,
+      requires_test: requiresTest ? 1 : 0,
+      upstream_count: upstream.length,
+      downstream_count: downstream.length,
+      test_count: testIds.length,
+      finding_count: findingCount,
+      impact_summary: impactSummary,
+      source_path: def.source_path,
+      indexed_at: input.indexedAt,
+    };
+  });
+}
+
 export function analyzeSpecIrIntegrity(input: {
   defs: SpecDefRow[];
   relations: SpecRelationRow[];
@@ -1688,6 +1818,16 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
     schedules,
     indexedAt,
   });
+  const typedSpecTraceClosure = analyzeTypedSpecTraceClosure({
+    defs,
+    relations: relationResult.relations,
+  });
+  const specRagClosureEntries = deriveSpecRagClosureEntries({
+    defs,
+    relations: relationResult.relations,
+    closureFindings: typedSpecTraceClosure.findings,
+    indexedAt,
+  });
   const findings = analyzeSpecIrIntegrity({
     defs,
     relations: relationResult.relations,
@@ -1728,6 +1868,7 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
     activation_entries: activations,
     activation_schedule_reviews: activationScheduleReviews,
     document_catalog_entries: documentCatalogEntries,
+    spec_rag_closure_entries: specRagClosureEntries,
     agent_contracts: agentContracts,
     detector_route_candidates: deriveDetectorRouteCandidates(findings, indexedAt),
     findings,
@@ -1824,6 +1965,31 @@ export function projectSpecIr(repoRoot: string, db: HarnessDb, deps: SpecIrProje
         summary:
           `document catalog ${row.default_status}; profile_controlled=${row.profile_controlled}; ` +
           `skip_reason_required=${row.skip_reason_required}`,
+        updated_at: row.indexed_at,
+      },
+    });
+  }
+  for (const row of projection.spec_rag_closure_entries) {
+    deps.recordProjectionEvent(db, {
+      table: "spec_rag_closure_entries",
+      id: row.spec_rag_entry_id,
+      row: { ...row },
+    });
+    deps.recordProjectionEvent(db, {
+      table: "search_index",
+      id: stableId("spec-rag-closure", row.spec_rag_entry_id),
+      row: {
+        search_id: stableId("spec-rag-closure", row.spec_rag_entry_id),
+        subject_type: "spec_rag_closure_entry",
+        subject_id: row.spec_id,
+        path: row.source_path,
+        title: `${row.spec_id} ${row.rag} ${row.closure_status}`,
+        tokens:
+          `${row.spec_id} ${row.spec_kind} ${row.layer} ${row.sub_doc} ${row.rag} ` +
+          `${row.closure_status} ${row.impact_summary}`,
+        summary:
+          `spec closure RAG ${row.rag}; status=${row.closure_status}; ` +
+          `tests=${row.test_count}; findings=${row.finding_count}`,
         updated_at: row.indexed_at,
       },
     });

@@ -129,7 +129,7 @@ data.md (論理ドメインモデル) の §8 state schema を、`.ut-tdd/` YAML
 | `coverage` | `coverage_id` | `scope`, `subject_id`, `metric`, `value`, `threshold`, `status` | test coverage / trace coverage / plan coverage を保存する。 |
 | `findings` | `finding_id` | `kind`, `severity`, `subject_id`, `source`, `status`, `evidence_path` | doctor / vmodel lint / review findings を保存する。 |
 | `gate_runs` | `gate_run_id` | `gate_id`, `plan_id`, `status`, `checked_at`, `evidence_path` | `.ut-tdd/gate_runs/*.json`, CI evidence |
-| spec IR tables | §9.9 | `spec_defs`, `spec_relations`, `schedule_entries`, `activation_entries`, `document_catalog_entries`, `detector_route_candidates` | Vモデル仕様 IR / 工程 / 活性化 / 文書カタログ / 起票候補 projection。§2.7 基礎表を正本化せず、詳細は §9.9 で定義する。 |
+| spec IR tables | §9.9 | `spec_defs`, `spec_relations`, `schedule_entries`, `activation_entries`, `document_catalog_entries`, `spec_rag_closure_entries`, `detector_route_candidates` | Vモデル仕様 IR / 工程 / 活性化 / 文書カタログ / spec 閉包 RAG / 起票候補 projection。§2.7 基礎表を正本化せず、詳細は §9.9 で定義する。 |
 
 物理不変条件: `trace_edges` の orphan 0、`coverage.status=fail` の gate fail-close、`findings.status=open` の severity 別 gate 判定、`model_runs.plan_id` と `plan_registry.plan_id` の参照整合を doctor / vmodel lint が検証する。`plan_registry.source_hash` は PLAN markdown 全文の sha256 で、persisted `harness.db` と現在の `docs/plans/*.md` の fingerprint 不一致は `drive-db-registration` hard gate で stale として扱う。projection は自動生成だが、検出対象の機械 SSoT として扱い、入力 state との不一致は `findings` に保存する。
 
@@ -520,6 +520,7 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 | `activation_entries` | `activation_entry_id` | `profile_id`, `target_kind`, `target_id`, `scope_status`, `target_version`, `defer_reason`, `enabled`, `source_path`, `plan_id`, `indexed_at` | `docs/governance/vmodel-activation-profiles.md` / activation profile / version target / 適用除外宣言 / PLAN frontmatter fallback | profile ごとの in_scope / out_of_scope / deferred を明示し、駆動モデル選択を厳格化する。専用 activation profile に掲載された `plan_id` は PLAN frontmatter fallback より優先する。 |
 | `activation_schedule_reviews` | `activation_schedule_review_id` | `profile_id`, `plan_id`, `schedule_entry_id`, `activation_entry_id`, `target_kind`, `target_id`, `scope_status`, `enabled`, `target_version`, `defer_reason`, `current_location`, `rag`, `schedule_status`, `layer`, `sub_doc`, `v_pair`, `source_path`, `indexed_at` | `activation_entries` × `schedule_entries` | version-up wave の対象/除外/延期理由と現在地を join し、検索・検出が同じ read-model を参照できるようにする。 |
 | `document_catalog_entries` | `document_catalog_entry_id` | `doc_type_id`, `layer`, `sub_doc`, `category`, `requirement_class`, `applicability`, `default_status`, `source_doc_family`, `authoring_source_path`, `projection_table`, `profile_controlled`, `skip_reason_required`, `source_path`, `indexed_at` | `docs/governance/vmodel-document-catalog.md` | ZIP `catalog.yaml` 相当の文書種別カタログを投影する。`document-system-map.md` は意味定義、本 table は検出・検索が読む機械可読 read-model。 |
+| `spec_rag_closure_entries` | `spec_rag_entry_id` | `spec_id`, `spec_kind`, `layer`, `sub_doc`, `rag`, `closure_status`, `requires_test`, `upstream_count`, `downstream_count`, `test_count`, `finding_count`, `impact_summary`, `source_path`, `indexed_at` | `spec_defs` × `spec_relations` × typed-spec closure findings | 要求・設計 ID がテストまで到達しているかを RAG read-model として保持する。`schedule_entries.rag` とは別概念であり、工程の現在地ではなく spec 閉包状態を表す。 |
 | `detector_route_candidates` | `route_candidate_id` | `source_table`, `source_id`, `detector_id`, `finding_kind`, `severity`, `subject_kind`, `subject_id`, `filing_target_id`, `target_layer`, `target_sub_doc`, `candidate_status`, `reason`, `evidence_path`, `computed_at` | findings / quality_signals / spec_relations / schedule_entries / activation_entries | 検出結果を起票候補として保持する。`target_layer` / `target_sub_doc` は function §3.2.1 から再導出した snapshot であり、DB 独自の決定ではない。 |
 | `agent_contracts` | `agent_contract_id` | `target_path`, `defines`, `read_first`, `done_when`, `source_path`, `source_hash`, `indexed_at` | `docs/governance/vmodel-agent-contracts.md` の `agent_contracts` 宣言 | ZIP の doc-local agent 契約を HARNESS の authoring source 契約として query 可能にする。`defines` / `read_first` / `done_when` は pipe-serialized TEXT で保持し、projection は source doc を更新しない。 |
 
@@ -538,6 +539,8 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 - `idx_activation_schedule_scope_rag(scope_status, rag, enabled)`.
 - `idx_document_catalog_layer_subdoc(layer, sub_doc, applicability)`.
 - `idx_document_catalog_doc_type(doc_type_id, default_status)`.
+- `idx_spec_rag_closure_rag_status(rag, closure_status)`.
+- `idx_spec_rag_closure_spec(spec_id, requires_test)`.
 - `idx_detector_candidates_source(source_table, source_id)`.
 - `idx_detector_candidates_filing(filing_target_id, severity, candidate_status)`.
 - `idx_detector_candidates_subject(subject_id)`.
@@ -558,6 +561,7 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 - `activation_entries.scope_status=out_of_scope|deferred` は理由 (`defer_reason`) を必須とし、理由なし除外は `findings.kind=activation-reason-missing` とする。
 - `activation_schedule_reviews` は `activation_entries.plan_id` と `schedule_entries.plan_id` の join 結果である。工程表に存在しない `target_kind=plan` は `findings.kind=activation-schedule-missing` とし、projection 側で工程行を創作しない。
 - `document_catalog_entries` は `vmodel-document-catalog.md` からのみ作る。`document-system-map.md` の本文表を直接 scrape して正本化せず、意味定義と機械可読一覧を分離する。
+- `spec_rag_closure_entries` は typed spec 宣言と trace closure finding から作る派生 read-model であり、source doc、PLAN、`schedule_entries.rag` を更新しない。`green` は test 到達済みかつ closure finding なし、`yellow` は test 到達済みだが closure finding あり、`red` は test を要求する spec が test 到達 0 の状態を表す。
 - `detector_route_candidates` は FilingTarget 決定表ではない。candidate row は signal / subject / evidence / current_location を提供し、`route eval` は L4 function §3.2.1 の FilingTarget SSoT を読んで `allowed_kinds` / `layer_band` / `sub_doc_hint` / `pairing_obligation` を決定する。
 - raw provider transcript、secret、credential、PII、未redact payload はいずれの table にも保存しない。
 - `spec_relations` は仕様 IR の semantic edge であり、§9.5 `dependency_edges` は横断 impact graph の edge である。両者を同じ table に畳まず、後続 U4 では join で接続する。

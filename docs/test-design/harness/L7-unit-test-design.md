@@ -1023,3 +1023,11 @@ TVMS-008 は agent contract authoring source、TVMS-009 は agent contract docto
 | U-TRACE-IMPACT-R1 | `analyzeTraceImpact(db, spec_id)` | `traces_from` / `requires` を依存元から影響先へ反転し、`traces_to` / `tests` を宣言方向で辿る。指定 ID の上流・下流・テスト影響を分離して返す。 |
 | U-TRACE-IMPACT-R2 | `analyzeTraceImpact(db, unknown_id)` | unknown ID は silent success にせず `trace-impact-root-missing` finding で fail-close する。 |
 | U-TRACE-IMPACT-R3 | `ut-tdd trace impact --id <id> --json` | CLI は DB read-only surface として JSON/text 出力を持ち、`change-impact.ts` のファイル差分検出とは責務を分ける。 |
+
+## PLAN-L6-61 spec RAG 閉包台帳 oracle (2026-07-08)
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-SPEC-RAG-R1 | `deriveSpecRagClosureEntries(input)` | typed spec relation を `PLAN-L6-60` と同じ向きで辿り、test 到達済みかつ closure finding なしの spec は `green` / `closed`、test を要求するが test 到達 0 の spec は `red` / `missing_test` になる。 |
+| U-SPEC-RAG-R2 | `rebuildHarnessDb` / `projectSpecIr` | real repo rebuild で `spec_rag_closure_entries` が populated になり、`VMS-004` などの typed spec row が `search_index` から `spec closure RAG` で検索できる。 |
+| U-SPEC-RAG-R3 | `ut-tdd trace rag --id <id> --json` | CLI は `spec_rag_closure_entries` を read-only に表示し、`--id` filter と JSON 出力を持つ。`schedule_entries.rag` を代替参照しない。 |

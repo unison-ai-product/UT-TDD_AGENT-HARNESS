@@ -92,6 +92,10 @@ export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirem
       "document catalog entries are derived from the V-model document catalog authoring source",
   },
   {
+    table: "spec_rag_closure_entries",
+    reason: "spec RAG closure entries are derived from typed spec trace closure state",
+  },
+  {
     table: "agent_contracts",
     reason: "agent contracts are derived from V-model doc-local authoring contracts",
   },

@@ -113,6 +113,26 @@ export const HARNESS_DB_SPEC_IR_TABLES: TableDef[] = [
     ],
   },
   {
+    name: "spec_rag_closure_entries",
+    columns: [
+      pk("spec_rag_entry_id"),
+      col("spec_id"),
+      col("spec_kind"),
+      col("layer"),
+      col("sub_doc"),
+      col("rag"),
+      col("closure_status"),
+      col("requires_test", "INTEGER"),
+      col("upstream_count", "INTEGER"),
+      col("downstream_count", "INTEGER"),
+      col("test_count", "INTEGER"),
+      col("finding_count", "INTEGER"),
+      col("impact_summary"),
+      col("source_path"),
+      col("indexed_at"),
+    ],
+  },
+  {
     name: "detector_route_candidates",
     columns: [
       pk("route_candidate_id"),
