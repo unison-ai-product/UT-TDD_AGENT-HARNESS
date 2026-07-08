@@ -6,6 +6,7 @@ import {
   checkDbProjectionIngestion,
   checkTypedSpecLedgerBodySync,
   checkTypedSpecOwnedArtifactDispersal,
+  checkTypedSpecPhaseLayerAlignment,
   checkTypedSpecTraceClosure,
 } from "./db-projection";
 import { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression";
@@ -228,6 +229,9 @@ export function buildDoctorCheckDefinitionGroups(
         full("typed-spec-ledger-body-sync", () => checkTypedSpecLedgerBodySync(deps.repoRoot)),
         full("typed-spec-owned-artifact-dispersal", () =>
           checkTypedSpecOwnedArtifactDispersal(deps.repoRoot),
+        ),
+        full("typed-spec-phase-layer-alignment", () =>
+          checkTypedSpecPhaseLayerAlignment(deps.repoRoot),
         ),
         full("doc-consistency", () => checkDocConsistency(deps.repoRoot)),
         full("entity-coverage", () => checkEntityCoverage(deps.repoRoot)),

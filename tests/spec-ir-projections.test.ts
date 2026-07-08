@@ -232,6 +232,12 @@ describe("spec IR projections", () => {
         root,
         "vmodel-typed-spec-definitions.md",
         [
+          "---",
+          "title: Typed spec fixture",
+          "status: confirmed",
+          "typed_spec_phase_owner: L6",
+          "---",
+          "",
           "# Typed spec fixture",
           "",
           "```yaml",
@@ -318,6 +324,8 @@ describe("spec IR projections", () => {
           expect.objectContaining({ kind: "typed-spec-ledger-row-missing" }),
           expect.objectContaining({ kind: "typed-spec-phase-direction-invalid" }),
           expect.objectContaining({ kind: "typed-spec-owned-source-mismatch" }),
+          expect.objectContaining({ kind: "typed-spec-owner-phase-missing" }),
+          expect.objectContaining({ kind: "typed-spec-phase-layer-mismatch" }),
         ]),
       );
     } finally {
@@ -469,6 +477,52 @@ describe("spec IR projections", () => {
           expect.objectContaining({
             kind: "typed-spec-owned-source-mismatch",
             subject_id: "VMS-501",
+            evidence_path: "docs/governance/vmodel-typed-spec-definitions.md",
+          }),
+        ]),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("turns typed spec v_phase and owner artifact layer drift into integrity findings", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-typed-phase-layer-"));
+    try {
+      writeGovernanceDoc(
+        root,
+        "vmodel-typed-spec-definitions.md",
+        [
+          "---",
+          "title: Typed spec phase layer bad fixture",
+          "status: confirmed",
+          "typed_spec_phase_owner: L5",
+          "---",
+          "",
+          "# Typed spec phase/layer bad fixture",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-601",
+          "      kind: typed-source",
+          "```",
+          "",
+          "| spec_id | ledger_sources | v_phase |",
+          "| --- | --- | --- |",
+          "| VMS-601 | docs/governance/vmodel-typed-spec-definitions.md | L6 |",
+          "",
+          "VMS-601 body anchor.",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-08T00:00:00.000Z");
+
+      expect(projection.findings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "typed-spec-phase-layer-mismatch",
+            subject_id: "VMS-601:v_phase:L6:owner:L5",
             evidence_path: "docs/governance/vmodel-typed-spec-definitions.md",
           }),
         ]),

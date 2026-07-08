@@ -3,13 +3,14 @@ title: "Vモデル typed spec 定義正本"
 status: confirmed
 owner: PO / TL
 updated: 2026-07-08
+typed_spec_phase_owner: L6
 ---
 
 # Vモデル typed spec 定義正本
 
 ## 0. 役割
 
-本書は `Vモデル設計ドキュメント_clean.zip` の `99_型付きスペック・自動検出設計書` と
+本書は `Vモデル設計ドキュメント.zip` の `99_型付きスペック・自動検出設計書` と
 `schema/spec.schema.json` から HARNESS 向けに抽出した `spec.defines` 正本である。
 
 検出系は本書の宣言を読む。章見出し、ファイル名、正規表現から定義 ID を推測して正本化してはいけない。
@@ -27,7 +28,7 @@ spec:
     - id: VMS-004
       kind: typed-spec-authoring-source
       traces_from: [VMS-001]
-      traces_to: [VMS-006]
+      traces_to: [VMS-006, VMS-007]
       tests: [TVMS-004]
 ```
 
@@ -73,6 +74,9 @@ typed_spec_ledger:
   - spec_id: VMS-006
     ledger_sources: [docs/plans/PLAN-L7-386-typed-spec-declaration-projection.md]
     v_phase: L7
+  - spec_id: VMS-007
+    ledger_sources: [docs/plans/PLAN-L6-46-typed-spec-phase-layer-alignment.md]
+    v_phase: L6
   - spec_id: TVMS-001
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
@@ -94,6 +98,9 @@ typed_spec_ledger:
     ledger_sources:
       - docs/test-design/harness/L7-unit-test-design.md
       - tests/spec-ir-projections.test.ts
+    v_phase: L7
+  - spec_id: TVMS-007
+    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
 ```
 
@@ -127,6 +134,11 @@ review 可能にする read-model である。VMS-002 と VMS-003 を上流に�
 VMS-006 は typed spec 宣言を `spec_defs` / `spec_relations` / `search_index` / `findings` へ投影する
 実装境界である。VMS-004 を上流に持つ。対応 oracle は TVMS-006 である。
 
+### VMS-007 phase/layer 整合
+
+VMS-007 は typed spec 台帳の `v_phase` と宣言元 artifact の owner phase を一致させる設計である。
+VMS-004 を上流に持ち、対応 oracle は TVMS-007 である。
+
 ### TVMS-001 単体 oracle
 
 TVMS-001 は VMS-001 の上流憲章が typed spec 宇宙の root として検査されることを保証する。
@@ -151,6 +163,10 @@ TVMS-005 は VMS-005 の活性化工程 review が profile と工程表を join 
 
 TVMS-006 は VMS-006 の typed spec projection が DB と doctor gate に現れることを保証する。
 
+### TVMS-007 phase/layer 検証 oracle
+
+TVMS-007 は VMS-007 の phase/layer 整合が unit oracle と doctor gate に現れることを保証する。
+
 ## 4. 不変条件
 
 - 同一 ID を複数 doc で宣言しない。
@@ -158,3 +174,4 @@ TVMS-006 は VMS-006 の typed spec projection が DB と doctor gate に現れ�
 - typed spec の宣言と既存見出し由来検出が食い違う場合は、typed spec を優先し、差分を後続 U9 の trace closure で扱う。
 - typed spec の本文実体、台帳行、V-model phase が欠ける場合は U10 の ledger/body sync で finding にする。
 - VMS-004 以外の typed spec 宣言は、各 `ledger_sources` が指す owned artifact に置く。central bootstrap doc が所有外 ID の宣言元として残る場合は U11 の owned artifact dispersal で finding にする。
+- typed spec の `v_phase` は宣言元 artifact の `layer` / `executed_at_layer` / `typed_spec_phase_owner` frontmatter と一致する。governance doc のように文書全体の V-model 層を持たない artifact は、typed spec 所有層を `typed_spec_phase_owner` で宣言する。

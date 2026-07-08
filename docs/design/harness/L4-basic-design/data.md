@@ -67,6 +67,7 @@ projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来�
 - typed spec の `traces_to` と相手側 `traces_from`、および `tests` と test spec 側 `traces_from` は閉包として突合する。片方向だけの宣言は検出器が補完せず finding にする。
 - typed spec の本文実体、台帳行、V-model phase は宣言と同じ authoring source から読む。本文実体欠落、台帳行欠落、未知台帳ID、重複台帳ID、phase 逆流は検出器が補完せず finding にする。
 - typed spec の宣言元は所有 artifact に分散する。`spec_defs.source_path` は台帳の `ledger_sources` に含まれる必要があり、中央 bootstrap doc が所有外 ID を握り続ける状態は finding にする。
+- typed spec の `v_phase` は宣言元 artifact の V-model 層宣言と一致する。通常 doc は `layer` / path 由来層、test-design は `executed_at_layer`、governance doc は `typed_spec_phase_owner` を owner phase として持つ。
 - `ScheduleEntry` / `ActivationEntry` は Workflow 集約の projection input であり、PLAN frontmatter を暗黙更新しない。
 - `ScheduleEntry` の優先順位は、専用工程管理表 → PLAN frontmatter fallback の順とする。
 - `ActivationScheduleReview` は読みモデルであり、profile / 工程表 / PLAN を暗黙更新しない。

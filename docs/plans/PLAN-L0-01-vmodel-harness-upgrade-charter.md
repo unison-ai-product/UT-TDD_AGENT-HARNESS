@@ -42,7 +42,7 @@ dependencies:
 
 ## 0. 目的
 
-`Vモデル設計ドキュメント_clean.zip` を上流設計素材として、現行 UT-TDD Agent Harness を全面的に
+`Vモデル設計ドキュメント.zip` を上流設計素材として、現行 UT-TDD Agent Harness を全面的に
 バージョンアップする。これは既存 harness の正本・CLI・DB・workflow を壊して作り直す企画ではない。
 既存の TypeScript/Bun core、`.ut-tdd/harness.db`、PLAN/frontmatter、doctor/lint、Forward spine を
 活かしながら、Vモデルの現在地把握・駆動モデル選択・宣言型データ取込・DDD/保守性設計を上流から

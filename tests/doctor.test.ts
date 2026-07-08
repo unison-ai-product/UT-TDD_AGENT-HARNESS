@@ -75,6 +75,7 @@ import {
   checkTrackedCanonical,
   checkTypedSpecLedgerBodySync,
   checkTypedSpecOwnedArtifactDispersal,
+  checkTypedSpecPhaseLayerAlignment,
   checkTypedSpecTraceClosure,
   checkVerificationGroupsResult,
   checkVerificationProfile,
@@ -688,6 +689,58 @@ describe("runDoctor", () => {
     }
   });
 
+  it("surfaces typed spec phase/layer alignment as a doctor hard gate", () => {
+    const result = checkTypedSpecPhaseLayerAlignment(process.cwd());
+    const r = realRepoDoctor();
+
+    expect(result.ok).toBe(true);
+    expect(result.messages[0]).toContain("typed-spec-phase-layer-alignment - OK");
+    expect(r.ok).toBe(true);
+    expect(
+      r.messages.some((m) => m.includes("doctor: typed-spec-phase-layer-alignment - OK")),
+    ).toBe(true);
+  });
+
+  it("fails typed spec phase/layer alignment when owner frontmatter does not match v_phase", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-typed-spec-phase-layer-"));
+    try {
+      mkdirSync(join(root, "docs", "governance"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "governance", "vmodel-typed-spec-definitions.md"),
+        [
+          "---",
+          "title: Typed spec phase layer bad fixture",
+          "status: confirmed",
+          "typed_spec_phase_owner: L5",
+          "---",
+          "",
+          "# Typed spec phase/layer bad fixture",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-701",
+          "      kind: typed-source",
+          "```",
+          "",
+          "| spec_id | ledger_sources | v_phase |",
+          "| --- | --- | --- |",
+          "| VMS-701 | docs/governance/vmodel-typed-spec-definitions.md | L6 |",
+          "",
+          "VMS-701 has body substance.",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = checkTypedSpecPhaseLayerAlignment(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("typed-spec-phase-layer-mismatch");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("hard-gates PLAN governance once repo frontmatter debt is closed", () => {
     const governance = checkPlanGovernance(process.cwd());
     const r = realRepoDoctor();
@@ -1104,6 +1157,7 @@ describe("runDoctor", () => {
       ["typed-spec-trace-closure", checkTypedSpecTraceClosure(missingRoot)],
       ["typed-spec-ledger-body-sync", checkTypedSpecLedgerBodySync(missingRoot)],
       ["typed-spec-owned-artifact-dispersal", checkTypedSpecOwnedArtifactDispersal(missingRoot)],
+      ["typed-spec-phase-layer-alignment", checkTypedSpecPhaseLayerAlignment(missingRoot)],
       ["rule-drift", checkRuleDrift(missingRoot)],
       ["gate-confirm", checkGateConfirm(missingRoot)],
       ["plan-dod", checkPlanDod(missingRoot)],

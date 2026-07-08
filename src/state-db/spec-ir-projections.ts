@@ -174,6 +174,13 @@ export interface TypedSpecOwnedArtifactDispersalResult {
   ok: boolean;
 }
 
+export interface TypedSpecPhaseLayerAlignmentResult {
+  typedSpecCount: number;
+  alignedSpecCount: number;
+  findings: SpecIrFindingRow[];
+  ok: boolean;
+}
+
 interface SpecIrProjectionDeps {
   nowIso: () => string;
   recordProjectionEvent: (
@@ -915,6 +922,23 @@ function sourceMatchesLedgerSource(sourcePath: string, ledgerSource: string): bo
   return normalizedSource === normalizedLedgerSource;
 }
 
+function sourceOwnerPhases(source: TypedSpecSourceSnapshot | undefined): string[] {
+  if (!source) return [];
+  const metadata = metadataFromContent(source.content);
+  const phases = [
+    stringField(metadata.typed_spec_phase_owner),
+    stringField(metadata.executed_at_layer),
+    stringField(metadata.layer) || inferLayerFromPath(source.path),
+  ];
+  return [...new Set(phases.filter(Boolean).map((phase) => phase.toUpperCase()))];
+}
+
+function phaseMatchesOwner(ledgerPhase: string, ownerPhases: string[]): boolean {
+  const normalizedLedgerPhase = ledgerPhase.trim().toUpperCase();
+  if (!normalizedLedgerPhase) return false;
+  return ownerPhases.some((ownerPhase) => ownerPhase === normalizedLedgerPhase);
+}
+
 export function analyzeTypedSpecLedgerBodySync(input: {
   defs: SpecDefRow[];
   relations: SpecRelationRow[];
@@ -1058,6 +1082,53 @@ export function analyzeTypedSpecOwnedArtifactDispersal(input: {
   return {
     typedSpecCount: typedDefs.length,
     dispersedSpecCount,
+    findings,
+    ok: findings.length === 0,
+  };
+}
+
+export function analyzeTypedSpecPhaseLayerAlignment(input: {
+  defs: SpecDefRow[];
+  sources: TypedSpecSourceSnapshot[];
+}): TypedSpecPhaseLayerAlignmentResult {
+  const typedDefs = input.defs.filter(isTypedSpecDef);
+  const ledgerRows = parseTypedSpecLedgerRows(input.sources);
+  const ledgerBySpecId = new Map(ledgerRows.map((row) => [row.specId, row]));
+  const sourceByPath = new Map(input.sources.map((source) => [normalizePath(source.path), source]));
+  const findings: SpecIrFindingRow[] = [];
+  let alignedSpecCount = 0;
+
+  for (const def of typedDefs) {
+    const row = ledgerBySpecId.get(def.spec_id);
+    if (!row) continue;
+    const source = sourceByPath.get(normalizePath(def.source_path));
+    const ownerPhases = sourceOwnerPhases(source);
+    if (ownerPhases.length === 0) {
+      findings.push(
+        typedSpecFinding({
+          kind: "typed-spec-owner-phase-missing",
+          subjectId: def.spec_id,
+          evidencePath: def.source_path,
+        }),
+      );
+      continue;
+    }
+    if (!phaseMatchesOwner(row.vPhase, ownerPhases)) {
+      findings.push(
+        typedSpecFinding({
+          kind: "typed-spec-phase-layer-mismatch",
+          subjectId: `${def.spec_id}:v_phase:${row.vPhase}:owner:${ownerPhases.join(",")}`,
+          evidencePath: def.source_path,
+        }),
+      );
+      continue;
+    }
+    alignedSpecCount += 1;
+  }
+
+  return {
+    typedSpecCount: typedDefs.length,
+    alignedSpecCount,
     findings,
     ok: findings.length === 0,
   };
@@ -1374,6 +1445,12 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
   );
   findings.push(
     ...analyzeTypedSpecOwnedArtifactDispersal({
+      defs,
+      sources,
+    }).findings,
+  );
+  findings.push(
+    ...analyzeTypedSpecPhaseLayerAlignment({
       defs,
       sources,
     }).findings,

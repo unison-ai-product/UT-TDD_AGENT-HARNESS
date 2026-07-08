@@ -16,7 +16,7 @@ next_pair_freeze: L4
 
 ## 1. 前提
 
-`Vモデル設計ドキュメント_clean.zip` は、工程表、宣言型 spec、trace 検査、activation/profile、DDD/OOP
+`Vモデル設計ドキュメント.zip` は、工程表、宣言型 spec、trace 検査、activation/profile、DDD/OOP
 設計を含む上流設計素材である。UT-TDD 側では ADR-001 に従い、ZIP 内 tooling を product runtime として直接
 移植しない。概念を TypeScript/Bun core、PLAN/frontmatter、design docs、test-design、`.ut-tdd/harness.db`
 projection へ翻訳する。

@@ -28,6 +28,7 @@ export {
   checkDbProjectionIngestion,
   checkTypedSpecLedgerBodySync,
   checkTypedSpecOwnedArtifactDispersal,
+  checkTypedSpecPhaseLayerAlignment,
   checkTypedSpecTraceClosure,
 } from "./db-projection";
 export { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression";

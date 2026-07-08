@@ -903,7 +903,16 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-TYPED-SPEC-O2 | `analyzeTypedSpecOwnedArtifactDispersal(input)` | 中央 bootstrap doc など `ledger_sources` 外の path で宣言された ID は `typed-spec-owned-source-mismatch` finding にする。 |
 | U-TYPED-SPEC-O3 | `checkTypedSpecOwnedArtifactDispersal(repoRoot)` | finding が 0 件なら `doctor: typed-spec-owned-artifact-dispersal - OK`、1 件以上なら `violation` として `runDoctor.ok=false` に合流する。 |
 
-**gap 件数: 1 / 21** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
+> `analyzeTypedSpecPhaseLayerAlignment` / `checkTypedSpecPhaseLayerAlignment` typed spec phase/layer 整合契約 (PLAN-L6-46 / PLAN-L7-390)。
+
+| ID | 対象 | 期待 |
+| --- | --- | --- |
+| U-TYPED-SPEC-P1 | `analyzeTypedSpecPhaseLayerAlignment(input)` | 台帳 `v_phase` が宣言元 artifact の `typed_spec_phase_owner` / `executed_at_layer` / `layer` / path 由来 layer と一致する場合は finding を出さない。 |
+| U-TYPED-SPEC-P2 | `analyzeTypedSpecPhaseLayerAlignment(input)` | owner phase を解決できない場合は `typed-spec-owner-phase-missing` finding にする。 |
+| U-TYPED-SPEC-P3 | `analyzeTypedSpecPhaseLayerAlignment(input)` | 台帳 `v_phase` と owner phase が食い違う場合は `typed-spec-phase-layer-mismatch` finding にする。 |
+| U-TYPED-SPEC-P4 | `checkTypedSpecPhaseLayerAlignment(repoRoot)` | finding が 0 件なら `doctor: typed-spec-phase-layer-alignment - OK`、1 件以上なら `violation` として `runDoctor.ok=false` に合流する。 |
+
+**gap 件数: 1 / 25** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
 
 L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。
 
@@ -930,6 +939,10 @@ spec:
     - id: TVMS-006
       kind: projection-oracle
       traces_from: [VMS-006]
+    - id: TVMS-007
+      kind: unit-oracle
+      traces_from: [VMS-007]
 ```
 
-TVMS-001、TVMS-002、TVMS-003、TVMS-004、TVMS-005、TVMS-006 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。
+TVMS-001、TVMS-002、TVMS-003、TVMS-004、TVMS-005、TVMS-006、TVMS-007 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。
+TVMS-007 は VMS-007 の phase/layer alignment が unit oracle と doctor gate で検証されることを保証する。
