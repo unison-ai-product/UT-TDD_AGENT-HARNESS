@@ -42,6 +42,26 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 
 > **内部資産 (roster / skill catalog) の非 entity 判断 (A-90、ADR-004 整合、PO 確定 2026-06-01)**: subagent roster と skill catalog は **data 集約に含めない**。理由: ADR-004 で markdown (`.claude/agents/*.md` / `docs/skills/**/*.md`) を**唯一正本**とし、TS (層2、roster/skills module) は起動時に scan して **in-memory 構築 (scan-on-demand、永続 state なし)** するため、`.ut-tdd/` に独自の永続 entity を持たない。よって **5 集約モデルは不変** (roster/skill は state を持つ entity ではなく、fs 正本に対する読みモデル)。architecture §3.1 roster/skills building block / function §1.1 / L9 ST-ASSET と本判断で整合 (cross-sub-doc 沈黙 gap を解消)。詳細 = §8 state schema / ADR-004 Consequences。
 
+### §1.1 Vモデル宣言型 spec IR (PLAN-L4-19)
+
+Vモデル改善に伴う「宣言型によるデータベース引き込み」は、設計正本を DB へ移すものではない。docs / PLAN / test-design / 工程管理表を authoring source とし、`.ut-tdd/harness.db` には検出・起票補助用の IR projection を作る。これにより検出系は、文字列探索だけでなく仕様定義・仕様間関係・工程現在地・活性化 profile を query できる。
+
+| IR entity / view | L4 分類 | 所属集約 | 正本 | DB projection での役割 |
+|---|---|---|---|---|
+| **SpecDef** | entity (子) | Artifact | docs / PLAN / test-design の frontmatter と章 anchor | `defines` された要件・設計要素・テスト設計要素を安定 ID / owner artifact / section anchor / lifecycle で検索可能にする |
+| **SpecRelation** | entity (子) | Artifact | trace 宣言 / pair 宣言 / design-to-test 参照 | `requires` / `verifies` / `pairs` / `derives` / `supersedes` を edge として保持し、未定義・未参照・missing-test・ledger mismatch を検出する |
+| **ScheduleEntry** | entity (子) | Workflow | 工程管理表 / Forward spine | current_location / V-pair / predecessor / RAG / adoption / blocked reason を保持し、現在地と次工程を明示する |
+| **ActivationEntry** | entity (子) | Workflow | activation profile / version target / 適用除外宣言 | profile ごとの in-scope / out-of-scope / defer reason / target version を保持し、駆動モデル選択を厳格化する |
+| **DetectorFinding** | derived_view | (CQRS 読みモデル) | detector / doctor / review の実行結果 | artifact / relation / schedule / quality signal を route candidate 化する。FilingTarget は function §3.2.1 から導出し、検出系は layer/sub_doc/pairing を創作しない |
+
+不変条件:
+
+- `SpecDef` / `SpecRelation` は Artifact 集約内で完結し、Plan / Workflow を直接変更しない。
+- `ScheduleEntry` / `ActivationEntry` は Workflow 集約の projection input であり、PLAN frontmatter を暗黙更新しない。
+- `DetectorFinding` と DB table は読みモデルであり、authoring source ではない。
+- docs/YAML/JSON 正本と projection の齟齬は doctor finding として fail-close し、projection 側で silent repair しない。
+- FilingTarget の `allowed_kinds` / `layer_band` / `sub_doc_hint` / `pairing_obligation` は function §3.2.1 の SSoT から導出し、detector 固有 heuristic に閉じ込めない。
+
 ## §2 集約境界 (Aggregate)
 
 | 集約 | ルート | 境界 (含む entity) | トランザクション一貫性単位 |
@@ -153,6 +173,11 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | `trace_edges` | V-model 4 artifact + directed edge の照合 |
 | `coverage` | trace coverage / test coverage / plan coverage の集計 |
 | `findings` | drift / connection deficiency / regression / review finding の保存 |
+| `spec_defs` | `SpecDef` projection。仕様 ID、kind、owner artifact、section anchor、lifecycle を検索可能にする |
+| `spec_relations` | `SpecRelation` projection。defines / requires / verifies / pairs / derives / supersedes edge を保持する |
+| `schedule_entries` | `ScheduleEntry` projection。工程管理表の現在地、V-pair、predecessor、RAG、blocked reason を保持する |
+| `activation_entries` | `ActivationEntry` projection。profile ごとの in-scope / out-of-scope / defer reason / target version を保持する |
+| `detector_route_candidates` | `DetectorFinding` projection。検出結果を FilingTarget SSoT に渡す候補として保持し、起票先を DB 独自に決定しない |
 | `gate_runs` | gate 判定証跡と doctor/vmodel lint 結果 |
 
 不変条件: projection DB は生成 state だが、検出器の機械 SSoT として扱う。入力となる docs/YAML/JSON と projection の齟齬は doctor が finding として出し、silent repair しない。
