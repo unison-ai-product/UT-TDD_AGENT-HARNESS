@@ -5,7 +5,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { deriveArtifactProgressDecision } from "../src/state-db/artifact-progress-decision";
-import { projectRefactorCandidateSignals } from "../src/state-db/feedback-projections";
+import {
+  projectFeedbackEvents,
+  projectIssueApprovalGuardrails,
+  projectIssueQueue,
+  projectRefactorCandidateSignals,
+} from "../src/state-db/feedback-projections";
 import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
 import {
@@ -983,6 +988,146 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
           },
         }),
       ).toThrow(/secret-like/);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("projects detector route candidates into feedback, dry-run issue queue, and approval guardrail", () => {
+    const db = openHarnessDb(":memory:");
+    const deps = {
+      nowIso: () => "2026-07-08T00:00:00.000Z",
+      stableId: (prefix: string, value: string) =>
+        `${prefix}:${value.replace(/[^A-Za-z0-9._:-]+/g, "-")}`,
+      recordProjectionEvent,
+    };
+    try {
+      migrate(db);
+      recordProjectionEvent(db, {
+        table: "detector_route_candidates",
+        id: "candidate:spec-ir-orphan",
+        row: {
+          route_candidate_id: "candidate:spec-ir-orphan",
+          source_table: "findings",
+          source_id: "finding:spec-ir-orphan",
+          detector_id: "spec-ir-integrity",
+          finding_kind: "spec-ir-orphan-relation",
+          severity: "warn",
+          subject_kind: "spec_ir",
+          subject_id: "spec-relation:missing",
+          filing_target_id: "routeFiling:feature_addition",
+          target_layer: "L6",
+          target_sub_doc: "function-spec",
+          candidate_status: "non_ready",
+          reason: "routeFiling SSoT evaluation required",
+          evidence_path: "docs/plans/PLAN-L6-39-vmodel-spec-ir-function-contracts.md",
+          computed_at: "2026-07-08T00:00:00.000Z",
+        },
+      });
+
+      projectFeedbackEvents(db, deps);
+      projectIssueQueue(db, deps);
+      projectIssueApprovalGuardrails(db, deps);
+
+      const feedback = db
+        .prepare(
+          "SELECT source_table, source_id, signal_type, severity, next_action FROM feedback_events WHERE source_table = ?",
+        )
+        .get("detector_route_candidates") as
+        | {
+            source_table: string;
+            source_id: string;
+            signal_type: string;
+            severity: string;
+            next_action: string;
+          }
+        | undefined;
+      expect(feedback).toMatchObject({
+        source_table: "detector_route_candidates",
+        source_id: "candidate:spec-ir-orphan",
+        signal_type: "detector_route_candidate:spec-ir-orphan-relation",
+        severity: "warn",
+      });
+      expect(feedback?.next_action).toContain("routeFiling SSoT");
+
+      const issue = db
+        .prepare(
+          "SELECT title, body, status, human_approval_required, external_issue_url FROM issue_queue WHERE source_event_id = ?",
+        )
+        .get("feedback:detector-route-candidate:candidate:spec-ir-orphan") as
+        | {
+            title: string;
+            body: string;
+            status: string;
+            human_approval_required: number;
+            external_issue_url: string;
+          }
+        | undefined;
+      expect(issue).toMatchObject({
+        title: "[ut-tdd detector candidate] detector_route_candidate:spec-ir-orphan-relation",
+        status: "queued_dry_run",
+        human_approval_required: 1,
+        external_issue_url: "",
+      });
+      expect(issue?.body).toContain("Human approval and routeFiling SSoT evaluation are required");
+
+      const guardrail = db
+        .prepare(
+          "SELECT decision, human_signoff_required FROM guardrail_decisions WHERE guardrail = ?",
+        )
+        .get("external-github-issue-approval") as
+        | { decision: string; human_signoff_required: number }
+        | undefined;
+      expect(guardrail).toMatchObject({
+        decision: "requires-human-approval",
+        human_signoff_required: 1,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("does not project closed detector route candidates into feedback or issue queue", () => {
+    const db = openHarnessDb(":memory:");
+    const deps = {
+      nowIso: () => "2026-07-08T00:00:00.000Z",
+      stableId: (prefix: string, value: string) =>
+        `${prefix}:${value.replace(/[^A-Za-z0-9._:-]+/g, "-")}`,
+      recordProjectionEvent,
+    };
+    try {
+      migrate(db);
+      recordProjectionEvent(db, {
+        table: "detector_route_candidates",
+        id: "candidate:closed",
+        row: {
+          route_candidate_id: "candidate:closed",
+          source_table: "findings",
+          source_id: "finding:closed",
+          detector_id: "spec-ir-integrity",
+          finding_kind: "spec-ir-orphan-relation",
+          severity: "warn",
+          subject_kind: "spec_ir",
+          subject_id: "spec-relation:closed",
+          filing_target_id: "routeFiling:feature_addition",
+          target_layer: "L6",
+          target_sub_doc: "function-spec",
+          candidate_status: "closed",
+          reason: "already handled",
+          evidence_path: "docs/plans/PLAN-L6-39-vmodel-spec-ir-function-contracts.md",
+          computed_at: "2026-07-08T00:00:00.000Z",
+        },
+      });
+
+      projectFeedbackEvents(db, deps);
+      projectIssueQueue(db, deps);
+
+      expect(
+        db
+          .prepare("SELECT COUNT(*) AS n FROM feedback_events WHERE source_table = ?")
+          .get("detector_route_candidates"),
+      ).toMatchObject({ n: 0 });
+      expect(db.prepare("SELECT COUNT(*) AS n FROM issue_queue").get()).toMatchObject({ n: 0 });
     } finally {
       db.close();
     }

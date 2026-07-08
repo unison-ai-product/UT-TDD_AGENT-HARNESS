@@ -198,6 +198,34 @@ describe("takeover feedback surface (PLAN-L7-110)", () => {
     }
   });
 
+  it("surfaces detector route candidate feedback as actionable routeFiling review work", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      insertFeedbackEvent(db, {
+        id: "feedback:detector-route-candidate:spec-ir-1",
+        signalType: "detector_route_candidate:spec-ir-orphan-relation",
+        severity: "warn",
+        nextAction:
+          "review detector route candidate; candidate_status=non_ready; routeFiling SSoT before filing",
+        sourceTable: "detector_route_candidates",
+        sourceId: "candidate:spec-ir-1",
+      });
+
+      const result = selectTakeoverFeedback(db);
+      expect(result.total).toBe(1);
+      expect(result.items[0]).toMatchObject({
+        signal_type: "detector_route_candidate:spec-ir-orphan-relation",
+        severity: "warn",
+        bucket: "actionable",
+      });
+      expect(renderTakeoverFeedback(result)).toContain("routeFiling SSoT");
+      expect(renderTakeoverFeedback(result)).toContain("candidate_status=non_ready");
+    } finally {
+      db.close();
+    }
+  });
+
   it("does not surface closed feedback_events rows", () => {
     const db = openHarnessDb(":memory:");
     try {

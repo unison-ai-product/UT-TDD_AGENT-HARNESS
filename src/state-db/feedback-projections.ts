@@ -66,8 +66,24 @@ export function projectRefactorCandidateSignals(
 
 export function projectFeedbackEvents(db: HarnessDb, deps: FeedbackProjectionDeps): void {
   const createdAt = deps.nowIso();
+  const detectorCandidates = db
+    .prepare(
+      `SELECT route_candidate_id, source_table, source_id, finding_kind, severity, subject_id,
+              filing_target_id, target_layer, target_sub_doc, candidate_status, reason
+       FROM detector_route_candidates
+       WHERE candidate_status IN ('non_ready', 'ready', 'open')
+       ORDER BY route_candidate_id`,
+    )
+    .all();
+  const detectorCandidateFindingIds = new Set(
+    detectorCandidates
+      .filter((candidate) => String(candidate.source_table ?? "") === "findings")
+      .map((candidate) => String(candidate.source_id ?? ""))
+      .filter(Boolean),
+  );
   for (const finding of db.prepare("SELECT * FROM findings WHERE status = 'open'").all()) {
     const findingId = String(finding.finding_id ?? "");
+    if (detectorCandidateFindingIds.has(findingId)) continue;
     const subject = String(finding.subject_id ?? findingId);
     const id = deps.stableId("feedback:finding", findingId || subject);
     deps.recordProjectionEvent(db, {
@@ -84,6 +100,35 @@ export function projectFeedbackEvents(db: HarnessDb, deps: FeedbackProjectionDep
         severity: String(finding.severity ?? "warn"),
         status: "open",
         next_action: `review finding ${findingId || subject}`,
+        created_at: createdAt,
+      },
+    });
+  }
+  for (const candidate of detectorCandidates) {
+    const candidateId = String(candidate.route_candidate_id ?? "");
+    const subject = String(candidate.subject_id ?? candidateId);
+    const findingKind = String(candidate.finding_kind ?? "detector-route-candidate");
+    const severity = signalSeverity(candidate.severity);
+    const id = deps.stableId("feedback:detector-route-candidate", candidateId || subject);
+    deps.recordProjectionEvent(db, {
+      table: "feedback_events",
+      id,
+      row: {
+        feedback_event_id: id,
+        finding_id: "",
+        plan_id: subject.startsWith("PLAN-") ? subject : "",
+        source_table: "detector_route_candidates",
+        source_id: candidateId || subject,
+        source_color: String(candidate.candidate_status ?? "non_ready"),
+        signal_type: `detector_route_candidate:${findingKind}`,
+        severity,
+        status: "open",
+        next_action:
+          `review detector route candidate ${candidateId || subject}; ` +
+          `candidate_status=${candidate.candidate_status ?? ""}; ` +
+          `evaluate routeFiling SSoT before filing ` +
+          `(target=${candidate.target_layer ?? ""}/${candidate.target_sub_doc ?? ""}, ` +
+          `filing=${candidate.filing_target_id ?? ""}): ${candidate.reason ?? ""}`,
         created_at: createdAt,
       },
     });
@@ -243,6 +288,7 @@ export function projectRetryEvents(db: HarnessDb, deps: FeedbackProjectionDeps):
 export function projectIssueQueue(db: HarnessDb, deps: FeedbackProjectionDeps): void {
   const createdAt = deps.nowIso();
   const issueSignals = new Set([
+    "detector_route_candidate",
     "trouble_event_rate",
     "workflow_human_required_rate",
     "workflow_retry_groups",
@@ -253,14 +299,19 @@ export function projectIssueQueue(db: HarnessDb, deps: FeedbackProjectionDeps): 
       `SELECT feedback_event_id, plan_id, signal_type, severity, next_action
        FROM feedback_events
        WHERE signal_type IN ('trouble_event_rate', 'workflow_human_required_rate', 'workflow_retry_groups', 'workflow_blocked_rate')
+          OR signal_type LIKE 'detector_route_candidate:%'
        ORDER BY feedback_event_id`,
     )
     .all();
   for (const row of rows) {
     const signalType = String(row.signal_type ?? "");
-    if (!issueSignals.has(signalType)) continue;
+    const normalizedSignal = signalType.startsWith("detector_route_candidate:")
+      ? "detector_route_candidate"
+      : signalType;
+    if (!issueSignals.has(normalizedSignal)) continue;
     const sourceEventId = String(row.feedback_event_id ?? "");
     const id = deps.stableId("issue-queue", sourceEventId);
+    const isDetectorCandidate = normalizedSignal === "detector_route_candidate";
     deps.recordProjectionEvent(db, {
       table: "issue_queue",
       id,
@@ -269,8 +320,12 @@ export function projectIssueQueue(db: HarnessDb, deps: FeedbackProjectionDeps): 
         source_event_id: sourceEventId,
         plan_id: String(row.plan_id ?? ""),
         target: "github",
-        title: `[ut-tdd telemetry] ${signalType}`,
-        body: `Dry-run issue candidate from feedback event ${sourceEventId}: ${row.next_action ?? ""}`,
+        title: isDetectorCandidate
+          ? `[ut-tdd detector candidate] ${signalType}`
+          : `[ut-tdd telemetry] ${signalType}`,
+        body: isDetectorCandidate
+          ? `Dry-run filing candidate from detector route feedback ${sourceEventId}. Human approval and routeFiling SSoT evaluation are required before external issue creation: ${row.next_action ?? ""}`
+          : `Dry-run issue candidate from feedback event ${sourceEventId}: ${row.next_action ?? ""}`,
         status: "queued_dry_run",
         human_approval_required: 1,
         approved_by: "",
