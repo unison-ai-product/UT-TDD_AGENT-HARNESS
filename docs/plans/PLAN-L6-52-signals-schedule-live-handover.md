@@ -31,6 +31,7 @@ dependencies:
     - docs/plans/PLAN-L7-385-vmodel-activation-profile-join.md
   references:
     - docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
+    - docs/plans/PLAN-L6-54-unrecorded-change-diff-gate.md
     - docs/governance/vmodel-upgrade-schedule.md
 ---
 
@@ -56,6 +57,19 @@ human plane の正本であり、これを digest に使えば「どこまで進
 3. **handover 接続**: SessionStart digest の状態段を schedule projection 由来
    (current wave / in-progress / next / blocked) に差し替える。PLAN-L7-392 の digest 設計と
    同一面で実装し、重複 surface を作らない。
+
+## 1.1 PLAN-L6-54 との境界 (設計クロスチェック 2026-07-08 是正)
+
+本 PLAN の「矛盾検出」(②) と L6-54 (記録なき変更検出) はいずれも「宣言済み状態 vs
+実態」の乖離を検出する点で隣接するが、検出軸が異なる:
+
+- 本 PLAN (L6-52) の矛盾検出は **実行時シグナル軸**: テスト合否・実装 done 申告と
+  signals (実行結果) の乖離を検出する (「done と言ったが緑になっていない」)。
+- L6-54 の記録なき変更検出は **spec 内容軸**: spec_defs ID の意味単位差分と
+  history/PLAN/typed-spec ledger への記録有無を検出する (「内容は変わったが記録がない」)。
+
+両者は独立 gate とし、schedule projection の RAG 表示上で並置してよいが、検出ロジック
+と fail-close 条件は統合しない。
 
 ## 2. 受け入れ条件 (design freeze 時)
 
