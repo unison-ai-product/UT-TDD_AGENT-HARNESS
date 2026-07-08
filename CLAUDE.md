@@ -159,7 +159,12 @@ fallback.
 - Docs work defaults to Sonnet-class Claude; research defaults to Haiku-class
   Claude; implementation defaults to GPT/Codex-class workers.
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
-  closing authority; their default effort is `high`.
+  closing authority.
+- Worker lanes (implementation / lightweight, including spark/mini) default to
+  effort `middle` (PO rule, 2026-07-08).
+- Implementation work in `hybrid` is cross-executed and cross-reviewed: the
+  non-orchestrating provider executes, and review returns to the other
+  provider (tier-router implementation lane, PO rule 2026-07-08).
 - Design/implementation review uses a top reviewer model: GPT frontier
   (`gpt-5.5`) or Claude Opus (`claude-opus-4-8`) or above, behind the explicit
   frontier gate.

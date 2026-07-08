@@ -15,7 +15,7 @@ describe("team model policy", () => {
     });
   });
 
-  it("uses fast codex model and high effort for lightweight work", () => {
+  it("uses fast codex model and middle effort for lightweight work (PO rule 2026-07-08)", () => {
     const selection = selectTeamModel({
       provider: "codex",
       role: "docs",
@@ -27,7 +27,7 @@ describe("team model policy", () => {
       difficulty: "trivial",
       model_family: "fast",
       model: MODEL_IDS.codex.spark,
-      reasoning_effort: "high",
+      reasoning_effort: "middle",
       task_intent: "docs",
     });
   });
@@ -113,27 +113,91 @@ describe("team model policy", () => {
     });
   });
 
-  it("builds upper-model advisor decisions for lower orchestrators", () => {
+  it("routes sonnet design decisions to fable with a codex consult fallback", () => {
     const claude = buildAdvisorDecision({
       task: "review whether the release gate is safe to close",
       mode: "hybrid",
+      decisionKind: "design",
       currentModel: MODEL_IDS.claude.sonnet,
     });
 
     expect(claude).toMatchObject({
       provider: "claude",
-      model: MODEL_IDS.claude.opus,
-      effort: "high",
+      model: MODEL_IDS.claude.fable,
+      effort: "middle",
+      consultation_mode: "consult",
+      decision_kind: "design",
+      decision_kind_source: "explicit",
       current_model_lower_than_advisor: true,
       adapterPlan: {
         provider: "claude",
-        model: MODEL_IDS.claude.opus,
-        effort: "high",
+        model: MODEL_IDS.claude.fable,
         dry_run: true,
+      },
+      fallback: {
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
+        effort: "middle",
+        consultation_mode: "consult",
       },
     });
     expect(claude.adapterPlan.stdin).toContain("upper-model advisor");
+  });
 
+  it("routes opus design decisions to fable with an adversarial codex fallback", () => {
+    const decision = buildAdvisorDecision({
+      task: "decide the architecture split for the projection layer",
+      mode: "hybrid",
+      decisionKind: "design",
+      currentModel: MODEL_IDS.claude.opus,
+    });
+
+    expect(decision).toMatchObject({
+      provider: "claude",
+      model: MODEL_IDS.claude.fable,
+      effort: "middle",
+      consultation_mode: "consult",
+      fallback: {
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
+        effort: "middle",
+        consultation_mode: "adversarial",
+      },
+    });
+    expect(decision.fallback?.adapterPlan.stdin).toContain("adversarial verifier");
+  });
+
+  it("routes implementation decisions to the codex frontier model", () => {
+    const sonnet = buildAdvisorDecision({
+      task: "implement the retry logic fix in src",
+      mode: "hybrid",
+      currentModel: MODEL_IDS.claude.sonnet,
+    });
+    expect(sonnet).toMatchObject({
+      provider: "codex",
+      model: MODEL_IDS.codex.frontier,
+      effort: "middle",
+      consultation_mode: "consult",
+      decision_kind: "implementation",
+      decision_kind_source: "inferred",
+    });
+    expect(sonnet.fallback).toBeUndefined();
+
+    const opus = buildAdvisorDecision({
+      task: "implement the retry logic fix in src",
+      mode: "hybrid",
+      currentModel: MODEL_IDS.claude.opus,
+    });
+    expect(opus).toMatchObject({
+      provider: "codex",
+      model: MODEL_IDS.codex.frontier,
+      effort: "middle",
+      consultation_mode: "adversarial",
+    });
+    expect(opus.adapterPlan.stdin).toContain("adversarial verifier");
+  });
+
+  it("builds executable codex advisor plans in codex-only mode", () => {
     const codex = buildAdvisorDecision({
       task: "advise on uncertain implementation close",
       mode: "codex-only",
@@ -144,7 +208,8 @@ describe("team model policy", () => {
     expect(codex).toMatchObject({
       provider: "codex",
       model: MODEL_IDS.codex.frontier,
-      effort: "xhigh",
+      effort: "middle",
+      consultation_mode: "consult",
       adapterPlan: {
         provider: "codex",
         model: MODEL_IDS.codex.frontier,
@@ -152,6 +217,21 @@ describe("team model policy", () => {
       },
     });
     expect(codex.adapterPlan.args).toEqual(["exec", "-m", MODEL_IDS.codex.frontier, "-"]);
+    expect(codex.fallback).toBeUndefined();
+  });
+
+  it("omits the codex fallback in claude-only mode", () => {
+    const decision = buildAdvisorDecision({
+      task: "review whether the release gate is safe to close",
+      mode: "claude-only",
+      decisionKind: "design",
+      currentModel: MODEL_IDS.claude.sonnet,
+    });
+    expect(decision).toMatchObject({
+      provider: "claude",
+      model: MODEL_IDS.claude.fable,
+    });
+    expect(decision.fallback).toBeUndefined();
   });
 
   it("treats older sonnet and haiku generations as lower than the advisor family", () => {
@@ -160,11 +240,12 @@ describe("team model policy", () => {
         buildAdvisorDecision({
           task: "review whether the release gate is safe to close",
           mode: "hybrid",
+          decisionKind: "design",
           currentModel,
         }),
       ).toMatchObject({
         provider: "claude",
-        model: MODEL_IDS.claude.opus,
+        model: MODEL_IDS.claude.fable,
         current_model_lower_than_advisor: true,
       });
     }

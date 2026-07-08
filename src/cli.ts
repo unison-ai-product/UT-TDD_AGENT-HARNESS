@@ -2139,6 +2139,7 @@ program
   .option("--task <text>", "task text")
   .option("--task-file <path>", TASK_FILE_OPTION_DESCRIPTION)
   .option("--provider <provider>", "advisor provider (claude|codex)")
+  .option("--decision <kind>", "decision kind (design|implementation); inferred when omitted")
   .option("--current-model <model>", "current orchestrator model that needs advice")
   .option("--reason <text>", "why upper-model advice is needed")
   .option("--plan <id>", "PLAN id")
@@ -2150,6 +2151,7 @@ program
       task?: string;
       taskFile?: string;
       provider?: string;
+      decision?: string;
       currentModel?: string;
       reason?: string;
       plan?: string;
@@ -2168,11 +2170,17 @@ program
         process.exitCode = 1;
         return;
       }
+      if (opts.decision && opts.decision !== "design" && opts.decision !== "implementation") {
+        process.stderr.write("advisor --decision must be design or implementation\n");
+        process.exitCode = 1;
+        return;
+      }
       const mode = opts.mode ?? detectMode().mode;
       const decision = buildAdvisorDecision({
         task,
         mode,
         provider: opts.provider as AdapterProvider | undefined,
+        decisionKind: opts.decision as "design" | "implementation" | undefined,
         currentModel: opts.currentModel,
         reason: opts.reason,
         planId: opts.plan,
@@ -2189,12 +2197,17 @@ program
         if (opts.json) process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);
         else {
           process.stdout.write(
-            `advisor: provider=${decision.provider} model=${decision.model} effort=${decision.effort} intent=${decision.task_intent} lower=${decision.current_model_lower_than_advisor} dry-run\n`,
+            `advisor: provider=${decision.provider} model=${decision.model} effort=${decision.effort} mode=${decision.consultation_mode} decision=${decision.decision_kind} intent=${decision.task_intent} lower=${decision.current_model_lower_than_advisor} dry-run\n`,
           );
           process.stdout.write(`  - ${decision.reason}\n`);
           process.stdout.write(
             `  - dispatch: command=${decision.adapterPlan.command} args=[${decision.adapterPlan.args.join(" ")}]\n`,
           );
+          if (decision.fallback) {
+            process.stdout.write(
+              `  - fallback on response error: provider=${decision.fallback.provider} model=${decision.fallback.model} effort=${decision.fallback.effort} mode=${decision.fallback.consultation_mode}\n`,
+            );
+          }
         }
         return;
       }
@@ -2208,6 +2221,24 @@ program
         },
         { gitBranch, gitHead, runSessionStartSideEffects, writeHandoverWarnings },
       );
+      // 一次相談先のレスポンスエラーは advisor 全体を落とさず fallback へ切替える
+      // (advisor-tool の advisor_tool_result_error と同じ fail-soft 思想)。
+      let fallbackExecution: ReturnType<typeof executeAdapterPlanForCli> | undefined;
+      if ((execution.exit_code ?? 1) !== 0 && decision.fallback?.adapterPlan.available) {
+        process.stderr.write(
+          `advisor: primary provider=${decision.provider} failed (exit=${execution.exit_code ?? "null"}); falling back to provider=${decision.fallback.provider} model=${decision.fallback.model} mode=${decision.fallback.consultation_mode}\n`,
+        );
+        fallbackExecution = executeAdapterPlanForCli(
+          decision.fallback.adapterPlan,
+          {
+            sessionPrefix: `advisor-${decision.fallback.provider}`,
+            toolName: "advisor",
+            planId: opts.plan,
+            jsonOut: Boolean(opts.json),
+          },
+          { gitBranch, gitHead, runSessionStartSideEffects, writeHandoverWarnings },
+        );
+      }
       const output = {
         ...decision,
         adapterPlan: {
@@ -2215,14 +2246,31 @@ program
           ...execution,
           dry_run: false,
         },
+        ...(fallbackExecution && decision.fallback
+          ? {
+              fallback: {
+                ...decision.fallback,
+                adapterPlan: {
+                  ...decision.fallback.adapterPlan,
+                  ...fallbackExecution,
+                  dry_run: false,
+                },
+              },
+              fallback_used: true,
+            }
+          : {}),
       };
       if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-      else {
+      else if (fallbackExecution && decision.fallback) {
+        process.stdout.write(
+          `advisor executed (fallback): provider=${decision.fallback.provider} model=${decision.fallback.model} mode=${decision.fallback.consultation_mode} exit=${fallbackExecution.exit_code ?? "null"}\n`,
+        );
+      } else {
         process.stdout.write(
           `advisor executed: provider=${decision.provider} model=${decision.model} exit=${execution.exit_code ?? "null"}\n`,
         );
       }
-      process.exitCode = execution.exit_code ?? 1;
+      process.exitCode = (fallbackExecution ?? execution).exit_code ?? 1;
     },
   );
 

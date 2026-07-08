@@ -454,16 +454,23 @@ describe("L7 CLI surface closure", () => {
     const payload = JSON.parse(run.stdout);
 
     expect(run.status).toBe(0);
+    // 設計判断 (review intent → design) は Fable 一次 + Codex fallback (PO ルーティング 2026-07-08)。
     expect(payload).toMatchObject({
       provider: "claude",
-      model: "claude-opus-4-8",
-      effort: "high",
+      model: "claude-fable-5",
+      effort: "middle",
+      consultation_mode: "consult",
+      decision_kind: "design",
       current_model_lower_than_advisor: true,
       adapterPlan: {
         provider: "claude",
-        model: "claude-opus-4-8",
-        effort: "high",
+        model: "claude-fable-5",
         dry_run: true,
+      },
+      fallback: {
+        provider: "codex",
+        model: "gpt-5.5",
+        consultation_mode: "consult",
       },
     });
     expect(payload.adapterPlan.stdin).toContain("upper-model advisor");
@@ -504,7 +511,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload).toMatchObject({
         provider: "codex",
         model: "gpt-5.5",
-        effort: "xhigh",
+        effort: "middle",
         adapterPlan: {
           provider: "codex",
           model: "gpt-5.5",
