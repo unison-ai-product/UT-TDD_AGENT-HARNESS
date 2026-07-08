@@ -848,6 +848,19 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-SPECIR-R8 | `deriveDetectorRouteCandidates(input)` | finding/spec/schedule/activation を join し、候補を `detector_route_candidates` draft として返す。FilingTarget は創作せず、target snapshot は L4 function §3.2.1 / `routeFiling` SSoT から取得する。 |
 | U-SPECIR-R9 | `deriveDetectorRouteCandidates(input)` (non-ready) | SSoT 不在、unknown route_signal、target_layer/sub_doc mismatch は non-ready finding。起票済み PLAN や FilingTarget 決定済みとして扱わない。 |
 
+## PLAN-L7-368 Design Lint DB Projection Addendum (2026-07-08)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の
+> `projectDesignPairFreezeFindings` / `projectDesignQualityCoverage` / `checkDesignDetection`
+> 契約。既存 file-driven lint の判定を再利用し、DB 投影 fact から検出状態を queryable にする。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-DESIGNDB-R1 | `projectDesignQualityCoverage(repoRoot, db)` | `doc-consistency` / `entity-coverage` / `fr-registry-audit` / `sub-doc-catalog-drift` / `sub-doc-section-structure` / `l6-fr-coverage` / `fr-roadmap-coverage` / `module-drift` の 8 check を `coverage(scope=design-quality, metric=violation_count)` に 1 行ずつ投影する。clean repo は value=0 / threshold=0 / status=`passed`。 |
+| U-DESIGNDB-R2 | `projectDesignPairFreezeFindings(repoRoot, db)` | design sub-doc の `pair_artifact` 欠落、参照不実在、逆参照欠落を `findings.kind=design-pair-orphan:<reason>`、source=`vmodel-pair-freeze`、status=`open` として投影する。 |
+| U-DESIGNDB-R3 | `collectDesignDetectionStats` / `analyzeDesignDetectionStats` | design-quality coverage の欠落、blocked coverage、open pair orphan finding のいずれかがあると `ok=false`。すべて揃い passed なら `ok=true`。 |
+| U-DESIGNDB-R4 | `checkDesignDetection(repoRoot)` | doctor は DB 集約結果を `design-detection` として 1 surface で報告する。既存 file-driven check の詳細 message を重複出力せず、DB fact の欠落/blocked/open だけを hard gate 化する。 |
+
 ## PLAN-L6-40 Route Filing Review Surface Addendum (2026-07-08)
 
 > 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の

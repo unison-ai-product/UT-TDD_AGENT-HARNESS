@@ -7,6 +7,11 @@ import { describe, expect, it } from "vitest";
 import { findReference } from "../src/search/index";
 import { deriveArtifactProgressDecision } from "../src/state-db/artifact-progress-decision";
 import {
+  analyzeDesignDetectionStats,
+  collectDesignDetectionStats,
+  DESIGN_QUALITY_CHECK_IDS,
+} from "../src/state-db/design-detection";
+import {
   decideRefactorCandidate,
   projectFeedbackEvents,
   projectIssueApprovalGuardrails,
@@ -16,6 +21,7 @@ import {
 import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
 import {
+  projectDesignPairFreezeFindings,
   projectRuntimeGuardrailDecisionFromSessionEvent,
   projectRuntimeSkillInvocationFromSessionEvent,
   projectRuntimeTestRunFromSessionEvent,
@@ -124,6 +130,71 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
 
         expect(result.ok).toBe(true);
         expect(row?.path).toBe("skills/refactoring.md");
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("projects design-quality coverage rows from the real repo rebuild", () => {
+    if (!hasSourceProjectionPlanDocs()) return;
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      rebuildHarnessDb({ db });
+
+      const rows = db
+        .prepare(
+          "SELECT subject_id, value, threshold, status FROM coverage WHERE scope = ? AND metric = ? ORDER BY subject_id",
+        )
+        .all("design-quality", "violation_count") as Array<{
+        subject_id: string;
+        value: number;
+        threshold: number;
+        status: string;
+      }>;
+      expect(rows.map((row) => row.subject_id)).toEqual([...DESIGN_QUALITY_CHECK_IDS].sort());
+      expect(rows.every((row) => row.value === 0 && row.threshold === 0)).toBe(true);
+      expect(rows.every((row) => row.status === "passed")).toBe(true);
+
+      const stats = collectDesignDetectionStats(db);
+      expect(analyzeDesignDetectionStats(stats).ok).toBe(true);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("projects pair-freeze orphan findings as DB-detectable design findings", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-design-pair-projection-"));
+    try {
+      mkdirSync(join(root, "docs", "design", "harness", "L1-requirements"), {
+        recursive: true,
+      });
+      mkdirSync(join(root, "docs", "test-design", "harness"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "design", "harness", "L1-requirements", "functional.md"),
+        ["---", "layer: L1", "status: confirmed", "---", "# functional", ""].join("\n"),
+        "utf8",
+      );
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        migrate(db);
+        projectDesignPairFreezeFindings(root, db);
+        const finding = db
+          .prepare(
+            "SELECT kind, severity, subject_id, source, status FROM findings WHERE kind LIKE ?",
+          )
+          .get("design-pair-orphan:%");
+        expect(finding).toMatchObject({
+          kind: "design-pair-orphan:pair-missing",
+          severity: "error",
+          subject_id: "docs/design/harness/L1-requirements/functional.md",
+          source: "vmodel-pair-freeze",
+          status: "open",
+        });
+        expect(analyzeDesignDetectionStats(collectDesignDetectionStats(db)).ok).toBe(false);
       } finally {
         db.close();
       }

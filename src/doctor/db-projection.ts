@@ -14,6 +14,11 @@ import {
   dbProjectionIngestionMessages,
 } from "../lint/db-projection-ingestion";
 import type { LintResult } from "../plan/lint";
+import {
+  analyzeDesignDetectionStats,
+  collectDesignDetectionStats,
+  designDetectionMessages,
+} from "../state-db/design-detection";
 import type { HarnessDb } from "../state-db/index";
 import { openHarnessDb } from "../state-db/index";
 import {
@@ -200,6 +205,28 @@ export function checkDbProjectionIngestion(
       ],
       ok: false,
     };
+  }
+}
+
+export function checkDesignDetection(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["design-detection - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  const db = openHarnessDb(":memory:", { repoRoot });
+  try {
+    rebuildHarnessDb({ repoRoot, db });
+    const result = analyzeDesignDetectionStats(collectDesignDetectionStats(db));
+    return { messages: designDetectionMessages(result), ok: result.ok };
+  } catch {
+    return {
+      messages: ["design-detection - violation: design detection projection could not run"],
+      ok: false,
+    };
+  } finally {
+    db.close();
   }
 }
 

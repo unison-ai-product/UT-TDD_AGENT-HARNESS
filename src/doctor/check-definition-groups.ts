@@ -3,6 +3,7 @@ import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import type { LintResult } from "../plan/lint";
 import {
   checkAgentContractDetection,
+  checkDesignDetection,
   checkDbProjectionCoverage,
   checkDbProjectionIngestion,
   checkTypedSpecLedgerBodySync,
@@ -235,6 +236,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("guardrail-invariants", () => checkGuardrailInvariants(deps.repoRoot)),
         full("db-projection-coverage", () => checkDbProjectionCoverage(deps.repoRoot)),
         full("db-projection-ingestion", () => checkDbProjectionIngestion(deps.repoRoot, options)),
+        full("design-detection", () => checkDesignDetection(deps.repoRoot)),
         full("typed-spec-trace-closure", () => checkTypedSpecTraceClosure(deps.repoRoot)),
         full("typed-spec-ledger-body-sync", () => checkTypedSpecLedgerBodySync(deps.repoRoot)),
         full("typed-spec-owned-artifact-dispersal", () =>

@@ -25,6 +25,7 @@ import { checkSetupSmoke } from "./setup-smoke";
 export type { DoctorOptions } from "./check-registry";
 export {
   checkAgentContractDetection,
+  checkDesignDetection,
   checkDbProjectionCoverage,
   checkDbProjectionIngestion,
   checkTypedSpecLedgerBodySync,

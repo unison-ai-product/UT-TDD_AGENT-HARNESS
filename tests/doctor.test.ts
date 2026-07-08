@@ -17,6 +17,12 @@ import {
   selectDoctorCheckDefinitions,
 } from "../src/doctor/check-registry";
 import {
+  analyzeDesignDetectionStats,
+  designDetectionMessages,
+  DESIGN_QUALITY_CHECK_IDS,
+  type DesignDetectionStats,
+} from "../src/state-db/design-detection";
+import {
   checkDependencyDrift as checkDependencyDriftAdapter,
   checkRegressionExpansion as checkRegressionExpansionAdapter,
 } from "../src/doctor/dependency-regression";
@@ -123,6 +129,65 @@ describe("buildDoctorResult", () => {
       messages: ["doctor: mode=standalone", "doctor: alpha - OK"],
       timings: [{ id: "alpha", duration_ms: 1.25, ok: true, message_count: 1 }],
     });
+  });
+});
+
+describe("design-detection doctor aggregate", () => {
+  const cleanStats = (): DesignDetectionStats => ({
+    coverageRows: DESIGN_QUALITY_CHECK_IDS.map((subject_id) => ({
+      subject_id,
+      metric: "violation_count",
+      value: 0,
+      threshold: 0,
+      status: "passed",
+    })),
+    missingCoverage: [],
+    blockedCoverage: [],
+    pairOrphanFindings: [],
+  });
+
+  it("fails on missing coverage rows without replaying file-driven lint details", () => {
+    const stats = cleanStats();
+    stats.coverageRows = stats.coverageRows.filter((row) => row.subject_id !== "module-drift");
+    stats.missingCoverage = ["module-drift"];
+
+    const result = analyzeDesignDetectionStats(stats);
+
+    expect(result.ok).toBe(false);
+    expect(designDetectionMessages(result).join("\n")).toContain("missing_coverage=1");
+    expect(designDetectionMessages(result).join("\n")).not.toContain("module-drift —");
+  });
+
+  it("fails on blocked coverage and open pair orphan findings", () => {
+    const stats = cleanStats();
+    stats.blockedCoverage = [
+      {
+        subject_id: "l6-fr-coverage",
+        metric: "violation_count",
+        value: 2,
+        threshold: 0,
+        status: "blocked",
+      },
+    ];
+    stats.pairOrphanFindings = [
+      {
+        finding_id: "finding:design-pair-orphan:pair-missing:doc",
+        kind: "design-pair-orphan:pair-missing",
+        severity: "error",
+        subject_id: "docs/design/harness/L1-requirements/functional.md",
+        source: "vmodel-pair-freeze",
+        status: "open",
+        evidence_path: "docs/design/harness/L1-requirements/functional.md",
+      },
+    ];
+
+    const result = analyzeDesignDetectionStats(stats);
+    const messages = designDetectionMessages(result).join("\n");
+
+    expect(result.ok).toBe(false);
+    expect(messages).toContain("blocked_coverage=1");
+    expect(messages).toContain("pair_orphans=1");
+    expect(messages).toContain("design-pair-orphan:pair-missing");
   });
 });
 
@@ -1353,6 +1418,7 @@ describe("runDoctor", () => {
       "runtime-portability",
       "db-projection-coverage",
       "db-projection-ingestion",
+      "design-detection",
       "rule-drift",
       "gate-confirm",
       "plan-schedule",
