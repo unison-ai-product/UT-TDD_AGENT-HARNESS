@@ -52,11 +52,6 @@ import {
   catalogVerificationProfiles,
   recommendVerificationProfiles,
 } from "../lint/verification-profile";
-import {
-  analyzePairFreeze,
-  loadPairDocs,
-  type PairOrphanReason,
-} from "../vmodel/lint";
 import { loadMemoryEntries } from "../memory/index";
 import {
   HARNESS_DB_TABLE_BY_NAME,
@@ -65,8 +60,9 @@ import {
   type TableDef,
 } from "../schema/harness-db";
 import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog";
-import { DESIGN_QUALITY_CHECK_IDS, type DesignQualityCheckId } from "./design-detection";
+import { analyzePairFreeze, loadPairDocs, type PairOrphanReason } from "../vmodel/lint";
 import { deriveArtifactProgressDecision } from "./artifact-progress-decision";
+import { DESIGN_QUALITY_CHECK_IDS, type DesignQualityCheckId } from "./design-detection";
 import {
   projectFeedbackEvents,
   projectImprovementLog,
@@ -413,9 +409,7 @@ export function projectDesignQualityCoverage(repoRoot: string, db: HarnessDb): v
         loadFrRoadmapCoverageDocs(repoRoot),
         repoRoot,
       );
-      return (
-        (result.checked === 0 ? 1 : 0) + result.violations.length + result.openRows.length
-      );
+      return (result.checked === 0 ? 1 : 0) + result.violations.length + result.openRows.length;
     },
     "module-drift": () => analyzeModuleDrift(loadModuleDocs(repoRoot)).orphans.length,
   };

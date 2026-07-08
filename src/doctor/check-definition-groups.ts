@@ -3,9 +3,9 @@ import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import type { LintResult } from "../plan/lint";
 import {
   checkAgentContractDetection,
-  checkDesignDetection,
   checkDbProjectionCoverage,
   checkDbProjectionIngestion,
+  checkDesignDetection,
   checkTypedSpecLedgerBodySync,
   checkTypedSpecOwnedArtifactDispersal,
   checkTypedSpecPhaseLayerAlignment,

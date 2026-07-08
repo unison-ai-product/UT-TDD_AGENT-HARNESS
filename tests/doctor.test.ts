@@ -17,12 +17,6 @@ import {
   selectDoctorCheckDefinitions,
 } from "../src/doctor/check-registry";
 import {
-  analyzeDesignDetectionStats,
-  designDetectionMessages,
-  DESIGN_QUALITY_CHECK_IDS,
-  type DesignDetectionStats,
-} from "../src/state-db/design-detection";
-import {
   checkDependencyDrift as checkDependencyDriftAdapter,
   checkRegressionExpansion as checkRegressionExpansionAdapter,
 } from "../src/doctor/dependency-regression";
@@ -92,6 +86,12 @@ import {
 } from "../src/doctor/index";
 import { buildDoctorResult } from "../src/doctor/result";
 import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots";
+import {
+  analyzeDesignDetectionStats,
+  DESIGN_QUALITY_CHECK_IDS,
+  type DesignDetectionStats,
+  designDetectionMessages,
+} from "../src/state-db/design-detection";
 
 const NOW = "2026-06-04T00:00:00.000Z";
 const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
