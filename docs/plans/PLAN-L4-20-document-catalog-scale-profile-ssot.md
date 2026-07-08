@@ -5,7 +5,7 @@ kind: add-design
 layer: L4
 sub_doc: data
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
@@ -15,7 +15,38 @@ parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L5
-review_evidence: []
+review_evidence:
+  - reviewer: codex-tl
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-08T20:16:00+09:00"
+    tests_green_at: "2026-07-08T20:16:00+09:00"
+    verdict: approve
+    scope: "PLAN-L4-20 P0 slice: ZIP catalog.yaml 相当の Vモデル文書カタログを `docs/governance/vmodel-document-catalog.md` に authoring source 化し、`document_catalog_entries` / search_index へ投影する。`document-system-map.md` は意味定義、DB は read-model という境界を維持し、検出系が設計正本を後追いできる形にした。"
+    green_commands:
+      - kind: typecheck
+        command: "bun run tsc --noEmit"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-08T20:12:00+09:00"
+        evidence_path: src/state-db/spec-ir-projections.ts
+        output_digest: "sha256:dba4fb880bd0a5ae88f4c30aab17066959a2aaf80b381cb54605592627dd9fea"
+      - kind: unit_test
+        command: "bun run vitest run tests/state-db.test.ts tests/projection-writer.test.ts tests/db-projection-ingestion.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-08T20:14:00+09:00"
+        evidence_path: tests/projection-writer.test.ts
+        output_digest: "sha256:fb28667439a6f367908536433a0f8c2b1d7299c8bbcdc6a882f6d8183da3009e"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-08T20:15:00+09:00"
+        evidence_path: src/lint/db-projection-ingestion.ts
+        output_digest: "sha256:026bd8f373f7735fcaf9418f4d51f0c0af8b7c8de72b6eb70ee10d1edfe4e156"
 agent_slots:
   - role: tl
     slot_label: "TL - カタログ/プロファイル SSoT の契約設計、既存 document-system-map との重複整理"
@@ -24,6 +55,12 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L4-20-document-catalog-scale-profile-ssot.md
     artifact_type: markdown_doc
+  - artifact_path: docs/governance/vmodel-document-catalog.md
+    artifact_type: markdown_doc
+  - artifact_path: src/schema/harness-db-tables-spec-ir.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/spec-ir-projections.ts
+    artifact_type: source_module
 dependencies:
   parent: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
   requires: []

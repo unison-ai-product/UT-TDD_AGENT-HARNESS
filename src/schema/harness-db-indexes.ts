@@ -258,6 +258,16 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     columns: ["scope_status", "rag", "enabled"],
   },
   {
+    name: "idx_document_catalog_layer_subdoc",
+    table: "document_catalog_entries",
+    columns: ["layer", "sub_doc", "applicability"],
+  },
+  {
+    name: "idx_document_catalog_doc_type",
+    table: "document_catalog_entries",
+    columns: ["doc_type_id", "default_status"],
+  },
+  {
     name: "idx_detector_candidates_source",
     table: "detector_route_candidates",
     columns: ["source_table", "source_id"],

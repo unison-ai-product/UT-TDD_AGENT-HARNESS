@@ -93,6 +93,26 @@ export const HARNESS_DB_SPEC_IR_TABLES: TableDef[] = [
     ],
   },
   {
+    name: "document_catalog_entries",
+    columns: [
+      pk("document_catalog_entry_id"),
+      col("doc_type_id"),
+      col("layer"),
+      col("sub_doc"),
+      col("category"),
+      col("requirement_class"),
+      col("applicability"),
+      col("default_status"),
+      col("source_doc_family"),
+      col("authoring_source_path"),
+      col("projection_table"),
+      col("profile_controlled", "INTEGER"),
+      col("skip_reason_required", "INTEGER"),
+      col("source_path"),
+      col("indexed_at"),
+    ],
+  },
+  {
     name: "detector_route_candidates",
     columns: [
       pk("route_candidate_id"),

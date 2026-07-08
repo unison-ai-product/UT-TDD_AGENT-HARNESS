@@ -1396,6 +1396,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rowCounts(db).schedule_entries).toBeGreaterThan(0);
       expect(rowCounts(db).activation_entries).toBeGreaterThan(0);
       expect(rowCounts(db).activation_schedule_reviews).toBeGreaterThan(0);
+      expect(rowCounts(db).document_catalog_entries).toBeGreaterThan(0);
       const inheritedOracle = db
         .prepare("SELECT COUNT(*) AS count FROM test_cases WHERE test_file = ? AND oracle_id = ?")
         .get("tests/handover.test.ts", "U-HOVER-001") as { count: number } | undefined;
@@ -1445,6 +1446,21 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       });
       expect(findReference(db, "vmodel-clean-core PLAN-L7-385").at(0)).toMatchObject({
         subject_type: "activation_schedule_review",
+      });
+      const documentCatalog = db
+        .prepare(
+          "SELECT layer, sub_doc, default_status FROM document_catalog_entries WHERE doc_type_id = ?",
+        )
+        .get("DOC-L4-DATA") as
+        | { layer: string; sub_doc: string; default_status: string }
+        | undefined;
+      expect(documentCatalog).toMatchObject({
+        layer: "L4",
+        sub_doc: "data",
+        default_status: "required",
+      });
+      expect(findReference(db, "DOC-L4-DATA document catalog").at(0)).toMatchObject({
+        subject_type: "document_catalog_entry",
       });
       const typedSpec = db
         .prepare("SELECT spec_kind, section_anchor FROM spec_defs WHERE spec_id = ?")

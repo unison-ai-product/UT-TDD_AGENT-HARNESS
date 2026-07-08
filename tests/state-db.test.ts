@@ -88,6 +88,11 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
           table: "refactor_candidates",
           columns: ["state", "confidence", "last_seen_at"],
         },
+        {
+          name: "idx_document_catalog_doc_type",
+          table: "document_catalog_entries",
+          columns: ["doc_type_id", "default_status"],
+        },
       ]),
     );
 
@@ -127,6 +132,22 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
         "target_layer",
         "target_sub_doc",
         "candidate_status",
+      ]),
+    );
+    const documentCatalogColumns = db
+      .prepare("PRAGMA table_info(document_catalog_entries)")
+      .all()
+      .map((row) => String(row.name));
+    expect(documentCatalogColumns).toEqual(
+      expect.arrayContaining([
+        "document_catalog_entry_id",
+        "doc_type_id",
+        "layer",
+        "sub_doc",
+        "applicability",
+        "default_status",
+        "profile_controlled",
+        "skip_reason_required",
       ]),
     );
     const refactorCandidateColumns = db

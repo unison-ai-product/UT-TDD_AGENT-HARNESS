@@ -87,6 +87,11 @@ export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirem
     reason: "activation schedule reviews join activation profiles with V-model schedule state",
   },
   {
+    table: "document_catalog_entries",
+    reason:
+      "document catalog entries are derived from the V-model document catalog authoring source",
+  },
+  {
     table: "agent_contracts",
     reason: "agent contracts are derived from V-model doc-local authoring contracts",
   },

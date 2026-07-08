@@ -12,6 +12,7 @@ type SpecIrSourceKind =
   | "test_design"
   | "schedule_doc"
   | "activation_profile"
+  | "document_catalog"
   | "typed_spec"
   | "agent_contracts"
   | "refactor_qa_release_contract";
@@ -112,6 +113,24 @@ export interface ActivationScheduleReviewRow {
   indexed_at: string;
 }
 
+export interface DocumentCatalogEntryRow {
+  document_catalog_entry_id: string;
+  doc_type_id: string;
+  layer: string;
+  sub_doc: string;
+  category: string;
+  requirement_class: string;
+  applicability: string;
+  default_status: string;
+  source_doc_family: string;
+  authoring_source_path: string;
+  projection_table: string;
+  profile_controlled: number;
+  skip_reason_required: number;
+  source_path: string;
+  indexed_at: string;
+}
+
 export interface DetectorRouteCandidateRow {
   route_candidate_id: string;
   source_table: string;
@@ -157,6 +176,7 @@ export interface SpecIrProjection {
   schedule_entries: ScheduleEntryRow[];
   activation_entries: ActivationEntryRow[];
   activation_schedule_reviews: ActivationScheduleReviewRow[];
+  document_catalog_entries: DocumentCatalogEntryRow[];
   detector_route_candidates: DetectorRouteCandidateRow[];
   agent_contracts: AgentContractRow[];
   findings: SpecIrFindingRow[];
@@ -340,6 +360,7 @@ function inferSubDocFromPath(path: string): string {
 function sourceKind(path: string): SpecIrSourceKind | null {
   if (path === "docs/governance/vmodel-upgrade-schedule.md") return "schedule_doc";
   if (path === "docs/governance/vmodel-activation-profiles.md") return "activation_profile";
+  if (path === "docs/governance/vmodel-document-catalog.md") return "document_catalog";
   if (path === "docs/governance/vmodel-typed-spec-definitions.md") return "typed_spec";
   if (path === "docs/governance/vmodel-agent-contracts.md") return "agent_contracts";
   if (path === "docs/governance/vmodel-refactor-qa-release-gates.md") {
@@ -373,6 +394,7 @@ export function loadSpecIrSources(repoRoot: string): SpecIrSource[] {
     "governance",
     "vmodel-activation-profiles.md",
   );
+  const documentCatalogSource = join(repoRoot, "docs", "governance", "vmodel-document-catalog.md");
   const typedSpecSource = join(repoRoot, "docs", "governance", "vmodel-typed-spec-definitions.md");
   const agentContractSource = join(repoRoot, "docs", "governance", "vmodel-agent-contracts.md");
   const refactorQaReleaseContractSource = join(
@@ -384,6 +406,7 @@ export function loadSpecIrSources(repoRoot: string): SpecIrSource[] {
   return [
     ...(existsSync(scheduleSource) ? [scheduleSource] : []),
     ...(existsSync(activationProfileSource) ? [activationProfileSource] : []),
+    ...(existsSync(documentCatalogSource) ? [documentCatalogSource] : []),
     ...(existsSync(typedSpecSource) ? [typedSpecSource] : []),
     ...(existsSync(agentContractSource) ? [agentContractSource] : []),
     ...(existsSync(refactorQaReleaseContractSource) ? [refactorQaReleaseContractSource] : []),
@@ -809,6 +832,39 @@ export function joinActivationScheduleReviews(input: {
       indexed_at: input.indexedAt,
     };
   });
+}
+
+export function parseDocumentCatalogEntries(
+  sources: SpecIrSource[],
+  indexedAt: string,
+): DocumentCatalogEntryRow[] {
+  const rows: DocumentCatalogEntryRow[] = [];
+  for (const source of sources.filter((item) => item.kind === "document_catalog")) {
+    for (const row of markdownTableRows(source.content, ["doc_type_id", "layer", "sub_doc"])) {
+      const docTypeId = row.doc_type_id ?? "";
+      if (!docTypeId) continue;
+      const layer = row.layer ?? "";
+      const subDoc = row.sub_doc ?? "";
+      rows.push({
+        document_catalog_entry_id: stableId("document-catalog-entry", docTypeId),
+        doc_type_id: docTypeId,
+        layer,
+        sub_doc: subDoc,
+        category: row.category ?? "",
+        requirement_class: row.requirement_class ?? "",
+        applicability: row.applicability || "in_scope",
+        default_status: row.default_status || "required",
+        source_doc_family: row.source_doc_family ?? "",
+        authoring_source_path: normalizePath(row.authoring_source_path ?? ""),
+        projection_table: row.projection_table ?? "",
+        profile_controlled: boolFromField(row.profile_controlled ?? "", false),
+        skip_reason_required: boolFromField(row.skip_reason_required ?? "", false),
+        source_path: source.path,
+        indexed_at: indexedAt,
+      });
+    }
+  }
+  return rows;
 }
 
 function agentContractBlocks(source: SpecIrSource): Record<string, unknown>[] {
@@ -1625,6 +1681,7 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
   const relationResult = parseSpecRelations(sources, defs, indexedAt);
   const schedules = parseScheduleEntries(sources, indexedAt);
   const activations = parseActivationEntries(sources, indexedAt);
+  const documentCatalogEntries = parseDocumentCatalogEntries(sources, indexedAt);
   const agentContracts = parseAgentContractRows(sources, indexedAt);
   const activationScheduleReviews = joinActivationScheduleReviews({
     activations,
@@ -1670,6 +1727,7 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
     schedule_entries: schedules,
     activation_entries: activations,
     activation_schedule_reviews: activationScheduleReviews,
+    document_catalog_entries: documentCatalogEntries,
     agent_contracts: agentContracts,
     detector_route_candidates: deriveDetectorRouteCandidates(findings, indexedAt),
     findings,
@@ -1740,6 +1798,32 @@ export function projectSpecIr(repoRoot: string, db: HarnessDb, deps: SpecIrProje
         summary:
           `activation profile ${row.scope_status}; enabled=${row.enabled}; ` +
           `location=${row.current_location}`,
+        updated_at: row.indexed_at,
+      },
+    });
+  }
+  for (const row of projection.document_catalog_entries) {
+    deps.recordProjectionEvent(db, {
+      table: "document_catalog_entries",
+      id: row.document_catalog_entry_id,
+      row: { ...row },
+    });
+    deps.recordProjectionEvent(db, {
+      table: "search_index",
+      id: stableId("document-catalog-entry", row.document_catalog_entry_id),
+      row: {
+        search_id: stableId("document-catalog-entry", row.document_catalog_entry_id),
+        subject_type: "document_catalog_entry",
+        subject_id: row.doc_type_id,
+        path: row.source_path,
+        title: `${row.doc_type_id} ${row.layer} ${row.sub_doc}`,
+        tokens:
+          `${row.doc_type_id} ${row.layer} ${row.sub_doc} ${row.category} ` +
+          `${row.requirement_class} ${row.applicability} ${row.default_status} ` +
+          `${row.source_doc_family} ${row.authoring_source_path} ${row.projection_table}`,
+        summary:
+          `document catalog ${row.default_status}; profile_controlled=${row.profile_controlled}; ` +
+          `skip_reason_required=${row.skip_reason_required}`,
         updated_at: row.indexed_at,
       },
     });
