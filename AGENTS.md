@@ -209,6 +209,11 @@ calls.
 ## Editing Rules
 
 - Read target files before editing them.
+- When reading tracked prose or source through PowerShell, specify UTF-8 explicitly
+  (for example `Get-Content -Encoding utf8`) or use Node/Bun filesystem reads.
+  Do not trust bare `Get-Content` / ANSI-default output for Japanese text; display
+  mojibake can become real file corruption if copied back into docs. Repository
+  gates enforce UTF-8 no-BOM and mojibake fail-close through `readability`.
 - Match existing code structure, naming, and test placement.
 - Treat existing uncommitted changes and **commits made by the other runtime
   (Claude)** as legitimate work; do not revert/reset/checkout them without

@@ -439,6 +439,12 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-READ-002 | `readabilityMessages` | doctor に path:line:marker を出し、復元要求を明示 |
 | U-READ-003 | `loadL6ReadabilityDocs` | 実 repo L6 design docs 18 件で marker 0 |
 | U-READ-004 | `loadFreezeReadabilityDocs` | 実 repo の L6 design docs + PM trace 対象 L5 PLAN 4 件で marker 0 |
+| U-READ-005 | `analyzeByteIntegrity` | UTF-8 BOM / UTF-16 LE BOM / UTF-16 BE BOM をそれぞれ `utf8-bom` / `utf16le-bom` / `utf16be-bom` violation にする |
+| U-READ-006 | `analyzeByteIntegrity` | 不正 UTF-8 byte sequence を lossy decode 後の文字列だけに頼らず `invalid-utf8` violation にする |
+| U-READ-007 | `analyzeByteIntegrity` | BOM 無 UTF-16LE ASCII 相当の NUL byte と C1 control codepoint を `control-character` violation にする |
+| U-READ-008 | `analyzeByteIntegrity` | `.json` の escaped U+FFFD / mojibake marker を JSON.parse 後の string/key 走査で `json-escaped-mojibake` violation にする |
+| U-READ-009 | `analyzeArtifacts` | byte layer が clean な valid UTF-8 double-encode mojibake でも、string-level denylist を統合して violation にする |
+| U-READ-010 | `checkReadability` / `checkRuntimeReadability` | real repo の docs/root instruction docs と `.ut-tdd` audit/handover artifacts が string + byte 統合 guard で green になる |
 
 ### §1.18 U-GCONF (gate-confirm coupling lint、PLAN-L7-18 / IMP-079)
 

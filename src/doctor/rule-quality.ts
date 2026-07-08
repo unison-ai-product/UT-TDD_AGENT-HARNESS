@@ -14,7 +14,7 @@ import {
 } from "../lint/design-language";
 import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
 import {
-  analyzeReadability,
+  analyzeArtifacts,
   loadRuntimeArtifactReadabilityDocs,
   loadSystemReadabilityDocs,
   readabilityMessages,
@@ -120,7 +120,7 @@ export function checkReadability(repoRoot: string): { messages: string[]; ok: bo
     return { messages: ["readability - violation: repo root could not be read"], ok: false };
   }
   try {
-    const r = analyzeReadability(loadSystemReadabilityDocs(repoRoot));
+    const r = analyzeArtifacts(loadSystemReadabilityDocs(repoRoot));
     return { messages: readabilityMessages(r), ok: r.checked > 0 && r.ok };
   } catch {
     return { messages: ["readability — ⚠ prose docs を読めない"], ok: false };
@@ -143,7 +143,7 @@ export function checkRuntimeReadability(repoRoot: string): { messages: string[];
     };
   }
   try {
-    const r = analyzeReadability(loadRuntimeArtifactReadabilityDocs(repoRoot));
+    const r = analyzeArtifacts(loadRuntimeArtifactReadabilityDocs(repoRoot));
     return { messages: runtimeReadabilityMessages(r), ok: r.ok };
   } catch {
     return { messages: ["runtime-readability — ⚠ .ut-tdd artifacts を読めない"], ok: false };

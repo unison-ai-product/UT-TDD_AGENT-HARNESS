@@ -71,3 +71,14 @@ Type/pseudocode substance（型と擬似コードの実体）:
 
 - **scrum-reverse lint**: PoC confirmed (redesign 除く) ⇔ Reverse 合流 / reverse→confirmed poc 参照の整合検査 (§1.2)。→ concept §10.3 へ back-merge。
 - **propagation lint**: concept §2.6 ⇔ requirements §7.8.1 の signal 語彙一致検査 (L0⇔L3 伝播ドリフト検出)。→ concept §10.3 へ back-merge。
+
+## §7 readability byte-integrity gate 追補 (PLAN-REVERSE-396 / PLAN-L7-395)
+
+readability gate は、string-level mojibake marker denylist だけではなく、byte-level positive validation を持つ多層防御として扱う。これは PowerShell などの shell 表示化けそのものを判定するためではなく、repo 内のファイル実体へ破損 byte / BOM / escaped mojibake が混入した状態を fail-close するための設計である。
+
+| 関数 | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `analyzeByteIntegrity` | `analyzeByteIntegrity(files: ReadabilityArtifact[]) -> ReadabilityResult` | loader は repo-relative path と raw bytes を渡す。 | UTF-8 BOM、UTF-16 LE/BE BOM、不正 UTF-8、NUL/C0/C1 制御文字、JSON escape 化された mojibake marker を violation として返す。 | byte 検査は `analyzeReadability` を置換しない。valid UTF-8 の double-encode mojibake は string-level denylist が引き続き捕捉する。 | U-READ-005..009 |
+| `analyzeArtifacts` | `analyzeArtifacts(files: ReadabilityArtifact[]) -> ReadabilityResult` | artifact は single read から得た `bytes` と `text` を持つ。 | string-level readability と byte integrity の violations を統合し、doctor が読む単一 verdict を返す。 | decode 例外は per-file `invalid-utf8` violation に変換し、I/O fail-close と混同しない。 | U-READ-010 |
+
+実装端点は `src/lint/readability.ts` に置く。`checkReadability` / `checkRuntimeReadability` は `analyzeArtifacts` を使い、`loadSystemReadabilityDocs` / `loadRuntimeArtifactReadabilityDocs` は `readFileSync(path)` の single read から `bytes` と UTF-8 text を同時に構築する。repo 標準は UTF-8 no-BOM とし、BOM cleanup 後は BOM 再混入も readability gate の red 条件になる。
