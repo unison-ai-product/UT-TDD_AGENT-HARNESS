@@ -201,6 +201,12 @@ const GOVERNANCE_DOCS = [
   "docs/governance/repository-structure.md",
 ] as const;
 const ROOT_CANONICAL_DOCS = ["README.md", "AGENTS.md", "CLAUDE.md", ".claude/CLAUDE.md"] as const;
+/**
+ * docs/ 直下に置かれ、どのサブディレクトリ walk (design/process/adr/governance/test-design/plans)
+ * にも入らない ledger doc (PLAN-L7-397)。未登録だと該当 doc 単独の変更で
+ * missing-projection (gate error) が毎回発生する (docs/improvement-backlog.md 実例)。
+ */
+const DOCS_ROOT_LEDGER_FILES = ["docs/feedback-log.md", "docs/improvement-backlog.md"] as const;
 const ROOT_CONFIG_DOCS = [
   ".claude/settings.json",
   ".codex/config.toml",
@@ -439,6 +445,15 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
       addDesignDocIfAbsent(designDocs, path);
     } catch {
       // fail-open: optional root canonical docs may be absent in fixtures.
+    }
+  }
+
+  for (const path of DOCS_ROOT_LEDGER_FILES) {
+    try {
+      statSync(join(repoRoot, path));
+      addDesignDocIfAbsent(designDocs, path);
+    } catch {
+      // fail-open: optional docs/ root ledger may be absent in fixtures.
     }
   }
 

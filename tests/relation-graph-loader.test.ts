@@ -708,5 +708,12 @@ describe("relation graph real-repo loader (PLAN-L7-142 stale-edge fence)", () =>
     expect(codexHooksImpact.ok).toBe(true);
     expect(codexHooksImpact.changedNodes.map((n) => n.id)).toContain("design:.codex/hooks.json");
     expect(codexHooksImpact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    // PLAN-L7-397: docs/ 直下 ledger (どのサブディレクトリ walk にも入らない) の coverage 回帰止め。
+    for (const path of ["docs/feedback-log.md", "docs/improvement-backlog.md"]) {
+      const impact = analyzeRelationImpact({ changedPaths: [path], projection });
+      expect(impact.ok).toBe(true);
+      expect(impact.changedNodes.map((n) => n.id)).toContain(`design:${path}`);
+      expect(impact.findings.map((f) => f.code)).not.toContain("missing-projection");
+    }
   });
 });
