@@ -58,6 +58,7 @@ projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来�
 | **ScheduleEntry** | entity (子) | Workflow | 工程管理表 / Forward spine | current_location / V-pair / predecessor / RAG / adoption / blocked reason を保持し、現在地と次工程を明示する |
 | **ActivationEntry** | entity (子) | Workflow | activation profile / version target / 適用除外宣言 | profile ごとの in-scope / out-of-scope / defer reason / target version を保持し、駆動モデル選択を厳格化する |
 | **ActivationScheduleReview** | derived_view | (CQRS 読みモデル) | ScheduleEntry × ActivationEntry | version-up wave の対象/除外/延期理由と現在地を join し、検索と検出が profile と工程表を同時に読めるようにする |
+| **AgentContract** | entity (子) | Artifact | `docs/governance/vmodel-agent-contracts.md` の `agent_contracts` 宣言 | ZIP の doc-local `agent.read_first` / `agent.done_when` を HARNESS の authoring source 契約として保持し、編集前に読む artifact と完了 gate を検索可能にする |
 | **DetectorFinding** | derived_view | (CQRS 読みモデル) | detector / doctor / review の実行結果 | artifact / relation / schedule / quality signal を route candidate 化する。FilingTarget は function §3.2.1 から導出し、検出系は layer/sub_doc/pairing を創作しない |
 
 不変条件:
@@ -68,6 +69,7 @@ projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来�
 - typed spec の本文実体、台帳行、V-model phase は宣言と同じ authoring source から読む。本文実体欠落、台帳行欠落、未知台帳ID、重複台帳ID、phase 逆流は検出器が補完せず finding にする。
 - typed spec の宣言元は所有 artifact に分散する。`spec_defs.source_path` は台帳の `ledger_sources` に含まれる必要があり、中央 bootstrap doc が所有外 ID を握り続ける状態は finding にする。
 - typed spec の `v_phase` は宣言元 artifact の V-model 層宣言と一致する。通常 doc は `layer` / path 由来層、test-design は `executed_at_layer`、governance doc は `typed_spec_phase_owner` を owner phase として持つ。
+- `AgentContract` は doc-local agent 契約の authoring source であり、`read_first` / `done_when` を DB 側で補完しない。ZIP の `detect green` は `doctor:<gate-id>` へ翻訳された構造契約として読む。
 - `ScheduleEntry` / `ActivationEntry` は Workflow 集約の projection input であり、PLAN frontmatter を暗黙更新しない。
 - `ScheduleEntry` の優先順位は、専用工程管理表 → PLAN frontmatter fallback の順とする。
 - `ActivationScheduleReview` は読みモデルであり、profile / 工程表 / PLAN を暗黙更新しない。

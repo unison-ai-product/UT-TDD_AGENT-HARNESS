@@ -44,8 +44,8 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L7-389-typed-spec-owned-artifact-dispersal-gate | L7 |  | L6 | PLAN-L6-45-typed-spec-owned-artifact-dispersal | U11b: owned artifact 分散を doctor hard gate として実装 | green | confirmed |  |
 | PLAN-L6-46-typed-spec-phase-layer-alignment | L6 | function-spec | L7 | PLAN-L7-389-typed-spec-owned-artifact-dispersal-gate | U12a: `v_phase` と owner artifact layer/frontmatter の整合を固定する契約 | green | confirmed |  |
 | PLAN-L7-390-typed-spec-phase-layer-alignment-gate | L7 |  | L6 | PLAN-L6-46-typed-spec-phase-layer-alignment | U12b: phase/layer 整合を doctor hard gate として実装 | green | confirmed |  |
-| PLAN-L6-47-agent-contract-authoring-source | L6 | function-spec | L7 | PLAN-L7-390-typed-spec-phase-layer-alignment-gate | U12c: 修正版ZIPの `agent.read_first` / `agent.done_when` をHARNESSの authoring source 契約へ翻訳 | yellow | planned | U12 green 後に起票 |
-| PLAN-L7-391-agent-contract-detect-gate | L7 |  | L6 | PLAN-L6-47-agent-contract-authoring-source | U12d: agent 契約をDB projection / doctor gateへ接続し、done_when detect green を検出可能にする | yellow | planned | U12c 後 |
+| PLAN-L6-47-agent-contract-authoring-source | L6 | function-spec | L7 | PLAN-L7-390-typed-spec-phase-layer-alignment-gate | U12c: 修正版ZIPの `agent.read_first` / `agent.done_when` を HARNESS の authoring source 契約へ翻訳済み | green | confirmed |  |
+| PLAN-L7-391-agent-contract-detect-gate | L7 |  | L6 | PLAN-L6-47-agent-contract-authoring-source | U12d: agent 契約を DB projection / doctor gate へ接続し、done_when detect green を検出可能化済み | green | confirmed |  |
 | PLAN-L6-48-vmodel-l2-freeze-l5-verification-design | L6 | function-spec | L7 | PLAN-L7-391-agent-contract-detect-gate | U13a: 107のL2プロト合意凍結、L5検証設計整備をHARNESSのForward freeze条件へ反映 | yellow | planned | U12d 後 |
 | PLAN-L6-49-refactor-and-qa-release-gates | L6 | function-spec | L7 | PLAN-L6-48-vmodel-l2-freeze-l5-verification-design | U13b: 108リファクタ等価性テスト、109 QA Go/No-GoをRefactor/Accept/Release gateへ翻訳 | yellow | planned | U13a 後 |
 

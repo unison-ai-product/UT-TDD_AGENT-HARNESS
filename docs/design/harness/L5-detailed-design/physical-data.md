@@ -490,6 +490,7 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 | `activation_entries` | `activation_entry_id` | `profile_id`, `target_kind`, `target_id`, `scope_status`, `target_version`, `defer_reason`, `enabled`, `source_path`, `plan_id`, `indexed_at` | `docs/governance/vmodel-activation-profiles.md` / activation profile / version target / 適用除外宣言 / PLAN frontmatter fallback | profile ごとの in_scope / out_of_scope / deferred を明示し、駆動モデル選択を厳格化する。専用 activation profile に掲載された `plan_id` は PLAN frontmatter fallback より優先する。 |
 | `activation_schedule_reviews` | `activation_schedule_review_id` | `profile_id`, `plan_id`, `schedule_entry_id`, `activation_entry_id`, `target_kind`, `target_id`, `scope_status`, `enabled`, `target_version`, `defer_reason`, `current_location`, `rag`, `schedule_status`, `layer`, `sub_doc`, `v_pair`, `source_path`, `indexed_at` | `activation_entries` × `schedule_entries` | version-up wave の対象/除外/延期理由と現在地を join し、検索・検出が同じ read-model を参照できるようにする。 |
 | `detector_route_candidates` | `route_candidate_id` | `source_table`, `source_id`, `detector_id`, `finding_kind`, `severity`, `subject_kind`, `subject_id`, `filing_target_id`, `target_layer`, `target_sub_doc`, `candidate_status`, `reason`, `evidence_path`, `computed_at` | findings / quality_signals / spec_relations / schedule_entries / activation_entries | 検出結果を起票候補として保持する。`target_layer` / `target_sub_doc` は function §3.2.1 から再導出した snapshot であり、DB 独自の決定ではない。 |
+| `agent_contracts` | `agent_contract_id` | `target_path`, `defines`, `read_first`, `done_when`, `source_path`, `source_hash`, `indexed_at` | `docs/governance/vmodel-agent-contracts.md` の `agent_contracts` 宣言 | ZIP の doc-local agent 契約を HARNESS の authoring source 契約として query 可能にする。`defines` / `read_first` / `done_when` は pipe-serialized TEXT で保持し、projection は source doc を更新しない。 |
 
 必須 index:
 
@@ -507,6 +508,7 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 - `idx_detector_candidates_source(source_table, source_id)`.
 - `idx_detector_candidates_filing(filing_target_id, severity, candidate_status)`.
 - `idx_detector_candidates_subject(subject_id)`.
+- `idx_agent_contracts_target(target_path)`.
 
 不変条件:
 
@@ -518,6 +520,7 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 - typed spec 宣言は本文実体、台帳行、V-model phase と突合する。本文実体欠落は `typed-spec-body-missing`、台帳行欠落は `typed-spec-ledger-row-missing`、台帳ID未知は `typed-spec-ledger-unknown-id`、台帳ID重複は `typed-spec-ledger-duplicate-id`、phase 欠落は `typed-spec-ledger-phase-missing`、phase 逆流は `typed-spec-phase-direction-invalid` finding にする。
 - typed spec 宣言の `source_path` が台帳 `ledger_sources` に含まれない場合は `typed-spec-owned-source-mismatch` finding にする。これは central bootstrap に残った所有外宣言、または誤った artifact への宣言移動を検出する。
 - typed spec 宣言元 artifact から owner phase を解決できない場合は `typed-spec-owner-phase-missing`、台帳 `v_phase` と owner phase が食い違う場合は `typed-spec-phase-layer-mismatch` finding にする。owner phase は `typed_spec_phase_owner`、`executed_at_layer`、`layer`、path 由来 layer の順で解決する。
+- agent contract は `target_path` / `defines` / `read_first` / `done_when` を必須とする。`target_path` または `read_first` 参照先欠落は `agent-contract-target-missing` / `agent-contract-read-first-missing`、空 `defines` / `done_when` は `agent-contract-defines-missing` / `agent-contract-done-when-missing`、`done_when` の未知 doctor gate は `agent-contract-doctor-gate-unknown` finding にする。
 - `schedule_entries` は工程管理表と PLAN frontmatter fallback の projection であり、PLAN status や dependencies を暗黙更新しない。工程表掲載 row は fallback row に上書きされない。
 - `activation_entries.scope_status=out_of_scope|deferred` は理由 (`defer_reason`) を必須とし、理由なし除外は `findings.kind=activation-reason-missing` とする。
 - `activation_schedule_reviews` は `activation_entries.plan_id` と `schedule_entries.plan_id` の join 結果である。工程表に存在しない `target_kind=plan` は `findings.kind=activation-schedule-missing` とし、projection 側で工程行を創作しない。

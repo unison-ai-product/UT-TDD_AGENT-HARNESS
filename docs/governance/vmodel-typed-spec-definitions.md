@@ -28,7 +28,7 @@ spec:
     - id: VMS-004
       kind: typed-spec-authoring-source
       traces_from: [VMS-001]
-      traces_to: [VMS-006, VMS-007]
+      traces_to: [VMS-006, VMS-007, VMS-008]
       tests: [TVMS-004]
 ```
 
@@ -77,6 +77,12 @@ typed_spec_ledger:
   - spec_id: VMS-007
     ledger_sources: [docs/plans/PLAN-L6-46-typed-spec-phase-layer-alignment.md]
     v_phase: L6
+  - spec_id: VMS-008
+    ledger_sources: [docs/plans/PLAN-L6-47-agent-contract-authoring-source.md]
+    v_phase: L6
+  - spec_id: VMS-009
+    ledger_sources: [docs/plans/PLAN-L7-391-agent-contract-detect-gate.md]
+    v_phase: L7
   - spec_id: TVMS-001
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
@@ -100,6 +106,12 @@ typed_spec_ledger:
       - tests/spec-ir-projections.test.ts
     v_phase: L7
   - spec_id: TVMS-007
+    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
+    v_phase: L7
+  - spec_id: TVMS-008
+    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
+    v_phase: L7
+  - spec_id: TVMS-009
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
 ```
@@ -138,6 +150,14 @@ VMS-006 は typed spec 宣言を `spec_defs` / `spec_relations` / `search_index`
 
 VMS-007 は typed spec 台帳の `v_phase` と宣言元 artifact の owner phase を一致させる設計である。
 VMS-004 を上流に持ち、対応 oracle は TVMS-007 である。
+### VMS-008 agent 契約宣言元
+
+VMS-008 は ZIP の `agent.read_first` / `agent.done_when` を HARNESS の authoring source contract として保持する設計である。
+VMS-004 を上流に持ち、detect gate 実装である VMS-009 へ接続する。対応 oracle は TVMS-008 である。
+### VMS-009 agent 契約検出 gate
+
+VMS-009 は agent contract を DB projection と doctor hard gate へ接続する実装境界である。
+VMS-008 を上流に持ち、対応 oracle は TVMS-009 である。
 
 ### TVMS-001 単体 oracle
 
@@ -166,6 +186,12 @@ TVMS-006 は VMS-006 の typed spec projection が DB と doctor gate に現れ�
 ### TVMS-007 phase/layer 検証 oracle
 
 TVMS-007 は VMS-007 の phase/layer 整合が unit oracle と doctor gate に現れることを保証する。
+### TVMS-008 agent 契約宣言 oracle
+
+TVMS-008 は VMS-008 の agent contract authoring source が unit oracle と projection contract に現れることを保証する。
+### TVMS-009 agent 契約検出 oracle
+
+TVMS-009 は VMS-009 の agent contract detect gate が doctor hard gate と fail-close fixture に現れることを保証する。
 
 ## 4. 不変条件
 

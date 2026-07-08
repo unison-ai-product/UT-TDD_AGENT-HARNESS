@@ -118,6 +118,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "typed-spec-ledger-body-sync",
   "typed-spec-owned-artifact-dispersal",
   "typed-spec-phase-layer-alignment",
+  "agent-contract-detection",
   "doc-consistency",
   "entity-coverage",
   "fr-registry-audit",

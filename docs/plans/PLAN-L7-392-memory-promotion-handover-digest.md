@@ -3,7 +3,7 @@ plan_id: PLAN-L7-392-memory-promotion-handover-digest
 title: "PLAN-L7-392 (add-impl): HARNESS メモリ昇格 nudge と handover digest 化"
 kind: add-impl
 layer: L7
-drive: db
+drive: be
 status: draft
 route_signal: feature_addition
 route_mode: add-feature
@@ -24,20 +24,9 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
     artifact_type: markdown_doc
-  - artifact_path: src/feedback/surface.ts
-    artifact_type: source_module
-  - artifact_path: src/memory/index.ts
-    artifact_type: source_module
-  - artifact_path: src/cli.ts
-    artifact_type: source_module
-  - artifact_path: tests/feedback-surface.test.ts
-    artifact_type: test_code
-  - artifact_path: tests/memory.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-189-shared-harness-memory-cross-runtime.md
   requires:
-    - docs/plans/PLAN-REVERSE-392-memory-promotion-digest-backfill.md
     - docs/plans/PLAN-L7-189-shared-harness-memory-cross-runtime.md
     - docs/plans/PLAN-L7-366-takeover-surface-warn-actionable.md
   references:

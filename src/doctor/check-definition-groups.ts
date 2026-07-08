@@ -2,6 +2,7 @@ import { checkHandoverOutstandingAnchor } from "../handover/index";
 import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import type { LintResult } from "../plan/lint";
 import {
+  checkAgentContractDetection,
   checkDbProjectionCoverage,
   checkDbProjectionIngestion,
   checkTypedSpecLedgerBodySync,
@@ -233,6 +234,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("typed-spec-phase-layer-alignment", () =>
           checkTypedSpecPhaseLayerAlignment(deps.repoRoot),
         ),
+        full("agent-contract-detection", () => checkAgentContractDetection(deps.repoRoot)),
         full("doc-consistency", () => checkDocConsistency(deps.repoRoot)),
         full("entity-coverage", () => checkEntityCoverage(deps.repoRoot)),
         full("fr-registry-audit", () => checkFrRegistryAudit(deps.repoRoot)),

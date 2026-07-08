@@ -12,7 +12,8 @@ type SpecIrSourceKind =
   | "test_design"
   | "schedule_doc"
   | "activation_profile"
-  | "typed_spec";
+  | "typed_spec"
+  | "agent_contracts";
 
 interface SpecIrSource {
   kind: SpecIrSourceKind;
@@ -128,6 +129,17 @@ export interface DetectorRouteCandidateRow {
   computed_at: string;
 }
 
+export interface AgentContractRow {
+  agent_contract_id: string;
+  target_path: string;
+  defines: string;
+  read_first: string;
+  done_when: string;
+  source_path: string;
+  source_hash: string;
+  indexed_at: string;
+}
+
 export interface SpecIrFindingRow {
   finding_id: string;
   kind: string;
@@ -145,6 +157,7 @@ export interface SpecIrProjection {
   activation_entries: ActivationEntryRow[];
   activation_schedule_reviews: ActivationScheduleReviewRow[];
   detector_route_candidates: DetectorRouteCandidateRow[];
+  agent_contracts: AgentContractRow[];
   findings: SpecIrFindingRow[];
 }
 
@@ -177,6 +190,12 @@ export interface TypedSpecOwnedArtifactDispersalResult {
 export interface TypedSpecPhaseLayerAlignmentResult {
   typedSpecCount: number;
   alignedSpecCount: number;
+  findings: SpecIrFindingRow[];
+  ok: boolean;
+}
+
+export interface AgentContractIntegrityResult {
+  contractCount: number;
   findings: SpecIrFindingRow[];
   ok: boolean;
 }
@@ -321,6 +340,7 @@ function sourceKind(path: string): SpecIrSourceKind | null {
   if (path === "docs/governance/vmodel-upgrade-schedule.md") return "schedule_doc";
   if (path === "docs/governance/vmodel-activation-profiles.md") return "activation_profile";
   if (path === "docs/governance/vmodel-typed-spec-definitions.md") return "typed_spec";
+  if (path === "docs/governance/vmodel-agent-contracts.md") return "agent_contracts";
   if (path.startsWith("docs/plans/")) return "plan";
   if (path.startsWith("docs/design/harness/")) return "design_doc";
   if (path.startsWith("docs/test-design/harness/")) return "test_design";
@@ -350,10 +370,12 @@ export function loadSpecIrSources(repoRoot: string): SpecIrSource[] {
     "vmodel-activation-profiles.md",
   );
   const typedSpecSource = join(repoRoot, "docs", "governance", "vmodel-typed-spec-definitions.md");
+  const agentContractSource = join(repoRoot, "docs", "governance", "vmodel-agent-contracts.md");
   return [
     ...(existsSync(scheduleSource) ? [scheduleSource] : []),
     ...(existsSync(activationProfileSource) ? [activationProfileSource] : []),
     ...(existsSync(typedSpecSource) ? [typedSpecSource] : []),
+    ...(existsSync(agentContractSource) ? [agentContractSource] : []),
     ...walkMarkdown(join(repoRoot, "docs", "plans")),
     ...walkMarkdown(join(repoRoot, "docs", "design", "harness")),
     ...walkMarkdown(join(repoRoot, "docs", "test-design", "harness")),
@@ -776,6 +798,175 @@ export function joinActivationScheduleReviews(input: {
       indexed_at: input.indexedAt,
     };
   });
+}
+
+function agentContractBlocks(source: SpecIrSource): Record<string, unknown>[] {
+  const blocks: Record<string, unknown>[] = [];
+  for (const match of source.content.matchAll(/```ya?ml\s*\n([\s\S]*?)\n```/g)) {
+    const parsed = parseYaml(match[1]);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+    blocks.push(parsed as Record<string, unknown>);
+  }
+  return blocks;
+}
+
+export function parseAgentContractRows(
+  sources: SpecIrSource[],
+  indexedAt: string,
+): AgentContractRow[] {
+  const rows: AgentContractRow[] = [];
+  for (const source of sources.filter((item) => item.kind === "agent_contracts")) {
+    for (const block of agentContractBlocks(source)) {
+      const contracts = block.agent_contracts;
+      if (!Array.isArray(contracts)) continue;
+      for (const item of contracts) {
+        if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+        const raw = item as Record<string, unknown>;
+        const contractId = stringField(raw.contract_id);
+        const targetPath = normalizePath(stringField(raw.target_path));
+        rows.push({
+          agent_contract_id:
+            contractId || stableId("agent-contract-missing-id", `${source.path}:${targetPath}`),
+          target_path: targetPath,
+          defines: stringList(raw.defines).map(typedSpecId).sort().join("|"),
+          read_first: stringList(raw.read_first).map(normalizePath).sort().join("|"),
+          done_when: stringList(raw.done_when).sort().join("|"),
+          source_path: source.path,
+          source_hash: source.sourceHash,
+          indexed_at: indexedAt,
+        });
+      }
+    }
+  }
+  return rows;
+}
+
+function splitPipeList(value: string): string[] {
+  return value
+    .split("|")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function agentContractFinding(input: {
+  kind: string;
+  subjectId: string;
+  evidencePath: string;
+}): SpecIrFindingRow {
+  return {
+    finding_id: stableId(`finding:${input.kind}`, input.subjectId),
+    kind: input.kind,
+    severity: "warn",
+    subject_id: input.subjectId,
+    source: "agent-contract-integrity",
+    status: "open",
+    evidence_path: input.evidencePath,
+  };
+}
+
+export function analyzeAgentContractIntegrity(input: {
+  contracts: AgentContractRow[];
+  sources: TypedSpecSourceSnapshot[];
+  knownDoctorGateIds?: readonly string[];
+}): AgentContractIntegrityResult {
+  const sourcePaths = new Set(input.sources.map((source) => normalizePath(source.path)));
+  const knownDoctorGateIds = new Set(input.knownDoctorGateIds ?? []);
+  const contractCounts = new Map<string, number>();
+  const findings: SpecIrFindingRow[] = [];
+
+  for (const contract of input.contracts) {
+    contractCounts.set(
+      contract.agent_contract_id,
+      (contractCounts.get(contract.agent_contract_id) ?? 0) + 1,
+    );
+    if (!contract.agent_contract_id.startsWith("VAGENT-")) {
+      findings.push(
+        agentContractFinding({
+          kind: "agent-contract-invalid-id",
+          subjectId: contract.agent_contract_id,
+          evidencePath: contract.source_path,
+        }),
+      );
+    }
+    if (!contract.target_path || !sourcePaths.has(normalizePath(contract.target_path))) {
+      findings.push(
+        agentContractFinding({
+          kind: "agent-contract-target-missing",
+          subjectId: contract.agent_contract_id,
+          evidencePath: contract.source_path,
+        }),
+      );
+    }
+    if (splitPipeList(contract.defines).length === 0) {
+      findings.push(
+        agentContractFinding({
+          kind: "agent-contract-defines-missing",
+          subjectId: contract.agent_contract_id,
+          evidencePath: contract.source_path,
+        }),
+      );
+    }
+    for (const readFirst of splitPipeList(contract.read_first)) {
+      if (sourcePaths.has(normalizePath(readFirst))) continue;
+      findings.push(
+        agentContractFinding({
+          kind: "agent-contract-read-first-missing",
+          subjectId: `${contract.agent_contract_id}:${readFirst}`,
+          evidencePath: contract.source_path,
+        }),
+      );
+    }
+    if (splitPipeList(contract.done_when).length === 0) {
+      findings.push(
+        agentContractFinding({
+          kind: "agent-contract-done-when-missing",
+          subjectId: contract.agent_contract_id,
+          evidencePath: contract.source_path,
+        }),
+      );
+    }
+    for (const doneWhen of splitPipeList(contract.done_when)) {
+      const match = doneWhen.match(/^doctor:([a-z0-9-]+)$/);
+      if (!match) {
+        findings.push(
+          agentContractFinding({
+            kind: "agent-contract-done-when-invalid",
+            subjectId: `${contract.agent_contract_id}:${doneWhen}`,
+            evidencePath: contract.source_path,
+          }),
+        );
+        continue;
+      }
+      if (knownDoctorGateIds.size > 0 && !knownDoctorGateIds.has(match[1])) {
+        findings.push(
+          agentContractFinding({
+            kind: "agent-contract-doctor-gate-unknown",
+            subjectId: `${contract.agent_contract_id}:${match[1]}`,
+            evidencePath: contract.source_path,
+          }),
+        );
+      }
+    }
+  }
+
+  for (const [contractId, count] of contractCounts) {
+    if (count <= 1) continue;
+    findings.push(
+      agentContractFinding({
+        kind: "agent-contract-duplicate-id",
+        subjectId: contractId,
+        evidencePath:
+          input.contracts.find((contract) => contract.agent_contract_id === contractId)
+            ?.source_path ?? "",
+      }),
+    );
+  }
+
+  return {
+    contractCount: input.contracts.length,
+    findings,
+    ok: findings.length === 0,
+  };
 }
 
 function isTypedSpecDef(def: SpecDefRow): boolean {
@@ -1423,6 +1614,7 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
   const relationResult = parseSpecRelations(sources, defs, indexedAt);
   const schedules = parseScheduleEntries(sources, indexedAt);
   const activations = parseActivationEntries(sources, indexedAt);
+  const agentContracts = parseAgentContractRows(sources, indexedAt);
   const activationScheduleReviews = joinActivationScheduleReviews({
     activations,
     schedules,
@@ -1455,12 +1647,19 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
       sources,
     }).findings,
   );
+  findings.push(
+    ...analyzeAgentContractIntegrity({
+      contracts: agentContracts,
+      sources,
+    }).findings,
+  );
   return {
     spec_defs: defs,
     spec_relations: relationResult.relations,
     schedule_entries: schedules,
     activation_entries: activations,
     activation_schedule_reviews: activationScheduleReviews,
+    agent_contracts: agentContracts,
     detector_route_candidates: deriveDetectorRouteCandidates(findings, indexedAt),
     findings,
   };
@@ -1530,6 +1729,27 @@ export function projectSpecIr(repoRoot: string, db: HarnessDb, deps: SpecIrProje
         summary:
           `activation profile ${row.scope_status}; enabled=${row.enabled}; ` +
           `location=${row.current_location}`,
+        updated_at: row.indexed_at,
+      },
+    });
+  }
+  for (const row of projection.agent_contracts) {
+    deps.recordProjectionEvent(db, {
+      table: "agent_contracts",
+      id: row.agent_contract_id,
+      row: { ...row },
+    });
+    deps.recordProjectionEvent(db, {
+      table: "search_index",
+      id: stableId("agent-contract", row.agent_contract_id),
+      row: {
+        search_id: stableId("agent-contract", row.agent_contract_id),
+        subject_type: "agent_contract",
+        subject_id: row.agent_contract_id,
+        path: row.source_path,
+        title: `${row.agent_contract_id} ${row.target_path}`,
+        tokens: `${row.agent_contract_id} ${row.target_path} ${row.defines} ${row.read_first} ${row.done_when}`,
+        summary: `agent contract for ${row.target_path}`,
         updated_at: row.indexed_at,
       },
     });

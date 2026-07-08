@@ -21,6 +21,7 @@ import {
   checkRegressionExpansion as checkRegressionExpansionAdapter,
 } from "../src/doctor/dependency-regression";
 import {
+  checkAgentContractDetection,
   checkAgentSlots,
   checkAssetDrift,
   checkBackfillResult,
@@ -741,6 +742,56 @@ describe("runDoctor", () => {
     }
   });
 
+  it("surfaces V-model agent contract detection as a doctor hard gate", () => {
+    const result = checkAgentContractDetection(process.cwd());
+    const r = realRepoDoctor();
+
+    expect(result.ok).toBe(true);
+    expect(result.messages[0]).toContain("agent-contract-detection - OK");
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: agent-contract-detection - OK"))).toBe(true);
+  });
+
+  it("fails V-model agent contract detection when done_when references an unknown doctor gate", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-agent-contract-"));
+    try {
+      const governanceDir = join(root, "docs", "governance");
+      mkdirSync(governanceDir, { recursive: true });
+      writeFileSync(join(governanceDir, "vmodel-upgrade-schedule.md"), "# Schedule\n", "utf8");
+      writeFileSync(
+        join(governanceDir, "vmodel-typed-spec-definitions.md"),
+        "# Typed spec\n",
+        "utf8",
+      );
+      writeFileSync(
+        join(governanceDir, "vmodel-agent-contracts.md"),
+        [
+          "# Agent contracts",
+          "",
+          "```yaml",
+          "agent_contracts:",
+          "  - contract_id: VAGENT-301",
+          "    target_path: docs/governance/vmodel-typed-spec-definitions.md",
+          "    defines: [VMS-301]",
+          "    read_first:",
+          "      - docs/governance/vmodel-upgrade-schedule.md",
+          "    done_when:",
+          "      - doctor:no-such-gate",
+          "```",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = checkAgentContractDetection(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("agent-contract-doctor-gate-unknown");
+      expect(result.messages.join("\n")).toContain("VAGENT-301:no-such-gate");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("hard-gates PLAN governance once repo frontmatter debt is closed", () => {
     const governance = checkPlanGovernance(process.cwd());
     const r = realRepoDoctor();
@@ -1158,6 +1209,7 @@ describe("runDoctor", () => {
       ["typed-spec-ledger-body-sync", checkTypedSpecLedgerBodySync(missingRoot)],
       ["typed-spec-owned-artifact-dispersal", checkTypedSpecOwnedArtifactDispersal(missingRoot)],
       ["typed-spec-phase-layer-alignment", checkTypedSpecPhaseLayerAlignment(missingRoot)],
+      ["agent-contract-detection", checkAgentContractDetection(missingRoot)],
       ["rule-drift", checkRuleDrift(missingRoot)],
       ["gate-confirm", checkGateConfirm(missingRoot)],
       ["plan-dod", checkPlanDod(missingRoot)],
@@ -1331,6 +1383,7 @@ describe("runDoctor", () => {
       "tracked-canonical",
       "dependency-drift",
       "regression-expansion",
+      "agent-contract-detection",
       "green-command-digest",
     ];
 

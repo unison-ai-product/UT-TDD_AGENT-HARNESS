@@ -112,4 +112,17 @@ export const HARNESS_DB_SPEC_IR_TABLES: TableDef[] = [
       col("computed_at"),
     ],
   },
+  {
+    name: "agent_contracts",
+    columns: [
+      pk("agent_contract_id"),
+      col("target_path"),
+      col("defines"),
+      col("read_first"),
+      col("done_when"),
+      col("source_path"),
+      col("source_hash"),
+      col("indexed_at"),
+    ],
+  },
 ];

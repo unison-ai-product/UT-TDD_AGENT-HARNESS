@@ -86,6 +86,10 @@ export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirem
     table: "activation_schedule_reviews",
     reason: "activation schedule reviews join activation profiles with V-model schedule state",
   },
+  {
+    table: "agent_contracts",
+    reason: "agent contracts are derived from V-model doc-local authoring contracts",
+  },
 ];
 
 export const EVIDENCE_GATED_DB_PROJECTION_TABLES = [

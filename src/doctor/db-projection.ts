@@ -22,6 +22,8 @@ import {
   rebuildHarnessDb,
 } from "../state-db/projection-writer";
 import {
+  type AgentContractIntegrityResult,
+  analyzeAgentContractIntegrity,
   analyzeTypedSpecLedgerBodySync,
   analyzeTypedSpecOwnedArtifactDispersal,
   analyzeTypedSpecPhaseLayerAlignment,
@@ -34,6 +36,7 @@ import {
   type TypedSpecTraceClosureResult,
 } from "../state-db/spec-ir-projections";
 import { loadRuntimeSessionUsage } from "../state-db/token-tracker";
+import { FULL_DOCTOR_OUTPUT_IDS } from "./profiles";
 
 export interface DbProjectionDoctorOptions {
   strictTelemetryProvenance?: boolean;
@@ -390,6 +393,52 @@ export function checkTypedSpecPhaseLayerAlignment(repoRoot: string): {
       messages: [
         "typed-spec-phase-layer-alignment - violation: typed spec phase/layer alignment could not run",
       ],
+      ok: false,
+    };
+  }
+}
+
+export function agentContractDetectionMessages(result: AgentContractIntegrityResult): string[] {
+  if (result.ok) {
+    return [`agent-contract-detection - OK (contracts=${result.contractCount})`];
+  }
+  return [
+    `agent-contract-detection - violation (contracts=${result.contractCount}, findings=${result.findings.length})`,
+    ...result.findings
+      .slice(0, 8)
+      .map(
+        (finding) =>
+          `agent-contract-detection - ${finding.kind}: ${finding.subject_id} (${finding.evidence_path})`,
+      ),
+  ];
+}
+
+export function checkAgentContractDetection(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+  result?: AgentContractIntegrityResult;
+} {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["agent-contract-detection - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const projection = collectSpecIrProjection(repoRoot, new Date(0).toISOString());
+    const sources = loadSpecIrSources(repoRoot).map((source) => ({
+      path: source.path,
+      content: source.content,
+    }));
+    const result = analyzeAgentContractIntegrity({
+      contracts: projection.agent_contracts,
+      sources,
+      knownDoctorGateIds: FULL_DOCTOR_OUTPUT_IDS,
+    });
+    return { messages: agentContractDetectionMessages(result), ok: result.ok, result };
+  } catch {
+    return {
+      messages: ["agent-contract-detection - violation: agent contract detection could not run"],
       ok: false,
     };
   }

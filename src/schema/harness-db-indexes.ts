@@ -262,4 +262,9 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     table: "detector_route_candidates",
     columns: ["subject_id"],
   },
+  {
+    name: "idx_agent_contracts_target",
+    table: "agent_contracts",
+    columns: ["target_path"],
+  },
 ];

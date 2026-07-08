@@ -912,6 +912,14 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-TYPED-SPEC-P3 | `analyzeTypedSpecPhaseLayerAlignment(input)` | 台帳 `v_phase` と owner phase が食い違う場合は `typed-spec-phase-layer-mismatch` finding にする。 |
 | U-TYPED-SPEC-P4 | `checkTypedSpecPhaseLayerAlignment(repoRoot)` | finding が 0 件なら `doctor: typed-spec-phase-layer-alignment - OK`、1 件以上なら `violation` として `runDoctor.ok=false` に合流する。 |
 
+> `parseAgentContractRows` / `analyzeAgentContractIntegrity` / `checkAgentContractDetection` agent contract 契約 (PLAN-L6-47 / PLAN-L7-391)。
+| ID | 対象 | 期待 |
+| --- | --- | --- |
+| U-AGENT-CONTRACT-R1 | `parseAgentContractRows(input)` | `docs/governance/vmodel-agent-contracts.md` の `agent_contracts` から `agent_contracts` row を生成し、`defines` / `read_first` / `done_when` を保持する。 |
+| U-AGENT-CONTRACT-R2 | `analyzeAgentContractIntegrity(input)` | `read_first` の欠落を `agent-contract-read-first-missing` finding にする。 |
+| U-AGENT-CONTRACT-R3 | `analyzeAgentContractIntegrity(input)` | Python command 文字列など `doctor:<gate-id>` ではない `done_when` を `agent-contract-done-when-invalid` finding にする。 |
+| U-AGENT-CONTRACT-R4 | `checkAgentContractDetection(repoRoot)` | 未知 doctor gate を `agent-contract-doctor-gate-unknown` として fail-close し、real repo では `doctor: agent-contract-detection - OK` を返す。 |
+
 **gap 件数: 1 / 25** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
 
 L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。
@@ -942,7 +950,14 @@ spec:
     - id: TVMS-007
       kind: unit-oracle
       traces_from: [VMS-007]
+    - id: TVMS-008
+      kind: unit-oracle
+      traces_from: [VMS-008]
+    - id: TVMS-009
+      kind: projection-oracle
+      traces_from: [VMS-009]
 ```
 
 TVMS-001、TVMS-002、TVMS-003、TVMS-004、TVMS-005、TVMS-006、TVMS-007 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。
 TVMS-007 は VMS-007 の phase/layer alignment が unit oracle と doctor gate で検証されることを保証する。
+TVMS-008 は agent contract authoring source、TVMS-009 は agent contract doctor gate の oracle である。

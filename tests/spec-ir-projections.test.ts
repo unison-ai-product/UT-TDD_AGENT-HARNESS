@@ -532,6 +532,94 @@ describe("spec IR projections", () => {
     }
   });
 
+  it("projects V-model agent contracts as authoring source contracts", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-agent-contract-"));
+    try {
+      writeGovernanceDoc(root, "vmodel-upgrade-schedule.md", "# V-model schedule\n");
+      writeGovernanceDoc(root, "vmodel-typed-spec-definitions.md", "# Typed spec\n");
+      writeGovernanceDoc(
+        root,
+        "vmodel-agent-contracts.md",
+        [
+          "# Agent contracts",
+          "",
+          "```yaml",
+          "agent_contracts:",
+          "  - contract_id: VAGENT-101",
+          "    target_path: docs/governance/vmodel-typed-spec-definitions.md",
+          "    defines: [VMS-101]",
+          "    read_first:",
+          "      - docs/governance/vmodel-upgrade-schedule.md",
+          "    done_when:",
+          "      - doctor:typed-spec-trace-closure",
+          "```",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-08T00:00:00.000Z");
+
+      expect(projection.agent_contracts).toEqual([
+        expect.objectContaining({
+          agent_contract_id: "VAGENT-101",
+          target_path: "docs/governance/vmodel-typed-spec-definitions.md",
+          defines: "VMS-101",
+          read_first: "docs/governance/vmodel-upgrade-schedule.md",
+          done_when: "doctor:typed-spec-trace-closure",
+          source_path: "docs/governance/vmodel-agent-contracts.md",
+        }),
+      ]);
+      expect(projection.findings).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: expect.stringMatching(/^agent-contract-/) }),
+        ]),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("turns malformed V-model agent contracts into integrity findings", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-agent-contract-bad-"));
+    try {
+      writeGovernanceDoc(root, "vmodel-typed-spec-definitions.md", "# Typed spec\n");
+      writeGovernanceDoc(
+        root,
+        "vmodel-agent-contracts.md",
+        [
+          "# Agent contracts",
+          "",
+          "```yaml",
+          "agent_contracts:",
+          "  - contract_id: VAGENT-201",
+          "    target_path: docs/governance/vmodel-typed-spec-definitions.md",
+          "    defines: [VMS-201]",
+          "    read_first:",
+          "      - docs/governance/missing-first.md",
+          "    done_when:",
+          "      - python tools/build.py detect",
+          "```",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-08T00:00:00.000Z");
+
+      expect(projection.findings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "agent-contract-read-first-missing",
+            subject_id: "VAGENT-201:docs/governance/missing-first.md",
+          }),
+          expect.objectContaining({
+            kind: "agent-contract-done-when-invalid",
+            subject_id: "VAGENT-201:python tools/build.py detect",
+          }),
+        ]),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("turns malformed typed spec declarations into integrity findings", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-typed-bad-"));
     try {
