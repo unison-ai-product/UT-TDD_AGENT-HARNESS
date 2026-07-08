@@ -52,6 +52,7 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
   it("charter は layer=L0 で通り、L0 以外は fail (§1.3 / §2.1.1)", () => {
     const ok = frontmatterSchema.safeParse(
       implBase({
+        plan_id: "PLAN-L0-99-charter",
         kind: "charter",
         layer: "L0",
         parent_design: undefined,
@@ -111,6 +112,54 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
           plan_id: "PLAN-L5-99-research",
           kind: "research",
           layer: "L5",
+          parent_design: undefined,
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it("kind=verify accepts only right-arm layers and stays out of cross/workflow kinds", () => {
+    expect(
+      frontmatterSchema.safeParse(
+        implBase({
+          plan_id: "PLAN-L9-99-system-verification",
+          kind: "verify",
+          layer: "L9",
+          parent_design: undefined,
+          route_mode: "verify",
+        }),
+      ).success,
+    ).toBe(true);
+    expect(
+      frontmatterSchema.safeParse(
+        implBase({
+          plan_id: "PLAN-L7-99-unit-implementation",
+          kind: "verify",
+          layer: "L7",
+          parent_design: undefined,
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      frontmatterSchema.safeParse(
+        implBase({
+          plan_id: "PLAN-L9-99-system-verification",
+          kind: "verify",
+          layer: "cross",
+          parent_design: undefined,
+          workflow_phase: "S2",
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it("plan_id L-token must match layer", () => {
+    expect(
+      frontmatterSchema.safeParse(
+        implBase({
+          plan_id: "PLAN-L8-99-system-verification",
+          kind: "verify",
+          layer: "L9",
           parent_design: undefined,
         }),
       ).success,

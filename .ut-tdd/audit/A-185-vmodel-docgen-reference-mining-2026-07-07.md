@@ -123,3 +123,40 @@ feature-gap)。セキュリティは既に A-174 F-4 で routing 済のため再
 
 本 doc は Recovery/Add-feature/Refactor PLAN を自動起票しない。routeable candidate を記録するのみで、
 起票は人間承認 + 各 mode の exit 契約充足を要する (recovery.md / add-feature.md)。
+
+## §E ZIP 再検証 (2026-07-08、PO 添付原本確認)
+
+PO 添付の `Vモデル設計ドキュメント.zip` を一時展開し、A-185 の抽出が原本と整合しているか再確認した。
+展開先は `%TEMP%\ut-tdd-vmodel-docgen-zip-audit\vmodel-docgen`。ZIP は git 管理対象にしない。
+
+### 原本構成
+
+- `docs/*.yaml`: 59 件。
+- `templates/*.yaml`: 58 件。
+- `build/*.xlsx`: 118 件。
+- 右肺/検証系の主要ソースは `06_単体テスト設計書.yaml` / `07_結合テスト設計書.yaml` /
+  `08_総合テスト設計書.yaml` / `09_受入テスト設計書.yaml` / `12_テスト計画書.yaml` /
+  `28_検証設計書.yaml` / `49_AI成果物検証設計.yaml` / `51_画面検証(UIテスト)設計.yaml` /
+  `53_PoC検証設計書.yaml` / `traceability.yaml` / `catalog.yaml`。
+
+### 抽出妥当性
+
+A-185 の中核所見「UT-TDD は層別 test-design は持つが、上位の `12_テスト計画書` と
+`28_検証設計書` に相当する右肺統制 slot が不足」は原本と一致する。原本 `catalog.yaml` は
+`test_plan` / `ut` / `it` / `st` / `at` に加え、`verification` / `test_tech` /
+`test_data` / `coverage_crit` / `contract_test` / `bdd` / `ai_verification` / `ui_test` /
+`poc` を test/verification 系成果物として持つ。したがって RECOVERY-10 の「右肺 = ③テスト設計 +
+検証戦略 + 検証設計」への抽出は妥当。
+
+### 原本ツール実行結果
+
+`PYTHONIOENCODING=utf-8` を指定して原本ツールを実行した。
+
+- `python tools/build.py validate`: 定義ID 83 / 参照ID 88、未定義参照なし、未参照定義なし。
+- `python tools/build.py check`: 重複定義 8 件、循環依存 2 件を検出し
+  `build/00_整合性チェック_見本.xlsx` を生成。
+- `python tools/build.py coverage`: 総合 92.7% (作成済102 / 未作成8 / 対象外1)。
+- `python tools/build.py deps`: 依存エッジ 46 件を抽出し `build/00_設計間依存関係_見本.xlsx` を生成。
+
+`deps --graph` / `deps --focus 28` はローカル Python 環境に `matplotlib` が無く未実行
+(`requirements.txt` には `matplotlib>=3.6` が記載)。これは ZIP 欠損ではなく実行環境依存。

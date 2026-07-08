@@ -171,6 +171,7 @@ const ALLOWED_LAYER_BY_KIND: Record<string, readonly string[]> = {
   retrofit: ["L7"],
   troubleshoot: ["L7"],
   research: ["L1", "L2", "L3", "L4"],
+  verify: ["L8", "L9", "L10", "L11", "L12", "L13", "L14"],
 };
 
 /**
@@ -250,6 +251,14 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
       code: custom,
       path: ["plan_id"],
       message: `plan_id token=${driveTok} は kind=${DRIVE_TOKEN_TO_KIND[driveTok]} のみ (現 kind=${fm.kind}、§1.10 A)`,
+    });
+  }
+  const layerTok = fm.plan_id.match(/^PLAN-(L(?:[0-9]|1[0-4]))-/)?.[1];
+  if (layerTok && fm.layer && fm.layer !== layerTok) {
+    ctx.addIssue({
+      code: custom,
+      path: ["layer"],
+      message: `plan_id token=${layerTok} は layer=${layerTok} のみ (現 layer=${fm.layer}、§1.10 A)`,
     });
   }
 

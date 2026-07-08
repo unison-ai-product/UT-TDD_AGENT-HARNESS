@@ -239,6 +239,7 @@ function kindLayerViolations(raw: Record<string, unknown>): string[] {
   const designLayers = new Set(["L1", "L2", "L3", "L4", "L5", "L6"]);
   const addDesignLayers = new Set(["L3", "L4", "L5", "L6"]);
   const researchLayers = new Set(["L1", "L2", "L3", "L4"]);
+  const verifyLayers = new Set(["L8", "L9", "L10", "L11", "L12", "L13", "L14"]);
   const l7Only = new Set(["impl", "add-impl", "refactor", "retrofit", "troubleshoot"]);
 
   if (kind === "design" && !designLayers.has(layer)) return [`design:${layer}:expected_L1-L6`];
@@ -248,6 +249,9 @@ function kindLayerViolations(raw: Record<string, unknown>): string[] {
   if (l7Only.has(kind) && layer !== "L7") return [`${kind}:${layer}:expected_L7`];
   if (kind === "research" && !researchLayers.has(layer)) {
     return [`research:${layer}:expected_L1-L4`];
+  }
+  if (kind === "verify" && !verifyLayers.has(layer)) {
+    return [`verify:${layer}:expected_L8-L14`];
   }
   return [];
 }

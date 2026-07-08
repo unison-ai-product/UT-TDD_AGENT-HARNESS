@@ -193,7 +193,7 @@ routing 評価は次の 3 段で行い、fall-through の終着は常に Forward
 | step | 処理 | 判定 |
 |---|---|---|
 | (i) 失敗系 signal 評価 | 入力 signal を L4 §3.2 失敗 routing **全順序 (Incident > Recovery > Reverse > Refactor)** で評価。複数競合時は上位を採る。token 一致は最長一致 (`regression_prod` を汎用 `regression` に吸わせない) | 一致 → 当該 mode + `forward_insufficient_reason` = 一致 signal/条件 |
-| (ii) 能動 mode 固有 signal 評価 | Retrofit / Add-feature / Scrum / Research / Discovery **+ 拡張 2 mode (design-bottomup / version-up、C.2 暫定 band)** の固有 signal (L4 §3.1 入口 signal 列 + `ROUTE_SIGNAL_MAP` の拡張 token) を評価 | 一致 → 当該 mode + `forward_insufficient_reason` = 一致 signal/条件 (拡張 2 mode の signal が fall-through で Forward に落ちることはない) |
+| (ii) 能動 mode 固有 signal 評価 | Retrofit / Add-feature / Scrum / Research / Discovery **+ 拡張 3 mode (design-bottomup / version-up / verify、C.2 暫定 band)** の固有 signal (L4 §3.1 入口 signal 列 + `ROUTE_SIGNAL_MAP` の拡張 token) を評価 | 一致 → 当該 mode + `forward_insufficient_reason` = 一致 signal/条件 (拡張 3 mode の signal が fall-through で Forward に落ちることはない) |
 | (iii) fall-through | (i)(ii) いずれも不一致 (未知 token 含む) | **Forward** を返す。未知 token は warn 記録 |
 
 - **非 Forward 決定の invariant**: `forward_insufficient_reason` (トリガ signal + 「Forward では解決できない」条件) 無しに非 Forward の filing target を生成しない。
@@ -217,8 +217,9 @@ routing 評価は次の 3 段で行い、fall-through の終着は常に Forward
 | **research** | research | L1-L4 | — | ADR 記録 + Forward 接続先 (L1 or L4) 明記 |
 | **design-bottomup** | add-design / add-impl | add-design→L2-L6 (screen 系 sub_doc) / add-impl→L7 | L2 screen 系 sub_doc | add-feature と同型 (Reverse back-fill) |
 | **version-up** | add-design | L3-L6 | — | 後送要件の deferral 台帳記録 (着手時に add-feature 決定表へ合流) |
+| **verify** | verify | L8-L14 | — | 検証 evidence + defect_routing。失敗・品質所見は Forward / Reverse / Refactor / Recovery へ routing |
 
-- `design-bottomup` / `version-up` は route-map 実装 (`ROUTE_SIGNAL_MAP`) 由来の拡張 mode。L4 §3.1 表への外部設計 back-fill は L4 add-design carry とし、本表では add-feature 同型の暫定 band で fail-close する (kind 無制約に戻さない)。**本表の「single source = L4 §3.1」の正本性はこの L4 back-fill 完了で完成する** — それまで拡張 2 mode の band は暫定であり、L4 との一致検証 (U-ROUTE-R1) の照合対象は L4 §3.1 掲載 mode に限る (L5 が外部設計正本を先行拡張したままにしない = altitude/SSoT 規律)。
+- `design-bottomup` / `version-up` / `verify` は route-map 実装 (`ROUTE_SIGNAL_MAP`) 由来の拡張 mode。L4 §3.1 表への外部設計 back-fill は L4 add-design carry とし、本表では各 mode の暫定 band で fail-close する (kind 無制約に戻さない)。**本表の「single source = L4 §3.1」の正本性はこの L4 back-fill 完了で完成する** — それまで拡張 3 mode の band は暫定であり、L4 との一致検証 (U-ROUTE-R1) の照合対象は L4 §3.1 掲載 mode に限る (L5 が外部設計正本を先行拡張したままにしない = altitude/SSoT 規律)。
 - **spine 閉域後の intake 制約 (PO 2026-07-07)**: `forward` 行の plain `design` / `impl` 起票は **Forward spine の初回降下 (未閉領域) にのみ存在し得た経路**である。本 harness は既に L14 到達・`forward-convergence` 稼働済みであり、**現段階で plain `kind=impl` の L7 新規起票はそもそも成立しない (常に fail-close)**。新規の実装作業は必ず駆動モデル経由 — **add-feature (add-design→add-impl + Reverse pairing) / incident (troubleshoot) / refactor / retrofit** — で入り、出口の Forward 合流義務を負う。plain design/impl による spine 再開を許すと Forward が永遠に閉じない (完備性 invariant の帰結: 閉じた完備集合への変更は、合流義務を持つ駆動モデル経由でのみ入る)。
 - **PLAN plane の区別**: PLAN の layer は「その層の成果物をどう作るか」の作業計画 plane であり、設計内容そのものの plane とは別 — L7 PLAN は実装の手順計画なので設計の成立が前提 (C.3)、L6 PLAN は L6 設計書の作成計画である。既存の plain `kind=impl` PLAN 群 (route-mode-kind debt 台帳) は現段階ではカテゴリ不成立であり、着手時の add-impl + Reverse pairing への昇格 (C.4) が唯一の正規化経路。
 

@@ -750,6 +750,12 @@ dependencies:
         subDoc: null,
         extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
       }),
+      planDoc("PLAN-L7-198-verify-left-arm", {
+        kind: "verify",
+        layer: "L7",
+        subDoc: null,
+        extra: "created: 2026-07-07\nupdated: 2026-07-07\n",
+      }),
     ];
 
     const violations = analyzePlanGovernance(docs).violations.filter(
@@ -762,6 +768,7 @@ dependencies:
       "add-design:L7:expected_L3-L6",
       "add-impl:L6:expected_L7",
       "research:L7:expected_L1-L4",
+      "verify:L7:expected_L8-L14",
     ]);
   });
 
@@ -796,6 +803,13 @@ dependencies:
         layer: "L3",
         subDoc: null,
         extra: "created: 2026-06-23\nupdated: 2026-06-23\n",
+      }),
+      planDoc("PLAN-L9-198-verify-ok", {
+        kind: "verify",
+        layer: "L9",
+        subDoc: null,
+        extra:
+          "route_signal: verification_plan\nroute_mode: verify\ncreated: 2026-07-07\nupdated: 2026-07-07\n",
       }),
       planDoc("PLAN-M-198-master-hub", {
         kind: "design",
@@ -942,7 +956,7 @@ dependencies:
         parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
         extra: "route_mode: add-feature\n",
       }),
-      planDoc("PLAN-L7-902-add-feature-add-design", {
+      planDoc("PLAN-L6-902-add-feature-add-design", {
         kind: "add-design",
         layer: "L6",
         status: "draft",
@@ -954,6 +968,29 @@ dependencies:
     const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
 
     expect(reasons).not.toContain("route_mode_kind_mismatch");
+  });
+
+  it("U-PLANGOV-011v2: route_mode=verify accepts only kind=verify", () => {
+    const docs = [
+      planDoc("PLAN-L9-910-verify-ok", {
+        kind: "verify",
+        layer: "L9",
+        subDoc: null,
+        extra:
+          "route_signal: verification_plan\nroute_mode: verify\ncreated: 2026-07-07\nupdated: 2026-07-07\n",
+      }),
+      planDoc("PLAN-L7-911-verify-wrong-kind", {
+        kind: "add-impl",
+        layer: "L7",
+        subDoc: null,
+        extra:
+          "route_signal: verification_plan\nroute_mode: verify\ncreated: 2026-07-07\nupdated: 2026-07-07\n",
+      }),
+    ];
+
+    const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
+
+    expect(reasons).toContain("route_mode_kind_mismatch");
   });
 
   it("U-PLANGOV-011w: draft debt is exempt while draft and fails closed on start (着手時昇格)", () => {

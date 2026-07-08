@@ -699,7 +699,7 @@ FR-L1-12 (`suggestSkillInjection`) / FR-L1-47 (`recommendSkills`) の公開 CLI 
   bucketRecommendations test。
 - `skills→task` import は一方向 (dependency-drift cycles 0)。oracle: `tests/skill-recommend.test.ts`
   (recommendSkillsForText の flat-list + risk reason)。`workflowModeForKind`: reverse→Reverse / poc→Discovery /
-  refactor→Refactor / troubleshoot→Recovery / それ以外→Forward。
+  refactor→Refactor / troubleshoot→Recovery / verify→Verify / それ以外→Forward。
 ## 2026-06-23 dynamic skill injection materialization 追補 (PLAN-L7-135)
 
 FR-L1-12 / FR-L1-47 は recommendation row だけでは close しない。runtime contract は 2 step とする。

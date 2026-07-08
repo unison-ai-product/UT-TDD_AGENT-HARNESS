@@ -32,6 +32,9 @@ describe("PLAN-L7-243: mode catalog derivation", () => {
     expect(
       workflowModeForPlan({ planId: "PLAN-L7-902-x", routeMode: "version-up", kind: "impl" }),
     ).toBe("Version-up");
+    expect(
+      workflowModeForPlan({ planId: "PLAN-L9-903-x", routeMode: "verify", kind: "verify" }),
+    ).toBe("Verify");
   });
 
   it("legacy plans without route_mode fall back to plan_id prefix then kind", () => {
@@ -43,6 +46,7 @@ describe("PLAN-L7-243: mode catalog derivation", () => {
     expect(workflowModeForPlan({ planId: "PLAN-L7-230-x", kind: "refactor" })).toBe("Refactor");
     expect(workflowModeForPlan({ planId: "PLAN-L7-231-x", kind: "troubleshoot" })).toBe("Incident");
     expect(workflowModeForPlan({ planId: "PLAN-L7-232-x", kind: "retrofit" })).toBe("Retrofit");
+    expect(workflowModeForPlan({ planId: "PLAN-L9-233-x", kind: "verify" })).toBe("Verify");
     expect(workflowModeForPlan({ planId: "PLAN-L4-01-x", kind: "design" })).toBe("Forward");
     expect(workflowModeForPlan({ planId: "PLAN-L7-01-x", kind: "impl" })).toBe("Forward");
   });

@@ -5,6 +5,7 @@ describe("branch-kind-check", () => {
   it("classifies governed branch prefixes", () => {
     expect(classifyBranchKind("feature/issue-spine")).toBe("feature");
     expect(classifyBranchKind("hotfix/recovery")).toBe("hotfix");
+    expect(classifyBranchKind("verify/right-lung")).toBe("verify");
     expect(classifyBranchKind("main")).toBe("none");
   });
 
@@ -58,6 +59,22 @@ describe("branch-kind-check", () => {
 
     expect(result.ok).toBe(true);
     expect(branchKindMessages(result).join("\n")).toContain("warnings=1");
+  });
+
+  it("allows verify branch with kind=verify PLAN", () => {
+    const result = analyzeBranchKind({
+      branch: "verify/right-lung",
+      changedPaths: ["docs/plans/PLAN-L9-121-right-lung-check.md"],
+      plans: [
+        {
+          file: "docs/plans/PLAN-L9-121-right-lung-check.md",
+          plan_id: "PLAN-L9-121",
+          kind: "verify",
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
   });
 
   it("requires PLAN when docs/chore branches touch skill docs", () => {

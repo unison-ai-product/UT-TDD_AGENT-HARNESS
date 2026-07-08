@@ -381,6 +381,28 @@ version-up 未裁定のまま P2 を適用すると 47件が fail-close する�
    再発防止 lint (3 点セット存在 / roadmap 対応 / 粒度一致 / pair_artifact schema)。
 5. **Stage 2 = L7-336 活性化** — 無宣言 fail-open 一般 (src 202 箇所) の warn/fail 化。独立サイクル burn-down。
 
+### 2026-07-08 Codex 実装結果 (verify kind/layer envelope)
+
+残実装 1 の **verify kind/layer envelope** を実装した。`VALID_KINDS` は 13 種となり、`kind=verify` は
+L8-L14 のみ許可、`workflow_phase` / `layer=cross` へは入れない。`PLAN-L<N>-...` の L token と
+frontmatter `layer` の不一致も fail-close にした。
+
+実装面:
+
+- `src/schema/index.ts` / `src/schema/frontmatter.ts`: `verify` kind、L8-L14 layer band、L-token↔layer 整合。
+- `src/plan/lint-policy.ts` / `src/plan/lint.ts`: `route_mode=verify` は `kind=verify` のみ許可し、verify の
+  kind-layer mismatch を `verify:<layer>:expected_L8-L14` として surface。
+- `src/lint/branch-kind.ts`: `verify/*` branch prefix を追加し、`kind=verify` PLAN だけを許可。
+- `src/lint/forward-convergence.ts`: `verify` を Forward 収束 scope に含め、未集約 landed verify PLAN を検知。
+- `src/schema/route-map.ts` / `src/schema/mode-catalog.ts`: `verification_plan` / `quality_assurance` /
+  `test_plan` / `right_lung` / `verify` を Verify mode へ routing。
+- `docs/process/modes/verify.md` と process/design 正本を追加・同期。
+
+外部参照 `Vモデル設計ドキュメント.zip` は 2026-07-08 に再展開して確認済み。A-185 §E に、原本構成、
+`validate` / `check` / `coverage` / `deps` 実行結果、右肺抽出の妥当性を追記した。抽出結論は維持:
+参照カタログは 06-09 層別テスト設計の上位に `12_テスト計画書` + `28_検証設計書` を持つため、
+RECOVERY-10 の「右肺 = ③テスト設計 + 検証戦略 + 検証設計」への抽出は正しい。
+
 ## Step 5: fullback (再発防止 + 上位整合)
 
 - concept §2.3 / requirements への「右肺 = 品質保証 plane」back-fill は Recovery exit 後の Reverse
@@ -399,7 +421,7 @@ version-up 未裁定のまま P2 を適用すると 47件が fail-close する�
 
 - [ ] tl/po 人間サインオフ (Step 2/3) が review_evidence に記録される。
 - [ ] Step 4 の修正手順定義 (影響調査・手順・検証・rollback) が追記されサインオフされてから本体着手。
-- [ ] L8-L14 layer を取れる検証 kind が schema/lint に存在し、`ut-tdd plan lint` が受理する。
+- [x] L8-L14 layer を取れる検証 kind が schema/lint に存在し、`ut-tdd plan lint` が受理する。
 - [ ] 右肺 doc 全件に検証戦略節があり、doctor が fail-close 検査する。
 - [ ] 検証所見→refactor/reverse 発火→Forward 合流の defect_routing が機械記録される。
 - [ ] concept/requirements への back-fill Reverse が起票される (exit 条件)。

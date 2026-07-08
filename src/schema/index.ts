@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 
-/** §1.3 VALID_KINDS (12 種) */
+/** §1.3 VALID_KINDS (13 種) */
 export const VALID_KINDS = [
   "charter",
   "impl",
@@ -19,6 +19,7 @@ export const VALID_KINDS = [
   "recovery",
   "troubleshoot",
   "research",
+  "verify",
 ] as const;
 export const kindSchema = z.enum(VALID_KINDS);
 export type Kind = z.infer<typeof kindSchema>;

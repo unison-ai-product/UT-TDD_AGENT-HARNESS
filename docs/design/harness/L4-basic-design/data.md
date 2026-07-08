@@ -55,11 +55,11 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 > 集約間は **ID 参照のみ** (直接オブジェクト参照禁止、DDD 原則)。例: artifact.pair は plan を ID で参照。
 > **acceptance_criterion / acceptance_test の帰属** (business §10.1.1「FR-* 配下」): AC は FR の受入条件、AT はその検証であり、両者は artifact の **trace 経路 (AC↔AT 被覆、g3-trace R3)** で Artifact 集約に紐づく。FR 自体は artifact (要件 doc) の内容であるため、AC/AT を Artifact 集約の子とする。
 
-## §3 値オブジェクト (Value Object) — 12 種 (`src/schema/index.ts` と 1:1、SubDoc は IMP-026 で zod 化済み)
+## §3 値オブジェクト (Value Object) — 13 種 (`src/schema/index.ts` と 1:1、SubDoc は IMP-026 で zod 化済み)
 
 | 値オブジェクト | 値域 | src/schema |
 |---|---|---|
-| Kind（種別） | charter/impl/design/poc/reverse/add-design/add-impl/refactor/retrofit/recovery/troubleshoot/research の 12 種 | `VALID_KINDS` |
+| Kind（種別） | charter/impl/design/poc/reverse/add-design/add-impl/refactor/retrofit/recovery/troubleshoot/research/verify の 13 種 | `VALID_KINDS` |
 | Layer | L0-L14 + cross (16) | `VALID_LAYERS` |
 | Drive | be/fe/fullstack/db/agent (5、専門職のみ) | `VALID_DRIVES` |
 | WorkflowPhase（工程） | S0-S4 (kind=poc) / R0-R4 (kind=reverse) の 10 種 | `VALID_WORKFLOW_PHASES` |
@@ -109,6 +109,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | Plan | kind=poc → workflow_phase ∈ {S0-S4} ∧ layer=cross | frontmatter superRefine で検証 |
 | Plan | kind=reverse ∧ R4 → forward_routing ∧ promotion_strategy 必須 | frontmatter superRefine |
 | Plan | kind=design ∧ layer∈[L1-L6] → sub_doc 必須 ∧ ∈ VALID_SUB_DOCS[layer] | G.1/G.3 |
+| Plan | kind=verify → layer∈[L8-L14] ∧ workflow_phase 禁止 ∧ `PLAN-L<N>-...` の L token は layer と一致 | frontmatter superRefine / plan governance |
 | Plan | agent_slot.model ∈ allowlist、opus は pdm-* のみ | agent-guard |
 | Workflow | 前工程未完了で後工程着手不可 (V-model 順序、D-03=0) | doctor / plan lint |
 | Evaluation | verified 評価は紐付け (実装/A-番号) 必須 | improvement-backlog |

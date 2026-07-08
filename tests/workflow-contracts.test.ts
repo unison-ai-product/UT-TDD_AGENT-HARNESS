@@ -165,6 +165,7 @@ describe("L7 workflow contract implementations", () => {
   it("implements routing, workflow, FE/design, asset, model, drive, skill, and command contracts", () => {
     expect(routeSignalCandidates("feature_addition")).toEqual(["add-feature"]);
     expect(routeSignalCandidates("version_deferral")).toEqual(["version-up"]);
+    expect(routeSignalCandidates("verification_plan")).toEqual(["verify"]);
     expect(routeSignalToMode({ signal: "reverse gap" }).candidates).toEqual(["reverse"]);
     expect(routeSignalToMode({ signal: "drift", drive: "agent" }).candidates[0]).toBe("reverse");
     expect(routeSignalToMode({ signal: "regression_prod" }).candidates[0]).toBe("incident");

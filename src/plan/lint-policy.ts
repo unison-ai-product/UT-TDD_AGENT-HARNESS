@@ -39,6 +39,7 @@ const ROUTE_MODE_ALLOWED_KINDS: Record<string, readonly string[]> = {
   recovery: ["recovery"],
   refactor: ["refactor"],
   "version-up": ["impl"],
+  verify: ["verify"],
 };
 
 // 2026-07-02 時点で landed 済みの route_mode=add-feature + kind=impl 慣行。
