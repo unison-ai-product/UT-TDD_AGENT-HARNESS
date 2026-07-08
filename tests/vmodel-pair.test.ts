@@ -32,7 +32,9 @@ const doc = (
 describe("vmodel pair-freeze lint (U-VPAIR)", () => {
   it("U-VPAIR-001: parsePairDoc / stripInlineComment — frontmatter 抽出 + inline コメント除去", () => {
     expect(
-      stripInlineComment("docs/test-design/harness/L10-ux-validation-test-design.md  # L2↔L10 pair"),
+      stripInlineComment(
+        "docs/test-design/harness/L10-ux-validation-test-design.md  # L2↔L10 pair",
+      ),
     ).toBe("docs/test-design/harness/L10-ux-validation-test-design.md");
     expect(stripInlineComment("docs/test-design/harness/L9-system-test-design.md")).toBe(
       "docs/test-design/harness/L9-system-test-design.md",
