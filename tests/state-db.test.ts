@@ -83,6 +83,11 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
           table: "detector_route_candidates",
           columns: ["filing_target_id", "severity", "candidate_status"],
         },
+        {
+          name: "idx_refactor_candidates_state",
+          table: "refactor_candidates",
+          columns: ["state", "confidence", "last_seen_at"],
+        },
       ]),
     );
 
@@ -122,6 +127,22 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
         "target_layer",
         "target_sub_doc",
         "candidate_status",
+      ]),
+    );
+    const refactorCandidateColumns = db
+      .prepare("PRAGMA table_info(refactor_candidates)")
+      .all()
+      .map((row) => String(row.name));
+    expect(refactorCandidateColumns).toEqual(
+      expect.arrayContaining([
+        "candidate_key",
+        "kind",
+        "subject",
+        "state",
+        "linked_plan_id",
+        "first_seen_at",
+        "last_seen_at",
+        "decided_at",
       ]),
     );
     expect(missingTables(db)).toEqual([]);

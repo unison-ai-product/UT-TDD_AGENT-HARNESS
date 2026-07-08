@@ -2,9 +2,12 @@ import type { HarnessDb } from "./index";
 import {
   analyzeRefactorCandidates,
   candidateRank,
+  isRefactorCandidateDecisionState,
   loadRefactorCandidateInputs,
   REFACTOR_FEEDBACK_LIMIT,
   type RefactorCandidate,
+  type RefactorCandidateLifecycleState,
+  refactorCandidateKey,
 } from "./refactor-candidates";
 import { detectorRouteCandidateAction } from "./route-candidate-review";
 
@@ -19,11 +22,73 @@ interface FeedbackProjectionDeps {
 
 const refactorCandidateCache = new Map<string, RefactorCandidate[]>();
 
+interface RefactorCandidateLifecycleRecord {
+  state: RefactorCandidateLifecycleState;
+  linked_plan_id: string;
+  first_seen_at: string;
+  decided_at: string;
+}
+
 function signalSeverity(status: unknown): string {
   const normalized = String(status ?? "warn").toLowerCase();
   if (normalized === "fail" || normalized === "error") return normalized;
   if (normalized === "warn") return "warn";
   return "info";
+}
+
+function canReadLifecycle(db: HarnessDb): boolean {
+  return typeof (db as { prepare?: unknown }).prepare === "function";
+}
+
+function loadRefactorCandidateLifecycle(
+  db: HarnessDb,
+): Map<string, RefactorCandidateLifecycleRecord> {
+  if (!canReadLifecycle(db)) return new Map();
+  const rows = db
+    .prepare(
+      `SELECT candidate_key, state, linked_plan_id, first_seen_at, decided_at
+       FROM refactor_candidates`,
+    )
+    .all();
+  return new Map(
+    rows.map((row) => [
+      String(row.candidate_key ?? ""),
+      {
+        state: String(row.state ?? "open") as RefactorCandidateLifecycleState,
+        linked_plan_id: String(row.linked_plan_id ?? ""),
+        first_seen_at: String(row.first_seen_at ?? ""),
+        decided_at: String(row.decided_at ?? ""),
+      },
+    ]),
+  );
+}
+
+export function decideRefactorCandidate(
+  db: HarnessDb,
+  input: {
+    candidate_key: string;
+    state: Exclude<RefactorCandidateLifecycleState, "open">;
+    decided_at: string;
+    linked_plan_id?: string;
+  },
+): { ok: boolean; findings: string[] } {
+  const findings: string[] = [];
+  if (!input.candidate_key) findings.push("candidate_key is required");
+  if (input.state !== "rejected" && !input.linked_plan_id) {
+    findings.push("linked_plan_id is required for accepted or implemented candidates");
+  }
+  if (!input.decided_at) findings.push("decided_at is required");
+  if (findings.length > 0) return { ok: false, findings };
+  db.prepare(
+    `UPDATE refactor_candidates
+     SET state = ?, linked_plan_id = ?, decided_at = ?
+     WHERE candidate_key = ?`,
+  ).run(input.state, input.linked_plan_id ?? "", input.decided_at, input.candidate_key);
+  const updated = db
+    .prepare("SELECT candidate_key FROM refactor_candidates WHERE candidate_key = ? AND state = ?")
+    .get(input.candidate_key, input.state);
+  if (!updated) return { ok: false, findings: ["candidate not found"] };
+  return { ok: true, findings: [] };
 }
 
 export function projectRefactorCandidateSignals(
@@ -35,6 +100,7 @@ export function projectRefactorCandidateSignals(
   const cached = refactorCandidateCache.get(repoRoot);
   const candidates = cached ?? analyzeRefactorCandidates(loadRefactorCandidateInputs(repoRoot));
   refactorCandidateCache.set(repoRoot, candidates);
+  const lifecycle = loadRefactorCandidateLifecycle(db);
   const feedbackSubjects = new Set(
     candidates
       .filter((candidate) => candidate.confidence === "high")
@@ -43,11 +109,36 @@ export function projectRefactorCandidateSignals(
       .map((candidate) => `${candidate.kind}:${candidate.subject}`),
   );
   for (const candidate of candidates) {
+    const candidateKey = refactorCandidateKey(candidate);
+    const existing = lifecycle.get(candidateKey);
+    const state =
+      existing && isRefactorCandidateDecisionState(existing.state) ? existing.state : "open";
+    const linkedPlanId = existing?.linked_plan_id ?? "";
+    deps.recordProjectionEvent(db, {
+      table: "refactor_candidates",
+      id: candidateKey,
+      row: {
+        candidate_key: candidateKey,
+        kind: candidate.kind,
+        path: candidate.path,
+        subject: candidate.subject,
+        confidence: candidate.confidence,
+        score: candidate.score,
+        threshold: candidate.threshold,
+        state,
+        linked_plan_id: linkedPlanId,
+        reason: candidate.reason,
+        first_seen_at: existing?.first_seen_at || computedAt,
+        last_seen_at: computedAt,
+        decided_at: existing?.decided_at ?? "",
+      },
+    });
     const signalId = deps.stableId(
       "refactor-candidate",
       `${candidate.kind}:${candidate.subject}:${candidate.reason}`,
     );
-    const shouldFeedback = feedbackSubjects.has(`${candidate.kind}:${candidate.subject}`);
+    const shouldFeedback =
+      state === "open" && feedbackSubjects.has(`${candidate.kind}:${candidate.subject}`);
     deps.recordProjectionEvent(db, {
       table: "quality_signals",
       id: signalId,

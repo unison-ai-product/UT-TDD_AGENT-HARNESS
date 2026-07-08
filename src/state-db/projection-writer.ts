@@ -1095,8 +1095,11 @@ function projectVerificationBandExecution(db: HarnessDb): void {
   }
 }
 
+const REBUILD_PERSISTENT_TABLES = new Set(["refactor_candidates"]);
+
 function truncateProjectionTables(db: HarnessDb): void {
   for (const table of [...HARNESS_DB_TABLES].reverse()) {
+    if (REBUILD_PERSISTENT_TABLES.has(table.name)) continue;
     db.prepare(`DELETE FROM ${table.name}`).run();
   }
 }

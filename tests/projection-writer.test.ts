@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { findReference } from "../src/search/index";
 import { deriveArtifactProgressDecision } from "../src/state-db/artifact-progress-decision";
 import {
+  decideRefactorCandidate,
   projectFeedbackEvents,
   projectIssueApprovalGuardrails,
   projectIssueQueue,
@@ -25,7 +26,10 @@ import {
   REFACTOR_CANDIDATE_THRESHOLDS,
   REFACTOR_POLICY_TERMS,
 } from "../src/state-db/refactor-candidate-policy";
-import { analyzeRefactorCandidates } from "../src/state-db/refactor-candidates";
+import {
+  analyzeRefactorCandidates,
+  refactorCandidateKey,
+} from "../src/state-db/refactor-candidates";
 import { projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore } from "../src/state-db/runtime-projections";
 import { projectSkillMetrics as projectSkillMetricsCore } from "../src/state-db/skill-projections";
 
@@ -452,6 +456,88 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
           }),
         ]),
       );
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps refactor candidate lifecycle decisions across rebuilds", () => {
+    const repoRoot = join(tmpdir(), `ut-tdd-refactor-lifecycle-${randomUUID()}`);
+    try {
+      mkdirSync(join(repoRoot, "src"), { recursive: true });
+      writeFileSync(
+        join(repoRoot, "src", "fixture.ts"),
+        Array.from({ length: 950 }, (_, i) => `function check${i}() {\n  return ${i};\n}`).join(
+          "\n",
+        ),
+      );
+
+      const db = openHarnessDb(":memory:", { repoRoot });
+      try {
+        const input = {
+          repoRoot,
+          db,
+          relationGraph: { nodes: [], edges: [], verificationProfiles: [], findings: [] },
+          documentExports: {
+            document_export_runs: [],
+            document_export_datasets: [],
+            document_export_artifacts: [],
+            findings: [],
+            actionsTaken: [],
+            ok: true,
+          },
+          verificationEvidence: {
+            verification_profiles: [],
+            verification_recommendations: [],
+            mcp_server_runs: [],
+            external_tool_findings: [],
+            findings: [],
+            ok: true,
+          },
+        };
+        expect(rebuildHarnessDb(input).ok).toBe(true);
+
+        const detected = analyzeRefactorCandidates([
+          {
+            path: "src/fixture.ts",
+            content: Array.from(
+              { length: 950 },
+              (_, i) => `function check${i}() {\n  return ${i};\n}`,
+            ).join("\n"),
+          },
+        ]).find((candidate) => candidate.kind === "split-module");
+        expect(detected).toBeDefined();
+        if (!detected) throw new Error("split-module candidate was not detected");
+        const candidateKey = refactorCandidateKey(detected);
+        const initial = db
+          .prepare("SELECT state, linked_plan_id FROM refactor_candidates WHERE candidate_key = ?")
+          .get(candidateKey);
+        expect(initial).toMatchObject({ state: "open", linked_plan_id: "" });
+
+        expect(
+          decideRefactorCandidate(db, {
+            candidate_key: candidateKey,
+            state: "rejected",
+            decided_at: "2026-07-08T20:00:00.000Z",
+          }).ok,
+        ).toBe(true);
+        expect(rebuildHarnessDb(input).ok).toBe(true);
+
+        const preserved = db
+          .prepare("SELECT state, linked_plan_id FROM refactor_candidates WHERE candidate_key = ?")
+          .get(candidateKey);
+        expect(preserved).toMatchObject({ state: "rejected", linked_plan_id: "" });
+        const signal = db
+          .prepare("SELECT status FROM quality_signals WHERE source = ? AND subject_id = ?")
+          .get("refactor-candidate-detector", "src/fixture.ts");
+        expect(signal).toMatchObject({ status: "pass" });
+        const feedback = db
+          .prepare("SELECT COUNT(*) AS n FROM feedback_events WHERE signal_type = ?")
+          .get("refactor_candidate:split-module");
+        expect(Number(feedback?.n ?? 0)).toBe(0);
+      } finally {
+        db.close();
+      }
     } finally {
       rmSync(repoRoot, { recursive: true, force: true });
     }

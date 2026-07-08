@@ -25,6 +25,8 @@ export interface RefactorCandidate {
   reason: string;
 }
 
+export type RefactorCandidateLifecycleState = "open" | "accepted" | "rejected" | "implemented";
+
 export const REFACTOR_FEEDBACK_LIMIT = 20;
 
 const {
@@ -40,6 +42,18 @@ const {
 
 function stableHash(value: string): string {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
+
+export function refactorCandidateKey(
+  candidate: Pick<RefactorCandidate, "kind" | "subject">,
+): string {
+  return `refactor-candidate:${stableHash(`${candidate.kind}:${candidate.subject}`).slice(7, 23)}`;
+}
+
+export function isRefactorCandidateDecisionState(
+  value: string,
+): value is Exclude<RefactorCandidateLifecycleState, "open"> {
+  return value === "accepted" || value === "rejected" || value === "implemented";
 }
 
 function sourceFiles(dir: string): string[] {

@@ -537,6 +537,14 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
   (`split-module` / `extract-helper` / `deduplicate-function` / `externalize-literal`) の検出、`candidateRank`
   順序、`projectRefactorCandidateSignals` による `quality_signals`/`feedback_events` projection、空入力で
   candidate を捏造しないこと、を green `it` で被覆 (PLAN-L7-147 AC「4 kind すべてを純 detector test が被覆」)。
+
+### §1.23b Refactor candidate lifecycle oracle (PLAN-L7-367)
+
+| U-ID | 対象 | oracle |
+|---|---|---|
+| U-REFACTOR-LIFE-001 | `migrate` / schema registry | `refactor_candidates` table と `idx_refactor_candidates_state` が作成される。 |
+| U-REFACTOR-LIFE-002 | `projectRefactorCandidateSignals` | detector output が `refactor_candidates.state=open` として登録され、既存 `quality_signals` projection も維持される。 |
+| U-REFACTOR-LIFE-003 | `decideRefactorCandidate` + `rebuildHarnessDb` | `rejected` にした candidate は次回 rebuild でも `open` に戻らず、feedback event が再発火しない。 |
 - 関連 detector 後続 (`PLAN-L7-148`/`150`/`151`/`152`/`153`/`158`) は本 descent を基点とする (module extraction /
   closure sweep / precision+policy extraction)。
 

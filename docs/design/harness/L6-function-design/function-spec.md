@@ -37,7 +37,9 @@ v2_import: docs/migration/v2-import-ledger.md
 | `projectRuntimeModelTelemetryForDoctor` | `(db: HarnessDb) => void` | doctor が in-memory harness DB を rebuild 済みで、runtime transcript directories は `UT_TDD_CLAUDE_SESSIONS_DIR` / `UT_TDD_CODEX_SESSIONS_DIR` または OS default から読む。 | provider を起動せず既存 Claude/Codex JSONL logs を scan し、token/cost backed `model_runs` rows を telemetry provenance 評価用に overlay する。deterministic `db rebuild` は source-only のままにする。 |
 | `evaluateGreenDefinition` | `(input: GreenDefinitionInput, deps: HarnessDbDeps) => GreenDefinitionResult` | changed artifact kind に対する profile と required command kinds が既知である。 | computed green time、missing commands、non-zero exits、DB projection refs を返す。confirmed review evidence は result が green かつ `computed_green_at <= reviewed_at` の場合だけ有効。 |
 | `computeUtHistorySignals` | `(input: UtHistoryInput, deps: HarnessDbDeps) => QualitySignal[]` | test run/result rows は正規化済みで、分母 0 は明示される。 | oracle coverage、plan green rate、flake score、duration regression、green-definition compliance を算出する。non-green signals は `findings` に合流する。 |
-| `analyzeRefactorCandidates` | `(inputs: RefactorCandidateInput[]) => RefactorCandidate[]` (`candidateRank` 順、入力は `loadRefactorCandidateInputs(repoRoot)` 由来) | source module/function inputs は正規化済みで、構造 threshold (module size、body length、duplicate-body hash、literal repeat count) は明示される。 | behavior-invariant な 4 種 refactor candidate (`split-module` / `extract-helper` / `deduplicate-function` / `externalize-literal`) を deterministic に検出し、`quality_signals` (`metric=refactor_candidate:<kind>`) と `feedback_events` surface へ project する。既存 tables への additive projection で schema は変えない。空/0 入力は明示的に扱い、候補を捏造しない (PLAN-L7-147 / Reverse back-fill PLAN-REVERSE-141)。 |
+| `analyzeRefactorCandidates` | `(inputs: RefactorCandidateInput[]) => RefactorCandidate[]` (`candidateRank` 順、入力は `loadRefactorCandidateInputs(repoRoot)` 由来) | source module/function inputs は正規化済みで、構造 threshold (module size、body length、duplicate-body hash、literal repeat count) は明示される。 | behavior-invariant な 5 種 refactor candidate (`split-module` / `extract-helper` / `deduplicate-function` / `externalize-literal` / `externalize-policy`) を deterministic に検出し、`quality_signals` (`metric=refactor_candidate:<kind>`) と `feedback_events` surface へ project する。空/0 入力は明示的に扱い、候補を捏造しない (PLAN-L7-147 / Reverse back-fill PLAN-REVERSE-141)。 |
+| `projectRefactorCandidateSignals` | `(repoRoot, db, deps) => void` | `analyzeRefactorCandidates` の出力と既存 `refactor_candidates` row を読める。 | candidate ごとに安定 `candidate_key` を作り、`refactor_candidates` へ lifecycle row を upsert する。既存 state が `accepted` / `rejected` / `implemented` の場合は rebuild で `open` に戻さない。`quality_signals.status=warn` と feedback 発火は `state=open` かつ high-confidence 上位候補に限定する。 |
+| `decideRefactorCandidate` | `(db, { candidate_key, state, decided_at, linked_plan_id? }) => ContractResult-like` | candidate row が存在する。`accepted` / `implemented` は `linked_plan_id` を持つ。 | triage decision を永続化する。`rejected` は linked plan を要求しない。存在しない candidate や不足した decision input は fail-close する。 |
 
 unit oracle families:
 
@@ -45,6 +47,8 @@ unit oracle families:
 - U-FR-L1-12 / U-FR-L1-46 / U-FR-L1-47 は skill recommendation、roster capability、skill metric inputs を覆う。
 - U-FR-L1-33 / U-FR-L1-34 / U-FR-L1-48 / U-FR-L1-49 は search/reference reduction、command cataloging、asset drift detection を覆う。
 - `analyzeRefactorCandidates` (refactor candidate detector) は同じ projection oracle family (U-FR-L1-06/19/20/40/41) 配下の additive `quality_signals` / `feedback_events` projection である。4 種 detection は `tests/projection-writer.test.ts` で覆う (L7 descent: `docs/test-design/harness/L7-unit-test-design.md`)。
+- `projectRefactorCandidateSignals` の lifecycle oracle は `refactor_candidates` の永続 state を対象にする。
+  `rejected` / `implemented` が rebuild で再 open 化しないことを `tests/projection-writer.test.ts` で固定する。
 
 ### 2026-06-23 feedback surface taxonomy 追補
 

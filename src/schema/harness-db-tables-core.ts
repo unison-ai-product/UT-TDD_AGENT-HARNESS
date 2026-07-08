@@ -206,6 +206,24 @@ export const HARNESS_DB_CORE_TABLES: TableDef[] = [
     ],
   },
   {
+    name: "refactor_candidates",
+    columns: [
+      pk("candidate_key"),
+      col("kind"),
+      col("path"),
+      col("subject"),
+      col("confidence"),
+      col("score", "REAL"),
+      col("threshold", "REAL"),
+      col("state"),
+      col("linked_plan_id"),
+      col("reason"),
+      col("first_seen_at"),
+      col("last_seen_at"),
+      col("decided_at"),
+    ],
+  },
+  {
     name: "test_runs",
     columns: [
       pk("test_run_id"),

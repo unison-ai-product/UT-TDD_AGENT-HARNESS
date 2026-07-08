@@ -279,6 +279,36 @@ DB が保存するのは ID、reason、score、redacted summary のみにする�
 - すべての non-green lint/doctor/vmodel/gate result は `findings` と optional `quality_signals` で表現できる。
 - `search_index` は docs/state/logs から rebuild 可能であり、authoritative state を変更せず delete/rebuild できる。
 
+### 9.3.1 リファクタ候補 lifecycle 投影
+
+`refactor_candidates` は ZIP108 の Refactor 候補を検出だけで終わらせず、triage state を保持する
+永続 lifecycle table である。`quality_signals` は rebuild 可能な signal projection のまま残すが、
+`refactor_candidates` は `rebuildHarnessDb` の truncate 対象から外し、`accepted` / `rejected` /
+`implemented` の判断を次回 rebuild でも保持する。
+
+| table | 主キー | columns | 目的 |
+|---|---|---|---|
+| `refactor_candidates` | `candidate_key` | `kind`, `path`, `subject`, `confidence`, `score`, `threshold`, `state`, `linked_plan_id`, `reason`, `first_seen_at`, `last_seen_at`, `decided_at` | detector output の候補 identity と triage state を保持し、false-positive や対応済み候補の再発火を防ぐ。 |
+
+State semantics は次の通り。
+
+- `open`: detector が現在も検出しており、まだ triage されていない。
+- `accepted`: Refactor PLAN へ進める判断済み。`linked_plan_id` が必須。
+- `rejected`: false-positive または現時点で対応しない判断済み。再検出されても `open` に戻さない。
+- `implemented`: 対応済み。`linked_plan_id` が必須。
+
+必要 index:
+
+- `idx_refactor_candidates_state(state, confidence, last_seen_at)`.
+- `idx_refactor_candidates_plan(linked_plan_id, state)`.
+
+不変条件:
+
+- DB は projection であり authoring source ではない。`refactor_candidates` は triage state だけを保持し、
+  Refactor PLAN 本文や設計差分を生成・承認しない。
+- `quality_signals.status=warn` と `feedback_events` は `state=open` の high-confidence 候補だけに限定する。
+- `accepted` / `rejected` / `implemented` は rebuild で上書きしない。
+
 ### §9.4 UT evidence history projection の定義 (A-122 / IMP-109)
 
 Phase 2 close review では、DB design が workflow、guardrail、skill、quality signal を既に project できる一方で、UT-specific feedback question にはまだ答えられないことが判明した。Phase 4 DB implementation 開始前に、以下の projection table を追加する。これらは derived data のままであり、authoring source は test file、PLAN artifact、vitest/Bun output、CI log、`.ut-tdd/` evidence とする。

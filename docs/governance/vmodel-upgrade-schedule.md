@@ -50,6 +50,7 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L7-393-vmodel-l2-freeze-l5-verification-gate | L7 |  | L6 | PLAN-L6-48-vmodel-l2-freeze-l5-verification-design | U13a-impl: L2/L5 forward freeze contract を doctor gate と unit oracle へ接続 | green | confirmed |  |
 | PLAN-L6-49-refactor-and-qa-release-gates | L6 | function-spec | L7 | PLAN-L7-393-vmodel-l2-freeze-l5-verification-gate | U13b: 108リファクタ等価性テスト、109 QA Go/No-GoをRefactor/Accept/Release gateへ翻訳 | green | confirmed |  |
 | PLAN-L7-394-refactor-qa-release-contract-gate | L7 |  | L6 | PLAN-L6-49-refactor-and-qa-release-gates | U13b-impl: refactor / QA release contract を doctor gate と unit oracle へ接続 | green | confirmed |  |
+| PLAN-L7-367-refactor-candidate-lifecycle | L7 |  | L6 | PLAN-L6-49-refactor-and-qa-release-gates | U13c: Refactor candidate lifecycle を DB 永続 state と rebuild 保持へ接続 | green | confirmed |  |
 
 ## 2. 解釈規則
 

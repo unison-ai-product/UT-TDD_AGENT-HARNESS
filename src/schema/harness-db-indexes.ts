@@ -86,6 +86,16 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     columns: ["source_table", "source_id"],
   },
   {
+    name: "idx_refactor_candidates_state",
+    table: "refactor_candidates",
+    columns: ["state", "confidence", "last_seen_at"],
+  },
+  {
+    name: "idx_refactor_candidates_plan",
+    table: "refactor_candidates",
+    columns: ["linked_plan_id", "state"],
+  },
+  {
     name: "idx_memory_kind_updated",
     table: "memory_entries",
     columns: ["kind", "updated_at"],
