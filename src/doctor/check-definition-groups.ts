@@ -212,9 +212,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("sub-doc-section-structure", () => checkSubDocSectionStructure(deps.repoRoot)),
         full("screen-impl-pair-freeze", () => checkScreenImplPairFreeze(deps.repoRoot)),
         full("verification-groups", () => checkVerificationGroupsResult(deps.repoRoot)),
-        full("forward-freeze-contracts", () =>
-          checkForwardFreezeContractsResult(deps.repoRoot),
-        ),
+        full("forward-freeze-contracts", () => checkForwardFreezeContractsResult(deps.repoRoot)),
       ],
     },
     {

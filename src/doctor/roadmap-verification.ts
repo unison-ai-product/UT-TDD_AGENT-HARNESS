@@ -11,8 +11,8 @@ import {
 } from "../lint/roadmap-registry";
 import { fmValue } from "../lint/shared";
 import {
-  analyzePairFreeze,
   analyzeForwardFreezeContracts,
+  analyzePairFreeze,
   analyzeVerificationGroups,
   forwardFreezeContractMessages,
   loadPairDocs,
@@ -119,7 +119,9 @@ export function checkForwardFreezeContractsResult(repoRoot: string): {
     return { messages: forwardFreezeContractMessages(result), ok: result.ok };
   } catch {
     return {
-      messages: ["forward-freeze-contracts - violation: forward freeze contract lint could not run"],
+      messages: [
+        "forward-freeze-contracts - violation: forward freeze contract lint could not run",
+      ],
       ok: false,
     };
   }
