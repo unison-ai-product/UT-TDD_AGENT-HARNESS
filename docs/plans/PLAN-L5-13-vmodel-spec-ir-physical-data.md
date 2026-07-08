@@ -60,7 +60,7 @@ dependencies:
     - PLAN-L4-18-roadmap-drive-selection-hardening
     - PLAN-L5-08-harness-db-feedback
   blocks:
-    - PLAN-L6-vmodel-spec-ir-contracts
+    - PLAN-L6-39-vmodel-spec-ir-function-contracts
     - PLAN-L7-vmodel-spec-ir-projection
   references:
     - docs/design/harness/L4-basic-design/data.md
@@ -99,6 +99,6 @@ dependencies:
 
 ## 4. 後続 slice
 
-- U3 L6: spec IR loader / projector / detector route candidate の関数契約と U-* oracle を定義する。
+- U3 L6: PLAN-L6-39 で spec IR loader / projector / detector route candidate の関数契約と U-* oracle を定義する。
 - U3 L7: `src/schema/harness-db*` と `src/state-db/projection-writer.ts` に table / projection / tests を追加する。
 - U4: `doctor` / detector / feedback surface が `detector_route_candidates` と FilingTarget SSoT を結合して起票候補を返す。

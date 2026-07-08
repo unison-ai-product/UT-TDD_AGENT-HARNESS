@@ -768,7 +768,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 
 | L6 doc | 機能 | 対応 test ファイル | 判定 |
 |---|---|---|---|
-| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) | tests/plan-lint.test.ts, tests/vmodel-pair.test.ts, tests/agent-guard.test.ts, tests/mode-catalog.test.ts, tests/frontmatter.test.ts (U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し) | covered |
+| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) / routeFiling 契約 / spec IR projection 契約 | tests/plan-lint.test.ts, tests/vmodel-pair.test.ts, tests/agent-guard.test.ts, tests/mode-catalog.test.ts, tests/frontmatter.test.ts (U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し)。後続 U3 L7 で tests/spec-ir-projections.test.ts, tests/projection-writer.test.ts, tests/doctor.test.ts に U-SPECIR を実装する。 | covered + pending U3 L7 |
 | edge-case.md | `@edge-normal/error/boundary/throws` 4 観点 | 各 lint test の `@edge-*` 契約実装先に分散 (専用ファイル無し) | covered |
 | session-log.md | resolveActivePlan/recordEvent/compressPlanDigest/onStop/onSessionStart | tests/session-log.test.ts | covered |
 | forced-stop-feedback.md | detectDanglingTurn/recordForcedStop/classifyFeedback/recordFeedback/scanDanglingStops | tests/forced-stop.test.ts | covered |
@@ -811,6 +811,28 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-ROUTE-R8 | `assertL7HasDesignAncestor(plan, registry)` | `layer=L7` の impl 系 PLAN (`impl`/`add-impl`) は parent 連鎖が設計層 PLAN (L4/L5/L6 の design/add-design) に到達しなければ `l7_cold_intake` で fail-close。到達すれば violation 0。 |
 | U-ROUTE-R9 | `assertL7HasDesignAncestor(plan, registry)` (two-phase intake) | 対の Reverse PLAN が draft でも intake (draft 起票) は許容。confirmed 昇格時は双方 pairing ready (相互参照解決 + Reverse 側 forward_routing 宣言) でなければ fail-close。 |
 | U-ROUTE-R10 | `routeFiling(signal)` (Reverse 出所必須) | `mode=reverse` の FilingTarget は `origin` (origin signal / origin plan_id) を必ず持つ。出所なき standalone reverse は途中導入 (既走プロジェクト onboarding) signal の場合のみ emit され、それ以外は fail-close。`requires_human_approval` は escalation 境界昇格の結果として FilingTarget 自身が保持する。 |
+
+## PLAN-L6-39 Vモデル Spec IR Function Contracts Addendum (2026-07-08)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の `loadSpecIrSources` /
+> `parseSpecDefs` / `parseSpecRelations` / `parseScheduleEntries` / `parseActivationEntries` /
+> `projectSpecIr` / `analyzeSpecIrIntegrity` / `deriveDetectorRouteCandidates` 契約 (PLAN-L6-39)。
+> 物理 table は `docs/design/harness/L5-detailed-design/physical-data.md` §9.9 (PLAN-L5-13)。
+> 実装は後続 add-impl (L7)。
+> **oracle ID 採番規律**: 正式 3 桁 oracle ID (`U-SPECIR-1XX`) は後続 add-impl 着手時に tests への
+> citation と同時に採番する。下表の R 系 ID は本 addendum 内の設計参照用であり、孤児 oracle を作らない。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-SPECIR-R1 | `loadSpecIrSources(input)` | repo-relative root だけを読み、source docs / PLAN / test-design / schedule / activation profile を書き換えない。missing root は warn finding、secret-like / PII-like / raw transcript payload は projection input に載せない。 |
+| U-SPECIR-R2 | `parseSpecDefs(bundle)` | 同一 input から stable `spec_id` / `source_hash` / `section_anchor` を生成する。未知 layer/sub_doc、重複 ID、空 definition は finding 化し、仕様を補完創作しない。 |
+| U-SPECIR-R3 | `parseSpecRelations(bundle, defs)` | relation_kind は allowlist (`defines` / `requires` / `verifies` / `pairs` / `derives` / `supersedes`) のみ許可。orphan relation、self-loop、未知 relation_kind は finding。`dependency_edges` と混同しない。 |
+| U-SPECIR-R4 | `parseScheduleEntries(bundle)` | 工程管理表から deterministic `schedule_entries` draft を返す。date/state 欠落、未解決 plan_id、過去 due 未完了は finding。PLAN status は mutate しない。 |
+| U-SPECIR-R5 | `parseActivationEntries(bundle)` | enabled profile は reason を必須とし、未知 drive/mode または profile 欠落を finding/fail-close 候補にする。暗黙 default で駆動モデルを有効化しない。 |
+| U-SPECIR-R6 | `projectSpecIr(input, db)` | `spec_defs` / `spec_relations` / `schedule_entries` / `activation_entries` / `detector_route_candidates` を idempotent upsert する。同一入力 rebuild 2 回で row counts と IDs が安定し、source docs は rewrite しない。 |
+| U-SPECIR-R7 | `analyzeSpecIrIntegrity(input)` | orphan relation、未知 layer/sub_doc、activation reason 欠落、secret-like evidence/value、raw markdown body 永続化を finding/quality_signal に変換する。parse 失敗を silent skip しない。 |
+| U-SPECIR-R8 | `deriveDetectorRouteCandidates(input)` | finding/spec/schedule/activation を join し、候補を `detector_route_candidates` draft として返す。FilingTarget は創作せず、target snapshot は L4 function §3.2.1 / `routeFiling` SSoT から取得する。 |
+| U-SPECIR-R9 | `deriveDetectorRouteCandidates(input)` (non-ready) | SSoT 不在、unknown route_signal、target_layer/sub_doc mismatch は non-ready finding。起票済み PLAN や FilingTarget 決定済みとして扱わない。 |
 
 **gap 件数: 1 / 21** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
 
