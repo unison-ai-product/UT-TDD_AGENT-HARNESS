@@ -73,6 +73,7 @@ import {
   checkSkillAssignment,
   checkTelemetryClosure,
   checkTrackedCanonical,
+  checkTypedSpecTraceClosure,
   checkVerificationGroupsResult,
   checkVerificationProfile,
   type DoctorDeps,
@@ -528,6 +529,52 @@ describe("runDoctor", () => {
     expect(r.messages.some((m) => m.includes("doctor: g3-trace - OK"))).toBe(true);
   });
 
+  it("surfaces typed spec trace closure as a doctor hard gate", () => {
+    const result = checkTypedSpecTraceClosure(process.cwd());
+    const r = realRepoDoctor();
+
+    expect(result.ok).toBe(true);
+    expect(result.messages[0]).toContain("typed-spec-trace-closure - OK");
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: typed-spec-trace-closure - OK"))).toBe(true);
+  });
+
+  it("fails typed spec trace closure when bidirectional trace or test backlink is missing", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-typed-spec-closure-"));
+    try {
+      mkdirSync(join(root, "docs", "governance"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "governance", "vmodel-typed-spec-definitions.md"),
+        [
+          "# Typed spec bad closure",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-301",
+          "      kind: typed-source",
+          "      traces_to: [VMS-302]",
+          "      tests: [TVMS-301]",
+          "    - id: VMS-302",
+          "      kind: typed-projection",
+          "    - id: TVMS-301",
+          "      kind: unit-oracle",
+          "```",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = checkTypedSpecTraceClosure(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("typed-spec-trace-reverse-missing");
+      expect(result.messages.join("\n")).toContain("typed-spec-test-backlink-missing");
+      expect(result.messages.join("\n")).toContain("typed-spec-test-missing");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("hard-gates PLAN governance once repo frontmatter debt is closed", () => {
     const governance = checkPlanGovernance(process.cwd());
     const r = realRepoDoctor();
@@ -941,6 +988,7 @@ describe("runDoctor", () => {
       ["runtime-portability", checkRuntimePortability(missingRoot)],
       ["db-projection-coverage", checkDbProjectionCoverage(missingRoot)],
       ["db-projection-ingestion", checkDbProjectionIngestion(missingRoot)],
+      ["typed-spec-trace-closure", checkTypedSpecTraceClosure(missingRoot)],
       ["rule-drift", checkRuleDrift(missingRoot)],
       ["gate-confirm", checkGateConfirm(missingRoot)],
       ["plan-dod", checkPlanDod(missingRoot)],

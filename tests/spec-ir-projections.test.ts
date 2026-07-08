@@ -244,9 +244,13 @@ describe("spec IR projections", () => {
           "    - id: VMS-102",
           "      kind: typed-projection",
           "      traces_from: [VMS-101]",
+          "      tests: [TVMS-102]",
           "    - id: TVMS-101",
           "      kind: unit-oracle",
           "      traces_from: [VMS-101]",
+          "    - id: TVMS-102",
+          "      kind: unit-oracle",
+          "      traces_from: [VMS-102]",
           "```",
         ].join("\n"),
       );
@@ -285,6 +289,65 @@ describe("spec IR projections", () => {
             from_spec_id: "TVMS-101",
             to_spec_id: "VMS-101",
             relation_kind: "traces_from",
+          }),
+          expect.objectContaining({
+            from_spec_id: "VMS-102",
+            to_spec_id: "TVMS-102",
+            relation_kind: "tests",
+          }),
+        ]),
+      );
+      expect(projection.findings).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "typed-spec-trace-reverse-missing" }),
+          expect.objectContaining({ kind: "typed-spec-test-backlink-missing" }),
+          expect.objectContaining({ kind: "typed-spec-test-missing" }),
+        ]),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("turns typed spec trace closure gaps into integrity findings", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-typed-closure-"));
+    try {
+      writeGovernanceDoc(
+        root,
+        "vmodel-typed-spec-definitions.md",
+        [
+          "# Typed spec closure bad fixture",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-201",
+          "      kind: typed-source",
+          "      traces_to: [VMS-202]",
+          "      tests: [TVMS-201]",
+          "    - id: VMS-202",
+          "      kind: typed-projection",
+          "    - id: TVMS-201",
+          "      kind: unit-oracle",
+          "```",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-08T00:00:00.000Z");
+
+      expect(projection.findings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "typed-spec-trace-reverse-missing",
+            subject_id: "VMS-201:traces_to:VMS-202",
+          }),
+          expect.objectContaining({
+            kind: "typed-spec-test-backlink-missing",
+            subject_id: "VMS-201:tests:TVMS-201",
+          }),
+          expect.objectContaining({
+            kind: "typed-spec-test-missing",
+            subject_id: "VMS-202",
           }),
         ]),
       );

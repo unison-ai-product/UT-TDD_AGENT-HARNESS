@@ -23,7 +23,11 @@ import {
 import { checkSetupSmoke } from "./setup-smoke";
 
 export type { DoctorOptions } from "./check-registry";
-export { checkDbProjectionCoverage, checkDbProjectionIngestion } from "./db-projection";
+export {
+  checkDbProjectionCoverage,
+  checkDbProjectionIngestion,
+  checkTypedSpecTraceClosure,
+} from "./db-projection";
 export { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression";
 export { checkDocConsistency, checkEntityCoverage, checkFrRegistryAudit } from "./doc-registry";
 export {

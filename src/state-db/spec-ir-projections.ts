@@ -148,6 +148,13 @@ export interface SpecIrProjection {
   findings: SpecIrFindingRow[];
 }
 
+export interface TypedSpecTraceClosureResult {
+  typedSpecCount: number;
+  relationCount: number;
+  findings: SpecIrFindingRow[];
+  ok: boolean;
+}
+
 interface SpecIrProjectionDeps {
   nowIso: () => string;
   recordProjectionEvent: (
@@ -745,6 +752,134 @@ export function joinActivationScheduleReviews(input: {
   });
 }
 
+function isTypedSpecDef(def: SpecDefRow): boolean {
+  return def.section_anchor.startsWith("spec.defines:");
+}
+
+function traceKey(from: string, kind: string, to: string): string {
+  return `${from}\u0000${kind}\u0000${to}`;
+}
+
+function typedSpecFinding(input: {
+  kind: string;
+  subjectId: string;
+  evidencePath: string;
+  severity?: SpecIrFindingRow["severity"];
+}): SpecIrFindingRow {
+  return {
+    finding_id: stableId(`finding:${input.kind}`, input.subjectId),
+    kind: input.kind,
+    severity: input.severity ?? "warn",
+    subject_id: input.subjectId,
+    source: "typed-spec-trace-closure",
+    status: "open",
+    evidence_path: input.evidencePath,
+  };
+}
+
+function requiresTypedSpecTest(kind: string): boolean {
+  const normalized = kind.trim().toLowerCase();
+  if (normalized.includes("oracle") || normalized.includes("test") || normalized.includes("検証")) {
+    return false;
+  }
+  return (
+    normalized.includes("requirement") ||
+    normalized.includes("要件") ||
+    normalized.includes("source") ||
+    normalized.includes("profile") ||
+    normalized.includes("projection") ||
+    normalized.includes("review") ||
+    normalized.includes("charter")
+  );
+}
+
+export function analyzeTypedSpecTraceClosure(input: {
+  defs: SpecDefRow[];
+  relations: SpecRelationRow[];
+}): TypedSpecTraceClosureResult {
+  const typedDefs = input.defs.filter(isTypedSpecDef);
+  const typedIds = new Set(typedDefs.map((def) => def.spec_id));
+  const typedById = new Map(typedDefs.map((def) => [def.spec_id, def]));
+  const typedRelations = input.relations.filter(
+    (relation) => typedIds.has(relation.from_spec_id) || typedIds.has(relation.to_spec_id),
+  );
+  const relationKeys = new Set(
+    typedRelations.map((relation) =>
+      traceKey(relation.from_spec_id, relation.relation_kind, relation.to_spec_id),
+    ),
+  );
+  const testsBySpecId = new Map<string, SpecRelationRow[]>();
+  const findings: SpecIrFindingRow[] = [];
+
+  for (const relation of typedRelations) {
+    if (relation.relation_kind === "tests") {
+      const rows = testsBySpecId.get(relation.from_spec_id) ?? [];
+      rows.push(relation);
+      testsBySpecId.set(relation.from_spec_id, rows);
+    }
+    if (relation.relation_kind === "traces_to") {
+      const reverse = traceKey(relation.to_spec_id, "traces_from", relation.from_spec_id);
+      if (!relationKeys.has(reverse)) {
+        findings.push(
+          typedSpecFinding({
+            kind: "typed-spec-trace-reverse-missing",
+            subjectId: `${relation.from_spec_id}:traces_to:${relation.to_spec_id}`,
+            evidencePath: relation.source,
+          }),
+        );
+      }
+    }
+    if (relation.relation_kind === "traces_from") {
+      const reverse = traceKey(relation.to_spec_id, "traces_to", relation.from_spec_id);
+      const testBacklink = traceKey(relation.to_spec_id, "tests", relation.from_spec_id);
+      if (!relationKeys.has(reverse) && !relationKeys.has(testBacklink)) {
+        findings.push(
+          typedSpecFinding({
+            kind: "typed-spec-trace-reverse-missing",
+            subjectId: `${relation.from_spec_id}:traces_from:${relation.to_spec_id}`,
+            evidencePath: relation.source,
+          }),
+        );
+      }
+    }
+    if (relation.relation_kind === "tests") {
+      const testDef = typedById.get(relation.to_spec_id);
+      const testTracesBack = traceKey(relation.to_spec_id, "traces_from", relation.from_spec_id);
+      if (!testDef || !relationKeys.has(testTracesBack)) {
+        findings.push(
+          typedSpecFinding({
+            kind: "typed-spec-test-backlink-missing",
+            subjectId: `${relation.from_spec_id}:tests:${relation.to_spec_id}`,
+            evidencePath: relation.source,
+          }),
+        );
+      }
+    }
+  }
+
+  for (const def of typedDefs) {
+    if (
+      requiresTypedSpecTest(def.spec_kind) &&
+      (testsBySpecId.get(def.spec_id)?.length ?? 0) === 0
+    ) {
+      findings.push(
+        typedSpecFinding({
+          kind: "typed-spec-test-missing",
+          subjectId: def.spec_id,
+          evidencePath: def.source_path,
+        }),
+      );
+    }
+  }
+
+  return {
+    typedSpecCount: typedDefs.length,
+    relationCount: typedRelations.length,
+    findings,
+    ok: findings.length === 0,
+  };
+}
+
 export function analyzeSpecIrIntegrity(input: {
   defs: SpecDefRow[];
   relations: SpecRelationRow[];
@@ -839,6 +974,12 @@ export function analyzeSpecIrIntegrity(input: {
       });
     }
   }
+  findings.push(
+    ...analyzeTypedSpecTraceClosure({
+      defs: input.defs,
+      relations: input.relations,
+    }).findings,
+  );
   for (const schedule of input.schedules) {
     schedulePlanCounts.set(schedule.plan_id, (schedulePlanCounts.get(schedule.plan_id) ?? 0) + 1);
     if (!schedule.current_location.trim()) {

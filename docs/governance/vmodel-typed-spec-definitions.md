@@ -77,6 +77,7 @@ spec:
 - `spec.defines[].kind` は分類であり、空欄を許可しない。
 - `traces_from` は上流 ID、`traces_to` は下流 ID、`tests` は対応する検証 ID を指す。
 - 参照先が同じ `spec.defines` 宇宙に存在しない場合は finding にする。
+- `unit-oracle` / `integration-oracle` / `projection-oracle` などの oracle kind は、上位 spec の `tests` から参照され、oracle 側が `traces_from` を返す検証 leaf である。oracle 自体には追加の `tests` edge を要求しない。
 - HARNESS の ID は `FR-L1-*` / `PLAN-*` / `U-*` 等を含むため、ZIP の `^[A-Z]+-[0-9]+[a-z]?$` をそのまま正本にしない。
 - typed spec は検出を安定化するための設計正本であり、DB projection から本書を書き換えない。
 

@@ -21,6 +21,11 @@ import {
   projectTokenUsage,
   rebuildHarnessDb,
 } from "../state-db/projection-writer";
+import {
+  analyzeTypedSpecTraceClosure,
+  collectSpecIrProjection,
+  type TypedSpecTraceClosureResult,
+} from "../state-db/spec-ir-projections";
 import { loadRuntimeSessionUsage } from "../state-db/token-tracker";
 
 export interface DbProjectionDoctorOptions {
@@ -183,6 +188,49 @@ export function checkDbProjectionIngestion(
       messages: [
         "db-projection-ingestion - violation: automatic projection ingestion could not run",
       ],
+      ok: false,
+    };
+  }
+}
+
+export function typedSpecTraceClosureMessages(result: TypedSpecTraceClosureResult): string[] {
+  if (result.ok) {
+    return [
+      `typed-spec-trace-closure - OK (typed_specs=${result.typedSpecCount}, relations=${result.relationCount})`,
+    ];
+  }
+  return [
+    `typed-spec-trace-closure - violation (typed_specs=${result.typedSpecCount}, findings=${result.findings.length})`,
+    ...result.findings
+      .slice(0, 8)
+      .map(
+        (finding) =>
+          `typed-spec-trace-closure - ${finding.kind}: ${finding.subject_id} (${finding.evidence_path})`,
+      ),
+  ];
+}
+
+export function checkTypedSpecTraceClosure(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+  result?: TypedSpecTraceClosureResult;
+} {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["typed-spec-trace-closure - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const projection = collectSpecIrProjection(repoRoot, new Date(0).toISOString());
+    const result = analyzeTypedSpecTraceClosure({
+      defs: projection.spec_defs,
+      relations: projection.spec_relations,
+    });
+    return { messages: typedSpecTraceClosureMessages(result), ok: result.ok, result };
+  } catch {
+    return {
+      messages: ["typed-spec-trace-closure - violation: typed spec trace closure could not run"],
       ok: false,
     };
   }
