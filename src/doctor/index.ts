@@ -26,6 +26,7 @@ export type { DoctorOptions } from "./check-registry";
 export {
   checkDbProjectionCoverage,
   checkDbProjectionIngestion,
+  checkTypedSpecLedgerBodySync,
   checkTypedSpecTraceClosure,
 } from "./db-projection";
 export { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression";

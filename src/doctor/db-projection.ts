@@ -22,8 +22,11 @@ import {
   rebuildHarnessDb,
 } from "../state-db/projection-writer";
 import {
+  analyzeTypedSpecLedgerBodySync,
   analyzeTypedSpecTraceClosure,
   collectSpecIrProjection,
+  loadSpecIrSources,
+  type TypedSpecLedgerBodySyncResult,
   type TypedSpecTraceClosureResult,
 } from "../state-db/spec-ir-projections";
 import { loadRuntimeSessionUsage } from "../state-db/token-tracker";
@@ -231,6 +234,56 @@ export function checkTypedSpecTraceClosure(repoRoot: string): {
   } catch {
     return {
       messages: ["typed-spec-trace-closure - violation: typed spec trace closure could not run"],
+      ok: false,
+    };
+  }
+}
+
+export function typedSpecLedgerBodySyncMessages(result: TypedSpecLedgerBodySyncResult): string[] {
+  if (result.ok) {
+    return [
+      `typed-spec-ledger-body-sync - OK (typed_specs=${result.typedSpecCount}, ledger_rows=${result.ledgerRowCount})`,
+    ];
+  }
+  return [
+    `typed-spec-ledger-body-sync - violation (typed_specs=${result.typedSpecCount}, findings=${result.findings.length})`,
+    ...result.findings
+      .slice(0, 8)
+      .map(
+        (finding) =>
+          `typed-spec-ledger-body-sync - ${finding.kind}: ${finding.subject_id} (${finding.evidence_path})`,
+      ),
+  ];
+}
+
+export function checkTypedSpecLedgerBodySync(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+  result?: TypedSpecLedgerBodySyncResult;
+} {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["typed-spec-ledger-body-sync - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const projection = collectSpecIrProjection(repoRoot, new Date(0).toISOString());
+    const sources = loadSpecIrSources(repoRoot).map((source) => ({
+      path: source.path,
+      content: source.content,
+    }));
+    const result = analyzeTypedSpecLedgerBodySync({
+      defs: projection.spec_defs,
+      relations: projection.spec_relations,
+      sources,
+    });
+    return { messages: typedSpecLedgerBodySyncMessages(result), ok: result.ok, result };
+  } catch {
+    return {
+      messages: [
+        "typed-spec-ledger-body-sync - violation: typed spec ledger/body sync could not run",
+      ],
       ok: false,
     };
   }

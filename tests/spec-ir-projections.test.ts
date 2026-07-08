@@ -252,6 +252,18 @@ describe("spec IR projections", () => {
           "      kind: unit-oracle",
           "      traces_from: [VMS-102]",
           "```",
+          "",
+          "| spec_id | ledger_sources | v_phase |",
+          "| --- | --- | --- |",
+          "| VMS-101 | docs/plans/PLAN-L6-101.md | L6 |",
+          "| VMS-102 | docs/plans/PLAN-L7-102.md | L7 |",
+          "| TVMS-101 | docs/test-design/harness/L7-unit-test-design.md | L7 |",
+          "| TVMS-102 | docs/test-design/harness/L7-unit-test-design.md | L7 |",
+          "",
+          "VMS-101 body anchor.",
+          "VMS-102 body anchor.",
+          "TVMS-101 body anchor.",
+          "TVMS-102 body anchor.",
         ].join("\n"),
       );
 
@@ -302,6 +314,9 @@ describe("spec IR projections", () => {
           expect.objectContaining({ kind: "typed-spec-trace-reverse-missing" }),
           expect.objectContaining({ kind: "typed-spec-test-backlink-missing" }),
           expect.objectContaining({ kind: "typed-spec-test-missing" }),
+          expect.objectContaining({ kind: "typed-spec-body-missing" }),
+          expect.objectContaining({ kind: "typed-spec-ledger-row-missing" }),
+          expect.objectContaining({ kind: "typed-spec-phase-direction-invalid" }),
         ]),
       );
     } finally {
@@ -348,6 +363,72 @@ describe("spec IR projections", () => {
           expect.objectContaining({
             kind: "typed-spec-test-missing",
             subject_id: "VMS-202",
+          }),
+        ]),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("turns typed spec ledger, body, and phase drift into integrity findings", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-typed-ledger-"));
+    try {
+      writeGovernanceDoc(
+        root,
+        "vmodel-typed-spec-definitions.md",
+        [
+          "# Typed spec ledger bad fixture",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-301",
+          "      kind: typed-source",
+          "      traces_from: [VMS-302]",
+          "      tests: [TVMS-301]",
+          "    - id: VMS-302",
+          "      kind: typed-projection",
+          "      tests: [TVMS-302]",
+          "    - id: TVMS-301",
+          "      kind: unit-oracle",
+          "      traces_from: [VMS-301]",
+          "    - id: TVMS-302",
+          "      kind: unit-oracle",
+          "      traces_from: [VMS-302]",
+          "```",
+          "",
+          "| spec_id | ledger_sources | v_phase |",
+          "| --- | --- | --- |",
+          "| VMS-301 | docs/plans/PLAN-L6-301.md | L6 |",
+          "| VMS-302 | docs/plans/PLAN-L7-302.md | L7 |",
+          "| VMS-302 | docs/plans/PLAN-L7-302.md | L7 |",
+          "| TVMS-301 | docs/test-design/harness/L7-unit-test-design.md | L7 |",
+          "| TVMS-999 | docs/test-design/harness/L7-unit-test-design.md | L7 |",
+          "",
+          "VMS-301 body anchor.",
+          "VMS-302 body anchor.",
+          "TVMS-301 body anchor.",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-08T00:00:00.000Z");
+
+      expect(projection.findings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "typed-spec-ledger-row-missing",
+            subject_id: "TVMS-302",
+          }),
+          expect.objectContaining({ kind: "typed-spec-body-missing", subject_id: "TVMS-302" }),
+          expect.objectContaining({ kind: "typed-spec-ledger-unknown-id", subject_id: "TVMS-999" }),
+          expect.objectContaining({
+            kind: "typed-spec-ledger-duplicate-id",
+            subject_id: "VMS-302",
+          }),
+          expect.objectContaining({
+            kind: "typed-spec-phase-direction-invalid",
+            subject_id: "VMS-301:traces_from:VMS-302",
           }),
         ]),
       );

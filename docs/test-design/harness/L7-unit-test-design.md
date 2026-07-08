@@ -884,6 +884,17 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-TYPED-SPEC-C4 | `analyzeTypedSpecTraceClosure(input)` | test を要求する kind に `tests` edge が無い場合は `typed-spec-test-missing` finding にする。ただし `*-oracle` kind は検証 leaf として追加 test を要求しない。 |
 | U-TYPED-SPEC-C5 | `checkTypedSpecTraceClosure(repoRoot)` | typed spec 閉包 finding が 0 件なら `doctor: typed-spec-trace-closure - OK`、1 件以上なら `violation` として `runDoctor.ok=false` に合流する。 |
 
+> `analyzeTypedSpecLedgerBodySync` / `checkTypedSpecLedgerBodySync` typed spec 台帳・本文・phase 契約 (PLAN-L6-44 / PLAN-L7-388)。
+
+| ID | 対象 | 期待 |
+| --- | --- | --- |
+| U-TYPED-SPEC-S1 | `analyzeTypedSpecLedgerBodySync(input)` | 全 typed spec に本文実体、台帳行、`v_phase` がある場合は finding を出さない。 |
+| U-TYPED-SPEC-S2 | `analyzeTypedSpecLedgerBodySync(input)` | 宣言IDに本文実体が無い場合は `typed-spec-body-missing` finding にする。 |
+| U-TYPED-SPEC-S3 | `analyzeTypedSpecLedgerBodySync(input)` | 台帳行欠落、未知台帳ID、重複台帳IDをそれぞれ `typed-spec-ledger-row-missing` / `typed-spec-ledger-unknown-id` / `typed-spec-ledger-duplicate-id` finding にする。 |
+| U-TYPED-SPEC-S4 | `analyzeTypedSpecLedgerBodySync(input)` | `v_phase` 欠落または不正を `typed-spec-ledger-phase-missing` finding にする。 |
+| U-TYPED-SPEC-S5 | `analyzeTypedSpecLedgerBodySync(input)` | `traces_from` が後工程を指す、または `traces_to` / `tests` が上流へ戻る場合は `typed-spec-phase-direction-invalid` finding にする。 |
+| U-TYPED-SPEC-S6 | `checkTypedSpecLedgerBodySync(repoRoot)` | finding が 0 件なら `doctor: typed-spec-ledger-body-sync - OK`、1 件以上なら `violation` として `runDoctor.ok=false` に合流する。 |
+
 **gap 件数: 1 / 21** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
 
 L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。

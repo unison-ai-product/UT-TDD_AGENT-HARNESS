@@ -4,6 +4,7 @@ import type { LintResult } from "../plan/lint";
 import {
   checkDbProjectionCoverage,
   checkDbProjectionIngestion,
+  checkTypedSpecLedgerBodySync,
   checkTypedSpecTraceClosure,
 } from "./db-projection";
 import { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression";
@@ -223,6 +224,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("db-projection-coverage", () => checkDbProjectionCoverage(deps.repoRoot)),
         full("db-projection-ingestion", () => checkDbProjectionIngestion(deps.repoRoot, options)),
         full("typed-spec-trace-closure", () => checkTypedSpecTraceClosure(deps.repoRoot)),
+        full("typed-spec-ledger-body-sync", () => checkTypedSpecLedgerBodySync(deps.repoRoot)),
         full("doc-consistency", () => checkDocConsistency(deps.repoRoot)),
         full("entity-coverage", () => checkEntityCoverage(deps.repoRoot)),
         full("fr-registry-audit", () => checkFrRegistryAudit(deps.repoRoot)),

@@ -515,6 +515,7 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 - typed spec 宣言の ID 形式、kind 欠落、重複 ID は `typed-spec-invalid-id` / `typed-spec-kind-missing` / `typed-spec-duplicate-id` finding にする。
 - typed spec 宣言の `traces_from` / `traces_to` は双方向に閉じる。片側欠落は `typed-spec-trace-reverse-missing` finding にする。
 - typed spec 宣言の `tests` は test spec 側の `traces_from` と閉じる。片側欠落は `typed-spec-test-backlink-missing` finding にし、test を要求する kind に test edge が無い場合は `typed-spec-test-missing` finding にする。
+- typed spec 宣言は本文実体、台帳行、V-model phase と突合する。本文実体欠落は `typed-spec-body-missing`、台帳行欠落は `typed-spec-ledger-row-missing`、台帳ID未知は `typed-spec-ledger-unknown-id`、台帳ID重複は `typed-spec-ledger-duplicate-id`、phase 欠落は `typed-spec-ledger-phase-missing`、phase 逆流は `typed-spec-phase-direction-invalid` finding にする。
 - `schedule_entries` は工程管理表と PLAN frontmatter fallback の projection であり、PLAN status や dependencies を暗黙更新しない。工程表掲載 row は fallback row に上書きされない。
 - `activation_entries.scope_status=out_of_scope|deferred` は理由 (`defer_reason`) を必須とし、理由なし除外は `findings.kind=activation-reason-missing` とする。
 - `activation_schedule_reviews` は `activation_entries.plan_id` と `schedule_entries.plan_id` の join 結果である。工程表に存在しない `target_kind=plan` は `findings.kind=activation-schedule-missing` とし、projection 側で工程行を創作しない。

@@ -73,6 +73,7 @@ import {
   checkSkillAssignment,
   checkTelemetryClosure,
   checkTrackedCanonical,
+  checkTypedSpecLedgerBodySync,
   checkTypedSpecTraceClosure,
   checkVerificationGroupsResult,
   checkVerificationProfile,
@@ -575,6 +576,71 @@ describe("runDoctor", () => {
     }
   });
 
+  it("surfaces typed spec ledger/body sync as a doctor hard gate", () => {
+    const result = checkTypedSpecLedgerBodySync(process.cwd());
+    const r = realRepoDoctor();
+
+    expect(result.ok).toBe(true);
+    expect(result.messages[0]).toContain("typed-spec-ledger-body-sync - OK");
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: typed-spec-ledger-body-sync - OK"))).toBe(
+      true,
+    );
+  });
+
+  it("fails typed spec ledger/body sync when body, ledger, or phase direction is invalid", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-typed-spec-ledger-"));
+    try {
+      mkdirSync(join(root, "docs", "governance"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "governance", "vmodel-typed-spec-definitions.md"),
+        [
+          "# Typed spec bad ledger",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-401",
+          "      kind: typed-source",
+          "      traces_from: [VMS-402]",
+          "      tests: [TVMS-401]",
+          "    - id: VMS-402",
+          "      kind: typed-projection",
+          "      tests: [TVMS-402]",
+          "    - id: TVMS-401",
+          "      kind: unit-oracle",
+          "      traces_from: [VMS-401]",
+          "    - id: TVMS-402",
+          "      kind: unit-oracle",
+          "      traces_from: [VMS-402]",
+          "```",
+          "",
+          "| spec_id | ledger_sources | v_phase |",
+          "| --- | --- | --- |",
+          "| VMS-401 | docs/plans/PLAN-L6-401.md | L6 |",
+          "| VMS-402 | docs/plans/PLAN-L7-402.md | L7 |",
+          "| TVMS-401 | docs/test-design/harness/L7-unit-test-design.md | L7 |",
+          "| TVMS-999 | docs/test-design/harness/L7-unit-test-design.md | L7 |",
+          "",
+          "VMS-401 has body substance.",
+          "VMS-402 has body substance.",
+          "TVMS-401 has body substance.",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = checkTypedSpecLedgerBodySync(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("typed-spec-ledger-row-missing");
+      expect(result.messages.join("\n")).toContain("typed-spec-body-missing");
+      expect(result.messages.join("\n")).toContain("typed-spec-ledger-unknown-id");
+      expect(result.messages.join("\n")).toContain("typed-spec-phase-direction-invalid");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("hard-gates PLAN governance once repo frontmatter debt is closed", () => {
     const governance = checkPlanGovernance(process.cwd());
     const r = realRepoDoctor();
@@ -989,6 +1055,7 @@ describe("runDoctor", () => {
       ["db-projection-coverage", checkDbProjectionCoverage(missingRoot)],
       ["db-projection-ingestion", checkDbProjectionIngestion(missingRoot)],
       ["typed-spec-trace-closure", checkTypedSpecTraceClosure(missingRoot)],
+      ["typed-spec-ledger-body-sync", checkTypedSpecLedgerBodySync(missingRoot)],
       ["rule-drift", checkRuleDrift(missingRoot)],
       ["gate-confirm", checkGateConfirm(missingRoot)],
       ["plan-dod", checkPlanDod(missingRoot)],

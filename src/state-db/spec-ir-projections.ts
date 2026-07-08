@@ -155,6 +155,18 @@ export interface TypedSpecTraceClosureResult {
   ok: boolean;
 }
 
+export interface TypedSpecSourceSnapshot {
+  path: string;
+  content: string;
+}
+
+export interface TypedSpecLedgerBodySyncResult {
+  typedSpecCount: number;
+  ledgerRowCount: number;
+  findings: SpecIrFindingRow[];
+  ok: boolean;
+}
+
 interface SpecIrProjectionDeps {
   nowIso: () => string;
   recordProjectionEvent: (
@@ -793,6 +805,217 @@ function requiresTypedSpecTest(kind: string): boolean {
   );
 }
 
+interface TypedSpecLedgerRow {
+  specId: string;
+  ledgerSources: string[];
+  vPhase: string;
+  sourcePath: string;
+}
+
+function listField(value: string): string[] {
+  return value
+    .split(/[,\n]/)
+    .map((item) => item.trim().replace(/^`|`$/g, ""))
+    .filter((item) => item && item !== "-");
+}
+
+function parseTypedSpecLedgerRows(sources: TypedSpecSourceSnapshot[]): TypedSpecLedgerRow[] {
+  const rows: TypedSpecLedgerRow[] = [];
+  for (const source of sources) {
+    for (const row of markdownTableRows(source.content, ["spec_id", "ledger_sources", "v_phase"])) {
+      const specId = typedSpecId(row.spec_id ?? "");
+      if (!specId) continue;
+      rows.push({
+        specId,
+        ledgerSources: listField(row.ledger_sources ?? ""),
+        vPhase: stringField(row.v_phase),
+        sourcePath: source.path,
+      });
+    }
+    for (const match of source.content.matchAll(/```ya?ml\s*\n([\s\S]*?)\n```/g)) {
+      const parsed = parseYaml(match[1]);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+      const ledger = (parsed as Record<string, unknown>).typed_spec_ledger;
+      if (!Array.isArray(ledger)) continue;
+      for (const item of ledger) {
+        if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+        const raw = item as Record<string, unknown>;
+        const specId = typedSpecId(stringField(raw.spec_id));
+        if (!specId) continue;
+        rows.push({
+          specId,
+          ledgerSources: stringList(raw.ledger_sources),
+          vPhase: stringField(raw.v_phase),
+          sourcePath: source.path,
+        });
+      }
+    }
+  }
+  return rows;
+}
+
+function stripSpecDeclarationBlocks(content: string): string {
+  const withoutFrontmatter =
+    content.startsWith("---") && content.indexOf("\n---", 3) >= 0
+      ? content.slice(content.indexOf("\n---", 3) + 4)
+      : content;
+  return withoutFrontmatter.replace(/```ya?ml\s*\n([\s\S]*?)\n```/g, (block, body) => {
+    const parsed = parseYaml(body);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed) &&
+      (parsed as Record<string, unknown>).spec
+    ) {
+      return "";
+    }
+    return block;
+  });
+}
+
+function stripTypedSpecLedgerTables(content: string): string {
+  const lines = content.split(/\r?\n/);
+  const kept: string[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (
+      line.includes("spec_id") &&
+      line.includes("ledger_sources") &&
+      line.includes("v_phase") &&
+      lines[index + 1]?.match(/^\s*\|?\s*:?-{3,}/)
+    ) {
+      index += 2;
+      while (index < lines.length && lines[index].trim().startsWith("|")) {
+        index += 1;
+      }
+      index -= 1;
+      continue;
+    }
+    kept.push(line);
+  }
+  return kept.join("\n");
+}
+
+function phaseRank(value: string): number | null {
+  const match = value.trim().match(/^L(\d{1,2})$/i);
+  if (!match) return null;
+  return Number(match[1]);
+}
+
+export function analyzeTypedSpecLedgerBodySync(input: {
+  defs: SpecDefRow[];
+  relations: SpecRelationRow[];
+  sources: TypedSpecSourceSnapshot[];
+}): TypedSpecLedgerBodySyncResult {
+  const typedDefs = input.defs.filter(isTypedSpecDef);
+  const typedIds = new Set(typedDefs.map((def) => def.spec_id));
+  const sourceBodyByPath = new Map(
+    input.sources.map((source) => [
+      source.path,
+      stripTypedSpecLedgerTables(stripSpecDeclarationBlocks(source.content)),
+    ]),
+  );
+  const ledgerRows = parseTypedSpecLedgerRows(input.sources);
+  const ledgerBySpecId = new Map(ledgerRows.map((row) => [row.specId, row]));
+  const ledgerCounts = new Map<string, number>();
+  const findings: SpecIrFindingRow[] = [];
+  for (const row of ledgerRows) {
+    ledgerCounts.set(row.specId, (ledgerCounts.get(row.specId) ?? 0) + 1);
+  }
+
+  for (const def of typedDefs) {
+    const body = sourceBodyByPath.get(def.source_path) ?? "";
+    if (!body.includes(def.spec_id)) {
+      findings.push(
+        typedSpecFinding({
+          kind: "typed-spec-body-missing",
+          subjectId: def.spec_id,
+          evidencePath: def.source_path,
+        }),
+      );
+    }
+    const row = ledgerBySpecId.get(def.spec_id);
+    if (!row) {
+      findings.push(
+        typedSpecFinding({
+          kind: "typed-spec-ledger-row-missing",
+          subjectId: def.spec_id,
+          evidencePath: def.source_path,
+        }),
+      );
+      continue;
+    }
+    if (row.ledgerSources.length === 0) {
+      findings.push(
+        typedSpecFinding({
+          kind: "typed-spec-ledger-source-missing",
+          subjectId: def.spec_id,
+          evidencePath: row.sourcePath,
+        }),
+      );
+    }
+    if (phaseRank(row.vPhase) === null) {
+      findings.push(
+        typedSpecFinding({
+          kind: "typed-spec-ledger-phase-missing",
+          subjectId: def.spec_id,
+          evidencePath: row.sourcePath,
+        }),
+      );
+    }
+  }
+
+  for (const [specId, count] of ledgerCounts) {
+    if (count <= 1) continue;
+    findings.push(
+      typedSpecFinding({
+        kind: "typed-spec-ledger-duplicate-id",
+        subjectId: specId,
+        evidencePath: ledgerBySpecId.get(specId)?.sourcePath ?? "",
+      }),
+    );
+  }
+
+  for (const row of ledgerRows) {
+    if (!typedIds.has(row.specId)) {
+      findings.push(
+        typedSpecFinding({
+          kind: "typed-spec-ledger-unknown-id",
+          subjectId: row.specId,
+          evidencePath: row.sourcePath,
+        }),
+      );
+    }
+  }
+
+  for (const relation of input.relations) {
+    if (!typedIds.has(relation.from_spec_id) || !typedIds.has(relation.to_spec_id)) continue;
+    const fromPhase = phaseRank(ledgerBySpecId.get(relation.from_spec_id)?.vPhase ?? "");
+    const toPhase = phaseRank(ledgerBySpecId.get(relation.to_spec_id)?.vPhase ?? "");
+    if (fromPhase === null || toPhase === null) continue;
+    if (
+      (relation.relation_kind === "traces_from" && fromPhase < toPhase) ||
+      (relation.relation_kind === "traces_to" && fromPhase > toPhase) ||
+      (relation.relation_kind === "tests" && fromPhase > toPhase)
+    ) {
+      findings.push(
+        typedSpecFinding({
+          kind: "typed-spec-phase-direction-invalid",
+          subjectId: `${relation.from_spec_id}:${relation.relation_kind}:${relation.to_spec_id}`,
+          evidencePath: relation.source,
+        }),
+      );
+    }
+  }
+
+  return {
+    typedSpecCount: typedDefs.length,
+    ledgerRowCount: ledgerRows.length,
+    findings,
+    ok: findings.length === 0,
+  };
+}
+
 export function analyzeTypedSpecTraceClosure(input: {
   defs: SpecDefRow[];
   relations: SpecRelationRow[];
@@ -1095,6 +1318,13 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
     activations,
     activationScheduleReviews,
   });
+  findings.push(
+    ...analyzeTypedSpecLedgerBodySync({
+      defs,
+      relations: relationResult.relations,
+      sources,
+    }).findings,
+  );
   return {
     spec_defs: defs,
     spec_relations: relationResult.relations,
