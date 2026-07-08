@@ -107,7 +107,14 @@ Rules:
 
 1. `subagent_type` must be in the allowlist.
 2. Agent calls without a model are blocked.
-3. The requested model must match the agent frontmatter family.
+3. The requested model must be at or above the capability family declared in
+   the agent frontmatter (a floor, not an exact pin) — downgrades (cost-cutting)
+   are blocked; escalating to the orchestrator's own tier or higher is allowed.
+   Worker-role subagents (be-api / be-logic / db-schema / devops-deploy /
+   pmo-haiku / refactor-scout / etc.) stay pinned to a lower tier;
+   quality-check / gate subagents (code-reviewer / ut-tdd-tl / security-audit /
+   qa-test) declare an opus floor. Review must never be lower-tier than the
+   orchestrator it reviews (PO principle 2026-07-08, PLAN-L7-399).
 4. Bypass is allowed only with `UT_TDD_ALLOW_RAW_AGENT=1` and must leave
    evidence.
 5. Invalid stdin JSON or unverifiable state fails closed.
