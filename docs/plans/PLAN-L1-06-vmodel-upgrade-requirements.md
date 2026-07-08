@@ -145,5 +145,5 @@ L1 要件差分が L4-L7 詳細へ踏み込みすぎていないか、既存正�
 
 ## 6. 後続
 
-次は U2 として `roadmap-drive-selection-hardening` を起票し、工程管理表と filing target を
+次は U2 として `PLAN-L4-18-roadmap-drive-selection-hardening` を起票し、工程管理表と filing target を
 `docs/process/forward/overview.md`、L4 §3、L5/L6 router design、status/doctor 出力へ接続する。

@@ -102,9 +102,9 @@ FR-12〜16 / FR-23〜30 の workflow を機能単位で外部設計する。こ�
 > **mode taxonomy (IMP-069 reconciled、PO 2026-06-05「Forward=spine」確定 / 拡張2 mode back-fill = PLAN-L4-17)**: canonical 構成 = **Forward spine (主線、合流先) + 駆動モデル (entry mode、11 種) + 工程専門 (screen/frontend、2)**。11 駆動モデル = `docs/process/modes/` の 11 = Discovery / Scrum / Reverse / Recovery / Incident / Refactor / Retrofit / Add-feature / **Research** / **design-bottomup** / **version-up** (Forward を除く)。**Forward は駆動モデルの 1 つでなく、全駆動モデルが出口で合流する終着 (spine)**。旧 §3「10 mode」(Forward を mode に算入) は解消。concept §10.3 用語集 (駆動モデル 11 種) と一致。
 > **legacy framing との橋渡し (重要、カウント混乱防止)**: concept §2.5 の「**9-mode ecosystem**」表は別グルーピング = **Forward + 8 (Research 除く)** で数えたもの。本 §3 の「11 駆動モデル」は entry 起点で数えた現在集合 (Research + 拡張2 mode = design-bottomup / version-up を含む)。**同一 universe を起点違い・時点違いで数えた表記差** (9-mode = Forward 起点の legacy / 11 駆動モデル = entry 起点の現在集合)。両者の対応の正本 = `docs/process/modes/README.md §3`。L5 以降で mode を数えるときは **本 §3 の「Forward spine + 11 駆動モデル + 2 工程専門」を operational 正本**とする。L9 ST-FUNC ペアも本構成。
 
-### §3.1 駆動モデル (entry mode) の外部設計 — 12 種
+### §3.1 駆動入口の外部設計 — 12 行 (11 駆動モデル + Verify 右肺入口)
 
-各駆動モデルは状況 signal で発動し、固有 phase/step を経て、**出口で必ず Forward spine の特定 L 工程へ合流**する (concept §2.5)。kind は §1.3 VALID_KINDS、非1:1 対応は §3.2。
+各駆動モデルは状況 signal で発動し、固有 phase/step を経て、**出口で必ず Forward spine の特定 L 工程へ合流**する (concept §2.5)。kind は §1.3 VALID_KINDS、非1:1 対応は §3.2。表は 12 行だが、taxonomy 上の駆動モデルは 11 種である。`Verify` は右肺専用入口であり、左肺の 11 駆動モデルと同じ routing surface に載せるが、Forward に代わる第 12 駆動モデルとして数えない。
 
 | 駆動モデル | kind | 入口 signal | 状態遷移 (phase/step + 各 what) | 出口 contract → Forward 合流先 | gate / 人間サインオフ |
 |---|---|---|---|---|---|
@@ -165,6 +165,34 @@ Incident (env=prod 障害) > Recovery (暴走/forced_stop/dev 回帰) > Reverse 
 | 分岐 | `interrupt` (design_gap/new_requirement/constraint/po_change) | 4 方向分岐 | runaway 併発→Recovery / 要件昇格→Discovery / 軽微追加→Add-feature / 設計 gap のみ→Forward spot 修正 |
 
 **mode ↔ kind の非1:1 (§1.3 整合)**: ① Discovery と Scrum は同一 `kind=poc`、入口 (mode) で識別し frontmatter では区別しない / ② Incident は独立 kind を持たず `troubleshoot`(L7) + `recovery`(cross) の 2 PLAN に分割 (`recovery` PLAN の `dependencies.requires` に `troubleshoot` PLAN を宣言) / ③ Add-feature は `add-design`(L3-L6) + `add-impl`(L7) を内包 / ④ Verify は `kind=verify` と 1:1 だが `layer=L8-L14` の右肺専用であり、cross/workflow kind ではない。ID-legibility の射程は §1.10.A (横断駆動 = mode token / layer-bound = layer token + kind 識別)。
+
+### §3.2.1 FilingTarget と工程表 SSoT (VUP-REQ-01/02)
+
+駆動モデル選択は `mode` だけを返す判定ではない。L4 外部設計の正本は、工程表上の現在地と次の filing 先を
+同時に返す `FilingTarget` である。`runtime(detect)`、`doctor`、`route eval`、DB projection はこの設計の
+投影を読む側であり、検出系が独自に layer / sub_doc / pairing を創作してはならない。
+
+`routeFiling(signal, context) -> FilingTarget` の外部形状:
+
+| field | 意味 | 正本 |
+|---|---|---|
+| `current_location` | 現在の Forward L 工程、右肺工程、または横断 mode の位置 | PLAN / design / test-design の工程表 |
+| `schedule_entry` | 前提工程、V-pair、進捗、RAG、採用状態 | PLAN §工程表 / 後続 schedule projection |
+| `mode` | Discovery / Reverse / Verify などの駆動モデル | 本 §3.1 / §3.2 |
+| `allowed_kinds` | `kind` 候補。mode と非1:1 の場合は複数 | 本 §3.1 kind 列 |
+| `layer_band` | 起票可能な L 工程範囲。cold L7 を防ぐ | 本 §3.1 出口 contract / L5-10 |
+| `sub_doc_hint` | L1-L6 の sub_doc 候補。未確定なら Discovery / Research へ戻す | schema VALID_SUB_DOCS + L4/L5 設計 |
+| `pairing_obligation` | 左肺/右肺の pair-freeze、verify、defect routing 義務 | V-model pair / right-lung 設計 |
+| `activation_profile` | PoC / Standard / Enterprise / Web などの対象範囲 | version-up / activation 設計 |
+| `forward_insufficient_reason` | 非 Forward を選ぶ理由。空なら Forward spine を既定にする | route audit / review evidence |
+
+不変条件:
+
+- Forward は正規 spine であり、非 Forward mode は `forward_insufficient_reason` を持つ。
+- feature / version-up / design-bottomup は設計層を skip して `kind=impl` の cold L7 に入らない。
+- Verify は `layer=L8-L14` の右肺 FilingTarget として扱い、検証結果は defect routing により左肺へ戻る。
+- `.ut-tdd/harness.db` は上記 field の query surface であり、authoring source ではない。
+- detector finding は signal、artifact、関係、品質状態を報告する。filing 先の最終形は本設計 SSoT から導出する。
 
 ### §3.3 工程専門 (Forward spine 内、独立 mode でない) — 2 種
 
