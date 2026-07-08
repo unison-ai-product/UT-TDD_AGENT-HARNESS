@@ -233,6 +233,10 @@ calls.
   (+ 自分の意図変更のみ) に固定し、測定値が動いたら相手を疑う前に自分の baseline を疑う
   (foreign tree の transient を相手の退行と帰責しない)。引き継ぎ feedback は harness.db
   (`feedback_events`、PLAN-L7-110) から受け取り、stale 化する prose handover を正本にしない。
+- **永続教訓は共有 HARNESS メモリへ昇格する** (`ut-tdd memory add`、正本 `.ut-tdd/memory/`、
+  PLAN-L7-189)。PO ルール・教訓・落とし穴をランタイム私的メモリや chat 止まりにしない。
+  エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
+  (stale 化する層を作らない)。
 
 ## Test Rules
 

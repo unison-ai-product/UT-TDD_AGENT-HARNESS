@@ -136,6 +136,10 @@ working tree を相手ランタイムが常時書き換えるため、full tree 
   相手の退行と帰責するのは誤り)。
 - **引き継ぎ feedback は harness.db から受け取る** (`feedback_events`、SessionStart で surface、
   PLAN-L7-110)。stale 化する prose handover を現状把握の正本にしない。CURRENT.json / prose は補助。
+- **永続教訓は共有 HARNESS メモリへ昇格する** (`ut-tdd memory add`、正本 `.ut-tdd/memory/`、
+  PLAN-L7-189)。PO ルール・教訓・落とし穴をランタイム私的メモリや chat 止まりにしない。
+  エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
+  (stale 化する層を作らない)。
 
 ## Canonical Commands
 
