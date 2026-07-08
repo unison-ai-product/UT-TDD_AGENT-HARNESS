@@ -13,10 +13,13 @@ import { fmValue } from "../lint/shared";
 import {
   analyzeForwardFreezeContracts,
   analyzePairFreeze,
+  analyzeRefactorQaReleaseContracts,
   analyzeVerificationGroups,
   forwardFreezeContractMessages,
   loadPairDocs,
+  loadRefactorQaReleaseContractInput,
   loadVerificationPlanEvidence,
+  refactorQaReleaseContractMessages,
   verificationGroupMessages,
   verificationGroupsOk,
 } from "../vmodel/lint";
@@ -121,6 +124,23 @@ export function checkForwardFreezeContractsResult(repoRoot: string): {
     return {
       messages: [
         "forward-freeze-contracts - violation: forward freeze contract lint could not run",
+      ],
+      ok: false,
+    };
+  }
+}
+
+export function checkRefactorQaReleaseContractsResult(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  try {
+    const result = analyzeRefactorQaReleaseContracts(loadRefactorQaReleaseContractInput(repoRoot));
+    return { messages: refactorQaReleaseContractMessages(result), ok: result.ok };
+  } catch {
+    return {
+      messages: [
+        "refactor-qa-release-contracts - violation: refactor/QA release contract lint could not run",
       ],
       ok: false,
     };

@@ -48,7 +48,8 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L7-391-agent-contract-detect-gate | L7 |  | L6 | PLAN-L6-47-agent-contract-authoring-source | U12d: agent 契約を DB projection / doctor gate へ接続し、done_when detect green を検出可能化済み | green | confirmed |  |
 | PLAN-L6-48-vmodel-l2-freeze-l5-verification-design | L6 | function-spec | L7 | PLAN-L7-391-agent-contract-detect-gate | U13a: 107のL2プロト合意凍結、L5検証設計整備をHARNESSのForward freeze条件へ反映 | green | confirmed |  |
 | PLAN-L7-393-vmodel-l2-freeze-l5-verification-gate | L7 |  | L6 | PLAN-L6-48-vmodel-l2-freeze-l5-verification-design | U13a-impl: L2/L5 forward freeze contract を doctor gate と unit oracle へ接続 | green | confirmed |  |
-| PLAN-L6-49-refactor-and-qa-release-gates | L6 | function-spec | L7 | PLAN-L7-393-vmodel-l2-freeze-l5-verification-gate | U13b: 108リファクタ等価性テスト、109 QA Go/No-GoをRefactor/Accept/Release gateへ翻訳 | yellow | planned | U13a gate 後 |
+| PLAN-L6-49-refactor-and-qa-release-gates | L6 | function-spec | L7 | PLAN-L7-393-vmodel-l2-freeze-l5-verification-gate | U13b: 108リファクタ等価性テスト、109 QA Go/No-GoをRefactor/Accept/Release gateへ翻訳 | green | confirmed |  |
+| PLAN-L7-394-refactor-qa-release-contract-gate | L7 |  | L6 | PLAN-L6-49-refactor-and-qa-release-gates | U13b-impl: refactor / QA release contract を doctor gate と unit oracle へ接続 | green | confirmed |  |
 
 ## 2. 解釈規則
 

@@ -94,7 +94,7 @@ spec:
     - id: VMS-010
       kind: forward-freeze-contract-design
       traces_from: [VMS-008]
-      traces_to: [VMS-011]
+      traces_to: [VMS-011, VMS-012]
       tests: [TVMS-010]
 ```
 

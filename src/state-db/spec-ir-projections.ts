@@ -13,7 +13,8 @@ type SpecIrSourceKind =
   | "schedule_doc"
   | "activation_profile"
   | "typed_spec"
-  | "agent_contracts";
+  | "agent_contracts"
+  | "refactor_qa_release_contract";
 
 interface SpecIrSource {
   kind: SpecIrSourceKind;
@@ -341,6 +342,9 @@ function sourceKind(path: string): SpecIrSourceKind | null {
   if (path === "docs/governance/vmodel-activation-profiles.md") return "activation_profile";
   if (path === "docs/governance/vmodel-typed-spec-definitions.md") return "typed_spec";
   if (path === "docs/governance/vmodel-agent-contracts.md") return "agent_contracts";
+  if (path === "docs/governance/vmodel-refactor-qa-release-gates.md") {
+    return "refactor_qa_release_contract";
+  }
   if (path.startsWith("docs/plans/")) return "plan";
   if (path.startsWith("docs/design/harness/")) return "design_doc";
   if (path.startsWith("docs/test-design/harness/")) return "test_design";
@@ -371,11 +375,18 @@ export function loadSpecIrSources(repoRoot: string): SpecIrSource[] {
   );
   const typedSpecSource = join(repoRoot, "docs", "governance", "vmodel-typed-spec-definitions.md");
   const agentContractSource = join(repoRoot, "docs", "governance", "vmodel-agent-contracts.md");
+  const refactorQaReleaseContractSource = join(
+    repoRoot,
+    "docs",
+    "governance",
+    "vmodel-refactor-qa-release-gates.md",
+  );
   return [
     ...(existsSync(scheduleSource) ? [scheduleSource] : []),
     ...(existsSync(activationProfileSource) ? [activationProfileSource] : []),
     ...(existsSync(typedSpecSource) ? [typedSpecSource] : []),
     ...(existsSync(agentContractSource) ? [agentContractSource] : []),
+    ...(existsSync(refactorQaReleaseContractSource) ? [refactorQaReleaseContractSource] : []),
     ...walkMarkdown(join(repoRoot, "docs", "plans")),
     ...walkMarkdown(join(repoRoot, "docs", "design", "harness")),
     ...walkMarkdown(join(repoRoot, "docs", "test-design", "harness")),

@@ -60,6 +60,7 @@ import {
 } from "./process-quality";
 import {
   checkForwardFreezeContractsResult,
+  checkRefactorQaReleaseContractsResult,
   checkRoadmap,
   checkVerificationGroupsResult,
 } from "./roadmap-verification";
@@ -213,6 +214,9 @@ export function buildDoctorCheckDefinitionGroups(
         full("screen-impl-pair-freeze", () => checkScreenImplPairFreeze(deps.repoRoot)),
         full("verification-groups", () => checkVerificationGroupsResult(deps.repoRoot)),
         full("forward-freeze-contracts", () => checkForwardFreezeContractsResult(deps.repoRoot)),
+        full("refactor-qa-release-contracts", () =>
+          checkRefactorQaReleaseContractsResult(deps.repoRoot),
+        ),
       ],
     },
     {

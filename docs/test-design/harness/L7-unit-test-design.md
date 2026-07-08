@@ -940,6 +940,23 @@ TVMS-011 は VMS-011 の `forward-freeze-contracts` gate が fail-close fixture 
 | U-FREEZE-CONTRACT-003 | `analyzeForwardFreezeContracts(input)` | L8 verification design missing a L5 detail basename or GWT table produces `l8-coverage-missing` / `l8-gwt-missing`. |
 | U-FREEZE-CONTRACT-004 | `checkForwardFreezeContractsResult(repoRoot)` | Real repo returns `forward-freeze-contracts - OK` and is wired into doctor full profile. |
 
+### TVMS-012 refactor / QA release 契約設計 oracle
+
+TVMS-012 は VMS-012 の ZIP 108/109 authoring source が、Refactor の振る舞い不変・閾値・切り戻しと、QA の ISO/IEC 25010 / Go/No-Go / スモーク契約を持つことを保証する。
+
+### TVMS-013 refactor / QA release gate oracle
+
+TVMS-013 は VMS-013 の `refactor-qa-release-contracts` gate が fail-close fixture と real repo green で検証されることを保証する。
+
+> `analyzeRefactorQaReleaseContracts` / `checkRefactorQaReleaseContractsResult` oracle (PLAN-L6-49 / PLAN-L7-394).
+
+| Test ID | 対象 | 期待 |
+| --- | --- | --- |
+| U-REFACTOR-QA-001 | valid fixture | ZIP108/109 authoring source、Refactor process、workflow contract が揃えば OK |
+| U-REFACTOR-QA-002 | authoring source | Go/No-Go が欠けると fail-close |
+| U-REFACTOR-QA-003 | refactor process | authoring source への接続が欠けると fail-close |
+| U-REFACTOR-QA-004 | real repo | `refactor-qa-release-contracts - OK` が doctor full profile に配線済み |
+
 ## U11 型付きスペック所有 artifact
 
 ```yaml
@@ -978,6 +995,12 @@ spec:
     - id: TVMS-011
       kind: unit-oracle
       traces_from: [VMS-011]
+    - id: TVMS-012
+      kind: unit-oracle
+      traces_from: [VMS-012]
+    - id: TVMS-013
+      kind: unit-oracle
+      traces_from: [VMS-013]
 ```
 
 TVMS-001、TVMS-002、TVMS-003、TVMS-004、TVMS-005、TVMS-006、TVMS-007 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。

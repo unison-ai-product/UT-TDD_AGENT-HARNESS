@@ -388,6 +388,154 @@ export function forwardFreezeContractMessages(result: ForwardFreezeContractResul
  * V-model pair-freeze lint (requirements §6.8.3 / §2 設計層)。
  * 設計層 ①⇔③ pair の双方向整合・孤児0 を検査する。G7 の 4 artifact 12 edge trace は別 (未実装、後続)。
  */
+export type RefactorQaReleaseContractViolationReason =
+  | "authoring-source-missing"
+  | "authoring-source-marker-missing"
+  | "refactor-process-marker-missing"
+  | "workflow-contract-marker-missing";
+
+export interface RefactorQaReleaseContractViolation {
+  path: string;
+  reason: RefactorQaReleaseContractViolationReason;
+  detail: string;
+}
+
+export interface RefactorQaReleaseContractInput {
+  authoringSource: string | null;
+  refactorProcess: string | null;
+  workflowContracts: string | null;
+}
+
+export interface RefactorQaReleaseContractResult {
+  ok: boolean;
+  checked: number;
+  violations: RefactorQaReleaseContractViolation[];
+}
+
+const REFACTOR_QA_AUTHORING_SOURCE = "docs/governance/vmodel-refactor-qa-release-gates.md";
+const REFACTOR_PROCESS_DOC = "docs/process/modes/refactor.md";
+const WORKFLOW_CONTRACTS_SOURCE = "src/workflow/contracts.ts";
+
+const REFACTOR_QA_AUTHORING_MARKERS = [
+  "VMS-012",
+  "VMS-013",
+  "循環的複雑度",
+  "関数あたり15超",
+  "重複コード率",
+  "5%超",
+  "単体10分超",
+  "直近3回中2回リグレッション",
+  "振る舞い不変",
+  "characterization test",
+  "切り戻し",
+  "ISO/IEC 25010",
+  "Go/No-Go",
+  "G01",
+  "G08",
+  "schedule --live",
+  "review --status",
+  "スモーク",
+  "No-Go",
+] as const;
+
+const REFACTOR_PROCESS_MARKERS = [
+  "behavior-invariant",
+  "assertRefactorInvariant",
+  "test IDs",
+  "Database-triggered Refactor",
+  "vmodel-refactor-qa-release-gates.md",
+] as const;
+
+const WORKFLOW_CONTRACT_MARKERS = [
+  "assertRefactorInvariant",
+  "input.before === input.after",
+  "refactor-test-id-missing",
+  "linked regression test ids",
+] as const;
+
+function missingMarkers(content: string | null, markers: readonly string[]): string[] {
+  const text = content ?? "";
+  return markers.filter((marker) => !text.includes(marker));
+}
+
+export function loadRefactorQaReleaseContractInput(
+  repoRoot: string = process.cwd(),
+): RefactorQaReleaseContractInput {
+  const read = (path: string): string | null => {
+    try {
+      return readFileSync(join(repoRoot, path), "utf8");
+    } catch {
+      return null;
+    }
+  };
+  return {
+    authoringSource: read(REFACTOR_QA_AUTHORING_SOURCE),
+    refactorProcess: read(REFACTOR_PROCESS_DOC),
+    workflowContracts: read(WORKFLOW_CONTRACTS_SOURCE),
+  };
+}
+
+export function analyzeRefactorQaReleaseContracts(
+  input: RefactorQaReleaseContractInput,
+): RefactorQaReleaseContractResult {
+  const violations: RefactorQaReleaseContractViolation[] = [];
+
+  if (input.authoringSource == null) {
+    violations.push({
+      path: REFACTOR_QA_AUTHORING_SOURCE,
+      reason: "authoring-source-missing",
+      detail: "ZIP108/109 authoring source is required",
+    });
+  }
+
+  for (const marker of missingMarkers(input.authoringSource, REFACTOR_QA_AUTHORING_MARKERS)) {
+    violations.push({
+      path: REFACTOR_QA_AUTHORING_SOURCE,
+      reason: "authoring-source-marker-missing",
+      detail: marker,
+    });
+  }
+
+  for (const marker of missingMarkers(input.refactorProcess, REFACTOR_PROCESS_MARKERS)) {
+    violations.push({
+      path: REFACTOR_PROCESS_DOC,
+      reason: "refactor-process-marker-missing",
+      detail: marker,
+    });
+  }
+
+  for (const marker of missingMarkers(input.workflowContracts, WORKFLOW_CONTRACT_MARKERS)) {
+    violations.push({
+      path: WORKFLOW_CONTRACTS_SOURCE,
+      reason: "workflow-contract-marker-missing",
+      detail: marker,
+    });
+  }
+
+  return {
+    ok: violations.length === 0,
+    checked:
+      REFACTOR_QA_AUTHORING_MARKERS.length +
+      REFACTOR_PROCESS_MARKERS.length +
+      WORKFLOW_CONTRACT_MARKERS.length,
+    violations,
+  };
+}
+
+export function refactorQaReleaseContractMessages(
+  result: RefactorQaReleaseContractResult,
+): string[] {
+  if (result.ok) {
+    return [`refactor-qa-release-contracts - OK (checked=${result.checked})`];
+  }
+  return [
+    `refactor-qa-release-contracts - violation (checked=${result.checked}, findings=${result.violations.length})`,
+    ...result.violations
+      .slice(0, 10)
+      .map((v) => `refactor-qa-release-contracts - ${v.reason}: ${v.path} (${v.detail})`),
+  ];
+}
+
 export function lintVmodel(_path?: string): LintResult {
   const result = analyzePairFreeze(loadPairDocs());
   return { ok: result.ok, messages: pairFreezeMessages(result) };

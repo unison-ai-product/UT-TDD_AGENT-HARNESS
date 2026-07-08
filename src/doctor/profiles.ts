@@ -104,6 +104,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "guardrail-invariants",
   "verification-groups",
   "forward-freeze-contracts",
+  "refactor-qa-release-contracts",
   "roadmap",
   "impl-plan-trace",
   "oracle-test-trace",

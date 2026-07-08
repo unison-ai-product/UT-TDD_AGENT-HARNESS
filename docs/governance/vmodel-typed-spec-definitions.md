@@ -89,6 +89,12 @@ typed_spec_ledger:
   - spec_id: VMS-011
     ledger_sources: [docs/plans/PLAN-L7-393-vmodel-l2-freeze-l5-verification-gate.md]
     v_phase: L7
+  - spec_id: VMS-012
+    ledger_sources: [docs/governance/vmodel-refactor-qa-release-gates.md]
+    v_phase: L6
+  - spec_id: VMS-013
+    ledger_sources: [docs/plans/PLAN-L7-394-refactor-qa-release-contract-gate.md]
+    v_phase: L7
   - spec_id: TVMS-001
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
@@ -127,6 +133,16 @@ typed_spec_ledger:
     ledger_sources:
       - docs/test-design/harness/L7-unit-test-design.md
       - tests/vmodel-forward-freeze-contracts.test.ts
+    v_phase: L7
+  - spec_id: TVMS-012
+    ledger_sources:
+      - docs/test-design/harness/L7-unit-test-design.md
+      - tests/vmodel-refactor-qa-release-contracts.test.ts
+    v_phase: L7
+  - spec_id: TVMS-013
+    ledger_sources:
+      - docs/test-design/harness/L7-unit-test-design.md
+      - tests/vmodel-refactor-qa-release-contracts.test.ts
     v_phase: L7
 ```
 
@@ -181,6 +197,16 @@ VMS-008 を上流に持ち、実装 gate である VMS-011 へ接続する。対
 VMS-011 は VMS-010 の設計を `forward-freeze-contracts` doctor gate と unit oracle へ接続する実装境界である。
 VMS-010 を上流に持ち、対応 oracle は TVMS-011 である。
 
+### VMS-012 リファクタ / QA リリース契約設計
+
+VMS-012 は ZIP 108 の Refactor 不変性・閾値・切り戻しと、ZIP 109 の ISO/IEC 25010 / Go/No-Go / スモーク契約を HARNESS の設計正本へ落とす typed spec である。
+VMS-010 を上流に持ち、実装 gate である VMS-013 へ接続する。対応 oracle は TVMS-012 である。
+
+### VMS-013 リファクタ / QA リリース契約 gate
+
+VMS-013 は VMS-012 の設計正本を `refactor-qa-release-contracts` doctor gate と unit oracle へ接続する実装境界である。
+VMS-012 を上流に持ち、対応 oracle は TVMS-013 である。
+
 ### TVMS-001 単体 oracle
 
 TVMS-001 は VMS-001 の上流憲章が typed spec 宇宙の root として検査されることを保証する。
@@ -220,6 +246,14 @@ TVMS-010 は VMS-010 の L2 prototype agreement と L5 verification design contr
 ### TVMS-011 L2/L5 凍結契約 gate oracle
 
 TVMS-011 は VMS-011 の `forward-freeze-contracts` gate が fail-close fixture と real repo green で検証されることを保証する。
+
+### TVMS-012 リファクタ / QA リリース契約設計 oracle
+
+TVMS-012 は VMS-012 の authoring source が ZIP 108/109 の Refactor / QA release 契約を保持していることを unit oracle で検証する。
+
+### TVMS-013 リファクタ / QA リリース gate oracle
+
+TVMS-013 は VMS-013 の `refactor-qa-release-contracts` gate が fail-close fixture と real repo green で検証されることを保証する。
 
 ## 4. 不変条件
 
