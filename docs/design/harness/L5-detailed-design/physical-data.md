@@ -486,7 +486,7 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 |---|---|---|---|---|
 | `spec_defs` | `spec_id` | `spec_kind`, `layer`, `sub_doc`, `owner_artifact_id`, `owner_path`, `section_anchor`, `title`, `lifecycle_status`, `plan_id`, `source_path`, `source_hash`, `indexed_at` | design docs / PLAN frontmatter / test-design headings | 要件・設計要素・テスト設計要素を安定 ID と章 anchor で検索可能にする。 |
 | `spec_relations` | `relation_id` | `from_spec_id`, `to_spec_id`, `relation_kind`, `plan_id`, `status`, `source`, `evidence_path`, `indexed_at` | trace 宣言 / pair 宣言 / design-to-test 参照 / PLAN dependencies | `defines` / `requires` / `verifies` / `pairs` / `derives` / `supersedes` を edge として保存し、未定義・未参照・missing-test・ledger mismatch を検出する。 |
-| `schedule_entries` | `schedule_entry_id` | `plan_id`, `layer`, `sub_doc`, `v_pair`, `predecessor_plan_ids`, `current_location`, `rag`, `status`, `blocked_reason`, `source_path`, `source_hash`, `indexed_at` | 工程管理表 / Forward spine / PLAN schedule sections | 現在地と次工程を query 可能にし、工程表の空セル・逆流・未合流 branch を検出する。`predecessor_plan_ids` は comma を含まない plan_id list の serialized TEXT とする。 |
+| `schedule_entries` | `schedule_entry_id` | `plan_id`, `layer`, `sub_doc`, `v_pair`, `predecessor_plan_ids`, `current_location`, `rag`, `status`, `blocked_reason`, `source_path`, `source_hash`, `indexed_at` | `docs/governance/vmodel-upgrade-schedule.md` / Forward spine / PLAN frontmatter fallback | 現在地と次工程を query 可能にし、工程表の空セル・逆流・未合流 branch を検出する。専用工程表に掲載された `plan_id` は PLAN frontmatter fallback より優先する。`predecessor_plan_ids` は comma を含まない plan_id list の serialized TEXT とする。 |
 | `activation_entries` | `activation_entry_id` | `profile_id`, `target_kind`, `target_id`, `scope_status`, `target_version`, `defer_reason`, `enabled`, `source_path`, `plan_id`, `indexed_at` | activation profile / version target / 適用除外宣言 | profile ごとの in_scope / out_of_scope / deferred を明示し、駆動モデル選択を厳格化する。 |
 | `detector_route_candidates` | `route_candidate_id` | `source_table`, `source_id`, `detector_id`, `finding_kind`, `severity`, `subject_kind`, `subject_id`, `filing_target_id`, `target_layer`, `target_sub_doc`, `candidate_status`, `reason`, `evidence_path`, `computed_at` | findings / quality_signals / spec_relations / schedule_entries / activation_entries | 検出結果を起票候補として保持する。`target_layer` / `target_sub_doc` は function §3.2.1 から再導出した snapshot であり、DB 独自の決定ではない。 |
 
@@ -509,7 +509,7 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 
 - すべての `spec_relations.from_spec_id` / `to_spec_id` は `spec_defs.spec_id` を参照する。orphan relation は `findings.kind=spec-ir-orphan-relation` として fail-close する。
 - `spec_defs.layer` / `sub_doc` は `VALID_SUB_DOCS` と frontmatter schema に従う。未知 layer/sub_doc は projection で補正せず `findings` にする。
-- `schedule_entries` は工程管理表と PLAN schedule section の projection であり、PLAN status や dependencies を暗黙更新しない。
+- `schedule_entries` は工程管理表と PLAN frontmatter fallback の projection であり、PLAN status や dependencies を暗黙更新しない。工程表掲載 row は fallback row に上書きされない。
 - `activation_entries.scope_status=out_of_scope|deferred` は理由 (`defer_reason`) を必須とし、理由なし除外は `findings.kind=activation-reason-missing` とする。
 - `detector_route_candidates` は FilingTarget 決定表ではない。candidate row は signal / subject / evidence / current_location を提供し、`route eval` は L4 function §3.2.1 の FilingTarget SSoT を読んで `allowed_kinds` / `layer_band` / `sub_doc_hint` / `pairing_obligation` を決定する。
 - raw provider transcript、secret、credential、PII、未redact payload はいずれの table にも保存しない。

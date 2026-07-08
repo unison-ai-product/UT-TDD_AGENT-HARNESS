@@ -49,7 +49,9 @@ Harness は、各 PLAN / design artifact / test-design artifact について、�
 - PLAN または後続 design IR から schedule entry を導出できる。
 - `ut-tdd status` / `doctor` / DB query が同じ現在地情報を参照する。
 - 工程表は人間の進行帳であると同時に、AI の次アクション選択入力になる。
-- `.ut-tdd/harness.db` は projection であり、正本は PLAN / docs / test-design に置く。
+- 工程管理表の専用 authoring source は `docs/governance/vmodel-upgrade-schedule.md` とし、掲載 PLAN はこの表を
+  PLAN frontmatter fallback より優先する。
+- `.ut-tdd/harness.db` は projection であり、正本は工程管理表 / PLAN / docs / test-design に置く。
 
 ### VUP-REQ-02: 駆動モデル選択の厳格化
 
@@ -71,6 +73,7 @@ Harness は、要求、機能、設計、テスト、検証、ドメイン要素
 
 - `spec.defines` 相当の宣言を UT-TDD の doc/frontmatter/body block のいずれかへ正規配置する。
 - design IR は `spec_defs`、`trace_edges`、`activation_entries`、`schedule_entries` などへ projection できる。
+- `schedule_entries` は専用工程管理表を第一入力とし、未掲載 PLAN のみ PLAN frontmatter から後方互換 fallback する。
 - undefined reference、unreferenced definition、missing test、ledger mismatch を DB query で検出できる。
 - 既存 PLAN / design docs を一括置換せず、activation/profile で段階導入する。
 

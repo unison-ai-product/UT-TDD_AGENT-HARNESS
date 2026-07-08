@@ -11,6 +11,7 @@ Claude Code、Codex、人間レビュアーは通常作業で以下を読む:
 2. `ut-tdd-agent-harness-requirements_v1.2.md`
 3. `../adr/ADR-001-ut-tdd-harness-redesign-and-language.md`
 4. `repository-structure.md`
+5. `vmodel-upgrade-schedule.md`
 
 > **ADR-001 境界**: 実装は UT-TDD 所有の TypeScript/Bun である。migration
 > docs と source snapshots は porting audit と regression idea の参照資料に限る。

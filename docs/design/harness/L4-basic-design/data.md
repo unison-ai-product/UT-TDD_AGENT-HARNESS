@@ -46,6 +46,11 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 
 Vモデル改善に伴う「宣言型によるデータベース引き込み」は、設計正本を DB へ移すものではない。docs / PLAN / test-design / 工程管理表を authoring source とし、`.ut-tdd/harness.db` には検出・起票補助用の IR projection を作る。これにより検出系は、文字列探索だけでなく仕様定義・仕様間関係・工程現在地・活性化 profile を query できる。
 
+工程管理表の専用 authoring source は `docs/governance/vmodel-upgrade-schedule.md` である。`ScheduleEntry`
+projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来の fallback row より優先する。未掲載 PLAN
+は後方互換のため PLAN frontmatter から fallback 生成するが、これは工程表正本を補完する暫定 projection であり、
+工程表に載った行を上書きしてはならない。
+
 | IR entity / view | L4 分類 | 所属集約 | 正本 | DB projection での役割 |
 |---|---|---|---|---|
 | **SpecDef** | entity (子) | Artifact | docs / PLAN / test-design の frontmatter と章 anchor | `defines` された要件・設計要素・テスト設計要素を安定 ID / owner artifact / section anchor / lifecycle で検索可能にする |
@@ -58,6 +63,7 @@ Vモデル改善に伴う「宣言型によるデータベース引き込み」�
 
 - `SpecDef` / `SpecRelation` は Artifact 集約内で完結し、Plan / Workflow を直接変更しない。
 - `ScheduleEntry` / `ActivationEntry` は Workflow 集約の projection input であり、PLAN frontmatter を暗黙更新しない。
+- `ScheduleEntry` の優先順位は、専用工程管理表 → PLAN frontmatter fallback の順とする。
 - `DetectorFinding` と DB table は読みモデルであり、authoring source ではない。
 - docs/YAML/JSON 正本と projection の齟齬は doctor finding として fail-close し、projection 側で silent repair しない。
 - FilingTarget の `allowed_kinds` / `layer_band` / `sub_doc_hint` / `pairing_obligation` は function §3.2.1 の SSoT から導出し、detector 固有 heuristic に閉じ込めない。

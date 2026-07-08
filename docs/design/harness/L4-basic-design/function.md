@@ -176,8 +176,8 @@ Incident (env=prod 障害) > Recovery (暴走/forced_stop/dev 回帰) > Reverse 
 
 | field | 意味 | 正本 |
 |---|---|---|
-| `current_location` | 現在の Forward L 工程、右肺工程、または横断 mode の位置 | PLAN / design / test-design の工程表 |
-| `schedule_entry` | 前提工程、V-pair、進捗、RAG、採用状態 | PLAN §工程表 / 後続 schedule projection |
+| `current_location` | 現在の Forward L 工程、右肺工程、または横断 mode の位置 | `docs/governance/vmodel-upgrade-schedule.md` / schedule projection |
+| `schedule_entry` | 前提工程、V-pair、進捗、RAG、採用状態 | 専用工程管理表を第一入力、未掲載 PLAN は PLAN frontmatter fallback |
 | `mode` | Discovery / Reverse / Verify などの駆動モデル | 本 §3.1 / §3.2 |
 | `allowed_kinds` | `kind` 候補。mode と非1:1 の場合は複数 | 本 §3.1 kind 列 |
 | `layer_band` | 起票可能な L 工程範囲。cold L7 を防ぐ | 本 §3.1 出口 contract / L5-10 |
@@ -192,6 +192,7 @@ Incident (env=prod 障害) > Recovery (暴走/forced_stop/dev 回帰) > Reverse 
 - feature / version-up / design-bottomup は設計層を skip して `kind=impl` の cold L7 に入らない。
 - Verify は `layer=L8-L14` の右肺 FilingTarget として扱い、検証結果は defect routing により左肺へ戻る。
 - `.ut-tdd/harness.db` は上記 field の query surface であり、authoring source ではない。
+- 工程管理表に掲載された PLAN の `current_location` / `rag` / `blocked_reason` は、検出系の推測より工程表正本を優先する。
 - detector finding は signal、artifact、関係、品質状態を報告する。filing 先の最終形は本設計 SSoT から導出する。
 
 ### §3.3 工程専門 (Forward spine 内、独立 mode でない) — 2 種

@@ -6,7 +6,7 @@ import { isValidSubDocForLayer, V_MODEL_PAIRS } from "../schema";
 import { isSecretLike } from "../secret";
 import type { HarnessDb } from "./index";
 
-type SpecIrSourceKind = "plan" | "design_doc" | "test_design";
+type SpecIrSourceKind = "plan" | "design_doc" | "test_design" | "schedule_doc";
 
 interface SpecIrSource {
   kind: SpecIrSourceKind;
@@ -211,6 +211,7 @@ function inferSubDocFromPath(path: string): string {
 }
 
 function sourceKind(path: string): SpecIrSourceKind | null {
+  if (path === "docs/governance/vmodel-upgrade-schedule.md") return "schedule_doc";
   if (path.startsWith("docs/plans/")) return "plan";
   if (path.startsWith("docs/design/harness/")) return "design_doc";
   if (path.startsWith("docs/test-design/harness/")) return "test_design";
@@ -232,7 +233,9 @@ function walkMarkdown(root: string): string[] {
 }
 
 export function loadSpecIrSources(repoRoot: string): SpecIrSource[] {
+  const scheduleSource = join(repoRoot, "docs", "governance", "vmodel-upgrade-schedule.md");
   return [
+    ...(existsSync(scheduleSource) ? [scheduleSource] : []),
     ...walkMarkdown(join(repoRoot, "docs", "plans")),
     ...walkMarkdown(join(repoRoot, "docs", "design", "harness")),
     ...walkMarkdown(join(repoRoot, "docs", "test-design", "harness")),
@@ -273,6 +276,79 @@ function sourceTitle(source: SpecIrSource): string {
   return (
     stringField(source.metadata.title) || firstHeading(source.content) || basename(source.path)
   );
+}
+
+function splitMarkdownTableLine(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function markdownTableRows(content: string): Record<string, string>[] {
+  const lines = content.split(/\r?\n/);
+  const rows: Record<string, string>[] = [];
+  for (let index = 0; index < lines.length - 2; index += 1) {
+    const headerLine = lines[index];
+    const separatorLine = lines[index + 1];
+    if (!headerLine.trim().startsWith("|") || !separatorLine.match(/^\s*\|?\s*:?-{3,}/)) {
+      continue;
+    }
+    const headers = splitMarkdownTableLine(headerLine).map((header) =>
+      header.toLowerCase().replace(/`/g, ""),
+    );
+    if (!headers.includes("plan_id") || !headers.includes("current_location")) continue;
+    for (let rowIndex = index + 2; rowIndex < lines.length; rowIndex += 1) {
+      const line = lines[rowIndex];
+      if (!line.trim().startsWith("|")) break;
+      const cells = splitMarkdownTableLine(line);
+      const row: Record<string, string> = {};
+      headers.forEach((header, cellIndex) => {
+        row[header] = cells[cellIndex] ?? "";
+      });
+      rows.push(row);
+    }
+  }
+  return rows;
+}
+
+function parseScheduleAuthoringRows(
+  sources: SpecIrSource[],
+  indexedAt: string,
+): ScheduleEntryRow[] {
+  const rows: ScheduleEntryRow[] = [];
+  for (const source of sources.filter((item) => item.kind === "schedule_doc")) {
+    for (const row of markdownTableRows(source.content)) {
+      const planId = row.plan_id ?? "";
+      if (!planId) continue;
+      const layer = row.layer ?? "";
+      const status = row.status || "active";
+      const rawPredecessors = row.predecessor_plan_ids || row.predecessors || "";
+      const predecessors = rawPredecessors
+        .split(/[|,]/)
+        .map((item) => planIdFromReference(item.trim()) || item.trim())
+        .filter(Boolean)
+        .sort();
+      rows.push({
+        schedule_entry_id: stableId("schedule-entry", planId),
+        plan_id: planId,
+        layer,
+        sub_doc: row.sub_doc ?? "",
+        v_pair: row.v_pair || (V_MODEL_PAIRS as Record<string, string>)[layer] || "",
+        predecessor_plan_ids: predecessors.join("|"),
+        current_location: row.current_location ?? "",
+        rag: row.rag || (status === "confirmed" || status === "completed" ? "green" : "yellow"),
+        status,
+        blocked_reason: row.blocked_reason ?? "",
+        source_path: source.path,
+        source_hash: source.sourceHash,
+        indexed_at: indexedAt,
+      });
+    }
+  }
+  return rows;
 }
 
 export function parseSpecDefs(sources: SpecIrSource[], indexedAt: string): SpecDefRow[] {
@@ -395,8 +471,11 @@ export function parseScheduleEntries(
   sources: SpecIrSource[],
   indexedAt: string,
 ): ScheduleEntryRow[] {
-  return sources
+  const authoredRows = parseScheduleAuthoringRows(sources, indexedAt);
+  const authoredPlanIds = new Set(authoredRows.map((row) => row.plan_id));
+  const fallbackRows = sources
     .filter((source) => source.kind === "plan" && sourcePlanId(source))
+    .filter((source) => !authoredPlanIds.has(sourcePlanId(source)))
     .map((source) => {
       const planId = sourcePlanId(source);
       const status = sourceStatus(source);
@@ -422,6 +501,7 @@ export function parseScheduleEntries(
         indexed_at: indexedAt,
       };
     });
+  return [...authoredRows, ...fallbackRows];
 }
 
 export function parseActivationEntries(
@@ -455,10 +535,12 @@ export function analyzeSpecIrIntegrity(input: {
   defs: SpecDefRow[];
   relations: SpecRelationRow[];
   relationFindings: SpecIrFindingRow[];
+  schedules: ScheduleEntryRow[];
   activations: ActivationEntryRow[];
 }): SpecIrFindingRow[] {
   const findings = [...input.relationFindings];
   const defIds = new Set(input.defs.map((def) => def.spec_id));
+  const schedulePlanCounts = new Map<string, number>();
   for (const def of input.defs) {
     if (
       ["L1", "L2", "L3", "L4", "L5", "L6"].includes(def.layer) &&
@@ -503,6 +585,47 @@ export function analyzeSpecIrIntegrity(input: {
         evidence_path: relation.evidence_path,
       });
     }
+  }
+  for (const schedule of input.schedules) {
+    schedulePlanCounts.set(schedule.plan_id, (schedulePlanCounts.get(schedule.plan_id) ?? 0) + 1);
+    if (!schedule.current_location.trim()) {
+      findings.push({
+        finding_id: stableId(
+          "finding:schedule-current-location-missing",
+          schedule.schedule_entry_id,
+        ),
+        kind: "schedule-current-location-missing",
+        severity: "warn",
+        subject_id: schedule.schedule_entry_id,
+        source: "spec-ir-projection",
+        status: "open",
+        evidence_path: schedule.source_path,
+      });
+    }
+    if (schedule.rag && !["green", "yellow", "red"].includes(schedule.rag)) {
+      findings.push({
+        finding_id: stableId("finding:schedule-rag-unknown", schedule.schedule_entry_id),
+        kind: "schedule-rag-unknown",
+        severity: "warn",
+        subject_id: schedule.schedule_entry_id,
+        source: "spec-ir-projection",
+        status: "open",
+        evidence_path: schedule.source_path,
+      });
+    }
+  }
+  for (const [planId, count] of schedulePlanCounts) {
+    if (count <= 1) continue;
+    findings.push({
+      finding_id: stableId("finding:schedule-duplicate-plan", planId),
+      kind: "schedule-duplicate-plan",
+      severity: "warn",
+      subject_id: planId,
+      source: "spec-ir-projection",
+      status: "open",
+      evidence_path:
+        input.schedules.find((schedule) => schedule.plan_id === planId)?.source_path ?? "",
+    });
   }
   for (const activation of input.activations) {
     if (
@@ -556,6 +679,7 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
     defs,
     relations: relationResult.relations,
     relationFindings: relationResult.findings,
+    schedules,
     activations,
   });
   return {
