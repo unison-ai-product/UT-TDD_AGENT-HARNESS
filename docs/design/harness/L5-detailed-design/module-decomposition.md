@@ -29,6 +29,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 | **plan** | `src/plan/lint.ts` | 実装済 (PLAN-L5-02 以降拡張) | PLAN lint |
 | **vmodel** | `src/vmodel/lint.ts` | 実装済 (PLAN-L5-02 以降拡張) | V-model 4 artifact trace lint |
 | **runtime** | `src/runtime/detect.ts` + `agent-guard.ts` | 実装済 | mode 検出 + agent-guard 判定 |
+| **shared** | `src/shared/*.ts` | 実装済 | module 横断の純粋ヘルパー。lint/runtime の逆依存回避 |
 | **doctor** | `src/doctor/index.ts` | 実装済 (scaffold) | 統合検証集約 |
 | **workflow** | `src/workflow/contracts.ts` + `src/workflow/readiness.ts` | 実装済 | 11 mode workflow エンジン (function §3) |
 | **session** | `src/handover/` + `src/runtime/session-log.ts` | 実装済 | Handover 操作 (function §4、L6 carry IMP-019) |

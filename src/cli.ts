@@ -73,6 +73,7 @@ import {
   saveVerificationEvidence,
   verificationRecommendationMermaid,
 } from "./lint/verification-profile";
+import { runWriteEncodingGuard } from "./lint/write-encoding-guard";
 import {
   type MemoryKind,
   renderMemoryList,
@@ -962,23 +963,28 @@ hook
         ...(opts.path ? { file_path: opts.path } : {}),
         ...(opts.command ? { command: opts.command } : {}),
       };
-      dispatch(
-        {
-          ...input,
-          hook_event_name: "PostToolUse",
-          tool_name: opts.tool ?? input.tool_name ?? (opts.command ? "Bash" : "manual"),
-          tool_input: toolInput,
-          tool_response: opts.outcome
-            ? {
-                ...(typeof input.tool_response === "object" ? input.tool_response : {}),
-                outcome: opts.outcome,
-              }
-            : input.tool_response,
-        },
-        nodeDeps(process.cwd(), gitBranch, gitHead),
-        "PostToolUse",
-      );
+      const repoRoot = process.cwd();
+      const postInput = {
+        ...input,
+        hook_event_name: "PostToolUse",
+        tool_name: opts.tool ?? input.tool_name ?? (opts.command ? "Bash" : "manual"),
+        tool_input: toolInput,
+        tool_response: opts.outcome
+          ? {
+              ...(typeof input.tool_response === "object" ? input.tool_response : {}),
+              outcome: opts.outcome,
+            }
+          : input.tool_response,
+      };
+      dispatch(postInput, nodeDeps(repoRoot, gitBranch, gitHead), "PostToolUse");
+      const encodingGuard = runWriteEncodingGuard(postInput, {
+        repoRoot,
+        changedFiles: () => loadChangedFiles(repoRoot),
+      });
       process.stdout.write(`session-log: post-tool-use ${input.session_id ?? "ut-tdd-cli"}\n`);
+      for (const message of encodingGuard.messages) {
+        process.stderr.write(`${message}\n`);
+      }
     },
   );
 

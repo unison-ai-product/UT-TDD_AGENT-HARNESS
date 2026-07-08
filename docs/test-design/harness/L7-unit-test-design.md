@@ -446,6 +446,17 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-READ-009 | `analyzeArtifacts` | byte layer が clean な valid UTF-8 double-encode mojibake でも、string-level denylist を統合して violation にする |
 | U-READ-010 | `checkReadability` / `checkRuntimeReadability` | real repo の docs/root instruction docs と `.ut-tdd` audit/handover artifacts が string + byte 統合 guard で green になる |
 
+### §1.16.3 U-WENC (write encoding guard、PLAN-L7-317)
+
+> ペア = `governance-enforcement.md` §8。doctor/CI の readability gate を待たず、書き込み直後に UTF-8 no-BOM / mojibake marker 違反を可視化する。
+
+| ID | 対象 | Oracle |
+|---|---|---|
+| U-WENC-001 | `hook post-tool-use` + `runWriteEncodingGuard` | `PostToolUse` が触った UTF-16LE `.md` を exit 0 のまま warning + `.ut-tdd/logs/encoding-violations.jsonl` 記録にする |
+| U-WENC-002 | `hook post-tool-use` | UTF-8 no-BOM の日本語 `.md` は warning も violation log も出さない |
+| U-WENC-003 | `runWriteEncodingGuard` | `Bash` / shell 系 tool は明示 target が無い場合に changed file fallback を使い、BOM 付き text を検出する |
+| U-WENC-004 | `collectWriteEncodingGuardTargets` | `apply_patch` header から text path を抽出し、binary path は対象外にする |
+
 ### §1.18 U-GCONF (gate-confirm coupling lint、PLAN-L7-18 / IMP-079)
 
 > ペア = `gate-confirm.md`。gate-design §2 台帳と design/test-design doc `status: confirmed` の coupling を検査する。parse 失敗を含む不整合は fail-close。
