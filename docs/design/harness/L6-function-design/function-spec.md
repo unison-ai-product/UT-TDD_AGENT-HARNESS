@@ -767,3 +767,10 @@ provider CLI を起動する。
 - `green`: 1 件以上の linked passing `test_runs` row が存在し、dependency impact が clean と確認されている。
 
 `projectArtifactProgress(db, graph)` は file-backed source/design/test-design/plan/requirement node を project する。これは `dependency_check_run_id`、`dependency_checked_at`、`passed_test_run_ids`、`passed_test_run_count`、`recovery_plan_ids` を記録する。projection は rebuildable `artifact_progress_events` row も書き込み、red/yellow row を `source_table="artifact_progress"` 付きで `feedback_events` へ mirror する。これにより workflow routing は DB state から開始できる。
+
+## PLAN-L6-60 ID 起点 trace impact traversal 追補 (2026-07-08)
+
+| 関数 | signature | 契約 |
+|---|---|---|
+| `analyzeTraceImpact` | `AnalyzeTraceImpactInput { db; spec_id } -> TraceImpactResult { root?; upstream[]; downstream[]; tests[]; edges[]; findings[] }` | `spec_defs` / `spec_relations` のうち `section_anchor=spec.defines:*` の typed ID 宇宙を読み、指定 `spec_id` の上流・下流・テスト影響を deterministic に返す。document-level の `requires` / `pairs` は artifact graph の責務であり、ID traversal へ混入させない。`traces_from` / `requires` は依存元から影響先へ向きを反転し、`traces_to` / `tests` は宣言方向を影響方向として扱う。unknown ID または空 projection は finding で fail-close し、source docs / PLAN / DB projection source は書き換えない。 |
+| `ut-tdd trace impact --id <id>` | CLI read-only command | `analyzeTraceImpact` の結果を text または `--json` で返す。`change-impact.ts` はファイル差分検出、`trace impact` は設計 ID 起点 traversal として責務を分ける。PLAN-L6-61 の RAG 閉包台帳はこの出力契約を入力にできる。 |

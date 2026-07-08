@@ -1015,3 +1015,11 @@ spec:
 TVMS-001、TVMS-002、TVMS-003、TVMS-004、TVMS-005、TVMS-006、TVMS-007 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。
 TVMS-007 は VMS-007 の phase/layer alignment が unit oracle と doctor gate で検証されることを保証する。
 TVMS-008 は agent contract authoring source、TVMS-009 は agent contract doctor gate の oracle である。
+
+## PLAN-L6-60 ID 起点 trace impact traversal oracle (2026-07-08)
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-TRACE-IMPACT-R1 | `analyzeTraceImpact(db, spec_id)` | `traces_from` / `requires` を依存元から影響先へ反転し、`traces_to` / `tests` を宣言方向で辿る。指定 ID の上流・下流・テスト影響を分離して返す。 |
+| U-TRACE-IMPACT-R2 | `analyzeTraceImpact(db, unknown_id)` | unknown ID は silent success にせず `trace-impact-root-missing` finding で fail-close する。 |
+| U-TRACE-IMPACT-R3 | `ut-tdd trace impact --id <id> --json` | CLI は DB read-only surface として JSON/text 出力を持ち、`change-impact.ts` のファイル差分検出とは責務を分ける。 |

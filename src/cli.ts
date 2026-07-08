@@ -174,6 +174,7 @@ import {
   loadTeamDefinition,
   type MemberPlacement,
 } from "./team/run";
+import { analyzeTraceImpact } from "./trace/impact";
 import { formatVmodelInjection, resolveVmodelInjection } from "./vmodel/injection";
 import { lintVmodel } from "./vmodel/lint";
 import {
@@ -823,6 +824,38 @@ graph
       return;
     }
     process.stdout.write(`${artifact.content}\n`);
+  });
+
+const trace = program.command("trace").description("ID-based typed spec trace traversal");
+trace
+  .command("impact")
+  .description("compute upstream/downstream/test impact from a spec id")
+  .requiredOption("--id <id>", "spec id to traverse, for example VMS-004")
+  .option("--json", "JSON output")
+  .action((opts: { id: string; json?: boolean }) => {
+    const repoRoot = process.cwd();
+    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+    try {
+      migrate(db);
+      const result = analyzeTraceImpact(db, opts.id);
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else if (result.ok) {
+        process.stdout.write(`trace impact: ${result.root?.spec_id} (${result.root?.spec_kind})\n`);
+        for (const node of result.upstream) process.stdout.write(`  upstream: ${node.spec_id}\n`);
+        for (const node of result.downstream) {
+          process.stdout.write(`  downstream: ${node.spec_id}\n`);
+        }
+        for (const node of result.tests) process.stdout.write(`  test: ${node.spec_id}\n`);
+      } else {
+        for (const finding of result.findings) {
+          process.stderr.write(`[${finding.severity}] ${finding.code}: ${finding.message}\n`);
+        }
+      }
+      process.exitCode = result.ok ? 0 : 1;
+    } finally {
+      db.close();
+    }
   });
 
 const session = program.command("session").description("session-log runtime events");

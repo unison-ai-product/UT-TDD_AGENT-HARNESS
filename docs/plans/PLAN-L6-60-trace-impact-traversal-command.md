@@ -5,7 +5,7 @@ kind: add-design
 layer: L6
 sub_doc: function-spec
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
@@ -15,13 +15,56 @@ parent_design: docs/plans/PLAN-L6-43-typed-spec-trace-closure.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L8
-review_evidence: []
+review_evidence:
+  - reviewer: codex-tl
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-08T20:36:00+09:00"
+    tests_green_at: "2026-07-08T20:35:00+09:00"
+    verdict: approve
+    scope: "PLAN-L6-60 ID 起点 trace impact traversal の L6/L7/CLI/実装を確認。`spec_defs` / `spec_relations` を正本にし、`change-impact.ts` のファイル差分検出とは責務分離。"
+    green_commands:
+      - kind: typecheck
+        command: "bun run tsc --noEmit"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-08T20:34:00+09:00"
+        evidence_path: src/trace/impact.ts
+        output_digest: "sha256:ffe3e7829a526f6c88eeb088689550e883ef1c57e52e4580798954bc50163102"
+      - kind: unit_test
+        command: "bun run vitest run tests\\trace-impact.test.ts tests\\cli-surface.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-08T20:35:00+09:00"
+        evidence_path: tests/trace-impact.test.ts
+        output_digest: "sha256:2693f2951f526df8fc55b0df7038816890ff8cd6734dbd01b6b9b9692a7fadd2"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-08T20:34:00+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:0afbb1c32cf190399bc3525bdd47c1979158e8af843f28b053f9d31d0c426971"
 agent_slots:
   - role: tl
     slot_label: "TL - ID 起点 traversal コマンドの契約設計、change-impact.ts との役割境界"
 generates:
   - artifact_path: docs/plans/PLAN-L6-60-trace-impact-traversal-command.md
     artifact_type: markdown_doc
+  - artifact_path: src/trace/impact.ts
+    artifact_type: source_module
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
+  - artifact_path: tests/trace-impact.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/cli-surface.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/design/harness/L6-function-design/function-spec.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L6-43-typed-spec-trace-closure.md
   requires: []
@@ -58,3 +101,12 @@ harness.db には `trace_edges` (設計間の artifact 粒度の依存投影、`
 
 - ID 起点 traversal の入出力契約が L6 function-spec として固定される。
 - `change-impact.ts` と重複しない役割分担が明記される。
+
+## 3. 実装結果 (2026-07-08)
+
+- `src/trace/impact.ts` に `analyzeTraceImpact` を追加し、`spec_defs` / `spec_relations` の ID 粒度グラフを traversal する。
+- `ut-tdd trace impact --id <id>` を追加し、text / `--json` の read-only 出力を提供する。
+- `section_anchor=spec.defines:*` の typed ID 宇宙に閉じ、document-level の `requires` / `pairs` は artifact graph 側の責務として混入させない。
+- `traces_from` / `requires` は依存元から影響先へ向きを反転し、`traces_to` / `tests` は宣言方向を影響方向として扱う。
+- unknown ID / 空 projection は finding で fail-close する。
+- L6 function-spec と L7 unit-test-design に追補し、`PLAN-L6-61` が RAG 閉包台帳の入力として再利用できる出力契約を固定した。
