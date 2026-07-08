@@ -200,6 +200,19 @@ requirements produced here.
 | IT-EXT-05 | registry/config は存在するが参照キー (mode/kind 等) が欠落した fixture (version-up 穴の再現) | `ut-tdd doctor` を実行する。 | 未知キーは Pack 既定へ **fail-close** し、fail-open (制約なしとして通過) しない。 | registry loader -> 既定 fallback boundary。 | 未知キー = fail-close (`if (!allowedKinds) return []` 型 fail-open の回帰ガード)。 |
 | IT-EXT-04 | 変動点宣言なしだが実体は registry/config で外部化されている箇所の fixture (過大宣言の逆) | `ut-tdd doctor` を実行する。 | 宣言が無い箇所は検査対象外 (lint は宣言駆動、全 doc を強制外部化しない = 過大外部化を強制しない)。 | 変動点マーカー parser boundary。 | lint は宣言された変動点のみ検査 (speculative generality を lint 自身が強制しない)。 |
 
+## Appendix F: Vモデル spec IR projection 結合テスト設計 (PLAN-L5-13、2026-07-08)
+
+> 設計ペア: `docs/design/harness/L5-detailed-design/physical-data.md` §9.9。
+> 本 Appendix は、docs / PLAN / test-design / 工程表 / activation profile から `spec_defs` / `spec_relations` / `schedule_entries` / `activation_entries` / `detector_route_candidates` を rebuildable projection として作る境界を扱う。
+> **実行時期**: U3 L7 の schema / projection writer 実装後に④実行する design-first。現時点では実装前 green を主張しない。
+
+| IT-ID | 前提 (Given) | 操作 (When) | 期待結果 (Then) | モジュール境界 | 不変条件 |
+|---|---|---|---|---|---|
+| IT-SPECIR-01 | design doc / PLAN / test-design heading / 工程表 fixture と空の `.ut-tdd/harness.db` | `ut-tdd db rebuild` を実行する。 | `spec_defs` / `spec_relations` / `schedule_entries` / `activation_entries` が deterministic に作られ、再実行しても row 数と digest が変わらない。 | markdown/frontmatter loader -> spec-ir projector -> SQLite boundary。 | projection は authoring source を変更しない。 |
+| IT-SPECIR-02 | `spec_relations` が未定義 `spec_id` を参照する fixture | `ut-tdd doctor` または spec-ir projection check を実行する。 | `spec-ir-orphan-relation` finding が作られ fail-close する。silent skip / auto repair はしない。 | spec-ir relation resolver -> findings projection boundary。 | orphan relation 0 が完了条件。 |
+| IT-SPECIR-03 | finding / quality_signal / schedule / activation が同じ subject を指す fixture | detector route candidate projection を実行する。 | `detector_route_candidates` は subject / signal / current_location / evidence を保持するが、FilingTarget の `allowed_kinds` / `layer_band` / `sub_doc_hint` / `pairing_obligation` は L4 function §3.2.1 由来で再導出される。 | findings + schedule + activation -> route candidate -> route eval boundary。 | detector は filing target を創作しない。設計 SSoT 不在なら candidate は non-ready finding になる。 |
+| IT-SPECIR-04 | activation profile が out-of-scope/deferred だが理由が無い fixture、または secret-like payload を含む fixture | spec-ir / activation projection を実行する。 | 理由なし除外は `activation-reason-missing` finding、secret-like payload は DB 挿入前に拒否される。 | activation loader -> projection sanitizer -> findings boundary。 | profile 除外は理由必須。raw/secret/PII は spec IR table に保存しない。 |
+
 ## §6 G8-WORKFLOW: integration verification workflow
 
 This section defines the executable workflow granularity for closing L8/G8. It

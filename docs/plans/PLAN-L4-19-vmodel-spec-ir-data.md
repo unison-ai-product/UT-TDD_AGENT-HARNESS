@@ -38,7 +38,7 @@ review_evidence:
         exit_code: 0
         completed_at: "2026-07-08T12:30:00+09:00"
         evidence_path: docs/test-design/harness/L9-system-test-design.md
-        output_digest: "sha256:df04161596b89f391952b4302011ab1ded3c730d8294a11a4e2fa0df92f97f96"
+        output_digest: "sha256:35cc93312f8a55763ce9eeca0d81336ec79fc0c2210d5e75e908fdce6eb96153"
 agent_slots:
   - role: tl
     slot_label: "TL - spec IR / DB projection の集約境界判断"
@@ -59,7 +59,7 @@ dependencies:
     - PLAN-L1-06-vmodel-upgrade-requirements
     - PLAN-L4-18-roadmap-drive-selection-hardening
   blocks:
-    - PLAN-L5-physical-vmodel-spec-ir
+    - PLAN-L5-13-vmodel-spec-ir-physical-data
     - PLAN-L7-vmodel-spec-ir-projection
   references:
     - docs/design/harness/L1-requirements/vmodel-upgrade-requirements.md
@@ -98,7 +98,7 @@ dependencies:
 
 ## 4. 後続 slice
 
-- U3 L5: 物理 schema / projection writer / migration 方針を確定する。
+- U3 L5: `PLAN-L5-13-vmodel-spec-ir-physical-data` で物理 schema / projection writer / migration 方針を確定する。
 - U3 L6-L8: projection contract と oracle を定義する。
 - U3 L7: `spec_defs` / `spec_relations` / schedule / activation projection を実装する。
 - U4: DB projection を検出系・起票候補・doctor finding surface へ接続する。

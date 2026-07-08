@@ -47,7 +47,7 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 | ST-DATA-03 | 集約間整合 (§7、artifact.trace↔plan.generates) | 不整合 → doctor 検出 | vitest doctor |
 | ST-DATA-04 | state schema ↔ src/schema 突合 (§8) | enum 齟齬 → doctor check_business_entity_coverage | vitest doctor |
 | ST-DATA-05 | review 前置証跡 不変条件 (§6 Plan、IMP-071) | confirmed/completed の design/impl/add-* PLAN が review_evidence 無し → doctor `checkReviewEvidence` fail-close (hard) | vitest doctor (U-REVIEW-006 実 repo ガード、実装済) |
-| ST-DATA-06 | 宣言型 spec IR 論理モデル (§1.1 / §8.1) | SpecDef / SpecRelation / ScheduleEntry / ActivationEntry / DetectorFinding が既存集約境界に割り当てられ、DB projection が authoring source に昇格しない | vitest DB projection + doctor coverage (U3 L7) |
+| ST-DATA-06 | 宣言型 spec IR 論理モデル (§1.1 / §8.1) | SpecDef / SpecRelation / ScheduleEntry / ActivationEntry / DetectorFinding が既存集約境界に割り当てられ、DB projection が authoring source に昇格しない。L5/L8 では IT-SPECIR-01..04 へ降下し、U3 L7 で vitest DB projection + doctor coverage に落とす | vitest DB projection + doctor coverage (U3 L7) |
 
 ### §1.2 ST-ARCH (architecture.md 由来 — 統合 / 依存方向 / fail-close)
 
