@@ -40,6 +40,7 @@ import { DRIVE_TDD_FITS } from "../src/workflow/contracts-policy";
 import type { ContractResult as SidecarContractResult } from "../src/workflow/contracts-types";
 import {
   evaluateRouteCommand,
+  routeFiling,
   routeSignalToMode,
   validateRouteConfigText,
 } from "../src/workflow/routing-contracts";
@@ -171,6 +172,19 @@ describe("L7 workflow contract implementations", () => {
     expect(routeSignalToMode({ signal: "regression_prod" }).candidates[0]).toBe("incident");
     expect(routeSignalToMode({ signal: "new_requirement" }).candidates[0]).toBe("add-feature");
     expect(routeSignalToMode({ signal: "version_deferral" }).candidates[0]).toBe("version-up");
+    const filingTarget = routeFiling({ signal: "feature_addition" });
+    expect(filingTarget.target).toMatchObject({
+      mode: "add-feature",
+      allowed_kinds: ["add-design", "add-impl"],
+      layer_band: ["L3-L6", "L7"],
+      requires_human_approval: false,
+    });
+    expect(filingTarget.target.forward_insufficient_reason).toContain("feature_addition");
+    const unknownFilingTarget = routeFiling({ signal: "unmapped-special-case" });
+    expect(unknownFilingTarget.target.mode).toBe("forward");
+    expect(unknownFilingTarget.findings.map((finding) => finding.code)).toContain(
+      "route-filing-unknown-signal",
+    );
     const routeEval = evaluateRouteCommand({ signal: "reverse gap" });
     expect(routeEval.mode).toBe("reverse");
     expect(routeEval.exit_code).toBe(0);

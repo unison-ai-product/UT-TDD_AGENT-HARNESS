@@ -28,8 +28,10 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L6-39-vmodel-spec-ir-function-contracts | L6 | function-spec | L7 | PLAN-L5-13-vmodel-spec-ir-physical-data | U2d: loader/parser/projector/detector handoff 契約を固定 | green | confirmed |  |
 | PLAN-L7-381-vmodel-spec-ir-projection | L7 |  | L6 | PLAN-L6-39-vmodel-spec-ir-function-contracts | U3: spec_defs / relations / schedule / activation / candidates をDB投影済 | green | confirmed |  |
 | PLAN-L7-382-detector-route-candidate-feedback | L7 |  | L6 | PLAN-L7-381-vmodel-spec-ir-projection | U4: detector候補をfeedback / dry-run issue queueへ接続済 | green | confirmed |  |
-| PLAN-L7-383-vmodel-schedule-authoring-source | L7 |  | L6 | PLAN-L7-382-detector-route-candidate-feedback | U5: 工程管理表を専用 authoring source としてDB投影へ接続中 | yellow | active | CI / doctor gate before merge |
-| PLAN-L6-40-route-filing-review-surface | L6 | function-spec | L7 | PLAN-L7-383-vmodel-schedule-authoring-source | U6: routeFiling SSoT 評価結果をcandidate review surfaceへ表示する設計 | yellow | planned | U5の工程表 projection green 後に起票 |
+| PLAN-L7-383-vmodel-schedule-authoring-source | L7 |  | L6 | PLAN-L7-382-detector-route-candidate-feedback | U5: 工程管理表を専用 authoring source としてDB投影へ接続済 | green | confirmed |  |
+| PLAN-L6-40-route-filing-review-surface | L6 | function-spec | L7 | PLAN-L7-383-vmodel-schedule-authoring-source | U6a: routeFiling SSoT 評価結果のreview DTO契約を固定 | green | confirmed |  |
+| PLAN-L7-384-route-filing-review-surface | L7 |  | L6 | PLAN-L6-40-route-filing-review-surface | U6b: detector candidate review surfaceへFilingTarget評価結果を表示済 | green | confirmed |  |
+| PLAN-L7-385-vmodel-activation-profile-join | L7 |  | L6 | PLAN-L7-384-route-filing-review-surface | U7: activation profile と工程表をjoinしてversion-up対象/除外/延期理由を検索可能化 | yellow | planned | U6のreview surface green 後に起票 |
 
 ## 2. 解釈規則
 

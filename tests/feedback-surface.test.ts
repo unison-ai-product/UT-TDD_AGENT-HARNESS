@@ -207,7 +207,7 @@ describe("takeover feedback surface (PLAN-L7-110)", () => {
         signalType: "detector_route_candidate:spec-ir-orphan-relation",
         severity: "warn",
         nextAction:
-          "review detector route candidate; candidate_status=non_ready; routeFiling SSoT before filing",
+          "review detector route candidate; candidate_status=non_ready; routeFiling SSoT evaluated signal=feature_addition; route_eval_mode=add-feature; allowed_kinds=add-design,add-impl; layer_band=L3-L6,L7; review_status=ssot_evaluated",
         sourceTable: "detector_route_candidates",
         sourceId: "candidate:spec-ir-1",
       });
@@ -220,6 +220,8 @@ describe("takeover feedback surface (PLAN-L7-110)", () => {
         bucket: "actionable",
       });
       expect(renderTakeoverFeedback(result)).toContain("routeFiling SSoT");
+      expect(renderTakeoverFeedback(result)).toContain("route_eval_mode=add-feature");
+      expect(renderTakeoverFeedback(result)).toContain("allowed_kinds=add-design,add-impl");
       expect(renderTakeoverFeedback(result)).toContain("candidate_status=non_ready");
     } finally {
       db.close();

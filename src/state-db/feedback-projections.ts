@@ -6,6 +6,7 @@ import {
   REFACTOR_FEEDBACK_LIMIT,
   type RefactorCandidate,
 } from "./refactor-candidates";
+import { detectorRouteCandidateAction } from "./route-candidate-review";
 
 interface FeedbackProjectionDeps {
   nowIso: () => string;
@@ -123,12 +124,7 @@ export function projectFeedbackEvents(db: HarnessDb, deps: FeedbackProjectionDep
         signal_type: `detector_route_candidate:${findingKind}`,
         severity,
         status: "open",
-        next_action:
-          `review detector route candidate ${candidateId || subject}; ` +
-          `candidate_status=${candidate.candidate_status ?? ""}; ` +
-          `evaluate routeFiling SSoT before filing ` +
-          `(target=${candidate.target_layer ?? ""}/${candidate.target_sub_doc ?? ""}, ` +
-          `filing=${candidate.filing_target_id ?? ""}): ${candidate.reason ?? ""}`,
+        next_action: detectorRouteCandidateAction(candidate),
         created_at: createdAt,
       },
     });
@@ -324,7 +320,7 @@ export function projectIssueQueue(db: HarnessDb, deps: FeedbackProjectionDeps): 
           ? `[ut-tdd detector candidate] ${signalType}`
           : `[ut-tdd telemetry] ${signalType}`,
         body: isDetectorCandidate
-          ? `Dry-run filing candidate from detector route feedback ${sourceEventId}. Human approval and routeFiling SSoT evaluation are required before external issue creation: ${row.next_action ?? ""}`
+          ? `Dry-run filing candidate from detector route feedback ${sourceEventId}. Human approval is required before external issue creation; routeFiling SSoT evaluation is recorded in the feedback event: ${row.next_action ?? ""}`
           : `Dry-run issue candidate from feedback event ${sourceEventId}: ${row.next_action ?? ""}`,
         status: "queued_dry_run",
         human_approval_required: 1,

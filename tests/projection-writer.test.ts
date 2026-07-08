@@ -1049,6 +1049,9 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
         severity: "warn",
       });
       expect(feedback?.next_action).toContain("routeFiling SSoT");
+      expect(feedback?.next_action).toContain("route_eval_mode=add-feature");
+      expect(feedback?.next_action).toContain("allowed_kinds=add-design,add-impl");
+      expect(feedback?.next_action).toContain("layer_band=L3-L6,L7");
 
       const issue = db
         .prepare(
@@ -1069,7 +1072,9 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
         human_approval_required: 1,
         external_issue_url: "",
       });
-      expect(issue?.body).toContain("Human approval and routeFiling SSoT evaluation are required");
+      expect(issue?.body).toContain("Human approval is required before external issue creation");
+      expect(issue?.body).toContain("routeFiling SSoT evaluation is recorded");
+      expect(issue?.body).toContain("review_status=ssot_evaluated");
 
       const guardrail = db
         .prepare(

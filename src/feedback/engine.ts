@@ -1,5 +1,6 @@
 import type { HarnessDb } from "../state-db/index";
 import { upsertRow } from "../state-db/index";
+import { detectorRouteCandidateAction } from "../state-db/route-candidate-review";
 import { RUNTIME_SKILL_SOURCE_PREFIX } from "../state-db/skill-projections";
 
 export interface SkillMetric {
@@ -195,12 +196,7 @@ export function emitFeedbackEvents(db: HarnessDb): FeedbackEvent[] {
       signal_type: `detector_route_candidate:${findingKind}`,
       severity: signalSeverity(candidate.severity),
       status: "open",
-      next_action:
-        `review detector route candidate ${candidateId || subject}; ` +
-        `candidate_status=${candidate.candidate_status ?? ""}; ` +
-        `evaluate routeFiling SSoT before filing ` +
-        `(target=${candidate.target_layer ?? ""}/${candidate.target_sub_doc ?? ""}, ` +
-        `filing=${candidate.filing_target_id ?? ""}): ${candidate.reason ?? ""}`,
+      next_action: detectorRouteCandidateAction(candidate),
       created_at: createdAt,
     };
     upsertRow(db, { table: "feedback_events", primaryKey: "feedback_event_id", row: { ...event } });

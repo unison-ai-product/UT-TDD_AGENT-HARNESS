@@ -248,6 +248,9 @@ describe("IT-SEARCH-01 / IT-DB-03 / IT-FEEDBACK-01", () => {
         severity: "warn",
       });
       expect(events[0]?.next_action).toContain("routeFiling SSoT");
+      expect(events[0]?.next_action).toContain("route_eval_mode=add-feature");
+      expect(events[0]?.next_action).toContain("allowed_kinds=add-design,add-impl");
+      expect(events[0]?.next_action).toContain("requires_human_approval=false");
       expect(
         db
           .prepare("SELECT COUNT(*) AS n FROM feedback_events WHERE source_table = ?")

@@ -834,6 +834,20 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-SPECIR-R8 | `deriveDetectorRouteCandidates(input)` | finding/spec/schedule/activation を join し、候補を `detector_route_candidates` draft として返す。FilingTarget は創作せず、target snapshot は L4 function §3.2.1 / `routeFiling` SSoT から取得する。 |
 | U-SPECIR-R9 | `deriveDetectorRouteCandidates(input)` (non-ready) | SSoT 不在、unknown route_signal、target_layer/sub_doc mismatch は non-ready finding。起票済み PLAN や FilingTarget 決定済みとして扱わない。 |
 
+## PLAN-L6-40 Route Filing Review Surface Addendum (2026-07-08)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の
+> `routeFiling` / `reviewDetectorRouteCandidate` 契約 (PLAN-L6-40)。
+> `detector_route_candidates` は候補入力であり、review surface が `routeFiling` SSoT を再評価して表示する。
+> DB schema は増やさず、表示 DTO と `feedback_events.next_action` で人間確認へ渡す。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-ROUTE-REVIEW-R1 | `routeFiling("feature_addition")` | mode=`add-feature`、`allowed_kinds=add-design/add-impl`、`layer_band=L3-L6/L7`、`requires_human_approval=false` を返す。 |
+| U-ROUTE-REVIEW-R2 | `routeFiling(unknown)` | mode=`forward` に fail-closed fallback し、unknown signal finding を伴う。silent success にしない。 |
+| U-ROUTE-REVIEW-R3 | `reviewDetectorRouteCandidate(candidate)` | candidate snapshot と FilingTarget 完全形を併記し、`allowed_kinds` / `layer_band` / `pairing_obligation` / `requires_human_approval` を表示要約に含める。 |
+| U-ROUTE-REVIEW-R4 | `projectFeedbackEvents` / `emitFeedbackEvents` | rebuild projection 経路と `feedback list --emit` 経路の両方で同じ routeFiling review 要約が出る。source finding との二重表示はしない。 |
+
 **gap 件数: 1 / 21** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
 
 L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。
