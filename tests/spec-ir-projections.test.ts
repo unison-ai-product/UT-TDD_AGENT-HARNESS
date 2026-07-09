@@ -229,6 +229,106 @@ describe("spec IR projections", () => {
     }
   });
 
+  it("joins document scale profile rows with the V-model document catalog", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-document-scale-profile-"));
+    try {
+      writeGovernanceDoc(
+        root,
+        "vmodel-document-catalog.md",
+        [
+          "# V-model document catalog",
+          "",
+          "| doc_type_id | layer | sub_doc | category | requirement_class | applicability | default_status | source_doc_family | authoring_source_path | projection_table | profile_controlled | skip_reason_required |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|",
+          "| DOC-L4-REPORT | L4 | report | deliverable | product-select | profile_controlled | skipped | vmodel-product-select | docs/governance/document-system-map.md#1b | document_catalog_entries | true | true |",
+        ].join("\n"),
+      );
+      writeGovernanceDoc(
+        root,
+        "vmodel-document-scale-profiles.md",
+        [
+          "# V-model document scale profiles",
+          "",
+          "| profile_id | doc_type_id | decision | detail_override | status_override | reason | required_plan_id |",
+          "|---|---|---|---|---|---|---|",
+          "| enterprise | DOC-L4-REPORT | adopt | detailed | required | enterprise profile requires report/audit output design. | PLAN-L4-999-report-slot |",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-09T00:00:00.000Z");
+
+      expect(projection.document_scale_profile_entries).toEqual([
+        expect.objectContaining({
+          profile_id: "enterprise",
+          doc_type_id: "DOC-L4-REPORT",
+          decision: "adopt",
+          detail_override: "detailed",
+          status_override: "required",
+          required_plan_id: "PLAN-L4-999-report-slot",
+          source_path: "docs/governance/vmodel-document-scale-profiles.md",
+        }),
+      ]);
+      expect(projection.document_scale_profile_reviews).toEqual([
+        expect.objectContaining({
+          profile_id: "enterprise",
+          doc_type_id: "DOC-L4-REPORT",
+          decision: "adopt",
+          catalog_layer: "L4",
+          catalog_sub_doc: "report",
+          requirement_class: "product-select",
+          catalog_default_status: "skipped",
+          catalog_profile_controlled: 1,
+          catalog_skip_reason_required: 1,
+        }),
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("turns malformed document scale profile rows into integrity findings", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-document-scale-profile-bad-"));
+    try {
+      writeGovernanceDoc(
+        root,
+        "vmodel-document-catalog.md",
+        [
+          "# V-model document catalog",
+          "",
+          "| doc_type_id | layer | sub_doc | category | requirement_class | applicability | default_status | source_doc_family | authoring_source_path | projection_table | profile_controlled | skip_reason_required |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|",
+          "| DOC-L4-REPORT | L4 | report | deliverable | product-select | profile_controlled | skipped | vmodel-product-select | docs/governance/document-system-map.md#1b | document_catalog_entries | true | true |",
+        ].join("\n"),
+      );
+      writeGovernanceDoc(
+        root,
+        "vmodel-document-scale-profiles.md",
+        [
+          "# V-model document scale profiles",
+          "",
+          "| profile_id | doc_type_id | decision | detail_override | status_override | reason | required_plan_id |",
+          "|---|---|---|---|---|---|---|",
+          "| poc | DOC-L4-REPORT | skip | compact | skipped |  | PLAN-L4-999-missing |",
+          "| enterprise | DOC-L4-MISSING | adopt | detailed | required | missing catalog row fixture. |  |",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-09T00:00:00.000Z");
+
+      expect(projection.findings).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "document-scale-profile-detail-unknown" }),
+          expect.objectContaining({ kind: "document-scale-profile-reason-missing" }),
+          expect.objectContaining({ kind: "document-scale-profile-catalog-reason-missing" }),
+          expect.objectContaining({ kind: "document-scale-profile-required-plan-missing" }),
+          expect.objectContaining({ kind: "document-scale-profile-catalog-missing" }),
+        ]),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("projects typed spec.defines declarations and declaration trace edges", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-typed-"));
     try {

@@ -7,6 +7,7 @@ pair_artifact: docs/design/harness/L1-requirements/
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L1
 created: 2026-05-29
+updated: 2026-07-09
 ---
 
 # UT-TDD Agent Harness — L1 運用テスト設計 (③ / OT-*)
@@ -167,3 +168,15 @@ L1 5 sub-doc 構造に再編 (v1.2、v2 HELIX-workflows 設計概念参照) に�
 ## 4. trace (③ → ①)
 
 本書の各 OT は `../../design/harness/L1-requirements/{business,functional,screen,technical,nfr}-requirements.md` の 5 sub-doc 内の BR-*/FR-L1-*/SR-*/TR-*/NFR-* と相互 reference する (v1.2 で 5 sub-doc 構造に再編、構想書 §3.1.2.1)。G1 (業務要求ゲート) で **5 sub-doc 全体 ⇔ 本書 1 doc** の pair freeze を PO サインオフで確定する。具体しきい値・受入条件は L3 AC / L12 受入テスト設計へ送る。
+
+## 5. G14-WORKFLOW
+
+test_strategy: L1 business / functional / screen / technical / NFR 要求を、継続運用で価値と安全性が維持されるかとして確認する risk-based operational verification。
+test_plan: L14 slice ごとに OT-*、運用 KPI、gate pass rate、handover / memory / feedback loop の必須・任意・defer を選ぶ。
+test_conditions: 選択 OT は運用観測条件、観測期間、対象 mode、必要な人間承認、次サイクル L0 feedback 条件を持つ。
+coverage_items: OT-* coverage は BR、FR-L1、SR、TR、NFR、UX、運用 KPI、L14→L0 feedback へ map する。
+test_procedures: doctor、db rebuild、gate evidence、handover / memory recall、CI、運用サインオフを実行し、観測結果を記録する。
+execution_evidence: operational evidence manifest は command、OT ID、KPI、signoff、feedback path、defer、result を記録する。
+exit_criteria: 必須 OT は pass または明示 defer を持ち、運用上の未解決 human_required / external_required が PO 承認なしに閉じられていない。
+defect_routing: failed OT は L14 correction、L1/L3/L4 back-prop、Reverse、Recovery、Incident、または次サイクル L0 planning feedback へ route する。
+verification_design: 検証環境、運用データ実在性、計測方法、評価基準、実行手順、L14→L0 feedback 記録を選択 OT-* ごとに明示する。

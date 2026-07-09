@@ -268,6 +268,16 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     columns: ["doc_type_id", "default_status"],
   },
   {
+    name: "idx_document_scale_profile_entry",
+    table: "document_scale_profile_entries",
+    columns: ["profile_id", "doc_type_id", "decision"],
+  },
+  {
+    name: "idx_document_scale_profile_review",
+    table: "document_scale_profile_reviews",
+    columns: ["profile_id", "decision", "catalog_layer"],
+  },
+  {
     name: "idx_spec_rag_closure_rag_status",
     table: "spec_rag_closure_entries",
     columns: ["rag", "closure_status"],

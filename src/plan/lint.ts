@@ -18,10 +18,12 @@ import {
   REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE,
   REVERSE_R4_ROUTE_BACKPROP_ENFORCEMENT_DATE,
   REVIEW_PATTERN,
+  RIGHT_ARM_VERIFICATION_GATE_BY_LAYER,
   ROUTE_CERTIFICATE_ENFORCEMENT_DATE,
   ROUTE_MODE_ALLOWED_KINDS,
   ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS,
   ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS,
+  ROUTE_MODE_LAYER_BANDS,
   SERIAL_MODE_PATTERN,
   SERIAL_REASONS,
   VALID_REVERSE_FULLBACK_SCOPE_DECISIONS,
@@ -396,6 +398,77 @@ function routeModeKindViolations(
   ];
 }
 
+function routeModeKindLayerViolations(
+  raw: Record<string, unknown>,
+  planId: string,
+): { reason: "route_mode_kind_layer_mismatch"; detail: string }[] {
+  if (stringField(raw.status) === "archived") return [];
+
+  const mode = stringField(raw.route_mode);
+  if (!mode) return [];
+
+  const allowedLayers = ROUTE_MODE_LAYER_BANDS[mode];
+  if (!allowedLayers) return [];
+
+  const layer = stringField(raw.layer) ?? "";
+  if (allowedLayers.includes(layer)) return [];
+
+  if (ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS.has(planId)) return [];
+  const status = stringField(raw.status) ?? "";
+  if (ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS.has(planId) && status === "draft") return [];
+
+  const debtNote = ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS.has(planId)
+    ? ` (debt plan must be promoted to add-impl + Reverse pairing before leaving draft; ${ROUTE_MODE_KIND_DEBT_GUIDANCE})`
+    : "";
+  return [
+    {
+      reason: "route_mode_kind_layer_mismatch",
+      detail: `route_mode=${mode} allows layer=${allowedLayers.join("|")} but layer=${layer}${debtNote}`,
+    },
+  ];
+}
+
+function verifyGateViolations(raw: Record<string, unknown>): {
+  reason: "verify_gate_missing" | "verify_gate_layer_mismatch";
+  detail: string;
+}[] {
+  if (stringField(raw.status) === "archived") return [];
+
+  const kind = stringField(raw.kind);
+  const gate = stringField(raw.verification_gate);
+  if (kind !== "verify") {
+    return gate
+      ? [
+          {
+            reason: "verify_gate_layer_mismatch",
+            detail: `verification_gate=${gate} is only valid for kind=verify`,
+          },
+        ]
+      : [];
+  }
+
+  const layer = stringField(raw.layer) ?? "";
+  const expectedGate = RIGHT_ARM_VERIFICATION_GATE_BY_LAYER[layer];
+  if (!expectedGate) return [];
+  if (!gate) {
+    return [
+      {
+        reason: "verify_gate_missing",
+        detail: `kind=verify layer=${layer} requires verification_gate=${expectedGate}`,
+      },
+    ];
+  }
+  if (gate !== expectedGate) {
+    return [
+      {
+        reason: "verify_gate_layer_mismatch",
+        detail: `kind=verify layer=${layer} requires verification_gate=${expectedGate} but got ${gate}`,
+      },
+    ];
+  }
+  return [];
+}
+
 const PLAN_CODE_LINE_REFERENCE_PATTERN = /\b([A-Za-z0-9_./\\-]+\.tsx?):(\d+)\b/g;
 
 function fileLineCount(path: string): number {
@@ -709,6 +782,12 @@ export function analyzePlanGovernance(
       violations.push({ file: entry.file, ...violation });
     }
     for (const violation of routeModeKindViolations(raw, planId)) {
+      violations.push({ file: entry.file, ...violation });
+    }
+    for (const violation of routeModeKindLayerViolations(raw, planId)) {
+      violations.push({ file: entry.file, ...violation });
+    }
+    for (const violation of verifyGateViolations(raw)) {
       violations.push({ file: entry.file, ...violation });
     }
 

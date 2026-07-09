@@ -92,6 +92,15 @@ export const AUTOMATIC_DB_PROJECTION_REQUIREMENTS: DbProjectionIngestionRequirem
       "document catalog entries are derived from the V-model document catalog authoring source",
   },
   {
+    table: "document_scale_profile_entries",
+    reason:
+      "document scale profile entries are derived from the V-model document scale profile authoring source",
+  },
+  {
+    table: "document_scale_profile_reviews",
+    reason: "document scale profile reviews join scale profile decisions with the document catalog",
+  },
+  {
     table: "spec_rag_closure_entries",
     reason: "spec RAG closure entries are derived from typed spec trace closure state",
   },

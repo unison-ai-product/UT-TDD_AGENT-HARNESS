@@ -133,9 +133,26 @@ add-feature mode は `add-design` と `add-impl` を内包する運用で、独�
 - デッドロック解消: 案(a) REVERSE `dependencies.parent` 参照による draft 段階 pairing は `0d55f5e` で
   先行着地済み。本 PLAN はその上で昇格実例第 1 号として運用形を確立した。
 
+## 2026-07-09 追補: route_mode-layer band hardening
+
+Vモデル改善 ZIP 精読後の追加実装として、PLAN-L6-38 の `routeModeKindLayer` 契約を
+`analyzePlanGovernance` に降ろした。既存の `route_mode -> kind` 判定は維持し、同じ debt
+allowlist を使って `route_mode -> layer band` を別 violation reason
+`route_mode_kind_layer_mismatch` として surface する。
+
+- `src/plan/lint-policy.ts`: `ROUTE_MODE_LAYER_BANDS` を追加。
+- `src/plan/lint-types.ts`: `route_mode_kind_layer_mismatch` を PLAN governance violation reason に追加。
+- `src/plan/lint.ts`: `routeModeKindLayerViolations` を追加し、`analyzePlanGovernance` へ配線。
+- `tests/plan-lint.test.ts`: `U-PLANGOV-011v4` で `verify` の L7 誤配置と `add-feature` の L2 誤配置を fail-close し、L9 verify 正常系を固定。
+- 設計反映: `docs/design/harness/L6-function-design/function-spec.md` と
+  `docs/test-design/harness/L7-unit-test-design.md` に、現行実装済み範囲と `promote_by`
+  期限 hardening の残 carry を分離して記録。
+
 ## DoD
 
 - [x] route_mode-kind の対応表を定義する (add-feature スコープ。全 mode 展開は PO gate として残置)。
 - [x] 新規の不整合 PLAN を plan lint で fail させる (`route_mode_kind_mismatch`、regression test 固定)。
 - [x] 既存 debt を台帳化し、段階是正 (着手時昇格) として surface する。
 - [x] process (docs/process/modes/add-feature.md) へ back-fill する (PLAN-REVERSE-263)。
+- [x] route_mode の layer band を PLAN governance lint に追加し、`route_mode_kind_layer_mismatch`
+      と `U-PLANGOV-011v4` で Vモデル層の誤配置を fail-close する。

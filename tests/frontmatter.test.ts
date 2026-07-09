@@ -127,6 +127,7 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
           layer: "L9",
           parent_design: undefined,
           route_mode: "verify",
+          verification_gate: "G9",
         }),
       ).success,
     ).toBe(true);
@@ -161,6 +162,38 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
           kind: "verify",
           layer: "L9",
           parent_design: undefined,
+          verification_gate: "G9",
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it("kind=verify requires verification_gate matching the right-arm layer", () => {
+    expect(
+      frontmatterSchema.safeParse(
+        implBase({
+          plan_id: "PLAN-L9-99-system-verification",
+          kind: "verify",
+          layer: "L9",
+          parent_design: undefined,
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      frontmatterSchema.safeParse(
+        implBase({
+          plan_id: "PLAN-L9-99-system-verification",
+          kind: "verify",
+          layer: "L9",
+          parent_design: undefined,
+          verification_gate: "G10",
+        }),
+      ).success,
+    ).toBe(false);
+    expect(
+      frontmatterSchema.safeParse(
+        implBase({
+          verification_gate: "G7",
         }),
       ).success,
     ).toBe(false);

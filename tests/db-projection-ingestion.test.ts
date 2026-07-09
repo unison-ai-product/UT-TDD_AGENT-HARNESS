@@ -34,6 +34,8 @@ const populatedAutomaticProjectionCounts = {
   activation_entries: 1,
   activation_schedule_reviews: 1,
   document_catalog_entries: 1,
+  document_scale_profile_entries: 1,
+  document_scale_profile_reviews: 1,
   spec_rag_closure_entries: 1,
   agent_contracts: 1,
 };
@@ -58,6 +60,8 @@ describe("db projection ingestion detector", () => {
       expect(result.rowCounts.activation_entries).toBeGreaterThan(0);
       expect(result.rowCounts.activation_schedule_reviews).toBeGreaterThan(0);
       expect(result.rowCounts.document_catalog_entries).toBeGreaterThan(0);
+      expect(result.rowCounts.document_scale_profile_entries).toBeGreaterThan(0);
+      expect(result.rowCounts.document_scale_profile_reviews).toBeGreaterThan(0);
       expect(result.rowCounts.spec_rag_closure_entries).toBeGreaterThan(0);
       expect(result.rowCounts.agent_contracts).toBeGreaterThan(0);
     } finally {
@@ -137,6 +141,8 @@ describe("db projection ingestion detector", () => {
         "schedule_entries",
         "activation_entries",
         "document_catalog_entries",
+        "document_scale_profile_entries",
+        "document_scale_profile_reviews",
         "spec_rag_closure_entries",
         "agent_contracts",
       ]),

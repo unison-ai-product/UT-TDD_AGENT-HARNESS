@@ -1468,6 +1468,8 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rowCounts(db).activation_entries).toBeGreaterThan(0);
       expect(rowCounts(db).activation_schedule_reviews).toBeGreaterThan(0);
       expect(rowCounts(db).document_catalog_entries).toBeGreaterThan(0);
+      expect(rowCounts(db).document_scale_profile_entries).toBeGreaterThan(0);
+      expect(rowCounts(db).document_scale_profile_reviews).toBeGreaterThan(0);
       expect(rowCounts(db).spec_rag_closure_entries).toBeGreaterThan(0);
       const inheritedOracle = db
         .prepare("SELECT COUNT(*) AS count FROM test_cases WHERE test_file = ? AND oracle_id = ?")
@@ -1533,6 +1535,21 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       });
       expect(findReference(db, "DOC-L4-DATA document catalog").at(0)).toMatchObject({
         subject_type: "document_catalog_entry",
+      });
+      const documentScaleProfile = db
+        .prepare(
+          "SELECT decision, catalog_layer, catalog_sub_doc FROM document_scale_profile_reviews WHERE profile_id = ? AND doc_type_id = ?",
+        )
+        .get("enterprise", "DOC-L4-REPORT") as
+        | { decision: string; catalog_layer: string; catalog_sub_doc: string }
+        | undefined;
+      expect(documentScaleProfile).toMatchObject({
+        decision: "adopt",
+        catalog_layer: "L4",
+        catalog_sub_doc: "report",
+      });
+      expect(findReference(db, "enterprise DOC-L4-REPORT adopt").at(0)).toMatchObject({
+        subject_type: "document_scale_profile_review",
       });
       const typedSpec = db
         .prepare("SELECT spec_kind, section_anchor FROM spec_defs WHERE spec_id = ?")

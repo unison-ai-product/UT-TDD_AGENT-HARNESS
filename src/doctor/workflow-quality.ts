@@ -37,6 +37,12 @@ import {
   loadRightArmGatePlanningInput,
   rightArmGatePlanningMessages,
 } from "../lint/right-arm-gate-planning";
+import {
+  analyzeRightLungDocGovernance,
+  canLoadRightLungDocGovernanceInput,
+  loadRightLungDocGovernanceInput,
+  rightLungDocGovernanceMessages,
+} from "../lint/right-lung-doc-governance";
 import { classifyProposalDocumentCoverage } from "../task/classify";
 
 /**
@@ -84,6 +90,29 @@ export function checkRightArmGatePlanning(repoRoot: string): { messages: string[
   } catch {
     return {
       messages: ["right-arm-gate-planning - violation: G8-G14 carry docs could not be read"],
+      ok: false,
+    };
+  }
+}
+
+export function checkRightLungDocGovernance(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  if (!canLoadRightLungDocGovernanceInput(repoRoot)) {
+    return {
+      messages: [
+        "right-lung-doc-governance - violation: right-lung test-design docs could not be read",
+      ],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeRightLungDocGovernance(loadRightLungDocGovernanceInput(repoRoot));
+    return { messages: rightLungDocGovernanceMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["right-lung-doc-governance - violation: right-lung doc check could not run"],
       ok: false,
     };
   }

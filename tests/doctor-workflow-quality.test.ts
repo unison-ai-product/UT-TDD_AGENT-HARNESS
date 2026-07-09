@@ -10,6 +10,7 @@ import {
   checkLintWiring,
   checkProposalDocumentCoverage,
   checkRightArmGatePlanning,
+  checkRightLungDocGovernance,
 } from "../src/doctor/workflow-quality";
 
 describe("doctor workflow quality checks", () => {
@@ -22,6 +23,7 @@ describe("doctor workflow quality checks", () => {
       ["lint-wiring", checkLintWiring(missingRoot)],
       ["frontend-design-coverage", checkFrontendDesignCoverage(missingRoot)],
       ["proposal-document-coverage", checkProposalDocumentCoverage(missingRoot)],
+      ["right-lung-doc-governance", checkRightLungDocGovernance(missingRoot)],
       ["g8-integration-workflow", checkG8IntegrationWorkflow(missingRoot)],
       ["g9-system-workflow", checkG9SystemWorkflow(missingRoot)],
       ["g10-ux-workflow", checkG10UxWorkflow(missingRoot)],

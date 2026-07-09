@@ -14,6 +14,11 @@ import {
 } from "../lint/design-language";
 import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
 import {
+  analyzeGateIdFormat,
+  gateIdFormatMessages,
+  loadGateIdFormatInput,
+} from "../lint/gate-id-format";
+import {
   analyzeArtifacts,
   loadRuntimeArtifactReadabilityDocs,
   loadSystemReadabilityDocs,
@@ -110,6 +115,21 @@ export function checkGateConfirm(repoRoot: string): { messages: string[]; ok: bo
   } catch {
     return {
       messages: ["gate-confirm - violation: gate-design/doc frontmatter could not be read"],
+      ok: false,
+    };
+  }
+}
+
+export function checkGateIdFormat(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["gate-id-format - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeGateIdFormat(loadGateIdFormatInput(repoRoot));
+    return { messages: gateIdFormatMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["gate-id-format - violation: gate docs or evidence manifests could not be read"],
       ok: false,
     };
   }

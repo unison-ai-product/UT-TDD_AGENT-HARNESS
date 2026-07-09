@@ -235,6 +235,7 @@ test strategy -> test plan -> test condition / coverage item -> test procedure
 | `execution_evidence` | The integration evidence manifest records command, exit code, IT-* IDs, evidence path, selected/deferred counts, and failure routing. Green unit tests alone do not close G8 unless the manifest maps them to IT-* coverage. |
 | `exit_criteria` | G8 passes only when all mandatory selected IT-* rows have passing evidence, all defers are explicit and not past their waiting layer, no blocking doctor lint remains, and review evidence is recorded for gate-significant changes. |
 | `defect_routing` | Failure routes to L8 correction when the test/evidence is wrong, Reverse when L5/L6 contract is wrong, Refactor when integration structure is weak, Recovery when a regression is found, and Incident for production-impacting failures. |
+| `verification_design` | Verification environment, data reality, measurement method, evaluation threshold, and execution procedure are explicit in the selected IT-* evidence plan. |
 
 Minimum G8 close profile for the first L8 ascent:
 

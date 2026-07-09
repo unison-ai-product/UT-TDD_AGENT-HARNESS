@@ -94,6 +94,11 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
           columns: ["doc_type_id", "default_status"],
         },
         {
+          name: "idx_document_scale_profile_entry",
+          table: "document_scale_profile_entries",
+          columns: ["profile_id", "doc_type_id", "decision"],
+        },
+        {
           name: "idx_spec_rag_closure_rag_status",
           table: "spec_rag_closure_entries",
           columns: ["rag", "closure_status"],
@@ -153,6 +158,21 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
         "default_status",
         "profile_controlled",
         "skip_reason_required",
+      ]),
+    );
+    const documentScaleProfileColumns = db
+      .prepare("PRAGMA table_info(document_scale_profile_reviews)")
+      .all()
+      .map((row) => String(row.name));
+    expect(documentScaleProfileColumns).toEqual(
+      expect.arrayContaining([
+        "document_scale_profile_review_id",
+        "profile_id",
+        "doc_type_id",
+        "decision",
+        "catalog_layer",
+        "catalog_sub_doc",
+        "catalog_skip_reason_required",
       ]),
     );
     const specRagColumns = db

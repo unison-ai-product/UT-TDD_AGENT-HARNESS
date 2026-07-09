@@ -121,7 +121,7 @@ projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来�
 | AcId | `AC-FR-<NN>-<NN>` / `AC-NFR-*` / `AC-UX-*` | g3-trace |
 | AtId | `AT-*` | g3-trace |
 | NfrId | `NFR-<NN>` (NFR-09/10 欠番) | g3-trace / doc-consistency |
-| GateId | `G<N>` (G0.5-G14) | (形式 lint 未実装 → IMP-072 carry。現状 gate **状態遷移** は doctor/plan lint が検証、ID **形式**検証は L5 carry) |
+| GateId | `G<N>` (G0.5-G14) | `gate-id-format` (PLAN-L7-395 / IMP-072)。gate **状態遷移** は `gate-confirm`、ID **形式**は `gate-id-format` が検証 |
 | ImpId | `IMP-<NNN>` | improvement-backlog |
 
 > ID は値オブジェクト (不変・等価性は値で判定)。採番は集約ルート起票時に確定。
@@ -193,6 +193,9 @@ projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来�
 | `schedule_entries` | `ScheduleEntry` projection。工程管理表の現在地、V-pair、predecessor、RAG、blocked reason を保持する |
 | `activation_entries` | `ActivationEntry` projection。profile ごとの in-scope / out-of-scope / defer reason / target version を保持する |
 | `activation_schedule_reviews` | `ActivationScheduleReview` projection。activation profile と工程表を join し、version-up wave の現在地、対象/除外/延期理由を検索可能にする |
+| `document_catalog_entries` | `DocumentCatalogEntry` projection。Vモデル文書種別 catalog の layer/sub_doc/category/default status/profile control を保持する |
+| `document_scale_profile_entries` | `DocumentScaleProfileEntry` projection。PoC/Standard/Enterprise ごとの文書採用・skip・粒度・理由を保持する |
+| `document_scale_profile_reviews` | `DocumentScaleProfileReview` projection。文書 catalog と規模 profile を join し、product-select 文書の採用理由・skip理由・必要PLANを検索可能にする |
 | `detector_route_candidates` | `DetectorFinding` projection。検出結果を FilingTarget SSoT に渡す候補として保持し、起票先を DB 独自に決定しない |
 | `gate_runs` | gate 判定証跡と doctor/vmodel lint 結果 |
 

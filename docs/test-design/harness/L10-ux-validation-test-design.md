@@ -43,6 +43,7 @@ test_procedures: 対応する vitest/doctor/render/review command を実行し�
 execution_evidence: UX evidence manifest は command、UXV ID、path、result を記録する。
 exit_criteria: 必須の選択済み UXV case はすべて pass、または明示的な defer を持つ。
 defect_routing: 失敗した UXV case は scope に応じて L10 correction、L2/L4 back-prop、Reverse、Incident へ route する。
+verification_design: 検証環境、実データ/レンダリング条件、計測方法、評価基準、実行手順を選択 UXV-* ごとに明示する。
 
 ## §2 UX 検証テストケース (UXV-*、GWT)
 

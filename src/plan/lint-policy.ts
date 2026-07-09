@@ -44,6 +44,29 @@ const ROUTE_MODE_ALLOWED_KINDS: Record<string, readonly string[]> = {
   verify: ["verify"],
 };
 
+// L4 §3.1 駆動モデル表と Vモデル層の対応。kind だけ合っていても layer が
+// 別の腕を指していれば片肺運用になるため、route_mode ごとの許容 layer band を
+// PLAN governance lint で fail-close する。
+const ROUTE_MODE_LAYER_BANDS: Record<string, readonly string[]> = {
+  "add-feature": ["L3", "L4", "L5", "L6", "L7"],
+  incident: ["L7", "cross"],
+  reverse: ["cross"],
+  recovery: ["cross"],
+  refactor: ["L7"],
+  "version-up": ["L7"],
+  verify: ["L8", "L9", "L10", "L11", "L12", "L13", "L14"],
+};
+
+const RIGHT_ARM_VERIFICATION_GATE_BY_LAYER: Record<string, string> = {
+  L8: "G8",
+  L9: "G9",
+  L10: "G10",
+  L11: "G11",
+  L12: "G12",
+  L13: "G13",
+  L14: "G14",
+};
+
 // 2026-07-02 時点で landed 済みの route_mode=add-feature + kind=impl 慣行。
 // 完了成果の kind を書き換えると履歴改ざんになるため恒久免除で台帳固定する。
 // 正本台帳: docs/governance/route-mode-kind-debt-audit-2026-07-02.md
@@ -153,10 +176,12 @@ export {
   REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE,
   REVERSE_R4_ROUTE_BACKPROP_ENFORCEMENT_DATE,
   REVIEW_PATTERN,
+  RIGHT_ARM_VERIFICATION_GATE_BY_LAYER,
   ROUTE_CERTIFICATE_ENFORCEMENT_DATE,
   ROUTE_MODE_ALLOWED_KINDS,
   ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS,
   ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS,
+  ROUTE_MODE_LAYER_BANDS,
   SERIAL_MODE_PATTERN,
   SERIAL_REASONS,
   VALID_REVERSE_FULLBACK_SCOPE_DECISIONS,

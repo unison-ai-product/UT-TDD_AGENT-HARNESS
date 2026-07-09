@@ -809,7 +809,7 @@ dependencies:
         layer: "L9",
         subDoc: null,
         extra:
-          "route_signal: verification_plan\nroute_mode: verify\ncreated: 2026-07-07\nupdated: 2026-07-07\n",
+          "route_signal: verification_plan\nroute_mode: verify\nverification_gate: G9\ncreated: 2026-07-07\nupdated: 2026-07-07\n",
       }),
       planDoc("PLAN-M-198-master-hub", {
         kind: "design",
@@ -977,7 +977,7 @@ dependencies:
         layer: "L9",
         subDoc: null,
         extra:
-          "route_signal: verification_plan\nroute_mode: verify\ncreated: 2026-07-07\nupdated: 2026-07-07\n",
+          "route_signal: verification_plan\nroute_mode: verify\nverification_gate: G9\ncreated: 2026-07-07\nupdated: 2026-07-07\n",
       }),
       planDoc("PLAN-L7-911-verify-wrong-kind", {
         kind: "add-impl",
@@ -1029,6 +1029,92 @@ dependencies:
 
     for (const file of okDocs) expect(mismatchFiles).not.toContain(file);
     expect(mismatchFiles).toContain("docs/plans/PLAN-L7-914-incident-wrong-kind.md");
+  });
+
+  it("U-PLANGOV-011v4: route_mode layer band rejects mismatched V-model layers", () => {
+    const docs = [
+      planDoc("PLAN-L9-915-verify-layer-ok", {
+        kind: "verify",
+        layer: "L9",
+        subDoc: null,
+        extra:
+          "route_signal: verification_plan\nroute_mode: verify\nverification_gate: G9\ncreated: 2026-07-08\nupdated: 2026-07-08\n",
+      }),
+      planDoc("PLAN-L7-916-verify-layer-wrong", {
+        kind: "verify",
+        layer: "L7",
+        subDoc: null,
+        extra:
+          "route_signal: verification_plan\nroute_mode: verify\ncreated: 2026-07-08\nupdated: 2026-07-08\n",
+      }),
+      planDoc("PLAN-L2-917-add-feature-layer-wrong", {
+        kind: "add-design",
+        layer: "L2",
+        status: "draft",
+        subDoc: null,
+        extra:
+          "route_signal: feature_addition\nroute_mode: add-feature\ncreated: 2026-07-08\nupdated: 2026-07-08\n",
+      }),
+    ];
+
+    const mismatchFiles = analyzePlanGovernance(docs)
+      .violations.filter((v) => v.reason === "route_mode_kind_layer_mismatch")
+      .map((v) => v.file);
+
+    expect(mismatchFiles).not.toContain("docs/plans/PLAN-L9-915-verify-layer-ok.md");
+    expect(mismatchFiles).toContain("docs/plans/PLAN-L7-916-verify-layer-wrong.md");
+    expect(mismatchFiles).toContain("docs/plans/PLAN-L2-917-add-feature-layer-wrong.md");
+  });
+
+  it("U-PLANGOV-011v5: verify PLANs bind L8-L14 layers to matching G8-G14 verification_gate", () => {
+    const docs = [
+      planDoc("PLAN-L10-918-verify-gate-ok", {
+        kind: "verify",
+        layer: "L10",
+        subDoc: null,
+        extra:
+          "route_signal: verification_plan\nroute_mode: verify\nverification_gate: G10\ncreated: 2026-07-09\nupdated: 2026-07-09\n",
+      }),
+      planDoc("PLAN-L10-919-verify-gate-missing", {
+        kind: "verify",
+        layer: "L10",
+        subDoc: null,
+        extra:
+          "route_signal: verification_plan\nroute_mode: verify\ncreated: 2026-07-09\nupdated: 2026-07-09\n",
+      }),
+      planDoc("PLAN-L10-920-verify-gate-mismatch", {
+        kind: "verify",
+        layer: "L10",
+        subDoc: null,
+        extra:
+          "route_signal: verification_plan\nroute_mode: verify\nverification_gate: G9\ncreated: 2026-07-09\nupdated: 2026-07-09\n",
+      }),
+      planDoc("PLAN-L7-921-nonverify-gate", {
+        kind: "add-impl",
+        layer: "L7",
+        subDoc: null,
+        parentDesign: "docs/design/harness/L6-function-design/function-spec.md",
+        extra:
+          "route_signal: feature_addition\nroute_mode: add-feature\nverification_gate: G8\ncreated: 2026-07-09\nupdated: 2026-07-09\n",
+      }),
+    ];
+
+    const violations = analyzePlanGovernance(docs).violations;
+    const missingFiles = violations
+      .filter((v) => v.reason === "verify_gate_missing")
+      .map((v) => v.file);
+    const mismatchFiles = violations
+      .filter((v) => v.reason === "verify_gate_layer_mismatch")
+      .map((v) => v.file);
+
+    expect(missingFiles).toEqual(["docs/plans/PLAN-L10-919-verify-gate-missing.md"]);
+    expect(mismatchFiles).toEqual([
+      "docs/plans/PLAN-L10-920-verify-gate-mismatch.md",
+      "docs/plans/PLAN-L7-921-nonverify-gate.md",
+    ]);
+    expect(violations.map((v) => v.file)).not.toContain(
+      "docs/plans/PLAN-L10-918-verify-gate-ok.md",
+    );
   });
 
   it("U-PLANGOV-011w: draft debt is exempt while draft and fails closed on start (着手時昇格)", () => {

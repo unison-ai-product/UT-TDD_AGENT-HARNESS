@@ -70,6 +70,7 @@ import {
   checkDddTddRules,
   checkDesignLanguage,
   checkGateConfirm,
+  checkGateIdFormat,
   checkReadability,
   checkRuleDrift,
   checkRuntimePortability,
@@ -100,6 +101,7 @@ import {
   checkLintWiring,
   checkProposalDocumentCoverage,
   checkRightArmGatePlanning,
+  checkRightLungDocGovernance,
 } from "./workflow-quality";
 
 const fullProfile = ["full"] as const;
@@ -166,6 +168,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("runtime-portability", () => checkRuntimePortability(deps.repoRoot)),
         full("rule-drift", () => checkRuleDrift(deps.repoRoot)),
         full("gate-confirm", () => checkGateConfirm(deps.repoRoot)),
+        full("gate-id-format", () => checkGateIdFormat(deps.repoRoot)),
         full("plan-schedule", () => checkPlanSchedule(deps.repoRoot)),
         full("plan-governance", () => checkPlanGovernance(deps.repoRoot)),
         full("plan-dod", () => checkPlanDod(deps.repoRoot)),
@@ -256,6 +259,7 @@ export function buildDoctorCheckDefinitionGroups(
       definitions: [
         full("improvement-backlog", () => checkImprovementBacklog(deps.repoRoot)),
         full("right-arm-gate-planning", () => checkRightArmGatePlanning(deps.repoRoot)),
+        full("right-lung-doc-governance", () => checkRightLungDocGovernance(deps.repoRoot)),
         full("g8-integration-workflow", () => checkG8IntegrationWorkflow(deps.repoRoot)),
         full("g9-system-workflow", () => checkG9SystemWorkflow(deps.repoRoot)),
         full("g10-ux-workflow", () => checkG10UxWorkflow(deps.repoRoot)),

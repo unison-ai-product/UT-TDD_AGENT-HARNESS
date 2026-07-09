@@ -13,6 +13,7 @@ type SpecIrSourceKind =
   | "schedule_doc"
   | "activation_profile"
   | "document_catalog"
+  | "document_scale_profile"
   | "typed_spec"
   | "agent_contracts"
   | "refactor_qa_release_contract";
@@ -131,6 +132,40 @@ export interface DocumentCatalogEntryRow {
   indexed_at: string;
 }
 
+export interface DocumentScaleProfileEntryRow {
+  document_scale_profile_entry_id: string;
+  profile_id: string;
+  doc_type_id: string;
+  decision: string;
+  detail_override: string;
+  status_override: string;
+  reason: string;
+  required_plan_id: string;
+  source_path: string;
+  indexed_at: string;
+}
+
+export interface DocumentScaleProfileReviewRow {
+  document_scale_profile_review_id: string;
+  profile_id: string;
+  doc_type_id: string;
+  document_scale_profile_entry_id: string;
+  document_catalog_entry_id: string;
+  decision: string;
+  detail_override: string;
+  status_override: string;
+  reason: string;
+  required_plan_id: string;
+  catalog_layer: string;
+  catalog_sub_doc: string;
+  requirement_class: string;
+  catalog_default_status: string;
+  catalog_profile_controlled: number;
+  catalog_skip_reason_required: number;
+  source_path: string;
+  indexed_at: string;
+}
+
 export interface SpecRagClosureEntryRow {
   spec_rag_entry_id: string;
   spec_id: string;
@@ -195,6 +230,8 @@ export interface SpecIrProjection {
   activation_entries: ActivationEntryRow[];
   activation_schedule_reviews: ActivationScheduleReviewRow[];
   document_catalog_entries: DocumentCatalogEntryRow[];
+  document_scale_profile_entries: DocumentScaleProfileEntryRow[];
+  document_scale_profile_reviews: DocumentScaleProfileReviewRow[];
   spec_rag_closure_entries: SpecRagClosureEntryRow[];
   detector_route_candidates: DetectorRouteCandidateRow[];
   agent_contracts: AgentContractRow[];
@@ -380,6 +417,9 @@ function sourceKind(path: string): SpecIrSourceKind | null {
   if (path === "docs/governance/vmodel-upgrade-schedule.md") return "schedule_doc";
   if (path === "docs/governance/vmodel-activation-profiles.md") return "activation_profile";
   if (path === "docs/governance/vmodel-document-catalog.md") return "document_catalog";
+  if (path === "docs/governance/vmodel-document-scale-profiles.md") {
+    return "document_scale_profile";
+  }
   if (path === "docs/governance/vmodel-typed-spec-definitions.md") return "typed_spec";
   if (path === "docs/governance/vmodel-agent-contracts.md") return "agent_contracts";
   if (path === "docs/governance/vmodel-refactor-qa-release-gates.md") {
@@ -414,6 +454,12 @@ export function loadSpecIrSources(repoRoot: string): SpecIrSource[] {
     "vmodel-activation-profiles.md",
   );
   const documentCatalogSource = join(repoRoot, "docs", "governance", "vmodel-document-catalog.md");
+  const documentScaleProfileSource = join(
+    repoRoot,
+    "docs",
+    "governance",
+    "vmodel-document-scale-profiles.md",
+  );
   const typedSpecSource = join(repoRoot, "docs", "governance", "vmodel-typed-spec-definitions.md");
   const agentContractSource = join(repoRoot, "docs", "governance", "vmodel-agent-contracts.md");
   const refactorQaReleaseContractSource = join(
@@ -426,6 +472,7 @@ export function loadSpecIrSources(repoRoot: string): SpecIrSource[] {
     ...(existsSync(scheduleSource) ? [scheduleSource] : []),
     ...(existsSync(activationProfileSource) ? [activationProfileSource] : []),
     ...(existsSync(documentCatalogSource) ? [documentCatalogSource] : []),
+    ...(existsSync(documentScaleProfileSource) ? [documentScaleProfileSource] : []),
     ...(existsSync(typedSpecSource) ? [typedSpecSource] : []),
     ...(existsSync(agentContractSource) ? [agentContractSource] : []),
     ...(existsSync(refactorQaReleaseContractSource) ? [refactorQaReleaseContractSource] : []),
@@ -884,6 +931,72 @@ export function parseDocumentCatalogEntries(
     }
   }
   return rows;
+}
+
+export function parseDocumentScaleProfileEntries(
+  sources: SpecIrSource[],
+  indexedAt: string,
+): DocumentScaleProfileEntryRow[] {
+  const rows: DocumentScaleProfileEntryRow[] = [];
+  for (const source of sources.filter((item) => item.kind === "document_scale_profile")) {
+    for (const row of markdownTableRows(source.content, ["profile_id", "doc_type_id"])) {
+      const profileId = row.profile_id ?? "";
+      const docTypeId = row.doc_type_id ?? "";
+      if (!profileId || !docTypeId) continue;
+      rows.push({
+        document_scale_profile_entry_id: stableId(
+          "document-scale-profile-entry",
+          `${profileId}:${docTypeId}`,
+        ),
+        profile_id: profileId,
+        doc_type_id: docTypeId,
+        decision: row.decision || "adopt",
+        detail_override: row.detail_override ?? "",
+        status_override: row.status_override ?? "",
+        reason: row.reason ?? "",
+        required_plan_id: row.required_plan_id ?? "",
+        source_path: source.path,
+        indexed_at: indexedAt,
+      });
+    }
+  }
+  return rows;
+}
+
+export function joinDocumentScaleProfileReviews(input: {
+  profileEntries: DocumentScaleProfileEntryRow[];
+  catalogEntries: DocumentCatalogEntryRow[];
+  indexedAt: string;
+}): DocumentScaleProfileReviewRow[] {
+  const catalogByDocType = new Map(input.catalogEntries.map((entry) => [entry.doc_type_id, entry]));
+  return input.profileEntries.map((profileEntry) => {
+    const catalog = catalogByDocType.get(profileEntry.doc_type_id);
+    return {
+      document_scale_profile_review_id: stableId(
+        "document-scale-profile-review",
+        `${profileEntry.document_scale_profile_entry_id}:${
+          catalog?.document_catalog_entry_id ?? "missing-catalog"
+        }`,
+      ),
+      profile_id: profileEntry.profile_id,
+      doc_type_id: profileEntry.doc_type_id,
+      document_scale_profile_entry_id: profileEntry.document_scale_profile_entry_id,
+      document_catalog_entry_id: catalog?.document_catalog_entry_id ?? "",
+      decision: profileEntry.decision,
+      detail_override: profileEntry.detail_override,
+      status_override: profileEntry.status_override,
+      reason: profileEntry.reason,
+      required_plan_id: profileEntry.required_plan_id,
+      catalog_layer: catalog?.layer ?? "",
+      catalog_sub_doc: catalog?.sub_doc ?? "",
+      requirement_class: catalog?.requirement_class ?? "",
+      catalog_default_status: catalog?.default_status ?? "",
+      catalog_profile_controlled: catalog?.profile_controlled ?? 0,
+      catalog_skip_reason_required: catalog?.skip_reason_required ?? 0,
+      source_path: profileEntry.source_path || catalog?.source_path || "",
+      indexed_at: input.indexedAt,
+    };
+  });
 }
 
 function agentContractBlocks(source: SpecIrSource): Record<string, unknown>[] {
@@ -1616,11 +1729,24 @@ export function analyzeSpecIrIntegrity(input: {
   schedules: ScheduleEntryRow[];
   activations: ActivationEntryRow[];
   activationScheduleReviews: ActivationScheduleReviewRow[];
+  documentScaleProfileEntries: DocumentScaleProfileEntryRow[];
+  documentScaleProfileReviews: DocumentScaleProfileReviewRow[];
 }): SpecIrFindingRow[] {
   const findings = [...input.relationFindings];
   const defIds = new Set(input.defs.map((def) => def.spec_id));
+  const planIds = new Set(input.defs.map((def) => def.plan_id).filter(Boolean));
   const schedulePlanCounts = new Map<string, number>();
   const specDefCounts = new Map<string, number>();
+  const validScaleProfileDecisions = new Set(["adopt", "conditional", "skip", "defer"]);
+  const validScaleProfileDetails = new Set(["lite", "standard", "detailed"]);
+  const validScaleProfileStatuses = new Set([
+    "minimal",
+    "standard",
+    "required",
+    "skipped",
+    "draft",
+    "profile_controlled",
+  ]);
   for (const def of input.defs) {
     specDefCounts.set(def.spec_id, (specDefCounts.get(def.spec_id) ?? 0) + 1);
     if (
@@ -1779,6 +1905,112 @@ export function analyzeSpecIrIntegrity(input: {
       });
     }
   }
+  for (const entry of input.documentScaleProfileEntries) {
+    if (!validScaleProfileDecisions.has(entry.decision)) {
+      findings.push({
+        finding_id: stableId(
+          "finding:document-scale-profile-decision-unknown",
+          entry.document_scale_profile_entry_id,
+        ),
+        kind: "document-scale-profile-decision-unknown",
+        severity: "warn",
+        subject_id: entry.document_scale_profile_entry_id,
+        source: "spec-ir-projection",
+        status: "open",
+        evidence_path: entry.source_path,
+      });
+    }
+    if (entry.detail_override && !validScaleProfileDetails.has(entry.detail_override)) {
+      findings.push({
+        finding_id: stableId(
+          "finding:document-scale-profile-detail-unknown",
+          entry.document_scale_profile_entry_id,
+        ),
+        kind: "document-scale-profile-detail-unknown",
+        severity: "warn",
+        subject_id: entry.document_scale_profile_entry_id,
+        source: "spec-ir-projection",
+        status: "open",
+        evidence_path: entry.source_path,
+      });
+    }
+    if (entry.status_override && !validScaleProfileStatuses.has(entry.status_override)) {
+      findings.push({
+        finding_id: stableId(
+          "finding:document-scale-profile-status-unknown",
+          entry.document_scale_profile_entry_id,
+        ),
+        kind: "document-scale-profile-status-unknown",
+        severity: "warn",
+        subject_id: entry.document_scale_profile_entry_id,
+        source: "spec-ir-projection",
+        status: "open",
+        evidence_path: entry.source_path,
+      });
+    }
+    if (["conditional", "skip", "defer"].includes(entry.decision) && entry.reason.trim() === "") {
+      findings.push({
+        finding_id: stableId(
+          "finding:document-scale-profile-reason-missing",
+          entry.document_scale_profile_entry_id,
+        ),
+        kind: "document-scale-profile-reason-missing",
+        severity: "warn",
+        subject_id: entry.document_scale_profile_entry_id,
+        source: "spec-ir-projection",
+        status: "open",
+        evidence_path: entry.source_path,
+      });
+    }
+    if (entry.required_plan_id && !planIds.has(entry.required_plan_id)) {
+      findings.push({
+        finding_id: stableId(
+          "finding:document-scale-profile-required-plan-missing",
+          `${entry.document_scale_profile_entry_id}:${entry.required_plan_id}`,
+        ),
+        kind: "document-scale-profile-required-plan-missing",
+        severity: "warn",
+        subject_id: `${entry.document_scale_profile_entry_id}:${entry.required_plan_id}`,
+        source: "spec-ir-projection",
+        status: "open",
+        evidence_path: entry.source_path,
+      });
+    }
+  }
+  for (const review of input.documentScaleProfileReviews) {
+    if (!review.document_catalog_entry_id) {
+      findings.push({
+        finding_id: stableId(
+          "finding:document-scale-profile-catalog-missing",
+          review.document_scale_profile_review_id,
+        ),
+        kind: "document-scale-profile-catalog-missing",
+        severity: "warn",
+        subject_id: review.document_scale_profile_review_id,
+        source: "spec-ir-projection",
+        status: "open",
+        evidence_path: review.source_path,
+      });
+    }
+    if (
+      review.catalog_skip_reason_required === 1 &&
+      ["conditional", "skip", "defer"].includes(review.decision) &&
+      review.reason.trim() === ""
+    ) {
+      findings.push({
+        finding_id: stableId(
+          "finding:document-scale-profile-catalog-reason-missing",
+          review.document_scale_profile_review_id,
+        ),
+        kind: "document-scale-profile-catalog-reason-missing",
+        severity: "warn",
+        subject_id: review.document_scale_profile_review_id,
+        source: "spec-ir-projection",
+        status: "open",
+        evidence_path: review.source_path,
+      });
+    }
+  }
   return findings;
 }
 
@@ -1812,6 +2044,12 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
   const schedules = parseScheduleEntries(sources, indexedAt);
   const activations = parseActivationEntries(sources, indexedAt);
   const documentCatalogEntries = parseDocumentCatalogEntries(sources, indexedAt);
+  const documentScaleProfileEntries = parseDocumentScaleProfileEntries(sources, indexedAt);
+  const documentScaleProfileReviews = joinDocumentScaleProfileReviews({
+    profileEntries: documentScaleProfileEntries,
+    catalogEntries: documentCatalogEntries,
+    indexedAt,
+  });
   const agentContracts = parseAgentContractRows(sources, indexedAt);
   const activationScheduleReviews = joinActivationScheduleReviews({
     activations,
@@ -1835,6 +2073,8 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
     schedules,
     activations,
     activationScheduleReviews,
+    documentScaleProfileEntries,
+    documentScaleProfileReviews,
   });
   findings.push(
     ...analyzeTypedSpecLedgerBodySync({
@@ -1868,6 +2108,8 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
     activation_entries: activations,
     activation_schedule_reviews: activationScheduleReviews,
     document_catalog_entries: documentCatalogEntries,
+    document_scale_profile_entries: documentScaleProfileEntries,
+    document_scale_profile_reviews: documentScaleProfileReviews,
     spec_rag_closure_entries: specRagClosureEntries,
     agent_contracts: agentContracts,
     detector_route_candidates: deriveDetectorRouteCandidates(findings, indexedAt),
@@ -1965,6 +2207,40 @@ export function projectSpecIr(repoRoot: string, db: HarnessDb, deps: SpecIrProje
         summary:
           `document catalog ${row.default_status}; profile_controlled=${row.profile_controlled}; ` +
           `skip_reason_required=${row.skip_reason_required}`,
+        updated_at: row.indexed_at,
+      },
+    });
+  }
+  for (const row of projection.document_scale_profile_entries) {
+    deps.recordProjectionEvent(db, {
+      table: "document_scale_profile_entries",
+      id: row.document_scale_profile_entry_id,
+      row: { ...row },
+    });
+  }
+  for (const row of projection.document_scale_profile_reviews) {
+    deps.recordProjectionEvent(db, {
+      table: "document_scale_profile_reviews",
+      id: row.document_scale_profile_review_id,
+      row: { ...row },
+    });
+    deps.recordProjectionEvent(db, {
+      table: "search_index",
+      id: stableId("document-scale-profile-review", row.document_scale_profile_review_id),
+      row: {
+        search_id: stableId("document-scale-profile-review", row.document_scale_profile_review_id),
+        subject_type: "document_scale_profile_review",
+        subject_id: `${row.profile_id}:${row.doc_type_id}`,
+        path: row.source_path,
+        title: `${row.profile_id} ${row.doc_type_id} ${row.decision}`,
+        tokens:
+          `${row.profile_id} ${row.doc_type_id} ${row.decision} ${row.detail_override} ` +
+          `${row.status_override} ${row.required_plan_id} ${row.catalog_layer} ` +
+          `${row.catalog_sub_doc} ${row.requirement_class} ${row.catalog_default_status} ` +
+          `${row.reason}`,
+        summary:
+          `document scale profile ${row.decision}; detail=${row.detail_override}; ` +
+          `status=${row.status_override}`,
         updated_at: row.indexed_at,
       },
     });

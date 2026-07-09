@@ -57,6 +57,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/governance/vmodel-document-catalog.md
     artifact_type: markdown_doc
+  - artifact_path: docs/governance/vmodel-document-scale-profiles.md
+    artifact_type: markdown_doc
   - artifact_path: src/schema/harness-db-tables-spec-ir.ts
     artifact_type: source_module
   - artifact_path: src/state-db/spec-ir-projections.ts
@@ -66,6 +68,8 @@ dependencies:
   requires: []
   references:
     - docs/design/harness/L4-basic-design/data.md
+    - docs/governance/vmodel-document-catalog.md
+    - docs/governance/vmodel-document-scale-profiles.md
     - docs/governance/vmodel-activation-profiles.md
     - docs/plans/PLAN-L6-50-execution-assignment-ledger.md
     - docs/plans/PLAN-L6-57-scope-detection-dry-run-preview.md
@@ -119,3 +123,7 @@ yaml 8 種) で、参照 `catalog.yaml` (~150 件のドキュメント種別マ�
 - 既存 document-system-map / `vmodel-activation-profiles.md` / `PLAN-L6-57` との役割境界が非重複で
   明記される。
 - product-select skip 判定に理由必須フィールドがあり、「未着手」と「意図的 skip」が区別できる。
+- PoC/Standard/Enterprise の `adopt|conditional|skip|defer`、`detail_override`、`status_override` が
+  `document_scale_profile_entries` と `document_scale_profile_reviews` に投影され、検索・検出対象になる。
+- catalog 欠落、skip/defer/conditional の理由欠落、`required_plan_id` 未解決は finding 化され、projection 側で
+  profile 判定を補完しない。

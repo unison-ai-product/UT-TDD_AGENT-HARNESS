@@ -6,6 +6,7 @@ import {
   checkDddTddRules,
   checkDesignLanguage,
   checkGateConfirm,
+  checkGateIdFormat,
   checkReadability,
   checkRuleDrift,
   checkRuntimePortability,
@@ -23,6 +24,7 @@ describe("doctor rule quality checks", () => {
       ["runtime-portability", checkRuntimePortability(missingRoot)],
       ["rule-drift", checkRuleDrift(missingRoot)],
       ["gate-confirm", checkGateConfirm(missingRoot)],
+      ["gate-id-format", checkGateIdFormat(missingRoot)],
       ["readability", checkReadability(missingRoot)],
       ["runtime-readability", checkRuntimeReadability(missingRoot)],
     ] as const;

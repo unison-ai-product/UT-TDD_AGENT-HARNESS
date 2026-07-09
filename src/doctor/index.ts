@@ -92,6 +92,7 @@ export {
   checkDddTddRules,
   checkDesignLanguage,
   checkGateConfirm,
+  checkGateIdFormat,
   checkReadability,
   checkRuleDrift,
   checkRuntimePortability,
@@ -127,6 +128,7 @@ export {
   checkLintWiring,
   checkProposalDocumentCoverage,
   checkRightArmGatePlanning,
+  checkRightLungDocGovernance,
 } from "./workflow-quality";
 
 export function runDoctor(

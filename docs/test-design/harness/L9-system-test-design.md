@@ -129,3 +129,4 @@ test_procedures: run the mapped vitest/doctor/CI commands and capture exit codes
 execution_evidence: system evidence manifest records command, ST IDs, paths, and result.
 exit_criteria: all mandatory selected ST cases pass or explicit defer exists.
 defect_routing: failed ST cases route to L9 correction, Reverse, Refactor, Recovery, or Incident by scope.
+verification_design: system environment, data reality, measurement method, evaluation threshold, and execution procedure are explicit for selected ST-* coverage.

@@ -157,6 +157,7 @@ import {
   projectTokenUsage,
   rebuildHarnessDb,
 } from "./state-db/projection-writer";
+import { buildScopeDryRunPreview } from "./state-db/scope-preview";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
 import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify";
 import {
@@ -1395,6 +1396,52 @@ db.command("rebuild")
       "  note: plans / roadmap rollups / review evidence / optional Phase3 outputs を projection\n",
     );
   });
+db.command("scope-preview")
+  .description("preview document/activation detection scope from harness.db profiles")
+  .requiredOption("--profile <profile>", "document scale profile id (poc|standard|enterprise)")
+  .option("--activation-profile <profile>", "optional activation profile id")
+  .option("--capability <flag...>", "capability flag(s) that resolve conditional documents")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      profile: string;
+      activationProfile?: string;
+      capability?: string[];
+      json?: boolean;
+    }) => {
+      const repoRoot = process.cwd();
+      const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+      try {
+        const result = buildScopeDryRunPreview(db, {
+          profileId: opts.profile,
+          activationProfileId: opts.activationProfile,
+          capabilityFlags: opts.capability,
+        });
+        if (opts.json) {
+          process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+        } else {
+          process.stdout.write(
+            `scope-preview: profile=${result.profile_id} docs=${result.summary.documents_total} ` +
+              `in_scope=${result.summary.documents_in_scope} conditional=${result.summary.documents_conditional} ` +
+              `deferred=${result.summary.documents_deferred} skipped=${result.summary.documents_skipped}\n`,
+          );
+          process.stdout.write(`  gates=${result.gates.join(",") || "-"}\n`);
+          process.stdout.write(`  detectors=${result.detectors.join(",")}\n`);
+          for (const row of result.documents) {
+            process.stdout.write(
+              `  ${row.resolved_scope_status} ${row.doc_type_id} ${row.detail_override}/${row.status_override} gate=${row.gate_id} action=${row.required_action}\n`,
+            );
+          }
+          for (const finding of result.findings) {
+            process.stdout.write(`  ${finding.severity} ${finding.kind}: ${finding.message}\n`);
+          }
+        }
+        if (!result.ok) process.exitCode = 1;
+      } finally {
+        db.close();
+      }
+    },
+  );
 
 const progress = program.command("progress").description("artifact progress read model");
 progress
