@@ -63,6 +63,8 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/doc-consistency.test.ts
     artifact_type: test_code
+  - artifact_path: tests/context-doc-router.test.ts
+    artifact_type: test_code
   - artifact_path: tests/drive-model-passage.test.ts
     artifact_type: test_code
   - artifact_path: tests/entity-coverage.test.ts
@@ -176,6 +178,13 @@ registration」であることを本節で明記する (落とさない仕組み
 entity-coverage / fr-registry-audit / g3-trace / gate-review-tier /
 handover-completion-wording / placeholder-deps / plan-id-naming / rule-automation-closure /
 rule-drift / schema / sub-doc-catalog-drift / sub-doc-section-structure (`tests/*.test.ts`)。
+
+**追加 backfill (2026-07-09)**: HARNESS メモリ再監査で `tests/context-doc-router.test.ts` が
+`PLAN-L7-302` の doc-router 部分に対応するものの、同 PLAN は v2 parked の draft であり
+merged artifact の `generates` owner にできないことが分かった。そのため本 remediation PLAN を
+retroactive registration anchor として追加登録する。機能所有は `PLAN-L7-302` 本文の DoD に残すが、
+test-case catalog の `plan_id` は confirmed anchor である本 PLAN へ寄せ、draft PLAN に merged
+deliverable を持たせない。
 
 ## 4. Acceptance Criteria
 
