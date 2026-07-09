@@ -717,6 +717,107 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
+  it("U-DBPROJ-GATE-01 projects persisted gate run evidence into gate/workflow/retry rows", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-gate-run-projection-"));
+    const planId = "PLAN-L7-363-routine-gate-run-projection";
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "plans", `${planId}.md`),
+        [
+          "---",
+          `plan_id: ${planId}`,
+          'title: "gate run projection fixture"',
+          "kind: impl",
+          "layer: L7",
+          "drive: db",
+          "status: confirmed",
+          "route_signal: feature_addition",
+          "route_mode: add-feature",
+          "created: 2026-07-09",
+          "updated: 2026-07-09",
+          "---",
+          "",
+          "# gate run projection fixture",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      mkdirSync(join(root, ".ut-tdd", "gate_runs"), { recursive: true });
+      for (const [index, status] of ["failed", "passed"].entries()) {
+        writeFileSync(
+          join(root, ".ut-tdd", "gate_runs", `G4-attempt-${index + 1}.json`),
+          `${JSON.stringify(
+            {
+              schema_version: 1,
+              gate_run_id: `gate-run:G4:attempt-${index + 1}`,
+              gate_id: "G4",
+              plan_id: planId,
+              status,
+              checked_at: `2026-07-09T00:0${index}:00.000Z`,
+              session_id: "session-gate-projection",
+              mode: "hybrid",
+              tier: "cross_agent",
+              review_kind: "cross_agent",
+              static_applicable: true,
+              source: "ut-tdd gate",
+              messages: [],
+            },
+            null,
+            2,
+          )}\n`,
+          "utf8",
+        );
+      }
+
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        rebuildHarnessDb({ repoRoot: root, db });
+        const gateRows = db
+          .prepare(
+            "SELECT gate_id, status, evidence_path FROM gate_runs WHERE plan_id = ? ORDER BY checked_at",
+          )
+          .all(planId);
+        expect(gateRows).toEqual([
+          {
+            gate_id: "G4",
+            status: "failed",
+            evidence_path: ".ut-tdd/gate_runs/G4-attempt-1.json",
+          },
+          {
+            gate_id: "G4",
+            status: "passed",
+            evidence_path: ".ut-tdd/gate_runs/G4-attempt-2.json",
+          },
+        ]);
+        const workflows = db
+          .prepare(
+            "SELECT workflow, phase, ready_status FROM workflow_runs WHERE plan_id = ? ORDER BY checked_at",
+          )
+          .all(planId);
+        expect(workflows).toEqual([
+          { workflow: "routine-gate", phase: "G4", ready_status: "blocked" },
+          { workflow: "routine-gate", phase: "G4", ready_status: "passed" },
+        ]);
+        const retry = db
+          .prepare(
+            "SELECT plan_id, workflow, phase, attempt_count FROM retry_events WHERE plan_id = ?",
+          )
+          .get(planId);
+        expect(retry).toMatchObject({
+          plan_id: planId,
+          workflow: "routine-gate",
+          phase: "G4",
+          attempt_count: 2,
+        });
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("projects runtime test_runs from session-log verification events with session provenance", () => {
     const db = openHarnessDb(":memory:");
     try {

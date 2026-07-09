@@ -87,6 +87,7 @@ import {
   runDoctor,
 } from "../src/doctor/index";
 import { buildDoctorResult } from "../src/doctor/result";
+import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../src/lint/gate-run-coverage";
 import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots";
 import {
   analyzeDesignDetectionStats,
@@ -190,6 +191,40 @@ describe("design-detection doctor aggregate", () => {
     expect(messages).toContain("blocked_coverage=1");
     expect(messages).toContain("pair_orphans=1");
     expect(messages).toContain("design-pair-orphan:pair-missing");
+  });
+});
+
+describe("gate-run-coverage doctor aggregate", () => {
+  it("U-DOCTOR-GATE-01 fails closed on workflow rows without gate evidence and orphan gate runs", () => {
+    const result = analyzeGateRunCoverage({
+      gateRuns: 1,
+      workflowRuns: 2,
+      workflowPlansWithoutGateRun: 1,
+      orphanGateRuns: 1,
+      blankPlanGateRuns: 0,
+      invalidEvidenceFindings: 0,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.reason)).toEqual([
+      "workflow_without_gate_run",
+      "orphan_gate_run",
+    ]);
+    expect(gateRunCoverageMessages(result).join("\n")).toContain("gate-run-coverage - violation");
+  });
+
+  it("passes when gate and workflow projections are joined", () => {
+    const result = analyzeGateRunCoverage({
+      gateRuns: 2,
+      workflowRuns: 2,
+      workflowPlansWithoutGateRun: 0,
+      orphanGateRuns: 0,
+      blankPlanGateRuns: 0,
+      invalidEvidenceFindings: 0,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(gateRunCoverageMessages(result).join("\n")).toContain("gate-run-coverage - OK");
   });
 });
 

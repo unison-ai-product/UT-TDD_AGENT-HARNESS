@@ -167,6 +167,14 @@ interface SessionLogProjection {
   outcome?: string;
 }
 
+interface ProjectedGateRunEvidence {
+  gate_run_id?: unknown;
+  gate_id?: unknown;
+  plan_id?: unknown;
+  status?: unknown;
+  checked_at?: unknown;
+}
+
 interface ProviderHandoverProjection {
   handover_id?: string;
   from?: string;
@@ -1290,6 +1298,76 @@ function projectVerificationBandExecution(db: HarnessDb): void {
         value: metric.value,
         threshold: metric.threshold,
         status: passed ? "passed" : "blocked",
+      },
+    });
+  }
+}
+
+function projectGateRunEvidence(repoRoot: string, db: HarnessDb): void {
+  const dir = join(repoRoot, ".ut-tdd", "gate_runs");
+  if (!existsSync(dir)) return;
+  const files = readdirSync(dir)
+    .filter((name) => name.endsWith(".json"))
+    .map((name) => join(dir, name))
+    .sort();
+  for (const file of files) {
+    const evidencePath = normalizePath(relative(repoRoot, file));
+    let parsed: ProjectedGateRunEvidence;
+    try {
+      parsed = JSON.parse(readFileSync(file, "utf8")) as ProjectedGateRunEvidence;
+    } catch {
+      recordFinding(db, {
+        kind: "invalid-gate-run-evidence",
+        severity: "warn",
+        subjectId: evidencePath,
+        source: "gate-run-projection",
+        evidencePath,
+      });
+      continue;
+    }
+    const gateRunId = asString(parsed.gate_run_id);
+    const gateId = asString(parsed.gate_id);
+    const status =
+      parsed.status === "passed" ? "passed" : parsed.status === "failed" ? "failed" : null;
+    const checkedAt = asString(parsed.checked_at);
+    if (!gateRunId || !gateId || !status || !checkedAt) {
+      recordFinding(db, {
+        kind: "invalid-gate-run-evidence",
+        severity: "warn",
+        subjectId: evidencePath,
+        source: "gate-run-projection",
+        evidencePath,
+      });
+      continue;
+    }
+    const planId = asString(parsed.plan_id ?? undefined) ?? "";
+    recordProjectionEvent(db, {
+      table: "gate_runs",
+      id: gateRunId,
+      row: {
+        gate_run_id: gateRunId,
+        gate_id: gateId,
+        plan_id: planId,
+        status,
+        checked_at: checkedAt,
+        evidence_path: evidencePath,
+      },
+    });
+    if (!planId) continue;
+    const workflowRunId = stableId("gate-workflow", gateRunId);
+    recordProjectionEvent(db, {
+      table: "workflow_runs",
+      id: workflowRunId,
+      row: {
+        workflow_run_id: workflowRunId,
+        plan_id: planId,
+        drive_run_id: stableId("gate-drive", planId),
+        workflow: "routine-gate",
+        phase: gateId,
+        ready_status: status === "passed" ? "passed" : "blocked",
+        blocked_reason: status === "passed" ? "" : "gate run status failed",
+        human_required: 0,
+        checked_at: checkedAt,
       },
     });
   }
@@ -2881,6 +2959,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectDesignPairFreezeFindings(repoRoot, db);
         projectDesignQualityCoverage(repoRoot, db);
         projectVerificationBandExecution(db);
+        projectGateRunEvidence(repoRoot, db);
       });
       time("automation-memory", () => {
         projectAutomationAssets(repoRoot, db);

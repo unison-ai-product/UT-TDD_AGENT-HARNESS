@@ -70,6 +70,7 @@ export {
   checkDriveModelPassage,
   checkFeedbackLog,
   checkFrRoadmapCoverage,
+  checkGateRunCoverage,
   checkL6Completion,
   checkL6FrCoverage,
   checkL7Completion,
