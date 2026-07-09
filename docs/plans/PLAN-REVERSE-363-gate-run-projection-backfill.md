@@ -39,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-09T20:26:36+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:562197278c07523074f729efd42fc6c5839aa6fe581862c1b951b3f67d21cf73"
+        anchor_commit: d930b56f21342342693ac6e014a48ba6cb63eda0
 backprop_scope:
   - layer: L6-function-design
     artifact_path: docs/design/harness/L6-function-design/function-spec.md
