@@ -1,3 +1,4 @@
+import { stableId } from "../stable-id";
 import type { HarnessDb } from "../state-db/index";
 
 /**
@@ -75,7 +76,7 @@ export function classifyFeedbackBucket(input: {
 }
 
 function feedbackId(prefix: string, subject: string): string {
-  return `${prefix}:${subject}`.replace(/[^A-Za-z0-9._:-]+/g, "-");
+  return stableId(prefix, subject);
 }
 
 function planIdOf(subject: string): string {

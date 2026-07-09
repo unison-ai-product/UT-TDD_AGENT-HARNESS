@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { findReference } from "../src/search/index";
+import { stableId } from "../src/stable-id";
 import { deriveArtifactProgressDecision } from "../src/state-db/artifact-progress-decision";
 import {
   analyzeDesignDetectionStats,
@@ -1155,8 +1156,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     const db = openHarnessDb(":memory:");
     const deps = {
       nowIso: () => "2026-07-08T00:00:00.000Z",
-      stableId: (prefix: string, value: string) =>
-        `${prefix}:${value.replace(/[^A-Za-z0-9._:-]+/g, "-")}`,
+      stableId,
       recordProjectionEvent,
     };
     try {
@@ -1254,8 +1254,7 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     const db = openHarnessDb(":memory:");
     const deps = {
       nowIso: () => "2026-07-08T00:00:00.000Z",
-      stableId: (prefix: string, value: string) =>
-        `${prefix}:${value.replace(/[^A-Za-z0-9._:-]+/g, "-")}`,
+      stableId,
       recordProjectionEvent,
     };
     try {

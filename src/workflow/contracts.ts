@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { stableId } from "../stable-id";
 import type { HarnessDb } from "../state-db/index";
 import { upsertRow } from "../state-db/index";
 import { DRIVE_TDD_FITS, type DriveTddFit } from "./contracts-policy";
@@ -37,10 +38,6 @@ function finding(
 
 function result(findings: Finding[], evidence_paths: string[] = []): ContractResult {
   return { ok: findings.every((f) => f.severity !== "error"), findings, evidence_paths };
-}
-
-function stableId(prefix: string, value: string): string {
-  return `${prefix}:${value || "unknown"}`.replace(/[^A-Za-z0-9._:-]+/g, "-");
 }
 
 function stableHash(value: string): string {

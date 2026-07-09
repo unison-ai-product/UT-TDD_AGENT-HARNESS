@@ -6,6 +6,7 @@ import {
   shouldScoreSkillAsset,
   skillScoreReason,
 } from "../skill-scoring/scoring";
+import { stableId } from "../stable-id";
 import type { HarnessDb } from "../state-db/index";
 import { upsertRow } from "../state-db/index";
 import { classifyTask } from "../task/classify";
@@ -146,10 +147,6 @@ export interface SkillInvocation {
   fired_at: string;
   source: string;
   accepted: number;
-}
-
-function stableId(prefix: string, value: string): string {
-  return `${prefix}:${value.replace(/[^A-Za-z0-9._:-]+/g, "-")}`;
 }
 
 function nowIso(): string {

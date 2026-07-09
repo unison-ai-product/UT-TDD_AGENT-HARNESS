@@ -1,3 +1,4 @@
+import { stableId } from "../stable-id";
 import type { HarnessDb } from "../state-db/index";
 import { upsertRow } from "../state-db/index";
 import { detectorRouteCandidateAction } from "../state-db/route-candidate-review";
@@ -128,7 +129,7 @@ export function computeSkillMetrics(db: HarnessDb): SkillMetric[] {
 }
 
 function feedbackId(prefix: string, subject: string): string {
-  return `${prefix}:${subject}`.replace(/[^A-Za-z0-9._:-]+/g, "-");
+  return stableId(prefix, subject);
 }
 
 function signalSeverity(status: unknown): string {

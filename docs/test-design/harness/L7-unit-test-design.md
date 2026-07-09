@@ -877,6 +877,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-SPECIR-R8 | `deriveDetectorRouteCandidates(input)` | finding/spec/schedule/activation を join し、候補を `detector_route_candidates` draft として返す。FilingTarget は創作せず、target snapshot は L4 function §3.2.1 / `routeFiling` SSoT から取得する。 |
 | U-SPECIR-R9 | `deriveDetectorRouteCandidates(input)` (non-ready) | SSoT 不在、unknown route_signal、target_layer/sub_doc mismatch は non-ready finding。起票済み PLAN や FilingTarget 決定済みとして扱わない。 |
 | U-SPECIR-R10 | `analyzeSpecIrIntegrity(input)` / `parseSpecRelations(bundle, defs)` (PLAN-L7-405) | `spec-ir-invalid-subdoc` は L1-L6 design document row の catalog 違反だけに発火し、PLAN / test-design / typed spec / reference doc の補助行では発火しない。一意な `PLAN-Lx-NN` 短縮参照と存在する reference doc path は `spec_relations` に解決され、orphan relation を出さない。 |
+| U-SPECIR-R11 | `stableId(prefix, value)` / projection ID consumers (PLAN-L7-406) | ASCII safe ID は後方互換のまま、非ASCII見出し・パス・空文字は deterministic に正規化される。正規化で情報が落ちる場合は hash suffix で衝突を避け、projection / feedback / skill / workflow のテスト injected deps も同じ helper を使う。 |
 
 ## PLAN-L7-368 Design Lint DB Projection Addendum (2026-07-08)
 
