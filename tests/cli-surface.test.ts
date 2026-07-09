@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -138,6 +139,70 @@ function withFakeProviderEnv(provider: "codex" | "claude") {
 }
 
 describe("L7 CLI surface closure", () => {
+  it("U-GATE-007 persists gate run evidence without changing gate verdict semantics", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-gate-run-"));
+    try {
+      const run = runCliIn(root, [
+        "gate",
+        "G0.5",
+        "--mode",
+        "standalone",
+        "--review-kind",
+        "human",
+        "--human-approved",
+        "--plan",
+        "PLAN-L7-363-routine-gate-run-projection",
+        "--session",
+        "session-gate-test",
+        "--json",
+      ]);
+      expect(run.status, `stderr:\n${run.stderr}\nstdout:\n${run.stdout}`).toBe(0);
+      const payload = JSON.parse(run.stdout);
+      expect(payload.passed).toBe(true);
+      expect(payload.gate_run_evidence.path).toMatch(/^\.ut-tdd\/gate_runs\/G0\.5-/);
+      const files = readdirSync(join(root, ".ut-tdd", "gate_runs"));
+      expect(files).toHaveLength(1);
+      const evidence = JSON.parse(
+        readFileSync(join(root, ".ut-tdd", "gate_runs", files[0]), "utf8"),
+      );
+      expect(evidence).toMatchObject({
+        gate_id: "G0.5",
+        plan_id: "PLAN-L7-363-routine-gate-run-projection",
+        status: "passed",
+        session_id: "session-gate-test",
+        source: "ut-tdd gate",
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 15_000);
+
+  it("U-GATE-008 keeps the gate verdict when evidence persistence fails", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-gate-run-fail-"));
+    try {
+      writeFileSync(join(root, ".ut-tdd"), "not a directory", "utf8");
+      const run = runCliIn(root, [
+        "gate",
+        "G0.5",
+        "--mode",
+        "standalone",
+        "--review-kind",
+        "human",
+        "--human-approved",
+        "--plan",
+        "PLAN-L7-363-routine-gate-run-projection",
+        "--json",
+      ]);
+      expect(run.status, `stderr:\n${run.stderr}\nstdout:\n${run.stdout}`).toBe(0);
+      const payload = JSON.parse(run.stdout);
+      expect(payload.passed).toBe(true);
+      expect(payload.gate_run_evidence).toBeNull();
+      expect(payload.gate_run_evidence_warning).toContain("gate run evidence write failed");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 15_000);
+
   it("exposes plan complete as the completed handover lifecycle entrypoint", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-plan-complete-"));
     try {

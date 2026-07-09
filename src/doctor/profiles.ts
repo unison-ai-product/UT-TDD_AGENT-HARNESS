@@ -86,6 +86,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "drive-model-passage",
   "drive-db-registration",
   "db-currency",
+  "gate-run-coverage",
   "fr-roadmap-coverage",
   "telemetry-closure",
   "cycle-p4-verification",

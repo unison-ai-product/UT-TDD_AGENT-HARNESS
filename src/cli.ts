@@ -42,6 +42,7 @@ import {
 import { computeSkillMetrics } from "./feedback/engine";
 import { renderTakeoverFeedback, selectTakeoverFeedback } from "./feedback/surface";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
+import { writeGateRunEvidence } from "./gate/run-evidence";
 import { evaluateStaticGate } from "./gate/static";
 import { evaluateGithubOpsGuard, renderGithubOpsGuard } from "./github/ops-guard";
 import { loadRelationGraphSourceSet } from "./graph/loader";
@@ -2469,6 +2470,8 @@ program
   .option("--reviewer-model <model>", "reviewer provider/model id")
   .option("--checklist <path>", "YAML checklist evidence for single-runtime review")
   .option("--coverage-summary <path>", "coverage/coverage-summary.json evidence for G7")
+  .option("--plan <id>", "plan_id to attach to gate run evidence")
+  .option("--session <id>", "session_id to attach to gate run evidence")
   .option("--human-approved", "standalone human approval evidence")
   .option("--json", "JSON output")
   .action(
@@ -2481,6 +2484,8 @@ program
         reviewerModel?: string;
         checklist?: string;
         coverageSummary?: string;
+        plan?: string;
+        session?: string;
         humanApproved?: boolean;
         json?: boolean;
       },
@@ -2520,11 +2525,62 @@ program
         static_gate: staticGate,
         messages: [...review.messages, ...staticGate.messages],
       };
-      if (opts.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      let gateRunEvidence: { path: string; gate_run_id: string } | null = null;
+      let gateRunEvidenceWarning: string | null = null;
+      try {
+        const written = writeGateRunEvidence({
+          repoRoot: process.cwd(),
+          gateId: id,
+          planId:
+            opts.plan ??
+            process.env.UT_TDD_PLAN_ID ??
+            resolveActivePlan(nodeDeps(process.cwd(), gitBranch)),
+          sessionId: opts.session ?? process.env.UT_TDD_SESSION_ID ?? null,
+          status: result.passed ? "passed" : "failed",
+          mode,
+          reviewKind: result.review_kind,
+          workerModel: opts.workerModel ?? null,
+          reviewerModel: opts.reviewerModel ?? null,
+          checklistPath: opts.checklist ?? null,
+          coverageSummaryPath: opts.coverageSummary ?? null,
+          staticApplicable: staticGate.applicable,
+          checks: [
+            {
+              name: "review-tier",
+              result: review.passed ? "passed" : "failed",
+              messages: review.messages,
+            },
+            {
+              name: "static-gate",
+              result: staticGate.applicable
+                ? staticGate.passed
+                  ? "passed"
+                  : "failed"
+                : "not_applicable",
+              messages: staticGate.messages,
+            },
+          ],
+          messages: result.messages,
+        });
+        gateRunEvidence = {
+          path: written.path,
+          gate_run_id: written.evidence.gate_run_id,
+        };
+      } catch (error) {
+        gateRunEvidenceWarning = `gate run evidence write failed: ${String(error)}`;
+      }
+      const output = {
+        ...result,
+        gate_run_evidence: gateRunEvidence,
+        gate_run_evidence_warning: gateRunEvidenceWarning,
+      };
+      if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
       else {
         process.stdout.write(
           `gate ${id}: ${result.passed ? "passed" : "failed"} mode=${result.mode} review=${result.review_kind ?? "-"} cross_agent_review=${result.cross_agent_review} static=${staticGate.applicable ? (staticGate.passed ? "passed" : "failed") : "n-a"}\n`,
         );
+        if (gateRunEvidence) process.stdout.write(`  - evidence: ${gateRunEvidence.path}\n`);
+        if (gateRunEvidenceWarning) process.stdout.write(`  - ${gateRunEvidenceWarning}\n`);
         for (const m of result.messages) process.stdout.write(`  - ${m}\n`);
       }
       process.exitCode = result.passed ? 0 : 1;
