@@ -615,6 +615,105 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
+  it("routes verification defect findings into refactor candidate lifecycle rows", () => {
+    const repoRoot = join(tmpdir(), `ut-tdd-defect-routing-refactor-${randomUUID()}`);
+    try {
+      const db = openHarnessDb(":memory:", { repoRoot });
+      try {
+        const input = {
+          repoRoot,
+          db,
+          relationGraph: { nodes: [], edges: [], verificationProfiles: [], findings: [] },
+          documentExports: {
+            document_export_runs: [],
+            document_export_datasets: [],
+            document_export_artifacts: [],
+            findings: [],
+            actionsTaken: [],
+            ok: true,
+          },
+          verificationEvidence: {
+            verification_profiles: [],
+            verification_recommendations: [],
+            mcp_server_runs: [],
+            external_tool_findings: [],
+            findings: [
+              {
+                code: "missing-test-coverage" as const,
+                severity: "warn" as const,
+                message: "integration structure is weak; route through defect_routing to Refactor",
+                nodeId: "src/workflow/weak-module.ts#integration-structure-refactor",
+                evidencePath: "docs/test-design/harness/L8-integration-test-design.md",
+              },
+            ],
+            ok: false,
+          },
+        };
+        expect(rebuildHarnessDb(input).ok).toBe(true);
+
+        const candidate = db
+          .prepare(
+            "SELECT candidate_key, kind, path, subject, state, linked_plan_id FROM refactor_candidates WHERE kind = ?",
+          )
+          .get("verification-defect-routing") as
+          | {
+              candidate_key: string;
+              kind: string;
+              path: string;
+              subject: string;
+              state: string;
+              linked_plan_id: string;
+            }
+          | undefined;
+        expect(candidate).toMatchObject({
+          kind: "verification-defect-routing",
+          path: "docs/test-design/harness/L8-integration-test-design.md",
+          subject: "src/workflow/weak-module.ts#integration-structure-refactor",
+          state: "open",
+          linked_plan_id: "",
+        });
+
+        const signal = db
+          .prepare(
+            "SELECT source, metric, subject_id, status FROM quality_signals WHERE source = ?",
+          )
+          .get("verification-defect-routing");
+        expect(signal).toMatchObject({
+          source: "verification-defect-routing",
+          metric: "refactor_candidate:verification-defect-routing",
+          subject_id: "src/workflow/weak-module.ts#integration-structure-refactor",
+          status: "warn",
+        });
+
+        expect(
+          decideRefactorCandidate(db, {
+            candidate_key: candidate?.candidate_key ?? "",
+            state: "accepted",
+            linked_plan_id: "PLAN-L7-410-defect-routing-refactor-candidates",
+            decided_at: "2026-07-09T00:00:00.000Z",
+          }).ok,
+        ).toBe(true);
+        expect(rebuildHarnessDb(input).ok).toBe(true);
+
+        const preserved = db
+          .prepare("SELECT state, linked_plan_id FROM refactor_candidates WHERE candidate_key = ?")
+          .get(candidate?.candidate_key ?? "");
+        expect(preserved).toMatchObject({
+          state: "accepted",
+          linked_plan_id: "PLAN-L7-410-defect-routing-refactor-candidates",
+        });
+        const closedSignal = db
+          .prepare("SELECT status FROM quality_signals WHERE source = ?")
+          .get("verification-defect-routing");
+        expect(closedSignal).toMatchObject({ status: "pass" });
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
   it("derives artifact progress colors from dependency checks and linked tests", () => {
     expect(
       deriveArtifactProgressDecision({
