@@ -10,7 +10,7 @@ route_mode: refactor
 backprop_decision: not_required
 backprop_decision_reason: "既存の model routing / setup adapter template 契約の drift 是正。上位要求の意味変更はなく、MODEL_IDS SSoT と runtime asset 境界の機械オラクルを追加する小 slice。"
 created: 2026-07-02
-updated: 2026-07-03
+updated: 2026-07-09
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -50,8 +50,8 @@ dependencies:
 review_evidence:
   - reviewer: codex
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-03T22:16:00+09:00"
-    tests_green_at: "2026-07-03T22:15:30+09:00"
+    reviewed_at: "2026-07-09T19:09:03+09:00"
+    tests_green_at: "2026-07-09T19:09:03+09:00"
     verdict: approve
     scope: "MODEL_IDS SSoT drift の現 drift 是正。active .claude/agents frontmatter、docs/templates/adapter disk mirror、BUILTIN_GITHUB_TEMPLATES、team/advisor model routing、token pricing fallback を対象に、旧 model literal へ依存した oracle を MODEL_IDS 参照へ置換。full lint gate 拡張は Deferred に残す。"
     worker_model: codex
@@ -62,25 +62,28 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-03T22:12:15+09:00"
+        completed_at: "2026-07-09T19:09:03+09:00"
         evidence_path: tests/model-id-ssot-drift.test.ts
-        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        output_digest: "sha256:deeb257f306463332312514a1d010b0044819a687eeb2686ea34dbd40790424e"
+        anchor_commit: 1afa132c9368fc362706db102880e020d7ba3d24
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-03T22:12:38+09:00"
+        completed_at: "2026-07-09T19:09:03+09:00"
         evidence_path: src/team/model-policy.ts
-        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        output_digest: "sha256:7dc400d40eebafe4b2dbaf30311193697b76ff1d587ee7aa1fcd980ebc1d7cac"
+        anchor_commit: 1afa132c9368fc362706db102880e020d7ba3d24
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-03T22:12:19+09:00"
+        completed_at: "2026-07-09T19:09:03+09:00"
         evidence_path: src/setup/templates.ts
-        output_digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        output_digest: "sha256:8b1cc68d565af29ccecd32e0c9a317de735061cff1133b048d8bdc67f1f6eb12"
+        anchor_commit: 1afa132c9368fc362706db102880e020d7ba3d24
 ---
 
 # PLAN-L7-256: model ID SSoT drift gate

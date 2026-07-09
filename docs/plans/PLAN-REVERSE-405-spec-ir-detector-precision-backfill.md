@@ -45,8 +45,8 @@ dependencies:
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-09T15:54:00+09:00"
-    tests_green_at: "2026-07-09T15:54:00+09:00"
+    reviewed_at: "2026-07-09T19:12:35+09:00"
+    tests_green_at: "2026-07-09T19:12:35+09:00"
     verdict: approve
     scope: "PLAN-REVERSE-405。L7 実装で明確になった spec-ir 検出境界を L6/L7 設計へ back-fill した。"
     worker_model: codex
@@ -57,9 +57,10 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-09T15:54:00+09:00"
+        completed_at: "2026-07-09T19:12:35+09:00"
         evidence_path: tests/spec-ir-projections.test.ts
-        output_digest: "sha256:ec5fd841c5f6f32d6665e30cdba27b86e126a4a55bb200a8869b352408f06ab7"
+        output_digest: "sha256:c75a927503432e96482a7a3ab8c4e2a890fa7a53f2f43be3e8b3eb4303830ef1"
+        anchor_commit: 1afa132c9368fc362706db102880e020d7ba3d24
 ---
 
 # PLAN-REVERSE-405: spec-ir 検出境界精密化の設計 back-fill

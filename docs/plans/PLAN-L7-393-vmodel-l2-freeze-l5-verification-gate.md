@@ -8,7 +8,7 @@ status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-07-09
 owner: PO / TL
 parent_design: docs/plans/PLAN-L6-48-vmodel-l2-freeze-l5-verification-design.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -17,8 +17,8 @@ next_pair_freeze: L8
 review_evidence:
   - reviewer: codex-tl
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-08T17:45:45+09:00"
-    tests_green_at: "2026-07-08T17:45:45+09:00"
+    reviewed_at: "2026-07-09T19:10:51+09:00"
+    tests_green_at: "2026-07-09T19:10:51+09:00"
     verdict: approve
     scope: "U13a add-impl slice. forward-freeze-contracts doctor gate と unit oracle を追加。"
     green_commands:
@@ -27,9 +27,10 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-08T17:45:45+09:00"
+        completed_at: "2026-07-09T19:10:51+09:00"
         evidence_path: tests/vmodel-forward-freeze-contracts.test.ts
-        output_digest: "sha256:4a9f3dd15d5b50a2bc1cbe4e2e40d46f3f7e59a5e2b0b7845c4fae1774a88840"
+        output_digest: "sha256:27efe2eb587a22d42f4668213f1e827cb8526596f9573789949feb9d5b012d4b"
+        anchor_commit: 1afa132c9368fc362706db102880e020d7ba3d24
 agent_slots:
   - role: tl
     slot_label: "TL - forward freeze contract gate"
