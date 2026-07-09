@@ -797,3 +797,16 @@ provider CLI を起動する。
 | `ut-tdd trace rag --id <id> --json` | CLI read-only command | `spec_rag_closure_entries` を DB から読み、text または JSON で表示する。DB row を source doc に逆書きせず、`ut-tdd db rebuild` 済み projection を観測するだけにする。 |
 
 spec RAG と工程 RAG は別の read-model である。`spec_rag_closure_entries.rag` は spec の test 到達と closure finding を表し、`schedule_entries.rag` は工程管理表の進捗・ready 状態を表す。CLI、doctor、detector はこの 2 つを同じ signal として扱ってはならない。
+
+## PLAN-L6-50 ID 単位実行割当台帳追補 (2026-07-09)
+
+| 関数 / command | signature | 契約 |
+|---|---|---|
+| `deriveExecutionAssignmentLedger` | `DeriveExecutionAssignmentLedgerInput { defs; relations; schedules; existing_assignments; indexedAt } -> ExecutionAssignmentLedgerRow[]` | `spec_defs` の typed spec ID と `spec_relations` の V 字対 / test edge、工程管理表の現在地を入力に、ID 単位の実装・検証・review task row を deterministic に導出する。`assignment_id` は `spec_id + task_kind` から作る stable ID とし、同一入力で row 数・ID・archived 判定が揺れてはならない。 |
+| `mergeExecutionAssignmentLedger` | `MergeExecutionAssignmentLedgerInput { derived; existing_authoring_rows } -> ExecutionAssignmentLedgerMergeResult { rows; archived; findings }` | 既存の手動 status/evidence を温存し、新規 ID は planned として追加し、宣言から消えた ID は削除せず `archived` + reason へ退避する。projection や detector は authoring source を書き換えない。 |
+| `checkExecutionAssignmentLedger` | `CheckExecutionAssignmentLedgerInput { rows; defs } -> ContractResult` | `done/pass/fail` の evidence 欠落、宣言外 spec、target artifact 欠落、archive reason 欠落、同一 assignment の重複を finding 化する。`done/pass/fail` の evidence は command、PR、path、issue など検証可能アンカーを要求し、「確認しました」だけの自然文はアンカーとして扱わない。 |
+| `ut-tdd assignment check --json` | CLI read-only command | authoring source と DB projection を読み、台帳違反を JSON/text で返す。source doc を補完創作せず、実装完了も承認もしない。 |
+
+実行割当台帳は ZIP `assign.py` / `docs/assign.yaml` 相当の HARNESS 翻訳である。PLAN 粒度の
+`review_evidence.green_commands` は証跡履歴として残すが、ID 単位の実行・検証対象を代替しない。
+検出系は PLAN 粒度 evidence に合わせて台帳を薄めず、typed spec ID と V-pair から導いた実行単位に合わせる。

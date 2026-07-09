@@ -1067,11 +1067,15 @@ spec:
     - id: TVMS-013
       kind: unit-oracle
       traces_from: [VMS-013]
+    - id: TVMS-014
+      kind: unit-oracle
+      traces_from: [VMS-014]
 ```
 
 TVMS-001、TVMS-002、TVMS-003、TVMS-004、TVMS-005、TVMS-006、TVMS-007 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。
 TVMS-007 は VMS-007 の phase/layer alignment が unit oracle と doctor gate で検証されることを保証する。
 TVMS-008 は agent contract authoring source、TVMS-009 は agent contract doctor gate の oracle である。
+TVMS-014 は VMS-014 の ID 単位実行割当台帳 contract が L7 unit oracle として定義されることを保証する。
 
 ## PLAN-L6-60 ID 起点 trace impact traversal oracle (2026-07-08)
 
@@ -1088,6 +1092,15 @@ TVMS-008 は agent contract authoring source、TVMS-009 は agent contract docto
 | U-SPEC-RAG-R1 | `deriveSpecRagClosureEntries(input)` | typed spec relation を `PLAN-L6-60` と同じ向きで辿り、test 到達済みかつ closure finding なしの spec は `green` / `closed`、test を要求するが test 到達 0 の spec は `red` / `missing_test` になる。 |
 | U-SPEC-RAG-R2 | `rebuildHarnessDb` / `projectSpecIr` | real repo rebuild で `spec_rag_closure_entries` が populated になり、`VMS-004` などの typed spec row が `search_index` から `spec closure RAG` で検索できる。 |
 | U-SPEC-RAG-R3 | `ut-tdd trace rag --id <id> --json` | CLI は `spec_rag_closure_entries` を read-only に表示し、`--id` filter と JSON 出力を持つ。`schedule_entries.rag` を代替参照しない。 |
+
+## PLAN-L6-50 ID 単位実行割当台帳 oracle (2026-07-09)
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-ASSIGN-LEDGER-R1 | `deriveExecutionAssignmentLedger(input)` | typed spec ID と V-pair / test edge から `implementation` / `verification` / `review` の assignment row を deterministic に導出し、同一入力で `assignment_id` と row 数が揺れない。 |
+| U-ASSIGN-LEDGER-R2 | `mergeExecutionAssignmentLedger(input)` | 既存 authoring row の status/evidence を温存し、新規 spec は planned として追加、消えた spec は削除ではなく `archived` + reason へ退避する。 |
+| U-ASSIGN-LEDGER-R3 | `checkExecutionAssignmentLedger(input)` | `done/pass/fail` の evidence 欠落、宣言外 spec、target artifact 欠落、archive reason 欠落、同一 assignment 重複を fail-close finding にする。 |
+| U-ASSIGN-LEDGER-R4 | `ut-tdd assignment check --json` | CLI は authoring source / DB projection を read-only に検査し、台帳補完や実行完了承認を行わない。JSON 出力に finding kind、assignment_id、evidence_path を含める。 |
 
 ## PLAN-L6-59 設計 doc 横断整合性 oracle (2026-07-09)
 
