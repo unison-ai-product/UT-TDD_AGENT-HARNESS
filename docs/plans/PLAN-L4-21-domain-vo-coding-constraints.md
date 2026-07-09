@@ -33,6 +33,7 @@ review_evidence:
         completed_at: "2026-07-09T22:00:00+09:00"
         evidence_path: docs/design/harness/L4-basic-design/data.md
         output_digest: "sha256:fafb63ae64b515157f5379e59243d9aa7ef3c2ce3df6294f2dbc735138ddf2e7"
+        anchor_commit: 0b9e7f6268b007c69b3de05e7e90f8fdb40058e1
 agent_slots:
   - role: tl
     slot_label: "TL - 値オブジェクト方針とクラス・メソッド構造規約の適用範囲判断 (harness 自身の domain class 量に見合う優先度確認)"

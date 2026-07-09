@@ -33,6 +33,7 @@ review_evidence:
         completed_at: "2026-07-09T23:20:00+09:00"
         evidence_path: docs/design/harness/L6-function-design/skill-admission.md
         output_digest: "sha256:22ac0b1a0491e25ca965c28f92f40160b7c6aefd079f0db17e951f73607145cb"
+        anchor_commit: 0b9e7f6268b007c69b3de05e7e90f8fdb40058e1
 agent_slots:
   - role: tl
     slot_label: "TL - skill admission gate の品質3要件、judge権限境界、既存 skill-index との非重複確認"
