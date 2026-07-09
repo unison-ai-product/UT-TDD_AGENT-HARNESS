@@ -24,11 +24,12 @@ const READY_DEPENDENCY_STATUSES = new Set(["confirmed", "completed"]);
 // add-impl を内包する運用で、kind=impl は back-fill 義務 (KIND_BACKFILL) を
 // 機械免除してしまうため許容しない (A-178 G-14)。
 //
-// PLAN-RECOVERY-10 (Stage 1, PO サインオフ 2026-07-07): 従来は add-feature のみ登録で、
-// 他 route_mode は lint.ts の fail-open (`if (!allowedKinds) return []`) により route_mode↔kind
-// 整合を一度も検査されず素通りしていた。SSoT (L4 §3.1 駆動モデル表 function.md:109 の kind 列) から
-// 全実在 mode の allowed kinds を導出して登録 (観測組合せの鵜呑み blessing でなく spec 由来)。
-// - reverse→reverse / recovery→recovery / refactor→refactor: L4 §3.1 一致。
+// PLAN-RECOVERY-10 (Stage 1, PO サインオフ 2026-07-07): SSoT
+// (L4 §3.1 駆動モデル表 function.md の kind 列) から全 11 駆動モデル + Verify の
+// allowed kinds を導出して登録 (観測組合せの鵜呑み blessing でなく spec 由来)。
+// - discovery/scrum→poc: 両 mode は同じ kind=poc を共有し、workflow_phase で状態を表す。
+// - reverse/recovery/refactor/retrofit/research→同名 kind: L4 §3.1 一致。
+// - add-feature/design-bottomup→add-design|add-impl: 設計追補 + 実装追補を内包する。
 // - incident→troubleshoot|recovery: L4 §3.1 / route-filing の Incident 行に一致。
 // - version-up→impl: option1 (PO 裁定)。parked track の実装意図を impl で保全し、着手時 add-feature
 //   合流で add-design を生む (L4 §3.1 は back-fill 側の記述、parked kind は本裁定で確定)。
@@ -36,10 +37,15 @@ const READY_DEPENDENCY_STATUSES = new Set(["confirmed", "completed"]);
 // 恒久免除する (kind 書き換え=履歴改ざん回避)。
 const ROUTE_MODE_ALLOWED_KINDS: Record<string, readonly string[]> = {
   "add-feature": ["add-design", "add-impl"],
+  "design-bottomup": ["add-design", "add-impl"],
+  discovery: ["poc"],
   incident: ["troubleshoot", "recovery"],
+  refactor: ["refactor"],
+  research: ["research"],
+  retrofit: ["retrofit"],
   reverse: ["reverse"],
   recovery: ["recovery"],
-  refactor: ["refactor"],
+  scrum: ["poc"],
   "version-up": ["impl"],
   verify: ["verify"],
 };
@@ -49,10 +55,15 @@ const ROUTE_MODE_ALLOWED_KINDS: Record<string, readonly string[]> = {
 // PLAN governance lint で fail-close する。
 const ROUTE_MODE_LAYER_BANDS: Record<string, readonly string[]> = {
   "add-feature": ["L3", "L4", "L5", "L6", "L7"],
+  "design-bottomup": ["L2", "L3", "L4", "L5", "L6", "L7"],
+  discovery: ["cross"],
   incident: ["L7", "cross"],
   reverse: ["cross"],
   recovery: ["cross"],
   refactor: ["L7"],
+  research: ["L1", "L2", "L3", "L4"],
+  retrofit: ["L7"],
+  scrum: ["cross"],
   "version-up": ["L7"],
   verify: ["L8", "L9", "L10", "L11", "L12", "L13", "L14"],
 };
