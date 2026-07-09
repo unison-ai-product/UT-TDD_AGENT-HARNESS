@@ -868,14 +868,15 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-ID | Target | Oracle |
 |---|---|---|
 | U-SPECIR-R1 | `loadSpecIrSources(input)` | repo-relative root だけを読み、source docs / PLAN / test-design / schedule / activation profile を書き換えない。missing root は warn finding、secret-like / PII-like / raw transcript payload は projection input に載せない。 |
-| U-SPECIR-R2 | `parseSpecDefs(bundle)` | 同一 input から stable `spec_id` / `source_hash` / `section_anchor` を生成する。未知 layer/sub_doc、重複 ID、空 definition は finding 化し、仕様を補完創作しない。 |
-| U-SPECIR-R3 | `parseSpecRelations(bundle, defs)` | relation_kind は allowlist (`defines` / `requires` / `verifies` / `pairs` / `derives` / `supersedes`) のみ許可。orphan relation、self-loop、未知 relation_kind は finding。`dependency_edges` と混同しない。 |
+| U-SPECIR-R2 | `parseSpecDefs(bundle)` | 同一 input から stable `spec_id` / `source_hash` / `section_anchor` を生成する。未知 layer/sub_doc、重複 ID、空 definition は finding 化し、仕様を補完創作しない。非ASCII見出しなど ASCII 正規化で情報が落ちる ID は hash suffix で衝突を避ける。 |
+| U-SPECIR-R3 | `parseSpecRelations(bundle, defs)` | relation_kind は allowlist (`defines` / `requires` / `verifies` / `pairs` / `derives` / `supersedes`) のみ許可。orphan relation、self-loop、未知 relation_kind は finding。`dependency_edges` と混同しない。一意な短縮 PLAN ID と `docs/adr` / `docs/process` / `docs/migration` / `docs/governance` の参照 doc は解決対象に含める。 |
 | U-SPECIR-R4 | `parseScheduleEntries(bundle)` | 工程管理表から deterministic `schedule_entries` draft を返す。date/state 欠落、未解決 plan_id、過去 due 未完了は finding。PLAN status は mutate しない。 |
 | U-SPECIR-R5 | `parseActivationEntries(bundle)` | enabled profile は reason を必須とし、未知 drive/mode または profile 欠落を finding/fail-close 候補にする。暗黙 default で駆動モデルを有効化しない。 |
 | U-SPECIR-R6 | `projectSpecIr(input, db)` | `spec_defs` / `spec_relations` / `schedule_entries` / `activation_entries` / `detector_route_candidates` を idempotent upsert する。同一入力 rebuild 2 回で row counts と IDs が安定し、source docs は rewrite しない。 |
 | U-SPECIR-R7 | `analyzeSpecIrIntegrity(input)` | orphan relation、未知 layer/sub_doc、activation reason 欠落、secret-like evidence/value、raw markdown body 永続化を finding/quality_signal に変換する。parse 失敗を silent skip しない。 |
 | U-SPECIR-R8 | `deriveDetectorRouteCandidates(input)` | finding/spec/schedule/activation を join し、候補を `detector_route_candidates` draft として返す。FilingTarget は創作せず、target snapshot は L4 function §3.2.1 / `routeFiling` SSoT から取得する。 |
 | U-SPECIR-R9 | `deriveDetectorRouteCandidates(input)` (non-ready) | SSoT 不在、unknown route_signal、target_layer/sub_doc mismatch は non-ready finding。起票済み PLAN や FilingTarget 決定済みとして扱わない。 |
+| U-SPECIR-R10 | `analyzeSpecIrIntegrity(input)` / `parseSpecRelations(bundle, defs)` (PLAN-L7-405) | `spec-ir-invalid-subdoc` は L1-L6 design document row の catalog 違反だけに発火し、PLAN / test-design / typed spec / reference doc の補助行では発火しない。一意な `PLAN-Lx-NN` 短縮参照と存在する reference doc path は `spec_relations` に解決され、orphan relation を出さない。 |
 
 ## PLAN-L7-368 Design Lint DB Projection Addendum (2026-07-08)
 
