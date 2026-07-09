@@ -30,7 +30,8 @@
     "ST-EXT-01",
     "ST-EXT-02",
     "ST-EXT-03",
-    "ST-EXT-04"
+    "ST-EXT-04",
+    "ST-EXT-05"
   ],
   "mandatory_st_ids": [
     "ST-DATA-01",
@@ -59,7 +60,8 @@
     "ST-EXT-01",
     "ST-EXT-02",
     "ST-EXT-03",
-    "ST-EXT-04"
+    "ST-EXT-04",
+    "ST-EXT-05"
   ],
   "deferred_st_ids": [
     "ST-ASSET-04",
@@ -147,7 +149,8 @@
       "st_ids": [
         "ST-EXT-01",
         "ST-EXT-02",
-        "ST-EXT-04"
+        "ST-EXT-04",
+        "ST-EXT-05"
       ]
     },
     {
@@ -160,6 +163,18 @@
       "output_digest": "sha256:7cf0cfd9fa472809cd5cb2b4d8121291840027bcb46db31b2838fdc5bad6e581",
       "st_ids": [
         "ST-EXT-03"
+      ]
+    },
+    {
+      "command_id": "cmd-st-ext-cli-surface",
+      "command": "bun run vitest run tests\\cli-surface.test.ts tests\\workflow-contracts.test.ts tests\\g9-system-workflow.test.ts",
+      "runner": "bun",
+      "scope": "targeted",
+      "exit_code": 0,
+      "evidence_path": "tests/cli-surface.test.ts",
+      "output_digest": "sha256:937e539495cd650292f9738b93f3eebe37094c73e148b55b4f583103f9cf0423",
+      "st_ids": [
+        "ST-EXT-05"
       ]
     }
   ],
@@ -490,6 +505,20 @@
         "cmd-st-ext-targeted"
       ],
       "notes": "Provider SDK isolation and dependency direction are checked through adapter and dependency tests."
+    },
+    {
+      "st_id": "ST-EXT-05",
+      "status": "passed",
+      "evidence_paths": [
+        "tests/cli-surface.test.ts",
+        "tests/workflow-contracts.test.ts",
+        "src/cli.ts",
+        "src/workflow/contracts.ts"
+      ],
+      "command_ids": [
+        "cmd-st-ext-cli-surface"
+      ],
+      "notes": "CLI user boundary is covered by the existing CLI surface and command catalog tests; PLAN-REVERSE-395 fixes the L4/L6/L9 design backfill."
     }
   ],
   "exit_criteria": {

@@ -45,6 +45,7 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 | **(d) 依存管理境界** | Dependabot | inbound 通知 (PR / alert) |
 | **(e) local↔Web 境界 (将来、IMP-031)** | 画面 (14 screen) + DB を載せる Web サーバ | **現状なし** (file-based local、ネットワーク非依存)。画面+DB をサーバ側に配置する Phase B / multi-team 時に **local harness ↔ Web サーバ間のネットワーク通信境界**が新設される。[ADR-003](../../../adr/ADR-003-runtime-adapter-boundary-subscription-cli.md) adapter 方針の延長で設計 |
 | **(f) 内部資産 fs 境界 (A-90、内部資産増分の整合宣言)** | `.claude/agents/*.md` (roster 正本) / `docs/skills/**/*.md` (skill 正本) | **external-if 対象外 (internal resource)**。外部 service ではなくローカル fs 読取で、**adapter 隔離なし** — roster/skills module の `loadX()` 端点に隔離 (architecture §6、fs は副作用端点)。state は持たず scan-on-demand で in-memory 構築 (data.md §1/§8、ADR-004)。本行は「内部資産が外部境界でない」ことの**明示宣言** (cross-sub-doc 沈黙 gap を解消) |
+| **(g) CLI user boundary (PLAN-REVERSE-395)** | `ut-tdd` top-level / subcommand surface | 外部 service ではなく人間・hook・CI から呼ばれる product boundary。`src/cli.ts` の commander surface を as-is 復元し、公開コマンド体系、`--json` 出力、終了コード規約、help/completion 入力を L4 境界として固定する。CLI コマンド一覧は L6 `buildCommandCatalog` / L7 CLI surface tests へ降下し、検出系が存在しない command path を創作してはいけない。 |
 
 ## §3 各境界の DbC 契約 (precondition / postcondition / invariant)
 
@@ -54,6 +55,7 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 | **(b) VCS・CI** | ローカル gate 証跡が存在 | CI 側 gate 再実行結果がローカルと一致 (NFR-13 dev-local+CI 整合) | branch protection は gate pass を必須化、bypass は Incident のみ (FR-17) |
 | **(c) 観測・監視** | (inbound) alert payload が schema 準拠 | Incident mode 自動 routing trigger (FR-08/16) | 観測は記録のみ、harness の判定ロジックに副作用を直接与えない (mode routing 経由) |
 | **(d) 依存管理** | (inbound) Dependabot PR/alert | security NFR 経路で triage (人間トリアージ) | 自動マージしない (人間確認、禁止事項) |
+| **(g) CLI user boundary** | `ut-tdd` は repository root で実行され、`src/cli.ts` の commander catalog に存在する command path のみを受け付ける。機械利用は原則 `--json` を持つ command を選ぶ。 | 成功時は exit 0、hard gate / validation failure は exit 1、明示 block 系 guard は exit 2 を返す。text 出力は人間向け、JSON 出力は automation 向けに分離する。 | CLI surface の正本は実装先行の `src/cli.ts` を Reverse で L4/L6 へ back-fill したもの。AGENTS/CLAUDE の Canonical Commands は代表導線であり、全 command catalog の代替正本ではない。 |
 
 > Precondition/Postcondition の**詳細**(引数型・エラー型・リトライ・タイムアウト) は L5 D-API で確定 (§7 粒度境界)。
 
@@ -67,6 +69,7 @@ harness が依存する外部 service との**境界契約**を Design by Contra
 | **VCS・CI** | GitHub 不在 → ローカル gate のみで継続 (CI は branch protection でのみ必須)。CI fail → PR block (fail-close) |
 | **観測・監視** | Sentry/Uptime Robot 不在 → Incident 自動 trigger が無効化されるのみ、手動 `ut-tdd incident open` は機能継続 |
 | **依存管理** | Dependabot 不在 → security 通知が手動 (`ut-tdd doctor` の依存検出で代替) |
+| **CLI user boundary** | 未定義 command / 必須 option 欠落 / gate failure は非 0 exit で停止する。`--json` を持つ command は automation が parse 可能な JSON を返し、text 出力を機械正本にしない。shell completion はこの command catalog を利用し、存在しない subcommand を補完候補に出さない。 |
 
 > **原則** (architecture.md fail-close + 禁止事項): 外部 provider SDK / 認証情報を前提にした fallback を**通常導線として追加しない**。外部不在でも core 機能 (検証・gate・trace) は file-based state で動作する。
 
@@ -125,3 +128,4 @@ AI runtime / 外部ツール (Claude Code / Codex CLI / gh ...)  ← いずれ�
 - 観測境界 (Sentry/Uptime → Incident trigger) の payload schema = L5 D-CONTRACT
 - provider 引継ぎ (FR-L1-42) の context+budget 連携 = `provider-handover.v1` package (`ut-tdd handover provider export/status`, `.ut-tdd/handover/provider/`)
 - **function.md §8 も参照** (mode-routing.yaml / gate-checks.yaml の DSL schema = L5 D-CONTRACT carry を含む。本 doc §8 と function.md §8 で carry 先が相補的)
+- **CLI user boundary (PLAN-REVERSE-395)**: top-level command catalog、subcommand path、`--json` 有無、終了コード分類は L6 `buildCommandCatalog` / L7 CLI surface tests へ降下する。`PLAN-L6-64` の shell completion はこの as-is catalog を入力とし、completion 側で command path を再発明しない。

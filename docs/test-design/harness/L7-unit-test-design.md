@@ -690,6 +690,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 - U-FR-L1-01..U-FR-L1-50 are defined by `docs/design/harness/L6-function-design/fr-unit-coverage.md`.
 - U-FR-L1-51 covers artifact progress red/yellow/green derivation from linked test evidence, dependency impact, and recovery/fullback evidence.
+- U-FR-L1-48 covers command catalog generation from the actual CLI surface. After PLAN-REVERSE-395, the oracle must distinguish top-level/subcommand paths, JSON-capable commands, expected exit profiles (0/1/2/provider-propagated), and registrar-owned command families (`codex`/`claude`, `distribution`, `feedback`). Shell completion design must consume this catalog and must not invent unregistered command paths.
 - The executable guard is `src/lint/l6-fr-coverage.ts`: it parses the L1 FR registry and fails when any registered FR lacks an L6 spec path, deterministic unit contract, or U-* oracle.
 - This addendum is the L7 Red entry contract for L6 completion: each U-FR-L1-* row must become a focused unit test or be explicitly re-routed by a later confirmed PLAN.
 
