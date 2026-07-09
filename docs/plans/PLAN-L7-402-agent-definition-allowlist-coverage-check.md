@@ -23,10 +23,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-402-agent-definition-allowlist-coverage-check.md
     artifact_type: markdown_doc
-  - artifact_path: src/doctor/agent-definition-coverage.ts
-    artifact_type: source_module
-  - artifact_path: tests/doctor-agent-definition-coverage.test.ts
-    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
