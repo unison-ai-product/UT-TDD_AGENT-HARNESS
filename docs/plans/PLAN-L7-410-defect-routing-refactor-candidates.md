@@ -37,6 +37,7 @@ review_evidence:
         completed_at: "2026-07-09T21:13:00+09:00"
         evidence_path: src/state-db/feedback-projections.ts
         output_digest: "sha256:5003250200f263eea333914960a842dbcea620d35ad93bffb8c3ffdcda5a9e0a"
+        anchor_commit: a3fb0f408cf47c46340cb10b3a1ba1d089a6257e
       - kind: unit_test
         command: "bun run vitest run tests\\projection-writer.test.ts tests\\state-db.test.ts --reporter=dot"
         runner: bun
@@ -45,6 +46,7 @@ review_evidence:
         completed_at: "2026-07-09T21:12:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:7fbed17ede44ed62063555512d05a2e856b4acd3fd7d33087bf7a47da81fa8aa"
+        anchor_commit: a3fb0f408cf47c46340cb10b3a1ba1d089a6257e
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -53,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-09T21:12:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:7fbed17ede44ed62063555512d05a2e856b4acd3fd7d33087bf7a47da81fa8aa"
+        anchor_commit: a3fb0f408cf47c46340cb10b3a1ba1d089a6257e
       - kind: lint
         command: "bun run src\\cli.ts plan lint docs\\plans\\PLAN-L7-410-defect-routing-refactor-candidates.md docs\\plans\\PLAN-REVERSE-410-defect-routing-refactor-backfill.md docs\\plans\\PLAN-RECOVERY-10-right-lung-quality-assurance.md"
         runner: bun
@@ -61,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-09T21:12:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:7fbed17ede44ed62063555512d05a2e856b4acd3fd7d33087bf7a47da81fa8aa"
+        anchor_commit: a3fb0f408cf47c46340cb10b3a1ba1d089a6257e
       - kind: smoke
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
@@ -69,6 +73,7 @@ review_evidence:
         completed_at: "2026-07-09T21:13:00+09:00"
         evidence_path: src/state-db/feedback-projections.ts
         output_digest: "sha256:5003250200f263eea333914960a842dbcea620d35ad93bffb8c3ffdcda5a9e0a"
+        anchor_commit: a3fb0f408cf47c46340cb10b3a1ba1d089a6257e
 generates:
   - artifact_path: docs/plans/PLAN-L7-410-defect-routing-refactor-candidates.md
     artifact_type: markdown_doc

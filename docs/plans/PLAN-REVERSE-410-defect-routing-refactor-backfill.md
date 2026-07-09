@@ -47,6 +47,7 @@ review_evidence:
         completed_at: "2026-07-09T21:12:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:7fbed17ede44ed62063555512d05a2e856b4acd3fd7d33087bf7a47da81fa8aa"
+        anchor_commit: a3fb0f408cf47c46340cb10b3a1ba1d089a6257e
       - kind: unit_test
         command: "bun run vitest run tests\\projection-writer.test.ts tests\\state-db.test.ts --reporter=dot"
         runner: bun
@@ -55,6 +56,7 @@ review_evidence:
         completed_at: "2026-07-09T21:12:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:7fbed17ede44ed62063555512d05a2e856b4acd3fd7d33087bf7a47da81fa8aa"
+        anchor_commit: a3fb0f408cf47c46340cb10b3a1ba1d089a6257e
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-410-defect-routing-refactor-backfill.md
     artifact_type: markdown_doc
