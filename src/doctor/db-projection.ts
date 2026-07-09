@@ -29,11 +29,13 @@ import {
 import {
   type AgentContractIntegrityResult,
   analyzeAgentContractIntegrity,
+  analyzeDesignDocCrossIntegrity,
   analyzeTypedSpecLedgerBodySync,
   analyzeTypedSpecOwnedArtifactDispersal,
   analyzeTypedSpecPhaseLayerAlignment,
   analyzeTypedSpecTraceClosure,
   collectSpecIrProjection,
+  type DesignDocCrossIntegrityResult,
   loadSpecIrSources,
   type TypedSpecLedgerBodySyncResult,
   type TypedSpecOwnedArtifactDispersalResult,
@@ -268,6 +270,52 @@ export function checkTypedSpecTraceClosure(repoRoot: string): {
   } catch {
     return {
       messages: ["typed-spec-trace-closure - violation: typed spec trace closure could not run"],
+      ok: false,
+    };
+  }
+}
+
+export function designDocCrossIntegrityMessages(result: DesignDocCrossIntegrityResult): string[] {
+  if (result.ok) {
+    return [
+      `design-doc-cross-integrity - OK (docs=${result.checked_docs}, duplicate_definitions=0, dependency_cycles=0)`,
+    ];
+  }
+  return [
+    `design-doc-cross-integrity - violation (docs=${result.checked_docs}, duplicate_definitions=${result.duplicate_definitions.length}, dependency_cycles=${result.dependency_cycles.length})`,
+    ...result.findings
+      .slice(0, 8)
+      .map(
+        (finding) =>
+          `design-doc-cross-integrity - ${finding.kind}: ${finding.subject_id} (${finding.evidence_path})`,
+      ),
+  ];
+}
+
+export function checkDesignDocCrossIntegrity(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+  result?: DesignDocCrossIntegrityResult;
+} {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["design-doc-cross-integrity - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const projection = collectSpecIrProjection(repoRoot, new Date(0).toISOString());
+    const result = analyzeDesignDocCrossIntegrity({
+      defs: projection.spec_defs,
+      relations: projection.spec_relations,
+      catalog_entries: projection.document_catalog_entries,
+    });
+    return { messages: designDocCrossIntegrityMessages(result), ok: result.ok, result };
+  } catch {
+    return {
+      messages: [
+        "design-doc-cross-integrity - violation: design doc cross integrity could not run",
+      ],
       ok: false,
     };
   }

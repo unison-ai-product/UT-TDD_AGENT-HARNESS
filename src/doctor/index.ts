@@ -28,6 +28,7 @@ export {
   checkDbProjectionCoverage,
   checkDbProjectionIngestion,
   checkDesignDetection,
+  checkDesignDocCrossIntegrity,
   checkTypedSpecLedgerBodySync,
   checkTypedSpecOwnedArtifactDispersal,
   checkTypedSpecPhaseLayerAlignment,
