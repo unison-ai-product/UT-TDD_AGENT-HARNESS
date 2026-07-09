@@ -611,6 +611,24 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-SKILL-NEW-002 | `scaffoldSkill` (domain) | `--category domain --domain-tags writing` → L/駆動なし + category=domain + domain_tags 付きを生成、ok=true |
 | U-SKILL-NEW-003 | `scaffoldSkill` (project 配布境界) | `--category project` の出力先は `docs/skills/` でなく利用側 root (配布境界 §6) / 既存 name と衝突する場合は上書きせず finding |
 
+### §1.24b U-SKILL-ADMIT (skill admission gate 由来、PLAN-L6-67 add-design / skill-admission.md §4-§8、FR-L1-19/12/24 拡張)
+
+> ペア = `skill-admission.md` §4-§8。新規 skill 候補を novelty / decision-usefulness / harness-fit の 3 要件で判定し、
+> judge を CI/doctor 合否に入れず、決定論残渣だけを hard gate 化する。admit は機械条件の合成でのみ成立し、
+> judge 単独の no_objection では fail-open しない。
+
+| U-ID | 対象関数 | oracle (DbC) |
+|---|---|---|
+| U-SKILL-ADMIT-001 | `analyzeSkillFit` | `analyzeSkillAssignments` を再実装せず委譲し、索引違反・readability・trigger 衝突を合成する。repairable は frontmatter 正規化など機械修復可能な違反だけ true。 |
+| U-SKILL-ADMIT-002 | `computeSkillNovelty` | 凍結 catalog snapshot に対し `metadataOverlap` で nearest N と maxOverlap を決定論的に返し、閾値で novel / ambiguous / duplicate に分類する。 |
+| U-SKILL-ADMIT-003 | `analyzeDecisionPoints` | `decision_points` が 1 件以上あり、一般語 denylist だけの項目を nonGeneric=false として reject 可能にする。 |
+| U-SKILL-ADMIT-004 | `repairSkillCandidate` | repairable な fit 違反だけを機械修復し、本文意味や `decision_points` の中身は生成しない。同じ候補を再入力すると appliedFixes は空になる。 |
+| U-SKILL-ADMIT-005 | `resolveAdmission` | `admit-new` は fit.ok、novelty=novel、decisionPoints present/nonGeneric、judgeVerdict=no_objection が全て揃う場合だけ成立する。欠けた条件は reject / flag / needs-judge / repair-then-admit / merge-supersede に分岐する。 |
+| U-SKILL-ADMIT-006 | judge dispatch 境界 | judge は reject / flag / no_objection だけを返し、admit 権を持たない。単一 runtime では no_objection を許さず、自己肯定で admit できない。 |
+| U-SKILL-ADMIT-007 | `analyzeSkillSupersession` | duplicate 判定の merge-supersede は `supersedes` と被 supersede 側の逆参照が揃う場合だけ成立し、片方向参照を fail-close する。 |
+| U-SKILL-ADMIT-008 | `renderSkillCatalogIndex` | frontmatter catalog を SSoT に索引一覧を生成し、手編集された SKILL_MAP drift を検出可能にする。 |
+| U-SKILL-ADMIT-009 | `analyzeAdmissionCoverage` | baseline に存在しない新規 skill の admission 台帳欠落と catalog drift だけを deterministic に検出し、judge/LLM 呼び出しを doctor/CI 合否に含めない。 |
+
 ## §2 量閉じ一覧 (L6 設計 → U 被覆、孤児チェック)
 
 - function-spec §1 関数 → U-FUNC-01〜04
@@ -630,6 +648,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - **module-drift.md asset-drift alias (loadAssetDriftInput/analyzeAssetDrift/assetDriftMessages/checkAssetDrift) → U-ASSETDRIFT-001〜006** (内部資産 + prompt template cutover 差分、FR-L1-49。legacy source path residue / legacy command residue / docs-skills vacancy / guard allowlist missing を doctor hard guard。孤児 0)
 - **skill-index.md §1-§5 関数 (analyzeSkillAssignments 索引反転 / scoreSkill de-saturate / runtime-provenance learning / wildcard checklist scoring 除外 / scanSkillCatalog+catalogAutomationAssets の category 投影) → U-SKILL-IDX-001〜011** (add-design 差分、PLAN-L6-37 + PLAN-REVERSE-277。索引キー = L+駆動+メタデータ、category fallback、indexable-by-something fail-close、de-saturate、CLI↔DB scorer SSoT。孤児 0)
 - **skill new scaffolder (scaffoldSkill) → U-SKILL-NEW-001〜003** (PLAN-L6-37 同梱 add-feature。規約準拠雛形生成 + 生成後 lint ok + 配布境界。孤児 0)
+- **skill-admission.md §4-§8 関数 (analyzeSkillFit/computeSkillNovelty/analyzeDecisionPoints/repairSkillCandidate/resolveAdmission/analyzeSkillSupersession/renderSkillCatalogIndex/analyzeAdmissionCoverage) → U-SKILL-ADMIT-001〜009** (add-design 差分、PLAN-L6-67。品質 3 要件、4種判定、judge fail-open 封止、台帳/カタログ drift の決定論検査。孤児 0)
 - **module-drift.md change-impact addendum (analyzeChangeImpact/parseGitPorcelain/loadChangedFiles/changeImpactMessages) → U-CHGIMPACT-001〜004** (コード変更に対する設計・テスト更新漏れ検出。doctor hard guard。孤児 0)
 - **module-drift.md coding-rules addendum (analyzeCodingRules/loadCodingRuleDocs/loadCodingWorkflowDocs/codingRulesMessages/checkCodingRules) → U-CODE-001〜010** (requirements-level coding rule SSoT + workflow placement + error/module-boundary + machine-surface-language の機械検出。doctor hard guard。孤児 0)
 - **module-drift.md DDD/TDD strictness addendum (analyzeDddTddRules/loadDddTddInputs/dddTddRulesMessages/checkDddTddRules) → U-DDDTDD-001〜008** (DDD/TDD SSoT + workflow placement + Red-first evidence + test oracle + integration GWT の機械検出。doctor hard guard。孤児 0)
