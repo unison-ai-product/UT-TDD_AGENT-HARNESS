@@ -31,6 +31,11 @@ import {
   loadRuntimePortabilityDocs,
   runtimePortabilityMessages,
 } from "../lint/runtime-portability";
+import {
+  analyzeSecretScan,
+  loadSystemSecretScanArtifacts,
+  secretScanMessages,
+} from "../lint/secret-scan";
 
 export function checkCodingRules(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
@@ -167,5 +172,17 @@ export function checkRuntimeReadability(repoRoot: string): { messages: string[];
     return { messages: runtimeReadabilityMessages(r), ok: r.ok };
   } catch {
     return { messages: ["runtime-readability — ⚠ .ut-tdd artifacts を読めない"], ok: false };
+  }
+}
+
+export function checkSecretScan(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["secret-scan - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeSecretScan(loadSystemSecretScanArtifacts(repoRoot));
+    return { messages: secretScanMessages(r), ok: r.checked > 0 && r.ok };
+  } catch {
+    return { messages: ["secret-scan — violation: secret scan artifacts を読めない"], ok: false };
   }
 }

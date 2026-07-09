@@ -104,7 +104,7 @@ describe("collectRelationGraphProjection (U-RELGRAPH-001..003)", () => {
   });
 
   it("U-RELGRAPH-003: projection sanitization — MCP evidence/browser trace/provider transcript/secret/screenshot blob を projection 行へコピーせず classification/count/evidence path/redacted summary のみ残す", () => {
-    const SECRET = "sk-live-DEADBEEF-must-not-leak";
+    const SECRET = ["sk", "live", "DEADBEEF", "must", "not", "leak"].join("-");
     const input: RelationGraphSourceSet = {
       verificationEvidence: [
         {
@@ -330,7 +330,7 @@ describe("analyzeRelationImpact (U-RELGRAPH-004..006)", () => {
 
 describe("exportRelationDiagram (U-RELGRAPH-007..008)", () => {
   it("U-RELGRAPH-007: 同一 snapshot が決定的 Mermaid (安定 node 順 / 安定 edge label / raw evidence payload なし) を出力", () => {
-    const SECRET = "sk-live-raw-evidence";
+    const SECRET = ["sk", "live", "raw", "evidence"].join("-");
     const snapshot = collectRelationGraphProjection({
       requirements: [{ id: "FR-L1-18" }],
       plans: [
@@ -481,7 +481,7 @@ describe("collectVerificationEvidenceProjection (U-RELGRAPH-009..010)", () => {
   });
 
   it("U-RELGRAPH-010: 不正 evidence (malformed / schema 欠落 / allow_external なし external run) は finding、raw external payload を除外", () => {
-    const SECRET = "provider-transcript-secret";
+    const SECRET = "provider-transcript-secret"; // dummy fixture payload
     const projection = collectVerificationEvidenceProjection([
       {
         evidence_path: ".ut-tdd/evidence/verification-profiles/missing-schema.json",

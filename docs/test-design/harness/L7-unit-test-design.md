@@ -1091,3 +1091,18 @@ TVMS-008 は agent contract authoring source、TVMS-009 は agent contract docto
 | U-DESIGN-CROSS-R1 | `analyzeDesignDocCrossIntegrity(input)` | `document_catalog_entries` で対象 doc 集合を確定し、`spec_defs` の同一 `spec_id` が複数 authoring source で定義された場合は `design-doc-duplicate-definition` finding を返す。 |
 | U-DESIGN-CROSS-R2 | `analyzeDesignDocCrossIntegrity(input)` | `spec_relations` を doc 間 edge に射影し、doc A -> doc B -> doc A の循環を `design-doc-dependency-cycle` finding として返す。同一 doc 内自己参照は cycle 扱いしない。 |
 | U-DESIGN-CROSS-R3 | `checkDesignDocCrossIntegrity(repoRoot)` | doctor gate は catalog + typed spec projection を authoring source から再構築して判定し、module import cycle (`dependency-drift`) や typed-spec trace closure の片方向欠落と重複して同じ違反を二重報告しない。 |
+
+## PLAN-L6-62 docs 横断 secret-scan oracle (2026-07-09)
+
+> 設計ペア: `docs/design/harness/L6-function-design/secret.md` の `analyzeSecretScan` /
+> `loadSystemSecretScanArtifacts` / `checkSecretScan` / distribution secret preflight 契約。
+> L4 security slot の方針を下流検出に合わせるのではなく、検出系が L4/L6 設計へ従う。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-DOCSECRET-001 | `analyzeSecretScan(input)` | AWS access key、GitHub token、private key block、Bearer token、password / credential 直書きを marker / line / path 付き violation にする。 |
+| U-DOCSECRET-002 | `analyzeSecretScan(input)` | dummy / placeholder / redacted / fixture / test-only が同一行に明示された説明用 payload は violation にしない。ただし説明無しの実値形 payload は fail-close。 |
+| U-DOCSECRET-003 | `secretScanMessages(result)` | doctor / CLI に path:line:marker の sample を出し、修正対象を追える。 |
+| U-DOCSECRET-004 | `loadSystemSecretScanArtifacts(repoRoot)` | `docs/`、root canonical docs、`.ut-tdd/audit`、`.ut-tdd/handover`、`.ut-tdd/logs`、`.ut-tdd/memory` を active scan band として読む。 |
+| U-DOCSECRET-005 | `checkSecretScan(repoRoot)` | doctor full profile の hard gate として登録され、repoRoot 不在・読込不能・violation ありを fail-close にする。 |
+| U-DOCSECRET-006 | `ut-tdd distribution sync-stage/sync-pack/package` | clean Pack materialize 前に secret-scan を実行し、violation があれば copy / prune / tar を実行せず blocked にする。 |
