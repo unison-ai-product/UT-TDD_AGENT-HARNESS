@@ -14,7 +14,7 @@
 
 | 軸 | 問い (一言) | 値の例 | 正本 |
 |----|-----------|--------|------|
-| **kind** | この PLAN は**何をする**のか | charter / design / impl / poc / reverse / add-design / add-impl / refactor / retrofit / recovery / troubleshoot / research (12 種) | requirements §1.3 |
+| **kind** | この PLAN は**何をする**のか | charter / design / impl / poc / reverse / add-design / add-impl / refactor / retrofit / recovery / troubleshoot / research / verify (13 種) | requirements §1.3 |
 | **layer** | V-model の**どの工程**か | L0-L14 (Forward 工程) / cross (横断駆動) (16 種) | requirements §1.4 |
 | **drive** | **どの専門職 (specialist) を招集する**のか | be / fe / fullstack / db / agent (5 種 = 専門職、V7 再設計済) | requirements §1.6 |
 | **workflow_phase** | 横断駆動の**局面** | S0-S4 (poc) / R0-R4 (reverse)。他 kind は持たない (10 種) | requirements §1.5 |

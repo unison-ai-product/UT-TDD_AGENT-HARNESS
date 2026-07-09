@@ -47,6 +47,7 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 | ST-DATA-03 | 集約間整合 (§7、artifact.trace↔plan.generates) | 不整合 → doctor 検出 | vitest doctor |
 | ST-DATA-04 | state schema ↔ src/schema 突合 (§8) | enum 齟齬 → doctor check_business_entity_coverage | vitest doctor |
 | ST-DATA-05 | review 前置証跡 不変条件 (§6 Plan、IMP-071) | confirmed/completed の design/impl/add-* PLAN が review_evidence 無し → doctor `checkReviewEvidence` fail-close (hard) | vitest doctor (U-REVIEW-006 実 repo ガード、実装済) |
+| ST-DATA-06 | 宣言型 spec IR 論理モデル (§1.1 / §8.1) | SpecDef / SpecRelation / ScheduleEntry / ActivationEntry / DetectorFinding が既存集約境界に割り当てられ、DB projection が authoring source に昇格しない。L5/L8 では IT-SPECIR-01..04 へ降下し、U3 L7 で vitest DB projection + doctor coverage に落とす | vitest DB projection + doctor coverage (U3 L7) |
 
 ### §1.2 ST-ARCH (architecture.md 由来 — 統合 / 依存方向 / fail-close)
 
@@ -61,7 +62,7 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 
 | ST-ID (候補) | 検証対象 (function.md) | 想定シナリオ | 機械検証 (carry) |
 |---|---|---|---|
-| ST-FUNC-01 | 駆動モデル end-to-end 遷移 (§3.1、9 種) | 各駆動モデルが入口 signal で発動 → 固有 phase/step を経て → 出口 contract を満たす (例: Discovery S0→S4 で confirmed=verify 成功必須 / Reverse R0→R4 で forward_routing 確定) | vitest workflow 統合 (L7) |
+| ST-FUNC-01 | 駆動モデル end-to-end 遷移 (§3.1、11 種 + Verify 右肺入口) | 各駆動モデルが入口 signal で発動 → 固有 phase/step を経て → 出口 contract を満たす (例: Discovery S0→S4 で confirmed=verify 成功必須 / Reverse R0→R4 で forward_routing 確定)。Verify は右肺入口として同じ routing surface に載るが、左肺駆動モデルには数えない | vitest workflow 統合 (L7) |
 | ST-FUNC-01b | Forward spine 合流 contract (§3.1 出口列) | 各駆動モデルの出口が**正しい Forward L 工程へ合流** (Reverse=L1/L3/L4/L5/gap-only の 5値 / Scrum は L8-L14 へ合流不可=IMP-044 / Refactor=L7 内部完結で L1/L4 不変) | vitest workflow 統合 |
 | ST-FUNC-02 | 機能間依存 (§7) | plan draft→hook→registry / gate→trace→detector の連鎖 | vitest 統合 |
 | ST-FUNC-03 | TDD 強制 (FR-02、§2 sprint) | Red→Green→refactor 順序 + 本体先行で fail-close | vitest 統合 |
@@ -69,6 +70,9 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 | ST-FUNC-05 | mode↔kind 非1:1 (§3.2) | Discovery/Scrum が同一 kind=poc で mode 識別 / Incident が troubleshoot+recovery の 2 PLAN に分割 (recovery.requires に troubleshoot 宣言) / Add-feature が add-design+add-impl | vitest 統合 (frontmatter + dependencies) |
 | ST-FUNC-06 | 人間サインオフ + execution mode 別 review tier (§3.1/§3.6) | Recovery=tl+po / Incident=オンコール+tl+pm / Retrofit config_drift=tl のサインオフ無しに exit させない (fail-close、mode-invariant)。**判断ゲートの review tier が execution mode で縮退** (hybrid=cross-agent / claude-only・codex-only=intra_runtime_subagent hard / standalone=人間必須)、`ut-tdd gate` が status mode を参照し self-review が cross-agent に化けない | vitest `gate-review-tier.test.ts` + CLI `ut-tdd gate` smoke (mode 別) |
 | ST-FUNC-07 | skill 文脈注入 (§3.4、FR-12) | `skill suggest` が PLAN context (kind/layer/drive) から ranked 推挙 + 注入規約を返し、**全 skill を常時ロードしない** (必要 step のみ注入) | vitest skill (L7) |
+| ST-FUNC-08 | design-bottomup end-to-end (§3.1、画面後付け駆動) | **Given** 既存 backend + FE 要件未確定、**When** `design_bottomup` 系 signal で発動、**Then** backend 由来 FE 要件 elicitation → mock 具体化 (L2) → add-design (L2-L6) → add-impl (L7) を経て、要件 (L1/L3) は Reverse back-fill で bottom-up 後追い合流する (DISCOVERY-07 feasibility 由来) | vitest workflow 統合 (L7) |
+| ST-FUNC-09 | version-up end-to-end (§3.1、後送要件駆動) | **Given** 現バージョンで後送された要件、**When** `version_deferral` 系 signal で deferral 台帳へ記録し次バージョン着手、**Then** 台帳 → add-feature 決定表へ合流 → add-design (L3-L6) として同型化する (着手まで PLAN 化しない) | vitest workflow 統合 |
+| ST-FUNC-10 | FilingTarget と工程表 SSoT (§3.2.1) | **Given** detector / doctor / route eval が signal を検出し、**When** filing 先を提示する、**Then** mode だけでなく current_location / schedule_entry / allowed_kinds / layer_band / sub_doc_hint / pairing_obligation / activation_profile を L4 設計 SSoT 由来で返し、設計に無い filing target を検出系が創作しない | vitest routing + DB projection 統合 |
 
 > 個別 FR の AC レベル受入は L12 受入テスト (AT-*) が担う。L9 は **複数 FR/module をまたぐ統合挙動**を対象 (L12 との責務分界)。駆動モデルの状態遷移 pseudocode / CLI signature は L4 §3.6 で L5/L6 へ defer のため、ST-FUNC は **system 粒度の遷移成立・合流先・優先度・サインオフ**を対象 (関数粒度の単体は L7 U-* が担う)。
 
@@ -97,7 +101,7 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 
 ## §2 量閉じ一覧 (L4 設計要素 → ST 被覆、孤児チェック)
 
-- data.md §6 不変条件 10 件 → 被覆対応 (m-3 明示): 逆ピラミッド/4-artifact 系 → **ST-DATA-01**、V_MODEL_PAIRS/集約境界系 → **ST-DATA-02**、§7 集約間整合 6 件 → **ST-DATA-03**、state schema↔src/schema 系 → **ST-DATA-04**、**review 前置証跡 (IMP-071、PLAN-L4-06 追加) → ST-DATA-05** (10 不変条件を 5 ST に束ねて全数被覆、孤児 0)
+- data.md §6 不変条件 10 件 → 被覆対応 (m-3 明示): 逆ピラミッド/4-artifact 系 → **ST-DATA-01**、V_MODEL_PAIRS/集約境界系 → **ST-DATA-02**、§7 集約間整合 6 件 → **ST-DATA-03**、state schema↔src/schema 系 → **ST-DATA-04**、**review 前置証跡 (IMP-071、PLAN-L4-06 追加) → ST-DATA-05**、§1.1/§8.1 宣言型 spec IR / DB projection 境界 → **ST-DATA-06** (既存 10 不変条件 + U3 IR 境界を 6 ST に束ねて全数被覆、孤児 0)
 - architecture.md §3 依存方向 / §2 品質目標 → ST-ARCH-01〜04
 - function.md §3 workflow オーケストレーション (Forward spine + 9 駆動モデル + 2 工程専門) → ST-FUNC-01 (遷移) / ST-FUNC-01b (Forward 合流) / §3.2 routing 優先度 → ST-FUNC-04 / §3.2 mode↔kind → ST-FUNC-05 / §3.1 サインオフ + §3.6 execution mode 別 review tier → ST-FUNC-06 / §3.4 skill (FR-12) → ST-FUNC-07 / §3.6 execution mode degradation → ST-EXT-02 (external-if §4 と共有) / §7 依存 → ST-FUNC-02。孤児 0 (9 駆動 + spine + 工程専門 2 + routing + skill + execution mode 3+1 パターンが全て被覆)
 - **function.md §1.1 C12 内部資産 roster/command (FR-L1-46/48) → ST-ASSET-01〜03 / architecture §3 skills (FR-L1-47) → ST-ASSET-05 / architecture §4.1 drift lint (FR-L1-49) → ST-ASSET-06/07 implemented evidence (`src/runtime/agent-slots.ts`, `src/workflow/contracts.ts`, `src/lint/asset-drift.ts`)**
@@ -125,3 +129,4 @@ test_procedures: run the mapped vitest/doctor/CI commands and capture exit codes
 execution_evidence: system evidence manifest records command, ST IDs, paths, and result.
 exit_criteria: all mandatory selected ST cases pass or explicit defer exists.
 defect_routing: failed ST cases route to L9 correction, Reverse, Refactor, Recovery, or Incident by scope.
+verification_design: system environment, data reality, measurement method, evaluation threshold, and execution procedure are explicit for selected ST-* coverage.

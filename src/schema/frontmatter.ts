@@ -99,6 +99,8 @@ const frontmatterBaseSchema = z.object({
   version_target: z.string().optional(),
   route_signal: z.string().optional(),
   route_mode: z.string().optional(),
+  /** 右腕検証 PLAN の gate 結合。kind=verify は layer=L8-L14 と G8-G14 を 1:1 で宣言する。 */
+  verification_gate: z.string().optional(),
   /** migration import trace reference (optional migration ledger path) */
   v2_import: z.string().optional(),
   /** review 前置エビデンス (requirements §7.8.7 / .claude/CLAUDE.md MUST、IMP-071)。
@@ -171,6 +173,17 @@ const ALLOWED_LAYER_BY_KIND: Record<string, readonly string[]> = {
   retrofit: ["L7"],
   troubleshoot: ["L7"],
   research: ["L1", "L2", "L3", "L4"],
+  verify: ["L8", "L9", "L10", "L11", "L12", "L13", "L14"],
+};
+
+const VERIFICATION_GATE_BY_LAYER: Record<string, string> = {
+  L8: "G8",
+  L9: "G9",
+  L10: "G10",
+  L11: "G11",
+  L12: "G12",
+  L13: "G13",
+  L14: "G14",
 };
 
 /**
@@ -250,6 +263,36 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
       code: custom,
       path: ["plan_id"],
       message: `plan_id token=${driveTok} は kind=${DRIVE_TOKEN_TO_KIND[driveTok]} のみ (現 kind=${fm.kind}、§1.10 A)`,
+    });
+  }
+  const layerTok = fm.plan_id.match(/^PLAN-(L(?:[0-9]|1[0-4]))-/)?.[1];
+  if (layerTok && fm.layer && fm.layer !== layerTok) {
+    ctx.addIssue({
+      code: custom,
+      path: ["layer"],
+      message: `plan_id token=${layerTok} は layer=${layerTok} のみ (現 layer=${fm.layer}、§1.10 A)`,
+    });
+  }
+  if (fm.kind === "verify") {
+    const expectedGate = fm.layer ? VERIFICATION_GATE_BY_LAYER[fm.layer] : undefined;
+    if (expectedGate && !fm.verification_gate) {
+      ctx.addIssue({
+        code: custom,
+        path: ["verification_gate"],
+        message: `kind=verify + layer=${fm.layer} は verification_gate=${expectedGate} 必須 (§1.10 A / right-arm gate binding)`,
+      });
+    } else if (expectedGate && fm.verification_gate !== expectedGate) {
+      ctx.addIssue({
+        code: custom,
+        path: ["verification_gate"],
+        message: `kind=verify + layer=${fm.layer} は verification_gate=${expectedGate} のみ (現 ${fm.verification_gate})`,
+      });
+    }
+  } else if (fm.verification_gate) {
+    ctx.addIssue({
+      code: custom,
+      path: ["verification_gate"],
+      message: "verification_gate は kind=verify のみ (§1.10 A / right-arm gate binding)",
     });
   }
 

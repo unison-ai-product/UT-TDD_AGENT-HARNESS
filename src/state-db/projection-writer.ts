@@ -17,6 +17,15 @@ import {
   loadDescentAdjacency,
   loadTraceKeyedArtifacts,
 } from "../lint/descent-obligation";
+import { analyzeDocConsistency, loadDocConsistencyDocs } from "../lint/doc-consistency";
+import { analyzeEntityCoverage, loadBusiness as loadEntityBusiness } from "../lint/entity-coverage";
+import { analyzeFrRegistry, loadFrDocs as loadFrRegistryDocs } from "../lint/fr-registry-audit";
+import {
+  analyzeFrRoadmapCoverageWithRoot,
+  loadFrRoadmapCoverageDocs,
+} from "../lint/fr-roadmap-coverage";
+import { analyzeL6FrCoverage, loadL6FrCoverageDocs } from "../lint/l6-fr-coverage";
+import { analyzeModuleDrift, loadModuleDocs } from "../lint/module-drift";
 import {
   analyzeRelationImpact,
   collectRelationGraphProjection,
@@ -32,6 +41,14 @@ import {
 } from "../lint/roadmap-registry";
 import { normalizePath } from "../lint/shared";
 import {
+  analyzeSubDocCatalogDrift,
+  loadSubDocCatalogDriftInput,
+} from "../lint/sub-doc-catalog-drift";
+import {
+  analyzeSubDocSectionStructure,
+  loadSubDocSectionStructureInput,
+} from "../lint/sub-doc-section-structure";
+import {
   catalogVerificationProfiles,
   recommendVerificationProfiles,
 } from "../lint/verification-profile";
@@ -43,7 +60,9 @@ import {
   type TableDef,
 } from "../schema/harness-db";
 import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog";
+import { analyzePairFreeze, loadPairDocs, type PairOrphanReason } from "../vmodel/lint";
 import { deriveArtifactProgressDecision } from "./artifact-progress-decision";
+import { DESIGN_QUALITY_CHECK_IDS, type DesignQualityCheckId } from "./design-detection";
 import {
   projectFeedbackEvents,
   projectImprovementLog,
@@ -75,6 +94,7 @@ import {
   projectSkillTelemetry as projectSkillTelemetryCore,
   skillScore,
 } from "./skill-projections";
+import { projectSpecIr } from "./spec-ir-projections";
 import type { RunUsage } from "./token-tracker";
 
 export interface ProjectionEvent {
@@ -265,6 +285,142 @@ function recordFinding(
       evidence_path: input.evidencePath ?? "",
     },
   });
+}
+
+function designCoverageId(subjectId: string): string {
+  return stableId("design-quality-coverage", `${subjectId}:violation_count`);
+}
+
+function recordDesignQualityCoverage(
+  db: HarnessDb,
+  input: {
+    subjectId: DesignQualityCheckId;
+    violationCount: number;
+  },
+): void {
+  const passed = input.violationCount <= 0;
+  recordProjectionEvent(db, {
+    table: "coverage",
+    id: designCoverageId(input.subjectId),
+    row: {
+      coverage_id: designCoverageId(input.subjectId),
+      scope: "design-quality",
+      subject_id: input.subjectId,
+      metric: "violation_count",
+      value: input.violationCount,
+      threshold: 0,
+      status: passed ? "passed" : "blocked",
+    },
+  });
+}
+
+function designQualityLoadError(db: HarnessDb, subjectId: DesignQualityCheckId): void {
+  recordDesignQualityCoverage(db, { subjectId, violationCount: 1 });
+  recordFinding(db, {
+    kind: "design-quality-load-error",
+    severity: "error",
+    subjectId,
+    source: "design-quality-projection",
+  });
+}
+
+export function projectDesignPairFreezeFindings(repoRoot: string, db: HarnessDb): void {
+  let result: ReturnType<typeof analyzePairFreeze>;
+  try {
+    result = analyzePairFreeze(loadPairDocs(repoRoot));
+  } catch {
+    recordFinding(db, {
+      kind: "design-pair-orphan:load-error",
+      severity: "error",
+      subjectId: "vmodel-pair-freeze",
+      source: "vmodel-pair-freeze",
+      evidencePath: "docs/design/harness",
+    });
+    return;
+  }
+  const knownReasons = new Set<PairOrphanReason>([
+    "pair-missing",
+    "ref-unresolved",
+    "trace-orphan",
+  ]);
+  for (const orphan of result.orphans) {
+    const reason = knownReasons.has(orphan.reason) ? orphan.reason : "trace-orphan";
+    recordFinding(db, {
+      kind: `design-pair-orphan:${reason}`,
+      severity: "error",
+      subjectId: orphan.path,
+      source: "vmodel-pair-freeze",
+      evidencePath: orphan.path,
+    });
+  }
+}
+
+function projectOneDesignQualityCoverage(
+  db: HarnessDb,
+  subjectId: DesignQualityCheckId,
+  run: () => number,
+): void {
+  try {
+    recordDesignQualityCoverage(db, { subjectId, violationCount: run() });
+  } catch {
+    designQualityLoadError(db, subjectId);
+  }
+}
+
+export function projectDesignQualityCoverage(repoRoot: string, db: HarnessDb): void {
+  const expected = new Set<DesignQualityCheckId>(DESIGN_QUALITY_CHECK_IDS);
+  const checks: Record<DesignQualityCheckId, () => number> = {
+    "doc-consistency": () => {
+      const result = analyzeDocConsistency(loadDocConsistencyDocs(repoRoot));
+      return (
+        result.carryOrphans.length +
+        result.screenIdOrphans.length +
+        (result.nfrCount.mismatch ? 1 : 0)
+      );
+    },
+    "entity-coverage": () => analyzeEntityCoverage(loadEntityBusiness(repoRoot)).duplicates.length,
+    "fr-registry-audit": () => {
+      const result = analyzeFrRegistry(loadFrRegistryDocs(repoRoot));
+      return (
+        result.unregistered.length +
+        result.unexplainedGaps.length +
+        result.attributeOrphans.length +
+        result.countMismatches.length +
+        result.screenCoverageOrphans.length
+      );
+    },
+    "sub-doc-catalog-drift": () =>
+      analyzeSubDocCatalogDrift(loadSubDocCatalogDriftInput(repoRoot)).drift.length,
+    "sub-doc-section-structure": () =>
+      analyzeSubDocSectionStructure(loadSubDocSectionStructureInput(repoRoot)).violations.length,
+    "l6-fr-coverage": () => {
+      const result = analyzeL6FrCoverage(loadL6FrCoverageDocs(repoRoot));
+      return (
+        result.missing.length +
+        result.unknown.length +
+        result.incomplete.length +
+        result.missingSpecFiles.length +
+        result.weakContracts.length +
+        result.missingSubstance.length
+      );
+    },
+    "fr-roadmap-coverage": () => {
+      const result = analyzeFrRoadmapCoverageWithRoot(
+        loadFrRoadmapCoverageDocs(repoRoot),
+        repoRoot,
+      );
+      return (result.checked === 0 ? 1 : 0) + result.violations.length + result.openRows.length;
+    },
+    "module-drift": () => analyzeModuleDrift(loadModuleDocs(repoRoot)).orphans.length,
+  };
+  for (const subjectId of DESIGN_QUALITY_CHECK_IDS) {
+    const check = checks[subjectId];
+    if (!check || !expected.has(subjectId)) {
+      designQualityLoadError(db, subjectId);
+      continue;
+    }
+    projectOneDesignQualityCoverage(db, subjectId, check);
+  }
 }
 
 function checkResolvablePlanJoin(db: HarnessDb, table: string, row: Record<string, unknown>): void {
@@ -1094,8 +1250,11 @@ function projectVerificationBandExecution(db: HarnessDb): void {
   }
 }
 
+const REBUILD_PERSISTENT_TABLES = new Set(["refactor_candidates"]);
+
 function truncateProjectionTables(db: HarnessDb): void {
   for (const table of [...HARNESS_DB_TABLES].reverse()) {
+    if (REBUILD_PERSISTENT_TABLES.has(table.name)) continue;
     db.prepare(`DELETE FROM ${table.name}`).run();
   }
 }
@@ -2674,6 +2833,8 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectReviewEvidenceRegistry(repoRoot, db);
         projectGuardrailInvariantAdvisories(db);
         projectDescentObligations(repoRoot, db);
+        projectDesignPairFreezeFindings(repoRoot, db);
+        projectDesignQualityCoverage(repoRoot, db);
         projectVerificationBandExecution(db);
       });
       time("automation-memory", () => {
@@ -2713,6 +2874,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectVerificationEvidence(db, input.verificationEvidence),
       );
       time("test-cases", () => projectTestCaseCatalog(repoRoot, db));
+      time("spec-ir", () => projectSpecIr(repoRoot, db, projectionDeps));
       time("feedback", () => {
         projectFeedbackEvents(db, projectionDeps);
         projectTroubleEvents(db, projectionDeps);

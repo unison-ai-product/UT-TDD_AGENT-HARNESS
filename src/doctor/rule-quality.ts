@@ -14,7 +14,12 @@ import {
 } from "../lint/design-language";
 import { analyzeGateConfirm, gateConfirmMessages, loadGateConfirmDocs } from "../lint/gate-confirm";
 import {
-  analyzeReadability,
+  analyzeGateIdFormat,
+  gateIdFormatMessages,
+  loadGateIdFormatInput,
+} from "../lint/gate-id-format";
+import {
+  analyzeArtifacts,
   loadRuntimeArtifactReadabilityDocs,
   loadSystemReadabilityDocs,
   readabilityMessages,
@@ -115,12 +120,27 @@ export function checkGateConfirm(repoRoot: string): { messages: string[]; ok: bo
   }
 }
 
+export function checkGateIdFormat(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return { messages: ["gate-id-format - violation: repo root could not be read"], ok: false };
+  }
+  try {
+    const r = analyzeGateIdFormat(loadGateIdFormatInput(repoRoot));
+    return { messages: gateIdFormatMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["gate-id-format - violation: gate docs or evidence manifests could not be read"],
+      ok: false,
+    };
+  }
+}
+
 export function checkReadability(repoRoot: string): { messages: string[]; ok: boolean } {
   if (!existsSync(repoRoot)) {
     return { messages: ["readability - violation: repo root could not be read"], ok: false };
   }
   try {
-    const r = analyzeReadability(loadSystemReadabilityDocs(repoRoot));
+    const r = analyzeArtifacts(loadSystemReadabilityDocs(repoRoot));
     return { messages: readabilityMessages(r), ok: r.checked > 0 && r.ok };
   } catch {
     return { messages: ["readability — ⚠ prose docs を読めない"], ok: false };
@@ -143,7 +163,7 @@ export function checkRuntimeReadability(repoRoot: string): { messages: string[];
     };
   }
   try {
-    const r = analyzeReadability(loadRuntimeArtifactReadabilityDocs(repoRoot));
+    const r = analyzeArtifacts(loadRuntimeArtifactReadabilityDocs(repoRoot));
     return { messages: runtimeReadabilityMessages(r), ok: r.ok };
   } catch {
     return { messages: ["runtime-readability — ⚠ .ut-tdd artifacts を読めない"], ok: false };

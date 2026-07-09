@@ -51,7 +51,7 @@ PLAN-L6-10 (設計) / L7-11 (実装) で導入した **設計層 pair freeze lin
 ## §6 用語更新
 
 - **pair-freeze lint (設計層)**: design doc (①) ⇔ test-design doc (③) の `pair_artifact` 双方向整合・孤児0 を検査する vmodel lint の設計層部分 (G1-G6 pair freeze の機械担保、requirements §6.8.3)。G7 の 4 artifact 12 edge trace とは別レイヤー。→ concept §10 へ back-merge (本 PLAN Step 2)。
-- **self-pair**: `pair_artifact: self` の doc (wireframe mock 自体が③ペア、L2⇔L10、IMP-039/058)。pair-freeze lint は孤児扱いしない。→ concept §10 へ back-merge。
+- **self-pair (撤回済み)**: 旧 `pair_artifact: self` = ③ペア規約。**PLAN-RECOVERY-09/REVERSE-12 (2026-07-07) で撤去** (PO 裁定なき作り込み)。pair-freeze lint 本体 (上記) は有効。self-pair 部分のみ撤回。
 
 ## §7 DoD
 - [x] requirements §6.8.3/§2.4 との非矛盾確認 + L6 frontmatter 規約注記

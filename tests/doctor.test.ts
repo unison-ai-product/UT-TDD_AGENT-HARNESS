@@ -21,6 +21,7 @@ import {
   checkRegressionExpansion as checkRegressionExpansionAdapter,
 } from "../src/doctor/dependency-regression";
 import {
+  checkAgentContractDetection,
   checkAgentSlots,
   checkAssetDrift,
   checkBackfillResult,
@@ -42,6 +43,7 @@ import {
   checkForwardConvergenceAudit,
   checkFrRoadmapCoverage,
   checkGateConfirm,
+  checkGateIdFormat,
   checkGuardrailInvariants,
   checkHandover,
   checkHandoverDisciplineMessages,
@@ -73,6 +75,10 @@ import {
   checkSkillAssignment,
   checkTelemetryClosure,
   checkTrackedCanonical,
+  checkTypedSpecLedgerBodySync,
+  checkTypedSpecOwnedArtifactDispersal,
+  checkTypedSpecPhaseLayerAlignment,
+  checkTypedSpecTraceClosure,
   checkVerificationGroupsResult,
   checkVerificationProfile,
   type DoctorDeps,
@@ -81,6 +87,12 @@ import {
 } from "../src/doctor/index";
 import { buildDoctorResult } from "../src/doctor/result";
 import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots";
+import {
+  analyzeDesignDetectionStats,
+  DESIGN_QUALITY_CHECK_IDS,
+  type DesignDetectionStats,
+  designDetectionMessages,
+} from "../src/state-db/design-detection";
 
 const NOW = "2026-06-04T00:00:00.000Z";
 const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
@@ -118,6 +130,65 @@ describe("buildDoctorResult", () => {
       messages: ["doctor: mode=standalone", "doctor: alpha - OK"],
       timings: [{ id: "alpha", duration_ms: 1.25, ok: true, message_count: 1 }],
     });
+  });
+});
+
+describe("design-detection doctor aggregate", () => {
+  const cleanStats = (): DesignDetectionStats => ({
+    coverageRows: DESIGN_QUALITY_CHECK_IDS.map((subject_id) => ({
+      subject_id,
+      metric: "violation_count",
+      value: 0,
+      threshold: 0,
+      status: "passed",
+    })),
+    missingCoverage: [],
+    blockedCoverage: [],
+    pairOrphanFindings: [],
+  });
+
+  it("fails on missing coverage rows without replaying file-driven lint details", () => {
+    const stats = cleanStats();
+    stats.coverageRows = stats.coverageRows.filter((row) => row.subject_id !== "module-drift");
+    stats.missingCoverage = ["module-drift"];
+
+    const result = analyzeDesignDetectionStats(stats);
+
+    expect(result.ok).toBe(false);
+    expect(designDetectionMessages(result).join("\n")).toContain("missing_coverage=1");
+    expect(designDetectionMessages(result).join("\n")).not.toContain("module-drift —");
+  });
+
+  it("fails on blocked coverage and open pair orphan findings", () => {
+    const stats = cleanStats();
+    stats.blockedCoverage = [
+      {
+        subject_id: "l6-fr-coverage",
+        metric: "violation_count",
+        value: 2,
+        threshold: 0,
+        status: "blocked",
+      },
+    ];
+    stats.pairOrphanFindings = [
+      {
+        finding_id: "finding:design-pair-orphan:pair-missing:doc",
+        kind: "design-pair-orphan:pair-missing",
+        severity: "error",
+        subject_id: "docs/design/harness/L1-requirements/functional.md",
+        source: "vmodel-pair-freeze",
+        status: "open",
+        evidence_path: "docs/design/harness/L1-requirements/functional.md",
+      },
+    ];
+
+    const result = analyzeDesignDetectionStats(stats);
+    const messages = designDetectionMessages(result).join("\n");
+
+    expect(result.ok).toBe(false);
+    expect(messages).toContain("blocked_coverage=1");
+    expect(messages).toContain("pair_orphans=1");
+    expect(messages).toContain("design-pair-orphan:pair-missing");
   });
 });
 
@@ -526,6 +597,265 @@ describe("runDoctor", () => {
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: g1-trace - OK"))).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: g3-trace - OK"))).toBe(true);
+  });
+
+  it("surfaces typed spec trace closure as a doctor hard gate", () => {
+    const result = checkTypedSpecTraceClosure(process.cwd());
+    const r = realRepoDoctor();
+
+    expect(result.ok).toBe(true);
+    expect(result.messages[0]).toContain("typed-spec-trace-closure - OK");
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: typed-spec-trace-closure - OK"))).toBe(true);
+  });
+
+  it("fails typed spec trace closure when bidirectional trace or test backlink is missing", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-typed-spec-closure-"));
+    try {
+      mkdirSync(join(root, "docs", "governance"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "governance", "vmodel-typed-spec-definitions.md"),
+        [
+          "# Typed spec bad closure",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-301",
+          "      kind: typed-source",
+          "      traces_to: [VMS-302]",
+          "      tests: [TVMS-301]",
+          "    - id: VMS-302",
+          "      kind: typed-projection",
+          "    - id: TVMS-301",
+          "      kind: unit-oracle",
+          "```",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = checkTypedSpecTraceClosure(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("typed-spec-trace-reverse-missing");
+      expect(result.messages.join("\n")).toContain("typed-spec-test-backlink-missing");
+      expect(result.messages.join("\n")).toContain("typed-spec-test-missing");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("surfaces typed spec ledger/body sync as a doctor hard gate", () => {
+    const result = checkTypedSpecLedgerBodySync(process.cwd());
+    const r = realRepoDoctor();
+
+    expect(result.ok).toBe(true);
+    expect(result.messages[0]).toContain("typed-spec-ledger-body-sync - OK");
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: typed-spec-ledger-body-sync - OK"))).toBe(
+      true,
+    );
+  });
+
+  it("fails typed spec ledger/body sync when body, ledger, or phase direction is invalid", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-typed-spec-ledger-"));
+    try {
+      mkdirSync(join(root, "docs", "governance"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "governance", "vmodel-typed-spec-definitions.md"),
+        [
+          "# Typed spec bad ledger",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-401",
+          "      kind: typed-source",
+          "      traces_from: [VMS-402]",
+          "      tests: [TVMS-401]",
+          "    - id: VMS-402",
+          "      kind: typed-projection",
+          "      tests: [TVMS-402]",
+          "    - id: TVMS-401",
+          "      kind: unit-oracle",
+          "      traces_from: [VMS-401]",
+          "    - id: TVMS-402",
+          "      kind: unit-oracle",
+          "      traces_from: [VMS-402]",
+          "```",
+          "",
+          "| spec_id | ledger_sources | v_phase |",
+          "| --- | --- | --- |",
+          "| VMS-401 | docs/plans/PLAN-L6-401.md | L6 |",
+          "| VMS-402 | docs/plans/PLAN-L7-402.md | L7 |",
+          "| TVMS-401 | docs/test-design/harness/L7-unit-test-design.md | L7 |",
+          "| TVMS-999 | docs/test-design/harness/L7-unit-test-design.md | L7 |",
+          "",
+          "VMS-401 has body substance.",
+          "VMS-402 has body substance.",
+          "TVMS-401 has body substance.",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = checkTypedSpecLedgerBodySync(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("typed-spec-ledger-row-missing");
+      expect(result.messages.join("\n")).toContain("typed-spec-body-missing");
+      expect(result.messages.join("\n")).toContain("typed-spec-ledger-unknown-id");
+      expect(result.messages.join("\n")).toContain("typed-spec-phase-direction-invalid");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("surfaces typed spec owned artifact dispersal as a doctor hard gate", () => {
+    const result = checkTypedSpecOwnedArtifactDispersal(process.cwd());
+    const r = realRepoDoctor();
+
+    expect(result.ok).toBe(true);
+    expect(result.messages[0]).toContain("typed-spec-owned-artifact-dispersal - OK");
+    expect(r.ok).toBe(true);
+    expect(
+      r.messages.some((m) => m.includes("doctor: typed-spec-owned-artifact-dispersal - OK")),
+    ).toBe(true);
+  });
+
+  it("fails typed spec owned artifact dispersal when declarations remain outside ledger sources", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-typed-spec-owned-"));
+    try {
+      mkdirSync(join(root, "docs", "governance"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "governance", "vmodel-typed-spec-definitions.md"),
+        [
+          "# Typed spec ownership bad fixture",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-601",
+          "      kind: typed-source",
+          "```",
+          "",
+          "| spec_id | ledger_sources | v_phase |",
+          "| --- | --- | --- |",
+          "| VMS-601 | docs/plans/PLAN-L6-601.md | L6 |",
+          "",
+          "VMS-601 has body substance.",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = checkTypedSpecOwnedArtifactDispersal(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("typed-spec-owned-source-mismatch");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("surfaces typed spec phase/layer alignment as a doctor hard gate", () => {
+    const result = checkTypedSpecPhaseLayerAlignment(process.cwd());
+    const r = realRepoDoctor();
+
+    expect(result.ok).toBe(true);
+    expect(result.messages[0]).toContain("typed-spec-phase-layer-alignment - OK");
+    expect(r.ok).toBe(true);
+    expect(
+      r.messages.some((m) => m.includes("doctor: typed-spec-phase-layer-alignment - OK")),
+    ).toBe(true);
+  });
+
+  it("fails typed spec phase/layer alignment when owner frontmatter does not match v_phase", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-typed-spec-phase-layer-"));
+    try {
+      mkdirSync(join(root, "docs", "governance"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "governance", "vmodel-typed-spec-definitions.md"),
+        [
+          "---",
+          "title: Typed spec phase layer bad fixture",
+          "status: confirmed",
+          "typed_spec_phase_owner: L5",
+          "---",
+          "",
+          "# Typed spec phase/layer bad fixture",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-701",
+          "      kind: typed-source",
+          "```",
+          "",
+          "| spec_id | ledger_sources | v_phase |",
+          "| --- | --- | --- |",
+          "| VMS-701 | docs/governance/vmodel-typed-spec-definitions.md | L6 |",
+          "",
+          "VMS-701 has body substance.",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = checkTypedSpecPhaseLayerAlignment(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("typed-spec-phase-layer-mismatch");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("surfaces V-model agent contract detection as a doctor hard gate", () => {
+    const result = checkAgentContractDetection(process.cwd());
+    const r = realRepoDoctor();
+
+    expect(result.ok).toBe(true);
+    expect(result.messages[0]).toContain("agent-contract-detection - OK");
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: agent-contract-detection - OK"))).toBe(true);
+  });
+
+  it("fails V-model agent contract detection when done_when references an unknown doctor gate", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-agent-contract-"));
+    try {
+      const governanceDir = join(root, "docs", "governance");
+      mkdirSync(governanceDir, { recursive: true });
+      writeFileSync(join(governanceDir, "vmodel-upgrade-schedule.md"), "# Schedule\n", "utf8");
+      writeFileSync(
+        join(governanceDir, "vmodel-typed-spec-definitions.md"),
+        "# Typed spec\n",
+        "utf8",
+      );
+      writeFileSync(
+        join(governanceDir, "vmodel-agent-contracts.md"),
+        [
+          "# Agent contracts",
+          "",
+          "```yaml",
+          "agent_contracts:",
+          "  - contract_id: VAGENT-301",
+          "    target_path: docs/governance/vmodel-typed-spec-definitions.md",
+          "    defines: [VMS-301]",
+          "    read_first:",
+          "      - docs/governance/vmodel-upgrade-schedule.md",
+          "    done_when:",
+          "      - doctor:no-such-gate",
+          "```",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = checkAgentContractDetection(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("agent-contract-doctor-gate-unknown");
+      expect(result.messages.join("\n")).toContain("VAGENT-301:no-such-gate");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("hard-gates PLAN governance once repo frontmatter debt is closed", () => {
@@ -941,8 +1271,14 @@ describe("runDoctor", () => {
       ["runtime-portability", checkRuntimePortability(missingRoot)],
       ["db-projection-coverage", checkDbProjectionCoverage(missingRoot)],
       ["db-projection-ingestion", checkDbProjectionIngestion(missingRoot)],
+      ["typed-spec-trace-closure", checkTypedSpecTraceClosure(missingRoot)],
+      ["typed-spec-ledger-body-sync", checkTypedSpecLedgerBodySync(missingRoot)],
+      ["typed-spec-owned-artifact-dispersal", checkTypedSpecOwnedArtifactDispersal(missingRoot)],
+      ["typed-spec-phase-layer-alignment", checkTypedSpecPhaseLayerAlignment(missingRoot)],
+      ["agent-contract-detection", checkAgentContractDetection(missingRoot)],
       ["rule-drift", checkRuleDrift(missingRoot)],
       ["gate-confirm", checkGateConfirm(missingRoot)],
+      ["gate-id-format", checkGateIdFormat(missingRoot)],
       ["plan-dod", checkPlanDod(missingRoot)],
       ["placeholder-deps", checkPlaceholderDeps(missingRoot)],
       ["g1-trace", checkPlanTraceGate(missingRoot, "G1-trace")],
@@ -1084,8 +1420,10 @@ describe("runDoctor", () => {
       "runtime-portability",
       "db-projection-coverage",
       "db-projection-ingestion",
+      "design-detection",
       "rule-drift",
       "gate-confirm",
+      "gate-id-format",
       "plan-schedule",
       "plan-governance",
       "plan-dod",
@@ -1114,6 +1452,7 @@ describe("runDoctor", () => {
       "tracked-canonical",
       "dependency-drift",
       "regression-expansion",
+      "agent-contract-detection",
       "green-command-digest",
     ];
 

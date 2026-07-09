@@ -71,3 +71,25 @@ Type/pseudocode substance（型と擬似コードの実体）:
 
 - **scrum-reverse lint**: PoC confirmed (redesign 除く) ⇔ Reverse 合流 / reverse→confirmed poc 参照の整合検査 (§1.2)。→ concept §10.3 へ back-merge。
 - **propagation lint**: concept §2.6 ⇔ requirements §7.8.1 の signal 語彙一致検査 (L0⇔L3 伝播ドリフト検出)。→ concept §10.3 へ back-merge。
+
+## §7 readability byte-integrity gate 追補 (PLAN-REVERSE-396 / PLAN-L7-395)
+
+readability gate は、string-level mojibake marker denylist だけではなく、byte-level positive validation を持つ多層防御として扱う。これは PowerShell などの shell 表示化けそのものを判定するためではなく、repo 内のファイル実体へ破損 byte / BOM / escaped mojibake が混入した状態を fail-close するための設計である。
+
+| 関数 | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `analyzeByteIntegrity` | `analyzeByteIntegrity(files: ReadabilityArtifact[]) -> ReadabilityResult` | loader は repo-relative path と raw bytes を渡す。 | UTF-8 BOM、UTF-16 LE/BE BOM、不正 UTF-8、NUL/C0/C1 制御文字、JSON escape 化された mojibake marker を violation として返す。 | byte 検査は `analyzeReadability` を置換しない。valid UTF-8 の double-encode mojibake は string-level denylist が引き続き捕捉する。 | U-READ-005..009 |
+| `analyzeArtifacts` | `analyzeArtifacts(files: ReadabilityArtifact[]) -> ReadabilityResult` | artifact は single read から得た `bytes` と `text` を持つ。 | string-level readability と byte integrity の violations を統合し、doctor が読む単一 verdict を返す。 | decode 例外は per-file `invalid-utf8` violation に変換し、I/O fail-close と混同しない。 | U-READ-010 |
+
+実装端点は `src/lint/readability.ts` に置く。`checkReadability` / `checkRuntimeReadability` は `analyzeArtifacts` を使い、`loadSystemReadabilityDocs` / `loadRuntimeArtifactReadabilityDocs` は `readFileSync(path)` の single read から `bytes` と UTF-8 text を同時に構築する。repo 標準は UTF-8 no-BOM とし、BOM cleanup 後は BOM 再混入も readability gate の red 条件になる。
+
+## §8 write encoding guard 追補 (PLAN-L7-317)
+
+PowerShell `Get-Content` / `Set-Content` / `Out-File` の既定 encoding 差分による事故は、表示化けと実ファイル破損を分けて扱う。repo の正本判定は常に byte を UTF-8 no-BOM として検査し、shell 表示だけの mojibake は破損とみなさない。一方で `PostToolUse` 後に書き込まれた text artifact が UTF-16/BOM/invalid UTF-8/CP932 mojibake marker を持つ場合は、doctor を待たず即時に警告して `.ut-tdd/logs/encoding-violations.jsonl` に記録する。
+
+| 関数 | Signature | pre | post | invariant | oracle |
+|---|---|---|---|---|---|
+| `collectWriteEncodingGuardTargets` | `collectWriteEncodingGuardTargets(input, repoRoot, changedFiles?) -> string[]` | `PostToolUse` payload と任意の git changed file list を渡す。 | `file_path` / `path` / `apply_patch` header 由来の text path、または shell tool 時の changed file fallback を返す。 | binary / vendor / node_modules は対象外。明示 target がある場合は shell fallback に広げない。 | U-WENC-001 / U-WENC-003 / U-WENC-004 |
+| `runWriteEncodingGuard` | `runWriteEncodingGuard(input, deps) -> WriteEncodingGuardResult` | `repoRoot` は作業 repo。検査は advisory である。 | 対象 artifact を single read し、`analyzeArtifacts` を再利用して違反 message と jsonl 証跡を出す。 | 検出ロジックは readability gate と同じ `src/lint` 境界で共有し、hook は exit 0 の fail-open を維持する。 | U-WENC-001..004 |
+
+`hook post-tool-use` は既存 session-log 記録の後に `runWriteEncodingGuard` を呼ぶ。`Write` / `Edit` / `MultiEdit` / `apply_patch` / `write_file` は明示 target だけを検査する。`Bash` / `exec_command` / `local_shell` は tool payload から書込先を決定できないため、`git status --porcelain` の changed file list を fallback target とする。完全性は doctor/CI の `readability` / `runtime-readability` が引き続き担保し、PostToolUse guard は事故の早期発見と連鎖防止を担う。

@@ -23,8 +23,48 @@ const READY_DEPENDENCY_STATUSES = new Set(["confirmed", "completed"]);
 // PLAN-L7-263: route_mode と kind の整合表。add-feature mode は add-design /
 // add-impl を内包する運用で、kind=impl は back-fill 義務 (KIND_BACKFILL) を
 // 機械免除してしまうため許容しない (A-178 G-14)。
+//
+// PLAN-RECOVERY-10 (Stage 1, PO サインオフ 2026-07-07): 従来は add-feature のみ登録で、
+// 他 route_mode は lint.ts の fail-open (`if (!allowedKinds) return []`) により route_mode↔kind
+// 整合を一度も検査されず素通りしていた。SSoT (L4 §3.1 駆動モデル表 function.md:109 の kind 列) から
+// 全実在 mode の allowed kinds を導出して登録 (観測組合せの鵜呑み blessing でなく spec 由来)。
+// - reverse→reverse / recovery→recovery / refactor→refactor: L4 §3.1 一致。
+// - incident→troubleshoot|recovery: L4 §3.1 / route-filing の Incident 行に一致。
+// - version-up→impl: option1 (PO 裁定)。parked track の実装意図を impl で保全し、着手時 add-feature
+//   合流で add-design を生む (L4 §3.1 は back-fill 側の記述、parked kind は本裁定で確定)。
+// landed 済の off-diagonal (SSoT 不一致だが confirmed) は ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS で
+// 恒久免除する (kind 書き換え=履歴改ざん回避)。
 const ROUTE_MODE_ALLOWED_KINDS: Record<string, readonly string[]> = {
   "add-feature": ["add-design", "add-impl"],
+  incident: ["troubleshoot", "recovery"],
+  reverse: ["reverse"],
+  recovery: ["recovery"],
+  refactor: ["refactor"],
+  "version-up": ["impl"],
+  verify: ["verify"],
+};
+
+// L4 §3.1 駆動モデル表と Vモデル層の対応。kind だけ合っていても layer が
+// 別の腕を指していれば片肺運用になるため、route_mode ごとの許容 layer band を
+// PLAN governance lint で fail-close する。
+const ROUTE_MODE_LAYER_BANDS: Record<string, readonly string[]> = {
+  "add-feature": ["L3", "L4", "L5", "L6", "L7"],
+  incident: ["L7", "cross"],
+  reverse: ["cross"],
+  recovery: ["cross"],
+  refactor: ["L7"],
+  "version-up": ["L7"],
+  verify: ["L8", "L9", "L10", "L11", "L12", "L13", "L14"],
+};
+
+const RIGHT_ARM_VERIFICATION_GATE_BY_LAYER: Record<string, string> = {
+  L8: "G8",
+  L9: "G9",
+  L10: "G10",
+  L11: "G11",
+  L12: "G12",
+  L13: "G13",
+  L14: "G14",
 };
 
 // 2026-07-02 時点で landed 済みの route_mode=add-feature + kind=impl 慣行。
@@ -36,6 +76,25 @@ const ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS = new Set([
   "PLAN-L7-214-skill-root-relation-graph-projection",
   "PLAN-L7-215-model-effort-advisor-routing",
   "PLAN-L7-221-github-ci-policy-gate",
+  // PLAN-RECOVERY-10 (Stage 1, 2026-07-07): refactor/recovery mode を SSoT で登録した際に
+  // 炙り出た landed off-diagonal。全て confirmed = landed 済のため恒久免除 (kind 書換=履歴改ざん回避)。
+  // 個別 burn-down (Reverse 起票) は debt-audit doc の refactor/recovery 節で追う。
+  // refactor mode + kind=impl (SSoT: refactor→refactor)。behavior-invariant 義務を免除する同クラス債務。
+  "PLAN-L7-216-setup-boundary-refactor",
+  "PLAN-L7-217-doctor-setup-smoke-extraction",
+  "PLAN-L7-218-setup-distribution-module-extraction",
+  "PLAN-L7-220-doctor-plan-governance-extraction",
+  "PLAN-L7-222-doctor-runtime-surface-extraction",
+  "PLAN-L7-223-cli-distribution-registrar-extraction",
+  "PLAN-L7-224-doctor-db-projection-extraction",
+  "PLAN-L7-225-doctor-rule-quality-extraction",
+  "PLAN-L7-226-doctor-workflow-quality-extraction",
+  "PLAN-L7-227-doctor-doc-registry-extraction",
+  "PLAN-L7-228-doctor-roadmap-verification-extraction",
+  "PLAN-L7-256-model-id-ssot-drift-gate",
+  // recovery mode + kind={refactor,impl} (SSoT: recovery→recovery)。
+  "PLAN-L7-359-consumer-setup-profile-wiring",
+  "PLAN-L7-361-setup-noninteractive-package-tar-portability",
 ]);
 
 // draft のまま起票された debt。draft の間のみ免除し、着手 (status が draft
@@ -117,10 +176,12 @@ export {
   REVERSE_R4_CLAIMED_ARTIFACT_ENFORCEMENT_DATE,
   REVERSE_R4_ROUTE_BACKPROP_ENFORCEMENT_DATE,
   REVIEW_PATTERN,
+  RIGHT_ARM_VERIFICATION_GATE_BY_LAYER,
   ROUTE_CERTIFICATE_ENFORCEMENT_DATE,
   ROUTE_MODE_ALLOWED_KINDS,
   ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS,
   ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS,
+  ROUTE_MODE_LAYER_BANDS,
   SERIAL_MODE_PATTERN,
   SERIAL_REASONS,
   VALID_REVERSE_FULLBACK_SCOPE_DECISIONS,

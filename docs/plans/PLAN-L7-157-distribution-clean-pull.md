@@ -69,7 +69,7 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
-  - artifact_path: docs/test-design/harness/L3-acceptance-test-design.md
+  - artifact_path: docs/test-design/harness/L12-acceptance-test-design.md
     artifact_type: test_design
   - artifact_path: docs/governance/repository-structure.md
     artifact_type: doc_update

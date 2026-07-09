@@ -2,7 +2,7 @@
 layer: L1
 sub_doc: business
 status: confirmed
-pair_artifact: docs/test-design/harness/L1-operational-test-design.md
+pair_artifact: docs/test-design/harness/L14-operational-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L3
 v2_import: docs/migration/v2-import-ledger.md
@@ -208,7 +208,7 @@ UT-TDD Agent Harness の運用原則として、**画面・hook・gate のすべ
 | UX-02 | OT-10 | ダッシュボード UX 確認 |
 | UX-03 | OT-11 | gate/lint 失敗時 next_action 明確性確認 |
 
-(本表は BR/UX → OT-01〜11 の対応。OT 全件 (追加観点含む) の詳細は `docs/test-design/harness/L1-operational-test-design.md` 参照)
+(本表は BR/UX → OT-01〜11 の対応。OT 全件 (追加観点含む) の詳細は `docs/test-design/harness/L14-operational-test-design.md` 参照)
 
 ## §8 関連 doc
 
@@ -219,7 +219,7 @@ UT-TDD Agent Harness の運用原則として、**画面・hook・gate のすべ
 - L1 画面要求: `docs/design/harness/L1-requirements/screen-requirements.md`
 - L1 技術要求: `docs/design/harness/L1-requirements/technical-requirements.md`
 - L1 非機能要求: `docs/design/harness/L1-requirements/nfr.md`
-- L14 運用テスト設計: `docs/test-design/harness/L1-operational-test-design.md`
+- L14 運用テスト設計: `docs/test-design/harness/L14-operational-test-design.md`
 
 ## §9 carry / 既知の不足
 

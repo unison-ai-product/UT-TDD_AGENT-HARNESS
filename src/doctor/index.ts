@@ -23,7 +23,16 @@ import {
 import { checkSetupSmoke } from "./setup-smoke";
 
 export type { DoctorOptions } from "./check-registry";
-export { checkDbProjectionCoverage, checkDbProjectionIngestion } from "./db-projection";
+export {
+  checkAgentContractDetection,
+  checkDbProjectionCoverage,
+  checkDbProjectionIngestion,
+  checkDesignDetection,
+  checkTypedSpecLedgerBodySync,
+  checkTypedSpecOwnedArtifactDispersal,
+  checkTypedSpecPhaseLayerAlignment,
+  checkTypedSpecTraceClosure,
+} from "./db-projection";
 export { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression";
 export { checkDocConsistency, checkEntityCoverage, checkFrRegistryAudit } from "./doc-registry";
 export {
@@ -83,6 +92,7 @@ export {
   checkDddTddRules,
   checkDesignLanguage,
   checkGateConfirm,
+  checkGateIdFormat,
   checkReadability,
   checkRuleDrift,
   checkRuntimePortability,
@@ -118,6 +128,7 @@ export {
   checkLintWiring,
   checkProposalDocumentCoverage,
   checkRightArmGatePlanning,
+  checkRightLungDocGovernance,
 } from "./workflow-quality";
 
 export function runDoctor(

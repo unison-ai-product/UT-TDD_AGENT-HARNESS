@@ -2,7 +2,7 @@
 layer: L3
 sub_doc: business
 status: confirmed
-pair_artifact: docs/test-design/harness/L3-acceptance-test-design.md
+pair_artifact: docs/test-design/harness/L12-acceptance-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 related_l1_screen: docs/design/harness/L1-requirements/screen-requirements.md
@@ -230,7 +230,7 @@ priority: P1」
 - L1 画面要求 HM-08: `docs/design/harness/L1-requirements/screen-requirements.md` §1.HM.08
 - L3 functional (P0 FR-01〜18): `docs/design/harness/L3-functional/functional-requirements.md`
 - L3 nfr-grade (NFR 閾値): `docs/design/harness/L3-functional/nfr-grade.md`
-- L12 受入テスト: `docs/test-design/harness/L3-acceptance-test-design.md`
+- L12 受入テスト: `docs/test-design/harness/L12-acceptance-test-design.md`
 - PLAN: `docs/plans/PLAN-L3-02-business-detail.md`
 
 ## §9 carry / 次工程 (L4 / Phase B) への引き継ぎ

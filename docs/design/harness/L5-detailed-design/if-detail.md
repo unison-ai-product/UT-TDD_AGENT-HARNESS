@@ -66,7 +66,7 @@ external-if.md (what/形状) の **how = adapter 詳細契約**を確定する (
 
 | DSL file | schema 概要 | 関連 |
 |---|---|---|
-| `mode-routing.yaml` | decision table: `{signal → mode}` (drift/劣化/暴走/障害 → Reverse/Refactor/Recovery/Incident、優先度付き、FR-08) | runtime(detect) が消費 |
+| signal→mode decision table | `{signal → mode}` (drift/劣化/暴走/障害 → Reverse/Refactor/Recovery/Incident、優先度付き・最長一致、FR-08)。**実装実体 = `src/schema/route-map.ts` (`ROUTE_SIGNAL_MAP`、TS 定数表) + `src/plan/lint-policy.ts` (kind 制約)**。`.ut-tdd/config/route-map.yaml` / `--route-map` は optional override surface (L4 §3.2、`ut-tdd` 始まり command のみ許可)。当初計画の `mode-routing.yaml` 単独 DSL は採らなかった (drift 是正 2026-07-07、PLAN-L5-10)。内部処理 = internal-processing.md Appendix C | `route eval` / runtime(detect) が消費 |
 | `gate-checks.yaml` | `{gate_id → [check]}` 各 check は決定論 (AI 呼ばない、FR-05)。出力は `recommendedCommandV1Schema` 準拠の next_action | doctor/gate が消費 |
 
 > DSL は zod で読込時 validate (physical-data §5)。`recommendedCommandV1Schema` (実装済) が gate の推奨コマンド契約。

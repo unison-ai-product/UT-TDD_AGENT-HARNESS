@@ -48,8 +48,7 @@ function analyzePairFreeze(docs):
     pa = d.pairArtifact
     # rule 1 pair-exists
     if pa is null:        orphans.push({d.path, "pair-missing", "layer "+d.layer}); continue
-    if pa == "self":      pairs++; continue                      # self-pair (wireframe)
-    # rule 2 ref-resolves
+    # rule 2 ref-resolves ("self" は byPath 解決に失敗し ref-unresolved 孤児になる — 例外分岐なし)
     target = byPath.get(pa)
     if target is null:    orphans.push({d.path, "ref-unresolved", pa}); continue
     # rule 3 trace-bidir
@@ -58,10 +57,8 @@ function analyzePairFreeze(docs):
         if back is null or not dirOf(d.path).startsWith(stripTrailingSlash(back)) and not back == dirOf(d.path):
             orphans.push({d.path, "trace-orphan", "test-design が "+dirOf(d.path)+" を逆参照しない"})
         else: pairs++
-    elif pa startsWith "docs/design/":                            # L2 group 参照 (→ wireframe.md)
-        # 参照先が self-pair group の hub であること (wireframe)
-        if target.pairArtifact == "self": pairs++
-        else: orphans.push({d.path, "trace-orphan", "group hub "+pa+" が self-pair でない"})
+    else: orphans.push({d.path, "ref-unresolved", "未知の pair 形式: "+pa})
+        # design→design 参照 (旧 L2 group hub) は非対応 (PLAN-RECOVERY-09 で self-pair 例外と共に撤去)
   return { ok: orphans == [], orphans, pairs }
 ```
 
@@ -72,8 +69,14 @@ function analyzePairFreeze(docs):
   - **index doc** = basename `README.md` (sub-doc を束ねる親 index で、自身は pair を持たない)。
   - **living doc** = `roadmap.md` (検証/改善 anchor、freeze 対象外 = pair を持たない companion)。
   - 除外は **basename 固定リスト** (`README.md` / `roadmap.md`) で判定 (frontmatter フラグに依存しない明示規約)。
-- **self-pair** = `pair_artifact: self` (wireframe mock 自体が③ペア、L2⇔L10、IMP-039/058)。孤児にしない。
-- **L2 group** = `pair_artifact` が同層 `wireframe.md` を指す (screen-list/screen-flow/ui-element)。group hub (wireframe) が self-pair であれば pair 成立。
+- **self-pair / L2 group hub は撤去済み (PLAN-RECOVERY-09、2026-07-07)**: 旧規約 (IMP-039/058
+  「wireframe mock 自体が③ペア、L10 独立 doc 不要」) は PO 裁定なき作り込みで、欠落を lint から
+  隠す例外だったため撤去。L2 sub-doc は全て `docs/test-design/harness/L10-ux-validation-test-design.md`
+  を直接参照する (rule 3 双方向の正規形)。`self` および design→design 参照は `ref-unresolved` 孤児。
+- **③ doc の命名標準 (PLAN-RECOVERY-09、機械検査 = doctor `test-design-naming`)**:
+  `docs/test-design/harness/` 直下は `L<右腕層>-<kebab>-test-design.md` (右腕層 = L7 谷/L8/L9/
+  L10/L12/L14) のみ許可し、frontmatter `executed_at_layer` は filename 層と一致必須。左腕層命名の
+  再流入と標準外 doc の無断追加は fail-close (明示許可: README.md / proposal-document-coverage-routing.md)。
 - test-design 側の `pair_artifact` は **ディレクトリ集合参照** (例 `docs/design/harness/L4-basic-design/`) で、design sub-doc の所在 dir を含めば双方向成立。
 - **ルート直下 doc** = `docs/design/harness/<file>.md` (例: 移行 stub `L1-business-requirements.md` = `# (moved)`) は **2 階層 sub-doc でない**ため対象外。`designLayerFromPath` は `L<N>-<topic>/<file>.md` の **2 階層構造のみ**マッチする (ルート直下 stub の暗黙除外。stub 自体の整理は別途 carry)。
 - **検算 (実 repo)**: regex マッチ 33 − EXCLUDED 3 (L2/L3 の `README.md` ×2 + `roadmap.md` ×1) = 検査対象 30 = 双方向成立 30 pair (孤児0)。全対象が pair 成立 = 見逃し0。
@@ -84,7 +87,7 @@ function analyzePairFreeze(docs):
 |---|---|---|
 | pair-missing | rule 1 `pair-exists` (設計 doc に pair が存在) | layer L1-L6 sub-doc に pair_artifact 必須 (requirements §436) |
 | ref-unresolved | rule 2 `ref-resolves` (path 参照が repo 内実在) | byPath 解決失敗 = 不実在 |
-| trace-orphan | rule 3 `trace-bidir` (A→B に B→A 逆参照、孤児0) | test-design dir 集合参照 / L2 group hub の双方向 |
+| trace-orphan | rule 3 `trace-bidir` (A→B に B→A 逆参照、孤児0) | test-design dir 集合参照の双方向 |
 
 > 本 lint は IMP-033 クロスチェックエンジン (10 rule 汎用形) の **pair 系 3 rule の先行実装**。汎用 rule registry への吸収は IMP-033 本実装時 (Phase 後続)。
 

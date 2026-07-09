@@ -88,14 +88,29 @@ const SECRET_RE =
   /\b([A-Za-z0-9_-]*(?:token|key|secret|password|passwd|pwd|bearer)[A-Za-z0-9_-]*\s*[=:]\s*)\S+/gi;
 const MAX_SUMMARY = 120;
 
+/** token/key/secret 様の値をマスクする (truncate はしない、path 系の再利用向け純関数)。 */
+function maskSecrets(raw: string): string {
+  return raw.replace(SECRET_RE, "$1***");
+}
+
 /** 禁則 (token/key/secret 様) をマスクし 120 文字へ truncate。durable digest への漏洩防止。 */
 export function sanitize(raw: string | undefined): string {
   if (!raw) return "";
-  const masked = raw.replace(SECRET_RE, "$1***");
+  const masked = maskSecrets(raw);
   return masked.length > MAX_SUMMARY ? `${masked.slice(0, MAX_SUMMARY - 1)}…` : masked;
 }
 
-/** ツール名 + 対象 path のみ。引数値・ファイル内容は載せない。 */
+/**
+ * ツール名 + 対象 path のみ。引数値・ファイル内容は載せない。
+ *
+ * path を伴うツールは 120 文字 truncate を **適用しない** (mask のみ)。この target は
+ * work-guard の sessionTouchedFiles (このセッションが触ったファイル一覧) の突合キーに
+ * そのまま再利用されており、途中で "…" 省略されると実 path と文字列一致せず、深い
+ * repo path + 説明的なファイル名 (本 repo の PLAN 命名規約) で長さ 120 超が普通に起き、
+ * 自分自身の正当な編集が「他ランタイムの foreign uncommitted file」と誤検知され block
+ * される (システム全体監査で実発見、2026-07-08)。path が secret を含むことは通常無いが
+ * mask 自体は安全側で維持する。
+ */
 export function summarize(input: SessionHookInput): string {
   const tool = input.tool_name ?? "";
   const ti = input.tool_input ?? {};
@@ -107,7 +122,10 @@ export function summarize(input: SessionHookInput): string {
     const verb = classifyVerificationVerb(String(ti.command ?? ""));
     return sanitize(`${tool} (${verb ?? "bash"})`);
   }
-  const hint = path ? String(path) : tool === "Bash" ? "(bash)" : "";
+  if (path) {
+    return maskSecrets(`${tool} ${path}`.trim());
+  }
+  const hint = tool === "Bash" ? "(bash)" : "";
   return sanitize(`${tool} ${hint}`.trim());
 }
 

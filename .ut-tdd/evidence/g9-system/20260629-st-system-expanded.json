@@ -62,7 +62,11 @@
     "ST-EXT-04"
   ],
   "deferred_st_ids": [
-    "ST-ASSET-04"
+    "ST-ASSET-04",
+    "ST-DATA-06",
+    "ST-FUNC-08",
+    "ST-FUNC-09",
+    "ST-FUNC-10"
   ],
   "commands": [
     {

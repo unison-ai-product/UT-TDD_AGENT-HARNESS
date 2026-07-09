@@ -10,6 +10,7 @@ related_l5_physical_data: docs/design/harness/L5-detailed-design/physical-data.m
 related_l5_module: docs/design/harness/L5-detailed-design/module-decomposition.md
 related_l5_internal: docs/design/harness/L5-detailed-design/internal-processing.md
 related_l5_if_detail: docs/design/harness/L5-detailed-design/if-detail.md
+related_l5_ui_detail: docs/design/harness/L5-detailed-design/ui-detail.md
 next_pair_freeze: L5
 v2_import: docs/migration/v2-import-ledger.md
 created: 2026-05-29
@@ -125,6 +126,9 @@ DDD/TDD strictness automation (`src/lint/ddd-tdd-rules.ts` / `integration-gwt`) 
 | IT-MODULE-02 | A lint module fixture with `loadX` and pure `analyzeX`. | Loader reads fixtures and analyzer is run with provided docs. | I/O stays in loader, analyzer is deterministic and side-effect free. | fs loader -> pure analyzer -> message boundary. | Same input yields same result; messages match violation set. | Analyzer reading fs, loader hiding parse failure, unstable message order. |
 | IT-STATE-01 | Valid and invalid `.ut-tdd` state files plus schema fixtures. | State is written, read back, and parsed through zod. | Valid state round-trips; invalid state fails closed before use. | state fs -> zod schema -> doctor boundary. | Parse result matches schema and preserves IDs. | Missing required field, unknown enum, corrupt JSON/YAML. |
 | IT-STATE-02 | Two drive partitions with overlapping artifact IDs. | Drive-scoped state is read and cross-drive contamination is checked. | Each drive remains isolated unless an explicit trace edge allows linkage. | `.ut-tdd/drive/<drive>` -> state loader boundary. | No cross-drive read without declared edge. | Same ID in two drives, missing drive, invalid skip_sub_doc. |
+| IT-UI-01 | `ui-detail.md` RouteRegistry and QueryState contracts plus L2 screen IDs. | Screen route and query parsing are integrated in a frontend adapter fixture. | Route ID maps to one adapter, and URL state round-trips without mutating harness state. | router -> query parser -> screen adapter boundary. | Duplicate route IDs fail; query defaults are deterministic. | Unknown screen ID, malformed query, stale route alias. |
+| IT-UI-02 | `ui-detail.md` DataProvider, EvidenceLink, and TelemetryBadge contracts. | A screen adapter loads projected DB/doc evidence and renders provenance labels. | Evidence links remain explicit and provenance distinguishes runtime, projection, advisory, stale, and unknown. | data provider -> evidence component -> UI state boundary. | Missing evidence is visible; UI does not create source-of-truth state. | Empty projection, stale evidence, hidden provenance. |
+| IT-UI-03 | `ui-detail.md` MarkdownViewer and CopyButton contracts. | Markdown/frontmatter rendering and command-text copy are exercised together. | Markdown is sanitized, source path remains visible, and copy control emits text only. | markdown renderer -> copy control -> browser UI boundary. | No script execution and no command execution from UI. | Embedded script, missing source path, accidental shell execution. |
 | IT-ASSET-01 | `.claude/agents/*.md` fixture set and roster registry fixture. | `roster list` scans markdown and builds the registry. | Every file becomes one deterministic registry row. | markdown source -> roster module -> registry boundary. | ID equals filename stem; capability class is independent of model family. | Duplicate filename stem, missing name, unsupported metadata. |
 | IT-ASSET-02 | Roster registry and guard allowlist fixtures. | `roster check` compares registry names and allowlist entries. | Matching sets pass; missing roster or name mismatch fails closed. | roster module -> guard allowlist boundary. | `missingFromRoster=0` and `nameMismatches=0` for pass. | Non-allowlisted known agents stay informational, not failure. |
 | IT-ASSET-03 | Import graph fixture for runtime, guard, and roster modules. | Dependency-direction check verifies `runtime -> roster` only. | Roster never imports runtime/guard; L7 resolver is implemented in `src/runtime/agent-slots.ts`. | runtime/guard/roster import boundary. | Cycle count 0; reverse dependency count 0. | Hidden transitive import or resolver that fabricates capabilities. |
@@ -171,6 +175,48 @@ requirements produced here.
 | IT-DOCCOV-03 | Discovery/research proposal text plus candidate external templates. | Research adoption mapping is produced. | Adoptable templates are split into `incorporate`, `reference`, `exclude`, or `ut-tdd-specific`. | research mapping -> coverage output boundary. | Marketing/vendor templates are rejected; UT-TDD workflow/agent templates stay UT-TDD-specific. | Vendor-specific formats, generic marketing templates, untestable checklist prose. |
 | IT-DOCCOV-04 | A proposal classified with security/privacy, migration, or other escalation-sensitive terms. | Coverage classification combines `classifyTask` findings with document packs. | Granularity reaches at least G4 and human/risk evidence is required. | task risk classifier -> document coverage boundary. | `nfr`, `technical-requirements`, `system-test-design`, and approval evidence are present. | Low confidence drive, multiple risk terms, missing affected files. |
 
+## Appendix D: 駆動モデルルーター内部処理 結合テスト設計 (PLAN-L5-10、2026-07-07)
+
+> 設計ペア: `docs/design/harness/L5-detailed-design/internal-processing.md` Appendix C (駆動モデルルーター
+> 内部処理)。関数契約粒度の単体は L7-unit-test-design.md「PLAN-L6-38 Router Function Contracts Addendum」
+> (U-ROUTE-R1〜R10、正式 3 桁採番は add-impl 時)。本 Appendix は route eval CLI ↔ lint ↔ doctor ↔ 台帳 audit doc のモジュール間結合を扱う。
+> **実行時期**: 本 Appendix の IT-ROUTE は internal-processing.md Appendix C.6 carry の add-impl (routeFiling / 全 mode kind×layer 制約 / two-phase intake の lint 実装) が着地した後に④実行する設計である。現行実装 (`ROUTE_MODE_ALLOWED_KINDS` = add-feature のみ / `READY_DEPENDENCY_STATUSES` = confirmed/completed のみ) では IT-ROUTE-03/04 は未成立が期待値 (design-first の正常形であり、実装前 green を主張しない)。
+
+| IT-ID | Given | When | Then | Fixture / Boundary | Assertions | Negative / Edge |
+|---|---|---|---|---|---|---|
+| IT-ROUTE-01 | 既知 signal (失敗系 + 能動 + 未知 token の混在 fixture) | `ut-tdd route eval --signal <s> --format json` を実行する。 | filing target 完全形 (mode / allowed_kinds / layer_band / sub_doc_hint / pairing_obligation / forward_insufficient_reason) が JSON で返り、未知 token は `mode=forward` + warn になる。 | route eval CLI -> route-map -> filing target serializer boundary。 | 非 forward 出力は reason を必ず持つ。失敗系競合は Incident > Recovery > Reverse > Refactor。最長一致が維持される。 | 未知 token、複数 token 競合、escalation 境界 signal (approval 昇格)、legacy command 混入 route-map (exit 1)。 |
+| IT-ROUTE-02 | 非 forward 決定を返す signal fixture | route eval が非 forward mode を決定する。 | `.ut-tdd/audit/` 配下の append-only 記録に `{signal, mode, forward_insufficient_reason, decided_at}` が残る。 | route eval -> audit appender boundary。 | 記録失敗は decision を変えない (fail-open 記録 + stderr surface)。forward 決定は audit 対象外。 | audit dir 書込不可、重複 signal 連続実行 (append 冪等性)。 |
+| IT-ROUTE-03 | L4 §3.1 band 外の (route_mode, kind, layer) を持つ PLAN fixture + draft-debt 台帳 fixture | `ut-tdd plan lint` / `ut-tdd doctor` を実行する。 | band 外 PLAN は `route_mode_kind_layer_mismatch`、設計祖先なし L7 impl は `l7_cold_intake` で fail-close する。台帳 entry は promote_by 有効 + justification 時のみ免除。 | plan frontmatter loader -> lint-policy 台帳 -> doctor aggregation boundary。 | 全 mode に kind/layer 制約が効く (`allowedKinds` 未定義 fall-through が無い)。期限超過 debt は draft でも fail。 | promote_by 欠落 entry、justification 無き新規 allowlist 追加、archived PLAN (対象外)。 |
+| IT-ROUTE-04 | add-impl PLAN + 対の Reverse PLAN (双方 draft) fixture | two-phase intake で draft 起票 → 片方を confirmed へ昇格する。 | draft 間は requires_not_ready にならず intake が通り、confirmed 昇格時のみ双方 pairing ready を要求して未 ready は fail-close する。 | plan lint (requires/backfill-pairing) -> status 遷移検証 boundary。 | intake 緩和が draft 間に限定され confirmed 系 gate へ漏れない。既存 READY_DEPENDENCY_STATUSES 規律が confirmed 以降で不変。 | Reverse 参照欠落の add-impl (intake でも fail)、forward_routing 未宣言 Reverse との同時昇格。 |
+
+## Appendix E: 変動点外部化設計 lint 結合テスト設計 (PLAN-L5-12、2026-07-07)
+
+> 設計ペア: `docs/design/harness/L5-detailed-design/internal-processing.md` Appendix C.7 (変動点外部化設計)。
+> 本 Appendix は「宣言された変動点 × 外部化設計の存在」を検査する設計時 lint の結合挙動を扱う。
+> **実行時期**: C.7 の設計時 lint 実装 (C.6 carry の add-impl) が着地した後に④実行する design-first。
+> 実装前 green は主張しない。
+
+| IT-ID | 前提 (Given) | 操作 (When) | 期待結果 (Then) | モジュール境界 | 不変条件 |
+|---|---|---|---|---|---|
+| IT-EXT-01 | 変動点を宣言し外部化設計 (config schema/registry 参照) を持つ設計 doc fixture | `ut-tdd doctor` を実行する。 | 変動点×外部化設計が揃うため green。 | design-doc loader -> 変動点マーカー parser -> 外部化存在検査 boundary。 | 外部化設計あり = green (誤検知しない)。 |
+| IT-EXT-02 | 変動点を宣言したが外部化設計が無い設計 doc fixture | `ut-tdd doctor` を実行する。 | `externalization_design_missing` が**永続エラー**として fail-close (一度きり warn でなく毎回)。 | 同上。 | 宣言変動点に外部化なし = 永続 fail (absence-blindness 根治)。時間経過で消音しない。 |
+| IT-EXT-03 | opt-out を宣言した箇所 (十分な反証理由 + TL 承認あり / 形骸理由 / TL 承認なし の 3 fixture) | `ut-tdd doctor` を実行する。 | 4 類型 (a)-(d) への反証 + TL 承認 record を持つ opt-out のみ pass。形骸理由 (実質空 / 4 類型言及なし) と TL 承認なしは fail。opt-out 一覧は常時表示。 | opt-out 台帳 + review record boundary。 | 理由付き opt-out ≠ 無言の欠落。opt-out は判定基準への反証を要し hollow rationalization を弾く。 |
+| IT-EXT-05 | registry/config は存在するが参照キー (mode/kind 等) が欠落した fixture (version-up 穴の再現) | `ut-tdd doctor` を実行する。 | 未知キーは Pack 既定へ **fail-close** し、fail-open (制約なしとして通過) しない。 | registry loader -> 既定 fallback boundary。 | 未知キー = fail-close (`if (!allowedKinds) return []` 型 fail-open の回帰ガード)。 |
+| IT-EXT-04 | 変動点宣言なしだが実体は registry/config で外部化されている箇所の fixture (過大宣言の逆) | `ut-tdd doctor` を実行する。 | 宣言が無い箇所は検査対象外 (lint は宣言駆動、全 doc を強制外部化しない = 過大外部化を強制しない)。 | 変動点マーカー parser boundary。 | lint は宣言された変動点のみ検査 (speculative generality を lint 自身が強制しない)。 |
+
+## Appendix F: Vモデル spec IR projection 結合テスト設計 (PLAN-L5-13、2026-07-08)
+
+> 設計ペア: `docs/design/harness/L5-detailed-design/physical-data.md` §9.9。
+> 本 Appendix は、docs / PLAN / test-design / 工程表 / activation profile から `spec_defs` / `spec_relations` / `schedule_entries` / `activation_entries` / `detector_route_candidates` を rebuildable projection として作る境界を扱う。
+> **実行時期**: U3 L7 の schema / projection writer 実装後に④実行する design-first。現時点では実装前 green を主張しない。
+
+| IT-ID | 前提 (Given) | 操作 (When) | 期待結果 (Then) | モジュール境界 | 不変条件 |
+|---|---|---|---|---|---|
+| IT-SPECIR-01 | design doc / PLAN / test-design heading / 工程表 fixture と空の `.ut-tdd/harness.db` | `ut-tdd db rebuild` を実行する。 | `spec_defs` / `spec_relations` / `schedule_entries` / `activation_entries` が deterministic に作られ、再実行しても row 数と digest が変わらない。 | markdown/frontmatter loader -> spec-ir projector -> SQLite boundary。 | projection は authoring source を変更しない。 |
+| IT-SPECIR-02 | `spec_relations` が未定義 `spec_id` を参照する fixture | `ut-tdd doctor` または spec-ir projection check を実行する。 | `spec-ir-orphan-relation` finding が作られ fail-close する。silent skip / auto repair はしない。 | spec-ir relation resolver -> findings projection boundary。 | orphan relation 0 が完了条件。 |
+| IT-SPECIR-03 | finding / quality_signal / schedule / activation が同じ subject を指す fixture | detector route candidate projection を実行する。 | `detector_route_candidates` は subject / signal / current_location / evidence を保持するが、FilingTarget の `allowed_kinds` / `layer_band` / `sub_doc_hint` / `pairing_obligation` は L4 function §3.2.1 由来で再導出される。 | findings + schedule + activation -> route candidate -> route eval boundary。 | detector は filing target を創作しない。設計 SSoT 不在なら candidate は non-ready finding になる。 |
+| IT-SPECIR-04 | activation profile が out-of-scope/deferred だが理由が無い fixture、または secret-like payload を含む fixture | spec-ir / activation projection を実行する。 | 理由なし除外は `activation-reason-missing` finding、secret-like payload は DB 挿入前に拒否される。 | activation loader -> projection sanitizer -> findings boundary。 | profile 除外は理由必須。raw/secret/PII は spec IR table に保存しない。 |
+
 ## §6 G8-WORKFLOW: integration verification workflow
 
 This section defines the executable workflow granularity for closing L8/G8. It
@@ -189,6 +235,7 @@ test strategy -> test plan -> test condition / coverage item -> test procedure
 | `execution_evidence` | The integration evidence manifest records command, exit code, IT-* IDs, evidence path, selected/deferred counts, and failure routing. Green unit tests alone do not close G8 unless the manifest maps them to IT-* coverage. |
 | `exit_criteria` | G8 passes only when all mandatory selected IT-* rows have passing evidence, all defers are explicit and not past their waiting layer, no blocking doctor lint remains, and review evidence is recorded for gate-significant changes. |
 | `defect_routing` | Failure routes to L8 correction when the test/evidence is wrong, Reverse when L5/L6 contract is wrong, Refactor when integration structure is weak, Recovery when a regression is found, and Incident for production-impacting failures. |
+| `verification_design` | Verification environment, data reality, measurement method, evaluation threshold, and execution procedure are explicit in the selected IT-* evidence plan. |
 
 Minimum G8 close profile for the first L8 ascent:
 

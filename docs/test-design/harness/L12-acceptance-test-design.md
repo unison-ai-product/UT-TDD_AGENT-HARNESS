@@ -12,7 +12,7 @@ related_l3_nfr: docs/design/harness/L3-functional/nfr-grade.md
 next_pair_freeze: L3
 v2_import: docs/migration/v2-import-ledger.md
 created: 2026-05-28
-updated: 2026-06-02
+updated: 2026-07-09
 ---
 
 # UT-TDD Agent Harness — L3 受入テスト設計 (④ / AT-*)
@@ -231,3 +231,15 @@ updated: 2026-06-02
 - **L4 carry AT**: AT-FR-10-03 (UI 直接実行不可) / AT-FR-17-01〜03 (GHA workflow) / AT-NFR-02 / AT-NFR-09 → L4 設計 + 実装後に L12 AT として lift
 - **Phase B carry AT**: AT-FR-BR21-36-01〜43-02 (6 件) + AT-BR21-06/08 (UI、2 件) / AT-NFR-18 (PII redaction) → Phase B 着手時に lift
 - **L7 実装**: 全 AT-* を vitest / GHA workflow に変換、Red 状態で先行作成 (TDD 強制 FR-02)
+
+## §6 G12-WORKFLOW
+
+test_strategy: L3 FR / AC / NFR / BR 派生を本番受入可能性として確認する risk-based acceptance verification。
+test_plan: L12 slice ごとに AT-* / NFR-* / BR21 派生の必須・任意・defer を選び、受入証跡と承認境界へ結合する。
+test_conditions: 選択 AT は対応 FR / AC / NFR / BR と受入条件、環境条件、承認者、失敗時の差戻し先を持つ。
+coverage_items: AT-* coverage は functional、business、NFR、workflow core、distribution / migration carry へ map する。
+test_procedures: mapped vitest、doctor、CI、distribution smoke、または人間承認記録を実行し、exit code と signoff を残す。
+execution_evidence: acceptance evidence manifest は command、AT/NFR ID、evidence path、signoff、defer、result を記録する。
+exit_criteria: 必須 acceptance row は pass または明示 defer を持ち、L12 リリース承認に必要な PO signoff が欠落していない。
+defect_routing: failed AT は L12 correction、L3/L4 back-prop、Reverse、Recovery、Incident へ scope 別に route する。
+verification_design: 検証環境、受入データ実在性、計測方法、評価基準、実行手順、承認記録を選択 AT-* ごとに明示する。

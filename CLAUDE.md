@@ -136,6 +136,10 @@ working tree を相手ランタイムが常時書き換えるため、full tree 
   相手の退行と帰責するのは誤り)。
 - **引き継ぎ feedback は harness.db から受け取る** (`feedback_events`、SessionStart で surface、
   PLAN-L7-110)。stale 化する prose handover を現状把握の正本にしない。CURRENT.json / prose は補助。
+- **永続教訓は共有 HARNESS メモリへ昇格する** (`ut-tdd memory add`、正本 `.ut-tdd/memory/`、
+  PLAN-L7-189)。PO ルール・教訓・落とし穴をランタイム私的メモリや chat 止まりにしない。
+  エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
+  (stale 化する層を作らない)。
 
 ## Canonical Commands
 
@@ -159,7 +163,12 @@ fallback.
 - Docs work defaults to Sonnet-class Claude; research defaults to Haiku-class
   Claude; implementation defaults to GPT/Codex-class workers.
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
-  closing authority; their default effort is `high`.
+  closing authority.
+- Worker lanes (implementation / lightweight, including spark/mini) default to
+  effort `middle` (PO rule, 2026-07-08).
+- Implementation work in `hybrid` is cross-executed and cross-reviewed: the
+  non-orchestrating provider executes, and review returns to the other
+  provider (tier-router implementation lane, PO rule 2026-07-08).
 - Design/implementation review uses a top reviewer model: GPT frontier
   (`gpt-5.5`) or Claude Opus (`claude-opus-4-8`) or above, behind the explicit
   frontier gate.

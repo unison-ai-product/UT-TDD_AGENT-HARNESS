@@ -12,6 +12,8 @@ import type { TeamProvider } from "./run";
  */
 export const MODEL_IDS = {
   claude: {
+    /** Claude 5 世代フロンティア (advisor 一次相談先、2026-07 更新)。 */
+    fable: "claude-fable-5",
     opus: "claude-opus-4-8",
     /** Sonnet 5 世代 (2026-06 更新)。coding/agentic で旧 Opus 級、価格帯は 4-6 と同一。 */
     sonnet: "claude-sonnet-5",
@@ -238,13 +240,17 @@ function policyEffort(input: {
   fallback: ReasoningEffort;
 }): ReasoningEffort {
   if (input.intent === "uiux") return "xhigh";
+  // ワーカー帯 (実装/軽量、spark/mini 含む) の既定 effort は middle (PO 指示 2026-07-08)。
   if (input.model === MODEL_IDS.codex.mini || input.model === MODEL_IDS.codex.spark) {
-    return "high";
+    return "middle";
   }
   if (input.intent === "review") {
     return input.provider === "codex" ? "xhigh" : "high";
   }
   if (input.difficulty === "critical") return "high";
+  if (input.intent === "implementation" || input.intent === "lightweight") {
+    return "middle";
+  }
   if (input.difficulty === "complex") return input.provider === "codex" ? "high" : "high";
   if (input.provider === "codex") return "middle";
   if (input.provider === "claude") return "high";

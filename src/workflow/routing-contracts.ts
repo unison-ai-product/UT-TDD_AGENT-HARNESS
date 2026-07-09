@@ -1,6 +1,7 @@
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { type RecommendedCommandV1, recommendedCommandV1Schema } from "../schema/index";
+import { type FilingTarget, type RouteFilingResult, routeFiling } from "../schema/route-filing";
 import {
   ROUTE_COMMAND_DOCTOR,
   ROUTE_COMMAND_TASK_CLASSIFY,
@@ -9,9 +10,11 @@ import {
   routeMatchLength,
   routeSignalCandidates,
 } from "../schema/route-map";
-import type { ContractResult, Finding, Severity } from "./contracts";
+import type { ContractResult, Finding, Severity } from "./contracts-types";
 
 export type { RouteSignalEntry } from "../schema/route-map";
+export type { FilingTarget, RouteFilingResult };
+export { routeFiling };
 
 function finding(
   code: string,

@@ -45,7 +45,7 @@ export interface DbProjectionRequirements {
   indexes: DbProjectionIndexRequirement[];
 }
 
-const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.[134567] .*)/;
+const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.[1345679] .*)/;
 const SECTION_RE = /^###?\s+/;
 
 function backtickValues(value: string): string[] {

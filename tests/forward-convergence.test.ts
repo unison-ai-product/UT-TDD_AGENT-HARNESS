@@ -154,6 +154,16 @@ describe("forward-convergence: 分類", () => {
     expect(r.classifications).toEqual([]);
     expect(r.ok).toBe(true);
   });
+
+  it("verify PLANs are convergence-scoped right-arm work", () => {
+    const r = analyzeForwardConvergence(
+      [plan({ plan_id: "PLAN-L9-900-system-verification", kind: "verify" })],
+      new Set(),
+      new Set(),
+    );
+    expect(r.unconvergedLanded).toEqual(["PLAN-L9-900-system-verification"]);
+    expect(r.ok).toBe(false);
+  });
 });
 
 describe("forward-convergence: parse + messages", () => {

@@ -2,10 +2,14 @@ import type { HarnessDb } from "./index";
 import {
   analyzeRefactorCandidates,
   candidateRank,
+  isRefactorCandidateDecisionState,
   loadRefactorCandidateInputs,
   REFACTOR_FEEDBACK_LIMIT,
   type RefactorCandidate,
+  type RefactorCandidateLifecycleState,
+  refactorCandidateKey,
 } from "./refactor-candidates";
+import { detectorRouteCandidateAction } from "./route-candidate-review";
 
 interface FeedbackProjectionDeps {
   nowIso: () => string;
@@ -18,11 +22,73 @@ interface FeedbackProjectionDeps {
 
 const refactorCandidateCache = new Map<string, RefactorCandidate[]>();
 
+interface RefactorCandidateLifecycleRecord {
+  state: RefactorCandidateLifecycleState;
+  linked_plan_id: string;
+  first_seen_at: string;
+  decided_at: string;
+}
+
 function signalSeverity(status: unknown): string {
   const normalized = String(status ?? "warn").toLowerCase();
   if (normalized === "fail" || normalized === "error") return normalized;
   if (normalized === "warn") return "warn";
   return "info";
+}
+
+function canReadLifecycle(db: HarnessDb): boolean {
+  return typeof (db as { prepare?: unknown }).prepare === "function";
+}
+
+function loadRefactorCandidateLifecycle(
+  db: HarnessDb,
+): Map<string, RefactorCandidateLifecycleRecord> {
+  if (!canReadLifecycle(db)) return new Map();
+  const rows = db
+    .prepare(
+      `SELECT candidate_key, state, linked_plan_id, first_seen_at, decided_at
+       FROM refactor_candidates`,
+    )
+    .all();
+  return new Map(
+    rows.map((row) => [
+      String(row.candidate_key ?? ""),
+      {
+        state: String(row.state ?? "open") as RefactorCandidateLifecycleState,
+        linked_plan_id: String(row.linked_plan_id ?? ""),
+        first_seen_at: String(row.first_seen_at ?? ""),
+        decided_at: String(row.decided_at ?? ""),
+      },
+    ]),
+  );
+}
+
+export function decideRefactorCandidate(
+  db: HarnessDb,
+  input: {
+    candidate_key: string;
+    state: Exclude<RefactorCandidateLifecycleState, "open">;
+    decided_at: string;
+    linked_plan_id?: string;
+  },
+): { ok: boolean; findings: string[] } {
+  const findings: string[] = [];
+  if (!input.candidate_key) findings.push("candidate_key is required");
+  if (input.state !== "rejected" && !input.linked_plan_id) {
+    findings.push("linked_plan_id is required for accepted or implemented candidates");
+  }
+  if (!input.decided_at) findings.push("decided_at is required");
+  if (findings.length > 0) return { ok: false, findings };
+  db.prepare(
+    `UPDATE refactor_candidates
+     SET state = ?, linked_plan_id = ?, decided_at = ?
+     WHERE candidate_key = ?`,
+  ).run(input.state, input.linked_plan_id ?? "", input.decided_at, input.candidate_key);
+  const updated = db
+    .prepare("SELECT candidate_key FROM refactor_candidates WHERE candidate_key = ? AND state = ?")
+    .get(input.candidate_key, input.state);
+  if (!updated) return { ok: false, findings: ["candidate not found"] };
+  return { ok: true, findings: [] };
 }
 
 export function projectRefactorCandidateSignals(
@@ -34,6 +100,7 @@ export function projectRefactorCandidateSignals(
   const cached = refactorCandidateCache.get(repoRoot);
   const candidates = cached ?? analyzeRefactorCandidates(loadRefactorCandidateInputs(repoRoot));
   refactorCandidateCache.set(repoRoot, candidates);
+  const lifecycle = loadRefactorCandidateLifecycle(db);
   const feedbackSubjects = new Set(
     candidates
       .filter((candidate) => candidate.confidence === "high")
@@ -42,11 +109,36 @@ export function projectRefactorCandidateSignals(
       .map((candidate) => `${candidate.kind}:${candidate.subject}`),
   );
   for (const candidate of candidates) {
+    const candidateKey = refactorCandidateKey(candidate);
+    const existing = lifecycle.get(candidateKey);
+    const state =
+      existing && isRefactorCandidateDecisionState(existing.state) ? existing.state : "open";
+    const linkedPlanId = existing?.linked_plan_id ?? "";
+    deps.recordProjectionEvent(db, {
+      table: "refactor_candidates",
+      id: candidateKey,
+      row: {
+        candidate_key: candidateKey,
+        kind: candidate.kind,
+        path: candidate.path,
+        subject: candidate.subject,
+        confidence: candidate.confidence,
+        score: candidate.score,
+        threshold: candidate.threshold,
+        state,
+        linked_plan_id: linkedPlanId,
+        reason: candidate.reason,
+        first_seen_at: existing?.first_seen_at || computedAt,
+        last_seen_at: computedAt,
+        decided_at: existing?.decided_at ?? "",
+      },
+    });
     const signalId = deps.stableId(
       "refactor-candidate",
       `${candidate.kind}:${candidate.subject}:${candidate.reason}`,
     );
-    const shouldFeedback = feedbackSubjects.has(`${candidate.kind}:${candidate.subject}`);
+    const shouldFeedback =
+      state === "open" && feedbackSubjects.has(`${candidate.kind}:${candidate.subject}`);
     deps.recordProjectionEvent(db, {
       table: "quality_signals",
       id: signalId,
@@ -66,8 +158,24 @@ export function projectRefactorCandidateSignals(
 
 export function projectFeedbackEvents(db: HarnessDb, deps: FeedbackProjectionDeps): void {
   const createdAt = deps.nowIso();
+  const detectorCandidates = db
+    .prepare(
+      `SELECT route_candidate_id, source_table, source_id, finding_kind, severity, subject_id,
+              filing_target_id, target_layer, target_sub_doc, candidate_status, reason
+       FROM detector_route_candidates
+       WHERE candidate_status IN ('non_ready', 'ready', 'open')
+       ORDER BY route_candidate_id`,
+    )
+    .all();
+  const detectorCandidateFindingIds = new Set(
+    detectorCandidates
+      .filter((candidate) => String(candidate.source_table ?? "") === "findings")
+      .map((candidate) => String(candidate.source_id ?? ""))
+      .filter(Boolean),
+  );
   for (const finding of db.prepare("SELECT * FROM findings WHERE status = 'open'").all()) {
     const findingId = String(finding.finding_id ?? "");
+    if (detectorCandidateFindingIds.has(findingId)) continue;
     const subject = String(finding.subject_id ?? findingId);
     const id = deps.stableId("feedback:finding", findingId || subject);
     deps.recordProjectionEvent(db, {
@@ -84,6 +192,30 @@ export function projectFeedbackEvents(db: HarnessDb, deps: FeedbackProjectionDep
         severity: String(finding.severity ?? "warn"),
         status: "open",
         next_action: `review finding ${findingId || subject}`,
+        created_at: createdAt,
+      },
+    });
+  }
+  for (const candidate of detectorCandidates) {
+    const candidateId = String(candidate.route_candidate_id ?? "");
+    const subject = String(candidate.subject_id ?? candidateId);
+    const findingKind = String(candidate.finding_kind ?? "detector-route-candidate");
+    const severity = signalSeverity(candidate.severity);
+    const id = deps.stableId("feedback:detector-route-candidate", candidateId || subject);
+    deps.recordProjectionEvent(db, {
+      table: "feedback_events",
+      id,
+      row: {
+        feedback_event_id: id,
+        finding_id: "",
+        plan_id: subject.startsWith("PLAN-") ? subject : "",
+        source_table: "detector_route_candidates",
+        source_id: candidateId || subject,
+        source_color: String(candidate.candidate_status ?? "non_ready"),
+        signal_type: `detector_route_candidate:${findingKind}`,
+        severity,
+        status: "open",
+        next_action: detectorRouteCandidateAction(candidate),
         created_at: createdAt,
       },
     });
@@ -243,6 +375,7 @@ export function projectRetryEvents(db: HarnessDb, deps: FeedbackProjectionDeps):
 export function projectIssueQueue(db: HarnessDb, deps: FeedbackProjectionDeps): void {
   const createdAt = deps.nowIso();
   const issueSignals = new Set([
+    "detector_route_candidate",
     "trouble_event_rate",
     "workflow_human_required_rate",
     "workflow_retry_groups",
@@ -253,14 +386,19 @@ export function projectIssueQueue(db: HarnessDb, deps: FeedbackProjectionDeps): 
       `SELECT feedback_event_id, plan_id, signal_type, severity, next_action
        FROM feedback_events
        WHERE signal_type IN ('trouble_event_rate', 'workflow_human_required_rate', 'workflow_retry_groups', 'workflow_blocked_rate')
+          OR signal_type LIKE 'detector_route_candidate:%'
        ORDER BY feedback_event_id`,
     )
     .all();
   for (const row of rows) {
     const signalType = String(row.signal_type ?? "");
-    if (!issueSignals.has(signalType)) continue;
+    const normalizedSignal = signalType.startsWith("detector_route_candidate:")
+      ? "detector_route_candidate"
+      : signalType;
+    if (!issueSignals.has(normalizedSignal)) continue;
     const sourceEventId = String(row.feedback_event_id ?? "");
     const id = deps.stableId("issue-queue", sourceEventId);
+    const isDetectorCandidate = normalizedSignal === "detector_route_candidate";
     deps.recordProjectionEvent(db, {
       table: "issue_queue",
       id,
@@ -269,8 +407,12 @@ export function projectIssueQueue(db: HarnessDb, deps: FeedbackProjectionDeps): 
         source_event_id: sourceEventId,
         plan_id: String(row.plan_id ?? ""),
         target: "github",
-        title: `[ut-tdd telemetry] ${signalType}`,
-        body: `Dry-run issue candidate from feedback event ${sourceEventId}: ${row.next_action ?? ""}`,
+        title: isDetectorCandidate
+          ? `[ut-tdd detector candidate] ${signalType}`
+          : `[ut-tdd telemetry] ${signalType}`,
+        body: isDetectorCandidate
+          ? `Dry-run filing candidate from detector route feedback ${sourceEventId}. Human approval is required before external issue creation; routeFiling SSoT evaluation is recorded in the feedback event: ${row.next_action ?? ""}`
+          : `Dry-run issue candidate from feedback event ${sourceEventId}: ${row.next_action ?? ""}`,
         status: "queued_dry_run",
         human_approval_required: 1,
         approved_by: "",

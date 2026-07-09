@@ -73,6 +73,7 @@ import {
   saveVerificationEvidence,
   verificationRecommendationMermaid,
 } from "./lint/verification-profile";
+import { runWriteEncodingGuard } from "./lint/write-encoding-guard";
 import {
   type MemoryKind,
   renderMemoryList,
@@ -156,6 +157,7 @@ import {
   projectTokenUsage,
   rebuildHarnessDb,
 } from "./state-db/projection-writer";
+import { buildScopeDryRunPreview } from "./state-db/scope-preview";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
 import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify";
 import {
@@ -174,6 +176,7 @@ import {
   loadTeamDefinition,
   type MemberPlacement,
 } from "./team/run";
+import { analyzeTraceImpact } from "./trace/impact";
 import { formatVmodelInjection, resolveVmodelInjection } from "./vmodel/injection";
 import { lintVmodel } from "./vmodel/lint";
 import {
@@ -825,6 +828,94 @@ graph
     process.stdout.write(`${artifact.content}\n`);
   });
 
+const trace = program.command("trace").description("ID-based typed spec trace traversal");
+trace
+  .command("impact")
+  .description("compute upstream/downstream/test impact from a spec id")
+  .requiredOption("--id <id>", "spec id to traverse, for example VMS-004")
+  .option("--json", "JSON output")
+  .action((opts: { id: string; json?: boolean }) => {
+    const repoRoot = process.cwd();
+    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+    try {
+      migrate(db);
+      const result = analyzeTraceImpact(db, opts.id);
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      } else if (result.ok) {
+        process.stdout.write(`trace impact: ${result.root?.spec_id} (${result.root?.spec_kind})\n`);
+        for (const node of result.upstream) process.stdout.write(`  upstream: ${node.spec_id}\n`);
+        for (const node of result.downstream) {
+          process.stdout.write(`  downstream: ${node.spec_id}\n`);
+        }
+        for (const node of result.tests) process.stdout.write(`  test: ${node.spec_id}\n`);
+      } else {
+        for (const finding of result.findings) {
+          process.stderr.write(`[${finding.severity}] ${finding.code}: ${finding.message}\n`);
+        }
+      }
+      process.exitCode = result.ok ? 0 : 1;
+    } finally {
+      db.close();
+    }
+  });
+trace
+  .command("rag")
+  .description("list typed spec closure RAG ledger entries")
+  .option("--id <id>", "filter by spec id")
+  .option("--json", "JSON output")
+  .action((opts: { id?: string; json?: boolean }) => {
+    type TraceRagRow = {
+      spec_id: string;
+      spec_kind: string;
+      layer: string;
+      sub_doc: string;
+      rag: string;
+      closure_status: string;
+      requires_test: number;
+      upstream_count: number;
+      downstream_count: number;
+      test_count: number;
+      finding_count: number;
+      impact_summary: string;
+      source_path: string;
+      indexed_at: string;
+    };
+    const repoRoot = process.cwd();
+    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+    try {
+      migrate(db);
+      const rows = opts.id
+        ? db
+            .prepare(
+              "SELECT spec_id, spec_kind, layer, sub_doc, rag, closure_status, requires_test, upstream_count, downstream_count, test_count, finding_count, impact_summary, source_path, indexed_at FROM spec_rag_closure_entries WHERE spec_id = ? ORDER BY spec_id",
+            )
+            .all(opts.id)
+        : db
+            .prepare(
+              "SELECT spec_id, spec_kind, layer, sub_doc, rag, closure_status, requires_test, upstream_count, downstream_count, test_count, finding_count, impact_summary, source_path, indexed_at FROM spec_rag_closure_entries ORDER BY CASE rag WHEN 'red' THEN 0 WHEN 'yellow' THEN 1 ELSE 2 END, spec_id",
+            )
+            .all();
+      const typedRows = rows as TraceRagRow[];
+      if (opts.json) {
+        process.stdout.write(`${JSON.stringify(typedRows, null, 2)}\n`);
+        return;
+      }
+      if (typedRows.length === 0) {
+        process.stdout.write("trace rag: no rows (run `ut-tdd db rebuild` first)\n");
+        process.exitCode = opts.id ? 1 : 0;
+        return;
+      }
+      for (const row of typedRows) {
+        process.stdout.write(
+          `${row.rag} ${row.spec_id} ${row.closure_status} tests=${row.test_count} findings=${row.finding_count} ${row.impact_summary}\n`,
+        );
+      }
+    } finally {
+      db.close();
+    }
+  });
+
 const session = program.command("session").description("session-log runtime events");
 session
   .command("start")
@@ -873,23 +964,28 @@ hook
         ...(opts.path ? { file_path: opts.path } : {}),
         ...(opts.command ? { command: opts.command } : {}),
       };
-      dispatch(
-        {
-          ...input,
-          hook_event_name: "PostToolUse",
-          tool_name: opts.tool ?? input.tool_name ?? (opts.command ? "Bash" : "manual"),
-          tool_input: toolInput,
-          tool_response: opts.outcome
-            ? {
-                ...(typeof input.tool_response === "object" ? input.tool_response : {}),
-                outcome: opts.outcome,
-              }
-            : input.tool_response,
-        },
-        nodeDeps(process.cwd(), gitBranch, gitHead),
-        "PostToolUse",
-      );
+      const repoRoot = process.cwd();
+      const postInput = {
+        ...input,
+        hook_event_name: "PostToolUse",
+        tool_name: opts.tool ?? input.tool_name ?? (opts.command ? "Bash" : "manual"),
+        tool_input: toolInput,
+        tool_response: opts.outcome
+          ? {
+              ...(typeof input.tool_response === "object" ? input.tool_response : {}),
+              outcome: opts.outcome,
+            }
+          : input.tool_response,
+      };
+      dispatch(postInput, nodeDeps(repoRoot, gitBranch, gitHead), "PostToolUse");
+      const encodingGuard = runWriteEncodingGuard(postInput, {
+        repoRoot,
+        changedFiles: () => loadChangedFiles(repoRoot),
+      });
       process.stdout.write(`session-log: post-tool-use ${input.session_id ?? "ut-tdd-cli"}\n`);
+      for (const message of encodingGuard.messages) {
+        process.stderr.write(`${message}\n`);
+      }
     },
   );
 
@@ -1300,6 +1396,52 @@ db.command("rebuild")
       "  note: plans / roadmap rollups / review evidence / optional Phase3 outputs を projection\n",
     );
   });
+db.command("scope-preview")
+  .description("preview document/activation detection scope from harness.db profiles")
+  .requiredOption("--profile <profile>", "document scale profile id (poc|standard|enterprise)")
+  .option("--activation-profile <profile>", "optional activation profile id")
+  .option("--capability <flag...>", "capability flag(s) that resolve conditional documents")
+  .option("--json", "JSON output")
+  .action(
+    (opts: {
+      profile: string;
+      activationProfile?: string;
+      capability?: string[];
+      json?: boolean;
+    }) => {
+      const repoRoot = process.cwd();
+      const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+      try {
+        const result = buildScopeDryRunPreview(db, {
+          profileId: opts.profile,
+          activationProfileId: opts.activationProfile,
+          capabilityFlags: opts.capability,
+        });
+        if (opts.json) {
+          process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+        } else {
+          process.stdout.write(
+            `scope-preview: profile=${result.profile_id} docs=${result.summary.documents_total} ` +
+              `in_scope=${result.summary.documents_in_scope} conditional=${result.summary.documents_conditional} ` +
+              `deferred=${result.summary.documents_deferred} skipped=${result.summary.documents_skipped}\n`,
+          );
+          process.stdout.write(`  gates=${result.gates.join(",") || "-"}\n`);
+          process.stdout.write(`  detectors=${result.detectors.join(",")}\n`);
+          for (const row of result.documents) {
+            process.stdout.write(
+              `  ${row.resolved_scope_status} ${row.doc_type_id} ${row.detail_override}/${row.status_override} gate=${row.gate_id} action=${row.required_action}\n`,
+            );
+          }
+          for (const finding of result.findings) {
+            process.stdout.write(`  ${finding.severity} ${finding.kind}: ${finding.message}\n`);
+          }
+        }
+        if (!result.ok) process.exitCode = 1;
+      } finally {
+        db.close();
+      }
+    },
+  );
 
 const progress = program.command("progress").description("artifact progress read model");
 progress
@@ -2139,6 +2281,7 @@ program
   .option("--task <text>", "task text")
   .option("--task-file <path>", TASK_FILE_OPTION_DESCRIPTION)
   .option("--provider <provider>", "advisor provider (claude|codex)")
+  .option("--decision <kind>", "decision kind (design|implementation); inferred when omitted")
   .option("--current-model <model>", "current orchestrator model that needs advice")
   .option("--reason <text>", "why upper-model advice is needed")
   .option("--plan <id>", "PLAN id")
@@ -2150,6 +2293,7 @@ program
       task?: string;
       taskFile?: string;
       provider?: string;
+      decision?: string;
       currentModel?: string;
       reason?: string;
       plan?: string;
@@ -2168,11 +2312,17 @@ program
         process.exitCode = 1;
         return;
       }
+      if (opts.decision && opts.decision !== "design" && opts.decision !== "implementation") {
+        process.stderr.write("advisor --decision must be design or implementation\n");
+        process.exitCode = 1;
+        return;
+      }
       const mode = opts.mode ?? detectMode().mode;
       const decision = buildAdvisorDecision({
         task,
         mode,
         provider: opts.provider as AdapterProvider | undefined,
+        decisionKind: opts.decision as "design" | "implementation" | undefined,
         currentModel: opts.currentModel,
         reason: opts.reason,
         planId: opts.plan,
@@ -2189,12 +2339,17 @@ program
         if (opts.json) process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);
         else {
           process.stdout.write(
-            `advisor: provider=${decision.provider} model=${decision.model} effort=${decision.effort} intent=${decision.task_intent} lower=${decision.current_model_lower_than_advisor} dry-run\n`,
+            `advisor: provider=${decision.provider} model=${decision.model} effort=${decision.effort} mode=${decision.consultation_mode} decision=${decision.decision_kind} intent=${decision.task_intent} lower=${decision.current_model_lower_than_advisor} dry-run\n`,
           );
           process.stdout.write(`  - ${decision.reason}\n`);
           process.stdout.write(
             `  - dispatch: command=${decision.adapterPlan.command} args=[${decision.adapterPlan.args.join(" ")}]\n`,
           );
+          if (decision.fallback) {
+            process.stdout.write(
+              `  - fallback on response error: provider=${decision.fallback.provider} model=${decision.fallback.model} effort=${decision.fallback.effort} mode=${decision.fallback.consultation_mode}\n`,
+            );
+          }
         }
         return;
       }
@@ -2208,6 +2363,24 @@ program
         },
         { gitBranch, gitHead, runSessionStartSideEffects, writeHandoverWarnings },
       );
+      // 一次相談先のレスポンスエラーは advisor 全体を落とさず fallback へ切替える
+      // (advisor-tool の advisor_tool_result_error と同じ fail-soft 思想)。
+      let fallbackExecution: ReturnType<typeof executeAdapterPlanForCli> | undefined;
+      if ((execution.exit_code ?? 1) !== 0 && decision.fallback?.adapterPlan.available) {
+        process.stderr.write(
+          `advisor: primary provider=${decision.provider} failed (exit=${execution.exit_code ?? "null"}); falling back to provider=${decision.fallback.provider} model=${decision.fallback.model} mode=${decision.fallback.consultation_mode}\n`,
+        );
+        fallbackExecution = executeAdapterPlanForCli(
+          decision.fallback.adapterPlan,
+          {
+            sessionPrefix: `advisor-${decision.fallback.provider}`,
+            toolName: "advisor",
+            planId: opts.plan,
+            jsonOut: Boolean(opts.json),
+          },
+          { gitBranch, gitHead, runSessionStartSideEffects, writeHandoverWarnings },
+        );
+      }
       const output = {
         ...decision,
         adapterPlan: {
@@ -2215,14 +2388,31 @@ program
           ...execution,
           dry_run: false,
         },
+        ...(fallbackExecution && decision.fallback
+          ? {
+              fallback: {
+                ...decision.fallback,
+                adapterPlan: {
+                  ...decision.fallback.adapterPlan,
+                  ...fallbackExecution,
+                  dry_run: false,
+                },
+              },
+              fallback_used: true,
+            }
+          : {}),
       };
       if (opts.json) process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-      else {
+      else if (fallbackExecution && decision.fallback) {
+        process.stdout.write(
+          `advisor executed (fallback): provider=${decision.fallback.provider} model=${decision.fallback.model} mode=${decision.fallback.consultation_mode} exit=${fallbackExecution.exit_code ?? "null"}\n`,
+        );
+      } else {
         process.stdout.write(
           `advisor executed: provider=${decision.provider} model=${decision.model} exit=${execution.exit_code ?? "null"}\n`,
         );
       }
-      process.exitCode = execution.exit_code ?? 1;
+      process.exitCode = (fallbackExecution ?? execution).exit_code ?? 1;
     },
   );
 

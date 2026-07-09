@@ -267,16 +267,19 @@ export function computeUtHistorySignals(input: {
 }
 
 export type {
+  FilingTarget,
   RouteApprovalPolicy,
   RouteApprovalResult,
   RouteConfigViolation,
   RouteEscalationBoundary,
   RouteEvalResult,
+  RouteFilingResult,
   RouteSignalEntry,
 } from "./routing-contracts";
 export {
   detectRouteEscalationBoundaries,
   evaluateRouteCommand,
+  routeFiling,
   routeSignalToMode,
   validateDContractDsl,
   validateRouteConfigText,

@@ -1,7 +1,16 @@
 import { checkHandoverOutstandingAnchor } from "../handover/index";
 import { checkGreenCommandDigests } from "../lint/green-command-digest";
 import type { LintResult } from "../plan/lint";
-import { checkDbProjectionCoverage, checkDbProjectionIngestion } from "./db-projection";
+import {
+  checkAgentContractDetection,
+  checkDbProjectionCoverage,
+  checkDbProjectionIngestion,
+  checkDesignDetection,
+  checkTypedSpecLedgerBodySync,
+  checkTypedSpecOwnedArtifactDispersal,
+  checkTypedSpecPhaseLayerAlignment,
+  checkTypedSpecTraceClosure,
+} from "./db-projection";
 import { checkDependencyDrift, checkRegressionExpansion } from "./dependency-regression";
 import { checkDocConsistency, checkEntityCoverage, checkFrRegistryAudit } from "./doc-registry";
 import {
@@ -28,6 +37,7 @@ import {
   checkPropagation,
   checkReviewEvidence,
   checkScrumReverse,
+  checkTestDesignNaming,
 } from "./plan-governance";
 import {
   checkCycleP4Verification,
@@ -49,12 +59,18 @@ import {
   checkSubDocSectionStructure,
   checkTelemetryClosure,
 } from "./process-quality";
-import { checkRoadmap, checkVerificationGroupsResult } from "./roadmap-verification";
+import {
+  checkForwardFreezeContractsResult,
+  checkRefactorQaReleaseContractsResult,
+  checkRoadmap,
+  checkVerificationGroupsResult,
+} from "./roadmap-verification";
 import {
   checkCodingRules,
   checkDddTddRules,
   checkDesignLanguage,
   checkGateConfirm,
+  checkGateIdFormat,
   checkReadability,
   checkRuleDrift,
   checkRuntimePortability,
@@ -85,6 +101,7 @@ import {
   checkLintWiring,
   checkProposalDocumentCoverage,
   checkRightArmGatePlanning,
+  checkRightLungDocGovernance,
 } from "./workflow-quality";
 
 const fullProfile = ["full"] as const;
@@ -129,6 +146,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("propagation", () => checkPropagation(deps.repoRoot)),
         full("review-evidence", () => checkReviewEvidence(deps.repoRoot)),
         full("pair-freeze", () => checkPairFreeze(deps.repoRoot)),
+        full("test-design-naming", () => checkTestDesignNaming(deps.repoRoot)),
         full("module-drift", () => checkModuleDrift(deps.repoRoot)),
         full("merged-plan-status", () => checkMergedPlanStatus(deps.repoRoot)),
         full("plan-artifact-existence", () => checkPlanArtifactExistence(deps.repoRoot)),
@@ -150,6 +168,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("runtime-portability", () => checkRuntimePortability(deps.repoRoot)),
         full("rule-drift", () => checkRuleDrift(deps.repoRoot)),
         full("gate-confirm", () => checkGateConfirm(deps.repoRoot)),
+        full("gate-id-format", () => checkGateIdFormat(deps.repoRoot)),
         full("plan-schedule", () => checkPlanSchedule(deps.repoRoot)),
         full("plan-governance", () => checkPlanGovernance(deps.repoRoot)),
         full("plan-dod", () => checkPlanDod(deps.repoRoot)),
@@ -198,6 +217,10 @@ export function buildDoctorCheckDefinitionGroups(
         full("sub-doc-section-structure", () => checkSubDocSectionStructure(deps.repoRoot)),
         full("screen-impl-pair-freeze", () => checkScreenImplPairFreeze(deps.repoRoot)),
         full("verification-groups", () => checkVerificationGroupsResult(deps.repoRoot)),
+        full("forward-freeze-contracts", () => checkForwardFreezeContractsResult(deps.repoRoot)),
+        full("refactor-qa-release-contracts", () =>
+          checkRefactorQaReleaseContractsResult(deps.repoRoot),
+        ),
       ],
     },
     {
@@ -216,6 +239,16 @@ export function buildDoctorCheckDefinitionGroups(
         full("guardrail-invariants", () => checkGuardrailInvariants(deps.repoRoot)),
         full("db-projection-coverage", () => checkDbProjectionCoverage(deps.repoRoot)),
         full("db-projection-ingestion", () => checkDbProjectionIngestion(deps.repoRoot, options)),
+        full("design-detection", () => checkDesignDetection(deps.repoRoot)),
+        full("typed-spec-trace-closure", () => checkTypedSpecTraceClosure(deps.repoRoot)),
+        full("typed-spec-ledger-body-sync", () => checkTypedSpecLedgerBodySync(deps.repoRoot)),
+        full("typed-spec-owned-artifact-dispersal", () =>
+          checkTypedSpecOwnedArtifactDispersal(deps.repoRoot),
+        ),
+        full("typed-spec-phase-layer-alignment", () =>
+          checkTypedSpecPhaseLayerAlignment(deps.repoRoot),
+        ),
+        full("agent-contract-detection", () => checkAgentContractDetection(deps.repoRoot)),
         full("doc-consistency", () => checkDocConsistency(deps.repoRoot)),
         full("entity-coverage", () => checkEntityCoverage(deps.repoRoot)),
         full("fr-registry-audit", () => checkFrRegistryAudit(deps.repoRoot)),
@@ -226,6 +259,7 @@ export function buildDoctorCheckDefinitionGroups(
       definitions: [
         full("improvement-backlog", () => checkImprovementBacklog(deps.repoRoot)),
         full("right-arm-gate-planning", () => checkRightArmGatePlanning(deps.repoRoot)),
+        full("right-lung-doc-governance", () => checkRightLungDocGovernance(deps.repoRoot)),
         full("g8-integration-workflow", () => checkG8IntegrationWorkflow(deps.repoRoot)),
         full("g9-system-workflow", () => checkG9SystemWorkflow(deps.repoRoot)),
         full("g10-ux-workflow", () => checkG10UxWorkflow(deps.repoRoot)),

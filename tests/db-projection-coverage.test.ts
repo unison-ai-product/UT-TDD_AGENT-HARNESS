@@ -12,6 +12,10 @@ describe("db-projection-coverage detector", () => {
 
     expect(result.ok).toBe(true);
     expect(result.checked).toBeGreaterThan(30);
+    expect(result.checked).toBeGreaterThanOrEqual(48);
+    expect(result.checkedIndexes).toBeGreaterThanOrEqual(41);
+    expect(result.missingTables.map((item) => item.table)).not.toContain("spec_defs");
+    expect(result.missingIndexes.map((item) => item.name)).not.toContain("idx_spec_defs_owner");
     expect(result.missingTables).toEqual([]);
     expect(result.missingColumns).toEqual([]);
     expect(result.primaryKeyMismatches).toEqual([]);

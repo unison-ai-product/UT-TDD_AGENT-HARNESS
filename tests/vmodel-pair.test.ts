@@ -22,25 +22,33 @@ const doc = (
   layer: string | null,
   pa: string | null,
   status: string | null = null,
+  nextPairFreeze: string | null = null,
+  content = "",
 ): PairDoc => ({
   path,
   layer,
   pairArtifact: pa,
   status,
+  nextPairFreeze,
+  content,
 });
 
 describe("vmodel pair-freeze lint (U-VPAIR)", () => {
   it("U-VPAIR-001: parsePairDoc / stripInlineComment — frontmatter 抽出 + inline コメント除去", () => {
-    expect(stripInlineComment("self  # wireframe mock 自体が③ペア")).toBe("self");
+    expect(
+      stripInlineComment(
+        "docs/test-design/harness/L10-ux-validation-test-design.md  # L2↔L10 pair",
+      ),
+    ).toBe("docs/test-design/harness/L10-ux-validation-test-design.md");
     expect(stripInlineComment("docs/test-design/harness/L9-system-test-design.md")).toBe(
       "docs/test-design/harness/L9-system-test-design.md",
     );
     const d = parsePairDoc(
       "docs/design/harness/L2-screen/wireframe.md",
-      "---\nlayer: L2\npair_artifact: self  # mock\n---\n",
+      "---\nlayer: L2\npair_artifact: docs/test-design/harness/L10-ux-validation-test-design.md  # mock\n---\n",
     );
     expect(d.layer).toBe("L2");
-    expect(d.pairArtifact).toBe("self");
+    expect(d.pairArtifact).toBe("docs/test-design/harness/L10-ux-validation-test-design.md");
   });
 
   it("U-VPAIR-002: pair-missing / ref-unresolved を検出", () => {
@@ -89,8 +97,9 @@ describe("vmodel pair-freeze lint (U-VPAIR)", () => {
     expect(orphan.orphans[0]?.reason).toBe("trace-orphan");
   });
 
-  it("U-VPAIR-004: self-pair / L2 group — wireframe=self は孤児にしない、group hub 経由で成立", () => {
-    const r = analyzePairFreeze([
+  it("U-VPAIR-004: self / design→design 参照は非対応 — L2 は test-design 直接参照でのみ成立 (RECOVERY-09)", () => {
+    // 旧 self-pair / group hub は撤去済み: どちらも孤児 (fail-close)
+    const legacy = analyzePairFreeze([
       doc("docs/design/harness/L2-screen/wireframe.md", "L2", "self"),
       doc(
         "docs/design/harness/L2-screen/screen-list.md",
@@ -98,8 +107,29 @@ describe("vmodel pair-freeze lint (U-VPAIR)", () => {
         "docs/design/harness/L2-screen/wireframe.md",
       ),
     ]);
+    expect(legacy.ok).toBe(false);
+    expect(legacy.orphans).toHaveLength(2);
+
+    // 正規形: L2 sub-doc → L10 test-design doc の直接参照 (rule 3 双方向)
+    const r = analyzePairFreeze([
+      doc(
+        "docs/design/harness/L2-screen/wireframe.md",
+        "L2",
+        "docs/test-design/harness/L10-ux-validation-test-design.md",
+      ),
+      doc(
+        "docs/design/harness/L2-screen/screen-list.md",
+        "L2",
+        "docs/test-design/harness/L10-ux-validation-test-design.md",
+      ),
+      doc(
+        "docs/test-design/harness/L10-ux-validation-test-design.md",
+        "L2",
+        "docs/design/harness/L2-screen/",
+      ),
+    ]);
     expect(r.ok).toBe(true);
-    expect(r.pairs).toBe(2); // wireframe(self) + screen-list(group)
+    expect(r.pairs).toBe(2);
   });
 
   it("U-VPAIR-004b: README / roadmap は対象外 (pair 欠落でも孤児にしない)", () => {

@@ -4,11 +4,24 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { findReference } from "../src/search/index";
 import { deriveArtifactProgressDecision } from "../src/state-db/artifact-progress-decision";
-import { projectRefactorCandidateSignals } from "../src/state-db/feedback-projections";
+import {
+  analyzeDesignDetectionStats,
+  collectDesignDetectionStats,
+  DESIGN_QUALITY_CHECK_IDS,
+} from "../src/state-db/design-detection";
+import {
+  decideRefactorCandidate,
+  projectFeedbackEvents,
+  projectIssueApprovalGuardrails,
+  projectIssueQueue,
+  projectRefactorCandidateSignals,
+} from "../src/state-db/feedback-projections";
 import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
 import {
+  projectDesignPairFreezeFindings,
   projectRuntimeGuardrailDecisionFromSessionEvent,
   projectRuntimeSkillInvocationFromSessionEvent,
   projectRuntimeTestRunFromSessionEvent,
@@ -19,7 +32,10 @@ import {
   REFACTOR_CANDIDATE_THRESHOLDS,
   REFACTOR_POLICY_TERMS,
 } from "../src/state-db/refactor-candidate-policy";
-import { analyzeRefactorCandidates } from "../src/state-db/refactor-candidates";
+import {
+  analyzeRefactorCandidates,
+  refactorCandidateKey,
+} from "../src/state-db/refactor-candidates";
 import { projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore } from "../src/state-db/runtime-projections";
 import { projectSkillMetrics as projectSkillMetricsCore } from "../src/state-db/skill-projections";
 
@@ -114,6 +130,71 @@ describe("IT-DB-01/02: harness.db projection writer", () => {
 
         expect(result.ok).toBe(true);
         expect(row?.path).toBe("skills/refactoring.md");
+      } finally {
+        db.close();
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("projects design-quality coverage rows from the real repo rebuild", () => {
+    if (!hasSourceProjectionPlanDocs()) return;
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      rebuildHarnessDb({ db });
+
+      const rows = db
+        .prepare(
+          "SELECT subject_id, value, threshold, status FROM coverage WHERE scope = ? AND metric = ? ORDER BY subject_id",
+        )
+        .all("design-quality", "violation_count") as Array<{
+        subject_id: string;
+        value: number;
+        threshold: number;
+        status: string;
+      }>;
+      expect(rows.map((row) => row.subject_id)).toEqual([...DESIGN_QUALITY_CHECK_IDS].sort());
+      expect(rows.every((row) => row.value === 0 && row.threshold === 0)).toBe(true);
+      expect(rows.every((row) => row.status === "passed")).toBe(true);
+
+      const stats = collectDesignDetectionStats(db);
+      expect(analyzeDesignDetectionStats(stats).ok).toBe(true);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("projects pair-freeze orphan findings as DB-detectable design findings", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-design-pair-projection-"));
+    try {
+      mkdirSync(join(root, "docs", "design", "harness", "L1-requirements"), {
+        recursive: true,
+      });
+      mkdirSync(join(root, "docs", "test-design", "harness"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "design", "harness", "L1-requirements", "functional.md"),
+        ["---", "layer: L1", "status: confirmed", "---", "# functional", ""].join("\n"),
+        "utf8",
+      );
+      const db = openHarnessDb(":memory:", { repoRoot: root });
+      try {
+        migrate(db);
+        projectDesignPairFreezeFindings(root, db);
+        const finding = db
+          .prepare(
+            "SELECT kind, severity, subject_id, source, status FROM findings WHERE kind LIKE ?",
+          )
+          .get("design-pair-orphan:%");
+        expect(finding).toMatchObject({
+          kind: "design-pair-orphan:pair-missing",
+          severity: "error",
+          subject_id: "docs/design/harness/L1-requirements/functional.md",
+          source: "vmodel-pair-freeze",
+          status: "open",
+        });
+        expect(analyzeDesignDetectionStats(collectDesignDetectionStats(db)).ok).toBe(false);
       } finally {
         db.close();
       }
@@ -446,6 +527,88 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
           }),
         ]),
       );
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps refactor candidate lifecycle decisions across rebuilds", () => {
+    const repoRoot = join(tmpdir(), `ut-tdd-refactor-lifecycle-${randomUUID()}`);
+    try {
+      mkdirSync(join(repoRoot, "src"), { recursive: true });
+      writeFileSync(
+        join(repoRoot, "src", "fixture.ts"),
+        Array.from({ length: 950 }, (_, i) => `function check${i}() {\n  return ${i};\n}`).join(
+          "\n",
+        ),
+      );
+
+      const db = openHarnessDb(":memory:", { repoRoot });
+      try {
+        const input = {
+          repoRoot,
+          db,
+          relationGraph: { nodes: [], edges: [], verificationProfiles: [], findings: [] },
+          documentExports: {
+            document_export_runs: [],
+            document_export_datasets: [],
+            document_export_artifacts: [],
+            findings: [],
+            actionsTaken: [],
+            ok: true,
+          },
+          verificationEvidence: {
+            verification_profiles: [],
+            verification_recommendations: [],
+            mcp_server_runs: [],
+            external_tool_findings: [],
+            findings: [],
+            ok: true,
+          },
+        };
+        expect(rebuildHarnessDb(input).ok).toBe(true);
+
+        const detected = analyzeRefactorCandidates([
+          {
+            path: "src/fixture.ts",
+            content: Array.from(
+              { length: 950 },
+              (_, i) => `function check${i}() {\n  return ${i};\n}`,
+            ).join("\n"),
+          },
+        ]).find((candidate) => candidate.kind === "split-module");
+        expect(detected).toBeDefined();
+        if (!detected) throw new Error("split-module candidate was not detected");
+        const candidateKey = refactorCandidateKey(detected);
+        const initial = db
+          .prepare("SELECT state, linked_plan_id FROM refactor_candidates WHERE candidate_key = ?")
+          .get(candidateKey);
+        expect(initial).toMatchObject({ state: "open", linked_plan_id: "" });
+
+        expect(
+          decideRefactorCandidate(db, {
+            candidate_key: candidateKey,
+            state: "rejected",
+            decided_at: "2026-07-08T20:00:00.000Z",
+          }).ok,
+        ).toBe(true);
+        expect(rebuildHarnessDb(input).ok).toBe(true);
+
+        const preserved = db
+          .prepare("SELECT state, linked_plan_id FROM refactor_candidates WHERE candidate_key = ?")
+          .get(candidateKey);
+        expect(preserved).toMatchObject({ state: "rejected", linked_plan_id: "" });
+        const signal = db
+          .prepare("SELECT status FROM quality_signals WHERE source = ? AND subject_id = ?")
+          .get("refactor-candidate-detector", "src/fixture.ts");
+        expect(signal).toMatchObject({ status: "pass" });
+        const feedback = db
+          .prepare("SELECT COUNT(*) AS n FROM feedback_events WHERE signal_type = ?")
+          .get("refactor_candidate:split-module");
+        expect(Number(feedback?.n ?? 0)).toBe(0);
+      } finally {
+        db.close();
+      }
     } finally {
       rmSync(repoRoot, { recursive: true, force: true });
     }
@@ -988,6 +1151,151 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
+  it("projects detector route candidates into feedback, dry-run issue queue, and approval guardrail", () => {
+    const db = openHarnessDb(":memory:");
+    const deps = {
+      nowIso: () => "2026-07-08T00:00:00.000Z",
+      stableId: (prefix: string, value: string) =>
+        `${prefix}:${value.replace(/[^A-Za-z0-9._:-]+/g, "-")}`,
+      recordProjectionEvent,
+    };
+    try {
+      migrate(db);
+      recordProjectionEvent(db, {
+        table: "detector_route_candidates",
+        id: "candidate:spec-ir-orphan",
+        row: {
+          route_candidate_id: "candidate:spec-ir-orphan",
+          source_table: "findings",
+          source_id: "finding:spec-ir-orphan",
+          detector_id: "spec-ir-integrity",
+          finding_kind: "spec-ir-orphan-relation",
+          severity: "warn",
+          subject_kind: "spec_ir",
+          subject_id: "spec-relation:missing",
+          filing_target_id: "routeFiling:feature_addition",
+          target_layer: "L6",
+          target_sub_doc: "function-spec",
+          candidate_status: "non_ready",
+          reason: "routeFiling SSoT evaluation required",
+          evidence_path: "docs/plans/PLAN-L6-39-vmodel-spec-ir-function-contracts.md",
+          computed_at: "2026-07-08T00:00:00.000Z",
+        },
+      });
+
+      projectFeedbackEvents(db, deps);
+      projectIssueQueue(db, deps);
+      projectIssueApprovalGuardrails(db, deps);
+
+      const feedback = db
+        .prepare(
+          "SELECT source_table, source_id, signal_type, severity, next_action FROM feedback_events WHERE source_table = ?",
+        )
+        .get("detector_route_candidates") as
+        | {
+            source_table: string;
+            source_id: string;
+            signal_type: string;
+            severity: string;
+            next_action: string;
+          }
+        | undefined;
+      expect(feedback).toMatchObject({
+        source_table: "detector_route_candidates",
+        source_id: "candidate:spec-ir-orphan",
+        signal_type: "detector_route_candidate:spec-ir-orphan-relation",
+        severity: "warn",
+      });
+      expect(feedback?.next_action).toContain("routeFiling SSoT");
+      expect(feedback?.next_action).toContain("route_eval_mode=add-feature");
+      expect(feedback?.next_action).toContain("allowed_kinds=add-design,add-impl");
+      expect(feedback?.next_action).toContain("layer_band=L3-L6,L7");
+
+      const issue = db
+        .prepare(
+          "SELECT title, body, status, human_approval_required, external_issue_url FROM issue_queue WHERE source_event_id = ?",
+        )
+        .get("feedback:detector-route-candidate:candidate:spec-ir-orphan") as
+        | {
+            title: string;
+            body: string;
+            status: string;
+            human_approval_required: number;
+            external_issue_url: string;
+          }
+        | undefined;
+      expect(issue).toMatchObject({
+        title: "[ut-tdd detector candidate] detector_route_candidate:spec-ir-orphan-relation",
+        status: "queued_dry_run",
+        human_approval_required: 1,
+        external_issue_url: "",
+      });
+      expect(issue?.body).toContain("Human approval is required before external issue creation");
+      expect(issue?.body).toContain("routeFiling SSoT evaluation is recorded");
+      expect(issue?.body).toContain("review_status=ssot_evaluated");
+
+      const guardrail = db
+        .prepare(
+          "SELECT decision, human_signoff_required FROM guardrail_decisions WHERE guardrail = ?",
+        )
+        .get("external-github-issue-approval") as
+        | { decision: string; human_signoff_required: number }
+        | undefined;
+      expect(guardrail).toMatchObject({
+        decision: "requires-human-approval",
+        human_signoff_required: 1,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("does not project closed detector route candidates into feedback or issue queue", () => {
+    const db = openHarnessDb(":memory:");
+    const deps = {
+      nowIso: () => "2026-07-08T00:00:00.000Z",
+      stableId: (prefix: string, value: string) =>
+        `${prefix}:${value.replace(/[^A-Za-z0-9._:-]+/g, "-")}`,
+      recordProjectionEvent,
+    };
+    try {
+      migrate(db);
+      recordProjectionEvent(db, {
+        table: "detector_route_candidates",
+        id: "candidate:closed",
+        row: {
+          route_candidate_id: "candidate:closed",
+          source_table: "findings",
+          source_id: "finding:closed",
+          detector_id: "spec-ir-integrity",
+          finding_kind: "spec-ir-orphan-relation",
+          severity: "warn",
+          subject_kind: "spec_ir",
+          subject_id: "spec-relation:closed",
+          filing_target_id: "routeFiling:feature_addition",
+          target_layer: "L6",
+          target_sub_doc: "function-spec",
+          candidate_status: "closed",
+          reason: "already handled",
+          evidence_path: "docs/plans/PLAN-L6-39-vmodel-spec-ir-function-contracts.md",
+          computed_at: "2026-07-08T00:00:00.000Z",
+        },
+      });
+
+      projectFeedbackEvents(db, deps);
+      projectIssueQueue(db, deps);
+
+      expect(
+        db
+          .prepare("SELECT COUNT(*) AS n FROM feedback_events WHERE source_table = ?")
+          .get("detector_route_candidates"),
+      ).toMatchObject({ n: 0 });
+      expect(db.prepare("SELECT COUNT(*) AS n FROM issue_queue").get()).toMatchObject({ n: 0 });
+    } finally {
+      db.close();
+    }
+  });
+
   it("turns unresolved cross-drive/model joins into findings instead of silently skipping them", () => {
     const db = openHarnessDb(":memory:");
     try {
@@ -1154,10 +1462,123 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(rowCounts(db).test_cases).toBeGreaterThan(0);
       expect(rowCounts(db).test_artifact_edges).toBeGreaterThan(0);
       expect(rowCounts(db).artifact_progress).toBeGreaterThan(0);
+      expect(rowCounts(db).spec_defs).toBeGreaterThan(0);
+      expect(rowCounts(db).spec_relations).toBeGreaterThan(0);
+      expect(rowCounts(db).schedule_entries).toBeGreaterThan(0);
+      expect(rowCounts(db).activation_entries).toBeGreaterThan(0);
+      expect(rowCounts(db).activation_schedule_reviews).toBeGreaterThan(0);
+      expect(rowCounts(db).document_catalog_entries).toBeGreaterThan(0);
+      expect(rowCounts(db).document_scale_profile_entries).toBeGreaterThan(0);
+      expect(rowCounts(db).document_scale_profile_reviews).toBeGreaterThan(0);
+      expect(rowCounts(db).spec_rag_closure_entries).toBeGreaterThan(0);
       const inheritedOracle = db
         .prepare("SELECT COUNT(*) AS count FROM test_cases WHERE test_file = ? AND oracle_id = ?")
         .get("tests/handover.test.ts", "U-HOVER-001") as { count: number } | undefined;
       expect(inheritedOracle?.count ?? 0).toBeGreaterThan(0);
+      const specPlan = db
+        .prepare("SELECT layer, sub_doc, lifecycle_status FROM spec_defs WHERE plan_id = ?")
+        .get("PLAN-L6-39-vmodel-spec-ir-function-contracts") as
+        | { layer: string; sub_doc: string; lifecycle_status: string }
+        | undefined;
+      expect(specPlan).toMatchObject({
+        layer: "L6",
+        sub_doc: "function-spec",
+        lifecycle_status: "confirmed",
+      });
+      const specRelation = db
+        .prepare("SELECT relation_kind FROM spec_relations WHERE plan_id = ? AND evidence_path = ?")
+        .get(
+          "PLAN-L6-39-vmodel-spec-ir-function-contracts",
+          "PLAN-L5-13-vmodel-spec-ir-physical-data",
+        ) as { relation_kind: string } | undefined;
+      expect(specRelation).toMatchObject({ relation_kind: "requires" });
+      const schedule = db
+        .prepare("SELECT v_pair, rag FROM schedule_entries WHERE plan_id = ?")
+        .get("PLAN-L6-39-vmodel-spec-ir-function-contracts") as
+        | { v_pair: string; rag: string }
+        | undefined;
+      expect(schedule).toMatchObject({ v_pair: "L7", rag: "green" });
+      const activation = db
+        .prepare("SELECT profile_id, enabled FROM activation_entries WHERE plan_id = ?")
+        .get("PLAN-L6-39-vmodel-spec-ir-function-contracts") as
+        | { profile_id: string; enabled: number }
+        | undefined;
+      expect(activation).toMatchObject({ profile_id: "vmodel-clean-core", enabled: 1 });
+      const activationReview = db
+        .prepare(
+          "SELECT profile_id, current_location, scope_status, rag FROM activation_schedule_reviews WHERE plan_id = ?",
+        )
+        .get("PLAN-L7-385-vmodel-activation-profile-join") as
+        | { profile_id: string; current_location: string; scope_status: string; rag: string }
+        | undefined;
+      expect(activationReview).toMatchObject({
+        profile_id: "vmodel-clean-core",
+        current_location:
+          "U7b: activation profile と工程表をjoinしてversion-up対象/除外/延期理由を検索可能化済",
+        scope_status: "in_scope",
+        rag: "green",
+      });
+      expect(findReference(db, "vmodel-clean-core PLAN-L7-385").at(0)).toMatchObject({
+        subject_type: "activation_schedule_review",
+      });
+      const documentCatalog = db
+        .prepare(
+          "SELECT layer, sub_doc, default_status FROM document_catalog_entries WHERE doc_type_id = ?",
+        )
+        .get("DOC-L4-DATA") as
+        | { layer: string; sub_doc: string; default_status: string }
+        | undefined;
+      expect(documentCatalog).toMatchObject({
+        layer: "L4",
+        sub_doc: "data",
+        default_status: "required",
+      });
+      expect(findReference(db, "DOC-L4-DATA document catalog").at(0)).toMatchObject({
+        subject_type: "document_catalog_entry",
+      });
+      const documentScaleProfile = db
+        .prepare(
+          "SELECT decision, catalog_layer, catalog_sub_doc FROM document_scale_profile_reviews WHERE profile_id = ? AND doc_type_id = ?",
+        )
+        .get("enterprise", "DOC-L4-REPORT") as
+        | { decision: string; catalog_layer: string; catalog_sub_doc: string }
+        | undefined;
+      expect(documentScaleProfile).toMatchObject({
+        decision: "adopt",
+        catalog_layer: "L4",
+        catalog_sub_doc: "report",
+      });
+      expect(findReference(db, "enterprise DOC-L4-REPORT adopt").at(0)).toMatchObject({
+        subject_type: "document_scale_profile_review",
+      });
+      const typedSpec = db
+        .prepare("SELECT spec_kind, section_anchor FROM spec_defs WHERE spec_id = ?")
+        .get("VMS-004") as { spec_kind: string; section_anchor: string } | undefined;
+      expect(typedSpec).toMatchObject({
+        spec_kind: "typed-spec-authoring-source",
+        section_anchor: "spec.defines:VMS-004",
+      });
+      expect(findReference(db, "VMS-004 typed-spec-authoring-source").at(0)).toMatchObject({
+        subject_type: "typed_spec",
+        subject_id: "VMS-004",
+      });
+      const specRag = db
+        .prepare(
+          "SELECT rag, closure_status, test_count, finding_count FROM spec_rag_closure_entries WHERE spec_id = ?",
+        )
+        .get("VMS-004") as
+        | { rag: string; closure_status: string; test_count: number; finding_count: number }
+        | undefined;
+      expect(specRag).toMatchObject({
+        rag: "green",
+        closure_status: "closed",
+        finding_count: 0,
+      });
+      expect(specRag?.test_count ?? 0).toBeGreaterThan(0);
+      expect(findReference(db, "VMS-004 spec closure RAG").at(0)).toMatchObject({
+        subject_type: "spec_rag_closure_entry",
+        subject_id: "VMS-004",
+      });
     } finally {
       db.close();
     }

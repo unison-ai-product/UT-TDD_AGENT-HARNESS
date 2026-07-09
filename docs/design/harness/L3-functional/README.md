@@ -32,7 +32,7 @@ L1 業務要求 / 機能要求 / NFR を L3 機能要件 (FR-* + AC-* + IPA グ�
 ## L1 ↔ L3 ↔ L12 接続
 
 - **上流 (L1 baton)**: L1 5 sub-doc + L2-screen placeholder を全件 `dependencies.requires` で列挙 (G1-trace R4 充足規約、screen §4.1 参照)。L2-screen は L3 の未充足依存ではなく、L2 着手時に PLAN-L2-01〜04 で本起票する明示 carry として扱う。
-- **下流 (L3 → L12 pair)**: 本 sub-doc 3 件全体 ↔ `docs/test-design/harness/L3-acceptance-test-design.md` 1 doc (V-model L3↔L12 pair)
+- **下流 (L3 → L12 pair)**: 本 sub-doc 3 件全体 ↔ `docs/test-design/harness/L12-acceptance-test-design.md` 1 doc (V-model L3↔L12 pair)
 - **下流 (L3 → L4)**: L4 PLAN (PLAN-L4-01〜05) は本 sub-doc 全件を `dependencies.requires` に列挙
 
 ## 横断原則継承 (CC2 carry)

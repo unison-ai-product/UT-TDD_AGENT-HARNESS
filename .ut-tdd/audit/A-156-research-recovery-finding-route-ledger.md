@@ -74,6 +74,25 @@ record-only (A-173 と同 disposition)。詳細は A-174。
 
 PO /goal 指示により record-only disposition を解除し、A-172 / A-173 / A-174 / dogfood の全候補を修正駆動モデルで起票済み (plan lint green)。対応表の正本は `.ut-tdd/audit/A-175-architecture-audit-registry-2026-07-02.md` §2 (PLAN-RECOVERY-06/07、PLAN-L7-232〜245、PLAN-L4-15/16)。以降の状態管理は各 PLAN が正本。
 
+## A-185 Candidates (2026-07-07, vmodel-docgen リファレンスマイニング)
+
+出所監査 = `.ut-tdd/audit/A-185-vmodel-docgen-reference-mining-2026-07-07.md`。`route eval` 実走証跡は
+`route-approval.jsonl` 2026-07-07。全て auto_create=false、人間承認待ち。全所見が feature-gap (不足機能の追加)
+のため Recovery 系の新規候補は無し。セキュリティは A-174 F-4 で routing 済のため再掲のみ (二重起票回避)。
+
+| source | finding | type | candidate route | required payload |
+|---|---|---|---|---|
+| A-185 §A① | セキュリティ設計/STRIDE/権限マトリクス slot 欠落 (認証認可を持つ harness 自身に脅威モデル不在) | `feature-gap` | **既 routing 済 = PLAN-L4-16 (draft)**。新規起票せず draft の unblock (A-174 F-4 と同一) | 脅威モデル/権限マトリクス/対策/セキュリティテストの slot 確定 (PO/TL 判断) |
+| A-185 §B① | 設計 doc 横断の重複定義検出 + 設計 doc 級の循環依存検出が非カバー (namespace 個別 dup / module 級 cycle のみ) | `feature-gap` | Add-feature via `feature_addition` | vmodel-docgen `cmd_check` を TS 再設計。既存 `detectCycles` (module 級) / namespace dup を設計 doc 級へ拡張、doctor 配線 |
+| A-185 §B② | 設計間依存グラフ (共有 ID 重み) / focus view / trace 図が未実装 (harness.db trace_edges から導出可) | `feature-gap` | Add-feature via `feature_addition` = **PLAN-L7-247/248 (parked)** の具体化 | `cmd_deps`/`diagram_dsl` を設計 source に、parked 解除可否判断、trace 図の出所リンク |
+| A-185 §B③ | 規模プロファイル機構 (PoC/Standard/Enterprise × 粒度) が無く、product-select 判定が手動 | `feature-gap` | Add-feature via `feature_addition` | `cmd_profile`/`profiles.yaml` parity。採用/skip/粒度の自動判定で §A④ gap 吸収 |
+| A-185 §A② | テスト計画書 (全体) slot 欠落 (層別 test-design の上位統制が無い) | `feature-gap` | Add-feature via `feature_addition` | RECOVERY-10 右肺 (検証戦略の上位) と統合設計 |
+| A-185 §A③ | データディクショナリ / 表示名ラベル / エラーメッセージ / i18n slot 欠落 | `feature-gap` | Add-feature via `feature_addition` | L4 `data`/新 slot で back-fill、document-system-map §1b 拡張 |
+| A-185 §A④ | 環境定義 / ネットワーク / インフラ / DR-BCP / 変更管理 slot 欠落 (product-select) | `feature-gap` | Add-feature via `feature_addition` | §B③ 規模プロファイルで skip/採用 自動判定に吸収 |
+
+**disposition (2026-07-07)**: record-only (routeable candidate 記録のみ)。実 PLAN 起票は PO/TL yes 後。
+着手前段として document-system-map §4 へ未カバー slot 表 + 規模プロファイル判定を追記予定 (PO 承認済方針)。
+
 ## Boundary
 
 This ledger does not create Recovery PLANs automatically. It records routeable candidates only.

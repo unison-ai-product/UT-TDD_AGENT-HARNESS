@@ -42,6 +42,41 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 
 > **内部資産 (roster / skill catalog) の非 entity 判断 (A-90、ADR-004 整合、PO 確定 2026-06-01)**: subagent roster と skill catalog は **data 集約に含めない**。理由: ADR-004 で markdown (`.claude/agents/*.md` / `docs/skills/**/*.md`) を**唯一正本**とし、TS (層2、roster/skills module) は起動時に scan して **in-memory 構築 (scan-on-demand、永続 state なし)** するため、`.ut-tdd/` に独自の永続 entity を持たない。よって **5 集約モデルは不変** (roster/skill は state を持つ entity ではなく、fs 正本に対する読みモデル)。architecture §3.1 roster/skills building block / function §1.1 / L9 ST-ASSET と本判断で整合 (cross-sub-doc 沈黙 gap を解消)。詳細 = §8 state schema / ADR-004 Consequences。
 
+### §1.1 Vモデル宣言型 spec IR (PLAN-L4-19)
+
+Vモデル改善に伴う「宣言型によるデータベース引き込み」は、設計正本を DB へ移すものではない。docs / PLAN / test-design / 工程管理表を authoring source とし、`.ut-tdd/harness.db` には検出・起票補助用の IR projection を作る。これにより検出系は、文字列探索だけでなく仕様定義・仕様間関係・工程現在地・活性化 profile を query できる。
+
+工程管理表の専用 authoring source は `docs/governance/vmodel-upgrade-schedule.md` である。`ScheduleEntry`
+projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来の fallback row より優先する。未掲載 PLAN
+は後方互換のため PLAN frontmatter から fallback 生成するが、これは工程表正本を補完する暫定 projection であり、
+工程表に載った行を上書きしてはならない。
+
+| IR entity / view | L4 分類 | 所属集約 | 正本 | DB projection での役割 |
+|---|---|---|---|---|
+| **SpecDef** | entity (子) | Artifact | 所有 artifact 本文の `spec.defines` / `docs/governance/vmodel-typed-spec-definitions.md` bootstrap / docs / PLAN / test-design の frontmatter と章 anchor | `defines` された要件・設計要素・テスト設計要素を安定 ID / owner artifact / section anchor / lifecycle で検索可能にする。typed spec 宣言がある場合は見出し推測より優先する |
+| **SpecRelation** | entity (子) | Artifact | `spec.defines[].traces_from` / `traces_to` / `tests` / pair 宣言 / design-to-test 参照 | `requires` / `verifies` / `pairs` / `derives` / `supersedes` / `traces_from` / `traces_to` / `tests` を edge として保持し、未定義・未参照・双方向不一致・test backlink 欠落・missing-test・ledger mismatch を検出する |
+| **ScheduleEntry** | entity (子) | Workflow | 工程管理表 / Forward spine | current_location / V-pair / predecessor / RAG / adoption / blocked reason を保持し、現在地と次工程を明示する |
+| **ActivationEntry** | entity (子) | Workflow | activation profile / version target / 適用除外宣言 | profile ごとの in-scope / out-of-scope / defer reason / target version を保持し、駆動モデル選択を厳格化する |
+| **ActivationScheduleReview** | derived_view | (CQRS 読みモデル) | ScheduleEntry × ActivationEntry | version-up wave の対象/除外/延期理由と現在地を join し、検索と検出が profile と工程表を同時に読めるようにする |
+| **AgentContract** | entity (子) | Artifact | `docs/governance/vmodel-agent-contracts.md` の `agent_contracts` 宣言 | ZIP の doc-local `agent.read_first` / `agent.done_when` を HARNESS の authoring source 契約として保持し、編集前に読む artifact と完了 gate を検索可能にする |
+| **DetectorFinding** | derived_view | (CQRS 読みモデル) | detector / doctor / review の実行結果 | artifact / relation / schedule / quality signal を route candidate 化する。FilingTarget は function §3.2.1 から導出し、検出系は layer/sub_doc/pairing を創作しない |
+
+不変条件:
+
+- `SpecDef` / `SpecRelation` は Artifact 集約内で完結し、Plan / Workflow を直接変更しない。
+- `spec.defines` は型付き宣言正本であり、検出系は ID / kind / trace を推測で創作しない。
+- typed spec の `traces_to` と相手側 `traces_from`、および `tests` と test spec 側 `traces_from` は閉包として突合する。片方向だけの宣言は検出器が補完せず finding にする。
+- typed spec の本文実体、台帳行、V-model phase は宣言と同じ authoring source から読む。本文実体欠落、台帳行欠落、未知台帳ID、重複台帳ID、phase 逆流は検出器が補完せず finding にする。
+- typed spec の宣言元は所有 artifact に分散する。`spec_defs.source_path` は台帳の `ledger_sources` に含まれる必要があり、中央 bootstrap doc が所有外 ID を握り続ける状態は finding にする。
+- typed spec の `v_phase` は宣言元 artifact の V-model 層宣言と一致する。通常 doc は `layer` / path 由来層、test-design は `executed_at_layer`、governance doc は `typed_spec_phase_owner` を owner phase として持つ。
+- `AgentContract` は doc-local agent 契約の authoring source であり、`read_first` / `done_when` を DB 側で補完しない。ZIP の `detect green` は `doctor:<gate-id>` へ翻訳された構造契約として読む。
+- `ScheduleEntry` / `ActivationEntry` は Workflow 集約の projection input であり、PLAN frontmatter を暗黙更新しない。
+- `ScheduleEntry` の優先順位は、専用工程管理表 → PLAN frontmatter fallback の順とする。
+- `ActivationScheduleReview` は読みモデルであり、profile / 工程表 / PLAN を暗黙更新しない。
+- `DetectorFinding` と DB table は読みモデルであり、authoring source ではない。
+- docs/YAML/JSON 正本と projection の齟齬は doctor finding として fail-close し、projection 側で silent repair しない。
+- FilingTarget の `allowed_kinds` / `layer_band` / `sub_doc_hint` / `pairing_obligation` は function §3.2.1 の SSoT から導出し、detector 固有 heuristic に閉じ込めない。
+
 ## §2 集約境界 (Aggregate)
 
 | 集約 | ルート | 境界 (含む entity) | トランザクション一貫性単位 |
@@ -55,11 +90,11 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 > 集約間は **ID 参照のみ** (直接オブジェクト参照禁止、DDD 原則)。例: artifact.pair は plan を ID で参照。
 > **acceptance_criterion / acceptance_test の帰属** (business §10.1.1「FR-* 配下」): AC は FR の受入条件、AT はその検証であり、両者は artifact の **trace 経路 (AC↔AT 被覆、g3-trace R3)** で Artifact 集約に紐づく。FR 自体は artifact (要件 doc) の内容であるため、AC/AT を Artifact 集約の子とする。
 
-## §3 値オブジェクト (Value Object) — 12 種 (`src/schema/index.ts` と 1:1、SubDoc は IMP-026 で zod 化済み)
+## §3 値オブジェクト (Value Object) — 13 種 (`src/schema/index.ts` と 1:1、SubDoc は IMP-026 で zod 化済み)
 
 | 値オブジェクト | 値域 | src/schema |
 |---|---|---|
-| Kind（種別） | charter/impl/design/poc/reverse/add-design/add-impl/refactor/retrofit/recovery/troubleshoot/research の 12 種 | `VALID_KINDS` |
+| Kind（種別） | charter/impl/design/poc/reverse/add-design/add-impl/refactor/retrofit/recovery/troubleshoot/research/verify の 13 種 | `VALID_KINDS` |
 | Layer | L0-L14 + cross (16) | `VALID_LAYERS` |
 | Drive | be/fe/fullstack/db/agent (5、専門職のみ) | `VALID_DRIVES` |
 | WorkflowPhase（工程） | S0-S4 (kind=poc) / R0-R4 (kind=reverse) の 10 種 | `VALID_WORKFLOW_PHASES` |
@@ -86,7 +121,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | AcId | `AC-FR-<NN>-<NN>` / `AC-NFR-*` / `AC-UX-*` | g3-trace |
 | AtId | `AT-*` | g3-trace |
 | NfrId | `NFR-<NN>` (NFR-09/10 欠番) | g3-trace / doc-consistency |
-| GateId | `G<N>` (G0.5-G14) | (形式 lint 未実装 → IMP-072 carry。現状 gate **状態遷移** は doctor/plan lint が検証、ID **形式**検証は L5 carry) |
+| GateId | `G<N>` (G0.5-G14) | `gate-id-format` (PLAN-L7-395 / IMP-072)。gate **状態遷移** は `gate-confirm`、ID **形式**は `gate-id-format` が検証 |
 | ImpId | `IMP-<NNN>` | improvement-backlog |
 
 > ID は値オブジェクト (不変・等価性は値で判定)。採番は集約ルート起票時に確定。
@@ -109,6 +144,7 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | Plan | kind=poc → workflow_phase ∈ {S0-S4} ∧ layer=cross | frontmatter superRefine で検証 |
 | Plan | kind=reverse ∧ R4 → forward_routing ∧ promotion_strategy 必須 | frontmatter superRefine |
 | Plan | kind=design ∧ layer∈[L1-L6] → sub_doc 必須 ∧ ∈ VALID_SUB_DOCS[layer] | G.1/G.3 |
+| Plan | kind=verify → layer∈[L8-L14] ∧ workflow_phase 禁止 ∧ `PLAN-L<N>-...` の L token は layer と一致 | frontmatter superRefine / plan governance |
 | Plan | agent_slot.model ∈ allowlist、opus は pdm-* のみ | agent-guard |
 | Workflow | 前工程未完了で後工程着手不可 (V-model 順序、D-03=0) | doctor / plan lint |
 | Evaluation | verified 評価は紐付け (実装/A-番号) 必須 | improvement-backlog |
@@ -152,6 +188,15 @@ L1 §10.1 の業務 entity を L4 ドメインモデルへ詳細化する (PLAN-
 | `trace_edges` | V-model 4 artifact + directed edge の照合 |
 | `coverage` | trace coverage / test coverage / plan coverage の集計 |
 | `findings` | drift / connection deficiency / regression / review finding の保存 |
+| `spec_defs` | `SpecDef` projection。仕様 ID、kind、owner artifact、section anchor、lifecycle を検索可能にする |
+| `spec_relations` | `SpecRelation` projection。defines / requires / verifies / pairs / derives / supersedes edge を保持する |
+| `schedule_entries` | `ScheduleEntry` projection。工程管理表の現在地、V-pair、predecessor、RAG、blocked reason を保持する |
+| `activation_entries` | `ActivationEntry` projection。profile ごとの in-scope / out-of-scope / defer reason / target version を保持する |
+| `activation_schedule_reviews` | `ActivationScheduleReview` projection。activation profile と工程表を join し、version-up wave の現在地、対象/除外/延期理由を検索可能にする |
+| `document_catalog_entries` | `DocumentCatalogEntry` projection。Vモデル文書種別 catalog の layer/sub_doc/category/default status/profile control を保持する |
+| `document_scale_profile_entries` | `DocumentScaleProfileEntry` projection。PoC/Standard/Enterprise ごとの文書採用・skip・粒度・理由を保持する |
+| `document_scale_profile_reviews` | `DocumentScaleProfileReview` projection。文書 catalog と規模 profile を join し、product-select 文書の採用理由・skip理由・必要PLANを検索可能にする |
+| `detector_route_candidates` | `DetectorFinding` projection。検出結果を FilingTarget SSoT に渡す候補として保持し、起票先を DB 独自に決定しない |
 | `gate_runs` | gate 判定証跡と doctor/vmodel lint 結果 |
 
 不変条件: projection DB は生成 state だが、検出器の機械 SSoT として扱う。入力となる docs/YAML/JSON と projection の齟齬は doctor が finding として出し、silent repair しない。

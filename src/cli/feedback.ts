@@ -38,7 +38,9 @@ export function registerFeedbackCommands(program: Command): void {
 
   feedback
     .command("list")
-    .description("emit/list harness.db feedback events")
+    .description(
+      "emit/list harness.db feedback events from findings, quality signals, and detector route candidates",
+    )
     .option("--json", "JSON output")
     .option(
       "--emit",

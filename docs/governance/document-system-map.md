@@ -185,6 +185,38 @@ IPA 共通フレーム 2013 (SLCP-JCF) では次が**同義**として扱われ�
 
 > 🟢 本 doc で確定済: §0 (基本設計=外部設計)、§1 (L0-L14 標準マップ)、§3 (配線図=DbC)。これらは concept §3 / §11 の grounding 正本となる。
 
+## §4.1 業界標準カタログ差分 — 未カバー設計書 slot + 規模プロファイル判定 (A-185)
+
+> 外部参照 `vmodel-docgen` (V-model 設計書 53 種の汎用ジェネレータ) との突き合わせ所見。正本 =
+> `.ut-tdd/audit/A-185-vmodel-docgen-reference-mining-2026-07-07.md`。各 gap は research 内部監査ワークフロー
+> (PLAN-L7-198) で route 済で、finding-route ledger `.ut-tdd/audit/A-156` の「A-185 Candidates」に集約
+> (全 feature-gap → Add-feature、auto_create=false、人間承認待ち)。本節はその一望表であり、着手は PO/TL 裁定。
+
+**未カバー / 部分カバー slot 一覧** (UT-TDD `VALID_SUB_DOCS` + §1b/§1c 対照、grep 裏取り済):
+
+| 設計書型 | 判定 | 区分 | 対応方針 | route 先 |
+|---|---|---|---|---|
+| セキュリティ設計 / STRIDE / 権限マトリクス / 対策 | partial | ① 必須 (認証認可を持つ製品) | **既 routing 済 = PLAN-L4-16 (draft) の unblock** (A-174 F-4) | Add-feature (L4-16) |
+| テスト計画書 (全体、層別 test-design の上位) | gap | ① 必須 | slot 新設。RECOVERY-10 右肺 (検証戦略の上位) と統合 | Add-feature |
+| データディクショナリ (field 単位網羅) | gap | ① 必須 (データを持つ製品) | L4 `data` の必須 § 追加 or 新 slot | Add-feature |
+| 表示名/ラベルカタログ・エラーメッセージ一覧 | gap | ② プロダクト選択 (UI 有時) | 新 slot or L4 `ui-standard`/`code-value` 拡張 | Add-feature |
+| 国際化 i18n 設計 | gap | ② プロダクト選択 (多言語時) | 新 slot。規模プロファイルで採否 | Add-feature |
+| 性能試験計画 / セキュリティテスト計画 | gap | ① 必須 (NFR 受入) | 右肺 test-design 群へ NFR 試験計画を追加 | Add-feature (一部 L4-16) |
+| 環境定義 / ネットワーク / サーバー・インフラ設計 | gap | ② プロダクト選択 (インフラ持つ製品) | 規模プロファイルで skip/採用 自動判定 | Add-feature |
+| 信頼性・DR・BCP / 変更管理 | gap | ② プロダクト選択 (本番運用製品) | 同上 (規模プロファイル) | Add-feature |
+| CI/CD 設計・イベント/メッセージスキーマ・KPI/計測・ログトレース設計 | partial | ② プロダクト選択 | 実装/概念はあるが専用設計 doc を slot 化 | Add-feature |
+
+**規模プロファイル判定 (未機構、A-185 §B③ = `vmodel-docgen cmd_profile` parity)**: 上表の「② プロダクト選択」は
+現状 `skip_sub_doc[].reason` の手動判定 (§1b)。参照は **PoC / Standard / Enterprise の規模プロファイル ×
+粒度 (詳細 / 標準 / 簡易)** で各設計書の採用 / skip / 粒度を自動設定する。UT-TDD にこの機構を新設すれば、
+④ 群 (infra/DR/i18n 等) の採否を製品規模から機械判定でき、meta-model の slot を持ちつつ小規模製品では
+自動 skip できる (slot 欠落と意図 skip を区別)。これも A-185 §D で Add-feature に route 済。
+
+> **原則の再確認**: 未カバー = 「meta-model (下流 SI 製品に課す doc 体系) の slot 欠落」であり、harness 自身が
+> CLI で当該成果物を持たないこと (§1b「② プロダクト選択」) とは別問題。slot は meta-model に持ち、harness 自身は
+> `skip_sub_doc[].reason` で明示 skip する ([[ut-tdd-agent-harness-concept_v3.1]] §自己適用境界)。規模を理由に
+> slot 自体を欠落させない (縮退させない)。
+
 ## §5 参照標準
 
 - IPA 共通フレーム 2013 (SLCP-JCF): https://www.ipa.go.jp/publish/secbooks20130304.html

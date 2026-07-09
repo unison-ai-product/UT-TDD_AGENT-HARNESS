@@ -105,6 +105,13 @@ export const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
     requiresApproval: false,
   },
   {
+    tokens: ["verification_plan", "quality_assurance", "test_plan", "right_lung", "verify"],
+    mode: "verify",
+    command: ROUTE_COMMAND_TASK_CLASSIFY,
+    preflight: true,
+    requiresApproval: false,
+  },
+  {
     tokens: ["tech_decision_required", "option_comparison_needed", "adr_required", "research"],
     mode: "research",
     command: ROUTE_COMMAND_TASK_CLASSIFY,

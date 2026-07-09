@@ -62,13 +62,13 @@ describe("static gates", () => {
     expect(result.orphanPaths).toEqual(["docs/design/harness/L4-basic-design/function.md"]);
   });
 
-  it("fails G2 when the wireframe mock self-pair is missing", () => {
+  it("fails G2 when the wireframe mock lacks the L10 test-design pair wiring (RECOVERY-09)", () => {
     const result = analyzeLayerPairGate(
       [
         doc(
-          "docs/design/harness/L2-screen/screen-list.md",
-          "L2",
           "docs/design/harness/L2-screen/wireframe.md",
+          "L2",
+          "self", // 旧 self-pair 残骸は配線として認めない
           "placeholder",
         ),
       ],

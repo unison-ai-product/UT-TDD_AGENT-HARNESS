@@ -464,14 +464,15 @@ describe("team run validation", () => {
     expect(result.ok).toBe(true);
     const se = result.members.find((m) => m.role === "se");
     const qa = result.members.find((m) => m.role === "qa");
-    // ワーカー(se)=主(claude)/軽量 tier、検証(qa)=相手(codex)/フロンティアで明示的に別 provider。
-    expect(se?.provider).toBe("claude");
-    expect(se?.model_selection.model).toBe("claude-haiku-4-5");
-    expect(qa?.provider).toBe("codex");
-    expect(qa?.model_selection.model).toBe("gpt-5.5");
+    // 実装レーン (PO 指示 2026-07-08): 実装(se)=相手(codex) がクロス実行、
+    // 検証(qa)=実行側と別 provider (=主 claude、フロンティア) がクロスレビュー。
+    expect(se?.provider).toBe("codex");
+    expect(se?.model_selection.model).toBe("gpt-5.3-codex-spark");
+    expect(qa?.provider).toBe("claude");
+    expect(qa?.model_selection.model).toBe("claude-opus-4-8");
     expect(se?.provider).not.toBe(qa?.provider);
-    expect(se?.adapter?.command).toBe("claude");
-    expect(qa?.adapter?.command).toBe("codex");
+    expect(se?.adapter?.command).toBe("codex");
+    expect(qa?.adapter?.command).toBe("claude");
   });
 
   it("blocks a routed frontier reviewer without explicit permission (fail-close)", () => {
@@ -489,13 +490,13 @@ describe("team run validation", () => {
     const qa = result.members.find((m) => m.role === "qa");
     expect(qa?.executable).toBe(false);
     expect(qa?.adapter).toBeUndefined();
-    // ワーカーは明示許可不要で配置される (主=claude)。
+    // ワーカーは明示許可不要で配置される (実装レーン: 相手=codex がクロス実行)。
     const se = result.members.find((m) => m.role === "se");
-    expect(se?.provider).toBe("claude");
+    expect(se?.provider).toBe("codex");
     expect(se?.executable).toBe(true);
   });
 
-  it("flips the routed worker to the codex primary when codex hosts the session", () => {
+  it("flips the routed implementation worker to claude when codex hosts the session", () => {
     const team = baseTeam([
       { role: "se", engine: "pmo-sonnet", task: "rename a field" },
       { role: "tl", engine: "codex-tl", task: "review slice A", serialize_after: "se" },
@@ -509,10 +510,10 @@ describe("team run validation", () => {
     expect(result.ok).toBe(true);
     const se = result.members.find((m) => m.role === "se");
     const tl = result.members.find((m) => m.role === "tl");
-    // 主=codex なので worker(se)=codex、相談(tl)=相手(claude)=フロンティア(opus)。
-    expect(se?.provider).toBe("codex");
-    expect(se?.model_selection.model).toBe("gpt-5.3-codex-spark");
-    expect(tl?.provider).toBe("claude");
-    expect(tl?.model_selection.model).toBe("claude-opus-4-8");
+    // 主=codex の実装レーン: 実行(se)=相手(claude)、相談(tl)=主(codex)=フロンティア。
+    expect(se?.provider).toBe("claude");
+    expect(se?.model_selection.model).toBe("claude-haiku-4-5");
+    expect(tl?.provider).toBe("codex");
+    expect(tl?.model_selection.model).toBe("gpt-5.5");
   });
 });

@@ -11,6 +11,8 @@ import {
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index";
+import { migrate } from "../src/state-db/migration";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");
@@ -40,6 +42,40 @@ function parseCliJson(run: ReturnType<typeof runCliIn>) {
   expect(run.status, `stderr:\n${run.stderr}\nstdout:\n${run.stdout}`).toBe(0);
   expect(run.stdout.trim(), `stderr:\n${run.stderr}`).not.toBe("");
   return JSON.parse(run.stdout);
+}
+
+function seedScopePreviewDb(root: string): void {
+  mkdirSync(join(root, ".ut-tdd"), { recursive: true });
+  const db = openHarnessDb(defaultHarnessDbPath(root), { repoRoot: root });
+  try {
+    migrate(db);
+    upsertRow(db, {
+      table: "document_scale_profile_reviews",
+      primaryKey: "document_scale_profile_review_id",
+      row: {
+        document_scale_profile_review_id: "standard:DOC-L4-REPORT",
+        profile_id: "standard",
+        doc_type_id: "DOC-L4-REPORT",
+        document_scale_profile_entry_id: "entry:standard:DOC-L4-REPORT",
+        document_catalog_entry_id: "catalog:DOC-L4-REPORT",
+        decision: "conditional",
+        detail_override: "standard",
+        status_override: "profile_controlled",
+        reason: "report capability flag controls adoption",
+        required_plan_id: "",
+        catalog_layer: "L4",
+        catalog_sub_doc: "report",
+        requirement_class: "product-select",
+        catalog_default_status: "skipped",
+        catalog_profile_controlled: 1,
+        catalog_skip_reason_required: 1,
+        source_path: "docs/governance/vmodel-document-scale-profiles.md",
+        indexed_at: "2026-07-09T00:00:00.000Z",
+      },
+    });
+  } finally {
+    db.close();
+  }
 }
 
 function writeFakeProvider(binDir: string, name: "codex" | "claude"): string {
@@ -256,6 +292,65 @@ describe("L7 CLI surface closure", () => {
     expect(run.stdout).toContain("release-plan");
   }, 15_000);
 
+  it("exposes ID-based trace impact traversal as a CLI surface", () => {
+    const run = runCli(["trace", "impact", "--help"]);
+
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain("--id <id>");
+    expect(run.stdout).toContain("--json");
+  }, 15_000);
+
+  it("exposes typed spec closure RAG as a CLI surface", () => {
+    const run = runCli(["trace", "rag", "--help"]);
+
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain("--id <id>");
+    expect(run.stdout).toContain("--json");
+  }, 15_000);
+
+  it("exposes DB scope-preview as a CLI surface", () => {
+    const run = runCli(["db", "scope-preview", "--help"]);
+
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain("--profile <profile>");
+    expect(run.stdout).toContain("--activation-profile <profile>");
+    expect(run.stdout).toContain("--capability <flag...>");
+    expect(run.stdout).toContain("--json");
+  }, 15_000);
+
+  it("renders DB scope-preview JSON without mutating profile sources", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-scope-preview-cli-"));
+    try {
+      seedScopePreviewDb(root);
+      const run = runCliIn(root, [
+        "db",
+        "scope-preview",
+        "--profile",
+        "standard",
+        "--capability",
+        "report",
+        "--json",
+      ]);
+      const payload = parseCliJson(run);
+
+      expect(payload).toMatchObject({
+        ok: true,
+        profile_id: "standard",
+        summary: {
+          documents_total: 1,
+          documents_in_scope: 1,
+        },
+      });
+      expect(payload.documents[0]).toMatchObject({
+        doc_type_id: "DOC-L4-REPORT",
+        resolved_scope_status: "in_scope",
+        gate_id: "G4",
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 15_000);
+
   it("exposes feedback commands through the extracted registrar", () => {
     const help = runCli(["feedback", "--help"]);
     const classify = runCli(["feedback", "classify", "--text", "please review this regression"]);
@@ -454,16 +549,23 @@ describe("L7 CLI surface closure", () => {
     const payload = JSON.parse(run.stdout);
 
     expect(run.status).toBe(0);
+    // 設計判断 (review intent → design) は Fable 一次 + Codex fallback (PO ルーティング 2026-07-08)。
     expect(payload).toMatchObject({
       provider: "claude",
-      model: "claude-opus-4-8",
-      effort: "high",
+      model: "claude-fable-5",
+      effort: "middle",
+      consultation_mode: "consult",
+      decision_kind: "design",
       current_model_lower_than_advisor: true,
       adapterPlan: {
         provider: "claude",
-        model: "claude-opus-4-8",
-        effort: "high",
+        model: "claude-fable-5",
         dry_run: true,
+      },
+      fallback: {
+        provider: "codex",
+        model: "gpt-5.5",
+        consultation_mode: "consult",
       },
     });
     expect(payload.adapterPlan.stdin).toContain("upper-model advisor");
@@ -504,7 +606,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload).toMatchObject({
         provider: "codex",
         model: "gpt-5.5",
-        effort: "xhigh",
+        effort: "middle",
         adapterPlan: {
           provider: "codex",
           model: "gpt-5.5",

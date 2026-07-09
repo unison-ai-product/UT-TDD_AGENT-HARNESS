@@ -207,10 +207,10 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 | U-ID | 関数 | oracle (DbC) |
 |------|------|--------------|
-| U-VPAIR-001 | `loadPairDocs` | `docs/design/harness/**` + `docs/test-design/harness/**` の frontmatter (path/layer/pair_artifact) を読む / `README.md`・`roadmap.md` を対象外 / inline コメント (`pair_artifact: self  # ...`) を除去して値抽出 |
+| U-VPAIR-001 | `loadPairDocs` | `docs/design/harness/**` + `docs/test-design/harness/**` の frontmatter (path/layer/pair_artifact) を読む / `README.md`・`roadmap.md` を対象外 / inline コメント (`pair_artifact: <path>  # ...`) を除去して値抽出 |
 | U-VPAIR-002 | `analyzePairFreeze` (pair-missing/ref-unresolved) | layer L1-L6 sub-doc で pair_artifact 欠落 → `pair-missing` 1件/`ok=false` / pair_artifact path 不実在 → `ref-unresolved`/`ok=false` |
 | U-VPAIR-003 | `analyzePairFreeze` (trace-bidir) | design→test-design に対し test-design の dir 集合参照が design の所在 dir を含む → pair 成立 / 逆参照無 → `trace-orphan`/`ok=false` |
-| U-VPAIR-004 | `analyzePairFreeze` (self-pair / L2 group) | `pair_artifact: self` → 孤児にしない / L2 group (wireframe 参照) は hub が self-pair なら成立 |
+| U-VPAIR-004 | `analyzePairFreeze` (旧 self/group 非対応) | `pair_artifact: self`・design→design 参照 → `ref-unresolved` 孤児 (旧 self-pair/group hub は PLAN-RECOVERY-09 で撤去) / L2 sub-doc は L10-ux-validation-test-design.md 直接参照で rule 3 成立 |
 | U-VPAIR-005 | `loadPairDocs`+`analyzePairFreeze` (実 repo 回帰ガード) | 実 repo で `orphans == []` (全 V-pair が双方向、孤児0) |
 | U-VPAIR-006 | `pairFreezeMessages` | 孤児なし → `"OK"` / 孤児あり → reason 別文言 (`pair 欠落`/`参照不実在`/`逆参照なし`) |
 
@@ -439,6 +439,23 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-READ-002 | `readabilityMessages` | doctor に path:line:marker を出し、復元要求を明示 |
 | U-READ-003 | `loadL6ReadabilityDocs` | 実 repo L6 design docs 18 件で marker 0 |
 | U-READ-004 | `loadFreezeReadabilityDocs` | 実 repo の L6 design docs + PM trace 対象 L5 PLAN 4 件で marker 0 |
+| U-READ-005 | `analyzeByteIntegrity` | UTF-8 BOM / UTF-16 LE BOM / UTF-16 BE BOM をそれぞれ `utf8-bom` / `utf16le-bom` / `utf16be-bom` violation にする |
+| U-READ-006 | `analyzeByteIntegrity` | 不正 UTF-8 byte sequence を lossy decode 後の文字列だけに頼らず `invalid-utf8` violation にする |
+| U-READ-007 | `analyzeByteIntegrity` | BOM 無 UTF-16LE ASCII 相当の NUL byte と C1 control codepoint を `control-character` violation にする |
+| U-READ-008 | `analyzeByteIntegrity` | `.json` の escaped U+FFFD / mojibake marker を JSON.parse 後の string/key 走査で `json-escaped-mojibake` violation にする |
+| U-READ-009 | `analyzeArtifacts` | byte layer が clean な valid UTF-8 double-encode mojibake でも、string-level denylist を統合して violation にする |
+| U-READ-010 | `checkReadability` / `checkRuntimeReadability` | real repo の docs/root instruction docs と `.ut-tdd` audit/handover artifacts が string + byte 統合 guard で green になる |
+
+### §1.16.3 U-WENC (write encoding guard、PLAN-L7-317)
+
+> ペア = `governance-enforcement.md` §8。doctor/CI の readability gate を待たず、書き込み直後に UTF-8 no-BOM / mojibake marker 違反を可視化する。
+
+| ID | 対象 | Oracle |
+|---|---|---|
+| U-WENC-001 | `hook post-tool-use` + `runWriteEncodingGuard` | `PostToolUse` が触った UTF-16LE `.md` を exit 0 のまま warning + `.ut-tdd/logs/encoding-violations.jsonl` 記録にする |
+| U-WENC-002 | `hook post-tool-use` | UTF-8 no-BOM の日本語 `.md` は warning も violation log も出さない |
+| U-WENC-003 | `runWriteEncodingGuard` | `Bash` / shell 系 tool は明示 target が無い場合に changed file fallback を使い、BOM 付き text を検出する |
+| U-WENC-004 | `collectWriteEncodingGuardTargets` | `apply_patch` header から text path を抽出し、binary path は対象外にする |
 
 ### §1.18 U-GCONF (gate-confirm coupling lint、PLAN-L7-18 / IMP-079)
 
@@ -452,6 +469,9 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-GCONF-004 | `analyzeGateConfirm` | gate PASS の layer に confirmed doc → ok |
 | U-GCONF-005 | `analyzeGateConfirm` | gate table parse 失敗 → `ok=false` + `violation` (fail-close) |
 | U-GCONF-006 | `analyzeGateConfirm` | draft doc は対象外 |
+| U-GID-001 | `analyzeGateIdFormat` | `G0.5` と `G1`〜`G14`、および `G8/G9` などの shorthand 分解結果を受理 |
+| U-GID-002 | `analyzeGateIdFormat` | `G15` / `G01` / `gate-3` を `invalid_forward_gate_id` で fail-close |
+| U-GID-003 | `checkGateIdFormat` | doctor full profile が `gate-id-format - OK` を surface し、repo root 不在では violation |
 
 ### §1.19 U-PLANSCH (plan lint §工程表 最小強制、PLAN-L7-20 / IMP-081)
 
@@ -537,6 +557,14 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
   (`split-module` / `extract-helper` / `deduplicate-function` / `externalize-literal`) の検出、`candidateRank`
   順序、`projectRefactorCandidateSignals` による `quality_signals`/`feedback_events` projection、空入力で
   candidate を捏造しないこと、を green `it` で被覆 (PLAN-L7-147 AC「4 kind すべてを純 detector test が被覆」)。
+
+### §1.23b Refactor candidate lifecycle oracle (PLAN-L7-367)
+
+| U-ID | 対象 | oracle |
+|---|---|---|
+| U-REFACTOR-LIFE-001 | `migrate` / schema registry | `refactor_candidates` table と `idx_refactor_candidates_state` が作成される。 |
+| U-REFACTOR-LIFE-002 | `projectRefactorCandidateSignals` | detector output が `refactor_candidates.state=open` として登録され、既存 `quality_signals` projection も維持される。 |
+| U-REFACTOR-LIFE-003 | `decideRefactorCandidate` + `rebuildHarnessDb` | `rejected` にした candidate は次回 rebuild でも `open` に戻らず、feedback event が再発火しない。 |
 - 関連 detector 後続 (`PLAN-L7-148`/`150`/`151`/`152`/`153`/`158`) は本 descent を基点とする (module extraction /
   closure sweep / precision+policy extraction)。
 
@@ -768,7 +796,7 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 
 | L6 doc | 機能 | 対応 test ファイル | 判定 |
 |---|---|---|---|
-| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) | tests/plan-lint.test.ts, tests/vmodel-pair.test.ts, tests/agent-guard.test.ts, tests/mode-catalog.test.ts, tests/frontmatter.test.ts (U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し) | covered |
+| function-spec.md | 関数 signature (§1) / pseudocode (§2) / rule engine 10 型 (§4) / routeFiling 契約 / spec IR projection 契約 | tests/plan-lint.test.ts, tests/vmodel-pair.test.ts, tests/agent-guard.test.ts, tests/mode-catalog.test.ts, tests/frontmatter.test.ts (U-FUNC/U-CORE/U-RULE は分散実装、専用 U-ID タグ無し)。後続 U3 L7 で tests/spec-ir-projections.test.ts, tests/projection-writer.test.ts, tests/doctor.test.ts に U-SPECIR を実装する。 | covered + pending U3 L7 |
 | edge-case.md | `@edge-normal/error/boundary/throws` 4 観点 | 各 lint test の `@edge-*` 契約実装先に分散 (専用ファイル無し) | covered |
 | session-log.md | resolveActivePlan/recordEvent/compressPlanDigest/onStop/onSessionStart | tests/session-log.test.ts | covered |
 | forced-stop-feedback.md | detectDanglingTurn/recordForcedStop/classifyFeedback/recordFeedback/scanDanglingStops | tests/forced-stop.test.ts | covered |
@@ -790,6 +818,260 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | plan-schedule-lint.md | 工程表 schedule 最小強制 (U-PLANSCH) | tests/plan-lint.test.ts | covered |
 | screen-spec.md | parseScreenQuery/validateScreenQuery/handleScreenEvent/loadScreenViewModel/buildRouteRegistry (U-SCREEN-001〜006) | tests/screen-impl-pair-freeze.test.ts は pair-freeze gate のみを被覆し、上記個別関数 (parseScreenQuery 等) を直接 Grep しても実 test 未検出 | **gap** |
 
-**gap 件数: 1 / 21** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
+## PLAN-L6-38 Router Function Contracts Addendum (駆動モデルルーター関数契約、2026-07-07)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の `routeFiling` /
+> `analyzePlanGovernance.routeModeKindLayer` / `assertL7HasDesignAncestor` 契約 (PLAN-L6-38)。
+> 機構側は internal-processing.md Appendix C (PLAN-L5-10、↔ L8 IT-ROUTE)。実装は後続 add-impl (L7)。
+> **oracle ID 採番規律**: 正式 3 桁 oracle ID (`U-ROUTE-1XX`) は後続 add-impl 着手時に tests への
+> citation と同時に採番する (forward-citation 規律 = `oracle-test-trace` NEW gate。宣言だけ先行させて
+> 未 citation orphan を作らない)。下表の 2 桁 ID は本 addendum 内の設計参照用。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-ROUTE-R1 | `routeFiling(signal)` | 既知 token → mode は `routeSignalToMode` と一致し、`layer_band` / `allowed_kinds` が L4 §3.1 表と一致する FilingTarget を返す (照合対象は L4 §3.1 掲載 mode。拡張 2 mode = design-bottomup/version-up は L4 back-fill 完了までは C.2 暫定 band と一致で可)。 |
+| U-ROUTE-R2 | `routeFiling(signal)` (Forward 正規) | 未知 token / 例外条件不成立 → `mode=forward` を返し (default fall-through)、未知 token は warn を伴う。silent success にしない。 |
+| U-ROUTE-R3 | `routeFiling(signal)` (不変条件) | 非 forward の FilingTarget は `forward_insufficient_reason` 無しに生成されない。生成時は reason にトリガ signal が含まれる。 |
+| U-ROUTE-R4 | `routeFiling(signal)` (cold L7 禁止) | いかなる signal に対しても `(allowed_kinds=[impl] 単独, layer_band=[L7])` の filing 入口を emit しない。 |
+| U-ROUTE-R5 | `routeFiling(signal)` (競合/境界) | 失敗系 signal 競合は Incident > Recovery > Reverse > Refactor の全順序で解決。最長一致 (`regression_prod` が `regression` に吸われない)。escalation 境界 signal は mode 非依存で `requires_human_approval=true` へ昇格。 |
+| U-ROUTE-R6 | `analyzePlanGovernance.routeModeKindLayer(plan)` | `route_mode` の layer band 外の non-archived PLAN は `route_mode_kind_layer_mismatch` で fail-close。band 内は violation 0。実装済み oracle は `U-PLANGOV-011v4`: `verify` は L8-L14 のみ、`add-feature` は L3-L7 のみを受理する。 |
+| U-ROUTE-R7 | `analyzePlanGovernance.routeModeKindLayer(plan)` (免除) | legacy landed / draft debt は `routeModeKind` と同一 allowlist を使う。legacy landed は恒久免除、draft debt は status=draft の間のみ免除し、着手時に fail-close。`promote_by` 有効期限 + justification までの escape hardening は Appendix C.4 carry として別 slice で固定する。 |
+| U-ROUTE-R8 | `assertL7HasDesignAncestor(plan, registry)` | `layer=L7` の impl 系 PLAN (`impl`/`add-impl`) は parent 連鎖が設計層 PLAN (L4/L5/L6 の design/add-design) に到達しなければ `l7_cold_intake` で fail-close。到達すれば violation 0。 |
+| U-ROUTE-R9 | `assertL7HasDesignAncestor(plan, registry)` (two-phase intake) | 対の Reverse PLAN が draft でも intake (draft 起票) は許容。confirmed 昇格時は双方 pairing ready (相互参照解決 + Reverse 側 forward_routing 宣言) でなければ fail-close。 |
+| U-ROUTE-R10 | `routeFiling(signal)` (Reverse 出所必須) | `mode=reverse` の FilingTarget は `origin` (origin signal / origin plan_id) を必ず持つ。出所なき standalone reverse は途中導入 (既走プロジェクト onboarding) signal の場合のみ emit され、それ以外は fail-close。`requires_human_approval` は escalation 境界昇格の結果として FilingTarget 自身が保持する。 |
+| U-ROUTE-R11 | `analyzePlanGovernance.verifyGateBinding(plan)` / `frontmatterSchema` | `kind=verify` は `layer=L8..L14` と `verification_gate=G8..G14` を 1:1 で宣言しなければ `verify_gate_missing` / `verify_gate_layer_mismatch` で fail-close。non-verify PLAN の `verification_gate` も拒否し、右腕 gate を実装・設計 PLAN に誤接続しない。実装 oracle は `U-PLANGOV-011v5` と `frontmatter.test.ts` の verify gate 契約。 |
+| U-RLG-001 | `analyzeRightLungDocGovernance(input)` | L8/L9/L10/L12/L14 の各 right-lung test-design doc が `Gx-WORKFLOW` と 9 marker (`test_strategy` / `test_plan` / `test_conditions` / `coverage_items` / `test_procedures` / `execution_evidence` / `exit_criteria` / `defect_routing` / `verification_design`) と層別 test case ID family (`IT-` / `ST-` / `UXV-` / `AT-` / `OT-`) を持てば pass。 |
+| U-RLG-002 | `analyzeRightLungDocGovernance(input)` | workflow marker、`defect_routing` / `verification_design` などの必須 marker、または層別 test case ID family が欠落した doc は violation として missing marker 名を返す。 |
+| U-RLG-003 | `checkRightLungDocGovernance(repoRoot)` / doctor full profile | repo root 不在は fail-close。実 repo は 5 doc checked で green となり、doctor full profile に `right-lung-doc-governance` が配線される。 |
+
+## PLAN-L6-39 Vモデル Spec IR Function Contracts Addendum (2026-07-08)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の `loadSpecIrSources` /
+> `parseSpecDefs` / `parseSpecRelations` / `parseScheduleEntries` / `parseActivationEntries` /
+> `projectSpecIr` / `analyzeSpecIrIntegrity` / `deriveDetectorRouteCandidates` 契約 (PLAN-L6-39)。
+> 物理 table は `docs/design/harness/L5-detailed-design/physical-data.md` §9.9 (PLAN-L5-13)。
+> 実装は後続 add-impl (L7)。
+> **oracle ID 採番規律**: 正式 3 桁 oracle ID (`U-SPECIR-1XX`) は後続 add-impl 着手時に tests への
+> citation と同時に採番する。下表の R 系 ID は本 addendum 内の設計参照用であり、孤児 oracle を作らない。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-SPECIR-R1 | `loadSpecIrSources(input)` | repo-relative root だけを読み、source docs / PLAN / test-design / schedule / activation profile を書き換えない。missing root は warn finding、secret-like / PII-like / raw transcript payload は projection input に載せない。 |
+| U-SPECIR-R2 | `parseSpecDefs(bundle)` | 同一 input から stable `spec_id` / `source_hash` / `section_anchor` を生成する。未知 layer/sub_doc、重複 ID、空 definition は finding 化し、仕様を補完創作しない。 |
+| U-SPECIR-R3 | `parseSpecRelations(bundle, defs)` | relation_kind は allowlist (`defines` / `requires` / `verifies` / `pairs` / `derives` / `supersedes`) のみ許可。orphan relation、self-loop、未知 relation_kind は finding。`dependency_edges` と混同しない。 |
+| U-SPECIR-R4 | `parseScheduleEntries(bundle)` | 工程管理表から deterministic `schedule_entries` draft を返す。date/state 欠落、未解決 plan_id、過去 due 未完了は finding。PLAN status は mutate しない。 |
+| U-SPECIR-R5 | `parseActivationEntries(bundle)` | enabled profile は reason を必須とし、未知 drive/mode または profile 欠落を finding/fail-close 候補にする。暗黙 default で駆動モデルを有効化しない。 |
+| U-SPECIR-R6 | `projectSpecIr(input, db)` | `spec_defs` / `spec_relations` / `schedule_entries` / `activation_entries` / `detector_route_candidates` を idempotent upsert する。同一入力 rebuild 2 回で row counts と IDs が安定し、source docs は rewrite しない。 |
+| U-SPECIR-R7 | `analyzeSpecIrIntegrity(input)` | orphan relation、未知 layer/sub_doc、activation reason 欠落、secret-like evidence/value、raw markdown body 永続化を finding/quality_signal に変換する。parse 失敗を silent skip しない。 |
+| U-SPECIR-R8 | `deriveDetectorRouteCandidates(input)` | finding/spec/schedule/activation を join し、候補を `detector_route_candidates` draft として返す。FilingTarget は創作せず、target snapshot は L4 function §3.2.1 / `routeFiling` SSoT から取得する。 |
+| U-SPECIR-R9 | `deriveDetectorRouteCandidates(input)` (non-ready) | SSoT 不在、unknown route_signal、target_layer/sub_doc mismatch は non-ready finding。起票済み PLAN や FilingTarget 決定済みとして扱わない。 |
+
+## PLAN-L7-368 Design Lint DB Projection Addendum (2026-07-08)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の
+> `projectDesignPairFreezeFindings` / `projectDesignQualityCoverage` / `checkDesignDetection`
+> 契約。既存 file-driven lint の判定を再利用し、DB 投影 fact から検出状態を queryable にする。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-DESIGNDB-R1 | `projectDesignQualityCoverage(repoRoot, db)` | `doc-consistency` / `entity-coverage` / `fr-registry-audit` / `sub-doc-catalog-drift` / `sub-doc-section-structure` / `l6-fr-coverage` / `fr-roadmap-coverage` / `module-drift` の 8 check を `coverage(scope=design-quality, metric=violation_count)` に 1 行ずつ投影する。clean repo は value=0 / threshold=0 / status=`passed`。 |
+| U-DESIGNDB-R2 | `projectDesignPairFreezeFindings(repoRoot, db)` | design sub-doc の `pair_artifact` 欠落、参照不実在、逆参照欠落を `findings.kind=design-pair-orphan:<reason>`、source=`vmodel-pair-freeze`、status=`open` として投影する。 |
+| U-DESIGNDB-R3 | `collectDesignDetectionStats` / `analyzeDesignDetectionStats` | design-quality coverage の欠落、blocked coverage、open pair orphan finding のいずれかがあると `ok=false`。すべて揃い passed なら `ok=true`。 |
+| U-DESIGNDB-R4 | `checkDesignDetection(repoRoot)` | doctor は DB 集約結果を `design-detection` として 1 surface で報告する。既存 file-driven check の詳細 message を重複出力せず、DB fact の欠落/blocked/open だけを hard gate 化する。 |
+
+## PLAN-L6-40 Route Filing Review Surface Addendum (2026-07-08)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の
+> `routeFiling` / `reviewDetectorRouteCandidate` 契約 (PLAN-L6-40)。
+> `detector_route_candidates` は候補入力であり、review surface が `routeFiling` SSoT を再評価して表示する。
+> DB schema は増やさず、表示 DTO と `feedback_events.next_action` で人間確認へ渡す。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-ROUTE-REVIEW-R1 | `routeFiling("feature_addition")` | mode=`add-feature`、`allowed_kinds=add-design/add-impl`、`layer_band=L3-L6/L7`、`requires_human_approval=false` を返す。 |
+| U-ROUTE-REVIEW-R2 | `routeFiling(unknown)` | mode=`forward` に fail-closed fallback し、unknown signal finding を伴う。silent success にしない。 |
+| U-ROUTE-REVIEW-R3 | `reviewDetectorRouteCandidate(candidate)` | candidate snapshot と FilingTarget 完全形を併記し、`allowed_kinds` / `layer_band` / `pairing_obligation` / `requires_human_approval` を表示要約に含める。 |
+| U-ROUTE-REVIEW-R4 | `projectFeedbackEvents` / `emitFeedbackEvents` | rebuild projection 経路と `feedback list --emit` 経路の両方で同じ routeFiling review 要約が出る。source finding との二重表示はしない。 |
+
+## PLAN-L6-41 Activation Profile Schedule Join Addendum (2026-07-08)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の
+> `parseActivationEntries` / `joinActivationScheduleReviews` 契約 (PLAN-L6-41)。
+> `docs/governance/vmodel-activation-profiles.md` を第一入力にし、工程管理表と join した read-model を DB と検索へ出す。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-ACTIVATION-SCHEDULE-R1 | `parseActivationEntries(input)` | activation profile authoring row が PLAN frontmatter fallback より優先され、`scope_status` / `target_version` / `defer_reason` / `enabled` を保持する。 |
+| U-ACTIVATION-SCHEDULE-R2 | `joinActivationScheduleReviews(input)` | `activation_entries.plan_id` と `schedule_entries.plan_id` を join し、`current_location` / `rag` / `schedule_status` / `v_pair` を read-model に含める。 |
+| U-ACTIVATION-SCHEDULE-R3 | `analyzeSpecIrIntegrity(input)` | `scope_status=deferred|out_of_scope` の理由欠落、または `target_kind=plan` の工程表未接続を finding 化し、projection 側で工程行を創作しない。 |
+| U-ACTIVATION-SCHEDULE-R4 | `rebuildHarnessDb` / `findReference` | real repo rebuild で `activation_schedule_reviews` が populated になり、`vmodel-clean-core` や `deferred` で検索できる。 |
+| U-DOCUMENT-CATALOG-R1 | `parseDocumentCatalogEntries(input)` / `projectSpecIr` | `docs/governance/vmodel-document-catalog.md` から `document_catalog_entries` を populated にし、`DOC-L4-DATA` などを `findReference` で検索できる。 |
+| U-DOCUMENT-SCALE-R1 | `parseDocumentScaleProfileEntries(input)` / `joinDocumentScaleProfileReviews(input)` | `docs/governance/vmodel-document-scale-profiles.md` から `document_scale_profile_entries` を populated にし、`document_catalog_entries` と join して `document_scale_profile_reviews` に catalog layer/sub_doc/default status を含める。 |
+| U-DOCUMENT-SCALE-R2 | `analyzeSpecIrIntegrity(input)` | 未知 decision/detail/status、catalog 欠落、skip/defer/conditional の理由欠落、`required_plan_id` 未解決を finding 化し、profile 判定を projection 側で補完しない。 |
+| U-DOCUMENT-SCALE-R3 | `rebuildHarnessDb` / `findReference` | real repo rebuild で `document_scale_profile_reviews` が populated になり、`enterprise DOC-L4-REPORT adopt` などを検索できる。 |
+| U-SCOPE-PREVIEW-R1 | `buildScopeDryRunPreview(db, input)` | document scale profile の `conditional` 文書は capability flag が一致した場合だけ `resolved_scope_status=in_scope`、一致しなければ `conditional` のまま返す。 |
+| U-SCOPE-PREVIEW-R2 | `buildScopeDryRunPreview(db, input)` | `defer` 文書は `required_plan_id` が投影済みなら warn なしで `required_action=follow required plan ...` を返し、未投影なら warn finding を返す。 |
+| U-SCOPE-PREVIEW-R3 | `buildScopeDryRunPreview(db, input)` | document scale profile 不在は `scope-preview-profile-missing` error finding とし、dry-run が silent success しない。 |
+| U-SCOPE-PREVIEW-R4 | `ut-tdd db scope-preview --profile <id> --json` | CLI は JSON/text 両出力を持ち、`documents` / `activations` / `gates` / `detectors` / `findings` / `summary` を返す。source docs / PLAN / profile を更新しない。 |
+
+## PLAN-L6-42 Typed Spec Declaration Addendum (2026-07-08)
+
+> 設計ペア: `docs/design/harness/L6-function-design/function-spec.md` の
+> `parseSpecDefs` / `parseSpecRelations` typed spec 契約 (PLAN-L6-42)。
+> `docs/governance/vmodel-typed-spec-definitions.md` の `spec.defines` を正本とし、検出を推測から宣言読み取りへ寄せる。
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-TYPED-SPEC-R1 | `parseSpecDefs(input)` | `spec.defines[].id` / `kind` を `spec_defs` に投影し、`section_anchor=spec.defines:<id>` で見出し由来定義と区別する。 |
+| U-TYPED-SPEC-R2 | `parseSpecRelations(input)` | `traces_from` / `traces_to` / `tests` を `spec_relations` edge にし、参照先 ID が無ければ finding にする。 |
+| U-TYPED-SPEC-R3 | `analyzeSpecIrIntegrity(input)` | ID 形式不正、kind 欠落、重複 ID を finding 化し、projection 側で ID や kind を創作しない。 |
+| U-TYPED-SPEC-R4 | `rebuildHarnessDb` / `findReference` | real repo rebuild で typed spec 宣言が `spec_defs` と `search_index` に入り、`VMS-004` などで検索できる。 |
+
+> `analyzeTypedSpecTraceClosure` / `checkTypedSpecTraceClosure` typed spec 閉包契約 (PLAN-L6-43 / PLAN-L7-387)。
+
+| ID | 対象 | 期待 |
+| --- | --- | --- |
+| U-TYPED-SPEC-C1 | `analyzeTypedSpecTraceClosure(input)` | `traces_to` と相手側 `traces_from` が双方向に閉じている場合は finding を出さない。 |
+| U-TYPED-SPEC-C2 | `analyzeTypedSpecTraceClosure(input)` | `traces_to` または `traces_from` の片側欠落を `typed-spec-trace-reverse-missing` finding にする。 |
+| U-TYPED-SPEC-C3 | `analyzeTypedSpecTraceClosure(input)` | `tests` と test spec 側 `traces_from` の片側欠落を `typed-spec-test-backlink-missing` finding にする。 |
+| U-TYPED-SPEC-C4 | `analyzeTypedSpecTraceClosure(input)` | test を要求する kind に `tests` edge が無い場合は `typed-spec-test-missing` finding にする。ただし `*-oracle` kind は検証 leaf として追加 test を要求しない。 |
+| U-TYPED-SPEC-C5 | `checkTypedSpecTraceClosure(repoRoot)` | typed spec 閉包 finding が 0 件なら `doctor: typed-spec-trace-closure - OK`、1 件以上なら `violation` として `runDoctor.ok=false` に合流する。 |
+
+> `analyzeTypedSpecLedgerBodySync` / `checkTypedSpecLedgerBodySync` typed spec 台帳・本文・phase 契約 (PLAN-L6-44 / PLAN-L7-388)。
+
+| ID | 対象 | 期待 |
+| --- | --- | --- |
+| U-TYPED-SPEC-S1 | `analyzeTypedSpecLedgerBodySync(input)` | 全 typed spec に本文実体、台帳行、`v_phase` がある場合は finding を出さない。 |
+| U-TYPED-SPEC-S2 | `analyzeTypedSpecLedgerBodySync(input)` | 宣言IDに本文実体が無い場合は `typed-spec-body-missing` finding にする。 |
+| U-TYPED-SPEC-S3 | `analyzeTypedSpecLedgerBodySync(input)` | 台帳行欠落、未知台帳ID、重複台帳IDをそれぞれ `typed-spec-ledger-row-missing` / `typed-spec-ledger-unknown-id` / `typed-spec-ledger-duplicate-id` finding にする。 |
+| U-TYPED-SPEC-S4 | `analyzeTypedSpecLedgerBodySync(input)` | `v_phase` 欠落または不正を `typed-spec-ledger-phase-missing` finding にする。 |
+| U-TYPED-SPEC-S5 | `analyzeTypedSpecLedgerBodySync(input)` | `traces_from` が後工程を指す、または `traces_to` / `tests` が上流へ戻る場合は `typed-spec-phase-direction-invalid` finding にする。 |
+| U-TYPED-SPEC-S6 | `checkTypedSpecLedgerBodySync(repoRoot)` | finding が 0 件なら `doctor: typed-spec-ledger-body-sync - OK`、1 件以上なら `violation` として `runDoctor.ok=false` に合流する。 |
+
+> `analyzeTypedSpecOwnedArtifactDispersal` / `checkTypedSpecOwnedArtifactDispersal` typed spec 所有 artifact 分散契約 (PLAN-L6-45 / PLAN-L7-389)。
+
+| ID | 対象 | 期待 |
+| --- | --- | --- |
+| U-TYPED-SPEC-O1 | `analyzeTypedSpecOwnedArtifactDispersal(input)` | `spec.defines` の `source_path` が台帳 `ledger_sources` に含まれる場合は finding を出さない。 |
+| U-TYPED-SPEC-O2 | `analyzeTypedSpecOwnedArtifactDispersal(input)` | 中央 bootstrap doc など `ledger_sources` 外の path で宣言された ID は `typed-spec-owned-source-mismatch` finding にする。 |
+| U-TYPED-SPEC-O3 | `checkTypedSpecOwnedArtifactDispersal(repoRoot)` | finding が 0 件なら `doctor: typed-spec-owned-artifact-dispersal - OK`、1 件以上なら `violation` として `runDoctor.ok=false` に合流する。 |
+
+> `analyzeTypedSpecPhaseLayerAlignment` / `checkTypedSpecPhaseLayerAlignment` typed spec phase/layer 整合契約 (PLAN-L6-46 / PLAN-L7-390)。
+
+| ID | 対象 | 期待 |
+| --- | --- | --- |
+| U-TYPED-SPEC-P1 | `analyzeTypedSpecPhaseLayerAlignment(input)` | 台帳 `v_phase` が宣言元 artifact の `typed_spec_phase_owner` / `executed_at_layer` / `layer` / path 由来 layer と一致する場合は finding を出さない。 |
+| U-TYPED-SPEC-P2 | `analyzeTypedSpecPhaseLayerAlignment(input)` | owner phase を解決できない場合は `typed-spec-owner-phase-missing` finding にする。 |
+| U-TYPED-SPEC-P3 | `analyzeTypedSpecPhaseLayerAlignment(input)` | 台帳 `v_phase` と owner phase が食い違う場合は `typed-spec-phase-layer-mismatch` finding にする。 |
+| U-TYPED-SPEC-P4 | `checkTypedSpecPhaseLayerAlignment(repoRoot)` | finding が 0 件なら `doctor: typed-spec-phase-layer-alignment - OK`、1 件以上なら `violation` として `runDoctor.ok=false` に合流する。 |
+
+> `parseAgentContractRows` / `analyzeAgentContractIntegrity` / `checkAgentContractDetection` agent contract 契約 (PLAN-L6-47 / PLAN-L7-391)。
+| ID | 対象 | 期待 |
+| --- | --- | --- |
+| U-AGENT-CONTRACT-R1 | `parseAgentContractRows(input)` | `docs/governance/vmodel-agent-contracts.md` の `agent_contracts` から `agent_contracts` row を生成し、`defines` / `read_first` / `done_when` を保持する。 |
+| U-AGENT-CONTRACT-R2 | `analyzeAgentContractIntegrity(input)` | `read_first` の欠落を `agent-contract-read-first-missing` finding にする。 |
+| U-AGENT-CONTRACT-R3 | `analyzeAgentContractIntegrity(input)` | Python command 文字列など `doctor:<gate-id>` ではない `done_when` を `agent-contract-done-when-invalid` finding にする。 |
+| U-AGENT-CONTRACT-R4 | `checkAgentContractDetection(repoRoot)` | 未知 doctor gate を `agent-contract-doctor-gate-unknown` として fail-close し、real repo では `doctor: agent-contract-detection - OK` を返す。 |
+
+**gap 件数: 1 / 25** (screen-spec.md の U-SCREEN-001〜006 個別関数単体テストが未実装。frontend は backend-first 方針で意図的に後回しにされている領域であり、既存 improvement backlog / L6 完了監査の対象。本 PLAN は可視化のみでスコープ外、是正は別 routing)。
 
 L6 doc 追加時は本表へ行を追加する (将来 PLAN-L7-337 設計参照 lint の発火点候補)。
+
+### TVMS-010 L2/L5 freeze contract design oracle
+
+TVMS-010 は VMS-010 の L2 prototype agreement と L5 verification design contract が L7 unit oracle として定義されることを保証する。
+
+### TVMS-011 L2/L5 freeze contract gate oracle
+
+TVMS-011 は VMS-011 の `forward-freeze-contracts` gate が fail-close fixture と real repo green で検証されることを保証する。
+
+> `analyzeForwardFreezeContracts` / `checkForwardFreezeContractsResult` L2/L5 forward freeze contract oracle (PLAN-L6-48 / PLAN-L7-393).
+| ID | Target | Oracle |
+| --- | --- | --- |
+| U-FREEZE-CONTRACT-001 | `analyzeForwardFreezeContracts(input)` | L2 prototype agreement docs and L5 verification design docs pass together when status, pair, next freeze, evidence marker, L8 coverage, and GWT table are present. |
+| U-FREEZE-CONTRACT-002 | `analyzeForwardFreezeContracts(input)` | L2 confirmed docs without G2/PO/prototype agreement evidence produce `l2-prototype-evidence-missing`. |
+| U-FREEZE-CONTRACT-003 | `analyzeForwardFreezeContracts(input)` | L8 verification design missing a L5 detail basename or GWT table produces `l8-coverage-missing` / `l8-gwt-missing`. |
+| U-FREEZE-CONTRACT-004 | `checkForwardFreezeContractsResult(repoRoot)` | Real repo returns `forward-freeze-contracts - OK` and is wired into doctor full profile. |
+
+### TVMS-012 refactor / QA release 契約設計 oracle
+
+TVMS-012 は VMS-012 の ZIP 108/109 authoring source が、Refactor の振る舞い不変・閾値・切り戻しと、QA の ISO/IEC 25010 / Go/No-Go / スモーク契約を持つことを保証する。
+
+### TVMS-013 refactor / QA release gate oracle
+
+TVMS-013 は VMS-013 の `refactor-qa-release-contracts` gate が fail-close fixture と real repo green で検証されることを保証する。
+
+> `analyzeRefactorQaReleaseContracts` / `checkRefactorQaReleaseContractsResult` oracle (PLAN-L6-49 / PLAN-L7-394).
+
+| Test ID | 対象 | 期待 |
+| --- | --- | --- |
+| U-REFACTOR-QA-001 | valid fixture | ZIP108/109 authoring source、Refactor process、workflow contract が揃えば OK |
+| U-REFACTOR-QA-002 | authoring source | Go/No-Go が欠けると fail-close |
+| U-REFACTOR-QA-003 | refactor process | authoring source への接続が欠けると fail-close |
+| U-REFACTOR-QA-004 | real repo | `refactor-qa-release-contracts - OK` が doctor full profile に配線済み |
+
+## U11 型付きスペック所有 artifact
+
+```yaml
+spec:
+  defines:
+    - id: TVMS-001
+      kind: unit-oracle
+      traces_from: [VMS-001]
+    - id: TVMS-002
+      kind: unit-oracle
+      traces_from: [VMS-002]
+    - id: TVMS-003
+      kind: unit-oracle
+      traces_from: [VMS-003]
+    - id: TVMS-004
+      kind: unit-oracle
+      traces_from: [VMS-004]
+    - id: TVMS-005
+      kind: integration-oracle
+      traces_from: [VMS-005]
+    - id: TVMS-006
+      kind: projection-oracle
+      traces_from: [VMS-006]
+    - id: TVMS-007
+      kind: unit-oracle
+      traces_from: [VMS-007]
+    - id: TVMS-008
+      kind: unit-oracle
+      traces_from: [VMS-008]
+    - id: TVMS-009
+      kind: projection-oracle
+      traces_from: [VMS-009]
+    - id: TVMS-010
+      kind: unit-oracle
+      traces_from: [VMS-010]
+    - id: TVMS-011
+      kind: unit-oracle
+      traces_from: [VMS-011]
+    - id: TVMS-012
+      kind: unit-oracle
+      traces_from: [VMS-012]
+    - id: TVMS-013
+      kind: unit-oracle
+      traces_from: [VMS-013]
+```
+
+TVMS-001、TVMS-002、TVMS-003、TVMS-004、TVMS-005、TVMS-006、TVMS-007 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。
+TVMS-007 は VMS-007 の phase/layer alignment が unit oracle と doctor gate で検証されることを保証する。
+TVMS-008 は agent contract authoring source、TVMS-009 は agent contract doctor gate の oracle である。
+
+## PLAN-L6-60 ID 起点 trace impact traversal oracle (2026-07-08)
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-TRACE-IMPACT-R1 | `analyzeTraceImpact(db, spec_id)` | `traces_from` / `requires` を依存元から影響先へ反転し、`traces_to` / `tests` を宣言方向で辿る。指定 ID の上流・下流・テスト影響を分離して返す。 |
+| U-TRACE-IMPACT-R2 | `analyzeTraceImpact(db, unknown_id)` | unknown ID は silent success にせず `trace-impact-root-missing` finding で fail-close する。 |
+| U-TRACE-IMPACT-R3 | `ut-tdd trace impact --id <id> --json` | CLI は DB read-only surface として JSON/text 出力を持ち、`change-impact.ts` のファイル差分検出とは責務を分ける。 |
+
+## PLAN-L6-61 spec RAG 閉包台帳 oracle (2026-07-08)
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-SPEC-RAG-R1 | `deriveSpecRagClosureEntries(input)` | typed spec relation を `PLAN-L6-60` と同じ向きで辿り、test 到達済みかつ closure finding なしの spec は `green` / `closed`、test を要求するが test 到達 0 の spec は `red` / `missing_test` になる。 |
+| U-SPEC-RAG-R2 | `rebuildHarnessDb` / `projectSpecIr` | real repo rebuild で `spec_rag_closure_entries` が populated になり、`VMS-004` などの typed spec row が `search_index` から `spec closure RAG` で検索できる。 |
+| U-SPEC-RAG-R3 | `ut-tdd trace rag --id <id> --json` | CLI は `spec_rag_closure_entries` を read-only に表示し、`--id` filter と JSON 出力を持つ。`schedule_entries.rag` を代替参照しない。 |

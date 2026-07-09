@@ -10,7 +10,7 @@ route_mode: add-feature
 created: 2026-07-02
 updated: 2026-07-02
 owner: PM / PO
-parent_design: docs/test-design/harness/L1-operational-test-design.md
+parent_design: docs/test-design/harness/L14-operational-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
   - role: se
@@ -24,7 +24,7 @@ dependencies:
   parent: null
   requires: []
   references:
-    - docs/test-design/harness/L1-operational-test-design.md
+    - docs/test-design/harness/L14-operational-test-design.md
     - .ut-tdd/audit/A-171-full-release-close-checklist-2026-07-01.md
     - src/doctor/index.ts
     - .ut-tdd/audit/A-178-control-layer-gap-audit-2026-07-02.md
@@ -40,7 +40,7 @@ draft 起票 (PO 要望 2026-07-02「運用のチェック項目の出力とか�
 
 ## 背景 — 素材は構造化済み、合成器が無い
 
-- **OT-01〜47** (`docs/test-design/harness/L1-operational-test-design.md`) が表構造 (OT-ID / 検証する要求 / 運用検証観点 / 合否目安) で機械抽出可能。
+- **OT-01〜47** (`docs/test-design/harness/L14-operational-test-design.md`) が表構造 (OT-ID / 検証する要求 / 運用検証観点 / 合否目安) で機械抽出可能。
 - **機械判定源**が DB/doctor に揃っている: doctor gate 結果、`roadmap_band_coverage` (band 状態)、`gate_runs`、`status --json` (outstanding/defers)、CI 状態、`issue_queue` (2 件)。
 - **人間境界の checklist 前例**: A-171 (full release close) が boundary/実行者/必要証拠/close 更新先の表として手書き済み — これを生成対象の書式正本にできる。
 - 現状、これらを 1 枚の運用 checklist に合成する出力器が存在しない (handover §1-§2 auto とは別物: handover は引き継ぎ、これは運用判定)。

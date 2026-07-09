@@ -24,6 +24,7 @@ export const ROUTE_MODE_DISPLAY: Record<string, string> = {
   incident: "Incident",
   "add-feature": "Add-feature",
   "version-up": "Version-up",
+  verify: "Verify",
   research: "Research",
 };
 
@@ -44,6 +45,7 @@ const KIND_FALLBACK_DISPLAY: Record<string, string> = {
   research: "Research",
   "add-design": "Add-feature",
   "add-impl": "Add-feature",
+  verify: "Verify",
 };
 
 export interface ModeDerivationInput {
@@ -81,6 +83,7 @@ export const MODE_CATALOG_DOC_FILES: Record<string, string> = {
   "reverse.md": "Reverse",
   "scrum.md": "Scrum",
   "version-up.md": "Version-up",
+  "verify.md": "Verify",
 };
 
 /** カタログ doc ファイル名のうち mode 写像に無いもの (新 mode doc の取りこぼし検出)。 */

@@ -11,10 +11,15 @@ import {
 } from "../lint/roadmap-registry";
 import { fmValue } from "../lint/shared";
 import {
+  analyzeForwardFreezeContracts,
   analyzePairFreeze,
+  analyzeRefactorQaReleaseContracts,
   analyzeVerificationGroups,
+  forwardFreezeContractMessages,
   loadPairDocs,
+  loadRefactorQaReleaseContractInput,
   loadVerificationPlanEvidence,
+  refactorQaReleaseContractMessages,
   verificationGroupMessages,
   verificationGroupsOk,
 } from "../vmodel/lint";
@@ -106,4 +111,38 @@ export function checkVerificationGroupsResult(repoRoot: string): {
 
 export function checkVerificationGroups(repoRoot: string): string[] {
   return checkVerificationGroupsResult(repoRoot).messages;
+}
+
+export function checkForwardFreezeContractsResult(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  try {
+    const result = analyzeForwardFreezeContracts(loadPairDocs(repoRoot));
+    return { messages: forwardFreezeContractMessages(result), ok: result.ok };
+  } catch {
+    return {
+      messages: [
+        "forward-freeze-contracts - violation: forward freeze contract lint could not run",
+      ],
+      ok: false,
+    };
+  }
+}
+
+export function checkRefactorQaReleaseContractsResult(repoRoot: string): {
+  messages: string[];
+  ok: boolean;
+} {
+  try {
+    const result = analyzeRefactorQaReleaseContracts(loadRefactorQaReleaseContractInput(repoRoot));
+    return { messages: refactorQaReleaseContractMessages(result), ok: result.ok };
+  } catch {
+    return {
+      messages: [
+        "refactor-qa-release-contracts - violation: refactor/QA release contract lint could not run",
+      ],
+      ok: false,
+    };
+  }
 }

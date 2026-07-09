@@ -12,6 +12,34 @@ import {
 import { openHarnessDb } from "../src/state-db/index";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer";
 
+const populatedAutomaticProjectionCounts = {
+  graph_nodes: 1,
+  dependency_edges: 1,
+  trace_edges: 1,
+  graph_snapshots: 1,
+  impact_rules: 1,
+  verification_profiles: 1,
+  mcp_server_profiles: 1,
+  mcp_profile_triggers: 1,
+  document_export_profiles: 1,
+  document_export_triggers: 1,
+  document_export_runs: 1,
+  document_export_datasets: 1,
+  test_cases: 1,
+  test_artifact_edges: 1,
+  artifact_progress: 1,
+  spec_defs: 1,
+  spec_relations: 1,
+  schedule_entries: 1,
+  activation_entries: 1,
+  activation_schedule_reviews: 1,
+  document_catalog_entries: 1,
+  document_scale_profile_entries: 1,
+  document_scale_profile_reviews: 1,
+  spec_rag_closure_entries: 1,
+  agent_contracts: 1,
+};
+
 describe("db projection ingestion detector", () => {
   it("passes when rebuildHarnessDb auto-populates catalog and graph projection tables", () => {
     const db = openHarnessDb(":memory:");
@@ -26,6 +54,16 @@ describe("db projection ingestion detector", () => {
       expect(result.rowCounts.mcp_server_profiles).toBeGreaterThan(0);
       expect(result.rowCounts.document_export_profiles).toBeGreaterThan(0);
       expect(result.rowCounts.test_cases).toBeGreaterThan(0);
+      expect(result.rowCounts.spec_defs).toBeGreaterThan(0);
+      expect(result.rowCounts.spec_relations).toBeGreaterThan(0);
+      expect(result.rowCounts.schedule_entries).toBeGreaterThan(0);
+      expect(result.rowCounts.activation_entries).toBeGreaterThan(0);
+      expect(result.rowCounts.activation_schedule_reviews).toBeGreaterThan(0);
+      expect(result.rowCounts.document_catalog_entries).toBeGreaterThan(0);
+      expect(result.rowCounts.document_scale_profile_entries).toBeGreaterThan(0);
+      expect(result.rowCounts.document_scale_profile_reviews).toBeGreaterThan(0);
+      expect(result.rowCounts.spec_rag_closure_entries).toBeGreaterThan(0);
+      expect(result.rowCounts.agent_contracts).toBeGreaterThan(0);
     } finally {
       db.close();
     }
@@ -83,21 +121,8 @@ describe("db projection ingestion detector", () => {
 
   it("fails closed when an automatic projection table is empty", () => {
     const result = analyzeDbProjectionIngestion({
-      graph_nodes: 1,
-      dependency_edges: 1,
-      trace_edges: 1,
-      graph_snapshots: 1,
-      impact_rules: 1,
-      verification_profiles: 1,
+      ...populatedAutomaticProjectionCounts,
       mcp_server_profiles: 0,
-      mcp_profile_triggers: 1,
-      document_export_profiles: 1,
-      document_export_triggers: 1,
-      document_export_runs: 1,
-      document_export_datasets: 1,
-      test_cases: 1,
-      test_artifact_edges: 1,
-      artifact_progress: 1,
     });
 
     expect(result.ok).toBe(false);
@@ -109,28 +134,28 @@ describe("db projection ingestion detector", () => {
 
   it("treats trace_edges as automatic and telemetry-only tables as explicit evidence-gated zeros", () => {
     expect(AUTOMATIC_DB_PROJECTION_REQUIREMENTS.map((item) => item.table)).toContain("trace_edges");
+    expect(AUTOMATIC_DB_PROJECTION_REQUIREMENTS.map((item) => item.table)).toEqual(
+      expect.arrayContaining([
+        "spec_defs",
+        "spec_relations",
+        "schedule_entries",
+        "activation_entries",
+        "document_catalog_entries",
+        "document_scale_profile_entries",
+        "document_scale_profile_reviews",
+        "spec_rag_closure_entries",
+        "agent_contracts",
+      ]),
+    );
     expect(EVIDENCE_GATED_DB_PROJECTION_TABLES).toEqual(
-      expect.arrayContaining(["model_evaluations", "retry_events"]),
+      expect.arrayContaining(["model_evaluations", "retry_events", "detector_route_candidates"]),
     );
   });
 
   it("fails closed when trace_edges is not populated", () => {
     const result = analyzeDbProjectionIngestion({
-      graph_nodes: 1,
-      dependency_edges: 1,
+      ...populatedAutomaticProjectionCounts,
       trace_edges: 0,
-      graph_snapshots: 1,
-      impact_rules: 1,
-      verification_profiles: 1,
-      mcp_server_profiles: 1,
-      mcp_profile_triggers: 1,
-      document_export_profiles: 1,
-      document_export_triggers: 1,
-      document_export_runs: 1,
-      document_export_datasets: 1,
-      test_cases: 1,
-      test_artifact_edges: 1,
-      artifact_progress: 1,
     });
 
     expect(result.ok).toBe(false);
@@ -140,21 +165,7 @@ describe("db projection ingestion detector", () => {
   it("surfaces populated telemetry tables that have only projection provenance", () => {
     const result = analyzeDbProjectionIngestion(
       {
-        graph_nodes: 1,
-        dependency_edges: 1,
-        trace_edges: 1,
-        graph_snapshots: 1,
-        impact_rules: 1,
-        verification_profiles: 1,
-        mcp_server_profiles: 1,
-        mcp_profile_triggers: 1,
-        document_export_profiles: 1,
-        document_export_triggers: 1,
-        document_export_runs: 1,
-        document_export_datasets: 1,
-        test_cases: 1,
-        test_artifact_edges: 1,
-        artifact_progress: 1,
+        ...populatedAutomaticProjectionCounts,
         skill_invocations: 7,
         model_runs: 3,
       },
@@ -192,21 +203,7 @@ describe("db projection ingestion detector", () => {
   it("fails closed on projection-only telemetry when provenance enforcement is enabled", () => {
     const result = analyzeDbProjectionIngestion(
       {
-        graph_nodes: 1,
-        dependency_edges: 1,
-        trace_edges: 1,
-        graph_snapshots: 1,
-        impact_rules: 1,
-        verification_profiles: 1,
-        mcp_server_profiles: 1,
-        mcp_profile_triggers: 1,
-        document_export_profiles: 1,
-        document_export_triggers: 1,
-        document_export_runs: 1,
-        document_export_datasets: 1,
-        test_cases: 1,
-        test_artifact_edges: 1,
-        artifact_progress: 1,
+        ...populatedAutomaticProjectionCounts,
         test_runs: 9,
       },
       undefined,

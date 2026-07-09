@@ -325,6 +325,23 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     );
   });
 
+  // PLAN-L7-398 (システム全体監査、2026-07-08 実発見): work-guard の sessionTouchedFiles は
+  // この target 文字列をそのまま突合キーに使う。120 文字 truncate されると深い repo path +
+  // 長い説明的ファイル名 (本 repo の PLAN 命名規約) で実 path と不一致になり、自分自身の
+  // 正当な編集が foreign-uncommitted と誤検知される。path を伴う target は truncate しない。
+  it("U-SLOG-009: summarize does not truncate long file-path targets (work-guard round-trip fence)", () => {
+    const longPath =
+      "docs/plans/PLAN-L7-999-a-very-long-descriptive-plan-filename-that-exceeds-the-legacy-120-char-summary-cap-on-its-own.md";
+    const result = summarize({ tool_name: "Write", tool_input: { file_path: longPath } });
+    expect(result).toBe(`Write ${longPath}`);
+    expect(result).not.toContain("…");
+    // secret-like 値が path に紛れ込んでも mask は維持する (truncate 無しでも漏洩防止は生きる)。
+    const secretish = "docs/plans/token=abcdef123.md";
+    expect(summarize({ tool_name: "Write", tool_input: { file_path: secretish } })).toBe(
+      "Write docs/plans/token=***",
+    );
+  });
+
   it("U-SLOG-007b: onPostToolUse persists the classified verb (no argument leak)", () => {
     const deps = mockDeps();
     deps.files.set(statePath, "PLAN-RECOVERY-05");
