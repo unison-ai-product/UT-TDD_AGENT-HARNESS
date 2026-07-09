@@ -13,8 +13,10 @@ import {
 } from "../src/plan/lint";
 import {
   READY_DEPENDENCY_STATUSES,
+  ROUTE_MODE_ALLOWED_KINDS,
   ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS,
   ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS,
+  ROUTE_MODE_LAYER_BANDS,
 } from "../src/plan/lint-policy";
 import type { LintResult as SidecarLintResult } from "../src/plan/lint-types";
 
@@ -1029,6 +1031,86 @@ dependencies:
 
     for (const file of okDocs) expect(mismatchFiles).not.toContain(file);
     expect(mismatchFiles).toContain("docs/plans/PLAN-L7-914-incident-wrong-kind.md");
+  });
+
+  it("U-PLANGOV-011v3b: all L4 §3.1 drive route modes are registered with allowed kinds and layer bands", () => {
+    const expectedKinds: Record<string, string[]> = {
+      "add-feature": ["add-design", "add-impl"],
+      "design-bottomup": ["add-design", "add-impl"],
+      discovery: ["poc"],
+      incident: ["troubleshoot", "recovery"],
+      recovery: ["recovery"],
+      refactor: ["refactor"],
+      research: ["research"],
+      retrofit: ["retrofit"],
+      reverse: ["reverse"],
+      scrum: ["poc"],
+      "version-up": ["impl"],
+      verify: ["verify"],
+    };
+    const expectedLayerBands: Record<string, string[]> = {
+      "add-feature": ["L3", "L4", "L5", "L6", "L7"],
+      "design-bottomup": ["L2", "L3", "L4", "L5", "L6", "L7"],
+      discovery: ["cross"],
+      incident: ["L7", "cross"],
+      recovery: ["cross"],
+      refactor: ["L7"],
+      research: ["L1", "L2", "L3", "L4"],
+      retrofit: ["L7"],
+      reverse: ["cross"],
+      scrum: ["cross"],
+      "version-up": ["L7"],
+      verify: ["L8", "L9", "L10", "L11", "L12", "L13", "L14"],
+    };
+
+    expect(ROUTE_MODE_ALLOWED_KINDS).toEqual(expectedKinds);
+    expect(ROUTE_MODE_LAYER_BANDS).toEqual(expectedLayerBands);
+  });
+
+  it("U-PLANGOV-011v3c: newly registered route modes no longer fail as unknown route_mode", () => {
+    const docs = [
+      planDoc("PLAN-DISCOVERY-901-discovery-poc", {
+        kind: "poc",
+        layer: "cross",
+        subDoc: null,
+        extra:
+          "route_signal: requirement_undefined\nroute_mode: discovery\ncreated: 2026-07-09\nupdated: 2026-07-09\n",
+      }),
+      planDoc("PLAN-DISCOVERY-902-scrum-poc", {
+        kind: "poc",
+        layer: "cross",
+        subDoc: null,
+        extra:
+          "route_signal: user_feedback_iteration\nroute_mode: scrum\ncreated: 2026-07-09\nupdated: 2026-07-09\n",
+      }),
+      planDoc("PLAN-L7-903-retrofit-ok", {
+        kind: "retrofit",
+        layer: "L7",
+        subDoc: null,
+        extra:
+          "route_signal: upgrade\nroute_mode: retrofit\ncreated: 2026-07-09\nupdated: 2026-07-09\n",
+      }),
+      planDoc("PLAN-L4-904-research-ok", {
+        kind: "research",
+        layer: "L4",
+        subDoc: null,
+        extra:
+          "route_signal: adr_required\nroute_mode: research\ncreated: 2026-07-09\nupdated: 2026-07-09\n",
+      }),
+      planDoc("PLAN-L2-905-design-bottomup-ok", {
+        kind: "add-design",
+        layer: "L2",
+        subDoc: null,
+        extra:
+          "route_signal: design_bottomup\nroute_mode: design-bottomup\ncreated: 2026-07-09\nupdated: 2026-07-09\n",
+      }),
+    ];
+
+    const details = analyzePlanGovernance(docs)
+      .violations.filter((v) => v.reason === "route_mode_kind_mismatch")
+      .map((v) => v.detail ?? "");
+
+    expect(details.some((detail) => detail.includes("unknown route_mode="))).toBe(false);
   });
 
   it("U-PLANGOV-011v4: route_mode layer band rejects mismatched V-model layers", () => {
