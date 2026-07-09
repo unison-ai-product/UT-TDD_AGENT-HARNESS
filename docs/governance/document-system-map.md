@@ -57,6 +57,7 @@ IPA 共通フレーム 2013 (SLCP-JCF) では次が**同義**として扱われ�
 | **UI 設計標準** | `ui-standard` | **② プロダクト選択 (UI 有時)** | Nablarch UI標準/部品カタログ / ISO 9241-110 | **再利用 FE 設計標準** (UI 設計標準 + UI 部品カタログ + design tokens=色)。`data` (DB 設計標準) の FE 対応物。L2 (画面棚卸し) と別物で、impl **前**に要る方式設計/開発標準。PLAN-L4-14 |
 | 業務処理 (機能) | `function` | ① 必須 | DDD / arc42 §5 | 機能の外部振る舞い |
 | 外部 IF | `external-if` | ② プロダクト選択 | C4 Container / DDD | 外部接続がある製品 |
+| **セキュリティ** | `security` | **① 必須 (認証・認可・秘密情報・配布を持つ製品)** | STRIDE / OWASP ASVS / DevSecOps | 認証境界、秘密情報、監査証跡、配布前検査。PLAN-L4-16 |
 | データ (ドメインモデル) | `data` | ① 必須 | DDD (Evans) | 集約/値オブジェクト |
 | **帳票** | `report` | **② プロダクト選択** | IPA 外部設計 (帳票設計) | 帳票出力がある製品 |
 | **バッチ** | `batch` | **② プロダクト選択** | IPA 外部設計 (バッチ設計) | バッチ処理がある製品 |
@@ -196,7 +197,7 @@ IPA 共通フレーム 2013 (SLCP-JCF) では次が**同義**として扱われ�
 
 | 設計書型 | 判定 | 区分 | 対応方針 | route 先 |
 |---|---|---|---|---|
-| セキュリティ設計 / STRIDE / 権限マトリクス / 対策 | partial | ① 必須 (認証認可を持つ製品) | **既 routing 済 = PLAN-L4-16 (draft) の unblock** (A-174 F-4) | Add-feature (L4-16) |
+| セキュリティ設計 / STRIDE / 権限マトリクス / 対策 | covered | ① 必須 (認証・認可・秘密情報・配布を持つ製品) | `security` slot を PLAN-L4-16 で confirmed。docs 横断 secret-scan は PLAN-L6-62 へ降下 | Add-feature (L4-16) |
 | テスト計画書 (全体、層別 test-design の上位) | gap | ① 必須 | slot 新設。RECOVERY-10 右肺 (検証戦略の上位) と統合 | Add-feature |
 | データディクショナリ (field 単位網羅) | gap | ① 必須 (データを持つ製品) | L4 `data` の必須 § 追加 or 新 slot | Add-feature |
 | 表示名/ラベルカタログ・エラーメッセージ一覧 | gap | ② プロダクト選択 (UI 有時) | 新 slot or L4 `ui-standard`/`code-value` 拡張 | Add-feature |

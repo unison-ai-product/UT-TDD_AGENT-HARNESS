@@ -55,6 +55,8 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L7-404-design-doc-cross-integrity-gate | L7 |  | L6 | PLAN-L6-59-design-doc-cross-integrity-check | U14a-impl: 設計doc横断整合性 gate を doctor / unit oracle へ接続 | green | confirmed |  |
 | PLAN-REVERSE-395-cli-command-design-backfill | cross | external-if | L9 |  | U14b: 実装先行 CLI command surface / exit code / JSON 境界を L4 external-if へ back-fill | green | confirmed |  |
 | PLAN-L6-64-cli-shell-completion | L6 | function-spec | L7 | PLAN-REVERSE-395-cli-command-design-backfill | U14c: shell completion は REVERSE-395 の as-is command catalog を入力にして設計する | yellow | draft | REVERSE-395 R4 合流待ちは解除済み。次 slice で completion 対象 shell / command generation を freeze する。 |
+| PLAN-L4-16-security-design-slot | L4 | security | L9 |  | U14d: L4 security slot を schema / catalog / profile / L4 body へ登録し、L6-62 secret-scan の上流前提を解凍 | green | confirmed |  |
+| PLAN-L6-62-design-doc-secret-scan-gate | L6 | function-spec | L7 | PLAN-L4-16-security-design-slot | U14e: docs横断 secret-scan / distribution 前 fail-close / rotation 方針を L6 契約化する | yellow | draft | L4-16 confirmed 済み。次 slice で L6 design freeze。 |
 
 ## 2. 解釈規則
 

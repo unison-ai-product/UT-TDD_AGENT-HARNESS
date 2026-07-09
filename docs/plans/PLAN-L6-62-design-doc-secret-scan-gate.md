@@ -26,7 +26,8 @@ generates:
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L4-16-security-design-slot.md
-  requires: []
+  requires:
+    - docs/plans/PLAN-L4-16-security-design-slot.md
   references:
     - docs/plans/PLAN-L4-16-security-design-slot.md
     - docs/design/harness/L6-function-design/secret.md

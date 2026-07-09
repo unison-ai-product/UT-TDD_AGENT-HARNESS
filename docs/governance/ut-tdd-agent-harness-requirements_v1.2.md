@@ -441,8 +441,8 @@ VALID_SUB_DOCS = {
   L1: ["business", "functional", "screen", "technical", "nfr"],                          # 5 種
   L2: ["screen-list", "screen-flow", "wireframe", "ui-element"],                          # 4 種
   L3: ["business", "functional", "nfr", "screen-functional"],                             # 3 コア + 1 FE (screen-functional = 画面/UI 機能要件、② プロダクト選択 UI 有時)
-  L4: ["data", "architecture", "function", "external-if", "ui-standard",
-       "report", "batch", "notification", "code-value"],                                  # 4 コア + 5 標準成果物 (screen は L2 専用層が持つ。ui-standard = FE 設計標準 = data の FE 対)
+  L4: ["data", "architecture", "function", "external-if", "security", "ui-standard",
+       "report", "batch", "notification", "code-value"],                                  # 4 コア + security + 5 標準成果物 (screen は L2 専用層が持つ。ui-standard = FE 設計標準 = data の FE 対)
   L5: ["internal-processing", "module-decomposition", "physical-data", "if-detail",
        "ui-detail"],                                                                      # 4 コア + 1 FE (ui-detail = FE 内部設計 component/state/routing、② プロダクト選択 UI 有時)
   L6: ["function-spec", "class-design", "edge-case", "screen-spec"],                       # 3 コア + 1 FE (screen-spec = per-screen 機能設計、② プロダクト選択 UI 有時)
@@ -460,6 +460,8 @@ PLAN ID 命名は `PLAN-L<N>-<NN>-<sub-doc-slug>` (例: `PLAN-L1-03-screen-requi
 > **FE/UI 設計 doc カタログ vocabulary 登録 (2026-06-25、PLAN-L4-14 §4)**: [document-system-map.md](./document-system-map.md) §1c が定義する per-layer FE/UI 設計 doc カバレッジ (左腕) のうち、これまで「穴 + 未登録候補 slug」だった L3/L5/L6 の FE 設計 doc 型を `VALID_SUB_DOCS` へ登録し、定義を機械可知にする。**L3 `screen-functional`** (画面/UI 機能要件 + 画面 AC、SyRS/BDD) / **L5 `ui-detail`** (FE 内部設計 = component 分割・状態管理・routing・画面内部処理、IEEE 1016 SDD) / **L6 `screen-spec`** (per-screen 機能設計 = 項目/イベント/バリデーション/画面内遷移、Nablarch システム機能設計書(画面) 相当)。いずれも §G.13 の「**② プロダクト選択 (UI 有時)**」(UI を持つ製品のみ起票、BE-only/no-UI は `skip_sub_doc[].reason` で省略)。**vocabulary 登録が先・各型の必須 § 構造定義と body 実体化は body 起票時 (作成段階) に後続** (`report`/`batch` 等を vocabulary 先行登録した PLAN-L7-97 §4 と同方針、speculative な § 定義をしない)。正本は `src/schema/index.ts` の `VALID_SUB_DOCS`、左腕カバレッジ定義の正本は document-system-map §1c。
 >
 > **FE/UI 本文実体化 (2026-06-30、PLAN-L3-06 / PLAN-L5-09 / PLAN-L6-36)**: harness central UI は L3 `screen-functional`、L5 `ui-detail`、L6 `screen-spec` の本文を confirmed 化済み。上記の vocabulary-first rule は一般的なプロダクト選択ルールとして残すが、本プロダクトでは `frontend-design-coverage` が FE 左腕 6 本文ファイルすべてを要求し、pending 0 を報告する。
+
+> **L4 security slot 追加 (2026-07-09、PLAN-L4-16)**: `security` は認証・認可・秘密情報・監査証跡・配布前検査の L4 降下先である。`docs/governance/vmodel-document-catalog.md` の `DOC-L4-SECURITY` と同期し、`docs/design/harness/L4-basic-design/security.md` を正本 body とする。L6 の docs 横断 secret-scan (`PLAN-L6-62`) はこの L4 方針を上流設計として参照する。正本は `src/schema/index.ts` の `VALID_SUB_DOCS`。
 
 > **内部資産拡張 sub-doc (REVERSE-01 V4 注記、2026-06-04)**: harness 自身が統制する内部資産 (roster / skill-pack / drift-lint) は、上記コア sub-doc enum とは別の **拡張 sub-doc** として L4/L5 に存在する (実 PLAN: `PLAN-L4-10〜13` (internal-asset-master/roster/skill-pack/drift-lint) / `PLAN-L5-05〜07` (roster/skill/drift))。これらは製品ドメインの設計 sub-doc でなく harness メタ資産のため、コア `VALID_SUB_DOCS[L4|L5]` の件数確定 (5/4 種) には含めず、**拡張点**として別管理する。lint engine 実装時は `VALID_SUB_DOCS` を「コア + 内部資産拡張」の 2 群で持つ (件数 audit はコア群で行い、拡張群は allow-list 追加)。
 
