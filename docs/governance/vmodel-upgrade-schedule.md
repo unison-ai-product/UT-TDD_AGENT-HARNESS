@@ -2,7 +2,7 @@
 title: "Vモデル upgrade schedule authoring source"
 status: confirmed
 owner: PO / TL
-updated: 2026-07-08
+updated: 2026-07-09
 typed_spec_phase_owner: L6
 ---
 
@@ -59,6 +59,9 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L6-62-design-doc-secret-scan-gate | L6 | function-spec | L7 | PLAN-L4-16-security-design-slot | U14e: docs横断 secret-scan / distribution 前 fail-close / rotation 方針を L6 契約化し、doctor / distribution preflight へ降下 | green | confirmed |  |
 | PLAN-L7-260-sensitive-scan-boundary | L7 |  | L6 | PLAN-L6-62-design-doc-secret-scan-gate | U14e-impl: L6 secret-scan 契約を `src/lint/secret-scan.ts` / doctor hard gate / distribution preflight へ接続済み。pre-push hook 対象見直しが残る | yellow | draft | pre-push hook 対象見直しは carry。 |
 | PLAN-L6-50-execution-assignment-ledger | L6 | function-spec | L7 | PLAN-L7-386-typed-spec-declaration-projection | U15a: ZIP assign/signals の ID 単位実行割当台帳を L6 契約・L7 oracle・typed spec 台帳へ接続 | green | confirmed |  |
+| PLAN-L4-21-domain-vo-coding-constraints | L4 | data/function | L9 | PLAN-L0-01-vmodel-harness-upgrade-charter | U16a: ZIP94/95 の値オブジェクト方針とクラス・メソッド構造規約を L4 data / coding-rules SSoT へ固定 | green | confirmed |  |
+| PLAN-L6-67-skill-admission-gate | L6 | function-spec | L7 | PLAN-L6-37-skill-index-category | U16b: skill admission gate を品質3要件・4種判定・judge fail-open封止・決定論残渣 doctor 契約として L6/L7 に接続 | green | confirmed |  |
+| PLAN-L7-411-skill-admission-gate | L7 |  | L6 | PLAN-L6-67-skill-admission-gate | U16b-impl: skill admission gate の判定関数・CLI・台帳/quarantine・doctor coverage・supersede lint を実装する後続 slice | yellow | draft | PLAN-REVERSE-411 と双方向 pair。 |
 
 ## 2. 解釈規則
 

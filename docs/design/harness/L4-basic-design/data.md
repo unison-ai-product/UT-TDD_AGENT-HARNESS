@@ -111,6 +111,39 @@ projection はこの表に掲載された `plan_id` を PLAN frontmatter 由来�
 > **Drive 値域整合 (PLAN-L4-06、drift 是正)**: `VALID_DRIVES` は **専門職 5 種のみ** (be/fe/fullstack/db/agent)。旧記載の mode 値 (scrum/reverse/poc/troubleshoot) は **drive ではなく entry mode** であり、`PLAN-DISCOVERY-04 V7 / PLAN-REVERSE-01 R3` で drive enum から除去済 ([[feedback_drive_is_specialist_not_mode]])。drive=専門職 / mode=駆動モデル を混同しない (mode は function §3.1)。
 > **SubDoc 注記**: 値域は requirements §1.10.G.1 VALID_SUB_DOCS (text spec) を `src/schema/index.ts` の `VALID_SUB_DOCS` / `subDocSchema` に定数化済み。`frontmatterSchema` は kind=design + L1-L6 の `sub_doc` 必須と layer 別値域を fail-close で検査する。
 
+### §3.1 値オブジェクト実装方針 (PLAN-L4-21、ZIP 94 相当)
+
+値オブジェクトは enum の別名ではなく、不正状態を作らせない境界である。後続 L6/L7 実装は次の方針を
+薄めてはならない。
+
+| 契約 | 内容 | 適用境界 |
+|---|---|---|
+| 完全コンストラクタ | 必須属性は生成時にすべて受け取り、生成後に追加必須値を埋める two-step 初期化を禁止する。 | 新規 domain/value object、既存 `src/schema` 由来 VO wrapper を追加する場合 |
+| 不変性 | VO は値等価で扱い、外部から mutation できる public mutable field / setter を持たない。配列・object を保持する場合は defensive copy または readonly view とする。 | `Kind` / `Layer` / `Drive` / `SubDoc` / `GateId` / `PlanId` など |
+| 生成/再構築分離 | user input から作る `create` と、trusted projection / persisted state から戻す `reconstruct` を同じ関数に混ぜない。`reconstruct` は validation bypass ではなく、保存済み schema version と整合することを確認する。 | DB projection、frontmatter parse、`.ut-tdd/*` state 読込 |
+| 不変条件の同居 | VO の値域・正規化・比較条件は呼び出し側に分散させず、VO か schema SSoT に置く。 | `src/schema/index.ts`、将来の VO module |
+| 失敗表現 | 無効値は boolean/null で潰さず、typed finding / zod issue / explicit error state として返す。 | authoring source parse、lint、doctor、CLI input |
+
+既存 harness は現時点で zod enum と string ID が中心で、domain class 量は薄い。したがって本設計は既存全 string
+ID の即時 wrapper 化を要求しない。ただし新規 domain object / VO を追加する PLAN は、本節に従い
+`parent_design` または design impact で VO 契約を明示する。
+
+### §3.2 クラス・メソッド構造規約 (PLAN-L4-21、ZIP 95 相当)
+
+AI が生成する TypeScript core は、後でリファクタする前提ではなく、設計時点で保守可能な形へ制約する。
+`docs/governance/coding-rules.md` は実装形状の SSoT として次の構造規約を持つ。
+
+| rule id | 設計閾値 | hard 化の考え方 |
+|---|---|---|
+| `max-nesting-depth` | source function 内の制御ネストは原則 3 以下。4 以上は early return / guard clause / 関数分割を検討する。 | L7 実装 PLAN で AST lint を追加し、既存 debt は件数を実測して grandfather 期限を切る。 |
+| `max-function-lines` | source function / method は概ね 80 nonblank lines 以下。超過は domain step、policy table、projection helper へ分割する。 | test helper は対象外。source 既存 debt は baseline ではなく refactor candidate へ送る。 |
+| `max-cyclomatic-complexity` | source function の分岐点は概ね 12 以下。分岐表が増える場合は declarative registry / policy module へ外部化する。 | `externalize-policy` refactor candidate と接続する。 |
+| `command-query-separation` | state/file/DB を変更する command は値を query result として返さない。query は mutation しない。 | CLI command handler など副作用境界は例外ではなく、command result DTO として明示する。 |
+| `prefer-guard-clause` | `else` 連鎖で正常経路を深くしない。失敗条件は先に返し、main path を浅く保つ。 | 自動検出は false-positive を避けるため L7 で限定 pattern から始める。 |
+
+これらは本 L4 で設計契約を固定し、機械実装は L6 function contract / L7 add-impl で段階導入する。
+閾値を既存 detector の都合で緩める場合は、実測 debt と期限付き例外を PLAN に記録する。
+
 ## §4 entity ID 規約 (集約横断、既存 lint regex と一致)
 
 | ID 型 | 形式 | 検証 lint |

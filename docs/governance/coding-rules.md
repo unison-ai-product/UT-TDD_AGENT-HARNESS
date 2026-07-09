@@ -56,6 +56,36 @@ coding_rules:
       description: "機械向け CLI、doctor、lint、gate、JSON、env、status、oracle surface は安定した ASCII English decision token を使う。"
 ```
 
+## ドメイン・構造設計規約 (PLAN-L4-21)
+
+本節は ZIP 94/95 相当の L4 設計契約である。上の `coding_rules` YAML は現行 hard gate の正本であり、本節の
+追加 rule は L6/L7 実装 PLAN で analyzer と oracle を追加してから YAML の hard gate へ昇格する。
+
+### 値オブジェクト
+
+- VO は完全コンストラクタを持つ。必須値を後から setter で埋める初期化は禁止する。
+- VO は immutable とし、public mutable field / setter / mutable collection の外部公開を避ける。
+- user input 由来の `create` と persisted/projection 由来の `reconstruct` を分離する。
+- invalid input は `null` / `false` で潰さず、typed finding、zod issue、または explicit error state として返す。
+- VO 値域と正規化は呼び出し側へ散らさず、schema SSoT または VO module に置く。
+
+### クラス・メソッド構造
+
+| rule id | 設計閾値 | 目的 |
+|---|---|---|
+| `max-nesting-depth` | source function 内の制御ネストは原則 3 以下 | main path を浅くし、guard clause / helper 抽出を促す |
+| `max-function-lines` | source function / method は概ね 80 nonblank lines 以下 | 1 関数 1 責務を保つ |
+| `max-cyclomatic-complexity` | source function の分岐点は概ね 12 以下 | policy table / registry / strategy への外部化を促す |
+| `command-query-separation` | command は mutation、query は読み取りに分離 | 副作用と戻り値の混在による検証不能性を避ける |
+| `prefer-guard-clause` | 正常系を深い `else` に閉じ込めない | 変更時の局所性とレビュー容易性を上げる |
+
+hard gate 化の順序:
+
+1. 既存 repo の実測値を L7 実装 PLAN で記録する。
+2. false-positive が出やすい CQS / guard clause は限定 pattern から始める。
+3. 既存超過は silent grandfather にせず、refactor candidate または期限付き例外として記録する。
+4. analyzer 実装と L7 oracle が揃った rule だけ `coding_rules` YAML の hard gate へ昇格する。
+
 ## 機械 surface の言語
 
 機械読取・機械解析される surface は安定した ASCII English token を使う。
