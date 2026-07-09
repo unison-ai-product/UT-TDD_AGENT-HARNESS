@@ -277,6 +277,14 @@ export interface AgentContractIntegrityResult {
   ok: boolean;
 }
 
+export interface DesignDocCrossIntegrityResult {
+  checked_docs: number;
+  duplicate_definitions: string[];
+  dependency_cycles: string[];
+  findings: SpecIrFindingRow[];
+  ok: boolean;
+}
+
 interface SpecIrProjectionDeps {
   nowIso: () => string;
   recordProjectionEvent: (
@@ -1722,6 +1730,121 @@ export function deriveSpecRagClosureEntries(input: {
   });
 }
 
+function normalizeDocumentPath(path: string): string {
+  return normalizePath(path).split("#")[0] ?? "";
+}
+
+function specDefDocumentPath(def: SpecDefRow): string {
+  return normalizeDocumentPath(def.source_path || def.owner_path);
+}
+
+function canonicalCycle(nodes: string[]): string {
+  const cycle = nodes.at(-1) === nodes[0] ? nodes.slice(0, -1) : [...nodes];
+  if (cycle.length === 0) return "";
+  let best = cycle;
+  for (let i = 1; i < cycle.length; i += 1) {
+    const rotated = [...cycle.slice(i), ...cycle.slice(0, i)];
+    if (rotated.join("\u0000") < best.join("\u0000")) best = rotated;
+  }
+  return [...best, best[0]].join(" -> ");
+}
+
+export function analyzeDesignDocCrossIntegrity(input: {
+  defs: SpecDefRow[];
+  relations: SpecRelationRow[];
+  catalog_entries: DocumentCatalogEntryRow[];
+}): DesignDocCrossIntegrityResult {
+  const catalogDocPaths = new Set(
+    input.catalog_entries
+      .map((entry) => normalizeDocumentPath(entry.authoring_source_path))
+      .filter(Boolean),
+  );
+  const isTargetDoc = (path: string): boolean =>
+    catalogDocPaths.size === 0 || catalogDocPaths.has(normalizeDocumentPath(path));
+  const targetDefs = input.defs.filter((def) => isTargetDoc(specDefDocumentPath(def)));
+  const checkedDocs = new Set(targetDefs.map(specDefDocumentPath).filter(Boolean));
+  const defsBySpecId = new Map<string, SpecDefRow[]>();
+  const firstDefBySpecId = new Map<string, SpecDefRow>();
+  for (const def of targetDefs) {
+    const rows = defsBySpecId.get(def.spec_id) ?? [];
+    rows.push(def);
+    defsBySpecId.set(def.spec_id, rows);
+    if (!firstDefBySpecId.has(def.spec_id)) firstDefBySpecId.set(def.spec_id, def);
+  }
+
+  const findings: SpecIrFindingRow[] = [];
+  const duplicateDefinitions: string[] = [];
+  for (const [specId, rows] of defsBySpecId) {
+    const sourcePaths = [...new Set(rows.map(specDefDocumentPath).filter(Boolean))].sort();
+    if (sourcePaths.length <= 1) continue;
+    const subject = `${specId}:${sourcePaths.join("|")}`;
+    duplicateDefinitions.push(subject);
+    findings.push({
+      finding_id: stableId("finding:design-doc-duplicate-definition", subject),
+      kind: "design-doc-duplicate-definition",
+      severity: "warn",
+      subject_id: specId,
+      source: "design-doc-cross-integrity",
+      status: "open",
+      evidence_path: sourcePaths[0],
+    });
+  }
+
+  const edges = new Map<string, Set<string>>();
+  const dependencyRelationKinds = new Set(["requires", "traces_to", "derives", "supersedes"]);
+  for (const relation of input.relations) {
+    if (!dependencyRelationKinds.has(relation.relation_kind)) continue;
+    const from = firstDefBySpecId.get(relation.from_spec_id);
+    const to = firstDefBySpecId.get(relation.to_spec_id);
+    if (!from || !to) continue;
+    const fromPath = specDefDocumentPath(from);
+    const toPath = specDefDocumentPath(to);
+    if (!fromPath || !toPath || fromPath === toPath) continue;
+    if (!isTargetDoc(fromPath) || !isTargetDoc(toPath)) continue;
+    const targets = edges.get(fromPath) ?? new Set<string>();
+    targets.add(toPath);
+    edges.set(fromPath, targets);
+  }
+
+  const cycles = new Set<string>();
+  const visit = (node: string, stack: string[], seen: Set<string>): void => {
+    const nextNodes = [...(edges.get(node) ?? [])].sort();
+    for (const next of nextNodes) {
+      const existingIndex = stack.indexOf(next);
+      if (existingIndex >= 0) {
+        cycles.add(canonicalCycle([...stack.slice(existingIndex), next]));
+        continue;
+      }
+      if (seen.has(next)) continue;
+      visit(next, [...stack, next], new Set([...seen, next]));
+    }
+  };
+  for (const node of [...edges.keys()].sort()) {
+    visit(node, [node], new Set([node]));
+  }
+
+  const dependencyCycles = [...cycles].sort();
+  for (const cycle of dependencyCycles) {
+    findings.push({
+      finding_id: stableId("finding:design-doc-dependency-cycle", cycle),
+      kind: "design-doc-dependency-cycle",
+      severity: "warn",
+      subject_id: cycle,
+      source: "design-doc-cross-integrity",
+      status: "open",
+      evidence_path: cycle.split(" -> ")[0] ?? "",
+    });
+  }
+
+  return {
+    checked_docs: checkedDocs.size,
+    duplicate_definitions: duplicateDefinitions,
+    dependency_cycles: dependencyCycles,
+    findings,
+    ok: findings.length === 0,
+  };
+}
+
 export function analyzeSpecIrIntegrity(input: {
   defs: SpecDefRow[];
   relations: SpecRelationRow[];
@@ -2099,6 +2222,13 @@ export function collectSpecIrProjection(repoRoot: string, indexedAt: string): Sp
     ...analyzeAgentContractIntegrity({
       contracts: agentContracts,
       sources,
+    }).findings,
+  );
+  findings.push(
+    ...analyzeDesignDocCrossIntegrity({
+      defs,
+      relations: relationResult.relations,
+      catalog_entries: documentCatalogEntries,
     }).findings,
   );
   return {

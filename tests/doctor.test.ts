@@ -37,6 +37,7 @@ import {
   checkDddTddRules,
   checkDependencyDrift,
   checkDescentObligation,
+  checkDesignDocCrossIntegrity,
   checkDriveDbRegistration,
   checkDriveModelPassage,
   checkForwardConvergence,
@@ -607,6 +608,73 @@ describe("runDoctor", () => {
     expect(result.messages[0]).toContain("typed-spec-trace-closure - OK");
     expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: typed-spec-trace-closure - OK"))).toBe(true);
+  });
+
+  it("surfaces design doc cross integrity as a doctor hard gate", () => {
+    const result = checkDesignDocCrossIntegrity(process.cwd());
+    const r = realRepoDoctor();
+
+    expect(result.ok).toBe(true);
+    expect(result.messages[0]).toContain("design-doc-cross-integrity - OK");
+    expect(r.ok).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: design-doc-cross-integrity - OK"))).toBe(
+      true,
+    );
+  });
+
+  it("fails design doc cross integrity when a typed spec is defined by multiple docs", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-design-cross-"));
+    try {
+      mkdirSync(join(root, "docs", "governance"), { recursive: true });
+      mkdirSync(join(root, "docs", "design", "harness", "L4-basic-design"), { recursive: true });
+      writeFileSync(
+        join(root, "docs", "governance", "vmodel-document-catalog.md"),
+        [
+          "# V-model document catalog",
+          "",
+          "| doc_type_id | layer | sub_doc | category | requirement_class | applicability | default_status | source_doc_family | authoring_source_path | projection_table | profile_controlled | skip_reason_required |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|",
+          "| DOC-A | L4 | data | basic-design | core | in_scope | required | fixture | docs/design/harness/L4-basic-design/data.md | spec_defs | false | false |",
+          "| DOC-B | L4 | function | basic-design | core | in_scope | required | fixture | docs/design/harness/L4-basic-design/function.md | spec_defs | false | false |",
+        ].join("\n"),
+        "utf8",
+      );
+      writeFileSync(
+        join(root, "docs", "design", "harness", "L4-basic-design", "data.md"),
+        [
+          "# A",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-DUP",
+          "      kind: contract",
+          "```",
+        ].join("\n"),
+        "utf8",
+      );
+      writeFileSync(
+        join(root, "docs", "design", "harness", "L4-basic-design", "function.md"),
+        [
+          "# B",
+          "",
+          "```yaml",
+          "spec:",
+          "  defines:",
+          "    - id: VMS-DUP",
+          "      kind: contract",
+          "```",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = checkDesignDocCrossIntegrity(root);
+
+      expect(result.ok).toBe(false);
+      expect(result.messages.join("\n")).toContain("design-doc-duplicate-definition");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("fails typed spec trace closure when bidirectional trace or test backlink is missing", () => {

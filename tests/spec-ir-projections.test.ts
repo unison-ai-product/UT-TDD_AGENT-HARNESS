@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  analyzeDesignDocCrossIntegrity,
   analyzeTypedSpecTraceClosure,
   collectSpecIrProjection,
   deriveSpecRagClosureEntries,
@@ -327,6 +328,160 @@ describe("spec IR projections", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it("detects duplicate typed spec definitions across design documents", () => {
+    const defs = [
+      {
+        spec_id: "VMS-DUP",
+        spec_kind: "contract",
+        layer: "L4",
+        sub_doc: "data",
+        owner_artifact_id: "a",
+        owner_path: "docs/design/harness/L4-basic-design/data.md",
+        section_anchor: "spec.defines:VMS-DUP",
+        title: "VMS-DUP contract",
+        lifecycle_status: "active",
+        plan_id: "",
+        source_path: "docs/design/harness/L4-basic-design/data.md",
+        source_hash: "sha256:a",
+        indexed_at: "2026-07-09T00:00:00.000Z",
+      },
+      {
+        spec_id: "VMS-DUP",
+        spec_kind: "contract",
+        layer: "L4",
+        sub_doc: "function",
+        owner_artifact_id: "b",
+        owner_path: "docs/design/harness/L4-basic-design/function.md",
+        section_anchor: "spec.defines:VMS-DUP",
+        title: "VMS-DUP contract duplicate",
+        lifecycle_status: "active",
+        plan_id: "",
+        source_path: "docs/design/harness/L4-basic-design/function.md",
+        source_hash: "sha256:b",
+        indexed_at: "2026-07-09T00:00:00.000Z",
+      },
+    ];
+
+    const result = analyzeDesignDocCrossIntegrity({
+      defs,
+      relations: [],
+      catalog_entries: [],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "design-doc-duplicate-definition",
+          subject_id: "VMS-DUP",
+        }),
+      ]),
+    );
+  });
+
+  it("detects design document dependency cycles while ignoring same-document self references", () => {
+    const indexedAt = "2026-07-09T00:00:00.000Z";
+    const defs = [
+      {
+        spec_id: "VMS-A",
+        spec_kind: "contract",
+        layer: "L4",
+        sub_doc: "data",
+        owner_artifact_id: "a",
+        owner_path: "docs/design/harness/L4-basic-design/data.md",
+        section_anchor: "spec.defines:VMS-A",
+        title: "A",
+        lifecycle_status: "active",
+        plan_id: "",
+        source_path: "docs/design/harness/L4-basic-design/data.md",
+        source_hash: "sha256:a",
+        indexed_at: indexedAt,
+      },
+      {
+        spec_id: "VMS-B",
+        spec_kind: "contract",
+        layer: "L4",
+        sub_doc: "function",
+        owner_artifact_id: "b",
+        owner_path: "docs/design/harness/L4-basic-design/function.md",
+        section_anchor: "spec.defines:VMS-B",
+        title: "B",
+        lifecycle_status: "active",
+        plan_id: "",
+        source_path: "docs/design/harness/L4-basic-design/function.md",
+        source_hash: "sha256:b",
+        indexed_at: indexedAt,
+      },
+      {
+        spec_id: "VMS-C",
+        spec_kind: "contract",
+        layer: "L4",
+        sub_doc: "function",
+        owner_artifact_id: "c",
+        owner_path: "docs/design/harness/L4-basic-design/function.md",
+        section_anchor: "spec.defines:VMS-C",
+        title: "C",
+        lifecycle_status: "active",
+        plan_id: "",
+        source_path: "docs/design/harness/L4-basic-design/function.md",
+        source_hash: "sha256:c",
+        indexed_at: indexedAt,
+      },
+    ];
+    const relations = [
+      {
+        relation_id: "r1",
+        from_spec_id: "VMS-A",
+        to_spec_id: "VMS-B",
+        relation_kind: "traces_to",
+        plan_id: "",
+        status: "active",
+        source: "docs/design/harness/L4-basic-design/data.md",
+        evidence_path: "VMS-B",
+        indexed_at: indexedAt,
+      },
+      {
+        relation_id: "r2",
+        from_spec_id: "VMS-B",
+        to_spec_id: "VMS-A",
+        relation_kind: "traces_to",
+        plan_id: "",
+        status: "active",
+        source: "docs/design/harness/L4-basic-design/function.md",
+        evidence_path: "VMS-A",
+        indexed_at: indexedAt,
+      },
+      {
+        relation_id: "r3",
+        from_spec_id: "VMS-B",
+        to_spec_id: "VMS-C",
+        relation_kind: "traces_to",
+        plan_id: "",
+        status: "active",
+        source: "docs/design/harness/L4-basic-design/function.md",
+        evidence_path: "VMS-C",
+        indexed_at: indexedAt,
+      },
+    ];
+
+    const result = analyzeDesignDocCrossIntegrity({
+      defs,
+      relations,
+      catalog_entries: [],
+    });
+
+    expect(result.dependency_cycles).toHaveLength(1);
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "design-doc-dependency-cycle",
+          subject_id:
+            "docs/design/harness/L4-basic-design/data.md -> docs/design/harness/L4-basic-design/function.md -> docs/design/harness/L4-basic-design/data.md",
+        }),
+      ]),
+    );
   });
 
   it("projects typed spec.defines declarations and declaration trace edges", () => {

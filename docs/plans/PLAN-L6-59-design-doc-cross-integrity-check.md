@@ -5,7 +5,7 @@ kind: add-design
 layer: L6
 sub_doc: function-spec
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
@@ -15,12 +15,39 @@ parent_design: docs/plans/PLAN-L4-20-document-catalog-scale-profile-ssot.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L8
-review_evidence: []
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-09T13:11:00+09:00"
+    tests_green_at: "2026-07-09T13:11:00+09:00"
+    verdict: approve
+    scope: "PLAN-L6-59 design freeze。設計doc横断の重複定義/循環依存検出契約を L6 function-spec / L7 unit oracle / Vモデル工程管理表へ backfill した。"
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: lint
+        command: "bun run src\\cli.ts plan lint --gate governance"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-09T13:11:00+09:00"
+        evidence_path: docs/plans/PLAN-L6-59-design-doc-cross-integrity-check.md
+        output_digest: "sha256:81d6ecc41beaa3c2a7c1fb2b453dd46b6ae6aff4eb38adf0cc0b8ef821bc23aa"
 agent_slots:
   - role: tl
     slot_label: "TL - 設計 doc 級の重複定義/循環依存検出契約、既存 namespace 個別 dup / module 級 cycle との境界確認"
 generates:
   - artifact_path: docs/plans/PLAN-L6-59-design-doc-cross-integrity-check.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L6-function-design/function-spec.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
+  - artifact_path: docs/governance/vmodel-upgrade-schedule.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/plans/PLAN-L7-404-design-doc-cross-integrity-gate.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/plans/PLAN-REVERSE-404-design-doc-cross-integrity-backfill.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L4-20-document-catalog-scale-profile-ssot.md
@@ -63,6 +90,17 @@ dependencies:
 
 ## 2. 受け入れ条件 (design freeze 時)
 
-- 重複定義検出の対象 ID 族・doc 単位の粒度が固定される。
-- 循環依存検出が既存 module 級 `detectCycles` と非重複であることが明記される。
-- `PLAN-L4-20` のカタログ構造が確定するまで本 PLAN は `requires` でブロックされる。
+- [x] 重複定義検出の対象 ID 族・doc 単位の粒度が固定される。
+- [x] 循環依存検出が既存 module 級 `detectCycles` と非重複であることが明記される。
+- [x] `PLAN-L4-20` のカタログ構造が確定するまで本 PLAN は `requires` でブロックされる。
+- [x] L6 function-spec に `analyzeDesignDocCrossIntegrity` の入出力・finding・非重複境界を固定する。
+- [x] L7 unit-test-design に `U-DESIGN-CROSS-*` oracle を追加し、後続 L7 実装の Red/Green 判定を固定する。
+- [x] `vmodel-upgrade-schedule.md` に U14a として現在地を登録し、工程管理表から DB projection へ流せる状態にする。
+
+## 3. Design Freeze Result (2026-07-09)
+
+本 PLAN は L6 設計 freeze として confirmed とする。実装は後続 L7 add-impl で行う。
+検出器は `document_catalog_entries` と typed spec projection (`spec_defs` / `spec_relations`) を入力にし、
+設計 doc ノード単位で重複定義と循環依存を検出する。これにより ZIP `cmd_check` 相当の「全 doc 横断で見る」
+性質を HARNESS の設計正本へ移し、module import cycle や typed-spec trace closure の個別 gate へ責務を
+押し込まない。

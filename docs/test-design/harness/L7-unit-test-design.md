@@ -1082,3 +1082,11 @@ TVMS-008 は agent contract authoring source、TVMS-009 は agent contract docto
 | U-SPEC-RAG-R1 | `deriveSpecRagClosureEntries(input)` | typed spec relation を `PLAN-L6-60` と同じ向きで辿り、test 到達済みかつ closure finding なしの spec は `green` / `closed`、test を要求するが test 到達 0 の spec は `red` / `missing_test` になる。 |
 | U-SPEC-RAG-R2 | `rebuildHarnessDb` / `projectSpecIr` | real repo rebuild で `spec_rag_closure_entries` が populated になり、`VMS-004` などの typed spec row が `search_index` から `spec closure RAG` で検索できる。 |
 | U-SPEC-RAG-R3 | `ut-tdd trace rag --id <id> --json` | CLI は `spec_rag_closure_entries` を read-only に表示し、`--id` filter と JSON 出力を持つ。`schedule_entries.rag` を代替参照しない。 |
+
+## PLAN-L6-59 設計 doc 横断整合性 oracle (2026-07-09)
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-DESIGN-CROSS-R1 | `analyzeDesignDocCrossIntegrity(input)` | `document_catalog_entries` で対象 doc 集合を確定し、`spec_defs` の同一 `spec_id` が複数 authoring source で定義された場合は `design-doc-duplicate-definition` finding を返す。 |
+| U-DESIGN-CROSS-R2 | `analyzeDesignDocCrossIntegrity(input)` | `spec_relations` を doc 間 edge に射影し、doc A -> doc B -> doc A の循環を `design-doc-dependency-cycle` finding として返す。同一 doc 内自己参照は cycle 扱いしない。 |
+| U-DESIGN-CROSS-R3 | `checkDesignDocCrossIntegrity(repoRoot)` | doctor gate は catalog + typed spec projection を authoring source から再構築して判定し、module import cycle (`dependency-drift`) や typed-spec trace closure の片方向欠落と重複して同じ違反を二重報告しない。 |

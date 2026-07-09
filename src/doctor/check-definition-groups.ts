@@ -6,6 +6,7 @@ import {
   checkDbProjectionCoverage,
   checkDbProjectionIngestion,
   checkDesignDetection,
+  checkDesignDocCrossIntegrity,
   checkTypedSpecLedgerBodySync,
   checkTypedSpecOwnedArtifactDispersal,
   checkTypedSpecPhaseLayerAlignment,
@@ -240,6 +241,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("db-projection-coverage", () => checkDbProjectionCoverage(deps.repoRoot)),
         full("db-projection-ingestion", () => checkDbProjectionIngestion(deps.repoRoot, options)),
         full("design-detection", () => checkDesignDetection(deps.repoRoot)),
+        full("design-doc-cross-integrity", () => checkDesignDocCrossIntegrity(deps.repoRoot)),
         full("typed-spec-trace-closure", () => checkTypedSpecTraceClosure(deps.repoRoot)),
         full("typed-spec-ledger-body-sync", () => checkTypedSpecLedgerBodySync(deps.repoRoot)),
         full("typed-spec-owned-artifact-dispersal", () =>
