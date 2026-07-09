@@ -39,6 +39,8 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/distribution-acceptance.test.ts
     artifact_type: test_code
+  - artifact_path: tests/distribution-scratch-ignore.test.ts
+    artifact_type: test_code
   - artifact_path: docs/templates/adapter/AGENTS.md
     artifact_type: template
   - artifact_path: docs/templates/adapter/CLAUDE.md
