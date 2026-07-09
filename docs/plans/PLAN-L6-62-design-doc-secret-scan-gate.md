@@ -18,8 +18,8 @@ next_pair_freeze: L8
 review_evidence:
   - reviewer: codex-intra-runtime-subagent
     review_kind: intra_runtime_subagent
-    reviewed_at: 2026-07-09T14:39:36+09:00
-    tests_green_at: 2026-07-09T14:39:36+09:00
+    reviewed_at: 2026-07-09T19:13:55+09:00
+    tests_green_at: 2026-07-09T19:13:55+09:00
     scope: "PLAN-L6-62。L4 security slot confirmed 後、L6 secret-scan 契約 / L7 oracle / doctor hard gate / distribution preflight の接続を確認。"
     verdict: approve
     green_commands:
@@ -28,9 +28,10 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: 2026-07-09T14:39:36+09:00
+        completed_at: 2026-07-09T19:13:55+09:00
         evidence_path: tests/secret-scan.test.ts
-        output_digest: "sha256:32714975273040a2215bb85f166194a44f8c463711ac551efbc908f5e82e019f"
+        output_digest: "sha256:f983f38803bd12e84789df990b761e6e681dcffcb9be8ebc829e1332814e5cc6"
+        anchor_commit: 1afa132c9368fc362706db102880e020d7ba3d24
       - kind: typecheck
         command: "bun run tsc --noEmit"
         runner: bun
