@@ -21,6 +21,12 @@ function writeGovernanceDoc(root: string, name: string, body: string): void {
   writeFileSync(join(dir, name), body, "utf8");
 }
 
+function writeMarkdown(root: string, relativePath: string, body: string): void {
+  const path = join(root, relativePath);
+  mkdirSync(path.replace(/[/\\][^/\\]+$/, ""), { recursive: true });
+  writeFileSync(path, body, "utf8");
+}
+
 describe("spec IR projections", () => {
   it("builds deterministic spec IR rows and routes orphan findings as non-ready candidates", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-"));
@@ -971,6 +977,175 @@ describe("spec IR projections", () => {
           expect.objectContaining({ kind: "spec-ir-orphan-relation" }),
         ]),
       );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("scopes invalid sub_doc findings to design document catalog rows", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-subdoc-scope-"));
+    try {
+      writePlan(
+        root,
+        "PLAN-L6-998-plan-subdoc-fixture.md",
+        [
+          "---",
+          "plan_id: PLAN-L6-998-plan-subdoc-fixture",
+          "title: Plan subdoc fixture",
+          "kind: add-design",
+          "layer: L6",
+          "sub_doc: not-a-design-subdoc",
+          "drive: db",
+          "status: confirmed",
+          "route_signal: feature_addition",
+          "route_mode: add-feature",
+          "---",
+          "",
+          "# Plan subdoc fixture",
+        ].join("\n"),
+      );
+      writeMarkdown(
+        root,
+        "docs/design/harness/L6-function-design/not-a-design-subdoc.md",
+        [
+          "---",
+          "layer: L6",
+          "sub_doc: not-a-design-subdoc",
+          "status: confirmed",
+          "---",
+          "",
+          "# Invalid design subdoc fixture",
+          "## 日本語見出し",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-09T00:00:00.000Z");
+      const invalidSubDocFindings = projection.findings.filter(
+        (finding) => finding.kind === "spec-ir-invalid-subdoc",
+      );
+
+      expect(invalidSubDocFindings).toHaveLength(1);
+      expect(invalidSubDocFindings[0]).toEqual(
+        expect.objectContaining({
+          subject_id: expect.stringContaining("not-a-design-subdoc.md-document"),
+          evidence_path: "docs/design/harness/L6-function-design/not-a-design-subdoc.md",
+        }),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves short-form plan IDs and reference docs without orphan relation noise", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-relation-scope-"));
+    try {
+      writePlan(
+        root,
+        "PLAN-L7-65-deterministic-model-policy.md",
+        [
+          "---",
+          "plan_id: PLAN-L7-65-deterministic-model-policy",
+          "title: Deterministic model policy",
+          "kind: add-impl",
+          "layer: L7",
+          "drive: db",
+          "status: confirmed",
+          "route_signal: feature_addition",
+          "route_mode: add-feature",
+          "---",
+          "",
+          "# Deterministic model policy",
+        ].join("\n"),
+      );
+      writePlan(
+        root,
+        "PLAN-L7-66-existing-repo-onboarding-readme.md",
+        [
+          "---",
+          "plan_id: PLAN-L7-66-existing-repo-onboarding-readme",
+          "title: Existing repo onboarding README",
+          "kind: add-impl",
+          "layer: L7",
+          "drive: db",
+          "status: confirmed",
+          "route_signal: feature_addition",
+          "route_mode: add-feature",
+          "parent_design: docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md",
+          "dependencies:",
+          "  parent: PLAN-L7-65",
+          "---",
+          "",
+          "# Existing repo onboarding README",
+        ].join("\n"),
+      );
+      writeMarkdown(
+        root,
+        "docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md",
+        "# ADR-001\n",
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-09T00:00:00.000Z");
+
+      expect(projection.spec_relations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            relation_kind: "requires",
+            evidence_path: "PLAN-L7-65",
+          }),
+          expect.objectContaining({
+            relation_kind: "requires",
+            evidence_path: "docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md",
+          }),
+        ]),
+      );
+      expect(
+        projection.findings.filter(
+          (finding) =>
+            finding.kind === "spec-ir-orphan-relation" &&
+            (finding.subject_id.includes("PLAN-L7-65") ||
+              finding.subject_id.includes("docs/adr/ADR-001")),
+        ),
+      ).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps unicode-derived section spec IDs distinct when ASCII sanitization would collide", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-unicode-id-"));
+    try {
+      writeMarkdown(
+        root,
+        "docs/design/harness/L6-function-design/unicode-section-fixture.md",
+        [
+          "---",
+          "layer: L6",
+          "sub_doc: function-spec",
+          "status: confirmed",
+          "---",
+          "",
+          "# Unicode section fixture",
+          "",
+          "## 設計",
+          "",
+          "## 試験",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-09T00:00:00.000Z");
+      const sectionIds = projection.spec_defs
+        .filter(
+          (def) =>
+            def.owner_path ===
+              "docs/design/harness/L6-function-design/unicode-section-fixture.md" &&
+            def.spec_kind === "section" &&
+            ["設計", "試験"].includes(def.title),
+        )
+        .map((def) => def.spec_id);
+
+      expect(sectionIds).toHaveLength(2);
+      expect(new Set(sectionIds).size).toBe(2);
+      expect(sectionIds.every((id) => /--[a-f0-9]{12}$/.test(id))).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

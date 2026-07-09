@@ -10,6 +10,7 @@ type SpecIrSourceKind =
   | "plan"
   | "design_doc"
   | "test_design"
+  | "reference_doc"
   | "schedule_doc"
   | "activation_profile"
   | "document_catalog"
@@ -294,7 +295,11 @@ interface SpecIrProjectionDeps {
 }
 
 function stableId(prefix: string, value: string): string {
-  return `${prefix}:${value.replace(/[^A-Za-z0-9._:-]+/g, "-")}`;
+  const raw = value || "unknown";
+  const sanitized = raw.replace(/[^A-Za-z0-9._:-]+/g, "-");
+  if (sanitized === raw && sanitized !== "") return `${prefix}:${sanitized}`;
+  const suffix = createHash("sha256").update(raw).digest("hex").slice(0, 12);
+  return `${prefix}:${sanitized || "unknown"}--${suffix}`;
 }
 
 function stableHash(value: string): string {
@@ -314,10 +319,18 @@ function markdownFrontmatter(content: string): string {
 function metadataFromContent(content: string): Record<string, unknown> {
   const raw = markdownFrontmatter(content);
   if (!raw.trim()) return {};
-  const parsed = parseYaml(raw);
-  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-    ? (parsed as Record<string, unknown>)
-    : {};
+  return parseYamlObject(raw) ?? {};
+}
+
+function parseYamlObject(raw: string): Record<string, unknown> | null {
+  try {
+    const parsed = parseYaml(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 function stringField(value: unknown): string {
@@ -348,10 +361,22 @@ function dependencyValues(metadata: Record<string, unknown>): string[] {
   ].filter(Boolean);
 }
 
+function referenceValues(metadata: Record<string, unknown>): string[] {
+  return [
+    ...dependencyValues(metadata),
+    stringField(metadata.pair_artifact),
+    ...stringList(metadata.references),
+  ].filter(Boolean);
+}
+
 function planIdFromReference(value: string): string {
   const normalized = normalizePath(value);
   const match = normalized.match(/(PLAN-[A-Z0-9-]+[A-Za-z0-9-]*)/);
   return match?.[1] ?? "";
+}
+
+function planShortId(planId: string): string {
+  return planId.match(/^(PLAN-(?:L\d+|REVERSE|RECOVERY|DISCOVERY)-\d+)/)?.[1] ?? planId;
 }
 
 function firstHeading(content: string): string {
@@ -373,6 +398,7 @@ function typedSpecId(value: string): string {
 }
 
 function typedSpecDeclarations(source: SpecIrSource): TypedSpecDeclaration[] {
+  if (source.kind === "reference_doc") return [];
   const blocks: unknown[] = [];
   const metadataSpec =
     source.metadata.spec && typeof source.metadata.spec === "object"
@@ -380,9 +406,9 @@ function typedSpecDeclarations(source: SpecIrSource): TypedSpecDeclaration[] {
       : null;
   if (metadataSpec) blocks.push(metadataSpec);
   for (const match of source.content.matchAll(/```ya?ml\s*\n([\s\S]*?)\n```/g)) {
-    const parsed = parseYaml(match[1]);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
-    const spec = (parsed as Record<string, unknown>).spec;
+    const parsed = parseYamlObject(match[1]);
+    if (!parsed) continue;
+    const spec = parsed.spec;
     if (spec && typeof spec === "object" && !Array.isArray(spec)) blocks.push(spec);
   }
   const declarations: TypedSpecDeclaration[] = [];
@@ -436,6 +462,14 @@ function sourceKind(path: string): SpecIrSourceKind | null {
   if (path.startsWith("docs/plans/")) return "plan";
   if (path.startsWith("docs/design/harness/")) return "design_doc";
   if (path.startsWith("docs/test-design/harness/")) return "test_design";
+  if (
+    path.startsWith("docs/governance/") ||
+    path.startsWith("docs/adr/") ||
+    path.startsWith("docs/process/") ||
+    path.startsWith("docs/migration/")
+  ) {
+    return "reference_doc";
+  }
   return null;
 }
 
@@ -476,7 +510,7 @@ export function loadSpecIrSources(repoRoot: string): SpecIrSource[] {
     "governance",
     "vmodel-refactor-qa-release-gates.md",
   );
-  return [
+  const canonicalSourcePaths = [
     ...(existsSync(scheduleSource) ? [scheduleSource] : []),
     ...(existsSync(activationProfileSource) ? [activationProfileSource] : []),
     ...(existsSync(documentCatalogSource) ? [documentCatalogSource] : []),
@@ -487,7 +521,24 @@ export function loadSpecIrSources(repoRoot: string): SpecIrSource[] {
     ...walkMarkdown(join(repoRoot, "docs", "plans")),
     ...walkMarkdown(join(repoRoot, "docs", "design", "harness")),
     ...walkMarkdown(join(repoRoot, "docs", "test-design", "harness")),
-  ].flatMap((absolutePath) => {
+  ];
+  const uniqueCanonicalPaths = new Set(canonicalSourcePaths);
+  const referencedPaths = new Set<string>();
+  for (const absolutePath of uniqueCanonicalPaths) {
+    const path = normalizePath(relative(repoRoot, absolutePath));
+    if (!path.startsWith("docs/plans/")) continue;
+    const metadata = metadataFromContent(readFileSync(absolutePath, "utf8"));
+    for (const ref of referenceValues(metadata)) {
+      const refPath = normalizePath(ref);
+      if (planIdFromReference(refPath)) continue;
+      const refKind = sourceKind(refPath);
+      if (!refKind) continue;
+      const refAbsolutePath = join(repoRoot, refPath);
+      if (existsSync(refAbsolutePath)) referencedPaths.add(refAbsolutePath);
+    }
+  }
+  const sourcePaths = [...uniqueCanonicalPaths, ...referencedPaths];
+  return [...new Set(sourcePaths)].flatMap((absolutePath) => {
     const path = normalizePath(relative(repoRoot, absolutePath));
     const kind = sourceKind(path);
     if (!kind) return [];
@@ -518,6 +569,15 @@ function sourcePlanId(source: SpecIrSource): string {
 
 function sourceStatus(source: SpecIrSource): string {
   return stringField(source.metadata.status) || "active";
+}
+
+function shouldValidateDesignSubDoc(def: SpecDefRow): boolean {
+  return (
+    def.spec_kind === "design_doc" &&
+    def.section_anchor === "document" &&
+    ["L1", "L2", "L3", "L4", "L5", "L6"].includes(def.layer) &&
+    def.owner_path.startsWith("docs/design/harness/")
+  );
 }
 
 function sourceTitle(source: SpecIrSource): string {
@@ -640,7 +700,7 @@ export function parseSpecDefs(sources: SpecIrSource[], indexedAt: string): SpecD
         indexed_at: indexedAt,
       });
     }
-    if (source.kind === "plan") continue;
+    if (source.kind === "plan" || source.kind === "reference_doc") continue;
     for (const match of source.content.matchAll(/^(#{1,3})\s+(.+)$/gm)) {
       const title = match[2].trim();
       const anchor = slug(title);
@@ -671,12 +731,24 @@ export function parseSpecRelations(
   indexedAt: string,
 ): { relations: SpecRelationRow[]; findings: SpecIrFindingRow[] } {
   const byPlanId = new Map(defs.filter((def) => def.plan_id).map((def) => [def.plan_id, def]));
+  const byPlanShortId = new Map<string, SpecDefRow | null>();
+  for (const def of defs.filter((item) => item.plan_id)) {
+    const shortId = planShortId(def.plan_id);
+    const existing = byPlanShortId.get(shortId);
+    byPlanShortId.set(shortId, existing && existing.spec_id !== def.spec_id ? null : def);
+  }
   const byPath = new Map(
     defs.filter((def) => def.section_anchor === "document").map((def) => [def.owner_path, def]),
   );
   const bySpecId = new Map(defs.map((def) => [def.spec_id, def]));
   const relations: SpecRelationRow[] = [];
   const findings: SpecIrFindingRow[] = [];
+  const resolvePlanDef = (planId: string): SpecDefRow | undefined => {
+    const exact = byPlanId.get(planId);
+    if (exact) return exact;
+    const short = byPlanShortId.get(planId);
+    return short ?? undefined;
+  };
   const addRelation = (input: {
     source: SpecIrSource;
     from: SpecDefRow;
@@ -717,7 +789,7 @@ export function parseSpecRelations(
     if (!from) continue;
     for (const ref of dependencyValues(source.metadata)) {
       const targetPlanId = planIdFromReference(ref);
-      const target = targetPlanId ? byPlanId.get(targetPlanId) : byPath.get(normalizePath(ref));
+      const target = targetPlanId ? resolvePlanDef(targetPlanId) : byPath.get(normalizePath(ref));
       addRelation({ source, from, to: target, relationKind: "requires", evidencePath: ref });
     }
     const pairArtifact = normalizePath(stringField(source.metadata.pair_artifact));
@@ -1010,9 +1082,9 @@ export function joinDocumentScaleProfileReviews(input: {
 function agentContractBlocks(source: SpecIrSource): Record<string, unknown>[] {
   const blocks: Record<string, unknown>[] = [];
   for (const match of source.content.matchAll(/```ya?ml\s*\n([\s\S]*?)\n```/g)) {
-    const parsed = parseYaml(match[1]);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
-    blocks.push(parsed as Record<string, unknown>);
+    const parsed = parseYamlObject(match[1]);
+    if (!parsed) continue;
+    blocks.push(parsed);
   }
   return blocks;
 }
@@ -1245,9 +1317,9 @@ function parseTypedSpecLedgerRows(sources: TypedSpecSourceSnapshot[]): TypedSpec
       });
     }
     for (const match of source.content.matchAll(/```ya?ml\s*\n([\s\S]*?)\n```/g)) {
-      const parsed = parseYaml(match[1]);
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
-      const ledger = (parsed as Record<string, unknown>).typed_spec_ledger;
+      const parsed = parseYamlObject(match[1]);
+      if (!parsed) continue;
+      const ledger = parsed.typed_spec_ledger;
       if (!Array.isArray(ledger)) continue;
       for (const item of ledger) {
         if (!item || typeof item !== "object" || Array.isArray(item)) continue;
@@ -1272,13 +1344,8 @@ function stripSpecDeclarationBlocks(content: string): string {
       ? content.slice(content.indexOf("\n---", 3) + 4)
       : content;
   return withoutFrontmatter.replace(/```ya?ml\s*\n([\s\S]*?)\n```/g, (block, body) => {
-    const parsed = parseYaml(body);
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      !Array.isArray(parsed) &&
-      (parsed as Record<string, unknown>).spec
-    ) {
+    const parsed = parseYamlObject(body);
+    if (parsed?.spec) {
       return "";
     }
     return block;
@@ -1872,10 +1939,7 @@ export function analyzeSpecIrIntegrity(input: {
   ]);
   for (const def of input.defs) {
     specDefCounts.set(def.spec_id, (specDefCounts.get(def.spec_id) ?? 0) + 1);
-    if (
-      ["L1", "L2", "L3", "L4", "L5", "L6"].includes(def.layer) &&
-      !isValidSubDocForLayer(def.layer, def.sub_doc)
-    ) {
+    if (shouldValidateDesignSubDoc(def) && !isValidSubDocForLayer(def.layer, def.sub_doc)) {
       findings.push({
         finding_id: stableId(
           "finding:spec-ir-invalid-subdoc",
