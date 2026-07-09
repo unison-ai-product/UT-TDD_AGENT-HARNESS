@@ -4,6 +4,7 @@ import { basename, join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { isValidSubDocForLayer, V_MODEL_PAIRS } from "../schema";
 import { isSecretLike } from "../secret";
+import { stableId } from "../stable-id";
 import type { HarnessDb } from "./index";
 
 type SpecIrSourceKind =
@@ -292,14 +293,6 @@ interface SpecIrProjectionDeps {
     db: HarnessDb,
     event: { table: string; id: string; row: Record<string, unknown> },
   ) => void;
-}
-
-function stableId(prefix: string, value: string): string {
-  const raw = value || "unknown";
-  const sanitized = raw.replace(/[^A-Za-z0-9._:-]+/g, "-");
-  if (sanitized === raw && sanitized !== "") return `${prefix}:${sanitized}`;
-  const suffix = createHash("sha256").update(raw).digest("hex").slice(0, 12);
-  return `${prefix}:${sanitized || "unknown"}--${suffix}`;
 }
 
 function stableHash(value: string): string {

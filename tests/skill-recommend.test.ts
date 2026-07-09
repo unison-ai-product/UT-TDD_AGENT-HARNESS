@@ -9,6 +9,7 @@ import {
   recordSkillRecommendations,
 } from "../src/skill-engine/recommend";
 import { scoreSkillDetailed, shouldScoreSkillAsset } from "../src/skill-scoring/scoring";
+import { stableId } from "../src/stable-id";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
 import { recordProjectionEvent } from "../src/state-db/projection-writer";
@@ -514,7 +515,7 @@ describe("skill recommendation telemetry", () => {
         ]),
         deps: {
           nowIso: () => "2026-06-12T00:05:00.000Z",
-          stableId: (prefix, value) => `${prefix}:${value.replace(/[^A-Za-z0-9._:-]+/g, "-")}`,
+          stableId,
           recordProjectionEvent,
           skillDriveModelForPlan: () => "Add-feature",
         },

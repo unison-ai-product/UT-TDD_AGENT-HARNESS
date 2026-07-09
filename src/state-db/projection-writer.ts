@@ -60,6 +60,7 @@ import {
   type TableDef,
 } from "../schema/harness-db";
 import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog";
+import { stableId } from "../stable-id";
 import { analyzePairFreeze, loadPairDocs, type PairOrphanReason } from "../vmodel/lint";
 import { deriveArtifactProgressDecision } from "./artifact-progress-decision";
 import { DESIGN_QUALITY_CHECK_IDS, type DesignQualityCheckId } from "./design-detection";
@@ -198,10 +199,6 @@ function tableDef(name: string): TableDef {
 
 function nowIso(): string {
   return new Date().toISOString();
-}
-
-function stableId(prefix: string, value: string): string {
-  return `${prefix}:${value.replace(/[^A-Za-z0-9._:-]+/g, "-")}`;
 }
 
 function stableHash(value: string): string {

@@ -30,6 +30,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 | **vmodel** | `src/vmodel/lint.ts` | 実装済 (PLAN-L5-02 以降拡張) | V-model 4 artifact trace lint |
 | **runtime** | `src/runtime/detect.ts` + `agent-guard.ts` | 実装済 | mode 検出 + agent-guard 判定 |
 | **shared** | `src/shared/*.ts` | 実装済 | module 横断の純粋ヘルパー。lint/runtime の逆依存回避 |
+| **stable-id** | `src/stable-id.ts` | 実装済 | projection/feedback/skill/workflow 横断の deterministic ID 正規化。非ASCIIや区切り正規化で情報が落ちる場合は hash suffix で衝突を防ぐ |
 | **doctor** | `src/doctor/index.ts` | 実装済 (scaffold) | 統合検証集約 |
 | **workflow** | `src/workflow/contracts.ts` + `src/workflow/readiness.ts` | 実装済 | 11 mode workflow エンジン (function §3) |
 | **session** | `src/handover/` + `src/runtime/session-log.ts` | 実装済 | Handover 操作 (function §4、L6 carry IMP-019) |
@@ -47,6 +48,9 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 - `index.ts`: 11 enum 定数 + schema (`kindSchema`/`layerSchema`/`driveSchema`/`statusSchema`/`roleSchema`/`workflowPhaseSchema`/`decisionOutcomeSchema`/`reverseTypeSchema`/`forwardRoutingSchema`/`promotionStrategySchema`/`artifactTypeSchema`/`orchestrationModeSchema`) + `V_MODEL_PAIRS` + `recommendedCommandV1Schema` + 型 export
 - `frontmatter.ts`: `planIdSchema` / `agentSlotSchema` / `generatesEntrySchema` / `dependenciesSchema` / `frontmatterBaseSchema` / `frontmatterSchema` (superRefine) / `Frontmatter` 型
 - **schema status**: `subDocSchema` (IMP-026) / `planIdSchema` 層別 regex (IMP-004) は `src/schema` に実装済み
+
+### §2.1a stable-id (横断 ID helper、依存末端)
+- `stable-id.ts`: `stableId(prefix: string, value: string): string`。projection row ID、feedback ID、skill recommendation/invocation ID、workflow evidence ID の共通生成器。値がそのまま ASCII safe な場合は既存 ID を維持し、正規化で情報が落ちる場合だけ `--<sha256 12hex>` を付与する。依存は `node:crypto` のみで、state-db / feedback / workflow への逆依存を持たない。
 
 ### §2.2 lint (共通様式 = `loadX`/`analyzeX(docs?)`/extractor)
 | lint module | 公開 IF (export) |
