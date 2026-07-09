@@ -587,9 +587,12 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-SKILL-IDX-003 | `analyzeSkillAssignments` (project 登録可) | L/駆動が共に空 + `category=project` の skill は ok=true |
 | U-SKILL-IDX-004 | `analyzeSkillAssignments` (無索引 fail-close) | L/駆動が共に空 + category 無 → `not-indexable` + ok=false (死蔵を落とす不変条件、§2.1) |
 | U-SKILL-IDX-005 | `analyzeSkillAssignments` (category 値検証) | `category` が workflow/domain/project 外 → `unknown-category` + ok=false / `skill_type` 空は依然 `missing-skill-type` / layers/drive_models の値検証 (unknown-layer/unknown-drive-model) は維持 |
-| U-SKILL-IDX-006 | `scoreSkill` (de-saturate) | 同一工程 (layer+drive 一致) で複数 skill が **score=1 に飽和せず**、metadata 重なりで弁別される (DISCOVERY-03 §5 の同点アルファベット順退化を解消) / 同入力→同出力 (決定論) |
+| U-SKILL-IDX-006 | `scoreSkill` (de-saturate) | 同一工程 (layer+drive 一致) で複数 skill が **score=1 に飽和せず**、実 catalog の token 分布を代表する fixture 上で metadata 重なりにより弁別される (DISCOVERY-03 §5 の同点アルファベット順退化を解消) / 同入力→同出力 (決定論) |
 | U-SKILL-IDX-007 | `scoreSkill` (domain situation-pull) | L/駆動が空の domain skill は L 軸/駆動軸 0 点だが、task が `domain_tags` に一致すると metadata 重なり + category ヒットで浮上する (recommended 帯へ) |
 | U-SKILL-IDX-008 | `scanSkillCatalog` / `catalogAutomationAssets` (category 投影) | skill frontmatter の `category` が `SkillCatalogEntry.category` / `automation_assets.category` 列へ投影され、search tokens に `category` + `domain_tags` が合流する / 実 repo skill 全件が indexable (not-indexable 0) |
+| U-SKILL-IDX-009 | `shouldScoreSkillAsset` / `recommendSkillsForPlan` (wildcard checklist 境界) | `skills/review-checklist.yaml` 相当の全 L 層×全駆動 review/checklist data asset は workflow skill の関連度 scoring 候補から除外され、`required` bucket に常時浮上しない |
+| U-SKILL-IDX-010 | `projectSkillEvaluations` / `scoreSkillDetailed` (runtime-provenance learning) | `skill_evaluations` は `skill_invocations.source LIKE "runtime-hook:%"` の実発火だけから作られ、`auto-projection:*` は adoption/success/unused signal に混入しない。runtime 実績がある skill のみ learning adjustment が reason と score に反映される |
+| U-SKILL-IDX-011 | `recommendSkillsForPlan` / `projectSkillTelemetry` (shared scorer) | CLI skill 推奨と DB projection は同一 scorer を使い、同一 plan・同一 catalog 入力で skill 順位と score が一致する。`scoreSkill` / `skillScore` の二重実装 drift を許さない |
 
 ### §1.24a `ut-tdd skill new` scaffolder (PLAN-L6-37 後続 add-feature 同梱)
 
@@ -616,7 +619,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - **agent-slots.md §2.3 関数 (loadSlots/fireSlot/releaseSlot/releaseOldestGuardSlot/sweepStaleGuardSlots/listActiveSlots/listStaleSlots/peakParallel/exceedsParallelLimit/recordGuardFire) → U-SLOT-001〜008** (add-feature 差分、IMP-050 + IMP-106 SubagentStop release。nodeAgentSlotsDeps は実 I/O deps で unit では mock 代替。孤児 0)
 - **module-drift.md §2-§3 関数 (parseListedModules/scanActualModules/analyzeModuleDrift/loadModuleDocs/moduleDriftMessages) → U-MDRIFT-001〜005** (add-feature 差分、PLAN-L7-16/IMP-075。moduleDriftMessages は U-MDRIFT-003/004 経路 + 専用 assert で被覆、loadModuleDocs は U-MDRIFT-005 実 repo ガードに内包。孤児 0)
 - **module-drift.md asset-drift alias (loadAssetDriftInput/analyzeAssetDrift/assetDriftMessages/checkAssetDrift) → U-ASSETDRIFT-001〜006** (内部資産 + prompt template cutover 差分、FR-L1-49。legacy source path residue / legacy command residue / docs-skills vacancy / guard allowlist missing を doctor hard guard。孤児 0)
-- **skill-index.md §1-§5 関数 (analyzeSkillAssignments 索引反転 / scoreSkill de-saturate / scanSkillCatalog+catalogAutomationAssets の category 投影) → U-SKILL-IDX-001〜008** (add-design 差分、PLAN-L6-37。索引キー = L+駆動+メタデータ、category fallback、indexable-by-something fail-close、de-saturate。孤児 0)
+- **skill-index.md §1-§5 関数 (analyzeSkillAssignments 索引反転 / scoreSkill de-saturate / runtime-provenance learning / wildcard checklist scoring 除外 / scanSkillCatalog+catalogAutomationAssets の category 投影) → U-SKILL-IDX-001〜011** (add-design 差分、PLAN-L6-37 + PLAN-REVERSE-277。索引キー = L+駆動+メタデータ、category fallback、indexable-by-something fail-close、de-saturate、CLI↔DB scorer SSoT。孤児 0)
 - **skill new scaffolder (scaffoldSkill) → U-SKILL-NEW-001〜003** (PLAN-L6-37 同梱 add-feature。規約準拠雛形生成 + 生成後 lint ok + 配布境界。孤児 0)
 - **module-drift.md change-impact addendum (analyzeChangeImpact/parseGitPorcelain/loadChangedFiles/changeImpactMessages) → U-CHGIMPACT-001〜004** (コード変更に対する設計・テスト更新漏れ検出。doctor hard guard。孤児 0)
 - **module-drift.md coding-rules addendum (analyzeCodingRules/loadCodingRuleDocs/loadCodingWorkflowDocs/codingRulesMessages/checkCodingRules) → U-CODE-001〜010** (requirements-level coding rule SSoT + workflow placement + error/module-boundary + machine-surface-language の機械検出。doctor hard guard。孤児 0)

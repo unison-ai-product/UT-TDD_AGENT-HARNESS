@@ -2049,16 +2049,17 @@ Fixture.
           "SELECT skill_id, reason FROM skill_recommendations WHERE plan_id = ? ORDER BY rank LIMIT 1",
         )
         .get("PLAN-M-01-cutover-backfill");
-      expect(skillRecommendation).toMatchObject({ skill_id: "skill:review-checklist" });
+      expect(skillRecommendation).toBeDefined();
+      expect(String(skillRecommendation?.skill_id ?? "")).not.toBe("skill:review-checklist");
       expect(String(skillRecommendation?.reason)).toContain("layer=");
 
       const skillInvocation = db
         .prepare(
           "SELECT skill_id, source, accepted FROM skill_invocations WHERE plan_id = ? AND skill_id = ?",
         )
-        .get("PLAN-M-01-cutover-backfill", "skill:review-checklist");
+        .get("PLAN-M-01-cutover-backfill", String(skillRecommendation?.skill_id ?? ""));
       expect(skillInvocation).toMatchObject({
-        skill_id: "skill:review-checklist",
+        skill_id: skillRecommendation?.skill_id,
         source: "auto-projection:review-evidence",
         accepted: 1,
       });

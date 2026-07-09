@@ -771,7 +771,11 @@ export function projectRuntimeSkillInvocationFromSessionEvent(
       resolvePlanId: (planId) => resolveProjectedPlanId(input.plans, planId),
       recordProjectionEvent,
       skillScore: (plan, asset) =>
-        skillScore(plan, asset, { skillDriveModelForPlan: planModeResolver(input.plans) }),
+        skillScore({
+          plan,
+          asset,
+          deps: { skillDriveModelForPlan: planModeResolver(input.plans) },
+        }),
     },
   });
 }
@@ -790,7 +794,11 @@ function projectRuntimeSkillInvocationsFromSessionLogs(
       resolvePlanId: (planId) => resolveProjectedPlanId(plans, planId),
       recordProjectionEvent,
       skillScore: (plan, asset) =>
-        skillScore(plan, asset, { skillDriveModelForPlan: planModeResolver(plans) }),
+        skillScore({
+          plan,
+          asset,
+          deps: { skillDriveModelForPlan: planModeResolver(plans) },
+        }),
     },
   });
 }
