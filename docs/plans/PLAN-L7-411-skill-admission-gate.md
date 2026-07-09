@@ -17,12 +17,6 @@ agent_slots:
   - role: qa
     slot_label: "QA — U-SKILL-ADMIT (admit-new 3点合致 / judge no_objection 単独では admit しない / quarantine 非再浮上 / NEW-only coverage / カタログ drift) のカバレッジ"
 generates:
-  - artifact_path: src/skill-engine/admission.ts
-    artifact_type: source_module
-  - artifact_path: src/lint/skill-supersession.ts
-    artifact_type: source_module
-  - artifact_path: tests/skill-admission.test.ts
-    artifact_type: test_code
   - artifact_path: docs/plans/PLAN-L7-411-skill-admission-gate.md
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-411-skill-admission-backfill.md
