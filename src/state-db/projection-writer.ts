@@ -255,6 +255,32 @@ function planExists(db: HarnessDb, planId: string): boolean {
   return row !== undefined;
 }
 
+function uniqueShortPlanExists(db: HarnessDb, planId: string): boolean {
+  if (!isBareNumericPlanContext(planId)) return false;
+  const row = db
+    .prepare("SELECT COUNT(*) AS count FROM plan_registry WHERE plan_id LIKE ?")
+    .get(`${planId}-%`) as { count: number } | undefined;
+  return (row?.count ?? 0) === 1;
+}
+
+function isBareNumericPlanContext(planId: string): boolean {
+  return /^PLAN-L\d+-\d+$/.test(planId);
+}
+
+function isRuntimeStateEvidencePath(path: string | undefined): boolean {
+  if (!path) return false;
+  return path.startsWith(".ut-tdd/logs/") || path.startsWith(".ut-tdd/handover/");
+}
+
+function isRuntimeContextProjectionTable(table: string): boolean {
+  return (
+    table === "hook_events" ||
+    table === "test_runs" ||
+    table === "trouble_events" ||
+    table === "guardrail_decisions"
+  );
+}
+
 function findingId(kind: string, subjectId: string): string {
   return stableId(`finding:${kind}`, subjectId);
 }
@@ -424,17 +450,31 @@ function checkResolvablePlanJoin(db: HarnessDb, table: string, row: Record<strin
   if (table === "plan_registry") return;
   if (table === "feedback_events") return;
   const planId = asString(row.plan_id);
-  if (!planId || planExists(db, planId)) return;
+  if (!planId || planExists(db, planId) || uniqueShortPlanExists(db, planId)) return;
   // A plan_id column can carry a free-form WORK-CONTEXT label that is not a single
   // concrete PLAN foreign key and legitimately resolves to no registry row:
   //   - an audit-cycle id (e.g. "A-136-cycle-p4-verification-audit"), or
   //   - a compound "PLAN-a+b+c" label spanning several PLANs.
   // hook_events records whichever work was active, so these are non-FK labels, not
-  // dangling references. A concrete single "PLAN-..." id that does not resolve
-  // (deleted/renamed) is still flagged (PLAN-L7-144).
+  // dangling references. Local runtime logs can also preserve old bare numeric PLAN
+  // context labels after the canonical slugged PLAN has been archived/renamed. Those
+  // are still surfaced, but separately from true source-table unresolved joins.
   if (/^A-\d/.test(planId) || planId.includes("+")) return;
   const pk = primaryKeyOf(tableDef(table));
   const subject = `${table}:${String(row[pk] ?? "")}`;
+  if (
+    isBareNumericPlanContext(planId) &&
+    (isRuntimeStateEvidencePath(asString(row.evidence_path) ?? undefined) ||
+      isRuntimeContextProjectionTable(table))
+  ) {
+    recordFinding(db, {
+      kind: "stale-runtime-plan-context",
+      subjectId: subject,
+      source: "projection-writer",
+      evidencePath: asString(row.evidence_path) ?? undefined,
+    });
+    return;
+  }
   recordFinding(db, {
     kind: "unresolved-join",
     subjectId: subject,

@@ -1367,6 +1367,108 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
     }
   });
 
+  it("resolves unique short PLAN labels before creating unresolved join findings", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+
+      recordProjectionEvent(db, {
+        table: "plan_registry",
+        id: "PLAN-L7-46-projection-writer",
+        row: {
+          plan_id: "PLAN-L7-46-projection-writer",
+          kind: "impl",
+          layer: "L7",
+          drive: "db",
+          status: "confirmed",
+          parent: "",
+          updated_at: "2026-07-09",
+          source_hash: "hash",
+        },
+      });
+      recordProjectionEvent(db, {
+        table: "model_runs",
+        id: "run-with-short-plan",
+        row: {
+          run_id: "run-with-short-plan",
+          runtime: "codex",
+          model: "gpt-5.4",
+          role: "se",
+          drive: "db",
+          plan_id: "PLAN-L7-46",
+          started_at: "2026-07-09T00:02:00.000Z",
+          completed_at: "2026-07-09T00:03:00.000Z",
+          evidence_path: ".ut-tdd/evidence/run.json",
+        },
+      });
+
+      const flagged = db
+        .prepare(
+          "SELECT COUNT(*) AS n FROM findings WHERE kind = 'unresolved-join' AND subject_id = ?",
+        )
+        .get("model_runs:run-with-short-plan") as { n: number };
+      expect(flagged.n).toBe(0);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("separates stale bare numeric runtime PLAN context from true unresolved joins", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+
+      recordProjectionEvent(db, {
+        table: "hook_events",
+        id: "hook-with-stale-runtime-plan",
+        row: {
+          event_id: "hook-with-stale-runtime-plan",
+          session_id: "session-1",
+          plan_id: "PLAN-L7-40",
+          hook_name: "SessionStart",
+          event_type: "session_start",
+          occurred_at: "2026-07-09T00:02:00.000Z",
+          digest: "",
+          evidence_path: ".ut-tdd/logs/session/session-1.jsonl",
+        },
+      });
+      recordProjectionEvent(db, {
+        table: "model_runs",
+        id: "run-with-missing-bare-plan",
+        row: {
+          run_id: "run-with-missing-bare-plan",
+          runtime: "codex",
+          model: "gpt-5.4",
+          role: "se",
+          drive: "db",
+          plan_id: "PLAN-L7-40",
+          started_at: "2026-07-09T00:02:00.000Z",
+          completed_at: "2026-07-09T00:03:00.000Z",
+          evidence_path: ".ut-tdd/evidence/run.json",
+        },
+      });
+
+      const stale = db
+        .prepare("SELECT kind, severity, status FROM findings WHERE subject_id = ?")
+        .get("hook_events:hook-with-stale-runtime-plan");
+      expect(stale).toMatchObject({
+        kind: "stale-runtime-plan-context",
+        severity: "warn",
+        status: "open",
+      });
+      const unresolved = db
+        .prepare("SELECT kind, severity, status FROM findings WHERE subject_id = ?")
+        .get("model_runs:run-with-missing-bare-plan");
+      expect(unresolved).toMatchObject({
+        kind: "unresolved-join",
+        severity: "warn",
+        status: "open",
+      });
+    } finally {
+      db.close();
+    }
+  });
+
   it("does not turn feedback_events queue rows into unresolved join findings", () => {
     const db = openHarnessDb(":memory:");
     try {
