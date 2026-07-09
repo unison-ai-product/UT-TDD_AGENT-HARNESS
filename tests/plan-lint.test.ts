@@ -259,7 +259,7 @@ describe("plan schedule lint (IMP-081)", () => {
   });
 
   it("U-PLANGOV-006: L4 標準成果物カタログ拡張 (report/batch/notification/code-value) を plan lint が valid sub_doc として受理", () => {
-    const newTypes = ["report", "batch", "notification", "code-value"];
+    const newTypes = ["report", "batch", "notification", "code-value", "security"];
     const docs = newTypes.map((t, i) => planDoc(`PLAN-L4-8${i}-${t}`, { layer: "L4", subDoc: t }));
     const reasons = analyzePlanGovernance(docs).violations.map((v) => v.reason);
     expect(reasons).not.toContain("invalid_sub_doc");

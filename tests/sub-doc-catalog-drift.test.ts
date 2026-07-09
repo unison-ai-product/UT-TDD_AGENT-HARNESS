@@ -94,6 +94,13 @@ describe("loadSubDocCatalogDriftInput real repo (U-SDCD-007)", () => {
     expect(analyzeSubDocCatalogDrift(input).ok).toBe(true);
   });
 
+  it("U-SDCD-011: L4 security slot が登録され schema↔要件 §G.1 で drift 0 (PLAN-L4-16)", () => {
+    expect(VALID_SUB_DOCS.L4 as readonly string[]).toContain("security");
+    const input = loadSubDocCatalogDriftInput(process.cwd());
+    expect(input.requirement.L4 ?? []).toContain("security");
+    expect(analyzeSubDocCatalogDrift(input).ok).toBe(true);
+  });
+
   it("U-SDCD-010: L3/L5/L6 FE 設計 doc slug が登録され schema↔要件 §G.1 で drift 0 (PLAN-L4-14 §4)", () => {
     // §1c FE カバレッジ定義の slot 段階 = screen-functional(L3)/ui-detail(L5)/screen-spec(L6) を
     // schema + 要件 §G.1 両方に登録 (3 点同期)。② プロダクト選択 (UI 有時)、body は段階順で後続。

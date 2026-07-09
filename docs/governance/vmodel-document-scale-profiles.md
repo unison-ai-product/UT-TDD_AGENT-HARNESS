@@ -36,21 +36,21 @@ profile や skip reason を暗黙生成してはいけない。
 | `poc` | `DOC-L4-BATCH` | `skip` | `lite` | `skipped` | バッチ機能が未選択のため product-select 文書として明示 skip する。 |  |
 | `poc` | `DOC-L4-NOTIFICATION` | `skip` | `lite` | `skipped` | 通知機能が未選択のため product-select 文書として明示 skip する。 |  |
 | `poc` | `DOC-L4-CODE-VALUE` | `skip` | `lite` | `skipped` | コード値一覧は domain breadth が確定するまで明示 skip する。 |  |
-| `poc` | `DOC-L4-SECURITY` | `defer` | `lite` | `draft` | セキュリティ設計 slot は PoC でも未定義にせず、専用PLANへ延期する。 | `PLAN-L4-16-security-design-slot` |
+| `poc` | `DOC-L4-SECURITY` | `adopt` | `lite` | `required` | PoC でも秘密情報混入と配布前検査の境界は未定義にしない。 |  |
 | `standard` | `DOC-L4-DATA` | `adopt` | `standard` | `required` | 標準開発では data contract を標準粒度で維持する。 |  |
 | `standard` | `DOC-L4-UI-STANDARD` | `adopt` | `standard` | `required` | UI 標準は L10 UX validation の上流正本になる。 |  |
 | `standard` | `DOC-L4-REPORT` | `conditional` | `standard` | `profile_controlled` | 帳票機能選択時のみ採用し、未選択時は reason 付き skip にする。 |  |
 | `standard` | `DOC-L4-BATCH` | `conditional` | `standard` | `profile_controlled` | バッチ機能選択時のみ採用し、未選択時は reason 付き skip にする。 |  |
 | `standard` | `DOC-L4-NOTIFICATION` | `conditional` | `standard` | `profile_controlled` | 通知機能選択時のみ採用し、未選択時は reason 付き skip にする。 |  |
 | `standard` | `DOC-L4-CODE-VALUE` | `adopt` | `standard` | `required` | コード値・表示名はデータ辞書/i18n slot の基礎になる。 |  |
-| `standard` | `DOC-L4-SECURITY` | `defer` | `standard` | `draft` | security slot は L4 正本設計を別PLANで固定する。 | `PLAN-L4-16-security-design-slot` |
+| `standard` | `DOC-L4-SECURITY` | `adopt` | `standard` | `required` | 標準開発では認証境界、秘密情報、監査証跡、配布前検査方針を L4 で維持する。 |  |
 | `enterprise` | `DOC-L4-DATA` | `adopt` | `detailed` | `required` | 監査可能な data contract と DB projection trace を要求する。 |  |
 | `enterprise` | `DOC-L4-UI-STANDARD` | `adopt` | `detailed` | `required` | UX/アクセシビリティ/運用保守を含めた詳細粒度を要求する。 |  |
 | `enterprise` | `DOC-L4-REPORT` | `adopt` | `detailed` | `required` | 帳票・監査出力は enterprise profile では標準採用する。 |  |
 | `enterprise` | `DOC-L4-BATCH` | `adopt` | `detailed` | `required` | 運用処理・再実行・監査証跡を含む batch 設計を採用する。 |  |
 | `enterprise` | `DOC-L4-NOTIFICATION` | `adopt` | `detailed` | `required` | 通知・監視・運用連絡の設計を採用する。 |  |
 | `enterprise` | `DOC-L4-CODE-VALUE` | `adopt` | `detailed` | `required` | データ辞書・表示名・エラーメッセージ・i18n slot を詳細化する。 |  |
-| `enterprise` | `DOC-L4-SECURITY` | `defer` | `detailed` | `draft` | 認証/認可/秘密情報/監査要件は専用PLANで独立設計する。 | `PLAN-L4-16-security-design-slot` |
+| `enterprise` | `DOC-L4-SECURITY` | `adopt` | `detailed` | `required` | 監査可能な security boundary と secret-scan / rotation 方針を詳細粒度で要求する。 |  |
 
 ## 3. 解釈規則
 
