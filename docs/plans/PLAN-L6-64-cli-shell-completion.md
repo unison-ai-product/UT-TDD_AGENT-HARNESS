@@ -24,9 +24,9 @@ generates:
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
-  requires: []
-  references:
+  requires:
     - docs/plans/PLAN-REVERSE-395-cli-command-design-backfill.md
+  references:
     - docs/design/harness/L4-basic-design/external-if.md
     - src/cli.ts
     - .ut-tdd/audit/A-185-vmodel-docgen-reference-mining-2026-07-07.md

@@ -98,6 +98,7 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 | ST-EXT-02 | fail-close / degradation (§4) | Codex 不在→claude-only / **Claude 不在→codex-only** / 双方不在→standalone (4 execution mode 縮退、function §3.6 整合) | vitest mode 統合 |
 | ST-EXT-03 | VCS・CI 境界 (§3) | ローカル gate 証跡 ↔ CI 再実行一致 (NFR-13) | GHA workflow test |
 | ST-EXT-04 | adapter 隔離 (§6) | core が provider SDK 直依存しない (intent のみ) | dependency lint |
+| ST-EXT-05 | CLI user boundary (§2/§3/§4、PLAN-REVERSE-395) | `ut-tdd --help` / representative subcommands / `--json` command / hard gate failure が、as-is command catalog と終了コード規約 (success=0、validation/gate failure=1、guard block=2) に従う。shell completion はこの catalog を入力にし、存在しない command path を候補化しない | CLI surface smoke + vitest CLI integration |
 
 ## §2 量閉じ一覧 (L4 設計要素 → ST 被覆、孤児チェック)
 
@@ -106,6 +107,7 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 - function.md §3 workflow オーケストレーション (Forward spine + 9 駆動モデル + 2 工程専門) → ST-FUNC-01 (遷移) / ST-FUNC-01b (Forward 合流) / §3.2 routing 優先度 → ST-FUNC-04 / §3.2 mode↔kind → ST-FUNC-05 / §3.1 サインオフ + §3.6 execution mode 別 review tier → ST-FUNC-06 / §3.4 skill (FR-12) → ST-FUNC-07 / §3.6 execution mode degradation → ST-EXT-02 (external-if §4 と共有) / §7 依存 → ST-FUNC-02。孤児 0 (9 駆動 + spine + 工程専門 2 + routing + skill + execution mode 3+1 パターンが全て被覆)
 - **function.md §1.1 C12 内部資産 roster/command (FR-L1-46/48) → ST-ASSET-01〜03 / architecture §3 skills (FR-L1-47) → ST-ASSET-05 / architecture §4.1 drift lint (FR-L1-49) → ST-ASSET-06/07 implemented evidence (`src/runtime/agent-slots.ts`, `src/workflow/contracts.ts`, `src/lint/asset-drift.ts`)**
 - external-if.md §3 境界 4 / §4 degradation → ST-EXT-01〜04
+- external-if.md §2/§3/§4 CLI user boundary (PLAN-REVERSE-395) → ST-EXT-05
 - **孤児 (設計要素で ST 未被覆) = 0** を L9 本起票で機械確認する。Current hard evidence is pair-freeze orphan 0 + implemented asset-drift slice + L7 roster/skill/command contract evidence. No active ST-ASSET L7 carry remains in this document.
 
 ## §3 trace (④ → ②)

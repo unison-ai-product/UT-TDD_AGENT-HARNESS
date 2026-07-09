@@ -6,19 +6,50 @@ layer: cross
 workflow_phase: R0
 confirmed_reverse_type: design
 drive: agent
-status: draft
+status: confirmed
 route_signal: design_gap
 route_mode: reverse
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-07-09
 owner: PO / Codex
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
-review_evidence: []
+forward_routing: L4
+promotion_strategy: reuse-as-is
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-09T14:20:00+09:00"
+    tests_green_at: "2026-07-09T14:20:00+09:00"
+    verdict: approve
+    scope: "PLAN-REVERSE-395 R0→R4。src/cli.ts の commander surface / exit code / JSON 境界を L4 external-if と L9 ST-EXT-05 へ as-is back-fill し、PLAN-L6-64 の completion 入力を固定した。"
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: lint
+        command: "bun run src\\cli.ts plan lint --gate governance"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-09T14:20:00+09:00"
+        evidence_path: docs/design/harness/L4-basic-design/external-if.md
+        output_digest: "sha256:c38f639fc1c6b7ff9dcb96aa247a3e1ab09441d6d8b4db48777fff8d07aa62a8"
 agent_slots:
   - role: tl
     slot_label: "TL - src/cli.ts 実装からの as-is 復元 (R0-R2) + L4 external-if.md への合流判断 (R3-R4)"
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-395-cli-command-design-backfill.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L4-basic-design/external-if.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L9-system-test-design.md
+    artifact_type: test_design
+  - artifact_path: docs/governance/vmodel-upgrade-schedule.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L6-function-design/function-spec.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
+  - artifact_path: docs/plans/PLAN-L6-64-cli-shell-completion.md
     artifact_type: markdown_doc
 dependencies:
   parent: null
@@ -59,8 +90,45 @@ advisor 相談の結果、**本件は Forward `add-design` (未実装機能の�
 
 ## 3. 受け入れ条件
 
-- as-is 復元がテスト・CI で裏取りされた実コマンド一覧と一致する (推測で記述しない)。
-- Forward 合流先 (新設 doc か既存 doc 拡張か) が R3 で確定する。
-- `forward_routing`/`promotion_strategy` は R0 時点では未確定のため frontmatter に含めない
+- [x] as-is 復元がテスト・CI で裏取りされた実コマンド一覧と一致する (推測で記述しない)。
+- [x] Forward 合流先 (新設 doc か既存 doc 拡張か) が R3 で確定する。
+- [x] `forward_routing`/`promotion_strategy` は R0 時点では未確定のため frontmatter に含めない
   (Codex クロスレビュー指摘: R0 で先取り確定すると R3/R4 の判断を骨抜きにする)。R3/R4 到達時に
   確定した値を追記する。
+
+## 4. R0-R2 as-is 復元結果 (2026-07-09)
+
+実装正本は `src/cli.ts` の commander surface である。`bun run src\cli.ts --help` と
+`.command(...)` 定義を照合し、top-level command は `status`、`doctor`、`mcp`、`verify`、
+`graph`、`trace`、`session`、`hook`、`guard`、`plan`、`handover`、`db`、`progress`、`find`、
+`metrics`、`telemetry`、`skill`、`review`、`cutover`、`automation`、`guardrail`、`issue`、
+`trouble`、`improvement`、`asset`、`roster`、`builder`、`vmodel`、`route`、`advisor`、`codex`、
+`claude`、`gate`、`task`、`team`、`audit`、`branch`、`github`、`feedback`、`setup`、`memory`、
+`distribution`、`context` と確認した。
+
+代表的な下位 command は `trace impact/rag`、`graph impact/export`、`db status/rebuild/scope-preview`、
+`skill suggest/new`、`task classify/route/roster`、`team suggest/run`、`memory add/list/recall/context/suggest`、
+`handover provider export/status` である。Canonical Commands は AGENTS/CLAUDE に代表導線として存在するが、
+全 CLI catalog の正本ではない。
+
+終了コード規約は as-is で次の分類に復元する。
+
+- success / dry-run success: exit 0。
+- validation failure、doctor / lint / gate failure、missing required input、unknown DB row: exit 1。
+- explicit guard block / route command hard block: exit 2。
+- provider adapter execution は provider process の `exit_code` を伝播する。
+
+出力規約は text が人間向け、`--json` が automation 向けである。全 command が `--json` を持つわけではないため、
+機械利用 command は `--json` 有無を command catalog で識別する。
+
+## 5. R3/R4 合流判断
+
+R3 判断: 新規 doc は作らず、既存 `docs/design/harness/L4-basic-design/external-if.md` に
+`CLI user boundary` を追加する。理由は、CLI は外部 service ではないが、人間・hook・CI が呼ぶ product
+boundary であり、既存 external-if の境界 DbC / fail-close / degradation と同じ L4 粒度で扱えるため。
+
+R4 結果: `external-if.md` に CLI boundary を back-fill し、L9 `ST-EXT-05` に system test category を追加した。
+さらに L6 `buildCommandCatalog` の契約を、shell completion が利用する command registry として明確化し、
+L7 `U-FR-L1-48` oracle に JSON 対応有無、exit profile、registrar 所有 command family の観点を追加した。
+`PLAN-L6-64` は本 Reverse を `requires` に持ち、completion 設計ではこの as-is command catalog を入力にする。
+completion 側で存在しない command path を創作してはならない。
