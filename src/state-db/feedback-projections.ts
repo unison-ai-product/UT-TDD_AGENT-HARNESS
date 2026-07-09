@@ -29,6 +29,25 @@ interface RefactorCandidateLifecycleRecord {
   decided_at: string;
 }
 
+const RIGHT_LUNG_TEST_DESIGN_PATHS = new Set([
+  "docs/test-design/harness/L8-integration-test-design.md",
+  "docs/test-design/harness/L9-system-test-design.md",
+  "docs/test-design/harness/L10-ux-validation-test-design.md",
+  "docs/test-design/harness/L12-acceptance-test-design.md",
+  "docs/test-design/harness/L14-operational-test-design.md",
+]);
+
+const REFACTOR_DEFECT_ROUTING_TERMS = [
+  "refactor",
+  "structural",
+  "structure",
+  "integration-structure",
+  "code-smell",
+  "smell",
+  "maintainability",
+  "modularity",
+] as const;
+
 function signalSeverity(status: unknown): string {
   const normalized = String(status ?? "warn").toLowerCase();
   if (normalized === "fail" || normalized === "error") return normalized;
@@ -38,6 +57,25 @@ function signalSeverity(status: unknown): string {
 
 function canReadLifecycle(db: HarnessDb): boolean {
   return typeof (db as { prepare?: unknown }).prepare === "function";
+}
+
+function isRightLungTestDesignEvidence(path: string): boolean {
+  return RIGHT_LUNG_TEST_DESIGN_PATHS.has(path.replace(/\\/g, "/"));
+}
+
+function hasRefactorDefectRoutingTerm(value: string): boolean {
+  const normalized = value.toLowerCase();
+  return REFACTOR_DEFECT_ROUTING_TERMS.some((term) => normalized.includes(term));
+}
+
+function verificationFindingScore(severity: string): number {
+  if (severity === "fail" || severity === "error") return 3;
+  if (severity === "warn") return 2;
+  return 1;
+}
+
+function verificationFindingConfidence(severity: string): "high" | "medium" {
+  return severity === "fail" || severity === "error" || severity === "warn" ? "high" : "medium";
 }
 
 function loadRefactorCandidateLifecycle(
@@ -150,6 +188,84 @@ export function projectRefactorCandidateSignals(
         value: candidate.score,
         threshold: candidate.threshold,
         status: shouldFeedback ? "warn" : "pass",
+        computed_at: computedAt,
+      },
+    });
+  }
+}
+
+export function projectVerificationDefectRoutingRefactorCandidates(
+  db: HarnessDb,
+  deps: FeedbackProjectionDeps,
+): void {
+  const computedAt = deps.nowIso();
+  const lifecycle = loadRefactorCandidateLifecycle(db);
+  const rows = db
+    .prepare(
+      `SELECT finding_id, kind, severity, subject_id, source, status, evidence_path
+       FROM findings
+       WHERE status = 'open'
+       ORDER BY finding_id`,
+    )
+    .all();
+
+  for (const row of rows) {
+    const findingId = String(row.finding_id ?? "");
+    const findingKind = String(row.kind ?? "");
+    const severity = signalSeverity(row.severity);
+    const subject = String(row.subject_id ?? findingId);
+    const source = String(row.source ?? "");
+    const evidencePath = String(row.evidence_path ?? "");
+    const routingText = `${findingKind} ${subject} ${evidencePath}`;
+    const fromVerification =
+      source === "verification-evidence" || isRightLungTestDesignEvidence(evidencePath);
+    if (!fromVerification || !hasRefactorDefectRoutingTerm(routingText)) continue;
+
+    const candidate: RefactorCandidate = {
+      kind: "verification-defect-routing",
+      path: evidencePath || source || "verification-evidence",
+      subject,
+      score: verificationFindingScore(severity),
+      threshold: 1,
+      confidence: verificationFindingConfidence(severity),
+      reason: `verification defect_routing selected Refactor for ${findingKind || findingId}`,
+    };
+    const candidateKey = refactorCandidateKey(candidate);
+    const existing = lifecycle.get(candidateKey);
+    const state =
+      existing && isRefactorCandidateDecisionState(existing.state) ? existing.state : "open";
+    const linkedPlanId = existing?.linked_plan_id ?? "";
+    deps.recordProjectionEvent(db, {
+      table: "refactor_candidates",
+      id: candidateKey,
+      row: {
+        candidate_key: candidateKey,
+        kind: candidate.kind,
+        path: candidate.path,
+        subject: candidate.subject,
+        confidence: candidate.confidence,
+        score: candidate.score,
+        threshold: candidate.threshold,
+        state,
+        linked_plan_id: linkedPlanId,
+        reason: candidate.reason,
+        first_seen_at: existing?.first_seen_at || computedAt,
+        last_seen_at: computedAt,
+        decided_at: existing?.decided_at ?? "",
+      },
+    });
+    const signalId = deps.stableId("verification-defect-routing", findingId || subject);
+    deps.recordProjectionEvent(db, {
+      table: "quality_signals",
+      id: signalId,
+      row: {
+        signal_id: signalId,
+        source: "verification-defect-routing",
+        subject_id: subject,
+        metric: "refactor_candidate:verification-defect-routing",
+        value: candidate.score,
+        threshold: candidate.threshold,
+        status: state === "open" ? "warn" : "pass",
         computed_at: computedAt,
       },
     });

@@ -312,14 +312,17 @@ version-up 未裁定のまま P2 を適用すると 47件が fail-close する�
   から populated へ遷移。具体 check-id は L7-363 統合時に確定。
 - **rollback**: L7-363 側の projection 変更単位で revert (本 PLAN では配線仕様のみ、コード副作用なし)。
 
-### Step 4.4: 品質改善ループの接続 (defect_routing) [直列: PLAN-L7-367 統合=downstream_dependency]
+### Step 4.4: 品質改善ループの接続 (defect_routing) [直列: PLAN-L7-367 / PLAN-L7-410 統合=downstream_dependency]
 
-- **影響**: refactor 候補 lifecycle (PLAN-L7-367 既起票)。検証所見 → refactor/reverse 発火 → Forward 合流。
-- **手順**: 検証 PLAN の defect_routing 出口を refactor 候補 lifecycle (L7-367) へ接続する仕様を定義。
-  候補→PLAN リンクと Forward 合流 (駆動 branch→main) の機械記録を規定。
-- **検証**: 検証所見 fixture から refactor 候補が生成され候補→refactor/reverse PLAN リンクが張られる
-  結合テスト (L8 追補、L7-367 と統合)。
-- **rollback**: L7-367 側 lifecycle 変更単位で revert。
+- **影響**: refactor 候補 lifecycle (PLAN-L7-367) と verification defect routing 投影 (PLAN-L7-410)。
+  検証所見 → refactor 候補 → triage / linked PLAN → Forward 合流の品質改善 loop。
+- **手順**: L7-367 の lifecycle table を土台に、L7-410 で検証 PLAN の defect_routing 出口を
+  `refactor_candidates.kind=verification-defect-routing` へ接続する。候補→PLAN リンクは
+  `decideRefactorCandidate.linked_plan_id` で保持し、DB は PLAN 本文を生成しない。Reverse route は既存
+  `detector_route_candidates` / `routeFiling` 経路に分離する。
+- **検証**: 検証所見 fixture から refactor 候補と quality signal が生成され、候補→Refactor PLAN リンクが
+  rebuild 後も保持される L7 projection test (PLAN-L7-410 / U-REFACTOR-ROUTE-001..002)。
+- **rollback**: L7-367 / L7-410 側 lifecycle / projection 変更単位で revert。
 
 ### 手順定義段階の DoD (サインオフ対象)
 

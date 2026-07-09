@@ -13,7 +13,8 @@ export type RefactorCandidateKind =
   | "extract-helper"
   | "deduplicate-function"
   | "externalize-literal"
-  | "externalize-policy";
+  | "externalize-policy"
+  | "verification-defect-routing";
 
 export interface RefactorCandidate {
   kind: RefactorCandidateKind;

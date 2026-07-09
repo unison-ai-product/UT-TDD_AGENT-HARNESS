@@ -577,6 +577,13 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 - 関連 detector 後続 (`PLAN-L7-148`/`150`/`151`/`152`/`153`/`158`) は本 descent を基点とする (module extraction /
   closure sweep / precision+policy extraction)。
 
+### §1.23c Verification defect_routing -> Refactor lifecycle oracle (PLAN-L7-410)
+
+| U-ID | 対象 | oracle |
+|---|---|---|
+| U-REFACTOR-ROUTE-001 | `projectVerificationDefectRoutingRefactorCandidates` + `rebuildHarnessDb` | 右肺 `defect_routing` 文脈を持つ verification finding fixture は `refactor_candidates.kind=verification-defect-routing` と `quality_signals.source=verification-defect-routing` に投影される。 |
+| U-REFACTOR-ROUTE-002 | `decideRefactorCandidate` + `rebuildHarnessDb` | `accepted` にした verification defect routing candidate は `linked_plan_id` を保持し、次回 rebuild で `open` に戻らず signal は `pass` へ落ちる。 |
+
 ### §1.24 U-SKILL-IDX (skill 索引モデル 由来、PLAN-L6-37 add-design / skill-index.md §1-§5、FR-L1-47/FR-L1-12)
 
 > ペア = `skill-index.md` §1-§5。索引キー = L + 駆動モデル + メタデータ。L/駆動が共に空の skill だけ `category`
