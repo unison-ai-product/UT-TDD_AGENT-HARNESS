@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { normalizePath } from "../lint/shared";
+import { shouldScoreSkillAsset } from "../skill-scoring/scoring";
 import type { HarnessDb } from "./index";
 
 export interface RuntimeSessionLogProjection {
@@ -149,7 +150,7 @@ export function projectRuntimeSkillInvocationFromSessionEvent(
   const assets = db
     .prepare("SELECT * FROM automation_assets WHERE asset_type = ? ORDER BY asset_id")
     .all("skill")
-    .filter((asset) => !String(asset.skill_type ?? "").startsWith("skill-map"));
+    .filter(shouldScoreSkillAsset);
   const ranked = assets
     .map((asset) => ({ asset, score: deps.skillScore(plan, asset) }))
     .filter((entry) => entry.score > 0)

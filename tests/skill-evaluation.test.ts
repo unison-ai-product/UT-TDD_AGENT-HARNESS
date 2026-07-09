@@ -40,7 +40,7 @@ function seedInvocation(
       layer: "L7",
       drive: "db",
       fired_at: opts.firedAt,
-      source: "test",
+      source: "runtime-hook:skill-suggest",
       accepted: opts.accepted,
     },
   });

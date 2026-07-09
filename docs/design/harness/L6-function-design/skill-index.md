@@ -13,11 +13,11 @@ implemented_by: docs/plans/PLAN-L7-211-skill-index-category-materialization.md
 # skill 索引モデル
 
 本書は `skill.v1` メタデータをどの軸で検出、推薦、生成するかを定義する L6 機能設計である。
-対象実装は `src/lint/skill-assignment.ts`、`src/assets/catalog.ts`、`src/skill-engine/recommend.ts`、`src/skill-engine/scaffold.ts`、`src/schema/harness-db-tables-core.ts` とする。
+対象実装は `src/lint/skill-assignment.ts`、`src/assets/catalog.ts`、`src/skill-scoring/scoring.ts`、`src/skill-engine/recommend.ts`、`src/skill-engine/scaffold.ts`、`src/schema/harness-db-tables-core.ts` とする。
 
 開発 repo では既存互換のため `docs/skills/` を読み続けられる。一方、配布用 Pack repo では利用者が直接見る開発 OS の部品として root `skills/` を標準配置とする。実装は `skills/` が存在する場合にこれを優先し、存在しない場合だけ `docs/skills/` に fallback する。
 
-> **L6 契約マーカー**: `analyzeSkillAssignments`、`scoreSkill`、`scanSkillCatalog`、`catalogAutomationAssets`、`scaffoldSkill` は unit-test 粒度の契約である。DoD の pre/post/invariant は `docs/test-design/harness/L7-unit-test-design.md` §1.24 `U-SKILL-IDX-001..008` と §1.24a `U-SKILL-NEW-001..003` に対応する。
+> **L6 契約マーカー**: `analyzeSkillAssignments`、`scoreSkill`、`scoreSkillDetailed`、`scanSkillCatalog`、`catalogAutomationAssets`、`scaffoldSkill` は unit-test 粒度の契約である。DoD の pre/post/invariant は `docs/test-design/harness/L7-unit-test-design.md` §1.24 `U-SKILL-IDX-001..011` と §1.24a `U-SKILL-NEW-001..003` に対応する。
 
 ## 1. 索引キー
 
@@ -65,7 +65,8 @@ triggers: <string>
 
 ```text
 analyzeSkillAssignments(input: SkillAssignmentDoc[]) => SkillAssignmentResult
-scoreSkill(ctx: SkillRecommendationContext, asset: AutomationAsset) => number
+scoreSkill(ctx: SkillRecommendationContext, asset: AutomationAsset, options?: SkillScoreOptions) => number
+scoreSkillDetailed(ctx: SkillRecommendationContext, asset: AutomationAsset, options?: SkillScoreOptions) => SkillScoreDetails
 scanSkillCatalog(root: string) => SkillCatalogEntry[]
 catalogAutomationAssets(input: AssetCatalogInput) => AutomationAsset[]
 scaffoldSkill(input: SkillScaffoldInput, deps: SkillScaffoldDeps) => SkillScaffoldResult
@@ -74,7 +75,7 @@ scaffoldSkill(input: SkillScaffoldInput, deps: SkillScaffoldDeps) => SkillScaffo
 | 関数 | 入力 | 出力 | 不変条件 | oracle |
 |---|---|---|---|---|
 | `analyzeSkillAssignments` | skill file path と frontmatter metadata | `SkillAssignmentResult` | `docs.length > 0` かつ violation 0 のときだけ `ok=true`。未知 L 層、未知駆動、未知 category、索引不能 skill を違反にする。 | U-SKILL-IDX-001..005 |
-| `scoreSkill` | task context と catalog asset | 0..1 の決定的 score | L 層/駆動一致だけで飽和させず、metadata overlap で同点退避する。同一入力は同一出力を返す。 | U-SKILL-IDX-006..007 |
+| `scoreSkill` / `scoreSkillDetailed` | task context と catalog asset と任意の runtime learning signal | 0..1 の決定的 score / matched token / learning adjustment / exclusion reason | L 層/駆動一致だけで飽和させず、metadata overlap と runtime-provenance learning で同点退避する。同一入力は同一出力を返す。CLI 推奨と DB projection は同じ scoring 実装を使う。 | U-SKILL-IDX-006..007,009..011 |
 | `scanSkillCatalog` | `skills/**/*.md` または `docs/skills/**/*.md` | skill catalog entries | skill 本文を保存せず、path、id、routing metadata、検索 token、drift finding だけを返す。 | U-SKILL-IDX-008 |
 | `catalogAutomationAssets` | enrolled asset docs | `automation_assets` projection | `category` と `domain_tags` を projection と検索 token に反映する。 | U-SKILL-IDX-008 |
 | `scaffoldSkill` | skill 生成入力と既存 path set | 生成予定 path、content、finding | 上書きしない。生成後 frontmatter は `analyzeSkillAssignments` で indexable である。 | U-SKILL-NEW-001..003 |
@@ -90,10 +91,17 @@ if ctx.workflowMode matches asset.applies_drive_models: score += 0.30
 score += metadataOverlap(ctx, asset) capped at 0.20
 if quality/review/test keyword matches: score += 0.05
 if category in {domain, project} and metadata overlaps: score += 0.10
+score += learningAdjustment(runtime-provenance skill_evaluations only)
 return min(1, round2(score))
 ```
 
 `metadataOverlap` は `kind`、`drive`、`workflowMode`、理由記述、`skill_type`、`category`、`domain_tags`、`triggers` の token 重なりを数える。これにより L 層と駆動モデルだけで top-5 が同点になる状態を避ける。
+
+`learningAdjustment` は runtime 実発火に由来する `skill_evaluations` だけを入力にする。`skill_invocations.source LIKE "runtime-hook:%"` から作った adoption/success/unused signal は加点・減点へ反映してよいが、`auto-projection:*` の間接推定行を学習実績として扱ってはいけない。これは projection 再構築の副作用で推薦が自己増幅することを防ぐための fail-close 境界である。
+
+`scoreSkillDetailed` は推薦理由のために `matchedTokens`、`learningAdjustment`、`excluded`、`exclusionReason` を返す。CLI `skill suggest` の reason は少なくとも `skill=<skill_id>`、matched token、learning 状態を含め、候補ごとに同一文言へ潰してはいけない。DB projection (`projectSkillTelemetry`) は同じ scorer を呼ぶ。2 重実装で CLI と DB rebuild の順位が乖離する状態は不変条件違反である。
+
+`skill-map*` と全 L 層×全駆動の review/checklist 系 wildcard 資産は、workflow skill と同じ関連度 scoring 候補に入れない。`skills/review-checklist.yaml` のような gate checklist SSoT は人間または gate 評価のためのデータ資産であり、任意 PLAN の `required` skill 候補として常時浮上させない。
 
 ## 5. 配布境界
 
