@@ -95,6 +95,13 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-SLOG-006 | `setActivePlan`/`activePlanUpdatedAt`/`activePlanStale`/`onPostToolUse` (IMP-078 gap②③) | setActivePlan が current-plan 2 行目に updated_at を刻む (1 行目=plan_id 不変、resolveActivePlan は 1 行目読取) / activePlanStale が maxHours 超で true・旧形式 (timestamp 無し 1 行) は false (後方互換) / onPostToolUse の git commit が `headCommit` hash を commit event target に載せる (未供給は target 無し=旧挙動) |
 | U-SLOG-007 | `src/cli.ts session start` / `hook post-tool-use` / `session summary` + `.claude/settings.json` + `ut-tdd codex --execute` | Claude settings の SessionStart/PostToolUse/Stop が `.claude/hooks/session-log.ts` 直接実装ではなく package-local `src/cli.ts` entrypoint を指す / temp repo で `ut-tdd plan use` → `session start` → `hook post-tool-use` → `session summary` を実行すると `.ut-tdd/logs/plan/<plan_id>.digest.json` が生成され、session_start/tool_use と touched file が集計される / fake `codex` を PATH に置いた temp repo で `ut-tdd codex --execute` と `ut-tdd codex --task-file <path> --execute` を実行すると、Codex wrapper も同じ session lifecycle を記録し、legacy source raw Codex guard との共存用に `legacy source_ALLOW_RAW_CODEX=1` + `legacy source_RAW_CODEX_REASON=ut-tdd-runtime-adapter-wrapper` を渡す / `ut-tdd codex --plan <id> --execute` は `<id>` を session-log の plan_id に使い、provider CLI へ `--plan-id` を渡さない |
 | U-SLOG-008 | `compressPlanDigest` (event 単位 high-watermark、PLAN-L7-80) | `session_watermarks[sid]` = その session の matching event を畳み済み件数として持ち、同一 session が複数回 summarize (複数 Stop) されてもログ伸長分の増分のみ計上する (旧 session 単位 fold は 2 回目以降を全 skip = 過少計上) / 増分なし再適用は idempotent / pre-L7-80 digest (session_watermarks 無し) は migration として既計上分 (ts <= updated_at) を再計上せず新規分のみ計上する |
+| U-SLOG-009 | `renderEscalationSignals` (SessionStart surface cap) | escalation signal が 0 件なら空文字 / total 件数は header に保持 / 既定上限または指定 `maxSignals` 件だけを列挙 / `maxSignals<=0` は無制限 escape hatch / 残件は breadcrumb で示し、直前 session log 調査へ誘導する / STOP・root cause 文言は維持 |
+
+### §1.5a U-FEEDBACK-SURFACE (takeover feedback surface 由来、PLAN-L7-400)
+| U-ID | 検証対象 | oracle (DbC) |
+|---|---|---|
+| U-FEEDBACK-SURFACE-001 | `selectTakeoverFeedback` group-first cap | open feedback rows を `bucket/severity/signal_type` で group 化してから上位 group を選ぶ。同一 `signal_type` が多数行を占有しても別 `signal_type` の actionable cluster が不可視化されない。 |
+| U-FEEDBACK-SURFACE-002 | `renderTakeoverFeedback` count/breadcrumb | 表示 group の count は group 内実件数を示す。隠れた actionable rows/groups がある場合は `ut-tdd feedback list --json` breadcrumb を出す。telemetry は従来通り signal count 要約に留める。 |
 
 ### §1.6 U-FSF (forced-stop フィードバック由来、PLAN-L6-04 add-design / forced-stop-feedback.md §2-§3)
 | U-ID | 検証対象 | oracle (DbC) |

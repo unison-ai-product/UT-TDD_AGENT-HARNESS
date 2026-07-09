@@ -18,7 +18,13 @@
 > (同日起票、`status: draft` / `version_target: v2` で parked、Claude 自身の persistent memory
 > 肥大対策であり本監査の対象とは別層)。F1 は「新規発見」ではなく **PLAN-L7-302 の既存スコープを
 > 独立した実測で再確認したもの** と訂正する。F2〜F4 (feedback surface 多様性飢餓 / escalation cap
-> 欠如 / グローバル agent 死重) には対応する既存 PLAN は見つからなかった。
+> 欠如 / グローバル agent 死重) には対応する既存 PLAN は見つからなかったため、PO 指示 (2026-07-09
+> 「起票しておいて」) により新規起票した。F2/F3 の分解起票
+> (`PLAN-L7-400-feedback-surface-group-before-slice` /
+> `PLAN-L7-401-attempt-escalation-surface-cap`) は正本実装を
+> `PLAN-L7-403-feedback-surface-context-efficiency` に統合し、起票経緯として `archived` 化した。
+> F4 は `PLAN-L7-402-agent-definition-allowlist-coverage-check` として `draft` のまま残す
+> (is-blocking な allowlist 是正自体は repo 外 = PO 判断のため、まずは drift 可視化へ scope を絞る)。
 
 ## 0. 総括 (Executive Summary)
 
@@ -175,7 +181,9 @@ refactor_candidate:externalize-policy: 2 件
 グルーピング → 上位 N **群** を breadcrumb 付きで返す」に変更する (slice と group の順序を入れ替える)。
 これにより固定予算内で常に N 種類の異なる問題が surface され、同一クラスタによる独占を防げる。
 PLAN-L7-137 (feedback surface taxonomy) / PLAN-L7-366 (今回と同じ surface.ts が対象) の続きとして
-1 PLAN で対応可能な規模。
+1 PLAN で対応可能な規模。**→ `PLAN-L7-400-feedback-surface-group-before-slice` として分解起票後、
+正本実装は `PLAN-L7-403-feedback-surface-context-efficiency` に統合済み
+(2026-07-09、400 は `archived`、403 は `confirmed`)。**
 
 **補足 (`unresolved-join` の経緯)**: この signal type 自体は未知の新規問題ではない。
 `PLAN-L7-144-warn-remediation-parity-and-join` (`status: confirmed`、2026-06-24) が
@@ -193,7 +201,10 @@ PLAN-L7-137 (feedback surface taxonomy) / PLAN-L7-366 (今回と同じ surface.t
 採用しているのに対し、この surface だけ無制限。発火条件 (同一 subject への 3 回連続失敗、既定
 `DEFAULT_ATTEMPT_THRESHOLD=3`) が比較的稀なため実害は現時点で小さいが、直前 session で多数の
 subject が閾値を超えるケース (大規模な連続失敗) では無制限に行が伸びる。既存 cap 方針との
-一貫性のため、同じ `capWithBreadcrumb` 相当の処理を適用するのが望ましい。
+一貫性のため、同じ `capWithBreadcrumb` 相当の処理を適用するのが望ましい。**→
+`PLAN-L7-401-attempt-escalation-surface-cap` として分解起票後、正本実装は
+`PLAN-L7-403-feedback-surface-context-efficiency` に統合済み
+(2026-07-09、401 は `archived`、403 は `confirmed`)。**
 
 ### F4 [Medium/Low] グローバル agent 定義 5 件 (fe-a11y/fe-component/fe-design/fe-style/fe-test) が
 このリポジトリでは絶対に発火できないまま毎セッション注入される
@@ -241,15 +252,17 @@ system-reminder でも実際に出現)。
 |---|---|---|---|---|---|
 | 1a | (暫定/低コスト) Read Order に「該当章のみ参照」注記を追加 | `docs/governance/README.md`, `CLAUDE.md` | 低 (文言追加のみ) | 中 (PO ゲート待ちの間の緩和) | `PLAN-L7-302` 着手前の暫定策として位置づけ |
 | 1b | (本対応) canonical Read Order の tier 改訂 + doc-router 活性化 | `CLAUDE.md`, `.claude/CLAUDE.md`, `AGENTS.md`, `src/context/doc-router.ts` | 高 (正本変更、3 面同期、PO 承認必須) | 高 (基線 11.3 万トークン→1 万未満、PLAN-L7-302 DoD) | **`PLAN-L7-302-context-tiering` (draft/v2、既存)** |
-| 2 | `selectTakeoverFeedback` を「先にグルーピング→上位 N 群」へ変更 | `src/feedback/surface.ts` | 中 (ロジック変更+テスト) | 高 (absence-blindness の実例を解消、602 件クラスタを可視化) | 無し (新規、PLAN-L7-137/366 の系譜) |
-| 3 | `renderEscalationSignals` に既存 cap 方式と同等の上限+breadcrumb を追加 | `src/runtime/attempt-escalation.ts` | 低 | 中 (一貫性、将来の無制限伸長を防止) | 無し (新規) |
-| 4 | グローバル agent 定義の allowlist 整合 (使うなら allowlist 追加、使わないなら退避) | `~/.claude/agents/` (repo 外、PO 判断) | 低 | 低〜中 (~15.6KB/セッション、複数プロジェクト横断) | 無し (新規) |
+| 2 | `selectTakeoverFeedback` を「先にグルーピング→上位 N 群」へ変更 | `src/feedback/surface.ts` | 中 (ロジック変更+テスト) | 高 (absence-blindness の実例を解消、602 件クラスタを可視化) | **`PLAN-L7-403-feedback-surface-context-efficiency` (confirmed、`PLAN-L7-400` から統合)** |
+| 3 | `renderEscalationSignals` に既存 cap 方式と同等の上限+breadcrumb を追加 | `src/runtime/attempt-escalation.ts` | 低 | 中 (一貫性、将来の無制限伸長を防止) | **`PLAN-L7-403-feedback-surface-context-efficiency` (confirmed、`PLAN-L7-401` から統合)** |
+| 4 | agent 定義 ↔ allowlist の drift を doctor advisory で可視化 (実際の allowlist 追加/退避判断は別途 PO) | `src/doctor/agent-definition-coverage.ts` (新規)、`~/.claude/agents/` の是正自体は repo 外 | 低 | 低〜中 (~15.6KB/セッション、複数プロジェクト横断。今後の同種 drift の再発を機械検出) | **`PLAN-L7-402-agent-definition-allowlist-coverage-check` (draft、新規起票 2026-07-09)** |
 
 **訂正**: #1 は当初「新規提案」として記載したが、`PLAN-L7-302-context-tiering` (2026-07-03 起票、
 draft/v2 parked、一部 landed) が本体対応として既に存在するため 1a (暫定策)/1b (PLAN-L7-302 本体)
-に分割した。#2・#3・#4 は既存 PLAN 検索の結果、対応する PLAN が見つからなかった新規事項。
-新規 PLAN として起票する場合は #2 は `PLAN-L7-137`/`PLAN-L7-366` を、#1a は `PLAN-L7-302` を
-`dependencies.requires`/`references` に張ることを推奨する (起票自体は本監査の範囲外、PO 判断待ち)。
+に分割した。#2・#3・#4 は既存 PLAN 検索の結果、対応する PLAN が見つからなかった新規事項だったため、
+PO 指示 (2026-07-09「起票しておいて」) を受けて `PLAN-L7-400`/`PLAN-L7-401`/`PLAN-L7-402` として
+新規起票した。その後 #2/#3 は実装粒度を統合して `PLAN-L7-403` に着地させ、400/401 は起票経緯の
+参照として `archived` 化した。#4 の allowlist 是正自体は実施せず (repo 外・PO 判断) advisory 追加のみに
+scope を絞った draft として残す。
 関連: `PLAN-L7-324-memory-compaction-trigger` (draft/v2 parked) は Claude 自身の persistent memory
 (`~/.claude/projects/.../memory/`) 肥大対策で、本監査が扱った harness.db 側の surface とは別層だが
 「コンテキスト管理」という括りでは同じ v2 backlog に属する。

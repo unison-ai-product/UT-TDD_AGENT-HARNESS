@@ -63,6 +63,9 @@ human-facing feedback surfaces は stored severity を変えずに、open rows �
 | `telemetry` | `info` rows および `artifact_progress_yellow`、`missing-test-oracle-id`、`skill_firing_rate`、`skill_acceptance_rate` などの高頻度 measurement signals | takeover output では row ごとに列挙せず、signal count で要約する。 |
 
 `selectTakeoverFeedback` と text `ut-tdd feedback list` output はこの taxonomy を使う。個別 queue rows が必要な consumers 向けには、`ut-tdd feedback list --json` を raw audit path として残す。
+SessionStart takeover surface は **group-first cap** とする。open rows を `bucket/severity/signal_type` で先に group 化し、gate/actionable group を上位 N 群だけ表示対象にする。単一 `signal_type` が多数行を占有しても他の actionable cluster を不可視にしてはいけない。表示 group の count は group 内の実件数を示し、隠れた group/row は breadcrumb で `ut-tdd feedback list --json` へ誘導する。
+
+attempt escalation surface は直前 session の連続失敗 loop を上限付きで表示する。`renderEscalationSignals` は total 件数を header に保持しつつ、既定 10 件だけを列挙し、残件は breadcrumb とする。これは SessionStart の固定予算を守るための surface cap であり、`evaluateAttemptEscalation` の検出件数は削らない。
 
 ### 2026-06-23 read-only quality / branch audit 追補
 
