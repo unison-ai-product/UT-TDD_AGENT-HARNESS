@@ -14,6 +14,11 @@ import { homedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import type { Command } from "commander";
 import { buildReleasePublicationPlan } from "../github/ops-guard";
+import {
+  analyzeSecretScan,
+  loadSecretScanArtifactsForPaths,
+  secretScanMessages,
+} from "../lint/secret-scan";
 import { detectMode } from "../runtime/detect";
 import {
   buildCleanDistributionPlan,
@@ -70,6 +75,17 @@ function copyCleanDistributionArtifact(input: {
     return;
   }
   cpSync(from, to, { recursive: true });
+}
+
+function runDistributionSecretScan(input: {
+  repoRoot: string;
+  sourcePaths: readonly string[];
+  artifactPaths: readonly string[];
+}): ReturnType<typeof analyzeSecretScan> {
+  const sourceArtifactPaths = input.artifactPaths.map((rel) =>
+    cleanDistributionSourcePath(rel, input.sourcePaths),
+  );
+  return analyzeSecretScan(loadSecretScanArtifactsForPaths(input.repoRoot, sourceArtifactPaths));
 }
 
 export function registerDistributionCommands(program: Command): void {
@@ -252,6 +268,11 @@ export function registerDistributionCommands(program: Command): void {
           sourceTag: opts.tag,
           cleanRepo: opts.cleanRepo,
         });
+        const secretScan = runDistributionSecretScan({
+          repoRoot,
+          sourcePaths,
+          artifactPaths: exportPlan.artifactPaths,
+        });
         const outDir = opts.out
           ? isAbsolute(opts.out)
             ? opts.out
@@ -269,7 +290,7 @@ export function registerDistributionCommands(program: Command): void {
           (path) => !plannedArtifacts.has(path) && !path.startsWith(".git/"),
         );
         let copyError: string | null = null;
-        if (exportPlan.ok) {
+        if (exportPlan.ok && secretScan.ok) {
           try {
             for (const rel of exportPlan.artifactPaths) {
               const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
@@ -286,14 +307,25 @@ export function registerDistributionCommands(program: Command): void {
         }
         const manifest = join(outDir, ".ut-tdd-pack-sync-manifest.json");
         const output = {
-          ok: exportPlan.ok && copyError === null && unmanagedExistingPaths.length === 0,
+          ok:
+            exportPlan.ok &&
+            secretScan.ok &&
+            copyError === null &&
+            unmanagedExistingPaths.length === 0,
           export: exportPlan,
+          secretScan: {
+            ok: secretScan.ok,
+            checked: secretScan.checked,
+            violations: secretScan.violations,
+          },
           sync,
           stage: {
             outDir,
             manifest,
             copiedArtifacts:
-              copyError === null && exportPlan.ok ? exportPlan.artifactPaths.length : 0,
+              copyError === null && exportPlan.ok && secretScan.ok
+                ? exportPlan.artifactPaths.length
+                : 0,
             unmanagedExistingPaths,
             copyError,
             destructiveRemoteMutation: false,
@@ -311,6 +343,9 @@ export function registerDistributionCommands(program: Command): void {
         );
         process.stdout.write(`  out: ${outDir}\n`);
         process.stdout.write(`  copied-artifacts: ${output.stage.copiedArtifacts}\n`);
+        if (!secretScan.ok) {
+          process.stdout.write(`  ${secretScanMessages(secretScan)[0]}\n`);
+        }
         process.stdout.write(`  unmanaged-existing: ${unmanagedExistingPaths.length}\n`);
         process.stdout.write(
           "  remote mutation: requires PO approval; no push/release was executed\n",
@@ -348,6 +383,11 @@ export function registerDistributionCommands(program: Command): void {
           sourceTag: opts.tag,
           cleanRepo: opts.cleanRepo,
         });
+        const secretScan = runDistributionSecretScan({
+          repoRoot,
+          sourcePaths,
+          artifactPaths: exportPlan.artifactPaths,
+        });
         const sync = buildPackSyncPlan({
           exportPlan,
           sourcePaths,
@@ -362,7 +402,7 @@ export function registerDistributionCommands(program: Command): void {
         let copyError: string | null = null;
         let pruneError: string | null = null;
 
-        if (repoExists && opts.pruneLocal) {
+        if (repoExists && opts.pruneLocal && secretScan.ok) {
           try {
             for (const rel of existingBefore) {
               rmSync(join(repoDir, ...rel.split("/")), { force: true });
@@ -373,7 +413,7 @@ export function registerDistributionCommands(program: Command): void {
           }
         }
 
-        if (repoExists && exportPlan.ok && pruneError === null) {
+        if (repoExists && exportPlan.ok && secretScan.ok && pruneError === null) {
           try {
             for (const rel of exportPlan.artifactPaths) {
               const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
@@ -405,10 +445,16 @@ export function registerDistributionCommands(program: Command): void {
           ok:
             repoExists &&
             exportPlan.ok &&
+            secretScan.ok &&
             pruneError === null &&
             copyError === null &&
             unmanagedExistingPaths.length === 0,
           export: exportPlan,
+          secretScan: {
+            ok: secretScan.ok,
+            checked: secretScan.checked,
+            violations: secretScan.violations,
+          },
           sync,
           pack: {
             repoDir,
@@ -445,6 +491,9 @@ export function registerDistributionCommands(program: Command): void {
         );
         process.stdout.write(`  repo-dir: ${repoDir}\n`);
         process.stdout.write(`  copied-artifacts: ${output.pack.copiedArtifacts}\n`);
+        if (!secretScan.ok) {
+          process.stdout.write(`  ${secretScanMessages(secretScan)[0]}\n`);
+        }
         process.stdout.write(`  unmanaged-existing: ${unmanagedExistingPaths.length}\n`);
         process.stdout.write(`  pruned-local: ${prunedPaths.length}\n`);
         process.stdout.write(
@@ -495,6 +544,12 @@ export function registerDistributionCommands(program: Command): void {
         sourceTag: opts.tag,
         cleanRepo: opts.cleanRepo,
       });
+      const sourcePaths = collectDistributionCandidatePaths(repoRoot);
+      const secretScan = runDistributionSecretScan({
+        repoRoot,
+        sourcePaths,
+        artifactPaths: exportPlan.artifactPaths,
+      });
       const outDir = opts.out
         ? isAbsolute(opts.out)
           ? opts.out
@@ -509,8 +564,7 @@ export function registerDistributionCommands(program: Command): void {
       let tarResult: ReturnType<typeof spawnSync> | null = null;
       try {
         mkdirSync(outDir, { recursive: true });
-        const sourcePaths = collectDistributionCandidatePaths(repoRoot);
-        for (const rel of exportPlan.artifactPaths) {
+        for (const rel of secretScan.ok ? exportPlan.artifactPaths : []) {
           const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
           copyCleanDistributionArtifact({
             sourceRoot: repoRoot,
@@ -556,10 +610,19 @@ export function registerDistributionCommands(program: Command): void {
         rmSync(stage, { recursive: true, force: true });
       }
       const ok =
-        exportPlan.ok && tarResult?.status === 0 && existsSync(tarball) && existsSync(checksum);
+        exportPlan.ok &&
+        secretScan.ok &&
+        tarResult?.status === 0 &&
+        existsSync(tarball) &&
+        existsSync(checksum);
       const output = {
         ok,
         export: exportPlan,
+        secretScan: {
+          ok: secretScan.ok,
+          checked: secretScan.checked,
+          violations: secretScan.violations,
+        },
         artifacts: {
           tarball,
           checksum,
@@ -589,6 +652,9 @@ export function registerDistributionCommands(program: Command): void {
         process.stdout.write(
           `  tar: error exit=${tarResult.status ?? "null"}${stderrHead ? ` (${stderrHead})` : ""} - artifacts not created\n`,
         );
+      }
+      if (!secretScan.ok) {
+        process.stdout.write(`  ${secretScanMessages(secretScan)[0]}\n`);
       }
       process.stdout.write(`  tarball: ${tarball}\n`);
       process.stdout.write(`  checksum: ${checksum}\n`);

@@ -19,18 +19,31 @@ plan: docs/plans/PLAN-L6-01-function-spec.md
 
 本 module は網羅的 credential scanner ではない。既知 prefix の narrow guard として使い、広範な検出は別 scanner の責務とする。
 
+`PLAN-L6-62` 以降、広範な検出は `secret-scan` lint family の責務として本書に同居させる。
+これは既存 `SECRET_PATTERN` / `isSecretLike` を拡張して巨大化するものではなく、docs / audit / memory /
+Pack 配布物を対象にした別契約である。検出系は L4 security slot の方針に従い、検出器の都合で対象範囲や
+例外を暗黙生成してはならない。
+
 ## §2 IF 契約
 
 | 関数 | Signature | pre | post | invariant | oracle |
 |---|---|---|---|---|---|
 | `SECRET_PATTERN` | SECRET_PATTERN: RegExp | なし | `sk-` / `ghp_` / `github_pat_` / `xox[baprs]-` 系の長い token に match する | 定数。runtime state に依存しない | U-SECRET-001 |
 | `isSecretLike` | isSecretLike(value: string) => boolean | `value` は任意文字列 | pattern に match すれば `true`、それ以外は `false` | 純関数。副作用なし、例外を投げない | U-SECRET-002 |
+| `analyzeSecretScan` | `(artifacts: SecretScanArtifact[]) => SecretScanResult` | artifact は path/text を持つ active prose/runtime/distribution surface | AWS access key、GitHub token、private key block、Bearer token、password/credential 直書きを marker/line 付き violation にする | 純関数。dummy/placeholder/redacted 明示行は例外扱い | U-DOCSECRET-001..003 |
+| `loadSystemSecretScanArtifacts` | `(repoRoot) => SecretScanArtifact[]` | repoRoot は UT-TDD source checkout | `docs/`、root canonical docs、`.ut-tdd/audit`、`.ut-tdd/handover`、`.ut-tdd/logs`、`.ut-tdd/memory` の active text artifact を収集する | vendor/archive 由来の歴史資料は通常 scan band に入れない | U-DOCSECRET-004 |
+| `checkSecretScan` | `(repoRoot) => LintResult-like` | doctor full profile から呼ばれる | artifact 読込不能または violation>0 なら fail-close | doctor hard gate。warning ではない | U-DOCSECRET-005 |
+| `distribution secret preflight` | `artifactPaths -> analyzeSecretScan` | clean Pack materialize 前 | `sync-stage` / `sync-pack` / `package` は copy/prune/tar 前に scan し、violation があれば成果物生成を止める | 人間承認でも秘密混入を配布してよい例外にはしない | U-DOCSECRET-006 |
 
 ## §3 失敗方針
 
 - module 自体は throw しない。fail-close / fail-open の判断は caller が行う。
 - memory authoring など永続化 surface では `isSecretLike` の `true` を fail-close として扱う。
 - 未知形式の credential は false になる可能性があるため、網羅的 scan の代替として扱わない。
+- `secret-scan` は doctor / distribution の呼び出し点で fail-close とする。scan 対象の読込不能も
+  「検査できないので通す」ではなく violation として扱う。
+- 例外は dummy / placeholder / redacted / fixture / test-only 等が同一行に明示された場合に限る。
+  例外は実秘密値の保存許可ではなく、テスト用・説明用であることを機械判定可能にするための記録である。
 
 ## §4 エッジケース
 
@@ -41,7 +54,13 @@ plan: docs/plans/PLAN-L6-01-function-spec.md
 | 3 | `ghp_` / `github_pat_` / `xox[baprs]-` family | `true` | U-SECRET-003 |
 | 4 | prefix はあるが短い | `false` | U-SECRET-004 |
 | 5 | 長文中に token が埋め込まれる | 部分 match で `true` | U-SECRET-005 |
+| 6 | docs に AWS access key / GitHub token / private key block / Bearer token / password 直書きがある | `secret-scan` violation | U-DOCSECRET-001 |
+| 7 | dummy / placeholder と明示された説明行 | violation なし | U-DOCSECRET-002 |
+| 8 | `.ut-tdd/memory` / audit / handover に secret-like payload が混じる | `secret-scan` violation | U-DOCSECRET-004 |
+| 9 | Pack 配布対象に secret-like payload が混じる | materialize 前に distribution command が blocked | U-DOCSECRET-006 |
 
 ## §5 検証接続
 
-L7 unit-test design の U-SECRET-* が本 doc の contract を検証する。`tests/secret.test.ts` 相当と、memory fail-close tests が間接的な回帰 fence になる。
+L7 unit-test design の U-SECRET-* / U-DOCSECRET-* が本 doc の contract を検証する。
+`tests/memory.test.ts` / `tests/projection-writer.test.ts` / `tests/search-feedback.test.ts` は narrow guard の回帰 fence、
+`tests/secret-scan.test.ts` と distribution CLI tests は広域 scanner / 配布前 fail-close の回帰 fence になる。

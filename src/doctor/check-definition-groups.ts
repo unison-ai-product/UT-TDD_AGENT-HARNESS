@@ -76,6 +76,7 @@ import {
   checkRuleDrift,
   checkRuntimePortability,
   checkRuntimeReadability,
+  checkSecretScan,
 } from "./rule-quality";
 import type { DoctorCheckDefinition, DoctorOptions } from "./runner";
 import { type DoctorDeps, handoverDeps } from "./runtime-state";
@@ -202,6 +203,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("l6-fr-coverage", () => checkL6FrCoverage(deps.repoRoot)),
         full("readability", () => checkReadability(deps.repoRoot)),
         full("runtime-readability", () => checkRuntimeReadability(deps.repoRoot)),
+        full("secret-scan", () => checkSecretScan(deps.repoRoot)),
         full("feedback-log", () => checkFeedbackLog(deps.repoRoot)),
         full("l6-completion", () => checkL6Completion(deps.repoRoot)),
         full("l7-completion", () => checkL7Completion(deps.repoRoot)),

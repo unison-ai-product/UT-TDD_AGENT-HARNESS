@@ -796,7 +796,7 @@ describe("L7 CLI surface closure", () => {
     );
   });
 
-  it("materializes clean Pack artifacts into a local staging directory without publishing", () => {
+  it("U-DOCSECRET-006: materializes clean Pack artifacts into a local staging directory without publishing", () => {
     const outDir = mkdtempSync(join(tmpdir(), "ut-tdd-pack-stage-"));
     try {
       const run = runCliIn(repoRoot, [
@@ -838,7 +838,7 @@ describe("L7 CLI surface closure", () => {
     }
   }, 30_000);
 
-  it("updates a local Pack checkout and prunes non-Pack files only when requested", () => {
+  it("U-DOCSECRET-006: updates a local Pack checkout and prunes non-Pack files only when requested", () => {
     const packDir = mkdtempSync(join(tmpdir(), "ut-tdd-pack-repo-"));
     let manifest: string | null = null;
     try {
@@ -861,6 +861,9 @@ describe("L7 CLI surface closure", () => {
       expect(blocked.status, blocked.stderr || blocked.stdout).toBe(1);
       expect(blockedPayload).toMatchObject({
         ok: false,
+        secretScan: {
+          ok: true,
+        },
         pack: {
           repoDir: packDir,
           repoExists: true,
@@ -889,6 +892,9 @@ describe("L7 CLI surface closure", () => {
       expect(pruned.status, pruned.stderr || pruned.stdout).toBe(0);
       expect(prunedPayload).toMatchObject({
         ok: true,
+        secretScan: {
+          ok: true,
+        },
         pack: {
           repoDir: packDir,
           repoExists: true,

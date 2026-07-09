@@ -98,6 +98,7 @@ export {
   checkRuleDrift,
   checkRuntimePortability,
   checkRuntimeReadability,
+  checkSecretScan,
 } from "./rule-quality";
 export {
   checkAgentSlots,
