@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-07T14:52:41+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:97bc9dc4711dcd771714c3e73d1f89f039b382fca41ffca5b0fbe79abd0bec1b"
+        anchor_commit: 0bf9f45d4a266fbb95272bff72f28da6d00b14a2
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -58,6 +59,7 @@ review_evidence:
         completed_at: "2026-07-07T14:52:41+09:00"
         evidence_path: src/doctor/check-definition-groups.ts
         output_digest: "sha256:fcd37404eb0f0c18e1d42c8311bd59ad2ee4f80e7152ea2ffa0c427882fbceb7"
+        anchor_commit: 0bf9f45d4a266fbb95272bff72f28da6d00b14a2
       - kind: lint
         command: "bunx biome check src\\doctor\\check-definitions.ts src\\doctor\\check-definition-groups.ts tests\\doctor.test.ts docs\\plans\\PLAN-L7-377-doctor-definition-groups.md"
         runner: bun
@@ -66,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-07T14:52:41+09:00"
         evidence_path: src/doctor/check-definitions.ts
         output_digest: "sha256:046d4c7aeffd3745904693dd66eaf10502af87ac89473d1bec489f5aa2abaaa9"
+        anchor_commit: 0bf9f45d4a266fbb95272bff72f28da6d00b14a2
 ---
 
 # PLAN-L7-377 (refactor): doctor check definitions を group 化する

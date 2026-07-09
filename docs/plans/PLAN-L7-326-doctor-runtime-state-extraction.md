@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-03T13:50:00+09:00"
         evidence_path: src/doctor/runtime-state.ts
         output_digest: "sha256:c2c533e14373dfebbe924163045bdf6fbb51719d9eb46f38cb132ea01eb3b49f"
+        anchor_commit: 4d11f58e16139827b2d7b312449513810a7467a8
       - kind: lint
         command: "bunx biome check src\\doctor\\index.ts src\\doctor\\runtime-state.ts tests\\doctor.test.ts"
         runner: bun
@@ -58,6 +59,7 @@ review_evidence:
         completed_at: "2026-07-03T14:01:00+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:cc98b627d2d15a7bba15efb9484e853080f83af73449fabd1e0939aa1fa09aa1"
+        anchor_commit: 4d11f58e16139827b2d7b312449513810a7467a8
       - kind: smoke
         command: "bun -e \"import { checkAgentSlots, checkHandover, checkHandoverDisciplineMessages, nodeDoctorDeps } from './src/doctor/index.ts'; console.log([checkAgentSlots, checkHandover, checkHandoverDisciplineMessages, nodeDoctorDeps].map((f) => typeof f).join(','))\""
         runner: bun
@@ -66,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-03T14:01:00+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:cc98b627d2d15a7bba15efb9484e853080f83af73449fabd1e0939aa1fa09aa1"
+        anchor_commit: 4d11f58e16139827b2d7b312449513810a7467a8
       - kind: smoke
         command: "bun -e \"import { checkAgentSlots, checkHandover, checkHandoverDisciplineMessages } from './src/doctor/index.ts'; const deps = { repoRoot: '/repo', now: '2026-07-03T00:00:00.000Z', readText: () => null, listDir: () => [] }; console.log(checkHandover(deps)); console.log(checkHandoverDisciplineMessages(deps).length >= 0); console.log(checkAgentSlots({ repoRoot: '/repo', now: () => deps.now, readText: () => null, writeText: () => {}, newId: () => 'x' }));\""
         runner: bun
@@ -74,6 +77,7 @@ review_evidence:
         completed_at: "2026-07-03T14:02:00+09:00"
         evidence_path: src/doctor/runtime-state.ts
         output_digest: "sha256:c2c533e14373dfebbe924163045bdf6fbb51719d9eb46f38cb132ea01eb3b49f"
+        anchor_commit: 4d11f58e16139827b2d7b312449513810a7467a8
 ---
 
 # PLAN-L7-326: doctor runtime-state extraction

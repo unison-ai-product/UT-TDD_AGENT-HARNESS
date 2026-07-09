@@ -55,6 +55,7 @@ review_evidence:
         completed_at: "2026-06-30T10:17:40+09:00"
         evidence_path: tests/runtime-adapter.test.ts
         output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
+        anchor_commit: 12f7c9e20d49c6313c1f9be944db853d7d54c2af
       - kind: unit_test
         command: "bun run test tests\\team-schema.test.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts"
         runner: bun
@@ -63,6 +64,7 @@ review_evidence:
         completed_at: "2026-06-30T10:42:58+09:00"
         evidence_path: tests/team-schema.test.ts
         output_digest: "sha256:39e64a5d87d7cfc4417ac5b94c67c574d12695bed0c7f027950ae4604965f676"
+        anchor_commit: 1041009386a9500ae95d3304f72e20375ee9a123
       - kind: unit_test
         command: "bun run test tests\\team-schema.test.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts"
         runner: bun
@@ -71,6 +73,7 @@ review_evidence:
         completed_at: "2026-06-30T10:17:40+09:00"
         evidence_path: tests/team-run.test.ts
         output_digest: "sha256:48679da7a5a6db9c2bce6753cf353943e40f0865b240244fff4a3f4c966f70d9"
+        anchor_commit: 00a0cd7ace711074ae9f77f66a69aee51d26d434
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -79,6 +82,7 @@ review_evidence:
         completed_at: "2026-06-30T10:17:40+09:00"
         evidence_path: src/runtime/adapter.ts
         output_digest: "sha256:91e14872daecee813cb26ca822f18b72fd1f4c41534cbdcfd493557a916e2454"
+        anchor_commit: b70262160e9d116f7853513186b29ac5ee347962
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -87,6 +91,7 @@ review_evidence:
         completed_at: "2026-07-01T16:52:01+09:00"
         evidence_path: src/schema/team.ts
         output_digest: "sha256:5eb3c0621123ff038a984802230fe208f8a27dcfa1a94200d37a6d28f7f5fb4d"
+        anchor_commit: adeefa7249deedc6f9029fe866cfe7a67904ccc2
 ---
 
 # PLAN-L7-195 (impl): model override injection hardening (Security)

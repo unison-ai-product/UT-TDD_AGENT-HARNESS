@@ -47,6 +47,7 @@ review_evidence:
         completed_at: "2026-06-23"
         evidence_path: tests/review-green-command-projection.test.ts
         output_digest: "sha256:d288dc9ff7118c9cb76e83d2c5357e0312a66a2430a3774933f35f671a227009"
+        anchor_commit: 0b9b673ab627a98ff6b498bb0a6ce3cb5ac017ff
 ---
 
 # PLAN-L7-109: Review green command DB projection

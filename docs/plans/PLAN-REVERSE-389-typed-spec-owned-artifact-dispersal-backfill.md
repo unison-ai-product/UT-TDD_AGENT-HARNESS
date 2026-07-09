@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T15:45:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:a6c177b1f236ebdbe2518d6e6de9091231fb96c10dca356aa153e9146f35f5b2"
+        anchor_commit: 779c2869be0065dbe7a4fe09550f80466eb75d32
 agent_slots:
   - role: tl
     slot_label: "TL - typed spec owned artifact reverse review"

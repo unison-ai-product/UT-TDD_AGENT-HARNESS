@@ -52,6 +52,7 @@ review_evidence:
         completed_at: "2026-07-07T12:45:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:543ee37817645cd633901a2b244b0f881d127ed84e68d9350c58452f05a10da3"
+        anchor_commit: 9f8ee327b2473e2badc18fbb6c8d8da28a352e8b
       - kind: unit_test
         command: "bun run test -- tests\\cli-surface.test.ts --testNamePattern \"doctor profile|doctor profiles|doctor scope|doctor verification\" --reporter=dot"
         runner: bun
@@ -60,6 +61,7 @@ review_evidence:
         completed_at: "2026-07-07T12:45:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:c845079e2127cdd15f038d05c6999c3dcaee74821f1d3e10bcd0d9ce0ee8885e"
+        anchor_commit: 9f8ee327b2473e2badc18fbb6c8d8da28a352e8b
 ---
 
 # PLAN-L7-370 (refactor): doctor profile を CLI surface 化する

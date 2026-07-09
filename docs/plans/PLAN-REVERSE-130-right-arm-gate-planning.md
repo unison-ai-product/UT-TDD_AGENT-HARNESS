@@ -71,6 +71,7 @@ review_evidence:
         completed_at: "2026-06-23T16:30:00+09:00"
         evidence_path: tests/right-arm-gate-planning.test.ts
         output_digest: "sha256:f321df37a40bc2ea221a2a2ab9d07c36ff6c8be0e02524791c40d198e8e9fb3b"
+        anchor_commit: c00efefa16d8cc5957c730eaff0cbb0e4b1a32ce
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -79,6 +80,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
 ---
 
 # PLAN-REVERSE-130: right-arm gate planning fullback

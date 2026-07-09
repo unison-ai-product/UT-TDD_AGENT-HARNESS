@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T12:30:00+09:00"
         evidence_path: docs/design/harness/L4-basic-design/data.md
         output_digest: "sha256:4be256e1f7f65eba42729c326f60e4f363b4fe903226f43179024500bddf5914"
+        anchor_commit: 3a133674ed69e7868ef11967218fd7bcf65798de
       - kind: doctor
         command: "bun run src/cli.ts doctor"
         runner: bun
@@ -39,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-08T12:30:00+09:00"
         evidence_path: docs/test-design/harness/L9-system-test-design.md
         output_digest: "sha256:35cc93312f8a55763ce9eeca0d81336ec79fc0c2210d5e75e908fdce6eb96153"
+        anchor_commit: 566215b65620e3b3cb9630061e304ebc30a49975
 agent_slots:
   - role: tl
     slot_label: "TL - spec IR / DB projection の集約境界判断"

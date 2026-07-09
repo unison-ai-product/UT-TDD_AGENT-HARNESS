@@ -60,6 +60,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:f2a4f438552f76da5592e2002a92e5a64b28dc82fe643c08e7c182f61944569f"
+        anchor_commit: d9c34cb768968e42af0d952186f74c72c3ba1d73
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts tests\\workflow-contracts.test.ts"
         runner: bun
@@ -68,6 +69,7 @@ review_evidence:
         completed_at: "2026-06-30T10:57:19+09:00"
         evidence_path: tests/workflow-contracts.test.ts
         output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
+        anchor_commit: b386be1d616da4b0362de575f564aa16f47a69d0
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -76,6 +78,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
         output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -84,6 +87,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
         output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: smoke
         command: "bun -e \"buildCleanDistributionPlan smoke: artifactCount=421, denylistViolations=[], legacy-name hits=[]\""
         runner: bun
@@ -92,6 +96,7 @@ review_evidence:
         completed_at: "2026-06-30T10:58:00+09:00"
         evidence_path: docs/governance/README.md
         output_digest: "sha256:2714e0ffd09470610e2bd55861d03012b3ed213dcbd7d9d0ac50576bb747572b"
+        anchor_commit: 4b1c64e74b38dc8b6a2e6d56ca52b36d258365a2
       - kind: smoke
         command: "bun -e \"buildCleanDistributionPlan smoke: artifactCount=421, denylistViolations=[], legacy-name hits=[]\""
         runner: bun
@@ -100,6 +105,7 @@ review_evidence:
         completed_at: "2026-06-30T10:58:00+09:00"
         evidence_path: docs/adr/ADR-001-ut-tdd-harness-redesign-and-language.md
         output_digest: "sha256:7a60fa3ff043ce0de969aae2dcafb4d59fd3adce0dce71864c35a87c48d40cec"
+        anchor_commit: 4b1c64e74b38dc8b6a2e6d56ca52b36d258365a2
       - kind: smoke
         command: "bun -e \"buildCleanDistributionPlan smoke: artifactCount=421, denylistViolations=[], legacy-name hits=[]\""
         runner: bun
@@ -108,6 +114,7 @@ review_evidence:
         completed_at: "2026-06-30T10:58:00+09:00"
         evidence_path: docs/adr/ADR-005-distribution-model-and-central-ui.md
         output_digest: "sha256:1a2394432a0353ebfb84cd5ff74dee413b3583c9809f604c1a8bcda49f7c9321"
+        anchor_commit: 4b1c64e74b38dc8b6a2e6d56ca52b36d258365a2
 ---
 
 # PLAN-L7-191: clean distribution wording and dogfood governance curation

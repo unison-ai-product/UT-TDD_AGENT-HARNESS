@@ -43,6 +43,7 @@ review_evidence:
         completed_at: "2026-07-03T20:48:37+09:00"
         evidence_path: tests/update-check.test.ts
         output_digest: "sha256:0cb6b915706f3ec1d9f8f31c41ae3ff354eb3a07ac4f5adc3d9bbfaaeb5f1b1f"
+        anchor_commit: d215c9f6d3965d4bd2a2f78859af2ac2f46830e0
 ---
 
 # PLAN-REVERSE-362: Pack update-check advisory design backfill

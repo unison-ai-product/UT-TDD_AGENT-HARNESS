@@ -55,6 +55,7 @@ review_evidence:
         completed_at: "2026-06-23T13:30:00+09:00"
         evidence_path: tests/backfill-pairing.test.ts
         output_digest: "sha256:4677eff98f8f122d395b94c7f70527358f358152a310e93d926a60ad3cc46512"
+        anchor_commit: 827a000383b6aa332c4b582c7b4afd4f6c92e5a3
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -63,6 +64,7 @@ review_evidence:
         completed_at: "2026-06-23T13:30:00+09:00"
         evidence_path: src/lint/backfill-pairing.ts
         output_digest: "sha256:cb69e5f9425f57492a0760eb7574201d4d361689feb2229db46d773509485b07"
+        anchor_commit: 827a000383b6aa332c4b582c7b4afd4f6c92e5a3
 ---
 
 # PLAN-REVERSE-119: conditional backfill audit sync

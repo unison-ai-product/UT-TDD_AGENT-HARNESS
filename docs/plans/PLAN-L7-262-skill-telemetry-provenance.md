@@ -60,6 +60,7 @@ review_evidence:
         completed_at: "2026-07-02T20:26:18+09:00"
         evidence_path: tests/skill-telemetry-provenance.test.ts
         output_digest: "sha256:ed9153691945aae71ca89885584b471fd07546867a6d6f46c68d3e803a1f4692"
+        anchor_commit: 3d083b5d32815e24478d1b6029abdbb43187b623
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -68,6 +69,7 @@ review_evidence:
         completed_at: "2026-07-02T20:26:18+09:00"
         evidence_path: src/state-db/skill-projections.ts
         output_digest: "sha256:d4dc1f06b71833491065fb7a7f0fdc8275186b4d4c3c73e0e38a7939d1541e52"
+        anchor_commit: 20e9bbd183455c4fba087730fb1a05d7437a6637
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -76,6 +78,7 @@ review_evidence:
         completed_at: "2026-07-02T20:26:18+09:00"
         evidence_path: src/runtime/session-log.ts
         output_digest: "sha256:be6bbbd9de16f2a037c25b05a0ce2f281dc524104e5af6951c85c2f2f364f667"
+        anchor_commit: 20e9bbd183455c4fba087730fb1a05d7437a6637
   - reviewer: codex-cli
     review_kind: cross_agent
     reviewed_at: "2026-07-02T23:08:00+09:00"
@@ -93,6 +96,7 @@ review_evidence:
         completed_at: "2026-07-02T23:01:50+09:00"
         evidence_path: tests/skill-telemetry-provenance.test.ts
         output_digest: "sha256:ed9153691945aae71ca89885584b471fd07546867a6d6f46c68d3e803a1f4692"
+        anchor_commit: 3d083b5d32815e24478d1b6029abdbb43187b623
 ---
 
 # PLAN-L7-262 (impl): skill telemetry の provenance 分離

@@ -49,6 +49,7 @@ review_evidence:
         completed_at: "2026-06-25T22:10:36+09:00"
         evidence_path: tests/handover.test.ts
         output_digest: "sha256:a8880464cc076556fa02321fb205e95af3c1908155f125861cd23b8560f8f9f8"
+        anchor_commit: 1676993a19a70090f804cade9d5553584e45704f
       - kind: unit_test
         command: "bun run vitest run tests\\handover-completion-wording.test.ts --reporter=dot"
         runner: bun
@@ -57,6 +58,7 @@ review_evidence:
         completed_at: "2026-06-25T22:10:56+09:00"
         evidence_path: tests/handover-completion-wording.test.ts
         output_digest: "sha256:87d7e25d5201fdb018cc1109490f22c81e44aaa06c8eec2ec14ee6a4d41ba3b9"
+        anchor_commit: e2244a1508fc5f1fefb896b3c673d75a4f35038a
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -65,6 +67,7 @@ review_evidence:
         completed_at: "2026-06-25T22:16:58+09:00"
         evidence_path: src/handover/index.ts
         output_digest: "sha256:8284061b8e1dcc8e089b784f51f39f32cbd91ddfeb3452d8a96a07f54158bc25"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -73,6 +76,7 @@ review_evidence:
         completed_at: "2026-06-25T22:16:49+09:00"
         evidence_path: src/handover/handover-types.ts
         output_digest: "sha256:ac848a981e1843998d9a219a8209a4458195b89bc1c4bfe90dfd3696163c5160"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
     notes:
       - "bun run vitest run tests\\doctor.test.ts timed out before test output in this environment; retained as residual verification risk and covered by subsequent doctor CLI gate."
 ---

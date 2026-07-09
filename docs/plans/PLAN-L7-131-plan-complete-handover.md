@@ -44,6 +44,7 @@ review_evidence:
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
+        anchor_commit: 47355c568e05e8f9759bbdca05e1b42618143b1a
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -52,6 +53,7 @@ review_evidence:
         completed_at: "2026-06-23T16:10:00+09:00"
         evidence_path: tsconfig.json
         output_digest: "sha256:290e679c492d7c229373061b313ab332394da783b08c9eff85bbb81275f96afc"
+        anchor_commit: f31464607d02776d9d6e01a64da0889b65eac0d9
 ---
 
 # PLAN-L7-131: plan complete handover

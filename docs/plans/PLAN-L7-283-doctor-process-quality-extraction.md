@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-07-02T22:45:00+09:00"
         evidence_path: src/doctor/process-quality.ts
         output_digest: "sha256:936429debb42b7a5aaa5f425b9f64b3923ebab969717fb5519eaec1b4eed6341"
+        anchor_commit: eedfc3e60f5007952778c312b799bea2d6fbf23a
       - kind: unit_test
         command: "bun run vitest run tests\\doctor-process-quality.test.ts --reporter=dot"
         runner: bun
@@ -59,6 +60,7 @@ review_evidence:
         completed_at: "2026-07-02T22:45:00+09:00"
         evidence_path: tests/doctor-process-quality.test.ts
         output_digest: "sha256:a8ddf39af873881d6dbef395d3131bbe604d6c7a43a948e5d5289d00f5ba57a8"
+        anchor_commit: eedfc3e60f5007952778c312b799bea2d6fbf23a
 ---
 
 # PLAN-L7-283: doctor process quality adapter extraction

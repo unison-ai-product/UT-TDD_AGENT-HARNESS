@@ -53,6 +53,7 @@ review_evidence:
         completed_at: "2026-07-03T20:48:37+09:00"
         evidence_path: tests/update-check.test.ts
         output_digest: "sha256:0cb6b915706f3ec1d9f8f31c41ae3ff354eb3a07ac4f5adc3d9bbfaaeb5f1b1f"
+        anchor_commit: d215c9f6d3965d4bd2a2f78859af2ac2f46830e0
       - kind: unit_test
         command: "bun run vitest run tests/distribution-acceptance.test.ts tests/setup.test.ts tests/cli-surface.test.ts --reporter=dot"
         runner: bun
@@ -61,6 +62,7 @@ review_evidence:
         completed_at: "2026-07-03T20:52:30+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
         output_digest: "sha256:d61d7df274007db7e0a848a8f63eb2e1ccf5a6b37372dee3a26a7b51377f400a"
+        anchor_commit: d215c9f6d3965d4bd2a2f78859af2ac2f46830e0
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -69,6 +71,7 @@ review_evidence:
         completed_at: "2026-07-03T20:48:33+09:00"
         evidence_path: src/setup/update-check.ts
         output_digest: "sha256:cc5de93c3e2217765cbf1d0b25faaee1773ccb743cd5b5e24b5e416518ea3b08"
+        anchor_commit: d215c9f6d3965d4bd2a2f78859af2ac2f46830e0
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -77,6 +80,7 @@ review_evidence:
         completed_at: "2026-07-03T20:53:30+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:12619be045136964b4565abc04917f33d68eda37e5039a18462db3f56aa1bc2b"
+        anchor_commit: d215c9f6d3965d4bd2a2f78859af2ac2f46830e0
 ---
 
 # PLAN-L7-362: Pack update-check advisory

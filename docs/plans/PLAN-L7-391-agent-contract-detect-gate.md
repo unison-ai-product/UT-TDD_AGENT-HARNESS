@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T17:20:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:5af700330b849715556c32f87893914ad87b56e32c4ebd0b0f478400d474ec46"
+        anchor_commit: d55666212ce10793624e61bf019a755b174d7fc3
 agent_slots:
   - role: tl
     slot_label: "TL - agent contract detect gate"

@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-02T13:05:00+09:00"
         evidence_path: src/doctor/db-projection.ts
         output_digest: "sha256:a2005bb86c9e2ce54edb815649a5cb3fde7a74778e3a509c5e0f5eb1f7a0439e"
+        anchor_commit: dba674a843188262b2ae140aeb3292be82218443
       - kind: unit_test
         command: "bun run vitest run tests\\doctor-db-projection.test.ts tests\\doctor.test.ts --testNamePattern \"doctor db projection|hard-gate checker inputs\" --reporter=dot"
         runner: bun
@@ -62,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-02T13:05:00+09:00"
         evidence_path: tests/doctor-db-projection.test.ts
         output_digest: "sha256:5737f96d29c340095b40ebb227bbd2dd68336bcbe0705ed7a7b3f7b0d49df680"
+        anchor_commit: dba674a843188262b2ae140aeb3292be82218443
 ---
 
 # PLAN-L7-224: Doctor DB projection extraction

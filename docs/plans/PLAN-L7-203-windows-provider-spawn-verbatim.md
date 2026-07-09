@@ -48,6 +48,7 @@ review_evidence:
         completed_at: "2026-06-30T11:58:50+09:00"
         evidence_path: tests/runtime-adapter.test.ts
         output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
+        anchor_commit: 12f7c9e20d49c6313c1f9be944db853d7d54c2af
       - kind: integration_test
         command: "bun run vitest run tests\\runtime-hook-entrypoints.test.ts tests\\cli-surface.test.ts tests\\distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -56,6 +57,7 @@ review_evidence:
         completed_at: "2026-06-30T11:57:24+09:00"
         evidence_path: tests/runtime-hook-entrypoints.test.ts
         output_digest: "sha256:74c3e99f9b6a45a68e0de00eb5715010c03eee6cf9ab235d11dd6f975a227eac"
+        anchor_commit: 7e3e3f518119c66c48eaf18f9e91451ab2672c68
       - kind: unit_test
         command: "bun run test"
         runner: bun
@@ -64,6 +66,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -72,6 +75,7 @@ review_evidence:
         completed_at: "2026-06-30T11:57:24+09:00"
         evidence_path: src/runtime/adapter.ts
         output_digest: "sha256:91e14872daecee813cb26ca822f18b72fd1f4c41534cbdcfd493557a916e2454"
+        anchor_commit: b70262160e9d116f7853513186b29ac5ee347962
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -80,6 +84,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
 ---
 
 # PLAN-L7-203: Windows provider .cmd spawn quoting

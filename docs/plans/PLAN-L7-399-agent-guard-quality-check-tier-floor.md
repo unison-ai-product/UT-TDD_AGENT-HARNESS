@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T22:23:57+09:00"
         evidence_path: tests/agent-guard.test.ts
         output_digest: "sha256:f9c937b259ea5ec62508b5df32b820ffd682e09a0023760f9258d5af91fceff7"
+        anchor_commit: 18da439c0f8fc3c76c4d2101e97815b6200b5d64
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T22:19:00+09:00"
         evidence_path: src/runtime/agent-guard.ts
         output_digest: "sha256:dfc634f6d5d74ef1d22498ea31a669f213719f049879ca309c4eddb5d6729911"
+        anchor_commit: 18da439c0f8fc3c76c4d2101e97815b6200b5d64
 agent_slots:
   - role: tl
     slot_label: "TL - agent-guard capability floor 是正レビュー"

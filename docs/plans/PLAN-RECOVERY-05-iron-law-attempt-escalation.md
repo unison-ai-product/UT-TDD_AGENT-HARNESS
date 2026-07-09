@@ -48,6 +48,7 @@ review_evidence:
         completed_at: "2026-06-23T15:54:00+09:00"
         evidence_path: tests/attempt-escalation.test.ts
         output_digest: "sha256:8f0c3329489e7f351ddc53dd318dc57abed9e45f3f0e355381ea4fe1916999b6"
+        anchor_commit: fd7ddd787953dbac021f94fdfd4c79f2714df7b1
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -56,6 +57,7 @@ review_evidence:
         completed_at: "2026-06-23T15:54:00+09:00"
         evidence_path: tsconfig.json
         output_digest: "sha256:290e679c492d7c229373061b313ab332394da783b08c9eff85bbb81275f96afc"
+        anchor_commit: f31464607d02776d9d6e01a64da0889b65eac0d9
       - kind: lint
         command: "bunx biome check src\\runtime\\attempt-escalation.ts tests\\attempt-escalation.test.ts"
         runner: bun
@@ -64,6 +66,7 @@ review_evidence:
         completed_at: "2026-06-23T15:54:00+09:00"
         evidence_path: src/runtime/attempt-escalation.ts
         output_digest: "sha256:f727200a8a3c7fef3ce8f2ca97db6c9fb813085deaf9fbf955b9cd8fc5761ecb"
+        anchor_commit: fd7ddd787953dbac021f94fdfd4c79f2714df7b1
   - reviewer: codex (cross-provider desk review)
     review_kind: cross_agent
     reviewed_at: "2026-06-23"
@@ -81,6 +84,7 @@ review_evidence:
         completed_at: "2026-06-23"
         evidence_path: tests/verb-classify.test.ts
         output_digest: "sha256:ed2b16fe6249ce3fe92fd14abbb122d50ed2c4d6d39562d449dc2f7b8ece5e53"
+        anchor_commit: fd7ddd787953dbac021f94fdfd4c79f2714df7b1
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -89,6 +93,7 @@ review_evidence:
         completed_at: "2026-06-23"
         evidence_path: src/runtime/verb-classify.ts
         output_digest: "sha256:778d0146279fd05a2b526674840f37133d45834c2500a3f6b98836bc7345d79d"
+        anchor_commit: 674c59f0a4ac01ca4e8bbb5fcbf1bd5b7e60b36b
       - kind: lint
         command: "npx biome check src/runtime/verb-classify.ts src/runtime/attempt-escalation.ts src/runtime/session-log.ts src/cli.ts"
         runner: bun
@@ -97,6 +102,7 @@ review_evidence:
         completed_at: "2026-06-23"
         evidence_path: src/runtime/attempt-escalation.ts
         output_digest: "sha256:f727200a8a3c7fef3ce8f2ca97db6c9fb813085deaf9fbf955b9cd8fc5761ecb"
+        anchor_commit: fd7ddd787953dbac021f94fdfd4c79f2714df7b1
 ---
 
 # PLAN-RECOVERY-05 (recovery): Iron Law + 3-attempt escalation

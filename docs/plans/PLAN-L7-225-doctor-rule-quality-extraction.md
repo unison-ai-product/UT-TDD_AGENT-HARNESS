@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-02T13:45:00+09:00"
         evidence_path: src/doctor/rule-quality.ts
         output_digest: "sha256:048d7ed8f471bda2a7a31c7403dc3e5089a1d7cf23f2550937d7e4bbd4cf3d44"
+        anchor_commit: f91ecc90ee18afb0ba49bd49d144a1bd9d783494
       - kind: unit_test
         command: "bun run vitest run tests\\doctor-rule-quality.test.ts tests\\doctor.test.ts --testNamePattern \"doctor rule quality|hard-gate checker inputs\" --reporter=dot"
         runner: bun
@@ -62,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-02T13:45:00+09:00"
         evidence_path: tests/doctor-rule-quality.test.ts
         output_digest: "sha256:e3d9e577a73d5ac22c7928fbecb10cfd1e4a6e8f1b18c51384a16d3ac803c1b1"
+        anchor_commit: f91ecc90ee18afb0ba49bd49d144a1bd9d783494
 ---
 
 # PLAN-L7-225: Doctor rule quality extraction

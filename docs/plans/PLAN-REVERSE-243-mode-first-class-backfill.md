@@ -45,6 +45,7 @@ review_evidence:
         completed_at: "2026-07-02T21:16:03+09:00"
         evidence_path: tests/mode-catalog.test.ts
         output_digest: "sha256:dd3a7a9e3e5d0c4a65cb31c4d55be2391ab1d74d5247e8387359649dc08e29b2"
+        anchor_commit: 5aa16ac24e68a5654ea7d8c4d20511b10ce11c3f
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -53,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-02T21:16:03+09:00"
         evidence_path: src/schema/mode-catalog.ts
         output_digest: "sha256:6eebf2218afee38df1b5c9c8eb1bb849b42bd9aecc8440dad246bc7a82cc2976"
+        anchor_commit: 5aa16ac24e68a5654ea7d8c4d20511b10ce11c3f
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -61,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-02T21:16:03+09:00"
         evidence_path: src/state-db/projection-writer.ts
         output_digest: "sha256:d3fbe43294b7768bf68c29ca7bc4df7ea4386734aabf32beff1f825e89a99504"
+        anchor_commit: 5aa16ac24e68a5654ea7d8c4d20511b10ce11c3f
 ---
 
 # PLAN-REVERSE-243: mode 第一級化 (route_mode 正本) の設計 back-fill

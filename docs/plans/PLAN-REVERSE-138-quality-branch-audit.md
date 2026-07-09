@@ -77,6 +77,7 @@ review_evidence:
         completed_at: "2026-06-30T20:17:36+09:00"
         evidence_path: tests/quality-audit.test.ts
         output_digest: "sha256:67ff3c7faa901eb99914661b2b5b16fdc8c7ffee66d028c6e362891631b10c58"
+        anchor_commit: 09bbdb4f98250c9b172af07da660c43e75cf35da
       - kind: unit_test
         command: "bun run vitest run tests\\quality-audit.test.ts tests\\branch-audit.test.ts tests\\cli-surface.test.ts -t \"quality audit|branch audit\" --reporter=dot"
         runner: bun
@@ -85,6 +86,7 @@ review_evidence:
         completed_at: "2026-06-30T20:17:36+09:00"
         evidence_path: tests/branch-audit.test.ts
         output_digest: "sha256:83860fcceb15d570c46c5e156b1345fddc5170685f10ff1c99b35fa66aee33a1"
+        anchor_commit: 09bbdb4f98250c9b172af07da660c43e75cf35da
       - kind: unit_test
         command: "bun run vitest run tests\\quality-audit.test.ts tests\\branch-audit.test.ts tests\\cli-surface.test.ts -t \"quality audit|branch audit\" --reporter=dot"
         runner: bun
@@ -93,6 +95,7 @@ review_evidence:
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
+        anchor_commit: 47355c568e05e8f9759bbdca05e1b42618143b1a
 ---
 
 # PLAN-REVERSE-138: read-only quality and branch audit backfill

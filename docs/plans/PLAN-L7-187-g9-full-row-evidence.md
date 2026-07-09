@@ -36,6 +36,7 @@ review_evidence:
         completed_at: "2026-06-29T15:15:24+09:00"
         evidence_path: tests/g9-system-workflow.test.ts
         output_digest: "sha256:7ca4e705639b5f3f0f9b814663666ffe57f95c93d4d394b743fae8b7080c68cb"
+        anchor_commit: 6b5d6c057ffb5d86b5bb47467c91ac9b48a464a9
       - kind: unit_test
         command: "bun run test"
         runner: bun
@@ -44,6 +45,7 @@ review_evidence:
         completed_at: "2026-06-29T15:18:39+09:00"
         evidence_path: tests/g9-system-workflow.test.ts
         output_digest: "sha256:7ca4e705639b5f3f0f9b814663666ffe57f95c93d4d394b743fae8b7080c68cb"
+        anchor_commit: 6b5d6c057ffb5d86b5bb47467c91ac9b48a464a9
 agent_slots:
   - role: tl
     slot_label: "TL - G9 evidence closure"

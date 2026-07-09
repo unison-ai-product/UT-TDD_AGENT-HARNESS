@@ -40,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-08T13:44:30+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:b3fbba3c08fa5e2825b1068ea78b4686f5eaed45e35457ef78f28447cf12772c"
+        anchor_commit: 164de056ecced57754d460a9c7bec8aed715b4bb
 ---
 
 # PLAN-REVERSE-384: routeFiling review surface design backfill closure

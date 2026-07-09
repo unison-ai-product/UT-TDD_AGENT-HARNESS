@@ -48,6 +48,7 @@ review_evidence:
         completed_at: "2026-06-23T16:30:00+09:00"
         evidence_path: tests/right-arm-gate-planning.test.ts
         output_digest: "sha256:f321df37a40bc2ea221a2a2ab9d07c36ff6c8be0e02524791c40d198e8e9fb3b"
+        anchor_commit: c00efefa16d8cc5957c730eaff0cbb0e4b1a32ce
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -56,6 +57,7 @@ review_evidence:
         completed_at: "2026-06-23T16:30:00+09:00"
         evidence_path: src/lint/right-arm-gate-planning.ts
         output_digest: "sha256:5c5df976593649215c875d844ac067a99e6a5f3bbe107843f565be01f97caacd"
+        anchor_commit: c00efefa16d8cc5957c730eaff0cbb0e4b1a32ce
 ---
 
 # PLAN-L7-130: right-arm gate planning

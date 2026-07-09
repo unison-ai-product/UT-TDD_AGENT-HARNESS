@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T15:17:26+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:5cce65217aa7da46789d0bd3b7ed753379d5ab27e2a75d37b12c403055152398"
+        anchor_commit: 72cc0964d61f87f6004fe6c1d04fb7bc5acafd74
 agent_slots:
   - role: tl
     slot_label: "TL - typed spec ledger/body reverse review"

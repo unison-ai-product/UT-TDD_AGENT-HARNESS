@@ -57,6 +57,7 @@ review_evidence:
         completed_at: "2026-06-26T21:20:00+09:00"
         evidence_path: tests/g8-integration-workflow.test.ts
         output_digest: "sha256:2eab00f92a5bda76ff43a4b215d4620c117939e3221f808603492b5c7ed77d91"
+        anchor_commit: 627f1ffdb3b1f19113cd9609339ffa757cead142
 ---
 
 # PLAN-L7-169: G8 integration evidence manifest

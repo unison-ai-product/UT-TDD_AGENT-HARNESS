@@ -56,6 +56,7 @@ review_evidence:
         completed_at: "2026-06-23T15:30:00+09:00"
         evidence_path: tests/workflow-contracts.test.ts
         output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
+        anchor_commit: b386be1d616da4b0362de575f564aa16f47a69d0
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -64,6 +65,7 @@ review_evidence:
         completed_at: "2026-06-23T15:30:00+09:00"
         evidence_path: src/workflow/contracts.ts
         output_digest: "sha256:6caf60cac4a0d40cc4c6a2f46b26f92f2e6707958f3462c0c643b21ad1af7fd8"
+        anchor_commit: bec03cb94f1f182be4021e453d20486af6fa67cc
 ---
 
 # PLAN-REVERSE-123: route eval RecommendedCommandV1 fullback

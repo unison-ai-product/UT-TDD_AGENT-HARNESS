@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-03T11:57:29+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:dbd92229109242552757ca4a4de1f89926f87afc5be8ad4e3bdcbc3e8ef7b1c3"
+        anchor_commit: 8486df5e88be045eedf6610d3fddc57b6a3c21a9
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts tests\\plan-lint.test.ts -t \"reference freshness|code-line references|hard gates wired\" --reporter=dot"
         runner: bun
@@ -58,6 +59,7 @@ review_evidence:
         completed_at: "2026-07-03T11:58:10+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:221b2023d4d2582f9651c0bf98083224708053363d2c1162ae99c06191c614df"
+        anchor_commit: 8486df5e88be045eedf6610d3fddc57b6a3c21a9
       - kind: unit_test
         command: "bun run test:pack"
         runner: bun
@@ -66,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-03T11:58:52+09:00"
         evidence_path: tests/readability.test.ts
         output_digest: "sha256:ad6468a3bb93493c37fc6fa194e3384b844c131a6b30a62bd9042f7ad8213228"
+        anchor_commit: c18872c85c31a3a316cdcc0290cf55348f11b69d
 ---
 
 # PLAN-L7-314: PLAN reference freshness doctor advisory

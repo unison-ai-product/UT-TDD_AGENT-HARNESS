@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-02T14:15:00+09:00"
         evidence_path: src/doctor/workflow-quality.ts
         output_digest: "sha256:1bbaa03940caaa4e851b1bf8032c8f22b93b1eb91f3bd280549051305b9a0d2a"
+        anchor_commit: 6293811fa9e6254422cd88e63b8740b2fa5bde52
       - kind: unit_test
         command: "bun run vitest run tests\\doctor-workflow-quality.test.ts tests\\doctor.test.ts --testNamePattern \"doctor workflow quality|hard-gate checker inputs\" --reporter=dot"
         runner: bun
@@ -62,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-02T14:15:00+09:00"
         evidence_path: tests/doctor-workflow-quality.test.ts
         output_digest: "sha256:0ad5ee61b48179a9573d5b9455db8015a243565a08f2be0eee5aab4923438101"
+        anchor_commit: 6293811fa9e6254422cd88e63b8740b2fa5bde52
 ---
 
 # PLAN-L7-226: Doctor workflow quality extraction

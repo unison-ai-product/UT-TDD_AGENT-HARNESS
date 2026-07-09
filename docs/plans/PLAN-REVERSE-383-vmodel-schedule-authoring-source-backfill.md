@@ -40,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-08T13:21:30+09:00"
         evidence_path: tests/spec-ir-projections.test.ts
         output_digest: "sha256:8cccd994bf72df3b7f503e043d4cc5ceb368204ae24f62c92be7c84044eb5638"
+        anchor_commit: bb58e908087076713c90aa22fb06d4e20d8c5947
 ---
 
 # PLAN-REVERSE-383: Vモデル工程管理表 authoring source design backfill closure

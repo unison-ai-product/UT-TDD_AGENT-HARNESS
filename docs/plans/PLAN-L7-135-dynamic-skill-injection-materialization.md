@@ -68,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/skill-recommend.test.ts
         output_digest: "sha256:d81427f0e99ca96135340712542b7a28d8ef370aaf47fa71033b6d16ff221a76"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
       - kind: unit_test
         command: "bun run vitest run tests\\skill-recommend.test.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts tests\\tier-router.test.ts tests\\doctor.test.ts tests\\cli-surface.test.ts -t \"routeToAdapterPlan|codex-wrapper-parity|skill|inject|shared Claude/Codex launch plan|provider-neutral|stdin|task route\""
         runner: bun
@@ -76,6 +77,7 @@ review_evidence:
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: tests/runtime-adapter.test.ts
         output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
+        anchor_commit: 12f7c9e20d49c6313c1f9be944db853d7d54c2af
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -84,6 +86,7 @@ review_evidence:
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: src/runtime/adapter.ts
         output_digest: "sha256:91e14872daecee813cb26ca822f18b72fd1f4c41534cbdcfd493557a916e2454"
+        anchor_commit: b70262160e9d116f7853513186b29ac5ee347962
       - kind: lint
         command: "bunx biome check src\\runtime\\adapter.ts src\\team\\run.ts src\\task\\tier-router.ts src\\doctor\\index.ts src\\cli.ts src\\skills\\recommend.ts tests\\runtime-adapter.test.ts tests\\team-run.test.ts tests\\tier-router.test.ts tests\\doctor.test.ts tests\\skill-recommend.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -92,6 +95,7 @@ review_evidence:
         completed_at: "2026-06-23T18:42:32+09:00"
         evidence_path: src/skill-engine/recommend.ts
         output_digest: "sha256:bc70b172a9dfd750ae950eb5fb573479a8cc9932e422ae915d46662d96d5e961"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
 ---
 
 # PLAN-L7-135: Dynamic skill injection materialization

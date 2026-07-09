@@ -42,6 +42,7 @@ review_evidence:
         completed_at: "2026-07-08T13:01:10+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:f75198da0bb9bcf80feba789d274bac931d1f273279747adb24a8f29c46fad74"
+        anchor_commit: 132adcbcc52730c873b7a818c41760934116a5f4
 ---
 
 # PLAN-REVERSE-382: detector route candidate feedback bridge design backfill closure

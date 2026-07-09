@@ -47,6 +47,7 @@ review_evidence:
         completed_at: "2026-06-25T19:58:58+09:00"
         evidence_path: tests/team-run.test.ts
         output_digest: "sha256:48679da7a5a6db9c2bce6753cf353943e40f0865b240244fff4a3f4c966f70d9"
+        anchor_commit: 00a0cd7ace711074ae9f77f66a69aee51d26d434
       - kind: unit_test
         command: "bun run vitest run tests\\team-run.test.ts"
         runner: bun
@@ -55,6 +56,7 @@ review_evidence:
         completed_at: "2026-06-25T19:58:58+09:00"
         evidence_path: src/team/run.ts
         output_digest: "sha256:a31e6a97262d7a4beaabfcf0ad0e8ddfbcf20771c445d82f2d92eb3d5c96a634"
+        anchor_commit: 00a0cd7ace711074ae9f77f66a69aee51d26d434
       - kind: unit_test
         command: "bun run vitest run tests\\team-run.test.ts"
         runner: bun
@@ -63,6 +65,7 @@ review_evidence:
         completed_at: "2026-06-25T19:58:58+09:00"
         evidence_path: src/team/run-policy.ts
         output_digest: "sha256:abb6418997ff1639ca6a083eceb02fa51c3e4c254a26e27330eaffd6fff1c7a9"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -71,6 +74,7 @@ review_evidence:
         completed_at: "2026-06-25T20:00:37+09:00"
         evidence_path: src/team/run.ts
         output_digest: "sha256:a31e6a97262d7a4beaabfcf0ad0e8ddfbcf20771c445d82f2d92eb3d5c96a634"
+        anchor_commit: 00a0cd7ace711074ae9f77f66a69aee51d26d434
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -79,6 +83,7 @@ review_evidence:
         completed_at: "2026-06-25T20:00:37+09:00"
         evidence_path: tests/team-run.test.ts
         output_digest: "sha256:48679da7a5a6db9c2bce6753cf353943e40f0865b240244fff4a3f4c966f70d9"
+        anchor_commit: 00a0cd7ace711074ae9f77f66a69aee51d26d434
 ---
 
 # PLAN-L7-162: team run policy extraction

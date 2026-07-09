@@ -56,6 +56,7 @@ review_evidence:
         completed_at: "2026-07-01T17:22:39+09:00"
         evidence_path: tsconfig.json
         output_digest: "sha256:290e679c492d7c229373061b313ab332394da783b08c9eff85bbb81275f96afc"
+        anchor_commit: f31464607d02776d9d6e01a64da0889b65eac0d9
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -64,6 +65,7 @@ review_evidence:
         completed_at: "2026-07-01T17:23:07+09:00"
         evidence_path: biome.json
         output_digest: "sha256:b70d2d1403c671399680ca5c783e86591fde85e10dc57c45be2c8806f0549cf7"
+        anchor_commit: d34158748e720df8844ac32aaa1dba7a7b0b9b11
       - kind: unit_test
         command: "bun run vitest run tests\\workflow-contracts.test.ts tests\\cli-surface.test.ts --reporter=dot"
         runner: bun
@@ -72,6 +74,7 @@ review_evidence:
         completed_at: "2026-07-01T17:24:05+09:00"
         evidence_path: tests/workflow-contracts.test.ts
         output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
+        anchor_commit: b386be1d616da4b0362de575f564aa16f47a69d0
       - kind: smoke
         command: "bun src\\cli.ts route eval --signal \"smell duplicated routing table\" --format json"
         runner: bun
@@ -80,6 +83,7 @@ review_evidence:
         completed_at: "2026-07-01T17:23:07+09:00"
         evidence_path: src/workflow/routing-contracts.ts
         output_digest: "sha256:44626b2b9841630983407330a42858f5021252d8d257abe10ff36c57273abe0d"
+        anchor_commit: b386be1d616da4b0362de575f564aa16f47a69d0
 ---
 
 # PLAN-L7-198 (impl): Research/監査 finding → Recovery 起票配線

@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T16:35:00+09:00"
         evidence_path: src/state-db/spec-ir-projections.ts
         output_digest: "sha256:24fa837f0b555741015cb5aec6165ac6380ae175fc40f4500e68cb139c953128"
+        anchor_commit: 33f03923a561495acd0ff9f43b9e2f8af718335e
       - kind: unit_test
         command: "bun run vitest run tests/spec-ir-projections.test.ts tests/doctor.test.ts"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T16:35:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:892ddc838bb032c4d10871382ffb83d071c7ddeea644a15998ce9f70e4434371"
+        anchor_commit: 33f03923a561495acd0ff9f43b9e2f8af718335e
 agent_slots:
   - role: tl
     slot_label: "TL - typed spec phase/layer gate"

@@ -72,6 +72,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
+        anchor_commit: 3f9adfea88616ba33fe8ff23aebc730c4b0c9cb3
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -80,6 +81,7 @@ review_evidence:
         completed_at: "2026-06-25T15:53:00+09:00"
         evidence_path: src/state-db/refactor-candidates.ts
         output_digest: "sha256:0e270c1572d46850fe94dd43359a38c04b75ecc7b23a62cf8bf983f74c8f601a"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
 ---
 
 # PLAN-L7-150: refactor candidate closure sweep

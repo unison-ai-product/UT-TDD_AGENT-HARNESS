@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T14:28:52+09:00"
         evidence_path: src/state-db/spec-ir-projections.ts
         output_digest: "sha256:871718adf763551fab9fa611a634c1e651f840ff3427621c8ade1ff08b2edb92"
+        anchor_commit: 0e6a853261a58222b7728dbb2a95c3aea8fd0955
       - kind: unit_test
         command: "bun run vitest run tests/spec-ir-projections.test.ts tests/projection-writer.test.ts"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T14:28:52+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:e5411ef9a37603354acc5c4a4aea335ec016c1cef990ffd449759f86188e48c2"
+        anchor_commit: 0e6a853261a58222b7728dbb2a95c3aea8fd0955
 agent_slots:
   - role: tl
     slot_label: "TL - typed spec declaration projection"

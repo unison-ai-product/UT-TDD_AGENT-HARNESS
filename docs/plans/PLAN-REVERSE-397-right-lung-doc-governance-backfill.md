@@ -35,6 +35,7 @@ review_evidence:
         completed_at: "2026-07-09T12:05:00+09:00"
         evidence_path: tests/right-lung-doc-governance.test.ts
         output_digest: "sha256:f9805fb5bad01f32e7525d552a1a2e6059810c939c9c223979d405ab46b615c1"
+        anchor_commit: 48d89bbca4b341ce1013fb91eb4c9187d4119497
 backprop_scope:
   - layer: L6-function-design
     artifact_path: docs/design/harness/L6-function-design/function-spec.md

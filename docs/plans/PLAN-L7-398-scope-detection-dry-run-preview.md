@@ -32,6 +32,7 @@ review_evidence:
         completed_at: "2026-07-09T12:10:00+09:00"
         evidence_path: tests/scope-preview.test.ts
         output_digest: "sha256:d43456f00c9d0d02549805dd44c654c650e04224096967cbd708bac7f30f243d"
+        anchor_commit: 48d89bbca4b341ce1013fb91eb4c9187d4119497
       - kind: smoke
         command: "bun run src\\cli.ts db scope-preview --profile standard --capability report --activation-profile vmodel-clean-core --json"
         runner: bun
@@ -40,6 +41,7 @@ review_evidence:
         completed_at: "2026-07-09T12:10:00+09:00"
         evidence_path: src/state-db/scope-preview.ts
         output_digest: "sha256:c610629d62b4e09e64fb0bd444949a62ce750e401b852735fc967ecd102e5951"
+        anchor_commit: 48d89bbca4b341ce1013fb91eb4c9187d4119497
 agent_slots:
   - role: tl
     slot_label: "TL - scope preview contract and dry-run boundary"

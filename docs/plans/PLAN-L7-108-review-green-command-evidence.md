@@ -63,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/review-evidence.test.ts
         output_digest: "sha256:5fef87a0e2879c4b9bd7608c92e01a1ad0aa45cdd0578fba065f2307b81354c4"
+        anchor_commit: 3f9adfea88616ba33fe8ff23aebc730c4b0c9cb3
       - kind: unit_test
         command: "bun test tests\\frontmatter.test.ts"
         runner: bun
@@ -71,6 +72,7 @@ review_evidence:
         completed_at: "2026-06-23"
         evidence_path: tests/frontmatter.test.ts
         output_digest: "sha256:3fe83386c27d73b3c364c254a78c6a17791e8ebad3668d7387545a0016df12cb"
+        anchor_commit: b1440534f036440cbecdbb34dbb7850be2770e6b
       - kind: unit_test
         command: "bun test tests\\workflow-contracts.test.ts"
         runner: bun
@@ -79,6 +81,7 @@ review_evidence:
         completed_at: "2026-06-23"
         evidence_path: tests/workflow-contracts.test.ts
         output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
+        anchor_commit: b386be1d616da4b0362de575f564aa16f47a69d0
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -87,6 +90,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/lint/review-evidence.ts
         output_digest: "sha256:8ba3905fe5be6a02a3cffc590d02fc285a5c9a414dad938f4f70d7778b71db83"
+        anchor_commit: 3f9adfea88616ba33fe8ff23aebc730c4b0c9cb3
 ---
 
 # PLAN-L7-108: Review green command evidence gate

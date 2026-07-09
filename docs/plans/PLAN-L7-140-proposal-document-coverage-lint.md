@@ -68,6 +68,7 @@ review_evidence:
         completed_at: "2026-06-24T12:06:05+09:00"
         evidence_path: tests/proposal-document-coverage.test.ts
         output_digest: "sha256:b83eb982966a0e6fa019a4fd2bf59e2284cec83a168268f5c845e34243fb8fb1"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
 ---
 
 # PLAN-L7-140: Proposal Document Coverage Routing And Lint

@@ -35,6 +35,7 @@ review_evidence:
         completed_at: "2026-07-09T10:50:00+09:00"
         evidence_path: tests/gate-id-format.test.ts
         output_digest: "sha256:7e484e36a3f7f6534e4ff8076a7f7d42425f9a6f52f7cbe69061d4e44167f5e9"
+        anchor_commit: 48d89bbca4b341ce1013fb91eb4c9187d4119497
 backprop_scope:
   - layer: L4-basic-design
     artifact_path: docs/design/harness/L4-basic-design/data.md

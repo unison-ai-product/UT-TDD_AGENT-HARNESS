@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-07T13:43:06+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:678c89128a083f6bb318cbfe64473290442d597daf2623b8a010fdb5465f8d31"
+        anchor_commit: e6596c07b22f3dbf8b51bb1fa7c22553de331f3b
       - kind: unit_test
         command: "bun run test -- tests\\cli-surface.test.ts --testNamePattern \"doctor profile|doctor profiles|doctor scope|doctor verification\" --reporter=dot"
         runner: bun
@@ -58,6 +59,7 @@ review_evidence:
         completed_at: "2026-07-07T13:43:06+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:c845079e2127cdd15f038d05c6999c3dcaee74821f1d3e10bcd0d9ce0ee8885e"
+        anchor_commit: 9f8ee327b2473e2badc18fbb6c8d8da28a352e8b
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -66,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-07T13:43:06+09:00"
         evidence_path: src/doctor/profiles.ts
         output_digest: "sha256:07788a8e6886bb9aad05b341208ea5a9eb768cd0b02db4ef0fefff38a33253b1"
+        anchor_commit: e6596c07b22f3dbf8b51bb1fa7c22553de331f3b
 ---
 
 # PLAN-L7-373 (refactor): doctor profile registry を小 module へ分離する

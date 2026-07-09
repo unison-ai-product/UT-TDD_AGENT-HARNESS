@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-09T18:19:00+09:00"
         evidence_path: src/state-db/projection-writer.ts
         output_digest: "sha256:f8a101c27971ef96125626381fb2bf396880da5363faabf115ecd71299ce1594"
+        anchor_commit: 6da19b4756d7cf63a536418d1b14dada24bf5f4e
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -58,6 +59,7 @@ review_evidence:
         completed_at: "2026-07-09T18:23:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:66f8f8f65d44ddf1280d007b1fbcf2af599e7bd172c11ebca80e94b1c13daa41"
+        anchor_commit: 6da19b4756d7cf63a536418d1b14dada24bf5f4e
       - kind: unit_test
         command: "bun run vitest run tests\\projection-writer.test.ts -t \"short PLAN|stale bare numeric\""
         runner: bun
@@ -66,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-09T18:19:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:66f8f8f65d44ddf1280d007b1fbcf2af599e7bd172c11ebca80e94b1c13daa41"
+        anchor_commit: 6da19b4756d7cf63a536418d1b14dada24bf5f4e
 ---
 
 # PLAN-L7-409: runtime PLAN context join signal separation

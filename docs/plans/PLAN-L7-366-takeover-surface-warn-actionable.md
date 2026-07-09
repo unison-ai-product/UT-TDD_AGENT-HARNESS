@@ -59,6 +59,7 @@ review_evidence:
         completed_at: "2026-07-07T12:00:00+09:00"
         evidence_path: tests/feedback-surface.test.ts
         output_digest: "sha256:0eeb8d02d1e1ff81077121922b59f196b5782dee03795c1d10cbe1c4639a4967"
+        anchor_commit: 374d4ee130e0d53da441dd1a1c6d140ab8041c50
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -67,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-07T11:59:00+09:00"
         evidence_path: src/feedback/surface.ts
         output_digest: "sha256:f2bfee5b2185cfc63e1aa5be3ebfdfd02b754b0eb3fbe3bc0c317fa78aec66d4"
+        anchor_commit: 374d4ee130e0d53da441dd1a1c6d140ab8041c50
 ---
 
 # PLAN-L7-366 (impl): takeover surface の warn 昇格と feedback_events 読み取り

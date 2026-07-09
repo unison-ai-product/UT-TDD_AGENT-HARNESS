@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-03T11:27:05+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:9e65be107dd0b29c429ac320027e2f967726db77147f7b278a7d6d106f86fbc7"
+        anchor_commit: 308e6f2b768ff307bea961e18e883268489fe133
       - kind: unit_test
         command: "bun run vitest run tests\\cli-delegation.test.ts tests\\cli-surface.test.ts -t \"delegation|model/effort|claude runtime|executes codex adapter\" --reporter=dot"
         runner: bun
@@ -62,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-03T11:27:29+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:0587b86b989f110cf57fec87b76cd6430f46cfe75e35d38c7c50d8894562c4cb"
+        anchor_commit: 308e6f2b768ff307bea961e18e883268489fe133
       - kind: unit_test
         command: "bun run test:pack"
         runner: bun
@@ -70,6 +72,7 @@ review_evidence:
         completed_at: "2026-07-03T11:30:42+09:00"
         evidence_path: tests/readability.test.ts
         output_digest: "sha256:ad6468a3bb93493c37fc6fa194e3384b844c131a6b30a62bd9042f7ad8213228"
+        anchor_commit: c18872c85c31a3a316cdcc0290cf55348f11b69d
 ---
 
 # PLAN-L7-286: CLI delegation command registration extraction

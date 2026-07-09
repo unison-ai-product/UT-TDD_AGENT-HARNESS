@@ -58,6 +58,7 @@ review_evidence:
         completed_at: "2026-07-03T17:00:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:c8ab3b26d10caea10906ab774ab191f29e0c5f53ca59a8bde962400b0338aa82"
+        anchor_commit: c31fbe0f42bfb9c148c75df40aebd5bfd68ddaaa
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -66,6 +67,7 @@ review_evidence:
         completed_at: "2026-07-03T16:59:00+09:00"
         evidence_path: src/doctor/check-registry.ts
         output_digest: "sha256:32a24674feae139bae657dd2c40e760eb3bf6b5b1e8fa61bc00905ed6794252f"
+        anchor_commit: c31fbe0f42bfb9c148c75df40aebd5bfd68ddaaa
       - kind: lint
         command: "bunx biome check src\\doctor\\check-registry.ts src\\doctor\\index.ts src\\doctor\\result.ts src\\cli.ts tests\\doctor.test.ts tests\\cli-surface.test.ts docs\\plans\\PLAN-L7-357-doctor-timing-profile.md"
         runner: bun
@@ -74,6 +76,7 @@ review_evidence:
         completed_at: "2026-07-03T16:59:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:fd85ebc140197656ea1cdd74f56409d35a22c8760b1390098d2fc5d5d14f514f"
+        anchor_commit: c31fbe0f42bfb9c148c75df40aebd5bfd68ddaaa
 ---
 
 # PLAN-L7-357: doctor per-check timing profile

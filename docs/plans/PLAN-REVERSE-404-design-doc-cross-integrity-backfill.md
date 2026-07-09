@@ -68,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-09T13:26:00+09:00"
         evidence_path: docs/design/harness/L6-function-design/function-spec.md
         output_digest: "sha256:dbd805dc9dd4f35f2c042d097adedc96176e121ef2939511ad6eed4cff5bbed3"
+        anchor_commit: 8ce5feb56aa4e4db61773490f97cf1744185992e
 ---
 
 # PLAN-REVERSE-404: design-doc-cross-integrity 検出能力の設計 back-fill

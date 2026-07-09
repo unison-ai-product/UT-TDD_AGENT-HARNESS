@@ -49,6 +49,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
+        anchor_commit: 3f9adfea88616ba33fe8ff23aebc730c4b0c9cb3
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -57,6 +58,7 @@ review_evidence:
         completed_at: "2026-06-25T14:49:41+09:00"
         evidence_path: src/state-db/refactor-candidates.ts
         output_digest: "sha256:0e270c1572d46850fe94dd43359a38c04b75ecc7b23a62cf8bf983f74c8f601a"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -65,6 +67,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/state-db/projection-writer.ts
         output_digest: "sha256:1a61852bc66a939e4624a516ec9b5a5a4147becd6ac8e06842b25bca7e51bd1a"
+        anchor_commit: b3904eca7a50e185da4aeb1fa4177f0b3b64e271
       - kind: smoke
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
@@ -73,6 +76,7 @@ review_evidence:
         completed_at: "2026-06-25T14:50:05+09:00"
         evidence_path: docs/process/modes/refactor.md
         output_digest: "sha256:915ec6686156b8ed12e57a18b666105a488bc3ae85c31e1d89db2c1336ac94b4"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
 ---
 
 # PLAN-L7-148: refactor candidate detector module extraction

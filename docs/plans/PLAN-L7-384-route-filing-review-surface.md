@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T13:58:15+09:00"
         evidence_path: src/schema/route-filing.ts
         output_digest: "sha256:f04a03d201f9e656a28d33e74e7686955b8cb273fd3ac6ac1a8d2fe06585a1d2"
+        anchor_commit: 164de056ecced57754d460a9c7bec8aed715b4bb
       - kind: unit_test
         command: "bun run vitest run tests/workflow-contracts.test.ts tests/feedback-surface.test.ts tests/search-feedback.test.ts tests/projection-writer.test.ts"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T13:58:15+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:b3fbba3c08fa5e2825b1068ea78b4686f5eaed45e35457ef78f28447cf12772c"
+        anchor_commit: 164de056ecced57754d460a9c7bec8aed715b4bb
 agent_slots:
   - role: tl
     slot_label: "TL - routeFiling FilingTarget wiring review"

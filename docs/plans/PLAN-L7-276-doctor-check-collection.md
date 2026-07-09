@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-02T17:31:00+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:4e07d3838355b462bcde380b659ceba391b270535c72dce984183151165bee1f"
+        anchor_commit: b4b66c55e279a88481ff5f540d8cfc69687c2058
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts -t \"keeps all hard gates wired into runDoctor hard-gate aggregation\" --reporter=dot"
         runner: bun
@@ -62,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-02T17:36:06+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:4e76e7579fb3340c29c1454a018ae4c7271f369f4f13220874a332b4a5c4364b"
+        anchor_commit: b4b66c55e279a88481ff5f540d8cfc69687c2058
 ---
 
 # PLAN-L7-276: doctor check collection extraction

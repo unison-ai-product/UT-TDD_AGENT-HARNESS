@@ -60,6 +60,7 @@ review_evidence:
         completed_at: "2026-07-02T17:00:00+09:00"
         evidence_path: src/state-db/skill-projections.ts
         output_digest: "sha256:063af7b0dc3f66f299aa98533a7d61b10d562a1a4d8739cbd29fd5b9b020336e"
+        anchor_commit: 023111b0bf62d770ce3e5d6a2caf63cb8d432760
       - kind: unit_test
         command: "bun run vitest run tests\\skill-evaluation.test.ts tests\\projection-writer.test.ts tests\\skill-recommend.test.ts tests\\db-projection-ingestion.test.ts --reporter=dot"
         runner: bun
@@ -68,6 +69,7 @@ review_evidence:
         completed_at: "2026-07-02T17:00:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:42bee61e425f71256298670c6bc6b0e13519a183927fb67a32edbd73d7f2b523"
+        anchor_commit: 023111b0bf62d770ce3e5d6a2caf63cb8d432760
 ---
 
 # PLAN-L7-231: Skill projection extraction

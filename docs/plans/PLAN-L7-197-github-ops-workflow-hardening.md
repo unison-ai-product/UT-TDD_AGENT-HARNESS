@@ -56,6 +56,7 @@ review_evidence:
         completed_at: 2026-07-01T18:02:24+09:00
         evidence_path: src/cli.ts
         output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: lint
         command: bun run lint
         runner: bun
@@ -64,6 +65,7 @@ review_evidence:
         completed_at: 2026-07-01T18:00:15+09:00
         evidence_path: tests/github-ops-guard.test.ts
         output_digest: "sha256:ede51495fd3cd4b174d943ff49293a3d5f33268cc2e63ca2b549f4457c25a96c"
+        anchor_commit: ed2843cc723e261105daa0215758b3aa0a307be2
       - kind: unit_test
         command: bun run vitest run tests/github-ops-guard.test.ts tests/setup.test.ts --reporter=dot
         runner: bun
@@ -72,6 +74,7 @@ review_evidence:
         completed_at: 2026-07-01T18:00:27+09:00
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:f2a4f438552f76da5592e2002a92e5a64b28dc82fe643c08e7c182f61944569f"
+        anchor_commit: d9c34cb768968e42af0d952186f74c72c3ba1d73
       - kind: smoke
         command: bun run vitest run tests/cli-surface.test.ts -t "release publication|GitHub branch-type|CODEOWNERS team" --reporter=dot
         runner: bun
@@ -80,6 +83,7 @@ review_evidence:
         completed_at: 2026-07-01T17:58:38+09:00
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
+        anchor_commit: 47355c568e05e8f9759bbdca05e1b42618143b1a
       - kind: smoke
         command: bun src/cli.ts distribution release-plan --tag v0.1.0 --repo unison-ai-product/UT-TDD_AGENT-HARNESS-Pack --json
         runner: bun
@@ -88,6 +92,7 @@ review_evidence:
         completed_at: 2026-07-01T18:03:01+09:00
         evidence_path: src/github/ops-guard.ts
         output_digest: "sha256:f45fd0e718bd627d26fa834fd811d1f7ccf72d78f7c6a2ab77bc86b8c8f94164"
+        anchor_commit: ed2843cc723e261105daa0215758b3aa0a307be2
       - kind: smoke
         command: bun src/cli.ts audit quality --include-tests --limit 20
         runner: bun
@@ -96,6 +101,7 @@ review_evidence:
         completed_at: 2026-07-01T18:03:02+09:00
         evidence_path: tests/github-ops-guard.test.ts
         output_digest: "sha256:ede51495fd3cd4b174d943ff49293a3d5f33268cc2e63ca2b549f4457c25a96c"
+        anchor_commit: ed2843cc723e261105daa0215758b3aa0a307be2
 ---
 
 # PLAN-L7-197 (impl): GitHub 運用 workflow hardening

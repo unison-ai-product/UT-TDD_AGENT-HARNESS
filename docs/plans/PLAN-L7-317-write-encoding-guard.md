@@ -26,6 +26,7 @@ review_evidence:
         completed_at: "2026-07-08T22:24:10+09:00"
         evidence_path: tests/write-encoding-guard.test.ts
         output_digest: "sha256:80188b5e3b1add41411d19ab6d1f8d68542f8d89e914f4b2a4a8748767fe0162"
+        anchor_commit: 28b33f17c8931aaf603401ee6b2b2323b20e8db9
       - kind: typecheck
         command: "bun run tsc --noEmit"
         runner: bun
@@ -34,6 +35,7 @@ review_evidence:
         completed_at: "2026-07-08T22:24:10+09:00"
         evidence_path: src/lint/write-encoding-guard.ts
         output_digest: "sha256:5e26ec8de782c7d97f4ba53797b85f302ffaa9387a3b09baf3fea479d698746b"
+        anchor_commit: 28b33f17c8931aaf603401ee6b2b2323b20e8db9
       - kind: lint
         command: "bunx biome check src\\lint\\write-encoding-guard.ts src\\cli.ts tests\\write-encoding-guard.test.ts"
         runner: bun
@@ -42,6 +44,7 @@ review_evidence:
         completed_at: "2026-07-08T22:24:10+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:da638ed7304d97576766a006f387cfdcd4f72e3d07500705d9942158d819b524"
+        anchor_commit: 28b33f17c8931aaf603401ee6b2b2323b20e8db9
 parent_design: docs/design/harness/L6-function-design/governance-enforcement.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:

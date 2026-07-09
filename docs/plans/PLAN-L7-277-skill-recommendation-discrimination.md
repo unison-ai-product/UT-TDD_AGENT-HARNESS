@@ -78,6 +78,7 @@ review_evidence:
         completed_at: "2026-07-09T15:35:00+09:00"
         evidence_path: tests/skill-recommend.test.ts
         output_digest: "sha256:f751bd993fac00a598c5b0c1404384d3deb1ac6104e4ba2237bfa6679e748f59"
+        anchor_commit: db92a0614b8cbb6579d733f9f6efa4803ed80d5d
       - kind: typecheck
         command: "bun run tsc --noEmit"
         runner: bun
@@ -86,6 +87,7 @@ review_evidence:
         completed_at: "2026-07-09T15:33:00+09:00"
         evidence_path: src/skill-scoring/scoring.ts
         output_digest: "sha256:cfa7e179277a6411140472e25cd2be80a7e2e825f5d75f00ddd6752c127f9fd1"
+        anchor_commit: db92a0614b8cbb6579d733f9f6efa4803ed80d5d
 ---
 
 # PLAN-L7-277 (add-impl): skill 推奨の差別化

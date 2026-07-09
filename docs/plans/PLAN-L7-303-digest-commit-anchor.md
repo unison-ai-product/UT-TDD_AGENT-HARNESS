@@ -8,7 +8,7 @@ status: confirmed
 route_signal: version_deferral
 route_mode: version-up
 created: 2026-07-03
-updated: 2026-07-03
+updated: 2026-07-09
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/review-evidence.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -41,6 +41,7 @@ dependencies:
   requires: []
   references:
     - .ut-tdd/audit/A-181-performance-sustainability-audit-2026-07-03.md
+    - .ut-tdd/audit/A-187-green-command-digest-suspect-ledger-2026-07-09.md
     - docs/governance/harness-v2-update-strategy.md
     - docs/plans/PLAN-L7-132-green-command-digest-integrity.md
     - docs/plans/PLAN-L7-194-green-command-digest-hard-gate.md
@@ -62,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-03T14:26:08+09:00"
         evidence_path: src/schema/frontmatter.ts
         output_digest: "sha256:acb91e3a1caca37c60ba90fe9a047779c922ad99850aca18ccedbbc1eac065dc"
+        anchor_commit: 3658f7e9ccce337d186588f3d2ba2ad1bdb210fd
       - kind: unit_test
         command: "bun run vitest run tests\\green-command-digest.test.ts tests\\frontmatter.test.ts tests\\cli-surface.test.ts -t \"nodeHistoryScanDeps|review_evidence.green_commands|green command digest migration\" --reporter=dot --maxWorkers=1 --minWorkers=1"
         runner: bun
@@ -70,6 +72,7 @@ review_evidence:
         completed_at: "2026-07-03T14:28:19+09:00"
         evidence_path: tests/green-command-digest.test.ts
         output_digest: "sha256:ffcbebc519c2af70426d26fea8038fae0b5b242adb71fe49d4a4fb4b69162766"
+        anchor_commit: 3658f7e9ccce337d186588f3d2ba2ad1bdb210fd
       - kind: lint
         command: "bunx biome check src\\cli.ts src\\lint\\green-command-digest.ts src\\schema\\frontmatter.ts tests\\green-command-digest.test.ts tests\\frontmatter.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -78,21 +81,24 @@ review_evidence:
         completed_at: "2026-07-03T14:26:08+09:00"
         evidence_path: src/lint/green-command-digest.ts
         output_digest: "sha256:9d33e77a6016525bbad1e039619d72415329baf3b7f5a6ed506dd3e235478eb7"
+        anchor_commit: 3658f7e9ccce337d186588f3d2ba2ad1bdb210fd
 ---
 
 # PLAN-L7-303 (impl): green-command digest の commit anchor 化
 
 ## Status
 
-**部分 landed (2026-07-03) / 残 parked (v2)**。A-181 DV-5。L7-132 (advisory 機構) / L7-194 (opt-in strict へ訂正済) の後継。**L7-194 の claim を errata 扱いにするものではない** — L7-194 は「normal doctor は green 維持 + strict flag は opt-in」への訂正を scope 注記で明示済み。本 PLAN が解くのはその先の構造問題。
+**部分 landed (2026-07-03) / item 3-execute 実行済み (2026-07-09) / 残 parked (v2)**。A-181 DV-5。L7-132 (advisory 機構) / L7-194 (opt-in strict へ訂正済) の後継。**L7-194 の claim を errata 扱いにするものではない** — L7-194 は「normal doctor は green 維持 + strict flag は opt-in」への訂正を scope 注記で明示済み。本 PLAN が解くのはその先の構造問題。
 
-**landed スライス (PO /goal 2026-07-03)**: schema 拡張 (item 1) + 照合二層化 (item 2) + migrate dry-run 計画器 (item 3 の非破壊部分) + regression test を実装した。活性化型は先例 (L7-312/314) に倣い refactor (code_smell)。**残 parked = item 3-execute (199 件の anchor_commit back-fill) と item 4 (hard ratchet)** — いずれも committed PLAN の frontmatter 改変 (監査境界) と全体 doctor 赤化リスクを伴い PO ゲート。
+**landed スライス (PO /goal 2026-07-03)**: schema 拡張 (item 1) + 照合二層化 (item 2) + migrate dry-run 計画器 (item 3 の非破壊部分) + regression test を実装した。活性化型は先例 (L7-312/314) に倣い refactor (code_smell)。
+
+**execute スライス (PO /goal 2026-07-09)**: `ut-tdd plan digest-migrate --execute` を実行し、recoverable な green_command へ `anchor_commit` を追記した。既存 `output_digest` は変更していない。実行結果は `applied=772 / files=298 / skipped_already_anchored=0 / suspect=22`。実行後の dry-run は `795 green_command: recoverable=0 / suspect=22 / already-anchored=773`。**残 parked = suspect 22 件の A-18x 個別台帳調査と item 4 (hard ratchet)**。
 
 **dogfood 実証**: 本スライスの anchor 機構を PLAN-L7-309 の review_evidence で実データ検証済 — `anchor_commit: e57f70b...` を付け、`git show e57f70b:docs/plans/PLAN-L7-232-...md` の blob hash が記録 digest と一致 (working tree が今後変わっても永続 green)。anchor 機構が実リポジトリで機能することの証跡。
 
-**migrate dry-run の実リポジトリ結果 (2026-07-03)**: `ut-tdd plan digest-migrate` を全 PLAN に走らせ、**567 green_command を recoverable=562 / suspect=4 / already-anchored=1 に分類**した。A-181 が「199 件不一致」と数えた中身は、大半 (562) が「健全な進化による正当な stale = 履歴に一致 blob あり → anchor 化で永続復旧可能」であり、真に疑わしいのは 4 件のみと判明。**suspect 4 件** (要 A-18x 個別台帳化、PO ゲート):
-- `PLAN-L7-282-pack-direct-source-only-guards` / `tests\projection-writer.test.ts`
-- `PLAN-RECOVERY-07-design-bottomup-backmerge` / `tests\mode-catalog.test.ts`, `src\schema\mode-catalog.ts`, `tests\drive-model-passage.test.ts`
+**migrate dry-run の実リポジトリ結果 (2026-07-03)**: `ut-tdd plan digest-migrate` を全 PLAN に走らせ、**567 green_command を recoverable=562 / suspect=4 / already-anchored=1 に分類**した。A-181 が「199 件不一致」と数えた中身は、大半が「健全な進化による正当な stale = 履歴に一致 blob あり → anchor 化で永続復旧可能」であり、真に疑わしいものは suspect として分離できることを確認した。
+
+**migrate execute 後の実リポジトリ結果 (2026-07-09)**: `ut-tdd plan digest-migrate --execute` 後、`ut-tdd plan digest-migrate` は **795 green_command を recoverable=0 / suspect=22 / already-anchored=773 に分類**した。suspect 22 件は `.ut-tdd/audit/A-187-green-command-digest-suspect-ledger-2026-07-09.md` に台帳化した。suspect は `--execute` では修復しない。
 
 suspect = どの履歴 commit の blob も claimed digest に一致しない = output_digest に「ファイル hash でなくコマンド出力 hash」を入れた等の疑い (本 PLAN 実装中に L7-309 で orchestrator 自身が危うく踏みかけた誤りと同型)。捏造断定でなく「file-hash 意味論では未照合」。是正は個別調査 (item 3-execute の PO ゲート)。
 
@@ -127,11 +133,13 @@ suspect = どの履歴 commit の blob も claimed digest に一致しない = o
 - [x] anchor 先の内容と合わない digest (捏造) が fail する (test 固定 — anchor-digest-mismatch。unverifiable は非 fail も test 固定)
 - [x] `anchor_commit` が frontmatter schema / review parser / digest audit に通る。
 - [x] `ut-tdd plan digest-migrate` が非破壊 dry-run surface として公開されている。
+- [x] `ut-tdd plan digest-migrate --execute` が recoverable のみに `anchor_commit` を追記し、`output_digest` を変更しない。
 - [x] Windows backslash の evidence_path が git pathspec で誤 suspect 化しない。
 
 ## 残 parked (PO ゲート)
 
-- [ ] 実リポジトリで mismatch 件数が 0 (doctor 実行の実測値を review_evidence に記録) — **parked (199 件移行 = item 3-execute の PO ゲート)**
+- [ ] suspect 22 件を A-187 台帳で個別調査し、再実行証跡・誤記是正・欠損認定のいずれかへ分類する。
+- [ ] 実リポジトリで mismatch 件数が 0 (doctor 実行の実測値を review_evidence に記録) — **parked (suspect 22 件の個別調査が前提)**
 - [ ] mismatch 0 到達後の hard 化で、fake digest 注入 fixture が doctor exit 1 になる (real-repo regression test、L7-194 の test 資産を流用) — **parked (item 4 hard ratchet、mismatch 0 到達が前提)**
 
 ## 実装ノート (後続モデル向け)

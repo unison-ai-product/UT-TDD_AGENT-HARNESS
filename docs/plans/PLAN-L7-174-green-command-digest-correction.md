@@ -41,6 +41,7 @@ review_evidence:
         completed_at: "2026-06-25T22:34:00+09:00"
         evidence_path: tests/green-command-digest.test.ts
         output_digest: "sha256:4c10eca9258ffe560b0eb420d9ecac699ad0e7423b519f09cdf6db81e0000018"
+        anchor_commit: 78a5d9a7039f498dad8695d8dd6828832161bcbe
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -49,6 +50,7 @@ review_evidence:
         completed_at: "2026-06-25T22:34:13+09:00"
         evidence_path: src/lint/green-command-digest.ts
         output_digest: "sha256:898a7a236a2873fdbd0df6b380331fcd70774334af71abd3bd6fb721d721a7f4"
+        anchor_commit: 78a5d9a7039f498dad8695d8dd6828832161bcbe
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -57,6 +59,7 @@ review_evidence:
         completed_at: "2026-06-25T22:34:00+09:00"
         evidence_path: src/lint/green-command-digest.ts
         output_digest: "sha256:898a7a236a2873fdbd0df6b380331fcd70774334af71abd3bd6fb721d721a7f4"
+        anchor_commit: 78a5d9a7039f498dad8695d8dd6828832161bcbe
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-29T19:18:36+09:00"
@@ -74,6 +77,7 @@ review_evidence:
         completed_at: "2026-06-29T19:18:23+09:00"
         evidence_path: tests/green-command-digest.test.ts
         output_digest: "sha256:4c10eca9258ffe560b0eb420d9ecac699ad0e7423b519f09cdf6db81e0000018"
+        anchor_commit: 78a5d9a7039f498dad8695d8dd6828832161bcbe
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -82,6 +86,7 @@ review_evidence:
         completed_at: "2026-06-29T19:18:23+09:00"
         evidence_path: src/lint/green-command-digest.ts
         output_digest: "sha256:898a7a236a2873fdbd0df6b380331fcd70774334af71abd3bd6fb721d721a7f4"
+        anchor_commit: 78a5d9a7039f498dad8695d8dd6828832161bcbe
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -90,6 +95,7 @@ review_evidence:
         completed_at: "2026-06-29T19:18:36+09:00"
         evidence_path: src/lint/green-command-digest.ts
         output_digest: "sha256:898a7a236a2873fdbd0df6b380331fcd70774334af71abd3bd6fb721d721a7f4"
+        anchor_commit: 78a5d9a7039f498dad8695d8dd6828832161bcbe
 ---
 
 # PLAN-L7-174: green command digest correction

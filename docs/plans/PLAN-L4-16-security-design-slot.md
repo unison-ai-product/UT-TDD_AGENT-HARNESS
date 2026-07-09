@@ -33,6 +33,7 @@ review_evidence:
         completed_at: "2026-07-09T15:30:00+09:00"
         evidence_path: docs/design/harness/L4-basic-design/security.md
         output_digest: "sha256:477d6a39aae8f7555ddb8d50580f5d4cc000968544b30e534c9c3510681ea527"
+        anchor_commit: 49ccaf025b9143e5c8f41595fc95f131b4ed896e
 agent_slots:
   - role: po
     slot_label: "PO - security slot 新設の採否 (document-system-map + VALID_SUB_DOCS 拡張)"

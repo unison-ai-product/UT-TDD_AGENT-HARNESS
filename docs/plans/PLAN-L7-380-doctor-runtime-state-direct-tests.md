@@ -47,6 +47,7 @@ review_evidence:
         completed_at: "2026-07-07T16:00:28+09:00"
         evidence_path: tests/doctor-runtime-state.test.ts
         output_digest: "sha256:5e311cc28afd6c9eb136719cc4665b34b72a7e740184c72a85ff99dc840c26b9"
+        anchor_commit: 10fa97ddd5f8c0c9dc971add8e6f8756e0017b1d
       - kind: lint
         command: "bunx biome check tests\\doctor-runtime-state.test.ts docs\\plans\\PLAN-L7-380-doctor-runtime-state-direct-tests.md"
         runner: bun
@@ -55,6 +56,7 @@ review_evidence:
         completed_at: "2026-07-07T16:00:28+09:00"
         evidence_path: tests/doctor-runtime-state.test.ts
         output_digest: "sha256:5e311cc28afd6c9eb136719cc4665b34b72a7e740184c72a85ff99dc840c26b9"
+        anchor_commit: 10fa97ddd5f8c0c9dc971add8e6f8756e0017b1d
 ---
 
 # PLAN-L7-380: doctor runtime-state direct tests

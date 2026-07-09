@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-07T17:54:04+09:00"
         evidence_path: tests/self-pair-normative-guard.test.ts
         output_digest: "sha256:88beeda1f37fc4bf4cb5050827d6e4d3a872ca53a6a34e7fae6a38fd440b2439"
+        anchor_commit: d7b9912a9b61240267ca341fe107699b931abdb9
       - kind: vmodel_lint
         command: "bun run src/cli.ts doctor (pair-freeze / test-design-naming)"
         runner: bun
@@ -39,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-07T17:54:04+09:00"
         evidence_path: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
         output_digest: "sha256:4b2b5d9339dfcec8ee0ade8bfdb25706cd68840d3731565a1e03cf21b922ab12"
+        anchor_commit: d7b9912a9b61240267ca341fe107699b931abdb9
       - kind: lint
         command: "bun run src/cli.ts plan lint docs/plans/PLAN-REVERSE-12-self-pair-normalization.md"
         runner: bun
@@ -47,6 +49,7 @@ review_evidence:
         completed_at: "2026-07-07T17:54:04+09:00"
         evidence_path: docs/design/harness/L4-basic-design/function.md
         output_digest: "sha256:c13588c91c6a47e78832749643167fbab5f33b7dde7cccc043819ebfc4158192"
+        anchor_commit: d7b9912a9b61240267ca341fe107699b931abdb9
 owner: PM / PO
 agent_slots:
   - role: tl

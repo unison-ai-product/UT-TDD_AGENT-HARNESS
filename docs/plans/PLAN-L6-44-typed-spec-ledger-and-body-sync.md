@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T15:17:26+09:00"
         evidence_path: docs/design/harness/L6-function-design/function-spec.md
         output_digest: "sha256:fc5b85d8f68f057b976f0867ff2065ddc8070c7105e8b4cf059e91df72a2e589"
+        anchor_commit: 72cc0964d61f87f6004fe6c1d04fb7bc5acafd74
 agent_slots:
   - role: tl
     slot_label: "TL - typed spec ledger/body sync design"

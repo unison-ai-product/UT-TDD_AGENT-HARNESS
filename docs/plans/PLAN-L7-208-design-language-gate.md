@@ -178,6 +178,7 @@ review_evidence:
         completed_at: "2026-06-30T15:21:18+09:00"
         evidence_path: tests/design-language.test.ts
         output_digest: "sha256:d0cc3bae406181fbcbb834b921b4e60a65ecb9d129f1a99dfc7226d80d5b1656"
+        anchor_commit: 4b1c64e74b38dc8b6a2e6d56ca52b36d258365a2
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -186,6 +187,7 @@ review_evidence:
         completed_at: "2026-06-30T15:21:18+09:00"
         evidence_path: src/lint/design-language.ts
         output_digest: "sha256:53886f743fa03d1f4565be54184a36cb47a489b369bd43b3cb6de04e629e7569"
+        anchor_commit: 4b1c64e74b38dc8b6a2e6d56ca52b36d258365a2
 ---
 
 # PLAN-L7-208: Design language gate for public design docs

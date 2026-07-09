@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-06-25T17:28:43+09:00"
         evidence_path: tests/task-classify.test.ts
         output_digest: "sha256:4354ec1766680c77a56569eb7c6fbfafdff3b568beafed6092c3da2a8375b075"
+        anchor_commit: 80dc4c8e4e61b0a8d2c8e6de0e2ccb70a5fa57fe
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -59,6 +60,7 @@ review_evidence:
         completed_at: "2026-06-25T17:28:43+09:00"
         evidence_path: src/task/proposal-document-pack-types.ts
         output_digest: "sha256:e2c59a540a7b3a5e9cb4ebff4c670d15890c5e47438c6e39712ce8d0c556ce03"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -67,6 +69,7 @@ review_evidence:
         completed_at: "2026-06-25T17:29:00+09:00"
         evidence_path: src/task/proposal-coverage-data.ts
         output_digest: "sha256:7d90403d7b0dcbc190e67c46405e6c468a8a481fbcfba1fdffafeff8d756807f"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
 ---
 
 # PLAN-L7-154: proposal document pack split

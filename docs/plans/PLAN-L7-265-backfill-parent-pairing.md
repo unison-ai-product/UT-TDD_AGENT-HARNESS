@@ -61,6 +61,7 @@ review_evidence:
         completed_at: "2026-07-02T17:05:00+09:00"
         evidence_path: src/lint/backfill-pairing.ts
         output_digest: "sha256:b8ea7e33c71c66ad7fa09f61d1460f516a55c38e8a272d7a0eb2d2cac4657371"
+        anchor_commit: 0d55f5e3d99d8333591281fed502b2ee91ec2156
       - kind: unit_test
         command: "bun run vitest run tests\\backfill-pairing.test.ts tests\\plan-lint.test.ts --reporter=dot"
         runner: bun
@@ -69,6 +70,7 @@ review_evidence:
         completed_at: "2026-07-02T17:05:00+09:00"
         evidence_path: tests/backfill-pairing.test.ts
         output_digest: "sha256:fc0a4545f6c5c76ca411c81958a9d0ac593740068f4b12ea136144f0df8f4266"
+        anchor_commit: 0d55f5e3d99d8333591281fed502b2ee91ec2156
 ---
 
 # PLAN-L7-265: backfill parent pairing for draft reverse

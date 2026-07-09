@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T19:10:00+09:00"
         evidence_path: tests/vmodel-refactor-qa-release-contracts.test.ts
         output_digest: "sha256:69b388dcb8698630b9b45abefc63d9c3b509f80e81dc872ab37aabb8a5fc0420"
+        anchor_commit: a9accba5c8cc59eb53308e84613191b84dc54e22
 agent_slots:
   - role: tl
     slot_label: "TL - refactor / QA gate"

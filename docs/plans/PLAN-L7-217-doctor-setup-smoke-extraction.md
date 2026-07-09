@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-07-02T11:34:00+09:00"
         evidence_path: src/doctor/setup-smoke.ts
         output_digest: "sha256:8a3da298584413c73c75da507d81151983336d2cca59aea8d65a1cfcaf5c6e57"
+        anchor_commit: 952e839eb705e838cc5c0be9c6eb712cc604ba8e
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts --testNamePattern \"setup smoke\" --reporter=dot"
         runner: bun
@@ -59,6 +60,7 @@ review_evidence:
         completed_at: "2026-07-02T11:35:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
 ---
 
 # PLAN-L7-217: doctor setup-smoke module extraction

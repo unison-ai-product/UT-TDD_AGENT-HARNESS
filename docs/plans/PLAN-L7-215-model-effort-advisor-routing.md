@@ -67,6 +67,7 @@ review_evidence:
         completed_at: "2026-07-01T17:02:00+09:00"
         evidence_path: src/team/advisor-policy.ts
         output_digest: "sha256:6fdae49f1f46109de6ac8415f93e011f7f64f329218eb2c07767de6f99b99d8b"
+        anchor_commit: adeefa7249deedc6f9029fe866cfe7a67904ccc2
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -75,6 +76,7 @@ review_evidence:
         completed_at: "2026-07-01T17:00:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: unit_test
         command: "bun run vitest run tests\\team-model-policy.test.ts tests\\team-launch-policy.test.ts tests\\team-run.test.ts tests\\team-schema.test.ts tests\\runtime-adapter.test.ts tests\\model-id-ssot.test.ts tests\\cli-surface.test.ts --reporter=dot"
         runner: bun
@@ -83,6 +85,7 @@ review_evidence:
         completed_at: "2026-07-01T17:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
+        anchor_commit: 47355c568e05e8f9759bbdca05e1b42618143b1a
       - kind: unit_test
         command: "bun run vitest run tests\\team-model-policy.test.ts tests\\team-launch-policy.test.ts tests\\team-run.test.ts tests\\team-schema.test.ts tests\\runtime-adapter.test.ts tests\\model-id-ssot.test.ts tests\\cli-surface.test.ts --reporter=dot"
         runner: bun
@@ -91,6 +94,7 @@ review_evidence:
         completed_at: "2026-07-01T17:01:00+09:00"
         evidence_path: tests/team-model-policy.test.ts
         output_digest: "sha256:71ad4b26d6540a5bf0a0213d01655dd71ef4352b4ba4c9e6dd5da28b50ad2a6d"
+        anchor_commit: adeefa7249deedc6f9029fe866cfe7a67904ccc2
       - kind: unit_test
         command: "bun run vitest run tests\\team-model-policy.test.ts tests\\team-launch-policy.test.ts tests\\team-run.test.ts tests\\team-schema.test.ts tests\\runtime-adapter.test.ts tests\\model-id-ssot.test.ts tests\\cli-surface.test.ts --reporter=dot"
         runner: bun
@@ -99,6 +103,7 @@ review_evidence:
         completed_at: "2026-07-01T17:01:00+09:00"
         evidence_path: tests/team-launch-policy.test.ts
         output_digest: "sha256:e8d3aa782e4e31e9cbd5e2c9f9552a4b732c286f7f6618291304f28578dd3351"
+        anchor_commit: a266aad1ab1a7f60fe3f759b30fa4c755a227408
 ---
 
 # PLAN-L7-215 model / effort / advisor routing

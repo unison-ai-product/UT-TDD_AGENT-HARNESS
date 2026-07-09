@@ -53,6 +53,7 @@ review_evidence:
         completed_at: "2026-07-09T17:17:00+09:00"
         evidence_path: src/plan/lint-policy.ts
         output_digest: "sha256:1c23d30c875ba13e964dc23d0f5c36a9bf07aa274bbd3747ff5d4cbbac7d3228"
+        anchor_commit: 3718267ac0b5d179a4e6cbfa7c03e0572ec49a84
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -61,6 +62,7 @@ review_evidence:
         completed_at: "2026-07-09T17:17:00+09:00"
         evidence_path: tests/plan-lint.test.ts
         output_digest: "sha256:535fa6746109d3b09bd11d96488301a579b97b00aadc02f2400e7ffb15f5eb77"
+        anchor_commit: 3718267ac0b5d179a4e6cbfa7c03e0572ec49a84
       - kind: unit_test
         command: "bun run vitest run tests\\plan-lint.test.ts"
         runner: bun
@@ -69,6 +71,7 @@ review_evidence:
         completed_at: "2026-07-09T17:20:00+09:00"
         evidence_path: tests/plan-lint.test.ts
         output_digest: "sha256:535fa6746109d3b09bd11d96488301a579b97b00aadc02f2400e7ffb15f5eb77"
+        anchor_commit: 3718267ac0b5d179a4e6cbfa7c03e0572ec49a84
 ---
 
 # PLAN-L7-407: route_mode allowed-kinds completion

@@ -64,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-09T13:26:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:96e6920003cef323b11c7d09967b5627639fc3e489c50001b4ef4019fee4907b"
+        anchor_commit: 8ce5feb56aa4e4db61773490f97cf1744185992e
 ---
 
 # PLAN-L7-404: design-doc-cross-integrity doctor gate

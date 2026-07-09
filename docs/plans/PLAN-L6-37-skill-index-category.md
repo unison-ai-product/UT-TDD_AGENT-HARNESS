@@ -43,6 +43,7 @@ review_evidence:
         completed_at: 2026-07-01T18:10:58+09:00
         evidence_path: tests/skill-assignment.test.ts
         output_digest: "sha256:3b60f7070da1e86ff814669c0be470fa55c5816122d6c67e73e1db361dd3e7e6"
+        anchor_commit: da9049e6d1ad0dd1c8d7a7332ead45339e4c9dc9
       - kind: unit_test
         command: bun run vitest run tests/skill-assignment.test.ts tests/skill-recommend.test.ts tests/asset-catalog.test.ts tests/skill-scaffold.test.ts --reporter=dot
         runner: bun
@@ -51,6 +52,7 @@ review_evidence:
         completed_at: 2026-07-01T18:10:58+09:00
         evidence_path: tests/skill-recommend.test.ts
         output_digest: "sha256:d81427f0e99ca96135340712542b7a28d8ef370aaf47fa71033b6d16ff221a76"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
       - kind: unit_test
         command: bun run vitest run tests/skill-assignment.test.ts tests/skill-recommend.test.ts tests/asset-catalog.test.ts tests/skill-scaffold.test.ts --reporter=dot
         runner: bun
@@ -59,6 +61,7 @@ review_evidence:
         completed_at: 2026-07-01T18:10:58+09:00
         evidence_path: tests/asset-catalog.test.ts
         output_digest: "sha256:79fc89eec778b9e6c5d317efc8752cb2eef7e5052df7fe179965415a105bf7b4"
+        anchor_commit: da5bd2811dee2708d0d3ca8105baff5893f2b618
       - kind: unit_test
         command: bun run vitest run tests/skill-assignment.test.ts tests/skill-recommend.test.ts tests/asset-catalog.test.ts tests/skill-scaffold.test.ts --reporter=dot
         runner: bun
@@ -67,6 +70,7 @@ review_evidence:
         completed_at: 2026-07-01T18:10:58+09:00
         evidence_path: tests/skill-scaffold.test.ts
         output_digest: "sha256:c357ebd21caa8f164ea9415f364d13caa032fb25acc2fed9c0a25f0abe35e439"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
       - kind: typecheck
         command: bun run typecheck
         runner: bun
@@ -75,6 +79,7 @@ review_evidence:
         completed_at: 2026-07-01T18:11:04+09:00
         evidence_path: docs/design/harness/L6-function-design/skill-index.md
         output_digest: "sha256:99f20045a262862f3f9756694cbe755819af9334668a6afe0cf2e9b43d10e18f"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
       - kind: lint
         command: bun run lint
         runner: bun
@@ -83,6 +88,7 @@ review_evidence:
         completed_at: 2026-07-01T18:11:02+09:00
         evidence_path: docs/test-design/harness/L7-unit-test-design.md
         output_digest: "sha256:6bbdfc8c25eb4ad7a213b55ff4eea645847840623e4799b771b27373a908bfdb"
+        anchor_commit: b3904eca7a50e185da4aeb1fa4177f0b3b64e271
 ---
 
 # PLAN-L6-37 (add-design): skill 索引モデルの機能設計

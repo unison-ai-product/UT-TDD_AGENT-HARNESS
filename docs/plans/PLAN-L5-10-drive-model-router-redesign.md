@@ -28,6 +28,7 @@ review_evidence:
         completed_at: "2026-07-07T14:04:46+09:00"
         evidence_path: docs/design/harness/L5-detailed-design/internal-processing.md
         output_digest: "sha256:e575406e2f06aa34a12ced7dc8d549aec3c7a4ab566dc2f3f8052b12e01df24f"
+        anchor_commit: 427c8a49b117d5ed64299aa4a51e91f5ec928d95
       - kind: lint
         command: "bun run src/cli.ts plan lint docs/plans/PLAN-L5-10-drive-model-router-redesign.md"
         runner: bun
@@ -36,6 +37,7 @@ review_evidence:
         completed_at: "2026-07-07T14:04:46+09:00"
         evidence_path: docs/test-design/harness/L8-integration-test-design.md
         output_digest: "sha256:0a761f2c8919fc06bfcd314dbad6942fcbab0f23aa19cef334bcd738f73d1095"
+        anchor_commit: 427c8a49b117d5ed64299aa4a51e91f5ec928d95
 owner: PM / PO
 parent_design: docs/design/harness/L5-detailed-design/internal-processing.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

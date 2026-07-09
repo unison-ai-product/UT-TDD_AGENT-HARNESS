@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-07-07T14:12:42+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:94f95e61ed1cc3f64b20593d06aa2684574da2c2450c077699cac80767eb7431"
+        anchor_commit: af658d515e923c5a5b7d35e6e96d6aa894caca47
       - kind: unit_test
         command: "bun run test -- tests\\cli-surface.test.ts --testNamePattern \"doctor profile|doctor profiles|doctor scope|doctor verification\" --reporter=dot"
         runner: bun
@@ -59,6 +60,7 @@ review_evidence:
         completed_at: "2026-07-07T14:12:42+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:5cbc3c63927242a43759c9be956dcdf115f83928e28f486529a12ee54fda2269"
+        anchor_commit: af658d515e923c5a5b7d35e6e96d6aa894caca47
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -67,6 +69,7 @@ review_evidence:
         completed_at: "2026-07-07T14:12:42+09:00"
         evidence_path: src/doctor/profiles.ts
         output_digest: "sha256:1a6f6db8763c4915dd3d738e118ce934b407f55efc9de03b6d55703cc506d0cd"
+        anchor_commit: af658d515e923c5a5b7d35e6e96d6aa894caca47
 ---
 
 # PLAN-L7-375 (refactor): consumer toolchain doctor profile を追加する

@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T14:10:34+09:00"
         evidence_path: src/state-db/spec-ir-projections.ts
         output_digest: "sha256:a7580e1f03e9125fbd3d6e426f8c1aec8be92f1f317ca1b1d01c59b89a235778"
+        anchor_commit: 5003e0a79c61cb77badded407c08ec6608ae8278
       - kind: unit_test
         command: "bun run vitest run tests/spec-ir-projections.test.ts tests/projection-writer.test.ts tests/db-projection-ingestion.test.ts tests/db-projection-coverage.test.ts"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T14:10:34+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:ff1e6e9bfa0b6850233f2bfba91677e12be3590598c3e733e119247858342c69"
+        anchor_commit: 5003e0a79c61cb77badded407c08ec6608ae8278
 agent_slots:
   - role: tl
     slot_label: "TL - activation schedule review projection"

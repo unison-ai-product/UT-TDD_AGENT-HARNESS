@@ -55,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-09T15:35:00+09:00"
         evidence_path: tests/skill-recommend.test.ts
         output_digest: "sha256:f751bd993fac00a598c5b0c1404384d3deb1ac6104e4ba2237bfa6679e748f59"
+        anchor_commit: db92a0614b8cbb6579d733f9f6efa4803ed80d5d
       - kind: lint
         command: "bun run src\\cli.ts plan lint --gate governance"
         runner: bun
@@ -63,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-09T15:25:00+09:00"
         evidence_path: docs/design/harness/L6-function-design/skill-index.md
         output_digest: "sha256:da568bc04093f712bea730e1451fa17f7e3c0b9076ed5c7815eb93be4bb293a1"
+        anchor_commit: db92a0614b8cbb6579d733f9f6efa4803ed80d5d
 ---
 
 # PLAN-REVERSE-277: skill 推奨差別化の設計 back-fill

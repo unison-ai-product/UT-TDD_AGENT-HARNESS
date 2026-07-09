@@ -52,6 +52,7 @@ review_evidence:
         completed_at: "2026-07-03T11:30:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:b160a56a9a493715fc236e2bd105d6328726b3ee400b10d9f15ca5d7343ed8ea"
+        anchor_commit: ab933040dae5c998aee805f5269d683f594991ab
       - kind: unit_test
         command: "bun run vitest run tests\\cli-surface.test.ts tests\\cli-delegation.test.ts -t \"executes codex adapter|model/effort|delegation\" --reporter=dot"
         runner: bun
@@ -60,6 +61,7 @@ review_evidence:
         completed_at: "2026-07-03T11:30:00+09:00"
         evidence_path: tests/cli-delegation.test.ts
         output_digest: "sha256:6de0218d63f798de13c57e3a04c13e910278bc525982176160ceb75d082a8653"
+        anchor_commit: ab933040dae5c998aee805f5269d683f594991ab
 ---
 
 # PLAN-L7-285: CLI runtime command delegation helper reuse

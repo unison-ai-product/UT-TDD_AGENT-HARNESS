@@ -98,6 +98,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:f2a4f438552f76da5592e2002a92e5a64b28dc82fe643c08e7c182f61944569f"
+        anchor_commit: d9c34cb768968e42af0d952186f74c72c3ba1d73
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -106,6 +107,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
         output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -114,6 +116,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/templates.ts
         output_digest: "sha256:be6c00ee9b0794f02d95717d3bbebe4f869fb1c5c457417cd566cc462aa57e28"
+        anchor_commit: ed2843cc723e261105daa0215758b3aa0a307be2
   - reviewer: codex-cli
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-01T16:17:00+09:00"
@@ -131,6 +134,7 @@ review_evidence:
         completed_at: "2026-07-01T11:59:00+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -139,6 +143,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts --testNamePattern \"fresh-consumer setup smoke\" --reporter=dot"
         runner: bun
@@ -147,6 +152,7 @@ review_evidence:
         completed_at: "2026-07-01T12:08:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts tests\\distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -155,6 +161,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
         output_digest: "sha256:367d0423e4b538c570dddf174113c689360a56dd303a354b6a5e1883036dc6ec"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: smoke
         command: "bun src\\cli.ts distribution package --out .ut-tdd\\dist-local --json; tarball展開先から consumer setup --solo; bun .ut-tdd\\bin\\ut-tdd.mjs --help; bun .ut-tdd\\bin\\ut-tdd.mjs status --json"
         runner: powershell
@@ -163,6 +170,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/templates.ts
         output_digest: "sha256:be6c00ee9b0794f02d95717d3bbebe4f869fb1c5c457417cd566cc462aa57e28"
+        anchor_commit: ed2843cc723e261105daa0215758b3aa0a307be2
 ---
 
 # PLAN-L7-213: project-local setup wrapper

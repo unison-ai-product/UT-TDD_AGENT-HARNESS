@@ -49,6 +49,7 @@ review_evidence:
         completed_at: "2026-07-03T12:38:41+09:00"
         evidence_path: README.md
         output_digest: "sha256:fce86b2eddab157b9bc057fbdcb6d5b0753bf7e65a211c1e6d90119653d96d01"
+        anchor_commit: 4cad95cb8dc6e33562e79a240092200b78b49dce
       - kind: lint
         command: "if (rg -n \"setup harness|harness checkout|harness source|source CLI|setup source\" README.md src\\setup\\templates.ts tests\\setup.test.ts) { exit 1 } else { exit 0 }"
         runner: powershell
@@ -57,6 +58,7 @@ review_evidence:
         completed_at: "2026-07-03T12:38:41+09:00"
         evidence_path: src/setup/templates.ts
         output_digest: "sha256:0c072f0c9731577265bbbf95583c5a0463ae3776efc467e71a4ee570fb8f440f"
+        anchor_commit: 4cad95cb8dc6e33562e79a240092200b78b49dce
       - kind: unit_test
         command: "bun run vitest run tests\\readability.test.ts --reporter=dot"
         runner: bun
@@ -65,6 +67,7 @@ review_evidence:
         completed_at: "2026-07-03T12:38:43+09:00"
         evidence_path: tests/readability.test.ts
         output_digest: "sha256:ad6468a3bb93493c37fc6fa194e3384b844c131a6b30a62bd9042f7ad8213228"
+        anchor_commit: c18872c85c31a3a316cdcc0290cf55348f11b69d
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts --reporter=dot"
         runner: bun
@@ -73,6 +76,7 @@ review_evidence:
         completed_at: "2026-07-03T12:38:43+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:1f660274902543771978fb7f71407c655dfe9e210229885326e7d34bb59f4447"
+        anchor_commit: 4cad95cb8dc6e33562e79a240092200b78b49dce
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -81,6 +85,7 @@ review_evidence:
         completed_at: "2026-07-03T12:38:46+09:00"
         evidence_path: src/setup/templates.ts
         output_digest: "sha256:0c072f0c9731577265bbbf95583c5a0463ae3776efc467e71a4ee570fb8f440f"
+        anchor_commit: 4cad95cb8dc6e33562e79a240092200b78b49dce
       - kind: unit_test
         command: "bun run test:pack"
         runner: bun
@@ -89,6 +94,7 @@ review_evidence:
         completed_at: "2026-07-03T12:39:35+09:00"
         evidence_path: tests/readability.test.ts
         output_digest: "sha256:ad6468a3bb93493c37fc6fa194e3384b844c131a6b30a62bd9042f7ad8213228"
+        anchor_commit: c18872c85c31a3a316cdcc0290cf55348f11b69d
 ---
 
 # PLAN-L7-322: README Pack-first onboarding wording

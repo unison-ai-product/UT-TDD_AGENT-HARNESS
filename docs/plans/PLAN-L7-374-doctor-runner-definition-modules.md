@@ -52,6 +52,7 @@ review_evidence:
         completed_at: "2026-07-07T14:00:56+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:fc1e978aab0b13e98f1c0edcb0101ad0f10b2bf67f6063bb8d002e3b295d0b1b"
+        anchor_commit: 150d69492846f24ee7d13fcc7a8dbc7f61e4629f
       - kind: unit_test
         command: "bun run test -- tests\\cli-surface.test.ts --testNamePattern \"doctor profile|doctor profiles|doctor scope|doctor verification\" --reporter=dot"
         runner: bun
@@ -60,6 +61,7 @@ review_evidence:
         completed_at: "2026-07-07T14:00:56+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:c845079e2127cdd15f038d05c6999c3dcaee74821f1d3e10bcd0d9ce0ee8885e"
+        anchor_commit: 9f8ee327b2473e2badc18fbb6c8d8da28a352e8b
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -68,6 +70,7 @@ review_evidence:
         completed_at: "2026-07-07T14:00:56+09:00"
         evidence_path: src/doctor/runner.ts
         output_digest: "sha256:8657952028ad58d0a4ac85941f403abc020a1a34d1bde2baa99a5bc648586ee0"
+        anchor_commit: 150d69492846f24ee7d13fcc7a8dbc7f61e4629f
 ---
 
 # PLAN-L7-374 (refactor): doctor runner と check definition を分離する

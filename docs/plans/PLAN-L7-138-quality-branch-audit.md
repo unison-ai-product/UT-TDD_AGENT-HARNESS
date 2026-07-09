@@ -59,6 +59,7 @@ review_evidence:
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
+        anchor_commit: 47355c568e05e8f9759bbdca05e1b42618143b1a
       - kind: typecheck
         command: "bun run tsc --noEmit"
         runner: bun
@@ -67,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -75,6 +77,7 @@ review_evidence:
         completed_at: "2026-06-23T22:05:10+09:00"
         evidence_path: src/audit/quality.ts
         output_digest: "sha256:21df0de2a64028799e47b02f30e38b0221895cce18d09c07240e577b96874b22"
+        anchor_commit: 09bbdb4f98250c9b172af07da660c43e75cf35da
       - kind: smoke
         command: "bun run src\\cli.ts audit quality --limit 10"
         runner: bun
@@ -83,6 +86,7 @@ review_evidence:
         completed_at: "2026-06-23T22:06:00+09:00"
         evidence_path: tests/quality-audit.test.ts
         output_digest: "sha256:67ff3c7faa901eb99914661b2b5b16fdc8c7ffee66d028c6e362891631b10c58"
+        anchor_commit: 09bbdb4f98250c9b172af07da660c43e75cf35da
       - kind: smoke
         command: "bun run src\\cli.ts branch audit --limit 20"
         runner: bun
@@ -91,6 +95,7 @@ review_evidence:
         completed_at: "2026-06-23T22:06:00+09:00"
         evidence_path: tests/branch-audit.test.ts
         output_digest: "sha256:83860fcceb15d570c46c5e156b1345fddc5170685f10ff1c99b35fa66aee33a1"
+        anchor_commit: 09bbdb4f98250c9b172af07da660c43e75cf35da
 ---
 
 # PLAN-L7-138 (add-impl): read-only quality and branch audits

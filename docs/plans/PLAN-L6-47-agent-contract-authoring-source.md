@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T17:20:00+09:00"
         evidence_path: docs/governance/vmodel-agent-contracts.md
         output_digest: "sha256:08f83631602f5fdac67a8192069abf151fe0211c130b0ef504c13d978c168664"
+        anchor_commit: d55666212ce10793624e61bf019a755b174d7fc3
 agent_slots:
   - role: tl
     slot_label: "TL - agent contract authoring source"

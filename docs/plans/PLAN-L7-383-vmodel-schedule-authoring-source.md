@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T13:21:30+09:00"
         evidence_path: src/state-db/spec-ir-projections.ts
         output_digest: "sha256:178f8f00c60dcea8a4c1a4a05dd944146bc0db0ce788c25216a43e9f1ee8a81a"
+        anchor_commit: bb58e908087076713c90aa22fb06d4e20d8c5947
       - kind: unit_test
         command: "bun run vitest run tests/spec-ir-projections.test.ts tests/projection-writer.test.ts tests/db-projection-ingestion.test.ts"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T13:21:30+09:00"
         evidence_path: tests/spec-ir-projections.test.ts
         output_digest: "sha256:8cccd994bf72df3b7f503e043d4cc5ceb368204ae24f62c92be7c84044eb5638"
+        anchor_commit: bb58e908087076713c90aa22fb06d4e20d8c5947
 agent_slots:
   - role: tl
     slot_label: "TL - schedule authoring source / upstream design alignment"

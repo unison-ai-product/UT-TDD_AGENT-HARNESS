@@ -45,6 +45,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
         output_digest: "sha256:e42d9d2be60e6b383cc51c291009e3e8104f2c60db8dca17737be0cfb3eb34d6"
+        anchor_commit: fe54ac5e76e5785f8dd74de02528c1bff367c880
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -53,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/graph/loader.ts
         output_digest: "sha256:7a231cb642507d46f961e0b38fbbd6807c908a3305831a79f235adcbe3152902"
+        anchor_commit: fe54ac5e76e5785f8dd74de02528c1bff367c880
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -61,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/graph/loader.ts
         output_digest: "sha256:7a231cb642507d46f961e0b38fbbd6807c908a3305831a79f235adcbe3152902"
+        anchor_commit: fe54ac5e76e5785f8dd74de02528c1bff367c880
       - kind: smoke
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
@@ -69,6 +72,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/graph/loader.ts
         output_digest: "sha256:7a231cb642507d46f961e0b38fbbd6807c908a3305831a79f235adcbe3152902"
+        anchor_commit: fe54ac5e76e5785f8dd74de02528c1bff367c880
 ---
 
 # PLAN-L7-156: top-level reference document graph node

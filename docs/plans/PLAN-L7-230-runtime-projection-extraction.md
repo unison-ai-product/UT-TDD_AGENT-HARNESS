@@ -55,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-02T16:05:00+09:00"
         evidence_path: src/state-db/runtime-projections.ts
         output_digest: "sha256:90653c9bbd01deebd3f9fdf7349137b8d92776be4ed2ed4af2871c62a085d22f"
+        anchor_commit: 9c291aa47bed7f09fcaf515780203abff6aa2e98
       - kind: unit_test
         command: "bun run vitest run tests\\projection-writer.test.ts --reporter=dot"
         runner: bun
@@ -63,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-02T16:05:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:5a097504a714d98a94ada4eedf016cac3e2417c180a9c6904c987e46f1bf0c4b"
+        anchor_commit: 9c291aa47bed7f09fcaf515780203abff6aa2e98
 ---
 
 # PLAN-L7-230: Runtime projection extraction

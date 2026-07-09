@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-03T18:01:00+09:00"
         evidence_path: tests/project-hook.test.ts
         output_digest: "sha256:48480897a7026a89bd00952cbf40a4d089f0d0288ab1bcba446ba4452d2ff950"
+        anchor_commit: 9eed81bb65bf768b9e9a6a74b373e700ff047fbe
       - kind: unit_test
         command: "bun run vitest run tests/distribution-acceptance.test.ts tests/github-ci-policy.test.ts --reporter=dot"
         runner: bun
@@ -58,6 +59,7 @@ review_evidence:
         completed_at: "2026-07-03T17:42:00+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
         output_digest: "sha256:70f64cbd086c233fb169d9d13a2ca630c21802bf5c1a088acf94629b5af0dab0"
+        anchor_commit: 9eed81bb65bf768b9e9a6a74b373e700ff047fbe
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -66,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-03T18:01:00+09:00"
         evidence_path: src/setup/templates.ts
         output_digest: "sha256:e4720ac55b9b542d18f0a9f5d54b6258a17f556cb9622576a63558ec5be435b4"
+        anchor_commit: 9eed81bb65bf768b9e9a6a74b373e700ff047fbe
       - kind: lint
         command: "bunx biome check src/setup/distribution.ts src/setup/templates.ts src/lint/project-hook.ts src/lint/codex-hook-adapter.ts src/lint/codex-hook-adapter-policy.ts tests/project-hook.test.ts tests/codex-hook-adapter.test.ts tests/distribution-acceptance.test.ts"
         runner: bun
@@ -74,6 +77,7 @@ review_evidence:
         completed_at: "2026-07-03T18:01:30+09:00"
         evidence_path: src/lint/project-hook.ts
         output_digest: "sha256:8248d0f61f0d8525482ff63d2b3b4a10d0a73f5e58b204490fdebca3c39e1176"
+        anchor_commit: 9eed81bb65bf768b9e9a6a74b373e700ff047fbe
 ---
 
 # PLAN-RECOVERY-06 (recovery): Pack consumer 実動線の doctor self-application 前提混入の是正

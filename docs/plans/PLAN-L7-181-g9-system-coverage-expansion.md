@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-06-29T13:18:00+09:00"
         evidence_path: tests/gate-static.test.ts
         output_digest: "sha256:4830898f4dd9b8132ecd4d071ab89c8c46eecde288b5bd0efaa2ecb12bb87b0e"
+        anchor_commit: 239cb32d4b244006b09a071cdcc7d43a3410da4e
       - kind: unit_test
         command: "bun run vitest run tests\\dependency-drift.test.ts tests\\agent-guard.test.ts tests\\cli-surface.test.ts tests\\doctor.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun
@@ -59,6 +60,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/dependency-drift.test.ts
         output_digest: "sha256:c17e61c86a61d36ec5556b8ae43aef32249ca6d36998edc5813f300d9833c58b"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
       - kind: unit_test
         command: "bun run vitest run tests\\workflow-contracts.test.ts tests\\drive-model-passage.test.ts tests\\forward-convergence.test.ts tests\\backfill-pairing.test.ts tests\\gate-review-tier.test.ts tests\\skill-recommend.test.ts tests\\team-run.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun
@@ -67,6 +69,7 @@ review_evidence:
         completed_at: "2026-06-29T13:22:00+09:00"
         evidence_path: tests/workflow-contracts.test.ts
         output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
+        anchor_commit: b386be1d616da4b0362de575f564aa16f47a69d0
       - kind: unit_test
         command: "bun run vitest run tests\\asset-catalog.test.ts tests\\asset-drift.test.ts tests\\agent-slots.test.ts tests\\cli-surface.test.ts tests\\skill-recommend.test.ts tests\\workflow-contracts.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun
@@ -75,6 +78,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/asset-catalog.test.ts
         output_digest: "sha256:79fc89eec778b9e6c5d317efc8752cb2eef7e5052df7fe179965415a105bf7b4"
+        anchor_commit: da5bd2811dee2708d0d3ca8105baff5893f2b618
       - kind: unit_test
         command: "bun run vitest run tests\\runtime-adapter.test.ts tests\\agent-guard.test.ts tests\\codex-hook-adapter.test.ts tests\\runtime-hook-entrypoints.test.ts tests\\dependency-drift.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun
@@ -83,6 +87,7 @@ review_evidence:
         completed_at: "2026-06-29T13:22:00+09:00"
         evidence_path: tests/runtime-adapter.test.ts
         output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
+        anchor_commit: 12f7c9e20d49c6313c1f9be944db853d7d54c2af
 ---
 
 # PLAN-L7-181: G9 system coverage expansion

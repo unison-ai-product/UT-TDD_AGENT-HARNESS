@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-09T12:05:00+09:00"
         evidence_path: tests/right-lung-doc-governance.test.ts
         output_digest: "sha256:f9805fb5bad01f32e7525d552a1a2e6059810c939c9c223979d405ab46b615c1"
+        anchor_commit: 48d89bbca4b341ce1013fb91eb4c9187d4119497
       - kind: doctor
         command: "bun run src/cli.ts doctor"
         runner: bun
@@ -39,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-09T12:05:00+09:00"
         evidence_path: src/lint/right-lung-doc-governance.ts
         output_digest: "sha256:e50ddf6e527d1ae46a57caea1efc5b953f96c57be4c044f65b34a03e664237b1"
+        anchor_commit: 48d89bbca4b341ce1013fb91eb4c9187d4119497
 agent_slots:
   - role: tl
     slot_label: "TL - right-lung doc governance"

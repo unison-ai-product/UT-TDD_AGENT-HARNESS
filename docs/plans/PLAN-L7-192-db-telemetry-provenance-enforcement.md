@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-06-29T19:46:29+09:00"
         evidence_path: tests/db-projection-ingestion.test.ts
         output_digest: "sha256:53507c4d465d3fde47369dbcb3051da02dd7f0df502924239086634b07ff5fef"
+        anchor_commit: 9321d946ea91b3180823a20efab6869e75abeb8d
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -58,6 +59,7 @@ review_evidence:
         completed_at: "2026-06-29T19:46:29+09:00"
         evidence_path: src/lint/db-projection-ingestion.ts
         output_digest: "sha256:2c399eef3a217df89caaf12c429fd27171e2385d0e079ba19be3334f2473a1ac"
+        anchor_commit: 9321d946ea91b3180823a20efab6869e75abeb8d
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -66,6 +68,7 @@ review_evidence:
         completed_at: "2026-06-29T19:46:29+09:00"
         evidence_path: src/lint/db-projection-ingestion.ts
         output_digest: "sha256:2c399eef3a217df89caaf12c429fd27171e2385d0e079ba19be3334f2473a1ac"
+        anchor_commit: 9321d946ea91b3180823a20efab6869e75abeb8d
 ---
 
 # PLAN-L7-192: DB telemetry provenance enforcement switch

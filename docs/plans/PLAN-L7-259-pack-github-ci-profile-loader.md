@@ -55,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-02T16:25:00+09:00"
         evidence_path: tests/github-ci-policy.test.ts
         output_digest: "sha256:0320befad0631395509d280e24bbd493d3df8e9df6218b72b9cfc5bddc7132d7"
+        anchor_commit: 4832c335349ead21373eb4c040078d74fa57f9ce
 ---
 
 # PLAN-L7-259: Pack GitHub CI profile loader

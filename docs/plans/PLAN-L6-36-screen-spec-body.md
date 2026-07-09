@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-06-30T13:35:50+09:00"
         evidence_path: tests/frontend-design-coverage.test.ts
         output_digest: "sha256:59d6ade3af544d0df04d5bc4de0a5d7e50398019d8e614e973da6a6ec79d86ad"
+        anchor_commit: 3dbd7babd2d9dac6893003fd6a9c6eb107bed3af
 ---
 
 # PLAN-L6-36: populate FE screen-spec body

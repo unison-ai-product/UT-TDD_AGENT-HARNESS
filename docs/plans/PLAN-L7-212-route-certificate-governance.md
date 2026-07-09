@@ -62,6 +62,7 @@ review_evidence:
         completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: tests/plan-lint.test.ts
         output_digest: "sha256:5200049532ce0cb4b1210298bb346151ea184c90ff89440a0ef71b831eaf1653"
+        anchor_commit: 4c4401b66dff08751e7e15ffc16cb064f4ef66ac
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -70,6 +71,7 @@ review_evidence:
         completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: src/plan/lint.ts
         output_digest: "sha256:096c894039dd0664cd7a60bcc6b417da34883587a278a16362296ccbb3bdf020"
+        anchor_commit: 4c4401b66dff08751e7e15ffc16cb064f4ef66ac
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -78,6 +80,7 @@ review_evidence:
         completed_at: "2026-06-30T22:29:00+09:00"
         evidence_path: src/schema/route-map.ts
         output_digest: "sha256:895f3be1928954139e1e34abd98ffdb0ca5ba6629e663d47d568def07b436078"
+        anchor_commit: 4c4401b66dff08751e7e15ffc16cb064f4ef66ac
 ---
 
 # PLAN-L7-212: route certificate governance

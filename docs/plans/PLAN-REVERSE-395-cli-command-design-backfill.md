@@ -33,6 +33,7 @@ review_evidence:
         completed_at: "2026-07-09T14:20:00+09:00"
         evidence_path: docs/design/harness/L4-basic-design/external-if.md
         output_digest: "sha256:c38f639fc1c6b7ff9dcb96aa247a3e1ab09441d6d8b4db48777fff8d07aa62a8"
+        anchor_commit: 3d352708ddb9e06d81b8a9dc10b5414f6a357d43
 agent_slots:
   - role: tl
     slot_label: "TL - src/cli.ts 実装からの as-is 復元 (R0-R2) + L4 external-if.md への合流判断 (R3-R4)"

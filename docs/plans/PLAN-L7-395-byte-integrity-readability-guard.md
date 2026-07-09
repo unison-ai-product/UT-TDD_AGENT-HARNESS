@@ -26,6 +26,7 @@ review_evidence:
         completed_at: "2026-07-08T21:12:00+09:00"
         evidence_path: tests/readability.test.ts
         output_digest: "sha256:fbf9f70d81ef7a721267b30a823682cab012a9a64f9ee0f023864693cc812184"
+        anchor_commit: 9f8a3d399f56c0e0a4be5518b97371b8f1ba9075
       - kind: typecheck
         command: "bun run tsc --noEmit"
         runner: bun
@@ -34,6 +35,7 @@ review_evidence:
         completed_at: "2026-07-08T21:12:00+09:00"
         evidence_path: src/lint/readability.ts
         output_digest: "sha256:f02d73edaa8441af0042a6e1e94b45cf7a82f1e8b61a9bedea5e8e5a016106e7"
+        anchor_commit: 9f8a3d399f56c0e0a4be5518b97371b8f1ba9075
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -42,6 +44,7 @@ review_evidence:
         completed_at: "2026-07-08T21:12:00+09:00"
         evidence_path: src/lint/readability.ts
         output_digest: "sha256:f02d73edaa8441af0042a6e1e94b45cf7a82f1e8b61a9bedea5e8e5a016106e7"
+        anchor_commit: 9f8a3d399f56c0e0a4be5518b97371b8f1ba9075
       - kind: smoke
         command: "bun -e \"... utf8bom=0 scan ...\""
         runner: bun
@@ -50,6 +53,7 @@ review_evidence:
         completed_at: "2026-07-08T21:12:00+09:00"
         evidence_path: AGENTS.md
         output_digest: "sha256:fae34dd628afc9f126b044ceb79e0475d26e9363db198617d71e3c794cb419fc"
+        anchor_commit: 9f8a3d399f56c0e0a4be5518b97371b8f1ba9075
 parent_design: docs/design/harness/L6-function-design/governance-enforcement.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:

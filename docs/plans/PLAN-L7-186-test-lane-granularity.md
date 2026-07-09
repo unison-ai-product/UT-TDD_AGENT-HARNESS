@@ -35,6 +35,7 @@ review_evidence:
         completed_at: "2026-06-29T14:43:00+09:00"
         evidence_path: tests/runtime-portability.test.ts
         output_digest: "sha256:5792d29d443c60c5eb2fe686ed411d3c988bcda25e7d898cf93a0a065b70c632"
+        anchor_commit: d216090a8dd462f13d3087a7756c3464737bb7be
       - kind: unit_test
         command: "bun run test:fast"
         runner: bun
@@ -43,6 +44,7 @@ review_evidence:
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: package.json
         output_digest: "sha256:5251fbb6d57a6e788cd46b6198fb400e3de56b69a83f708738072ed0b5c49475"
+        anchor_commit: b5d4a379fe50b02d7fed11a2822015fc915661fd
       - kind: unit_test
         command: "bun run test:db"
         runner: bun
@@ -51,6 +53,7 @@ review_evidence:
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: package.json
         output_digest: "sha256:5251fbb6d57a6e788cd46b6198fb400e3de56b69a83f708738072ed0b5c49475"
+        anchor_commit: b5d4a379fe50b02d7fed11a2822015fc915661fd
       - kind: unit_test
         command: "bun run test:cli"
         runner: bun
@@ -59,6 +62,7 @@ review_evidence:
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: package.json
         output_digest: "sha256:5251fbb6d57a6e788cd46b6198fb400e3de56b69a83f708738072ed0b5c49475"
+        anchor_commit: b5d4a379fe50b02d7fed11a2822015fc915661fd
       - kind: unit_test
         command: "bun run test"
         runner: bun
@@ -67,6 +71,7 @@ review_evidence:
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: package.json
         output_digest: "sha256:5251fbb6d57a6e788cd46b6198fb400e3de56b69a83f708738072ed0b5c49475"
+        anchor_commit: b5d4a379fe50b02d7fed11a2822015fc915661fd
 agent_slots:
   - role: tl
     slot_label: "TL - test lane granularity"

@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T22:01:15+09:00"
         evidence_path: tests/session-log.test.ts
         output_digest: "sha256:9721af0c331430a85e8683171116706e171be5a3defe97238f2f0d1fbd51836b"
+        anchor_commit: 80a1b3830acb61fbb69d665629a0fde8b0d49a32
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T22:00:00+09:00"
         evidence_path: src/runtime/session-log.ts
         output_digest: "sha256:01be8560c608d18af3548c67ac44d5be968e3c7dd966c240184c74ee32943898"
+        anchor_commit: 80a1b3830acb61fbb69d665629a0fde8b0d49a32
 agent_slots:
   - role: tl
     slot_label: "TL - session-log summarize() path truncation fix review"

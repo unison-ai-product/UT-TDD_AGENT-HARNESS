@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-09T11:30:00+09:00"
         evidence_path: tests/plan-lint.test.ts
         output_digest: "sha256:81311c6f4fa14a8f212e36436858d0c09ad6f9b8057e8e9004e0fcf3590ab5e5"
+        anchor_commit: 48d89bbca4b341ce1013fb91eb4c9187d4119497
       - kind: doctor
         command: "bun run src/cli.ts doctor"
         runner: bun
@@ -39,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-09T11:30:00+09:00"
         evidence_path: src/plan/lint.ts
         output_digest: "sha256:9c5511ba95ddca39097e2e02c7d0184e838ebf376b03f9ecf5e7a2b8dd47ffc0"
+        anchor_commit: 48d89bbca4b341ce1013fb91eb4c9187d4119497
 agent_slots:
   - role: tl
     slot_label: "TL - right-arm verify gate contract"

@@ -63,6 +63,7 @@ review_evidence:
         completed_at: "2026-06-30T10:39:47+09:00"
         evidence_path: tests/team-schema.test.ts
         output_digest: "sha256:39e64a5d87d7cfc4417ac5b94c67c574d12695bed0c7f027950ae4604965f676"
+        anchor_commit: 1041009386a9500ae95d3304f72e20375ee9a123
       - kind: unit_test
         command: "bun run vitest run tests\\team-schema.test.ts tests\\project-hook.test.ts tests\\setup.test.ts tests\\codex-hook-adapter.test.ts"
         runner: bun
@@ -71,6 +72,7 @@ review_evidence:
         completed_at: "2026-06-30T10:39:47+09:00"
         evidence_path: src/lint/project-hook.ts
         output_digest: "sha256:e7644618bd16aa587f614da0622ae3055472c44e390084a34d15e89f223e2dc9"
+        anchor_commit: 1041009386a9500ae95d3304f72e20375ee9a123
       - kind: unit_test
         command: "bun run vitest run tests\\team-schema.test.ts tests\\project-hook.test.ts tests\\setup.test.ts tests\\codex-hook-adapter.test.ts"
         runner: bun
@@ -79,6 +81,7 @@ review_evidence:
         completed_at: "2026-06-30T10:39:47+09:00"
         evidence_path: docs/templates/adapter/.claude/settings.json
         output_digest: "sha256:b1d5d8176a68a35f405921e8233dbcb41cb2a5a10985e709c7e3f8ad5452e29c"
+        anchor_commit: 38067e639148f6d16ffe2bc640c48bf7458fe66d
 ---
 
 # PLAN-L7-196 Runtime Config Hardening

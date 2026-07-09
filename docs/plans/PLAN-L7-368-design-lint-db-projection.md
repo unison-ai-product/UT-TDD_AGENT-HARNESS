@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T22:00:39+09:00"
         evidence_path: src/state-db/design-detection.ts
         output_digest: "sha256:c8ae831bd236172f97e61bfc166e67975fa4ef959abc77b4513a232996b069eb"
+        anchor_commit: 9960b56c57a2fcb92c6d38154aa03ab21c584cbb
       - kind: unit_test
         command: "bun run vitest run tests\\projection-writer.test.ts -t \"design\""
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T21:45:29+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:5bedeaff02d4a40bf2290d914994baff2bd4ed144a4f04d256d0e362c507033e"
+        anchor_commit: 9960b56c57a2fcb92c6d38154aa03ab21c584cbb
       - kind: unit_test
         command: "bun run vitest run tests\\projection-writer.test.ts -t \"pair-freeze orphan\""
         runner: bun
@@ -46,6 +48,7 @@ review_evidence:
         completed_at: "2026-07-08T21:45:39+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:5bedeaff02d4a40bf2290d914994baff2bd4ed144a4f04d256d0e362c507033e"
+        anchor_commit: 9960b56c57a2fcb92c6d38154aa03ab21c584cbb
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts -t \"design-detection doctor aggregate\""
         runner: bun
@@ -54,6 +57,7 @@ review_evidence:
         completed_at: "2026-07-08T22:00:39+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:9b5e7e40dee6905cb926c9af32d2aa609feecff7ae44d83a3fb5c4c22bbbe634"
+        anchor_commit: 9960b56c57a2fcb92c6d38154aa03ab21c584cbb
       - kind: lint
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
