@@ -16,6 +16,8 @@ export interface SurfacedFeedback {
   plan_id: string;
   next_action: string;
   bucket: FeedbackSurfaceBucket;
+  surface_count?: number;
+  surface_plan_ids?: string[];
 }
 
 export interface TakeoverFeedbackResult {
@@ -123,7 +125,10 @@ function renderGroupedItems(items: SurfacedFeedback[], indent = "    "): string[
       planIds: new Set<string>(),
       nextAction: item.next_action,
     };
-    group.count += 1;
+    group.count += item.surface_count ?? 1;
+    for (const planId of item.surface_plan_ids ?? []) {
+      if (planId) group.planIds.add(planId);
+    }
     if (item.plan_id) group.planIds.add(item.plan_id);
     groups.set(key, group);
   }
@@ -143,6 +148,50 @@ function renderGroupedItems(items: SurfacedFeedback[], indent = "    "): string[
           : "";
       return `${indent}- (${group.severity}) ${group.signalType}${planText}: count=${group.count}; ${group.nextAction}`;
     });
+}
+
+function feedbackGroupKey(item: SurfacedFeedback): string {
+  return `${item.bucket}:${item.severity}:${item.signal_type}`;
+}
+
+function selectDisplayGroups(items: SurfacedFeedback[], limit: number): SurfacedFeedback[] {
+  const groups = new Map<string, SurfacedFeedback[]>();
+  for (const item of items) {
+    if (item.bucket === "telemetry") continue;
+    const key = feedbackGroupKey(item);
+    const group = groups.get(key) ?? [];
+    group.push(item);
+    groups.set(key, group);
+  }
+
+  const selectedGroups = [...groups.values()]
+    .sort((a, b) => {
+      const aHead = a[0];
+      const bHead = b[0];
+      if (!aHead || !bHead) return 0;
+      return (
+        BUCKET_RANK[aHead.bucket] - BUCKET_RANK[bHead.bucket] ||
+        severityRank(aHead.severity) - severityRank(bHead.severity) ||
+        b.length - a.length ||
+        aHead.feedback_event_id.localeCompare(bHead.feedback_event_id)
+      );
+    })
+    .slice(0, limit);
+
+  return selectedGroups.map((group) => {
+    const sorted = [...group].sort((a, b) =>
+      a.feedback_event_id.localeCompare(b.feedback_event_id),
+    );
+    const representative = sorted[0];
+    if (!representative) {
+      throw new Error("empty feedback surface group");
+    }
+    return {
+      ...representative,
+      surface_count: group.length,
+      surface_plan_ids: [...new Set(group.map((item) => item.plan_id).filter(Boolean))],
+    };
+  });
 }
 
 /**
@@ -255,7 +304,7 @@ export function selectTakeoverFeedback(
     }
   }
 
-  const surfaced = items.filter((item) => item.bucket !== "telemetry").slice(0, limit);
+  const surfaced = selectDisplayGroups(items, limit);
   return { total: items.length, bySeverity, byBucket, telemetryBySignal, items: surfaced };
 }
 
@@ -274,7 +323,8 @@ export function renderTakeoverFeedback(result: TakeoverFeedbackResult): string {
   lines.push(...renderGroupedItems(gateItems));
   if (actionableItems.length > 0) lines.push("  actionable:");
   lines.push(...renderGroupedItems(actionableItems));
-  const hiddenActionable = result.byBucket.gate + result.byBucket.actionable - result.items.length;
+  const surfacedActionable = result.items.reduce((sum, item) => sum + (item.surface_count ?? 1), 0);
+  const hiddenActionable = result.byBucket.gate + result.byBucket.actionable - surfacedActionable;
   if (hiddenActionable > 0) {
     lines.push(`  - (+${hiddenActionable} more actionable - ut-tdd feedback list --json)`);
   }
