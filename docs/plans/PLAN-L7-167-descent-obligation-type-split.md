@@ -47,6 +47,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/descent-obligation.test.ts
         output_digest: "sha256:4bb1b6918987fa1635d44112a1a9b38b3a32021f062d9e35cf3445234427729e"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
       - kind: unit_test
         command: "bun run vitest run tests\\descent-obligation.test.ts"
         runner: bun
@@ -55,6 +56,7 @@ review_evidence:
         completed_at: "2026-06-25T20:56:09+09:00"
         evidence_path: src/lint/descent-obligation.ts
         output_digest: "sha256:9e10ed6bb1e78391761787647ee1c1a8896f59fc32aa6d7db0d253129096b4c4"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: unit_test
         command: "bun run vitest run tests\\descent-obligation.test.ts"
         runner: bun
@@ -63,6 +65,7 @@ review_evidence:
         completed_at: "2026-06-25T20:56:09+09:00"
         evidence_path: src/lint/descent-obligation-types.ts
         output_digest: "sha256:ab277901716f72cd3da7ab0f4c75777b72a8482d51abfd76495e354a9e4452a5"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -71,6 +74,7 @@ review_evidence:
         completed_at: "2026-06-25T20:57:30+09:00"
         evidence_path: src/lint/descent-obligation.ts
         output_digest: "sha256:9e10ed6bb1e78391761787647ee1c1a8896f59fc32aa6d7db0d253129096b4c4"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -79,6 +83,7 @@ review_evidence:
         completed_at: "2026-06-25T20:57:33+09:00"
         evidence_path: src/lint/descent-obligation-types.ts
         output_digest: "sha256:ab277901716f72cd3da7ab0f4c75777b72a8482d51abfd76495e354a9e4452a5"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
 ---
 
 # PLAN-L7-167: descent obligation type split

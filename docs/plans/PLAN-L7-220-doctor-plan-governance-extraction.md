@@ -62,6 +62,7 @@ review_evidence:
         completed_at: "2026-07-02T12:01:00+09:00"
         evidence_path: src/doctor/plan-governance.ts
         output_digest: "sha256:60e111dc79137214cbdcf53e0691e5d880ee7a3b782b7f7dac2b3340a51da96d"
+        anchor_commit: 952e839eb705e838cc5c0be9c6eb712cc604ba8e
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts tests\\plan-supersession.test.ts tests\\plan-body-substance.test.ts tests\\plan-completion-drift.test.ts --reporter=dot"
         runner: bun
@@ -70,6 +71,7 @@ review_evidence:
         completed_at: "2026-07-02T12:03:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
 ---
 
 # PLAN-L7-220: doctor plan governance module extraction

@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T20:05:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:3ca1b40b5467e5ec0c46899e441f53acbc2d81ef8172333993072b5c5ee3a581"
+        anchor_commit: f51d1f04c306e5afba492da2a85cabd9591e15a9
 agent_slots:
   - role: tl
     slot_label: "TL - lifecycle boundary and existing detector compatibility"

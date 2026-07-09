@@ -43,6 +43,7 @@ review_evidence:
         completed_at: "2026-07-02T20:26:18+09:00"
         evidence_path: tests/skill-telemetry-provenance.test.ts
         output_digest: "sha256:62942f915aa2c77b5c4b94e70483d9d68bbd9f2c723ca2a1fb6d69f1f3aa4f5a"
+        anchor_commit: 20e9bbd183455c4fba087730fb1a05d7437a6637
 ---
 
 # PLAN-REVERSE-262: skill telemetry provenance 分離の設計 back-fill

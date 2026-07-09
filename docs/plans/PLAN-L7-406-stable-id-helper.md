@@ -62,6 +62,7 @@ review_evidence:
         completed_at: "2026-07-09T16:58:00+09:00"
         evidence_path: src/stable-id.ts
         output_digest: "sha256:e0a3a0580965ece1cc130dadc5b98a82effa30245a6b046c0de98d2f79e31375"
+        anchor_commit: 740f83f985da717310271e2e2d46ce2a5e4134a5
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -70,6 +71,7 @@ review_evidence:
         completed_at: "2026-07-09T16:58:00+09:00"
         evidence_path: tests/stable-id.test.ts
         output_digest: "sha256:ddbd23941724d316a083f6463a71200f86f4932fd76ad292a7d5f8e7993158a7"
+        anchor_commit: 740f83f985da717310271e2e2d46ce2a5e4134a5
       - kind: unit_test
         command: "bun run vitest run tests\\projection-writer.test.ts tests\\stable-id.test.ts tests\\spec-ir-projections.test.ts tests\\feedback-surface.test.ts tests\\skill-recommend.test.ts"
         runner: bun
@@ -78,6 +80,7 @@ review_evidence:
         completed_at: "2026-07-09T17:01:00+09:00"
         evidence_path: tests/stable-id.test.ts
         output_digest: "sha256:ddbd23941724d316a083f6463a71200f86f4932fd76ad292a7d5f8e7993158a7"
+        anchor_commit: 740f83f985da717310271e2e2d46ce2a5e4134a5
       - kind: smoke
         command: "bun run src\\cli.ts db rebuild"
         runner: bun

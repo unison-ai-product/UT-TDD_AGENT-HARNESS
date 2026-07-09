@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-02T22:05:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:90eda6ff5dfe5944db150759c31650e03a8d75f439ae287a21f508f6ca860b22"
+        anchor_commit: e3551583a1231cda3768320f54c274e16f31b197
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -62,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-02T22:05:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:90eda6ff5dfe5944db150759c31650e03a8d75f439ae287a21f508f6ca860b22"
+        anchor_commit: e3551583a1231cda3768320f54c274e16f31b197
       - kind: unit_test
         command: "bun run vitest run tests\\plan-lint.test.ts tests\\projection-writer.test.ts --reporter=dot"
         runner: bun

@@ -53,6 +53,7 @@ review_evidence:
         completed_at: "2026-07-03T18:18:00+09:00"
         evidence_path: tests/db-projection-ingestion.test.ts
         output_digest: "sha256:5e2ea7869561dca7818628bbe9f5d17c2b537a1420bfdb7ab925ca858972f26b"
+        anchor_commit: 07f484ca1e5f08a429cfac334872037c62f67770
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -61,6 +62,7 @@ review_evidence:
         completed_at: "2026-07-03T18:18:00+09:00"
         evidence_path: src/state-db/projection-writer.ts
         output_digest: "sha256:77118c7dd79d0ce3fe45292375d2ae6c520865f655e6997e777c9ca1547e1ee8"
+        anchor_commit: 07f484ca1e5f08a429cfac334872037c62f67770
       - kind: lint
         command: "bunx biome check src\\state-db\\projection-writer.ts src\\doctor\\db-projection.ts src\\doctor\\check-registry.ts src\\doctor\\result.ts tests\\db-projection-ingestion.test.ts docs\\plans\\PLAN-L7-360-db-projection-profiling.md"
         runner: bun

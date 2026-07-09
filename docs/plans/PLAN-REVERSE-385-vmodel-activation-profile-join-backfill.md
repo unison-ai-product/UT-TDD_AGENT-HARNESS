@@ -40,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-08T14:10:34+09:00"
         evidence_path: tests/spec-ir-projections.test.ts
         output_digest: "sha256:f45e6336212da38510041085e50b973813204aa887e387ce7815595b04b79fc7"
+        anchor_commit: 5003e0a79c61cb77badded407c08ec6608ae8278
 ---
 
 # PLAN-REVERSE-385: activation profile schedule join design backfill closure

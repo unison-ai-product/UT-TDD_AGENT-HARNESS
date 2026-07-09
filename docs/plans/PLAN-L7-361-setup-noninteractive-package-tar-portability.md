@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-03T18:51:20+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:ff224267adf0ddc6e4ce7849e119bacdf3931c5d32bc07ec5fe4ef153cefd553"
+        anchor_commit: ec072598808b7c15fe972f264ac66f8067973e8e
       - kind: unit_test
         command: "bun run vitest run tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -62,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-03T18:52:15+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
         output_digest: "sha256:45de473da18bd3d74da85e99b9bc20f706825c1753a365a429eae79b21831b27"
+        anchor_commit: ec072598808b7c15fe972f264ac66f8067973e8e
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -70,6 +72,7 @@ review_evidence:
         completed_at: "2026-07-03T18:51:15+09:00"
         evidence_path: src/setup/index.ts
         output_digest: "sha256:e3c52a39624318d5f67e76fe2d4ff8b0ea3fdb910a05d884a82e6a211f6c742b"
+        anchor_commit: ec072598808b7c15fe972f264ac66f8067973e8e
       - kind: lint
         command: "bunx biome check src/setup/index.ts src/cli/distribution.ts tests/setup.test.ts tests/distribution-acceptance.test.ts"
         runner: bun
@@ -78,6 +81,7 @@ review_evidence:
         completed_at: "2026-07-03T18:53:00+09:00"
         evidence_path: src/cli/distribution.ts
         output_digest: "sha256:699e8dd595f7b5e4abab96fa395eaf3dc6495b19be7c34e68503bdeb84229b86"
+        anchor_commit: ec072598808b7c15fe972f264ac66f8067973e8e
 ---
 
 # PLAN-L7-361 (impl): setup 非対話ハング根治 + distribution package tar 可搬性

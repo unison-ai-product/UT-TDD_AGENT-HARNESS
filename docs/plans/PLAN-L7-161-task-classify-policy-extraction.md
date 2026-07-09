@@ -47,6 +47,7 @@ review_evidence:
         completed_at: "2026-06-25T19:37:29+09:00"
         evidence_path: tests/task-classify.test.ts
         output_digest: "sha256:4354ec1766680c77a56569eb7c6fbfafdff3b568beafed6092c3da2a8375b075"
+        anchor_commit: 80dc4c8e4e61b0a8d2c8e6de0e2ccb70a5fa57fe
       - kind: unit_test
         command: "bun run vitest run tests\\task-classify.test.ts"
         runner: bun
@@ -55,6 +56,7 @@ review_evidence:
         completed_at: "2026-06-25T19:37:29+09:00"
         evidence_path: src/task/classify.ts
         output_digest: "sha256:a0e452625be7f0d0c0df7c0f89059989cb203b177edb9afd7ba27c29a0efe158"
+        anchor_commit: 80dc4c8e4e61b0a8d2c8e6de0e2ccb70a5fa57fe
       - kind: unit_test
         command: "bun run vitest run tests\\task-classify.test.ts"
         runner: bun
@@ -63,6 +65,7 @@ review_evidence:
         completed_at: "2026-06-25T19:37:29+09:00"
         evidence_path: src/task/classify-policy.ts
         output_digest: "sha256:7781c8d712eab28fa8cffc2ade45c855c1600c921175d175b7efd67ec4900587"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -71,6 +74,7 @@ review_evidence:
         completed_at: "2026-06-25T19:39:00+09:00"
         evidence_path: src/task/classify.ts
         output_digest: "sha256:a0e452625be7f0d0c0df7c0f89059989cb203b177edb9afd7ba27c29a0efe158"
+        anchor_commit: 80dc4c8e4e61b0a8d2c8e6de0e2ccb70a5fa57fe
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -79,6 +83,7 @@ review_evidence:
         completed_at: "2026-06-25T19:39:00+09:00"
         evidence_path: tests/task-classify.test.ts
         output_digest: "sha256:4354ec1766680c77a56569eb7c6fbfafdff3b568beafed6092c3da2a8375b075"
+        anchor_commit: 80dc4c8e4e61b0a8d2c8e6de0e2ccb70a5fa57fe
 ---
 
 # PLAN-L7-161: task classify policy extraction

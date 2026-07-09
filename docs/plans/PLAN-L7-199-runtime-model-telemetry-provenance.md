@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
+        anchor_commit: 47355c568e05e8f9759bbdca05e1b42618143b1a
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -59,6 +60,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -67,6 +69,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
 ---
 
 # PLAN-L7-199: Runtime model telemetry provenance in doctor

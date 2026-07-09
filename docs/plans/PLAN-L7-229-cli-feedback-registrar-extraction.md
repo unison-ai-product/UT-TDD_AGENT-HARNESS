@@ -55,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-02T15:40:00+09:00"
         evidence_path: src/cli/feedback.ts
         output_digest: "sha256:ebb0fc80ce4f7e2b87ce29c94c82d5f341ec3d576385c2423c2a471e5a26df12"
+        anchor_commit: 2de5ef3724a441b9cd5dbcaa7a55b99d6c10e641
       - kind: unit_test
         command: "bun run vitest run tests\\cli-surface.test.ts --reporter=dot"
         runner: bun
@@ -63,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-02T15:40:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:ea067199cbaed343e048b15f22dc59b38d33e2210cafe0cf4ae12f8f129bc6c8"
+        anchor_commit: 2de5ef3724a441b9cd5dbcaa7a55b99d6c10e641
 ---
 
 # PLAN-L7-229: CLI feedback registrar extraction

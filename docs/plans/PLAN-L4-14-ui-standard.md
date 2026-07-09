@@ -65,6 +65,7 @@ review_evidence:
         completed_at: "2026-06-25T10:54:00+09:00"
         evidence_path: tests/sub-doc-catalog-drift.test.ts
         output_digest: "sha256:b3dcadf9d822b77db345ccc3c5f35a4dcd6b94193c7dcc11c699f45d3e46be12"
+        anchor_commit: effa5b2ec35e0e87c99a4177c08b3182bb518b5e
       - kind: typecheck
         command: "bun run typecheck (VALID_SUB_DOCS[L3/L4/L5/L6] FE slug 登録、3 点同期 §8)"
         runner: bun
@@ -73,6 +74,7 @@ review_evidence:
         completed_at: "2026-06-25T10:54:00+09:00"
         evidence_path: src/schema/index.ts
         output_digest: "sha256:c990a76b1df98eb4d1f1c41acc168db9fb1c7e40dc8fb2d67c9f3292aac3f5f8"
+        anchor_commit: 3dbd7babd2d9dac6893003fd6a9c6eb107bed3af
 ---
 
 # PLAN-L4-14 (design/ui-standard): L4 FE 設計標準 (部品/色の降下先確定)

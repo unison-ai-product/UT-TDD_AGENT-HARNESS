@@ -68,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-03T17:46:00+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:4121d49ed1039d974920df387938350f67d11755f669baff35d62929ea232e1c"
+        anchor_commit: 9eed81bb65bf768b9e9a6a74b373e700ff047fbe
       - kind: unit_test
         command: "bun run vitest run tests\\project-hook.test.ts tests\\codex-hook-adapter.test.ts tests\\distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -84,6 +85,7 @@ review_evidence:
         completed_at: "2026-07-03T17:39:00+09:00"
         evidence_path: src/setup/templates.ts
         output_digest: "sha256:e4720ac55b9b542d18f0a9f5d54b6258a17f556cb9622576a63558ec5be435b4"
+        anchor_commit: 9eed81bb65bf768b9e9a6a74b373e700ff047fbe
       - kind: lint
         command: "bunx biome check docs\\templates\\github\\common\\harness-check.yml src\\lint\\codex-hook-adapter-policy.ts src\\lint\\codex-hook-adapter.ts src\\lint\\project-hook.ts src\\setup\\distribution.ts src\\setup\\templates.ts tests\\setup.test.ts"
         runner: bun

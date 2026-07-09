@@ -28,6 +28,7 @@ review_evidence:
         completed_at: "2026-07-07T14:04:46+09:00"
         evidence_path: docs/design/harness/L6-function-design/function-spec.md
         output_digest: "sha256:ab4440b424461e4a279d939d7da4a3da0fec60f8eb2b60b7ecd7e43b1f217c12"
+        anchor_commit: 427c8a49b117d5ed64299aa4a51e91f5ec928d95
       - kind: lint
         command: "bun run src/cli.ts plan lint docs/plans/PLAN-L6-38-router-function-contracts.md"
         runner: bun
@@ -36,6 +37,7 @@ review_evidence:
         completed_at: "2026-07-07T14:04:46+09:00"
         evidence_path: docs/test-design/harness/L7-unit-test-design.md
         output_digest: "sha256:fd3d2183fa2b9ac07bee33318913d56bf2b33c6316170b875a6958230c3306e0"
+        anchor_commit: 427c8a49b117d5ed64299aa4a51e91f5ec928d95
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

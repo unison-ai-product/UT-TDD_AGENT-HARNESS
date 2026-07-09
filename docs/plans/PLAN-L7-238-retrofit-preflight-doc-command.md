@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-07-02T22:50:05+09:00"
         evidence_path: tests/cited-command-existence.test.ts
         output_digest: "sha256:52e720551229a5fb4553c8855ff040d0cce1d88c4848be43c901be3bc3609093"
+        anchor_commit: 6e7e79e9854df90e589081343282e2878f6e2e8d
 ---
 
 # PLAN-L7-238 (impl): retrofit.md 誤コマンド修正 + doc 記載コマンド実在 lint

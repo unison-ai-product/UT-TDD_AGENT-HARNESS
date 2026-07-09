@@ -66,6 +66,7 @@ review_evidence:
         completed_at: "2026-07-07T11:33:00+09:00"
         evidence_path: tests/db-currency.test.ts
         output_digest: "sha256:a77aad990773fab9b813c07859eacb090b9d44972e2a32b4757e9ed1e050e6bf"
+        anchor_commit: 0d8c635f1bb91483055d5f9e7c1fafb7d767e034
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -74,6 +75,7 @@ review_evidence:
         completed_at: "2026-07-07T11:35:00+09:00"
         evidence_path: src/doctor/check-registry.ts
         output_digest: "sha256:d51002e385230c1c10f4b1d7bba27b241fd858746db55ad63757bdbdeda8e642"
+        anchor_commit: 0d8c635f1bb91483055d5f9e7c1fafb7d767e034
       - kind: lint
         command: "bunx biome check docs\\plans\\PLAN-L7-365-harness-db-currency-hook.md docs\\plans\\PLAN-L7-369-db-currency-doctor-gate.md src\\lint\\db-currency.ts src\\state-db\\drive-registration.ts src\\doctor\\process-quality.ts src\\doctor\\check-registry.ts src\\doctor\\index.ts tests\\db-currency.test.ts tests\\drive-db-registration.test.ts tests\\doctor-process-quality.test.ts tests\\doctor.test.ts"
         runner: bun
@@ -82,6 +84,7 @@ review_evidence:
         completed_at: "2026-07-07T11:35:00+09:00"
         evidence_path: src/state-db/drive-registration.ts
         output_digest: "sha256:00e90f0deefaa9497c6b6e80234f7d0c6ab96e4912ab5d28b7f423d494d3446d"
+        anchor_commit: 0d8c635f1bb91483055d5f9e7c1fafb7d767e034
 ---
 
 # PLAN-L7-369 (refactor): db-currency doctor gate

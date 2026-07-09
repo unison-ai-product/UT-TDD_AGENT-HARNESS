@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-02T17:10:00+09:00"
         evidence_path: tests/backfill-pairing.test.ts
         output_digest: "sha256:f80c0641ed17082b8b27eba0d623284c2979694663ccdc3bb66c31a1f0b0d4db"
+        anchor_commit: 775d82a309a17fc17017fcba6e88f1f56f2372e9
 ---
 
 # PLAN-L7-266: Pack source-only test guards

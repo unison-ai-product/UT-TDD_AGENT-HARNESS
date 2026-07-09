@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T16:35:00+09:00"
         evidence_path: docs/design/harness/L6-function-design/function-spec.md
         output_digest: "sha256:db2e1bb1662d5b607474de28f6ab1933deb096cbeb775c3464cc747a54e4ad84"
+        anchor_commit: 33f03923a561495acd0ff9f43b9e2f8af718335e
 agent_slots:
   - role: tl
     slot_label: "TL - typed spec phase/layer alignment design"

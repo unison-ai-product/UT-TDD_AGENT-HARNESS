@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T12:44:53+09:00"
         evidence_path: src/state-db/spec-ir-projections.ts
         output_digest: "sha256:451613ff14bd705d80b757fcb3b02a1fd1ea9e823fc3ddcc733ebdae32c3c811"
+        anchor_commit: 50cf3a0607dbea807faa2f9e5dac1aa22971ed0c
       - kind: unit_test
         command: "bun run vitest run tests/state-db.test.ts tests/db-projection-coverage.test.ts tests/db-projection-ingestion.test.ts tests/spec-ir-projections.test.ts tests/projection-writer.test.ts"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T12:44:53+09:00"
         evidence_path: tests/spec-ir-projections.test.ts
         output_digest: "sha256:24716a444f44c35e72207567751efe480f9b8d47dfdf0e931536f340b4a71a6d"
+        anchor_commit: 50cf3a0607dbea807faa2f9e5dac1aa22971ed0c
 agent_slots:
   - role: tl
     slot_label: "TL - spec IR projection schema / writer integration review"

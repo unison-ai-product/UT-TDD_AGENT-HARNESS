@@ -69,6 +69,7 @@ review_evidence:
         completed_at: "2026-07-02T15:45:00+09:00"
         evidence_path: src/doctor/dependency-regression.ts
         output_digest: "sha256:982e16bea06b79a54b7f6970f06fc8cc10a30bc72322fedb74194f2c4815d5d2"
+        anchor_commit: 06c56db0997980c1ad8688ddfccf12389b072346
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts tests\\dependency-drift.test.ts --reporter=dot"
         runner: bun
@@ -77,6 +78,7 @@ review_evidence:
         completed_at: "2026-07-02T15:45:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:5eff910681a9e4b89b848b89399d9fd745e8917adbf1befe32bf49981a730077"
+        anchor_commit: 06c56db0997980c1ad8688ddfccf12389b072346
 ---
 
 # PLAN-L7-250: doctor dependency / regression adapter extraction

@@ -59,6 +59,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
+        anchor_commit: 3f9adfea88616ba33fe8ff23aebc730c4b0c9cb3
       - kind: unit_test
         command: "bun run vitest run tests\\cli.test.ts tests\\agent-guard.test.ts"
         runner: bun
@@ -67,6 +68,7 @@ review_evidence:
         completed_at: "2026-06-25T18:43:35+09:00"
         evidence_path: tests/cli.test.ts
         output_digest: "sha256:3bcbd79405736ad55cf59e08361b646b83968d04e694f4fda5f4ab91dbd70a64"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: unit_test
         command: "bun run vitest run tests\\cli.test.ts tests\\agent-guard.test.ts"
         runner: bun
@@ -75,6 +77,7 @@ review_evidence:
         completed_at: "2026-06-25T18:43:35+09:00"
         evidence_path: tests/agent-guard.test.ts
         output_digest: "sha256:d63d4b93fa5ff137ea1dd3b44177af15915c7274fa4d84d2b2b2fc99c0d71f7c"
+        anchor_commit: 4b1c64e74b38dc8b6a2e6d56ca52b36d258365a2
       - kind: unit_test
         command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -83,6 +86,7 @@ review_evidence:
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
+        anchor_commit: 47355c568e05e8f9759bbdca05e1b42618143b1a
       - kind: unit_test
         command: "bun run vitest run tests\\agent-guard.test.ts tests\\workflow-contracts.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -91,6 +95,7 @@ review_evidence:
         completed_at: "2026-06-25T18:23:31+09:00"
         evidence_path: tests/agent-guard.test.ts
         output_digest: "sha256:d63d4b93fa5ff137ea1dd3b44177af15915c7274fa4d84d2b2b2fc99c0d71f7c"
+        anchor_commit: 4b1c64e74b38dc8b6a2e6d56ca52b36d258365a2
       - kind: unit_test
         command: "bun run vitest run tests\\agent-guard.test.ts tests\\workflow-contracts.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -99,6 +104,7 @@ review_evidence:
         completed_at: "2026-06-25T18:23:31+09:00"
         evidence_path: tests/workflow-contracts.test.ts
         output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
+        anchor_commit: b386be1d616da4b0362de575f564aa16f47a69d0
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -107,6 +113,7 @@ review_evidence:
         completed_at: "2026-06-25T18:24:17+09:00"
         evidence_path: src/state-db/refactor-candidates.ts
         output_digest: "sha256:0e270c1572d46850fe94dd43359a38c04b75ecc7b23a62cf8bf983f74c8f601a"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -115,6 +122,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
 ---
 
 # PLAN-L7-158: refactor detector precision and policy extraction

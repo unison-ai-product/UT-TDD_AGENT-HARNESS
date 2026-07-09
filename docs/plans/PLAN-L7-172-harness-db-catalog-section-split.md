@@ -57,6 +57,7 @@ review_evidence:
         completed_at: "2026-06-25T21:53:34+09:00"
         evidence_path: tests/state-db.test.ts
         output_digest: "sha256:bfb3698fc15d79cd071c389e1b2cd1c805cd8e561526bb26eeed839bb829d587"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: unit_test
         command: "bun run vitest run tests\\state-db.test.ts tests\\db-projection-ingestion.test.ts"
         runner: bun
@@ -65,6 +66,7 @@ review_evidence:
         completed_at: "2026-06-25T21:53:34+09:00"
         evidence_path: tests/db-projection-ingestion.test.ts
         output_digest: "sha256:53507c4d465d3fde47369dbcb3051da02dd7f0df502924239086634b07ff5fef"
+        anchor_commit: 9321d946ea91b3180823a20efab6869e75abeb8d
       - kind: unit_test
         command: "bun run vitest run tests\\state-db.test.ts tests\\db-projection-ingestion.test.ts"
         runner: bun
@@ -73,6 +75,7 @@ review_evidence:
         completed_at: "2026-06-25T21:53:34+09:00"
         evidence_path: src/schema/harness-db-catalog.ts
         output_digest: "sha256:81f4c66394128721249f900d053d0c6e377289f91069bde588f812224b69ff2c"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: unit_test
         command: "bun run vitest run tests\\state-db.test.ts tests\\db-projection-ingestion.test.ts"
         runner: bun
@@ -81,6 +84,7 @@ review_evidence:
         completed_at: "2026-06-25T21:53:34+09:00"
         evidence_path: src/schema/harness-db-tables-core.ts
         output_digest: "sha256:600d956ad25ddea7625f12dcce099b348f145ce057054644393a346eeae07094"
+        anchor_commit: b3904eca7a50e185da4aeb1fa4177f0b3b64e271
       - kind: unit_test
         command: "bun run vitest run tests\\state-db.test.ts tests\\db-projection-ingestion.test.ts"
         runner: bun
@@ -89,6 +93,7 @@ review_evidence:
         completed_at: "2026-06-25T21:53:34+09:00"
         evidence_path: src/schema/harness-db-tables-graph.ts
         output_digest: "sha256:bf52681a3595d148483c2778a79bb20aabd9b95b7c14d1983ce830a4d2828937"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: unit_test
         command: "bun run vitest run tests\\state-db.test.ts tests\\db-projection-ingestion.test.ts"
         runner: bun
@@ -97,6 +102,7 @@ review_evidence:
         completed_at: "2026-06-25T21:53:34+09:00"
         evidence_path: src/schema/harness-db-tables-evaluation.ts
         output_digest: "sha256:6a7998736d30a0ccbc43cb997655d357d4a177096f63be2a16e822f18c4149c7"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: unit_test
         command: "bun run vitest run tests\\state-db.test.ts tests\\db-projection-ingestion.test.ts"
         runner: bun
@@ -105,6 +111,7 @@ review_evidence:
         completed_at: "2026-06-25T21:53:34+09:00"
         evidence_path: src/schema/harness-db-indexes.ts
         output_digest: "sha256:0e84203f82c4b52d1a111e2e813e2ca6b9392324637787be2db2d656aa25c25b"
+        anchor_commit: b3904eca7a50e185da4aeb1fa4177f0b3b64e271
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -113,6 +120,7 @@ review_evidence:
         completed_at: "2026-06-25T21:53:33+09:00"
         evidence_path: src/schema/harness-db-table-builders.ts
         output_digest: "sha256:b84c3c8c379c25828716c8749efae34a7614f1405dd1305077377b30bc17d6d2"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -121,6 +129,7 @@ review_evidence:
         completed_at: "2026-06-25T21:53:22+09:00"
         evidence_path: src/schema/harness-db-catalog.ts
         output_digest: "sha256:81f4c66394128721249f900d053d0c6e377289f91069bde588f812224b69ff2c"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
 ---
 
 # PLAN-L7-172: harness DB catalog section split

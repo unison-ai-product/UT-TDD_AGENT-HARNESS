@@ -28,6 +28,7 @@ review_evidence:
         completed_at: "2026-07-08T21:12:00+09:00"
         evidence_path: tests/readability.test.ts
         output_digest: "sha256:fbf9f70d81ef7a721267b30a823682cab012a9a64f9ee0f023864693cc812184"
+        anchor_commit: 9f8a3d399f56c0e0a4be5518b97371b8f1ba9075
       - kind: typecheck
         command: "bun run tsc --noEmit"
         runner: bun
@@ -36,6 +37,7 @@ review_evidence:
         completed_at: "2026-07-08T21:12:00+09:00"
         evidence_path: docs/design/harness/L6-function-design/governance-enforcement.md
         output_digest: "sha256:6df7a9705f3666525864d6d6072f5962321d5c1c277b64d1269bae693942b3a0"
+        anchor_commit: 9f8a3d399f56c0e0a4be5518b97371b8f1ba9075
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
 backprop_scope:

@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-02T14:45:00+09:00"
         evidence_path: src/doctor/doc-registry.ts
         output_digest: "sha256:1c0af31e6807ef821c2fc578f2bbd6ef5374b7b468d0f21808db73bf2eb45a77"
+        anchor_commit: deaac32e9a9d9b7f6b2d33f20121ac6a63d70c95
       - kind: unit_test
         command: "bun run vitest run tests\\doctor-doc-registry.test.ts --reporter=dot"
         runner: bun
@@ -62,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-02T14:45:00+09:00"
         evidence_path: tests/doctor-doc-registry.test.ts
         output_digest: "sha256:2e41bafbaf6f232bcf05b525f12f744a0394eef5d82e499721443ee8f75ea28f"
+        anchor_commit: deaac32e9a9d9b7f6b2d33f20121ac6a63d70c95
 ---
 
 # PLAN-L7-227: Doctor doc registry extraction

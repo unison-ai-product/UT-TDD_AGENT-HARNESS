@@ -60,6 +60,7 @@ review_evidence:
         completed_at: "2026-07-07T13:05:00+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:14727edf6b46059836b1064613ec46db392a8ac2e53282189e1c54e72f066a8f"
+        anchor_commit: 261d749f80222529e7b2abacffb847ac3a8823f8
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -68,6 +69,7 @@ review_evidence:
         completed_at: "2026-07-07T13:05:00+09:00"
         evidence_path: src/setup/templates.ts
         output_digest: "sha256:8f032cf39d2246de38020f922817158342d4af504bb20bbd82fa0004dccb9c66"
+        anchor_commit: 261d749f80222529e7b2abacffb847ac3a8823f8
       - kind: unit_test
         command: "bun run test -- tests\\model-id-ssot-drift.test.ts --reporter=dot"
         runner: bun
@@ -76,6 +78,7 @@ review_evidence:
         completed_at: "2026-07-07T13:25:00+09:00"
         evidence_path: tests/model-id-ssot-drift.test.ts
         output_digest: "sha256:deeb257f306463332312514a1d010b0044819a687eeb2686ea34dbd40790424e"
+        anchor_commit: 6bad31bdc24f67adb1978120dd3afa030111646c
 ---
 
 # PLAN-L7-372 (refactor): consumer adapter の doctor 案内を profile 化する

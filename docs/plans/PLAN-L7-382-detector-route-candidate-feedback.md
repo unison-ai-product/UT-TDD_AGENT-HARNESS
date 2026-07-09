@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T13:01:10+09:00"
         evidence_path: src/state-db/feedback-projections.ts
         output_digest: "sha256:80571889b44c7eeeb95f760e9d47733a447678fa34bb79e239fc745e2308130b"
+        anchor_commit: 132adcbcc52730c873b7a818c41760934116a5f4
       - kind: unit_test
         command: "bun run vitest run tests/feedback-surface.test.ts tests/search-feedback.test.ts tests/projection-writer.test.ts"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T13:01:10+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:f75198da0bb9bcf80feba789d274bac931d1f273279747adb24a8f29c46fad74"
+        anchor_commit: 132adcbcc52730c873b7a818c41760934116a5f4
 agent_slots:
   - role: tl
     slot_label: "TL - detector candidate feedback bridge review"

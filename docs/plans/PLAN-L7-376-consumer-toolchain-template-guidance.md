@@ -61,6 +61,7 @@ review_evidence:
         completed_at: "2026-07-07T14:29:54+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:2f80f9a41096374f4d733c88b8c748457fe2d859d1435bee7ab8e9fb520e8ad2"
+        anchor_commit: 5c424eb5d1231964a97b7f575349c8958c8adbd0
       - kind: unit_test
         command: "bun run test -- tests\\model-id-ssot-drift.test.ts --reporter=dot"
         runner: bun
@@ -77,6 +78,7 @@ review_evidence:
         completed_at: "2026-07-07T14:31:09+09:00"
         evidence_path: src/setup/templates.ts
         output_digest: "sha256:8b1cc68d565af29ccecd32e0c9a317de735061cff1133b048d8bdc67f1f6eb12"
+        anchor_commit: 5c424eb5d1231964a97b7f575349c8958c8adbd0
       - kind: lint
         command: "bunx biome check src\\setup\\templates.ts tests\\setup.test.ts docs\\plans\\PLAN-L7-376-consumer-toolchain-template-guidance.md docs\\templates\\adapter\\AGENTS.md docs\\templates\\adapter\\CLAUDE.md docs\\templates\\adapter\\.claude\\CLAUDE.md docs\\templates\\adapter\\.claude\\commands\\ut-tdd-status.md docs\\templates\\adapter\\.claude\\commands\\ut-tdd-test.md docs\\templates\\adapter\\.claude\\agents\\ut-tdd-tl.md"
         runner: bun
@@ -85,6 +87,7 @@ review_evidence:
         completed_at: "2026-07-07T14:31:09+09:00"
         evidence_path: docs/templates/adapter/AGENTS.md
         output_digest: "sha256:55c67e338427e8447ad0f0171b237dd6351203012eb8bdaa6b45b3e97fede136"
+        anchor_commit: 5c424eb5d1231964a97b7f575349c8958c8adbd0
 ---
 
 # PLAN-L7-376 (refactor): consumer toolchain profile を adapter 案内へ同期する

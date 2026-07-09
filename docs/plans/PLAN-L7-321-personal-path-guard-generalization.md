@@ -53,6 +53,7 @@ review_evidence:
         completed_at: "2026-07-03T12:28:12+09:00"
         evidence_path: src/lint/personal-path.ts
         output_digest: "sha256:a1bffe6a59542a45b64ae6b920c10541d99dd0efd4c66d669f535c313fc49818"
+        anchor_commit: e03252d90b8658d18e61bb97a7a9f524589e31e9
       - kind: unit_test
         command: "bun run vitest run tests\\asset-drift.test.ts tests\\project-hook.test.ts tests\\handover.test.ts --reporter=dot"
         runner: bun
@@ -61,6 +62,7 @@ review_evidence:
         completed_at: "2026-07-03T12:28:13+09:00"
         evidence_path: tests/asset-drift.test.ts
         output_digest: "sha256:8dc9a648802491f755a87856cf9353e8ab0fc3edec23b26c4aac5f2d621c5ace"
+        anchor_commit: e03252d90b8658d18e61bb97a7a9f524589e31e9
       - kind: unit_test
         command: "bun run test:pack"
         runner: bun
@@ -69,6 +71,7 @@ review_evidence:
         completed_at: "2026-07-03T12:29:01+09:00"
         evidence_path: tests/readability.test.ts
         output_digest: "sha256:ad6468a3bb93493c37fc6fa194e3384b844c131a6b30a62bd9042f7ad8213228"
+        anchor_commit: c18872c85c31a3a316cdcc0290cf55348f11b69d
 ---
 
 # PLAN-L7-321: personal absolute path guard generalization

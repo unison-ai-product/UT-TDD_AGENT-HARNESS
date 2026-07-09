@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-02T12:31:00+09:00"
         evidence_path: src/doctor/runtime-surface.ts
         output_digest: "sha256:52c7e86d11b7acfffa162d3b055c240d21c20dc23fd39b8a34a9708a5e7a8c7d"
+        anchor_commit: b7f4c1ff096f4b910c303395512502b4b0517310
       - kind: unit_test
         command: "bun run vitest run tests\\doctor-runtime-surface.test.ts tests\\doctor.test.ts --testNamePattern \"doctor runtime surface|codex-wrapper-parity|GitHub CI policy|project-hook|missing root\" --reporter=dot"
         runner: bun
@@ -62,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-02T12:31:00+09:00"
         evidence_path: tests/doctor-runtime-surface.test.ts
         output_digest: "sha256:1b42e63205e4c1258c1894a562e6d7f1ef139e785a832d2d973d50051c94c698"
+        anchor_commit: b7f4c1ff096f4b910c303395512502b4b0517310
 ---
 
 # PLAN-L7-222: Doctor runtime surface extraction

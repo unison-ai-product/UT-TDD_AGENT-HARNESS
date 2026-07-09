@@ -75,6 +75,7 @@ review_evidence:
         completed_at: "2026-07-02T17:17:03+09:00"
         evidence_path: tests/github-ci-policy.test.ts
         output_digest: "sha256:33f3eccc716f104d878776111cb7ac576a41c956d20ffabce89346b3d1d66b45"
+        anchor_commit: 74a2f86d9149b1c46cc34b3f9c6c6081287eca84
 ---
 
 # PLAN-L7-267: Pack CI test boundary

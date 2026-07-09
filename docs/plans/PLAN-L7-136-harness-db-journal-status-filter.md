@@ -47,6 +47,7 @@ review_evidence:
         completed_at: "2026-06-23T20:22:27+09:00"
         evidence_path: tests/change-impact.test.ts
         output_digest: "sha256:f583ee4eec1487c557b21220de3732663e670b8ae6e6c6bc058a9f5e82cdb7ae"
+        anchor_commit: 0e6fd25af6b9995e7e428daa937537ba82d69aaf
       - kind: typecheck
         command: "bun run tsc --noEmit"
         runner: bun
@@ -55,6 +56,7 @@ review_evidence:
         completed_at: "2026-06-23T20:22:27+09:00"
         evidence_path: src/lint/change-impact.ts
         output_digest: "sha256:c9364b56f5a1e2189536c5a5ad4ff9e760e8d435487bbfe650760cdd016a7f2f"
+        anchor_commit: 0e6fd25af6b9995e7e428daa937537ba82d69aaf
 ---
 
 # PLAN-L7-136 (troubleshoot): filter transient harness DB journal status paths

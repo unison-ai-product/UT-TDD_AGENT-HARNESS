@@ -36,6 +36,7 @@ review_evidence:
         completed_at: "2026-06-29T14:14:08+09:00"
         evidence_path: tests/g10-ux-workflow.test.ts
         output_digest: "sha256:56d268e7f01d5f6ab958d20023e0740661beadc62eeee8c6d847c89924e756a9"
+        anchor_commit: b1657beaefb7e520e0836b48f735eaf82e4c5b3c
 agent_slots:
   - role: tl
     slot_label: "TL - G10 workflow mechanization"

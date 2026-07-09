@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-06-24T18:34:00+09:00"
         evidence_path: tests/guardrail-invariant-advisory.test.ts
         output_digest: "sha256:6db39c54697b5f638deb7972368e178458385cdb68a047d5da5e362e97c5ae23"
+        anchor_commit: 1543931b0c5d4566988514a14e394af985260f0f
   - reviewer: codex-gpt-5.x
     review_kind: cross_agent
     reviewed_at: "2026-06-24T18:39:00+09:00"
@@ -47,6 +48,7 @@ review_evidence:
         completed_at: "2026-06-24T18:34:00+09:00"
         evidence_path: tests/guardrail-invariant-advisory.test.ts
         output_digest: "sha256:6db39c54697b5f638deb7972368e178458385cdb68a047d5da5e362e97c5ae23"
+        anchor_commit: 1543931b0c5d4566988514a14e394af985260f0f
 agent_slots:
   - role: tl
     slot_label: "TL — guardrail advisory parity + join exemption"

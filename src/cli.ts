@@ -54,7 +54,11 @@ import {
   setActivePlanCli,
 } from "./handover/index";
 import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact";
-import { nodeHistoryScanDeps, planDigestMigration } from "./lint/green-command-digest";
+import {
+  applyDigestAnchorCandidatesToContent,
+  nodeHistoryScanDeps,
+  planDigestMigration,
+} from "./lint/green-command-digest";
 import { computeOutstandingWork, outstandingSummaryLine } from "./lint/outstanding";
 import {
   analyzeRelationImpact,
@@ -1146,21 +1150,51 @@ plan
   .command("digest-migrate")
   .description(
     "green_command digest を記録時点 commit へ anchor 化する計画 (PLAN-L7-303、dry-run 既定)。" +
-      "履歴から claimed digest 一致 commit を特定し recoverable/suspect に分類する。--execute は PO ゲート (committed PLAN 改変=監査境界) につき未実装。",
+      "履歴から claimed digest 一致 commit を特定し recoverable/suspect に分類する。",
   )
   .option("--json", "JSON 出力")
-  .action((opts: { json?: boolean }) => {
+  .option(
+    "--execute",
+    "recoverable entry に anchor_commit を追記する (既存 output_digest は変更しない)",
+  )
+  .action((opts: { json?: boolean; execute?: boolean }) => {
     const repoRoot = process.cwd();
-    const candidates = planDigestMigration(
-      loadReviewPlans(repoRoot),
-      nodeHistoryScanDeps(repoRoot),
-    );
+    const plans = loadReviewPlans(repoRoot);
+    const candidates = planDigestMigration(plans, nodeHistoryScanDeps(repoRoot));
     if (opts.json) {
       process.stdout.write(`${JSON.stringify(candidates, null, 2)}\n`);
       return;
     }
     const counts = { recoverable: 0, suspect: 0, "already-anchored": 0 } as Record<string, number>;
     for (const c of candidates) counts[c.disposition] = (counts[c.disposition] ?? 0) + 1;
+    if (opts.execute) {
+      const byFile = new Map<string, typeof candidates>();
+      for (const c of candidates.filter((x) => x.disposition === "recoverable")) {
+        byFile.set(c.file, [...(byFile.get(c.file) ?? []), c]);
+      }
+      let touchedFiles = 0;
+      let applied = 0;
+      let skippedAlreadyAnchored = 0;
+      for (const [file, fileCandidates] of byFile) {
+        const path = join(repoRoot, "docs", "plans", file);
+        const before = readFileSync(path, "utf8");
+        const result = applyDigestAnchorCandidatesToContent(before, fileCandidates);
+        applied += result.applied;
+        skippedAlreadyAnchored += result.skippedAlreadyAnchored;
+        if (result.content !== before) {
+          writeFileSync(path, result.content, "utf8");
+          touchedFiles += 1;
+        }
+      }
+      process.stdout.write(
+        `plan digest-migrate --execute — applied=${applied} files=${touchedFiles} ` +
+          `skipped_already_anchored=${skippedAlreadyAnchored} suspect=${counts.suspect}\n`,
+      );
+      process.stdout.write(
+        "既存 output_digest は変更していない。suspect は履歴に claimed 一致 blob が無いため未更新。\n",
+      );
+      return;
+    }
     process.stdout.write(
       `plan digest-migrate (dry-run) — ${candidates.length} green_command: ` +
         `recoverable=${counts.recoverable} suspect=${counts.suspect} already-anchored=${counts["already-anchored"]}\n`,
@@ -1173,7 +1207,7 @@ plan
     }
     process.stdout.write(
       "\nsuspect = どの commit にも claimed 一致 blob 無し (捏造/回復不能疑い、A-18x 台帳化)。" +
-        "\n書き込み (anchor_commit back-fill) は committed PLAN 改変 = 監査境界につき PO ゲート。\n",
+        "\n書き込みは --execute で recoverable に anchor_commit のみ追記する。\n",
     );
   });
 

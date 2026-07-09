@@ -60,6 +60,7 @@ review_evidence:
         completed_at: "2026-07-03T16:20:00+09:00"
         evidence_path: tests/toolchain-pin.test.ts
         output_digest: "sha256:5105744a4d1293502402a913fe1a4d7a554807e4986524b6e6d166c65ca0a363"
+        anchor_commit: 3dd979f7c27e772ed28128f8ac98282374b474a8
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -68,6 +69,7 @@ review_evidence:
         completed_at: "2026-07-03T16:20:00+09:00"
         evidence_path: src/lint/toolchain-pin.ts
         output_digest: "sha256:4cb3b5f3ec327e2fbea9d95630ea7de9d6380dc8c441d3d2379e6bc18e20b8ef"
+        anchor_commit: 3dd979f7c27e772ed28128f8ac98282374b474a8
       - kind: lint
         command: "bunx biome check src\\doctor\\index.ts src\\doctor\\toolchain.ts src\\lint\\toolchain-pin.ts tests\\toolchain-pin.test.ts tests\\doctor.test.ts package.json"
         runner: bun
@@ -76,6 +78,7 @@ review_evidence:
         completed_at: "2026-07-03T16:20:00+09:00"
         evidence_path: src/doctor/toolchain.ts
         output_digest: "sha256:edd7dcdd81af9c91cdb785163e2a40d350cd2ab35e905453f461ae322d26e0c9"
+        anchor_commit: 3dd979f7c27e772ed28128f8ac98282374b474a8
 ---
 
 # PLAN-L7-354: toolchain biome exact pin gate

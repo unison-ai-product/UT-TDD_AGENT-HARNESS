@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T20:34:00+09:00"
         evidence_path: src/trace/impact.ts
         output_digest: "sha256:ffe3e7829a526f6c88eeb088689550e883ef1c57e52e4580798954bc50163102"
+        anchor_commit: bb213c29f3df5789789a0368378f3985257fc3f0
       - kind: unit_test
         command: "bun run vitest run tests\\trace-impact.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -39,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-08T20:35:00+09:00"
         evidence_path: tests/trace-impact.test.ts
         output_digest: "sha256:2693f2951f526df8fc55b0df7038816890ff8cd6734dbd01b6b9b9692a7fadd2"
+        anchor_commit: bb213c29f3df5789789a0368378f3985257fc3f0
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -47,6 +49,7 @@ review_evidence:
         completed_at: "2026-07-08T20:34:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:0afbb1c32cf190399bc3525bdd47c1979158e8af843f28b053f9d31d0c426971"
+        anchor_commit: bb213c29f3df5789789a0368378f3985257fc3f0
 agent_slots:
   - role: tl
     slot_label: "TL - ID 起点 traversal コマンドの契約設計、change-impact.ts との役割境界"

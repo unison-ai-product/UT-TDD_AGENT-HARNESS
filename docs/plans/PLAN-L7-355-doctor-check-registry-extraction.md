@@ -52,6 +52,7 @@ review_evidence:
         completed_at: "2026-07-03T16:38:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:fd1b0c687f7b8672f8262193c95fbcdf9de1844ebbdd6d54de37fd9d4a5fb068"
+        anchor_commit: 35d941013bdf9a75867f71a3b3831e849c2a144f
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -60,6 +61,7 @@ review_evidence:
         completed_at: "2026-07-03T16:38:00+09:00"
         evidence_path: src/doctor/check-registry.ts
         output_digest: "sha256:1dc2c79a690afbb0ffb97085638acb9a49f754aebfe25cc984ab17203793cf71"
+        anchor_commit: 35d941013bdf9a75867f71a3b3831e849c2a144f
       - kind: lint
         command: "bunx biome check src\\doctor\\index.ts src\\doctor\\check-registry.ts tests\\doctor.test.ts docs\\plans\\PLAN-L7-355-doctor-check-registry-extraction.md"
         runner: bun
@@ -68,6 +70,7 @@ review_evidence:
         completed_at: "2026-07-03T16:38:00+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:86325c170c0f7691f62c2ee7b4ee88d5062ffbaab73844e1a8c6f628c683c437"
+        anchor_commit: 35d941013bdf9a75867f71a3b3831e849c2a144f
 ---
 
 # PLAN-L7-355: doctor check registry extraction

@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T15:17:26+09:00"
         evidence_path: src/state-db/spec-ir-projections.ts
         output_digest: "sha256:91f5337c20ce0f12b50111cf54538ebd284899d4288846b929d060a3e40547bb"
+        anchor_commit: 72cc0964d61f87f6004fe6c1d04fb7bc5acafd74
       - kind: unit_test
         command: "bun run vitest run tests/spec-ir-projections.test.ts tests/doctor.test.ts"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T15:17:26+09:00"
         evidence_path: tests/spec-ir-projections.test.ts
         output_digest: "sha256:5d1fe4fb21773cf4cb8495d80e51ed602ac0c9d272013516d25c5e58706049ea"
+        anchor_commit: 72cc0964d61f87f6004fe6c1d04fb7bc5acafd74
 agent_slots:
   - role: tl
     slot_label: "TL - typed spec ledger/body sync gate"

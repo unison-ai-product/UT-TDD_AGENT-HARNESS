@@ -57,6 +57,7 @@ review_evidence:
         completed_at: "2026-06-29T12:20:00+09:00"
         evidence_path: tests/g9-system-workflow.test.ts
         output_digest: "sha256:7ca4e705639b5f3f0f9b814663666ffe57f95c93d4d394b743fae8b7080c68cb"
+        anchor_commit: 6b5d6c057ffb5d86b5bb47467c91ac9b48a464a9
       - kind: unit_test
         command: "bun run vitest run tests\\review-evidence.test.ts tests\\dependency-drift.test.ts tests\\workflow-contracts.test.ts tests\\asset-drift.test.ts tests\\runtime-adapter.test.ts tests\\g9-system-workflow.test.ts"
         runner: bun
@@ -65,6 +66,7 @@ review_evidence:
         completed_at: "2026-06-29T12:37:00+09:00"
         evidence_path: tests/g9-system-workflow.test.ts
         output_digest: "sha256:7ca4e705639b5f3f0f9b814663666ffe57f95c93d4d394b743fae8b7080c68cb"
+        anchor_commit: 6b5d6c057ffb5d86b5bb47467c91ac9b48a464a9
 ---
 
 # PLAN-L7-179: G9 system workflow evidence gate

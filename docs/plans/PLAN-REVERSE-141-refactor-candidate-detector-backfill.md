@@ -76,6 +76,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
+        anchor_commit: 3f9adfea88616ba33fe8ff23aebc730c4b0c9cb3
       - kind: unit_test
         command: "bunx vitest run tests/forward-convergence.test.ts (L7-147 converged + allowlist 空化 + grandfather 機構注入)"
         runner: bun
@@ -84,6 +85,7 @@ review_evidence:
         completed_at: "2026-06-26T16:15:00+09:00"
         evidence_path: tests/forward-convergence.test.ts
         output_digest: "sha256:f069920038d511eb8f00e6aaa1fa6fa223062f237b21e88085e7ba8f13e8e9d5"
+        anchor_commit: d5b92947e2299b847c9cd09e8e88640e3a6ff546
       - kind: doctor
         command: "bun src/cli.ts doctor (forward-convergence/forward-convergence-audit/plan-governance 含む full gate)"
         runner: bun
@@ -92,6 +94,7 @@ review_evidence:
         completed_at: "2026-06-26T16:15:00+09:00"
         evidence_path: docs/governance/forward-convergence-legacy-debt-audit.md
         output_digest: "sha256:2d8c4cd731d65778474b64e961f882744721591aa24f6f1a801e2967b9910a4f"
+        anchor_commit: 4b1c64e74b38dc8b6a2e6d56ca52b36d258365a2
 ---
 
 # PLAN-REVERSE-141: refactor candidate detector の L6/L7 descent back-fill (IMP-146)

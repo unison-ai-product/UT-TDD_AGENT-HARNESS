@@ -46,6 +46,7 @@ review_evidence:
         completed_at: "2026-07-07T15:05:05+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:01beb307042518ee1372fd96b5e35df984437cc70c12ace80641ea0aa69e0622"
+        anchor_commit: 302f6163bf48d779ba392af9e29eaed887acb8ef
       - kind: unit_test
         command: "bun run test -- tests\\doctor.test.ts --testNamePattern \"asset-drift hard gate|dependency-drift and regression expansion|roadmap-rollup|Cycle P4\" --reporter=dot"
         runner: bun
@@ -54,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-07T15:06:26+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:01beb307042518ee1372fd96b5e35df984437cc70c12ace80641ea0aa69e0622"
+        anchor_commit: 302f6163bf48d779ba392af9e29eaed887acb8ef
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -62,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-07T15:06:26+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:01beb307042518ee1372fd96b5e35df984437cc70c12ace80641ea0aa69e0622"
+        anchor_commit: 302f6163bf48d779ba392af9e29eaed887acb8ef
       - kind: unit_test
         command: "bunx vitest run tests\\doctor.test.ts --reporter=dot"
         runner: bun
@@ -70,6 +73,7 @@ review_evidence:
         completed_at: "2026-07-07T15:14:50+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:01beb307042518ee1372fd96b5e35df984437cc70c12ace80641ea0aa69e0622"
+        anchor_commit: 302f6163bf48d779ba392af9e29eaed887acb8ef
       - kind: lint
         command: "bunx biome check tests\\doctor.test.ts docs\\plans\\PLAN-L7-378-doctor-test-lazy-cache.md"
         runner: bun
@@ -78,6 +82,7 @@ review_evidence:
         completed_at: "2026-07-07T15:16:13+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:01beb307042518ee1372fd96b5e35df984437cc70c12ace80641ea0aa69e0622"
+        anchor_commit: 302f6163bf48d779ba392af9e29eaed887acb8ef
 ---
 
 # PLAN-L7-378 (refactor): doctor test の full doctor 実行を lazy cache 化する

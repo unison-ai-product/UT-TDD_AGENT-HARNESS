@@ -35,6 +35,7 @@ review_evidence:
         completed_at: "2026-06-29T14:28:59+09:00"
         evidence_path: tests/relation-graph.test.ts
         output_digest: "sha256:248104e6101b259da78ff312b9d5cca334a37fbc250cc66c648cccb7de6efa68"
+        anchor_commit: c57ad638d370b3431f44a31c5cac5eff250d835e
 agent_slots:
   - role: tl
     slot_label: "TL - relation graph directory projection"

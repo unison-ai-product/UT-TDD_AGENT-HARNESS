@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T22:30:24+09:00"
         evidence_path: tests/write-encoding-guard.test.ts
         output_digest: "sha256:80188b5e3b1add41411d19ab6d1f8d68542f8d89e914f4b2a4a8748767fe0162"
+        anchor_commit: 28b33f17c8931aaf603401ee6b2b2323b20e8db9
       - kind: typecheck
         command: "bun run tsc --noEmit"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T22:30:24+09:00"
         evidence_path: src/lint/write-encoding-guard.ts
         output_digest: "sha256:5e26ec8de782c7d97f4ba53797b85f302ffaa9387a3b09baf3fea479d698746b"
+        anchor_commit: 28b33f17c8931aaf603401ee6b2b2323b20e8db9
 backprop_scope:
   - layer: L4-basic-design
     decision: updated

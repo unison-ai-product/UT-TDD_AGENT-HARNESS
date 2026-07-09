@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-07-03T11:05:00+09:00"
         evidence_path: src/cli/delegation.ts
         output_digest: "sha256:650da4c1b32c775035d366c04a55b77efbcb30aa0a073509aecfa2297ecd6cc4"
+        anchor_commit: c32f6bf1f53ca70432a13cdce0629a004006d762
       - kind: unit_test
         command: "bun run vitest run tests\\cli-delegation.test.ts tests\\cli-surface.test.ts -t \"delegation|advisor|model/effort\" --reporter=dot"
         runner: bun
@@ -59,6 +60,7 @@ review_evidence:
         completed_at: "2026-07-03T11:05:00+09:00"
         evidence_path: tests/cli-delegation.test.ts
         output_digest: "sha256:b7affd9f11a1ca8be5fdb48e191436e29bc68ce8e3b9741cf1aa3706e7d98238"
+        anchor_commit: c32f6bf1f53ca70432a13cdce0629a004006d762
 ---
 
 # PLAN-L7-284: CLI delegation execution helper extraction

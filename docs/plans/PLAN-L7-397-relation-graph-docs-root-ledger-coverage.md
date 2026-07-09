@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T21:41:00+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
         output_digest: "sha256:9c7f7fdf42eb63a9f20fd428c1eb2b6d2469547f7d3f46630dc7892752f7a943"
+        anchor_commit: a87f8275be2005e6a5dc0e42f6230b3c1c384cb5
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T21:41:00+09:00"
         evidence_path: src/graph/loader.ts
         output_digest: "sha256:34bdf648d3941df893443e9e917aed2f61d03b273e79438e0a36581949646160"
+        anchor_commit: a87f8275be2005e6a5dc0e42f6230b3c1c384cb5
 agent_slots:
   - role: tl
     slot_label: "TL - relation graph loader docs/ root ledger coverage review"

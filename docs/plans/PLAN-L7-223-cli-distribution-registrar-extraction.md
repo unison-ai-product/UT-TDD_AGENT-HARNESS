@@ -55,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-02T13:05:00+09:00"
         evidence_path: src/cli/distribution.ts
         output_digest: "sha256:394cf50bc881e5653fccbbba58af69954cdd227ed9fdf26395c2a415f54fb1e6"
+        anchor_commit: a661410be5ffd4e9112a7dbfa0bb58138fa45e51
       - kind: unit_test
         command: "bun run vitest run tests\\cli-distribution-registrar.test.ts tests\\cli-surface.test.ts --reporter=dot"
         runner: bun
@@ -63,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-02T13:05:00+09:00"
         evidence_path: tests/cli-distribution-registrar.test.ts
         output_digest: "sha256:650cf1a038682b0fd40243bdfaa62dfdd70b7cbcbc0982dc4362354db828ecfd"
+        anchor_commit: a661410be5ffd4e9112a7dbfa0bb58138fa45e51
 ---
 
 # PLAN-L7-223: CLI distribution registrar extraction

@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-03T11:41:17+09:00"
         evidence_path: src/plan/lint.ts
         output_digest: "sha256:8222027be581c8bb3949ec045a969b882ac70a389f86d44b42944557668781a8"
+        anchor_commit: 52aecbe9ea434425b8a02fa4c375dc46347bab18
       - kind: unit_test
         command: "bun run vitest run tests\\plan-lint.test.ts -t \"route_mode_kind|code-line references\" --reporter=dot"
         runner: bun
@@ -58,6 +59,7 @@ review_evidence:
         completed_at: "2026-07-03T11:41:17+09:00"
         evidence_path: tests/plan-lint.test.ts
         output_digest: "sha256:4e98421692ab8912295d4620e3933d1952e92affde89d1824e422c8a7c7950a6"
+        anchor_commit: 52aecbe9ea434425b8a02fa4c375dc46347bab18
       - kind: unit_test
         command: "bun run test:pack"
         runner: bun
@@ -66,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-03T11:43:45+09:00"
         evidence_path: tests/readability.test.ts
         output_digest: "sha256:ad6468a3bb93493c37fc6fa194e3384b844c131a6b30a62bd9042f7ad8213228"
+        anchor_commit: c18872c85c31a3a316cdcc0290cf55348f11b69d
 ---
 
 # PLAN-L7-312: PLAN reference freshness analyzer foundation

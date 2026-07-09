@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T14:46:58+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:2ba4ee2c837197540894e73449c00057549bbfcc1abefbd9b1aba68f71228764"
+        anchor_commit: 455e60b102e308a4a78af206bb0e48b44d91cf5c
 agent_slots:
   - role: tl
     slot_label: "TL - typed spec closure reverse review"

@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-06-25T21:07:53+09:00"
         evidence_path: tests/verification-profile.test.ts
         output_digest: "sha256:3bf8064e662b9071536985fbf4b850d478b5f7f2362e10721fd3ceeeff17324c"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: unit_test
         command: "bun run vitest run tests\\verification-profile.test.ts"
         runner: bun
@@ -59,6 +60,7 @@ review_evidence:
         completed_at: "2026-06-25T21:07:53+09:00"
         evidence_path: src/lint/verification-profile.ts
         output_digest: "sha256:de1e9833b9e8ba36d7fb558c4ad711420398000db24a47f9f13d8753aa33d648"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: unit_test
         command: "bun run vitest run tests\\verification-profile.test.ts"
         runner: bun
@@ -67,6 +69,7 @@ review_evidence:
         completed_at: "2026-06-25T21:07:53+09:00"
         evidence_path: src/lint/verification-profile-types.ts
         output_digest: "sha256:0078453928c4e73da41e6ec6e0386a0f2d56bea94d6b033a12c35f49e08d7602"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -75,6 +78,7 @@ review_evidence:
         completed_at: "2026-06-25T21:08:03+09:00"
         evidence_path: src/lint/verification-profile-catalog.ts
         output_digest: "sha256:914fa6a5a96e7d94cf8fc4598410dfd8371efe80b18695e6b8c94497a1b4b80c"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -83,6 +87,7 @@ review_evidence:
         completed_at: "2026-06-25T21:08:09+09:00"
         evidence_path: src/lint/verification-profile-safety.ts
         output_digest: "sha256:294d53ff3dbe303be1bd92315676de35ac5126040240b876fa4096e415fdc1d5"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
 ---
 
 # PLAN-L7-168: verification profile type split

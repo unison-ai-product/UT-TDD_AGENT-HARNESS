@@ -82,6 +82,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/skill-scaffold.test.ts
         output_digest: "sha256:c357ebd21caa8f164ea9415f364d13caa032fb25acc2fed9c0a25f0abe35e439"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
       - kind: unit_test
         command: "bun run vitest run tests\\skill-assignment.test.ts tests\\skill-recommend.test.ts tests\\asset-catalog.test.ts tests\\skill-scaffold.test.ts tests\\agent-guard.test.ts tests\\setup.test.ts tests\\distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -90,6 +91,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/asset-catalog.test.ts
         output_digest: "sha256:79fc89eec778b9e6c5d317efc8752cb2eef7e5052df7fe179965415a105bf7b4"
+        anchor_commit: da5bd2811dee2708d0d3ca8105baff5893f2b618
       - kind: unit_test
         command: "bun run vitest run tests\\skill-assignment.test.ts tests\\skill-recommend.test.ts tests\\asset-catalog.test.ts tests\\skill-scaffold.test.ts tests\\agent-guard.test.ts tests\\setup.test.ts tests\\distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -98,6 +100,7 @@ review_evidence:
         completed_at: "2026-06-30T18:00:00+09:00"
         evidence_path: tests/agent-guard.test.ts
         output_digest: "sha256:d63d4b93fa5ff137ea1dd3b44177af15915c7274fa4d84d2b2b2fc99c0d71f7c"
+        anchor_commit: 4b1c64e74b38dc8b6a2e6d56ca52b36d258365a2
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -106,6 +109,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/skill-engine/scaffold.ts
         output_digest: "sha256:55b7a910e8fa5d3c5251edfc2d18479f0439cfca1162b5b58ccac7825f6d034c"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
       - kind: unit_test
         command: "bun run vitest run tests\\skill-assignment.test.ts tests\\skill-recommend.test.ts tests\\asset-catalog.test.ts tests\\skill-scaffold.test.ts --reporter=dot"
         runner: bun
@@ -114,6 +118,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: docs/design/harness/L6-function-design/skill-index.md
         output_digest: "sha256:99f20045a262862f3f9756694cbe755819af9334668a6afe0cf2e9b43d10e18f"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -122,6 +127,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -130,6 +136,7 @@ review_evidence:
         completed_at: "2026-06-30T18:00:00+09:00"
         evidence_path: src/skill-engine/recommend.ts
         output_digest: "sha256:bc70b172a9dfd750ae950eb5fb573479a8cc9932e422ae915d46662d96d5e961"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
 ---
 
 # PLAN-L7-211: Skill index category and scaffolder materialization

@@ -63,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
+        anchor_commit: 3f9adfea88616ba33fe8ff23aebc730c4b0c9cb3
       - kind: unit_test
         command: "bun run vitest run tests\\tier-router.test.ts tests\\model-id-ssot.test.ts tests\\agent-guard.test.ts tests\\projection-writer.test.ts"
         runner: bun
@@ -71,6 +72,7 @@ review_evidence:
         completed_at: "2026-06-25T16:48:56+09:00"
         evidence_path: tests/tier-router.test.ts
         output_digest: "sha256:8c4f57122634806872c53d35f865fc5bf0219653ab04348ba84aee014aa27ed4"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -79,6 +81,7 @@ review_evidence:
         completed_at: "2026-06-25T16:47:13+09:00"
         evidence_path: src/state-db/refactor-candidates.ts
         output_digest: "sha256:0e270c1572d46850fe94dd43359a38c04b75ecc7b23a62cf8bf983f74c8f601a"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: unit_test
         command: "bun run vitest run tests\\relation-graph-loader.test.ts"
         runner: bun
@@ -87,6 +90,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/relation-graph-loader.test.ts
         output_digest: "sha256:e42d9d2be60e6b383cc51c291009e3e8104f2c60db8dca17737be0cfb3eb34d6"
+        anchor_commit: fe54ac5e76e5785f8dd74de02528c1bff367c880
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -95,6 +99,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/graph/loader.ts
         output_digest: "sha256:7a231cb642507d46f961e0b38fbbd6807c908a3305831a79f235adcbe3152902"
+        anchor_commit: fe54ac5e76e5785f8dd74de02528c1bff367c880
       - kind: smoke
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
@@ -103,6 +108,7 @@ review_evidence:
         completed_at: "2026-06-25T16:50:09+09:00"
         evidence_path: docs/process/modes/refactor.md
         output_digest: "sha256:915ec6686156b8ed12e57a18b666105a488bc3ae85c31e1d89db2c1336ac94b4"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: doctor
         command: "bun run src\\cli.ts doctor"
         runner: bun
@@ -111,6 +117,7 @@ review_evidence:
         completed_at: "2026-06-25T16:51:00+09:00"
         evidence_path: docs/process/modes/refactor.md
         output_digest: "sha256:915ec6686156b8ed12e57a18b666105a488bc3ae85c31e1d89db2c1336ac94b4"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
 ---
 
 # PLAN-L7-151: refactor scout agent and policy externalization detector

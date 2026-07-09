@@ -41,6 +41,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:f2a4f438552f76da5592e2002a92e5a64b28dc82fe643c08e7c182f61944569f"
+        anchor_commit: d9c34cb768968e42af0d952186f74c72c3ba1d73
       - kind: smoke
         command: "bun run vitest run tests\\setup.test.ts tests\\distribution-acceptance.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -49,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
         output_digest: "sha256:367d0423e4b538c570dddf174113c689360a56dd303a354b6a5e1883036dc6ec"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -57,6 +59,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
         output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -65,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/templates.ts
         output_digest: "sha256:be6c00ee9b0794f02d95717d3bbebe4f869fb1c5c457417cd566cc462aa57e28"
+        anchor_commit: ed2843cc723e261105daa0215758b3aa0a307be2
 generates:
   - artifact_path: docs/plans/PLAN-L7-190-distribution-runtime-asset-projection.md
     artifact_type: markdown_doc

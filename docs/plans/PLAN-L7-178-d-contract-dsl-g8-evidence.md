@@ -53,6 +53,7 @@ review_evidence:
         completed_at: "2026-06-29T12:09:30+09:00"
         evidence_path: tests/workflow-contracts.test.ts
         output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
+        anchor_commit: b386be1d616da4b0362de575f564aa16f47a69d0
 ---
 
 # PLAN-L7-178: D-CONTRACT DSL G8 evidence closure

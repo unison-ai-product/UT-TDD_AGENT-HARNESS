@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T20:12:00+09:00"
         evidence_path: src/state-db/spec-ir-projections.ts
         output_digest: "sha256:dba4fb880bd0a5ae88f4c30aab17066959a2aaf80b381cb54605592627dd9fea"
+        anchor_commit: 9b29af3b955538560ca2e006c365a01603f54f2d
       - kind: unit_test
         command: "bun run vitest run tests/state-db.test.ts tests/projection-writer.test.ts tests/db-projection-ingestion.test.ts"
         runner: bun
@@ -39,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-08T20:14:00+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:fb28667439a6f367908536433a0f8c2b1d7299c8bbcdc6a882f6d8183da3009e"
+        anchor_commit: 9b29af3b955538560ca2e006c365a01603f54f2d
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -47,6 +49,7 @@ review_evidence:
         completed_at: "2026-07-08T20:15:00+09:00"
         evidence_path: src/lint/db-projection-ingestion.ts
         output_digest: "sha256:026bd8f373f7735fcaf9418f4d51f0c0af8b7c8de72b6eb70ee10d1edfe4e156"
+        anchor_commit: 9b29af3b955538560ca2e006c365a01603f54f2d
 agent_slots:
   - role: tl
     slot_label: "TL - カタログ/プロファイル SSoT の契約設計、既存 document-system-map との重複整理"

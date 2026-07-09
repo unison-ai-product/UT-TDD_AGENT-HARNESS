@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-02T17:24:52+09:00"
         evidence_path: tests/github-ci-policy.test.ts
         output_digest: "sha256:0332877c3f8c18805f85ef421f33fd97fb6ff20ad3d60a6c690b8899b6df82fd"
+        anchor_commit: f6ce28de6fd35facc1ad8c897cf8c3f093384802
 ---
 
 # PLAN-L7-268: GitHub CI profile table

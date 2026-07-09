@@ -66,6 +66,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:f2a4f438552f76da5592e2002a92e5a64b28dc82fe643c08e7c182f61944569f"
+        anchor_commit: d9c34cb768968e42af0d952186f74c72c3ba1d73
       - kind: unit_test
         command: "bun run vitest run tests/cli-surface.test.ts tests/distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -74,6 +75,7 @@ review_evidence:
         completed_at: "2026-06-30T22:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:c6aa218270dcf1a164768508e4bce5818cef05b59fa102a3846a08492e83de55"
+        anchor_commit: 47355c568e05e8f9759bbdca05e1b42618143b1a
       - kind: unit_test
         command: "bun run vitest run tests/runtime-portability.test.ts"
         runner: bun
@@ -82,6 +84,7 @@ review_evidence:
         completed_at: "2026-06-26T11:42:00+09:00"
         evidence_path: tests/runtime-portability.test.ts
         output_digest: "sha256:5792d29d443c60c5eb2fe686ed411d3c988bcda25e7d898cf93a0a065b70c632"
+        anchor_commit: d216090a8dd462f13d3087a7756c3464737bb7be
       - kind: unit_test
         command: "bun run vitest run tests/work-guard.test.ts"
         runner: bun
@@ -90,6 +93,7 @@ review_evidence:
         completed_at: "2026-06-26T11:43:00+09:00"
         evidence_path: tests/work-guard.test.ts
         output_digest: "sha256:5ff89dd03a0e6ec91733514d7c94ee10a7bf2dbe8b148a24c73d779a0681c35b"
+        anchor_commit: 69b1521e2ae6f78e87deed9491859a4688767b79
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -98,6 +102,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -106,6 +111,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
         output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -114,6 +120,7 @@ review_evidence:
         completed_at: "2026-06-26T11:44:20+09:00"
         evidence_path: src/lint/runtime-portability.ts
         output_digest: "sha256:6bfff017db581847b6553b6edf208fd7a0285a420bac96322d7798b4cd12cfe6"
+        anchor_commit: d216090a8dd462f13d3087a7756c3464737bb7be
       - kind: unit_test
         command: "bun run vitest run tests/work-guard.test.ts"
         runner: bun
@@ -122,6 +129,7 @@ review_evidence:
         completed_at: "2026-06-26T11:43:30+09:00"
         evidence_path: .claude/hooks/work-guard.ts
         output_digest: "sha256:5cd75baface268cb4cb817ee1b205a792714447361241a2ae5e6825866fe0b91"
+        anchor_commit: 69b1521e2ae6f78e87deed9491859a4688767b79
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -130,6 +138,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/setup/index.ts
         output_digest: "sha256:8dfc65759231dd77aae3f6acf0e89e28c9148ebfca783032b6b942bb7ee79670"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
 ---
 
 # PLAN-L7-170: external review remediation

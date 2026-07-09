@@ -48,6 +48,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/placeholder-deps.test.ts
         output_digest: "sha256:b98c8add6b5d704559dd8e692b24b152b58fd9c42b61a1fd2e1f788871d9dd1e"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
 ---
 
 # PLAN-L7-175: placeholder threshold G8 evidence closure

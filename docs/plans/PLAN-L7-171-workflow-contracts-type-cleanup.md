@@ -49,6 +49,7 @@ review_evidence:
         completed_at: "2026-06-25T21:39:53+09:00"
         evidence_path: tests/workflow-contracts.test.ts
         output_digest: "sha256:0b0bff7c2fdea2a365d20b26d36478896d707bf891a6caa386b846a5b9375e55"
+        anchor_commit: b386be1d616da4b0362de575f564aa16f47a69d0
       - kind: unit_test
         command: "bun run vitest run tests\\workflow-contracts.test.ts"
         runner: bun
@@ -57,6 +58,7 @@ review_evidence:
         completed_at: "2026-06-25T21:39:53+09:00"
         evidence_path: src/workflow/contracts.ts
         output_digest: "sha256:6caf60cac4a0d40cc4c6a2f46b26f92f2e6707958f3462c0c643b21ad1af7fd8"
+        anchor_commit: bec03cb94f1f182be4021e453d20486af6fa67cc
       - kind: unit_test
         command: "bun run vitest run tests\\workflow-contracts.test.ts"
         runner: bun
@@ -65,6 +67,7 @@ review_evidence:
         completed_at: "2026-06-25T21:39:53+09:00"
         evidence_path: src/workflow/contracts-types.ts
         output_digest: "sha256:2b8dcac19d45cd742cd7f996537c26ea0fb24273762405963b2d8e66e25417da"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: unit_test
         command: "bun run vitest run tests\\workflow-contracts.test.ts"
         runner: bun
@@ -73,6 +76,7 @@ review_evidence:
         completed_at: "2026-06-25T21:39:53+09:00"
         evidence_path: src/workflow/contracts-extras.ts
         output_digest: "sha256:879610fc9bf5ec87218f823b8741dd4a861dcddf0cc78d74ebe0051d99ebd569"
+        anchor_commit: e613f64b1890d15a1fd788637e78c956fab9d362
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -81,6 +85,7 @@ review_evidence:
         completed_at: "2026-06-25T21:40:04+09:00"
         evidence_path: src/workflow/contracts.ts
         output_digest: "sha256:6caf60cac4a0d40cc4c6a2f46b26f92f2e6707958f3462c0c643b21ad1af7fd8"
+        anchor_commit: bec03cb94f1f182be4021e453d20486af6fa67cc
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -89,6 +94,7 @@ review_evidence:
         completed_at: "2026-06-25T21:39:59+09:00"
         evidence_path: src/workflow/contracts-extras.ts
         output_digest: "sha256:879610fc9bf5ec87218f823b8741dd4a861dcddf0cc78d74ebe0051d99ebd569"
+        anchor_commit: e613f64b1890d15a1fd788637e78c956fab9d362
 ---
 
 # PLAN-L7-171: workflow contracts type cleanup

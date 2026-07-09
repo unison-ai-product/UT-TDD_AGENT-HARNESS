@@ -55,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-02T17:30:00+09:00"
         evidence_path: src/doctor/result.ts
         output_digest: "sha256:8ba6aacd7e18b99ac940b481c3936f32cc5901a86fdc16c02ee13ad910fbadae"
+        anchor_commit: a9df10984c06381faefe15113d36ed4708c5c4a4
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts tests\\cli-surface.test.ts --reporter=dot"
         runner: bun
@@ -63,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-02T17:30:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:67b623e7e28c197db3ded2e2c949995438c1516af2e1c1e8b397161f1dea574b"
+        anchor_commit: a9df10984c06381faefe15113d36ed4708c5c4a4
 ---
 
 # PLAN-L7-246: Doctor result aggregation extraction

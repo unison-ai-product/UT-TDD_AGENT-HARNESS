@@ -56,6 +56,7 @@ review_evidence:
         completed_at: "2026-07-02T19:48:47+09:00"
         evidence_path: tests/plan-lint.test.ts
         output_digest: "sha256:d40da6715e120d3a2ab1392b9f86396950aaa54c807d2869dc30336d191d89f5"
+        anchor_commit: cee1615f89e473c1dbcd3365c1d4d72c50045156
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -64,6 +65,7 @@ review_evidence:
         completed_at: "2026-07-02T19:48:47+09:00"
         evidence_path: src/plan/lint.ts
         output_digest: "sha256:e3603e7eb4eb142cd34c564f1d7721955f0328a637e0732b29484ce3069215f9"
+        anchor_commit: cee1615f89e473c1dbcd3365c1d4d72c50045156
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -72,6 +74,7 @@ review_evidence:
         completed_at: "2026-07-02T19:48:47+09:00"
         evidence_path: src/plan/lint-policy.ts
         output_digest: "sha256:c16ea403b4042990e07558d56a6f1ffdc27854acc0b4217cfa7a089a4f8ee786"
+        anchor_commit: cee1615f89e473c1dbcd3365c1d4d72c50045156
   - reviewer: codex-cli
     review_kind: cross_agent
     reviewed_at: "2026-07-02T22:52:00+09:00"
@@ -89,6 +92,7 @@ review_evidence:
         completed_at: "2026-07-02T19:48:47+09:00"
         evidence_path: tests/plan-lint.test.ts
         output_digest: "sha256:d40da6715e120d3a2ab1392b9f86396950aaa54c807d2869dc30336d191d89f5"
+        anchor_commit: cee1615f89e473c1dbcd3365c1d4d72c50045156
 ---
 
 # PLAN-L7-263: route_mode-kind consistency lint

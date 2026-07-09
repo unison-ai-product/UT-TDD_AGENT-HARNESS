@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-06-25T12:48:00+09:00"
         evidence_path: tests/design-elicitation.test.ts
         output_digest: "sha256:5daff4dcbff64a52fa22ccc89ebf42e060eb494726fb2e4889801311dca407e7"
+        anchor_commit: 1011d497dfca6ee964577b834f1b7a4654bd9c08
       - kind: unit_test
         command: "bunx vitest run tests/design-elicitation.test.ts (engine 本体 elicit/detectGaps/compose/runDesignBottomup 実挙動)"
         runner: bun
@@ -58,6 +59,7 @@ review_evidence:
         completed_at: "2026-06-25T12:48:00+09:00"
         evidence_path: src/workflow/design-elicitation.ts
         output_digest: "sha256:cdd1a991273e21469cca5b78e1b42f85967f3ce8b280cfdd2face6d9a39ce0df"
+        anchor_commit: 1011d497dfca6ee964577b834f1b7a4654bd9c08
 ---
 
 # PLAN-DISCOVERY-07 (kind=poc): design-bottomup 駆動モデル

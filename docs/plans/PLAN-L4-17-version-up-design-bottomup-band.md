@@ -28,6 +28,7 @@ review_evidence:
         completed_at: "2026-07-07T18:36:43+09:00"
         evidence_path: docs/design/harness/L4-basic-design/function.md
         output_digest: "sha256:e8a9e964e364cfb393e853cd56f38b7b285bcb7197ac35cbc27957f15887c6e3"
+        anchor_commit: 7eb9d217a65ac3b0886319c47aa868027e9c9536
       - kind: lint
         command: "bun run src/cli.ts plan lint docs/plans/PLAN-L4-17-version-up-design-bottomup-band.md"
         runner: bun
@@ -36,6 +37,7 @@ review_evidence:
         completed_at: "2026-07-07T18:36:43+09:00"
         evidence_path: docs/test-design/harness/L9-system-test-design.md
         output_digest: "sha256:7889ed4c9419179f2ed3c20d514c849ab162fae5bee8323087b4f6797eaa8419"
+        anchor_commit: 7eb9d217a65ac3b0886319c47aa868027e9c9536
 owner: PM / PO
 parent_design: docs/design/harness/L4-basic-design/function.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

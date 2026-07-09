@@ -63,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-02T16:45:00+09:00"
         evidence_path: tests/doctor-source-trace.test.ts
         output_digest: "sha256:32e1e17798ba858c136cae9e689ee73efe1eb400822687d18425fd53d97b59b3"
+        anchor_commit: 23f20a28c2bd978d837675109308faf3ea4dd57c
 ---
 
 # PLAN-L7-264: doctor source trace adapter extraction

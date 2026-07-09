@@ -53,6 +53,7 @@ review_evidence:
         completed_at: "2026-07-03T16:01:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:e83f87b1968ee5100f5799a84b4b494751f5afa177c21f4803a6bab0702f28fd"
+        anchor_commit: b63d99c73ff90a0cb66462f4b6815ad99dbd8001
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -61,6 +62,7 @@ review_evidence:
         completed_at: "2026-07-03T16:02:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:7b1e3ea3cfbf35c10c626d559c65fbdc5931f3e539e7b8ea1d60eaac45a3debc"
+        anchor_commit: b63d99c73ff90a0cb66462f4b6815ad99dbd8001
       - kind: lint
         command: "bunx biome check src\\cli.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -69,6 +71,7 @@ review_evidence:
         completed_at: "2026-07-03T16:02:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:7b1e3ea3cfbf35c10c626d559c65fbdc5931f3e539e7b8ea1d60eaac45a3debc"
+        anchor_commit: b63d99c73ff90a0cb66462f4b6815ad99dbd8001
 ---
 
 # PLAN-L7-352: guard help exit code contract

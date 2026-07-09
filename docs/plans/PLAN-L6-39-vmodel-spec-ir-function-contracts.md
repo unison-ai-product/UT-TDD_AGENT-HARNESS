@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T12:24:17+09:00"
         evidence_path: docs/design/harness/L6-function-design/function-spec.md
         output_digest: "sha256:602e34e80691b11ec7327fcebfd2dbee0db82edee69a785bab22fb08dba8cedc"
+        anchor_commit: 8a3d8c7417797c010eb4643e00dbffc69c869966
       - kind: doctor
         command: "bun run src/cli.ts doctor"
         runner: bun
@@ -39,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-08T12:24:17+09:00"
         evidence_path: docs/test-design/harness/L7-unit-test-design.md
         output_digest: "sha256:f0f9ad1d3eeaa44a335f975045d4ed07dd23ff5584daab751785cfedaa2c271f"
+        anchor_commit: 8a3d8c7417797c010eb4643e00dbffc69c869966
 agent_slots:
   - role: tl
     slot_label: "TL - spec IR 関数契約 / projection 境界レビュー"

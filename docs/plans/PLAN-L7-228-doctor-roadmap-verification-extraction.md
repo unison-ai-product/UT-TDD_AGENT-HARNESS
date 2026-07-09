@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-02T15:15:00+09:00"
         evidence_path: src/doctor/roadmap-verification.ts
         output_digest: "sha256:4f219dd19a968b673df8fd57dfe789b783239d9bc8a22a32058aadba6b96fd88"
+        anchor_commit: 7076a3e3d964b0470dffa0c60a9e9482f230f2e3
       - kind: unit_test
         command: "bun run vitest run tests\\doctor-roadmap-verification.test.ts --reporter=dot"
         runner: bun
@@ -62,6 +63,7 @@ review_evidence:
         completed_at: "2026-07-02T15:15:00+09:00"
         evidence_path: tests/doctor-roadmap-verification.test.ts
         output_digest: "sha256:a616deb83f2f11b16ddef78e1e35c72df9a10188cf5424e10afeb19a7399243e"
+        anchor_commit: 7076a3e3d964b0470dffa0c60a9e9482f230f2e3
 ---
 
 # PLAN-L7-228: Doctor roadmap verification extraction

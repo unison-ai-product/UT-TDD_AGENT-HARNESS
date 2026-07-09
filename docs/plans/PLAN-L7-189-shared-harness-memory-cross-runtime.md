@@ -69,6 +69,7 @@ review_evidence:
         completed_at: "2026-07-01T18:30:16+09:00"
         evidence_path: src/memory/index.ts
         output_digest: "sha256:37d1aa074805b1dda71c31f761759ae5e99784ea4d4e4fb85622cfe68397e5e5"
+        anchor_commit: b3904eca7a50e185da4aeb1fa4177f0b3b64e271
       - kind: unit_test
         command: "bun run vitest run tests\\memory.test.ts tests\\dependency-drift.test.ts --reporter=dot"
         runner: bun
@@ -77,6 +78,7 @@ review_evidence:
         completed_at: "2026-07-01T18:30:18+09:00"
         evidence_path: tests/memory.test.ts
         output_digest: "sha256:883c7b171a76cf86ef01d2f7a91b6245e39a67b43f694bc698aecacb9abfdc16"
+        anchor_commit: b3904eca7a50e185da4aeb1fa4177f0b3b64e271
       - kind: integration_test
         command: "bun run vitest run tests\\projection-writer.test.ts tests\\db-projection-coverage.test.ts tests\\db-projection-ingestion.test.ts --reporter=dot"
         runner: bun
@@ -85,6 +87,7 @@ review_evidence:
         completed_at: "2026-07-01T18:22:58+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:76825939ad6fd3e16a3c4225beada88354d62666a8deade364be07280e0c3320"
+        anchor_commit: 3f9adfea88616ba33fe8ff23aebc730c4b0c9cb3
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -93,6 +96,7 @@ review_evidence:
         completed_at: "2026-07-01T18:30:22+09:00"
         evidence_path: src/schema/harness-db.ts
         output_digest: "sha256:bc3266345c2c1ff13a8e248912bbc4bd86a5bf845c2eda7330e6d65ac3010841"
+        anchor_commit: b3904eca7a50e185da4aeb1fa4177f0b3b64e271
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -101,6 +105,7 @@ review_evidence:
         completed_at: "2026-07-01T18:30:23+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
       - kind: smoke
         command: "bun src\\cli.ts db rebuild"
         runner: bun
@@ -109,6 +114,7 @@ review_evidence:
         completed_at: "2026-07-01T18:32:00+09:00"
         evidence_path: docs/design/harness/L4-basic-design/architecture.md
         output_digest: "sha256:33ab09f8da631e3a58ef5fea44cb44d3b27bee5a7f3f4c8c9d418c6c5c6fb7eb"
+        anchor_commit: b3904eca7a50e185da4aeb1fa4177f0b3b64e271
       - kind: doctor
         command: "bun src\\cli.ts doctor"
         runner: bun
@@ -117,6 +123,7 @@ review_evidence:
         completed_at: "2026-07-01T18:33:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
 ---
 
 # PLAN-L7-189 (impl): HARNESS 共有 memory

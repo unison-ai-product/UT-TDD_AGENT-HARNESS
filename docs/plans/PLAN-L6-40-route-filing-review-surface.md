@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T13:44:30+09:00"
         evidence_path: tests/workflow-contracts.test.ts
         output_digest: "sha256:18b8a03dec8b3450f53649e6dd11cff438ad40b26cf94f9bc78feb131afc14f6"
+        anchor_commit: 164de056ecced57754d460a9c7bec8aed715b4bb
 agent_slots:
   - role: tl
     slot_label: "TL - routeFiling review surface design"

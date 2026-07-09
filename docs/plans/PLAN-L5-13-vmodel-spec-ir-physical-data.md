@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T13:20:00+09:00"
         evidence_path: docs/design/harness/L5-detailed-design/physical-data.md
         output_digest: "sha256:4bcf8ac9a89c167fe6d7ff599c533d4f92ee1b64b7b1e67c4873cc4b8735525d"
+        anchor_commit: 566215b65620e3b3cb9630061e304ebc30a49975
       - kind: doctor
         command: "bun run src/cli.ts doctor"
         runner: bun
@@ -39,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-08T13:20:00+09:00"
         evidence_path: docs/test-design/harness/L8-integration-test-design.md
         output_digest: "sha256:01ff53d2e864819a0b456149dd79e43f33ec9207d7ec6fe34cfec5d1b9572910"
+        anchor_commit: 566215b65620e3b3cb9630061e304ebc30a49975
 agent_slots:
   - role: tl
     slot_label: "TL - spec IR 物理 table / projection 境界レビュー"

@@ -47,6 +47,7 @@ review_evidence:
         completed_at: "2026-07-03T12:16:17+09:00"
         evidence_path: src/doctor/plan-governance.ts
         output_digest: "sha256:ab1cae6dc63d91d8ff15914e12449174fe25bb887b70256dba0195fb80c0410a"
+        anchor_commit: 6bc6bdd9c6822c7691c64e56420f471210107d4f
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts -t \"reference freshness|hard gates wired|plan gate re-exports\" --reporter=dot"
         runner: bun
@@ -55,6 +56,7 @@ review_evidence:
         completed_at: "2026-07-03T12:17:20+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:66b8255338e60f9489923cd6a8ea1e53248d88e44e63607784dc3cecd8ca1956"
+        anchor_commit: 6bc6bdd9c6822c7691c64e56420f471210107d4f
       - kind: unit_test
         command: "bun run test:pack"
         runner: bun
@@ -63,6 +65,7 @@ review_evidence:
         completed_at: "2026-07-03T12:19:37+09:00"
         evidence_path: tests/readability.test.ts
         output_digest: "sha256:ad6468a3bb93493c37fc6fa194e3384b844c131a6b30a62bd9042f7ad8213228"
+        anchor_commit: c18872c85c31a3a316cdcc0290cf55348f11b69d
 ---
 
 # PLAN-L7-318: doctor PLAN gate wrapper extraction

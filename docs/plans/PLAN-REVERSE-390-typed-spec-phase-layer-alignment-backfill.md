@@ -34,6 +34,7 @@ review_evidence:
         completed_at: "2026-07-08T16:35:00+09:00"
         evidence_path: docs/governance/vmodel-upgrade-schedule.md
         output_digest: "sha256:38d72b7ca812183dc8a7acacbfd3b5784d86c405cc045cf8eb017a3ae8334cba"
+        anchor_commit: 33f03923a561495acd0ff9f43b9e2f8af718335e
 backprop_scope:
   - layer: L4-basic-design
     artifact_path: docs/design/harness/L4-basic-design/data.md

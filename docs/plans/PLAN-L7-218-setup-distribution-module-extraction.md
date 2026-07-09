@@ -56,6 +56,7 @@ review_evidence:
         completed_at: "2026-07-02T11:50:00+09:00"
         evidence_path: src/setup/distribution.ts
         output_digest: "sha256:dafe60b49ffd3b6e1503ed1d7d15826329f52ccfa87dee09bf052a0b1bab286c"
+        anchor_commit: 952e839eb705e838cc5c0be9c6eb712cc604ba8e
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts tests\\distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -64,6 +65,7 @@ review_evidence:
         completed_at: "2026-07-02T11:51:00+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:d2bb6e7b7b4856c3277b73caf3fea1e95f9cce0582da8538977239080ca76f2f"
+        anchor_commit: 952e839eb705e838cc5c0be9c6eb712cc604ba8e
       - kind: integration_test
         command: "bun run vitest run tests\\setup.test.ts tests\\distribution-acceptance.test.ts --reporter=dot"
         runner: bun
@@ -72,6 +74,7 @@ review_evidence:
         completed_at: "2026-07-02T11:51:00+09:00"
         evidence_path: tests/distribution-acceptance.test.ts
         output_digest: "sha256:367d0423e4b538c570dddf174113c689360a56dd303a354b6a5e1883036dc6ec"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
 ---
 
 # PLAN-L7-218: setup distribution module extraction

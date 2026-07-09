@@ -45,6 +45,7 @@ review_evidence:
         completed_at: "2026-06-25T17:34:20+09:00"
         evidence_path: tests/task-classify.test.ts
         output_digest: "sha256:4354ec1766680c77a56569eb7c6fbfafdff3b568beafed6092c3da2a8375b075"
+        anchor_commit: 80dc4c8e4e61b0a8d2c8e6de0e2ccb70a5fa57fe
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -53,6 +54,7 @@ review_evidence:
         completed_at: "2026-06-25T17:34:18+09:00"
         evidence_path: src/task/proposal-research-data.ts
         output_digest: "sha256:c028b8e6d44f65a79159a3741073753bdb1f33774976f2fcee39179e89b1ffbe"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -61,6 +63,7 @@ review_evidence:
         completed_at: "2026-06-25T17:34:21+09:00"
         evidence_path: src/task/proposal-research-data.ts
         output_digest: "sha256:c028b8e6d44f65a79159a3741073753bdb1f33774976f2fcee39179e89b1ffbe"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
 ---
 
 # PLAN-L7-155: proposal research source constants

@@ -39,6 +39,7 @@ review_evidence:
         completed_at: 2026-07-09T14:39:36+09:00
         evidence_path: src/lint/secret-scan.ts
         output_digest: "sha256:32714975273040a2215bb85f166194a44f8c463711ac551efbc908f5e82e019f"
+        anchor_commit: d86aff1dbf8e4cc6a2631de979eb121bbdb5cc0a
 agent_slots:
   - role: tl
     slot_label: "TL - docs 横断 secret-scan ゲートの契約設計、既存 secret.ts (narrow guard) との境界確認"

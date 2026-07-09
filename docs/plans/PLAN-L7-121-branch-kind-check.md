@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/branch-kind.test.ts
         output_digest: "sha256:4e6024b234c5be7f573f909f3647255982c4a2af59339e8c35d42e53f5b4537a"
+        anchor_commit: da9049e6d1ad0dd1c8d7a7332ead45339e4c9dc9
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -58,6 +59,7 @@ review_evidence:
         completed_at: "2026-06-23T13:45:00+09:00"
         evidence_path: tsconfig.json
         output_digest: "sha256:290e679c492d7c229373061b313ab332394da783b08c9eff85bbb81275f96afc"
+        anchor_commit: f31464607d02776d9d6e01a64da0889b65eac0d9
       - kind: lint
         command: "bunx biome check src\\lint\\branch-kind.ts src\\doctor\\index.ts tests\\branch-kind.test.ts tests\\doctor.test.ts"
         runner: bun
@@ -66,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/lint/branch-kind.ts
         output_digest: "sha256:7ac54d3a1383784cb3d735bd8d2727833703c28138b0f77f99958b84d6805bef"
+        anchor_commit: da9049e6d1ad0dd1c8d7a7332ead45339e4c9dc9
 ---
 
 # PLAN-L7-121: branch-kind check doctor gate

@@ -55,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-02T16:35:00+09:00"
         evidence_path: src/github/ops-guard.ts
         output_digest: "sha256:6855182069de14c967aa43cf353dfdd9951debd624d43fc828439ae96a06ff4a"
+        anchor_commit: 8bd70318d38ac87ab65e40a04dfa7bd289bef0dd
       - kind: unit_test
         command: "bun run vitest run tests\\github-ops-guard.test.ts tests\\github-ci-policy.test.ts --reporter=dot"
         runner: bun
@@ -63,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-02T16:35:00+09:00"
         evidence_path: tests/github-ops-guard.test.ts
         output_digest: "sha256:04c6b1c61cc55f8657dbd00efeae94d7991310064479097fa771cf73be2e6c7f"
+        anchor_commit: 8bd70318d38ac87ab65e40a04dfa7bd289bef0dd
 ---
 
 # PLAN-L7-258: GitHub branch ref normalization

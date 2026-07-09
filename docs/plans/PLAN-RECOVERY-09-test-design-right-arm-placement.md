@@ -27,6 +27,7 @@ review_evidence:
         completed_at: "2026-07-07T17:09:35+09:00"
         evidence_path: src/lint/test-design-naming.ts
         output_digest: "sha256:ca39e5d7a6f84d923c1e0db914180a6f9b45656619c2485345c48b557920bd96"
+        anchor_commit: 16c77eb447baaf6b2b2cf26b47e8e02e5609750e
       - kind: unit_test
         command: "bun run vitest run tests/test-design-naming.test.ts"
         runner: bun
@@ -35,6 +36,7 @@ review_evidence:
         completed_at: "2026-07-07T17:09:35+09:00"
         evidence_path: tests/test-design-naming.test.ts
         output_digest: "sha256:2d9442ae228fdc82c0797fa42a7aa8406895de439cf63b95886aad27b426aeec"
+        anchor_commit: 16c77eb447baaf6b2b2cf26b47e8e02e5609750e
       - kind: vmodel_lint
         command: "bun run vitest run tests/vmodel-pair.test.ts tests/g10-ux-workflow.test.ts tests/gate-static.test.ts"
         runner: bun
@@ -43,6 +45,7 @@ review_evidence:
         completed_at: "2026-07-07T17:09:35+09:00"
         evidence_path: docs/test-design/harness/L10-ux-validation-test-design.md
         output_digest: "sha256:e862241b25b4da0fcf02766f6fc83769677145f85190f1daa116955930ea892d"
+        anchor_commit: ae3c3d24d9cba213330e7a0f00ffc60538cc2de0
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T20:58:00+09:00"
         evidence_path: src/state-db/spec-ir-projections.ts
         output_digest: "sha256:4212d085117f7a64114ab4c15a0e866816b11ceb9a33cbcf6843482ae4a17692"
+        anchor_commit: 88cc76ebcea955a88184a136a9d53243bd67ddbd
       - kind: unit_test
         command: "bun run vitest run tests\\state-db.test.ts tests\\spec-ir-projections.test.ts tests\\projection-writer.test.ts tests\\db-projection-ingestion.test.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -39,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-08T20:57:00+09:00"
         evidence_path: tests/spec-ir-projections.test.ts
         output_digest: "sha256:36b6611d87aab44a3624ef2fdcc1c8d21f97b0fd79ffa94f93fa3a62819cb99d"
+        anchor_commit: 88cc76ebcea955a88184a136a9d53243bd67ddbd
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -47,6 +49,7 @@ review_evidence:
         completed_at: "2026-07-08T20:58:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:2a804ffa8fe137b716e5e9f5f750159f67c04b627efb354e980c4b5c5d68fb55"
+        anchor_commit: 88cc76ebcea955a88184a136a9d53243bd67ddbd
       - kind: integration_test
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
@@ -55,6 +58,7 @@ review_evidence:
         completed_at: "2026-07-08T20:58:00+09:00"
         evidence_path: docs/design/harness/L5-detailed-design/physical-data.md
         output_digest: "sha256:9586f96e0a2d9ead4bad383e7cb79474af94235eef062d234e8f02cd12cd3f82"
+        anchor_commit: 88cc76ebcea955a88184a136a9d53243bd67ddbd
       - kind: smoke
         command: "bun run src\\cli.ts trace rag --id VMS-004 --json"
         runner: bun
@@ -63,6 +67,7 @@ review_evidence:
         completed_at: "2026-07-08T20:58:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:2a804ffa8fe137b716e5e9f5f750159f67c04b627efb354e980c4b5c5d68fb55"
+        anchor_commit: 88cc76ebcea955a88184a136a9d53243bd67ddbd
 agent_slots:
   - role: tl
     slot_label: "TL - spec RAG 閉包台帳の設計、PLAN-L6-43/60 との責務分離、DB read-model 化"

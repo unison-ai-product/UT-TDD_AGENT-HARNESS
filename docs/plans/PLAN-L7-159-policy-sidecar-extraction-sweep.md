@@ -59,6 +59,7 @@ review_evidence:
         completed_at: "2026-06-25T19:04:17+09:00"
         evidence_path: tests/gate-review-tier.test.ts
         output_digest: "sha256:dcf1847da140deed0001426cc67711b82306528b12b10c5f5a7a76a30ae5fc06"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: unit_test
         command: "bun run vitest run tests\\gate-review-tier.test.ts tests\\codex-hook-adapter.test.ts tests\\proposal-document-coverage.test.ts"
         runner: bun
@@ -67,6 +68,7 @@ review_evidence:
         completed_at: "2026-06-25T19:04:17+09:00"
         evidence_path: tests/codex-hook-adapter.test.ts
         output_digest: "sha256:cac7af4022bdcc150395b3ab2ed6295d167485c3508f99224f817bb5ca3c128d"
+        anchor_commit: 442e279bbf31626689d57c2f2f5a89f1dad52241
       - kind: unit_test
         command: "bun run vitest run tests\\gate-review-tier.test.ts tests\\codex-hook-adapter.test.ts tests\\proposal-document-coverage.test.ts"
         runner: bun
@@ -75,6 +77,7 @@ review_evidence:
         completed_at: "2026-06-25T19:04:17+09:00"
         evidence_path: tests/proposal-document-coverage.test.ts
         output_digest: "sha256:b83eb982966a0e6fa019a4fd2bf59e2284cec83a168268f5c845e34243fb8fb1"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -83,6 +86,7 @@ review_evidence:
         completed_at: "2026-06-25T19:04:52+09:00"
         evidence_path: src/gate/review-tier.ts
         output_digest: "sha256:12d3c3b2f7c44765b760db084030bb98939e1fa399dc89f0870f74009e37c666"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -91,6 +95,7 @@ review_evidence:
         completed_at: "2026-06-25T19:04:43+09:00"
         evidence_path: src/lint/proposal-document-coverage.ts
         output_digest: "sha256:ce9e78e072731ca2f3da364e0cfb1584e887ef205f7b14c319c6a79502cba4ee"
+        anchor_commit: 6df9a823a9de546e394f5224c80eb740d73a7993
 ---
 
 # PLAN-L7-159: policy sidecar extraction sweep

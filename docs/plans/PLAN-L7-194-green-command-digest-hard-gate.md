@@ -56,6 +56,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -64,6 +65,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -72,6 +74,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:4e1c724cd4cd04d3f9ad5efacfe4b7f12ad8a480448127d5ed9b2e7e0e5ddfc2"
+        anchor_commit: 5b819e80d5e1f34136847bebbb836477d8c5a6a4
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-01T16:17:00+09:00"
@@ -89,6 +92,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -97,6 +101,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
 ---
 
 # PLAN-L7-194 (impl): green-command-digest を hard gate へ昇格

@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/dependency-drift.test.ts
         output_digest: "sha256:c17e61c86a61d36ec5556b8ae43aef32249ca6d36998edc5813f300d9833c58b"
+        anchor_commit: e468ece632d7fd29c4dd3dbef301c2b38e847082
 ---
 
 # PLAN-L7-173: roster boundary G8 evidence closure

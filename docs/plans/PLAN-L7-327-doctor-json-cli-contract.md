@@ -49,6 +49,7 @@ review_evidence:
         completed_at: "2026-07-03T15:29:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:381ef19ae65073605cd47063ccf5abb8206205cb721b771f8f55e0751dbf778d"
+        anchor_commit: 7a039b0f60cfd5e662e72b280e39cbf995db765f
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -57,6 +58,7 @@ review_evidence:
         completed_at: "2026-07-03T15:06:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:f71b8c011ee515f7b52dc0fdb6c2eacfd1ebb27d84c16be547e2c937c923bfed"
+        anchor_commit: 7a039b0f60cfd5e662e72b280e39cbf995db765f
       - kind: lint
         command: "bunx biome check src\\cli.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -65,6 +67,7 @@ review_evidence:
         completed_at: "2026-07-03T15:06:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:f71b8c011ee515f7b52dc0fdb6c2eacfd1ebb27d84c16be547e2c937c923bfed"
+        anchor_commit: 7a039b0f60cfd5e662e72b280e39cbf995db765f
 ---
 
 # PLAN-L7-327: doctor --json CLI contract

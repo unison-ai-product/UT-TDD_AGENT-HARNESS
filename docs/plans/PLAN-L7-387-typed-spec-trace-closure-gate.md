@@ -30,6 +30,7 @@ review_evidence:
         completed_at: "2026-07-08T14:46:58+09:00"
         evidence_path: src/state-db/spec-ir-projections.ts
         output_digest: "sha256:b947c97086f4243f9a966331c072e8c2bf0ab156fcdf70f589611aa1e73b1f96"
+        anchor_commit: 455e60b102e308a4a78af206bb0e48b44d91cf5c
       - kind: unit_test
         command: "bun run vitest run tests/spec-ir-projections.test.ts tests/doctor.test.ts"
         runner: bun
@@ -38,6 +39,7 @@ review_evidence:
         completed_at: "2026-07-08T14:46:58+09:00"
         evidence_path: tests/spec-ir-projections.test.ts
         output_digest: "sha256:f9b3d529d1717a45abc913a8a881867a812ebf140f356e5a005b5036d222dc86"
+        anchor_commit: 455e60b102e308a4a78af206bb0e48b44d91cf5c
 agent_slots:
   - role: tl
     slot_label: "TL - typed spec trace closure gate"

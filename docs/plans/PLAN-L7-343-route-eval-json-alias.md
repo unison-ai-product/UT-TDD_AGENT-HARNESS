@@ -49,6 +49,7 @@ review_evidence:
         completed_at: "2026-07-03T15:35:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:453e817e14e8e3f0225aa5c5f1d3ccbe5706e84e4eb6aabc17351c8267506cf2"
+        anchor_commit: 2a41cb14c966fdc68627695d95fb32b5df4b2575
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -57,6 +58,7 @@ review_evidence:
         completed_at: "2026-07-03T15:36:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:e03ad0f2498ee56131b3e23ca61965277c2f147118d6ca8453e13838ded3133b"
+        anchor_commit: 2a41cb14c966fdc68627695d95fb32b5df4b2575
       - kind: lint
         command: "bunx biome check src\\cli.ts tests\\cli-surface.test.ts"
         runner: bun
@@ -65,6 +67,7 @@ review_evidence:
         completed_at: "2026-07-03T15:36:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:e03ad0f2498ee56131b3e23ca61965277c2f147118d6ca8453e13838ded3133b"
+        anchor_commit: 2a41cb14c966fdc68627695d95fb32b5df4b2575
 ---
 
 # PLAN-L7-343: route eval --json alias

@@ -52,6 +52,7 @@ review_evidence:
         completed_at: "2026-06-24T12:17:00+09:00"
         evidence_path: src/runtime/work-guard.ts
         output_digest: "sha256:ad589a73486d347838c5b913d7746df7b8037a50c2e97baa29790b2c22b8c81b"
+        anchor_commit: 562d9eaffd2aa2f46edc6c24b61570665aa26b65
       - kind: unit_test
         command: "bun run vitest run tests/work-guard.test.ts"
         runner: bun
@@ -60,6 +61,7 @@ review_evidence:
         completed_at: "2026-06-24T12:17:00+09:00"
         evidence_path: tests/work-guard.test.ts
         output_digest: "sha256:5ff89dd03a0e6ec91733514d7c94ee10a7bf2dbe8b148a24c73d779a0681c35b"
+        anchor_commit: 69b1521e2ae6f78e87deed9491859a4688767b79
       - kind: unit_test
         command: "bun run vitest run tests/codex-hook-adapter.test.ts"
         runner: bun
@@ -68,6 +70,7 @@ review_evidence:
         completed_at: "2026-06-24T12:17:00+09:00"
         evidence_path: tests/codex-hook-adapter.test.ts
         output_digest: "sha256:cac7af4022bdcc150395b3ab2ed6295d167485c3508f99224f817bb5ca3c128d"
+        anchor_commit: 442e279bbf31626689d57c2f2f5a89f1dad52241
 ---
 
 # PLAN-L7-139: Codex hook adapter (orchestrator-rule parity)

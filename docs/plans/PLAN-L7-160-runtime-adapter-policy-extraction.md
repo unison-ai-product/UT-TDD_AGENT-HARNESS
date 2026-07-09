@@ -51,6 +51,7 @@ review_evidence:
         completed_at: "2026-06-25T19:16:59+09:00"
         evidence_path: tests/runtime-adapter.test.ts
         output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
+        anchor_commit: 12f7c9e20d49c6313c1f9be944db853d7d54c2af
       - kind: unit_test
         command: "bun run vitest run tests\\runtime-adapter.test.ts"
         runner: bun
@@ -59,6 +60,7 @@ review_evidence:
         completed_at: "2026-06-25T19:16:59+09:00"
         evidence_path: src/runtime/adapter.ts
         output_digest: "sha256:91e14872daecee813cb26ca822f18b72fd1f4c41534cbdcfd493557a916e2454"
+        anchor_commit: b70262160e9d116f7853513186b29ac5ee347962
       - kind: unit_test
         command: "bun run vitest run tests\\runtime-adapter.test.ts"
         runner: bun
@@ -67,6 +69,7 @@ review_evidence:
         completed_at: "2026-06-25T19:16:59+09:00"
         evidence_path: src/runtime/adapter-policy.ts
         output_digest: "sha256:9b1c0ab2c23a5efdb88f1cd2522b2c150817fb203c034cf30d4bd561f11e20a5"
+        anchor_commit: 13787b6fbead07efd43b5f9a274420c98f3e9ace
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts -t \"U-ADAPTER-009\""
         runner: bun
@@ -75,6 +78,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts -t \"U-ADAPTER-009\""
         runner: bun
@@ -83,6 +87,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -91,6 +96,7 @@ review_evidence:
         completed_at: "2026-06-25T19:32:10+09:00"
         evidence_path: src/runtime/adapter.ts
         output_digest: "sha256:91e14872daecee813cb26ca822f18b72fd1f4c41534cbdcfd493557a916e2454"
+        anchor_commit: b70262160e9d116f7853513186b29ac5ee347962
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -99,6 +105,7 @@ review_evidence:
         completed_at: "2026-06-25T19:32:10+09:00"
         evidence_path: tests/runtime-adapter.test.ts
         output_digest: "sha256:ed8855117f7827e1da70ef4677cd539833169b02e858e56dc96cd922378f62d9"
+        anchor_commit: 12f7c9e20d49c6313c1f9be944db853d7d54c2af
 ---
 
 # PLAN-L7-160: runtime adapter policy extraction

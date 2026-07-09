@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T11:47:11+09:00"
         evidence_path: docs/design/harness/L4-basic-design/function.md
         output_digest: "sha256:bc792f97eed1c441d4d50c6d037a50419d08a57ccf2d4e48ec51f9798206c5d6"
+        anchor_commit: 87d3c546d41d9ede2fa07b7e140debf3a6cbbcf3
       - kind: doctor
         command: "bun run src/cli.ts doctor"
         runner: bun
@@ -39,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-08T11:47:11+09:00"
         evidence_path: docs/test-design/harness/L9-system-test-design.md
         output_digest: "sha256:e75fa687eb155828faf3aee11f3fbf93d2b8ac97fd490596d3799fd1f41d2db3"
+        anchor_commit: 87d3c546d41d9ede2fa07b7e140debf3a6cbbcf3
 agent_slots:
   - role: tl
     slot_label: "TL - 工程表・現在地・filing target の外部設計判断"

@@ -41,6 +41,7 @@ review_evidence:
         completed_at: "2026-07-08T12:44:53+09:00"
         evidence_path: tests/spec-ir-projections.test.ts
         output_digest: "sha256:24716a444f44c35e72207567751efe480f9b8d47dfdf0e931536f340b4a71a6d"
+        anchor_commit: 50cf3a0607dbea807faa2f9e5dac1aa22971ed0c
 ---
 
 # PLAN-REVERSE-381: Vモデル spec IR projection design backfill closure

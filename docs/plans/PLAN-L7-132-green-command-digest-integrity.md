@@ -46,6 +46,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:282deaee2fd3064d743310e503fefbf08c2749d6cd9be8ebc815deed99e3fd31"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -54,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
       - kind: lint
         command: "bun run lint"
         runner: bun
@@ -62,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: src/doctor/index.ts
         output_digest: "sha256:e0d5812770ccc3042a6c484f68dda86f62c63eae3801ff156660065730df97ea"
+        anchor_commit: df6a1383f9c59c4b500f8edf1cf45b7e5abedec3
   - reviewer: code-reviewer (intra_runtime_subagent)
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-06-23"
@@ -79,6 +82,7 @@ review_evidence:
         completed_at: "2026-06-23"
         evidence_path: tests/green-command-digest.test.ts
         output_digest: "sha256:4c10eca9258ffe560b0eb420d9ecac699ad0e7423b519f09cdf6db81e0000018"
+        anchor_commit: 78a5d9a7039f498dad8695d8dd6828832161bcbe
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -87,6 +91,7 @@ review_evidence:
         completed_at: "2026-06-23"
         evidence_path: src/lint/green-command-digest.ts
         output_digest: "sha256:898a7a236a2873fdbd0df6b380331fcd70774334af71abd3bd6fb721d721a7f4"
+        anchor_commit: 78a5d9a7039f498dad8695d8dd6828832161bcbe
 ---
 
 # PLAN-L7-132 (impl): green_command digest 実体検査

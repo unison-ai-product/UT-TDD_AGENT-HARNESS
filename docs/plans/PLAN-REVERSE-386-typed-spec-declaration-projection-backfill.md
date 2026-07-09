@@ -40,6 +40,7 @@ review_evidence:
         completed_at: "2026-07-08T14:28:52+09:00"
         evidence_path: tests/spec-ir-projections.test.ts
         output_digest: "sha256:d1fc968ac593bc02fa08010fb145dc9ad417b6f3c950dd3356775be51681912d"
+        anchor_commit: 0e6a853261a58222b7728dbb2a95c3aea8fd0955
 ---
 
 # PLAN-REVERSE-386: typed spec declaration projection backfill closure

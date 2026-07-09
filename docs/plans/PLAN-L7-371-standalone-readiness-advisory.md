@@ -52,6 +52,7 @@ review_evidence:
         completed_at: "2026-07-07T12:45:00+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:5419475a9fda8949fa4295c90dc7c36a2fe6dc0ad89bb5fc8b268d31c02fb627"
+        anchor_commit: f54f9cacdb2d20c20e32d98081c9d948a494c2e5
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -60,6 +61,7 @@ review_evidence:
         completed_at: "2026-07-07T12:45:00+09:00"
         evidence_path: src/setup/distribution.ts
         output_digest: "sha256:4b34d29f25dc395cd0cb7316422504cd4160ea8d29d5a09926dfe0d49ec7bc0d"
+        anchor_commit: f54f9cacdb2d20c20e32d98081c9d948a494c2e5
 ---
 
 # PLAN-L7-371 (refactor): standalone consumer readiness を advisory 化する

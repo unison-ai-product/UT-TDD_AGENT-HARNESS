@@ -28,6 +28,7 @@ review_evidence:
         completed_at: "2026-07-07T19:11:44+09:00"
         evidence_path: docs/design/harness/L5-detailed-design/internal-processing.md
         output_digest: "sha256:26e8caee84184b0f84e29922ca295de9eb1a46ebaa4ea50eff8b8fa9f49d522a"
+        anchor_commit: 0803c5abfb646743717b3bf03b6996e3384392a8
       - kind: lint
         command: "bun run src/cli.ts plan lint docs/plans/PLAN-L5-12-externalization-by-design.md"
         runner: bun
@@ -36,6 +37,7 @@ review_evidence:
         completed_at: "2026-07-07T19:11:44+09:00"
         evidence_path: docs/test-design/harness/L8-integration-test-design.md
         output_digest: "sha256:871c0c06c4f9c322ae4932df2a47164fdd869e32c7cf533b6dbb883c07f31d14"
+        anchor_commit: 0803c5abfb646743717b3bf03b6996e3384392a8
 owner: PM / PO
 parent_design: docs/design/harness/L5-detailed-design/internal-processing.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md

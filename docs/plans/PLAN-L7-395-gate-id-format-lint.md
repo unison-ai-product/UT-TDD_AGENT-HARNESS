@@ -32,6 +32,7 @@ review_evidence:
         completed_at: "2026-07-09T10:50:00+09:00"
         evidence_path: tests/gate-id-format.test.ts
         output_digest: "sha256:7e484e36a3f7f6534e4ff8076a7f7d42425f9a6f52f7cbe69061d4e44167f5e9"
+        anchor_commit: 48d89bbca4b341ce1013fb91eb4c9187d4119497
       - kind: doctor
         command: "bun run src/cli.ts doctor"
         runner: bun
@@ -40,6 +41,7 @@ review_evidence:
         completed_at: "2026-07-09T10:50:00+09:00"
         evidence_path: src/lint/gate-id-format.ts
         output_digest: "sha256:987bddd156fc77562b771b5b2d8c343276c94044c9a668ade69e8be02f5012b5"
+        anchor_commit: 48d89bbca4b341ce1013fb91eb4c9187d4119497
 agent_slots:
   - role: tl
     slot_label: "TL - GateId 形式契約と doctor hard gate レビュー"

@@ -54,6 +54,7 @@ review_evidence:
         completed_at: "2026-07-01T16:15:21+09:00"
         evidence_path: tests/asset-catalog.test.ts
         output_digest: "sha256:79fc89eec778b9e6c5d317efc8752cb2eef7e5052df7fe179965415a105bf7b4"
+        anchor_commit: da5bd2811dee2708d0d3ca8105baff5893f2b618
 ---
 
 # PLAN-L7-172: roster CLI G8 evidence closure

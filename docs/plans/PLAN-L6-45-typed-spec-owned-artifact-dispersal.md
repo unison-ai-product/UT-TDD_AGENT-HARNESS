@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T15:45:00+09:00"
         evidence_path: docs/design/harness/L6-function-design/function-spec.md
         output_digest: "sha256:341423047ed5449a05f2f77507888d56989887cc5303bc2658a7f62087c1fcd8"
+        anchor_commit: 779c2869be0065dbe7a4fe09550f80466eb75d32
 agent_slots:
   - role: tl
     slot_label: "TL - typed spec owned artifact dispersal design"

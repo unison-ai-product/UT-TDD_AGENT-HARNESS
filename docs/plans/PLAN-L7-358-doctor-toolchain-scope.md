@@ -55,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-03T17:36:00+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:cb40e06e5b456372eb82e7f7c08c7a400cd348e1e54baca864663f21dab455fe"
+        anchor_commit: cf338ea7acca209df5e42aa5d4f28fa5baf2f8ed
       - kind: unit_test
         command: "bun run vitest run tests\\cli-surface.test.ts -t \"doctor scope|doctor verification flag\" --reporter=dot"
         runner: bun
@@ -63,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-03T17:33:00+09:00"
         evidence_path: tests/cli-surface.test.ts
         output_digest: "sha256:0cd35030fe95624693da9cce000663dedc7cfd0d6762c613a96e57fcbff99ca5"
+        anchor_commit: cf338ea7acca209df5e42aa5d4f28fa5baf2f8ed
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -71,6 +73,7 @@ review_evidence:
         completed_at: "2026-07-03T17:39:00+09:00"
         evidence_path: src/doctor/check-registry.ts
         output_digest: "sha256:8be9f74c223b54c090eb2062b1f1ae6d808385398e83ec8fc192c0146c3e34d2"
+        anchor_commit: cf338ea7acca209df5e42aa5d4f28fa5baf2f8ed
       - kind: lint
         command: "bunx biome check src\\doctor\\check-registry.ts src\\cli.ts tests\\doctor.test.ts tests\\cli-surface.test.ts docs\\plans\\PLAN-L7-358-doctor-toolchain-scope.md"
         runner: bun
@@ -79,6 +82,7 @@ review_evidence:
         completed_at: "2026-07-03T17:39:00+09:00"
         evidence_path: src/cli.ts
         output_digest: "sha256:0db505155c0899574237bbce7592661714f1dd48017e7c842ad5543ade963599"
+        anchor_commit: cf338ea7acca209df5e42aa5d4f28fa5baf2f8ed
 ---
 
 # PLAN-L7-358: doctor toolchain scope

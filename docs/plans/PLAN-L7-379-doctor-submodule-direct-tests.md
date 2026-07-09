@@ -49,6 +49,7 @@ review_evidence:
         completed_at: "2026-07-07T15:29:49+09:00"
         evidence_path: tests/doctor-setup-smoke.test.ts
         output_digest: "sha256:2bac370ea3d85ec29257f6bde844277787e58775dfaeb5801e7d628b32cb3b17"
+        anchor_commit: 25513aaf0473ab33f4b515acb6516dca5d387a94
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
@@ -57,6 +58,7 @@ review_evidence:
         completed_at: "2026-07-07T15:30:02+09:00"
         evidence_path: tests/doctor-lint-gates.test.ts
         output_digest: "sha256:17f9e0cb85fa934536abdd5cee47695b011495361c0950228f9edba41949576b"
+        anchor_commit: 25513aaf0473ab33f4b515acb6516dca5d387a94
       - kind: lint
         command: "bunx biome check tests\\doctor-setup-smoke.test.ts tests\\doctor-lint-gates.test.ts docs\\plans\\PLAN-L7-379-doctor-submodule-direct-tests.md"
         runner: bun
@@ -65,6 +67,7 @@ review_evidence:
         completed_at: "2026-07-07T15:29:49+09:00"
         evidence_path: tests/doctor-setup-smoke.test.ts
         output_digest: "sha256:2bac370ea3d85ec29257f6bde844277787e58775dfaeb5801e7d628b32cb3b17"
+        anchor_commit: 25513aaf0473ab33f4b515acb6516dca5d387a94
 ---
 
 # PLAN-L7-379: doctor submodule direct tests

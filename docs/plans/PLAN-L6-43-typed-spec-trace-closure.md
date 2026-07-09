@@ -31,6 +31,7 @@ review_evidence:
         completed_at: "2026-07-08T14:46:58+09:00"
         evidence_path: docs/design/harness/L6-function-design/function-spec.md
         output_digest: "sha256:11d54389adc016ab9b3f608af57b1f7f34fe96f6bb5aedd8d0240bd3308a1e8f"
+        anchor_commit: 455e60b102e308a4a78af206bb0e48b44d91cf5c
 agent_slots:
   - role: tl
     slot_label: "TL - typed spec trace closure design"

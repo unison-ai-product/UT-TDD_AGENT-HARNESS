@@ -56,6 +56,7 @@ review_evidence:
         completed_at: "2026-07-02T12:20:00+09:00"
         evidence_path: src/lint/github-ci-policy.ts
         output_digest: "sha256:7e7a3cfcb5a292d3f5912ae433efc169f64f1a4ee98ad943cf73897dfc4aa4db"
+        anchor_commit: 952e839eb705e838cc5c0be9c6eb712cc604ba8e
       - kind: unit_test
         command: "bun run vitest run tests\\github-ci-policy.test.ts tests\\doctor.test.ts --testNamePattern \"github-ci-policy|GitHub CI policy|ok=true includes\" --reporter=dot"
         runner: bun
@@ -64,6 +65,7 @@ review_evidence:
         completed_at: "2026-07-02T12:23:00+09:00"
         evidence_path: tests/github-ci-policy.test.ts
         output_digest: "sha256:2cb7bea823ea77133836c369531529febdfba35d81e9b82d5aa62b34574453b9"
+        anchor_commit: 952e839eb705e838cc5c0be9c6eb712cc604ba8e
 ---
 
 # PLAN-L7-221: GitHub CI policy hard gate

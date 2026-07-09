@@ -35,6 +35,7 @@ review_evidence:
         completed_at: "2026-07-09T13:05:00+09:00"
         evidence_path: tests/feedback-surface.test.ts
         output_digest: "sha256:9568e906a8acfd0ecee9398f70554db93d9dd5ad3508540960895575db39d051"
+        anchor_commit: e9610dfefe87a99a608936455c0b0c7b8855b0c2
 backprop_scope:
   - layer: L6-function-design
     artifact_path: docs/design/harness/L6-function-design/function-spec.md

@@ -64,6 +64,7 @@ review_evidence:
         completed_at: "2026-06-26T15:20:00+09:00"
         evidence_path: docs/process/modes/version-up.md
         output_digest: "sha256:c53a3647b66dba5c5e947ca591b04c312b53d974a57ae41fdcd40077fdecd73b"
+        anchor_commit: ddf35da267baa7c8b1ef6a3137fc304175d5ebe5
       - kind: unit_test
         command: "bunx vitest run tests/forward-convergence.test.ts (version-up parked + fail-close + legacy audit)"
         runner: bun
@@ -72,6 +73,7 @@ review_evidence:
         completed_at: "2026-06-26T15:20:00+09:00"
         evidence_path: tests/forward-convergence.test.ts
         output_digest: "sha256:f069920038d511eb8f00e6aaa1fa6fa223062f237b21e88085e7ba8f13e8e9d5"
+        anchor_commit: d5b92947e2299b847c9cd09e8e88640e3a6ff546
 ---
 
 # PLAN-REVERSE-140: forward-convergence + version-up 正本 back-merge (DISCOVERY-08/09 S4 fullback)

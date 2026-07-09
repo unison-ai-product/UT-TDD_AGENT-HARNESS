@@ -50,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-03T12:52:25+09:00"
         evidence_path: src/doctor/lint-gates.ts
         output_digest: "sha256:6cc0a72fcbc2711f4557a122382c085babc254998123065946d84e83a1c78670"
+        anchor_commit: 0351f0ad8defee89dd314085bfad21e258cbf811
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts -t \"lint gate re-exports\" --reporter=dot"
         runner: bun
@@ -58,6 +59,7 @@ review_evidence:
         completed_at: "2026-07-03T12:53:16+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:d979145e09f73537997ff842f120a496885f528ee17e5647ff093d42d0f1517e"
+        anchor_commit: 0351f0ad8defee89dd314085bfad21e258cbf811
       - kind: unit_test
         command: "bun run vitest run tests\\doctor.test.ts -t \"lint gate re-exports|hard gates wired|fails closed when hard-gate checker inputs cannot be read\" --reporter=dot"
         runner: bun
@@ -66,6 +68,7 @@ review_evidence:
         completed_at: "2026-07-03T12:54:48+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:d979145e09f73537997ff842f120a496885f528ee17e5647ff093d42d0f1517e"
+        anchor_commit: 0351f0ad8defee89dd314085bfad21e258cbf811
       - kind: typecheck
         command: "Pack: bun run typecheck"
         runner: bun
@@ -74,6 +77,7 @@ review_evidence:
         completed_at: "2026-07-03T12:56:09+09:00"
         evidence_path: src/doctor/lint-gates.ts
         output_digest: "sha256:6cc0a72fcbc2711f4557a122382c085babc254998123065946d84e83a1c78670"
+        anchor_commit: 0351f0ad8defee89dd314085bfad21e258cbf811
       - kind: unit_test
         command: "Pack: bun run vitest run tests\\doctor.test.ts -t \"lint gate re-exports|hard gates wired|fails closed when hard-gate checker inputs cannot be read\" --reporter=dot"
         runner: bun
@@ -82,6 +86,7 @@ review_evidence:
         completed_at: "2026-07-03T12:56:43+09:00"
         evidence_path: tests/doctor.test.ts
         output_digest: "sha256:d979145e09f73537997ff842f120a496885f528ee17e5647ff093d42d0f1517e"
+        anchor_commit: 0351f0ad8defee89dd314085bfad21e258cbf811
       - kind: unit_test
         command: "Pack: bun run test:pack"
         runner: bun
@@ -90,6 +95,7 @@ review_evidence:
         completed_at: "2026-07-03T12:57:16+09:00"
         evidence_path: tests/readability.test.ts
         output_digest: "sha256:ad6468a3bb93493c37fc6fa194e3384b844c131a6b30a62bd9042f7ad8213228"
+        anchor_commit: c18872c85c31a3a316cdcc0290cf55348f11b69d
 ---
 
 # PLAN-L7-325: doctor lint gate extraction

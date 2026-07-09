@@ -161,6 +161,14 @@ describe("L7 CLI surface closure", () => {
     expect(run.stdout).toContain("digest-migrate");
   }, 15_000);
 
+  it("exposes green command digest migration execute as an explicit opt-in surface", () => {
+    const run = runCli(["plan", "digest-migrate", "--help"]);
+
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain("--execute");
+    expect(run.stdout).toContain("--json");
+  }, 15_000);
+
   it("exposes skill suggest as a JSON command surface", () => {
     const run = runCli(["skill", "suggest", "--plan", "PLAN-NO-SUCH", "--json"]);
 

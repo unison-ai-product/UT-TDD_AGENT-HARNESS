@@ -71,6 +71,7 @@ review_evidence:
         completed_at: "2026-07-02T16:10:00+09:00"
         evidence_path: src/setup/distribution.ts
         output_digest: "sha256:3ab54ef69699e216d3f74148b3af6097f07390c9858cc94a4dab5b1d8f347018"
+        anchor_commit: 2566a7eb0b8e63b481053a2dae437e84f7f83501
       - kind: unit_test
         command: "bun run vitest run tests\\setup.test.ts tests\\cli-surface.test.ts tests\\cli-distribution-registrar.test.ts --reporter=dot"
         runner: bun
@@ -79,6 +80,7 @@ review_evidence:
         completed_at: "2026-07-02T16:10:00+09:00"
         evidence_path: tests/setup.test.ts
         output_digest: "sha256:3b17e1677cbed01dd614f2a702a38f0518c1d5513487a93ece0a01e63285407c"
+        anchor_commit: 2566a7eb0b8e63b481053a2dae437e84f7f83501
 ---
 
 # PLAN-L7-252: Pack sync explicit staging commands
