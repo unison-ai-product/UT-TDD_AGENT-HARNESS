@@ -28,7 +28,7 @@ spec:
     - id: VMS-004
       kind: typed-spec-authoring-source
       traces_from: [VMS-001]
-      traces_to: [VMS-006, VMS-007, VMS-008]
+      traces_to: [VMS-006, VMS-007, VMS-008, VMS-014]
       tests: [TVMS-004]
 ```
 
@@ -95,6 +95,9 @@ typed_spec_ledger:
   - spec_id: VMS-013
     ledger_sources: [docs/plans/PLAN-L7-394-refactor-qa-release-contract-gate.md]
     v_phase: L7
+  - spec_id: VMS-014
+    ledger_sources: [docs/plans/PLAN-L6-50-execution-assignment-ledger.md]
+    v_phase: L6
   - spec_id: TVMS-001
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
@@ -143,6 +146,9 @@ typed_spec_ledger:
     ledger_sources:
       - docs/test-design/harness/L7-unit-test-design.md
       - tests/vmodel-refactor-qa-release-contracts.test.ts
+    v_phase: L7
+  - spec_id: TVMS-014
+    ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
 ```
 
@@ -207,6 +213,11 @@ VMS-010 を上流に持ち、実装 gate である VMS-013 へ接続する。対
 VMS-013 は VMS-012 の設計正本を `refactor-qa-release-contracts` doctor gate と unit oracle へ接続する実装境界である。
 VMS-012 を上流に持ち、対応 oracle は TVMS-013 である。
 
+### VMS-014 実行割当台帳設計
+
+VMS-014 は ZIP `assign.py` / `docs/assign.yaml` 相当の ID 単位実行割当台帳を HARNESS の L6 契約へ落とす typed spec である。
+VMS-004 を上流に持ち、対応 oracle は TVMS-014 である。
+
 ### TVMS-001 単体 oracle
 
 TVMS-001 は VMS-001 の上流憲章が typed spec 宇宙の root として検査されることを保証する。
@@ -254,6 +265,10 @@ TVMS-012 は VMS-012 の authoring source が ZIP 108/109 の Refactor / QA rele
 ### TVMS-013 リファクタ / QA リリース gate oracle
 
 TVMS-013 は VMS-013 の `refactor-qa-release-contracts` gate が fail-close fixture と real repo green で検証されることを保証する。
+
+### TVMS-014 実行割当台帳 oracle
+
+TVMS-014 は VMS-014 の ID 単位実行割当台帳 contract が L7 unit-test design に現れることを保証する。
 
 ## 4. 不変条件
 

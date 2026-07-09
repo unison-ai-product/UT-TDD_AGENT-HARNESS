@@ -58,6 +58,7 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L4-16-security-design-slot | L4 | security | L9 |  | U14d: L4 security slot を schema / catalog / profile / L4 body へ登録し、L6-62 secret-scan の上流前提を解凍 | green | confirmed |  |
 | PLAN-L6-62-design-doc-secret-scan-gate | L6 | function-spec | L7 | PLAN-L4-16-security-design-slot | U14e: docs横断 secret-scan / distribution 前 fail-close / rotation 方針を L6 契約化し、doctor / distribution preflight へ降下 | green | confirmed |  |
 | PLAN-L7-260-sensitive-scan-boundary | L7 |  | L6 | PLAN-L6-62-design-doc-secret-scan-gate | U14e-impl: L6 secret-scan 契約を `src/lint/secret-scan.ts` / doctor hard gate / distribution preflight へ接続済み。pre-push hook 対象見直しが残る | yellow | draft | pre-push hook 対象見直しは carry。 |
+| PLAN-L6-50-execution-assignment-ledger | L6 | function-spec | L7 | PLAN-L7-386-typed-spec-declaration-projection | U15a: ZIP assign/signals の ID 単位実行割当台帳を L6 契約・L7 oracle・typed spec 台帳へ接続 | green | confirmed |  |
 
 ## 2. 解釈規則
 
