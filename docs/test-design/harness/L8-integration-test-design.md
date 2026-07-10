@@ -261,3 +261,20 @@ Minimum G8 close profile for the first L8 ascent:
 | Procedure | Targeted test command(s) and `doctor` after wiring. |
 | Evidence | Integration evidence manifest under `.ut-tdd/evidence/g8-integration/*.json`, or PLAN `review_evidence.green_commands` that names the selected IT-* IDs. |
 | Exit | `g8-integration-workflow` doctor check OK and no selected mandatory IT-* failure. |
+
+## Engine-swap integration verification (PLAN-L5-16〜22)
+
+| IT-ID | Given | When | Then | 必須証拠 |
+|---|---|---|---|---|
+| `IT-VMSOURCE-01` | manifest宣言値109/163/21/8のauthored records | projection全削除後にrebuildする | identity集合・edge・finding digestが一致する | rebuild前後manifest、row identity diff 0 |
+| `IT-VMSOURCE-02` | 欠番/重複/orphan/理由なしdisposition/unknown profile/overlay競合fixture | loader+projectorを実行する | 各安定findingでfail-closeする | negative fixture、expected finding/exit |
+| `IT-PLANASSET-01` | v1 PLAN全件とnumeric core collision | canonical adapter+ledgerへmigrationする | 損失0、曖昧自動選択0、collision全件をmaterializeする | migration ledger、loss report |
+| `IT-WORKFLOW-01` | append-only transition/evidence列 | rebuild+reduceする | state/evidence usabilityが同一でstale/別revision evidenceを拒否する | event digest、reduction result |
+| `IT-VMCONTRACT-01` | L0-L14/G0.5-G14 authored contract | compileする | registry/doctor/roadmapのrule identityとdigestが一致する | compiled manifests 3面diff 0 |
+| `IT-DOCLEDGER-01` | baseline `3d232e9c`のdocs path集合921件 | init+materializeする | 全path exactly once、phantom/duplicate/case-fold collision 0になる | raw NUL hash、921件基準receipt |
+| `IT-DOCLEDGER-02` | baseline後のadd/delete/renameとbroken local reference fixture | final closureを実行する | 未台帳deltaとorphan/stale canonical assertionを拒否する | delta/edge finding manifest |
+| `IT-MODULE-01` | engine-swap module graph | dependency auditを実行する | domain逆依存、barrel cycle、doctor/CLI逆importが0になる | module graph、cycle count 0 |
+| `IT-ASSESS-01` | 163 item assessment | evidence/debtをjoinする | pending 0、verified 3面、partial/gap debt route 100%を満たす | assessment/debt coverage manifest |
+| `IT-SELFPROOF-01` | contract ruleとmutation corpus | 独立process verifierを実行する | receipt exactly once、全mutation kill、正常fixture false-positive 0になる | receipt、mutation survivor 0 |
+
+全ITはauthoring sourceを変更しないread/rebuild境界で実行し、DB/生成viewから判断を逆生成しない。

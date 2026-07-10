@@ -243,3 +243,15 @@ execution_evidence: acceptance evidence manifest は command、AT/NFR ID、evide
 exit_criteria: 必須 acceptance row は pass または明示 defer を持ち、L12 リリース承認に必要な PO signoff が欠落していない。
 defect_routing: failed AT は L12 correction、L3/L4 back-prop、Reverse、Recovery、Incident へ scope 別に route する。
 verification_design: 検証環境、受入データ実在性、計測方法、評価基準、実行手順、承認記録を選択 AT-* ごとに明示する。
+
+## §7 Engine-swap acceptance / deploy cases
+
+| AT ID | 前提 | 手順 | 合格条件 |
+|---|---|---|---|
+| `AT-ENGINE-01` | G11 UAT 3/3 pass | clean checkoutでinstall→typecheck→全回帰→doctorを実行 | 全command exit 0、hard finding 0 |
+| `AT-ENGINE-02` | legacy PLAN/catalog/DB fixture | migration→DB rebuild→status/trace queryを実行 | identity loss 0、numeric collision未判断0 |
+| `AT-ENGINE-03` | Pack artifactと既存版 | update→smoke→rollback→再smokeを実行 | update/rollback双方doctor exit 0 |
+| `AT-ENGINE-04` | G8-G11 evidence manifests | acceptance manifestへjoinする | mandatory evidence missing/stale 0、PO signoffあり |
+
+engine-swap mandatory ATは4/4 passを要求し、deferはprogram acceptへ使用できない。失敗はL12 correction、
+deployment design Reverse、L7 implementation、Recovery/Incidentへscope別にrouteする。

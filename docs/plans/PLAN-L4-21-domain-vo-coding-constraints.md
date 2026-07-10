@@ -13,8 +13,8 @@ updated: 2026-07-09
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
-pair_artifact: docs/test-design/harness/L7-unit-test-design.md
-next_pair_freeze: L5
+pair_artifact: docs/test-design/harness/L9-system-test-design.md
+next_pair_freeze: L9
 review_evidence:
   - reviewer: codex-intra-runtime
     review_kind: intra_runtime_subagent

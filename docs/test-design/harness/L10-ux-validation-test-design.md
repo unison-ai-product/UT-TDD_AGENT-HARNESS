@@ -57,6 +57,9 @@ BDD 形式 (Given/When/Then = 前提/操作/期待結果)。用語は L0 glossar
 | UXV-A11Y-01 | WCAG/a11y expectations が L4 UI standard に存在する | G10 accessibility verification が選択される | Evidence は a11y requirements を executable または reviewable checks に紐づける | screen-list.md / L4 ui-standard.md |
 | UXV-VRT-01 | visual regression が frontend-design の必須 green signal である | G10 VRT verification が選択される | visual-regression path または明示的 defer がなければ Evidence が G10 close を block する | screen-flow.md / business-flow.md |
 | UXV-REVIEW-01 | UX polish は row presence を超える judgement を必要とする | G10 review が選択される | Evidence は L11 handoff 前に review route と exit criteria を記録する | L2 全 sub-doc (総合) |
+| UXV-REVIEW-02 | G9 engine-swap system evidenceがgreenである | workflow/plan/docs auditのCLI結果をPO/QAが評価する | blocked reason、current revision、次actionが一意でhidden frontier 0になる | PLAN-L6-72 / PLAN-L9-01 |
+| UXV-A11Y-02 | CLIをscreen reader/高contrast terminalで利用する | error/help/status outputを検証する | 色だけに依存せずfinding ID、reason、next actionを取得できる | PLAN-L10-01 |
+| UXV-VRT-02 | engine-swap前後のstatus/doctor JSON fixtureがある | semantic snapshotを比較する | 意図したschema delta以外0、human text差分はreview evidenceへ残る | PLAN-L10-01 |
 
 ## §3 検証設計 (環境・実データ・計測・評価)
 

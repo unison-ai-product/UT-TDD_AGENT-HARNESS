@@ -24,6 +24,8 @@ confirmed化はOT設計のpair-freeze承認を表し、OT実行完了やengine-s
 | VUP-REQ-09 | OT-VUP-009 | illegal Forward transition、stale evidence、wrong revisionでacceptを拒否する |
 | VUP-REQ-10 | OT-VUP-010 | contract由来detectorの全ruleが独立mutationで発火し、survivor 0のreceiptを残す |
 
+## G14-WORKFLOW
+
 test_strategy: active engine-swap revisionだけを既存L1/L14 freezeと分離してrisk-basedに検証する。
 test_plan: U18a〜gおよびL8〜L14 verify PLANのevidence manifestをOT-VUP IDへ結合する。
 test_conditions: source/item/profile/FSM/PLAN revision/contract/detector mutationの正負入力を用意する。

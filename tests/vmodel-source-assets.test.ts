@@ -148,7 +148,15 @@ describe("checked Vモデル source assets", () => {
 
   it("U-VMSRC-006: declarative V-model contract covers L0-L14 and G0.5/G1-G14 exactly once", () => {
     const contract = YAML.parse(read("docs/process/vmodel-contract.yaml")) as {
-      forward_workflow: { pair_reciprocity_exceptions: string[] };
+      forward_workflow: {
+        pair_reciprocity_exceptions: string[];
+        pair_reciprocity_exception_contracts: Array<{
+          layer: string;
+          reason: string;
+          allowed_pair_layers: string[];
+          required_backlinks: string[];
+        }>;
+      };
       layers: Array<{
         layer: string;
         gate: string;
@@ -157,6 +165,10 @@ describe("checked Vモデル source assets", () => {
         evidence_families: string[];
         exit_criteria: string;
         defect_routing: string;
+        verification_plan_id?: string;
+        governance_artifact?: string;
+        case_id_prefix?: string;
+        evidence_manifest?: string;
       }>;
     };
     const expectedLayers = Array.from({ length: 15 }, (_, index) => `L${index}`);
@@ -175,11 +187,24 @@ describe("checked Vモデル source assets", () => {
     }
     const byLayer = new Map(contract.layers.map((entry) => [entry.layer, entry]));
     const exceptions = new Set(contract.forward_workflow.pair_reciprocity_exceptions);
+    expect(contract.forward_workflow.pair_reciprocity_exception_contracts).toHaveLength(2);
+    for (const exception of contract.forward_workflow.pair_reciprocity_exception_contracts) {
+      expect(exceptions.has(exception.layer)).toBe(true);
+      expect(exception.reason).not.toBe("");
+      expect(exception.allowed_pair_layers).toEqual(byLayer.get(exception.layer)?.pair_layers);
+      expect(exception.required_backlinks.length).toBeGreaterThan(0);
+    }
     for (const entry of contract.layers) {
       if (exceptions.has(entry.layer)) continue;
       for (const pair of entry.pair_layers) {
         expect(byLayer.get(pair)?.pair_layers).toContain(entry.layer);
       }
+    }
+    for (const entry of contract.layers.filter((layer) => Number(layer.layer.slice(1)) >= 8)) {
+      expect(entry.verification_plan_id).toMatch(`PLAN-${entry.layer}-`);
+      expect(entry.governance_artifact).toMatch(/^docs\//);
+      expect(entry.case_id_prefix).toMatch(/^[A-Z]+-$/);
+      expect(entry.evidence_manifest).toMatch(/^\.ut-tdd\/evidence\//);
     }
   });
 
@@ -208,5 +233,18 @@ describe("checked Vモデル source assets", () => {
     expect(l14).toContain("`PLAN-L1-07`のadditive L1 delta");
     expect(l14).not.toContain("PLAN-L1-06再凍結");
     expect(l14).not.toContain("PLAN-L1-06とVUP要件docをconfirmedへ戻さない");
+  });
+
+  it("U-VMSRC-009: planned oracle candidates keep kind-qualified unique identities", () => {
+    const unitDesign = read("docs/test-design/harness/L7-unit-test-design.md");
+    const candidateIds = [...unitDesign.matchAll(/`(CANDIDATE-[A-Z0-9-]+-[0-9]{3})`/g)].map(
+      (match) => match[1],
+    );
+    expect(candidateIds.length).toBeGreaterThan(0);
+    expect(new Set(candidateIds).size).toBe(candidateIds.length);
+    expect(candidateIds).toContain("CANDIDATE-P-FSM-001");
+    expect(candidateIds).toContain("CANDIDATE-I-DISP-001");
+    expect(candidateIds).toContain("CANDIDATE-I-SP-001");
+    expect(candidateIds).toContain("CANDIDATE-M-SP-001");
   });
 });

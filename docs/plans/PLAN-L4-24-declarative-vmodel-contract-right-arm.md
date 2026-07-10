@@ -15,7 +15,7 @@ owner: PO / Codex
 parent_design: docs/process/forward/overview.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L9-system-test-design.md
-next_pair_freeze: L5
+next_pair_freeze: L9
 agent_slots:
   - role: tl
     slot_label: "TL - L0-L14 pair/gate/evidence/exit/defect routing contract"
@@ -41,16 +41,25 @@ dependencies:
     - docs/plans/PLAN-L4-23-forward-fsm-plan-asset-v2.md
     - docs/test-design/harness/L8-integration-test-design.md
     - docs/test-design/harness/L9-system-test-design.md
-    - docs/test-design/harness/L10-ux-validation-design.md
+    - docs/test-design/harness/L10-ux-validation-test-design.md
+    - docs/process/evidence/g11-uat-review-design.md
     - docs/test-design/harness/L12-acceptance-test-design.md
+    - docs/process/evidence/g13-post-deploy-verification-design.md
     - docs/test-design/harness/L14-operational-test-design.md
+    - docs/plans/PLAN-L8-01-engine-swap-integration-verification.md
+    - docs/plans/PLAN-L9-01-engine-swap-system-verification.md
+    - docs/plans/PLAN-L10-01-engine-swap-ux-validation.md
+    - docs/plans/PLAN-L11-01-engine-swap-uat-review.md
+    - docs/plans/PLAN-L12-01-engine-swap-acceptance-deploy.md
+    - docs/plans/PLAN-L13-01-engine-swap-post-deploy-verification.md
+    - docs/plans/PLAN-L14-01-engine-swap-operational-value-verification.md
 ---
 
 # PLAN-L4-24: 宣言型 V-model contract と G8-G14 右腕 engine
 
 ## 1. 問題
 
-L8-L14 の Forward PLAN は0件で、G11-G14 は概念または marker に留まる。現行 right-arm planning は代表する
+baseline `origin/main@3d232e9c` 以前はL8-L14 の Forward PLAN が0件で、G11-G14 は概念または marker に留まっていた。現行 right-arm planning は代表する
 L7/Reverse PLAN 2本の参照で合格でき、verification band は roadmap 上で恒久 park される。設計契約と detector の
 gate mapping が複数 TypeScript 定数へ重複しており、設計変更が検出へ自動追随しない。
 
@@ -58,7 +67,7 @@ gate mapping が複数 TypeScript 定数へ重複しており、設計変更が�
 
 1. L0-L14 の layer/gate/V-pair/成果物/case ID/evidence/exit criteria/defect routing/approval/profile を宣言型正本へ集約する。
 2. contract loader が validate した同一DTOから plan lint、generic right-arm detector、doctor definition、roadmap obligation を導出する。
-3. L8-L14 に `kind: verify` PLAN を各層最低1件起票する。
+3. L8-L14 に `kind: verify` PLAN を各層最低1件起票し、工程表のG8→G14 predecessor chainへ登録する（PLAN-L8-01〜L14-01を起票済み）。
 4. G11 trace/UAT、G12 deploy/AT、G13 production smoke/SLI/SLO、G14 OT/value feedback を実行 contract として定義する。
 5. L11/L13 の process evidence artifact を document catalog の正式 slot にする。
 6. detector が欠落した設計判断を補完せず、contract欠落・重複定数・生成driftをfail-closeする。

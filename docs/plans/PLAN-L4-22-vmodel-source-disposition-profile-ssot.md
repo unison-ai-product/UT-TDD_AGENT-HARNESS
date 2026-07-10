@@ -14,7 +14,7 @@ owner: PO / Codex
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L9-system-test-design.md
-next_pair_freeze: L5
+next_pair_freeze: L9
 agent_slots:
   - role: tl
     slot_label: "TL - source/item/target 3集約と disposition 語彙の設計判断"

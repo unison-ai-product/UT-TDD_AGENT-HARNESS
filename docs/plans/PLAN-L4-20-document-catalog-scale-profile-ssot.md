@@ -13,8 +13,8 @@ updated: 2026-07-08
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
-pair_artifact: docs/test-design/harness/L7-unit-test-design.md
-next_pair_freeze: L5
+pair_artifact: docs/test-design/harness/L9-system-test-design.md
+next_pair_freeze: L9
 review_evidence:
   - reviewer: codex-tl
     review_kind: intra_runtime_subagent
@@ -88,8 +88,8 @@ dependencies:
 `.ut-tdd/audit/A-185` (2026-07-07) の §A④ (環境定義/ネットワーク/インフラ/DR-BCP等 product-select
 gap) と §B③ (規模プロファイル機構) は `A-156` route ledger に feature-gap として route 評価済みだったが、
 具体 PLAN 化されていなかった (未起票のまま残存)。2026-07-08 の ZIP 再監査 (拡張版、設計書 109 種 + メタ
-yaml 8 種) で、参照 `catalog.yaml` (~150 件のドキュメント種別マスターカタログ、category/status/detail/file
-構造) と `profiles.yaml` (PoC/Standard/Enterprise の `adopt`/`detail_override`/`default_status` による
+yaml 8 種) で、参照 `catalog.yaml` (現行checked入力ではsemantic item 163件、category/status/detail/file
+構造) と `profiles.yaml` (size 3件=PoC/Standard/Enterprise、product 5件を直交させる計8 profileの `adopt`/`detail_override`/`default_status` による
 採用範囲・粒度の自動判定) の両方が、UT-TDD 側のどの既起票 PLAN (L6-50〜58) にも対応しないことを確認した。
 
 本 PLAN は以下 3 点を統合する:
