@@ -28,6 +28,7 @@ import {
   SERIAL_REASONS,
   VALID_REVERSE_FULLBACK_SCOPE_DECISIONS,
   VALID_SUB_DOCS,
+  VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS,
 } from "./lint-policy";
 import type {
   LintResult,
@@ -258,15 +259,50 @@ function kindLayerViolations(raw: Record<string, unknown>): string[] {
   return [];
 }
 
-function versionRouteCertificateViolations(raw: Record<string, unknown>): {
+function versionRouteCertificateViolations(raw: Record<string, unknown>, planId: string): {
   reason: "version_route_certificate_missing" | "version_route_certificate_mismatch";
   detail: string;
 }[] {
-  if (!stringField(raw.version_target)) return [];
-  if (stringField(raw.status) !== "draft") return [];
+  const target = stringField(raw.version_target);
+  const status = stringField(raw.status) ?? "";
+  const mode = stringField(raw.route_mode);
+  if (VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS.has(planId)) {
+    const hasVersionTargetKey = Object.prototype.hasOwnProperty.call(raw, "version_target");
+    const exactLegacyTuple =
+      mode === "version-up" &&
+      stringField(raw.kind) === "impl" &&
+      stringField(raw.layer) === "L7" &&
+      status === "confirmed" &&
+      !hasVersionTargetKey;
+    return exactLegacyTuple
+      ? []
+      : [
+          {
+            reason: "version_route_certificate_mismatch",
+            detail:
+              "ledgered version-up landed debt changed its immutable legacy tuple; see docs/governance/version-up-route-debt-2026-07-10.md",
+          },
+        ];
+  }
+  if (mode === "version-up" && !target) {
+    return [
+      {
+        reason: "version_route_certificate_missing",
+        detail: "route_mode=version-up is parked-only and requires status=draft + version_target",
+      },
+    ];
+  }
+  if (!target) return [];
+  if (status !== "draft") {
+    return [
+      {
+        reason: "version_route_certificate_mismatch",
+        detail: `version_target requires status=draft but status=${status}`,
+      },
+    ];
+  }
 
   const signal = stringField(raw.route_signal);
-  const mode = stringField(raw.route_mode);
   const violations: {
     reason: "version_route_certificate_missing" | "version_route_certificate_mismatch";
     detail: string;
@@ -775,7 +811,7 @@ export function analyzePlanGovernance(
         detail: invalidKindLayers.join(", "),
       });
     }
-    for (const violation of versionRouteCertificateViolations(raw)) {
+    for (const violation of versionRouteCertificateViolations(raw, planId)) {
       violations.push({ file: entry.file, ...violation });
     }
     for (const violation of routeCertificateViolations(raw)) {

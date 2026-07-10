@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   analyzeRightArmGatePlanning,
+  engineSwapDependencyLink,
   rightArmGatePlanningMessages,
 } from "../src/lint/right-arm-gate-planning";
 
@@ -39,6 +40,8 @@ describe("right-arm gate planning lint", () => {
         "implemented",
         "PLAN-L7-130-right-arm-gate-planning / PLAN-REVERSE-130-right-arm-gate-planning",
       ),
+      engineSwapPlanStatus: "draft",
+      engineSwapProgramExitStatus: "in_progress",
     });
 
     expect(result.ok).toBe(true);
@@ -46,6 +49,184 @@ describe("right-arm gate planning lint", () => {
       "PLAN-L7-130-right-arm-gate-planning",
       "PLAN-REVERSE-130-right-arm-gate-planning",
     ]);
-    expect(rightArmGatePlanningMessages(result)[0]).toContain("right-arm-gate-planning - OK");
+    expect(rightArmGatePlanningMessages(result)[0]).toContain("IN-PROGRESS");
+  });
+
+  it("surfaces draft engine-swap right-arm gaps and fails if the design claims completion", () => {
+    const base = {
+      gatesMd:
+        "注: G8-G14 の機械検証条件は PLAN-L7-130-right-arm-gate-planning / PLAN-REVERSE-130-right-arm-gate-planning で起票済み。",
+      backlogMd: backlogRow(
+        "implemented",
+        "PLAN-L7-130-right-arm-gate-planning / PLAN-REVERSE-130-right-arm-gate-planning",
+      ),
+      verifyPlans: [
+        { layer: "L8", status: "confirmed", engineSwapLinked: true },
+        { layer: "L9", status: "confirmed", engineSwapLinked: true },
+      ],
+      engineSwapProgramExitStatus: "in_progress",
+    };
+    const draft = analyzeRightArmGatePlanning({ ...base, engineSwapPlanStatus: "draft" });
+    expect(draft.ok).toBe(true);
+    expect(draft.missingPlannedVerifyLayers).toEqual(["L10", "L11", "L12", "L13", "L14"]);
+    expect(draft.missingCompletedVerifyLayers).toEqual(["L10", "L11", "L12", "L13", "L14"]);
+    expect(rightArmGatePlanningMessages(draft)[0]).toContain("IN-PROGRESS");
+
+    const confirmed = analyzeRightArmGatePlanning({
+      ...base,
+      engineSwapPlanStatus: "confirmed",
+    });
+    expect(confirmed.ok).toBe(false);
+    expect(confirmed.violations[0]).toContain("verify PLAN layers are not planned");
+  });
+
+  it("does not claim completion from unrelated, archived, or draft verify PLANs", () => {
+    const layers = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"];
+    const base = {
+      gatesMd:
+        "注: G8-G14 は PLAN-L7-130-right-arm-gate-planning / PLAN-REVERSE-130-right-arm-gate-planning で起票済み。",
+      backlogMd: backlogRow(
+        "implemented",
+        "PLAN-L7-130-right-arm-gate-planning / PLAN-REVERSE-130-right-arm-gate-planning",
+      ),
+      engineSwapPlanStatus: "draft",
+      engineSwapProgramExitStatus: "in_progress",
+    };
+    const unrelated = analyzeRightArmGatePlanning({
+      ...base,
+      verifyPlans: layers.map((layer) => ({
+        layer,
+        status: "confirmed",
+        engineSwapLinked: false,
+      })),
+    });
+    expect(unrelated.engineSwapState).toBe("in_progress");
+    expect(unrelated.missingPlannedVerifyLayers).toEqual(layers);
+    expect(unrelated.missingCompletedVerifyLayers).toEqual(layers);
+
+    const inactive = analyzeRightArmGatePlanning({
+      ...base,
+      verifyPlans: layers.map((layer, index) => ({
+        layer,
+        status: index % 2 === 0 ? "archived" : "draft",
+        engineSwapLinked: true,
+      })),
+    });
+    expect(inactive.engineSwapState).toBe("in_progress");
+    expect(inactive.missingCompletedVerifyLayers).toEqual(layers);
+
+    const readyButDesignDraft = analyzeRightArmGatePlanning({
+      ...base,
+      verifyPlans: layers.map((layer) => ({
+        layer,
+        status: "confirmed",
+        engineSwapLinked: true,
+      })),
+    });
+    expect(readyButDesignDraft.ok).toBe(true);
+    expect(readyButDesignDraft.engineSwapState).toBe("in_progress");
+    expect(readyButDesignDraft.missingPlannedVerifyLayers).toEqual([]);
+    expect(readyButDesignDraft.missingCompletedVerifyLayers).toEqual([]);
+    expect(rightArmGatePlanningMessages(readyButDesignDraft)[0]).toContain("IN-PROGRESS");
+  });
+
+  it("fails closed for a missing, unknown, or archived engine-swap design status", () => {
+    const base = {
+      gatesMd:
+        "G8-G14 は PLAN-L7-130-right-arm-gate-planning / PLAN-REVERSE-130-right-arm-gate-planning で起票済み。",
+      backlogMd: backlogRow(
+        "implemented",
+        "PLAN-L7-130-right-arm-gate-planning / PLAN-REVERSE-130-right-arm-gate-planning",
+      ),
+      verifyPlans: ["L8", "L9", "L10", "L11", "L12", "L13", "L14"].map((layer) => ({
+        layer,
+        status: "confirmed",
+        engineSwapLinked: true,
+      })),
+      engineSwapProgramExitStatus: "in_progress",
+    };
+    for (const status of [null, "banana", "archived"] as const) {
+      const result = analyzeRightArmGatePlanning({ ...base, engineSwapPlanStatus: status });
+      expect(result.ok, String(status)).toBe(false);
+      expect(result.engineSwapState, String(status)).not.toBe("complete");
+    }
+  });
+
+  it("separates design freeze obligations from program acceptance evidence", () => {
+    const layers = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"];
+    const base = {
+      gatesMd:
+        "G8-G14 は PLAN-L7-130-right-arm-gate-planning / PLAN-REVERSE-130-right-arm-gate-planning で起票済み。",
+      backlogMd: backlogRow(
+        "implemented",
+        "PLAN-L7-130-right-arm-gate-planning / PLAN-REVERSE-130-right-arm-gate-planning",
+      ),
+      engineSwapPlanStatus: "confirmed",
+      verifyPlans: layers.map((layer) => ({
+        layer,
+        status: "draft",
+        engineSwapLinked: true,
+      })),
+    };
+    const executing = analyzeRightArmGatePlanning({
+      ...base,
+      engineSwapProgramExitStatus: "in_progress",
+    });
+    expect(executing.ok).toBe(true);
+    expect(executing.engineSwapState).toBe("in_progress");
+    expect(executing.missingPlannedVerifyLayers).toEqual([]);
+    expect(executing.missingCompletedVerifyLayers).toEqual(layers);
+
+    const prematureAccept = analyzeRightArmGatePlanning({
+      ...base,
+      engineSwapProgramExitStatus: "accepted",
+    });
+    expect(prematureAccept.ok).toBe(false);
+    expect(prematureAccept.violations.join(" ")).toContain("program is accepted");
+
+    const accepted = analyzeRightArmGatePlanning({
+      ...base,
+      engineSwapProgramExitStatus: "accepted",
+      verifyPlans: layers.map((layer) => ({
+        layer,
+        status: "confirmed",
+        engineSwapLinked: true,
+      })),
+    });
+    expect(accepted.ok).toBe(true);
+    expect(accepted.engineSwapState).toBe("complete");
+
+    for (const status of ["draft", "banana", "archived"] as const) {
+      const invalidTransition = analyzeRightArmGatePlanning({
+        ...base,
+        engineSwapPlanStatus: status,
+        engineSwapProgramExitStatus: "accepted",
+        verifyPlans: layers.map((layer) => ({
+          layer,
+          status: "confirmed",
+          engineSwapLinked: true,
+        })),
+      });
+      expect(invalidTransition.ok, status).toBe(false);
+      expect(invalidTransition.engineSwapState, status).not.toBe("complete");
+    }
+  });
+
+  it("recognizes engine-swap linkage only in structured dependency fields", () => {
+    const incidental = [
+      "---",
+      "dependencies:",
+      "  parent: PLAN-OTHER",
+      "  requires: []",
+      "  references: []",
+      "---",
+      "本文で PLAN-L4-24-declarative-vmodel-contract-right-arm を否定的に言及する。",
+    ].join("\n");
+    const linked = incidental.replace(
+      "  references: []",
+      "  references:\n    - docs/plans/PLAN-L4-24-declarative-vmodel-contract-right-arm.md",
+    );
+    expect(engineSwapDependencyLink(incidental)).toBe(false);
+    expect(engineSwapDependencyLink(linked)).toBe(true);
   });
 });

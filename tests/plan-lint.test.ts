@@ -17,6 +17,7 @@ import {
   ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS,
   ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS,
   ROUTE_MODE_LAYER_BANDS,
+  VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS,
 } from "../src/plan/lint-policy";
 import type { LintResult as SidecarLintResult } from "../src/plan/lint-types";
 
@@ -1148,6 +1149,48 @@ dependencies:
     expect(mismatchFiles).toContain("docs/plans/PLAN-L2-917-add-feature-layer-wrong.md");
   });
 
+  it("U-PLANGOV-011v4a: version-up is parked-only and active work uses add-feature", () => {
+    const docs = [
+      planDoc("PLAN-L7-930-version-up-parked-ok", {
+        kind: "impl",
+        layer: "L7",
+        status: "draft",
+        subDoc: null,
+        extra:
+          "version_target: v2\nroute_signal: version_deferral\nroute_mode: version-up\ncreated: 2026-07-10\nupdated: 2026-07-10\n",
+      }),
+      planDoc("PLAN-L4-931-active-upgrade-ok", {
+        kind: "add-design",
+        layer: "L4",
+        subDoc: "function",
+        extra:
+          "route_signal: feature_addition\nroute_mode: add-feature\ncreated: 2026-07-10\nupdated: 2026-07-10\n",
+      }),
+      planDoc("PLAN-L4-932-version-up-active-wrong", {
+        kind: "add-design",
+        layer: "L4",
+        subDoc: "function",
+        extra:
+          "route_signal: version_deferral\nroute_mode: version-up\ncreated: 2026-07-10\nupdated: 2026-07-10\n",
+      }),
+    ];
+
+    const violations = analyzePlanGovernance(docs).violations;
+    const kindMismatches = violations
+      .filter((violation) => violation.reason === "route_mode_kind_mismatch")
+      .map((violation) => violation.file);
+    const layerMismatches = violations
+      .filter((violation) => violation.reason === "route_mode_kind_layer_mismatch")
+      .map((violation) => violation.file);
+
+    expect(kindMismatches).not.toContain("docs/plans/PLAN-L7-930-version-up-parked-ok.md");
+    expect(layerMismatches).not.toContain("docs/plans/PLAN-L7-930-version-up-parked-ok.md");
+    expect(kindMismatches).not.toContain("docs/plans/PLAN-L4-931-active-upgrade-ok.md");
+    expect(layerMismatches).not.toContain("docs/plans/PLAN-L4-931-active-upgrade-ok.md");
+    expect(kindMismatches).toContain("docs/plans/PLAN-L4-932-version-up-active-wrong.md");
+    expect(layerMismatches).toContain("docs/plans/PLAN-L4-932-version-up-active-wrong.md");
+  });
+
   it("U-PLANGOV-011v5: verify PLANs bind L8-L14 layers to matching G8-G14 verification_gate", () => {
     const docs = [
       planDoc("PLAN-L10-918-verify-gate-ok", {
@@ -1315,6 +1358,86 @@ dependencies:
 
     expect(idsOf(legacySection)).toEqual(ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS);
     expect(idsOf(draftSection)).toEqual(ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS);
+  });
+
+  it("U-PLANGOV-011y2: parked version-up requires target and landed debt tuple is immutable", () => {
+    const missingTarget = analyzePlanGovernance([
+      planDoc("PLAN-L7-930-version-up-missing-target", {
+        kind: "impl",
+        layer: "L7",
+        status: "draft",
+        subDoc: null,
+        extra:
+          "route_signal: version_deferral\nroute_mode: version-up\ncreated: 2026-07-10\nupdated: 2026-07-10\n",
+      }),
+    ]);
+    expect(missingTarget.violations.map((violation) => violation.reason)).toContain(
+      "version_route_certificate_missing",
+    );
+
+    const legacyId = "PLAN-L7-303-digest-commit-anchor";
+    const exactLegacy = analyzePlanGovernance([
+      planDoc(legacyId, {
+        kind: "impl",
+        layer: "L7",
+        status: "confirmed",
+        subDoc: null,
+        extra:
+          "route_signal: version_deferral\nroute_mode: version-up\ncreated: 2026-07-01\nupdated: 2026-07-01\n",
+      }),
+    ]);
+    expect(exactLegacy.violations.map((violation) => violation.reason)).not.toContain(
+      "version_route_certificate_mismatch",
+    );
+
+    const changedLegacy = analyzePlanGovernance([
+      planDoc(legacyId, {
+        kind: "impl",
+        layer: "L7",
+        status: "archived",
+        subDoc: null,
+        extra:
+          "route_signal: version_deferral\nroute_mode: version-up\ncreated: 2026-07-01\nupdated: 2026-07-10\n",
+      }),
+    ]);
+    expect(changedLegacy.violations.map((violation) => violation.reason)).toContain(
+      "version_route_certificate_mismatch",
+    );
+    const emptyTargetKey = analyzePlanGovernance([
+      planDoc(legacyId, {
+        kind: "impl",
+        layer: "L7",
+        status: "confirmed",
+        subDoc: null,
+        extra:
+          "version_target:\nroute_signal: version_deferral\nroute_mode: version-up\ncreated: 2026-07-01\nupdated: 2026-07-10\n",
+      }),
+    ]);
+    expect(emptyTargetKey.violations.map((violation) => violation.reason)).toContain(
+      "version_route_certificate_mismatch",
+    );
+    expect(VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS).toEqual(
+      new Set(["PLAN-L7-303-digest-commit-anchor"]),
+    );
+    const debtLedger = readFileSync(
+      join(process.cwd(), "docs/governance/version-up-route-debt-2026-07-10.md"),
+      "utf8",
+    );
+    const ledgerIds = new Set(
+      [...debtLedger.matchAll(/^\|\s*(PLAN-[A-Za-z0-9-]+)\s*\|/gm)].map(
+        (match) => match[1],
+      ),
+    );
+    expect(ledgerIds).toEqual(VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS);
+    const landedPlan = readFileSync(
+      join(process.cwd(), "docs/plans/PLAN-L7-303-digest-commit-anchor.md"),
+      "utf8",
+    );
+    expect(landedPlan).toMatch(/^status:\s*confirmed$/m);
+    expect(landedPlan).toMatch(/^route_mode:\s*version-up$/m);
+    expect(landedPlan).toMatch(/^kind:\s*impl$/m);
+    expect(landedPlan).toMatch(/^layer:\s*L7$/m);
+    expect(landedPlan).not.toMatch(/^version_target:/m);
   });
 
   it("U-PLANGOV-011z: draft PLAN code-line references surface missing paths and stale line numbers as advisory findings", () => {

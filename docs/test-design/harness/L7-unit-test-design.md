@@ -1164,3 +1164,14 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | U-DOCSECRET-004 | `loadSystemSecretScanArtifacts(repoRoot)` | `docs/`、root canonical docs、`.ut-tdd/audit`、`.ut-tdd/handover`、`.ut-tdd/logs`、`.ut-tdd/memory` を active scan band として読む。 |
 | U-DOCSECRET-005 | `checkSecretScan(repoRoot)` | doctor full profile の hard gate として登録され、repoRoot 不在・読込不能・violation ありを fail-close にする。 |
 | U-DOCSECRET-006 | `ut-tdd distribution sync-stage/sync-pack/package` | clean Pack materialize 前に secret-scan を実行し、violation があれば copy / prune / tar を実行せず blocked にする。 |
+
+## Vモデルactive frontier / right-arm coverage追補 (PLAN-L6-69)
+
+| test_id | 対象 | oracle |
+|---|---|---|
+| U-VUP-FRONTIER-001 | `parseUpgradeFrontier` / `upgradeFrontierMessage` | yellow/draftを`IN-PROGRESS`、全green/non-draftだけを`CLEAR`にする。 |
+| U-VUP-FRONTIER-002 | `parseUpgradeFrontier` / `checkRoadmap` | schedule表・必須列・行の欠落、重複ID、red rowをfail-closeする。 |
+| U-RIGHT-ARM-ENGINE-001 | `loadRightArmGatePlanningInput` / `analyzeRightArmGatePlanning` | engine-swap linkedかつconfirmed/completedのverify PLANだけをL8〜L14 coverageへ数える。 |
+| U-RIGHT-ARM-ENGINE-002 | `analyzeRightArmGatePlanning` | design freezeはlinked全層起票、program acceptはlinked全層confirmed/completedを別々に強制する。 |
+| U-VTRIG-REVISION-001 | `analyzeVerificationGroups` | confirmed base + valid additive draftをbase freeze完了 / active revision `IN-PROGRESS`として別集計する。 |
+| U-VTRIG-REVISION-002 | `analyzeVerificationGroups` / `analyzePairFreeze` | base欠落/未confirmed/layer不一致は免除せず、delta exact pairの双方向参照を検証する。 |

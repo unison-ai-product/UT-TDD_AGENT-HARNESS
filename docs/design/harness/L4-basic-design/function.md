@@ -120,7 +120,7 @@ FR-12〜16 / FR-23〜30 の workflow を機能単位で外部設計する。こ�
 | **Add-feature** | add-design + add-impl (内包) | `feature_addition` / `scope_extension` | (phase なし) step 集合: 影響範囲特定 → (A 要件追補 / B 後送) → add-design (parent 必須) → add-impl (parent 必須) → テスト確認 → V 整合 | 追補が工程 doc 反映 + G7 孤児0 + 既存テスト緑 + `dependencies.parent` 設定済 → **既存 parent PLAN へ接続。経路 B (最頻): G7 trace 凍結は Reverse G3 通過後まで保留** | G7 (孤児0) / 経路 B は G3 (Reverse 完了後) |
 | **Research** | research | `tech_decision_required` / `option_comparison_needed` / `adr_required` | (phase なし) 5 step: 調査課題定義 → 候補調査 → 比較評価 → ADR 記録 → research-memo | ADR (ADR-NNN) 記録完了 + Forward 接続先確定 (L1 or L4 を ADR 内に明記) + research-memo 保存 → **L4 基本設計 or L1 要求の判断材料**。「作れるか不明」→ Discovery 切替 | gate = 人間 (ADR PR レビュー)。**機械化条件は明示 defer** (G? 未割当 → IMP-052、§3.7 carry。doc-only で完了にしない) |
 | **design-bottomup** | add-design + add-impl (内包) | `screen_addition_to_backend` / `design_bottomup` / `backend_derived_screen` / `add_ui_to_backend` | (phase なし) backend から FE 要件を elicitation (Discovery 合成再利用、`design-elicitation` engine) → mock 具体化 (L2 screen 系 sub_doc) → add-design (L2-L6、parent 必須) → add-impl (L7、parent 必須) → 既存テスト緑 | mock/add-design が L2-L6 反映 + add-impl G7 孤児0 + 要件 (L1/L3) は Reverse back-fill (bottom-up 後追い) → **add-design L2-L6 (screen 系 sub_doc) / add-impl L7 (Add-feature 同型)** | G2 (screen pair freeze) / add-impl G7 / PO (elicitation 採否)。DISCOVERY-07 で feasibility confirmed |
-| **version-up** | add-design | `version_deferral` / `version-up` / `version_up` / `future_version` | (phase なし) 後送要件を deferral 台帳へ記録 → 次バージョン着手時に add-feature 決定表へ合流 → add-design (L3-L6) | deferral 台帳記録 (着手まで PLAN 化しない) + 着手時 add-feature 合流 → **add-design L3-L6** | 着手時 add-feature の G7。deferral 記録は台帳 lint 化 (carry) |
+| **version-up** | impl (parked) | `version_deferral` / `version-up` / `version_up` / `future_version` | 将来実装placeholderを`status=draft + version_target + layer=L7`で保全 → activation時にadd-featureへ合流 | parked中はL7 draftのみ。activationは別PLANのadd-design (L3-L6) + add-impl (L7) → **Forwardへ合流** | parked tuple lint + activation時add-featureのG3-G7 |
 | **Verify** | verify | `verification_plan` / `quality_assurance` / `test_plan` / `right_lung` / `verify` | (phase なし) 検証対象・評価基準・実行 profile を確定 → L8-L14 の検証 PLAN を起票 → evidence / result を記録 → defect_routing 判定 | 検証結果が evidence として残り、失敗・品質所見は Forward / Reverse / Refactor / Recovery へ routing。右肺 PLAN 自体は `verify/*` branch + `kind=verify` | 対象 gate/profile の green evidence。quality finding は close せず routing |
 
 > **version-up の kind = 合流出口 kind と parked track kind の区別 (PLAN-RECOVERY-10 Stage 1、PO 裁定 option1 2026-07-07)**:
@@ -129,7 +129,7 @@ FR-12〜16 / FR-23〜30 の workflow を機能単位で外部設計する。こ�
 > 例: PLAN-L7-141/204/248) では、その parked PLAN は **将来実装意図の placeholder として `kind: impl` を持つ**。
 > この parked `kind: impl` は `route_mode: version-up` + `version_target` により back-fill 義務 (`KIND_BACKFILL[impl]=none`)
 > を**保留**し、**着手 (`version_target` 除去 → add-feature 合流) 時に add-design/add-impl へ昇格して義務が復活**する。
-> 機械保証: `ROUTE_MODE_ALLOWED_KINDS["version-up"] = ["impl"]` (`src/plan/lint-policy.ts`) が parked `kind: impl` を許容し、
+> 機械保証: `src/schema/route-filing.ts` のversion-up正本からlintが`kind=impl / layer=L7`を導出し、parked `kind: impl` を許容する。
 > `version_target` を欠く version-up は「着手済」として add-feature 合流義務下に置く。これにより parked が back-fill を
 > 恒久免除する抜け穴を塞ぐ (parked ⇔ version_target 存在、が不変条件)。
 
@@ -189,7 +189,7 @@ Incident (env=prod 障害) > Recovery (暴走/forced_stop/dev 回帰) > Reverse 
 不変条件:
 
 - Forward は正規 spine であり、非 Forward mode は `forward_insufficient_reason` を持つ。
-- feature / version-up / design-bottomup は設計層を skip して `kind=impl` の cold L7 に入らない。
+- feature / design-bottomup / version-up activationは設計層をskipして`kind=impl`のcold L7に入らない。version-up parked track自体は実装着手ではない。
 - Verify は `layer=L8-L14` の右肺 FilingTarget として扱い、検証結果は defect routing により左肺へ戻る。
 - `.ut-tdd/harness.db` は上記 field の query surface であり、authoring source ではない。
 - 工程管理表に掲載された PLAN の `current_location` / `rag` / `blocked_reason` は、検出系の推測より工程表正本を優先する。

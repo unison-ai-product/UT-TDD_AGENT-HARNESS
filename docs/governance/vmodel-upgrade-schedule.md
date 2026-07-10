@@ -2,7 +2,7 @@
 title: "Vモデル upgrade schedule authoring source"
 status: confirmed
 owner: PO / TL
-updated: 2026-07-09
+updated: 2026-07-10
 typed_spec_phase_owner: L6
 ---
 
@@ -21,7 +21,19 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 
 | `plan_id` | `layer` | `sub_doc` | `v_pair` | `predecessor_plan_ids` | `current_location` | `rag` | `status` | `blocked_reason` |
 |---|---|---|---|---|---|---|---|---|
-| PLAN-L0-01-vmodel-harness-upgrade-charter | L0 | charter |  |  | U0: charter confirmed; ZIP前提をVモデル全面更新として固定 | green | confirmed |  |
+| PLAN-L0-01-vmodel-harness-upgrade-charter | L0 | charter |  |  | U0: engine-swap/full-scope charter承認済。programはU18a-d設計中 | yellow | confirmed | 109→163 join、FSM/PLAN v2、G8-G14 contract未完 |
+| PLAN-L1-06-vmodel-upgrade-requirements | L1 | technical | L14 | PLAN-L0-01-vmodel-harness-upgrade-charter | U1: VUP-REQ-01〜08の既存freezeを履歴として維持 | green | confirmed |  |
+| PLAN-L1-07-vmodel-engine-swap-requirements-delta | L1 | technical | L14 | PLAN-L1-06-vmodel-upgrade-requirements | U18: VUP-REQ-08A/09/10とfull-scope engine-swap差分をadditive freeze済 | green | confirmed |  |
+| PLAN-L4-22-vmodel-source-disposition-profile-ssot | L4 | data | L9 | PLAN-L0-01-vmodel-harness-upgrade-charter | U18a: 109 source→163 item→target dispositionと8 profileを再freeze | yellow | draft | 163 item-level join、L9 pair review、projection設計待ち |
+| PLAN-L4-23-forward-fsm-plan-asset-v2 | L4 | function | L9 | PLAN-L0-01-vmodel-harness-upgrade-charter | U18b: append-only Forward FSM / immutable PLAN Asset v2を再freeze | yellow | draft | L5 ledger、L6 guard、legacy migration oracle待ち |
+| PLAN-L4-24-declarative-vmodel-contract-right-arm | L4 | architecture | L9 | PLAN-L4-23-forward-fsm-plan-asset-v2 | U18c: 設計由来V-model contractとG8-G14右腕engineを再freeze | yellow | draft | contract schema、L8-L14 verify PLAN、G11-G14 evidence待ち |
+| PLAN-L6-69-active-upgrade-frontier-right-arm-contract | L6 | function-spec | L7 | PLAN-L4-24-declarative-vmodel-contract-right-arm | U18c-design: active frontier/right-arm fail-close関数契約をfreeze済 | green | confirmed |  |
+| PLAN-L7-416-active-upgrade-frontier-right-arm-gate | L7 |  | L6 | PLAN-L6-69-active-upgrade-frontier-right-arm-contract | U18c-impl: false-greenを除去するparser/analyzer/doctor gate実装済 | green | confirmed |  |
+| PLAN-REVERSE-416-active-upgrade-frontier-right-arm-backfill | cross | function-spec | L7 | PLAN-L7-416-active-upgrade-frontier-right-arm-gate | U18c-backfill: observed false-greenをL6/L7契約へ合流済 | green | confirmed |  |
+| PLAN-L4-25-repository-docs-engine-swap-audit | L4 | architecture | L9 | PLAN-L4-22-vmodel-source-disposition-profile-ssot,PLAN-L4-23-forward-fsm-plan-asset-v2,PLAN-L4-24-declarative-vmodel-contract-right-arm | U18d: repository全tracked docsのdispositionと設計波及を監査 | yellow | draft | baseline ledger、全件判断、cross-reference closure待ち |
+| PLAN-L4-26-engine-swap-object-method-design | L4 | data | L9 | PLAN-L4-21-domain-vo-coding-constraints,PLAN-L4-23-forward-fsm-plan-asset-v2 | U18e: engine-swap domainのaggregate/class/method/port設計を実体化 | yellow | draft | L4 object判断、L5 module、L6 method契約、負債routing待ち |
+| PLAN-L4-27-vmodel-semantic-self-audit | L4 | architecture | L9 | PLAN-L4-22-vmodel-source-disposition-profile-ssot,PLAN-L4-25-repository-docs-engine-swap-audit,PLAN-L4-26-engine-swap-object-method-design | U18f: ZIP 163 itemに対するHARNESS設計/実装/test/evidenceの正しさを全件監査 | yellow | draft | 163 item review、pending 0、gap debt、frontier review待ち |
+| PLAN-L4-28-design-detection-self-proof | L4 | architecture | L9 | PLAN-L4-24-declarative-vmodel-contract-right-arm,PLAN-L4-27-vmodel-semantic-self-audit | U18g: 設計由来detectorの完全性/freshness/実発火/mutationを独立自己証明 | yellow | draft | meta-verifier、receipt、mutation survivor 0、surface parity待ち |
 | PLAN-L3-04-upstream-schedule-reconciliation | L3 | functional | L12 | PLAN-L0-01-vmodel-harness-upgrade-charter | U1: requirements slice confirmed; 上流要求と受入条件を固定 | green | confirmed |  |
 | PLAN-L4-18-roadmap-drive-selection-hardening | L4 | function | L9 | PLAN-L3-04-upstream-schedule-reconciliation | U2a: routeFiling / 駆動モデル選択の外部設計を固定 | green | confirmed |  |
 | PLAN-L4-19-vmodel-spec-ir-data | L4 | data | L9 | PLAN-L4-18-roadmap-drive-selection-hardening | U2b: spec IR / 工程 / activation の集約境界を固定 | green | confirmed |  |
