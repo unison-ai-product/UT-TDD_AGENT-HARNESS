@@ -195,6 +195,26 @@ D2 = Pack クリーン配布の構造妥当性監査。effort=high / read-only /
    コストで最深の監査を出した (D1 の 3 倍コストは網羅列挙の性質による)。**「難所の監査・
    検証に限り Sol へ上げる」運用 (Fable 5 対称) は価格性能的に成立する**。
 
+### 5.3 参考: Claude 側ブラインド D2 (2026-07-10)
+
+同一バンドルで Claude 側 2 点を測定 (採点者 Claude 本体は答え既見のため、未汚染の
+別コンテキストで実行)。**条件差の留保**: Opus は Agent tool (subagent、bundle 限定指示)、
+Fable は advisor 経路 (`ut-tdd advisor --execute`) で repo 常駐コンテキスト (CLAUDE.md 等)
+を持つため、GPT 勢との厳密同条件ではない。
+
+| 指標 | claude-opus-4-8 | claude-fable-5 (advisor 経由) |
+|---|---|---|
+| D2 正解キー recall | 4/6 + partial 2 | 5/6 + partial 1 |
+| 新規指摘 | 4 (denylist 空洞化を独立発見) | 5 (manifest 非冪等を独立発見、readiness 恒真・package の exportPlan.ok 非ゲート・docs/skills remap の governance 矛盾) |
+| 特記 | no-go 核心を catch-22 として最鋭利に定式化 | 唯一「根因単一修正」(git archive + dirty fail-close) まで提示。tag 生成が標準動線 nextCommands に無い欠落も唯一発見 |
+| 実行 | 136s / 48.5k tokens | 131s / tokens 不明 (advisor 経由) |
+
+Sol の denylist 空洞化を Opus が、Terra の manifest 非冪等を Fable が、それぞれ独立に
+再発見しており、**モデル横断の独立一致は finding の実在性の強い証拠** (adversarial
+verification が自然成立)。agent-guard が model=fable を正規化できない事象も本測定で
+発見 (`ModelFamily`/`FAMILY_RANK` に Claude 5 世代が無い)。修正方針は「fable を最上位
+rank に追加しつつ worker role 割当は policy で禁止」(判断頂点の非消費原則、§6 参照)。
+
 ## 6. S1 DoD
 
 - [ ] 仮説表 (H1–H3) と採用基準が PO / TL レビューで凍結される。
