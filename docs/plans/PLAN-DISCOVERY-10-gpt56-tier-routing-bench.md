@@ -215,7 +215,55 @@ verification が自然成立)。agent-guard が model=fable を正規化でき�
 発見 (`ModelFamily`/`FAMILY_RANK` に Claude 5 世代が無い)。修正方針は「fable を最上位
 rank に追加しつつ worker role 割当は policy で禁止」(判断頂点の非消費原則、§6 参照)。
 
-## 6. S1 DoD
+### 5.4 W2 実装 lane (2026-07-10)
+
+形式: fix commit の親 (バグ版) source + 凍結テスト全文を渡し、修正版全文を single-shot
+出力 → worktree (当該 fix commit) に適用して凍結テストを実走 (codex sandbox の Windows
+spawn 不能を回避する replay 形式)。effort=medium、4 課題。
+
+| 指標 | gpt-5.6-terra | gpt-5.5 |
+|---|---|---|
+| pass@1 | **4/4** (13+20+4+25 tests green) | 3/4 (loader が esbuild transform error = 構文不正) |
+| tokens | 73.7k | 98.5k |
+| 時間 | 341s | 352s |
+
+### 5.5 W3 テスト lane (2026-07-10)
+
+形式: 挙動契約からテストを書かせ、red/green 二面 oracle (修正版で green かつバグ版で
+red = KILLS-BUG) を実走。有効課題 = agent-guard のみ (session-log 課題は出題側の API
+記述不足 — 返り値型未指定 + 誤誘導的な Bash 例 — で両モデル同時 fail したため**課題無効**)。
+
+- agent-guard: **Terra / gpt-5.5 両モデル KILLS-BUG 達成** (1/1)。
+- 出題教訓: W3 は対象 API を厳密に固定した場合のみ有効な測定になる (agent-guard は
+  API を明記して両者成功、session-log は未指定で両者が別々の形に誤推定)。
+
+### 5.6 軽量分類 lane (H3、2026-07-10)
+
+実 commit 12 件の Conventional Commits type 分類 (prefix 除去 + file list 提示、effort=low):
+luna 5/12 / mini 6/12 / spark 5/12、latency は luna 最速 (9s)。**有意差なし**。本 repo の
+feat commit は docs も大量に触るため file list が誤誘導する等、課題側の識別力不足も併記
+(H3 は未決のまま — Luna 採用の積極根拠は現時点なし)。
+
+## 6. S3 verify まとめと S4 提言 (draft — S4 確定は PO ゲート)
+
+全 lane 集計 (W4 レビュー / W5 検証 / W1 設計×2 / W2 実装 / W3 テスト):
+
+- **H2 (Terra = 主力実装帯) — 採用提言**。全 lane で gpt-5.5 と同等以上 (W5 6/6 vs 5/6、
+  W1-D2 で新規実バグ発見、W2 pass@1 4/4 vs 3/4)、消費トークンも一貫して少なく単価半額。
+  → `MODEL_IDS.codex.worker` を `gpt-5.4` から `gpt-5.6-terra` へ更新する提言
+  (5.5 級品質を worker 単価で常用する、PO 意図の実装形)。
+- **H1 (Sol = エスカレーション先) — 採用提言**。難所 (W1-D2) で recall 6/6 + 裏取り済
+  新規欠陥 2 件と明確な上積み。routine 難度では Terra と差が出ないため常用は不経済。
+  → `MODEL_IDS.codex.frontier` を `gpt-5.5` から `gpt-5.6-sol` へ更新し、advisor の GPT 側
+  相談先・最上位 review gate を Sol に置く提言 (Fable 5 対称の escalation 席。7/13 以降
+  Fable がプラン外に落ちる想定下で実効 frontier 席になる)。
+- **H3 (Luna = 軽量帯) — 保留**。spark/mini との有意差を示せず。課題設計を改善した
+  再測まで現状維持。
+- 実施形: S4 confirmed 後、後継 impl PLAN で `MODEL_IDS` SSoT (PLAN-L7-256 系) +
+  tier roster + advisor policy を更新。agent-guard の family 対応は PLAN-L7-414。
+  gpt-5.6 系の family 序列挿入位置は本 PLAN の実測を review_evidence として引用する。
+
+## 7. S1 DoD
 
 - [ ] 仮説表 (H1–H3) と採用基準が PO / TL レビューで凍結される。
 - [ ] Lane A の replay 対象 PLAN 候補リストが確定する (freeze 済テスト設計を持つこと)。
