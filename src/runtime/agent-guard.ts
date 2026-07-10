@@ -17,18 +17,20 @@
  * This module is pure. The hook shim owns stdin and filesystem access.
  */
 
-import { MODEL_IDS } from "../team/model-policy";
 import {
   AGENT_GUARD_BYPASS_HINT,
   AGENT_TOOL_NAMES,
+  CLAUDE_MODEL_FAMILY_CATALOG,
   SUBAGENT_ALLOWLIST,
 } from "./agent-guard-policy";
 
-export type ModelFamily = keyof typeof MODEL_IDS.claude;
+export type ModelFamily = keyof typeof CLAUDE_MODEL_FAMILY_CATALOG;
 
 /** Capability floor ordering. Higher rank = strictly more capable, never a valid "downgrade" target. */
 const FAMILY_RANK: Record<ModelFamily, number> = { haiku: 0, sonnet: 1, opus: 2, fable: 3 };
-const MODEL_FAMILY_CATALOG = Object.entries(MODEL_IDS.claude) as Array<[ModelFamily, string]>;
+const MODEL_FAMILY_CATALOG = Object.entries(CLAUDE_MODEL_FAMILY_CATALOG) as Array<
+  [ModelFamily, string]
+>;
 const MODEL_FAMILIES = MODEL_FAMILY_CATALOG.map(([family]) => family);
 const MODEL_FAMILY_TEXT = MODEL_FAMILIES.join(" / ");
 

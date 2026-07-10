@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { normalizeModelFamily } from "../src/runtime/agent-guard";
-import { SUBAGENT_ALLOWLIST } from "../src/runtime/agent-guard-policy";
+import { CLAUDE_MODEL_FAMILY_CATALOG, SUBAGENT_ALLOWLIST } from "../src/runtime/agent-guard-policy";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
 import { MODEL_IDS } from "../src/team/model-policy";
 
@@ -89,5 +89,9 @@ describe("U-MODELID-SSOT: model ID single source of truth", () => {
     for (const [family, modelId] of Object.entries(MODEL_IDS.claude)) {
       expect(normalizeModelFamily(modelId), modelId).toBe(family);
     }
+  });
+
+  it("(f) runtime-layer CLAUDE_MODEL_FAMILY_CATALOG mirrors MODEL_IDS.claude (module-boundary duplicate)", () => {
+    expect({ ...CLAUDE_MODEL_FAMILY_CATALOG }).toEqual({ ...MODEL_IDS.claude });
   });
 });
