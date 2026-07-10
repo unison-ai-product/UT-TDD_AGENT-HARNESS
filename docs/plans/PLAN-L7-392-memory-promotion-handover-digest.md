@@ -3,7 +3,7 @@ plan_id: PLAN-L7-392-memory-promotion-handover-digest
 title: "PLAN-L7-392 (add-impl): HARNESS メモリ昇格 nudge と telemetry lifecycle"
 kind: add-impl
 layer: L7
-drive: be
+drive: db
 status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
@@ -39,9 +39,9 @@ generates:
   - artifact_path: src/state-db/projection-writer.ts
     artifact_type: source_module
   - artifact_path: src/schema/harness-db-tables-core.ts
-    artifact_type: schema
+    artifact_type: source_module
   - artifact_path: src/schema/harness-db-indexes.ts
-    artifact_type: schema
+    artifact_type: source_module
   - artifact_path: tests/feedback-lifecycle.test.ts
     artifact_type: test_code
   - artifact_path: tests/feedback-surface.test.ts

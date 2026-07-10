@@ -120,6 +120,7 @@ describe("feedback lifecycle", () => {
     const deps = {
       nowIso: () => now,
       stableId,
+      telemetryTtlMs: 1,
       recordProjectionEvent: (
         target: typeof db,
         event: { table: string; id: string; row: Record<string, unknown> },
@@ -164,13 +165,13 @@ describe("feedback lifecycle", () => {
           created_at: now,
         },
       });
-      reconcileFeedbackLifecycle(root, db, deps, 1);
+      reconcileFeedbackLifecycle(root, db, deps);
       expect(db.prepare("SELECT state FROM feedback_lifecycle").get()).toMatchObject({
         state: "open",
       });
 
       now = "2026-07-10T00:00:01Z";
-      reconcileFeedbackLifecycle(root, db, deps, 1);
+      reconcileFeedbackLifecycle(root, db, deps);
       const latest = db
         .prepare(
           "SELECT state FROM feedback_lifecycle ORDER BY occurred_at DESC, lifecycle_id DESC LIMIT 1",
@@ -183,7 +184,7 @@ describe("feedback lifecycle", () => {
         "UPDATE feedback_events SET source_generation = ? WHERE feedback_event_id = ?",
       ).run("generation:2", "feedback:memory");
       now = "2026-07-10T00:00:02Z";
-      reconcileFeedbackLifecycle(root, db, deps, 1);
+      reconcileFeedbackLifecycle(root, db, deps);
       expect(
         db
           .prepare(
@@ -201,7 +202,7 @@ describe("feedback lifecycle", () => {
 
       db.prepare("DELETE FROM feedback_events WHERE feedback_event_id = ?").run("feedback:memory");
       now = "2026-07-10T00:00:03Z";
-      reconcileFeedbackLifecycle(root, db, deps, 1);
+      reconcileFeedbackLifecycle(root, db, deps);
       expect(
         db
           .prepare(
@@ -229,7 +230,7 @@ describe("feedback lifecycle", () => {
         },
       });
       now = "2026-07-10T00:00:04Z";
-      reconcileFeedbackLifecycle(root, db, deps, 1);
+      reconcileFeedbackLifecycle(root, db, deps);
       const recurrence = db
         .prepare("SELECT source_generation FROM feedback_events WHERE feedback_event_id = ?")
         .get("feedback:memory") as { source_generation: string };
@@ -288,6 +289,7 @@ describe("feedback lifecycle", () => {
       reconcileFeedbackLifecycle(blockedRoot, db, {
         nowIso: () => "2026-07-10T00:00:00Z",
         stableId,
+        telemetryTtlMs: 1,
         recordProjectionEvent: (
           target,
           event: { table: string; id: string; row: Record<string, unknown> },

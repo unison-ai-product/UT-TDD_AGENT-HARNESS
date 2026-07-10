@@ -20,6 +20,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-392-memory-promotion-digest-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L6-function-design/memory.md
+    artifact_type: design_doc
+  - artifact_path: docs/design/harness/L6-function-design/forced-stop-feedback.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
+  - artifact_path: docs/test-design/harness/L8-integration-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
   requires:

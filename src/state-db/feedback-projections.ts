@@ -21,6 +21,7 @@ import { detectorRouteCandidateAction } from "./route-candidate-review";
 interface FeedbackProjectionDeps {
   nowIso: () => string;
   stableId: (prefix: string, value: string) => string;
+  telemetryTtlMs?: number;
   recordProjectionEvent: (
     db: HarnessDb,
     event: { table: string; id: string; row: Record<string, unknown> },
@@ -54,18 +55,16 @@ function lifecycleKey(
 }
 
 function recordLifecycleTransitions(
-  repoRoot: string,
-  db: HarnessDb,
+  input: { repoRoot: string; db: HarnessDb; records: FeedbackLifecycleRecord[] },
   deps: FeedbackProjectionDeps,
-  records: FeedbackLifecycleRecord[],
 ): void {
-  if (!appendFeedbackLifecycleBatch(repoRoot, records)) return;
-  for (const record of records) {
+  if (!appendFeedbackLifecycleBatch(input.repoRoot, input.records)) return;
+  for (const record of input.records) {
     const id = deps.stableId(
       "feedback-lifecycle",
       `${record.feedback_event_id}:${record.source_generation}:${record.occurred_at}:${record.state}`,
     );
-    deps.recordProjectionEvent(db, {
+    deps.recordProjectionEvent(input.db, {
       table: "feedback_lifecycle",
       id,
       row: { lifecycle_id: id, ...record },
@@ -82,9 +81,9 @@ export function reconcileFeedbackLifecycle(
   repoRoot: string,
   db: HarnessDb,
   deps: FeedbackProjectionDeps,
-  telemetryTtlMs = FEEDBACK_TELEMETRY_TTL_MS,
 ): void {
   const now = deps.nowIso();
+  const telemetryTtlMs = deps.telemetryTtlMs ?? FEEDBACK_TELEMETRY_TTL_MS;
   const records = loadFeedbackLifecycle(repoRoot);
   const transitions: FeedbackLifecycleRecord[] = [];
   const latest = new Map<string, FeedbackLifecycleRecord>();
@@ -167,7 +166,7 @@ export function reconcileFeedbackLifecycle(
     transitions.push(next);
     latest.set(key, next);
   }
-  recordLifecycleTransitions(repoRoot, db, deps, transitions);
+  recordLifecycleTransitions({ repoRoot, db, records: transitions }, deps);
 }
 
 const refactorCandidateCache = new Map<string, RefactorCandidate[]>();
