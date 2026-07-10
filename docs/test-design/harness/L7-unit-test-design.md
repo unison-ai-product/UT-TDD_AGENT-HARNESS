@@ -1182,13 +1182,13 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 
 | test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
 |---|---|---|---|
-| `CANDIDATE-PA-001` | 空/不正`asset_id` | `PlanAsset.create` | `plan-asset-invalid-id`, exit 1 |
-| `CANDIDATE-PA-002` | revision 1,3 | `PlanAsset.reconstruct` | `plan-revision-gap`, exit 1 |
-| `CANDIDATE-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
-| `CANDIDATE-PA-004` | revision 1+evidence | `PlanAsset.revise` | 旧instance/evidence digest不変、exit 0 |
-| `CANDIDATE-PA-005` | expired/別revision evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`, exit 1 |
-| `CANDIDATE-PA-006` | legacy PLAN全field | canonical adapter | field loss 0。損失時`plan-migration-loss`, exit 1 |
-| `CANDIDATE-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
+| `U-PA-001` | 空/不正`asset_id` | `PlanAsset.create` | `plan-asset-invalid-id`, exit 1 |
+| `U-PA-002` | revision 1,3 | `PlanAsset.reconstruct` | `plan-revision-gap`, exit 1 |
+| `U-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
+| `U-PA-004` | revision 1+evidence | `PlanAsset.revise` | 旧instance/evidence digest不変、exit 0 |
+| `U-PA-005` | expired/別revision/policy別exit evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`、Red expected nonzeroだけusable、exit 1/0 |
+| `U-PA-006` | legacy PLAN全field + short alias 18衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
+| `U-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
 | `CANDIDATE-FSM-001` | 正規stateごとの次event | `transition` | 許可表どおりのnext state/event、exit 0 |
 | `CANDIDATE-FSM-002` | proposed→implementing | `transition` | `forward-transition-illegal`, exit 1 |
 | `CANDIDATE-FSM-003` | pair frozen、Red evidenceなし | implement command | `forward-red-evidence-missing`, exit 1 |

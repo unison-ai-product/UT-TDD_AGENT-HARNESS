@@ -23,6 +23,7 @@ UT-TDD-agent-harness/
 ├── tsconfig.json                 # TypeScript strict
 ├── bun.lock                      # Bun lockfile (tracked)
 ├── vitest.config.ts              # Vitest coverage reporter config (G7 coverage-summary evidence)
+├── ut-tdd.project.json           # PLAN asset用の追跡済みrepository identity正本
 ├── .gitattributes                # 改行正規化 (eol=lf、*.ps1 は crlf)
 ├── .editorconfig                 # editor/agent shared whitespace and newline defaults
 ├── .gitignore

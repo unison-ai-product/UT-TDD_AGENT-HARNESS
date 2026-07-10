@@ -1052,7 +1052,7 @@ resumeだけが元normal stateへ戻す。reopenの同一revisionはstate復帰�
 `EvidencePolicy`はkind、min/max cardinality、maxAge、accepted producers、`exitRule=exact|nonzero|any`、`expectedExit?`、subject revision/source commit一致をtyped fieldで持つ。
 不足kindと不適格record IDをstable順で返し、別revision・policyのexitRule不適合・期限切れrecordを件数へ数えない。
 
-| policy ID | required kind | cardinality | exit rule | accepted producer |
+| ポリシーID | 必須証跡kind | 必要件数 | exit規則 | 許可producer |
 |---|---|---:|---|---|
 | `scope-approval/v1` | `scope-approval` | 1以上 | exact 0 | `human|po` |
 | `pair-artifact/v1` | `pair-artifact-declaration` | 1以上 | exact 0 | `codex|claude|human` |
@@ -1083,9 +1083,9 @@ kind 1以上・同revision・accepted producerで要求する。policy ID未登�
 
 #### workflow CLI共通envelope
 
-`workflow status|transition|explain`は同じapplication service verdictを使用し、JSONは
-`{ ok, command, subject { asset_id, revision, alias }, current_state, requested_state?, verdict,
-findings[], evidence_ids[], event_id?, state_digest }`を返す。正常exit 0、domain/guard違反1、usage/schema違反2、I/O/transaction失敗3。
+`workflow status|transition|explain`は同じapplication service verdictを使用する。JSON応答は`ok`、`command`、
+`subject { asset_id, revision, alias }`、`current_state`、任意の`requested_state`、`verdict`、`findings[]`、
+`evidence_ids[]`、任意の`event_id`、`state_digest`を返す。正常exit 0、domain/guard違反1、usage/schema違反2、I/O/transaction失敗3。
 `status`と`explain`は書込み0、`transition`はevent append+projectionを1 transactionで行う。aliasは418のexact resolverだけを使い、
 ambiguous=`plan-migration-collision`、unknown=`plan-asset-not-found`、future revision=`plan-revision-not-found`とする。
 CLI/hook/doctorはrule ID、verdict、exit classを変換せず、同じrequest digestなら同じcommand ID再送を冪等に扱う。

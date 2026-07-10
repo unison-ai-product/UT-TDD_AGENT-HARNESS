@@ -53,6 +53,7 @@ import {
   recommendVerificationProfiles,
 } from "../lint/verification-profile";
 import { loadMemoryEntries } from "../memory/index";
+import { resolveLegacyPlanAlias } from "../plan-asset/adapters/legacy-plan-adapter.js";
 import {
   HARNESS_DB_TABLE_BY_NAME,
   HARNESS_DB_TABLES,
@@ -673,8 +674,8 @@ function projectDriveRuns(
 }
 
 function resolveProjectedPlanId(plans: Map<string, ProjectedPlan>, planId: string): string {
-  if (plans.has(planId)) return planId;
-  return [...plans.keys()].find((id) => id.startsWith(`${planId}-`)) ?? planId;
+  const resolved = resolveLegacyPlanAlias(planId, [...plans.keys()]);
+  return resolved.ok ? resolved.value : planId;
 }
 
 function projectHookEvents(

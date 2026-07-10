@@ -23,6 +23,18 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-418-plan-asset-v2-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: ut-tdd.project.json
+    artifact_type: config
+  - artifact_path: src/plan-asset/domain/plan-asset.ts
+    artifact_type: typescript_source
+  - artifact_path: src/plan-asset/domain/evidence-record.ts
+    artifact_type: typescript_source
+  - artifact_path: src/plan-asset/domain/reservation.ts
+    artifact_type: typescript_source
+  - artifact_path: src/plan-asset/adapters/legacy-plan-adapter.ts
+    artifact_type: typescript_source
+  - artifact_path: tests/plan-asset/domain.test.ts
+    artifact_type: test
 dependencies:
   parent: docs/plans/PLAN-L6-71-plan-asset-canonical-migration-contracts.md
   requires: []
@@ -34,4 +46,10 @@ dependencies:
 
 U-PA-001..007をRed freezeし、immutable aggregate/VO、canonical v1 adapter、collision migration ledger、採番予約を実装する。情報損失と曖昧short IDはfail-closeする。DoDはlegacy全件変換、collision全件判断、旧revision不変、review、Reverse-418合流である。
 
-planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,adapters}`、reservation/migration schema、dry-run CLI、実行可能Red/Green testである。実体作成と同時にfrontmatter `generates`へ昇格する。
+planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,adapters}`、reservation/migration schema、dry-run CLI、実行可能Red/Green testである。実体化した成果物はfrontmatter `generates`へ昇格する。
+
+## 実装進捗
+
+- U-PA-001..007: Redを観測後、domain/value object、legacy canonical adapter、曖昧alias fail-close、採番予約をGreen化済み。
+- `state-db`のlegacy short alias解決は先頭一致を廃止し、canonical resolverのexact/unique規則へ統合済み。
+- 未完了: Git provenance付きproject identity loader、ledger DB/schema、全legacy PLAN移行・collision判断、dry-run CLI、Reverse-418合流。
