@@ -3,10 +3,11 @@ plan_id: PLAN-DISCOVERY-10-gpt56-tier-routing-bench
 title: "PLAN-DISCOVERY-10 (kind=poc): GPT-5.6 (Sol/Terra/Luna) レーン別 replay ベンチ — orchestration routing への組み込み判断"
 kind: poc
 layer: cross
-workflow_phase: S1
+workflow_phase: S4
 scrum_type: hypothesis-test
 drive: agent
-status: draft
+status: confirmed
+decision_outcome: confirmed
 created: 2026-07-10
 updated: 2026-07-10
 owner: PM (Claude) / PO (人間)
@@ -29,6 +30,13 @@ dependencies:
     - docs/plans/PLAN-L7-255-delegation-model-effort-injection.md
     - docs/plans/PLAN-L7-256-model-id-ssot-drift-gate.md
     - src/team/model-policy.ts
+review_evidence:
+  - reviewer: po
+    review_kind: human
+    reviewed_at: "2026-07-10T14:35:00+09:00"
+    tests_green_at: "2026-07-10T14:20:00+09:00"
+    verdict: approve
+    scope: "S4 決定 (H2 worker→gpt-5.6-terra 採用 / H1 frontier→gpt-5.6-sol 採用 / H3 luna 保留)。実測は本 PLAN §5 の全 lane 記録 (W2 凍結テスト oracle 実走 = wt-bench での vitest green 62 件、W3 red/green 二面 oracle、W1 正解キー照合) に基づく。PO はチャットで仮説再定義 (Terra=主力/Sol=escalation、2026-07-10) から S4 採否まで段階承認。実装は後継 PLAN-L7-415 (kind=impl) に委譲し、本 PLAN は測定と決定の記録で閉じる。"
 ---
 
 # PLAN-DISCOVERY-10 (kind=poc): GPT-5.6 レーン別 replay ベンチ
