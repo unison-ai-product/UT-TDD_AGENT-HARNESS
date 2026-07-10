@@ -83,16 +83,20 @@ describe("document profile resolver", () => {
     expect(catalog.ok).toBe(true);
     if (!catalog.ok) return;
 
+    const explicitDecisions = [
+      decision("explicit-data-detail", "standard", "DOC-L4-DATA", "adopt", "detailed", "required"),
+    ];
+
     const first = resolveDocumentProfile(catalog.value, {
       sizeProfileId: "standard",
       productProfileIds: ["web", "mobile"],
-      explicitDecisions: [],
+      explicitDecisions,
       capabilityFlags: [],
     });
     const second = resolveDocumentProfile(catalog.value, {
       sizeProfileId: "standard",
       productProfileIds: ["mobile", "web"],
-      explicitDecisions: [],
+      explicitDecisions,
       capabilityFlags: [],
     });
     expect(first).toEqual(second);

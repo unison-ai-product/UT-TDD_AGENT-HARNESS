@@ -68,8 +68,15 @@ PLAN-L7-417で実装したsource disposition、semantic item、profile、DB proj
 | `a13c392f` | tracked authoring projection |
 | `5d01b77d` | target resolverとconstraint verification |
 | `d142192f` | object input refactor、schema enum修正、detector自己証明gap closure |
+| `4b577868` | tamper false-green解消、U-PROFILE trace整合、profile manifest駆動化 |
 
-検証結果はtargeted 15 files **99/99 Green**、`tsc --noEmit` Green、coding-rules 9/9 Green、PLAN工程表739件Greenである。全suiteは172/174 files、1678/1695 tests Greenで、RedはIMP-147の共有append-only `feedback_lifecycle`競合1件と、L7-417がdraftであることに起因する`doctor`連鎖16件へ分離した。前者はproduct fixed-pointとは別のtest isolation負債として既に起票済み、後者は本Reverse合流とreview evidence確定で閉じる。
+検証結果はtargeted 15 files **100/100 Green**、`tsc --noEmit` Green、coding-rules 9/9 Green、PLAN工程表739件Greenである。再現commandは次のとおりで、anchorは`4b577868`である。
+
+```powershell
+bunx vitest run tests/coding-rules.test.ts tests/design-language.test.ts tests/improvement-backlog.test.ts tests/db-projection-coverage.test.ts tests/harness-db-constraints.test.ts tests/disposition/strict-markdown-table.test.ts tests/disposition/tracked-authoring-loader.test.ts tests/disposition/catalog.test.ts tests/disposition/projection.test.ts tests/disposition/target-resolver.test.ts tests/disposition/tracked-target-registry.test.ts tests/profile/resolver.test.ts tests/profile/tracked-loader.test.ts tests/vmodel-schema.test.ts tests/vmodel-migration.test.ts --reporter=dot
+```
+
+全suiteは172/174 files、1678/1695 tests Greenで、RedはIMP-147の共有append-only `feedback_lifecycle`競合1件と、L7-417がdraftであることに起因する`doctor`連鎖16件へ分離した。前者はproduct fixed-pointとは別のtest isolation負債として`IMP-147`へ起票済み、後者は本Reverse合流とreview evidence確定後の全suite再実行で閉じる。
 
 ## §4 R4合流先
 
