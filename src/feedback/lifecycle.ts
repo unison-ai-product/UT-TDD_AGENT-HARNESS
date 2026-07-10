@@ -8,6 +8,22 @@ export interface FeedbackLifecycleRecord {
   reason: string;
 }
 
+export function parseFeedbackLifecycle(raw: string): FeedbackLifecycleRecord[] {
+  return raw.split(/\r?\n/).flatMap((line) => {
+    if (!line.trim()) return [];
+    try {
+      const value = JSON.parse(line) as FeedbackLifecycleRecord;
+      return value.feedback_event_id && value.source_generation && value.state ? [value] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+
+export function renderFeedbackLifecycle(record: FeedbackLifecycleRecord): string {
+  return `${JSON.stringify(record)}\n`;
+}
+
 export function resolveFeedbackLifecycle(input: {
   previous?: FeedbackLifecycleRecord;
   source_present: boolean;
