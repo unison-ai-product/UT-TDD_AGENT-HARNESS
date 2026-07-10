@@ -1424,9 +1424,7 @@ dependencies:
       "utf8",
     );
     const ledgerIds = new Set(
-      [...debtLedger.matchAll(/^\|\s*(PLAN-[A-Za-z0-9-]+)\s*\|/gm)].map(
-        (match) => match[1],
-      ),
+      [...debtLedger.matchAll(/^\|\s*(PLAN-[A-Za-z0-9-]+)\s*\|/gm)].map((match) => match[1]),
     );
     expect(ledgerIds).toEqual(VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS);
     const landedPlan = readFileSync(

@@ -33,9 +33,7 @@ describe("active Vモデル upgrade frontier", () => {
     expect(() => parseUpgradeFrontier("# schedule")).toThrow("table is missing");
     expect(() =>
       parseUpgradeFrontier(
-        ["| plan_id | rag | status |", "|---|---|---|", "| P1 | green | confirmed |"].join(
-          "\n",
-        ),
+        ["| plan_id | rag | status |", "|---|---|---|", "| P1 | green | confirmed |"].join("\n"),
       ),
     ).toThrow("columns are missing");
     expect(() =>
@@ -46,14 +44,17 @@ describe("active Vモデル upgrade frontier", () => {
         ].join("\n"),
       ),
     ).toThrow("no rows");
-    expect(() => parseUpgradeFrontier(`${schedule}\n| PLAN-U18-A | duplicate | yellow | draft | x |`)).toThrow(
-      "duplicate plan_id",
-    );
+    expect(() =>
+      parseUpgradeFrontier(`${schedule}\n| PLAN-U18-A | duplicate | yellow | draft | x |`),
+    ).toThrow("duplicate plan_id");
   });
 
   it("turns a red authored row into a hard-gate violation", () => {
     const entries = parseUpgradeFrontier(
-      schedule.replace("| PLAN-U18-B | U18b review | yellow | confirmed | evidence |", "| PLAN-U18-B | U18b review | red | confirmed | blocked |"),
+      schedule.replace(
+        "| PLAN-U18-B | U18b review | yellow | confirmed | evidence |",
+        "| PLAN-U18-B | U18b review | red | confirmed | blocked |",
+      ),
     );
     expect(upgradeFrontierViolations(entries)).toEqual([
       "active-upgrade-frontier - violation: PLAN-U18-B is red (blocked)",
@@ -61,14 +62,14 @@ describe("active Vモデル upgrade frontier", () => {
   });
 
   it("fails closed for an invalid separator, rag, or PLAN status", () => {
-    expect(() => parseUpgradeFrontier(schedule.replace("|---|---|---|---|---|", "|---|oops|---|---|---|"))).toThrow(
-      "separator row is invalid",
-    );
-    expect(() => parseUpgradeFrontier(schedule.replace("| yellow | draft |", "| blue | draft |"))).toThrow(
-      "invalid rag=blue",
-    );
-    expect(() => parseUpgradeFrontier(schedule.replace("| yellow | draft |", "| yellow | nonsense |"))).toThrow(
-      "invalid status=nonsense",
-    );
+    expect(() =>
+      parseUpgradeFrontier(schedule.replace("|---|---|---|---|---|", "|---|oops|---|---|---|")),
+    ).toThrow("separator row is invalid");
+    expect(() =>
+      parseUpgradeFrontier(schedule.replace("| yellow | draft |", "| blue | draft |")),
+    ).toThrow("invalid rag=blue");
+    expect(() =>
+      parseUpgradeFrontier(schedule.replace("| yellow | draft |", "| yellow | nonsense |")),
+    ).toThrow("invalid status=nonsense");
   });
 });

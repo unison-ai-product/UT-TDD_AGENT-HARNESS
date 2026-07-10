@@ -13,10 +13,7 @@ function clean(value: string): string {
   return value.trim().replace(/^`|`$/g, "");
 }
 
-function tableRows(
-  markdown: string,
-  requiredHeaders: string[],
-): Array<Record<string, string>> {
+function tableRows(markdown: string, requiredHeaders: string[]): Array<Record<string, string>> {
   const lines = markdown.split(/\r?\n/);
   const rows: Array<Record<string, string>> = [];
   for (let index = 0; index < lines.length - 1; index += 1) {
@@ -49,19 +46,13 @@ describe("checked Vモデル source assets", () => {
       "target",
       "profile / 判断理由",
     ]);
-    const expected = Array.from({ length: 109 }, (_, index) =>
-      `ZIP-DOC-${String(index + 1).padStart(3, "0")}`,
+    const expected = Array.from(
+      { length: 109 },
+      (_, index) => `ZIP-DOC-${String(index + 1).padStart(3, "0")}`,
     );
     expect(rows.map((row) => row.source_id)).toEqual(expected);
     expect(new Set(rows.map((row) => row.source_id)).size).toBe(109);
-    const allowed = new Set([
-      "adopt",
-      "merge",
-      "reference",
-      "defer",
-      "not_applicable",
-      "reject",
-    ]);
+    const allowed = new Set(["adopt", "merge", "reference", "defer", "not_applicable", "reject"]);
     expect(rows.filter((row) => !allowed.has(row.disposition))).toEqual([]);
     expect(rows.filter((row) => !row.target || !row["profile / 判断理由"])).toEqual([]);
   });
@@ -75,19 +66,15 @@ describe("checked Vモデル source assets", () => {
     expect(new Set(items.map((row) => row.item_id)).size).toBe(163);
     const categoryIds = new Set(categories.map((row) => row.category_id));
     const sourceIds = new Set(
-      tableRows(disposition, ["source_id", "disposition", "target"]).map(
-        (row) => row.source_id,
-      ),
+      tableRows(disposition, ["source_id", "disposition", "target"]).map((row) => row.source_id),
     );
     expect(items.filter((row) => !categoryIds.has(row.category_id))).toEqual([]);
     expect(
-      items.filter(
-        (row) => row.source_ref !== "NO-SOURCE" && !sourceIds.has(row.source_ref),
-      ),
+      items.filter((row) => row.source_ref !== "NO-SOURCE" && !sourceIds.has(row.source_ref)),
     ).toEqual([]);
-    expect(items.filter((row) => row.source_ref === "NO-SOURCE").map((row) => row.item_id)).toEqual([
-      "iac",
-    ]);
+    expect(items.filter((row) => row.source_ref === "NO-SOURCE").map((row) => row.item_id)).toEqual(
+      ["iac"],
+    );
   });
 
   it("U-VMSRC-003: typed target edges resolve without silent source omissions", () => {
@@ -95,21 +82,14 @@ describe("checked Vモデル source assets", () => {
       (row) => row.source_id,
     );
     const edgeRows = tableRows(edges, ["edge_id", "source_id", "target_type", "target_ref"]);
-    const allowedTypes = new Set([
-      "target_slot",
-      "artifact_path",
-      "artifact_family",
-      "plan_alias",
-    ]);
+    const allowedTypes = new Set(["target_slot", "artifact_path", "artifact_family", "plan_alias"]);
     expect(new Set(edgeRows.map((row) => row.edge_id)).size).toBe(edgeRows.length);
     expect(edgeRows.filter((row) => !allowedTypes.has(row.target_type))).toEqual([]);
     const sourcesWithEdges = new Set(edgeRows.map((row) => row.source_id));
     expect(sourceIds.filter((sourceId) => !sourcesWithEdges.has(sourceId))).toEqual([]);
 
     const targetSlots = new Set(
-      tableRows(targetCatalog, ["doc_type_id", "layer", "sub_doc"]).map(
-        (row) => row.doc_type_id,
-      ),
+      tableRows(targetCatalog, ["doc_type_id", "layer", "sub_doc"]).map((row) => row.doc_type_id),
     );
     for (const edge of edgeRows) {
       if (edge.target_type === "target_slot") expect(targetSlots.has(edge.target_ref)).toBe(true);

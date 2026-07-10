@@ -127,9 +127,7 @@ const ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS = new Set([
 ]);
 
 // parked version-up契約の導入前にconfirmedとなった履歴1件。履歴は書き換えず負債台帳で追う。
-const VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS = new Set([
-  "PLAN-L7-303-digest-commit-anchor",
-]);
+const VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS = new Set(["PLAN-L7-303-digest-commit-anchor"]);
 
 const DB_PROJECTION_BACKPROP_REQUIRED_GENERATES = [
   "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",

@@ -118,7 +118,8 @@ export function analyzePairFreeze(docs: PairDoc[]): PairFreezeResult {
       .map((doc) => doc.path),
   );
   for (const path of invalidRevisionPaths) {
-    const doc = byPath.get(path)!;
+    const doc = byPath.get(path);
+    if (!doc) continue;
     orphans.push({
       path,
       reason: "revision-base-invalid",

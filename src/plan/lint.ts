@@ -259,7 +259,10 @@ function kindLayerViolations(raw: Record<string, unknown>): string[] {
   return [];
 }
 
-function versionRouteCertificateViolations(raw: Record<string, unknown>, planId: string): {
+function versionRouteCertificateViolations(
+  raw: Record<string, unknown>,
+  planId: string,
+): {
   reason: "version_route_certificate_missing" | "version_route_certificate_mismatch";
   detail: string;
 }[] {
@@ -267,7 +270,7 @@ function versionRouteCertificateViolations(raw: Record<string, unknown>, planId:
   const status = stringField(raw.status) ?? "";
   const mode = stringField(raw.route_mode);
   if (VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS.has(planId)) {
-    const hasVersionTargetKey = Object.prototype.hasOwnProperty.call(raw, "version_target");
+    const hasVersionTargetKey = Object.hasOwn(raw, "version_target");
     const exactLegacyTuple =
       mode === "version-up" &&
       stringField(raw.kind) === "impl" &&

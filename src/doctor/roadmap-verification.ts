@@ -43,9 +43,7 @@ export function checkRoadmap(repoRoot: string): { messages: string[]; ok: boolea
         ok: false,
       };
     }
-    const activeUpgradeFrontier = parseUpgradeFrontier(
-      readFileSync(upgradeSchedulePath, "utf8"),
-    );
+    const activeUpgradeFrontier = parseUpgradeFrontier(readFileSync(upgradeSchedulePath, "utf8"));
     // Program coverage: registered roadmaps must cover the forward bands.
     // PLAN-RECOVERY-04 treats an empty roadmap registry as a hard violation.
     const coverageMessages = programCoverageMessages(

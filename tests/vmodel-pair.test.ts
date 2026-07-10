@@ -134,12 +134,7 @@ describe("vmodel pair-freeze lint (U-VPAIR)", () => {
       revisionBaseArtifact: baseDesign.path,
     };
     const invalidDeltaTest = {
-      ...doc(
-        "docs/test-design/harness/L14-delta.md",
-        "L1",
-        deltaDesign.path,
-        "draft",
-      ),
+      ...doc("docs/test-design/harness/L14-delta.md", "L1", deltaDesign.path, "draft"),
       revisionTrack: "additive",
       revisionBaseArtifact: "docs/test-design/harness/MISSING.md",
     };
@@ -267,12 +262,7 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
   });
 
   it("U-VTRIG-002A: additive draft revision is surfaced without unfreezing the confirmed base", () => {
-    const base = doc(
-      "docs/design/harness/L1-requirements/base.md",
-      "L1",
-      "x",
-      "confirmed",
-    );
+    const base = doc("docs/design/harness/L1-requirements/base.md", "L1", "x", "confirmed");
     const delta = {
       ...doc("docs/design/harness/L1-requirements/delta.md", "L1", "x", "draft"),
       revisionTrack: "additive",
@@ -283,9 +273,9 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
     expect(group?.total).toBe(1);
     expect(group?.activeRevisionTotal).toBe(1);
     expect(group?.activeRevisionDraft).toBe(1);
-    expect(verificationGroupMessages([group!])[0]).toContain(
-      "active revisions IN-PROGRESS",
-    );
+    expect(group).toBeDefined();
+    if (!group) throw new Error("L0-L3 verification group is missing");
+    expect(verificationGroupMessages([group])[0]).toContain("active revisions IN-PROGRESS");
 
     const invalid = analyzeVerificationGroups(
       [{ ...delta, revisionBaseArtifact: "docs/design/harness/L1-requirements/missing.md" }],
@@ -357,11 +347,11 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
         confirmed: 4,
         draft: 0,
         placeholder: 1,
-      hasOrphan: false,
-      activeRevisionTotal: 0,
-      activeRevisionConfirmed: 0,
-      activeRevisionDraft: 0,
-      activeRevisionHasOrphan: false,
+        hasOrphan: false,
+        activeRevisionTotal: 0,
+        activeRevisionConfirmed: 0,
+        activeRevisionDraft: 0,
+        activeRevisionHasOrphan: false,
         requiredPlanIds: [],
         confirmedPlanIds: [],
         missingPlanIds: [],
@@ -384,11 +374,11 @@ describe("verification trigger (U-VTRIG、層群 freeze の機械発火、IMP-06
         confirmed: 0,
         draft: 18,
         placeholder: 0,
-      hasOrphan: false,
-      activeRevisionTotal: 0,
-      activeRevisionConfirmed: 0,
-      activeRevisionDraft: 0,
-      activeRevisionHasOrphan: false,
+        hasOrphan: false,
+        activeRevisionTotal: 0,
+        activeRevisionConfirmed: 0,
+        activeRevisionDraft: 0,
+        activeRevisionHasOrphan: false,
         requiredPlanIds: [],
         confirmedPlanIds: [],
         missingPlanIds: [],

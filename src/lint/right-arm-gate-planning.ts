@@ -73,10 +73,7 @@ export function loadRightArmGatePlanningInput(repoRoot = process.cwd()): RightAr
     existsSync(resolve(repoRoot, "docs/plans", `${planId}.md`)),
   );
   const planDir = resolve(repoRoot, "docs/plans");
-  const engineSwapPath = resolve(
-    planDir,
-    "PLAN-L4-24-declarative-vmodel-contract-right-arm.md",
-  );
+  const engineSwapPath = resolve(planDir, "PLAN-L4-24-declarative-vmodel-contract-right-arm.md");
   const engineSwapContent = existsSync(engineSwapPath)
     ? readFileSync(engineSwapPath, "utf8")
     : null;
@@ -128,10 +125,7 @@ export function analyzeRightArmGatePlanning(
   const expectedVerifyLayers = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"];
   const plannedVerifyLayers = new Set(
     (input.verifyPlans ?? [])
-      .filter(
-        (plan) =>
-          plan.engineSwapLinked && plan.status !== "archived",
-      )
+      .filter((plan) => plan.engineSwapLinked && plan.status !== "archived")
       .map((plan) => plan.layer),
   );
   const completedVerifyLayers = new Set(
@@ -176,9 +170,7 @@ export function analyzeRightArmGatePlanning(
     input.engineSwapPlanStatus !== "confirmed" &&
     input.engineSwapPlanStatus !== "completed"
   ) {
-    violations.push(
-      `engine-swap right-arm PLAN has invalid status=${input.engineSwapPlanStatus}`,
-    );
+    violations.push(`engine-swap right-arm PLAN has invalid status=${input.engineSwapPlanStatus}`);
   }
   if (
     input.engineSwapProgramExitStatus !== "in_progress" &&
@@ -191,10 +183,7 @@ export function analyzeRightArmGatePlanning(
   if (programAccepted && !designFrozen) {
     violations.push("engine-swap program cannot be accepted before the right-arm design freeze");
   }
-  if (
-    designFrozen &&
-    missingPlannedVerifyLayers.length > 0
-  ) {
+  if (designFrozen && missingPlannedVerifyLayers.length > 0) {
     violations.push(
       `engine-swap right-arm design is frozen but linked verify PLAN layers are not planned: ${missingPlannedVerifyLayers.join(",")}`,
     );

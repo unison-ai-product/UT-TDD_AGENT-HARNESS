@@ -48,7 +48,11 @@ export function parseUpgradeFrontier(markdown: string): UpgradeFrontierEntry[] {
   const entries: UpgradeFrontierEntry[] = [];
   const seenPlanIds = new Set<string>();
   let rowCount = 0;
-  for (let index = headerIndex + 2; index < lines.length && lines[index].startsWith("|"); index += 1) {
+  for (
+    let index = headerIndex + 2;
+    index < lines.length && lines[index].startsWith("|");
+    index += 1
+  ) {
     const row = cells(lines[index]);
     const entry = {
       planId: row[indexOf("plan_id")] ?? "",
