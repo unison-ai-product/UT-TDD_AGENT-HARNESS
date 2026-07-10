@@ -180,6 +180,17 @@ export const HARNESS_DB_CORE_TABLES: TableDef[] = [
     ],
   },
   {
+    name: "feedback_lifecycle",
+    columns: [
+      pk("lifecycle_id"),
+      col("feedback_event_id"),
+      col("source_generation"),
+      col("state"),
+      col("occurred_at"),
+      col("reason"),
+    ],
+  },
+  {
     name: "memory_entries",
     columns: [
       pk("memory_id"),
