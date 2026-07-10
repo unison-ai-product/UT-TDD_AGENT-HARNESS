@@ -110,7 +110,42 @@ S4 で routing 変更を採用する場合、変更本体は本 PLAN では行�
 (PLAN-L7-256 の SSoT drift gate 配下) に routeする。agent-guard の capability family 序列
 への Sol/Terra/Luna 挿入位置も、そのベンチ結果を review_evidence として決める。
 
-## 5. S1 DoD
+## 5. S2 パイロット結果 — 第1スライス (2026-07-10 実測)
+
+条件: Codex CLI 0.144.1 / `codex exec` / effort=medium 固定 / n=1 / sandbox read-only。
+コーパス = 実 fix commit 4 件 (80a1b383 session-log 切り詰め / 18da439c agent-guard
+family pin / a87f8275 loader ledger 未登録 / ec072598 setup 非対話ハング)。
+W4 = 4 問 (うち 1 問は症状提示型)、W5 = 6 問 (REJECT 正解 4 + ACCEPT 正解 2)。
+採点 = Claude (Fable 5) cross-grade。**W1/W2/W3 は未実施** (次スライス)。
+
+| 指標 | gpt-5.6-sol | gpt-5.6-terra | gpt-5.5 (現職) |
+|---|---|---|---|
+| W4 植込み欠陥 recall | 2/4 | 2/4 | 2/4 |
+| W5 verdict 正答 | **6/6** | **6/6** | 5/6 |
+| W5 false-accept (主指標) | 0 | 0 | 0 |
+| W5 false-reject | 0 | 0 | 1 (修正版を過剰懐疑で REJECT) |
+| 総トークン (10 問) | 85,068 | 105,914 | 141,422 |
+| 総実行時間 | 261s | 328s | 333s |
+
+所見 (n=1 の初期シグナル、確定判断には次スライスが必要):
+
+1. **H2 支持**: Terra は 2 lane で gpt-5.5 と同等〜上回り (W5 6/6 vs 5/6)、単価半額
+   かつ消費トークンも少ない。「5.5 の仕事を半額で」の初期シグナルは肯定的。
+2. **H1 未証明**: Sol は本コーパスでは Terra と同スコアで、エスカレーション先としての
+   上積みを示せていない。天井を測るには本コーパスは易しすぎる — 次スライスは
+   より難しい欠陥 (跨モジュール・並行性・設計整合) で天井差を測る。
+3. **lane 設計への知見**: 3 モデル全てが同じ 2 問 (session-log 切り詰め / agent-guard
+   pin) をブラインドレビューで落とし、同じ 2 問を W5 で主張として突きつけられれば
+   全モデル正しく見抜いた。「気付く力」と「指差し検証する力」は別能力であり、
+   review gate には「何を主張 (claim) として渡すか」の設計が recall を支配する。
+4. **運用所見**: モデルが sandbox 内でシェル実行を試みると Windows sandbox spawn error
+   (CreateProcessAsUserW 1312) が発生 (gpt-5.5 / Terra で観測、回答へは自力復帰)。
+   W2 実装 lane はシェル実行が本質なので、workspace-write sandbox の動作確認が前提。
+
+raw log はローカル scratch (/tmp/bench)。プロンプトは上記 fix commit の親/当該版から
+機械的に再生成可能 (再現手順は本 PLAN §3 と run-model.sh 形式)。
+
+## 6. S1 DoD
 
 - [ ] 仮説表 (H1–H3) と採用基準が PO / TL レビューで凍結される。
 - [ ] Lane A の replay 対象 PLAN 候補リストが確定する (freeze 済テスト設計を持つこと)。
