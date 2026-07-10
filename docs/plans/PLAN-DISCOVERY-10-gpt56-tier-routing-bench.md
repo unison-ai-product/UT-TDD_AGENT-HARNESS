@@ -71,30 +71,30 @@ judgment gate / 軽量並列 lane) へ組み込むため、**この harness の�
 を謳うため H2 が本命。Sol は frontier 帯 ($5/$30 per 1M) で gpt-5.5 との品質差が判断点。
 Luna ($1/$6) は現職 spark/mini との品質−コストのトレードオフが判断点。
 
-## 3. 測定設計: 自リポ実績を oracle にした replay
+## 3. 測定設計: V-model 5 工程 × 機械 oracle の replay (PO 指示 2026-07-10 改訂)
 
+測定対象は **設計・実装・テスト・レビュー・検証の 5 工程** (V-model の仕事の種類)。
 private repo の完了済み成果物を問題セットにする (学習データ汚染なし)。判定は機械 oracle
 を最優先し、モデル判定が必要な箇所は **別ファミリ (Claude 側) が cross-grade** する
 (自画自賛バイアス排除、hybrid 原則)。
 
-### Lane A — 実装 replay (H2: Terra vs gpt-5.4)
+**共有コーパス**: 過去の fix commit (親 commit = 既知バグ版 / 当該 commit = 修正版) は
+W3 (red 面 oracle)・W4 (既知欠陥)・W5 (誤った完了主張) の 3 工程で使い回す。
 
-- 完了済み PLAN からテスト設計 freeze 済のもの 10–15 件を選定。親 commit に checkout し、
-  spec / test design のみ渡して実装させる。
-- oracle: freeze 済テスト + typecheck / lint / doctor gate。
-- 指標: pass@1、gate 通過率、$/解決タスク、生成 diff サイズ。
+| # | 工程 | タスク | oracle (機械優先) | 主対象ペア |
+|---|---|---|---|---|
+| W1 | 設計 | freeze 済み上位要求から設計 doc を再生成 | vmodel doc lint / typed-spec gate 通過 + 実 freeze 済設計 (PO 承認済) との blind cross-grade (別ファミリ採点) | Sol vs gpt-5.5 / Terra |
+| W2 | 実装 | spec / freeze 済テスト設計から実装 replay (親 commit へ checkout) | freeze 済テスト green (pass@1) + typecheck / lint / doctor gate 通過率、$/解決タスク | Terra vs gpt-5.4 |
+| W3 | テスト | spec + 実装からテストコードを書かせる | **red/green 二面 oracle**: 修正版で green **かつ** 既知バグ版 (fix commit の親) で red になるか (バグを殺せないテストは coverage だけの器) | Terra vs gpt-5.4 / Luna |
+| W4 | レビュー | 既知欠陥入りコード/diff のレビュー | 確認済み欠陥の検出 recall + false positive 率 (ノイズを撒く review gate は現職より悪い、recall 単独で判断しない) | Sol vs gpt-5.5 |
+| W5 | 検証 | 完了主張 + 証跡の受入判定 (ACCEPT/REJECT) | 既知の「後で誤りと判明した主張」(supersedes / errata、修正前状態での完了主張) を REJECT し、確認済み主張を ACCEPT できるか。**false-accept 率が主指標** (検証 lane は悲観的でなければならない) | Sol vs gpt-5.5 |
 
-### Lane B — レビュー欠陥検出 (H1: Sol vs gpt-5.5)
+補助 lane (H3 用): `ut-tdd task classify` / skill suggest / doctor finding triage 相当の
+軽量分類で確定ラベルとの一致率 + latency + コスト (Luna vs spark/mini)。
 
-- 既知欠陥コーパス: 2026-07-09 システム全体監査の確認済みバグ、過去の errata /
-  supersedes PLAN 等、**PO 確認済みラベル付き欠陥** を使う。
-- 欠陥混入時点の diff をレビューさせ、検出 recall と false positive 率を測る。
-- ノイズを撒く review gate は現職より悪い: recall 単独で判断しない。
-
-### Lane C — 軽量分類 (H3: Luna vs spark/mini)
-
-- `ut-tdd task classify` / `skill suggest` / doctor finding triage 相当のタスクで、
-  確定ラベルとの一致率 + latency + コストを測る。
+W1 の設計採点だけは完全機械化できないため、構造 gate (lint) を一次 fail-close にし、
+内容は「実際に freeze を通った設計」を参照解として別ファミリが blind rubric 採点する。
+採点者にはどちらがどのモデルの産出物か伏せる。
 
 ## 4. スケジュール
 
