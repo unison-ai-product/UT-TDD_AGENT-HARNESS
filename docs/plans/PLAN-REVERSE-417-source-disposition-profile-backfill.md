@@ -27,6 +27,8 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/design/harness/L6-function-design/function-spec.md
     artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-417-source-disposition-profile-projection.md
   requires: []

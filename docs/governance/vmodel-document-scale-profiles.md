@@ -18,7 +18,7 @@ typed_spec_phase_owner: L4
 join した `document_scale_profile_reviews` を検索・検出用 read-model として使う。検出系は本書の採用判定を読む側であり、
 profile や skip reason を暗黙生成してはいけない。
 
-### 0.1 profile manifest
+### 0.1 profile manifest宣言
 
 | `field` | `value` |
 |---|---:|
