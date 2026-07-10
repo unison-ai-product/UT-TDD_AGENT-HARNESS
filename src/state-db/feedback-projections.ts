@@ -101,14 +101,30 @@ export function reconcileFeedbackLifecycle(
   const currentByEvent = new Map<string, string>();
   for (const row of currentRows) {
     const feedbackEventId = String(row.feedback_event_id ?? "");
-    const sourceGeneration = String(row.source_generation ?? "");
+    let sourceGeneration = String(row.source_generation ?? "");
     if (!feedbackEventId || !sourceGeneration) continue;
-    currentByEvent.set(feedbackEventId, sourceGeneration);
-    const key = lifecycleKey({
+    let key = lifecycleKey({
       feedback_event_id: feedbackEventId,
       source_generation: sourceGeneration,
     });
-    const previous = latest.get(key);
+    let previous = latest.get(key);
+    while (previous?.state === "closed" || previous?.state === "superseded") {
+      sourceGeneration = deps.stableId(
+        "feedback-generation-recurrence",
+        `${sourceGeneration}:${previous.state}:${previous.occurred_at}`,
+      );
+      key = lifecycleKey({
+        feedback_event_id: feedbackEventId,
+        source_generation: sourceGeneration,
+      });
+      previous = latest.get(key);
+    }
+    if (sourceGeneration !== String(row.source_generation ?? "")) {
+      db.prepare(
+        "UPDATE feedback_events SET source_generation = ? WHERE feedback_event_id = ?",
+      ).run(sourceGeneration, feedbackEventId);
+    }
+    currentByEvent.set(feedbackEventId, sourceGeneration);
     if (!previous) {
       const opened: FeedbackLifecycleRecord = {
         feedback_event_id: feedbackEventId,

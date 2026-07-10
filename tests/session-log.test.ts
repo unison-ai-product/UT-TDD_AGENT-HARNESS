@@ -313,13 +313,27 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
       {
         session_id: "codex-session",
         tool_name: "exec_command",
-        tool_input: { command: "git commit -m x" },
+        tool_input: { cmd: "git commit -m x" },
       },
       codex,
     );
     const codexLog = codex.files.get(sessionPath("codex-session")) ?? "";
     expect(codexLog).toContain('"event_type":"commit"');
     expect(codexLog).toContain('"outcome":"ok"');
+
+    const localShell = mockDeps({ headCommit: () => "local123" });
+    localShell.files.set(statePath, "PLAN-L6-68-memory-telemetry-lifecycle-contract");
+    onPostToolUse(
+      {
+        session_id: "local-shell-session",
+        tool_name: "local_shell",
+        tool_input: { cmd: "git commit -m x" },
+      },
+      localShell,
+    );
+    expect(localShell.files.get(sessionPath("local-shell-session"))).toContain(
+      '"event_type":"commit"',
+    );
   });
 
   // PLAN-RECOVERY-05 item 2: Bash の検証 verb を target に分類して残す (引数は残さない)。
@@ -385,6 +399,20 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
       deps,
     );
     expect(deps.files.get(sessionPath("memory-session"))).toContain('"event_type":"memory_write"');
+
+    const codexMemory = mockDeps();
+    codexMemory.files.set(statePath, "PLAN-L6-68-memory-telemetry-lifecycle-contract");
+    onPostToolUse(
+      {
+        session_id: "codex-memory-session",
+        tool_name: "exec_command",
+        tool_input: { cmd: "bun src/cli.ts memory add --title example --body-file example.md" },
+      },
+      codexMemory,
+    );
+    expect(codexMemory.files.get(sessionPath("codex-memory-session"))).toContain(
+      '"event_type":"memory_write"',
+    );
 
     const warnings: string[] = [];
     const missing = mockDeps({ warn: (message) => warnings.push(message) });

@@ -171,7 +171,7 @@ function isMemoryWriteInput(input: SessionHookInput): boolean {
   ) {
     return true;
   }
-  const command = String(values.command ?? "");
+  const command = String(values.command ?? values.cmd ?? "");
   return /(?:ut-tdd|src[\\/]cli\.ts)\s+memory\s+add\b/i.test(command);
 }
 
@@ -429,7 +429,8 @@ export function onSessionStart(input: SessionHookInput, deps: SessionLogDeps): n
 /** tool_use (git commit は commit) を append。常に 0 (fail-open)。 */
 export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): number {
   try {
-    const cmd = String((input.tool_input as { command?: unknown })?.command ?? "");
+    const shellInput = input.tool_input as { command?: unknown; cmd?: unknown };
+    const cmd = String(shellInput?.command ?? shellInput?.cmd ?? "");
     const isShellTool = /^(?:Bash|exec_command|local_shell)$/i.test(input.tool_name ?? "");
     const isCommit = isShellTool && /\bgit\s+commit\b/i.test(cmd);
     const isMemoryWrite = isMemoryWriteInput(input);

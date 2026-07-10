@@ -6,6 +6,7 @@ import { selectTakeoverFeedback } from "../src/feedback/surface";
 import { evaluateMemoryPromotion } from "../src/runtime/memory-promotion";
 import {
   appendFeedbackLifecycle,
+  appendFeedbackLifecycleBatch,
   feedbackLifecyclePath,
   parseFeedbackLifecycle,
   resolveFeedbackLifecycle,
@@ -91,6 +92,22 @@ describe("feedback lifecycle", () => {
       const blockedRoot = join(root, "not-a-directory");
       writeFileSync(blockedRoot, "blocked", "utf8");
       expect(appendFeedbackLifecycle(blockedRoot, open)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-MEMORY-006: appends a large initial lifecycle set in one durable batch", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-feedback-batch-"));
+    try {
+      const records = Array.from({ length: 1_000 }, (_, index) => ({
+        ...open,
+        feedback_event_id: `feedback:${index}`,
+      }));
+      expect(appendFeedbackLifecycleBatch(root, records)).toBe(true);
+      expect(
+        parseFeedbackLifecycle(readFileSync(feedbackLifecyclePath(root), "utf8")),
+      ).toHaveLength(1_000);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -193,6 +210,38 @@ describe("feedback lifecycle", () => {
           .get("generation:2"),
       ).toMatchObject({ state: "closed" });
 
+      upsertRow(db, {
+        table: "feedback_events",
+        primaryKey: "feedback_event_id",
+        row: {
+          feedback_event_id: "feedback:memory",
+          finding_id: "",
+          plan_id: "PLAN-X",
+          source_table: "quality_signals",
+          source_id: "signal:memory",
+          source_generation: "generation:2",
+          source_color: "",
+          signal_type: "memory_promotion_missed",
+          severity: "info",
+          status: "open",
+          next_action: "review memory",
+          created_at: now,
+        },
+      });
+      now = "2026-07-10T00:00:04Z";
+      reconcileFeedbackLifecycle(root, db, deps, 1);
+      const recurrence = db
+        .prepare("SELECT source_generation FROM feedback_events WHERE feedback_event_id = ?")
+        .get("feedback:memory") as { source_generation: string };
+      expect(recurrence.source_generation).not.toBe("generation:2");
+      expect(
+        db
+          .prepare(
+            "SELECT state FROM feedback_lifecycle WHERE source_generation = ? ORDER BY occurred_at DESC LIMIT 1",
+          )
+          .get(recurrence.source_generation),
+      ).toMatchObject({ state: "open" });
+
       const transitionCount = Number(
         (
           db.prepare("SELECT COUNT(*) AS n FROM feedback_lifecycle").get() as {
@@ -204,6 +253,53 @@ describe("feedback lifecycle", () => {
       projectFeedbackLifecycle(root, db, deps);
       expect(db.prepare("SELECT COUNT(*) AS n FROM feedback_lifecycle").get()).toMatchObject({
         n: transitionCount,
+      });
+    } finally {
+      db.close();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("U-MEMORY-006: does not create DB-only lifecycle state when the durable append fails", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-feedback-append-fail-"));
+    const blockedRoot = join(root, "not-a-directory");
+    writeFileSync(blockedRoot, "blocked", "utf8");
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      upsertRow(db, {
+        table: "feedback_events",
+        primaryKey: "feedback_event_id",
+        row: {
+          feedback_event_id: "feedback:blocked",
+          finding_id: "",
+          plan_id: "PLAN-X",
+          source_table: "quality_signals",
+          source_id: "signal:blocked",
+          source_generation: "generation:blocked",
+          source_color: "",
+          signal_type: "memory_promotion_missed",
+          severity: "info",
+          status: "open",
+          next_action: "review",
+          created_at: "2026-07-10T00:00:00Z",
+        },
+      });
+      reconcileFeedbackLifecycle(blockedRoot, db, {
+        nowIso: () => "2026-07-10T00:00:00Z",
+        stableId,
+        recordProjectionEvent: (
+          target,
+          event: { table: string; id: string; row: Record<string, unknown> },
+        ) =>
+          upsertRow(target, {
+            table: event.table,
+            primaryKey: "lifecycle_id",
+            row: event.row,
+          }),
+      });
+      expect(db.prepare("SELECT COUNT(*) AS n FROM feedback_lifecycle").get()).toMatchObject({
+        n: 0,
       });
     } finally {
       db.close();
