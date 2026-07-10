@@ -156,9 +156,11 @@ D2 = Pack クリーン配布の構造妥当性監査。effort=high / read-only /
 |---|---|---|---|
 | D1 結合点列挙 | 54 項目 (最網羅) | ~20 項目 + 急所先出し | 19 項目 (全て接地) |
 | D1 設計品質 (rubric/10) | 8.5 | 8 | 7.5 |
-| D2 正解キー recall | 未実施 (usage limit) | 5/6 + 新規 4 | 5/6 + 新規 2 |
-| tokens (D1+D2) | 95k (D1のみ) | 96k | 63k |
-| 時間 | 468s (D1のみ) | 293s | 264s |
+| D2 正解キー recall | **6/6 + 新規 3 (裏取り済 2)** | 5/6 + 新規 4 (裏取り済 1) | 5/6 + 新規 2 |
+| tokens (D1+D2) | 126k | 96k | 63k |
+| 時間 | 719s | 293s | 264s |
+
+(Sol D2 は初回 usage limit で失敗、アカウント切替後の再実行で完走: 30k tokens / 251s。)
 
 所見:
 
@@ -179,6 +181,19 @@ D2 = Pack クリーン配布の構造妥当性監査。effort=high / read-only /
    使う分には gate 側で担保可能。
 5. 採点材料の教訓: 過去監査の修正がコード/テンプレにコメントとして残るため、**実リポ
    由来の題材は正解キー漏洩の混入チェックが必須** (今回 C-1 で実際に発生)。
+6. **Sol D2 (再実行) は正解キー 6/6 全 hit + 新規 3 件、うち 2 件を実コードで裏取り確認**:
+   (a) denylist 空洞化 — `buildCleanDistributionPlan` は denied path を先に filter 除外して
+   から `denylistViolations` を計算するため、violation はほぼ構造的に空 = **denylist が
+   fail-close でなく silent exclude に落ちている** (`src/setup/distribution.ts:238-244`)。
+   (b) 削除の非伝播 — `gitAddPathspecCommands` は現行 artifact のみ `git add` し、削除
+   path を stage しないため、Pack から消したファイルが公開 commit に残り続ける
+   (`src/setup/distribution.ts:200-213`)。(c) skills/ と docs/skills/ の書換衝突 shadowing
+   (構造妥当、未実証)。(a)(b) も **要 routeFiling**。convergence 欠如 (DEFECT 5) の定式化
+   は 3 モデル中最も完全で、「非破壊不変条件 + clean artifact 同時成立が未閉」という
+   no-go 判断の機械的根拠をそのまま与える。
+7. エスカレーション先としての Sol 像が確定的: D2 単体では 30k tokens / 251s と Terra 並の
+   コストで最深の監査を出した (D1 の 3 倍コストは網羅列挙の性質による)。**「難所の監査・
+   検証に限り Sol へ上げる」運用 (Fable 5 対称) は価格性能的に成立する**。
 
 ## 6. S1 DoD
 
