@@ -22,6 +22,7 @@ import {
   type RunUsage,
   summarizeRunUsage,
 } from "../src/state-db/token-tracker";
+import { MODEL_IDS } from "../src/team/model-policy";
 
 describe("computeClaudeCostUsd", () => {
   it("computes cost from CLAUDE_PRICING (input + cache multipliers + output)", () => {
@@ -96,6 +97,25 @@ describe("computeCodexCostUsd (OPENAI_PRICING, 公式単価)", () => {
         outputTokens: 1000,
       }),
     ).toBeCloseTo(0.0175, 6);
+  });
+
+  it("computes pricing fallbacks for the GPT-5.6 worker and frontier tiers", () => {
+    expect(
+      computeCodexCostUsd({
+        model: MODEL_IDS.codex.worker,
+        inputTokens: 1_000,
+        cachedInputTokens: 0,
+        outputTokens: 1_000,
+      }),
+    ).toBeCloseTo(0.0175, 6);
+    expect(
+      computeCodexCostUsd({
+        model: MODEL_IDS.codex.frontier,
+        inputTokens: 1_000,
+        cachedInputTokens: 0,
+        outputTokens: 1_000,
+      }),
+    ).toBeCloseTo(0.035, 6);
   });
 
   it("tolerates a trailing date/version suffix (prefix match to gpt-5.4)", () => {

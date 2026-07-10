@@ -14,6 +14,7 @@ import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
+import { MODEL_IDS } from "../src/team/model-policy";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");
@@ -637,7 +638,7 @@ describe("L7 CLI surface closure", () => {
       },
       fallback: {
         provider: "codex",
-        model: "gpt-5.5",
+        model: MODEL_IDS.codex.frontier,
         consultation_mode: "consult",
       },
     });
@@ -678,18 +679,18 @@ describe("L7 CLI surface closure", () => {
       expect(run.stdout).not.toContain("noisy-codex");
       expect(payload).toMatchObject({
         provider: "codex",
-        model: "gpt-5.5",
+        model: MODEL_IDS.codex.frontier,
         effort: "middle",
         adapterPlan: {
           provider: "codex",
-          model: "gpt-5.5",
+          model: MODEL_IDS.codex.frontier,
           dry_run: false,
           executed: true,
           exit_code: 0,
         },
       });
       const codexEnv = readFileSync(join(root, "codex-env.txt"), "utf8");
-      expect(codexEnv).toContain("gpt-5.5");
+      expect(codexEnv).toContain(MODEL_IDS.codex.frontier);
       expect(codexEnv).toContain("args=");
     } finally {
       rmSync(root, { recursive: true, force: true });

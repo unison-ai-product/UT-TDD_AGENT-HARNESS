@@ -4,7 +4,7 @@ title: "PLAN-L7-415 (retrofit): GPT-5.6 tier routing 採用 — worker→terra /
 kind: retrofit
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: dependency_outdated
 route_mode: retrofit
 backprop_decision: not_required
@@ -21,6 +21,24 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-415-gpt56-tier-routing-adoption.md
     artifact_type: markdown_doc
+  - artifact_path: src/cli/delegation.ts
+    artifact_type: source_module
+  - artifact_path: src/team/model-policy.ts
+    artifact_type: source_module
+  - artifact_path: src/team/advisor-policy.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/token-tracker.ts
+    artifact_type: source_module
+  - artifact_path: docs/templates/adapter/AGENTS.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/adapter/CLAUDE.md
+    artifact_type: markdown_doc
+  - artifact_path: tests/team-run.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/tier-router.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/token-tracker.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires:
@@ -33,6 +51,43 @@ dependencies:
     - docs/plans/PLAN-L7-256-model-id-ssot-drift-gate.md
     - docs/plans/PLAN-L7-414-agent-guard-claude5-family-rank.md
     - .ut-tdd/memory/project-fable-5-7-13-rate-limit.md
+review_evidence:
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: "2026-07-10T15:15:00+09:00"
+    tests_green_at: "2026-07-10T15:13:23+09:00"
+    verdict: approve
+    worker_model: gpt-5.6-terra
+    reviewer_model: claude-fable-5
+    scope: "cross review (hybrid): worker (Codex/gpt-5.6-terra、PR #41) の実装 — GPT-5.6 terra/sol の T1/T0 routing、advisor の MODEL_IDS.codex.frontier 参照自動追随、direct Codex worker dry-run、pricing fallback、SSoT oracle と adapter mirror、Fable route 不変 — を diff 検分で確認。worker 記録の green_commands schema 違反 (runner=bunx、digest への説明文混入) と tests/cli-surface.test.ts の旧 frontier literal 3 箇所を review fix として是正し、green 3 コマンドを reviewer が再実行して digest を再採取 (下記は再実行値)。worker の当初 green 主張 (34/34 passed、typecheck/lint exit 0、15:00 JST) は PR #41 記載。"
+    green_commands:
+      - kind: unit_test
+        command: "bunx vitest run tests/model-id-ssot-drift.test.ts tests/team-model-policy.test.ts tests/team-run.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T15:13:23+09:00"
+        evidence_path: tests/model-id-ssot-drift.test.ts
+        output_digest: "sha256:8743b1e4f59fe8fe16a8db767b1355e31ef0d4879c0ced7ebe420cffd8341c5f"
+        anchor_commit: 42ff3f0e
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-10T15:13:23+09:00"
+        evidence_path: src/cli/delegation.ts
+        output_digest: "sha256:8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+        anchor_commit: 42ff3f0e
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-10T15:13:23+09:00"
+        evidence_path: src/team/model-policy.ts
+        output_digest: "sha256:246de80b8519745d9f14ed54e846f51c3fe1a7a46ef8e3a5067d8e0d5bb81f9f"
+        anchor_commit: 42ff3f0e
 ---
 
 # PLAN-L7-415 (retrofit): GPT-5.6 tier routing 採用

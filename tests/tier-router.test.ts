@@ -17,6 +17,7 @@ import {
   TIER_TABLE,
   tierFor,
 } from "../src/task/tier-router-policy";
+import { MODEL_IDS } from "../src/team/model-policy";
 
 function det(
   mode: RuntimeDetection["mode"],
@@ -51,8 +52,8 @@ describe("U-TIER: cost-tiered provider router", () => {
   it("U-TIER-003: ワーカーは T0 に解決できない (fail-close 不変条件)", () => {
     expect(() => resolveModel("se", "T0", "claude")).toThrow(/invariant/);
     expect(() => resolveModel("docs", "T0", "codex")).toThrow(/invariant/);
-    expect(resolveModel("se", "T2", "claude")).toBe("claude-haiku-4-5");
-    expect(resolveModel("se", "T1", "codex")).toBe("gpt-5.4");
+    expect(resolveModel("se", "T2", "claude")).toBe(MODEL_IDS.claude.haiku);
+    expect(resolveModel("se", "T1", "codex")).toBe(MODEL_IDS.codex.worker);
   });
 
   it("U-TIER-004: GPT(Codex) も Claude と対称 (全 role 両 provider・同 archetype)", () => {
@@ -70,7 +71,7 @@ describe("U-TIER: cost-tiered provider router", () => {
     expect([...FRONTIER_ROLES].sort()).toEqual(["qa", "tl", "uiux"]);
   });
 
-  it("U-TIER-005: T0 (opus/gpt-5.5) は明示許可ゲート (fail-close)", () => {
+  it("U-TIER-005: T0 (opus/Codex frontier) は明示許可ゲート (fail-close)", () => {
     const d = det("claude-only", "claude");
     const blocked = route({ role: "tl", task: { text: "design the api boundary" } }, d);
     expect(blocked.tier).toBe("T0");
@@ -81,7 +82,7 @@ describe("U-TIER: cost-tiered provider router", () => {
       auth: { explicit: true },
     });
     expect(ready.status).toBe("ready");
-    expect(ready.model).toBe("claude-opus-4-8");
+    expect(ready.model).toBe(MODEL_IDS.claude.opus);
     expect(FRONTIER_MODELS.has(ready.model ?? "")).toBe(true);
   });
 
@@ -98,14 +99,14 @@ describe("U-TIER: cost-tiered provider router", () => {
     const d = det("codex-only", "codex");
     const cheap = route({ role: "se", task: { text: "rename a field" } }, d);
     expect(cheap.tier).toBe("T2");
-    expect(cheap.model).toBe("gpt-5.3-codex-spark");
+    expect(cheap.model).toBe(MODEL_IDS.codex.spark);
 
     const hard = route(
       { role: "se", task: { text: "refactor the database integration architecture" } },
       d,
     );
     expect(hard.tier).toBe("T1");
-    expect(hard.model).toBe("gpt-5.4");
+    expect(hard.model).toBe(MODEL_IDS.codex.worker);
   });
 
   it("U-TIER-008: assignCross は hybrid で判断を相手 provider にフリップ", () => {
@@ -129,7 +130,7 @@ describe("U-TIER: cost-tiered provider router", () => {
       det("hybrid", "claude"),
     );
     expect(claudeDriven.provider).toBe("codex");
-    expect(claudeDriven.model).toBe("gpt-5.3-codex-spark");
+    expect(claudeDriven.model).toBe(MODEL_IDS.codex.spark);
     expect(claudeDriven.effort).toBe("middle");
 
     const codexDriven = route(
@@ -137,7 +138,7 @@ describe("U-TIER: cost-tiered provider router", () => {
       det("hybrid", "codex"),
     );
     expect(codexDriven.provider).toBe("claude");
-    expect(codexDriven.model).toBe("claude-haiku-4-5");
+    expect(codexDriven.model).toBe(MODEL_IDS.claude.haiku);
     expect(codexDriven.effort).toBe("middle");
   });
 
@@ -192,7 +193,7 @@ describe("U-TIER: cost-tiered provider router", () => {
     expect(plan).not.toBeNull();
     expect(plan?.provider).toBe("codex");
     expect(plan?.command).toBe("codex");
-    expect(plan?.args).toContain("gpt-5.3-codex-spark");
+    expect(plan?.args).toContain(MODEL_IDS.codex.spark);
     const injected = routeToAdapterPlan(ready, "rename a field", {
       mode: "codex-only",
       contextInjection: {
@@ -249,12 +250,12 @@ describe("U-TIER: cost-tiered provider router", () => {
     // se=実装ワーカー=相手(codex) がクロス実行 (effort middle)。
     expect(routings[0].routed).toBe(true);
     expect(routings[0].decision?.provider).toBe("codex");
-    expect(routings[0].decision?.model).toBe("gpt-5.3-codex-spark");
+    expect(routings[0].decision?.model).toBe(MODEL_IDS.codex.spark);
     expect(routings[0].decision?.effort).toBe("middle");
     // qa=検証=実行側と別 provider (=主 claude)、明示許可ありで T0 ready。
     expect(routings[1].routed).toBe(true);
     expect(routings[1].decision?.provider).toBe("claude");
-    expect(routings[1].decision?.model).toBe("claude-opus-4-8");
+    expect(routings[1].decision?.model).toBe(MODEL_IDS.claude.opus);
     expect(routings[1].decision?.status).toBe("ready");
     // po=router 非対象 → routed=false (engine fallback)。
     expect(routings[2].routed).toBe(false);

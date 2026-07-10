@@ -164,7 +164,7 @@ describe("team run validation", () => {
             engine: "codex-se",
             task: "implement small docs change",
             difficulty: "critical",
-            model: "gpt-5.4",
+            model: MODEL_IDS.codex.worker,
             effort: "high",
           },
           { role: "tl", engine: "pmo-sonnet", task: "review slice A" },
@@ -177,7 +177,7 @@ describe("team run validation", () => {
     expect(result.members[0].model_selection).toMatchObject({
       difficulty: "critical",
       difficulty_source: "explicit",
-      model: "gpt-5.4",
+      model: MODEL_IDS.codex.worker,
       model_source: "explicit",
       reasoning_effort: "high",
       effort_source: "explicit",
@@ -198,9 +198,9 @@ describe("team run validation", () => {
     expect(recommendation.definition?.name).toBe("proposal-coverage-team");
     expect(recommendation.definition?.max_parallel).toBe(7);
     const members = recommendation.definition?.members ?? [];
-    expect(members.filter((member) => member.model === "gpt-5.4-mini")).toHaveLength(4);
-    expect(members.filter((member) => member.model === "gpt-5.3-codex-spark")).toHaveLength(3);
-    expect(members.some((member) => member.model === "gpt-5.5")).toBe(false);
+    expect(members.filter((member) => member.model === MODEL_IDS.codex.mini)).toHaveLength(4);
+    expect(members.filter((member) => member.model === MODEL_IDS.codex.spark)).toHaveLength(3);
+    expect(members.some((member) => member.model === MODEL_IDS.codex.frontier)).toBe(false);
     expect(members.every((member) => member.ownership)).toBe(true);
     expect(members.some((member) => member.engine === "pmo-sonnet")).toBe(true);
 
@@ -208,10 +208,10 @@ describe("team run validation", () => {
     expect(plan.ok).toBe(true);
     expect(plan.strategy).toBe("sequential");
     expect(
-      plan.members.filter((member) => member.model_selection.model === "gpt-5.4-mini"),
+      plan.members.filter((member) => member.model_selection.model === MODEL_IDS.codex.mini),
     ).toHaveLength(4);
     expect(
-      plan.members.filter((member) => member.model_selection.model === "gpt-5.3-codex-spark"),
+      plan.members.filter((member) => member.model_selection.model === MODEL_IDS.codex.spark),
     ).toHaveLength(3);
     expect(plan.members.some((member) => member.prompt.includes("ownership:"))).toBe(true);
   });
@@ -512,8 +512,8 @@ describe("team run validation", () => {
     const tl = result.members.find((m) => m.role === "tl");
     // 主=codex の実装レーン: 実行(se)=相手(claude)、相談(tl)=主(codex)=フロンティア。
     expect(se?.provider).toBe("claude");
-    expect(se?.model_selection.model).toBe("claude-haiku-4-5");
+    expect(se?.model_selection.model).toBe(MODEL_IDS.claude.haiku);
     expect(tl?.provider).toBe("codex");
-    expect(tl?.model_selection.model).toBe("gpt-5.5");
+    expect(tl?.model_selection.model).toBe(MODEL_IDS.codex.frontier);
   });
 });
