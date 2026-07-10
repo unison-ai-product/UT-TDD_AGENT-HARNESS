@@ -1,3 +1,4 @@
+import { loadFeedbackLifecycle } from "../feedback/lifecycle";
 import type { HarnessDb } from "./index";
 import {
   analyzeRefactorCandidates,
@@ -18,6 +19,24 @@ interface FeedbackProjectionDeps {
     db: HarnessDb,
     event: { table: string; id: string; row: Record<string, unknown> },
   ) => void;
+}
+
+export function projectFeedbackLifecycle(
+  repoRoot: string,
+  db: HarnessDb,
+  deps: FeedbackProjectionDeps,
+): void {
+  for (const record of loadFeedbackLifecycle(repoRoot)) {
+    const id = deps.stableId(
+      "feedback-lifecycle",
+      `${record.feedback_event_id}:${record.source_generation}:${record.occurred_at}`,
+    );
+    deps.recordProjectionEvent(db, {
+      table: "feedback_lifecycle",
+      id,
+      row: { lifecycle_id: id, ...record },
+    });
+  }
 }
 
 const refactorCandidateCache = new Map<string, RefactorCandidate[]>();
