@@ -5,7 +5,7 @@ kind: add-design
 layer: L5
 sub_doc: physical-data
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
@@ -40,7 +40,42 @@ dependencies:
   references:
     - docs/plans/PLAN-L7-246-feedback-event-lifecycle.md
     - docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-subagent-lifecycle-final-gate
+    review_kind: intra_runtime_subagent
+    reviewer_model: gpt-5
+    reviewed_at: "2026-07-10T14:43:18+09:00"
+    tests_green_at: "2026-07-10T14:40:26+09:00"
+    verdict: approve
+    scope: "PLAN-L5-15最終design/pair review。source generation、append-only lifecycle、DB-only遷移禁止、L5↔L8 IT-FLC、ZIP比較evidence、batch初回rebuildを確認し、新規P0/P1なし。"
+    green_commands:
+      - kind: lint
+        command: "bun run src\\cli.ts plan lint docs\\plans\\PLAN-L5-15-feedback-lifecycle-physical-data.md docs\\plans\\PLAN-L6-68-memory-telemetry-lifecycle-contract.md docs\\plans\\PLAN-L7-392-memory-promotion-handover-digest.md docs\\plans\\PLAN-REVERSE-392-memory-promotion-digest-backfill.md"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:34:39+09:00"
+        evidence_path: docs/design/harness/L5-detailed-design/physical-data.md
+        output_digest: "sha256:e3f5d37315e7b90515646ff61c0f20fcdc4d40a6a8bffdcf8223c09259387abc"
+        anchor_commit: 4e871bc3bf3dc532e44c674b65f1b39c357138f0
+      - kind: integration_test
+        command: "bunx vitest run tests/feedback-lifecycle.test.ts tests/session-log.test.ts tests/feedback-surface.test.ts tests/dependency-drift.test.ts tests/rule-drift.test.ts tests/runtime-hook-entrypoints.test.ts tests/codex-hook-adapter.test.ts tests/project-hook.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:40:26+09:00"
+        evidence_path: tests/feedback-lifecycle.test.ts
+        output_digest: "sha256:937af52dc81adc5a65d49f0b64c7ec5e82efa83df2600a71c36ad3134d729674"
+        anchor_commit: 58fb20bfe4ccbeacba139e86f60fe4e3aab3dfa5
+      - kind: integration_test
+        command: "bunx vitest run tests/projection-writer.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:30:00+09:00"
+        evidence_path: tests/projection-writer.test.ts
+        output_digest: "sha256:11d201a3f160069718d7c39cbceffa7cd52be968547b26a1c34b7bcba96a11fd"
+        anchor_commit: 4e871bc3bf3dc532e44c674b65f1b39c357138f0
 ---
 
 # PLAN-L5-15: feedback source generation / lifecycle 物理設計
@@ -71,7 +106,7 @@ ZIPは比較evidenceでありauthoring sourceへ昇格しない。
 
 ## §2 DoD
 
-- [ ] physical-dataに両table、generation、index、authoring/projection境界がある。
-- [ ] L8にrebuild、TTL、generation交代、source解消、fallback抑止の結合oracleがある。
-- [ ] L6/L7が本物理設計を親として降下し、detector都合でstateを創作しない。
-- [ ] DB不在/lock/破損時もhookはfail-openだが、正常書込時の遷移欠落はtestでfail-closeする。
+- [x] physical-dataに両table、generation、index、authoring/projection境界がある。
+- [x] L8にrebuild、TTL、generation交代、source解消、fallback抑止の結合oracleがある。
+- [x] L6/L7が本物理設計を親として降下し、detector都合でstateを創作しない。
+- [x] DB不在/lock/破損時もhookはfail-openだが、正常書込時の遷移欠落はtestでfail-closeする。

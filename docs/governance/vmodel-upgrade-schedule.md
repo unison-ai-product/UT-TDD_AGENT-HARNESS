@@ -65,9 +65,9 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L6-52-signals-schedule-live-handover | L6 | function-spec | L7 | PLAN-L7-383-vmodel-schedule-authoring-source,PLAN-L7-385-vmodel-activation-profile-join | U17a: runtime test/review/gate signal と工程 authoring RAG のlive join、固定4段digest契約をfreeze | green | confirmed |  |
 | PLAN-L7-412-schedule-live-session-digest | L7 |  | L6 | PLAN-L6-52-signals-schedule-live-handover | U17b: 工程live stateと固定4段SessionStart digestを実装し、旧feedback/memory個別surfaceを統合 | green | confirmed |  |
 | PLAN-REVERSE-412-schedule-live-session-digest-backfill | cross | function-spec | L7 | PLAN-L7-412-schedule-live-session-digest | U17b-r: 既存handover/feedback/memory surfaceをL6固定4段digest契約へbackfill | green | confirmed |  |
-| PLAN-L5-15-feedback-lifecycle-physical-data | L5 | physical-data | L8 | PLAN-L7-412-schedule-live-session-digest | U17c-physical: source generationとappend-only lifecycleの物理境界をfreeze | yellow | draft | L8結合oracleとcross-review待ち。 |
-| PLAN-L6-68-memory-telemetry-lifecycle-contract | L6 | function-spec | L7 | PLAN-L5-15-feedback-lifecycle-physical-data | U17c-design: memory昇格nudge、telemetry消化、source解消の設計契約をfreeze | yellow | draft | L5 physical-data freeze待ち。 |
-| PLAN-L7-392-memory-promotion-handover-digest | L7 |  | L6 | PLAN-L6-68-memory-telemetry-lifecycle-contract | U17c: digest責務移管後、memory昇格nudgeとtelemetry TTL/auto-ackを実装 | yellow | draft | fixed digestはPLAN-L7-412へ移管。 |
+| PLAN-L5-15-feedback-lifecycle-physical-data | L5 | physical-data | L8 | PLAN-L7-412-schedule-live-session-digest | U17c-physical: source generationとappend-only lifecycleの物理境界をfreeze | green | confirmed |  |
+| PLAN-L6-68-memory-telemetry-lifecycle-contract | L6 | function-spec | L7 | PLAN-L5-15-feedback-lifecycle-physical-data | U17c-design: memory昇格nudge、telemetry消化、source解消の設計契約をfreeze | green | confirmed |  |
+| PLAN-L7-392-memory-promotion-handover-digest | L7 |  | L6 | PLAN-L6-68-memory-telemetry-lifecycle-contract | U17c: digest責務移管後、memory昇格nudgeとtelemetry TTL/auto-ackを実装 | green | confirmed |  |
 
 ## 2. 解釈規則
 

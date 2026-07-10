@@ -4,7 +4,7 @@ title: "PLAN-L7-392 (add-impl): HARNESS メモリ昇格 nudge と telemetry life
 kind: add-impl
 layer: L7
 drive: be
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
@@ -53,11 +53,47 @@ dependencies:
   requires:
     - docs/plans/PLAN-L7-189-shared-harness-memory-cross-runtime.md
     - docs/plans/PLAN-L7-366-takeover-surface-warn-actionable.md
+    - docs/plans/PLAN-REVERSE-392-memory-promotion-digest-backfill.md
   references:
     - docs/plans/PLAN-L7-110-takeover-feedback-surface.md
     - docs/plans/PLAN-L7-246-feedback-event-lifecycle.md
     - docs/plans/PLAN-L7-412-schedule-live-session-digest.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-subagent-lifecycle-final-gate
+    review_kind: intra_runtime_subagent
+    reviewer_model: gpt-5
+    reviewed_at: "2026-07-10T14:43:18+09:00"
+    tests_green_at: "2026-07-10T14:40:26+09:00"
+    verdict: approve
+    scope: "PLAN-L7-392最終implementation review。production配線、latest generation surface、fallback抑止、Codex cmd payload、同一semantic再発、batch性能、module cycle 0を確認し、新規P0/P1なし。"
+    green_commands:
+      - kind: typecheck
+        command: "bunx tsc --noEmit"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-10T14:34:26+09:00"
+        evidence_path: src/shared/feedback-lifecycle.ts
+        output_digest: "sha256:7f4faa0641b0290b3fe4f7306f81b12360d0dc75cbc08ce3668887e4ccbbed37"
+        anchor_commit: 4e871bc3bf3dc532e44c674b65f1b39c357138f0
+      - kind: unit_test
+        command: "bunx vitest run tests/feedback-lifecycle.test.ts tests/session-log.test.ts tests/feedback-surface.test.ts tests/dependency-drift.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:40:26+09:00"
+        evidence_path: tests/feedback-lifecycle.test.ts
+        output_digest: "sha256:937af52dc81adc5a65d49f0b64c7ec5e82efa83df2600a71c36ad3134d729674"
+        anchor_commit: 58fb20bfe4ccbeacba139e86f60fe4e3aab3dfa5
+      - kind: integration_test
+        command: "bunx vitest run tests/projection-writer.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:30:00+09:00"
+        evidence_path: tests/projection-writer.test.ts
+        output_digest: "sha256:11d201a3f160069718d7c39cbceffa7cd52be968547b26a1c34b7bcba96a11fd"
+        anchor_commit: 4e871bc3bf3dc532e44c674b65f1b39c357138f0
 ---
 
 # PLAN-L7-392: HARNESS メモリ昇格 nudge と telemetry lifecycle
@@ -98,3 +134,10 @@ handover は「DB 導出 digest (状態) + HARNESS メモリ (知識) + HEAD (�
   feedback_events に記録される (real-repo regression test)。
 - open feedback の telemetry が TTL/auto-ack で減衰する。
 - `PLAN-L7-412` の固定4段digestへ重複出力を追加しない。
+
+## 4. 検収結果
+
+- [x] Claude/Codexのcommit/PLAN遷移とmemory writeをStop summaryで照合する。
+- [x] telemetry TTL、source解消、generation交代、同一semantic再発をappend-onlyに記録する。
+- [x] terminal feedbackをsource fallbackで再表示しない。
+- [x] 初回lifecycle化をbatch appendし、projection-writer 32 testsを95.5秒で完走する。

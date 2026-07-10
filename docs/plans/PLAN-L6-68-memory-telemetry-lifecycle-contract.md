@@ -5,7 +5,7 @@ kind: add-design
 layer: L6
 sub_doc: function-spec
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
@@ -41,7 +41,33 @@ dependencies:
     - docs/plans/PLAN-L7-246-feedback-event-lifecycle.md
     - docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
     - docs/plans/PLAN-REVERSE-392-memory-promotion-digest-backfill.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-subagent-lifecycle-final-gate
+    review_kind: intra_runtime_subagent
+    reviewer_model: gpt-5
+    reviewed_at: "2026-07-10T14:43:18+09:00"
+    tests_green_at: "2026-07-10T14:40:26+09:00"
+    verdict: approve
+    scope: "PLAN-L6-68最終contract review。memory nudge、Codex/Claude PostToolUse、TTL、source解消、recurrence generation、fail-open境界をL7 oracleと照合し、新規P0/P1なし。"
+    green_commands:
+      - kind: typecheck
+        command: "bunx tsc --noEmit"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-10T14:34:26+09:00"
+        evidence_path: src/runtime/memory-promotion.ts
+        output_digest: "sha256:29d9ad53a8723fc5208e71dea855880d38d10e79178678a189976d5bb50e891e"
+        anchor_commit: 4e871bc3bf3dc532e44c674b65f1b39c357138f0
+      - kind: unit_test
+        command: "bunx vitest run tests/feedback-lifecycle.test.ts tests/session-log.test.ts tests/feedback-surface.test.ts tests/dependency-drift.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:40:26+09:00"
+        evidence_path: tests/feedback-lifecycle.test.ts
+        output_digest: "sha256:937af52dc81adc5a65d49f0b64c7ec5e82efa83df2600a71c36ad3134d729674"
+        anchor_commit: 58fb20bfe4ccbeacba139e86f60fe4e3aab3dfa5
 ---
 
 # PLAN-L6-68: memory 昇格 nudge と telemetry lifecycle 契約
