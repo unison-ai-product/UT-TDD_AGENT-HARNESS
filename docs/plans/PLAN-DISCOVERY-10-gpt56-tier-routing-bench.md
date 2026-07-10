@@ -145,6 +145,41 @@ W4 = 4 問 (うち 1 問は症状提示型)、W5 = 6 問 (REJECT 正解 4 + ACCE
 raw log はローカル scratch (/tmp/bench)。プロンプトは上記 fix commit の親/当該版から
 機械的に再生成可能 (再現手順は本 PLAN §3 と run-model.sh 形式)。
 
+### 5.2 W1 設計 lane — 実課題 2 題 (2026-07-10 実測、PO 題材指定)
+
+題材 (PO 指定): D1 = 多言語対応 (Python/PHP/Go を同等の機械 gate で統治する設計)、
+D2 = Pack クリーン配布の構造妥当性監査。effort=high / read-only / 素材バンドル同一。
+採点 = Claude cross-grade。D2 正解キー = A-172 の確認済み findings のうち現在も open
+のもの (C-1 は配布材料の CI テンプレ内コメントに答えが残存していたため採点除外)。
+
+| 指標 | gpt-5.6-sol | gpt-5.6-terra | gpt-5.5 |
+|---|---|---|---|
+| D1 結合点列挙 | 54 項目 (最網羅) | ~20 項目 + 急所先出し | 19 項目 (全て接地) |
+| D1 設計品質 (rubric/10) | 8.5 | 8 | 7.5 |
+| D2 正解キー recall | 未実施 (usage limit) | 5/6 + 新規 4 | 5/6 + 新規 2 |
+| tokens (D1+D2) | 95k (D1のみ) | 96k | 63k |
+| 時間 | 468s (D1のみ) | 293s | 264s |
+
+所見:
+
+1. **Terra が D2 で現行コードの実バグを新規発見**: sync-stage が自分の書く manifest
+   (`.ut-tdd-pack-sync-manifest.json`) を次回実行の unmanaged 検出で fail させる
+   **非冪等バグ** (`src/cli/distribution.ts` collectDistributionCandidatePaths の除外が
+   `.git`/`node_modules`/`dist` のみであることを実コードで裏取り済み)。TOCTOU
+   (scan→copy 競合)・非トランザクション sync・「secret スキャン ≠ データ分類境界」
+   (no-go 核心) も構造的に妥当な指摘。→ **要 routeFiling (別 PLAN で起票)**。
+2. Sol の D1 は最も網羅的・精緻 (toolchain 粒度 profile ID、pytest 0 件収集 guard 等)
+   だが、トークン 3 倍・時間 3 倍。**「同等品質を半額の Terra」対「上積みに 3 倍払う
+   Sol」の構図が設計 lane でも再現**。Sol D2 は usage limit (15:05 回復) で未測。
+3. 全モデル共通の設計急所一致: 「harness 自身は TS/Bun のまま、切るのは対象リポジトリ
+   統治の結合」「runner enum は neutral な provenance へ」— 多言語対応の設計方針として
+   そのまま採用可能な収束。
+4. Terra の弱点も観測: バンドル外パスをあたかも読んだかのように引用する **citation
+   非接地** (実在ファイルだが提示材料に無い)。エスカレーション先ではなく主力帯として
+   使う分には gate 側で担保可能。
+5. 採点材料の教訓: 過去監査の修正がコード/テンプレにコメントとして残るため、**実リポ
+   由来の題材は正解キー漏洩の混入チェックが必須** (今回 C-1 で実際に発生)。
+
 ## 6. S1 DoD
 
 - [ ] 仮説表 (H1–H3) と採用基準が PO / TL レビューで凍結される。
