@@ -102,6 +102,28 @@ zip 資料 → skill の対応 (ファイル名は英語、本文は既存 skill
       `ut-tdd doctor` exit 0。
 - [ ] PLAN-L7-411 (admission gate 実装、Codex lane) の対象ファイルに触れていない。
 
+## 3b. Slice 2 (PO 指示 2026-07-10): 工程単位・資料ファミリ単位・プロダクトパターン軸
+
+Slice 1 (横断判断 skill 8+1) 完了後、PO 指摘により未カバーの 3 軸を追加する:
+
+1. **工程 (ステージ) 単位 skill (5 本)** — zip L1〜L12 を UT-TDD 層体系に写像した工程帯別に、
+   各工程の着眼・必須項目・凍結条件・次工程への引き渡し物を収録:
+   vmodel-stage-upstream (企画/要求/要件)、vmodel-stage-architecture (基本設計)、
+   vmodel-stage-detailed-design (詳細設計+テスト設計シフトレフト)、
+   vmodel-stage-implementation-unit (実装/テスト実装/単体)、
+   vmodel-stage-integration-acceptance-ops (結合〜受入〜運用テスト)。
+2. **設計資料ファミリ単位 skill (9 本)** — 109 種設計書を系統別に束ね、各資料の必須項目・
+   落ちやすい抜けを資料単位で列挙 (1 資料 1 skill は索引汚染のため不採用):
+   data / security-privacy / operations-reliability / performance-observability /
+   web-frontend / mobile-desktop / cli-api-platform / ai-agent / saas-business。
+3. **プロダクトパターン skill (1 本)** — profiles.yaml (PoC/Standard/Enterprise ×
+   Web/Mobile/Desktop/CLI/APIService) を翻案し、規模×プラットフォームで採否・粒度の
+   判断がどう変わるかを外部化。工程/ファミリ skill 側にもパターン条件付き
+   decision_points (「PoC なら省略可、Enterprise なら必須」型) を含める。
+
+要件は Slice 1 と同一 (skill.v1 / decision_points 3〜8 / denylist / SKILL_MAP 登録 /
+既存 skill との境界明記)。
+
 ## 4. 非目標
 
 - harness 機能追加 (整合性 gate / 図面 / 規模プロファイル等、A-185 §C) — 別 PLAN。
