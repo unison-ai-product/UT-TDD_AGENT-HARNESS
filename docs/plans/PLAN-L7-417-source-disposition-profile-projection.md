@@ -29,7 +29,13 @@ generates:
     artifact_type: source_code
   - artifact_path: src/disposition/adapters/tracked-vmodel-loader.ts
     artifact_type: source_code
+  - artifact_path: src/disposition/domain/authoring-provenance.ts
+    artifact_type: source_code
+  - artifact_path: src/disposition/ports/authoring-provenance.ts
+    artifact_type: source_code
   - artifact_path: src/profile/domain/resolver.ts
+    artifact_type: source_code
+  - artifact_path: src/profile/adapters/tracked-profile-loader.ts
     artifact_type: source_code
   - artifact_path: tests/disposition/catalog.test.ts
     artifact_type: test_code
@@ -37,7 +43,11 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/disposition/tracked-authoring-loader.test.ts
     artifact_type: test_code
+  - artifact_path: tests/disposition/authoring-provenance.test.ts
+    artifact_type: test_code
   - artifact_path: tests/profile/resolver.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/profile/tracked-loader.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-70-source-catalog-profile-resolver-contracts.md

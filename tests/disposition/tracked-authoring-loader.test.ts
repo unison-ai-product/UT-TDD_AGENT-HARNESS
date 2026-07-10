@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseStrictMarkdownTable } from "../../src/disposition/adapters/strict-markdown-table";
 import { loadTrackedCatalogInput } from "../../src/disposition/adapters/tracked-vmodel-loader";
+import { gitBlobOid } from "../../src/disposition/domain/authoring-provenance";
 import { DocumentDispositionCatalog } from "../../src/disposition/domain/document-disposition-catalog";
 
 const read = (path: string) => readFileSync(path);
@@ -90,11 +92,23 @@ describe("tracked checked V-model authoring loader", () => {
       "docs/governance/vmodel-item-target-ledger.md",
     ];
     const bundle = Object.fromEntries(authoringPaths.map((path) => [path, read(path)]));
-    const input = loadTrackedCatalogInput(bundle);
+    const receipts = authoringPaths.map((path) => ({
+      path,
+      blobOid: gitBlobOid(bundle[path]),
+      contentDigest: createHash("sha256").update(bundle[path]).digest("hex"),
+      sourceCommit: "a".repeat(40),
+    }));
+    const input = loadTrackedCatalogInput(bundle, receipts);
     expect(input.declaredCounts).toMatchObject({ sources: 109, categories: 21, items: 163 });
     const result = DocumentDispositionCatalog.create(input);
     expect(result.ok, result.ok ? undefined : JSON.stringify(result.errors.slice(0, 5))).toBe(true);
     if (!result.ok) return;
     expect(result.value.unresolved()).toHaveLength(163);
+
+    const tampered = {
+      ...bundle,
+      [authoringPaths[0]]: Buffer.concat([bundle[authoringPaths[0]], Buffer.from("\n")]),
+    };
+    expect(() => loadTrackedCatalogInput(tampered, receipts)).toThrow("catalog-provenance-invalid");
   });
 });

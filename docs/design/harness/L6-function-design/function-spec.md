@@ -963,6 +963,11 @@ finding identityは少なくとも`catalog-count-mismatch`、`catalog-source-dup
 `catalog-item-target-incomplete`、`profile-unknown`、`profile-overlay-conflict`、
 `profile-decision-missing`を予約し、全findingが`ruleId,subjectId,message,severity,evidenceRefs[]`を持つ。
 
+`AuthoringProvenancePort.receipts(paths)`はgit index/HEADから`path,blobOid,contentDigest,sourceCommit`を返す。
+loaderはbundleとreceiptのpath集合完全一致、Git blob OID、SHA-256、40hex commitを検証してからparseし、working tree内容から
+receiptを自己発行しない。不一致は`catalog-provenance-invalid`。純粋verifierはportと分離し、mutation fixtureで改竄、欠落、余剰、
+duplicate、invalid commitをすべてkillする。
+
 #### Forward FSM完全遷移表
 
 正常系の各行は隣接遷移だけを許す。`expectedFrom`不一致、sequence欠番、同一`commandId`で異なるpayloadはそれぞれ

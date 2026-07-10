@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { type AuthoringReceipt, verifyAuthoringProvenance } from "../domain/authoring-provenance";
 import { type CatalogInput, sourceItemEdgeId } from "../domain/document-disposition-catalog";
 import { parseStrictMarkdownTable } from "./strict-markdown-table";
 
@@ -36,7 +37,12 @@ function optional(row: Row, key: string): string | undefined {
   return value && value !== "—" ? value : undefined;
 }
 
-export function loadTrackedCatalogInput(bundle: AuthoringBundle): CatalogInput {
+export function loadTrackedCatalogInput(
+  bundle: AuthoringBundle,
+  receipts: readonly AuthoringReceipt[],
+): CatalogInput {
+  const provenance = verifyAuthoringProvenance(bundle, receipts);
+  if (!provenance.ok) throw new Error(JSON.stringify(provenance.findings));
   const manifestRows = table(bundle, paths.manifest, ["field", "value"]);
   const manifest = new Map(manifestRows.map((row) => [row.field, row.value]));
   const dispositions = table(bundle, paths.dispositions, [
