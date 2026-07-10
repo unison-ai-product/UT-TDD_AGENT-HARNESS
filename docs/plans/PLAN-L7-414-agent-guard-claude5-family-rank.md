@@ -33,60 +33,60 @@ dependencies:
     - docs/plans/PLAN-DISCOVERY-10-gpt56-tier-routing-bench.md
     - .ut-tdd/memory/project-fable-5-7-13-rate-limit.md
 review_evidence:
-  - reviewer: codex-intra-runtime
-    review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-10T17:02:00+09:00"
-    tests_green_at: "2026-07-10T17:01:20+09:00"
+  - reviewer: claude-pm
+    review_kind: cross_agent
+    reviewed_at: "2026-07-10T17:08:00+09:00"
+    tests_green_at: "2026-07-10T17:05:45+09:00"
     verdict: approve
-    scope: "PLAN-L7-414: MODEL_IDS.claude を基準にした fable family 正規化、fable の最上位 rank、品質／gate 役だけへの apex-tier 許可、worker role の fail-close 拒否、および MODEL_IDS drift regression。"
-    worker_model: codex
-    reviewer_model: codex-intra-runtime
+    scope: "PLAN-L7-414: MODEL_IDS.claude を基準にした fable family 正規化、fable の最上位 rank、品質／gate 役だけへの apex-tier 許可、worker role の fail-close 拒否、および MODEL_IDS drift regression。worker=Codex (gpt-5.6-terra) 実装を Claude が diff レビューし、green commands を PR head で再実走して digest を採取。"
+    worker_model: gpt-5.6-terra
+    reviewer_model: claude-fable-5
     green_commands:
       - kind: unit_test
         command: "bunx vitest run tests/agent-guard.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-10T17:01:14+09:00"
+        completed_at: "2026-07-10T17:05:24+09:00"
         evidence_path: tests/agent-guard.test.ts
-        output_digest: "sha256:652948248ea625b573babe652d6333567b69c7389ff3722a544a062cbf14a7c8"
-        anchor_commit: 044717096d5c54f41f0895b98c2a26786322410f
+        output_digest: "sha256:e7f9aa91c707d1e6b429b8a54a01d303adea1f7259ddb8e1dbcf8fb6bfe93899"
+        anchor_commit: 1811132b1e82fbcfdbe983174a34867bda498684
       - kind: unit_test
         command: "bunx vitest run tests/model-id-ssot-drift.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-10T17:01:16+09:00"
+        completed_at: "2026-07-10T17:05:26+09:00"
         evidence_path: tests/model-id-ssot-drift.test.ts
-        output_digest: "sha256:486cf49f8c2246c8119fcab8671bb421bb567c7d81e91d3ce6965d1adcf46535"
-        anchor_commit: 044717096d5c54f41f0895b98c2a26786322410f
+        output_digest: "sha256:31661a87f19fa50ca4803fcdff18adfeece3d9046eba5712cc0d61c3ad72f129"
+        anchor_commit: 1811132b1e82fbcfdbe983174a34867bda498684
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-10T17:01:20+09:00"
+        completed_at: "2026-07-10T17:05:32+09:00"
         evidence_path: src/runtime/agent-guard.ts
-        output_digest: "sha256:5a3973f79ed9becd5f23c4feff467513814de7ea381d75a4d2e339aa8b8edca9"
-        anchor_commit: 044717096d5c54f41f0895b98c2a26786322410f
+        output_digest: "sha256:2a492cc4599b27e801dc1227fb948243f1efa93868c7b3de64304762682b3258"
+        anchor_commit: 1811132b1e82fbcfdbe983174a34867bda498684
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-10T17:01:20+09:00"
+        completed_at: "2026-07-10T17:05:35+09:00"
         evidence_path: src/runtime/agent-guard.ts
-        output_digest: "sha256:52a421f44026606f8f4a42433c30e3851aefa52042aef84279a87e0feaaa63b3"
-        anchor_commit: 044717096d5c54f41f0895b98c2a26786322410f
+        output_digest: "sha256:44a40dc293ebb3b72d88fb51f45ea330391cc7e8ddfefbbf5f0ea81a1a0215bc"
+        anchor_commit: 1811132b1e82fbcfdbe983174a34867bda498684
       - kind: vmodel_lint
         command: "bun run src/cli.ts plan lint"
         runner: bun
         scope: gate
         exit_code: 0
-        completed_at: "2026-07-10T16:59:38+09:00"
+        completed_at: "2026-07-10T17:05:45+09:00"
         evidence_path: docs/plans/PLAN-L7-414-agent-guard-claude5-family-rank.md
-        output_digest: "sha256:e8ae22a1af85d0a6a5b63af69731a22edbab13b59d68c8066ff3e8cfb954c452"
-        anchor_commit: 044717096d5c54f41f0895b98c2a26786322410f
+        output_digest: "sha256:a273fcb3087ffb99e363f1de26afdff72d4952be8be74d48a4f15d8ec0ae4b6b"
+        anchor_commit: 1811132b1e82fbcfdbe983174a34867bda498684
 ---
 
 # PLAN-L7-414 (troubleshoot): agent-guard の Claude 5 世代 family 未正規化
