@@ -15,6 +15,7 @@ import {
   reviewGuardMessages,
 } from "../runtime/review-guard";
 import { dispatch, nodeDeps, type SessionHookInput } from "../runtime/session-log";
+import { MODEL_IDS } from "../team/model-policy";
 
 export interface AdapterExecutionDeps {
   gitBranch: () => string | null;
@@ -185,7 +186,9 @@ function runtimeCommand(
             role: opts.role,
             task,
             planId: opts.plan,
-            model: opts.model,
+            // Direct Codex delegation is an implementation worker lane unless a caller
+            // explicitly selects another model; reserve frontier routing for advisor/gates.
+            model: opts.model ?? (provider === "codex" ? MODEL_IDS.codex.worker : undefined),
             effort: opts.effort,
             execute: Boolean(opts.execute),
             contextInjection,

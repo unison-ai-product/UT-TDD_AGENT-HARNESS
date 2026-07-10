@@ -21,9 +21,9 @@ export const MODEL_IDS = {
   },
   codex: {
     /** T0 フロンティア (相談/検証の最上位帯)。 */
-    frontier: "gpt-5.5",
+    frontier: "gpt-5.6-sol",
     /** T1 ワーカー専門。 */
-    worker: "gpt-5.4",
+    worker: "gpt-5.6-terra",
     /** T2 ワーカー軽量 (原則安く)。 */
     spark: "gpt-5.3-codex-spark",
     mini: "gpt-5.4-mini",
@@ -192,7 +192,7 @@ function modelForProvider(input: { provider: TeamProvider; engine: string; model
   if (input.provider === "local") return { model: "local", source: "policy" };
   if (input.provider === "codex") {
     // frontier = 最上位帯。tier-router TIER_TABLE.T0.codex (= MODEL_IDS.codex.frontier) と同一正本。
-    // 旧 gpt-5.4 (= worker) は T1 (ワーカー専門) であり、claude frontier=opus(T0) との非対称を生んでいた。
+    // worker は T1 (ワーカー専門) であり、frontier (T0) と混在させない。
     if (input.modelFamily === "frontier")
       return { model: MODEL_IDS.codex.frontier, source: "policy" };
     if (input.modelFamily === "codex") return { model: MODEL_IDS.codex.codex, source: "policy" };
