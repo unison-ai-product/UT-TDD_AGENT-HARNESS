@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -8,15 +8,15 @@ import type { PairDoc } from "../src/vmodel/lint";
 
 const cliPath = join(process.cwd(), "src", "cli.ts");
 
-function runCli(args: string[]) {
+function runCli(args: string[], cwd = process.cwd()) {
   if (process.platform === "win32") {
     const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
     return spawnSync(cmdExe, ["/d", "/c", "bun", cliPath, ...args], {
-      cwd: process.cwd(),
+      cwd,
       encoding: "utf8",
     });
   }
-  return spawnSync("bun", [cliPath, ...args], { cwd: process.cwd(), encoding: "utf8" });
+  return spawnSync("bun", [cliPath, ...args], { cwd, encoding: "utf8" });
 }
 
 const doc = (
@@ -122,23 +122,22 @@ describe("static gates", () => {
 
   it("U-GATE-006: reports invalid checklist YAML as a gate failure instead of crashing", () => {
     const dir = mkdtempSync(join(tmpdir(), "ut-tdd-checklist-"));
-    const checklist = join(dir, "bad-review-checklist.yaml");
-    writeFileSync(checklist, "items: [");
+    try {
+      const checklist = join(dir, "bad-review-checklist.yaml");
+      writeFileSync(checklist, "items: [");
 
-    const result = runCli([
-      "gate",
-      "G4",
-      "--mode",
-      "codex-only",
-      "--checklist",
-      checklist,
-      "--json",
-    ]);
+      const result = runCli(
+        ["gate", "G4", "--mode", "codex-only", "--checklist", checklist, "--json"],
+        dir,
+      );
 
-    expect(result.status).toBe(1);
-    expect(result.stdout).toContain("review checklist - violation");
-    expect(result.stdout).toContain('"passed": false');
-    expect(result.stderr).not.toContain("error: script");
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain("review checklist - violation");
+      expect(result.stdout).toContain('"passed": false');
+      expect(result.stderr).not.toContain("error: script");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("rejects coverage below the G7 threshold", () => {
