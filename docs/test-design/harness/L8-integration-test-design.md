@@ -14,7 +14,7 @@ related_l5_ui_detail: docs/design/harness/L5-detailed-design/ui-detail.md
 next_pair_freeze: L5
 v2_import: docs/migration/v2-import-ledger.md
 created: 2026-05-29
-updated: 2026-06-09
+updated: 2026-07-10
 ---
 
 # UT-TDD Agent Harness — L8 結合テスト設計 (④ / IT-*)
@@ -216,6 +216,21 @@ requirements produced here.
 | IT-SPECIR-02 | `spec_relations` が未定義 `spec_id` を参照する fixture | `ut-tdd doctor` または spec-ir projection check を実行する。 | `spec-ir-orphan-relation` finding が作られ fail-close する。silent skip / auto repair はしない。 | spec-ir relation resolver -> findings projection boundary。 | orphan relation 0 が完了条件。 |
 | IT-SPECIR-03 | finding / quality_signal / schedule / activation が同じ subject を指す fixture | detector route candidate projection を実行する。 | `detector_route_candidates` は subject / signal / current_location / evidence を保持するが、FilingTarget の `allowed_kinds` / `layer_band` / `sub_doc_hint` / `pairing_obligation` は L4 function §3.2.1 由来で再導出される。 | findings + schedule + activation -> route candidate -> route eval boundary。 | detector は filing target を創作しない。設計 SSoT 不在なら candidate は non-ready finding になる。 |
 | IT-SPECIR-04 | activation profile が out-of-scope/deferred だが理由が無い fixture、または secret-like payload を含む fixture | spec-ir / activation projection を実行する。 | 理由なし除外は `activation-reason-missing` finding、secret-like payload は DB 挿入前に拒否される。 | activation loader -> projection sanitizer -> findings boundary。 | profile 除外は理由必須。raw/secret/PII は spec IR table に保存しない。 |
+
+## Appendix G: feedback lifecycle projection 結合テスト設計 (PLAN-L5-15、2026-07-10)
+
+> 設計ペア: `docs/design/harness/L5-detailed-design/physical-data.md` §9 と
+> `PLAN-L5-15-feedback-lifecycle-physical-data`。source観測、append-only lifecycle、DB rebuild、
+> takeover surfaceの境界を結合検証する。
+
+| IT-ID | 前提 (Given) | 操作 (When) | 期待結果 (Then) | モジュール境界 | 不変条件 |
+|---|---|---|---|---|---|
+| IT-FLC-01 | 同一source generationのopen feedbackとlifecycle log | DB rebuildを2回実行する。 | open transitionは重複せず、rowとsurface件数が不変。 | source projector -> lifecycle reconciler -> SQLite | rebuildは消化stateを創作・巻戻ししない。 |
+| IT-FLC-02 | TTLを超えたtelemetryと、同時刻のgate/actionable | lifecycle reconcileとtakeover selectを実行する。 | telemetryだけackされ、gate/actionableはopenのまま。 | lifecycle policy -> DB -> surface | TTLは安全・判断signalを消さない。 |
+| IT-FLC-03 | ack済みfeedbackと元quality signal/finding | takeover selectを実行する。 | feedback eventもsource fallbackも表示されない。 | feedback_events + lifecycle -> fallback dedupe | terminal stateを別経路で再表示しない。 |
+| IT-FLC-04 | 同一event IDで意味状態が変わったsource | generationを更新してreconcileする。 | 旧generationはterminal、新generationだけopen。 | generation builder -> lifecycle log -> projection | 同一generationは再openせず、新観測は埋没させない。 |
+| IT-FLC-05 | sourceが消滅したactionable feedback | rebuild/reconcileを実行する。 | lifecycleはclosedとなり、理由と時刻がappend-onlyで残る。 | source absence detector -> lifecycle appender | silent deleteせず監査履歴を残す。 |
+| IT-FLC-06 | `.ut-tdd/logs`不在、またはDB/log書込失敗 | append/reconcile/Stop summaryを実行する。 | 正常時はdirectoryを作り永続化、失敗時はhook exit 0。 | hook -> filesystem -> DB | fail-openはruntime継続であり、正常書込の無観測消失を許可しない。 |
 
 ## §6 G8-WORKFLOW: integration verification workflow
 

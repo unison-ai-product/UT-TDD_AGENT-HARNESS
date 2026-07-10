@@ -40,6 +40,7 @@ function insertFeedbackEvent(
     nextAction?: string;
     sourceTable?: string;
     sourceId?: string;
+    sourceGeneration?: string;
     findingId?: string;
   },
 ): void {
@@ -52,6 +53,7 @@ function insertFeedbackEvent(
       plan_id: input.planId ?? "",
       source_table: input.sourceTable ?? "",
       source_id: input.sourceId ?? "",
+      source_generation: input.sourceGeneration ?? "generation:test",
       source_color: "",
       signal_type: input.signalType,
       severity: input.severity,

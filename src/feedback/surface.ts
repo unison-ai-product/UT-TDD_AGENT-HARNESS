@@ -1,3 +1,4 @@
+import { isTelemetryFeedback } from "../shared/feedback-lifecycle";
 import { stableId } from "../stable-id";
 import type { HarnessDb } from "../state-db/index";
 
@@ -50,17 +51,6 @@ export interface FeedbackEventRowLike {
 const BUCKET_RANK: Record<FeedbackSurfaceBucket, number> = { gate: 0, actionable: 1, telemetry: 2 };
 const SEVERITY_RANK: Record<string, number> = { error: 0, fail: 0, warn: 1, info: 2 };
 
-const TELEMETRY_SIGNAL_TYPES = new Set([
-  "artifact_progress_yellow",
-  "drive_firing_rate",
-  "large-document-split",
-  "missing-test-oracle-id",
-  "skill_acceptance_rate",
-  "skill_firing_rate",
-  "trouble_event_rate",
-  "workflow_human_required_rate",
-]);
-
 function severityRank(severity: string): number {
   return SEVERITY_RANK[severity] ?? SEVERITY_RANK.warn;
 }
@@ -71,7 +61,7 @@ export function classifyFeedbackBucket(input: {
 }): FeedbackSurfaceBucket {
   const severity = input.severity.toLowerCase();
   if (severity === "error" || severity === "fail") return "gate";
-  if (severity === "info" || TELEMETRY_SIGNAL_TYPES.has(input.signal_type)) return "telemetry";
+  if (isTelemetryFeedback(input)) return "telemetry";
   return "actionable";
 }
 
@@ -211,14 +201,21 @@ export function selectTakeoverFeedback(
   const representedFeedbackIds = new Set<string>();
   const representedSources = new Set<string>();
 
-  const openFeedbackEvents = db
+  const feedbackEventRows = db
     .prepare(
-      `SELECT feedback_event_id, finding_id, plan_id, source_table, source_id, signal_type, severity, next_action
+      `SELECT feedback_events.feedback_event_id, finding_id, plan_id, source_table, source_id,
+              signal_type, severity, next_action, source_generation,
+              (SELECT lifecycle.state
+               FROM feedback_lifecycle lifecycle
+               WHERE lifecycle.feedback_event_id = feedback_events.feedback_event_id
+                 AND lifecycle.source_generation = feedback_events.source_generation
+               ORDER BY lifecycle.occurred_at DESC, lifecycle.lifecycle_id DESC
+               LIMIT 1) AS latest_lifecycle_state
        FROM feedback_events
        WHERE status = 'open'`,
     )
     .all() as Array<Record<string, unknown>>;
-  for (const event of openFeedbackEvents) {
+  for (const event of feedbackEventRows) {
     const signalType = String(event.signal_type ?? "feedback");
     const severity = String(event.severity ?? "warn").toLowerCase();
     const feedbackEventId = String(event.feedback_event_id ?? "");
@@ -227,6 +224,9 @@ export function selectTakeoverFeedback(
     if (key) representedSources.add(key);
     const findingId = String(event.finding_id ?? "");
     if (findingId) representedSources.add(sourceKey("findings", findingId));
+    if (["ack", "closed", "superseded"].includes(String(event.latest_lifecycle_state ?? ""))) {
+      continue;
+    }
     items.push({
       feedback_event_id: feedbackEventId,
       signal_type: signalType,

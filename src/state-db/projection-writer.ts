@@ -66,6 +66,7 @@ import { deriveArtifactProgressDecision } from "./artifact-progress-decision";
 import { DESIGN_QUALITY_CHECK_IDS, type DesignQualityCheckId } from "./design-detection";
 import {
   projectFeedbackEvents,
+  projectFeedbackLifecycle,
   projectImprovementLog,
   projectIssueApprovalGuardrails,
   projectIssueQueue,
@@ -73,6 +74,7 @@ import {
   projectRetryEvents,
   projectTroubleEvents,
   projectVerificationDefectRoutingRefactorCandidates,
+  reconcileFeedbackLifecycle,
 } from "./feedback-projections";
 import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants";
 import {
@@ -3014,8 +3016,10 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
       time("test-cases", () => projectTestCaseCatalog(repoRoot, db));
       time("spec-ir", () => projectSpecIr(repoRoot, db, projectionDeps));
       time("feedback", () => {
+        projectFeedbackLifecycle(repoRoot, db, projectionDeps);
         projectVerificationDefectRoutingRefactorCandidates(db, projectionDeps);
         projectFeedbackEvents(db, projectionDeps);
+        reconcileFeedbackLifecycle(repoRoot, db, projectionDeps);
         projectTroubleEvents(db, projectionDeps);
         projectRetryEvents(db, projectionDeps);
         projectIssueQueue(db, projectionDeps);

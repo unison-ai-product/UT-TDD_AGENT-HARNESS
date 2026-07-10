@@ -3,14 +3,14 @@ plan_id: PLAN-L7-392-memory-promotion-handover-digest
 title: "PLAN-L7-392 (add-impl): HARNESS メモリ昇格 nudge と telemetry lifecycle"
 kind: add-impl
 layer: L7
-drive: be
-status: draft
+drive: db
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
 updated: 2026-07-10
 owner: PO / Codex
-parent_design: docs/design/harness/L6-function-design/handover-mechanism.md
+parent_design: docs/plans/PLAN-L6-68-memory-telemetry-lifecycle-contract.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L8
@@ -24,16 +24,103 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
     artifact_type: markdown_doc
+  - artifact_path: src/shared/feedback-lifecycle.ts
+    artifact_type: source_module
+  - artifact_path: src/feedback/surface.ts
+    artifact_type: source_module
+  - artifact_path: src/memory/index.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/session-log.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/memory-promotion.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/feedback-projections.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/projection-writer.ts
+    artifact_type: source_module
+  - artifact_path: src/schema/harness-db-tables-core.ts
+    artifact_type: source_module
+  - artifact_path: src/schema/harness-db-indexes.ts
+    artifact_type: source_module
+  - artifact_path: tests/feedback-lifecycle.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/feedback-surface.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/session-log.test.ts
+    artifact_type: test_code
 dependencies:
-  parent: docs/plans/PLAN-L7-189-shared-harness-memory-cross-runtime.md
+  parent: docs/plans/PLAN-L6-68-memory-telemetry-lifecycle-contract.md
   requires:
     - docs/plans/PLAN-L7-189-shared-harness-memory-cross-runtime.md
     - docs/plans/PLAN-L7-366-takeover-surface-warn-actionable.md
+    - docs/plans/PLAN-REVERSE-392-memory-promotion-digest-backfill.md
   references:
     - docs/plans/PLAN-L7-110-takeover-feedback-surface.md
     - docs/plans/PLAN-L7-246-feedback-event-lifecycle.md
     - docs/plans/PLAN-L7-412-schedule-live-session-digest.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude-fable-5
+    review_kind: cross_agent
+    worker_model: codex:gpt-5
+    reviewer_model: claude:claude-fable-5
+    reviewed_at: "2026-07-10T14:56:00+09:00"
+    tests_green_at: "2026-07-10T14:47:21+09:00"
+    verdict: approve
+    scope: "frontier advisor による別 model family の最終実装判断。具体的な merge blocker なし (Go)。PR head の CI green、merge 直前の origin/main 再確認、24h TTL telemetry の意図維持、Claude 側での通常 merge を受入条件とした。"
+    green_commands:
+      - kind: unit_test
+        command: "bunx vitest run tests/feedback-lifecycle.test.ts tests/coding-rules.test.ts tests/plan-completion-drift.test.ts tests/review-evidence.test.ts tests/backfill-pairing.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:47:21+09:00"
+        evidence_path: tests/feedback-lifecycle.test.ts
+        output_digest: "sha256:b8d956203873d0efee1d8a26584c1c62debdc4b790535de97db8d94a96c61f69"
+        anchor_commit: 45da3df21e7b7cf69c44b2569dc5ca31685eee26
+  - reviewer: codex-subagent-lifecycle-final-gate
+    review_kind: intra_runtime_subagent
+    reviewer_model: gpt-5
+    reviewed_at: "2026-07-10T14:48:10+09:00"
+    tests_green_at: "2026-07-10T14:47:21+09:00"
+    verdict: approve
+    scope: "PLAN-L7-392最終implementation review。production配線、latest generation surface、fallback抑止、Codex cmd payload、同一semantic再発、batch性能、module cycle 0を確認し、新規P0/P1なし。"
+    green_commands:
+      - kind: typecheck
+        command: "bunx tsc --noEmit"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-10T14:34:26+09:00"
+        evidence_path: src/shared/feedback-lifecycle.ts
+        output_digest: "sha256:7f4faa0641b0290b3fe4f7306f81b12360d0dc75cbc08ce3668887e4ccbbed37"
+        anchor_commit: 4e871bc3bf3dc532e44c674b65f1b39c357138f0
+      - kind: unit_test
+        command: "bunx vitest run tests/feedback-lifecycle.test.ts tests/session-log.test.ts tests/feedback-surface.test.ts tests/dependency-drift.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:40:26+09:00"
+        evidence_path: tests/session-log.test.ts
+        output_digest: "sha256:c7d9e0c7d3ab16958412ed2d5507dcb67972dee97568e72c3ac9470391e2d359"
+        anchor_commit: 58fb20bfe4ccbeacba139e86f60fe4e3aab3dfa5
+      - kind: integration_test
+        command: "bunx vitest run tests/projection-writer.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:30:00+09:00"
+        evidence_path: tests/projection-writer.test.ts
+        output_digest: "sha256:11d201a3f160069718d7c39cbceffa7cd52be968547b26a1c34b7bcba96a11fd"
+        anchor_commit: 4e871bc3bf3dc532e44c674b65f1b39c357138f0
+      - kind: unit_test
+        command: "bunx vitest run tests/feedback-lifecycle.test.ts tests/coding-rules.test.ts tests/plan-completion-drift.test.ts tests/review-evidence.test.ts tests/backfill-pairing.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:47:21+09:00"
+        evidence_path: tests/feedback-lifecycle.test.ts
+        output_digest: "sha256:b8d956203873d0efee1d8a26584c1c62debdc4b790535de97db8d94a96c61f69"
+        anchor_commit: 45da3df21e7b7cf69c44b2569dc5ca31685eee26
 ---
 
 # PLAN-L7-392: HARNESS メモリ昇格 nudge と telemetry lifecycle
@@ -74,3 +161,10 @@ handover は「DB 導出 digest (状態) + HARNESS メモリ (知識) + HEAD (�
   feedback_events に記録される (real-repo regression test)。
 - open feedback の telemetry が TTL/auto-ack で減衰する。
 - `PLAN-L7-412` の固定4段digestへ重複出力を追加しない。
+
+## 4. 検収結果
+
+- [x] Claude/Codexのcommit/PLAN遷移とmemory writeをStop summaryで照合する。
+- [x] telemetry TTL、source解消、generation交代、同一semantic再発をappend-onlyに記録する。
+- [x] terminal feedbackをsource fallbackで再表示しない。
+- [x] 初回lifecycle化をbatch appendし、projection-writer 32 testsを95.5秒で完走する。

@@ -306,6 +306,34 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     const log2 = deps2.files.get(sessionPath("s1")) ?? "";
     expect(log2).toContain('"event_type":"commit"');
     expect(log2).not.toContain('"target"');
+
+    const codex = mockDeps({ headCommit: () => "codex123" });
+    codex.files.set(statePath, "PLAN-L6-68-memory-telemetry-lifecycle-contract");
+    onPostToolUse(
+      {
+        session_id: "codex-session",
+        tool_name: "exec_command",
+        tool_input: { cmd: "git commit -m x" },
+      },
+      codex,
+    );
+    const codexLog = codex.files.get(sessionPath("codex-session")) ?? "";
+    expect(codexLog).toContain('"event_type":"commit"');
+    expect(codexLog).toContain('"outcome":"ok"');
+
+    const localShell = mockDeps({ headCommit: () => "local123" });
+    localShell.files.set(statePath, "PLAN-L6-68-memory-telemetry-lifecycle-contract");
+    onPostToolUse(
+      {
+        session_id: "local-shell-session",
+        tool_name: "local_shell",
+        tool_input: { cmd: "git commit -m x" },
+      },
+      localShell,
+    );
+    expect(localShell.files.get(sessionPath("local-shell-session"))).toContain(
+      '"event_type":"commit"',
+    );
   });
 
   // PLAN-RECOVERY-05 item 2: Bash の検証 verb を target に分類して残す (引数は残さない)。
@@ -356,6 +384,62 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     const log = deps.files.get(sessionPath("s1")) ?? "";
     expect(log).toContain('"target":"Bash (vitest)"');
     expect(log).not.toContain("secret.ts"); // 引数は残さない
+  });
+
+  it("U-MEMORY-005 / IT-FLC-06: records Claude/Codex memory writes and emits one idempotent Stop nudge", () => {
+    const deps = mockDeps();
+    deps.files.set(statePath, "PLAN-L6-68-memory-telemetry-lifecycle-contract");
+    onPostToolUse(
+      {
+        session_id: "memory-session",
+        tool_name: "Write",
+        tool_input: { file_path: ".ut-tdd/memory/project-example.md" },
+        tool_response: { outcome: "ok" },
+      },
+      deps,
+    );
+    expect(deps.files.get(sessionPath("memory-session"))).toContain('"event_type":"memory_write"');
+
+    const codexMemory = mockDeps();
+    codexMemory.files.set(statePath, "PLAN-L6-68-memory-telemetry-lifecycle-contract");
+    onPostToolUse(
+      {
+        session_id: "codex-memory-session",
+        tool_name: "exec_command",
+        tool_input: { cmd: "bun src/cli.ts memory add --title example --body-file example.md" },
+      },
+      codexMemory,
+    );
+    expect(codexMemory.files.get(sessionPath("codex-memory-session"))).toContain(
+      '"event_type":"memory_write"',
+    );
+
+    const warnings: string[] = [];
+    const missing = mockDeps({ warn: (message) => warnings.push(message) });
+    missing.files.set(statePath, "PLAN-L6-68-memory-telemetry-lifecycle-contract");
+    missing.files.set(
+      sessionPath("missing-memory"),
+      `${JSON.stringify({
+        ts: "2026-07-10T00:00:00Z",
+        session_id: "missing-memory",
+        plan_id: "PLAN-L6-68-memory-telemetry-lifecycle-contract",
+        event_type: "commit",
+        outcome: "ok",
+      })}\n`,
+    );
+    expect(onStop({ session_id: "missing-memory" }, missing)).toBe(0);
+    expect(missing.files.get(sessionPath("missing-memory"))).toContain(
+      '"event_type":"memory_promotion_missed"',
+    );
+    expect(warnings).toHaveLength(1);
+
+    expect(onStop({ session_id: "missing-memory" }, missing)).toBe(0);
+    expect(warnings).toHaveLength(1);
+    expect(
+      (missing.files.get(sessionPath("missing-memory")) ?? "").match(
+        /"event_type":"memory_promotion_missed"/g,
+      ),
+    ).toHaveLength(1);
   });
 
   it("parseSessionEvents parses jsonl and skips corrupted lines (fail-open)", () => {

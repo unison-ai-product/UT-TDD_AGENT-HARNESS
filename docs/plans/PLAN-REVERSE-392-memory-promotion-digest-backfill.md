@@ -3,10 +3,10 @@ plan_id: PLAN-REVERSE-392-memory-promotion-digest-backfill
 title: "PLAN-REVERSE-392: memory 昇格 nudge / telemetry lifecycle の design backfill"
 kind: reverse
 layer: cross
-workflow_phase: R0
+workflow_phase: R4
 confirmed_reverse_type: design
 drive: db
-status: draft
+status: confirmed
 route_signal: design_gap
 route_mode: reverse
 forward_routing: gap-only
@@ -20,16 +20,51 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-392-memory-promotion-digest-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L6-function-design/memory.md
+    artifact_type: design_doc
+  - artifact_path: docs/design/harness/L6-function-design/forced-stop-feedback.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
+  - artifact_path: docs/test-design/harness/L8-integration-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
   requires:
+    - PLAN-L6-68-memory-telemetry-lifecycle-contract
     - PLAN-L7-189-shared-harness-memory-cross-runtime
   references:
     - PLAN-L7-366-takeover-surface-warn-actionable
     - PLAN-L7-246-feedback-event-lifecycle
     - PLAN-L7-412-schedule-live-session-digest
     - PLAN-REVERSE-412-schedule-live-session-digest-backfill
-review_evidence: []
+review_evidence:
+  - reviewer: codex-subagent-lifecycle-final-gate
+    review_kind: intra_runtime_subagent
+    reviewer_model: gpt-5
+    reviewed_at: "2026-07-10T14:48:10+09:00"
+    tests_green_at: "2026-07-10T14:47:21+09:00"
+    verdict: approve
+    scope: "PLAN-REVERSE-392 R4 merge review。L5 physical-data、L6 contracts、L7実装、L7/L8 oracleへのbackfillと旧digest責務非重複を確認し、新規P0/P1なし。"
+    green_commands:
+      - kind: unit_test
+        command: "bunx vitest run tests/feedback-lifecycle.test.ts tests/session-log.test.ts tests/feedback-surface.test.ts tests/dependency-drift.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:40:26+09:00"
+        evidence_path: docs/design/harness/L6-function-design/memory.md
+        output_digest: "sha256:4e6506b7f3387b7d7c0a12dd2ca169935f117d83503e8f02009097d4674eca39"
+        anchor_commit: 4e871bc3bf3dc532e44c674b65f1b39c357138f0
+      - kind: unit_test
+        command: "bunx vitest run tests/feedback-lifecycle.test.ts tests/coding-rules.test.ts tests/plan-completion-drift.test.ts tests/review-evidence.test.ts tests/backfill-pairing.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:47:21+09:00"
+        evidence_path: tests/feedback-lifecycle.test.ts
+        output_digest: "sha256:b8d956203873d0efee1d8a26584c1c62debdc4b790535de97db8d94a96c61f69"
+        anchor_commit: 45da3df21e7b7cf69c44b2569dc5ca31685eee26
 ---
 
 # PLAN-REVERSE-392: memory 昇格 nudge / telemetry lifecycle の design backfill
@@ -48,15 +83,16 @@ prose handover は廃止方向。共有メモリは存在したが書き込み�
 
 ## R2 Alignment
 
-固定4段digestはconfirmedのPLAN-L7-412 / PLAN-REVERSE-412へ委譲する。本backfillはL6 memoryの
-nudge契約とfeedback lifecycleのTTL/auto-ackだけを対象にし、forward routingはgap-onlyとする。
+固定4段digestはconfirmedのPLAN-L7-412 / PLAN-REVERSE-412へ委譲する。本backfillはPLAN-L6-68の
+L6 memory nudge契約とfeedback lifecycleのTTL/auto-ackだけを対象にし、forward routingはgap-onlyとする。
 
 ## R3 / R4 Outcome
 
-未実施 (draft)。PLAN-L7-392 実装と対で閉じる。
+L5 physical-data、L6 memory/feedback contract、L7実装、L7/L8 oracleへbackfillし、
+PLAN-L7-392と同時にR4 merge可と判定した。固定4段digestはPLAN-L7-412へ委譲したままで重複しない。
 
 ## DoD
 
-- [ ] L6 memory に昇格 nudge の contract (fail-open) が追記される。
-- [ ] telemetry TTL/auto-ack が feedback lifecycle 設計へ接続される。
-- [ ] PLAN-L7-412の固定4段digestへ重複surfaceを追加しない。
+- [x] L6 memory に昇格 nudge の contract (fail-open) が追記される。
+- [x] telemetry TTL/auto-ack が feedback lifecycle 設計へ接続される。
+- [x] PLAN-L7-412の固定4段digestへ重複surfaceを追加しない。
