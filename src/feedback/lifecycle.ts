@@ -24,6 +24,27 @@ export function renderFeedbackLifecycle(record: FeedbackLifecycleRecord): string
   return `${JSON.stringify(record)}\n`;
 }
 
+export function feedbackLifecyclePath(repoRoot: string): string {
+  return join(repoRoot, ".ut-tdd", "logs", "feedback-lifecycle.jsonl");
+}
+
+export function loadFeedbackLifecycle(repoRoot: string): FeedbackLifecycleRecord[] {
+  const path = feedbackLifecyclePath(repoRoot);
+  try {
+    return existsSync(path) ? parseFeedbackLifecycle(readFileSync(path, "utf8")) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function appendFeedbackLifecycle(repoRoot: string, record: FeedbackLifecycleRecord): void {
+  try {
+    appendFileSync(feedbackLifecyclePath(repoRoot), renderFeedbackLifecycle(record), "utf8");
+  } catch {
+    // Lifecycle telemetry is fail-open.
+  }
+}
+
 export function resolveFeedbackLifecycle(input: {
   previous?: FeedbackLifecycleRecord;
   source_present: boolean;
@@ -42,3 +63,5 @@ export function resolveFeedbackLifecycle(input: {
   if (!Number.isFinite(elapsed) || elapsed < telemetry_ttl_ms) return previous;
   return { ...previous, state: "ack", occurred_at: now, reason: "telemetry_ttl" };
 }
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
