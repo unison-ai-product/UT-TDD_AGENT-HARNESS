@@ -1189,6 +1189,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-005` | expired/別revision/policy別exit evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`、Red expected nonzeroだけusable、exit 1/0 |
 | `U-PA-006` | legacy PLAN全field + short alias 18衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
 | `U-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
+| `U-PA-008` | HEAD tracked `ut-tdd.project.json`、改竄bytes/receipt、schema/identity不正、remote無し | `loadTrackedProjectIdentity` / `loadProjectIdentityFromHead` | exact HEAD blobだけ成功しreceipt digest安定。index/working tree/remote補完0、異常種別を専用findingでfail-close |
 | `CANDIDATE-FSM-001` | 正規stateごとの次event | `transition` | 許可表どおりのnext state/event、exit 0 |
 | `CANDIDATE-FSM-002` | proposed→implementing | `transition` | `forward-transition-illegal`, exit 1 |
 | `CANDIDATE-FSM-003` | pair frozen、Red evidenceなし | implement command | `forward-red-evidence-missing`, exit 1 |

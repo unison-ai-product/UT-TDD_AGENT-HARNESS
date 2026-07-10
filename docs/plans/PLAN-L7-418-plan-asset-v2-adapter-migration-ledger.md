@@ -33,7 +33,11 @@ generates:
     artifact_type: typescript_source
   - artifact_path: src/plan-asset/adapters/legacy-plan-adapter.ts
     artifact_type: typescript_source
+  - artifact_path: src/plan-asset/adapters/project-identity-loader.ts
+    artifact_type: typescript_source
   - artifact_path: tests/plan-asset/domain.test.ts
+    artifact_type: test
+  - artifact_path: tests/plan-asset/project-identity-loader.test.ts
     artifact_type: test
 dependencies:
   parent: docs/plans/PLAN-L6-71-plan-asset-canonical-migration-contracts.md
@@ -50,6 +54,6 @@ planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,
 
 ## 実装進捗
 
-- U-PA-001..007: Redを観測後、domain/value object、legacy canonical adapter、曖昧alias fail-close、採番予約をGreen化済み。
+- U-PA-001..008: Redを観測後、domain/value object、legacy canonical adapter、曖昧alias fail-close、採番予約、HEAD tracked project identity provenanceをGreen化済み。
 - `state-db`のlegacy short alias解決は先頭一致を廃止し、canonical resolverのexact/unique規則へ統合済み。
 - 未完了: Git provenance付きproject identity loader、ledger DB/schema、全legacy PLAN移行・collision判断、dry-run CLI、Reverse-418合流。

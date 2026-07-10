@@ -953,10 +953,18 @@ legacy `asset_id`は初回migration時だけ、UTF-8 length-prefixed frame
 検証して非NFCを拒否し、UTF-8 bytesを勝手に正規化しない。`repositoryIdentity`はroot tracked正本
 `ut-tdd.project.json`の`schema_version=ut-tdd.project/v1`、`repository_identity`に明示するcase-sensitive owner/name
 （本repo=`unison-ai-product/UT-TDD_AGENT-HARNESS`）だけを読み、Git tracked blob/HEAD receiptを検証してremote URLから推測しない。
-config不在、fork別identity、remote無しは`plan-repository-identity-missing`として明示入力を要求する。
+config不在またはcallerが明示したfork identityとの不一致は`plan-repository-identity-missing`として明示入力を要求する。
+validなHEAD tracked configはremote有無に関係なく成功し、config欠落時もremote URLからidentityを補完しない。
 checkout path、branch、`.git` suffix、layer、ordinal、source pathを入力にしない。
 生成後はledgerの`asset_id`を正本とし、rename/layer変更で再計算しない。frame algorithm/version、入力値、digestを
 `legacy_plan_migration_events`のtyped columnとrevision payloadへ記録する。
+
+`loadTrackedProjectIdentity({bytes,receipt,expectedRepositoryIdentity?})`は固定path、Git object format、HEAD commit、
+blob OID、raw content SHA-256をpureに照合し、`repositoryIdentity`と`receiptDigest`を返す。
+`loadProjectIdentityFromHead({repoRoot,expectedRepositoryIdentity?})`だけがGit adapterとしてHEAD regular blobを読む。
+index/working tree/remoteを正本にせず、config schema不正、identity文法不正、provenance不一致をそれぞれ
+`plan-project-config-invalid`、`plan-repository-identity-invalid`、`plan-repository-identity-provenance-invalid`で分離する。
+identityはtrim一致・NFC・exactly one slashのASCII owner/nameとし、`.git` suffixを拒否する。
 
 v1/v2 parserは`schema_version=ut-tdd.plan/v2`の有無でdiscriminated unionにし、v1 unknown frontmatter key、
 本文digest、依存・artifact・review evidenceを落とさない。short aliasはexact full IDを先に照合し、prefix候補が2件以上なら
