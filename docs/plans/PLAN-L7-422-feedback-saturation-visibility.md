@@ -23,10 +23,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-422-feedback-saturation-visibility.md
     artifact_type: markdown_doc
-  - artifact_path: src/feedback/surface.ts
-    artifact_type: source_module
-  - artifact_path: tests/feedback-surface.test.ts
-    artifact_type: test_code
 dependencies:
   parent: null
   requires: []

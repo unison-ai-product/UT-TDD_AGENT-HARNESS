@@ -14,6 +14,8 @@ parent_design: docs/design/harness/L6-function-design/function-spec.md
 backprop_decision: not_required
 backprop_decision_reason: "setup が emit する成果物と既存ポリシー (PLAN-L7-399 opus floor / CLAUDE.md UTF-8-LF 前提) の乖離修正、および宣言済みだが空白の VSCode 共有設定の整備。新規 L0/L1 要件ではない。"
 agent_slots:
+  - role: aim
+    slot_label: "AIM — 是正方針の設計判断 (fail-close 境界 / gate 方針)"
   - role: se
     slot_label: "SE — templates.ts の floor 修正 + COMMON_FILES への editorconfig/gitattributes 追加 + .vscode 共有設定"
   - role: tl
@@ -21,8 +23,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-425-setup-standardization.md
     artifact_type: markdown_doc
-  - artifact_path: src/setup/templates.ts
-    artifact_type: source_module
 dependencies:
   parent: null
   requires: []

@@ -14,6 +14,8 @@ parent_design: docs/design/harness/L6-function-design/function-spec.md
 backprop_decision: not_required
 backprop_decision_reason: "既存 guard 機構 (PLAN-L7-114 work-guard / agent-guard) の宣言 (fail-close) と実装の乖離修正であり、新規 L0/L1 要件ではない。"
 agent_slots:
+  - role: aim
+    slot_label: "AIM — 是正方針の設計判断 (fail-close 境界 / gate 方針)"
   - role: se
     slot_label: "SE — bun 不在シミュレーション実験 + wrapper 化 (必要時) + work-guard unescape/case/untracked 修正 + regression test"
   - role: tl
@@ -21,10 +23,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-419-hook-failopen-hardening.md
     artifact_type: markdown_doc
-  - artifact_path: src/runtime/work-guard.ts
-    artifact_type: source_module
-  - artifact_path: tests/work-guard.test.ts
-    artifact_type: test_code
 dependencies:
   parent: null
   requires: []

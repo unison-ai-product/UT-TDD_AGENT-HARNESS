@@ -14,6 +14,8 @@ parent_design: docs/design/harness/L6-function-design/function-spec.md
 backprop_decision: not_required
 backprop_decision_reason: "CLAUDE.md 宣言 (legacy hooks は非正本) と実挙動 (legacy hook が唯一の commit-time enforcement) の矛盾解消であり、新規 L0/L1 要件ではない。既知課題「git hooks 非追跡」(A-183) の実害是正。"
 agent_slots:
+  - role: aim
+    slot_label: "AIM — 是正方針の設計判断 (fail-close 境界 / gate 方針)"
   - role: se
     slot_label: "SE — tracked hook source 作成 + setup での導入 + doctor hooksPath/世代検知"
   - role: tl
@@ -21,8 +23,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-424-git-hooks-ownership.md
     artifact_type: markdown_doc
-  - artifact_path: src/setup/templates.ts
-    artifact_type: source_module
 dependencies:
   parent: null
   requires: []

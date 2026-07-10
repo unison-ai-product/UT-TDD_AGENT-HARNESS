@@ -14,6 +14,8 @@ parent_design: docs/design/harness/L6-function-design/function-spec.md
 backprop_decision: not_required
 backprop_decision_reason: "既存テスト基盤の衛生欠陥修正と再発防止 lint の追加であり、新規 L0/L1 要件ではない。CLAUDE.md「共有 tree を測るな」原則の機械化。"
 agent_slots:
+  - role: aim
+    slot_label: "AIM — 是正方針の設計判断 (fail-close 境界 / gate 方針)"
   - role: qa
     slot_label: "QA — live-tree 依存テストの棚卸し + fence 設計"
   - role: se
@@ -23,10 +25,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-421-test-hygiene-live-tree-fence.md
     artifact_type: markdown_doc
-  - artifact_path: tests/cli-surface.test.ts
-    artifact_type: test_code
-  - artifact_path: vitest.config.ts
-    artifact_type: config
 dependencies:
   parent: null
   requires: []

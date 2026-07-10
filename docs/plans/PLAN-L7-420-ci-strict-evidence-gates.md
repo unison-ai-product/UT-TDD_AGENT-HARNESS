@@ -14,6 +14,8 @@ parent_design: docs/design/harness/L6-function-design/function-spec.md
 backprop_decision: not_required
 backprop_decision_reason: "L7-132/174/194 系列 (green-command-digest) と L7-192 (telemetry provenance) が導入済みの検証機構の運用実効化・退行是正であり、新規 L0/L1 要件ではない。"
 agent_slots:
+  - role: aim
+    slot_label: "AIM — 是正方針の設計判断 (fail-close 境界 / gate 方針)"
   - role: qa
     slot_label: "QA — digest 不一致 30 件の棚卸し (fake/stale/rerun 要の分類) + 是正"
   - role: se
@@ -23,10 +25,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-420-ci-strict-evidence-gates.md
     artifact_type: markdown_doc
-  - artifact_path: .github/workflows/harness-check.yml
-    artifact_type: config
-  - artifact_path: src/doctor/check-definition-groups.ts
-    artifact_type: source_module
 dependencies:
   parent: null
   requires: []

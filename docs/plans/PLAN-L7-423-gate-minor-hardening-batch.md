@@ -14,6 +14,8 @@ parent_design: docs/design/harness/L6-function-design/function-spec.md
 backprop_decision: not_required
 backprop_decision_reason: "既存 gate/lint 群の局所的 fail-open/検知漏れの硬化バッチであり、新規 L0/L1 要件ではない。各項目は独立に適用可能な Minor 修正。"
 agent_slots:
+  - role: aim
+    slot_label: "AIM — 是正方針の設計判断 (fail-close 境界 / gate 方針)"
   - role: se
     slot_label: "SE — 各 Minor 硬化の実装 + 個別 regression test"
   - role: tl
@@ -21,10 +23,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-423-gate-minor-hardening-batch.md
     artifact_type: markdown_doc
-  - artifact_path: src/lint/secret-scan.ts
-    artifact_type: source_module
-  - artifact_path: src/doctor/runner.ts
-    artifact_type: source_module
 dependencies:
   parent: null
   requires: []
