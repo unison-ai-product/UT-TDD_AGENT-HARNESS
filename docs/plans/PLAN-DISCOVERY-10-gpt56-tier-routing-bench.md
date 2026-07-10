@@ -8,12 +8,17 @@ scrum_type: hypothesis-test
 drive: agent
 status: confirmed
 decision_outcome: confirmed
+promotion_strategy: redesign
+route_signal: discovery
+route_mode: discovery
 created: 2026-07-10
 updated: 2026-07-10
 owner: PM (Claude) / PO (人間)
 agent_slots:
   - role: po
     slot_label: "PO — S4 routing 変更採否 (MODEL_IDS SSoT 更新 = 規範変更ゲート)"
+  - role: aim
+    slot_label: "AIM — 仮説→lane→oracle の測定設計と S4 判断材料の整理"
   - role: tl
     slot_label: "TL (別 runtime) — ベンチ設計と判定基準のクロスレビュー"
   - role: se
@@ -36,7 +41,26 @@ review_evidence:
     reviewed_at: "2026-07-10T14:35:00+09:00"
     tests_green_at: "2026-07-10T14:20:00+09:00"
     verdict: approve
-    scope: "S4 決定 (H2 worker→gpt-5.6-terra 採用 / H1 frontier→gpt-5.6-sol 採用 / H3 luna 保留)。実測は本 PLAN §5 の全 lane 記録 (W2 凍結テスト oracle 実走 = wt-bench での vitest green 62 件、W3 red/green 二面 oracle、W1 正解キー照合) に基づく。PO はチャットで仮説再定義 (Terra=主力/Sol=escalation、2026-07-10) から S4 採否まで段階承認。実装は後継 PLAN-L7-415 (kind=impl) に委譲し、本 PLAN は測定と決定の記録で閉じる。"
+    scope: "S4 決定 (H2 worker→gpt-5.6-terra 採用 / H1 frontier→gpt-5.6-sol 採用 / H3 luna 保留)。実測は本 PLAN §5 の全 lane 記録 (W2 凍結テスト oracle 実走 = wt-bench での vitest green 62 件、W3 red/green 二面 oracle、W1 正解キー照合) に基づく。PO はチャットで仮説再定義 (Terra=主力/Sol=escalation、2026-07-10) から S4 採否まで段階承認。実装は後継 PLAN-L7-415 (kind=retrofit) に委譲し、本 PLAN は測定と決定の記録で閉じる。"
+    green_commands:
+      - kind: lint
+        command: "bun src/cli.ts plan lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-10T14:20:00+09:00"
+        evidence_path: docs/plans/PLAN-DISCOVERY-10-gpt56-tier-routing-bench.md
+        output_digest: "sha256:db8d825c3b4b5c1679a365d0f3e95a3ab41fd8a741a49fc292fa1b28f2e1dbc4"
+        anchor_commit: 9af32ba86bc658d5edde73bcd0664c5d8022063d
+      - kind: smoke
+        command: "bunx vitest run tests/session-log.test.ts tests/agent-guard.test.ts tests/relation-graph-loader.test.ts tests/setup.test.ts (W2 oracle: fix commit worktree にモデル出力を適用して凍結テストを実走、terra 4/4 green / gpt-5.5 3/4)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:20:00+09:00"
+        evidence_path: tests/session-log.test.ts
+        output_digest: "sha256:363b44844882f342615a786777263a86b41b9ac6491e5d873bf2b07c81e2f670"
+        anchor_commit: 80a1b3830acb61fbb69d665629a0fde8b0d49a32
 ---
 
 # PLAN-DISCOVERY-10 (kind=poc): GPT-5.6 レーン別 replay ベンチ

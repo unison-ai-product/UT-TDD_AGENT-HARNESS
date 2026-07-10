@@ -1,12 +1,12 @@
 ---
 plan_id: PLAN-L7-415-gpt56-tier-routing-adoption
-title: "PLAN-L7-415 (impl): GPT-5.6 tier routing 採用 — worker→terra / frontier→sol (PLAN-DISCOVERY-10 S4 確定)"
-kind: impl
+title: "PLAN-L7-415 (retrofit): GPT-5.6 tier routing 採用 — worker→terra / frontier→sol (PLAN-DISCOVERY-10 S4 確定)"
+kind: retrofit
 layer: L7
 drive: agent
 status: draft
-route_signal: feature_addition
-route_mode: refactor
+route_signal: dependency_outdated
+route_mode: retrofit
 backprop_decision: not_required
 backprop_decision_reason: "PLAN-DISCOVERY-10 S4 で PO 確定済みの routing 更新を MODEL_IDS SSoT と routing policy に反映する実装 slice。上位要求 (Model/Effort Routing の原則) の意味変更はなく、model ID の世代更新 + escalation 席の割当変更。"
 created: 2026-07-10
@@ -21,25 +21,24 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-415-gpt56-tier-routing-adoption.md
     artifact_type: markdown_doc
-  - artifact_path: src/team/model-policy.ts
-    artifact_type: source_module
-  - artifact_path: src/team/advisor-policy.ts
-    artifact_type: source_module
-  - artifact_path: src/state-db/token-tracker.ts
-    artifact_type: source_module
-  - artifact_path: tests/team-model-policy.test.ts
-    artifact_type: test_code
 dependencies:
   parent: null
   requires:
     - PLAN-DISCOVERY-10-gpt56-tier-routing-bench
   references:
+    - src/team/model-policy.ts
+    - src/team/advisor-policy.ts
+    - src/state-db/token-tracker.ts
+    - tests/team-model-policy.test.ts
     - docs/plans/PLAN-L7-256-model-id-ssot-drift-gate.md
     - docs/plans/PLAN-L7-414-agent-guard-claude5-family-rank.md
     - .ut-tdd/memory/project-fable-5-7-13-rate-limit.md
 ---
 
-# PLAN-L7-415 (impl): GPT-5.6 tier routing 採用
+# PLAN-L7-415 (retrofit): GPT-5.6 tier routing 採用
+
+kind=retrofit の根拠: 既存 routing 機構の挙動仕様は不変のまま、依存する外部モデル世代
+(GPT-5.5/5.4 → 5.6 系) への追随更新であるため (dependency_outdated → retrofit route)。
 
 ## 決定 (PLAN-DISCOVERY-10 S4、PO 承認 2026-07-10)
 

@@ -5,6 +5,8 @@ kind: troubleshoot
 layer: L7
 drive: be
 status: draft
+route_signal: incident
+route_mode: incident
 created: 2026-07-10
 updated: 2026-07-10
 owner: PM (Claude) / PO (人間)
@@ -15,19 +17,18 @@ agent_slots:
     slot_label: "TL — 欠陥修正の境界レビュー (配布アーキ再設計との切り分け)"
   - role: se
     slot_label: "SE — fail-close 化 + regression test 実装"
+  - role: aim
+    slot_label: "AIM — troubleshoot 分類と配布アーキ再設計 (scope 外) への切り分けレビュー"
 generates:
   - artifact_path: docs/plans/PLAN-L7-413-distribution-export-integrity-defects.md
     artifact_type: markdown_doc
-  - artifact_path: src/cli/distribution.ts
-    artifact_type: source_module
-  - artifact_path: src/setup/distribution.ts
-    artifact_type: source_module
-  - artifact_path: tests/distribution-acceptance.test.ts
-    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
   references:
+    - src/cli/distribution.ts
+    - src/setup/distribution.ts
+    - tests/distribution-acceptance.test.ts
     - docs/plans/PLAN-DISCOVERY-10-gpt56-tier-routing-bench.md
     - .ut-tdd/audit/A-172-pack-comprehensive-review-2026-07-02.md
     - docs/plans/PLAN-L7-157-distribution-clean-pull.md

@@ -5,6 +5,8 @@ kind: troubleshoot
 layer: L7
 drive: agent
 status: draft
+route_signal: incident
+route_mode: incident
 created: 2026-07-10
 updated: 2026-07-10
 owner: PM (Claude) / PO (人間)
@@ -15,17 +17,17 @@ agent_slots:
     slot_label: "TL — family rank 拡張と worker 割当禁止 policy のレビュー"
   - role: se
     slot_label: "SE — 正規化拡張 + policy 実装 + regression test"
+  - role: aim
+    slot_label: "AIM — troubleshoot 分類と頂点 tier policy の整合レビュー"
 generates:
   - artifact_path: docs/plans/PLAN-L7-414-agent-guard-claude5-family-rank.md
     artifact_type: markdown_doc
-  - artifact_path: src/runtime/agent-guard.ts
-    artifact_type: source_module
-  - artifact_path: tests/agent-guard.test.ts
-    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
   references:
+    - src/runtime/agent-guard.ts
+    - tests/agent-guard.test.ts
     - docs/plans/PLAN-L7-399-agent-guard-quality-check-tier-floor.md
     - docs/plans/PLAN-L7-256-model-id-ssot-drift-gate.md
     - docs/plans/PLAN-DISCOVERY-10-gpt56-tier-routing-bench.md
