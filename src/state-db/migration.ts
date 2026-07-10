@@ -101,6 +101,24 @@ function ensurePrimaryKeyCompatibilityIndexes(db: HarnessDb): void {
   }
 }
 
+function rebuildVersion26ProjectionTables(db: HarnessDb, fromVersion: number): boolean {
+  if (fromVersion >= 26) return false;
+  const present = new Set(tableNames(db));
+  const rebuild = [
+    "document_scale_profile_reviews",
+    "document_scale_profile_entries",
+    "document_catalog_entries",
+  ];
+  let changed = false;
+  for (const table of rebuild) {
+    if (!present.has(table)) continue;
+    assertSqlIdentifier(table);
+    db.exec(`DROP TABLE ${table}`);
+    changed = true;
+  }
+  return changed;
+}
+
 /**
  * schema を現行 SCHEMA_VERSION まで適用する。
  * user_version < SCHEMA_VERSION のときのみ DDL を流し、適用後に user_version を更新する。
@@ -108,6 +126,7 @@ function ensurePrimaryKeyCompatibilityIndexes(db: HarnessDb): void {
  */
 export function migrate(db: HarnessDb): MigrationResult {
   const fromVersion = db.userVersion();
+  const rebuiltProjectionTables = rebuildVersion26ProjectionTables(db, fromVersion);
   const ddls = schemaDdl();
   for (const ddl of ddls.filter((s) => s.startsWith("CREATE TABLE"))) db.exec(ddl);
   const addedColumns = addMissingColumns(db);
@@ -118,7 +137,7 @@ export function migrate(db: HarnessDb): MigrationResult {
   return {
     fromVersion,
     toVersion,
-    applied: fromVersion < SCHEMA_VERSION || addedColumns > 0,
+    applied: fromVersion < SCHEMA_VERSION || addedColumns > 0 || rebuiltProjectionTables,
     tables: tableNames(db),
   };
 }

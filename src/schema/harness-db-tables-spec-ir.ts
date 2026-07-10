@@ -1,5 +1,5 @@
 import type { TableDef } from "./harness-db";
-import { col, pk } from "./harness-db-table-builders";
+import { col, enumCheck, foreignKey, pk, requiredCol } from "./harness-db-table-builders";
 
 export const HARNESS_DB_SPEC_IR_TABLES: TableDef[] = [
   {
@@ -111,20 +111,48 @@ export const HARNESS_DB_SPEC_IR_TABLES: TableDef[] = [
       col("source_path"),
       col("indexed_at"),
     ],
+    unique: [["doc_type_id"]],
   },
   {
     name: "document_scale_profile_entries",
     columns: [
       pk("document_scale_profile_entry_id"),
-      col("profile_id"),
-      col("doc_type_id"),
-      col("decision"),
-      col("detail_override"),
-      col("status_override"),
-      col("reason"),
+      requiredCol("profile_id"),
+      requiredCol("doc_type_id"),
+      requiredCol("decision"),
+      requiredCol("detail_override"),
+      requiredCol("status_override"),
+      requiredCol("reason"),
       col("required_plan_id"),
-      col("source_path"),
-      col("indexed_at"),
+      requiredCol("row_digest"),
+      requiredCol("source_path"),
+      requiredCol("indexed_at"),
+    ],
+    unique: [["profile_id", "doc_type_id"]],
+    foreignKeys: [
+      foreignKey(["profile_id"], "document_scale_profiles", ["profile_id"]),
+      foreignKey(["doc_type_id"], "document_catalog_entries", ["doc_type_id"]),
+    ],
+    checks: [
+      enumCheck("decision", ["adopt", "conditional", "skip", "defer"]),
+      enumCheck("detail_override", ["lite", "standard", "detailed"]),
+      enumCheck("status_override", [
+        "minimal",
+        "standard",
+        "required",
+        "profile_controlled",
+        "skipped",
+      ]),
+      {
+        kind: "or",
+        expressions: [
+          {
+            kind: "not",
+            expression: { kind: "compare", column: "decision", operator: "=", value: "defer" },
+          },
+          { kind: "is-null", column: "required_plan_id", negate: true },
+        ],
+      },
     ],
   },
   {

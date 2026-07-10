@@ -676,7 +676,9 @@ projection上の導出は次に限定する。source-item `edge_id`はlength-pre
 source-targetのreasonやcategory ordinalのようにauthoringにない意味fieldは生成しない。source disposition rowとsource-target rowは
 `source_id/disposition`をexact比較し、targetはtyped resolver後のcanonical identityで比較する。`plan_alias`はPLAN Asset alias、
 `artifact_path`はrepo-relative normalized path、`artifact_family`はtracked member集合、`target_slot`はdocument catalog IDへ解決する。
-display aliasとcanonical refの文字列不一致だけで拒否せず、未解決/多義だけを`catalog-target-unresolved`で拒否する。source target typeは
+`artifact_path`のdisposition表示だけはbasenameを許し、git tracked path集合で一意に解決できる場合だけcanonical pathへ写す。
+同basename複数は多義として拒否する。display aliasとcanonical refの文字列不一致だけで拒否せず、未解決/多義だけを
+`catalog-target-unresolved`で拒否する。source target typeは
 `plan_alias|artifact_family|artifact_path|target_slot`であり、item target kind enumとは別型にする。
 
 event/revision/receiptはappend-onlyとし、UPDATE/DELETEで履歴を上書きしない。schema追加は`SCHEMA_VERSION`をbumpし、

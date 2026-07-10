@@ -968,6 +968,10 @@ loaderはbundleとreceiptのpath集合完全一致、Git blob OID、SHA-256、40
 receiptを自己発行しない。不一致は`catalog-provenance-invalid`。純粋verifierはportと分離し、mutation fixtureで改竄、欠落、余剰、
 duplicate、invalid commitをすべてkillする。
 
+`TargetRegistry`はPLAN aliases、git tracked paths、一意basename path aliases、明示family members、document target slotsだけを持つ。
+`resolveCanonicalTarget`は4 kindを存在検証し、未解決・多義・phantomをfail-closeする。`reconcileDispositionTarget`は表示aliasと
+typed edgeのcanonical集合を比較し、文字列近似やfilesystem探索によるdefault生成をしない。
+
 #### Forward FSM完全遷移表
 
 正常系の各行は隣接遷移だけを許す。`expectedFrom`不一致、sequence欠番、同一`commandId`で異なるpayloadはそれぞれ

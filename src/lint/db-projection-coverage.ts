@@ -1,6 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { HARNESS_DB_INDEXES, HARNESS_DB_TABLE_BY_NAME, primaryKeyOf } from "../schema/harness-db";
+import {
+  createTableSql,
+  HARNESS_DB_INDEXES,
+  HARNESS_DB_TABLE_BY_NAME,
+  HARNESS_DB_TABLES,
+  primaryKeyColumnsOf,
+  type TableDef,
+} from "../schema/harness-db";
+import type { HarnessDb } from "../state-db";
 
 export interface DbProjectionRequirement {
   section: string;
@@ -43,6 +51,19 @@ export interface DbProjectionCoverageResult {
 export interface DbProjectionRequirements {
   tables: DbProjectionRequirement[];
   indexes: DbProjectionIndexRequirement[];
+}
+
+export interface DbConstraintCoverageFinding {
+  table: string;
+  constraint: "table" | "not-null" | "primary-key" | "foreign-key" | "unique" | "check";
+  expected: string;
+  actual: string;
+}
+
+export interface DbConstraintCoverageResult {
+  checked: number;
+  findings: DbConstraintCoverageFinding[];
+  ok: boolean;
 }
 
 const TARGET_SECTION_RE = /^###?\s+.*(?:2\.7 SQLite projection DB|9\.[1345679] .*)/;
@@ -119,7 +140,7 @@ export function analyzeDbProjectionCoverage(
       missingTables.push(requirement);
       continue;
     }
-    const actualPk = primaryKeyOf(table);
+    const actualPk = primaryKeyColumnsOf(table).join(",");
     if (requirement.primaryKey && actualPk !== requirement.primaryKey) {
       primaryKeyMismatches.push({
         table: requirement.table,
@@ -174,6 +195,207 @@ export function analyzeDbProjectionCoverage(
   };
 }
 
+function normalized(value: string): string {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/\s*([(),])\s*/g, "$1")
+    .trim()
+    .toUpperCase();
+}
+
+function checkClauses(sql: string): string[] {
+  const clauses: string[] = [];
+  const upper = sql.toUpperCase();
+  let cursor = 0;
+  while (cursor < sql.length) {
+    const check = upper.indexOf("CHECK", cursor);
+    if (check < 0) break;
+    const open = sql.indexOf("(", check + 5);
+    if (open < 0) break;
+    let depth = 0;
+    let quoted = false;
+    let close = -1;
+    for (let index = open; index < sql.length; index++) {
+      const character = sql[index];
+      if (character === "'") {
+        if (quoted && sql[index + 1] === "'") index++;
+        else quoted = !quoted;
+      } else if (!quoted && character === "(") depth++;
+      else if (!quoted && character === ")" && --depth === 0) {
+        close = index;
+        break;
+      }
+    }
+    if (close < 0) break;
+    clauses.push(normalized(sql.slice(open + 1, close)));
+    cursor = close + 1;
+  }
+  return clauses.sort();
+}
+
+function setDiff(expected: readonly string[], actual: readonly string[]): string[] {
+  const remaining = [...actual];
+  return expected.filter((item) => {
+    const index = remaining.indexOf(item);
+    if (index < 0) return true;
+    remaining.splice(index, 1);
+    return false;
+  });
+}
+
+function actualPrimaryKey(db: HarnessDb, table: string): string[] {
+  return db
+    .prepare(`PRAGMA table_info(${table})`)
+    .all()
+    .filter((row) => Number(row.pk ?? 0) > 0)
+    .sort((left, right) => Number(left.pk) - Number(right.pk))
+    .map((row) => String(row.name));
+}
+
+function actualUniqueKeys(db: HarnessDb, table: string): string[] {
+  return db
+    .prepare(`PRAGMA index_list(${table})`)
+    .all()
+    .filter((row) => Number(row.unique ?? 0) === 1 && String(row.origin ?? "") !== "pk")
+    .map((row) => {
+      const name = String(row.name);
+      return db
+        .prepare(`PRAGMA index_info(${name})`)
+        .all()
+        .sort((left, right) => Number(left.seqno) - Number(right.seqno))
+        .map((column) => String(column.name))
+        .join(",");
+    })
+    .sort();
+}
+
+function expectedForeignKeys(table: TableDef): string[] {
+  const inline = table.columns.flatMap((column) =>
+    column.references
+      ? [
+          [
+            column.name,
+            column.references.table,
+            column.references.column,
+            column.references.onUpdate ?? "NO ACTION",
+            column.references.onDelete ?? "NO ACTION",
+          ].join("|"),
+        ]
+      : [],
+  );
+  const composite = (table.foreignKeys ?? []).map((key) =>
+    [
+      key.columns.join(","),
+      key.referencedTable,
+      key.referencedColumns.join(","),
+      key.onUpdate ?? "NO ACTION",
+      key.onDelete ?? "NO ACTION",
+    ].join("|"),
+  );
+  return [...inline, ...composite].sort();
+}
+
+function actualForeignKeys(db: HarnessDb, table: string): string[] {
+  const groups = new Map<number, Record<string, unknown>[]>();
+  for (const row of db.prepare(`PRAGMA foreign_key_list(${table})`).all()) {
+    const id = Number(row.id);
+    groups.set(id, [...(groups.get(id) ?? []), row]);
+  }
+  return [...groups.values()]
+    .map((rows) => {
+      const ordered = rows.sort((left, right) => Number(left.seq) - Number(right.seq));
+      return [
+        ordered.map((row) => String(row.from)).join(","),
+        String(ordered[0]?.table ?? ""),
+        ordered.map((row) => String(row.to)).join(","),
+        String(ordered[0]?.on_update ?? "NO ACTION"),
+        String(ordered[0]?.on_delete ?? "NO ACTION"),
+      ].join("|");
+    })
+    .sort();
+}
+
+/** registryのtyped制約が実SQLite schemaにも存在することをfail-closeで照合する。 */
+export function analyzeDbConstraintCoverage(
+  db: HarnessDb,
+  tables: readonly TableDef[] = HARNESS_DB_TABLES,
+): DbConstraintCoverageResult {
+  const findings: DbConstraintCoverageFinding[] = [];
+  const existing = new Set(
+    db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map((row) => String(row.name)),
+  );
+  for (const table of tables) {
+    if (!existing.has(table.name)) {
+      findings.push({
+        table: table.name,
+        constraint: "table",
+        expected: "present",
+        actual: "missing",
+      });
+      continue;
+    }
+    const info = db.prepare(`PRAGMA table_info(${table.name})`).all();
+    const notNull = new Set(
+      info.filter((row) => Number(row.notnull ?? 0) === 1).map((row) => String(row.name)),
+    );
+    for (const column of table.columns.filter((item) => item.notNull)) {
+      if (!notNull.has(column.name))
+        findings.push({
+          table: table.name,
+          constraint: "not-null",
+          expected: column.name,
+          actual: "nullable",
+        });
+    }
+    const expectedPk = primaryKeyColumnsOf(table);
+    const actualPk = actualPrimaryKey(db, table.name);
+    if (expectedPk.join("|") !== actualPk.join("|"))
+      findings.push({
+        table: table.name,
+        constraint: "primary-key",
+        expected: expectedPk.join(","),
+        actual: actualPk.join(","),
+      });
+
+    const expectedFk = expectedForeignKeys(table);
+    const actualFk = actualForeignKeys(db, table.name);
+    for (const missing of setDiff(expectedFk, actualFk))
+      findings.push({
+        table: table.name,
+        constraint: "foreign-key",
+        expected: missing,
+        actual: actualFk.join(";"),
+      });
+
+    const expectedUnique = (table.unique ?? []).map((columns) => columns.join(",")).sort();
+    const actualUnique = actualUniqueKeys(db, table.name);
+    for (const missing of setDiff(expectedUnique, actualUnique))
+      findings.push({
+        table: table.name,
+        constraint: "unique",
+        expected: missing,
+        actual: actualUnique.join(";"),
+      });
+
+    const schemaRow = db
+      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?")
+      .get(table.name);
+    const expectedChecks = checkClauses(createTableSql(table));
+    const actualChecks = checkClauses(String(schemaRow?.sql ?? ""));
+    for (const missing of setDiff(expectedChecks, actualChecks))
+      findings.push({
+        table: table.name,
+        constraint: "check",
+        expected: missing,
+        actual: actualChecks.join(";"),
+      });
+  }
+  return { checked: tables.length, findings, ok: tables.length > 0 && findings.length === 0 };
+}
+
 export function loadDbProjectionRequirements(repoRoot: string): DbProjectionRequirements {
   const path = join(
     repoRoot,
@@ -214,4 +436,15 @@ export function dbProjectionCoverageMessages(result: DbProjectionCoverageResult)
     );
   }
   return messages;
+}
+
+export function dbConstraintCoverageMessages(result: DbConstraintCoverageResult): string[] {
+  if (result.ok) return [`db-constraint-coverage - OK (${result.checked} tables)`];
+  return [
+    "db-constraint-coverage - violation",
+    ...result.findings.map(
+      (finding) =>
+        `${finding.table} ${finding.constraint}: expected ${finding.expected}, actual ${finding.actual}`,
+    ),
+  ];
 }

@@ -142,7 +142,8 @@ export interface DocumentScaleProfileEntryRow {
   detail_override: string;
   status_override: string;
   reason: string;
-  required_plan_id: string;
+  required_plan_id: string | null;
+  row_digest: string;
   source_path: string;
   indexed_at: string;
 }
@@ -1023,17 +1024,33 @@ export function parseDocumentScaleProfileEntries(
         ),
         profile_id: profileId,
         doc_type_id: docTypeId,
-        decision: row.decision || "adopt",
+        decision: row.decision ?? "",
         detail_override: row.detail_override ?? "",
         status_override: row.status_override ?? "",
         reason: row.reason ?? "",
-        required_plan_id: row.required_plan_id ?? "",
+        required_plan_id: row.required_plan_id || null,
+        row_digest: profileEntryDigest(row),
         source_path: source.path,
         indexed_at: indexedAt,
       });
     }
   }
   return rows;
+}
+
+function profileEntryDigest(row: Record<string, string>): string {
+  const headers = [
+    "profile_id",
+    "doc_type_id",
+    "decision",
+    "detail_override",
+    "status_override",
+    "reason",
+    "required_plan_id",
+  ];
+  return createHash("sha256")
+    .update(JSON.stringify(headers.map((header) => [header, row[header] ?? ""])))
+    .digest("hex");
 }
 
 export function joinDocumentScaleProfileReviews(input: {
@@ -1059,7 +1076,7 @@ export function joinDocumentScaleProfileReviews(input: {
       detail_override: profileEntry.detail_override,
       status_override: profileEntry.status_override,
       reason: profileEntry.reason,
-      required_plan_id: profileEntry.required_plan_id,
+      required_plan_id: profileEntry.required_plan_id ?? "",
       catalog_layer: catalog?.layer ?? "",
       catalog_sub_doc: catalog?.sub_doc ?? "",
       requirement_class: catalog?.requirement_class ?? "",

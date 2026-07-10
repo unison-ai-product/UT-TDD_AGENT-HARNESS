@@ -28,6 +28,13 @@ describe("I-DISP-001 V-model projection", () => {
       expect(count(db, "vmodel_meta_source_mappings")).toBe(1);
       expect(count(db, "vmodel_semantic_items")).toBe(163);
       expect(count(db, "vmodel_item_target_edges")).toBe(163);
+      expect(
+        Number(
+          db
+            .prepare("SELECT COUNT(*) AS count FROM findings WHERE source = ?")
+            .get("vmodel-item-target")?.count ?? 0,
+        ),
+      ).toBe(163);
       expect(count(db, "document_scale_profiles")).toBe(8);
       const first = snapshot(db);
       projectVmodelAuthoring(process.cwd(), db);
@@ -80,11 +87,17 @@ function count(db: ReturnType<typeof openHarnessDb>, table: string): number {
 }
 
 function snapshot(db: ReturnType<typeof openHarnessDb>) {
-  return Object.fromEntries(
-    tables.map((table) => [table, db.prepare(`SELECT * FROM ${table} ORDER BY 1`).all()]),
-  );
+  return {
+    ...Object.fromEntries(
+      tables.map((table) => [table, db.prepare(`SELECT * FROM ${table} ORDER BY 1`).all()]),
+    ),
+    findings: db
+      .prepare("SELECT * FROM findings WHERE source = ? ORDER BY finding_id")
+      .all("vmodel-item-target"),
+  };
 }
 
 function clear(db: ReturnType<typeof openHarnessDb>): void {
   for (const table of [...tables].reverse()) db.exec(`DELETE FROM ${table}`);
+  db.prepare("DELETE FROM findings WHERE source = ?").run("vmodel-item-target");
 }

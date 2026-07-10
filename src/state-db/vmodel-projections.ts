@@ -1,10 +1,16 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { GitAuthoringProvenance } from "../disposition/adapters/git-authoring-provenance";
+import { buildTrackedTargetRegistry } from "../disposition/adapters/tracked-target-registry";
 import { loadTrackedCatalogInput } from "../disposition/adapters/tracked-vmodel-loader";
 import { DocumentDispositionCatalog } from "../disposition/domain/document-disposition-catalog";
+import {
+  reconcileDispositionTarget,
+  resolveCanonicalTarget,
+} from "../disposition/domain/target-resolver";
 import type { AuthoringProvenancePort } from "../disposition/ports/authoring-provenance";
 import { loadTrackedDocumentProfileCatalog } from "../profile/adapters/tracked-profile-loader";
+import { stableId } from "../stable-id";
 import type { HarnessDb } from "./index";
 import { upsertRow } from "./index";
 
@@ -44,6 +50,18 @@ export function projectVmodelAuthoring(
   );
   const catalog = DocumentDispositionCatalog.create(catalogInput);
   if (!catalog.ok) throw new Error(JSON.stringify(catalog.errors));
+  validateTargets(repoRoot, catalogInput);
+  for (const finding of catalog.value.unresolved()) {
+    upsert(db, "findings", "finding_id", {
+      finding_id: stableId("vmodel-item-target-pending", finding.subjectId),
+      kind: finding.ruleId,
+      severity: finding.severity,
+      subject_id: finding.subjectId,
+      source: "vmodel-item-target",
+      status: "open",
+      evidence_path: "docs/governance/vmodel-item-target-ledger.md",
+    });
+  }
 
   for (const row of catalogInput.sources) upsert(db, "vmodel_sources", "source_id", snake(row));
   for (const row of catalogInput.categories)
@@ -65,6 +83,35 @@ export function projectVmodelAuthoring(
   );
   for (const row of profiles.catalog.profiles)
     upsert(db, "document_scale_profiles", "profile_id", snake(row));
+}
+
+function validateTargets(
+  repoRoot: string,
+  input: ReturnType<typeof loadTrackedCatalogInput>,
+): void {
+  const families = input.sourceTargetEdges
+    .filter((edge) => edge.targetType === "artifact_family")
+    .map((edge) => edge.targetRef);
+  const registry = buildTrackedTargetRegistry(repoRoot, families);
+  for (const edge of input.sourceTargetEdges) {
+    const resolved = resolveCanonicalTarget(
+      { kind: edge.targetType, ref: edge.targetRef },
+      registry,
+    );
+    if (!resolved.ok) throw new Error(JSON.stringify(resolved.findings));
+  }
+  for (const source of input.sources) {
+    const edges = input.sourceTargetEdges.filter((edge) => edge.sourceId === source.sourceId);
+    if (edges.length !== 1) continue;
+    const reconciled = reconcileDispositionTarget(
+      {
+        displayRef: source.targetRef,
+        edge: { kind: edges[0].targetType, ref: edges[0].targetRef },
+      },
+      registry,
+    );
+    if (!reconciled.ok) throw new Error(JSON.stringify(reconciled.findings));
+  }
 }
 
 function bundle(paths: readonly string[], read: (path: string) => Uint8Array) {

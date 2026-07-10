@@ -1208,6 +1208,10 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-DISP-003` | source/item/target orphan | catalog create | `catalog-orphan-edge`, exit 1 |
 | `U-DISP-004` | disposition理由/target/PLAN欠落 | catalog create | `catalog-disposition-incomplete`, exit 1 |
 | `U-DISP-005` | 同一edge ID重複 | catalog create | `catalog-edge-duplicate`, exit 1 |
+| `U-TARGET-001` | 4 typed target | canonical resolver | plan/path/family/slotをregistryだけで解決、exit 0 |
+| `U-TARGET-002` | disposition short alias / edge full alias | reconcile | canonical identity一致、exit 0 |
+| `U-TARGET-003` | unknown/ambiguous/absent target | canonical resolver | typed finding、exit 1 |
+| `U-TARGET-004` | phantom family/canonical mismatch | canonical resolver | existence/mismatch finding、exit 1 |
 | `I-DISP-001` | valid authored catalog | DB削除→rebuild | catalog/edge/profile full row・digest identity集合差0、provenance失敗時rollback |
 | `U-PROFILE-001` | checked manifest size 3/product 5 | profile create | 宣言件数一致、exit 0 |
 | `U-PROFILE-002` | baseline+product+explicit override | resolverを2回 | resolved digest同一、exit 0 |

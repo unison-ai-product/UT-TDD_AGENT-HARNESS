@@ -33,6 +33,10 @@ generates:
     artifact_type: source_code
   - artifact_path: src/disposition/domain/authoring-provenance.ts
     artifact_type: source_code
+  - artifact_path: src/disposition/domain/target-resolver.ts
+    artifact_type: source_code
+  - artifact_path: src/disposition/adapters/tracked-target-registry.ts
+    artifact_type: source_code
   - artifact_path: src/disposition/adapters/git-authoring-provenance.ts
     artifact_type: source_code
   - artifact_path: src/disposition/ports/authoring-provenance.ts
@@ -55,6 +59,8 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/vmodel-schema.test.ts
     artifact_type: test_code
+  - artifact_path: tests/vmodel-migration.test.ts
+    artifact_type: test_code
   - artifact_path: tests/disposition/catalog.test.ts
     artifact_type: test_code
   - artifact_path: tests/disposition/strict-markdown-table.test.ts
@@ -65,6 +71,10 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/disposition/git-authoring-provenance.test.ts
     artifact_type: test_code
+  - artifact_path: tests/disposition/target-resolver.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/disposition/tracked-target-registry.test.ts
+    artifact_type: test_code
   - artifact_path: tests/profile/resolver.test.ts
     artifact_type: test_code
   - artifact_path: tests/profile/tracked-loader.test.ts
@@ -72,6 +82,14 @@ generates:
   - artifact_path: src/state-db/vmodel-projections.ts
     artifact_type: source_code
   - artifact_path: src/state-db/projection-writer.ts
+    artifact_type: source_code
+  - artifact_path: src/state-db/migration.ts
+    artifact_type: source_code
+  - artifact_path: src/state-db/spec-ir-projections.ts
+    artifact_type: source_code
+  - artifact_path: src/lint/db-projection-coverage.ts
+    artifact_type: source_code
+  - artifact_path: src/doctor/db-projection.ts
     artifact_type: source_code
   - artifact_path: tests/disposition/projection.test.ts
     artifact_type: test_code
@@ -90,8 +108,9 @@ U-DISP/U-PROFILEをRed freeze後、catalog/profile domain、authoring loader、D
 planned deliverablesは`src/disposition/{domain,application,ports,adapters}`、`src/profile/{domain,application,ports,adapters}`、DB schema/projection、実行可能Red/Green test、item-target ledger validationである。実体作成と同時にfrontmatter `generates`へ昇格する。
 
 2026-07-10 Red/Green waveではpure catalog/profile domain、strict table parser、tracked 109/21/163 catalog loaderを実装した。
-DB schema/projector、profile tracked loader、provenance receipt、I-DISP-001/rollbackは実装済み。残るcanonical target resolver、
-既存profile entryのversioned migration/constraint、constraint coverage detector、pending finding projectionは未完了であり、
+DB schema/projector、profile tracked loader、provenance receipt、I-DISP-001/rollback、pure canonical target resolver、
+既存profile entryのversioned migration/constraint、constraint coverage detector、pending finding projectionは実装済み。残る
+target registry adapterによる実authoring全edge existence検査まで実装済み。Reverse-417合流とfull regressionが未完了であり、
 PLAN statusとDoDを完了へ進めない。
 
 Red freezeは`U-DISP-001..005`、query純粋性/安定順序、`U-PROFILE-001..005`を同一contract revisionで先行し、
