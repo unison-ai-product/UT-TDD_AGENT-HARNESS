@@ -1,6 +1,6 @@
 ---
 plan_id: PLAN-L7-392-memory-promotion-handover-digest
-title: "PLAN-L7-392 (add-impl): HARNESS メモリ昇格 nudge と handover digest 化"
+title: "PLAN-L7-392 (add-impl): HARNESS メモリ昇格 nudge と telemetry lifecycle"
 kind: add-impl
 layer: L7
 drive: be
@@ -8,7 +8,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-07-10
 owner: PO / Codex
 parent_design: docs/design/harness/L6-function-design/handover-mechanism.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
@@ -16,11 +16,11 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L8
 agent_slots:
   - role: tl
-    slot_label: "TL - memory 昇格 nudge / digest 設計整合レビュー"
+    slot_label: "TL - memory 昇格 nudge / telemetry lifecycle 設計整合レビュー"
   - role: se
-    slot_label: "SE - Stop hook warn + SessionStart digest 実装"
+    slot_label: "SE - Stop hook warn + telemetry TTL/auto-ack 実装"
   - role: qa
-    slot_label: "QA - digest 固定フォーマットと telemetry 締め出しの回帰"
+    slot_label: "QA - nudge false-positive と telemetry 減衰の回帰"
 generates:
   - artifact_path: docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
     artifact_type: markdown_doc
@@ -32,10 +32,11 @@ dependencies:
   references:
     - docs/plans/PLAN-L7-110-takeover-feedback-surface.md
     - docs/plans/PLAN-L7-246-feedback-event-lifecycle.md
+    - docs/plans/PLAN-L7-412-schedule-live-session-digest.md
 review_evidence: []
 ---
 
-# PLAN-L7-392: HARNESS メモリ昇格 nudge と handover digest 化
+# PLAN-L7-392: HARNESS メモリ昇格 nudge と telemetry lifecycle
 
 ## 0. 背景 (PO 決定 2026-07-08)
 
@@ -54,16 +55,16 @@ handover は「DB 導出 digest (状態) + HARNESS メモリ (知識) + HEAD (�
    PLAN 状態遷移があり、かつ `.ut-tdd/memory/` への書き込みが 0 件」を検出したとき、
    warn telemetry (`memory_promotion_missed`) を feedback_events へ記録し、summary 出力に
    1 行 nudge を出す。block しない (false positive 許容、fail-open)。
-2. **SessionStart digest 化**: takeover surface を固定 4 段フォーマットへ投影する:
-   ① gate 全件 ② HEAD 直近確定成果 (git log 由来 N 件) ③ 未閉 actionable 上位 5 件
-   ④ `memory recall` 上位。telemetry 系イベントは本文から締め出し、集計 1 行に畳む。
-3. **telemetry lifecycle**: telemetry kind の feedback_events に TTL / 自動 ack を導入し、
+2. **telemetry lifecycle**: telemetry kind の feedback_events に TTL / 自動 ack を導入し、
    open 件数がシグナルを埋没させない状態を維持する (PLAN-L7-246 の lifecycle に接続)。
+
+固定4段 SessionStart digest は `PLAN-L6-52` / `PLAN-L7-412` へ移管する。同PLANが
+工程live stateを含めて実装し、本PLANは同じsurfaceを再実装しない。
 
 ## 2. 不変条件
 
-- digest は DB / HEAD からの導出のみで構成し、prose スナップショットを正本にしない。
-- nudge / digest は fail-open: DB 不在・lock・破損でセッション起動や Stop を止めない。
+- PLAN-L7-412のdigestへ別surfaceを追加せず、proseスナップショットを正本にしない。
+- nudge / telemetry lifecycleはfail-open: DB不在・lock・破損でStopを止めない。
 - memory への書き込み内容は永続知識に限る。エピソード状態 (進捗・次の一手) を
   memory に書く経路を作らない。
 
@@ -71,5 +72,5 @@ handover は「DB 導出 digest (状態) + HARNESS メモリ (知識) + HEAD (�
 
 - commit ありかつ memory 書き込み 0 のセッションで `memory_promotion_missed` warn が
   feedback_events に記録される (real-repo regression test)。
-- SessionStart surface が固定 4 段で出力され、telemetry 生イベントが本文に現れない。
 - open feedback の telemetry が TTL/auto-ack で減衰する。
+- `PLAN-L7-412` の固定4段digestへ重複出力を追加しない。

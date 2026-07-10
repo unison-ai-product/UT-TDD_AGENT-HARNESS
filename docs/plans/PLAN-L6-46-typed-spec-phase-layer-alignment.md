@@ -67,7 +67,7 @@ frontmatter で明示し、検出系が設計層を推測で補完しない状�
 
 ## 1. ZIP 再検査結果
 
-修正版 `Vモデル設計ドキュメント.zip` は再展開で 624 files / 29 dirs、主要 docs 43/97/99/107/108/109 が存在した。
+修正版 `Vモデル設計ドキュメント_checked.zip` は再展開で 624 files / 29 dirs、主要 docs 43/97/99/107/108/109 が存在した。
 `verify_files.py`、`build.py validate`、`spec_types.py`、`spec_trace.py`、`schedule.py`、
 `build.py detect` はすべて green で、対象書面 109 件の agent メタデータも実態と一致した。
 

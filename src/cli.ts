@@ -40,7 +40,6 @@ import {
   type DoctorRunProfileId,
 } from "./doctor/check-registry";
 import { computeSkillMetrics } from "./feedback/engine";
-import { renderTakeoverFeedback, selectTakeoverFeedback } from "./feedback/surface";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { writeGateRunEvidence } from "./gate/run-evidence";
 import { evaluateStaticGate } from "./gate/static";
@@ -54,6 +53,10 @@ import {
   runHandover,
   setActivePlanCli,
 } from "./handover/index";
+import {
+  renderSessionStartDigest,
+  selectSessionStartDigest,
+} from "./handover/session-start-digest";
 import { loadChangedFiles, loadStagedFiles } from "./lint/change-impact";
 import {
   applyDigestAnchorCandidatesToContent,
@@ -395,9 +398,7 @@ function runSessionStartSideEffects(
   } catch {
     // fail-open: lifecycle maintenance must not block the runtime.
   }
-  surfaceTakeoverFeedbackToStdout(repoRoot);
-  surfaceMemoryToStdout(repoRoot);
-  surfaceAttemptEscalationToStdout(repoRoot, input.session_id);
+  surfaceSessionStartDigestToStdout(repoRoot, attemptEscalationBlock(repoRoot, input.session_id));
 }
 
 /**
@@ -406,56 +407,55 @@ function runSessionStartSideEffects(
  * 再導出する (core rebuild の入力境界を広げない)。現セッションを除いた最新 1 ファイルのみを読むため
  * 古い失敗は再浮上しない。独立した fail-open: ログ不在 / 破損で runtime を止めない。
  */
-function surfaceAttemptEscalationToStdout(repoRoot: string, currentSessionId?: string): void {
+function attemptEscalationBlock(repoRoot: string, currentSessionId?: string): string {
   try {
     const dir = join(repoRoot, ".ut-tdd", "logs", "session");
-    if (!existsSync(dir)) return;
+    if (!existsSync(dir)) return "";
     const files = readdirSync(dir)
       .filter((name) => name.endsWith(".jsonl"))
       .map((name) => ({ name, mtimeMs: statSync(join(dir, name)).mtimeMs }));
     const currentName = currentSessionId ? `${safeName(currentSessionId)}.jsonl` : undefined;
     const preceding = selectPrecedingSessionFile(files, currentName);
-    if (!preceding) return;
+    if (!preceding) return "";
     const events = parseSessionEvents(readFileSync(join(dir, preceding), "utf8"));
     const signals = evaluateAttemptEscalation(attemptsFromSessionEvents(events));
-    const block = renderEscalationSignals(signals);
-    if (block) process.stdout.write(block);
+    return renderEscalationSignals(signals);
   } catch {
     // fail-open: escalation surface は best-effort。
+    return "";
   }
 }
 
-/**
- * 引き継ぎ (SessionStart) 時に harness.db の open feedback をエージェントへ surface する
- * (PLAN-L7-110)。stale な prose handover や、共有 working tree の都度計測ではなく、DB を
- * 正本として feedback を「受け取る」経路。独立した fail-open: Codex の並行 db rebuild と競合して
- * ロックされても、引き継ぎ維持処理 (上) も runtime も阻害しない。
- */
-function surfaceTakeoverFeedbackToStdout(repoRoot: string): void {
+/** DB state、HEAD、actionable、memory を固定4段で返す。各入力は fail-open。 */
+function recentHeadCommits(repoRoot: string, limit = 5): string[] {
+  try {
+    const output = execFileSync("git", ["log", `-${limit}`, "--format=%h %s"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    }).trim();
+    return output ? output.split(/\r?\n/).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function surfaceSessionStartDigestToStdout(repoRoot: string, escalationBlock = ""): void {
   try {
     const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
     try {
-      const block = renderTakeoverFeedback(selectTakeoverFeedback(db));
+      const block = renderSessionStartDigest(
+        selectSessionStartDigest(
+          db,
+          recentHeadCommits(repoRoot),
+          escalationBlock.trim().split(/\r?\n/).filter(Boolean),
+        ),
+      );
       if (block) process.stdout.write(block);
     } finally {
       db.close();
     }
   } catch {
-    // fail-open: feedback surface は best-effort。DB 不在 / ロック / 破損で runtime を止めない。
-  }
-}
-
-function surfaceMemoryToStdout(repoRoot: string): void {
-  try {
-    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
-    try {
-      const block = renderMemorySurface(selectMemoryEntries(db, { limit: 5 }));
-      if (block) process.stdout.write(block);
-    } finally {
-      db.close();
-    }
-  } catch {
-    // fail-open: memory surface is shared context, not a runtime blocker.
+    // fail-open: DB 不在 / lock / 破損で SessionStart を止めない。
   }
 }
 

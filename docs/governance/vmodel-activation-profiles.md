@@ -10,7 +10,7 @@ typed_spec_phase_owner: L6
 
 ## 0. 役割
 
-本書は `Vモデル設計ドキュメント.zip` の `profiles.yaml` / `99_型付きスペック・自動検出設計書` /
+本書は `Vモデル設計ドキュメント_checked.zip` の `profiles.yaml` / `99_型付きスペック・自動検出設計書` /
 `97_スペック駆動開発・トレース閉包設計書` / `107_Vモデル・レベル定義` から HARNESS 向けに抽出した、
 version-up wave の activation profile 正本である。
 

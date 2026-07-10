@@ -401,7 +401,7 @@ frontmatter `layer` の不一致も fail-close にした。
   `test_plan` / `right_lung` / `verify` を Verify mode へ routing。
 - `docs/process/modes/verify.md` と process/design 正本を追加・同期。
 
-外部参照 `Vモデル設計ドキュメント.zip` は 2026-07-08 に再展開して確認済み。A-185 §E に、原本構成、
+外部参照 `Vモデル設計ドキュメント_checked.zip` は 2026-07-08 に再展開して確認済み。A-185 §E に、原本構成、
 `validate` / `check` / `coverage` / `deps` 実行結果、右肺抽出の妥当性を追記した。抽出結論は維持:
 参照カタログは 06-09 層別テスト設計の上位に `12_テスト計画書` + `28_検証設計書` を持つため、
 RECOVERY-10 の「右肺 = ③テスト設計 + 検証戦略 + 検証設計」への抽出は正しい。

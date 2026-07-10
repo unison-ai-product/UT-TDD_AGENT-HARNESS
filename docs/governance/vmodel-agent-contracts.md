@@ -9,7 +9,7 @@ updated: 2026-07-08
 
 ## 0. 役割
 
-本書は `Vモデル設計ドキュメント.zip` の各 doc にある `agent.defines` / `agent.read_first` /
+本書は `Vモデル設計ドキュメント_checked.zip` の各 doc にある `agent.defines` / `agent.read_first` /
 `agent.done_when` を、HARNESS の authoring source 契約へ翻訳した正本である。
 
 ZIP の `python tools/build.py detect` green 条件は、HARNESS では Python runtime の移植ではなく

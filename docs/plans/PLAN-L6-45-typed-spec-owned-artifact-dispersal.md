@@ -80,7 +80,7 @@ dependencies:
 
 ## 4. 修正版 ZIP からの追加根拠
 
-修正版 `Vモデル設計ドキュメント.zip` は、typed spec の所有位置を文書ローカル契約へ寄せる方向を強めている。
+修正版 `Vモデル設計ドキュメント_checked.zip` は、typed spec の所有位置を文書ローカル契約へ寄せる方向を強めている。
 各 doc の `agent.read_first` / `agent.done_when` と `python tools/build.py detect` green 条件は、
 宣言・本文・検出結果を同じ owned artifact に閉じる根拠である。
 U11 ではこのうち `spec.defines` の owned artifact 分散だけを完了条件に含め、

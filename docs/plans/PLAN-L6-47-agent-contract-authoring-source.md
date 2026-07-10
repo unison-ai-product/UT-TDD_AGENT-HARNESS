@@ -66,7 +66,7 @@ dependencies:
 
 ## 0. 役割
 
-本 PLAN は U12c として、修正版 `Vモデル設計ドキュメント.zip` の各 doc に含まれる
+本 PLAN は U12c として、修正版 `Vモデル設計ドキュメント_checked.zip` の各 doc に含まれる
 `agent.defines` / `agent.read_first` / `agent.done_when` を HARNESS の設計契約へ翻訳する。
 ZIP の `done_when: python tools/build.py detect` は Python runtime 移植ではなく、
 HARNESS の `doctor:<gate-id>` 完了条件として表す。

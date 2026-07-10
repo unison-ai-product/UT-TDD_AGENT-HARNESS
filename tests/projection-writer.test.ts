@@ -22,6 +22,7 @@ import {
 import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/index";
 import { migrate, rowCounts } from "../src/state-db/migration";
 import {
+  latestReviewEvidenceEntry,
   projectDesignPairFreezeFindings,
   projectRuntimeGuardrailDecisionFromSessionEvent,
   projectRuntimeSkillInvocationFromSessionEvent,
@@ -69,6 +70,17 @@ const hasSourceScreenDocs = () =>
   existsSync(
     join(process.cwd(), "docs", "design", "harness", "L1-requirements", "screen-requirements.md"),
   );
+
+describe("review evidence projection selection", () => {
+  it("U-SCHEDULE-LIVE-002: compares reviewed_at as instants and resolves ties by declaration", () => {
+    const latest = latestReviewEvidenceEntry([
+      { reviewed_at: "2026-07-10T00:30:00+09:00", verdict: "offset-but-older" },
+      { reviewed_at: "2026-07-09T20:00:00Z", verdict: "absolute-latest" },
+      { reviewed_at: "2026-07-10T05:00:00+09:00", verdict: "approve-after-fix" },
+    ]);
+    expect(latest?.verdict).toBe("approve-after-fix");
+  });
+});
 
 describe("SECRET_PATTERN word-boundary anchoring", () => {
   it("does not match 'sk' inside a word but matches a boundary-delimited token", () => {

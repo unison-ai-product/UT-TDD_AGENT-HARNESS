@@ -10,7 +10,7 @@ typed_spec_phase_owner: L6
 
 ## 0. 役割
 
-本書は `Vモデル設計ドキュメント.zip` から始まった HARNESS バージョンアップの工程管理表である。
+本書は `Vモデル設計ドキュメント_checked.zip` から始まった HARNESS バージョンアップの工程管理表である。
 目的は、上流からの全面見直しを「現在地」「V-pair」「前提」「RAG」「駆動モデルの入口」に分解し、
 `.ut-tdd/harness.db` の `schedule_entries` projection へ宣言的に引き込むことである。
 
@@ -62,6 +62,10 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L4-21-domain-vo-coding-constraints | L4 | data/function | L9 | PLAN-L0-01-vmodel-harness-upgrade-charter | U16a: ZIP94/95 の値オブジェクト方針とクラス・メソッド構造規約を L4 data / coding-rules SSoT へ固定 | green | confirmed |  |
 | PLAN-L6-67-skill-admission-gate | L6 | function-spec | L7 | PLAN-L6-37-skill-index-category | U16b: skill admission gate を品質3要件・4種判定・judge fail-open封止・決定論残渣 doctor 契約として L6/L7 に接続 | green | confirmed |  |
 | PLAN-L7-411-skill-admission-gate | L7 |  | L6 | PLAN-L6-67-skill-admission-gate | U16b-impl: skill admission gate の判定関数・CLI・台帳/quarantine・doctor coverage・supersede lint を実装する後続 slice | yellow | draft | PLAN-REVERSE-411 と双方向 pair。 |
+| PLAN-L6-52-signals-schedule-live-handover | L6 | function-spec | L7 | PLAN-L7-383-vmodel-schedule-authoring-source,PLAN-L7-385-vmodel-activation-profile-join | U17a: runtime test/review/gate signal と工程 authoring RAG のlive join、固定4段digest契約をfreeze | green | confirmed |  |
+| PLAN-L7-412-schedule-live-session-digest | L7 |  | L6 | PLAN-L6-52-signals-schedule-live-handover | U17b: 工程live stateと固定4段SessionStart digestを実装し、旧feedback/memory個別surfaceを統合 | green | confirmed |  |
+| PLAN-REVERSE-412-schedule-live-session-digest-backfill | cross | function-spec | L7 | PLAN-L7-412-schedule-live-session-digest | U17b-r: 既存handover/feedback/memory surfaceをL6固定4段digest契約へbackfill | green | confirmed |  |
+| PLAN-L7-392-memory-promotion-handover-digest | L7 |  | L6 | PLAN-L7-412-schedule-live-session-digest | U17c: digest責務移管後、memory昇格nudgeとtelemetry TTL/auto-ackを実装 | yellow | draft | fixed digestはPLAN-L7-412へ移管。 |
 
 ## 2. 解釈規則
 

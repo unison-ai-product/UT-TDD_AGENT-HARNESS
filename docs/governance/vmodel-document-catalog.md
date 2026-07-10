@@ -10,7 +10,7 @@ typed_spec_phase_owner: L4
 
 ## 0. 役割
 
-本書は `Vモデル設計ドキュメント.zip` の `catalog.yaml` 相当を HARNESS 側で追跡する authoring source である。
+本書は `Vモデル設計ドキュメント_checked.zip` の `catalog.yaml` 相当を HARNESS 側で追跡する authoring source である。
 `document-system-map.md` は工程・業界標準・設計思想の説明正本、本書は文書種別・採用粒度・projection 先を機械が読める一覧正本とする。
 
 `harness.db` は正本ではなく、本書から `document_catalog_entries` へ rebuild される projection である。
