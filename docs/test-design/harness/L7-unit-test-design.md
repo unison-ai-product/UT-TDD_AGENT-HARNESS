@@ -30,7 +30,7 @@ The L6 pair scope also includes module contract backfill docs added after the or
 |---|---|---|
 | `docs/design/harness/L6-function-design/context.md` | U-CONTEXT-001..005 | `tests/doc-router.test.ts` or equivalent context router unit tests |
 | `docs/design/harness/L6-function-design/graph.md` | U-GRAPH-001..005 | `tests/graph-loader.test.ts`, `tests/relation-graph*.test.ts` |
-| `docs/design/harness/L6-function-design/memory.md` | U-MEMORY-001..005 | `tests/memory-*.test.ts`, `tests/projection-writer.test.ts` |
+| `docs/design/harness/L6-function-design/memory.md` | U-MEMORY-001..006 | `tests/memory-*.test.ts`, `tests/projection-writer.test.ts` |
 | `docs/design/harness/L6-function-design/secret.md` | U-SECRET-001..005 | `tests/secret.test.ts` or memory secret fail-close tests |
 
 # UT-TDD Agent Harness — L7 単体テスト設計 (④ / U-*)
@@ -159,6 +159,8 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-MEMORY-002 | `writeMemoryEntry` / `parseMemoryFile` | title/body/tags または file 全体に secret-like payload があれば fail-close し、memory file / projection row を作らない。 |
 | U-MEMORY-003 | `rebuildHarnessDb` / `projectMemoryEntries` / `selectMemoryEntries` | `.ut-tdd/memory/*.md` から `memory_entries` へ projection し、query/limit 付きで read-only に選択できる。 |
 | U-MEMORY-004 | `renderMemorySurface` / `ut-tdd memory recall` / SessionStart side effect | Claude/Codex 共通の `harness.db memory` block を出力し、空ならノイズを出さない。db 不在・破損・lock 時は fail-open で runtime を止めない。 |
+| U-MEMORY-005 | `evaluateMemoryPromotion(events)` / Stop summary | commitまたはplan_switchがありmemory write成功が無いsessionだけ`memory_promotion_missed` telemetry候補へ進める。本文・prompt・git diffを読まず、memory書込みを強制しない。 |
+| U-MEMORY-006 | feedback lifecycle projection | telemetryだけがTTL後ack対象で、gate/actionableはsource解消まで残る。消化済telemetryは同一sourceの再投影でopenへ戻らず、新観測だけが新generationを作る。DB書込失敗はfail-open。 |
 
 ### §1.9 U-SLOT (agent-slots 由来、PLAN-L7-08 / IMP-050)
 
