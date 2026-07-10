@@ -44,6 +44,22 @@ decision_points:
     choose: "treat the gate as not cleared"
     over: "treating ut-tdd doctor green as implicit gate clearance"
     because: "a gate with no recorded evidence is not cleared, regardless of doctor status"
+  - when: "an attacker's finding is 'this seems ambiguous' or 'this looks insufficient' with no concrete scenario attached"
+    choose: "reject it as not-an-attack and require the attacker construct the actual counterexample (a two-reading split, an uncovered input/state/order, an unreconstructable evidence trail, or a green-tests-but-unmet-requirement scenario)"
+    over: "accepting a vague concern as valid review pressure toward a FLAG"
+    because: "only four attack types are valid and all four are constructive; 'seems ambiguous' is explicitly excluded, and accepting it lets qualitative hand-waving substitute for a falsifiable claim."
+  - when: "a defender wants to dismiss an attack but the provided packet text does not clearly exclude it"
+    choose: "leave the refutation blank and record the attack as unrefuted"
+    over: "writing a refutation based on inferred intent, common sense, or context outside the packet"
+    because: "the defender may refute only by quoting the packet; conceding when no quote excludes the counterexample is the correct verdict, not a defender failure, and a refutation built on outside context cannot be re-verified by anyone reading the record later."
+  - when: "a review pass records no_attack for an artifact"
+    choose: "require at least 3 logged attempted-attack failures before accepting no_attack, and treat the outcome as PASS-WEAK — a priority target for the human spot-check tier, not an equal-strength PASS"
+    over: "treating a bare no_attack claim as equivalent to a clean PASS, or accepting it with no attempt log"
+    because: "no_attack without >=3 logged attempts is treated as OPEN; even a properly logged no_attack is not proof of safety, only evidence that this particular attacker found nothing, which is why it is prioritized for human review instead of trusted as strongly as a survived attack."
+  - when: "selecting who plays attacker/defender, or reporting what a PASS verdict means"
+    choose: "exclude the artifact's author model/session from both roles, and report PASS as 'survived this attacker' only"
+    over: "letting the authoring session self-attack or self-defend for convenience, or reporting PASS as a general safety/quality guarantee"
+    because: "models in the same family have correlated blind spots and the author cannot be an independent adversary against its own work; PASS carries no meaning beyond having survived the specific attacker that ran, not a general correctness proof."
 ---
 
 # adversarial review
@@ -104,6 +120,72 @@ to probe:
 2. All G4/G5 conditions still green.
 3. ADR set to `Accepted` where applicable.
 4. Handover updated or closed.
+
+## Structured attack/defense protocol (counterexample construction, not voting)
+
+This protocol supplements the gate-by-gate procedure above with a stricter,
+role-separated form of adversarial review for high-risk artifacts (e.g. a
+risk-weighted sample flagged for deeper scrutiny). It is not a vote or a
+consensus check: a structural gate being green (`ut-tdd doctor`, `vmodel
+lint`) shows the artifact is "not broken," not that it is high quality. The
+adversarial structure asks a narrower, falsifiable question instead —
+**does an unrefuted attack exist?** — and is a filter that reduces how much a
+human needs to look at directly; it does not replace human spot-check review.
+
+**Roles are separated and blind.** The attacker receives only the review
+packet — no conversation history, no repository, no authoring context. The
+defender receives the packet plus the attacker's recorded attack log, and
+nothing else. The artifact's author model/session may serve as **neither**
+attacker nor defender.
+
+**The attacker's duty is constructing a concrete counterexample**, not
+casting an opinion. Only four attack types are valid:
+
+1. Two readings of the same requirement/spec text that produce different
+   pass/fail outcomes.
+2. A concrete input, state, or ordering that the declared tests do not cover.
+3. Evidence from which a re-verification procedure cannot be reconstructed
+   (the trail is present but unusable to redo the check).
+4. A scenario where the declared tests are green but the actual requirement
+   is not met.
+
+"Seems ambiguous" or "looks insufficient" is not an attack — the attacker
+must write the counterexample itself (the specific reading split, the
+specific uncovered input, the specific unreconstructable step, or the
+specific green-but-unmet scenario). If no attack can be constructed, the
+attacker declares `no_attack` and must log at least 3 attempted attacks and
+why each failed to hold; a `no_attack` with fewer than 3 logged attempts is
+invalid and is treated as **OPEN**, not as evidence of safety.
+
+**The defender's duty is refutation by citation only.** A refutation is valid
+only in the form "that counterexample is excluded by the text '…'" — quoting
+the packet. Appeals to common sense, inferred intent, or context outside the
+packet are not refutations. If no quote excludes the counterexample, the
+defender leaves the refutation blank; conceding is the correct verdict in
+that case, not a defender failure.
+
+**Verdicts:**
+
+- **One or more attacks left unrefuted → FLAG.** Route to correction. Editing
+  or deleting a recorded attack to make it disappear is tampering and is
+  prohibited — the record is append-only.
+- **All logged attacks refuted by citation → PASS**, with the attack/defense
+  record attached. A subset of PASS verdicts still goes to human spot-check
+  (the third defense layer is never fully replaced).
+- **`no_attack` (with >=3 logged attempts) → PASS-WEAK.** This is the
+  **priority** target for human spot-check, not a stronger result than a
+  contested-and-refuted PASS — "no attack was found" is not proof the
+  artifact is safe, only that this attacker did not find one.
+
+**Known limits of this protocol itself:** attackers and defenders are
+themselves subject to Goodhart pressure (a lazy attacker discharges duty with
+a weak attack; a defender may over-reach a refutation). This is why the
+protocol requires a verifiable artifact at each step — a literal
+counterexample from the attacker, a literal quote from the defender — rather
+than a prose judgement call, and why it never replaces the human spot-check
+tier. Models from the same family also have correlated blind spots, so a
+PASS from this protocol means only "survived this attacker," not a general
+safety or correctness guarantee.
 
 ## Evidence format
 

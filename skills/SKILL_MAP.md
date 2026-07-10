@@ -66,6 +66,14 @@ packs for the current task.
 | Browser / screen (L10) verification | browser-testing-and-screen-verification |
 | Git / Conventional Commits / CI | git |
 | Doc maintenance (README / runbook prose) | documentation |
+| Before writing any code (delete/absorb/reuse/config first) | code-minimalism |
+| Test-case ideation quality / oracle / when to stop testing | test-breakage-thinking |
+| Screen state-matrix / visual-regression triage / a11y judgement | visual-state-verification |
+| Which design docs to write, at what granularity (tailoring) | design-tailoring-and-granularity |
+| Requirement elicitation via screen prototypes (pre-freeze) | screen-driven-requirements |
+| Contract headroom / envelope versioning judgement | contract-envelope-design |
+| Where to start a slice (domain/prototype/contract-first) | vmodel-drive-direction |
+| Design principles (pillars), VO/domain/class norms | design-principles-pillars |
 
 ## Domain / project skills (indexed by category + metadata)
 
