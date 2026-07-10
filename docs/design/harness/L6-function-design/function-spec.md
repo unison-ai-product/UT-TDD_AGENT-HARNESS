@@ -912,9 +912,9 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 
 | 型 | 必須field | 不変条件 / error |
 |---|---|---|
-| `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `dependencies[]` | 空ID、重複dependency、revision≠1は`PlanAssetError` |
+| `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `canonicalPayload`, `dependencies[]` | 空ID、重複dependency、revision≠1、payload digest不一致は`PlanAssetError` |
 | `RevisePlanCommand` | `assetId`, `baseRevision`, `changeSet`, `actor`, `reason` | base≠latest、空reason、identity変更は拒否 |
-| `EvidenceInput` | `evidenceId`, `subjectId`, `subjectRevision`, `sourceCommit`, `digest`, `producedAt`, `expiresAt?`, `producer` | digest/commit/revision欠落は`EvidenceError` |
+| `EvidenceInput` | `evidenceId`, `subjectId`, `subjectRevision`, `sourceCommit`, `commandArgs[]`, `outputDigest`, `exitCode`, `producedAt`, `expiresAt?`, `producer` | digest/commit/revision/command欠落は`EvidenceError`。非0 exitも監査用recordとしてvalid |
 | `EvidencePolicy` | `requiredKinds[]`, `maxAge?`, `acceptedProducers[]` | 別revision、期限切れ、producer外は`EvidenceVerdict.usable=false` |
 | `WorkflowCommand` | `subjectId`, `expectedFrom`, `to`, `actor`, `reason?`, `evidenceIds[]` | 許可表外、sequence不整合、guard不足は`WorkflowError` |
 | `WorkflowContext` | `subjectRevision`, `events[]`, `evidence[]`, `now`, `policyRevision` | event/evidenceが別subjectならfail-close |
@@ -944,8 +944,38 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 | `ProfileSelection` | `sizeProfileId`, `productProfileIds[]`, `explicitDecisions[]`, `capabilityFlags[]` | product IDはstable昇順、同precedence同slot異値=`profile-overlay-conflict`、同値duplicateもidentity重複で拒否 |
 | `ResolvedDocumentDecision` | `docTypeId`, `decision`, `detail`, `status`, `reason`, `winningDecisionId`, `appliedDecisionIds[]`, `requiredPlanId?` | core/security detailを弱化しない。required slot欠落=`profile-decision-missing` |
 | `ResolvedProfile` | `selectionDigest`, `decisions: ResolvedDocumentDecision[]`, `applicationReceipt[]`, `findings[]` | size→stable product→explicitの適用順をreceiptへ保持し、未定義をdefault生成しない |
-| `LegacyPlanDto` | `legacyPlanId`, `frontmatter`, `bodyDigest`, `sourceCommit` | field loss=`plan-migration-loss`、numeric core衝突=`plan-migration-collision` |
-| `LegacyPlanMigrationDecision` | `migrationId`, `legacyPlanId`, `assetId?`, `decision`, `collisionGroup?`, `lossFields[]`, `reason`, `reviewPlanId?` | ambiguous/lossは自動asset選択禁止 |
+| `LegacyPlanDto` | `repositoryIdentity`, `sourcePath`, `legacyPlanId`, `knownFrontmatter`, `unknownFrontmatter`, `bodyDigest`, `sourceCommit` | field loss=`plan-migration-loss`、numeric core衝突=`plan-migration-collision`。unknown fieldもcanonical payloadへ保持 |
+| `LegacyPlanMigrationDecision` | `migrationId`, `legacyPlanId`, `assetId`, `decision`, `resolvedAlias?`, `collisionGroup?`, `lossFields[]`, `reason`, `reviewPlanId?` | assetIdはfull IDから必ず生成。ambiguous/lossはresolvedAliasを自動選択禁止 |
+
+legacy `asset_id`は初回migration時だけ、UTF-8 length-prefixed frame
+`["ut-tdd-plan-legacy-v1", repositoryIdentity, legacyPlanId]`のSHA-256から
+`plan:legacy:<64 lowercase hex>`として決定する。各frameは`uint32 big-endian byte length + bytes`、文字列はNFCであることを
+検証して非NFCを拒否し、UTF-8 bytesを勝手に正規化しない。`repositoryIdentity`はroot tracked正本
+`ut-tdd.project.json`の`schema_version=ut-tdd.project/v1`、`repository_identity`に明示するcase-sensitive owner/name
+（本repo=`unison-ai-product/UT-TDD_AGENT-HARNESS`）だけを読み、Git tracked blob/HEAD receiptを検証してremote URLから推測しない。
+config不在、fork別identity、remote無しは`plan-repository-identity-missing`として明示入力を要求する。
+checkout path、branch、`.git` suffix、layer、ordinal、source pathを入力にしない。
+生成後はledgerの`asset_id`を正本とし、rename/layer変更で再計算しない。frame algorithm/version、入力値、digestを
+`legacy_plan_migration_events`のtyped columnとrevision payloadへ記録する。
+
+v1/v2 parserは`schema_version=ut-tdd.plan/v2`の有無でdiscriminated unionにし、v1 unknown frontmatter key、
+本文digest、依存・artifact・review evidenceを落とさない。short aliasはexact full IDを先に照合し、prefix候補が2件以上なら
+候補をstable順で返す`plan-migration-collision`とし、最初の候補を選ばない。collision 18群/37 PLANは
+`legacy_plan_migration_events`へexactly once materializeする。full legacy IDからのasset IDはcollisionに関係なく生成し、
+判断未確定行は`resolvedAlias=NULL`+`reviewPlanId`必須とする。
+
+canonical JSONはobject keyをUTF-8 bytewise昇順、array順序保持、numberはsafe integer、stringはNFC検証済みUTF-8、
+boolean/nullをそのままframe化し、空白を持たない。YAML tag、anchor、merge key、非string map key、safe integer外numberは
+lossless変換不能として`plan-migration-loss`にする。未知fieldは`unknownFrontmatter`のcanonical JSONと元frontmatter digestを
+両方保持し、値をstring化しない。`EvidenceRecord.isUsableFor`はsubject/revision/commit、kind、producer、expiryとpolicy固有の
+`exitRule/expectedExit`を照合する。非0 exitはRed policyでusableになり得るが、Green/accept policyではusable=falseにする。
+record自体は削除しない。producer値域はcontract registryから読み、未知producerを
+記録時finding、accept時fail-closeとする。argvはsecret-scan/redaction port通過後の値だけを保存する。
+
+全append commandは`commandPayloadDigest`を返す。digestはcommand type、subject identity、入力DTOのcanonical frameだけから作り、
+command ID、clock、event ID、resultを含めない。同一command IDの再送はこのdigestをconstant-time比較し、一致時だけ既存event/resultを返す。
+global receiptのsubjectは`plan_revision(assetId+revision)`、`reservation(reservationId)`、
+`legacy_migration(legacyPlanId)`のdiscriminated unionとし、plan以外へ架空revisionを補完しない。
 
 authoring loaderはsource manifest、source disposition、semantic item catalog、source-target edge、item-target ledger、
 document profileの6正本を、見出し名・column集合・row幅・inline code delimiter・UTF-8・revision/provenance digestまで厳密に読む。
@@ -977,6 +1007,11 @@ typed edgeのcanonical集合を比較し、文字列近似やfilesystem探索に
 正常系の各行は隣接遷移だけを許す。`expectedFrom`不一致、sequence欠番、同一`commandId`で異なるpayloadはそれぞれ
 `forward-expected-state-mismatch`、`forward-sequence-invalid`、`forward-command-conflict`とする。
 
+event空集合の初期stateはrevisionごとの`proposed`、次sequenceは1とする。sequenceは1始まりで連続し、event IDと
+command IDはsubject横断で一意、同一event ID異payloadは`forward-event-conflict`、同一command ID+同一payloadは既存eventを返す。
+reducer入力は`sequence,eventId`の順でcanonicalizeせず、受領順がsequence昇順でない場合もfail-closeする。event digestは
+subject/revision/sequence/command payload digest/from/to/resume/reason/source commit/evidence IDのcanonical JSONから生成し、clockやDB rowidを含めない。
+
 | command | from | to | 必須guard/evidence | finding / 備考 |
 |---|---|---|---|---|
 | `plan` | proposed | planned | 承認済みscope / PLAN identity | `forward-plan-evidence-missing` |
@@ -997,6 +1032,68 @@ typed edgeのcanonical集合を比較し、文字列近似やfilesystem探索に
 | `reopen` | blockedまたはrejected | reopened | `resumeState`、reason、new evidence、同一subject revision | `forward-resume-state-invalid` |
 | `resume` | reopened | reopen eventの`resumeState` | resume先guardを再評価 | 過去guardを流用せず、accepted/archived/supersededへresume不可 |
 
+例外contextはnormal state 1件だけを`resumeState`として保持し、例外stackを作らない。blockedからrejectする場合はblockedを
+resume先にせず、block eventが保持した元normal stateをrejectedへ継承する。reopenはblocked/rejectedをreopenedへ写し、
+resumeだけが元normal stateへ戻す。reopenの同一revisionはstate復帰だけに使用し、意味変更は`PlanAsset.revise`で新revisionを作り
+新revisionの`proposed`から開始する。superseded/archivedはterminal、acceptedはarchive以外不可とする。
+
+#### Forward evidence policy表
+
+| policy / transition | required kind | cardinality | subject/expiry/producer条件 |
+|---|---|---:|---|
+| `pair-freeze/v1` | `design-pair-review` | 1以上 | 同asset/revision、exit 0、expiryなし、review producer |
+| `red-freeze/v1` | `red-test-run` | 1以上 | policyの`expectedExit`（非0可）+expected finding一致、todo/skip禁止、同revision/source commit |
+| `implementation/v1` | `targeted-test-run`, `implementation-digest` | 各1以上 | exit 0、同revision、accepted runner |
+| `trace-freeze/v1` | `trace-closure` | 1以上 | orphan/stale 0、同revision/source commit |
+| `review/v1` | `green-test-run`, `independent-review` | 各1以上 | tests_green_at≤reviewed_at、reviewer policy適合 |
+| `accept/v1` | `green-test-run`, `gate-run`, `acceptance-decision` | 各1以上 | 非期限切れ、exit 0、同revision/commit、PO/human要件をprofileから適用 |
+| exception command | `exception-context` | 1以上 | actor/reason/source commit/resumeまたはreplacementを同recordで拘束 |
+
+`EvidencePolicy`はkind、min/max cardinality、maxAge、accepted producers、`exitRule=exact|nonzero|any`、`expectedExit?`、subject revision/source commit一致をtyped fieldで持つ。
+不足kindと不適格record IDをstable順で返し、別revision・policyのexitRule不適合・期限切れrecordを件数へ数えない。
+
+| policy ID | required kind | cardinality | exit rule | accepted producer |
+|---|---|---:|---|---|
+| `scope-approval/v1` | `scope-approval` | 1以上 | exact 0 | `human|po` |
+| `pair-artifact/v1` | `pair-artifact-declaration` | 1以上 | exact 0 | `codex|claude|human` |
+| `trace-materialization/v1` | `trace-materialization` | 1以上 | exact 0 | `codex|claude|ci` |
+| `green-review-ready/v1` | `green-test-run` | 1以上 | exact 0 | `ci|codex|claude` |
+| `retention/v1` | `retention-decision` | 1以上 | exact 0 | `human|po` |
+
+command→policyは次の完全表を正本とし、実装switchに暗黙defaultを持たない。
+
+| command | policy ID |
+|---|---|
+| `plan` | `scope-approval/v1` |
+| `prepare_pair_freeze` | `pair-artifact/v1` |
+| `freeze_pair` | `pair-freeze/v1` |
+| `freeze_red` | `red-freeze/v1` |
+| `start_implementation` | `red-freeze/v1` |
+| `complete_implementation` | `implementation/v1` |
+| `prepare_trace_freeze` | `trace-materialization/v1` |
+| `freeze_trace` | `trace-freeze/v1` |
+| `prepare_review` | `green-review-ready/v1` |
+| `approve_review` | `review/v1` |
+| `accept` | `accept/v1` |
+| `archive` | `retention/v1` |
+| `block|reject|supersede|reopen|resume` | `exception-context/v1` |
+
+`scope-approval`、`pair-artifact`、`trace-materialization`、`green-review-ready`、`retention`は各遷移表の必須fieldを
+kind 1以上・同revision・accepted producerで要求する。policy ID未登録は`forward-policy-missing`でfail-closeする。
+
+#### workflow CLI共通envelope
+
+`workflow status|transition|explain`は同じapplication service verdictを使用し、JSONは
+`{ ok, command, subject { asset_id, revision, alias }, current_state, requested_state?, verdict,
+findings[], evidence_ids[], event_id?, state_digest }`を返す。正常exit 0、domain/guard違反1、usage/schema違反2、I/O/transaction失敗3。
+`status`と`explain`は書込み0、`transition`はevent append+projectionを1 transactionで行う。aliasは418のexact resolverだけを使い、
+ambiguous=`plan-migration-collision`、unknown=`plan-asset-not-found`、future revision=`plan-revision-not-found`とする。
+CLI/hook/doctorはrule ID、verdict、exit classを変換せず、同じrequest digestなら同じcommand ID再送を冪等に扱う。
+
+`P-FSM-001` generatorはseedをevidenceへ記録し、0〜64 event、全normal/exception command、valid/invalid evidence、
+duplicate/gap/out-of-order sequenceを生成する。shrinkerは連続chunk削除→単event削除→optional evidence/reason縮小の順で、
+subject/revisionを勝手に変更しない。最低10,000列または全state×command pairを網羅し、非許可state到達0、invalid列受理0を要求する。
+
 #### reservation / self-proof port契約
 
 | port / method | signature | 契約 |
@@ -1008,6 +1105,13 @@ typed edgeのcanonical集合を比較し、文字列近似やfilesystem探索に
 | `SourceHasher.hash` | `(frames: Array<{ label; bytes }>, algorithm='sha256') -> Digest` | `labelLength+label+byteLength+bytes`でframe化し、文字列連結collisionを禁止。改行/encodingを勝手に正規化しない |
 | `ReceiptStore.append` | `(receipt, expectedPreviousDigest?) -> Result<AppendReceipt, ReceiptConflict>` | append-only、receipt ID/digest冪等。既存ID異payload、previous digest不一致をconflict |
 | `ReceiptStore.load` | `(ruleId, contractRevision) -> Receipt[]` | rule/revision/verifiedAt/receiptIdの決定論順。DB空集合をauthoring receiptの代替にしない |
+
+reservation event空集合は`unreserved`、最初の`reserved`はsequence 1とする。許可遷移は
+`unreserved→active(reserved)`、`active→released(released)`、`active→expired(expired)`だけで、released/expiredはterminal。
+releaseとexpireの競合は`BEGIN IMMEDIATE`で先にreceiptを確定したcommandだけが成功し、後続は
+`plan-id-reservation-not-active`。同一command ID+同一payload再送は同じevent/lease result、異payloadは
+`plan-id-reservation-command-conflict`。reconstructはsequence、event/command identity、token hash、expiry条件を再検証し、
+event全削除→canonical ledger再読込後のstate/event/command payload digest集合差0を要求する。
 
 #### L7実装ownership DAG
 

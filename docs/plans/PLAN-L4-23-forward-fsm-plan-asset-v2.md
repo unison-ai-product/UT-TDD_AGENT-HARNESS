@@ -5,7 +5,7 @@ kind: add-design
 layer: L4
 sub_doc: function
 drive: fullstack
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
@@ -39,6 +39,15 @@ dependencies:
     - docs/design/harness/L1-requirements/vmodel-upgrade-requirements.md
     - docs/process/gates.md
     - docs/governance/vmodel-upgrade-schedule.md
+review_evidence:
+  - reviewer: "Codex plan-asset/FSM design reviewers"
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-10T23:03:00+09:00"
+    tests_green_at: "2026-07-10T23:00:20+09:00"
+    verdict: approve
+    worker_model: gpt-5
+    reviewer_model: gpt-5
+    scope: "PLAN Asset/FSMを独立read-only review。ledger DB、identity framing、event/projection分離、evidence policy、CLI envelope、exception/property contractを反復検査しCritical 0 / Important 0。実装・検収権限は未委譲。"
 ---
 
 # PLAN-L4-23: append-only Forward FSM + PLAN Asset v2
