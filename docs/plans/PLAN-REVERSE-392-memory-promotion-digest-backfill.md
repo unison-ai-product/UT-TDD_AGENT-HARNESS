@@ -21,8 +21,9 @@ generates:
   - artifact_path: docs/plans/PLAN-REVERSE-392-memory-promotion-digest-backfill.md
     artifact_type: markdown_doc
 dependencies:
-  parent: docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
+  parent: docs/plans/PLAN-L6-68-memory-telemetry-lifecycle-contract.md
   requires:
+    - PLAN-L6-68-memory-telemetry-lifecycle-contract
     - PLAN-L7-189-shared-harness-memory-cross-runtime
   references:
     - PLAN-L7-366-takeover-surface-warn-actionable
@@ -48,8 +49,8 @@ prose handover は廃止方向。共有メモリは存在したが書き込み�
 
 ## R2 Alignment
 
-固定4段digestはconfirmedのPLAN-L7-412 / PLAN-REVERSE-412へ委譲する。本backfillはL6 memoryの
-nudge契約とfeedback lifecycleのTTL/auto-ackだけを対象にし、forward routingはgap-onlyとする。
+固定4段digestはconfirmedのPLAN-L7-412 / PLAN-REVERSE-412へ委譲する。本backfillはPLAN-L6-68の
+L6 memory nudge契約とfeedback lifecycleのTTL/auto-ackだけを対象にし、forward routingはgap-onlyとする。
 
 ## R3 / R4 Outcome
 
