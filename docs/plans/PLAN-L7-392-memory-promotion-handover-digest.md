@@ -26,6 +26,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/feedback/lifecycle.ts
     artifact_type: source_module
+  - artifact_path: tests/feedback-lifecycle.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-189-shared-harness-memory-cross-runtime.md
   requires:
