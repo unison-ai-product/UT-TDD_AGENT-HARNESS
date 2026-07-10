@@ -240,11 +240,18 @@ export function buildCleanDistributionPlan(input: {
   const sourceTag = input.sourceTag ?? "unreleased";
   const cleanRepo = input.cleanRepo ?? DEFAULT_PACK_REPO;
   const normalized = [...new Set(input.paths.map(normalizeDistributionPath))].sort();
-  const denylistViolations = normalized.filter(isDeniedCleanPath);
   const includedSourcePaths = normalized.filter(
     (path) => isAllowedCleanPath(path) && !isDeniedCleanPath(path),
   );
   const artifactPaths = [...new Set(includedSourcePaths.map(cleanDistributionArtifactPath))].sort();
+  // D-2 fail-close (PLAN-L7-413 followup): violation は **最終出荷集合 (artifactPaths)** を
+  // deny で監視する。include filter の退行や remap の denied 空間衝突で denied path が
+  // 出荷側に達したときのみ fire する出力ガード。denied な入力 path 自体は通常の除外
+  // (excludedPaths) — 全 denied 入力を fail にすると full repo walk (.ut-tdd/ 等常在) と
+  // 意図的 carve-out (src/web/ は tracked .gitkeep を持つ) で plan が恒常 blocked になる
+  // (PR #42 の過剰 fail-close、cli-surface 実 repo 回帰で検出)。「denied 入力が出荷されない」
+  // 側の fence は tests/distribution-acceptance.test.ts の D-2 テストが固定する。
+  const denylistViolations = artifactPaths.filter(isDeniedCleanPath);
   const artifactSet = new Set(artifactPaths);
   const missingRequired = CLEAN_REQUIRED_PATHS.filter((path) => !artifactSet.has(path));
   const includedSourceSet = new Set(includedSourcePaths);

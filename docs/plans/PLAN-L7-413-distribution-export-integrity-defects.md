@@ -112,6 +112,14 @@ claude-fable-5) に実施した副産物として、現行コードの欠陥が�
   excludedPaths と別枠で報告し ok 条件へ組み込む。
 - oracle: denied path (例 `.ut-tdd/x`, `docs/plans/x.md`) を input paths に混ぜたとき
   ok=false かつ violation に列挙される regression test (現行実装では fail する = red 起点)。
+- **訂正注記 (2026-07-10 followup)**: 上記修正方針の前段 (denied 入力の存在自体を fail) は
+  **過剰 fail-close** だった — full repo walk には denied path (.ut-tdd/ 等) が常在し、
+  `src/web/` は tracked .gitkeep を持つ意図的 carve-out のため、実 repo の plan が恒常
+  blocked になる (PR #42 で実装され cli-surface 実 repo 回帰 5 件で検出、赤のままマージ
+  してしまった運用ミスも同時発生)。確定形 = **出力ガード** (`artifactPaths` を deny で監視、
+  include filter 退行・remap 衝突時のみ fire) + **構造 fence テスト** (denied 入力が
+  artifactPaths に決して現れないことを固定)。oracle も同 followup で書換え済み。D-4 の
+  blocked 誘発は denied 入力ではなく missingRequired で行う。
 
 ### D-3: 削除の非伝播 (Pack に消したはずのファイルが残留)
 
