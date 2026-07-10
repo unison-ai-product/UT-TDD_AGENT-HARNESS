@@ -33,3 +33,5 @@ dependencies:
 # PLAN-L7-418
 
 U-PA-001..007をRed freezeし、immutable aggregate/VO、canonical v1 adapter、collision migration ledger、採番予約を実装する。情報損失と曖昧short IDはfail-closeする。DoDはlegacy全件変換、collision全件判断、旧revision不変、review、Reverse-418合流である。
+
+planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,adapters}`、reservation/migration schema、dry-run CLI、実行可能Red/Green testである。実体作成と同時にfrontmatter `generates`へ昇格する。

@@ -28,8 +28,11 @@ dependencies:
   requires: []
   references:
     - docs/plans/PLAN-REVERSE-417-source-disposition-profile-backfill.md
+    - docs/governance/vmodel-item-target-ledger.md
 ---
 
 # PLAN-L7-417
 
 U-DISP/U-PROFILEをRed freeze後、catalog/profile domain、authoring loader、DB projectorをsmall moduleで実装する。manifest宣言件数との整合を検証し、109/163/21/8を恒久定数化しない。DoDはtargeted/full regression、rebuild identity差0、cross-agent review、Reverse-417合流である。
+
+planned deliverablesは`src/disposition/{domain,application,ports,adapters}`、`src/profile/{domain,application,ports,adapters}`、DB schema/projection、実行可能Red/Green test、item-target ledger validationである。実体作成と同時にfrontmatter `generates`へ昇格する。

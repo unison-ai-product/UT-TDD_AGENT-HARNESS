@@ -13,6 +13,8 @@ typed_spec_phase_owner: L4
 本書はchecked ZIPの `docs/catalog.yaml.items` をtracked authoring sourceとして正規化する。category 21件は分類軸、
 item 163件はsemantic itemであり、両者を同じ件数として数えない。`source_ref` は番号付きsource documentへ接続し、
 番号付き文書外の補助artifactは明示的なmeta mappingを持つ。
+itemごとのHARNESS target判断は [vmodel-item-target-ledger.md](./vmodel-item-target-ledger.md) を別のauthoring SSoTとする。
+source→target edgeからruntimeがitem targetを推論してはならない。
 
 ## 2. category
 

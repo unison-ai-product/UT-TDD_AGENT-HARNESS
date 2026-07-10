@@ -28,10 +28,13 @@ dependencies:
   requires: []
   references:
     - docs/plans/PLAN-L7-417-source-disposition-profile-projection.md
+    - docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md
+    - docs/plans/PLAN-L7-419-forward-fsm-transition-workflow-cli.md
     - docs/plans/PLAN-L7-420-vmodel-contract-compiler-registry.md
+    - docs/plans/PLAN-L7-422-repository-document-disposition-closure-gate.md
     - docs/plans/PLAN-REVERSE-423-engine-swap-domain-backfill.md
 ---
 
 # PLAN-L7-423
 
-U-DOMAINをRed freezeし、kernel/domain/application/ports/adaptersへ段階移行する。互換re-export、public API owner、migration waveを守り、cycle 0、function 80行/CC12/nesting3をhard gateにする。DoDは全consumer移行、review、Reverse-423合流である。
+U-DOMAINをRed freezeし、共通kernelとmodule-boundary/cycle/CQS移行を所有する。417/418/419/420/422が所有するdomain機能を再実装しない。互換re-export、public API owner、migration waveを守り、cycle 0、function 80行/CC12/nesting3をhard gateにする。DoDは全consumer移行、review、Reverse-423合流である。

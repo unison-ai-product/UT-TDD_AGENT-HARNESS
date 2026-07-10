@@ -925,6 +925,65 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 | `SelfProofRequest` | `contractRevision`, `sourceHash`, `compiledHash`, `rules[]`, `fixtures[]`, `mutations[]`, `surfaces[]` | rule/fixture/mutation/surface identityを重複なく1回ずつ定義 |
 | `SelfProofDeps` | `processRunner`, `sourceHasher`, `receiptStore`, `clock` | detector verdict関数をdependencyとして受け取らない |
 
+#### catalog / profile / migration DTO詳細
+
+| 型 | 必須field | ordering / finding |
+|---|---|---|
+| `CatalogInput` | `manifestRevision`, `declaredCounts`, `sources[]`, `items[]`, `categories[]`, `sourceItemEdges[]`, `itemTargetEdges[]`, `profiles[]`, `overrides[]` | authored順を保持せずstable ID昇順でcanonical digestを作る。件数不一致=`catalog-count-mismatch` |
+| `CatalogSource` | `sourceId`, `ordinal`, `title`, `disposition`, `sourceHash` | ordinal/ID重複=`catalog-source-duplicate`、判断欠落=`catalog-disposition-incomplete` |
+| `CatalogItem` | `itemId`, `categoryId`, `title`, `sourceRevision` | category/source edge欠落=`catalog-orphan-edge` |
+| `ItemTargetEdge` | `edgeId`, `itemId`, `targetStatus`, `reason`, `sourceDigest`, `targetKind?`, `targetRef?`, `planId?` | runtimeでsource→targetを継承・推論しない。pendingはtarget禁止、adopt/merge/reference/deferのtarget欠落=`catalog-item-target-incomplete` |
+| `ProfileSelection` | `sizeProfileId`, `productProfileIds[]`, `explicitOverrides[]`, `capabilityFlags[]` | product IDはstable昇順、同priority異値=`profile-overlay-conflict` |
+| `ResolvedProfile` | `selectionDigest`, `decisions[]`, `findings[]` | size→product→explicitの適用順をreceiptへ保持し、未定義をdefault生成しない |
+| `LegacyPlanDto` | `legacyPlanId`, `frontmatter`, `bodyDigest`, `sourceCommit` | field loss=`plan-migration-loss`、numeric core衝突=`plan-migration-collision` |
+| `LegacyPlanMigrationDecision` | `migrationId`, `legacyPlanId`, `assetId?`, `decision`, `collisionGroup?`, `lossFields[]`, `reason`, `reviewPlanId?` | ambiguous/lossは自動asset選択禁止 |
+
+#### Forward FSM完全遷移表
+
+正常系の各行は隣接遷移だけを許す。`expectedFrom`不一致、sequence欠番、同一`commandId`で異なるpayloadはそれぞれ
+`forward-expected-state-mismatch`、`forward-sequence-invalid`、`forward-command-conflict`とする。
+
+| command | from | to | 必須guard/evidence | finding / 備考 |
+|---|---|---|---|---|
+| `plan` | proposed | planned | 承認済みscope / PLAN identity | `forward-plan-evidence-missing` |
+| `prepare_pair_freeze` | planned | pair_freeze_ready | 左右artifact宣言済み | `forward-pair-artifact-missing` |
+| `freeze_pair` | pair_freeze_ready | pair_frozen | pair reciprocity合格 | `forward-pair-freeze-missing` |
+| `freeze_red` | pair_frozen | red_frozen | 実行時に期待finding/exitで失敗したRed evidence | `forward-red-evidence-missing`。todo/skip不可 |
+| `start_implementation` | red_frozen | implementing | Red revision一致 | `forward-red-revision-mismatch` |
+| `complete_implementation` | implementing | implementation_complete | 実装digest / targeted Green | `forward-implementation-evidence-missing` |
+| `prepare_trace_freeze` | implementation_complete | trace_freeze_ready | generates/requirement/test edgeをmaterialize済み | `forward-trace-evidence-missing` |
+| `freeze_trace` | trace_freeze_ready | trace_frozen | orphan/stale edge 0件 | `forward-trace-freeze-missing` |
+| `prepare_review` | trace_frozen | review_ready | tests_green_atとreview scope | `forward-review-evidence-missing` |
+| `approve_review` | review_ready | reviewed | 独立reviewer / approve verdict | `forward-review-not-approved` |
+| `accept` | reviewed | accepted | 必須test/gate/PO acceptance evidence | `forward-accept-evidence-missing` |
+| `archive` | accepted | archived | replacement/retention reason | `forward-archive-context-missing`。archivedはterminal |
+| `block` | proposed〜reviewedの正常状態 | blocked | `resumeState=from`、actor/reason/revision/commit/evidence | `forward-exception-context-missing` |
+| `reject` | planned〜review_readyの正常状態またはblocked | rejected | `resumeState=from`、reviewer/actor/reason/revision/evidence | accepted/archiveからreject不可 |
+| `supersede` | proposed〜reviewedの正常状態またはblocked/rejected | superseded | replacement asset/revision、reason、evidence | supersededはterminal |
+| `reopen` | blockedまたはrejected | reopened | `resumeState`、reason、new evidence、同一subject revision | `forward-resume-state-invalid` |
+| `resume` | reopened | reopen eventの`resumeState` | resume先guardを再評価 | 過去guardを流用せず、accepted/archived/supersededへresume不可 |
+
+#### reservation / self-proof port契約
+
+| port / method | signature | 契約 |
+|---|---|---|
+| `PlanIdReservation.reserve` | `(request: { namespace; ordinal; assetId; leaseMs; commandId }, tx) -> Result<ReservationLease, ReservationError>` | transaction内compare-and-insert。同一commandId+同一payloadは同じleaseを返し、異payloadはconflict |
+| `PlanIdReservation.release` | `(reservationId, leaseToken, commandId, tx) -> Result<ReleaseEvent, ReservationError>` | token hashをconstant-time照合し、二重releaseは同一結果。期限切れ/他tokenを拒否 |
+| `PlanIdReservation.reconstruct` | `(events, now) -> Result<ReservationState, ReservationError>` | sequence/lease重複0、wall clockをeventへ混入しない |
+| `ProcessRunner.run` | `(request: { executable; args[]; cwd; envAllowlist; stdinDigest?; timeoutMs; maxStdoutBytes; maxStderrBytes }) -> Promise<ProcessObservation>` | shell文字列連結禁止。timeout/signal/exceptionを`exitKind=exited|timeout|signal|spawn_error`へ正規化し、出力超過はtruncate finding |
+| `SourceHasher.hash` | `(frames: Array<{ label; bytes }>, algorithm='sha256') -> Digest` | `labelLength+label+byteLength+bytes`でframe化し、文字列連結collisionを禁止。改行/encodingを勝手に正規化しない |
+| `ReceiptStore.append` | `(receipt, expectedPreviousDigest?) -> Result<AppendReceipt, ReceiptConflict>` | append-only、receipt ID/digest冪等。既存ID異payload、previous digest不一致をconflict |
+| `ReceiptStore.load` | `(ruleId, contractRevision) -> Receipt[]` | rule/revision/verifiedAt/receiptIdの決定論順。DB空集合をauthoring receiptの代替にしない |
+
+#### L7実装ownership DAG
+
+`PLAN-L7-423`は各bounded contextの機能実装を重複所有しない。共通`kernel`とmodule-boundary/cycle/CQS移行だけを所有し、
+417=disposition/profile、418=PLAN Asset/reservation/migration、419=Forward FSM/CLI、420=contract compilerを所有し、
+421=right-arm/right-lung、422=document dispositionを各source ownerとする。順序は
+`418 -> 419`、`417 + 419 + 420 + 422 -> 423`、`422 + 423 -> 424`、
+`420 + 421 + 424 -> 425`とする。419は418のidentity/evidence port確定後に開始する。adapter間の共有は
+kernel DTO/portだけで行い、別contextのdomainを直接importしない。
+
 共通返却は`Result<T, E>`または`ContractResult { ok, findings[] }`とし、findingは`ruleId`、`subjectId`、
 `message`、`severity`、`evidenceRefs[]`を持つ。authoring/validation commandは違反時exit 1、CLI usageはexit 2、
 正常はexit 0とする。空/nullで失敗を表現しない。

@@ -34,3 +34,5 @@ dependencies:
 # PLAN-L7-419
 
 U-FSM-001..007/P-FSM-001をRed freezeし、append-only event/reducer/policyと`workflow status|transition|explain`を実装する。state直書き、Red/trace/review evidence回避を禁止する。DoDは全surface同一verdict、rebuild決定性、review、Reverse-419合流である。
+
+419は418のidentity/evidence/reservation port確定後に開始する。draft中はschedule predecessorで順序を強制し、418 confirmed後に`requires`へ昇格する。planned deliverablesは`src/forward/{domain,application,ports,adapters}`、event/evidence projection、CLI registrar、実行可能Red/property testである。

@@ -42,3 +42,5 @@ dependencies:
 - domainはkernel以外を逆importせず、I/Oはportへ隔離し、domain間はbranded ID/DTOで参照する。
 - aggregate commandはevent/resultを返し、queryはmutationしない。二段階初期化、public mutable field、汎用Manager、barrel相互importを禁止する。
 - 新規function 80 nonblank lines、CC12、nesting 3、cycle 0をhard gateとし、既存超過はdebt PLANへ送る。
+- `PlanIdReservation.reserve/release/reconstruct`はtransaction、lease、idempotent command、token hash照合、競合errorを公開契約に持つ。
+- 423はshared kernelとmodule-boundary移行だけを所有し、417/418/419/420/422のbounded context実装を二重所有しない。

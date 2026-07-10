@@ -30,6 +30,8 @@ dependencies:
   requires: []
   blocks:
     - docs/plans/PLAN-L7-417-source-disposition-profile-projection.md
+  references:
+    - docs/governance/vmodel-item-target-ledger.md
 ---
 
 # PLAN-L6-70: source catalog / profile overlay resolver契約
@@ -37,4 +39,5 @@ dependencies:
 - `DocumentDispositionCatalog.create(input): Result<Catalog, CatalogViolation[]>`はmanifest宣言件数と実record件数、edge/disposition不変条件を完全生成時に検証する。109/163/21/8はchecked ZIP revisionのacceptance fixtureであり、aggregateへ恒久定数化しない。
 - `traceSource(sourceId)`と`unresolved()`はqueryのみで状態を変更しない。
 - `resolveProfile(catalog, selection)`はsize baseline→product overlay→explicit overrideの順で決定論的に解決し、unknownと同優先度競合をfail-closeする。
+- `CatalogInput`はitem→target authored ledgerを必須入力とし、pendingは未完として返す。source→targetからの暗黙継承を禁止する。
 - `U-DISP-001..005`、`I-DISP-001`、`U-PROFILE-001..005`をL7 test-designへ固定する。

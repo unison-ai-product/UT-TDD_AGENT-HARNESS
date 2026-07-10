@@ -36,6 +36,7 @@ dependencies:
   references:
     - docs/governance/vmodel-source-manifest.md
     - docs/governance/vmodel-semantic-item-catalog.md
+    - docs/governance/vmodel-item-target-ledger.md
     - docs/governance/vmodel-document-scale-profiles.md
 ---
 
@@ -43,7 +44,7 @@ dependencies:
 
 ## 設計範囲
 
-- authored Markdown の source 109、item 163、category 21、profile 8を安定IDで保持し、DBは再構築可能なprojectionに限定する。
+- authored Markdown の source 109、item 163、category 21、profile 8を安定IDで保持し、DBは再構築可能なprojectionに限定する。item→targetは`vmodel-item-target-ledger.md`の163件materialized recordだけを読み、source edgeから推論しない。
 - `vmodel_sources`、`vmodel_semantic_items`、`vmodel_source_item_edges`、`vmodel_item_target_edges`、`vmodel_profiles`、`vmodel_profile_overrides`を定義する。
 - disposition理由、target/PLAN、profile default+override、provenance hashをnullableにせず、unknown IDと同優先度競合をfail-closeする。
 - `SpecDef`/`SpecRelation`とのjoin keyを固定し、既存projectionを第二の正本にしない。

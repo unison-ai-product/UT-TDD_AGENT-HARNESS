@@ -44,6 +44,7 @@ dependencies:
 - itemごとにapplicability、HARNESS意味、design/runtime/test/evidence参照、revision/digest、review verdict、severity、debt PLAN、owner、next transitionを保持する。
 - `pending_review|verified|partial|gap|profile_conditional|not_applicable`をauthoring語彙とし、DB/detectorは判定を創作しない。
 - assessment revisionとreview eventをappend-onlyにし、verified後のsource変更をstaleとして再監査へ戻す。
+- `semantic_assessments`、3面別`semantic_assessment_evidence`、append-only`semantic_assessment_reviews`、`semantic_assessment_debt_routes`を分割し、verdict行だけで証拠・承認・routeを代用しない。
 
 ## 受入条件
 

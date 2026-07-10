@@ -45,6 +45,7 @@ dependencies:
     - docs/plans/PLAN-L4-20-document-catalog-scale-profile-ssot.md
   blocks: []
   references:
+    - docs/governance/vmodel-item-target-ledger.md
     - docs/design/harness/L1-requirements/vmodel-upgrade-requirements.md
     - docs/governance/vmodel-upgrade-schedule.md
 ---
