@@ -153,6 +153,8 @@ claude-fable-5) に実施した副産物として、現行コードの欠陥が�
 
 ## DoD
 
-- [ ] D-1〜D-4 それぞれに red→green の regression test が付き、修正が landed。
-- [ ] 修正は現行配布アーキの範囲内 (読み取り元切替を含まない) であることを TL が確認。
-- [ ] review_evidence に green_commands (targeted vitest + typecheck + lint) を記録。
+- [x] D-1〜D-4 それぞれに red→green の regression test が付き、修正が landed (PR #42 +
+      D-2 意味論訂正 followup PR #43。D-2 の確定 oracle は「denied 入力が出荷されない」構造 fence)。
+- [x] 修正は現行配布アーキの範囲内 (読み取り元切替を含まない) であることを TL が確認
+      (Claude cross-review、PR #42/#43)。
+- [x] review_evidence に green_commands (targeted vitest + typecheck + lint) を記録。
