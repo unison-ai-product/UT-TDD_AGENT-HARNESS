@@ -4,7 +4,7 @@ title: "PLAN-L7-414 (troubleshoot): agent-guard の Claude 5 世代 (fable) fami
 kind: troubleshoot
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-10
@@ -32,6 +32,61 @@ dependencies:
     - docs/plans/PLAN-L7-256-model-id-ssot-drift-gate.md
     - docs/plans/PLAN-DISCOVERY-10-gpt56-tier-routing-bench.md
     - .ut-tdd/memory/project-fable-5-7-13-rate-limit.md
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-10T17:02:00+09:00"
+    tests_green_at: "2026-07-10T17:01:20+09:00"
+    verdict: approve
+    scope: "PLAN-L7-414: MODEL_IDS.claude を基準にした fable family 正規化、fable の最上位 rank、品質／gate 役だけへの apex-tier 許可、worker role の fail-close 拒否、および MODEL_IDS drift regression。"
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bunx vitest run tests/agent-guard.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T17:01:14+09:00"
+        evidence_path: tests/agent-guard.test.ts
+        output_digest: "sha256:652948248ea625b573babe652d6333567b69c7389ff3722a544a062cbf14a7c8"
+        anchor_commit: 044717096d5c54f41f0895b98c2a26786322410f
+      - kind: unit_test
+        command: "bunx vitest run tests/model-id-ssot-drift.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T17:01:16+09:00"
+        evidence_path: tests/model-id-ssot-drift.test.ts
+        output_digest: "sha256:486cf49f8c2246c8119fcab8671bb421bb567c7d81e91d3ce6965d1adcf46535"
+        anchor_commit: 044717096d5c54f41f0895b98c2a26786322410f
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-10T17:01:20+09:00"
+        evidence_path: src/runtime/agent-guard.ts
+        output_digest: "sha256:5a3973f79ed9becd5f23c4feff467513814de7ea381d75a4d2e339aa8b8edca9"
+        anchor_commit: 044717096d5c54f41f0895b98c2a26786322410f
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-10T17:01:20+09:00"
+        evidence_path: src/runtime/agent-guard.ts
+        output_digest: "sha256:52a421f44026606f8f4a42433c30e3851aefa52042aef84279a87e0feaaa63b3"
+        anchor_commit: 044717096d5c54f41f0895b98c2a26786322410f
+      - kind: vmodel_lint
+        command: "bun run src/cli.ts plan lint"
+        runner: bun
+        scope: gate
+        exit_code: 0
+        completed_at: "2026-07-10T16:59:38+09:00"
+        evidence_path: docs/plans/PLAN-L7-414-agent-guard-claude5-family-rank.md
+        output_digest: "sha256:e8ae22a1af85d0a6a5b63af69731a22edbab13b59d68c8066ff3e8cfb954c452"
+        anchor_commit: 044717096d5c54f41f0895b98c2a26786322410f
 ---
 
 # PLAN-L7-414 (troubleshoot): agent-guard の Claude 5 世代 family 未正規化
@@ -74,6 +129,6 @@ PLAN-DISCOVERY-10 の Claude 側ブラインド測定で、Agent tool へ `model
 
 ## DoD
 
-- [ ] `model=fable` が quality-check 系 subagent で通り、worker 系で policy BLOCK される。
-- [ ] family 正規化が MODEL_IDS SSoT と drift しないこと (PLAN-L7-256 の drift test へ追補)。
-- [ ] review_evidence に green_commands (targeted vitest + typecheck + lint) を記録。
+- [x] `model=fable` が quality-check 系 subagent で通り、worker 系で policy BLOCK される。
+- [x] family 正規化が MODEL_IDS SSoT と drift しないこと (PLAN-L7-256 の drift test へ追補)。
+- [x] review_evidence に green_commands (targeted vitest + typecheck + lint) を記録。

@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { normalizeModelFamily } from "../src/runtime/agent-guard";
 import { SUBAGENT_ALLOWLIST } from "../src/runtime/agent-guard-policy";
 import { BUILTIN_GITHUB_TEMPLATES } from "../src/setup/templates";
 import { MODEL_IDS } from "../src/team/model-policy";
@@ -82,5 +83,11 @@ describe("U-MODELID-SSOT: model ID single source of truth", () => {
     const missingInDoc = [...SUBAGENT_ALLOWLIST].filter((name) => !documented.has(name)).sort();
     const extraInDoc = [...documented].filter((name) => !SUBAGENT_ALLOWLIST.has(name)).sort();
     expect({ missingInDoc, extraInDoc }).toEqual({ missingInDoc: [], extraInDoc: [] });
+  });
+
+  it("(e) MODEL_IDS.claude values normalize to their catalog family", () => {
+    for (const [family, modelId] of Object.entries(MODEL_IDS.claude)) {
+      expect(normalizeModelFamily(modelId), modelId).toBe(family);
+    }
   });
 });
