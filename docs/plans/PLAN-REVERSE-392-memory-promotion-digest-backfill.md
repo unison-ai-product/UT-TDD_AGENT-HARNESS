@@ -42,8 +42,8 @@ review_evidence:
   - reviewer: codex-subagent-lifecycle-final-gate
     review_kind: intra_runtime_subagent
     reviewer_model: gpt-5
-    reviewed_at: "2026-07-10T14:43:18+09:00"
-    tests_green_at: "2026-07-10T14:40:26+09:00"
+    reviewed_at: "2026-07-10T14:48:10+09:00"
+    tests_green_at: "2026-07-10T14:47:21+09:00"
     verdict: approve
     scope: "PLAN-REVERSE-392 R4 merge review。L5 physical-data、L6 contracts、L7実装、L7/L8 oracleへのbackfillと旧digest責務非重複を確認し、新規P0/P1なし。"
     green_commands:
@@ -56,6 +56,15 @@ review_evidence:
         evidence_path: docs/design/harness/L6-function-design/memory.md
         output_digest: "sha256:4e6506b7f3387b7d7c0a12dd2ca169935f117d83503e8f02009097d4674eca39"
         anchor_commit: 4e871bc3bf3dc532e44c674b65f1b39c357138f0
+      - kind: unit_test
+        command: "bunx vitest run tests/feedback-lifecycle.test.ts tests/coding-rules.test.ts tests/plan-completion-drift.test.ts tests/review-evidence.test.ts tests/backfill-pairing.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:47:21+09:00"
+        evidence_path: tests/feedback-lifecycle.test.ts
+        output_digest: "sha256:b8d956203873d0efee1d8a26584c1c62debdc4b790535de97db8d94a96c61f69"
+        anchor_commit: 45da3df21e7b7cf69c44b2569dc5ca31685eee26
 ---
 
 # PLAN-REVERSE-392: memory 昇格 nudge / telemetry lifecycle の design backfill

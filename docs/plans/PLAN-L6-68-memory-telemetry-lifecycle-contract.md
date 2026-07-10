@@ -45,8 +45,8 @@ review_evidence:
   - reviewer: codex-subagent-lifecycle-final-gate
     review_kind: intra_runtime_subagent
     reviewer_model: gpt-5
-    reviewed_at: "2026-07-10T14:43:18+09:00"
-    tests_green_at: "2026-07-10T14:40:26+09:00"
+    reviewed_at: "2026-07-10T14:48:10+09:00"
+    tests_green_at: "2026-07-10T14:47:21+09:00"
     verdict: approve
     scope: "PLAN-L6-68最終contract review。memory nudge、Codex/Claude PostToolUse、TTL、source解消、recurrence generation、fail-open境界をL7 oracleと照合し、新規P0/P1なし。"
     green_commands:
@@ -65,9 +65,18 @@ review_evidence:
         scope: targeted
         exit_code: 0
         completed_at: "2026-07-10T14:40:26+09:00"
-        evidence_path: tests/feedback-lifecycle.test.ts
-        output_digest: "sha256:937af52dc81adc5a65d49f0b64c7ec5e82efa83df2600a71c36ad3134d729674"
+        evidence_path: tests/session-log.test.ts
+        output_digest: "sha256:c7d9e0c7d3ab16958412ed2d5507dcb67972dee97568e72c3ac9470391e2d359"
         anchor_commit: 58fb20bfe4ccbeacba139e86f60fe4e3aab3dfa5
+      - kind: unit_test
+        command: "bunx vitest run tests/feedback-lifecycle.test.ts tests/coding-rules.test.ts tests/plan-completion-drift.test.ts tests/review-evidence.test.ts tests/backfill-pairing.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T14:47:21+09:00"
+        evidence_path: tests/feedback-lifecycle.test.ts
+        output_digest: "sha256:b8d956203873d0efee1d8a26584c1c62debdc4b790535de97db8d94a96c61f69"
+        anchor_commit: 45da3df21e7b7cf69c44b2569dc5ca31685eee26
 ---
 
 # PLAN-L6-68: memory 昇格 nudge と telemetry lifecycle 契約
