@@ -617,12 +617,14 @@ materializeされないselector自体を正本にしない。Markdown ledgerは�
 
 | table | 必須columnと型 | key / FK / nullability | index / ordering |
 |---|---|---|---|
-| `vmodel_sources` | `source_id TEXT`, `ordinal INTEGER`, `title TEXT`, `disposition TEXT`, `source_hash TEXT` | PK=`source_id`、`ordinal` UNIQUE、全列NOT NULL | `ordinal`順 |
-| `vmodel_semantic_items` | `item_id TEXT`, `category_id TEXT`, `title TEXT`, `source_revision TEXT` | PK=`item_id`、category FK、全列NOT NULL | category+item index |
-| `vmodel_source_item_edges` | `edge_id TEXT`, `source_id TEXT`, `item_id TEXT`, `reason TEXT` | PK=`edge_id`、source/item FK、reason NOT NULL | source/item双方index |
+| `vmodel_sources` | `source_id TEXT`, `ordinal INTEGER`, `source_title TEXT`, `disposition TEXT`, `target_ref TEXT`, `reason TEXT`, `row_digest TEXT`, `manifest_digest TEXT` | PK=`source_id`、`ordinal` UNIQUE、全列NOT NULL。ordinalは`ZIP-DOC-NNN`のNNNだけから導出 | `ordinal`順 |
+| `vmodel_categories` | `category_id TEXT`, `category_name TEXT`, `row_digest TEXT` | PK=`category_id`、全列NOT NULL | category index |
+| `vmodel_semantic_items` | `item_id TEXT`, `item_name TEXT`, `category_id TEXT`, `source_status TEXT`, `source_ref TEXT`, `source_file TEXT`, `row_digest TEXT` | PK=`item_id`、category/source FK、全列NOT NULL | category/source/item index |
+| `vmodel_source_item_edges` | `edge_id TEXT`, `source_id TEXT`, `item_id TEXT`, `source_status TEXT`, `source_file TEXT`, `row_digest TEXT` | PK=`edge_id`、source/item FK、全列NOT NULL | source/item双方index |
+| `vmodel_source_target_edges` | `edge_id TEXT`, `source_id TEXT`, `disposition TEXT`, `target_type TEXT`, `target_ref TEXT`, `row_digest TEXT` | PK=`edge_id`、source FK、全列NOT NULL | source/target index |
 | `vmodel_item_target_edges` | `edge_id TEXT`, `item_id TEXT`, `target_status TEXT`, `target_kind TEXT?`, `target_ref TEXT?`, `plan_id TEXT?`, `reason TEXT`, `source_digest TEXT` | PK=`edge_id`、item FK、全判断でreason/source digest必須。pendingはtarget NULL、adopt/merge/reference/deferはtyped target必須 | item/status/target index |
-| `vmodel_profiles` | `profile_id TEXT`, `axis TEXT`, `priority INTEGER`, `definition_hash TEXT` | PK=`profile_id`、axis enum、全列NOT NULL | axis+priority index |
-| `vmodel_profile_overrides` | `override_id TEXT`, `profile_id TEXT`, `item_id TEXT`, `decision TEXT`, `target_kind TEXT?`, `target_ref TEXT?`, `reason TEXT`, `priority INTEGER`, `source_digest TEXT` | PK=`override_id`、profile/item FK、同一priority異値をUNIQUE/CHECKで拒否 | profile+priority+item index |
+| `document_scale_profiles` | `profile_id TEXT`, `profile_axis TEXT`, `profile_rank INTEGER`, `description TEXT`, `default_status TEXT`, `default_detail TEXT`, `scope_policy TEXT`, `row_digest TEXT` | PK=`profile_id`、axis=`size|product`、全列NOT NULL | axis+rank index |
+| `document_scale_profile_entries` | `document_scale_profile_entry_id TEXT`, `profile_id TEXT`, `doc_type_id TEXT`, `decision TEXT`, `detail_override TEXT`, `status_override TEXT`, `reason TEXT`, `required_plan_id TEXT?`, `row_digest TEXT` | PK=`document_scale_profile_entry_id`、profile/doc type FK、同一profile/slot UNIQUE | profile+doc type index |
 | `plan_assets` | `asset_id TEXT`, `canonical_alias TEXT`, `created_revision INTEGER` | PK=`asset_id`、alias UNIQUE、全列NOT NULL | alias index |
 | `plan_aliases` | `alias_id TEXT`, `asset_id TEXT`, `alias TEXT`, `valid_from_revision INTEGER`, `valid_to_revision INTEGER?`, `reason TEXT` | PK=`alias_id`、asset FK、active alias UNIQUE、終了revisionのみnullable | asset+revision / alias index |
 | `plan_revisions` | `asset_id TEXT`, `revision INTEGER`, `content_digest TEXT`, `source_commit TEXT`, `actor TEXT`, `reason TEXT`, `created_at TEXT` | PK=`(asset_id,revision)`、asset FK、全列NOT NULL | revision単調増加 |
@@ -653,6 +655,26 @@ materializeされないselector自体を正本にしない。Markdown ledgerは�
 設計・runtime・testの三面で意味適合するかを判定するreview projectionである。後者からtarget判断を生成・補完せず、前者の
 `edge_id` / `source_digest`をassessment evidenceから参照する。rebuild時はledger→target edge→assessmentの一方向で投影し、
 同一itemのdigest不一致を`semantic-target-source-drift`としてfail-closeする。
+
+`document_scale_profiles` / `document_scale_profile_entries` / `document_scale_profile_reviews`は同じ`doc_type_id`
+bounded contextのmaster / authored decision / derived reviewである。semantic `item_id`へ置換・暗黙mapせず、別名の第二projectionも
+作らない。authoring sourceは`vmodel-document-scale-profiles.md`だけとし、master/entry全fieldのround-trip digestと
+entry→master/doc catalog FKを検証する。
+source dispositionの値域は`adopt|merge|reference|defer|not_applicable|reject`、reasonは全状態必須とする。
+item targetは`pending_review|adopt|merge|reference|defer|not_applicable|reject`、target kindは
+`artifact_path|artifact_family|plan_alias|target_slot`。`pending_review`はtarget禁止、
+`adopt|merge|reference|defer`はtyped target必須、`defer`は実在PLAN必須、その他のplanは任意とする。
+
+現行schema registryがFK、NOT NULL、UNIQUE、CHECK、複合PKを表現できない場合、PLAN-L7-417はregistry modelを先に拡張する。
+application validationだけでL5制約を代替してはならず、DDL制約とdomain validationの両面をRed/Greenにする。
+
+projection上の導出は次に限定する。source-item `edge_id`はlength-prefixed frame
+`[source_ref,item_id]`のSHA-256、各`row_digest`はauthoring rowの全column名+値、`manifest_digest`はprovenance表全体から作る。
+source-targetのreasonやcategory ordinalのようにauthoringにない意味fieldは生成しない。source disposition rowとsource-target rowは
+`source_id/disposition`をexact比較し、targetはtyped resolver後のcanonical identityで比較する。`plan_alias`はPLAN Asset alias、
+`artifact_path`はrepo-relative normalized path、`artifact_family`はtracked member集合、`target_slot`はdocument catalog IDへ解決する。
+display aliasとcanonical refの文字列不一致だけで拒否せず、未解決/多義だけを`catalog-target-unresolved`で拒否する。source target typeは
+`plan_alias|artifact_family|artifact_path|target_slot`であり、item target kind enumとは別型にする。
 
 event/revision/receiptはappend-onlyとし、UPDATE/DELETEで履歴を上書きしない。schema追加は`SCHEMA_VERSION`をbumpし、
 旧DBをin-place真実化せず、authoring sourceからtransactional rebuildする。migration前後でPK集合、FK orphan、

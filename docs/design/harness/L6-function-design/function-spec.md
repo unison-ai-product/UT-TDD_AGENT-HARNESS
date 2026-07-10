@@ -929,14 +929,38 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 
 | 型 | 必須field | ordering / finding |
 |---|---|---|
-| `CatalogInput` | `manifestRevision`, `declaredCounts`, `sources[]`, `items[]`, `categories[]`, `sourceItemEdges[]`, `itemTargetEdges[]`, `profiles[]`, `overrides[]` | authored順を保持せずstable ID昇順でcanonical digestを作る。件数不一致=`catalog-count-mismatch` |
-| `CatalogSource` | `sourceId`, `ordinal`, `title`, `disposition`, `sourceHash` | ordinal/ID重複=`catalog-source-duplicate`、判断欠落=`catalog-disposition-incomplete` |
-| `CatalogItem` | `itemId`, `categoryId`, `title`, `sourceRevision` | category/source edge欠落=`catalog-orphan-edge` |
-| `ItemTargetEdge` | `edgeId`, `itemId`, `targetStatus`, `reason`, `sourceDigest`, `targetKind?`, `targetRef?`, `planId?` | runtimeでsource→targetを継承・推論しない。pendingはtarget禁止、adopt/merge/reference/deferのtarget欠落=`catalog-item-target-incomplete` |
-| `ProfileSelection` | `sizeProfileId`, `productProfileIds[]`, `explicitOverrides[]`, `capabilityFlags[]` | product IDはstable昇順、同priority異値=`profile-overlay-conflict` |
-| `ResolvedProfile` | `selectionDigest`, `decisions[]`, `findings[]` | size→product→explicitの適用順をreceiptへ保持し、未定義をdefault生成しない |
+| `CatalogInput` | `manifestIdentity { auditedOn, zipSha256 }`, `declaredCounts`, `sources[]`, `items[]`, `categories[]`, `sourceItemEdges[]`, `sourceTargetEdges[]`, `itemTargetEdges[]` | manifest provenance表の`audited_on`+`sha256`をそのまま使用しrevisionを創作しない。stable ID昇順でcanonical digestを作る。件数不一致=`catalog-count-mismatch` |
+| `CatalogSource` | `sourceId`, `ordinal`, `sourceTitle`, `disposition`, `targetRef`, `reason`, `rowDigest`, `manifestDigest` | ordinalはsource IDからだけ導出。ID/ordinal重複=`catalog-source-duplicate`、判断/reason欠落=`catalog-disposition-incomplete` |
+| `CatalogCategory` | `categoryId`, `categoryName`, `rowDigest` | authoringにないordinal/revisionを生成しない。ID重複=`catalog-category-duplicate` |
+| `CatalogItem` | `itemId`, `itemName`, `categoryId`, `sourceStatus`, `sourceRef`, `sourceFile`, `rowDigest` | category/source edge欠落=`catalog-orphan-edge` |
+| `SourceItemEdge` | `edgeId`, `sourceId`, `itemId`, `sourceStatus`, `sourceFile`, `rowDigest` | edgeIdは`sourceRef,itemId`のframed digestだけから導出し、reasonを創作しない |
+| `SourceTargetEdge` | `edgeId`, `sourceId`, `targetType`, `targetRef`, `disposition`, `rowDigest` | targetType=`plan_alias|artifact_family|artifact_path|target_slot`。source targetはitem targetのdefaultではない |
+| `ItemTargetEdge` | `edgeId`, `itemId`, `targetStatus`, `reason`, `sourceDigest`, `targetKind?`, `targetRef?`, `planId?` | targetKind=`artifact_path|artifact_family|plan_alias|target_slot`。runtimeでsource→targetを継承・推論しない。pendingはtarget禁止、adopt/merge/reference/deferのtarget欠落=`catalog-item-target-incomplete` |
+| `DocumentProfileDecision` | `decisionId`, `profileId`, `docTypeId`, `decision`, `detailOverride`, `statusOverride`, `reason`, `rowDigest`, `requiredPlanId?` | semantic itemへmapしない。conditional/skip/deferはreason必須、deferはPLAN必須 |
+| `DocumentProfile` | `profileId`, `profileAxis`, `profileRank`, `description`, `defaultStatus`, `defaultDetail`, `scopePolicy`, `rowDigest` | profile master全fieldをround-tripし、decision rowをmaster代用にしない |
+| `DocumentProfileCatalogInput` | `sourcePath`, `sourceDigest`, `profiles: DocumentProfile[]`, `decisions: DocumentProfileDecision[]` | strict loaderの単一出力。profile/decision IDとFKをcreate前に検証 |
+| `DocumentProfileCatalog.create` | `(input: DocumentProfileCatalogInput) -> Result<DocumentProfileCatalog, CatalogViolation[]>` | master全field/entryをlossless保持。unknown enum/FK/duplicateをfail-closeしresolverへvalid aggregateだけ渡す |
+| `ProfileSelection` | `sizeProfileId`, `productProfileIds[]`, `explicitDecisions[]`, `capabilityFlags[]` | product IDはstable昇順、同precedence同slot異値=`profile-overlay-conflict`、同値duplicateもidentity重複で拒否 |
+| `ResolvedDocumentDecision` | `docTypeId`, `decision`, `detail`, `status`, `reason`, `winningDecisionId`, `appliedDecisionIds[]`, `requiredPlanId?` | core/security detailを弱化しない。required slot欠落=`profile-decision-missing` |
+| `ResolvedProfile` | `selectionDigest`, `decisions: ResolvedDocumentDecision[]`, `applicationReceipt[]`, `findings[]` | size→stable product→explicitの適用順をreceiptへ保持し、未定義をdefault生成しない |
 | `LegacyPlanDto` | `legacyPlanId`, `frontmatter`, `bodyDigest`, `sourceCommit` | field loss=`plan-migration-loss`、numeric core衝突=`plan-migration-collision` |
 | `LegacyPlanMigrationDecision` | `migrationId`, `legacyPlanId`, `assetId?`, `decision`, `collisionGroup?`, `lossFields[]`, `reason`, `reviewPlanId?` | ambiguous/lossは自動asset選択禁止 |
+
+authoring loaderはsource manifest、source disposition、semantic item catalog、source-target edge、item-target ledger、
+document profileの6正本を、見出し名・column集合・row幅・inline code delimiter・UTF-8・revision/provenance digestまで厳密に読む。
+未知/重複column、欠落row、row幅不一致、silent skipはそれぞれ`catalog-authoring-schema-invalid`、
+`catalog-authoring-row-invalid`、`catalog-authoring-count-invalid`としてfail-closeする。複数findingは
+`ruleId, subjectId, evidenceRefs`のbytewise stable順にし、canonical digestはlength-prefixed frameで計算する。
+
+catalog createはauthoring構造がvalidなら`pending_review`を保持したまま成功できる。pendingは完了判断ではなく、
+`unresolved()`が純粋queryとしてstable ID順に全件返す。accept/closeだけがpending 0を要求し、DB空集合やsource-targetから
+targetを補完しない。`traceSource()` / `unresolved()`はaggregate digestを変更しない。
+
+finding identityは少なくとも`catalog-count-mismatch`、`catalog-source-duplicate`、
+`catalog-category-duplicate`、`catalog-item-duplicate`、`catalog-edge-duplicate`、
+`catalog-profile-duplicate`、`catalog-orphan-edge`、`catalog-disposition-incomplete`、
+`catalog-item-target-incomplete`、`profile-unknown`、`profile-overlay-conflict`、
+`profile-decision-missing`を予約し、全findingが`ruleId,subjectId,message,severity,evidenceRefs[]`を持つ。
 
 #### Forward FSM完全遷移表
 

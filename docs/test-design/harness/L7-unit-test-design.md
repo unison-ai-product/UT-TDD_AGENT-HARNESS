@@ -1214,6 +1214,28 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `CANDIDATE-PROFILE-003` | unknown profile/item | resolver | `profile-unknown`, exit 1 |
 | `CANDIDATE-PROFILE-004` | 同優先度で異なる値 | resolver | `profile-overlay-conflict`, exit 1 |
 | `CANDIDATE-PROFILE-005` | authored decision欠落 | resolver | default創作せず`profile-decision-missing`, exit 1 |
+
+#### PLAN-L7-417 Red freeze詳細
+
+上表のDISP候補5件は実テスト化時に`U-DISP-001..005`へ同時昇格し、valid small fixture、tracked checked fixture、
+単一違反mutation builderを共有する。件数不一致はsource/item/category/source-item/source-target/item-target/profile/decisionの
+全dimension、orphanは各typed edge、duplicateは全entity identity/ordinalをtable-drivenで検査する。pending+target、final target欠落、
+reason/digest欠落、item ledger row欠落時のsource-target非継承を個別fixtureとする。`traceSource`/`unresolved`はbefore/after digest同一、
+stable ID順を固定する。109/163/21/8はtracked acceptance fixtureだけがassertし、domain定数やsmall fixtureへ複製しない。
+
+上表のPROFILE候補5件は`U-PROFILE-001..005`へ同時昇格する。document `doc_type_id`でsize→product stable order→explicitの
+全permutationを2回解決し、selection digest、winning decision、application receiptの一致を検査する。unknown profile/doc type/capability、
+同precedence異値、同値identity重複、required slot欠落、core/security detail弱化を個別Redにする。semantic `item_id`への暗黙mapは
+fixture自体で禁止する。
+
+strict loader Redはmanifestを含む6正本それぞれについてunknown/duplicate/missing column、row幅、inline-code delimiter、
+invalid UTF-8、revision/provenance digest mismatch、unknown disposition/decision/detail/status/target typeを1 mutationずつ持つ。
+profile master 8件は全field round-trip/digest、entry→profile/doc type FKを比較する。schema registryはFK、NOT NULL、UNIQUE、
+CHECK、複合PKを各1違反fixtureでDDL自身が拒否することを確認し、domain findingだけのGreenを認めない。
+
+domain Green後に上表のintegration候補を`I-DISP-001`へ昇格し、全projectionのPK、source/canonical digest、finding IDを
+delete→rebuild前後で完全比較する。invalid authoringはtransaction rollbackし既存projectionを保持する。row countだけの比較、
+DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証拠に含めることは禁止する。
 | `CANDIDATE-DOCLEDGER-001` | baseline raw NUL path集合 | snapshot capture | count/tree OID/hashがfixture一致 |
 | `CANDIDATE-DOCLEDGER-002` | missing/duplicate/phantom/case-fold path | ledger validate | 各stable finding、exit 1 |
 | `CANDIDATE-DOCLEDGER-003` | conditional field欠落 | ledger validate | `doc-disposition-incomplete`, exit 1 |
