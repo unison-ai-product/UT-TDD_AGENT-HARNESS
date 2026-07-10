@@ -12,6 +12,31 @@ applies_to:
     - Add-feature
     - Refactor
     - Retrofit
+decision_points:
+  - when: "an L5 design doc or L6 test design doc is missing before writing a new module"
+    choose: "stop and resolve the design gap as an unresolved PLAN `requires` before writing source"
+    over: "write the source file first and backfill the design doc afterward"
+    because: "`ut-tdd doctor` checks structural link existence but not substance, so writing ahead creates descent obligation debt that goes undetected"
+  - when: "an external input's type cannot be immediately narrowed (parsed JSON, CLI args)"
+    choose: "type it `unknown` and narrow with a type guard before use"
+    over: "type it `any` to unblock compilation quickly"
+    because: "`any` without a PLAN-linked rationale is forbidden and silently defeats `bun run typecheck` as a safety gate"
+  - when: "a function reads state, transforms it, and writes output in one body"
+    choose: "split into three functions with distinct names, separating I/O from computation"
+    over: "keep it as one function for brevity"
+    because: "functions mixing I/O with computation make unit tests dependent on file system state, turning a unit test into an integration test"
+  - when: "multiple small features are ready to commit at once"
+    choose: "commit each Red-to-Green step separately, one commit per advancing test"
+    over: "batch multiple feature commits into one to reduce commit noise"
+    because: "the Red-commit/Green-commit sequence is required audit evidence (FR-L1-02); batching destroys the trace"
+  - when: "a Biome lint rule fires on generated or awkward code"
+    choose: "fix the underlying formatting/lint issue or document a PLAN-linked rationale for suppressing it"
+    over: "add `// biome-ignore` without explanation to unblock the commit"
+    because: "unexplained biome-ignore comments accumulate silently and break CI on a later push when the suppressed rule finally matters"
+  - when: "a function body is approaching or exceeding 30 lines"
+    choose: "extract a named helper, and document the extraction in the L5 spec if it introduces a new concept"
+    over: "leave the function long because it still 'reads fine'"
+    because: "the 30-line guideline exists to keep single-responsibility enforceable; undocumented extractions also break L5/L6 descent traceability"
 ---
 
 # incremental implementation

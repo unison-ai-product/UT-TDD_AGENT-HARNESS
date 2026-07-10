@@ -66,6 +66,29 @@ packs for the current task.
 | Browser / screen (L10) verification | browser-testing-and-screen-verification |
 | Git / Conventional Commits / CI | git |
 | Doc maintenance (README / runbook prose) | documentation |
+| Before writing any code (delete/absorb/reuse/config first) | code-minimalism |
+| Test-case ideation quality / oracle / when to stop testing | test-breakage-thinking |
+| Screen state-matrix / visual-regression triage / a11y judgement | visual-state-verification |
+| Which design docs to write, at what granularity (tailoring) | design-tailoring-and-granularity |
+| Requirement elicitation via screen prototypes (pre-freeze) | screen-driven-requirements |
+| Contract headroom / envelope versioning judgement | contract-envelope-design |
+| Where to start a slice (domain/prototype/contract-first) | vmodel-drive-direction |
+| Design principles (pillars), VO/domain/class norms | design-principles-pillars |
+| Stage: charter / demands / requirements freeze | vmodel-stage-upstream |
+| Stage: basic design (decomposition, domain, infra outline) | vmodel-stage-architecture |
+| Stage: detailed design + shift-left test design | vmodel-stage-detailed-design |
+| Stage: implementation / TDD closure / unit test | vmodel-stage-implementation-unit |
+| Stage: integration → system → acceptance → operational test | vmodel-stage-integration-acceptance-ops |
+| Product pattern presets (scale × platform adoption/granularity) | product-profile-tailoring |
+| Data design docs (DB / schema / mapping / dictionary / IO) | design-family-data |
+| Security & privacy design docs | design-family-security-privacy |
+| Ops / reliability / DR / incident design docs | design-family-operations-reliability |
+| Performance / KPI / logging / cost design docs | design-family-performance-observability |
+| Web frontend design docs (responsive / CWV / i18n-a11y) | design-family-web-frontend |
+| Mobile & desktop client design docs | design-family-mobile-desktop |
+| CLI / API governance / webhook / event design docs | design-family-cli-api-platform |
+| AI agent / AI-output verification / model governance docs | design-family-ai-agent |
+| SaaS business docs (billing / tenant / SLA / compliance) | design-family-saas-business |
 
 ## Domain / project skills (indexed by category + metadata)
 

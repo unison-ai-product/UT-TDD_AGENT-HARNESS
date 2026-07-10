@@ -16,6 +16,31 @@ applies_to:
     - Recovery
     - Refactor
     - Retrofit
+decision_points:
+  - when: "Staging files for a commit"
+    choose: "stage explicit file paths only"
+    over: "using `git add -A` or `git add .`"
+    because: "bulk staging can pull in `.ut-tdd/` runtime state, `.env` files, or generated artefacts that must never enter the repository"
+  - when: "Writing a multi-line commit message"
+    choose: "use a Bash heredoc (`git commit -F - <<'EOF' ... EOF`)"
+    over: "using a PowerShell here-string"
+    because: "the `commit-msg` hook does not accept PowerShell here-strings for multi-line messages; only the Bash heredoc form is honored"
+  - when: "Verifying Vitest before pushing"
+    choose: "run `bun run test`"
+    over: "running bare `bun test`"
+    because: "bare `bun test` has sync-timeout flakiness and is not what CI's `harness-check` runs; a locally-green bare run can still fail CI"
+  - when: "Checking format/lint before pushing"
+    choose: "run `bun run lint` (invokes `biome check`)"
+    over: "running `biome lint` alone"
+    because: "`biome lint` alone does not check formatting; format violations pass locally and break `harness-check` on push"
+  - when: "A commit touches files under `.github/workflows/`"
+    choose: "use a temporary workflow-scoped PAT and remove it immediately after the push"
+    over: "pushing with the normal GCM OAuth token, or leaving the workflow-scoped token persisted in config/env"
+    because: "GitHub rejects workflow-file pushes from the normal OAuth token, and persisting a workflow-scoped credential is an unnecessary standing security exposure"
+  - when: "Choosing between committing directly to `main` or opening a feature branch"
+    choose: "commit directly to `main` for solo single-session work, and use a `<type>/<slug>` feature branch when work spans multiple sessions or needs a PR review gate"
+    over: "always branching, or always committing directly to `main` regardless of scope"
+    because: "the branch decision is scoped to session/review needs, not a blanket policy — hybrid-mode review gates specifically require the branch+PR path"
 ---
 
 # git
