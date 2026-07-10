@@ -6,7 +6,7 @@ layer: cross
 workflow_phase: R4
 confirmed_reverse_type: design
 drive: db
-status: draft
+status: confirmed
 route_signal: drift
 route_mode: reverse
 forward_routing: gap-only
@@ -27,8 +27,6 @@ generates:
     artifact_type: design_doc
   - artifact_path: docs/design/harness/L6-function-design/function-spec.md
     artifact_type: design_doc
-  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
-    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-417-source-disposition-profile-projection.md
   requires: []
@@ -69,8 +67,9 @@ PLAN-L7-417で実装したsource disposition、semantic item、profile、DB proj
 | `5d01b77d` | target resolverとconstraint verification |
 | `d142192f` | object input refactor、schema enum修正、detector自己証明gap closure |
 | `4b577868` | tamper false-green解消、U-PROFILE trace整合、profile manifest駆動化 |
+| `73ca9cf4` | 正常explicit overlay適用とdigest差のmutation耐性を証明 |
 
-検証結果はtargeted 15 files **100/100 Green**、`tsc --noEmit` Green、coding-rules 9/9 Green、PLAN工程表739件Greenである。再現commandは次のとおりで、anchorは`4b577868`である。
+検証結果はtargeted 15 files **100/100 Green**、`tsc --noEmit` Green、coding-rules 9/9 Green、PLAN工程表739件Greenである。再現commandは次のとおりで、anchorは`73ca9cf4`である。
 
 ```powershell
 bunx vitest run tests/coding-rules.test.ts tests/design-language.test.ts tests/improvement-backlog.test.ts tests/db-projection-coverage.test.ts tests/harness-db-constraints.test.ts tests/disposition/strict-markdown-table.test.ts tests/disposition/tracked-authoring-loader.test.ts tests/disposition/catalog.test.ts tests/disposition/projection.test.ts tests/disposition/target-resolver.test.ts tests/disposition/tracked-target-registry.test.ts tests/profile/resolver.test.ts tests/profile/tracked-loader.test.ts tests/vmodel-schema.test.ts tests/vmodel-migration.test.ts --reporter=dot

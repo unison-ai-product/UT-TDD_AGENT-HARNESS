@@ -4,7 +4,7 @@ title: "PLAN-L7-417 (add-impl): source disposition / semantic catalog / profile 
 kind: add-impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
@@ -103,6 +103,25 @@ dependencies:
   references:
     - docs/plans/PLAN-REVERSE-417-source-disposition-profile-backfill.md
     - docs/governance/vmodel-item-target-ledger.md
+review_evidence:
+  - reviewer: "Codex design reviewer"
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-10T22:00:00+09:00"
+    tests_green_at: "2026-07-10T21:59:50+09:00"
+    verdict: approve
+    worker_model: gpt-5
+    reviewer_model: gpt-5
+    scope: "HEAD 73ca9cf4とReverse-417を独立read-only review。tamper false-green、profile manifest、U-PROFILE trace/explicit overlay、target resolver、DB constraint closureを再検査し、Critical 0 / Important 0でAPPROVE。検収・merge権限は委譲されていない。"
+    green_commands:
+      - kind: unit_test
+        command: "bunx vitest run tests/coding-rules.test.ts tests/design-language.test.ts tests/improvement-backlog.test.ts tests/db-projection-coverage.test.ts tests/harness-db-constraints.test.ts tests/disposition/strict-markdown-table.test.ts tests/disposition/tracked-authoring-loader.test.ts tests/disposition/catalog.test.ts tests/disposition/projection.test.ts tests/disposition/target-resolver.test.ts tests/disposition/tracked-target-registry.test.ts tests/profile/resolver.test.ts tests/profile/tracked-loader.test.ts tests/vmodel-schema.test.ts tests/vmodel-migration.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T21:59:50+09:00"
+        evidence_path: tests/profile/resolver.test.ts
+        output_digest: "sha256:22b4499a487b8ce9d886b141f3c1bcd2ff86a3e2d79b30b586eeb1c4649cbd30"
+        anchor_commit: 73ca9cf4a03b15e83cb42b2e55cf4370337bc0a4
 ---
 
 # PLAN-L7-417
@@ -115,8 +134,17 @@ planned deliverablesは`src/disposition/{domain,application,ports,adapters}`、`
 DB schema/projector、profile tracked loader、provenance receipt、I-DISP-001/rollback、pure canonical target resolver、
 既存profile entryのversioned migration/constraint、constraint coverage detector、pending finding projectionは実装済み。残る
 target registry adapterによる実authoring全edge existence検査まで実装済み。Reverse-417合流とfull regressionが未完了であり、
-PLAN statusとDoDを完了へ進めない。
+独立reviewとtargeted regressionを完了し、Reverse-417へ合流した。
 
 Red freezeは`U-DISP-001..005`、query純粋性/安定順序、`U-PROFILE-001..005`を同一contract revisionで先行し、
 domain Green後に`I-DISP-001`（PK/digest/finding identity fixed point）とinvalid authoring rollbackをRed化する。
 schema registry制約、strict loader、source/item target非推論、document `doc_type_id` profile境界を縮退させない。
+
+## Acceptance Criteria
+
+- [x] tracked 109/21/163 catalogと8 profile/26 decisionをlosslessに投影する。
+- [x] provenance、canonical target、typed DB constraint、migrationをfail-closeで検証する。
+- [x] `I-DISP-001` fixed-pointとtamper rollbackをfalse-greenなしで証明する。
+- [x] `U-PROFILE-001..005`と設計oracleの意味を一致させる。
+- [x] independent read-only reviewでCritical/Important 0を確認する。
+- [x] Reverse-417へR0-R4実装事実と再現commandを合流する。
