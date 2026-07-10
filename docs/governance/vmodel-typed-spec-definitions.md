@@ -10,7 +10,7 @@ typed_spec_phase_owner: L6
 
 ## 0. 役割
 
-本書は `Vモデル設計ドキュメント.zip` の `99_型付きスペック・自動検出設計書` と
+本書は `Vモデル設計ドキュメント_checked.zip` の `99_型付きスペック・自動検出設計書` と
 `schema/spec.schema.json` から HARNESS 向けに抽出した `spec.defines` 正本である。
 
 検出系は本書の宣言を読む。章見出し、ファイル名、正規表現から定義 ID を推測して正本化してはいけない。
@@ -28,7 +28,7 @@ spec:
     - id: VMS-004
       kind: typed-spec-authoring-source
       traces_from: [VMS-001]
-      traces_to: [VMS-006, VMS-007, VMS-008, VMS-014]
+      traces_to: [VMS-006, VMS-007, VMS-008, VMS-014, VMS-015]
       tests: [TVMS-004]
 ```
 
@@ -98,6 +98,9 @@ typed_spec_ledger:
   - spec_id: VMS-014
     ledger_sources: [docs/plans/PLAN-L6-50-execution-assignment-ledger.md]
     v_phase: L6
+  - spec_id: VMS-015
+    ledger_sources: [docs/plans/PLAN-L6-52-signals-schedule-live-handover.md]
+    v_phase: L6
   - spec_id: TVMS-001
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
     v_phase: L7
@@ -149,6 +152,12 @@ typed_spec_ledger:
     v_phase: L7
   - spec_id: TVMS-014
     ledger_sources: [docs/test-design/harness/L7-unit-test-design.md]
+    v_phase: L7
+  - spec_id: TVMS-015
+    ledger_sources:
+      - docs/test-design/harness/L7-unit-test-design.md
+      - tests/session-start-digest.test.ts
+      - tests/projection-writer.test.ts
     v_phase: L7
 ```
 
@@ -218,6 +227,11 @@ VMS-012 を上流に持ち、対応 oracle は TVMS-013 である。
 VMS-014 は ZIP `assign.py` / `docs/assign.yaml` 相当の ID 単位実行割当台帳を HARNESS の L6 契約へ落とす typed spec である。
 VMS-004 を上流に持ち、対応 oracle は TVMS-014 である。
 
+### VMS-015 工程 live state / SessionStart digest 設計
+
+VMS-015 は工程 authoring RAG と runtime test/review/gate signal を分離joinし、SessionStartを
+固定4段へ収束させる L6 契約である。VMS-004 を上流に持ち、対応 oracle は TVMS-015 である。
+
 ### TVMS-001 単体 oracle
 
 TVMS-001 は VMS-001 の上流憲章が typed spec 宇宙の root として検査されることを保証する。
@@ -269,6 +283,11 @@ TVMS-013 は VMS-013 の `refactor-qa-release-contracts` gate が fail-close fix
 ### TVMS-014 実行割当台帳 oracle
 
 TVMS-014 は VMS-014 の ID 単位実行割当台帳 contract が L7 unit-test design に現れることを保証する。
+
+### TVMS-015 工程 live state / digest oracle
+
+TVMS-015 は VMS-015 の authoring RAG非更新、失敗signal矛盾、固定4段digest契約を
+L7 unit oracleで保証する。
 
 ## 4. 不変条件
 

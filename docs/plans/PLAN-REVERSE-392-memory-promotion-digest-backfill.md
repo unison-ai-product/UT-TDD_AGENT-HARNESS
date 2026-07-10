@@ -1,6 +1,6 @@
 ---
 plan_id: PLAN-REVERSE-392-memory-promotion-digest-backfill
-title: "PLAN-REVERSE-392: memory 昇格 nudge / handover digest の design backfill"
+title: "PLAN-REVERSE-392: memory 昇格 nudge / telemetry lifecycle の design backfill"
 kind: reverse
 layer: cross
 workflow_phase: R0
@@ -12,11 +12,11 @@ route_mode: reverse
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-07-10
 owner: PO / Codex
 agent_slots:
   - role: tl
-    slot_label: "TL - handover-mechanism / memory 設計との整合 backfill"
+    slot_label: "TL - memory / feedback lifecycle 設計との整合 backfill"
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-392-memory-promotion-digest-backfill.md
     artifact_type: markdown_doc
@@ -27,10 +27,12 @@ dependencies:
   references:
     - PLAN-L7-366-takeover-surface-warn-actionable
     - PLAN-L7-246-feedback-event-lifecycle
+    - PLAN-L7-412-schedule-live-session-digest
+    - PLAN-REVERSE-412-schedule-live-session-digest-backfill
 review_evidence: []
 ---
 
-# PLAN-REVERSE-392: memory 昇格 nudge / handover digest の design backfill
+# PLAN-REVERSE-392: memory 昇格 nudge / telemetry lifecycle の design backfill
 
 ## R0 Evidence
 
@@ -39,16 +41,15 @@ prose handover は廃止方向。共有メモリは存在したが書き込み�
 
 ## R1 Observed Gap
 
-- `docs/design/harness/L6-function-design/handover-mechanism.md` は digest の固定 4 段
-  フォーマット (gate / HEAD 成果 / actionable 上位 / memory recall) を規定していない。
+- 固定4段digestの設計gapはPLAN-L6-52 / PLAN-REVERSE-412でbackfill済みであり、本PLANに
+  残さない。
 - `memory.md` (L6) は memory への書き込み契機 (昇格 nudge) を契約に含まない。
 - telemetry lifecycle (TTL / auto-ack) の設計が feedback lifecycle 設計に未接続。
 
 ## R2 Alignment
 
-エンジン載せ替え (Codex 対応中) の handover/workflow 改修と同一面。載せ替え側の新設計が
-確定したら、本 backfill はそこへ合流し、L6 handover-mechanism / memory の contract 更新として
-閉じる。forward routing は gap-only とする。
+固定4段digestはconfirmedのPLAN-L7-412 / PLAN-REVERSE-412へ委譲する。本backfillはL6 memoryの
+nudge契約とfeedback lifecycleのTTL/auto-ackだけを対象にし、forward routingはgap-onlyとする。
 
 ## R3 / R4 Outcome
 
@@ -56,6 +57,6 @@ prose handover は廃止方向。共有メモリは存在したが書き込み�
 
 ## DoD
 
-- [ ] L6 handover-mechanism に digest 固定フォーマットの contract が追記される。
 - [ ] L6 memory に昇格 nudge の contract (fail-open) が追記される。
 - [ ] telemetry TTL/auto-ack が feedback lifecycle 設計へ接続される。
+- [ ] PLAN-L7-412の固定4段digestへ重複surfaceを追加しない。

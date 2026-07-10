@@ -990,10 +990,23 @@ function projectRoadmapRollup(repoRoot: string, db: HarnessDb): void {
   }
 }
 
+export function latestReviewEvidenceEntry<T extends { reviewed_at?: string }>(
+  entries: T[],
+): T | undefined {
+  const timestampRank = (value?: string): number => {
+    const parsed = Date.parse(value ?? "");
+    return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+  };
+  return entries.reduce<T | undefined>((latest, entry) => {
+    if (!latest) return entry;
+    return timestampRank(entry.reviewed_at) >= timestampRank(latest.reviewed_at) ? entry : latest;
+  }, undefined);
+}
+
 function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
   const indexedAt = nowIso();
   for (const plan of loadReviewPlans(repoRoot)) {
-    const firstEntry = plan.crossEntries[0];
+    const latestEntry = latestReviewEvidenceEntry(plan.crossEntries);
     const id = stableId("review-evidence", plan.plan_id);
     recordProjectionEvent(db, {
       table: "review_evidence_registry",
@@ -1004,12 +1017,12 @@ function projectReviewEvidenceRegistry(repoRoot: string, db: HarnessDb): void {
         kind: plan.kind,
         status: plan.status,
         has_evidence: plan.hasEvidence ? 1 : 0,
-        review_kind: firstEntry?.review_kind ?? "",
-        verdict: firstEntry?.verdict ?? "",
-        reviewed_at: firstEntry?.reviewed_at ?? "",
-        tests_green_at: firstEntry?.tests_green_at ?? "",
-        worker_model: firstEntry?.worker_model ?? "",
-        reviewer_model: firstEntry?.reviewer_model ?? "",
+        review_kind: latestEntry?.review_kind ?? "",
+        verdict: latestEntry?.verdict ?? "",
+        reviewed_at: latestEntry?.reviewed_at ?? "",
+        tests_green_at: latestEntry?.tests_green_at ?? "",
+        worker_model: latestEntry?.worker_model ?? "",
+        reviewer_model: latestEntry?.reviewer_model ?? "",
         source: normalizePath(join("docs", "plans", plan.file)),
         indexed_at: indexedAt,
       },

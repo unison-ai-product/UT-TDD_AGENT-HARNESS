@@ -63,7 +63,7 @@ dependencies:
 
 ## 0. 役割
 
-本 PLAN は U7a として、`Vモデル設計ドキュメント.zip` の profile / WBS / typed detection 方針を
+本 PLAN は U7a として、`Vモデル設計ドキュメント_checked.zip` の profile / WBS / typed detection 方針を
 HARNESS の activation profile authoring source と工程表 join 契約へ落とす。
 
 ## 1. 設計内容

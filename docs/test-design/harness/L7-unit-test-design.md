@@ -948,6 +948,10 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-ACTIVATION-SCHEDULE-R2 | `joinActivationScheduleReviews(input)` | `activation_entries.plan_id` と `schedule_entries.plan_id` を join し、`current_location` / `rag` / `schedule_status` / `v_pair` を read-model に含める。 |
 | U-ACTIVATION-SCHEDULE-R3 | `analyzeSpecIrIntegrity(input)` | `scope_status=deferred|out_of_scope` の理由欠落、または `target_kind=plan` の工程表未接続を finding 化し、projection 側で工程行を創作しない。 |
 | U-ACTIVATION-SCHEDULE-R4 | `rebuildHarnessDb` / `findReference` | real repo rebuild で `activation_schedule_reviews` が populated になり、`vmodel-clean-core` や `deferred` で検索できる。 |
+| U-SCHEDULE-LIVE-001 | `selectScheduleLiveState(db)` | 専用工程表由来 row を PLAN fallback より優先し、`authoring_rag` と `effective_rag` を分離する。 |
+| U-SCHEDULE-LIVE-002 | `selectScheduleLiveState(db)` / `latestReviewEvidenceEntry` | authoring green と最新 test/gate (`blocked`を含む) または最新review snapshotの差し戻し矛盾を red にする一方、passing signal だけで authoring yellow/red を green に昇格しない。最新時刻はUTC instantで比較し、同一instantは後置row/entryを採用する。未知/空ragはyellowへfail-closedする。 |
+| U-SCHEDULE-LIVE-003 | `selectSessionStartDigest(db, head)` | `current=着手可能lane全件`、`next=未解決predecessor待ち`、`blocked=明示block`を排他的に分類し、contradictionも依存順序を迂回しない。6件以上のready laneもnextへ誤分類しない。単一read transaction snapshotでlatest gate runをgate/PLAN単位に全件保持し、gate queryを共有する。actionableは上位5 group、telemetryは集計、memoryは上位5件に畳む。 |
+| U-SCHEDULE-LIVE-004 | `renderSessionStartDigest(digest)` / SessionStart | `state-and-gates / HEAD / actionable / memory` の固定4段を1回だけ出力し、旧 feedback/memory/escalation block を重複表示しない。Iron Law escalationは第1段に内包し、DB/HEAD不在は fail-open。 |
 | U-DOCUMENT-CATALOG-R1 | `parseDocumentCatalogEntries(input)` / `projectSpecIr` | `docs/governance/vmodel-document-catalog.md` から `document_catalog_entries` を populated にし、`DOC-L4-DATA` などを `findReference` で検索できる。 |
 | U-DOCUMENT-SCALE-R1 | `parseDocumentScaleProfileEntries(input)` / `joinDocumentScaleProfileReviews(input)` | `docs/governance/vmodel-document-scale-profiles.md` から `document_scale_profile_entries` を populated にし、`document_catalog_entries` と join して `document_scale_profile_reviews` に catalog layer/sub_doc/default status を含める。 |
 | U-DOCUMENT-SCALE-R2 | `analyzeSpecIrIntegrity(input)` | 未知 decision/detail/status、catalog 欠落、skip/defer/conditional の理由欠落、`required_plan_id` 未解決を finding 化し、profile 判定を projection 側で補完しない。 |
@@ -1100,12 +1104,16 @@ spec:
     - id: TVMS-014
       kind: unit-oracle
       traces_from: [VMS-014]
+    - id: TVMS-015
+      kind: unit-oracle
+      traces_from: [VMS-015]
 ```
 
 TVMS-001、TVMS-002、TVMS-003、TVMS-004、TVMS-005、TVMS-006、TVMS-007 は L7 unit-test-design の所有 artifact で宣言される typed spec oracle である。
 TVMS-007 は VMS-007 の phase/layer alignment が unit oracle と doctor gate で検証されることを保証する。
 TVMS-008 は agent contract authoring source、TVMS-009 は agent contract doctor gate の oracle である。
 TVMS-014 は VMS-014 の ID 単位実行割当台帳 contract が L7 unit oracle として定義されることを保証する。
+TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contract が L7 unit oracle として定義されることを保証する。
 
 ## PLAN-L6-60 ID 起点 trace impact traversal oracle (2026-07-08)
 

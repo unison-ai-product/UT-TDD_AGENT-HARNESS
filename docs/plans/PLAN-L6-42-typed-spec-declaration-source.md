@@ -65,7 +65,7 @@ dependencies:
 
 ## 0. 役割
 
-本 PLAN は U8a として、`Vモデル設計ドキュメント.zip` の `99_型付きスペック・自動検出設計書` を
+本 PLAN は U8a として、`Vモデル設計ドキュメント_checked.zip` の `99_型付きスペック・自動検出設計書` を
 HARNESS の `spec.defines` 契約へ落とす。
 
 ## 1. 設計内容

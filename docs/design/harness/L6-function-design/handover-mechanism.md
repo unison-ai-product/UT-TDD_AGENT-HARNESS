@@ -227,7 +227,10 @@ oracle U-HOVER-015 が 4 経路を fail-close 検査。
 | `selectTakeoverFeedback(db, {limit})` | 現在の open findings / warn\|fail signals を read-only で読み、severity 降順 (fail→warn→info) → id 昇順で安定ソートし `total` / `bySeverity` / limit 適用 `items` を返す。SessionStart で write-lock 競合を起こさないため `feedback_events` へは書き込まない |
 | `renderTakeoverFeedback(result)` | open=0 なら空文字 (引き継ぎ時にノイズを出さない)。それ以外は機械可読な集計行 `📥 harness.db feedback (open=N; ...)` + 上位 N + 残件 breadcrumb |
 
-**配線**: `runSessionStartSideEffects` (cli.ts) が SessionStart hook で `surfaceTakeoverFeedbackToStdout` を **独立 fail-open** で呼び、block を stdout へ surface (= エージェントの context へ feedback が「入る」)。db 不在 / ロック (他ランタイムの並行 rebuild) / 破損でも引き継ぎ維持処理と runtime を阻害しない。これにより引き継ぎは prose ではなく DB から feedback を受け取る。
+**配線 (superseded)**: PLAN-L7-110時点では `surfaceTakeoverFeedbackToStdout` を独立
+fail-openで呼んでいた。PLAN-L6-52 / PLAN-L7-412以降は選択関数だけを再利用し、feedbackを
+`surfaceSessionStartDigestToStdout` の第1段/第3段へ統合する。db不在・ロック・破損でも
+引き継ぎ維持処理とruntimeを阻害せず、proseではなくDBからfeedbackを受け取る境界は維持する。
 
 ## §2.9 共有 memory surface (PLAN-L7-189) — Claude/Codex 共通の文脈を受け取る
 
@@ -240,11 +243,41 @@ oracle U-HOVER-015 が 4 経路を fail-close 検査。
 | `selectMemoryEntries(db, {query, limit})` / `renderMemorySurface(entries)` | SessionStart 用の短い context block を read-only で作る。open feedback と同じく db lock / db 不在 / 破損時は fail-open で runtime を止めない。 |
 | `ut-tdd memory add/list/recall` | Claude Code と Codex が同じ CLI surface で memory を書き、db rebuild 後に同じ内容を recall できる。 |
 
-**配線**: `runSessionStartSideEffects` は `surfaceTakeoverFeedbackToStdout` の直後に `surfaceMemoryToStdout` を呼ぶ。これにより Claude/Codex のどちらで始まった session でも、同一 repo の `.ut-tdd/memory` と `harness.db` から同じ共有 memory が surface される。
+**配線 (superseded)**: `surfaceTakeoverFeedbackToStdout` と `surfaceMemoryToStdout` の個別出力は
+PLAN-L6-52 / PLAN-L7-412で廃止した。現行の `runSessionStartSideEffects` は
+`surfaceSessionStartDigestToStdout` を1回だけ呼び、同一repoの `.ut-tdd/memory` と
+`harness.db` を固定4段digestへ統合する。
+
+## §2.10 工程 live state と固定4段 digest (PLAN-L6-52)
+
+ZIP の `signals` → `schedule --live` と工程表連携を HARNESS へ翻訳する。工程管理表の
+`rag` / `current_location` は human plane の authoring source とし、`test_runs`、
+`review_evidence_registry`、`gate_runs` は実行 signal として read-only join する。
+
+- `selectScheduleLiveState` は専用工程管理表由来の `schedule_entries` を優先し、PLAN
+  frontmatter fallback を現在地へ混入させない。
+- 実行 signal の失敗は `authoring_rag=green` との矛盾を `effective_rag=red` として表示する。
+  `blocked` gateも失敗として扱い、未知/空ragは楽観的greenにせずyellowへfail-closedする。
+  passing signal は authoring yellow/red を勝手に green 化しない。最新signalはUTC instantで比較し、
+  同一instantは後置row/entryを採用する。
+- `current` は `blocked_reason` がなく未解決predecessorを持たない着手可能laneを全件、`next` は
+  未解決predecessor待ち、`blocked` は明示blockとして排他的に分類し、contradictionも依存順序を
+  迂回しない。
+- SessionStart は個別 feedback/memory/escalation block を廃止し、`state-and-gates`、`HEAD`、
+  `actionable`、`memory` の固定4段へ統合する。state 段は current/next/blocked、最新
+  gate 全件、直前sessionのIron Law escalationを含み、actionable は上位5 group、
+  telemetry は集計だけを表示する。
+- DB 不在、lock、破損、git log 不在は各入力を fail-open とし、SessionStart 自体を止めない。
+  DB由来のschedule/gate/feedback/memoryは単一read transaction snapshotで読み、prose handoverは
+  digest入力にしない。
+
+これにより handover は「DB 導出状態 + HEAD 事実 + HARNESS memory 知識」に収束する。
+`PLAN-L7-392` の固定4段 digest は本契約へ移管し、同 PLAN は memory 昇格 nudge と
+telemetry lifecycle に責務を絞る。
 
 ## §3 ③ 単体テスト設計とのペア (G6 pair freeze 対象)
 
-generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + **U-HOVER-014〜015** (PLAN-L7-83 累積上限化 `boundSameDayEntries` + marker reconcile) + §1.5 **U-SLOG-006** (active-plan stale / commit hash) + §1.8.1 **U-MEMORY-001〜004** (共有 memory write/load/projection/secret/surface)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) + §2.6 の slimSummary / boundSameDayEntries / marker reconcile + §2.9 の memory surface を被覆 (孤児 0)。trace は G7 で双方向凍結。
+generates pair: `docs/test-design/harness/L7-unit-test-design.md` §1.8 **U-HOVER-001〜007** + **U-HOVER-011〜012** (IMP-078 gap) + **U-HOVER-013** (A-138 ITEM-4 同日累積 slim) + **U-HOVER-014〜015** (PLAN-L7-83 累積上限化 `boundSameDayEntries` + marker reconcile) + §1.5 **U-SLOG-006** (active-plan stale / commit hash) + §1.8.1 **U-MEMORY-001〜004** (共有 memory write/load/projection/secret/surface) + **U-SCHEDULE-LIVE-001〜004** (工程 live state / 固定4段 digest)。本書 §2.3 の 9 関数 + §2.7 の品質増分関数 (checkHandoverBypass/countHandoverEntries/latestSessionId/activePlanStale/activePlanUpdatedAt) + §2.6 の slimSummary / boundSameDayEntries / marker reconcile + §2.9 の memory surface + §2.10 の live digest を被覆 (孤児 0)。trace は G7 で双方向凍結。
 
 ## §4 carry / 次工程
 

@@ -10,7 +10,7 @@ typed_spec_phase_owner: L4
 
 ## 0. 役割
 
-本書は `Vモデル設計ドキュメント.zip` の `profiles.yaml` 相当を HARNESS 側で追跡する authoring source である。
+本書は `Vモデル設計ドキュメント_checked.zip` の `profiles.yaml` 相当を HARNESS 側で追跡する authoring source である。
 `vmodel-document-catalog.md` は文書種別の master catalog、本書は規模プロファイルごとの採用・skip・粒度判定を
 機械が読める行として固定する。
 
