@@ -48,6 +48,16 @@ review_evidence:
     worker_model: gpt-5
     reviewer_model: gpt-5
     scope: "PLAN Asset/FSMを独立read-only review。ledger DB、identity framing、event/projection分離、evidence policy、CLI envelope、exception/property contractを反復検査しCritical 0 / Important 0。実装・検収権限は未委譲。"
+    green_commands:
+      - kind: lint
+        command: "bun run src/cli.ts plan lint && bunx vitest run tests/design-language.test.ts tests/coding-rules.test.ts --reporter=dot && bunx tsc --noEmit"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T23:00:20+09:00"
+        evidence_path: docs/plans/PLAN-L4-23-forward-fsm-plan-asset-v2.md
+        output_digest: "sha256:cdde001a46d281e5ff10dbd25d94c49e2f501f0f3e0066dc409a925e9d9149bd"
+        anchor_commit: bc7b4a2cc0504f380adff576bdda80abfa29656c
 ---
 
 # PLAN-L4-23: append-only Forward FSM + PLAN Asset v2

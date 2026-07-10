@@ -47,6 +47,16 @@ review_evidence:
     worker_model: gpt-5
     reviewer_model: gpt-5
     scope: "Canonical ledger DB、append-only event、typed partial UNIQUE、composite FK、global receipt、current projection/rebuildをreviewしCritical 0 / Important 0。"
+    green_commands:
+      - kind: lint
+        command: "bun run src/cli.ts plan lint && bunx vitest run tests/design-language.test.ts tests/coding-rules.test.ts --reporter=dot && bunx tsc --noEmit"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T23:00:20+09:00"
+        evidence_path: docs/plans/PLAN-L5-17-plan-asset-workflow-ledger-physical-data.md
+        output_digest: "sha256:67ad9ed3d6911228b8bfce161a7569227adae625ae554fb25f231b3a86162a66"
+        anchor_commit: bc7b4a2cc0504f380adff576bdda80abfa29656c
 ---
 
 # PLAN-L5-17: PLAN Asset v2 / workflow event ledger物理設計

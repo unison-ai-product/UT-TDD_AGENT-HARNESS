@@ -40,6 +40,16 @@ review_evidence:
     worker_model: gpt-5
     reviewer_model: gpt-5
     scope: "FSM遷移、例外、typed evidence policy、CLI parity、ledger atomicity、property oracleを反復reviewしCritical 0 / Important 0。"
+    green_commands:
+      - kind: lint
+        command: "bun run src/cli.ts plan lint && bunx vitest run tests/design-language.test.ts tests/coding-rules.test.ts --reporter=dot && bunx tsc --noEmit"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T23:00:20+09:00"
+        evidence_path: docs/plans/PLAN-L6-72-forward-fsm-evidence-policy-contracts.md
+        output_digest: "sha256:ef929a8ee12bc4ba8662869cf42b303fc40d82f0ed0df34332d43b8f6d367dec"
+        anchor_commit: bc7b4a2cc0504f380adff576bdda80abfa29656c
 ---
 
 # PLAN-L6-72: Forward FSM / transition / evidence policy契約
