@@ -52,42 +52,42 @@ dependencies:
     - docs/plans/PLAN-L7-414-agent-guard-claude5-family-rank.md
     - .ut-tdd/memory/project-fable-5-7-13-rate-limit.md
 review_evidence:
-  - reviewer: codex
-    review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-10T15:00:24+09:00"
-    tests_green_at: "2026-07-10T15:00:24+09:00"
+  - reviewer: claude
+    review_kind: cross_agent
+    reviewed_at: "2026-07-10T15:15:00+09:00"
+    tests_green_at: "2026-07-10T15:13:23+09:00"
     verdict: approve
-    scope: "GPT-5.6 terra/sol の T1/T0 routing、advisor の MODEL_IDS 追随、direct Codex worker dry-run、pricing fallback、SSoT oracle と adapter mirror を確認。Fable route は未変更。"
     worker_model: gpt-5.6-terra
-    reviewer_model: codex-intra-runtime
+    reviewer_model: claude-fable-5
+    scope: "cross review (hybrid): worker (Codex/gpt-5.6-terra、PR #41) の実装 — GPT-5.6 terra/sol の T1/T0 routing、advisor の MODEL_IDS.codex.frontier 参照自動追随、direct Codex worker dry-run、pricing fallback、SSoT oracle と adapter mirror、Fable route 不変 — を diff 検分で確認。worker 記録の green_commands schema 違反 (runner=bunx、digest への説明文混入) と tests/cli-surface.test.ts の旧 frontier literal 3 箇所を review fix として是正し、green 3 コマンドを reviewer が再実行して digest を再採取 (下記は再実行値)。worker の当初 green 主張 (34/34 passed、typecheck/lint exit 0、15:00 JST) は PR #41 記載。"
     green_commands:
       - kind: unit_test
         command: "bunx vitest run tests/model-id-ssot-drift.test.ts tests/team-model-policy.test.ts tests/team-run.test.ts"
-        runner: bunx
+        runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-10T15:00:24+09:00"
+        completed_at: "2026-07-10T15:13:23+09:00"
         evidence_path: tests/model-id-ssot-drift.test.ts
-        output_digest: "sha256:06cf8deb2f5a51ffed040603f503f8ea82102850afdc0a4586a69e35844477c5 (3 files, 34 tests passed)"
-        anchor_commit: 833e396f14beeb4722cc9b1e0dd5febef97eccf4
+        output_digest: "sha256:8743b1e4f59fe8fe16a8db767b1355e31ef0d4879c0ced7ebe420cffd8341c5f"
+        anchor_commit: 42ff3f0e
       - kind: typecheck
         command: "bun run typecheck"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-10T15:00:00+09:00"
+        completed_at: "2026-07-10T15:13:23+09:00"
         evidence_path: src/cli/delegation.ts
-        output_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 (tsc --noEmit succeeded)"
-        anchor_commit: 833e396f14beeb4722cc9b1e0dd5febef97eccf4
+        output_digest: "sha256:8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+        anchor_commit: 42ff3f0e
       - kind: lint
         command: "bun run lint"
         runner: bun
         scope: full
         exit_code: 0
-        completed_at: "2026-07-10T15:00:00+09:00"
+        completed_at: "2026-07-10T15:13:23+09:00"
         evidence_path: src/team/model-policy.ts
-        output_digest: "biome check src tests: Checked 372 files; no fixes applied"
-        anchor_commit: 833e396f14beeb4722cc9b1e0dd5febef97eccf4
+        output_digest: "sha256:246de80b8519745d9f14ed54e846f51c3fe1a7a46ef8e3a5067d8e0d5bb81f9f"
+        anchor_commit: 42ff3f0e
 ---
 
 # PLAN-L7-415 (retrofit): GPT-5.6 tier routing 採用
