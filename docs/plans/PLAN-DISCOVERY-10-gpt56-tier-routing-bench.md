@@ -63,13 +63,14 @@ judgment gate / 軽量並列 lane) へ組み込むため、**この harness の�
 
 | # | ティア | 対象レーン | 現職 (比較相手) | 採用基準 (合格ライン) |
 |---|---|---|---|---|
-| H1 | gpt-5.6-sol | frontier review gate / advisor 相談先 | gpt-5.5 (`MODEL_IDS.codex.frontier`) | 欠陥検出 recall が現職以上 **かつ** false positive 率が現職以下 |
-| H2 | gpt-5.6-terra | T1 実装 worker lane (effort middle) | gpt-5.4 (`MODEL_IDS.codex.worker`) | pass@1 + gate 通過率が現職同等以上 **かつ** $/解決タスクが現職以下 |
+| H1 | gpt-5.6-sol | **エスカレーション先** (frontier 相談 / 最上位 review gate)。Claude 側 Fable 5 と対称の GPT 側 top 帯 | gpt-5.5 (`MODEL_IDS.codex.frontier`)。参照比較として Fable 5 / Opus | gpt-5.5 に対し **品質で明確優位** (recall・false-accept 率)。優位でなければ「エスカレーション先」の意味がないため不採用 |
+| H2 | gpt-5.6-terra | **主力実装帯** — 現在 gpt-5.5 が担う仕事の置換 (worker lane の底上げ兼コスト削減) | **gpt-5.5** (PO 方針 2026-07-10: 大半の実装は 5.5 で網羅できる前提。5.5 同等品質を半額で出せるかが判断点) | 5 工程で gpt-5.5 と **品質同等** (統計的に劣後しない) **かつ** $/解決タスクが下回る |
 | H3 | gpt-5.6-luna | T2 軽量並列 lane (spark/mini、closing authority なし) | gpt-5.3-codex-spark / gpt-5.4-mini | 分類一致率が現職同等以上 **かつ** latency・$/タスクが現職以下 |
 
-公開情報の事前予想 (検証対象であって根拠にしない): Terra は「GPT-5.5 同等性能で約半額」
-を謳うため H2 が本命。Sol は frontier 帯 ($5/$30 per 1M) で gpt-5.5 との品質差が判断点。
-Luna ($1/$6) は現職 spark/mini との品質−コストのトレードオフが判断点。
+PO 方針 (2026-07-10): routing の将来像は **Terra = 主力 (5.5 の仕事を半額で) / Sol =
+上位エスカレーション先 (Claude 側の Fable 5 と対称的な扱い)**。したがって H2 の比較相手は
+gpt-5.4 ではなく gpt-5.5 本体であり、H1 は「5.5 より上か」だけを問う (同等では不採用)。
+gpt-5.4 worker lane との比較は H2 成立時の付随確認に格下げする。
 
 ## 3. 測定設計: V-model 5 工程 × 機械 oracle の replay (PO 指示 2026-07-10 改訂)
 
