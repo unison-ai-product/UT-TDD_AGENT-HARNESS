@@ -24,6 +24,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
     artifact_type: markdown_doc
+  - artifact_path: src/feedback/lifecycle.ts
+    artifact_type: source_module
 dependencies:
   parent: docs/plans/PLAN-L7-189-shared-harness-memory-cross-runtime.md
   requires:
