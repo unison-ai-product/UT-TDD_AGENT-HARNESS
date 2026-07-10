@@ -56,7 +56,7 @@ const CACHE_WRITE_MULTIPLIER = 1.25;
 
 /**
  * OpenAI (Codex runtime) モデル単価 ($/1M tokens)。正本 = OpenAI 公式 API pricing
- * (https://developers.openai.com/api/docs/pricing、standard tier、2026-06-15 取得)。`cached` は公式
+ * (https://developers.openai.com/api/docs/pricing、standard tier、2026-07-10 確認)。`cached` は公式
  * "cached input" 割引単価で、caching 非対応モデル (pro) は null → computeCodexCostUsd が input 単価で課金する。
  * 根拠: ハードコードだが公式 published 単価であり、model→price の散在を避けここへ集約 (CLAUDE_PRICING と対称)。
  * **未掲載モデルは表に入れない = cost null** (捏造禁止の不変条件)。例: gpt-5.4-codex は公式 pricing に未掲載の
@@ -66,6 +66,8 @@ export const OPENAI_PRICING: Record<
   string,
   { input: number; cached: number | null; output: number }
 > = {
+  "gpt-5.6-sol": { input: 5, cached: 0.5, output: 30 },
+  "gpt-5.6-terra": { input: 2.5, cached: 0.25, output: 15 },
   "gpt-5.5": { input: 5, cached: 0.5, output: 30 },
   "gpt-5.5-pro": { input: 30, cached: null, output: 180 },
   "gpt-5.4": { input: 2.5, cached: 0.25, output: 15 },

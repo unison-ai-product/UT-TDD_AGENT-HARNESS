@@ -4,7 +4,7 @@ title: "PLAN-L7-413 (troubleshoot): distribution export の整合性欠陥 4 件
 kind: troubleshoot
 layer: L7
 drive: be
-status: draft
+status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-10
@@ -22,6 +22,12 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-413-distribution-export-integrity-defects.md
     artifact_type: markdown_doc
+  - artifact_path: src/cli/distribution.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/distribution.ts
+    artifact_type: source_module
+  - artifact_path: tests/distribution-acceptance.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
@@ -32,6 +38,43 @@ dependencies:
     - docs/plans/PLAN-DISCOVERY-10-gpt56-tier-routing-bench.md
     - .ut-tdd/audit/A-172-pack-comprehensive-review-2026-07-02.md
     - docs/plans/PLAN-L7-157-distribution-clean-pull.md
+review_evidence:
+  - reviewer: codex-intra-runtime
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-10T15:51:00+09:00"
+    tests_green_at: "2026-07-10T15:50:31+09:00"
+    verdict: approve
+    scope: "PLAN-L7-413 D-1〜D-4: manifest 冪等性、denylist fail-close、削除 staging、blocked export の package/prune 非実行、および unsigned tarball 契約整合。working tree 読取方式は変更していない。"
+    worker_model: codex
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T15:48:20+09:00"
+        evidence_path: src/setup/distribution.ts
+        output_digest: "sha256:5a3973f79ed9becd5f23c4feff467513814de7ea381d75a4d2e339aa8b8edca9"
+        anchor_commit: 88bd16355b3ad7cd0b1b7eb65b318102f4ba23d1
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T15:48:30+09:00"
+        evidence_path: src/cli/distribution.ts
+        output_digest: "sha256:abcf66c52213b9a7396815d137d11df17ff4ade7aaffe7d09de8abd6a428dd3f"
+        anchor_commit: 88bd16355b3ad7cd0b1b7eb65b318102f4ba23d1
+      - kind: unit_test
+        command: "bun x vitest run tests/distribution-acceptance.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T15:50:31+09:00"
+        evidence_path: tests/distribution-acceptance.test.ts
+        output_digest: "sha256:295cdc5cf164724e6fdde8e4e13f0ea18c4a8c78731fa20e4aa84b5c8ac3cbfe"
+        anchor_commit: 88bd16355b3ad7cd0b1b7eb65b318102f4ba23d1
 ---
 
 # PLAN-L7-413 (troubleshoot): distribution export の整合性欠陥 4 件
@@ -69,6 +112,14 @@ claude-fable-5) に実施した副産物として、現行コードの欠陥が�
   excludedPaths と別枠で報告し ok 条件へ組み込む。
 - oracle: denied path (例 `.ut-tdd/x`, `docs/plans/x.md`) を input paths に混ぜたとき
   ok=false かつ violation に列挙される regression test (現行実装では fail する = red 起点)。
+- **訂正注記 (2026-07-10 followup)**: 上記修正方針の前段 (denied 入力の存在自体を fail) は
+  **過剰 fail-close** だった — full repo walk には denied path (.ut-tdd/ 等) が常在し、
+  `src/web/` は tracked .gitkeep を持つ意図的 carve-out のため、実 repo の plan が恒常
+  blocked になる (PR #42 で実装され cli-surface 実 repo 回帰 5 件で検出、赤のままマージ
+  してしまった運用ミスも同時発生)。確定形 = **出力ガード** (`artifactPaths` を deny で監視、
+  include filter 退行・remap 衝突時のみ fire) + **構造 fence テスト** (denied 入力が
+  artifactPaths に決して現れないことを固定)。oracle も同 followup で書換え済み。D-4 の
+  blocked 誘発は denied 入力ではなく missingRequired で行う。
 
 ### D-3: 削除の非伝播 (Pack に消したはずのファイルが残留)
 
@@ -102,6 +153,8 @@ claude-fable-5) に実施した副産物として、現行コードの欠陥が�
 
 ## DoD
 
-- [ ] D-1〜D-4 それぞれに red→green の regression test が付き、修正が landed。
-- [ ] 修正は現行配布アーキの範囲内 (読み取り元切替を含まない) であることを TL が確認。
-- [ ] review_evidence に green_commands (targeted vitest + typecheck + lint) を記録。
+- [x] D-1〜D-4 それぞれに red→green の regression test が付き、修正が landed (PR #42 +
+      D-2 意味論訂正 followup PR #43。D-2 の確定 oracle は「denied 入力が出荷されない」構造 fence)。
+- [x] 修正は現行配布アーキの範囲内 (読み取り元切替を含まない) であることを TL が確認
+      (Claude cross-review、PR #42/#43)。
+- [x] review_evidence に green_commands (targeted vitest + typecheck + lint) を記録。

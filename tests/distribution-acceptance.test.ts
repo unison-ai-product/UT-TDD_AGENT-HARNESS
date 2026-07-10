@@ -16,6 +16,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCleanDistributionPlan,
   cleanDistributionSourcePath,
+  gitAddPathspecCommands,
   transformCleanDistributionArtifact,
 } from "../src/setup/index";
 
@@ -111,10 +112,125 @@ function removeCleanRoot(root: string): void {
   }
 }
 
+function createCleanDistributionFixture(): string {
+  const root = mkdtempSync(join(tmpdir(), "ut-tdd-distribution-integrity-"));
+  const sourcePaths = walkCandidatePaths(repoRoot);
+  const plan = buildCleanDistributionPlan({ paths: sourcePaths, sourceTag: "v0.0.0-test" });
+  for (const rel of plan.artifactPaths) {
+    const from = join(repoRoot, cleanDistributionSourcePath(rel, sourcePaths));
+    const to = join(root, rel);
+    mkdirSync(dirname(to), { recursive: true });
+    if (rel === "package.json") {
+      writeFileSync(to, transformCleanDistributionArtifact(rel, readFileSync(from, "utf8")));
+    } else {
+      cpSync(from, to, { recursive: true });
+    }
+  }
+  return root;
+}
+
 describe("clean distribution local acceptance smoke", () => {
-  it("U-SETUP-013 / U-SETUP-014 / AT-DIST-001: clean artifact installs and exposes the same core CLI surfaces", () => {
+  it("PLAN-L7-413 D-1: sync-stage is idempotent when the outDir already has its manifest", () => {
+    const cleanRoot = createCleanDistributionFixture();
+    const stageDir = join(cleanRoot, ".stage");
+    try {
+      const args = [
+        join(repoRoot, "src", "cli.ts"),
+        "distribution",
+        "sync-stage",
+        "--tag",
+        "v0.0.0-test",
+        "--out",
+        stageDir,
+        "--json",
+      ];
+      const first = runBun(cleanRoot, args);
+      expect(first.status, first.stderr || first.stdout).toBe(0);
+      const second = runBun(cleanRoot, args);
+      expect(second.status, second.stderr || second.stdout).toBe(0);
+      expect(JSON.parse(second.stdout).ok).toBe(true);
+    } finally {
+      removeCleanRoot(cleanRoot);
+    }
+  }, 120_000);
+
+  it("PLAN-L7-413 D-2: denied 入力は出荷集合へ決して到達しない (構造 fence)", () => {
+    // deny 対象 (allow 外・allow 内 carve-out の両方) は excludedPaths 行きで、
+    // artifactPaths / violation には現れない。violation は出力ガード (include filter 退行
+    // や remap の denied 空間衝突時のみ fire) — 入力に denied があるだけでは blocked に
+    // ならない (full repo walk は denied 常在のため、恒常 blocked は誤 fail-close)。
     const plan = buildCleanDistributionPlan({
+      paths: [
+        "README.md",
+        "LICENSE",
+        "package.json",
+        "src/cli.ts",
+        ".ut-tdd/x",
+        "docs/plans/x.md",
+        "src/web/leak.ts",
+      ],
+    });
+    expect(plan.denylistViolations).toEqual([]);
+    for (const denied of [".ut-tdd/x", "docs/plans/x.md", "src/web/leak.ts"]) {
+      expect(plan.artifactPaths).not.toContain(denied);
+      expect(plan.excludedPaths).toContain(denied);
+    }
+  });
+
+  it("PLAN-L7-413 D-3: deletion paths are staged by generated Pack commands", () => {
+    const commands = gitAddPathspecCommands("C:/pack", ["README.md"], ["obsolete.txt"]);
+    expect(commands.join("\n")).toContain('git -C C:/pack rm --ignore-unmatch -- "obsolete.txt"');
+  });
+
+  it("PLAN-L7-413 D-4: a blocked export neither packages nor prunes", () => {
+    const cleanRoot = createCleanDistributionFixture();
+    const releaseDir = join(cleanRoot, ".release");
+    try {
+      // blocked は missingRequired で誘発する (denied 入力は D-2 followup により通常除外で
+      // あって blocked にならないため)。
+      rmSync(join(cleanRoot, "LICENSE"), { force: true });
+      const result = runBun(cleanRoot, [
+        join(repoRoot, "src", "cli.ts"),
+        "distribution",
+        "package",
+        "--tag",
+        "v0.0.0-blocked",
+        "--out",
+        releaseDir,
+        "--json",
+      ]);
+      expect(result.status).toBe(1);
+      expect(JSON.parse(result.stdout).ok).toBe(false);
+      expect(existsSync(join(releaseDir, "v0.0.0-blocked.tar.gz"))).toBe(false);
+
+      const packDir = join(cleanRoot, ".pack");
+      mkdirSync(packDir, { recursive: true });
+      const obsolete = join(packDir, "obsolete.txt");
+      writeFileSync(obsolete, "must not be pruned\n", "utf8");
+      const pack = runBun(cleanRoot, [
+        join(repoRoot, "src", "cli.ts"),
+        "distribution",
+        "sync-pack",
+        "--repo-dir",
+        packDir,
+        "--prune-local",
+        "--json",
+      ]);
+      expect(pack.status).toBe(1);
+      expect(JSON.parse(pack.stdout).pack.prunedPaths).toEqual([]);
+      expect(existsSync(obsolete)).toBe(true);
+    } finally {
+      removeCleanRoot(cleanRoot);
+    }
+  }, 120_000);
+
+  it("U-SETUP-013 / U-SETUP-014 / AT-DIST-001: clean artifact installs and exposes the same core CLI surfaces", () => {
+    const sourcePlan = buildCleanDistributionPlan({
       paths: walkCandidatePaths(repoRoot),
+      sourceTag: "v0.1.0",
+    });
+    const plan = buildCleanDistributionPlan({
+      paths: sourcePlan.artifactPaths,
       sourceTag: "v0.1.0",
     });
     expect(plan.ok).toBe(true);

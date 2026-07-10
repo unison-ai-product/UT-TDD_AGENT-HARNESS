@@ -14,6 +14,7 @@ import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
+import { MODEL_IDS } from "../src/team/model-policy";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");
@@ -637,7 +638,7 @@ describe("L7 CLI surface closure", () => {
       },
       fallback: {
         provider: "codex",
-        model: "gpt-5.5",
+        model: MODEL_IDS.codex.frontier,
         consultation_mode: "consult",
       },
     });
@@ -678,18 +679,18 @@ describe("L7 CLI surface closure", () => {
       expect(run.stdout).not.toContain("noisy-codex");
       expect(payload).toMatchObject({
         provider: "codex",
-        model: "gpt-5.5",
+        model: MODEL_IDS.codex.frontier,
         effort: "middle",
         adapterPlan: {
           provider: "codex",
-          model: "gpt-5.5",
+          model: MODEL_IDS.codex.frontier,
           dry_run: false,
           executed: true,
           exit_code: 0,
         },
       });
       const codexEnv = readFileSync(join(root, "codex-env.txt"), "utf8");
-      expect(codexEnv).toContain("gpt-5.5");
+      expect(codexEnv).toContain(MODEL_IDS.codex.frontier);
       expect(codexEnv).toContain("args=");
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -759,7 +760,7 @@ describe("L7 CLI surface closure", () => {
         actualCutRequiresPoApproval: true,
         export: {
           ok: true,
-          channel: "clean-repo-plus-signed-tarball",
+          channel: "clean-repo-plus-tarball",
           sourceTag: "v0.1.0",
           cleanRepo: "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
         },
@@ -801,22 +802,19 @@ describe("L7 CLI surface closure", () => {
       expect(payload).toMatchObject({
         ok: true,
         actualPublishRequiresPoApproval: true,
-        artifacts: {
-          signatureRequired: true,
-          signatureCreated: false,
-        },
         export: {
           ok: true,
           sourceTag: "v0.1.0",
         },
       });
+      // PLAN-L7-413 D-4c: unsigned tarball 契約へ整合 — signature 系 field は payload から
+      // 撤去済み (宣言と実装の一致)。tarball + checksum + manifest のみが成果物。
+      expect(payload.artifacts.signature).toBeUndefined();
       expect(existsSync(payload.artifacts.tarball)).toBe(true);
       expect(existsSync(payload.artifacts.checksum)).toBe(true);
       expect(existsSync(payload.artifacts.manifest)).toBe(true);
-      expect(existsSync(payload.artifacts.signature)).toBe(false);
       expect(readFileSync(payload.artifacts.checksum, "utf8")).toContain("v0.1.0.tar.gz");
       const manifest = JSON.parse(readFileSync(payload.artifacts.manifest, "utf8"));
-      expect(manifest.signatureCreated).toBe(false);
       expect(manifest.artifactCount).toBeGreaterThan(100);
     } finally {
       rmSync(outDir, { recursive: true, force: true });

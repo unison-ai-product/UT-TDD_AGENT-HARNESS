@@ -57,6 +57,8 @@ function collectDistributionCandidatePaths(repoRoot: string): string[] {
   return out.sort();
 }
 
+const PACK_SYNC_MANIFEST = ".ut-tdd-pack-sync-manifest.json";
+
 function copyCleanDistributionArtifact(input: {
   sourceRoot: string;
   sourcePath: string;
@@ -287,7 +289,8 @@ export function registerDistributionCommands(program: Command): void {
         mkdirSync(outDir, { recursive: true });
         const plannedArtifacts = new Set(exportPlan.artifactPaths);
         const unmanagedExistingPaths = collectDistributionCandidatePaths(outDir).filter(
-          (path) => !plannedArtifacts.has(path) && !path.startsWith(".git/"),
+          (path) =>
+            !plannedArtifacts.has(path) && !path.startsWith(".git/") && path !== PACK_SYNC_MANIFEST,
         );
         let copyError: string | null = null;
         if (exportPlan.ok && secretScan.ok) {
@@ -305,7 +308,7 @@ export function registerDistributionCommands(program: Command): void {
             copyError = error instanceof Error ? error.message : String(error);
           }
         }
-        const manifest = join(outDir, ".ut-tdd-pack-sync-manifest.json");
+        const manifest = join(outDir, PACK_SYNC_MANIFEST);
         const output = {
           ok:
             exportPlan.ok &&
@@ -402,7 +405,7 @@ export function registerDistributionCommands(program: Command): void {
         let copyError: string | null = null;
         let pruneError: string | null = null;
 
-        if (repoExists && opts.pruneLocal && secretScan.ok) {
+        if (repoExists && opts.pruneLocal && exportPlan.ok && secretScan.ok) {
           try {
             for (const rel of existingBefore) {
               rmSync(join(repoDir, ...rel.split("/")), { force: true });
@@ -474,7 +477,7 @@ export function registerDistributionCommands(program: Command): void {
             actualRemoteMutationRequiresPoApproval: true,
             nextCommands: [
               `git -C ${repoDir} status --short`,
-              ...gitAddPathspecCommands(repoDir, exportPlan.artifactPaths),
+              ...gitAddPathspecCommands(repoDir, exportPlan.artifactPaths, existingBefore),
               `git -C ${repoDir} commit -m "chore: sync clean pack ${exportPlan.sourceTag}"`,
               `git -C ${repoDir} push origin ${opts.branch ?? "main"}`,
             ],
@@ -559,52 +562,54 @@ export function registerDistributionCommands(program: Command): void {
       const tarball = join(outDir, `${artifactStem}.tar.gz`);
       const checksum = `${tarball}.sha256`;
       const manifest = join(outDir, `${artifactStem}.manifest.json`);
-      const signature = `${tarball}.sig`;
       const stage = mkdtempSync(join(tmpdir(), "ut-tdd-clean-package-"));
       let tarResult: ReturnType<typeof spawnSync> | null = null;
       try {
-        mkdirSync(outDir, { recursive: true });
-        for (const rel of secretScan.ok ? exportPlan.artifactPaths : []) {
-          const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
-          copyCleanDistributionArtifact({
-            sourceRoot: repoRoot,
-            sourcePath: sourceRel,
-            targetRoot: stage,
-            artifactPath: rel,
+        if (exportPlan.ok && secretScan.ok) {
+          mkdirSync(outDir, { recursive: true });
+          for (const rel of exportPlan.artifactPaths) {
+            const sourceRel = cleanDistributionSourcePath(rel, sourcePaths);
+            copyCleanDistributionArtifact({
+              sourceRoot: repoRoot,
+              sourcePath: sourceRel,
+              targetRoot: stage,
+              artifactPath: rel,
+            });
+          }
+          // -f はドライブレター (C:) を含む絶対パスだと GNU tar (Git Bash 同梱) がリモートホスト名と
+          // 解釈して "Cannot connect to C:" で必ず失敗する。cwd を outDir に固定し -f を相対 basename に
+          // することで bsdtar/GNU tar の両実装で動く (PLAN-L7-361)。-C の引数は remote 解釈されない。
+          tarResult = spawnSync("tar", ["-czf", basename(tarball), "-C", stage, "."], {
+            cwd: outDir,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
           });
-        }
-        // -f はドライブレター (C:) を含む絶対パスだと GNU tar (Git Bash 同梱) がリモートホスト名と
-        // 解釈して "Cannot connect to C:" で必ず失敗する。cwd を outDir に固定し -f を相対 basename に
-        // することで bsdtar/GNU tar の両実装で動く (PLAN-L7-361)。-C の引数は remote 解釈されない。
-        tarResult = spawnSync("tar", ["-czf", basename(tarball), "-C", stage, "."], {
-          cwd: outDir,
-          encoding: "utf8",
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-        if (tarResult.status === 0) {
-          const digest = createHash("sha256").update(readFileSync(tarball)).digest("hex");
-          writeFileSync(checksum, `${digest}  ${basename(tarball)}\n`, "utf8");
-          writeFileSync(
-            manifest,
-            `${JSON.stringify(
-              {
-                ok: exportPlan.ok,
-                sourceTag: exportPlan.sourceTag,
-                cleanRepo: exportPlan.cleanRepo,
-                tarball,
-                checksum,
-                signature,
-                signatureRequired: true,
-                signatureCreated: false,
-                artifactCount: exportPlan.artifactPaths.length,
-                missingRequired: exportPlan.missingRequired,
-                denylistViolations: exportPlan.denylistViolations,
-              },
-              null,
-              2,
-            )}\n`,
-            "utf8",
-          );
+          if (tarResult.status === 0) {
+            const digest = createHash("sha256").update(readFileSync(tarball)).digest("hex");
+            writeFileSync(checksum, `${digest}  ${basename(tarball)}\n`, "utf8");
+            writeFileSync(
+              manifest,
+              `${JSON.stringify(
+                {
+                  ok: exportPlan.ok,
+                  sourceTag: exportPlan.sourceTag,
+                  cleanRepo: exportPlan.cleanRepo,
+                  tarball,
+                  checksum,
+                  artifactCount: exportPlan.artifactPaths.length,
+                  missingRequired: exportPlan.missingRequired,
+                  denylistViolations: exportPlan.denylistViolations,
+                },
+                null,
+                2,
+              )}\n`,
+              "utf8",
+            );
+          }
+        } else {
+          rmSync(tarball, { force: true });
+          rmSync(checksum, { force: true });
+          rmSync(manifest, { force: true });
         }
       } finally {
         rmSync(stage, { recursive: true, force: true });
@@ -627,9 +632,6 @@ export function registerDistributionCommands(program: Command): void {
           tarball,
           checksum,
           manifest,
-          signature,
-          signatureRequired: true,
-          signatureCreated: false,
         },
         tar: {
           exitCode: tarResult?.status ?? null,
@@ -658,7 +660,6 @@ export function registerDistributionCommands(program: Command): void {
       }
       process.stdout.write(`  tarball: ${tarball}\n`);
       process.stdout.write(`  checksum: ${checksum}\n`);
-      process.stdout.write("  signature: required but not created (external signing boundary)\n");
       process.stdout.write("  publish: requires PO approval\n");
       process.exitCode = ok ? 0 : 1;
     });

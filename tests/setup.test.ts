@@ -671,7 +671,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     });
 
     expect(plan.ok).toBe(true);
-    expect(plan.channel).toBe("clean-repo-plus-signed-tarball");
+    expect(plan.channel).toBe("clean-repo-plus-tarball");
     expect(plan.artifactPaths).toContain("LICENSE");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/AGENTS.md");
     expect(plan.artifactPaths).toContain("docs/templates/adapter/.codex/hooks.json");
@@ -727,11 +727,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(plan.artifactPaths).not.toContain(".ut-tdd/handover/CURRENT.json");
     expect(plan.artifactPaths).not.toContain(".ut-tdd/harness.db");
     expect(plan.artifactPaths).not.toContain(".ut-tdd/harness.db-wal");
-    expect(plan.releaseIntegrity.artifacts).toEqual([
-      "v0.1.0.tar.gz",
-      "v0.1.0.tar.gz.sha256",
-      "v0.1.0.tar.gz.sig",
-    ]);
+    // PLAN-L7-413 D-4c: unsigned tarball 契約 — .sig は成果物から撤去 (宣言と実装の一致)。
+    expect(plan.releaseIntegrity.artifacts).toEqual(["v0.1.0.tar.gz", "v0.1.0.tar.gz.sha256"]);
   });
 
   it("U-SETUP-011c: Pack sync plan is non-destructive and copies only clean artifacts", () => {

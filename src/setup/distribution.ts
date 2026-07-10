@@ -2,7 +2,7 @@ import { COMMON_FILES } from "./templates";
 
 export interface CleanDistributionPlan {
   ok: boolean;
-  channel: "clean-repo-plus-signed-tarball";
+  channel: "clean-repo-plus-tarball";
   sourceTag: string;
   cleanRepo: string;
   artifactPaths: string[];
@@ -199,16 +199,21 @@ function shellQuotePath(path: string): string {
 export function gitAddPathspecCommands(
   repoDir: string,
   artifactPaths: readonly string[],
+  removedPaths: readonly string[] = [],
 ): string[] {
   const commands: string[] = [];
   const chunkSize = 80;
-  for (let i = 0; i < artifactPaths.length; i += chunkSize) {
-    const chunk = artifactPaths
-      .slice(i, i + chunkSize)
-      .map(shellQuotePath)
-      .join(" ");
-    commands.push(`git -C ${repoDir} add -- ${chunk}`);
-  }
+  const addCommands = (verb: string, paths: readonly string[]): void => {
+    for (let i = 0; i < paths.length; i += chunkSize) {
+      const chunk = paths
+        .slice(i, i + chunkSize)
+        .map(shellQuotePath)
+        .join(" ");
+      commands.push(`git -C ${repoDir} ${verb} -- ${chunk}`);
+    }
+  };
+  addCommands("add", artifactPaths);
+  addCommands("rm --ignore-unmatch", removedPaths);
   return commands;
 }
 
@@ -239,14 +244,21 @@ export function buildCleanDistributionPlan(input: {
     (path) => isAllowedCleanPath(path) && !isDeniedCleanPath(path),
   );
   const artifactPaths = [...new Set(includedSourcePaths.map(cleanDistributionArtifactPath))].sort();
+  // D-2 fail-close (PLAN-L7-413 followup): violation は **最終出荷集合 (artifactPaths)** を
+  // deny で監視する。include filter の退行や remap の denied 空間衝突で denied path が
+  // 出荷側に達したときのみ fire する出力ガード。denied な入力 path 自体は通常の除外
+  // (excludedPaths) — 全 denied 入力を fail にすると full repo walk (.ut-tdd/ 等常在) と
+  // 意図的 carve-out (src/web/ は tracked .gitkeep を持つ) で plan が恒常 blocked になる
+  // (PR #42 の過剰 fail-close、cli-surface 実 repo 回帰で検出)。「denied 入力が出荷されない」
+  // 側の fence は tests/distribution-acceptance.test.ts の D-2 テストが固定する。
+  const denylistViolations = artifactPaths.filter(isDeniedCleanPath);
   const artifactSet = new Set(artifactPaths);
   const missingRequired = CLEAN_REQUIRED_PATHS.filter((path) => !artifactSet.has(path));
-  const denylistViolations = artifactPaths.filter(isDeniedCleanPath);
   const includedSourceSet = new Set(includedSourcePaths);
   const excludedPaths = normalized.filter((path) => !includedSourceSet.has(path));
   return {
     ok: missingRequired.length === 0 && denylistViolations.length === 0,
-    channel: "clean-repo-plus-signed-tarball",
+    channel: "clean-repo-plus-tarball",
     sourceTag,
     cleanRepo,
     artifactPaths,
@@ -255,7 +267,7 @@ export function buildCleanDistributionPlan(input: {
     denylistViolations,
     releaseIntegrity: {
       required: true,
-      artifacts: [`${sourceTag}.tar.gz`, `${sourceTag}.tar.gz.sha256`, `${sourceTag}.tar.gz.sig`],
+      artifacts: [`${sourceTag}.tar.gz`, `${sourceTag}.tar.gz.sha256`],
     },
   };
 }
@@ -422,7 +434,7 @@ export function buildPackSyncPlan(input: {
       "missingRequired.length === 0",
       "git status --short shows only intended clean Pack files",
       "Pack CI passes before release publication",
-      "signature tarball and GitHub release publication remain separate human-approved operations",
+      "tarball and GitHub release publication remain separate human-approved operations",
     ],
     publishRequiresPoApproval: true,
     destructiveRemoteMutation: false,
