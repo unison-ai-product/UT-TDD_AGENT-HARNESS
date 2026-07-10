@@ -22,7 +22,7 @@ Claude Code read priority is `../CLAUDE.md` -> this file ->
 Active hooks in `.claude/settings.json` must call package-local UT-TDD commands
 only. Do not enable hooks that depend on personal legacy runtime paths.
 
-- `PreToolUse(Agent)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"`
+- `PreToolUse(Agent|Task)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"`
 - `PreToolUse(Edit|Write|MultiEdit)`: `bun "$CLAUDE_PROJECT_DIR/.claude/hooks/work-guard.ts"`
 - `SessionStart`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" session start`
 - `PostToolUse(Edit|Write|MultiEdit|Bash)`: `bun "$CLAUDE_PROJECT_DIR/src/cli.ts" hook post-tool-use`
@@ -97,7 +97,7 @@ plain fenced command for a human to run if the native tool is unavailable.
 
 ## Subagent Guard
 
-`PreToolUse(Agent)` uses:
+`PreToolUse(Agent|Task)` uses:
 
 ```bash
 bun "$CLAUDE_PROJECT_DIR/.claude/hooks/agent-guard.ts"
