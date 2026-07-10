@@ -15,6 +15,7 @@ import { HARNESS_DB_CORE_TABLES } from "../src/schema/harness-db-tables-core";
 import { HARNESS_DB_EVALUATION_TABLES } from "../src/schema/harness-db-tables-evaluation";
 import { HARNESS_DB_GRAPH_EXPORT_TABLES } from "../src/schema/harness-db-tables-graph";
 import { HARNESS_DB_SPEC_IR_TABLES } from "../src/schema/harness-db-tables-spec-ir";
+import { HARNESS_DB_VMODEL_TABLES } from "../src/schema/harness-db-tables-vmodel";
 import { assertWithinUtTdd, openHarnessDb, upsertRow } from "../src/state-db/index";
 import { ensureHarnessSchema, harnessDbStatus } from "../src/state-db/maintenance";
 import { migrate, missingTables, rowCounts, tableNames } from "../src/state-db/migration";
@@ -65,6 +66,7 @@ describe("IT-DB-01: harness.db state-db foundation", () => {
         ...HARNESS_DB_CORE_TABLES,
         ...HARNESS_DB_GRAPH_EXPORT_TABLES,
         ...HARNESS_DB_EVALUATION_TABLES,
+        ...HARNESS_DB_VMODEL_TABLES,
         ...HARNESS_DB_SPEC_IR_TABLES,
       ].map((t) => t.name),
     );

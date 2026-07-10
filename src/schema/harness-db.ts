@@ -19,20 +19,60 @@ export { HARNESS_DB_INDEXES, HARNESS_DB_TABLES } from "./harness-db-catalog";
  * affinity ヒント)。各 table の列・PK・index は §2.7/§9.1/§9.3 に準拠。
  */
 
-export const SCHEMA_VERSION = 25;
+export const SCHEMA_VERSION = 26;
 
 export type ColumnType = "TEXT" | "INTEGER" | "REAL";
+
+export type ReferentialAction = "CASCADE" | "RESTRICT" | "SET NULL" | "NO ACTION";
+
+export interface ColumnReference {
+  table: string;
+  column: string;
+  onDelete?: ReferentialAction;
+  onUpdate?: ReferentialAction;
+}
+
+export type CheckScalar = string | number;
+
+/** raw SQLを受け取らずにCHECKを表現する閉じた式木。 */
+export type CheckExpression =
+  | { kind: "in"; column: string; values: readonly CheckScalar[] }
+  | {
+      kind: "compare";
+      column: string;
+      operator: "=" | "!=" | "<" | "<=" | ">" | ">=";
+      value: CheckScalar;
+    }
+  | { kind: "is-null"; column: string; negate?: boolean }
+  | { kind: "and"; expressions: readonly CheckExpression[] }
+  | { kind: "or"; expressions: readonly CheckExpression[] }
+  | { kind: "not"; expression: CheckExpression };
+
+export interface ForeignKeyDef {
+  columns: readonly string[];
+  referencedTable: string;
+  referencedColumns: readonly string[];
+  onDelete?: ReferentialAction;
+  onUpdate?: ReferentialAction;
+}
 
 export interface ColumnDef {
   name: string;
   type: ColumnType;
   /** PRIMARY KEY 列 (1 table 1 列、physical-data の PK に準拠)。 */
   primaryKey?: boolean;
+  notNull?: boolean;
+  references?: ColumnReference;
 }
 
 export interface TableDef {
   name: string;
   columns: ColumnDef[];
+  /** 2列以上の複合PK。既存のColumnDef.primaryKeyとの併用は禁止。 */
+  primaryKey?: readonly string[];
+  unique?: readonly (readonly string[])[];
+  checks?: readonly CheckExpression[];
+  foreignKeys?: readonly ForeignKeyDef[];
 }
 
 export interface IndexDef {
@@ -53,17 +93,147 @@ export function assertSqlIdentifier(name: string): void {
   }
 }
 
+function assertKnownColumns(table: TableDef, columns: readonly string[], subject: string): void {
+  if (columns.length === 0) throw new Error(`${table.name} ${subject} の列が空です`);
+  const known = new Set(table.columns.map((column) => column.name));
+  for (const column of columns) {
+    assertSqlIdentifier(column);
+    if (!known.has(column)) throw new Error(`${table.name} ${subject} の未知列: ${column}`);
+  }
+}
+
+function validateCheck(table: TableDef, expression: CheckExpression): void {
+  if (expression.kind === "and" || expression.kind === "or") {
+    if (expression.expressions.length === 0) {
+      throw new Error(`${table.name} CHECK ${expression.kind} の式が空です`);
+    }
+    for (const child of expression.expressions) validateCheck(table, child);
+    return;
+  }
+  if (expression.kind === "not") {
+    validateCheck(table, expression.expression);
+    return;
+  }
+  assertKnownColumns(table, [expression.column], "CHECK");
+  if (expression.kind === "in" && expression.values.length === 0) {
+    throw new Error(`${table.name} CHECK IN の値が空です`);
+  }
+  const values =
+    expression.kind === "in"
+      ? expression.values
+      : expression.kind === "compare"
+        ? [expression.value]
+        : [];
+  for (const value of values) {
+    if (typeof value === "number" && !Number.isFinite(value)) {
+      throw new Error(`${table.name} CHECK に有限でない数値は使えません`);
+    }
+  }
+}
+
+export function validateTableDef(table: TableDef): void {
+  assertSqlIdentifier(table.name);
+  if (table.columns.length === 0) throw new Error(`${table.name} の列が空です`);
+  const names = new Set<string>();
+  for (const column of table.columns) {
+    assertSqlIdentifier(column.name);
+    if (names.has(column.name))
+      throw new Error(`${table.name} の列が重複しています: ${column.name}`);
+    names.add(column.name);
+    if (column.references) {
+      assertSqlIdentifier(column.references.table);
+      assertSqlIdentifier(column.references.column);
+    }
+  }
+  const inlineKeys = table.columns
+    .filter((column) => column.primaryKey)
+    .map((column) => column.name);
+  if (inlineKeys.length > 1 || (inlineKeys.length > 0 && table.primaryKey)) {
+    throw new Error(`${table.name} のPRIMARY KEY定義が競合しています`);
+  }
+  if (table.primaryKey) {
+    if (table.primaryKey.length < 2)
+      throw new Error(`${table.name} の複合PRIMARY KEYは2列以上必要です`);
+    assertKnownColumns(table, table.primaryKey, "PRIMARY KEY");
+    if (new Set(table.primaryKey).size !== table.primaryKey.length) {
+      throw new Error(`${table.name} のPRIMARY KEY列が重複しています`);
+    }
+  }
+  for (const columns of table.unique ?? []) {
+    assertKnownColumns(table, columns, "UNIQUE");
+    if (new Set(columns).size !== columns.length)
+      throw new Error(`${table.name} のUNIQUE列が重複しています`);
+  }
+  for (const foreignKey of table.foreignKeys ?? []) {
+    assertKnownColumns(table, foreignKey.columns, "FOREIGN KEY");
+    assertSqlIdentifier(foreignKey.referencedTable);
+    for (const column of foreignKey.referencedColumns) assertSqlIdentifier(column);
+    if (foreignKey.columns.length !== foreignKey.referencedColumns.length) {
+      throw new Error(`${table.name} のFOREIGN KEY列数が一致しません`);
+    }
+  }
+  for (const check of table.checks ?? []) validateCheck(table, check);
+}
+
 export const HARNESS_DB_TABLE_BY_NAME: ReadonlyMap<string, TableDef> = new Map(
   HARNESS_DB_TABLES.map((t) => [t.name, t]),
 );
 
 /** CREATE TABLE DDL を registry から生成 (deterministic、IF NOT EXISTS)。 */
 export function createTableSql(table: TableDef): string {
+  validateTableDef(table);
   const cols = table.columns.map((c) => {
-    const constraint = c.primaryKey ? " PRIMARY KEY" : "";
-    return `  ${c.name} ${c.type}${constraint}`;
+    const constraints = [
+      c.primaryKey ? "PRIMARY KEY" : "",
+      c.notNull ? "NOT NULL" : "",
+      c.references ? renderReference(c.references) : "",
+    ].filter(Boolean);
+    return `  ${c.name} ${c.type}${constraints.length > 0 ? ` ${constraints.join(" ")}` : ""}`;
   });
-  return `CREATE TABLE IF NOT EXISTS ${table.name} (\n${cols.join(",\n")}\n)`;
+  const constraints = [
+    ...(table.primaryKey ? [`  PRIMARY KEY (${table.primaryKey.join(", ")})`] : []),
+    ...(table.unique ?? []).map((columns) => `  UNIQUE (${columns.join(", ")})`),
+    ...(table.foreignKeys ?? []).map(
+      (foreignKey) =>
+        `  FOREIGN KEY (${foreignKey.columns.join(", ")}) REFERENCES ${foreignKey.referencedTable} (${foreignKey.referencedColumns.join(", ")})${renderActions(foreignKey)}`,
+    ),
+    ...(table.checks ?? []).map((check) => `  CHECK (${renderCheck(check)})`),
+  ];
+  return `CREATE TABLE IF NOT EXISTS ${table.name} (\n${[...cols, ...constraints].join(",\n")}\n)`;
+}
+
+function renderActions(input: {
+  onDelete?: ReferentialAction;
+  onUpdate?: ReferentialAction;
+}): string {
+  return `${input.onDelete ? ` ON DELETE ${input.onDelete}` : ""}${input.onUpdate ? ` ON UPDATE ${input.onUpdate}` : ""}`;
+}
+
+function renderReference(reference: ColumnReference): string {
+  return `REFERENCES ${reference.table} (${reference.column})${renderActions(reference)}`;
+}
+
+function renderScalar(value: CheckScalar): string {
+  if (typeof value === "number") return String(value);
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
+function renderCheck(expression: CheckExpression): string {
+  switch (expression.kind) {
+    case "in":
+      return `${expression.column} IN (${expression.values.map(renderScalar).join(", ")})`;
+    case "compare":
+      return `${expression.column} ${expression.operator} ${renderScalar(expression.value)}`;
+    case "is-null":
+      return `${expression.column} IS ${expression.negate ? "NOT " : ""}NULL`;
+    case "and":
+    case "or":
+      return expression.expressions
+        .map((child) => `(${renderCheck(child)})`)
+        .join(` ${expression.kind.toUpperCase()} `);
+    case "not":
+      return `NOT (${renderCheck(expression.expression)})`;
+  }
 }
 
 /** CREATE INDEX DDL。 */
@@ -77,8 +247,7 @@ export function schemaDdl(): string[] {
 }
 // registry identifiers are validated at module load so invalid DDL fails before projection writes.
 for (const table of HARNESS_DB_TABLES) {
-  assertSqlIdentifier(table.name);
-  for (const column of table.columns) assertSqlIdentifier(column.name);
+  validateTableDef(table);
 }
 for (const index of HARNESS_DB_INDEXES) {
   assertSqlIdentifier(index.name);
@@ -87,7 +256,15 @@ for (const index of HARNESS_DB_INDEXES) {
 }
 
 export function primaryKeyOf(table: TableDef): string {
+  if (table.primaryKey) {
+    throw new Error(`table ${table.name} has a composite primary key; use primaryKeyColumnsOf`);
+  }
   const key = table.columns.find((c) => c.primaryKey);
   if (!key) throw new Error(`table ${table.name} has no primary key column`);
   return key.name;
+}
+
+export function primaryKeyColumnsOf(table: TableDef): readonly string[] {
+  if (table.primaryKey) return [...table.primaryKey];
+  return [primaryKeyOf(table)];
 }

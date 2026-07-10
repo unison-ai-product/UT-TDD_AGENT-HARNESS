@@ -37,6 +37,12 @@ generates:
     artifact_type: source_code
   - artifact_path: src/profile/adapters/tracked-profile-loader.ts
     artifact_type: source_code
+  - artifact_path: src/schema/harness-db-tables-vmodel.ts
+    artifact_type: source_code
+  - artifact_path: tests/harness-db-constraints.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/vmodel-schema.test.ts
+    artifact_type: test_code
   - artifact_path: tests/disposition/catalog.test.ts
     artifact_type: test_code
   - artifact_path: tests/disposition/strict-markdown-table.test.ts

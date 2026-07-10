@@ -668,6 +668,8 @@ item targetは`pending_review|adopt|merge|reference|defer|not_applicable|reject`
 
 現行schema registryがFK、NOT NULL、UNIQUE、CHECK、複合PKを表現できない場合、PLAN-L7-417はregistry modelを先に拡張する。
 application validationだけでL5制約を代替してはならず、DDL制約とdomain validationの両面をRed/Greenにする。
+PLAN-L7-417のDB waveでtyped `ColumnDef/TableDef`へNOT NULL、inline/composite FK、UNIQUE、閉じたCHECK AST、
+composite PKを追加し、raw SQLを受け取らないDDL生成とSQLite実強制testを実装する。
 
 projection上の導出は次に限定する。source-item `edge_id`はlength-prefixed frame
 `[source_ref,item_id]`のSHA-256、各`row_digest`はauthoring rowの全column名+値、`manifest_digest`はprovenance表全体から作る。
