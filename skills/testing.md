@@ -14,6 +14,35 @@ applies_to:
     - Add-feature
     - Reverse
     - Retrofit
+decision_points:
+  - when: "choosing the runner for CI or local test execution"
+    choose: "bun run test (Vitest)"
+    over: "bun test"
+    because: "bun test's 5-second sync timeout produces false failures on async Vitest suites"
+  - when: "a PLAN proposes raising a coverage threshold in vitest.config.ts"
+    choose: "confirm the new tests have meaningful oracles first"
+    over: "raising the threshold once the percentage target is hit"
+    because: "coverage count is not the same as oracle quality; a raised threshold can be satisfied by weak assertions"
+  - when: "building fixtures for harness state in tests"
+    choose: "dedicated fixtures under tests/fixtures/"
+    over: "reusing production .ut-tdd/ state as a test fixture"
+    because: "test runs must be reproducible without depending on a live runtime"
+  - when: "an integration test needs to read harness.db"
+    choose: "set up and tear down its own in-memory or temp-file DB instance"
+    over: "reading the shared/production harness.db"
+    because: "shared DB state makes test runs non-reproducible and can leak state between runs"
+  - when: "a test suite reports high coverage percentage"
+    choose: "verify the assertions would catch a wrong return value or a missing write to .ut-tdd/"
+    over: "accepting the coverage percentage as evidence the tests are useful"
+    because: "a green coverage percentage does not prove the test oracles are meaningful"
+  - when: "a test (or code under test) spawns bun/bunx as a child process and must pass on Windows CI"
+    choose: "resolve the runnable entrypoint explicitly (or spawn via a shell) so the Windows `.cmd` shim is executable"
+    over: "spawning the bare command name and relying on POSIX-only resolution"
+    because: "on Windows, bun/bunx are `.cmd` shims that plain spawn cannot execute; the suite stays green on POSIX CI and fails only on native Windows (known CI blind spot in this repo)"
+  - when: "back-filling tests for existing code under a Retrofit or Reverse PLAN"
+    choose: "write characterisation tests describing current behavior before making any design changes"
+    over: "changing the design first and writing tests against the new behavior"
+    because: "characterisation tests establish the regression fence that protects existing behavior during the retrofit"
 ---
 
 # testing

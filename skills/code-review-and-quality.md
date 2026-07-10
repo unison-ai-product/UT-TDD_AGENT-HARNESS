@@ -17,6 +17,27 @@ applies_to:
     - Reverse
     - Refactor
     - Retrofit
+decision_points:
+  - when: "A W-gate pair (design doc <-> test/verification artifact) is being closed for accept."
+    choose: "Read the test-design doc body to confirm the specified scenarios are actually present in the test file."
+    over: "Closing the gate because the test-ID count matches the design-doc scenario count."
+    because: "The skill states a W-gate is not closed by coverage count alone; a matching count can still map onto trivial or wrong assertions."
+  - when: "Verifying integration-path test doubles for the Step 2 substance audit."
+    choose: "Confirm integration paths use a real test double."
+    over: "Accepting a full database mock as sufficient integration coverage."
+    because: "FR-L1-03's descent obligation requires integration tests to exercise real behavior; a full mock can pass while the real integration path is broken."
+  - when: "Reviewing a Refactor or Retrofit PLAN for accept."
+    choose: "Run the Step 4 retrograde quality check (assertion count, test-design section removal, suppression count) before approving."
+    over: "Treating the standard Step 1-3 review as sufficient since no new feature is being added."
+    because: "The skill notes refactors frequently delete tests silently; skipping the retrograde check specifically misses quality regressions that a same-scope review would not catch."
+  - when: "A changed module's V-model sibling artifacts (design doc, test-design doc, trace_links) are being checked."
+    choose: "Confirm all three exist and are referenced in `review_evidence.trace_links`, not just the code change itself."
+    over: "Approving the PLAN because the implementation and its direct unit test are present."
+    because: "FR-L1-21 review evidence and the layer obligation check require the full sibling set; a missing design or test-design doc is an open V-model obligation even if the code works."
+  - when: "A commit uses `biome lint` instead of `bun run lint` before the review is closed."
+    choose: "Flag it as an anti-pattern and require `bun run lint`."
+    over: "Accepting it since `biome lint` also reports lint violations."
+    because: "The skill lists this exact substitution as an anti-pattern: format violations accumulate silently and fail the next CI push."
 ---
 
 # code review and quality

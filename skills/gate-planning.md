@@ -16,6 +16,31 @@ applies_to:
     - Reverse
     - Scrum
     - Discovery
+decision_points:
+  - when: "Deciding whether a unit of work is complete"
+    choose: "require all seven DoD conditions (typecheck/lint/test green, doctor 0, plan lint 0, review --uncommitted clean, freeze readability, glossary updated, handover if session-crossing)"
+    over: "treating \"code written\" or \"looks right\" as sufficient to close"
+    because: "only machine evidence and recorded review findings clear a gate; subjective code-looks-right assessments are not falsifiable"
+  - when: "Running Vitest locally or in CI"
+    choose: "use `bun run test`"
+    over: "using bare `bun test`"
+    because: "the native runner has sync-timeout flakiness; CI uses Vitest via `bun run test`, so bare `bun test` can pass locally and still fail CI"
+  - when: "Checking Biome formatting before a gate"
+    choose: "run `bun run lint` (which invokes `biome check`)"
+    over: "running `biome lint` alone"
+    because: "`biome lint` does not check formatting; format violations accumulate silently and break the next push"
+  - when: "`ut-tdd doctor` exits 0 for a layer"
+    choose: "treat that as structural governance passing only, and still read the design docs for substance"
+    over: "treating doctor-green as confirmation the design itself is correct"
+    because: "doctor checks structural governance (schema, dependencies, projections), not design substance — green doctor with a wrong design is possible"
+  - when: "A judgement gate (pair-freeze, trace-freeze, accept) needs review evidence"
+    choose: "obtain cross-agent review evidence in hybrid mode, or `intra_runtime_subagent` evidence in single-runtime mode"
+    over: "self-review by the same agent/session that did the work"
+    because: "self-review alone is explicitly excluded — mode-aware review tier exists precisely to prevent one agent from being both author and sole reviewer"
+  - when: "A type error, lint violation, or skipped test blocks a gate"
+    choose: "fix the underlying issue or get a PLAN-linked rationale recorded"
+    over: "silencing with `// biome-ignore`, `// @ts-ignore`, or `.skip`"
+    because: "unrationalized silencing defeats the enforcement the gate exists to provide and hides the condition from future review"
 ---
 
 # gate planning
