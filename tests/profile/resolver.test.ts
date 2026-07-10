@@ -101,6 +101,23 @@ describe("document profile resolver", () => {
     });
     expect(first).toEqual(second);
     expect(first.ok && first.value.selectionDigest).toMatch(/^[a-f0-9]{64}$/);
+    if (!first.ok) return;
+    expect(first.value.decisions.find((item) => item.docTypeId === "DOC-L4-DATA")).toMatchObject({
+      winningDecisionId: "explicit-data-detail",
+      detail: "detailed",
+    });
+    expect(first.value.applicationReceipt).toContain("explicit-data-detail");
+
+    const withoutExplicit = resolveDocumentProfile(catalog.value, {
+      sizeProfileId: "standard",
+      productProfileIds: ["web", "mobile"],
+      explicitDecisions: [],
+      capabilityFlags: [],
+    });
+    expect(withoutExplicit.ok).toBe(true);
+    if (withoutExplicit.ok) {
+      expect(withoutExplicit.value.selectionDigest).not.toBe(first.value.selectionDigest);
+    }
   });
 
   it("preserves every master field and rejects invalid enum or FK", () => {
