@@ -43,9 +43,9 @@ typed_spec_phase_owner: L4
 | `DOC-L8-INTEGRATION-TEST-DESIGN` | `L8` | `integration-test-design` | `test-design` | `core` | `in_scope` | `required` | `vmodel-test` | `docs/test-design/harness/L8-integration-test-design.md` | `spec_defs` | `false` | `false` |
 | `DOC-L9-SYSTEM-TEST-DESIGN` | `L9` | `system-test-design` | `test-design` | `core` | `in_scope` | `required` | `vmodel-test` | `docs/test-design/harness/L9-system-test-design.md` | `spec_defs` | `false` | `false` |
 | `DOC-L10-UX-VALIDATION` | `L10` | `ux-validation` | `test-design` | `product-select` | `profile_controlled` | `required` | `vmodel-test` | `docs/test-design/harness/L10-ux-validation-test-design.md` | `spec_defs` | `true` | `true` |
-| `DOC-L11-TRACE-UAT` | `L11` | `trace-uat` | `process-evidence` | `core` | `in_scope` | `required` | `vmodel-verification` | `docs/process/gates.md` | `evidence_records` | `false` | `false` |
+| `DOC-L11-TRACE-UAT` | `L11` | `trace-uat` | `process-evidence` | `core` | `in_scope` | `required` | `vmodel-verification` | `docs/process/evidence/g11-uat-review-design.md` | `evidence_records` | `false` | `false` |
 | `DOC-L12-ACCEPTANCE` | `L12` | `acceptance-test-design` | `test-design` | `core` | `in_scope` | `required` | `vmodel-test` | `docs/test-design/harness/L12-acceptance-test-design.md` | `spec_defs` | `false` | `false` |
-| `DOC-L13-PRODUCTION-OBSERVATION` | `L13` | `production-observation` | `process-evidence` | `core` | `in_scope` | `required` | `vmodel-verification` | `docs/process/gates.md` | `evidence_records` | `false` | `false` |
+| `DOC-L13-PRODUCTION-OBSERVATION` | `L13` | `production-observation` | `process-evidence` | `core` | `in_scope` | `required` | `vmodel-verification` | `docs/process/evidence/g13-post-deploy-verification-design.md` | `evidence_records` | `false` | `false` |
 | `DOC-L14-OPERATIONAL-TEST` | `L14` | `operational-test-design` | `test-design` | `core` | `in_scope` | `required` | `vmodel-test` | `docs/test-design/harness/L14-operational-test-design.md` | `spec_defs` | `false` | `false` |
 | `DOC-L14-VMODEL-ENGINE-SWAP-OT` | `L14` | `operational-test-design` | `upgrade-delta` | `core` | `in_scope` | `required` | `vmodel-upgrade` | `docs/test-design/harness/L14-vmodel-engine-swap-operational-test-design.md` | `spec_defs` | `false` | `false` |
 

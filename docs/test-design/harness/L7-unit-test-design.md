@@ -1175,3 +1175,76 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | U-RIGHT-ARM-ENGINE-002 | `analyzeRightArmGatePlanning` | design freezeはlinked全層起票、program acceptはlinked全層confirmed/completedを別々に強制する。 |
 | U-VTRIG-REVISION-001 | `analyzeVerificationGroups` | confirmed base + valid additive draftをbase freeze完了 / active revision `IN-PROGRESS`として別集計する。 |
 | U-VTRIG-REVISION-002 | `analyzeVerificationGroups` / `analyzePairFreeze` | base欠落/未confirmed/layer不一致は免除せず、delta exact pairの双方向参照を検証する。 |
+
+## Engine-swap unit/property/mutation oracle (PLAN-L6-70〜77)
+
+`CANDIDATE-*`はdraft実装PLANに対応する未freeze候補であり、実テストcitationとして数えない。各L7 PLANの開始時に、期待finding/exitで実際に失敗するRed testを追加してから正規`U-*`/`IT-*`/`P-*`/`M-*`へ昇格する。`it.todo`やskipだけで昇格してはならない。実装済みV-model compiler群だけは`U-VMC-*`としてfreeze済みである。
+
+| test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
+|---|---|---|---|
+| `CANDIDATE-PA-001` | 空/不正`asset_id` | `PlanAsset.create` | `plan-asset-invalid-id`, exit 1 |
+| `CANDIDATE-PA-002` | revision 1,3 | `PlanAsset.reconstruct` | `plan-revision-gap`, exit 1 |
+| `CANDIDATE-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
+| `CANDIDATE-PA-004` | revision 1+evidence | `PlanAsset.revise` | 旧instance/evidence digest不変、exit 0 |
+| `CANDIDATE-PA-005` | expired/別revision evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`, exit 1 |
+| `CANDIDATE-PA-006` | legacy PLAN全field | canonical adapter | field loss 0。損失時`plan-migration-loss`, exit 1 |
+| `CANDIDATE-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
+| `CANDIDATE-FSM-001` | 正規stateごとの次event | `transition` | 許可表どおりのnext state/event、exit 0 |
+| `CANDIDATE-FSM-002` | proposed→implementing | `transition` | `forward-transition-illegal`, exit 1 |
+| `CANDIDATE-FSM-003` | pair frozen、Red evidenceなし | implement command | `forward-red-evidence-missing`, exit 1 |
+| `CANDIDATE-FSM-004` | trace未freeze | review command | `forward-trace-freeze-missing`, exit 1 |
+| `CANDIDATE-FSM-005` | review/test evidence不足 | accept command | `forward-accept-evidence-missing`, exit 1 |
+| `CANDIDATE-FSM-006` | blocked/reopenedで理由またはevidenceなし | `transition` | `forward-exception-context-missing`, exit 1 |
+| `CANDIDATE-FSM-007` | 同一sequence付きevent列 | `reduceForward`を2回 | state/verdict/digest同一、exit 0 |
+| `CANDIDATE-FSM-001` | generatorが作る任意event列 | `reduceForward` | 非許可状態到達0、sequence違反は必ずexit 1 |
+| `U-VMC-001` | L0-L14各1件 | `VModelContract.create` | layer count 15、exit 0 |
+| `U-VMC-002` | G0.5/G1-G14各1件 | `VModelContract.create` | gate count 15、exit 0 |
+| `U-VMC-003` | layer/gate欠落または重複 | `VModelContract.create` | `contract-cardinality-invalid`, exit 1 |
+| `U-VMC-004` | pair/exception reason不整合 | `VModelContract.create` | `contract-pair-invalid`, exit 1 |
+| `U-VMC-005` | required field欠落 | loader/compiler | default補完せず`contract-field-missing`, exit 1 |
+| `I-VMC-001` | valid contract | compiler→registry/doctor/roadmap | rule ID/verdict集合差0、exit 0 |
+| `CANDIDATE-DISP-001` | checked manifest宣言値と同数records | catalog create | source/item/category/profile件数一致、exit 0 |
+| `CANDIDATE-DISP-002` | manifest件数とrecord件数不一致 | catalog create | `catalog-count-mismatch`, exit 1 |
+| `CANDIDATE-DISP-003` | source/item/target orphan | catalog create | `catalog-orphan-edge`, exit 1 |
+| `CANDIDATE-DISP-004` | disposition理由/target/PLAN欠落 | catalog create | `catalog-disposition-incomplete`, exit 1 |
+| `CANDIDATE-DISP-005` | 同一edge ID重複 | catalog create | `catalog-edge-duplicate`, exit 1 |
+| `CANDIDATE-DISP-001` | valid authored catalog | DB削除→rebuild | catalog/edge/finding identity集合差0 |
+| `CANDIDATE-PROFILE-001` | checked manifest size 3/product 5 | profile create | 宣言件数一致、exit 0 |
+| `CANDIDATE-PROFILE-002` | baseline+product+explicit override | resolverを2回 | resolved digest同一、exit 0 |
+| `CANDIDATE-PROFILE-003` | unknown profile/item | resolver | `profile-unknown`, exit 1 |
+| `CANDIDATE-PROFILE-004` | 同優先度で異なる値 | resolver | `profile-overlay-conflict`, exit 1 |
+| `CANDIDATE-PROFILE-005` | authored decision欠落 | resolver | default創作せず`profile-decision-missing`, exit 1 |
+| `CANDIDATE-DOCLEDGER-001` | baseline raw NUL path集合 | snapshot capture | count/tree OID/hashがfixture一致 |
+| `CANDIDATE-DOCLEDGER-002` | missing/duplicate/phantom/case-fold path | ledger validate | 各stable finding、exit 1 |
+| `CANDIDATE-DOCLEDGER-003` | conditional field欠落 | ledger validate | `doc-disposition-incomplete`, exit 1 |
+| `CANDIDATE-DOCLEDGER-004` | add/delete/rename未台帳 | final closure | `doc-delta-unregistered`, exit 1 |
+| `CANDIDATE-DOCLEDGER-005` | broken/superseded/archive依存edge | reference analyze | typed orphan finding、exit 1 |
+| `CANDIDATE-DOMAIN-001` | domain import graph | dependency audit | domain→kernel以外の逆依存0 |
+| `CANDIDATE-DOMAIN-002` | barrel相互import fixture | dependency audit | `module-cycle`, exit 1 |
+| `CANDIDATE-DOMAIN-003` | command/query同時mutation fixture | CQS audit | `command-query-mixed`, exit 1 |
+| `CANDIDATE-DOMAIN-004` | 不完全constructor/public mutable fixture | structure audit | `domain-invalid-state-surface`, exit 1 |
+| `CANDIDATE-ASSESS-001` | design/runtime/test evidence完備 | evaluator | `verified`, exit 0 |
+| `CANDIDATE-ASSESS-002` | 3面のいずれか欠落 | evaluator | verifiedにせず`partial`, exit 0 |
+| `CANDIDATE-ASSESS-003` | gapでdebt route欠落 | evaluator | `assessment-debt-route-missing`, exit 1 |
+| `CANDIDATE-ASSESS-004` | conditional/NA理由・profile・承認欠落 | evaluator | `assessment-applicability-incomplete`, exit 1 |
+| `CANDIDATE-ASSESS-005` | source revision/digest変更 | evaluator | 旧verifiedをstale扱い、exit 1 |
+| `CANDIDATE-ASSESS-006` | 163 item全件fixture | aggregate query | pending 0、gap/partial route coverage 100% |
+| `CANDIDATE-SP-001` | rule/registry duplicate/orphan | meta-verifier | `self-proof-registration-mismatch`, exit 1 |
+| `CANDIDATE-SP-002` | source/generated digest不一致 | meta-verifier | `self-proof-generated-stale`, exit 1 |
+| `CANDIDATE-SP-003` | CLI/hook/doctor/CI surface欠落 | meta-verifier | `self-proof-surface-missing`, exit 1 |
+| `CANDIDATE-SP-004` | expected/actual finding/exit不一致 | meta-verifier | `self-proof-verdict-mismatch`, exit 1 |
+| `CANDIDATE-SP-005` | 正常fixture | meta-verifier | false-positive 0、exit 0 |
+| `CANDIDATE-SP-006` | detector未登録fixture | process runner | `self-proof-detector-unwired`, exit 1 |
+| `CANDIDATE-SP-007` | detectorが例外を成功扱い | process runner | `self-proof-exception-swallowed`, exit 1 |
+| `CANDIDATE-SP-008` | authored source欠落をDBが補完 | meta-verifier | `self-proof-db-only-completion`, exit 1 |
+| `CANDIDATE-SP-001` | 同一rule全surface実行 | process runner | rule ID/verdict/exit一致、exit 0 |
+| `CANDIDATE-SP-002` | receipt projection削除 | rebuild+verify | receipt/finding identity集合差0 |
+| `CANDIDATE-SP-001` | rule条件削除mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-SP-002` | gate mapping交換mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-SP-003` | stale生成物mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-SP-004` | detector未配線mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-SP-005` | exception fail-open mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-SP-006` | DB-only補完mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-SP-007` | surface登録脱落mutation | mutation runner | mutation killed、exit 1 |
+
+実装前にnegative fixtureが期待finding/exitで落ちるRedを固定し、detectorのpass/fail関数をmeta-verifierのoracleへ再利用しない。

@@ -14,7 +14,7 @@ owner: PO / Codex
 parent_design: docs/design/harness/L4-basic-design/data.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L9-system-test-design.md
-next_pair_freeze: L5
+next_pair_freeze: L9
 agent_slots:
   - role: tl
     slot_label: "TL - aggregate責務、class採用境界、pure function境界"

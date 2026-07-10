@@ -148,7 +148,15 @@ describe("checked Vモデル source assets", () => {
 
   it("U-VMSRC-006: declarative V-model contract covers L0-L14 and G0.5/G1-G14 exactly once", () => {
     const contract = YAML.parse(read("docs/process/vmodel-contract.yaml")) as {
-      forward_workflow: { pair_reciprocity_exceptions: string[] };
+      forward_workflow: {
+        pair_reciprocity_exceptions: string[];
+        pair_reciprocity_exception_contracts: Array<{
+          layer: string;
+          reason: string;
+          allowed_pair_layers: string[];
+          required_backlinks: string[];
+        }>;
+      };
       layers: Array<{
         layer: string;
         gate: string;
@@ -157,6 +165,10 @@ describe("checked Vモデル source assets", () => {
         evidence_families: string[];
         exit_criteria: string;
         defect_routing: string;
+        verification_plan_id?: string;
+        governance_artifact?: string;
+        case_id_prefix?: string;
+        evidence_manifest?: string;
       }>;
     };
     const expectedLayers = Array.from({ length: 15 }, (_, index) => `L${index}`);
@@ -175,11 +187,24 @@ describe("checked Vモデル source assets", () => {
     }
     const byLayer = new Map(contract.layers.map((entry) => [entry.layer, entry]));
     const exceptions = new Set(contract.forward_workflow.pair_reciprocity_exceptions);
+    expect(contract.forward_workflow.pair_reciprocity_exception_contracts).toHaveLength(2);
+    for (const exception of contract.forward_workflow.pair_reciprocity_exception_contracts) {
+      expect(exceptions.has(exception.layer)).toBe(true);
+      expect(exception.reason).not.toBe("");
+      expect(exception.allowed_pair_layers).toEqual(byLayer.get(exception.layer)?.pair_layers);
+      expect(exception.required_backlinks.length).toBeGreaterThan(0);
+    }
     for (const entry of contract.layers) {
       if (exceptions.has(entry.layer)) continue;
       for (const pair of entry.pair_layers) {
         expect(byLayer.get(pair)?.pair_layers).toContain(entry.layer);
       }
+    }
+    for (const entry of contract.layers.filter((layer) => Number(layer.layer.slice(1)) >= 8)) {
+      expect(entry.verification_plan_id).toMatch(`PLAN-${entry.layer}-`);
+      expect(entry.governance_artifact).toMatch(/^docs\//);
+      expect(entry.case_id_prefix).toMatch(/^[A-Z]+-$/);
+      expect(entry.evidence_manifest).toMatch(/^\.ut-tdd\/evidence\//);
     }
   });
 

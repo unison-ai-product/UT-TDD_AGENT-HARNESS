@@ -577,3 +577,59 @@ PLAN-L4-19 の宣言型 spec IR は、Vモデル改善に伴う検出系・起�
 - candidate 生成は `findings` / `quality_signals` / spec IR / schedule / activation / activation schedule review を join するが、PLAN 起票や frontmatter 更新は行わない。
 - `recordProjectionEvent` は schema にない列を保持しないため、列名 typo は U3 L7 の test で検出する。単一 PLAN を表さない値は `plan_id` に入れず、複数 plan は専用 serialized field または relation table へ逃がす。
 - L8 は IT-SPECIR-01..04 で、projection の冪等性、orphan fail-close、FilingTarget 非創作、activation 理由必須 / raw payload 非保存を検証する。
+
+## §9.15 Vモデル engine-swap 物理データ群 (PLAN-L5-16〜19 / 21〜22)
+
+### §9.15.1 authoring source と projection 境界
+
+engine-swap の正本は `docs/governance/**`、`docs/process/vmodel-contract.yaml`、PLAN、test-designに置く。
+以下のDB tableは検索・join・rebuild用projectionであり、未記入disposition、semantic verdict、profile override、
+workflow transition、evidence、doc監査判断を補完してはならない。
+
+| 物理データ群 | 主キー / identity | authoring source | 不変条件 |
+|---|---|---|---|
+| source/item/target | `source_id`, `item_id`, `edge_id` | source manifest / item catalog / target edges | manifest宣言件数=record件数、orphan 0。checked fixtureは109/163/21 |
+| profile | `profile_id`, `override_id` | 規模profile catalog | manifest宣言件数=record件数、unknown/同優先度競合 fail-close。checked fixtureはsize 3 + product 5 |
+| PLAN Asset | `asset_id`, `(asset_id, revision)` | PLAN Asset v2 / migration ledger | renameでidentity不変、revision単調増加 |
+| workflow/evidence | `event_id`, `evidence_id` | append-only ledger | subject revision/commit/digest/expiry拘束 |
+| Vモデルcontract | `(contract_revision, rule_id)` | `vmodel-contract.yaml` | L0-L14/G0.5-G14を重複なく1回ずつ定義 |
+| docs disposition | `(baseline_id, path)` | manifest + zone shard | baseline path exactly once、delta明示、pending 0 |
+| semantic assessment | `(item_id, assessment_revision)` | self-assessment catalog | verified 3面証拠、partial/gap debt route必須 |
+| 自己証明 | `(rule_id, contract_revision, verifier_version)` | 追記専用receipt/corpus | registry/receiptを重複なく1回ずつ定義、mutation survivor 0 |
+
+### §9.15.2 repository文書snapshot / shard schema
+
+`docs/governance/repository-document-disposition/manifest.yaml`は`schema_version`、baseline/final snapshot、
+`path_stream_algorithm=git-ls-tree-z-v1`、commit、tree OID、tracked count、raw NUL stream SHA-256、deltaを持つ。
+zone shardの全recordは`path`、baseline blob/digest、zone、disposition、reason、targets、plan IDs、impact tags、
+authoring provenance、application statusを必須とする。selectorはauthoring CLIの入力に使えるが、最終recordへ
+materializeされないselector自体を正本にしない。Markdown ledgerは生成view、DBはprojectionである。
+
+### §9.15.3 索引 / rebuild / 保持
+
+- source/item/target/profileはIDと逆引きtarget、PLAN Assetはalias/revision、workflowはsubject+sequence、evidenceはsubject+revisionへindexを張る。
+- docs ledgerはpath/zone/disposition/impact tag、semantic assessmentはverdict/debt PLAN、self-proofはrule/surface/mutationへindexを張る。
+- append-only event/receipt/reviewを更新・削除で上書きせず、supersessionを新eventとして記録する。
+- projection全削除/rebuild後にrow countだけでなくidentity集合、digest、reduction verdict、finding IDが一致しなければfail-closeする。
+- raw ZIP本文、provider transcript、secret、credential、PIIをDB/receiptへ保存しない。
+
+### §9.15.4 column / FK / 並び順 / migration契約
+
+| table | 必須columnと型 | key / FK / nullability | index / ordering |
+|---|---|---|---|
+| `vmodel_sources` | `source_id TEXT`, `ordinal INTEGER`, `title TEXT`, `disposition TEXT`, `source_hash TEXT` | PK=`source_id`、`ordinal` UNIQUE、全列NOT NULL | `ordinal`順 |
+| `vmodel_semantic_items` | `item_id TEXT`, `category_id TEXT`, `title TEXT`, `source_revision TEXT` | PK=`item_id`、category FK、全列NOT NULL | category+item index |
+| `vmodel_source_item_edges` | `edge_id TEXT`, `source_id TEXT`, `item_id TEXT`, `reason TEXT` | PK=`edge_id`、source/item FK、reason NOT NULL | source/item双方index |
+| `vmodel_item_target_edges` | `edge_id TEXT`, `item_id TEXT`, `target_kind TEXT`, `target_ref TEXT`, `plan_id TEXT?` | PK=`edge_id`、item FK、adopt/merge時target NOT NULL | item/target index |
+| `vmodel_profiles` | `profile_id TEXT`, `axis TEXT`, `priority INTEGER`, `definition_hash TEXT` | PK=`profile_id`、axis enum、全列NOT NULL | axis+priority index |
+| `plan_assets` | `asset_id TEXT`, `canonical_alias TEXT`, `created_revision INTEGER` | PK=`asset_id`、alias UNIQUE、全列NOT NULL | alias index |
+| `plan_revisions` | `asset_id TEXT`, `revision INTEGER`, `content_digest TEXT`, `source_commit TEXT` | PK=`(asset_id,revision)`、asset FK、全列NOT NULL | revision単調増加 |
+| `workflow_transition_events` | `event_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `sequence INTEGER`, `from_state TEXT`, `to_state TEXT`, `reason TEXT?` | PK=`event_id`、`(subject_id,sequence)` UNIQUE、subject FK | subject+sequence昇順 |
+| `evidence_records` | `evidence_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `source_commit TEXT`, `digest TEXT`, `produced_at TEXT`, `expires_at TEXT?` | PK=`evidence_id`、subject/revision FK、expiryのみnullable | subject+revision index |
+| `document_dispositions` | `baseline_id TEXT`, `path TEXT`, `blob_oid TEXT`, `zone TEXT`, `disposition TEXT`, `reason TEXT?`, `application_status TEXT` | PK=`(baseline_id,path)`、conditional reason/targetをCHECK | zone/disposition/status index |
+| `semantic_assessments` | `item_id TEXT`, `assessment_revision INTEGER`, `verdict TEXT`, `source_digest TEXT`, `debt_plan_id TEXT?` | PK=`(item_id,assessment_revision)`、item FK、gap/partial時debt NOT NULL | verdict/debt index |
+| `self_proof_receipts` | `rule_id TEXT`, `contract_revision TEXT`, `verifier_version TEXT`, `source_hash TEXT`, `generated_hash TEXT`, `actual_exit INTEGER` | PK=`(rule_id,contract_revision,verifier_version)`、全列NOT NULL | rule/revision index |
+
+event/revision/receiptはappend-onlyとし、UPDATE/DELETEで履歴を上書きしない。schema追加は`SCHEMA_VERSION`をbumpし、
+旧DBをin-place真実化せず、authoring sourceからtransactional rebuildする。migration前後でPK集合、FK orphan、
+UNIQUE違反、reduction digestを比較し、差があればcommitせずrollbackする。

@@ -196,3 +196,50 @@ boundary rule: lint modules は first-class detector のままにする。DB lay
 | FR-L1-08 / FR-L1-12 / FR-L1-19 / FR-L1-21 / FR-L1-22 / FR-L1-28 | runtime routing、skill injection、learning feedback、test perspective、FE detector、two-stage design module boundaries を受け取る |
 | FR-L1-31 / FR-L1-32 / FR-L1-33 / FR-L1-34 / FR-L1-35 | context、folder、asset mapping、integration-map、infrastructure readiness module boundaries を受け取る |
 | FR-L1-37 / FR-L1-39 / FR-L1-41 / FR-L1-44 | model recommendation、task classification、drive detection、onboarding module boundaries を受け取る |
+
+## 付録C: Vモデル engine-swap モジュール分割 (PLAN-L5-20)
+
+### C.1 モジュール責務
+
+| コンテキスト | domain / application / port | class採用判断 | I/O adapter |
+|---|---|---|---|
+| kernel | `Result`、`Finding`、branded ID/digest | immutable VOのみ | なし |
+| plan-asset | `PlanAsset`、`PlanRevision`、`EvidenceRecord`、採番予約 | lifecycle/identityを持つaggregate/VO | frontmatter、台帳、SQLite |
+| forward | `ForwardWorkflow`、遷移event、reducer/policy | aggregateとpure reducer/policy | 遷移台帳、evidence reader |
+| vmodel-contract | 検証済contract、layer/gate VO、compiler | 検証済aggregateとapplication compiler | YAML loader、生成registry |
+| disposition | source/item/target/disposition edge catalog | 検証済aggregateとimmutable edge | Markdown/YAML loader、projection writer |
+| profile | profile catalog/selection/resolved profile | VOとstateless resolver | profile authoring loader |
+| docs-governance | snapshot、materialized disposition、typed reference graph | pure validatorとapplication command | Git object、YAML shard、report writer |
+| semantic-assessment | assessment/evidence/debt route | pure evaluatorとrouteFiling port | catalog loader、projection writer |
+| self-proof | receipt/report/mutation corpus | classを使わずpure functionとports | process runner、hasher、receipt store |
+
+### C.1.1 package / public API / 移行wave
+
+| wave | package path | public API owner | 互換 / 移行 |
+|---|---|---|---|
+| W1 | `src/kernel/{result,finding,ids}.ts` | 共通`Result`/`Finding`/branded ID | `src/workflow/contracts-types.ts`から互換re-exportし、consumer移行後に旧定義を除去 |
+| W1 | `src/plan-asset/domain/*` | `PlanAsset`, `PlanRevision`, `EvidenceRecord`, `PlanIdReservation` | legacy frontmatter parserはadapterとしてcanonical DTOを返す |
+| W1 | `src/forward/domain/*` | `ForwardWorkflow`, `reduceForward`, policy table | 現行workflow helperはapplication facadeへ段階委譲 |
+| W2 | `src/vmodel-contract/{domain,application,ports,adapters}/*` | `VModelContract`, `compileVModelContract` | 手書きgate定数をgenerated registryへ置換し、drift gate後に旧定数を除去 |
+| W2 | `src/disposition/{domain,adapters}/*` | `DocumentDispositionCatalog` | Markdown catalog loaderとDB projectorを分離 |
+| W2 | `src/profile/{domain,adapters}/*` | `resolveProfile` | doctor run profileとの名称衝突を避け`DocumentProfile`を使用 |
+| W3 | `src/document-governance/*` | snapshot/materialize/validate/reference closure | 現行relation graphをoracleにせず、必要edgeだけ互換export |
+| W3 | `src/semantic-assessment/*` | `evaluateSemanticItem`, `routeAssessmentDebt` | routeFiling portへ委譲しlocal heuristicを禁止 |
+| W4 | `src/self-proof/*` | `runSelfProof`, receipt/report DTO | process runnerでCLI/hook/doctor/CIを外部観測 |
+
+各packageは`domain/index`の巨大barrelを作らず、public symbolの所有fileを1つに固定する。移行waveごとに
+consumer一覧、互換re-export削除条件、module graph cycle 0、targeted testをevidenceへ記録する。
+
+### C.2 依存規則
+
+`kernel ← domain ← application → ports ← adapters`とし、CLI/doctorをcomposition rootにする。domainはkernel以外へ
+逆依存せず、domain間はbranded ID/DTOだけで参照する。filesystem/SQLite/Markdown/YAML/process実行をdomainへ
+持ち込まず、barrel相互importと`*Manager`巨大classを禁止する。既存`LintResult`のplan実装逆依存、
+`runtime/detect`とadapterのtype cycle、巨大lint/projection moduleは互換re-exportを伴う段階移行対象とする。
+
+### C.3 規模 / 循環 / CQS gate
+
+- 新規source function/methodは80 nonblank lines、cyclomatic complexity 12、制御nesting 3を上限とする。
+- aggregate public methodは概ね7以下。commandはevent/resultを返し、queryは状態を変更しない。
+- public mutable field、setter、二段階初期化、汎用service locator、domainからdoctor/CLI importを禁止する。
+- module graph cycleは0をhard gateとし、既存超過は件数を隠さずdebt PLANへ送る。
