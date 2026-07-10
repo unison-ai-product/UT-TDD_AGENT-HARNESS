@@ -234,4 +234,17 @@ describe("checked Vモデル source assets", () => {
     expect(l14).not.toContain("PLAN-L1-06再凍結");
     expect(l14).not.toContain("PLAN-L1-06とVUP要件docをconfirmedへ戻さない");
   });
+
+  it("U-VMSRC-009: planned oracle candidates keep kind-qualified unique identities", () => {
+    const unitDesign = read("docs/test-design/harness/L7-unit-test-design.md");
+    const candidateIds = [...unitDesign.matchAll(/`(CANDIDATE-[A-Z0-9-]+-[0-9]{3})`/g)].map(
+      (match) => match[1],
+    );
+    expect(candidateIds.length).toBeGreaterThan(0);
+    expect(new Set(candidateIds).size).toBe(candidateIds.length);
+    expect(candidateIds).toContain("CANDIDATE-P-FSM-001");
+    expect(candidateIds).toContain("CANDIDATE-I-DISP-001");
+    expect(candidateIds).toContain("CANDIDATE-I-SP-001");
+    expect(candidateIds).toContain("CANDIDATE-M-SP-001");
+  });
 });

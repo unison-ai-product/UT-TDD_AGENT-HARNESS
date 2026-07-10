@@ -1196,7 +1196,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `CANDIDATE-FSM-005` | review/test evidence不足 | accept command | `forward-accept-evidence-missing`, exit 1 |
 | `CANDIDATE-FSM-006` | blocked/reopenedで理由またはevidenceなし | `transition` | `forward-exception-context-missing`, exit 1 |
 | `CANDIDATE-FSM-007` | 同一sequence付きevent列 | `reduceForward`を2回 | state/verdict/digest同一、exit 0 |
-| `CANDIDATE-FSM-001` | generatorが作る任意event列 | `reduceForward` | 非許可状態到達0、sequence違反は必ずexit 1 |
+| `CANDIDATE-P-FSM-001` | generatorが作る任意event列 | `reduceForward` | 非許可状態到達0、sequence違反は必ずexit 1 |
 | `U-VMC-001` | L0-L14各1件 | `VModelContract.create` | layer count 15、exit 0 |
 | `U-VMC-002` | G0.5/G1-G14各1件 | `VModelContract.create` | gate count 15、exit 0 |
 | `U-VMC-003` | layer/gate欠落または重複 | `VModelContract.create` | `contract-cardinality-invalid`, exit 1 |
@@ -1208,7 +1208,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `CANDIDATE-DISP-003` | source/item/target orphan | catalog create | `catalog-orphan-edge`, exit 1 |
 | `CANDIDATE-DISP-004` | disposition理由/target/PLAN欠落 | catalog create | `catalog-disposition-incomplete`, exit 1 |
 | `CANDIDATE-DISP-005` | 同一edge ID重複 | catalog create | `catalog-edge-duplicate`, exit 1 |
-| `CANDIDATE-DISP-001` | valid authored catalog | DB削除→rebuild | catalog/edge/finding identity集合差0 |
+| `CANDIDATE-I-DISP-001` | valid authored catalog | DB削除→rebuild | catalog/edge/finding identity集合差0 |
 | `CANDIDATE-PROFILE-001` | checked manifest size 3/product 5 | profile create | 宣言件数一致、exit 0 |
 | `CANDIDATE-PROFILE-002` | baseline+product+explicit override | resolverを2回 | resolved digest同一、exit 0 |
 | `CANDIDATE-PROFILE-003` | unknown profile/item | resolver | `profile-unknown`, exit 1 |
@@ -1237,14 +1237,14 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `CANDIDATE-SP-006` | detector未登録fixture | process runner | `self-proof-detector-unwired`, exit 1 |
 | `CANDIDATE-SP-007` | detectorが例外を成功扱い | process runner | `self-proof-exception-swallowed`, exit 1 |
 | `CANDIDATE-SP-008` | authored source欠落をDBが補完 | meta-verifier | `self-proof-db-only-completion`, exit 1 |
-| `CANDIDATE-SP-001` | 同一rule全surface実行 | process runner | rule ID/verdict/exit一致、exit 0 |
-| `CANDIDATE-SP-002` | receipt projection削除 | rebuild+verify | receipt/finding identity集合差0 |
-| `CANDIDATE-SP-001` | rule条件削除mutation | mutation runner | mutation killed、exit 1 |
-| `CANDIDATE-SP-002` | gate mapping交換mutation | mutation runner | mutation killed、exit 1 |
-| `CANDIDATE-SP-003` | stale生成物mutation | mutation runner | mutation killed、exit 1 |
-| `CANDIDATE-SP-004` | detector未配線mutation | mutation runner | mutation killed、exit 1 |
-| `CANDIDATE-SP-005` | exception fail-open mutation | mutation runner | mutation killed、exit 1 |
-| `CANDIDATE-SP-006` | DB-only補完mutation | mutation runner | mutation killed、exit 1 |
-| `CANDIDATE-SP-007` | surface登録脱落mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-I-SP-001` | 同一rule全surface実行 | process runner | rule ID/verdict/exit一致、exit 0 |
+| `CANDIDATE-I-SP-002` | receipt projection削除 | rebuild+verify | receipt/finding identity集合差0 |
+| `CANDIDATE-M-SP-001` | rule条件削除mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-M-SP-002` | gate mapping交換mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-M-SP-003` | stale生成物mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-M-SP-004` | detector未配線mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-M-SP-005` | exception fail-open mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-M-SP-006` | DB-only補完mutation | mutation runner | mutation killed、exit 1 |
+| `CANDIDATE-M-SP-007` | surface登録脱落mutation | mutation runner | mutation killed、exit 1 |
 
 実装前にnegative fixtureが期待finding/exitで落ちるRedを固定し、detectorのpass/fail関数をmeta-verifierのoracleへ再利用しない。
