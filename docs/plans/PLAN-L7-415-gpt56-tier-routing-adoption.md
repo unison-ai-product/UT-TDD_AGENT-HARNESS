@@ -4,7 +4,7 @@ title: "PLAN-L7-415 (retrofit): GPT-5.6 tier routing 採用 — worker→terra /
 kind: retrofit
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: dependency_outdated
 route_mode: retrofit
 backprop_decision: not_required
@@ -21,6 +21,24 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-415-gpt56-tier-routing-adoption.md
     artifact_type: markdown_doc
+  - artifact_path: src/cli/delegation.ts
+    artifact_type: source_module
+  - artifact_path: src/team/model-policy.ts
+    artifact_type: source_module
+  - artifact_path: src/team/advisor-policy.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/token-tracker.ts
+    artifact_type: source_module
+  - artifact_path: docs/templates/adapter/AGENTS.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/adapter/CLAUDE.md
+    artifact_type: markdown_doc
+  - artifact_path: tests/team-run.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/tier-router.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/token-tracker.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires:
@@ -33,6 +51,43 @@ dependencies:
     - docs/plans/PLAN-L7-256-model-id-ssot-drift-gate.md
     - docs/plans/PLAN-L7-414-agent-guard-claude5-family-rank.md
     - .ut-tdd/memory/project-fable-5-7-13-rate-limit.md
+review_evidence:
+  - reviewer: codex
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-10T15:00:24+09:00"
+    tests_green_at: "2026-07-10T15:00:24+09:00"
+    verdict: approve
+    scope: "GPT-5.6 terra/sol の T1/T0 routing、advisor の MODEL_IDS 追随、direct Codex worker dry-run、pricing fallback、SSoT oracle と adapter mirror を確認。Fable route は未変更。"
+    worker_model: gpt-5.6-terra
+    reviewer_model: codex-intra-runtime
+    green_commands:
+      - kind: unit_test
+        command: "bunx vitest run tests/model-id-ssot-drift.test.ts tests/team-model-policy.test.ts tests/team-run.test.ts"
+        runner: bunx
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T15:00:24+09:00"
+        evidence_path: tests/model-id-ssot-drift.test.ts
+        output_digest: "sha256:06cf8deb2f5a51ffed040603f503f8ea82102850afdc0a4586a69e35844477c5 (3 files, 34 tests passed)"
+        anchor_commit: 833e396f14beeb4722cc9b1e0dd5febef97eccf4
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-10T15:00:00+09:00"
+        evidence_path: src/cli/delegation.ts
+        output_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 (tsc --noEmit succeeded)"
+        anchor_commit: 833e396f14beeb4722cc9b1e0dd5febef97eccf4
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-10T15:00:00+09:00"
+        evidence_path: src/team/model-policy.ts
+        output_digest: "biome check src tests: Checked 372 files; no fixes applied"
+        anchor_commit: 833e396f14beeb4722cc9b1e0dd5febef97eccf4
 ---
 
 # PLAN-L7-415 (retrofit): GPT-5.6 tier routing 採用
