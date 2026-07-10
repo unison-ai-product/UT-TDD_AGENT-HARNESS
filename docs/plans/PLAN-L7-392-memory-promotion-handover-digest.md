@@ -10,7 +10,7 @@ route_mode: add-feature
 created: 2026-07-08
 updated: 2026-07-10
 owner: PO / Codex
-parent_design: docs/design/harness/L6-function-design/handover-mechanism.md
+parent_design: docs/plans/PLAN-L6-68-memory-telemetry-lifecycle-contract.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L8
@@ -26,10 +26,28 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/feedback/lifecycle.ts
     artifact_type: source_module
+  - artifact_path: src/feedback/surface.ts
+    artifact_type: source_module
+  - artifact_path: src/memory/index.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/session-log.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/feedback-projections.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/projection-writer.ts
+    artifact_type: source_module
+  - artifact_path: src/schema/harness-db-tables-core.ts
+    artifact_type: schema
+  - artifact_path: src/schema/harness-db-indexes.ts
+    artifact_type: schema
   - artifact_path: tests/feedback-lifecycle.test.ts
     artifact_type: test_code
+  - artifact_path: tests/feedback-surface.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/session-log.test.ts
+    artifact_type: test_code
 dependencies:
-  parent: docs/plans/PLAN-L7-189-shared-harness-memory-cross-runtime.md
+  parent: docs/plans/PLAN-L6-68-memory-telemetry-lifecycle-contract.md
   requires:
     - docs/plans/PLAN-L7-189-shared-harness-memory-cross-runtime.md
     - docs/plans/PLAN-L7-366-takeover-surface-warn-actionable.md

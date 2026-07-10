@@ -74,6 +74,7 @@ import {
   projectRetryEvents,
   projectTroubleEvents,
   projectVerificationDefectRoutingRefactorCandidates,
+  reconcileFeedbackLifecycle,
 } from "./feedback-projections";
 import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants";
 import {
@@ -3018,6 +3019,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectFeedbackLifecycle(repoRoot, db, projectionDeps);
         projectVerificationDefectRoutingRefactorCandidates(db, projectionDeps);
         projectFeedbackEvents(db, projectionDeps);
+        reconcileFeedbackLifecycle(repoRoot, db, projectionDeps);
         projectTroubleEvents(db, projectionDeps);
         projectRetryEvents(db, projectionDeps);
         projectIssueQueue(db, projectionDeps);

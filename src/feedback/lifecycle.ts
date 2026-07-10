@@ -1,4 +1,23 @@
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+
 export type FeedbackLifecycleState = "open" | "ack" | "closed" | "superseded";
+
+const TELEMETRY_SIGNAL_TYPES = new Set([
+  "artifact_progress_yellow",
+  "drive_firing_rate",
+  "large-document-split",
+  "memory_promotion_missed",
+  "missing-test-oracle-id",
+  "skill_acceptance_rate",
+  "skill_firing_rate",
+  "trouble_event_rate",
+  "workflow_human_required_rate",
+]);
+
+export function isTelemetryFeedback(input: { severity: string; signal_type: string }): boolean {
+  return input.severity.toLowerCase() === "info" || TELEMETRY_SIGNAL_TYPES.has(input.signal_type);
+}
 
 export interface FeedbackLifecycleRecord {
   feedback_event_id: string;
@@ -13,7 +32,15 @@ export function parseFeedbackLifecycle(raw: string): FeedbackLifecycleRecord[] {
     if (!line.trim()) return [];
     try {
       const value = JSON.parse(line) as FeedbackLifecycleRecord;
-      return value.feedback_event_id && value.source_generation && value.state ? [value] : [];
+      const validState = ["open", "ack", "closed", "superseded"].includes(value.state);
+      const validTime = Number.isFinite(Date.parse(value.occurred_at));
+      return value.feedback_event_id &&
+        value.source_generation &&
+        validState &&
+        validTime &&
+        typeof value.reason === "string"
+        ? [value]
+        : [];
     } catch {
       return [];
     }
@@ -39,7 +66,9 @@ export function loadFeedbackLifecycle(repoRoot: string): FeedbackLifecycleRecord
 
 export function appendFeedbackLifecycle(repoRoot: string, record: FeedbackLifecycleRecord): void {
   try {
-    appendFileSync(feedbackLifecyclePath(repoRoot), renderFeedbackLifecycle(record), "utf8");
+    const path = feedbackLifecyclePath(repoRoot);
+    mkdirSync(dirname(path), { recursive: true });
+    appendFileSync(path, renderFeedbackLifecycle(record), "utf8");
   } catch {
     // Lifecycle telemetry is fail-open.
   }
@@ -63,5 +92,3 @@ export function resolveFeedbackLifecycle(input: {
   if (!Number.isFinite(elapsed) || elapsed < telemetry_ttl_ms) return previous;
   return { ...previous, state: "ack", occurred_at: now, reason: "telemetry_ttl" };
 }
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";

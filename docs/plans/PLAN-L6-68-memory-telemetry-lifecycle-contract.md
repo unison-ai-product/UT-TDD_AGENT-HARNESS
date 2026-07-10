@@ -3,7 +3,7 @@ plan_id: PLAN-L6-68-memory-telemetry-lifecycle-contract
 title: "PLAN-L6-68 (add-design): memory 昇格 nudge と telemetry lifecycle 契約"
 kind: add-design
 layer: L6
-sub_doc: memory
+sub_doc: function-spec
 drive: db
 status: draft
 route_signal: feature_addition
@@ -11,7 +11,7 @@ route_mode: add-feature
 created: 2026-07-10
 updated: 2026-07-10
 owner: PO / Codex
-parent_design: docs/plans/PLAN-L6-52-signals-schedule-live-handover.md
+parent_design: docs/plans/PLAN-L5-15-feedback-lifecycle-physical-data.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
@@ -32,11 +32,13 @@ generates:
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
 dependencies:
-  parent: docs/plans/PLAN-L6-52-signals-schedule-live-handover.md
+  parent: docs/plans/PLAN-L5-15-feedback-lifecycle-physical-data.md
   requires:
+    - docs/plans/PLAN-L5-15-feedback-lifecycle-physical-data.md
     - docs/plans/PLAN-L7-189-shared-harness-memory-cross-runtime.md
-    - docs/plans/PLAN-L7-246-feedback-event-lifecycle.md
   references:
+    - docs/plans/PLAN-L6-52-signals-schedule-live-handover.md
+    - docs/plans/PLAN-L7-246-feedback-event-lifecycle.md
     - docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
     - docs/plans/PLAN-REVERSE-392-memory-promotion-digest-backfill.md
 review_evidence: []

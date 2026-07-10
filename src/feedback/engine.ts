@@ -17,6 +17,7 @@ export interface FeedbackEvent {
   plan_id: string;
   source_table: string;
   source_id: string;
+  source_generation: string;
   source_color: string;
   signal_type: string;
   severity: string;
@@ -172,6 +173,10 @@ export function emitFeedbackEvents(db: HarnessDb): FeedbackEvent[] {
       plan_id: subject.startsWith("PLAN-") ? subject : "",
       source_table: "findings",
       source_id: findingId || subject,
+      source_generation: feedbackId(
+        "feedback-generation",
+        `findings:${findingId || subject}:${String(finding.kind ?? "finding")}:${String(finding.severity ?? "warn")}`,
+      ),
       source_color: "",
       signal_type: String(finding.kind ?? "finding"),
       severity: String(finding.severity ?? "warn"),
@@ -193,6 +198,10 @@ export function emitFeedbackEvents(db: HarnessDb): FeedbackEvent[] {
       plan_id: subject.startsWith("PLAN-") ? subject : "",
       source_table: "detector_route_candidates",
       source_id: candidateId || subject,
+      source_generation: feedbackId(
+        "feedback-generation",
+        `detector_route_candidates:${candidateId || subject}:${String(candidate.candidate_status ?? "non_ready")}:${findingKind}:${signalSeverity(candidate.severity)}`,
+      ),
       source_color: String(candidate.candidate_status ?? "non_ready"),
       signal_type: `detector_route_candidate:${findingKind}`,
       severity: signalSeverity(candidate.severity),
@@ -212,11 +221,43 @@ export function emitFeedbackEvents(db: HarnessDb): FeedbackEvent[] {
       plan_id: subject.startsWith("PLAN-") ? subject : "",
       source_table: "quality_signals",
       source_id: String(signal.signal_id ?? subject),
+      source_generation: feedbackId(
+        "feedback-generation",
+        `quality_signals:${String(signal.signal_id ?? subject)}:${String(signal.metric ?? "quality_signal")}:${String(signal.status ?? "warn")}:${String(signal.value ?? "")}`,
+      ),
       source_color: "",
       signal_type: String(signal.metric ?? "quality_signal"),
       severity: signalSeverity(signal.status),
       status: "open",
       next_action: `review quality signal ${signal.signal_id ?? subject}`,
+      created_at: createdAt,
+    };
+    upsertRow(db, { table: "feedback_events", primaryKey: "feedback_event_id", row: { ...event } });
+    events.push(event);
+  }
+  for (const hook of db
+    .prepare(
+      "SELECT event_id, session_id, plan_id, occurred_at FROM hook_events WHERE event_type = 'memory_promotion_missed' ORDER BY event_id",
+    )
+    .all()) {
+    const eventId = String(hook.event_id ?? "");
+    const sessionId = String(hook.session_id ?? "");
+    const event: FeedbackEvent = {
+      feedback_event_id: feedbackId("feedback:memory-promotion", eventId || sessionId),
+      finding_id: "",
+      plan_id: String(hook.plan_id ?? ""),
+      source_table: "hook_events",
+      source_id: eventId || sessionId,
+      source_generation: feedbackId(
+        "feedback-generation",
+        `hook_events:${eventId || sessionId}:${String(hook.occurred_at ?? "")}`,
+      ),
+      source_color: "",
+      signal_type: "memory_promotion_missed",
+      severity: "info",
+      status: "open",
+      next_action:
+        "review session changes and promote durable knowledge to HARNESS memory when warranted",
       created_at: createdAt,
     };
     upsertRow(db, { table: "feedback_events", primaryKey: "feedback_event_id", row: { ...event } });

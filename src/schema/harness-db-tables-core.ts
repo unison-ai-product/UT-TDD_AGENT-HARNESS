@@ -171,6 +171,7 @@ export const HARNESS_DB_CORE_TABLES: TableDef[] = [
       col("plan_id"),
       col("source_table"),
       col("source_id"),
+      col("source_generation"),
       col("source_color"),
       col("signal_type"),
       col("severity"),

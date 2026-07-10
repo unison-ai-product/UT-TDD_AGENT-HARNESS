@@ -21,7 +21,7 @@ generates:
   - artifact_path: docs/plans/PLAN-REVERSE-392-memory-promotion-digest-backfill.md
     artifact_type: markdown_doc
 dependencies:
-  parent: docs/plans/PLAN-L6-68-memory-telemetry-lifecycle-contract.md
+  parent: docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
   requires:
     - PLAN-L6-68-memory-telemetry-lifecycle-contract
     - PLAN-L7-189-shared-harness-memory-cross-runtime

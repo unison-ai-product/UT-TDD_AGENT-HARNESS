@@ -86,6 +86,11 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     columns: ["source_table", "source_id"],
   },
   {
+    name: "idx_feedback_lifecycle_event",
+    table: "feedback_lifecycle",
+    columns: ["feedback_event_id", "source_generation", "occurred_at"],
+  },
+  {
     name: "idx_refactor_candidates_state",
     table: "refactor_candidates",
     columns: ["state", "confidence", "last_seen_at"],

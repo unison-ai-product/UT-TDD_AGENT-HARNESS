@@ -19,6 +19,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import { evaluateMemoryPromotion } from "../memory/index";
 import { classifyVerificationVerb } from "./verb-classify";
 
 export type SessionEventType =
@@ -26,6 +27,8 @@ export type SessionEventType =
   | "tool_use"
   | "commit"
   | "plan_switch"
+  | "memory_write"
+  | "memory_promotion_missed"
   | "session_end"
   | "forced_stop" // 強制停止 (推定、PLAN-L6-04/L7-02 forced-stop-feedback)
   | "user_prompt" // ユーザー入力 (dangling-turn 推定の活動 marker)
@@ -80,6 +83,8 @@ export interface SessionLogDeps {
   removeFile?: (path: string) => void;
   /** 直近 commit hash (`git rev-parse HEAD`)。IMP-078 gap③: commit 捕捉を hook で供給。未提供→hash 無し。 */
   headCommit?: () => string | null;
+  /** Optional user-facing warning sink. Omitted in tests and non-interactive consumers. */
+  warn?: (message: string) => void;
 }
 
 const BRANCH_PLAN_RE = /^(?:add|design|feature|reverse|hotfix|poc|refactor)\/(.+)$/;
@@ -143,6 +148,31 @@ function outcomeOf(input: SessionHookInput): "ok" | "error" | undefined {
   if (r?.outcome === "error") return "error";
   if (r?.outcome === "ok") return "ok";
   return undefined;
+}
+
+function isMemoryWriteInput(input: SessionHookInput): boolean {
+  const tool = input.tool_name ?? "";
+  const values = input.tool_input ?? {};
+  const path = String(values.file_path ?? values.path ?? values.notebook_path ?? "")
+    .replaceAll("\\", "/")
+    .toLowerCase();
+  if (
+    path.includes(".ut-tdd/memory/") &&
+    /^(?:Edit|Write|MultiEdit|apply_patch|write_file)$/i.test(tool)
+  ) {
+    return true;
+  }
+  const patch = String(values.patch ?? values.input ?? "")
+    .replaceAll("\\", "/")
+    .toLowerCase();
+  if (
+    /^(?:apply_patch|write_file)$/i.test(tool) &&
+    /\*\*\* (?:update|add|delete) file: .*\.ut-tdd\/memory\//i.test(patch)
+  ) {
+    return true;
+  }
+  const command = String(values.command ?? "");
+  return /(?:ut-tdd|src[\\/]cli\.ts)\s+memory\s+add\b/i.test(command);
 }
 
 function emptyDigest(planId: string): PlanDigest {
@@ -401,6 +431,7 @@ export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): nu
   try {
     const cmd = String((input.tool_input as { command?: unknown })?.command ?? "");
     const isCommit = input.tool_name === "Bash" && /git\s+commit/.test(cmd);
+    const isMemoryWrite = isMemoryWriteInput(input);
     // PLAN-L7-04 Gap B 配線: commit message に PLAN ID があれば current-plan を活性化 (best-effort)。
     // `-F -` heredoc は cmd に本文が乗らず inferred=null → no-op。fail-open (throw しない)。
     if (isCommit) {
@@ -412,7 +443,7 @@ export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): nu
         ts: deps.now(),
         session_id: input.session_id ?? "unknown",
         plan_id: input.plan_id ?? resolveActivePlan(deps),
-        event_type: isCommit ? "commit" : "tool_use",
+        event_type: isCommit ? "commit" : isMemoryWrite ? "memory_write" : "tool_use",
         tool: input.tool_name,
         // IMP-078 gap③: commit は HEAD hash を捕捉 (deps.headCommit、PostToolUse は commit 完了後 = 新 HEAD)。
         // hash 取得不能 (headCommit 未提供/null) なら undefined = 旧挙動 ("Bash (bash)" 汚染は避ける、I-2)。
@@ -447,6 +478,23 @@ export function onStop(input: SessionHookInput, deps: SessionLogDeps): number {
     const raw = deps.readText(file);
     if (!raw) return 0;
     const events = parseSessionEvents(raw);
+    const promotion = evaluateMemoryPromotion(events);
+    if (promotion.should_nudge) {
+      const nudge: SessionEvent = {
+        ts: deps.now(),
+        session_id: sid,
+        plan_id: input.plan_id ?? resolveActivePlan(deps),
+        event_type: "memory_promotion_missed",
+        tool: "session-summary",
+        target: promotion.reason,
+        outcome: "ok",
+      };
+      recordEvent(nudge, deps);
+      events.push(nudge);
+      deps.warn?.(
+        "memory nudge: commit/PLAN transition occurred without a durable HARNESS memory write",
+      );
+    }
     const plans = new Set(
       events.map((e) => e.plan_id).filter((p): p is string => p !== null && p !== undefined),
     );
@@ -514,5 +562,6 @@ export function nodeDeps(
       if (existsSync(path)) rmSync(path);
     },
     headCommit: gitHead,
+    warn: (message) => process.stdout.write(`${message}\n`),
   };
 }

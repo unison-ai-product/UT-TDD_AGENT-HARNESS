@@ -231,7 +231,8 @@ PLAN-L5-08 は、SQLite を単なる storage ではなく reference-feedback mec
 | `hook_events` | `event_id` | `session_id`, `plan_id`, `hook_name`, `event_type`, `occurred_at`, `digest`, `evidence_path` | SessionStart/PostToolUse/Stop、gate、PLAN event を state projection へ結合する。 |
 | `skill_invocations` | `skill_invocation_id` | `session_id`, `plan_id`, `skill_id`, `layer`, `drive`, `fired_at`, `source`, `accepted` | 実際に発火した skill event を永続化する。 |
 | `skill_recommendations` | `skill_recommendation_id` | `session_id`, `plan_id`, `skill_id`, `rank`, `score`, `reason`, `recommended_at` | skill firing rate と recommendation quality の denominator を永続化する。 |
-| `feedback_events` | `feedback_event_id` | `finding_id`, `plan_id`, `signal_type`, `severity`, `status`, `next_action`, `created_at` | 繰り返し finding と drift を replanning input へ変換する。 |
+| `feedback_events` | `feedback_event_id` | `finding_id`, `plan_id`, `source_table`, `source_id`, `source_generation`, `signal_type`, `severity`, `status`, `next_action`, `created_at` | 再構築可能なsource観測をreplanning inputへ変換する。`source_generation`は意味状態から決定論的に生成し、同一観測のrebuildでは変えない。 |
+| `feedback_lifecycle` | `lifecycle_id` | `feedback_event_id`, `source_generation`, `state`, `occurred_at`, `reason` | `.ut-tdd/logs/feedback-lifecycle.jsonl` のappend-only消化履歴を投影する。同一generationのterminal stateをrebuildで再openしない。 |
 | `memory_entries` | `memory_id` | `kind`, `title`, `body`, `tags`, `source_path`, `updated_at`, `content_hash` | `.ut-tdd/memory/*.md` の authored memory を Claude/Codex 共有の read model として project する。SessionStart surface はこの table を read-only で読む。 |
 | `quality_signals` | `signal_id` | `source`, `subject_id`, `metric`, `value`, `threshold`, `status`, `computed_at` | orphan count、coverage、stale approval、gate-confirm coupling、schedule lint などの machine-check metrics を保存する。 |
 | `search_index` | `search_id` | `subject_type`, `subject_id`, `path`, `title`, `tokens`, `summary`, `updated_at` | PLAN/artifact/finding/skill/model/session query の lookup cost を下げる。 |
@@ -270,6 +271,8 @@ DB が保存するのは ID、reason、score、redacted summary のみにする�
 - `idx_hook_session_plan(session_id, plan_id, occurred_at)`
 - `idx_skill_plan_skill(plan_id, skill_id, fired_at)`
 - `idx_memory_kind_updated(kind, updated_at)`
+- `idx_feedback_source(source_table, source_id)`
+- `idx_feedback_lifecycle_event(feedback_event_id, source_generation, occurred_at)`
 - `idx_search_subject(subject_type, subject_id)`
 
 不変条件:
@@ -278,6 +281,7 @@ DB が保存するのは ID、reason、score、redacted summary のみにする�
 - すべての `workflow_runs`、`guardrail_decisions`、`automation_assets` row は source path または evidence path のいずれかを持ち、non-ready automation は closing finding なしに ready として現れない。
 - すべての non-green lint/doctor/vmodel/gate result は `findings` と optional `quality_signals` で表現できる。
 - `search_index` は docs/state/logs から rebuild 可能であり、authoritative state を変更せず delete/rebuild できる。
+- `feedback_events`は観測projection、`feedback_lifecycle`はdurableな消化履歴projectionである。current generationの最新transitionだけがsurface可否を決め、terminal eventのsourceをfinding/signal fallbackで再表示しない。
 
 ### 9.3.1 リファクタ候補 lifecycle 投影
 

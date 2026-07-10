@@ -358,6 +358,48 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     expect(log).not.toContain("secret.ts"); // 引数は残さない
   });
 
+  it("U-MEMORY-005: records explicit memory writes and emits one idempotent Stop nudge", () => {
+    const deps = mockDeps();
+    deps.files.set(statePath, "PLAN-L6-68-memory-telemetry-lifecycle-contract");
+    onPostToolUse(
+      {
+        session_id: "memory-session",
+        tool_name: "Write",
+        tool_input: { file_path: ".ut-tdd/memory/project-example.md" },
+        tool_response: { outcome: "ok" },
+      },
+      deps,
+    );
+    expect(deps.files.get(sessionPath("memory-session"))).toContain('"event_type":"memory_write"');
+
+    const warnings: string[] = [];
+    const missing = mockDeps({ warn: (message) => warnings.push(message) });
+    missing.files.set(statePath, "PLAN-L6-68-memory-telemetry-lifecycle-contract");
+    missing.files.set(
+      sessionPath("missing-memory"),
+      `${JSON.stringify({
+        ts: "2026-07-10T00:00:00Z",
+        session_id: "missing-memory",
+        plan_id: "PLAN-L6-68-memory-telemetry-lifecycle-contract",
+        event_type: "commit",
+        outcome: "ok",
+      })}\n`,
+    );
+    expect(onStop({ session_id: "missing-memory" }, missing)).toBe(0);
+    expect(missing.files.get(sessionPath("missing-memory"))).toContain(
+      '"event_type":"memory_promotion_missed"',
+    );
+    expect(warnings).toHaveLength(1);
+
+    expect(onStop({ session_id: "missing-memory" }, missing)).toBe(0);
+    expect(warnings).toHaveLength(1);
+    expect(
+      (missing.files.get(sessionPath("missing-memory")) ?? "").match(
+        /"event_type":"memory_promotion_missed"/g,
+      ),
+    ).toHaveLength(1);
+  });
+
   it("parseSessionEvents parses jsonl and skips corrupted lines (fail-open)", () => {
     const raw = `${JSON.stringify({ ts: "1", session_id: "s", plan_id: null, event_type: "tool_use", target: "a" })}\n{bad json\n\n${JSON.stringify({ ts: "2", session_id: "s", plan_id: null, event_type: "tool_use", target: "b" })}\n`;
     const events = parseSessionEvents(raw);

@@ -117,7 +117,7 @@ U-FSF-001 (`detectDanglingTurn` 純粋性/dangling 判定) / U-FSF-002 (`recordF
 | 目的 | 安全性強制 (守り) | 観測記録 (非侵襲) | 逸脱 signal 捕捉 → Recovery 提示 (非侵襲) |
 | 判断 | hook 内 (決定論) | hook 内 (集計のみ) | **hook 外 (Haiku subcommand)** |
 
-### §2.6.1 feedback telemetry lifecycle (PLAN-L6-68)
+### §2.6.1 feedback telemetry lifecycle の消化契約 (PLAN-L6-68)
 
 `feedback_events`のsource観測はappend-only/rebuild可能なprojectionとして保持し、消化状態は別lifecycle recordで管理する。telemetryだけはTTL後ack対象、gate/actionableはsource解消時だけclosedとする。消化済telemetryは同一source再投影でopenへ戻さず、新観測だけが新generationを作る。遷移には時刻とreasonを残し、DB書込失敗はfail-openでhookを止めない。
 
