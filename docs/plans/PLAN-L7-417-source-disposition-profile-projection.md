@@ -23,6 +23,22 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-417-source-disposition-profile-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: src/disposition/domain/document-disposition-catalog.ts
+    artifact_type: source_code
+  - artifact_path: src/disposition/adapters/strict-markdown-table.ts
+    artifact_type: source_code
+  - artifact_path: src/disposition/adapters/tracked-vmodel-loader.ts
+    artifact_type: source_code
+  - artifact_path: src/profile/domain/resolver.ts
+    artifact_type: source_code
+  - artifact_path: tests/disposition/catalog.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/disposition/strict-markdown-table.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/disposition/tracked-authoring-loader.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/profile/resolver.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-70-source-catalog-profile-resolver-contracts.md
   requires: []
@@ -36,6 +52,10 @@ dependencies:
 U-DISP/U-PROFILEをRed freeze後、catalog/profile domain、authoring loader、DB projectorをsmall moduleで実装する。manifest宣言件数との整合を検証し、109/163/21/8を恒久定数化しない。DoDはtargeted/full regression、rebuild identity差0、cross-agent review、Reverse-417合流である。
 
 planned deliverablesは`src/disposition/{domain,application,ports,adapters}`、`src/profile/{domain,application,ports,adapters}`、DB schema/projection、実行可能Red/Green test、item-target ledger validationである。実体作成と同時にfrontmatter `generates`へ昇格する。
+
+2026-07-10 Red/Green waveではpure catalog/profile domain、strict table parser、tracked 109/21/163 catalog loaderを実装した。
+残るDB schema/projector、profile tracked loader、canonical target resolver、provenance receipt、I-DISP-001/rollbackは未完了であり、
+PLAN statusとDoDを完了へ進めない。
 
 Red freezeは`U-DISP-001..005`、query純粋性/安定順序、`U-PROFILE-001..005`を同一contract revisionで先行し、
 domain Green後に`I-DISP-001`（PK/digest/finding identity fixed point）とinvalid authoring rollbackをRed化する。

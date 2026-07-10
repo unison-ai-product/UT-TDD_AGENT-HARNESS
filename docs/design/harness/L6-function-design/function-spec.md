@@ -929,9 +929,10 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 
 | 型 | 必須field | ordering / finding |
 |---|---|---|
-| `CatalogInput` | `manifestIdentity { auditedOn, zipSha256 }`, `declaredCounts`, `sources[]`, `items[]`, `categories[]`, `sourceItemEdges[]`, `sourceTargetEdges[]`, `itemTargetEdges[]` | manifest provenance表の`audited_on`+`sha256`をそのまま使用しrevisionを創作しない。stable ID昇順でcanonical digestを作る。件数不一致=`catalog-count-mismatch` |
+| `CatalogInput` | `manifestIdentity { auditedOn, zipSha256 }`, `declaredCounts`, `sources[]`, `items[]`, `categories[]`, `metaSourceMappings[]`, `sourceItemEdges[]`, `sourceTargetEdges[]`, `itemTargetEdges[]` | manifest provenance表の`audited_on`+`sha256`をそのまま使用しrevisionを創作しない。stable ID昇順でcanonical digestを作る。件数不一致=`catalog-count-mismatch` |
 | `CatalogSource` | `sourceId`, `ordinal`, `sourceTitle`, `disposition`, `targetRef`, `reason`, `rowDigest`, `manifestDigest` | ordinalはsource IDからだけ導出。ID/ordinal重複=`catalog-source-duplicate`、判断/reason欠落=`catalog-disposition-incomplete` |
 | `CatalogCategory` | `categoryId`, `categoryName`, `rowDigest` | authoringにないordinal/revisionを生成しない。ID重複=`catalog-category-duplicate` |
+| `MetaSourceMapping` | `metaSourceRef`, `allowedSourceStatus`, `sourceFilePolicy`, `reason`, `rowDigest` | item sourceが109 source外の場合の唯一のtyped endpoint。status/file policy不一致をorphanとして拒否 |
 | `CatalogItem` | `itemId`, `itemName`, `categoryId`, `sourceStatus`, `sourceRef`, `sourceFile`, `rowDigest` | category/source edge欠落=`catalog-orphan-edge` |
 | `SourceItemEdge` | `edgeId`, `sourceId`, `itemId`, `sourceStatus`, `sourceFile`, `rowDigest` | edgeIdは`sourceRef,itemId`のframed digestだけから導出し、reasonを創作しない |
 | `SourceTargetEdge` | `edgeId`, `sourceId`, `targetType`, `targetRef`, `disposition`, `rowDigest` | targetType=`plan_alias|artifact_family|artifact_path|target_slot`。source targetはitem targetのdefaultではない |

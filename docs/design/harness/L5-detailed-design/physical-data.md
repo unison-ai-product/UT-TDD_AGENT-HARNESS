@@ -619,6 +619,7 @@ materializeされないselector自体を正本にしない。Markdown ledgerは�
 |---|---|---|---|
 | `vmodel_sources` | `source_id TEXT`, `ordinal INTEGER`, `source_title TEXT`, `disposition TEXT`, `target_ref TEXT`, `reason TEXT`, `row_digest TEXT`, `manifest_digest TEXT` | PK=`source_id`、`ordinal` UNIQUE、全列NOT NULL。ordinalは`ZIP-DOC-NNN`のNNNだけから導出 | `ordinal`順 |
 | `vmodel_categories` | `category_id TEXT`, `category_name TEXT`, `row_digest TEXT` | PK=`category_id`、全列NOT NULL | category index |
+| `vmodel_meta_source_mappings` | `meta_source_ref TEXT`, `allowed_source_status TEXT`, `source_file_policy TEXT`, `reason TEXT`, `row_digest TEXT` | PK=`meta_source_ref`、全列NOT NULL | status/policy index |
 | `vmodel_semantic_items` | `item_id TEXT`, `item_name TEXT`, `category_id TEXT`, `source_status TEXT`, `source_ref TEXT`, `source_file TEXT`, `row_digest TEXT` | PK=`item_id`、category/source FK、全列NOT NULL | category/source/item index |
 | `vmodel_source_item_edges` | `edge_id TEXT`, `source_id TEXT`, `item_id TEXT`, `source_status TEXT`, `source_file TEXT`, `row_digest TEXT` | PK=`edge_id`、source/item FK、全列NOT NULL | source/item双方index |
 | `vmodel_source_target_edges` | `edge_id TEXT`, `source_id TEXT`, `disposition TEXT`, `target_type TEXT`, `target_ref TEXT`, `row_digest TEXT` | PK=`edge_id`、source FK、全列NOT NULL | source/target index |

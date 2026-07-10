@@ -1203,27 +1203,28 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-VMC-004` | pair/exception reason不整合 | `VModelContract.create` | `contract-pair-invalid`, exit 1 |
 | `U-VMC-005` | required field欠落 | loader/compiler | default補完せず`contract-field-missing`, exit 1 |
 | `I-VMC-001` | valid contract | compiler→registry/doctor/roadmap | rule ID/verdict集合差0、exit 0 |
-| `CANDIDATE-DISP-001` | checked manifest宣言値と同数records | catalog create | source/item/category/profile件数一致、exit 0 |
-| `CANDIDATE-DISP-002` | manifest件数とrecord件数不一致 | catalog create | `catalog-count-mismatch`, exit 1 |
-| `CANDIDATE-DISP-003` | source/item/target orphan | catalog create | `catalog-orphan-edge`, exit 1 |
-| `CANDIDATE-DISP-004` | disposition理由/target/PLAN欠落 | catalog create | `catalog-disposition-incomplete`, exit 1 |
-| `CANDIDATE-DISP-005` | 同一edge ID重複 | catalog create | `catalog-edge-duplicate`, exit 1 |
+| `U-DISP-001` | checked manifest宣言値と同数records | catalog create | source/item/category/profile件数一致、exit 0 |
+| `U-DISP-002` | manifest件数とrecord件数不一致 | catalog create | `catalog-count-mismatch`, exit 1 |
+| `U-DISP-003` | source/item/target orphan | catalog create | `catalog-orphan-edge`, exit 1 |
+| `U-DISP-004` | disposition理由/target/PLAN欠落 | catalog create | `catalog-disposition-incomplete`, exit 1 |
+| `U-DISP-005` | 同一edge ID重複 | catalog create | `catalog-edge-duplicate`, exit 1 |
 | `CANDIDATE-I-DISP-001` | valid authored catalog | DB削除→rebuild | catalog/edge/finding identity集合差0 |
-| `CANDIDATE-PROFILE-001` | checked manifest size 3/product 5 | profile create | 宣言件数一致、exit 0 |
-| `CANDIDATE-PROFILE-002` | baseline+product+explicit override | resolverを2回 | resolved digest同一、exit 0 |
-| `CANDIDATE-PROFILE-003` | unknown profile/item | resolver | `profile-unknown`, exit 1 |
-| `CANDIDATE-PROFILE-004` | 同優先度で異なる値 | resolver | `profile-overlay-conflict`, exit 1 |
-| `CANDIDATE-PROFILE-005` | authored decision欠落 | resolver | default創作せず`profile-decision-missing`, exit 1 |
+| `U-PROFILE-001` | checked manifest size 3/product 5 | profile create | 宣言件数一致、exit 0 |
+| `U-PROFILE-002` | baseline+product+explicit override | resolverを2回 | resolved digest同一、exit 0 |
+| `U-PROFILE-003` | unknown profile/item | resolver | `profile-unknown`, exit 1 |
+| `U-PROFILE-004` | 同優先度で異なる値 | resolver | `profile-overlay-conflict`, exit 1 |
+| `U-PROFILE-005` | authored decision欠落 | resolver | default創作せず`profile-decision-missing`, exit 1 |
 
 #### PLAN-L7-417 Red freeze詳細
 
-上表のDISP候補5件は実テスト化時に`U-DISP-001..005`へ同時昇格し、valid small fixture、tracked checked fixture、
+上表のDISP 5件は実テスト`tests/disposition/catalog.test.ts`へ昇格済みで、valid small fixture、tracked checked fixture、
 単一違反mutation builderを共有する。件数不一致はsource/item/category/source-item/source-target/item-target/profile/decisionの
 全dimension、orphanは各typed edge、duplicateは全entity identity/ordinalをtable-drivenで検査する。pending+target、final target欠落、
 reason/digest欠落、item ledger row欠落時のsource-target非継承を個別fixtureとする。`traceSource`/`unresolved`はbefore/after digest同一、
 stable ID順を固定する。109/163/21/8はtracked acceptance fixtureだけがassertし、domain定数やsmall fixtureへ複製しない。
+109 source外は`vmodel-semantic-item-catalog.md`のtyped meta source mappingだけを許し、status/file policy不一致をorphan Redにする。
 
-上表のPROFILE候補5件は`U-PROFILE-001..005`へ同時昇格する。document `doc_type_id`でsize→product stable order→explicitの
+上表のPROFILE 5件は実テスト`tests/profile/resolver.test.ts`へ昇格済みである。document `doc_type_id`でsize→product stable order→explicitの
 全permutationを2回解決し、selection digest、winning decision、application receiptの一致を検査する。unknown profile/doc type/capability、
 同precedence異値、同値identity重複、required slot欠落、core/security detail弱化を個別Redにする。semantic `item_id`への暗黙mapは
 fixture自体で禁止する。

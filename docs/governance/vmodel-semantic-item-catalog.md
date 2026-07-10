@@ -219,9 +219,15 @@ source→target edgeからruntimeがitem targetを推論してはならない。
 - `traceability.yaml` はtrace/ID規約を所有する `ZIP-DOC-033` へ接続する。
 - `iac` はsource catalog自体が `status=na` / file空を宣言するため、`NO-SOURCE` を理由付き状態として保持する。
 
+### 4.1 meta source mapping
+
+| meta_source_ref | allowed_source_status | source_file_policy | reason |
+|---|---|---|---|
+| `NO-SOURCE` | `na` | `empty` | checked ZIPがIaC source artifactを持たないことを明示し、欠落をdoneへ補完しない。 |
+
 ## 5. 不変条件
 
 - itemは163件exactly、item_id重複0、unknown category 0である。
-- `NO-SOURCE` はsource側が `status=na` のitemに限る。
+- `NO-SOURCE` は上表のstatus/file policyに一致するitemに限る。
 - source_refは109 source dispositionまたは承認済meta mappingへ解決する。
 - item→source→target edgeに理由なしorphanを許さない。
