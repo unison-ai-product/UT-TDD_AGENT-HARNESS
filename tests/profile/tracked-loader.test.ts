@@ -27,12 +27,18 @@ function receipts(bundle: ProfileAuthoringBundle) {
 }
 
 describe("tracked document profile loader", () => {
-  it("loads 8 profile masters and every authored decision losslessly", () => {
+  it("U-PROFILE-001: loads the declared 3 size and 5 product profiles losslessly", () => {
     const bundle = trackedBundle();
     const result = loadTrackedDocumentProfileCatalog(bundle, receipts(bundle));
     expect(result.sourcePath).toBe(profilePath);
     expect(result.sourceDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(result.catalog.profiles).toHaveLength(8);
+    expect(
+      result.catalog.profiles.filter((profile) => profile.profileAxis === "size"),
+    ).toHaveLength(3);
+    expect(
+      result.catalog.profiles.filter((profile) => profile.profileAxis === "product"),
+    ).toHaveLength(5);
     expect(result.catalog.decisions).toHaveLength(26);
     expect(
       result.catalog.profiles.find((profile) => profile.profileId === "enterprise"),
@@ -72,6 +78,18 @@ describe("tracked document profile loader", () => {
     );
     expect(() => loadTrackedDocumentProfileCatalog(bundle, receipts(bundle))).toThrow(
       /catalog-authoring-schema-invalid/,
+    );
+  });
+
+  it("derives profile and decision counts from the tracked manifest", () => {
+    const bundle = trackedBundle();
+    bundle[profilePath] = Buffer.from(
+      bundle[profilePath]
+        .toString()
+        .replace("| `profile_count` | `8` |", "| `profile_count` | `7` |"),
+    );
+    expect(() => loadTrackedDocumentProfileCatalog(bundle, receipts(bundle))).toThrow(
+      /catalog-authoring-count-invalid/,
     );
   });
 });

@@ -66,15 +66,26 @@ export function loadTrackedDocumentProfileCatalog(
   if (!provenance.ok) throw new Error(JSON.stringify(provenance.findings));
   const profileBytes = requiredSource(bundle, profilePath);
   const catalogBytes = requiredSource(bundle, catalogPath);
+  const manifest = new Map(
+    table(profileBytes, { path: profilePath, headers: ["field", "value"] }).map((row) => [
+      required(row, "field"),
+      required(row, "value"),
+    ]),
+  );
   const profileRows = table(profileBytes, {
     path: profilePath,
     headers: profileHeaders,
-    expectedRows: 8,
+    expectedRows: manifestCount(manifest, "profile_count"),
   });
-  const decisionRows = table(profileBytes, { path: profilePath, headers: decisionHeaders });
+  const decisionRows = table(profileBytes, {
+    path: profilePath,
+    headers: decisionHeaders,
+    expectedRows: manifestCount(manifest, "decision_count"),
+  });
   const catalogRows = table(catalogBytes, { path: catalogPath, headers: catalogHeaders });
   const profiles = profileRows.map(toProfile);
   const decisions = decisionRows.map(toDecision);
+  assertAxisCounts(profiles, manifest);
   const knownDocTypeIds = catalogRows.map((row) => required(row, "doc_type_id"));
   const decisionDocTypes = [...new Set(decisions.map((decision) => decision.docTypeId))];
   const coreDocTypeIds = catalogRows
@@ -95,6 +106,29 @@ export function loadTrackedDocumentProfileCatalog(
     catalogSourceDigest: digestBytes(catalogBytes),
     catalog: result.value,
   });
+}
+
+function manifestCount(manifest: ReadonlyMap<string, string>, field: string): number {
+  const count = Number.parseInt(manifest.get(field) ?? "", 10);
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new Error(`profile-authoring-manifest-invalid: ${field}`);
+  }
+  return count;
+}
+
+function assertAxisCounts(
+  profiles: readonly DocumentProfile[],
+  manifest: ReadonlyMap<string, string>,
+): void {
+  for (const axis of ["size", "product"] as const) {
+    const expected = manifestCount(manifest, `${axis}_profile_count`);
+    const actual = profiles.filter((profile) => profile.profileAxis === axis).length;
+    if (actual !== expected) {
+      throw new Error(
+        `profile-authoring-count-mismatch: ${axis} declared=${expected} actual=${actual}`,
+      );
+    }
+  }
 }
 
 function toProfile(row: Row): DocumentProfile {

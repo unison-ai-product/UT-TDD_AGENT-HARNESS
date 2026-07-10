@@ -72,7 +72,7 @@ function decision(
 }
 
 describe("document profile resolver", () => {
-  it("U-PROFILE-001: product selection order does not change decisions or receipt", () => {
+  it("U-PROFILE-002: repeated resolution preserves decisions and digest independent of product order", () => {
     const catalog = createProfileCatalog({
       profiles,
       decisions,
@@ -99,7 +99,7 @@ describe("document profile resolver", () => {
     expect(first.ok && first.value.selectionDigest).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it("U-PROFILE-002: preserves every master field and rejects invalid enum or FK", () => {
+  it("preserves every master field and rejects invalid enum or FK", () => {
     const valid = createProfileCatalog({
       profiles,
       decisions,

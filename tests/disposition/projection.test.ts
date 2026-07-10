@@ -55,6 +55,7 @@ describe("I-DISP-001 V-model projection", () => {
       projectVmodelAuthoring(process.cwd(), db);
       const before = snapshot(db);
       const provenance = new GitAuthoringProvenance(process.cwd());
+      let projectionFailure: unknown;
       db.exec("BEGIN IMMEDIATE");
       try {
         clear(db);
@@ -65,10 +66,13 @@ describe("I-DISP-001 V-model projection", () => {
               ? new TextEncoder().encode("tampered")
               : readFileSync(path),
         });
-        throw new Error("tampered projection unexpectedly succeeded");
-      } catch {
+      } catch (error) {
+        projectionFailure = error;
+      } finally {
         db.exec("ROLLBACK");
       }
+      expect(projectionFailure).toBeInstanceOf(Error);
+      expect(String(projectionFailure)).toContain("catalog-provenance-invalid");
       expect(snapshot(db)).toEqual(before);
     } finally {
       db.close();

@@ -21,6 +21,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-417-source-disposition-profile-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L4-basic-design/architecture.md
+    artifact_type: design_doc
+  - artifact_path: docs/design/harness/L5-detailed-design/physical-data.md
+    artifact_type: design_doc
+  - artifact_path: docs/design/harness/L6-function-design/function-spec.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-417-source-disposition-profile-projection.md
   requires: []
@@ -28,4 +36,48 @@ dependencies:
 
 # PLAN-REVERSE-417
 
-R0で実装/fixtureを観測し、R1でtable/adapter差、R2でU-DISP/U-PROFILE、R3で109/163/21/8 fixtureとmanifest宣言境界、R4でL5-16/L6-70へ実装事実を合流する。Forward設計を実装都合で弱めない。
+## §0 目的
+
+PLAN-L7-417で実装したsource disposition、semantic item、profile、DB projectionを観測し、Forward設計との差をR0からR4まで逆向きに検証する。実装上の都合でL4-L6契約を弱めず、設計に不足していた機械境界だけをbackfillする。
+
+## §1 R0-R4観測結果
+
+| phase | 観測・判定 | 結果 |
+|---|---|---|
+| R0 | domain/adapters/schema/projectionとtracked authoringを観測 | source 109件、category 21件、item 163件、profile 8件、profile decision 26件を正本から読込。件数の恒久定数化なし |
+| R1 | Forward設計と実装schemaを差分比較 | typed NOT NULL/PK/FK/UNIQUE/CHECK、version 26 migration、canonical target registry、Git blob/commit receipt、pending finding投影の不足を検出し実装済み |
+| R2 | `U-DISP-*`、`U-PROFILE-*`、`U-TARGET-*`、`I-DISP-001`をoracleとして照合 | strict header/row、非推論、target全edge existence、fixed-point、tamper rollbackをGreen化 |
+| R3 | checked ZIP由来の数量とintentを照合 | 109/21/163/8/26を再現。163 itemは未検収decisionを`pending_review` findingとして保持し、doneへ補完しない |
+| R4 | 実装事実をForwardへ合流 | L4 architecture、L5 physical-data、L6 function-spec、L7 test-designへmodule/table/constraint/oracleをbackfill済み |
+
+## §2 自己証明境界
+
+- provenanceはworking treeの現在値を再hashして正当化せず、tracked blobとanchor commitを照合する。未commit正本変更はfail-closeする。
+- source targetは`plan_alias`、`artifact_path`、`artifact_family`、`target_slot`のtyped resolverでのみ解決し、basename aliasは一意な場合だけ許可する。
+- DB constraint coverageはregistryとSQLite実DDLのNOT NULL、複合PK、FK action、UNIQUE、CHECKを比較し、application validationで代替しない。
+- `I-DISP-001`はdelete/rebuildのidentity fixed-pointと、tamper時のtransaction rollbackを同時に要求する。
+- `design-language`は日本語本文を維持しつつ、全cellが単一identifierの機械headerだけを除外する。英語sentence cellは引き続きRedとする（IMP-151）。
+
+## §3 実装・検証証跡
+
+| commit | 内容 |
+|---|---|
+| `bf5fb5a6` | lossless catalog/profile domain |
+| `c1b7ee17` | tracked Git provenance |
+| `d2064814` | typed DB constraint registry |
+| `a13c392f` | tracked authoring projection |
+| `5d01b77d` | target resolverとconstraint verification |
+| `d142192f` | object input refactor、schema enum修正、detector自己証明gap closure |
+
+検証結果はtargeted 15 files **99/99 Green**、`tsc --noEmit` Green、coding-rules 9/9 Green、PLAN工程表739件Greenである。全suiteは172/174 files、1678/1695 tests Greenで、RedはIMP-147の共有append-only `feedback_lifecycle`競合1件と、L7-417がdraftであることに起因する`doctor`連鎖16件へ分離した。前者はproduct fixed-pointとは別のtest isolation負債として既に起票済み、後者は本Reverse合流とreview evidence確定で閉じる。
+
+## §4 R4合流先
+
+- `docs/design/harness/L4-basic-design/architecture.md`: disposition/profile moduleと依存方向。
+- `docs/design/harness/L5-detailed-design/physical-data.md`: V-model table、制約、migration、projection ownership。
+- `docs/design/harness/L6-function-design/function-spec.md`: strict loader、provenance、target resolver、profile resolver、DB coverage contract。
+- `docs/test-design/harness/L7-unit-test-design.md`: `U-DISP-*`、`U-PROFILE-*`、`U-TARGET-*`、`I-DISP-001`。
+
+## §5 収束判定
+
+Forward設計を縮退させる未解消gapはない。163件の`pending_review`はPO検収待ちの業務状態であり、実装欠落としてdone化しない。PLAN-L7-417の実装完了判定は独立review、Reverse確認、`doctor`再実行後に行う。
