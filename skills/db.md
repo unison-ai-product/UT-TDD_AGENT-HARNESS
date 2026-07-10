@@ -16,6 +16,27 @@ applies_to:
     - Reverse
     - Retrofit
     - Refactor
+decision_points:
+  - when: "ut-tdd doctor reports a harness.db projection mismatch"
+    choose: "Run ut-tdd db rebuild and re-run ut-tdd doctor before further diagnosis"
+    over: "Hand-editing harness.db rows to fix the mismatch"
+    because: "harness.db is a generated SQLite projection written only by projection-writer.ts; hand edits are non-authoritative and will be overwritten or re-diverge"
+  - when: "Adding a new required (NOT NULL) column to an existing table"
+    choose: "Add it as nullable first, then make it required in a later migration"
+    over: "Adding it as NOT NULL in a single migration"
+    because: "Migration design rules require migrations to be additive first"
+  - when: "A migration drops a column or transforms data destructively"
+    choose: "Require a PLAN review_evidence entry confirming the data loss is intentional and approved before merging"
+    over: "Merging the destructive migration once tests pass"
+    because: "Destructive migrations require explicit review_evidence confirming approved data loss"
+  - when: "A PLAN needs to record new harness state (e.g. a new gate_runs row)"
+    choose: "Add it through the projection writer (src/state-db/projection-writer.ts)"
+    over: "Writing a bare SQL INSERT against harness.db"
+    because: "Bare SQL inserts are explicitly called out as not authoritative"
+  - when: "A Reverse R1 pass discovers an undocumented DB schema in src/"
+    choose: "Extract it into an L4 design doc with an ER diagram before treating the schema as stable"
+    over: "Leaving the schema undocumented and continuing to modify it ad hoc"
+    because: "The when-to-load section requires an R1 pass to extract undocumented schema into a design doc"
 ---
 
 # db

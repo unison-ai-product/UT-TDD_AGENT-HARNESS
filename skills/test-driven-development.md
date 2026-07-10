@@ -12,6 +12,31 @@ applies_to:
     - Add-feature
     - Reverse
     - Refactor
+decision_points:
+  - when: "crossing pair-freeze into L7 implementation"
+    choose: "write the failing test first and commit it as standalone Red evidence"
+    over: "implementing the source first and back-filling the test"
+    because: "a test written after its implementation provides zero design signal and forfeits Red evidence required by FR-L1-02"
+  - when: "a newly written test passes before any source change"
+    choose: "stop and investigate whether the assertion is vacuous or the feature already exists"
+    over: "treating an unexpected early pass as a success to move past"
+    because: "an unexplained pass hides either a weak oracle or duplicate implementation, both of which corrupt the Red-Green record"
+  - when: "a refactor step turns a previously Green test Red"
+    choose: "stop immediately and revert the last change"
+    over: "continuing to refactor and fixing tests afterward"
+    because: "Refactor must preserve behavior; a Red test during refactor means behavior changed, which is out of scope for that step"
+  - when: "deciding what to mock in a unit test"
+    choose: "mock only process boundaries (I/O, network, DB)"
+    over: "mocking the unit under test itself"
+    because: "mocking the unit under test removes the thing the test is supposed to verify"
+  - when: "writing integration tests under tests/integration/"
+    choose: "exercise real harness state (.ut-tdd/, harness.db)"
+    over: "using mocked replacements for harness state"
+    because: "a prior incident showed mock/real divergence masking a broken migration path"
+  - when: "choosing the test-run command for CI or local verification"
+    choose: "bun run test"
+    over: "bun test"
+    because: "the native bun test runner has a 5-second sync timeout that produces flaky failures on async tests unrelated to real defects"
 ---
 
 # test driven development

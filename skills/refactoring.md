@@ -12,6 +12,27 @@ applies_to:
     - Refactor
     - Forward
     - Add-feature
+decision_points:
+  - when: "the test suite does not fully cover the observable boundary of the code about to be refactored"
+    choose: "write characterisation tests first to establish the regression fence"
+    over: "start restructuring the code and rely on the existing partial test coverage"
+    because: "a refactor without a full regression fence is an unverified behaviour change, not a safe structural change"
+  - when: "a refactor step turns a gate (`typecheck`/`lint`/`test`/`doctor`) Red"
+    choose: "revert the last structural change before proceeding"
+    over: "keep going and fix the Red gate after a few more changes"
+    because: "accumulating multiple structural changes across a Red gate makes it impossible to isolate which change broke behaviour"
+  - when: "a cleanup step would add or remove test cases while restructuring code"
+    choose: "route the test addition to a separate Add-feature or Reverse PLAN"
+    over: "add the tests inside the same Refactor PLAN commit"
+    because: "the refactor cycle checklist requires the same number of Green tests as baseline; adding tests during refactor is a TDD step with separate review obligations, and mixing them invalidates the regression fence's evidentiary value"
+  - when: "a change under a Refactor PLAN alters a public API, `.ut-tdd/` state artefact, or `harness.db` schema"
+    choose: "reclassify the work as Add-feature or Retrofit and route accordingly"
+    over: "keep it under `kind: refactor` since most of the change is structural"
+    because: "any change to externally observable behaviour is by definition not refactoring under FR-L1-25, regardless of how much of the diff is internal"
+  - when: "`ut-tdd doctor` passes after a refactor commit"
+    choose: "treat it as confirmation of structural governance only, and separately verify test-count parity and reviewed output correctness"
+    over: "treat a green `ut-tdd doctor` as proof the refactor preserved behaviour"
+    because: "doctor checks structural governance, not observable output correctness — passing doctor alone does not establish behaviour invariance"
 ---
 
 # refactoring

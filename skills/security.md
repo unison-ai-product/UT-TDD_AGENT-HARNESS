@@ -19,6 +19,31 @@ applies_to:
     - Reverse
     - Recovery
     - Incident
+decision_points:
+  - when: "A PLAN would modify authentication, authorization, the agent-guard allowlist, or `UT_TDD_ALLOW_RAW_AGENT=1` bypass paths."
+    choose: "stop the PLAN, document the boundary crossed in `.ut-tdd/audit/`, and wait for explicit PO confirmation"
+    over: "proceeding with implementation and recording the change in normal review_evidence"
+    because: "these are named escalation boundaries; the file states escalation means stopping the PLAN, not just annotating it after the fact."
+  - when: "`agent-guard.ts` receives an agent call with an unknown `subagent_type` or missing `model` field."
+    choose: "exit 1 (fail-close)"
+    over: "exiting 0 and logging a warning"
+    because: "the file states fail-close is the only safe default for an unrecognized agent type or missing model — a fail-open path would let an unvetted agent execute."
+  - when: "`UT_TDD_ALLOW_RAW_AGENT=1` is used to bypass agent-guard."
+    choose: "require it to write evidence to `.ut-tdd/audit/` every time, treating it as an emergency bypass"
+    over: "treating it as a normal operational flag usable without an audit trail"
+    because: "the anti-patterns section names this exact conflation as a security defect — repeated undocumented use erodes the escalation-boundary guarantee."
+  - when: "A hook exits 0 despite encountering an internal error condition."
+    choose: "classify this as a security defect requiring the failure mode to be enumerated in the L5 design doc"
+    over: "treating a quiet exit 0 as acceptable graceful degradation"
+    because: "the file states a hook that exits 0 on error is a security defect by definition — fail-close is the required behavior for hook execution."
+  - when: "A `ut-tdd guardrail` finding surfaces on a committed file."
+    choose: "fix the root cause before accept"
+    over: "silencing the finding with a comment or suppression"
+    because: "the anti-patterns section states silencing with a comment instead of fixing the root cause is prohibited — the fix must land before accept, not be deferred by suppression."
+  - when: "`ut-tdd doctor` reports a hook failing due to PATH/System32 issues on Windows."
+    choose: "verify with `ut-tdd doctor` first before treating it as a code regression"
+    over: "assuming the hook logic itself is broken and starting a code fix"
+    because: "the file explicitly separates PATH integrity failures (environment) from code regressions; misdiagnosing wastes effort and risks masking the real environmental cause."
 ---
 
 # security

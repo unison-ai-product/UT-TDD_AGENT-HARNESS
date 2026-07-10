@@ -13,6 +13,27 @@ applies_to:
     - Reverse
     - Add-feature
     - Refactor
+decision_points:
+  - when: "A PLAN actually consumes another PLAN's generated artifact but requires is left empty"
+    choose: "Declare the dependency explicitly in requires"
+    over: "Leaving requires: [] because the coupling is 'implicit' or obvious"
+    because: "An implicit-but-undeclared dependency is listed as an anti-pattern — it must be made explicit"
+  - when: "A placeholder_deps forward reference is still unresolved at trace-freeze"
+    choose: "Resolve it before trace-freeze, blocking progression to accept if unresolved"
+    over: "Carrying the placeholder past trace-freeze as a convenience"
+    because: "Every placeholder must resolve or the PLAN cannot reach accept"
+  - when: "ut-tdd plan lint reports a dependency-lint error for a requires entry that references a non-existent PLAN"
+    choose: "Create the missing PLAN that the requires entry points to"
+    over: "Deleting the requires entry to make the lint error go away"
+    because: "Removing the requires entry instead of creating the missing PLAN is listed as an anti-pattern"
+  - when: "A Refactor PLAN claims external interfaces are unchanged"
+    choose: "Prove it with a ut-tdd graph diff between HEAD and base commit showing identical external-facing edges"
+    over: "Asserting interface-neutrality in prose without a graph comparison"
+    because: "The Refactor gate requires ut-tdd graph run on HEAD and base commit with identical edges as evidence, not a prose claim"
+  - when: "ut-tdd doctor fires a dependency-drift or orphan finding"
+    choose: "Trace the chain to find which upstream PLAN owns the artifact/module before editing anything"
+    over: "Editing PLAN YAML or imports speculatively to silence the finding"
+    because: "The mapping procedure requires tracing the chain (which upstream PLAN owns the artifact) before updating requires/placeholder_deps or imports"
 ---
 
 # dependency map

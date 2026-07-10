@@ -19,6 +19,31 @@ applies_to:
     - Reverse
     - Recovery
     - Refactor
+decision_points:
+  - when: "ut-tdd doctor and ut-tdd vmodel lint are both green at a gate"
+    choose: "read the design doc body and verify the claim is substantiated"
+    over: "accepting green doctor/lint output as proof the content is correct"
+    because: "doctor and lint check structure, not substance — coverage without substance is a named failure mode"
+  - when: "a biome-ignore or ts-ignore suppression appears in the diff"
+    choose: "fail the review unless the suppression carries a PLAN-linked rationale"
+    over: "letting an unexplained suppression pass because the rest of the diff is clean"
+    because: "unexplained suppressions are gate evasion and defeat the purpose of the lint gate"
+  - when: "reviewing a PLAN in hybrid mode"
+    choose: "require a different runtime or subagent family as the reviewer"
+    over: "accepting self-review as the only recorded review evidence"
+    because: "self-review as sole evidence in hybrid mode is an explicit anti-pattern — hybrid exists to get an independent check"
+  - when: "only part of the PLAN's diff changed since the last review pass"
+    choose: "review the full PLAN scope again"
+    over: "reviewing only the partial diff since the last pass"
+    because: "running review on a partial diff is a named anti-pattern that can miss regressions in already-touched files"
+  - when: "an L6 test-design doc is missing for a new function but L7 code already exists"
+    choose: "record it as an open obligation in review_evidence"
+    over: "treating the working L7 implementation as sufficient evidence of coverage"
+    because: "absent layer artifacts must be surfaced even when downstream code exists, per the trace-completeness check"
+  - when: "a gate has no recorded review_evidence entry"
+    choose: "treat the gate as not cleared"
+    over: "treating ut-tdd doctor green as implicit gate clearance"
+    because: "a gate with no recorded evidence is not cleared, regardless of doctor status"
 ---
 
 # adversarial review

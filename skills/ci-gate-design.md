@@ -14,6 +14,31 @@ applies_to:
     - Add-feature
     - Refactor
     - Recovery
+decision_points:
+  - when: "A new class of defect (e.g., orphaned PLAN, roster/guard drift) is proposed as a new `ut-tdd doctor` check."
+    choose: "First confirm `src/plan/lint.ts` and `src/doctor/` do not already cover it before implementing."
+    over: "Adding the new gate directly without checking for overlap."
+    because: "The skill states overlapping gates create false-confidence; a duplicate check can pass while masking the actual uncovered case."
+  - when: "Designing what a new gate should detect."
+    choose: "Design it to detect an absent or wrong artifact (fail-close on absence)."
+    over: "Designing it to only confirm an ID or link is present (coverage-only check)."
+    because: "The skill identifies absence-blindness as the root cause of descent gaps; a coverage-only gate proves an ID exists, not that the content behind it is correct."
+  - when: "CI output is long and a failure needs triage."
+    choose: "Read the full output."
+    over: "Piping through `| tail` to see only the end of the log."
+    because: "The skill explicitly warns truncation hides the root error; the real failing command is often earlier in the log than the final summary."
+  - when: "A sub-gate fails and blocks the push."
+    choose: "Fix the root cause in source, or file a PLAN-linked rationale if suppressing."
+    over: "Silencing with `// biome-ignore`, `// @ts-ignore`, or `.skip` without justification."
+    because: "Unlinked suppressions hide real defects from future review and accumulate as untracked technical debt."
+  - when: "`bun run lint` and `biome lint` are both available as ways to check the code."
+    choose: "Use `bun run lint` before push."
+    over: "Running `biome lint` alone."
+    because: "`biome lint` alone does not check formatting, so format violations pass locally and fail the next CI push."
+  - when: "A check passes locally on code that should have failed."
+    choose: "File an `improvement-backlog.md` entry and open a PLAN for the gate defect."
+    over: "Treating the pass as valid and moving on."
+    because: "A false-green is itself a gate defect per the skill's failure-response protocol, not a one-off fluke to ignore."
 ---
 
 # ci gate design
