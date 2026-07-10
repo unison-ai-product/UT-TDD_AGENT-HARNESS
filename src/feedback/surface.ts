@@ -215,7 +215,12 @@ export function selectTakeoverFeedback(
     .prepare(
       `SELECT feedback_event_id, finding_id, plan_id, source_table, source_id, signal_type, severity, next_action
        FROM feedback_events
-       WHERE status = 'open'`,
+       WHERE status = 'open'
+         AND NOT EXISTS (
+           SELECT 1 FROM feedback_lifecycle lifecycle
+           WHERE lifecycle.feedback_event_id = feedback_events.feedback_event_id
+             AND lifecycle.state IN ('ack', 'closed', 'superseded')
+         )`,
     )
     .all() as Array<Record<string, unknown>>;
   for (const event of openFeedbackEvents) {
