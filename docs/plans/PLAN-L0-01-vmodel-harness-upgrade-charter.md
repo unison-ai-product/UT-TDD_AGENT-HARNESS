@@ -4,13 +4,13 @@ title: "PLAN-L0-01 (charter): clean Vモデル設計を起点にした Harness �
 kind: charter
 layer: L0
 drive: fullstack
-status: draft
+status: confirmed
 owner: PO / TL
 agent_slots:
   - role: po
     slot_label: "PO — バージョンアップ企画の目的・非破壊境界・全面見直し範囲の承認"
   - role: tl
-    slot_label: "TL — 現行 harness と clean ZIP の差分評価、最小影響の Forward 再設計ルート確定"
+    slot_label: "TL — 現行 harness と checked ZIP の差分評価、Forward/PLAN engine-swap 境界確定"
   - role: qa
     slot_label: "QA — 右肺/検証/工程管理表/閉包 gate の受入条件定義"
   - role: aim
@@ -43,15 +43,15 @@ dependencies:
 ## 0. 目的
 
 `Vモデル設計ドキュメント_checked.zip` を上流設計素材として、現行 UT-TDD Agent Harness を全面的に
-バージョンアップする。これは既存 harness の正本・CLI・DB・workflow を壊して作り直す企画ではない。
-既存の TypeScript/Bun core、`.ut-tdd/harness.db`、PLAN/frontmatter、doctor/lint、Forward spine を
-活かしながら、Vモデルの現在地把握・駆動モデル選択・宣言型データ取込・DDD/保守性設計を上流から
-再凍結する。
+バージョンアップする。TypeScript/Bun core、append-only evidence、`.ut-tdd/harness.db` projection、Git 履歴を
+chassis として継承する一方、Forward workflow、PLAN identity/revision/evidence、文書体系、G8-G14 検証を
+上流設計から入れ替える。既存 detector の都合に設計を合わせず、設計契約から detector/doctor を導出する。
 
 起票日: 2026-07-08。
 
-この PLAN は L0 企画であり、実装や正本本文の直接更新は行わない。後続の L1 要求、L3 要件、L4/L5/L6
-設計、L7 実装、L8-L14 検証 PLAN を束ねる親チケットとして機能する。
+この PLAN は L0 企画であり、L1 要求、L3 要件、L4/L5/L6 設計、L7 実装、L8-L14 検証 PLAN を束ねる。
+既存正本を不変扱いせず、109 source document 全件を disposition し、採用・統合・参照・延期・非適用の理由と
+更新先を機械検索できる状態まで改訂対象に含める。
 
 ## 1. 前提整理
 
@@ -68,22 +68,17 @@ dependencies:
 
 ### 1.2 clean ZIP の確認結果
 
-2026-07-08 のローカル確認で、clean ZIP は素の新規展開と ZIP 内ファイル数が一致した。
-旧 ZIP は作業対象から外し、ローカルから削除済み。
+2026-07-10 の再監査では、ZIP を展開せず central directory と UTF-8 entry 名を検査した。ZIP 自体は正本にせず、
+hash と inventory を provenance として固定する。
 
 | 確認 | 結果 |
 |---|---|
-| ZIP 内ファイル数 / 新規展開ファイル数 | 572 / 572 |
-| `verify_files.py` | UTF-8 不正 0、置換文字 0、YAML 壊れ 0 |
-| `build.py validate` | 定義ID 91 / 参照ID 96、未定義・未参照なし |
-| `build.py check` | 構造的矛盾 0 |
-| `build.py coverage` | 100.0% |
-| `build.py deps` | 依存エッジ 116 |
-| `spec_check.py` | 要求→要件→設計→テストの閉包漏れなし |
-| `spec_types.py` | 型宣言 91 件 / ヒューリスティック検出 91 件で完全一致 |
-| `spec_trace.py` | 宙吊り、逆流、テスト欠落、台帳不一致なし |
-| `schedule.py` | V字対、先行、日程、進捗、採用、RAG 整合 OK |
-| `build.py detect --profile` | PoC / Web / Standard / Enterprise すべて対象内矛盾なし |
+| SHA-256 | `47b9a900ac99e093a1750f68f34c00e3bbd78c13a070d57dcdaba9ae50a274a8` |
+| ZIP entry | 624 files / unsafe path 0 / duplicate 0 / symlink 0 / encrypted 0 |
+| 番号付き設計文書 | `docs/01_*.yaml` から `docs/109_*.yaml` の 109 件、欠番 0 |
+| semantic catalog | `docs/catalog.yaml` の category 21件 / item 163件 (合計record 184件) |
+| profile | PoC / Standard / Enterprise / Web / Mobile / Desktop / CLI / APIService の 8 件 |
+| HARNESS への位置付け | TeamFlow sample は比較素材。HARNESS の正本・runtime・検出結果として直接採用しない |
 
 ### 1.3 clean ZIP から取り込む中核
 
@@ -106,30 +101,33 @@ dependencies:
 | 宣言型データ | frontmatter / relation graph / harness.db はあるが、設計ID宣言の正本化は未統一 | `spec.defines` が検出の正本になっている | `spec.defines` 相当を UT-TDD の design IR / DB 投影へ段階導入する |
 | 検出系 | lint/doctor がファイル・frontmatter・DB projection を横断するが、検出面が散在 | 型宣言、閉包、activation、schedule が一体の検出面 | 検出を「履歴と関係を持った harness.db query」に寄せる |
 | DDD/保守性 | L4 data と DDD/TDD strictness は存在する | オブジェクト指向型の設計強化を設計書群全体へ張る必要 | 集約/VO/契約/不変条件を既存 docs 全体の設計規約に昇格する |
-| 既存文書 | 正本 doc は多いが更新履歴が長く、古い前提も混在 | clean ZIP は 107 文書をプロファイル/activation で束ねる | 全文書一括編集ではなく、上流から freeze し直して波及更新する |
+| 既存文書 | 正本 doc は多いが更新履歴が長く、古い前提も混在 | checked ZIP は 109 source docs / 163 semantic items / 21 categories / 8 profiles を束ねる | 全文書を inventory し、source→item→target disposition を上流から freeze して波及更新する |
 
-## 3. 最小影響のアップデート境界
+## 3. engine-swap の更新境界
 
-最初のアップデートは **新規 L0 charter 起票のみ** とし、既存設計・実装・テスト・DB schema を変更しない。
-理由は次の通り。
+変更量を小さくすることは受入条件ではない。chassis の継承は、既存の意味や detector を温存することでもない。
+次を一つの architecture program として完遂する。
 
-1. clean ZIP の設計は上流概念から DB/検出/DDD/検証まで広範囲に波及するため、L7 から直接入ると局所最適になる。
-2. 既存 harness には `verify`、roadmap、harness.db、DDD/TDD strictness という受け皿が既にあるため、破壊的な新体系は不要。
-3. 既存ドキュメント全部の見直しが必要になるため、最初に変更境界と順序を PLAN として固定しないと、差分が散らばる。
-4. clean ZIP 自体は外部素材であり、repo 正本へ取り込むには UT-TDD の TypeScript/Bun / docs / DB projection 境界へ翻案する必要がある。
+1. source 109件、semantic item 163件、category 21件、HARNESS target slot を別集約として正本化し、silent omission を禁止する。
+2. Forward を append-only transition ledger を持つ FSM にし、pair freeze / Red / trace freeze / review / accept を状態遷移として執行する。
+3. PLAN を immutable `asset_id`、revision、alias history、revision-bound evidence を持つ v2 資産へ移行する。
+4. 宣言型 V-model contract を設計正本にし、G8-G14 detector/doctor/roadmap obligation をそこから導出する。
+5. L8-L14 の `kind: verify` PLAN と evidence contract を全層起票し、恒久 park と概念だけの false-green を撤去する。
+6. 既存文書を全件再評価し、更新・統合・参照・延期・非適用のいずれでも authored rationale と trace を残す。
 
-したがって本 PLAN は、後続の改修を以下の順に分割する。
+実装は review 可能な wave に分割するが、各 wave は scope を切り下げるためではなく、上流設計から下流実装・検証へ
+不可逆な意味ドリフトを起こさず降下させるために用いる。
 
 | Wave | 目的 | 主な成果物 | 影響 |
 |---|---|---|---|
-| U0 | 上流再企画 | 本 PLAN、PO/TL 承認、後続PLAN束ね | docs/plans 1 本のみ |
-| U1 | 要求・要件再凍結 | L1/L3 の要求・要件へ「工程表・宣言DB・検出・DDD強化」を追加 | governance/design docs |
+| U0 | 上流再企画 | 本 PLAN、ZIP provenance、109→163→target disposition、後続PLAN束ね | governance / design / PLAN |
+| U1 | 要求・要件再凍結 | L1/L3 へ engine-swap、全件 disposition、design-derived detector を追加 | governance/design docs |
 | U2 | 工程管理表の厳格化 | roadmap/program rollup を現在地・駆動モデル選択・右肺着手可否へ接続 | docs + lint/doctor 設計 |
 | U3 | 宣言型 design IR | `spec.defines` 相当の schema、DB projection、閉包検出設計 | schema / state-db / lint |
 | U4 | 検出系DB化 | findings / quality_signals / trace_edges / activation を query 可能にし、起票補助へ返す | state-db / doctor / review |
 | U5 | DDD/OOP設計強化 | 集約・値オブジェクト・契約・不変条件を既存 docs 全体に展開 | L4-L6 docs + tests |
-| U6 | workflow/PLAN改修 | PLAN 自体を資産として残せる構造へ再設計し、activation/profile に対応 | plan lint / templates / docs |
-| U7 | 右肺閉ループ | L8-L14 verify evidence → defect_routing → refactor/reverse/add-feature へ接続 | verify / DB / workflow |
+| U6 | workflow/PLAN改修 | Forward FSM と PLAN Asset v2、immutable evidence ledger を導入 | schema / workflow / CLI / DB / docs |
+| U7 | 右肺閉ループ | 宣言型 contract 由来の G8-G14 と verify PLAN/evidence を全層実装 | verify / DB / workflow / doctor |
 
 ## 4. 後続PLAN化する具体テーマ
 
@@ -144,13 +142,17 @@ dependencies:
 | `plan-asset-format-redesign` | add-design + add-impl / L5-L7 | PLAN lint / template / review evidence の再設計 |
 | `right-lung-quality-loop-db` | add-design + add-impl / L6-L8 | PLAN-RECOVERY-10 の右肺を DB/defect routing に接続 |
 
-## 5. 受入条件
+## 5. program 完遂条件
 
-- [ ] PO/TL が「clean ZIP は上流設計素材であり、現行 harness の正本を直接置換しない」ことを承認する。
+frontmatter `status=confirmed` はcharterの方針承認を表し、以下のprogram完遂を表さない。programの実績は
+Forward FSM移行までは工程表RAG、移行後はtransition ledgerで管理する。
+
+- [x] PO が「checked ZIP は上流設計素材であり、既存 chassis を活かしつつ engine / handling / safety を全面更新する」ことを承認した。
 - [ ] 現行 harness の受け皿 (`verify` / roadmap / harness.db / DDD/TDD strictness / version-up) と clean ZIP の中核対応が本 PLAN で説明されている。
 - [ ] 旧 ZIP は作業対象から外れ、clean ZIP の確認結果のみを根拠にする。
+- [ ] source 109件すべてに disposition があり、163 item と HARNESS target slot へ join できる。
 - [ ] 後続改修は U1→U7 の順で、上流から再凍結して進める。
-- [ ] 既存 docs 全部の見直しは一括置換でなく、activation/profile/trace closure に基づく差分更新として扱う。
+- [ ] 既存 docs 全部を inventory し、activation/profile/trace closure に基づく差分更新または理由付き非適用として閉じる。
 - [ ] DB は authored source を直接置換しない。設計・PLAN・test-design を正本とし、harness.db は projection / detection / query surface として使う。
 - [ ] 工程管理表は人間向け進行台帳であり、AI の PLAN オーケストレーションと分離しつつ DB projection で接続する。
 
@@ -162,13 +164,13 @@ dependencies:
 | 工程管理表を既存 `roadmap:` block へ拡張するか、新しい schedule projection にするか | TL/QA | 既存 doctor/program rollup の再利用度 |
 | activation/profile を PLAN status とどう分離するか | PO/TL | active draft / version-up parked / scope NA の誤認防止 |
 | DDD/OOP 強化を L4 data 主導にするか、L5/L6 class-design 主導にするか | TL/SE | 保守性・拡張性の設計時担保と既存 docs への波及量 |
-| clean ZIP の 107 文書を UT-TDD の文書体系へどの粒度で対応付けるか | PO/TL/Docs | 全文書作成強制を避け、activation で必要粒度に合わせる |
+| checked ZIP の 109 source docs / 163 itemsをどの HARNESS target slot へ統合するか | PO/TL/Docs | disposition catalog で全件を exactly once 扱い、silent omission を許さない |
 
 ## 7. 実行メモ
 
 - 旧 ZIP は作業対象外。今後の比較・引用は clean ZIP の確認結果のみを使う。
 - clean ZIP の Python tooling はそのまま product runtime に移植しない。ADR-001 に従い、UT-TDD 側は TypeScript/Bun core と `.ut-tdd/harness.db` projection へ翻案する。
-- この PLAN は `draft` のまま PO/TL 承認を待つ。承認後、U1 の L1/L3 要求・要件PLANから着手する。
+- PO の `/goal` 指示により engine-swap/full-scope を承認済み。後続は disposition、FSM/PLAN v2、V-model contract の3系統で起票する。
 
 ## U11 型付きスペック所有 artifact
 

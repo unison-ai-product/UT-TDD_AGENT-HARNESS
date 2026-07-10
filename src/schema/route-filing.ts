@@ -31,7 +31,7 @@ export interface RouteFilingResult extends RouteFilingContractResult {
 
 const ROUTE_CONTRACT_EVIDENCE_PATH = "src/schema/route-filing.ts";
 
-const FILING_TARGET_BY_MODE: Record<
+export const FILING_TARGET_BY_MODE: Record<
   string,
   Omit<FilingTarget, "mode" | "forward_insufficient_reason" | "origin" | "requires_human_approval">
 > = {
@@ -103,10 +103,11 @@ const FILING_TARGET_BY_MODE: Record<
     pairing_obligation: "same as add-feature with Reverse backfill",
   },
   "version-up": {
-    allowed_kinds: ["add-design"],
-    layer_band: ["L3-L6"],
+    allowed_kinds: ["impl"],
+    layer_band: ["L7"],
     sub_doc_hint: "",
-    pairing_obligation: "deferral ledger; activation joins add-feature when implemented",
+    pairing_obligation:
+      "parked draft requires version_target; activation removes parking and joins add-feature",
   },
   verify: {
     allowed_kinds: ["verify"],

@@ -23,11 +23,18 @@ export interface PairDoc {
   pairArtifact: string | null;
   /** frontmatter status (confirmed/draft/placeholder 等)。null = 欠落。検証発火の freeze 判定に使う。 */
   status: string | null;
+  /** additive revision は既存base freezeとは別frontierとして集計する。 */
+  revisionTrack?: string | null;
+  revisionBaseArtifact?: string | null;
   nextPairFreeze?: string | null;
   content?: string;
 }
 
-export type PairOrphanReason = "pair-missing" | "ref-unresolved" | "trace-orphan";
+export type PairOrphanReason =
+  | "pair-missing"
+  | "ref-unresolved"
+  | "trace-orphan"
+  | "revision-base-invalid";
 
 export interface PairOrphan {
   path: string;
@@ -76,9 +83,26 @@ export function parsePairDoc(path: string, content: string): PairDoc {
     layer: fmValue(content, "layer") ?? null,
     pairArtifact: raw != null ? stripInlineComment(raw) : null,
     status: fmValue(content, "status") ?? null,
+    revisionTrack: fmValue(content, "revision_track") ?? null,
+    revisionBaseArtifact: fmValue(content, "revision_base_artifact") ?? null,
     nextPairFreeze: fmValue(content, "next_pair_freeze") ?? null,
     content,
   };
+}
+
+function isValidAdditiveRevision(doc: PairDoc, docsByPath: Map<string, PairDoc>): boolean {
+  if (doc.revisionTrack !== "additive" || !doc.revisionBaseArtifact) return false;
+  const base = docsByPath.get(doc.revisionBaseArtifact);
+  const sameFamily = base
+    ? doc.path.startsWith("docs/design/") === base.path.startsWith("docs/design/")
+    : false;
+  return Boolean(
+    base &&
+      base.revisionTrack !== "additive" &&
+      (base.status === "confirmed" || base.status === "completed") &&
+      base.layer === doc.layer &&
+      sameFamily,
+  );
 }
 
 /**
@@ -88,10 +112,25 @@ export function parsePairDoc(path: string, content: string): PairDoc {
 export function analyzePairFreeze(docs: PairDoc[]): PairFreezeResult {
   const byPath = new Map(docs.map((d) => [d.path, d]));
   const orphans: PairOrphan[] = [];
+  const invalidRevisionPaths = new Set(
+    docs
+      .filter((doc) => doc.revisionTrack === "additive" && !isValidAdditiveRevision(doc, byPath))
+      .map((doc) => doc.path),
+  );
+  for (const path of invalidRevisionPaths) {
+    const doc = byPath.get(path);
+    if (!doc) continue;
+    orphans.push({
+      path,
+      reason: "revision-base-invalid",
+      detail: doc.revisionBaseArtifact ?? "missing revision_base_artifact",
+    });
+  }
   let pairs = 0;
 
   for (const d of docs) {
     if (!isDesignSubDoc(d)) continue;
+    if (invalidRevisionPaths.has(d.path)) continue;
     const pa = d.pairArtifact;
     // rule 1 pair-exists (frontmatter layer 欠落時は path から層を補完して表示)
     if (pa == null) {
@@ -105,13 +144,21 @@ export function analyzePairFreeze(docs: PairDoc[]): PairFreezeResult {
       orphans.push({ path: d.path, reason: "ref-unresolved", detail: pa });
       continue;
     }
+    if (invalidRevisionPaths.has(target.path)) {
+      orphans.push({
+        path: d.path,
+        reason: "revision-base-invalid",
+        detail: `${target.path} has an invalid revision base`,
+      });
+      continue;
+    }
     // rule 3 trace-bidir
     if (pa.startsWith("docs/test-design/")) {
       // test-design 側は design dir の集合参照。design の所在 dir を含めば双方向成立。
       const back = target.pairArtifact;
       const dir = dirOf(d.path);
       const normBack = back ? (back.endsWith("/") ? back : `${back}/`) : null;
-      if (normBack && dir.startsWith(normBack)) {
+      if (back === d.path || (normBack && dir.startsWith(normBack))) {
         pairs++;
       } else {
         orphans.push({
@@ -163,9 +210,15 @@ export function pairFreezeMessages(result: PairFreezeResult): string[] {
     "pair-missing": "pair 欠落",
     "ref-unresolved": "参照不実在",
     "trace-orphan": "逆参照なし",
+    "revision-base-invalid": "revision base 不正",
   };
   const msgs: string[] = [];
-  for (const reason of ["pair-missing", "ref-unresolved", "trace-orphan"] as PairOrphanReason[]) {
+  for (const reason of [
+    "pair-missing",
+    "ref-unresolved",
+    "trace-orphan",
+    "revision-base-invalid",
+  ] as PairOrphanReason[]) {
     const hits = result.orphans.filter((o) => o.reason === reason);
     if (hits.length === 0) continue;
     const list = hits.map((o) => `${o.path} (${o.detail})`).join(", ");
@@ -609,6 +662,10 @@ export interface GroupReadiness {
   draft: number;
   placeholder: number;
   hasOrphan: boolean;
+  activeRevisionTotal: number;
+  activeRevisionConfirmed: number;
+  activeRevisionDraft: number;
+  activeRevisionHasOrphan: boolean;
   requiredPlanIds: string[];
   confirmedPlanIds: string[];
   missingPlanIds: string[];
@@ -676,12 +733,17 @@ export function analyzeVerificationGroups(
   planEvidence: VerificationPlanEvidenceMap = new Map<string, VerificationPlanEvidence>(),
 ): GroupReadiness[] {
   const orphanPaths = new Set(orphans.map((o) => o.path));
+  const docsByPath = new Map(docs.map((doc) => [doc.path, doc]));
   return VERIFICATION_GROUPS.map((g) => {
     const layerSet = new Set(g.layers);
-    const groupDocs = docs.filter((d) => {
+    const allGroupDocs = docs.filter((d) => {
       const layer = designLayerFromPath(d.path);
       return isDesignSubDoc(d) && layer != null && layerSet.has(layer);
     });
+    const groupDocs = allGroupDocs.filter((doc) => !isValidAdditiveRevision(doc, docsByPath));
+    const activeRevisionDocs = allGroupDocs.filter((doc) =>
+      isValidAdditiveRevision(doc, docsByPath),
+    );
     let confirmed = 0;
     let draft = 0;
     let placeholder = 0;
@@ -693,6 +755,11 @@ export function analyzeVerificationGroups(
       if (orphanPaths.has(d.path)) hasOrphan = true;
     }
     const total = groupDocs.length;
+    const activeRevisionConfirmed = activeRevisionDocs.filter(
+      (doc) => doc.status === "confirmed" || doc.status === "completed",
+    ).length;
+    const activeRevisionDraft = activeRevisionDocs.length - activeRevisionConfirmed;
+    const activeRevisionHasOrphan = activeRevisionDocs.some((doc) => orphanPaths.has(doc.path));
     const requiredPlanIds = g.requiredPlanIds ?? [];
     const confirmedPlanIds = requiredPlanIds.filter((id) => {
       const evidence = planEvidence.get(id);
@@ -721,6 +788,10 @@ export function analyzeVerificationGroups(
       draft,
       placeholder,
       hasOrphan,
+      activeRevisionTotal: activeRevisionDocs.length,
+      activeRevisionConfirmed,
+      activeRevisionDraft,
+      activeRevisionHasOrphan,
       requiredPlanIds,
       confirmedPlanIds,
       missingPlanIds,
@@ -755,7 +826,13 @@ export function verificationGroupMessages(groups: GroupReadiness[]): string[] {
         g.requiredPlanIds.length > 0
           ? `, L7 plans ${g.confirmedPlanIds.length}/${g.requiredPlanIds.length} confirmed, evidence ${g.evidenceReadyPlanIds.length}/${g.requiredPlanIds.length}`
           : "";
-      return `verification — ${head}: ✅ freeze 完了 (${g.confirmed}/${g.total} confirmed${park}${planEvidence}, 孤児0) → 検証サイクル発火可`;
+      const revision =
+        g.activeRevisionTotal === 0
+          ? ""
+          : g.activeRevisionDraft > 0 || g.activeRevisionHasOrphan
+            ? ` / active revisions IN-PROGRESS (${g.activeRevisionConfirmed}/${g.activeRevisionTotal} confirmed${g.activeRevisionHasOrphan ? ", pair 孤児あり" : ""})`
+            : ` / active revisions ${g.activeRevisionConfirmed}/${g.activeRevisionTotal} confirmed`;
+      return `verification — ${head}: ✅ base freeze 完了 (${g.confirmed}/${g.total} confirmed${park}${planEvidence}, 孤児0)${revision} → 検証サイクル発火可`;
     }
     const parts = [`${g.confirmed}/${g.total} confirmed`];
     if (g.draft > 0) parts.push(`draft ${g.draft}`);

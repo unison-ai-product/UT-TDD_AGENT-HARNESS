@@ -828,3 +828,42 @@ spec RAG と工程 RAG は別の read-model である。`spec_rag_closure_entrie
 実行割当台帳は ZIP `assign.py` / `docs/assign.yaml` 相当の HARNESS 翻訳である。PLAN 粒度の
 `review_evidence.green_commands` は証跡履歴として残すが、ID 単位の実行・検証対象を代替しない。
 検出系は PLAN 粒度 evidence に合わせて台帳を薄めず、typed spec ID と V-pair から導いた実行単位に合わせる。
+
+## Vモデルengine-swap進捗投影契約
+
+### ActiveUpgradeFrontier
+
+`docs/governance/vmodel-upgrade-schedule.md`を唯一のauthoring sourceとし、`plan_id`、`current_location`、`rag`、
+`status`、`blocked_reason`を正規化する。separatorは各列3個以上の`-`だけを許可し、RAGは`green/yellow/red`、
+statusはschema `VALID_STATUSES`から導出する。表欠落、必須列欠落、空表、重複`plan_id`、空ID、未知enumは入力不正としてfail-closeし、
+`CLEAR`へ変換してはならない。`green`かつ非draftだけを完了行とし、`yellow`またはdraftは`IN-PROGRESS`、
+`red`はdoctor hard violationとする。DB/roadmapの既存greenはactive upgradeのyellow/redを隠してはならない。
+
+公開関数契約:
+
+- `parseUpgradeFrontier(markdown): UpgradeFrontierEntry[]` — 必須表を検証し、未完行を工程表順で返す。構造不正は例外。
+- `upgradeFrontierMessage(entries): string` — 0件のみ`CLEAR`、1件以上は`IN-PROGRESS`を返す。
+- `checkRoadmap(repoRoot)` — source欠落/破損/redをhard failure、yellow/draftを可視な進行中として扱う。
+
+### EngineSwapRightArmCoverage
+
+L8〜L14の完了判定はrepository全体の`kind=verify`件数ではなく、frontmatterの`dependencies.parent/requires/references`で
+`PLAN-L1-07`または`PLAN-L4-24`を構造的に依存・参照するengine-swap verify PLANだけを対象とする。本文の偶発言及はlinkにしない。`archived`、無関係、draftのverify PLANは
+層の完了証拠に数えない。L4-24がdraftなら、全層が存在してもstateは`in_progress`のままにする。
+L4-24がconfirmed/completedになるdesign freezeでは、linkedかつ非archivedのL8〜L14 PLANが全層起票済みであることだけを要求し、
+下流実行中を許可する。`program_exit_status=accepted`へのprogram accept遷移で初めて、linkedかつconfirmed/completedの
+L8〜L14全層をhard gateにする。`program_exit_status=in_progress`では未完層を`IN-PROGRESS`表示し、設計承認とprogram完遂を再結合しない。
+
+公開関数契約:
+
+- `loadRightArmGatePlanningInput(repoRoot)` — verify PLANごとにlayer/status/engine-swap linkを読み取る。
+- `analyzeRightArmGatePlanning(input)` — linked active verify PLANだけで不足層を計算し、design statusと整合するstateを返す。
+- `rightArmGatePlanningMessages(result)` — draftは`IN-PROGRESS`、完了は`OK`、契約違反は`violation`を返す。
+
+### AdditiveRevisionFreeze
+
+既存confirmed artifactへ意味変更を上書きせず、delta design docは`revision_track=additive`と
+`revision_base_artifact=<confirmed base path>`を持つ。verification groupはbase docsだけで既存freezeを集計し、
+valid additive revisionを別frontierとして`IN-PROGRESS`表示する。base欠落、base未confirmed、layer不一致は
+additive免除を認めず、通常draftとしてbase freezeをfail-closeする。design→test-designの逆参照は既存directory集合参照に加え、
+delta同士のexact artifact pathを許可する。

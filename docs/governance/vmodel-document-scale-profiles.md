@@ -2,7 +2,7 @@
 title: "Vモデル document scale profile 正本"
 status: confirmed
 owner: PO / TL
-updated: 2026-07-09
+updated: 2026-07-10
 typed_spec_phase_owner: L4
 ---
 
@@ -18,13 +18,18 @@ typed_spec_phase_owner: L4
 join した `document_scale_profile_reviews` を検索・検出用 read-model として使う。検出系は本書の採用判定を読む側であり、
 profile や skip reason を暗黙生成してはいけない。
 
-## 1. 規模プロファイル
+## 1. profile 定義
 
-| `profile_id` | `profile_rank` | `description` | `default_status` | `default_detail` | `scope_policy` |
-|---|---:|---|---|---|---|
-| `poc` | `10` | PoC / 技術検証。core 文書を最小粒度で維持し、product-select 文書は明示 skip を基本にする。 | `minimal` | `lite` | `core-required` |
-| `standard` | `20` | 標準開発。core 文書は標準粒度、product-select 文書は適用可否を明示する。 | `standard` | `standard` | `core-plus-selected` |
-| `enterprise` | `30` | 監査・保守・拡張前提。core と product-select を広く採用し、gap 文書は独立PLANへ接続する。 | `required` | `detailed` | `audit-ready` |
+| `profile_id` | `profile_axis` | `profile_rank` | `description` | `default_status` | `default_detail` | `scope_policy` |
+|---|---|---:|---|---|---|---|
+| `poc` | `size` | `10` | PoC / 技術検証。core 文書を簡易粒度で維持し、skipも理由付きで記録する。 | `minimal` | `lite` | `core-required` |
+| `standard` | `size` | `20` | 標準開発。core 文書は標準粒度、product-select 文書は適用可否を明示する。 | `standard` | `standard` | `core-plus-selected` |
+| `enterprise` | `size` | `30` | 監査・保守・拡張前提。core と選択product文書を詳細化し、deferをPLANへ接続する。 | `required` | `detailed` | `audit-ready` |
+| `web` | `product` | `110` | Webクライアント/公開面の設計slotを有効化する。 | `profile_controlled` | `standard` | `product-web` |
+| `mobile` | `product` | `120` | Mobile/offline/device/distribution/securityの設計slotを有効化する。 | `profile_controlled` | `standard` | `product-mobile` |
+| `desktop` | `product` | `130` | Desktop/package/update/signing/OS integrationの設計slotを有効化する。 | `profile_controlled` | `standard` | `product-desktop` |
+| `cli` | `product` | `140` | CLI command/config/auth/output/distribution/completionの設計slotを有効化する。 | `profile_controlled` | `standard` | `product-cli` |
+| `api-service` | `product` | `150` | API governance/SDK/webhook/event deliveryの設計slotを有効化する。 | `profile_controlled` | `standard` | `product-api-service` |
 
 ## 2. 文書別採用判定
 
@@ -51,6 +56,11 @@ profile や skip reason を暗黙生成してはいけない。
 | `enterprise` | `DOC-L4-NOTIFICATION` | `adopt` | `detailed` | `required` | 通知・監視・運用連絡の設計を採用する。 |  |
 | `enterprise` | `DOC-L4-CODE-VALUE` | `adopt` | `detailed` | `required` | データ辞書・表示名・エラーメッセージ・i18n slot を詳細化する。 |  |
 | `enterprise` | `DOC-L4-SECURITY` | `adopt` | `detailed` | `required` | 監査可能な security boundary と secret-scan / rotation 方針を詳細粒度で要求する。 |  |
+| `web` | `DOC-L4-UI-STANDARD` | `adopt` | `detailed` | `required` | Web clientとL10 browser/visual/a11y検証を有効化する。 |  |
+| `mobile` | `DOC-L4-UI-STANDARD` | `adopt` | `detailed` | `required` | Mobile clientとdevice/offline/distribution設計を有効化する。 | PLAN-L4-22-vmodel-source-disposition-profile-ssot |
+| `desktop` | `DOC-L4-UI-STANDARD` | `adopt` | `detailed` | `required` | Desktop clientとpackage/update/signing設計を有効化する。 | PLAN-L4-22-vmodel-source-disposition-profile-ssot |
+| `cli` | `DOC-L4-UI-STANDARD` | `skip` | `lite` | `skipped` | CLI productはGUI UX slotを採用せず、external-if/CLI slotを使用する。 | PLAN-L4-22-vmodel-source-disposition-profile-ssot |
+| `api-service` | `DOC-L4-UI-STANDARD` | `skip` | `lite` | `skipped` | APIService productはGUI UX slotを採用せず、external-if/API slotを使用する。 | PLAN-L4-22-vmodel-source-disposition-profile-ssot |
 
 ## 3. 解釈規則
 
@@ -61,6 +71,12 @@ profile や skip reason を暗黙生成してはいけない。
 - `decision=skip|defer|conditional` は `reason` を必須にする。
 - `required_plan_id` が入る行は、対応する PLAN が存在しない場合に検出対象にする。
 - `status_override` と `detail_override` は profile 判定の結果であり、catalog の `default_status` を上書きする正本ではない。
+- size profileとproduct profileは直交合成する。単一`profile_rank`で相互排他にせず、resolverがaxis別default+overrideを決定論的に適用する。
+- 8 profile definition自体もDB projection対象とし、decision rowだけをprofile masterの代用にしない。
+- resolverはsize baselineを先に適用し、product overlayを後から適用する。同じslotで競合した場合、明示product decisionがsize defaultを上書きする。
+- security/privacy/trace/evidenceのcore requirementはproduct overlayで弱めない。detailは`lite < standard < detailed`の強い側を採用する。
+- product固有source itemはcategory (`web|mobile|desktop|cli|apisvc`) とproduct profileを一致させ、別productのitemを暗黙採用しない。
+- product overlayの`skip|conditional|defer`にも理由を必須とし、未定義overlayを自動`adopt`しない。
 
 ## 4. 不変条件
 

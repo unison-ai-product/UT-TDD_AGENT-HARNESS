@@ -1,4 +1,5 @@
 import { VALID_SUB_DOCS as SCHEMA_VALID_SUB_DOCS } from "../schema/index";
+import { FILING_TARGET_BY_MODE } from "../schema/route-filing";
 
 const SERIAL_REASONS = ["file_conflict", "downstream_dependency", "shared_state"] as const;
 const MODE_PATTERN = /\[(並列|直列)\]/;
@@ -20,53 +21,27 @@ const INTERNAL_ASSET_EXTENSION_PLAN_IDS = new Set([
 ]);
 const READY_DEPENDENCY_STATUSES = new Set(["confirmed", "completed"]);
 
-// PLAN-L7-263: route_mode と kind の整合表。add-feature mode は add-design /
-// add-impl を内包する運用で、kind=impl は back-fill 義務 (KIND_BACKFILL) を
-// 機械免除してしまうため許容しない (A-178 G-14)。
-//
-// PLAN-RECOVERY-10 (Stage 1, PO サインオフ 2026-07-07): SSoT
-// (L4 §3.1 駆動モデル表 function.md の kind 列) から全 11 駆動モデル + Verify の
-// allowed kinds を導出して登録 (観測組合せの鵜呑み blessing でなく spec 由来)。
-// - discovery/scrum→poc: 両 mode は同じ kind=poc を共有し、workflow_phase で状態を表す。
-// - reverse/recovery/refactor/retrofit/research→同名 kind: L4 §3.1 一致。
-// - add-feature/design-bottomup→add-design|add-impl: 設計追補 + 実装追補を内包する。
-// - incident→troubleshoot|recovery: L4 §3.1 / route-filing の Incident 行に一致。
-// - version-up→impl: option1 (PO 裁定)。parked track の実装意図を impl で保全し、着手時 add-feature
-//   合流で add-design を生む (L4 §3.1 は back-fill 側の記述、parked kind は本裁定で確定)。
-// landed 済の off-diagonal (SSoT 不一致だが confirmed) は ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS で
-// 恒久免除する (kind 書き換え=履歴改ざん回避)。
-const ROUTE_MODE_ALLOWED_KINDS: Record<string, readonly string[]> = {
-  "add-feature": ["add-design", "add-impl"],
-  "design-bottomup": ["add-design", "add-impl"],
-  discovery: ["poc"],
-  incident: ["troubleshoot", "recovery"],
-  refactor: ["refactor"],
-  research: ["research"],
-  retrofit: ["retrofit"],
-  reverse: ["reverse"],
-  recovery: ["recovery"],
-  scrum: ["poc"],
-  "version-up": ["impl"],
-  verify: ["verify"],
-};
+// routeFiling の設計契約を lint 側でも直接読む。mode/kind/layer を別の手書き表へ複製しない。
+// range (`L3-L6`) は PLAN lint の単層照合用に展開する。
+function expandLayerBand(values: readonly string[]): string[] {
+  return values.flatMap((value) => {
+    const match = /^L(\d+)-L(\d+)$/.exec(value);
+    if (!match) return [value];
+    const start = Number(match[1]);
+    const end = Number(match[2]);
+    return Array.from({ length: end - start + 1 }, (_, index) => `L${start + index}`);
+  });
+}
 
-// L4 §3.1 駆動モデル表と Vモデル層の対応。kind だけ合っていても layer が
-// 別の腕を指していれば片肺運用になるため、route_mode ごとの許容 layer band を
-// PLAN governance lint で fail-close する。
-const ROUTE_MODE_LAYER_BANDS: Record<string, readonly string[]> = {
-  "add-feature": ["L3", "L4", "L5", "L6", "L7"],
-  "design-bottomup": ["L2", "L3", "L4", "L5", "L6", "L7"],
-  discovery: ["cross"],
-  incident: ["L7", "cross"],
-  reverse: ["cross"],
-  recovery: ["cross"],
-  refactor: ["L7"],
-  research: ["L1", "L2", "L3", "L4"],
-  retrofit: ["L7"],
-  scrum: ["cross"],
-  "version-up": ["L7"],
-  verify: ["L8", "L9", "L10", "L11", "L12", "L13", "L14"],
-};
+const routeModes = Object.entries(FILING_TARGET_BY_MODE).filter(([mode]) => mode !== "forward");
+
+const ROUTE_MODE_ALLOWED_KINDS: Record<string, readonly string[]> = Object.fromEntries(
+  routeModes.map(([mode, target]) => [mode, [...target.allowed_kinds]]),
+);
+
+const ROUTE_MODE_LAYER_BANDS: Record<string, readonly string[]> = Object.fromEntries(
+  routeModes.map(([mode, target]) => [mode, expandLayerBand(target.layer_band)]),
+);
 
 const RIGHT_ARM_VERIFICATION_GATE_BY_LAYER: Record<string, string> = {
   L8: "G8",
@@ -151,6 +126,9 @@ const ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS = new Set([
   "PLAN-L7-368-design-lint-db-projection",
 ]);
 
+// parked version-up契約の導入前にconfirmedとなった履歴1件。履歴は書き換えず負債台帳で追う。
+const VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS = new Set(["PLAN-L7-303-digest-commit-anchor"]);
+
 const DB_PROJECTION_BACKPROP_REQUIRED_GENERATES = [
   "docs/governance/ut-tdd-agent-harness-requirements_v1.2.md",
   "docs/design/harness/L1-requirements/functional-requirements.md",
@@ -197,4 +175,5 @@ export {
   SERIAL_REASONS,
   VALID_REVERSE_FULLBACK_SCOPE_DECISIONS,
   VALID_SUB_DOCS,
+  VERSION_UP_PARKING_LEGACY_LANDED_PLAN_IDS,
 };
