@@ -154,12 +154,27 @@ describe("clean distribution local acceptance smoke", () => {
     }
   }, 120_000);
 
-  it("PLAN-L7-413 D-2: denied source paths fail closed and are reported", () => {
+  it("PLAN-L7-413 D-2: denied 入力は出荷集合へ決して到達しない (構造 fence)", () => {
+    // deny 対象 (allow 外・allow 内 carve-out の両方) は excludedPaths 行きで、
+    // artifactPaths / violation には現れない。violation は出力ガード (include filter 退行
+    // や remap の denied 空間衝突時のみ fire) — 入力に denied があるだけでは blocked に
+    // ならない (full repo walk は denied 常在のため、恒常 blocked は誤 fail-close)。
     const plan = buildCleanDistributionPlan({
-      paths: ["README.md", "LICENSE", "package.json", "src/cli.ts", ".ut-tdd/x", "docs/plans/x.md"],
+      paths: [
+        "README.md",
+        "LICENSE",
+        "package.json",
+        "src/cli.ts",
+        ".ut-tdd/x",
+        "docs/plans/x.md",
+        "src/web/leak.ts",
+      ],
     });
-    expect(plan.ok).toBe(false);
-    expect(plan.denylistViolations).toEqual([".ut-tdd/x", "docs/plans/x.md"]);
+    expect(plan.denylistViolations).toEqual([]);
+    for (const denied of [".ut-tdd/x", "docs/plans/x.md", "src/web/leak.ts"]) {
+      expect(plan.artifactPaths).not.toContain(denied);
+      expect(plan.excludedPaths).toContain(denied);
+    }
   });
 
   it("PLAN-L7-413 D-3: deletion paths are staged by generated Pack commands", () => {
@@ -171,9 +186,9 @@ describe("clean distribution local acceptance smoke", () => {
     const cleanRoot = createCleanDistributionFixture();
     const releaseDir = join(cleanRoot, ".release");
     try {
-      const denied = join(cleanRoot, "docs", "plans", "x.md");
-      mkdirSync(dirname(denied), { recursive: true });
-      writeFileSync(denied, "denied\n", "utf8");
+      // blocked は missingRequired で誘発する (denied 入力は D-2 followup により通常除外で
+      // あって blocked にならないため)。
+      rmSync(join(cleanRoot, "LICENSE"), { force: true });
       const result = runBun(cleanRoot, [
         join(repoRoot, "src", "cli.ts"),
         "distribution",

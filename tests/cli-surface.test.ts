@@ -760,7 +760,7 @@ describe("L7 CLI surface closure", () => {
         actualCutRequiresPoApproval: true,
         export: {
           ok: true,
-          channel: "clean-repo-plus-signed-tarball",
+          channel: "clean-repo-plus-tarball",
           sourceTag: "v0.1.0",
           cleanRepo: "unison-ai-product/UT-TDD_AGENT-HARNESS-Pack",
         },
@@ -802,22 +802,19 @@ describe("L7 CLI surface closure", () => {
       expect(payload).toMatchObject({
         ok: true,
         actualPublishRequiresPoApproval: true,
-        artifacts: {
-          signatureRequired: true,
-          signatureCreated: false,
-        },
         export: {
           ok: true,
           sourceTag: "v0.1.0",
         },
       });
+      // PLAN-L7-413 D-4c: unsigned tarball 契約へ整合 — signature 系 field は payload から
+      // 撤去済み (宣言と実装の一致)。tarball + checksum + manifest のみが成果物。
+      expect(payload.artifacts.signature).toBeUndefined();
       expect(existsSync(payload.artifacts.tarball)).toBe(true);
       expect(existsSync(payload.artifacts.checksum)).toBe(true);
       expect(existsSync(payload.artifacts.manifest)).toBe(true);
-      expect(existsSync(payload.artifacts.signature)).toBe(false);
       expect(readFileSync(payload.artifacts.checksum, "utf8")).toContain("v0.1.0.tar.gz");
       const manifest = JSON.parse(readFileSync(payload.artifacts.manifest, "utf8"));
-      expect(manifest.signatureCreated).toBe(false);
       expect(manifest.artifactCount).toBeGreaterThan(100);
     } finally {
       rmSync(outDir, { recursive: true, force: true });

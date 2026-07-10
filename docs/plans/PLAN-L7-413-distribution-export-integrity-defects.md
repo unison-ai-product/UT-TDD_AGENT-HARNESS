@@ -112,6 +112,14 @@ claude-fable-5) に実施した副産物として、現行コードの欠陥が�
   excludedPaths と別枠で報告し ok 条件へ組み込む。
 - oracle: denied path (例 `.ut-tdd/x`, `docs/plans/x.md`) を input paths に混ぜたとき
   ok=false かつ violation に列挙される regression test (現行実装では fail する = red 起点)。
+- **訂正注記 (2026-07-10 followup)**: 上記修正方針の前段 (denied 入力の存在自体を fail) は
+  **過剰 fail-close** だった — full repo walk には denied path (.ut-tdd/ 等) が常在し、
+  `src/web/` は tracked .gitkeep を持つ意図的 carve-out のため、実 repo の plan が恒常
+  blocked になる (PR #42 で実装され cli-surface 実 repo 回帰 5 件で検出、赤のままマージ
+  してしまった運用ミスも同時発生)。確定形 = **出力ガード** (`artifactPaths` を deny で監視、
+  include filter 退行・remap 衝突時のみ fire) + **構造 fence テスト** (denied 入力が
+  artifactPaths に決して現れないことを固定)。oracle も同 followup で書換え済み。D-4 の
+  blocked 誘発は denied 入力ではなく missingRequired で行う。
 
 ### D-3: 削除の非伝播 (Pack に消したはずのファイルが残留)
 
@@ -145,6 +153,8 @@ claude-fable-5) に実施した副産物として、現行コードの欠陥が�
 
 ## DoD
 
-- [ ] D-1〜D-4 それぞれに red→green の regression test が付き、修正が landed。
-- [ ] 修正は現行配布アーキの範囲内 (読み取り元切替を含まない) であることを TL が確認。
-- [ ] review_evidence に green_commands (targeted vitest + typecheck + lint) を記録。
+- [x] D-1〜D-4 それぞれに red→green の regression test が付き、修正が landed (PR #42 +
+      D-2 意味論訂正 followup PR #43。D-2 の確定 oracle は「denied 入力が出荷されない」構造 fence)。
+- [x] 修正は現行配布アーキの範囲内 (読み取り元切替を含まない) であることを TL が確認
+      (Claude cross-review、PR #42/#43)。
+- [x] review_evidence に green_commands (targeted vitest + typecheck + lint) を記録。
