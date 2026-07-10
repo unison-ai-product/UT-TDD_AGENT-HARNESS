@@ -92,9 +92,9 @@ evidenceは`subject_asset_id`、`subject_revision`、`source_commit`、`command`
 
 ## 8. CLI契約
 
-- `ut-tdd workflow status --plan <alias|asset_id>`
-- `ut-tdd workflow transition --plan <asset_id> --to <state> --evidence <id...>`
-- `ut-tdd workflow explain --plan <asset_id> --to <state>`
+- `ut-tdd workflow status --plan <alias|asset_id>`（実装予定。現行CLIではない）
+- `ut-tdd workflow transition --plan <asset_id> --to <state> --evidence <id...>`（実装予定。現行CLIではない）
+- `ut-tdd workflow explain --plan <asset_id> --to <state>`（実装予定。現行CLIではない）
 - `ut-tdd plan validate <path>`
 - `ut-tdd plan migrate --dry-run [--path <path>]`
 - `ut-tdd plan revise --asset <asset_id> --from-revision <n>`
