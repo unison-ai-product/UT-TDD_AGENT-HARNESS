@@ -32,6 +32,7 @@ review_evidence:
         completed_at: "2026-07-10T11:56:35+09:00"
         evidence_path: docs/design/harness/L6-function-design/function-spec.md
         output_digest: "sha256:1583d540ccb3a9282646a25317e2f7ad4a3c0c0d78574ddd3953adb78df80b90"
+        anchor_commit: 8f8364267a9a614b60a273ee1cd60464cb9bba8a
       - kind: unit_test
         command: "bun run vitest run tests\\session-start-digest.test.ts tests\\projection-writer.test.ts tests\\review-evidence.test.ts tests\\feedback-surface.test.ts tests\\memory.test.ts tests\\handover.test.ts"
         runner: bun
@@ -40,6 +41,7 @@ review_evidence:
         completed_at: "2026-07-10T11:55:55+09:00"
         evidence_path: tests/session-start-digest.test.ts
         output_digest: "sha256:9c7b9c86eee9ee298f87c4a5a5291078dbc4769486f92d981030e78d7c97451e"
+        anchor_commit: 8f8364267a9a614b60a273ee1cd60464cb9bba8a
       - kind: integration_test
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
@@ -48,6 +50,7 @@ review_evidence:
         completed_at: "2026-07-10T11:56:20+09:00"
         evidence_path: docs/design/harness/L6-function-design/handover-mechanism.md
         output_digest: "sha256:3c157bd335808c04657afecf4da798fc7cfc44b85ba517393fbd9b7263732275"
+        anchor_commit: 8f8364267a9a614b60a273ee1cd60464cb9bba8a
 agent_slots:
   - role: tl
     slot_label: "TL - signals 還流と handover digest 接続の契約"

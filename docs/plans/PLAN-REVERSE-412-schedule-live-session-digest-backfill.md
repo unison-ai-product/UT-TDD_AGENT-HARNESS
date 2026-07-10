@@ -46,6 +46,7 @@ review_evidence:
         completed_at: "2026-07-10T11:56:35+09:00"
         evidence_path: docs/design/harness/L6-function-design/handover-mechanism.md
         output_digest: "sha256:3c157bd335808c04657afecf4da798fc7cfc44b85ba517393fbd9b7263732275"
+        anchor_commit: 8f8364267a9a614b60a273ee1cd60464cb9bba8a
       - kind: integration_test
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
@@ -54,6 +55,7 @@ review_evidence:
         completed_at: "2026-07-10T11:56:20+09:00"
         evidence_path: src/handover/session-start-digest.ts
         output_digest: "sha256:21dfda7b66c11f73101652ea47991ad29bbb4f78f057dd31f60a35455853fe3c"
+        anchor_commit: 8f8364267a9a614b60a273ee1cd60464cb9bba8a
       - kind: smoke
         command: "bun run src\\cli.ts session start --session PLAN-L7-412-smoke-final-20260710-1157"
         runner: bun
@@ -62,6 +64,7 @@ review_evidence:
         completed_at: "2026-07-10T11:56:35+09:00"
         evidence_path: src/handover/session-start-digest.ts
         output_digest: "sha256:21dfda7b66c11f73101652ea47991ad29bbb4f78f057dd31f60a35455853fe3c"
+        anchor_commit: 8f8364267a9a614b60a273ee1cd60464cb9bba8a
 ---
 
 # PLAN-REVERSE-412: 工程 live state / SessionStart digest backfill

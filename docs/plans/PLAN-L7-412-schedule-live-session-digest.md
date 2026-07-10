@@ -56,6 +56,7 @@ review_evidence:
         completed_at: "2026-07-10T11:53:50+09:00"
         evidence_path: src/handover/session-start-digest.ts
         output_digest: "sha256:21dfda7b66c11f73101652ea47991ad29bbb4f78f057dd31f60a35455853fe3c"
+        anchor_commit: 8f8364267a9a614b60a273ee1cd60464cb9bba8a
       - kind: unit_test
         command: "bun run vitest run tests\\session-start-digest.test.ts tests\\projection-writer.test.ts tests\\review-evidence.test.ts tests\\feedback-surface.test.ts tests\\memory.test.ts tests\\handover.test.ts"
         runner: bun
@@ -64,6 +65,7 @@ review_evidence:
         completed_at: "2026-07-10T11:55:55+09:00"
         evidence_path: tests/session-start-digest.test.ts
         output_digest: "sha256:9c7b9c86eee9ee298f87c4a5a5291078dbc4769486f92d981030e78d7c97451e"
+        anchor_commit: 8f8364267a9a614b60a273ee1cd60464cb9bba8a
       - kind: integration_test
         command: "bun run src\\cli.ts db rebuild"
         runner: bun
@@ -72,6 +74,7 @@ review_evidence:
         completed_at: "2026-07-10T11:56:20+09:00"
         evidence_path: tests/projection-writer.test.ts
         output_digest: "sha256:11d201a3f160069718d7c39cbceffa7cd52be968547b26a1c34b7bcba96a11fd"
+        anchor_commit: 8f8364267a9a614b60a273ee1cd60464cb9bba8a
       - kind: smoke
         command: "bun run src\\cli.ts session start --session PLAN-L7-412-smoke-final-20260710-1157"
         runner: bun
@@ -80,6 +83,7 @@ review_evidence:
         completed_at: "2026-07-10T11:56:35+09:00"
         evidence_path: src/handover/session-start-digest.ts
         output_digest: "sha256:21dfda7b66c11f73101652ea47991ad29bbb4f78f057dd31f60a35455853fe3c"
+        anchor_commit: 8f8364267a9a614b60a273ee1cd60464cb9bba8a
 ---
 
 # PLAN-L7-412: 工程 live state と固定4段 SessionStart digest
