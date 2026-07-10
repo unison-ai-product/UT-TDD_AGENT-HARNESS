@@ -130,8 +130,8 @@ export const HARNESS_DB_SPEC_IR_TABLES: TableDef[] = [
     ],
     unique: [["profile_id", "doc_type_id"]],
     foreignKeys: [
-      foreignKey(["profile_id"], "document_scale_profiles", ["profile_id"]),
-      foreignKey(["doc_type_id"], "document_catalog_entries", ["doc_type_id"]),
+      foreignKey(["profile_id"], { table: "document_scale_profiles", columns: ["profile_id"] }),
+      foreignKey(["doc_type_id"], { table: "document_catalog_entries", columns: ["doc_type_id"] }),
     ],
     checks: [
       enumCheck("decision", ["adopt", "conditional", "skip", "defer"]),

@@ -29,20 +29,23 @@ export function buildTrackedTargetRegistry(
     ]),
   );
   const catalogPath = "docs/governance/vmodel-document-catalog.md";
-  const parsed = parseStrictMarkdownTable(readFileSync(join(repoRoot, catalogPath)), catalogPath, [
-    "doc_type_id",
-    "layer",
-    "sub_doc",
-    "category",
-    "requirement_class",
-    "applicability",
-    "default_status",
-    "source_doc_family",
-    "authoring_source_path",
-    "projection_table",
-    "profile_controlled",
-    "skip_reason_required",
-  ]);
+  const parsed = parseStrictMarkdownTable(readFileSync(join(repoRoot, catalogPath)), {
+    subjectId: catalogPath,
+    expectedHeaders: [
+      "doc_type_id",
+      "layer",
+      "sub_doc",
+      "category",
+      "requirement_class",
+      "applicability",
+      "default_status",
+      "source_doc_family",
+      "authoring_source_path",
+      "projection_table",
+      "profile_controlled",
+      "skip_reason_required",
+    ],
+  });
   if (!parsed.ok) throw new Error(JSON.stringify(parsed.findings));
   return Object.freeze({
     aliases: Object.freeze(aliases),

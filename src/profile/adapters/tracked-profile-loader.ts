@@ -66,9 +66,13 @@ export function loadTrackedDocumentProfileCatalog(
   if (!provenance.ok) throw new Error(JSON.stringify(provenance.findings));
   const profileBytes = requiredSource(bundle, profilePath);
   const catalogBytes = requiredSource(bundle, catalogPath);
-  const profileRows = table(profileBytes, profilePath, profileHeaders, 8);
-  const decisionRows = table(profileBytes, profilePath, decisionHeaders);
-  const catalogRows = table(catalogBytes, catalogPath, catalogHeaders);
+  const profileRows = table(profileBytes, {
+    path: profilePath,
+    headers: profileHeaders,
+    expectedRows: 8,
+  });
+  const decisionRows = table(profileBytes, { path: profilePath, headers: decisionHeaders });
+  const catalogRows = table(catalogBytes, { path: catalogPath, headers: catalogHeaders });
   const profiles = profileRows.map(toProfile);
   const decisions = decisionRows.map(toDecision);
   const knownDocTypeIds = catalogRows.map((row) => required(row, "doc_type_id"));
@@ -127,11 +131,14 @@ function toDecision(row: Row): DocumentProfileDecision {
 
 function table(
   bytes: Uint8Array,
-  path: string,
-  headers: readonly string[],
-  expectedRows?: number,
+  config: { path: string; headers: readonly string[]; expectedRows?: number },
 ): readonly Row[] {
-  const result = parseStrictMarkdownTable(bytes, path, headers, expectedRows);
+  const { path, headers, expectedRows } = config;
+  const result = parseStrictMarkdownTable(bytes, {
+    subjectId: path,
+    expectedHeaders: headers,
+    ...(expectedRows === undefined ? {} : { expectedRows }),
+  });
   if (!result.ok) throw new Error(JSON.stringify(result.findings));
   return result.rows;
 }

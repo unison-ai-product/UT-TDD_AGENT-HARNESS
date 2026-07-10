@@ -219,7 +219,7 @@ source→target edgeからruntimeがitem targetを推論してはならない。
 - `traceability.yaml` はtrace/ID規約を所有する `ZIP-DOC-033` へ接続する。
 - `iac` はsource catalog自体が `status=na` / file空を宣言するため、`NO-SOURCE` を理由付き状態として保持する。
 
-### 4.1 meta source mapping
+### 4.1 meta source mapping定義
 
 | meta_source_ref | allowed_source_status | source_file_policy | reason |
 |---|---|---|---|

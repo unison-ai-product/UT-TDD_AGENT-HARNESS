@@ -52,29 +52,39 @@ export function projectVmodelAuthoring(
   if (!catalog.ok) throw new Error(JSON.stringify(catalog.errors));
   validateTargets(repoRoot, catalogInput);
   for (const finding of catalog.value.unresolved()) {
-    upsert(db, "findings", "finding_id", {
-      finding_id: stableId("vmodel-item-target-pending", finding.subjectId),
-      kind: finding.ruleId,
-      severity: finding.severity,
-      subject_id: finding.subjectId,
-      source: "vmodel-item-target",
-      status: "open",
-      evidence_path: "docs/governance/vmodel-item-target-ledger.md",
+    upsert(db, {
+      table: "findings",
+      primaryKey: "finding_id",
+      row: {
+        finding_id: stableId("vmodel-item-target-pending", finding.subjectId),
+        kind: finding.ruleId,
+        severity: finding.severity,
+        subject_id: finding.subjectId,
+        source: "vmodel-item-target",
+        status: "open",
+        evidence_path: "docs/governance/vmodel-item-target-ledger.md",
+      },
     });
   }
 
-  for (const row of catalogInput.sources) upsert(db, "vmodel_sources", "source_id", snake(row));
+  for (const row of catalogInput.sources)
+    upsert(db, { table: "vmodel_sources", primaryKey: "source_id", row: snake(row) });
   for (const row of catalogInput.categories)
-    upsert(db, "vmodel_categories", "category_id", snake(row));
+    upsert(db, { table: "vmodel_categories", primaryKey: "category_id", row: snake(row) });
   for (const row of catalogInput.metaSourceMappings)
-    upsert(db, "vmodel_meta_source_mappings", "meta_source_ref", snake(row));
-  for (const row of catalogInput.items) upsert(db, "vmodel_semantic_items", "item_id", snake(row));
+    upsert(db, {
+      table: "vmodel_meta_source_mappings",
+      primaryKey: "meta_source_ref",
+      row: snake(row),
+    });
+  for (const row of catalogInput.items)
+    upsert(db, { table: "vmodel_semantic_items", primaryKey: "item_id", row: snake(row) });
   for (const row of catalogInput.sourceItemEdges)
-    upsert(db, "vmodel_source_item_edges", "edge_id", snake(row));
+    upsert(db, { table: "vmodel_source_item_edges", primaryKey: "edge_id", row: snake(row) });
   for (const row of catalogInput.sourceTargetEdges)
-    upsert(db, "vmodel_source_target_edges", "edge_id", snake(row));
+    upsert(db, { table: "vmodel_source_target_edges", primaryKey: "edge_id", row: snake(row) });
   for (const row of catalogInput.itemTargetEdges)
-    upsert(db, "vmodel_item_target_edges", "edge_id", snake(row));
+    upsert(db, { table: "vmodel_item_target_edges", primaryKey: "edge_id", row: snake(row) });
 
   const profileBundle = bundle(profilePaths, deps.read);
   const profiles = loadTrackedDocumentProfileCatalog(
@@ -82,7 +92,7 @@ export function projectVmodelAuthoring(
     deps.provenance.receipts(profilePaths),
   );
   for (const row of profiles.catalog.profiles)
-    upsert(db, "document_scale_profiles", "profile_id", snake(row));
+    upsert(db, { table: "document_scale_profiles", primaryKey: "profile_id", row: snake(row) });
 }
 
 function validateTargets(
@@ -129,9 +139,7 @@ function snake(row: object): Record<string, unknown> {
 
 function upsert(
   db: HarnessDb,
-  table: string,
-  primaryKey: string,
-  row: Record<string, unknown>,
+  request: { table: string; primaryKey: string; row: Record<string, unknown> },
 ): void {
-  upsertRow(db, { table, primaryKey, row });
+  upsertRow(db, request);
 }

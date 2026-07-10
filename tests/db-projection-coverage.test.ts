@@ -32,7 +32,13 @@ const child: TableDef = {
   ],
   primaryKey: ["parent_id", "ordinal"],
   unique: [["owner_id", "ordinal"]],
-  foreignKeys: [foreignKey(["parent_id"], "coverage_parent", ["id"], { onDelete: "RESTRICT" })],
+  foreignKeys: [
+    foreignKey(["parent_id"], {
+      table: "coverage_parent",
+      columns: ["id"],
+      onDelete: "RESTRICT",
+    }),
+  ],
   checks: [enumCheck("status", ["draft", "confirmed"])],
 };
 

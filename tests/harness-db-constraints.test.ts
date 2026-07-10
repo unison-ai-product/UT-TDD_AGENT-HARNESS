@@ -26,7 +26,13 @@ const constrainedTable: TableDef = {
   ],
   primaryKey: ["parent_id", "ordinal"],
   unique: [["owner_id", "ordinal"]],
-  foreignKeys: [foreignKey(["parent_id"], "parents", ["parent_id"], { onDelete: "RESTRICT" })],
+  foreignKeys: [
+    foreignKey(["parent_id"], {
+      table: "parents",
+      columns: ["parent_id"],
+      onDelete: "RESTRICT",
+    }),
+  ],
   checks: [
     enumCheck("status", ["draft", "confirmed"]),
     {
@@ -104,7 +110,10 @@ describe("typed harness.db constraints", () => {
     [{ ...constrainedTable, unique: [["owner_id); DROP TABLE parents;--"]] }, /SQL/],
     [{ ...constrainedTable, checks: [{ kind: "in", column: "status", values: [] }] }, /値が空/],
     [
-      { ...constrainedTable, foreignKeys: [foreignKey(["parent_id"], "parents", ["id", "extra"])] },
+      {
+        ...constrainedTable,
+        foreignKeys: [foreignKey(["parent_id"], { table: "parents", columns: ["id", "extra"] })],
+      },
       /列数/,
     ],
     [{ ...constrainedTable, primaryKey: ["parent_id", "parent_id"] }, /重複/],

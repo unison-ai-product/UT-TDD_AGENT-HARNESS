@@ -168,10 +168,19 @@ function canonicalDigest(input: CatalogInput): string {
 function violation(
   ruleId: string,
   subjectId: string,
-  message: string,
-  evidenceRefs: string[] = [],
-  severity: CatalogViolation["severity"] = "error",
+  detail:
+    | string
+    | {
+        message: string;
+        evidenceRefs?: string[];
+        severity?: CatalogViolation["severity"];
+      },
 ): CatalogViolation {
+  const {
+    message,
+    evidenceRefs = [],
+    severity = "error",
+  } = typeof detail === "string" ? { message: detail } : detail;
   return { ruleId, subjectId, message, severity, evidenceRefs: [...evidenceRefs].sort() };
 }
 
@@ -185,15 +194,19 @@ function stableFindings(findings: CatalogViolation[]): CatalogViolation[] {
 
 function duplicateFindings<T>(
   rows: readonly T[],
-  identity: (row: T) => string,
-  ruleId: string,
-  evidence: string,
+  config: { identity: (row: T) => string; ruleId: string; evidence: string },
 ): CatalogViolation[] {
+  const { identity, ruleId, evidence } = config;
   const counts = new Map<string, number>();
   for (const row of rows) counts.set(identity(row), (counts.get(identity(row)) ?? 0) + 1);
   return [...counts.entries()]
     .filter(([, count]) => count > 1)
-    .map(([id]) => violation(ruleId, id, `duplicate identity: ${id}`, [evidence]));
+    .map(([id]) =>
+      violation(ruleId, id, {
+        message: `duplicate identity: ${id}`,
+        evidenceRefs: [evidence],
+      }),
+    );
 }
 
 function validate(input: CatalogInput): CatalogViolation[] {
@@ -219,60 +232,55 @@ function validate(input: CatalogInput): CatalogViolation[] {
   for (const dimension of DIMENSIONS) {
     if (input.declaredCounts[dimension] !== input[dimension].length) {
       findings.push(
-        violation(
-          "catalog-count-mismatch",
-          dimension,
-          `declared=${input.declaredCounts[dimension]} actual=${input[dimension].length}`,
-          ["manifest:declaredCounts", `catalog:${dimension}`],
-        ),
+        violation("catalog-count-mismatch", dimension, {
+          message: `declared=${input.declaredCounts[dimension]} actual=${input[dimension].length}`,
+          evidenceRefs: ["manifest:declaredCounts", `catalog:${dimension}`],
+        }),
       );
     }
   }
 
   findings.push(
-    ...duplicateFindings(
-      input.sources,
-      (row) => row.sourceId,
-      "catalog-source-duplicate",
-      "sources",
-    ),
-    ...duplicateFindings(
-      input.sources,
-      (row) => String(row.ordinal),
-      "catalog-source-duplicate",
-      "sources:ordinal",
-    ),
-    ...duplicateFindings(
-      input.categories,
-      (row) => row.categoryId,
-      "catalog-category-duplicate",
-      "categories",
-    ),
-    ...duplicateFindings(
-      input.metaSourceMappings,
-      (row) => row.metaSourceRef,
-      "catalog-edge-duplicate",
-      "metaSourceMappings",
-    ),
-    ...duplicateFindings(input.items, (row) => row.itemId, "catalog-item-duplicate", "items"),
-    ...duplicateFindings(
-      input.sourceItemEdges,
-      (row) => row.edgeId,
-      "catalog-edge-duplicate",
-      "sourceItemEdges",
-    ),
-    ...duplicateFindings(
-      input.sourceTargetEdges,
-      (row) => row.edgeId,
-      "catalog-edge-duplicate",
-      "sourceTargetEdges",
-    ),
-    ...duplicateFindings(
-      input.itemTargetEdges,
-      (row) => row.edgeId,
-      "catalog-edge-duplicate",
-      "itemTargetEdges",
-    ),
+    ...duplicateFindings(input.sources, {
+      identity: (row) => row.sourceId,
+      ruleId: "catalog-source-duplicate",
+      evidence: "sources",
+    }),
+    ...duplicateFindings(input.sources, {
+      identity: (row) => String(row.ordinal),
+      ruleId: "catalog-source-duplicate",
+      evidence: "sources:ordinal",
+    }),
+    ...duplicateFindings(input.categories, {
+      identity: (row) => row.categoryId,
+      ruleId: "catalog-category-duplicate",
+      evidence: "categories",
+    }),
+    ...duplicateFindings(input.metaSourceMappings, {
+      identity: (row) => row.metaSourceRef,
+      ruleId: "catalog-edge-duplicate",
+      evidence: "metaSourceMappings",
+    }),
+    ...duplicateFindings(input.items, {
+      identity: (row) => row.itemId,
+      ruleId: "catalog-item-duplicate",
+      evidence: "items",
+    }),
+    ...duplicateFindings(input.sourceItemEdges, {
+      identity: (row) => row.edgeId,
+      ruleId: "catalog-edge-duplicate",
+      evidence: "sourceItemEdges",
+    }),
+    ...duplicateFindings(input.sourceTargetEdges, {
+      identity: (row) => row.edgeId,
+      ruleId: "catalog-edge-duplicate",
+      evidence: "sourceTargetEdges",
+    }),
+    ...duplicateFindings(input.itemTargetEdges, {
+      identity: (row) => row.edgeId,
+      ruleId: "catalog-edge-duplicate",
+      evidence: "itemTargetEdges",
+    }),
   );
 
   const sourceIds = new Set(input.sources.map((row) => row.sourceId));
@@ -299,9 +307,10 @@ function validate(input: CatalogInput): CatalogViolation[] {
     }
     if (!source.reason.trim() || !isDigest(source.rowDigest) || !isDigest(source.manifestDigest)) {
       findings.push(
-        violation("catalog-disposition-incomplete", source.sourceId, "reason/digest is required", [
-          source.sourceId,
-        ]),
+        violation("catalog-disposition-incomplete", source.sourceId, {
+          message: "reason/digest is required",
+          evidenceRefs: [source.sourceId],
+        }),
       );
     }
     if (
@@ -309,9 +318,10 @@ function validate(input: CatalogInput): CatalogViolation[] {
       !source.targetRef.trim()
     ) {
       findings.push(
-        violation("catalog-disposition-incomplete", source.sourceId, "target is required", [
-          source.sourceId,
-        ]),
+        violation("catalog-disposition-incomplete", source.sourceId, {
+          message: "target is required",
+          evidenceRefs: [source.sourceId],
+        }),
       );
     }
   }
@@ -345,10 +355,10 @@ function validate(input: CatalogInput): CatalogViolation[] {
     );
     if (!categoryIds.has(item.categoryId) || (!sourceIds.has(item.sourceRef) && !metaMatches)) {
       findings.push(
-        violation("catalog-orphan-edge", item.itemId, "item category/source is unresolved", [
-          item.categoryId,
-          item.sourceRef,
-        ]),
+        violation("catalog-orphan-edge", item.itemId, {
+          message: "item category/source is unresolved",
+          evidenceRefs: [item.categoryId, item.sourceRef],
+        }),
       );
     }
     const matchingSourceEdges = input.sourceItemEdges.filter(
@@ -356,22 +366,18 @@ function validate(input: CatalogInput): CatalogViolation[] {
     );
     if (matchingSourceEdges.length !== 1) {
       findings.push(
-        violation(
-          "catalog-orphan-edge",
-          item.itemId,
-          "item must have exactly one authored source edge",
-          [item.sourceRef],
-        ),
+        violation("catalog-orphan-edge", item.itemId, {
+          message: "item must have exactly one authored source edge",
+          evidenceRefs: [item.sourceRef],
+        }),
       );
     }
     if (input.itemTargetEdges.filter((edge) => edge.itemId === item.itemId).length !== 1) {
       findings.push(
-        violation(
-          "catalog-item-target-incomplete",
-          item.itemId,
-          "item must have exactly one authored target decision",
-          [item.itemId],
-        ),
+        violation("catalog-item-target-incomplete", item.itemId, {
+          message: "item must have exactly one authored target decision",
+          evidenceRefs: [item.itemId],
+        }),
       );
     }
   }
@@ -392,18 +398,18 @@ function validate(input: CatalogInput): CatalogViolation[] {
     );
     if ((!sourceIds.has(edge.sourceId) && !metaMatches) || !itemIds.has(edge.itemId)) {
       findings.push(
-        violation("catalog-orphan-edge", edge.edgeId, "source-item endpoint is unresolved", [
-          edge.sourceId,
-          edge.itemId,
-        ]),
+        violation("catalog-orphan-edge", edge.edgeId, {
+          message: "source-item endpoint is unresolved",
+          evidenceRefs: [edge.sourceId, edge.itemId],
+        }),
       );
     }
     if (edge.edgeId !== sourceItemEdgeId(edge.sourceId, edge.itemId)) {
       findings.push(
-        violation("catalog-edge-identity-invalid", edge.edgeId, "source-item edge ID mismatch", [
-          edge.sourceId,
-          edge.itemId,
-        ]),
+        violation("catalog-edge-identity-invalid", edge.edgeId, {
+          message: "source-item edge ID mismatch",
+          evidenceRefs: [edge.sourceId, edge.itemId],
+        }),
       );
     }
   }
@@ -423,17 +429,19 @@ function validate(input: CatalogInput): CatalogViolation[] {
     }
     if (!sourceIds.has(edge.sourceId)) {
       findings.push(
-        violation("catalog-orphan-edge", edge.edgeId, "source-target source is unresolved", [
-          edge.sourceId,
-        ]),
+        violation("catalog-orphan-edge", edge.edgeId, {
+          message: "source-target source is unresolved",
+          evidenceRefs: [edge.sourceId],
+        }),
       );
     }
     const source = input.sources.find((row) => row.sourceId === edge.sourceId);
     if (source && source.disposition !== edge.disposition) {
       findings.push(
-        violation("catalog-source-target-mismatch", edge.edgeId, "disposition mismatch", [
-          edge.sourceId,
-        ]),
+        violation("catalog-source-target-mismatch", edge.edgeId, {
+          message: "disposition mismatch",
+          evidenceRefs: [edge.sourceId],
+        }),
       );
     }
   }
@@ -448,9 +456,10 @@ function validate(input: CatalogInput): CatalogViolation[] {
     }
     if (!itemIds.has(edge.itemId)) {
       findings.push(
-        violation("catalog-orphan-edge", edge.edgeId, "item-target item is unresolved", [
-          edge.itemId,
-        ]),
+        violation("catalog-orphan-edge", edge.edgeId, {
+          message: "item-target item is unresolved",
+          evidenceRefs: [edge.itemId],
+        }),
       );
     }
     const hasTarget = Boolean(edge.targetKind && edge.targetRef?.trim());
@@ -464,12 +473,10 @@ function validate(input: CatalogInput): CatalogViolation[] {
       (edge.targetStatus === "defer" && !edge.planId)
     ) {
       findings.push(
-        violation(
-          "catalog-item-target-incomplete",
-          edge.itemId,
-          "item target decision is incomplete",
-          [edge.edgeId],
-        ),
+        violation("catalog-item-target-incomplete", edge.itemId, {
+          message: "item target decision is incomplete",
+          evidenceRefs: [edge.edgeId],
+        }),
       );
     }
   }
@@ -531,13 +538,11 @@ export class DocumentDispositionCatalog {
     return this.#input.itemTargetEdges
       .filter((edge) => edge.targetStatus === "pending_review")
       .map((edge) =>
-        violation(
-          "catalog-item-target-pending",
-          edge.itemId,
-          "item target review is pending",
-          [edge.edgeId],
-          "warning",
-        ),
+        violation("catalog-item-target-pending", edge.itemId, {
+          message: "item target review is pending",
+          evidenceRefs: [edge.edgeId],
+          severity: "warning",
+        }),
       )
       .sort((left, right) => compareBytes(left.subjectId, right.subjectId));
   }

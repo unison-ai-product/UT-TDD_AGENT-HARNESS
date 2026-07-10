@@ -64,7 +64,9 @@ export const HARNESS_DB_VMODEL_TABLES: TableDef[] = [
       requiredCol("source_file"),
       requiredCol("row_digest"),
     ],
-    foreignKeys: [foreignKey(["category_id"], "vmodel_categories", ["category_id"])],
+    foreignKeys: [
+      foreignKey(["category_id"], { table: "vmodel_categories", columns: ["category_id"] }),
+    ],
   },
   {
     name: "vmodel_source_item_edges",
@@ -77,7 +79,9 @@ export const HARNESS_DB_VMODEL_TABLES: TableDef[] = [
       requiredCol("row_digest"),
     ],
     unique: [["source_id", "item_id"]],
-    foreignKeys: [foreignKey(["item_id"], "vmodel_semantic_items", ["item_id"])],
+    foreignKeys: [
+      foreignKey(["item_id"], { table: "vmodel_semantic_items", columns: ["item_id"] }),
+    ],
   },
   {
     name: "vmodel_source_target_edges",
@@ -90,7 +94,7 @@ export const HARNESS_DB_VMODEL_TABLES: TableDef[] = [
       requiredCol("row_digest"),
     ],
     unique: [["source_id", "target_type", "target_ref"]],
-    foreignKeys: [foreignKey(["source_id"], "vmodel_sources", ["source_id"])],
+    foreignKeys: [foreignKey(["source_id"], { table: "vmodel_sources", columns: ["source_id"] })],
     checks: [enumCheck("disposition", dispositions), enumCheck("target_type", targetKinds)],
   },
   {
@@ -107,8 +111,8 @@ export const HARNESS_DB_VMODEL_TABLES: TableDef[] = [
     ],
     unique: [["item_id"]],
     foreignKeys: [
-      foreignKey(["item_id"], "vmodel_semantic_items", ["item_id"]),
-      foreignKey(["plan_id"], "plan_registry", ["plan_id"]),
+      foreignKey(["item_id"], { table: "vmodel_semantic_items", columns: ["item_id"] }),
+      foreignKey(["plan_id"], { table: "plan_registry", columns: ["plan_id"] }),
     ],
     checks: [
       enumCheck("target_status", itemStatuses),

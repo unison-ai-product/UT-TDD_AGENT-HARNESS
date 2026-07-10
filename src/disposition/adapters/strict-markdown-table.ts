@@ -32,10 +32,13 @@ function finding(ruleId: TableFinding["ruleId"], subjectId: string, message: str
 
 export function parseStrictMarkdownTable(
   input: Uint8Array,
-  subjectId: string,
-  expectedHeaders: readonly string[],
-  expectedRows?: number,
+  config: {
+    subjectId: string;
+    expectedHeaders: readonly string[];
+    expectedRows?: number;
+  },
 ): StrictTableResult {
+  const { subjectId, expectedHeaders, expectedRows } = config;
   let text: string;
   try {
     text = new TextDecoder("utf-8", { fatal: true }).decode(input);

@@ -17,7 +17,7 @@ const paths = {
 function table(bundle: AuthoringBundle, path: string, headers: string[]): readonly Row[] {
   const bytes = bundle[path];
   if (!bytes) throw new Error(`catalog authoring source missing: ${path}`);
-  const result = parseStrictMarkdownTable(bytes, path, headers);
+  const result = parseStrictMarkdownTable(bytes, { subjectId: path, expectedHeaders: headers });
   if (!result.ok) throw new Error(JSON.stringify(result.findings));
   return result.rows;
 }

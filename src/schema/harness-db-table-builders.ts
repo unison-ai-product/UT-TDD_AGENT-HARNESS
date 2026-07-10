@@ -17,10 +17,19 @@ export const reference = (name: string, target: ColumnReference, type: ColumnTyp
 
 export const foreignKey = (
   columns: readonly string[],
-  referencedTable: string,
-  referencedColumns: readonly string[],
-  actions: Pick<ForeignKeyDef, "onDelete" | "onUpdate"> = {},
-): ForeignKeyDef => ({ columns, referencedTable, referencedColumns, ...actions });
+  target: {
+    table: string;
+    columns: readonly string[];
+    onDelete?: ForeignKeyDef["onDelete"];
+    onUpdate?: ForeignKeyDef["onUpdate"];
+  },
+): ForeignKeyDef => ({
+  columns,
+  referencedTable: target.table,
+  referencedColumns: target.columns,
+  ...(target.onDelete ? { onDelete: target.onDelete } : {}),
+  ...(target.onUpdate ? { onUpdate: target.onUpdate } : {}),
+});
 
 export const enumCheck = (column: string, values: readonly string[]): CheckExpression => ({
   kind: "in",

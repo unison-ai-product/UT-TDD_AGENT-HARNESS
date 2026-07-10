@@ -6,7 +6,13 @@ const valid = "| `id` | name |\n|---|---|\n| `A` | Alpha |\n";
 
 describe("strict V-model authoring table", () => {
   it("loads an exact table without normalizing authored values", () => {
-    expect(parseStrictMarkdownTable(encode(valid), "fixture", ["id", "name"], 1)).toEqual({
+    expect(
+      parseStrictMarkdownTable(encode(valid), {
+        subjectId: "fixture",
+        expectedHeaders: ["id", "name"],
+        expectedRows: 1,
+      }),
+    ).toEqual({
       ok: true,
       rows: [{ id: "A", name: "Alpha" }],
     });
@@ -17,7 +23,10 @@ describe("strict V-model authoring table", () => {
     ["duplicate column", "| `id` | id |\n|---|---|\n| `A` | Alpha |\n"],
     ["missing column", "| `id` |\n|---|\n| `A` |\n"],
   ])("fails closed for %s", (_, markdown) => {
-    const result = parseStrictMarkdownTable(encode(markdown), "fixture", ["id", "name"]);
+    const result = parseStrictMarkdownTable(encode(markdown), {
+      subjectId: "fixture",
+      expectedHeaders: ["id", "name"],
+    });
     expect(result).toMatchObject({
       ok: false,
       findings: [{ ruleId: "catalog-authoring-schema-invalid" }],
@@ -28,7 +37,10 @@ describe("strict V-model authoring table", () => {
     ["row width", "| id | name |\n|---|---|\n| A | Alpha | extra |\n"],
     ["unbalanced inline code", "| id | name |\n|---|---|\n| `A | Alpha |\n"],
   ])("fails closed for %s", (_, markdown) => {
-    const result = parseStrictMarkdownTable(encode(markdown), "fixture", ["id", "name"]);
+    const result = parseStrictMarkdownTable(encode(markdown), {
+      subjectId: "fixture",
+      expectedHeaders: ["id", "name"],
+    });
     expect(result).toMatchObject({
       ok: false,
       findings: [{ ruleId: "catalog-authoring-row-invalid" }],
@@ -36,12 +48,19 @@ describe("strict V-model authoring table", () => {
   });
 
   it("fails closed for invalid UTF-8", () => {
-    const result = parseStrictMarkdownTable(Uint8Array.of(0xc3, 0x28), "fixture", ["id"]);
+    const result = parseStrictMarkdownTable(Uint8Array.of(0xc3, 0x28), {
+      subjectId: "fixture",
+      expectedHeaders: ["id"],
+    });
     expect(result).toMatchObject({ ok: false, findings: [{ message: "invalid UTF-8" }] });
   });
 
   it("fails closed when an expected row is silently omitted", () => {
-    const result = parseStrictMarkdownTable(encode(valid), "fixture", ["id", "name"], 2);
+    const result = parseStrictMarkdownTable(encode(valid), {
+      subjectId: "fixture",
+      expectedHeaders: ["id", "name"],
+      expectedRows: 2,
+    });
     expect(result).toMatchObject({
       ok: false,
       findings: [{ ruleId: "catalog-authoring-count-invalid" }],

@@ -26,35 +26,35 @@ generates:
   - artifact_path: docs/plans/PLAN-REVERSE-417-source-disposition-profile-backfill.md
     artifact_type: markdown_doc
   - artifact_path: src/disposition/domain/document-disposition-catalog.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/disposition/adapters/strict-markdown-table.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/disposition/adapters/tracked-vmodel-loader.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/disposition/domain/authoring-provenance.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/disposition/domain/target-resolver.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/disposition/adapters/tracked-target-registry.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/disposition/adapters/git-authoring-provenance.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/disposition/ports/authoring-provenance.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/profile/domain/resolver.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/profile/adapters/tracked-profile-loader.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/schema/harness-db-tables-vmodel.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/schema/harness-db.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/schema/harness-db-table-builders.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/schema/harness-db-catalog.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/schema/harness-db-indexes.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: tests/harness-db-constraints.test.ts
     artifact_type: test_code
   - artifact_path: tests/vmodel-schema.test.ts
@@ -80,18 +80,22 @@ generates:
   - artifact_path: tests/profile/tracked-loader.test.ts
     artifact_type: test_code
   - artifact_path: src/state-db/vmodel-projections.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/state-db/projection-writer.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/state-db/migration.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/state-db/spec-ir-projections.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/lint/db-projection-coverage.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: src/doctor/db-projection.ts
-    artifact_type: source_code
+    artifact_type: source_module
   - artifact_path: tests/disposition/projection.test.ts
+    artifact_type: test_code
+  - artifact_path: src/lint/design-language.ts
+    artifact_type: source_module
+  - artifact_path: tests/design-language.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-70-source-catalog-profile-resolver-contracts.md

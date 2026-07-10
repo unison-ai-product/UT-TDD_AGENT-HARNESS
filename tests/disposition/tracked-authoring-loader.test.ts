@@ -9,7 +9,11 @@ import { DocumentDispositionCatalog } from "../../src/disposition/domain/documen
 const read = (path: string) => readFileSync(path);
 
 function rows(path: string, headers: string[], expected?: number) {
-  const result = parseStrictMarkdownTable(read(path), path, headers, expected);
+  const result = parseStrictMarkdownTable(read(path), {
+    subjectId: path,
+    expectedHeaders: headers,
+    ...(expected === undefined ? {} : { expectedRows: expected }),
+  });
   expect(result.ok, result.ok ? undefined : JSON.stringify(result.findings)).toBe(true);
   if (!result.ok) throw new Error(result.findings[0]?.message);
   return result.rows;

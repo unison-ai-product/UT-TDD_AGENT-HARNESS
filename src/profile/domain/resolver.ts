@@ -129,7 +129,7 @@ export function resolveDocumentProfile(
 
   for (const profileId of orderedProfileIds) {
     for (const decision of decisionsFor(catalog, profileId)) {
-      applyDecision(catalog, resolved, decision, false, findings);
+      applyDecision(catalog, { resolved, next: decision, explicit: false, findings });
       receipt.push(decision.decisionId);
     }
   }
@@ -145,7 +145,7 @@ export function resolveDocumentProfile(
     if (!profileById(catalog, decision.profileId)) {
       findings.push(finding("profile-unknown", decision.profileId));
     }
-    applyDecision(catalog, resolved, decision, true, findings);
+    applyDecision(catalog, { resolved, next: decision, explicit: true, findings });
     receipt.push(decision.decisionId);
   }
   for (const required of [...catalog.requiredDocTypeIds].sort()) {
@@ -176,11 +176,14 @@ export function resolveDocumentProfile(
 
 function applyDecision(
   catalog: ProfileCatalog,
-  resolved: Map<string, ResolvedDocumentDecision>,
-  next: DocumentProfileDecision,
-  explicit: boolean,
-  findings: ProfileFinding[],
+  input: {
+    resolved: Map<string, ResolvedDocumentDecision>;
+    next: DocumentProfileDecision;
+    explicit: boolean;
+    findings: ProfileFinding[];
+  },
 ): void {
+  const { resolved, next, explicit, findings } = input;
   const current = resolved.get(next.docTypeId);
   if (current && catalog.coreDocTypeIds.includes(next.docTypeId)) {
     if (detailRank(next.detailOverride) < detailRank(current.detail)) {
