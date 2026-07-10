@@ -79,7 +79,7 @@ describe("feedback lifecycle", () => {
     ).toMatchObject({ state: "closed", reason: "source_resolved" });
   });
 
-  it("U-MEMORY-006: validates JSONL and creates the durable log directory fail-open", () => {
+  it("U-MEMORY-006 / IT-FLC-06: validates JSONL and creates the durable log directory fail-open", () => {
     expect(
       parseFeedbackLifecycle(
         `${JSON.stringify(open)}\n${JSON.stringify({ ...open, state: "invalid" })}\n{bad}\n`,
@@ -97,7 +97,7 @@ describe("feedback lifecycle", () => {
     }
   });
 
-  it("U-MEMORY-006: appends a large initial lifecycle set in one durable batch", () => {
+  it("U-MEMORY-006 / IT-FLC-01: appends a large initial lifecycle set in one durable batch", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-feedback-batch-"));
     try {
       const records = Array.from({ length: 1_000 }, (_, index) => ({
@@ -113,7 +113,7 @@ describe("feedback lifecycle", () => {
     }
   });
 
-  it("U-MEMORY-006: reconciles generation-aware lifecycle and prevents acked fallback resurfacing", () => {
+  it("U-MEMORY-006 / IT-FLC-01..05: reconciles generation-aware lifecycle and prevents terminal fallback resurfacing", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-feedback-reconcile-"));
     const db = openHarnessDb(":memory:", { repoRoot: root });
     let now = "2026-07-10T00:00:00Z";
@@ -260,7 +260,7 @@ describe("feedback lifecycle", () => {
     }
   });
 
-  it("U-MEMORY-006: does not create DB-only lifecycle state when the durable append fails", () => {
+  it("U-MEMORY-006 / IT-FLC-06: does not create DB-only lifecycle state when the durable append fails", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-feedback-append-fail-"));
     const blockedRoot = join(root, "not-a-directory");
     writeFileSync(blockedRoot, "blocked", "utf8");

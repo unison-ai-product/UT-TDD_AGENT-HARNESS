@@ -386,7 +386,7 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     expect(log).not.toContain("secret.ts"); // 引数は残さない
   });
 
-  it("U-MEMORY-005: records explicit memory writes and emits one idempotent Stop nudge", () => {
+  it("U-MEMORY-005 / IT-FLC-06: records Claude/Codex memory writes and emits one idempotent Stop nudge", () => {
     const deps = mockDeps();
     deps.files.set(statePath, "PLAN-L6-68-memory-telemetry-lifecycle-contract");
     onPostToolUse(
