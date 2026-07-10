@@ -19,6 +19,8 @@ agent_slots:
   - role: qa
     slot_label: "QA - U-DISP/U-PROFILE/I-DISP Red→Green"
 generates:
+  - artifact_path: docs/design/harness/L4-basic-design/architecture.md
+    artifact_type: design_doc
   - artifact_path: docs/plans/PLAN-L7-417-source-disposition-profile-projection.md
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-417-source-disposition-profile-backfill.md
@@ -31,6 +33,8 @@ generates:
     artifact_type: source_code
   - artifact_path: src/disposition/domain/authoring-provenance.ts
     artifact_type: source_code
+  - artifact_path: src/disposition/adapters/git-authoring-provenance.ts
+    artifact_type: source_code
   - artifact_path: src/disposition/ports/authoring-provenance.ts
     artifact_type: source_code
   - artifact_path: src/profile/domain/resolver.ts
@@ -38,6 +42,14 @@ generates:
   - artifact_path: src/profile/adapters/tracked-profile-loader.ts
     artifact_type: source_code
   - artifact_path: src/schema/harness-db-tables-vmodel.ts
+    artifact_type: source_code
+  - artifact_path: src/schema/harness-db.ts
+    artifact_type: source_code
+  - artifact_path: src/schema/harness-db-table-builders.ts
+    artifact_type: source_code
+  - artifact_path: src/schema/harness-db-catalog.ts
+    artifact_type: source_code
+  - artifact_path: src/schema/harness-db-indexes.ts
     artifact_type: source_code
   - artifact_path: tests/harness-db-constraints.test.ts
     artifact_type: test_code
@@ -51,9 +63,17 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/disposition/authoring-provenance.test.ts
     artifact_type: test_code
+  - artifact_path: tests/disposition/git-authoring-provenance.test.ts
+    artifact_type: test_code
   - artifact_path: tests/profile/resolver.test.ts
     artifact_type: test_code
   - artifact_path: tests/profile/tracked-loader.test.ts
+    artifact_type: test_code
+  - artifact_path: src/state-db/vmodel-projections.ts
+    artifact_type: source_code
+  - artifact_path: src/state-db/projection-writer.ts
+    artifact_type: source_code
+  - artifact_path: tests/disposition/projection.test.ts
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-70-source-catalog-profile-resolver-contracts.md
@@ -70,7 +90,8 @@ U-DISP/U-PROFILEをRed freeze後、catalog/profile domain、authoring loader、D
 planned deliverablesは`src/disposition/{domain,application,ports,adapters}`、`src/profile/{domain,application,ports,adapters}`、DB schema/projection、実行可能Red/Green test、item-target ledger validationである。実体作成と同時にfrontmatter `generates`へ昇格する。
 
 2026-07-10 Red/Green waveではpure catalog/profile domain、strict table parser、tracked 109/21/163 catalog loaderを実装した。
-残るDB schema/projector、profile tracked loader、canonical target resolver、provenance receipt、I-DISP-001/rollbackは未完了であり、
+DB schema/projector、profile tracked loader、provenance receipt、I-DISP-001/rollbackは実装済み。残るcanonical target resolver、
+既存profile entryのversioned migration/constraint、constraint coverage detector、pending finding projectionは未完了であり、
 PLAN statusとDoDを完了へ進めない。
 
 Red freezeは`U-DISP-001..005`、query純粋性/安定順序、`U-PROFILE-001..005`を同一contract revisionで先行し、

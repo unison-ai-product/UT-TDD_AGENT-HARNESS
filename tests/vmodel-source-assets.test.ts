@@ -244,7 +244,7 @@ describe("checked Vモデル source assets", () => {
     expect(candidateIds.length).toBeGreaterThan(0);
     expect(new Set(candidateIds).size).toBe(candidateIds.length);
     expect(candidateIds).toContain("CANDIDATE-P-FSM-001");
-    expect(candidateIds).toContain("CANDIDATE-I-DISP-001");
+    expect(unitDesign).toContain("| `I-DISP-001` |");
     expect(candidateIds).toContain("CANDIDATE-I-SP-001");
     expect(candidateIds).toContain("CANDIDATE-M-SP-001");
   });

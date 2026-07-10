@@ -1208,7 +1208,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-DISP-003` | source/item/target orphan | catalog create | `catalog-orphan-edge`, exit 1 |
 | `U-DISP-004` | disposition理由/target/PLAN欠落 | catalog create | `catalog-disposition-incomplete`, exit 1 |
 | `U-DISP-005` | 同一edge ID重複 | catalog create | `catalog-edge-duplicate`, exit 1 |
-| `CANDIDATE-I-DISP-001` | valid authored catalog | DB削除→rebuild | catalog/edge/finding identity集合差0 |
+| `I-DISP-001` | valid authored catalog | DB削除→rebuild | catalog/edge/profile full row・digest identity集合差0、provenance失敗時rollback |
 | `U-PROFILE-001` | checked manifest size 3/product 5 | profile create | 宣言件数一致、exit 0 |
 | `U-PROFILE-002` | baseline+product+explicit override | resolverを2回 | resolved digest同一、exit 0 |
 | `U-PROFILE-003` | unknown profile/item | resolver | `profile-unknown`, exit 1 |
@@ -1234,7 +1234,7 @@ invalid UTF-8、revision/provenance digest mismatch、unknown disposition/decisi
 profile master 8件は全field round-trip/digest、entry→profile/doc type FKを比較する。schema registryはFK、NOT NULL、UNIQUE、
 CHECK、複合PKを各1違反fixtureでDDL自身が拒否することを確認し、domain findingだけのGreenを認めない。
 
-domain Green後に上表のintegration候補を`I-DISP-001`へ昇格し、全projectionのPK、source/canonical digest、finding IDを
+上表のintegration oracleは`tests/disposition/projection.test.ts`へ昇格済みで、全projectionのPK、source/canonical digestを
 delete→rebuild前後で完全比較する。invalid authoringはtransaction rollbackし既存projectionを保持する。row countだけの比較、
 DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証拠に含めることは禁止する。
 | `CANDIDATE-DOCLEDGER-001` | baseline raw NUL path集合 | snapshot capture | count/tree OID/hashがfixture一致 |

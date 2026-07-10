@@ -100,6 +100,7 @@ import {
 } from "./skill-projections";
 import { projectSpecIr } from "./spec-ir-projections";
 import type { RunUsage } from "./token-tracker";
+import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections";
 
 export interface ProjectionEvent {
   table: string;
@@ -2962,6 +2963,9 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     try {
       time("truncate", () => truncateProjectionTables(db));
       const plans = time("plans", () => projectPlans(repoRoot, db));
+      if (hasVmodelAuthoring(repoRoot)) {
+        time("vmodel-authoring", () => projectVmodelAuthoring(repoRoot, db));
+      }
       time("drive-hook-model", () => {
         projectDriveRuns(repoRoot, db, plans);
         projectHookEvents(repoRoot, db, plans);
