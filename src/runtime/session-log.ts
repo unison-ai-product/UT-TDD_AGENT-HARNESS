@@ -19,7 +19,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { evaluateMemoryPromotion } from "../memory/index";
+import { evaluateMemoryPromotion } from "./memory-promotion";
 import { classifyVerificationVerb } from "./verb-classify";
 
 export type SessionEventType =
@@ -430,8 +430,10 @@ export function onSessionStart(input: SessionHookInput, deps: SessionLogDeps): n
 export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): number {
   try {
     const cmd = String((input.tool_input as { command?: unknown })?.command ?? "");
-    const isCommit = input.tool_name === "Bash" && /git\s+commit/.test(cmd);
+    const isShellTool = /^(?:Bash|exec_command|local_shell)$/i.test(input.tool_name ?? "");
+    const isCommit = isShellTool && /\bgit\s+commit\b/i.test(cmd);
     const isMemoryWrite = isMemoryWriteInput(input);
+    const observedOutcome = outcomeOf(input);
     // PLAN-L7-04 Gap B 配線: commit message に PLAN ID があれば current-plan を活性化 (best-effort)。
     // `-F -` heredoc は cmd に本文が乗らず inferred=null → no-op。fail-open (throw しない)。
     if (isCommit) {
@@ -448,7 +450,7 @@ export function onPostToolUse(input: SessionHookInput, deps: SessionLogDeps): nu
         // IMP-078 gap③: commit は HEAD hash を捕捉 (deps.headCommit、PostToolUse は commit 完了後 = 新 HEAD)。
         // hash 取得不能 (headCommit 未提供/null) なら undefined = 旧挙動 ("Bash (bash)" 汚染は避ける、I-2)。
         target: isCommit ? (deps.headCommit?.() ?? undefined) : summarize(input),
-        outcome: outcomeOf(input),
+        outcome: isCommit || isMemoryWrite ? (observedOutcome ?? "ok") : observedOutcome,
       },
       deps,
     );

@@ -1,17 +1,20 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { selectTakeoverFeedback } from "../src/feedback/surface";
+import { evaluateMemoryPromotion } from "../src/runtime/memory-promotion";
 import {
   appendFeedbackLifecycle,
   feedbackLifecyclePath,
   parseFeedbackLifecycle,
   resolveFeedbackLifecycle,
-} from "../src/feedback/lifecycle";
-import { selectTakeoverFeedback } from "../src/feedback/surface";
-import { evaluateMemoryPromotion } from "../src/memory/index";
+} from "../src/shared/feedback-lifecycle";
 import { stableId } from "../src/stable-id";
-import { reconcileFeedbackLifecycle } from "../src/state-db/feedback-projections";
+import {
+  projectFeedbackLifecycle,
+  reconcileFeedbackLifecycle,
+} from "../src/state-db/feedback-projections";
 import { openHarnessDb, upsertRow } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 
@@ -83,8 +86,11 @@ describe("feedback lifecycle", () => {
     ).toEqual([open]);
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-feedback-lifecycle-"));
     try {
-      appendFeedbackLifecycle(root, open);
+      expect(appendFeedbackLifecycle(root, open)).toBe(true);
       expect(readFileSync(feedbackLifecyclePath(root), "utf8")).toContain('"state":"open"');
+      const blockedRoot = join(root, "not-a-directory");
+      writeFileSync(blockedRoot, "blocked", "utf8");
+      expect(appendFeedbackLifecycle(blockedRoot, open)).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -186,6 +192,19 @@ describe("feedback lifecycle", () => {
           )
           .get("generation:2"),
       ).toMatchObject({ state: "closed" });
+
+      const transitionCount = Number(
+        (
+          db.prepare("SELECT COUNT(*) AS n FROM feedback_lifecycle").get() as {
+            n: number;
+          }
+        ).n,
+      );
+      db.prepare("DELETE FROM feedback_lifecycle").run();
+      projectFeedbackLifecycle(root, db, deps);
+      expect(db.prepare("SELECT COUNT(*) AS n FROM feedback_lifecycle").get()).toMatchObject({
+        n: transitionCount,
+      });
     } finally {
       db.close();
       rmSync(root, { recursive: true, force: true });

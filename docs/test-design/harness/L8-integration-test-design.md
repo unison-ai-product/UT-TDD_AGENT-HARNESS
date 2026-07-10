@@ -14,7 +14,7 @@ related_l5_ui_detail: docs/design/harness/L5-detailed-design/ui-detail.md
 next_pair_freeze: L5
 v2_import: docs/migration/v2-import-ledger.md
 created: 2026-05-29
-updated: 2026-06-09
+updated: 2026-07-10
 ---
 
 # UT-TDD Agent Harness — L8 結合テスト設計 (④ / IT-*)

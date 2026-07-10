@@ -306,6 +306,20 @@ describe("session-log (PLAN-L7-01 add-impl / U-SLOG)", () => {
     const log2 = deps2.files.get(sessionPath("s1")) ?? "";
     expect(log2).toContain('"event_type":"commit"');
     expect(log2).not.toContain('"target"');
+
+    const codex = mockDeps({ headCommit: () => "codex123" });
+    codex.files.set(statePath, "PLAN-L6-68-memory-telemetry-lifecycle-contract");
+    onPostToolUse(
+      {
+        session_id: "codex-session",
+        tool_name: "exec_command",
+        tool_input: { command: "git commit -m x" },
+      },
+      codex,
+    );
+    const codexLog = codex.files.get(sessionPath("codex-session")) ?? "";
+    expect(codexLog).toContain('"event_type":"commit"');
+    expect(codexLog).toContain('"outcome":"ok"');
   });
 
   // PLAN-RECOVERY-05 item 2: Bash の検証 verb を target に分類して残す (引数は残さない)。

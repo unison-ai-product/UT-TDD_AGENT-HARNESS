@@ -46,6 +46,11 @@ review_evidence: []
 
 # PLAN-L6-68: memory 昇格 nudge と telemetry lifecycle 契約
 
+> ZIP比較根拠: `Vモデル設計ドキュメント_checked.zip`（SHA-256
+> `47b9a900ac99e093a1750f68f34c00e3bbd78c13a070d57dcdaba9ae50a274a8`）の
+> `signals` / handover / `agent.done_when`を、HARNESS正本のStop/session/feedback契約へ翻訳する。
+> ZIP側のPython実装やL1-L12番号は移植しない。
+
 ## Gap
 
 memory は durable knowledge のauthoring/projectionを持つが、sessionにcommitまたはPLAN遷移が

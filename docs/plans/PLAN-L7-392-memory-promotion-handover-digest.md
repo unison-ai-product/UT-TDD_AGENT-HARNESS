@@ -24,13 +24,15 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-392-memory-promotion-handover-digest.md
     artifact_type: markdown_doc
-  - artifact_path: src/feedback/lifecycle.ts
+  - artifact_path: src/shared/feedback-lifecycle.ts
     artifact_type: source_module
   - artifact_path: src/feedback/surface.ts
     artifact_type: source_module
   - artifact_path: src/memory/index.ts
     artifact_type: source_module
   - artifact_path: src/runtime/session-log.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/memory-promotion.ts
     artifact_type: source_module
   - artifact_path: src/state-db/feedback-projections.ts
     artifact_type: source_module

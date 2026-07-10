@@ -11,7 +11,7 @@ related_l6_edge_case: docs/design/harness/L6-function-design/edge-case.md
 next_pair_freeze: L6
 v2_import: docs/migration/v2-import-ledger.md
 created: 2026-05-29
-updated: 2026-05-29
+updated: 2026-07-10
 ---
 
 ## 2026-06-09 L6 pair-scope addendum

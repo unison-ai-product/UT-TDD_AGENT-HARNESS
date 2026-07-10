@@ -175,7 +175,7 @@ export function emitFeedbackEvents(db: HarnessDb): FeedbackEvent[] {
       source_id: findingId || subject,
       source_generation: feedbackId(
         "feedback-generation",
-        `findings:${findingId || subject}:${String(finding.kind ?? "finding")}:${String(finding.severity ?? "warn")}`,
+        `findings:${findingId || subject}:${String(finding.kind ?? "finding")}:${String(finding.severity ?? "warn")}:${subject}:${String(finding.source ?? "")}:${String(finding.evidence_path ?? "")}`,
       ),
       source_color: "",
       signal_type: String(finding.kind ?? "finding"),
@@ -200,7 +200,7 @@ export function emitFeedbackEvents(db: HarnessDb): FeedbackEvent[] {
       source_id: candidateId || subject,
       source_generation: feedbackId(
         "feedback-generation",
-        `detector_route_candidates:${candidateId || subject}:${String(candidate.candidate_status ?? "non_ready")}:${findingKind}:${signalSeverity(candidate.severity)}`,
+        `detector_route_candidates:${candidateId || subject}:${String(candidate.candidate_status ?? "non_ready")}:${findingKind}:${signalSeverity(candidate.severity)}:${subject}:${String(candidate.filing_target_id ?? "")}:${String(candidate.target_layer ?? "")}:${String(candidate.target_sub_doc ?? "")}:${String(candidate.reason ?? "")}`,
       ),
       source_color: String(candidate.candidate_status ?? "non_ready"),
       signal_type: `detector_route_candidate:${findingKind}`,
@@ -223,7 +223,7 @@ export function emitFeedbackEvents(db: HarnessDb): FeedbackEvent[] {
       source_id: String(signal.signal_id ?? subject),
       source_generation: feedbackId(
         "feedback-generation",
-        `quality_signals:${String(signal.signal_id ?? subject)}:${String(signal.metric ?? "quality_signal")}:${String(signal.status ?? "warn")}:${String(signal.value ?? "")}`,
+        `quality_signals:${String(signal.signal_id ?? subject)}:${String(signal.source ?? "")}:${subject}:${String(signal.metric ?? "quality_signal")}:${String(signal.status ?? "warn")}:${String(signal.value ?? "")}:${String(signal.threshold ?? "")}`,
       ),
       source_color: "",
       signal_type: String(signal.metric ?? "quality_signal"),
@@ -250,7 +250,7 @@ export function emitFeedbackEvents(db: HarnessDb): FeedbackEvent[] {
       source_id: eventId || sessionId,
       source_generation: feedbackId(
         "feedback-generation",
-        `hook_events:${eventId || sessionId}:${String(hook.occurred_at ?? "")}`,
+        `hook_events:${eventId || sessionId}:memory_promotion_missed`,
       ),
       source_color: "",
       signal_type: "memory_promotion_missed",

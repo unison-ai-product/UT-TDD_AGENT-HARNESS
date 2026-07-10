@@ -51,6 +51,15 @@ review_evidence: []
 `feedback_lifecycle` は人間または時間経過による消化状態を失わない append-only 履歴とする。本PLANは、
 projection rebuild が消化済みsignalを再openする問題を、source generationを明示する物理設計で解消する。
 
+## §0.1 ZIP比較根拠
+
+比較入力は `Vモデル設計ドキュメント_checked.zip`（SHA-256
+`47b9a900ac99e093a1750f68f34c00e3bbd78c13a070d57dcdaba9ae50a274a8`、624 entries、
+設計書109種）である。ZIPの`signals` / `schedule --live` / handover / `agent.done_when`は、
+実行結果を次工程へ還流しつつ判断済みsignalを無限再掲しない運用を前提にする。HARNESSではPython
+toolchainを移植せず、repo正本のL5物理設計とTypeScript/Bun projectionへgeneration/lifecycle契約を翻訳する。
+ZIPは比較evidenceでありauthoring sourceへ昇格しない。
+
 ## §1 物理契約
 
 - `feedback_events.source_generation` は source table/id と意味状態から決定論的に生成し、時刻だけの差で変えない。

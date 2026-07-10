@@ -1,10 +1,10 @@
 import {
-  appendFeedbackLifecycle,
+  appendFeedbackLifecycleBatch,
   type FeedbackLifecycleRecord,
   isTelemetryFeedback,
   loadFeedbackLifecycle,
   resolveFeedbackLifecycle,
-} from "../feedback/lifecycle";
+} from "../shared/feedback-lifecycle";
 import type { HarnessDb } from "./index";
 import {
   analyzeRefactorCandidates,
@@ -35,7 +35,7 @@ export function projectFeedbackLifecycle(
   for (const record of loadFeedbackLifecycle(repoRoot)) {
     const id = deps.stableId(
       "feedback-lifecycle",
-      `${record.feedback_event_id}:${record.source_generation}:${record.occurred_at}`,
+      `${record.feedback_event_id}:${record.source_generation}:${record.occurred_at}:${record.state}`,
     );
     deps.recordProjectionEvent(db, {
       table: "feedback_lifecycle",
@@ -53,22 +53,24 @@ function lifecycleKey(
   return `${record.feedback_event_id}\u0000${record.source_generation}`;
 }
 
-function recordLifecycleTransition(
+function recordLifecycleTransitions(
   repoRoot: string,
   db: HarnessDb,
   deps: FeedbackProjectionDeps,
-  record: FeedbackLifecycleRecord,
+  records: FeedbackLifecycleRecord[],
 ): void {
-  appendFeedbackLifecycle(repoRoot, record);
-  const id = deps.stableId(
-    "feedback-lifecycle",
-    `${record.feedback_event_id}:${record.source_generation}:${record.occurred_at}:${record.state}`,
-  );
-  deps.recordProjectionEvent(db, {
-    table: "feedback_lifecycle",
-    id,
-    row: { lifecycle_id: id, ...record },
-  });
+  if (!appendFeedbackLifecycleBatch(repoRoot, records)) return;
+  for (const record of records) {
+    const id = deps.stableId(
+      "feedback-lifecycle",
+      `${record.feedback_event_id}:${record.source_generation}:${record.occurred_at}:${record.state}`,
+    );
+    deps.recordProjectionEvent(db, {
+      table: "feedback_lifecycle",
+      id,
+      row: { lifecycle_id: id, ...record },
+    });
+  }
 }
 
 /**
@@ -84,6 +86,7 @@ export function reconcileFeedbackLifecycle(
 ): void {
   const now = deps.nowIso();
   const records = loadFeedbackLifecycle(repoRoot);
+  const transitions: FeedbackLifecycleRecord[] = [];
   const latest = new Map<string, FeedbackLifecycleRecord>();
   for (const record of records) latest.set(lifecycleKey(record), record);
 
@@ -114,7 +117,7 @@ export function reconcileFeedbackLifecycle(
         occurred_at: now,
         reason: "source_observed",
       };
-      recordLifecycleTransition(repoRoot, db, deps, opened);
+      transitions.push(opened);
       latest.set(key, opened);
       continue;
     }
@@ -130,7 +133,7 @@ export function reconcileFeedbackLifecycle(
       telemetry_ttl_ms: telemetryTtlMs,
     });
     if (next && (next.state !== previous.state || next.occurred_at !== previous.occurred_at)) {
-      recordLifecycleTransition(repoRoot, db, deps, next);
+      transitions.push(next);
       latest.set(key, next);
     }
   }
@@ -145,9 +148,10 @@ export function reconcileFeedbackLifecycle(
       occurred_at: now,
       reason: currentGeneration ? "source_generation_changed" : "source_resolved",
     };
-    recordLifecycleTransition(repoRoot, db, deps, next);
+    transitions.push(next);
     latest.set(key, next);
   }
+  recordLifecycleTransitions(repoRoot, db, deps, transitions);
 }
 
 const refactorCandidateCache = new Map<string, RefactorCandidate[]>();
@@ -435,7 +439,7 @@ export function projectFeedbackEvents(db: HarnessDb, deps: FeedbackProjectionDep
         source_id: findingId || subject,
         source_generation: deps.stableId(
           "feedback-generation",
-          `findings:${findingId || subject}:${String(finding.kind ?? "finding")}:${String(finding.severity ?? "warn")}`,
+          `findings:${findingId || subject}:${String(finding.kind ?? "finding")}:${String(finding.severity ?? "warn")}:${subject}:${String(finding.source ?? "")}:${String(finding.evidence_path ?? "")}`,
         ),
         source_color: "",
         signal_type: String(finding.kind ?? "finding"),
@@ -463,7 +467,7 @@ export function projectFeedbackEvents(db: HarnessDb, deps: FeedbackProjectionDep
         source_id: candidateId || subject,
         source_generation: deps.stableId(
           "feedback-generation",
-          `detector_route_candidates:${candidateId || subject}:${String(candidate.candidate_status ?? "non_ready")}:${findingKind}:${severity}`,
+          `detector_route_candidates:${candidateId || subject}:${String(candidate.candidate_status ?? "non_ready")}:${findingKind}:${severity}:${subject}:${String(candidate.filing_target_id ?? "")}:${String(candidate.target_layer ?? "")}:${String(candidate.target_sub_doc ?? "")}:${String(candidate.reason ?? "")}`,
         ),
         source_color: String(candidate.candidate_status ?? "non_ready"),
         signal_type: `detector_route_candidate:${findingKind}`,
@@ -491,7 +495,7 @@ export function projectFeedbackEvents(db: HarnessDb, deps: FeedbackProjectionDep
         source_id: signalId || subject,
         source_generation: deps.stableId(
           "feedback-generation",
-          `quality_signals:${signalId || subject}:${String(signal.metric ?? "quality_signal")}:${String(signal.status ?? "warn")}:${String(signal.value ?? "")}`,
+          `quality_signals:${signalId || subject}:${String(signal.source ?? "")}:${subject}:${String(signal.metric ?? "quality_signal")}:${String(signal.status ?? "warn")}:${String(signal.value ?? "")}:${String(signal.threshold ?? "")}`,
         ),
         source_color: "",
         signal_type: String(signal.metric ?? "quality_signal"),
@@ -521,7 +525,7 @@ export function projectFeedbackEvents(db: HarnessDb, deps: FeedbackProjectionDep
         source_id: eventId || sessionId,
         source_generation: deps.stableId(
           "feedback-generation",
-          `hook_events:${eventId || sessionId}:${String(event.occurred_at ?? "")}`,
+          `hook_events:${eventId || sessionId}:memory_promotion_missed`,
         ),
         source_color: "",
         signal_type: "memory_promotion_missed",
