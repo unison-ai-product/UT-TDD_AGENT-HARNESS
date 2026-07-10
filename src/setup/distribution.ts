@@ -2,7 +2,7 @@ import { COMMON_FILES } from "./templates";
 
 export interface CleanDistributionPlan {
   ok: boolean;
-  channel: "clean-repo-plus-signed-tarball";
+  channel: "clean-repo-plus-tarball";
   sourceTag: string;
   cleanRepo: string;
   artifactPaths: string[];
@@ -199,16 +199,21 @@ function shellQuotePath(path: string): string {
 export function gitAddPathspecCommands(
   repoDir: string,
   artifactPaths: readonly string[],
+  removedPaths: readonly string[] = [],
 ): string[] {
   const commands: string[] = [];
   const chunkSize = 80;
-  for (let i = 0; i < artifactPaths.length; i += chunkSize) {
-    const chunk = artifactPaths
-      .slice(i, i + chunkSize)
-      .map(shellQuotePath)
-      .join(" ");
-    commands.push(`git -C ${repoDir} add -- ${chunk}`);
-  }
+  const addCommands = (verb: string, paths: readonly string[]): void => {
+    for (let i = 0; i < paths.length; i += chunkSize) {
+      const chunk = paths
+        .slice(i, i + chunkSize)
+        .map(shellQuotePath)
+        .join(" ");
+      commands.push(`git -C ${repoDir} ${verb} -- ${chunk}`);
+    }
+  };
+  addCommands("add", artifactPaths);
+  addCommands("rm --ignore-unmatch", removedPaths);
   return commands;
 }
 
@@ -235,18 +240,18 @@ export function buildCleanDistributionPlan(input: {
   const sourceTag = input.sourceTag ?? "unreleased";
   const cleanRepo = input.cleanRepo ?? DEFAULT_PACK_REPO;
   const normalized = [...new Set(input.paths.map(normalizeDistributionPath))].sort();
+  const denylistViolations = normalized.filter(isDeniedCleanPath);
   const includedSourcePaths = normalized.filter(
     (path) => isAllowedCleanPath(path) && !isDeniedCleanPath(path),
   );
   const artifactPaths = [...new Set(includedSourcePaths.map(cleanDistributionArtifactPath))].sort();
   const artifactSet = new Set(artifactPaths);
   const missingRequired = CLEAN_REQUIRED_PATHS.filter((path) => !artifactSet.has(path));
-  const denylistViolations = artifactPaths.filter(isDeniedCleanPath);
   const includedSourceSet = new Set(includedSourcePaths);
   const excludedPaths = normalized.filter((path) => !includedSourceSet.has(path));
   return {
     ok: missingRequired.length === 0 && denylistViolations.length === 0,
-    channel: "clean-repo-plus-signed-tarball",
+    channel: "clean-repo-plus-tarball",
     sourceTag,
     cleanRepo,
     artifactPaths,
@@ -255,7 +260,7 @@ export function buildCleanDistributionPlan(input: {
     denylistViolations,
     releaseIntegrity: {
       required: true,
-      artifacts: [`${sourceTag}.tar.gz`, `${sourceTag}.tar.gz.sha256`, `${sourceTag}.tar.gz.sig`],
+      artifacts: [`${sourceTag}.tar.gz`, `${sourceTag}.tar.gz.sha256`],
     },
   };
 }
@@ -422,7 +427,7 @@ export function buildPackSyncPlan(input: {
       "missingRequired.length === 0",
       "git status --short shows only intended clean Pack files",
       "Pack CI passes before release publication",
-      "signature tarball and GitHub release publication remain separate human-approved operations",
+      "tarball and GitHub release publication remain separate human-approved operations",
     ],
     publishRequiresPoApproval: true,
     destructiveRemoteMutation: false,
