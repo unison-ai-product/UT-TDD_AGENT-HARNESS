@@ -40,6 +40,8 @@ describe("normalizeModelFamily", () => {
     expect(normalizeModelFamily("claude-sonnet-4-6")).toBe("sonnet");
     expect(normalizeModelFamily("claude-haiku-4-5-20251001")).toBe("haiku");
     expect(normalizeModelFamily("claude-opus-4-7")).toBe("opus");
+    expect(normalizeModelFamily("fable")).toBe("fable");
+    expect(normalizeModelFamily("claude-fable-5")).toBe("fable");
   });
   it("returns null for empty / non-Claude models", () => {
     expect(normalizeModelFamily("")).toBeNull();
@@ -182,6 +184,18 @@ describe("evaluateAgentGuard", () => {
     expect(
       evaluateAgentGuard(agent({ subagent_type: "ut-tdd-tl", model: "opus" }), ctx()).code,
     ).toBe(0);
+  });
+
+  it("allows fable only for quality-check subagents", () => {
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "code-reviewer", model: "fable" }), ctx()).code,
+    ).toBe(0);
+  });
+
+  it("blocks fable for worker subagents even when it satisfies their capability floor", () => {
+    const d = evaluateAgentGuard(agent({ subagent_type: "be-logic", model: "fable" }), ctx());
+    expect(d.code).toBe(2);
+    expect(d.message).toContain("apex-tier policy");
   });
 
   it("blocks an allowlisted subagent whose definition file is missing", () => {
