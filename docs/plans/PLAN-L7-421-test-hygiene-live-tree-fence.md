@@ -99,7 +99,8 @@ review_evidence: []
   (a) detached HEAD snapshot、(b) 隔離 fixture のいずれかへ分類・適用する。CI 専用の
   live tree 測定は残さず、新規・呼出数差分・古い契約は全て fail-close とする。
   T-2 は rebuild 済み DB を前提とする guard (未 rebuild ならテスト内で rebuild
-  or 明示 skip 理由) を入れる。
+  or 明示 skip 理由) を入れる。snapshot runner は clone/copy 内で `db rebuild` を
+  実行し、起動元の gitignored DB を継承しない決定論的fixtureを作る。
 
 ### Step 4: [並列] vitest.config 明示 + 誤配置 state 検出
 - include/exclude/testTimeout を明示し、config-drift テストで固定。

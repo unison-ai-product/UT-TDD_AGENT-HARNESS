@@ -56,6 +56,7 @@ export function runSnapshotTests(args = process.argv.slice(2), repoRoot = proces
   try {
     createSnapshot(repoRoot, snapshotRoot);
     run(process.execPath, ["install", "--frozen-lockfile"], snapshotRoot);
+    run(process.execPath, ["run", "src/cli.ts", "db", "rebuild"], snapshotRoot);
     run(process.execPath, ["x", "vitest", "run", ...args], snapshotRoot, {
       ...process.env,
       INIT_CWD: snapshotRoot,
