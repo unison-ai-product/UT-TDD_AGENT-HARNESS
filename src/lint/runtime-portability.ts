@@ -22,6 +22,16 @@ export interface RuntimePortabilityResult {
 }
 
 const ALLOWED_SCRIPT_WRAPPERS = new Set(["scripts/ut-tdd", "scripts/ut-tdd.ps1"]);
+// git client-side hook entrypoints (PLAN-L7-260 §4, PLAN-L7-424 Step 2 が想定する置き場)。
+// `scripts/` へ core logic を持ち込ませない gate の本旨は、検出ロジックを src/lint/secret-scan.ts
+// に置き続けさせる下記の narrow 制約 (git-hook-entrypoint-not-thin / git-hook-scanner-not-reusing-core)
+// で維持する。
+const ALLOWED_GIT_HOOK_ENTRYPOINTS = new Set([
+  "scripts/git-hooks/pre-push",
+  "scripts/git-hooks/secret-scan-diff.ts",
+]);
+const GIT_HOOK_SCANNER_PATH = "scripts/git-hooks/secret-scan-diff.ts";
+const GIT_HOOK_DISPATCHER_PATH = "scripts/git-hooks/pre-push";
 const CORE_FILE_PATTERN = /\.(?:ts|gitkeep)$/;
 const HOOK_FILE_PATTERN = /\.ts$/;
 const DISALLOWED_RUNTIME_FILE_PATTERN = /\.(?:py|sh|bash|js|mjs|cjs)$/;
@@ -251,12 +261,43 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
       message: "Python/Bash/JS runtime files are not allowed in current core surfaces.",
     });
   }
-  if (path.startsWith("scripts/") && !ALLOWED_SCRIPT_WRAPPERS.has(path)) {
+  if (
+    path.startsWith("scripts/") &&
+    !ALLOWED_SCRIPT_WRAPPERS.has(path) &&
+    !ALLOWED_GIT_HOOK_ENTRYPOINTS.has(path)
+  ) {
     violations.push({
       path,
       line: 1,
       rule: "script-wrapper-unapproved",
-      message: "Only the thin ut-tdd POSIX/PowerShell wrappers are allowed under scripts/.",
+      message:
+        "Only the thin ut-tdd POSIX/PowerShell wrappers and the tracked git-hooks entrypoints are allowed under scripts/.",
+    });
+  }
+  if (path === GIT_HOOK_DISPATCHER_PATH) {
+    if (/\bpython(?:3)?\b/.test(doc.text)) {
+      violations.push({
+        path,
+        line: lineOf(doc.text, /\bpython(?:3)?\b/),
+        rule: "git-hook-entrypoint-python",
+        message: "git-hooks entrypoints must not reintroduce Python runtime dispatch.",
+      });
+    }
+    if (!/\bbun\b/.test(doc.text) || !doc.text.includes("secret-scan-diff.ts")) {
+      violations.push({
+        path,
+        line: 1,
+        rule: "git-hook-entrypoint-not-thin",
+        message: `${GIT_HOOK_DISPATCHER_PATH} must stay a thin bun dispatcher to ${GIT_HOOK_SCANNER_PATH}, not reimplement scan logic.`,
+      });
+    }
+  }
+  if (path === GIT_HOOK_SCANNER_PATH && !/src[\\/]lint[\\/]secret-scan/.test(doc.text)) {
+    violations.push({
+      path,
+      line: 1,
+      rule: "git-hook-scanner-not-reusing-core",
+      message: `${GIT_HOOK_SCANNER_PATH} must reuse src/lint/secret-scan.ts detection logic, not reimplement it.`,
     });
   }
   if (ALLOWED_SCRIPT_WRAPPERS.has(path)) {

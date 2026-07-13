@@ -34,6 +34,7 @@ Pack 配布物を対象にした別契約である。検出系は L4 security sl
 | `loadSystemSecretScanArtifacts` | `(repoRoot) => SecretScanArtifact[]` | repoRoot は UT-TDD source checkout | `docs/`、root canonical docs、`.ut-tdd/audit`、`.ut-tdd/handover`、`.ut-tdd/logs`、`.ut-tdd/memory` の active text artifact を収集する | vendor/archive 由来の歴史資料は通常 scan band に入れない | U-DOCSECRET-004 |
 | `checkSecretScan` | `(repoRoot) => LintResult-like` | doctor full profile から呼ばれる | artifact 読込不能または violation>0 なら fail-close | doctor hard gate。warning ではない | U-DOCSECRET-005 |
 | `distribution secret preflight` | `artifactPaths -> analyzeSecretScan` | clean Pack materialize 前 | `sync-stage` / `sync-pack` / `package` は copy/prune/tar 前に scan し、violation があれば成果物生成を止める | 人間承認でも秘密混入を配布してよい例外にはしない | U-DOCSECRET-006 |
+| `pre-push widened scan` | `runSecretScanDiff(repoRoot, entries: {sha,path}[], mode, readBlob)` (`scripts/git-hooks/secret-scan-diff.ts`) | `git config core.hooksPath scripts/git-hooks` で有効化した pre-push が、push される commit 群それぞれの (sha, path) ペアを渡す (working tree ではなく各 commit 時点の blob を対象にする — 途中 commit で追加され後続 commit で削除される secret を working tree のクリーン化で bypass させないための設計、blind review 指摘反映 2026-07-13) | `analyzeSecretScan` を再利用し、docs/・`.ut-tdd/audit`・`.ut-tdd/logs`・`.ut-tdd/memory` を含む widened surface (3 パターン限定を撤廃) の credential marker を、各 (sha, path) の `git show <sha>:<path>` blob 内容から検出する。旧 pre-push (helix 世代、untracked) の PII 正規表現 (電話番号/郵便番号/email/internal URL) は後退させず併存する | 初回導入は warn-only が既定。`UT_TDD_PRE_PUSH_SECRET_SCAN_MODE=fail-close` でのみ fail-close へ昇格する。widened surface 外 (`src/` など) は対象外のまま | U-DOCSECRET-007 |
 
 ## §3 失敗方針
 
@@ -58,9 +59,14 @@ Pack 配布物を対象にした別契約である。検出系は L4 security sl
 | 7 | dummy / placeholder と明示された説明行 | violation なし | U-DOCSECRET-002 |
 | 8 | `.ut-tdd/memory` / audit / handover に secret-like payload が混じる | `secret-scan` violation | U-DOCSECRET-004 |
 | 9 | Pack 配布対象に secret-like payload が混じる | materialize 前に distribution command が blocked | U-DOCSECRET-006 |
+| 10 | pre-push が渡す (sha, path) 群に widened surface 外 (例: `src/`) の path が含まれる | scan 対象から除外する (widened surface のみ検査) | U-DOCSECRET-007 |
+| 10b | 同一 push 内で先行 commit が secret を追加し後続 commit が working tree 上だけクリーン化する | 先行 commit の blob 時点で violation を検出する (working tree の状態に影響されない) | U-DOCSECRET-007 |
+| 11 | pre-push の widened surface に credential/PII marker があり、mode が既定 (warn) | violation を報告するが push は継続する (exit 0) | U-DOCSECRET-007 |
+| 12 | 同条件で `UT_TDD_PRE_PUSH_SECRET_SCAN_MODE=fail-close` | push を止める (exit 1) | U-DOCSECRET-007 |
 
 ## §5 検証接続
 
 L7 unit-test design の U-SECRET-* / U-DOCSECRET-* が本 doc の contract を検証する。
 `tests/memory.test.ts` / `tests/projection-writer.test.ts` / `tests/search-feedback.test.ts` は narrow guard の回帰 fence、
-`tests/secret-scan.test.ts` と distribution CLI tests は広域 scanner / 配布前 fail-close の回帰 fence になる。
+`tests/secret-scan.test.ts` と distribution CLI tests は広域 scanner / 配布前 fail-close の回帰 fence、
+`tests/secret-scan-diff.test.ts` は pre-push widened scan (credential 再利用 + 温存 PII regex + warn/fail-close mode) の回帰 fence になる。
