@@ -1,0 +1,62 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildLegacyPlanInventory,
+  parseLegacyPlanSource,
+} from "../../src/plan-asset/adapters/legacy-plan-inventory.js";
+
+describe("legacy PLAN HEAD inventory", () => {
+  it("U-PA-019: inventories every HEAD PLAN losslessly with unique asset identities", () => {
+    const result = buildLegacyPlanInventory(process.cwd());
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.items).toHaveLength(741);
+    expect(new Set(result.value.items.map((item) => item.sourcePath)).size).toBe(741);
+    expect(new Set(result.value.items.map((item) => item.assetId)).size).toBe(741);
+    expect(result.value.items.every((item) => item.frontmatter.plan_id === item.legacyPlanId)).toBe(
+      true,
+    );
+    expect(
+      result.value.items.every(
+        (item) =>
+          Object.keys(item.frontmatter).length ===
+          Object.keys(item.knownFrontmatter).length + Object.keys(item.unknownFrontmatter).length,
+      ),
+    ).toBe(true);
+    expect(
+      result.value.items.every((item) =>
+        /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(item.sourceBlobOid),
+      ),
+    ).toBe(true);
+  });
+
+  it("U-PA-020: materializes all current numeric-core collisions without auto-selection", () => {
+    const result = buildLegacyPlanInventory(process.cwd());
+    if (!result.ok) throw new Error(result.error.ruleId);
+    expect(result.value.collisionGroups).toHaveLength(20);
+    expect(result.value.collisionGroups.flatMap((group) => group.planIds)).toHaveLength(41);
+    expect(result.value.collisionGroups.every((group) => group.planIds.length > 1)).toBe(true);
+  });
+
+  it("U-PA-021: produces a deterministic inventory digest from the same HEAD", () => {
+    const first = buildLegacyPlanInventory(process.cwd());
+    const second = buildLegacyPlanInventory(process.cwd());
+    expect(second).toEqual(first);
+    if (first.ok) {
+      expect(first.value.inventoryDigest).toBe(
+        "86a25dda63d29db9a6d02b6bacfd835e53762cdf416bd8df5b0d04b7d3caf718",
+      );
+    }
+  });
+
+  it.each([
+    ["anchor", "extra: &base value\ncopy: *base"],
+    ["merge", "base: &base { enabled: true }\nextra:\n  <<: *base"],
+    ["tag", "extra: !custom value"],
+    ["non-string key", "extra:\n  1: value"],
+    ["unsafe integer", `extra: ${Number.MAX_SAFE_INTEGER + 1}`],
+  ])("U-PA-022: rejects lossless-incompatible YAML %s", (_kind, extra) => {
+    expect(
+      parseLegacyPlanSource(`---\nplan_id: PLAN-L7-999-fixture\n${extra}\n---\nbody\n`),
+    ).toBeNull();
+  });
+});

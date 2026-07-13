@@ -1187,7 +1187,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
 | `U-PA-004` | revision 1+evidence | `PlanAsset.revise` | 旧instance/evidence digest不変、exit 0 |
 | `U-PA-005` | expired/別revision/policy別exit evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`、Red expected nonzeroだけusable、exit 1/0 |
-| `U-PA-006` | legacy PLAN全field + short alias 18衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
+| `U-PA-006` | legacy PLAN全field + short alias現HEAD 20衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
 | `U-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
 | `U-PA-008` | HEAD tracked `ut-tdd.project.json`、改竄bytes/receipt、schema/identity不正、remote無し | `loadTrackedProjectIdentity` / `loadProjectIdentityFromHead` | exact HEAD blobだけ成功しreceipt digest安定。index/working tree/remote補完0、異常種別を専用findingでfail-close |
 | `U-PA-009` | active alias/ordinal leaseを同時挿入 | typed partial UNIQUE DDL | active rowは1件だけ成功。terminal/closed intervalは履歴として共存可能 |
@@ -1200,6 +1200,10 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-016` | active leaseへrelease/expireを競合実行 | `PlanLedger.release/expire` | token/expiry guardを通った一方だけterminal eventをappendし、敗者は`plan-id-reservation-not-active` |
 | `U-PA-017` | active ordinalへ別reservationをappend | `PlanLedger.reserve` | `plan-id-reservation-conflict`でevent/current/receiptを全rollbackし部分commit 0 |
 | `U-PA-018` | reservation receiptのsubject/result kind/command type/recorded timeを改竄 | `migratePlanLedger` receipt/event bijection verifier | event subject/payload/result/timeとの不一致を`plan-ledger-unavailable`でfail-close |
+| `U-PA-019` | HEAD `docs/plans/PLAN-*.md`全件 | `buildLegacyPlanInventory` | 741 pathをexactly onceで読み、full plan ID/asset IDが全件一意、frontmatter plan_id一致 |
+| `U-PA-020` | numeric coreでgroup化したHEAD PLAN | `buildLegacyPlanInventory` | 20群/41 PLANをstable順で返し自動winner選択0 |
+| `U-PA-021` | 同一HEADを反復inventory | `buildLegacyPlanInventory` | item/collision順とSHA-256 inventory digestが完全一致 |
+| `U-PA-022` | anchor/alias/merge/custom tag/non-string key/unsafe integerを含むfrontmatter | `parseLegacyPlanSource` | lossless canonical化できないYAMLを全件fail-close |
 | `CANDIDATE-FSM-001` | 正規stateごとの次event | `transition` | 許可表どおりのnext state/event、exit 0 |
 | `CANDIDATE-FSM-002` | proposed→implementing | `transition` | `forward-transition-illegal`, exit 1 |
 | `CANDIDATE-FSM-003` | pair frozen、Red evidenceなし | implement command | `forward-red-evidence-missing`, exit 1 |

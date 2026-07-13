@@ -87,7 +87,7 @@ evidenceは`subject_asset_id`、`subject_revision`、`source_commit`、redacted 
 - v1 PLANはrepository identityとfull `plan_id`から決定論的legacy asset IDを得る。
 - 既存fileを一括renameせず、v1 adapterがcanonical v2 DTOを返す。
 - 新規PLANと意味変更PLANはv2へ昇格する。
-- numeric core衝突18群はmigration ledgerでwinner/new ordinal/legacy aliasを固定し、恒久allowlistへ逃がさない。
+- numeric core衝突はmigration ledgerでwinner/new ordinal/legacy aliasを固定し、恒久allowlistへ逃がさない。設計baselineは18群、現HEAD inventoryは20群/41 PLANであり、HEAD digestごとに再計測する。
 - legacy asset IDは`[algorithm label, root tracked ut-tdd.project.json#repository_identity, full legacy plan_id]`をuint32 big-endian byte lengthでframe化したSHA-256から初回だけ導出する。config schema/blob/HEADを検証し、remote URLからidentityを推測せず、config不在はfail-closeする。checkout path、branch、source path、layer、ordinalを入力にせず、導出後はrename時に再計算しない。
 - `ut-tdd plan migrate --dry-run`は書換えず、identity、collision、unresolved reference、evidence bindingを表示する。
 - 明示`--execute`は新revision/alias/ledgerをappendし、履歴を書き換えない。
