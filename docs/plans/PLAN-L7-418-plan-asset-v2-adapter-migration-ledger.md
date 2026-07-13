@@ -45,6 +45,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/plan-ledger.ts
     artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/append-command.ts
+    artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/transaction.ts
     artifact_type: source_module
   - artifact_path: src/schema/harness-db.ts

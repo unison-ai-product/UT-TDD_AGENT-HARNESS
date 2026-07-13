@@ -1,11 +1,10 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 import type { HarnessDb } from "../../state-db/index.js";
+import { AppendCommandTransaction, type AppendResult } from "./append-command.js";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
-import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
+import type { LedgerTransactionPort } from "./transaction.js";
 
-type LedgerResult =
-  | { readonly ok: true; readonly replayed: boolean; readonly resultRef: string }
-  | { readonly ok: false; readonly ruleId: string };
+type LedgerResult = AppendResult;
 
 interface ReserveInput {
   readonly reservationId: string;
@@ -25,14 +24,14 @@ interface CloseInput {
 }
 
 export class PlanLedger {
-  private readonly transactionPort: LedgerTransactionPort;
+  private readonly appendCommands: AppendCommandTransaction;
 
   constructor(
     private readonly db: HarnessDb,
     transactionPort?: LedgerTransactionPort,
   ) {
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
-    this.transactionPort = transactionPort ?? new ImmediateLedgerTransaction(db);
+    this.appendCommands = new AppendCommandTransaction(db, transactionPort);
   }
 
   reconstruct(reservationId: string):
@@ -181,61 +180,19 @@ export class PlanLedger {
   }): LedgerResult {
     const { commandId, commandType, payload, append } = options;
     if (!migratePlanLedger(this.db).ok) return failed("plan-ledger-unavailable");
-    const payloadDigest = digest({
-      commandType,
-      subjectKind: "reservation",
-      ...withoutCommandContext(payload),
-    });
-    return this.transactionPort.run(() => {
-      const replay = this.db
-        .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
-        .get(commandId);
-      if (replay) {
-        const result =
-          replay.command_payload_digest === payloadDigest
-            ? { ok: true as const, replayed: true, resultRef: String(replay.result_ref) }
-            : failed("plan-id-reservation-command-conflict");
-        return { commit: true, value: result };
-      }
-      const result = append(payloadDigest);
-      if (!result.ok) {
-        return { commit: false, value: result };
-      }
-      this.insertReceipt({
+    return this.appendCommands.run(
+      {
         commandId,
         commandType,
-        payloadDigest,
-        resultRef: result.resultRef,
+        subjectKind: "reservation",
         subjectKey: String(payload.reservationId),
+        payload: withoutCommandContext(payload),
         recordedAt: String(payload.occurredAt),
-      });
-      return { commit: true, value: result };
-    });
-  }
-
-  private insertReceipt(input: {
-    commandId: string;
-    commandType: string;
-    payloadDigest: string;
-    resultRef: string;
-    subjectKey: string;
-    recordedAt: string;
-  }): void {
-    const row = {
-      command_id: input.commandId,
-      command_type: input.commandType,
-      subject_kind: "reservation",
-      subject_key: input.subjectKey,
-      plan_asset_id: null,
-      plan_revision: null,
-      command_payload_digest: input.payloadDigest,
-      result_kind: "reservation_event",
-      result_ref: input.resultRef,
-      recorded_at: input.recordedAt,
-    };
-    this.db
-      .prepare("INSERT INTO append_command_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(...Object.values(row), ledgerRowDigest(row, "receipt_digest"));
+        resultKind: "reservation_event",
+        conflictRuleId: "plan-id-reservation-command-conflict",
+      },
+      append,
+    );
   }
 
   private insertReservationEvent(event: Readonly<Record<string, unknown>>): void {
@@ -292,14 +249,6 @@ function reservationEvent(
     expires_at: input.expiresAt,
   };
   return Object.freeze({ ...row, event_digest: ledgerRowDigest(row, "event_digest") });
-}
-
-function digest(value: object): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify(Object.entries(value).sort(([left], [right]) => left.localeCompare(right))),
-    )
-    .digest("hex");
 }
 
 function withoutCommandContext(
