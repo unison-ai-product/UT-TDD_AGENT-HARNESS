@@ -23,6 +23,7 @@ runtime-portability:2 screen-impl-pair-freeze:1 self-pair-normative-guard:1 setu
 sub-doc-catalog-drift:5 sub-doc-section-structure:1 telemetry-closure:1 test-design-naming:1 toolchain-pin:1 tracked-canonical:1
 update-check:1 vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1
+secret-scan-diff:1
 feedback-log:2
 global-setup.ts:1 support/workspace-roots.ts:3
 `;
