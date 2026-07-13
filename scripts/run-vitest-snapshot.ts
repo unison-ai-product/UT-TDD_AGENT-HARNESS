@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, realpathSync, rmSync, rmdirSync, symlinkSync } from "node:fs";
+import { existsSync, lstatSync, realpathSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -14,7 +14,7 @@ function removeSnapshot(snapshotRoot: string, depsRoot: string): void {
   const failures: unknown[] = [];
   try {
     if (existsSync(depsRoot) && lstatSync(depsRoot).isSymbolicLink()) {
-      rmdirSync(depsRoot);
+      rmSync(depsRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
     }
   } catch (error) {
     failures.push(error);

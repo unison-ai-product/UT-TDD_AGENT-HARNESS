@@ -21,13 +21,13 @@ export function captureWorkspaceInventory(root: string): { digest: string; entri
       const path = join(directory, entry);
       const relativeEntry = relativePath ? `${relativePath}/${entry}` : entry;
       const stat = lstatSync(path);
-      if (stat.isDirectory()) {
+      if (stat.isSymbolicLink()) {
+        entries.push(`l:${relativeEntry}:${readlinkSync(path)}`);
+      } else if (stat.isDirectory()) {
         entries.push(`d:${relativeEntry}`);
         visit(path, relativeEntry);
       } else if (stat.isFile()) {
         entries.push(`f:${relativeEntry}:${digest(readFileSync(path))}`);
-      } else if (stat.isSymbolicLink()) {
-        entries.push(`l:${relativeEntry}:${readlinkSync(path)}`);
       } else {
         throw new Error(`workspace fence unsupported entry: ${relativeEntry}`);
       }
