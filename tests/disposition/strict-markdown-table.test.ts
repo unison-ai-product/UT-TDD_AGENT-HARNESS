@@ -74,7 +74,9 @@ describe("strict V-model authoring table", () => {
     });
     expect(result).toMatchObject({
       ok: false,
-      findings: [{ ruleId: "catalog-authoring-schema-invalid", message: "table header is ambiguous" }],
+      findings: [
+        { ruleId: "catalog-authoring-schema-invalid", message: "table header is ambiguous" },
+      ],
     });
   });
 });

@@ -56,47 +56,49 @@ export function loadTrackedCatalogInput(
   const manifestRows = table({ bundle, path: paths.manifest, headers: ["field", "value"] });
   const manifest = new Map(manifestRows.map((row) => [row.field, row.value]));
   const manifestObject = Object.fromEntries(manifest);
-  const dispositions = table({ bundle, path: paths.dispositions, headers: [
-    "source_id",
-    "source_title",
-    "disposition",
-    "target",
-    "profile / 判断理由",
-  ] });
-  const categories = table({ bundle, path: paths.semantics, headers: ["category_id", "category_name"] });
-  const items = table({ bundle, path: paths.semantics, headers: [
-    "item_id",
-    "item_name",
-    "category_id",
-    "source_status",
-    "source_ref",
-    "source_file",
-  ] });
-  const metaSourceMappings = table({ bundle, path: paths.semantics, headers: [
-    "meta_source_ref",
-    "allowed_source_status",
-    "source_file_policy",
-    "reason",
-  ] });
+  const dispositions = table({
+    bundle,
+    path: paths.dispositions,
+    headers: ["source_id", "source_title", "disposition", "target", "profile / 判断理由"],
+  });
+  const categories = table({
+    bundle,
+    path: paths.semantics,
+    headers: ["category_id", "category_name"],
+  });
+  const items = table({
+    bundle,
+    path: paths.semantics,
+    headers: ["item_id", "item_name", "category_id", "source_status", "source_ref", "source_file"],
+  });
+  const metaSourceMappings = table({
+    bundle,
+    path: paths.semantics,
+    headers: ["meta_source_ref", "allowed_source_status", "source_file_policy", "reason"],
+  });
   const sourceTargets = table({
     bundle,
     path: paths.sourceTargets,
     headers: ["edge_id", "source_id", "disposition", "target_type", "target_ref"],
     expectedRows: Number(required(manifestObject, "source_target_edges")),
   });
-  const itemTargets = table({ bundle, path: paths.itemTargets, headers: [
-    "edge_id",
-    "item_id",
-    "項目名",
-    "category_id",
-    "source_ref",
-    "source_digest",
-    "target_status",
-    "target_kind",
-    "target_ref",
-    "判断理由",
-    "plan_id",
-  ] });
+  const itemTargets = table({
+    bundle,
+    path: paths.itemTargets,
+    headers: [
+      "edge_id",
+      "item_id",
+      "項目名",
+      "category_id",
+      "source_ref",
+      "source_digest",
+      "target_status",
+      "target_kind",
+      "target_ref",
+      "判断理由",
+      "plan_id",
+    ],
+  });
   const manifestDigest = digest(manifestRows);
   const sourceItemEdges = items.map((row) => ({
     edgeId: sourceItemEdgeId(row.source_ref, row.item_id),
