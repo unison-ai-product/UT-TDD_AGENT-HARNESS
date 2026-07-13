@@ -6,7 +6,7 @@ layer: cross
 workflow_phase: R4
 confirmed_reverse_type: design
 drive: agent
-status: draft
+status: confirmed
 route_signal: drift
 route_mode: reverse
 forward_routing: gap-only
@@ -40,8 +40,26 @@ dependencies:
   requires: []
   blocks: []
   references:
-    - docs/governance/design-decision-elicitation.md
-review_evidence: []
+    - docs/plans/PLAN-L3-07-design-decision-elicitation-format.md
+review_evidence:
+  - reviewer: codex-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-13T16:35:00+09:00"
+    tests_green_at: "2026-07-13T16:27:55+09:00"
+    verdict: approve
+    scope: "L6 function-spec 追補 / L7 U-ELICIT oracle 表 backfill を含む packet を Codex blind review (claim-blind / spec-blind)。FLAG 2 件は L6 契約 (missing_skill_ids 可視化、A+B 雛形) と oracle 表 (U-ELICIT-005 拡張 / 007 追加) へ反映して解消。architecture §3.1 に elicitation module 登載 (module-drift 解消)。"
+    worker_model: claude-fable-5
+    reviewer_model: gpt-5.6-terra
+    green_commands:
+      - kind: unit_test
+        command: "bun x vitest run tests/elicitation-context.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-13T16:27:47+09:00"
+        evidence_path: tests/elicitation-context.test.ts
+        output_digest: "sha256:e0e50aef0a1c30723409dce5e324f4a07f9f6cd935a74356a8e0a8a3dc9976b1"
+        anchor_commit: 0a3d7fcd14cbd2a2b64918532e5717df037b57a9
 ---
 
 # PLAN-REVERSE-428: ステージ紐付きエリシテーション実装の設計 backfill
@@ -69,6 +87,6 @@ PLAN-L7-428 (add-impl) の Reverse ペア。`ut-tdd elicit context` /
 
 ## DoD
 
-- [ ] L6 function-spec に elicitation packet 契約が載る。
-- [ ] L7 unit test design に U-ELICIT oracle が登録される。
-- [ ] doctor / vmodel lint green。
+- [x] L6 function-spec に elicitation packet 契約が載る。
+- [x] L7 unit test design に U-ELICIT oracle が登録される。
+- [x] doctor / vmodel lint green。

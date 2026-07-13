@@ -4,7 +4,7 @@ title: "PLAN-L7-428 (add-impl): ステージ紐付きエリシテーション文
 kind: add-impl
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-13
@@ -37,7 +37,43 @@ dependencies:
     - docs/governance/design-decision-elicitation.md
     - docs/plans/PLAN-REVERSE-428-stage-bound-elicitation-backfill.md
     - docs/plans/PLAN-L7-419-forward-fsm-transition-workflow-cli.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-13T16:35:00+09:00"
+    tests_green_at: "2026-07-13T16:27:55+09:00"
+    verdict: approve
+    scope: "Codex (gpt-5.6) blind review (claim-blind / spec-blind 二 lane、author claim 秘匿)。FLAG 2 件 (依頼テンプレートに B 行欠落 = governance §共通ルール 1 違反、missing_skill_ids の未可視化 = 推薦既定の静かな欠落) を修正し、U-ELICIT-005 拡張 + U-ELICIT-007 追加で oracle 化。反駁済み攻撃: 必須項目空入力 (fail-close 済)、relation 片側接続 (OR 集計)、指定テスト 6 件 green。修正後 7/7 green。"
+    worker_model: claude-fable-5
+    reviewer_model: gpt-5.6-terra
+    green_commands:
+      - kind: unit_test
+        command: "bun x vitest run tests/elicitation-context.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-13T16:27:47+09:00"
+        evidence_path: tests/elicitation-context.test.ts
+        output_digest: "sha256:e0e50aef0a1c30723409dce5e324f4a07f9f6cd935a74356a8e0a8a3dc9976b1"
+        anchor_commit: 0a3d7fcd14cbd2a2b64918532e5717df037b57a9
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-13T16:27:50+09:00"
+        evidence_path: src/elicitation/context.ts
+        output_digest: "sha256:f9c323272118765c41cf57bce7ec6ca1ee2fb8f37fc5c962afa2f5272a292f61"
+        anchor_commit: 0a3d7fcd14cbd2a2b64918532e5717df037b57a9
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-13T16:27:55+09:00"
+        evidence_path: src/elicitation/record.ts
+        output_digest: "sha256:cd5fd32b59aed38fac0878fb6f2f46a853c7db1a8b3b01c65c84a32512a99202"
+        anchor_commit: 0a3d7fcd14cbd2a2b64918532e5717df037b57a9
 ---
 
 # PLAN-L7-428 (add-impl): ステージ紐付きエリシテーション文脈
@@ -99,10 +135,10 @@ PO 要望 (2026-07-13、PLAN-L3-07 の後続本格化指示):
 
 ## DoD
 
-- [ ] `ut-tdd elicit context` が stage / design-coverage / defaults / 依頼
+- [x] `ut-tdd elicit context` が stage / design-coverage / defaults / 依頼
       テンプレートの 4 段 packet を返す (`--plan` 指定と工程表 current 解決の両方)。
-- [ ] skill decision_points が「聞かずに既定で進められる判断」として列挙される。
-- [ ] spec_defs / spec_relations 由来の設計カバレッジ集計が載る。
-- [ ] `ut-tdd elicit record` が stage 付き JSONL を append し、必須項目欠落で
+- [x] skill decision_points が「聞かずに既定で進められる判断」として列挙される。
+- [x] spec_defs / spec_relations 由来の設計カバレッジ集計が載る。
+- [x] `ut-tdd elicit record` が stage 付き JSONL を append し、必須項目欠落で
       fail-close する。
-- [ ] U-ELICIT-001..006 green、typecheck / lint green。
+- [x] U-ELICIT-001..007 green、typecheck / lint green (blind review FLAG 2 件修正込み)。
