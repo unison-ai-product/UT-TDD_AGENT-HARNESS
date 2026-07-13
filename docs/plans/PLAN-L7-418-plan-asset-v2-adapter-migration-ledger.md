@@ -33,6 +33,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-asset/domain/reservation.ts
     artifact_type: source_module
+  - artifact_path: src/plan-asset/domain/legacy-migration.ts
+    artifact_type: source_module
   - artifact_path: src/plan-asset/adapters/legacy-plan-adapter.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/adapters/project-identity-loader.ts
@@ -52,6 +54,8 @@ generates:
   - artifact_path: src/state-db/projection-writer.ts
     artifact_type: source_module
   - artifact_path: tests/plan-asset/domain.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/legacy-migration.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/project-identity-loader.test.ts
     artifact_type: test_code
@@ -81,7 +85,8 @@ planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,
 ## 実装進捗
 
 - U-PA-001..022: Redを観測後、domain/value object、legacy canonical adapter、曖昧alias fail-close、採番予約、HEAD tracked project identity provenance、ledger typed schema/replay verifier、atomic reservation/receipt transaction、HEAD 741 PLAN inventory、lossless非互換YAMLのfail-closeをGreen化済み。
-- U-PA-023..033: 独立監査IMP-159を反映し、migration pure reducer、state/field完全表、atomic write-set、双方向receipt、fault injection/reopen oracleをL6/L7へdesign freeze済み。実行可能Red testとschema/application Green化は未着手。
+- U-PA-023/024/025/031: migration pure reducer、state transition、decision field matrix、immutable provenance replayを実行可能Red観測後Green化済み。
+- U-PA-026..030/032/033: atomic write-set、optimistic guard、global replay、双方向receipt、fault injection/reopen oracleはdesign freeze済み。実行可能Red testとschema/application Green化は未着手。
 - HEAD `274adf14` inventoryは741件、collision 20群/41 PLAN、digest=`86a25dda63d29db9a6d02b6bacfd835e53762cdf416bd8df5b0d04b7d3caf718`。digestはrepository identity receipt、source commit、Git blob OID、source content、frontmatter/body、known/unknown field、collision projectionを拘束し、旧18群/37 PLAN固定値へ検出を合わせない。
 - `state-db`のlegacy short alias解決は先頭一致を廃止し、canonical resolverのexact/unique規則へ統合済み。
-- 未完了: U-PA-023..033 Red→Green、全legacy PLAN移行・collision判断、dry-run CLI、Reverse-418合流。
+- 未完了: U-PA-026..030/032/033 Red→Green、全legacy PLAN移行・collision判断、dry-run CLI、Reverse-418合流。
