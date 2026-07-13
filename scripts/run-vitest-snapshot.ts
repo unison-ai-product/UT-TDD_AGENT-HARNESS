@@ -164,9 +164,10 @@ export function sealReference(referenceRoot: string): void {
   }
   const identity = output("whoami", [], referenceRoot);
   if (!identity) throw new Error("reference snapshot identity cannot be resolved");
+  run("attrib", ["+R", join(referenceRoot, "*"), "/S"], referenceRoot);
   run(
     "icacls",
-    [referenceRoot, "/grant:r", `${identity}:(OI)(CI)(IO)(RX)`, "/C", "/Q"],
+    [referenceRoot, "/deny", `${identity}:(AD,DC)`, "/C", "/Q"],
     referenceRoot,
   );
 }
@@ -179,9 +180,10 @@ export function unsealReference(referenceRoot: string): void {
   }
   const identity = output("whoami", [], referenceRoot);
   if (!identity) throw new Error("reference snapshot identity cannot be resolved");
+  run("attrib", ["-R", join(referenceRoot, "*"), "/S"], referenceRoot);
   run(
     "icacls",
-    [referenceRoot, "/grant:r", `${identity}:(OI)(CI)(IO)(F)`, "/C", "/Q"],
+    [referenceRoot, "/remove:d", identity, "/C", "/Q"],
     referenceRoot,
   );
 }
