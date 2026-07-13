@@ -12,7 +12,7 @@ route_mode: reverse
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-13
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md
 agent_slots:
@@ -46,7 +46,7 @@ PLAN-L7-418で実装したPlanAsset v2 ledger、legacy migration application、7
 | R1 | L5-17/L6-71/ADR-008との差分比較 | reducer/transaction契約は既設計と一致。全件dry-run、reviewed rekey manifest、HEAD target、snapshot、role delegation、target slot証明が未backfill |
 | R2 | U-PA-001〜042を設計oracleへ照合 | identity、revision、receipt、rollback、reopen、752件bijection、target/provenance、CLI公開契約をGreen化 |
 | R3 | checked ZIP/A-187のclaim-only gapと照合 | catalog/display claimを成功根拠にせず、HEAD blob・typed slot・role contract実体へ突合。label推測、自動collision選択を禁止 |
-| R4 | 実装事実をForwardへ合流 | L6 function-spec、L7 unit-test-design、role contract正本へU-PA-034〜041と検査境界をbackfill |
+| R4 | 実装事実をForwardへ合流 | L6 function-spec、L7 unit-test-design、role contract正本へU-PA-034〜042と検査境界をbackfill |
 
 ## §2 自己証明境界
 
@@ -69,6 +69,7 @@ PLAN-L7-418で実装したPlanAsset v2 ledger、legacy migration application、7
 | `387f3d5b` | snapshot object独立Git oracle |
 | `c2fbe34a` / `d48c9476` | role contract正本とdelegation実体証明 |
 | `5cbd5d2a` | HEAD target slot検証 |
+| `5b9cde08` | main取り込み後752件inventory / 55件reviewed rekey再収束 |
 
 再現command:
 

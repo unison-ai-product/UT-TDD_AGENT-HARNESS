@@ -8,7 +8,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-13
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L6-71-plan-asset-canonical-migration-contracts.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -17,7 +17,7 @@ agent_slots:
   - role: se
     slot_label: "SE - PlanAsset/Revision/Evidence/Reservationとv1 adapter"
   - role: qa
-    slot_label: "QA - U-PA-001..033 Red→Green"
+    slot_label: "QA - U-PA-001..042 Red→Green / CLI fail-close"
 generates:
   - artifact_path: docs/governance/vmodel-role-contracts.md
     artifact_type: design_doc
@@ -27,6 +27,16 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-418-plan-asset-v2-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: src/plan-asset/application/legacy-migration-dry-run.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/application/legacy-migration-decision-manifest.ts
+    artifact_type: source_module
+  - artifact_path: src/cli/plan-asset.ts
+    artifact_type: source_module
+  - artifact_path: tests/plan-asset/legacy-migration-dry-run.test.ts
+    artifact_type: test
+  - artifact_path: tests/cli-surface.test.ts
+    artifact_type: test
   - artifact_path: ut-tdd.project.json
     artifact_type: config
   - artifact_path: src/plan-asset/domain/plan-asset.ts
@@ -102,9 +112,9 @@ planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,
 - U-PA-028: `LegacyMigrationLedger.adopt`でPlanAsset/revision 1/alias event+current/migratedまたはrekeyed event+current/global receiptを同一transactionで生成する。`migrated`はcollision/review provenanceを禁止し、`rekeyed`は両方を必須化するapplication oracle、composite revision target、全digest再検証をGreen化済み。
 - dry-run inventory gateは752件全件についてdecisionを出力するだけでなく、A-187およびPLAN-L6-79採番SSoTから得た契約として、PLAN番号prefix一意性、catalog claimとtarget実体、reference target slot実在、委譲先設計実体、snapshot hash一致実体の取得元をfail-closeで検証する。foreign worktree上の未確定PLAN本文には依存せず、確定済HARNESS memoryの契約を入力境界とする。
 - U-PA-034〜037: `LegacyMigrationDryRun` application objectと`plan migration-dry-run` CLIを追加。HEAD inventoryとのexactly-once bijection、source commit/blob/content digest、決定論的report digest、decision field matrixを自己証明する。非衝突697件はlossless migrated、27群55件は`REVIEWED_REKEY_DECISIONS`へPLAN IDとnumeric prefixを明示列挙し、full legacy IDをcanonical aliasとしてrekeyedにする。manifestの欠落・余剰・group不一致をfail-closeし、752 emitted / migrated 697 / rekeyed 55 / pending 0 / finding 0でGreen。
-- dry-runの残Green条件はtarget/slot/delegation/snapshot provenance portを接続し、全752件の実体証明を完了することである。decision層だけのGreenをdry-run全体完成とは扱わない。
-- U-PA-038: confirmed/completed/accepted PLANの`generates[].artifact_path`をworking treeではなくHEAD treeへ突合する`HeadTargetRegistry`を追加。exact fileは非空blob、directory familyは配下に非空tracked blobが1件以上あることを要求する。file-only初版が4 directory familyをphantom扱いした誤検知をcommit前にRedで捕捉し、file/family両対応へ是正して741件 finding 0を回復した。
-- A-187委譲実体監査で、現行`agent_slots`が`role + slot_label`のみでtyped `design_ref`を持たず受け皿実体を証明不能と確認した。これをIMP-162へ負債起票し、schema/上流PLAN契約を追加してからdetectorを追従させる。label文字列から設計先を推測する実装や、検出を通すためのslot削除は禁止する。
+- target/slot/delegation/snapshot provenance portを接続し、全752件の実体証明を完了した。decision層だけのGreenではなく、独立Git objectと上流contract実体まで検証対象に含める。
+- U-PA-038: confirmed/completed/accepted PLANの`generates[].artifact_path`をworking treeではなくHEAD treeへ突合する`HeadTargetRegistry`を追加。exact fileは非空blob、directory familyは配下に非空tracked blobが1件以上あることを要求する。file-only初版が4 directory familyをphantom扱いした誤検知をcommit前にRedで捕捉し、file/family両対応へ是正して当時HEAD 741件のfinding 0を回復した。
+- A-187委譲実体監査で、現行`agent_slots`が`role + slot_label`のみでtyped `design_ref`を持たず受け皿実体を証明不能と確認した。IMP-162へ負債起票後、上流role contract正本を追加し、detectorをその設計へ追従させて解消した。label文字列から設計先を推測する実装や、検出を通すためのslot削除は禁止する。
 - U-PA-039: dry-run recordの`sourceCommit + sourcePath`を独立Git oracleでblob OIDへ解決し、`git cat-file blob`の実bytes SHA-256が`sourceContentDigest`と一致することを再検証する。working tree再hashやreport内自己比較ではなく、commit-bound object取得元を証跡とする。
 - U-PA-040: `vmodel-role-contracts.md`を7 roleの上流正本とし、HEADからstrict loadしたrole contractを全`agent_slots`へlossless projectionする。各recordは`role + slotLabel + contractRef`を保持し、未知role/label不正/contract target欠落をfail-closeする。独立Git oracleで全contract blobがsource commitに存在し非空であることを検証する。
 - U-PA-041: HEADの`vmodel-item-target-ledger.md`にある全`target_kind=target_slot` edgeを、HEADの`vmodel-document-catalog.md`から構築したslot registryへ`resolveCanonicalTarget`で突合する。working tree catalogやdisplay claimを真実源にせず、slot欠落はdry-run global findingとしてfail-closeする。
@@ -112,8 +122,8 @@ planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,
 - U-PA-030: migration event/current/global receiptの双方向bijectionとstream/current集合一致をverifierへ追加し、event-only/receipt-only mutationをGreen化済み。
 - U-PA-033: file-backed migration ledgerのclose/reopen後にcurrent state、event digest、command payload digest集合が完全一致するreconstruct oracleをGreen化済み。
 - U-PA-032: observe 3境界とadoption 7境界へfault portを注入し、各例外後にmigration/receipt/asset/revision/alias全table delta 0をGreen化済み。U-PA-001..033の実行可能testはtodo 0。
-- U-PA-026..030/032/033: atomic write-set、optimistic guard、global replay、双方向receipt、fault injection/reopen oracleはdesign freeze済み。実行可能Red testとschema/application Green化は未着手。
+- U-PA-026..030/032/033: atomic write-set、optimistic guard、global replay、双方向receipt、fault injection/reopen oracleをdesign freezeし、実行可能Red観測後にschema/applicationをGreen化済み。
 - HEAD `274adf14` inventoryは741件、collision 20群/41 PLAN、digest=`86a25dda63d29db9a6d02b6bacfd835e53762cdf416bd8df5b0d04b7d3caf718`。digestはrepository identity receipt、source commit、Git blob OID、source content、frontmatter/body、known/unknown field、collision projectionを拘束し、旧18群/37 PLAN固定値へ検出を合わせない。
 - `origin/main`取り込み後のHEAD `0b8893d9`では752件、collision 27群/55 PLANへ増加した。新規7群/14件も暗黙選択せずreview manifestへ明示追加し、現HEAD oracleへ追随した。
 - `state-db`のlegacy short alias解決は先頭一致を廃止し、canonical resolverのexact/unique規則へ統合済み。
-- 未完了: 全legacy PLAN移行・collision判断、dry-run CLI、Reverse-418合流。
+- Codex実装境界は完了。残る状態遷移はcross-runtime独立review、PR Ready化、Claude/PO acceptance、main mergeであり、実装完了と検収完了を混同しない。
