@@ -35,7 +35,8 @@ dependencies:
     - src/state-db/spec-ir-projections.ts
     - src/schema/index.ts
     - tests/spec-ir-projections.test.ts
-review_evidence: []
+review_evidence:
+  - "2026-07-13 cross-provider blind review (codex gpt-5.6-terra, ut-tdd codex --role blind-reviewer --execute): FLAG→解消。tests/spec-ir-projections.test.ts 21/21 green (2回再現)、実 repo orphan-relation=1 (pairs:self、REVERSE-12 規定通り) を実測確認。指摘1: 実測 invalid-subdoc=0≠18 — 並行 PLAN-L7-245 レーンが同一 working tree で cluster A 18件の sub_doc を正規化済みのため (§4 規定の差分説明。両 PLAN 合流後の最終想定値と一致)。指摘2: §2 existsSync 記述と実装の不一致 — §2 を採択実装 (finding kind 追加なしのため実在確認も行わない) に訂正、欠落検出は §7 残リスクへ"
 ---
 
 # PLAN-L7-429 (add-impl): spec-ir detector scope 精密化
@@ -83,10 +84,11 @@ review_evidence: []
    - path prefix allowlist (`src/`, `tests/`, `.ut-tdd/`, `docs/research/`, `skills/`,
      `docs/improvement-backlog.md`, ルート設定ファイル `CLAUDE.md` / `AGENTS.md` /
      `package.json` 等) に一致する参照は spec-ir relation (`requires` / `pairs`) の解決対象外とし、
-     `existsSync` のみで実在確認する evidence reference として扱う。存在しない場合のみ別 finding
-     kind (例: `spec-ir-missing-evidence`) を検討するが、本 PLAN では **新規 finding kind 追加は
-     行わず**、単に orphan-relation の対象から除外する (finding 総量を静かに減らすだけで、
-     evidence 欠落の検出自体を弱めない設計は次期課題として残リスクに明記する)。
+     evidence reference として扱い、relation 解決から無条件に除外する。本 PLAN では **新規
+     finding kind 追加は行わない**ため実在確認 (`existsSync`) も行わない (確認しても報告先
+     finding が無く dead check になる。blind-review 指摘 2026-07-13 で記述を採択実装に訂正)。
+     存在しない evidence path の欠落検出 (`spec-ir-missing-evidence` 相当) は実在確認ごと
+     次期課題として §7 残リスクに明記する。
    - **`pair_artifact: self` は除外しない** (blind-review 指摘 2026-07-13 で撤回): confirmed の
      `PLAN-REVERSE-12` が「self-pair は撤去済み、`pair_artifact: self` は unresolved orphan として
      fail-close」を規定しており、本 PLAN はこれに従い self を orphan 判定のまま残す。
