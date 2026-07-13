@@ -8,7 +8,14 @@ import {
   primaryKeyColumnsOf,
   type TableDef,
 } from "../schema/harness-db";
-import type { HarnessDb } from "../state-db";
+
+/** lintがstate-db実装へ逆依存しないためのSQLite introspection port。 */
+export interface DbIntrospectionPort {
+  prepare(sql: string): {
+    get(...params: unknown[]): Record<string, unknown> | undefined;
+    all(...params: unknown[]): Record<string, unknown>[];
+  };
+}
 
 export interface DbProjectionRequirement {
   section: string;
@@ -243,7 +250,7 @@ function setDiff(expected: readonly string[], actual: readonly string[]): string
   });
 }
 
-function actualPrimaryKey(db: HarnessDb, table: string): string[] {
+function actualPrimaryKey(db: DbIntrospectionPort, table: string): string[] {
   return db
     .prepare(`PRAGMA table_info(${table})`)
     .all()
@@ -252,7 +259,7 @@ function actualPrimaryKey(db: HarnessDb, table: string): string[] {
     .map((row) => String(row.name));
 }
 
-function actualUniqueKeys(db: HarnessDb, table: string): string[] {
+function actualUniqueKeys(db: DbIntrospectionPort, table: string): string[] {
   return db
     .prepare(`PRAGMA index_list(${table})`)
     .all()
@@ -295,7 +302,7 @@ function expectedForeignKeys(table: TableDef): string[] {
   return [...inline, ...composite].sort();
 }
 
-function actualForeignKeys(db: HarnessDb, table: string): string[] {
+function actualForeignKeys(db: DbIntrospectionPort, table: string): string[] {
   const groups = new Map<number, Record<string, unknown>[]>();
   for (const row of db.prepare(`PRAGMA foreign_key_list(${table})`).all()) {
     const id = Number(row.id);
@@ -317,7 +324,7 @@ function actualForeignKeys(db: HarnessDb, table: string): string[] {
 
 /** registryのtyped制約が実SQLite schemaにも存在することをfail-closeで照合する。 */
 export function analyzeDbConstraintCoverage(
-  db: HarnessDb,
+  db: DbIntrospectionPort,
   tables: readonly TableDef[] = HARNESS_DB_TABLES,
 ): DbConstraintCoverageResult {
   const findings: DbConstraintCoverageFinding[] = [];

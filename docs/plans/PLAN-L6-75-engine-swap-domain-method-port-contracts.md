@@ -9,7 +9,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-13
 owner: PO / Codex
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -44,3 +44,4 @@ dependencies:
 - 新規function 80 nonblank lines、CC12、nesting 3、cycle 0をhard gateとし、既存超過はdebt PLANへ送る。
 - `PlanIdReservation.reserve/release/reconstruct`はtransaction、lease、idempotent command、token hash照合、競合errorを公開契約に持つ。
 - 423はshared kernelとmodule-boundary移行だけを所有し、417/418/419/420/422のbounded context実装を二重所有しない。
+- lint/query側が永続化具象`HarnessDb`をimportすることを禁止する。DB schema introspectionはquery ownerが最小`DbIntrospectionPort.prepare().{get,all}`を公開し、state-db adapterは構造的に実装する。これにより`state-db -> lint/export/graph/vmodel/plan`のprojection方向を維持し、逆向きedgeとmodule cycleを作らない。

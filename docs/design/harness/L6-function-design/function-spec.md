@@ -24,6 +24,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | 関数 | signature | 前提 | 事後 / oracle |
 |---|---|---|---|
 | `recordProjectionEvent` | `(event: ProjectionEvent, deps: HarnessDbDeps) => ProjectionRowRef` | `event.plan_id` または `event.session_id` が存在し、`deps.dbPath` は `.ut-tdd/` 配下に解決される。 | ID を検証し、該当 projection table row を upsert して `{table, id, evidence_path}` を返す。source docs は rewrite しない。 |
+| `analyzeDbConstraintCoverage` | `(db: DbIntrospectionPort, tables?: TableDef[]) => DbConstraintCoverageResult` | `DbIntrospectionPort`はread-only `prepare().get/all`だけを公開し、lint/query層は具象`HarnessDb`をimportしない。 | typed schemaとSQLite introspectionを照合し、table/NOT NULL/PK/FK/UNIQUE/CHECKの欠落をfindingへ返す。state-dbへの逆依存とmodule cycleを作らない。 |
 | `rebuildHarnessDb` | `(input: RebuildInput, deps: HarnessDbDeps) => RebuildResult` | repo root は読込可能で、DB path は `.ut-tdd/` 配下にある。 | projection tables を truncate し、正規化済み docs/state/log digest を replay して `search_index` と `quality_signals` を再計算する。同一入力では deterministic。 |
 | `stableId` | `(prefix: string, value: string) => string` | prefix は空でない projection namespace、value は raw subject ID または空文字を許容する。 | ASCII safe な value は既存 ID を維持し、正規化で情報が落ちる場合は `--<sha256 12hex>` suffix を付ける。空 value は `unknown` sentinel に正規化する。projection / feedback / skill / workflow の row ID 生成はこの helper を共有し、local regex copy を増やさない。 |
 | `computeSkillMetrics` | `(rows: SkillMetricInput) => QualitySignal[]` | recommendation / invocation rows が与えられ、分母 0 は明示される。 | layer/drive/plan/model ごとに `fired/recommended` と `accepted/fired` を算出する。欠落 row は findings とし、成功を捏造しない。 |
