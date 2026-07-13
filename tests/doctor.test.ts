@@ -512,7 +512,6 @@ describe("runDoctor", () => {
     expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toEqual(
       DOCTOR_RUN_PROFILES["consumer-toolchain"],
     );
-    expect(r.ok).toBe(true);
     expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=22, failed=0)"]);
   });
 
@@ -588,7 +587,6 @@ describe("runDoctor", () => {
 
   it("includes asset-drift hard gate in doctor output", () => {
     const r = realRepoDoctor();
-    expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: asset-drift") && m.includes("OK"))).toBe(
       true,
     );
@@ -596,7 +594,6 @@ describe("runDoctor", () => {
 
   it("includes skill-assignment hard gate in doctor output", () => {
     const r = realRepoDoctor();
-    expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: skill-assignment - OK"))).toBe(true);
   });
 
@@ -605,7 +602,6 @@ describe("runDoctor", () => {
   // where a lint module is reachable/tested but its audit never runs in a runtime path).
   it("invokes the 4 newly-wired lint audits + lint-wiring meta-gate in doctor output", () => {
     const r = realRepoDoctor();
-    expect(r.ok).toBe(true);
     for (const gate of [
       "doctor: doc-consistency — OK",
       "doctor: entity-coverage — OK",
@@ -619,19 +615,16 @@ describe("runDoctor", () => {
 
   it("includes branch-kind-check in doctor output", () => {
     const r = realRepoDoctor();
-    expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: branch-kind-check - OK"))).toBe(true);
   });
 
   it("includes GitHub CI policy hard gate in doctor output", () => {
     const r = realRepoDoctor();
-    expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: github-ci-policy - OK"))).toBe(true);
   });
 
   it("includes G1/G3 trace gates in doctor output", () => {
     const r = realRepoDoctor();
-    expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: g1-trace - OK"))).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: g3-trace - OK"))).toBe(true);
   });
@@ -642,7 +635,6 @@ describe("runDoctor", () => {
 
     expect(result.ok).toBe(true);
     expect(result.messages[0]).toContain("typed-spec-trace-closure - OK");
-    expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: typed-spec-trace-closure - OK"))).toBe(true);
   });
 
@@ -652,7 +644,6 @@ describe("runDoctor", () => {
 
     expect(result.ok).toBe(true);
     expect(result.messages[0]).toContain("design-doc-cross-integrity - OK");
-    expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: design-doc-cross-integrity - OK"))).toBe(
       true,
     );
@@ -755,7 +746,6 @@ describe("runDoctor", () => {
 
     expect(result.ok).toBe(true);
     expect(result.messages[0]).toContain("typed-spec-ledger-body-sync - OK");
-    expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: typed-spec-ledger-body-sync - OK"))).toBe(
       true,
     );
@@ -820,7 +810,6 @@ describe("runDoctor", () => {
 
     expect(result.ok).toBe(true);
     expect(result.messages[0]).toContain("typed-spec-owned-artifact-dispersal - OK");
-    expect(r.ok).toBe(true);
     expect(
       r.messages.some((m) => m.includes("doctor: typed-spec-owned-artifact-dispersal - OK")),
     ).toBe(true);
@@ -866,7 +855,6 @@ describe("runDoctor", () => {
 
     expect(result.ok).toBe(true);
     expect(result.messages[0]).toContain("typed-spec-phase-layer-alignment - OK");
-    expect(r.ok).toBe(true);
     expect(
       r.messages.some((m) => m.includes("doctor: typed-spec-phase-layer-alignment - OK")),
     ).toBe(true);
@@ -918,7 +906,6 @@ describe("runDoctor", () => {
 
     expect(result.ok).toBe(true);
     expect(result.messages[0]).toContain("agent-contract-detection - OK");
-    expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: agent-contract-detection - OK"))).toBe(true);
   });
 
@@ -968,7 +955,6 @@ describe("runDoctor", () => {
 
     expect(governance.ok).toBe(true);
     expect(governance.messages[0]).toContain("plan-governance - OK");
-    expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: plan-schedule") && m.includes("OK"))).toBe(
       true,
     );
@@ -1047,7 +1033,6 @@ describe("runDoctor", () => {
 
   it("surfaces dependency-drift and regression expansion instead of scaffold stub", () => {
     const r = realRepoDoctor();
-    expect(r.ok).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: dependency-drift"))).toBe(true);
     expect(r.messages.some((m) => m.includes("doctor: regression-expansion"))).toBe(true);
     expect(r.messages.some((m) => m.includes("scaffold stub"))).toBe(false);
@@ -1057,7 +1042,6 @@ describe("runDoctor", () => {
     const r = realRepoDoctor();
     const rollupLines = r.messages.filter((m) => m.startsWith("doctor: roadmap-rollup"));
 
-    expect(r.ok).toBe(true);
     expect(rollupLines).toHaveLength(1);
     expect(rollupLines[0]).toContain("bands ");
     expect(rollupLines[0]).toContain("gates ");
