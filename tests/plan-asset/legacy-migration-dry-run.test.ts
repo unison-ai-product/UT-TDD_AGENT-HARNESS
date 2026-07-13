@@ -17,16 +17,14 @@ describe("legacy migration dry-run", () => {
     expect(result.reportDigest).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it("U-PA-035: refuses to auto-select the 41 ambiguous numeric-prefix items", () => {
+  it("U-PA-035: applies all 41 explicit reviewed rekey decisions", () => {
     const result = new LegacyMigrationDryRun().run(process.cwd());
     if (!("records" in result)) throw new Error(result.ruleId);
     expect(result.collisionGroups).toBe(20);
     expect(result.collisionItems).toBe(41);
-    expect(result.decisionCounts).toEqual({ migrated: 700, rekeyed: 0, rejected: 0, pending: 41 });
-    expect(result.ok).toBe(false);
-    expect(
-      result.findings.filter((item) => item.ruleId === "plan-migration-decision-pending"),
-    ).toHaveLength(41);
+    expect(result.decisionCounts).toEqual({ migrated: 700, rekeyed: 41, rejected: 0, pending: 0 });
+    expect(result.ok).toBe(true);
+    expect(result.findings).toEqual([]);
   });
 
   it("U-PA-036: detects a decision manifest that targets another inventory identity", () => {

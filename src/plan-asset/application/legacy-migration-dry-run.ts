@@ -5,6 +5,10 @@ import {
   type LegacyPlanInventoryItem,
 } from "../adapters/legacy-plan-inventory.js";
 import { validateMigrationFields } from "../domain/legacy-migration.js";
+import {
+  MIGRATION_REVIEW_PLAN_ID,
+  REVIEWED_REKEY_DECISIONS,
+} from "./legacy-migration-decision-manifest.js";
 
 export type MigrationPreviewDecision = "migrated" | "rekeyed" | "rejected" | "pending";
 
@@ -57,7 +61,7 @@ export interface MigrationDecisionPort {
 }
 
 export class LegacyMigrationDryRun {
-  constructor(private readonly decisions: MigrationDecisionPort = new SafeDecisionPreview()) {}
+  constructor(private readonly decisions: MigrationDecisionPort = new ReviewedDecisionManifest()) {}
 
   run(repoRoot: string): MigrationDryRunReport | { readonly ok: false; readonly ruleId: string } {
     const inventory = buildLegacyPlanInventory(repoRoot);
@@ -70,7 +74,10 @@ export class LegacyMigrationDryRun {
     const records = inventory.value.items.map((item) =>
       record(item, this.decisions.decide(item, collisionByPlan.get(item.legacyPlanId) ?? null)),
     );
-    const findings = records.flatMap((item) => item.findings);
+    const findings = [
+      ...manifestFindings(inventory.value.collisionGroups),
+      ...records.flatMap((item) => item.findings),
+    ];
     if (new Set(records.map((item) => item.legacyPlanId)).size !== inventory.value.items.length) {
       findings.push(
         finding("plan-migration-preview-not-bijective", null, "inventory/preview bijection failed"),
@@ -98,9 +105,20 @@ export class LegacyMigrationDryRun {
   }
 }
 
-class SafeDecisionPreview implements MigrationDecisionPort {
+class ReviewedDecisionManifest implements MigrationDecisionPort {
+  private readonly rekeys = new Map<string, string>(REVIEWED_REKEY_DECISIONS);
   decide(item: LegacyPlanInventoryItem, collision: LegacyPlanCollisionGroup | null) {
     if (collision) {
+      if (this.rekeys.get(item.legacyPlanId) === collision.numericCore)
+        return {
+          legacyPlanId: item.legacyPlanId,
+          decision: "rekeyed" as const,
+          resolvedAlias: item.legacyPlanId,
+          collisionGroup: collision.numericCore,
+          lossFields: [],
+          reason: "reviewed numeric-prefix collision keeps the unique full legacy alias",
+          reviewPlanId: MIGRATION_REVIEW_PLAN_ID,
+        };
       return {
         legacyPlanId: item.legacyPlanId,
         decision: "pending" as const,
@@ -108,7 +126,7 @@ class SafeDecisionPreview implements MigrationDecisionPort {
         collisionGroup: collision.numericCore,
         lossFields: [],
         reason: "numeric prefix collision requires reviewed rekey decision",
-        reviewPlanId: "PLAN-L7-418-plan-asset-v2-adapter-migration-ledger",
+        reviewPlanId: MIGRATION_REVIEW_PLAN_ID,
       };
     }
     return {
@@ -171,6 +189,24 @@ function counts(records: readonly MigrationDryRunRecord[]) {
   };
   for (const item of records) result[item.decision] += 1;
   return Object.freeze(result);
+}
+
+function manifestFindings(
+  collisions: readonly LegacyPlanCollisionGroup[],
+): MigrationDryRunFinding[] {
+  const expected = new Map(
+    collisions.flatMap((group) => group.planIds.map((id) => [id, group.numericCore] as const)),
+  );
+  const reviewed = new Map<string, string>(REVIEWED_REKEY_DECISIONS);
+  return [...new Set([...expected.keys(), ...reviewed.keys()])]
+    .filter((id) => expected.get(id) !== reviewed.get(id))
+    .map((id) =>
+      finding(
+        "plan-migration-decision-manifest-mismatch",
+        id,
+        "reviewed collision decision is missing, extra, or bound to another numeric prefix",
+      ),
+    );
 }
 
 function finding(
