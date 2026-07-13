@@ -53,6 +53,47 @@ function createsPersistedHarnessDb(path: string, source: string): boolean {
   return persisted;
 }
 
+function usesRawRecursiveTreeRemoval(path: string, source: string): boolean {
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const aliases = new Set(["rmSync"]);
+  for (const statement of file.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !statement.importClause?.namedBindings ||
+      !ts.isNamedImports(statement.importClause.namedBindings)
+    )
+      continue;
+    for (const element of statement.importClause.namedBindings.elements) {
+      if ((element.propertyName?.text ?? element.name.text) === "rmSync")
+        aliases.add(element.name.text);
+    }
+  }
+  let raw = false;
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      aliases.has(node.expression.text)
+    ) {
+      const options = node.arguments[1];
+      if (
+        options &&
+        ts.isObjectLiteralExpression(options) &&
+        options.properties.some(
+          (property) =>
+            ts.isPropertyAssignment(property) &&
+            property.name.getText(file) === "recursive" &&
+            property.initializer.kind === ts.SyntaxKind.TrueKeyword,
+        )
+      )
+        raw = true;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return raw;
+}
+
 describe("persistent harness DB cleanup contract", () => {
   it("U-TESTHYGIENE-019: auto-discovers every persisted DB owner and requires retrying cleanup", () => {
     const root = process.cwd();
@@ -68,6 +109,7 @@ describe("persistent harness DB cleanup contract", () => {
     for (const owner of owners) {
       expect(owner.source, owner.path).toContain('from "./support/temp-tree"');
       expect(owner.source, owner.path).toMatch(/removeTestTree(?:\(|;)/);
+      expect(usesRawRecursiveTreeRemoval(owner.path, owner.source), owner.path).toBe(false);
     }
   });
 });

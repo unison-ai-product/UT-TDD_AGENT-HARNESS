@@ -224,7 +224,7 @@ describe("L7 CLI surface closure", () => {
       expect(complete.stdout).toContain("status=completed");
       expect(complete.stdout).toContain("(dry-run)");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 15_000);
 
@@ -346,7 +346,7 @@ describe("L7 CLI surface closure", () => {
       );
       expect(run.stdout).not.toContain("undefined");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 15_000);
 
@@ -492,7 +492,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload.model).toBe("gpt-5.3-codex-spark");
       expect(payload.args).toEqual(["exec", "-m", "gpt-5.3-codex-spark", "-"]);
     } finally {
-      rmSync(fake.binDir, { recursive: true, force: true });
+      removeTestTree(fake.binDir);
     }
   }, 20_000);
 
@@ -531,7 +531,7 @@ describe("L7 CLI surface closure", () => {
         "high",
       ]);
     } finally {
-      rmSync(fake.binDir, { recursive: true, force: true });
+      removeTestTree(fake.binDir);
     }
   }, 20_000);
 
@@ -701,7 +701,7 @@ describe("L7 CLI surface closure", () => {
       expect(codexEnv).toContain(MODEL_IDS.codex.frontier);
       expect(codexEnv).toContain("args=");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 20_000);
 
@@ -789,7 +789,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload.readiness.ci.forkPullRequestSecrets).toBe("not-required");
       expect(readFileSync(join(binDir, "codex-env.txt"), "utf8")).toContain("args=");
     } finally {
-      rmSync(binDir, { recursive: true, force: true });
+      removeTestTree(binDir);
     }
   }, 20_000);
 
@@ -826,7 +826,7 @@ describe("L7 CLI surface closure", () => {
       const manifest = JSON.parse(readFileSync(payload.artifacts.manifest, "utf8"));
       expect(manifest.artifactCount).toBeGreaterThan(100);
     } finally {
-      rmSync(outDir, { recursive: true, force: true });
+      removeTestTree(outDir);
     }
   }, 30_000);
 
@@ -914,7 +914,7 @@ describe("L7 CLI surface closure", () => {
       const manifest = JSON.parse(readFileSync(payload.stage.manifest, "utf8"));
       expect(manifest.stage.copiedArtifacts).toBeGreaterThan(100);
     } finally {
-      rmSync(outDir, { recursive: true, force: true });
+      removeTestTree(outDir);
     }
   }, 30_000);
 
@@ -1000,7 +1000,7 @@ describe("L7 CLI surface closure", () => {
       expect(prunedPayload.pack.nextCommands.join("\n")).not.toContain("git add --all");
       expect(prunedPayload.pack.nextCommands.join("\n")).not.toContain(" add --all");
     } finally {
-      rmSync(packDir, { recursive: true, force: true });
+      removeTestTree(packDir);
       if (manifest) rmSync(manifest, { force: true });
     }
   }, 40_000);
@@ -1074,7 +1074,7 @@ describe("L7 CLI surface closure", () => {
       expect(run.status).toBe(1);
       expect(run.stderr).toContain("--tl-team / --qa-team / --po-team");
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 
@@ -1105,7 +1105,7 @@ describe("L7 CLI surface closure", () => {
       expect(run.stderr).not.toContain("claude");
       expect(run.stderr).not.toContain("codex");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1196,7 +1196,7 @@ describe("L7 CLI surface closure", () => {
         payload.members.map((member: { adapter: { command: string } }) => member.adapter.command),
       ).toEqual(["codex", "claude"]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1343,7 +1343,7 @@ describe("L7 CLI surface closure", () => {
       expect(readFileSync(join(root, "claude-env.txt"), "utf8")).not.toContain("raw=1");
       expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("effort=high");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1385,7 +1385,7 @@ describe("L7 CLI surface closure", () => {
       // provider が実際に起動した証跡 (env dump)。「実行せず JSON だけ」だと生成されない。
       expect(readFileSync(join(root, "codex-env.txt"), "utf8")).toContain("args=");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 20_000);
 });
