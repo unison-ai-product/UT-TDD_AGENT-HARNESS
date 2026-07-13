@@ -89,4 +89,54 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
       db.close();
     }
   });
+
+  it("groups operational facts without hiding trouble, human, or retry counts", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const drive = db.prepare(
+        "INSERT INTO drive_runs (drive_run_id, mode, status) VALUES (?, ?, ?)",
+      );
+      for (const [id, status] of [
+        ["d1", "completed"],
+        ["d2", "confirmed"],
+        ["d3", "documented"],
+        ["d4", "completed"],
+        ["d5", "active"],
+      ]) {
+        drive.run(id, "forward", status);
+      }
+      drive.run("d6", null, "completed");
+      drive.run("d7", "unknown", "active");
+      db.prepare("INSERT INTO hook_events (event_id, event_type, digest) VALUES (?, ?, ?)").run(
+        "h1",
+        "error",
+        "failed",
+      );
+      db.prepare("INSERT INTO hook_events (event_id, event_type, digest) VALUES (?, ?, ?)").run(
+        "h2",
+        "tool_use",
+        "ok",
+      );
+      const workflow = db.prepare(
+        `INSERT INTO workflow_runs
+           (workflow_run_id, plan_id, workflow, phase, ready_status, human_required)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      );
+      workflow.run("w1", "PLAN-A", "forward", "implement", "ready", 0);
+      workflow.run("w2", "PLAN-A", "forward", "implement", "blocked", 1);
+      workflow.run("w3", "PLAN-B", "forward", "review", "passed", 1);
+
+      expect(new SqliteProjectionStore(db).readOperationalMetricFacts()).toEqual({
+        drives: [
+          { mode: "forward", total: 5, completed: 4 },
+          { mode: "unknown", total: 2, completed: 1 },
+        ],
+        hooks: { total: 2, trouble: 1 },
+        workflow: { total: 3, blocked: 1, humanRequired: 2, retryGroups: 1 },
+      });
+    } finally {
+      db.close();
+    }
+  });
 });

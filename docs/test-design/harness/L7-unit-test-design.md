@@ -406,6 +406,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DOMAIN-003 | PoC application ports | read portの意味的countをdomainへ渡し、生成eventだけをstoreへ記録する。SQL文字列をportへ漏らさない。 |
 | U-DOMAIN-004 | `SqliteProjectionStore` / `clearRebuildableProjectionTables` | unknown tableをfail-closeし、schema列とPKを正規化し、free-form secretを永続化前に拒否する。未解決PLAN joinとstale runtime contextを区別し、audit/compound contextを誤検出しない。再構築ではrebuildable rowを消去する一方、`refactor_candidates`負債ledgerを保持する。 |
 | U-DOMAIN-005 | model evaluation domain/application/config/SQLite read | success rate 4桁、token効率2桁、cost効率6桁をpure計算し、success/token/cost不在時はNULLを捏造しない。disabled/malformed opt-inはread/store 0、cold-startはstore 0、時刻は注入値を使う。SQLiteは複数modelをgrouped集計し、orphan PLANをsuccess 0、全cost不明をNULLとして返す。 |
+| U-DOMAIN-006 | operational metrics domain/application/SQLite read | drive成功集合と丸め前0.8境界、hook trouble、workflow blocked/human/retry、0母数、4桁表示をpure policyで固定する。N drive modeからN+4 eventをhost locale非依存のcode-unit順・一意ID・注入時刻で生成する。同一mode factは合算する。SQLite grouped readはretryをplan/workflow/phase単位で数え、NULL/literal unknown modeを同一groupへ正規化してcompletedとsignalを失わず、非0signalを隠さない。 |
 
 ### §1.16.1f U-VTRIG L0-L7 (implementation verification cycle gate)
 

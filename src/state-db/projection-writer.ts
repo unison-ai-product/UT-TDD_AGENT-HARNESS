@@ -55,6 +55,7 @@ import {
 import { loadMemoryEntries } from "../memory/index";
 import { RepositoryModelEvaluationConfig } from "../projection/adapters/model-evaluation-config";
 import { projectModelEvaluations as projectModelEvaluationsApplication } from "../projection/application/project-model-evaluations";
+import { projectOperationalMetrics as projectOperationalMetricsApplication } from "../projection/application/project-operational-metrics";
 import { projectPocEvaluations as projectPocEvaluationsApplication } from "../projection/application/project-poc-evaluations";
 import type { ProjectionEvent } from "../projection/contracts/projection-store";
 import { HARNESS_DB_TABLES } from "../schema/harness-db";
@@ -2425,103 +2426,8 @@ export function projectModelEvaluations(db: HarnessDb, repoRoot: string): void {
 }
 
 function projectOperationalMetrics(db: HarnessDb): void {
-  const computedAt = nowIso();
-  const metrics: {
-    subject: string;
-    name: string;
-    value: number;
-    threshold: number;
-    status: string;
-  }[] = [];
-  const driveModes = db
-    .prepare("SELECT mode, COUNT(*) AS total FROM drive_runs GROUP BY mode ORDER BY mode")
-    .all();
-  for (const row of driveModes) {
-    const mode = String(row.mode ?? "unknown");
-    const total = Number(row.total ?? 0);
-    const completed = scalarNumber(
-      db,
-      "SELECT COUNT(*) AS value FROM drive_runs WHERE mode = ? AND status IN ('completed', 'confirmed', 'documented')",
-      [mode],
-    );
-    const rate = total === 0 ? 0 : completed / total;
-    metrics.push({
-      subject: `drive:${mode}`,
-      name: "drive_firing_rate",
-      value: Number(rate.toFixed(4)),
-      threshold: 0.8,
-      status: rate >= 0.8 ? "pass" : "warn",
-    });
-  }
-  const hookTotal = scalarNumber(db, "SELECT COUNT(*) AS value FROM hook_events");
-  const troubleTotal = scalarNumber(
-    db,
-    "SELECT COUNT(*) AS value FROM hook_events WHERE event_type IN ('forced_stop', 'error', 'failed') OR digest LIKE '%fail%' OR digest LIKE '%error%'",
-  );
-  metrics.push({
-    subject: "hooks",
-    name: "trouble_event_rate",
-    value: hookTotal === 0 ? 0 : Number((troubleTotal / hookTotal).toFixed(4)),
-    threshold: 0,
-    status: troubleTotal === 0 ? "pass" : "warn",
-  });
-  const workflowTotal = scalarNumber(db, "SELECT COUNT(*) AS value FROM workflow_runs");
-  const blockedTotal = scalarNumber(
-    db,
-    "SELECT COUNT(*) AS value FROM workflow_runs WHERE ready_status NOT IN ('passed_local', 'passed', 'ready')",
-  );
-  const humanTotal = scalarNumber(
-    db,
-    "SELECT COUNT(*) AS value FROM workflow_runs WHERE human_required = 1",
-  );
-  const retryGroups = scalarNumber(
-    db,
-    `SELECT COUNT(*) AS value
-     FROM (
-       SELECT plan_id, workflow, phase, COUNT(*) AS c
-       FROM workflow_runs
-       GROUP BY plan_id, workflow, phase
-       HAVING c > 1
-     )`,
-  );
-  metrics.push({
-    subject: "workflow",
-    name: "workflow_blocked_rate",
-    value: workflowTotal === 0 ? 0 : Number((blockedTotal / workflowTotal).toFixed(4)),
-    threshold: 0,
-    status: blockedTotal === 0 ? "pass" : "warn",
-  });
-  metrics.push({
-    subject: "workflow",
-    name: "workflow_human_required_rate",
-    value: workflowTotal === 0 ? 0 : Number((humanTotal / workflowTotal).toFixed(4)),
-    threshold: 0,
-    status: humanTotal === 0 ? "pass" : "warn",
-  });
-  metrics.push({
-    subject: "workflow",
-    name: "workflow_retry_groups",
-    value: retryGroups,
-    threshold: 0,
-    status: retryGroups === 0 ? "pass" : "warn",
-  });
-  for (const metric of metrics) {
-    const signalId = stableId("telemetry-signal", `${metric.subject}:${metric.name}`);
-    recordProjectionEvent(db, {
-      table: "quality_signals",
-      id: signalId,
-      row: {
-        signal_id: signalId,
-        source: "telemetry-metrics",
-        subject_id: metric.subject,
-        metric: metric.name,
-        value: metric.value,
-        threshold: metric.threshold,
-        status: metric.status,
-        computed_at: computedAt,
-      },
-    });
-  }
+  const store = new SqliteProjectionStore(db);
+  projectOperationalMetricsApplication({ read: store, store, computedAt: nowIso() });
 }
 
 /** screen-list.md §1 の画面表 (画面 ID / 名 / カテゴリ / URL / L1 参照) を行に分解する。 */

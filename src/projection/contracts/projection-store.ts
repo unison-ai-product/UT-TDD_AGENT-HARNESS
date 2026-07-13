@@ -1,4 +1,5 @@
 import type { ModelEvaluationFacts } from "../domain/model-evaluations";
+import type { OperationalMetricFacts } from "../domain/operational-metrics";
 import type { PocDecisionCount } from "../domain/poc-evaluations";
 
 export interface ProjectionEvent {
@@ -23,4 +24,8 @@ export interface ModelEvaluationConfigPort {
 
 export interface ModelEvaluationReadPort {
   readModelEvaluationFacts(): readonly ModelEvaluationFacts[];
+}
+
+export interface OperationalMetricsReadPort {
+  readOperationalMetricFacts(): OperationalMetricFacts;
 }

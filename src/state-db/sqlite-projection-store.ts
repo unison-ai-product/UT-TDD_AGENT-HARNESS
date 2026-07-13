@@ -1,9 +1,11 @@
 import type {
   ModelEvaluationReadPort,
+  OperationalMetricsReadPort,
   ProjectionEvent,
   ProjectionStore,
 } from "../projection/contracts/projection-store";
 import type { ModelEvaluationFacts } from "../projection/domain/model-evaluations";
+import type { OperationalMetricFacts } from "../projection/domain/operational-metrics";
 import { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status";
 import type { PocDecisionCount } from "../projection/domain/poc-evaluations";
 import { HARNESS_DB_TABLE_BY_NAME, primaryKeyOf, type TableDef } from "../schema/harness-db";
@@ -28,7 +30,9 @@ export interface ProjectionFindingInput {
   evidencePath?: string;
 }
 
-export class SqliteProjectionStore implements ProjectionStore, ModelEvaluationReadPort {
+export class SqliteProjectionStore
+  implements ProjectionStore, ModelEvaluationReadPort, OperationalMetricsReadPort
+{
   readonly #db: HarnessDb;
 
   constructor(db: HarnessDb) {
@@ -96,6 +100,57 @@ export class SqliteProjectionStore implements ProjectionStore, ModelEvaluationRe
       .map(modelEvaluationFacts);
   }
 
+  readOperationalMetricFacts(): OperationalMetricFacts {
+    const drives = this.#db
+      .prepare(
+        `SELECT COALESCE(mode, 'unknown') AS mode,
+                COUNT(*) AS total,
+                SUM(CASE WHEN status IN ('completed', 'confirmed', 'documented') THEN 1 ELSE 0 END) AS completed
+           FROM drive_runs
+          GROUP BY COALESCE(mode, 'unknown')
+          ORDER BY mode`,
+      )
+      .all()
+      .map((row) => ({
+        mode: String(row.mode ?? "unknown"),
+        total: Number(row.total ?? 0),
+        completed: Number(row.completed ?? 0),
+      }));
+    const hooks = this.#db
+      .prepare(
+        `SELECT COUNT(*) AS total,
+                SUM(CASE WHEN event_type IN ('forced_stop', 'error', 'failed')
+                              OR digest LIKE '%fail%' OR digest LIKE '%error%'
+                         THEN 1 ELSE 0 END) AS trouble
+           FROM hook_events`,
+      )
+      .get();
+    const workflow = this.#db
+      .prepare(
+        `SELECT COUNT(*) AS total,
+                SUM(CASE WHEN ready_status NOT IN ('passed_local', 'passed', 'ready') THEN 1 ELSE 0 END) AS blocked,
+                SUM(CASE WHEN human_required = 1 THEN 1 ELSE 0 END) AS human_required,
+                (SELECT COUNT(*) FROM (
+                  SELECT plan_id, workflow, phase
+                    FROM workflow_runs
+                   GROUP BY plan_id, workflow, phase
+                  HAVING COUNT(*) > 1
+                )) AS retry_groups
+           FROM workflow_runs`,
+      )
+      .get();
+    return {
+      drives,
+      hooks: { total: numeric(hooks?.total), trouble: numeric(hooks?.trouble) },
+      workflow: {
+        total: numeric(workflow?.total),
+        blocked: numeric(workflow?.blocked),
+        humanRequired: numeric(workflow?.human_required),
+        retryGroups: numeric(workflow?.retry_groups),
+      },
+    };
+  }
+
   uniqueShortPlanExists(planId: string): boolean {
     if (!isBareNumericPlanContext(planId)) return false;
     const row = this.#db
@@ -114,6 +169,10 @@ function modelEvaluationFacts(row: Record<string, unknown>): ModelEvaluationFact
     totalOutputTokens: Number(row.total_output_tokens ?? 0),
     totalCostUsd: row.total_cost_usd == null ? null : Number(row.total_cost_usd),
   };
+}
+
+function numeric(value: unknown): number {
+  return Number(value ?? 0);
 }
 
 function tableDef(name: string): TableDef {
