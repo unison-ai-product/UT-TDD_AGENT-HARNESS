@@ -10,24 +10,18 @@ function run(command: string, args: string[], cwd: string, env = process.env): v
   }
 }
 
-function removeSnapshot(repoRoot: string, snapshotRoot: string, depsRoot: string): void {
+function removeSnapshot(snapshotRoot: string, depsRoot: string): void {
   const failures: unknown[] = [];
   try {
-    if (existsSync(depsRoot) && lstatSync(depsRoot).isSymbolicLink() && realpathSync(depsRoot) === realpathSync(join(repoRoot, "node_modules"))) {
+    if (existsSync(depsRoot) && lstatSync(depsRoot).isSymbolicLink()) {
       rmdirSync(depsRoot);
     }
   } catch (error) {
     failures.push(error);
   }
   try {
-    run("git", ["worktree", "remove", "--force", snapshotRoot], repoRoot);
-  } catch (error) {
-    failures.push(error);
-  }
-  try {
     (globalThis as { Bun?: { gc?: (force?: boolean) => void } }).Bun?.gc?.(true);
     rmSync(snapshotRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
-    run("git", ["worktree", "prune"], repoRoot);
   } catch (error) {
     failures.push(error);
   }
@@ -42,7 +36,8 @@ const snapshotDeps = join(snapshotRoot, "node_modules");
 const cacheRoot = join(tmpdir(), `ut-tdd-vitest-cache-${process.pid}-${Date.now()}`);
 let primaryError: unknown;
 try {
-  run("git", ["worktree", "add", "--detach", snapshotRoot, "HEAD"], repoRoot);
+  run("git", ["clone", "--no-local", "--shared", "--no-checkout", repoRoot, snapshotRoot], repoRoot);
+  run("git", ["checkout", "--detach", "HEAD"], snapshotRoot);
   symlinkSync(realpathSync(sourceDeps), snapshotDeps, process.platform === "win32" ? "junction" : "dir");
   run(process.execPath, ["x", "vitest", "run", ...process.argv.slice(2)], snapshotRoot, {
     ...process.env,
@@ -53,12 +48,20 @@ try {
 } catch (error) {
   primaryError = error;
 } finally {
+  const cleanupFailures: unknown[] = [];
   try {
-    removeSnapshot(repoRoot, snapshotRoot, snapshotDeps);
+    removeSnapshot(snapshotRoot, snapshotDeps);
+  } catch (error) {
+    cleanupFailures.push(error);
+  }
+  try {
     rmSync(cacheRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
-  } catch (cleanupError) {
-    if (primaryError) throw new AggregateError([primaryError, cleanupError], "vitest execution and cleanup failed");
-    throw cleanupError;
+  } catch (error) {
+    cleanupFailures.push(error);
+  }
+  if (cleanupFailures.length > 0) {
+    if (primaryError) throw new AggregateError([primaryError, ...cleanupFailures], "vitest execution and cleanup failed");
+    throw new AggregateError(cleanupFailures, "vitest snapshot cleanup failed");
   }
 }
 if (primaryError) throw primaryError;

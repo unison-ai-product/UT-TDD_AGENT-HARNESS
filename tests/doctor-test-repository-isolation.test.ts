@@ -49,6 +49,26 @@ describe("doctor test repository isolation", () => {
     );
   });
 
+  it("U-TESTHYGIENE-018: AST detection rejects aliases and ignores comment or string decoys", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [
+        { path: "tests/alias.test.ts", source: "const get = process.cwd; get();" },
+        { path: "tests/import.test.ts", source: "import { cwd as get } from 'node:process'; get();" },
+        { path: "tests/env.test.ts", source: "const root = process.env.INIT_CWD;" },
+        { path: "tests/decoy.test.ts", source: "// process.cwd()\nconst text = 'process.cwd()';" },
+      ],
+      contracts: {},
+    });
+    expect(result.messages).toEqual(
+      expect.arrayContaining([
+        "test-repository-isolation - violation: forbidden-live-root-source:tests/alias.test.ts",
+        "test-repository-isolation - violation: forbidden-live-root-source:tests/import.test.ts",
+        "test-repository-isolation - violation: forbidden-live-root-source:tests/env.test.ts",
+      ]),
+    );
+    expect(result.messages).not.toContain("test-repository-isolation - violation: forbidden-live-root-source:tests/decoy.test.ts");
+  });
+
   it("U-TESTHYGIENE-015: classifies every real repository test access", () => {
     expect(checkTestRepositoryIsolation(process.cwd()).ok).toBe(true);
   });

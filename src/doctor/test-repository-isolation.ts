@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import ts from "typescript";
 import type { LintResult } from "../plan/lint";
 
 export type RepositoryReadMode = "head_snapshot" | "isolated_fixture";
@@ -20,7 +21,8 @@ right-arm-gate-planning:1 right-lung-doc-governance:1 roadmap:1 rule-automation-
 runtime-portability:2 screen-impl-pair-freeze:1 self-pair-normative-guard:1 setup-agent-floor:2 setup:7 skill-assignment:1 state-db:1
 sub-doc-catalog-drift:5 sub-doc-section-structure:1 telemetry-closure:1 test-design-naming:1 toolchain-pin:1 tracked-canonical:1
 vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
-doctor-test-repository-isolation:1
+doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1
+global-setup:1 support/workspace-roots:2
 `;
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
@@ -40,8 +42,33 @@ export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadCo
       }),
   );
 
-function codeOnly(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|\s)\/\/.*$/gm, "$1");
+function isProcessReference(node: ts.Expression): boolean {
+  return ts.isIdentifier(node) && node.text === "process";
+}
+
+function isCwdAccess(node: ts.Node): node is ts.PropertyAccessExpression {
+  return ts.isPropertyAccessExpression(node) && isProcessReference(node.expression) && node.name.text === "cwd";
+}
+
+function inspectSource(path: string, source: string): { calls: number; forbidden: boolean } {
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  let calls = 0;
+  let forbidden = false;
+  const visit = (node: ts.Node): void => {
+    if (ts.isIdentifier(node) && node.text === "__dirname") forbidden = true;
+    if (ts.isPropertyAccessExpression(node) && ts.isMetaProperty(node.expression) && ["dirname", "url"].includes(node.name.text)) forbidden = true;
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && ["process", "node:process"].includes(node.moduleSpecifier.text)) forbidden = true;
+    if (ts.isCallExpression(node) && isCwdAccess(node.expression)) calls += 1;
+    else if (isCwdAccess(node) && !(ts.isCallExpression(node.parent) && node.parent.expression === node)) forbidden = true;
+    if (ts.isElementAccessExpression(node) && isProcessReference(node.expression)) forbidden = true;
+    if (ts.isPropertyAccessExpression(node) && isProcessReference(node.expression) && node.name.text === "chdir") forbidden = true;
+    if (ts.isPropertyAccessExpression(node) && ts.isPropertyAccessExpression(node.expression) && isProcessReference(node.expression.expression) && node.expression.name.text === "env") {
+      if (["INIT_CWD", "PWD"].includes(node.name.text)) forbidden = true;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return { calls, forbidden };
 }
 
 export function analyzeTestRepositoryIsolation(input: {
@@ -52,12 +79,12 @@ export function analyzeTestRepositoryIsolation(input: {
   const actual = new Map<string, number>();
   const forbidden: string[] = [];
   for (const file of input.files) {
-    const source = codeOnly(file.source);
     const path = file.path.replaceAll("\\", "/");
-    if (/\b__dirname\b|\bimport\.meta\.(?:dirname|url)\b|\bprocess\s*\[\s*["']cwd["']\s*\]/.test(source)) {
+    const inspected = inspectSource(path, file.source);
+    if (inspected.forbidden) {
       forbidden.push(`forbidden-live-root-source:${path}`);
     }
-    const calls = (source.match(/\bprocess\.cwd\(\)/g) ?? []).length;
+    const calls = inspected.calls;
     if (calls > 0) actual.set(path, calls);
   }
   const violations: string[] = [...forbidden];
@@ -85,7 +112,7 @@ function testFiles(root: string): Array<{ path: string; source: string }> {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name);
       if (entry.isDirectory()) pending.push(path);
-      else if (entry.isFile() && entry.name.endsWith(".test.ts")) {
+      else if (entry.isFile() && entry.name.endsWith(".ts")) {
         files.push({ path: relative(root, path).replaceAll("\\", "/"), source: readFileSync(path, "utf8") });
       }
     }
