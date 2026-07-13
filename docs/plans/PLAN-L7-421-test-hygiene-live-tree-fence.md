@@ -26,13 +26,13 @@ generates:
   - artifact_path: docs/plans/PLAN-L7-421-test-hygiene-live-tree-fence.md
     artifact_type: markdown_doc
   - artifact_path: scripts/run-vitest-snapshot.ts
-    artifact_type: typescript_source
+    artifact_type: script
   - artifact_path: src/runtime/repo-root.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
   - artifact_path: src/doctor/runtime-state-location.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
   - artifact_path: src/doctor/test-repository-isolation.ts
-    artifact_type: typescript_source
+    artifact_type: source_module
 dependencies:
   parent: null
   requires: []
