@@ -139,7 +139,11 @@ function withFakeProviderEnv(provider: "codex" | "claude") {
   writeFakeProvider(binDir, provider);
   return {
     binDir,
-    env: { ...process.env, PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}` },
+    env: {
+      ...process.env,
+      UT_TDD_TEST_PROVIDER_OUTPUT_DIR: binDir,
+      PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
+    },
   };
 }
 
