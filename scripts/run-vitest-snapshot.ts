@@ -167,7 +167,7 @@ export function sealReference(referenceRoot: string): void {
   run("attrib", ["+R", join(referenceRoot, "*"), "/S"], referenceRoot);
   run(
     "icacls",
-    [referenceRoot, "/deny", `${identity}:(AD,DC)`, "/C", "/Q"],
+    [referenceRoot, "/deny", `${identity}:(WD,AD)`, "/C", "/Q"],
     referenceRoot,
   );
 }
