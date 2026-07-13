@@ -61,6 +61,31 @@ export class LegacyMigrationLedger {
     this.commands = new AppendCommandTransaction(db, transaction);
   }
 
+  reconstruct(legacyPlanId: string):
+    | {
+        readonly ok: true;
+        readonly state: Readonly<Record<string, unknown>>;
+        readonly eventDigests: readonly string[];
+        readonly payloadDigests: readonly string[];
+      }
+    | { readonly ok: false; readonly ruleId: string } {
+    if (!migratePlanLedger(this.db).ok) return { ok: false, ruleId: "plan-ledger-unavailable" };
+    const state = this.db
+      .prepare("SELECT * FROM legacy_plan_migrations WHERE legacy_plan_id = ?")
+      .get(legacyPlanId);
+    if (!state) return { ok: false, ruleId: "plan-migration-not-found" };
+    const events = this.db
+      .prepare(`SELECT event_digest, command_payload_digest FROM legacy_plan_migration_events
+        WHERE legacy_plan_id = ? ORDER BY sequence`)
+      .all(legacyPlanId);
+    return {
+      ok: true,
+      state: Object.freeze({ ...state }),
+      eventDigests: Object.freeze(events.map((event) => String(event.event_digest))),
+      payloadDigests: Object.freeze(events.map((event) => String(event.command_payload_digest))),
+    };
+  }
+
   observe(input: ObserveMigrationInput): AppendResult {
     if (!migratePlanLedger(this.db).ok) return failed("plan-ledger-unavailable");
     return this.commands.run(

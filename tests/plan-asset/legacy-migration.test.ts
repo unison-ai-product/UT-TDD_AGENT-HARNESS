@@ -70,7 +70,6 @@ describe("legacy migration reducer", () => {
   });
 
   it.todo("U-PA-032: rolls back every migration write boundary after fault injection");
-  it.todo("U-PA-033: reconstructs identical state and provenance after file reopen");
 });
 
 function event(overrides: Partial<MigrationEvent> = {}): MigrationEvent {

@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { LegacyMigrationLedger } from "../../src/plan-asset/ledger/legacy-migration-ledger.js";
-import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
+import { migratePlanLedger, openPlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../../src/state-db/index.js";
 
 describe("legacy migration ledger application", () => {
@@ -108,6 +111,23 @@ describe("legacy migration ledger application", () => {
         ruleId: "plan-ledger-unavailable",
       });
     });
+  });
+
+  it("U-PA-033: reconstructs identical state and provenance after file reopen", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-migration-ledger-"));
+    try {
+      const firstDb = openPlanLedger({ repoRoot });
+      const first = new LegacyMigrationLedger(firstDb);
+      first.observe(input());
+      const before = first.reconstruct(input().legacyPlanId);
+      firstDb.close();
+      const reopened = openPlanLedger({ repoRoot });
+      const after = new LegacyMigrationLedger(reopened).reconstruct(input().legacyPlanId);
+      expect(after).toEqual(before);
+      reopened.close();
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
   });
 });
 
