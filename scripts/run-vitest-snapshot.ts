@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, realpathSync, rmSync, symlinkSync } from "node:fs";
+import { cpSync, existsSync, lstatSync, realpathSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -28,6 +28,19 @@ function removeSnapshot(snapshotRoot: string, depsRoot: string): void {
   if (failures.length > 0) throw new AggregateError(failures, "vitest snapshot cleanup failed");
 }
 
+function createSnapshot(repoRoot: string, snapshotRoot: string): void {
+  const probe = spawnSync("git", ["rev-parse", "--is-inside-work-tree"], { cwd: repoRoot, stdio: "ignore" });
+  if (probe.status === 0) {
+    run("git", ["clone", "--no-local", "--shared", "--no-checkout", repoRoot, snapshotRoot], repoRoot);
+    run("git", ["checkout", "--detach", "HEAD"], snapshotRoot);
+    return;
+  }
+  cpSync(repoRoot, snapshotRoot, {
+    recursive: true,
+    filter: (path) => ![".git", "node_modules"].includes(path.slice(repoRoot.length + 1)),
+  });
+}
+
 const repoRoot = process.cwd();
 const sourceDeps = join(repoRoot, "node_modules");
 if (!existsSync(sourceDeps)) throw new Error("node_modules is required before test snapshot execution");
@@ -36,14 +49,14 @@ const snapshotDeps = join(snapshotRoot, "node_modules");
 const cacheRoot = join(tmpdir(), `ut-tdd-vitest-cache-${process.pid}-${Date.now()}`);
 let primaryError: unknown;
 try {
-  run("git", ["clone", "--no-local", "--shared", "--no-checkout", repoRoot, snapshotRoot], repoRoot);
-  run("git", ["checkout", "--detach", "HEAD"], snapshotRoot);
+  createSnapshot(repoRoot, snapshotRoot);
   symlinkSync(realpathSync(sourceDeps), snapshotDeps, process.platform === "win32" ? "junction" : "dir");
   run(process.execPath, ["x", "vitest", "run", ...process.argv.slice(2)], snapshotRoot, {
     ...process.env,
     INIT_CWD: snapshotRoot,
     UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,
     UT_TDD_UPDATE_CHECK_CACHE_DIR: cacheRoot,
+    UT_TDD_VITEST_CACHE_DIR: join(cacheRoot, "vite"),
   });
 } catch (error) {
   primaryError = error;

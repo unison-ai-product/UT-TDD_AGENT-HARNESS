@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertGitWorkspaceUnchanged,
+  captureGitWorkspaceFingerprint,
   captureWorkspaceInventory,
   type GitWorkspaceFingerprint,
 } from "./support/git-workspace-fingerprint";
@@ -36,12 +37,25 @@ describe("git workspace fence", () => {
     expect(() => assertGitWorkspaceUnchanged(fingerprint, { ...fingerprint })).not.toThrow();
   });
 
-  it.each(["head", "statusDigest", "worktreeDigest", "indexDigest", "untrackedDigest", "inventoryDigest"] as const)(
-    "U-TESTHYGIENE-011: rejects a changed %s component",
-    (key) => {
-      expect(() =>
-        assertGitWorkspaceUnchanged(fingerprint, { ...fingerprint, [key]: "mutated" }),
-      ).toThrow("workspace fence violation");
-    },
-  );
+  it("U-TESTHYGIENE-020: inventories a non-Git distribution tree without invoking Git", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-pack-fence-"));
+    try {
+      expect(captureGitWorkspaceFingerprint(root).head).toBe("non-git");
+    } finally {
+      removeTestTree(root);
+    }
+  });
+
+  it.each([
+    "head",
+    "statusDigest",
+    "worktreeDigest",
+    "indexDigest",
+    "untrackedDigest",
+    "inventoryDigest",
+  ] as const)("U-TESTHYGIENE-011: rejects a changed %s component", (key) => {
+    expect(() =>
+      assertGitWorkspaceUnchanged(fingerprint, { ...fingerprint, [key]: "mutated" }),
+    ).toThrow("workspace fence violation");
+  });
 });

@@ -860,7 +860,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(transformed.scripts.test).toContain("tests/distribution-acceptance.test.ts");
     expect(transformed.scripts.test).toContain("tests/readability.test.ts");
     expect(transformed.scripts["test:pack"]).toBe(transformed.scripts.test);
-    expect(transformed.scripts["test:source"]).toBe("vitest run");
+    expect(transformed.scripts["test:source"]).toContain("scripts/run-vitest-snapshot.ts");
     expect(transformed.scripts.typecheck).toBe("tsc --noEmit");
   });
 

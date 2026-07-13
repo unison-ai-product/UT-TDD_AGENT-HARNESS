@@ -3,14 +3,20 @@ import config from "../vitest.config";
 
 describe("U-TESTHYGIENE-001: vitest execution boundary", () => {
   it("pins test discovery, exclusions, and timeout", () => {
-    const test = (config as {
-      test?: {
-        include?: string[];
-        exclude?: string[];
-        testTimeout?: number;
-        globalSetup?: string[];
-      };
-    }).test;
+    const test = (
+      config as {
+        cacheDir?: string;
+        test?: {
+          include?: string[];
+          exclude?: string[];
+          testTimeout?: number;
+          globalSetup?: string[];
+        };
+      }
+    ).test;
+    expect((config as { cacheDir?: string }).cacheDir).toBe(
+      process.env.UT_TDD_VITEST_CACHE_DIR ?? "node_modules/.vite",
+    );
     expect(test?.include).toEqual(["tests/**/*.test.ts"]);
     expect(test?.exclude).toEqual([
       "node_modules/**",

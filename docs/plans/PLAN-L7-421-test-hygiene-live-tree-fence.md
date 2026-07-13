@@ -25,6 +25,14 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-421-test-hygiene-live-tree-fence.md
     artifact_type: markdown_doc
+  - artifact_path: scripts/run-vitest-snapshot.ts
+    artifact_type: typescript_source
+  - artifact_path: src/runtime/repo-root.ts
+    artifact_type: typescript_source
+  - artifact_path: src/doctor/runtime-state-location.ts
+    artifact_type: typescript_source
+  - artifact_path: src/doctor/test-repository-isolation.ts
+    artifact_type: typescript_source
 dependencies:
   parent: null
   requires: []
@@ -69,6 +77,11 @@ review_evidence: []
   等、openHarnessDb 利用 25 ファイル中残り) は `db.close()` 後 `rmSync(...,
   { recursive: true, force: true })` のみで、Windows のハンドル解放遅延時に
   EBUSY で落ちうる。cleanup ヘルパを共通化して全 DB テストへ適用する。
+- **T-6 (snapshot runtime 漏れ)**: detached clone が source `node_modules` を
+  symlink/junction で再利用するため、Vitest/Vite の既定 cache を source 側へ
+  書く。runner 固有の一時 cache root を環境注入し、update check cache と同じ
+  cleanup 境界で削除する。Clean Pack でも同一 runner を使い、Pack の標準
+  `bun test` を隔離実行する。
 
 ## 工程表
 

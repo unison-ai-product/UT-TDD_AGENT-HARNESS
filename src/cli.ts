@@ -970,7 +970,7 @@ hook
         ...(opts.path ? { file_path: opts.path } : {}),
         ...(opts.command ? { command: opts.command } : {}),
       };
-      const repoRoot = requireRuntimeRepoRoot();
+      const repoRoot = requireRuntimeRepoRoot({ allowCwdFallback: true });
       const postInput = {
         ...input,
         hook_event_name: "PostToolUse",

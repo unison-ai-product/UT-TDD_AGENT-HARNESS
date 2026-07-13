@@ -47,6 +47,13 @@ function git(repoRoot: string, args: string[]): Buffer {
   return result.stdout;
 }
 
+function isGitRepository(repoRoot: string): boolean {
+  return (
+    spawnSync("git", ["rev-parse", "--is-inside-work-tree"], { cwd: repoRoot, stdio: "ignore" })
+      .status === 0
+  );
+}
+
 function digest(...chunks: Array<string | Buffer>): string {
   const hash = createHash("sha256");
   for (const chunk of chunks) hash.update(chunk);
@@ -54,6 +61,18 @@ function digest(...chunks: Array<string | Buffer>): string {
 }
 
 export function captureGitWorkspaceFingerprint(repoRoot: string): GitWorkspaceFingerprint {
+  const inventory = captureWorkspaceInventory(repoRoot);
+  if (!isGitRepository(repoRoot)) {
+    return {
+      head: "non-git",
+      statusDigest: "non-git",
+      worktreeDigest: "non-git",
+      indexDigest: "non-git",
+      untrackedDigest: "non-git",
+      inventoryDigest: inventory.digest,
+      inventoryEntries: inventory.entries,
+    };
+  }
   const untrackedPaths = git(repoRoot, ["ls-files", "--others", "--exclude-standard", "-z"])
     .toString("utf8")
     .split("\0")
@@ -61,12 +80,18 @@ export function captureGitWorkspaceFingerprint(repoRoot: string): GitWorkspaceFi
     .sort();
   const untrackedChunks: Array<string | Buffer> = [];
   for (const path of untrackedPaths) {
-    untrackedChunks.push(path, "\0", readFileSync(join(repoRoot, path)), "\0");
+    const absolutePath = join(repoRoot, path);
+    const stat = lstatSync(absolutePath);
+    if (stat.isSymbolicLink()) untrackedChunks.push(path, "\0", readlinkSync(absolutePath), "\0");
+    else if (stat.isFile()) untrackedChunks.push(path, "\0", readFileSync(absolutePath), "\0");
+    else if (stat.isDirectory()) untrackedChunks.push(path, "\0", "directory", "\0");
+    else throw new Error(`workspace fence unsupported untracked entry: ${path}`);
   }
-  const inventory = captureWorkspaceInventory(repoRoot);
   return {
     head: git(repoRoot, ["rev-parse", "HEAD"]).toString("utf8").trim(),
-    statusDigest: digest(git(repoRoot, ["status", "--porcelain=v1", "-z", "--untracked-files=all"])),
+    statusDigest: digest(
+      git(repoRoot, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]),
+    ),
     worktreeDigest: digest(git(repoRoot, ["diff", "--binary", "HEAD"])),
     indexDigest: digest(git(repoRoot, ["diff", "--cached", "--binary", "HEAD"])),
     untrackedDigest: digest(...untrackedChunks),

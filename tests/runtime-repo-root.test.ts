@@ -22,13 +22,28 @@ describe("U-TESTHYGIENE-002: runtime repo root", () => {
     const isolated = mkdtempSync(join(tmpdir(), "ut-tdd-runtime-isolated-"));
     try {
       writeFileSync(join(root, "ut-tdd.project.json"), "{}\n");
-      expect(resolveRuntimeRepoRoot({ cwd: isolated, env: { CLAUDE_PROJECT_DIR: root } })).toBe(root);
-      expect(resolveRuntimeRepoRoot({ cwd: isolated, env: { CLAUDE_PROJECT_DIR: "relative" } })).toBeNull();
+      expect(resolveRuntimeRepoRoot({ cwd: isolated, env: { CLAUDE_PROJECT_DIR: root } })).toBe(
+        root,
+      );
+      expect(
+        resolveRuntimeRepoRoot({ cwd: isolated, env: { CLAUDE_PROJECT_DIR: "relative" } }),
+      ).toBeNull();
       expect(() =>
         requireRuntimeRepoRoot({ cwd: isolated, env: { CLAUDE_PROJECT_DIR: "relative" } }),
       ).toThrow("runtime state write blocked");
     } finally {
       rmSync(root, { recursive: true, force: true });
+      rmSync(isolated, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the hook cwd only when the caller explicitly permits a consumer fallback", () => {
+    const isolated = mkdtempSync(join(tmpdir(), "ut-tdd-runtime-hook-"));
+    try {
+      expect(requireRuntimeRepoRoot({ cwd: isolated, env: {}, allowCwdFallback: true })).toBe(
+        isolated,
+      );
+    } finally {
       rmSync(isolated, { recursive: true, force: true });
     }
   });
@@ -51,7 +66,13 @@ describe("U-TESTHYGIENE-002: runtime repo root", () => {
       mkdirSync(join(root, ".git"));
       mkdirSync(join(root, "src"));
       mkdirSync(join(root, ".claude"));
-      for (const path of ["package.json", "src/cli.ts", "AGENTS.md", "CLAUDE.md", ".claude/CLAUDE.md"]) {
+      for (const path of [
+        "package.json",
+        "src/cli.ts",
+        "AGENTS.md",
+        "CLAUDE.md",
+        ".claude/CLAUDE.md",
+      ]) {
         writeFileSync(join(root, path), "\n");
       }
       expect(resolveRuntimeRepoRoot({ cwd: root, env: {} })).toBe(root);
