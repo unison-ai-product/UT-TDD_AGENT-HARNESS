@@ -102,6 +102,7 @@ import {
   skillScore,
 } from "./skill-projections";
 import { projectSpecIr } from "./spec-ir-projections";
+import { runSqliteTransaction } from "./sqlite-transaction";
 import type { RunUsage } from "./token-tracker";
 import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections";
 
@@ -896,8 +897,7 @@ function projectReviewModelRuns(
  */
 export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
   if (usages.length === 0) return;
-  db.exec("BEGIN IMMEDIATE");
-  try {
+  runSqliteTransaction(db, () => {
     for (const u of usages) {
       if (!u.model) continue; // model 不明の行は集計不能なので捨てる
       const id = stableId("token-run", `${u.runtime}:${u.sessionId}:${u.turnIndex}`);
@@ -922,11 +922,7 @@ export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
         },
       });
     }
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    throw error;
-  }
+  });
 }
 
 function planStatusMap(repoRoot: string): Map<string, string> {
