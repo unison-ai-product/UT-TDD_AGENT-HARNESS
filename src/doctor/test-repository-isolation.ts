@@ -26,25 +26,41 @@ feedback-log:2
 global-setup.ts:1 support/workspace-roots.ts:3
 `;
 
-export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
-  Object.fromEntries(
-    CONTRACT_ROWS.trim()
-      .split(/\s+/)
-      .map((row) => {
-        const [name, calls] = row.split(":");
-        return [
-          `tests/${name.endsWith(".ts") ? name : `${name}.test.ts`}`,
-          {
-            mode: "head_snapshot",
-            calls: Number(calls),
-            reason: "repository contract read is fixed to detached HEAD",
-          },
-        ];
-      }),
-  );
+export const REPOSITORY_READ_CONTRACTS: Readonly<
+  Record<string, RepositoryReadContract>
+> = Object.fromEntries(
+  CONTRACT_ROWS.trim()
+    .split(/\s+/)
+    .map((row) => {
+      const [name, calls] = row.split(":");
+      return [
+        `tests/${name.endsWith(".ts") ? name : `${name}.test.ts`}`,
+        {
+          mode: "head_snapshot",
+          calls: Number(calls),
+          reason: "repository contract read is fixed to detached HEAD",
+        },
+      ];
+    }),
+);
 
 function isProcessReference(node: ts.Expression): boolean {
-  return ts.isIdentifier(node) && node.text === "process";
+  if (ts.isIdentifier(node) && node.text === "process") return true;
+  if (
+    ts.isPropertyAccessExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === "globalThis" &&
+    node.name.text === "process"
+  )
+    return true;
+  return (
+    ts.isCallExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === "require" &&
+    node.arguments.length === 1 &&
+    ts.isStringLiteralLike(node.arguments[0]) &&
+    ["process", "node:process"].includes(node.arguments[0].text)
+  );
 }
 
 function isCwdAccess(node: ts.Node): node is ts.PropertyAccessExpression {
@@ -67,24 +83,50 @@ const REPOSITORY_READ_APIS = new Set([
 const REPOSITORY_PATH =
   /^(?:\.?(?:\/|\\))?(?:\.claude|\.codex|\.github|\.ut-tdd|docs|scripts|skills|src|tests)(?:\/|\\)|^(?:AGENTS\.md|CLAUDE\.md|package\.json|tsconfig\.json|vitest\.config\.ts)$/;
 
+function staticPath(node: ts.Expression): string | null {
+  if (ts.isStringLiteralLike(node) || ts.isNoSubstitutionTemplateLiteral(node))
+    return node.text;
+  if (
+    ts.isCallExpression(node) &&
+    ((ts.isIdentifier(node.expression) &&
+      ["join", "resolve"].includes(node.expression.text)) ||
+      (ts.isPropertyAccessExpression(node.expression) &&
+        ["join", "resolve"].includes(node.expression.name.text)))
+  ) {
+    const parts = node.arguments.map(staticPath);
+    return parts.every((part): part is string => part !== null)
+      ? parts.join("/")
+      : null;
+  }
+  return null;
+}
+
 function isDirectRepositoryRead(node: ts.CallExpression): boolean {
   const name = ts.isIdentifier(node.expression)
     ? node.expression.text
     : ts.isPropertyAccessExpression(node.expression)
       ? node.expression.name.text
       : null;
-  const target = node.arguments[0];
+  const target = node.arguments[0] ? staticPath(node.arguments[0]) : null;
   return Boolean(
     name &&
-      REPOSITORY_READ_APIS.has(name) &&
-      target &&
-      ts.isStringLiteralLike(target) &&
-      REPOSITORY_PATH.test(target.text),
+    REPOSITORY_READ_APIS.has(name) &&
+    target &&
+    REPOSITORY_PATH.test(target),
   );
 }
 
-function inspectSource(path: string, source: string): { calls: number; forbidden: boolean } {
-  const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+function inspectSource(
+  path: string,
+  source: string,
+): { calls: number; forbidden: boolean } {
+  const file = ts.createSourceFile(
+    path,
+    source,
+    ts.ScriptTarget.ES2022,
+    true,
+    ts.ScriptKind.TS,
+  );
   let calls = 0;
   let forbidden = false;
   const visit = (node: ts.Node): void => {
@@ -101,6 +143,18 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
       ["process", "node:process"].includes(node.moduleSpecifier.text)
     )
       forbidden = true;
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.name.elements.some(
+        (element) =>
+          element.propertyName?.getText(file) === "cwd" ||
+          element.name.getText(file) === "cwd",
+      ) &&
+      node.initializer &&
+      isProcessReference(node.initializer)
+    )
+      forbidden = true;
     if (ts.isCallExpression(node) && isCwdAccess(node.expression)) calls += 1;
     if (
       ts.isCallExpression(node) &&
@@ -114,7 +168,11 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
       !(ts.isCallExpression(node.parent) && node.parent.expression === node)
     )
       forbidden = true;
-    if (ts.isElementAccessExpression(node) && isProcessReference(node.expression)) forbidden = true;
+    if (
+      ts.isElementAccessExpression(node) &&
+      isProcessReference(node.expression)
+    )
+      forbidden = true;
     if (
       ts.isPropertyAccessExpression(node) &&
       isProcessReference(node.expression) &&
@@ -154,11 +212,14 @@ export function analyzeTestRepositoryIsolation(input: {
   const violations: string[] = [...forbidden];
   for (const [path, calls] of actual) {
     const contract = contracts[path];
-    if (!contract) violations.push(`unclassified:${path}:repository-read=${calls}`);
+    if (!contract)
+      violations.push(`unclassified:${path}:repository-read=${calls}`);
     else if (contract.mode !== "head_snapshot")
       violations.push(`invalid-mode:${path}:${contract.mode}`);
     else if (contract.calls !== calls)
-      violations.push(`callsite-drift:${path}:expected=${contract.calls}:actual=${calls}`);
+      violations.push(
+        `callsite-drift:${path}:expected=${contract.calls}:actual=${calls}`,
+      );
   }
   for (const path of Object.keys(contracts)) {
     if (!actual.has(path)) violations.push(`stale-contract:${path}`);
@@ -166,7 +227,9 @@ export function analyzeTestRepositoryIsolation(input: {
   return violations.length === 0
     ? {
         ok: true,
-        messages: [`test-repository-isolation - OK (contracts=${actual.size}, live_runtime=0)`],
+        messages: [
+          `test-repository-isolation - OK (contracts=${actual.size}, live_runtime=0)`,
+        ],
       }
     : {
         ok: false,
@@ -201,6 +264,9 @@ export function checkTestRepositoryIsolation(repoRoot: string): LintResult {
   try {
     return analyzeTestRepositoryIsolation({ files: testFiles(repoRoot) });
   } catch {
-    return { ok: false, messages: ["test-repository-isolation - violation: scan-error"] };
+    return {
+      ok: false,
+      messages: ["test-repository-isolation - violation: scan-error"],
+    };
   }
 }

@@ -6,6 +6,7 @@ import {
   createSnapshot,
   finishSnapshotCleanup,
   removeSnapshot,
+  resolveSnapshotSource,
 } from "../scripts/run-vitest-snapshot";
 import { removeTestTree } from "./support/temp-tree";
 
@@ -22,6 +23,27 @@ describe("vitest snapshot runner", () => {
       expect(existsSync(join(snapshot, "node_modules"))).toBe(false);
     } finally {
       removeTestTree(source);
+      removeTestTree(snapshot);
+    }
+  });
+
+  it("U-TESTHYGIENE-024: treats a Pack nested below an unrelated Git root as non-Git", () => {
+    const parent = mkdtempSync(join(tmpdir(), "ut-tdd-parent-git-"));
+    const pack = join(parent, "pack");
+    const snapshot = `${parent}-snapshot`;
+    try {
+      expect(spawnSync("git", ["init"], { cwd: parent }).status).toBe(0);
+      mkdirSync(pack);
+      writeFileSync(join(pack, "package.json"), "{}\n");
+      mkdirSync(join(pack, "node_modules"));
+      writeFileSync(join(pack, "node_modules", "leak.txt"), "source-only\n");
+
+      expect(resolveSnapshotSource(pack)).toEqual({ kind: "copy" });
+      createSnapshot(pack, snapshot);
+      expect(existsSync(join(snapshot, "package.json"))).toBe(true);
+      expect(existsSync(join(snapshot, "node_modules"))).toBe(false);
+    } finally {
+      removeTestTree(parent);
       removeTestTree(snapshot);
     }
   });
@@ -52,3 +74,4 @@ describe("vitest snapshot runner", () => {
     expect(called).toEqual(["snapshot", "cache"]);
   });
 });
+import { spawnSync } from "node:child_process";

@@ -7,7 +7,12 @@ import {
 describe("doctor test repository isolation", () => {
   it("U-TESTHYGIENE-013: rejects a new unclassified live repository read", () => {
     const result = analyzeTestRepositoryIsolation({
-      files: [{ path: "tests/new.test.ts", source: "const root = process" + ".cwd();" }],
+      files: [
+        {
+          path: "tests/new.test.ts",
+          source: "const root = process" + ".cwd();",
+        },
+      ],
       contracts: {},
     });
     expect(result.ok).toBe(false);
@@ -19,7 +24,10 @@ describe("doctor test repository isolation", () => {
   it("U-TESTHYGIENE-024: rejects implicit cwd repository reads without process.cwd", () => {
     const result = analyzeTestRepositoryIsolation({
       files: [
-        { path: "tests/fs.test.ts", source: "readFileSync('docs/governance/README.md', 'utf8');" },
+        {
+          path: "tests/fs.test.ts",
+          source: "readFileSync('docs/governance/README.md', 'utf8');",
+        },
         { path: "tests/bun.test.ts", source: "Bun.file('src/cli.ts');" },
       ],
       contracts: {},
@@ -32,12 +40,59 @@ describe("doctor test repository isolation", () => {
     );
   });
 
+  it("U-TESTHYGIENE-025: rejects composed paths and alternate process references", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [
+        {
+          path: "tests/join.test.ts",
+          source: "readFileSync(join('docs', 'README.md'));",
+        },
+        {
+          path: "tests/resolve.test.ts",
+          source: "readFileSync(resolve('src/cli.ts'));",
+        },
+        { path: "tests/global.test.ts", source: "globalThis.process.cwd();" },
+        {
+          path: "tests/require.test.ts",
+          source: "require('node:process').cwd();",
+        },
+        {
+          path: "tests/destructure.test.ts",
+          source: "const { cwd } = process; cwd();",
+        },
+      ],
+      contracts: {},
+    });
+    expect(result.messages).toEqual(
+      expect.arrayContaining([
+        "test-repository-isolation - violation: unclassified:tests/join.test.ts:repository-read=1",
+        "test-repository-isolation - violation: unclassified:tests/resolve.test.ts:repository-read=1",
+        "test-repository-isolation - violation: unclassified:tests/global.test.ts:repository-read=1",
+        "test-repository-isolation - violation: unclassified:tests/require.test.ts:repository-read=1",
+        "test-repository-isolation - violation: forbidden-live-root-source:tests/destructure.test.ts",
+      ]),
+    );
+  });
+
   it("U-TESTHYGIENE-014: rejects callsite drift and stale contracts", () => {
     const result = analyzeTestRepositoryIsolation({
-      files: [{ path: "tests/a.test.ts", source: "process" + ".cwd(); process" + ".cwd();" }],
+      files: [
+        {
+          path: "tests/a.test.ts",
+          source: "process" + ".cwd(); process" + ".cwd();",
+        },
+      ],
       contracts: {
-        "tests/a.test.ts": { mode: "head_snapshot", calls: 1, reason: "fixture" },
-        "tests/stale.test.ts": { mode: "head_snapshot", calls: 1, reason: "fixture" },
+        "tests/a.test.ts": {
+          mode: "head_snapshot",
+          calls: 1,
+          reason: "fixture",
+        },
+        "tests/stale.test.ts": {
+          mode: "head_snapshot",
+          calls: 1,
+          reason: "fixture",
+        },
       },
     });
     expect(result.ok).toBe(false);
@@ -52,8 +107,14 @@ describe("doctor test repository isolation", () => {
   it("U-TESTHYGIENE-017: rejects direct root aliases that bypass snapshot cwd", () => {
     const result = analyzeTestRepositoryIsolation({
       files: [
-        { path: "tests/dirname.test.ts", source: "const root = __" + "dirname;" },
-        { path: "tests/meta.test.ts", source: "const root = import.meta." + "dirname;" },
+        {
+          path: "tests/dirname.test.ts",
+          source: "const root = __" + "dirname;",
+        },
+        {
+          path: "tests/meta.test.ts",
+          source: "const root = import.meta." + "dirname;",
+        },
         { path: "tests/element.test.ts", source: "process['" + "cwd']();" },
       ],
       contracts: {},
@@ -70,13 +131,22 @@ describe("doctor test repository isolation", () => {
   it("U-TESTHYGIENE-018: AST detection rejects aliases and ignores comment or string decoys", () => {
     const result = analyzeTestRepositoryIsolation({
       files: [
-        { path: "tests/alias.test.ts", source: "const get = process.cwd; get();" },
+        {
+          path: "tests/alias.test.ts",
+          source: "const get = process.cwd; get();",
+        },
         {
           path: "tests/import.test.ts",
           source: "import { cwd as get } from 'node:process'; get();",
         },
-        { path: "tests/env.test.ts", source: "const root = process.env.INIT_CWD;" },
-        { path: "tests/decoy.test.ts", source: "// process.cwd()\nconst text = 'process.cwd()';" },
+        {
+          path: "tests/env.test.ts",
+          source: "const root = process.env.INIT_CWD;",
+        },
+        {
+          path: "tests/decoy.test.ts",
+          source: "// process.cwd()\nconst text = 'process.cwd()';",
+        },
       ],
       contracts: {},
     });
