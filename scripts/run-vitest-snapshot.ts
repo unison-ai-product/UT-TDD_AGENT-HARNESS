@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, rmSync } from "node:fs";
+import { cpSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -51,17 +51,22 @@ export function finishSnapshotCleanup(primaryError: unknown, cleanups: Array<() 
 
 export function runSnapshotTests(args = process.argv.slice(2), repoRoot = process.cwd()): void {
   const snapshotRoot = join(tmpdir(), `ut-tdd-vitest-${process.pid}-${Date.now()}`);
+  const referenceRoot = join(tmpdir(), `ut-tdd-vitest-head-${process.pid}-${Date.now()}`);
   const cacheRoot = join(tmpdir(), `ut-tdd-vitest-cache-${process.pid}-${Date.now()}`);
   let primaryError: unknown;
   try {
     createSnapshot(repoRoot, snapshotRoot);
     run(process.execPath, ["install", "--frozen-lockfile"], snapshotRoot);
     run(process.execPath, ["run", "src/cli.ts", "db", "rebuild"], snapshotRoot);
+    createSnapshot(repoRoot, referenceRoot);
+    const runtimeState = join(snapshotRoot, ".ut-tdd");
+    if (existsSync(runtimeState)) cpSync(runtimeState, join(referenceRoot, ".ut-tdd"), { recursive: true });
     run(process.execPath, ["x", "vitest", "run", ...args], snapshotRoot, {
       ...process.env,
       INIT_CWD: snapshotRoot,
       UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,
       UT_TDD_TEST_FENCE_ROOT: repoRoot,
+      UT_TDD_HEAD_SNAPSHOT_ROOT: referenceRoot,
       UT_TDD_UPDATE_CHECK_CACHE_DIR: cacheRoot,
       UT_TDD_VITEST_CACHE_DIR: join(cacheRoot, "vite"),
     });
@@ -70,6 +75,7 @@ export function runSnapshotTests(args = process.argv.slice(2), repoRoot = proces
   } finally {
     finishSnapshotCleanup(primaryError, [
       () => removeSnapshot(snapshotRoot),
+      () => removeSnapshot(referenceRoot),
       () => rmSync(cacheRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }),
     ]);
   }

@@ -5,20 +5,45 @@ import { describe, expect, it } from "vitest";
 
 function createsPersistedHarnessDb(path: string, source: string): boolean {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const tracked = new Map<string, string>();
+  for (const statement of file.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !statement.importClause?.namedBindings ||
+      !ts.isNamedImports(statement.importClause.namedBindings)
+    )
+      continue;
+    for (const element of statement.importClause.namedBindings.elements) {
+      const imported = element.propertyName?.text ?? element.name.text;
+      if (
+        [
+          "defaultHarnessDbPath",
+          "ensureHarnessSchema",
+          "openHarnessDb",
+          "rebuildHarnessDb",
+        ].includes(imported)
+      )
+        tracked.set(element.name.text, imported);
+    }
+  }
   let persisted = false;
   const visit = (node: ts.Node): void => {
     if (!ts.isCallExpression(node) || !ts.isIdentifier(node.expression)) {
       ts.forEachChild(node, visit);
       return;
     }
-    if (["defaultHarnessDbPath", "ensureHarnessSchema"].includes(node.expression.text))
-      persisted = true;
-    if (
-      node.expression.text === "rebuildHarnessDb" &&
-      ts.isObjectLiteralExpression(node.arguments[0])
-    ) {
+    const called = tracked.get(node.expression.text) ?? node.expression.text;
+    if (["defaultHarnessDbPath", "ensureHarnessSchema"].includes(called)) persisted = true;
+    if (called === "openHarnessDb") {
+      const dbPath = node.arguments[0];
+      if (!dbPath || !ts.isStringLiteralLike(dbPath) || dbPath.text !== ":memory:")
+        persisted = true;
+    }
+    if (called === "rebuildHarnessDb" && ts.isObjectLiteralExpression(node.arguments[0])) {
       const suppliesDb = node.arguments[0].properties.some(
-        (property) => ts.isPropertyAssignment(property) && property.name.getText(file) === "db",
+        (property) =>
+          (ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property)) &&
+          property.name.getText(file) === "db",
       );
       if (!suppliesDb) persisted = true;
     }

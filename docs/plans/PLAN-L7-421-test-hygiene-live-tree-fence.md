@@ -82,6 +82,10 @@ review_evidence: []
   書く。runner 固有の一時 cache root を環境注入し、update check cache と同じ
   cleanup 境界で削除する。Clean Pack でも同一 runner を使い、Pack の標準
   `bun test` を隔離実行する。
+- **T-7 (snapshot 内の読書き競合)**: 全 test file が同じsnapshotを並列共有すると、
+  writer test が生成中の `.ut-tdd` をdoctor等のrepository-read testが観測する。
+  runnerは「書込み可能な実行snapshot」と「fingerprintで不変を強制するHEAD読取り
+  snapshot」を分離し、`headSnapshotRoot()` 契約は後者だけを返す。
 
 ## 工程表
 

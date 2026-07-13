@@ -1,9 +1,10 @@
 export type WorkspaceReadMode = "head_snapshot" | "isolated_fixture";
 
 export function headSnapshotRoot(): string {
-  const root = process.env.UT_TDD_TEST_EXECUTION_ROOT;
-  if (!root || root !== process.cwd()) throw new Error("detached HEAD execution root is required");
-  return process.cwd();
+  const root = process.env.UT_TDD_HEAD_SNAPSHOT_ROOT;
+  if (!root || root === process.cwd())
+    throw new Error("independent detached HEAD read root is required");
+  return root;
 }
 
 export function workspaceRead(input: {

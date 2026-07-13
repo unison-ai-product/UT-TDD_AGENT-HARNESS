@@ -95,6 +95,7 @@ import {
   type DesignDetectionStats,
   designDetectionMessages,
 } from "../src/state-db/design-detection";
+import { headSnapshotRoot } from "./support/workspace-roots";
 
 const NOW = "2026-06-04T00:00:00.000Z";
 const pointerPath = join("/repo", ".ut-tdd", "handover", "CURRENT.json");
@@ -413,7 +414,7 @@ describe("checkAgentSlots (doctor agent-slots surface, IMP-050)", () => {
 describe("runDoctor", () => {
   let cachedRealRepoDoctor: ReturnType<typeof runDoctor> | null = null;
   const realRepoDoctor = () => {
-    cachedRealRepoDoctor ??= runDoctor();
+    cachedRealRepoDoctor ??= runDoctor(nodeDoctorDeps(headSnapshotRoot()));
     return cachedRealRepoDoctor;
   };
 
@@ -516,9 +517,9 @@ describe("runDoctor", () => {
   });
 
   it("runs only the toolchain gate when doctor scope is toolchain", () => {
-    const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(process.cwd()));
+    const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(headSnapshotRoot()));
     const selected = selectDoctorCheckDefinitions(definitions, "toolchain");
-    const run = collectDoctorCheckRun(nodeDoctorDeps(process.cwd()), {
+    const run = collectDoctorCheckRun(nodeDoctorDeps(headSnapshotRoot()), {
       scope: "toolchain",
       timing: true,
     });
@@ -636,7 +637,7 @@ describe("runDoctor", () => {
   });
 
   it("surfaces typed spec trace closure as a doctor hard gate", () => {
-    const result = checkTypedSpecTraceClosure(process.cwd());
+    const result = checkTypedSpecTraceClosure(headSnapshotRoot());
     const r = realRepoDoctor();
 
     expect(result.ok).toBe(true);
@@ -646,7 +647,7 @@ describe("runDoctor", () => {
   });
 
   it("surfaces design doc cross integrity as a doctor hard gate", () => {
-    const result = checkDesignDocCrossIntegrity(process.cwd());
+    const result = checkDesignDocCrossIntegrity(headSnapshotRoot());
     const r = realRepoDoctor();
 
     expect(result.ok).toBe(true);
@@ -749,7 +750,7 @@ describe("runDoctor", () => {
   });
 
   it("surfaces typed spec ledger/body sync as a doctor hard gate", () => {
-    const result = checkTypedSpecLedgerBodySync(process.cwd());
+    const result = checkTypedSpecLedgerBodySync(headSnapshotRoot());
     const r = realRepoDoctor();
 
     expect(result.ok).toBe(true);
@@ -814,7 +815,7 @@ describe("runDoctor", () => {
   });
 
   it("surfaces typed spec owned artifact dispersal as a doctor hard gate", () => {
-    const result = checkTypedSpecOwnedArtifactDispersal(process.cwd());
+    const result = checkTypedSpecOwnedArtifactDispersal(headSnapshotRoot());
     const r = realRepoDoctor();
 
     expect(result.ok).toBe(true);
@@ -860,7 +861,7 @@ describe("runDoctor", () => {
   });
 
   it("surfaces typed spec phase/layer alignment as a doctor hard gate", () => {
-    const result = checkTypedSpecPhaseLayerAlignment(process.cwd());
+    const result = checkTypedSpecPhaseLayerAlignment(headSnapshotRoot());
     const r = realRepoDoctor();
 
     expect(result.ok).toBe(true);
@@ -912,7 +913,7 @@ describe("runDoctor", () => {
   });
 
   it("surfaces V-model agent contract detection as a doctor hard gate", () => {
-    const result = checkAgentContractDetection(process.cwd());
+    const result = checkAgentContractDetection(headSnapshotRoot());
     const r = realRepoDoctor();
 
     expect(result.ok).toBe(true);
@@ -962,7 +963,7 @@ describe("runDoctor", () => {
   });
 
   it("hard-gates PLAN governance once repo frontmatter debt is closed", () => {
-    const governance = checkPlanGovernance(process.cwd());
+    const governance = checkPlanGovernance(headSnapshotRoot());
     const r = realRepoDoctor();
 
     expect(governance.ok).toBe(true);
@@ -1445,23 +1446,29 @@ describe("runDoctor", () => {
   });
 
   it("keeps all hard gates wired into runDoctor hard-gate aggregation", () => {
-    const indexSource = readFileSync(join(process.cwd(), "src", "doctor", "index.ts"), "utf8");
+    const indexSource = readFileSync(join(headSnapshotRoot(), "src", "doctor", "index.ts"), "utf8");
     const registrySource = readFileSync(
-      join(process.cwd(), "src", "doctor", "check-registry.ts"),
+      join(headSnapshotRoot(), "src", "doctor", "check-registry.ts"),
       "utf8",
     );
     const definitionsSource = readFileSync(
-      join(process.cwd(), "src", "doctor", "check-definitions.ts"),
+      join(headSnapshotRoot(), "src", "doctor", "check-definitions.ts"),
       "utf8",
     );
     const groupSource = readFileSync(
-      join(process.cwd(), "src", "doctor", "check-definition-groups.ts"),
+      join(headSnapshotRoot(), "src", "doctor", "check-definition-groups.ts"),
       "utf8",
     );
-    const profileSource = readFileSync(join(process.cwd(), "src", "doctor", "profiles.ts"), "utf8");
-    const runnerSource = readFileSync(join(process.cwd(), "src", "doctor", "runner.ts"), "utf8");
-    const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(process.cwd()));
-    const definitionGroups = buildDoctorCheckDefinitionGroups(nodeDoctorDeps(process.cwd()));
+    const profileSource = readFileSync(
+      join(headSnapshotRoot(), "src", "doctor", "profiles.ts"),
+      "utf8",
+    );
+    const runnerSource = readFileSync(
+      join(headSnapshotRoot(), "src", "doctor", "runner.ts"),
+      "utf8",
+    );
+    const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(headSnapshotRoot()));
+    const definitionGroups = buildDoctorCheckDefinitionGroups(nodeDoctorDeps(headSnapshotRoot()));
     const flattenedGroupDefinitions = definitionGroups.flatMap((group) => group.definitions);
     const checkIds = definitions.map((definition) => definition.id);
     const groupCheckIds = flattenedGroupDefinitions.map((definition) => definition.id);

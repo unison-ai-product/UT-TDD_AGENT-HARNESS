@@ -11,7 +11,25 @@ describe("doctor test repository isolation", () => {
       contracts: {},
     });
     expect(result.ok).toBe(false);
-    expect(result.messages).toContain("test-repository-isolation - violation: unclassified:tests/new.test.ts:process.cwd=1");
+    expect(result.messages).toContain(
+      "test-repository-isolation - violation: unclassified:tests/new.test.ts:repository-read=1",
+    );
+  });
+
+  it("U-TESTHYGIENE-024: rejects implicit cwd repository reads without process.cwd", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [
+        { path: "tests/fs.test.ts", source: "readFileSync('docs/governance/README.md', 'utf8');" },
+        { path: "tests/bun.test.ts", source: "Bun.file('src/cli.ts');" },
+      ],
+      contracts: {},
+    });
+    expect(result.messages).toEqual(
+      expect.arrayContaining([
+        "test-repository-isolation - violation: unclassified:tests/fs.test.ts:repository-read=1",
+        "test-repository-isolation - violation: unclassified:tests/bun.test.ts:repository-read=1",
+      ]),
+    );
   });
 
   it("U-TESTHYGIENE-014: rejects callsite drift and stale contracts", () => {
@@ -53,7 +71,10 @@ describe("doctor test repository isolation", () => {
     const result = analyzeTestRepositoryIsolation({
       files: [
         { path: "tests/alias.test.ts", source: "const get = process.cwd; get();" },
-        { path: "tests/import.test.ts", source: "import { cwd as get } from 'node:process'; get();" },
+        {
+          path: "tests/import.test.ts",
+          source: "import { cwd as get } from 'node:process'; get();",
+        },
         { path: "tests/env.test.ts", source: "const root = process.env.INIT_CWD;" },
         { path: "tests/decoy.test.ts", source: "// process.cwd()\nconst text = 'process.cwd()';" },
       ],
@@ -66,7 +87,9 @@ describe("doctor test repository isolation", () => {
         "test-repository-isolation - violation: forbidden-live-root-source:tests/env.test.ts",
       ]),
     );
-    expect(result.messages).not.toContain("test-repository-isolation - violation: forbidden-live-root-source:tests/decoy.test.ts");
+    expect(result.messages).not.toContain(
+      "test-repository-isolation - violation: forbidden-live-root-source:tests/decoy.test.ts",
+    );
   });
 
   it("U-TESTHYGIENE-015: classifies every real repository test access", () => {
