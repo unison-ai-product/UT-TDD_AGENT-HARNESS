@@ -88,6 +88,27 @@ describe("legacy migration ledger application", () => {
       expect(migratePlanLedger(db)).toMatchObject({ ok: true });
     });
   });
+
+  it("U-PA-030: rejects migration event/receipt bijection orphans in both directions", () => {
+    withLedger(({ db, ledger }) => {
+      ledger.observe(input());
+      db.exec("DROP TRIGGER trg_append_command_receipts_no_delete");
+      db.exec("DELETE FROM append_command_receipts");
+      expect(migratePlanLedger(db)).toMatchObject({
+        ok: false,
+        ruleId: "plan-ledger-unavailable",
+      });
+    });
+    withLedger(({ db, ledger }) => {
+      ledger.observe(input());
+      db.exec("DROP TRIGGER trg_legacy_plan_migration_events_no_delete");
+      db.exec("DELETE FROM legacy_plan_migration_events");
+      expect(migratePlanLedger(db)).toMatchObject({
+        ok: false,
+        ruleId: "plan-ledger-unavailable",
+      });
+    });
+  });
 });
 
 function input() {

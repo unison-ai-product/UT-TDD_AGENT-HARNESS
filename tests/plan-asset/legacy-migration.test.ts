@@ -69,7 +69,6 @@ describe("legacy migration reducer", () => {
     ).toMatchObject({ ok: false, ruleId });
   });
 
-  it.todo("U-PA-030: detects event/current/receipt bijection tampering in both directions");
   it.todo("U-PA-032: rolls back every migration write boundary after fault injection");
   it.todo("U-PA-033: reconstructs identical state and provenance after file reopen");
 });

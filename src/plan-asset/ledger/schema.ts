@@ -522,8 +522,39 @@ function ledgerRowsValid(db: HarnessDb): boolean {
     aliasReductionsValid(db) &&
     reservationReductionsValid(db) &&
     migrationReductionsValid(db) &&
-    reservationReceiptsValid(db)
+    reservationReceiptsValid(db) &&
+    migrationReceiptsValid(db)
   );
+}
+
+function migrationReceiptsValid(db: HarnessDb): boolean {
+  const orphanEvents = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM legacy_plan_migration_events event
+       LEFT JOIN legacy_plan_migrations current ON current.legacy_plan_id = event.legacy_plan_id
+       LEFT JOIN append_command_receipts receipt ON receipt.result_ref = event.migration_event_id
+       WHERE current.legacy_plan_id IS NULL OR receipt.command_id IS NULL
+         OR receipt.subject_kind != 'legacy_migration'
+         OR receipt.command_id != event.command_id
+         OR receipt.command_payload_digest != event.command_payload_digest
+         OR receipt.subject_key != event.legacy_plan_id
+         OR receipt.result_kind != 'migration_event'
+         OR receipt.recorded_at != event.occurred_at
+         OR receipt.command_type != CASE event.event_kind
+           WHEN 'observed' THEN 'migration.observe'
+           WHEN 'decided' THEN 'migration.decide'
+           WHEN 'revised' THEN 'migration.revise'
+         END`,
+    )
+    .get();
+  const orphanReceipts = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM append_command_receipts receipt
+       LEFT JOIN legacy_plan_migration_events event ON event.migration_event_id = receipt.result_ref
+       WHERE receipt.subject_kind = 'legacy_migration' AND event.migration_event_id IS NULL`,
+    )
+    .get();
+  return Number(orphanEvents?.n ?? 0) === 0 && Number(orphanReceipts?.n ?? 0) === 0;
 }
 
 function reservationReceiptsValid(db: HarnessDb): boolean {
@@ -625,10 +656,14 @@ function reservationReductionsValid(db: HarnessDb): boolean {
 }
 
 function migrationReductionsValid(db: HarnessDb): boolean {
-  return db
-    .prepare("SELECT * FROM legacy_plan_migrations")
-    .all()
-    .every((current) => {
+  const currents = db.prepare("SELECT * FROM legacy_plan_migrations").all();
+  const streamCount = Number(
+    db.prepare("SELECT COUNT(DISTINCT legacy_plan_id) AS n FROM legacy_plan_migration_events").get()
+      ?.n ?? 0,
+  );
+  return (
+    streamCount === currents.length &&
+    currents.every((current) => {
       const stream = db
         .prepare(
           "SELECT * FROM legacy_plan_migration_events WHERE legacy_plan_id = ? ORDER BY sequence",
@@ -651,7 +686,8 @@ function migrationReductionsValid(db: HarnessDb): boolean {
         "identity_digest",
         "source_digest",
       ]);
-    });
+    })
+  );
 }
 
 function continuous(stream: readonly Readonly<Record<string, unknown>>[]): boolean {
