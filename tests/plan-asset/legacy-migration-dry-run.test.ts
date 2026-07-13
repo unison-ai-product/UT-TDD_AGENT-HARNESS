@@ -4,6 +4,7 @@ import {
   HeadTargetRegistry,
   LegacyMigrationDryRun,
   type MigrationDecisionPort,
+  targetSlotFindings,
 } from "../../src/plan-asset/application/legacy-migration-dry-run.js";
 
 describe("legacy migration dry-run", () => {
@@ -43,6 +44,10 @@ describe("legacy migration dry-run", () => {
         Number(git(["cat-file", "-s", `${result.sourceCommit}:${contractRef}`]).trim()),
       ).toBeGreaterThan(0);
     }
+  });
+
+  it("U-PA-041: resolves every authored target_slot against the HEAD document catalog", () => {
+    expect(targetSlotFindings(process.cwd())).toEqual([]);
   });
 
   it("U-PA-034: emits an exactly-once HEAD-bound record for every inventory item", () => {

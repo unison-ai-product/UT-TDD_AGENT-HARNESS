@@ -1,5 +1,10 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { parseStrictMarkdownTable } from "../../disposition/adapters/strict-markdown-table.js";
+import {
+  resolveCanonicalTarget,
+  type TargetRegistry,
+} from "../../disposition/domain/target-resolver.js";
 import { type Role, VALID_ROLES } from "../../schema/index.js";
 import {
   buildLegacyPlanInventory,
@@ -96,6 +101,7 @@ export class LegacyMigrationDryRun {
     );
     const findings = [
       ...manifestFindings(inventory.value.collisionGroups),
+      ...targetSlotFindings(repoRoot),
       ...records.flatMap((item) => item.findings),
     ];
     if (new Set(records.map((item) => item.legacyPlanId)).size !== inventory.value.items.length) {
@@ -123,6 +129,73 @@ export class LegacyMigrationDryRun {
       collisionItems: inventory.value.collisionGroups.flatMap((group) => group.planIds).length,
     });
   }
+}
+
+export function targetSlotFindings(repoRoot: string): MigrationDryRunFinding[] {
+  const catalogPath = "docs/governance/vmodel-document-catalog.md";
+  const ledgerPath = "docs/governance/vmodel-item-target-ledger.md";
+  const catalog = parseStrictMarkdownTable(headBytes(repoRoot, catalogPath), {
+    subjectId: catalogPath,
+    expectedHeaders: [
+      "doc_type_id",
+      "layer",
+      "sub_doc",
+      "category",
+      "requirement_class",
+      "applicability",
+      "default_status",
+      "source_doc_family",
+      "authoring_source_path",
+      "projection_table",
+      "profile_controlled",
+      "skip_reason_required",
+    ],
+  });
+  const ledger = parseStrictMarkdownTable(headBytes(repoRoot, ledgerPath), {
+    subjectId: ledgerPath,
+    expectedHeaders: [
+      "edge_id",
+      "item_id",
+      "項目名",
+      "category_id",
+      "source_ref",
+      "source_digest",
+      "target_status",
+      "target_kind",
+      "target_ref",
+      "判断理由",
+      "plan_id",
+    ],
+  });
+  if (!catalog.ok || !ledger.ok) {
+    return [
+      finding(
+        "plan-target-slot-registry-invalid",
+        null,
+        "HEAD target slot authoring table is invalid",
+      ),
+    ];
+  }
+  const registry: TargetRegistry = {
+    aliases: {},
+    pathAliases: {},
+    trackedPaths: new Set(),
+    familyMembers: {},
+    targetSlots: new Set(catalog.rows.map((row) => row.doc_type_id)),
+  };
+  return ledger.rows.flatMap((row) => {
+    if (row.target_kind !== "target_slot") return [];
+    const result = resolveCanonicalTarget({ kind: "target_slot", ref: row.target_ref }, registry);
+    return result.ok
+      ? []
+      : result.findings.map((item) =>
+          finding(item.ruleId, row.plan_id || null, `${row.edge_id}: ${item.message}`),
+        );
+  });
+}
+
+function headBytes(repoRoot: string, path: string): Uint8Array {
+  return execFileSync("git", ["-C", repoRoot, "show", `HEAD:${path}`]);
 }
 
 class ReviewedDecisionManifest implements MigrationDecisionPort {
