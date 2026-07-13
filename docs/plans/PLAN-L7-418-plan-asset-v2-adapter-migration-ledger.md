@@ -108,6 +108,7 @@ planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,
 - U-PA-039: dry-run recordの`sourceCommit + sourcePath`を独立Git oracleでblob OIDへ解決し、`git cat-file blob`の実bytes SHA-256が`sourceContentDigest`と一致することを再検証する。working tree再hashやreport内自己比較ではなく、commit-bound object取得元を証跡とする。
 - U-PA-040: `vmodel-role-contracts.md`を7 roleの上流正本とし、HEADからstrict loadしたrole contractを全`agent_slots`へlossless projectionする。各recordは`role + slotLabel + contractRef`を保持し、未知role/label不正/contract target欠落をfail-closeする。独立Git oracleで全contract blobがsource commitに存在し非空であることを検証する。
 - U-PA-041: HEADの`vmodel-item-target-ledger.md`にある全`target_kind=target_slot` edgeを、HEADの`vmodel-document-catalog.md`から構築したslot registryへ`resolveCanonicalTarget`で突合する。working tree catalogやdisplay claimを真実源にせず、slot欠落はdry-run global findingとしてfail-closeする。
+- U-PA-042: `tests/cli-surface.test.ts`で`plan migration-dry-run --json`の公開契約を固定し、exit 0、741/741、migrated 700、rekeyed 41、pending/finding 0をE2E検証する。
 - U-PA-030: migration event/current/global receiptの双方向bijectionとstream/current集合一致をverifierへ追加し、event-only/receipt-only mutationをGreen化済み。
 - U-PA-033: file-backed migration ledgerのclose/reopen後にcurrent state、event digest、command payload digest集合が完全一致するreconstruct oracleをGreen化済み。
 - U-PA-032: observe 3境界とadoption 7境界へfault portを注入し、各例外後にmigration/receipt/asset/revision/alias全table delta 0をGreen化済み。U-PA-001..033の実行可能testはtodo 0。

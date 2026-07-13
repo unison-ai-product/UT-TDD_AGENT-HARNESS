@@ -44,7 +44,7 @@ PLAN-L7-418で実装したPlanAsset v2 ledger、legacy migration application、7
 |---|---|---|
 | R0 | domain/ledger/CLIとHEAD正本を観測 | 741 PLAN、20 numeric-prefix群/41件、migration/rekey/reject application、global receiptを確認 |
 | R1 | L5-17/L6-71/ADR-008との差分比較 | reducer/transaction契約は既設計と一致。全件dry-run、reviewed rekey manifest、HEAD target、snapshot、role delegation、target slot証明が未backfill |
-| R2 | U-PA-001〜041を設計oracleへ照合 | identity、revision、receipt、rollback、reopen、741件bijection、target/provenance検査をGreen化 |
+| R2 | U-PA-001〜042を設計oracleへ照合 | identity、revision、receipt、rollback、reopen、741件bijection、target/provenance、CLI公開契約をGreen化 |
 | R3 | checked ZIP/A-187のclaim-only gapと照合 | catalog/display claimを成功根拠にせず、HEAD blob・typed slot・role contract実体へ突合。label推測、自動collision選択を禁止 |
 | R4 | 実装事実をForwardへ合流 | L6 function-spec、L7 unit-test-design、role contract正本へU-PA-034〜041と検査境界をbackfill |
 
@@ -84,7 +84,7 @@ dry-run受入値は固定実装条件ではなく現HEAD oracleとして`total=7
 ## §4 R4合流先
 
 - `docs/design/harness/L6-function-design/function-spec.md`: migration dry-run application、HEAD target/provenance、delegation/slot contract。
-- `docs/test-design/harness/L7-unit-test-design.md`: U-PA-034〜041。
+- `docs/test-design/harness/L7-unit-test-design.md`: U-PA-034〜042。
 - `docs/governance/vmodel-role-contracts.md`: 7 role delegation contract正本。
 - L5-17/ADR-008は既存identity/physical ledger契約と実装が一致し、重複更新不要と判定。
 
