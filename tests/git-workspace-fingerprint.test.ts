@@ -16,17 +16,18 @@ const fingerprint: GitWorkspaceFingerprint = {
   indexDigest: "index",
   untrackedDigest: "untracked",
   inventoryDigest: "inventory",
+  inventoryEntries: [],
 };
 
 describe("git workspace fence", () => {
   it("U-TESTHYGIENE-016: inventories ignored files and empty directories", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-"));
     try {
-      const before = captureWorkspaceInventory(root);
+      const before = captureWorkspaceInventory(root).digest;
       mkdirSync(join(root, ".ut-tdd", "gate_runs"), { recursive: true });
-      expect(captureWorkspaceInventory(root)).not.toBe(before);
+      expect(captureWorkspaceInventory(root).digest).not.toBe(before);
       writeFileSync(join(root, ".ut-tdd", "gate_runs", "leak.json"), "{}\n");
-      expect(captureWorkspaceInventory(root)).not.toBe(before);
+      expect(captureWorkspaceInventory(root).digest).not.toBe(before);
     } finally {
       removeTestTree(root);
     }

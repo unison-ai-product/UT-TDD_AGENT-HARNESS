@@ -10,10 +10,11 @@ export interface GitWorkspaceFingerprint {
   indexDigest: string;
   untrackedDigest: string;
   inventoryDigest: string;
+  inventoryEntries: string[];
 }
 
-export function captureWorkspaceInventory(root: string): string {
-  const entries: Array<string | Buffer> = [];
+export function captureWorkspaceInventory(root: string): { digest: string; entries: string[] } {
+  const entries: string[] = [];
   const visit = (directory: string, relativePath: string): void => {
     for (const entry of readdirSync(directory).sort()) {
       if (!relativePath && (entry === ".git" || entry === "node_modules")) continue;
@@ -21,19 +22,19 @@ export function captureWorkspaceInventory(root: string): string {
       const relativeEntry = relativePath ? `${relativePath}/${entry}` : entry;
       const stat = lstatSync(path);
       if (stat.isDirectory()) {
-        entries.push(`d:${relativeEntry}\0`);
+        entries.push(`d:${relativeEntry}`);
         visit(path, relativeEntry);
       } else if (stat.isFile()) {
-        entries.push(`f:${relativeEntry}\0`, digest(readFileSync(path)), "\0");
+        entries.push(`f:${relativeEntry}:${digest(readFileSync(path))}`);
       } else if (stat.isSymbolicLink()) {
-        entries.push(`l:${relativeEntry}\0`, readlinkSync(path), "\0");
+        entries.push(`l:${relativeEntry}:${readlinkSync(path)}`);
       } else {
         throw new Error(`workspace fence unsupported entry: ${relativeEntry}`);
       }
     }
   };
   visit(root, "");
-  return digest(...entries);
+  return { digest: digest(...entries), entries };
 }
 
 function git(repoRoot: string, args: string[]): Buffer {
@@ -62,13 +63,15 @@ export function captureGitWorkspaceFingerprint(repoRoot: string): GitWorkspaceFi
   for (const path of untrackedPaths) {
     untrackedChunks.push(path, "\0", readFileSync(join(repoRoot, path)), "\0");
   }
+  const inventory = captureWorkspaceInventory(repoRoot);
   return {
     head: git(repoRoot, ["rev-parse", "HEAD"]).toString("utf8").trim(),
     statusDigest: digest(git(repoRoot, ["status", "--porcelain=v1", "-z", "--untracked-files=all"])),
     worktreeDigest: digest(git(repoRoot, ["diff", "--binary", "HEAD"])),
     indexDigest: digest(git(repoRoot, ["diff", "--cached", "--binary", "HEAD"])),
     untrackedDigest: digest(...untrackedChunks),
-    inventoryDigest: captureWorkspaceInventory(repoRoot),
+    inventoryDigest: inventory.digest,
+    inventoryEntries: inventory.entries,
   };
 }
 
@@ -77,8 +80,12 @@ export function assertGitWorkspaceUnchanged(
   after: GitWorkspaceFingerprint,
 ): void {
   if (JSON.stringify(before) !== JSON.stringify(after)) {
+    const beforeSet = new Set(before.inventoryEntries);
+    const afterSet = new Set(after.inventoryEntries);
+    const added = after.inventoryEntries.filter((entry) => !beforeSet.has(entry)).slice(0, 10);
+    const removed = before.inventoryEntries.filter((entry) => !afterSet.has(entry)).slice(0, 10);
     throw new Error(
-      `test workspace fence violation: before=${JSON.stringify(before)} after=${JSON.stringify(after)}`,
+      `test workspace fence violation: added=${added.join(",")} removed=${removed.join(",")}`,
     );
   }
 }
