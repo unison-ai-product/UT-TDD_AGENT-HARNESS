@@ -74,7 +74,7 @@ origin/main に同一番号・別 slug の PLAN が 5 組存在する: L6-70 / L
 `PLAN-L6-71-plan-asset-canonical-migration-contracts` と衝突したため **PLAN-L6-78 へ改番**した。
 plan_id (full slug) は一意だが、短縮表記「PLAN-L7-424」等は既に曖昧で、schedule/references の短縮参照が
 誤読リスクを持つ。番号 prefix の一意性 lint または採番 SSoT (次番号の予約機構) が route 候補
-(起票判断は PO へ。既存 5 組の改番は両ランタイム調整が要るため本監査では行わない)。
+(PLAN-L6-79-plan-number-allocation-uniqueness として起票済。既存 5 組の改番は両ランタイム調整後の別 slice)。
 
 ## Finding Route (起票結果 — PO 指示 2026-07-13「未起票であれば起票する」)
 
