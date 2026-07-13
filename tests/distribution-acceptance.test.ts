@@ -267,9 +267,10 @@ describe("clean distribution local acceptance smoke", () => {
       const packPackageJson = JSON.parse(readFileSync(join(cleanRoot, "package.json"), "utf8")) as {
         scripts: Record<string, string>;
       };
-      expect(packPackageJson.scripts.test).toContain("scripts/run-vitest-snapshot.ts");
+      expect(packPackageJson.scripts.test).toBe("bun run test:pack");
+      expect(packPackageJson.scripts["test:pack"]).toContain("scripts/run-vitest-snapshot.ts");
       expect(packPackageJson.scripts.test).toContain("tests/distribution-acceptance.test.ts");
-      expect(packPackageJson.scripts["test:source"]).toContain("scripts/run-vitest-snapshot.ts");
+      expect(packPackageJson.scripts["test:source"]).toBe("bun run test:vitest-snapshot");
 
       const status = runBun(cleanRoot, ["src/cli.ts", "status", "--json"], env);
       expect(status.status, status.stderr || status.stdout).toBe(0);

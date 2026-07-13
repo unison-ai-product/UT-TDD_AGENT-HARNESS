@@ -55,6 +55,7 @@ try {
     ...process.env,
     INIT_CWD: snapshotRoot,
     UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,
+    UT_TDD_TEST_FENCE_ROOT: repoRoot,
     UT_TDD_UPDATE_CHECK_CACHE_DIR: cacheRoot,
     UT_TDD_VITEST_CACHE_DIR: join(cacheRoot, "vite"),
   });

@@ -111,7 +111,8 @@ review_evidence: []
 
 ## AC
 
-- [ ] テスト全走行後に `git status --porcelain` 差分ゼロ (fence が機械検証)。
+- [ ] テスト全走行後に**起動元 worktree**の `git status --porcelain` 差分ゼロ
+      (snapshot 外を fingerprint する fence が機械検証)。
 - [ ] repository 読みテストが detached HEAD snapshot / 隔離 fixture の契約台帳下にあり、
       新規・呼出数差分・古い契約は lint が fail する (real-repo regression test で実証)。
 - [ ] vitest.config に include/exclude/testTimeout が明示され drift テスト有り。
