@@ -35,6 +35,14 @@ generates:
     artifact_type: source_module
   - artifact_path: src/projection/domain/poc-evaluations.ts
     artifact_type: source_module
+  - artifact_path: src/state-db/sqlite-projection-store.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/sqlite-projection-rebuild.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/sqlite-transaction.ts
+    artifact_type: source_module
+  - artifact_path: tests/sqlite-projection-store.test.ts
+    artifact_type: test_code
   - artifact_path: tests/dependency-drift.test.ts
     artifact_type: test_code
 dependencies:
@@ -58,8 +66,15 @@ U-DOMAINをRed freezeし、共通kernelとmodule-boundary/cycle/CQS移行を所�
 - U-DEPD-005でreal repository全module graphのcycle 0を固定した。
 - `db-projection-coverage`が具象`HarnessDb`へ型逆依存していたため、query ownerの`DbIntrospectionPort`へ反転した。state-dbのprojection方向を維持し、7件として列挙されていた単一SCCをallowlistなしで解消した。
 - `projection-writer.ts`のapplication orchestration分割は本PLANの残DoDとして継続し、cycle 0だけをgod object解消完了の代用にしない。
-- PoC評価の集計規則を`src/state-db/projections/poc-evaluations.ts`へpure projectorとして抽出した。DB queryと永続化は互換facadeに残し、FR-L1-43のpublic APIを壊さずにapplication分離を開始した。
-- PoC用の意味的`ProjectionReadPort`と`ProjectionStore`をneutral projection contractへ抽出し、`read → domain → store`のapplication縦sliceを実装した。SQL構文をapplicationへ漏らさず、SQLite adapter化は次waveでrecord/transaction責務を移す。
+- PoC評価の集計規則は`src/projection/domain/poc-evaluations.ts`が所有する。`src/state-db/projections/poc-evaluations.ts`は旧importを壊さない互換re-exportであり、domain正本ではない。
+- PoC用の意味的`PocEvaluationReadPort`と`ProjectionStore`をneutral projection contractへ抽出し、`read → domain → store`のapplication縦sliceを実装した。SQL構文はapplicationへ漏らさない。
+- SQLite具象責務は`SqliteProjectionStore`、`runSqliteTransaction`、`clearRebuildableProjectionTables`へ分割した。旧`projection-writer.ts`はpublic facadeと全projectorの再構築順序を保つが、row正規化、secret fail-close、plan join分類、PoC read、transaction、再構築table消去は所有しない。
+
+## 検出負債
+
+- `DEBT-L7-423-01`: `recordFinding`直接経路は共通event正規化を通らない。finding payload用のsensitive-value oracleをRed化し、finding専用schema guardまたは共通guardへ収束させる。
+- `DEBT-L7-423-02`: 単独の`record`はprojection row upsertとjoin finding upsertを一つのtransaction境界に束ねない。application commandのtransaction port移行時に故障注入テストを追加し、部分commit 0を証明する。
+- 両負債はlegacy facade削除までのmigration wave内で解消する。現抽出のGreenを完了宣言や恒久免除に使わない。
 
 ## migration wave
 

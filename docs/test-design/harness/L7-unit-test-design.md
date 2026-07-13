@@ -397,6 +397,15 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 > **Status (PLAN-REVERSE-42, 2026-06-11)**: U-DEPD-001..003 and U-REGEXP-001..002 are green in `tests/dependency-drift.test.ts` against `src/lint/dependency-drift.ts`. `doctor` now surfaces `dependency-drift` / `regression-expansion` and no longer emits the scaffold stub.
 
+### §1.16.1e.1 U-DOMAIN (engine-swap domain / port / SQLite adapter)
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-DOMAIN-001 | neutral `normalizePath` boundary | Windows/POSIX separatorを同じpathへ正規化し、旧lint importは同一関数の互換re-exportである。 |
+| U-DOMAIN-002 | PoC pure projector | permitted decisionだけを正規化し、DB・filesystem・clockへ直接依存せずdeterministic eventを返す。 |
+| U-DOMAIN-003 | PoC application ports | read portの意味的countをdomainへ渡し、生成eventだけをstoreへ記録する。SQL文字列をportへ漏らさない。 |
+| U-DOMAIN-004 | `SqliteProjectionStore` / `clearRebuildableProjectionTables` | unknown tableをfail-closeし、schema列とPKを正規化し、free-form secretを永続化前に拒否する。未解決PLAN joinとstale runtime contextを区別し、audit/compound contextを誤検出しない。再構築ではrebuildable rowを消去する一方、`refactor_candidates`負債ledgerを保持する。 |
+
 ### §1.16.1f U-VTRIG L0-L7 (implementation verification cycle gate)
 
 > Pair = `vmodel-pair-freeze.md` verification group trigger + roadmap G-L7.E. The L0-L7 implementation band is a machine-surfaced verification cycle gate after L7 freeze.

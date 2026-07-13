@@ -55,12 +55,7 @@ import {
 import { loadMemoryEntries } from "../memory/index";
 import { projectPocEvaluations as projectPocEvaluationsApplication } from "../projection/application/project-poc-evaluations";
 import type { ProjectionEvent } from "../projection/contracts/projection-store";
-import {
-  HARNESS_DB_TABLE_BY_NAME,
-  HARNESS_DB_TABLES,
-  primaryKeyOf,
-  type TableDef,
-} from "../schema/harness-db";
+import { HARNESS_DB_TABLES } from "../schema/harness-db";
 import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog";
 import { normalizePath } from "../shared/source-text";
 import { stableId } from "../stable-id";
@@ -80,13 +75,7 @@ import {
   reconcileFeedbackLifecycle,
 } from "./feedback-projections";
 import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants";
-import {
-  defaultHarnessDbPath,
-  type HarnessDb,
-  openHarnessDb,
-  SECRET_PATTERN,
-  upsertRow,
-} from "./index";
+import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index";
 import { migrate, rowCounts } from "./migration";
 import {
   projectRuntimeGuardrailDecisionFromSessionEvent as projectRuntimeGuardrailDecisionFromSessionEventCore,
@@ -102,6 +91,8 @@ import {
   skillScore,
 } from "./skill-projections";
 import { projectSpecIr } from "./spec-ir-projections";
+import { clearRebuildableProjectionTables } from "./sqlite-projection-rebuild";
+import { type ProjectionFindingInput, SqliteProjectionStore } from "./sqlite-projection-store";
 import { runSqliteTransaction } from "./sqlite-transaction";
 import type { RunUsage } from "./token-tracker";
 import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections";
@@ -190,24 +181,9 @@ interface ProviderHandoverProjection {
   };
 }
 
-const RAW_PAYLOAD_KEYS = new Set([
-  "rawMcpResponse",
-  "browserTrace",
-  "providerTranscript",
-  "transcript",
-  "secret",
-  "credential",
-  "screenshotBlob",
-]);
 const VERIFY_CUTOVER_PLAN_ID = "PLAN-M-00-verify-cutover";
 const VERIFY_CUTOVER_AUDIT_PATH = ".ut-tdd/audit/A-132-l8-l14-verification-band-execution.md";
 const VERIFICATION_BAND_LAYERS = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"] as const;
-
-function tableDef(name: string): TableDef {
-  const table = HARNESS_DB_TABLE_BY_NAME.get(name);
-  if (!table) throw new Error(`unknown harness.db projection table: ${name}`);
-  return table;
-}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -231,95 +207,12 @@ function scalarNumber(db: HarnessDb, sql: string, params: unknown[] = []): numbe
   return typeof value === "number" ? value : Number(value ?? 0);
 }
 
-function assertNoSensitivePayload(row: Record<string, unknown>, table: TableDef): void {
-  // Structured-identifier columns — primary keys and `*_id` reference columns —
-  // hold deterministic composite slugs (e.g. "skill:planning-and-task-breakdown",
-  // or a relation-graph "finding:...:changed-path-src-task-..." slug), not
-  // free-form payload. Exempt them from the secret-pattern check so a legitimate
-  // slug that happens to contain "sk-" (inside a "task-" prefix or a "-breakdown"
-  // suffix) is not a false-positive secret. Free-form columns are still checked.
-  const pkNames = new Set(table.columns.filter((c) => c.primaryKey).map((c) => c.name));
-  const isStructuredId = (key: string): boolean => pkNames.has(key) || key.endsWith("_id");
-  for (const [key, value] of Object.entries(row)) {
-    if (RAW_PAYLOAD_KEYS.has(key)) {
-      throw new Error(`raw/sensitive payload column is not allowed in harness.db: ${key}`);
-    }
-    if (!isStructuredId(key) && typeof value === "string" && SECRET_PATTERN.test(value)) {
-      throw new Error(`secret-like value is not allowed in harness.db projection column: ${key}`);
-    }
-  }
-}
-
-function normalizeRow(table: TableDef, event: ProjectionEvent): Record<string, unknown> {
-  const allowed = new Set(table.columns.map((c) => c.name));
-  const pk = primaryKeyOf(table);
-  const row: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(event.row)) {
-    if (allowed.has(key)) row[key] = value;
-  }
-  if (row[pk] === undefined) row[pk] = event.id;
-  assertNoSensitivePayload(row, table);
-  return row;
-}
-
 function planExists(db: HarnessDb, planId: string): boolean {
-  const row = db.prepare("SELECT plan_id FROM plan_registry WHERE plan_id = ?").get(planId);
-  return row !== undefined;
+  return new SqliteProjectionStore(db).planExists(planId);
 }
 
-function uniqueShortPlanExists(db: HarnessDb, planId: string): boolean {
-  if (!isBareNumericPlanContext(planId)) return false;
-  const row = db
-    .prepare("SELECT COUNT(*) AS count FROM plan_registry WHERE plan_id LIKE ?")
-    .get(`${planId}-%`) as { count: number } | undefined;
-  return (row?.count ?? 0) === 1;
-}
-
-function isBareNumericPlanContext(planId: string): boolean {
-  return /^PLAN-L\d+-\d+$/.test(planId);
-}
-
-function isRuntimeStateEvidencePath(path: string | undefined): boolean {
-  if (!path) return false;
-  return path.startsWith(".ut-tdd/logs/") || path.startsWith(".ut-tdd/handover/");
-}
-
-function isRuntimeContextProjectionTable(table: string): boolean {
-  return (
-    table === "hook_events" ||
-    table === "test_runs" ||
-    table === "trouble_events" ||
-    table === "guardrail_decisions"
-  );
-}
-
-function findingId(kind: string, subjectId: string): string {
-  return stableId(`finding:${kind}`, subjectId);
-}
-
-function recordFinding(
-  db: HarnessDb,
-  input: {
-    kind: string;
-    severity?: "error" | "warn" | "info";
-    subjectId: string;
-    source: string;
-    evidencePath?: string;
-  },
-): void {
-  upsertRow(db, {
-    table: "findings",
-    primaryKey: "finding_id",
-    row: {
-      finding_id: findingId(input.kind, input.subjectId),
-      kind: input.kind,
-      severity: input.severity ?? "warn",
-      subject_id: input.subjectId,
-      source: input.source,
-      status: "open",
-      evidence_path: input.evidencePath ?? "",
-    },
-  });
+function recordFinding(db: HarnessDb, input: ProjectionFindingInput): void {
+  new SqliteProjectionStore(db).recordFinding(input);
 }
 
 function designCoverageId(subjectId: string): string {
@@ -458,52 +351,8 @@ export function projectDesignQualityCoverage(repoRoot: string, db: HarnessDb): v
   }
 }
 
-function checkResolvablePlanJoin(db: HarnessDb, table: string, row: Record<string, unknown>): void {
-  if (table === "plan_registry") return;
-  if (table === "feedback_events") return;
-  const planId = asString(row.plan_id);
-  if (!planId || planExists(db, planId) || uniqueShortPlanExists(db, planId)) return;
-  // A plan_id column can carry a free-form WORK-CONTEXT label that is not a single
-  // concrete PLAN foreign key and legitimately resolves to no registry row:
-  //   - an audit-cycle id (e.g. "A-136-cycle-p4-verification-audit"), or
-  //   - a compound "PLAN-a+b+c" label spanning several PLANs.
-  // hook_events records whichever work was active, so these are non-FK labels, not
-  // dangling references. Local runtime logs can also preserve old bare numeric PLAN
-  // context labels after the canonical slugged PLAN has been archived/renamed. Those
-  // are still surfaced, but separately from true source-table unresolved joins.
-  if (/^A-\d/.test(planId) || planId.includes("+")) return;
-  const pk = primaryKeyOf(tableDef(table));
-  const subject = `${table}:${String(row[pk] ?? "")}`;
-  if (
-    isBareNumericPlanContext(planId) &&
-    (isRuntimeStateEvidencePath(asString(row.evidence_path) ?? undefined) ||
-      isRuntimeContextProjectionTable(table))
-  ) {
-    recordFinding(db, {
-      kind: "stale-runtime-plan-context",
-      subjectId: subject,
-      source: "projection-writer",
-      evidencePath: asString(row.evidence_path) ?? undefined,
-    });
-    return;
-  }
-  recordFinding(db, {
-    kind: "unresolved-join",
-    subjectId: subject,
-    source: "projection-writer",
-    evidencePath: asString(row.evidence_path) ?? undefined,
-  });
-}
-
 export function recordProjectionEvent(db: HarnessDb, event: ProjectionEvent): void {
-  const table = tableDef(event.table);
-  const row = normalizeRow(table, event);
-  upsertRow(db, {
-    table: table.name,
-    primaryKey: primaryKeyOf(table),
-    row,
-  });
-  checkResolvablePlanJoin(db, table.name, row);
+  new SqliteProjectionStore(db).record(event);
 }
 
 function markdownFiles(dir: string): string[] {
@@ -1385,13 +1234,8 @@ function projectGateRunEvidence(repoRoot: string, db: HarnessDb): void {
   }
 }
 
-const REBUILD_PERSISTENT_TABLES = new Set(["refactor_candidates"]);
-
 function truncateProjectionTables(db: HarnessDb): void {
-  for (const table of [...HARNESS_DB_TABLES].reverse()) {
-    if (REBUILD_PERSISTENT_TABLES.has(table.name)) continue;
-    db.prepare(`DELETE FROM ${table.name}`).run();
-  }
+  clearRebuildableProjectionTables(db);
 }
 
 function projectRelationGraph(db: HarnessDb, graph: RelationGraphProjection | undefined): void {
@@ -2532,22 +2376,11 @@ export function projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string })
  * AC-FR-BR21-43-02 cold-start: 0 PoC PLANs => 0 rows, no throw.
  */
 export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): void {
-  const evaluatedAt = opts?.asOf ?? nowIso();
+  const store = new SqliteProjectionStore(db);
   projectPocEvaluationsApplication({
-    evaluatedAt,
-    read: {
-      readPocDecisionCounts: () =>
-        db
-          .prepare(
-            `SELECT decision_outcome, COUNT(*) AS cnt
-             FROM plan_registry
-             WHERE kind = 'poc'
-               AND decision_outcome IN ('confirmed', 'rejected', 'pivot')
-             GROUP BY decision_outcome`,
-          )
-          .all() as { decision_outcome: string; cnt: number }[],
-    },
-    store: { record: (event) => recordProjectionEvent(db, event) },
+    evaluatedAt: opts?.asOf ?? nowIso(),
+    read: store,
+    store,
   });
 }
 
