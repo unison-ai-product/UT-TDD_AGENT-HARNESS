@@ -40,7 +40,6 @@ import {
   loadRoadmaps,
   PARKED_BANDS,
 } from "../lint/roadmap-registry";
-import { normalizePath } from "../shared/source-text";
 import {
   analyzeSubDocCatalogDrift,
   loadSubDocCatalogDriftInput,
@@ -61,6 +60,7 @@ import {
   type TableDef,
 } from "../schema/harness-db";
 import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog";
+import { normalizePath } from "../shared/source-text";
 import { stableId } from "../stable-id";
 import { analyzePairFreeze, loadPairDocs, type PairOrphanReason } from "../vmodel/lint";
 import { deriveArtifactProgressDecision } from "./artifact-progress-decision";
@@ -86,6 +86,7 @@ import {
   upsertRow,
 } from "./index";
 import { migrate, rowCounts } from "./migration";
+import { summarizePocEvaluations } from "./projections/poc-evaluations";
 import {
   projectRuntimeGuardrailDecisionFromSessionEvent as projectRuntimeGuardrailDecisionFromSessionEventCore,
   projectRuntimeSkillInvocationFromSessionEvent as projectRuntimeSkillInvocationFromSessionEventCore,
@@ -2537,8 +2538,6 @@ export function projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string })
  * AC-FR-BR21-43-01: 10 PoC, 6 confirmed / 3 rejected / 1 pivot => rate 0.60.
  * AC-FR-BR21-43-02 cold-start: 0 PoC PLANs => 0 rows, no throw.
  */
-const POC_DECISION_VALUES = ["confirmed", "rejected", "pivot"] as const;
-
 export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): void {
   const evaluatedAt = opts?.asOf ?? nowIso();
 
@@ -2553,36 +2552,11 @@ export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): 
     )
     .all() as { decision_outcome: string; cnt: number }[];
 
-  if (rows.length === 0) return; // Cold-start: no decided PoC PLANs => 0 rows.
-
-  const counts: Record<string, number> = { confirmed: 0, rejected: 0, pivot: 0 };
-  for (const row of rows) {
-    const outcome = row.decision_outcome as (typeof POC_DECISION_VALUES)[number];
-    if (outcome in counts) counts[outcome] = Number(row.cnt ?? 0);
-  }
-
-  const confirmedCount = counts.confirmed;
-  const rejectedCount = counts.rejected;
-  const pivotCount = counts.pivot;
-  const totalCount = confirmedCount + rejectedCount + pivotCount;
-  const pocSuccessRate = totalCount === 0 ? 0 : Number((confirmedCount / totalCount).toFixed(4));
-
   // 単一行制約 (review I-1): id 固定で全 PoC を 1 集計行に集約するのは FR-L1-43 の現要件
   // (1 summary 行) のみで有効。将来 PoC 種別別 / スプリント別に分解する要件が出たら PK を
   // (scope, evaluated_at) 等へ変更し、本 id 固定・idx_poc_evaluations_rate も合わせて見直す。
-  recordProjectionEvent(db, {
-    table: "poc_evaluations",
-    id: "poc-evaluation:summary",
-    row: {
-      poc_evaluation_id: "poc-evaluation:summary",
-      poc_success_rate: pocSuccessRate,
-      confirmed_count: confirmedCount,
-      rejected_count: rejectedCount,
-      pivot_count: pivotCount,
-      total_count: totalCount,
-      evaluated_at: evaluatedAt,
-    },
-  });
+  const event = summarizePocEvaluations(rows, evaluatedAt);
+  if (event) recordProjectionEvent(db, event);
 }
 
 /**

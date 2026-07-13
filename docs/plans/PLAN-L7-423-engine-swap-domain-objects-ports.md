@@ -27,6 +27,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/shared/source-text.ts
     artifact_type: source_module
+  - artifact_path: src/state-db/projections/poc-evaluations.ts
+    artifact_type: source_module
   - artifact_path: tests/dependency-drift.test.ts
     artifact_type: test_code
 dependencies:
@@ -50,6 +52,7 @@ U-DOMAINをRed freezeし、共通kernelとmodule-boundary/cycle/CQS移行を所�
 - U-DEPD-005でreal repository全module graphのcycle 0を固定した。
 - `db-projection-coverage`が具象`HarnessDb`へ型逆依存していたため、query ownerの`DbIntrospectionPort`へ反転した。state-dbのprojection方向を維持し、7件として列挙されていた単一SCCをallowlistなしで解消した。
 - `projection-writer.ts`のapplication orchestration分割は本PLANの残DoDとして継続し、cycle 0だけをgod object解消完了の代用にしない。
+- PoC評価の集計規則を`src/state-db/projections/poc-evaluations.ts`へpure projectorとして抽出した。DB queryと永続化は互換facadeに残し、FR-L1-43のpublic APIを壊さずにapplication分離を開始した。
 
 ## migration wave
 
