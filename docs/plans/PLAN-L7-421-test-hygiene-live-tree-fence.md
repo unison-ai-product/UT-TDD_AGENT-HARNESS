@@ -179,3 +179,12 @@ review_evidence: []
 - [ ] `docs/plans/.ut-tdd/` 残留が除去され、誤配置検出が doctor に載っている。
 - [ ] (T-5) DB テストの cleanup が共通ヘルパ経由で Windows lock retry
       (`maxRetries`) を持ち、エラー握り潰しをしない。
+- [ ] Gitは単一捕捉OID、non-Gitは単一execution captureからreferenceを生成し、live source二度読みに依存しない。
+      non-Git copyは全階層の`.git`／`.ut-tdd`／`node_modules`を含まず、post-rebuild注入はDBとfeedback lifecycle logのみである。
+- [ ] referenceはVitest起動からcleanup直前まで物理的にread-onlyであり、Windowsを含むcanonical path比較でexecution rootと
+      reference rootを混同しない。seal／revision／fingerprint／cleanup failureはexit 1である。
+- [ ] repository read契約は`head_snapshot`／`isolated_fixture`のmode別exact countを持つ。sinkへ到達しないbare／void／
+      unused／assertion-only rootは数えず、HEAD root（alias・静的derived pathを含む）のwrite sinkはhard violationとなる。
+- [ ] persistent DB cleanupはnamed／namespace／destructuring／element／alias／options chainを正規化し、constant-dead cleanupを
+      証拠にしない。任意CFG post-dominator／mutation survivor 0はPLAN-L7-425へdebt route済みである。
+- [ ] confirm時に`tests/doctor.test.ts`の`merged-plan-status` transitional allowanceを0件へ戻し、doctor exit 0を最終証拠とする。

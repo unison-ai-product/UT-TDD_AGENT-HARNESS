@@ -992,25 +992,31 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
 
 ### `runSnapshotTests(args, repoRoot)`
 
-- pre: Git sourceはtop-level exact一致でのみGit扱いし、開始時のcommit OIDを一度だけ捕捉する。
-  非Git Packはlive sourceを一度だけexecutionへcopyする。
-- post: referenceは捕捉済みexecutionから、依存install／DB rebuildより前に生成する。Gitは同一OID、
-  非Gitは同一capture内容となり、live sourceを二度読まない。referenceへ後から注入できるruntime inputは
-  `harness.db` と `feedback-lifecycle.jsonl` だけとする。
-- invariant: source/execution/reference/cacheを分離し、sourceとreferenceの前後fingerprint差分、revision
-  mismatch、cleanup失敗をfail-closeする。`.git`／`node_modules`は階層を問わずcopy対象外とする。
+- pre: Git sourceはtop-level canonical pathが`repoRoot`とexact一致する場合だけGit扱いし、開始時のcommit OIDを
+  一度だけ捕捉する。非Git Packはlive sourceを一度だけwritable execution snapshotへcopyする。
+- post: referenceは捕捉済みexecutionから依存install／DB rebuildより前に生成する。Gitは捕捉OIDとreference HEADの
+  一致、非Gitはexecution captureとの内容一致を検証し、live sourceを二度読まない。DB rebuild後にreferenceへ追加
+  できるruntime inputは`.ut-tdd/harness.db`と`.ut-tdd/logs/feedback-lifecycle.jsonl`だけとする。
+- invariant: source/execution/reference/cacheを分離する。non-Git copyではpath segmentとして現れる`.git`、`.ut-tdd`、
+  `node_modules`を全階層で除外する（Git cloneの`.git`はrevision検証に必要でありこのcopy除外規則の対象外）。
+  referenceはtest process起動前にsealし、終了時cleanupの直前だけunsealする。seal、source/reference fingerprint
+  差分、revision mismatch、cleanup失敗はResult error・exit 1でfail-closeする。正常終了はexit 0、CLI usageはexit 2とする。
 
 ### `analyzeTestRepositoryIsolation(input)`
 
 - test sourceのread API、path、`process`、HEAD rootのprovenanceをAST bindingから解決する。named／namespace／
   const／destructuring alias、関数内alias、静的path concat、async API、bracket accessを同じcanonical sinkへ正規化する。
-- root取得の裸式、`void`、未使用bindingは契約callへ算入しない。repository read sinkへ到達したrootだけを台帳へ計上する。
-- 新規read、件数差、stale契約、live root由来、scan errorは全てhard violationとし、コメントや文字列は数えない。
+- 各sinkは`head_snapshot`又は`isolated_fixture`のprovenance modeを持つ。契約台帳はmode別call countをexactに要求し、
+  `process.cwd()`と相対path readはwritable execution fixture、`headSnapshotRoot()`起点のreadはread-only HEAD snapshotとして計上する。
+- root取得の裸式、`void`、未使用binding、assertion-only使用は契約callへ算入しない。repository read sinkへ到達したrootだけを
+  台帳へ計上する。HEAD root又はそのalias／静的derived pathをwrite sinkへ渡すことは契約件数と無関係にhard violationとする。
+- 新規read、mode別件数差、stale契約、live root由来、HEAD write、scan errorは全てhard violationとし、コメントや文字列は数えない。
 
 ### persistent DB test ownership
 
 - persistent DB ownerは`tests/**/*.test.ts`を再帰走査し、DB acquisition aliasを正規化して自動発見する。
 - ownerは`support/temp-tree`由来の`removeTestTree`を実行可能経路で呼び、raw recursive `rm`／`rmSync`を
   named／namespace／element／alias／options chainの全表現で使用しない。
-- `if(false)`、constant-false `&&`、constant-true `else`のcleanupは証拠としない。一般CFG post-dominatorと
-  mutation survivor 0の独立証明はPLAN-L7-425でこの契約を検査する。
+- `if(false)`、constant-false `&&`、constant-true `else`のcleanupは証拠としない。本PLANの実行可能性判定はこれら
+  定数dead pathまでであり、任意CFGのpost-dominator、interprocedural dataflow、mutation survivor 0はPLAN-L7-425の
+  独立自己証明範囲とする。

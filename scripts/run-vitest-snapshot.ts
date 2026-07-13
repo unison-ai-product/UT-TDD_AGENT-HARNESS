@@ -78,7 +78,7 @@ export function createSnapshot(
       "git",
       [
         "clone",
-        "--no-local",
+        "--no-hardlinks",
         "--no-checkout",
         repoRoot,
         snapshotRoot,
