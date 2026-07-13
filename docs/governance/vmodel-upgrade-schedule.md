@@ -2,7 +2,7 @@
 title: "Vモデル upgrade schedule authoring source"
 status: confirmed
 owner: PO / TL
-updated: 2026-07-10
+updated: 2026-07-13
 typed_spec_phase_owner: L6
 ---
 
@@ -80,6 +80,8 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L5-15-feedback-lifecycle-physical-data | L5 | physical-data | L8 | PLAN-L7-412-schedule-live-session-digest | U17c-physical: source generationとappend-only lifecycleの物理境界をfreeze | green | confirmed |  |
 | PLAN-L6-68-memory-telemetry-lifecycle-contract | L6 | function-spec | L7 | PLAN-L5-15-feedback-lifecycle-physical-data | U17c-design: memory昇格nudge、telemetry消化、source解消の設計契約をfreeze | green | confirmed |  |
 | PLAN-L7-392-memory-promotion-handover-digest | L7 |  | L6 | PLAN-L6-68-memory-telemetry-lifecycle-contract | U17c: digest責務移管後、memory昇格nudgeとtelemetry TTL/auto-ackを実装 | green | confirmed |  |
+| PLAN-L4-29-security-design-substance | L4 | security | L9 | PLAN-L4-16-security-design-slot | U19a: A-187 §3 のsecurity実体化 (脅威モデル/供給網/鍵/監査ログ + not_applicable明文化) を起票 | yellow | draft | 脅威モデル節、供給網/鍵/監査ログ設計、na判断の catalog 反映待ち |
+| PLAN-L6-71-coding-structure-rules-contract | L6 | function-spec | L7 | PLAN-L4-21-domain-vo-coding-constraints | U19b: ZIP-DOC-095 構造規約の analyzer 契約を起票 (A-187 §5) | yellow | draft | rule 語彙の排他分類、analyzer 契約 freeze、L7 add-impl 後続起票待ち |
 
 ## 2. 解釈規則
 

@@ -9,7 +9,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-07-13
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -54,5 +54,6 @@ genuine gap と判定した。本機能は UT-TDD 自身に無関係な product-
 - 対象シェルと補完コマンド体系が L6 function-spec として固定される。
 - PO による機能要否判断が記録される (需要が無いと判断された場合は本 PLAN の `status` を `archived` に
   変更し、skip 理由を本文に明記する)。
-- `PLAN-REVERSE-395` (CLI コマンド体系 as-is 復元) の R4 合流結果を `requires` として待ち、
+- `PLAN-REVERSE-395` (CLI コマンド体系 as-is 復元) は confirmed 済みで合流待ちは解除済み
+  (2026-07-13 A-187 監査で本文 stale を訂正。工程管理表 `vmodel-upgrade-schedule.md` と同期)。
   復元されたコマンド一覧・終了コード規約と整合する形でサブコマンド体系を設計する。
