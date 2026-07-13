@@ -2926,8 +2926,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     // Atomic rebuild: truncate + re-project run inside a single transaction so a
     // mid-rebuild failure rolls back to the prior committed projection instead of
     // leaving the DB truncated or half-populated (DB rebuild atomicity).
-    db.exec("BEGIN IMMEDIATE");
-    try {
+    runSqliteTransaction(db, () => {
       time("truncate", () => truncateProjectionTables(db));
       const plans = time("plans", () => projectPlans(repoRoot, db));
       if (hasVmodelAuthoring(repoRoot)) {
@@ -2998,11 +2997,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectImprovementLog(db, projectionDeps);
       });
       time("screens", () => projectScreens(repoRoot, db));
-      time("commit", () => db.exec("COMMIT"));
-    } catch (error) {
-      db.exec("ROLLBACK");
-      throw error;
-    }
+    });
     const counts = time("row-counts", () => rowCounts(db));
     const result: RebuildHarnessDbResult = {
       ok: true,
