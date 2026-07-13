@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildLegacyPlanInventory,
+  inventoryProjectionDigest,
   parseLegacyPlanSource,
 } from "../../src/plan-asset/adapters/legacy-plan-inventory.js";
 
@@ -41,11 +42,21 @@ describe("legacy PLAN HEAD inventory", () => {
     const first = buildLegacyPlanInventory(process.cwd());
     const second = buildLegacyPlanInventory(process.cwd());
     expect(second).toEqual(first);
-    if (first.ok) {
-      expect(first.value.inventoryDigest).toBe(
-        "86a25dda63d29db9a6d02b6bacfd835e53762cdf416bd8df5b0d04b7d3caf718",
-      );
-    }
+    if (first.ok) expect(first.value.inventoryDigest).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it("U-PA-021: fixes the canonical projection digest with an independent fixture oracle", () => {
+    const projection = {
+      sourceCommit: "1".repeat(40),
+      repositoryIdentity: "owner/repository",
+      collisions: [["PLAN-L7-1", ["PLAN-L7-1-a", "PLAN-L7-1-b"]]],
+      items: [["docs/plans/PLAN-L7-1-a.md", "PLAN-L7-1-a", "plan:legacy:a"]],
+    } as const;
+    const expected = "2de67b9ca087811f3f87b9bb958d38d04eafb2321737559be87670d24d52b782";
+    expect(inventoryProjectionDigest(projection)).toBe(expected);
+    expect(inventoryProjectionDigest({ ...projection, sourceCommit: "2".repeat(40) })).not.toBe(
+      expected,
+    );
   });
 
   it.each([

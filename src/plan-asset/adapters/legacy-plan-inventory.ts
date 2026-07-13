@@ -86,30 +86,32 @@ export function buildLegacyPlanInventory(repoRoot: string): InventoryResult {
         sourceCommit,
         items: Object.freeze(items),
         collisionGroups,
-        inventoryDigest: sha256(
-          canonical({
-            repositoryIdentity: identity.value.repositoryIdentity,
-            identityReceiptDigest: identity.value.provenance.receiptDigest,
-            sourceCommit,
-            collisions: collisionGroups.map((group) => [group.numericCore, group.planIds]),
-            items: items.map((item) => [
-              item.sourcePath,
-              item.legacyPlanId,
-              item.assetId,
-              item.frontmatterDigest,
-              item.bodyDigest,
-              item.sourceBlobOid,
-              item.sourceContentDigest,
-              canonical(item.knownFrontmatter),
-              canonical(item.unknownFrontmatter),
-            ]),
-          }),
-        ),
+        inventoryDigest: inventoryProjectionDigest({
+          repositoryIdentity: identity.value.repositoryIdentity,
+          identityReceiptDigest: identity.value.provenance.receiptDigest,
+          sourceCommit,
+          collisions: collisionGroups.map((group) => [group.numericCore, group.planIds]),
+          items: items.map((item) => [
+            item.sourcePath,
+            item.legacyPlanId,
+            item.assetId,
+            item.frontmatterDigest,
+            item.bodyDigest,
+            item.sourceBlobOid,
+            item.sourceContentDigest,
+            canonical(item.knownFrontmatter),
+            canonical(item.unknownFrontmatter),
+          ]),
+        }),
       }),
     };
   } catch {
     return { ok: false, error: { ruleId: "plan-migration-loss" } };
   }
+}
+
+export function inventoryProjectionDigest(projection: Readonly<Record<string, unknown>>): string {
+  return sha256(canonical(projection));
 }
 
 export function parseLegacyPlanSource(content: string): {
