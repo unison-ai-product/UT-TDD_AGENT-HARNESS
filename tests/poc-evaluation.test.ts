@@ -49,6 +49,14 @@ describe("U-FR-L1-43: projectPocEvaluations", () => {
       "2026-07-13T00:00:00.000Z",
     );
 
+    expect(event).toMatchObject({
+      table: "poc_evaluations",
+      id: "poc-evaluation:summary",
+      row: {
+        poc_evaluation_id: "poc-evaluation:summary",
+        evaluated_at: "2026-07-13T00:00:00.000Z",
+      },
+    });
     expect(event?.row).toMatchObject({
       confirmed_count: 6,
       rejected_count: 3,
@@ -56,6 +64,7 @@ describe("U-FR-L1-43: projectPocEvaluations", () => {
       total_count: 10,
       poc_success_rate: 0.6,
     });
+    expect(summarizePocEvaluations([], "2026-07-13T00:00:00.000Z")).toBeUndefined();
   });
 
   it("AC-FR-BR21-43-02 cold-start: zero PoC PLANs produces zero rows and does not throw", () => {
