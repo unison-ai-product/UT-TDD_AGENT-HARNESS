@@ -2,7 +2,11 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createSnapshot, removeSnapshot } from "../scripts/run-vitest-snapshot";
+import {
+  createSnapshot,
+  finishSnapshotCleanup,
+  removeSnapshot,
+} from "../scripts/run-vitest-snapshot";
 import { removeTestTree } from "./support/temp-tree";
 
 describe("vitest snapshot runner", () => {
@@ -29,5 +33,22 @@ describe("vitest snapshot runner", () => {
         throw failure;
       }),
     ).toThrow("vitest snapshot cleanup failed");
+  });
+
+  it("U-TESTHYGIENE-023: runs every cleanup and aggregates primary and cleanup failures", () => {
+    const called: string[] = [];
+    expect(() =>
+      finishSnapshotCleanup(new Error("test failed"), [
+        () => {
+          called.push("snapshot");
+          throw new Error("snapshot cleanup failed");
+        },
+        () => {
+          called.push("cache");
+          throw new Error("cache cleanup failed");
+        },
+      ]),
+    ).toThrow("vitest execution and cleanup failed");
+    expect(called).toEqual(["snapshot", "cache"]);
   });
 });

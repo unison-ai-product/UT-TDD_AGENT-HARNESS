@@ -34,6 +34,21 @@ export function createSnapshot(repoRoot: string, snapshotRoot: string): void {
   });
 }
 
+export function finishSnapshotCleanup(primaryError: unknown, cleanups: Array<() => void>): void {
+  const cleanupFailures: unknown[] = [];
+  for (const cleanup of cleanups) {
+    try {
+      cleanup();
+    } catch (error) {
+      cleanupFailures.push(error);
+    }
+  }
+  if (cleanupFailures.length === 0) return;
+  if (primaryError)
+    throw new AggregateError([primaryError, ...cleanupFailures], "vitest execution and cleanup failed");
+  throw new AggregateError(cleanupFailures, "vitest snapshot cleanup failed");
+}
+
 export function runSnapshotTests(args = process.argv.slice(2), repoRoot = process.cwd()): void {
   const snapshotRoot = join(tmpdir(), `ut-tdd-vitest-${process.pid}-${Date.now()}`);
   const cacheRoot = join(tmpdir(), `ut-tdd-vitest-cache-${process.pid}-${Date.now()}`);
@@ -52,22 +67,10 @@ export function runSnapshotTests(args = process.argv.slice(2), repoRoot = proces
   } catch (error) {
     primaryError = error;
   } finally {
-    const cleanupFailures: unknown[] = [];
-    for (const cleanup of [
+    finishSnapshotCleanup(primaryError, [
       () => removeSnapshot(snapshotRoot),
       () => rmSync(cacheRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }),
-    ]) {
-      try {
-        cleanup();
-      } catch (error) {
-        cleanupFailures.push(error);
-      }
-    }
-    if (cleanupFailures.length > 0) {
-      if (primaryError)
-        throw new AggregateError([primaryError, ...cleanupFailures], "vitest execution and cleanup failed");
-      throw new AggregateError(cleanupFailures, "vitest snapshot cleanup failed");
-    }
+    ]);
   }
   if (primaryError) throw primaryError;
 }
