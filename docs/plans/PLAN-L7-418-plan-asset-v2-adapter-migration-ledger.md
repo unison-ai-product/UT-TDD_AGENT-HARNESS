@@ -19,6 +19,8 @@ agent_slots:
   - role: qa
     slot_label: "QA - U-PA-001..033 Red→Green"
 generates:
+  - artifact_path: docs/governance/vmodel-role-contracts.md
+    artifact_type: design_doc
   - artifact_path: docs/improvement-backlog.md
     artifact_type: doc_update
   - artifact_path: docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md
@@ -40,6 +42,8 @@ generates:
   - artifact_path: src/plan-asset/adapters/project-identity-loader.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/adapters/legacy-plan-inventory.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/adapters/role-contract-registry.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/schema.ts
     artifact_type: source_module
