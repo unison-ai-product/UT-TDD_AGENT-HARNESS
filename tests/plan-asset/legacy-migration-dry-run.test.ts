@@ -17,6 +17,16 @@ describe("legacy migration dry-run", () => {
     expect(registry.hasNonEmpty("docs/missing/")).toBe(false);
   });
 
+  it("U-PA-039: re-verifies snapshot OID and content digest from the bound HEAD object", () => {
+    const result = new LegacyMigrationDryRun().run(process.cwd());
+    if (!("records" in result)) throw new Error(result.ruleId);
+    const sample = result.records[0];
+    const oid = git(["rev-parse", `${result.sourceCommit}:${sample.sourcePath}`]).trim();
+    const bytes = execFileSync("git", ["-C", process.cwd(), "cat-file", "blob", oid]);
+    expect(oid).toBe(sample.sourceBlobOid);
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe(sample.sourceContentDigest);
+  });
+
   it("U-PA-034: emits an exactly-once HEAD-bound record for every inventory item", () => {
     const result = new LegacyMigrationDryRun().run(process.cwd());
     if (!("records" in result)) throw new Error(result.ruleId);
@@ -67,3 +77,10 @@ describe("legacy migration dry-run", () => {
     expect(second).toEqual(first);
   });
 });
+
+function git(args: readonly string[]): string {
+  return execFileSync("git", ["-C", process.cwd(), ...args], { encoding: "utf8" });
+}
+
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
