@@ -12,7 +12,7 @@ route_signal: code_smell
 route_mode: refactor
 backprop_decision: not_required
 backprop_decision_reason: "Behavior-invariant extraction inside the existing harness.db projection boundary. Skill recommendation, invocation metric, and skill evaluation projection core moves behind injected dependencies while projection-writer keeps the existing public rebuild wiring and projectSkillEvaluations signature."
-parent_design: docs/design/harness/L6-function-design/harness-db-feedback.md
+parent_design: docs/plans/PLAN-L5-08-harness-db-feedback.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
   - role: se

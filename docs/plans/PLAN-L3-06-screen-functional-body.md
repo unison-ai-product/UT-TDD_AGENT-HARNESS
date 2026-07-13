@@ -20,7 +20,7 @@ generates:
     artifact_type: doc_update
   - artifact_path: src/lint/frontend-design-coverage.ts
     artifact_type: source_module
-pair_artifact: docs/test-design/harness/L3-acceptance-test-design.md
+pair_artifact: docs/test-design/harness/L12-acceptance-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 next_pair_freeze: L12

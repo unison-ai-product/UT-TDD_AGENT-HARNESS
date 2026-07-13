@@ -12,7 +12,7 @@ route_signal: code_smell
 route_mode: refactor
 backprop_decision: not_required
 backprop_decision_reason: "Behavior-invariant extraction inside the existing harness.db projection boundary. Runtime session-derived test run, guardrail decision, and skill invocation projections keep the same public projection-writer exports and persisted schema; no product requirement, L4/L6 design contract, or GitHub operation semantics changed."
-parent_design: docs/design/harness/L6-function-design/harness-db-feedback.md
+parent_design: docs/plans/PLAN-L5-08-harness-db-feedback.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
   - role: se
