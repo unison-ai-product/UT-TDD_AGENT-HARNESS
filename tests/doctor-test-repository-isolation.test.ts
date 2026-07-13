@@ -161,7 +161,7 @@ describe("doctor test repository isolation", () => {
     );
   });
 
-  it("U-TESTHYGIENE-037: separates read provenance modes and rejects aliased derived HEAD writes", () => {
+  it("U-TESTHYGIENE-037: separates read provenance modes and rejects derived HEAD mutation sinks", () => {
     const result = analyzeTestRepositoryIsolation({
       files: [
         {
@@ -173,6 +173,11 @@ describe("doctor test repository isolation", () => {
           path: "tests/dead-root.test.ts",
           source: "if (false) check(headSnapshotRoot());",
         },
+        {
+          path: "tests/mutation-sinks.test.ts",
+          source:
+            "import { createWriteStream as stream, truncateSync as cut } from 'node:fs'; const root=headSnapshotRoot(); const target=join(root, 'docs/x'); stream(target); cut(target); Bun.write(target, 'x');",
+        },
       ],
       contracts: {
         "tests/provenance.test.ts": {
@@ -180,13 +185,45 @@ describe("doctor test repository isolation", () => {
           reason: "separate capabilities",
         },
         "tests/dead-root.test.ts": { mode: "head_snapshot", calls: 1, reason: "dead decoy" },
+        "tests/mutation-sinks.test.ts": {
+          mode: "head_snapshot",
+          calls: 1,
+          reason: "all supported mutation sinks reject derived HEAD paths",
+        },
       },
     });
     expect(result.messages).toEqual(
       expect.arrayContaining([
         "test-repository-isolation - violation: forbidden-live-root-source:tests/provenance.test.ts",
+        "test-repository-isolation - violation: forbidden-live-root-source:tests/mutation-sinks.test.ts",
         "test-repository-isolation - violation: stale-contract:tests/dead-root.test.ts",
       ]),
+    );
+  });
+
+  it("U-TESTHYGIENE-038: rejects supported Node and Bun mutation destinations below HEAD", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [
+        {
+          path: "tests/all-sinks.test.ts",
+          source:
+            "import { chmodSync, copyFileSync, createWriteStream, linkSync, mkdtempSync, openSync, renameSync, symlinkSync, truncateSync, utimesSync } from 'node:fs'; const root=headSnapshotRoot(); const target=join(root, 'docs/x'); createWriteStream(target); openSync(target, 'w'); truncateSync(target); chmodSync(target, 0o644); utimesSync(target, 0, 0); mkdtempSync(join(root, 'tmp-')); copyFileSync('tmp', target); linkSync('tmp', target); symlinkSync('tmp', target); renameSync(target, 'tmp'); renameSync('tmp', target); Bun.write(target, 'x'); Bun.write(Bun.file(target), 'x');",
+        },
+        {
+          path: "tests/read-only-open.test.ts",
+          source: "const root=headSnapshotRoot(); openSync(join(root, 'docs/x'), 'r');",
+        },
+      ],
+      contracts: {
+        "tests/all-sinks.test.ts": { mode: "head_snapshot", calls: 1, reason: "sink coverage" },
+        "tests/read-only-open.test.ts": { mode: "head_snapshot", calls: 1, reason: "read only" },
+      },
+    });
+    expect(result.messages).toContain(
+      "test-repository-isolation - violation: forbidden-live-root-source:tests/all-sinks.test.ts",
+    );
+    expect(result.messages).not.toContain(
+      "test-repository-isolation - violation: forbidden-live-root-source:tests/read-only-open.test.ts",
     );
   });
 

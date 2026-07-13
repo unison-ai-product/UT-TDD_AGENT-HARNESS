@@ -167,7 +167,7 @@ export function sealReference(referenceRoot: string): void {
   run("attrib", ["+R", join(referenceRoot, "*"), "/S"], referenceRoot);
   run(
     "icacls",
-    [referenceRoot, "/deny", `${identity}:(WD,AD)`, "/C", "/Q"],
+    [referenceRoot, "/deny", `${identity}:(OI)(CI)(WD,AD)`, "/T", "/C", "/Q"],
     referenceRoot,
   );
 }
@@ -183,7 +183,7 @@ export function unsealReference(referenceRoot: string): void {
   run("attrib", ["-R", join(referenceRoot, "*"), "/S"], referenceRoot);
   run(
     "icacls",
-    [referenceRoot, "/remove:d", identity, "/C", "/Q"],
+    [referenceRoot, "/remove:d", identity, "/T", "/C", "/Q"],
     referenceRoot,
   );
 }

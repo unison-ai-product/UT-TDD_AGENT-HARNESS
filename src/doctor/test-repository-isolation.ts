@@ -62,7 +62,7 @@ repositoryReadContracts["tests/doctor.test.ts"] = {
 
 repositoryReadContracts["tests/workspace-roots.test.ts"] = {
   mode_calls: { isolated_fixture: 1 },
-  reason: "root capability test exercises both detached HEAD and execution fixture",
+  reason: "root capability test exercises the writable execution fixture",
 };
 repositoryReadContracts["tests/support/workspace-roots.ts"] = {
   mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
@@ -108,19 +108,51 @@ const REPOSITORY_READ_APIS = new Set([
 const REPOSITORY_WRITE_APIS = new Set([
   "appendFile",
   "appendFileSync",
+  "chmod",
+  "chmodSync",
+  "chown",
+  "chownSync",
+  "createWriteStream",
   "cp",
   "cpSync",
+  "copyFile",
+  "copyFileSync",
+  "lchmod",
+  "lchmodSync",
+  "lchown",
+  "lchownSync",
+  "link",
+  "linkSync",
+  "lutimes",
+  "lutimesSync",
   "mkdir",
   "mkdirSync",
+  "mkdtemp",
+  "mkdtempSync",
+  "open",
+  "openSync",
   "rename",
   "renameSync",
   "rm",
   "rmSync",
+  "truncate",
+  "truncateSync",
   "unlink",
   "unlinkSync",
+  "utimes",
+  "utimesSync",
   "writeFile",
   "writeFileSync",
 ]);
+const MUTATION_TARGET_ARGS: Readonly<Record<string, readonly number[]>> = {
+  "Bun.write": [0],
+  appendFile: [0], appendFileSync: [0], chmod: [0], chmodSync: [0], chown: [0], chownSync: [0],
+  createWriteStream: [0], cp: [1], cpSync: [1], copyFile: [1], copyFileSync: [1],
+  lchmod: [0], lchmodSync: [0], lchown: [0], lchownSync: [0], link: [1], linkSync: [1],
+  lutimes: [0], lutimesSync: [0], mkdir: [0], mkdirSync: [0], mkdtemp: [0], mkdtempSync: [0],
+  rename: [0, 1], renameSync: [0, 1], rm: [0], rmSync: [0], truncate: [0], truncateSync: [0],
+  unlink: [0], unlinkSync: [0], utimes: [0], utimesSync: [0], writeFile: [0], writeFileSync: [0],
+};
 const REPOSITORY_PATH =
   /^(?:\.?(?:\/|\\))?(?:\.claude|\.codex|\.github|\.ut-tdd|docs|scripts|skills|src|tests)(?:\/|\\)|^(?:AGENTS\.md|CLAUDE\.md|package\.json|tsconfig\.json|vitest\.config\.ts)$/;
 
@@ -153,6 +185,28 @@ function memberName(node: ts.Expression): string | null {
   if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression))
     return node.argumentExpression.text;
   return null;
+}
+
+function writeApiName(node: ts.CallExpression, aliases: ReadonlyMap<string, string>): string | null {
+  const rawName = memberName(node.expression);
+  const alias = rawName ? aliases.get(rawName) ?? rawName : null;
+  if (alias && REPOSITORY_WRITE_APIS.has(alias)) return alias;
+  if (
+    ts.isPropertyAccessExpression(node.expression) &&
+    ts.isIdentifier(node.expression.expression) &&
+    node.expression.expression.text === "Bun" &&
+    node.expression.name.text === "write"
+  )
+    return "Bun.write";
+  return null;
+}
+
+function isWriteCapableOpen(node: ts.CallExpression, name: string): boolean {
+  if (name === "createWriteStream") return true;
+  if (name !== "open" && name !== "openSync") return false;
+  const flag = node.arguments[1];
+  if (!flag || !ts.isStringLiteralLike(flag)) return true;
+  return /[wa+]/.test(flag.text);
 }
 
 function isDirectRepositoryRead(
@@ -345,15 +399,18 @@ function inspectSource(
       modeCalls.head_snapshot += 1;
     if (ts.isCallExpression(node) && isDirectRepositoryRead(node, readAliases, pathAliases))
       modeCalls.isolated_fixture += 1;
-    if (
-      ts.isCallExpression(node) &&
-      REPOSITORY_WRITE_APIS.has(
-        writeAliases.get(memberName(node.expression) ?? "") ?? memberName(node.expression) ?? "",
-      ) &&
-      node.arguments[0] &&
-      containsHeadRoot(node.arguments[0])
-    )
-      forbidden = true;
+    if (ts.isCallExpression(node)) {
+      const writeName = writeApiName(node, writeAliases);
+      const targetArgs = writeName
+        ? writeName === "open" || writeName === "openSync" || writeName === "createWriteStream"
+          ? isWriteCapableOpen(node, writeName)
+            ? [0]
+            : []
+          : MUTATION_TARGET_ARGS[writeName] ?? []
+        : [];
+      if (targetArgs.some((index) => node.arguments[index] && containsHeadRoot(node.arguments[index])))
+        forbidden = true;
+    }
     else if (
       ts.isPropertyAccessExpression(node) &&
       node.name.text === "cwd" &&

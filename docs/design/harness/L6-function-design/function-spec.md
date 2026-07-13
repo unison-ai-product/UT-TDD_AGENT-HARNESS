@@ -1009,7 +1009,8 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
 - 各sinkは`head_snapshot`又は`isolated_fixture`のprovenance modeを持つ。契約台帳はmode別call countをexactに要求し、
   `process.cwd()`と相対path readはwritable execution fixture、`headSnapshotRoot()`起点のreadはread-only HEAD snapshotとして計上する。
 - root取得の裸式、`void`、未使用binding、assertion-only使用は契約callへ算入しない。repository read sinkへ到達したrootだけを
-  台帳へ計上する。HEAD root又はそのalias／静的derived pathをwrite sinkへ渡すことは契約件数と無関係にhard violationとする。
+  台帳へ計上する。HEAD root又はそのalias／静的derived pathをNode/Bunの直接mutation sinkへ渡すことは契約件数と無関係にhard violationとする。
+  `open`／`openSync`はwrite-capable flagをfail-closeし、FD/FileHandleを経る任意dataflowはPLAN-L7-425の独立自己証明対象とする。
 - 新規read、mode別件数差、stale契約、live root由来、HEAD write、scan errorは全てhard violationとし、コメントや文字列は数えない。
 
 ### persistent DB test ownership

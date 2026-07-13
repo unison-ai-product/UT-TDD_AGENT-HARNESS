@@ -1270,31 +1270,41 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | --- | --- | --- | --- |
 | `U-TESTHYGIENE-001` | `vitest-config.test.ts` | config fixture | cache/include/exclude/timeout/globalSetupが固定値 |
 | `U-TESTHYGIENE-002` | `runtime-repo-root.test.ts` | nested hook cwd | root解決失敗は`runtime state write blocked` |
-| `U-TESTHYGIENE-004..006` | `doctor-runtime-state-location.test.ts` | canonical／nested／scan-error state | canonicalはgreen、誤配置／scan errorはfail-close |
-| `U-TESTHYGIENE-008..009` | `temp-tree.test.ts` | DB handle／cleanup error | retry optionsと`EBUSY`伝播 |
-| `U-TESTHYGIENE-010..011` | `git-workspace-fingerprint.test.ts` | dirty baseline／各fingerprint mutation | baselineはgreen、mutationは`workspace fence violation` |
+| `U-TESTHYGIENE-004` | `doctor-runtime-state-location.test.ts` | canonical state | canonicalはgreen |
+| `U-TESTHYGIENE-005` | `doctor-runtime-state-location.test.ts` | nested state | 誤配置はfail-close |
+| `U-TESTHYGIENE-006` | `doctor-runtime-state-location.test.ts` | scan-error state | scan errorはfail-close |
+| `U-TESTHYGIENE-008` | `temp-tree.test.ts` | DB handle | retry optionsを維持 |
+| `U-TESTHYGIENE-009` | `temp-tree.test.ts` | cleanup error | `EBUSY`を伝播 |
+| `U-TESTHYGIENE-010` | `git-workspace-fingerprint.test.ts` | dirty baseline | baselineはgreen |
+| `U-TESTHYGIENE-011` | `git-workspace-fingerprint.test.ts` | fingerprint mutation | `workspace fence violation` |
 | `U-TESTHYGIENE-012` | `workspace-roots.test.ts` | head root capability | `head_snapshot` rootはcwdと異なる |
 | `U-TESTHYGIENE-013` | `doctor-test-repository-isolation.test.ts` | unclassified cwd | `unclassified:<path>:repository-read=1`、exit 1 |
 | `U-TESTHYGIENE-014` | 同上 | mode件数／stale契約 | `callsite-drift:<path>:<mode>:expected=N:actual=M`／`stale-contract`、exit 1 |
 | `U-TESTHYGIENE-015` | 同上 | 実repo台帳 | `checkTestRepositoryIsolation(...).ok=true` |
 | `U-TESTHYGIENE-016` | `git-workspace-fingerprint.test.ts` | ignored／empty directory | inventory digest差分を検出 |
-| `U-TESTHYGIENE-017..018` | `doctor-test-repository-isolation.test.ts` | root alias／文字列decoy | live rootは`forbidden-live-root-source`、文字列は非検出 |
+| `U-TESTHYGIENE-017` | `doctor-test-repository-isolation.test.ts` | root alias | `forbidden-live-root-source` |
+| `U-TESTHYGIENE-018` | `doctor-test-repository-isolation.test.ts` | 文字列decoy | 文字列は非検出 |
 | `U-TESTHYGIENE-019` | `persistent-db-cleanup-contract.test.ts` | owner AST scan | owner全件retry helper、raw recursive removal 0 |
 | `U-TESTHYGIENE-020` | `git-workspace-fingerprint.test.ts` | non-Git tree | `head='non-git'` |
 | `U-TESTHYGIENE-021` | `vitest-snapshot-runner.test.ts` | non-Git Pack | copy後`node_modules`なし |
-| `U-TESTHYGIENE-022..023` | 同上 | cleanup／複合failure | cleanup aggregateを伝播、全cleanup実行 |
-| `U-TESTHYGIENE-024..025` | `doctor-test-repository-isolation.test.ts` | literal／join／process variants | 未分類は`unclassified`、live rootはhard violation |
+| `U-TESTHYGIENE-022` | 同上 | cleanup | cleanup aggregateを伝播 |
+| `U-TESTHYGIENE-023` | 同上 | 複合failure | 全cleanupを実行 |
+| `U-TESTHYGIENE-024` | `doctor-test-repository-isolation.test.ts` | literal path | 未分類は`unclassified` |
+| `U-TESTHYGIENE-025` | `doctor-test-repository-isolation.test.ts` | join／process variants | live rootはhard violation |
 | `U-TESTHYGIENE-026` | `persistent-db-cleanup-contract.test.ts` | namespace DB／rm | canonical APIに解決 |
 | `U-TESTHYGIENE-027` | `vitest-snapshot-runner.test.ts` | runtime input copy | DB／lifecycle logだけcopy |
 | `U-TESTHYGIENE-028` | `doctor.test.ts` | aggregate blocker | Draft中の遷移oracle。confirm時は0 blocker／`ok=true`へ更新 |
-| `U-TESTHYGIENE-029..030` | repository isolation／DB cleanup test | read／rm alias | alias・element・asyncをcanonical化 |
+| `U-TESTHYGIENE-029` | `doctor-test-repository-isolation.test.ts` | read alias | alias・element・asyncをcanonical化 |
+| `U-TESTHYGIENE-030` | `persistent-db-cleanup-contract.test.ts` | rm alias | alias・elementをcanonical化 |
 | `U-TESTHYGIENE-031` | `doctor-test-repository-isolation.test.ts` | bare HEAD root | `stale-contract`、exit 1 |
 | `U-TESTHYGIENE-032` | `vitest-snapshot-runner.test.ts` | 親Git配下Pack | copy mode、全階層`.git`／`.ut-tdd`／`node_modules`除外 |
 | `U-TESTHYGIENE-033` | `persistent-db-cleanup-contract.test.ts` | alias chain／constant-dead | dead cleanupは証拠外 |
 | `U-TESTHYGIENE-034` | `vitest-snapshot-runner.test.ts` | non-Git capture | referenceはexecution captureと一致 |
 | `U-TESTHYGIENE-035` | `doctor-test-repository-isolation.test.ts` | provenance alias／decoy | sink到達だけ計上、decoyは`stale-contract` |
 | `U-TESTHYGIENE-036` | `vitest-snapshot-runner.test.ts` | reference seal lifecycle | 実行区間はwrite拒否、unseal後cleanup可能、failureはexit 1 |
-| `U-TESTHYGIENE-037` | `doctor-test-repository-isolation.test.ts` | mode provenance／derived HEAD write | mode exact、derived writeは`forbidden-live-root-source`、dead rootは`stale-contract`、exit 1 |
+| `U-TESTHYGIENE-037` | `doctor-test-repository-isolation.test.ts` | mode provenance／derived HEAD mutation sink | mode exact、derived write sinkは`forbidden-live-root-source`、dead rootは`stale-contract`、exit 1 |
+| `U-TESTHYGIENE-038` | `doctor-test-repository-isolation.test.ts` | Node/Bun mutation sink destination | `open('w')`、stream、metadata、copy/link/symlink destination、`Bun.write`はderived HEAD pathで`forbidden-live-root-source`、`open('r')`は非違反 |
+| `U-TESTHYGIENE-039` | `vitest-snapshot-runner.test.ts` | captured Git OID | source HEADが進んでも、execution/referenceは同一捕捉OIDの内容を保持 |
 
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。

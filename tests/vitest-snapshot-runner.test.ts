@@ -87,19 +87,47 @@ describe("vitest snapshot runner", () => {
     }
   });
 
+  it("U-TESTHYGIENE-039: uses one captured Git revision for execution and reference", () => {
+    const source = mkdtempSync(join(tmpdir(), "ut-tdd-git-source-"));
+    const execution = `${source}-execution`;
+    const reference = `${source}-reference`;
+    try {
+      expect(spawnSync("git", ["init"], { cwd: source }).status).toBe(0);
+      writeFileSync(join(source, "package.json"), '{"version":1}\n');
+      expect(spawnSync("git", ["add", "package.json"], { cwd: source }).status).toBe(0);
+      expect(spawnSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.invalid", "commit", "-m", "initial"], { cwd: source }).status).toBe(0);
+      const captured = resolveSnapshotSource(source);
+      expect(captured.kind).toBe("git");
+      createSnapshot(source, execution, captured);
+      writeFileSync(join(source, "package.json"), '{"version":2}\n');
+      expect(spawnSync("git", ["add", "package.json"], { cwd: source }).status).toBe(0);
+      expect(spawnSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.invalid", "commit", "-m", "next"], { cwd: source }).status).toBe(0);
+      createSnapshot(source, reference, captured);
+      expect(readFileSync(join(execution, "package.json"), "utf8")).toBe('{"version":1}\n');
+      expect(readFileSync(join(reference, "package.json"), "utf8")).toBe('{"version":1}\n');
+    } finally {
+      removeTestTree(source);
+      removeTestTree(execution);
+      removeTestTree(reference);
+    }
+  });
+
   it("U-TESTHYGIENE-036: seals the reference for the whole test interval and unseals cleanup", () => {
     const reference = mkdtempSync(join(tmpdir(), "ut-tdd-sealed-reference-"));
     const outside = mkdtempSync(join(tmpdir(), "ut-tdd-sealed-outside-"));
     const file = join(reference, "source.txt");
+    const nested = join(reference, "nested");
     const outsideFile = join(outside, "outside.txt");
     try {
       writeFileSync(file, "immutable\n");
+      mkdirSync(nested);
       writeFileSync(outsideFile, "outside\n");
       if (process.platform !== "win32") symlinkSync(outsideFile, join(reference, "outside-link"));
       sealReference(reference);
       if (process.platform === "win32") {
         expect(() => writeFileSync(file, "mutated\n")).toThrow();
         expect(() => writeFileSync(join(reference, "new.txt"), "created\n")).toThrow();
+        expect(() => writeFileSync(join(nested, "new.txt"), "created\n")).toThrow();
       } else {
         expect(statSync(file).mode & 0o222).toBe(0);
         expect(statSync(outsideFile).mode & 0o222).not.toBe(0);

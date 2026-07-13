@@ -126,6 +126,9 @@ review_evidence: []
   `if (false)` cleanup decoy を負例 corpus に加える。一般的な interprocedural dataflow、
   lifecycle post-dominator、mutation survivor 0 は
   `PLAN-L7-425-independent-detector-meta-verifier` で自己証明する。
+  HEAD referenceへのmutationはNode/Bunの直接sinkをAPIごとのdestination引数として
+  判定する。`open`はwrite-capable flagをfail-closeし、FD/FileHandleを経る任意dataflowは
+  同PLAN-L7-425へdebt routeする。
 
 ## 工程表
 
@@ -159,7 +162,8 @@ review_evidence: []
 - snapshot runner は同一 OID、Git top-level exact 判定、限定runtime input、全cleanup
   aggregate を実装した。
 - repository isolation は再帰走査、契約件数/stale/unclassified fail-close に加え、
-  alias・async・bracket・bare `headSnapshotRoot()` decoy の負例を持つ。
+  alias・async・bracket・bare `headSnapshotRoot()` decoy、Node/Bunの直接mutation sink
+  destination の負例を持つ。
 - persistent DB cleanup は owner 自動発見、namespace/destructuring/const alias、async
   `rm`、options chain、dead cleanup decoy を負例化した。
 - HEAD `97968c6c` で `172 files / 1661 tests` green、doctor `60/60` green、起動元・
@@ -184,7 +188,8 @@ review_evidence: []
 - [ ] referenceはVitest起動からcleanup直前まで物理的にread-onlyであり、Windowsを含むcanonical path比較でexecution rootと
       reference rootを混同しない。seal／revision／fingerprint／cleanup failureはexit 1である。
 - [ ] repository read契約は`head_snapshot`／`isolated_fixture`のmode別exact countを持つ。sinkへ到達しないbare／void／
-      unused／assertion-only rootは数えず、HEAD root（alias・静的derived pathを含む）のwrite sinkはhard violationとなる。
+      unused／assertion-only rootは数えず、HEAD root（alias・静的derived pathを含む）のNode/Bun直接write sinkはhard violationとなる。
+      FD/FileHandleを経る任意dataflowはPLAN-L7-425の独立自己証明対象としてdebt routeする。
 - [ ] persistent DB cleanupはnamed／namespace／destructuring／element／alias／options chainを正規化し、constant-dead cleanupを
       証拠にしない。任意CFG post-dominator／mutation survivor 0はPLAN-L7-425へdebt route済みである。
 - [ ] confirm時に`tests/doctor.test.ts`の`merged-plan-status` transitional allowanceを0件へ戻し、doctor exit 0を最終証拠とする。
