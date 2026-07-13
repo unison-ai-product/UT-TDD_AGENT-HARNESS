@@ -157,6 +157,22 @@ function chmodTree(root: string, directoryMode: number, fileMode: number): void 
   visit(root);
 }
 
+function updateWindowsWriteDeny(root: string, identity: string, remove: boolean): void {
+  const visit = (path: string): void => {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) return;
+    if (stat.isDirectory()) for (const entry of readdirSync(path)) visit(join(path, entry));
+    run(
+      "icacls",
+      remove
+        ? [path, "/remove:d", identity, "/C", "/Q"]
+        : [path, "/deny", `${identity}:(WD,AD,WEA,WA,DC,D)`, "/C", "/Q"],
+      root,
+    );
+  };
+  for (const entry of readdirSync(root)) visit(join(root, entry));
+}
+
 export function sealReference(referenceRoot: string): void {
   if (process.platform !== "win32") {
     chmodTree(referenceRoot, 0o555, 0o444);
@@ -164,18 +180,7 @@ export function sealReference(referenceRoot: string): void {
   }
   const identity = output("whoami", [], referenceRoot);
   if (!identity) throw new Error("reference snapshot identity cannot be resolved");
-  run(
-    "icacls",
-    [
-      referenceRoot,
-      "/deny",
-      `${identity}:(OI)(CI)(W,D,DC,WDAC,WO)`,
-      "/T",
-      "/C",
-      "/Q",
-    ],
-    referenceRoot,
-  );
+  updateWindowsWriteDeny(referenceRoot, identity, false);
 }
 
 export function unsealReference(referenceRoot: string): void {
@@ -186,18 +191,7 @@ export function unsealReference(referenceRoot: string): void {
   }
   const identity = output("whoami", [], referenceRoot);
   if (!identity) throw new Error("reference snapshot identity cannot be resolved");
-  run(
-    "icacls",
-    [
-      referenceRoot,
-      "/remove:d",
-      identity,
-      "/T",
-      "/C",
-      "/Q",
-    ],
-    referenceRoot,
-  );
+  updateWindowsWriteDeny(referenceRoot, identity, true);
 }
 
 export function runSnapshotTests(
