@@ -9,7 +9,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-13
 owner: PO / Codex
 parent_design: docs/process/vmodel-contract.yaml
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -86,3 +86,24 @@ expected finding/exit、actual finding/exit、test_run_id、source commit、veri
 ## 5. 降下先
 
 L5 receipt/schema、L6 compiler/verifier contract、L7 small modules/CLI/doctor/CI、L9 mutation system testへ降下する。
+
+## 付録A: negative-fixture 現況マッピング (2026-07-13 監査)
+
+外部指摘 12 種の既知欠陥について「異常系入力で検出器が Red になることを assert
+するテスト」の現況を監査した結果。L7 降下時の fixture 設計の初期スコープとして
+使う (有=既存 fence を再利用、無/限定=本 PLAN 系列で新設)。
+
+| 欠陥種 | 現況 | 根拠 |
+|---|---|---|
+| duplicate YAML key | 無 (parser は yaml v2 uniqueKeys 既定で fail-close だが専用負系テスト無し。parse error に対象ファイル名が付かない改善余地あり) | `src/plan/lint.ts:151` |
+| merge key `<<` 衝突 | 無 (`merge: true` 非指定のため merge key 自体が無効。未文書化・未テスト) | `src/plan/lint.ts:3` |
+| evidence 欠落 | 有 | `tests/review-evidence.test.ts:235-240` |
+| revision 不一致 | 限定的 (vmodel additive pairing のみ) | `tests/vmodel-pair.test.ts:136-151` |
+| stale evidence 流用 | 有 | `tests/green-command-digest.test.ts:69-80,181-191` |
+| deny artifact 混入 | 無 (検出ロジックは PR #43 で出力側判定へ是正済みだが、意図的混入の負系 fixture 無し) | `src/setup/distribution.ts:254`, `tests/distribution-acceptance.test.ts` |
+| orphan gate run | 有 | `tests/doctor.test.ts:198-214` |
+| DB projection drift | 有 | `tests/db-currency.test.ts:48-63` 他 |
+| Markdown-ledger 不一致 | 有 | `tests/merged-plan-status.test.ts` |
+| generated registry drift | 表層のみ (実 repo の正常系確認のみ、合成破損 fixture 無し) | `tests/fr-registry-audit.test.ts:19-66` |
+| workspace 汚染 | 有 (top-level drift のみ。テスト残渣 fence は PLAN-L7-421 側) | `tests/tracked-canonical.test.ts:13-20` |
+| Windows path 衝突 | 無 (case 衝突 / 予約名 / 長パス等の検出ロジック自体が不在。新規 detector 設計が必要) | `src/lint/personal-path.ts`, `src/lint/runtime-portability.ts` |

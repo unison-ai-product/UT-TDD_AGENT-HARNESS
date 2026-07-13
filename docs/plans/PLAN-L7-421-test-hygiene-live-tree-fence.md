@@ -8,7 +8,7 @@ status: draft
 route_signal: incident
 route_mode: incident
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-13
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 backprop_decision: not_required
@@ -53,6 +53,23 @@ review_evidence: []
   `.ut-tdd` state が `docs/plans/.ut-tdd/` に生成された残留も確認されており
   (cwd 誤りの CLI 実行痕跡)、誤配置 state の検出機構も無い。
 
+## 追加所見 (2026-07-13 基盤欠陥指摘の検証監査)
+
+- **T-4 (誤配置の原因コード特定)**: `docs/plans/.ut-tdd/logs/session/*.jsonl`
+  残留の直接原因は `src/runtime/session-log.ts` `recordEvent` (262-268 行) が
+  `deps.repoRoot` = 呼び出し元 `process.cwd()` (`src/cli.ts:944` 等の hook
+  dispatch) をそのまま書き込み root に使うこと。hook 起動時に cwd が repo root
+  でないと `.ut-tdd/` が任意ディレクトリへ生成される。Step 4 の誤配置検出に
+  加え、hook 経路では `CLAUDE_PROJECT_DIR` 等による repo root 解決 (cwd 非依存)
+  を検討する。
+- **T-5 (SQLite cleanup の Windows lock 耐性ムラ)**: `Bun.gc(true)` +
+  `rmSync(..., { maxRetries: 10, retryDelay: 50 })` パターンを持つのは
+  `tests/state-db.test.ts:28-31` と `tests/memory.test.ts` のみ。他の DB 系
+  テスト (`tests/token-tracker.test.ts` / `tests/feedback-lifecycle.test.ts`
+  等、openHarnessDb 利用 25 ファイル中残り) は `db.close()` 後 `rmSync(...,
+  { recursive: true, force: true })` のみで、Windows のハンドル解放遅延時に
+  EBUSY で落ちうる。cleanup ヘルパを共通化して全 DB テストへ適用する。
+
 ## 工程表
 
 ### Step 1: [並列] T-1 の tmp 分離
@@ -85,3 +102,5 @@ review_evidence: []
       lint が fail する (real-repo regression test で実証)。
 - [ ] vitest.config に include/exclude/testTimeout が明示され drift テスト有り。
 - [ ] `docs/plans/.ut-tdd/` 残留が除去され、誤配置検出が doctor に載っている。
+- [ ] (T-5) DB テストの cleanup が共通ヘルパ経由で Windows lock retry
+      (`maxRetries`) を持ち、エラー握り潰しをしない。
