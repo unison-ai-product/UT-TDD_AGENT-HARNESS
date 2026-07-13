@@ -29,7 +29,7 @@ describe("vitest snapshot runner", () => {
     }
   });
 
-  it("U-TESTHYGIENE-024: treats a Pack nested below an unrelated Git root as non-Git", () => {
+  it("U-TESTHYGIENE-032: treats a Pack nested below an unrelated Git root as non-Git", () => {
     const parent = mkdtempSync(join(tmpdir(), "ut-tdd-parent-git-"));
     const pack = join(parent, "pack");
     const snapshot = `${parent}-snapshot`;

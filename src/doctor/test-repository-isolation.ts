@@ -135,7 +135,16 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
     }
     if (ts.isVariableStatement(statement) && statement.declarationList.flags & ts.NodeFlags.Const) {
       for (const declaration of statement.declarationList.declarations) {
-        if (!ts.isIdentifier(declaration.name) || !declaration.initializer) continue;
+        if (!declaration.initializer) continue;
+        if (ts.isObjectBindingPattern(declaration.name)) {
+          for (const element of declaration.name.elements) {
+            const imported = element.propertyName?.getText(file) ?? element.name.getText(file);
+            if (REPOSITORY_READ_APIS.has(imported) && ts.isIdentifier(element.name))
+              readAliases.set(element.name.text, imported);
+          }
+          continue;
+        }
+        if (!ts.isIdentifier(declaration.name)) continue;
         const target = memberName(declaration.initializer);
         const canonical = target ? (readAliases.get(target) ?? target) : null;
         if (canonical && REPOSITORY_READ_APIS.has(canonical))
@@ -174,7 +183,8 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
     if (
       ts.isCallExpression(node) &&
       ts.isIdentifier(node.expression) &&
-      node.expression.text === "headSnapshotRoot"
+      node.expression.text === "headSnapshotRoot" &&
+      !ts.isExpressionStatement(node.parent)
     )
       calls += 1;
     if (ts.isCallExpression(node) && isDirectRepositoryRead(node, readAliases)) calls += 1;

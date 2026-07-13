@@ -34,7 +34,15 @@ function createsPersistedHarnessDb(path: string, source: string): boolean {
     )
       continue;
     for (const declaration of statement.declarationList.declarations) {
-      if (!ts.isIdentifier(declaration.name) || !declaration.initializer) continue;
+      if (!declaration.initializer) continue;
+      if (ts.isObjectBindingPattern(declaration.name)) {
+        for (const element of declaration.name.elements) {
+          const target = element.propertyName?.getText(file) ?? element.name.getText(file);
+          if (ts.isIdentifier(element.name)) tracked.set(element.name.text, target);
+        }
+        continue;
+      }
+      if (!ts.isIdentifier(declaration.name)) continue;
       const target = ts.isIdentifier(declaration.initializer)
         ? tracked.get(declaration.initializer.text)
         : ts.isPropertyAccessExpression(declaration.initializer) &&
@@ -107,7 +115,16 @@ function usesRawRecursiveTreeRemoval(path: string, source: string): boolean {
     )
       continue;
     for (const declaration of statement.declarationList.declarations) {
-      if (!ts.isIdentifier(declaration.name) || !declaration.initializer) continue;
+      if (!declaration.initializer) continue;
+      if (ts.isObjectBindingPattern(declaration.name)) {
+        for (const element of declaration.name.elements) {
+          const target = element.propertyName?.getText(file) ?? element.name.getText(file);
+          if (["rm", "rmSync"].includes(target) && ts.isIdentifier(element.name))
+            aliases.add(element.name.text);
+        }
+        continue;
+      }
+      if (!ts.isIdentifier(declaration.name)) continue;
       options.set(declaration.name.text, declaration.initializer);
       const target = ts.isIdentifier(declaration.initializer)
         ? declaration.initializer.text
@@ -120,8 +137,12 @@ function usesRawRecursiveTreeRemoval(path: string, source: string): boolean {
     }
   }
   const isRecursive = (expression: ts.Expression | undefined): boolean => {
-    const resolved =
-      expression && ts.isIdentifier(expression) ? options.get(expression.text) : expression;
+    let resolved = expression;
+    const seen = new Set<string>();
+    while (resolved && ts.isIdentifier(resolved) && !seen.has(resolved.text)) {
+      seen.add(resolved.text);
+      resolved = options.get(resolved.text);
+    }
     if (!resolved || !ts.isObjectLiteralExpression(resolved)) return false;
     if (resolved.properties.some(ts.isSpreadAssignment)) return true;
     return resolved.properties.some(
@@ -151,6 +172,50 @@ function usesRawRecursiveTreeRemoval(path: string, source: string): boolean {
   };
   visit(file);
   return raw;
+}
+
+function hasLiveCleanupCall(path: string, source: string): boolean {
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const aliases = new Set<string>();
+  for (const statement of file.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteralLike(statement.moduleSpecifier) ||
+      !/(?:^|\/)support\/temp-tree$/.test(statement.moduleSpecifier.text) ||
+      !statement.importClause?.namedBindings ||
+      !ts.isNamedImports(statement.importClause.namedBindings)
+    )
+      continue;
+    for (const element of statement.importClause.namedBindings.elements) {
+      if ((element.propertyName?.text ?? element.name.text) === "removeTestTree")
+        aliases.add(element.name.text);
+    }
+  }
+  let found = false;
+  const isStaticallyDead = (node: ts.Node): boolean => {
+    for (let current = node.parent; current; current = current.parent) {
+      if (
+        ts.isIfStatement(current) &&
+        current.thenStatement.pos <= node.pos &&
+        node.end <= current.thenStatement.end &&
+        current.expression.kind === ts.SyntaxKind.FalseKeyword
+      )
+        return true;
+    }
+    return false;
+  };
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      aliases.has(node.expression.text) &&
+      !isStaticallyDead(node)
+    )
+      found = true;
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return found;
 }
 
 describe("persistent harness DB cleanup contract", () => {
@@ -184,6 +249,27 @@ describe("persistent harness DB cleanup contract", () => {
     ).toBe(true);
   });
 
+  it("U-TESTHYGIENE-033: resolves destructuring and rejects chained options or dead cleanup", () => {
+    expect(
+      createsPersistedHarnessDb(
+        "tests/nested/owner.test.ts",
+        "import * as db from '../src/db'; const { openHarnessDb: open } = db; open(path);",
+      ),
+    ).toBe(true);
+    expect(
+      usesRawRecursiveTreeRemoval(
+        "tests/nested/owner.test.ts",
+        "import * as fs from 'node:fs'; const { rmSync: wipe } = fs; const a = { recursive: true }; const b = a; wipe(root, b);",
+      ),
+    ).toBe(true);
+    expect(
+      hasLiveCleanupCall(
+        "tests/nested/owner.test.ts",
+        "import { removeTestTree } from '../support/temp-tree'; if (false) removeTestTree(root);",
+      ),
+    ).toBe(false);
+  });
+
   it("U-TESTHYGIENE-019: auto-discovers every persisted DB owner and requires retrying cleanup", () => {
     const root = process.cwd();
     const pending = [join(root, "tests")];
@@ -205,8 +291,7 @@ describe("persistent harness DB cleanup contract", () => {
 
     expect(owners.length).toBeGreaterThan(0);
     for (const owner of owners) {
-      expect(owner.source, owner.path).toMatch(/from\s+["'](?:\.\.\/|\.\/)*support\/temp-tree["']/);
-      expect(owner.source, owner.path).toMatch(/removeTestTree(?:\(|;)/);
+      expect(hasLiveCleanupCall(owner.path, owner.source), owner.path).toBe(true);
       expect(usesRawRecursiveTreeRemoval(owner.path, owner.source), owner.path).toBe(false);
     }
   });

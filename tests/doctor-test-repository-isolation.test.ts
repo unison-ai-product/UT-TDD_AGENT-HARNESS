@@ -85,6 +85,10 @@ describe("doctor test repository isolation", () => {
           path: "tests/const-alias.test.ts",
           source: "const load = readFileSync; load('src/cli.ts');",
         },
+        {
+          path: "tests/destructure-read.test.ts",
+          source: "const { readFileSync: load } = require('node:fs'); load('docs/README.md');",
+        },
         { path: "tests/env-bracket.test.ts", source: "process.env['PWD'];" },
         { path: "tests/global-bracket.test.ts", source: "globalThis['process'].cwd();" },
       ],
@@ -94,9 +98,26 @@ describe("doctor test repository isolation", () => {
       expect.arrayContaining([
         "test-repository-isolation - violation: unclassified:tests/import-alias.test.ts:repository-read=1",
         "test-repository-isolation - violation: unclassified:tests/const-alias.test.ts:repository-read=1",
+        "test-repository-isolation - violation: unclassified:tests/destructure-read.test.ts:repository-read=1",
         "test-repository-isolation - violation: forbidden-live-root-source:tests/env-bracket.test.ts",
         "test-repository-isolation - violation: forbidden-live-root-source:tests/global-bracket.test.ts",
       ]),
+    );
+  });
+
+  it("U-TESTHYGIENE-031: does not let a bare headSnapshotRoot decoy satisfy a contract", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [{ path: "tests/decoy-root.test.ts", source: "headSnapshotRoot();" }],
+      contracts: {
+        "tests/decoy-root.test.ts": {
+          mode: "head_snapshot",
+          calls: 1,
+          reason: "must be consumed",
+        },
+      },
+    });
+    expect(result.messages).toContain(
+      "test-repository-isolation - violation: stale-contract:tests/decoy-root.test.ts",
     );
   });
 
