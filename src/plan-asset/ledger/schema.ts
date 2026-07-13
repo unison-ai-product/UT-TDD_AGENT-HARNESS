@@ -486,7 +486,42 @@ function ledgerRowsValid(db: HarnessDb): boolean {
     )
   )
     return false;
-  return aliasReductionsValid(db) && reservationReductionsValid(db) && migrationReductionsValid(db);
+  return (
+    aliasReductionsValid(db) &&
+    reservationReductionsValid(db) &&
+    migrationReductionsValid(db) &&
+    reservationReceiptsValid(db)
+  );
+}
+
+function reservationReceiptsValid(db: HarnessDb): boolean {
+  const orphanEvents = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM plan_id_reservation_events event
+       LEFT JOIN plan_id_reservations current ON current.reservation_id = event.reservation_id
+       LEFT JOIN append_command_receipts receipt ON receipt.result_ref = event.reservation_event_id
+       WHERE current.reservation_id IS NULL OR receipt.command_id IS NULL
+         OR receipt.subject_kind != 'reservation'
+         OR receipt.command_id != event.command_id
+         OR receipt.command_payload_digest != event.command_payload_digest
+         OR receipt.subject_key != event.reservation_id
+         OR receipt.result_kind != 'reservation_event'
+         OR receipt.recorded_at != event.occurred_at
+         OR receipt.command_type != CASE event.event_kind
+           WHEN 'reserved' THEN 'reservation.reserve'
+           WHEN 'released' THEN 'reservation.release'
+           WHEN 'expired' THEN 'reservation.expire'
+         END`,
+    )
+    .get();
+  const orphanReceipts = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM append_command_receipts receipt
+       LEFT JOIN plan_id_reservation_events event ON event.reservation_event_id = receipt.result_ref
+       WHERE receipt.subject_kind = 'reservation' AND event.reservation_event_id IS NULL`,
+    )
+    .get();
+  return Number(orphanEvents?.n ?? 0) === 0 && Number(orphanReceipts?.n ?? 0) === 0;
 }
 
 function aliasReductionsValid(db: HarnessDb): boolean {

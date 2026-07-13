@@ -1195,6 +1195,11 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-011` | ledger version 0/current/future、repo外path | `openPlanLedger` / `migratePlanLedger` | 専用pathだけversion 1へtransactional作成。future/schema不一致は`plan-ledger-unavailable`、repo外はfail-close |
 | `U-PA-012` | plan/reservation/migration subject別global receipt、架空revision、plan列混入 | `append_command_receipts` typed CHECK/composite FK | plan subjectだけ実在asset+revision必須、他subjectはplan列NULL。違反はSQLiteが拒否 |
 | `U-PA-013` | valid current ledgerのevent/revision/receipt/reduction digestを1列改竄 | `migratePlanLedger` row digest/reduction verifier | DDL形状が同一でも`plan-ledger-unavailable`でfail-closeし、空ledgerとして補完しない |
+| `U-PA-014` | valid asset、未予約ordinal | `PlanLedger.reserve` | event/current/receiptを同一transactionで各1件appendしreopen検証Green |
+| `U-PA-015` | 同一command IDの同一payload／異payload再送 | `PlanLedger.reserve` | 同一payloadは同じresultをreplayし行増加0、異payloadは`plan-id-reservation-command-conflict` |
+| `U-PA-016` | active leaseへrelease/expireを競合実行 | `PlanLedger.release/expire` | token/expiry guardを通った一方だけterminal eventをappendし、敗者は`plan-id-reservation-not-active` |
+| `U-PA-017` | active ordinalへ別reservationをappend | `PlanLedger.reserve` | `plan-id-reservation-conflict`でevent/current/receiptを全rollbackし部分commit 0 |
+| `U-PA-018` | reservation receiptのsubject/result kind/command type/recorded timeを改竄 | `migratePlanLedger` receipt/event bijection verifier | event subject/payload/result/timeとの不一致を`plan-ledger-unavailable`でfail-close |
 | `CANDIDATE-FSM-001` | 正規stateごとの次event | `transition` | 許可表どおりのnext state/event、exit 0 |
 | `CANDIDATE-FSM-002` | proposed→implementing | `transition` | `forward-transition-illegal`, exit 1 |
 | `CANDIDATE-FSM-003` | pair frozen、Red evidenceなし | implement command | `forward-red-evidence-missing`, exit 1 |

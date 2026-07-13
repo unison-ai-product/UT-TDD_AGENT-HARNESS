@@ -197,26 +197,32 @@ describe("PLAN Asset canonical ledger schema", () => {
   });
 
   it("U-PA-013: rejects event, revision, and reduction projection tampering", () => {
-    expectTamperRejected(
-      (db) => seedAliasReduction(db, "plan:a"),
-      (db) => db.exec("UPDATE plan_aliases SET alias = 'PLAN-L7-tampered'"),
-    );
-    expectTamperRejected(
-      (db) => seedAliasReduction(db, "plan:a"),
-      (db) => {
-        replaceTrigger(db, "trg_plan_alias_events_no_update");
-        db.exec("UPDATE plan_alias_events SET reason = 'tampered'");
-        restoreTrigger(db, "trg_plan_alias_events_no_update");
-      },
-    );
-    expectTamperRejected(
-      (db) => seedAsset(db, "plan:a"),
-      (db) => {
-        replaceTrigger(db, "trg_plan_revisions_no_update");
-        db.exec("UPDATE plan_revisions SET canonical_payload_json = '{\"tampered\":true}'");
-        restoreTrigger(db, "trg_plan_revisions_no_update");
-      },
-    );
+    expect(() =>
+      expectTamperRejected(
+        (db) => seedAliasReduction(db, "plan:a"),
+        (db) => db.exec("UPDATE plan_aliases SET alias = 'PLAN-L7-tampered'"),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      expectTamperRejected(
+        (db) => seedAliasReduction(db, "plan:a"),
+        (db) => {
+          replaceTrigger(db, "trg_plan_alias_events_no_update");
+          db.exec("UPDATE plan_alias_events SET reason = 'tampered'");
+          restoreTrigger(db, "trg_plan_alias_events_no_update");
+        },
+      ),
+    ).not.toThrow();
+    expect(() =>
+      expectTamperRejected(
+        (db) => seedAsset(db, "plan:a"),
+        (db) => {
+          replaceTrigger(db, "trg_plan_revisions_no_update");
+          db.exec("UPDATE plan_revisions SET canonical_payload_json = '{\"tampered\":true}'");
+          restoreTrigger(db, "trg_plan_revisions_no_update");
+        },
+      ),
+    ).not.toThrow();
   });
 });
 

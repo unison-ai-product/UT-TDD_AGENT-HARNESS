@@ -17,8 +17,10 @@ agent_slots:
   - role: se
     slot_label: "SE - PlanAsset/Revision/Evidence/Reservationとv1 adapter"
   - role: qa
-    slot_label: "QA - U-PA-001..013 Red→Green"
+    slot_label: "QA - U-PA-001..018 Red→Green"
 generates:
+  - artifact_path: docs/improvement-backlog.md
+    artifact_type: doc_update
   - artifact_path: docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-418-plan-asset-v2-backfill.md
@@ -37,6 +39,10 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/schema.ts
     artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/plan-ledger.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/transaction.ts
+    artifact_type: source_module
   - artifact_path: src/schema/harness-db.ts
     artifact_type: source_module
   - artifact_path: src/kernel/plan-alias.ts
@@ -48,6 +54,8 @@ generates:
   - artifact_path: tests/plan-asset/project-identity-loader.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/ledger-schema.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/ledger-application.test.ts
     artifact_type: test_code
   - artifact_path: tests/harness-db-constraints.test.ts
     artifact_type: test_code
@@ -62,12 +70,12 @@ dependencies:
 
 # PLAN-L7-418
 
-U-PA-001..013をRed freezeし、immutable aggregate/VO、canonical v1 adapter、collision migration ledger、採番予約、HEAD tracked repository identity loaderを実装する。情報損失と曖昧short IDはfail-closeする。DoDはlegacy全件変換、collision全件判断、旧revision不変、review、Reverse-418合流である。
+U-PA-001..018をRed freezeし、immutable aggregate/VO、canonical v1 adapter、collision migration ledger、採番予約、HEAD tracked repository identity loaderを実装する。情報損失と曖昧short IDはfail-closeする。DoDはlegacy全件変換、collision全件判断、旧revision不変、review、Reverse-418合流である。
 
 planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,adapters}`、reservation/migration schema、dry-run CLI、実行可能Red/Green testである。実体化した成果物はfrontmatter `generates`へ昇格する。
 
 ## 実装進捗
 
-- U-PA-001..013: Redを観測後、domain/value object、legacy canonical adapter、曖昧alias fail-close、採番予約、HEAD tracked project identity provenance、ledger typed partial UNIQUE/append-only trigger/composite FK/path/version/schema・row digest fingerprintをGreen化済み。
+- U-PA-001..018: Redを観測後、domain/value object、legacy canonical adapter、曖昧alias fail-close、採番予約、HEAD tracked project identity provenance、ledger typed schema/replay verifier、atomic reservation/receipt transactionをGreen化済み。
 - `state-db`のlegacy short alias解決は先頭一致を廃止し、canonical resolverのexact/unique規則へ統合済み。
-- 未完了: ledger application transaction/reducer、全legacy PLAN移行・collision判断、dry-run CLI、Reverse-418合流。
+- 未完了: alias/migration application reducer、全legacy PLAN移行・collision判断、dry-run CLI、Reverse-418合流。
