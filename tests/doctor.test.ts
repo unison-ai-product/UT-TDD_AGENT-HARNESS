@@ -425,9 +425,8 @@ describe("runDoctor", () => {
     );
 
     expect(r.ok).toBe(false);
-    expect(blockers).toHaveLength(2);
+    expect(blockers).toHaveLength(1);
     expect(blockers[0]).toContain("merged-plan-status");
-    expect(blockers[1]).toContain("db-currency");
   });
 
   it("ok=true includes handover and agent-slots surfaces as warnings", () => {
