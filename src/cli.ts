@@ -39,6 +39,8 @@ import {
   DOCTOR_RUN_PROFILES,
   type DoctorRunProfileId,
 } from "./doctor/check-registry";
+import { renderElicitationContext, selectElicitationContext } from "./elicitation/context";
+import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/record";
 import { computeSkillMetrics } from "./feedback/engine";
 import { evaluateGateReview, loadReviewChecklistIfPresent } from "./gate/review-tier";
 import { writeGateRunEvidence } from "./gate/run-evidence";
@@ -155,6 +157,7 @@ import {
   recommendSkillsForPlan,
   recommendSkillsForText,
   recordSkillRecommendations,
+  resolveRuntimeSessionId,
 } from "./skill-engine/recommend";
 import { type SkillCategory, scaffoldSkill } from "./skill-engine/scaffold";
 import { defaultHarnessDbPath, openHarnessDb } from "./state-db/index";
@@ -3204,6 +3207,74 @@ memory
       db.close();
     }
   });
+
+const elicit = program
+  .command("elicit")
+  .description("design-decision elicitation bound to the current V-model stage (PLAN-L7-428)");
+elicit
+  .command("context")
+  .description(
+    "resolve current stage + skill decision defaults + design coverage into an elicitation packet",
+  )
+  .option("--plan <plan_id>", "target PLAN (default: first ready schedule row)")
+  .option("--json", "JSON output")
+  .action((opts: { plan?: string; json?: boolean }) => {
+    const repoRoot = process.cwd();
+    const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+    try {
+      const ctx = selectElicitationContext(db, { repoRoot, planId: opts.plan });
+      process.stdout.write(
+        opts.json ? `${JSON.stringify(ctx, null, 2)}\n` : renderElicitationContext(ctx),
+      );
+    } finally {
+      db.close();
+    }
+  });
+elicit
+  .command("record")
+  .description(`append an adopted design decision to ${DESIGN_DECISION_LOG_PATH}`)
+  .requiredOption("--plan <plan_id>", "PLAN the decision belongs to")
+  .requiredOption("--topic <text>", "what was decided (判断の種別)")
+  .requiredOption("--chosen <text>", "adopted option")
+  .requiredOption("--reason <text>", "why it was adopted")
+  .option("--options <csv>", "comma-separated candidate options")
+  .action(
+    (opts: { plan: string; topic: string; chosen: string; reason: string; options?: string }) => {
+      const repoRoot = process.cwd();
+      let currentLocation = "";
+      try {
+        const db = openHarnessDb(defaultHarnessDbPath(repoRoot), { repoRoot });
+        try {
+          const ctx = selectElicitationContext(db, { repoRoot, planId: opts.plan });
+          currentLocation = ctx.stage?.current_location ?? "";
+        } finally {
+          db.close();
+        }
+      } catch {
+        // fail-open: 工程表 stage が引けなくても記録は成立させる
+      }
+      try {
+        const record = appendDesignDecision(repoRoot, {
+          planId: opts.plan,
+          currentLocation,
+          topic: opts.topic,
+          options: opts.options?.split(",") ?? [],
+          chosen: opts.chosen,
+          reason: opts.reason,
+          sessionId: resolveRuntimeSessionId(),
+        });
+        process.stdout.write(
+          `elicit: recorded ${record.plan_id}${record.current_location ? ` @ ${record.current_location}` : ""} → ${DESIGN_DECISION_LOG_PATH}\n`,
+        );
+        process.stdout.write(
+          "elicit: 正本への転記を忘れずに (PLAN 設計判断節 / ADR、governance §共通ルール 7)\n",
+        );
+      } catch (error) {
+        process.stderr.write(`elicit: ${error instanceof Error ? error.message : String(error)}\n`);
+        process.exitCode = 1;
+      }
+    },
+  );
 
 registerDistributionCommands(program);
 
