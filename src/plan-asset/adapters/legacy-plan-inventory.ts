@@ -4,7 +4,7 @@ import { isAlias, isMap, isScalar, isSeq, parseDocument } from "yaml";
 import { deriveLegacyAssetId } from "./legacy-plan-adapter.js";
 import { loadProjectIdentityFromHead } from "./project-identity-loader.js";
 
-interface InventoryItem {
+export interface LegacyPlanInventoryItem {
   readonly sourcePath: string;
   readonly legacyPlanId: string;
   readonly assetId: string;
@@ -18,25 +18,25 @@ interface InventoryItem {
   readonly sourceCommit: string;
 }
 
-interface CollisionGroup {
+export interface LegacyPlanCollisionGroup {
   readonly numericCore: string;
   readonly planIds: readonly string[];
 }
 
-type InventoryResult =
+export type LegacyPlanInventoryResult =
   | {
       readonly ok: true;
       readonly value: {
         readonly repositoryIdentity: string;
         readonly sourceCommit: string;
-        readonly items: readonly InventoryItem[];
-        readonly collisionGroups: readonly CollisionGroup[];
+        readonly items: readonly LegacyPlanInventoryItem[];
+        readonly collisionGroups: readonly LegacyPlanCollisionGroup[];
         readonly inventoryDigest: string;
       };
     }
   | { readonly ok: false; readonly error: { readonly ruleId: string; readonly path?: string } };
 
-export function buildLegacyPlanInventory(repoRoot: string): InventoryResult {
+export function buildLegacyPlanInventory(repoRoot: string): LegacyPlanInventoryResult {
   const identity = loadProjectIdentityFromHead({ repoRoot });
   if (!identity.ok) return { ok: false, error: identity.error };
   try {
@@ -46,7 +46,7 @@ export function buildLegacyPlanInventory(repoRoot: string): InventoryResult {
       .filter((path) => /^docs\/plans\/PLAN-.*\.md$/.test(path))
       .sort(compareBytes);
     const blobs = gitHeadFiles(repoRoot, paths);
-    const items: InventoryItem[] = [];
+    const items: LegacyPlanInventoryItem[] = [];
     for (const path of paths) {
       const blob = blobs.get(path);
       if (!blob) return { ok: false, error: { ruleId: "plan-migration-loss", path } };
@@ -218,7 +218,9 @@ function hasUnique<T>(items: readonly T[], select: (item: T) => string): boolean
   return new Set(items.map(select)).size === items.length;
 }
 
-function collisions(items: readonly InventoryItem[]): readonly CollisionGroup[] {
+function collisions(
+  items: readonly LegacyPlanInventoryItem[],
+): readonly LegacyPlanCollisionGroup[] {
   const groups = new Map<string, string[]>();
   for (const item of items) {
     const core = /^(PLAN-(?:L(?:[0-9]|1[0-4])|DISCOVERY|REVERSE|RECOVERY|M)-\d+)/.exec(
