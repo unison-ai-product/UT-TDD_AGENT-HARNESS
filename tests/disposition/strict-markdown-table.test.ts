@@ -66,4 +66,15 @@ describe("strict V-model authoring table", () => {
       findings: [{ ruleId: "catalog-authoring-count-invalid" }],
     });
   });
+
+  it("fails closed when the same schema appears in more than one table", () => {
+    const result = parseStrictMarkdownTable(encode(`${valid}\n${valid}`), {
+      subjectId: "fixture",
+      expectedHeaders: ["id", "name"],
+    });
+    expect(result).toMatchObject({
+      ok: false,
+      findings: [{ ruleId: "catalog-authoring-schema-invalid", message: "table header is ambiguous" }],
+    });
+  });
 });

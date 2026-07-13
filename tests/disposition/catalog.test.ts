@@ -147,6 +147,13 @@ describe("DocumentDispositionCatalog", () => {
     expect(rules(input)).toContain("catalog-orphan-edge");
   });
 
+  it("U-DISP-003: source-target edge欠落を宣言件数と無関係に拒否する", () => {
+    const input = fixture();
+    input.sourceTargetEdges = [];
+    input.declaredCounts.sourceTargetEdges = 0;
+    expect(rules(input)).toContain("catalog-source-target-incomplete");
+  });
+
   it("U-DISP-003: 派生edge identityとsource disposition不一致を拒否する", () => {
     const identity = fixture();
     identity.sourceItemEdges[0].edgeId = "invented";

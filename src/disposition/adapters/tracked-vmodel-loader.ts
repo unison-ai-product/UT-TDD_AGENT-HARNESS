@@ -14,10 +14,19 @@ const paths = {
   itemTargets: "docs/governance/vmodel-item-target-ledger.md",
 } as const;
 
-function table(bundle: AuthoringBundle, path: string, headers: string[]): readonly Row[] {
+function table(
+  bundle: AuthoringBundle,
+  path: string,
+  headers: string[],
+  expectedRows?: number,
+): readonly Row[] {
   const bytes = bundle[path];
   if (!bytes) throw new Error(`catalog authoring source missing: ${path}`);
-  const result = parseStrictMarkdownTable(bytes, { subjectId: path, expectedHeaders: headers });
+  const result = parseStrictMarkdownTable(bytes, {
+    subjectId: path,
+    expectedHeaders: headers,
+    ...(expectedRows === undefined ? {} : { expectedRows }),
+  });
   if (!result.ok) throw new Error(JSON.stringify(result.findings));
   return result.rows;
 }
@@ -45,6 +54,7 @@ export function loadTrackedCatalogInput(
   if (!provenance.ok) throw new Error(JSON.stringify(provenance.findings));
   const manifestRows = table(bundle, paths.manifest, ["field", "value"]);
   const manifest = new Map(manifestRows.map((row) => [row.field, row.value]));
+  const manifestObject = Object.fromEntries(manifest);
   const dispositions = table(bundle, paths.dispositions, [
     "source_id",
     "source_title",
@@ -67,13 +77,12 @@ export function loadTrackedCatalogInput(
     "source_file_policy",
     "reason",
   ]);
-  const sourceTargets = table(bundle, paths.sourceTargets, [
-    "edge_id",
-    "source_id",
-    "disposition",
-    "target_type",
-    "target_ref",
-  ]);
+  const sourceTargets = table(
+    bundle,
+    paths.sourceTargets,
+    ["edge_id", "source_id", "disposition", "target_type", "target_ref"],
+    Number(required(manifestObject, "source_target_edges")),
+  );
   const itemTargets = table(bundle, paths.itemTargets, [
     "edge_id",
     "item_id",
@@ -98,16 +107,16 @@ export function loadTrackedCatalogInput(
   }));
   return {
     manifestIdentity: {
-      auditedOn: required(Object.fromEntries(manifest), "audited_on"),
-      zipSha256: required(Object.fromEntries(manifest), "sha256"),
+      auditedOn: required(manifestObject, "audited_on"),
+      zipSha256: required(manifestObject, "sha256"),
     },
     declaredCounts: {
-      sources: Number(required(Object.fromEntries(manifest), "numbered_source_documents")),
-      categories: Number(required(Object.fromEntries(manifest), "semantic_catalog_categories")),
+      sources: Number(required(manifestObject, "numbered_source_documents")),
+      categories: Number(required(manifestObject, "semantic_catalog_categories")),
       metaSourceMappings: metaSourceMappings.length,
-      items: Number(required(Object.fromEntries(manifest), "semantic_catalog_items")),
+      items: Number(required(manifestObject, "semantic_catalog_items")),
       sourceItemEdges: sourceItemEdges.length,
-      sourceTargetEdges: sourceTargets.length,
+      sourceTargetEdges: Number(required(manifestObject, "source_target_edges")),
       itemTargetEdges: itemTargets.length,
     },
     sources: dispositions.map((row) => ({

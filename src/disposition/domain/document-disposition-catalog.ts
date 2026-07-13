@@ -445,6 +445,16 @@ function validate(input: CatalogInput): CatalogViolation[] {
       );
     }
   }
+  for (const sourceId of sourceIds) {
+    if (!input.sourceTargetEdges.some((edge) => edge.sourceId === sourceId)) {
+      findings.push(
+        violation("catalog-source-target-incomplete", sourceId, {
+          message: "source has no target edge",
+          evidenceRefs: [sourceId],
+        }),
+      );
+    }
+  }
   for (const edge of input.itemTargetEdges) {
     if (
       !itemStatuses.has(edge.targetStatus) ||

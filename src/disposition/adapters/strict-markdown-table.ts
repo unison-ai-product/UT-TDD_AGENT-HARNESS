@@ -59,19 +59,26 @@ export function parseStrictMarkdownTable(
     );
     return isHeader ? [index] : [];
   });
-  const headerIndex = tableHeaders.find((index) => {
+  const matchingHeaders = tableHeaders.filter((index) => {
     const headers = cells(lines[index]).map(unwrap);
     return (
       headers.length === expectedHeaders.length &&
       headers.every((header, position) => header === expectedHeaders[position])
     );
   });
-  if (headerIndex === undefined) {
+  if (matchingHeaders.length !== 1) {
     return {
       ok: false,
-      findings: [finding("catalog-authoring-schema-invalid", subjectId, "table header missing")],
+      findings: [
+        finding(
+          "catalog-authoring-schema-invalid",
+          subjectId,
+          matchingHeaders.length === 0 ? "table header missing" : "table header is ambiguous",
+        ),
+      ],
     };
   }
+  const headerIndex = matchingHeaders[0];
   const rawHeaders = cells(lines[headerIndex]);
   const headers = rawHeaders.map(unwrap);
   if (
