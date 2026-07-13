@@ -23,6 +23,17 @@ export interface ObserveMigrationInput {
   readonly expectedSequence: 0;
 }
 
+export interface RejectMigrationInput {
+  readonly legacyPlanId: string;
+  readonly lossFields: readonly string[];
+  readonly reason: string;
+  readonly reviewPlanId: string;
+  readonly commandId: string;
+  readonly occurredAt: string;
+  readonly expectedSequence: 1;
+  readonly expectedDecision: "pending";
+}
+
 export class LegacyMigrationLedger {
   private readonly commands: AppendCommandTransaction;
 
@@ -48,6 +59,23 @@ export class LegacyMigrationLedger {
         conflictRuleId: "plan-migration-command-conflict",
       },
       (payloadDigest) => this.appendObserved(input, payloadDigest),
+    );
+  }
+
+  reject(input: RejectMigrationInput): AppendResult {
+    if (!migratePlanLedger(this.db).ok) return failed("plan-ledger-unavailable");
+    return this.commands.run(
+      {
+        commandId: input.commandId,
+        commandType: "migration.decide",
+        subjectKind: "legacy_migration",
+        subjectKey: input.legacyPlanId,
+        payload: withoutContext(input),
+        recordedAt: input.occurredAt,
+        resultKind: "migration_event",
+        conflictRuleId: "plan-migration-command-conflict",
+      },
+      (payloadDigest) => this.appendRejected(input, payloadDigest),
     );
   }
 
@@ -79,6 +107,54 @@ export class LegacyMigrationLedger {
     this.db
       .prepare(`INSERT INTO legacy_plan_migrations VALUES (${placeholders(projection)})`)
       .run(...Object.values(projection));
+    return { ok: true, replayed: false, resultRef: String(event.migration_event_id) };
+  }
+
+  private appendRejected(input: RejectMigrationInput, payloadDigest: string): AppendResult {
+    const current = this.db
+      .prepare("SELECT * FROM legacy_plan_migrations WHERE legacy_plan_id = ?")
+      .get(input.legacyPlanId);
+    const first = this.db
+      .prepare(
+        "SELECT * FROM legacy_plan_migration_events WHERE legacy_plan_id = ? AND sequence = 1",
+      )
+      .get(input.legacyPlanId);
+    if (!current || !first || current.decision !== input.expectedDecision) {
+      return failed("plan-migration-state-conflict");
+    }
+    const row = {
+      ...first,
+      migration_event_id: `migration:${input.legacyPlanId}:event:2`,
+      sequence: input.expectedSequence + 1,
+      command_id: input.commandId,
+      command_payload_digest: payloadDigest,
+      event_kind: "decided",
+      decision: "rejected",
+      resolved_alias: null,
+      loss_fields_json: JSON.stringify(input.lossFields),
+      reason: input.reason,
+      review_plan_id: input.reviewPlanId,
+      occurred_at: input.occurredAt,
+      event_digest: undefined,
+    };
+    const { event_digest: _ignored, ...eventWithoutDigest } = row;
+    const event = {
+      ...eventWithoutDigest,
+      event_digest: ledgerRowDigest(eventWithoutDigest, "event_digest"),
+    };
+    this.db
+      .prepare(`INSERT INTO legacy_plan_migration_events VALUES (${placeholders(event)})`)
+      .run(...Object.values(event));
+    this.db
+      .prepare(`UPDATE legacy_plan_migrations SET decision = 'rejected', resolved_alias = NULL,
+        loss_fields_json = ?, reason = ?, review_plan_id = ?, last_event_digest = ? WHERE legacy_plan_id = ?`)
+      .run(
+        event.loss_fields_json,
+        input.reason,
+        input.reviewPlanId,
+        event.event_digest,
+        input.legacyPlanId,
+      );
     return { ok: true, replayed: false, resultRef: String(event.migration_event_id) };
   }
 }
@@ -114,7 +190,9 @@ function observedEvent(input: ObserveMigrationInput, payloadDigest: string) {
   return Object.freeze({ ...row, event_digest: ledgerRowDigest(row, "event_digest") });
 }
 
-function withoutContext(input: ObserveMigrationInput): Readonly<Record<string, unknown>> {
+function withoutContext(
+  input: ObserveMigrationInput | RejectMigrationInput,
+): Readonly<Record<string, unknown>> {
   return Object.fromEntries(
     Object.entries(input).filter(([key]) => key !== "commandId" && key !== "occurredAt"),
   );

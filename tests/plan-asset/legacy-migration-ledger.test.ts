@@ -31,6 +31,31 @@ describe("legacy migration ledger application", () => {
       expect(counts(db)).toEqual([1, 1, 1]);
     });
   });
+
+  it("U-PA-029: rejects without creating a PlanAsset revision or alias", () => {
+    withLedger(({ db, ledger }) => {
+      expect(ledger.observe(input())).toMatchObject({ ok: true });
+      expect(
+        ledger.reject({
+          legacyPlanId: input().legacyPlanId,
+          lossFields: ["frontmatter.unsupported"],
+          reason: "lossless migration unavailable",
+          reviewPlanId: "PLAN-L7-418-review",
+          commandId: "command:reject",
+          occurredAt: "2026-07-13T01:00:00Z",
+          expectedSequence: 1,
+          expectedDecision: "pending",
+        }),
+      ).toMatchObject({ ok: true, replayed: false });
+      expect(counts(db)).toEqual([2, 1, 2]);
+      expect(
+        ["plan_assets", "plan_revisions", "plan_alias_events", "plan_aliases"].map((table) =>
+          count(db, table),
+        ),
+      ).toEqual([0, 0, 0, 0]);
+      expect(migratePlanLedger(db)).toMatchObject({ ok: true });
+    });
+  });
 });
 
 function input() {
@@ -69,6 +94,10 @@ function withLedger(
 
 function counts(db: ReturnType<typeof openHarnessDb>): readonly number[] {
   return ["legacy_plan_migration_events", "legacy_plan_migrations", "append_command_receipts"].map(
-    (table) => Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n ?? 0),
+    (table) => count(db, table),
   );
+}
+
+function count(db: ReturnType<typeof openHarnessDb>, table: string): number {
+  return Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n ?? 0);
 }
