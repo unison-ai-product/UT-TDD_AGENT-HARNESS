@@ -166,7 +166,7 @@ export function sealReference(referenceRoot: string): void {
   if (!identity) throw new Error("reference snapshot identity cannot be resolved");
   run(
     "icacls",
-    [referenceRoot, "/deny", `${identity}:(OI)(CI)(IO)(WD,AD,WEA,WA,DC,D)`, "/C", "/Q"],
+    [referenceRoot, "/grant:r", `${identity}:(OI)(CI)(IO)(RX)`, "/C", "/Q"],
     referenceRoot,
   );
 }
@@ -179,7 +179,11 @@ export function unsealReference(referenceRoot: string): void {
   }
   const identity = output("whoami", [], referenceRoot);
   if (!identity) throw new Error("reference snapshot identity cannot be resolved");
-  run("icacls", [referenceRoot, "/remove:d", identity, "/C", "/Q"], referenceRoot);
+  run(
+    "icacls",
+    [referenceRoot, "/grant:r", `${identity}:(OI)(CI)(IO)(F)`, "/C", "/Q"],
+    referenceRoot,
+  );
 }
 
 export function runSnapshotTests(
