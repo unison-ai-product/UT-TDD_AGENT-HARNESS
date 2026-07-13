@@ -106,6 +106,7 @@ planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,
 - U-PA-038: confirmed/completed/accepted PLANの`generates[].artifact_path`をworking treeではなくHEAD treeへ突合する`HeadTargetRegistry`を追加。exact fileは非空blob、directory familyは配下に非空tracked blobが1件以上あることを要求する。file-only初版が4 directory familyをphantom扱いした誤検知をcommit前にRedで捕捉し、file/family両対応へ是正して741件 finding 0を回復した。
 - A-187委譲実体監査で、現行`agent_slots`が`role + slot_label`のみでtyped `design_ref`を持たず受け皿実体を証明不能と確認した。これをIMP-162へ負債起票し、schema/上流PLAN契約を追加してからdetectorを追従させる。label文字列から設計先を推測する実装や、検出を通すためのslot削除は禁止する。
 - U-PA-039: dry-run recordの`sourceCommit + sourcePath`を独立Git oracleでblob OIDへ解決し、`git cat-file blob`の実bytes SHA-256が`sourceContentDigest`と一致することを再検証する。working tree再hashやreport内自己比較ではなく、commit-bound object取得元を証跡とする。
+- U-PA-040: `vmodel-role-contracts.md`を7 roleの上流正本とし、HEADからstrict loadしたrole contractを全`agent_slots`へlossless projectionする。各recordは`role + slotLabel + contractRef`を保持し、未知role/label不正/contract target欠落をfail-closeする。独立Git oracleで全contract blobがsource commitに存在し非空であることを検証する。
 - U-PA-030: migration event/current/global receiptの双方向bijectionとstream/current集合一致をverifierへ追加し、event-only/receipt-only mutationをGreen化済み。
 - U-PA-033: file-backed migration ledgerのclose/reopen後にcurrent state、event digest、command payload digest集合が完全一致するreconstruct oracleをGreen化済み。
 - U-PA-032: observe 3境界とadoption 7境界へfault portを注入し、各例外後にmigration/receipt/asset/revision/alias全table delta 0をGreen化済み。U-PA-001..033の実行可能testはtodo 0。

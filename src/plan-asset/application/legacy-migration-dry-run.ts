@@ -1,10 +1,15 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { type Role, VALID_ROLES } from "../../schema/index.js";
 import {
   buildLegacyPlanInventory,
   type LegacyPlanCollisionGroup,
   type LegacyPlanInventoryItem,
 } from "../adapters/legacy-plan-inventory.js";
+import {
+  loadRoleContractRegistry,
+  type RoleContractRegistry,
+} from "../adapters/role-contract-registry.js";
 import { validateMigrationFields } from "../domain/legacy-migration.js";
 import {
   MIGRATION_REVIEW_PLAN_ID,
@@ -35,7 +40,14 @@ export interface MigrationDryRunRecord extends MigrationDecisionProposal {
   readonly sourceCommit: string;
   readonly sourceBlobOid: string;
   readonly sourceContentDigest: string;
+  readonly delegationTargets: readonly DelegationTarget[];
   readonly findings: readonly MigrationDryRunFinding[];
+}
+
+export interface DelegationTarget {
+  readonly role: Role;
+  readonly slotLabel: string;
+  readonly contractRef: string;
 }
 
 export interface MigrationDryRunReport {
@@ -73,11 +85,13 @@ export class LegacyMigrationDryRun {
       ),
     );
     const headArtifacts = HeadTargetRegistry.load(repoRoot);
+    const roleContracts = loadRoleContractRegistry(repoRoot);
     const records = inventory.value.items.map((item) =>
       record(
         item,
         this.decisions.decide(item, collisionByPlan.get(item.legacyPlanId) ?? null),
         headArtifacts,
+        roleContracts,
       ),
     );
     const findings = [
@@ -151,8 +165,13 @@ function record(
   item: LegacyPlanInventoryItem,
   proposal: MigrationDecisionProposal,
   headArtifacts: HeadTargetRegistry,
+  roleContracts: RoleContractRegistry,
 ): MigrationDryRunRecord {
-  const findings: MigrationDryRunFinding[] = artifactFindings(item, headArtifacts);
+  const delegation = delegationProjection(item, roleContracts, headArtifacts);
+  const findings: MigrationDryRunFinding[] = [
+    ...artifactFindings(item, headArtifacts),
+    ...delegation.findings,
+  ];
   if (proposal.legacyPlanId !== item.legacyPlanId) {
     findings.push(
       finding(
@@ -183,8 +202,41 @@ function record(
     sourceCommit: item.sourceCommit,
     sourceBlobOid: item.sourceBlobOid,
     sourceContentDigest: item.sourceContentDigest,
+    delegationTargets: delegation.targets,
     findings: Object.freeze(findings),
   });
+}
+
+function delegationProjection(
+  item: LegacyPlanInventoryItem,
+  registry: RoleContractRegistry,
+  targets: HeadTargetRegistry,
+): { readonly targets: readonly DelegationTarget[]; readonly findings: MigrationDryRunFinding[] } {
+  const slots = Array.isArray(item.frontmatter.agent_slots) ? item.frontmatter.agent_slots : [];
+  const findings: MigrationDryRunFinding[] = [];
+  const projected = slots.flatMap((slot) => {
+    if (!slot || typeof slot !== "object") return [];
+    const value = slot as Record<string, unknown>;
+    if (!VALID_ROLES.includes(value.role as Role) || typeof value.slot_label !== "string") {
+      findings.push(
+        finding("plan-delegation-role-mismatch", item.legacyPlanId, "invalid role or slot label"),
+      );
+      return [];
+    }
+    const role = value.role as Role;
+    const contractRef = registry.targets[role];
+    if (!targets.hasNonEmpty(contractRef)) {
+      findings.push(
+        finding(
+          "plan-delegation-design-missing",
+          item.legacyPlanId,
+          `HEAD contract missing: ${contractRef}`,
+        ),
+      );
+    }
+    return [Object.freeze({ role, slotLabel: value.slot_label, contractRef })];
+  });
+  return { targets: Object.freeze(projected), findings };
 }
 
 function artifactFindings(

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { loadRoleContractRegistry } from "../../src/plan-asset/adapters/role-contract-registry.js";
 import {
   HeadTargetRegistry,
   LegacyMigrationDryRun,
@@ -25,6 +26,23 @@ describe("legacy migration dry-run", () => {
     const bytes = execFileSync("git", ["-C", process.cwd(), "cat-file", "blob", oid]);
     expect(oid).toBe(sample.sourceBlobOid);
     expect(createHash("sha256").update(bytes).digest("hex")).toBe(sample.sourceContentDigest);
+  });
+
+  it("U-PA-040: resolves every delegation slot to a non-empty role contract at HEAD", () => {
+    const result = new LegacyMigrationDryRun().run(process.cwd());
+    if (!("records" in result)) throw new Error(result.ruleId);
+    const targets = result.records.flatMap((record) => record.delegationTargets);
+    expect(targets.length).toBeGreaterThan(0);
+    const contracts = loadRoleContractRegistry(process.cwd());
+    expect(new Set(Object.keys(contracts.targets))).toEqual(
+      new Set(["po", "tl", "qa", "aim", "uiux", "se", "docs"]),
+    );
+    expect(targets.every((target) => target.role in contracts.targets)).toBe(true);
+    for (const contractRef of new Set(targets.map((target) => target.contractRef))) {
+      expect(
+        Number(git(["cat-file", "-s", `${result.sourceCommit}:${contractRef}`]).trim()),
+      ).toBeGreaterThan(0);
+    }
   });
 
   it("U-PA-034: emits an exactly-once HEAD-bound record for every inventory item", () => {
