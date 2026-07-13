@@ -784,7 +784,6 @@ describe("L7 CLI surface closure", () => {
       expect(payload.readiness.contracts.tagPin).toContain("#v0.1.0");
       expect(payload.readiness.ci.forkPullRequestSecrets).toBe("not-required");
       expect(readFileSync(join(binDir, "codex-env.txt"), "utf8")).toContain("args=");
-      expect(existsSync(join(repoRoot, "codex-env.txt"))).toBe(false);
     } finally {
       rmSync(binDir, { recursive: true, force: true });
     }

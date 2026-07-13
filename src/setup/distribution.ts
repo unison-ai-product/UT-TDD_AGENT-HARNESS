@@ -188,7 +188,7 @@ export function transformCleanDistributionArtifact(artifactPath: string, content
   const scripts = { ...(parsed.scripts ?? {}) };
   scripts["test:source"] ??= scripts.test ?? "vitest run";
   scripts["test:pack"] = PACK_SAFE_TEST_SCRIPT;
-  scripts.test = PACK_SAFE_TEST_SCRIPT;
+  scripts.test = "bun run test:pack";
   return `${JSON.stringify({ ...parsed, scripts }, null, 2)}\n`;
 }
 
