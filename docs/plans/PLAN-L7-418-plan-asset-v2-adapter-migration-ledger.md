@@ -95,6 +95,7 @@ planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,
 - ledger schema v2でderived migration identityとadopted `(target_asset_id,target_revision)`を分離し、pending/rejectedの架空PlanAsset生成を禁止、migrated/rekeyedのphantom revisionをcomposite FKで拒否するU-PA-023/028/029 DB oracleをGreen化済み。
 - U-PA-026/027: `LegacyMigrationLedger.observe`でpending event/current/global receiptのatomic append、state conflict rollback、同command replay、異payload conflictをGreen化済み。
 - U-PA-029: `LegacyMigrationLedger.reject`でdecided event/current/global receiptだけをatomic更新し、PlanAsset/revision/alias生成0をGreen化済み。
+- U-PA-028: `LegacyMigrationLedger.adopt`でPlanAsset/revision 1/alias event+current/migrated event+current/global receiptを同一transactionで生成し、composite revision targetと全digest再検証をGreen化済み。
 - U-PA-026..030/032/033: atomic write-set、optimistic guard、global replay、双方向receipt、fault injection/reopen oracleはdesign freeze済み。実行可能Red testとschema/application Green化は未着手。
 - HEAD `274adf14` inventoryは741件、collision 20群/41 PLAN、digest=`86a25dda63d29db9a6d02b6bacfd835e53762cdf416bd8df5b0d04b7d3caf718`。digestはrepository identity receipt、source commit、Git blob OID、source content、frontmatter/body、known/unknown field、collision projectionを拘束し、旧18群/37 PLAN固定値へ検出を合わせない。
 - `state-db`のlegacy short alias解決は先頭一致を廃止し、canonical resolverのexact/unique規則へ統合済み。

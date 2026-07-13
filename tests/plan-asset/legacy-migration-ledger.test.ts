@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { LegacyMigrationLedger } from "../../src/plan-asset/ledger/legacy-migration-ledger.js";
 import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
@@ -56,6 +57,37 @@ describe("legacy migration ledger application", () => {
       expect(migratePlanLedger(db)).toMatchObject({ ok: true });
     });
   });
+
+  it("U-PA-028: atomically adopts a canonical revision and alias", () => {
+    withLedger(({ db, ledger }) => {
+      expect(ledger.observe(input())).toMatchObject({ ok: true });
+      const payload = JSON.stringify({ legacyPlanId: input().legacyPlanId, migrated: true });
+      expect(
+        ledger.adopt({
+          legacyPlanId: input().legacyPlanId,
+          resolvedAlias: input().legacyPlanId,
+          canonicalPayloadJson: payload,
+          canonicalPayloadDigest: sha256(payload),
+          bodyDigest: "1".repeat(64),
+          sourcePath: "docs/plans/PLAN-L7-1-a.md",
+          sourceCommit: "2".repeat(40),
+          actor: "migration:test",
+          reason: "lossless canonical adoption",
+          commandId: "command:adopt",
+          occurredAt: "2026-07-13T01:00:00Z",
+          expectedSequence: 1,
+          expectedDecision: "pending",
+        }),
+      ).toMatchObject({ ok: true, replayed: false });
+      expect(counts(db)).toEqual([2, 1, 2]);
+      expect(
+        ["plan_assets", "plan_revisions", "plan_alias_events", "plan_aliases"].map((table) =>
+          count(db, table),
+        ),
+      ).toEqual([1, 1, 1, 1]);
+      expect(migratePlanLedger(db)).toMatchObject({ ok: true });
+    });
+  });
 });
 
 function input() {
@@ -100,4 +132,8 @@ function counts(db: ReturnType<typeof openHarnessDb>): readonly number[] {
 
 function count(db: ReturnType<typeof openHarnessDb>, table: string): number {
   return Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n ?? 0);
+}
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }
