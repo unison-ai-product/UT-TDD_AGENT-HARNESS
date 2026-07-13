@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 
-const ROOT_MARKERS = ["ut-tdd.project.json", ".git"] as const;
+const PROJECT_MARKER = "ut-tdd.project.json";
 
 export function resolveRuntimeRepoRoot(input?: {
   cwd?: string;
@@ -30,5 +30,10 @@ export function requireRuntimeRepoRoot(input?: Parameters<typeof resolveRuntimeR
 }
 
 function isRepoRoot(path: string, exists: (path: string) => boolean): boolean {
-  return ROOT_MARKERS.some((marker) => exists(resolve(path, marker)));
+  return (
+    exists(resolve(path, PROJECT_MARKER)) ||
+    [".git", "package.json", "src/cli.ts", "AGENTS.md", "CLAUDE.md", ".claude/CLAUDE.md"].every((marker) =>
+      exists(resolve(path, marker)),
+    )
+  );
 }

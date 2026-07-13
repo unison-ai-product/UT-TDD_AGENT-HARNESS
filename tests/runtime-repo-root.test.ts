@@ -32,4 +32,33 @@ describe("U-TESTHYGIENE-002: runtime repo root", () => {
       rmSync(isolated, { recursive: true, force: true });
     }
   });
+
+  it("does not mistake a nested Git marker for a UT-TDD repository root", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-runtime-git-"));
+    try {
+      const nested = join(root, "vendor", "nested");
+      mkdirSync(join(nested, ".git"), { recursive: true });
+      writeFileSync(join(root, "ut-tdd.project.json"), "{}\n");
+      expect(resolveRuntimeRepoRoot({ cwd: nested, env: {} })).toBe(root);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts an unmarked checkout only when its complete UT-TDD source markers exist", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-runtime-source-"));
+    try {
+      mkdirSync(join(root, ".git"));
+      mkdirSync(join(root, "src"));
+      mkdirSync(join(root, ".claude"));
+      for (const path of ["package.json", "src/cli.ts", "AGENTS.md", "CLAUDE.md", ".claude/CLAUDE.md"]) {
+        writeFileSync(join(root, path), "\n");
+      }
+      expect(resolveRuntimeRepoRoot({ cwd: root, env: {} })).toBe(root);
+      rmSync(join(root, "CLAUDE.md"));
+      expect(resolveRuntimeRepoRoot({ cwd: root, env: {} })).toBeNull();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

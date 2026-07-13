@@ -12,7 +12,9 @@ import { MODEL_IDS, PROPOSAL_SUBAGENT_LANES, selectTeamModel } from "../src/team
  * を値で確認し、かつ「両モジュールに生の ID literal が再混入していないか」をソース走査で fail-close する。
  */
 
-const repoRoot = join(__dirname, "..");
+import { headSnapshotRoot } from "./support/workspace-roots";
+
+const repoRoot = headSnapshotRoot();
 const ALL_IDS: string[] = [...Object.values(MODEL_IDS.claude), ...Object.values(MODEL_IDS.codex)];
 
 function quotedOccurrences(file: string, id: string): number {

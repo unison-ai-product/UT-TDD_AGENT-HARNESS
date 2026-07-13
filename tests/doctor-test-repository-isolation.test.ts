@@ -31,6 +31,24 @@ describe("doctor test repository isolation", () => {
     );
   });
 
+  it("U-TESTHYGIENE-017: rejects direct root aliases that bypass snapshot cwd", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [
+        { path: "tests/dirname.test.ts", source: "const root = __dirname;" },
+        { path: "tests/meta.test.ts", source: "const root = import.meta.dirname;" },
+        { path: "tests/element.test.ts", source: "process['cwd']();" },
+      ],
+      contracts: {},
+    });
+    expect(result.messages).toEqual(
+      expect.arrayContaining([
+        "test-repository-isolation - violation: forbidden-live-root-source:tests/dirname.test.ts",
+        "test-repository-isolation - violation: forbidden-live-root-source:tests/meta.test.ts",
+        "test-repository-isolation - violation: forbidden-live-root-source:tests/element.test.ts",
+      ]),
+    );
+  });
+
   it("U-TESTHYGIENE-015: classifies every real repository test access", () => {
     expect(checkTestRepositoryIsolation(process.cwd()).ok).toBe(true);
   });

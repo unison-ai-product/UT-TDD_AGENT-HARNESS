@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { lstatSync, readdirSync, readFileSync, readlinkSync } from "node:fs";
 import { join } from "node:path";
 
 export interface GitWorkspaceFingerprint {
@@ -9,6 +9,31 @@ export interface GitWorkspaceFingerprint {
   worktreeDigest: string;
   indexDigest: string;
   untrackedDigest: string;
+  inventoryDigest: string;
+}
+
+export function captureWorkspaceInventory(root: string): string {
+  const entries: Array<string | Buffer> = [];
+  const visit = (directory: string, relativePath: string): void => {
+    for (const entry of readdirSync(directory).sort()) {
+      if (!relativePath && (entry === ".git" || entry === "node_modules")) continue;
+      const path = join(directory, entry);
+      const relativeEntry = relativePath ? `${relativePath}/${entry}` : entry;
+      const stat = lstatSync(path);
+      if (stat.isDirectory()) {
+        entries.push(`d:${relativeEntry}\0`);
+        visit(path, relativeEntry);
+      } else if (stat.isFile()) {
+        entries.push(`f:${relativeEntry}\0`, digest(readFileSync(path)), "\0");
+      } else if (stat.isSymbolicLink()) {
+        entries.push(`l:${relativeEntry}\0`, readlinkSync(path), "\0");
+      } else {
+        throw new Error(`workspace fence unsupported entry: ${relativeEntry}`);
+      }
+    }
+  };
+  visit(root, "");
+  return digest(...entries);
 }
 
 function git(repoRoot: string, args: string[]): Buffer {
@@ -43,6 +68,7 @@ export function captureGitWorkspaceFingerprint(repoRoot: string): GitWorkspaceFi
     worktreeDigest: digest(git(repoRoot, ["diff", "--binary", "HEAD"])),
     indexDigest: digest(git(repoRoot, ["diff", "--cached", "--binary", "HEAD"])),
     untrackedDigest: digest(...untrackedChunks),
+    inventoryDigest: captureWorkspaceInventory(repoRoot),
   };
 }
 

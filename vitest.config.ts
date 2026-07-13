@@ -6,7 +6,6 @@ export default defineConfig({
     exclude: ["node_modules/**", "dist/**", "coverage/**", ".git/**", "**/.ut-tdd/**"],
     testTimeout: 30_000,
     globalSetup: ["tests/global-setup.ts"],
-    setupFiles: ["tests/workspace-setup.ts"],
     coverage: {
       reporter: ["text", "html", "clover", "json-summary"],
     },

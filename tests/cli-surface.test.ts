@@ -15,6 +15,7 @@ import { describe, expect, it } from "vitest";
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import { MODEL_IDS } from "../src/team/model-policy";
+import { removeTestTree } from "./support/temp-tree";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");
@@ -177,7 +178,7 @@ describe("L7 CLI surface closure", () => {
         source: "ut-tdd gate",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 15_000);
 
@@ -203,7 +204,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload.gate_run_evidence).toBeNull();
       expect(payload.gate_run_evidence_warning).toContain("gate run evidence write failed");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 15_000);
 
@@ -424,7 +425,7 @@ describe("L7 CLI surface closure", () => {
         gate_id: "G4",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 15_000);
 

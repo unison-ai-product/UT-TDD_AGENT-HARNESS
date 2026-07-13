@@ -50,11 +50,17 @@ export function analyzeTestRepositoryIsolation(input: {
 }): LintResult {
   const contracts = input.contracts ?? REPOSITORY_READ_CONTRACTS;
   const actual = new Map<string, number>();
+  const forbidden: string[] = [];
   for (const file of input.files) {
-    const calls = (codeOnly(file.source).match(/\bprocess\.cwd\(\)/g) ?? []).length;
-    if (calls > 0) actual.set(file.path.replaceAll("\\", "/"), calls);
+    const source = codeOnly(file.source);
+    const path = file.path.replaceAll("\\", "/");
+    if (/\b__dirname\b|\bimport\.meta\.(?:dirname|url)\b|\bprocess\s*\[\s*["']cwd["']\s*\]/.test(source)) {
+      forbidden.push(`forbidden-live-root-source:${path}`);
+    }
+    const calls = (source.match(/\bprocess\.cwd\(\)/g) ?? []).length;
+    if (calls > 0) actual.set(path, calls);
   }
-  const violations: string[] = [];
+  const violations: string[] = [...forbidden];
   for (const [path, calls] of actual) {
     const contract = contracts[path];
     if (!contract) violations.push(`unclassified:${path}:process.cwd=${calls}`);

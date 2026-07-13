@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   assertGitWorkspaceUnchanged,
+  captureWorkspaceInventory,
   type GitWorkspaceFingerprint,
 } from "./support/git-workspace-fingerprint";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { removeTestTree } from "./support/temp-tree";
 
 const fingerprint: GitWorkspaceFingerprint = {
   head: "head",
@@ -10,9 +15,22 @@ const fingerprint: GitWorkspaceFingerprint = {
   worktreeDigest: "worktree",
   indexDigest: "index",
   untrackedDigest: "untracked",
+  inventoryDigest: "inventory",
 };
 
 describe("git workspace fence", () => {
+  it("U-TESTHYGIENE-016: inventories ignored files and empty directories", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-fence-"));
+    try {
+      const before = captureWorkspaceInventory(root);
+      mkdirSync(join(root, ".ut-tdd", "gate_runs"), { recursive: true });
+      expect(captureWorkspaceInventory(root)).not.toBe(before);
+      writeFileSync(join(root, ".ut-tdd", "gate_runs", "leak.json"), "{}\n");
+      expect(captureWorkspaceInventory(root)).not.toBe(before);
+    } finally {
+      removeTestTree(root);
+    }
+  });
   it("U-TESTHYGIENE-010: accepts an unchanged dirty baseline", () => {
     expect(() => assertGitWorkspaceUnchanged(fingerprint, { ...fingerprint })).not.toThrow();
   });
