@@ -23,10 +23,18 @@ const CLAUDE_AGENT_TEMPLATES = [
     "Backend domain logic reviewer for invariants, boundaries, and TDD fit.",
     CLAUDE_SONNET,
   ],
+  // quality-check / gate reviewer (code-reviewer / qa-test / security-audit / ut-tdd-tl) は
+  // opus floor (PLAN-L7-399: review は orchestrator より下位にしない)。ソース repo の
+  // .claude/agents/*.md と配布テンプレのポリシー drift は tests/setup-agent-floor.test.ts で固定。
+  [
+    "blind-reviewer",
+    "Blind reviewer that judges the artifact against spec and self-run tests only, with author claims and intent withheld.",
+    CLAUDE_OPUS,
+  ],
   [
     "code-reviewer",
     "Read-only senior engineering reviewer for correctness, security, and maintainability.",
-    CLAUDE_SONNET,
+    CLAUDE_OPUS,
   ],
   [
     "db-schema",
@@ -87,7 +95,7 @@ const CLAUDE_AGENT_TEMPLATES = [
   [
     "qa-test",
     "Quality reviewer for test strategy, oracle strength, and regression scope.",
-    CLAUDE_SONNET,
+    CLAUDE_OPUS,
   ],
   [
     "refactor-scout",
@@ -97,12 +105,12 @@ const CLAUDE_AGENT_TEMPLATES = [
   [
     "security-audit",
     "Security reviewer for auth, secrets, PII, and threat-model concerns.",
-    CLAUDE_SONNET,
+    CLAUDE_OPUS,
   ],
   [
     "ut-tdd-tl",
     "Technical-lead reviewer for UT-TDD workflow, gates, tests, and release readiness.",
-    CLAUDE_SONNET,
+    CLAUDE_OPUS,
   ],
 ] as const;
 
@@ -191,6 +199,37 @@ const CLAUDE_COMMAND_FILES: { template: string; file: GeneratedFile }[] =
 export const BUILTIN_GITHUB_TEMPLATES: TemplateSet = {
   ...CLAUDE_AGENT_TEMPLATE_SET,
   ...CLAUDE_COMMAND_TEMPLATE_SET,
+  // UTF-8/LF 正規化ペア (CLAUDE.md mojibake 対策前提の setup 導入保証、PLAN-L7-425)。
+  // disk template (docs/templates/github/common/) と同内容の builtin fallback。
+  "common/.editorconfig": [
+    "root = true",
+    "",
+    "[*]",
+    "charset = utf-8",
+    "end_of_line = lf",
+    "insert_final_newline = true",
+    "trim_trailing_whitespace = true",
+    "",
+    "[*.{bat,cmd,ps1}]",
+    "end_of_line = crlf",
+    "",
+  ].join("\n"),
+  "common/.gitattributes": [
+    "# UT-TDD line-ending normalization (止: CRLF/LF churn)",
+    "* text=auto eol=lf",
+    "",
+    "# Windows PowerShell entrypoints keep CRLF",
+    "*.ps1 text eol=crlf",
+    "*.cmd text eol=crlf",
+    "*.bat text eol=crlf",
+    "",
+    "# Binaries / lockfiles",
+    "bun.lockb binary",
+    "*.png binary",
+    "*.jpg binary",
+    "*.ico binary",
+    "",
+  ].join("\n"),
   "common/ut-tdd.mjs": [
     "#!/usr/bin/env bun",
     'import { existsSync } from "node:fs";',
@@ -646,6 +685,16 @@ export const COMMON_FILES: { template: string; file: GeneratedFile }[] = [
       category: "A",
       purpose: "Claude slash command for UT-TDD verification",
     },
+  },
+  // UTF-8/LF 正規化 (mojibake 対策) は consumer-readiness の read-only 検査だけでなく
+  // setup が実体を導入して保証する (PLAN-L7-425 I-2)。既存ファイルは runSetup の非破壊 skip に従う。
+  {
+    template: "common/.editorconfig",
+    file: { path: ".editorconfig", category: "A", purpose: "UTF-8 / LF normalization (editor)" },
+  },
+  {
+    template: "common/.gitattributes",
+    file: { path: ".gitattributes", category: "A", purpose: "UTF-8 / LF normalization (git)" },
   },
   {
     template: "common/harness-check.yml",

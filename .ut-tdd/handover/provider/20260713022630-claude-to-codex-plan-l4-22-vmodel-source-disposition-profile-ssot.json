@@ -1,0 +1,26 @@
+{
+  "schema_version": "provider-handover.v1",
+  "handover_kind": "mechanical",
+  "handover_id": "20260713022630-claude-to-codex-plan-l4-22-vmodel-source-disposition-profile-ssot",
+  "from": "claude",
+  "to": "codex",
+  "active_plan": "PLAN-L4-22-vmodel-source-disposition-profile-ssot",
+  "budget": null,
+  "context": {
+    "summary": "A-187 checked-ZIP乖離監査を完了し bc3b970d で push 済 (branch work/l7-419-quality-verification-audit-plans)。乖離の正本は .ut-tdd/audit/…",
+    "next_actions": [
+      "PLAN-L4-22 §2.7 catalog errata の反映 (disposition/semantic catalog 訂正)",
+      "PLAN-L4-29 の L4 security 設計 freeze",
+      "PLAN-L6-71 の analyzer 契約 freeze",
+      "PLAN-L6-70 残: 資料ファミリ skill 9本"
+    ],
+    "files": [
+      ".ut-tdd/audit/A-187-vmodel-checked-zip-divergence-audit-2026-07-13.md",
+      "docs/plans/PLAN-L4-29-security-design-substance.md",
+      "docs/plans/PLAN-L6-71-coding-structure-rules-contract.md",
+      "docs/plans/PLAN-L4-22-vmodel-source-disposition-profile-ssot.md",
+      "docs/governance/vmodel-upgrade-schedule.md"
+    ]
+  },
+  "created_at": "2026-07-13T02:26:30.463Z"
+}

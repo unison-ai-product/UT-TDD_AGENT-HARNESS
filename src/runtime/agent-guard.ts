@@ -8,7 +8,7 @@
  * 4. Calls that request a model family *below* the one declared in frontmatter are
  *    blocked (no quiet downgrade / cost-cutting). Requesting a family *at or above*
  *    the declared floor is allowed (PLAN-L7-399): review-critical subagents
- *    (code-reviewer / ut-tdd-tl / security-audit / qa-test) declare a sonnet floor,
+ *    (blind-reviewer / code-reviewer / ut-tdd-tl / security-audit / qa-test) declare a sonnet floor,
  *    but a higher-tier orchestrator (opus) must be able to escalate a review to its
  *    own tier or above — pinning review strictly below the orchestrator inverts the
  *    "review >= orchestrator" invariant the harness otherwise enforces via
@@ -36,6 +36,7 @@ const MODEL_FAMILY_TEXT = MODEL_FAMILIES.join(" / ");
 
 // PLAN-L7-414: fable is an apex tier reserved for judgement gates, never worker consumption.
 const FABLE_QUALITY_CHECK_SUBAGENTS = new Set([
+  "blind-reviewer",
   "code-reviewer",
   "ut-tdd-tl",
   "security-audit",
@@ -149,7 +150,7 @@ export function evaluateAgentGuard(input: AgentGuardInput, ctx: AgentGuardContex
   if (requested === "fable" && !FABLE_QUALITY_CHECK_SUBAGENTS.has(subagentType)) {
     return blockOrBypass(
       `[ut-tdd-guard] BLOCK: apex-tier policy reserves fable for quality-check subagents ` +
-        `(code-reviewer / ut-tdd-tl / security-audit / qa-test); ${subagentType} is not eligible.`,
+        `(blind-reviewer / code-reviewer / ut-tdd-tl / security-audit / qa-test); ${subagentType} is not eligible.`,
     );
   }
   if (FAMILY_RANK[requested] < FAMILY_RANK[family]) {

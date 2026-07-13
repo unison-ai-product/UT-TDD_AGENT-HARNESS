@@ -116,6 +116,34 @@ Design decisions, judgement gates, and R4 merge decisions should go through a
 different runtime / model family when feasible. In single-runtime modes, record
 `intra_runtime_subagent` as the review substitute and leave evidence.
 
+### Blind review role (`--role blind-reviewer`)
+
+`ut-tdd codex --role blind-reviewer --task "<packet>"` is the Codex side of blind
+review. `blind-reviewer` / `blind-review` are read-only delegation roles: the
+review session must stay non-destructive (review-guard enforces it), so the role
+inspects and reports — it never implements or edits off-task.
+
+The role judges the artifact, not the author's account. When you build the packet,
+withhold the author's claims, self-assessment, stated intent, prior verdicts, and
+identity/runtime. Run two lanes and report them separately:
+
+- **claim-blind (main)**: artifact + spec/AC + tests you run yourself. Judge
+  whether the artifact satisfies the spec regardless of what the author claims.
+  Prose claims (`N green`, `blast radius 0`, `fully covered`) are not evidence
+  (`coding ≠ substance`, PLAN-L7-89); if they appear in the packet, flag and
+  disregard them and re-derive the verdict from spec + test results.
+- **spec-blind (safety net)**: artifact only, spec withheld too. Judge internal
+  soundness (self-contradiction, obvious bugs, uncovered boundaries, dead code).
+  Requirement satisfaction is out of scope for this lane.
+
+Use the valid-attack taxonomy and citation-only refutation from
+`docs/plans/PLAN-L6-53-adversarial-review-mechanism.md`; verdict is FLAG (an
+un-refuted attack), PASS (all attacks refuted by citation), or PASS-WEAK (no
+attack found, with a trial log of at least three attempted attacks). In `hybrid`,
+route blind review to the provider that did not author the change so
+attacker/defender providers stay separated. The Claude subagent counterpart is
+`.claude/agents/blind-reviewer.md`.
+
 Model / effort routing defaults:
 
 - Docs work defaults to Sonnet-class Claude; research defaults to Haiku-class

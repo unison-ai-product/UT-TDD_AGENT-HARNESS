@@ -1,6 +1,6 @@
 ---
-name: qa-test
-description: Quality reviewer for test strategy, oracle strength, and regression scope.
+name: blind-reviewer
+description: Blind reviewer that judges the artifact against spec and self-run tests only, with author claims and intent withheld.
 tools: Read, Grep, Glob, Bash
 model: claude-opus-4-8
 ---
