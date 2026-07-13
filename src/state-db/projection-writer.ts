@@ -53,6 +53,7 @@ import {
   recommendVerificationProfiles,
 } from "../lint/verification-profile";
 import { loadMemoryEntries } from "../memory/index";
+import { withinProjectionTransaction } from "../projection/contracts/projection-store";
 import {
   HARNESS_DB_TABLE_BY_NAME,
   HARNESS_DB_TABLES,
@@ -899,8 +900,7 @@ function projectReviewModelRuns(
  */
 export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
   if (usages.length === 0) return;
-  db.exec("BEGIN IMMEDIATE");
-  try {
+  withinProjectionTransaction(db, () => {
     for (const u of usages) {
       if (!u.model) continue; // model 不明の行は集計不能なので捨てる
       const id = stableId("token-run", `${u.runtime}:${u.sessionId}:${u.turnIndex}`);
@@ -925,11 +925,7 @@ export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
         },
       });
     }
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    throw error;
-  }
+  });
 }
 
 function planStatusMap(repoRoot: string): Map<string, string> {
@@ -2934,8 +2930,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     // Atomic rebuild: truncate + re-project run inside a single transaction so a
     // mid-rebuild failure rolls back to the prior committed projection instead of
     // leaving the DB truncated or half-populated (DB rebuild atomicity).
-    db.exec("BEGIN IMMEDIATE");
-    try {
+    withinProjectionTransaction(db, () => {
       time("truncate", () => truncateProjectionTables(db));
       const plans = time("plans", () => projectPlans(repoRoot, db));
       if (hasVmodelAuthoring(repoRoot)) {
@@ -3006,11 +3001,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectImprovementLog(db, projectionDeps);
       });
       time("screens", () => projectScreens(repoRoot, db));
-      time("commit", () => db.exec("COMMIT"));
-    } catch (error) {
-      db.exec("ROLLBACK");
-      throw error;
-    }
+    });
     const counts = time("row-counts", () => rowCounts(db));
     const result: RebuildHarnessDbResult = {
       ok: true,
