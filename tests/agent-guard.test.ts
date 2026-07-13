@@ -19,6 +19,7 @@ const FAMILIES: Record<string, ResolvedFamily> = {
   "refactor-scout": "haiku",
   "pdm-tech-innovation": "opus",
   "code-reviewer": "sonnet",
+  "blind-reviewer": "opus",
   "ut-tdd-tl": "sonnet",
 };
 const legacyRuntimeCommand = `${["he", "lix"].join("")} codex`;
@@ -190,12 +191,31 @@ describe("evaluateAgentGuard", () => {
     expect(
       evaluateAgentGuard(agent({ subagent_type: "code-reviewer", model: "fable" }), ctx()).code,
     ).toBe(0);
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "blind-reviewer", model: "fable" }), ctx()).code,
+    ).toBe(0);
   });
 
   it("blocks fable for worker subagents even when it satisfies their capability floor", () => {
     const d = evaluateAgentGuard(agent({ subagent_type: "be-logic", model: "fable" }), ctx());
     expect(d.code).toBe(2);
     expect(d.message).toContain("apex-tier policy");
+  });
+
+  it("allows opus on the blind-reviewer gate subagent and blocks any downgrade", () => {
+    expect(SUBAGENT_ALLOWLIST.has("blind-reviewer")).toBe(true);
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "blind-reviewer", model: "opus" }), ctx()).code,
+    ).toBe(0);
+    const sonnetDowngrade = evaluateAgentGuard(
+      agent({ subagent_type: "blind-reviewer", model: "sonnet" }),
+      ctx(),
+    );
+    expect(sonnetDowngrade.code).toBe(2);
+    expect(sonnetDowngrade.message).toContain("downgrade");
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "blind-reviewer", model: "haiku" }), ctx()).code,
+    ).toBe(2);
   });
 
   it("blocks an allowlisted subagent whose definition file is missing", () => {

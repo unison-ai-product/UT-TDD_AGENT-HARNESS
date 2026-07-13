@@ -10,7 +10,18 @@ import {
 describe("review-guard (IMP-137 / PLAN-L7-85)", () => {
   describe("isReadOnlyDelegationRole", () => {
     it("U-RGUARD-001: consult/verify (相談/検証) roles are read-only", () => {
-      for (const role of ["tl", "qa", "uiux", "reviewer", "review", "security", "audit"]) {
+      for (const role of [
+        "tl",
+        "qa",
+        "uiux",
+        "reviewer",
+        "review",
+        "security",
+        "audit",
+        "code-reviewer",
+        "blind-review",
+        "blind-reviewer",
+      ]) {
         expect(isReadOnlyDelegationRole(role)).toBe(true);
       }
     });

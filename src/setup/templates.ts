@@ -27,6 +27,11 @@ const CLAUDE_AGENT_TEMPLATES = [
   // opus floor (PLAN-L7-399: review は orchestrator より下位にしない)。ソース repo の
   // .claude/agents/*.md と配布テンプレのポリシー drift は tests/setup-agent-floor.test.ts で固定。
   [
+    "blind-reviewer",
+    "Blind reviewer that judges the artifact against spec and self-run tests only, with author claims and intent withheld.",
+    CLAUDE_OPUS,
+  ],
+  [
     "code-reviewer",
     "Read-only senior engineering reviewer for correctness, security, and maintainability.",
     CLAUDE_OPUS,
