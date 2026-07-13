@@ -57,26 +57,14 @@ describe("vitest snapshot runner", () => {
       mkdirSync(join(execution, ".ut-tdd", "logs"), { recursive: true });
       mkdirSync(join(execution, ".ut-tdd", "memory"), { recursive: true });
       writeFileSync(join(execution, ".ut-tdd", "harness.db"), "db");
-      writeFileSync(
-        join(execution, ".ut-tdd", "logs", "feedback-lifecycle.jsonl"),
-        "{}\n",
-      );
-      writeFileSync(
-        join(execution, ".ut-tdd", "memory", "private.md"),
-        "must-not-copy\n",
-      );
+      writeFileSync(join(execution, ".ut-tdd", "logs", "feedback-lifecycle.jsonl"), "{}\n");
+      writeFileSync(join(execution, ".ut-tdd", "memory", "private.md"), "must-not-copy\n");
 
       copyReferenceRuntimeInputs(execution, reference);
 
       expect(existsSync(join(reference, ".ut-tdd", "harness.db"))).toBe(true);
-      expect(
-        existsSync(
-          join(reference, ".ut-tdd", "logs", "feedback-lifecycle.jsonl"),
-        ),
-      ).toBe(true);
-      expect(
-        existsSync(join(reference, ".ut-tdd", "memory", "private.md")),
-      ).toBe(false);
+      expect(existsSync(join(reference, ".ut-tdd", "logs", "feedback-lifecycle.jsonl"))).toBe(true);
+      expect(existsSync(join(reference, ".ut-tdd", "memory", "private.md"))).toBe(false);
     } finally {
       removeTestTree(execution);
       removeTestTree(reference);
