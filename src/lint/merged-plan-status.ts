@@ -156,11 +156,27 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
 
 function resolveBaseRef(repoRoot: string): string | null {
   const candidates = [
+    githubPullRequestBaseSha(),
     process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : null,
     "origin/main",
     "main",
   ].filter((value): value is string => Boolean(value));
   return candidates.find((ref) => gitObjectExists(repoRoot, ref)) ?? null;
+}
+
+/** GitHub pull_request checkoutのmerge commitやshallow refをbaseと誤認しない。 */
+function githubPullRequestBaseSha(): string | null {
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!eventPath || !existsSync(eventPath)) return null;
+  try {
+    const event = JSON.parse(readFileSync(eventPath, "utf8")) as {
+      pull_request?: { base?: { sha?: unknown } };
+    };
+    const sha = event.pull_request?.base?.sha;
+    return typeof sha === "string" && /^[0-9a-f]{40}$/i.test(sha) ? sha : null;
+  } catch {
+    return null;
+  }
 }
 
 function frontmatterStatus(content: string): string | null {

@@ -235,7 +235,7 @@ describe("L7 CLI surface closure", () => {
     expect(run.stdout).toContain("--json");
   }, 15_000);
 
-  it("exposes the complete HEAD migration inventory as a machine-readable dry-run", () => {
+  it("U-PA-042: exposes the complete HEAD migration inventory as a machine-readable dry-run", () => {
     const run = runCli(["plan", "migration-dry-run", "--json"]);
     const payload = parseCliJson(run) as {
       ok: boolean;

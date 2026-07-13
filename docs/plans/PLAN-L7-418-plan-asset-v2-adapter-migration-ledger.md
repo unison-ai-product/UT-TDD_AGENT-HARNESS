@@ -34,9 +34,9 @@ generates:
   - artifact_path: src/cli/plan-asset.ts
     artifact_type: source_module
   - artifact_path: tests/plan-asset/legacy-migration-dry-run.test.ts
-    artifact_type: test
+    artifact_type: test_code
   - artifact_path: tests/cli-surface.test.ts
-    artifact_type: test
+    artifact_type: test_code
   - artifact_path: ut-tdd.project.json
     artifact_type: config
   - artifact_path: src/plan-asset/domain/plan-asset.ts
