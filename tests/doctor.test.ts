@@ -420,7 +420,9 @@ describe("runDoctor", () => {
 
   it("U-TESTHYGIENE-028: rejects unknown aggregate doctor blockers", () => {
     const r = realRepoDoctor();
-    const blockers = r.messages.filter((message) => message.includes("violation"));
+    const blockers = r.messages.filter(
+      (message) => message.includes(" - violation") || message.includes(" — violation"),
+    );
 
     expect(r.ok).toBe(false);
     expect(blockers).toHaveLength(2);
