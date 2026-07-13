@@ -44,7 +44,6 @@ const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.f
 );
 
 for (const [path, calls] of Object.entries({
-  "tests/doctor.test.ts": 25,
   "tests/model-id-ssot-drift.test.ts": 1,
   "tests/model-id-ssot.test.ts": 1,
   "tests/plan-id-naming.test.ts": 1,
@@ -56,12 +55,17 @@ for (const [path, calls] of Object.entries({
     reason: "repository contract read is fixed to detached HEAD",
   };
 
+repositoryReadContracts["tests/doctor.test.ts"] = {
+  mode_calls: { head_snapshot: 18, isolated_fixture: 7 },
+  reason: "doctor aggregate test exercises both detached HEAD and execution fixture",
+};
+
 repositoryReadContracts["tests/workspace-roots.test.ts"] = {
-  mode_calls: { head_snapshot: 2, isolated_fixture: 1 },
+  mode_calls: { isolated_fixture: 1 },
   reason: "root capability test exercises both detached HEAD and execution fixture",
 };
 repositoryReadContracts["tests/support/workspace-roots.ts"] = {
-  mode_calls: { head_snapshot: 2, isolated_fixture: 1 },
+  mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
   reason: "root capability implementation validates both provenance modes",
 };
 
