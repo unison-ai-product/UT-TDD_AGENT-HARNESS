@@ -1248,3 +1248,18 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `CANDIDATE-M-SP-007` | surface登録脱落mutation | mutation runner | mutation killed、exit 1 |
 
 実装前にnegative fixtureが期待finding/exitで落ちるRedを固定し、detectorのpass/fail関数をmeta-verifierのoracleへ再利用しない。
+
+## PLAN-L7-428 ステージ紐付きエリシテーション oracle (PLAN-REVERSE-428 backfill、2026-07-13)
+
+対象 = `src/elicitation/context.ts` / `src/elicitation/record.ts`。実テスト =
+`tests/elicitation-context.test.ts` (in-memory harness.db + temp repo fixture)。
+
+| ID | 観点 | fixture | expected |
+| --- | --- | --- | --- |
+| `U-ELICIT-001` | plan 省略時の stage 自己解決 | ready schedule row 1 件 | `stage_source="schedule-current"`、plan/location が row と一致 |
+| `U-ELICIT-002` | skill decision_points の defaults 結合 | layer 一致 skill asset + frontmatter decision_points | plan-match で defaults に when/choose/over/because が展開される |
+| `U-ELICIT-003` | skill 読取 fail-open | DB 登録済みだが実体欠落の skill asset | throw せず `unreadable_skills` に asset_id が載る |
+| `U-ELICIT-004` | 設計カバレッジ結合 | plan 一致 spec + layer 一致 spec + 対象外 spec + relation 1 件 | spec_count=2 / relation_count=1 / lifecycle 集計一致 (対象外 layer は除外) |
+| `U-ELICIT-005` | render 4 段固定 | stage+skill+spec を全て seed | stage 行 / defaults 見出し / specs 件数 / `## 設計判断依頼` / 選択肢 A (推奨)+B 行を全て含む |
+| `U-ELICIT-006` | 採択記録 append-only + fail-close | 2 回 append + 必須項目欠落 1 回 | JSONL 2 行 (stage 付き)、topic 空は throw |
+| `U-ELICIT-007` | asset path 未解決の可視化 | path 空の skill asset 行 | throw せず `unreadable_skills` に asset_id、defaults は空 |

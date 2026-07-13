@@ -60,6 +60,16 @@ Design and implementation should be judged by these pillars:
 英語/原語のまま。Windows 文字化けは UTF-8 化 (`.editorconfig` charset=utf-8 / `.gitattributes` eol=lf) と
 `readability` gate (mojibake fail-close) で防ぐ前提であり、**文字化け回避を理由に doc を英語化しない**。
 
+### 設計判断エリシテーション (PO ルール 2026-07-13)
+
+PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 未確定点) に限る**。
+進捗確認・実行許可・自力で確定できる事実は聞かない (可逆作業は進める)。聞き方は
+`docs/governance/design-decision-elicitation.md` の共通フォーマットに従う: 前提 2〜3 行 +
+選択肢 2〜4 個 + 各 trade-off + 推奨 1 つ (先頭、理由 1 行)。Claude の対話セッションでは
+AskUserQuestion をこの用途に限って使ってよい (必要なら preview 付き)。非対話セッションと
+Codex では `## 設計判断依頼` の markdown 選択肢表で等価に出力して停止する。採択結果は
+PLAN の設計判断節 / ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
+
 ## Canonical Docs
 
 - `docs/governance/ut-tdd-agent-harness-concept_v3.1.md`

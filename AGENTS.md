@@ -23,6 +23,15 @@ Separation of responsibilities:
 英語/原語のまま。Windows 文字化けは UTF-8 化 (`.editorconfig` charset=utf-8 / `.gitattributes` eol=lf) と
 `readability` gate (mojibake fail-close) で防ぐ前提であり、**文字化け回避を理由に doc を英語化しない**。
 
+### 設計判断エリシテーション (PO ルール 2026-07-13)
+
+PO への質問は **設計判断 (trade-off が実在する方式選択 / spec 未確定点) に限る**。
+進捗確認・実行許可・自力で確定できる事実は聞かない (可逆作業は進める)。聞き方は
+`docs/governance/design-decision-elicitation.md` の共通フォーマットに従う。Codex には
+構造化質問ツールが無いため、`## 設計判断依頼` 見出し + 選択肢表 (案 / 得るもの / 失うもの、
+推奨を先頭に「(推奨)」+ 理由 1 行) の markdown を出力して停止する。採択結果は PLAN の
+設計判断節 / ADR に記録する (skill: `skills/design-decision-elicitation.md`)。
+
 ## Core Reads
 
 For work in this repository, read the repository-owned sources below and follow
