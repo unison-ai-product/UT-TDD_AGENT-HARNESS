@@ -405,6 +405,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DOMAIN-002 | PoC pure projector | permitted decisionだけを正規化し、DB・filesystem・clockへ直接依存せずdeterministic eventを返す。 |
 | U-DOMAIN-003 | PoC application ports | read portの意味的countをdomainへ渡し、生成eventだけをstoreへ記録する。SQL文字列をportへ漏らさない。 |
 | U-DOMAIN-004 | `SqliteProjectionStore` / `clearRebuildableProjectionTables` | unknown tableをfail-closeし、schema列とPKを正規化し、free-form secretを永続化前に拒否する。未解決PLAN joinとstale runtime contextを区別し、audit/compound contextを誤検出しない。再構築ではrebuildable rowを消去する一方、`refactor_candidates`負債ledgerを保持する。 |
+| U-DOMAIN-005 | model evaluation domain/application/config/SQLite read | success rate 4桁、token効率2桁、cost効率6桁をpure計算し、success/token/cost不在時はNULLを捏造しない。disabled/malformed opt-inはread/store 0、cold-startはstore 0、時刻は注入値を使う。SQLiteは複数modelをgrouped集計し、orphan PLANをsuccess 0、全cost不明をNULLとして返す。 |
 
 ### §1.16.1f U-VTRIG L0-L7 (implementation verification cycle gate)
 

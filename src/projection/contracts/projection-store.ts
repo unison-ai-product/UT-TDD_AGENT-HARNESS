@@ -1,3 +1,4 @@
+import type { ModelEvaluationFacts } from "../domain/model-evaluations";
 import type { PocDecisionCount } from "../domain/poc-evaluations";
 
 export interface ProjectionEvent {
@@ -14,4 +15,12 @@ export interface ProjectionStore {
 /** FR-L1-43専用の意味的読取port。SQL構文をapplicationへ漏らさない。 */
 export interface PocEvaluationReadPort {
   readPocDecisionCounts(): readonly PocDecisionCount[];
+}
+
+export interface ModelEvaluationConfigPort {
+  isEnabled(): boolean;
+}
+
+export interface ModelEvaluationReadPort {
+  readModelEvaluationFacts(): readonly ModelEvaluationFacts[];
 }

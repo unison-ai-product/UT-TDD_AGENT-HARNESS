@@ -35,6 +35,14 @@ generates:
     artifact_type: source_module
   - artifact_path: src/projection/domain/poc-evaluations.ts
     artifact_type: source_module
+  - artifact_path: src/projection/domain/model-evaluations.ts
+    artifact_type: source_module
+  - artifact_path: src/projection/domain/plan-status.ts
+    artifact_type: source_module
+  - artifact_path: src/projection/application/project-model-evaluations.ts
+    artifact_type: source_module
+  - artifact_path: src/projection/adapters/model-evaluation-config.ts
+    artifact_type: source_module
   - artifact_path: src/state-db/sqlite-projection-store.ts
     artifact_type: source_module
   - artifact_path: src/state-db/sqlite-projection-rebuild.ts
@@ -42,6 +50,8 @@ generates:
   - artifact_path: src/state-db/sqlite-transaction.ts
     artifact_type: source_module
   - artifact_path: tests/sqlite-projection-store.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/model-evaluation-domain.test.ts
     artifact_type: test_code
   - artifact_path: tests/dependency-drift.test.ts
     artifact_type: test_code
@@ -69,6 +79,7 @@ U-DOMAINをRed freezeし、共通kernelとmodule-boundary/cycle/CQS移行を所�
 - PoC評価の集計規則は`src/projection/domain/poc-evaluations.ts`が所有する。`src/state-db/projections/poc-evaluations.ts`は旧importを壊さない互換re-exportであり、domain正本ではない。
 - PoC用の意味的`PocEvaluationReadPort`と`ProjectionStore`をneutral projection contractへ抽出し、`read → domain → store`のapplication縦sliceを実装した。SQL構文はapplicationへ漏らさない。
 - SQLite具象責務は`SqliteProjectionStore`、`runSqliteTransaction`、`clearRebuildableProjectionTables`へ分割した。旧`projection-writer.ts`はpublic facadeと全projectorの再構築順序を保つが、row正規化、secret fail-close、plan join分類、PoC read、transaction、再構築table消去は所有しない。
+- model評価はopt-in repository config adapter、application command、pure event builder、grouped SQLite readへ分割した。成功statusはneutral domain SSoTへ移し、旧skill projection exportを維持した。N+1 queryを1 grouped queryへ置換し、token/costの非対称母集団とNULL非捏造をoracleで固定した。
 
 ## 検出負債
 

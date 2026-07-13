@@ -1,4 +1,10 @@
-import type { ProjectionEvent, ProjectionStore } from "../projection/contracts/projection-store";
+import type {
+  ModelEvaluationReadPort,
+  ProjectionEvent,
+  ProjectionStore,
+} from "../projection/contracts/projection-store";
+import type { ModelEvaluationFacts } from "../projection/domain/model-evaluations";
+import { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status";
 import type { PocDecisionCount } from "../projection/domain/poc-evaluations";
 import { HARNESS_DB_TABLE_BY_NAME, primaryKeyOf, type TableDef } from "../schema/harness-db";
 import { stableId } from "../stable-id";
@@ -22,7 +28,7 @@ export interface ProjectionFindingInput {
   evidencePath?: string;
 }
 
-export class SqliteProjectionStore implements ProjectionStore {
+export class SqliteProjectionStore implements ProjectionStore, ModelEvaluationReadPort {
   readonly #db: HarnessDb;
 
   constructor(db: HarnessDb) {
@@ -71,6 +77,25 @@ export class SqliteProjectionStore implements ProjectionStore {
       .all() as unknown as PocDecisionCount[];
   }
 
+  readModelEvaluationFacts(): readonly ModelEvaluationFacts[] {
+    const placeholders = PLAN_SUCCESS_STATUSES.map(() => "?").join(", ");
+    return this.#db
+      .prepare(
+        `SELECT mr.model,
+                COUNT(*) AS run_count,
+                SUM(CASE WHEN pr.status IN (${placeholders}) THEN 1 ELSE 0 END) AS success_count,
+                COALESCE(SUM(mr.input_tokens), 0) AS total_input_tokens,
+                COALESCE(SUM(mr.output_tokens), 0) AS total_output_tokens,
+                SUM(mr.cost_usd) AS total_cost_usd
+           FROM model_runs mr
+           LEFT JOIN plan_registry pr ON mr.plan_id = pr.plan_id
+          GROUP BY mr.model
+          ORDER BY mr.model`,
+      )
+      .all(...PLAN_SUCCESS_STATUSES)
+      .map(modelEvaluationFacts);
+  }
+
   uniqueShortPlanExists(planId: string): boolean {
     if (!isBareNumericPlanContext(planId)) return false;
     const row = this.#db
@@ -78,6 +103,17 @@ export class SqliteProjectionStore implements ProjectionStore {
       .get(`${planId}-%`) as { count: number } | undefined;
     return (row?.count ?? 0) === 1;
   }
+}
+
+function modelEvaluationFacts(row: Record<string, unknown>): ModelEvaluationFacts {
+  return {
+    model: String(row.model ?? ""),
+    runCount: Number(row.run_count ?? 0),
+    successCount: Number(row.success_count ?? 0),
+    totalInputTokens: Number(row.total_input_tokens ?? 0),
+    totalOutputTokens: Number(row.total_output_tokens ?? 0),
+    totalCostUsd: row.total_cost_usd == null ? null : Number(row.total_cost_usd),
+  };
 }
 
 function tableDef(name: string): TableDef {

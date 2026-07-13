@@ -53,6 +53,8 @@ import {
   recommendVerificationProfiles,
 } from "../lint/verification-profile";
 import { loadMemoryEntries } from "../memory/index";
+import { RepositoryModelEvaluationConfig } from "../projection/adapters/model-evaluation-config";
+import { projectModelEvaluations as projectModelEvaluationsApplication } from "../projection/application/project-model-evaluations";
 import { projectPocEvaluations as projectPocEvaluationsApplication } from "../projection/application/project-poc-evaluations";
 import type { ProjectionEvent } from "../projection/contracts/projection-store";
 import { HARNESS_DB_TABLES } from "../schema/harness-db";
@@ -84,7 +86,6 @@ import {
   projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore,
 } from "./runtime-projections";
 import {
-  PLAN_SUCCESS_STATUSES,
   projectSkillEvaluations as projectSkillEvaluationsCore,
   projectSkillMetrics as projectSkillMetricsCore,
   projectSkillTelemetry as projectSkillTelemetryCore,
@@ -2414,87 +2415,13 @@ export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): 
  * Cold-start (enabled but 0 model_runs): 0 rows, no throw.
  */
 export function projectModelEvaluations(db: HarnessDb, repoRoot: string): void {
-  // Opt-in gate: disabled by default.
-  const optInPath = join(repoRoot, ".ut-tdd", "config", "model-opt-in.yaml");
-  if (!existsSync(optInPath)) return;
-  let enabled = false;
-  try {
-    const raw = readFileSync(optInPath, "utf8");
-    const parsed = parseYaml(raw) as Record<string, unknown> | null;
-    enabled = parsed != null && parsed.enabled === true;
-  } catch {
-    // parse failure = treat as disabled (fail-open for opt-in gate)
-    return;
-  }
-  if (!enabled) return;
-
-  // Fetch all model_runs grouped by model.
-  const runRows = db
-    .prepare("SELECT model, COUNT(*) AS run_count FROM model_runs GROUP BY model")
-    .all() as { model: string; run_count: number }[];
-
-  if (runRows.length === 0) return; // Cold-start: 0 model_runs => 0 rows.
-
-  // Build success_count per model by joining model_runs -> plan_registry on plan_id.
-  // PLAN_SUCCESS_STATUSES is reused from this module (single-source-of-truth).
-  const successStatusPlaceholders = PLAN_SUCCESS_STATUSES.map(() => "?").join(", ");
-  const evaluatedAt = nowIso();
-
-  for (const runRow of runRows) {
-    const model = runRow.model;
-    const runCount = Number(runRow.run_count ?? 0);
-
-    const successCount =
-      (
-        db
-          .prepare(
-            `SELECT COUNT(*) AS success_count
-           FROM model_runs mr
-           JOIN plan_registry pr ON mr.plan_id = pr.plan_id
-           WHERE mr.model = ?
-             AND pr.status IN (${successStatusPlaceholders})`,
-          )
-          .get(model, ...PLAN_SUCCESS_STATUSES) as { success_count: number } | undefined
-      )?.success_count ?? 0;
-
-    const successRate = runCount === 0 ? 0 : Number((Number(successCount) / runCount).toFixed(4));
-
-    // FR-L1-38 token 効率 (PLAN-L7-57): token 行 (token-tracker 投入) のみ非 NULL。SUM は NULL を無視。
-    // total_cost は全行 NULL のとき NULL (= cost を出せる run が無い)。tokens_per_success / cost_per_success
-    // は success が無い / 該当 totals が無いとき NULL (core=token、$=enrichment、捏造しない)。
-    const agg = db
-      .prepare(
-        `SELECT COALESCE(SUM(input_tokens), 0) AS total_input,
-                COALESCE(SUM(output_tokens), 0) AS total_output,
-                SUM(cost_usd) AS total_cost
-         FROM model_runs WHERE model = ?`,
-      )
-      .get(model) as { total_input: number; total_output: number; total_cost: number | null };
-    const totalInput = Number(agg.total_input ?? 0);
-    const totalOutput = Number(agg.total_output ?? 0);
-    const totalCost = agg.total_cost == null ? null : Number(agg.total_cost);
-    const sc = Number(successCount);
-    const tokensPerSuccess =
-      sc > 0 && totalOutput > 0 ? Number((totalOutput / sc).toFixed(2)) : null;
-    const costPerSuccess = totalCost != null && sc > 0 ? Number((totalCost / sc).toFixed(6)) : null;
-
-    recordProjectionEvent(db, {
-      table: "model_evaluations",
-      id: model,
-      row: {
-        model,
-        success_rate: successRate,
-        run_count: runCount,
-        success_count: sc,
-        evaluated_at: evaluatedAt,
-        total_input_tokens: totalInput,
-        total_output_tokens: totalOutput,
-        total_cost_usd: totalCost,
-        tokens_per_success: tokensPerSuccess,
-        cost_per_success: costPerSuccess,
-      },
-    });
-  }
+  const store = new SqliteProjectionStore(db);
+  projectModelEvaluationsApplication({
+    config: new RepositoryModelEvaluationConfig(repoRoot),
+    read: store,
+    store,
+    evaluatedAt: nowIso(),
+  });
 }
 
 function projectOperationalMetrics(db: HarnessDb): void {
