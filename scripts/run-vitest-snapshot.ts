@@ -39,6 +39,7 @@ const sourceDeps = join(repoRoot, "node_modules");
 if (!existsSync(sourceDeps)) throw new Error("node_modules is required before test snapshot execution");
 const snapshotRoot = join(tmpdir(), `ut-tdd-vitest-${process.pid}-${Date.now()}`);
 const snapshotDeps = join(snapshotRoot, "node_modules");
+const cacheRoot = join(tmpdir(), `ut-tdd-vitest-cache-${process.pid}-${Date.now()}`);
 let primaryError: unknown;
 try {
   run("git", ["worktree", "add", "--detach", snapshotRoot, "HEAD"], repoRoot);
@@ -47,12 +48,14 @@ try {
     ...process.env,
     INIT_CWD: snapshotRoot,
     UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,
+    UT_TDD_UPDATE_CHECK_CACHE_DIR: cacheRoot,
   });
 } catch (error) {
   primaryError = error;
 } finally {
   try {
     removeSnapshot(repoRoot, snapshotRoot, snapshotDeps);
+    rmSync(cacheRoot, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   } catch (cleanupError) {
     if (primaryError) throw new AggregateError([primaryError, cleanupError], "vitest execution and cleanup failed");
     throw cleanupError;
