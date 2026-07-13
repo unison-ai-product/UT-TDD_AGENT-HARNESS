@@ -161,6 +161,35 @@ describe("doctor test repository isolation", () => {
     );
   });
 
+  it("U-TESTHYGIENE-037: separates read provenance modes and rejects aliased derived HEAD writes", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [
+        {
+          path: "tests/provenance.test.ts",
+          source:
+            "import { headSnapshotRoot as root } from '../src/test/workspace-roots'; import { writeFileSync as save } from 'node:fs'; const get=root; const base=get(); const target=join(base, 'docs/x'); save(target, 'x'); process.cwd();",
+        },
+        {
+          path: "tests/dead-root.test.ts",
+          source: "if (false) check(headSnapshotRoot());",
+        },
+      ],
+      contracts: {
+        "tests/provenance.test.ts": {
+          mode_calls: { head_snapshot: 1, isolated_fixture: 1 },
+          reason: "separate capabilities",
+        },
+        "tests/dead-root.test.ts": { mode: "head_snapshot", calls: 1, reason: "dead decoy" },
+      },
+    });
+    expect(result.messages).toEqual(
+      expect.arrayContaining([
+        "test-repository-isolation - violation: forbidden-live-root-source:tests/provenance.test.ts",
+        "test-repository-isolation - violation: stale-contract:tests/dead-root.test.ts",
+      ]),
+    );
+  });
+
   it("U-TESTHYGIENE-014: rejects callsite drift and stale contracts", () => {
     const result = analyzeTestRepositoryIsolation({
       files: [
@@ -171,7 +200,7 @@ describe("doctor test repository isolation", () => {
       ],
       contracts: {
         "tests/a.test.ts": {
-          mode: "head_snapshot",
+          mode: "isolated_fixture",
           calls: 1,
           reason: "fixture",
         },
@@ -185,7 +214,7 @@ describe("doctor test repository isolation", () => {
     expect(result.ok).toBe(false);
     expect(result.messages).toEqual(
       expect.arrayContaining([
-        "test-repository-isolation - violation: callsite-drift:tests/a.test.ts:expected=1:actual=2",
+        "test-repository-isolation - violation: callsite-drift:tests/a.test.ts:isolated_fixture:expected=1:actual=2",
         "test-repository-isolation - violation: stale-contract:tests/stale.test.ts",
       ]),
     );

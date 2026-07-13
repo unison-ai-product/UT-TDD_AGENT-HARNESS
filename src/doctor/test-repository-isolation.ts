@@ -5,8 +5,9 @@ import type { LintResult } from "../plan/lint";
 
 export type RepositoryReadMode = "head_snapshot" | "isolated_fixture";
 export interface RepositoryReadContract {
-  mode: RepositoryReadMode;
-  calls: number;
+  mode?: RepositoryReadMode;
+  calls?: number;
+  mode_calls?: Partial<Record<RepositoryReadMode, number>>;
   reason: string;
 }
 
@@ -26,22 +27,46 @@ feedback-log:2
 global-setup.ts:1 support/workspace-roots.ts:3
 `;
 
+const repositoryReadContracts: Record<string, RepositoryReadContract> = Object.fromEntries(
+  CONTRACT_ROWS.trim()
+    .split(/\s+/)
+    .map((row) => {
+      const [name, calls] = row.split(":");
+      return [
+        `tests/${name.endsWith(".ts") ? name : `${name}.test.ts`}`,
+        {
+          mode: "isolated_fixture",
+          calls: Number(calls),
+          reason: "repository contract read is isolated in the writable execution snapshot",
+        },
+      ];
+    }),
+);
+
+for (const [path, calls] of Object.entries({
+  "tests/doctor.test.ts": 25,
+  "tests/model-id-ssot-drift.test.ts": 1,
+  "tests/model-id-ssot.test.ts": 1,
+  "tests/plan-id-naming.test.ts": 1,
+  "tests/update-check.test.ts": 1,
+}))
+  repositoryReadContracts[path] = {
+    mode: "head_snapshot",
+    calls,
+    reason: "repository contract read is fixed to detached HEAD",
+  };
+
+repositoryReadContracts["tests/workspace-roots.test.ts"] = {
+  mode_calls: { head_snapshot: 2, isolated_fixture: 1 },
+  reason: "root capability test exercises both detached HEAD and execution fixture",
+};
+repositoryReadContracts["tests/support/workspace-roots.ts"] = {
+  mode_calls: { head_snapshot: 2, isolated_fixture: 1 },
+  reason: "root capability implementation validates both provenance modes",
+};
+
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
-  Object.fromEntries(
-    CONTRACT_ROWS.trim()
-      .split(/\s+/)
-      .map((row) => {
-        const [name, calls] = row.split(":");
-        return [
-          `tests/${name.endsWith(".ts") ? name : `${name}.test.ts`}`,
-          {
-            mode: "head_snapshot",
-            calls: Number(calls),
-            reason: "repository contract read is fixed to detached HEAD",
-          },
-        ];
-      }),
-  );
+  repositoryReadContracts;
 
 function isProcessReference(node: ts.Expression): boolean {
   if (ts.isIdentifier(node) && node.text === "process") return true;
@@ -75,6 +100,22 @@ const REPOSITORY_READ_APIS = new Set([
   "readdirSync",
   "stat",
   "statSync",
+]);
+const REPOSITORY_WRITE_APIS = new Set([
+  "appendFile",
+  "appendFileSync",
+  "cp",
+  "cpSync",
+  "mkdir",
+  "mkdirSync",
+  "rename",
+  "renameSync",
+  "rm",
+  "rmSync",
+  "unlink",
+  "unlinkSync",
+  "writeFile",
+  "writeFileSync",
 ]);
 const REPOSITORY_PATH =
   /^(?:\.?(?:\/|\\))?(?:\.claude|\.codex|\.github|\.ut-tdd|docs|scripts|skills|src|tests)(?:\/|\\)|^(?:AGENTS\.md|CLAUDE\.md|package\.json|tsconfig\.json|vitest\.config\.ts)$/;
@@ -121,11 +162,31 @@ function isDirectRepositoryRead(
   return Boolean(name && REPOSITORY_READ_APIS.has(name) && target && REPOSITORY_PATH.test(target));
 }
 
-function inspectSource(path: string, source: string): { calls: number; forbidden: boolean } {
+function inspectSource(
+  path: string,
+  source: string,
+): { modeCalls: Record<RepositoryReadMode, number>; forbidden: boolean } {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
   const readAliases = new Map<string, string>();
+  const writeAliases = new Map<string, string>();
   const pathAliases = new Map<string, string>();
   const processAliases = new Set<string>(["process"]);
+  const headFunctionAliases = new Set<string>(["headSnapshotRoot"]);
+  const headRootAliases = new Set<string>();
+  const containsKnownHead = (node: ts.Node): boolean => {
+    if (ts.isIdentifier(node) && headRootAliases.has(node.text)) return true;
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      headFunctionAliases.has(node.expression.text)
+    )
+      return true;
+    let found = false;
+    ts.forEachChild(node, (child) => {
+      if (containsKnownHead(child)) found = true;
+    });
+    return found;
+  };
   const collect = (node: ts.Node): void => {
     if (
       ts.isImportDeclaration(node) &&
@@ -135,6 +196,8 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
       for (const element of node.importClause.namedBindings.elements) {
         const imported = element.propertyName?.text ?? element.name.text;
         if (REPOSITORY_READ_APIS.has(imported)) readAliases.set(element.name.text, imported);
+        if (REPOSITORY_WRITE_APIS.has(imported)) writeAliases.set(element.name.text, imported);
+        if (imported === "headSnapshotRoot") headFunctionAliases.add(element.name.text);
       }
     if (ts.isVariableDeclaration(node) && node.initializer) {
       if (ts.isObjectBindingPattern(node.name)) {
@@ -142,12 +205,19 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
           const imported = element.propertyName?.getText(file) ?? element.name.getText(file);
           if (REPOSITORY_READ_APIS.has(imported) && ts.isIdentifier(element.name))
             readAliases.set(element.name.text, imported);
+          if (REPOSITORY_WRITE_APIS.has(imported) && ts.isIdentifier(element.name))
+            writeAliases.set(element.name.text, imported);
         }
       } else if (ts.isIdentifier(node.name)) {
         const target = memberName(node.initializer);
         const canonical = target ? (readAliases.get(target) ?? target) : null;
         if (canonical && REPOSITORY_READ_APIS.has(canonical))
           readAliases.set(node.name.text, canonical);
+        const writeCanonical = target ? (writeAliases.get(target) ?? target) : null;
+        if (writeCanonical && REPOSITORY_WRITE_APIS.has(writeCanonical))
+          writeAliases.set(node.name.text, writeCanonical);
+        if (ts.isIdentifier(node.initializer) && headFunctionAliases.has(node.initializer.text))
+          headFunctionAliases.add(node.name.text);
         const value = staticPath(node.initializer, pathAliases);
         if (value !== null) pathAliases.set(node.name.text, value);
         if (
@@ -155,16 +225,57 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
           (ts.isIdentifier(node.initializer) && processAliases.has(node.initializer.text))
         )
           processAliases.add(node.name.text);
+        if (containsKnownHead(node.initializer)) headRootAliases.add(node.name.text);
       }
     }
     ts.forEachChild(node, collect);
   };
-  for (let pass = 0; pass < 4; pass += 1) collect(file);
+  for (let pass = 0; pass < 8; pass += 1) collect(file);
   const isProcessRef = (node: ts.Expression): boolean =>
     isProcessReference(node) || (ts.isIdentifier(node) && processAliases.has(node.text));
+  const containsHeadRoot = (node: ts.Node): boolean => {
+    if (ts.isIdentifier(node) && headRootAliases.has(node.text)) return true;
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      headFunctionAliases.has(node.expression.text)
+    )
+      return true;
+    let found = false;
+    ts.forEachChild(node, (child) => {
+      if (containsHeadRoot(child)) found = true;
+    });
+    return found;
+  };
+  const isRepositoryConsumer = (call: ts.CallExpression): boolean => {
+    const name = memberName(call.expression) ?? "";
+    return !/^(?:expect|to(?:Be|Equal|Contain|Match|Have|Throw))/.test(name);
+  };
+  const isStaticallyDead = (node: ts.Node): boolean => {
+    for (let current: ts.Node | undefined = node; current; current = current.parent) {
+      if (
+        ts.isIfStatement(current) &&
+        current.expression.kind === ts.SyntaxKind.FalseKeyword &&
+        current.thenStatement.pos <= node.pos &&
+        node.end <= current.thenStatement.end
+      )
+        return true;
+      if (
+        ts.isBinaryExpression(current) &&
+        current.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+        current.left.kind === ts.SyntaxKind.FalseKeyword &&
+        current.right.pos <= node.pos &&
+        node.end <= current.right.end
+      )
+        return true;
+    }
+    return false;
+  };
   const isConsumedRootCall = (node: ts.CallExpression): boolean => {
     if (ts.isExpressionStatement(node.parent) || ts.isVoidExpression(node.parent)) return false;
-    if (!ts.isVariableDeclaration(node.parent) || !ts.isIdentifier(node.parent.name)) return true;
+    if (ts.isCallExpression(node.parent)) return isRepositoryConsumer(node.parent);
+    if (!ts.isVariableDeclaration(node.parent) || !ts.isIdentifier(node.parent.name))
+      return ts.isReturnStatement(node.parent);
     const declarationName = node.parent.name;
     const name = declarationName.text;
     let consumed = false;
@@ -174,7 +285,8 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
         candidate.text === name &&
         candidate !== declarationName &&
         ts.isCallExpression(candidate.parent) &&
-        candidate.parent.arguments.includes(candidate)
+        candidate.parent.arguments.includes(candidate) &&
+        isRepositoryConsumer(candidate.parent)
       )
         consumed = true;
       ts.forEachChild(candidate, findUse);
@@ -182,7 +294,10 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
     findUse(file);
     return consumed;
   };
-  let calls = 0;
+  const modeCalls: Record<RepositoryReadMode, number> = {
+    head_snapshot: 0,
+    isolated_fixture: 0,
+  };
   let forbidden = false;
   const visit = (node: ts.Node): void => {
     if (ts.isIdentifier(node) && node.text === "__dirname") forbidden = true;
@@ -215,16 +330,26 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
       node.expression.name.text === "cwd" &&
       isProcessRef(node.expression.expression)
     )
-      calls += 1;
+      modeCalls.isolated_fixture += 1;
     if (
       ts.isCallExpression(node) &&
       ts.isIdentifier(node.expression) &&
-      node.expression.text === "headSnapshotRoot" &&
+      headFunctionAliases.has(node.expression.text) &&
+      !isStaticallyDead(node) &&
       isConsumedRootCall(node)
     )
-      calls += 1;
+      modeCalls.head_snapshot += 1;
     if (ts.isCallExpression(node) && isDirectRepositoryRead(node, readAliases, pathAliases))
-      calls += 1;
+      modeCalls.isolated_fixture += 1;
+    if (
+      ts.isCallExpression(node) &&
+      REPOSITORY_WRITE_APIS.has(
+        writeAliases.get(memberName(node.expression) ?? "") ?? memberName(node.expression) ?? "",
+      ) &&
+      node.arguments[0] &&
+      containsHeadRoot(node.arguments[0])
+    )
+      forbidden = true;
     else if (
       ts.isPropertyAccessExpression(node) &&
       node.name.text === "cwd" &&
@@ -267,7 +392,7 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
     ts.forEachChild(node, visit);
   };
   visit(file);
-  return { calls, forbidden };
+  return { modeCalls, forbidden };
 }
 
 export function analyzeTestRepositoryIsolation(input: {
@@ -275,7 +400,7 @@ export function analyzeTestRepositoryIsolation(input: {
   contracts?: Readonly<Record<string, RepositoryReadContract>>;
 }): LintResult {
   const contracts = input.contracts ?? REPOSITORY_READ_CONTRACTS;
-  const actual = new Map<string, number>();
+  const actual = new Map<string, Record<RepositoryReadMode, number>>();
   const forbidden: string[] = [];
   for (const file of input.files) {
     const path = file.path.replaceAll("\\", "/");
@@ -283,17 +408,26 @@ export function analyzeTestRepositoryIsolation(input: {
     if (inspected.forbidden) {
       forbidden.push(`forbidden-live-root-source:${path}`);
     }
-    const calls = inspected.calls;
-    if (calls > 0) actual.set(path, calls);
+    const calls = inspected.modeCalls.head_snapshot + inspected.modeCalls.isolated_fixture;
+    if (calls > 0) actual.set(path, inspected.modeCalls);
   }
   const violations: string[] = [...forbidden];
-  for (const [path, calls] of actual) {
+  for (const [path, modeCalls] of actual) {
     const contract = contracts[path];
+    const calls = modeCalls.head_snapshot + modeCalls.isolated_fixture;
     if (!contract) violations.push(`unclassified:${path}:repository-read=${calls}`);
-    else if (contract.mode !== "head_snapshot")
-      violations.push(`invalid-mode:${path}:${contract.mode}`);
-    else if (contract.calls !== calls)
-      violations.push(`callsite-drift:${path}:expected=${contract.calls}:actual=${calls}`);
+    else {
+      const expected =
+        contract.mode_calls ??
+        (contract.mode && contract.calls !== undefined ? { [contract.mode]: contract.calls } : {});
+      for (const mode of ["head_snapshot", "isolated_fixture"] as const) {
+        const expectedCalls = expected[mode] ?? 0;
+        if (expectedCalls !== modeCalls[mode])
+          violations.push(
+            `callsite-drift:${path}:${mode}:expected=${expectedCalls}:actual=${modeCalls[mode]}`,
+          );
+      }
+    }
   }
   for (const path of Object.keys(contracts)) {
     if (!actual.has(path)) violations.push(`stale-contract:${path}`);

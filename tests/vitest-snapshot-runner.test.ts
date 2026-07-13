@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -9,6 +17,8 @@ import {
   finishSnapshotCleanup,
   removeSnapshot,
   resolveSnapshotSource,
+  sealReference,
+  unsealReference,
 } from "../scripts/run-vitest-snapshot";
 import { removeTestTree } from "./support/temp-tree";
 
@@ -41,12 +51,15 @@ describe("vitest snapshot runner", () => {
       writeFileSync(join(pack, "node_modules", "leak.txt"), "source-only\n");
       mkdirSync(join(pack, "nested", "node_modules"), { recursive: true });
       writeFileSync(join(pack, "nested", "node_modules", "leak.txt"), "nested-source-only\n");
+      mkdirSync(join(pack, ".ut-tdd", "memory"), { recursive: true });
+      writeFileSync(join(pack, ".ut-tdd", "memory", "leak.md"), "source-runtime\n");
 
       expect(resolveSnapshotSource(pack)).toEqual({ kind: "copy" });
       createSnapshot(pack, snapshot);
       expect(existsSync(join(snapshot, "package.json"))).toBe(true);
       expect(existsSync(join(snapshot, "node_modules"))).toBe(false);
       expect(existsSync(join(snapshot, "nested", "node_modules"))).toBe(false);
+      expect(existsSync(join(snapshot, ".ut-tdd"))).toBe(false);
     } finally {
       removeTestTree(parent);
       removeTestTree(snapshot);
@@ -71,6 +84,32 @@ describe("vitest snapshot runner", () => {
       removeTestTree(source);
       removeTestTree(execution);
       removeTestTree(reference);
+    }
+  });
+
+  it("U-TESTHYGIENE-036: seals the reference for the whole test interval and unseals cleanup", () => {
+    const reference = mkdtempSync(join(tmpdir(), "ut-tdd-sealed-reference-"));
+    const outside = mkdtempSync(join(tmpdir(), "ut-tdd-sealed-outside-"));
+    const file = join(reference, "source.txt");
+    const outsideFile = join(outside, "outside.txt");
+    try {
+      writeFileSync(file, "immutable\n");
+      writeFileSync(outsideFile, "outside\n");
+      if (process.platform !== "win32") symlinkSync(outsideFile, join(reference, "outside-link"));
+      sealReference(reference);
+      if (process.platform === "win32") {
+        expect(() => writeFileSync(file, "mutated\n")).toThrow();
+        expect(() => writeFileSync(join(reference, "new.txt"), "created\n")).toThrow();
+      } else {
+        expect(statSync(file).mode & 0o222).toBe(0);
+        expect(statSync(outsideFile).mode & 0o222).not.toBe(0);
+      }
+      unsealReference(reference);
+      writeFileSync(file, "cleanup-enabled\n");
+    } finally {
+      unsealReference(reference);
+      removeTestTree(reference);
+      removeTestTree(outside);
     }
   });
 

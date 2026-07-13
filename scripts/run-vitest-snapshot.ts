@@ -1,9 +1,12 @@
 import { spawnSync } from "node:child_process";
 import {
+  chmodSync,
   cpSync,
   copyFileSync,
   existsSync,
+  lstatSync,
   mkdirSync,
+  readdirSync,
   realpathSync,
   rmSync,
 } from "node:fs";
@@ -29,7 +32,7 @@ function output(command: string, args: string[], cwd: string): string | null {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
-function canonicalPath(path: string): string {
+export function canonicalPath(path: string): string {
   const resolved = realpathSync.native(path).replaceAll("\\", "/");
   return process.platform === "win32" ? resolved.toLowerCase() : resolved;
 }
@@ -76,7 +79,6 @@ export function createSnapshot(
       [
         "clone",
         "--no-local",
-        "--shared",
         "--no-checkout",
         repoRoot,
         snapshotRoot,
@@ -93,7 +95,7 @@ export function createSnapshot(
     filter: (path) =>
       !relative(repoRoot, path)
         .split(/[\\/]/)
-        .some((part) => [".git", "node_modules"].includes(part)),
+        .some((part) => [".git", ".ut-tdd", "node_modules"].includes(part)),
   });
 }
 
@@ -141,6 +143,49 @@ export function copyReferenceRuntimeInputs(
   );
 }
 
+function chmodTree(root: string, directoryMode: number, fileMode: number): void {
+  const visit = (path: string): void => {
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) return;
+    if (!stat.isDirectory()) {
+      chmodSync(path, fileMode);
+      return;
+    }
+    for (const entry of readdirSync(path)) visit(join(path, entry));
+    chmodSync(path, directoryMode);
+  };
+  visit(root);
+}
+
+export function sealReference(referenceRoot: string): void {
+  if (process.platform !== "win32") {
+    chmodTree(referenceRoot, 0o555, 0o444);
+    return;
+  }
+  const identity = output("whoami", [], referenceRoot);
+  if (!identity) throw new Error("reference snapshot identity cannot be resolved");
+  run(
+    "icacls",
+    [referenceRoot, "/inheritance:r", "/grant:r", `${identity}:(OI)(CI)(RX)`, "/T", "/C", "/Q"],
+    referenceRoot,
+  );
+}
+
+export function unsealReference(referenceRoot: string): void {
+  if (!existsSync(referenceRoot)) return;
+  if (process.platform !== "win32") {
+    chmodTree(referenceRoot, 0o755, 0o644);
+    return;
+  }
+  const identity = output("whoami", [], referenceRoot);
+  if (!identity) throw new Error("reference snapshot identity cannot be resolved");
+  run(
+    "icacls",
+    [referenceRoot, "/grant:r", `${identity}:(OI)(CI)(F)`, "/T", "/C", "/Q"],
+    referenceRoot,
+  );
+}
+
 export function runSnapshotTests(
   args = process.argv.slice(2),
   repoRoot = process.cwd(),
@@ -171,6 +216,7 @@ export function runSnapshotTests(
         ["diff", "--exit-code", "--", ":(exclude).ut-tdd/harness.db"],
         referenceRoot,
       );
+    sealReference(referenceRoot);
     run(process.execPath, ["x", "vitest", "run", ...args], snapshotRoot, {
       ...process.env,
       INIT_CWD: snapshotRoot,
@@ -184,8 +230,9 @@ export function runSnapshotTests(
     primaryError = error;
   } finally {
     finishSnapshotCleanup(primaryError, [
-      () => removeSnapshot(snapshotRoot),
+      () => unsealReference(referenceRoot),
       () => removeSnapshot(referenceRoot),
+      () => removeSnapshot(snapshotRoot),
       () =>
         rmSync(cacheRoot, {
           recursive: true,
