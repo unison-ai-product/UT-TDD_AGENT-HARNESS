@@ -972,6 +972,34 @@ v1/v2 parserは`schema_version=ut-tdd.plan/v2`の有無でdiscriminated unionに
 `legacy_plan_migration_events`へexactly once materializeする。full legacy IDからのasset IDはcollisionに関係なく生成し、
 判断未確定行は`resolvedAlias=NULL`+`reviewPlanId`必須とする。
 
+legacy migration applicationは`observe` / `decide` / `revise`のdiscriminated commandと純粋reducerを正本にする。
+初期状態へ許されるのは`observe(pending)`だけで、既存streamへ`observe`を重ねない。`decide`はpendingから
+`migrated|rekeyed|rejected`へ1回だけ進め、`revise`はterminal decisionから別decisionへ明示的review証跡付きで進める。
+全commandは`expectedSequence`と`expectedDecision`を持ち、不一致は`plan-migration-state-conflict`として行増加0にする。
+event列はsequence連続、first=`observed`、以後`decided|revised`、occurredAt非減少、legacyPlanId/assetId/repository identity/
+identity algorithm+input+digest/source digest不変を全step replayで検査する。
+
+decision field matrixは次を完全表とし、applicationとDDLの両方で同じ契約を強制する。
+
+| decision | resolvedAlias | collisionGroup | lossFields | reviewPlanId | reason |
+|---|---|---|---|---|---|
+| `pending` | NULL | 衝突時必須 | 空可 | 必須 | 非空 |
+| `migrated` | full legacy aliasと一致 | NULL | 空 | NULL | 非空 |
+| `rekeyed` | legacy aliasと異なるcanonical full alias | 必須 | 空 | 必須 | 非空 |
+| `rejected` | NULL | 任意 | 1件以上 | 必須 | 非空 |
+
+`observe`はmigration stream/current/receiptだけをatomic appendし、derived asset identityを参照しても
+`plan_assets`や架空revisionを生成しない。`decide(migrated|rekeyed)`だけがPlanAsset revision 1、canonical payload、alias event/current、
+migration event/current、global receiptを1 transactionでappendする。`rejected`はPlanAsset/revision/aliasを生成しない。
+このためpending/rejected eventの`asset_id`はidentity-derived valueとして保持するがPlanAsset FK対象にせず、terminal adopted targetは
+nullable `(target_asset_id,target_revision)` composite FKで実在revisionへ束縛する。canonical payloadはsourcePath/sourceCommit、
+frontmatter/body/unknown field digest、inventory digest、identity receiptをlosslessに保持する。
+
+global receiptはmigration eventと双方向exactly-oneで、subject=`legacy_migration(legacyPlanId)`、result=`migration_event`、
+command type=`migration.observe|decide|revise`、payload digest、result ref、recordedAtがeventと一致する。event-only/current-only/
+receipt-only streamはすべて`plan-ledger-unavailable`とし、reducer replayとprojectionの集合差を許さない。
+各insert境界のfault injection、2 writer競合、file reopenでtransaction delta 0または同一digest stateを証明する。
+
 canonical JSONはobject keyをUTF-8 bytewise昇順、array順序保持、numberはsafe integer、stringはNFC検証済みUTF-8、
 boolean/nullをそのままframe化し、空白を持たない。YAML tag、anchor、merge key、非string map key、safe integer外numberは
 lossless変換不能として`plan-migration-loss`にする。未知fieldは`unknownFrontmatter`のcanonical JSONと元frontmatter digestを

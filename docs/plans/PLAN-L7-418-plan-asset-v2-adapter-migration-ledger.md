@@ -17,7 +17,7 @@ agent_slots:
   - role: se
     slot_label: "SE - PlanAsset/Revision/Evidence/Reservationとv1 adapter"
   - role: qa
-    slot_label: "QA - U-PA-001..022 Red→Green"
+    slot_label: "QA - U-PA-001..033 Red→Green"
 generates:
   - artifact_path: docs/improvement-backlog.md
     artifact_type: doc_update
@@ -74,13 +74,14 @@ dependencies:
 
 # PLAN-L7-418
 
-U-PA-001..022をRed freezeし、immutable aggregate/VO、canonical v1 adapter、collision migration ledger、採番予約、HEAD tracked repository identity loaderを実装する。情報損失と曖昧short IDはfail-closeする。DoDはlegacy全件変換、collision全件判断、旧revision不変、review、Reverse-418合流である。
+U-PA-001..033をRed freezeし、immutable aggregate/VO、canonical v1 adapter、collision migration ledger、採番予約、HEAD tracked repository identity loaderを実装する。情報損失と曖昧short IDはfail-closeする。DoDはlegacy全件変換、collision全件判断、旧revision不変、review、Reverse-418合流である。
 
 planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,adapters}`、reservation/migration schema、dry-run CLI、実行可能Red/Green testである。実体化した成果物はfrontmatter `generates`へ昇格する。
 
 ## 実装進捗
 
 - U-PA-001..022: Redを観測後、domain/value object、legacy canonical adapter、曖昧alias fail-close、採番予約、HEAD tracked project identity provenance、ledger typed schema/replay verifier、atomic reservation/receipt transaction、HEAD 741 PLAN inventory、lossless非互換YAMLのfail-closeをGreen化済み。
+- U-PA-023..033: 独立監査IMP-159を反映し、migration pure reducer、state/field完全表、atomic write-set、双方向receipt、fault injection/reopen oracleをL6/L7へdesign freeze済み。実行可能Red testとschema/application Green化は未着手。
 - HEAD `274adf14` inventoryは741件、collision 20群/41 PLAN、digest=`86a25dda63d29db9a6d02b6bacfd835e53762cdf416bd8df5b0d04b7d3caf718`。digestはrepository identity receipt、source commit、Git blob OID、source content、frontmatter/body、known/unknown field、collision projectionを拘束し、旧18群/37 PLAN固定値へ検出を合わせない。
 - `state-db`のlegacy short alias解決は先頭一致を廃止し、canonical resolverのexact/unique規則へ統合済み。
-- 未完了: alias/migration application reducer、全legacy PLAN移行・collision判断、dry-run CLI、Reverse-418合流。
+- 未完了: U-PA-023..033 Red→Green、全legacy PLAN移行・collision判断、dry-run CLI、Reverse-418合流。

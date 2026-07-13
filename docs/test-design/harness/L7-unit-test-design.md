@@ -1204,6 +1204,17 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-020` | numeric coreでgroup化したHEAD PLAN | `buildLegacyPlanInventory` | 20群/41 PLANをstable順で返し自動winner選択0 |
 | `U-PA-021` | 同一HEADを反復inventory | `buildLegacyPlanInventory` | item/collision順とSHA-256 inventory digestが完全一致 |
 | `U-PA-022` | anchor/alias/merge/custom tag/non-string key/unsafe integerを含むfrontmatter | `parseLegacyPlanSource` | lossless canonical化できないYAMLを全件fail-close |
+| `U-PA-023` | empty state + valid pending observe | `reduceLegacyMigration` / append port | observed event/current/receiptのみatomic append、PlanAsset/revision/alias行0 |
+| `U-PA-024` | state×observe/decide/revise全組合せ | migration transition table | 許可pairだけ次state、禁止pairは`plan-migration-transition-invalid`でdelta 0 |
+| `U-PA-025` | decision 4種×field有無mutation | decision field matrix | 必須/禁止組合せをapplicationとSQLiteが同じruleでfail-close |
+| `U-PA-026` | stale expectedSequence/expectedDecision、2 writer | migration append | 一方だけ成功し敗者`plan-migration-state-conflict`、部分commit 0 |
+| `U-PA-027` | 同command ID同payload／異payload | migration append | 同一は同result replay・行増加0、異payloadはglobal command conflict |
+| `U-PA-028` | migrated/rekeyed decision | migration transaction | PlanAsset revision 1、alias、migration event/current、receiptを同一transactionで生成し全provenance digest一致 |
+| `U-PA-029` | rejected decision | migration transaction | migration event/current/receiptだけ生成しPlanAsset/revision/alias行0 |
+| `U-PA-030` | event/current/receipt各方向の孤児・subject/type/result/time/payload改竄 | ledger verifier | 双方向bijection/reducer replay不一致を`plan-ledger-unavailable`でfail-close |
+| `U-PA-031` | sequence/kind/time/identity/source digest mutation | `reduceLegacyMigration` | first observed・連続列・非減少時刻・immutable provenance違反を全件拒否 |
+| `U-PA-032` | 各append境界fault injection | migration transaction port | event/current/asset/revision/alias/receiptの全table delta 0 |
+| `U-PA-033` | valid ledger close→file reopen/rebuild | migration reconstruct | state/event/payload/provenance digest集合が完全一致 |
 | `CANDIDATE-FSM-001` | 正規stateごとの次event | `transition` | 許可表どおりのnext state/event、exit 0 |
 | `CANDIDATE-FSM-002` | proposed→implementing | `transition` | `forward-transition-illegal`, exit 1 |
 | `CANDIDATE-FSM-003` | pair frozen、Red evidenceなし | implement command | `forward-red-evidence-missing`, exit 1 |
