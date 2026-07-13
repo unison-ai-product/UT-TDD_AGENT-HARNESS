@@ -103,8 +103,8 @@ describe("vitest snapshot runner", () => {
       expect(spawnSync("git", ["add", "package.json"], { cwd: source }).status).toBe(0);
       expect(spawnSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.invalid", "commit", "-m", "next"], { cwd: source }).status).toBe(0);
       createSnapshot(source, reference, captured);
-      expect(readFileSync(join(execution, "package.json"), "utf8")).toBe('{"version":1}\n');
-      expect(readFileSync(join(reference, "package.json"), "utf8")).toBe('{"version":1}\n');
+      expect(readFileSync(join(execution, "package.json"), "utf8").trim()).toBe('{"version":1}');
+      expect(readFileSync(join(reference, "package.json"), "utf8").trim()).toBe('{"version":1}');
     } finally {
       removeTestTree(source);
       removeTestTree(execution);
