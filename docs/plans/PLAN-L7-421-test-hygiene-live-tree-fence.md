@@ -11,8 +11,10 @@ created: 2026-07-10
 updated: 2026-07-13
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/function-spec.md
-backprop_decision: not_required
-backprop_decision_reason: "既存テスト基盤の衛生欠陥修正と再発防止 lint の追加であり、新規 L0/L1 要件ではない。CLAUDE.md「共有 tree を測るな」原則の機械化。"
+backprop_decision: required
+backprop_decision_reason: "T7-T9でdual snapshot、単一capture、read provenance、DB owner lifecycleというL6契約を追加したため、function-specとL7 unit test-designへ設計deltaをbackpropする。L0/L1要件追加は不要。"
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+next_pair_freeze: L7
 agent_slots:
   - role: aim
     slot_label: "AIM — 是正方針の設計判断 (fail-close 境界 / gate 方針)"
@@ -33,6 +35,34 @@ generates:
     artifact_type: source_module
   - artifact_path: src/doctor/test-repository-isolation.ts
     artifact_type: source_module
+  - artifact_path: docs/design/harness/L6-function-design/function-spec.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
+  - artifact_path: vitest.config.ts
+    artifact_type: config
+  - artifact_path: package.json
+    artifact_type: config
+  - artifact_path: tests/global-setup.ts
+    artifact_type: test_code
+  - artifact_path: tests/support/git-workspace-fingerprint.ts
+    artifact_type: test_code
+  - artifact_path: tests/support/temp-tree.ts
+    artifact_type: test_code
+  - artifact_path: tests/support/workspace-roots.ts
+    artifact_type: test_code
+  - artifact_path: tests/doctor-test-repository-isolation.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/persistent-db-cleanup-contract.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/vitest-snapshot-runner.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/git-workspace-fingerprint.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/doctor-runtime-state-location.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/vitest-config.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []

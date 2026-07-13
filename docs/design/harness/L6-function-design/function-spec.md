@@ -987,3 +987,30 @@ runtime 契約。実装 = `src/elicitation/context.ts` / `src/elicitation/record
   消費側需要が出た後続 PLAN で行う (現時点で新規テーブル無し)。
 
 oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
+
+## PLAN-L7-421 テスト実行snapshot／検出provenance契約 (backprop、2026-07-13)
+
+### `runSnapshotTests(args, repoRoot)`
+
+- pre: Git sourceはtop-level exact一致でのみGit扱いし、開始時のcommit OIDを一度だけ捕捉する。
+  非Git Packはlive sourceを一度だけexecutionへcopyする。
+- post: referenceは捕捉済みexecutionから、依存install／DB rebuildより前に生成する。Gitは同一OID、
+  非Gitは同一capture内容となり、live sourceを二度読まない。referenceへ後から注入できるruntime inputは
+  `harness.db` と `feedback-lifecycle.jsonl` だけとする。
+- invariant: source/execution/reference/cacheを分離し、sourceとreferenceの前後fingerprint差分、revision
+  mismatch、cleanup失敗をfail-closeする。`.git`／`node_modules`は階層を問わずcopy対象外とする。
+
+### `analyzeTestRepositoryIsolation(input)`
+
+- test sourceのread API、path、`process`、HEAD rootのprovenanceをAST bindingから解決する。named／namespace／
+  const／destructuring alias、関数内alias、静的path concat、async API、bracket accessを同じcanonical sinkへ正規化する。
+- root取得の裸式、`void`、未使用bindingは契約callへ算入しない。repository read sinkへ到達したrootだけを台帳へ計上する。
+- 新規read、件数差、stale契約、live root由来、scan errorは全てhard violationとし、コメントや文字列は数えない。
+
+### persistent DB test ownership
+
+- persistent DB ownerは`tests/**/*.test.ts`を再帰走査し、DB acquisition aliasを正規化して自動発見する。
+- ownerは`support/temp-tree`由来の`removeTestTree`を実行可能経路で呼び、raw recursive `rm`／`rmSync`を
+  named／namespace／element／alias／options chainの全表現で使用しない。
+- `if(false)`、constant-false `&&`、constant-true `else`のcleanupは証拠としない。一般CFG post-dominatorと
+  mutation survivor 0の独立証明はPLAN-L7-425でこの契約を検査する。

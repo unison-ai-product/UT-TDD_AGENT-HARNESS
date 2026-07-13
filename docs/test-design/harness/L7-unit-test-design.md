@@ -1263,3 +1263,22 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-ELICIT-005` | render 4 段固定 | stage+skill+spec を全て seed | stage 行 / defaults 見出し / specs 件数 / `## 設計判断依頼` / 選択肢 A (推奨)+B 行を全て含む |
 | `U-ELICIT-006` | 採択記録 append-only + fail-close | 2 回 append + 必須項目欠落 1 回 | JSONL 2 行 (stage 付き)、topic 空は throw |
 | `U-ELICIT-007` | asset path 未解決の可視化 | path 空の skill asset 行 | throw せず `unreadable_skills` に asset_id、defaults は空 |
+
+## PLAN-L7-421 テスト衛生oracle (backprop、2026-07-13)
+
+| ID | 観点 | fixture / 実行 | expected |
+| --- | --- | --- | --- |
+| `U-TESTHYGIENE-001..012` | source／reference fence | tracked・untracked・ignored・index・HEAD mutation | inventory差分をfail-close、clean sourceは差分0 |
+| `U-TESTHYGIENE-013..018` | repository read基本契約 | live cwd、alias、comment/string decoy、real repo | unclassified／drift／stale／live rootはexit 1、全台帳一致はgreen |
+| `U-TESTHYGIENE-019` | persistent DB owner集合 | `tests/**/*.test.ts` AST scan | owner全件がretry helperを持ちraw recursive removal 0 |
+| `U-TESTHYGIENE-021..023` | snapshot cleanup／Pack copy | non-Git Pack、cleanup failure、複合failure | shared dependency 0、全cleanup実行、例外をaggregateして伝播 |
+| `U-TESTHYGIENE-024..025` | implicit／composed repository read | direct literal、join/resolve、process variants | 全経路を台帳readまたはlive-root violationへ分類 |
+| `U-TESTHYGIENE-026..030` | namespace／alias／async／options | DB/read/rmのnamed・namespace・element・const alias | canonical APIへ解決し回避0 |
+| `U-TESTHYGIENE-031` | bare HEAD root decoy | `headSnapshotRoot();` | callへ数えずstale contract |
+| `U-TESTHYGIENE-032` | 親Git配下Pack | nested Pack＋nested node_modules | copy mode、全階層node_modules除外 |
+| `U-TESTHYGIENE-033` | cleanup decoy／alias chain | destructuring、2段options、constant-dead branch | owner/raw cleanupを検出、dead helperは証拠外 |
+| `U-TESTHYGIENE-034` | non-Git capture同一性 | source capture後にlive source変更 | referenceはexecution captureと同一、後発変更を観測しない |
+| `U-TESTHYGIENE-035` | provenance chain | local path/read/process alias、void/unused root | sinkへ到達したreadだけ計上、decoy契約はstale |
+
+実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
+`tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。
