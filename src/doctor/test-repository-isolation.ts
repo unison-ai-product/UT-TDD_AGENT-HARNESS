@@ -22,7 +22,7 @@ runtime-portability:2 screen-impl-pair-freeze:1 self-pair-normative-guard:1 setu
 sub-doc-catalog-drift:5 sub-doc-section-structure:1 telemetry-closure:1 test-design-naming:1 toolchain-pin:1 tracked-canonical:1
 vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1
-global-setup:1 support/workspace-roots:2
+global-setup.ts:1 support/workspace-roots.ts:2
 `;
 
 export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadContract>> =
@@ -32,7 +32,7 @@ export const REPOSITORY_READ_CONTRACTS: Readonly<Record<string, RepositoryReadCo
       .map((row) => {
         const [name, calls] = row.split(":");
         return [
-          `tests/${name}.test.ts`,
+          `tests/${name.endsWith(".ts") ? name : `${name}.test.ts`}`,
           {
             mode: "head_snapshot",
             calls: Number(calls),

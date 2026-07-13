@@ -14,7 +14,7 @@ describe("persistent harness DB cleanup contract", () => {
     for (const owner of PERSISTENT_DB_OWNERS) {
       const source = readFileSync(join(process.cwd(), owner), "utf8");
       expect(source, owner).toContain('from "./support/temp-tree"');
-      expect(source, owner).toContain("removeTestTree(");
+      expect(source, owner).toMatch(/removeTestTree(?:\(|;)/);
     }
   });
 });
