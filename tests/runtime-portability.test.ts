@@ -218,6 +218,82 @@ describe("runtime-portability lint", () => {
     expect(result.violations.filter((v) => v.rule === "legacy-runtime-marker")).toHaveLength(4);
   });
 
+  it("U-RPORT-010: accepts the tracked git-hooks entrypoints (PLAN-L7-260 §4 / PLAN-L7-424)", () => {
+    const result = analyzeRuntimePortability([
+      ...validDocs,
+      {
+        path: "scripts/git-hooks/pre-push",
+        text: '#!/usr/bin/env bash\nset -euo pipefail\nbun "$hook_dir/secret-scan-diff.ts"\n',
+      },
+      {
+        path: "scripts/git-hooks/secret-scan-diff.ts",
+        text: 'import { analyzeSecretScan } from "../../src/lint/secret-scan";\nanalyzeSecretScan([]);\n',
+      },
+    ]);
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("U-RPORT-011: still rejects unrecognized files under scripts/git-hooks/", () => {
+    const result = analyzeRuntimePortability([
+      ...validDocs,
+      { path: "scripts/git-hooks/other.sh", text: "#!/usr/bin/env bash\necho hi\n" },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.rule)).toContain("script-wrapper-unapproved");
+  });
+
+  it("U-RPORT-012: rejects a git-hooks pre-push that reintroduces Python dispatch", () => {
+    const result = analyzeRuntimePortability([
+      ...validDocs,
+      {
+        path: "scripts/git-hooks/pre-push",
+        text: "#!/usr/bin/env bash\npython3 scan.py\n",
+      },
+      {
+        path: "scripts/git-hooks/secret-scan-diff.ts",
+        text: 'import { analyzeSecretScan } from "../../src/lint/secret-scan";\n',
+      },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.rule)).toEqual(
+      expect.arrayContaining(["git-hook-entrypoint-python", "git-hook-entrypoint-not-thin"]),
+    );
+  });
+
+  it("U-RPORT-013: rejects a git-hooks pre-push that stops dispatching to the bun scanner", () => {
+    const result = analyzeRuntimePortability([
+      ...validDocs,
+      { path: "scripts/git-hooks/pre-push", text: "#!/usr/bin/env bash\necho no-op\n" },
+      {
+        path: "scripts/git-hooks/secret-scan-diff.ts",
+        text: 'import { analyzeSecretScan } from "../../src/lint/secret-scan";\n',
+      },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.rule)).toContain("git-hook-entrypoint-not-thin");
+  });
+
+  it("U-RPORT-014: rejects a git-hooks scanner that reimplements detection instead of reusing src/lint/secret-scan.ts", () => {
+    const result = analyzeRuntimePortability([
+      ...validDocs,
+      {
+        path: "scripts/git-hooks/pre-push",
+        text: '#!/usr/bin/env bash\nbun "$hook_dir/secret-scan-diff.ts"\n',
+      },
+      {
+        path: "scripts/git-hooks/secret-scan-diff.ts",
+        text: "const SECRET_PATTERN = /ghp_[A-Za-z0-9]+/;\n",
+      },
+    ]);
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((v) => v.rule)).toContain("git-hook-scanner-not-reusing-core");
+  });
+
   it("U-RPORT-007: scans src/scripts via filesystem when git is unavailable (zip/tarball)", () => {
     // .git を作らない = git ls-files が失敗し filesystem fallback に落ちる経路 (配布物の検査面欠落回帰)。
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-rport-nogit-"));

@@ -9,7 +9,7 @@ status: confirmed
 created: 2026-05-27
 updated: 2026-05-28
 owner: PM (Opus) / PO (人間)
-pair_artifact: docs/test-design/harness/L1-operational-test-design.md
+pair_artifact: docs/test-design/harness/L14-operational-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L3
 agent_slots:

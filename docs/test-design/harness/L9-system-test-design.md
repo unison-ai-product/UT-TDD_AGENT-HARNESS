@@ -10,6 +10,7 @@ related_l4_data: docs/design/harness/L4-basic-design/data.md
 related_l4_architecture: docs/design/harness/L4-basic-design/architecture.md
 related_l4_function: docs/design/harness/L4-basic-design/function.md
 related_l4_external_if: docs/design/harness/L4-basic-design/external-if.md
+related_l4_security: docs/design/harness/L4-basic-design/security.md
 related_plan_l4_internal: docs/plans/PLAN-L4-10-internal-asset-master.md
 next_pair_freeze: L4
 v2_import: docs/migration/v2-import-ledger.md
@@ -99,6 +100,7 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 | ST-EXT-03 | VCS・CI 境界 (§3) | ローカル gate 証跡 ↔ CI 再実行一致 (NFR-13) | GHA workflow test |
 | ST-EXT-04 | adapter 隔離 (§6) | core が provider SDK 直依存しない (intent のみ) | dependency lint |
 | ST-EXT-05 | CLI user boundary (§2/§3/§4、PLAN-REVERSE-395) | `ut-tdd --help` / representative subcommands / `--json` command / hard gate failure が、as-is command catalog と終了コード規約 (success=0、validation/gate failure=1、guard block=2) に従う。shell completion はこの catalog を入力にし、存在しない command path を候補化しない | CLI surface smoke + vitest CLI integration |
+| ST-EXT-06 | security 境界 (`docs/design/harness/L4-basic-design/security.md` §5-§9、PLAN-L4-29、ZIP-DOC-102 相当) | STRIDE 脅威モデル (§5) の各対策が agent-guard/work-guard/escalation gate として実際に fail-close する / 供給網 (§6) preflight が violation 時に materialize を止める / 秘密非保持 (§7) を secret-scan narrow guard + 横断 scan が補強する / 監査ログ要件 (§8) の記録先が実在する (review_evidence 必須化・foreign-edit-overrides.jsonl) | vitest agent-guard / work-guard / secret-scan / doctor `checkReviewEvidence` (既存) + `PLAN-L6-62` distribution preflight |
 
 ## §2 量閉じ一覧 (L4 設計要素 → ST 被覆、孤児チェック)
 
@@ -108,6 +110,7 @@ L4 基本設計の各設計要素が L9 総合テスト (ST-*) で被覆され�
 - **function.md §1.1 C12 内部資産 roster/command (FR-L1-46/48) → ST-ASSET-01〜03 / architecture §3 skills (FR-L1-47) → ST-ASSET-05 / architecture §4.1 drift lint (FR-L1-49) → ST-ASSET-06/07 implemented evidence (`src/runtime/agent-slots.ts`, `src/workflow/contracts.ts`, `src/lint/asset-drift.ts`)**
 - external-if.md §3 境界 4 / §4 degradation → ST-EXT-01〜04
 - external-if.md §2/§3/§4 CLI user boundary (PLAN-REVERSE-395) → ST-EXT-05
+- **security.md §5-§9 (脅威モデル/供給網/鍵・秘密/監査ログ、PLAN-L4-29) → ST-EXT-06** (ZIP-DOC-102 相当の security verification 接続、孤児 0 に含める)
 - **孤児 (設計要素で ST 未被覆) = 0** を L9 本起票で機械確認する。Current hard evidence is pair-freeze orphan 0 + implemented asset-drift slice + L7 roster/skill/command contract evidence. No active ST-ASSET L7 carry remains in this document.
 
 ## §3 trace (④ → ②)

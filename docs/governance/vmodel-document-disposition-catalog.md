@@ -30,7 +30,7 @@ source document、semantic item、HARNESS target slotは別集約である。本
 | ZIP-DOC-007 | 結合テスト設計書 | merge | `docs/test-design/harness/L8-integration-test-design.md` | G8契約へ統合 |
 | ZIP-DOC-008 | 総合テスト設計書 | merge | `docs/test-design/harness/L9-system-test-design.md` | G9契約へ統合 |
 | ZIP-DOC-009 | 受入テスト設計書 | merge | `docs/test-design/harness/L12-acceptance-test-design.md` | G12契約へ統合 |
-| ZIP-DOC-010 | セキュリティ設計書 | merge | `docs/design/harness/L4-basic-design/security.md` | security slotへ統合 |
+| ZIP-DOC-010 | セキュリティ設計書 | merge | `docs/design/harness/L4-basic-design/security.md` | security slotへ統合。脅威モデル(STRIDE)実体はsecurity.md §5 (PLAN-L4-29) |
 | ZIP-DOC-011 | 運用設計書 | merge | `docs/test-design/harness/L14-operational-test-design.md` | L13/L14運用証拠へ統合 |
 | ZIP-DOC-012 | テスト計画書 | adopt | `docs/process/vmodel-contract.yaml` | G7-G14共通evidence policyとして採用 |
 | ZIP-DOC-013 | 移行設計・計画書 | merge | `docs/process/gates.md` | G12 deploy/rollbackへ統合 |
@@ -56,7 +56,7 @@ source document、semantic item、HARNESS target slotは別集約である。本
 | ZIP-DOC-033 | トレーサビリティ・ID体系・紐づけ規約 | merge | `docs/process/plan-asset-v2.md` | immutable identity/traceへ統合 |
 | ZIP-DOC-034 | 保守・メンテナンス設計書 | merge | `docs/test-design/harness/L14-operational-test-design.md` | operation/upgrade evidenceへ統合 |
 | ZIP-DOC-035 | 信頼性・DR・BCP設計書 | reference | `docs/governance/vmodel-document-catalog.md` | governed productのresilience profileで採用 |
-| ZIP-DOC-036 | プライバシー設計書 | reference | `docs/design/harness/L4-basic-design/security.md` | PII取扱いがある案件のみ高影響承認付き採用 |
+| ZIP-DOC-036 | プライバシー設計書 | reference | `docs/design/harness/L4-basic-design/security.md` | PII取扱いがある案件のみ高影響承認付き採用。デフォルト値はnot_applicable、判断理由はsecurity.md §9 (PLAN-L4-29) |
 | ZIP-DOC-037 | 国際化・アクセシビリティ設計書 | merge | `docs/design/harness/L4-basic-design/ui-standard.md` | UI/a11y/i18n slotへ統合 |
 | ZIP-DOC-038 | CI・CDパイプライン設計書 | merge | `docs/process/gates.md` | CI/merge evidenceへ統合 |
 | ZIP-DOC-039 | イベント・メッセージスキーマ設計書 | merge | `docs/design/harness/L5-detailed-design/physical-data.md` | append-only event schemaへ統合 |
@@ -76,8 +76,8 @@ source document、semantic item、HARNESS target slotは別集約である。本
 | ZIP-DOC-053 | PoC検証設計書 | merge | `docs/process/modes/` | Scrum/PoC S0-S4へ統合 |
 | ZIP-DOC-054 | 課金・メータリング設計書 | reference | `vmodel-document-scale-profiles.md` | billing capability案件のみprofile採用 |
 | ZIP-DOC-055 | テナントライフサイクル設計書 | reference | `vmodel-document-scale-profiles.md` | multi-tenant案件のみprofile採用 |
-| ZIP-DOC-056 | 供給網セキュリティ設計書 | merge | `docs/design/harness/L4-basic-design/security.md` | dependency/distribution gateへ統合 |
-| ZIP-DOC-057 | シークレット鍵管理設計書 | merge | `docs/design/harness/L4-basic-design/security.md` | secret scan/rotation policyへ統合 |
+| ZIP-DOC-056 | 供給網セキュリティ設計書 | merge | `docs/design/harness/L4-basic-design/security.md` | dependency/distribution gateへ統合。実体はsecurity.md §6 (PLAN-L4-29) |
+| ZIP-DOC-057 | シークレット鍵管理設計書 | merge | `docs/design/harness/L4-basic-design/security.md` | secret scan/rotation policyへ統合。実体はsecurity.md §7、KEK-DEK部分はnot_applicable (§9、PLAN-L4-29) |
 | ZIP-DOC-058 | 非機能要件グリッド設計書 | merge | `docs/design/harness/L1-requirements/nfr.md` | NFR/verification traceへ統合 |
 | ZIP-DOC-059 | リージョン戦略・データレジデンシー設計書 | reference | `vmodel-document-scale-profiles.md` | regulated/multi-region案件のみ採用 |
 | ZIP-DOC-060 | レート制限・クォータ設計書 | merge | `docs/design/harness/L4-basic-design/architecture.md` | provider/token concurrency policyへ統合 |
@@ -87,7 +87,7 @@ source document、semantic item、HARNESS target slotは別集約である。本
 | ZIP-DOC-064 | コスト設計・FinOps設計書 | merge | `docs/design/harness/L1-requirements/nfr.md` | token/cost budgetへ統合 |
 | ZIP-DOC-065 | 運用手順書・保守マニュアル・教育計画 | merge | `docs/test-design/harness/L14-operational-test-design.md` | Pack/user operationsへ統合 |
 | ZIP-DOC-066 | 顧客SLA・サービスカタログ設計書 | reference | `vmodel-document-scale-profiles.md` | external SLAを持つ案件のみ採用 |
-| ZIP-DOC-067 | アイデンティティ・プロビジョニング設計書 | reference | `docs/design/harness/L4-basic-design/security.md` | auth/identity変更時のみ高影響承認付き採用 |
+| ZIP-DOC-067 | アイデンティティ・プロビジョニング設計書 | reference | `docs/design/harness/L4-basic-design/security.md` | auth/identity変更時のみ高影響承認付き採用。デフォルト値はnot_applicable、判断理由はsecurity.md §9 (PLAN-L4-29) |
 | ZIP-DOC-068 | コンプライアンス対応・統制マッピング設計書 | reference | `vmodel-document-scale-profiles.md` | regulated profileで採用 |
 | ZIP-DOC-069 | 性能設計書 | merge | `docs/design/harness/L1-requirements/nfr.md` | performance NFRへ統合 |
 | ZIP-DOC-070 | モデルガバナンス・ML-BOM設計書 | merge | `docs/design/harness/L4-basic-design/architecture.md` | model routing/advisor evidenceへ統合 |
@@ -122,7 +122,7 @@ source document、semantic item、HARNESS target slotは別集約である。本
 | ZIP-DOC-099 | 型付きスペック・自動検出設計書 | merge | `docs/design/harness/L4-basic-design/data.md` | authored spec→detectorへ統合 |
 | ZIP-DOC-100 | 環境定義書 | reference | `vmodel-document-scale-profiles.md` | governed repoのenvironment profileで採用 |
 | ZIP-DOC-101 | 性能試験計画書 | merge | `docs/test-design/harness/L9-system-test-design.md` | G9 performance evidenceへ統合 |
-| ZIP-DOC-102 | セキュリティテスト計画・脆弱性診断書 | merge | `docs/test-design/harness/L9-system-test-design.md` | security verificationへ統合 |
+| ZIP-DOC-102 | セキュリティテスト計画・脆弱性診断書 | merge | `docs/test-design/harness/L9-system-test-design.md` | security verificationへ統合。実体はL9 §1.4 ST-EXT-06 (PLAN-L4-29) |
 | ZIP-DOC-103 | プロジェクト計画書 | merge | `docs/governance/vmodel-upgrade-schedule.md` | program/schedule/FSM projectionへ統合 |
 | ZIP-DOC-104 | JSON型・スキーマ設計書 | merge | `docs/design/harness/L5-detailed-design/physical-data.md` | schema boundaryへ統合 |
 | ZIP-DOC-105 | 永続化マッピング設計書 | merge | `docs/design/harness/L5-detailed-design/physical-data.md` | projection/rebuild mappingへ統合 |

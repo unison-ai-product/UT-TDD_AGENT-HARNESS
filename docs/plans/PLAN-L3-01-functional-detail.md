@@ -9,7 +9,7 @@ status: confirmed
 created: 2026-05-28
 updated: 2026-06-02
 owner: PM (Opus) / PO (人間)
-pair_artifact: docs/test-design/harness/L3-acceptance-test-design.md
+pair_artifact: docs/test-design/harness/L12-acceptance-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 related_br: docs/design/harness/L1-requirements/business-requirements.md
 related_l1_functional: docs/design/harness/L1-requirements/functional-requirements.md

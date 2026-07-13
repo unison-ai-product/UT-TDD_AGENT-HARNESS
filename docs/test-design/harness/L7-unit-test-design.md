@@ -1164,6 +1164,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | U-DOCSECRET-004 | `loadSystemSecretScanArtifacts(repoRoot)` | `docs/`、root canonical docs、`.ut-tdd/audit`、`.ut-tdd/handover`、`.ut-tdd/logs`、`.ut-tdd/memory` を active scan band として読む。 |
 | U-DOCSECRET-005 | `checkSecretScan(repoRoot)` | doctor full profile の hard gate として登録され、repoRoot 不在・読込不能・violation ありを fail-close にする。 |
 | U-DOCSECRET-006 | `ut-tdd distribution sync-stage/sync-pack/package` | clean Pack materialize 前に secret-scan を実行し、violation があれば copy / prune / tar を実行せず blocked にする。 |
+| U-DOCSECRET-007 | `runSecretScanDiff(repoRoot, entries: {sha,path}[], mode, readBlob)` (`scripts/git-hooks/secret-scan-diff.ts`、PLAN-L7-260 §4 pre-push 対象見直し、2026-07-13、blob 方式へ設計修正 2026-07-13) | 3 パターン限定 (`*CLAUDE.md`/`*SKILL.md`/references 配下 `*.md`) を撤廃し、docs/・`.ut-tdd/audit`・`.ut-tdd/logs`・`.ut-tdd/memory` を widened scan surface として credential marker (`analyzeSecretScan` 再利用) + 温存 PII regex (電話番号/郵便番号/email/internal URL) を検出する。push される各 commit 時点の blob (`git show <sha>:<path>`) を個別に読むため、同一 push 内で先行 commit が追加し後続 commit が working tree 上だけクリーン化する secret も検出する (`tests/secret-scan-diff.test.ts` の bare remote + hooksPath e2e で固定)。widened surface 外の changed path は対象外。mode 既定は warn (exit 0 のまま violation を報告)、`UT_TDD_PRE_PUSH_SECRET_SCAN_MODE=fail-close` でのみ push を止める (exit 1)。 |
 
 ## Vモデルactive frontier / right-arm coverage追補 (PLAN-L6-69)
 
