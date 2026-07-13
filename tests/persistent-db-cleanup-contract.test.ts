@@ -191,6 +191,22 @@ function hasLiveCleanupCall(path: string, source: string): boolean {
         aliases.add(element.name.text);
     }
   }
+  for (const statement of file.statements) {
+    if (
+      !ts.isVariableStatement(statement) ||
+      !(statement.declarationList.flags & ts.NodeFlags.Const)
+    )
+      continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.initializer &&
+        ts.isIdentifier(declaration.initializer) &&
+        aliases.has(declaration.initializer.text)
+      )
+        aliases.add(declaration.name.text);
+    }
+  }
   let found = false;
   const isStaticallyDead = (node: ts.Node): boolean => {
     for (let current = node.parent; current; current = current.parent) {
