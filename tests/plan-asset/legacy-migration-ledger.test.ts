@@ -129,6 +129,36 @@ describe("legacy migration ledger application", () => {
       rmSync(repoRoot, { recursive: true, force: true });
     }
   });
+
+  it.each([
+    "migration-event",
+    "migration-current",
+    "receipt",
+  ])("U-PA-032: rolls back observe after %s fault", (boundary) => {
+    withLedger(({ db }) => {
+      const ledger = new LegacyMigrationLedger(db, undefined, faultAt(boundary));
+      expect(() => ledger.observe(input())).toThrow(`fault:${boundary}`);
+      expect(countAll(db)).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    });
+  });
+
+  it.each([
+    "plan-asset",
+    "plan-revision",
+    "alias-event",
+    "alias-current",
+    "migration-event",
+    "migration-current",
+    "receipt",
+  ])("U-PA-032: rolls back adoption after %s fault", (boundary) => {
+    withLedger(({ db, ledger }) => {
+      ledger.observe(input());
+      const baseline = countAll(db);
+      const faulting = new LegacyMigrationLedger(db, undefined, faultAt(boundary));
+      expect(() => faulting.adopt(adoptInput())).toThrow(`fault:${boundary}`);
+      expect(countAll(db)).toEqual(baseline);
+    });
+  });
 });
 
 function input() {
@@ -153,6 +183,25 @@ function input() {
   };
 }
 
+function adoptInput() {
+  const payload = JSON.stringify({ legacyPlanId: input().legacyPlanId, migrated: true });
+  return {
+    legacyPlanId: input().legacyPlanId,
+    resolvedAlias: input().legacyPlanId,
+    canonicalPayloadJson: payload,
+    canonicalPayloadDigest: sha256(payload),
+    bodyDigest: "1".repeat(64),
+    sourcePath: "docs/plans/PLAN-L7-1-a.md",
+    sourceCommit: "2".repeat(40),
+    actor: "migration:test",
+    reason: "lossless canonical adoption",
+    commandId: "command:adopt",
+    occurredAt: "2026-07-13T01:00:00Z",
+    expectedSequence: 1 as const,
+    expectedDecision: "pending" as const,
+  };
+}
+
 function withLedger(
   run: (fixture: { db: ReturnType<typeof openHarnessDb>; ledger: LegacyMigrationLedger }) => void,
 ): void {
@@ -173,6 +222,26 @@ function counts(db: ReturnType<typeof openHarnessDb>): readonly number[] {
 
 function count(db: ReturnType<typeof openHarnessDb>, table: string): number {
   return Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n ?? 0);
+}
+
+function countAll(db: ReturnType<typeof openHarnessDb>): readonly number[] {
+  return [
+    "legacy_plan_migration_events",
+    "legacy_plan_migrations",
+    "append_command_receipts",
+    "plan_assets",
+    "plan_revisions",
+    "plan_alias_events",
+    "plan_aliases",
+  ].map((table) => count(db, table));
+}
+
+function faultAt(expected: string) {
+  return {
+    after(boundary: string) {
+      if (boundary === expected) throw new Error(`fault:${boundary}`);
+    },
+  };
 }
 
 function sha256(value: string): string {

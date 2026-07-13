@@ -1,5 +1,9 @@
 import type { HarnessDb } from "../../state-db/index.js";
-import { AppendCommandTransaction, type AppendResult } from "./append-command.js";
+import {
+  AppendCommandTransaction,
+  type AppendResult,
+  type LedgerFaultPort,
+} from "./append-command.js";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
 import type { LedgerTransactionPort } from "./transaction.js";
 
@@ -56,9 +60,10 @@ export class LegacyMigrationLedger {
   constructor(
     private readonly db: HarnessDb,
     transaction?: LedgerTransactionPort,
+    private readonly fault?: LedgerFaultPort,
   ) {
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
-    this.commands = new AppendCommandTransaction(db, transaction);
+    this.commands = new AppendCommandTransaction(db, transaction, fault);
   }
 
   reconstruct(legacyPlanId: string):
@@ -146,6 +151,7 @@ export class LegacyMigrationLedger {
     this.db
       .prepare(`INSERT INTO legacy_plan_migration_events VALUES (${placeholders(event)})`)
       .run(...Object.values(event));
+    this.fault?.after("migration-event");
     const projection = {
       migration_id: `migration:${input.legacyPlanId}`,
       legacy_plan_id: input.legacyPlanId,
@@ -165,6 +171,7 @@ export class LegacyMigrationLedger {
     this.db
       .prepare(`INSERT INTO legacy_plan_migrations VALUES (${placeholders(projection)})`)
       .run(...Object.values(projection));
+    this.fault?.after("migration-current");
     return { ok: true, replayed: false, resultRef: String(event.migration_event_id) };
   }
 
@@ -203,6 +210,7 @@ export class LegacyMigrationLedger {
     this.db
       .prepare(`INSERT INTO legacy_plan_migration_events VALUES (${placeholders(event)})`)
       .run(...Object.values(event));
+    this.fault?.after("migration-event");
     this.db
       .prepare(`UPDATE legacy_plan_migrations SET decision = 'rejected', resolved_alias = NULL,
         loss_fields_json = ?, reason = ?, review_plan_id = ?, last_event_digest = ? WHERE legacy_plan_id = ?`)
@@ -213,6 +221,7 @@ export class LegacyMigrationLedger {
         event.event_digest,
         input.legacyPlanId,
       );
+    this.fault?.after("migration-current");
     return { ok: true, replayed: false, resultRef: String(event.migration_event_id) };
   }
 
@@ -223,6 +232,7 @@ export class LegacyMigrationLedger {
     this.db
       .prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)")
       .run(assetId, input.occurredAt, input.sourceCommit, String(state.first.identity_algorithm));
+    this.fault?.after("plan-asset");
     this.db
       .prepare("INSERT INTO plan_revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .run(
@@ -237,13 +247,16 @@ export class LegacyMigrationLedger {
         input.reason,
         input.occurredAt,
       );
+    this.fault?.after("plan-revision");
     const alias = aliasEvent(assetId, input, payloadDigest);
     this.db
       .prepare("INSERT INTO plan_alias_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .run(...Object.values(alias));
+    this.fault?.after("alias-event");
     this.db
       .prepare("INSERT INTO plan_aliases VALUES (?, ?, ?, ?, ?, ?)")
       .run(`alias:${assetId}:1`, assetId, input.resolvedAlias, 1, null, alias.event_digest);
+    this.fault?.after("alias-current");
     const event = decisionEvent(state.first, {
       commandId: input.commandId,
       payloadDigest,
@@ -257,11 +270,13 @@ export class LegacyMigrationLedger {
       targetRevision: 1,
     });
     this.insertDecision(event);
+    this.fault?.after("migration-event");
     this.db
       .prepare(`UPDATE legacy_plan_migrations SET target_asset_id = ?, target_revision = 1,
       decision = 'migrated', resolved_alias = ?, collision_group = NULL, loss_fields_json = '[]',
       reason = ?, review_plan_id = NULL, last_event_digest = ? WHERE legacy_plan_id = ?`)
       .run(assetId, input.resolvedAlias, input.reason, event.event_digest, input.legacyPlanId);
+    this.fault?.after("migration-current");
     return { ok: true, replayed: false, resultRef: String(event.migration_event_id) };
   }
 

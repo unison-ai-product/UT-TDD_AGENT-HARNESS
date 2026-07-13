@@ -98,7 +98,8 @@ planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,
 - U-PA-028: `LegacyMigrationLedger.adopt`でPlanAsset/revision 1/alias event+current/migrated event+current/global receiptを同一transactionで生成し、composite revision targetと全digest再検証をGreen化済み。
 - U-PA-030: migration event/current/global receiptの双方向bijectionとstream/current集合一致をverifierへ追加し、event-only/receipt-only mutationをGreen化済み。
 - U-PA-033: file-backed migration ledgerのclose/reopen後にcurrent state、event digest、command payload digest集合が完全一致するreconstruct oracleをGreen化済み。
+- U-PA-032: observe 3境界とadoption 7境界へfault portを注入し、各例外後にmigration/receipt/asset/revision/alias全table delta 0をGreen化済み。U-PA-001..033の実行可能testはtodo 0。
 - U-PA-026..030/032/033: atomic write-set、optimistic guard、global replay、双方向receipt、fault injection/reopen oracleはdesign freeze済み。実行可能Red testとschema/application Green化は未着手。
 - HEAD `274adf14` inventoryは741件、collision 20群/41 PLAN、digest=`86a25dda63d29db9a6d02b6bacfd835e53762cdf416bd8df5b0d04b7d3caf718`。digestはrepository identity receipt、source commit、Git blob OID、source content、frontmatter/body、known/unknown field、collision projectionを拘束し、旧18群/37 PLAN固定値へ検出を合わせない。
 - `state-db`のlegacy short alias解決は先頭一致を廃止し、canonical resolverのexact/unique規則へ統合済み。
-- 未完了: U-PA-026..030/032/033 Red→Green、全legacy PLAN移行・collision判断、dry-run CLI、Reverse-418合流。
+- 未完了: 全legacy PLAN移行・collision判断、dry-run CLI、Reverse-418合流。

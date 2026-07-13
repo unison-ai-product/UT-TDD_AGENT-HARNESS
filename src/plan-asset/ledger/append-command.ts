@@ -7,6 +7,10 @@ export type AppendResult =
   | { readonly ok: true; readonly replayed: boolean; readonly resultRef: string }
   | { readonly ok: false; readonly ruleId: string };
 
+export interface LedgerFaultPort {
+  after(boundary: string): void;
+}
+
 interface AppendCommand {
   readonly commandId: string;
   readonly commandType: string;
@@ -24,6 +28,7 @@ export class AppendCommandTransaction {
   constructor(
     private readonly db: HarnessDb,
     transaction?: LedgerTransactionPort,
+    private readonly fault?: LedgerFaultPort,
   ) {
     this.transaction = transaction ?? new ImmediateLedgerTransaction(db);
   }
@@ -46,6 +51,7 @@ export class AppendCommandTransaction {
       const result = append(payloadDigest);
       if (!result.ok) return { commit: false, value: result };
       this.insertReceipt(command, payloadDigest, result.resultRef);
+      this.fault?.after("receipt");
       return { commit: true, value: result };
     });
   }
