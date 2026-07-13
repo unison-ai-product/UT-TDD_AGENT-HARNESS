@@ -968,7 +968,7 @@ identityはtrim一致・NFC・exactly one slashのASCII owner/nameとし、`.git
 
 v1/v2 parserは`schema_version=ut-tdd.plan/v2`の有無でdiscriminated unionにし、v1 unknown frontmatter key、
 本文digest、依存・artifact・review evidenceを落とさない。short aliasはexact full IDを先に照合し、prefix候補が2件以上なら
-候補をstable順で返す`plan-migration-collision`とし、最初の候補を選ばない。現HEADのcollision 20群/41 PLANは
+候補をstable順で返す`plan-migration-collision`とし、最初の候補を選ばない。現HEADのcollision 27群/55 PLANは
 `legacy_plan_migration_events`へexactly once materializeする。full legacy IDからのasset IDはcollisionに関係なく生成し、
 判断未確定行は`resolvedAlias=NULL`+`reviewPlanId`必須とする。
 

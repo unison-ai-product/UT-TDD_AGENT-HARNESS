@@ -36,22 +36,22 @@ dependencies:
 
 ## §0 目的
 
-PLAN-L7-418で実装したPlanAsset v2 ledger、legacy migration application、741件dry-runを観測し、Forward設計との差をR0〜R4で逆向きに検証する。既存L5-17/L6-71/ADR-008のidentity・revision・transaction契約を保持し、実装で判明した自己証明境界だけをbackfillする。
+PLAN-L7-418で実装したPlanAsset v2 ledger、legacy migration application、752件dry-runを観測し、Forward設計との差をR0〜R4で逆向きに検証する。既存L5-17/L6-71/ADR-008のidentity・revision・transaction契約を保持し、実装で判明した自己証明境界だけをbackfillする。
 
 ## §1 R0-R4観測結果
 
 | phase | 観測・判定 | 結果 |
 |---|---|---|
-| R0 | domain/ledger/CLIとHEAD正本を観測 | 741 PLAN、20 numeric-prefix群/41件、migration/rekey/reject application、global receiptを確認 |
+| R0 | domain/ledger/CLIとHEAD正本を観測 | 752 PLAN、27 numeric-prefix群/55件、migration/rekey/reject application、global receiptを確認 |
 | R1 | L5-17/L6-71/ADR-008との差分比較 | reducer/transaction契約は既設計と一致。全件dry-run、reviewed rekey manifest、HEAD target、snapshot、role delegation、target slot証明が未backfill |
-| R2 | U-PA-001〜042を設計oracleへ照合 | identity、revision、receipt、rollback、reopen、741件bijection、target/provenance、CLI公開契約をGreen化 |
+| R2 | U-PA-001〜042を設計oracleへ照合 | identity、revision、receipt、rollback、reopen、752件bijection、target/provenance、CLI公開契約をGreen化 |
 | R3 | checked ZIP/A-187のclaim-only gapと照合 | catalog/display claimを成功根拠にせず、HEAD blob・typed slot・role contract実体へ突合。label推測、自動collision選択を禁止 |
 | R4 | 実装事実をForwardへ合流 | L6 function-spec、L7 unit-test-design、role contract正本へU-PA-034〜041と検査境界をbackfill |
 
 ## §2 自己証明境界
 
-- inventoryはworking treeではなくsource commitのtracked PLAN blob 741件をbatch取得し、OID/content digestをrecord/report digestへ拘束する。
-- collision 41件はreview manifestへPLAN IDとnumeric prefixを明示列挙する。欠落・余剰・group不一致はfail-closeし、prefixから暗黙選択しない。
+- inventoryはworking treeではなくsource commitのtracked PLAN blob 752件をbatch取得し、OID/content digestをrecord/report digestへ拘束する。
+- collision 55件はreview manifestへPLAN IDとnumeric prefixを明示列挙する。欠落・余剰・group不一致はfail-closeし、prefixから暗黙選択しない。
 - `generates`はHEAD上の非空fileまたは非空directory familyへ突合する。file-only detectorのdirectory誤検知を許可しない。
 - delegationは7 roleの上流contractをstrict loadし、既存`role + slot_label`を保持したprojectionへ`contractRef`を追加する。
 - `target_slot`はHEAD item ledgerとHEAD document catalogを既存typed resolverで照合する。
@@ -79,7 +79,7 @@ bun run src/cli.ts plan migration-dry-run
 bun run src/cli.ts plan lint docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md
 ```
 
-dry-run受入値は固定実装条件ではなく現HEAD oracleとして`total=741 / emitted=741 / migrated=700 / rekeyed=41 / pending=0 / finding=0`。reportはsource commit、inventory digest、report digestを出力する。
+dry-run受入値は固定実装条件ではなく現HEAD oracleとして`total=752 / emitted=752 / migrated=697 / rekeyed=55 / pending=0 / finding=0`。reportはsource commit、inventory digest、report digestを出力する。
 
 ## §4 R4合流先
 

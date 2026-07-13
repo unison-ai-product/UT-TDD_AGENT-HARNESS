@@ -247,9 +247,9 @@ describe("L7 CLI surface closure", () => {
 
     expect(payload).toMatchObject({
       ok: true,
-      total: 741,
-      emitted: 741,
-      decisionCounts: { migrated: 700, rekeyed: 41, rejected: 0, pending: 0 },
+      total: 752,
+      emitted: 752,
+      decisionCounts: { migrated: 697, rekeyed: 55, rejected: 0, pending: 0 },
       findings: [],
     });
   }, 15_000);

@@ -10,9 +10,9 @@ describe("legacy PLAN HEAD inventory", () => {
     const result = buildLegacyPlanInventory(process.cwd());
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.items).toHaveLength(741);
-    expect(new Set(result.value.items.map((item) => item.sourcePath)).size).toBe(741);
-    expect(new Set(result.value.items.map((item) => item.assetId)).size).toBe(741);
+    expect(result.value.items).toHaveLength(752);
+    expect(new Set(result.value.items.map((item) => item.sourcePath)).size).toBe(752);
+    expect(new Set(result.value.items.map((item) => item.assetId)).size).toBe(752);
     expect(result.value.items.every((item) => item.frontmatter.plan_id === item.legacyPlanId)).toBe(
       true,
     );
@@ -33,8 +33,8 @@ describe("legacy PLAN HEAD inventory", () => {
   it("U-PA-020: materializes all current numeric-core collisions without auto-selection", () => {
     const result = buildLegacyPlanInventory(process.cwd());
     if (!result.ok) throw new Error(result.error.ruleId);
-    expect(result.value.collisionGroups).toHaveLength(20);
-    expect(result.value.collisionGroups.flatMap((group) => group.planIds)).toHaveLength(41);
+    expect(result.value.collisionGroups).toHaveLength(27);
+    expect(result.value.collisionGroups.flatMap((group) => group.planIds)).toHaveLength(55);
     expect(result.value.collisionGroups.every((group) => group.planIds.length > 1)).toBe(true);
   });
 

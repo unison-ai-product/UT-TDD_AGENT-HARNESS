@@ -53,7 +53,7 @@ describe("legacy migration dry-run", () => {
   it("U-PA-034: emits an exactly-once HEAD-bound record for every inventory item", () => {
     const result = new LegacyMigrationDryRun().run(process.cwd());
     if (!("records" in result)) throw new Error(result.ruleId);
-    expect(result.total).toBe(741);
+    expect(result.total).toBe(752);
     expect(result.emitted).toBe(result.total);
     expect(new Set(result.records.map((item) => item.legacyPlanId)).size).toBe(result.total);
     expect(new Set(result.records.map((item) => item.sourceCommit))).toEqual(
@@ -62,12 +62,12 @@ describe("legacy migration dry-run", () => {
     expect(result.reportDigest).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it("U-PA-035: applies all 41 explicit reviewed rekey decisions", () => {
+  it("U-PA-035: applies all 55 explicit reviewed rekey decisions", () => {
     const result = new LegacyMigrationDryRun().run(process.cwd());
     if (!("records" in result)) throw new Error(result.ruleId);
-    expect(result.collisionGroups).toBe(20);
-    expect(result.collisionItems).toBe(41);
-    expect(result.decisionCounts).toEqual({ migrated: 700, rekeyed: 41, rejected: 0, pending: 0 });
+    expect(result.collisionGroups).toBe(27);
+    expect(result.collisionItems).toBe(55);
+    expect(result.decisionCounts).toEqual({ migrated: 697, rekeyed: 55, rejected: 0, pending: 0 });
     expect(result.ok).toBe(true);
     expect(result.findings).toEqual([]);
   });
