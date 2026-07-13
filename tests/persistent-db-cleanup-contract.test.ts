@@ -3,25 +3,12 @@ import { join, relative } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
-export function createsPersistedHarnessDb(
-  path: string,
-  source: string,
-): boolean {
-  const file = ts.createSourceFile(
-    path,
-    source,
-    ts.ScriptTarget.ES2022,
-    true,
-    ts.ScriptKind.TS,
-  );
+function createsPersistedHarnessDb(path: string, source: string): boolean {
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
   const tracked = new Map<string, string>();
   const namespaces = new Set<string>();
   for (const statement of file.statements) {
-    if (
-      !ts.isImportDeclaration(statement) ||
-      !statement.importClause?.namedBindings
-    )
-      continue;
+    if (!ts.isImportDeclaration(statement) || !statement.importClause?.namedBindings) continue;
     if (ts.isNamespaceImport(statement.importClause.namedBindings)) {
       namespaces.add(statement.importClause.namedBindings.name.text);
       continue;
@@ -53,25 +40,16 @@ export function createsPersistedHarnessDb(
           namespaces.has(node.expression.expression.text)
         ? node.expression.name.text
         : "";
-    if (["defaultHarnessDbPath", "ensureHarnessSchema"].includes(called))
-      persisted = true;
+    if (["defaultHarnessDbPath", "ensureHarnessSchema"].includes(called)) persisted = true;
     if (called === "openHarnessDb") {
       const dbPath = node.arguments[0];
-      if (
-        !dbPath ||
-        !ts.isStringLiteralLike(dbPath) ||
-        dbPath.text !== ":memory:"
-      )
+      if (!dbPath || !ts.isStringLiteralLike(dbPath) || dbPath.text !== ":memory:")
         persisted = true;
     }
-    if (
-      called === "rebuildHarnessDb" &&
-      ts.isObjectLiteralExpression(node.arguments[0])
-    ) {
+    if (called === "rebuildHarnessDb" && ts.isObjectLiteralExpression(node.arguments[0])) {
       const suppliesDb = node.arguments[0].properties.some(
         (property) =>
-          (ts.isPropertyAssignment(property) ||
-            ts.isShorthandPropertyAssignment(property)) &&
+          (ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property)) &&
           property.name.getText(file) === "db",
       );
       if (!suppliesDb) persisted = true;
@@ -82,25 +60,12 @@ export function createsPersistedHarnessDb(
   return persisted;
 }
 
-export function usesRawRecursiveTreeRemoval(
-  path: string,
-  source: string,
-): boolean {
-  const file = ts.createSourceFile(
-    path,
-    source,
-    ts.ScriptTarget.ES2022,
-    true,
-    ts.ScriptKind.TS,
-  );
+function usesRawRecursiveTreeRemoval(path: string, source: string): boolean {
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
   const aliases = new Set(["rmSync"]);
   const namespaces = new Set<string>();
   for (const statement of file.statements) {
-    if (
-      !ts.isImportDeclaration(statement) ||
-      !statement.importClause?.namedBindings
-    )
-      continue;
+    if (!ts.isImportDeclaration(statement) || !statement.importClause?.namedBindings) continue;
     if (ts.isNamespaceImport(statement.importClause.namedBindings)) {
       namespaces.add(statement.importClause.namedBindings.name.text);
       continue;
@@ -115,8 +80,7 @@ export function usesRawRecursiveTreeRemoval(
   const visit = (node: ts.Node): void => {
     if (
       ts.isCallExpression(node) &&
-      ((ts.isIdentifier(node.expression) &&
-        aliases.has(node.expression.text)) ||
+      ((ts.isIdentifier(node.expression) && aliases.has(node.expression.text)) ||
         (ts.isPropertyAccessExpression(node.expression) &&
           ts.isIdentifier(node.expression.expression) &&
           namespaces.has(node.expression.expression.text) &&
@@ -174,18 +138,13 @@ describe("persistent harness DB cleanup contract", () => {
           });
       }
     }
-    const owners = files.filter((file) =>
-      createsPersistedHarnessDb(file.path, file.source),
-    );
+    const owners = files.filter((file) => createsPersistedHarnessDb(file.path, file.source));
 
     expect(owners.length).toBeGreaterThan(0);
     for (const owner of owners) {
       expect(owner.source, owner.path).toContain('from "./support/temp-tree"');
       expect(owner.source, owner.path).toMatch(/removeTestTree(?:\(|;)/);
-      expect(
-        usesRawRecursiveTreeRemoval(owner.path, owner.source),
-        owner.path,
-      ).toBe(false);
+      expect(usesRawRecursiveTreeRemoval(owner.path, owner.source), owner.path).toBe(false);
     }
   });
 });
