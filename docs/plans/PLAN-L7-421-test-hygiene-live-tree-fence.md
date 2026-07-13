@@ -86,6 +86,16 @@ review_evidence: []
   writer test が生成中の `.ut-tdd` をdoctor等のrepository-read testが観測する。
   runnerは「書込み可能な実行snapshot」と「fingerprintで不変を強制するHEAD読取り
   snapshot」を分離し、`headSnapshotRoot()` 契約は後者だけを返す。
+- **T-8 (snapshot 正本の単一 revision 化)**: execution/reference を別々の可変
+  `HEAD` から作ると hybrid commit 境界で revision が割れる。起動時に OID を一度だけ
+  捕捉し、両 snapshot を同一 OID へ detached checkout して一致を fail-close する。
+  親 Git 配下の非 Git Pack は top-level exact 一致で copy mode と判定し、reference へは
+  `harness.db` と整合用 `feedback-lifecycle.jsonl` だけを注入する。
+- **T-9 (検出器の構文回避)**: repository read / persistent DB cleanup の単純な
+  namespace・named/const/destructuring alias、element access、async API、options alias、
+  `if (false)` cleanup decoy を負例 corpus に加える。一般的な interprocedural dataflow、
+  lifecycle post-dominator、mutation survivor 0 は
+  `PLAN-L7-425-independent-detector-meta-verifier` で自己証明する。
 
 ## 工程表
 
@@ -99,7 +109,7 @@ review_evidence: []
 ### Step 3: [直列] live 測定テストの検出基盤と方針適用
 - 直列理由 = **downstream_dependency** (棚卸し結果が個別方針を決める)。
 - tests/ 配下で repository 読みを静的検出する lint (reason・呼出数を持つ契約台帳方式)
-  を追加。再棚卸しの実行コード 60 テスト（コメント 1、fence setup 1 を除外）は全件を
+  を追加。再棚卸しで検出した 71 test/support file は全件を
   (a) detached HEAD snapshot、(b) 隔離 fixture のいずれかへ分類・適用する。CI 専用の
   live tree 測定は残さず、新規・呼出数差分・古い契約は全て fail-close とする。
   T-2 は rebuild 済み DB を前提とする guard (未 rebuild ならテスト内で rebuild
@@ -113,6 +123,21 @@ review_evidence: []
 
 ### Step 5: [直列] 回帰確認
 - 直列理由 = **verification_gate**。全テスト green + doctor exit 0。
+
+## 実装・検証記録 (2026-07-13)
+
+- snapshot runner は同一 OID、Git top-level exact 判定、限定runtime input、全cleanup
+  aggregate を実装した。
+- repository isolation は再帰走査、契約件数/stale/unclassified fail-close に加え、
+  alias・async・bracket・bare `headSnapshotRoot()` decoy の負例を持つ。
+- persistent DB cleanup は owner 自動発見、namespace/destructuring/const alias、async
+  `rm`、options chain、dead cleanup decoy を負例化した。
+- HEAD `97968c6c` で `172 files / 1661 tests` green、doctor `60/60` green、起動元・
+  reference fingerprint差分ゼロを確認した。以後のdetector強化はHEAD `6b88fac6` の
+  targeted `18/18` greenまで確認済みで、最終full suiteを再実行して証拠を更新する。
+- `doctor.test.ts` のaggregate baselineはPLANがdraftの間だけ
+  `merged-plan-status` 1件を許可する。PLAN confirm時に許可を0件へ更新し、doctor全体
+  greenを復元することを解除条件とする。
 
 ## AC
 
