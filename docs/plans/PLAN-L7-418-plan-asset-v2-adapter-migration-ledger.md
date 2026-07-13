@@ -47,6 +47,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/append-command.ts
     artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/legacy-migration-ledger.ts
+    artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/transaction.ts
     artifact_type: source_module
   - artifact_path: src/schema/harness-db.ts
@@ -58,6 +60,8 @@ generates:
   - artifact_path: tests/plan-asset/domain.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/legacy-migration.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/legacy-migration-ledger.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-asset/project-identity-loader.test.ts
     artifact_type: test_code
@@ -89,6 +93,7 @@ planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,
 - U-PA-001..022: Redを観測後、domain/value object、legacy canonical adapter、曖昧alias fail-close、採番予約、HEAD tracked project identity provenance、ledger typed schema/replay verifier、atomic reservation/receipt transaction、HEAD 741 PLAN inventory、lossless非互換YAMLのfail-closeをGreen化済み。
 - U-PA-023/024/025/031: migration pure reducer、state transition、decision field matrix、immutable provenance replayを実行可能Red観測後Green化済み。
 - ledger schema v2でderived migration identityとadopted `(target_asset_id,target_revision)`を分離し、pending/rejectedの架空PlanAsset生成を禁止、migrated/rekeyedのphantom revisionをcomposite FKで拒否するU-PA-023/028/029 DB oracleをGreen化済み。
+- U-PA-026/027: `LegacyMigrationLedger.observe`でpending event/current/global receiptのatomic append、state conflict rollback、同command replay、異payload conflictをGreen化済み。
 - U-PA-026..030/032/033: atomic write-set、optimistic guard、global replay、双方向receipt、fault injection/reopen oracleはdesign freeze済み。実行可能Red testとschema/application Green化は未着手。
 - HEAD `274adf14` inventoryは741件、collision 20群/41 PLAN、digest=`86a25dda63d29db9a6d02b6bacfd835e53762cdf416bd8df5b0d04b7d3caf718`。digestはrepository identity receipt、source commit、Git blob OID、source content、frontmatter/body、known/unknown field、collision projectionを拘束し、旧18群/37 PLAN固定値へ検出を合わせない。
 - `state-db`のlegacy short alias解決は先頭一致を廃止し、canonical resolverのexact/unique規則へ統合済み。
