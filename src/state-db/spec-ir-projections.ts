@@ -564,6 +564,17 @@ function sourceStatus(source: SpecIrSource): string {
   return stringField(source.metadata.status) || "active";
 }
 
+/**
+ * PLAN-L7-429: doc_type frontmatter がメタ doc (README index / verification roadmap) を宣言する
+ * design doc は L1-L6 design document catalog の実体ではないため、spec_kind を
+ * design_meta_doc に分類して sub_doc 検証の対象外とする。
+ */
+const META_DOC_TYPES = new Set(["index", "verification-roadmap"]);
+
+function isMetaDesignDoc(source: SpecIrSource): boolean {
+  return META_DOC_TYPES.has(stringField(source.metadata.doc_type));
+}
+
 function shouldValidateDesignSubDoc(def: SpecDefRow): boolean {
   return (
     def.spec_kind === "design_doc" &&
@@ -660,9 +671,11 @@ export function parseSpecDefs(sources: SpecIrSource[], indexedAt: string): SpecD
     const layer = sourceLayer(source);
     const subDoc = sourceSubDoc(source);
     const documentSpecId = stableId("spec", `${source.path}#document`);
+    const documentSpecKind =
+      source.kind === "design_doc" && isMetaDesignDoc(source) ? "design_meta_doc" : source.kind;
     defs.push({
       spec_id: documentSpecId,
-      spec_kind: source.kind,
+      spec_kind: documentSpecKind,
       layer,
       sub_doc: subDoc,
       owner_artifact_id: ownerArtifactId,
@@ -716,6 +729,39 @@ export function parseSpecDefs(sources: SpecIrSource[], indexedAt: string): SpecD
     }
   }
   return defs;
+}
+
+/**
+ * PLAN-L7-429: PLAN frontmatter の requires / pair_artifact のうち、loadSpecIrSources が
+ * spec-ir ソースとして取り込まない artifact 種別 (実装・テスト・runtime 証跡・research・
+ * skill・ルート設定ファイル) への参照は spec 依存 relation ではなく evidence 参照であり、
+ * relation 解決の対象外とする (orphan-relation を発火させない)。`pair_artifact: self` は
+ * PLAN-REVERSE-12 の規定通り unresolved orphan のまま残す (ここでは除外しない)。
+ * evidence path の実在欠落検出 (spec-ir-missing-evidence 相当) は本 PLAN の外 (§7 残リスク)。
+ */
+const EVIDENCE_REFERENCE_PREFIXES = [
+  "src/",
+  "tests/",
+  "scripts/",
+  "skills/",
+  ".ut-tdd/",
+  ".claude/",
+  ".github/",
+  "docs/research/",
+];
+
+const EVIDENCE_REFERENCE_PATHS = new Set([
+  "CLAUDE.md",
+  "AGENTS.md",
+  "package.json",
+  "docs/improvement-backlog.md",
+]);
+
+function isEvidenceReference(path: string): boolean {
+  return (
+    EVIDENCE_REFERENCE_PATHS.has(path) ||
+    EVIDENCE_REFERENCE_PREFIXES.some((prefix) => path.startsWith(prefix))
+  );
 }
 
 export function parseSpecRelations(
@@ -782,11 +828,12 @@ export function parseSpecRelations(
     if (!from) continue;
     for (const ref of dependencyValues(source.metadata)) {
       const targetPlanId = planIdFromReference(ref);
+      if (!targetPlanId && isEvidenceReference(normalizePath(ref))) continue;
       const target = targetPlanId ? resolvePlanDef(targetPlanId) : byPath.get(normalizePath(ref));
       addRelation({ source, from, to: target, relationKind: "requires", evidencePath: ref });
     }
     const pairArtifact = normalizePath(stringField(source.metadata.pair_artifact));
-    if (pairArtifact) {
+    if (pairArtifact && !isEvidenceReference(pairArtifact)) {
       addRelation({
         source,
         from,

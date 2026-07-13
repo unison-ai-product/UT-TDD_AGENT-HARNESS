@@ -910,6 +910,8 @@ This addendum pairs `screen-spec.md` with L7 unit-test oracles. It covers the L6
 | U-SPECIR-R9 | `deriveDetectorRouteCandidates(input)` (non-ready) | SSoT 不在、unknown route_signal、target_layer/sub_doc mismatch は non-ready finding。起票済み PLAN や FilingTarget 決定済みとして扱わない。 |
 | U-SPECIR-R10 | `analyzeSpecIrIntegrity(input)` / `parseSpecRelations(bundle, defs)` (PLAN-L7-405) | `spec-ir-invalid-subdoc` は L1-L6 design document row の catalog 違反だけに発火し、PLAN / test-design / typed spec / reference doc の補助行では発火しない。一意な `PLAN-Lx-NN` 短縮参照と存在する reference doc path は `spec_relations` に解決され、orphan relation を出さない。 |
 | U-SPECIR-R11 | `stableId(prefix, value)` / projection ID consumers (PLAN-L7-406) | ASCII safe ID は後方互換のまま、非ASCII見出し・パス・空文字は deterministic に正規化される。正規化で情報が落ちる場合は hash suffix で衝突を避け、projection / feedback / skill / workflow のテスト injected deps も同じ helper を使う。 |
+| U-SPECIR-R12 | `parseSpecDefs(bundle)` / `analyzeSpecIrIntegrity(input)` (PLAN-L7-429) | frontmatter `doc_type: index` / `doc_type: verification-roadmap` を宣言する design doc は `spec_kind: design_meta_doc` に分類され、`spec-ir-invalid-subdoc` の対象外になる。meta doc 以外の design doc の sub_doc 検証は従来通り発火する。 |
+| U-SPECIR-R13 | `parseSpecRelations(bundle, defs)` (PLAN-L7-429) | PLAN frontmatter の `requires` / `pair_artifact` のうち evidence 参照 (`src/` / `tests/` / `scripts/` / `skills/` / `.ut-tdd/` / `.claude/` / `.github/` / `docs/research/` prefix、および `CLAUDE.md` / `AGENTS.md` / `package.json` / `docs/improvement-backlog.md`) は spec 依存 relation の解決対象外で、orphan relation を発火しない。`pair_artifact: self` は PLAN-REVERSE-12 規定通り unresolved orphan として発火し続ける (実装: tests/spec-ir-projections.test.ts "PLAN-L7-429" ケース)。 |
 
 ## PLAN-L7-368 Design Lint DB Projection Addendum (2026-07-08)
 
