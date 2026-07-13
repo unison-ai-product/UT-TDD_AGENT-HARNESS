@@ -11,8 +11,6 @@ created: 2026-07-10
 updated: 2026-07-13
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/function-spec.md
-backprop_decision: required
-backprop_decision_reason: "T7-T9でdual snapshot、単一capture、read provenance、DB owner lifecycleというL6契約を追加したため、function-specとL7 unit test-designへ設計deltaをbackpropする。L0/L1要件追加は不要。"
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
 agent_slots:
