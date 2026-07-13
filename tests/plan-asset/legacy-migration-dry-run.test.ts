@@ -1,10 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
+  HeadTargetRegistry,
   LegacyMigrationDryRun,
   type MigrationDecisionPort,
 } from "../../src/plan-asset/application/legacy-migration-dry-run.js";
 
 describe("legacy migration dry-run", () => {
+  it("U-PA-038: proves exact files and directory families against non-empty HEAD blobs", () => {
+    const registry = HeadTargetRegistry.from([
+      ["docs/process/forward/README.md", 10],
+      ["docs/empty.md", 0],
+    ]);
+    expect(registry.hasNonEmpty("docs/process/forward/")).toBe(true);
+    expect(registry.hasNonEmpty("docs/process/forward")).toBe(true);
+    expect(registry.hasNonEmpty("docs/empty.md")).toBe(false);
+    expect(registry.hasNonEmpty("docs/missing/")).toBe(false);
+  });
+
   it("U-PA-034: emits an exactly-once HEAD-bound record for every inventory item", () => {
     const result = new LegacyMigrationDryRun().run(process.cwd());
     if (!("records" in result)) throw new Error(result.ruleId);

@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   buildLegacyPlanInventory,
@@ -71,8 +72,13 @@ export class LegacyMigrationDryRun {
         group.planIds.map((planId) => [planId, group] as const),
       ),
     );
+    const headArtifacts = HeadTargetRegistry.load(repoRoot);
     const records = inventory.value.items.map((item) =>
-      record(item, this.decisions.decide(item, collisionByPlan.get(item.legacyPlanId) ?? null)),
+      record(
+        item,
+        this.decisions.decide(item, collisionByPlan.get(item.legacyPlanId) ?? null),
+        headArtifacts,
+      ),
     );
     const findings = [
       ...manifestFindings(inventory.value.collisionGroups),
@@ -144,8 +150,9 @@ class ReviewedDecisionManifest implements MigrationDecisionPort {
 function record(
   item: LegacyPlanInventoryItem,
   proposal: MigrationDecisionProposal,
+  headArtifacts: HeadTargetRegistry,
 ): MigrationDryRunRecord {
-  const findings: MigrationDryRunFinding[] = [];
+  const findings: MigrationDryRunFinding[] = artifactFindings(item, headArtifacts);
   if (proposal.legacyPlanId !== item.legacyPlanId) {
     findings.push(
       finding(
@@ -178,6 +185,64 @@ function record(
     sourceContentDigest: item.sourceContentDigest,
     findings: Object.freeze(findings),
   });
+}
+
+function artifactFindings(
+  item: LegacyPlanInventoryItem,
+  headArtifacts: HeadTargetRegistry,
+): MigrationDryRunFinding[] {
+  if (!["confirmed", "completed", "accepted"].includes(String(item.frontmatter.status))) return [];
+  const generates = Array.isArray(item.frontmatter.generates) ? item.frontmatter.generates : [];
+  return generates.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const path = (entry as Record<string, unknown>).artifact_path;
+    if (typeof path !== "string" || !path.trim()) {
+      return [
+        finding(
+          "plan-generated-target-invalid",
+          item.legacyPlanId,
+          "generated target path is absent",
+        ),
+      ];
+    }
+    return headArtifacts.hasNonEmpty(path)
+      ? []
+      : [
+          finding(
+            "plan-generated-target-missing",
+            item.legacyPlanId,
+            `HEAD target is missing or hollow: ${path}`,
+          ),
+        ];
+  });
+}
+
+export class HeadTargetRegistry {
+  private constructor(private readonly files: ReadonlyMap<string, number>) {}
+
+  static load(repoRoot: string): HeadTargetRegistry {
+    const output = execFileSync("git", ["-C", repoRoot, "ls-tree", "-r", "-l", "HEAD"], {
+      encoding: "utf8",
+    });
+    const files = new Map<string, number>();
+    for (const line of output.split(/\r?\n/)) {
+      const match = /^\d+\s+\w+\s+[a-f0-9]+\s+(\d+|-)\t(.+)$/.exec(line);
+      if (match && match[1] !== "-") files.set(match[2], Number(match[1]));
+    }
+    return new HeadTargetRegistry(files);
+  }
+
+  static from(entries: Iterable<readonly [string, number]>): HeadTargetRegistry {
+    return new HeadTargetRegistry(new Map(entries));
+  }
+
+  hasNonEmpty(rawPath: string): boolean {
+    const path = rawPath.replaceAll("\\", "/").replace(/^\.\//, "");
+    const exact = this.files.get(path);
+    if (exact !== undefined) return exact > 0;
+    const prefix = path.endsWith("/") ? path : `${path}/`;
+    return [...this.files].some(([candidate, size]) => candidate.startsWith(prefix) && size > 0);
+  }
 }
 
 function counts(records: readonly MigrationDryRunRecord[]) {
