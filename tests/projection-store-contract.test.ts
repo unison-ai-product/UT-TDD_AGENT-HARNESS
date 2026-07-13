@@ -1,21 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { withinProjectionTransaction } from "../src/projection/contracts/projection-store";
+import { projectPocEvaluations } from "../src/projection/application/project-poc-evaluations";
 
-describe("U-DOMAIN-003: ProjectionTransaction", () => {
-  it("commits successful projection work", () => {
-    const commands: string[] = [];
-    const value = withinProjectionTransaction({ exec: (sql) => commands.push(sql) }, () => "ok");
-    expect(value).toBe("ok");
-    expect(commands).toEqual(["BEGIN IMMEDIATE", "COMMIT"]);
+describe("U-DOMAIN-003: PoC projection ports", () => {
+  it("projects a semantic read result through the store without SQLite", () => {
+    const events: unknown[] = [];
+    projectPocEvaluations({
+      evaluatedAt: "2026-07-13T00:00:00.000Z",
+      read: { readPocDecisionCounts: () => [{ decision_outcome: "confirmed", cnt: 2 }] },
+      store: { record: (event) => events.push(event) },
+    });
+    expect(events).toMatchObject([{ id: "poc-evaluation:summary", row: { total_count: 2 } }]);
   });
 
-  it("rolls back and preserves the original failure", () => {
-    const commands: string[] = [];
-    expect(() =>
-      withinProjectionTransaction({ exec: (sql) => commands.push(sql) }, () => {
-        throw new Error("projection failed");
-      }),
-    ).toThrow("projection failed");
-    expect(commands).toEqual(["BEGIN IMMEDIATE", "ROLLBACK"]);
+  it("does not write at cold start", () => {
+    const events: unknown[] = [];
+    projectPocEvaluations({
+      evaluatedAt: "2026-07-13T00:00:00.000Z",
+      read: { readPocDecisionCounts: () => [] },
+      store: { record: (event) => events.push(event) },
+    });
+    expect(events).toEqual([]);
   });
 });

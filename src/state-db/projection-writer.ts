@@ -53,7 +53,8 @@ import {
   recommendVerificationProfiles,
 } from "../lint/verification-profile";
 import { loadMemoryEntries } from "../memory/index";
-import { withinProjectionTransaction } from "../projection/contracts/projection-store";
+import { projectPocEvaluations as projectPocEvaluationsApplication } from "../projection/application/project-poc-evaluations";
+import type { ProjectionEvent } from "../projection/contracts/projection-store";
 import {
   HARNESS_DB_TABLE_BY_NAME,
   HARNESS_DB_TABLES,
@@ -87,7 +88,6 @@ import {
   upsertRow,
 } from "./index";
 import { migrate, rowCounts } from "./migration";
-import { summarizePocEvaluations } from "./projections/poc-evaluations";
 import {
   projectRuntimeGuardrailDecisionFromSessionEvent as projectRuntimeGuardrailDecisionFromSessionEventCore,
   projectRuntimeSkillInvocationFromSessionEvent as projectRuntimeSkillInvocationFromSessionEventCore,
@@ -105,11 +105,7 @@ import { projectSpecIr } from "./spec-ir-projections";
 import type { RunUsage } from "./token-tracker";
 import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections";
 
-export interface ProjectionEvent {
-  table: string;
-  id: string;
-  row: Record<string, unknown>;
-}
+export type { ProjectionEvent } from "../projection/contracts/projection-store";
 
 export interface RebuildHarnessDbInput {
   repoRoot?: string;
@@ -900,7 +896,8 @@ function projectReviewModelRuns(
  */
 export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
   if (usages.length === 0) return;
-  withinProjectionTransaction(db, () => {
+  db.exec("BEGIN IMMEDIATE");
+  try {
     for (const u of usages) {
       if (!u.model) continue; // model 不明の行は集計不能なので捨てる
       const id = stableId("token-run", `${u.runtime}:${u.sessionId}:${u.turnIndex}`);
@@ -925,7 +922,11 @@ export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
         },
       });
     }
-  });
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 function planStatusMap(repoRoot: string): Map<string, string> {
@@ -2536,23 +2537,22 @@ export function projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string })
  */
 export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): void {
   const evaluatedAt = opts?.asOf ?? nowIso();
-
-  // Count decided PoC PLANs by outcome.
-  const rows = db
-    .prepare(
-      `SELECT decision_outcome, COUNT(*) AS cnt
-       FROM plan_registry
-       WHERE kind = 'poc'
-         AND decision_outcome IN ('confirmed', 'rejected', 'pivot')
-       GROUP BY decision_outcome`,
-    )
-    .all() as { decision_outcome: string; cnt: number }[];
-
-  // 単一行制約 (review I-1): id 固定で全 PoC を 1 集計行に集約するのは FR-L1-43 の現要件
-  // (1 summary 行) のみで有効。将来 PoC 種別別 / スプリント別に分解する要件が出たら PK を
-  // (scope, evaluated_at) 等へ変更し、本 id 固定・idx_poc_evaluations_rate も合わせて見直す。
-  const event = summarizePocEvaluations(rows, evaluatedAt);
-  if (event) recordProjectionEvent(db, event);
+  projectPocEvaluationsApplication({
+    evaluatedAt,
+    read: {
+      readPocDecisionCounts: () =>
+        db
+          .prepare(
+            `SELECT decision_outcome, COUNT(*) AS cnt
+             FROM plan_registry
+             WHERE kind = 'poc'
+               AND decision_outcome IN ('confirmed', 'rejected', 'pivot')
+             GROUP BY decision_outcome`,
+          )
+          .all() as { decision_outcome: string; cnt: number }[],
+    },
+    store: { record: (event) => recordProjectionEvent(db, event) },
+  });
 }
 
 /**
@@ -2930,7 +2930,8 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     // Atomic rebuild: truncate + re-project run inside a single transaction so a
     // mid-rebuild failure rolls back to the prior committed projection instead of
     // leaving the DB truncated or half-populated (DB rebuild atomicity).
-    withinProjectionTransaction(db, () => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
       time("truncate", () => truncateProjectionTables(db));
       const plans = time("plans", () => projectPlans(repoRoot, db));
       if (hasVmodelAuthoring(repoRoot)) {
@@ -3001,7 +3002,11 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectImprovementLog(db, projectionDeps);
       });
       time("screens", () => projectScreens(repoRoot, db));
-    });
+      time("commit", () => db.exec("COMMIT"));
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
     const counts = time("row-counts", () => rowCounts(db));
     const result: RebuildHarnessDbResult = {
       ok: true,

@@ -31,6 +31,10 @@ generates:
     artifact_type: source_module
   - artifact_path: src/projection/contracts/projection-store.ts
     artifact_type: source_module
+  - artifact_path: src/projection/application/project-poc-evaluations.ts
+    artifact_type: source_module
+  - artifact_path: src/projection/domain/poc-evaluations.ts
+    artifact_type: source_module
   - artifact_path: tests/dependency-drift.test.ts
     artifact_type: test_code
 dependencies:
@@ -55,7 +59,7 @@ U-DOMAINをRed freezeし、共通kernelとmodule-boundary/cycle/CQS移行を所�
 - `db-projection-coverage`が具象`HarnessDb`へ型逆依存していたため、query ownerの`DbIntrospectionPort`へ反転した。state-dbのprojection方向を維持し、7件として列挙されていた単一SCCをallowlistなしで解消した。
 - `projection-writer.ts`のapplication orchestration分割は本PLANの残DoDとして継続し、cycle 0だけをgod object解消完了の代用にしない。
 - PoC評価の集計規則を`src/state-db/projections/poc-evaluations.ts`へpure projectorとして抽出した。DB queryと永続化は互換facadeに残し、FR-L1-43のpublic APIを壊さずにapplication分離を開始した。
-- `ProjectionStore` / `ProjectionReadPort` / `ProjectionTransaction`をneutral projection contractへ抽出し、SQLite adapterである`HarnessDb`がこれを実装する方向を固定した。transaction境界も共通helperへ寄せ、application移設時にSQLite型へ戻らないようにした。
+- PoC用の意味的`ProjectionReadPort`と`ProjectionStore`をneutral projection contractへ抽出し、`read → domain → store`のapplication縦sliceを実装した。SQL構文をapplicationへ漏らさず、SQLite adapter化は次waveでrecord/transaction責務を移す。
 
 ## migration wave
 

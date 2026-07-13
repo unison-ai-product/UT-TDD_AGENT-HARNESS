@@ -11,10 +11,6 @@
 import { mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import type {
-  ProjectionStatement,
-  ProjectionStore,
-} from "../projection/contracts/projection-store";
 import { assertSqlIdentifier } from "../schema/harness-db";
 
 export { isSecretLike, SECRET_PATTERN } from "../secret";
@@ -22,10 +18,22 @@ export { isSecretLike, SECRET_PATTERN } from "../secret";
 const nodeRequire = createRequire(import.meta.url);
 
 /** 正規化済み prepared statement。get は行不在で undefined を返す。 */
-export type HarnessStatement = ProjectionStatement;
+export interface HarnessStatement {
+  run(...params: unknown[]): void;
+  get(...params: unknown[]): Record<string, unknown> | undefined;
+  all(...params: unknown[]): Record<string, unknown>[];
+}
 
 /** 正規化済み DB ハンドル (bun:sqlite / node:sqlite を吸収)。 */
-export interface HarnessDb extends ProjectionStore {}
+export interface HarnessDb {
+  readonly path: string;
+  readonly driver: "bun" | "node";
+  exec(sql: string): void;
+  prepare(sql: string): HarnessStatement;
+  userVersion(): number;
+  setUserVersion(version: number): void;
+  close(): void;
+}
 
 /**
  * harness.db に投影・記録してはならない secret 様トークンの単一正本パターン
