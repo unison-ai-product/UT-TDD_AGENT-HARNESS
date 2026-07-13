@@ -36,7 +36,7 @@ describe("git workspace fence", () => {
     expect(() => assertGitWorkspaceUnchanged(fingerprint, { ...fingerprint })).not.toThrow();
   });
 
-  it.each(Object.keys(fingerprint) as Array<keyof GitWorkspaceFingerprint>)(
+  it.each(["head", "statusDigest", "worktreeDigest", "indexDigest", "untrackedDigest", "inventoryDigest"] as const)(
     "U-TESTHYGIENE-011: rejects a changed %s component",
     (key) => {
       expect(() =>
