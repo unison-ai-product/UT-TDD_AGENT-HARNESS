@@ -31,6 +31,7 @@
  *
  * 純関数 (analyzeMergedPlanStatus) + I/O loader (loadMergedPlanStatusInput) を分離 (lint 共通様式)。
  */
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -117,25 +118,101 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
     return { plans: [] }; // docs/plans 不在は空 (fail-open、他 lint と同方針)
   }
   const plansDir = join(repoRoot, "docs", "plans");
+  const baseRef = resolveBaseRef(repoRoot);
+  const basePaths = baseRef
+    ? new Set(gitText(repoRoot, ["ls-tree", "-r", "--name-only", baseRef]).split(/\r?\n/))
+    : null;
+  const basePlanContents = baseRef
+    ? gitBatchText(
+        repoRoot,
+        reviewPlans.map((plan) => `docs/plans/${plan.file}`).filter((path) => basePaths?.has(path)),
+        baseRef,
+      )
+    : null;
   for (const rp of reviewPlans) {
     if (rp.status === "archived") continue;
     let content = "";
     try {
-      content = readFileSync(join(plansDir, rp.file), "utf8");
+      content = baseRef
+        ? (basePlanContents?.get(`docs/plans/${rp.file}`) ?? "")
+        : readFileSync(join(plansDir, rp.file), "utf8");
+      if (!content) continue;
     } catch {
       continue;
     }
     const mergedArtifacts = generatesMergedDeliverablePaths(content).filter((p) =>
-      existsSync(join(repoRoot, p)),
+      basePaths ? basePaths.has(p) : existsSync(join(repoRoot, p)),
     );
+    const baseStatus = frontmatterStatus(content) ?? rp.status;
     plans.push({
       planId: rp.plan_id,
-      status: rp.status,
+      status: baseStatus,
       kind: rp.kind,
       mergedArtifacts,
     });
   }
   return { plans };
+}
+
+function resolveBaseRef(repoRoot: string): string | null {
+  const candidates = [
+    process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : null,
+    "origin/main",
+    "main",
+  ].filter((value): value is string => Boolean(value));
+  return candidates.find((ref) => gitObjectExists(repoRoot, ref)) ?? null;
+}
+
+function frontmatterStatus(content: string): string | null {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content);
+  if (!match) return null;
+  try {
+    const value = parseYaml(match[1]) as { status?: unknown };
+    return typeof value?.status === "string" ? value.status : null;
+  } catch {
+    return null;
+  }
+}
+
+function gitObjectExists(repoRoot: string, object: string): boolean {
+  try {
+    execFileSync("git", ["-C", repoRoot, "cat-file", "-e", object], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function gitText(repoRoot: string, args: readonly string[]): string {
+  return execFileSync("git", ["-C", repoRoot, ...args], { encoding: "utf8" });
+}
+
+function gitBatchText(
+  repoRoot: string,
+  paths: readonly string[],
+  ref: string,
+): ReadonlyMap<string, string> {
+  if (paths.length === 0) return new Map();
+  const output = execFileSync("git", ["-C", repoRoot, "cat-file", "--batch"], {
+    input: paths.map((path) => `${ref}:${path}\n`).join(""),
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  const contents = new Map<string, string>();
+  let offset = 0;
+  for (const path of paths) {
+    const lineEnd = output.indexOf(10, offset);
+    if (lineEnd < 0) throw new Error("merged-plan-status-base-read-failed");
+    const header = output.subarray(offset, lineEnd).toString("utf8").split(" ");
+    const size = Number(header[2]);
+    if (header.length !== 3 || header[1] !== "blob" || !Number.isSafeInteger(size)) {
+      throw new Error("merged-plan-status-base-read-failed");
+    }
+    const start = lineEnd + 1;
+    const end = start + size;
+    contents.set(path, output.subarray(start, end).toString("utf8"));
+    offset = end + 1;
+  }
+  return contents;
 }
 
 export function mergedPlanStatusMessages(r: MergedPlanStatusResult): string[] {
