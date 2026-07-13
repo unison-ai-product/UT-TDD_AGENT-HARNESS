@@ -116,6 +116,29 @@ export function finishSnapshotCleanup(
   throw new AggregateError(cleanupFailures, "vitest snapshot cleanup failed");
 }
 
+export function copyReferenceRuntimeInputs(
+  snapshotRoot: string,
+  referenceRoot: string,
+): void {
+  const database = join(snapshotRoot, ".ut-tdd", "harness.db");
+  if (existsSync(database)) {
+    mkdirSync(join(referenceRoot, ".ut-tdd"), { recursive: true });
+    copyFileSync(database, join(referenceRoot, ".ut-tdd", "harness.db"));
+  }
+  const lifecycleLog = join(
+    snapshotRoot,
+    ".ut-tdd",
+    "logs",
+    "feedback-lifecycle.jsonl",
+  );
+  if (!existsSync(lifecycleLog)) return;
+  mkdirSync(join(referenceRoot, ".ut-tdd", "logs"), { recursive: true });
+  copyFileSync(
+    lifecycleLog,
+    join(referenceRoot, ".ut-tdd", "logs", "feedback-lifecycle.jsonl"),
+  );
+}
+
 export function runSnapshotTests(
   args = process.argv.slice(2),
   repoRoot = process.cwd(),
@@ -139,11 +162,7 @@ export function runSnapshotTests(
     run(process.execPath, ["install", "--frozen-lockfile"], snapshotRoot);
     run(process.execPath, ["run", "src/cli.ts", "db", "rebuild"], snapshotRoot);
     createSnapshot(repoRoot, referenceRoot, source);
-    const database = join(snapshotRoot, ".ut-tdd", "harness.db");
-    if (existsSync(database)) {
-      mkdirSync(join(referenceRoot, ".ut-tdd"), { recursive: true });
-      copyFileSync(database, join(referenceRoot, ".ut-tdd", "harness.db"));
-    }
+    copyReferenceRuntimeInputs(snapshotRoot, referenceRoot);
     if (source.kind === "git")
       run(
         "git",

@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -87,7 +93,10 @@ import {
   runDoctor,
 } from "../src/doctor/index";
 import { buildDoctorResult } from "../src/doctor/result";
-import { analyzeGateRunCoverage, gateRunCoverageMessages } from "../src/lint/gate-run-coverage";
+import {
+  analyzeGateRunCoverage,
+  gateRunCoverageMessages,
+} from "../src/lint/gate-run-coverage";
 import type { AgentSlotsDeps, Slot } from "../src/runtime/agent-slots";
 import {
   analyzeDesignDetectionStats,
@@ -152,14 +161,20 @@ describe("design-detection doctor aggregate", () => {
 
   it("fails on missing coverage rows without replaying file-driven lint details", () => {
     const stats = cleanStats();
-    stats.coverageRows = stats.coverageRows.filter((row) => row.subject_id !== "module-drift");
+    stats.coverageRows = stats.coverageRows.filter(
+      (row) => row.subject_id !== "module-drift",
+    );
     stats.missingCoverage = ["module-drift"];
 
     const result = analyzeDesignDetectionStats(stats);
 
     expect(result.ok).toBe(false);
-    expect(designDetectionMessages(result).join("\n")).toContain("missing_coverage=1");
-    expect(designDetectionMessages(result).join("\n")).not.toContain("module-drift —");
+    expect(designDetectionMessages(result).join("\n")).toContain(
+      "missing_coverage=1",
+    );
+    expect(designDetectionMessages(result).join("\n")).not.toContain(
+      "module-drift —",
+    );
   });
 
   it("fails on blocked coverage and open pair orphan findings", () => {
@@ -211,7 +226,9 @@ describe("gate-run-coverage doctor aggregate", () => {
       "workflow_without_gate_run",
       "orphan_gate_run",
     ]);
-    expect(gateRunCoverageMessages(result).join("\n")).toContain("gate-run-coverage - violation");
+    expect(gateRunCoverageMessages(result).join("\n")).toContain(
+      "gate-run-coverage - violation",
+    );
   });
 
   it("passes when gate and workflow projections are joined", () => {
@@ -225,11 +242,16 @@ describe("gate-run-coverage doctor aggregate", () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(gateRunCoverageMessages(result).join("\n")).toContain("gate-run-coverage - OK");
+    expect(gateRunCoverageMessages(result).join("\n")).toContain(
+      "gate-run-coverage - OK",
+    );
   });
 });
 
-function codexWrapperParityFiles(root: string, overrides: Record<string, string> = {}) {
+function codexWrapperParityFiles(
+  root: string,
+  overrides: Record<string, string> = {},
+) {
   const file = (relativePath: string) => join(root, ...relativePath.split("/"));
   return new Map<string, string>(
     Object.entries({
@@ -246,7 +268,8 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
         'const args = isCodex ? ["exec", "-"] : ["--print", "--input-format", "text"];',
         "return { stdin: intent.task, plan_id: intent.planId };",
       ].join("\n"),
-      "src/runtime/adapter-policy.ts": 'export const CODEX_STDIN_ARGS = ["exec", "-"] as const;',
+      "src/runtime/adapter-policy.ts":
+        'export const CODEX_STDIN_ARGS = ["exec", "-"] as const;',
       "tests/runtime-hook-entrypoints.test.ts": [
         "ut-tdd codex --execute records the same session lifecycle through the adapter wrapper",
         "ut-tdd codex --task-file feeds file content through the same adapter wrapper",
@@ -259,7 +282,9 @@ function codexWrapperParityFiles(root: string, overrides: Record<string, string>
   );
 }
 
-function deps(over: Partial<DoctorDeps> & { files?: Map<string, string> } = {}): DoctorDeps {
+function deps(
+  over: Partial<DoctorDeps> & { files?: Map<string, string> } = {},
+): DoctorDeps {
   const files = over.files ?? new Map<string, string>();
   return {
     repoRoot: "/repo",
@@ -313,7 +338,10 @@ describe("checkHandover (doctor handover staleness surface)", () => {
 describe("checkHandoverDisciplineMessages", () => {
   it("fresh CURRENT still surfaces drift when active_plan differs from current plan", () => {
     const files = new Map([
-      [currentPlanPath, "PLAN-L5-08-harness-db-feedback\n2026-06-03T23:50:00.000Z"],
+      [
+        currentPlanPath,
+        "PLAN-L5-08-harness-db-feedback\n2026-06-03T23:50:00.000Z",
+      ],
       [
         join(digestDir, "PLAN-L5-08-harness-db-feedback.digest.json"),
         JSON.stringify({
@@ -344,7 +372,10 @@ describe("checkHandoverDisciplineMessages", () => {
 
   it("runDoctor surfaces handover discipline as warning-only", () => {
     const files = new Map([
-      [currentPlanPath, "PLAN-L5-08-harness-db-feedback\n2026-06-03T23:50:00.000Z"],
+      [
+        currentPlanPath,
+        "PLAN-L5-08-harness-db-feedback\n2026-06-03T23:50:00.000Z",
+      ],
       [
         join(digestDir, "PLAN-L5-08-harness-db-feedback.digest.json"),
         JSON.stringify({
@@ -359,13 +390,22 @@ describe("checkHandoverDisciplineMessages", () => {
     ]);
     const r = runDoctor(deps({ files }));
     expect(r.ok).toBe(false);
-    expect(r.messages.some((m) => m.includes("handover-discipline"))).toBe(true);
-    expect(r.messages.some((m) => m.includes("verification group lint could not run"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("handover-discipline"))).toBe(
+      true,
+    );
+    expect(
+      r.messages.some((m) =>
+        m.includes("verification group lint could not run"),
+      ),
+    ).toBe(true);
   });
 });
 
 describe("checkAgentSlots (doctor agent-slots surface, IMP-050)", () => {
-  function slotDeps(slots: Slot[] | null, now = "2026-06-04T00:10:00.000Z"): AgentSlotsDeps {
+  function slotDeps(
+    slots: Slot[] | null,
+    now = "2026-06-04T00:10:00.000Z",
+  ): AgentSlotsDeps {
     const files = new Map<string, string>();
     if (slots !== null) files.set(slotStatePath, JSON.stringify(slots));
     return {
@@ -404,7 +444,9 @@ describe("checkAgentSlots (doctor agent-slots surface, IMP-050)", () => {
 
   it("reports OK and peak for released slots without writing state", () => {
     const msg = checkAgentSlots(
-      slotDeps([slot({ status: "completed", released_at: "2026-06-04T00:02:00.000Z" })]),
+      slotDeps([
+        slot({ status: "completed", released_at: "2026-06-04T00:02:00.000Z" }),
+      ]),
     );
     expect(msg).toContain("OK");
     expect(msg).toContain("peak_parallel");
@@ -423,7 +465,11 @@ describe("runDoctor", () => {
     expect(r.ok).toBe(false);
     expect(r.messages.some((m) => m.includes("handover"))).toBe(true);
     expect(r.messages.some((m) => m.includes("agent-slots"))).toBe(true);
-    expect(r.messages.some((m) => m.includes("verification group lint could not run"))).toBe(true);
+    expect(
+      r.messages.some((m) =>
+        m.includes("verification group lint could not run"),
+      ),
+    ).toBe(true);
     // Keep warning-only surfaces from masking hard-fail lint coverage.
     expect(r.messages.some((m) => m.includes("scrum-reverse"))).toBe(true);
     expect(r.messages.some((m) => m.includes("propagation"))).toBe(true);
@@ -434,20 +480,41 @@ describe("runDoctor", () => {
     const hookJson = JSON.stringify({
       hooks: {
         PreToolUse: [
-          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard" }] },
-          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard" }] },
+          {
+            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook agent-guard" }],
+          },
+          {
+            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook work-guard" }],
+          },
         ],
-        SessionStart: [{ hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session start" }] }],
-        PostToolUse: [{ hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use" }] }],
+        SessionStart: [
+          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session start" }] },
+        ],
+        PostToolUse: [
+          {
+            hooks: [
+              { command: "bun .ut-tdd/bin/ut-tdd.mjs hook post-tool-use" },
+            ],
+          },
+        ],
         Stop: [
-          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session summary" }] },
-          { hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop" }] },
+          {
+            hooks: [{ command: "bun .ut-tdd/bin/ut-tdd.mjs session summary" }],
+          },
+          {
+            hooks: [
+              { command: "bun .ut-tdd/bin/ut-tdd.mjs hook subagent-stop" },
+            ],
+          },
         ],
       },
     });
     const file = (path: string) => join("/repo", ...path.split("/"));
     const files = new Map<string, string>([
-      [file(".ut-tdd/bin/ut-tdd.mjs"), "const localBin = '.ut-tdd/bin/ut-tdd.mjs';"],
+      [
+        file(".ut-tdd/bin/ut-tdd.mjs"),
+        "const localBin = '.ut-tdd/bin/ut-tdd.mjs';",
+      ],
       [file("AGENTS.md"), "UT-TDD adapter"],
       [file("CLAUDE.md"), "UT-TDD adapter"],
       [file(".claude/CLAUDE.md"), "UT-TDD adapter"],
@@ -464,27 +531,41 @@ describe("runDoctor", () => {
       "consumer-toolchain",
       "consumer-setup-smoke",
     ]);
-    expect(new Set(DOCTOR_RUN_PROFILE_IDS).size).toBe(DOCTOR_RUN_PROFILE_IDS.length);
-    expect(Object.keys(DOCTOR_RUN_PROFILES).sort()).toEqual([...DOCTOR_RUN_PROFILE_IDS].sort());
+    expect(new Set(DOCTOR_RUN_PROFILE_IDS).size).toBe(
+      DOCTOR_RUN_PROFILE_IDS.length,
+    );
+    expect(Object.keys(DOCTOR_RUN_PROFILES).sort()).toEqual(
+      [...DOCTOR_RUN_PROFILE_IDS].sort(),
+    );
     expect(doctorRunProfilesForAudience("consumer")).toEqual([
       DOCTOR_RUN_PROFILES["consumer-toolchain"],
       DOCTOR_RUN_PROFILES["consumer-setup-smoke"],
     ]);
-    expect(doctorRunProfilesForAudience("consumer").every(isConsumerSafeDoctorRunProfile)).toBe(
-      true,
-    );
-    expect(consumerSafeDoctorRunProfiles().map((profile) => profile.id)).toEqual([
+    expect(
+      doctorRunProfilesForAudience("consumer").every(
+        isConsumerSafeDoctorRunProfile,
+      ),
+    ).toBe(true);
+    expect(
+      consumerSafeDoctorRunProfiles().map((profile) => profile.id),
+    ).toEqual([
       "source-toolchain",
       "consumer-toolchain",
       "consumer-setup-smoke",
     ]);
-    expect(consumerSafeDoctorRunProfiles().every(isConsumerSafeDoctorRunProfile)).toBe(true);
-    expect(consumerSafeDoctorRunProfiles().some((profile) => profile.sourceOnly)).toBe(false);
+    expect(
+      consumerSafeDoctorRunProfiles().every(isConsumerSafeDoctorRunProfile),
+    ).toBe(true);
+    expect(
+      consumerSafeDoctorRunProfiles().some((profile) => profile.sourceOnly),
+    ).toBe(false);
     expect(consumerSafeDoctorRunProfiles()).not.toContainEqual(
       expect.objectContaining({ sourceOnly: true }),
     );
     expect(
-      consumerSafeDoctorRunProfiles().filter((profile) => profile.audience === "consumer"),
+      consumerSafeDoctorRunProfiles().filter(
+        (profile) => profile.audience === "consumer",
+      ),
     ).toEqual([
       DOCTOR_RUN_PROFILES["consumer-toolchain"],
       DOCTOR_RUN_PROFILES["consumer-setup-smoke"],
@@ -500,39 +581,52 @@ describe("runDoctor", () => {
       outputIds: [],
       sourceOnly: false,
     });
-    expect(resolveDoctorRunProfile({ setupSmoke: true, scope: "toolchain" })).toMatchObject({
+    expect(
+      resolveDoctorRunProfile({ setupSmoke: true, scope: "toolchain" }),
+    ).toMatchObject({
       id: "consumer-setup-smoke",
       invocation: "setup-smoke",
       setupSmoke: true,
       sourceOnly: false,
     });
-    expect(resolveDoctorRunProfile({ profile: "consumer-setup-smoke" })).toEqual(
-      DOCTOR_RUN_PROFILES["consumer-setup-smoke"],
-    );
+    expect(
+      resolveDoctorRunProfile({ profile: "consumer-setup-smoke" }),
+    ).toEqual(DOCTOR_RUN_PROFILES["consumer-setup-smoke"]);
     expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toEqual(
       DOCTOR_RUN_PROFILES["consumer-toolchain"],
     );
-    expect(r.messages).toEqual(["doctor: setup-smoke - OK (checked=22, failed=0)"]);
+    expect(r.messages).toEqual([
+      "doctor: setup-smoke - OK (checked=22, failed=0)",
+    ]);
   });
 
   it("runs only the toolchain gate when doctor scope is toolchain", () => {
-    const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(headSnapshotRoot()));
+    const definitions = buildFullDoctorCheckDefinitions(
+      nodeDoctorDeps(headSnapshotRoot()),
+    );
     const selected = selectDoctorCheckDefinitions(definitions, "toolchain");
     const run = collectDoctorCheckRun(nodeDoctorDeps(headSnapshotRoot()), {
       scope: "toolchain",
       timing: true,
     });
 
-    expect(resolveDoctorRunProfile()).toEqual(DOCTOR_RUN_PROFILES["source-full"]);
-    expect(doctorRunProfilesForAudience("source").map((profile) => profile.id)).toEqual([
-      "source-full",
-      "source-toolchain",
-    ]);
-    expect(doctorRunProfilesForAudience("source").filter((profile) => profile.sourceOnly)).toEqual([
+    expect(resolveDoctorRunProfile()).toEqual(
       DOCTOR_RUN_PROFILES["source-full"],
-    ]);
-    expect(isConsumerSafeDoctorRunProfile(DOCTOR_RUN_PROFILES["source-full"])).toBe(false);
-    expect(isConsumerSafeDoctorRunProfile(DOCTOR_RUN_PROFILES["source-toolchain"])).toBe(true);
+    );
+    expect(
+      doctorRunProfilesForAudience("source").map((profile) => profile.id),
+    ).toEqual(["source-full", "source-toolchain"]);
+    expect(
+      doctorRunProfilesForAudience("source").filter(
+        (profile) => profile.sourceOnly,
+      ),
+    ).toEqual([DOCTOR_RUN_PROFILES["source-full"]]);
+    expect(
+      isConsumerSafeDoctorRunProfile(DOCTOR_RUN_PROFILES["source-full"]),
+    ).toBe(false);
+    expect(
+      isConsumerSafeDoctorRunProfile(DOCTOR_RUN_PROFILES["source-toolchain"]),
+    ).toBe(true);
     expect(resolveDoctorRunProfile()).toMatchObject({
       id: "source-full",
       audience: "source",
@@ -554,13 +648,15 @@ describe("runDoctor", () => {
       outputIds: ["toolchain-pin"],
       sourceOnly: false,
     });
-    expect(resolveDoctorRunProfile({ profile: "source-full", setupSmoke: true })).toEqual(
-      DOCTOR_RUN_PROFILES["source-full"],
-    );
+    expect(
+      resolveDoctorRunProfile({ profile: "source-full", setupSmoke: true }),
+    ).toEqual(DOCTOR_RUN_PROFILES["source-full"]);
     expect(resolveDoctorRunProfile({ profile: "source-toolchain" })).toEqual(
       DOCTOR_RUN_PROFILES["source-toolchain"],
     );
-    expect(resolveDoctorRunProfile({ profile: "consumer-toolchain" })).toMatchObject({
+    expect(
+      resolveDoctorRunProfile({ profile: "consumer-toolchain" }),
+    ).toMatchObject({
       id: "consumer-toolchain",
       audience: "consumer",
       invocation: "registry",
@@ -569,7 +665,9 @@ describe("runDoctor", () => {
       outputIds: ["toolchain-pin"],
       sourceOnly: false,
     });
-    expect(DOCTOR_RUN_PROFILES["source-full"].outputIds).toEqual(doctorOutputIdsForScope("full"));
+    expect(DOCTOR_RUN_PROFILES["source-full"].outputIds).toEqual(
+      doctorOutputIdsForScope("full"),
+    );
     expect(DOCTOR_RUN_PROFILES["source-toolchain"].outputIds).toEqual(
       doctorOutputIdsForScope("toolchain"),
     );
@@ -577,24 +675,34 @@ describe("runDoctor", () => {
       doctorOutputIdsForScope("toolchain"),
     );
     expect(doctorOutputIdsForScope("toolchain")).toEqual(["toolchain-pin"]);
-    expect(selected.map((definition) => definition.id)).toEqual(["toolchain-pin"]);
+    expect(selected.map((definition) => definition.id)).toEqual([
+      "toolchain-pin",
+    ]);
     expect(run.checks).toHaveLength(1);
     expect(run.checks[0]?.messages[0]).toContain("toolchain-pin");
     expect(run.timings).toEqual([
-      expect.objectContaining({ id: "toolchain-pin", ok: run.checks[0]?.ok, message_count: 1 }),
+      expect.objectContaining({
+        id: "toolchain-pin",
+        ok: run.checks[0]?.ok,
+        message_count: 1,
+      }),
     ]);
   });
 
   it("includes asset-drift hard gate in doctor output", () => {
     const r = realRepoDoctor();
-    expect(r.messages.some((m) => m.includes("doctor: asset-drift") && m.includes("OK"))).toBe(
-      true,
-    );
+    expect(
+      r.messages.some(
+        (m) => m.includes("doctor: asset-drift") && m.includes("OK"),
+      ),
+    ).toBe(true);
   });
 
   it("includes skill-assignment hard gate in doctor output", () => {
     const r = realRepoDoctor();
-    expect(r.messages.some((m) => m.includes("doctor: skill-assignment - OK"))).toBe(true);
+    expect(
+      r.messages.some((m) => m.includes("doctor: skill-assignment - OK")),
+    ).toBe(true);
   });
 
   // PLAN-L7-95: the 4 previously-inert lint audits + the lint-wiring meta-gate must be
@@ -615,18 +723,26 @@ describe("runDoctor", () => {
 
   it("includes branch-kind-check in doctor output", () => {
     const r = realRepoDoctor();
-    expect(r.messages.some((m) => m.includes("doctor: branch-kind-check - OK"))).toBe(true);
+    expect(
+      r.messages.some((m) => m.includes("doctor: branch-kind-check - OK")),
+    ).toBe(true);
   });
 
   it("includes GitHub CI policy hard gate in doctor output", () => {
     const r = realRepoDoctor();
-    expect(r.messages.some((m) => m.includes("doctor: github-ci-policy - OK"))).toBe(true);
+    expect(
+      r.messages.some((m) => m.includes("doctor: github-ci-policy - OK")),
+    ).toBe(true);
   });
 
   it("includes G1/G3 trace gates in doctor output", () => {
     const r = realRepoDoctor();
-    expect(r.messages.some((m) => m.includes("doctor: g1-trace - OK"))).toBe(true);
-    expect(r.messages.some((m) => m.includes("doctor: g3-trace - OK"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: g1-trace - OK"))).toBe(
+      true,
+    );
+    expect(r.messages.some((m) => m.includes("doctor: g3-trace - OK"))).toBe(
+      true,
+    );
   });
 
   it("surfaces typed spec trace closure as a doctor hard gate", () => {
@@ -635,7 +751,11 @@ describe("runDoctor", () => {
 
     expect(result.ok).toBe(true);
     expect(result.messages[0]).toContain("typed-spec-trace-closure - OK");
-    expect(r.messages.some((m) => m.includes("doctor: typed-spec-trace-closure - OK"))).toBe(true);
+    expect(
+      r.messages.some((m) =>
+        m.includes("doctor: typed-spec-trace-closure - OK"),
+      ),
+    ).toBe(true);
   });
 
   it("surfaces design doc cross integrity as a doctor hard gate", () => {
@@ -644,16 +764,20 @@ describe("runDoctor", () => {
 
     expect(result.ok).toBe(true);
     expect(result.messages[0]).toContain("design-doc-cross-integrity - OK");
-    expect(r.messages.some((m) => m.includes("doctor: design-doc-cross-integrity - OK"))).toBe(
-      true,
-    );
+    expect(
+      r.messages.some((m) =>
+        m.includes("doctor: design-doc-cross-integrity - OK"),
+      ),
+    ).toBe(true);
   });
 
   it("fails design doc cross integrity when a typed spec is defined by multiple docs", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-design-cross-"));
     try {
       mkdirSync(join(root, "docs", "governance"), { recursive: true });
-      mkdirSync(join(root, "docs", "design", "harness", "L4-basic-design"), { recursive: true });
+      mkdirSync(join(root, "docs", "design", "harness", "L4-basic-design"), {
+        recursive: true,
+      });
       writeFileSync(
         join(root, "docs", "governance", "vmodel-document-catalog.md"),
         [
@@ -681,7 +805,14 @@ describe("runDoctor", () => {
         "utf8",
       );
       writeFileSync(
-        join(root, "docs", "design", "harness", "L4-basic-design", "function.md"),
+        join(
+          root,
+          "docs",
+          "design",
+          "harness",
+          "L4-basic-design",
+          "function.md",
+        ),
         [
           "# B",
           "",
@@ -698,14 +829,18 @@ describe("runDoctor", () => {
       const result = checkDesignDocCrossIntegrity(root);
 
       expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("design-doc-duplicate-definition");
+      expect(result.messages.join("\n")).toContain(
+        "design-doc-duplicate-definition",
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
   it("fails typed spec trace closure when bidirectional trace or test backlink is missing", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-typed-spec-closure-"));
+    const root = mkdtempSync(
+      join(tmpdir(), "ut-tdd-doctor-typed-spec-closure-"),
+    );
     try {
       mkdirSync(join(root, "docs", "governance"), { recursive: true });
       writeFileSync(
@@ -732,8 +867,12 @@ describe("runDoctor", () => {
       const result = checkTypedSpecTraceClosure(root);
 
       expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("typed-spec-trace-reverse-missing");
-      expect(result.messages.join("\n")).toContain("typed-spec-test-backlink-missing");
+      expect(result.messages.join("\n")).toContain(
+        "typed-spec-trace-reverse-missing",
+      );
+      expect(result.messages.join("\n")).toContain(
+        "typed-spec-test-backlink-missing",
+      );
       expect(result.messages.join("\n")).toContain("typed-spec-test-missing");
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -746,13 +885,17 @@ describe("runDoctor", () => {
 
     expect(result.ok).toBe(true);
     expect(result.messages[0]).toContain("typed-spec-ledger-body-sync - OK");
-    expect(r.messages.some((m) => m.includes("doctor: typed-spec-ledger-body-sync - OK"))).toBe(
-      true,
-    );
+    expect(
+      r.messages.some((m) =>
+        m.includes("doctor: typed-spec-ledger-body-sync - OK"),
+      ),
+    ).toBe(true);
   });
 
   it("fails typed spec ledger/body sync when body, ledger, or phase direction is invalid", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-typed-spec-ledger-"));
+    const root = mkdtempSync(
+      join(tmpdir(), "ut-tdd-doctor-typed-spec-ledger-"),
+    );
     try {
       mkdirSync(join(root, "docs", "governance"), { recursive: true });
       writeFileSync(
@@ -795,10 +938,16 @@ describe("runDoctor", () => {
       const result = checkTypedSpecLedgerBodySync(root);
 
       expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("typed-spec-ledger-row-missing");
+      expect(result.messages.join("\n")).toContain(
+        "typed-spec-ledger-row-missing",
+      );
       expect(result.messages.join("\n")).toContain("typed-spec-body-missing");
-      expect(result.messages.join("\n")).toContain("typed-spec-ledger-unknown-id");
-      expect(result.messages.join("\n")).toContain("typed-spec-phase-direction-invalid");
+      expect(result.messages.join("\n")).toContain(
+        "typed-spec-ledger-unknown-id",
+      );
+      expect(result.messages.join("\n")).toContain(
+        "typed-spec-phase-direction-invalid",
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -809,9 +958,13 @@ describe("runDoctor", () => {
     const r = realRepoDoctor();
 
     expect(result.ok).toBe(true);
-    expect(result.messages[0]).toContain("typed-spec-owned-artifact-dispersal - OK");
+    expect(result.messages[0]).toContain(
+      "typed-spec-owned-artifact-dispersal - OK",
+    );
     expect(
-      r.messages.some((m) => m.includes("doctor: typed-spec-owned-artifact-dispersal - OK")),
+      r.messages.some((m) =>
+        m.includes("doctor: typed-spec-owned-artifact-dispersal - OK"),
+      ),
     ).toBe(true);
   });
 
@@ -843,7 +996,9 @@ describe("runDoctor", () => {
       const result = checkTypedSpecOwnedArtifactDispersal(root);
 
       expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("typed-spec-owned-source-mismatch");
+      expect(result.messages.join("\n")).toContain(
+        "typed-spec-owned-source-mismatch",
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -854,14 +1009,20 @@ describe("runDoctor", () => {
     const r = realRepoDoctor();
 
     expect(result.ok).toBe(true);
-    expect(result.messages[0]).toContain("typed-spec-phase-layer-alignment - OK");
+    expect(result.messages[0]).toContain(
+      "typed-spec-phase-layer-alignment - OK",
+    );
     expect(
-      r.messages.some((m) => m.includes("doctor: typed-spec-phase-layer-alignment - OK")),
+      r.messages.some((m) =>
+        m.includes("doctor: typed-spec-phase-layer-alignment - OK"),
+      ),
     ).toBe(true);
   });
 
   it("fails typed spec phase/layer alignment when owner frontmatter does not match v_phase", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-typed-spec-phase-layer-"));
+    const root = mkdtempSync(
+      join(tmpdir(), "ut-tdd-doctor-typed-spec-phase-layer-"),
+    );
     try {
       mkdirSync(join(root, "docs", "governance"), { recursive: true });
       writeFileSync(
@@ -894,7 +1055,9 @@ describe("runDoctor", () => {
       const result = checkTypedSpecPhaseLayerAlignment(root);
 
       expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("typed-spec-phase-layer-mismatch");
+      expect(result.messages.join("\n")).toContain(
+        "typed-spec-phase-layer-mismatch",
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -906,7 +1069,11 @@ describe("runDoctor", () => {
 
     expect(result.ok).toBe(true);
     expect(result.messages[0]).toContain("agent-contract-detection - OK");
-    expect(r.messages.some((m) => m.includes("doctor: agent-contract-detection - OK"))).toBe(true);
+    expect(
+      r.messages.some((m) =>
+        m.includes("doctor: agent-contract-detection - OK"),
+      ),
+    ).toBe(true);
   });
 
   it("fails V-model agent contract detection when done_when references an unknown doctor gate", () => {
@@ -914,7 +1081,11 @@ describe("runDoctor", () => {
     try {
       const governanceDir = join(root, "docs", "governance");
       mkdirSync(governanceDir, { recursive: true });
-      writeFileSync(join(governanceDir, "vmodel-upgrade-schedule.md"), "# Schedule\n", "utf8");
+      writeFileSync(
+        join(governanceDir, "vmodel-upgrade-schedule.md"),
+        "# Schedule\n",
+        "utf8",
+      );
       writeFileSync(
         join(governanceDir, "vmodel-typed-spec-definitions.md"),
         "# Typed spec\n",
@@ -942,7 +1113,9 @@ describe("runDoctor", () => {
       const result = checkAgentContractDetection(root);
 
       expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("agent-contract-doctor-gate-unknown");
+      expect(result.messages.join("\n")).toContain(
+        "agent-contract-doctor-gate-unknown",
+      );
       expect(result.messages.join("\n")).toContain("VAGENT-301:no-such-gate");
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -955,10 +1128,14 @@ describe("runDoctor", () => {
 
     expect(governance.ok).toBe(true);
     expect(governance.messages[0]).toContain("plan-governance - OK");
-    expect(r.messages.some((m) => m.includes("doctor: plan-schedule") && m.includes("OK"))).toBe(
-      true,
-    );
-    expect(r.messages.some((m) => m.includes("doctor: plan-governance - OK"))).toBe(true);
+    expect(
+      r.messages.some(
+        (m) => m.includes("doctor: plan-schedule") && m.includes("OK"),
+      ),
+    ).toBe(true);
+    expect(
+      r.messages.some((m) => m.includes("doctor: plan-governance - OK")),
+    ).toBe(true);
   });
 
   it("keeps doctor plan gate re-exports stable after extraction", () => {
@@ -1023,9 +1200,13 @@ describe("runDoctor", () => {
       const messages = checkPlanReferenceFreshnessAdvisory(root);
 
       expect(
-        messages.some((message) => message.includes("plan-reference-freshness - advisory")),
+        messages.some((message) =>
+          message.includes("plan-reference-freshness - advisory"),
+        ),
       ).toBe(true);
-      expect(messages.every((message) => message.startsWith("doctor: "))).toBe(true);
+      expect(messages.every((message) => message.startsWith("doctor: "))).toBe(
+        true,
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -1033,14 +1214,20 @@ describe("runDoctor", () => {
 
   it("surfaces dependency-drift and regression expansion instead of scaffold stub", () => {
     const r = realRepoDoctor();
-    expect(r.messages.some((m) => m.includes("doctor: dependency-drift"))).toBe(true);
-    expect(r.messages.some((m) => m.includes("doctor: regression-expansion"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: dependency-drift"))).toBe(
+      true,
+    );
+    expect(
+      r.messages.some((m) => m.includes("doctor: regression-expansion")),
+    ).toBe(true);
     expect(r.messages.some((m) => m.includes("scaffold stub"))).toBe(false);
   });
 
   it("surfaces roadmap-rollup as a hard gate summary line", () => {
     const r = realRepoDoctor();
-    const rollupLines = r.messages.filter((m) => m.startsWith("doctor: roadmap-rollup"));
+    const rollupLines = r.messages.filter((m) =>
+      m.startsWith("doctor: roadmap-rollup"),
+    );
 
     expect(rollupLines).toHaveLength(1);
     expect(rollupLines[0]).toContain("bands ");
@@ -1052,14 +1239,21 @@ describe("runDoctor", () => {
   it("surfaces Cycle P4 closure audit as a hard gate", () => {
     const r = realRepoDoctor();
 
-    expect(r.ok).toBe(true);
-    expect(r.messages.some((m) => m.includes("doctor: cycle-p4-verification - OK"))).toBe(true);
+    expect(
+      r.messages.some((m) => m.includes("doctor: cycle-p4-verification - OK")),
+    ).toBe(true);
   });
 
   it("fails descent-obligation when a trace chain has no required downstream landing", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-descent-"));
     try {
-      const docDir = join(root, "docs", "design", "harness", "L6-function-design");
+      const docDir = join(
+        root,
+        "docs",
+        "design",
+        "harness",
+        "L6-function-design",
+      );
       mkdirSync(docDir, { recursive: true });
       writeFileSync(
         join(docDir, "bad.md"),
@@ -1070,7 +1264,9 @@ describe("runDoctor", () => {
       const result = checkDescentObligation(root);
 
       expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("descent-obligation - unmet");
+      expect(result.messages.join("\n")).toContain(
+        "descent-obligation - unmet",
+      );
       expect(result.messages.join("\n")).toContain("FR-L1-99");
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -1111,7 +1307,12 @@ describe("runDoctor", () => {
       mkdirSync(planDir, { recursive: true });
       writeFileSync(
         join(planDir, "PLAN-TEST-01-crossmodel.md"),
-        planWithReview("PLAN-TEST-01-crossmodel", "cross_agent", "gpt-5.4", "claude-opus-4-8"),
+        planWithReview(
+          "PLAN-TEST-01-crossmodel",
+          "cross_agent",
+          "gpt-5.4",
+          "claude-opus-4-8",
+        ),
         "utf8",
       );
 
@@ -1143,7 +1344,9 @@ describe("runDoctor", () => {
       const result = checkGuardrailInvariants(root);
 
       expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("guardrail-invariants - violation");
+      expect(result.messages.join("\n")).toContain(
+        "guardrail-invariants - violation",
+      );
       expect(result.messages.join("\n")).toContain("same-model-self-review");
       expect(result.messages.join("\n")).toContain("PLAN-TEST-02-selfreview");
     } finally {
@@ -1158,7 +1361,12 @@ describe("runDoctor", () => {
       mkdirSync(planDir, { recursive: true });
       writeFileSync(
         join(planDir, "PLAN-TEST-04-intra.md"),
-        planWithReview("PLAN-TEST-04-intra", "intra_runtime_subagent", "gpt-5.4", "gpt-5.4"),
+        planWithReview(
+          "PLAN-TEST-04-intra",
+          "intra_runtime_subagent",
+          "gpt-5.4",
+          "gpt-5.4",
+        ),
         "utf8",
       );
 
@@ -1171,7 +1379,9 @@ describe("runDoctor", () => {
   });
 
   it("does not false-positive guardrail-invariants when one model is omitted", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-guardrail-partial-"));
+    const root = mkdtempSync(
+      join(tmpdir(), "ut-tdd-doctor-guardrail-partial-"),
+    );
     try {
       const planDir = join(root, "docs", "plans");
       mkdirSync(planDir, { recursive: true });
@@ -1205,7 +1415,10 @@ describe("runDoctor", () => {
   });
 
   it("fails closed when guardrail-invariants repo root cannot be read", () => {
-    const missingRoot = join(tmpdir(), `ut-tdd-doctor-guardrail-missing-${NOW}-nope`);
+    const missingRoot = join(
+      tmpdir(),
+      `ut-tdd-doctor-guardrail-missing-${NOW}-nope`,
+    );
     const result = checkGuardrailInvariants(missingRoot);
     expect(result.ok).toBe(false);
   });
@@ -1247,7 +1460,13 @@ describe("runDoctor", () => {
   it("fails active design/test-design docs with unresolved L7 placeholder_deps", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-placeholder-deps-"));
     try {
-      const docDir = join(root, "docs", "design", "harness", "L5-detailed-design");
+      const docDir = join(
+        root,
+        "docs",
+        "design",
+        "harness",
+        "L5-detailed-design",
+      );
       mkdirSync(docDir, { recursive: true });
       writeFileSync(
         join(docDir, "physical-data.md"),
@@ -1266,7 +1485,9 @@ describe("runDoctor", () => {
       const result = checkPlaceholderDeps(root);
 
       expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("placeholder-deps - violation");
+      expect(result.messages.join("\n")).toContain(
+        "placeholder-deps - violation",
+      );
       expect(result.messages.join("\n")).toContain("physical-data.md:6");
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -1311,14 +1532,18 @@ describe("runDoctor", () => {
 
       expect(result.ok).toBe(true);
       expect(result.messages.join("\n")).toContain("codex-wrapper-parity - OK");
-      expect(result.messages.join("\n")).toContain("codex=ut-tdd-wrapper-lifecycle");
+      expect(result.messages.join("\n")).toContain(
+        "codex=ut-tdd-wrapper-lifecycle",
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
   it("U-ADAPTER-009: fails closed when Codex wrapper lifecycle evidence is missing", () => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-doctor-codex-parity-missing-"));
+    const root = mkdtempSync(
+      join(tmpdir(), "ut-tdd-doctor-codex-parity-missing-"),
+    );
     try {
       const result = checkCodexWrapperParity(
         deps({
@@ -1330,14 +1555,19 @@ describe("runDoctor", () => {
       );
 
       expect(result.ok).toBe(false);
-      expect(result.messages.join("\n")).toContain("Codex wrapper lifecycle test missing");
+      expect(result.messages.join("\n")).toContain(
+        "Codex wrapper lifecycle test missing",
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
   it("fails closed when hard-gate checker inputs cannot be read", () => {
-    const missingRoot = join(tmpdir(), `ut-tdd-doctor-missing-${Date.now()}-nope`);
+    const missingRoot = join(
+      tmpdir(),
+      `ut-tdd-doctor-missing-${Date.now()}-nope`,
+    );
     const checks = [
       ["backfill", checkBackfillResult(missingRoot)],
       ["scrum-reverse", checkScrumReverse(missingRoot)],
@@ -1360,9 +1590,18 @@ describe("runDoctor", () => {
       ["db-projection-coverage", checkDbProjectionCoverage(missingRoot)],
       ["db-projection-ingestion", checkDbProjectionIngestion(missingRoot)],
       ["typed-spec-trace-closure", checkTypedSpecTraceClosure(missingRoot)],
-      ["typed-spec-ledger-body-sync", checkTypedSpecLedgerBodySync(missingRoot)],
-      ["typed-spec-owned-artifact-dispersal", checkTypedSpecOwnedArtifactDispersal(missingRoot)],
-      ["typed-spec-phase-layer-alignment", checkTypedSpecPhaseLayerAlignment(missingRoot)],
+      [
+        "typed-spec-ledger-body-sync",
+        checkTypedSpecLedgerBodySync(missingRoot),
+      ],
+      [
+        "typed-spec-owned-artifact-dispersal",
+        checkTypedSpecOwnedArtifactDispersal(missingRoot),
+      ],
+      [
+        "typed-spec-phase-layer-alignment",
+        checkTypedSpecPhaseLayerAlignment(missingRoot),
+      ],
       ["agent-contract-detection", checkAgentContractDetection(missingRoot)],
       ["rule-drift", checkRuleDrift(missingRoot)],
       ["gate-confirm", checkGateConfirm(missingRoot)],
@@ -1382,7 +1621,10 @@ describe("runDoctor", () => {
       ["readability", checkReadability(missingRoot)],
       ["runtime-readability", checkRuntimeReadability(missingRoot)],
       ["project-hook", checkProjectHooks(missingRoot)],
-      ["codex-wrapper-parity", checkCodexWrapperParity(deps({ repoRoot: missingRoot }))],
+      [
+        "codex-wrapper-parity",
+        checkCodexWrapperParity(deps({ repoRoot: missingRoot })),
+      ],
       ["l6-completion", checkL6Completion(missingRoot)],
       ["l7-completion", checkL7Completion(missingRoot)],
       ["verification-groups", checkVerificationGroupsResult(missingRoot)],
@@ -1394,14 +1636,19 @@ describe("runDoctor", () => {
       ["regression-expansion", checkRegressionExpansion(missingRoot, null)],
     ] as const;
 
-    expect(checks.filter(([, result]) => result.ok).map(([name]) => name)).toEqual([]);
+    expect(
+      checks.filter(([, result]) => result.ok).map(([name]) => name),
+    ).toEqual([]);
     for (const [, result] of checks) {
       expect(result.messages.join("\n")).toMatch(/violation/i);
     }
   });
 
   it("keeps extracted dependency/regression doctor adapters fail-closed", () => {
-    const missingRoot = join(tmpdir(), `ut-tdd-doctor-dependency-missing-${Date.now()}-nope`);
+    const missingRoot = join(
+      tmpdir(),
+      `ut-tdd-doctor-dependency-missing-${Date.now()}-nope`,
+    );
 
     expect(checkDependencyDriftAdapter(missingRoot)).toMatchObject({
       ok: false,
@@ -1410,7 +1657,9 @@ describe("runDoctor", () => {
     });
     expect(checkRegressionExpansionAdapter(missingRoot, null)).toMatchObject({
       ok: false,
-      messages: ["regression-expansion - violation: repo root could not be read"],
+      messages: [
+        "regression-expansion - violation: repo root could not be read",
+      ],
     });
   });
 
@@ -1421,16 +1670,23 @@ describe("runDoctor", () => {
       const impact = checkChangeImpact(root);
       const integrity = checkChangeSetIntegrity(root);
       expect(impact.ok).toBe(true);
-      expect(impact.messages.join("\n")).toMatch(/skipped \(not a git repository\)/);
+      expect(impact.messages.join("\n")).toMatch(
+        /skipped \(not a git repository\)/,
+      );
       expect(integrity.ok).toBe(true);
-      expect(integrity.messages.join("\n")).toMatch(/skipped \(not a git repository\)/);
+      expect(integrity.messages.join("\n")).toMatch(
+        /skipped \(not a git repository\)/,
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
   it("keeps all hard gates wired into runDoctor hard-gate aggregation", () => {
-    const indexSource = readFileSync(join(headSnapshotRoot(), "src", "doctor", "index.ts"), "utf8");
+    const indexSource = readFileSync(
+      join(headSnapshotRoot(), "src", "doctor", "index.ts"),
+      "utf8",
+    );
     const registrySource = readFileSync(
       join(headSnapshotRoot(), "src", "doctor", "check-registry.ts"),
       "utf8",
@@ -1451,14 +1707,24 @@ describe("runDoctor", () => {
       join(headSnapshotRoot(), "src", "doctor", "runner.ts"),
       "utf8",
     );
-    const definitions = buildFullDoctorCheckDefinitions(nodeDoctorDeps(headSnapshotRoot()));
-    const definitionGroups = buildDoctorCheckDefinitionGroups(nodeDoctorDeps(headSnapshotRoot()));
-    const flattenedGroupDefinitions = definitionGroups.flatMap((group) => group.definitions);
+    const definitions = buildFullDoctorCheckDefinitions(
+      nodeDoctorDeps(headSnapshotRoot()),
+    );
+    const definitionGroups = buildDoctorCheckDefinitionGroups(
+      nodeDoctorDeps(headSnapshotRoot()),
+    );
+    const flattenedGroupDefinitions = definitionGroups.flatMap(
+      (group) => group.definitions,
+    );
     const checkIds = definitions.map((definition) => definition.id);
-    const groupCheckIds = flattenedGroupDefinitions.map((definition) => definition.id);
+    const groupCheckIds = flattenedGroupDefinitions.map(
+      (definition) => definition.id,
+    );
     const outputIds = [...FULL_DOCTOR_OUTPUT_IDS];
     expect(indexSource).toContain("resolveDoctorRunProfile");
-    expect(indexSource).toContain("const profile = resolveDoctorRunProfile(options)");
+    expect(indexSource).toContain(
+      "const profile = resolveDoctorRunProfile(options)",
+    );
     expect(indexSource).toContain('if (profile.invocation === "setup-smoke")');
     expect(indexSource).toContain(
       "const { checks, timings } = collectDoctorCheckRun(deps, options)",
@@ -1467,22 +1733,46 @@ describe("runDoctor", () => {
     expect(registrySource).toContain('} from "./check-definitions"');
     expect(runnerSource).toContain("export function collectDoctorCheckRun");
     expect(runnerSource).toContain("export function collectDoctorChecks");
-    expect(definitionsSource).toContain("export function buildFullDoctorCheckDefinitions");
-    expect(definitionsSource).toContain("buildDoctorCheckDefinitionGroups(deps, options)");
-    expect(groupSource).toContain("export function buildDoctorCheckDefinitionGroups");
-    expect(runnerSource).toContain("buildFullDoctorCheckDefinitions(deps, options)");
-    expect(definitionsSource).not.toContain("checkPlanReferenceFreshnessAdvisory");
+    expect(definitionsSource).toContain(
+      "export function buildFullDoctorCheckDefinitions",
+    );
+    expect(definitionsSource).toContain(
+      "buildDoctorCheckDefinitionGroups(deps, options)",
+    );
+    expect(groupSource).toContain(
+      "export function buildDoctorCheckDefinitionGroups",
+    );
+    expect(runnerSource).toContain(
+      "buildFullDoctorCheckDefinitions(deps, options)",
+    );
+    expect(definitionsSource).not.toContain(
+      "checkPlanReferenceFreshnessAdvisory",
+    );
     expect(registrySource).toContain('} from "./profiles"');
     expect(profileSource).toContain("export const DOCTOR_RUN_PROFILES");
     expect(profileSource).toContain("export const DOCTOR_RUN_PROFILE_IDS");
     expect(profileSource).toContain("export function resolveDoctorRunProfile");
-    expect(profileSource).toContain("export function doctorRunProfilesForAudience");
-    expect(profileSource).toContain("export function consumerSafeDoctorRunProfiles");
-    expect(profileSource).toContain("export function isConsumerSafeDoctorRunProfile");
-    expect(profileSource).toContain('consumerSafeDoctorRunProfile("consumer-setup-smoke")');
-    expect(profileSource).toContain('consumerSafeDoctorRunProfile("source-toolchain")');
-    expect(runnerSource).toContain("export function selectDoctorCheckDefinitions");
-    expect(profileSource).toContain('export type DoctorScope = "full" | "toolchain"');
+    expect(profileSource).toContain(
+      "export function doctorRunProfilesForAudience",
+    );
+    expect(profileSource).toContain(
+      "export function consumerSafeDoctorRunProfiles",
+    );
+    expect(profileSource).toContain(
+      "export function isConsumerSafeDoctorRunProfile",
+    );
+    expect(profileSource).toContain(
+      'consumerSafeDoctorRunProfile("consumer-setup-smoke")',
+    );
+    expect(profileSource).toContain(
+      'consumerSafeDoctorRunProfile("source-toolchain")',
+    );
+    expect(runnerSource).toContain(
+      "export function selectDoctorCheckDefinitions",
+    );
+    expect(profileSource).toContain(
+      'export type DoctorScope = "full" | "toolchain"',
+    );
     expect(definitionGroups.map((group) => group.id)).toEqual([
       "plan-governance",
       "rules-and-process",
@@ -1554,28 +1844,42 @@ describe("runDoctor", () => {
 
     expect(new Set(checkIds).size).toBe(checkIds.length);
     expect(groupCheckIds).toEqual(checkIds);
-    expect(new Set(definitionGroups.map((group) => group.id)).size).toBe(definitionGroups.length);
+    expect(new Set(definitionGroups.map((group) => group.id)).size).toBe(
+      definitionGroups.length,
+    );
     expect(new Set(outputIds).size).toBe(outputIds.length);
     expect(checkIds).toEqual(expect.arrayContaining(outputIds));
     expect(
-      selectDoctorCheckDefinitions(definitions, "full").map((definition) => definition.id),
+      selectDoctorCheckDefinitions(definitions, "full").map(
+        (definition) => definition.id,
+      ),
     ).toEqual(checkIds);
     expect(doctorOutputIdsForScope("full")).toEqual(outputIds);
     expect(outputIds).toEqual(expect.arrayContaining(expectedHardGates));
     expect(checkIds).not.toContain("plan-reference-freshness");
     expect(outputIds).not.toContain("plan-reference-freshness");
     expect(registrySource).not.toContain("checkPlanReferenceFreshnessAdvisory");
-    const definitionsById = new Map(definitions.map((definition) => [definition.id, definition]));
+    const definitionsById = new Map(
+      definitions.map((definition) => [definition.id, definition]),
+    );
     for (const definition of definitions) {
       for (const requiredId of definition.requires ?? []) {
         const required = definitionsById.get(requiredId);
         expect(required).toBeDefined();
-        expect(checkIds.indexOf(requiredId)).toBeLessThan(checkIds.indexOf(definition.id));
-        expect(required?.profiles).toEqual(expect.arrayContaining([...definition.profiles]));
+        expect(checkIds.indexOf(requiredId)).toBeLessThan(
+          checkIds.indexOf(definition.id),
+        );
+        expect(required?.profiles).toEqual(
+          expect.arrayContaining([...definition.profiles]),
+        );
       }
     }
-    expect(checkIds.indexOf("review-evidence")).toBeLessThan(checkIds.indexOf("pair-freeze"));
-    expect(outputIds.indexOf("l7-completion")).toBeLessThan(outputIds.indexOf("review-evidence"));
+    expect(checkIds.indexOf("review-evidence")).toBeLessThan(
+      checkIds.indexOf("pair-freeze"),
+    );
+    expect(outputIds.indexOf("l7-completion")).toBeLessThan(
+      outputIds.indexOf("review-evidence"),
+    );
     expect(checkIds.indexOf("guardrail-invariants")).toBeGreaterThan(
       checkIds.indexOf("regression-expansion"),
     );
@@ -1583,7 +1887,9 @@ describe("runDoctor", () => {
       outputIds.indexOf("verification-groups"),
     );
     expect(
-      definitions.find((definition) => definition.id === "regression-expansion"),
+      definitions.find(
+        (definition) => definition.id === "regression-expansion",
+      ),
     ).toMatchObject({
       requires: ["dependency-drift"],
     });
