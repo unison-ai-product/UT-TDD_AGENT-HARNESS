@@ -46,7 +46,7 @@ review_evidence: []
   `.ut-tdd/harness.db` の投影値 (`registeredHookEvents > 0` 等) を正本として
   測る。CI は db rebuild 先行で通るが、ローカル単独実行は DB 鮮度で Red/Green
   が動く (CI/ローカル乖離、「共有 tree を測るな」原則に構造的抵触)。
-- **T-3**: governance テスト 74 ファイルが `process.cwd()` でライブ作業ツリー
+- **T-3**: 初回棚卸しでは governance テスト 74 ファイルが `process.cwd()` でライブ作業ツリー
   (`docs/`・`src/`) を直読み。hybrid では相手ランタイムの未コミット編集を
   測って偽の Red/Green を出しうる。
 - **M**: `vitest.config.ts` に include/exclude/testTimeout が未明示。
@@ -81,9 +81,10 @@ review_evidence: []
 
 ### Step 3: [直列] live 測定テストの検出基盤と方針適用
 - 直列理由 = **downstream_dependency** (棚卸し結果が個別方針を決める)。
-- tests/ 配下で live tree / live `.ut-tdd` を読むテストを静的検出する lint
-  (許可リスト方式) を追加。既存 74 件は (a) CI 専用と明記、(b) `git ls-files`
-  (HEAD tracked) ベースへ移行、(c) fixture 化のいずれかへ分類・適用。
+- tests/ 配下で repository 読みを静的検出する lint (reason・呼出数を持つ契約台帳方式)
+  を追加。再棚卸しの実行コード 60 テスト（コメント 1、fence setup 1 を除外）は全件を
+  (a) detached HEAD snapshot、(b) 隔離 fixture のいずれかへ分類・適用する。CI 専用の
+  live tree 測定は残さず、新規・呼出数差分・古い契約は全て fail-close とする。
   T-2 は rebuild 済み DB を前提とする guard (未 rebuild ならテスト内で rebuild
   or 明示 skip 理由) を入れる。
 
@@ -98,8 +99,8 @@ review_evidence: []
 ## AC
 
 - [ ] テスト全走行後に `git status --porcelain` 差分ゼロ (fence が機械検証)。
-- [ ] live tree 読みテストが許可リスト管理下にあり、リスト外の新規追加は
-      lint が fail する (real-repo regression test で実証)。
+- [ ] repository 読みテストが detached HEAD snapshot / 隔離 fixture の契約台帳下にあり、
+      新規・呼出数差分・古い契約は lint が fail する (real-repo regression test で実証)。
 - [ ] vitest.config に include/exclude/testTimeout が明示され drift テスト有り。
 - [ ] `docs/plans/.ut-tdd/` 残留が除去され、誤配置検出が doctor に載っている。
 - [ ] (T-5) DB テストの cleanup が共通ヘルパ経由で Windows lock retry

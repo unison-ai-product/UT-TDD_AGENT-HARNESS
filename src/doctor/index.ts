@@ -115,6 +115,11 @@ export {
   checkProjectHooks,
 } from "./runtime-surface";
 export {
+  checkRuntimeStateLocation,
+  findRuntimeStateLocationFindings,
+} from "./runtime-state-location";
+export { checkTestRepositoryIsolation } from "./test-repository-isolation";
+export {
   checkImplPlanTrace,
   checkMergedPlanStatus,
   checkOracleTestTrace,

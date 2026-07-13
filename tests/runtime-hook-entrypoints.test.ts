@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -90,6 +98,7 @@ describe("runtime hook entrypoints", () => {
   it("shared CLI session/hook commands record a PLAN digest in a temp repo", () => {
     const cwd = mkdtempSync(join(tmpdir(), "ut-tdd-hook-"));
     try {
+      writeFileSync(join(cwd, "ut-tdd.project.json"), "{}\n");
       const start = runCli(cwd, ["plan", "use", "PLAN-L4-13"]);
       expect(start.status).toBe(0);
 
@@ -127,6 +136,44 @@ describe("runtime hook entrypoints", () => {
       expect(digest.event_counts.tool_use).toBe(1);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("records hook state at the repository root when launched from a nested cwd", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-hook-root-"));
+    try {
+      const nested = join(root, "docs", "plans");
+      mkdirSync(nested, { recursive: true });
+      writeFileSync(join(root, "ut-tdd.project.json"), "{}\n");
+      const run = runCli(
+        nested,
+        ["session", "start"],
+        { hook_event_name: "SessionStart", session_id: "nested-session" },
+        { UT_TDD_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "" },
+      );
+      expect(run.status).toBe(0);
+      expect(existsSync(join(root, ".ut-tdd", "logs", "session", "nested-session.jsonl"))).toBe(
+        true,
+      );
+      expect(existsSync(join(nested, ".ut-tdd"))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks hook state writes when no repository root can be resolved", () => {
+    const isolated = mkdtempSync(join(tmpdir(), "ut-tdd-hook-unresolved-"));
+    try {
+      const run = runCli(
+        isolated,
+        ["session", "start"],
+        { hook_event_name: "SessionStart", session_id: "unresolved-session" },
+        { UT_TDD_PROJECT_DIR: "", CLAUDE_PROJECT_DIR: "" },
+      );
+      expect(run.status).not.toBe(0);
+      expect(existsSync(join(isolated, ".ut-tdd"))).toBe(false);
+    } finally {
+      rmSync(isolated, { recursive: true, force: true });
     }
   });
 

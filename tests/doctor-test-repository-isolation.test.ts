@@ -1,0 +1,37 @@
+import { describe, expect, it } from "vitest";
+import {
+  analyzeTestRepositoryIsolation,
+  checkTestRepositoryIsolation,
+} from "../src/doctor/test-repository-isolation";
+
+describe("doctor test repository isolation", () => {
+  it("U-TESTHYGIENE-013: rejects a new unclassified live repository read", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [{ path: "tests/new.test.ts", source: "const root = process" + ".cwd();" }],
+      contracts: {},
+    });
+    expect(result.ok).toBe(false);
+    expect(result.messages).toContain("test-repository-isolation - violation: unclassified:tests/new.test.ts:process.cwd=1");
+  });
+
+  it("U-TESTHYGIENE-014: rejects callsite drift and stale contracts", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [{ path: "tests/a.test.ts", source: "process" + ".cwd(); process" + ".cwd();" }],
+      contracts: {
+        "tests/a.test.ts": { mode: "head_snapshot", calls: 1, reason: "fixture" },
+        "tests/stale.test.ts": { mode: "head_snapshot", calls: 1, reason: "fixture" },
+      },
+    });
+    expect(result.ok).toBe(false);
+    expect(result.messages).toEqual(
+      expect.arrayContaining([
+        "test-repository-isolation - violation: callsite-drift:tests/a.test.ts:expected=1:actual=2",
+        "test-repository-isolation - violation: stale-contract:tests/stale.test.ts",
+      ]),
+    );
+  });
+
+  it("U-TESTHYGIENE-015: classifies every real repository test access", () => {
+    expect(checkTestRepositoryIsolation(process.cwd()).ok).toBe(true);
+  });
+});

@@ -132,6 +132,7 @@ import {
   type SessionHookInput,
   safeName,
 } from "./runtime/session-log";
+import { requireRuntimeRepoRoot } from "./runtime/repo-root";
 import {
   evaluateWorkGuardTargets,
   extractEditTargets,
@@ -928,7 +929,7 @@ session
   .option("--session <id>", SESSION_OPTION_DESCRIPTION)
   .action((opts: { session?: string }) => {
     const input = readHookInput(HOOK_EVENT_SESSION_START, opts.session);
-    const repoRoot = process.cwd();
+    const repoRoot = requireRuntimeRepoRoot();
     const deps = nodeDeps(repoRoot, gitBranch, gitHead);
     runSessionStartSideEffects(repoRoot, input, deps);
     dispatch(input, deps, HOOK_EVENT_SESSION_START);
@@ -941,7 +942,7 @@ session
   .option("--session <id>", SESSION_OPTION_DESCRIPTION)
   .action((opts: { session?: string }) => {
     const input = readHookInput("Stop", opts.session);
-    dispatch(input, nodeDeps(process.cwd(), gitBranch, gitHead), "Stop");
+    dispatch(input, nodeDeps(requireRuntimeRepoRoot(), gitBranch, gitHead), "Stop");
     writeHandoverWarnings();
     process.stdout.write(`session-log: summary ${input.session_id ?? "ut-tdd-cli"}\n`);
   });
@@ -969,7 +970,7 @@ hook
         ...(opts.path ? { file_path: opts.path } : {}),
         ...(opts.command ? { command: opts.command } : {}),
       };
-      const repoRoot = process.cwd();
+      const repoRoot = requireRuntimeRepoRoot();
       const postInput = {
         ...input,
         hook_event_name: "PostToolUse",
@@ -1000,7 +1001,7 @@ hook
     "PreToolUse(Agent|Task): enforce subagent allowlist and declared model family; exits: 0=pass, 1=error, 2=blocked",
   )
   .action(() => {
-    const repoRoot = process.cwd();
+    const repoRoot = requireRuntimeRepoRoot();
     const input = parseHookInput<AgentGuardInput>(readStdin());
     if (!input) {
       process.stderr.write("[ut-tdd-guard] BLOCK: malformed hook JSON (fail-close)\n");
@@ -1031,7 +1032,7 @@ hook
     "PreToolUse(Edit|Write|MultiEdit/apply_patch|write_file): block foreign edits; exits: 0=pass, 1=error, 2=blocked",
   )
   .action(() => {
-    const repoRoot = process.cwd();
+    const repoRoot = requireRuntimeRepoRoot();
     const input = parseHookInput<{ tool_input?: unknown; session_id?: string }>(readStdin());
     if (!input) {
       // Work guard remains fail-open on malformed hook I/O, matching the repo-local shim.
@@ -1059,7 +1060,7 @@ hook
   .action(() => {
     // SubagentStop payload (session_id/transcript_path/stop_hook_active) は終了 subagent の
     // slot_id を含まず slot 個体相関に使えないため読まない (設計根拠 = agent-slots.md §2.4)。
-    const released = releaseOldestGuardSlot(nodeAgentSlotsDeps(process.cwd()));
+    const released = releaseOldestGuardSlot(nodeAgentSlotsDeps(requireRuntimeRepoRoot()));
     process.stdout.write(
       released
         ? `agent-slots: released ${released.slot_id} (${released.agent_kind})\n`

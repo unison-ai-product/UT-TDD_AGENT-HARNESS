@@ -1543,6 +1543,8 @@ describe("runDoctor", () => {
       "l6-fr-coverage",
       "readability",
       "runtime-readability",
+      "runtime-state-location",
+      "test-repository-isolation",
       "project-hook",
       "codex-wrapper-parity",
       "toolchain-pin",

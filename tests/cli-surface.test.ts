@@ -90,10 +90,12 @@ function writeFakeProvider(binDir: string, name: "codex" | "claude"): string {
       [
         "@echo off",
         `echo noisy-${name}`,
-        `echo raw=%${rawEnv}% > ${name}-env.txt`,
-        `echo reason=%${reasonEnv}% >> ${name}-env.txt`,
-        `echo effort=%CLAUDE_CODE_EFFORT_LEVEL% >> ${name}-env.txt`,
-        `echo args=%* >> ${name}-env.txt`,
+        'set "OUTPUT_DIR=%CD%"',
+        'if defined UT_TDD_TEST_PROVIDER_OUTPUT_DIR set "OUTPUT_DIR=%UT_TDD_TEST_PROVIDER_OUTPUT_DIR%"',
+        `echo raw=%${rawEnv}% > "%OUTPUT_DIR%\\${name}-env.txt"`,
+        `echo reason=%${reasonEnv}% >> "%OUTPUT_DIR%\\${name}-env.txt"`,
+        `echo effort=%CLAUDE_CODE_EFFORT_LEVEL% >> "%OUTPUT_DIR%\\${name}-env.txt"`,
+        `echo args=%* >> "%OUTPUT_DIR%\\${name}-env.txt"`,
         "exit /b 0",
         "",
       ].join("\r\n"),
@@ -106,7 +108,8 @@ function writeFakeProvider(binDir: string, name: "codex" | "claude"): string {
     [
       "#!/bin/sh",
       `echo noisy-${name}`,
-      `printf "raw=%s\\nreason=%s\\neffort=%s\\nargs=%s\\n" "$${rawEnv}" "$${reasonEnv}" "$CLAUDE_CODE_EFFORT_LEVEL" "$*" > ${name}-env.txt`,
+      'output_dir="${UT_TDD_TEST_PROVIDER_OUTPUT_DIR:-$PWD}"',
+      `printf "raw=%s\\nreason=%s\\neffort=%s\\nargs=%s\\n" "$${rawEnv}" "$${reasonEnv}" "$CLAUDE_CODE_EFFORT_LEVEL" "$*" > "$output_dir/${name}-env.txt"`,
       "exit 0",
       "",
     ].join("\n"),
@@ -750,6 +753,7 @@ describe("L7 CLI surface closure", () => {
       const run = runCliIn(repoRoot, ["distribution", "plan", "--tag", "v0.1.0", "--json"], {
         ...process.env,
         UT_TDD_CODEX_BIN: fakeCodex,
+        UT_TDD_TEST_PROVIDER_OUTPUT_DIR: binDir,
         PATH: `${binDir}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`,
       });
       const payload = JSON.parse(run.stdout);
@@ -778,8 +782,9 @@ describe("L7 CLI surface closure", () => {
       );
       expect(payload.readiness.contracts.tagPin).toContain("#v0.1.0");
       expect(payload.readiness.ci.forkPullRequestSecrets).toBe("not-required");
+      expect(readFileSync(join(binDir, "codex-env.txt"), "utf8")).toContain("args=");
+      expect(existsSync(join(repoRoot, "codex-env.txt"))).toBe(false);
     } finally {
-      rmSync(join(repoRoot, "codex-env.txt"), { force: true });
       rmSync(binDir, { recursive: true, force: true });
     }
   }, 20_000);

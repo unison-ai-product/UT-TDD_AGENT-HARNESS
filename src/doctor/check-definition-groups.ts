@@ -80,6 +80,8 @@ import {
   checkSecretScan,
 } from "./rule-quality";
 import type { DoctorCheckDefinition, DoctorOptions } from "./runner";
+import { checkRuntimeStateLocation } from "./runtime-state-location";
+import { checkTestRepositoryIsolation } from "./test-repository-isolation";
 import { type DoctorDeps, handoverDeps } from "./runtime-state";
 import {
   checkCodexHookAdapter,
@@ -192,6 +194,8 @@ export function buildDoctorCheckDefinitionGroups(
     {
       id: "runtime-surface",
       definitions: [
+        full("runtime-state-location", () => checkRuntimeStateLocation(deps.repoRoot)),
+        full("test-repository-isolation", () => checkTestRepositoryIsolation(deps.repoRoot)),
         full("project-hook", () => checkProjectHooks(deps.repoRoot)),
         full("github-ci-policy", () => checkGithubCiPolicy(deps.repoRoot)),
         full("codex-hook-adapter", () => checkCodexHookAdapter(deps.repoRoot)),
