@@ -191,6 +191,9 @@ describe("evaluateAgentGuard", () => {
     expect(
       evaluateAgentGuard(agent({ subagent_type: "code-reviewer", model: "fable" }), ctx()).code,
     ).toBe(0);
+    expect(
+      evaluateAgentGuard(agent({ subagent_type: "blind-reviewer", model: "fable" }), ctx()).code,
+    ).toBe(0);
   });
 
   it("blocks fable for worker subagents even when it satisfies their capability floor", () => {
