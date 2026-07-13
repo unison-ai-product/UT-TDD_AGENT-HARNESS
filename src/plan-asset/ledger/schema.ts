@@ -17,7 +17,31 @@ import {
 } from "../../schema/harness-db-table-builders.js";
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
 
-export const LEDGER_SCHEMA_VERSION = 1;
+export const LEDGER_SCHEMA_VERSION = 2;
+
+function migrationTargetCheck() {
+  return {
+    kind: "or" as const,
+    expressions: [
+      {
+        kind: "and" as const,
+        expressions: [
+          { kind: "in" as const, column: "decision", values: ["pending", "rejected"] },
+          { kind: "is-null" as const, column: "target_asset_id" },
+          { kind: "is-null" as const, column: "target_revision" },
+        ],
+      },
+      {
+        kind: "and" as const,
+        expressions: [
+          { kind: "in" as const, column: "decision", values: ["migrated", "rekeyed"] },
+          { kind: "is-null" as const, column: "target_asset_id", negate: true },
+          { kind: "is-null" as const, column: "target_revision", negate: true },
+        ],
+      },
+    ],
+  };
+}
 
 const tables: readonly TableDef[] = [
   {
@@ -181,6 +205,8 @@ const tables: readonly TableDef[] = [
       requiredCol("command_payload_digest"),
       requiredCol("event_kind"),
       requiredCol("asset_id"),
+      col("target_asset_id"),
+      col("target_revision", "INTEGER"),
       requiredCol("decision"),
       col("resolved_alias"),
       col("collision_group"),
@@ -219,11 +245,12 @@ const tables: readonly TableDef[] = [
           },
         ],
       },
+      migrationTargetCheck(),
     ],
     foreignKeys: [
-      foreignKey(["asset_id"], {
-        table: "plan_assets",
-        columns: ["asset_id"],
+      foreignKey(["target_asset_id", "target_revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
         onDelete: "RESTRICT",
       }),
     ],
@@ -234,6 +261,8 @@ const tables: readonly TableDef[] = [
       pk("migration_id"),
       requiredCol("legacy_plan_id"),
       requiredCol("asset_id"),
+      col("target_asset_id"),
+      col("target_revision", "INTEGER"),
       requiredCol("decision"),
       col("resolved_alias"),
       col("collision_group"),
@@ -245,11 +274,14 @@ const tables: readonly TableDef[] = [
       requiredCol("last_event_digest"),
     ],
     unique: [["legacy_plan_id"]],
-    checks: [enumCheck("decision", ["pending", "migrated", "rekeyed", "rejected"])],
+    checks: [
+      enumCheck("decision", ["pending", "migrated", "rekeyed", "rejected"]),
+      migrationTargetCheck(),
+    ],
     foreignKeys: [
-      foreignKey(["asset_id"], {
-        table: "plan_assets",
-        columns: ["asset_id"],
+      foreignKey(["target_asset_id", "target_revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
         onDelete: "RESTRICT",
       }),
     ],
@@ -608,6 +640,8 @@ function migrationReductionsValid(db: HarnessDb): boolean {
       return sameFields(current, latest, [
         "legacy_plan_id",
         "asset_id",
+        "target_asset_id",
+        "target_revision",
         "decision",
         "resolved_alias",
         "collision_group",

@@ -224,12 +224,79 @@ describe("PLAN Asset canonical ledger schema", () => {
       ),
     ).not.toThrow();
   });
+
+  it("U-PA-023/028/029: separates derived identity from an adopted revision target", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migratePlanLedger(db);
+      expect(() => insertMigrationEvent(db, "pending", null, null, "pending")).not.toThrow();
+      expect(() => insertMigrationEvent(db, "rejected", null, null, "rejected")).not.toThrow();
+      expect(() => insertMigrationEvent(db, "migrated", null, null, "missing-target")).toThrow();
+      expect(() =>
+        insertMigrationEvent(db, "migrated", "plan:missing", 1, "phantom-target"),
+      ).toThrow();
+      seedAsset(db, "plan:adopted");
+      expect(() =>
+        insertMigrationEvent(db, "migrated", "plan:adopted", 1, "adopted"),
+      ).not.toThrow();
+    } finally {
+      db.close();
+    }
+  });
 });
 
 const digest = "a".repeat(64);
 const commit = "b".repeat(40);
 const now = "2026-07-13T00:00:00Z";
 const later = "2026-07-14T00:00:00Z";
+
+function insertMigrationEvent(
+  db: ReturnType<typeof openHarnessDb>,
+  decision: "pending" | "migrated" | "rejected",
+  targetAssetId: string | null,
+  targetRevision: number | null,
+  suffix: string,
+): void {
+  const pending = decision === "pending";
+  const rejected = decision === "rejected";
+  db.prepare(
+    `INSERT INTO legacy_plan_migration_events (
+      migration_event_id, legacy_plan_id, sequence, command_id, command_payload_digest,
+      event_kind, asset_id, target_asset_id, target_revision, decision, resolved_alias,
+      collision_group, loss_fields_json, reason, review_plan_id, repository_identity,
+      identity_algorithm, identity_input_json, identity_digest, identity_config_path,
+      identity_config_blob_oid, identity_config_content_digest, identity_config_receipt_digest,
+      source_digest, occurred_at, event_digest
+    ) VALUES (${Array.from({ length: 26 }, () => "?").join(",")})`,
+  ).run(
+    `migration-event:${suffix}`,
+    `PLAN-L7-${suffix}`,
+    1,
+    `command:${suffix}`,
+    digest,
+    "observed",
+    `plan:derived:${suffix}`,
+    targetAssetId,
+    targetRevision,
+    decision,
+    decision === "migrated" ? `PLAN-L7-${suffix}` : null,
+    null,
+    rejected ? '["loss"]' : "[]",
+    "test",
+    pending || rejected ? "PLAN-L7-418-review" : null,
+    "owner/repository",
+    "ut-tdd-plan-legacy-v1",
+    "[]",
+    digest,
+    "ut-tdd.project.json",
+    commit,
+    digest,
+    digest,
+    digest,
+    now,
+    digest,
+  );
+}
 
 function seedAsset(db: ReturnType<typeof openHarnessDb>, assetId: string): void {
   db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(assetId, now, commit, "test");
