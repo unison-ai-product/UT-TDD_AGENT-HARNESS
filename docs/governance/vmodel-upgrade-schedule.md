@@ -2,7 +2,7 @@
 title: "Vモデル upgrade schedule authoring source"
 status: confirmed
 owner: PO / TL
-updated: 2026-07-10
+updated: 2026-07-13
 typed_spec_phase_owner: L6
 ---
 
@@ -121,6 +121,8 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L12-01-engine-swap-acceptance-deploy | L12 | verification | L3 | PLAN-L11-01-engine-swap-uat-review | U21e/G12: acceptance/deploy/rollback readiness | yellow | draft | G11 pass、AT/rollback evidence待ち |
 | PLAN-L13-01-engine-swap-post-deploy-verification | L13 | process-evidence | L12 | PLAN-L12-01-engine-swap-acceptance-deploy | U21f/G13: post-deploy smoke/SLI-SLO verification | yellow | draft | G12 pass、smoke/SLO evidence待ち |
 | PLAN-L14-01-engine-swap-operational-value-verification | L14 | verification | L1 | PLAN-L13-01-engine-swap-post-deploy-verification | U21g/G14: operational/value feedback verification | yellow | draft | G13 pass、operational KPI/PO decision待ち |
+| PLAN-L4-29-security-design-substance | L4 | security | L9 | PLAN-L4-16-security-design-slot | U22a: A-187 §3 のsecurity実体化 (脅威モデル/供給網/鍵/監査ログ + not_applicable明文化) を起票 | yellow | draft | 脅威モデル節、供給網/鍵/監査ログ設計、na判断の catalog 反映待ち |
+| PLAN-L6-78-coding-structure-rules-contract | L6 | function-spec | L7 | PLAN-L4-21-domain-vo-coding-constraints | U22b: ZIP-DOC-095 構造規約の analyzer 契約を起票 (A-187 §5) | yellow | draft | rule 語彙の排他分類、analyzer 契約 freeze、L7 add-impl 後続起票待ち |
 
 ## 2. 解釈規則
 

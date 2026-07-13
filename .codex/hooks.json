@@ -1,5 +1,5 @@
 {
-  "$comment": "Codex CLI project-local hook adapter (PLAN-L7-139). Official Codex discovery reads <repo>/.codex/hooks.json or <repo>/.codex/config.toml when the project is trusted. This mirrors the Claude guard hooks in .claude/settings.json, wired with Codex tool names, and reuses the same TypeScript entrypoints. Do not move this to global ~/.codex/.",
+  "description": "Codex CLI project-local hook adapter (PLAN-L7-139). Official Codex discovery reads <repo>/.codex/hooks.json or <repo>/.codex/config.toml when the project is trusted. This mirrors the Claude guard hooks in .claude/settings.json, wired with Codex tool names, and reuses the same TypeScript entrypoints. Do not move this to global ~/.codex/.",
   "hooks": {
     "PreToolUse": [
       {

@@ -9,7 +9,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-13
 owner: PM (Claude)
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -123,6 +123,14 @@ Slice 1 (横断判断 skill 8+1) 完了後、PO 指摘により未カバーの 3
 
 要件は Slice 1 と同一 (skill.v1 / decision_points 3〜8 / denylist / SKILL_MAP 登録 /
 既存 skill との境界明記)。
+
+## 3c. 現在地 (2026-07-13 A-187 監査による実体裏取り)
+
+- Slice 1 (横断判断 skill 8+1)・Slice 2 の工程単位 skill 5 本・プロダクトパターン skill 1 本
+  (`skills/product-profile-tailoring.md`) は `skills/` に実在確認済み。
+- **設計資料ファミリ単位 skill 9 本は 1 本も未作成** (grep 0 件)。残作業はこの 9 本。
+- 実体の大半が完了しているのに `status: draft` のままである点は A-187 §7 で指摘。confirmed 化は
+  ファミリ 9 本完了 + AC の機械検証 evidence を揃えて PO gate で行う (本追記では status を変更しない)。
 
 ## 4. 非目標
 

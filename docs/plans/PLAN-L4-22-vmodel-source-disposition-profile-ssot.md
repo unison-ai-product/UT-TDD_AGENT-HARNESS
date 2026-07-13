@@ -9,7 +9,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-13
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -47,6 +47,7 @@ dependencies:
   references:
     - docs/design/harness/L1-requirements/vmodel-upgrade-requirements.md
     - docs/governance/vmodel-upgrade-schedule.md
+    - .ut-tdd/audit/A-187-vmodel-checked-zip-divergence-audit-2026-07-13.md
 ---
 
 # PLAN-L4-22: 109 source→163 item→HARNESS target disposition/profile SSoT
@@ -65,6 +66,19 @@ baseline `origin/main@71a023b2` の`vmodel-document-catalog.md`はHARNESS target
 4. 8 profile を `size` (PoC/Standard/Enterprise) と `product` (Web/Mobile/Desktop/CLI/APIService) の直交軸として定義する。
 5. profile は default+override で決定論的に解決し、detector は authored decision を補完しない。
 6. harness.db は authoring source を上書きしない再構築可能な read-model に限定する。
+7. A-187 乖離監査 (2026-07-13) の catalog errata を反映する:
+   - claim-only/target 誤指定の訂正 — ZIP-DOC-012 (テスト計画実体は RECOVERY-10 右肺と統合)、
+     069 (target 粒度 L1→L3)、096 (7つの柱の統合先確定)、098 (mesh RAG/impact は PLAN-L6-70-vmodel-judgement-skill-pack 系へ)、
+     101/102 (L9 test-design への実体反映または target 変更)、109 (target を
+     `vmodel-refactor-qa-release-gates.md` へ訂正し `gates.md` から相互参照)。
+   - `vmodel-semantic-item-catalog.md` の `done` 判定を実体 grep 検証と突合し、mesh_vmodel/perf/sectest の
+     誤 done を訂正する。
+   - reference 先 slot 不在 6 件 (ZIP-DOC-054/055/059/063/066/068) を scale-profiles へ slot 追加するか
+     理由付き not_applicable へ変更する。
+   - disposition 再判断: 041 (i18n は「日本語固定 (Q31)」と正面衝突)、048/060/062/065/070 (target に
+     概念軸不在) を merge 維持 + 実体追記 / reference / not_applicable のいずれかへ確定する。
+   - canonical cache (`.ut-tdd/cache/`) の sha 不一致を解消するか、manifest へ「hash 一致 ZIP の取得元」を
+     明記して provenance 再現性を回復する。
 
 ## 3. 受入条件
 
