@@ -112,9 +112,10 @@ Rules:
    are blocked; escalating to the orchestrator's own tier or higher is allowed.
    Worker-role subagents (be-api / be-logic / db-schema / devops-deploy /
    pmo-haiku / refactor-scout / etc.) stay pinned to a lower tier;
-   quality-check / gate subagents (code-reviewer / ut-tdd-tl / security-audit /
-   qa-test) declare an opus floor. Review must never be lower-tier than the
-   orchestrator it reviews (PO principle 2026-07-08, PLAN-L7-399).
+   quality-check / gate subagents (code-reviewer / blind-reviewer / ut-tdd-tl /
+   security-audit / qa-test) declare an opus floor. Review must never be
+   lower-tier than the orchestrator it reviews (PO principle 2026-07-08,
+   PLAN-L7-399).
 4. Bypass is allowed only with `UT_TDD_ALLOW_RAW_AGENT=1` and must leave
    evidence.
 5. Invalid stdin JSON or unverifiable state fails closed.
@@ -137,9 +138,21 @@ Allowlist:
 - `pdm-marketing-innovation`
 - `pdm-innovation-manager`
 - `code-reviewer`
+- `blind-reviewer`
 - `security-audit`
 - `qa-test`
 - `ut-tdd-tl`
+
+`blind-reviewer` is a review/gate subagent (opus floor) that judges the artifact
+against spec and self-run tests only, with the author's claims, self-assessment,
+intent, prior verdicts, and identity withheld by the orchestrator when it builds
+the packet. It runs two lanes — claim-blind (vs spec/AC) and spec-blind (artifact
+internal soundness). It is the subagent-scoped precursor to the full adversarial
+mechanism in `docs/plans/PLAN-L6-53-adversarial-review-mechanism.md`. In `hybrid`
+the blind review should run on the provider that did not author the change (Claude
+subagent for Codex-authored work, `ut-tdd codex --role blind-reviewer` for
+Claude-authored work) so attacker/defender providers stay separated; single-runtime
+modes record `intra_runtime_subagent` evidence instead.
 
 Source-snapshot exploration is not an active Claude Code subagent route. Use
 project-focused agents for repository inspection and treat migration snapshots

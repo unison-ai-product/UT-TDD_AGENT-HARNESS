@@ -16,6 +16,7 @@ export const SUBAGENT_ALLOWLIST: ReadonlySet<string> = new Set([
   "pdm-marketing-innovation",
   "pdm-innovation-manager",
   "code-reviewer",
+  "blind-reviewer",
   "security-audit",
   "qa-test",
   "ut-tdd-tl",

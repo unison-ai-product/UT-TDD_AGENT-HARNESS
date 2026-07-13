@@ -16,9 +16,11 @@
 /**
  * read-only (非破壊) を期待する委譲ロール集合。§1.8 role taxonomy の相談 (tl/uiux) +
  * 検証 (qa) archetype は「判断側」であり実装代行しない (worker=se/docs のみ書き込み)。
- * literal な review エイリアス (reviewer/review/security/audit/code-review/code-reviewer) も
- * 同区分に含め、実 delegation で使われる表記ゆれを吸収する。worker ロール・未知ロールは
- * 含めない (誤検知回避 — guard はレビュー session の変更のみを対象とする)。
+ * literal な review エイリアス (reviewer/review/security/audit/code-review/code-reviewer/
+ * blind-review/blind-reviewer) も同区分に含め、実 delegation で使われる表記ゆれを吸収する。
+ * blind-review* は Codex 側ブラインドレビュー委譲 (ut-tdd codex --role blind-reviewer) の
+ * 非破壊性を強制する (著者主張を渡さない判定ロールは実装代行しない)。worker ロール・
+ * 未知ロールは含めない (誤検知回避 — guard はレビュー session の変更のみを対象とする)。
  */
 export const READ_ONLY_DELEGATION_ROLES: ReadonlySet<string> = new Set([
   "tl",
@@ -30,6 +32,8 @@ export const READ_ONLY_DELEGATION_ROLES: ReadonlySet<string> = new Set([
   "audit",
   "code-review",
   "code-reviewer",
+  "blind-review",
+  "blind-reviewer",
 ]);
 
 /** role を正規化 (trim + lowercase)。 */

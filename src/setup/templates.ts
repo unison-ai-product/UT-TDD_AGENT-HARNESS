@@ -24,6 +24,11 @@ const CLAUDE_AGENT_TEMPLATES = [
     CLAUDE_SONNET,
   ],
   [
+    "blind-reviewer",
+    "Blind reviewer that judges the artifact against spec and self-run tests only, with author claims and intent withheld.",
+    CLAUDE_OPUS,
+  ],
+  [
     "code-reviewer",
     "Read-only senior engineering reviewer for correctness, security, and maintainability.",
     CLAUDE_SONNET,

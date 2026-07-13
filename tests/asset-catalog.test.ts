@@ -359,6 +359,7 @@ describe("IT-ASSET-01/02: roster registry and guard consistency", () => {
         "pdm-marketing-innovation",
         "pdm-innovation-manager",
         "code-reviewer",
+        "blind-reviewer",
         "security-audit",
         "qa-test",
         "ut-tdd-tl",
@@ -368,7 +369,7 @@ describe("IT-ASSET-01/02: roster registry and guard consistency", () => {
     expect(result.ok).toBe(true);
     expect(result.missingFromRoster).toEqual([]);
     expect(result.nameMismatches).toEqual([]);
-    expect(result.allowlistedPresent).toBe(19);
+    expect(result.allowlistedPresent).toBe(20);
     expect(result.nonAllowlisted).toEqual([]);
   });
 });
