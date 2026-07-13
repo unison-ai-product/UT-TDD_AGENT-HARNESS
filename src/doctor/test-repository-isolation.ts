@@ -71,12 +71,17 @@ function isCwdAccess(node: ts.Node): node is ts.PropertyAccessExpression {
 }
 
 const REPOSITORY_READ_APIS = new Set([
+  "access",
   "accessSync",
   "existsSync",
   "file",
+  "lstat",
   "lstatSync",
+  "readFile",
   "readFileSync",
+  "readdir",
   "readdirSync",
+  "stat",
   "statSync",
 ]);
 const REPOSITORY_PATH =
@@ -96,18 +101,48 @@ function staticPath(node: ts.Expression): string | null {
   return null;
 }
 
-function isDirectRepositoryRead(node: ts.CallExpression): boolean {
-  const name = ts.isIdentifier(node.expression)
-    ? node.expression.text
-    : ts.isPropertyAccessExpression(node.expression)
-      ? node.expression.name.text
-      : null;
+function memberName(node: ts.Expression): string | null {
+  if (ts.isIdentifier(node)) return node.text;
+  if (ts.isPropertyAccessExpression(node)) return node.name.text;
+  if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression))
+    return node.argumentExpression.text;
+  return null;
+}
+
+function isDirectRepositoryRead(
+  node: ts.CallExpression,
+  aliases: ReadonlyMap<string, string>,
+): boolean {
+  const rawName = memberName(node.expression);
+  const name = rawName ? (aliases.get(rawName) ?? rawName) : null;
   const target = node.arguments[0] ? staticPath(node.arguments[0]) : null;
   return Boolean(name && REPOSITORY_READ_APIS.has(name) && target && REPOSITORY_PATH.test(target));
 }
 
 function inspectSource(path: string, source: string): { calls: number; forbidden: boolean } {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const readAliases = new Map<string, string>();
+  for (const statement of file.statements) {
+    if (
+      ts.isImportDeclaration(statement) &&
+      statement.importClause?.namedBindings &&
+      ts.isNamedImports(statement.importClause.namedBindings)
+    ) {
+      for (const element of statement.importClause.namedBindings.elements) {
+        const imported = element.propertyName?.text ?? element.name.text;
+        if (REPOSITORY_READ_APIS.has(imported)) readAliases.set(element.name.text, imported);
+      }
+    }
+    if (ts.isVariableStatement(statement) && statement.declarationList.flags & ts.NodeFlags.Const) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (!ts.isIdentifier(declaration.name) || !declaration.initializer) continue;
+        const target = memberName(declaration.initializer);
+        const canonical = target ? (readAliases.get(target) ?? target) : null;
+        if (canonical && REPOSITORY_READ_APIS.has(canonical))
+          readAliases.set(declaration.name.text, canonical);
+      }
+    }
+  }
   let calls = 0;
   let forbidden = false;
   const visit = (node: ts.Node): void => {
@@ -142,13 +177,30 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
       node.expression.text === "headSnapshotRoot"
     )
       calls += 1;
-    if (ts.isCallExpression(node) && isDirectRepositoryRead(node)) calls += 1;
+    if (ts.isCallExpression(node) && isDirectRepositoryRead(node, readAliases)) calls += 1;
     else if (
       isCwdAccess(node) &&
       !(ts.isCallExpression(node.parent) && node.parent.expression === node)
     )
       forbidden = true;
     if (ts.isElementAccessExpression(node) && isProcessReference(node.expression)) forbidden = true;
+    if (
+      ts.isElementAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "globalThis" &&
+      ts.isStringLiteralLike(node.argumentExpression) &&
+      node.argumentExpression.text === "process"
+    )
+      forbidden = true;
+    if (
+      ts.isElementAccessExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      isProcessReference(node.expression.expression) &&
+      node.expression.name.text === "env" &&
+      ts.isStringLiteralLike(node.argumentExpression) &&
+      ["INIT_CWD", "PWD"].includes(node.argumentExpression.text)
+    )
+      forbidden = true;
     if (
       ts.isPropertyAccessExpression(node) &&
       isProcessReference(node.expression) &&

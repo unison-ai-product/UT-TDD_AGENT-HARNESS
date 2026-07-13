@@ -74,6 +74,32 @@ describe("doctor test repository isolation", () => {
     );
   });
 
+  it("U-TESTHYGIENE-029: rejects read aliases, async reads, and bracket live-root access", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [
+        {
+          path: "tests/import-alias.test.ts",
+          source: "import { readFile as load } from 'node:fs/promises'; load('docs/README.md');",
+        },
+        {
+          path: "tests/const-alias.test.ts",
+          source: "const load = readFileSync; load('src/cli.ts');",
+        },
+        { path: "tests/env-bracket.test.ts", source: "process.env['PWD'];" },
+        { path: "tests/global-bracket.test.ts", source: "globalThis['process'].cwd();" },
+      ],
+      contracts: {},
+    });
+    expect(result.messages).toEqual(
+      expect.arrayContaining([
+        "test-repository-isolation - violation: unclassified:tests/import-alias.test.ts:repository-read=1",
+        "test-repository-isolation - violation: unclassified:tests/const-alias.test.ts:repository-read=1",
+        "test-repository-isolation - violation: forbidden-live-root-source:tests/env-bracket.test.ts",
+        "test-repository-isolation - violation: forbidden-live-root-source:tests/global-bracket.test.ts",
+      ]),
+    );
+  });
+
   it("U-TESTHYGIENE-014: rejects callsite drift and stale contracts", () => {
     const result = analyzeTestRepositoryIsolation({
       files: [

@@ -27,6 +27,24 @@ function createsPersistedHarnessDb(path: string, source: string): boolean {
         tracked.set(element.name.text, imported);
     }
   }
+  for (const statement of file.statements) {
+    if (
+      !ts.isVariableStatement(statement) ||
+      !(statement.declarationList.flags & ts.NodeFlags.Const)
+    )
+      continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || !declaration.initializer) continue;
+      const target = ts.isIdentifier(declaration.initializer)
+        ? tracked.get(declaration.initializer.text)
+        : ts.isPropertyAccessExpression(declaration.initializer) &&
+            ts.isIdentifier(declaration.initializer.expression) &&
+            namespaces.has(declaration.initializer.expression.text)
+          ? declaration.initializer.name.text
+          : null;
+      if (target) tracked.set(declaration.name.text, target);
+    }
+  }
   let persisted = false;
   const visit = (node: ts.Node): void => {
     if (!ts.isCallExpression(node)) {
@@ -35,10 +53,15 @@ function createsPersistedHarnessDb(path: string, source: string): boolean {
     }
     const called = ts.isIdentifier(node.expression)
       ? (tracked.get(node.expression.text) ?? node.expression.text)
-      : ts.isPropertyAccessExpression(node.expression) &&
+      : (ts.isPropertyAccessExpression(node.expression) ||
+            ts.isElementAccessExpression(node.expression)) &&
           ts.isIdentifier(node.expression.expression) &&
           namespaces.has(node.expression.expression.text)
-        ? node.expression.name.text
+        ? ts.isPropertyAccessExpression(node.expression)
+          ? node.expression.name.text
+          : ts.isStringLiteralLike(node.expression.argumentExpression)
+            ? node.expression.argumentExpression.text
+            : ""
         : "";
     if (["defaultHarnessDbPath", "ensureHarnessSchema"].includes(called)) persisted = true;
     if (called === "openHarnessDb") {
@@ -62,8 +85,9 @@ function createsPersistedHarnessDb(path: string, source: string): boolean {
 
 function usesRawRecursiveTreeRemoval(path: string, source: string): boolean {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
-  const aliases = new Set(["rmSync"]);
+  const aliases = new Set(["rm", "rmSync"]);
   const namespaces = new Set<string>();
+  const options = new Map<string, ts.Expression>();
   for (const statement of file.statements) {
     if (!ts.isImportDeclaration(statement) || !statement.importClause?.namedBindings) continue;
     if (ts.isNamespaceImport(statement.importClause.namedBindings)) {
@@ -72,32 +96,56 @@ function usesRawRecursiveTreeRemoval(path: string, source: string): boolean {
     }
     if (!ts.isNamedImports(statement.importClause.namedBindings)) continue;
     for (const element of statement.importClause.namedBindings.elements) {
-      if ((element.propertyName?.text ?? element.name.text) === "rmSync")
+      if (["rm", "rmSync"].includes(element.propertyName?.text ?? element.name.text))
         aliases.add(element.name.text);
     }
   }
+  for (const statement of file.statements) {
+    if (
+      !ts.isVariableStatement(statement) ||
+      !(statement.declarationList.flags & ts.NodeFlags.Const)
+    )
+      continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || !declaration.initializer) continue;
+      options.set(declaration.name.text, declaration.initializer);
+      const target = ts.isIdentifier(declaration.initializer)
+        ? declaration.initializer.text
+        : ts.isPropertyAccessExpression(declaration.initializer) &&
+            ts.isIdentifier(declaration.initializer.expression) &&
+            namespaces.has(declaration.initializer.expression.text)
+          ? declaration.initializer.name.text
+          : null;
+      if (target && aliases.has(target)) aliases.add(declaration.name.text);
+    }
+  }
+  const isRecursive = (expression: ts.Expression | undefined): boolean => {
+    const resolved =
+      expression && ts.isIdentifier(expression) ? options.get(expression.text) : expression;
+    if (!resolved || !ts.isObjectLiteralExpression(resolved)) return false;
+    if (resolved.properties.some(ts.isSpreadAssignment)) return true;
+    return resolved.properties.some(
+      (property) =>
+        ts.isPropertyAssignment(property) &&
+        property.name.getText(file) === "recursive" &&
+        property.initializer.kind === ts.SyntaxKind.TrueKeyword,
+    );
+  };
   let raw = false;
   const visit = (node: ts.Node): void => {
     if (
       ts.isCallExpression(node) &&
       ((ts.isIdentifier(node.expression) && aliases.has(node.expression.text)) ||
-        (ts.isPropertyAccessExpression(node.expression) &&
+        ((ts.isPropertyAccessExpression(node.expression) ||
+          ts.isElementAccessExpression(node.expression)) &&
           ts.isIdentifier(node.expression.expression) &&
           namespaces.has(node.expression.expression.text) &&
-          node.expression.name.text === "rmSync"))
+          (ts.isPropertyAccessExpression(node.expression)
+            ? ["rm", "rmSync"].includes(node.expression.name.text)
+            : ts.isStringLiteralLike(node.expression.argumentExpression) &&
+              ["rm", "rmSync"].includes(node.expression.argumentExpression.text))))
     ) {
-      const options = node.arguments[1];
-      if (
-        options &&
-        ts.isObjectLiteralExpression(options) &&
-        options.properties.some(
-          (property) =>
-            ts.isPropertyAssignment(property) &&
-            property.name.getText(file) === "recursive" &&
-            property.initializer.kind === ts.SyntaxKind.TrueKeyword,
-        )
-      )
-        raw = true;
+      if (isRecursive(node.arguments[1])) raw = true;
     }
     ts.forEachChild(node, visit);
   };
@@ -117,6 +165,21 @@ describe("persistent harness DB cleanup contract", () => {
       usesRawRecursiveTreeRemoval(
         "tests/nested/owner.test.ts",
         "import * as fs from 'node:fs'; fs.rmSync(root, { recursive: true });",
+      ),
+    ).toBe(true);
+  });
+
+  it("U-TESTHYGIENE-030: resolves aliases, element access, async rm, and options variables", () => {
+    expect(
+      createsPersistedHarnessDb(
+        "tests/nested/owner.test.ts",
+        "import * as db from '../src/db'; const open = db.openHarnessDb; open(path);",
+      ),
+    ).toBe(true);
+    expect(
+      usesRawRecursiveTreeRemoval(
+        "tests/nested/owner.test.ts",
+        "import * as fs from 'node:fs'; const opts = { recursive: true }; fs['rm'](root, opts, cb);",
       ),
     ).toBe(true);
   });
@@ -142,7 +205,7 @@ describe("persistent harness DB cleanup contract", () => {
 
     expect(owners.length).toBeGreaterThan(0);
     for (const owner of owners) {
-      expect(owner.source, owner.path).toContain('from "./support/temp-tree"');
+      expect(owner.source, owner.path).toMatch(/from\s+["'](?:\.\.\/|\.\/)*support\/temp-tree["']/);
       expect(owner.source, owner.path).toMatch(/removeTestTree(?:\(|;)/);
       expect(usesRawRecursiveTreeRemoval(owner.path, owner.source), owner.path).toBe(false);
     }
