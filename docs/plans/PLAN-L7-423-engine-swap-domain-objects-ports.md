@@ -25,6 +25,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/lint/db-projection-coverage.ts
     artifact_type: source_module
+  - artifact_path: src/shared/source-text.ts
+    artifact_type: source_module
   - artifact_path: tests/dependency-drift.test.ts
     artifact_type: test_code
 dependencies:

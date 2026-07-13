@@ -30,7 +30,7 @@ import type {
   TestFileInput,
 } from "../lint/relation-graph";
 import { loadReviewPlans } from "../lint/review-evidence";
-import { normalizePath } from "../lint/shared";
+import { normalizePath } from "../shared/source-text";
 import { loadPairDocs } from "../vmodel/lint";
 
 // ---- helpers ----------------------------------------------------------------

@@ -40,7 +40,7 @@ import {
   loadRoadmaps,
   PARKED_BANDS,
 } from "../lint/roadmap-registry";
-import { normalizePath } from "../lint/shared";
+import { normalizePath } from "../shared/source-text";
 import {
   analyzeSubDocCatalogDrift,
   loadSubDocCatalogDriftInput,
