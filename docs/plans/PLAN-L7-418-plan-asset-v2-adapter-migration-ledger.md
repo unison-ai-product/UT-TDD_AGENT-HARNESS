@@ -95,7 +95,8 @@ planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,
 - ledger schema v2でderived migration identityとadopted `(target_asset_id,target_revision)`を分離し、pending/rejectedの架空PlanAsset生成を禁止、migrated/rekeyedのphantom revisionをcomposite FKで拒否するU-PA-023/028/029 DB oracleをGreen化済み。
 - U-PA-026/027: `LegacyMigrationLedger.observe`でpending event/current/global receiptのatomic append、state conflict rollback、同command replay、異payload conflictをGreen化済み。
 - U-PA-029: `LegacyMigrationLedger.reject`でdecided event/current/global receiptだけをatomic更新し、PlanAsset/revision/alias生成0をGreen化済み。
-- U-PA-028: `LegacyMigrationLedger.adopt`でPlanAsset/revision 1/alias event+current/migrated event+current/global receiptを同一transactionで生成し、composite revision targetと全digest再検証をGreen化済み。
+- U-PA-028: `LegacyMigrationLedger.adopt`でPlanAsset/revision 1/alias event+current/migratedまたはrekeyed event+current/global receiptを同一transactionで生成する。`migrated`はcollision/review provenanceを禁止し、`rekeyed`は両方を必須化するapplication oracle、composite revision target、全digest再検証をGreen化済み。
+- dry-run inventory gateは741件全件についてdecisionを出力するだけでなく、A-187およびPLAN-L6-79採番SSoTから得た契約として、PLAN番号prefix一意性、catalog claimとtarget実体、reference target slot実在、委譲先設計実体、snapshot hash一致実体の取得元をfail-closeで検証する。foreign worktree上の未確定PLAN本文には依存せず、確定済HARNESS memoryの契約を入力境界とする。
 - U-PA-030: migration event/current/global receiptの双方向bijectionとstream/current集合一致をverifierへ追加し、event-only/receipt-only mutationをGreen化済み。
 - U-PA-033: file-backed migration ledgerのclose/reopen後にcurrent state、event digest、command payload digest集合が完全一致するreconstruct oracleをGreen化済み。
 - U-PA-032: observe 3境界とadoption 7境界へfault portを注入し、各例外後にmigration/receipt/asset/revision/alias全table delta 0をGreen化済み。U-PA-001..033の実行可能testはtodo 0。

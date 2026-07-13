@@ -40,7 +40,10 @@ export interface RejectMigrationInput {
 
 export interface AdoptMigrationInput {
   readonly legacyPlanId: string;
+  readonly decision: "migrated" | "rekeyed";
   readonly resolvedAlias: string;
+  readonly collisionGroup: string | null;
+  readonly reviewPlanId: string | null;
   readonly canonicalPayloadJson: string;
   readonly canonicalPayloadDigest: string;
   readonly bodyDigest: string;
@@ -226,6 +229,13 @@ export class LegacyMigrationLedger {
   }
 
   private appendAdopted(input: AdoptMigrationInput, payloadDigest: string): AppendResult {
+    const migrated = input.decision === "migrated";
+    if (
+      (migrated && (input.collisionGroup !== null || input.reviewPlanId !== null)) ||
+      (!migrated && (!input.collisionGroup || !input.reviewPlanId))
+    ) {
+      return failed("plan-migration-decision-invalid");
+    }
     const state = this.pendingState(input.legacyPlanId, input.expectedDecision);
     if (!state) return failed("plan-migration-state-conflict");
     const assetId = String(state.current.asset_id);
@@ -260,11 +270,12 @@ export class LegacyMigrationLedger {
     const event = decisionEvent(state.first, {
       commandId: input.commandId,
       payloadDigest,
-      decision: "migrated",
+      decision: input.decision,
       resolvedAlias: input.resolvedAlias,
+      collisionGroup: input.collisionGroup,
       lossFieldsJson: "[]",
       reason: input.reason,
-      reviewPlanId: null,
+      reviewPlanId: input.reviewPlanId,
       occurredAt: input.occurredAt,
       targetAssetId: assetId,
       targetRevision: 1,
@@ -273,9 +284,18 @@ export class LegacyMigrationLedger {
     this.fault?.after("migration-event");
     this.db
       .prepare(`UPDATE legacy_plan_migrations SET target_asset_id = ?, target_revision = 1,
-      decision = 'migrated', resolved_alias = ?, collision_group = NULL, loss_fields_json = '[]',
-      reason = ?, review_plan_id = NULL, last_event_digest = ? WHERE legacy_plan_id = ?`)
-      .run(assetId, input.resolvedAlias, input.reason, event.event_digest, input.legacyPlanId);
+      decision = ?, resolved_alias = ?, collision_group = ?, loss_fields_json = '[]',
+      reason = ?, review_plan_id = ?, last_event_digest = ? WHERE legacy_plan_id = ?`)
+      .run(
+        assetId,
+        input.decision,
+        input.resolvedAlias,
+        input.collisionGroup,
+        input.reason,
+        input.reviewPlanId,
+        event.event_digest,
+        input.legacyPlanId,
+      );
     this.fault?.after("migration-current");
     return { ok: true, replayed: false, resultRef: String(event.migration_event_id) };
   }
@@ -335,11 +355,12 @@ function decisionEvent(
   input: {
     commandId: string;
     payloadDigest: string;
-    decision: "migrated";
+    decision: "migrated" | "rekeyed";
     resolvedAlias: string;
+    collisionGroup: string | null;
     lossFieldsJson: string;
     reason: string;
-    reviewPlanId: null;
+    reviewPlanId: string | null;
     occurredAt: string;
     targetAssetId: string;
     targetRevision: number;
@@ -356,7 +377,7 @@ function decisionEvent(
     target_revision: input.targetRevision,
     decision: input.decision,
     resolved_alias: input.resolvedAlias,
-    collision_group: null,
+    collision_group: input.collisionGroup,
     loss_fields_json: input.lossFieldsJson,
     reason: input.reason,
     review_plan_id: input.reviewPlanId,

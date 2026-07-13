@@ -68,7 +68,10 @@ describe("legacy migration ledger application", () => {
       expect(
         ledger.adopt({
           legacyPlanId: input().legacyPlanId,
+          decision: "migrated",
           resolvedAlias: input().legacyPlanId,
+          collisionGroup: null,
+          reviewPlanId: null,
           canonicalPayloadJson: payload,
           canonicalPayloadDigest: sha256(payload),
           bodyDigest: "1".repeat(64),
@@ -89,6 +92,46 @@ describe("legacy migration ledger application", () => {
         ),
       ).toEqual([1, 1, 1, 1]);
       expect(migratePlanLedger(db)).toMatchObject({ ok: true });
+    });
+  });
+
+  it("U-PA-028: rekeys a collision with explicit review provenance", () => {
+    withLedger(({ db, ledger }) => {
+      const observed = { ...input(), collisionGroup: "collision:PLAN-L7-1-a" };
+      expect(ledger.observe(observed)).toMatchObject({ ok: true });
+      expect(
+        ledger.adopt({
+          ...adoptInput(),
+          decision: "rekeyed",
+          resolvedAlias: "PLAN-L7-1-a~owner-repository",
+          collisionGroup: observed.collisionGroup,
+          reviewPlanId: "PLAN-L7-418-review",
+        }),
+      ).toMatchObject({ ok: true, replayed: false });
+      expect(
+        db
+          .prepare(`SELECT decision, resolved_alias, collision_group, review_plan_id
+        FROM legacy_plan_migrations WHERE legacy_plan_id = ?`)
+          .get(observed.legacyPlanId),
+      ).toMatchObject({
+        decision: "rekeyed",
+        resolved_alias: "PLAN-L7-1-a~owner-repository",
+        collision_group: observed.collisionGroup,
+        review_plan_id: "PLAN-L7-418-review",
+      });
+      expect(migratePlanLedger(db)).toMatchObject({ ok: true });
+    });
+  });
+
+  it("U-PA-028: rejects decision/provenance mismatches without a delta", () => {
+    withLedger(({ db, ledger }) => {
+      ledger.observe(input());
+      const baseline = countAll(db);
+      expect(ledger.adopt({ ...adoptInput(), decision: "rekeyed" })).toMatchObject({
+        ok: false,
+        ruleId: "plan-migration-decision-invalid",
+      });
+      expect(countAll(db)).toEqual(baseline);
     });
   });
 
@@ -187,7 +230,10 @@ function adoptInput() {
   const payload = JSON.stringify({ legacyPlanId: input().legacyPlanId, migrated: true });
   return {
     legacyPlanId: input().legacyPlanId,
+    decision: "migrated" as const,
     resolvedAlias: input().legacyPlanId,
+    collisionGroup: null,
+    reviewPlanId: null,
     canonicalPayloadJson: payload,
     canonicalPayloadDigest: sha256(payload),
     bodyDigest: "1".repeat(64),
