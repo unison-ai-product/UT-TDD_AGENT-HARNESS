@@ -68,6 +68,14 @@ describe("legacy migration reducer", () => {
       ]),
     ).toMatchObject({ ok: false, ruleId });
   });
+
+  it.todo("U-PA-026: rejects stale expected sequence and decision with zero row delta");
+  it.todo("U-PA-027: replays the same global command and rejects a different payload");
+  it.todo("U-PA-028: atomically adopts a migrated or rekeyed canonical revision");
+  it.todo("U-PA-029: rejects without creating a PlanAsset revision or alias");
+  it.todo("U-PA-030: detects event/current/receipt bijection tampering in both directions");
+  it.todo("U-PA-032: rolls back every migration write boundary after fault injection");
+  it.todo("U-PA-033: reconstructs identical state and provenance after file reopen");
 });
 
 function event(overrides: Partial<MigrationEvent> = {}): MigrationEvent {
