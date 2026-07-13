@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L6-71-coding-structure-rules-contract
-title: "PLAN-L6-71 (add-design): ZIP-DOC-095 クラス・メソッド構造規約の analyzer 契約 — 宣言済み規約の機械強制化"
+plan_id: PLAN-L6-78-coding-structure-rules-contract
+title: "PLAN-L6-78 (add-design): ZIP-DOC-095 クラス・メソッド構造規約の analyzer 契約 — 宣言済み規約の機械強制化"
 kind: add-design
 layer: L6
 sub_doc: function-spec
@@ -23,7 +23,7 @@ agent_slots:
 generates:
   - artifact_path: docs/design/harness/L6-function-design/function-spec.md
     artifact_type: design_doc
-  - artifact_path: docs/plans/PLAN-L6-71-coding-structure-rules-contract.md
+  - artifact_path: docs/plans/PLAN-L6-78-coding-structure-rules-contract.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L4-21-domain-vo-coding-constraints.md
@@ -38,7 +38,7 @@ dependencies:
 review_evidence: []
 ---
 
-# PLAN-L6-71 (add-design): クラス・メソッド構造規約の analyzer 契約
+# PLAN-L6-78 (add-design): クラス・メソッド構造規約の analyzer 契約
 
 ## 1. 問題 (A-187 §5 / ZIP-DOC-095)
 

@@ -1,5 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  loadCompiledRightArmRegistry,
+  VMODEL_CONTRACT_PATH,
+} from "../vmodel-contract/adapters/yaml-contract-loader";
 
 export interface RightLungDocGovernanceDoc {
   layer: string;
@@ -38,48 +42,34 @@ const REQUIRED_WORKFLOW_MARKERS = [
   "verification_design",
 ] as const;
 
-const RIGHT_LUNG_DOCS = [
-  {
-    layer: "L8",
-    gate: "G8",
-    idPrefix: "IT-",
-    path: "docs/test-design/harness/L8-integration-test-design.md",
-  },
-  {
-    layer: "L9",
-    gate: "G9",
-    idPrefix: "ST-",
-    path: "docs/test-design/harness/L9-system-test-design.md",
-  },
-  {
-    layer: "L10",
-    gate: "G10",
-    idPrefix: "UXV-",
-    path: "docs/test-design/harness/L10-ux-validation-test-design.md",
-  },
-  {
-    layer: "L12",
-    gate: "G12",
-    idPrefix: "AT-",
-    path: "docs/test-design/harness/L12-acceptance-test-design.md",
-  },
-  {
-    layer: "L14",
-    gate: "G14",
-    idPrefix: "OT-",
-    path: "docs/test-design/harness/L14-operational-test-design.md",
-  },
-] as const;
+function loadRightLungDocDefinitions(
+  repoRoot: string,
+): Omit<RightLungDocGovernanceDoc, "content">[] {
+  return loadCompiledRightArmRegistry(repoRoot).obligations.map((entry) => ({
+    layer: entry.layer,
+    gate: entry.gate,
+    idPrefix: entry.caseIdPrefix,
+    path: entry.governanceArtifact,
+  }));
+}
 
 export function canLoadRightLungDocGovernanceInput(repoRoot = process.cwd()): boolean {
-  return RIGHT_LUNG_DOCS.every((doc) => existsSync(resolve(repoRoot, doc.path)));
+  if (!existsSync(resolve(repoRoot, VMODEL_CONTRACT_PATH))) return false;
+  try {
+    return loadRightLungDocDefinitions(repoRoot).every((doc) =>
+      existsSync(resolve(repoRoot, doc.path)),
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function loadRightLungDocGovernanceInput(
   repoRoot = process.cwd(),
 ): RightLungDocGovernanceInput {
+  const definitions = loadRightLungDocDefinitions(repoRoot);
   return {
-    docs: RIGHT_LUNG_DOCS.map((doc) => ({
+    docs: definitions.map((doc) => ({
       ...doc,
       content: readFileSync(resolve(repoRoot, doc.path), "utf8"),
     })),
@@ -88,10 +78,19 @@ export function loadRightLungDocGovernanceInput(
 
 function missingMarkers(doc: RightLungDocGovernanceDoc): string[] {
   const workflowMarker = `${doc.gate}-WORKFLOW`;
-  const markerMissing = [workflowMarker, ...REQUIRED_WORKFLOW_MARKERS].filter(
-    (marker) => !doc.content.includes(marker),
+  const workflowHeading = new RegExp(
+    `^#{1,6}\\s+.*\\b${workflowMarker.replace("-", "\\-")}\\b.*$`,
+    "m",
   );
-  const idPattern = new RegExp(`\\b${doc.idPrefix.replace("-", "\\-")}[A-Z0-9]`);
+  const markerMissing = workflowHeading.test(doc.content) ? [] : [workflowMarker];
+  for (const marker of REQUIRED_WORKFLOW_MARKERS) {
+    const fieldPattern = new RegExp(
+      `^(?:${marker}:\\s*\\S|\\|\\s*\`?${marker}\`?\\s*\\|\\s*\\S)`,
+      "m",
+    );
+    if (!fieldPattern.test(doc.content)) markerMissing.push(marker);
+  }
+  const idPattern = new RegExp(`^\\|[^\\n]*\\b${doc.idPrefix.replace("-", "\\-")}[A-Z0-9]`, "m");
   if (!idPattern.test(doc.content)) {
     markerMissing.push(`test_case_id_family:${doc.idPrefix}`);
   }

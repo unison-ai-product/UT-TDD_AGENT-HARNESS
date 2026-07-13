@@ -14,7 +14,7 @@ owner: PO / Codex
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L9-system-test-design.md
-next_pair_freeze: L5
+next_pair_freeze: L9
 agent_slots:
   - role: tl
     slot_label: "TL - source/item/target 3集約と disposition 語彙の設計判断"
@@ -68,7 +68,7 @@ baseline `origin/main@71a023b2` の`vmodel-document-catalog.md`はHARNESS target
 6. harness.db は authoring source を上書きしない再構築可能な read-model に限定する。
 7. A-187 乖離監査 (2026-07-13) の catalog errata を反映する:
    - claim-only/target 誤指定の訂正 — ZIP-DOC-012 (テスト計画実体は RECOVERY-10 右肺と統合)、
-     069 (target 粒度 L1→L3)、096 (7つの柱の統合先確定)、098 (mesh RAG/impact は PLAN-L6-70 系へ)、
+     069 (target 粒度 L1→L3)、096 (7つの柱の統合先確定)、098 (mesh RAG/impact は PLAN-L6-70-vmodel-judgement-skill-pack 系へ)、
      101/102 (L9 test-design への実体反映または target 変更)、109 (target を
      `vmodel-refactor-qa-release-gates.md` へ訂正し `gates.md` から相互参照)。
    - `vmodel-semantic-item-catalog.md` の `done` 判定を実体 grep 検証と突合し、mesh_vmodel/perf/sectest の

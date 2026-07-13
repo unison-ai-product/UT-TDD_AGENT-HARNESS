@@ -24,6 +24,15 @@ forward_workflow:
     - archived
   exception_states: [blocked, superseded, rejected, reopened]
   pair_reciprocity_exceptions: [L11, L13]
+  pair_reciprocity_exception_contracts:
+    - layer: L11
+      reason: UAT/trace review is a cross-layer process evidence aggregation, not a single left-layer test-design pair
+      allowed_pair_layers: [L1, L3, L4, L5, L6, L7]
+      required_backlinks: [PLAN-L1-07-vmodel-engine-swap-requirements-delta, PLAN-L4-24-declarative-vmodel-contract-right-arm]
+    - layer: L13
+      reason: production observation follows deploy/acceptance and owns process evidence instead of a test-design pair
+      allowed_pair_layers: [L12]
+      required_backlinks: [PLAN-L12-01-engine-swap-acceptance-deploy, PLAN-L4-24-declarative-vmodel-contract-right-arm]
 layers:
   - layer: L0
     gate: G0.5
@@ -106,6 +115,10 @@ layers:
     exit_criteria: mandatory_integration_cases_green_and_defects_routed
     defect_routing: reverse_to_L5_or_L6
     approval_role: QA/TL
+    verification_plan_id: PLAN-L8-01-engine-swap-integration-verification
+    governance_artifact: docs/test-design/harness/L8-integration-test-design.md
+    case_id_prefix: IT-
+    evidence_manifest: .ut-tdd/evidence/g8-integration/engine-swap.json
   - layer: L9
     gate: G9
     role: system_verification
@@ -115,6 +128,10 @@ layers:
     exit_criteria: mandatory_system_cases_green_and_design_intent_verified
     defect_routing: reverse_to_L4
     approval_role: QA/TL
+    verification_plan_id: PLAN-L9-01-engine-swap-system-verification
+    governance_artifact: docs/test-design/harness/L9-system-test-design.md
+    case_id_prefix: ST-
+    evidence_manifest: .ut-tdd/evidence/g9-system/engine-swap.json
   - layer: L10
     gate: G10
     role: ux_validation
@@ -124,6 +141,10 @@ layers:
     exit_criteria: real_data_ux_cases_green_and_findings_routed
     defect_routing: reverse_to_L2_or_L4
     approval_role: PO/QA
+    verification_plan_id: PLAN-L10-01-engine-swap-ux-validation
+    governance_artifact: docs/test-design/harness/L10-ux-validation-test-design.md
+    case_id_prefix: UXV-
+    evidence_manifest: .ut-tdd/evidence/g10-ux/engine-swap.json
   - layer: L11
     gate: G11
     role: trace_and_uat_review
@@ -133,6 +154,10 @@ layers:
     exit_criteria: no_unresolved_trace_or_uat_blocker
     defect_routing: reverse_to_owning_layer
     approval_role: PO/TL
+    verification_plan_id: PLAN-L11-01-engine-swap-uat-review
+    governance_artifact: docs/process/evidence/g11-uat-review-design.md
+    case_id_prefix: UAT-
+    evidence_manifest: .ut-tdd/evidence/g11-uat/engine-swap.json
   - layer: L12
     gate: G12
     role: deploy_and_acceptance
@@ -142,6 +167,10 @@ layers:
     exit_criteria: deployment_verified_and_all_mandatory_acceptance_cases_green
     defect_routing: rollback_or_reverse_to_L3_L7
     approval_role: PO/TL
+    verification_plan_id: PLAN-L12-01-engine-swap-acceptance-deploy
+    governance_artifact: docs/test-design/harness/L12-acceptance-test-design.md
+    case_id_prefix: AT-
+    evidence_manifest: .ut-tdd/evidence/g12-acceptance/engine-swap.json
   - layer: L13
     gate: G13
     role: production_observation
@@ -151,6 +180,10 @@ layers:
     exit_criteria: observation_window_closed_without_unrouted_blocker
     defect_routing: incident_recovery_or_rollback
     approval_role: PO/TL
+    verification_plan_id: PLAN-L13-01-engine-swap-post-deploy-verification
+    governance_artifact: docs/process/evidence/g13-post-deploy-verification-design.md
+    case_id_prefix: SMOKE-
+    evidence_manifest: .ut-tdd/evidence/g13-post-deploy/engine-swap.json
   - layer: L14
     gate: G14
     role: operational_and_value_verification
@@ -160,6 +193,10 @@ layers:
     exit_criteria: operational_cases_green_and_value_feedback_routed
     defect_routing: requirement_backprop_or_concept_policy
     approval_role: PO
+    verification_plan_id: PLAN-L14-01-engine-swap-operational-value-verification
+    governance_artifact: docs/test-design/harness/L14-vmodel-engine-swap-operational-test-design.md
+    case_id_prefix: OT-
+    evidence_manifest: .ut-tdd/evidence/g14-operational/engine-swap.json
 invariants:
   - id: VMC-001
     rule: every_layer_L0_through_L14_appears_exactly_once

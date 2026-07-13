@@ -61,9 +61,32 @@ describe("right-lung doc governance lint", () => {
   });
 
   it("U-RLG-003: keeps the live repository right-lung docs green", () => {
-    const result = analyzeRightLungDocGovernance(loadRightLungDocGovernanceInput(process.cwd()));
+    const input = loadRightLungDocGovernanceInput(process.cwd());
+    const result = analyzeRightLungDocGovernance(input);
 
     expect(result.ok).toBe(true);
-    expect(result.checked).toBe(5);
+    expect(result.checked).toBe(7);
+    expect(input.docs.map((doc) => doc.layer)).toEqual([
+      "L8",
+      "L9",
+      "L10",
+      "L11",
+      "L12",
+      "L13",
+      "L14",
+    ]);
+  });
+
+  it("U-RLG-004: rejects marker words that appear only in prose or a code sample", () => {
+    const proseOnly = `G11-WORKFLOW test_strategy test_plan test_conditions coverage_items
+test_procedures execution_evidence exit_criteria defect_routing verification_design UAT-X`;
+    const result = analyzeRightLungDocGovernance({
+      docs: [{ layer: "L11", gate: "G11", idPrefix: "UAT-", path: "x.md", content: proseOnly }],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.violations[0]?.missing).toContain("G11-WORKFLOW");
+    expect(result.violations[0]?.missing).toContain("test_strategy");
+    expect(result.violations[0]?.missing).toContain("test_case_id_family:UAT-");
   });
 });

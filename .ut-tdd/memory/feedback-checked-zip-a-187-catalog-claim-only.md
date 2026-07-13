@@ -13,4 +13,4 @@ checked ZIP (Vモデル設計ドキュメント) と HARNESS の乖離は A-187 
 3. 委譲宣言 (例: nfr.md「詳細は L4 で確定」) は受け皿実体の裏取りとセットで監査する。宣言のみの委譲チェーンは行き止まりになる (security.md)。
 4. snapshot provenance: .ut-tdd/cache の canonical zip は manifest sha と不一致でも検出されない (実行時参照ゼロ)。hash 宣言には「一致する実体の取得元」を併記しないと再現性が欠落する。
 
-是正 route: catalog errata = PLAN-L4-22 / security 実体化 = PLAN-L4-29 / 構造規約 analyzer = PLAN-L6-71。
+是正 route: catalog errata = PLAN-L4-22 / security 実体化 = PLAN-L4-29 / 構造規約 analyzer = PLAN-L6-78。

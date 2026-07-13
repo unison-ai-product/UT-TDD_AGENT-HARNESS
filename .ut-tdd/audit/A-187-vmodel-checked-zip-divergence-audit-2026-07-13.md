@@ -67,13 +67,22 @@ ZIP-DOC-010/036/056/057/067 の 5 件の統合先として宣言と実体が乖�
 - `.ut-tdd/cache/Vモデル設計ドキュメント_checked_canonical.zip` sha256 実測 `96103228…` ≠ manifest 宣言
   `47b9a900…`。実行時参照 0 件で機能影響なしだが provenance 再現性の欠落。Desktop 原本は manifest と一致。
 
+## §8 追補 (2026-07-13 merge 時に発見): PLAN 番号の runtime 間衝突
+
+origin/main に同一番号・別 slug の PLAN が 5 組存在する: L6-70 / L7-417 / L7-419 / L7-424 / L7-425
+(各 2 ファイル。Claude 系と Codex 系が独立採番した結果)。本監査の当初起票 PLAN-L6-71 も Codex 版
+`PLAN-L6-71-plan-asset-canonical-migration-contracts` と衝突したため **PLAN-L6-78 へ改番**した。
+plan_id (full slug) は一意だが、短縮表記「PLAN-L7-424」等は既に曖昧で、schedule/references の短縮参照が
+誤読リスクを持つ。番号 prefix の一意性 lint または採番 SSoT (次番号の予約機構) が route 候補
+(起票判断は PO へ。既存 5 組の改番は両ランタイム調整が要るため本監査では行わない)。
+
 ## Finding Route (起票結果 — PO 指示 2026-07-13「未起票であれば起票する」)
 
 | finding | 差し込み先 | 処置 |
 |---|---|---|
 | §1 catalog errata 6 件 + §2 slot 6 件 + §4 disposition 再判断 (041/048/060/062/065/070) + §7 cache provenance | **PLAN-L4-22** (draft、disposition/profile SSoT) | スコープ追記済 (本監査を references へ追加) |
 | §3 security 実体化 (STRIDE/供給網/鍵管理/監査ログ + RBAC 等の na 明文化) | **PLAN-L4-29** (新規) | 起票済 |
-| §5 ZIP-095 構造規約の機械強制 (analyzer/oracle/hard gate) | **PLAN-L6-71** (新規、L7 は後続起票) | 起票済 |
+| §5 ZIP-095 構造規約の機械強制 (analyzer/oracle/hard gate) | **PLAN-L6-78** (新規、L7 は後続起票、当初 L6-71 で起票→main の Codex 版 PLAN-L6-71 と番号衝突のため改番) | 起票済 |
 | §1 ZIP-DOC-012 テスト計画書 slot | PLAN-RECOVERY-10 (draft、右肺) + L4-22 errata | 既起票 (A-185 §C-5 と同一 route) |
 | §4 敵対検証エンジン機械化 | PLAN-L6-53 (draft) | 既起票 |
 | §4 目的別ダイジェスト自動生成 | PLAN-L7-302 (draft、context tiering) | 既起票 (合流) |
@@ -84,5 +93,5 @@ ZIP-DOC-010/036/056/057/067 の 5 件の統合先として宣言と実体が乖�
 
 ## Boundary
 
-本監査は Recovery/Refactor PLAN を自動起票しない。上記の新規起票 (L4-29 / L6-71) は PO の明示指示
+本監査は Recovery/Refactor PLAN を自動起票しない。上記の新規起票 (L4-29 / L6-78) は PO の明示指示
 (2026-07-13 goal) に基づく。status 遷移 (L6-70 の confirmed 化等) は evidence gate を要するため行わない。

@@ -132,3 +132,19 @@ execution_evidence: system evidence manifest records command, ST IDs, paths, and
 exit_criteria: all mandatory selected ST cases pass or explicit defer exists.
 defect_routing: failed ST cases route to L9 correction, Reverse, Refactor, Recovery, or Incident by scope.
 verification_design: system environment, data reality, measurement method, evaluation threshold, and execution procedure are explicit for selected ST-* coverage.
+
+## §7 Engine-swap system acceptance design (PLAN-L4-22〜28)
+
+| ST-ID | whole-system oracle | exit / defect routing |
+|---|---|---|
+| `ST-ENGINE-01` | source 109→item 163→targetとprofile 8をCLI/DB/doctorで同じidentityとして追跡できる | 不一致はL4/L5設計またはprojection defectへroute |
+| `ST-ENGINE-02` | PLAN v1全件をv2 canonical DTOへ変換し、rename/revision/event/evidenceをappend-onlyで説明できる | loss/collision未判断はaccept禁止 |
+| `ST-ENGINE-03` | 正規Forward全遷移を通り、各illegal transitionが全surfaceで同じfinding/exitになる | policy誤りはL6、wiring誤りはL7へroute |
+| `ST-ENGINE-04` | authored contractからG8-G14 obligationsを生成し、linked verify PLAN/evidence/exit/defect routeを全層で検証する | 欠落層はprogram accept禁止 |
+| `ST-ENGINE-05` | baseline全tracked docsをexactly once判断し、最終delta/cross-reference/stale premiseを閉包する | pending/orphan/phantomが1件でもあればL4-25継続 |
+| `ST-ENGINE-06` | PlanAsset/FSM/Contract/Disposition/Profile/SelfProofのmodule graph cycle 0、CQS、invalid state生成不能を検証する | 新規違反はmerge blocker、既存はdebt PLAN必須 |
+| `ST-ENGINE-07` | 163 item全件でverified 3面または理由付きconditional/NA、partial/gap debt routeを確認する | pendingまたはroute欠落はaccept禁止 |
+| `ST-ENGINE-08` | rule/registry/receipt/surface exactly once、mutation survivor 0、正常fixture false-positive 0を独立processで証明する | self-proof無しruleは未統制扱い |
+
+G4 pair-freezeは本節とL4-22〜28を双方向traceし、L5/L8、L6/L7へ順に降下する。system greenだけで
+設計判断やsemantic verdictを補完せず、失敗原因が上流contractならReverse、実装ならL7、verification設計ならL9へrouteする。

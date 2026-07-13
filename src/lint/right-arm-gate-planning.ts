@@ -9,6 +9,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import YAML from "yaml";
+import { loadCompiledRightArmRegistry } from "../vmodel-contract/adapters/yaml-contract-loader";
 import { parseBacklogEntries } from "./improvement-backlog";
 import { fmValue } from "./shared";
 
@@ -19,12 +20,30 @@ export interface RightArmGatePlanningInput {
   engineSwapPlanStatus?: string | null;
   engineSwapProgramExitStatus?: string | null;
   verifyPlans?: RightArmVerifyPlan[];
+  expectedVerifyPlans?: RightArmVerificationObligation[];
+  parentBacklinks?: string[];
 }
 
 export interface RightArmVerifyPlan {
+  planId?: string;
   layer: string;
   status: string;
   engineSwapLinked: boolean;
+  owningDesignLinked?: boolean;
+  verificationGate?: string;
+  parentDesign?: string;
+  generatedArtifacts?: string[];
+  governanceArtifactExists?: boolean;
+  dependencyPlanIds?: string[];
+}
+
+export interface RightArmVerificationObligation {
+  planId: string;
+  layer: string;
+  gate: string;
+  governanceArtifact: string;
+  evidenceManifest: string;
+  requiredBacklinks?: string[];
 }
 
 export interface RightArmGatePlanningResult {
@@ -48,24 +67,30 @@ const ENGINE_SWAP_PLAN_IDS = new Set([
   "PLAN-L1-07-vmodel-engine-swap-requirements-delta",
   "PLAN-L4-24-declarative-vmodel-contract-right-arm",
 ]);
+const EXPECTED_VERIFY_LAYERS = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"];
+
+function frontmatter(content: string): Record<string, unknown> | null {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  return match ? (YAML.parse(match[1]) as Record<string, unknown>) : null;
+}
+
+function dependencyIds(content: string): string[] {
+  const raw = frontmatter(content)?.dependencies as
+    | { parent?: unknown; requires?: unknown; references?: unknown }
+    | undefined;
+  if (!raw || typeof raw !== "object") return [];
+  return [raw.parent, raw.requires, raw.references]
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.replaceAll("\\", "/").split("/").at(-1)?.replace(/\.md$/, "") ?? "");
+}
 
 function unique(values: string[]): string[] {
   return [...new Set(values.map((value) => value.replace(/[.,;:]+$/, "")))].sort();
 }
 
 export function engineSwapDependencyLink(content: string): boolean {
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!match) return false;
-  const frontmatter = YAML.parse(match[1]) as {
-    dependencies?: { parent?: unknown; requires?: unknown; references?: unknown };
-  };
-  const dependencies = frontmatter.dependencies;
-  if (!dependencies || typeof dependencies !== "object") return false;
-  const values = [dependencies.parent, dependencies.requires, dependencies.references]
-    .flatMap((value) => (Array.isArray(value) ? value : [value]))
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.replaceAll("\\", "/").split("/").at(-1)?.replace(/\.md$/, "") ?? "");
-  return values.some((value) => ENGINE_SWAP_PLAN_IDS.has(value));
+  return dependencyIds(content).some((value) => ENGINE_SWAP_PLAN_IDS.has(value));
 }
 
 export function loadRightArmGatePlanningInput(repoRoot = process.cwd()): RightArmGatePlanningInput {
@@ -83,17 +108,48 @@ export function loadRightArmGatePlanningInput(repoRoot = process.cwd()): RightAr
   const engineSwapProgramExitStatus = engineSwapContent
     ? (fmValue(engineSwapContent, "program_exit_status") ?? null)
     : null;
+  const registry = loadCompiledRightArmRegistry(repoRoot);
+  const expectedVerifyPlans = registry.obligations.map((entry) => ({
+    planId: entry.planId,
+    layer: entry.layer,
+    gate: entry.gate,
+    governanceArtifact: entry.governanceArtifact,
+    evidenceManifest: entry.evidenceManifest,
+    requiredBacklinks:
+      registry.pairExceptions.find((exception) => exception.layer === entry.layer)
+        ?.requiredBacklinks ?? [],
+  }));
+  const parentBacklinks = engineSwapContent ? dependencyIds(engineSwapContent) : [];
   const verifyPlans = existsSync(planDir)
     ? readdirSync(planDir)
         .filter((name) => name.endsWith(".md"))
         .flatMap((name) => {
           const content = readFileSync(resolve(planDir, name), "utf8");
           if (fmValue(content, "kind") !== "verify") return [];
+          const raw = frontmatter(content) ?? {};
+          const generates = Array.isArray(raw.generates) ? raw.generates : [];
+          const generatedArtifacts = generates.flatMap((entry) => {
+            if (!entry || typeof entry !== "object") return [];
+            const path = (entry as { artifact_path?: unknown }).artifact_path;
+            return typeof path === "string" ? [path.replaceAll("\\", "/")] : [];
+          });
+          const parentDesign = typeof raw.parent_design === "string" ? raw.parent_design : "";
           return [
             {
+              planId: fmValue(content, "plan_id") ?? "",
               layer: fmValue(content, "layer") ?? "",
               status: fmValue(content, "status") ?? "draft",
               engineSwapLinked: engineSwapDependencyLink(content),
+              owningDesignLinked: dependencyIds(content).includes(
+                "PLAN-L4-24-declarative-vmodel-contract-right-arm",
+              ),
+              verificationGate: fmValue(content, "verification_gate") ?? "",
+              parentDesign,
+              generatedArtifacts,
+              governanceArtifactExists: Boolean(
+                parentDesign && existsSync(resolve(repoRoot, parentDesign)),
+              ),
+              dependencyPlanIds: dependencyIds(content),
             },
           ];
         })
@@ -105,7 +161,72 @@ export function loadRightArmGatePlanningInput(repoRoot = process.cwd()): RightAr
     engineSwapPlanStatus,
     engineSwapProgramExitStatus,
     verifyPlans,
+    expectedVerifyPlans,
+    parentBacklinks,
   };
+}
+
+function validExpectedVerifyPlans(
+  input: RightArmGatePlanningInput,
+  violations: string[],
+): RightArmVerifyPlan[] {
+  const obligations = input.expectedVerifyPlans ?? [];
+  if (
+    obligations.length !== EXPECTED_VERIFY_LAYERS.length ||
+    EXPECTED_VERIFY_LAYERS.some(
+      (layer) => obligations.filter((obligation) => obligation.layer === layer).length !== 1,
+    )
+  ) {
+    violations.push("engine-swap verification obligations must define L8-L14 exactly once");
+    return [];
+  }
+  const plans = input.verifyPlans ?? [];
+  const parentBacklinks = new Set(input.parentBacklinks ?? []);
+  return obligations.flatMap((obligation) => {
+    const matches = plans.filter((plan) => plan.planId === obligation.planId);
+    if (matches.length !== 1) {
+      violations.push(
+        matches.length === 0
+          ? `engine-swap expected verify PLAN is missing: ${obligation.planId}`
+          : `engine-swap verify PLAN identity is duplicated: ${obligation.planId}`,
+      );
+      return [];
+    }
+    const plan = matches[0];
+    const mismatches: string[] = [];
+    if (plan.layer !== obligation.layer) mismatches.push(`layer=${plan.layer}`);
+    if (plan.verificationGate !== obligation.gate) {
+      mismatches.push(`verification_gate=${plan.verificationGate ?? "missing"}`);
+    }
+    if (!plan.engineSwapLinked) mismatches.push("engine-swap-link=missing");
+    if (!plan.owningDesignLinked) mismatches.push("owning-design-link=missing");
+    if (!parentBacklinks.has(obligation.planId)) mismatches.push("parent-backlink=missing");
+    if (plan.parentDesign !== obligation.governanceArtifact) {
+      mismatches.push(`parent_design=${plan.parentDesign ?? "missing"}`);
+    }
+    if (!plan.governanceArtifactExists) mismatches.push("governance-artifact=missing");
+    if (!(plan.generatedArtifacts ?? []).includes(obligation.governanceArtifact)) {
+      mismatches.push("governance-artifact-generate=missing");
+    }
+    if (!(plan.generatedArtifacts ?? []).includes(obligation.evidenceManifest)) {
+      mismatches.push("evidence-manifest-generate=missing");
+    }
+    for (const backlink of obligation.requiredBacklinks ?? []) {
+      if (!(plan.dependencyPlanIds ?? []).includes(backlink)) {
+        mismatches.push(`required-backlink=${backlink}`);
+      }
+    }
+    if (!new Set(["draft", "confirmed", "completed", "archived"]).has(plan.status)) {
+      mismatches.push(`status=${plan.status}`);
+    }
+    if (mismatches.length > 0) {
+      violations.push(
+        `engine-swap verify PLAN contract mismatch: ${obligation.planId} (${mismatches.join(",")})`,
+      );
+      return [];
+    }
+    return [plan];
+  });
 }
 
 export function analyzeRightArmGatePlanning(
@@ -122,14 +243,15 @@ export function analyzeRightArmGatePlanning(
   ]);
   const gatesStillUnplanned = /G8-G14[\s\S]{0,300}未起票/.test(input.gatesMd);
   const violations: string[] = [];
-  const expectedVerifyLayers = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"];
+  const expectedVerifyLayers = EXPECTED_VERIFY_LAYERS;
+  const validVerifyPlans = validExpectedVerifyPlans(input, violations);
   const plannedVerifyLayers = new Set(
-    (input.verifyPlans ?? [])
+    validVerifyPlans
       .filter((plan) => plan.engineSwapLinked && plan.status !== "archived")
       .map((plan) => plan.layer),
   );
   const completedVerifyLayers = new Set(
-    (input.verifyPlans ?? [])
+    validVerifyPlans
       .filter(
         (plan) =>
           plan.engineSwapLinked && (plan.status === "confirmed" || plan.status === "completed"),

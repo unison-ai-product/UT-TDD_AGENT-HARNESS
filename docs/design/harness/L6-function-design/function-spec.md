@@ -867,3 +867,90 @@ L8〜L14全層をhard gateにする。`program_exit_status=in_progress`では未
 valid additive revisionを別frontierとして`IN-PROGRESS`表示する。base欠落、base未confirmed、layer不一致は
 additive免除を認めず、通常draftとしてbase freezeをfail-closeする。design→test-designの逆参照は既存directory集合参照に加え、
 delta同士のexact artifact pathを許可する。
+
+## Vモデル engine-swap L6契約群 (PLAN-L6-70〜77)
+
+### ドメインobject / catalog / profile
+
+- `DocumentDispositionCatalog.create(input): Result<Catalog, CatalogViolation[]>`
+- `Catalog.traceSource(sourceId): SourceItemTargetTrace` / `Catalog.unresolved(): CatalogViolation[]`
+- `resolveProfile(catalog, selection): Result<ResolvedProfile, ProfileViolation[]>`
+- `PlanRevision.create(input): Result<PlanRevision, PlanRevisionError>`
+- `PlanAsset.create(input, deps)` / `PlanAsset.reconstruct(revisions)` / `PlanAsset.revise(command)`
+- `EvidenceRecord.create(input)` / `EvidenceRecord.isUsableFor(subject, policy, now)`
+
+完全constructor/factoryでinvalid stateを拒否し、reviseは旧instance/evidenceを変更せず新asset+eventを返す。
+profile解決順はsize baseline→product overlay→explicit overrideで、unknownと同優先度競合をfail-closeする。
+
+### Forward FSM / contract compiler契約
+
+- `ForwardWorkflow.reconstruct(subject, events): Result<ForwardWorkflow, WorkflowError>`
+- `ForwardWorkflow.explain(command, context): GuardVerdict`
+- `ForwardWorkflow.transition(command, context): Result<WorkflowTransition, WorkflowError>`
+- `reduceForward(events): Result<ForwardState, WorkflowError>`
+- `VModelContract.create(dto): Result<VModelContract, ContractViolation[]>`
+- `compileVModelContract(contract): CompiledContract`
+
+FSM commandはeventだけを返し、current stateはreducerで導出する。compilerは同一rule identityからdetector registry、
+doctor definition、roadmap obligationを生成し、source/generated digest drift時は実行前にfail-closeする。
+
+### 文書監査 / semantic assessment / 自己証明
+
+- `captureDocsSnapshot(gitPort): DocsSnapshot`
+- `materializeDispositionBatch(command, current): CommandResult`
+- `validateDispositionLedger(snapshot, ledger, targetResolver): ContractResult`
+- `analyzeDocumentReferences(snapshot, readers): ReferenceClosureResult`
+- `evaluateSemanticItem(input, policy): SemanticAssessmentVerdict`
+- `routeAssessmentDebt(verdict, routeFilingPort): DebtRouteResult`
+- `runSelfProof(request, deps): Promise<SelfProofReport>`
+
+snapshot queryはGit objectからraw NUL path集合を読む。batch commandはselectorを全path recordへmaterializeし、validatorは
+selectorを再評価しない。semantic evaluatorはauthored evidenceを照合するだけでverdictを創作しない。meta-verifierは
+ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdict関数をoracleとしてimportしない。
+
+### DTO / error / finding / exit 契約
+
+| 型 | 必須field | 不変条件 / error |
+|---|---|---|
+| `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `dependencies[]` | 空ID、重複dependency、revision≠1は`PlanAssetError` |
+| `RevisePlanCommand` | `assetId`, `baseRevision`, `changeSet`, `actor`, `reason` | base≠latest、空reason、identity変更は拒否 |
+| `EvidenceInput` | `evidenceId`, `subjectId`, `subjectRevision`, `sourceCommit`, `digest`, `producedAt`, `expiresAt?`, `producer` | digest/commit/revision欠落は`EvidenceError` |
+| `EvidencePolicy` | `requiredKinds[]`, `maxAge?`, `acceptedProducers[]` | 別revision、期限切れ、producer外は`EvidenceVerdict.usable=false` |
+| `WorkflowCommand` | `subjectId`, `expectedFrom`, `to`, `actor`, `reason?`, `evidenceIds[]` | 許可表外、sequence不整合、guard不足は`WorkflowError` |
+| `WorkflowContext` | `subjectRevision`, `events[]`, `evidence[]`, `now`, `policyRevision` | event/evidenceが別subjectならfail-close |
+| `VModelContractDto` | `revision`, `layers[]`, `gates[]`, `pairs[]`, `exceptions[]`, `evidencePolicies[]`, `defectRoutes[]` | exactly-once、未知参照、理由なし例外は`ContractViolation[]` |
+| `DocsSnapshot` | `commit`, `treeOid`, `trackedCount`, `pathSetSha256`, `pathStreamAlgorithm` | algorithmは`git-ls-tree-z-v1`、working tree値で代替禁止 |
+| `DispositionRecord` | `path`, `blobOid`, `zone`, `disposition`, `reason?`, `targets[]`, `planIds[]`, `impactTags[]`, `applicationStatus` | conditional field不足は`DispositionFinding` |
+| `SemanticAssessmentInput` | `itemId`, `sourceRevision`, `applicability`, `designEvidence[]`, `runtimeEvidence[]`, `testEvidence[]`, `review`, `debtRoute?` | verified 3面、gap route、conditional理由を強制 |
+| `SelfProofRequest` | `contractRevision`, `sourceHash`, `compiledHash`, `rules[]`, `fixtures[]`, `mutations[]`, `surfaces[]` | rule/fixture/mutation/surface identityを重複なく1回ずつ定義 |
+| `SelfProofDeps` | `processRunner`, `sourceHasher`, `receiptStore`, `clock` | detector verdict関数をdependencyとして受け取らない |
+
+共通返却は`Result<T, E>`または`ContractResult { ok, findings[] }`とし、findingは`ruleId`、`subjectId`、
+`message`、`severity`、`evidenceRefs[]`を持つ。authoring/validation commandは違反時exit 1、CLI usageはexit 2、
+正常はexit 0とする。空/nullで失敗を表現しない。
+
+### method別 事前条件 / 事後条件 / 不変条件
+
+| メソッド | 事前条件 | 事後条件 | 不変条件 |
+|---|---|---|---|
+| `PlanAsset.create` | 完全input、revision=1 | 1 revisionのimmutable asset | asset ID不変 |
+| `PlanAsset.reconstruct` | sequence付き全revision | latestを指すasset | 欠番/重複0 |
+| `PlanAsset.revise` | base=latest、reason/evidence policy適合 | 新asset+`PlanRevisionAdded` event | 旧instance/digest不変 |
+| `ForwardWorkflow.transition` | expectedFrom=current、guard pass | append可能なevent 1件 | stateを直接mutationしない |
+| `reduceForward` | 同subject、sequence一意 | 決定論的state/verdict | 非許可state到達0 |
+| `compileVModelContract` | validated contract | registry/doctor/roadmap manifests | rule ID/digest集合一致 |
+| `validateDispositionLedger` | immutable baseline+materialized records | stable findings | path exactly once、判断非創作 |
+| `evaluateSemanticItem` | authored evidence+policy | verdict+不足集合 | evidence不足をverifiedにしない |
+| `runSelfProof` | independent ports+fixtures | receipt/report | 対象detectorの判定をoracleにしない |
+
+### L7 test ID
+
+- Plan Asset: `U-PA-001..007`
+- Forward FSM: `U-FSM-001..007`, `P-FSM-001`
+- Contract: `U-VMC-001..005`, `I-VMC-001`
+- Disposition/profile: `U-DISP-001..005`, `I-DISP-001`, `U-PROFILE-001..005`
+- ドキュメント台帳／ドメイン／意味評価: `U-DOCLEDGER-001..005`, `U-DOMAIN-001..004`, `U-ASSESS-001..006`
+- Self-proof: `U-SP-001..008`, `I-SP-001..002`, `M-SP-001..007`
+
+各IDはpre/post/invariant、positive/negative fixture、expected finding/exitをL7 unit-test-designへ結び、
+implementation前のRed freeze、mutation survivor 0、正常fixture false-positive 0を要求する。

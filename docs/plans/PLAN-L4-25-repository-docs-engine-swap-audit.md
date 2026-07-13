@@ -14,7 +14,7 @@ owner: PO / Codex
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L9-system-test-design.md
-next_pair_freeze: L5
+next_pair_freeze: L9
 agent_slots:
   - role: tl
     slot_label: "TL - 全tracked docsの責務・正本階層・更新判断"
@@ -27,6 +27,10 @@ agent_slots:
 generates:
   - artifact_path: docs/governance/repository-document-disposition-ledger.md
     artifact_type: markdown_doc
+  - artifact_path: docs/governance/repository-document-disposition/manifest.yaml
+    artifact_type: yaml_config
+  - artifact_path: docs/governance/repository-document-disposition/entries/index.yaml
+    artifact_type: yaml_config
   - artifact_path: docs/governance/document-system-map.md
     artifact_type: markdown_doc
   - artifact_path: docs/governance/vmodel-upgrade-schedule.md
@@ -64,12 +68,14 @@ dependencies:
 ## 3. 受入条件
 
 - 監査開始commitと`git ls-files docs`件数/hashをledger headerへ固定する。
+- path集合hashは`git ls-tree -r -z --name-only <baseline_commit> -- docs`のraw NUL streamを`sha256`で算出し、working treeやOS依存の改行joinを使わない。
 - baselineの全tracked docsがexactly once現れ、未判断・重複・存在しないpathが0件である。
 - `update|merge|supersede|archive`はtarget artifact/PLAN、`retain|not_applicable`は判断理由を持つ。
 - DDD/OOP波及対象のL4-L6正本、FSM/PLAN v2対象、右腕対象をtagで検索できる。
 - classを使わない判断も理由とpure function/VO/port境界を持ち、設計欠落を「非OOP」で正当化しない。
 - 旧前提 `572|107文書|~150 items|3 profiles|最小影響|L8-L14恒久park` のcanonical残存が0件である。
 - 更新完了後の全docsを再snapshotし、未処理deltaとcross-reference orphanを0にする。
+- baseline後のadd/delete/renameは明示deltaとして保持し、baseline exactly-onceと最終path集合の双方を閉包する。
 - detectorはledgerを読み、監査対象/判断/targetを推測生成しない。
 
 ## 4. 降下先

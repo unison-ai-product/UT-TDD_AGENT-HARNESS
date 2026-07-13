@@ -57,7 +57,7 @@ UT-TDD Agent Harness の L1 要件粒度へ翻訳する。既存正本の即時�
 ## 1. 入力
 
 - L0 charter: `docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md`
-- clean ZIP 確認結果: ZIP 内 572 files / 展開 572 files、UTF-8/YAML/trace/schedule/detect 検査 OK
+- 現行比較入力: checked ZIP SHA-256 `47b9a900ac99e093a1750f68f34c00e3bbd78c13a070d57dcdaba9ae50a274a8`、624 entries、番号付き設計書109件、semantic item 163件、category 21件、profile 8件。旧clean ZIPの件数はsupersededであり現行判断へ使用しない
 - 現行 L1 技術要求: `docs/design/harness/L1-requirements/technical-requirements.md`
 - 駆動モデル設計: `docs/design/harness/L4-basic-design/function.md` §3、`PLAN-L5-10`
 - 右肺導入中 PLAN: `PLAN-RECOVERY-10-right-lung-quality-assurance`
