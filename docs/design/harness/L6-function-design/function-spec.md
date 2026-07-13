@@ -1013,7 +1013,7 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
   `open`／`openSync`はwrite-capable flagをfail-closeし、FD/FileHandleを経る任意dataflowはPLAN-L7-425の独立自己証明対象とする。
 - 新規read、mode別件数差、stale契約、live root由来、HEAD write、scan errorは全てhard violationとし、コメントや文字列は数えない。
 
-### persistent DB test ownership
+### 永続DBテストの所有責務
 
 - persistent DB ownerは`tests/**/*.test.ts`を再帰走査し、DB acquisition aliasを正規化して自動発見する。
 - ownerは`support/temp-tree`由来の`removeTestTree`を実行可能経路で呼び、raw recursive `rm`／`rmSync`を
