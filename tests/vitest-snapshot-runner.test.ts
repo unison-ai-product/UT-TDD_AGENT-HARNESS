@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -39,14 +39,38 @@ describe("vitest snapshot runner", () => {
       writeFileSync(join(pack, "package.json"), "{}\n");
       mkdirSync(join(pack, "node_modules"));
       writeFileSync(join(pack, "node_modules", "leak.txt"), "source-only\n");
+      mkdirSync(join(pack, "nested", "node_modules"), { recursive: true });
+      writeFileSync(join(pack, "nested", "node_modules", "leak.txt"), "nested-source-only\n");
 
       expect(resolveSnapshotSource(pack)).toEqual({ kind: "copy" });
       createSnapshot(pack, snapshot);
       expect(existsSync(join(snapshot, "package.json"))).toBe(true);
       expect(existsSync(join(snapshot, "node_modules"))).toBe(false);
+      expect(existsSync(join(snapshot, "nested", "node_modules"))).toBe(false);
     } finally {
       removeTestTree(parent);
       removeTestTree(snapshot);
+    }
+  });
+
+  it("U-TESTHYGIENE-034: derives a non-Git reference from the captured execution", () => {
+    const source = mkdtempSync(join(tmpdir(), "ut-tdd-copy-source-"));
+    const execution = `${source}-execution`;
+    const reference = `${source}-reference`;
+    try {
+      writeFileSync(join(source, "package.json"), '{"version":1}\n');
+      createSnapshot(source, execution);
+      writeFileSync(join(source, "package.json"), '{"version":2}\n');
+      createSnapshot(execution, reference);
+
+      expect(readFileSync(join(execution, "package.json"), "utf8")).toBe(
+        readFileSync(join(reference, "package.json"), "utf8"),
+      );
+      expect(readFileSync(join(reference, "package.json"), "utf8")).toContain('"version":1');
+    } finally {
+      removeTestTree(source);
+      removeTestTree(execution);
+      removeTestTree(reference);
     }
   });
 

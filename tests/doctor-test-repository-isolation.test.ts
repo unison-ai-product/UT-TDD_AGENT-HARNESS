@@ -121,6 +121,46 @@ describe("doctor test repository isolation", () => {
     );
   });
 
+  it("U-TESTHYGIENE-035: traces local path/read/process aliases and rejects root decoys", () => {
+    const result = analyzeTestRepositoryIsolation({
+      files: [
+        {
+          path: "tests/path-alias.test.ts",
+          source: "const p='docs/README.md'; readFileSync(p);",
+        },
+        {
+          path: "tests/local-alias.test.ts",
+          source: "function f(){ const load=readFileSync; load('src/cli.ts'); }",
+        },
+        {
+          path: "tests/process-alias.test.ts",
+          source: "const p=require('node:process'); p.cwd();",
+        },
+        {
+          path: "tests/void-root.test.ts",
+          source: "void headSnapshotRoot();",
+        },
+        {
+          path: "tests/unused-root.test.ts",
+          source: "const unused=headSnapshotRoot();",
+        },
+      ],
+      contracts: {
+        "tests/void-root.test.ts": { mode: "head_snapshot", calls: 1, reason: "decoy" },
+        "tests/unused-root.test.ts": { mode: "head_snapshot", calls: 1, reason: "decoy" },
+      },
+    });
+    expect(result.messages).toEqual(
+      expect.arrayContaining([
+        "test-repository-isolation - violation: unclassified:tests/path-alias.test.ts:repository-read=1",
+        "test-repository-isolation - violation: unclassified:tests/local-alias.test.ts:repository-read=1",
+        "test-repository-isolation - violation: unclassified:tests/process-alias.test.ts:repository-read=1",
+        "test-repository-isolation - violation: stale-contract:tests/void-root.test.ts",
+        "test-repository-isolation - violation: stale-contract:tests/unused-root.test.ts",
+      ]),
+    );
+  });
+
   it("U-TESTHYGIENE-014: rejects callsite drift and stale contracts", () => {
     const result = analyzeTestRepositoryIsolation({
       files: [

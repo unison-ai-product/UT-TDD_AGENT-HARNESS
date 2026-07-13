@@ -8,7 +8,7 @@ import {
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 function run(
   command: string,
@@ -91,7 +91,9 @@ export function createSnapshot(
   cpSync(repoRoot, snapshotRoot, {
     recursive: true,
     filter: (path) =>
-      ![".git", "node_modules"].includes(path.slice(repoRoot.length + 1)),
+      !relative(repoRoot, path)
+        .split(/[\\/]/)
+        .some((part) => [".git", "node_modules"].includes(part)),
   });
 }
 
@@ -159,9 +161,9 @@ export function runSnapshotTests(
   try {
     const source = resolveSnapshotSource(repoRoot);
     createSnapshot(repoRoot, snapshotRoot, source);
+    createSnapshot(snapshotRoot, referenceRoot, resolveSnapshotSource(snapshotRoot));
     run(process.execPath, ["install", "--frozen-lockfile"], snapshotRoot);
     run(process.execPath, ["run", "src/cli.ts", "db", "rebuild"], snapshotRoot);
-    createSnapshot(repoRoot, referenceRoot, source);
     copyReferenceRuntimeInputs(snapshotRoot, referenceRoot);
     if (source.kind === "git")
       run(

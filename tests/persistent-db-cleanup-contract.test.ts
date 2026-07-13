@@ -35,6 +35,14 @@ function createsPersistedHarnessDb(path: string, source: string): boolean {
       continue;
     for (const declaration of statement.declarationList.declarations) {
       if (!declaration.initializer) continue;
+      if (
+        ts.isIdentifier(declaration.name) &&
+        ts.isIdentifier(declaration.initializer) &&
+        namespaces.has(declaration.initializer.text)
+      ) {
+        namespaces.add(declaration.name.text);
+        continue;
+      }
       if (ts.isObjectBindingPattern(declaration.name)) {
         for (const element of declaration.name.elements) {
           const target = element.propertyName?.getText(file) ?? element.name.getText(file);
@@ -116,6 +124,14 @@ function usesRawRecursiveTreeRemoval(path: string, source: string): boolean {
       continue;
     for (const declaration of statement.declarationList.declarations) {
       if (!declaration.initializer) continue;
+      if (
+        ts.isIdentifier(declaration.name) &&
+        ts.isIdentifier(declaration.initializer) &&
+        namespaces.has(declaration.initializer.text)
+      ) {
+        namespaces.add(declaration.name.text);
+        continue;
+      }
       if (ts.isObjectBindingPattern(declaration.name)) {
         for (const element of declaration.name.elements) {
           const target = element.propertyName?.getText(file) ?? element.name.getText(file);
@@ -217,6 +233,22 @@ function hasLiveCleanupCall(path: string, source: string): boolean {
         current.expression.kind === ts.SyntaxKind.FalseKeyword
       )
         return true;
+      if (
+        ts.isIfStatement(current) &&
+        current.elseStatement &&
+        current.elseStatement.pos <= node.pos &&
+        node.end <= current.elseStatement.end &&
+        current.expression.kind === ts.SyntaxKind.TrueKeyword
+      )
+        return true;
+      if (
+        ts.isBinaryExpression(current) &&
+        current.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+        current.right.pos <= node.pos &&
+        node.end <= current.right.end &&
+        current.left.kind === ts.SyntaxKind.FalseKeyword
+      )
+        return true;
     }
     return false;
   };
@@ -284,6 +316,24 @@ describe("persistent harness DB cleanup contract", () => {
         "import { removeTestTree } from '../support/temp-tree'; if (false) removeTestTree(root);",
       ),
     ).toBe(false);
+    expect(
+      hasLiveCleanupCall(
+        "tests/nested/owner.test.ts",
+        "import { removeTestTree } from '../support/temp-tree'; false && removeTestTree(root); if (true) {} else removeTestTree(root);",
+      ),
+    ).toBe(false);
+    expect(
+      createsPersistedHarnessDb(
+        "tests/nested/owner.test.ts",
+        "import * as db from '../src/db'; const d = db; d.ensureHarnessSchema(root);",
+      ),
+    ).toBe(true);
+    expect(
+      usesRawRecursiveTreeRemoval(
+        "tests/nested/owner.test.ts",
+        "import * as fs from 'node:fs'; const f = fs; f.rmSync(root, { recursive: true });",
+      ),
+    ).toBe(true);
   });
 
   it("U-TESTHYGIENE-019: auto-discovers every persisted DB owner and requires retrying cleanup", () => {

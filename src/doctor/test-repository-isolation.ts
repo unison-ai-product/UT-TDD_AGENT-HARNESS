@@ -62,14 +62,6 @@ function isProcessReference(node: ts.Expression): boolean {
   );
 }
 
-function isCwdAccess(node: ts.Node): node is ts.PropertyAccessExpression {
-  return (
-    ts.isPropertyAccessExpression(node) &&
-    isProcessReference(node.expression) &&
-    node.name.text === "cwd"
-  );
-}
-
 const REPOSITORY_READ_APIS = new Set([
   "access",
   "accessSync",
@@ -87,15 +79,24 @@ const REPOSITORY_READ_APIS = new Set([
 const REPOSITORY_PATH =
   /^(?:\.?(?:\/|\\))?(?:\.claude|\.codex|\.github|\.ut-tdd|docs|scripts|skills|src|tests)(?:\/|\\)|^(?:AGENTS\.md|CLAUDE\.md|package\.json|tsconfig\.json|vitest\.config\.ts)$/;
 
-function staticPath(node: ts.Expression): string | null {
+function staticPath(
+  node: ts.Expression,
+  paths: ReadonlyMap<string, string> = new Map(),
+): string | null {
   if (ts.isStringLiteralLike(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (ts.isIdentifier(node)) return paths.get(node.text) ?? null;
+  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    const left = staticPath(node.left, paths);
+    const right = staticPath(node.right, paths);
+    return left !== null && right !== null ? left + right : null;
+  }
   if (
     ts.isCallExpression(node) &&
     ((ts.isIdentifier(node.expression) && ["join", "resolve"].includes(node.expression.text)) ||
       (ts.isPropertyAccessExpression(node.expression) &&
         ["join", "resolve"].includes(node.expression.name.text)))
   ) {
-    const parts = node.arguments.map(staticPath);
+    const parts = node.arguments.map((argument) => staticPath(argument, paths));
     return parts.every((part): part is string => part !== null) ? parts.join("/") : null;
   }
   return null;
@@ -112,46 +113,75 @@ function memberName(node: ts.Expression): string | null {
 function isDirectRepositoryRead(
   node: ts.CallExpression,
   aliases: ReadonlyMap<string, string>,
+  paths: ReadonlyMap<string, string>,
 ): boolean {
   const rawName = memberName(node.expression);
   const name = rawName ? (aliases.get(rawName) ?? rawName) : null;
-  const target = node.arguments[0] ? staticPath(node.arguments[0]) : null;
+  const target = node.arguments[0] ? staticPath(node.arguments[0], paths) : null;
   return Boolean(name && REPOSITORY_READ_APIS.has(name) && target && REPOSITORY_PATH.test(target));
 }
 
 function inspectSource(path: string, source: string): { calls: number; forbidden: boolean } {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
   const readAliases = new Map<string, string>();
-  for (const statement of file.statements) {
+  const pathAliases = new Map<string, string>();
+  const processAliases = new Set<string>(["process"]);
+  const collect = (node: ts.Node): void => {
     if (
-      ts.isImportDeclaration(statement) &&
-      statement.importClause?.namedBindings &&
-      ts.isNamedImports(statement.importClause.namedBindings)
-    ) {
-      for (const element of statement.importClause.namedBindings.elements) {
+      ts.isImportDeclaration(node) &&
+      node.importClause?.namedBindings &&
+      ts.isNamedImports(node.importClause.namedBindings)
+    )
+      for (const element of node.importClause.namedBindings.elements) {
         const imported = element.propertyName?.text ?? element.name.text;
         if (REPOSITORY_READ_APIS.has(imported)) readAliases.set(element.name.text, imported);
       }
-    }
-    if (ts.isVariableStatement(statement) && statement.declarationList.flags & ts.NodeFlags.Const) {
-      for (const declaration of statement.declarationList.declarations) {
-        if (!declaration.initializer) continue;
-        if (ts.isObjectBindingPattern(declaration.name)) {
-          for (const element of declaration.name.elements) {
-            const imported = element.propertyName?.getText(file) ?? element.name.getText(file);
-            if (REPOSITORY_READ_APIS.has(imported) && ts.isIdentifier(element.name))
-              readAliases.set(element.name.text, imported);
-          }
-          continue;
+    if (ts.isVariableDeclaration(node) && node.initializer) {
+      if (ts.isObjectBindingPattern(node.name)) {
+        for (const element of node.name.elements) {
+          const imported = element.propertyName?.getText(file) ?? element.name.getText(file);
+          if (REPOSITORY_READ_APIS.has(imported) && ts.isIdentifier(element.name))
+            readAliases.set(element.name.text, imported);
         }
-        if (!ts.isIdentifier(declaration.name)) continue;
-        const target = memberName(declaration.initializer);
+      } else if (ts.isIdentifier(node.name)) {
+        const target = memberName(node.initializer);
         const canonical = target ? (readAliases.get(target) ?? target) : null;
         if (canonical && REPOSITORY_READ_APIS.has(canonical))
-          readAliases.set(declaration.name.text, canonical);
+          readAliases.set(node.name.text, canonical);
+        const value = staticPath(node.initializer, pathAliases);
+        if (value !== null) pathAliases.set(node.name.text, value);
+        if (
+          isProcessReference(node.initializer) ||
+          (ts.isIdentifier(node.initializer) && processAliases.has(node.initializer.text))
+        )
+          processAliases.add(node.name.text);
       }
     }
-  }
+    ts.forEachChild(node, collect);
+  };
+  for (let pass = 0; pass < 4; pass += 1) collect(file);
+  const isProcessRef = (node: ts.Expression): boolean =>
+    isProcessReference(node) || (ts.isIdentifier(node) && processAliases.has(node.text));
+  const isConsumedRootCall = (node: ts.CallExpression): boolean => {
+    if (ts.isExpressionStatement(node.parent) || ts.isVoidExpression(node.parent)) return false;
+    if (!ts.isVariableDeclaration(node.parent) || !ts.isIdentifier(node.parent.name)) return true;
+    const declarationName = node.parent.name;
+    const name = declarationName.text;
+    let consumed = false;
+    const findUse = (candidate: ts.Node): void => {
+      if (
+        ts.isIdentifier(candidate) &&
+        candidate.text === name &&
+        candidate !== declarationName &&
+        ts.isCallExpression(candidate.parent) &&
+        candidate.parent.arguments.includes(candidate)
+      )
+        consumed = true;
+      ts.forEachChild(candidate, findUse);
+    };
+    findUse(file);
+    return consumed;
+  };
   let calls = 0;
   let forbidden = false;
   const visit = (node: ts.Node): void => {
@@ -179,17 +209,26 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
       isProcessReference(node.initializer)
     )
       forbidden = true;
-    if (ts.isCallExpression(node) && isCwdAccess(node.expression)) calls += 1;
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.name.text === "cwd" &&
+      isProcessRef(node.expression.expression)
+    )
+      calls += 1;
     if (
       ts.isCallExpression(node) &&
       ts.isIdentifier(node.expression) &&
       node.expression.text === "headSnapshotRoot" &&
-      !ts.isExpressionStatement(node.parent)
+      isConsumedRootCall(node)
     )
       calls += 1;
-    if (ts.isCallExpression(node) && isDirectRepositoryRead(node, readAliases)) calls += 1;
+    if (ts.isCallExpression(node) && isDirectRepositoryRead(node, readAliases, pathAliases))
+      calls += 1;
     else if (
-      isCwdAccess(node) &&
+      ts.isPropertyAccessExpression(node) &&
+      node.name.text === "cwd" &&
+      isProcessRef(node.expression) &&
       !(ts.isCallExpression(node.parent) && node.parent.expression === node)
     )
       forbidden = true;
@@ -205,7 +244,7 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
     if (
       ts.isElementAccessExpression(node) &&
       ts.isPropertyAccessExpression(node.expression) &&
-      isProcessReference(node.expression.expression) &&
+      isProcessRef(node.expression.expression) &&
       node.expression.name.text === "env" &&
       ts.isStringLiteralLike(node.argumentExpression) &&
       ["INIT_CWD", "PWD"].includes(node.argumentExpression.text)
@@ -213,14 +252,14 @@ function inspectSource(path: string, source: string): { calls: number; forbidden
       forbidden = true;
     if (
       ts.isPropertyAccessExpression(node) &&
-      isProcessReference(node.expression) &&
+      isProcessRef(node.expression) &&
       node.name.text === "chdir"
     )
       forbidden = true;
     if (
       ts.isPropertyAccessExpression(node) &&
       ts.isPropertyAccessExpression(node.expression) &&
-      isProcessReference(node.expression.expression) &&
+      isProcessRef(node.expression.expression) &&
       node.expression.name.text === "env"
     ) {
       if (["INIT_CWD", "PWD"].includes(node.name.text)) forbidden = true;
