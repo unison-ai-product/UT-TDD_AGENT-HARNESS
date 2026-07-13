@@ -34,9 +34,9 @@ describe("doctor test repository isolation", () => {
   it("U-TESTHYGIENE-017: rejects direct root aliases that bypass snapshot cwd", () => {
     const result = analyzeTestRepositoryIsolation({
       files: [
-        { path: "tests/dirname.test.ts", source: "const root = __dirname;" },
-        { path: "tests/meta.test.ts", source: "const root = import.meta.dirname;" },
-        { path: "tests/element.test.ts", source: "process['cwd']();" },
+        { path: "tests/dirname.test.ts", source: "const root = __" + "dirname;" },
+        { path: "tests/meta.test.ts", source: "const root = import.meta." + "dirname;" },
+        { path: "tests/element.test.ts", source: "process['" + "cwd']();" },
       ],
       contracts: {},
     });

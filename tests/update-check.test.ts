@@ -20,7 +20,9 @@ import {
 } from "../src/setup/update-check";
 
 const ROOT = "/harness";
-const REPO_ROOT = join(fileURLToPath(import.meta.url), "..", "..");
+import { headSnapshotRoot } from "./support/workspace-roots";
+
+const REPO_ROOT = headSnapshotRoot();
 const CLI_PATH = join(REPO_ROOT, "src", "cli.ts");
 
 function runCli(args: string[], env: NodeJS.ProcessEnv, cwd = REPO_ROOT) {

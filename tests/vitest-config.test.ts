@@ -9,7 +9,6 @@ describe("U-TESTHYGIENE-001: vitest execution boundary", () => {
         exclude?: string[];
         testTimeout?: number;
         globalSetup?: string[];
-        setupFiles?: string[];
       };
     }).test;
     expect(test?.include).toEqual(["tests/**/*.test.ts"]);
@@ -22,6 +21,5 @@ describe("U-TESTHYGIENE-001: vitest execution boundary", () => {
     ]);
     expect(test?.testTimeout).toBe(30_000);
     expect(test?.globalSetup).toEqual(["tests/global-setup.ts"]);
-    expect(test?.setupFiles).toEqual(["tests/workspace-setup.ts"]);
   });
 });

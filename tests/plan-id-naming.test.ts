@@ -11,7 +11,9 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { planIdSchema } from "../src/schema/frontmatter";
 
-const plansDir = join(dirname(fileURLToPath(import.meta.url)), "..", "docs", "plans");
+import { headSnapshotRoot } from "./support/workspace-roots";
+
+const plansDir = join(headSnapshotRoot(), "docs", "plans");
 
 function extract(content: string, key: string): string | undefined {
   const m = content.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));

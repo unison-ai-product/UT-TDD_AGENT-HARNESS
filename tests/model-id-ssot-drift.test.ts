@@ -9,7 +9,9 @@ import { MODEL_IDS } from "../src/team/model-policy";
 
 // PLAN-L7-256: real-repo regression for model ID SSoT drift.
 // loadTemplates prefers disk templates over built-ins, so both sources must stay aligned.
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+import { headSnapshotRoot } from "./support/workspace-roots";
+
+const repoRoot = headSnapshotRoot();
 const CLAUDE_CATALOG = new Set<string>(Object.values(MODEL_IDS.claude));
 
 describe("U-MODELID-SSOT: model ID single source of truth", () => {
