@@ -203,8 +203,8 @@ boundary rule: lint modules は first-class detector のままにする。DB lay
 
 | コンテキスト | domain / application / port | class採用判断 | I/O adapter |
 |---|---|---|---|
-| kernel | `Result`、`Finding`、branded ID/digest | immutable VOのみ | なし |
-| plan-asset | `PlanAsset`、`PlanRevision`、`EvidenceRecord`、採番予約 | lifecycle/identityを持つaggregate/VO | frontmatter、台帳、SQLite |
+| kernel | `Result`、`Finding`、branded ID/digest、context横断alias resolver | immutable VO/pure resolverのみ | なし |
+| plan-asset | `PlanAsset`、`PlanRevision`、`EvidenceRecord`、採番予約、canonical ledger schema/application | lifecycle/identityを持つaggregate/VO。schema catalogはtyped data | frontmatter、HEAD provenance、専用SQLite ledger |
 | forward | `ForwardWorkflow`、遷移event、reducer/policy | aggregateとpure reducer/policy | 遷移台帳、evidence reader |
 | vmodel-contract | 検証済contract、layer/gate VO、compiler | 検証済aggregateとapplication compiler | YAML loader、生成registry |
 | disposition | source/item/target/disposition edge catalog | 検証済aggregateとimmutable edge | Markdown/YAML loader、projection writer |
@@ -219,6 +219,8 @@ boundary rule: lint modules は first-class detector のままにする。DB lay
 |---|---|---|---|
 | W1 | `src/kernel/{result,finding,ids}.ts` | 共通`Result`/`Finding`/branded ID | `src/workflow/contracts-types.ts`から互換re-exportし、consumer移行後に旧定義を除去 |
 | W1 | `src/plan-asset/domain/*` | `PlanAsset`, `PlanRevision`, `EvidenceRecord`, `PlanIdReservation` | legacy frontmatter parserはadapterとしてcanonical DTOを返す |
+| W1 | `src/plan-asset/ledger/*` | `ledgerSchemaDdl`, `migratePlanLedger`、後続append/reducer unit of work | `.ut-tdd/ledger/harness-ledger.db`だけを正本化し、`harness.db`へ混入しない |
+| W1 | `src/kernel/plan-alias.ts` | `resolveLegacyPlanAlias` | state-dbとplan-asset adapterの相互importを除去し、両者からpure kernelへ一方向依存 |
 | W1 | `src/forward/domain/*` | `ForwardWorkflow`, `reduceForward`, policy table | 現行workflow helperはapplication facadeへ段階委譲 |
 | W2 | `src/vmodel-contract/{domain,application,ports,adapters}/*` | `VModelContract`, `compileVModelContract` | 手書きgate定数をgenerated registryへ置換し、drift gate後に旧定数を除去 |
 | W2 | `src/disposition/{domain,adapters}/*` | `DocumentDispositionCatalog` | Markdown catalog loaderとDB projectorを分離 |

@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+export { resolveLegacyPlanAlias } from "../../kernel/plan-alias.js";
+
 type Result<T, E> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: E };
@@ -52,28 +54,6 @@ export function deriveLegacyAssetId(repositoryIdentity: string, legacyPlanId: st
     hash.update(length).update(bytes);
   }
   return `plan:legacy:${hash.digest("hex")}`;
-}
-
-export function resolveLegacyPlanAlias(
-  alias: string,
-  planIds: readonly string[],
-): Result<
-  string,
-  {
-    ruleId: string;
-    candidates: readonly string[];
-  }
-> {
-  if (planIds.includes(alias)) return { ok: true, value: alias };
-  const candidates = planIds.filter((planId) => planId.startsWith(`${alias}-`)).sort();
-  if (candidates.length === 1) return { ok: true, value: candidates[0] };
-  return {
-    ok: false,
-    error: {
-      ruleId: candidates.length ? "plan-migration-collision" : "plan-asset-not-found",
-      candidates,
-    },
-  };
 }
 
 function deepFreeze<T>(value: T): T {

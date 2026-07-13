@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  createIndexSql,
   createTableSql,
+  createTriggerSql,
   primaryKeyColumnsOf,
   type TableDef,
   validateTableDef,
@@ -128,5 +130,28 @@ describe("typed harness.db constraints", () => {
       checks: [enumCheck("status", ["ok'); DROP TABLE parents;--"])],
     });
     expect(sql).toContain("'ok''); DROP TABLE parents;--'");
+  });
+
+  it("renders typed partial UNIQUE indexes and append-only triggers", () => {
+    expect(
+      createIndexSql({
+        name: "uq_active",
+        table: "child_rows",
+        columns: ["owner_id", "ordinal"],
+        unique: true,
+        predicate: { kind: "equals", column: "status", value: "draft" },
+      }),
+    ).toBe(
+      "CREATE UNIQUE INDEX IF NOT EXISTS uq_active ON child_rows (owner_id, ordinal) WHERE status = 'draft'",
+    );
+    expect(
+      createTriggerSql({
+        name: "trg_child_rows_no_update",
+        table: "child_rows",
+        timing: "BEFORE",
+        event: "UPDATE",
+        action: { kind: "raise-abort", message: "append-only:child_rows" },
+      }),
+    ).toContain("RAISE(ABORT, 'append-only:child_rows')");
   });
 });

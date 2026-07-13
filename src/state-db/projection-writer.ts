@@ -10,6 +10,7 @@ import {
   parseCanonicalDocumentStructure,
 } from "../export/document-export";
 import { loadRelationGraphSourceSet } from "../graph/loader";
+import { resolveLegacyPlanAlias } from "../kernel/plan-alias.js";
 import { loadChangedFiles } from "../lint/change-impact";
 import {
   analyzeDescentObligations,
@@ -53,7 +54,6 @@ import {
   recommendVerificationProfiles,
 } from "../lint/verification-profile";
 import { loadMemoryEntries } from "../memory/index";
-import { resolveLegacyPlanAlias } from "../plan-asset/adapters/legacy-plan-adapter.js";
 import {
   HARNESS_DB_TABLE_BY_NAME,
   HARNESS_DB_TABLES,

@@ -79,6 +79,20 @@ export interface IndexDef {
   name: string;
   table: string;
   columns: string[];
+  unique?: boolean;
+  predicate?: IndexPredicate;
+}
+
+export type IndexPredicate =
+  | { kind: "is-null"; column: string }
+  | { kind: "equals"; column: string; value: CheckScalar };
+
+export interface TriggerDef {
+  name: string;
+  table: string;
+  timing: "BEFORE";
+  event: "UPDATE" | "DELETE";
+  action: { kind: "raise-abort"; message: string };
 }
 
 /**
@@ -238,7 +252,22 @@ function renderCheck(expression: CheckExpression): string {
 
 /** CREATE INDEX DDL。 */
 export function createIndexSql(index: IndexDef): string {
-  return `CREATE INDEX IF NOT EXISTS ${index.name} ON ${index.table} (${index.columns.join(", ")})`;
+  assertSqlIdentifier(index.name);
+  assertSqlIdentifier(index.table);
+  if (index.columns.length === 0) throw new Error(`${index.name} INDEX の列が空です`);
+  for (const column of index.columns) assertSqlIdentifier(column);
+  if (index.predicate) assertSqlIdentifier(index.predicate.column);
+  const predicate = index.predicate
+    ? ` WHERE ${index.predicate.column} ${index.predicate.kind === "is-null" ? "IS NULL" : `= ${renderScalar(index.predicate.value)}`}`
+    : "";
+  return `CREATE ${index.unique ? "UNIQUE " : ""}INDEX IF NOT EXISTS ${index.name} ON ${index.table} (${index.columns.join(", ")})${predicate}`;
+}
+
+export function createTriggerSql(trigger: TriggerDef): string {
+  assertSqlIdentifier(trigger.name);
+  assertSqlIdentifier(trigger.table);
+  const message = trigger.action.message.replaceAll("'", "''");
+  return `CREATE TRIGGER IF NOT EXISTS ${trigger.name} ${trigger.timing} ${trigger.event} ON ${trigger.table} BEGIN SELECT RAISE(ABORT, '${message}'); END`;
 }
 
 /** schema 全体の DDL 文 (table → index の順、deterministic)。 */
