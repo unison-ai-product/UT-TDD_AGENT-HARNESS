@@ -1000,6 +1000,15 @@ command type=`migration.observe|decide|revise`、payload digest、result ref、r
 receipt-only streamはすべて`plan-ledger-unavailable`とし、reducer replayとprojectionの集合差を許さない。
 各insert境界のfault injection、2 writer競合、file reopenでtransaction delta 0または同一digest stateを証明する。
 
+`LegacyMigrationDryRun.run(repoRoot)`はsource commitのtracked PLAN全件とdecision manifestをexactly-onceで結合し、
+`total=emitted`、legacy ID一意、decision field matrix、collision manifestの欠落・余剰・group不一致を検査する。
+各recordはsource path/commit/blob OID/content digest、delegation targetを持ち、reportはinventory/report digestを返す。
+完了PLANの`generates`はHEADの非空fileまたは配下に非空blobを持つdirectory familyへ突合する。
+snapshotは`commit:path`から取得した実blob bytesで再検証し、working tree再hashやreport内自己比較を証拠にしない。
+role delegationは`vmodel-role-contracts.md`の7 role全単射をHEADからstrict loadし、既存slotを
+`role + slotLabel + contractRef`へlossless projectionする。target slotはHEAD item ledgerとHEAD document catalogを
+`resolveCanonicalTarget`で照合する。未知role、contract欠落、slot欠落はglobal findingとしてfail-closeする。
+
 canonical JSONはobject keyをUTF-8 bytewise昇順、array順序保持、numberはsafe integer、stringはNFC検証済みUTF-8、
 boolean/nullをそのままframe化し、空白を持たない。YAML tag、anchor、merge key、非string map key、safe integer外numberは
 lossless変換不能として`plan-migration-loss`にする。未知fieldは`unknownFrontmatter`のcanonical JSONと元frontmatter digestを

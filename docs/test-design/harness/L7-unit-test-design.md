@@ -1215,6 +1215,14 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-031` | sequence/kind/time/identity/source digest mutation | `reduceLegacyMigration` | first observed・連続列・非減少時刻・immutable provenance違反を全件拒否 |
 | `U-PA-032` | 各append境界fault injection | migration transaction port | event/current/asset/revision/alias/receiptの全table delta 0 |
 | `U-PA-033` | valid ledger close→file reopen/rebuild | migration reconstruct | state/event/payload/provenance digest集合が完全一致 |
+| `U-PA-034` | source commitのHEAD PLAN全件 | `LegacyMigrationDryRun` | inventoryとrecordがexactly-once bijection、total=emitted、legacy ID重複0 |
+| `U-PA-035` | 20群/41件reviewed collision manifest | decision resolver | migrated=700、rekeyed=41、pending=0。manifest欠落・余剰・group不一致はfail-close |
+| `U-PA-036` | 別legacy IDを返すdecision port | dry-run record join | `plan-migration-preview-id-mismatch`、finding 1件以上 |
+| `U-PA-037` | 同一HEAD・同一manifestを2回実行 | dry-run report | record順、finding順、inventory/report digest完全一致 |
+| `U-PA-038` | HEAD exact file / directory family / hollow / missing | `HeadTargetRegistry` | 非空fileと非空familyのみ存在判定、hollow/missingを拒否 |
+| `U-PA-039` | record source commit/path/OID/content digest | 独立Git object oracle | `commit:path` OIDと実blob bytes SHA-256がrecordと一致 |
+| `U-PA-040` | 全agent slot + 7 role contract | role contract loader/projection | role全単射、全slot contractRef付与、HEAD contract blob非空。未知role/欠落は拒否 |
+| `U-PA-041` | item ledgerの全`target_slot` edge | HEAD document catalog resolver | 全slot ref解決、存在しないslotはglobal findingでfail-close |
 | `CANDIDATE-FSM-001` | 正規stateごとの次event | `transition` | 許可表どおりのnext state/event、exit 0 |
 | `CANDIDATE-FSM-002` | proposed→implementing | `transition` | `forward-transition-illegal`, exit 1 |
 | `CANDIDATE-FSM-003` | pair frozen、Red evidenceなし | implement command | `forward-red-evidence-missing`, exit 1 |

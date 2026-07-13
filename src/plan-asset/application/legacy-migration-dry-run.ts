@@ -92,12 +92,12 @@ export class LegacyMigrationDryRun {
     const headArtifacts = HeadTargetRegistry.load(repoRoot);
     const roleContracts = loadRoleContractRegistry(repoRoot);
     const records = inventory.value.items.map((item) =>
-      record(
+      record({
         item,
-        this.decisions.decide(item, collisionByPlan.get(item.legacyPlanId) ?? null),
+        proposal: this.decisions.decide(item, collisionByPlan.get(item.legacyPlanId) ?? null),
         headArtifacts,
         roleContracts,
-      ),
+      }),
     );
     const findings = [
       ...manifestFindings(inventory.value.collisionGroups),
@@ -234,12 +234,13 @@ class ReviewedDecisionManifest implements MigrationDecisionPort {
   }
 }
 
-function record(
-  item: LegacyPlanInventoryItem,
-  proposal: MigrationDecisionProposal,
-  headArtifacts: HeadTargetRegistry,
-  roleContracts: RoleContractRegistry,
-): MigrationDryRunRecord {
+function record(input: {
+  readonly item: LegacyPlanInventoryItem;
+  readonly proposal: MigrationDecisionProposal;
+  readonly headArtifacts: HeadTargetRegistry;
+  readonly roleContracts: RoleContractRegistry;
+}): MigrationDryRunRecord {
+  const { item, proposal, headArtifacts, roleContracts } = input;
   const delegation = delegationProjection(item, roleContracts, headArtifacts);
   const findings: MigrationDryRunFinding[] = [
     ...artifactFindings(item, headArtifacts),
