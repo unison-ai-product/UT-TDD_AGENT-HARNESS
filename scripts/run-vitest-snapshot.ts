@@ -166,7 +166,17 @@ export function sealReference(referenceRoot: string): void {
   if (!identity) throw new Error("reference snapshot identity cannot be resolved");
   run(
     "icacls",
-    [referenceRoot, "/inheritance:r", "/grant:r", `${identity}:(OI)(CI)(RX)`, "/T", "/C", "/Q"],
+    [
+      referenceRoot,
+      "/inheritance:r",
+      "/grant:r",
+      `${identity}:(RX)`,
+      "/grant",
+      `${identity}:(OI)(CI)(RX)`,
+      "/T",
+      "/C",
+      "/Q",
+    ],
     referenceRoot,
   );
 }
@@ -181,7 +191,16 @@ export function unsealReference(referenceRoot: string): void {
   if (!identity) throw new Error("reference snapshot identity cannot be resolved");
   run(
     "icacls",
-    [referenceRoot, "/grant:r", `${identity}:(OI)(CI)(F)`, "/T", "/C", "/Q"],
+    [
+      referenceRoot,
+      "/grant:r",
+      `${identity}:(F)`,
+      "/grant",
+      `${identity}:(OI)(CI)(F)`,
+      "/T",
+      "/C",
+      "/Q",
+    ],
     referenceRoot,
   );
 }
