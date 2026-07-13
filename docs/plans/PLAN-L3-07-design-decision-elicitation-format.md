@@ -30,7 +30,7 @@ generates:
   - artifact_path: AGENTS.md
     artifact_type: markdown_doc
 dependencies:
-  parent: null
+  parent: docs/plans/PLAN-L3-00-master.md
   requires: []
   blocks: []
   references:

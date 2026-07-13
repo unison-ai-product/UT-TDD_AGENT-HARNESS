@@ -161,6 +161,9 @@ export function selectElicitationContext(
   if (plan) {
     const recommendations = recommendSkillsForPlan(db, plan.plan_id, { limit: 8 });
     const injection = buildSkillInjectionSet(db, recommendations);
+    // path 未解決 (asset 行はあるが実体 path が引けない) も unreadable として可視化する
+    // (blind review FLAG: 推薦済み既定判断の静かな欠落を防ぐ)
+    unreadableSkills.push(...injection.missing_skill_ids);
     for (const entry of injection.entries) {
       const points = readSkillDecisionPoints(options.repoRoot, entry.skill_path);
       if (points === null) {
@@ -239,6 +242,7 @@ export function renderElicitationContext(ctx: ElicitationContext): string {
   lines.push("  前提: <2〜3 行>");
   lines.push("  | 案 | 内容 | 得るもの | 失うもの |");
   lines.push("  | A (推奨) | ... | ... | ... |");
-  lines.push("  推奨理由: <1 行>");
+  lines.push("  | B | ... | ... | ... |");
+  lines.push("  推奨理由: <1 行> (選択肢は 2〜4 個、governance §共通ルール 1)");
   return `${lines.join("\n")}\n`;
 }

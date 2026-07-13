@@ -173,6 +173,31 @@ describe("elicitation stage-bound context (U-ELICIT)", () => {
     expect(ctx.unreadable_skills).toContain("ghost-skill");
   });
 
+  it("U-ELICIT-007: surfaces skills whose asset path is unresolved as unreadable", () => {
+    const database = db();
+    const repoRoot = tempRepo();
+    seedPlan(database, "PLAN-L7-907-nopath", "L7");
+    put(database, "automation_assets", "asset_id", {
+      asset_id: "pathless-skill",
+      asset_type: "skill",
+      path: "",
+      trigger: "",
+      role: "",
+      capability: "",
+      skill_type: "workflow-contract",
+      category: "",
+      applies_layers: "L7",
+      applies_drive_models: "Forward|Add-feature",
+      drift_status: "ok",
+    });
+    const ctx = selectElicitationContext(database, {
+      repoRoot,
+      planId: "PLAN-L7-907-nopath",
+    });
+    expect(ctx.unreadable_skills).toContain("pathless-skill");
+    expect(ctx.decision_defaults).toEqual([]);
+  });
+
   it("U-ELICIT-004: joins design coverage from spec_defs by plan and layer", () => {
     const database = db();
     const repoRoot = tempRepo();
@@ -215,6 +240,9 @@ describe("elicitation stage-bound context (U-ELICIT)", () => {
     expect(output).toContain("[render-contract] 既定判断の分岐 → 既定案を採る");
     expect(output).toContain("specs=1");
     expect(output).toContain("## 設計判断依頼");
+    // governance §共通ルール 1: 選択肢 2〜4 個 — 雛形は A (推奨) + B の 2 行以上を含む
+    expect(output).toContain("| A (推奨) |");
+    expect(output).toContain("| B |");
   });
 
   it("U-ELICIT-006: appendDesignDecision writes an append-only JSONL record and validates input", () => {

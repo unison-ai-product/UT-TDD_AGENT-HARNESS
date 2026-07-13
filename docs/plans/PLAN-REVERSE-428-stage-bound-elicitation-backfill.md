@@ -3,7 +3,8 @@ plan_id: PLAN-REVERSE-428-stage-bound-elicitation-backfill
 title: "PLAN-REVERSE-428: ステージ紐付きエリシテーション実装の設計 backfill"
 kind: reverse
 layer: cross
-workflow_phase: R0
+workflow_phase: R4
+confirmed_reverse_type: design
 drive: agent
 status: draft
 route_signal: drift
@@ -15,12 +16,25 @@ updated: 2026-07-13
 owner: PM / PO
 parent_design: docs/plans/PLAN-L7-428-stage-bound-elicitation-context.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+backprop_scope:
+  - layer: L6-function-design
+    decision: updated
+    evidence_path: docs/design/harness/L6-function-design/function-spec.md
+    reason: "elicitation packet 契約 (stage 解決順序 / fail-open 境界 / coverage 結合条件 / append-only 記録) を固定する。"
+  - layer: L7-unit-test-design
+    decision: updated
+    evidence_path: docs/test-design/harness/L7-unit-test-design.md
+    reason: "U-ELICIT-001..006 を oracle 台帳へ登録する。"
 agent_slots:
   - role: tl
     slot_label: "TL — elicit context/record の実装事実を L6/L7 設計・test-design へ backfill"
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-428-stage-bound-elicitation-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L6-function-design/function-spec.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-428-stage-bound-elicitation-context.md
   requires: []

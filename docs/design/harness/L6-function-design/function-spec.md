@@ -954,3 +954,36 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 
 各IDはpre/post/invariant、positive/negative fixture、expected finding/exitをL7 unit-test-designへ結び、
 implementation前のRed freeze、mutation survivor 0、正常fixture false-positive 0を要求する。
+
+## PLAN-L7-428 ステージ紐付きエリシテーション追補 (PLAN-REVERSE-428 backfill、2026-07-13)
+
+設計判断エリシテーション (governance 正本 = `docs/governance/design-decision-elicitation.md`) の
+runtime 契約。実装 = `src/elicitation/context.ts` / `src/elicitation/record.ts`、CLI = `ut-tdd elicit`。
+
+### 文脈選択 `selectElicitationContext(db, { repoRoot, planId? })`
+
+- **stage 解決順序 (固定)**: ① `planId` 指定時は `selectScheduleLiveState` の entries から
+  plan-match (`stage_source="plan-match"`、工程表 row 不在なら stage=null のまま plan registry のみ
+  解決)。② 省略時は current 先頭 (`stage_source="schedule-current"`、その plan_id を対象へ昇格)。
+  ③ どちらも無ければ `stage_source="none"`。自己ステージ認識は **PLAN 粒度** (step 粒度は
+  PLAN-L7-419 Forward FSM 実装後に結合)。
+- **decision defaults**: `recommendSkillsForPlan` (limit=8) → `buildSkillInjectionSet` の skill asset
+  path から frontmatter `decision_points` を抽出し、「聞かずに既定で進められる判断」として返す。
+  skill 読取は **fail-open**: 読めない asset に加え、asset path 未解決 (`missing_skill_ids`) も `unreadable_skills[]` へ可視化し packet 全体は返す (推薦済み既定判断の静かな欠落を許さない)。
+  `when`/`choose` を欠く point は除外。
+- **design coverage**: `spec_defs` を `plan_id = ? OR layer = ?` で結合し、spec 件数 /
+  lifecycle 分布 / 代表 10 件と、その spec 集合に接続する `spec_relations` 件数を返す
+  (checked-ZIP 由来 typed-spec 投影の判断文脈化)。plan 未解決時は null。
+- **render**: `[1/4 stage] [2/4 design-coverage] [3/4 defaults] [4/4 template]` の固定 4 段。
+  template は `## 設計判断依頼` 雛形へ plan_id + current_location を埋め込み、選択肢行は A (推奨) + B の 2 行以上を含む (governance §共通ルール 1 の 2〜4 個)。
+
+### 採択記録 `appendDesignDecision(repoRoot, input)`
+
+- 採択記録は `.ut-tdd/logs/design-decisions.jsonl` へ **append-only** (stage =
+  plan_id + current_location 付き、session_id は `resolveRuntimeSessionId`)。
+- **fail-close**: plan_id / topic / chosen / reason の空は throw (exit 1)。
+- 正本分離: この log は episodic 記録面であり、設計判断の正本は PLAN 設計判断節 / ADR
+  (feedback lifecycle と同じ「append-only log + 正本分離」方針)。DB projection 化は
+  消費側需要が出た後続 PLAN で行う (現時点で新規テーブル無し)。
+
+oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
