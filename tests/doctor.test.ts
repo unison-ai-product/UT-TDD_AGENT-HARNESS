@@ -425,8 +425,13 @@ describe("runDoctor", () => {
     );
 
     expect(r.ok).toBe(false);
-    expect(blockers).toHaveLength(1);
-    expect(blockers[0]).toContain("merged-plan-status");
+    expect(blockers).toHaveLength(2);
+    expect(blockers).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("PLAN-L7-421-test-hygiene-live-tree-fence"),
+        expect.stringContaining("PLAN-L7-429-spec-ir-detector-scope"),
+      ]),
+    );
   });
 
   it("ok=true includes handover and agent-slots surfaces as warnings", () => {
