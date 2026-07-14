@@ -1398,3 +1398,19 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。
+
+## PLAN-L7-434 全PR共通harness-check trigger oracle (PLAN-REVERSE-434 backfill、2026-07-14)
+
+対象 = `.github/workflows/harness-check.yml` / `docs/templates/github/common/{harness-check,pack-harness-check}.yml` /
+`src/setup/templates.ts` / `src/lint/github-ci-policy.ts`。実テスト =
+`tests/github-ci-policy.test.ts` と `tests/setup.test.ts`。
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `U-CIPOL-001` | universal PR trigger正常系 | source / Packの`pull_request`にbase filterなし、`push.branches=[main]` | `analyzeGithubCiPolicy().ok=true`。非main baseを除外する構文0、job名`harness-check`不変 |
+| `U-CIPOL-002` | stacked PR退行 | `pull_request.branches=[main]` | `main_limited_pr_trigger`、exit 1相当 |
+| `U-CIPOL-003` |別表記のfail-close | `branches-ignore=[work/**]` と `pull_request`欠落を各mutation | 前者=`main_limited_pr_trigger`、後者=`missing_trigger` |
+| `U-SETUP-004b2` | setup builtin同期 | built-in `common/harness-check.yml` | `pull_request`あり、直下の`branches` / `branches-ignore`なし。既存guard強度も維持 |
+
+`pull_request`を単に含む文字列検査だけではGreenにしない。YAML構造でbase filter不在を検査し、
+source / Pack / setup builtinのどれか1面だけの更新を完了扱いにしない。

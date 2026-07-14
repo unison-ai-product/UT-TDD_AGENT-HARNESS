@@ -3,7 +3,7 @@ plan_id: PLAN-REVERSE-434-universal-pr-trigger-backfill
 title: "PLAN-REVERSE-434: universal PR trigger 実装の設計 backfill"
 kind: reverse
 layer: cross
-workflow_phase: R0
+workflow_phase: R3
 confirmed_reverse_type: design
 drive: agent
 status: draft
@@ -19,11 +19,11 @@ related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 backprop_scope:
   - layer: L6-function-design
-    decision: pending
+    decision: updated
     evidence_path: docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md
     reason: "universal PR trigger 契約 (base 無限定 pull_request + push main 維持 + 3 面同期) を L6 契約へ合流する。"
   - layer: L7-unit-test-design
-    decision: pending
+    decision: updated
     evidence_path: docs/test-design/harness/L7-unit-test-design.md
     reason: "main_limited_pr_trigger fail-close と missing pull_request trigger の負例 oracle (U-CIPOL 系) を test design へ合流する。"
 agent_slots:
@@ -33,6 +33,8 @@ review_evidence: []
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-434-universal-pr-trigger-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md
+    artifact_type: design_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
 dependencies:
@@ -45,10 +47,20 @@ dependencies:
 
 PLAN-L7-434 (add-impl) の Reverse ペア。実装事実を R0-R4 で設計層へ合流する:
 
-- R0: 実装差分の観測 — 3 面 (source workflow / Pack template / setup builtin) の
+- R0: 実装差分の観測済み — 3 面 (source workflow / Pack template / setup builtin) の
   `pull_request` base 限定撤去と `github-ci-policy` の `main_limited_pr_trigger` /
   missing pull_request trigger fail-close (tests/github-ci-policy.test.ts 負例 2 本)。
-- R1-R2: L6-82 契約との trace 照合 (required context `harness-check` 不変、push main 維持)。
-- R3: U-CIPOL 系 oracle を docs/test-design/harness/L7-unit-test-design.md へ同期。
-- R4: Forward 合流。確定済み PLAN-L7-197 / L7-221 の claim と矛盾があれば supersedes
+- R1-R2: L6-82 契約との trace 照合済み (required context `harness-check` 不変、push main 維持)。
+- R3: U-CIPOL-001..003 oracle を docs/test-design/harness/L7-unit-test-design.md へ同期済み。
+- R4: PR #61 の cross review / CI green 後に Forward 合流する。確定済み PLAN-L7-197 / L7-221 の claim と矛盾があれば supersedes
   宣言で訂正する (上書き禁止、PLAN-L7-89 の errata 規約)。
+
+## R3 証拠
+
+- source / source template / Pack template / setup builtin はいずれも `pull_request` の
+  `branches` / `branches-ignore` を持たない。
+- `tests/github-ci-policy.test.ts` は正常構文、`branches: [main]`、
+  `branches-ignore`、trigger 欠落を独立oracleとして固定する。
+- `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` §7.5-7.6 と
+  `docs/governance/ut-tdd-agent-harness-concept_v3.1.md` の全PR共通
+  `harness-check` 契約は既に上位正本へ存在し、追加の意味変更は不要だった。

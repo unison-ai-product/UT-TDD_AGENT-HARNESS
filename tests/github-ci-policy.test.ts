@@ -69,7 +69,7 @@ function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc
 }
 
 describe("github-ci-policy lint", () => {
-  it("accepts canonical source and Pack harness-check workflows", () => {
+  it("U-CIPOL-001: accepts universal source and Pack harness-check workflows", () => {
     const result = analyzeGithubCiPolicy(docs());
 
     expect(result.ok).toBe(true);
@@ -131,7 +131,7 @@ describe("github-ci-policy lint", () => {
     }
   });
 
-  it("rejects main-limited pull_request trigger (stacked PR regression, PLAN-L6-82)", () => {
+  it("U-CIPOL-002: rejects main-limited pull_request trigger (stacked PR regression)", () => {
     const limited = SOURCE_WORKFLOW.replace(
       "  pull_request:",
       "  pull_request:\n    branches: [main]",
@@ -148,7 +148,7 @@ describe("github-ci-policy lint", () => {
     });
   });
 
-  it("rejects branches-ignore filtering and missing pull_request trigger", () => {
+  it("U-CIPOL-003: rejects branches-ignore filtering and missing pull_request trigger", () => {
     const ignored = PACK_WORKFLOW.replace(
       "  pull_request:",
       "  pull_request:\n    branches-ignore: [work/**]",

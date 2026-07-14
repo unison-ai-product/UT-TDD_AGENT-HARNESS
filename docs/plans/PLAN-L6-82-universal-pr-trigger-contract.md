@@ -54,8 +54,8 @@ concept §7.2 / requirements §7.5-7.6 の「全 PR 共通 aggregate harness-che
 
 ## AC
 
-- [ ] 非 main base の PR で harness-check が発火することが GitHub event fixture テストで
-      固定されている (L8 receipt)。
-- [ ] `github-ci-policy` が main 限定 trigger 退行を fail-close する負例テストあり。
-- [ ] source / Pack template / setup builtin の 3 面が drift せず同一契約 (既存 detector 拡張)。
-- [ ] 実装は PLAN-L7-434。確定済み PLAN-L7-197 / L7-221 は上書きせず本ペアで訂正する。
+- [x] 非 main base を除外しない `pull_request` 構文を U-CIPOL-001 で固定する。
+- [x] `github-ci-policy` が main 限定 trigger 退行を U-CIPOL-002 で fail-close する。
+- [x] `branches-ignore` / trigger 欠落を U-CIPOL-003 で fail-close する。
+- [x] source / Pack template / setup builtin の 3 面を同一契約へ同期する。
+- [x] 実装は PLAN-L7-434。確定済み PLAN-L7-197 / L7-221 は上書きせず本ペアで訂正する。

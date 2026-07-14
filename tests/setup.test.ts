@@ -377,6 +377,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(workflow).toContain("bun run test");
     expect(workflow).toContain("audit quality --include-tests");
     expect(workflow).toContain("ut-tdd.mjs doctor --setup-smoke");
+    expect(workflow).toMatch(/\n {2}pull_request:\n/);
+    expect(workflow).not.toMatch(/pull_request:\n\s+(?:branches|branches-ignore):/);
   });
 
   it("U-SETUP-004c: built-in adapter templates ship enforced portable guard hooks", () => {

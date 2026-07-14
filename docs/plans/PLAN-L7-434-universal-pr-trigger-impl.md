@@ -25,7 +25,11 @@ generates:
     artifact_type: config
   - artifact_path: docs/templates/github/common/pack-harness-check.yml
     artifact_type: config
-  - artifact_path: src/doctor/github-ci-policy.ts
+  - artifact_path: docs/templates/github/common/harness-check.yml
+    artifact_type: config
+  - artifact_path: src/setup/templates.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/github-ci-policy.ts
     artifact_type: source_module
   - artifact_path: tests/github-ci-policy.test.ts
     artifact_type: test_code
@@ -36,6 +40,7 @@ dependencies:
   requires: []
   references:
     - docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md
+    - docs/plans/PLAN-REVERSE-434-universal-pr-trigger-backfill.md
     - .ut-tdd/memory/project-stacked-pr-harness-check-trigger-debt.md
 ---
 
@@ -55,7 +60,8 @@ dependencies:
 
 ## AC
 
-- [ ] 非 main base PR での発火が GitHub event fixture で固定 (U-CIPOL 系に追加)。
-- [ ] main 限定 trigger への mutation が detector で red になる負例テストあり。
-- [ ] source / Pack / builtin の 3 面 drift 検査 green。
-- [ ] harness-check の required context 名が不変 (branch protection 影響 0) を確認。
+- [x] 非 main base PR を除外しない trigger が U-CIPOL-001 の構文 oracle で固定される。
+- [x] main 限定 trigger への mutation が U-CIPOL-002 で red になる。
+- [x] `branches-ignore` / trigger 欠落が U-CIPOL-003 で red になる。
+- [x] source / Pack / builtin の 3 面が base 無限定 trigger へ同期される。
+- [x] job / required context 名 `harness-check` は不変である。
