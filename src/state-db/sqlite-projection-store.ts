@@ -47,6 +47,7 @@ export class SqliteProjectionStore
   }
 
   recordFinding(input: ProjectionFindingInput): void {
+    assertFindingInputSafe(input);
     upsertRow(this.#db, {
       table: "findings",
       primaryKey: "finding_id",
@@ -201,6 +202,18 @@ function assertNoSensitivePayload(row: Record<string, unknown>, table: TableDef)
     const structuredId = primaryKeys.has(key) || key.endsWith("_id");
     if (!structuredId && typeof value === "string" && SECRET_PATTERN.test(value)) {
       throw new Error(`secret-like value is not allowed in harness.db projection column: ${key}`);
+    }
+  }
+}
+
+/**
+ * Finding は任意の外部文脈を受けるため、構造化 ID の例外を適用しない。
+ * 移行中の recordFinding も ProjectionWrite と同じ fail-close 境界に置く。
+ */
+function assertFindingInputSafe(input: ProjectionFindingInput): void {
+  for (const [field, value] of Object.entries(input)) {
+    if (typeof value === "string" && SECRET_PATTERN.test(value)) {
+      throw new Error(`secret-like value is not allowed in harness.db finding field: ${field}`);
     }
   }
 }

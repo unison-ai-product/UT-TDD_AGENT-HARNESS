@@ -1301,7 +1301,7 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `CANDIDATE-DOMAIN-002` | barrel相互import fixture | dependency audit | `module-cycle`, exit 1 |
 | `CANDIDATE-DOMAIN-003` | command/query同時mutation fixture | CQS audit | `command-query-mixed`, exit 1 |
 | `CANDIDATE-DOMAIN-004` | 不完全constructor/public mutable fixture | structure audit | `domain-invalid-state-surface`, exit 1 |
-| `CANDIDATE-DOMAIN-007` | `recordFinding`のkind/subject/source/evidence各fieldへsecret-like値を注入 | common projection payload guard | write row 0、構造finding IDだけは許可。Red freeze後、実装testと同時にUへ昇格する。 |
+| `U-DOMAIN-007` | `recordFinding`のkind/subject/source/evidence各fieldへsecret-like値を注入 | common projection payload guard | write row 0、構造finding IDだけは許可。`tests/sqlite-projection-store.test.ts`で実装済み。 |
 | `CANDIDATE-DOMAIN-008` | row upsert後、join finding前/clear中にfault injection | `ProjectionTransactionPort.transaction` | 全projection tableのdelta 0、既存snapshot不変。成功時はrowとjoinが同一commit。 |
 | `CANDIDATE-DOMAIN-009` | fixed source bundleを同一contextで2回投入 | pure projectors / rebuild command | `ProjectionWrite`列、stable order、digest、row countsが完全一致。projectorのDB/FS/clock import 0。 |
 | `CANDIDATE-DOMAIN-010` | 全consumer import graphとlegacy path | dependency/architecture audit | `projection-writer.ts` import 0、file実体 0、domain/application→adapter逆辺 0。未移行はRed。 |

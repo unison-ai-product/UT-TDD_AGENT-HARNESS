@@ -42,6 +42,28 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
     }
   });
 
+  it("U-DOMAIN-007: rejects secret-like data from every legacy recordFinding field", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const store = new SqliteProjectionStore(db);
+      const secret = `sk-${"a".repeat(20)}`;
+      const safe = {
+        kind: "projection-finding",
+        severity: "warn" as const,
+        subjectId: "projection:subject",
+        source: "projection-test",
+        evidencePath: "docs/evidence.md",
+      };
+      for (const field of ["kind", "subjectId", "source", "evidencePath"] as const) {
+        expect(() => store.recordFinding({ ...safe, [field]: secret })).toThrow(/secret-like/);
+      }
+      expect(db.prepare("SELECT finding_id FROM findings").all()).toEqual([]);
+    } finally {
+      db.close();
+    }
+  });
+
   it("classifies unresolved joins while exempting audit and compound contexts", () => {
     const db = openHarnessDb(":memory:");
     try {
