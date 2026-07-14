@@ -12,12 +12,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  assertSnapshotContentMatch,
   copyReferenceRuntimeInputs,
   createSnapshot,
   finishSnapshotCleanup,
   removeSnapshot,
   resolveSnapshotSource,
   sealReference,
+  snapshotContentFingerprint,
   unsealReference,
 } from "../scripts/run-vitest-snapshot";
 import { removeTestTree } from "./support/temp-tree";
@@ -76,12 +78,28 @@ describe("vitest snapshot runner", () => {
       writeFileSync(join(source, "package.json"), '{"version":2}\n');
       createSnapshot(execution, reference);
 
+      expect(snapshotContentFingerprint(execution)).toBe(snapshotContentFingerprint(reference));
+
       expect(readFileSync(join(execution, "package.json"), "utf8")).toBe(
         readFileSync(join(reference, "package.json"), "utf8"),
       );
       expect(readFileSync(join(reference, "package.json"), "utf8")).toContain('"version":1');
     } finally {
       removeTestTree(source);
+      removeTestTree(execution);
+      removeTestTree(reference);
+    }
+  });
+
+  it("U-TESTHYGIENE-040: fails closed when a non-Git reference diverges from execution capture", () => {
+    const execution = mkdtempSync(join(tmpdir(), "ut-tdd-copy-execution-"));
+    const reference = `${execution}-reference`;
+    try {
+      writeFileSync(join(execution, "package.json"), '{"version":1}\n');
+      createSnapshot(execution, reference);
+      writeFileSync(join(reference, "package.json"), '{"version":2}\n');
+      expect(() => assertSnapshotContentMatch(execution, reference)).toThrow("snapshot content mismatch");
+    } finally {
       removeTestTree(execution);
       removeTestTree(reference);
     }

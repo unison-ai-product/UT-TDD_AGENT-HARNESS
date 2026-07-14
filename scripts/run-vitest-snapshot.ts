@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   cpSync,
@@ -7,6 +8,8 @@ import {
   lstatSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
+  readlinkSync,
   realpathSync,
   rmSync,
 } from "node:fs";
@@ -97,6 +100,31 @@ export function createSnapshot(
         .split(/[\\/]/)
         .some((part) => [".git", ".ut-tdd", "node_modules"].includes(part)),
   });
+}
+
+export function snapshotContentFingerprint(root: string): string {
+  const entries: string[] = [];
+  const visit = (path: string): void => {
+    const rel = relative(root, path).replaceAll("\\", "/");
+    const stat = lstatSync(path);
+    if (stat.isSymbolicLink()) {
+      entries.push(`link:${rel}:${readlinkSync(path)}`);
+      return;
+    }
+    if (stat.isDirectory()) {
+      entries.push(`dir:${rel}`);
+      for (const entry of readdirSync(path).sort()) visit(join(path, entry));
+      return;
+    }
+    entries.push(`file:${rel}:${createHash("sha256").update(readFileSync(path)).digest("hex")}`);
+  };
+  visit(root);
+  return createHash("sha256").update(entries.join("\n")).digest("hex");
+}
+
+export function assertSnapshotContentMatch(executionRoot: string, referenceRoot: string): void {
+  if (snapshotContentFingerprint(executionRoot) !== snapshotContentFingerprint(referenceRoot))
+    throw new Error("snapshot content mismatch");
 }
 
 export function finishSnapshotCleanup(
@@ -209,6 +237,7 @@ export function runSnapshotTests(
     const source = resolveSnapshotSource(repoRoot);
     createSnapshot(repoRoot, snapshotRoot, source);
     createSnapshot(snapshotRoot, referenceRoot, resolveSnapshotSource(snapshotRoot));
+    if (source.kind === "copy") assertSnapshotContentMatch(snapshotRoot, referenceRoot);
     run(process.execPath, ["install", "--frozen-lockfile"], snapshotRoot);
     run(process.execPath, ["run", "src/cli.ts", "db", "rebuild"], snapshotRoot);
     copyReferenceRuntimeInputs(snapshotRoot, referenceRoot);

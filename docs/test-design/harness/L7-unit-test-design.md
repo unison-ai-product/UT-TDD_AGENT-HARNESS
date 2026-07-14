@@ -1306,6 +1306,8 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-TESTHYGIENE-037` | `doctor-test-repository-isolation.test.ts` | mode provenance／derived HEAD mutation sink | mode exact、derived write sinkは`forbidden-live-root-source`、dead rootは`stale-contract`、exit 1 |
 | `U-TESTHYGIENE-038` | `doctor-test-repository-isolation.test.ts` | Node/Bun mutation sink destination | `open('w')`、stream、metadata、copy/link/symlink destination、`Bun.write`はderived HEAD pathで`forbidden-live-root-source`、`open('r')`は非違反 |
 | `U-TESTHYGIENE-039` | `vitest-snapshot-runner.test.ts` | captured Git OID | source HEADが進んでも、execution/referenceは同一捕捉OIDの内容を保持 |
+| `U-TESTHYGIENE-040` | `vitest-snapshot-runner.test.ts` | non-Git capture fingerprint | referenceがexecution captureから乖離すれば`snapshot content mismatch`でfail-close |
+| `U-TESTHYGIENE-041` | `doctor-test-repository-isolation.test.ts` | symlink destination | HEAD配下への`symlinkSync`出力先は単独でも`forbidden-live-root-source` |
 
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。

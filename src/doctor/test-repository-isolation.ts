@@ -136,6 +136,8 @@ const REPOSITORY_WRITE_APIS = new Set([
   "renameSync",
   "rm",
   "rmSync",
+  "symlink",
+  "symlinkSync",
   "truncate",
   "truncateSync",
   "unlink",
@@ -152,6 +154,7 @@ const MUTATION_TARGET_ARGS: Readonly<Record<string, readonly number[]>> = {
   lchmod: [0], lchmodSync: [0], lchown: [0], lchownSync: [0], link: [1], linkSync: [1],
   lutimes: [0], lutimesSync: [0], mkdir: [0], mkdirSync: [0], mkdtemp: [0], mkdtempSync: [0],
   rename: [0, 1], renameSync: [0, 1], rm: [0], rmSync: [0], truncate: [0], truncateSync: [0],
+  symlink: [1], symlinkSync: [1],
   unlink: [0], unlinkSync: [0], utimes: [0], utimesSync: [0], writeFile: [0], writeFileSync: [0],
 };
 const REPOSITORY_PATH =
