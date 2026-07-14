@@ -276,6 +276,60 @@ describe("github-ci-policy lint", () => {
     });
   });
 
+  it("U-CIPOL-007: rejects workflow-level path filters on PR and push", () => {
+    const pullRequestPaths = SOURCE_WORKFLOW.replace(
+      "  pull_request:",
+      "  pull_request:\n    paths: [src/**]",
+    );
+    expect(analyzeGithubCiPolicy(docs(pullRequestPaths)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "filtered_trigger",
+      detail: "pull_request must not use workflow-level paths or paths-ignore filters",
+    });
+
+    const pushPaths = SOURCE_WORKFLOW.replace(
+      "    branches: [main]",
+      "    branches: [main]\n    paths-ignore: [docs/**]",
+    );
+    expect(analyzeGithubCiPolicy(docs(pushPaths)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "filtered_trigger",
+      detail: "push must not use workflow-level paths or paths-ignore filters",
+    });
+  });
+
+  it("U-CIPOL-008: requires complete activity types when pull_request.types is explicit", () => {
+    const incomplete = SOURCE_WORKFLOW.replace(
+      "  pull_request:",
+      "  pull_request:\n    types: [opened]",
+    );
+    expect(analyzeGithubCiPolicy(docs(incomplete)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "incomplete_pull_request_types",
+      detail: "pull_request.types must include opened,synchronize,ready_for_review",
+    });
+
+    const complete = SOURCE_WORKFLOW.replace(
+      "  pull_request:",
+      "  pull_request:\n    types: [opened, synchronize, ready_for_review]",
+    );
+    expect(analyzeGithubCiPolicy(docs(complete)).ok).toBe(true);
+  });
+
+  it("rejects duplicate workflow roles in direct analyzer inputs", () => {
+    const baseline = docs();
+    const duplicate = [...baseline, { ...baseline[0], file: "duplicate-runtime.yml" }];
+    expect(analyzeGithubCiPolicy(duplicate).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "duplicate_workflow_role",
+      detail: "runtime appears 2 times",
+    });
+  });
+
   it("requires source CI to keep full doctor in the required status check", () => {
     const result = analyzeGithubCiPolicy(
       docs(SOURCE_WORKFLOW.replace("bun src/cli.ts doctor", "")),

@@ -60,7 +60,7 @@ PLAN-L7-434 (add-impl) の Reverse ペア。実装事実を R0-R4 で設計層�
   `pull_request` base 限定撤去と `github-ci-policy` の `main_limited_pr_trigger` /
   missing pull_request trigger fail-close (tests/github-ci-policy.test.ts 負例 2 本)。
 - R1-R2: L6-82 契約との trace 照合済み (required context `harness-check` 不変、push main 維持)。
-- R3: requirements §6.4 / §7.5-7.6 と U-CIPOL-001..006 oracle を上位設計・test-designへ同期済み。
+- R3: requirements §6.4 / §6.9.3 / §7.5-7.6 と U-CIPOL-001..008 oracle を上位設計・test-designへ同期済み。
 - R4: PR #61 の cross review / CI green 後に Forward 合流する。確定済み PLAN-L7-197 / L7-221 の claim と矛盾があれば supersedes
   宣言で訂正する (上書き禁止、PLAN-L7-89 の errata 規約)。
 
@@ -69,6 +69,6 @@ PLAN-L7-434 (add-impl) の Reverse ペア。実装事実を R0-R4 で設計層�
 - source workflow / source template / Pack template / setup builtin はいずれも `pull_request` の
   `branches` / `branches-ignore` を持たない。
 - `tests/github-ci-policy.test.ts` は正常構文、base filter、trigger欠落、不正型、
-  push main限定欠落、4 artifact loaderを独立oracleとして固定する。
+  push main限定欠落、path filter、不完全activity types、4 artifact loaderを独立oracleとして固定する。
 - `docs/governance/ut-tdd-agent-harness-requirements_v1.2.md` §6.4の旧main限定event契約を訂正し、
   §7.5-7.6へ全PR base発火とfail-close ACを合流した。

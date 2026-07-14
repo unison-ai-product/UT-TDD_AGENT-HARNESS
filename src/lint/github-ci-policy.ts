@@ -19,6 +19,9 @@ export interface GithubCiPolicyViolation {
     | "missing_trigger"
     | "malformed_trigger_shape"
     | "invalid_push_main_trigger"
+    | "filtered_trigger"
+    | "incomplete_pull_request_types"
+    | "duplicate_workflow_role"
     | "main_limited_pr_trigger"
     | "missing_permission"
     | "missing_concurrency"
@@ -71,6 +74,8 @@ interface GithubCiProfileSpec {
   requiredSteps: readonly RequiredStepSpec[];
   forbiddenSteps: readonly ForbiddenStepSpec[];
 }
+
+const REQUIRED_PULL_REQUEST_TYPES = ["opened", "synchronize", "ready_for_review"] as const;
 
 const SOURCE_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
@@ -206,11 +211,18 @@ function checkHarnessTriggers(input: {
       reason: "missing_trigger",
       detail: "push trigger (main only)",
     });
+  } else if (pushRecord && ("paths" in pushRecord || "paths-ignore" in pushRecord)) {
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "filtered_trigger",
+      detail: "push must not use workflow-level paths or paths-ignore filters",
+    });
   } else if (
     !pushRecord ||
     pushBranches?.length !== 1 ||
     pushBranches[0] !== "main" ||
-    "branches-ignore" in pushRecord
+    Object.keys(pushRecord).some((key) => key !== "branches")
   ) {
     pushViolation({
       violations: input.violations,
@@ -241,6 +253,14 @@ function checkHarnessTriggers(input: {
     });
     return;
   }
+  if ("paths" in pullRequestRecord || "paths-ignore" in pullRequestRecord) {
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "filtered_trigger",
+      detail: "pull_request must not use workflow-level paths or paths-ignore filters",
+    });
+  }
   if ("branches" in pullRequestRecord || "branches-ignore" in pullRequestRecord) {
     pushViolation({
       violations: input.violations,
@@ -249,6 +269,28 @@ function checkHarnessTriggers(input: {
       detail:
         "pull_request must not filter base branches: stacked PRs (base != main) would skip harness-check (PLAN-L6-82)",
     });
+  }
+  const unknownKeys = Object.keys(pullRequestRecord).filter(
+    (key) => !["branches", "branches-ignore", "paths", "paths-ignore", "types"].includes(key),
+  );
+  if (unknownKeys.length > 0) {
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "malformed_trigger_shape",
+      detail: `pull_request contains unsupported keys: ${unknownKeys.sort().join(",")}`,
+    });
+  }
+  if ("types" in pullRequestRecord) {
+    const types = stringValues(pullRequestRecord.types);
+    if (!types || REQUIRED_PULL_REQUEST_TYPES.some((required) => !types.includes(required))) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "incomplete_pull_request_types",
+        detail: `pull_request.types must include ${REQUIRED_PULL_REQUEST_TYPES.join(",")}`,
+      });
+    }
   }
 }
 
@@ -308,7 +350,8 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
 
   const requiredRoles = ["runtime", "source_template", "pack_template", "setup_builtin"] as const;
   for (const role of requiredRoles) {
-    if (!docs.some((doc) => doc.role === role)) {
+    const roleCount = docs.filter((doc) => doc.role === role).length;
+    if (roleCount === 0) {
       pushViolation({
         violations,
         doc: {
@@ -319,6 +362,15 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
         },
         reason: "missing_workflow",
         detail: `${role} harness-check workflow`,
+      });
+    } else if (roleCount > 1) {
+      const first = docs.find((doc) => doc.role === role);
+      if (!first) continue;
+      pushViolation({
+        violations,
+        doc: first,
+        reason: "duplicate_workflow_role",
+        detail: `${role} appears ${roleCount} times`,
       });
     }
   }
