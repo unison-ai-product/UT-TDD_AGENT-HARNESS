@@ -20,11 +20,13 @@ export const MODEL_IDS = {
     haiku: "claude-haiku-4-5",
   },
   codex: {
-    /** T0 フロンティア (相談/検証の最上位帯)。 */
+    /** T0 フロンティア (検証/設計/相談の最上位帯)。 */
     frontier: "gpt-5.6-sol",
-    /** T1 ワーカー専門。 */
+    /** テスト実装専門 (PO 割当 2026-07-14)。 */
     worker: "gpt-5.6-terra",
-    /** T2 ワーカー軽量 (原則安く)。 */
+    /** 実装 / ドキュメント修正の主力 (PO 採用 2026-07-14、effort=high 基準)。 */
+    luna: "gpt-5.6-luna",
+    /** T2 ワーカー軽量 (軽量実装/内部探索/web検索/doc パッチ、原則安く)。 */
     spark: "gpt-5.3-codex-spark",
     mini: "gpt-5.4-mini",
     /** codex-family エンジン指定時の専用モデル (model-policy 専用、roster 外)。 */
@@ -35,6 +37,84 @@ export const MODEL_IDS = {
 export const TASK_DIFFICULTIES = ["trivial", "simple", "standard", "complex", "critical"] as const;
 export type TaskDifficulty = (typeof TASK_DIFFICULTIES)[number];
 
+/**
+ * オーケストラパターン分岐 — 標準パターンの想定 orchestrator モデル (PO 2026-07-14):
+ * Claude Code は設計タスク時 Opus / 設計タスク完了時 Sonnet、Codex は設計タスク時 Sol /
+ * 実装タスク時 Terra を想定する。想定を下回るモデル選定で走る場合は advisor 機能を多用する
+ * (`advisorHeavyUseRecommended`)。worker lane の割当 (テスト実装=terra / 実装=luna) とは別軸で、
+ * こちらは「orchestrator セッション自身が何で走っているか」の期待値。
+ */
+export const STANDARD_ORCHESTRATION_EXPECTATION = {
+  claude: {
+    design: MODEL_IDS.claude.opus,
+    design_completion: MODEL_IDS.claude.sonnet,
+  },
+  codex: {
+    design: MODEL_IDS.codex.frontier,
+    implementation: MODEL_IDS.codex.worker,
+  },
+} as const;
+
+/** モデル capability rank (family 比較用。数値が大きいほど上位帯)。 */
+const MODEL_CAPABILITY_RANK: Record<string, number> = {
+  [MODEL_IDS.claude.fable]: 4,
+  [MODEL_IDS.claude.opus]: 3,
+  [MODEL_IDS.claude.sonnet]: 2,
+  [MODEL_IDS.claude.haiku]: 1,
+  [MODEL_IDS.codex.frontier]: 4,
+  [MODEL_IDS.codex.worker]: 2,
+  [MODEL_IDS.codex.luna]: 2,
+  [MODEL_IDS.codex.codex]: 1,
+  [MODEL_IDS.codex.spark]: 1,
+  [MODEL_IDS.codex.mini]: 1,
+};
+
+/**
+ * 現在の orchestrator モデルが標準パターンの想定を下回っているか。
+ * 下回る場合、判断ポイントで advisor を多用する (PO 2026-07-14)。
+ * 未知モデルは fail-open せず「下回る扱い」(advisor 推奨) に倒す。
+ */
+export function advisorHeavyUseRecommended(input: {
+  provider: "claude" | "codex";
+  phase: "design" | "design_completion" | "implementation";
+  currentModel: string;
+}): boolean {
+  const expectation = STANDARD_ORCHESTRATION_EXPECTATION[input.provider] as Record<
+    string,
+    string | undefined
+  >;
+  const expected = expectation[input.phase];
+  if (!expected) return false;
+  const currentRank = MODEL_CAPABILITY_RANK[input.currentModel];
+  const expectedRank = MODEL_CAPABILITY_RANK[expected];
+  if (currentRank === undefined || expectedRank === undefined) return true;
+  return currentRank < expectedRank;
+}
+
+/**
+ * レビュー 3 面 (PO 2026-07-14): 設計レビュー / 実装レビュー / ブラインドレビュー。
+ * いずれも frontier 帯 (Sol / Opus 以上) を floor とし、hybrid では非作成側 provider が担う。
+ * blind-review は author の主張・意図を遮断した packet で実施 (.claude/agents/blind-reviewer.md /
+ * `ut-tdd codex --role blind-reviewer`)。
+ */
+export const REVIEW_LANES = ["design-review", "implementation-review", "blind-review"] as const;
+export type ReviewLane = (typeof REVIEW_LANES)[number];
+
+export const REVIEW_LANE_MODELS: Record<ReviewLane, { claude: string; codex: string }> = {
+  "design-review": { claude: MODEL_IDS.claude.opus, codex: MODEL_IDS.codex.frontier },
+  "implementation-review": { claude: MODEL_IDS.claude.opus, codex: MODEL_IDS.codex.frontier },
+  "blind-review": { claude: MODEL_IDS.claude.opus, codex: MODEL_IDS.codex.frontier },
+};
+
+/**
+ * プランエージェント (PO 2026-07-14): 一次 = Fable、Fable 不在 (レート制限/エラー) 時は
+ * Sol へフォールバック。
+ */
+export const PLAN_AGENT_MODELS = {
+  primary: MODEL_IDS.claude.fable,
+  fallback: MODEL_IDS.codex.frontier,
+} as const;
+
 export const REASONING_EFFORTS = ["low", "medium", "middle", "high", "xhigh"] as const;
 export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
 
@@ -42,6 +122,8 @@ export const TASK_INTENTS = [
   "docs",
   "research",
   "implementation",
+  "test",
+  "design",
   "lightweight",
   "review",
   "uiux",
@@ -92,7 +174,8 @@ export const PROPOSAL_SUBAGENT_LANES: Record<ProposalSubagentLaneName, ProposalS
   },
   "T1-worker": {
     tier: "T1-worker",
-    model: MODEL_IDS.codex.worker,
+    // 実装帯の主力は luna (PO 2026-07-14)。terra はテスト実装専門席として roster に残る。
+    model: MODEL_IDS.codex.luna,
     max_parallel: 2,
     closing_authority: false,
     ownership: "disjoint implementation slices with paired design and test-design updates",
@@ -141,6 +224,8 @@ const COMPLEX_TERMS = [
 const SIMPLE_TERMS = ["comment", "docs", "format", "lint", "readme", "rename", "typo"];
 const RESEARCH_TERMS = ["research", "source", "sources", "survey", "market", "web"];
 const IMPLEMENTATION_TERMS = ["implement", "implementation", "code", "src", "fix", "build"];
+const TEST_TERMS = ["test", "tests", "vitest", "tdd", "oracle", "fixture", "red-green"];
+const DESIGN_TERMS = ["design", "architecture", "spec", "adr", "contract", "設計"];
 const REVIEW_TERMS = ["review", "verify", "audit", "judge", "acceptance"];
 const UIUX_TERMS = ["ui", "ux", "screen", "visual", "wireframe", "mock", "frontend"];
 
@@ -185,17 +270,33 @@ function recommendationInput(difficulty: TaskDifficulty): {
   }
 }
 
-function modelForProvider(input: { provider: TeamProvider; engine: string; modelFamily: string }): {
+function modelForProvider(input: {
+  provider: TeamProvider;
+  engine: string;
+  modelFamily: string;
+  intent: TaskIntent;
+  difficulty: TaskDifficulty;
+}): {
   model: string;
   source: "engine" | "policy";
 } {
+  const cheap = input.difficulty === "trivial" || input.difficulty === "simple";
   if (input.provider === "local") return { model: "local", source: "policy" };
   if (input.provider === "codex") {
+    // task-kind 割当 (PO 2026-07-14): 検証/設計=sol、テスト実装=terra、実装/doc修正=luna、
+    // 軽量実装/内部探索/web検索/doc パッチ=spark or mini。
     // frontier = 最上位帯。tier-router TIER_TABLE.T0.codex (= MODEL_IDS.codex.frontier) と同一正本。
-    // worker は T1 (ワーカー専門) であり、frontier (T0) と混在させない。
     if (input.modelFamily === "frontier")
       return { model: MODEL_IDS.codex.frontier, source: "policy" };
     if (input.modelFamily === "codex") return { model: MODEL_IDS.codex.codex, source: "policy" };
+    if (input.intent === "review" || input.intent === "design")
+      return { model: MODEL_IDS.codex.frontier, source: "policy" };
+    if (input.intent === "test") return { model: MODEL_IDS.codex.worker, source: "policy" };
+    if (input.intent === "research") return { model: MODEL_IDS.codex.mini, source: "policy" };
+    if (input.intent === "docs")
+      return { model: cheap ? MODEL_IDS.codex.mini : MODEL_IDS.codex.luna, source: "policy" };
+    if (input.intent === "implementation")
+      return { model: cheap ? MODEL_IDS.codex.spark : MODEL_IDS.codex.luna, source: "policy" };
     return { model: MODEL_IDS.codex.spark, source: "policy" };
   }
 
@@ -203,7 +304,15 @@ function modelForProvider(input: { provider: TeamProvider; engine: string; model
   if (engine.includes("opus")) return { model: MODEL_IDS.claude.opus, source: "engine" };
   if (engine.includes("haiku")) return { model: MODEL_IDS.claude.haiku, source: "engine" };
   if (engine.includes("sonnet")) return { model: MODEL_IDS.claude.sonnet, source: "engine" };
+  // task-kind 割当 (PO 2026-07-14): フロントデザイン/設計 doc 作成=opus、
+  // UI デザイン実装/doc 修正=sonnet、web 検索/doc パッチ=haiku。
   if (input.modelFamily === "frontier") return { model: MODEL_IDS.claude.opus, source: "policy" };
+  if (input.intent === "design" || input.intent === "review")
+    return { model: MODEL_IDS.claude.opus, source: "policy" };
+  if (input.intent === "uiux" || input.intent === "implementation" || input.intent === "test")
+    return { model: MODEL_IDS.claude.sonnet, source: "policy" };
+  if (input.intent === "docs")
+    return { model: cheap ? MODEL_IDS.claude.haiku : MODEL_IDS.claude.sonnet, source: "policy" };
   if (input.modelFamily === "codex") return { model: MODEL_IDS.claude.sonnet, source: "policy" };
   return { model: MODEL_IDS.claude.haiku, source: "policy" };
 }
@@ -217,6 +326,8 @@ export function inferTaskIntent(input: {
   const text = `${input.role ?? ""} ${input.engine ?? ""} ${input.task}`.toLowerCase();
   if (input.role === "uiux" || hasAny(text, UIUX_TERMS)) return "uiux";
   if (input.role === "qa" || hasAny(text, REVIEW_TERMS)) return "review";
+  if (hasAny(text, TEST_TERMS)) return "test";
+  if (hasAny(text, DESIGN_TERMS)) return "design";
   if (input.role === "docs" || hasAny(text, ["docs", "doc", "readme", "governance"])) {
     return "docs";
   }
@@ -240,15 +351,18 @@ function policyEffort(input: {
   fallback: ReasoningEffort;
 }): ReasoningEffort {
   if (input.intent === "uiux") return "xhigh";
-  // ワーカー帯 (実装/軽量、spark/mini 含む) の既定 effort は middle (PO 指示 2026-07-08)。
+  // luna (実装/doc修正 主力) は effort=high 基準 (PO 指示 2026-07-14、worker middle 既定の上書き)。
+  if (input.model === MODEL_IDS.codex.luna) return "high";
+  // ワーカー帯 (テスト実装/軽量、spark/mini 含む) の既定 effort は middle (PO 指示 2026-07-08)。
   if (input.model === MODEL_IDS.codex.mini || input.model === MODEL_IDS.codex.spark) {
     return "middle";
   }
   if (input.intent === "review") {
     return input.provider === "codex" ? "xhigh" : "high";
   }
+  if (input.intent === "design") return "high";
   if (input.difficulty === "critical") return "high";
-  if (input.intent === "implementation" || input.intent === "lightweight") {
+  if (input.intent === "implementation" || input.intent === "test" || input.intent === "lightweight") {
     return "middle";
   }
   if (input.difficulty === "complex") return input.provider === "codex" ? "high" : "high";
@@ -275,15 +389,17 @@ export function selectTeamModel(input: {
     size: recInput.size,
     uncertainty: recInput.uncertainty,
   });
-  const selectedModel = modelForProvider({
-    provider: input.provider,
-    engine: input.engine,
-    modelFamily: recommendation.model_family,
-  });
   const taskIntent = inferTaskIntent({
     role: input.role,
     engine: input.engine,
     task: input.task,
+    difficulty: difficulty.difficulty,
+  });
+  const selectedModel = modelForProvider({
+    provider: input.provider,
+    engine: input.engine,
+    modelFamily: recommendation.model_family,
+    intent: taskIntent,
     difficulty: difficulty.difficulty,
   });
   const model = input.model ?? selectedModel.model;

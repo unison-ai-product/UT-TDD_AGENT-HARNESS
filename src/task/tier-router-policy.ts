@@ -11,7 +11,8 @@ export const ROLE_ARCHETYPE: Record<RouterRole, Archetype> = {
 
 export const TIER_TABLE: Record<Tier, Record<Provider, string>> = {
   T0: { claude: MODEL_IDS.claude.opus, codex: MODEL_IDS.codex.frontier },
-  T1: { claude: MODEL_IDS.claude.sonnet, codex: MODEL_IDS.codex.worker },
+  // T1 実装帯 = luna (PO 2026-07-14)。terra はテスト実装専門 (MODEL_IDS.codex.worker) で intent 経路が使う。
+  T1: { claude: MODEL_IDS.claude.sonnet, codex: MODEL_IDS.codex.luna },
   T2: { claude: MODEL_IDS.claude.haiku, codex: MODEL_IDS.codex.spark },
 };
 

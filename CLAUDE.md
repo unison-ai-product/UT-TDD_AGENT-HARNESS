@@ -170,26 +170,33 @@ fallback.
 
 ## Model / Effort Routing
 
-- Docs work defaults to Sonnet-class Claude; research defaults to Haiku-class
-  Claude; implementation defaults to GPT/Codex-class workers.
+Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede):
+
+- Codex: テスト実装 = `gpt-5.6-terra`; 実装/ドキュメント修正 = `gpt-5.6-luna`
+  (effort `high` 基準、worker `middle` 既定の上書き); 検証/設計 = `gpt-5.6-sol`;
+  軽量実装/内部探索/web 検索/doc パッチ = `gpt-5.3-codex-spark` / `gpt-5.4-mini`。
+- Claude: フロントデザイン/設計ドキュメント作成 = Opus (`claude-opus-4-8`);
+  UI デザイン実装/ドキュメント修正 = Sonnet (`claude-sonnet-5`);
+  web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
   closing authority.
-- Worker lanes (implementation / lightweight, including spark/mini) default to
-  effort `middle` (PO rule, 2026-07-08).
+- Worker lanes (テスト実装/軽量、spark/mini 含む) default to effort `middle`
+  (PO rule 2026-07-08); luna のみ `high` 基準 (PO rule 2026-07-14)。
 - Implementation work in `hybrid` is cross-executed and cross-reviewed: the
   non-orchestrating provider executes, and review returns to the other
   provider (tier-router implementation lane, PO rule 2026-07-08).
 - Design/implementation review uses a top reviewer model: GPT frontier
-  (`gpt-5.5`) or Claude Opus (`claude-opus-4-8`) or above, behind the explicit
-  frontier gate.
-- UI/UX work defaults to Sonnet-class Claude with `xhigh` effort.
+  (`gpt-5.6-sol`) or Claude Opus (`claude-opus-4-8`) or above, behind the
+  explicit frontier gate.
+- UI/UX work は Sonnet-class Claude + `xhigh` effort。
 - Claude-family effort defaults to `high`; GPT/Codex effort defaults to
   `middle`; only high-judgement review/critical decisions move up to
   `high`/`xhigh`.
-- 現在の orchestrator が Sonnet-class Claude または下位 GPT/Codex model で、
-  判断に迷う場合は `ut-tdd advisor --task "..." --current-model <model>` を使う。
-  advisor は Claude Opus (`claude-opus-4-8`) または GPT frontier (`gpt-5.5`)
-  へ dry-run/execute 可能な adapter plan を作る。実相談は `--execute` を付ける。
+- advisor (PO rule 2026-07-14): 技術/設計/トラブルシューティング判断は
+  `gpt-5.6-sol` 一次 (fallback Fable)、デザイン/UI 判断は `claude-fable-5` 一次
+  (次点 `gpt-5.6-sol`)。迷う場合は
+  `ut-tdd advisor --task "..." --current-model <model>` を使い、実相談は
+  `--execute` を付ける。
 
 ## Skills
 
