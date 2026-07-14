@@ -68,9 +68,9 @@ review_evidence:
         scope: targeted
         exit_code: 0
         completed_at: "2026-07-14T19:27:48+09:00"
-        evidence_path: tests/team-model-policy.test.ts
-        output_digest: "sha256:496ce55c30d58a52d25c009e84551ea179ad65087f2f03b8d2c9abc922166ef0"
-        anchor_commit: ddbdc2f9
+        evidence_path: .ut-tdd/audit/A-144-l7-430-routing-v2-review-receipt.md
+        output_digest: "sha256:c9c84016c5f25b774261cccf20ddaa553dbdfd160c37ebbf0a6e900e383f0343"
+        anchor_commit: 369a07d4
   - reviewer: codex-spec-blind-lane
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-14T19:29:00+09:00"
@@ -84,9 +84,9 @@ review_evidence:
         scope: targeted
         exit_code: 0
         completed_at: "2026-07-14T19:27:48+09:00"
-        evidence_path: tests/team-run.test.ts
-        output_digest: "sha256:496ce55c30d58a52d25c009e84551ea179ad65087f2f03b8d2c9abc922166ef0"
-        anchor_commit: ddbdc2f9
+        evidence_path: .ut-tdd/audit/A-144-l7-430-routing-v2-review-receipt.md
+        output_digest: "sha256:c9c84016c5f25b774261cccf20ddaa553dbdfd160c37ebbf0a6e900e383f0343"
+        anchor_commit: 369a07d4
 ---
 
 # PLAN-L7-430 (retrofit): task-kind ベース model routing v2
