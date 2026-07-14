@@ -196,7 +196,7 @@ review_evidence: []
 - [ ] referenceはVitest起動からcleanup直前まで物理的にread-onlyであり、Windowsを含むcanonical path比較でexecution rootと
       reference rootを混同しない。seal直後のfingerprintをVitest後・unseal前に再検証し、seal／revision／fingerprint／cleanup failureはexit 1である。
 - [ ] snapshot runnerはbatch-onlyであり、live source編集を観測できないwatch機能を広告・受理しない。
-- [ ] sealed detached HEAD referenceへのglobal teardown fence tripはsnapshot runner子processを非0終了させ、runnerのexit 1伝播へ接続される。
+- [ ] fixtureはOS別の物理sealを確認し、明示bypassしたdetached HEAD referenceへのglobal teardown fence tripがsnapshot runner子processを非0終了させ、runnerのexit 1伝播へ接続される。
 - [ ] repository read契約は`head_snapshot`／`isolated_fixture`のmode別exact countを持つ。sinkへ到達しないbare／void／
       unused／assertion-only rootは数えず、HEAD root（alias・静的derived pathを含む）のNode/Bun直接write sinkはhard violationとなる。
       FD/FileHandleを経る任意dataflowはPLAN-L7-425の独立自己証明対象としてdebt routeする。

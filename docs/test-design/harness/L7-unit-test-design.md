@@ -1309,7 +1309,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-TESTHYGIENE-040` | `vitest-snapshot-runner.test.ts` | non-Git capture fingerprint | referenceがexecution captureから乖離すれば`snapshot content mismatch`でfail-close |
 | `U-TESTHYGIENE-041` | `doctor-test-repository-isolation.test.ts` | symlink destination | HEAD配下への`symlinkSync`出力先は単独でも`forbidden-live-root-source` |
 | `U-TESTHYGIENE-042` | `vitest-snapshot-runner.test.ts` | sealed reference fingerprint | seal直後のfingerprintとVitest後・unseal前のreference差分は`snapshot reference fingerprint mismatch`でfail-close |
-| `U-TESTHYGIENE-043` | `global-setup-fence.test.ts` | teardown fence process | sealed detached HEAD snapshot改変後のglobal teardownはsnapshot runner子processを非0で終了し`test workspace fence violation`を出す |
+| `U-TESTHYGIENE-043` | `global-setup-fence.test.ts` | teardown fence process | fixtureがOS別の物理sealを確認後に明示bypassでdetached HEAD snapshotを改変し、global teardownはsnapshot runner子processを非0で終了して`test workspace fence violation`を出す |
 | `U-TESTHYGIENE-045` | `vitest-snapshot-runner.test.ts` | batch-only runner | `--watch`／`-w`／`--watch=...`はstale snapshotを監視するためfail-close、通常引数は許可 |
 | `U-TESTHYGIENE-046` | `vitest-snapshot-runner.test.ts` | watch script contract | live sourceを観測できない`test:watch` scriptはmanifestに存在しない |
 
