@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadSlots, nodeAgentSlotsDeps } from "../src/runtime/agent-slots";
 import type { RuntimeDetection } from "../src/runtime/detect";
-import type { TeamDefinition } from "../src/schema/team";
+import { type TeamDefinition, teamMemberSchema } from "../src/schema/team";
 import { classifyProposalDocumentCoverage } from "../src/task/classify";
 import { routeTeamMembers } from "../src/task/tier-router";
 import { recommendTeamLaunch } from "../src/team/launch-policy";
@@ -137,19 +137,61 @@ describe("team run validation", () => {
     expect(result.members.every((m) => m.prompt.includes(TEAM_MEMBER_PROMPT_HEADER))).toBe(true);
     expect(result.members[0].prompt).toContain("provider: codex");
     expect(result.members[1].prompt).toContain("provider: claude");
-    expect(result.members[0].model_selection.model).toBe(MODEL_IDS.codex.codex);
+    // 実装 intent は engine family (codex) より優先して luna に解決 (PLAN-L7-430)。
+    expect(result.members[0].model_selection.model).toBe(MODEL_IDS.codex.luna);
     expect(result.members[0].adapter).toMatchObject({
       command: "codex",
       dry_run: true,
-      model: MODEL_IDS.codex.codex,
+      model: MODEL_IDS.codex.luna,
     });
     expect(result.members[0].adapter?.args).toContain("-m");
-    expect(result.members[1].model_selection.model).toBe(MODEL_IDS.claude.sonnet);
+    expect(result.members[1].model_selection.model).toBe(MODEL_IDS.claude.opus);
     expect(result.members[1].adapter).toMatchObject({
       command: "claude",
       dry_run: true,
-      model: MODEL_IDS.claude.sonnet,
+      model: MODEL_IDS.claude.opus,
     });
+  });
+
+  it("routes structured intent from the team contract and rejects unknown member fields", () => {
+    const result = buildTeamRunPlan(
+      {
+        name: "typed-intent-team",
+        strategy: "sequential",
+        max_parallel: 1,
+        members: [
+          {
+            role: "qa",
+            engine: "codex-qa",
+            task: "generic task text",
+            intent: "implementation",
+          },
+        ],
+      },
+      "codex-only",
+    );
+
+    expect(result.members[0].model_selection).toMatchObject({
+      task_intent: "implementation",
+      model: MODEL_IDS.codex.luna,
+    });
+    expect(() =>
+      teamMemberSchema.parse({
+        role: "qa",
+        engine: "codex-qa",
+        task: "generic task text",
+        intent: "invalid",
+      }),
+    ).toThrow();
+    expect(() =>
+      teamMemberSchema.parse({
+        role: "qa",
+        engine: "codex-qa",
+        task: "generic task text",
+        intent: "implementation",
+        typo_intent: "test",
+      }),
+    ).toThrow();
   });
 
   it("honors explicit model policy overrides in the shared launch plan", () => {

@@ -53,7 +53,7 @@ describe("U-TIER: cost-tiered provider router", () => {
     expect(() => resolveModel("se", "T0", "claude")).toThrow(/invariant/);
     expect(() => resolveModel("docs", "T0", "codex")).toThrow(/invariant/);
     expect(resolveModel("se", "T2", "claude")).toBe(MODEL_IDS.claude.haiku);
-    expect(resolveModel("se", "T1", "codex")).toBe(MODEL_IDS.codex.worker);
+    expect(resolveModel("se", "T1", "codex")).toBe(MODEL_IDS.codex.luna);
   });
 
   it("U-TIER-004: GPT(Codex) も Claude と対称 (全 role 両 provider・同 archetype)", () => {
@@ -106,7 +106,7 @@ describe("U-TIER: cost-tiered provider router", () => {
       d,
     );
     expect(hard.tier).toBe("T1");
-    expect(hard.model).toBe(MODEL_IDS.codex.worker);
+    expect(hard.model).toBe(MODEL_IDS.codex.luna);
   });
 
   it("U-TIER-008: assignCross は hybrid で判断を相手 provider にフリップ", () => {
