@@ -418,21 +418,14 @@ describe("runDoctor", () => {
     return cachedRealRepoDoctor;
   };
 
-  it("U-TESTHYGIENE-028: rejects unknown aggregate doctor blockers", () => {
+  it("U-TESTHYGIENE-028: accepts the resolved aggregate doctor baseline", () => {
     const r = realRepoDoctor();
     const blockers = r.messages.filter(
       (message) => message.includes(" - violation") || message.includes(" — violation"),
     );
 
-    const knownBlockers = [
-      "PLAN-L7-418-plan-asset-v2-adapter-migration-ledger",
-      "PLAN-L7-423-engine-swap-domain-objects-ports",
-    ];
-    expect(r.ok).toBe(false);
-    expect(blockers).toHaveLength(knownBlockers.length);
-    expect(blockers).toEqual(
-      expect.arrayContaining(knownBlockers.map((planId) => expect.stringContaining(planId))),
-    );
+    expect(r.ok).toBe(true);
+    expect(blockers).toHaveLength(0);
   });
 
   it("ok=true includes handover and agent-slots surfaces as warnings", () => {
@@ -985,16 +978,18 @@ describe("runDoctor", () => {
     }
   });
 
-  it("hard-gates PLAN governance while merged-plan debt remains", () => {
+  it("passes PLAN governance after merged-plan debt is resolved", () => {
     const governance = checkPlanGovernance(headSnapshotRoot());
     const r = realRepoDoctor();
 
-    expect(governance.ok).toBe(false);
-    expect(governance.messages[0]).toContain("plan-governance - violation");
+    expect(governance.ok).toBe(true);
+    expect(governance.messages).toEqual(expect.arrayContaining([expect.stringContaining("OK")]));
     expect(r.messages.some((m) => m.includes("doctor: plan-schedule") && m.includes("OK"))).toBe(
       true,
     );
-    expect(r.messages.some((m) => m.includes("doctor: plan-governance - violation"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: plan-governance") && m.includes("OK"))).toBe(
+      true,
+    );
   });
 
   it("keeps doctor plan gate re-exports stable after extraction", () => {
