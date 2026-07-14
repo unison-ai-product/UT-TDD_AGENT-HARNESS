@@ -12,10 +12,10 @@ import {
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { headPlanDocCount } from "./plan-asset/head-plan-doc-count.js";
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import { MODEL_IDS } from "../src/team/model-policy";
+import { headPlanDocCount } from "./plan-asset/head-plan-doc-count.js";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { headPlanDocCount } from "./head-plan-doc-count.js";
 import { loadRoleContractRegistry } from "../../src/plan-asset/adapters/role-contract-registry.js";
 import {
   HeadTargetRegistry,
@@ -7,6 +6,7 @@ import {
   type MigrationDecisionPort,
   targetSlotFindings,
 } from "../../src/plan-asset/application/legacy-migration-dry-run.js";
+import { headPlanDocCount } from "./head-plan-doc-count.js";
 
 describe("legacy migration dry-run", () => {
   it("U-PA-038: proves exact files and directory families against non-empty HEAD blobs", () => {
