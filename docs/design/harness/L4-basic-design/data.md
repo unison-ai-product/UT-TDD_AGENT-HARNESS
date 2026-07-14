@@ -234,6 +234,10 @@ AI が生成する TypeScript core は、後でリファクタする前提では
 
 不変条件: projection DB は生成 state だが、検出器の機械 SSoT として扱う。入力となる docs/YAML/JSON と projection の齟齬は doctor が finding として出し、silent repair しない。
 
+### §8.2 Projection rebuild 境界 (engine-swap)
+
+投影再構築は既存集約に永続entityを足す操作ではなく、authoring sourceからread modelを再生成するapplication serviceである。source収集→pure projector→単一write sessionの順だけを許可し、row/findingのいずれか、またはsecret guardが失敗した場合は全rollbackする。projection eventとfinding payloadには共通guardを適用し、raw secretをDB/auditへ保存しない。projectorはDB/FS/clock/CLIを直接importせず、I/Oはsource adapter、transaction adapter、CLI/doctor composition rootへ隔離する。detector/doctorは結果を観測するだけで、PLAN・docs・state正本を創作またはsilent repairしない。具体的port signatureと移行完了条件はL5/L6で定義する。
+
 ## §9 carry → L5 詳細設計
 
 - 各集約の **物理 schema 詳細** (JSON フィールド型・必須/任意・default) は L5 physical-data (D-DB) で確定
