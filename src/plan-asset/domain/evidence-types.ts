@@ -122,3 +122,14 @@ export type EvidenceExitRule =
   | { readonly kind: "exact"; readonly expected: number }
   | { readonly kind: "nonzero" }
   | { readonly kind: "any" };
+
+export type EvidenceClaimsRule =
+  | { readonly kind: "recorded" }
+  | { readonly kind: "review-approved" }
+  | { readonly kind: "red-observed" }
+  | { readonly kind: "trace-clean" }
+  | { readonly kind: "gate-passed" }
+  | {
+      readonly kind: "decision";
+      readonly expected: "accepted" | "rejected" | "retain" | "archive";
+    };

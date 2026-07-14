@@ -926,7 +926,7 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 | `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `canonicalPayload`, `dependencies[]` | 空ID、重複dependency、revision≠1、payload digest不一致は`PlanAssetError` |
 | `RevisePlanCommand` | `assetId`, `baseRevision`, `changeSet`, `actor`, `reason` | base≠latest、空reason、identity変更は拒否 |
 | `EvidenceInput` | `evidenceId`, `evidenceKind`, `subjectId`, `subjectRevision`, `sourceCommit`, branded `commandArgs`, kind別typed `claims`, `outputDigest`, `exitCode`, typed `producer`, `producedAt`, `expiresAt?`, `supersedesEvidenceId?` | claimsを含むrecord digestをcanonical fieldから内部生成する。digest/commit/revision/redacted command/kind/producer/claims欠落、kind-claims不一致、自己supersedeは`EvidenceError`。非0 exitも監査用recordとしてvalid |
-| `EvidencePolicy` | `policyId`, `revision`, `requirements[]`（各要素=`requirementId`, `requiredKind`, `minCount`, `maxCount?`, `acceptedProducers[]`, `exitRule`）、`maxAge?` | policy定義と評価context（subject/revision/commit/now）を分離する。複数kindを各cardinalityで表現し、全履歴からsupersession frontierを検証する。別kind/revision/commit、期限切れ、producer外、exit不適合を件数へ数えず、requirement別eligible/rejected IDをstable順で返す |
+| `EvidencePolicy` | `policyId`, `revision`, `requirements[]`（各要素=`requirementId`, `requiredKind`, `minCount`, `maxCount?`, `acceptedProducers[]`, `exitRule`, typed `claimsRule`）、`maxAge?` | policy定義と評価context（subject/revision/commit/now）を分離する。複数kindを各cardinalityで表現し、全履歴から因果順を検証したsupersession frontierを作る。別kind/revision/commit、期限切れ、producer外、exit/claims不適合を件数へ数えず、requirement別eligible/rejected IDをstable順で返す |
 | `WorkflowCommand` | `subjectId`, `expectedFrom`, `to`, `actor`, `reason?`, `evidenceIds[]` | 許可表外、sequence不整合、guard不足は`WorkflowError` |
 | `WorkflowContext` | `subjectRevision`, `events[]`, `evidence[]`, `now`, `policyRevision` | event/evidenceが別subjectならfail-close |
 | `VModelContractDto` | `revision`, `layers[]`, `gates[]`, `pairs[]`, `exceptions[]`, `evidencePolicies[]`, `defectRoutes[]` | exactly-once、未知参照、理由なし例外は`ContractViolation[]` |
@@ -1105,7 +1105,7 @@ resumeだけが元normal stateへ戻す。reopenの同一revisionはstate復帰�
 | `accept/v1` | `green-test-run`, `gate-run`, `acceptance-decision` | 各1以上 | 非期限切れ、exit 0、同revision/commit、PO/human要件をprofileから適用 |
 | exception command | `exception-context` | 1以上 | actor/reason/source commit/resumeまたはreplacementを同recordで拘束 |
 
-`EvidencePolicy`はkind、min/max cardinality、maxAge、accepted producers、`exitRule=exact|nonzero|any`、`expectedExit?`、subject revision/source commit一致をtyped fieldで持つ。
+`EvidencePolicy`はkind、min/max cardinality、maxAge、accepted producers、`exitRule=exact|nonzero|any`、`expectedExit?`、`claimsRule=recorded|review-approved|red-observed|trace-clean|gate-passed|decision(expected)`、subject revision/source commit一致をtyped fieldで持つ。
 不足kindと不適格record IDをstable順で返し、別revision・policyのexitRule不適合・期限切れrecordを件数へ数えない。
 
 | ポリシーID | 必須証跡kind | 必要件数 | exit規則 | 許可producer |

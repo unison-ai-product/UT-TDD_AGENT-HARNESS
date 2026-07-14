@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { ReservationService } from "../../src/plan-asset/application/reservation-service.js";
+import { HmacLeaseTokenKeyRing } from "../../src/plan-asset/adapters/hmac-lease-token-key-ring.js";
+import {
+  frameLeaseTokenContext,
+  ReservationService,
+} from "../../src/plan-asset/application/reservation-service.js";
 import { PlanLedger } from "../../src/plan-asset/ledger/plan-ledger.js";
 import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import type { ClockPort } from "../../src/plan-asset/ports/clock.js";
@@ -11,6 +15,27 @@ import type {
 import { openHarnessDb } from "../../src/state-db/index.js";
 
 describe("PLAN reservation service", () => {
+  it("U-PA-043: freezes the seven-field length-prefixed HMAC input and known vector", () => {
+    const message = frameLeaseTokenContext({
+      commandId: "command:a",
+      reservationId: "reservation:a",
+      namespace: "PLAN-L7",
+      ordinal: 418,
+      assetId: "plan:a",
+      occurredAt: "2026-07-14T00:00:00.000Z",
+      expiresAt: "2026-07-14T01:00:00.000Z",
+    });
+    expect(Buffer.from(message).toString("hex")).toBe(
+      "00000009636f6d6d616e643a610000000d7265736572766174696f6e3a6100000007504c414e2d4c370000000334313800000006706c616e3a6100000018323032362d30372d31345430303a30303a30302e3030305a00000018323032362d30372d31345430313a30303a30302e3030305a",
+    );
+    const keyRing = new HmacLeaseTokenKeyRing("v2", [
+      { version: "v2", secret: Buffer.alloc(32, 0x0b) },
+    ]);
+    expect(Buffer.from(keyRing.issueMac(message).mac).toString("hex")).toBe(
+      "487c01a611e5644dca7e5cf7b0e02cd7cf974c320e60bcbaabb816930eafdb2b",
+    );
+  });
+
   it("U-PA-043: issues a raw lease once, stores only its hash, and recovers the same replay", () => {
     const db = openHarnessDb(":memory:");
     try {
@@ -85,6 +110,13 @@ describe("PLAN reservation service", () => {
         ok: false,
         ruleId: "plan-id-reservation-command-conflict",
       });
+      expect(
+        service.reserve({
+          ...request,
+          commandId: "command:huge-lease",
+          leaseMs: Number.MAX_SAFE_INTEGER,
+        }),
+      ).toEqual({ ok: false, ruleId: "plan-id-reservation-invalid" });
       keyRing.corruptRecovery = true;
       expect(service.reserve(request)).toEqual({
         ok: false,

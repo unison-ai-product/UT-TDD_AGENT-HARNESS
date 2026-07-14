@@ -45,6 +45,14 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-asset/domain/evidence-policy.ts
     artifact_type: source_module
+  - artifact_path: src/plan-asset/domain/evidence-types.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/domain/evidence-claims.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/domain/evidence-canonical.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/domain/redacted-command-args.ts
+    artifact_type: source_module
   - artifact_path: src/plan-asset/domain/reservation.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/application/reservation-service.ts
@@ -52,6 +60,8 @@ generates:
   - artifact_path: src/plan-asset/ports/clock.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ports/lease-token-key-ring.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ports/reservation-ledger.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/domain/legacy-migration.ts
     artifact_type: source_module
@@ -62,6 +72,8 @@ generates:
   - artifact_path: src/plan-asset/adapters/legacy-plan-inventory.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/adapters/role-contract-registry.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/adapters/hmac-lease-token-key-ring.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/ledger/schema.ts
     artifact_type: source_module

@@ -43,6 +43,47 @@ describe("PLAN Asset canonical ledger schema", () => {
         null,
         digest,
       );
+      for (const invalidVersion of ["", "bad.version"]) {
+        expect(() =>
+          db
+            .prepare(
+              "INSERT INTO plan_id_reservation_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            )
+            .run(
+              `event:invalid:${invalidVersion}`,
+              `reservation:event-invalid:${invalidVersion}`,
+              1,
+              `command:event-invalid:${invalidVersion}`,
+              digest,
+              "reserved",
+              "PLAN-L7",
+              98,
+              "plan:a",
+              invalidVersion,
+              digest,
+              now,
+              later,
+              digest,
+            ),
+        ).toThrow();
+        expect(() =>
+          db
+            .prepare("INSERT INTO plan_id_reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .run(
+              `reservation:invalid:${invalidVersion}`,
+              "PLAN-L7",
+              99,
+              "plan:a",
+              invalidVersion,
+              digest,
+              "active",
+              now,
+              later,
+              null,
+              digest,
+            ),
+        ).toThrow();
+      }
       db.prepare("INSERT INTO plan_id_reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
         "reservation:a",
         "PLAN-L7",
@@ -477,5 +518,10 @@ function restoreTrigger(db: ReturnType<typeof openHarnessDb>, name: string): voi
 }
 
 function legacyV2Ddl(): readonly string[] {
-  return ledgerSchemaDdl().map((sql) => sql.replace(/lease_key_version TEXT NOT NULL,\s*/g, ""));
+  return ledgerSchemaDdl().map((sql) =>
+    sql
+      .replace(/lease_key_version TEXT NOT NULL,\s*/g, "")
+      .replace(/,\s*CHECK \(lease_key_version != ''\)/g, "")
+      .replace(/,\s*CHECK \(INSTR\(lease_key_version, '\.'\) = 0\)/g, ""),
+  );
 }

@@ -3,6 +3,7 @@ import { EvidencePolicy } from "../../src/plan-asset/domain/evidence-policy.js";
 import {
   createRedactedCommandArgs,
   EvidenceRecord,
+  type StoredEvidenceRecord,
 } from "../../src/plan-asset/domain/evidence-record.js";
 
 const digest = "a".repeat(64);
@@ -28,6 +29,7 @@ describe("PLAN Asset evidence policy", () => {
           maxCount: 1,
           acceptedProducers: ["ci"],
           exitRule: { kind: "exact", expected: 0 },
+          claimsRule: { kind: "recorded" },
         },
         {
           requirementId: "accept-gate",
@@ -35,6 +37,7 @@ describe("PLAN Asset evidence policy", () => {
           minCount: 1,
           acceptedProducers: ["ci"],
           exitRule: { kind: "exact", expected: 0 },
+          claimsRule: { kind: "gate-passed" },
         },
       ],
     });
@@ -103,11 +106,120 @@ describe("PLAN Asset evidence policy", () => {
     const created = EvidenceRecord.create(base);
     if (!created.ok) throw new Error("evidence fixture must be valid");
     expect(created.value.commandArgs.values).toContain("--token=[REDACTED]");
+    const compoundSecrets = createRedactedCommandArgs([
+      "cmd",
+      "--client-secret=TOPSECRET",
+      "--access-token",
+      "TOPSECRET2",
+      "OPENAI_API_KEY=TOPSECRET3",
+      "-H",
+      "Authorization: Bearer TOPSECRET4",
+      "https://user:TOPSECRET5@example.test/path",
+    ]);
+    expect(JSON.stringify(compoundSecrets)).not.toContain("TOPSECRET");
+    expect(
+      EvidenceRecord.create({
+        ...base,
+        commandArgs: createRedactedCommandArgs(["bun", "", "test"]),
+      }).ok,
+    ).toBe(false);
     expect(Object.isFrozen(created.value.claims)).toBe(true);
     expect(
       EvidenceRecord.reconstruct({
         ...created.value.toRecord(),
         outputDigest: "c".repeat(64),
+      }).ok,
+    ).toBe(false);
+
+    const stored = created.value.toRecord();
+    const mutations: Array<(record: StoredEvidenceRecord) => StoredEvidenceRecord> = [
+      (record) => ({ ...record, evidenceId: "evidence:mutated" }),
+      (record) => ({
+        ...record,
+        evidenceKind: "gate-run",
+        claims: { gateIds: ["gate:a"], failedGateIds: [] },
+      }),
+      (record) => ({ ...record, subjectId: "plan:b" }),
+      (record) => ({ ...record, subjectRevision: 2 }),
+      (record) => ({ ...record, sourceCommit: "c".repeat(40) }),
+      (record) => ({
+        ...record,
+        commandArgs: { schemaVersion: "redacted-argv/v1", values: ["bun", "test", "changed"] },
+      }),
+      (record) => ({ ...record, claims: { runnerId: "vitest", testIds: ["changed"] } }),
+      (record) => ({ ...record, exitCode: 1 }),
+      (record) => ({ ...record, producer: "codex" }),
+      (record) => ({ ...record, producedAt: "2026-07-13T23:00:00Z" }),
+      (record) => ({ ...record, expiresAt: "2026-07-15T00:00:00Z" }),
+      (record) => ({ ...record, supersedesEvidenceId: "evidence:older" }),
+      (record) => ({ ...record, recordDigest: "d".repeat(64) }),
+    ];
+    for (const mutate of mutations) {
+      const reconstructed = EvidenceRecord.reconstruct(mutate(stored));
+      expect(reconstructed.ok).toBe(false);
+      if (!reconstructed.ok) {
+        expect(reconstructed.error.ruleId).toBe("evidence-record-digest-mismatch");
+      }
+    }
+  });
+
+  it("U-PA-046: rejects negative claims and causally reversed supersession", () => {
+    const rejected = reviewEvidence("evidence:rejected", "rejected", "2026-07-14T01:00:00Z");
+    const olderApproval = reviewEvidence(
+      "evidence:older-approval",
+      "approved",
+      "2026-07-14T00:00:00Z",
+      rejected.evidenceId,
+    );
+    const policy = EvidencePolicy.create({
+      policyId: "review/v1",
+      revision: 1,
+      requirements: [
+        {
+          requirementId: "independent-review-approved",
+          requiredKind: "independent-review",
+          minCount: 1,
+          acceptedProducers: ["human"],
+          exitRule: { kind: "exact", expected: 0 },
+          claimsRule: { kind: "review-approved" },
+        },
+      ],
+    });
+    if (!policy.ok) throw new Error("policy fixture must be valid");
+    const verdict = policy.value.evaluate([rejected, olderApproval], {
+      subjectId: "plan:a",
+      subjectRevision: 1,
+      sourceCommit: commit,
+      now: "2026-07-14T02:00:00Z",
+    });
+    expect(verdict.usable).toBe(false);
+    expect(verdict.violations).toContain(
+      "evidence-supersession-causal-order:evidence:older-approval",
+    );
+    expect(verdict.eligibleEvidenceIds).not.toContain("evidence:rejected");
+  });
+
+  it.each([
+    { requiredKind: "unknown" as never },
+    { acceptedProducers: ["unknown" as never] },
+    { exitRule: { kind: "bogus" } as never },
+    { claimsRule: { kind: "bogus" } as never },
+  ])("U-PA-046: rejects an unknown policy discriminator", (override) => {
+    expect(
+      EvidencePolicy.create({
+        policyId: "invalid/v1",
+        revision: 1,
+        requirements: [
+          {
+            requirementId: "invalid",
+            requiredKind: "green-test-run",
+            minCount: 1,
+            acceptedProducers: ["ci"],
+            exitRule: { kind: "exact", expected: 0 },
+            claimsRule: { kind: "recorded" },
+            ...override,
+          },
+        ],
       }).ok,
     ).toBe(false);
   });
@@ -146,5 +258,29 @@ function evidence(
     expiresAt: overrides.expiresAt,
   });
   if (!created.ok) throw new Error("evidence fixture must be valid");
+  return created.value;
+}
+
+function reviewEvidence(
+  evidenceId: string,
+  verdict: "approved" | "rejected",
+  producedAt: string,
+  supersedesEvidenceId?: string,
+): EvidenceRecord {
+  const created = EvidenceRecord.create({
+    evidenceId,
+    evidenceKind: "independent-review",
+    subjectId: "plan:a",
+    subjectRevision: 1,
+    sourceCommit: commit,
+    commandArgs: createRedactedCommandArgs(["ut-tdd", "review"]),
+    claims: { verdict, reviewerId: "reviewer:a", reviewedAt: producedAt },
+    outputDigest: digest,
+    exitCode: 0,
+    producer: "human",
+    producedAt,
+    supersedesEvidenceId,
+  });
+  if (!created.ok) throw new Error("review evidence fixture must be valid");
   return created.value;
 }

@@ -1,5 +1,5 @@
 import { exactKeys, isNonempty, isPlainObject, validIso } from "./evidence-canonical.js";
-import type { EvidenceClaims, EvidenceKind } from "./evidence-types.js";
+import type { EvidenceClaims, EvidenceClaimsRule, EvidenceKind } from "./evidence-types.js";
 
 export function claimsValid(kind: EvidenceKind, value: unknown): value is EvidenceClaims {
   if (!isPlainObject(value)) return false;
@@ -36,6 +36,59 @@ export function claimsValid(kind: EvidenceKind, value: unknown): value is Eviden
     case "exception-context":
       return exceptionClaims(value);
   }
+}
+
+export function claimsRuleValidFor(kind: EvidenceKind, rule: EvidenceClaimsRule): boolean {
+  switch (rule.kind) {
+    case "recorded":
+      return true;
+    case "review-approved":
+      return kind === "design-pair-review" || kind === "independent-review";
+    case "red-observed":
+      return kind === "red-test-run";
+    case "trace-clean":
+      return kind === "trace-closure";
+    case "gate-passed":
+      return kind === "gate-run";
+    case "decision":
+      return kind === "acceptance-decision" || kind === "retention-decision";
+    default:
+      return false;
+  }
+}
+
+export function claimsSatisfy(
+  kind: EvidenceKind,
+  claims: EvidenceClaims,
+  rule: EvidenceClaimsRule,
+): boolean {
+  if (!claimsRuleValidFor(kind, rule)) return false;
+  const value = claims as unknown as Record<string, unknown>;
+  switch (rule.kind) {
+    case "recorded":
+      return true;
+    case "review-approved":
+      return value.verdict === "approved";
+    case "red-observed":
+      return redOutcomeSatisfied(value);
+    case "trace-clean":
+      return value.orphanCount === 0 && value.staleCount === 0;
+    case "gate-passed":
+      return Array.isArray(value.failedGateIds) && value.failedGateIds.length === 0;
+    case "decision":
+      return value.decision === rule.expected;
+  }
+}
+
+function redOutcomeSatisfied(value: Record<string, unknown>): boolean {
+  if (value.todoCount !== 0 || value.skipCount !== 0) return false;
+  const expected = Array.isArray(value.expectedFindingIds)
+    ? [...value.expectedFindingIds].sort()
+    : [];
+  const observed = Array.isArray(value.observedFindingIds)
+    ? [...value.observedFindingIds].sort()
+    : [];
+  return JSON.stringify(expected) === JSON.stringify(observed);
 }
 
 function redClaims(value: Record<string, unknown>): boolean {

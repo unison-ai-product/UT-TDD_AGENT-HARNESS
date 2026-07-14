@@ -43,7 +43,9 @@ export class ReservationService {
     const occurredAt = canonicalTime(this.clock.now());
     if (!occurredAt) return failed("plan-id-reservation-clock-invalid");
     const expiresMs = Date.parse(occurredAt) + request.leaseMs;
-    if (!Number.isSafeInteger(expiresMs)) return failed("plan-id-reservation-invalid");
+    if (!Number.isSafeInteger(expiresMs) || Math.abs(expiresMs) > 8_640_000_000_000_000) {
+      return failed("plan-id-reservation-invalid");
+    }
     const expiresAt = new Date(expiresMs).toISOString();
     const context = contextFor(request, occurredAt, expiresAt);
     const message = frameLeaseTokenContext(context);
@@ -146,7 +148,6 @@ interface LeaseTokenContext {
 
 export function frameLeaseTokenContext(context: LeaseTokenContext): Uint8Array {
   const values = [
-    "ut-tdd-lease-token/v1",
     context.commandId,
     context.reservationId,
     context.namespace,

@@ -143,7 +143,11 @@ const tables: readonly TableDef[] = [
       requiredCol("event_digest"),
     ],
     unique: [["reservation_id", "sequence"], ["command_id"]],
-    checks: [enumCheck("event_kind", ["reserved", "released", "expired"])],
+    checks: [
+      enumCheck("event_kind", ["reserved", "released", "expired"]),
+      { kind: "compare", column: "lease_key_version", operator: "!=", value: "" },
+      { kind: "not-contains", column: "lease_key_version", value: "." },
+    ],
     foreignKeys: [
       foreignKey(["asset_id"], {
         table: "plan_assets",
@@ -169,6 +173,8 @@ const tables: readonly TableDef[] = [
     ],
     checks: [
       enumCheck("status", ["active", "released", "expired"]),
+      { kind: "compare", column: "lease_key_version", operator: "!=", value: "" },
+      { kind: "not-contains", column: "lease_key_version", value: "." },
       {
         kind: "or",
         expressions: [
@@ -493,12 +499,29 @@ function legacyV2ReservationSchemaValid(db: HarnessDb): boolean {
   for (const name of ["plan_id_reservation_events", "plan_id_reservations"]) {
     const table = tables.find((candidate) => candidate.name === name);
     if (!table) return false;
-    const expected = normalizeDdl(
-      createTableSql(table).replace(/lease_key_version TEXT NOT NULL,\s*/g, ""),
-    );
+    const expected = normalizeDdl(createTableSql(withoutLeaseKeyVersion(table)));
     if (actual.get(`table:${name}`) !== expected) return false;
   }
   return true;
+}
+
+function withoutLeaseKeyVersion(table: TableDef): TableDef {
+  return {
+    ...table,
+    columns: table.columns.filter((column) => column.name !== "lease_key_version"),
+    checks: table.checks?.filter((check) => !checkReferencesColumn(check, "lease_key_version")),
+  };
+}
+
+function checkReferencesColumn(
+  check: NonNullable<TableDef["checks"]>[number],
+  column: string,
+): boolean {
+  if (check.kind === "and" || check.kind === "or") {
+    return check.expressions.some((child) => checkReferencesColumn(child, column));
+  }
+  if (check.kind === "not") return checkReferencesColumn(check.expression, column);
+  return check.column === column;
 }
 
 function reservationRowCount(db: HarnessDb): number {

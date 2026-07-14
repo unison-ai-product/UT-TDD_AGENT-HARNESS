@@ -1,9 +1,13 @@
-import type {
-  EvidenceExitRule,
-  EvidenceKind,
-  EvidenceProducer,
-  EvidenceRecord,
-} from "./evidence-record.js";
+import { claimsRuleValidFor, claimsSatisfy } from "./evidence-claims.js";
+import type { EvidenceRecord } from "./evidence-record.js";
+import {
+  EVIDENCE_KINDS,
+  EVIDENCE_PRODUCERS,
+  type EvidenceClaimsRule,
+  type EvidenceExitRule,
+  type EvidenceKind,
+  type EvidenceProducer,
+} from "./evidence-types.js";
 
 type Result<T, E> =
   | { readonly ok: true; readonly value: T }
@@ -16,6 +20,7 @@ export interface EvidenceRequirement {
   readonly maxCount?: number;
   readonly acceptedProducers: readonly EvidenceProducer[];
   readonly exitRule: EvidenceExitRule;
+  readonly claimsRule: EvidenceClaimsRule;
 }
 
 export interface EvidenceEvaluationContext {
@@ -86,6 +91,7 @@ export class EvidencePolicy {
         (record) =>
           active.has(record.evidenceId) &&
           record.isUsableFor({ ...context, ...requirement }).usable &&
+          claimsSatisfy(record.evidenceKind, record.claims, requirement.claimsRule) &&
           (this.maxAgeMs === undefined ||
             Date.parse(context.now) - Date.parse(record.producedAt) <= this.maxAgeMs),
       );
@@ -136,7 +142,12 @@ function requirementValid(requirement: EvidenceRequirement): boolean {
         requirement.maxCount >= requirement.minCount)) &&
     requirement.acceptedProducers.length > 0 &&
     new Set(requirement.acceptedProducers).size === requirement.acceptedProducers.length &&
-    (requirement.exitRule.kind !== "exact" || Number.isSafeInteger(requirement.exitRule.expected))
+    EVIDENCE_KINDS.includes(requirement.requiredKind) &&
+    requirement.acceptedProducers.every((producer) => EVIDENCE_PRODUCERS.includes(producer)) &&
+    ["exact", "nonzero", "any"].includes(requirement.exitRule.kind) &&
+    (requirement.exitRule.kind !== "exact" ||
+      Number.isSafeInteger(requirement.exitRule.expected)) &&
+    claimsRuleValidFor(requirement.requiredKind, requirement.claimsRule)
   );
 }
 
@@ -159,6 +170,11 @@ function validateSupersession(records: readonly EvidenceRecord[]): readonly stri
       target.evidenceKind !== record.evidenceKind
     ) {
       violations.push(`evidence-supersession-scope:${record.evidenceId}`);
+    } else if (
+      record.sourceCommit !== target.sourceCommit ||
+      Date.parse(record.producedAt) <= Date.parse(target.producedAt)
+    ) {
+      violations.push(`evidence-supersession-causal-order:${record.evidenceId}`);
     }
     superseders.set(targetId, (superseders.get(targetId) ?? 0) + 1);
   }

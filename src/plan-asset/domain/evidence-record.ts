@@ -30,6 +30,7 @@ import {
 
 export type {
   EvidenceClaims,
+  EvidenceClaimsRule,
   EvidenceError,
   EvidenceExitRule,
   EvidenceKind,
