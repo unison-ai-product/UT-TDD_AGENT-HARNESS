@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { REVIEWED_REKEY_DECISIONS } from "../../src/plan-asset/application/legacy-migration-decision-manifest.js";
 import {
   buildLegacyPlanInventory,
   inventoryProjectionDigest,
   parseLegacyPlanSource,
 } from "../../src/plan-asset/adapters/legacy-plan-inventory.js";
+import { REVIEWED_REKEY_DECISIONS } from "../../src/plan-asset/application/legacy-migration-decision-manifest.js";
 import { headPlanDocCount } from "./head-plan-doc-count.js";
 
 describe("legacy PLAN HEAD inventory", () => {
