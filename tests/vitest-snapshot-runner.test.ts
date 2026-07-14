@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  assertBatchVitestArgs,
   assertSnapshotContentMatch,
   assertSnapshotFingerprint,
   copyReferenceRuntimeInputs,
@@ -26,6 +27,20 @@ import {
 import { removeTestTree } from "./support/temp-tree";
 
 describe("vitest snapshot runner", () => {
+  it("U-TESTHYGIENE-045: rejects watch arguments because an execution snapshot cannot observe live edits", () => {
+    expect(() => assertBatchVitestArgs(["--watch"])).toThrow("batch-only");
+    expect(() => assertBatchVitestArgs(["-w"])).toThrow("batch-only");
+    expect(() => assertBatchVitestArgs(["--watch=false"])).toThrow("batch-only");
+    expect(() => assertBatchVitestArgs(["tests/example.test.ts", "--reporter=dot"])).not.toThrow();
+  });
+
+  it("U-TESTHYGIENE-046: does not advertise a live-source watch script", () => {
+    const manifest = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+      scripts?: Record<string, string>;
+    };
+    expect(manifest.scripts?.["test:watch"]).toBeUndefined();
+  });
+
   it("U-TESTHYGIENE-021: copies a non-Git Pack without sharing node_modules", () => {
     const source = mkdtempSync(join(tmpdir(), "ut-tdd-pack-source-"));
     const snapshot = `${source}-snapshot`;

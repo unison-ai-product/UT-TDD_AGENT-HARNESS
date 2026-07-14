@@ -132,6 +132,11 @@ export function assertSnapshotFingerprint(root: string, expectedFingerprint: str
     throw new Error("snapshot reference fingerprint mismatch");
 }
 
+export function assertBatchVitestArgs(args: readonly string[]): void {
+  if (args.some((arg) => arg === "-w" || arg === "--watch" || arg.startsWith("--watch=")))
+    throw new Error("vitest snapshot runner is batch-only; watch mode would observe a stale snapshot");
+}
+
 export function finishSnapshotCleanup(
   primaryError: unknown,
   cleanups: Array<() => void>,
@@ -225,6 +230,7 @@ export function runSnapshotTests(
   args = process.argv.slice(2),
   repoRoot = process.cwd(),
 ): void {
+  assertBatchVitestArgs(args);
   const snapshotRoot = join(
     tmpdir(),
     `ut-tdd-vitest-${process.pid}-${Date.now()}`,

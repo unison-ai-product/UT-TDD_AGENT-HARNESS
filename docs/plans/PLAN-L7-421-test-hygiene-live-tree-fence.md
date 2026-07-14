@@ -142,7 +142,7 @@ review_evidence: []
 ### Step 3: [直列] live 測定テストの検出基盤と方針適用
 - 直列理由 = **downstream_dependency** (棚卸し結果が個別方針を決める)。
 - tests/ 配下で repository 読みを静的検出する lint (reason・呼出数を持つ契約台帳方式)
-  を追加。再棚卸しで検出した 71 test/support file は全件を
+  を追加。再棚卸しで検出した 72 test/support file は全件を
   (a) detached HEAD snapshot、(b) 隔離 fixture のいずれかへ分類・適用する。CI 専用の
   live tree 測定は残さず、新規・呼出数差分・古い契約は全て fail-close とする。
   T-2 は rebuild 済み DB を前提とする guard (未 rebuild ならテスト内で rebuild
@@ -172,6 +172,11 @@ review_evidence: []
 - seal直後にreference fingerprintを捕捉し、Vitest終了後かつunseal前に再検証する。差分は
   `snapshot reference fingerprint mismatch`としてVitest失敗・cleanup失敗と同様に集約して
   fail-closeする（`U-TESTHYGIENE-042`）。
+- snapshot runnerはbatch-onlyである。live sourceを観測できない一時execution snapshotをwatchして
+  開発者へ誤った再実行保証を出さないため、`test:watch`は提供せず、watch引数もfail-closeする
+  （`U-TESTHYGIENE-045`／`046`）。
+- Git snapshotは捕捉OIDのtree objectだけを入力にし、hybrid中のindex・untracked・未commit差分を
+  正本へ昇格させない。契約台帳の件数SSoTは`REPOSITORY_READ_CONTRACTS`であり、L7表の総数を固定値にしない。
 - `doctor.test.ts` のaggregate baselineはPLANがdraftの間だけ
   `merged-plan-status` 1件を許可する。PLAN confirm時に許可を0件へ更新し、doctor全体
   greenを復元することを解除条件とする。
@@ -190,6 +195,8 @@ review_evidence: []
       non-Git copyは全階層の`.git`／`.ut-tdd`／`node_modules`を含まず、post-rebuild注入はDBとfeedback lifecycle logのみである。
 - [ ] referenceはVitest起動からcleanup直前まで物理的にread-onlyであり、Windowsを含むcanonical path比較でexecution rootと
       reference rootを混同しない。seal直後のfingerprintをVitest後・unseal前に再検証し、seal／revision／fingerprint／cleanup failureはexit 1である。
+- [ ] snapshot runnerはbatch-onlyであり、live source編集を観測できないwatch機能を広告・受理しない。
+- [ ] global teardownのfence tripはVitest子processを非0終了させ、runnerのexit 1伝播へ接続される。
 - [ ] repository read契約は`head_snapshot`／`isolated_fixture`のmode別exact countを持つ。sinkへ到達しないbare／void／
       unused／assertion-only rootは数えず、HEAD root（alias・静的derived pathを含む）のNode/Bun直接write sinkはhard violationとなる。
       FD/FileHandleを経る任意dataflowはPLAN-L7-425の独立自己証明対象としてdebt routeする。

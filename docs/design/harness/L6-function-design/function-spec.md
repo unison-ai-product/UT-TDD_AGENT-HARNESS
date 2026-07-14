@@ -993,7 +993,9 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
 ### `runSnapshotTests(args, repoRoot)`
 
 - pre: Git sourceはtop-level canonical pathが`repoRoot`とexact一致する場合だけGit扱いし、開始時のcommit OIDを
-  一度だけ捕捉する。非Git Packはlive sourceを一度だけwritable execution snapshotへcopyする。
+  一度だけ捕捉する。Git時の入力はこのOIDのtree objectだけであり、index、untracked、未commit worktree差分は
+  意図的に測定対象外とする。未commit変更を検証する場合は隔離fixture又はcommit済OIDを明示して使い、origin
+  worktree fenceは差分を検出してもsnapshot入力へ昇格させない。非Git Packはlive sourceを一度だけwritable execution snapshotへcopyする。
 - post: referenceは捕捉済みexecutionから依存install／DB rebuildより前に生成する。Gitは捕捉OIDとreference HEADの
   一致、非Gitはexecution captureとの内容一致を検証し、live sourceを二度読まない。DB rebuild後にreferenceへ追加
   できるruntime inputは`.ut-tdd/harness.db`と`.ut-tdd/logs/feedback-lifecycle.jsonl`だけとする。
@@ -1012,6 +1014,9 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
   台帳へ計上する。HEAD root又はそのalias／静的derived pathをNode/Bunの直接mutation sinkへ渡すことは契約件数と無関係にhard violationとする。
   `open`／`openSync`はwrite-capable flagをfail-closeし、FD/FileHandleを経る任意dataflowはPLAN-L7-425の独立自己証明対象とする。
 - 新規read、mode別件数差、stale契約、live root由来、HEAD write、scan errorは全てhard violationとし、コメントや文字列は数えない。
+  件数のSSoTは`REPOSITORY_READ_CONTRACTS`であり、L7表はoracle IDと意味論だけを持つ。test sourceの追加・削除・
+  read mode変更は同一commitで台帳を更新し、実repoのU-TESTHYGIENE-015でpath/mode/call数のexact equalityを確認する。
+  表示用総数は導出値であり固定定数化しない。
 
 ### 永続DBテストの所有責務
 
