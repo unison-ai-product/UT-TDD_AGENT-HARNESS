@@ -915,6 +915,7 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 - `HarnessProjectionSourcePort.load(): HarnessProjectionSourceBundle` はrepository I/Oをadapterへ閉じ込め、bundleにcaptured revision、capturedAt、source digestを必ず含める。application/domainはrepo root、filesystem、YAML、SQLiteを知らない。
 - `ProjectionRebuildCommand.rebuild(request): ProjectionRebuildResult` はbundleからpure projector群を順序決定的に実行し、一つの`ProjectionTransactionPort.transaction(session => ...)`内でclear、event、finding、joinをcommitする。失敗時は既存投影を保持し、部分commitを許さない。
 - `ProjectionWritePort.writeAll(writes)` は`ProjectionEvent`と`ProjectionFinding`のdiscriminated unionだけを受ける。event/findingの全string fieldは共通payload guardを通り、secret-like値は永続化前に拒否する。構造IDだけを例外とし、任意subject/evidence/source文字列を例外扱いしない。
+- 旧public `recordFinding` が残る移行期間も、adapterはfindingを`ProjectionWrite`へ正規化して同じpayload guardとwrite sessionへ委譲する。guard拒否時はrow、join findingとも0件であり、direct upsert、field別のguard省略、secretを含む任意IDの例外を許可しない。
 - pure projectorは`projectX(bundleSlice, context): readonly ProjectionWrite[]`であり、DB/FS/clock/cryptoをimportしない。時刻・stable IDはimmutable `ProjectionContext`から注入する。固定bundleのwrite列、順序、digestは再実行して同一である。
 - CLI、doctor、drive rebuild fallbackはcomposition rootとしてsource adapter、SQLite transaction store、clockを注入する。全consumer移行後にのみ旧`projection-writer.ts`を削除し、互換facadeを完了の代用にしない。
 
