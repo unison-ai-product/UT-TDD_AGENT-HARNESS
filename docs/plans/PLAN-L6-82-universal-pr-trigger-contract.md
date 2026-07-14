@@ -45,10 +45,10 @@ concept §7.2 / requirements §7.5-7.6 の「全 PR 共通 aggregate harness-che
 1. **universal PR trigger**: `pull_request` は base branch を限定しない (branches フィルタ削除
    または全 branch 許容)。`push` trigger は main 限定を維持 (solo main 直 dogfood)。
 2. **branch-protection context 不変**: required status check 名は `harness-check` 1 本のまま。
-3. **3 面同時更新**: source workflow / Pack template
-   (`docs/templates/github/common/pack-harness-check.yml`) / setup builtin が同一契約。
+3. **4 artifact同時更新**: source workflow / source template / Pack template /
+   setup builtin が同一trigger契約。detectorはprofile重複でmirrorを捨てず全件読む。
 4. **mutation fail-close**: `github-ci-policy` detector が「main 限定 pull_request trigger」への
-   退行を violation として検出する (現 detector は本契約を検査していない)。
+   退行、不正trigger型、push main限定の欠落をviolationとして検出する。
 5. issue #57 の Codex 設計コメント (branch は隔離のみ、工程正本は PLAN+harness.db /
    Execution Ledger 構想) と整合し、branch 命名契約は本 PLAN の scope 外。
 
@@ -57,5 +57,5 @@ concept §7.2 / requirements §7.5-7.6 の「全 PR 共通 aggregate harness-che
 - [x] 非 main base を除外しない `pull_request` 構文を U-CIPOL-001 で固定する。
 - [x] `github-ci-policy` が main 限定 trigger 退行を U-CIPOL-002 で fail-close する。
 - [x] `branches-ignore` / trigger 欠落を U-CIPOL-003 で fail-close する。
-- [x] source / Pack template / setup builtin の 3 面を同一契約へ同期する。
+- [x] source workflow / source template / Pack template / setup builtin の4 artifactを同一契約へ同期する。
 - [x] 実装は PLAN-L7-434。確定済み PLAN-L7-197 / L7-221 は上書きせず本ペアで訂正する。

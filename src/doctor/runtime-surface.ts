@@ -15,6 +15,7 @@ import {
   loadProjectHookDocs,
   projectHookMessages,
 } from "../lint/project-hook";
+import { BUILTIN_GITHUB_TEMPLATES } from "../setup/templates";
 
 export interface RuntimeSurfaceDeps {
   repoRoot: string;
@@ -41,7 +42,12 @@ export function checkGithubCiPolicy(repoRoot: string): { messages: string[]; ok:
     return { messages: ["github-ci-policy - violation: repo root could not be read"], ok: false };
   }
   try {
-    const r = analyzeGithubCiPolicy(loadGithubCiPolicyDocs(repoRoot));
+    const r = analyzeGithubCiPolicy(
+      loadGithubCiPolicyDocs({
+        repoRoot,
+        setupBuiltinWorkflow: BUILTIN_GITHUB_TEMPLATES["common/harness-check.yml"],
+      }),
+    );
     return { messages: githubCiPolicyMessages(r), ok: r.ok };
   } catch {
     return {

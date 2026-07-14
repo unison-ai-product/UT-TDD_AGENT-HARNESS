@@ -1127,9 +1127,12 @@ add-* 完了時、既存 PLAN との双方向 reference を更新:
 
 | 要件 | 仕様 |
 |------|------|
-| event trigger | `harness-check.yml` は `pull_request: branches: [main]` event で実行 |
+| event trigger | `harness-check.yml` は base branchを限定しない全 `pull_request` eventで実行し、`push`は`branches: [main]`だけに限定 |
 | 検出ロジック | PR head が `poc/*` で base が `main` なら subjob `poc-no-merge-guard` が exit 1 |
 | 例外 | なし (poc/* は S4 confirmed 後に Reverse → feature/* で再 PR する) |
+
+`poc/* → main` の拒否はGitHub event filterではなく、全PRで起動したjob内のhead/base guardで行う。
+これによりstacked PR（baseがmain以外）も同じ`harness-check`を必ず通り、base差による未検証経路を作らない。
 
 ## 6.5 CODEOWNERS bootstrap 2 段階
 
@@ -1873,7 +1876,7 @@ output:
 |------|----------|----------|
 | **pre-commit** | gitleaks / commitlint format / 軽量 lint (markdown / yaml) + `ut-tdd self-test --smoke` | < 5s |
 | **pre-push** | §5.3 session 終了前 4 項目 + 軽量 plan lint + 差分対象 self-test | < 15s |
-| **harness-check (CI on PR)** | §6.3 の 8 subjob (重い検証 + 全テスト + 回帰確認) | 数分 |
+| **harness-check (CI on every PR base)** | §6.3 の 8 subjob (重い検証 + 全テスト + 回帰確認)。`pull_request`に`branches` / `branches-ignore`を置かない | 数分 |
 
 `vmodel_lint` の完全検証は **pre-push と CI のみ** で実行。pre-commit には乗せない。
 
@@ -1900,6 +1903,7 @@ output:
 - [ ] pre-commit / pre-push / CI の責任分離 (§7.5) を守る
 - [ ] `ut-tdd self-test --smoke` はネットワーク不要・外部 AI runtime 不要で通る
 - [ ] PR merge gate は GitHub Actions `harness-check` のみを正本とし、ローカル hook 成否だけを merge 条件にしない
+- [x] `harness-check` は全PR baseで発火し、`pull_request`の不正な型・base filter・trigger欠落、`push: branches: [main]`の欠落を`github-ci-policy`がfail-closeする (PLAN-L6-82 / U-CIPOL-001..006、2026-07-14)
 - [x] **ルール同一性 (MUST、構想書 §2.1.0)**: gate / V-model / checklist / enum / route の正本は `ut-tdd` core + governance docs に単一定義され、`.claude/CLAUDE.md` / `AGENTS.md` がルールを再定義・分岐していない (doctor が両 adapter のルール重複・drift を検出し、検出時 fail)。`src/lint/rule-drift.ts` + doctor `checkRuleDrift` が AGENTS / CLAUDE adapter docs の必須 mode / command marker drift を fail-close 検出 (2026-06-08)。
 - [x] **rule parity test**: 同一 PLAN / diff を claude-only と codex-only で処理した際、`ut-tdd gate` / `ut-tdd plan lint` / `ut-tdd vmodel lint` の **判定結果と exit code が一致**する (runtime 差で結果が変わらない)。`ut-tdd gate` の判断ゲート review-tier は `evaluateGateReview` parity test で codex-only/claude-only 同一結果を機械検証 (2026-06-08)。
 - [x] **hybrid 機能分散 (MUST、構想書 §2.1.0)**: `ut-tdd team run` が `hybrid` で判断系 / 実行系を別 runtime に割り当て、同一 role の同一 runtime 重複・同一作業の二重実行を exit 1 で弾く (§7.1 team run 検証 7)。`validateTeamRun` が worker/reviewer provider 分離・duplicate role/provider を fail-close (2026-06-08)。

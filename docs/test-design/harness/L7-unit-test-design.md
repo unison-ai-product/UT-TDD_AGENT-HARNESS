@@ -1410,7 +1410,10 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `U-CIPOL-001` | universal PR trigger正常系 | source / Packの`pull_request`にbase filterなし、`push.branches=[main]` | `analyzeGithubCiPolicy().ok=true`。非main baseを除外する構文0、job名`harness-check`不変 |
 | `U-CIPOL-002` | stacked PR退行 | `pull_request.branches=[main]` | `main_limited_pr_trigger`、exit 1相当 |
 | `U-CIPOL-003` |別表記のfail-close | `branches-ignore=[work/**]` と `pull_request`欠落を各mutation | 前者=`main_limited_pr_trigger`、後者=`missing_trigger` |
+| `U-CIPOL-004` | trigger型fail-close | `pull_request`へ`false` / string / array / numberを各mutation | 全件`malformed_trigger_shape`。bare/nullまたはbase filterなしmapping以外を拒否 |
+| `U-CIPOL-005` | push main限定の構造検査 | push欠落+無関係fieldの`main`、別branch、`branches-ignore` | 欠落=`missing_trigger`、不正形=`invalid_push_main_trigger` |
+| `U-CIPOL-006` | 4 artifact入力 | source templateとsetup builtinを個別mutation | profile重複でdropせず、変異したartifact path自身のfinding |
 | `U-SETUP-004b2` | setup builtin同期 | built-in `common/harness-check.yml` | `pull_request`あり、直下の`branches` / `branches-ignore`なし。既存guard強度も維持 |
 
 `pull_request`を単に含む文字列検査だけではGreenにしない。YAML構造でbase filter不在を検査し、
-source / Pack / setup builtinのどれか1面だけの更新を完了扱いにしない。
+source workflow / source template / Pack template / setup builtinのどれか1 artifactだけの更新を完了扱いにしない。

@@ -59,11 +59,29 @@ jobs:
 
 function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc[] {
   return [
-    { file: ".github/workflows/harness-check.yml", content: source, profile: "source" },
+    {
+      file: ".github/workflows/harness-check.yml",
+      content: source,
+      profile: "source",
+      role: "runtime",
+    },
+    {
+      file: "docs/templates/github/common/harness-check.yml",
+      content: source,
+      profile: "source",
+      role: "source_template",
+    },
     {
       file: "docs/templates/github/common/pack-harness-check.yml",
       content: pack,
       profile: "pack",
+      role: "pack_template",
+    },
+    {
+      file: "setup-builtin:common/harness-check.yml",
+      content: source,
+      profile: "source",
+      role: "setup_builtin",
     },
   ];
 }
@@ -74,7 +92,9 @@ describe("github-ci-policy lint", () => {
 
     expect(result.ok).toBe(true);
     expect(result.violations).toEqual([]);
-    expect(githubCiPolicyMessages(result)[0]).toContain("source+pack harness-check gates");
+    expect(githubCiPolicyMessages(result)[0]).toContain(
+      "runtime+source-template+pack-template+setup-builtin triggers",
+    );
   });
 
   it("loads source checkouts where .github contains the source workflow", () => {
@@ -84,16 +104,33 @@ describe("github-ci-policy lint", () => {
       mkdirSync(join(repo, "docs", "templates", "github", "common"), { recursive: true });
       writeFileSync(join(repo, ".github", "workflows", "harness-check.yml"), SOURCE_WORKFLOW);
       writeFileSync(
+        join(repo, "docs", "templates", "github", "common", "harness-check.yml"),
+        SOURCE_WORKFLOW,
+      );
+      writeFileSync(
         join(repo, "docs", "templates", "github", "common", "pack-harness-check.yml"),
         PACK_WORKFLOW,
       );
 
-      const docs = loadGithubCiPolicyDocs(repo);
+      const docs = loadGithubCiPolicyDocs({
+        repoRoot: repo,
+        setupBuiltinWorkflow: SOURCE_WORKFLOW,
+      });
       const result = analyzeGithubCiPolicy(docs);
 
-      expect(docs.map((doc) => [doc.file, doc.profile])).toEqual([
-        [join(".github", "workflows", "harness-check.yml"), "source"],
-        [join("docs", "templates", "github", "common", "pack-harness-check.yml"), "pack"],
+      expect(docs.map((doc) => [doc.file, doc.profile, doc.role])).toEqual([
+        [join(".github", "workflows", "harness-check.yml"), "source", "runtime"],
+        [
+          join("docs", "templates", "github", "common", "harness-check.yml"),
+          "source",
+          "source_template",
+        ],
+        [
+          join("docs", "templates", "github", "common", "pack-harness-check.yml"),
+          "pack",
+          "pack_template",
+        ],
+        ["setup-builtin:common/harness-check.yml", "source", "setup_builtin"],
       ]);
       expect(result.ok).toBe(true);
       expect(result.violations).toEqual([]);
@@ -117,12 +154,25 @@ describe("github-ci-policy lint", () => {
         PACK_WORKFLOW,
       );
 
-      const docs = loadGithubCiPolicyDocs(repo);
+      const docs = loadGithubCiPolicyDocs({
+        repoRoot: repo,
+        setupBuiltinWorkflow: SOURCE_WORKFLOW,
+      });
       const result = analyzeGithubCiPolicy(docs);
 
-      expect(docs.map((doc) => [doc.file, doc.profile])).toEqual([
-        [join(".github", "workflows", "harness-check.yml"), "pack"],
-        [join("docs", "templates", "github", "common", "harness-check.yml"), "source"],
+      expect(docs.map((doc) => [doc.file, doc.profile, doc.role])).toEqual([
+        [join(".github", "workflows", "harness-check.yml"), "pack", "runtime"],
+        [
+          join("docs", "templates", "github", "common", "harness-check.yml"),
+          "source",
+          "source_template",
+        ],
+        [
+          join("docs", "templates", "github", "common", "pack-harness-check.yml"),
+          "pack",
+          "pack_template",
+        ],
+        ["setup-builtin:common/harness-check.yml", "source", "setup_builtin"],
       ]);
       expect(result.ok).toBe(true);
       expect(result.violations).toEqual([]);
@@ -163,6 +213,66 @@ describe("github-ci-policy lint", () => {
       profile: "source",
       reason: "missing_trigger",
       detail: "pull_request trigger (universal, all PR bases)",
+    });
+  });
+
+  it("U-CIPOL-004: rejects malformed pull_request trigger shapes", () => {
+    for (const value of ["false", "bogus", "[]", "0"]) {
+      const malformed = SOURCE_WORKFLOW.replace("  pull_request:", `  pull_request: ${value}`);
+      const result = analyzeGithubCiPolicy(docs(malformed));
+
+      expect(result.violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "malformed_trigger_shape",
+        detail: "pull_request must be a bare/null trigger or a mapping without base filters",
+      });
+    }
+  });
+
+  it("U-CIPOL-005: requires a structurally valid main-only push trigger", () => {
+    const unrelatedMain = SOURCE_WORKFLOW.replace(
+      "  push:\n    branches: [main]\n",
+      "  workflow_dispatch:\n    inputs:\n      branch:\n        default: main\n",
+    );
+    const missing = analyzeGithubCiPolicy(docs(unrelatedMain));
+    expect(missing.violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_trigger",
+      detail: "push trigger (main only)",
+    });
+
+    const wrongBranch = SOURCE_WORKFLOW.replace("branches: [main]", "branches: [work/**]");
+    const invalid = analyzeGithubCiPolicy(docs(wrongBranch));
+    expect(invalid.violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "invalid_push_main_trigger",
+      detail: "push must use branches: [main] with no branches-ignore",
+    });
+  });
+
+  it("U-CIPOL-006: checks source template and setup builtin without profile dedupe", () => {
+    const sourceTemplateDrift = docs();
+    sourceTemplateDrift[1] = {
+      ...sourceTemplateDrift[1],
+      content: SOURCE_WORKFLOW.replace("  pull_request:", "  pull_request:\n    branches: [main]"),
+    };
+    expect(
+      analyzeGithubCiPolicy(sourceTemplateDrift).violations.map((violation) => violation.file),
+    ).toContain("docs/templates/github/common/harness-check.yml");
+
+    const builtinDrift = docs();
+    builtinDrift[3] = {
+      ...builtinDrift[3],
+      content: SOURCE_WORKFLOW.replace("  pull_request:", "  pull_request: false"),
+    };
+    expect(analyzeGithubCiPolicy(builtinDrift).violations).toContainEqual({
+      file: "setup-builtin:common/harness-check.yml",
+      profile: "source",
+      reason: "malformed_trigger_shape",
+      detail: "pull_request must be a bare/null trigger or a mapping without base filters",
     });
   });
 

@@ -6,6 +6,7 @@ export interface GithubWorkflowDoc {
   file: string;
   content: string;
   profile: "source" | "pack";
+  role: "runtime" | "source_template" | "pack_template" | "setup_builtin";
 }
 
 export interface GithubCiPolicyViolation {
@@ -16,6 +17,8 @@ export interface GithubCiPolicyViolation {
     | "malformed_yaml"
     | "missing_job"
     | "missing_trigger"
+    | "malformed_trigger_shape"
+    | "invalid_push_main_trigger"
     | "main_limited_pr_trigger"
     | "missing_permission"
     | "missing_concurrency"
@@ -148,6 +151,20 @@ function valuesContain(value: unknown, needle: string): boolean {
   return false;
 }
 
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function stringValues(value: unknown): string[] | null {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value) && value.every((entry) => typeof entry === "string")) {
+    return value;
+  }
+  return null;
+}
+
 function stepText(step: WorkflowStep): string {
   return [step.name, step.uses, step.run].filter(Boolean).join("\n");
 }
@@ -173,6 +190,68 @@ function pushViolation(input: {
   });
 }
 
+function checkHarnessTriggers(input: {
+  workflow: WorkflowYaml;
+  doc: GithubWorkflowDoc;
+  violations: GithubCiPolicyViolation[];
+}): void {
+  const on = recordValue(input.workflow.on);
+  const push = on?.push;
+  const pushRecord = recordValue(push);
+  const pushBranches = pushRecord ? stringValues(pushRecord.branches) : null;
+  if (push === undefined) {
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "missing_trigger",
+      detail: "push trigger (main only)",
+    });
+  } else if (
+    !pushRecord ||
+    pushBranches?.length !== 1 ||
+    pushBranches[0] !== "main" ||
+    "branches-ignore" in pushRecord
+  ) {
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "invalid_push_main_trigger",
+      detail: "push must use branches: [main] with no branches-ignore",
+    });
+  }
+
+  const pullRequest = on?.pull_request;
+  if (pullRequest === undefined) {
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "missing_trigger",
+      detail: "pull_request trigger (universal, all PR bases)",
+    });
+    return;
+  }
+  if (pullRequest === null) return;
+  const pullRequestRecord = recordValue(pullRequest);
+  if (!pullRequestRecord) {
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "malformed_trigger_shape",
+      detail: "pull_request must be a bare/null trigger or a mapping without base filters",
+    });
+    return;
+  }
+  if ("branches" in pullRequestRecord || "branches-ignore" in pullRequestRecord) {
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "main_limited_pr_trigger",
+      detail:
+        "pull_request must not filter base branches: stacked PRs (base != main) would skip harness-check (PLAN-L6-82)",
+    });
+  }
+}
+
 export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicyResult {
   const violations: GithubCiPolicyViolation[] = [];
   for (const doc of docs) {
@@ -193,43 +272,8 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
       pushViolation({ violations, doc, reason: "missing_job", detail: "jobs.harness-check" });
       continue;
     }
-    if (!valuesContain(workflow.on, "main")) {
-      pushViolation({
-        violations,
-        doc,
-        reason: "missing_trigger",
-        detail: "push/pull_request main",
-      });
-    }
-    // universal PR trigger (PLAN-L6-82 / issue #57): pull_request を base branch で
-    // 限定すると stacked PR (base≠main) が required check なしで MERGEABLE になるため fail-close。
-    const onTriggers = workflow.on as Record<string, unknown> | string[] | string | undefined;
-    const pullRequestTrigger =
-      onTriggers && typeof onTriggers === "object" && !Array.isArray(onTriggers)
-        ? (onTriggers as Record<string, unknown>).pull_request
-        : Array.isArray(onTriggers) || typeof onTriggers === "string"
-          ? (valuesContain(onTriggers, "pull_request") ? null : undefined)
-          : undefined;
-    if (pullRequestTrigger === undefined) {
-      pushViolation({
-        violations,
-        doc,
-        reason: "missing_trigger",
-        detail: "pull_request trigger (universal, all PR bases)",
-      });
-    } else if (
-      pullRequestTrigger &&
-      typeof pullRequestTrigger === "object" &&
-      ("branches" in pullRequestTrigger || "branches-ignore" in pullRequestTrigger)
-    ) {
-      pushViolation({
-        violations,
-        doc,
-        reason: "main_limited_pr_trigger",
-        detail:
-          "pull_request must not filter base branches: stacked PRs (base != main) would skip harness-check (PLAN-L6-82)",
-      });
-    }
+    checkHarnessTriggers({ workflow, doc, violations });
+    if (doc.role === "source_template" || doc.role === "setup_builtin") continue;
     if (!valuesContain(workflow.permissions, "read")) {
       pushViolation({ violations, doc, reason: "missing_permission", detail: "contents: read" });
     }
@@ -262,20 +306,19 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
     }
   }
 
-  for (const profile of ["source", "pack"] as const) {
-    if (!docs.some((doc) => doc.profile === profile)) {
+  const requiredRoles = ["runtime", "source_template", "pack_template", "setup_builtin"] as const;
+  for (const role of requiredRoles) {
+    if (!docs.some((doc) => doc.role === role)) {
       pushViolation({
         violations,
         doc: {
-          file:
-            profile === "source"
-              ? join(".github", "workflows", "harness-check.yml")
-              : join("docs", "templates", "github", "common", "pack-harness-check.yml"),
-          profile,
+          file: role,
+          profile: role === "pack_template" ? "pack" : "source",
+          role,
           content: "",
         },
         reason: "missing_workflow",
-        detail: `${profile} harness-check workflow`,
+        detail: `${role} harness-check workflow`,
       });
     }
   }
@@ -283,29 +326,59 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
   return { checked: docs.length, violations, ok: violations.length === 0 };
 }
 
-export function loadGithubCiPolicyDocs(repoRoot: string = process.cwd()): GithubWorkflowDoc[] {
+export interface LoadGithubCiPolicyDocsInput {
+  repoRoot?: string;
+  setupBuiltinWorkflow?: string;
+}
+
+export function loadGithubCiPolicyDocs(
+  input: LoadGithubCiPolicyDocsInput = {},
+): GithubWorkflowDoc[] {
+  const repoRoot = input.repoRoot ?? process.cwd();
   const candidates: GithubWorkflowDoc[] = [];
-  const addCandidate = (relativeFile: string) => {
+  const addCandidate = (
+    relativeFile: string,
+    role: GithubWorkflowDoc["role"],
+    fixedProfile?: GithubWorkflowDoc["profile"],
+  ) => {
     const absoluteFile = join(repoRoot, relativeFile);
     if (!existsSync(absoluteFile)) return;
     const content = readFileSync(absoluteFile, "utf8");
-    const profile = inferGithubCiProfile(relativeFile, content);
-    if (candidates.some((candidate) => candidate.profile === profile)) return;
+    const profile = fixedProfile ?? inferGithubCiProfile(relativeFile, content);
     candidates.push({
       file: relativeFile,
       content,
       profile,
+      role,
     });
   };
-  addCandidate(join(".github", "workflows", "harness-check.yml"));
-  addCandidate(join("docs", "templates", "github", "common", "harness-check.yml"));
-  addCandidate(join("docs", "templates", "github", "common", "pack-harness-check.yml"));
+  addCandidate(join(".github", "workflows", "harness-check.yml"), "runtime");
+  addCandidate(
+    join("docs", "templates", "github", "common", "harness-check.yml"),
+    "source_template",
+    "source",
+  );
+  addCandidate(
+    join("docs", "templates", "github", "common", "pack-harness-check.yml"),
+    "pack_template",
+    "pack",
+  );
+  if (input.setupBuiltinWorkflow !== undefined) {
+    candidates.push({
+      file: "setup-builtin:common/harness-check.yml",
+      content: input.setupBuiltinWorkflow,
+      profile: "source",
+      role: "setup_builtin",
+    });
+  }
   return candidates;
 }
 
 export function githubCiPolicyMessages(result: GithubCiPolicyResult): string[] {
   if (result.ok) {
-    return [`github-ci-policy - OK (checked=${result.checked}, source+pack harness-check gates)`];
+    return [
+      `github-ci-policy - OK (checked=${result.checked}, runtime+source-template+pack-template+setup-builtin triggers)`,
+    ];
   }
   const sample = result.violations
     .slice(0, 8)

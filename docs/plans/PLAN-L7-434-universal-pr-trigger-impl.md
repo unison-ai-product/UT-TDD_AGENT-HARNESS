@@ -51,9 +51,9 @@ dependencies:
 1. `.github/workflows/harness-check.yml`: `pull_request` の `branches: [main]` フィルタを
    撤去 (全 base で発火)。`push: [main]` は維持。concurrency group は ref 単位のまま。
 2. Pack template `docs/templates/github/common/pack-harness-check.yml` と setup builtin を
-   同一契約へ更新。
+   source templateとともに同一契約へ更新し、4 artifactをdetector入力にする。
 3. `github-ci-policy` detector: 「pull_request trigger が base 限定されている」状態を
-   violation として fail-close (負例テスト必須)。
+   violation としてfail-closeし、不正trigger型とpush main限定欠落も拒否する。
 4. add-impl ペア: `PLAN-REVERSE-434-universal-pr-trigger-backfill` を併起票し、
    requirements §7.5-7.6 / L6-82 への backfill を R0-R4 で閉じる。
 5. 確定済み PLAN-L7-197 / L7-221 に claim 矛盾があれば supersedes 宣言で訂正 (上書き禁止)。
@@ -63,5 +63,7 @@ dependencies:
 - [x] 非 main base PR を除外しない trigger が U-CIPOL-001 の構文 oracle で固定される。
 - [x] main 限定 trigger への mutation が U-CIPOL-002 で red になる。
 - [x] `branches-ignore` / trigger 欠落が U-CIPOL-003 で red になる。
-- [x] source / Pack / builtin の 3 面が base 無限定 trigger へ同期される。
+- [x] 不正`pull_request`型とpush main限定欠落が U-CIPOL-004/005 で red になる。
+- [x] source template / setup builtinをprofile重複で捨てないことを U-CIPOL-006 で固定する。
+- [x] source workflow / source template / Pack template / setup builtinがbase無限定triggerへ同期される。
 - [x] job / required context 名 `harness-check` は不変である。
