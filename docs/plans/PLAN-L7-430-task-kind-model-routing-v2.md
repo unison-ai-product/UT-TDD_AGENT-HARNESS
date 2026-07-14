@@ -87,6 +87,38 @@ review_evidence:
         evidence_path: .ut-tdd/audit/A-144-l7-430-routing-v2-review-receipt.md
         output_digest: "sha256:c9c84016c5f25b774261cccf20ddaa553dbdfd160c37ebbf0a6e900e383f0343"
         anchor_commit: 369a07d4
+  - reviewer: codex-claim-blind-lane-final
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-14T19:33:32+09:00"
+    tests_green_at: "2026-07-14T19:27:48+09:00"
+    verdict: pass
+    scope: "tracked receiptのcurrent/anchor blob hash、routing/CLI、frontmatterを再検証。未反証attack 0。"
+    green_commands:
+      - kind: unit_test
+        command: "bun test tests/team-model-policy.test.ts tests/team-run.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-14T19:27:48+09:00"
+        evidence_path: .ut-tdd/audit/A-144-l7-430-routing-v2-review-receipt.md
+        output_digest: "sha256:c9c84016c5f25b774261cccf20ddaa553dbdfd160c37ebbf0a6e900e383f0343"
+        anchor_commit: 369a07d4
+  - reviewer: codex-spec-blind-lane-final
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-14T19:33:32+09:00"
+    tests_green_at: "2026-07-14T19:27:48+09:00"
+    verdict: pass
+    scope: "tracked receiptの実blob、anchor祖先関係、証拠時系列と負例gateを再検証。未反証attack 0。"
+    green_commands:
+      - kind: unit_test
+        command: "bun test tests/team-model-policy.test.ts tests/team-run.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-14T19:27:48+09:00"
+        evidence_path: .ut-tdd/audit/A-144-l7-430-routing-v2-review-receipt.md
+        output_digest: "sha256:c9c84016c5f25b774261cccf20ddaa553dbdfd160c37ebbf0a6e900e383f0343"
+        anchor_commit: 369a07d4
 ---
 
 # PLAN-L7-430 (retrofit): task-kind ベース model routing v2
