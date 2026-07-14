@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { normalizePath } from "../../shared/source-text";
 import type { ProjectionPlanSource } from "../domain/plan-projection";
@@ -6,6 +6,7 @@ import type { ProjectionPlanSource } from "../domain/plan-projection";
 /** Repository I/O を plan projection から隔離する source adapter。 */
 export function loadRepositoryPlanSources(repoRoot: string): readonly ProjectionPlanSource[] {
   const plansRoot = join(repoRoot, "docs", "plans");
+  if (!existsSync(plansRoot)) return [];
   return readdirSync(plansRoot)
     .filter((name) => name.endsWith(".md"))
     .sort()

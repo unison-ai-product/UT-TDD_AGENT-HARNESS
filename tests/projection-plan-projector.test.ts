@@ -1,5 +1,9 @@
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { loadRepositoryPlanSources } from "../src/projection/adapters/repository-plan-sources";
 import {
   type ProjectionPlanSource,
   projectPlanSources,
@@ -12,6 +16,15 @@ const context = {
 };
 
 describe("plan projection domain", () => {
+  it("treats a repository without docs/plans as an empty PLAN source", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-plan-source-"));
+    try {
+      expect(loadRepositoryPlanSources(repoRoot)).toEqual([]);
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
+  });
+
   it("projects captured PLAN sources deterministically without repository I/O", () => {
     const sources: readonly ProjectionPlanSource[] = [
       {
