@@ -35,7 +35,7 @@ describe("PLAN reservation service", () => {
       "00000009636f6d6d616e643a610000000d7265736572766174696f6e3a6100000007504c414e2d4c370000000334313800000006706c616e3a6100000018323032362d30372d31345430303a30303a30302e3030305a00000018323032362d30372d31345430313a30303a30302e3030305a",
     );
     const keyRing = new HmacLeaseTokenKeyRing("v2", [
-      { version: "v2", secret: Buffer.alloc(32, 0x0b) },
+      { version: "v2", secret: Buffer.alloc(32, 0x0b) }, // test-only deterministic fixture
     ]);
     expect(Object.getOwnPropertyNames(keyRing)).not.toEqual(
       expect.arrayContaining(["keys", "currentVersion"]),

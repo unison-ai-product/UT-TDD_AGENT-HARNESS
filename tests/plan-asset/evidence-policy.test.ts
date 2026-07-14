@@ -16,7 +16,7 @@ const commit = "b".repeat(40);
 const keyMaterial = [
   {
     version: "v1",
-    secret: Buffer.alloc(32, 0x2a),
+    secret: Buffer.alloc(32, 0x2a), // test-only deterministic fixture
     producers: ["human", "po", "codex", "claude", "ci"],
   },
 ] as const;
@@ -239,7 +239,11 @@ describe("PLAN Asset evidence policy", () => {
     const unsigned = EvidenceRecord.create(input);
     const signed = EvidenceRecord.create(input, issuer);
     const rogueAuthority = new HmacEvidenceAttestationIssuer("local-ci", "v1", [
-      { version: "v1", secret: Buffer.alloc(32, 0x7f), producers: ["ci"] },
+      {
+        version: "v1",
+        secret: Buffer.alloc(32, 0x7f), // test-only deterministic fixture
+        producers: ["ci"],
+      },
     ]);
     const forged = EvidenceRecord.create(input, rogueAuthority);
     if (!unsigned.ok || !signed.ok || !forged.ok) throw new Error("evidence fixture invalid");
@@ -318,8 +322,16 @@ describe("PLAN Asset evidence policy", () => {
 
   it("U-PA-048: binds producer/digest, rejects replay, and verifies rotated historical keys", () => {
     const rotationKeys = [
-      { version: "v1", secret: Buffer.alloc(32, 0x11), producers: ["ci"] as const },
-      { version: "v2", secret: Buffer.alloc(32, 0x22), producers: ["ci"] as const },
+      {
+        version: "v1",
+        secret: Buffer.alloc(32, 0x11), // test-only deterministic fixture
+        producers: ["ci"] as const,
+      },
+      {
+        version: "v2",
+        secret: Buffer.alloc(32, 0x22), // test-only deterministic fixture
+        producers: ["ci"] as const,
+      },
     ];
     const oldIssuer = new HmacEvidenceAttestationIssuer("rotation-ci", "v1", rotationKeys);
     const currentIssuer = new HmacEvidenceAttestationIssuer("rotation-ci", "v2", rotationKeys);
