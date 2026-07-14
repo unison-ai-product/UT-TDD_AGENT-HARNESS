@@ -424,14 +424,9 @@ describe("runDoctor", () => {
       (message) => message.includes(" - violation") || message.includes(" — violation"),
     );
 
-    expect(r.ok).toBe(false);
-    expect(blockers).toHaveLength(2);
-    expect(blockers).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("PLAN-L7-421-test-hygiene-live-tree-fence"),
-        expect.stringContaining("PLAN-L7-429-spec-ir-detector-scope"),
-      ]),
-    );
+    // PLAN-L7-421 / PLAN-L7-429 confirm 済み (2026-07-14): transitional allowance は 0 件。
+    expect(blockers).toEqual([]);
+    expect(r.ok).toBe(true);
   });
 
   it("ok=true includes handover and agent-slots surfaces as warnings", () => {

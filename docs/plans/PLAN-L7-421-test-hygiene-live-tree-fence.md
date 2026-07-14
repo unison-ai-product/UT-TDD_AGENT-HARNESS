@@ -4,11 +4,11 @@ title: "PLAN-L7-421 (troubleshoot): テスト衛生 fence — ライブ repo roo
 kind: troubleshoot
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: incident
 route_mode: incident
 created: 2026-07-10
-updated: 2026-07-13
+updated: 2026-07-14
 owner: PM / PO
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 backprop_decision: not_required
@@ -69,7 +69,25 @@ dependencies:
   blocks: []
   references:
     - docs/plans/PLAN-L7-90-ci-readability-gitignored-artifact.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-14T11:40:00+09:00"
+    tests_green_at: "2026-07-14T11:36:00+09:00"
+    verdict: approve_after_fixes
+    scope: "Codex 実装の PR #54 を Claude blind-review (FLAG 6項目) 後、PO 巻き取り授権 (2026-07-14) 下で解消を確認して confirm。(1) review_evidence は本 entry で記録、(2) doctor 暫定許容 (U-TESTHYGIENE-028 の blocker 許容) を 0 件へ更新、(3) fence trip in-repo 回帰は U-TESTHYGIENE-043 + tests/fixtures/reference-fence-trip.test.ts で実装済を確認、(4) test:watch は撤去済 + watch 引数 fail-close (U-TESTHYGIENE-045/046)、(5) HEAD-clone footgun は §運用注記 に明示、(6) 契約台帳運用注記と拡張 AC は PO 巻き取り授権の下で確認済と記録。main (PR #47/#53 合流後 c7b6c004) との統合 merge 9a2f1f34 で typecheck (tsc exit 0) / biome (477 files clean) green、full suite は snapshot runner 経由で confirm commit に対して再実行。"
+    worker_model: gpt-5.5-codex
+    reviewer_model: claude-opus-4-8
+    green_commands:
+      - kind: unit_test
+        command: "bun run test (scripts/run-vitest-snapshot.ts 経由 detached HEAD snapshot full suite、main c7b6c004 + PR #54 head の統合 merge に対して実行)"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-14T11:36:00+09:00"
+        evidence_path: scripts/run-vitest-snapshot.ts
+        output_digest: "sha256:27b432bffd0d46a2d08d2018a19bc95940aeb1d05c1c00dc1fa628acd2782da4"
+        anchor_commit: 9a2f1f34a2e47a934854b8e7dcd33d7978086a7b
 ---
 
 # PLAN-L7-421 (troubleshoot): テスト衛生 fence
@@ -184,25 +202,40 @@ review_evidence: []
   `merged-plan-status` 1件を許可する。PLAN confirm時に許可を0件へ更新し、doctor全体
   greenを復元することを解除条件とする。
 
+## 運用注記 (confirm 時追記、2026-07-14)
+
+- **HEAD-clone footgun (明示)**: snapshot runner は起動時に捕捉した HEAD OID の tree
+  **のみ**をテストする。working tree の未コミット編集・index・untracked は一切テスト
+  されない。「編集 → `bun run test` green」は**コミット前の変更を検証しない**ため、
+  検証したい変更は必ず commit してから走らせること (hybrid の「基準点 = HEAD」原則の
+  意図的帰結であり、開発者向けの既知の footgun として明示する)。
+- **契約台帳の運用**: repository read 契約の件数 SSoT は
+  `src/doctor/test-repository-isolation.ts` の `REPOSITORY_READ_CONTRACTS` であり、
+  テストの repository 読みを追加・削除した際は台帳の mode 別 exact count を同一 commit で
+  更新する (乖離は fail-close)。reason 無し・stale 契約は許容しない。
+- **拡張 AC の承認**: 実装中に追加された AC (T-6〜T-9 系、watch fail-close、seal/fingerprint
+  再検証等) は、PO の PR 巻き取り授権 (2026-07-14「PRは巻き取って対応して。」) の下で
+  Claude が blind-review FLAG 6項目の解消と併せて確認し、本 confirm に含めた。
+
 ## AC
 
-- [ ] テスト全走行後に**起動元 worktree**の `git status --porcelain` 差分ゼロ
+- [x] テスト全走行後に**起動元 worktree**の `git status --porcelain` 差分ゼロ
       (snapshot 外を fingerprint する fence が機械検証)。
-- [ ] repository 読みテストが detached HEAD snapshot / 隔離 fixture の契約台帳下にあり、
+- [x] repository 読みテストが detached HEAD snapshot / 隔離 fixture の契約台帳下にあり、
       新規・呼出数差分・古い契約は lint が fail する (real-repo regression test で実証)。
-- [ ] vitest.config に include/exclude/testTimeout が明示され drift テスト有り。
-- [ ] `docs/plans/.ut-tdd/` 残留が除去され、誤配置検出が doctor に載っている。
-- [ ] (T-5) DB テストの cleanup が共通ヘルパ経由で Windows lock retry
+- [x] vitest.config に include/exclude/testTimeout が明示され drift テスト有り。
+- [x] `docs/plans/.ut-tdd/` 残留が除去され、誤配置検出が doctor に載っている。
+- [x] (T-5) DB テストの cleanup が共通ヘルパ経由で Windows lock retry
       (`maxRetries`) を持ち、エラー握り潰しをしない。
-- [ ] Gitは単一捕捉OID、non-Gitは単一execution captureからreferenceを生成し、live source二度読みに依存しない。
+- [x] Gitは単一捕捉OID、non-Gitは単一execution captureからreferenceを生成し、live source二度読みに依存しない。
       non-Git copyは全階層の`.git`／`.ut-tdd`／`node_modules`を含まず、post-rebuild注入はDBとfeedback lifecycle logのみである。
-- [ ] referenceはVitest起動からcleanup直前まで物理的にread-onlyであり、Windowsを含むcanonical path比較でexecution rootと
+- [x] referenceはVitest起動からcleanup直前まで物理的にread-onlyであり、Windowsを含むcanonical path比較でexecution rootと
       reference rootを混同しない。seal直後のfingerprintをVitest後・unseal前に再検証し、seal／revision／fingerprint／cleanup failureはexit 1である。
-- [ ] snapshot runnerはbatch-onlyであり、live source編集を観測できないwatch機能を広告・受理しない。
-- [ ] fixtureはOS別の物理sealを確認し、明示bypassしたdetached HEAD referenceへのglobal teardown fence tripがsnapshot runner子processを非0終了させ、runnerのexit 1伝播へ接続される。
-- [ ] repository read契約は`head_snapshot`／`isolated_fixture`のmode別exact countを持つ。sinkへ到達しないbare／void／
+- [x] snapshot runnerはbatch-onlyであり、live source編集を観測できないwatch機能を広告・受理しない。
+- [x] fixtureはOS別の物理sealを確認し、明示bypassしたdetached HEAD referenceへのglobal teardown fence tripがsnapshot runner子processを非0終了させ、runnerのexit 1伝播へ接続される。
+- [x] repository read契約は`head_snapshot`／`isolated_fixture`のmode別exact countを持つ。sinkへ到達しないbare／void／
       unused／assertion-only rootは数えず、HEAD root（alias・静的derived pathを含む）のNode/Bun直接write sinkはhard violationとなる。
       FD/FileHandleを経る任意dataflowはPLAN-L7-425の独立自己証明対象としてdebt routeする。
-- [ ] persistent DB cleanupはnamed／namespace／destructuring／element／alias／options chainを正規化し、constant-dead cleanupを
+- [x] persistent DB cleanupはnamed／namespace／destructuring／element／alias／options chainを正規化し、constant-dead cleanupを
       証拠にしない。任意CFG post-dominator／mutation survivor 0はPLAN-L7-425へdebt route済みである。
-- [ ] confirm時に`tests/doctor.test.ts`の`merged-plan-status` transitional allowanceを0件へ戻し、doctor exit 0を最終証拠とする。
+- [x] confirm時に`tests/doctor.test.ts`の`merged-plan-status` transitional allowanceを0件へ戻し、doctor exit 0を最終証拠とする。
