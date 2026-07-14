@@ -1027,7 +1027,7 @@ lossless変換不能として`plan-migration-loss`にする。未知fieldは`unk
 `exitRule/expectedExit`を照合する。非0 exitはRed policyでusableになり得るが、Green/accept policyではusable=falseにする。
 record自体は削除しない。`claims`はRedのexpected/observed findingとtodo/skip、runner/test、trace orphan/stale、review verdict/reviewer、gate failure、acceptance/retention decision、exception actor/reason/resume/replacementをkind別discriminated DTOで保持し、`outputDigest`や自由文から意味を逆推定しない。supersessionは同subject/revision/kindの全履歴からactive frontierを作り、orphan/cycle/forkをfail-closeする。producer値域はcontract registryから読み、未知producerを
 記録時finding、accept時fail-closeとする。argvはsecret-scan/redaction port通過後の値だけを保存する。
-`recordDigest`は保存recordの改ざん検出でありproducer真正性ではない。真正性は`evidence-attestation/v1`のHMAC-SHA256 attestationをcomposition root固定のtrusted verifierで検証し、unknown authority/key、producer binding不一致、署名不一致、未署名をfail-closeする。issuerとverifierは別のnominal capabilityとし、verifierに発行surfaceを持たせない。secretとcurrent key versionはECMAScript private fieldへdefensive copyし、policyはverify-only concrete capability以外を拒否する。caller供給のallow-all verifierや`attested=true`の自己申告は契約外とする。
+`recordDigest`は保存recordの改ざん検出でありproducer真正性ではない。真正性は`evidence-attestation/v1`のHMAC-SHA256 attestationをcomposition root固定のtrusted verifierで検証し、unknown authority/key、producer binding不一致、署名不一致、未署名をfail-closeする。issuerとverifierは別capabilityとし、verifierに発行surfaceを持たせない。kernelのfinal verifierだけがmodule-private WeakMapへcanonical verify closureを登録でき、policyはその非偽造capture以外を拒否する。公開register、caller供給のallow-all verifier、`attested=true`の自己申告は契約外とする。
 
 全append commandは`commandPayloadDigest`を返す。digestはcommand type、subject identity、入力DTOのcanonical frameだけから作り、
 command ID、clock、event ID、resultを含めない。同一command IDの再送はこのdigestをconstant-time比較し、一致時だけ既存event/resultを返す。
