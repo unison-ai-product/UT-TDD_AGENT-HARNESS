@@ -10,7 +10,7 @@
  *   1. credential marker — `src/lint/secret-scan.ts` の `analyzeSecretScan` を再利用する
  *      (新規 scanner 実装禁止)。
  *   2. PII marker (電話番号 / 郵便番号 / email / internal URL) — 現行
- *      `.git/hooks/pre-push` (helix 世代、untracked) の SCAN_REGEX を後退させず
+ *      `.git/hooks/pre-push` の既存 SCAN_REGEX を後退させず
  *      温存し、ここで tracked 化する (unconditional match、dummy/placeholder 例外なし。
  *      legacy 挙動と 1:1 で揃える)。
  *
@@ -22,7 +22,7 @@
  * 当初案は変更ファイル一覧を現在の working tree (disk) から読む方式だったが、blind review
  * (Codex gpt-5.6-terra) で次の bypass が実証された: 同一 push 内で commit A が secret を追加し
  * commit B がそれを削除すると、working tree はクリーンなまま push できてしまう
- * (旧 helix hook は diff 追加行を commit 単位で見ていたため block していた)。
+ * (旧来hook は diff 追加行を commit 単位で見ていたため block していた)。
  * これを塞ぐため、push される「各 commit」の「その時点の blob」を個別に読む方式へ変更した。
  *
  * 初回導入は warn-only。`UT_TDD_PRE_PUSH_SECRET_SCAN_MODE=fail-close` で
@@ -121,7 +121,7 @@ export interface PiiScanResult {
   ok: boolean;
 }
 
-// 現行 `.git/hooks/pre-push` (helix 世代、untracked) の SCAN_REGEX を後退させず温存する
+// 現行 `.git/hooks/pre-push` の SCAN_REGEX を後退させず温存する
 // (電話番号 / 郵便番号 / internal URL / email)。「置換」でなく「対象拡大 + 温存」。
 // legacy は POSIX ERE の非アンカー match (grep -Eao) で、行内のどこにあっても部分一致で
 // 検出していた。JS 側で `\b` 境界を足すと legacy より弱くなる (blind review 指摘) ため、
