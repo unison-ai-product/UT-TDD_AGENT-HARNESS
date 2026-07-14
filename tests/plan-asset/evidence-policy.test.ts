@@ -223,6 +223,80 @@ describe("PLAN Asset evidence policy", () => {
       }).ok,
     ).toBe(false);
   });
+
+  it("U-PA-046: reduces a valid supersession chain and rejects orphan/fork/cycle graphs", () => {
+    const policy = approvedReviewPolicy();
+    const first = reviewEvidence("evidence:first", "approved", "2026-07-14T00:00:00Z");
+    const second = reviewEvidence(
+      "evidence:second",
+      "approved",
+      "2026-07-14T01:00:00Z",
+      first.evidenceId,
+    );
+    const third = reviewEvidence(
+      "evidence:third",
+      "approved",
+      "2026-07-14T02:00:00Z",
+      second.evidenceId,
+    );
+    const context = {
+      subjectId: "plan:a",
+      subjectRevision: 1,
+      sourceCommit: commit,
+      now: "2026-07-14T04:00:00Z",
+    };
+    expect(policy.evaluate([first, second, third], context)).toMatchObject({
+      usable: true,
+      eligibleEvidenceIds: ["evidence:third"],
+      rejectedEvidenceIds: ["evidence:first", "evidence:second"],
+      violations: [],
+    });
+
+    const orphan = reviewEvidence(
+      "evidence:orphan",
+      "approved",
+      "2026-07-14T03:00:00Z",
+      "evidence:missing",
+    );
+    expect(policy.evaluate([orphan], context).violations).toContain(
+      "evidence-supersession-orphan:evidence:orphan",
+    );
+
+    const forkLeft = reviewEvidence(
+      "evidence:fork-left",
+      "approved",
+      "2026-07-14T01:00:00Z",
+      first.evidenceId,
+    );
+    const forkRight = reviewEvidence(
+      "evidence:fork-right",
+      "approved",
+      "2026-07-14T02:00:00Z",
+      first.evidenceId,
+    );
+    expect(policy.evaluate([first, forkLeft, forkRight], context).violations).toContain(
+      "evidence-supersession-fork:evidence:first",
+    );
+
+    const cycleA = reviewEvidence(
+      "evidence:cycle-a",
+      "approved",
+      "2026-07-14T01:00:00Z",
+      "evidence:cycle-b",
+    );
+    const cycleB = reviewEvidence(
+      "evidence:cycle-b",
+      "approved",
+      "2026-07-14T02:00:00Z",
+      "evidence:cycle-a",
+    );
+    expect(policy.evaluate([cycleA, cycleB], context).violations).toEqual(
+      expect.arrayContaining([
+        "evidence-supersession-cycle:evidence:cycle-a",
+        "evidence-supersession-cycle:evidence:cycle-b",
+      ]),
+    );
+  });
 });
 
 function evidence(
@@ -282,5 +356,24 @@ function reviewEvidence(
     supersedesEvidenceId,
   });
   if (!created.ok) throw new Error("review evidence fixture must be valid");
+  return created.value;
+}
+
+function approvedReviewPolicy(): EvidencePolicy {
+  const created = EvidencePolicy.create({
+    policyId: "review/v1",
+    revision: 1,
+    requirements: [
+      {
+        requirementId: "independent-review-approved",
+        requiredKind: "independent-review",
+        minCount: 1,
+        acceptedProducers: ["human"],
+        exitRule: { kind: "exact", expected: 0 },
+        claimsRule: { kind: "review-approved" },
+      },
+    ],
+  });
+  if (!created.ok) throw new Error("policy fixture must be valid");
   return created.value;
 }
