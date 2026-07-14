@@ -15,7 +15,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 permissions:
   contents: read
 concurrency:
@@ -41,7 +40,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 permissions:
   contents: read
 concurrency:
@@ -131,6 +129,41 @@ describe("github-ci-policy lint", () => {
     } finally {
       rmSync(repo, { recursive: true, force: true });
     }
+  });
+
+  it("rejects main-limited pull_request trigger (stacked PR regression, PLAN-L6-82)", () => {
+    const limited = SOURCE_WORKFLOW.replace(
+      "  pull_request:",
+      "  pull_request:\n    branches: [main]",
+    );
+    const result = analyzeGithubCiPolicy(docs(limited));
+
+    expect(result.ok).toBe(false);
+    expect(result.violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "main_limited_pr_trigger",
+      detail:
+        "pull_request must not filter base branches: stacked PRs (base != main) would skip harness-check (PLAN-L6-82)",
+    });
+  });
+
+  it("rejects branches-ignore filtering and missing pull_request trigger", () => {
+    const ignored = PACK_WORKFLOW.replace(
+      "  pull_request:",
+      "  pull_request:\n    branches-ignore: [work/**]",
+    );
+    const withIgnore = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW, ignored));
+    expect(withIgnore.violations.map((v) => v.reason)).toContain("main_limited_pr_trigger");
+
+    const withoutPr = SOURCE_WORKFLOW.replace("  pull_request:\n", "");
+    const missing = analyzeGithubCiPolicy(docs(withoutPr));
+    expect(missing.violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_trigger",
+      detail: "pull_request trigger (universal, all PR bases)",
+    });
   });
 
   it("requires source CI to keep full doctor in the required status check", () => {

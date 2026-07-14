@@ -16,6 +16,7 @@ export interface GithubCiPolicyViolation {
     | "malformed_yaml"
     | "missing_job"
     | "missing_trigger"
+    | "main_limited_pr_trigger"
     | "missing_permission"
     | "missing_concurrency"
     | "missing_step"
@@ -198,6 +199,35 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
         doc,
         reason: "missing_trigger",
         detail: "push/pull_request main",
+      });
+    }
+    // universal PR trigger (PLAN-L6-82 / issue #57): pull_request を base branch で
+    // 限定すると stacked PR (base≠main) が required check なしで MERGEABLE になるため fail-close。
+    const onTriggers = workflow.on as Record<string, unknown> | string[] | string | undefined;
+    const pullRequestTrigger =
+      onTriggers && typeof onTriggers === "object" && !Array.isArray(onTriggers)
+        ? (onTriggers as Record<string, unknown>).pull_request
+        : Array.isArray(onTriggers) || typeof onTriggers === "string"
+          ? (valuesContain(onTriggers, "pull_request") ? null : undefined)
+          : undefined;
+    if (pullRequestTrigger === undefined) {
+      pushViolation({
+        violations,
+        doc,
+        reason: "missing_trigger",
+        detail: "pull_request trigger (universal, all PR bases)",
+      });
+    } else if (
+      pullRequestTrigger &&
+      typeof pullRequestTrigger === "object" &&
+      ("branches" in pullRequestTrigger || "branches-ignore" in pullRequestTrigger)
+    ) {
+      pushViolation({
+        violations,
+        doc,
+        reason: "main_limited_pr_trigger",
+        detail:
+          "pull_request must not filter base branches: stacked PRs (base != main) would skip harness-check (PLAN-L6-82)",
       });
     }
     if (!valuesContain(workflow.permissions, "read")) {
