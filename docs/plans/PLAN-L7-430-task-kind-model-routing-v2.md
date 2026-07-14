@@ -58,6 +58,7 @@ review_evidence:
   - reviewer: codex-claim-blind-lane
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-14T19:15:00+09:00"
+    tests_green_at: "2026-07-14T19:14:59+09:00"
     verdict: approve
     scope: "structured intent の strict schema→team run→model selection 配線、task-kind 優先、複合文・日本語分類、effort ladder を独立再検証。未反証 attack 0。"
     green_commands:
@@ -66,11 +67,12 @@ review_evidence:
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-14T19:15:00+09:00"
+        completed_at: "2026-07-14T19:14:59+09:00"
         anchor_commit: afd7e417
   - reviewer: codex-spec-blind-lane
     review_kind: intra_runtime_subagent
     reviewed_at: "2026-07-14T19:08:00+09:00"
+    tests_green_at: "2026-07-14T19:07:59+09:00"
     verdict: approve
     scope: "invalid/unknown intent の fail-close、leading action、docs 対象 action、team-run 回帰を再検証。未反証 attack 0。"
 ---
