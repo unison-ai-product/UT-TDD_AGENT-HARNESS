@@ -609,7 +609,13 @@ describe("projectTokenUsage + projectModelEvaluations (token efficiency)", () =>
         ]),
       ).toThrow("forced projection failure");
 
-      expect(execSql).toEqual(["BEGIN IMMEDIATE", "ROLLBACK"]);
+      expect(execSql).toEqual([
+        "BEGIN IMMEDIATE",
+        "SAVEPOINT ut_tdd_projection_1",
+        "ROLLBACK TO SAVEPOINT ut_tdd_projection_1",
+        "RELEASE SAVEPOINT ut_tdd_projection_1",
+        "ROLLBACK",
+      ]);
       const count = db.prepare("SELECT COUNT(*) AS n FROM model_runs").get() as { n: number };
       expect(count.n).toBe(0);
     } finally {
