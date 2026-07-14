@@ -115,6 +115,7 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "oracle-test-trace",
   "tracked-canonical",
   "sub-doc-catalog-drift",
+  "sub-doc-schema-integrity",
   "sub-doc-section-structure",
   "screen-impl-pair-freeze",
   "dependency-drift",

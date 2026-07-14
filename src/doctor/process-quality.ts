@@ -69,6 +69,11 @@ import {
   subDocCatalogDriftMessages,
 } from "../lint/sub-doc-catalog-drift";
 import {
+  analyzeSubDocSchemaIntegrity,
+  loadSubDocSchemaIntegrityInput,
+  subDocSchemaIntegrityMessages,
+} from "../lint/sub-doc-schema-integrity";
+import {
   analyzeSubDocSectionStructure,
   loadSubDocSectionStructureInput,
   subDocSectionStructureMessages,
@@ -414,6 +419,24 @@ export function checkSubDocCatalogDrift(repoRoot: string): { messages: string[];
   } catch {
     return {
       messages: ["sub-doc-catalog-drift - violation: requirements doc could not be read"],
+      ok: false,
+    };
+  }
+}
+
+export function checkSubDocSchemaIntegrity(repoRoot: string): { messages: string[]; ok: boolean } {
+  if (!existsSync(repoRoot)) {
+    return {
+      messages: ["sub-doc-schema-integrity - violation: repo root could not be read"],
+      ok: false,
+    };
+  }
+  try {
+    const r = analyzeSubDocSchemaIntegrity(loadSubDocSchemaIntegrityInput(repoRoot));
+    return { messages: subDocSchemaIntegrityMessages(r), ok: r.ok };
+  } catch {
+    return {
+      messages: ["sub-doc-schema-integrity - violation: design docs could not be read"],
       ok: false,
     };
   }

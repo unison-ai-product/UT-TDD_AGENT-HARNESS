@@ -1036,6 +1036,120 @@ describe("spec IR projections", () => {
     }
   });
 
+  it("PLAN-L7-429: excludes meta docs from sub_doc validation and evidence references from orphan relations, keeping pair_artifact self as orphan", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-detector-scope-"));
+    try {
+      writeMarkdown(
+        root,
+        "docs/design/harness/L6-function-design/README.md",
+        ["---", "layer: L6", "doc_type: index", "status: confirmed", "---", "", "# Index"].join(
+          "\n",
+        ),
+      );
+      writeMarkdown(
+        root,
+        "docs/design/harness/L3-functional/roadmap.md",
+        [
+          "---",
+          "layer: L3",
+          "doc_type: verification-roadmap",
+          "status: confirmed",
+          "---",
+          "",
+          "# Roadmap",
+        ].join("\n"),
+      );
+      writePlan(
+        root,
+        "PLAN-L7-996-evidence-reference-fixture.md",
+        [
+          "---",
+          "plan_id: PLAN-L7-996-evidence-reference-fixture",
+          "title: Evidence reference fixture",
+          "kind: add-impl",
+          "layer: L7",
+          "drive: db",
+          "status: confirmed",
+          "route_signal: feature_addition",
+          "route_mode: add-feature",
+          "dependencies:",
+          "  requires:",
+          "    - src/state-db/spec-ir-projections.ts",
+          "    - tests/spec-ir-projections.test.ts",
+          "    - .ut-tdd/audit/A-000-fixture-audit.md",
+          "    - docs/research/fixture-research.md",
+          "    - skills/SKILL_MAP.md",
+          "    - CLAUDE.md",
+          "    - package.json",
+          "---",
+          "",
+          "# Evidence reference fixture",
+        ].join("\n"),
+      );
+      writePlan(
+        root,
+        "PLAN-L7-995-self-pair-fixture.md",
+        [
+          "---",
+          "plan_id: PLAN-L7-995-self-pair-fixture",
+          "title: Self pair fixture",
+          "kind: add-impl",
+          "layer: L7",
+          "drive: db",
+          "status: confirmed",
+          "route_signal: feature_addition",
+          "route_mode: add-feature",
+          "pair_artifact: self",
+          "---",
+          "",
+          "# Self pair fixture",
+        ].join("\n"),
+      );
+
+      const projection = collectSpecIrProjection(root, "2026-07-13T00:00:00.000Z");
+
+      expect(
+        projection.findings.filter((finding) => finding.kind === "spec-ir-invalid-subdoc"),
+      ).toEqual([]);
+      expect(projection.spec_defs).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            owner_path: "docs/design/harness/L6-function-design/README.md",
+            spec_kind: "design_meta_doc",
+          }),
+          expect.objectContaining({
+            owner_path: "docs/design/harness/L3-functional/roadmap.md",
+            spec_kind: "design_meta_doc",
+          }),
+        ]),
+      );
+
+      const orphanFindings = projection.findings.filter(
+        (finding) => finding.kind === "spec-ir-orphan-relation",
+      );
+      expect(
+        orphanFindings.filter((finding) =>
+          finding.subject_id.includes("PLAN-L7-996-evidence-reference-fixture"),
+        ),
+      ).toEqual([]);
+      expect(
+        projection.spec_relations.filter(
+          (relation) => relation.plan_id === "PLAN-L7-996-evidence-reference-fixture",
+        ),
+      ).toEqual([]);
+      // PLAN-REVERSE-12 規定: pair_artifact self は unresolved orphan として発火し続ける。
+      expect(
+        orphanFindings.filter(
+          (finding) =>
+            finding.subject_id.includes("PLAN-L7-995-self-pair-fixture") &&
+            finding.subject_id.endsWith(":pairs:self"),
+        ),
+      ).toHaveLength(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("resolves short-form plan IDs and reference docs without orphan relation noise", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-spec-ir-relation-scope-"));
     try {

@@ -71,6 +71,24 @@ IPA 共通フレーム 2013 (SLCP-JCF) では次が**同義**として扱われ�
 > 確定し、`ut-tdd plan lint` (`sub-doc-section-structure` gate) が design PLAN に対し fail-close 検証する。
 > 例: 帳票 = §1 帳票一覧 / §2 レイアウト / §3 出力項目定義 / §4 出力条件・タイミング / §5 関連 doc。
 
+### §1b-1 L6 機能設計 sub_doc の粒度 (artifact 種別 bucket、PLAN-L7-245)
+
+L6 (機能設計) の `VALID_SUB_DOCS.L6` (`function-spec` / `class-design` / `edge-case` / `screen-spec`)
+は本節 §1b の L4 標準成果物カタログとは粒度が異なる。L4 §1b は「産出物の種類」を
+per-product-artifact で列挙する enumerable catalog (① 必須 / ② プロダクト選択の区分を伴う) だが、
+L6 は「関数仕様 doc という artifact **種別**」を表す coarse な bucket である。
+`docs/design/harness/L6-function-design/` 配下の各トピック doc (agent-slots / context / graph /
+memory / secret / skill-index 等、実装機構ごとに 1 file) はすべて `sub_doc: function-spec` を
+共有し、トピックの識別は **ファイル名 + 任意の `artifact_role: topic_<name>`**
+(L2 `business-flow.md` の `artifact_role: supplemental_business_flow` と同型の non-schema
+free-form メタデータ) が担う。
+
+新しい L6-function-design トピック doc を追加するときも `VALID_SUB_DOCS.L6` へ per-topic slug を
+追加しない。追加すると `sub-doc-catalog-drift` gate (schema ↔ 要件 v1.2 §G.1 mirror) が要件側
+未同期で fail-close する (2026-07-13 spec-ir triage cluster A、18 件の latent-defect と同じ経路を
+再発させないための明文化)。doc frontmatter ↔ schema (`VALID_SUB_DOCS`) ↔ 本ノートの 3 者整合は
+`sub-doc-schema-integrity` gate (`src/lint/sub-doc-schema-integrity.ts`) が機械検証する。
+
 ## §1c 各 L の FE/UI 設計ドキュメント定義 (フロント設計 doc coverage、PLAN-L4-14)
 
 > **本節の目的 (PO 指摘 2026-06-24「各 L におけるフロント/UI の設計ドキュメントを先に定義しろ」)**:
