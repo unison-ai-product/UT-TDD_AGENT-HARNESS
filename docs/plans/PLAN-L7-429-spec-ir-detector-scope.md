@@ -4,7 +4,7 @@ title: "PLAN-L7-429 (add-impl): spec-ir detector scope 精密化 — メタ doc 
 kind: add-impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-13
@@ -36,7 +36,24 @@ dependencies:
     - src/schema/index.ts
     - tests/spec-ir-projections.test.ts
 review_evidence:
-  - "2026-07-13 cross-provider blind review (codex gpt-5.6-terra, ut-tdd codex --role blind-reviewer --execute): FLAG→解消。tests/spec-ir-projections.test.ts 21/21 green (2回再現)、実 repo orphan-relation=1 (pairs:self、REVERSE-12 規定通り) を実測確認。指摘1: 実測 invalid-subdoc=0≠18 — 並行 PLAN-L7-245 レーンが同一 working tree で cluster A 18件の sub_doc を正規化済みのため (§4 規定の差分説明。両 PLAN 合流後の最終想定値と一致)。指摘2: §2 existsSync 記述と実装の不一致 — §2 を採択実装 (finding kind 追加なしのため実在確認も行わない) に訂正、欠落検出は §7 残リスクへ"
+  - reviewer: codex-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-13T21:05:29+09:00"
+    tests_green_at: "2026-07-13T20:41:58+09:00"
+    verdict: approve
+    scope: "FLAG→解消。tests/spec-ir-projections.test.ts 21/21 green (2回再現)、実 repo orphan-relation=1 (pairs:self、REVERSE-12 規定通り) を実測確認。指摘1: 実測 invalid-subdoc=0≠18 は並行 PLAN-L7-245 レーンが同一 working tree で cluster A 18件の sub_doc を正規化済みのため (§4 規定の差分説明、両 PLAN 合流後の最終想定値と一致)。指摘2: §2 existsSync 記述と実装の不一致は §2 を採択実装に訂正、欠落検出は §7 残リスクへ。"
+    worker_model: claude-fable-5
+    reviewer_model: gpt-5.6-terra
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests/spec-ir-projections.test.ts (21/21 green、PLAN-L7-429 メタdoc除外/evidence参照分離/self-pair 退行防止 fixture 含む)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-13T20:41:58+09:00"
+        evidence_path: tests/spec-ir-projections.test.ts
+        output_digest: "sha256:53e677236ddc1cb19b66725f5d64ac93aa91500bfbd0cef27c2cea0f29ceb0fc"
+        anchor_commit: d2ee517e77e63d95f4b52fd4cf5b70011b3eca10
 ---
 
 # PLAN-L7-429 (add-impl): spec-ir detector scope 精密化
