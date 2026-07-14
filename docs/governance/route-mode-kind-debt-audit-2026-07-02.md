@@ -78,7 +78,7 @@ landed off-diagonal。全て confirmed = landed 済につき恒久免除 (kind �
 | PLAN-L7-242-mode-exit-enforcement-batch | 未着手 (open) |
 | PLAN-L7-243-mode-first-class-db-projection | 昇格済 promoted (2026-07-02) |
 | PLAN-L7-244-right-arm-citation-gate | 未着手 (open) |
-| PLAN-L7-245-sub-doc-schema-integrity | 未着手 (open) |
+| PLAN-L7-245-sub-doc-schema-integrity | 昇格済 promoted (2026-07-14, PLAN-REVERSE-245 pairing) |
 | PLAN-L7-246-feedback-event-lifecycle | 未着手 (open) |
 | PLAN-L7-247-db-driven-diagram-generation | 未着手 (open) |
 | PLAN-L7-249-operational-checklist-output | 未着手 (open) |
