@@ -88,14 +88,15 @@ describe("team model policy", () => {
       reasoning_effort: "xhigh",
       task_intent: "uiux",
     });
+    // 実装は luna へ解決され effort=high 基準 (PO rule 2026-07-14)。
     expect(
       selectTeamModel({
         provider: "codex",
         role: "se",
         engine: "codex-se",
         task: "implement setup wrapper",
-      }).reasoning_effort,
-    ).toBe("middle");
+      }),
+    ).toMatchObject({ model: MODEL_IDS.codex.luna, reasoning_effort: "high" });
   });
 
   it("honors explicit difficulty, model, and effort overrides", () => {

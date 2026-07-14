@@ -652,22 +652,22 @@ describe("L7 CLI surface closure", () => {
     const payload = JSON.parse(run.stdout);
 
     expect(run.status).toBe(0);
-    // 設計判断 (review intent → design) は Fable 一次 + Codex fallback (PO ルーティング 2026-07-08)。
+    // 設計判断 (review intent → design) は Sol 一次 + Fable fallback (PO ルーティング 2026-07-14)。
     expect(payload).toMatchObject({
-      provider: "claude",
-      model: "claude-fable-5",
+      provider: "codex",
+      model: MODEL_IDS.codex.frontier,
       effort: "middle",
       consultation_mode: "consult",
       decision_kind: "design",
       current_model_lower_than_advisor: true,
       adapterPlan: {
-        provider: "claude",
-        model: "claude-fable-5",
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
         dry_run: true,
       },
       fallback: {
-        provider: "codex",
-        model: MODEL_IDS.codex.frontier,
+        provider: "claude",
+        model: "claude-fable-5",
         consultation_mode: "consult",
       },
     });

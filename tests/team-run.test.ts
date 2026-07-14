@@ -137,11 +137,12 @@ describe("team run validation", () => {
     expect(result.members.every((m) => m.prompt.includes(TEAM_MEMBER_PROMPT_HEADER))).toBe(true);
     expect(result.members[0].prompt).toContain("provider: codex");
     expect(result.members[1].prompt).toContain("provider: claude");
-    expect(result.members[0].model_selection.model).toBe(MODEL_IDS.codex.codex);
+    // 実装 intent は engine family (codex) より優先して luna に解決 (PLAN-L7-430)。
+    expect(result.members[0].model_selection.model).toBe(MODEL_IDS.codex.luna);
     expect(result.members[0].adapter).toMatchObject({
       command: "codex",
       dry_run: true,
-      model: MODEL_IDS.codex.codex,
+      model: MODEL_IDS.codex.luna,
     });
     expect(result.members[0].adapter?.args).toContain("-m");
     expect(result.members[1].model_selection.model).toBe(MODEL_IDS.claude.sonnet);
