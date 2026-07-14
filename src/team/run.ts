@@ -300,6 +300,7 @@ export function buildTeamRunPlan(
       role: member.role,
       engine: member.engine,
       task: member.task,
+      intent: member.intent,
       difficulty: member.difficulty,
       // placement (tier-router) のモデルを engine 既定より優先。空文字 (blocked) は無視。
       model: placement?.model || member.model,

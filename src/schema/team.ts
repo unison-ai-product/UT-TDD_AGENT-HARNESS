@@ -31,6 +31,20 @@ export type TaskDifficulty = z.infer<typeof taskDifficultySchema>;
 export const reasoningEffortSchema = z.enum(["low", "medium", "middle", "high", "xhigh"]);
 export type ReasoningEffort = z.infer<typeof reasoningEffortSchema>;
 
+/** 自然言語推論より優先する、team 定義上の構造化タスク種別。 */
+export const taskIntentSchema = z.enum([
+  "docs",
+  "research",
+  "implementation",
+  "test",
+  "design",
+  "lightweight",
+  "review",
+  "uiux",
+  "general",
+]);
+export type TaskIntent = z.infer<typeof taskIntentSchema>;
+
 export const modelOverrideSchema = z
   .string()
   .min(1)
@@ -53,18 +67,21 @@ export const serializationReasonSchema = z.object({
 });
 export type SerializationReason = z.infer<typeof serializationReasonSchema>;
 
-export const teamMemberSchema = z.object({
-  role: roleSchema,
-  /** 委譲先エンジン (codex-tl / codex-se / pmo-sonnet 等)。agent_kind として slot に記録。 */
-  engine: z.string().min(1),
-  task: z.string().min(1),
-  difficulty: taskDifficultySchema.optional(),
-  model: modelOverrideSchema.optional(),
-  effort: reasoningEffortSchema.optional(),
-  ownership: z.string().optional(),
-  /** この member を前段に直列化する理由 (parallel 戦略でも個別に直列化指定可)。 */
-  serialize_after: z.string().optional(),
-});
+export const teamMemberSchema = z
+  .object({
+    role: roleSchema,
+    /** 委譲先エンジン (codex-tl / codex-se / pmo-sonnet 等)。agent_kind として slot に記録。 */
+    engine: z.string().min(1),
+    task: z.string().min(1),
+    intent: taskIntentSchema.optional(),
+    difficulty: taskDifficultySchema.optional(),
+    model: modelOverrideSchema.optional(),
+    effort: reasoningEffortSchema.optional(),
+    ownership: z.string().optional(),
+    /** この member を前段に直列化する理由 (parallel 戦略でも個別に直列化指定可)。 */
+    serialize_after: z.string().optional(),
+  })
+  .strict();
 export type TeamMember = z.infer<typeof teamMemberSchema>;
 
 export const teamDefinitionSchema = z.object({

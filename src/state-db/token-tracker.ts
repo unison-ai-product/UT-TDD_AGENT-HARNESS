@@ -68,6 +68,7 @@ export const OPENAI_PRICING: Record<
 > = {
   "gpt-5.6-sol": { input: 5, cached: 0.5, output: 30 },
   "gpt-5.6-terra": { input: 2.5, cached: 0.25, output: 15 },
+  "gpt-5.6-luna": { input: 1, cached: 0.1, output: 6 },
   "gpt-5.5": { input: 5, cached: 0.5, output: 30 },
   "gpt-5.5-pro": { input: 30, cached: null, output: 180 },
   "gpt-5.4": { input: 2.5, cached: 0.25, output: 15 },
