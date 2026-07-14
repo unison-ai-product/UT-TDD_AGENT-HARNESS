@@ -107,15 +107,15 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
     );
   }
 
-  it("does not flag a confirmed PLAN whose generated src is merged (PR #47 landed 2026-07-14)", () => {
+  it("does not flag a confirmed PLAN whose generated src is merged on the base ref", () => {
     const input = loadMergedPlanStatusInput(process.cwd());
     const active = input.plans.find(
-      (plan) => plan.planId === "PLAN-L7-418-plan-asset-v2-adapter-migration-ledger",
+      (plan) => plan.planId === "PLAN-L7-429-spec-ir-detector-scope",
     );
     expect(active?.status).toBe("confirmed");
     expect(active?.mergedArtifacts).not.toEqual([]);
     expect(analyzeMergedPlanStatus(input).violations.map((item) => item.planId)).not.toContain(
-      "PLAN-L7-418-plan-asset-v2-adapter-migration-ledger",
+      "PLAN-L7-429-spec-ir-detector-scope",
     );
   });
 
