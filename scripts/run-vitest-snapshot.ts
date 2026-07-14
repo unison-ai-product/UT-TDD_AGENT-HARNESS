@@ -127,6 +127,11 @@ export function assertSnapshotContentMatch(executionRoot: string, referenceRoot:
     throw new Error("snapshot content mismatch");
 }
 
+export function assertSnapshotFingerprint(root: string, expectedFingerprint: string): void {
+  if (snapshotContentFingerprint(root) !== expectedFingerprint)
+    throw new Error("snapshot reference fingerprint mismatch");
+}
+
 export function finishSnapshotCleanup(
   primaryError: unknown,
   cleanups: Array<() => void>,
@@ -233,6 +238,7 @@ export function runSnapshotTests(
     `ut-tdd-vitest-cache-${process.pid}-${Date.now()}`,
   );
   let primaryError: unknown;
+  let sealedReferenceFingerprint: string | undefined;
   try {
     const source = resolveSnapshotSource(repoRoot);
     createSnapshot(repoRoot, snapshotRoot, source);
@@ -246,8 +252,9 @@ export function runSnapshotTests(
         "git",
         ["diff", "--exit-code", "--", ":(exclude).ut-tdd/harness.db"],
         referenceRoot,
-      );
+    );
     sealReference(referenceRoot);
+    sealedReferenceFingerprint = snapshotContentFingerprint(referenceRoot);
     run(process.execPath, ["x", "vitest", "run", ...args], snapshotRoot, {
       ...process.env,
       INIT_CWD: snapshotRoot,
@@ -260,6 +267,15 @@ export function runSnapshotTests(
   } catch (error) {
     primaryError = error;
   } finally {
+    if (sealedReferenceFingerprint) {
+      try {
+        assertSnapshotFingerprint(referenceRoot, sealedReferenceFingerprint);
+      } catch (error) {
+        primaryError = primaryError
+          ? new AggregateError([primaryError, error], "vitest execution and reference verification failed")
+          : error;
+      }
+    }
     finishSnapshotCleanup(primaryError, [
       () => unsealReference(referenceRoot),
       () => removeSnapshot(referenceRoot),

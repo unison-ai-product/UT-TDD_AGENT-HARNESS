@@ -169,6 +169,9 @@ review_evidence: []
 - HEAD `97968c6c` で `172 files / 1661 tests` green、doctor `60/60` green、起動元・
   reference fingerprint差分ゼロを確認した。以後のdetector強化はHEAD `6b88fac6` の
   targeted `18/18` greenまで確認済みで、最終full suiteを再実行して証拠を更新する。
+- seal直後にreference fingerprintを捕捉し、Vitest終了後かつunseal前に再検証する。差分は
+  `snapshot reference fingerprint mismatch`としてVitest失敗・cleanup失敗と同様に集約して
+  fail-closeする（`U-TESTHYGIENE-042`）。
 - `doctor.test.ts` のaggregate baselineはPLANがdraftの間だけ
   `merged-plan-status` 1件を許可する。PLAN confirm時に許可を0件へ更新し、doctor全体
   greenを復元することを解除条件とする。
@@ -186,7 +189,7 @@ review_evidence: []
 - [ ] Gitは単一捕捉OID、non-Gitは単一execution captureからreferenceを生成し、live source二度読みに依存しない。
       non-Git copyは全階層の`.git`／`.ut-tdd`／`node_modules`を含まず、post-rebuild注入はDBとfeedback lifecycle logのみである。
 - [ ] referenceはVitest起動からcleanup直前まで物理的にread-onlyであり、Windowsを含むcanonical path比較でexecution rootと
-      reference rootを混同しない。seal／revision／fingerprint／cleanup failureはexit 1である。
+      reference rootを混同しない。seal直後のfingerprintをVitest後・unseal前に再検証し、seal／revision／fingerprint／cleanup failureはexit 1である。
 - [ ] repository read契約は`head_snapshot`／`isolated_fixture`のmode別exact countを持つ。sinkへ到達しないbare／void／
       unused／assertion-only rootは数えず、HEAD root（alias・静的derived pathを含む）のNode/Bun直接write sinkはhard violationとなる。
       FD/FileHandleを経る任意dataflowはPLAN-L7-425の独立自己証明対象としてdebt routeする。

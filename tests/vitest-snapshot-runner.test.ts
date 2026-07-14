@@ -13,6 +13,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   assertSnapshotContentMatch,
+  assertSnapshotFingerprint,
   copyReferenceRuntimeInputs,
   createSnapshot,
   finishSnapshotCleanup,
@@ -98,9 +99,28 @@ describe("vitest snapshot runner", () => {
       writeFileSync(join(execution, "package.json"), '{"version":1}\n');
       createSnapshot(execution, reference);
       writeFileSync(join(reference, "package.json"), '{"version":2}\n');
-      expect(() => assertSnapshotContentMatch(execution, reference)).toThrow("snapshot content mismatch");
+      expect(() => assertSnapshotContentMatch(execution, reference)).toThrow(
+        "snapshot content mismatch",
+      );
     } finally {
       removeTestTree(execution);
+      removeTestTree(reference);
+    }
+  });
+
+  it("U-TESTHYGIENE-042: fails closed when a sealed reference changes after its fingerprint is captured", () => {
+    const reference = mkdtempSync(join(tmpdir(), "ut-tdd-reference-fingerprint-"));
+    try {
+      const file = join(reference, "package.json");
+      writeFileSync(file, '{"version":1}\n');
+      sealReference(reference);
+      const fingerprint = snapshotContentFingerprint(reference);
+      unsealReference(reference);
+      writeFileSync(file, '{"version":2}\n');
+      expect(() => assertSnapshotFingerprint(reference, fingerprint)).toThrow(
+        "snapshot reference fingerprint mismatch",
+      );
+    } finally {
       removeTestTree(reference);
     }
   });
@@ -113,13 +133,33 @@ describe("vitest snapshot runner", () => {
       expect(spawnSync("git", ["init"], { cwd: source }).status).toBe(0);
       writeFileSync(join(source, "package.json"), '{"version":1}\n');
       expect(spawnSync("git", ["add", "package.json"], { cwd: source }).status).toBe(0);
-      expect(spawnSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.invalid", "commit", "-m", "initial"], { cwd: source }).status).toBe(0);
+      expect(
+        spawnSync(
+          "git",
+          [
+            "-c",
+            "user.name=test",
+            "-c",
+            "user.email=test@example.invalid",
+            "commit",
+            "-m",
+            "initial",
+          ],
+          { cwd: source },
+        ).status,
+      ).toBe(0);
       const captured = resolveSnapshotSource(source);
       expect(captured.kind).toBe("git");
       createSnapshot(source, execution, captured);
       writeFileSync(join(source, "package.json"), '{"version":2}\n');
       expect(spawnSync("git", ["add", "package.json"], { cwd: source }).status).toBe(0);
-      expect(spawnSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.invalid", "commit", "-m", "next"], { cwd: source }).status).toBe(0);
+      expect(
+        spawnSync(
+          "git",
+          ["-c", "user.name=test", "-c", "user.email=test@example.invalid", "commit", "-m", "next"],
+          { cwd: source },
+        ).status,
+      ).toBe(0);
       createSnapshot(source, reference, captured);
       expect(readFileSync(join(execution, "package.json"), "utf8").trim()).toBe('{"version":1}');
       expect(readFileSync(join(reference, "package.json"), "utf8").trim()).toBe('{"version":1}');
