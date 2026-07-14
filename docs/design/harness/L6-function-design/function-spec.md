@@ -879,7 +879,7 @@ delta同士のexact artifact pathを許可する。
 - `resolveProfile(catalog, selection): Result<ResolvedProfile, ProfileViolation[]>`
 - `PlanRevision.create(input): Result<PlanRevision, PlanRevisionError>`
 - `PlanAsset.create(input, deps)` / `PlanAsset.reconstruct(revisions)` / `PlanAsset.revise(command)`
-- `EvidenceRecord.create(input)` / `EvidenceRecord.isUsableFor(subject, policy, now)`
+- `EvidenceRecord.create(input, issuer?)` / `EvidenceRecord.isUsableFor(subject, policy, now)`
 
 完全constructor/factoryでinvalid stateを拒否し、reviseは旧instance/evidenceを変更せず新asset+eventを返す。
 profile解決順はsize baseline→product overlay→explicit overrideで、unknownと同優先度競合をfail-closeする。
@@ -925,8 +925,8 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 |---|---|---|
 | `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `canonicalPayload`, `dependencies[]` | 空ID、重複dependency、revision≠1、payload digest不一致は`PlanAssetError` |
 | `RevisePlanCommand` | `assetId`, `baseRevision`, `changeSet`, `actor`, `reason` | base≠latest、空reason、identity変更は拒否 |
-| `EvidenceInput` | `evidenceId`, `evidenceKind`, `subjectId`, `subjectRevision`, `sourceCommit`, branded `commandArgs`, kind別typed `claims`, `outputDigest`, `exitCode`, typed `producer`, `producedAt`, `expiresAt?`, `supersedesEvidenceId?` | claimsを含むrecord digestをcanonical fieldから内部生成する。digest/commit/revision/redacted command/kind/producer/claims欠落、kind-claims不一致、自己supersedeは`EvidenceError`。非0 exitも監査用recordとしてvalid |
-| `EvidencePolicy` | `policyId`, `revision`, `requirements[]`（各要素=`requirementId`, `requiredKind`, `minCount`, `maxCount?`, `acceptedProducers[]`, `exitRule`, typed `claimsRule`）、`maxAge?` | policy定義と評価context（subject/revision/commit/now）を分離する。複数kindを各cardinalityで表現し、全履歴から因果順を検証したsupersession frontierを作る。別kind/revision/commit、期限切れ、producer外、exit/claims不適合を件数へ数えず、requirement別eligible/rejected IDをstable順で返す |
+| `EvidenceInput` | `evidenceId`, `evidenceKind`, `subjectId`, `subjectRevision`, `sourceCommit`, branded `commandArgs`, kind別typed `claims`, `outputDigest`, `exitCode`, typed `producer`, `producedAt`, `expiresAt?`, `supersedesEvidenceId?` | claimsを含むrecord digestをcanonical fieldから内部生成する。issuerがある場合はauthority/key version/producer/record digestを長さprefix frame化してattestationを発行する。非0 exitと未署名recordも監査用recordとしてvalid |
+| `EvidencePolicy` | `policyId`, `revision`, `requirements[]`（各要素=`requirementId`, `requiredKind`, `minCount`, `maxCount?`, `acceptedProducers[]`, `exitRule`, typed `claimsRule`）、`maxAge?`、composition root固定`EvidenceAttestationVerifierPort` | 全nested ruleをdefensive copy/deep freezeする。trusted verifierがauthority/key/producer binding/署名を検証したrecordだけをfrontier候補にする。未署名・署名不正、別kind/revision/commit、期限切れ、producer外、exit/claims不適合を件数へ数えず、requirement別eligible/rejected IDをstable順で返す |
 | `WorkflowCommand` | `subjectId`, `expectedFrom`, `to`, `actor`, `reason?`, `evidenceIds[]` | 許可表外、sequence不整合、guard不足は`WorkflowError` |
 | `WorkflowContext` | `subjectRevision`, `events[]`, `evidence[]`, `now`, `policyRevision` | event/evidenceが別subjectならfail-close |
 | `VModelContractDto` | `revision`, `layers[]`, `gates[]`, `pairs[]`, `exceptions[]`, `evidencePolicies[]`, `defectRoutes[]` | exactly-once、未知参照、理由なし例外は`ContractViolation[]` |
@@ -1027,6 +1027,7 @@ lossless変換不能として`plan-migration-loss`にする。未知fieldは`unk
 `exitRule/expectedExit`を照合する。非0 exitはRed policyでusableになり得るが、Green/accept policyではusable=falseにする。
 record自体は削除しない。`claims`はRedのexpected/observed findingとtodo/skip、runner/test、trace orphan/stale、review verdict/reviewer、gate failure、acceptance/retention decision、exception actor/reason/resume/replacementをkind別discriminated DTOで保持し、`outputDigest`や自由文から意味を逆推定しない。supersessionは同subject/revision/kindの全履歴からactive frontierを作り、orphan/cycle/forkをfail-closeする。producer値域はcontract registryから読み、未知producerを
 記録時finding、accept時fail-closeとする。argvはsecret-scan/redaction port通過後の値だけを保存する。
+`recordDigest`は保存recordの改ざん検出でありproducer真正性ではない。真正性は`evidence-attestation/v1`のHMAC-SHA256 attestationをcomposition root固定のtrusted verifierで検証し、unknown authority/key、producer binding不一致、署名不一致、未署名をfail-closeする。issuer/verifierのsecretとcurrent key versionはECMAScript private fieldに保持する。caller供給のallow-all verifierや`attested=true`の自己申告は契約外とする。
 
 全append commandは`commandPayloadDigest`を返す。digestはcommand type、subject identity、入力DTOのcanonical frameだけから作り、
 command ID、clock、event ID、resultを含めない。同一command IDの再送はこのdigestをconstant-time比較し、一致時だけ既存event/resultを返す。

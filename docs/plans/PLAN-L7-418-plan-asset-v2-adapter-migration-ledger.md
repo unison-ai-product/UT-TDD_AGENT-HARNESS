@@ -50,6 +50,8 @@ generates:
   - artifact_path: src/plan-asset/domain/evidence-claims.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/domain/evidence-canonical.ts
+  - artifact_path: src/plan-asset/ports/evidence-attestation.ts
+  - artifact_path: src/plan-asset/adapters/hmac-evidence-attestation-authority.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/domain/redacted-command-args.ts
     artifact_type: source_module
@@ -139,7 +141,7 @@ review_evidence:
 
 # PLAN-L7-418
 
-U-PA-001..047をRed freezeし、immutable aggregate/VO、canonical v1 adapter、collision migration ledger、採番予約、typed evidence、HEAD tracked repository identity loaderを実装する。情報損失と曖昧short IDはfail-closeする。DoDはlegacy全件変換、collision全件判断、旧revision不変、raw lease token非保存、evidence policy入力の型完備、ledger schema v3移行、review、Reverse-418合流である。
+U-PA-001..048をRed freezeし、immutable aggregate/VO、canonical v1 adapter、collision migration ledger、採番予約、署名付きtyped evidence、HEAD tracked repository identity loaderを実装する。情報損失と曖昧short IDはfail-closeする。DoDはlegacy全件変換、collision全件判断、旧revision不変、raw lease token非保存、evidence policy入力の型完備とproducer真正性検証、ledger schema v3移行、review、Reverse-418合流である。
 
 planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,adapters}`、reservation/migration schema、dry-run CLI、実行可能Red/Green testである。実体化した成果物はfrontmatter `generates`へ昇格する。
 
@@ -167,6 +169,6 @@ planned deliverablesは`src/kernel`、`src/plan-asset/{domain,application,ports,
 - HEAD `274adf14` inventoryは741件、collision 20群/41 PLAN、digest=`86a25dda63d29db9a6d02b6bacfd835e53762cdf416bd8df5b0d04b7d3caf718`。digestはrepository identity receipt、source commit、Git blob OID、source content、frontmatter/body、known/unknown field、collision projectionを拘束し、旧18群/37 PLAN固定値へ検出を合わせない。
 - `origin/main`取り込み後のHEAD `0b8893d9`では752件、collision 27群/55 PLANへ増加した。新規7群/14件も暗黙選択せずreview manifestへ明示追加し、現HEAD oracleへ追随した。
 - main `29ce65c1`で再検証し、HEAD 760件、migrated 705、rekeyed 55、pending 0、finding 0へ決定論的に追随した。件数固定ではなくHEAD由来bijectionを契約とする。
-- 独立監査でIMP-156のreservation token custody、EvidenceRecordのkind/cardinality/typed claims/producer/digest/supersession不足、L5 reservation schemaと実装のversion drift（IMP-167）を検出した。U-PA-043〜047を追加Redとし、これらがGreenになるまでReverse-418とL7-419依存を閉じない。
+- 独立監査でIMP-156のreservation token custody、EvidenceRecordのkind/cardinality/typed claims/producer/digest/supersession不足、L5 reservation schemaと実装のversion drift（IMP-167）を検出した。再レビューでproducer自己申告による偽CI証跡、nested policy ruleのTOCTOU、Cookie秘匿漏れ、鍵runtime property露出を検出した。U-PA-043〜048を追加Redとし、これらがGreenになるまでReverse-418とL7-419依存を閉じない。
 - `state-db`のlegacy short alias解決は先頭一致を廃止し、canonical resolverのexact/unique規則へ統合済み。
-- U-PA-001〜042の既存実装境界は完了した。U-PA-043〜047の追加Redは未完であり、これらのGreen、cross-runtime独立review、PR Ready化、Claude/PO acceptance、main mergeを実装完了と混同しない。
+- U-PA-001〜042の既存実装境界は完了した。U-PA-043〜048の追加境界は実装済みだが、detached HEAD Green、cross-runtime独立review、PR Ready化、Claude/PO acceptance、main mergeを実装完了と混同しない。
