@@ -59,6 +59,9 @@ export class HmacEvidenceAttestationVerifier implements EvidenceAttestationVerif
   readonly #keys: ReadonlyMap<string, StoredKey>;
 
   constructor(authorityId: string, keyMaterial: readonly EvidenceAuthorityKeyMaterial[]) {
+    if (new.target !== HmacEvidenceAttestationVerifier) {
+      throw new Error("evidence-attestation-verifier-subclass-forbidden");
+    }
     this.#authorityId = validAuthority(authorityId);
     this.#keys = buildKeys(keyMaterial);
     Object.freeze(this);
@@ -80,6 +83,8 @@ export class HmacEvidenceAttestationVerifier implements EvidenceAttestationVerif
     return actual.length === expected.length && timingSafeEqual(actual, expected);
   }
 }
+
+Object.freeze(HmacEvidenceAttestationVerifier.prototype);
 
 function buildKeys(
   keyMaterial: readonly EvidenceAuthorityKeyMaterial[],

@@ -141,6 +141,10 @@ describe("PLAN Asset evidence policy", () => {
       "TOPSECRET10",
       "-H",
       "X-Auth: TOPSECRET11",
+      "--signing-key=TOPSECRET12",
+      "AWS_ACCESS_KEY=TOPSECRET13",
+      "--ssh-key",
+      "TOPSECRET14",
     ]);
     expect(JSON.stringify(compoundSecrets)).not.toContain("TOPSECRET");
     expect(
@@ -274,6 +278,15 @@ describe("PLAN Asset evidence policy", () => {
     );
     expect("issue" in authority).toBe(false);
     expect(Object.isFrozen(authority)).toBe(true);
+    expect(Object.isFrozen(HmacEvidenceAttestationVerifier.prototype)).toBe(true);
+    class ForgedVerifier extends HmacEvidenceAttestationVerifier {
+      override verify(): boolean {
+        return true;
+      }
+    }
+    expect(() => new ForgedVerifier("local-ci", keyMaterial)).toThrow(
+      "evidence-attestation-verifier-subclass-forbidden",
+    );
     expect(
       EvidencePolicy.create(
         {

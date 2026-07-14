@@ -37,7 +37,7 @@ export class EvidencePolicy {
   readonly revision: number;
   readonly requirements: readonly EvidenceRequirement[];
   readonly maxAgeMs?: number;
-  readonly #verifier: HmacEvidenceAttestationVerifier;
+  readonly #verify: HmacEvidenceAttestationVerifier["verify"];
 
   private constructor(
     input: {
@@ -56,7 +56,7 @@ export class EvidencePolicy {
         .sort((left, right) => bytewise(left.requirementId, right.requirementId)),
     );
     this.maxAgeMs = input.maxAgeMs;
-    this.#verifier = verifier;
+    this.#verify = verifier.verify.bind(verifier);
     Object.freeze(this);
   }
 
@@ -98,7 +98,7 @@ export class EvidencePolicy {
           active.has(record.evidenceId) &&
           Boolean(
             record.attestation &&
-              this.#verifier.verify(
+              this.#verify(
                 { producer: record.producer, recordDigest: record.recordDigest },
                 record.attestation,
               ),
