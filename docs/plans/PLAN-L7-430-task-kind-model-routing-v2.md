@@ -81,7 +81,8 @@ Luna を「実装 / ドキュメント修正の主力」として採用した (�
 旧行列 (design→Fable 一次) を supersede。根拠: Fable レート制限
 ([[project-fable-5-7-13-rate-limit]]) と Sol の escalation 席実測。
 
-task-kindはdifficulty由来のmodel familyやengine familyより優先する。critical/complexはtask-kindが
+構造化`intent`をtask-kind正本とし、未指定時だけrole/task textから推論する。task-kindはrole既定、
+difficulty由来のmodel family、engine familyより優先する。critical/complexはtask-kindが
 `general`のときだけfrontierへ上げ、risk判断はadvisor gateで別に扱う。`test ... verify ...`のような
 重複語は「testを作る」動詞を伴う場合testを優先し、単語境界のないsubstring一致は分類に使わない。
 

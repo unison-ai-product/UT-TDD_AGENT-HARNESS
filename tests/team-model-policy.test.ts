@@ -401,6 +401,26 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     expect(inferTaskIntent({ task: "update release notes" })).toBe("docs");
   });
 
+  it("U-ROUTE2-021: detected and explicit task kinds override role defaults", () => {
+    expect(
+      selectTeamModel({
+        provider: "codex",
+        role: "qa",
+        engine: "codex-qa",
+        task: "write a vitest test for retry behavior",
+      }),
+    ).toMatchObject({ task_intent: "test", model: MODEL_IDS.codex.worker });
+    expect(
+      selectTeamModel({
+        provider: "codex",
+        role: "qa",
+        engine: "codex-qa",
+        task: "generic task text",
+        intent: "implementation",
+      }),
+    ).toMatchObject({ task_intent: "implementation", model: MODEL_IDS.codex.luna });
+  });
+
   it("U-ROUTE2-005: claude 設計ドキュメント作成は opus、doc 修正は sonnet、doc パッチは haiku", () => {
     expect(
       selectTeamModel({

@@ -271,15 +271,79 @@ const COMPLEX_TERMS = [
 
 const SIMPLE_TERMS = ["comment", "docs", "format", "lint", "readme", "rename", "typo"];
 const RESEARCH_TERMS = ["research", "source", "sources", "survey", "market", "web"];
-const IMPLEMENTATION_TERMS = ["implement", "implementation", "code", "src", "fix", "build"];
-const TEST_TERMS = ["test", "tests", "vitest", "tdd", "oracle", "fixture", "red-green"];
+const IMPLEMENTATION_TERMS = [
+  "implement",
+  "implementation",
+  "code",
+  "src",
+  "fix",
+  "build",
+  "実装",
+  "修正",
+  "コード",
+];
+const TEST_TERMS = [
+  "test",
+  "tests",
+  "testing",
+  "vitest",
+  "tdd",
+  "oracle",
+  "fixture",
+  "red-green",
+  "テスト",
+];
 const DESIGN_TERMS = ["design", "architecture", "spec", "adr", "contract", "設計"];
-const REVIEW_TERMS = ["review", "verify", "audit", "judge", "acceptance"];
+const REVIEW_TERMS = [
+  "review",
+  "verify",
+  "audit",
+  "judge",
+  "acceptance",
+  "レビュー",
+  "検証",
+  "監査",
+];
 const UIUX_TERMS = ["ui", "ux", "screen", "visual", "wireframe", "mock", "frontend"];
+const DOC_TERMS = ["docs", "doc", "readme", "governance", "release notes", "changelog"];
+const TEST_ACTION_TERMS = [
+  "write",
+  "create",
+  "add",
+  "implement",
+  "run",
+  "test",
+  "testing",
+  "書く",
+  "作成",
+  "追加",
+  "実装",
+  "実行",
+];
+const REVIEW_ACTION_TERMS = ["review", "verify", "audit", "judge", "レビュー", "検証", "監査"];
+const IMPLEMENTATION_ACTION_TERMS = ["implement", "implementation", "fix", "build", "実装", "修正"];
 
 function hasAny(text: string, terms: readonly string[]): boolean {
-  const tokens = new Set(text.split(/[^\p{L}\p{N}_-]+/u).filter(Boolean));
-  return terms.some((term) => tokens.has(term));
+  return terms.some((term) => {
+    if (containsNonAscii(term)) return text.includes(term);
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(?:^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, "u").test(text);
+  });
+}
+
+function startsWithAny(text: string, terms: readonly string[]): boolean {
+  const normalized = text.trimStart();
+  return terms.some((term) =>
+    containsNonAscii(term)
+      ? normalized.startsWith(term)
+      : new RegExp(`^${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=$|[^a-z0-9])`, "u").test(
+          normalized,
+        ),
+  );
+}
+
+function containsNonAscii(value: string): boolean {
+  return [...value].some((character) => (character.codePointAt(0) ?? 0) > 0x7f);
 }
 
 export function inferTaskDifficulty(input: {
@@ -375,19 +439,21 @@ export function inferTaskIntent(input: {
   difficulty?: TaskDifficulty;
 }): TaskIntent {
   const text = `${input.role ?? ""} ${input.engine ?? ""} ${input.task}`.toLowerCase();
+  const task = input.task.toLowerCase();
+  if (hasAny(task, DOC_TERMS)) return "docs";
+  if (hasAny(task, UIUX_TERMS)) return "uiux";
+  if (startsWithAny(task, REVIEW_ACTION_TERMS)) return "review";
+  const testImplementation =
+    hasAny(task, TEST_TERMS) &&
+    (startsWithAny(task, TEST_ACTION_TERMS) || hasAny(task, TEST_ACTION_TERMS.slice(7)));
+  if (testImplementation) return "test";
+  if (startsWithAny(task, IMPLEMENTATION_ACTION_TERMS)) return "implementation";
   if (input.role === "uiux") return "uiux";
   if (input.role === "qa") return "review";
-  const testImplementation =
-    hasAny(text, TEST_TERMS) &&
-    hasAny(text, ["write", "create", "add", "implement", "implementation"]);
-  if (testImplementation) return "test";
+  if (input.role === "docs") return "docs";
   if (hasAny(text, REVIEW_TERMS)) return "review";
   if (hasAny(text, TEST_TERMS)) return "test";
   if (hasAny(text, DESIGN_TERMS)) return "design";
-  if (input.role === "docs" || hasAny(text, ["docs", "doc", "readme", "governance"])) {
-    return "docs";
-  }
-  if (hasAny(text, UIUX_TERMS)) return "uiux";
   if (hasAny(text, RESEARCH_TERMS)) return "research";
   if (hasAny(text, IMPLEMENTATION_TERMS)) return "implementation";
   if (
@@ -435,6 +501,7 @@ export function selectTeamModel(input: {
   engine: string;
   task: string;
   difficulty?: TaskDifficulty;
+  intent?: TaskIntent;
   model?: string;
   effort?: ReasoningEffort;
 }): TeamModelSelection {
@@ -447,12 +514,14 @@ export function selectTeamModel(input: {
     size: recInput.size,
     uncertainty: recInput.uncertainty,
   });
-  const taskIntent = inferTaskIntent({
-    role: input.role,
-    engine: input.engine,
-    task: input.task,
-    difficulty: difficulty.difficulty,
-  });
+  const taskIntent =
+    input.intent ??
+    inferTaskIntent({
+      role: input.role,
+      engine: input.engine,
+      task: input.task,
+      difficulty: difficulty.difficulty,
+    });
   const selectedModel = modelForProvider({
     provider: input.provider,
     engine: input.engine,
