@@ -113,6 +113,21 @@ registry から生成。doctor に drift gate (生成物 ≠ registry 由来で 
 - ゲート対応: pair-freeze=設計レビュー / trace-freeze=実装レビュー / accept=ブラインド
   レビュー (REVIEW_LANES、非作成側 provider)。
 
+## 6. 「読ませる」ではなく機械強制 (PO 指摘 2026-07-14: 指示しないとオーケストレーションしない)
+
+document-first + machine enforcement の原則どおり、標準割当は読解依存にしない:
+
+1. **自動ロード層**: CLAUDE.md / AGENTS.md の routing 節 (L7-430 で更新済み) は両 runtime が
+   セッション開始時に必ず読み込む。rule-drift gate で両者の乖離を fail-close。
+2. **wrapper 層 (既に機械強制)**: `ut-tdd team run` / `codex` / `claude` 委譲は
+   `selectTeamModel` + effort ladder をコードで解決する。読んだかどうかに依存しない。
+3. **guard 層 (本 PLAN で拡張)**: agent-guard (PreToolUse hook) を registry 参照へ拡張し、
+   生の Agent 呼び出しでも task-kind に対する**想定外の model/effort 指定を fail-close**する
+   (現行の model floor 検査の上位互換)。orchestrator が routing を「忘れて」いても通らない。
+4. **SessionStart digest 層**: session start hook の digest に「現セッションの orchestrator
+   model と標準期待 (`STANDARD_ORCHESTRATION_EXPECTATION`) の比較 + advisor 多用推奨」を
+   1 行 surface する (下回りの自覚を毎セッション自動注入)。
+
 ## AC (L7 実装 PLAN へ引き継ぐ受入条件の骨子)
 
 - [ ] registry schema (layer/drive/task_kind/context_pack/skills/blind/generates) が
@@ -124,3 +139,6 @@ registry から生成。doctor に drift gate (生成物 ≠ registry 由来で 
 - [ ] skill 連動 (agent→skill allowlist 交差) が skill-engine テストで固定されている。
 - [ ] 帰責 3 分類 (設計/テスト/実装) の判定パターンが L7 test design に oracle として
       同期されている。
+- [ ] agent-guard が registry の task-kind 割当に反する model/effort 指定を fail-close する
+      (負例テストで固定)。SessionStart digest に orchestrator model と標準期待の比較が
+      surface される。
