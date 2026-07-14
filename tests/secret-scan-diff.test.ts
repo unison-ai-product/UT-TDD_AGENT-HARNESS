@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   analyzePiiScan,
@@ -62,9 +62,13 @@ function commitFile(root: string, relPath: string, content: string): string {
 
 /** `scripts/git-hooks/secret-scan-diff.ts` を stdin 経由で直接叩く (CLI entrypoint、実 git blob 使用)。 */
 function runHookCli(cwd: string, stdin: string, env?: NodeJS.ProcessEnv) {
-  const bunBinary =
+  const bunShim =
     (globalThis as { Bun?: { which?: (command: string) => string | null } }).Bun?.which?.("bun") ??
     "bun";
+  const bunBinary =
+    process.platform === "win32" && bunShim.toLowerCase().endsWith(".cmd")
+      ? join(dirname(bunShim), "node_modules", "bun", "bin", "bun.exe")
+      : bunShim;
   return spawnSync(bunBinary, [join(hooksDir, "secret-scan-diff.ts")], {
     cwd,
     encoding: "utf8",
