@@ -267,7 +267,7 @@ describe("team model policy", () => {
 });
 
 describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
-  it("U-ROUTE2-001: codex テスト実装は terra + middle effort", () => {
+  it("U-ROUTE2-001: codex テスト実装は terra + ladder base low effort", () => {
     const selection = selectTeamModel({
       provider: "codex",
       role: "se",

@@ -157,7 +157,7 @@ export function escalateShallowResponse(input: {
   if (ladder.shallow && input.currentEffort === ladder.base) {
     return { model: input.model, effort: ladder.shallow };
   }
-  if (ladder.escalate && input.currentEffort !== ladder.base) {
+  if (ladder.escalate && input.currentEffort === ladder.shallow) {
     return ladder.escalate;
   }
   return null;
@@ -278,7 +278,8 @@ const REVIEW_TERMS = ["review", "verify", "audit", "judge", "acceptance"];
 const UIUX_TERMS = ["ui", "ux", "screen", "visual", "wireframe", "mock", "frontend"];
 
 function hasAny(text: string, terms: readonly string[]): boolean {
-  return terms.some((term) => text.includes(term));
+  const tokens = new Set(text.split(/[^\p{L}\p{N}_-]+/u).filter(Boolean));
+  return terms.some((term) => tokens.has(term));
 }
 
 export function inferTaskDifficulty(input: {
@@ -333,10 +334,7 @@ function modelForProvider(input: {
   if (input.provider === "codex") {
     // task-kind 割当 (PO 2026-07-14): 検証/設計=sol、テスト実装=terra、実装/doc修正=luna、
     // 軽量実装/内部探索/web検索/doc パッチ=spark or mini。
-    // frontier = 最上位帯。tier-router TIER_TABLE.T0.codex (= MODEL_IDS.codex.frontier) と同一正本。
-    if (input.modelFamily === "frontier")
-      return { model: MODEL_IDS.codex.frontier, source: "policy" };
-    // intent 割当は modelFamily "codex" (engine 指定) より優先する — task-kind が正本。
+    // intent 割当はdifficulty由来modelFamilyより優先する — task-kind が正本。
     if (input.intent === "review" || input.intent === "design")
       return { model: MODEL_IDS.codex.frontier, source: "policy" };
     if (input.intent === "test") return { model: MODEL_IDS.codex.worker, source: "policy" };
@@ -345,23 +343,27 @@ function modelForProvider(input: {
       return { model: cheap ? MODEL_IDS.codex.mini : MODEL_IDS.codex.luna, source: "policy" };
     if (input.intent === "implementation")
       return { model: cheap ? MODEL_IDS.codex.spark : MODEL_IDS.codex.luna, source: "policy" };
+    // intent不明のcritical/complexだけをfrontierへ上げる。risk相談はadvisor gateで分離する。
+    if (input.modelFamily === "frontier")
+      return { model: MODEL_IDS.codex.frontier, source: "policy" };
     if (input.modelFamily === "codex") return { model: MODEL_IDS.codex.codex, source: "policy" };
     return { model: MODEL_IDS.codex.spark, source: "policy" };
   }
 
-  const engine = input.engine.toLowerCase();
-  if (engine.includes("opus")) return { model: MODEL_IDS.claude.opus, source: "engine" };
-  if (engine.includes("haiku")) return { model: MODEL_IDS.claude.haiku, source: "engine" };
-  if (engine.includes("sonnet")) return { model: MODEL_IDS.claude.sonnet, source: "engine" };
   // task-kind 割当 (PO 2026-07-14): フロントデザイン/設計 doc 作成=opus、
   // UI デザイン実装/doc 修正=sonnet、web 検索/doc パッチ=haiku。
-  if (input.modelFamily === "frontier") return { model: MODEL_IDS.claude.opus, source: "policy" };
   if (input.intent === "design" || input.intent === "review")
     return { model: MODEL_IDS.claude.opus, source: "policy" };
   if (input.intent === "uiux" || input.intent === "implementation" || input.intent === "test")
     return { model: MODEL_IDS.claude.sonnet, source: "policy" };
   if (input.intent === "docs")
     return { model: cheap ? MODEL_IDS.claude.haiku : MODEL_IDS.claude.sonnet, source: "policy" };
+  if (input.intent === "research") return { model: MODEL_IDS.claude.haiku, source: "policy" };
+  const engine = input.engine.toLowerCase();
+  if (engine.includes("opus")) return { model: MODEL_IDS.claude.opus, source: "engine" };
+  if (engine.includes("haiku")) return { model: MODEL_IDS.claude.haiku, source: "engine" };
+  if (engine.includes("sonnet")) return { model: MODEL_IDS.claude.sonnet, source: "engine" };
+  if (input.modelFamily === "frontier") return { model: MODEL_IDS.claude.opus, source: "policy" };
   if (input.modelFamily === "codex") return { model: MODEL_IDS.claude.sonnet, source: "policy" };
   return { model: MODEL_IDS.claude.haiku, source: "policy" };
 }
@@ -373,13 +375,19 @@ export function inferTaskIntent(input: {
   difficulty?: TaskDifficulty;
 }): TaskIntent {
   const text = `${input.role ?? ""} ${input.engine ?? ""} ${input.task}`.toLowerCase();
-  if (input.role === "uiux" || hasAny(text, UIUX_TERMS)) return "uiux";
-  if (input.role === "qa" || hasAny(text, REVIEW_TERMS)) return "review";
+  if (input.role === "uiux") return "uiux";
+  if (input.role === "qa") return "review";
+  const testImplementation =
+    hasAny(text, TEST_TERMS) &&
+    hasAny(text, ["write", "create", "add", "implement", "implementation"]);
+  if (testImplementation) return "test";
+  if (hasAny(text, REVIEW_TERMS)) return "review";
   if (hasAny(text, TEST_TERMS)) return "test";
   if (hasAny(text, DESIGN_TERMS)) return "design";
   if (input.role === "docs" || hasAny(text, ["docs", "doc", "readme", "governance"])) {
     return "docs";
   }
+  if (hasAny(text, UIUX_TERMS)) return "uiux";
   if (hasAny(text, RESEARCH_TERMS)) return "research";
   if (hasAny(text, IMPLEMENTATION_TERMS)) return "implementation";
   if (

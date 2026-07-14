@@ -63,12 +63,12 @@ Luna を「実装 / ドキュメント修正の主力」として採用した (�
 
 | provider | task-kind | model | effort |
 |---|---|---|---|
-| Codex | テスト実装 | gpt-5.6-terra | middle (worker 既定) |
-| Codex | 実装 / ドキュメント修正 | **gpt-5.6-luna (新規)** | **high (PO 2026-07-14、worker middle 既定の上書き)** |
-| Codex | 検証 / 設計 | gpt-5.6-sol | high〜xhigh (review=xhigh 維持) |
-| Codex | 軽量実装 / 内部探索 / web 検索 / doc パッチ | gpt-5.3-codex-spark / gpt-5.4-mini | middle |
-| Claude | フロントデザイン / 設計ドキュメント作成 | claude-opus-4-8 | high (uiux 文脈は xhigh) |
-| Claude | UI デザイン実装 / ドキュメント修正 | claude-sonnet-5 | high (uiux=xhigh 維持) |
+| Codex | テスト実装 | gpt-5.6-terra | low（浅い時middle、なお浅い時Sol low） |
+| Codex | 実装 / ドキュメント修正 | **gpt-5.6-luna (新規)** | **high** |
+| Codex | 検証 / 設計 | gpt-5.6-sol | low（浅い時middle） |
+| Codex | 軽量実装 / 内部探索 / web 検索 / doc パッチ | gpt-5.3-codex-spark / gpt-5.4-mini | spark=high / mini=xhigh |
+| Claude | フロントデザイン / 設計ドキュメント作成 | claude-opus-4-8 | high（浅い時xhigh、uiux文脈はxhigh） |
+| Claude | UI デザイン実装 / ドキュメント修正 | claude-sonnet-5 | middle（浅い時high、uiux=xhigh） |
 | Claude | web 検索 / doc パッチ | claude-haiku-4-5 | high (Claude 既定) |
 
 ### advisor 行列改定
@@ -80,6 +80,10 @@ Luna を「実装 / ドキュメント修正の主力」として採用した (�
 
 旧行列 (design→Fable 一次) を supersede。根拠: Fable レート制限
 ([[project-fable-5-7-13-rate-limit]]) と Sol の escalation 席実測。
+
+task-kindはdifficulty由来のmodel familyやengine familyより優先する。critical/complexはtask-kindが
+`general`のときだけfrontierへ上げ、risk判断はadvisor gateで別に扱う。`test ... verify ...`のような
+重複語は「testを作る」動詞を伴う場合testを優先し、単語境界のないsubstring一致は分類に使わない。
 
 ### 追補: オーケストラパターン分岐 / レビュー 3 面 / プランエージェント (PO 2026-07-14 同日追加)
 
