@@ -10,7 +10,33 @@ route_mode: add-feature
 created: 2026-07-02
 updated: 2026-07-14
 review_evidence:
-  - "2026-07-14 cross-provider blind review (codex gpt-5.6, ut-tdd codex --role blind-reviewer --execute): PASS-WEAK。claim-blind/spec-blind とも未反証の仕様違反なし、targeted test 19/19 green、方式 b (artifact_role 吸収) と map §1b-1 の整合確認、反例4系 (sub_doc 欠落/schema 外値/L4 drift 双方向/L6 方針ノート欠落) すべて防御確認。WEAK 理由は reviewer 環境での doctor 完走 timeout のみで、実 repo gate はオーケストレータが直接実測済み: sub-doc-schema-integrity OK (checked=54, meta skipped=3, drift 0) / sub-doc-catalog-drift OK (drift 0) / sub-doc-section-structure OK (bun src/cli.ts doctor、2026-07-14)"
+  - reviewer: codex-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-14T10:05:00+09:00"
+    tests_green_at: "2026-07-14T09:50:00+09:00"
+    verdict: approve
+    scope: "PASS-WEAK。claim-blind/spec-blind とも未反証の仕様違反なし、targeted test 19/19 green、方式 b (artifact_role 吸収) と map §1b-1 の整合確認、反例4系 (sub_doc 欠落/schema 外値/L4 drift 双方向/L6 方針ノート欠落) すべて防御確認。WEAK 理由は reviewer 環境での doctor 完走 timeout のみで、実 repo gate はオーケストレータが直接実測済み: sub-doc-schema-integrity OK (checked=54, meta skipped=3, drift 0) / sub-doc-catalog-drift OK / sub-doc-section-structure OK (bun src/cli.ts doctor、2026-07-14)。"
+    worker_model: claude-sonnet-5
+    reviewer_model: gpt-5.6
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests/sub-doc-schema-integrity.test.ts (19/19 green、3者突合 正例/負例 fixture)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-14T09:44:57+09:00"
+        evidence_path: tests/sub-doc-schema-integrity.test.ts
+        output_digest: "sha256:1e64400695a9caa1f900956f1daf3c6fd945e5dc773c36e08e6f6a9cc49f1701"
+        anchor_commit: d2ee517e77e63d95f4b52fd4cf5b70011b3eca10
+      - kind: doctor
+        command: "bun src/cli.ts doctor (sub-doc-schema-integrity OK checked=54 meta skipped=3 drift 0 / sub-doc-catalog-drift OK)"
+        runner: bun
+        scope: gate
+        exit_code: 0
+        completed_at: "2026-07-14T09:50:00+09:00"
+        evidence_path: src/lint/sub-doc-schema-integrity.ts
+        output_digest: "sha256:4cc05b6a9b61579efd2cdca2d6f36a761230e3801d354b8713ff26f264b3dc1e"
+        anchor_commit: d2ee517e77e63d95f4b52fd4cf5b70011b3eca10
 owner: PM / PO
 parent_design: docs/governance/document-system-map.md
 backprop_decision: not_required
