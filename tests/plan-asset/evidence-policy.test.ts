@@ -9,6 +9,7 @@ import {
   EvidenceRecord,
   type StoredEvidenceRecord,
 } from "../../src/plan-asset/domain/evidence-record.js";
+import { captureEvidenceAttestationVerifier } from "../../src/plan-asset/ports/evidence-attestation.js";
 
 const digest = "a".repeat(64);
 const commit = "b".repeat(40);
@@ -287,6 +288,13 @@ describe("PLAN Asset evidence policy", () => {
     expect(() => new ForgedVerifier("local-ci", keyMaterial)).toThrow(
       "evidence-attestation-verifier-subclass-forbidden",
     );
+    const prototypeSpoof = Object.create(HmacEvidenceAttestationVerifier.prototype) as {
+      verify: () => boolean;
+    };
+    Object.defineProperty(prototypeSpoof, "verify", { value: () => true });
+    const proxySpoof = new Proxy(authority, { get: () => () => true });
+    expect(captureEvidenceAttestationVerifier(prototypeSpoof as never)).toBeNull();
+    expect(captureEvidenceAttestationVerifier(proxySpoof)).toBeNull();
     expect(
       EvidencePolicy.create(
         {

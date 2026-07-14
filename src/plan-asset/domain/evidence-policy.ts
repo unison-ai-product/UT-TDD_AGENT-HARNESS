@@ -1,4 +1,8 @@
-import { HmacEvidenceAttestationVerifier } from "../adapters/hmac-evidence-attestation-authority.js";
+import {
+  type CapturedEvidenceAttestationVerifier,
+  captureEvidenceAttestationVerifier,
+  type EvidenceAttestationVerifierPort,
+} from "../ports/evidence-attestation.js";
 import { cloneCanonical, deepFreeze } from "./evidence-canonical.js";
 import { claimsRuleValidFor, claimsSatisfy } from "./evidence-claims.js";
 import type { EvidenceRecord } from "./evidence-record.js";
@@ -37,7 +41,7 @@ export class EvidencePolicy {
   readonly revision: number;
   readonly requirements: readonly EvidenceRequirement[];
   readonly maxAgeMs?: number;
-  readonly #verify: HmacEvidenceAttestationVerifier["verify"];
+  readonly #verify: CapturedEvidenceAttestationVerifier;
 
   private constructor(
     input: {
@@ -46,7 +50,7 @@ export class EvidencePolicy {
       readonly requirements: readonly EvidenceRequirement[];
       readonly maxAgeMs?: number;
     },
-    verifier: HmacEvidenceAttestationVerifier,
+    verify: CapturedEvidenceAttestationVerifier,
   ) {
     this.policyId = input.policyId;
     this.revision = input.revision;
@@ -56,7 +60,7 @@ export class EvidencePolicy {
         .sort((left, right) => bytewise(left.requirementId, right.requirementId)),
     );
     this.maxAgeMs = input.maxAgeMs;
-    this.#verify = verifier.verify.bind(verifier);
+    this.#verify = verify;
     Object.freeze(this);
   }
 
@@ -67,9 +71,10 @@ export class EvidencePolicy {
       readonly requirements: readonly EvidenceRequirement[];
       readonly maxAgeMs?: number;
     },
-    verifier: HmacEvidenceAttestationVerifier,
+    verifier: EvidenceAttestationVerifierPort,
   ): Result<EvidencePolicy, { readonly ruleId: string }> {
     const ids = input.requirements.map((requirement) => requirement.requirementId);
+    const verify = captureEvidenceAttestationVerifier(verifier);
     const valid =
       input.policyId.trim().length > 0 &&
       Number.isSafeInteger(input.revision) &&
@@ -79,9 +84,9 @@ export class EvidencePolicy {
       (input.maxAgeMs === undefined ||
         (Number.isSafeInteger(input.maxAgeMs) && input.maxAgeMs > 0)) &&
       input.requirements.every(requirementValid) &&
-      verifier instanceof HmacEvidenceAttestationVerifier;
+      verify !== null;
     return valid
-      ? { ok: true, value: new EvidencePolicy(input, verifier) }
+      ? { ok: true, value: new EvidencePolicy(input, verify) }
       : { ok: false, error: { ruleId: "evidence-policy-invalid" } };
   }
 

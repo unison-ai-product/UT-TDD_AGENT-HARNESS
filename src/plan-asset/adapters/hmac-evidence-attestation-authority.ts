@@ -5,6 +5,7 @@ import type {
   EvidenceAttestationIssuerPort,
   EvidenceAttestationVerifierPort,
 } from "../ports/evidence-attestation.js";
+import { registerEvidenceAttestationVerifier } from "../ports/evidence-attestation.js";
 
 export interface EvidenceAuthorityKeyMaterial {
   readonly version: string;
@@ -64,6 +65,7 @@ export class HmacEvidenceAttestationVerifier implements EvidenceAttestationVerif
     }
     this.#authorityId = validAuthority(authorityId);
     this.#keys = buildKeys(keyMaterial);
+    registerEvidenceAttestationVerifier(this, HmacEvidenceAttestationVerifier.prototype.verify);
     Object.freeze(this);
   }
 
