@@ -1,4 +1,4 @@
-import type { EvidenceAttestationVerifierPort } from "../ports/evidence-attestation.js";
+import { HmacEvidenceAttestationVerifier } from "../adapters/hmac-evidence-attestation-authority.js";
 import { cloneCanonical, deepFreeze } from "./evidence-canonical.js";
 import { claimsRuleValidFor, claimsSatisfy } from "./evidence-claims.js";
 import type { EvidenceRecord } from "./evidence-record.js";
@@ -37,7 +37,7 @@ export class EvidencePolicy {
   readonly revision: number;
   readonly requirements: readonly EvidenceRequirement[];
   readonly maxAgeMs?: number;
-  readonly #verifier: EvidenceAttestationVerifierPort;
+  readonly #verifier: HmacEvidenceAttestationVerifier;
 
   private constructor(
     input: {
@@ -46,7 +46,7 @@ export class EvidencePolicy {
       readonly requirements: readonly EvidenceRequirement[];
       readonly maxAgeMs?: number;
     },
-    verifier: EvidenceAttestationVerifierPort,
+    verifier: HmacEvidenceAttestationVerifier,
   ) {
     this.policyId = input.policyId;
     this.revision = input.revision;
@@ -67,7 +67,7 @@ export class EvidencePolicy {
       readonly requirements: readonly EvidenceRequirement[];
       readonly maxAgeMs?: number;
     },
-    verifier: EvidenceAttestationVerifierPort,
+    verifier: HmacEvidenceAttestationVerifier,
   ): Result<EvidencePolicy, { readonly ruleId: string }> {
     const ids = input.requirements.map((requirement) => requirement.requirementId);
     const valid =
@@ -78,7 +78,8 @@ export class EvidencePolicy {
       new Set(ids).size === ids.length &&
       (input.maxAgeMs === undefined ||
         (Number.isSafeInteger(input.maxAgeMs) && input.maxAgeMs > 0)) &&
-      input.requirements.every(requirementValid);
+      input.requirements.every(requirementValid) &&
+      verifier instanceof HmacEvidenceAttestationVerifier;
     return valid
       ? { ok: true, value: new EvidencePolicy(input, verifier) }
       : { ok: false, error: { ruleId: "evidence-policy-invalid" } };

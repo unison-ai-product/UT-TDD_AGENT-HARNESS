@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { HmacEvidenceAttestationAuthority } from "../../src/plan-asset/adapters/hmac-evidence-attestation-authority.js";
+import {
+  HmacEvidenceAttestationIssuer,
+  HmacEvidenceAttestationVerifier,
+} from "../../src/plan-asset/adapters/hmac-evidence-attestation-authority.js";
 import { EvidencePolicy } from "../../src/plan-asset/domain/evidence-policy.js";
 import {
   createRedactedCommandArgs,
@@ -9,13 +12,15 @@ import {
 
 const digest = "a".repeat(64);
 const commit = "b".repeat(40);
-const authority = new HmacEvidenceAttestationAuthority("local-ci", "v1", [
+const keyMaterial = [
   {
     version: "v1",
     secret: Buffer.alloc(32, 0x2a),
     producers: ["human", "po", "codex", "claude", "ci"],
   },
-]);
+] as const;
+const issuer = new HmacEvidenceAttestationIssuer("local-ci", "v1", keyMaterial);
+const authority = new HmacEvidenceAttestationVerifier("local-ci", keyMaterial);
 
 describe("PLAN Asset evidence policy", () => {
   it("U-PA-045: evaluates multiple typed requirements without cross-kind double counting", () => {
@@ -130,6 +135,12 @@ describe("PLAN Asset evidence policy", () => {
       "Cookie: session=TOPSECRET6",
       "--header",
       "Set-Cookie: refresh=TOPSECRET7",
+      "--header=X-Session-ID: TOPSECRET8",
+      "APIKEY=TOPSECRET9",
+      "--client-key",
+      "TOPSECRET10",
+      "-H",
+      "X-Auth: TOPSECRET11",
     ]);
     expect(JSON.stringify(compoundSecrets)).not.toContain("TOPSECRET");
     expect(
@@ -221,8 +232,8 @@ describe("PLAN Asset evidence policy", () => {
       producedAt: "2026-07-14T00:00:00Z",
     };
     const unsigned = EvidenceRecord.create(input);
-    const signed = EvidenceRecord.create(input, authority);
-    const rogueAuthority = new HmacEvidenceAttestationAuthority("local-ci", "v1", [
+    const signed = EvidenceRecord.create(input, issuer);
+    const rogueAuthority = new HmacEvidenceAttestationIssuer("local-ci", "v1", [
       { version: "v1", secret: Buffer.alloc(32, 0x7f), producers: ["ci"] },
     ]);
     const forged = EvidenceRecord.create(input, rogueAuthority);
@@ -261,6 +272,60 @@ describe("PLAN Asset evidence policy", () => {
     expect(Object.getOwnPropertyNames(authority)).not.toEqual(
       expect.arrayContaining(["keys", "currentVersion", "authorityId"]),
     );
+    expect("issue" in authority).toBe(false);
+    expect(Object.isFrozen(authority)).toBe(true);
+    expect(
+      EvidencePolicy.create(
+        {
+          policyId: "forged-verifier/v1",
+          revision: 1,
+          requirements: [
+            {
+              requirementId: "forged-verifier",
+              requiredKind: "gate-run",
+              minCount: 1,
+              acceptedProducers: ["ci"],
+              exitRule: { kind: "exact", expected: 0 },
+              claimsRule: { kind: "gate-passed" },
+            },
+          ],
+        },
+        { verify: () => true } as never,
+      ).ok,
+    ).toBe(false);
+  });
+
+  it("U-PA-048: binds producer/digest, rejects replay, and verifies rotated historical keys", () => {
+    const rotationKeys = [
+      { version: "v1", secret: Buffer.alloc(32, 0x11), producers: ["ci"] as const },
+      { version: "v2", secret: Buffer.alloc(32, 0x22), producers: ["ci"] as const },
+    ];
+    const oldIssuer = new HmacEvidenceAttestationIssuer("rotation-ci", "v1", rotationKeys);
+    const currentIssuer = new HmacEvidenceAttestationIssuer("rotation-ci", "v2", rotationKeys);
+    const rotationVerifier = new HmacEvidenceAttestationVerifier("rotation-ci", rotationKeys);
+    const first = { producer: "ci" as const, recordDigest: "1".repeat(64) };
+    const second = { producer: "ci" as const, recordDigest: "2".repeat(64) };
+    const oldAttestation = oldIssuer.issue(first);
+    const currentAttestation = currentIssuer.issue(second);
+
+    expect(oldAttestation.keyVersion).toBe("v1");
+    expect(currentAttestation.keyVersion).toBe("v2");
+    expect(rotationVerifier.verify(first, oldAttestation)).toBe(true);
+    expect(rotationVerifier.verify(second, currentAttestation)).toBe(true);
+    expect(rotationVerifier.verify(second, oldAttestation)).toBe(false);
+    expect(
+      rotationVerifier.verify(
+        { producer: "codex", recordDigest: first.recordDigest },
+        oldAttestation,
+      ),
+    ).toBe(false);
+    expect(
+      rotationVerifier.verify(
+        { producer: first.producer, recordDigest: "3".repeat(64) },
+        oldAttestation,
+      ),
+    ).toBe(false);
+    expect("issue" in rotationVerifier).toBe(false);
   });
 
   it("U-PA-046: rejects negative claims and causally reversed supersession", () => {
@@ -438,7 +503,7 @@ function evidence(
       producedAt: "2026-07-14T00:00:00Z",
       expiresAt: overrides.expiresAt,
     },
-    authority,
+    issuer,
   );
   if (!created.ok) throw new Error("evidence fixture must be valid");
   return created.value;
@@ -465,7 +530,7 @@ function reviewEvidence(
       producedAt,
       supersedesEvidenceId,
     },
-    authority,
+    issuer,
   );
   if (!created.ok) throw new Error("review evidence fixture must be valid");
   return created.value;
