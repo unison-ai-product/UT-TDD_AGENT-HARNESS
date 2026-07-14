@@ -11,6 +11,7 @@ import type { PocDecisionCount } from "../projection/domain/poc-evaluations";
 import { HARNESS_DB_TABLE_BY_NAME, primaryKeyOf, type TableDef } from "../schema/harness-db";
 import { stableId } from "../stable-id";
 import { type HarnessDb, SECRET_PATTERN, upsertRow } from "./index";
+import { runSqliteTransaction } from "./sqlite-transaction";
 
 const RAW_PAYLOAD_KEYS = new Set([
   "rawMcpResponse",
@@ -40,13 +41,22 @@ export class SqliteProjectionStore
   }
 
   record(event: ProjectionEvent): void {
+    runSqliteTransaction(this.#db, () => this.recordInSession(event));
+  }
+
+  recordFinding(input: ProjectionFindingInput): void {
+    runSqliteTransaction(this.#db, () => this.recordFindingInSession(input));
+  }
+
+  private recordInSession(event: ProjectionEvent): void {
     const table = tableDef(event.table);
     const row = normalizeRow(table, event);
     upsertRow(this.#db, { table: table.name, primaryKey: primaryKeyOf(table), row });
     checkResolvablePlanJoin(this, table.name, row);
   }
 
-  recordFinding(input: ProjectionFindingInput): void {
+  private recordFindingInSession(input: ProjectionFindingInput): void {
+    assertFindingInputSafe(input);
     upsertRow(this.#db, {
       table: "findings",
       primaryKey: "finding_id",
@@ -186,22 +196,32 @@ function normalizeRow(table: TableDef, event: ProjectionEvent): Record<string, u
   const primaryKey = primaryKeyOf(table);
   const row = Object.fromEntries(Object.entries(event.row).filter(([key]) => allowed.has(key)));
   if (row[primaryKey] === undefined) row[primaryKey] = event.id;
-  assertNoSensitivePayload(row, table);
+  assertNoSensitivePayload(row);
   return row;
 }
 
-function assertNoSensitivePayload(row: Record<string, unknown>, table: TableDef): void {
-  const primaryKeys = new Set(
-    table.columns.filter((column) => column.primaryKey).map((column) => column.name),
-  );
+function assertNoSensitivePayload(row: Record<string, unknown>): void {
   for (const [key, value] of Object.entries(row)) {
     if (RAW_PAYLOAD_KEYS.has(key)) {
       throw new Error(`raw/sensitive payload column is not allowed in harness.db: ${key}`);
     }
-    const structuredId = primaryKeys.has(key) || key.endsWith("_id");
-    if (!structuredId && typeof value === "string" && SECRET_PATTERN.test(value)) {
-      throw new Error(`secret-like value is not allowed in harness.db projection column: ${key}`);
-    }
+    assertNoSecretLikeString(value, "projection column", key);
+  }
+}
+
+/**
+ * Finding は任意の外部文脈を受けるため、構造化 ID の例外を適用しない。
+ * 移行中の recordFinding も ProjectionWrite と同じ fail-close 境界に置く。
+ */
+function assertFindingInputSafe(input: ProjectionFindingInput): void {
+  for (const [field, value] of Object.entries(input)) {
+    assertNoSecretLikeString(value, "finding field", field);
+  }
+}
+
+function assertNoSecretLikeString(value: unknown, scope: string, field: string): void {
+  if (typeof value === "string" && SECRET_PATTERN.test(value)) {
+    throw new Error(`secret-like value is not allowed in harness.db ${scope}: ${field}`);
   }
 }
 

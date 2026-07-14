@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import { clearRebuildableProjectionTables } from "../src/state-db/sqlite-projection-rebuild";
-import { SqliteProjectionStore } from "../src/state-db/sqlite-projection-store";
+import {
+  type ProjectionFindingInput,
+  SqliteProjectionStore,
+} from "../src/state-db/sqlite-projection-store";
 
 describe("U-DOMAIN-004: SQLite projection adapter", () => {
   it("normalizes schema columns, preserves explicit PK, and fails closed on secrets", () => {
@@ -37,6 +40,61 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
       expect(
         db.prepare("SELECT run_id FROM model_runs WHERE run_id = ?").get("secret-run"),
       ).toBeUndefined();
+
+      const secret = `sk-${"b".repeat(20)}`;
+      for (const event of [
+        { table: "plan_registry", id: secret, row: { kind: "impl" } },
+        {
+          table: "plan_registry",
+          id: "safe-event-id",
+          row: { plan_id: secret, kind: "impl" },
+        },
+        {
+          table: "model_runs",
+          id: "safe-run-id",
+          row: { run_id: secret, model: "safe-model" },
+        },
+      ]) {
+        expect(() => store.record(event)).toThrow(/secret-like/);
+      }
+      expect(
+        db.prepare("SELECT plan_id FROM plan_registry WHERE plan_id = ?").get(secret),
+      ).toBeUndefined();
+      expect(
+        db.prepare("SELECT run_id FROM model_runs WHERE run_id = ?").get(secret),
+      ).toBeUndefined();
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-DOMAIN-007: rejects secret-like data from every legacy recordFinding field without mutation", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const store = new SqliteProjectionStore(db);
+      const secret = `sk-${"a".repeat(20)}`;
+      const safe = {
+        kind: "projection-finding",
+        severity: "warn" as const,
+        subjectId: "projection:subject",
+        source: "projection-test",
+        evidencePath: "docs/evidence.md",
+      };
+      store.recordFinding(safe);
+      const unsafeInputs: ProjectionFindingInput[] = [
+        { ...safe, kind: secret },
+        { ...safe, subjectId: secret },
+        { ...safe, source: secret },
+        { ...safe, evidencePath: secret },
+        { ...safe, severity: secret as unknown as ProjectionFindingInput["severity"] },
+      ];
+      for (const input of unsafeInputs) {
+        expect(() => store.recordFinding(input)).toThrow(/secret-like/);
+      }
+      expect(db.prepare("SELECT kind, subject_id FROM findings").all()).toEqual([
+        { kind: safe.kind, subject_id: safe.subjectId },
+      ]);
     } finally {
       db.close();
     }
@@ -71,6 +129,38 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
       );
     } finally {
       db.close();
+    }
+  });
+
+  it("U-DOMAIN-008: rolls back an event when its derived join finding cannot be written", () => {
+    const real = openHarnessDb(":memory:");
+    try {
+      migrate(real);
+      let injected = false;
+      const flaky = {
+        ...real,
+        prepare: (sql: string) => {
+          if (!injected && /INSERT INTO findings\b/i.test(sql)) {
+            injected = true;
+            throw new Error("injected join finding failure");
+          }
+          return real.prepare(sql);
+        },
+      };
+      const store = new SqliteProjectionStore(flaky);
+
+      expect(() =>
+        store.record({
+          table: "model_runs",
+          id: "run-with-unresolved-plan",
+          row: { plan_id: "PLAN-L7-999-missing" },
+        }),
+      ).toThrow(/injected join finding failure/);
+      expect(injected).toBe(true);
+      expect(real.prepare("SELECT run_id FROM model_runs").all()).toEqual([]);
+      expect(real.prepare("SELECT finding_id FROM findings").all()).toEqual([]);
+    } finally {
+      real.close();
     }
   });
 
