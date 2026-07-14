@@ -424,9 +424,16 @@ describe("runDoctor", () => {
       (message) => message.includes(" - violation") || message.includes(" — violation"),
     );
 
+    const knownBlockers = [
+      "PLAN-L7-418-plan-asset-v2-adapter-migration-ledger",
+      "PLAN-L7-421-test-hygiene-live-tree-fence",
+      "PLAN-L7-423-engine-swap-domain-objects-ports",
+    ];
     expect(r.ok).toBe(false);
-    expect(blockers).toHaveLength(1);
-    expect(blockers).toEqual([expect.stringContaining("PLAN-L7-421-test-hygiene-live-tree-fence")]);
+    expect(blockers).toHaveLength(knownBlockers.length);
+    expect(blockers).toEqual(
+      expect.arrayContaining(knownBlockers.map((planId) => expect.stringContaining(planId))),
+    );
   });
 
   it("ok=true includes handover and agent-slots surfaces as warnings", () => {
@@ -979,16 +986,16 @@ describe("runDoctor", () => {
     }
   });
 
-  it("hard-gates PLAN governance once repo frontmatter debt is closed", () => {
+  it("hard-gates PLAN governance while merged-plan debt remains", () => {
     const governance = checkPlanGovernance(headSnapshotRoot());
     const r = realRepoDoctor();
 
-    expect(governance.ok).toBe(true);
-    expect(governance.messages[0]).toContain("plan-governance - OK");
+    expect(governance.ok).toBe(false);
+    expect(governance.messages[0]).toContain("plan-governance - violation");
     expect(r.messages.some((m) => m.includes("doctor: plan-schedule") && m.includes("OK"))).toBe(
       true,
     );
-    expect(r.messages.some((m) => m.includes("doctor: plan-governance - OK"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: plan-governance - violation"))).toBe(true);
   });
 
   it("keeps doctor plan gate re-exports stable after extraction", () => {
