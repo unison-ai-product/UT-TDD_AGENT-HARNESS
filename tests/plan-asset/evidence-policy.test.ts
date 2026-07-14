@@ -15,7 +15,7 @@ describe("PLAN Asset evidence policy", () => {
     const wrongKind = evidence("evidence:wrong-kind", { evidenceKind: "red-test-run" });
     const expired = evidence("evidence:expired", {
       evidenceKind: "green-test-run",
-      expiresAt: "2026-07-14T00:00:00Z",
+      expiresAt: "2026-07-14T00:30:00Z",
     });
     const policy = EvidencePolicy.create({
       policyId: "accept/v1",
