@@ -109,6 +109,38 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
     }
   });
 
+  it("U-DOMAIN-008: rolls back an event when its derived join finding cannot be written", () => {
+    const real = openHarnessDb(":memory:");
+    try {
+      migrate(real);
+      let injected = false;
+      const flaky = {
+        ...real,
+        prepare: (sql: string) => {
+          if (!injected && /INSERT INTO findings\b/i.test(sql)) {
+            injected = true;
+            throw new Error("injected join finding failure");
+          }
+          return real.prepare(sql);
+        },
+      };
+      const store = new SqliteProjectionStore(flaky);
+
+      expect(() =>
+        store.record({
+          table: "model_runs",
+          id: "run-with-unresolved-plan",
+          row: { plan_id: "PLAN-L7-999-missing" },
+        }),
+      ).toThrow(/injected join finding failure/);
+      expect(injected).toBe(true);
+      expect(real.prepare("SELECT run_id FROM model_runs").all()).toEqual([]);
+      expect(real.prepare("SELECT finding_id FROM findings").all()).toEqual([]);
+    } finally {
+      real.close();
+    }
+  });
+
   it("clears rebuildable rows while retaining refactor debt", () => {
     const db = openHarnessDb(":memory:");
     try {

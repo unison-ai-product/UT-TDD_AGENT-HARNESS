@@ -11,6 +11,7 @@ import type { PocDecisionCount } from "../projection/domain/poc-evaluations";
 import { HARNESS_DB_TABLE_BY_NAME, primaryKeyOf, type TableDef } from "../schema/harness-db";
 import { stableId } from "../stable-id";
 import { type HarnessDb, SECRET_PATTERN, upsertRow } from "./index";
+import { runSqliteTransaction } from "./sqlite-transaction";
 
 const RAW_PAYLOAD_KEYS = new Set([
   "rawMcpResponse",
@@ -40,13 +41,21 @@ export class SqliteProjectionStore
   }
 
   record(event: ProjectionEvent): void {
+    runSqliteTransaction(this.#db, () => this.recordInSession(event));
+  }
+
+  recordFinding(input: ProjectionFindingInput): void {
+    runSqliteTransaction(this.#db, () => this.recordFindingInSession(input));
+  }
+
+  private recordInSession(event: ProjectionEvent): void {
     const table = tableDef(event.table);
     const row = normalizeRow(table, event);
     upsertRow(this.#db, { table: table.name, primaryKey: primaryKeyOf(table), row });
     checkResolvablePlanJoin(this, table.name, row);
   }
 
-  recordFinding(input: ProjectionFindingInput): void {
+  private recordFindingInSession(input: ProjectionFindingInput): void {
     assertFindingInputSafe(input);
     upsertRow(this.#db, {
       table: "findings",
