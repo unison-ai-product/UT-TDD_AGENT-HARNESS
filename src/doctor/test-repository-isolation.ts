@@ -21,7 +21,7 @@ plan-id-naming:1 plan-lint:10 projection-writer:13 proposal-document-coverage:2 
 right-arm-gate-planning:1 right-lung-doc-governance:1 roadmap:1 rule-automation-closure:1 rule-drift:2 runtime-hook-entrypoints:1
 runtime-portability:2 screen-impl-pair-freeze:1 self-pair-normative-guard:1 setup-agent-floor:2 setup:7 skill-assignment:1 state-db:1
 sub-doc-catalog-drift:5 sub-doc-section-structure:1 telemetry-closure:1 test-design-naming:1 toolchain-pin:1 tracked-canonical:1
-update-check:1 vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
+vmodel-contract-compiler:1 vmodel-source-assets:1 work-guard:1 workspace-roots:3 write-encoding-guard:1
 doctor-test-repository-isolation:1 persistent-db-cleanup-contract:1
 secret-scan-diff:1
 feedback-log:2
@@ -49,7 +49,6 @@ for (const [path, calls] of Object.entries({
   "tests/model-id-ssot-drift.test.ts": 1,
   "tests/model-id-ssot.test.ts": 1,
   "tests/plan-id-naming.test.ts": 1,
-  "tests/update-check.test.ts": 1,
 }))
   repositoryReadContracts[path] = {
     mode: "head_snapshot",

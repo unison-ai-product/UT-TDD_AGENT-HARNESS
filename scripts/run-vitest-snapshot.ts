@@ -35,6 +35,12 @@ function output(command: string, args: string[], cwd: string): string | null {
   return result.status === 0 ? result.stdout.trim() : null;
 }
 
+export function resolveBunBinary(
+  runtime = (globalThis as { Bun?: { which?: (command: string) => string | undefined } }).Bun,
+): string {
+  return runtime?.which?.("bun") ?? (process.versions.bun ? process.execPath : "bun");
+}
+
 export function canonicalPath(path: string): string {
   const resolved = realpathSync.native(path).replaceAll("\\", "/");
   return process.platform === "win32" ? resolved.toLowerCase() : resolved;
@@ -246,12 +252,13 @@ export function runSnapshotTests(
   let primaryError: unknown;
   let sealedReferenceFingerprint: string | undefined;
   try {
+    const bun = resolveBunBinary();
     const source = resolveSnapshotSource(repoRoot);
     createSnapshot(repoRoot, snapshotRoot, source);
     createSnapshot(snapshotRoot, referenceRoot, resolveSnapshotSource(snapshotRoot));
     if (source.kind === "copy") assertSnapshotContentMatch(snapshotRoot, referenceRoot);
-    run(process.execPath, ["install", "--frozen-lockfile"], snapshotRoot);
-    run(process.execPath, ["run", "src/cli.ts", "db", "rebuild"], snapshotRoot);
+    run(bun, ["install", "--frozen-lockfile"], snapshotRoot);
+    run(bun, ["run", "src/cli.ts", "db", "rebuild"], snapshotRoot);
     copyReferenceRuntimeInputs(snapshotRoot, referenceRoot);
     if (source.kind === "git")
       run(
@@ -261,7 +268,7 @@ export function runSnapshotTests(
     );
     sealReference(referenceRoot);
     sealedReferenceFingerprint = snapshotContentFingerprint(referenceRoot);
-    run(process.execPath, ["x", "vitest", "run", ...args], snapshotRoot, {
+    run(bun, ["x", "vitest", "run", ...args], snapshotRoot, {
       ...process.env,
       INIT_CWD: snapshotRoot,
       UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,

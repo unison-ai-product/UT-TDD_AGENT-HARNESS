@@ -1003,6 +1003,8 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
   `node_modules`を全階層で除外する（Git cloneの`.git`はrevision検証に必要でありこのcopy除外規則の対象外）。
   referenceはtest process起動前にsealし、終了時cleanupの直前だけunsealする。seal、source/reference fingerprint
   差分、revision mismatch、cleanup失敗はResult error・exit 1でfail-closeする。正常終了はexit 0、CLI usageはexit 2とする。
+  snapshot内のinstall、DB rebuild、VitestはBun executableを解決して起動し、Vitest workerのNode executableを継承しない。
+  CLIを実行するtestは依存を持つexecution snapshotをcwd/sourceに使い、reference snapshotはread-only入力だけに使う。
 
 ### `analyzeTestRepositoryIsolation(input)`
 

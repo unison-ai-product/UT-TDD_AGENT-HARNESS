@@ -175,6 +175,9 @@ review_evidence: []
 - snapshot runnerはbatch-onlyである。live sourceを観測できない一時execution snapshotをwatchして
   開発者へ誤った再実行保証を出さないため、`test:watch`は提供せず、watch引数もfail-closeする
   （`U-TESTHYGIENE-045`／`046`）。
+- nested runnerを含む全snapshot lifecycleはBun executableを解決して起動する。Vitest workerの
+  Node executableを誤継承せず、CLI実行は依存を持つexecution snapshotへ限定する
+  （`U-TESTHYGIENE-047`）。reference snapshotはread-only入力だけに保持する。
 - Git snapshotは捕捉OIDのtree objectだけを入力にし、hybrid中のindex・untracked・未commit差分を
   正本へ昇格させない。契約台帳の件数SSoTは`REPOSITORY_READ_CONTRACTS`であり、L7表の総数を固定値にしない。
 - `doctor.test.ts` のaggregate baselineはPLANがdraftの間だけ

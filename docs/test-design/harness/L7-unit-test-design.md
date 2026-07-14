@@ -1312,6 +1312,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-TESTHYGIENE-043` | `global-setup-fence.test.ts` | teardown fence process | fixtureがOS別の物理sealを確認後に明示bypassでdetached HEAD snapshotを改変し、global teardownはsnapshot runner子processを非0で終了して`test workspace fence violation`を出す |
 | `U-TESTHYGIENE-045` | `vitest-snapshot-runner.test.ts` | batch-only runner | `--watch`／`-w`／`--watch=...`はstale snapshotを監視するためfail-close、通常引数は許可 |
 | `U-TESTHYGIENE-046` | `vitest-snapshot-runner.test.ts` | watch script contract | live sourceを観測できない`test:watch` scriptはmanifestに存在しない |
+| `U-TESTHYGIENE-047` | `vitest-snapshot-runner.test.ts` | Bun runtime resolution | Vitest workerのNode binaryを継承せず、Bun runtimeのabsolute executableをsnapshot install/rebuild/Vitestに使う |
 
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 describe("global setup fence", () => {
   it("U-TESTHYGIENE-043: turns a sealed detached-reference teardown violation into a nonzero runner process", () => {
     const result = spawnSync(
-      process.execPath,
+      "bun",
       ["scripts/run-vitest-snapshot.ts", "tests/fixtures/reference-fence-trip.test.ts"],
       {
         cwd: process.cwd(),
