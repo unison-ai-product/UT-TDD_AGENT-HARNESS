@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -107,14 +108,31 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
     );
   }
 
-  it("does not flag a confirmed PLAN whose generated src is merged on the base ref", () => {
-    const input = loadMergedPlanStatusInput(process.cwd());
-    const active = input.plans.find((plan) => plan.planId === "PLAN-L7-429-spec-ir-detector-scope");
-    expect(active?.status).toBe("confirmed");
-    expect(active?.mergedArtifacts).not.toEqual([]);
-    expect(analyzeMergedPlanStatus(input).violations.map((item) => item.planId)).not.toContain(
-      "PLAN-L7-429-spec-ir-detector-scope",
-    );
+  it("does not treat an unmerged PR-branch PLAN as a main-merged draft", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-pr-plan-"));
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      mkdirSync(join(root, "src"), { recursive: true });
+      git(root, ["init", "-b", "main"]);
+      git(root, ["config", "user.email", "test@example.invalid"]);
+      git(root, ["config", "user.name", "UT-TDD test"]);
+      writeFileSync(join(root, "src", "base.ts"), "export const base = true;\n", "utf8");
+      git(root, ["add", "."]);
+      git(root, ["commit", "-m", "base"]);
+      git(root, ["checkout", "-b", "feature/pr-plan"]);
+      writeFileSync(join(root, "src", "feature.ts"), "export const feature = true;\n", "utf8");
+      writePlan(root, "PLAN-TEST-PR-branch.md", "draft", "src/feature.ts");
+      git(root, ["add", "."]);
+      git(root, ["commit", "-m", "feature plan"]);
+
+      const input = loadMergedPlanStatusInput(root);
+      expect(input.plans.find((plan) => plan.planId === "PLAN-TEST-PR-branch")).toBeUndefined();
+      expect(analyzeMergedPlanStatus(input).violations.map((item) => item.planId)).not.toContain(
+        "PLAN-TEST-PR-branch",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("detects a draft PLAN whose generated src exists on disk (merged)", () => {
@@ -270,3 +288,7 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
     }
   });
 });
+
+function git(root: string, args: string[]): void {
+  execFileSync("git", ["-C", root, ...args], { stdio: "pipe" });
+}

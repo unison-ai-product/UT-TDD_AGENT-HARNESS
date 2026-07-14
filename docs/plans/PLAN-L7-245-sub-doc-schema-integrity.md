@@ -48,29 +48,31 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-245-sub-doc-schema-integrity.md
     artifact_type: markdown_doc
-  - artifact_path: docs/plans/PLAN-REVERSE-245-sub-doc-schema-integrity-backfill.md
-    artifact_type: markdown_doc
   - artifact_path: src/lint/sub-doc-schema-integrity.ts
     artifact_type: source_module
   - artifact_path: tests/sub-doc-schema-integrity.test.ts
     artifact_type: test_code
+  - artifact_path: docs/plans/PLAN-REVERSE-245-sub-doc-schema-integrity-backfill.md
+    artifact_type: markdown_doc
 dependencies:
-  parent: docs/plans/PLAN-L7-99-sub-doc-catalog-drift-gate.md
+  parent: docs/plans/PLAN-L6-01-function-spec.md
   requires: []
   references:
-    - docs/plans/PLAN-REVERSE-245-sub-doc-schema-integrity-backfill.md
     - .ut-tdd/audit/A-174-forward-design-test-pair-audit-2026-07-02.md
     - src/schema/index.ts
     - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
     - docs/plans/PLAN-L7-263-route-mode-kind-certificate.md
     - docs/plans/PLAN-L7-429-spec-ir-detector-scope.md
+    - docs/plans/PLAN-REVERSE-245-sub-doc-schema-integrity-backfill.md
 ---
 
 # PLAN-L7-245 (add-impl): 設計 doc frontmatter sub_doc の schema 整合
 
 ## Status
 
-draft 起票 (PO /goal 2026-07-02、A-174 F-5 latent-defect)。
+draft 起票 (PO /goal 2026-07-02、A-174 F-5 latent-defect)。2026-07-14 に実装事実を
+`add-impl` + `PLAN-REVERSE-245` pairing へ昇格した。既存の cross-agent review evidence は
+sub_doc 整合実装の判断証跡として保持し、Reverse のR0-R4 evidenceで上位設計へのbackfillを閉じる。
 
 ## 背景 (A-174 F-5)
 

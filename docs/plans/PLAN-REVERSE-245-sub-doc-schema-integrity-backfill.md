@@ -1,6 +1,6 @@
 ---
 plan_id: PLAN-REVERSE-245-sub-doc-schema-integrity-backfill
-title: "PLAN-REVERSE-245 (reverse): sub_doc schema 整合 lint の上位整合 backfill"
+title: "PLAN-REVERSE-245 (reverse): sub_doc schema integrity 実装の設計backfill"
 kind: reverse
 layer: cross
 workflow_phase: R4
@@ -13,12 +13,12 @@ forward_routing: gap-only
 promotion_strategy: reuse-as-is
 created: 2026-07-14
 updated: 2026-07-14
-owner: PO / Claude
+owner: PM / PO
 parent_design: docs/plans/PLAN-L7-245-sub-doc-schema-integrity.md
 review_evidence: []
 agent_slots:
   - role: tl
-    slot_label: "TL - PLAN-L7-245 実装後に document-system-map / L7 unit oracle へ backfill する範囲を確認"
+    slot_label: "TL - sub_doc schema/map/role境界をL6/L7正本へbackfill"
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-245-sub-doc-schema-integrity-backfill.md
     artifact_type: markdown_doc
@@ -27,33 +27,18 @@ dependencies:
   requires: []
 ---
 
-# PLAN-REVERSE-245: sub_doc schema 整合 lint の上位整合 backfill
+# PLAN-REVERSE-245: sub_doc schema integrity 実装の設計backfill
 
-## 0. 位置づけ
+## R0-R4
 
-`PLAN-L7-245-sub-doc-schema-integrity` は設計 doc frontmatter `sub_doc` と
-`VALID_SUB_DOCS` / `docs/governance/document-system-map.md` §1b の 3 者突合 lint
-(`src/lint/sub-doc-schema-integrity.ts`) を追加し、方式 b (L6 topic doc 18 件を
-`sub_doc: function-spec` + `artifact_role: topic_<name>` へ正規化、§1b-1 新設) を
-採択した add-impl である。add-impl が単独で着地しないよう、本 Reverse は実装事実を
-上位設計正本へ backfill するためのペアとして起票する (route_mode=add-feature の
-kind=impl 禁止 taxonomy に基づく昇格、2026-07-14)。
+- R0: `sub-doc-schema-integrity` が schema、設計doc、document-system-mapの三者を実際に突合することを観測する。
+- R1: L6の共有`function-spec` bucketと`artifact_role`によるtopic差分の境界をfunction contractへ同期する。
+- R2: U-SDSI-001..019の正例・schema外値・未宣言・L4双方向drift・L6方針ノート欠落をL7 test designへ同期する。
+- R3: `sub-doc-catalog-drift` と本gateの責務重複、meta doc除外、artifact_roleの自由値がschema値を迂回しないことを検証する。
+- R4: L0/L1の列挙型要求を変更せず、document-system-map §1b-1を現行L6設計正本として承認するかを記録する。
 
-## 1. R0-R4 方針
+## DoD
 
-- R0: lint 実装 (3 者突合、meta doc skip、artifact_role 吸収) が document-system-map
-  §1b/§1b-1 の記述と矛盾しないかを確認する。
-- R1: 方式 b で確定した正規化規約 (topic doc = function-spec + topic_<slug>) を
-  `docs/governance/document-system-map.md` §1b-1 へ戻す (実装時に同一変更内で反映済み —
-  差分が無いことを確認して close する)。
-- R2: `tests/sub-doc-schema-integrity.test.ts` の正例/負例 fixture を L7 単体テスト設計
-  (`docs/test-design/harness/L7-unit-test-design.md`) へ同期する。
-- R3: doctor gate (`sub-doc-schema-integrity` / `sub-doc-catalog-drift`) の検査範囲
-  (checked=54, meta skipped=3) を L6 側の対象 doc 台帳と突合し、drift 0 を確認する。
-- R4: 残 gap が無ければ Forward へ合流して close する。
-
-## AC
-
-- [ ] document-system-map §1b-1 と lint 実装の間に規約 drift が無い。
-- [ ] L7 unit test design に sub-doc-schema-integrity の oracle が記載されている。
-- [ ] doctor `sub-doc-schema-integrity` / `sub-doc-catalog-drift` が green である。
+- [ ] L6 contract / L7 unit design に実装境界とoracleをbackfillする。
+- [ ] targeted test、doctor、plan lintのgreen evidenceと独立reviewを記録する。
+- [ ] PLAN-L7-245のreview evidenceと実装状態に矛盾がないことを確認し、R4 verdictを確定する。

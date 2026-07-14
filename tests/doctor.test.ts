@@ -418,15 +418,14 @@ describe("runDoctor", () => {
     return cachedRealRepoDoctor;
   };
 
-  it("U-TESTHYGIENE-028: rejects unknown aggregate doctor blockers", () => {
+  it("U-TESTHYGIENE-028: accepts the resolved aggregate doctor baseline", () => {
     const r = realRepoDoctor();
     const blockers = r.messages.filter(
       (message) => message.includes(" - violation") || message.includes(" — violation"),
     );
 
-    // PLAN-L7-421 / PLAN-L7-429 confirm 済み (2026-07-14): transitional allowance は 0 件。
-    expect(blockers).toEqual([]);
     expect(r.ok).toBe(true);
+    expect(blockers).toHaveLength(0);
   });
 
   it("ok=true includes handover and agent-slots surfaces as warnings", () => {
@@ -979,16 +978,18 @@ describe("runDoctor", () => {
     }
   });
 
-  it("hard-gates PLAN governance once repo frontmatter debt is closed", () => {
+  it("passes PLAN governance after merged-plan debt is resolved", () => {
     const governance = checkPlanGovernance(headSnapshotRoot());
     const r = realRepoDoctor();
 
     expect(governance.ok).toBe(true);
-    expect(governance.messages[0]).toContain("plan-governance - OK");
+    expect(governance.messages).toEqual(expect.arrayContaining([expect.stringContaining("OK")]));
     expect(r.messages.some((m) => m.includes("doctor: plan-schedule") && m.includes("OK"))).toBe(
       true,
     );
-    expect(r.messages.some((m) => m.includes("doctor: plan-governance - OK"))).toBe(true);
+    expect(r.messages.some((m) => m.includes("doctor: plan-governance") && m.includes("OK"))).toBe(
+      true,
+    );
   });
 
   it("keeps doctor plan gate re-exports stable after extraction", () => {

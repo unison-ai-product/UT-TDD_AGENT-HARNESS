@@ -98,7 +98,6 @@ const ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS = new Set([
   "PLAN-L7-242-mode-exit-enforcement-batch",
   "PLAN-L7-243-mode-first-class-db-projection",
   "PLAN-L7-244-right-arm-citation-gate",
-  "PLAN-L7-245-sub-doc-schema-integrity",
   "PLAN-L7-246-feedback-event-lifecycle",
   "PLAN-L7-247-db-driven-diagram-generation",
   "PLAN-L7-249-operational-checklist-output",

@@ -274,6 +274,7 @@ export function runSnapshotTests(
       UT_TDD_TEST_EXECUTION_ROOT: snapshotRoot,
       UT_TDD_TEST_FENCE_ROOT: repoRoot,
       UT_TDD_HEAD_SNAPSHOT_ROOT: referenceRoot,
+      UT_TDD_BUN_BINARY: bun,
       UT_TDD_UPDATE_CHECK_CACHE_DIR: cacheRoot,
       UT_TDD_VITEST_CACHE_DIR: join(cacheRoot, "vite"),
     });
