@@ -1,11 +1,9 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac } from "node:crypto";
 import type { EvidenceAttestation, EvidenceProducer } from "../domain/evidence-types.js";
 import type {
   EvidenceAttestationInput,
   EvidenceAttestationIssuerPort,
-  EvidenceAttestationVerifierPort,
 } from "../ports/evidence-attestation.js";
-import { registerEvidenceAttestationVerifier } from "../ports/evidence-attestation.js";
 
 export interface EvidenceAuthorityKeyMaterial {
   readonly version: string;
@@ -53,40 +51,6 @@ export class HmacEvidenceAttestationIssuer implements EvidenceAttestationIssuerP
     });
   }
 }
-
-/** Verify-only capability with no signing surface and immutable private custody. */
-export class HmacEvidenceAttestationVerifier implements EvidenceAttestationVerifierPort {
-  readonly #authorityId: string;
-  readonly #keys: ReadonlyMap<string, StoredKey>;
-
-  constructor(authorityId: string, keyMaterial: readonly EvidenceAuthorityKeyMaterial[]) {
-    if (new.target !== HmacEvidenceAttestationVerifier) {
-      throw new Error("evidence-attestation-verifier-subclass-forbidden");
-    }
-    this.#authorityId = validAuthority(authorityId);
-    this.#keys = buildKeys(keyMaterial);
-    registerEvidenceAttestationVerifier(this, HmacEvidenceAttestationVerifier.prototype.verify);
-    Object.freeze(this);
-  }
-
-  verify(input: EvidenceAttestationInput, attestation: EvidenceAttestation): boolean {
-    if (
-      attestation.schemaVersion !== "evidence-attestation/v1" ||
-      attestation.algorithm !== "hmac-sha256" ||
-      attestation.authorityId !== this.#authorityId ||
-      !/^[A-Za-z0-9_-]{43}$/.test(attestation.signature)
-    ) {
-      return false;
-    }
-    const key = this.#keys.get(attestation.keyVersion);
-    if (!key?.producers.has(input.producer)) return false;
-    const actual = Buffer.from(attestation.signature, "base64url");
-    const expected = mac(this.#authorityId, attestation.keyVersion, input, key.secret);
-    return actual.length === expected.length && timingSafeEqual(actual, expected);
-  }
-}
-
-Object.freeze(HmacEvidenceAttestationVerifier.prototype);
 
 function buildKeys(
   keyMaterial: readonly EvidenceAuthorityKeyMaterial[],

@@ -1,8 +1,8 @@
 import {
   type CapturedEvidenceAttestationVerifier,
   captureEvidenceAttestationVerifier,
-  type EvidenceAttestationVerifierPort,
-} from "../ports/evidence-attestation.js";
+} from "../kernel/hmac-evidence-attestation-verifier.js";
+import type { EvidenceAttestationVerifierPort } from "../ports/evidence-attestation.js";
 import { cloneCanonical, deepFreeze } from "./evidence-canonical.js";
 import { claimsRuleValidFor, claimsSatisfy } from "./evidence-claims.js";
 import type { EvidenceRecord } from "./evidence-record.js";

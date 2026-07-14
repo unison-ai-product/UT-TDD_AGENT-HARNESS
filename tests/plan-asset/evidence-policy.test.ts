@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import {
-  HmacEvidenceAttestationIssuer,
-  HmacEvidenceAttestationVerifier,
-} from "../../src/plan-asset/adapters/hmac-evidence-attestation-authority.js";
+import { HmacEvidenceAttestationIssuer } from "../../src/plan-asset/adapters/hmac-evidence-attestation-authority.js";
 import { EvidencePolicy } from "../../src/plan-asset/domain/evidence-policy.js";
 import {
   createRedactedCommandArgs,
   EvidenceRecord,
   type StoredEvidenceRecord,
 } from "../../src/plan-asset/domain/evidence-record.js";
-import { captureEvidenceAttestationVerifier } from "../../src/plan-asset/ports/evidence-attestation.js";
+import {
+  captureEvidenceAttestationVerifier,
+  HmacEvidenceAttestationVerifier,
+} from "../../src/plan-asset/kernel/hmac-evidence-attestation-verifier.js";
 
 const digest = "a".repeat(64);
 const commit = "b".repeat(40);
@@ -286,7 +286,7 @@ describe("PLAN Asset evidence policy", () => {
       }
     }
     expect(() => new ForgedVerifier("local-ci", keyMaterial)).toThrow(
-      "evidence-attestation-verifier-subclass-forbidden",
+      "evidence-attestation-verifier-invalid",
     );
     const prototypeSpoof = Object.create(HmacEvidenceAttestationVerifier.prototype) as {
       verify: () => boolean;
