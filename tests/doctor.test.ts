@@ -427,7 +427,6 @@ describe("runDoctor", () => {
     const knownBlockers = [
       "PLAN-L7-418-plan-asset-v2-adapter-migration-ledger",
       "PLAN-L7-423-engine-swap-domain-objects-ports",
-      "route_mode_kind_mismatch",
     ];
     expect(r.ok).toBe(false);
     expect(blockers).toHaveLength(knownBlockers.length);

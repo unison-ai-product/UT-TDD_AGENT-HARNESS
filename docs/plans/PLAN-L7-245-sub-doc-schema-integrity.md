@@ -55,7 +55,7 @@ generates:
   - artifact_path: docs/plans/PLAN-REVERSE-245-sub-doc-schema-integrity-backfill.md
     artifact_type: markdown_doc
 dependencies:
-  parent: null
+  parent: docs/plans/PLAN-L6-01-function-spec.md
   requires: []
   references:
     - .ut-tdd/audit/A-174-forward-design-test-pair-audit-2026-07-02.md
