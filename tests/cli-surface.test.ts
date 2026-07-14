@@ -109,7 +109,7 @@ function writeFakeProvider(binDir: string, name: "codex" | "claude"): string {
     [
       "#!/bin/sh",
       `echo noisy-${name}`,
-      'output_dir="${UT_TDD_TEST_PROVIDER_OUTPUT_DIR:-$PWD}"',
+      ['output_dir="$', '{UT_TDD_TEST_PROVIDER_OUTPUT_DIR:-$PWD}"'].join(""),
       `printf "raw=%s\\nreason=%s\\neffort=%s\\nargs=%s\\n" "$${rawEnv}" "$${reasonEnv}" "$CLAUDE_CODE_EFFORT_LEVEL" "$*" > "$output_dir/${name}-env.txt"`,
       "exit 0",
       "",
