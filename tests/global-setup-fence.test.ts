@@ -5,7 +5,7 @@ import { resolveBunBinary } from "../scripts/run-vitest-snapshot";
 describe("global setup fence", () => {
   it("U-TESTHYGIENE-043: turns a sealed detached-reference teardown violation into a nonzero runner process", () => {
     const result = spawnSync(
-      resolveBunBinary(),
+      process.env.UT_TDD_BUN_BINARY ?? resolveBunBinary(),
       ["scripts/run-vitest-snapshot.ts", "tests/fixtures/reference-fence-trip.test.ts"],
       {
         cwd: process.cwd(),
