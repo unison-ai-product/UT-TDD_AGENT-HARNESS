@@ -4,7 +4,7 @@ title: "PLAN-L7-418 (add-impl): PLAN Asset v2 canonical adapter / migration ledg
 kind: add-impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
@@ -138,6 +138,24 @@ review_evidence:
         evidence_path: tests/plan-asset/head-plan-doc-count.ts
         output_digest: "sha256:7a3595b4d3604406f56200883020542ac1ee6c83283f5ddcf28fd3a0d2f73998"
         anchor_commit: ef1142d89f76cbe233690dddc0cec160ae4d2c66
+  - reviewer: claude-blind-reviewer-final
+    review_kind: cross_agent
+    reviewed_at: "2026-07-14T20:15:30+09:00"
+    tests_green_at: "2026-07-14T20:15:13+09:00"
+    verdict: pass
+    scope: "HEAD 960161bfのHMAC attestation信頼境界、migration ledger、main互換、fixture secret、detached evidenceへ12件以上の攻撃を試行。条件付きPASSのvitest実走条件をdetached 127+49 testsで解除し、未反証attack 0。"
+    worker_model: gpt-5.5-codex
+    reviewer_model: claude-opus-4-8
+    green_commands:
+      - kind: unit_test
+        command: "bun run scripts/run-vitest-snapshot.ts tests/plan-asset tests/harness-db-constraints.test.ts tests/dependency-drift.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-14T20:15:13+09:00"
+        evidence_path: .ut-tdd/audit/A-145-l7-418-final-review-receipt.md
+        output_digest: "sha256:d8d5904209490c60e039982ba4e95fb35c683ba1cc54ec2384c5f0c30e6fcec1"
+        anchor_commit: 84ef5046
 ---
 
 # PLAN-L7-418

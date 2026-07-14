@@ -5,7 +5,7 @@ kind: add-design
 layer: L6
 sub_doc: function-spec
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
