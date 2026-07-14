@@ -1305,6 +1305,7 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `U-DOMAIN-008` | row upsert後、join finding前/clear中にfault injection | re-entrant SQLite transaction + atomic rebuild | event/joinは`tests/sqlite-projection-store.test.ts`、clear後の既存snapshot不変は`tests/projection-writer.test.ts`でGreen。成功時はrowとjoinが同一commit。 |
 | `CANDIDATE-DOMAIN-009` | fixed source bundleを同一contextで2回投入し、`capturedRevision`/`capturedAt`/`sourceDigest`の欠落・空文字・別capture混在fixtureも投入 | pure projectors / rebuild command | 3 capture fieldを直接検証して不正bundleを拒否する。valid bundleは`ProjectionWrite`列、stable order、digest、row countsが完全一致し、projectorのDB/FS/clock import 0。HEAD名だけでworking-tree内容を証明しない。 |
 | `CANDIDATE-DOMAIN-010` | 全consumer import graph、legacy path、`tests/projection-writer.test.ts`を含む旧facade直結test | dependency/architecture audit | source/test双方で`projection-writer.ts` import 0、旧testは新application/adapter境界へ移行、file実体 0、domain/application→adapter逆辺 0。未移行はRed。 |
+| `CANDIDATE-DOMAIN-011` | raw `BEGIN`配下のprojection store呼出し、nested savepointのrollback/release故障注入 | `ProjectionTransactionPort` architecture gate + transaction fault oracle | projection write consumerのouter transactionは共通port以外0。rollback/release失敗時も原errorを保持し、outer rollbackとdepth復元を証明する。現時点はRed。 |
 | `CANDIDATE-ASSESS-001` | design/runtime/test evidence完備 | evaluator | `verified`, exit 0 |
 | `CANDIDATE-ASSESS-002` | 3面のいずれか欠落 | evaluator | verifiedにせず`partial`, exit 0 |
 | `CANDIDATE-ASSESS-003` | gapでdebt route欠落 | evaluator | `assessment-debt-route-missing`, exit 1 |
