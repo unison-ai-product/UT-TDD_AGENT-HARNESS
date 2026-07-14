@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { type Dirent, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { LintResult } from "../plan/lint";
 
@@ -14,15 +14,13 @@ function repoRelative(repoRoot: string, path: string): string {
   return value || ".";
 }
 
-export function findRuntimeStateLocationFindings(
-  repoRoot: string,
-): RuntimeStateLocationFinding[] {
+export function findRuntimeStateLocationFindings(repoRoot: string): RuntimeStateLocationFinding[] {
   const findings: RuntimeStateLocationFinding[] = [];
   const pending = [{ path: repoRoot, depth: 0 }];
   while (pending.length > 0) {
     const current = pending.pop();
     if (!current) break;
-    let entries;
+    let entries: Dirent[];
     try {
       entries = readdirSync(current.path, { withFileTypes: true }).sort((a, b) =>
         a.name < b.name ? -1 : a.name > b.name ? 1 : 0,

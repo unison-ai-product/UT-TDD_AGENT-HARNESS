@@ -229,8 +229,19 @@ describe("doctor test repository isolation", () => {
 
   it("U-TESTHYGIENE-041: rejects a symlink destination below HEAD in isolation", () => {
     const result = analyzeTestRepositoryIsolation({
-      files: [{ path: "tests/symlink-sink.test.ts", source: "const root=headSnapshotRoot(); symlinkSync('tmp', join(root, 'docs/x'));" }],
-      contracts: { "tests/symlink-sink.test.ts": { mode: "head_snapshot", calls: 1, reason: "symlink destination" } },
+      files: [
+        {
+          path: "tests/symlink-sink.test.ts",
+          source: "const root=headSnapshotRoot(); symlinkSync('tmp', join(root, 'docs/x'));",
+        },
+      ],
+      contracts: {
+        "tests/symlink-sink.test.ts": {
+          mode: "head_snapshot",
+          calls: 1,
+          reason: "symlink destination",
+        },
+      },
     });
     expect(result.messages).toContain(
       "test-repository-isolation - violation: forbidden-live-root-source:tests/symlink-sink.test.ts",

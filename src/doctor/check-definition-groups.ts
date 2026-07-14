@@ -80,9 +80,8 @@ import {
   checkSecretScan,
 } from "./rule-quality";
 import type { DoctorCheckDefinition, DoctorOptions } from "./runner";
-import { checkRuntimeStateLocation } from "./runtime-state-location";
-import { checkTestRepositoryIsolation } from "./test-repository-isolation";
 import { type DoctorDeps, handoverDeps } from "./runtime-state";
+import { checkRuntimeStateLocation } from "./runtime-state-location";
 import {
   checkCodexHookAdapter,
   checkCodexWrapperParity,
@@ -96,6 +95,7 @@ import {
   checkPlanArtifactExistence,
   checkTrackedCanonical,
 } from "./source-trace";
+import { checkTestRepositoryIsolation } from "./test-repository-isolation";
 import { checkToolchainPin } from "./toolchain";
 import {
   checkFrontendDesignCoverage,

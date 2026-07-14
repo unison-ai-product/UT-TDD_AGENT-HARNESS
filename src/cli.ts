@@ -124,6 +124,7 @@ import {
   readProviderHandoverCurrent,
   runProviderHandover,
 } from "./runtime/provider-handover";
+import { requireRuntimeRepoRoot } from "./runtime/repo-root";
 import { summarizeStagedReview } from "./runtime/review-guard";
 import {
   dispatch,
@@ -134,7 +135,6 @@ import {
   type SessionHookInput,
   safeName,
 } from "./runtime/session-log";
-import { requireRuntimeRepoRoot } from "./runtime/repo-root";
 import {
   evaluateWorkGuardTargets,
   extractEditTargets,

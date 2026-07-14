@@ -38,9 +38,7 @@ describe("doctor runtime state location", () => {
 
   it("U-TESTHYGIENE-006: fails closed when the repository cannot be scanned", () => {
     const missing = join(tmpdir(), `ut-tdd-state-location-missing-${process.pid}`);
-    expect(findRuntimeStateLocationFindings(missing)).toEqual([
-      { kind: "scan-error", path: "." },
-    ]);
+    expect(findRuntimeStateLocationFindings(missing)).toEqual([{ kind: "scan-error", path: "." }]);
     expect(checkRuntimeStateLocation(missing).ok).toBe(false);
   });
 });

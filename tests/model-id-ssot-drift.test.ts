@@ -1,6 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { normalizeModelFamily } from "../src/runtime/agent-guard";
 import { CLAUDE_MODEL_FAMILY_CATALOG, SUBAGENT_ALLOWLIST } from "../src/runtime/agent-guard-policy";

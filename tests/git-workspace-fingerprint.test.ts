@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   assertGitWorkspaceUnchanged,
@@ -5,9 +8,6 @@ import {
   captureWorkspaceInventory,
   type GitWorkspaceFingerprint,
 } from "./support/git-workspace-fingerprint";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { removeTestTree } from "./support/temp-tree";
 
 const fingerprint: GitWorkspaceFingerprint = {

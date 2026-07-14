@@ -149,13 +149,43 @@ const REPOSITORY_WRITE_APIS = new Set([
 ]);
 const MUTATION_TARGET_ARGS: Readonly<Record<string, readonly number[]>> = {
   "Bun.write": [0],
-  appendFile: [0], appendFileSync: [0], chmod: [0], chmodSync: [0], chown: [0], chownSync: [0],
-  createWriteStream: [0], cp: [1], cpSync: [1], copyFile: [1], copyFileSync: [1],
-  lchmod: [0], lchmodSync: [0], lchown: [0], lchownSync: [0], link: [1], linkSync: [1],
-  lutimes: [0], lutimesSync: [0], mkdir: [0], mkdirSync: [0], mkdtemp: [0], mkdtempSync: [0],
-  rename: [0, 1], renameSync: [0, 1], rm: [0], rmSync: [0], truncate: [0], truncateSync: [0],
-  symlink: [1], symlinkSync: [1],
-  unlink: [0], unlinkSync: [0], utimes: [0], utimesSync: [0], writeFile: [0], writeFileSync: [0],
+  appendFile: [0],
+  appendFileSync: [0],
+  chmod: [0],
+  chmodSync: [0],
+  chown: [0],
+  chownSync: [0],
+  createWriteStream: [0],
+  cp: [1],
+  cpSync: [1],
+  copyFile: [1],
+  copyFileSync: [1],
+  lchmod: [0],
+  lchmodSync: [0],
+  lchown: [0],
+  lchownSync: [0],
+  link: [1],
+  linkSync: [1],
+  lutimes: [0],
+  lutimesSync: [0],
+  mkdir: [0],
+  mkdirSync: [0],
+  mkdtemp: [0],
+  mkdtempSync: [0],
+  rename: [0, 1],
+  renameSync: [0, 1],
+  rm: [0],
+  rmSync: [0],
+  truncate: [0],
+  truncateSync: [0],
+  symlink: [1],
+  symlinkSync: [1],
+  unlink: [0],
+  unlinkSync: [0],
+  utimes: [0],
+  utimesSync: [0],
+  writeFile: [0],
+  writeFileSync: [0],
 };
 const REPOSITORY_PATH =
   /^(?:\.?(?:\/|\\))?(?:\.claude|\.codex|\.github|\.ut-tdd|docs|scripts|skills|src|tests)(?:\/|\\)|^(?:AGENTS\.md|CLAUDE\.md|package\.json|tsconfig\.json|vitest\.config\.ts)$/;
@@ -191,9 +221,12 @@ function memberName(node: ts.Expression): string | null {
   return null;
 }
 
-function writeApiName(node: ts.CallExpression, aliases: ReadonlyMap<string, string>): string | null {
+function writeApiName(
+  node: ts.CallExpression,
+  aliases: ReadonlyMap<string, string>,
+): string | null {
   const rawName = memberName(node.expression);
-  const alias = rawName ? aliases.get(rawName) ?? rawName : null;
+  const alias = rawName ? (aliases.get(rawName) ?? rawName) : null;
   if (alias && REPOSITORY_WRITE_APIS.has(alias)) return alias;
   if (
     ts.isPropertyAccessExpression(node.expression) &&
@@ -410,12 +443,13 @@ function inspectSource(
           ? isWriteCapableOpen(node, writeName)
             ? [0]
             : []
-          : MUTATION_TARGET_ARGS[writeName] ?? []
+          : (MUTATION_TARGET_ARGS[writeName] ?? [])
         : [];
-      if (targetArgs.some((index) => node.arguments[index] && containsHeadRoot(node.arguments[index])))
+      if (
+        targetArgs.some((index) => node.arguments[index] && containsHeadRoot(node.arguments[index]))
+      )
         forbidden = true;
-    }
-    else if (
+    } else if (
       ts.isPropertyAccessExpression(node) &&
       node.name.text === "cwd" &&
       isProcessRef(node.expression) &&

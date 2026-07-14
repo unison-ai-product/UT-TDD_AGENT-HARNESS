@@ -2,7 +2,6 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   checkForUpdate,
@@ -20,6 +19,7 @@ import {
 } from "../src/setup/update-check";
 
 const ROOT = "/harness";
+
 import { headSnapshotRoot } from "./support/workspace-roots";
 
 const REPO_ROOT = headSnapshotRoot();

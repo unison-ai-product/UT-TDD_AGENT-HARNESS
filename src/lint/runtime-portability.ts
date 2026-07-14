@@ -276,7 +276,11 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
       message: "Python/Bash/JS runtime files are not allowed in current core surfaces.",
     });
   }
-  if (path.startsWith("scripts/") && !ALLOWED_SCRIPT_WRAPPERS.has(path) && !ALLOWED_GIT_HOOK_ENTRYPOINTS.has(path)) {
+  if (
+    path.startsWith("scripts/") &&
+    !ALLOWED_SCRIPT_WRAPPERS.has(path) &&
+    !ALLOWED_GIT_HOOK_ENTRYPOINTS.has(path)
+  ) {
     violations.push({
       path,
       line: 1,
