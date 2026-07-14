@@ -5,11 +5,11 @@ kind: add-design
 layer: L5
 sub_doc: physical-data
 drive: db
-status: confirmed
+status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-14
 owner: PO / Codex
 parent_design: docs/design/harness/L5-detailed-design/physical-data.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md

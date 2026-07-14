@@ -191,6 +191,7 @@ function reserveInput() {
     namespace: "PLAN-L7",
     ordinal: 418,
     assetId: "plan:a",
+    leaseKeyVersion: "v2",
     leaseTokenHash: digest,
     commandId: "command:a",
     occurredAt: now,

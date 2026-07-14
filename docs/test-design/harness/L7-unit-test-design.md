@@ -1242,8 +1242,9 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-042` | `plan migration-dry-run --json` | CLI public surface | exit 0、`total=emitted=HEAD PLAN件数`、`migrated=total-rekeyed`、pending/finding 0のJSON契約 |
 | `U-PA-043` | `leaseMs`付きreservation commandを初回/再送 | `ReservationService` + versioned key-ring/clock port | raw tokenを返しDB/event/current/receipt保存0、再送はclock進行後も同一token/expiry、異payloadはconflict |
 | `U-PA-044` | reservation event/current/receipt各append直後にfault注入 | `PlanLedger.reserve` transaction | 各例外後にevent/current/receiptのdelta 0、次の正常commandは成功 |
-| `U-PA-045` | 複数kind/producer/subject/revision/commit/expiry/exitを組合せたevidence集合 | `EvidenceRecord` / `EvidencePolicy` | requirements各kindのeligibleだけをmin/max cardinalityへ数え、missing/rejected IDをstable順で返す |
-| `U-PA-046` | raw配列command、未知kind/producer、自己supersede、record field改変 | `EvidenceRecord.create` / digest | branded redacted argv以外は拒否、record digest不一致を再構築時に拒否、旧record不変 |
+| `U-PA-045` | 複数kind/producer/subject/revision/commit/expiry/exitを組合せたevidence全履歴 | `EvidenceRecord` / `EvidencePolicy` | policy定義と評価contextを分離し、requirements各kindのactive frontierだけをmin/max cardinalityへ数え、requirement別missing/rejected IDをstable順で返す |
+| `U-PA-046` | raw/split secret command、未知kind/producer、kind不一致claims、自己/orphan/cycle/fork supersede、全record field改変 | `EvidenceRecord.create` / policy frontier / digest | branded redacted argv以外は拒否、claimsを自由文から推測しない、supersession不正とrecord digest不一致を拒否、旧record不変 |
+| `U-PA-047` | v2 ledger（reservation 0件／hash-only reservationあり） | schema v3 migration | 空reservationはtransactionalにexact v3へ移行し、非空hash-onlyは明示manifestなしに変更せずfail-close。key version/event/current/reduction/reopen一致 |
 | `CANDIDATE-FSM-001` | 正規stateごとの次event | `transition` | 許可表どおりのnext state/event、exit 0 |
 | `CANDIDATE-FSM-002` | proposed→implementing | `transition` | `forward-transition-illegal`, exit 1 |
 | `CANDIDATE-FSM-003` | pair frozen、Red evidenceなし | implement command | `forward-red-evidence-missing`, exit 1 |

@@ -43,11 +43,12 @@ describe("PLAN Asset canonical ledger schema", () => {
         null,
         digest,
       );
-      db.prepare("INSERT INTO plan_id_reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+      db.prepare("INSERT INTO plan_id_reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
         "reservation:a",
         "PLAN-L7",
         1,
         "plan:a",
+        "v2",
         digest,
         "active",
         now,
@@ -57,17 +58,30 @@ describe("PLAN Asset canonical ledger schema", () => {
       );
       expect(() =>
         db
-          .prepare("INSERT INTO plan_id_reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-          .run("reservation:b", "PLAN-L7", 1, "plan:b", digest, "active", now, later, null, digest),
+          .prepare("INSERT INTO plan_id_reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+          .run(
+            "reservation:b",
+            "PLAN-L7",
+            1,
+            "plan:b",
+            "v2",
+            digest,
+            "active",
+            now,
+            later,
+            null,
+            digest,
+          ),
       ).toThrow();
       db.prepare(
         "UPDATE plan_id_reservations SET status = ?, closed_at = ? WHERE reservation_id = ?",
       ).run("released", now, "reservation:a");
-      db.prepare("INSERT INTO plan_id_reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+      db.prepare("INSERT INTO plan_id_reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
         "reservation:b",
         "PLAN-L7",
         1,
         "plan:b",
+        "v2",
         digest,
         "active",
         now,
@@ -155,6 +169,64 @@ describe("PLAN Asset canonical ledger schema", () => {
       });
     } finally {
       corrupt.close();
+    }
+  });
+
+  it("U-PA-047: atomically upgrades an empty-reservation v2 ledger to exact v3", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      for (const ddl of legacyV2Ddl()) db.exec(ddl);
+      db.setUserVersion(2);
+      seedAsset(db, "plan:a");
+      expect(LEDGER_SCHEMA_VERSION).toBe(3);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 3 });
+      expect(
+        db
+          .prepare("PRAGMA table_info(plan_id_reservation_events)")
+          .all()
+          .map((column) => column.name),
+      ).toContain("lease_key_version");
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 3 });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PA-047: leaves a nonempty hash-only v2 ledger untouched without a custody manifest", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      for (const ddl of legacyV2Ddl()) db.exec(ddl);
+      db.setUserVersion(2);
+      seedAsset(db, "plan:a");
+      db.prepare(
+        `INSERT INTO plan_id_reservation_events
+          (reservation_event_id, reservation_id, sequence, command_id,
+           command_payload_digest, event_kind, namespace, ordinal, asset_id,
+           lease_token_hash, occurred_at, expires_at, event_digest)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        "reservation:a:event:1",
+        "reservation:a",
+        1,
+        "command:a",
+        digest,
+        "reserved",
+        "PLAN-L7",
+        418,
+        "plan:a",
+        digest,
+        now,
+        later,
+        digest,
+      );
+      expect(migratePlanLedger(db)).toEqual({ ok: false, ruleId: "plan-ledger-unavailable" });
+      expect(db.userVersion()).toBe(2);
+      expect(
+        db.prepare("SELECT lease_token_hash FROM plan_id_reservation_events").get()
+          ?.lease_token_hash,
+      ).toBe(digest);
+    } finally {
+      db.close();
     }
   });
 
@@ -402,4 +474,10 @@ function restoreTrigger(db: ReturnType<typeof openHarnessDb>, name: string): voi
   const trigger = ledgerSchemaDdl().find((sql) => sql.includes(name));
   if (!trigger) throw new Error(`fixture trigger missing: ${name}`);
   db.exec(trigger);
+}
+
+function legacyV2Ddl(): readonly string[] {
+  return ledgerSchemaDdl().map((sql) =>
+    sql.replace(/lease_key_version TEXT NOT NULL,\s*/g, ""),
+  );
 }

@@ -925,8 +925,8 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 |---|---|---|
 | `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `canonicalPayload`, `dependencies[]` | 空ID、重複dependency、revision≠1、payload digest不一致は`PlanAssetError` |
 | `RevisePlanCommand` | `assetId`, `baseRevision`, `changeSet`, `actor`, `reason` | base≠latest、空reason、identity変更は拒否 |
-| `EvidenceInput` | `evidenceId`, `evidenceKind`, `subjectId`, `subjectRevision`, `sourceCommit`, branded `commandArgs`, `outputDigest`, `exitCode`, typed `producer`, `producedAt`, `expiresAt?`, `supersedesEvidenceId?` | record digestをcanonical fieldから内部生成する。digest/commit/revision/redacted command/kind/producer欠落、自己supersedeは`EvidenceError`。非0 exitも監査用recordとしてvalid |
-| `EvidencePolicy` | `requirements[]`（各要素=`requiredKind`, `minCount`, `maxCount?`, `acceptedProducers[]`, `exitRule`）、`maxAge?` | 複数kindを各cardinalityで表現する。別kind/revision/commit、期限切れ、producer外、exit不適合を件数へ数えず、kind別eligible/rejected IDをstable順で返す |
+| `EvidenceInput` | `evidenceId`, `evidenceKind`, `subjectId`, `subjectRevision`, `sourceCommit`, branded `commandArgs`, kind別typed `claims`, `outputDigest`, `exitCode`, typed `producer`, `producedAt`, `expiresAt?`, `supersedesEvidenceId?` | claimsを含むrecord digestをcanonical fieldから内部生成する。digest/commit/revision/redacted command/kind/producer/claims欠落、kind-claims不一致、自己supersedeは`EvidenceError`。非0 exitも監査用recordとしてvalid |
+| `EvidencePolicy` | `policyId`, `revision`, `requirements[]`（各要素=`requirementId`, `requiredKind`, `minCount`, `maxCount?`, `acceptedProducers[]`, `exitRule`）、`maxAge?` | policy定義と評価context（subject/revision/commit/now）を分離する。複数kindを各cardinalityで表現し、全履歴からsupersession frontierを検証する。別kind/revision/commit、期限切れ、producer外、exit不適合を件数へ数えず、requirement別eligible/rejected IDをstable順で返す |
 | `WorkflowCommand` | `subjectId`, `expectedFrom`, `to`, `actor`, `reason?`, `evidenceIds[]` | 許可表外、sequence不整合、guard不足は`WorkflowError` |
 | `WorkflowContext` | `subjectRevision`, `events[]`, `evidence[]`, `now`, `policyRevision` | event/evidenceが別subjectならfail-close |
 | `VModelContractDto` | `revision`, `layers[]`, `gates[]`, `pairs[]`, `exceptions[]`, `evidencePolicies[]`, `defectRoutes[]` | exactly-once、未知参照、理由なし例外は`ContractViolation[]` |
@@ -1025,7 +1025,7 @@ boolean/nullをそのままframe化し、空白を持たない。YAML tag、anch
 lossless変換不能として`plan-migration-loss`にする。未知fieldは`unknownFrontmatter`のcanonical JSONと元frontmatter digestを
 両方保持し、値をstring化しない。`EvidenceRecord.isUsableFor`はsubject/revision/commit、kind、producer、expiryとpolicy固有の
 `exitRule/expectedExit`を照合する。非0 exitはRed policyでusableになり得るが、Green/accept policyではusable=falseにする。
-record自体は削除しない。producer値域はcontract registryから読み、未知producerを
+record自体は削除しない。`claims`はRedのexpected/observed findingとtodo/skip、runner/test、trace orphan/stale、review verdict/reviewer、gate failure、acceptance/retention decision、exception actor/reason/resume/replacementをkind別discriminated DTOで保持し、`outputDigest`や自由文から意味を逆推定しない。supersessionは同subject/revision/kindの全履歴からactive frontierを作り、orphan/cycle/forkをfail-closeする。producer値域はcontract registryから読み、未知producerを
 記録時finding、accept時fail-closeとする。argvはsecret-scan/redaction port通過後の値だけを保存する。
 
 全append commandは`commandPayloadDigest`を返す。digestはcommand type、subject identity、入力DTOのcanonical frameだけから作り、

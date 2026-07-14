@@ -91,6 +91,6 @@ dry-run受入値は固定実装条件ではなく現HEAD oracleとする。main 
 
 ## §5 収束判定
 
-PlanAsset migration/dry-runのForward設計差はbackfillした。ただし独立監査で、L6 public reservation portに対するraw lease token発行・再送復元・key custody境界（IMP-156）と、L7-419 evidence policyが必要とするEvidenceRecordのtyped kind/cardinality/producer/digest/supersessionが実装へ未到達と確認した。これらはL7-418内のgap-only追加Red `U-PA-043〜046`として閉じ、別のForward状態機械や互換型を作らない。
+PlanAsset migration/dry-runのForward設計差はbackfillした。ただし独立監査で、L6 public reservation portに対するraw lease token発行・再送復元・key custody境界（IMP-156）、L7-419 evidence policyが必要とするEvidenceRecordのtyped kind/cardinality/claims/producer/digest/supersession、L5 reservation schemaのversion drift（IMP-167）が実装へ未到達と確認した。これらはL7-418内のgap-only追加Red `U-PA-043〜047`として閉じ、別のForward状態機械や互換型を作らない。
 
-残るPR lifecycle、GitHub設定、Issue inboundはPLAN-L7-418へ混ぜずIMP-160と後続Execution Ledger系列で扱う。R4のconfirmed判定はU-PA-043〜046 Green、独立review、全体gate後に行う。
+残るPR lifecycle、GitHub設定、Issue inboundはPLAN-L7-418へ混ぜずIMP-160と後続Execution Ledger系列で扱う。R4のconfirmed判定はU-PA-043〜047 Green、独立review、全体gate後に行う。
