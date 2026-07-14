@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { OPENAI_PRICING } from "../src/state-db/token-tracker";
+import { TIER_TABLE } from "../src/task/tier-router-policy";
 import { buildAdvisorDecision } from "../src/team/advisor-policy";
 import {
+  advisorHeavyUseRecommended,
   inferTaskDifficulty,
   inferTaskIntent,
   MODEL_IDS,
+  PLAN_AGENT_MODELS,
+  REVIEW_LANE_MODELS,
+  REVIEW_LANES,
   selectTeamModel,
 } from "../src/team/model-policy";
 
@@ -15,7 +21,7 @@ describe("team model policy", () => {
     });
   });
 
-  it("uses fast codex model and middle effort for lightweight work (PO rule 2026-07-08)", () => {
+  it("uses mini and middle effort for trivial doc patches (PO rule 2026-07-14)", () => {
     const selection = selectTeamModel({
       provider: "codex",
       role: "docs",
@@ -26,7 +32,7 @@ describe("team model policy", () => {
     expect(selection).toMatchObject({
       difficulty: "trivial",
       model_family: "fast",
-      model: MODEL_IDS.codex.spark,
+      model: MODEL_IDS.codex.mini,
       reasoning_effort: "middle",
       task_intent: "docs",
     });
@@ -113,7 +119,7 @@ describe("team model policy", () => {
     });
   });
 
-  it("routes sonnet design decisions to fable with a codex consult fallback", () => {
+  it("routes sonnet design decisions to sol with a fable fallback (PO rule 2026-07-14)", () => {
     const claude = buildAdvisorDecision({
       task: "review whether the release gate is safe to close",
       mode: "hybrid",
@@ -122,21 +128,21 @@ describe("team model policy", () => {
     });
 
     expect(claude).toMatchObject({
-      provider: "claude",
-      model: MODEL_IDS.claude.fable,
+      provider: "codex",
+      model: MODEL_IDS.codex.frontier,
       effort: "middle",
       consultation_mode: "consult",
       decision_kind: "design",
       decision_kind_source: "explicit",
       current_model_lower_than_advisor: true,
       adapterPlan: {
-        provider: "claude",
-        model: MODEL_IDS.claude.fable,
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
         dry_run: true,
       },
       fallback: {
-        provider: "codex",
-        model: MODEL_IDS.codex.frontier,
+        provider: "claude",
+        model: MODEL_IDS.claude.fable,
         effort: "middle",
         consultation_mode: "consult",
       },
@@ -144,7 +150,7 @@ describe("team model policy", () => {
     expect(claude.adapterPlan.stdin).toContain("upper-model advisor");
   });
 
-  it("routes opus design decisions to fable with an adversarial codex fallback", () => {
+  it("routes opus design decisions to adversarial sol with a fable fallback", () => {
     const decision = buildAdvisorDecision({
       task: "decide the architecture split for the projection layer",
       mode: "hybrid",
@@ -153,23 +159,23 @@ describe("team model policy", () => {
     });
 
     expect(decision).toMatchObject({
-      provider: "claude",
-      model: MODEL_IDS.claude.fable,
+      provider: "codex",
+      model: MODEL_IDS.codex.frontier,
       effort: "middle",
-      consultation_mode: "consult",
+      consultation_mode: "adversarial",
       fallback: {
-        provider: "codex",
-        model: MODEL_IDS.codex.frontier,
+        provider: "claude",
+        model: MODEL_IDS.claude.fable,
         effort: "middle",
-        consultation_mode: "adversarial",
+        consultation_mode: "consult",
       },
     });
-    expect(decision.fallback?.adapterPlan.stdin).toContain("adversarial verifier");
+    expect(decision.adapterPlan.stdin).toContain("adversarial verifier");
   });
 
   it("routes implementation decisions to the codex frontier model", () => {
     const sonnet = buildAdvisorDecision({
-      task: "implement the retry logic fix in src",
+      task: "implement the retry logic in src",
       mode: "hybrid",
       currentModel: MODEL_IDS.claude.sonnet,
     });
@@ -181,10 +187,13 @@ describe("team model policy", () => {
       decision_kind: "implementation",
       decision_kind_source: "inferred",
     });
-    expect(sonnet.fallback).toBeUndefined();
+    expect(sonnet.fallback).toMatchObject({
+      provider: "claude",
+      model: MODEL_IDS.claude.fable,
+    });
 
     const opus = buildAdvisorDecision({
-      task: "implement the retry logic fix in src",
+      task: "implement the retry logic in src",
       mode: "hybrid",
       currentModel: MODEL_IDS.claude.opus,
     });
@@ -244,10 +253,185 @@ describe("team model policy", () => {
           currentModel,
         }),
       ).toMatchObject({
-        provider: "claude",
-        model: MODEL_IDS.claude.fable,
+        provider: "codex",
+        model: MODEL_IDS.codex.frontier,
         current_model_lower_than_advisor: true,
       });
     }
+  });
+});
+
+describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
+  it("U-ROUTE2-001: codex テスト実装は terra + middle effort", () => {
+    const selection = selectTeamModel({
+      provider: "codex",
+      role: "se",
+      engine: "codex-se",
+      task: "write vitest oracle for the retry logic",
+    });
+    expect(selection).toMatchObject({
+      model: MODEL_IDS.codex.worker,
+      reasoning_effort: "middle",
+      task_intent: "test",
+    });
+  });
+
+  it("U-ROUTE2-002: codex 実装 (非軽量) は luna + high effort (worker middle 既定の上書き)", () => {
+    const selection = selectTeamModel({
+      provider: "codex",
+      role: "se",
+      engine: "codex-se",
+      task: "implement the projection ingestion pipeline in src",
+    });
+    expect(selection).toMatchObject({
+      model: MODEL_IDS.codex.luna,
+      reasoning_effort: "high",
+      task_intent: "implementation",
+    });
+  });
+
+  it("U-ROUTE2-003: codex 軽量実装は spark、研究/web は mini", () => {
+    expect(
+      selectTeamModel({
+        provider: "codex",
+        role: "se",
+        engine: "codex-se",
+        task: "rename src variable",
+        difficulty: "simple",
+      }).model,
+    ).toBe(MODEL_IDS.codex.spark);
+    expect(
+      selectTeamModel({
+        provider: "codex",
+        role: "pg",
+        engine: "codex-pg",
+        task: "web research on library sources",
+      }).model,
+    ).toBe(MODEL_IDS.codex.mini);
+  });
+
+  it("U-ROUTE2-004: codex 設計/検証は sol", () => {
+    expect(
+      selectTeamModel({
+        provider: "codex",
+        role: "se",
+        engine: "codex-se",
+        task: "architecture contract for the projection layer",
+      }).model,
+    ).toBe(MODEL_IDS.codex.frontier);
+  });
+
+  it("U-ROUTE2-005: claude 設計ドキュメント作成は opus、doc 修正は sonnet、doc パッチは haiku", () => {
+    expect(
+      selectTeamModel({
+        provider: "claude",
+        role: "se",
+        engine: "generic",
+        task: "author the module decomposition design document architecture",
+      }).model,
+    ).toBe(MODEL_IDS.claude.opus);
+    expect(
+      selectTeamModel({
+        provider: "claude",
+        role: "docs",
+        engine: "generic",
+        task: "update the governance handbook section wording",
+      }).model,
+    ).toBe(MODEL_IDS.claude.sonnet);
+    expect(
+      selectTeamModel({
+        provider: "claude",
+        role: "docs",
+        engine: "generic",
+        task: "readme typo",
+      }).model,
+    ).toBe(MODEL_IDS.claude.haiku);
+  });
+
+  it("U-ROUTE2-006: tier-router T1 codex は luna、T0 は sol/opus のまま", () => {
+    expect(TIER_TABLE.T1.codex).toBe(MODEL_IDS.codex.luna);
+    expect(TIER_TABLE.T0.codex).toBe(MODEL_IDS.codex.frontier);
+    expect(TIER_TABLE.T0.claude).toBe(MODEL_IDS.claude.opus);
+  });
+
+  it("U-ROUTE2-007: luna の公式 pricing が登録されている (cost null 回避)", () => {
+    expect(OPENAI_PRICING[MODEL_IDS.codex.luna]).toEqual({ input: 1, cached: 0.1, output: 6 });
+  });
+
+  it("U-ROUTE2-008: advisor uiux 判断は fable 一次 + sol fallback (PO: Fable、次点 Sol)", () => {
+    const decision = buildAdvisorDecision({
+      task: "judge the UI wireframe direction",
+      mode: "hybrid",
+      decisionKind: "uiux",
+      currentModel: MODEL_IDS.claude.sonnet,
+    });
+    expect(decision).toMatchObject({
+      provider: "claude",
+      model: MODEL_IDS.claude.fable,
+      decision_kind: "uiux",
+    });
+    expect(decision.fallback).toMatchObject({
+      provider: "codex",
+      model: MODEL_IDS.codex.frontier,
+    });
+  });
+
+  it("U-ROUTE2-009: troubleshooting は task 文から推論され sol 一次", () => {
+    const decision = buildAdvisorDecision({
+      task: "debug the flaky crash in the session log ingestion",
+      mode: "hybrid",
+      currentModel: MODEL_IDS.claude.sonnet,
+    });
+    expect(decision).toMatchObject({
+      provider: "codex",
+      model: MODEL_IDS.codex.frontier,
+      decision_kind: "troubleshooting",
+      decision_kind_source: "inferred",
+    });
+  });
+
+  it("U-ROUTE2-010: 想定を下回る orchestrator は advisor 多用を推奨 (未知モデルは推奨側へ fail)", () => {
+    expect(
+      advisorHeavyUseRecommended({
+        provider: "claude",
+        phase: "design",
+        currentModel: MODEL_IDS.claude.sonnet,
+      }),
+    ).toBe(true);
+    expect(
+      advisorHeavyUseRecommended({
+        provider: "claude",
+        phase: "design",
+        currentModel: MODEL_IDS.claude.opus,
+      }),
+    ).toBe(false);
+    expect(
+      advisorHeavyUseRecommended({
+        provider: "codex",
+        phase: "implementation",
+        currentModel: MODEL_IDS.codex.spark,
+      }),
+    ).toBe(true);
+    expect(
+      advisorHeavyUseRecommended({
+        provider: "codex",
+        phase: "design",
+        currentModel: "unknown-model-id",
+      }),
+    ).toBe(true);
+  });
+
+  it("U-ROUTE2-011: レビュー 3 面と プランエージェント (fable 一次 / sol fallback) の正本", () => {
+    expect(REVIEW_LANES).toEqual(["design-review", "implementation-review", "blind-review"]);
+    for (const lane of REVIEW_LANES) {
+      expect(REVIEW_LANE_MODELS[lane]).toEqual({
+        claude: MODEL_IDS.claude.opus,
+        codex: MODEL_IDS.codex.frontier,
+      });
+    }
+    expect(PLAN_AGENT_MODELS).toEqual({
+      primary: MODEL_IDS.claude.fable,
+      fallback: MODEL_IDS.codex.frontier,
+    });
   });
 });

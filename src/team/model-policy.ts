@@ -362,7 +362,11 @@ function policyEffort(input: {
   }
   if (input.intent === "design") return "high";
   if (input.difficulty === "critical") return "high";
-  if (input.intent === "implementation" || input.intent === "test" || input.intent === "lightweight") {
+  if (
+    input.intent === "implementation" ||
+    input.intent === "test" ||
+    input.intent === "lightweight"
+  ) {
     return "middle";
   }
   if (input.difficulty === "complex") return input.provider === "codex" ? "high" : "high";

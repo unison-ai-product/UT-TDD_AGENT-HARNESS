@@ -173,7 +173,14 @@ function isLowerThanAdvisor(input: {
     }
     return current.includes("sonnet") || current.includes("haiku");
   }
-  return current.startsWith("gpt-") || current.startsWith("codex-");
+  // advisor が Codex frontier (Sol) の場合: GPT/Codex 系 current は frontier 未満、
+  // Claude 系 current は frontier 級 (fable/opus) を除き下位 (sonnet/haiku)。
+  return (
+    current.startsWith("gpt-") ||
+    current.startsWith("codex-") ||
+    current.includes("sonnet") ||
+    current.includes("haiku")
+  );
 }
 
 function advisorPrompt(input: {
