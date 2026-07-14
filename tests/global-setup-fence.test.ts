@@ -12,7 +12,7 @@ describe("global setup fence", () => {
         env: { ...process.env, UT_TDD_FENCE_TRIP: "1" },
       },
     );
-    expect(result.status).not.toBe(0);
+    expect(result.status).toBe(1);
     expect(`${result.stdout}\n${result.stderr}`).toContain("test workspace fence violation");
   });
 });
