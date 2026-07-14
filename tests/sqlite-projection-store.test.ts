@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { openHarnessDb } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import { clearRebuildableProjectionTables } from "../src/state-db/sqlite-projection-rebuild";
-import { SqliteProjectionStore } from "../src/state-db/sqlite-projection-store";
+import {
+  type ProjectionFindingInput,
+  SqliteProjectionStore,
+} from "../src/state-db/sqlite-projection-store";
 
 describe("U-DOMAIN-004: SQLite projection adapter", () => {
   it("normalizes schema columns, preserves explicit PK, and fails closed on secrets", () => {
@@ -42,7 +45,7 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
     }
   });
 
-  it("U-DOMAIN-007: rejects secret-like data from every legacy recordFinding field", () => {
+  it("U-DOMAIN-007: rejects secret-like data from every legacy recordFinding field without mutation", () => {
     const db = openHarnessDb(":memory:");
     try {
       migrate(db);
@@ -55,10 +58,20 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
         source: "projection-test",
         evidencePath: "docs/evidence.md",
       };
-      for (const field of ["kind", "subjectId", "source", "evidencePath"] as const) {
-        expect(() => store.recordFinding({ ...safe, [field]: secret })).toThrow(/secret-like/);
+      store.recordFinding(safe);
+      const unsafeInputs: ProjectionFindingInput[] = [
+        { ...safe, kind: secret },
+        { ...safe, subjectId: secret },
+        { ...safe, source: secret },
+        { ...safe, evidencePath: secret },
+        { ...safe, severity: secret as unknown as ProjectionFindingInput["severity"] },
+      ];
+      for (const input of unsafeInputs) {
+        expect(() => store.recordFinding(input)).toThrow(/secret-like/);
       }
-      expect(db.prepare("SELECT finding_id FROM findings").all()).toEqual([]);
+      expect(db.prepare("SELECT kind, subject_id FROM findings").all()).toEqual([
+        { kind: safe.kind, subject_id: safe.subjectId },
+      ]);
     } finally {
       db.close();
     }

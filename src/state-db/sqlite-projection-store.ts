@@ -200,9 +200,7 @@ function assertNoSensitivePayload(row: Record<string, unknown>, table: TableDef)
       throw new Error(`raw/sensitive payload column is not allowed in harness.db: ${key}`);
     }
     const structuredId = primaryKeys.has(key) || key.endsWith("_id");
-    if (!structuredId && typeof value === "string" && SECRET_PATTERN.test(value)) {
-      throw new Error(`secret-like value is not allowed in harness.db projection column: ${key}`);
-    }
+    if (!structuredId) assertNoSecretLikeString(value, "projection column", key);
   }
 }
 
@@ -212,9 +210,13 @@ function assertNoSensitivePayload(row: Record<string, unknown>, table: TableDef)
  */
 function assertFindingInputSafe(input: ProjectionFindingInput): void {
   for (const [field, value] of Object.entries(input)) {
-    if (typeof value === "string" && SECRET_PATTERN.test(value)) {
-      throw new Error(`secret-like value is not allowed in harness.db finding field: ${field}`);
-    }
+    assertNoSecretLikeString(value, "finding field", field);
+  }
+}
+
+function assertNoSecretLikeString(value: unknown, scope: string, field: string): void {
+  if (typeof value === "string" && SECRET_PATTERN.test(value)) {
+    throw new Error(`secret-like value is not allowed in harness.db ${scope}: ${field}`);
   }
 }
 
