@@ -4,7 +4,7 @@ title: "PLAN-L7-429 (add-impl): spec-ir detector scope 精密化 — メタ doc 
 kind: add-impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-13

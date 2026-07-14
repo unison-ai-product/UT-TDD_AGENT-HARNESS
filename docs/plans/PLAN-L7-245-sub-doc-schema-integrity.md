@@ -13,6 +13,8 @@ review_evidence:
   - "2026-07-14 cross-provider blind review (codex gpt-5.6, ut-tdd codex --role blind-reviewer --execute): PASS-WEAK。claim-blind/spec-blind とも未反証の仕様違反なし、targeted test 19/19 green、方式 b (artifact_role 吸収) と map §1b-1 の整合確認、反例4系 (sub_doc 欠落/schema 外値/L4 drift 双方向/L6 方針ノート欠落) すべて防御確認。WEAK 理由は reviewer 環境での doctor 完走 timeout のみで、実 repo gate はオーケストレータが直接実測済み: sub-doc-schema-integrity OK (checked=54, meta skipped=3, drift 0) / sub-doc-catalog-drift OK (drift 0) / sub-doc-section-structure OK (bun src/cli.ts doctor、2026-07-14)"
 owner: PM / PO
 parent_design: docs/governance/document-system-map.md
+backprop_decision: not_required
+backprop_decision_reason: "A-174 F-5 latent-defect の解消 (schema 整合 lint + 既存 doc 正規化) であり新規 L0/L1 要件ではない。設計正本への合流は同一変更内で document-system-map §1b-1 に記録済み。"
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
   - role: se
