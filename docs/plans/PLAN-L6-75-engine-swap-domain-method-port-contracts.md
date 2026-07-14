@@ -5,11 +5,11 @@ kind: add-design
 layer: L6
 sub_doc: function-spec
 drive: fullstack
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-13
+updated: 2026-07-14
 owner: PO / Codex
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -34,6 +34,25 @@ dependencies:
     - docs/plans/PLAN-L6-73-vmodel-contract-compiler-right-arm-contracts.md
   blocks:
     - docs/plans/PLAN-L7-423-engine-swap-domain-objects-ports.md
+review_evidence:
+  - reviewer: claude-opus-4-8
+    review_kind: cross_agent
+    reviewed_at: "2026-07-14T15:03:30+09:00"
+    tests_green_at: "2026-07-14T15:00:10+09:00"
+    verdict: pass
+    worker_model: gpt-5.5-codex
+    reviewer_model: claude-opus-4-8
+    scope: "PR #55のL4-L8 projection rebuild設計をclaim-blind/spec-blindの2 laneで独立review。spec-blindで検出した構造IDのsecret guard例外、capture 3 fieldの直接oracle、旧projection-writer test移行漏れを設計とL7/L8 oracleへ反映し、focused再review PASSを得た。U-DOMAIN-005/006は既存行が実在するため欠番指摘は不採用。"
+    green_commands:
+      - kind: unit_test
+        command: "bun x vitest run tests/plan-lint.test.ts tests/readability.test.ts tests/merged-plan-status.test.ts --reporter=dot"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-14T15:00:10+09:00"
+        evidence_path: tests/plan-lint.test.ts
+        output_digest: "sha256:afaaca592faa0bfed99d8629e283710c181b3f6da21a4230bde4a7760504e77a"
+        anchor_commit: 12e503a49902e2548bc98e0498e508a9abcd6dc3
 ---
 
 # PLAN-L6-75: engine-swap domain class / method / port契約

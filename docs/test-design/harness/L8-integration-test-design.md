@@ -276,7 +276,7 @@ Minimum G8 close profile for the first L8 ascent:
 | `IT-MODULE-01` | engine-swap module graph | dependency auditを実行する | domain逆依存、barrel cycle、doctor/CLI逆importが0になる | module graph、cycle count 0 |
 | `IT-PROJECTION-REBUILD-01` | captured source bundle、SQLite transaction adapter、CLI/doctor composition root | 同一bundleで`ut-tdd db rebuild`、doctor rebuild、drive fallbackを実行する | 全入口が同一`ProjectionRebuildCommand`を通り、table identity/digest/receiptが一致する | source digest、入口別row diff 0、composition inventory |
 | `IT-PROJECTION-REBUILD-02` | row/finding write境界の故障注入、secret-like finding payload | rebuildを実行する | guard拒否またはwrite失敗時は既存projectionを保持し、row/finding部分commit 0、authoring source更新0 | transaction rollback evidence、expected finding/exit |
-| `IT-PROJECTION-REBUILD-03` | 全consumerとlegacy facade path | migration完了auditを実行する | `projection-writer.ts`実体・互換re-export・importが0、source adapter→application→SQLite transaction以外の逆辺0 | import graph、legacy path search、cycle 0 |
+| `IT-PROJECTION-REBUILD-03` | source/test全consumerとlegacy facade path (`tests/projection-writer.test.ts`を含む) | migration完了auditを実行する | 旧testを新application/adapter境界へ移行し、`projection-writer.ts`実体・互換re-export・importがsource/testとも0、source adapter→application→SQLite transaction以外の逆辺0 | import graph、legacy path search、test inventory、cycle 0 |
 | `IT-ASSESS-01` | 163 item assessment | evidence/debtをjoinする | pending 0、verified 3面、partial/gap debt route 100%を満たす | assessment/debt coverage manifest |
 | `IT-SELFPROOF-01` | contract ruleとmutation corpus | 独立process verifierを実行する | receipt exactly once、全mutation kill、正常fixture false-positive 0になる | receipt、mutation survivor 0 |
 
