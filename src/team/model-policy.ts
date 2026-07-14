@@ -440,14 +440,14 @@ export function inferTaskIntent(input: {
 }): TaskIntent {
   const text = `${input.role ?? ""} ${input.engine ?? ""} ${input.task}`.toLowerCase();
   const task = input.task.toLowerCase();
-  if (hasAny(task, DOC_TERMS)) return "docs";
   if (hasAny(task, UIUX_TERMS)) return "uiux";
   if (startsWithAny(task, REVIEW_ACTION_TERMS)) return "review";
+  if (startsWithAny(task, IMPLEMENTATION_ACTION_TERMS)) return "implementation";
   const testImplementation =
     hasAny(task, TEST_TERMS) &&
     (startsWithAny(task, TEST_ACTION_TERMS) || hasAny(task, TEST_ACTION_TERMS.slice(7)));
   if (testImplementation) return "test";
-  if (startsWithAny(task, IMPLEMENTATION_ACTION_TERMS)) return "implementation";
+  if (hasAny(task, DOC_TERMS)) return "docs";
   if (input.role === "uiux") return "uiux";
   if (input.role === "qa") return "review";
   if (input.role === "docs") return "docs";

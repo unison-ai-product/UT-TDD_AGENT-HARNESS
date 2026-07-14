@@ -393,6 +393,8 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     expect(inferTaskIntent({ task: "review tests and implement fix" })).toBe("review");
     expect(inferTaskIntent({ task: "write tests to audit security" })).toBe("test");
     expect(inferTaskIntent({ task: "implement fix and review tests" })).toBe("implementation");
+    expect(inferTaskIntent({ task: "review release notes" })).toBe("review");
+    expect(inferTaskIntent({ task: "implement docs generator" })).toBe("implementation");
   });
 
   it("U-ROUTE2-020: compound test and release-note terms remain routable", () => {
