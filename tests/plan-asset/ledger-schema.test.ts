@@ -271,6 +271,29 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
+  it("U-PA-047: rolls an interrupted v2-to-v3 schema migration back byte-for-byte", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      for (const ddl of legacyV2Ddl()) db.exec(ddl);
+      db.setUserVersion(2);
+      seedAsset(db, "plan:a");
+      const before = migrationSnapshot(db);
+      expect(
+        migratePlanLedger(db, {
+          fault: {
+            after(boundary) {
+              if (boundary === "v2-v3-tables-created") throw new Error("migration-fault");
+            },
+          },
+        }),
+      ).toEqual({ ok: false, ruleId: "plan-ledger-unavailable" });
+      expect(migrationSnapshot(db)).toBe(before);
+      expect(db.userVersion()).toBe(2);
+    } finally {
+      db.close();
+    }
+  });
+
   it("U-PA-012: constrains global receipt subjects to real plan revisions", () => {
     const db = openHarnessDb(":memory:");
     try {
@@ -524,4 +547,17 @@ function legacyV2Ddl(): readonly string[] {
       .replace(/,\s*CHECK \(lease_key_version != ''\)/g, "")
       .replace(/,\s*CHECK \(INSTR\(lease_key_version, '\.'\) = 0\)/g, ""),
   );
+}
+
+function migrationSnapshot(db: ReturnType<typeof openHarnessDb>): string {
+  return JSON.stringify({
+    version: db.userVersion(),
+    schema: db
+      .prepare(
+        "SELECT type, name, tbl_name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name",
+      )
+      .all(),
+    assets: db.prepare("SELECT * FROM plan_assets ORDER BY asset_id").all(),
+    revisions: db.prepare("SELECT * FROM plan_revisions ORDER BY asset_id, revision").all(),
+  });
 }

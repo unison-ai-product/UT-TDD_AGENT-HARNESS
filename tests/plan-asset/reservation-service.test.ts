@@ -12,6 +12,12 @@ import type {
   LeaseTokenKeyRingPort,
   LeaseTokenMac,
 } from "../../src/plan-asset/ports/lease-token-key-ring.js";
+import type {
+  ReservationLedgerPort,
+  ReservationLedgerRecord,
+  ReservationLedgerResult,
+  ReserveLedgerInput,
+} from "../../src/plan-asset/ports/reservation-ledger.js";
 import { openHarnessDb } from "../../src/state-db/index.js";
 
 describe("PLAN reservation service", () => {
@@ -172,6 +178,44 @@ describe("PLAN reservation service", () => {
       db.close();
     }
   });
+
+  it("U-PA-043: discards locally issued material and recovers the race winner version", () => {
+    const request = {
+      reservationId: "reservation:a",
+      namespace: "PLAN-L7",
+      ordinal: 418,
+      assetId: "plan:a",
+      leaseMs: 3_600_000,
+      commandId: "command:a",
+    };
+    const occurredAt = "2026-07-14T00:00:00.000Z";
+    const expiresAt = "2026-07-14T01:00:00.000Z";
+    const message = frameLeaseTokenContext({ ...request, occurredAt, expiresAt });
+    const winnerToken = `utl1.v2.${Buffer.from(mac("v2", message)).toString("base64url")}`;
+    const winner: ReservationLedgerRecord = {
+      ...request,
+      leaseKeyVersion: "v2",
+      leaseTokenHash: createHash("sha256").update(winnerToken).digest("hex"),
+      occurredAt,
+      expiresAt,
+    };
+    const keyRing = new FakeKeyRing();
+    keyRing.currentVersion = "v3";
+    keyRing.availableVersions.add("v3");
+    const service = new ReservationService(
+      new RaceLedger(winner),
+      new SequenceClock([occurredAt]),
+      keyRing,
+    );
+    expect(service.reserve(request)).toMatchObject({
+      ok: true,
+      replayed: true,
+      leaseKeyVersion: "v2",
+      leaseToken: winnerToken,
+    });
+    expect(keyRing.issueCalls).toBe(1);
+    expect(keyRing.recoverVersions).toEqual(["v2"]);
+  });
 });
 
 class SequenceClock implements ClockPort {
@@ -190,16 +234,36 @@ class FakeKeyRing implements LeaseTokenKeyRingPort {
   readonly recoverVersions: string[] = [];
   readonly availableVersions = new Set(["v2"]);
   corruptRecovery = false;
+  currentVersion = "v2";
 
   issueMac(message: Uint8Array): LeaseTokenMac {
     this.issueCalls += 1;
-    return { keyVersion: "v2", mac: mac("v2", message) };
+    return { keyVersion: this.currentVersion, mac: mac(this.currentVersion, message) };
   }
 
   recoverMac(keyVersion: string, message: Uint8Array): Uint8Array | null {
     this.recoverVersions.push(keyVersion);
     if (!this.availableVersions.has(keyVersion)) return null;
     return this.corruptRecovery ? mac("corrupt", message) : mac(keyVersion, message);
+  }
+}
+
+class RaceLedger implements ReservationLedgerPort {
+  private reads = 0;
+
+  constructor(private readonly winner: ReservationLedgerRecord) {}
+
+  findReserveByCommand(): ReservationLedgerRecord | null {
+    this.reads += 1;
+    return this.reads === 1 ? null : this.winner;
+  }
+
+  reserve(_input: ReserveLedgerInput): ReservationLedgerResult {
+    return { ok: false, ruleId: "plan-id-reservation-command-conflict" };
+  }
+
+  release(): ReservationLedgerResult {
+    return { ok: false, ruleId: "not-used" };
   }
 }
 

@@ -19,6 +19,10 @@ import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
 
 export const LEDGER_SCHEMA_VERSION = 3;
 
+export interface LedgerSchemaMigrationFaultPort {
+  after(boundary: string): void;
+}
+
 function migrationTargetCheck() {
   return {
     kind: "or" as const,
@@ -440,11 +444,12 @@ export function ledgerSchemaDdl(): readonly string[] {
 
 export function migratePlanLedger(
   db: HarnessDb,
+  options: { readonly fault?: LedgerSchemaMigrationFaultPort } = {},
 ): { ok: true; version: number } | { ok: false; ruleId: "plan-ledger-unavailable" } {
   const version = db.userVersion();
   if (version !== 0 && version !== 2 && version !== LEDGER_SCHEMA_VERSION)
     return { ok: false, ruleId: "plan-ledger-unavailable" };
-  if (version === 2 && !migrateV2ToV3(db)) {
+  if (version === 2 && !migrateV2ToV3(db, options.fault)) {
     return { ok: false, ruleId: "plan-ledger-unavailable" };
   }
   if (version === 0) {
@@ -464,7 +469,7 @@ export function migratePlanLedger(
     : { ok: false, ruleId: "plan-ledger-unavailable" };
 }
 
-function migrateV2ToV3(db: HarnessDb): boolean {
+function migrateV2ToV3(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): boolean {
   if (!legacyV2ReservationSchemaValid(db) || reservationRowCount(db) !== 0) return false;
   const reservationTables = new Set(["plan_id_reservation_events", "plan_id_reservations"]);
   const reservationIndexes = indexes.filter((index) => reservationTables.has(index.table));
@@ -475,13 +480,16 @@ function migrateV2ToV3(db: HarnessDb): boolean {
     for (const index of reservationIndexes) db.exec(`DROP INDEX ${index.name}`);
     db.exec("ALTER TABLE plan_id_reservation_events RENAME TO plan_id_reservation_events_v2");
     db.exec("ALTER TABLE plan_id_reservations RENAME TO plan_id_reservations_v2");
+    fault?.after("v2-v3-tables-renamed");
     for (const table of tables.filter((candidate) => reservationTables.has(candidate.name))) {
       db.exec(createTableSql(table));
     }
+    fault?.after("v2-v3-tables-created");
     db.exec("DROP TABLE plan_id_reservations_v2");
     db.exec("DROP TABLE plan_id_reservation_events_v2");
     for (const index of reservationIndexes) db.exec(createIndexSql(index));
     for (const trigger of reservationTriggers) db.exec(createTriggerSql(trigger));
+    fault?.after("v2-v3-schema-created");
     db.setUserVersion(LEDGER_SCHEMA_VERSION);
     if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v3-verification-failed");
     db.exec("COMMIT");
