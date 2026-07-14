@@ -361,6 +361,28 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     expect(inferTaskIntent({ task: "guide patch" })).toBe("general");
   });
 
+  it("U-ROUTE2-016: overlapping test/review wording preserves the explicit test task-kind", () => {
+    expect(
+      selectTeamModel({
+        provider: "codex",
+        role: "se",
+        engine: "codex-se",
+        task: "write a vitest test to verify retry behavior",
+      }),
+    ).toMatchObject({ task_intent: "test", model: MODEL_IDS.codex.worker });
+  });
+
+  it("U-ROUTE2-017: Claude task-kind overrides a lower explicit engine family", () => {
+    expect(
+      selectTeamModel({
+        provider: "claude",
+        role: "se",
+        engine: MODEL_IDS.claude.sonnet,
+        task: "author the architecture design contract",
+      }),
+    ).toMatchObject({ task_intent: "design", model: MODEL_IDS.claude.opus });
+  });
+
   it("U-ROUTE2-005: claude 設計ドキュメント作成は opus、doc 修正は sonnet、doc パッチは haiku", () => {
     expect(
       selectTeamModel({
