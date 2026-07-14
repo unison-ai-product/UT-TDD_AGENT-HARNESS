@@ -98,6 +98,13 @@ export function projectPlanSources(
 }
 
 function frontmatterValue(content: string, key: string): string {
-  const match = content.match(new RegExp(`^${key}:\\s*"?([^"\\r\\n]+)"?`, "m"));
+  const frontmatter = markdownFrontmatter(content);
+  if (!frontmatter) return "";
+  const match = frontmatter.match(new RegExp(`^${key}:\\s*"?([^"\\r\\n]+)"?`, "m"));
   return match?.[1]?.trim() ?? "";
+}
+
+function markdownFrontmatter(content: string): string {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  return match?.[1] ?? "";
 }

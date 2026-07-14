@@ -56,4 +56,33 @@ describe("plan projection domain", () => {
       row: { status: "draft", decision_outcome: "" },
     });
   });
+
+  it("does not project PLAN-like fields outside Markdown frontmatter", () => {
+    const sources: readonly ProjectionPlanSource[] = [
+      {
+        path: "docs/plans/body-only.md",
+        content: "# example\n\nplan_id: BODY-ONLY\nkind: impl\n",
+      },
+      {
+        path: "docs/plans/frontmatter-wins.md",
+        content: [
+          "---",
+          "plan_id: PLAN-L7-VALID",
+          "kind: impl",
+          "layer: L7",
+          "drive: be",
+          "---",
+          "",
+          "plan_id: BODY-SHADOW",
+          "kind: troubleshoot",
+        ].join("\r\n"),
+      },
+    ];
+
+    const result = projectPlanSources(sources, context);
+
+    expect([...result.plans.keys()]).toEqual(["PLAN-L7-VALID"]);
+    expect(result.plans.get("PLAN-L7-VALID")).toMatchObject({ kind: "impl", layer: "L7" });
+    expect(result.writes).toHaveLength(3);
+  });
 });
