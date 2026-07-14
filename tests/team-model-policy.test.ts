@@ -4,8 +4,10 @@ import { TIER_TABLE } from "../src/task/tier-router-policy";
 import { buildAdvisorDecision } from "../src/team/advisor-policy";
 import {
   advisorHeavyUseRecommended,
+  escalateShallowResponse,
   inferTaskDifficulty,
   inferTaskIntent,
+  MODEL_EFFORT_LADDER,
   MODEL_IDS,
   PLAN_AGENT_MODELS,
   REVIEW_LANE_MODELS,
@@ -21,7 +23,7 @@ describe("team model policy", () => {
     });
   });
 
-  it("uses mini and middle effort for trivial doc patches (PO rule 2026-07-14)", () => {
+  it("uses mini and xhigh effort for trivial doc patches (effort ladder, PO rule 2026-07-14)", () => {
     const selection = selectTeamModel({
       provider: "codex",
       role: "docs",
@@ -33,12 +35,12 @@ describe("team model policy", () => {
       difficulty: "trivial",
       model_family: "fast",
       model: MODEL_IDS.codex.mini,
-      reasoning_effort: "middle",
+      reasoning_effort: "xhigh",
       task_intent: "docs",
     });
   });
 
-  it("uses frontier model and xhigh effort for critical codex review work", () => {
+  it("uses frontier model at ladder-base low effort for critical codex review work", () => {
     const selection = selectTeamModel({
       provider: "codex",
       role: "qa",
@@ -51,7 +53,8 @@ describe("team model policy", () => {
       model_family: "frontier",
       // frontier = T0 最上位。tier-router TIER_TABLE.T0.codex と整合。
       model: MODEL_IDS.codex.frontier,
-      reasoning_effort: "xhigh",
+      // Sol は基準 low (effort ladder、PO rule 2026-07-14)。浅い時は middle へ引き上げ。
+      reasoning_effort: "low",
       task_intent: "review",
     });
   });
@@ -67,7 +70,8 @@ describe("team model policy", () => {
     expect(selection.model_family).toBe("frontier");
     expect(selection.model).toBe(MODEL_IDS.claude.sonnet);
     expect(selection.model_source).toBe("engine");
-    expect(selection.reasoning_effort).toBe("high");
+    // Sonnet は基準 middle (effort ladder、PO rule 2026-07-14)。浅い時は high へ引き上げ。
+    expect(selection.reasoning_effort).toBe("middle");
   });
 
   it("maps docs, research, UI/UX, and implementation intent to the requested effort defaults", () => {
@@ -272,7 +276,8 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     });
     expect(selection).toMatchObject({
       model: MODEL_IDS.codex.worker,
-      reasoning_effort: "middle",
+      // Terra は基準 low (effort ladder)。浅い時 middle、なお浅ければ Sol low へ乗り換え。
+      reasoning_effort: "low",
       task_intent: "test",
     });
   });
@@ -421,6 +426,39 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
         currentModel: "unknown-model-id",
       }),
     ).toBe(true);
+  });
+
+  it("U-ROUTE2-012: effort ladder 基準 — sol/terra/fable=low, sonnet=middle, opus/spark(luna)=high, mini=xhigh", () => {
+    const base = (model: string) => MODEL_EFFORT_LADDER[model]?.base;
+    expect(base(MODEL_IDS.codex.frontier)).toBe("low");
+    expect(base(MODEL_IDS.codex.worker)).toBe("low");
+    expect(base(MODEL_IDS.claude.fable)).toBe("low");
+    expect(base(MODEL_IDS.claude.sonnet)).toBe("middle");
+    expect(base(MODEL_IDS.claude.opus)).toBe("high");
+    expect(base(MODEL_IDS.codex.luna)).toBe("high");
+    expect(base(MODEL_IDS.codex.spark)).toBe("high");
+    expect(base(MODEL_IDS.codex.mini)).toBe("xhigh");
+  });
+
+  it("U-ROUTE2-013: 浅い回答のエスカレーション — terra low→middle→sol low、opus high→xhigh、行き止まりは null", () => {
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "low" }),
+    ).toEqual({ model: MODEL_IDS.codex.worker, effort: "middle" });
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "middle" }),
+    ).toEqual({ model: MODEL_IDS.codex.frontier, effort: "low" });
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.codex.frontier, currentEffort: "low" }),
+    ).toEqual({ model: MODEL_IDS.codex.frontier, effort: "middle" });
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.codex.frontier, currentEffort: "middle" }),
+    ).toBeNull();
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.claude.opus, currentEffort: "high" }),
+    ).toEqual({ model: MODEL_IDS.claude.opus, effort: "xhigh" });
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.codex.mini, currentEffort: "xhigh" }),
+    ).toBeNull();
   });
 
   it("U-ROUTE2-011: レビュー 3 面と プランエージェント (fable 一次 / sol fallback) の正本", () => {

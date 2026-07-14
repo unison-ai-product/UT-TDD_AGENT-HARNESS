@@ -92,6 +92,33 @@ Luna を「実装 / ドキュメント修正の主力」として採用した (�
 - **プランエージェント**: 一次 = Fable、Fable 不在時は Sol へフォールバック
   (`PLAN_AGENT_MODELS`)。
 
+### 追補 2: モデル別 effort 基準ラダー (PO 2026-07-14 同日追加)
+
+| model | 基準 | 浅い時 | なお浅い時 |
+|---|---|---|---|
+| Sol / Terra / Fable | low | middle | Terra のみ Sol low へ乗り換え |
+| Sonnet | middle | high | — |
+| Opus | high | xhigh | — |
+| Luna / spark | high | — | — |
+| mini | xhigh | — | — |
+
+下位帯ほど高 effort の逆傾斜 (能力を effort で補う)。H4 ベンチ実測
+([[feedback-gpt-5-6-effort-crossover-tendency-h4]]: Sol low ≈ Terra high) と整合。
+`MODEL_EFFORT_LADDER` / `escalateShallowResponse` として SSoT 化し、`policyEffort` の
+既定を置換 (UI/UX xhigh は task-kind 例外として維持)。「浅い」の判定は orchestrator /
+呼び出し側の運用判断で、ladder は次段の正本のみ提供する。
+
+### 追補 3: モデル入替の判定基準 (PO 2026-07-14)
+
+- モデルの入れ替え (roster 変更) は **使用トークン量 × モデル単価 × 回答品質** の 3 軸で
+  判定する。感覚や新モデルの話題性では入れ替えない。
+- 品質検証のタイミングは、**問題調査時の複数モデル平行検証** (同一問題を複数モデルに
+  同時投入) に相乗りさせ、**クリティカルな要因を見つけた数**で勝負させる (recall 偏重や
+  ノイズ撒きを避けるため、単なる指摘数ではなく致命要因の発見数)。
+- 器は既存の token-tracker (`workflow_runs` トークン実測 + `OPENAI_PRICING` /
+  `CLAUDE_PRICING` 単価) と `model_evaluations` projection。PLAN-DISCOVERY-10 の
+  lane 別ベンチ手法 (W1-W5 oracle) を再利用する。
+
 ## 実装範囲
 
 1. `MODEL_IDS.codex.luna = "gpt-5.6-luna"` 追加。

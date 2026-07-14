@@ -180,18 +180,18 @@ Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede)
   web 検索/doc パッチ = Haiku (`claude-haiku-4-5`)。
 - Lightweight parallel lanes use spark/mini-class GPT/Codex models with no
   closing authority.
-- Worker lanes (テスト実装/軽量、spark/mini 含む) default to effort `middle`
-  (PO rule 2026-07-08); luna のみ `high` 基準 (PO rule 2026-07-14)。
+- Effort はモデル別基準ラダー (PO rule 2026-07-14) が既定: Sol/Terra/Fable =
+  `low`、Sonnet = `middle`、Opus/Luna/spark = `high`、mini = `xhigh`。回答が
+  浅い時は 1 段引き上げ (Sol/Terra/Fable → `middle`、Sonnet → `high`、Opus →
+  `xhigh`)、Terra が `middle` でも浅い場合は Sol `low` へ乗り換える
+  (`escalateShallowResponse`)。ラダー外 (haiku 等) は従来既定 (Claude `high` /
+  GPT `middle`)。UI/UX のみ task-kind 例外で `xhigh` (PO rule 2026-07-08)。
 - Implementation work in `hybrid` is cross-executed and cross-reviewed: the
   non-orchestrating provider executes, and review returns to the other
   provider (tier-router implementation lane, PO rule 2026-07-08).
 - Design/implementation review uses a top reviewer model: GPT frontier
   (`gpt-5.6-sol`) or Claude Opus (`claude-opus-4-8`) or above, behind the
   explicit frontier gate.
-- UI/UX work は Sonnet-class Claude + `xhigh` effort。
-- Claude-family effort defaults to `high`; GPT/Codex effort defaults to
-  `middle`; only high-judgement review/critical decisions move up to
-  `high`/`xhigh`.
 - advisor (PO rule 2026-07-14): 技術/設計/トラブルシューティング判断は
   `gpt-5.6-sol` 一次 (fallback Fable)、デザイン/UI 判断は `claude-fable-5` 一次
   (次点 `gpt-5.6-sol`)。迷う場合は

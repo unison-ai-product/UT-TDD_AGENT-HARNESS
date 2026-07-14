@@ -115,6 +115,54 @@ export const PLAN_AGENT_MODELS = {
   fallback: MODEL_IDS.codex.frontier,
 } as const;
 
+/**
+ * モデル別 effort 基準ラダー (PO 2026-07-14)。base が既定 effort、shallow は「回答が浅い」
+ * と orchestrator が判断した時の引き上げ先。escalate は shallow でもなお浅い時の
+ * モデル乗り換え先 (Terra middle → Sol low)。上位モデルほど低 effort で足り、下位帯
+ * (spark/mini) は effort で能力を補う逆傾斜 (H4 ベンチ: Sol low ≈ Terra high の実測と整合)。
+ * luna のみ base=high (PO 2026-07-14 の実装帯上書き)。haiku は未指定のため Claude 既定 (high)。
+ */
+export const MODEL_EFFORT_LADDER: Record<
+  string,
+  {
+    base: ReasoningEffort;
+    shallow?: ReasoningEffort;
+    escalate?: { model: string; effort: ReasoningEffort };
+  }
+> = {
+  [MODEL_IDS.codex.frontier]: { base: "low", shallow: "middle" },
+  [MODEL_IDS.codex.worker]: {
+    base: "low",
+    shallow: "middle",
+    escalate: { model: MODEL_IDS.codex.frontier, effort: "low" },
+  },
+  [MODEL_IDS.codex.luna]: { base: "high" },
+  [MODEL_IDS.codex.spark]: { base: "high" },
+  [MODEL_IDS.codex.mini]: { base: "xhigh" },
+  [MODEL_IDS.claude.fable]: { base: "low", shallow: "middle" },
+  [MODEL_IDS.claude.opus]: { base: "high", shallow: "xhigh" },
+  [MODEL_IDS.claude.sonnet]: { base: "middle", shallow: "high" },
+};
+
+/**
+ * 「回答が浅い」時の次段。まず同モデルで shallow effort へ、それでも浅ければ escalate
+ * (モデル乗り換え) へ。次段が無ければ null (それ以上は advisor / 人間判断)。
+ */
+export function escalateShallowResponse(input: {
+  model: string;
+  currentEffort: ReasoningEffort;
+}): { model: string; effort: ReasoningEffort } | null {
+  const ladder = MODEL_EFFORT_LADDER[input.model];
+  if (!ladder) return null;
+  if (ladder.shallow && input.currentEffort === ladder.base) {
+    return { model: input.model, effort: ladder.shallow };
+  }
+  if (ladder.escalate && input.currentEffort !== ladder.base) {
+    return ladder.escalate;
+  }
+  return null;
+}
+
 export const REASONING_EFFORTS = ["low", "medium", "middle", "high", "xhigh"] as const;
 export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
 
@@ -351,16 +399,13 @@ function policyEffort(input: {
   intent: TaskIntent;
   fallback: ReasoningEffort;
 }): ReasoningEffort {
+  // UI/UX は xhigh (PO 指示 2026-07-08、ラダー未改定の task-kind 例外)。
   if (input.intent === "uiux") return "xhigh";
-  // luna (実装/doc修正 主力) は effort=high 基準 (PO 指示 2026-07-14、worker middle 既定の上書き)。
-  if (input.model === MODEL_IDS.codex.luna) return "high";
-  // ワーカー帯 (テスト実装/軽量、spark/mini 含む) の既定 effort は middle (PO 指示 2026-07-08)。
-  if (input.model === MODEL_IDS.codex.mini || input.model === MODEL_IDS.codex.spark) {
-    return "middle";
-  }
-  if (input.intent === "review") {
-    return input.provider === "codex" ? "xhigh" : "high";
-  }
+  // モデル別 effort 基準ラダー (PO 指示 2026-07-14) が最優先の既定。
+  const ladder = MODEL_EFFORT_LADDER[input.model];
+  if (ladder) return ladder.base;
+  // ラダー外 (haiku / local / custom) は従来既定。
+  if (input.intent === "review") return "high";
   if (input.intent === "design") return "high";
   if (input.difficulty === "critical") return "high";
   if (
