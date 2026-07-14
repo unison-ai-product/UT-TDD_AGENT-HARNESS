@@ -85,12 +85,57 @@ describe("PLAN reservation service", () => {
         ok: false,
         ruleId: "plan-id-reservation-command-conflict",
       });
+      keyRing.corruptRecovery = true;
+      expect(service.reserve(request)).toEqual({
+        ok: false,
+        ruleId: "plan-id-reservation-token-mismatch",
+      });
+      keyRing.corruptRecovery = false;
       keyRing.availableVersions.clear();
       expect(service.reserve(request)).toEqual({
         ok: false,
         ruleId: "plan-id-reservation-key-unavailable",
       });
       expect(keyRing.issueCalls).toBe(1);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PA-043: hashes a raw release token before crossing the ledger boundary", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      migratePlanLedger(db);
+      db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(
+        "plan:a",
+        "2026-07-14T00:00:00Z",
+        "b".repeat(40),
+        "test",
+      );
+      const service = new ReservationService(
+        new PlanLedger(db),
+        new SequenceClock(["2026-07-14T00:00:00Z", "2026-07-14T00:30:00Z"]),
+        new FakeKeyRing(),
+      );
+      const lease = service.reserve({
+        reservationId: "reservation:a",
+        namespace: "PLAN-L7",
+        ordinal: 418,
+        assetId: "plan:a",
+        leaseMs: 3_600_000,
+        commandId: "command:a",
+      });
+      if (!lease.ok) throw new Error("reservation fixture must succeed");
+      expect(
+        service.release({
+          reservationId: "reservation:a",
+          leaseToken: lease.leaseToken,
+          commandId: "command:release",
+        }),
+      ).toMatchObject({ ok: true });
+      expect(
+        JSON.stringify(db.prepare("SELECT * FROM plan_id_reservation_events").all()),
+      ).not.toContain(lease.leaseToken);
     } finally {
       db.close();
     }
@@ -112,6 +157,7 @@ class FakeKeyRing implements LeaseTokenKeyRingPort {
   issueCalls = 0;
   readonly recoverVersions: string[] = [];
   readonly availableVersions = new Set(["v2"]);
+  corruptRecovery = false;
 
   issueMac(message: Uint8Array): LeaseTokenMac {
     this.issueCalls += 1;
@@ -120,7 +166,8 @@ class FakeKeyRing implements LeaseTokenKeyRingPort {
 
   recoverMac(keyVersion: string, message: Uint8Array): Uint8Array | null {
     this.recoverVersions.push(keyVersion);
-    return this.availableVersions.has(keyVersion) ? mac(keyVersion, message) : null;
+    if (!this.availableVersions.has(keyVersion)) return null;
+    return this.corruptRecovery ? mac("corrupt", message) : mac(keyVersion, message);
   }
 }
 

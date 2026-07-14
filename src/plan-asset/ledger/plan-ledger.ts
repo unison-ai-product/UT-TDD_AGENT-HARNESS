@@ -1,5 +1,9 @@
 import { timingSafeEqual } from "node:crypto";
 import type { HarnessDb } from "../../state-db/index.js";
+import type {
+  ReservationLedgerPort,
+  ReservationLedgerRecord,
+} from "../ports/reservation-ledger.js";
 import {
   AppendCommandTransaction,
   type AppendResult,
@@ -22,25 +26,13 @@ interface ReserveInput {
   readonly expiresAt: string;
 }
 
-export interface ReservationLedgerRecord {
-  readonly reservationId: string;
-  readonly namespace: string;
-  readonly ordinal: number;
-  readonly assetId: string;
-  readonly leaseKeyVersion: string;
-  readonly leaseTokenHash: string;
-  readonly commandId: string;
-  readonly occurredAt: string;
-  readonly expiresAt: string;
-}
-
 interface CloseInput {
   readonly reservationId: string;
   readonly commandId: string;
   readonly occurredAt: string;
 }
 
-export class PlanLedger {
+export class PlanLedger implements ReservationLedgerPort {
   private readonly appendCommands: AppendCommandTransaction;
 
   constructor(

@@ -1,7 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { PlanLedger, ReservationLedgerRecord } from "../ledger/plan-ledger.js";
 import type { ClockPort } from "../ports/clock.js";
 import type { LeaseTokenKeyRingPort } from "../ports/lease-token-key-ring.js";
+import type {
+  ReservationLedgerPort,
+  ReservationLedgerRecord,
+} from "../ports/reservation-ledger.js";
 
 export interface ReserveRequest {
   readonly reservationId: string;
@@ -27,7 +30,7 @@ export type ReservationLease =
 
 export class ReservationService {
   constructor(
-    private readonly ledger: PlanLedger,
+    private readonly ledger: ReservationLedgerPort,
     private readonly clock: ClockPort,
     private readonly keyRing: LeaseTokenKeyRingPort,
   ) {}
