@@ -4,7 +4,7 @@ title: "PLAN-L7-430 (retrofit): task-kind ベース model routing v2 — Luna �
 kind: retrofit
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: dependency_outdated
 route_mode: retrofit
 backprop_decision: not_required
@@ -23,6 +23,10 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: src/team/model-policy.ts
     artifact_type: source_module
+  - artifact_path: src/schema/team.ts
+    artifact_type: source_module
+  - artifact_path: src/team/run.ts
+    artifact_type: source_module
   - artifact_path: src/team/advisor-policy.ts
     artifact_type: source_module
   - artifact_path: src/task/tier-router-policy.ts
@@ -30,6 +34,10 @@ generates:
   - artifact_path: src/state-db/token-tracker.ts
     artifact_type: source_module
   - artifact_path: tests/team-model-policy.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/team-run.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/team-launch-policy.test.ts
     artifact_type: test_code
   - artifact_path: tests/tier-router.test.ts
     artifact_type: test_code
@@ -46,7 +54,25 @@ dependencies:
     - src/task/tier-router-policy.ts
     - .ut-tdd/memory/project-fable-5-7-13-rate-limit.md
     - .ut-tdd/memory/feedback-gpt-5-6-effort-crossover-tendency-h4.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-claim-blind-lane
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-14T19:15:00+09:00"
+    verdict: approve
+    scope: "structured intent の strict schema→team run→model selection 配線、task-kind 優先、複合文・日本語分類、effort ladder を独立再検証。未反証 attack 0。"
+    green_commands:
+      - kind: unit_test
+        command: "bun run scripts/run-vitest-snapshot.ts tests/team-model-policy.test.ts tests/tier-router.test.ts tests/token-tracker.test.ts tests/team-launch-policy.test.ts tests/team-run.test.ts tests/model-id-ssot.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-14T19:15:00+09:00"
+        anchor_commit: afd7e417
+  - reviewer: codex-spec-blind-lane
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-14T19:08:00+09:00"
+    verdict: approve
+    scope: "invalid/unknown intent の fail-close、leading action、docs 対象 action、team-run 回帰を再検証。未反証 attack 0。"
 ---
 
 # PLAN-L7-430 (retrofit): task-kind ベース model routing v2
@@ -134,10 +160,11 @@ difficulty由来のmodel family、engine familyより優先する。critical/com
 6. `OPENAI_PRICING` に luna 公式単価 ($1 / cached $0.1 / $6 per 1M、2026-07-09 GA) を追加。
 7. `CLAUDE.md` / `AGENTS.md` の Model / Effort Routing 節を同一内容で更新 (adapter parity)。
 8. tests: team-model-policy / tier-router / token-tracker ほか影響テストの期待値更新 + 新割当の正例・effort 上書きの回帰を追加。
+9. team定義の構造化`intent`を strict schema として受理し、`buildTeamRunPlan`から model policy まで配線する。自然言語推論は未指定時のfallbackに限定する。
 
 ## AC
 
-- [ ] 上表の全割当が `selectTeamModel` / `resolveModel` / `buildAdvisorDecision` の単体テストで固定されている (機械 oracle、prose 主張なし)。
-- [ ] luna effort=high 上書きと worker middle 既定の共存がテストで固定されている。
-- [ ] advisor: uiux 判断が Fable 一次 + Sol fallback、design/implementation/troubleshooting が Sol 一次であることがテストで固定されている。
-- [ ] typecheck / 影響テスト / plan lint green。CLAUDE.md ↔ AGENTS.md の routing 記述が一致。
+- [x] 上表の全割当が `selectTeamModel` / `resolveModel` / `buildAdvisorDecision` の単体テストで固定されている (機械 oracle、prose 主張なし)。
+- [x] luna effort=high 上書きと worker middle 既定の共存がテストで固定されている。
+- [x] advisor: uiux 判断が Fable 一次 + Sol fallback、design/implementation/troubleshooting が Sol 一次であることがテストで固定されている。
+- [x] typecheck / 影響テスト / plan lint green。CLAUDE.md ↔ AGENTS.md の routing 記述が一致。
