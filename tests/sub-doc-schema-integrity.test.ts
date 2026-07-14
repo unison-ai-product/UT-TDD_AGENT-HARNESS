@@ -14,6 +14,7 @@ import {
   subDocSchemaIntegrityMessages,
 } from "../src/lint/sub-doc-schema-integrity";
 import { VALID_SUB_DOCS } from "../src/schema/index";
+import { headSnapshotRoot } from "./support/workspace-roots";
 
 const SCHEMA = {
   L6: ["function-spec", "class-design", "edge-case", "screen-spec"],
@@ -216,12 +217,12 @@ describe("subDocSchemaIntegrityMessages (U-SDSI-015..016)", () => {
 
 describe("loadSubDocSchemaIntegrityInput real repo (U-SDSI-017..019)", () => {
   it("U-SDSI-017: 実 repo の schema は src/schema の VALID_SUB_DOCS と一致 (正本 single source)", () => {
-    const input = loadSubDocSchemaIntegrityInput(process.cwd());
+    const input = loadSubDocSchemaIntegrityInput(headSnapshotRoot());
     expect(input.schema).toBe(VALID_SUB_DOCS);
   });
 
   it("U-SDSI-018: 実 repo の docs/design/harness 全設計 doc で drift 0 (2026-07-13 cluster A 18 件の回帰網)", () => {
-    const input = loadSubDocSchemaIntegrityInput(process.cwd());
+    const input = loadSubDocSchemaIntegrityInput(headSnapshotRoot());
     const r = analyzeSubDocSchemaIntegrity(input);
     if (!r.ok) {
       throw new Error(subDocSchemaIntegrityMessages(r).join("\n"));
@@ -231,7 +232,7 @@ describe("loadSubDocSchemaIntegrityInput real repo (U-SDSI-017..019)", () => {
   });
 
   it("U-SDSI-019: L6-function-design 配下の旧 bespoke sub_doc (skill-index 等) は現在 function-spec に統一されている", () => {
-    const input = loadSubDocSchemaIntegrityInput(process.cwd());
+    const input = loadSubDocSchemaIntegrityInput(headSnapshotRoot());
     const targets = [
       "docs/design/harness/L6-function-design/agent-slots.md",
       "docs/design/harness/L6-function-design/skill-index.md",

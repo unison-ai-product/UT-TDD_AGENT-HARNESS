@@ -49,6 +49,7 @@ for (const [path, calls] of Object.entries({
   "tests/model-id-ssot-drift.test.ts": 1,
   "tests/model-id-ssot.test.ts": 1,
   "tests/plan-id-naming.test.ts": 1,
+  "tests/sub-doc-schema-integrity.test.ts": 3,
 }))
   repositoryReadContracts[path] = {
     mode: "head_snapshot",
