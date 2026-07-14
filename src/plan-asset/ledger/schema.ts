@@ -17,7 +17,7 @@ import {
 } from "../../schema/harness-db-table-builders.js";
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
 
-export const LEDGER_SCHEMA_VERSION = 2;
+export const LEDGER_SCHEMA_VERSION = 3;
 
 function migrationTargetCheck() {
   return {
@@ -136,6 +136,7 @@ const tables: readonly TableDef[] = [
       requiredCol("namespace"),
       requiredCol("ordinal", "INTEGER"),
       requiredCol("asset_id"),
+      requiredCol("lease_key_version"),
       requiredCol("lease_token_hash"),
       requiredCol("occurred_at"),
       col("expires_at"),
@@ -158,6 +159,7 @@ const tables: readonly TableDef[] = [
       requiredCol("namespace"),
       requiredCol("ordinal", "INTEGER"),
       requiredCol("asset_id"),
+      requiredCol("lease_key_version"),
       requiredCol("lease_token_hash"),
       requiredCol("status"),
       requiredCol("reserved_at"),
@@ -434,8 +436,11 @@ export function migratePlanLedger(
   db: HarnessDb,
 ): { ok: true; version: number } | { ok: false; ruleId: "plan-ledger-unavailable" } {
   const version = db.userVersion();
-  if (version !== 0 && version !== LEDGER_SCHEMA_VERSION)
+  if (version !== 0 && version !== 2 && version !== LEDGER_SCHEMA_VERSION)
     return { ok: false, ruleId: "plan-ledger-unavailable" };
+  if (version === 2 && !migrateV2ToV3(db)) {
+    return { ok: false, ruleId: "plan-ledger-unavailable" };
+  }
   if (version === 0) {
     if (schemaObjects(db).length > 0) return { ok: false, ruleId: "plan-ledger-unavailable" };
     db.exec("BEGIN IMMEDIATE");
@@ -451,6 +456,57 @@ export function migratePlanLedger(
   return schemaMatches(db) && ledgerRowsValid(db)
     ? { ok: true, version: LEDGER_SCHEMA_VERSION }
     : { ok: false, ruleId: "plan-ledger-unavailable" };
+}
+
+function migrateV2ToV3(db: HarnessDb): boolean {
+  if (!legacyV2ReservationSchemaValid(db) || reservationRowCount(db) !== 0) return false;
+  const reservationTables = new Set(["plan_id_reservation_events", "plan_id_reservations"]);
+  const reservationIndexes = indexes.filter((index) => reservationTables.has(index.table));
+  const reservationTriggers = triggers.filter((trigger) => reservationTables.has(trigger.table));
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const trigger of reservationTriggers) db.exec(`DROP TRIGGER ${trigger.name}`);
+    for (const index of reservationIndexes) db.exec(`DROP INDEX ${index.name}`);
+    db.exec("ALTER TABLE plan_id_reservation_events RENAME TO plan_id_reservation_events_v2");
+    db.exec("ALTER TABLE plan_id_reservations RENAME TO plan_id_reservations_v2");
+    for (const table of tables.filter((candidate) => reservationTables.has(candidate.name))) {
+      db.exec(createTableSql(table));
+    }
+    db.exec("DROP TABLE plan_id_reservations_v2");
+    db.exec("DROP TABLE plan_id_reservation_events_v2");
+    for (const index of reservationIndexes) db.exec(createIndexSql(index));
+    for (const trigger of reservationTriggers) db.exec(createTriggerSql(trigger));
+    db.setUserVersion(LEDGER_SCHEMA_VERSION);
+    if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v3-verification-failed");
+    db.exec("COMMIT");
+    return true;
+  } catch {
+    db.exec("ROLLBACK");
+    return false;
+  }
+}
+
+function legacyV2ReservationSchemaValid(db: HarnessDb): boolean {
+  const actual = new Map(
+    schemaObjects(db).map((row) => [`${row.type}:${row.name}`, normalizeDdl(row.sql)]),
+  );
+  for (const name of ["plan_id_reservation_events", "plan_id_reservations"]) {
+    const table = tables.find((candidate) => candidate.name === name);
+    if (!table) return false;
+    const expected = normalizeDdl(
+      createTableSql(table).replace(/lease_key_version TEXT NOT NULL,\s*/g, ""),
+    );
+    if (actual.get(`table:${name}`) !== expected) return false;
+  }
+  return true;
+}
+
+function reservationRowCount(db: HarnessDb): number {
+  return ["plan_id_reservation_events", "plan_id_reservations"].reduce(
+    (total, table) =>
+      total + Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n ?? 0),
+    0,
+  );
 }
 
 export function ledgerRowDigest(
@@ -629,6 +685,7 @@ function reservationReductionsValid(db: HarnessDb): boolean {
           "namespace",
           "ordinal",
           "asset_id",
+          "lease_key_version",
           "lease_token_hash",
         ])
       )
@@ -640,6 +697,7 @@ function reservationReductionsValid(db: HarnessDb): boolean {
             "namespace",
             "ordinal",
             "asset_id",
+            "lease_key_version",
             "lease_token_hash",
           ]),
         )

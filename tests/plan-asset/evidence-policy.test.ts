@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { EvidencePolicy } from "../../src/plan-asset/domain/evidence-policy.js";
 import {
   createRedactedCommandArgs,
   EvidenceRecord,
 } from "../../src/plan-asset/domain/evidence-record.js";
-import { EvidencePolicy } from "../../src/plan-asset/domain/evidence-policy.js";
 
 const digest = "a".repeat(64);
 const commit = "b".repeat(40);
@@ -42,10 +42,10 @@ describe("PLAN Asset evidence policy", () => {
 
     expect(
       policy.value.evaluate([wrongKind, expired, gate, eligible], {
-      subjectId: "plan:a",
-      subjectRevision: 1,
-      sourceCommit: commit,
-      now: "2026-07-14T01:00:00Z",
+        subjectId: "plan:a",
+        subjectRevision: 1,
+        sourceCommit: commit,
+        now: "2026-07-14T01:00:00Z",
       }),
     ).toEqual({
       usable: true,
@@ -96,9 +96,9 @@ describe("PLAN Asset evidence policy", () => {
     );
     expect(EvidenceRecord.create({ ...base, evidenceKind: "unknown" as never }).ok).toBe(false);
     expect(EvidenceRecord.create({ ...base, producer: "unknown" as never }).ok).toBe(false);
-    expect(
-      EvidenceRecord.create({ ...base, supersedesEvidenceId: base.evidenceId }).ok,
-    ).toBe(false);
+    expect(EvidenceRecord.create({ ...base, supersedesEvidenceId: base.evidenceId }).ok).toBe(
+      false,
+    );
 
     const created = EvidenceRecord.create(base);
     if (!created.ok) throw new Error("evidence fixture must be valid");

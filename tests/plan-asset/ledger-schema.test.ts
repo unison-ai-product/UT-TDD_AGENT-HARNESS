@@ -477,7 +477,5 @@ function restoreTrigger(db: ReturnType<typeof openHarnessDb>, name: string): voi
 }
 
 function legacyV2Ddl(): readonly string[] {
-  return ledgerSchemaDdl().map((sql) =>
-    sql.replace(/lease_key_version TEXT NOT NULL,\s*/g, ""),
-  );
+  return ledgerSchemaDdl().map((sql) => sql.replace(/lease_key_version TEXT NOT NULL,\s*/g, ""));
 }

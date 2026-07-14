@@ -1,6 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
 import type { HarnessDb } from "../../state-db/index.js";
-import { AppendCommandTransaction, type AppendResult } from "./append-command.js";
+import {
+  AppendCommandTransaction,
+  type AppendResult,
+  type LedgerFaultPort,
+} from "./append-command.js";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
 import type { LedgerTransactionPort } from "./transaction.js";
 
@@ -11,6 +15,19 @@ interface ReserveInput {
   readonly namespace: string;
   readonly ordinal: number;
   readonly assetId: string;
+  readonly leaseKeyVersion: string;
+  readonly leaseTokenHash: string;
+  readonly commandId: string;
+  readonly occurredAt: string;
+  readonly expiresAt: string;
+}
+
+export interface ReservationLedgerRecord {
+  readonly reservationId: string;
+  readonly namespace: string;
+  readonly ordinal: number;
+  readonly assetId: string;
+  readonly leaseKeyVersion: string;
   readonly leaseTokenHash: string;
   readonly commandId: string;
   readonly occurredAt: string;
@@ -29,9 +46,43 @@ export class PlanLedger {
   constructor(
     private readonly db: HarnessDb,
     transactionPort?: LedgerTransactionPort,
+    private readonly fault?: LedgerFaultPort,
   ) {
     if (!migratePlanLedger(db).ok) throw new Error("plan-ledger-unavailable");
-    this.appendCommands = new AppendCommandTransaction(db, transactionPort);
+    this.appendCommands = new AppendCommandTransaction(db, transactionPort, fault);
+  }
+
+  findReserveByCommand(commandId: string): ReservationLedgerRecord | null {
+    if (!migratePlanLedger(this.db).ok) return null;
+    const row = this.db
+      .prepare(
+        `SELECT event.reservation_id, event.namespace, event.ordinal, event.asset_id,
+                event.lease_key_version, event.lease_token_hash, event.command_id,
+                event.occurred_at, event.expires_at
+           FROM plan_id_reservation_events event
+           JOIN append_command_receipts receipt
+             ON receipt.command_id = event.command_id
+            AND receipt.result_ref = event.reservation_event_id
+          WHERE event.command_id = ?
+            AND event.event_kind = 'reserved'
+            AND receipt.command_type = 'reservation.reserve'
+            AND receipt.subject_kind = 'reservation'
+            AND receipt.subject_key = event.reservation_id
+            AND receipt.result_kind = 'reservation_event'`,
+      )
+      .get(commandId);
+    if (!row) return null;
+    return Object.freeze({
+      reservationId: String(row.reservation_id),
+      namespace: String(row.namespace),
+      ordinal: Number(row.ordinal),
+      assetId: String(row.asset_id),
+      leaseKeyVersion: String(row.lease_key_version),
+      leaseTokenHash: String(row.lease_token_hash),
+      commandId: String(row.command_id),
+      occurredAt: String(row.occurred_at),
+      expiresAt: String(row.expires_at),
+    });
   }
 
   reconstruct(reservationId: string):
@@ -80,13 +131,20 @@ export class PlanLedger {
           commandPayloadDigest: payloadDigest,
         });
         this.insertReservationEvent(event);
+        this.fault?.after("reservation-event");
         this.db
-          .prepare("INSERT INTO plan_id_reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+          .prepare(
+            `INSERT INTO plan_id_reservations
+              (reservation_id, namespace, ordinal, asset_id, lease_key_version,
+               lease_token_hash, status, reserved_at, expires_at, closed_at, last_event_digest)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
           .run(
             input.reservationId,
             input.namespace,
             input.ordinal,
             input.assetId,
+            input.leaseKeyVersion,
             input.leaseTokenHash,
             "active",
             input.occurredAt,
@@ -94,6 +152,7 @@ export class PlanLedger {
             null,
             event.event_digest,
           );
+        this.fault?.after("reservation-current");
         return succeeded(String(event.reservation_event_id));
       },
     });
@@ -153,6 +212,7 @@ export class PlanLedger {
           namespace: String(current.namespace),
           ordinal: Number(current.ordinal),
           assetId: String(current.asset_id),
+          leaseKeyVersion: String(current.lease_key_version),
           leaseTokenHash: String(current.lease_token_hash),
           commandId: input.commandId,
           occurredAt: input.occurredAt,
@@ -167,6 +227,7 @@ export class PlanLedger {
             "UPDATE plan_id_reservations SET status = ?, closed_at = ?, last_event_digest = ? WHERE reservation_id = ?",
           )
           .run(eventKind, input.occurredAt, event.event_digest, input.reservationId);
+        this.fault?.after("reservation-current");
         return succeeded(String(event.reservation_event_id));
       },
     });
@@ -198,7 +259,11 @@ export class PlanLedger {
   private insertReservationEvent(event: Readonly<Record<string, unknown>>): void {
     this.db
       .prepare(
-        "INSERT INTO plan_id_reservation_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        `INSERT INTO plan_id_reservation_events
+          (reservation_event_id, reservation_id, sequence, command_id,
+           command_payload_digest, event_kind, namespace, ordinal, asset_id,
+           lease_key_version, lease_token_hash, occurred_at, expires_at, event_digest)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(...Object.values(event));
   }
@@ -244,6 +309,7 @@ function reservationEvent(
     namespace: input.namespace,
     ordinal: input.ordinal,
     asset_id: input.assetId,
+    lease_key_version: input.leaseKeyVersion,
     lease_token_hash: input.leaseTokenHash,
     occurred_at: input.occurredAt,
     expires_at: input.expiresAt,
@@ -271,6 +337,7 @@ function validReserveInput(input: ReserveInput): boolean {
     Boolean(input.namespace.trim()) &&
     Number.isSafeInteger(input.ordinal) &&
     input.ordinal > 0 &&
+    /^[A-Za-z0-9_-]+$/.test(input.leaseKeyVersion) &&
     /^[a-f0-9]{64}$/.test(input.leaseTokenHash) &&
     Number.isFinite(Date.parse(input.occurredAt)) &&
     Number.isFinite(Date.parse(input.expiresAt)) &&

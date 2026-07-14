@@ -1,13 +1,13 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { ReservationService } from "../../src/plan-asset/application/reservation-service.js";
+import { PlanLedger } from "../../src/plan-asset/ledger/plan-ledger.js";
+import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import type { ClockPort } from "../../src/plan-asset/ports/clock.js";
 import type {
   LeaseTokenKeyRingPort,
   LeaseTokenMac,
 } from "../../src/plan-asset/ports/lease-token-key-ring.js";
-import { PlanLedger } from "../../src/plan-asset/ledger/plan-ledger.js";
-import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../../src/state-db/index.js";
 
 describe("PLAN reservation service", () => {
