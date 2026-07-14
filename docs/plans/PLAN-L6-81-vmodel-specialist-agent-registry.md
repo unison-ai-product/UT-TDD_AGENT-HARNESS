@@ -128,6 +128,81 @@ document-first + machine enforcement の原則どおり、標準割当は読解�
    model と標準期待 (`STANDARD_ORCHESTRATION_EXPECTATION`) の比較 + advisor 多用推奨」を
    1 行 surface する (下回りの自覚を毎セッション自動注入)。
 
+## 7. 実装契約 (L7 へ渡す確定設計、2026-07-14 設計確定)
+
+### 7.1 registry schema (`.ut-tdd/agents/<agent-id>.yaml`)
+
+```yaml
+agent_id: l7-test-implementer        # kebab-case、ファイル名と一致 (unique)
+layer: L7                            # L0-L14
+drive: agent                         # 既存 drive taxonomy (5 種) の値のみ
+task_kind: test                      # model-policy TASK_INTENTS の値のみ
+runtime: both                        # claude | codex | both — 射影先
+purpose: "凍結 test-design から red テストを実装する"
+prompt: |                            # runtime 中立の system prompt 本文
+  ...
+context_pack:                        # 注入スコープ宣言 (L7-302 tier selector)
+  include:
+    - docs/test-design/harness/L7-unit-test-design.md#<対象節>
+    - "target_module_contracts"      # 動的 selector (実装時に解決)
+  exclude_defaults: true             # governance 全文等の既定除外
+skills: [test]                       # skills/ の skill 名 allowlist
+blind: false                         # true = 作成側文脈の注入禁止 (blind-review 隊)
+generates: [tests/]                  # 出せる成果物 prefix
+forbidden_paths: [src/, docs/design/]
+max_turns: 20
+```
+
+- **model / effort は書かない** (禁止 field)。射影時に `selectTeamModel` +
+  `MODEL_EFFORT_LADDER` が task_kind から解決する。lint で直書きを fail-close。
+- schema 検証は zod (`src/schema/agent-registry.ts` 新設)。unknown field は error。
+
+### 7.2 生成 (射影) contract — `ut-tdd agents sync`
+
+- 入力: `.ut-tdd/agents/*.yaml` 全件。出力: `.claude/agents/<id>.md` (frontmatter =
+  name/description/tools/model/effort/memory/maxTurns + prompt 本文) と `.codex/agents`
+  (PLAN-L7-426 の生成経路へ接続)。
+- 生成物先頭に `<!-- generated from .ut-tdd/agents/<id>.yaml — DO NOT EDIT -->` marker。
+- `--check` モード: 生成せず drift 検出のみ (CI/doctor 用)。doctor gate
+  `agent-registry-drift` は marker 欠落 / 内容不一致 / registry に無い生成物残留で
+  fail-close。手書き agent の暫定共存は `legacy_agent_allowlist` (縮小専用) で管理し、
+  移行完了で空にする。
+
+### 7.3 guard 拡張 contract (agent-guard)
+
+- 入力 stdin の `subagent_type` を registry の `agent_id` へ解決し、(a) model が
+  task_kind の標準割当 family を下回る場合 block (現行 floor 検査の上位互換)、
+  (b) `blind: true` の agent への prompt に作成側文脈 marker (`author_claims` 等の
+  packet field) が含まれる場合 block。
+- registry 不在 agent は従来 allowlist へ fallback (移行期)、allowlist にも無ければ
+  従来どおり block。
+
+### 7.4 SessionStart digest 追記 contract
+
+- digest 末尾に 1 行: `orchestration: model=<current> phase=<inferred> expected=<expected>
+  advisor_heavy_use=<bool>` (`STANDARD_ORCHESTRATION_EXPECTATION` /
+  `advisorHeavyUseRecommended` を使用)。
+
+### 7.5 L7 oracle 一覧 (test design へ同期する骨子、U-AGREG-001..)
+
+| ID | oracle |
+|---|---|
+| U-AGREG-001 | schema: 正例 yaml が parse され、unknown field / model 直書きが reject |
+| U-AGREG-002 | sync: yaml→claude md 生成が決定的 (同一入力→同一出力、marker 付与) |
+| U-AGREG-003 | drift: 生成物の手編集 / registry 外残留 / marker 欠落で doctor fail-close |
+| U-AGREG-004 | guard: task_kind 標準割当を下回る model 指定の Agent 呼び出しが block |
+| U-AGREG-005 | blind: blind=true agent への author_claims 注入が block (負例) |
+| U-AGREG-006 | 帰責: (設計blind FLAG / 凍結テスト red+テストblind PASS / テストblind FLAG) の 3 パターンが findings に帰責ラベル付きで記録される |
+| U-AGREG-007 | skill 連動: agent の skills allowlist と skill セレクタの交差のみ注入される |
+| U-AGREG-008 | 移行: legacy_agent_allowlist が縮小専用 (追加で lint fail) |
+
+### 7.6 実装分割 (Codex への委譲単位)
+
+1. **L7-431 (add-impl + REVERSE pair)**: schema + sync + drift gate (U-AGREG-001..003, 008)
+2. **L7-432 (add-impl + REVERSE pair)**: guard 拡張 + SessionStart digest (U-AGREG-004..005 + digest)
+3. **L7-433 (add-impl + REVERSE pair)**: blind 隊 packet / 帰責記録 / skill 連動 (U-AGREG-006..007、L6-53 の判定規約と接続)
+4. 既存 32 agent (.claude/agents 20 + global 12) の registry 移行は 1 の後に機械変換 + 個別レビューで実施。
+
 ## AC (L7 実装 PLAN へ引き継ぐ受入条件の骨子)
 
 - [ ] registry schema (layer/drive/task_kind/context_pack/skills/blind/generates) が
