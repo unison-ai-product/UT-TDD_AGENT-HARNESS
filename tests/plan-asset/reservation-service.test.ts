@@ -37,6 +37,9 @@ describe("PLAN reservation service", () => {
     const keyRing = new HmacLeaseTokenKeyRing("v2", [
       { version: "v2", secret: Buffer.alloc(32, 0x0b) },
     ]);
+    expect(Object.getOwnPropertyNames(keyRing)).not.toEqual(
+      expect.arrayContaining(["keys", "currentVersion"]),
+    );
     expect(Buffer.from(keyRing.issueMac(message).mac).toString("hex")).toBe(
       "487c01a611e5644dca7e5cf7b0e02cd7cf974c320e60bcbaabb816930eafdb2b",
     );

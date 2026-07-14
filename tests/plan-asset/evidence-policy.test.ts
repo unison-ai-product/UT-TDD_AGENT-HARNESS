@@ -115,6 +115,10 @@ describe("PLAN Asset evidence policy", () => {
       "-H",
       "Authorization: Bearer TOPSECRET4",
       "https://user:TOPSECRET5@example.test/path",
+      "-H",
+      "Cookie: session=TOPSECRET6",
+      "--header",
+      "Set-Cookie: refresh=TOPSECRET7",
     ]);
     expect(JSON.stringify(compoundSecrets)).not.toContain("TOPSECRET");
     expect(
@@ -161,6 +165,31 @@ describe("PLAN Asset evidence policy", () => {
         expect(reconstructed.error.ruleId).toBe("evidence-record-digest-mismatch");
       }
     }
+  });
+
+  it("U-PA-046: deep-freezes validated policy rules", () => {
+    const exitRule = { kind: "exact" as const, expected: 0 };
+    const claimsRule = { kind: "recorded" as const };
+    const created = EvidencePolicy.create({
+      policyId: "immutable/v1",
+      revision: 1,
+      requirements: [
+        {
+          requirementId: "immutable-green",
+          requiredKind: "green-test-run",
+          minCount: 1,
+          acceptedProducers: ["ci"],
+          exitRule,
+          claimsRule,
+        },
+      ],
+    });
+    if (!created.ok) throw new Error("policy fixture must be valid");
+
+    expect(Object.isFrozen(created.value.requirements[0]?.exitRule)).toBe(true);
+    expect(Object.isFrozen(created.value.requirements[0]?.claimsRule)).toBe(true);
+    exitRule.expected = 1;
+    expect(created.value.requirements[0]?.exitRule).toEqual({ kind: "exact", expected: 0 });
   });
 
   it("U-PA-046: rejects negative claims and causally reversed supersession", () => {
