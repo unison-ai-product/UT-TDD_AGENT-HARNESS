@@ -309,14 +309,49 @@ describe("github-ci-policy lint", () => {
       file: ".github/workflows/harness-check.yml",
       profile: "source",
       reason: "incomplete_pull_request_types",
-      detail: "pull_request.types must include opened,synchronize,ready_for_review",
+      detail: "pull_request.types must include opened,synchronize,reopened,ready_for_review",
     });
 
     const complete = SOURCE_WORKFLOW.replace(
       "  pull_request:",
-      "  pull_request:\n    types: [opened, synchronize, ready_for_review]",
+      "  pull_request:\n    types: [opened, synchronize, reopened, ready_for_review]",
     );
     expect(analyzeGithubCiPolicy(docs(complete)).ok).toBe(true);
+  });
+
+  it("U-CIPOL-009: rejects unknown, duplicate, and non-string activity types", () => {
+    const unknown = SOURCE_WORKFLOW.replace(
+      "  pull_request:",
+      "  pull_request:\n    types: [opened, synchronize, reopened, ready_for_review, banana]",
+    );
+    expect(analyzeGithubCiPolicy(docs(unknown)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "unsupported_pull_request_type",
+      detail: "unknown=banana",
+    });
+
+    const duplicate = SOURCE_WORKFLOW.replace(
+      "  pull_request:",
+      "  pull_request:\n    types: [opened, opened, synchronize, reopened, ready_for_review]",
+    );
+    expect(analyzeGithubCiPolicy(docs(duplicate)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "unsupported_pull_request_type",
+      detail: "duplicate=opened",
+    });
+
+    const nonString = SOURCE_WORKFLOW.replace(
+      "  pull_request:",
+      "  pull_request:\n    types: [opened, 1]",
+    );
+    expect(analyzeGithubCiPolicy(docs(nonString)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "malformed_trigger_shape",
+      detail: "pull_request.types must be a string or string array",
+    });
   });
 
   it("rejects duplicate workflow roles in direct analyzer inputs", () => {

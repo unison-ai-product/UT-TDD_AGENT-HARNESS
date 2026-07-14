@@ -53,7 +53,7 @@ dependencies:
 2. Pack template `docs/templates/github/common/pack-harness-check.yml` と setup builtin を
    source templateとともに同一契約へ更新し、4 artifactをdetector入力にする。
 3. `github-ci-policy` detector: 「pull_request trigger が base 限定されている」状態を
-   violation としてfail-closeし、不正trigger型、workflow-level path filter、不完全activity
+   violation としてfail-closeし、不正trigger型、workflow-level path filter、不完全/未知activity
    types、push main限定欠落も拒否する。
 4. add-impl ペア: `PLAN-REVERSE-434-universal-pr-trigger-backfill` を併起票し、
    requirements §7.5-7.6 / L6-82 への backfill を R0-R4 で閉じる。
@@ -67,5 +67,6 @@ dependencies:
 - [x] 不正`pull_request`型とpush main限定欠落が U-CIPOL-004/005 で red になる。
 - [x] source template / setup builtinをprofile重複で捨てないことを U-CIPOL-006 で固定する。
 - [x] workflow-level path filterと不完全activity typesを U-CIPOL-007/008 でredにする。
+- [x] 未知・非文字列・重複activity typesを U-CIPOL-009 でredにする。
 - [x] source workflow / source template / Pack template / setup builtinがbase無限定triggerへ同期される。
 - [x] job / required context 名 `harness-check` は不変である。

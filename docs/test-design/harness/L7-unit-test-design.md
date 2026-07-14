@@ -1414,7 +1414,8 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `U-CIPOL-005` | push main限定の構造検査 | push欠落+無関係fieldの`main`、別branch、`branches-ignore` | 欠落=`missing_trigger`、不正形=`invalid_push_main_trigger` |
 | `U-CIPOL-006` | 4 artifact入力 | source templateとsetup builtinを個別mutation | profile重複でdropせず、変異したartifact path自身のfinding |
 | `U-CIPOL-007` | workflow path filter禁止 | PR=`paths`、push=`paths-ignore`を各mutation | 両方`filtered_trigger`。Required checkをskip/pending化する経路0 |
-| `U-CIPOL-008` | activity types完全性 | `types=[opened]` / `types=[opened,synchronize,ready_for_review]` | 前者=`incomplete_pull_request_types`、後者Green。bare triggerもGreen |
+| `U-CIPOL-008` | activity types完全性 | `types=[opened]` / `types=[opened,synchronize,reopened,ready_for_review]` | 前者=`incomplete_pull_request_types`、後者Green。bare triggerもGreen |
+| `U-CIPOL-009` | activity vocabulary | 未知`banana` / 重複`opened` / 非文字列を各mutation | 未知・重複=`unsupported_pull_request_type`、非文字列=`malformed_trigger_shape` |
 | `U-SETUP-004b2` | setup builtin同期 | built-in `common/harness-check.yml` | `pull_request`あり、直下の`branches` / `branches-ignore`なし。既存guard強度も維持 |
 
 `pull_request`を単に含む文字列検査だけではGreenにしない。YAML構造でbase filter不在を検査し、

@@ -21,6 +21,7 @@ export interface GithubCiPolicyViolation {
     | "invalid_push_main_trigger"
     | "filtered_trigger"
     | "incomplete_pull_request_types"
+    | "unsupported_pull_request_type"
     | "duplicate_workflow_role"
     | "main_limited_pr_trigger"
     | "missing_permission"
@@ -75,7 +76,36 @@ interface GithubCiProfileSpec {
   forbiddenSteps: readonly ForbiddenStepSpec[];
 }
 
-const REQUIRED_PULL_REQUEST_TYPES = ["opened", "synchronize", "ready_for_review"] as const;
+const REQUIRED_PULL_REQUEST_TYPES = [
+  "opened",
+  "synchronize",
+  "reopened",
+  "ready_for_review",
+] as const;
+
+const PULL_REQUEST_ACTIVITY_TYPES = new Set([
+  "assigned",
+  "unassigned",
+  "labeled",
+  "unlabeled",
+  "opened",
+  "edited",
+  "closed",
+  "reopened",
+  "synchronize",
+  "converted_to_draft",
+  "locked",
+  "unlocked",
+  "enqueued",
+  "dequeued",
+  "milestoned",
+  "demilestoned",
+  "ready_for_review",
+  "review_requested",
+  "review_request_removed",
+  "auto_merge_enabled",
+  "auto_merge_disabled",
+]);
 
 const SOURCE_REQUIRED_STEPS = [
   { label: "checkout@v5", any: ["actions/checkout@v5"] },
@@ -283,7 +313,31 @@ function checkHarnessTriggers(input: {
   }
   if ("types" in pullRequestRecord) {
     const types = stringValues(pullRequestRecord.types);
-    if (!types || REQUIRED_PULL_REQUEST_TYPES.some((required) => !types.includes(required))) {
+    if (!types) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "malformed_trigger_shape",
+        detail: "pull_request.types must be a string or string array",
+      });
+      return;
+    }
+    const unknown = [...new Set(types.filter((type) => !PULL_REQUEST_ACTIVITY_TYPES.has(type)))];
+    const duplicate = [...new Set(types.filter((type, index) => types.indexOf(type) !== index))];
+    if (unknown.length > 0 || duplicate.length > 0) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "unsupported_pull_request_type",
+        detail: [
+          unknown.length > 0 ? `unknown=${unknown.sort().join(",")}` : "",
+          duplicate.length > 0 ? `duplicate=${duplicate.sort().join(",")}` : "",
+        ]
+          .filter(Boolean)
+          .join(";"),
+      });
+    }
+    if (REQUIRED_PULL_REQUEST_TYPES.some((required) => !types.includes(required))) {
       pushViolation({
         violations: input.violations,
         doc: input.doc,
