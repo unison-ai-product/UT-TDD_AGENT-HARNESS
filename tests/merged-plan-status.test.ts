@@ -109,9 +109,7 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
 
   it("does not flag a confirmed PLAN whose generated src is merged on the base ref", () => {
     const input = loadMergedPlanStatusInput(process.cwd());
-    const active = input.plans.find(
-      (plan) => plan.planId === "PLAN-L7-429-spec-ir-detector-scope",
-    );
+    const active = input.plans.find((plan) => plan.planId === "PLAN-L7-429-spec-ir-detector-scope");
     expect(active?.status).toBe("confirmed");
     expect(active?.mergedArtifacts).not.toEqual([]);
     expect(analyzeMergedPlanStatus(input).violations.map((item) => item.planId)).not.toContain(

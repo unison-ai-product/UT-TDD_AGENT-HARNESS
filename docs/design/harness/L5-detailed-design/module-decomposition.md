@@ -212,6 +212,7 @@ boundary rule: lint modules は first-class detector のままにする。DB lay
 | docs-governance | snapshot、materialized disposition、typed reference graph | pure validatorとapplication command | Git object、YAML shard、report writer |
 | semantic-assessment | assessment/evidence/debt route | pure evaluatorとrouteFiling port | catalog loader、projection writer |
 | self-proof | receipt/report/mutation corpus | classを使わずpure functionとports | process runner、hasher、receipt store |
+| projection-rebuild | immutable `ProjectionWrite` / `ProjectionFinding` とpure projector policy、rebuild application command、source/store/transaction port | aggregateではないapplication service。状態を持たず、write sessionへ順序付きwrite列を渡す | repository source bundle、SQLite projection store、CLI/doctor composition root |
 
 ### C.1.1 package / public API / 移行wave
 
@@ -228,6 +229,7 @@ boundary rule: lint modules は first-class detector のままにする。DB lay
 | W3 | `src/document-governance/*` | snapshot/materialize/validate/reference closure | 現行relation graphをoracleにせず、必要edgeだけ互換export |
 | W3 | `src/semantic-assessment/*` | `evaluateSemanticItem`, `routeAssessmentDebt` | routeFiling portへ委譲しlocal heuristicを禁止 |
 | W4 | `src/self-proof/*` | `runSelfProof`, receipt/report DTO | process runnerでCLI/hook/doctor/CIを外部観測 |
+| W5 | `src/projection/{domain,application,contracts,adapters}/*` | `ProjectionRebuildCommand`, `HarnessProjectionSourcePort`, `ProjectionTransactionPort` | 全consumerをcomposition rootへ移行後、`src/state-db/projection-writer.ts`を削除する。互換facadeの恒久残置は不可 |
 
 各packageは`domain/index`の巨大barrelを作らず、public symbolの所有fileを1つに固定する。移行waveごとに
 consumer一覧、互換re-export削除条件、module graph cycle 0、targeted testをevidenceへ記録する。
@@ -245,3 +247,5 @@ consumer一覧、互換re-export削除条件、module graph cycle 0、targeted t
 - aggregate public methodは概ね7以下。commandはevent/resultを返し、queryは状態を変更しない。
 - public mutable field、setter、二段階初期化、汎用service locator、domainからdoctor/CLI importを禁止する。
 - module graph cycleは0をhard gateとし、既存超過は件数を隠さずdebt PLANへ送る。
+- projection-rebuild domain/applicationはSQLite、filesystem、path、clockをimportせず、source adapterとcomposition rootだけがI/Oを所有する。
+- 旧`projection-writer.ts`を完了判定から除外しない。consumer import 0、file実体 0、source→pure projector→write sessionの依存方向を満たすまでW5は未完とする。
