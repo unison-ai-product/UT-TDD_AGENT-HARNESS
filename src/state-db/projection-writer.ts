@@ -54,10 +54,12 @@ import {
 } from "../lint/verification-profile";
 import { loadMemoryEntries } from "../memory/index";
 import { RepositoryModelEvaluationConfig } from "../projection/adapters/model-evaluation-config";
+import { loadRepositoryPlanSources } from "../projection/adapters/repository-plan-sources";
 import { projectModelEvaluations as projectModelEvaluationsApplication } from "../projection/application/project-model-evaluations";
 import { projectOperationalMetrics as projectOperationalMetricsApplication } from "../projection/application/project-operational-metrics";
 import { projectPocEvaluations as projectPocEvaluationsApplication } from "../projection/application/project-poc-evaluations";
 import type { ProjectionEvent } from "../projection/contracts/projection-store";
+import { type ProjectedPlan, projectPlanSources } from "../projection/domain/plan-projection";
 import { HARNESS_DB_TABLES } from "../schema/harness-db";
 import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog";
 import { normalizePath } from "../shared/source-text";
@@ -135,17 +137,6 @@ export {
   type ArtifactProgressState,
   deriveArtifactProgressDecision,
 } from "./artifact-progress-decision";
-
-interface ProjectedPlan {
-  planId: string;
-  kind: string;
-  layer: string;
-  drive: string;
-  status: string;
-  updatedAt: string;
-  // route_mode frontmatter (mode 第一級化、PLAN-L7-243)。legacy PLAN / fixture は未設定可。
-  routeMode?: string;
-}
 
 interface PlanDigestProjection {
   plan_id: string;
@@ -421,69 +412,12 @@ function readJson<T>(path: string): T | null {
 }
 
 function projectPlans(repoRoot: string, db: HarnessDb): Map<string, ProjectedPlan> {
-  const plans = new Map<string, ProjectedPlan>();
-  for (const path of markdownFiles(join(repoRoot, "docs", "plans"))) {
-    const content = readFileSync(path, "utf8");
-    const planId = frontmatterValue(content, "plan_id");
-    if (!planId) continue;
-    const kind = frontmatterValue(content, "kind");
-    const layer = frontmatterValue(content, "layer");
-    const drive = frontmatterValue(content, "drive");
-    const status = frontmatterValue(content, "status") || "draft";
-    const updatedAt = frontmatterValue(content, "updated") || frontmatterValue(content, "created");
-    const sourceHash = stableHash(content);
-    // decision_outcome: S4 verdict for PoC PLANs (confirmed/rejected/pivot).
-    // Read from `decision_outcome` frontmatter field; fall back to `decision` for legacy.
-    // Stored as "" when absent so the column is always TEXT (single-source: harness-db.ts §plan_registry).
-    const decisionOutcome =
-      frontmatterValue(content, "decision_outcome") || frontmatterValue(content, "decision") || "";
-    const routeMode = frontmatterValue(content, "route_mode");
-    plans.set(planId, { planId, kind, layer, drive, status, updatedAt, routeMode });
-    const relPath = normalizePath(relative(repoRoot, path));
-    recordProjectionEvent(db, {
-      table: "plan_registry",
-      id: planId,
-      row: {
-        plan_id: planId,
-        kind,
-        layer,
-        drive,
-        status,
-        parent: "",
-        route_mode: routeMode,
-        updated_at: updatedAt,
-        decision_outcome: decisionOutcome,
-        source_hash: sourceHash,
-      },
-    });
-    recordProjectionEvent(db, {
-      table: "artifact_registry",
-      id: stableId("artifact", relPath),
-      row: {
-        artifact_id: stableId("artifact", relPath),
-        artifact_type: "markdown_doc",
-        path: relPath,
-        pair_artifact: "",
-        status: "current",
-        updated_at: updatedAt,
-      },
-    });
-    recordProjectionEvent(db, {
-      table: "search_index",
-      id: stableId("plan", planId),
-      row: {
-        search_id: stableId("plan", planId),
-        subject_type: "plan",
-        subject_id: planId,
-        path: relPath,
-        title: frontmatterValue(content, "title") || planId,
-        tokens: `${planId} ${kind} ${layer} ${drive}`,
-        summary: status || "plan",
-        updated_at: updatedAt,
-      },
-    });
-  }
-  return plans;
+  const result = projectPlanSources(loadRepositoryPlanSources(repoRoot), {
+    stableId,
+    hash: stableHash,
+  });
+  for (const write of result.writes) recordProjectionEvent(db, write);
+  return new Map(result.plans);
 }
 
 function projectDriveRuns(
