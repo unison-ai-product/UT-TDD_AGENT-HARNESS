@@ -40,3 +40,4 @@ dependencies:
 - verifiedはdesign+runtime+test/evidence、partial/gapはseverity/owner/debt PLAN/next transition、conditional/NAは理由/profile/承認を要求する。
 - `routeAssessmentDebt`は`routeFiling` SSoTへ委譲し、layer/kind/pairingをlocal heuristicで決めない。
 - source/revision/digest変更でverifiedをstaleへ戻し、163件集計とpending 0を決定論的に返す。
+- evaluator出力はassessment、3面evidence、append-only review event、debt routeを別identityで返し、conditional/NAのprofile/reason/approvalを永続化可能にする。

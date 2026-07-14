@@ -55,10 +55,11 @@ dependencies:
 - `manifest.yaml`にschema version、baseline/final snapshot、raw NUL hash algorithm、delta一覧を持つ。
 - zone別shardに全pathをmaterialized recordとしてexactly once記載し、selectorやdetector推測を正本にしない。
 - recordはblob/digest、zone、disposition、reason、targets、plan IDs、impact tags、provenance、application statusを持つ。
+- projectionはsnapshot/disposition/target/PLAN/tag/delta/reference/run/findingを正規化し、JSON 1列や既存relation node数で921件を代用しない。
 - Markdown ledgerは生成view。DBは検索用projectionで、authoring sourceではない。
 
 ## 受入条件
 
 - missing/duplicate/phantom/case-fold collision、理由/target/PLAN欠落、未台帳add/delete/renameを拒否する。
 - final path集合をbaselineとexplicit deltaから再構築でき、pending 0かつtyped cross-reference orphan 0のみ完了とする。
--旧前提検出はcanonical assertionに限定し、archive/history/否定文/negative fixtureを誤検知しない。
+- 旧前提検出はcanonical assertionに限定し、archive/history/否定文/negative fixtureを誤検知しない。

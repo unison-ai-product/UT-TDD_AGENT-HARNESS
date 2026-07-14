@@ -38,6 +38,7 @@ describe("checked Vモデル source assets", () => {
   const edges = read("docs/governance/vmodel-source-target-edges.md");
   const targetCatalog = read("docs/governance/vmodel-document-catalog.md");
   const profiles = read("docs/governance/vmodel-document-scale-profiles.md");
+  const itemTargets = read("docs/governance/vmodel-item-target-ledger.md");
 
   it("U-VMSRC-001: 109 source documents are dispositioned exactly once", () => {
     const rows = tableRows(disposition, [
@@ -243,8 +244,60 @@ describe("checked Vモデル source assets", () => {
     expect(candidateIds.length).toBeGreaterThan(0);
     expect(new Set(candidateIds).size).toBe(candidateIds.length);
     expect(candidateIds).toContain("CANDIDATE-P-FSM-001");
-    expect(candidateIds).toContain("CANDIDATE-I-DISP-001");
+    expect(unitDesign).toContain("| `I-DISP-001` |");
     expect(candidateIds).toContain("CANDIDATE-I-SP-001");
     expect(candidateIds).toContain("CANDIDATE-M-SP-001");
+  });
+
+  it("U-VMSRC-010: all 163 semantic items have an explicit non-inferred target decision record", () => {
+    const semanticRows = tableRows(semanticItems, ["item_id", "category_id", "source_ref"]);
+    const targetRows = tableRows(itemTargets, [
+      "edge_id",
+      "item_id",
+      "source_ref",
+      "source_digest",
+      "target_status",
+      "target_kind",
+      "target_ref",
+      "判断理由",
+      "plan_id",
+    ]);
+    expect(targetRows).toHaveLength(163);
+    expect(new Set(targetRows.map((row) => row.item_id)).size).toBe(163);
+    expect(new Set(targetRows.map((row) => row.edge_id)).size).toBe(163);
+    expect(targetRows.map((row) => row.item_id).sort()).toEqual(
+      semanticRows.map((row) => row.item_id).sort(),
+    );
+    const semanticSource = new Map(semanticRows.map((row) => [row.item_id, row.source_ref]));
+    expect(targetRows.filter((row) => row.source_ref !== semanticSource.get(row.item_id))).toEqual(
+      [],
+    );
+    const allowedStatuses = new Set([
+      "pending_review",
+      "adopt",
+      "merge",
+      "reference",
+      "defer",
+      "not_applicable",
+      "reject",
+    ]);
+    expect(targetRows.filter((row) => !allowedStatuses.has(row.target_status))).toEqual([]);
+    expect(targetRows.filter((row) => !/^ITEM-TARGET-[A-Z0-9-]+$/.test(row.edge_id))).toEqual([]);
+    expect(targetRows.filter((row) => !/^[a-f0-9]{64}$/.test(row.source_digest))).toEqual([]);
+    expect(targetRows.filter((row) => !row.判断理由 || !row.plan_id)).toEqual([]);
+    expect(
+      targetRows.filter(
+        (row) =>
+          row.target_status === "pending_review" &&
+          (row.target_kind !== "—" || row.target_ref !== "—"),
+      ),
+    ).toEqual([]);
+    expect(
+      targetRows.filter(
+        (row) =>
+          ["adopt", "merge", "reference", "defer"].includes(row.target_status) &&
+          (row.target_kind === "—" || row.target_ref === "—"),
+      ),
+    ).toEqual([]);
   });
 });

@@ -35,3 +35,5 @@ dependencies:
 # PLAN-L7-422
 
 U-DOCLEDGERをRed freezeし、Git object snapshot、shard materialize、validator、typed reference closure、生成reportを実装する。baseline 3d232e9c/921を不変保持し以後をdelta化する。DoDはpending/orphan/phantom 0、review、Reverse-422合流である。
+
+planned deliverablesは`docs/governance/repository-document-disposition/**`の921件materialized ledger、`src/document-disposition/{domain,application,ports,adapters}`、正規化DB schema/projection、write/query分離CLI、実行可能Red/property/mutation testである。既存relation graphは検証済みedgeのconsumerに限定しoracleにしない。

@@ -2181,17 +2181,20 @@ Fixture.
       expect(result.ok).toBe(true);
       // hook/session evidence is allowed to move while the full Vitest suite runs in parallel.
       // The hook rows themselves are volatile, and unresolved hook joins are projected through
-      // findings/feedback_events, so exclude that derived volatility from the fixed-point check.
+      // findings/feedback_events and their durable feedback_lifecycle projection, so exclude that
+      // derived volatility from the fixed-point check. Product-owned projection tables remain exact.
       const {
         hook_events: _firstHookEvents,
         findings: _firstFindings,
         feedback_events: _firstFeedbackEvents,
+        feedback_lifecycle: _firstFeedbackLifecycle,
         ...firstStableCounts
       } = result.rowCounts;
       const {
         hook_events: _secondHookEvents,
         findings: _secondFindings,
         feedback_events: _secondFeedbackEvents,
+        feedback_lifecycle: _secondFeedbackLifecycle,
         ...secondStableCounts
       } = second.rowCounts;
       expect(secondStableCounts).toEqual(firstStableCounts);

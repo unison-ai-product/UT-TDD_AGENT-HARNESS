@@ -235,6 +235,25 @@ describe("L7 CLI surface closure", () => {
     expect(run.stdout).toContain("--json");
   }, 15_000);
 
+  it("U-PA-042: exposes the complete HEAD migration inventory as a machine-readable dry-run", () => {
+    const run = runCli(["plan", "migration-dry-run", "--json"]);
+    const payload = parseCliJson(run) as {
+      ok: boolean;
+      total: number;
+      emitted: number;
+      decisionCounts: Record<string, number>;
+      findings: unknown[];
+    };
+
+    expect(payload).toMatchObject({
+      ok: true,
+      total: 752,
+      emitted: 752,
+      decisionCounts: { migrated: 697, rekeyed: 55, rejected: 0, pending: 0 },
+      findings: [],
+    });
+  }, 15_000);
+
   it("exposes skill suggest as a JSON command surface", () => {
     const run = runCli(["skill", "suggest", "--plan", "PLAN-NO-SUCH", "--json"]);
 

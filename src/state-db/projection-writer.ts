@@ -10,6 +10,7 @@ import {
   parseCanonicalDocumentStructure,
 } from "../export/document-export";
 import { loadRelationGraphSourceSet } from "../graph/loader";
+import { resolveLegacyPlanAlias } from "../kernel/plan-alias.js";
 import { loadChangedFiles } from "../lint/change-impact";
 import {
   analyzeDescentObligations,
@@ -100,6 +101,7 @@ import {
 } from "./skill-projections";
 import { projectSpecIr } from "./spec-ir-projections";
 import type { RunUsage } from "./token-tracker";
+import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections";
 
 export interface ProjectionEvent {
   table: string;
@@ -672,8 +674,8 @@ function projectDriveRuns(
 }
 
 function resolveProjectedPlanId(plans: Map<string, ProjectedPlan>, planId: string): string {
-  if (plans.has(planId)) return planId;
-  return [...plans.keys()].find((id) => id.startsWith(`${planId}-`)) ?? planId;
+  const resolved = resolveLegacyPlanAlias(planId, [...plans.keys()]);
+  return resolved.ok ? resolved.value : planId;
 }
 
 function projectHookEvents(
@@ -2962,6 +2964,9 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     try {
       time("truncate", () => truncateProjectionTables(db));
       const plans = time("plans", () => projectPlans(repoRoot, db));
+      if (hasVmodelAuthoring(repoRoot)) {
+        time("vmodel-authoring", () => projectVmodelAuthoring(repoRoot, db));
+      }
       time("drive-hook-model", () => {
         projectDriveRuns(repoRoot, db, plans);
         projectHookEvents(repoRoot, db, plans);

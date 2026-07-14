@@ -34,6 +34,13 @@ proposed → planned → pair_freeze_ready → pair_frozen → red_frozen
 `blocked|superseded|rejected|reopened` は例外状態であり、理由、actor、対象revision、source commit、evidenceを持つ
 transition event がなければ成立しない。現在状態はevent reductionの結果であり、Markdown statusの直接編集を実績正本にしない。
 
+例外遷移は次の意味で固定する。`block`はaccepted/archive以外の正常状態から入り、元状態を`resume_state`に保存する。
+`reject`はplanned〜review_readyまたはblockedから入り、元状態を`resume_state`に保存する。`supersede`はreviewed以前の正常/例外状態からreplacement
+asset/revisionを指定してterminalへ入る。blocked/rejectedからだけ`reopen`を許し、次の`resume`で記録済み`resume_state`へ
+戻す。ただしresume先のguard/evidenceは再評価し、過去passを流用しない。acceptedからはarchiveだけ、archived/supersededは
+terminalとし、変更は新revision/assetで開始する。全正常遷移は上記一本道の隣接stateだけを許し、skip transitionを禁止する。
+完全なcommand/from/to/guard/finding表はL6 `function-spec.md`を正本とし、実装側のswitch分岐で例外意味を追加しない。
+
 ### 3. PLAN は immutable identity と revision を持つ
 
 PLAN Asset v2 は少なくとも `schema_version`、immutable `asset_id`、human-readable `plan_key`、revision、alias history、

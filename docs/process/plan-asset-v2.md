@@ -43,6 +43,7 @@ evidence_policy:
 - 意味変更はrevisionを増やす。旧revision本文/evidence/transitionを上書きしない。
 - dependency、supersede、artifact、evidenceは可能な限りimmutable IDを参照する。
 - numeric ordinalはauthoring namespaceで一意とし、予約台帳によって並列採番競合をfail-closeする。
+- canonical revision payloadは既知fieldだけでなくunknown v1 frontmatter、dependency、artifact、workflow、evidence policy、本文digestを保持し、adapter更新で過去fieldを落とさない。
 
 ## 4. Forward状態
 
@@ -78,15 +79,16 @@ reason: design_and_L9_pair_reviewed
 
 ## 6. evidence record
 
-evidenceは`subject_asset_id`、`subject_revision`、`source_commit`、`command`、`output_digest`、producer、occurred/expiryを
-持つ。対象revision不一致、commit/digest不一致、期限切れ、失敗exit codeのevidenceをaccept guardへ使用しない。
+evidenceは`subject_asset_id`、`subject_revision`、`source_commit`、redacted argv、`output_digest`、exit code、producer、occurred/expiryを
+持つ。失敗exitもRed/監査証拠として保存するが、対象revision不一致、commit/digest不一致、期限切れ、失敗exit codeのevidenceをaccept guardへ使用しない。
 
 ## 7. v1 migration
 
 - v1 PLANはrepository identityとfull `plan_id`から決定論的legacy asset IDを得る。
 - 既存fileを一括renameせず、v1 adapterがcanonical v2 DTOを返す。
 - 新規PLANと意味変更PLANはv2へ昇格する。
-- numeric core衝突18群はmigration ledgerでwinner/new ordinal/legacy aliasを固定し、恒久allowlistへ逃がさない。
+- numeric core衝突はmigration ledgerでwinner/new ordinal/legacy aliasを固定し、恒久allowlistへ逃がさない。設計baselineは18群、現HEAD inventoryは20群/41 PLANであり、HEAD digestごとに再計測する。
+- legacy asset IDは`[algorithm label, root tracked ut-tdd.project.json#repository_identity, full legacy plan_id]`をuint32 big-endian byte lengthでframe化したSHA-256から初回だけ導出する。config schema/blob/HEADを検証し、remote URLからidentityを推測せず、config不在はfail-closeする。checkout path、branch、source path、layer、ordinalを入力にせず、導出後はrename時に再計算しない。
 - `ut-tdd plan migrate --dry-run`は書換えず、identity、collision、unresolved reference、evidence bindingを表示する。
 - 明示`--execute`は新revision/alias/ledgerをappendし、履歴を書き換えない。
 
@@ -100,6 +102,10 @@ evidenceは`subject_asset_id`、`subject_revision`、`source_commit`、`command`
 - `ut-tdd plan revise --asset <asset_id> --from-revision <n>`
 
 CLI、hook、doctorは同じcanonical parser、FSM、guard verdict、exit codeを使用する。
+
+全workflow JSON surfaceは`ok/command/subject/current_state/requested_state/verdict/findings/evidence_ids/event_id/state_digest`
+の共通envelopeを使う。exitは成功0、guard/domain違反1、usage/schema違反2、I/O/transaction失敗3とする。
+`status|explain`は書込み禁止、`transition`はappend eventとcurrent projectionを同一transactionで更新する。
 
 ## 9. 受入不変条件
 

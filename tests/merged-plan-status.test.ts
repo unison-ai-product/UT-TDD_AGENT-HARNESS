@@ -107,6 +107,18 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
     );
   }
 
+  it("does not treat an unmerged PR-branch PLAN as a main-merged draft", () => {
+    const input = loadMergedPlanStatusInput(process.cwd());
+    const active = input.plans.find(
+      (plan) => plan.planId === "PLAN-L7-418-plan-asset-v2-adapter-migration-ledger",
+    );
+    expect(active?.status).toBe("draft");
+    expect(active?.mergedArtifacts).toEqual([]);
+    expect(analyzeMergedPlanStatus(input).violations.map((item) => item.planId)).not.toContain(
+      "PLAN-L7-418-plan-asset-v2-adapter-migration-ledger",
+    );
+  });
+
   it("detects a draft PLAN whose generated src exists on disk (merged)", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-merged-plan-"));
     try {
