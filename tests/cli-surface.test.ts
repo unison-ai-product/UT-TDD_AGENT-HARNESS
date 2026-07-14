@@ -12,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { headPlanDocCount } from "./plan-asset/head-plan-doc-count.js";
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index";
 import { migrate } from "../src/state-db/migration";
 import { MODEL_IDS } from "../src/team/model-policy";
@@ -245,11 +246,12 @@ describe("L7 CLI surface closure", () => {
       findings: unknown[];
     };
 
+    const planCount = headPlanDocCount(process.cwd());
     expect(payload).toMatchObject({
       ok: true,
-      total: 752,
-      emitted: 752,
-      decisionCounts: { migrated: 697, rekeyed: 55, rejected: 0, pending: 0 },
+      total: planCount,
+      emitted: planCount,
+      decisionCounts: { migrated: planCount - 55, rekeyed: 55, rejected: 0, pending: 0 },
       findings: [],
     });
   }, 15_000);

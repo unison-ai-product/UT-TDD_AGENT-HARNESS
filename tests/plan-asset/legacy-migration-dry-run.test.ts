@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { headPlanDocCount } from "./head-plan-doc-count.js";
 import { loadRoleContractRegistry } from "../../src/plan-asset/adapters/role-contract-registry.js";
 import {
   HeadTargetRegistry,
@@ -53,7 +54,7 @@ describe("legacy migration dry-run", () => {
   it("U-PA-034: emits an exactly-once HEAD-bound record for every inventory item", () => {
     const result = new LegacyMigrationDryRun().run(process.cwd());
     if (!("records" in result)) throw new Error(result.ruleId);
-    expect(result.total).toBe(752);
+    expect(result.total).toBe(headPlanDocCount(process.cwd()));
     expect(result.emitted).toBe(result.total);
     expect(new Set(result.records.map((item) => item.legacyPlanId)).size).toBe(result.total);
     expect(new Set(result.records.map((item) => item.sourceCommit))).toEqual(
@@ -67,7 +68,12 @@ describe("legacy migration dry-run", () => {
     if (!("records" in result)) throw new Error(result.ruleId);
     expect(result.collisionGroups).toBe(27);
     expect(result.collisionItems).toBe(55);
-    expect(result.decisionCounts).toEqual({ migrated: 697, rekeyed: 55, rejected: 0, pending: 0 });
+    expect(result.decisionCounts).toEqual({
+      migrated: headPlanDocCount(process.cwd()) - 55,
+      rekeyed: 55,
+      rejected: 0,
+      pending: 0,
+    });
     expect(result.ok).toBe(true);
     expect(result.findings).toEqual([]);
   });

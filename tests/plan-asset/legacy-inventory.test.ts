@@ -4,15 +4,18 @@ import {
   inventoryProjectionDigest,
   parseLegacyPlanSource,
 } from "../../src/plan-asset/adapters/legacy-plan-inventory.js";
+import { headPlanDocCount } from "./head-plan-doc-count.js";
 
 describe("legacy PLAN HEAD inventory", () => {
   it("U-PA-019: inventories every HEAD PLAN losslessly with unique asset identities", () => {
     const result = buildLegacyPlanInventory(process.cwd());
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.value.items).toHaveLength(752);
-    expect(new Set(result.value.items.map((item) => item.sourcePath)).size).toBe(752);
-    expect(new Set(result.value.items.map((item) => item.assetId)).size).toBe(752);
+    const planCount = headPlanDocCount(process.cwd());
+    expect(planCount).toBeGreaterThanOrEqual(752);
+    expect(result.value.items).toHaveLength(planCount);
+    expect(new Set(result.value.items.map((item) => item.sourcePath)).size).toBe(planCount);
+    expect(new Set(result.value.items.map((item) => item.assetId)).size).toBe(planCount);
     expect(result.value.items.every((item) => item.frontmatter.plan_id === item.legacyPlanId)).toBe(
       true,
     );
