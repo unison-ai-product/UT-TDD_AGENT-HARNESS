@@ -1362,7 +1362,8 @@ describe("L7 CLI surface closure", () => {
         "reason=ut-tdd-runtime-adapter-wrapper",
       );
       expect(readFileSync(join(root, "claude-env.txt"), "utf8")).not.toContain("raw=1");
-      expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("effort=high");
+      // Sonnet lane は effort ladder 基準 middle (adapter 表記 medium、PO rule 2026-07-14)。
+      expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("effort=medium");
     } finally {
       removeTestTree(root);
     }
