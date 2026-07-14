@@ -1301,7 +1301,7 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `CANDIDATE-DOMAIN-002` | barrel相互import fixture | dependency audit | `module-cycle`, exit 1 |
 | `CANDIDATE-DOMAIN-003` | command/query同時mutation fixture | CQS audit | `command-query-mixed`, exit 1 |
 | `CANDIDATE-DOMAIN-004` | 不完全constructor/public mutable fixture | structure audit | `domain-invalid-state-surface`, exit 1 |
-| `U-DOMAIN-007` | `recordFinding`のkind/subject/source/evidence各fieldへsecret-like値を注入 | common projection payload guard | write row 0、構造finding IDだけは許可。`tests/sqlite-projection-store.test.ts`で実装済み。 |
+| `CANDIDATE-DOMAIN-007` | `recordFinding`のkind/subject/source/evidence、event ID、primary key、`*_id`各fieldへsecret-like値を注入 | common projection payload guard + branded `ProjectionIdFactory` | 列名による例外なくwrite row 0。runtime guard負例は`tests/sqlite-projection-store.test.ts`でGreenだが、検査済みcomponentから内部factoryが生成したbranded ID限定と任意文字列cast拒否は未実装のため、全体はRedを維持する。 |
 | `U-DOMAIN-008` | row upsert後、join finding前にfault injection | re-entrant SQLite projection transaction | event行とjoin findingはともに0件。`tests/sqlite-projection-store.test.ts`で実装済み。rebuild全体のsnapshot不変は既存atomic rebuild oracleが担当する。 |
 | `CANDIDATE-DOMAIN-009` | fixed source bundleを同一contextで2回投入 | pure projectors / rebuild command | `ProjectionWrite`列、stable order、digest、row countsが完全一致。projectorのDB/FS/clock import 0。 |
 | `CANDIDATE-DOMAIN-010` | 全consumer import graphとlegacy path | dependency/architecture audit | `projection-writer.ts` import 0、file実体 0、domain/application→adapter逆辺 0。未移行はRed。 |

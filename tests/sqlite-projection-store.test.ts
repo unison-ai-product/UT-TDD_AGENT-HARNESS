@@ -40,6 +40,29 @@ describe("U-DOMAIN-004: SQLite projection adapter", () => {
       expect(
         db.prepare("SELECT run_id FROM model_runs WHERE run_id = ?").get("secret-run"),
       ).toBeUndefined();
+
+      const secret = `sk-${"b".repeat(20)}`;
+      for (const event of [
+        { table: "plan_registry", id: secret, row: { kind: "impl" } },
+        {
+          table: "plan_registry",
+          id: "safe-event-id",
+          row: { plan_id: secret, kind: "impl" },
+        },
+        {
+          table: "model_runs",
+          id: "safe-run-id",
+          row: { run_id: secret, model: "safe-model" },
+        },
+      ]) {
+        expect(() => store.record(event)).toThrow(/secret-like/);
+      }
+      expect(
+        db.prepare("SELECT plan_id FROM plan_registry WHERE plan_id = ?").get(secret),
+      ).toBeUndefined();
+      expect(
+        db.prepare("SELECT run_id FROM model_runs WHERE run_id = ?").get(secret),
+      ).toBeUndefined();
     } finally {
       db.close();
     }

@@ -113,11 +113,13 @@ U-DOMAINをRed freezeし、共通kernelとmodule-boundary/cycle/CQS移行を所�
 - model評価はopt-in repository config adapter、application command、pure event builder、grouped SQLite readへ分割した。成功statusはneutral domain SSoTへ移し、旧skill projection exportを維持した。N+1 queryを1 grouped queryへ置換し、token/costの非対称母集団とNULL非捏造をoracleで固定した。
 - operational metricsはdrive/hook/workflowの意味fact read、pure policy、application eventへ分割した。99行のSQL/policy/persist混在をfacadeへ縮退し、drive 0.8境界、0母数、trouble/blocked/human/retry、stable order/IDを`U-DOMAIN-006`で自己証明する。
 - PLAN projectionは`repository-plan-sources` adapterとpure `plan-projection` domainへ移管した。facadeはcaptured sourceのwrite列をstoreへ渡すだけとし、path順・legacy decision fallback・source hashの決定性を`projection-plan-projector.test.ts`で固定する。残るsource bundleとapplication commandは次waveで同じ境界へ移す。
+- L6 blind-reviewで構造ID例外の曖昧さが検出されたため、projection rowのprimary key/`*_id`も列名だけではsecret guardを免除しないruntime境界へ強化した。既存の`U-DOMAIN-007`完了主張は撤回し、branded `ProjectionIdFactory`と任意cast拒否が実装されるまでcandidate Redを維持する。
 
 ## 検出負債
 
 - `DEBT-L7-423-01`: `recordFinding`直接経路は共通event正規化を通らない。finding payload用のsensitive-value oracleをRed化し、finding専用schema guardまたは共通guardへ収束させる。
 - `DEBT-L7-423-02`: 単独の`record`はprojection row upsertとjoin finding upsertを一つのtransaction境界に束ねない。application commandのtransaction port移行時に故障注入テストを追加し、部分commit 0を証明する。
+- `DEBT-L7-423-03`: 現runtime guardはID列を含む全stringを検査するが、検査済みcomponentからのみ生成できるbranded `ProjectionIdFactory`と任意cast拒否は未実装である。source bundle/application command導入時にID生成portへ収束させ、compile-time負例とruntime負例の両方で閉じる。
 - 両負債はlegacy facade削除までのmigration wave内で解消する。現抽出のGreenを完了宣言や恒久免除に使わない。
 
 ## migration wave

@@ -196,20 +196,16 @@ function normalizeRow(table: TableDef, event: ProjectionEvent): Record<string, u
   const primaryKey = primaryKeyOf(table);
   const row = Object.fromEntries(Object.entries(event.row).filter(([key]) => allowed.has(key)));
   if (row[primaryKey] === undefined) row[primaryKey] = event.id;
-  assertNoSensitivePayload(row, table);
+  assertNoSensitivePayload(row);
   return row;
 }
 
-function assertNoSensitivePayload(row: Record<string, unknown>, table: TableDef): void {
-  const primaryKeys = new Set(
-    table.columns.filter((column) => column.primaryKey).map((column) => column.name),
-  );
+function assertNoSensitivePayload(row: Record<string, unknown>): void {
   for (const [key, value] of Object.entries(row)) {
     if (RAW_PAYLOAD_KEYS.has(key)) {
       throw new Error(`raw/sensitive payload column is not allowed in harness.db: ${key}`);
     }
-    const structuredId = primaryKeys.has(key) || key.endsWith("_id");
-    if (!structuredId) assertNoSecretLikeString(value, "projection column", key);
+    assertNoSecretLikeString(value, "projection column", key);
   }
 }
 
