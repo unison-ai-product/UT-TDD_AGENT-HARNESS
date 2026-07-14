@@ -1354,11 +1354,14 @@ dependencies:
       /## (?:legacy landed|draft debt)[^\n]*\n/,
     );
     const idsOf = (section: string) =>
-      new Set([...section.matchAll(/^\|\s*(PLAN-[A-Za-z0-9-]+)\s*\|([^\n]*)$/gm)]
-        .filter(([ , planId, row]) =>
-          planId !== "PLAN-L7-245-sub-doc-schema-integrity" || !row.includes("昇格済 promoted"),
-        )
-        .map((m) => m[1]));
+      new Set(
+        [...section.matchAll(/^\|\s*(PLAN-[A-Za-z0-9-]+)\s*\|([^\n]*)$/gm)]
+          .filter(
+            ([, planId, row]) =>
+              planId !== "PLAN-L7-245-sub-doc-schema-integrity" || !row.includes("昇格済 promoted"),
+          )
+          .map((m) => m[1]),
+      );
 
     expect(idsOf(legacySection)).toEqual(ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS);
     expect(idsOf(draftSection)).toEqual(ROUTE_MODE_KIND_DRAFT_DEBT_PLAN_IDS);
