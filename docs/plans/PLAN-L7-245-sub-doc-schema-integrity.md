@@ -1,7 +1,7 @@
 ---
 plan_id: PLAN-L7-245-sub-doc-schema-integrity
-title: "PLAN-L7-245 (impl): 設計 doc frontmatter sub_doc の schema 整合 (schema 外値・重複の解消)"
-kind: impl
+title: "PLAN-L7-245 (add-impl): 設計 doc frontmatter sub_doc の schema 整合 (schema 外値・重複の解消)"
+kind: add-impl
 layer: L7
 drive: be
 status: confirmed
@@ -48,14 +48,17 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-245-sub-doc-schema-integrity.md
     artifact_type: markdown_doc
+  - artifact_path: docs/plans/PLAN-REVERSE-245-sub-doc-schema-integrity-backfill.md
+    artifact_type: markdown_doc
   - artifact_path: src/lint/sub-doc-schema-integrity.ts
     artifact_type: source_module
   - artifact_path: tests/sub-doc-schema-integrity.test.ts
     artifact_type: test_code
 dependencies:
-  parent: null
+  parent: docs/plans/PLAN-L7-99-sub-doc-catalog-drift-gate.md
   requires: []
   references:
+    - docs/plans/PLAN-REVERSE-245-sub-doc-schema-integrity-backfill.md
     - .ut-tdd/audit/A-174-forward-design-test-pair-audit-2026-07-02.md
     - src/schema/index.ts
     - docs/governance/route-mode-kind-debt-audit-2026-07-02.md
@@ -63,7 +66,7 @@ dependencies:
     - docs/plans/PLAN-L7-429-spec-ir-detector-scope.md
 ---
 
-# PLAN-L7-245 (impl): 設計 doc frontmatter sub_doc の schema 整合
+# PLAN-L7-245 (add-impl): 設計 doc frontmatter sub_doc の schema 整合
 
 ## Status
 

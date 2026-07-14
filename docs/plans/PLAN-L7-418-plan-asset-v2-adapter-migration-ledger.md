@@ -4,11 +4,11 @@ title: "PLAN-L7-418 (add-impl): PLAN Asset v2 canonical adapter / migration ledg
 kind: add-impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-13
+updated: 2026-07-14
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L6-71-plan-asset-canonical-migration-contracts.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -94,6 +94,25 @@ dependencies:
   requires: []
   references:
     - docs/plans/PLAN-REVERSE-418-plan-asset-v2-backfill.md
+review_evidence:
+  - reviewer: claude-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-14T00:30:00+09:00"
+    tests_green_at: "2026-07-14T00:20:00+09:00"
+    verdict: approve_after_fixes
+    scope: "Codex 実装の PR #47 (wave2) を Claude blind-review 後、PO 巻き取り授権 (2026-07-14) 下でマージ。指摘 L-1 (plan-asset 系テストの live plan count 752/697 hardcode が HEAD 進行で顕在化) は tests/plan-asset/head-plan-doc-count.ts の HEAD 動的導出へ修正 (commit f2723dfa)。残る main baseline 再現失敗 (review-evidence/secret-scan/setup/doctor) は wave2 起因でないことを main 側で再現確認して帰属判定済み。worktree 検証で typecheck / biome / targeted 149 tests green 後に ff-merge。"
+    worker_model: gpt-5.5-codex
+    reviewer_model: claude-opus-4-8
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests/plan-asset/ ほか targeted 149 tests (main + wave2 統合 worktree、typecheck/biome green 併走)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-14T00:20:00+09:00"
+        evidence_path: tests/plan-asset/head-plan-doc-count.ts
+        output_digest: "sha256:7a3595b4d3604406f56200883020542ac1ee6c83283f5ddcf28fd3a0d2f73998"
+        anchor_commit: ef1142d89f76cbe233690dddc0cec160ae4d2c66
 ---
 
 # PLAN-L7-418

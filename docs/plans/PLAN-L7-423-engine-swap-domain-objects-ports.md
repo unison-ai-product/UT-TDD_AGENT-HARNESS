@@ -4,11 +4,11 @@ title: "PLAN-L7-423 (add-impl): engine-swap domain objects / ports / repositorie
 kind: add-impl
 layer: L7
 drive: fullstack
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-13
+updated: 2026-07-14
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L6-75-engine-swap-domain-method-port-contracts.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -71,6 +71,25 @@ dependencies:
     - docs/plans/PLAN-L7-420-vmodel-contract-compiler-registry.md
     - docs/plans/PLAN-L7-422-repository-document-disposition-closure-gate.md
     - docs/plans/PLAN-REVERSE-423-engine-swap-domain-backfill.md
+review_evidence:
+  - reviewer: claude-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-14T11:10:00+09:00"
+    tests_green_at: "2026-07-14T11:05:00+09:00"
+    verdict: approve
+    scope: "Codex 実装の PR #53 (wave3) を Claude blind-review 後、PO 巻き取り授権 (2026-07-14) 下で main へ retarget・統合検証してマージ (merge commit c7b6c004)。projection engine-swap (domain/application/contracts 分離 + sqlite-projection-store) を typecheck (tsc exit 0) / biome (458 files clean) / targeted+regression 10 suites (plan-asset・projection-writer・dependency-drift・model-evaluation・operational-metrics・sqlite-projection-store・spec-ir・sub-doc-schema-integrity・review-evidence) exit 0 で確認。未クローズ note M-1: operational metrics の NULL-mode 合算という挙動変更に依存する consumer 有無は PO 確認推奨。"
+    worker_model: gpt-5.5-codex
+    reviewer_model: claude-opus-4-8
+    green_commands:
+      - kind: unit_test
+        command: "bun run vitest run tests/plan-asset/ tests/projection-writer.test.ts tests/dependency-drift.test.ts tests/model-evaluation*.test.ts tests/operational-metrics-domain.test.ts tests/sqlite-projection-store.test.ts tests/spec-ir-projections.test.ts tests/sub-doc-schema-integrity.test.ts tests/review-evidence.test.ts (main+wave3 統合ツリー)"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-14T11:05:00+09:00"
+        evidence_path: tests/sqlite-projection-store.test.ts
+        output_digest: "sha256:b350374330754e9872a1c337efadba1decbdfd646152bca3bc95d219991e1825"
+        anchor_commit: c7b6c0046cf12602b7e8c7a2237eb00b1ed11da0
 ---
 
 # PLAN-L7-423

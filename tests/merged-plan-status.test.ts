@@ -107,13 +107,13 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
     );
   }
 
-  it("does not treat an unmerged PR-branch PLAN as a main-merged draft", () => {
+  it("does not flag a confirmed PLAN whose generated src is merged (PR #47 landed 2026-07-14)", () => {
     const input = loadMergedPlanStatusInput(process.cwd());
     const active = input.plans.find(
       (plan) => plan.planId === "PLAN-L7-418-plan-asset-v2-adapter-migration-ledger",
     );
-    expect(active?.status).toBe("draft");
-    expect(active?.mergedArtifacts).toEqual([]);
+    expect(active?.status).toBe("confirmed");
+    expect(active?.mergedArtifacts).not.toEqual([]);
     expect(analyzeMergedPlanStatus(input).violations.map((item) => item.planId)).not.toContain(
       "PLAN-L7-418-plan-asset-v2-adapter-migration-ledger",
     );
