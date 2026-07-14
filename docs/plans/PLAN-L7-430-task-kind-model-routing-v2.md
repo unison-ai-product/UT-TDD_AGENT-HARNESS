@@ -57,24 +57,36 @@ dependencies:
 review_evidence:
   - reviewer: codex-claim-blind-lane
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-14T19:15:00+09:00"
-    tests_green_at: "2026-07-14T19:14:59+09:00"
-    verdict: approve
-    scope: "structured intent の strict schema→team run→model selection 配線、task-kind 優先、複合文・日本語分類、effort ladder を独立再検証。未反証 attack 0。"
+    reviewed_at: "2026-07-14T19:29:00+09:00"
+    tests_green_at: "2026-07-14T19:27:48+09:00"
+    verdict: flag
+    scope: "routing/CLIは妥当。review evidenceの必須field欠落をFLAGとして検出し、修正後の再判定を要求。"
     green_commands:
       - kind: unit_test
-        command: "bun run scripts/run-vitest-snapshot.ts tests/team-model-policy.test.ts tests/tier-router.test.ts tests/token-tracker.test.ts tests/team-launch-policy.test.ts tests/team-run.test.ts tests/model-id-ssot.test.ts"
+        command: "bun test tests/team-model-policy.test.ts tests/team-run.test.ts"
         runner: bun
         scope: targeted
         exit_code: 0
-        completed_at: "2026-07-14T19:14:59+09:00"
-        anchor_commit: afd7e417
+        completed_at: "2026-07-14T19:27:48+09:00"
+        evidence_path: tests/team-model-policy.test.ts
+        output_digest: "sha256:496ce55c30d58a52d25c009e84551ea179ad65087f2f03b8d2c9abc922166ef0"
+        anchor_commit: ddbdc2f9
   - reviewer: codex-spec-blind-lane
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-14T19:08:00+09:00"
-    tests_green_at: "2026-07-14T19:07:59+09:00"
-    verdict: approve
-    scope: "invalid/unknown intent の fail-close、leading action、docs 対象 action、team-run 回帰を再検証。未反証 attack 0。"
+    reviewed_at: "2026-07-14T19:29:00+09:00"
+    tests_green_at: "2026-07-14T19:27:48+09:00"
+    verdict: flag
+    scope: "routing/CLIは妥当。confirmed PLANのgreen command receipt不足をFLAGとして検出し、修正後の再判定を要求。"
+    green_commands:
+      - kind: unit_test
+        command: "bun test tests/team-model-policy.test.ts tests/team-run.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-14T19:27:48+09:00"
+        evidence_path: tests/team-run.test.ts
+        output_digest: "sha256:496ce55c30d58a52d25c009e84551ea179ad65087f2f03b8d2c9abc922166ef0"
+        anchor_commit: ddbdc2f9
 ---
 
 # PLAN-L7-430 (retrofit): task-kind ベース model routing v2
