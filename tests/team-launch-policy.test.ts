@@ -41,9 +41,13 @@ describe("U-TEAM-003 team launch policy", () => {
     expect(plan.ok).toBe(true);
     expect(plan.strategy).toBe("sequential");
     expect(plan.members.map((member) => member.provider)).toEqual(["codex", "claude", "claude"]);
-    expect(plan.members.every((member) => member.model_selection.reasoning_effort === "high")).toBe(
-      true,
-    );
+    // effort はモデル別ラダー基準 (PO rule 2026-07-14): critical se は frontier(Sol)=low、
+    // review / verify は task-kind が engine family より優先され Opus=high。
+    expect(plan.members.map((member) => member.model_selection.reasoning_effort)).toEqual([
+      "low",
+      "high",
+      "high",
+    ]);
   });
 
   it("U-TEAM-003: launches for standard non-risk work by difficulty", () => {

@@ -4,11 +4,16 @@ import type { ExecutionMode } from "../runtime/detect";
 import { inferTaskIntent, MODEL_IDS, type ReasoningEffort, type TaskIntent } from "./model-policy";
 
 /**
- * advisor 判断種別 (PO ルーティング仕様 2026-07-08):
- * - design: 設計判断。一次相談先は Claude フロンティア (Fable)。
- * - implementation: 実装判断。一次相談先は Codex 最上位。
+ * advisor 判断種別 (PO ルーティング仕様 2026-07-14、2026-07-08 行列を supersede):
+ * - design / implementation / troubleshooting: 技術系判断。一次相談先は Codex 最上位 (Sol)。
+ * - uiux: デザイン/UI 判断。一次相談先は Claude フロンティア (Fable)、次点 Sol。
  */
-export const ADVISOR_DECISION_KINDS = ["design", "implementation"] as const;
+export const ADVISOR_DECISION_KINDS = [
+  "design",
+  "implementation",
+  "troubleshooting",
+  "uiux",
+] as const;
 export type AdvisorDecisionKind = (typeof ADVISOR_DECISION_KINDS)[number];
 
 /**
@@ -103,16 +108,15 @@ function fableRoute(): AdvisorRoute {
 }
 
 /**
- * ルーティング行列 (PO 仕様 2026-07-08):
+ * ルーティング行列 (PO 仕様 2026-07-14、2026-07-08 行列を supersede):
  *
- * | 判断     | orchestrator | 一次           | fallback (レスポンスエラー時) |
- * | design   | sonnet/other | Fable consult  | Codex frontier consult        |
- * | design   | opus         | Fable consult  | Codex frontier adversarial    |
- * | impl     | sonnet/other | Codex consult  | (なし — 既に Codex)           |
- * | impl     | opus         | Codex adversarial | (なし)                     |
+ * | 判断                          | 一次           | fallback (レスポンスエラー時) |
+ * | design/impl/troubleshooting  | Sol consult    | Fable consult                 |
+ * | uiux (デザイン/UI)           | Fable consult  | Sol consult (次点、PO 明示)   |
  *
- * Opus は Claude 側フロンティア相当なので、Codex へ渡る経路では相談を
+ * orchestrator が Opus (frontier 級) の場合、Codex へ渡る経路では相談を
  * 敵対検証へ切り替える (同格追認ではなく反証で価値を出す)。
+ * 根拠: Fable レート制限 (project-fable-5-7-13-rate-limit) と Sol の escalation 席実測。
  */
 export function resolveAdvisorRoutes(input: {
   decisionKind: AdvisorDecisionKind;
@@ -126,26 +130,28 @@ export function resolveAdvisorRoutes(input: {
   if (input.forcedProvider === "codex" || input.mode === "codex-only") {
     return { primary: codexRoute(adversarialForOpus) };
   }
-  if (input.forcedProvider === "claude") {
-    // 明示 claude 強制。claude-only では codex fallback を構成しない。
+  if (input.forcedProvider === "claude" || input.mode === "claude-only") {
+    // 明示 claude 強制 / claude-only。claude-only では codex fallback を構成しない。
     return {
       primary: fableRoute(),
       ...(input.mode === "claude-only" ? {} : { fallback: codexRoute(adversarialForOpus) }),
     };
   }
-  if (input.decisionKind === "implementation") {
-    if (input.mode === "claude-only") return { primary: fableRoute() };
-    return { primary: codexRoute(adversarialForOpus) };
+  if (input.decisionKind === "uiux") {
+    // デザイン/UI 判断は Fable 一次、次点 Sol (PO 2026-07-14)。
+    return { primary: fableRoute(), fallback: codexRoute(adversarialForOpus) };
   }
-  // design
-  return {
-    primary: fableRoute(),
-    ...(input.mode === "claude-only" ? {} : { fallback: codexRoute(adversarialForOpus) }),
-  };
+  // 技術/設計/トラブルシューティング判断は Sol 一次 (PO 2026-07-14)。
+  return { primary: codexRoute(adversarialForOpus), fallback: fableRoute() };
 }
 
-function inferDecisionKind(taskIntent: TaskIntent): AdvisorDecisionKind {
-  return taskIntent === "implementation" || taskIntent === "lightweight"
+const TROUBLESHOOTING_TERMS = ["bug", "crash", "debug", "error", "fail", "incident", "trouble"];
+
+function inferDecisionKind(taskIntent: TaskIntent, task: string): AdvisorDecisionKind {
+  if (taskIntent === "uiux") return "uiux";
+  const text = task.toLowerCase();
+  if (TROUBLESHOOTING_TERMS.some((term) => text.includes(term))) return "troubleshooting";
+  return taskIntent === "implementation" || taskIntent === "test" || taskIntent === "lightweight"
     ? "implementation"
     : "design";
 }
@@ -167,7 +173,14 @@ function isLowerThanAdvisor(input: {
     }
     return current.includes("sonnet") || current.includes("haiku");
   }
-  return current.startsWith("gpt-") || current.startsWith("codex-");
+  // advisor が Codex frontier (Sol) の場合: GPT/Codex 系 current は frontier 未満、
+  // Claude 系 current は frontier 級 (fable/opus) を除き下位 (sonnet/haiku)。
+  return (
+    current.startsWith("gpt-") ||
+    current.startsWith("codex-") ||
+    current.includes("sonnet") ||
+    current.includes("haiku")
+  );
 }
 
 function advisorPrompt(input: {
@@ -209,7 +222,7 @@ function advisorPrompt(input: {
 
 export function buildAdvisorDecision(input: AdvisorInput): AdvisorDecision {
   const taskIntent = inferTaskIntent({ task: input.task });
-  const decisionKind = input.decisionKind ?? inferDecisionKind(taskIntent);
+  const decisionKind = input.decisionKind ?? inferDecisionKind(taskIntent, input.task);
   const family = orchestratorFamily(input.currentModel);
   const routes = resolveAdvisorRoutes({
     decisionKind,
