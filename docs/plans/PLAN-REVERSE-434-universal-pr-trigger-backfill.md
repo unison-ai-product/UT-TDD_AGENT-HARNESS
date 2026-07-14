@@ -29,17 +29,20 @@ backprop_scope:
 agent_slots:
   - role: tl
     slot_label: "TL - trigger 契約と検出器負例の L6/L7 backfill"
+  - role: po
+    slot_label: "PO - R3 backfill判断とForward合流境界の検収"
 review_evidence: []
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-434-universal-pr-trigger-backfill.md
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md
-    artifact_type: design_doc
+    artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L7-434-universal-pr-trigger-impl.md
-  requires:
+  requires: []
+  references:
     - docs/plans/PLAN-L7-434-universal-pr-trigger-impl.md
 ---
 
