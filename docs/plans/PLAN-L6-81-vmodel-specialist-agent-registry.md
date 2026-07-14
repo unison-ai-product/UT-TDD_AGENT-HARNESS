@@ -26,9 +26,9 @@ generates:
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
-  requires:
-    - docs/plans/PLAN-L7-430-task-kind-model-routing-v2.md
+  requires: []
   references:
+    - docs/plans/PLAN-L7-430-task-kind-model-routing-v2.md
     - docs/plans/PLAN-L6-53-adversarial-review-mechanism.md
     - docs/plans/PLAN-L7-302-context-tiering.md
     - docs/plans/PLAN-L7-426-codex-native-subagents.md
