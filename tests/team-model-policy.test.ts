@@ -383,6 +383,24 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     ).toMatchObject({ task_intent: "design", model: MODEL_IDS.claude.opus });
   });
 
+  it("U-ROUTE2-018: Japanese task text preserves test, design, and UI task kinds", () => {
+    expect(inferTaskIntent({ task: "テストを実装する" })).toBe("test");
+    expect(inferTaskIntent({ task: "設計を作成する" })).toBe("design");
+    expect(inferTaskIntent({ task: "UIを実装する" })).toBe("uiux");
+  });
+
+  it("U-ROUTE2-019: leading action disambiguates compound test and review tasks", () => {
+    expect(inferTaskIntent({ task: "review tests and implement fix" })).toBe("review");
+    expect(inferTaskIntent({ task: "write tests to audit security" })).toBe("test");
+    expect(inferTaskIntent({ task: "implement fix and review tests" })).toBe("implementation");
+  });
+
+  it("U-ROUTE2-020: compound test and release-note terms remain routable", () => {
+    expect(inferTaskIntent({ task: "run unit-test suite" })).toBe("test");
+    expect(inferTaskIntent({ task: "testing retry behavior" })).toBe("test");
+    expect(inferTaskIntent({ task: "update release notes" })).toBe("docs");
+  });
+
   it("U-ROUTE2-005: claude 設計ドキュメント作成は opus、doc 修正は sonnet、doc パッチは haiku", () => {
     expect(
       selectTeamModel({
