@@ -327,6 +327,40 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     ).toBe(MODEL_IDS.codex.frontier);
   });
 
+  it("U-ROUTE2-014: task-kind remains primary for critical implementation and test work", () => {
+    expect(
+      selectTeamModel({
+        provider: "codex",
+        role: "se",
+        engine: "codex-se",
+        task: "implement database migration for production",
+      }),
+    ).toMatchObject({
+      difficulty: "critical",
+      task_intent: "implementation",
+      model: MODEL_IDS.codex.luna,
+    });
+    expect(
+      selectTeamModel({
+        provider: "codex",
+        role: "se",
+        engine: "codex-se",
+        task: "write test for database migration",
+      }),
+    ).toMatchObject({
+      difficulty: "critical",
+      task_intent: "test",
+      model: MODEL_IDS.codex.worker,
+    });
+  });
+
+  it("U-ROUTE2-015: intent inference uses token boundaries instead of substrings", () => {
+    expect(inferTaskIntent({ task: "summarize the contest result" })).toBe("general");
+    expect(inferTaskIntent({ task: "build adapter" })).toBe("implementation");
+    expect(inferTaskIntent({ task: "update build script" })).toBe("implementation");
+    expect(inferTaskIntent({ task: "guide patch" })).toBe("general");
+  });
+
   it("U-ROUTE2-005: claude 設計ドキュメント作成は opus、doc 修正は sonnet、doc パッチは haiku", () => {
     expect(
       selectTeamModel({
@@ -458,6 +492,9 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
     ).toEqual({ model: MODEL_IDS.claude.opus, effort: "xhigh" });
     expect(
       escalateShallowResponse({ model: MODEL_IDS.codex.mini, currentEffort: "xhigh" }),
+    ).toBeNull();
+    expect(
+      escalateShallowResponse({ model: MODEL_IDS.codex.worker, currentEffort: "high" }),
     ).toBeNull();
   });
 
