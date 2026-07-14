@@ -34,7 +34,9 @@ export interface SkillProjectionDeps {
   skillDriveModelForPlan: (planId: string) => string;
 }
 
-export const PLAN_SUCCESS_STATUSES = ["confirmed", "completed"] as const;
+export { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status";
+
+import { PLAN_SUCCESS_STATUSES } from "../projection/domain/plan-status";
 
 export function skillScore(input: {
   plan: SkillProjectedPlan;

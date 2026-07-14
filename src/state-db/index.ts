@@ -30,9 +30,7 @@ export interface HarnessDb {
   readonly driver: "bun" | "node";
   exec(sql: string): void;
   prepare(sql: string): HarnessStatement;
-  /** PRAGMA user_version を読む。 */
   userVersion(): number;
-  /** PRAGMA user_version を書く (整数のみ、SQL injection 防止のため数値検証)。 */
   setUserVersion(version: number): void;
   close(): void;
 }

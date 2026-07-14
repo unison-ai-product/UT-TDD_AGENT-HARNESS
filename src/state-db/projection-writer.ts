@@ -40,7 +40,6 @@ import {
   loadRoadmaps,
   PARKED_BANDS,
 } from "../lint/roadmap-registry";
-import { normalizePath } from "../lint/shared";
 import {
   analyzeSubDocCatalogDrift,
   loadSubDocCatalogDriftInput,
@@ -54,13 +53,14 @@ import {
   recommendVerificationProfiles,
 } from "../lint/verification-profile";
 import { loadMemoryEntries } from "../memory/index";
-import {
-  HARNESS_DB_TABLE_BY_NAME,
-  HARNESS_DB_TABLES,
-  primaryKeyOf,
-  type TableDef,
-} from "../schema/harness-db";
+import { RepositoryModelEvaluationConfig } from "../projection/adapters/model-evaluation-config";
+import { projectModelEvaluations as projectModelEvaluationsApplication } from "../projection/application/project-model-evaluations";
+import { projectOperationalMetrics as projectOperationalMetricsApplication } from "../projection/application/project-operational-metrics";
+import { projectPocEvaluations as projectPocEvaluationsApplication } from "../projection/application/project-poc-evaluations";
+import type { ProjectionEvent } from "../projection/contracts/projection-store";
+import { HARNESS_DB_TABLES } from "../schema/harness-db";
 import { workflowModeForPlan as catalogWorkflowModeForPlan } from "../schema/mode-catalog";
+import { normalizePath } from "../shared/source-text";
 import { stableId } from "../stable-id";
 import { analyzePairFreeze, loadPairDocs, type PairOrphanReason } from "../vmodel/lint";
 import { deriveArtifactProgressDecision } from "./artifact-progress-decision";
@@ -78,13 +78,7 @@ import {
   reconcileFeedbackLifecycle,
 } from "./feedback-projections";
 import { type GuardrailDecisionInput, inspectGuardrailInvariants } from "./guardrail-invariants";
-import {
-  defaultHarnessDbPath,
-  type HarnessDb,
-  openHarnessDb,
-  SECRET_PATTERN,
-  upsertRow,
-} from "./index";
+import { defaultHarnessDbPath, type HarnessDb, openHarnessDb } from "./index";
 import { migrate, rowCounts } from "./migration";
 import {
   projectRuntimeGuardrailDecisionFromSessionEvent as projectRuntimeGuardrailDecisionFromSessionEventCore,
@@ -93,21 +87,19 @@ import {
   projectRuntimeTestRunFromSessionEvent as projectRuntimeTestRunFromSessionEventCore,
 } from "./runtime-projections";
 import {
-  PLAN_SUCCESS_STATUSES,
   projectSkillEvaluations as projectSkillEvaluationsCore,
   projectSkillMetrics as projectSkillMetricsCore,
   projectSkillTelemetry as projectSkillTelemetryCore,
   skillScore,
 } from "./skill-projections";
 import { projectSpecIr } from "./spec-ir-projections";
+import { clearRebuildableProjectionTables } from "./sqlite-projection-rebuild";
+import { type ProjectionFindingInput, SqliteProjectionStore } from "./sqlite-projection-store";
+import { runSqliteTransaction } from "./sqlite-transaction";
 import type { RunUsage } from "./token-tracker";
 import { hasVmodelAuthoring, projectVmodelAuthoring } from "./vmodel-projections";
 
-export interface ProjectionEvent {
-  table: string;
-  id: string;
-  row: Record<string, unknown>;
-}
+export type { ProjectionEvent } from "../projection/contracts/projection-store";
 
 export interface RebuildHarnessDbInput {
   repoRoot?: string;
@@ -191,24 +183,9 @@ interface ProviderHandoverProjection {
   };
 }
 
-const RAW_PAYLOAD_KEYS = new Set([
-  "rawMcpResponse",
-  "browserTrace",
-  "providerTranscript",
-  "transcript",
-  "secret",
-  "credential",
-  "screenshotBlob",
-]);
 const VERIFY_CUTOVER_PLAN_ID = "PLAN-M-00-verify-cutover";
 const VERIFY_CUTOVER_AUDIT_PATH = ".ut-tdd/audit/A-132-l8-l14-verification-band-execution.md";
 const VERIFICATION_BAND_LAYERS = ["L8", "L9", "L10", "L11", "L12", "L13", "L14"] as const;
-
-function tableDef(name: string): TableDef {
-  const table = HARNESS_DB_TABLE_BY_NAME.get(name);
-  if (!table) throw new Error(`unknown harness.db projection table: ${name}`);
-  return table;
-}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -232,95 +209,12 @@ function scalarNumber(db: HarnessDb, sql: string, params: unknown[] = []): numbe
   return typeof value === "number" ? value : Number(value ?? 0);
 }
 
-function assertNoSensitivePayload(row: Record<string, unknown>, table: TableDef): void {
-  // Structured-identifier columns — primary keys and `*_id` reference columns —
-  // hold deterministic composite slugs (e.g. "skill:planning-and-task-breakdown",
-  // or a relation-graph "finding:...:changed-path-src-task-..." slug), not
-  // free-form payload. Exempt them from the secret-pattern check so a legitimate
-  // slug that happens to contain "sk-" (inside a "task-" prefix or a "-breakdown"
-  // suffix) is not a false-positive secret. Free-form columns are still checked.
-  const pkNames = new Set(table.columns.filter((c) => c.primaryKey).map((c) => c.name));
-  const isStructuredId = (key: string): boolean => pkNames.has(key) || key.endsWith("_id");
-  for (const [key, value] of Object.entries(row)) {
-    if (RAW_PAYLOAD_KEYS.has(key)) {
-      throw new Error(`raw/sensitive payload column is not allowed in harness.db: ${key}`);
-    }
-    if (!isStructuredId(key) && typeof value === "string" && SECRET_PATTERN.test(value)) {
-      throw new Error(`secret-like value is not allowed in harness.db projection column: ${key}`);
-    }
-  }
-}
-
-function normalizeRow(table: TableDef, event: ProjectionEvent): Record<string, unknown> {
-  const allowed = new Set(table.columns.map((c) => c.name));
-  const pk = primaryKeyOf(table);
-  const row: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(event.row)) {
-    if (allowed.has(key)) row[key] = value;
-  }
-  if (row[pk] === undefined) row[pk] = event.id;
-  assertNoSensitivePayload(row, table);
-  return row;
-}
-
 function planExists(db: HarnessDb, planId: string): boolean {
-  const row = db.prepare("SELECT plan_id FROM plan_registry WHERE plan_id = ?").get(planId);
-  return row !== undefined;
+  return new SqliteProjectionStore(db).planExists(planId);
 }
 
-function uniqueShortPlanExists(db: HarnessDb, planId: string): boolean {
-  if (!isBareNumericPlanContext(planId)) return false;
-  const row = db
-    .prepare("SELECT COUNT(*) AS count FROM plan_registry WHERE plan_id LIKE ?")
-    .get(`${planId}-%`) as { count: number } | undefined;
-  return (row?.count ?? 0) === 1;
-}
-
-function isBareNumericPlanContext(planId: string): boolean {
-  return /^PLAN-L\d+-\d+$/.test(planId);
-}
-
-function isRuntimeStateEvidencePath(path: string | undefined): boolean {
-  if (!path) return false;
-  return path.startsWith(".ut-tdd/logs/") || path.startsWith(".ut-tdd/handover/");
-}
-
-function isRuntimeContextProjectionTable(table: string): boolean {
-  return (
-    table === "hook_events" ||
-    table === "test_runs" ||
-    table === "trouble_events" ||
-    table === "guardrail_decisions"
-  );
-}
-
-function findingId(kind: string, subjectId: string): string {
-  return stableId(`finding:${kind}`, subjectId);
-}
-
-function recordFinding(
-  db: HarnessDb,
-  input: {
-    kind: string;
-    severity?: "error" | "warn" | "info";
-    subjectId: string;
-    source: string;
-    evidencePath?: string;
-  },
-): void {
-  upsertRow(db, {
-    table: "findings",
-    primaryKey: "finding_id",
-    row: {
-      finding_id: findingId(input.kind, input.subjectId),
-      kind: input.kind,
-      severity: input.severity ?? "warn",
-      subject_id: input.subjectId,
-      source: input.source,
-      status: "open",
-      evidence_path: input.evidencePath ?? "",
-    },
-  });
+function recordFinding(db: HarnessDb, input: ProjectionFindingInput): void {
+  new SqliteProjectionStore(db).recordFinding(input);
 }
 
 function designCoverageId(subjectId: string): string {
@@ -459,52 +353,8 @@ export function projectDesignQualityCoverage(repoRoot: string, db: HarnessDb): v
   }
 }
 
-function checkResolvablePlanJoin(db: HarnessDb, table: string, row: Record<string, unknown>): void {
-  if (table === "plan_registry") return;
-  if (table === "feedback_events") return;
-  const planId = asString(row.plan_id);
-  if (!planId || planExists(db, planId) || uniqueShortPlanExists(db, planId)) return;
-  // A plan_id column can carry a free-form WORK-CONTEXT label that is not a single
-  // concrete PLAN foreign key and legitimately resolves to no registry row:
-  //   - an audit-cycle id (e.g. "A-136-cycle-p4-verification-audit"), or
-  //   - a compound "PLAN-a+b+c" label spanning several PLANs.
-  // hook_events records whichever work was active, so these are non-FK labels, not
-  // dangling references. Local runtime logs can also preserve old bare numeric PLAN
-  // context labels after the canonical slugged PLAN has been archived/renamed. Those
-  // are still surfaced, but separately from true source-table unresolved joins.
-  if (/^A-\d/.test(planId) || planId.includes("+")) return;
-  const pk = primaryKeyOf(tableDef(table));
-  const subject = `${table}:${String(row[pk] ?? "")}`;
-  if (
-    isBareNumericPlanContext(planId) &&
-    (isRuntimeStateEvidencePath(asString(row.evidence_path) ?? undefined) ||
-      isRuntimeContextProjectionTable(table))
-  ) {
-    recordFinding(db, {
-      kind: "stale-runtime-plan-context",
-      subjectId: subject,
-      source: "projection-writer",
-      evidencePath: asString(row.evidence_path) ?? undefined,
-    });
-    return;
-  }
-  recordFinding(db, {
-    kind: "unresolved-join",
-    subjectId: subject,
-    source: "projection-writer",
-    evidencePath: asString(row.evidence_path) ?? undefined,
-  });
-}
-
 export function recordProjectionEvent(db: HarnessDb, event: ProjectionEvent): void {
-  const table = tableDef(event.table);
-  const row = normalizeRow(table, event);
-  upsertRow(db, {
-    table: table.name,
-    primaryKey: primaryKeyOf(table),
-    row,
-  });
-  checkResolvablePlanJoin(db, table.name, row);
+  new SqliteProjectionStore(db).record(event);
 }
 
 function markdownFiles(dir: string): string[] {
@@ -898,8 +748,7 @@ function projectReviewModelRuns(
  */
 export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
   if (usages.length === 0) return;
-  db.exec("BEGIN IMMEDIATE");
-  try {
+  runSqliteTransaction(db, () => {
     for (const u of usages) {
       if (!u.model) continue; // model 不明の行は集計不能なので捨てる
       const id = stableId("token-run", `${u.runtime}:${u.sessionId}:${u.turnIndex}`);
@@ -924,11 +773,7 @@ export function projectTokenUsage(db: HarnessDb, usages: RunUsage[]): void {
         },
       });
     }
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    throw error;
-  }
+  });
 }
 
 function planStatusMap(repoRoot: string): Map<string, string> {
@@ -1391,13 +1236,8 @@ function projectGateRunEvidence(repoRoot: string, db: HarnessDb): void {
   }
 }
 
-const REBUILD_PERSISTENT_TABLES = new Set(["refactor_candidates"]);
-
 function truncateProjectionTables(db: HarnessDb): void {
-  for (const table of [...HARNESS_DB_TABLES].reverse()) {
-    if (REBUILD_PERSISTENT_TABLES.has(table.name)) continue;
-    db.prepare(`DELETE FROM ${table.name}`).run();
-  }
+  clearRebuildableProjectionTables(db);
 }
 
 function projectRelationGraph(db: HarnessDb, graph: RelationGraphProjection | undefined): void {
@@ -2537,51 +2377,12 @@ export function projectSkillEvaluations(db: HarnessDb, opts?: { asOf?: string })
  * AC-FR-BR21-43-01: 10 PoC, 6 confirmed / 3 rejected / 1 pivot => rate 0.60.
  * AC-FR-BR21-43-02 cold-start: 0 PoC PLANs => 0 rows, no throw.
  */
-const POC_DECISION_VALUES = ["confirmed", "rejected", "pivot"] as const;
-
 export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): void {
-  const evaluatedAt = opts?.asOf ?? nowIso();
-
-  // Count decided PoC PLANs by outcome.
-  const rows = db
-    .prepare(
-      `SELECT decision_outcome, COUNT(*) AS cnt
-       FROM plan_registry
-       WHERE kind = 'poc'
-         AND decision_outcome IN ('confirmed', 'rejected', 'pivot')
-       GROUP BY decision_outcome`,
-    )
-    .all() as { decision_outcome: string; cnt: number }[];
-
-  if (rows.length === 0) return; // Cold-start: no decided PoC PLANs => 0 rows.
-
-  const counts: Record<string, number> = { confirmed: 0, rejected: 0, pivot: 0 };
-  for (const row of rows) {
-    const outcome = row.decision_outcome as (typeof POC_DECISION_VALUES)[number];
-    if (outcome in counts) counts[outcome] = Number(row.cnt ?? 0);
-  }
-
-  const confirmedCount = counts.confirmed;
-  const rejectedCount = counts.rejected;
-  const pivotCount = counts.pivot;
-  const totalCount = confirmedCount + rejectedCount + pivotCount;
-  const pocSuccessRate = totalCount === 0 ? 0 : Number((confirmedCount / totalCount).toFixed(4));
-
-  // 単一行制約 (review I-1): id 固定で全 PoC を 1 集計行に集約するのは FR-L1-43 の現要件
-  // (1 summary 行) のみで有効。将来 PoC 種別別 / スプリント別に分解する要件が出たら PK を
-  // (scope, evaluated_at) 等へ変更し、本 id 固定・idx_poc_evaluations_rate も合わせて見直す。
-  recordProjectionEvent(db, {
-    table: "poc_evaluations",
-    id: "poc-evaluation:summary",
-    row: {
-      poc_evaluation_id: "poc-evaluation:summary",
-      poc_success_rate: pocSuccessRate,
-      confirmed_count: confirmedCount,
-      rejected_count: rejectedCount,
-      pivot_count: pivotCount,
-      total_count: totalCount,
-      evaluated_at: evaluatedAt,
-    },
+  const store = new SqliteProjectionStore(db);
+  projectPocEvaluationsApplication({
+    evaluatedAt: opts?.asOf ?? nowIso(),
+    read: store,
+    store,
   });
 }
 
@@ -2615,187 +2416,18 @@ export function projectPocEvaluations(db: HarnessDb, opts?: { asOf?: string }): 
  * Cold-start (enabled but 0 model_runs): 0 rows, no throw.
  */
 export function projectModelEvaluations(db: HarnessDb, repoRoot: string): void {
-  // Opt-in gate: disabled by default.
-  const optInPath = join(repoRoot, ".ut-tdd", "config", "model-opt-in.yaml");
-  if (!existsSync(optInPath)) return;
-  let enabled = false;
-  try {
-    const raw = readFileSync(optInPath, "utf8");
-    const parsed = parseYaml(raw) as Record<string, unknown> | null;
-    enabled = parsed != null && parsed.enabled === true;
-  } catch {
-    // parse failure = treat as disabled (fail-open for opt-in gate)
-    return;
-  }
-  if (!enabled) return;
-
-  // Fetch all model_runs grouped by model.
-  const runRows = db
-    .prepare("SELECT model, COUNT(*) AS run_count FROM model_runs GROUP BY model")
-    .all() as { model: string; run_count: number }[];
-
-  if (runRows.length === 0) return; // Cold-start: 0 model_runs => 0 rows.
-
-  // Build success_count per model by joining model_runs -> plan_registry on plan_id.
-  // PLAN_SUCCESS_STATUSES is reused from this module (single-source-of-truth).
-  const successStatusPlaceholders = PLAN_SUCCESS_STATUSES.map(() => "?").join(", ");
-  const evaluatedAt = nowIso();
-
-  for (const runRow of runRows) {
-    const model = runRow.model;
-    const runCount = Number(runRow.run_count ?? 0);
-
-    const successCount =
-      (
-        db
-          .prepare(
-            `SELECT COUNT(*) AS success_count
-           FROM model_runs mr
-           JOIN plan_registry pr ON mr.plan_id = pr.plan_id
-           WHERE mr.model = ?
-             AND pr.status IN (${successStatusPlaceholders})`,
-          )
-          .get(model, ...PLAN_SUCCESS_STATUSES) as { success_count: number } | undefined
-      )?.success_count ?? 0;
-
-    const successRate = runCount === 0 ? 0 : Number((Number(successCount) / runCount).toFixed(4));
-
-    // FR-L1-38 token 効率 (PLAN-L7-57): token 行 (token-tracker 投入) のみ非 NULL。SUM は NULL を無視。
-    // total_cost は全行 NULL のとき NULL (= cost を出せる run が無い)。tokens_per_success / cost_per_success
-    // は success が無い / 該当 totals が無いとき NULL (core=token、$=enrichment、捏造しない)。
-    const agg = db
-      .prepare(
-        `SELECT COALESCE(SUM(input_tokens), 0) AS total_input,
-                COALESCE(SUM(output_tokens), 0) AS total_output,
-                SUM(cost_usd) AS total_cost
-         FROM model_runs WHERE model = ?`,
-      )
-      .get(model) as { total_input: number; total_output: number; total_cost: number | null };
-    const totalInput = Number(agg.total_input ?? 0);
-    const totalOutput = Number(agg.total_output ?? 0);
-    const totalCost = agg.total_cost == null ? null : Number(agg.total_cost);
-    const sc = Number(successCount);
-    const tokensPerSuccess =
-      sc > 0 && totalOutput > 0 ? Number((totalOutput / sc).toFixed(2)) : null;
-    const costPerSuccess = totalCost != null && sc > 0 ? Number((totalCost / sc).toFixed(6)) : null;
-
-    recordProjectionEvent(db, {
-      table: "model_evaluations",
-      id: model,
-      row: {
-        model,
-        success_rate: successRate,
-        run_count: runCount,
-        success_count: sc,
-        evaluated_at: evaluatedAt,
-        total_input_tokens: totalInput,
-        total_output_tokens: totalOutput,
-        total_cost_usd: totalCost,
-        tokens_per_success: tokensPerSuccess,
-        cost_per_success: costPerSuccess,
-      },
-    });
-  }
+  const store = new SqliteProjectionStore(db);
+  projectModelEvaluationsApplication({
+    config: new RepositoryModelEvaluationConfig(repoRoot),
+    read: store,
+    store,
+    evaluatedAt: nowIso(),
+  });
 }
 
 function projectOperationalMetrics(db: HarnessDb): void {
-  const computedAt = nowIso();
-  const metrics: {
-    subject: string;
-    name: string;
-    value: number;
-    threshold: number;
-    status: string;
-  }[] = [];
-  const driveModes = db
-    .prepare("SELECT mode, COUNT(*) AS total FROM drive_runs GROUP BY mode ORDER BY mode")
-    .all();
-  for (const row of driveModes) {
-    const mode = String(row.mode ?? "unknown");
-    const total = Number(row.total ?? 0);
-    const completed = scalarNumber(
-      db,
-      "SELECT COUNT(*) AS value FROM drive_runs WHERE mode = ? AND status IN ('completed', 'confirmed', 'documented')",
-      [mode],
-    );
-    const rate = total === 0 ? 0 : completed / total;
-    metrics.push({
-      subject: `drive:${mode}`,
-      name: "drive_firing_rate",
-      value: Number(rate.toFixed(4)),
-      threshold: 0.8,
-      status: rate >= 0.8 ? "pass" : "warn",
-    });
-  }
-  const hookTotal = scalarNumber(db, "SELECT COUNT(*) AS value FROM hook_events");
-  const troubleTotal = scalarNumber(
-    db,
-    "SELECT COUNT(*) AS value FROM hook_events WHERE event_type IN ('forced_stop', 'error', 'failed') OR digest LIKE '%fail%' OR digest LIKE '%error%'",
-  );
-  metrics.push({
-    subject: "hooks",
-    name: "trouble_event_rate",
-    value: hookTotal === 0 ? 0 : Number((troubleTotal / hookTotal).toFixed(4)),
-    threshold: 0,
-    status: troubleTotal === 0 ? "pass" : "warn",
-  });
-  const workflowTotal = scalarNumber(db, "SELECT COUNT(*) AS value FROM workflow_runs");
-  const blockedTotal = scalarNumber(
-    db,
-    "SELECT COUNT(*) AS value FROM workflow_runs WHERE ready_status NOT IN ('passed_local', 'passed', 'ready')",
-  );
-  const humanTotal = scalarNumber(
-    db,
-    "SELECT COUNT(*) AS value FROM workflow_runs WHERE human_required = 1",
-  );
-  const retryGroups = scalarNumber(
-    db,
-    `SELECT COUNT(*) AS value
-     FROM (
-       SELECT plan_id, workflow, phase, COUNT(*) AS c
-       FROM workflow_runs
-       GROUP BY plan_id, workflow, phase
-       HAVING c > 1
-     )`,
-  );
-  metrics.push({
-    subject: "workflow",
-    name: "workflow_blocked_rate",
-    value: workflowTotal === 0 ? 0 : Number((blockedTotal / workflowTotal).toFixed(4)),
-    threshold: 0,
-    status: blockedTotal === 0 ? "pass" : "warn",
-  });
-  metrics.push({
-    subject: "workflow",
-    name: "workflow_human_required_rate",
-    value: workflowTotal === 0 ? 0 : Number((humanTotal / workflowTotal).toFixed(4)),
-    threshold: 0,
-    status: humanTotal === 0 ? "pass" : "warn",
-  });
-  metrics.push({
-    subject: "workflow",
-    name: "workflow_retry_groups",
-    value: retryGroups,
-    threshold: 0,
-    status: retryGroups === 0 ? "pass" : "warn",
-  });
-  for (const metric of metrics) {
-    const signalId = stableId("telemetry-signal", `${metric.subject}:${metric.name}`);
-    recordProjectionEvent(db, {
-      table: "quality_signals",
-      id: signalId,
-      row: {
-        signal_id: signalId,
-        source: "telemetry-metrics",
-        subject_id: metric.subject,
-        metric: metric.name,
-        value: metric.value,
-        threshold: metric.threshold,
-        status: metric.status,
-        computed_at: computedAt,
-      },
-    });
-  }
+  const store = new SqliteProjectionStore(db);
+  projectOperationalMetricsApplication({ read: store, store, computedAt: nowIso() });
 }
 
 /** screen-list.md §1 の画面表 (画面 ID / 名 / カテゴリ / URL / L1 参照) を行に分解する。 */
@@ -2960,8 +2592,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
     // Atomic rebuild: truncate + re-project run inside a single transaction so a
     // mid-rebuild failure rolls back to the prior committed projection instead of
     // leaving the DB truncated or half-populated (DB rebuild atomicity).
-    db.exec("BEGIN IMMEDIATE");
-    try {
+    runSqliteTransaction(db, () => {
       time("truncate", () => truncateProjectionTables(db));
       const plans = time("plans", () => projectPlans(repoRoot, db));
       if (hasVmodelAuthoring(repoRoot)) {
@@ -3032,11 +2663,7 @@ export function rebuildHarnessDb(input: RebuildHarnessDbInput = {}): RebuildHarn
         projectImprovementLog(db, projectionDeps);
       });
       time("screens", () => projectScreens(repoRoot, db));
-      time("commit", () => db.exec("COMMIT"));
-    } catch (error) {
-      db.exec("ROLLBACK");
-      throw error;
-    }
+    });
     const counts = time("row-counts", () => rowCounts(db));
     const result: RebuildHarnessDbResult = {
       ok: true,
