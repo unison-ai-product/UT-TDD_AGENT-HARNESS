@@ -87,7 +87,7 @@ function redactHeader(value: string): string {
 
 function isSensitiveName(value: string): boolean {
   const normalized = value.toLowerCase().replaceAll("_", "-");
-  return /(?:token|secret|password|passphrase|api-key|authorization|credential|private-key)/.test(
+  return /(?:token|secret|password|passphrase|api-key|authorization|credential|private-key|cookie)/.test(
     normalized,
   );
 }

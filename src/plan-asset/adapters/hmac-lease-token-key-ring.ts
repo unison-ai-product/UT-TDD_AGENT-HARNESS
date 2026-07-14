@@ -7,12 +7,10 @@ export interface LeaseTokenKeyMaterial {
 }
 
 export class HmacLeaseTokenKeyRing implements LeaseTokenKeyRingPort {
-  private readonly keys: ReadonlyMap<string, Buffer>;
+  readonly #keys: ReadonlyMap<string, Buffer>;
+  readonly #currentVersion: string;
 
-  constructor(
-    private readonly currentVersion: string,
-    keyMaterial: readonly LeaseTokenKeyMaterial[],
-  ) {
+  constructor(currentVersion: string, keyMaterial: readonly LeaseTokenKeyMaterial[]) {
     const keys = new Map<string, Buffer>();
     for (const item of keyMaterial) {
       if (!validVersion(item.version) || item.secret.byteLength < 32 || keys.has(item.version)) {
@@ -21,14 +19,15 @@ export class HmacLeaseTokenKeyRing implements LeaseTokenKeyRingPort {
       keys.set(item.version, Buffer.from(item.secret));
     }
     if (!keys.has(currentVersion)) throw new Error("lease-token-current-key-missing");
-    this.keys = keys;
+    this.#currentVersion = currentVersion;
+    this.#keys = keys;
     Object.freeze(this);
   }
 
   issueMac(message: Uint8Array): LeaseTokenMac {
-    const mac = this.mac(this.currentVersion, message);
+    const mac = this.mac(this.#currentVersion, message);
     if (!mac) throw new Error("lease-token-current-key-missing");
-    return { keyVersion: this.currentVersion, mac };
+    return { keyVersion: this.#currentVersion, mac };
   }
 
   recoverMac(keyVersion: string, message: Uint8Array): Uint8Array | null {
@@ -36,7 +35,7 @@ export class HmacLeaseTokenKeyRing implements LeaseTokenKeyRingPort {
   }
 
   private mac(keyVersion: string, message: Uint8Array): Uint8Array | null {
-    const key = this.keys.get(keyVersion);
+    const key = this.#keys.get(keyVersion);
     return key ? createHmac("sha256", key).update(message).digest() : null;
   }
 }

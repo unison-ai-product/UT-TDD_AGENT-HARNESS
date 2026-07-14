@@ -1,3 +1,5 @@
+import type { EvidenceAttestationVerifierPort } from "../ports/evidence-attestation.js";
+import { cloneCanonical, deepFreeze } from "./evidence-canonical.js";
 import { claimsRuleValidFor, claimsSatisfy } from "./evidence-claims.js";
 import type { EvidenceRecord } from "./evidence-record.js";
 import {
@@ -35,35 +37,38 @@ export class EvidencePolicy {
   readonly revision: number;
   readonly requirements: readonly EvidenceRequirement[];
   readonly maxAgeMs?: number;
+  readonly #verifier: EvidenceAttestationVerifierPort;
 
-  private constructor(input: {
-    readonly policyId: string;
-    readonly revision: number;
-    readonly requirements: readonly EvidenceRequirement[];
-    readonly maxAgeMs?: number;
-  }) {
+  private constructor(
+    input: {
+      readonly policyId: string;
+      readonly revision: number;
+      readonly requirements: readonly EvidenceRequirement[];
+      readonly maxAgeMs?: number;
+    },
+    verifier: EvidenceAttestationVerifierPort,
+  ) {
     this.policyId = input.policyId;
     this.revision = input.revision;
     this.requirements = Object.freeze(
       input.requirements
-        .map((requirement) =>
-          Object.freeze({
-            ...requirement,
-            acceptedProducers: Object.freeze([...requirement.acceptedProducers]),
-          }),
-        )
+        .map((requirement) => deepFreeze(cloneCanonical(requirement)))
         .sort((left, right) => bytewise(left.requirementId, right.requirementId)),
     );
     this.maxAgeMs = input.maxAgeMs;
+    this.#verifier = verifier;
     Object.freeze(this);
   }
 
-  static create(input: {
-    readonly policyId: string;
-    readonly revision: number;
-    readonly requirements: readonly EvidenceRequirement[];
-    readonly maxAgeMs?: number;
-  }): Result<EvidencePolicy, { readonly ruleId: string }> {
+  static create(
+    input: {
+      readonly policyId: string;
+      readonly revision: number;
+      readonly requirements: readonly EvidenceRequirement[];
+      readonly maxAgeMs?: number;
+    },
+    verifier: EvidenceAttestationVerifierPort,
+  ): Result<EvidencePolicy, { readonly ruleId: string }> {
     const ids = input.requirements.map((requirement) => requirement.requirementId);
     const valid =
       input.policyId.trim().length > 0 &&
@@ -75,7 +80,7 @@ export class EvidencePolicy {
         (Number.isSafeInteger(input.maxAgeMs) && input.maxAgeMs > 0)) &&
       input.requirements.every(requirementValid);
     return valid
-      ? { ok: true, value: new EvidencePolicy(input) }
+      ? { ok: true, value: new EvidencePolicy(input, verifier) }
       : { ok: false, error: { ruleId: "evidence-policy-invalid" } };
   }
 
@@ -90,6 +95,13 @@ export class EvidencePolicy {
       const eligible = matching.filter(
         (record) =>
           active.has(record.evidenceId) &&
+          Boolean(
+            record.attestation &&
+              this.#verifier.verify(
+                { producer: record.producer, recordDigest: record.recordDigest },
+                record.attestation,
+              ),
+          ) &&
           record.isUsableFor({ ...context, ...requirement }).usable &&
           claimsSatisfy(record.evidenceKind, record.claims, requirement.claimsRule) &&
           (this.maxAgeMs === undefined ||

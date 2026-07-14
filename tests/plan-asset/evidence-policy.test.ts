@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { HmacEvidenceAttestationAuthority } from "../../src/plan-asset/adapters/hmac-evidence-attestation-authority.js";
 import { EvidencePolicy } from "../../src/plan-asset/domain/evidence-policy.js";
 import {
   createRedactedCommandArgs,
@@ -8,6 +9,13 @@ import {
 
 const digest = "a".repeat(64);
 const commit = "b".repeat(40);
+const authority = new HmacEvidenceAttestationAuthority("local-ci", "v1", [
+  {
+    version: "v1",
+    secret: Buffer.alloc(32, 0x2a),
+    producers: ["human", "po", "codex", "claude", "ci"],
+  },
+]);
 
 describe("PLAN Asset evidence policy", () => {
   it("U-PA-045: evaluates multiple typed requirements without cross-kind double counting", () => {
@@ -18,29 +26,32 @@ describe("PLAN Asset evidence policy", () => {
       evidenceKind: "green-test-run",
       expiresAt: "2026-07-14T00:30:00Z",
     });
-    const policy = EvidencePolicy.create({
-      policyId: "accept/v1",
-      revision: 1,
-      requirements: [
-        {
-          requirementId: "accept-green",
-          requiredKind: "green-test-run",
-          minCount: 1,
-          maxCount: 1,
-          acceptedProducers: ["ci"],
-          exitRule: { kind: "exact", expected: 0 },
-          claimsRule: { kind: "recorded" },
-        },
-        {
-          requirementId: "accept-gate",
-          requiredKind: "gate-run",
-          minCount: 1,
-          acceptedProducers: ["ci"],
-          exitRule: { kind: "exact", expected: 0 },
-          claimsRule: { kind: "gate-passed" },
-        },
-      ],
-    });
+    const policy = EvidencePolicy.create(
+      {
+        policyId: "accept/v1",
+        revision: 1,
+        requirements: [
+          {
+            requirementId: "accept-green",
+            requiredKind: "green-test-run",
+            minCount: 1,
+            maxCount: 1,
+            acceptedProducers: ["ci"],
+            exitRule: { kind: "exact", expected: 0 },
+            claimsRule: { kind: "recorded" },
+          },
+          {
+            requirementId: "accept-gate",
+            requiredKind: "gate-run",
+            minCount: 1,
+            acceptedProducers: ["ci"],
+            exitRule: { kind: "exact", expected: 0 },
+            claimsRule: { kind: "gate-passed" },
+          },
+        ],
+      },
+      authority,
+    );
     if (!policy.ok) throw new Error("policy fixture must be valid");
 
     expect(
@@ -170,26 +181,86 @@ describe("PLAN Asset evidence policy", () => {
   it("U-PA-046: deep-freezes validated policy rules", () => {
     const exitRule = { kind: "exact" as const, expected: 0 };
     const claimsRule = { kind: "recorded" as const };
-    const created = EvidencePolicy.create({
-      policyId: "immutable/v1",
-      revision: 1,
-      requirements: [
-        {
-          requirementId: "immutable-green",
-          requiredKind: "green-test-run",
-          minCount: 1,
-          acceptedProducers: ["ci"],
-          exitRule,
-          claimsRule,
-        },
-      ],
-    });
+    const created = EvidencePolicy.create(
+      {
+        policyId: "immutable/v1",
+        revision: 1,
+        requirements: [
+          {
+            requirementId: "immutable-green",
+            requiredKind: "green-test-run",
+            minCount: 1,
+            acceptedProducers: ["ci"],
+            exitRule,
+            claimsRule,
+          },
+        ],
+      },
+      authority,
+    );
     if (!created.ok) throw new Error("policy fixture must be valid");
 
     expect(Object.isFrozen(created.value.requirements[0]?.exitRule)).toBe(true);
     expect(Object.isFrozen(created.value.requirements[0]?.claimsRule)).toBe(true);
     exitRule.expected = 1;
     expect(created.value.requirements[0]?.exitRule).toEqual({ kind: "exact", expected: 0 });
+  });
+
+  it("U-PA-048: accepts only evidence attested by the policy's trusted authority", () => {
+    const input = {
+      evidenceId: "evidence:attested-gate",
+      evidenceKind: "gate-run" as const,
+      subjectId: "plan:a",
+      subjectRevision: 1,
+      sourceCommit: commit,
+      commandArgs: createRedactedCommandArgs(["ut-tdd", "gate"]),
+      claims: { gateIds: ["gate:accept"], failedGateIds: [] },
+      outputDigest: digest,
+      exitCode: 0,
+      producer: "ci" as const,
+      producedAt: "2026-07-14T00:00:00Z",
+    };
+    const unsigned = EvidenceRecord.create(input);
+    const signed = EvidenceRecord.create(input, authority);
+    const rogueAuthority = new HmacEvidenceAttestationAuthority("local-ci", "v1", [
+      { version: "v1", secret: Buffer.alloc(32, 0x7f), producers: ["ci"] },
+    ]);
+    const forged = EvidenceRecord.create(input, rogueAuthority);
+    if (!unsigned.ok || !signed.ok || !forged.ok) throw new Error("evidence fixture invalid");
+
+    const policy = EvidencePolicy.create(
+      {
+        policyId: "trusted-gate/v1",
+        revision: 1,
+        requirements: [
+          {
+            requirementId: "trusted-gate",
+            requiredKind: "gate-run",
+            minCount: 1,
+            acceptedProducers: ["ci"],
+            exitRule: { kind: "exact", expected: 0 },
+            claimsRule: { kind: "gate-passed" },
+          },
+        ],
+      },
+      authority,
+    );
+    if (!policy.ok) throw new Error("policy fixture invalid");
+    const context = {
+      subjectId: "plan:a",
+      subjectRevision: 1,
+      sourceCommit: commit,
+      now: "2026-07-14T01:00:00Z",
+    };
+
+    expect(policy.value.evaluate([unsigned.value], context).usable).toBe(false);
+    expect(policy.value.evaluate([forged.value], context).usable).toBe(false);
+    expect(policy.value.evaluate([signed.value], context).usable).toBe(true);
+    const restored = EvidenceRecord.reconstruct(signed.value.toRecord());
+    expect(restored.ok && policy.value.evaluate([restored.value], context).usable).toBe(true);
+    expect(Object.getOwnPropertyNames(authority)).not.toEqual(
+      expect.arrayContaining(["keys", "currentVersion", "authorityId"]),
+    );
   });
 
   it("U-PA-046: rejects negative claims and causally reversed supersession", () => {
@@ -200,20 +271,23 @@ describe("PLAN Asset evidence policy", () => {
       "2026-07-14T00:00:00Z",
       rejected.evidenceId,
     );
-    const policy = EvidencePolicy.create({
-      policyId: "review/v1",
-      revision: 1,
-      requirements: [
-        {
-          requirementId: "independent-review-approved",
-          requiredKind: "independent-review",
-          minCount: 1,
-          acceptedProducers: ["human"],
-          exitRule: { kind: "exact", expected: 0 },
-          claimsRule: { kind: "review-approved" },
-        },
-      ],
-    });
+    const policy = EvidencePolicy.create(
+      {
+        policyId: "review/v1",
+        revision: 1,
+        requirements: [
+          {
+            requirementId: "independent-review-approved",
+            requiredKind: "independent-review",
+            minCount: 1,
+            acceptedProducers: ["human"],
+            exitRule: { kind: "exact", expected: 0 },
+            claimsRule: { kind: "review-approved" },
+          },
+        ],
+      },
+      authority,
+    );
     if (!policy.ok) throw new Error("policy fixture must be valid");
     const verdict = policy.value.evaluate([rejected, olderApproval], {
       subjectId: "plan:a",
@@ -235,21 +309,24 @@ describe("PLAN Asset evidence policy", () => {
     { claimsRule: { kind: "bogus" } as never },
   ])("U-PA-046: rejects an unknown policy discriminator", (override) => {
     expect(
-      EvidencePolicy.create({
-        policyId: "invalid/v1",
-        revision: 1,
-        requirements: [
-          {
-            requirementId: "invalid",
-            requiredKind: "green-test-run",
-            minCount: 1,
-            acceptedProducers: ["ci"],
-            exitRule: { kind: "exact", expected: 0 },
-            claimsRule: { kind: "recorded" },
-            ...override,
-          },
-        ],
-      }).ok,
+      EvidencePolicy.create(
+        {
+          policyId: "invalid/v1",
+          revision: 1,
+          requirements: [
+            {
+              requirementId: "invalid",
+              requiredKind: "green-test-run",
+              minCount: 1,
+              acceptedProducers: ["ci"],
+              exitRule: { kind: "exact", expected: 0 },
+              claimsRule: { kind: "recorded" },
+              ...override,
+            },
+          ],
+        },
+        authority,
+      ).ok,
     ).toBe(false);
   });
 
@@ -336,30 +413,33 @@ function evidence(
   }> = {},
 ): EvidenceRecord {
   const evidenceKind = overrides.evidenceKind ?? "green-test-run";
-  const created = EvidenceRecord.create({
-    evidenceId,
-    evidenceKind,
-    subjectId: "plan:a",
-    subjectRevision: 1,
-    sourceCommit: commit,
-    commandArgs: createRedactedCommandArgs(["bun", "test"]),
-    claims:
-      evidenceKind === "red-test-run"
-        ? {
-            expectedFindingIds: ["red:expected"],
-            observedFindingIds: ["red:expected"],
-            todoCount: 0,
-            skipCount: 0,
-          }
-        : evidenceKind === "gate-run"
-          ? { gateIds: ["gate:accept"], failedGateIds: [] }
-          : { runnerId: "vitest", testIds: ["U-PA-045"] },
-    outputDigest: digest,
-    exitCode: 0,
-    producer: "ci",
-    producedAt: "2026-07-14T00:00:00Z",
-    expiresAt: overrides.expiresAt,
-  });
+  const created = EvidenceRecord.create(
+    {
+      evidenceId,
+      evidenceKind,
+      subjectId: "plan:a",
+      subjectRevision: 1,
+      sourceCommit: commit,
+      commandArgs: createRedactedCommandArgs(["bun", "test"]),
+      claims:
+        evidenceKind === "red-test-run"
+          ? {
+              expectedFindingIds: ["red:expected"],
+              observedFindingIds: ["red:expected"],
+              todoCount: 0,
+              skipCount: 0,
+            }
+          : evidenceKind === "gate-run"
+            ? { gateIds: ["gate:accept"], failedGateIds: [] }
+            : { runnerId: "vitest", testIds: ["U-PA-045"] },
+      outputDigest: digest,
+      exitCode: 0,
+      producer: "ci",
+      producedAt: "2026-07-14T00:00:00Z",
+      expiresAt: overrides.expiresAt,
+    },
+    authority,
+  );
   if (!created.ok) throw new Error("evidence fixture must be valid");
   return created.value;
 }
@@ -370,39 +450,45 @@ function reviewEvidence(
   producedAt: string,
   supersedesEvidenceId?: string,
 ): EvidenceRecord {
-  const created = EvidenceRecord.create({
-    evidenceId,
-    evidenceKind: "independent-review",
-    subjectId: "plan:a",
-    subjectRevision: 1,
-    sourceCommit: commit,
-    commandArgs: createRedactedCommandArgs(["ut-tdd", "review"]),
-    claims: { verdict, reviewerId: "reviewer:a", reviewedAt: producedAt },
-    outputDigest: digest,
-    exitCode: 0,
-    producer: "human",
-    producedAt,
-    supersedesEvidenceId,
-  });
+  const created = EvidenceRecord.create(
+    {
+      evidenceId,
+      evidenceKind: "independent-review",
+      subjectId: "plan:a",
+      subjectRevision: 1,
+      sourceCommit: commit,
+      commandArgs: createRedactedCommandArgs(["ut-tdd", "review"]),
+      claims: { verdict, reviewerId: "reviewer:a", reviewedAt: producedAt },
+      outputDigest: digest,
+      exitCode: 0,
+      producer: "human",
+      producedAt,
+      supersedesEvidenceId,
+    },
+    authority,
+  );
   if (!created.ok) throw new Error("review evidence fixture must be valid");
   return created.value;
 }
 
 function approvedReviewPolicy(): EvidencePolicy {
-  const created = EvidencePolicy.create({
-    policyId: "review/v1",
-    revision: 1,
-    requirements: [
-      {
-        requirementId: "independent-review-approved",
-        requiredKind: "independent-review",
-        minCount: 1,
-        acceptedProducers: ["human"],
-        exitRule: { kind: "exact", expected: 0 },
-        claimsRule: { kind: "review-approved" },
-      },
-    ],
-  });
+  const created = EvidencePolicy.create(
+    {
+      policyId: "review/v1",
+      revision: 1,
+      requirements: [
+        {
+          requirementId: "independent-review-approved",
+          requiredKind: "independent-review",
+          minCount: 1,
+          acceptedProducers: ["human"],
+          exitRule: { kind: "exact", expected: 0 },
+          claimsRule: { kind: "review-approved" },
+        },
+      ],
+    },
+    authority,
+  );
   if (!created.ok) throw new Error("policy fixture must be valid");
   return created.value;
 }

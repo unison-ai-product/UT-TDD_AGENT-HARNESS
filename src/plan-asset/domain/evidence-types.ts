@@ -82,6 +82,14 @@ interface TestRunClaims {
 
 export type EvidenceClaims = EvidenceClaimsByKind[EvidenceKind];
 
+export interface EvidenceAttestation {
+  readonly schemaVersion: "evidence-attestation/v1";
+  readonly algorithm: "hmac-sha256";
+  readonly authorityId: string;
+  readonly keyVersion: string;
+  readonly signature: string;
+}
+
 export interface EvidenceRecordInput<K extends EvidenceKind = EvidenceKind> {
   readonly evidenceId: string;
   readonly evidenceKind: K;
@@ -116,6 +124,7 @@ export interface StoredEvidenceRecord {
   readonly expiresAt: string | null;
   readonly supersedesEvidenceId: string | null;
   readonly recordDigest: string;
+  readonly attestation: EvidenceAttestation | null;
 }
 
 export type EvidenceExitRule =

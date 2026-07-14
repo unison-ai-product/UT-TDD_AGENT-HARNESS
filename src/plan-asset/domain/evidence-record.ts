@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { EvidenceAttestationIssuerPort } from "../ports/evidence-attestation.js";
 import {
   canonicalJson,
   cloneCanonical,
@@ -12,6 +13,7 @@ import { claimsValid } from "./evidence-claims.js";
 import {
   EVIDENCE_KINDS,
   EVIDENCE_PRODUCERS,
+  type EvidenceAttestation,
   type EvidenceClaims,
   type EvidenceError,
   type EvidenceExitRule,
@@ -59,17 +61,22 @@ export class EvidenceRecord {
   readonly expiresAt?: string;
   readonly supersedesEvidenceId?: string;
   readonly recordDigest!: string;
+  readonly attestation?: EvidenceAttestation;
 
   private constructor(input: ConstructorInput) {
     Object.assign(this, input);
     Object.freeze(this);
   }
 
-  static create(input: EvidenceRecordInput): Result<EvidenceRecord, EvidenceError> {
+  static create(
+    input: EvidenceRecordInput,
+    issuer?: EvidenceAttestationIssuerPort,
+  ): Result<EvidenceRecord, EvidenceError> {
     const error = validateInput(input);
     if (error) return { ok: false, error };
     const claims = deepFreeze(cloneCanonical(input.claims)) as EvidenceClaims;
     const record = storedFields({ ...input, claims });
+    const recordDigest = evidenceDigest(record);
     return {
       ok: true,
       value: new EvidenceRecord({
@@ -77,7 +84,8 @@ export class EvidenceRecord {
         commandArgs: input.commandArgs,
         expiresAt: input.expiresAt,
         supersedesEvidenceId: input.supersedesEvidenceId,
-        recordDigest: evidenceDigest(record),
+        recordDigest,
+        attestation: issuer?.issue({ producer: input.producer, recordDigest }),
       }),
     };
   }
@@ -104,9 +112,16 @@ export class EvidenceRecord {
       ...(input.supersedesEvidenceId ? { supersedesEvidenceId: input.supersedesEvidenceId } : {}),
     });
     if (!created.ok) return created;
-    return created.value.recordDigest === input.recordDigest
-      ? created
-      : failed("evidence-record-digest-mismatch");
+    if (created.value.recordDigest !== input.recordDigest) {
+      return failed("evidence-record-digest-mismatch");
+    }
+    return {
+      ok: true,
+      value: new EvidenceRecord({
+        ...created.value,
+        attestation: input.attestation ? deepFreeze(cloneCanonical(input.attestation)) : undefined,
+      }),
+    };
   }
 
   toRecord(): StoredEvidenceRecord {
@@ -128,6 +143,7 @@ export class EvidenceRecord {
       expiresAt: this.expiresAt ?? null,
       supersedesEvidenceId: this.supersedesEvidenceId ?? null,
       recordDigest: this.recordDigest,
+      attestation: this.attestation ?? null,
     });
   }
 
@@ -157,10 +173,14 @@ interface UsageContext {
   readonly exitRule: EvidenceExitRule;
 }
 
-type ConstructorInput = Omit<StoredEvidenceRecord, "expiresAt" | "supersedesEvidenceId"> & {
+type ConstructorInput = Omit<
+  StoredEvidenceRecord,
+  "expiresAt" | "supersedesEvidenceId" | "attestation"
+> & {
   readonly commandArgs: RedactedCommandArgs;
   readonly expiresAt?: string;
   readonly supersedesEvidenceId?: string;
+  readonly attestation?: EvidenceAttestation;
 };
 
 function validateInput(input: EvidenceRecordInput): EvidenceError | null {
@@ -209,7 +229,7 @@ function storedFields(input: EvidenceRecordInput & { readonly claims: EvidenceCl
   };
 }
 
-function evidenceDigest(record: Omit<StoredEvidenceRecord, "recordDigest">): string {
+function evidenceDigest(record: ReturnType<typeof storedFields>): string {
   return createHash("sha256")
     .update("ut-tdd-evidence-record/v1\0")
     .update(canonicalJson(record))
@@ -234,8 +254,23 @@ function storedShapeValid(input: StoredEvidenceRecord): boolean {
       "expiresAt",
       "supersedesEvidenceId",
       "recordDigest",
+      "attestation",
     ]) &&
-    /^[a-f0-9]{64}$/.test(String(input.recordDigest))
+    /^[a-f0-9]{64}$/.test(String(input.recordDigest)) &&
+    attestationValid(input.attestation)
+  );
+}
+
+function attestationValid(value: unknown): value is EvidenceAttestation | null {
+  if (value === null) return true;
+  if (!isPlainObject(value)) return false;
+  return (
+    exactKeys(value, ["schemaVersion", "algorithm", "authorityId", "keyVersion", "signature"]) &&
+    value.schemaVersion === "evidence-attestation/v1" &&
+    value.algorithm === "hmac-sha256" &&
+    /^[A-Za-z0-9_-]+$/.test(String(value.authorityId)) &&
+    /^[A-Za-z0-9_-]+$/.test(String(value.keyVersion)) &&
+    /^[A-Za-z0-9_-]{43}$/.test(String(value.signature))
   );
 }
 
