@@ -201,7 +201,64 @@ max_turns: 20
 1. **L7-431 (add-impl + REVERSE pair)**: schema + sync + drift gate (U-AGREG-001..003, 008)
 2. **L7-432 (add-impl + REVERSE pair)**: guard 拡張 + SessionStart digest (U-AGREG-004..005 + digest)
 3. **L7-433 (add-impl + REVERSE pair)**: blind 隊 packet / 帰責記録 / skill 連動 (U-AGREG-006..007、L6-53 の判定規約と接続)
-4. 既存 32 agent (.claude/agents 20 + global 12) の registry 移行は 1 の後に機械変換 + 個別レビューで実施。
+4. **L7-435 (add-impl + REVERSE pair)**: 検証パターン軸 + 招集型検証チーム (§8、U-AGREG-009..011)
+5. 既存 32 agent (.claude/agents 20 + global 12) の registry 移行は 1 の後に機械変換 + 個別レビューで実施。
+
+## 8. 検証パターン軸と招集型検証チーム (muster、PO 追補 2026-07-14)
+
+### 8.1 検証パターン語彙 (第一級 ID)
+
+registry に検証パターンのタグ軸を追加する。語彙は固定 enum (追加は本 PLAN 改訂で行う):
+
+| pattern_id | 内容 | 既存実体 |
+|---|---|---|
+| regression | テスト実走 + evidence (digest/receipt) | Vitest U-* oracle / harness-check |
+| negative | 負例・mutation fail-close 証明 | detector 負例、mutation survivor 0 |
+| spec-trace | spec(SSoT) と成果物の trace 突合 | pair_artifact / descent / plan lint |
+| blind | claim-blind / spec-blind 判定 | blind-reviewer、§4 blind 隊 |
+| adversarial | 反証専任攻撃 | advisor adversarial mode |
+| cross-family | 別プロバイダ/モデル族レビュー | hybrid cross-review |
+| multi-lens | レンズ別並行検証 (correctness/security/perf/a11y)、critical 発見数評価 | L7-430 追補 3 の入替基準 |
+| panel | N 案独立生成→採点→合成 | judge panel 型 workflow |
+| fault-attribution | 帰責分離 (設計/テスト/実装) | §4 帰責 3 分類 |
+
+### 8.2 task_kind → 招集の 2 段引き
+
+招集は **task_kind → パターン集合 → パターン担当可能 agent** の 2 段引きとし、
+task_kind→agent の直引きは禁止 (パターン/agent の追加が routing 変更なしで効くように)。
+
+標準プリセット (`MUSTER_PRESETS`、model-policy 同様コード正本):
+
+| task_kind | 招集パターン |
+|---|---|
+| design | spec-trace + adversarial + panel |
+| implementation | regression + negative + blind + cross-family |
+| test | negative + fault-attribution + blind(spec-blind) |
+| docs | spec-trace + 軽量 lint (readability) |
+| uiux | multi-lens (a11y/style/visual) |
+| research | multi-lens + completeness critic |
+| security/infra 接触 | multi-lens(security) + regression (実走 evidence 必須) |
+
+### 8.3 registry / 実装への反映
+
+- schema (§7.1) に `verify_patterns: [regression, ...]` field を追加 (その agent が
+  **担当できる**検証パターンの宣言。enum 外は reject)。
+- 招集エントリポイント: `ut-tdd verify muster --target <pr|plan|gate> ...` が
+  (a) 変更対象から task_kind/layer を解決、(b) MUSTER_PRESETS でパターン集合を引き、
+  (c) registry の verify_patterns 交差で member を選抜して team definition を合成する。
+  hybrid では blind/cross-family lane を非作成側 provider に割当 (§5 のゲート対応と同一原則)。
+- 判定集約は PASS / PASS-WEAK / FLAG を review_evidence + findings に記録し、
+  pattern_id をモデル入替判定 (トークン × 単価 × critical 発見数) の集計キーにする。
+- 実装 slice: **L7-435 (add-impl + REVERSE pair)** — MUSTER_PRESETS + `verify muster` +
+  team definition 合成 (U-AGREG-009..011)。L7-431 (schema) が先行依存。
+
+### 8.4 追加 oracle
+
+| ID | oracle |
+|---|---|
+| U-AGREG-009 | schema: verify_patterns の enum 外値が reject される |
+| U-AGREG-010 | muster: task_kind→preset→agent 交差の選抜が決定的で、直引き経路が存在しない |
+| U-AGREG-011 | muster: hybrid で blind/cross-family lane が作成側 provider へ割り当てられない (負例) |
 
 ## AC (L7 実装 PLAN へ引き継ぐ受入条件の骨子)
 
@@ -217,3 +274,5 @@ max_turns: 20
 - [ ] agent-guard が registry の task-kind 割当に反する model/effort 指定を fail-close する
       (負例テストで固定)。SessionStart digest に orchestrator model と標準期待の比較が
       surface される。
+- [ ] 検証パターン軸 (§8): verify_patterns enum 検証、muster 2 段引きの決定性、
+      hybrid での非作成側 lane 割当が負例つきで固定されている (U-AGREG-009..011)。
