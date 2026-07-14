@@ -1203,7 +1203,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
 | `U-PA-004` | revision 1+evidence | `PlanAsset.revise` | 旧instance/evidence digest不変、exit 0 |
 | `U-PA-005` | expired/別revision/policy別exit evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`、Red expected nonzeroだけusable、exit 1/0 |
-| `U-PA-006` | legacy PLAN全field + short alias現HEAD 20衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
+| `U-PA-006` | legacy PLAN全field + short alias現HEAD全衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
 | `U-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
 | `U-PA-008` | HEAD tracked `ut-tdd.project.json`、改竄bytes/receipt、schema/identity不正、remote無し | `loadTrackedProjectIdentity` / `loadProjectIdentityFromHead` | exact HEAD blobだけ成功しreceipt digest安定。index/working tree/remote補完0、異常種別を専用findingでfail-close |
 | `U-PA-009` | active alias/ordinal leaseを同時挿入 | typed partial UNIQUE DDL | active rowは1件だけ成功。terminal/closed intervalは履歴として共存可能 |
@@ -1216,8 +1216,8 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-016` | active leaseへrelease/expireを競合実行 | `PlanLedger.release/expire` | token/expiry guardを通った一方だけterminal eventをappendし、敗者は`plan-id-reservation-not-active` |
 | `U-PA-017` | active ordinalへ別reservationをappend | `PlanLedger.reserve` | `plan-id-reservation-conflict`でevent/current/receiptを全rollbackし部分commit 0 |
 | `U-PA-018` | reservation receiptのsubject/result kind/command type/recorded timeを改竄 | `migratePlanLedger` receipt/event bijection verifier | event subject/payload/result/timeとの不一致を`plan-ledger-unavailable`でfail-close |
-| `U-PA-019` | HEAD `docs/plans/PLAN-*.md`全件 | `buildLegacyPlanInventory` | 752 pathをexactly onceで読み、full plan ID/asset IDが全件一意、frontmatter plan_id一致 |
-| `U-PA-020` | numeric coreでgroup化したHEAD PLAN | `buildLegacyPlanInventory` | 27群/55 PLANをstable順で返し自動winner選択0 |
+| `U-PA-019` | HEAD `docs/plans/PLAN-*.md`全件 | `buildLegacyPlanInventory` | HEAD path全件をexactly onceで読み、full plan ID/asset IDが全件一意、frontmatter plan_id一致 |
+| `U-PA-020` | numeric coreでgroup化したHEAD PLAN | `buildLegacyPlanInventory` | reviewed rekey manifestのgroup/item集合とexact一致しstable順、自動winner選択0 |
 | `U-PA-021` | 同一HEADを反復inventory | `buildLegacyPlanInventory` | item/collision順とSHA-256 inventory digestが完全一致 |
 | `U-PA-022` | anchor/alias/merge/custom tag/non-string key/unsafe integerを含むfrontmatter | `parseLegacyPlanSource` | lossless canonical化できないYAMLを全件fail-close |
 | `U-PA-023` | empty state + valid pending observe | `reduceLegacyMigration` / append port | observed event/current/receiptのみatomic append、PlanAsset/revision/alias行0 |
@@ -1232,14 +1232,18 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-032` | 各append境界fault injection | migration transaction port | event/current/asset/revision/alias/receiptの全table delta 0 |
 | `U-PA-033` | valid ledger close→file reopen/rebuild | migration reconstruct | state/event/payload/provenance digest集合が完全一致 |
 | `U-PA-034` | source commitのHEAD PLAN全件 | `LegacyMigrationDryRun` | inventoryとrecordがexactly-once bijection、total=emitted、legacy ID重複0 |
-| `U-PA-035` | 27群/55件reviewed collision manifest | decision resolver | migrated=697、rekeyed=55、pending=0。manifest欠落・余剰・group不一致はfail-close |
+| `U-PA-035` | reviewed collision manifest | decision resolver | migrated=HEAD全件-rekeyed、pending=0。manifest欠落・余剰・group不一致はfail-close |
 | `U-PA-036` | 別legacy IDを返すdecision port | dry-run record join | `plan-migration-preview-id-mismatch`、finding 1件以上 |
 | `U-PA-037` | 同一HEAD・同一manifestを2回実行 | dry-run report | record順、finding順、inventory/report digest完全一致 |
 | `U-PA-038` | HEAD exact file / directory family / hollow / missing | `HeadTargetRegistry` | 非空fileと非空familyのみ存在判定、hollow/missingを拒否 |
 | `U-PA-039` | record source commit/path/OID/content digest | 独立Git object oracle | `commit:path` OIDと実blob bytes SHA-256がrecordと一致 |
 | `U-PA-040` | 全agent slot + 7 role contract | role contract loader/projection | role全単射、全slot contractRef付与、HEAD contract blob非空。未知role/欠落は拒否 |
 | `U-PA-041` | item ledgerの全`target_slot` edge | HEAD document catalog resolver | 全slot ref解決、存在しないslotはglobal findingでfail-close |
-| `U-PA-042` | `plan migration-dry-run --json` | CLI public surface | exit 0、752/752、697 migrated、55 rekeyed、pending/finding 0のJSON契約 |
+| `U-PA-042` | `plan migration-dry-run --json` | CLI public surface | exit 0、`total=emitted=HEAD PLAN件数`、`migrated=total-rekeyed`、pending/finding 0のJSON契約 |
+| `U-PA-043` | `leaseMs`付きreservation commandを初回/再送 | `ReservationService` + versioned key-ring/clock port | raw tokenを返しDB/event/current/receipt保存0、再送はclock進行後も同一token/expiry、異payloadはconflict |
+| `U-PA-044` | reservation event/current/receipt各append直後にfault注入 | `PlanLedger.reserve` transaction | 各例外後にevent/current/receiptのdelta 0、次の正常commandは成功 |
+| `U-PA-045` | 複数kind/producer/subject/revision/commit/expiry/exitを組合せたevidence集合 | `EvidenceRecord` / `EvidencePolicy` | requirements各kindのeligibleだけをmin/max cardinalityへ数え、missing/rejected IDをstable順で返す |
+| `U-PA-046` | raw配列command、未知kind/producer、自己supersede、record field改変 | `EvidenceRecord.create` / digest | branded redacted argv以外は拒否、record digest不一致を再構築時に拒否、旧record不変 |
 | `CANDIDATE-FSM-001` | 正規stateごとの次event | `transition` | 許可表どおりのnext state/event、exit 0 |
 | `CANDIDATE-FSM-002` | proposed→implementing | `transition` | `forward-transition-illegal`, exit 1 |
 | `CANDIDATE-FSM-003` | pair frozen、Red evidenceなし | implement command | `forward-red-evidence-missing`, exit 1 |

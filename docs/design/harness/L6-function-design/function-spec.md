@@ -925,8 +925,8 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 |---|---|---|
 | `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `canonicalPayload`, `dependencies[]` | 空ID、重複dependency、revision≠1、payload digest不一致は`PlanAssetError` |
 | `RevisePlanCommand` | `assetId`, `baseRevision`, `changeSet`, `actor`, `reason` | base≠latest、空reason、identity変更は拒否 |
-| `EvidenceInput` | `evidenceId`, `subjectId`, `subjectRevision`, `sourceCommit`, `commandArgs[]`, `outputDigest`, `exitCode`, `producedAt`, `expiresAt?`, `producer` | digest/commit/revision/command欠落は`EvidenceError`。非0 exitも監査用recordとしてvalid |
-| `EvidencePolicy` | `requiredKinds[]`, `maxAge?`, `acceptedProducers[]` | 別revision、期限切れ、producer外は`EvidenceVerdict.usable=false` |
+| `EvidenceInput` | `evidenceId`, `evidenceKind`, `subjectId`, `subjectRevision`, `sourceCommit`, branded `commandArgs`, `outputDigest`, `exitCode`, typed `producer`, `producedAt`, `expiresAt?`, `supersedesEvidenceId?` | record digestをcanonical fieldから内部生成する。digest/commit/revision/redacted command/kind/producer欠落、自己supersedeは`EvidenceError`。非0 exitも監査用recordとしてvalid |
+| `EvidencePolicy` | `requirements[]`（各要素=`requiredKind`, `minCount`, `maxCount?`, `acceptedProducers[]`, `exitRule`）、`maxAge?` | 複数kindを各cardinalityで表現する。別kind/revision/commit、期限切れ、producer外、exit不適合を件数へ数えず、kind別eligible/rejected IDをstable順で返す |
 | `WorkflowCommand` | `subjectId`, `expectedFrom`, `to`, `actor`, `reason?`, `evidenceIds[]` | 許可表外、sequence不整合、guard不足は`WorkflowError` |
 | `WorkflowContext` | `subjectRevision`, `events[]`, `evidence[]`, `now`, `policyRevision` | event/evidenceが別subjectならfail-close |
 | `VModelContractDto` | `revision`, `layers[]`, `gates[]`, `pairs[]`, `exceptions[]`, `evidencePolicies[]`, `defectRoutes[]` | exactly-once、未知参照、理由なし例外は`ContractViolation[]` |
@@ -1154,7 +1154,8 @@ subject/revisionを勝手に変更しない。最低10,000列または全state×
 
 | port / method | signature | 契約 |
 |---|---|---|
-| `PlanIdReservation.reserve` | `(request: { namespace; ordinal; assetId; leaseMs; commandId }, tx) -> Result<ReservationLease, ReservationError>` | transaction内compare-and-insert。同一commandId+同一payloadは同じleaseを返し、異payloadはconflict |
+| `ReservationService.reserve` | `(request: { reservationId; namespace; ordinal; assetId; leaseMs; commandId }) -> Result<ReservationLease, ReservationError>` | injected clockとversioned key-ring portからraw tokenを発行し、ledgerへは`keyVersion + hash`だけ渡す。token=`utl1.<keyVersion>.<base64url(HMAC-SHA256(secret, length-prefixed commandId/reservationId/namespace/ordinal/assetId/occurredAt/expiresAt))>`。再送はeventのkeyVersion/時刻を読み、同version keyで同じraw leaseを再導出しconstant-time hash照合。key保管adapterをdomain/applicationへ埋め込まない |
+| `PlanLedger.reserve` | `(record: { reservationId; namespace; ordinal; assetId; leaseKeyVersion; leaseTokenHash; commandId; occurredAt; expiresAt }, tx) -> Result<ReservationEvent, ReservationError>` | key version+hash-only記録adapter。event/current/receiptを同一transactionでappendし、いずれのfaultでも3表delta 0 |
 | `PlanIdReservation.release` | `(reservationId, leaseToken, commandId, tx) -> Result<ReleaseEvent, ReservationError>` | token hashをconstant-time照合し、二重releaseは同一結果。期限切れ/他tokenを拒否 |
 | `PlanIdReservation.reconstruct` | `(events, now) -> Result<ReservationState, ReservationError>` | sequence/lease重複0、wall clockをeventへ混入しない |
 | `ProcessRunner.run` | `(request: { executable; args[]; cwd; envAllowlist; stdinDigest?; timeoutMs; maxStdoutBytes; maxStderrBytes }) -> Promise<ProcessObservation>` | shell文字列連結禁止。timeout/signal/exceptionを`exitKind=exited|timeout|signal|spawn_error`へ正規化し、出力超過はtruncate finding |
