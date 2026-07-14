@@ -62,7 +62,8 @@ function commitFile(root: string, relPath: string, content: string): string {
 
 /** `scripts/git-hooks/secret-scan-diff.ts` を stdin 経由で直接叩く (CLI entrypoint、実 git blob 使用)。 */
 function runHookCli(cwd: string, stdin: string, env?: NodeJS.ProcessEnv) {
-  return spawnSync(process.execPath, [join(hooksDir, "secret-scan-diff.ts")], {
+  const bunBinary = process.execPath.toLowerCase().includes("bun") ? process.execPath : "bun";
+  return spawnSync(bunBinary, [join(hooksDir, "secret-scan-diff.ts")], {
     cwd,
     encoding: "utf8",
     input: stdin,
