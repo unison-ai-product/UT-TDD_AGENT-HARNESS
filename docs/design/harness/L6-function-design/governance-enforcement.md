@@ -1,6 +1,7 @@
 ---
 layer: L6
-sub_doc: function-spec-addendum
+sub_doc: function-spec
+artifact_role: supplemental_governance_enforcement
 status: confirmed
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 parent_doc: docs/plans/PLAN-L6-09-governance-enforcement.md

@@ -2,6 +2,8 @@
 layer: L6
 artifact_type: design_doc
 status: confirmed
+sub_doc: function-spec
+artifact_role: topic_vmodel_pair_freeze
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 next_pair_freeze: L7

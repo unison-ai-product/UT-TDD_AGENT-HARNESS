@@ -58,6 +58,7 @@ import {
   checkRuleAutomationClosure,
   checkScreenImplPairFreeze,
   checkSubDocCatalogDrift,
+  checkSubDocSchemaIntegrity,
   checkSubDocSectionStructure,
   checkTelemetryClosure,
 } from "./process-quality";
@@ -219,6 +220,7 @@ export function buildDoctorCheckDefinitionGroups(
         full("oracle-test-trace", () => checkOracleTestTrace(deps.repoRoot)),
         full("tracked-canonical", () => checkTrackedCanonical(deps.repoRoot)),
         full("sub-doc-catalog-drift", () => checkSubDocCatalogDrift(deps.repoRoot)),
+        full("sub-doc-schema-integrity", () => checkSubDocSchemaIntegrity(deps.repoRoot)),
         full("sub-doc-section-structure", () => checkSubDocSectionStructure(deps.repoRoot)),
         full("screen-impl-pair-freeze", () => checkScreenImplPairFreeze(deps.repoRoot)),
         full("verification-groups", () => checkVerificationGroupsResult(deps.repoRoot)),
