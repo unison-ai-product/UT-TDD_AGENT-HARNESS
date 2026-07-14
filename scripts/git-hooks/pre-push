@@ -16,7 +16,7 @@ set -euo pipefail
 # 【設計注記】途中 commit で追加され後続 commit で削除される secret は working tree では見えない
 # (working tree はクリーンなまま push できてしまう)。そのため本スクリプトは commit 単位で
 # (sha, path) を保持し、secret-scan-diff.ts 側で各 commit 時点の blob (`git show <sha>:<path>`)
-# を個別に読む。旧 `.git/hooks/pre-push` (helix 世代、untracked) は
+# を個別に読む。旧来の未追跡 `.git/hooks/pre-push` は
 # `*CLAUDE.md` / `*SKILL.md` / references 配下 `*.md` の 3 パターンへ限定して PII regex を
 # 直接 grep していたが、対象拡大 (docs/・.ut-tdd/audit/・.ut-tdd/logs/・.ut-tdd/memory) は
 # secret-scan-diff.ts 側の isWidenedScanSurface に一本化する。

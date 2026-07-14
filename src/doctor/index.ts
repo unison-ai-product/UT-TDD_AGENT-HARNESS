@@ -109,6 +109,10 @@ export {
   nodeDoctorDeps,
 } from "./runtime-state";
 export {
+  checkRuntimeStateLocation,
+  findRuntimeStateLocationFindings,
+} from "./runtime-state-location";
+export {
   checkCodexHookAdapter,
   checkCodexWrapperParity,
   checkGithubCiPolicy,
@@ -121,6 +125,7 @@ export {
   checkPlanArtifactExistence,
   checkTrackedCanonical,
 } from "./source-trace";
+export { checkTestRepositoryIsolation } from "./test-repository-isolation";
 export { checkToolchainPin } from "./toolchain";
 export {
   checkFrontendDesignCoverage,

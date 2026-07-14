@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -19,6 +19,7 @@ import { HARNESS_DB_VMODEL_TABLES } from "../src/schema/harness-db-tables-vmodel
 import { assertWithinUtTdd, openHarnessDb, upsertRow } from "../src/state-db/index";
 import { ensureHarnessSchema, harnessDbStatus } from "../src/state-db/maintenance";
 import { migrate, missingTables, rowCounts, tableNames } from "../src/state-db/migration";
+import { removeTestTree } from "./support/temp-tree";
 
 /**
  * bun:sqlite releases the OS file handle on GC finalization rather than synchronously on
@@ -26,10 +27,7 @@ import { migrate, missingTables, rowCounts, tableNames } from "../src/state-db/m
  * (the harness.db file is still mapped). Force GC where the runtime exposes it, then remove
  * with retries. node:sqlite releases on close(), so the GC hook is a Bun-only no-op there.
  */
-function cleanupRepo(repo: string): void {
-  (globalThis as { Bun?: { gc: (sync: boolean) => void } }).Bun?.gc(true);
-  rmSync(repo, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
-}
+const cleanupRepo = removeTestTree;
 
 /**
  * IT-DB-01: harness.db state-db foundation。

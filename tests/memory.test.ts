@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -11,15 +11,13 @@ import {
 import { isSecretLike } from "../src/secret";
 import { openHarnessDb } from "../src/state-db/index";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer";
+import { removeTestTree } from "./support/temp-tree";
 
 function tempRepo(): string {
   return mkdtempSync(join(tmpdir(), "ut-tdd-memory-"));
 }
 
-function cleanupRepo(repo: string): void {
-  (globalThis as { Bun?: { gc: (sync: boolean) => void } }).Bun?.gc(true);
-  rmSync(repo, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
-}
+const cleanupRepo = removeTestTree;
 
 describe("shared harness memory", () => {
   it("uses the shared secret detector directly", () => {

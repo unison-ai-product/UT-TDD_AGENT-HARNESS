@@ -2,7 +2,6 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   checkForUpdate,
@@ -20,10 +19,11 @@ import {
 } from "../src/setup/update-check";
 
 const ROOT = "/harness";
-const REPO_ROOT = join(fileURLToPath(import.meta.url), "..", "..");
-const CLI_PATH = join(REPO_ROOT, "src", "cli.ts");
+const EXECUTION_ROOT = process.env.UT_TDD_TEST_EXECUTION_ROOT;
+if (!EXECUTION_ROOT) throw new Error("update-check CLI tests require an execution snapshot");
+const CLI_PATH = join(EXECUTION_ROOT, "src", "cli.ts");
 
-function runCli(args: string[], env: NodeJS.ProcessEnv, cwd = REPO_ROOT) {
+function runCli(args: string[], env: NodeJS.ProcessEnv, cwd = EXECUTION_ROOT) {
   const base = { cwd, encoding: "utf8" as const, env, timeout: 120_000 };
   if (process.platform === "win32") {
     const cmdExe = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");

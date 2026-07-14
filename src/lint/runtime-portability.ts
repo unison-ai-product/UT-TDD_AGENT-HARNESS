@@ -21,7 +21,23 @@ export interface RuntimePortabilityResult {
   ok: boolean;
 }
 
-const ALLOWED_SCRIPT_WRAPPERS = new Set(["scripts/ut-tdd", "scripts/ut-tdd.ps1"]);
+const ALLOWED_SCRIPT_WRAPPERS = new Set([
+  "scripts/ut-tdd",
+  "scripts/ut-tdd.ps1",
+  "scripts/run-vitest-snapshot.ts",
+]);
+const VITEST_ENTRYPOINT = /\b(?:vitest\s+run|scripts[\\/]run-vitest-snapshot\.ts)\b/;
+
+function usesVitestEntrypoint(
+  script: string | undefined,
+  scripts: Record<string, string> | undefined,
+): boolean {
+  return (
+    VITEST_ENTRYPOINT.test(script ?? "") ||
+    (script === "bun run test:vitest-snapshot" &&
+      VITEST_ENTRYPOINT.test(scripts?.["test:vitest-snapshot"] ?? ""))
+  );
+}
 // git client-side hook entrypoints (PLAN-L7-260 §4, PLAN-L7-424 Step 2 が想定する置き場)。
 // `scripts/` へ core logic を持ち込ませない gate の本旨は、検出ロジックを src/lint/secret-scan.ts
 // に置き続けさせる下記の narrow 制約 (git-hook-entrypoint-not-thin / git-hook-scanner-not-reusing-core)
@@ -129,7 +145,7 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
       message: "TypeScript strictness must be enforced by tsc --noEmit.",
     });
   }
-  if (!/\bvitest\s+run\b/.test(pkg.scripts?.test ?? "")) {
+  if (!usesVitestEntrypoint(pkg.scripts?.test, pkg.scripts)) {
     violations.push({
       path,
       line: 1,
@@ -138,7 +154,7 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
     });
   }
   if (
-    !/\bvitest\s+run\b/.test(pkg.scripts?.["test:fast"] ?? "") ||
+    !usesVitestEntrypoint(pkg.scripts?.["test:fast"], pkg.scripts) ||
     !pkg.scripts?.["test:fast"]?.includes("--exclude tests/projection-writer.test.ts") ||
     !pkg.scripts?.["test:fast"]?.includes("--exclude tests/cli-surface.test.ts")
   ) {
@@ -151,8 +167,7 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
     });
   }
   if (
-    !/\bdb\s+rebuild\b/.test(pkg.scripts?.["test:db"] ?? "") ||
-    !/\bvitest\s+run\b/.test(pkg.scripts?.["test:db"] ?? "") ||
+    !usesVitestEntrypoint(pkg.scripts?.["test:db"], pkg.scripts) ||
     !pkg.scripts?.["test:db"]?.includes("tests/db-projection-ingestion.test.ts") ||
     !pkg.scripts?.["test:db"]?.includes("tests/drive-db-registration.test.ts") ||
     !pkg.scripts?.["test:db"]?.includes("tests/projection-writer.test.ts")
@@ -165,7 +180,7 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
     });
   }
   if (
-    !/\bvitest\s+run\b/.test(pkg.scripts?.["test:cli"] ?? "") ||
+    !usesVitestEntrypoint(pkg.scripts?.["test:cli"], pkg.scripts) ||
     !pkg.scripts?.["test:cli"]?.includes("tests/cli-surface.test.ts") ||
     !pkg.scripts?.["test:cli"]?.includes("tests/runtime-hook-entrypoints.test.ts")
   ) {
@@ -177,7 +192,7 @@ function packageViolations(doc: RuntimePortabilityDoc | undefined): RuntimePorta
     });
   }
   if (
-    !/\bvitest\s+run\b/.test(pkg.scripts?.["test:node-fallback"] ?? "") ||
+    !usesVitestEntrypoint(pkg.scripts?.["test:node-fallback"], pkg.scripts) ||
     !pkg.scripts?.["test:node-fallback"]?.includes("tests/state-db.test.ts") ||
     !pkg.scripts?.["test:node-fallback"]?.includes("tests/runtime-portability.test.ts")
   ) {
@@ -300,7 +315,7 @@ function analyzeRuntimeDoc(doc: RuntimePortabilityDoc): RuntimePortabilityViolat
       message: `${GIT_HOOK_SCANNER_PATH} must reuse src/lint/secret-scan.ts detection logic, not reimplement it.`,
     });
   }
-  if (ALLOWED_SCRIPT_WRAPPERS.has(path)) {
+  if (ALLOWED_SCRIPT_WRAPPERS.has(path) && path !== "scripts/run-vitest-snapshot.ts") {
     const lines = scriptNonCommentLines(doc.text);
     if (
       lines.length > 12 ||

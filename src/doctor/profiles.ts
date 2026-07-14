@@ -91,6 +91,8 @@ export const FULL_DOCTOR_OUTPUT_IDS = [
   "telemetry-closure",
   "cycle-p4-verification",
   "l14-close-audit",
+  "runtime-state-location",
+  "test-repository-isolation",
   "project-hook",
   "github-ci-policy",
   "codex-hook-adapter",

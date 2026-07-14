@@ -19,6 +19,7 @@ import {
   gitAddPathspecCommands,
   transformCleanDistributionArtifact,
 } from "../src/setup/index";
+import { removeTestTree } from "./support/temp-tree";
 
 const repoRoot = process.cwd();
 
@@ -97,20 +98,7 @@ function writeLocalUtTddShim(root: string): string {
   return path;
 }
 
-function removeCleanRoot(root: string): void {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    try {
-      rmSync(root, { recursive: true, force: true });
-      return;
-    } catch (error) {
-      if (attempt === 4) {
-        console.warn(`cleanup warning: could not remove ${root}: ${String(error)}`);
-        return;
-      }
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
-    }
-  }
-}
+const removeCleanRoot = removeTestTree;
 
 function createCleanDistributionFixture(): string {
   const root = mkdtempSync(join(tmpdir(), "ut-tdd-distribution-integrity-"));
@@ -267,9 +255,12 @@ describe("clean distribution local acceptance smoke", () => {
       const packPackageJson = JSON.parse(readFileSync(join(cleanRoot, "package.json"), "utf8")) as {
         scripts: Record<string, string>;
       };
-      expect(packPackageJson.scripts.test).toContain("tests/distribution-acceptance.test.ts");
-      expect(packPackageJson.scripts.test).toContain("tests/readability.test.ts");
-      expect(packPackageJson.scripts["test:source"]).toBe("vitest run");
+      expect(packPackageJson.scripts.test).toBe("bun run test:pack");
+      expect(packPackageJson.scripts["test:pack"]).toContain("scripts/run-vitest-snapshot.ts");
+      expect(packPackageJson.scripts["test:pack"]).toContain(
+        "tests/distribution-acceptance.test.ts",
+      );
+      expect(packPackageJson.scripts["test:source"]).toBe("bun run test:vitest-snapshot");
 
       const status = runBun(cleanRoot, ["src/cli.ts", "status", "--json"], env);
       expect(status.status, status.stderr || status.stdout).toBe(0);

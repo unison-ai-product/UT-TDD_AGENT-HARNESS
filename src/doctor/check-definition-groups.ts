@@ -82,6 +82,7 @@ import {
 } from "./rule-quality";
 import type { DoctorCheckDefinition, DoctorOptions } from "./runner";
 import { type DoctorDeps, handoverDeps } from "./runtime-state";
+import { checkRuntimeStateLocation } from "./runtime-state-location";
 import {
   checkCodexHookAdapter,
   checkCodexWrapperParity,
@@ -95,6 +96,7 @@ import {
   checkPlanArtifactExistence,
   checkTrackedCanonical,
 } from "./source-trace";
+import { checkTestRepositoryIsolation } from "./test-repository-isolation";
 import { checkToolchainPin } from "./toolchain";
 import {
   checkFrontendDesignCoverage,
@@ -193,6 +195,8 @@ export function buildDoctorCheckDefinitionGroups(
     {
       id: "runtime-surface",
       definitions: [
+        full("runtime-state-location", () => checkRuntimeStateLocation(deps.repoRoot)),
+        full("test-repository-isolation", () => checkTestRepositoryIsolation(deps.repoRoot)),
         full("project-hook", () => checkProjectHooks(deps.repoRoot)),
         full("github-ci-policy", () => checkGithubCiPolicy(deps.repoRoot)),
         full("codex-hook-adapter", () => checkCodexHookAdapter(deps.repoRoot)),

@@ -28,10 +28,10 @@ generates:
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-405-spec-ir-detector-precision.md
-  requires:
-    - docs/plans/PLAN-REVERSE-429-spec-ir-detector-scope-backfill.md
+  requires: []
   references:
     - docs/plans/PLAN-L7-245-sub-doc-schema-integrity.md
+    - docs/plans/PLAN-REVERSE-429-spec-ir-detector-scope-backfill.md
     - src/state-db/spec-ir-projections.ts
     - src/schema/index.ts
     - tests/spec-ir-projections.test.ts

@@ -16,6 +16,7 @@ import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/
 import { migrate } from "../src/state-db/migration";
 import { MODEL_IDS } from "../src/team/model-policy";
 import { headPlanDocCount } from "./plan-asset/head-plan-doc-count.js";
+import { removeTestTree } from "./support/temp-tree";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");
@@ -91,10 +92,12 @@ function writeFakeProvider(binDir: string, name: "codex" | "claude"): string {
       [
         "@echo off",
         `echo noisy-${name}`,
-        `echo raw=%${rawEnv}% > ${name}-env.txt`,
-        `echo reason=%${reasonEnv}% >> ${name}-env.txt`,
-        `echo effort=%CLAUDE_CODE_EFFORT_LEVEL% >> ${name}-env.txt`,
-        `echo args=%* >> ${name}-env.txt`,
+        'set "OUTPUT_DIR=%CD%"',
+        'if defined UT_TDD_TEST_PROVIDER_OUTPUT_DIR set "OUTPUT_DIR=%UT_TDD_TEST_PROVIDER_OUTPUT_DIR%"',
+        `echo raw=%${rawEnv}% > "%OUTPUT_DIR%\\${name}-env.txt"`,
+        `echo reason=%${reasonEnv}% >> "%OUTPUT_DIR%\\${name}-env.txt"`,
+        `echo effort=%CLAUDE_CODE_EFFORT_LEVEL% >> "%OUTPUT_DIR%\\${name}-env.txt"`,
+        `echo args=%* >> "%OUTPUT_DIR%\\${name}-env.txt"`,
         "exit /b 0",
         "",
       ].join("\r\n"),
@@ -107,7 +110,8 @@ function writeFakeProvider(binDir: string, name: "codex" | "claude"): string {
     [
       "#!/bin/sh",
       `echo noisy-${name}`,
-      `printf "raw=%s\\nreason=%s\\neffort=%s\\nargs=%s\\n" "$${rawEnv}" "$${reasonEnv}" "$CLAUDE_CODE_EFFORT_LEVEL" "$*" > ${name}-env.txt`,
+      ['output_dir="$', '{UT_TDD_TEST_PROVIDER_OUTPUT_DIR:-$PWD}"'].join(""),
+      `printf "raw=%s\\nreason=%s\\neffort=%s\\nargs=%s\\n" "$${rawEnv}" "$${reasonEnv}" "$CLAUDE_CODE_EFFORT_LEVEL" "$*" > "$output_dir/${name}-env.txt"`,
       "exit 0",
       "",
     ].join("\n"),
@@ -136,7 +140,11 @@ function withFakeProviderEnv(provider: "codex" | "claude") {
   writeFakeProvider(binDir, provider);
   return {
     binDir,
-    env: { ...process.env, PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}` },
+    env: {
+      ...process.env,
+      UT_TDD_TEST_PROVIDER_OUTPUT_DIR: binDir,
+      PATH: `${binDir}${delimiter}${process.env.PATH ?? ""}`,
+    },
   };
 }
 
@@ -175,7 +183,7 @@ describe("L7 CLI surface closure", () => {
         source: "ut-tdd gate",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 15_000);
 
@@ -201,7 +209,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload.gate_run_evidence).toBeNull();
       expect(payload.gate_run_evidence_warning).toContain("gate run evidence write failed");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 15_000);
 
@@ -217,7 +225,7 @@ describe("L7 CLI surface closure", () => {
       expect(complete.stdout).toContain("status=completed");
       expect(complete.stdout).toContain("(dry-run)");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 15_000);
 
@@ -359,7 +367,7 @@ describe("L7 CLI surface closure", () => {
       );
       expect(run.stdout).not.toContain("undefined");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 15_000);
 
@@ -442,7 +450,7 @@ describe("L7 CLI surface closure", () => {
         gate_id: "G4",
       });
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 15_000);
 
@@ -505,7 +513,7 @@ describe("L7 CLI surface closure", () => {
       expect(payload.model).toBe("gpt-5.3-codex-spark");
       expect(payload.args).toEqual(["exec", "-m", "gpt-5.3-codex-spark", "-"]);
     } finally {
-      rmSync(fake.binDir, { recursive: true, force: true });
+      removeTestTree(fake.binDir);
     }
   }, 20_000);
 
@@ -544,7 +552,7 @@ describe("L7 CLI surface closure", () => {
         "high",
       ]);
     } finally {
-      rmSync(fake.binDir, { recursive: true, force: true });
+      removeTestTree(fake.binDir);
     }
   }, 20_000);
 
@@ -714,7 +722,7 @@ describe("L7 CLI surface closure", () => {
       expect(codexEnv).toContain(MODEL_IDS.codex.frontier);
       expect(codexEnv).toContain("args=");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 20_000);
 
@@ -771,6 +779,7 @@ describe("L7 CLI surface closure", () => {
       const run = runCliIn(repoRoot, ["distribution", "plan", "--tag", "v0.1.0", "--json"], {
         ...process.env,
         UT_TDD_CODEX_BIN: fakeCodex,
+        UT_TDD_TEST_PROVIDER_OUTPUT_DIR: binDir,
         PATH: `${binDir}${process.platform === "win32" ? ";" : ":"}${process.env.PATH ?? ""}`,
       });
       const payload = JSON.parse(run.stdout);
@@ -799,9 +808,9 @@ describe("L7 CLI surface closure", () => {
       );
       expect(payload.readiness.contracts.tagPin).toContain("#v0.1.0");
       expect(payload.readiness.ci.forkPullRequestSecrets).toBe("not-required");
+      expect(readFileSync(join(binDir, "codex-env.txt"), "utf8")).toContain("args=");
     } finally {
-      rmSync(join(repoRoot, "codex-env.txt"), { force: true });
-      rmSync(binDir, { recursive: true, force: true });
+      removeTestTree(binDir);
     }
   }, 20_000);
 
@@ -838,7 +847,7 @@ describe("L7 CLI surface closure", () => {
       const manifest = JSON.parse(readFileSync(payload.artifacts.manifest, "utf8"));
       expect(manifest.artifactCount).toBeGreaterThan(100);
     } finally {
-      rmSync(outDir, { recursive: true, force: true });
+      removeTestTree(outDir);
     }
   }, 30_000);
 
@@ -926,7 +935,7 @@ describe("L7 CLI surface closure", () => {
       const manifest = JSON.parse(readFileSync(payload.stage.manifest, "utf8"));
       expect(manifest.stage.copiedArtifacts).toBeGreaterThan(100);
     } finally {
-      rmSync(outDir, { recursive: true, force: true });
+      removeTestTree(outDir);
     }
   }, 30_000);
 
@@ -1012,7 +1021,7 @@ describe("L7 CLI surface closure", () => {
       expect(prunedPayload.pack.nextCommands.join("\n")).not.toContain("git add --all");
       expect(prunedPayload.pack.nextCommands.join("\n")).not.toContain(" add --all");
     } finally {
-      rmSync(packDir, { recursive: true, force: true });
+      removeTestTree(packDir);
       if (manifest) rmSync(manifest, { force: true });
     }
   }, 40_000);
@@ -1086,7 +1095,7 @@ describe("L7 CLI surface closure", () => {
       expect(run.status).toBe(1);
       expect(run.stderr).toContain("--tl-team / --qa-team / --po-team");
     } finally {
-      rmSync(repo, { recursive: true, force: true });
+      removeTestTree(repo);
     }
   });
 
@@ -1117,7 +1126,7 @@ describe("L7 CLI surface closure", () => {
       expect(run.stderr).not.toContain("claude");
       expect(run.stderr).not.toContain("codex");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1208,7 +1217,7 @@ describe("L7 CLI surface closure", () => {
         payload.members.map((member: { adapter: { command: string } }) => member.adapter.command),
       ).toEqual(["codex", "claude"]);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1355,7 +1364,7 @@ describe("L7 CLI surface closure", () => {
       expect(readFileSync(join(root, "claude-env.txt"), "utf8")).not.toContain("raw=1");
       expect(readFileSync(join(root, "claude-env.txt"), "utf8")).toContain("effort=high");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 
@@ -1397,7 +1406,7 @@ describe("L7 CLI surface closure", () => {
       // provider が実際に起動した証跡 (env dump)。「実行せず JSON だけ」だと生成されない。
       expect(readFileSync(join(root, "codex-env.txt"), "utf8")).toContain("args=");
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   }, 20_000);
 });

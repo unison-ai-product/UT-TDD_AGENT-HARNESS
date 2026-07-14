@@ -67,6 +67,7 @@ function runHookCli(cwd: string, stdin: string, env?: NodeJS.ProcessEnv) {
     encoding: "utf8",
     input: stdin,
     env: { ...process.env, ...env },
+    shell: process.platform === "win32",
   });
 }
 

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -6,6 +6,7 @@ import { analyzeDbCurrency, dbCurrencyMessages } from "../src/lint/db-currency";
 import type { DriveDbRegistrationStats } from "../src/lint/drive-db-registration";
 import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer";
+import { removeTestTree } from "./support/temp-tree";
 
 const currentStats: DriveDbRegistrationStats = {
   planCount: 10,
@@ -93,7 +94,7 @@ describe("db-currency lint", () => {
       expect(stats).not.toBeNull();
       expect(result.ok).toBe(true);
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      removeTestTree(root);
     }
   });
 });

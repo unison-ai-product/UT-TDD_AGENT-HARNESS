@@ -19,6 +19,7 @@ export const UPDATE_CHECK_TTL_MS = 24 * 60 * 60 * 1000;
 export const UPDATE_CHECK_CACHE_PATH = join(".ut-tdd", "state", "update-check.json");
 export const UPDATE_CHECK_DISABLE_ENV = "UT_TDD_SKIP_UPDATE_CHECK";
 export const UPDATE_CHECK_REMOTE_ENV = "UT_TDD_UPDATE_CHECK_REMOTE";
+export const UPDATE_CHECK_CACHE_DIR_ENV = "UT_TDD_UPDATE_CHECK_CACHE_DIR";
 const LS_REMOTE_TIMEOUT_MS = 5000;
 
 export interface UpdateCheckDeps {
@@ -31,6 +32,8 @@ export interface UpdateCheckDeps {
   hasOwnGit: () => boolean;
   /** Optional configured remote for forks, mirrors, or private Pack channels. */
   remoteOverride?: () => string | null;
+  /** Test/runner-only cache root; production defaults to harnessRoot/.ut-tdd. */
+  cacheRoot?: () => string | null;
   /** Tag names from `git ls-remote --tags <remote>`; null means fail-open. */
   listRemoteTags: (remote: string) => string[] | null;
 }
@@ -115,7 +118,7 @@ function readManifest(deps: UpdateCheckDeps): HarnessManifest {
 }
 
 function readCache(deps: UpdateCheckDeps): UpdateCheckCache | null {
-  const raw = deps.readText(join(deps.harnessRoot, UPDATE_CHECK_CACHE_PATH));
+  const raw = deps.readText(cachePath(deps));
   if (raw === null) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<UpdateCheckCache>;
@@ -128,6 +131,10 @@ function readCache(deps: UpdateCheckDeps): UpdateCheckCache | null {
   } catch {
     return null;
   }
+}
+
+function cachePath(deps: UpdateCheckDeps): string {
+  return join(deps.cacheRoot?.() ?? deps.harnessRoot, UPDATE_CHECK_CACHE_PATH);
 }
 
 function failOpen(localVersion: string | null, detail: string): UpdateCheckResult {
@@ -193,7 +200,7 @@ export function checkForUpdate(deps: UpdateCheckDeps): UpdateCheckResult {
       source = "remote";
       const next: UpdateCheckCache = { checkedAtMs: deps.nowMs(), latestVersion, remote };
       try {
-        deps.writeText(join(deps.harnessRoot, UPDATE_CHECK_CACHE_PATH), JSON.stringify(next));
+        deps.writeText(cachePath(deps), JSON.stringify(next));
       } catch {
         // Fail-open: cache write failure only means the next status run checks remote again.
       }
@@ -259,6 +266,7 @@ export function nodeUpdateCheckDeps(
       writeText: () => {},
       hasOwnGit: () => false,
       remoteOverride: () => process.env[UPDATE_CHECK_REMOTE_ENV]?.trim() || null,
+      cacheRoot: () => process.env[UPDATE_CHECK_CACHE_DIR_ENV]?.trim() || null,
       listRemoteTags: () => null,
     };
   }
@@ -278,6 +286,7 @@ export function nodeUpdateCheckDeps(
     },
     hasOwnGit: () => existsSync(join(harnessRoot, ".git")),
     remoteOverride: () => process.env[UPDATE_CHECK_REMOTE_ENV]?.trim() || null,
+    cacheRoot: () => process.env[UPDATE_CHECK_CACHE_DIR_ENV]?.trim() || null,
     listRemoteTags: (remote) => {
       const res = spawnSync("git", ["ls-remote", "--tags", remote], {
         cwd: harnessRoot,
