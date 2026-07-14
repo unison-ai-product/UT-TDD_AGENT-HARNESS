@@ -94,7 +94,7 @@ describe("PLAN reservation service", () => {
       const keyRing = new FakeKeyRing();
       const service = new ReservationService(
         new PlanLedger(db),
-        new SequenceClock(["2026-07-14T00:00:00Z"]),
+        new SequenceClock(["2026-07-14T00:00:00Z", "2026-07-14T00:00:00Z"]),
         keyRing,
       );
       const request = {
