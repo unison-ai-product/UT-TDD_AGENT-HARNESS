@@ -288,7 +288,7 @@ function modelForProvider(input: {
     // frontier = 最上位帯。tier-router TIER_TABLE.T0.codex (= MODEL_IDS.codex.frontier) と同一正本。
     if (input.modelFamily === "frontier")
       return { model: MODEL_IDS.codex.frontier, source: "policy" };
-    if (input.modelFamily === "codex") return { model: MODEL_IDS.codex.codex, source: "policy" };
+    // intent 割当は modelFamily "codex" (engine 指定) より優先する — task-kind が正本。
     if (input.intent === "review" || input.intent === "design")
       return { model: MODEL_IDS.codex.frontier, source: "policy" };
     if (input.intent === "test") return { model: MODEL_IDS.codex.worker, source: "policy" };
@@ -297,6 +297,7 @@ function modelForProvider(input: {
       return { model: cheap ? MODEL_IDS.codex.mini : MODEL_IDS.codex.luna, source: "policy" };
     if (input.intent === "implementation")
       return { model: cheap ? MODEL_IDS.codex.spark : MODEL_IDS.codex.luna, source: "policy" };
+    if (input.modelFamily === "codex") return { model: MODEL_IDS.codex.codex, source: "policy" };
     return { model: MODEL_IDS.codex.spark, source: "policy" };
   }
 

@@ -336,6 +336,7 @@ describe("task-kind routing v2 (PLAN-L7-430, PO rule 2026-07-14)", () => {
         role: "docs",
         engine: "generic",
         task: "update the governance handbook section wording",
+        difficulty: "standard",
       }).model,
     ).toBe(MODEL_IDS.claude.sonnet);
     expect(
