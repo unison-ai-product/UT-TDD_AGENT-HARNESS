@@ -24,6 +24,7 @@ v2_import: docs/migration/v2-import-ledger.md
 | 関数 | signature | 前提 | 事後 / oracle |
 |---|---|---|---|
 | `recordProjectionEvent` | `(event: ProjectionEvent, deps: HarnessDbDeps) => ProjectionRowRef` | `event.plan_id` または `event.session_id` が存在し、`deps.dbPath` は `.ut-tdd/` 配下に解決される。 | ID を検証し、該当 projection table row を upsert して `{table, id, evidence_path}` を返す。source docs は rewrite しない。 |
+| `analyzeDbConstraintCoverage` | `(db: DbIntrospectionPort, tables?: TableDef[]) => DbConstraintCoverageResult` | `DbIntrospectionPort`はread-only `prepare().get/all`だけを公開し、lint/query層は具象`HarnessDb`をimportしない。 | typed schemaとSQLite introspectionを照合し、table/NOT NULL/PK/FK/UNIQUE/CHECKの欠落をfindingへ返す。state-dbへの逆依存とmodule cycleを作らない。 |
 | `rebuildHarnessDb` | `(input: RebuildInput, deps: HarnessDbDeps) => RebuildResult` | repo root は読込可能で、DB path は `.ut-tdd/` 配下にある。 | projection tables を truncate し、正規化済み docs/state/log digest を replay して `search_index` と `quality_signals` を再計算する。同一入力では deterministic。 |
 | `stableId` | `(prefix: string, value: string) => string` | prefix は空でない projection namespace、value は raw subject ID または空文字を許容する。 | ASCII safe な value は既存 ID を維持し、正規化で情報が落ちる場合は `--<sha256 12hex>` suffix を付ける。空 value は `unknown` sentinel に正規化する。projection / feedback / skill / workflow の row ID 生成はこの helper を共有し、local regex copy を増やさない。 |
 | `computeSkillMetrics` | `(rows: SkillMetricInput) => QualitySignal[]` | recommendation / invocation rows が与えられ、分母 0 は明示される。 | layer/drive/plan/model ごとに `fired/recommended` と `accepted/fired` を算出する。欠落 row は findings とし、成功を捏造しない。 |
@@ -233,8 +234,8 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `checkAgentContractDetection` | `DoctorDeps.repoRoot -> LintResult` | PLAN-L6-47/PLAN-L7-391。post: source docs から agent contract projection と source snapshot を再構築し、`analyzeAgentContractIntegrity` の `ok=false` を `doctor: agent-contract-detection - violation` として hard gate 化する。invariant: ZIP の `detect green` は `doctor:<gate-id>` の存在と green に翻訳し、Python tools を実行経路にしない。 |
 | `deriveDetectorRouteCandidates` | `DeriveDetectorRouteCandidatesInput { findings; quality_signals; spec_ir; filing_target_ssot } -> DetectorRouteCandidateResult { candidates[]; findings[] }` | PLAN-L6-39。post: finding/spec/schedule/activation を join し、L5 `detector_route_candidates` row draft (`route_candidate_id`, `source_table`, `source_id`, `detector_id`, `finding_kind`, `severity`, `subject_kind`, `subject_id`, `filing_target_id`, `target_layer`, `target_sub_doc`, `candidate_status`, `reason`, `evidence_path`, `computed_at`) を返す。invariant: FilingTarget を創作せず、target snapshot は L4 function §3.2.1 / `routeFiling` SSoT から得る。SSoT 不在、route_signal unknown、target mismatch は non-ready finding。 |
 | `reviewDetectorRouteCandidate` | `DetectorRouteCandidateLike -> DetectorRouteCandidateReview { route_signal; filing_target; snapshot_mismatch; review_status; next_action }` | PLAN-L6-40。post: candidate の `filing_target_id=routeFiling:*` から route signal を取り出し、`routeFiling` SSoT の `FilingTarget` 完全形 (`mode`, `allowed_kinds`, `layer_band`, `sub_doc_hint`, `pairing_obligation`, `forward_insufficient_reason`, `requires_human_approval`) と candidate snapshot を並べた review DTO を返す。`feedback_events.next_action` はこの DTO の人間向け要約であり、DB schema を増やさない。invariant: candidate source row / PLAN / schedule は更新しない。target snapshot と `layer_band` が食い違う場合は `review_status=snapshot_mismatch` とし、silent repair しない。 |
-| `recordProjectionEvent` | `RecordProjectionEventInput { event; source_path } -> RecordProjectionEventResult { ref: ProjectionRef }` | implemented pseudocode: `src/state-db/projection-writer.ts` に実装済み。ID を validate し、projection row を upsert して ref を返す。 |
-| `rebuildHarnessDb` | `RebuildHarnessDbInput { roots[]; truncate: true } -> RebuildHarnessDbResult extends ContractResult { rows_by_table; search_rows; signals }` | implemented pseudocode: `src/state-db/projection-writer.ts` に実装済み。projection を truncate し、docs/state/logs を replay して `search_index` と `quality_signals` を recompute する。 |
+| `recordProjectionEvent` | `RecordProjectionEventInput { event; source_path } -> RecordProjectionEventResult { ref: ProjectionRef }` | implemented pseudocode: SQLite adapter正本は`src/state-db/sqlite-projection-store.ts`。schema列への正規化、PK補完、secret fail-close、plan join findingを所有する。`src/state-db/projection-writer.ts`は既存public signatureの互換facadeだけを保持する。 |
+| `rebuildHarnessDb` | `RebuildHarnessDbInput { roots[]; truncate: true } -> RebuildHarnessDbResult extends ContractResult { rows_by_table; search_rows; signals }` | implemented pseudocode: 再構築順序のapplication orchestrationは`src/state-db/projection-writer.ts`に残る。SQLite transactionは`sqlite-transaction.ts`、再構築可能tableの消去と`refactor_candidates`保持は`sqlite-projection-rebuild.ts`が所有し、docs/state/logs replay後に`search_index`と`quality_signals`を再計算する。 |
 | `recordTestRunEvidence` | `TestRunEvidenceInput { command; runner; scope; started_at; completed_at; exit_code; evidence_path; cases? } -> RecordTestRunEvidenceResult { refs[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。Bun/vitest/doctor/lint evidence を UT history projection に集約し、failure digests を redact し、raw provider transcripts は永続化しない。 |
 | `evaluateGreenDefinition` | `GreenDefinitionInput { profile; required_commands[]; command_evidence[]; reviewed_at? } -> GreenDefinitionResult extends ContractResult { computed_green_at?; missing[]; non_green[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。required commands が absent/non-zero、または computed green time が review time より後なら fail する。 |
 | `computeUtHistorySignals` | `UtHistoryInput { plan_id?; window? } -> ComputeUtHistorySignalsResult { signals[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。oracle coverage、plan green rate、flake score、duration regression、green-definition compliance を compute する。 |
@@ -271,8 +272,9 @@ type QualitySignal = { signal_type: string; subject_id: string; score?: number; 
 | `recommendSkills` | `RecommendSkillsInput { task; layer; drive; catalog } -> RecommendSkillsResult { recommendations[]; findings[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。missing metadata は finding にする。 |
 | `buildCommandCatalog` | `BuildCommandCatalogInput { command_docs[]; cli_surface } -> BuildCommandCatalogResult extends ContractResult { commands[] }` | implemented pseudocode: `src/workflow/contracts.ts` に実装済み。search rows は rebuildable projection。PLAN-REVERSE-395 の as-is CLI 復元により、`commands[]` は `command` (例: `ut-tdd trace impact`)、source path、required/optional args、options、`hasJson` / json alias、expected exit profile (0/1/2/provider-propagated)、category (core/delegation/distribution/feedback) を持つ command registry として扱う。`src/cli.ts` と registrar (`src/cli/delegation.ts` / `src/cli/distribution.ts` / `src/cli/feedback.ts`) が SSoT 生成元であり、`builder catalog` や prose 代表導線だけで完全集合を再構成してはならない。PLAN-L6-64 shell completion はこの registry を入力にし、未登録 command path を候補化しない。 |
 | `projectSkillEvaluations` | `SkillEvaluationsInput { asOf?: string } -> void` | implemented pseudocode: `src/state-db/skill-projections.ts` に core 実装、`src/state-db/projection-writer.ts` に既存 public signature の wrapper を保持。skill_invocations + plan_registry から per-skill rating/adoption/success/unused を算出し、cold-start は zero rows。 |
-| `projectPocEvaluations` | `PocEvaluationsInput { asOf?: string } -> void` | implemented pseudocode: `src/state-db/projection-writer.ts` に実装済み。summary row は 1 件で、poc_success_rate = confirmed/(confirmed+rejected+pivot)。decided PoC PLANs がなければ zero rows。pivot は non-success。 |
-| `projectModelEvaluations` | `ModelEvaluationsInput { repoRoot: string } -> void` | implemented pseudocode: `src/state-db/projection-writer.ts` に実装済み。.ut-tdd/config/model-opt-in.yaml (enabled:true) で opt-in する。per-model success_rate = success_count/run_count は model_runs → plan_registry を join して算出し、cold-start は zero rows。**cost-efficiency DISCHARGED** (PLAN-L7-57 token telemetry + PLAN-L7-58 cost enrichment): cross-runtime session JSONL から `loadRuntimeSessionUsage`/`projectTokenUsage` で token efficiency を取り込み、$ cost は local `CLAUDE_PRICING` (Claude) と `OPENAI_PRICING` (Codex, official API pricing 2026-06-15) から計算する。published pricing のない model は cost=null のまま (fabricated cost なし)。取り込みは `ut-tdd telemetry scan`。 |
+| `projectPocEvaluations` | `PocEvaluationsInput { asOf?: string } -> void` | implemented pseudocode: pure集計coreは `src/projection/domain/poc-evaluations.ts`、meaningful read/store portを結ぶapplicationは `src/projection/application/project-poc-evaluations.ts`、SQLite read/persistは`src/state-db/sqlite-projection-store.ts`、既存public APIの互換facadeは `src/state-db/projection-writer.ts`。summary row は 1 件で、poc_success_rate = confirmed/(confirmed+rejected+pivot)。decided PoC PLANs がなければ zero rows。pivot は non-success。 |
+| `projectModelEvaluations` | `ModelEvaluationsInput { repoRoot: string } -> void` | implemented pseudocode: repository opt-in adapterは`src/projection/adapters/model-evaluation-config.ts`、application/pure計算は`src/projection/application/project-model-evaluations.ts`と`domain/model-evaluations.ts`、grouped SQLite read/persistは`src/state-db/sqlite-projection-store.ts`、旧public facadeは`projection-writer.ts`。.ut-tdd/config/model-opt-in.yaml (enabled:true) で opt-inする。per-model success_rate = success_count/run_count、cold-startはzero rows。**cost-efficiency DISCHARGED** (PLAN-L7-57 token telemetry + PLAN-L7-58 cost enrichment): cross-runtime session JSONLからtoken efficiencyを取り込み、published pricingのないmodelはcost=nullのまま捏造しない。分子=全model run token/cost、分母=PLAN成功数の意図的な非対称を維持する。取り込みは`ut-tdd telemetry scan`。 |
+| `projectOperationalMetrics` | `OperationalMetricsInput { computedAt } -> void` | implemented pseudocode: pure policyは`src/projection/domain/operational-metrics.ts`、application event生成は`src/projection/application/project-operational-metrics.ts`、drive/hook/workflow grouped readとpersistは`src/state-db/sqlite-projection-store.ts`、旧rebuild facadeは`projection-writer.ts`。drive成功statusはcompleted/confirmed/documented、threshold 0.8。statusは丸め前の率で判定し、表示値だけ4桁にする。NULL modeはliteral unknownと同じ`unknown` groupへ正規化・合算し、completed過少計上とsignal ID衝突を防ぐ。trouble/blocked/human/retryは0件をpass、非0をwarnとし、0母数をsilent skipせず0としてsignal化する。 |
 | `deriveArtifactProgressDecision` | `ArtifactProgressDecisionInput { linkedTestCount: number; dependencyChecked: boolean; openDependencyImpacts: number; recoveryPlanIds?: string[] } -> ArtifactProgressDecision { state: dependency_unchecked/implemented_unverified/verified; color: red/yellow/green; reason: string }` | `src/state-db/projection-writer.ts` に実装済み。pseudocode = dependency unchecked または open impacts があれば red、linked tests なしまたは recovery active なら yellow、それ以外は green。 |
 | `projectArtifactProgress` | `ArtifactProgressProjectionInput { graph?: RelationGraphProjection; db: HarnessDb } -> void` | `src/state-db/projection-writer.ts` に実装済み。pseudocode = source nodes を collect し、covered-by test edges を count し、impact_results/recovery PLANs を join し、decision を derive して rebuildable `artifact_progress` rows を upsert する。 |
 
@@ -912,9 +914,9 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 
 | 型 | 必須field | 不変条件 / error |
 |---|---|---|
-| `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `dependencies[]` | 空ID、重複dependency、revision≠1は`PlanAssetError` |
+| `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `canonicalPayload`, `dependencies[]` | 空ID、重複dependency、revision≠1、payload digest不一致は`PlanAssetError` |
 | `RevisePlanCommand` | `assetId`, `baseRevision`, `changeSet`, `actor`, `reason` | base≠latest、空reason、identity変更は拒否 |
-| `EvidenceInput` | `evidenceId`, `subjectId`, `subjectRevision`, `sourceCommit`, `digest`, `producedAt`, `expiresAt?`, `producer` | digest/commit/revision欠落は`EvidenceError` |
+| `EvidenceInput` | `evidenceId`, `subjectId`, `subjectRevision`, `sourceCommit`, `commandArgs[]`, `outputDigest`, `exitCode`, `producedAt`, `expiresAt?`, `producer` | digest/commit/revision/command欠落は`EvidenceError`。非0 exitも監査用recordとしてvalid |
 | `EvidencePolicy` | `requiredKinds[]`, `maxAge?`, `acceptedProducers[]` | 別revision、期限切れ、producer外は`EvidenceVerdict.usable=false` |
 | `WorkflowCommand` | `subjectId`, `expectedFrom`, `to`, `actor`, `reason?`, `evidenceIds[]` | 許可表外、sequence不整合、guard不足は`WorkflowError` |
 | `WorkflowContext` | `subjectRevision`, `events[]`, `evidence[]`, `now`, `policyRevision` | event/evidenceが別subjectならfail-close |
@@ -924,6 +926,248 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 | `SemanticAssessmentInput` | `itemId`, `sourceRevision`, `applicability`, `designEvidence[]`, `runtimeEvidence[]`, `testEvidence[]`, `review`, `debtRoute?` | verified 3面、gap route、conditional理由を強制 |
 | `SelfProofRequest` | `contractRevision`, `sourceHash`, `compiledHash`, `rules[]`, `fixtures[]`, `mutations[]`, `surfaces[]` | rule/fixture/mutation/surface identityを重複なく1回ずつ定義 |
 | `SelfProofDeps` | `processRunner`, `sourceHasher`, `receiptStore`, `clock` | detector verdict関数をdependencyとして受け取らない |
+
+#### catalog / profile / migration DTO詳細
+
+| 型 | 必須field | ordering / finding |
+|---|---|---|
+| `CatalogInput` | `manifestIdentity { auditedOn, zipSha256 }`, `declaredCounts`, `sources[]`, `items[]`, `categories[]`, `metaSourceMappings[]`, `sourceItemEdges[]`, `sourceTargetEdges[]`, `itemTargetEdges[]` | manifest provenance表の`audited_on`+`sha256`をそのまま使用しrevisionを創作しない。stable ID昇順でcanonical digestを作る。件数不一致=`catalog-count-mismatch` |
+| `CatalogSource` | `sourceId`, `ordinal`, `sourceTitle`, `disposition`, `targetRef`, `reason`, `rowDigest`, `manifestDigest` | ordinalはsource IDからだけ導出。ID/ordinal重複=`catalog-source-duplicate`、判断/reason欠落=`catalog-disposition-incomplete` |
+| `CatalogCategory` | `categoryId`, `categoryName`, `rowDigest` | authoringにないordinal/revisionを生成しない。ID重複=`catalog-category-duplicate` |
+| `MetaSourceMapping` | `metaSourceRef`, `allowedSourceStatus`, `sourceFilePolicy`, `reason`, `rowDigest` | item sourceが109 source外の場合の唯一のtyped endpoint。status/file policy不一致をorphanとして拒否 |
+| `CatalogItem` | `itemId`, `itemName`, `categoryId`, `sourceStatus`, `sourceRef`, `sourceFile`, `rowDigest` | category/source edge欠落=`catalog-orphan-edge` |
+| `SourceItemEdge` | `edgeId`, `sourceId`, `itemId`, `sourceStatus`, `sourceFile`, `rowDigest` | edgeIdは`sourceRef,itemId`のframed digestだけから導出し、reasonを創作しない |
+| `SourceTargetEdge` | `edgeId`, `sourceId`, `targetType`, `targetRef`, `disposition`, `rowDigest` | targetType=`plan_alias|artifact_family|artifact_path|target_slot`。source targetはitem targetのdefaultではない |
+| `ItemTargetEdge` | `edgeId`, `itemId`, `targetStatus`, `reason`, `sourceDigest`, `targetKind?`, `targetRef?`, `planId?` | targetKind=`artifact_path|artifact_family|plan_alias|target_slot`。runtimeでsource→targetを継承・推論しない。pendingはtarget禁止、adopt/merge/reference/deferのtarget欠落=`catalog-item-target-incomplete` |
+| `DocumentProfileDecision` | `decisionId`, `profileId`, `docTypeId`, `decision`, `detailOverride`, `statusOverride`, `reason`, `rowDigest`, `requiredPlanId?` | semantic itemへmapしない。conditional/skip/deferはreason必須、deferはPLAN必須 |
+| `DocumentProfile` | `profileId`, `profileAxis`, `profileRank`, `description`, `defaultStatus`, `defaultDetail`, `scopePolicy`, `rowDigest` | profile master全fieldをround-tripし、decision rowをmaster代用にしない |
+| `DocumentProfileCatalogInput` | `sourcePath`, `sourceDigest`, `profiles: DocumentProfile[]`, `decisions: DocumentProfileDecision[]` | strict loaderの単一出力。profile/decision IDとFKをcreate前に検証 |
+| `DocumentProfileCatalog.create` | `(input: DocumentProfileCatalogInput) -> Result<DocumentProfileCatalog, CatalogViolation[]>` | master全field/entryをlossless保持。unknown enum/FK/duplicateをfail-closeしresolverへvalid aggregateだけ渡す |
+| `ProfileSelection` | `sizeProfileId`, `productProfileIds[]`, `explicitDecisions[]`, `capabilityFlags[]` | product IDはstable昇順、同precedence同slot異値=`profile-overlay-conflict`、同値duplicateもidentity重複で拒否 |
+| `ResolvedDocumentDecision` | `docTypeId`, `decision`, `detail`, `status`, `reason`, `winningDecisionId`, `appliedDecisionIds[]`, `requiredPlanId?` | core/security detailを弱化しない。required slot欠落=`profile-decision-missing` |
+| `ResolvedProfile` | `selectionDigest`, `decisions: ResolvedDocumentDecision[]`, `applicationReceipt[]`, `findings[]` | size→stable product→explicitの適用順をreceiptへ保持し、未定義をdefault生成しない |
+| `LegacyPlanDto` | `repositoryIdentity`, `sourcePath`, `legacyPlanId`, `knownFrontmatter`, `unknownFrontmatter`, `bodyDigest`, `sourceCommit` | field loss=`plan-migration-loss`、numeric core衝突=`plan-migration-collision`。unknown fieldもcanonical payloadへ保持 |
+| `LegacyPlanMigrationDecision` | `migrationId`, `legacyPlanId`, `assetId`, `decision`, `resolvedAlias?`, `collisionGroup?`, `lossFields[]`, `reason`, `reviewPlanId?` | assetIdはfull IDから必ず生成。ambiguous/lossはresolvedAliasを自動選択禁止 |
+
+legacy `asset_id`は初回migration時だけ、UTF-8 length-prefixed frame
+`["ut-tdd-plan-legacy-v1", repositoryIdentity, legacyPlanId]`のSHA-256から
+`plan:legacy:<64 lowercase hex>`として決定する。各frameは`uint32 big-endian byte length + bytes`、文字列はNFCであることを
+検証して非NFCを拒否し、UTF-8 bytesを勝手に正規化しない。`repositoryIdentity`はroot tracked正本
+`ut-tdd.project.json`の`schema_version=ut-tdd.project/v1`、`repository_identity`に明示するcase-sensitive owner/name
+（本repo=`unison-ai-product/UT-TDD_AGENT-HARNESS`）だけを読み、Git tracked blob/HEAD receiptを検証してremote URLから推測しない。
+config不在またはcallerが明示したfork identityとの不一致は`plan-repository-identity-missing`として明示入力を要求する。
+validなHEAD tracked configはremote有無に関係なく成功し、config欠落時もremote URLからidentityを補完しない。
+checkout path、branch、`.git` suffix、layer、ordinal、source pathを入力にしない。
+生成後はledgerの`asset_id`を正本とし、rename/layer変更で再計算しない。frame algorithm/version、入力値、digestを
+`legacy_plan_migration_events`のtyped columnとrevision payloadへ記録する。
+
+`loadTrackedProjectIdentity({bytes,receipt,expectedRepositoryIdentity?})`は固定path、Git object format、HEAD commit、
+blob OID、raw content SHA-256をpureに照合し、`repositoryIdentity`と`receiptDigest`を返す。
+`loadProjectIdentityFromHead({repoRoot,expectedRepositoryIdentity?})`だけがGit adapterとしてHEAD regular blobを読む。
+index/working tree/remoteを正本にせず、config schema不正、identity文法不正、provenance不一致をそれぞれ
+`plan-project-config-invalid`、`plan-repository-identity-invalid`、`plan-repository-identity-provenance-invalid`で分離する。
+identityはtrim一致・NFC・exactly one slashのASCII owner/nameとし、`.git` suffixを拒否する。
+
+v1/v2 parserは`schema_version=ut-tdd.plan/v2`の有無でdiscriminated unionにし、v1 unknown frontmatter key、
+本文digest、依存・artifact・review evidenceを落とさない。short aliasはexact full IDを先に照合し、prefix候補が2件以上なら
+候補をstable順で返す`plan-migration-collision`とし、最初の候補を選ばない。現HEADのcollision 27群/55 PLANは
+`legacy_plan_migration_events`へexactly once materializeする。full legacy IDからのasset IDはcollisionに関係なく生成し、
+判断未確定行は`resolvedAlias=NULL`+`reviewPlanId`必須とする。
+
+legacy migration applicationは`observe` / `decide` / `revise`のdiscriminated commandと純粋reducerを正本にする。
+初期状態へ許されるのは`observe(pending)`だけで、既存streamへ`observe`を重ねない。`decide`はpendingから
+`migrated|rekeyed|rejected`へ1回だけ進め、`revise`はterminal decisionから別decisionへ明示的review証跡付きで進める。
+全commandは`expectedSequence`と`expectedDecision`を持ち、不一致は`plan-migration-state-conflict`として行増加0にする。
+event列はsequence連続、first=`observed`、以後`decided|revised`、occurredAt非減少、legacyPlanId/assetId/repository identity/
+identity algorithm+input+digest/source digest不変を全step replayで検査する。
+
+decision field matrixは次を完全表とし、applicationとDDLの両方で同じ契約を強制する。
+
+| decision | resolvedAlias | collisionGroup | lossFields | reviewPlanId | reason |
+|---|---|---|---|---|---|
+| `pending` | NULL | 衝突時必須 | 空可 | 必須 | 非空 |
+| `migrated` | full legacy aliasと一致 | NULL | 空 | NULL | 非空 |
+| `rekeyed` | legacy aliasと異なるcanonical full alias | 必須 | 空 | 必須 | 非空 |
+| `rejected` | NULL | 任意 | 1件以上 | 必須 | 非空 |
+
+`observe`はmigration stream/current/receiptだけをatomic appendし、derived asset identityを参照しても
+`plan_assets`や架空revisionを生成しない。`decide(migrated|rekeyed)`だけがPlanAsset revision 1、canonical payload、alias event/current、
+migration event/current、global receiptを1 transactionでappendする。`rejected`はPlanAsset/revision/aliasを生成しない。
+このためpending/rejected eventの`asset_id`はidentity-derived valueとして保持するがPlanAsset FK対象にせず、terminal adopted targetは
+nullable `(target_asset_id,target_revision)` composite FKで実在revisionへ束縛する。canonical payloadはsourcePath/sourceCommit、
+frontmatter/body/unknown field digest、inventory digest、identity receiptをlosslessに保持する。
+
+global receiptはmigration eventと双方向exactly-oneで、subject=`legacy_migration(legacyPlanId)`、result=`migration_event`、
+command type=`migration.observe|decide|revise`、payload digest、result ref、recordedAtがeventと一致する。event-only/current-only/
+receipt-only streamはすべて`plan-ledger-unavailable`とし、reducer replayとprojectionの集合差を許さない。
+各insert境界のfault injection、2 writer競合、file reopenでtransaction delta 0または同一digest stateを証明する。
+
+`LegacyMigrationDryRun.run(repoRoot)`はsource commitのtracked PLAN全件とdecision manifestをexactly-onceで結合し、
+`total=emitted`、legacy ID一意、decision field matrix、collision manifestの欠落・余剰・group不一致を検査する。
+各recordはsource path/commit/blob OID/content digest、delegation targetを持ち、reportはinventory/report digestを返す。
+完了PLANの`generates`はHEADの非空fileまたは配下に非空blobを持つdirectory familyへ突合する。
+snapshotは`commit:path`から取得した実blob bytesで再検証し、working tree再hashやreport内自己比較を証拠にしない。
+role delegationは`vmodel-role-contracts.md`の7 role全単射をHEADからstrict loadし、既存slotを
+`role + slotLabel + contractRef`へlossless projectionする。target slotはHEAD item ledgerとHEAD document catalogを
+`resolveCanonicalTarget`で照合する。未知role、contract欠落、slot欠落はglobal findingとしてfail-closeする。
+
+canonical JSONはobject keyをUTF-8 bytewise昇順、array順序保持、numberはsafe integer、stringはNFC検証済みUTF-8、
+boolean/nullをそのままframe化し、空白を持たない。YAML tag、anchor、merge key、非string map key、safe integer外numberは
+lossless変換不能として`plan-migration-loss`にする。未知fieldは`unknownFrontmatter`のcanonical JSONと元frontmatter digestを
+両方保持し、値をstring化しない。`EvidenceRecord.isUsableFor`はsubject/revision/commit、kind、producer、expiryとpolicy固有の
+`exitRule/expectedExit`を照合する。非0 exitはRed policyでusableになり得るが、Green/accept policyではusable=falseにする。
+record自体は削除しない。producer値域はcontract registryから読み、未知producerを
+記録時finding、accept時fail-closeとする。argvはsecret-scan/redaction port通過後の値だけを保存する。
+
+全append commandは`commandPayloadDigest`を返す。digestはcommand type、subject identity、入力DTOのcanonical frameだけから作り、
+command ID、clock、event ID、resultを含めない。同一command IDの再送はこのdigestをconstant-time比較し、一致時だけ既存event/resultを返す。
+global receiptのsubjectは`plan_revision(assetId+revision)`、`reservation(reservationId)`、
+`legacy_migration(legacyPlanId)`のdiscriminated unionとし、plan以外へ架空revisionを補完しない。
+
+authoring loaderはsource manifest、source disposition、semantic item catalog、source-target edge、item-target ledger、
+document profileの6正本を、見出し名・column集合・row幅・inline code delimiter・UTF-8・revision/provenance digestまで厳密に読む。
+未知/重複column、欠落row、row幅不一致、silent skipはそれぞれ`catalog-authoring-schema-invalid`、
+`catalog-authoring-row-invalid`、`catalog-authoring-count-invalid`としてfail-closeする。複数findingは
+`ruleId, subjectId, evidenceRefs`のbytewise stable順にし、canonical digestはlength-prefixed frameで計算する。
+
+catalog createはauthoring構造がvalidなら`pending_review`を保持したまま成功できる。pendingは完了判断ではなく、
+`unresolved()`が純粋queryとしてstable ID順に全件返す。accept/closeだけがpending 0を要求し、DB空集合やsource-targetから
+targetを補完しない。`traceSource()` / `unresolved()`はaggregate digestを変更しない。
+
+finding identityは少なくとも`catalog-count-mismatch`、`catalog-source-duplicate`、
+`catalog-category-duplicate`、`catalog-item-duplicate`、`catalog-edge-duplicate`、
+`catalog-profile-duplicate`、`catalog-orphan-edge`、`catalog-disposition-incomplete`、
+`catalog-item-target-incomplete`、`profile-unknown`、`profile-overlay-conflict`、
+`profile-decision-missing`を予約し、全findingが`ruleId,subjectId,message,severity,evidenceRefs[]`を持つ。
+
+`AuthoringProvenancePort.receipts(paths)`はgit index/HEADから`path,blobOid,contentDigest,sourceCommit`を返す。
+loaderはbundleとreceiptのpath集合完全一致、Git blob OID、SHA-256、40hex commitを検証してからparseし、working tree内容から
+receiptを自己発行しない。不一致は`catalog-provenance-invalid`。純粋verifierはportと分離し、mutation fixtureで改竄、欠落、余剰、
+duplicate、invalid commitをすべてkillする。
+
+`TargetRegistry`はPLAN aliases、git tracked paths、一意basename path aliases、明示family members、document target slotsだけを持つ。
+`resolveCanonicalTarget`は4 kindを存在検証し、未解決・多義・phantomをfail-closeする。`reconcileDispositionTarget`は表示aliasと
+typed edgeのcanonical集合を比較し、文字列近似やfilesystem探索によるdefault生成をしない。
+
+#### Forward FSM完全遷移表
+
+正常系の各行は隣接遷移だけを許す。`expectedFrom`不一致、sequence欠番、同一`commandId`で異なるpayloadはそれぞれ
+`forward-expected-state-mismatch`、`forward-sequence-invalid`、`forward-command-conflict`とする。
+
+event空集合の初期stateはrevisionごとの`proposed`、次sequenceは1とする。sequenceは1始まりで連続し、event IDと
+command IDはsubject横断で一意、同一event ID異payloadは`forward-event-conflict`、同一command ID+同一payloadは既存eventを返す。
+reducer入力は`sequence,eventId`の順でcanonicalizeせず、受領順がsequence昇順でない場合もfail-closeする。event digestは
+subject/revision/sequence/command payload digest/from/to/resume/reason/source commit/evidence IDのcanonical JSONから生成し、clockやDB rowidを含めない。
+
+| command | from | to | 必須guard/evidence | finding / 備考 |
+|---|---|---|---|---|
+| `plan` | proposed | planned | 承認済みscope / PLAN identity | `forward-plan-evidence-missing` |
+| `prepare_pair_freeze` | planned | pair_freeze_ready | 左右artifact宣言済み | `forward-pair-artifact-missing` |
+| `freeze_pair` | pair_freeze_ready | pair_frozen | pair reciprocity合格 | `forward-pair-freeze-missing` |
+| `freeze_red` | pair_frozen | red_frozen | 実行時に期待finding/exitで失敗したRed evidence | `forward-red-evidence-missing`。todo/skip不可 |
+| `start_implementation` | red_frozen | implementing | Red revision一致 | `forward-red-revision-mismatch` |
+| `complete_implementation` | implementing | implementation_complete | 実装digest / targeted Green | `forward-implementation-evidence-missing` |
+| `prepare_trace_freeze` | implementation_complete | trace_freeze_ready | generates/requirement/test edgeをmaterialize済み | `forward-trace-evidence-missing` |
+| `freeze_trace` | trace_freeze_ready | trace_frozen | orphan/stale edge 0件 | `forward-trace-freeze-missing` |
+| `prepare_review` | trace_frozen | review_ready | tests_green_atとreview scope | `forward-review-evidence-missing` |
+| `approve_review` | review_ready | reviewed | 独立reviewer / approve verdict | `forward-review-not-approved` |
+| `accept` | reviewed | accepted | 必須test/gate/PO acceptance evidence | `forward-accept-evidence-missing` |
+| `archive` | accepted | archived | replacement/retention reason | `forward-archive-context-missing`。archivedはterminal |
+| `block` | proposed〜reviewedの正常状態 | blocked | `resumeState=from`、actor/reason/revision/commit/evidence | `forward-exception-context-missing` |
+| `reject` | planned〜review_readyの正常状態またはblocked | rejected | `resumeState=from`、reviewer/actor/reason/revision/evidence | accepted/archiveからreject不可 |
+| `supersede` | proposed〜reviewedの正常状態またはblocked/rejected | superseded | replacement asset/revision、reason、evidence | supersededはterminal |
+| `reopen` | blockedまたはrejected | reopened | `resumeState`、reason、new evidence、同一subject revision | `forward-resume-state-invalid` |
+| `resume` | reopened | reopen eventの`resumeState` | resume先guardを再評価 | 過去guardを流用せず、accepted/archived/supersededへresume不可 |
+
+例外contextはnormal state 1件だけを`resumeState`として保持し、例外stackを作らない。blockedからrejectする場合はblockedを
+resume先にせず、block eventが保持した元normal stateをrejectedへ継承する。reopenはblocked/rejectedをreopenedへ写し、
+resumeだけが元normal stateへ戻す。reopenの同一revisionはstate復帰だけに使用し、意味変更は`PlanAsset.revise`で新revisionを作り
+新revisionの`proposed`から開始する。superseded/archivedはterminal、acceptedはarchive以外不可とする。
+
+#### Forward evidence policy表
+
+| policy / transition | required kind | cardinality | subject/expiry/producer条件 |
+|---|---|---:|---|
+| `pair-freeze/v1` | `design-pair-review` | 1以上 | 同asset/revision、exit 0、expiryなし、review producer |
+| `red-freeze/v1` | `red-test-run` | 1以上 | policyの`expectedExit`（非0可）+expected finding一致、todo/skip禁止、同revision/source commit |
+| `implementation/v1` | `targeted-test-run`, `implementation-digest` | 各1以上 | exit 0、同revision、accepted runner |
+| `trace-freeze/v1` | `trace-closure` | 1以上 | orphan/stale 0、同revision/source commit |
+| `review/v1` | `green-test-run`, `independent-review` | 各1以上 | tests_green_at≤reviewed_at、reviewer policy適合 |
+| `accept/v1` | `green-test-run`, `gate-run`, `acceptance-decision` | 各1以上 | 非期限切れ、exit 0、同revision/commit、PO/human要件をprofileから適用 |
+| exception command | `exception-context` | 1以上 | actor/reason/source commit/resumeまたはreplacementを同recordで拘束 |
+
+`EvidencePolicy`はkind、min/max cardinality、maxAge、accepted producers、`exitRule=exact|nonzero|any`、`expectedExit?`、subject revision/source commit一致をtyped fieldで持つ。
+不足kindと不適格record IDをstable順で返し、別revision・policyのexitRule不適合・期限切れrecordを件数へ数えない。
+
+| ポリシーID | 必須証跡kind | 必要件数 | exit規則 | 許可producer |
+|---|---|---:|---|---|
+| `scope-approval/v1` | `scope-approval` | 1以上 | exact 0 | `human|po` |
+| `pair-artifact/v1` | `pair-artifact-declaration` | 1以上 | exact 0 | `codex|claude|human` |
+| `trace-materialization/v1` | `trace-materialization` | 1以上 | exact 0 | `codex|claude|ci` |
+| `green-review-ready/v1` | `green-test-run` | 1以上 | exact 0 | `ci|codex|claude` |
+| `retention/v1` | `retention-decision` | 1以上 | exact 0 | `human|po` |
+
+command→policyは次の完全表を正本とし、実装switchに暗黙defaultを持たない。
+
+| command | policy ID |
+|---|---|
+| `plan` | `scope-approval/v1` |
+| `prepare_pair_freeze` | `pair-artifact/v1` |
+| `freeze_pair` | `pair-freeze/v1` |
+| `freeze_red` | `red-freeze/v1` |
+| `start_implementation` | `red-freeze/v1` |
+| `complete_implementation` | `implementation/v1` |
+| `prepare_trace_freeze` | `trace-materialization/v1` |
+| `freeze_trace` | `trace-freeze/v1` |
+| `prepare_review` | `green-review-ready/v1` |
+| `approve_review` | `review/v1` |
+| `accept` | `accept/v1` |
+| `archive` | `retention/v1` |
+| `block|reject|supersede|reopen|resume` | `exception-context/v1` |
+
+`scope-approval`、`pair-artifact`、`trace-materialization`、`green-review-ready`、`retention`は各遷移表の必須fieldを
+kind 1以上・同revision・accepted producerで要求する。policy ID未登録は`forward-policy-missing`でfail-closeする。
+
+#### workflow CLI共通envelope
+
+`workflow status|transition|explain`は同じapplication service verdictを使用する。JSON応答は`ok`、`command`、
+`subject { asset_id, revision, alias }`、`current_state`、任意の`requested_state`、`verdict`、`findings[]`、
+`evidence_ids[]`、任意の`event_id`、`state_digest`を返す。正常exit 0、domain/guard違反1、usage/schema違反2、I/O/transaction失敗3。
+`status`と`explain`は書込み0、`transition`はevent append+projectionを1 transactionで行う。aliasは418のexact resolverだけを使い、
+ambiguous=`plan-migration-collision`、unknown=`plan-asset-not-found`、future revision=`plan-revision-not-found`とする。
+CLI/hook/doctorはrule ID、verdict、exit classを変換せず、同じrequest digestなら同じcommand ID再送を冪等に扱う。
+
+`P-FSM-001` generatorはseedをevidenceへ記録し、0〜64 event、全normal/exception command、valid/invalid evidence、
+duplicate/gap/out-of-order sequenceを生成する。shrinkerは連続chunk削除→単event削除→optional evidence/reason縮小の順で、
+subject/revisionを勝手に変更しない。最低10,000列または全state×command pairを網羅し、非許可state到達0、invalid列受理0を要求する。
+
+#### reservation / self-proof port契約
+
+| port / method | signature | 契約 |
+|---|---|---|
+| `PlanIdReservation.reserve` | `(request: { namespace; ordinal; assetId; leaseMs; commandId }, tx) -> Result<ReservationLease, ReservationError>` | transaction内compare-and-insert。同一commandId+同一payloadは同じleaseを返し、異payloadはconflict |
+| `PlanIdReservation.release` | `(reservationId, leaseToken, commandId, tx) -> Result<ReleaseEvent, ReservationError>` | token hashをconstant-time照合し、二重releaseは同一結果。期限切れ/他tokenを拒否 |
+| `PlanIdReservation.reconstruct` | `(events, now) -> Result<ReservationState, ReservationError>` | sequence/lease重複0、wall clockをeventへ混入しない |
+| `ProcessRunner.run` | `(request: { executable; args[]; cwd; envAllowlist; stdinDigest?; timeoutMs; maxStdoutBytes; maxStderrBytes }) -> Promise<ProcessObservation>` | shell文字列連結禁止。timeout/signal/exceptionを`exitKind=exited|timeout|signal|spawn_error`へ正規化し、出力超過はtruncate finding |
+| `SourceHasher.hash` | `(frames: Array<{ label; bytes }>, algorithm='sha256') -> Digest` | `labelLength+label+byteLength+bytes`でframe化し、文字列連結collisionを禁止。改行/encodingを勝手に正規化しない |
+| `ReceiptStore.append` | `(receipt, expectedPreviousDigest?) -> Result<AppendReceipt, ReceiptConflict>` | append-only、receipt ID/digest冪等。既存ID異payload、previous digest不一致をconflict |
+| `ReceiptStore.load` | `(ruleId, contractRevision) -> Receipt[]` | rule/revision/verifiedAt/receiptIdの決定論順。DB空集合をauthoring receiptの代替にしない |
+
+reservation event空集合は`unreserved`、最初の`reserved`はsequence 1とする。許可遷移は
+`unreserved→active(reserved)`、`active→released(released)`、`active→expired(expired)`だけで、released/expiredはterminal。
+releaseとexpireの競合は`BEGIN IMMEDIATE`で先にreceiptを確定したcommandだけが成功し、後続は
+`plan-id-reservation-not-active`。同一command ID+同一payload再送は同じevent/lease result、異payloadは
+`plan-id-reservation-command-conflict`。reconstructはsequence、event/command identity、token hash、expiry条件を再検証し、
+event全削除→canonical ledger再読込後のstate/event/command payload digest集合差0を要求する。
+
+#### L7実装ownership DAG
+
+`PLAN-L7-423`は各bounded contextの機能実装を重複所有しない。共通`kernel`とmodule-boundary/cycle/CQS移行だけを所有し、
+417=disposition/profile、418=PLAN Asset/reservation/migration、419=Forward FSM/CLI、420=contract compilerを所有し、
+421=right-arm/right-lung、422=document dispositionを各source ownerとする。順序は
+`418 -> 419`、`417 + 419 + 420 + 422 -> 423`、`422 + 423 -> 424`、
+`420 + 421 + 424 -> 425`とする。419は418のidentity/evidence port確定後に開始する。adapter間の共有は
+kernel DTO/portだけで行い、別contextのdomainを直接importしない。
 
 共通返却は`Result<T, E>`または`ContractResult { ok, findings[] }`とし、findingは`ruleId`、`subjectId`、
 `message`、`severity`、`evidenceRefs[]`を持つ。authoring/validation commandは違反時exit 1、CLI usageはexit 2、

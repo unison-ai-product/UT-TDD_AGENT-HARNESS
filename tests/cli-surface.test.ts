@@ -16,6 +16,7 @@ import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/
 import { migrate } from "../src/state-db/migration";
 import { MODEL_IDS } from "../src/team/model-policy";
 import { removeTestTree } from "./support/temp-tree";
+import { headPlanDocCount } from "./plan-asset/head-plan-doc-count.js";
 
 const repoRoot = process.cwd();
 const cliPath = join(repoRoot, "src", "cli.ts");
@@ -241,6 +242,26 @@ describe("L7 CLI surface closure", () => {
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("--execute");
     expect(run.stdout).toContain("--json");
+  }, 15_000);
+
+  it("U-PA-042: exposes the complete HEAD migration inventory as a machine-readable dry-run", () => {
+    const run = runCli(["plan", "migration-dry-run", "--json"]);
+    const payload = parseCliJson(run) as {
+      ok: boolean;
+      total: number;
+      emitted: number;
+      decisionCounts: Record<string, number>;
+      findings: unknown[];
+    };
+
+    const planCount = headPlanDocCount(process.cwd());
+    expect(payload).toMatchObject({
+      ok: true,
+      total: planCount,
+      emitted: planCount,
+      decisionCounts: { migrated: planCount - 55, rekeyed: 55, rejected: 0, pending: 0 },
+      findings: [],
+    });
   }, 15_000);
 
   it("exposes skill suggest as a JSON command surface", () => {

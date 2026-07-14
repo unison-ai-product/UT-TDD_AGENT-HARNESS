@@ -390,10 +390,23 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DEPD-001 | `analyzeDependencyDrift` allowed graph | allowed source module imports normalize to deterministic module edges and OK messages. |
 | U-DEPD-002 | disallowed dependency | reverse dependency such as runtime -> lint returns `disallowed-module-dependency` finding. |
 | U-DEPD-003 | cycle detection | cyclic module imports return deterministic `module-cycle` finding. |
+| U-DEPD-004 | PlanAsset/state-db real repository graph | `kernel`境界を介し、PlanAssetとstate-dbのcycleが0。 |
+| U-DEPD-005 | full real repository module graph | `lint`は`DbIntrospectionPort`を所有しstate-db実装へ逆依存しない。全module cycleが0。 |
 | U-REGEXP-001 | `expandRegressionScope` affected modules | changed source module expands to direct tests and reverse-dependent module tests. |
 | U-REGEXP-002 | missing coverage | changed source module without direct test coverage returns `missing-regression-test` finding instead of silent fallback. |
 
 > **Status (PLAN-REVERSE-42, 2026-06-11)**: U-DEPD-001..003 and U-REGEXP-001..002 are green in `tests/dependency-drift.test.ts` against `src/lint/dependency-drift.ts`. `doctor` now surfaces `dependency-drift` / `regression-expansion` and no longer emits the scaffold stub.
+
+### §1.16.1e.1 U-DOMAIN (engine-swap domain / port / SQLite adapter)
+
+| U-ID | Target | Oracle |
+|---|---|---|
+| U-DOMAIN-001 | neutral `normalizePath` boundary | Windows/POSIX separatorを同じpathへ正規化し、旧lint importは同一関数の互換re-exportである。 |
+| U-DOMAIN-002 | PoC pure projector | permitted decisionだけを正規化し、DB・filesystem・clockへ直接依存せずdeterministic eventを返す。 |
+| U-DOMAIN-003 | PoC application ports | read portの意味的countをdomainへ渡し、生成eventだけをstoreへ記録する。SQL文字列をportへ漏らさない。 |
+| U-DOMAIN-004 | `SqliteProjectionStore` / `clearRebuildableProjectionTables` | unknown tableをfail-closeし、schema列とPKを正規化し、free-form secretを永続化前に拒否する。未解決PLAN joinとstale runtime contextを区別し、audit/compound contextを誤検出しない。再構築ではrebuildable rowを消去する一方、`refactor_candidates`負債ledgerを保持する。 |
+| U-DOMAIN-005 | model evaluation domain/application/config/SQLite read | success rate 4桁、token効率2桁、cost効率6桁をpure計算し、success/token/cost不在時はNULLを捏造しない。disabled/malformed opt-inはread/store 0、cold-startはstore 0、時刻は注入値を使う。SQLiteは複数modelをgrouped集計し、orphan PLANをsuccess 0、全cost不明をNULLとして返す。 |
+| U-DOMAIN-006 | operational metrics domain/application/SQLite read | drive成功集合と丸め前0.8境界、hook trouble、workflow blocked/human/retry、0母数、4桁表示をpure policyで固定する。N drive modeからN+4 eventをhost locale非依存のcode-unit順・一意ID・注入時刻で生成する。同一mode factは合算する。SQLite grouped readはretryをplan/workflow/phase単位で数え、NULL/literal unknown modeを同一groupへ正規化してcompletedとsignalを失わず、非0signalを隠さない。 |
 
 ### §1.16.1f U-VTRIG L0-L7 (implementation verification cycle gate)
 
@@ -1185,13 +1198,48 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 
 | test ID | precondition / fixture | command / query | postcondition / invariant / expected finding |
 |---|---|---|---|
-| `CANDIDATE-PA-001` | 空/不正`asset_id` | `PlanAsset.create` | `plan-asset-invalid-id`, exit 1 |
-| `CANDIDATE-PA-002` | revision 1,3 | `PlanAsset.reconstruct` | `plan-revision-gap`, exit 1 |
-| `CANDIDATE-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
-| `CANDIDATE-PA-004` | revision 1+evidence | `PlanAsset.revise` | 旧instance/evidence digest不変、exit 0 |
-| `CANDIDATE-PA-005` | expired/別revision evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`, exit 1 |
-| `CANDIDATE-PA-006` | legacy PLAN全field | canonical adapter | field loss 0。損失時`plan-migration-loss`, exit 1 |
-| `CANDIDATE-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
+| `U-PA-001` | 空/不正`asset_id` | `PlanAsset.create` | `plan-asset-invalid-id`, exit 1 |
+| `U-PA-002` | revision 1,3 | `PlanAsset.reconstruct` | `plan-revision-gap`, exit 1 |
+| `U-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
+| `U-PA-004` | revision 1+evidence | `PlanAsset.revise` | 旧instance/evidence digest不変、exit 0 |
+| `U-PA-005` | expired/別revision/policy別exit evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`、Red expected nonzeroだけusable、exit 1/0 |
+| `U-PA-006` | legacy PLAN全field + short alias現HEAD 20衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
+| `U-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
+| `U-PA-008` | HEAD tracked `ut-tdd.project.json`、改竄bytes/receipt、schema/identity不正、remote無し | `loadTrackedProjectIdentity` / `loadProjectIdentityFromHead` | exact HEAD blobだけ成功しreceipt digest安定。index/working tree/remote補完0、異常種別を専用findingでfail-close |
+| `U-PA-009` | active alias/ordinal leaseを同時挿入 | typed partial UNIQUE DDL | active rowは1件だけ成功。terminal/closed intervalは履歴として共存可能 |
+| `U-PA-010` | asset/revision/history rowを作成後にUPDATE/DELETE、存在しないrevisionへalias event | append-only trigger / composite FK | history変更とorphan revisionをSQLiteが拒否し、row/digest不変 |
+| `U-PA-011` | ledger version 0/current/future、repo外path | `openPlanLedger` / `migratePlanLedger` | 専用pathだけversion 1へtransactional作成。future/schema不一致は`plan-ledger-unavailable`、repo外はfail-close |
+| `U-PA-012` | plan/reservation/migration subject別global receipt、架空revision、plan列混入 | `append_command_receipts` typed CHECK/composite FK | plan subjectだけ実在asset+revision必須、他subjectはplan列NULL。違反はSQLiteが拒否 |
+| `U-PA-013` | valid current ledgerのevent/revision/receipt/reduction digestを1列改竄 | `migratePlanLedger` row digest/reduction verifier | DDL形状が同一でも`plan-ledger-unavailable`でfail-closeし、空ledgerとして補完しない |
+| `U-PA-014` | valid asset、未予約ordinal | `PlanLedger.reserve` | event/current/receiptを同一transactionで各1件appendしreopen検証Green |
+| `U-PA-015` | 同一command IDの同一payload／異payload再送 | `PlanLedger.reserve` | 同一payloadは同じresultをreplayし行増加0、異payloadは`plan-id-reservation-command-conflict` |
+| `U-PA-016` | active leaseへrelease/expireを競合実行 | `PlanLedger.release/expire` | token/expiry guardを通った一方だけterminal eventをappendし、敗者は`plan-id-reservation-not-active` |
+| `U-PA-017` | active ordinalへ別reservationをappend | `PlanLedger.reserve` | `plan-id-reservation-conflict`でevent/current/receiptを全rollbackし部分commit 0 |
+| `U-PA-018` | reservation receiptのsubject/result kind/command type/recorded timeを改竄 | `migratePlanLedger` receipt/event bijection verifier | event subject/payload/result/timeとの不一致を`plan-ledger-unavailable`でfail-close |
+| `U-PA-019` | HEAD `docs/plans/PLAN-*.md`全件 | `buildLegacyPlanInventory` | 752 pathをexactly onceで読み、full plan ID/asset IDが全件一意、frontmatter plan_id一致 |
+| `U-PA-020` | numeric coreでgroup化したHEAD PLAN | `buildLegacyPlanInventory` | 27群/55 PLANをstable順で返し自動winner選択0 |
+| `U-PA-021` | 同一HEADを反復inventory | `buildLegacyPlanInventory` | item/collision順とSHA-256 inventory digestが完全一致 |
+| `U-PA-022` | anchor/alias/merge/custom tag/non-string key/unsafe integerを含むfrontmatter | `parseLegacyPlanSource` | lossless canonical化できないYAMLを全件fail-close |
+| `U-PA-023` | empty state + valid pending observe | `reduceLegacyMigration` / append port | observed event/current/receiptのみatomic append、PlanAsset/revision/alias行0 |
+| `U-PA-024` | state×observe/decide/revise全組合せ | migration transition table | 許可pairだけ次state、禁止pairは`plan-migration-transition-invalid`でdelta 0 |
+| `U-PA-025` | decision 4種×field有無mutation | decision field matrix | 必須/禁止組合せをapplicationとSQLiteが同じruleでfail-close |
+| `U-PA-026` | stale expectedSequence/expectedDecision、2 writer | migration append | 一方だけ成功し敗者`plan-migration-state-conflict`、部分commit 0 |
+| `U-PA-027` | 同command ID同payload／異payload | migration append | 同一は同result replay・行増加0、異payloadはglobal command conflict |
+| `U-PA-028` | migrated/rekeyed decision | migration transaction | PlanAsset revision 1、alias、migration event/current、receiptを同一transactionで生成し全provenance digest一致 |
+| `U-PA-029` | rejected decision | migration transaction | migration event/current/receiptだけ生成しPlanAsset/revision/alias行0 |
+| `U-PA-030` | event/current/receipt各方向の孤児・subject/type/result/time/payload改竄 | ledger verifier | 双方向bijection/reducer replay不一致を`plan-ledger-unavailable`でfail-close |
+| `U-PA-031` | sequence/kind/time/identity/source digest mutation | `reduceLegacyMigration` | first observed・連続列・非減少時刻・immutable provenance違反を全件拒否 |
+| `U-PA-032` | 各append境界fault injection | migration transaction port | event/current/asset/revision/alias/receiptの全table delta 0 |
+| `U-PA-033` | valid ledger close→file reopen/rebuild | migration reconstruct | state/event/payload/provenance digest集合が完全一致 |
+| `U-PA-034` | source commitのHEAD PLAN全件 | `LegacyMigrationDryRun` | inventoryとrecordがexactly-once bijection、total=emitted、legacy ID重複0 |
+| `U-PA-035` | 27群/55件reviewed collision manifest | decision resolver | migrated=697、rekeyed=55、pending=0。manifest欠落・余剰・group不一致はfail-close |
+| `U-PA-036` | 別legacy IDを返すdecision port | dry-run record join | `plan-migration-preview-id-mismatch`、finding 1件以上 |
+| `U-PA-037` | 同一HEAD・同一manifestを2回実行 | dry-run report | record順、finding順、inventory/report digest完全一致 |
+| `U-PA-038` | HEAD exact file / directory family / hollow / missing | `HeadTargetRegistry` | 非空fileと非空familyのみ存在判定、hollow/missingを拒否 |
+| `U-PA-039` | record source commit/path/OID/content digest | 独立Git object oracle | `commit:path` OIDと実blob bytes SHA-256がrecordと一致 |
+| `U-PA-040` | 全agent slot + 7 role contract | role contract loader/projection | role全単射、全slot contractRef付与、HEAD contract blob非空。未知role/欠落は拒否 |
+| `U-PA-041` | item ledgerの全`target_slot` edge | HEAD document catalog resolver | 全slot ref解決、存在しないslotはglobal findingでfail-close |
+| `U-PA-042` | `plan migration-dry-run --json` | CLI public surface | exit 0、752/752、697 migrated、55 rekeyed、pending/finding 0のJSON契約 |
 | `CANDIDATE-FSM-001` | 正規stateごとの次event | `transition` | 許可表どおりのnext state/event、exit 0 |
 | `CANDIDATE-FSM-002` | proposed→implementing | `transition` | `forward-transition-illegal`, exit 1 |
 | `CANDIDATE-FSM-003` | pair frozen、Red evidenceなし | implement command | `forward-red-evidence-missing`, exit 1 |
@@ -1206,17 +1254,44 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-VMC-004` | pair/exception reason不整合 | `VModelContract.create` | `contract-pair-invalid`, exit 1 |
 | `U-VMC-005` | required field欠落 | loader/compiler | default補完せず`contract-field-missing`, exit 1 |
 | `I-VMC-001` | valid contract | compiler→registry/doctor/roadmap | rule ID/verdict集合差0、exit 0 |
-| `CANDIDATE-DISP-001` | checked manifest宣言値と同数records | catalog create | source/item/category/profile件数一致、exit 0 |
-| `CANDIDATE-DISP-002` | manifest件数とrecord件数不一致 | catalog create | `catalog-count-mismatch`, exit 1 |
-| `CANDIDATE-DISP-003` | source/item/target orphan | catalog create | `catalog-orphan-edge`, exit 1 |
-| `CANDIDATE-DISP-004` | disposition理由/target/PLAN欠落 | catalog create | `catalog-disposition-incomplete`, exit 1 |
-| `CANDIDATE-DISP-005` | 同一edge ID重複 | catalog create | `catalog-edge-duplicate`, exit 1 |
-| `CANDIDATE-I-DISP-001` | valid authored catalog | DB削除→rebuild | catalog/edge/finding identity集合差0 |
-| `CANDIDATE-PROFILE-001` | checked manifest size 3/product 5 | profile create | 宣言件数一致、exit 0 |
-| `CANDIDATE-PROFILE-002` | baseline+product+explicit override | resolverを2回 | resolved digest同一、exit 0 |
-| `CANDIDATE-PROFILE-003` | unknown profile/item | resolver | `profile-unknown`, exit 1 |
-| `CANDIDATE-PROFILE-004` | 同優先度で異なる値 | resolver | `profile-overlay-conflict`, exit 1 |
-| `CANDIDATE-PROFILE-005` | authored decision欠落 | resolver | default創作せず`profile-decision-missing`, exit 1 |
+| `U-DISP-001` | checked manifest宣言値と同数records | catalog create | source/item/category/profile件数一致、exit 0 |
+| `U-DISP-002` | manifest件数とrecord件数不一致 | catalog create | `catalog-count-mismatch`, exit 1 |
+| `U-DISP-003` | source/item/target orphan | catalog create | `catalog-orphan-edge`, exit 1 |
+| `U-DISP-004` | disposition理由/target/PLAN欠落 | catalog create | `catalog-disposition-incomplete`, exit 1 |
+| `U-DISP-005` | 同一edge ID重複 | catalog create | `catalog-edge-duplicate`, exit 1 |
+| `U-TARGET-001` | 4 typed target | canonical resolver | plan/path/family/slotをregistryだけで解決、exit 0 |
+| `U-TARGET-002` | disposition short alias / edge full alias | reconcile | canonical identity一致、exit 0 |
+| `U-TARGET-003` | unknown/ambiguous/absent target | canonical resolver | typed finding、exit 1 |
+| `U-TARGET-004` | phantom family/canonical mismatch | canonical resolver | existence/mismatch finding、exit 1 |
+| `I-DISP-001` | valid authored catalog | DB削除→rebuild | catalog/edge/profile full row・digest identity集合差0、provenance失敗時rollback |
+| `U-PROFILE-001` | checked manifest size 3/product 5 | profile create | 宣言件数一致、exit 0 |
+| `U-PROFILE-002` | baseline+product+explicit override | resolverを2回 | resolved digest同一、exit 0 |
+| `U-PROFILE-003` | unknown profile/item | resolver | `profile-unknown`, exit 1 |
+| `U-PROFILE-004` | 同優先度で異なる値 | resolver | `profile-overlay-conflict`, exit 1 |
+| `U-PROFILE-005` | authored decision欠落 | resolver | default創作せず`profile-decision-missing`, exit 1 |
+
+#### PLAN-L7-417 Red freeze詳細
+
+上表のDISP 5件は実テスト`tests/disposition/catalog.test.ts`へ昇格済みで、valid small fixture、tracked checked fixture、
+単一違反mutation builderを共有する。件数不一致はsource/item/category/source-item/source-target/item-target/profile/decisionの
+全dimension、orphanは各typed edge、duplicateは全entity identity/ordinalをtable-drivenで検査する。pending+target、final target欠落、
+reason/digest欠落、item ledger row欠落時のsource-target非継承を個別fixtureとする。`traceSource`/`unresolved`はbefore/after digest同一、
+stable ID順を固定する。109/163/21/8はtracked acceptance fixtureだけがassertし、domain定数やsmall fixtureへ複製しない。
+109 source外は`vmodel-semantic-item-catalog.md`のtyped meta source mappingだけを許し、status/file policy不一致をorphan Redにする。
+
+上表のPROFILE 5件は実テスト`tests/profile/resolver.test.ts`へ昇格済みである。document `doc_type_id`でsize→product stable order→explicitの
+全permutationを2回解決し、selection digest、winning decision、application receiptの一致を検査する。unknown profile/doc type/capability、
+同precedence異値、同値identity重複、required slot欠落、core/security detail弱化を個別Redにする。semantic `item_id`への暗黙mapは
+fixture自体で禁止する。
+
+strict loader Redはmanifestを含む6正本それぞれについてunknown/duplicate/missing column、row幅、inline-code delimiter、
+invalid UTF-8、revision/provenance digest mismatch、unknown disposition/decision/detail/status/target typeを1 mutationずつ持つ。
+profile master 8件は全field round-trip/digest、entry→profile/doc type FKを比較する。schema registryはFK、NOT NULL、UNIQUE、
+CHECK、複合PKを各1違反fixtureでDDL自身が拒否することを確認し、domain findingだけのGreenを認めない。
+
+上表のintegration oracleは`tests/disposition/projection.test.ts`へ昇格済みで、全projectionのPK、source/canonical digestを
+delete→rebuild前後で完全比較する。invalid authoringはtransaction rollbackし既存projectionを保持する。row countだけの比較、
+DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証拠に含めることは禁止する。
 | `CANDIDATE-DOCLEDGER-001` | baseline raw NUL path集合 | snapshot capture | count/tree OID/hashがfixture一致 |
 | `CANDIDATE-DOCLEDGER-002` | missing/duplicate/phantom/case-fold path | ledger validate | 各stable finding、exit 1 |
 | `CANDIDATE-DOCLEDGER-003` | conditional field欠落 | ledger validate | `doc-disposition-incomplete`, exit 1 |

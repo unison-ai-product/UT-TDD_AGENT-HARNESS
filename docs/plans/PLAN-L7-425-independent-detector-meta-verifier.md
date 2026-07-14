@@ -36,3 +36,5 @@ dependencies:
 # PLAN-L7-425
 
 U/I/M-SPをRed freezeし、独立ProcessRunner/Hasher/ReceiptStore、mutation corpus runner、CLI/doctor/CI surface parityを実装する。対象detector verdictをoracleに再利用せず、receipt無しruleを未統制とする。DoDはmutation survivor 0、false-positive 0、review、Reverse-425合流である。
+
+planned deliverablesは`src/self-proof/{domain,application,ports,adapters}`、receipt/fixture/surface/mutation正規化projection、外部process runner、CLI/doctor/CI wiring、実行可能Red/Green/mutation testである。420/421/424 confirmed後に`requires`へ昇格する。

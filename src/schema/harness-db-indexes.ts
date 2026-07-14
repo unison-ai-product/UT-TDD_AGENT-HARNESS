@@ -312,4 +312,30 @@ export const HARNESS_DB_INDEXES: IndexDef[] = [
     table: "agent_contracts",
     columns: ["target_path"],
   },
+  { name: "idx_vmodel_source_ordinal", table: "vmodel_sources", columns: ["ordinal"] },
+  {
+    name: "idx_vmodel_item_category_source",
+    table: "vmodel_semantic_items",
+    columns: ["category_id", "source_ref", "item_id"],
+  },
+  {
+    name: "idx_vmodel_source_item",
+    table: "vmodel_source_item_edges",
+    columns: ["source_id", "item_id"],
+  },
+  {
+    name: "idx_vmodel_source_target",
+    table: "vmodel_source_target_edges",
+    columns: ["source_id", "target_type", "target_ref"],
+  },
+  {
+    name: "idx_vmodel_item_target_status",
+    table: "vmodel_item_target_edges",
+    columns: ["item_id", "target_status", "target_kind"],
+  },
+  {
+    name: "idx_document_scale_profile_axis_rank",
+    table: "document_scale_profiles",
+    columns: ["profile_axis", "profile_rank"],
+  },
 ];

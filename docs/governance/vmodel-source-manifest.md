@@ -34,6 +34,7 @@ TeamFlow sampleであり、UT-TDD HARNESSの正本・runtime・検出結果で�
 | numbered_source_documents | `109` |
 | semantic_catalog_categories | `21` |
 | semantic_catalog_items | `163` |
+| source_target_edges | `109` |
 | semantic_catalog_records | `184` |
 | profiles | `8` |
 

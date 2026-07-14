@@ -44,6 +44,7 @@ dependencies:
 - receiptにrule/contract revision/source hash/generated hash/detector/fixtures/expected+actual finding+exit/test run/commit/verifier versionを保持する。
 - mutation corpusはrule削除、mapping交換、stale生成、未配線、例外握り潰し、DB-only補完、surface欠落を安定IDで表す。
 - receipt storeはappend-only authoring evidence、DBはprojectionとし、meta-verifierは対象detectorのpass/fail関数をoracleに再利用しない。
+- receipt本体、fixture execution、surface observation、mutation resultを別tableに分け、expected/actual finding+exit、test run、source commit、verified timeを保持する。
 
 ## 受入条件
 

@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { normalizePath } from "../lint/shared";
+import { normalizePath } from "../shared/source-text";
 import { shouldScoreSkillAsset } from "../skill-scoring/scoring";
 import type { HarnessDb } from "./index";
 

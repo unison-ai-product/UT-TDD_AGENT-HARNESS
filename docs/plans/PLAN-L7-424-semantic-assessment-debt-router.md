@@ -35,3 +35,5 @@ dependencies:
 # PLAN-L7-424
 
 U-ASSESSをRed freezeし、authored evidence照合、append-only review、stale判定、routeFiling委譲、DB projectionを実装する。verified創作を禁止し、163 item pending 0、partial/gap debt route 100%をDoDとする。review後Reverse-424へ合流する。
+
+planned deliverablesは`src/semantic-assessment/{domain,application,ports,adapters}`、assessment/evidence/review/debt route正規化projection、163件aggregate query、実行可能Red/Green testである。422/423 confirmed後に`requires`へ昇格する。

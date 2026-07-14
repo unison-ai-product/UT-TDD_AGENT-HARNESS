@@ -40,3 +40,4 @@ dependencies:
 - verifier depsはProcessRunner/SourceHasher/ReceiptStoreで、対象detectorのverdict関数をoracleとしてimportしない。
 - `U-SP-001..008`、`I-SP-001..002`、`M-SP-001..007`でregistry exactly-once、digest、surface、fixture、未配線、例外、DB-only補完、mutation killを検証する。
 - receipt無しruleを未統制としてcoverageから除外し、mutation survivor 0と正常fixture false-positive 0をaccept条件にする。
+- ProcessRunnerはargv/cwd/env allowlist/timeout/output上限とexit kind正規化、SourceHasherはlength-framed bytes、ReceiptStoreはappend/idempotency/conflictを公開method契約に持つ。

@@ -5,7 +5,7 @@ kind: add-design
 layer: L5
 sub_doc: physical-data
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
@@ -38,16 +38,36 @@ dependencies:
   references:
     - docs/adr/ADR-008-forward-fsm-plan-asset-v2.md
     - docs/process/plan-asset-v2.md
+review_evidence:
+  - reviewer: "Codex plan-asset/FSM design reviewers"
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-10T23:03:00+09:00"
+    tests_green_at: "2026-07-10T23:00:20+09:00"
+    verdict: approve
+    worker_model: gpt-5
+    reviewer_model: gpt-5
+    scope: "Canonical ledger DB、append-only event、typed partial UNIQUE、composite FK、global receipt、current projection/rebuildをreviewしCritical 0 / Important 0。"
+    green_commands:
+      - kind: lint
+        command: "bun run src/cli.ts plan lint && bunx vitest run tests/design-language.test.ts tests/coding-rules.test.ts --reporter=dot && bunx tsc --noEmit"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-10T23:00:20+09:00"
+        evidence_path: docs/plans/PLAN-L5-17-plan-asset-workflow-ledger-physical-data.md
+        output_digest: "sha256:67ad9ed3d6911228b8bfce161a7569227adae625ae554fb25f231b3a86162a66"
+        anchor_commit: bc7b4a2cc0504f380adff576bdda80abfa29656c
 ---
 
 # PLAN-L5-17: PLAN Asset v2 / workflow event ledger物理設計
 
 ## 設計範囲
 
-- `plan_assets`、`plan_aliases`、`plan_revisions`、`workflow_transition_events`、`evidence_records`、`legacy_plan_migrations`をappend-onlyで定義する。
+- `plan_assets`、`plan_alias_events`、`plan_revisions`、`plan_id_reservation_events`、`workflow_transition_events`、`evidence_records`、`legacy_plan_migration_events`をappend-onlyで定義し、alias/reservation/migration current表はevent reduction projectionとする。
 - `asset_id`はrename/layer変更で不変、revisionは単調増加、event/evidenceはsubject revisionとsource commit/digestへ拘束する。
 - current stateはevent reductionから導出し、DB rowやfrontmatter statusを独立更新する二重真実を禁止する。
 - numeric core collisionをmigration ledgerへ全件materializeし、曖昧なshort IDを自動選択しない。
+- revision canonical payloadはdependency/artifact/workflow/evidence policy/unknown v1 fieldをlosslessに保持する。active alias/ordinalはtyped partial UNIQUE、evidenceはargv/output digest/exit codeを保持する。
 
 ## 受入条件
 

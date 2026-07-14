@@ -3,7 +3,9 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import {
+  analyzeDbConstraintCoverage,
   analyzeDbProjectionCoverage,
+  dbConstraintCoverageMessages,
   dbProjectionCoverageMessages,
   loadDbProjectionRequirements,
 } from "../lint/db-projection-coverage";
@@ -21,6 +23,7 @@ import {
 } from "../state-db/design-detection";
 import type { HarnessDb } from "../state-db/index";
 import { openHarnessDb } from "../state-db/index";
+import { migrate } from "../state-db/migration";
 import {
   type ProjectionTiming,
   projectTokenUsage,
@@ -63,7 +66,20 @@ export function checkDbProjectionCoverage(repoRoot: string): { messages: string[
   }
   try {
     const result = analyzeDbProjectionCoverage(loadDbProjectionRequirements(repoRoot));
-    return { messages: dbProjectionCoverageMessages(result), ok: result.ok };
+    const db = openHarnessDb(":memory:");
+    try {
+      migrate(db);
+      const constraints = analyzeDbConstraintCoverage(db);
+      return {
+        messages: [
+          ...dbProjectionCoverageMessages(result),
+          ...dbConstraintCoverageMessages(constraints),
+        ],
+        ok: result.ok && constraints.ok,
+      };
+    } finally {
+      db.close();
+    }
   } catch {
     return {
       messages: ["db-projection-coverage - violation: physical-data/schema coverage could not run"],

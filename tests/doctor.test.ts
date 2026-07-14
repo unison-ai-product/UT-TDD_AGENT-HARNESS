@@ -614,6 +614,7 @@ describe("runDoctor", () => {
 
   it("includes asset-drift hard gate in doctor output", () => {
     const r = realRepoDoctor();
+    // This test verifies gate wiring; unrelated active repo gates may legitimately be non-terminal.
     expect(r.messages.some((m) => m.includes("doctor: asset-drift") && m.includes("OK"))).toBe(
       true,
     );

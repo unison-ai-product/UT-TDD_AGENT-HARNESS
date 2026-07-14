@@ -588,7 +588,7 @@ workflow transition、evidence、doc監査判断を補完してはならない�
 
 | 物理データ群 | 主キー / identity | authoring source | 不変条件 |
 |---|---|---|---|
-| source/item/target | `source_id`, `item_id`, `edge_id` | source manifest / item catalog / target edges | manifest宣言件数=record件数、orphan 0。checked fixtureは109/163/21 |
+| source/item/target | `source_id`, `item_id`, `edge_id` | source manifest / item catalog / source-target edges / `vmodel-item-target-ledger.md` | manifest宣言件数=record件数、orphan 0。checked fixtureは109/163/21。item targetをsource edgeから推論しない |
 | profile | `profile_id`, `override_id` | 規模profile catalog | manifest宣言件数=record件数、unknown/同優先度競合 fail-close。checked fixtureはsize 3 + product 5 |
 | PLAN Asset | `asset_id`, `(asset_id, revision)` | PLAN Asset v2 / migration ledger | renameでidentity不変、revision単調増加 |
 | workflow/evidence | `event_id`, `evidence_id` | append-only ledger | subject revision/commit/digest/expiry拘束 |
@@ -617,19 +617,98 @@ materializeされないselector自体を正本にしない。Markdown ledgerは�
 
 | table | 必須columnと型 | key / FK / nullability | index / ordering |
 |---|---|---|---|
-| `vmodel_sources` | `source_id TEXT`, `ordinal INTEGER`, `title TEXT`, `disposition TEXT`, `source_hash TEXT` | PK=`source_id`、`ordinal` UNIQUE、全列NOT NULL | `ordinal`順 |
-| `vmodel_semantic_items` | `item_id TEXT`, `category_id TEXT`, `title TEXT`, `source_revision TEXT` | PK=`item_id`、category FK、全列NOT NULL | category+item index |
-| `vmodel_source_item_edges` | `edge_id TEXT`, `source_id TEXT`, `item_id TEXT`, `reason TEXT` | PK=`edge_id`、source/item FK、reason NOT NULL | source/item双方index |
-| `vmodel_item_target_edges` | `edge_id TEXT`, `item_id TEXT`, `target_kind TEXT`, `target_ref TEXT`, `plan_id TEXT?` | PK=`edge_id`、item FK、adopt/merge時target NOT NULL | item/target index |
-| `vmodel_profiles` | `profile_id TEXT`, `axis TEXT`, `priority INTEGER`, `definition_hash TEXT` | PK=`profile_id`、axis enum、全列NOT NULL | axis+priority index |
-| `plan_assets` | `asset_id TEXT`, `canonical_alias TEXT`, `created_revision INTEGER` | PK=`asset_id`、alias UNIQUE、全列NOT NULL | alias index |
-| `plan_revisions` | `asset_id TEXT`, `revision INTEGER`, `content_digest TEXT`, `source_commit TEXT` | PK=`(asset_id,revision)`、asset FK、全列NOT NULL | revision単調増加 |
-| `workflow_transition_events` | `event_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `sequence INTEGER`, `from_state TEXT`, `to_state TEXT`, `reason TEXT?` | PK=`event_id`、`(subject_id,sequence)` UNIQUE、subject FK | subject+sequence昇順 |
-| `evidence_records` | `evidence_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `source_commit TEXT`, `digest TEXT`, `produced_at TEXT`, `expires_at TEXT?` | PK=`evidence_id`、subject/revision FK、expiryのみnullable | subject+revision index |
-| `document_dispositions` | `baseline_id TEXT`, `path TEXT`, `blob_oid TEXT`, `zone TEXT`, `disposition TEXT`, `reason TEXT?`, `application_status TEXT` | PK=`(baseline_id,path)`、conditional reason/targetをCHECK | zone/disposition/status index |
-| `semantic_assessments` | `item_id TEXT`, `assessment_revision INTEGER`, `verdict TEXT`, `source_digest TEXT`, `debt_plan_id TEXT?` | PK=`(item_id,assessment_revision)`、item FK、gap/partial時debt NOT NULL | verdict/debt index |
-| `self_proof_receipts` | `rule_id TEXT`, `contract_revision TEXT`, `verifier_version TEXT`, `source_hash TEXT`, `generated_hash TEXT`, `actual_exit INTEGER` | PK=`(rule_id,contract_revision,verifier_version)`、全列NOT NULL | rule/revision index |
+| `vmodel_sources` | `source_id TEXT`, `ordinal INTEGER`, `source_title TEXT`, `disposition TEXT`, `target_ref TEXT`, `reason TEXT`, `row_digest TEXT`, `manifest_digest TEXT` | PK=`source_id`、`ordinal` UNIQUE、全列NOT NULL。ordinalは`ZIP-DOC-NNN`のNNNだけから導出 | `ordinal`順 |
+| `vmodel_categories` | `category_id TEXT`, `category_name TEXT`, `row_digest TEXT` | PK=`category_id`、全列NOT NULL | category index |
+| `vmodel_meta_source_mappings` | `meta_source_ref TEXT`, `allowed_source_status TEXT`, `source_file_policy TEXT`, `reason TEXT`, `row_digest TEXT` | PK=`meta_source_ref`、全列NOT NULL | status/policy index |
+| `vmodel_semantic_items` | `item_id TEXT`, `item_name TEXT`, `category_id TEXT`, `source_status TEXT`, `source_ref TEXT`, `source_file TEXT`, `row_digest TEXT` | PK=`item_id`、category/source FK、全列NOT NULL | category/source/item index |
+| `vmodel_source_item_edges` | `edge_id TEXT`, `source_id TEXT`, `item_id TEXT`, `source_status TEXT`, `source_file TEXT`, `row_digest TEXT` | PK=`edge_id`、source/item FK、全列NOT NULL | source/item双方index |
+| `vmodel_source_target_edges` | `edge_id TEXT`, `source_id TEXT`, `disposition TEXT`, `target_type TEXT`, `target_ref TEXT`, `row_digest TEXT` | PK=`edge_id`、source FK、全列NOT NULL | source/target index |
+| `vmodel_item_target_edges` | `edge_id TEXT`, `item_id TEXT`, `target_status TEXT`, `target_kind TEXT?`, `target_ref TEXT?`, `plan_id TEXT?`, `reason TEXT`, `source_digest TEXT` | PK=`edge_id`、item FK、全判断でreason/source digest必須。pendingはtarget NULL、adopt/merge/reference/deferはtyped target必須 | item/status/target index |
+| `document_scale_profiles` | `profile_id TEXT`, `profile_axis TEXT`, `profile_rank INTEGER`, `description TEXT`, `default_status TEXT`, `default_detail TEXT`, `scope_policy TEXT`, `row_digest TEXT` | PK=`profile_id`、axis=`size|product`、全列NOT NULL | axis+rank index |
+| `document_scale_profile_entries` | `document_scale_profile_entry_id TEXT`, `profile_id TEXT`, `doc_type_id TEXT`, `decision TEXT`, `detail_override TEXT`, `status_override TEXT`, `reason TEXT`, `required_plan_id TEXT?`, `row_digest TEXT` | PK=`document_scale_profile_entry_id`、profile/doc type FK、同一profile/slot UNIQUE | profile+doc type index |
+| `plan_assets` | `asset_id TEXT`, `created_at TEXT`, `created_source_commit TEXT`, `identity_algorithm TEXT` | PK=`asset_id`、全列NOT NULL。aliasを保持せずidentity rootだけを所有 | `created_at` / `created_source_commit` index |
+| `plan_alias_events` | `alias_event_id TEXT`, `asset_id TEXT`, `sequence INTEGER`, `command_id TEXT`, `command_payload_digest TEXT`, `event_kind TEXT`, `alias TEXT`, `revision INTEGER`, `reason TEXT`, `occurred_at TEXT`, `event_digest TEXT` | PK=`alias_event_id`、`(asset_id,sequence)`/`command_id` UNIQUE、asset/revision composite FK。`event_kind=assigned|retired`、retiredは既存active alias必須、assignedは同alias active禁止 | asset+sequence / alias index |
+| `plan_aliases` | `alias_id TEXT`, `asset_id TEXT`, `alias TEXT`, `valid_from_revision INTEGER`, `valid_to_revision INTEGER?`, `last_event_digest TEXT` | alias event reductionから再構築するalias interval projection。PK=`alias_id`、asset/revision composite FK、`valid_to_revision IS NULL`のactive aliasだけpartial UNIQUE | asset+revision / alias partial index |
+| `plan_revisions` | `asset_id TEXT`, `revision INTEGER`, `canonical_payload_json TEXT`, `canonical_payload_digest TEXT`, `body_digest TEXT`, `source_path TEXT`, `source_commit TEXT`, `actor TEXT`, `reason TEXT`, `created_at TEXT` | PK=`(asset_id,revision)`、asset FK、全列NOT NULL。canonical payloadはdependency/artifact/workflow/evidence policy/unknown v1 fieldをlossless保持 | revision単調増加 / payload digest index |
+| `plan_id_reservation_events` | `reservation_event_id TEXT`, `reservation_id TEXT`, `sequence INTEGER`, `command_id TEXT`, `command_payload_digest TEXT`, `event_kind TEXT`, `namespace TEXT`, `ordinal INTEGER`, `asset_id TEXT`, `lease_token_hash TEXT`, `occurred_at TEXT`, `expires_at TEXT?`, `event_digest TEXT` | PK=`reservation_event_id`、`(reservation_id,sequence)`/`command_id` UNIQUE、asset FK、`event_kind=reserved|released|expired` CHECK。token生値保存禁止 | reservation+sequence / namespace+ordinal index |
+| `plan_id_reservations` | `reservation_id TEXT`, `namespace TEXT`, `ordinal INTEGER`, `asset_id TEXT`, `lease_token_hash TEXT`, `status TEXT`, `reserved_at TEXT`, `expires_at TEXT`, `closed_at TEXT?`, `last_event_digest TEXT` | reservation event reduction current projection。PK=`reservation_id`、asset FK、status=`active|released|expired`、activeのみclosed NULL、terminalのみclosed必須、`status='active'`の`(namespace,ordinal)`だけpartial UNIQUE | namespace+ordinal partial / status+expiry index |
+| `legacy_plan_migration_events` | `migration_event_id TEXT`, `legacy_plan_id TEXT`, `sequence INTEGER`, `command_id TEXT`, `command_payload_digest TEXT`, `event_kind TEXT`, `asset_id TEXT`, `target_asset_id TEXT?`, `target_revision INTEGER?`, `decision TEXT`, `resolved_alias TEXT?`, `collision_group TEXT?`, `loss_fields_json TEXT`, `reason TEXT`, `review_plan_id TEXT?`, `repository_identity TEXT`, `identity_algorithm TEXT`, `identity_input_json TEXT`, `identity_digest TEXT`, `identity_config_path TEXT`, `identity_config_blob_oid TEXT`, `identity_config_content_digest TEXT`, `identity_config_receipt_digest TEXT`, `source_digest TEXT`, `occurred_at TEXT`, `event_digest TEXT` | PK=`migration_event_id`、`(legacy_plan_id,sequence)`/`command_id` UNIQUE。`asset_id`はderived identityでFKにしない。pending/rejectedはtarget両列NULL、migrated/rekeyedは`(target_asset_id,target_revision)`で実在revisionへcomposite FK。`event_kind=observed|decided|revised`。identity configのHEAD receiptをtyped列で保持 | legacy/decision/collision index |
+| `legacy_plan_migrations` | `migration_id TEXT`, `legacy_plan_id TEXT`, `asset_id TEXT`, `target_asset_id TEXT?`, `target_revision INTEGER?`, `decision TEXT`, `resolved_alias TEXT?`, `collision_group TEXT?`, `loss_fields_json TEXT`, `reason TEXT`, `review_plan_id TEXT?`, `identity_digest TEXT`, `source_digest TEXT`, `last_event_digest TEXT` | migration event reduction projection。PK=`migration_id`、legacy ID UNIQUE。derived identityとadopted revision targetを分離し、eventと同じdecision-target CHECK/composite FKを持つ | decision/collision index |
+| `workflow_transition_events` | `event_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `sequence INTEGER`, `command_id TEXT`, `command_payload_digest TEXT`, `from_state TEXT`, `to_state TEXT`, `resume_state TEXT?`, `actor TEXT`, `reason TEXT`, `source_commit TEXT`, `occurred_at TEXT`, `event_digest TEXT` | PK=`event_id`、UNIQUE=`(event_id,subject_id,subject_revision)`/`(subject_id,sequence)`/`command_id`、`(subject_id,subject_revision)`→plan revision composite FK、例外時reason必須 | subject+sequence昇順 / command index |
+| `evidence_records` | `evidence_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `evidence_kind TEXT`, `source_commit TEXT`, `command_json TEXT`, `output_digest TEXT`, `exit_code INTEGER`, `producer TEXT`, `produced_at TEXT`, `expires_at TEXT?`, `supersedes_id TEXT?`, `record_digest TEXT` | PK=`evidence_id`、UNIQUE=`(evidence_id,subject_id,subject_revision)`、`(subject_id,subject_revision)`→plan revision composite FK、producer/kind CHECK、expiry/supersedesのみnullable。非0 exitも保存。commandはredacted argv | subject+revision+kind index |
+| `workflow_event_evidence` | `event_id TEXT`, `evidence_id TEXT`, `subject_id TEXT`, `subject_revision INTEGER`, `requirement_id TEXT` | PK=`(event_id,evidence_id,subject_id,subject_revision,requirement_id)`、event/evidence subject-revision composite FK | event / evidence索引 |
+| `workflow_subject_states` | `subject_id TEXT`, `subject_revision INTEGER`, `current_state TEXT`, `resume_state TEXT?`, `last_sequence INTEGER`, `last_event_id TEXT?`, `state_digest TEXT` | workflow event reduction current projection。PK=`(subject_id,subject_revision)`、plan revision composite FK、`(last_event_id,subject_id,subject_revision)` composite FK（empty時だけNULL） | state / last event index |
+| `append_command_receipts` | `command_id TEXT`, `command_type TEXT`, `subject_kind TEXT`, `subject_key TEXT`, `plan_asset_id TEXT?`, `plan_revision INTEGER?`, `command_payload_digest TEXT`, `result_kind TEXT`, `result_ref TEXT`, `recorded_at TEXT`, `receipt_digest TEXT` | PK=`command_id`、全append context横断正本。subject kind=`plan_revision|reservation|legacy_migration`。plan_revision kindだけasset/revision必須+composite FK、他kindは両方NULL | subject/type/time index |
+| `document_snapshots` | `snapshot_id TEXT`, `commit_oid TEXT`, `tree_oid TEXT`, `tracked_count INTEGER`, `path_stream_hash TEXT`, `algorithm TEXT`, `captured_at TEXT` | PK=`snapshot_id`、commit/tree/hash UNIQUE、全列NOT NULL | commit/tree index |
+| `document_dispositions` | `baseline_id TEXT`, `path TEXT`, `blob_oid TEXT`, `content_digest TEXT`, `zone TEXT`, `disposition TEXT`, `reason TEXT`, `application_status TEXT`, `provenance_digest TEXT` | PK=`(baseline_id,path)`、snapshot FK、全baseline path exactly once、全列NOT NULL | zone/disposition/status index |
+| `document_disposition_targets` | `baseline_id TEXT`, `path TEXT`, `target_ordinal INTEGER`, `target_kind TEXT`, `target_ref TEXT`, `target_digest TEXT` | PK=`(baseline_id,path,target_ordinal)`、disposition FK、target実在CHECK | kind/ref index |
+| `document_disposition_plan_edges` | `baseline_id TEXT`, `path TEXT`, `plan_id TEXT`, `edge_kind TEXT` | PK=`(baseline_id,path,plan_id,edge_kind)`、disposition/PLAN FK | plan/path索引 |
+| `document_disposition_tags` | `baseline_id TEXT`, `path TEXT`, `impact_tag TEXT` | PK=`(baseline_id,path,impact_tag)`、disposition FK | tag/path索引 |
+| `document_delta_events` | `delta_id TEXT`, `baseline_id TEXT`, `kind TEXT`, `from_path TEXT?`, `to_path TEXT?`, `before_blob_oid TEXT?`, `after_blob_oid TEXT?`, `source_commit TEXT`, `event_digest TEXT` | PK=`delta_id`、add/delete/rename/modify別CHECK、snapshot FK | baseline/kind/path index |
+| `document_reference_edges` | `reference_id TEXT`, `from_path TEXT`, `to_kind TEXT`, `to_ref TEXT`, `anchor TEXT?`, `source_line INTEGER`, `edge_digest TEXT` | PK=`reference_id`、from disposition FK、typed target/anchor existence CHECK | from/to索引 |
+| `document_closure_runs` | `run_id TEXT`, `baseline_id TEXT`, `final_commit_oid TEXT`, `ledger_digest TEXT`, `reference_digest TEXT`, `verdict TEXT`, `executed_at TEXT` | PK=`run_id`、snapshot FK、全列NOT NULL | baseline/time index |
+| `document_closure_findings` | `finding_id TEXT`, `run_id TEXT`, `kind TEXT`, `severity TEXT`, `subject_path TEXT`, `target_ref TEXT?`, `message TEXT` | PK=`finding_id`、run FK、targetのみnullable | run/kind/path index |
+| `semantic_assessments` | `item_id TEXT`, `assessment_revision INTEGER`, `verdict TEXT`, `applicability TEXT`, `profile_id TEXT?`, `applicability_reason TEXT`, `approval_ref TEXT?`, `source_digest TEXT`, `severity TEXT`, `owner TEXT`, `next_transition TEXT`, `created_at TEXT` | PK=`(item_id,assessment_revision)`、item/profile FK、conditional/NA時reason+profile+approval CHECK | verdict/applicability/owner index |
+| `semantic_assessment_evidence` | `item_id TEXT`, `assessment_revision INTEGER`, `evidence_plane TEXT`, `evidence_ref TEXT`, `evidence_digest TEXT` | PK=`(item_id,assessment_revision,evidence_plane,evidence_ref)`、assessment FK、plane=`design|runtime|test` | plane/ref索引 |
+| `semantic_assessment_reviews` | `review_event_id TEXT`, `item_id TEXT`, `assessment_revision INTEGER`, `decision TEXT`, `reviewer TEXT`, `reason TEXT`, `occurred_at TEXT`, `supersedes_event_id TEXT?` | PK=`review_event_id`、assessment FK、append-only | item/revision/time索引 |
+| `semantic_assessment_debt_routes` | `route_id TEXT`, `item_id TEXT`, `assessment_revision INTEGER`, `plan_id TEXT`, `finding_id TEXT`, `status TEXT`, `owner TEXT`, `next_action TEXT` | PK=`route_id`、assessment/PLAN FK、partial/gap時1件以上必須 | plan/status/owner index |
+| `self_proof_receipts` | `receipt_id TEXT`, `rule_id TEXT`, `detector_id TEXT`, `contract_revision TEXT`, `verifier_version TEXT`, `source_commit TEXT`, `source_hash TEXT`, `generated_hash TEXT`, `expected_exit INTEGER`, `actual_exit INTEGER`, `expected_finding_digest TEXT`, `actual_finding_digest TEXT`, `test_run_id TEXT`, `verified_at TEXT` | PK=`receipt_id`、rule+detector+revision+verifier UNIQUE、全列NOT NULL | rule/detector/revision index |
+| `self_proof_fixture_executions` | `execution_id TEXT`, `receipt_id TEXT`, `fixture_id TEXT`, `fixture_kind TEXT`, `input_digest TEXT`, `expected_finding_id TEXT?`, `actual_finding_id TEXT?`, `expected_exit INTEGER`, `actual_exit INTEGER`, `duration_ms INTEGER`, `output_digest TEXT` | PK=`execution_id`、receipt FK、fixture identity UNIQUE | receipt/kind/fixture索引 |
+| `self_proof_surface_observations` | `observation_id TEXT`, `receipt_id TEXT`, `surface TEXT`, `rule_identity TEXT`, `verdict TEXT`, `exit_code INTEGER`, `evidence_digest TEXT` | PK=`observation_id`、receipt FK、surface=`cli|hook|doctor|ci` CHECK | receipt/surface索引 |
+| `self_proof_mutation_results` | `mutation_result_id TEXT`, `receipt_id TEXT`, `mutation_id TEXT`, `mutation_kind TEXT`, `target_digest TEXT`, `survived INTEGER`, `finding_id TEXT?`, `test_run_id TEXT` | PK=`mutation_result_id`、receipt FK、mutation identity UNIQUE、survived=0をclose条件 | receipt/survived/kind index |
+
+`vmodel_item_target_edges` はitem→HARNESS target判断のauthoring projectionであり、`semantic_assessments`はそのtargetが
+設計・runtime・testの三面で意味適合するかを判定するreview projectionである。後者からtarget判断を生成・補完せず、前者の
+`edge_id` / `source_digest`をassessment evidenceから参照する。rebuild時はledger→target edge→assessmentの一方向で投影し、
+同一itemのdigest不一致を`semantic-target-source-drift`としてfail-closeする。
+
+`document_scale_profiles` / `document_scale_profile_entries` / `document_scale_profile_reviews`は同じ`doc_type_id`
+bounded contextのmaster / authored decision / derived reviewである。semantic `item_id`へ置換・暗黙mapせず、別名の第二projectionも
+作らない。authoring sourceは`vmodel-document-scale-profiles.md`だけとし、master/entry全fieldのround-trip digestと
+entry→master/doc catalog FKを検証する。
+source dispositionの値域は`adopt|merge|reference|defer|not_applicable|reject`、reasonは全状態必須とする。
+item targetは`pending_review|adopt|merge|reference|defer|not_applicable|reject`、target kindは
+`artifact_path|artifact_family|plan_alias|target_slot`。`pending_review`はtarget禁止、
+`adopt|merge|reference|defer`はtyped target必須、`defer`は実在PLAN必須、その他のplanは任意とする。
+
+現行schema registryがFK、NOT NULL、UNIQUE、CHECK、複合PKを表現できない場合、PLAN-L7-417はregistry modelを先に拡張する。
+application validationだけでL5制約を代替してはならず、DDL制約とdomain validationの両面をRed/Greenにする。
+PLAN-L7-417のDB waveでtyped `ColumnDef/TableDef`へNOT NULL、inline/composite FK、UNIQUE、閉じたCHECK AST、
+composite PKを追加し、raw SQLを受け取らないDDL生成とSQLite実強制testを実装する。
+
+projection上の導出は次に限定する。source-item `edge_id`はlength-prefixed frame
+`[source_ref,item_id]`のSHA-256、各`row_digest`はauthoring rowの全column名+値、`manifest_digest`はprovenance表全体から作る。
+source-targetのreasonやcategory ordinalのようにauthoringにない意味fieldは生成しない。source disposition rowとsource-target rowは
+`source_id/disposition`をexact比較し、targetはtyped resolver後のcanonical identityで比較する。`plan_alias`はPLAN Asset alias、
+`artifact_path`はrepo-relative normalized path、`artifact_family`はtracked member集合、`target_slot`はdocument catalog IDへ解決する。
+`artifact_path`のdisposition表示だけはbasenameを許し、git tracked path集合で一意に解決できる場合だけcanonical pathへ写す。
+同basename複数は多義として拒否する。display aliasとcanonical refの文字列不一致だけで拒否せず、未解決/多義だけを
+`catalog-target-unresolved`で拒否する。source target typeは
+`plan_alias|artifact_family|artifact_path|target_slot`であり、item target kind enumとは別型にする。
 
 event/revision/receiptはappend-onlyとし、UPDATE/DELETEで履歴を上書きしない。schema追加は`SCHEMA_VERSION`をbumpし、
 旧DBをin-place真実化せず、authoring sourceからtransactional rebuildする。migration前後でPK集合、FK orphan、
 UNIQUE違反、reduction digestを比較し、差があればcommitせずrollbackする。
+
+PLAN Asset waveでは`IndexDef`へ任意SQL文字列でなくtyped predicate（`isNull(column)` / `equals(column,value)`のみ）を追加し、
+active aliasとactive ordinal leaseのpartial UNIQUEをDDL生成する。`plan_id_reservations`はauthoring/event正本ではなく
+`plan_id_reservation_events`のreduction projectionであり、truncate/rebuild可能とする。履歴表
+`plan_assets|plan_alias_events|plan_revisions|plan_id_reservation_events|legacy_plan_migration_events|workflow_transition_events|evidence_records|workflow_event_evidence`
+は通常commandからUPDATE/DELETEせず、migration/rebuild adapterだけがtransaction内で再materializeする。
+`plan_aliases|plan_id_reservations|legacy_plan_migrations`はevent reduction projectionであり、履歴正本ではない。
+`workflow_subject_states`もevent reduction projectionである。event append、current projection更新、global command receipt追加は
+同一`BEGIN IMMEDIATE` transactionで行う。同一command ID+同一payloadは
+`command_payload_digest`（command type+subject+入力DTOのcanonical frameだけから生成）を比較して既存結果を返し、異payloadはconflict。
+event ID、時刻、結果をこのdigestへ含めない。`expired` reservation eventは`now >= expires_at`かつ未releaseのactive leaseだけに許可し、
+wall clock値をevent digestへ暗黙注入せずcommand inputとして記録する。
+
+append-only history tableと`append_command_receipts`には`BEFORE UPDATE` / `BEFORE DELETE` triggerを生成して通常connectionをfail-closeする。
+PLAN Asset/FSMの上表はcanonical `.ut-tdd/ledger/harness-ledger.db`に所有し、検索用`harness.db`へ同identityでprojectionする。
+ledger DBのevent/receipt/current reductionは1 transactionで確定し、filesystemとの二相commit/outboxを作らない。
+`harness.db` rebuildはauthoring PLAN revisionとledger DBのconsistent read transactionから新temporary tableへmaterializeし、
+PK/digest/reduction照合後にtransactional swapする。projection削除はledger DBを削除せず、triggerを無効化してhistoryをtruncateしない。
+ledger DB不在・schema不一致・digest破損は空ledgerとして補完せず`plan-ledger-unavailable`でfail-closeする。
+
+`workflow_event_evidence`は`event_id,evidence_id,subject_id,subject_revision,requirement_id`を持つ複合PKとし、
+`(event_id,subject_id,subject_revision)`→workflow event、`(evidence_id,subject_id,subject_revision)`→evidenceのcomposite FKで
+cross-subject/revision linkをSQLite実制約として拒否する。
