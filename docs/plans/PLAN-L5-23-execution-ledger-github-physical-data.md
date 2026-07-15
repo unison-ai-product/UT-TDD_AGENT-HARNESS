@@ -80,7 +80,7 @@ Issue、branch、PRのcreate operationは`(repository, episode_id, object_kind, 
 3. `(episode_id,event_sequence)`は連続し、同一command IDから生成できるauthoritative eventは最大1件とする。
 4. domain event appendとoutbox enqueueを同一transactionでcommitする。
 5. inbox insert、normalization、処理結果記録をcrash-safeに分け、未完処理をlease timeout後に再開できるようにする。
-6. certificate consume、E11 event append、projection更新意図を同一transactionに置き、二重再合流を防ぐ。
+6. E9 certificate consume、E10 event append、projection更新意図を同一transactionに置き、二重再合流を防ぐ。
 7. merge ready判定はprojection cacheを鵜呑みにせず、certificate、CI、review、head SHAのauthoritative refsを同一snapshotで再評価する。
 8. external bindingの付替えは履歴eventを要求し、URL/numberの直接上書きを禁止する。
 
@@ -112,7 +112,7 @@ retryは指数backoffと上限を持つが、上限到達でepisodeを消さな�
 - webhook二重配送、順序逆転、pollingとの重複でevent sequenceとprojectionが増殖しない。
 - `drive_model`欠落、未知値、矛盾、根拠なしoverrideをDB制約とdomain validationの双方で拒否する。
 - 別episode・別PLAN revision・別headのcertificate/evidenceをFK・policyの双方で拒否する。
-- certificateの二重consume、E9未完のE10、E11未完のE12、stale review/CIによるE14を拒否する。
+- certificateの二重consume、E8未完のE9、E9未完のE10、E11未完のE12、stale review/CIによるE14を拒否する。
 - GitHubが利用不能でもepisode/outboxを保持し、復旧後reconcileでE4/E12へ一度だけ進む。
 - raw episodeからlayer/type/cause/drive/recurrence/outcome rollupを再生成し、同一recurrenceを二重計上しない。
 - rebuild処理だけではGitHub writeが一度も呼ばれないことをspyで証明する。

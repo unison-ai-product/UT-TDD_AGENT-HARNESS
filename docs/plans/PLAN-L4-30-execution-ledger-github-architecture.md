@@ -101,8 +101,8 @@ Issueは第二の状態機械ではない。許可遷移、現在revision、再�
 | E5 `drive_plan_frozen` | 駆動モデル内PLAN/V-pairとbranchをfreeze | PLAN revision、paired oracle、base SHA |
 | E6 `drive_verified` | 駆動モデル固有検証を通過 | required test/evidence profile |
 | E7 `reentry_proposed` | Forward再入候補を構成 | original assumption/decisionの判定結果 |
-| E8 `reentry_certified` | 再合流証明を発行 | origin/reentry revision、evidence digest |
-| E9 `intermediate_verified` | 合流前中間テストを通過 | target L/state対応oracle |
+| E8 `intermediate_verified` | 合流前中間テストを通過 | target L/state対応oracle |
+| E9 `reentry_certified` | 再合流証明を発行 | E6/E8、origin/reentry revision、evidence digest |
 | E10 `forward_reentered` | Forward FSMへ正規遷移 | certificate消費、resume event |
 | E11 `post_reentry_verified` | 合流後テストを通過 | latest HEAD上の必須CI |
 | E12 `draft_pr_projected` | draft PRを冪等生成 | base/head、episode/Issue/PLAN link |
@@ -118,8 +118,8 @@ Issueは第二の状態機械ではない。許可遷移、現在revision、再�
 
 draft PR自動生成はE11通過後だけ許可する。main mergeは次をすべて満たす場合に限定する。
 
-1. E8 certificateが有効で一度だけ消費されている。
-2. E9とE11の必須test/CIが最新head SHAでGreenである。
+1. E9 certificateが有効で、E10で一度だけ消費されている。
+2. E6、E8、E11の必須test/CIが各subject SHAでGreenであり、E11以降のPR headと一致する。
 3. authorと異なるruntime/model familyのcross-reviewがPASSである。
 4. PR head SHA、review対象SHA、CI対象SHA、merge対象SHAが一致する。
 5. unresolved blocker、未処理outbox、矛盾するinbox observationがない。

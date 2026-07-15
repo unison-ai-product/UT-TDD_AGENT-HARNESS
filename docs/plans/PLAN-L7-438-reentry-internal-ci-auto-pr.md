@@ -62,17 +62,17 @@ certificate consumeとE10 appendをatomicにし、二重再合流を防ぐ。
 
 ### 2.3 二段testと内部CI
 
-1. **中間test (E9)**: 選択drive model内のhypothesis/repair/refactor oracleをsource revisionへ実行する。
+1. **中間test (E8)**: 選択drive model内のhypothesis/repair/refactor oracleをsource revisionへ実行する。
 2. **Forward仮合流後test (E11)**: target revisionとのisolated candidateを作り、impact graphが要求する
    targeted/integration/system/doctor/contract profileをcandidate HEADへ実行する。
 
 test resultはcommand、runner、scope、exit、completed_at、output digest、tested commitを保持する。
-E9 evidenceをE11へ流用せず、対象HEADの違うgreenや失敗後の古いgreenを採用しない。
+E8 evidenceをE11へ流用せず、対象HEADの違うgreenや失敗後の古いgreenを採用しない。
 internal CI runnerはprovider-independent portとし、GitHub Actionsの表示を内部判定正本にしない。
 
 ### 2.4 draft PR projector (E12)
 
-- E11 greenかつfreshなcertificateだけを`RequestDraftPullRequest` outboxへ変換する。
+- E11 greenかつE10で消費済みのfreshなcertificateだけを`RequestDraftPullRequest` outboxへ変換する。
 - PR bodyへIssue、episode、origin 4-tuple、drive model、reentry target、二段test digest、impact/backprop、HEADを投影する。
 - logical key `(repository, episode_id, pull_request, intent_revision)`で冪等化する。
 - timeout/429/5xx/応答喪失時はremote queryで既存PRをreconcileしてから再送し、重複PRを作らない。
@@ -84,7 +84,7 @@ internal CI runnerはprovider-independent portとし、GitHub Actionsの表示�
 
 | oracle | Red条件 / Green契約 |
 |---|---|
-| `U-REENTRY-001` | E6前のcertificate発行、またはE8/E9/E10/E11飛越しを拒否 |
+| `U-REENTRY-001` | E6/E8前のE9 certificate発行、またはE8/E9/E10/E11飛越しを拒否 |
 | `U-REENTRY-002` | drive model、origin revision、target revision、HEADの不一致を拒否 |
 | `U-REENTRY-003` | certificate二重consumeがE10を二重appendしない |
 | `U-REENTRY-004` | 中間testのみ、合流後testのみ、digestなしをE11/E12へ進めない |
@@ -107,8 +107,8 @@ GitHub応答成功直後のprocess crashを含める。
 ## 5. AC
 
 - [ ] E6–E12 reducer、repository、certificate、runner、GitHub PR portが短い責務単位に分離される。
-- [ ] 中間testとForward合流後testが別artifact/別evidenceとして同一candidateへtraceする。
-- [ ] certificate、test、CI、PRのsubject HEADが一致しない限りE12へ進まない。
+- [ ] E8中間testとE11合流後testが別artifact/別evidenceとして各subject revision/headへtraceし、E10以降のcandidate HEADとE11/E12 PR headが一致する。
+- [ ] E9 certificate、E10 consume、E11 test、CI、PRのsubject bindingが順序・revisionとも一致しない限りE12へ進まない。
 - [ ] draft PRは完全なtrace bodyを持ち、timeout/crash/retry後も1件だけ生成される。
 - [ ] GitHub不通でもLedger/certificate/test custodyを失わず、復旧後に同一intentを再開できる。
 - [ ] `U/P-REENTRY-*` / `U-PRFLOW-*`がRed→Greenとなり、mutation survivor 0を記録する。

@@ -1266,8 +1266,8 @@ Forward escapeは次のappend-only event系列を持つ。番号を飛ばす、�
 | E5 | 駆動PLANを凍結 | PLAN revision、V-pair obligations、schedule branch |
 | E6 | 駆動検証がGreen | drive固有test profileとgreen evidence |
 | E7 | 再合流を提案 | target Forward state、re-entry policy |
-| E8 | 再合流証明を発行 | origin/target binding、独立検証digest |
-| E9 | Forward中間テストがGreen | 離脱から合流点までの中間test evidence |
+| E8 | Forward中間テストがGreen | 離脱から合流点までの中間test evidence |
+| E9 | 再合流証明を発行 | E6/E8、origin/target binding、独立検証digest |
 | E10 | Forwardへ再合流 | accepted PLAN revision / state transition |
 | E11 | 再合流後テストがGreen | 合流後Forward test evidence |
 | E12 | draft PRを投影 | PR number、head/base、exact head SHA |

@@ -81,7 +81,8 @@ Issue body、Execution Ledger event、PLAN `route_mode`の3面が同じ正規化
 - `ForwardEscapeRequested`の後、Issue作成成功で`IssueProjected`、失敗で`IssueProjectionDeferred`をappendする。
 - GitHub成功応答はrepository/node ID/issue number/URL/observed revision/digestを記録し、同一commandの重複Issueを防ぐ。
 - Issue本文はorigin 4-tuple、escape reason、drive model、reentry target、PLAN IDを含み、projection digestで改変を検出する。
-- Issue作成前にoff-Forward実行を開始しない。ただしGitHub障害時は、Ledger上のdeferred receiptと人間承認を持つ
+- Issue作成前にoff-Forward実行を開始しない。GitHub障害時も、Ledger上のdeferred receiptと人間承認を持つ場合であっても、
+  E4のremote bindingを確認するまでE5（off-Forward実行開始）以降へ遷移しない。
 - GitHub障害時もE3のdurable requestまでは記録できるが、E4のremote bindingを確認するまでE5以降へ進めない。
   緊急Recovery/Incidentもこの順序を迂回せず、GitHub不通時は人間escalationと安全確保だけを別episodeに記録する。
 

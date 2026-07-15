@@ -1307,7 +1307,7 @@ interface GithubProjectionPort {
 - `observe`は通常Forward入力をescape episodeへ昇格しない。escape typeがある時だけE0を生成する。
 - `selectDrive`はcanonical drive enumとorigin/escape/PLAN kind/branch kindを同時検証し、未知・不整合を拒否する。
 - Issue projectionはE2より前、drive plan freezeはE4より前に実行できない。同じidempotency keyは同じreceiptを返す。
-- `certifyReentry`はE6のdrive検証とE9のForward中間testをorigin revisionへ束縛し、片方欠落を拒否する。
+- `certifyReentry`はE6のdrive検証とE8のForward中間testをorigin revisionへ束縛してE9 certificateを発行し、片方欠落を拒否する。E9はE10で一度だけconsumeし、E11の合流後testはE12 draft PRの前提として別に検証する。
 - draft PRはE11後だけ生成する。merge authorizationは別provider cross-review PASS、required CI、exact head、
   re-entry certificate、accept evidenceをAND条件で要求する。
 - GitHub inboundはremote observationをappendするだけで、domain eventのsequence/payloadを更新しない。

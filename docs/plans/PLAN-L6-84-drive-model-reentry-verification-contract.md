@@ -43,7 +43,9 @@ dependencies:
 
 off-Forward実行を「作業完了」で閉じず、選択した駆動モデル内の仮説・修正を検証してから、
 宣言済みForward revisionへ安全に引き込み、合流後の全体文脈でも再検証する。
-中間test greenだけでも、Forward合流後test greenだけでもcertificateは成立しない。
+E9 certificateはE6の駆動モデル検証とE8の中間testを束縛して発行する。E11のForward合流後testは
+certificate発行条件ではなく、E12 draft PRへ進む後段条件である。したがってE6/E8/E11の三証拠を
+混同せず、E9はE10で一度だけconsumeする。
 
 ## 2. ReentryCertificate aggregate
 
@@ -82,8 +84,9 @@ certificateは`drive_run_id`、`workflow_run_id`、Issue、PLAN revisionへjoin�
 
 ## 4. State / gate
 
-`ReentryRequested -> IntermediateVerified -> CandidateBuilt -> PostReentryVerified -> ReentryEligible`
-を正規列とする。`Rejected | Stale | HumanRequired`は理由・owner・next commandを伴う例外stateである。
+`E7 ReentryProposed -> E8 IntermediateVerified -> E9 ReentryCertified -> E10 ForwardReentered ->
+E11 PostReentryVerified -> E12 DraftPrProjected`を正規列とする。candidate構成はE7の作業であり、
+独立したcertificate発行後stateにしない。`Rejected | Stale | HumanRequired`は理由・owner・next commandを伴う例外stateである。
 skip、順序逆転、同一providerによるevidence捏造、対象commit不一致はfail-closeする。
 
 `evaluateReentryCertificate`はpure query、`appendReentryEvidence`はcommandとし、CQSを維持する。
@@ -93,9 +96,9 @@ detectorは設計表から必要test profileを読み、現行testに合わせ�
 
 `U-REENTRY-*` / `P-REENTRY-*`で次を固定する。
 
-1. 全drive modelがintermediateとpost-reentryの2段evidenceを要求する。
+1. 全drive modelがE6駆動検証、E8 intermediate、E11 post-reentryの三証拠を要求する。
 2. target revision更新、subject commit不一致、digest欠落、tests-before-decision時刻違反でstale/rejectedになる。
-3. 中間testだけ、合流後testだけ、targeted testだけではeligibleにならない。
+3. E9はE6/E8なしに発行できず、E12はE11なしに進めない。
 4. impact graphに未処理artifactが1件でもあればreentryを拒否し、backprop routeを返す。
 5. event replayが決定論的で、重複commandと順序入替mutationがstateを不正昇格させない。
 6. GitHub不通でもlocal candidate/test/certificateを保持し、外部状態回復後に同一HEADへ再接続できる。

@@ -39,7 +39,7 @@ review_evidence: []
 
 ## 1. 実装目的
 
-E3 `issue_outboxed`をGitHub Issueへ冪等投影し、webhook/polling観測をdurable inboxへ正規化してE4 `issue_projected`へ接続する。GitHub IssueはForward escapeの外部境界だが、Execution Ledgerを上書きするworkflow正本にはしない。
+E3 `issue_requested`をGitHub Issueへ冪等投影し、webhook/polling観測をdurable inboxへ正規化してE4 `issue_projected`へ接続する。GitHub IssueはForward escapeの外部境界だが、Execution Ledgerを上書きするworkflow正本にはしない。
 
 Issue作成、応答喪失、rate limit、外部編集、二重配送、削除、別repository投影をadapter境界で処理する。GitHub不通時もepisode/outboxを失わず、復旧時はremote queryを先行して重複Issueを作らない。
 
