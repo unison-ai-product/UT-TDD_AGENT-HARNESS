@@ -19,7 +19,15 @@ describe("PLAN draft ledger transaction", () => {
 
     expect(result).toMatchObject({ ok: true, replayed: false, revision: 1 });
     expect(counts(db)).toEqual([1, 1, 1, 1, 1, 1, 1, 1, 2]);
-    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 3 });
+    expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+    expect(db.prepare("SELECT * FROM plan_id_reservations").get()).toMatchObject({
+      lease_key_version: "plan-draft-v1",
+      lease_token_hash: sha("lease"),
+    });
+    expect(db.prepare("SELECT * FROM plan_id_reservation_events").get()).toMatchObject({
+      lease_key_version: "plan-draft-v1",
+      lease_token_hash: sha("lease"),
+    });
     const admission = db.prepare("SELECT * FROM plan_admission_receipts").get();
     expect(admission).toMatchObject({
       plan_asset_id: "asset:draft-1",

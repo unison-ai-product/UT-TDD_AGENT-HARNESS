@@ -404,6 +404,29 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
+  it("U-PA-047: rolls an interrupted admission v4 extension back to the original v2 ledger", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      for (const ddl of legacyV2Ddl()) db.exec(ddl);
+      db.setUserVersion(2);
+      seedAsset(db, "plan:a");
+      const before = migrationSnapshot(db);
+      expect(
+        migratePlanLedger(db, {
+          fault: {
+            after(boundary) {
+              if (boundary === "v2-v4-schema-created") throw new Error("migration-fault");
+            },
+          },
+        }),
+      ).toEqual({ ok: false, ruleId: "plan-ledger-unavailable" });
+      expect(migrationSnapshot(db)).toBe(before);
+      expect(db.userVersion()).toBe(2);
+    } finally {
+      db.close();
+    }
+  });
+
   it("U-PA-012: constrains global receipt subjects to real plan revisions", () => {
     const db = openHarnessDb(":memory:");
     try {
@@ -669,12 +692,19 @@ function restoreTrigger(db: ReturnType<typeof openHarnessDb>, name: string): voi
 }
 
 function legacyV2Ddl(): readonly string[] {
-  return ledgerSchemaDdl().map((sql) =>
-    sql
-      .replace(/lease_key_version TEXT NOT NULL,\s*/g, "")
-      .replace(/,\s*CHECK \(lease_key_version != ''\)/g, "")
-      .replace(/,\s*CHECK \(INSTR\(lease_key_version, '\.'\) = 0\)/g, ""),
-  );
+  return ledgerSchemaDdl()
+    .filter(
+      (sql) =>
+        !sql.includes("plan_admission_") &&
+        !sql.includes("plan_draft_journal") &&
+        !sql.includes("idx_plan_draft_journal_status"),
+    )
+    .map((sql) =>
+      sql
+        .replace(/lease_key_version TEXT NOT NULL,\s*/g, "")
+        .replace(/,\s*CHECK \(lease_key_version != ''\)/g, "")
+        .replace(/,\s*CHECK \(INSTR\(lease_key_version, '\.'\) = 0\)/g, ""),
+    );
 }
 
 function migrationSnapshot(db: ReturnType<typeof openHarnessDb>): string {

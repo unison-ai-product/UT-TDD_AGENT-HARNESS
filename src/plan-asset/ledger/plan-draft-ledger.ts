@@ -7,6 +7,8 @@ import type { HarnessDb } from "../../state-db/index.js";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
 import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
 
+const PLAN_DRAFT_LEASE_KEY_VERSION = "plan-draft-v1";
+
 export interface AppendPlanDraftInput extends CanonicalPlanDraftCommand {}
 
 export type AppendPlanDraftResult =
@@ -191,6 +193,7 @@ export class PlanDraftLedgerTransaction {
       namespace: input.namespace,
       ordinal: input.ordinal,
       asset_id: input.assetId,
+      lease_key_version: PLAN_DRAFT_LEASE_KEY_VERSION,
       lease_token_hash: input.leaseTokenHash,
       occurred_at: input.occurredAt,
       expires_at: input.expiresAt,
@@ -198,16 +201,26 @@ export class PlanDraftLedgerTransaction {
     const digest = ledgerRowDigest(event, "event_digest");
     this.db
       .prepare(
-        "INSERT INTO plan_id_reservation_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        `INSERT INTO plan_id_reservation_events
+          (reservation_event_id, reservation_id, sequence, command_id,
+           command_payload_digest, event_kind, namespace, ordinal, asset_id,
+           lease_key_version, lease_token_hash, occurred_at, expires_at, event_digest)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(...Object.values(event), digest);
     this.db
-      .prepare("INSERT INTO plan_id_reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .prepare(
+        `INSERT INTO plan_id_reservations
+          (reservation_id, namespace, ordinal, asset_id, lease_key_version,
+           lease_token_hash, status, reserved_at, expires_at, closed_at, last_event_digest)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
       .run(
         input.reservationId,
         input.namespace,
         input.ordinal,
         input.assetId,
+        PLAN_DRAFT_LEASE_KEY_VERSION,
         input.leaseTokenHash,
         "active",
         input.occurredAt,

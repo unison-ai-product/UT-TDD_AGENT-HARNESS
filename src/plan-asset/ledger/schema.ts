@@ -622,7 +622,7 @@ export function migratePlanLedger(
   const version = db.userVersion();
   if (version !== 0 && version !== 2 && version !== 3 && version !== LEDGER_SCHEMA_VERSION)
     return { ok: false, ruleId: "plan-ledger-unavailable" };
-  if (version === 2 && !migrateV2ToV3(db, options.fault)) {
+  if (version === 2 && !migrateV2ToV4(db, options.fault)) {
     return { ok: false, ruleId: "plan-ledger-unavailable" };
   }
   if (version === 0) {
@@ -669,7 +669,7 @@ export function migratePlanLedger(
     : { ok: false, ruleId: "plan-ledger-unavailable" };
 }
 
-function migrateV2ToV3(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): boolean {
+function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): boolean {
   if (!legacyV2ReservationSchemaValid(db) || reservationRowCount(db) !== 0) return false;
   const reservationTables = new Set(["plan_id_reservation_events", "plan_id_reservations"]);
   const reservationIndexes = indexes.filter((index) => reservationTables.has(index.table));
@@ -696,6 +696,15 @@ function migrateV2ToV3(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): b
       !ledgerRowsValid(db)
     )
       throw new Error("v2-v3-verification-failed");
+    // Keep custody v3 as the validated migration boundary, but do not expose it
+    // as a committed intermediate state. Admission v4 is installed in the same
+    // writer transaction so every v2 upgrade is all-or-nothing.
+    for (const table of v4Tables) db.exec(createTableSql(table));
+    for (const index of v4Indexes) db.exec(createIndexSql(index));
+    for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
+    fault?.after("v2-v4-schema-created");
+    db.setUserVersion(LEDGER_SCHEMA_VERSION);
+    if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v4-verification-failed");
     db.exec("COMMIT");
     return true;
   } catch {

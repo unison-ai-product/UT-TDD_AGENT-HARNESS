@@ -56,11 +56,18 @@ commitをlegacy ceilingに指定できないよう、engine landingとenforcemen
 
 ## Genesis契約
 
+0. live GitHub APIからrepository ID、default branch、main SHA、protection/ruleset ID、required PR review、
+   required status check、force-push/delete禁止、admin bypass方針を正規化したprotection snapshotを取得する。
+   `protected=false`、`unknown`、403、必須control欠落はhard stopし、inventory、activation、receipt、projectionを
+   1 byteも生成しない。
 1. `PLAN-L7-435`をPO/Claude検収でmainへmergeする。
-2. merge後の最新保護main `C0`からfresh `add/plan-admission-cutover` branchを作る。
-3. `C0`のcommit SHA、tree SHA、全`docs/plans/PLAN-*.md`のpath、plan ID、Git blob OID、
+2. protection有効化後の最新保護main `C0`からfresh `add/plan-admission-cutover` branchを作る。過去の未保護履歴を
+   遡及的にtrusted扱いせず、`C0`全量inventoryとPO/Claude bootstrap attestationを新たな信頼起点にする。
+3. G0で観測したmain SHA、`C0`、cutover PR baseを一致させ、`C0`のcommit SHA、tree SHA、
+   全`docs/plans/PLAN-*.md`のpath、plan ID、Git blob OID、
    canonical content digestを決定論的inventoryへexactly onceで記録する。
-4. activation、inventory、cutover receipt、genesis projectionを同一transitionで生成し、相互digestを束縛する。
+4. activation、inventory、cutover receipt、genesis projectionを同一transitionで生成し、相互digestと
+   protection snapshot digestを束縛する。
 5. genesis transition内で変更するPLANはlegacy inventoryで免除せず、通常の`plan draft` receiptを必須にする。
 6. genesis検証Greenとcross-family review後にだけworkflowとpre-pushをenforcedへ切り替える。
 
@@ -73,12 +80,17 @@ downgrade、削除、ceiling差替えをfail-closeする。
 - PR CIはbase/head最終差分だけでなく`base..head`の全commit edgeを検査する。
 - merge commitは全parentからmerge commitへのedgeを検査し、second-parent経由の洗浄を拒否する。
 - pre-pushはCIと同じcommit列・同じepoch判定を再利用する。
+- PR CIはlive protection snapshotを再取得し、生成時からの無効化、ruleset drift、観測SHAとPR baseの不一致を
+  fail-closeする。API取得不能を「変更なし」と解釈しない。
 - local SQLiteのunfinished journalはfresh CIから観測不能である。CIはtracked tree、receipt projection、
   recovery-clearance projectionを検証し、local journal gateはsession start/pre-pushが担当する。
 
 ## AC
 
 - [ ] ceiling SHA/treeが保護mainのPR baseと一致し、feature branch任意commitをceilingにできない。
+- [ ] `protected=false` / `unknown` / 403 / required control不足では副作用0でRedになる。
+- [ ] protection snapshotの観測SHA=`C0`=PR baseであり、そのdigestをcutover receiptへ束縛する。
+- [ ] PR CI再検査でprotection無効化・ruleset drift・SHA driftをRedにする。
 - [ ] inventoryが`C0`のPLAN集合と欠落・余剰・重複・digest差0で一致する。
 - [ ] activation/inventory/cutover receipt/projectionの相互digestが一致する。
 - [ ] genesis内PLAN変更、activation後変更、rename、delete、後続commit洗浄をfail-closeする。
@@ -89,5 +101,5 @@ downgrade、削除、ceiling差替えをfail-closeする。
 
 inventory欠落/余剰/順序差、ceiling SHA/tree偽装、activation単独、receipt単独、projection単独、
 legacy blob変更、rename/delete、後続commitでのreceipt洗浄、merge second-parent持込み、activation downgradeを
-各一項変異でRedにする。ceiling ancestry、完全集合比較、全parent検査、immutability検査を削るmutationを
-survivor 0にする。
+各一項変異でRedにする。protection false/403/部分保護、観測SHA不一致、ruleset driftはartifact副作用0でRedにする。
+protection gate、ceiling ancestry、完全集合比較、全parent検査、immutability検査を削るmutationをsurvivor 0にする。
