@@ -448,7 +448,10 @@ describe("github-ci-policy lint", () => {
   });
 
   it("U-CIPOL-010: rejects invalid on, step, concurrency, and role/profile shapes", () => {
-    const malformedOn = SOURCE_WORKFLOW.replace("on:\n", "on: bogus\n");
+    const malformedOn = SOURCE_WORKFLOW.replace(
+      /on:[\s\S]*?permissions:/,
+      "on: bogus\npermissions:",
+    );
     expect(analyzeGithubCiPolicy(docs(malformedOn)).violations).toContainEqual({
       file: ".github/workflows/harness-check.yml",
       profile: "source",
@@ -573,7 +576,7 @@ describe("github-ci-policy lint", () => {
 
   it("requires source CI to keep full doctor in the required status check", () => {
     const result = analyzeGithubCiPolicy(
-      docs(SOURCE_WORKFLOW.replace("bun src/cli.ts doctor", "")),
+      docs(SOURCE_WORKFLOW.replace("bun src/cli.ts doctor", "echo doctor omitted")),
     );
 
     expect(result.ok).toBe(false);
