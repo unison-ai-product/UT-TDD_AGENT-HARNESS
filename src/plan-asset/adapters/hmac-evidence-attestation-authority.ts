@@ -16,6 +16,13 @@ type StoredKey = {
   readonly producers: ReadonlySet<EvidenceProducer>;
 };
 
+type EvidenceMacInput = {
+  readonly authorityId: string;
+  readonly keyVersion: string;
+  readonly evidence: EvidenceAttestationInput;
+  readonly secret: Buffer;
+};
+
 /** Signing capability. Never pass this object to policy evaluation code. */
 export class HmacEvidenceAttestationIssuer implements EvidenceAttestationIssuerPort {
   readonly #authorityId: string;
@@ -45,9 +52,12 @@ export class HmacEvidenceAttestationIssuer implements EvidenceAttestationIssuerP
       algorithm: "hmac-sha256",
       authorityId: this.#authorityId,
       keyVersion: this.#currentVersion,
-      signature: mac(this.#authorityId, this.#currentVersion, input, key.secret).toString(
-        "base64url",
-      ),
+      signature: mac({
+        authorityId: this.#authorityId,
+        keyVersion: this.#currentVersion,
+        evidence: input,
+        secret: key.secret,
+      }).toString("base64url"),
     });
   }
 }
@@ -75,22 +85,17 @@ function buildKeys(
   return keys;
 }
 
-function mac(
-  authorityId: string,
-  keyVersion: string,
-  input: EvidenceAttestationInput,
-  secret: Buffer,
-): Buffer {
-  return createHmac("sha256", secret)
+function mac(input: EvidenceMacInput): Buffer {
+  return createHmac("sha256", input.secret)
     .update(
       frame([
         "ut-tdd-evidence-attestation/v1",
         "evidence-attestation/v1",
         "hmac-sha256",
-        authorityId,
-        keyVersion,
-        input.producer,
-        input.recordDigest,
+        input.authorityId,
+        input.keyVersion,
+        input.evidence.producer,
+        input.evidence.recordDigest,
       ]),
     )
     .digest();
