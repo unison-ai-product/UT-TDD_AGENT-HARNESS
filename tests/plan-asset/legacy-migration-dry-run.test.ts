@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadRoleContractRegistry } from "../../src/plan-asset/adapters/role-contract-registry.js";
+import { REVIEWED_REKEY_DECISIONS } from "../../src/plan-asset/application/legacy-migration-decision-manifest.js";
 import {
   HeadTargetRegistry,
   LegacyMigrationDryRun,
@@ -63,14 +64,16 @@ describe("legacy migration dry-run", () => {
     expect(result.reportDigest).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it("U-PA-035: applies all 55 explicit reviewed rekey decisions", () => {
+  it("U-PA-035: applies every explicit reviewed rekey decision", () => {
     const result = new LegacyMigrationDryRun().run(process.cwd());
     if (!("records" in result)) throw new Error(result.ruleId);
-    expect(result.collisionGroups).toBe(27);
-    expect(result.collisionItems).toBe(55);
+    const reviewedItems = REVIEWED_REKEY_DECISIONS.length;
+    const reviewedGroups = new Set(REVIEWED_REKEY_DECISIONS.map(([, group]) => group)).size;
+    expect(result.collisionGroups).toBe(reviewedGroups);
+    expect(result.collisionItems).toBe(reviewedItems);
     expect(result.decisionCounts).toEqual({
-      migrated: headPlanDocCount(process.cwd()) - 55,
-      rekeyed: 55,
+      migrated: headPlanDocCount(process.cwd()) - reviewedItems,
+      rekeyed: reviewedItems,
       rejected: 0,
       pending: 0,
     });

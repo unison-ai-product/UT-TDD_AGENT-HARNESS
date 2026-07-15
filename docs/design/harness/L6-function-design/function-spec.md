@@ -879,7 +879,7 @@ delta同士のexact artifact pathを許可する。
 - `resolveProfile(catalog, selection): Result<ResolvedProfile, ProfileViolation[]>`
 - `PlanRevision.create(input): Result<PlanRevision, PlanRevisionError>`
 - `PlanAsset.create(input, deps)` / `PlanAsset.reconstruct(revisions)` / `PlanAsset.revise(command)`
-- `EvidenceRecord.create(input)` / `EvidenceRecord.isUsableFor(subject, policy, now)`
+- `EvidenceRecord.create(input, issuer?)` / `EvidenceRecord.isUsableFor(subject, policy, now)`
 
 完全constructor/factoryでinvalid stateを拒否し、reviseは旧instance/evidenceを変更せず新asset+eventを返す。
 profile解決順はsize baseline→product overlay→explicit overrideで、unknownと同優先度競合をfail-closeする。
@@ -925,8 +925,8 @@ ProcessRunner/Hasher/ReceiptStoreをport注入し、検査対象detectorのverdi
 |---|---|---|
 | `PlanAssetInput` | `assetId`, `alias`, `initialRevision`, `canonicalPayload`, `dependencies[]` | 空ID、重複dependency、revision≠1、payload digest不一致は`PlanAssetError` |
 | `RevisePlanCommand` | `assetId`, `baseRevision`, `changeSet`, `actor`, `reason` | base≠latest、空reason、identity変更は拒否 |
-| `EvidenceInput` | `evidenceId`, `subjectId`, `subjectRevision`, `sourceCommit`, `commandArgs[]`, `outputDigest`, `exitCode`, `producedAt`, `expiresAt?`, `producer` | digest/commit/revision/command欠落は`EvidenceError`。非0 exitも監査用recordとしてvalid |
-| `EvidencePolicy` | `requiredKinds[]`, `maxAge?`, `acceptedProducers[]` | 別revision、期限切れ、producer外は`EvidenceVerdict.usable=false` |
+| `EvidenceInput` | `evidenceId`, `evidenceKind`, `subjectId`, `subjectRevision`, `sourceCommit`, branded `commandArgs`, kind別typed `claims`, `outputDigest`, `exitCode`, typed `producer`, `producedAt`, `expiresAt?`, `supersedesEvidenceId?` | claimsを含むrecord digestをcanonical fieldから内部生成する。issuerがある場合はauthority/key version/producer/record digestを長さprefix frame化してattestationを発行する。非0 exitと未署名recordも監査用recordとしてvalid |
+| `EvidencePolicy` | `policyId`, `revision`, `requirements[]`（各要素=`requirementId`, `requiredKind`, `minCount`, `maxCount?`, `acceptedProducers[]`, `exitRule`, typed `claimsRule`）、`maxAge?`、composition root固定`EvidenceAttestationVerifierPort` | 全nested ruleをdefensive copy/deep freezeする。trusted verifierがauthority/key/producer binding/署名を検証したrecordだけをfrontier候補にする。未署名・署名不正、別kind/revision/commit、期限切れ、producer外、exit/claims不適合を件数へ数えず、requirement別eligible/rejected IDをstable順で返す |
 | `WorkflowCommand` | `subjectId`, `expectedFrom`, `to`, `actor`, `reason?`, `evidenceIds[]` | 許可表外、sequence不整合、guard不足は`WorkflowError` |
 | `WorkflowContext` | `subjectRevision`, `events[]`, `evidence[]`, `now`, `policyRevision` | event/evidenceが別subjectならfail-close |
 | `VModelContractDto` | `revision`, `layers[]`, `gates[]`, `pairs[]`, `exceptions[]`, `evidencePolicies[]`, `defectRoutes[]` | exactly-once、未知参照、理由なし例外は`ContractViolation[]` |
@@ -1025,8 +1025,9 @@ boolean/nullをそのままframe化し、空白を持たない。YAML tag、anch
 lossless変換不能として`plan-migration-loss`にする。未知fieldは`unknownFrontmatter`のcanonical JSONと元frontmatter digestを
 両方保持し、値をstring化しない。`EvidenceRecord.isUsableFor`はsubject/revision/commit、kind、producer、expiryとpolicy固有の
 `exitRule/expectedExit`を照合する。非0 exitはRed policyでusableになり得るが、Green/accept policyではusable=falseにする。
-record自体は削除しない。producer値域はcontract registryから読み、未知producerを
+record自体は削除しない。`claims`はRedのexpected/observed findingとtodo/skip、runner/test、trace orphan/stale、review verdict/reviewer、gate failure、acceptance/retention decision、exception actor/reason/resume/replacementをkind別discriminated DTOで保持し、`outputDigest`や自由文から意味を逆推定しない。supersessionは同subject/revision/kindの全履歴からactive frontierを作り、orphan/cycle/forkをfail-closeする。producer値域はcontract registryから読み、未知producerを
 記録時finding、accept時fail-closeとする。argvはsecret-scan/redaction port通過後の値だけを保存する。
+`recordDigest`は保存recordの改ざん検出でありproducer真正性ではない。真正性は`evidence-attestation/v1`のHMAC-SHA256 attestationをcomposition root固定のtrusted verifierで検証し、unknown authority/key、producer binding不一致、署名不一致、未署名をfail-closeする。issuerとverifierは別capabilityとし、verifierに発行surfaceを持たせない。kernelのfinal verifierだけがmodule-private WeakMapへcanonical verify closureを登録でき、policyはその非偽造capture以外を拒否する。公開register、caller供給のallow-all verifier、`attested=true`の自己申告は契約外とする。
 
 全append commandは`commandPayloadDigest`を返す。digestはcommand type、subject identity、入力DTOのcanonical frameだけから作り、
 command ID、clock、event ID、resultを含めない。同一command IDの再送はこのdigestをconstant-time比較し、一致時だけ既存event/resultを返す。
@@ -1105,7 +1106,7 @@ resumeだけが元normal stateへ戻す。reopenの同一revisionはstate復帰�
 | `accept/v1` | `green-test-run`, `gate-run`, `acceptance-decision` | 各1以上 | 非期限切れ、exit 0、同revision/commit、PO/human要件をprofileから適用 |
 | exception command | `exception-context` | 1以上 | actor/reason/source commit/resumeまたはreplacementを同recordで拘束 |
 
-`EvidencePolicy`はkind、min/max cardinality、maxAge、accepted producers、`exitRule=exact|nonzero|any`、`expectedExit?`、subject revision/source commit一致をtyped fieldで持つ。
+`EvidencePolicy`はkind、min/max cardinality、maxAge、accepted producers、`exitRule=exact|nonzero|any`、`expectedExit?`、`claimsRule=recorded|review-approved|red-observed|trace-clean|gate-passed|decision(expected)`、subject revision/source commit一致をtyped fieldで持つ。
 不足kindと不適格record IDをstable順で返し、別revision・policyのexitRule不適合・期限切れrecordを件数へ数えない。
 
 | ポリシーID | 必須証跡kind | 必要件数 | exit規則 | 許可producer |
@@ -1154,7 +1155,8 @@ subject/revisionを勝手に変更しない。最低10,000列または全state×
 
 | port / method | signature | 契約 |
 |---|---|---|
-| `PlanIdReservation.reserve` | `(request: { namespace; ordinal; assetId; leaseMs; commandId }, tx) -> Result<ReservationLease, ReservationError>` | transaction内compare-and-insert。同一commandId+同一payloadは同じleaseを返し、異payloadはconflict |
+| `ReservationService.reserve` | `(request: { reservationId; namespace; ordinal; assetId; leaseMs; commandId }) -> Result<ReservationLease, ReservationError>` | injected clockとversioned key-ring portからraw tokenを発行し、ledgerへは`keyVersion + hash`だけ渡す。token=`utl1.<keyVersion>.<base64url(HMAC-SHA256(secret, length-prefixed commandId/reservationId/namespace/ordinal/assetId/occurredAt/expiresAt))>`。再送はeventのkeyVersion/時刻を読み、同version keyで同じraw leaseを再導出しconstant-time hash照合。key保管adapterをdomain/applicationへ埋め込まない |
+| `PlanLedger.reserve` | `(record: { reservationId; namespace; ordinal; assetId; leaseKeyVersion; leaseTokenHash; commandId; occurredAt; expiresAt }, tx) -> Result<ReservationEvent, ReservationError>` | key version+hash-only記録adapter。event/current/receiptを同一transactionでappendし、いずれのfaultでも3表delta 0 |
 | `PlanIdReservation.release` | `(reservationId, leaseToken, commandId, tx) -> Result<ReleaseEvent, ReservationError>` | token hashをconstant-time照合し、二重releaseは同一結果。期限切れ/他tokenを拒否 |
 | `PlanIdReservation.reconstruct` | `(events, now) -> Result<ReservationState, ReservationError>` | sequence/lease重複0、wall clockをeventへ混入しない |
 | `ProcessRunner.run` | `(request: { executable; args[]; cwd; envAllowlist; stdinDigest?; timeoutMs; maxStdoutBytes; maxStderrBytes }) -> Promise<ProcessObservation>` | shell文字列連結禁止。timeout/signal/exceptionを`exitKind=exited|timeout|signal|spawn_error`へ正規化し、出力超過はtruncate finding |
@@ -1311,3 +1313,32 @@ rollbackする。同一`command_id + request digest`の再送は同certificate�
 Admission receiptとPLAN本文のdigest、asset/revision、route tupleを`verifyPlanAdmissionReceipt(diff, ledger)`が
 再照合する。新規追加、rename、frontmatter/body直接編集、receiptなし、stale receiptはhook/pre-push/CIでexit 1。
 既存履歴はbaseline前のreceipt欠落だけを遡及改ざんせず、HEAD差分の新規/変更PLANへ強制する。
+
+## PLAN-L6-83..85 Forward離脱 / GitHub関数契約
+
+```ts
+class ExecutionEpisode {
+  static observe(input: ObserveEscapeInput): ExecutionEpisode;
+  selectDrive(input: SelectDriveInput): EpisodeEvent;
+  recordProjection(input: GithubProjectionResult): EpisodeEvent;
+  certifyReentry(input: ReentryEvidenceInput): ReentryCertificate;
+  authorizeMerge(input: MergeEvidenceInput): MergeAuthorization;
+}
+
+interface GithubProjectionPort {
+  projectIssue(command: ProjectIssueCommand): Promise<ProjectionReceipt>;
+  projectDraftPullRequest(command: ProjectPullRequestCommand): Promise<ProjectionReceipt>;
+  closeIssue(command: CloseIssueCommand): Promise<ProjectionReceipt>;
+}
+```
+
+契約不変条件:
+
+- `observe`は通常Forward入力をescape episodeへ昇格しない。escape typeがある時だけE0を生成する。
+- `selectDrive`はcanonical drive enumとorigin/escape/PLAN kind/branch kindを同時検証し、未知・不整合を拒否する。
+- Issue projectionはE2より前、drive plan freezeはE4より前に実行できない。同じidempotency keyは同じreceiptを返す。
+- `certifyReentry`はE6のdrive検証とE8のForward中間testをorigin revisionへ束縛してE9 certificateを発行し、片方欠落を拒否する。E9はE10で一度だけconsumeし、E11の合流後testはE12 draft PRの前提として別に検証する。
+- draft PRはE11後だけ生成する。merge authorizationは別provider cross-review PASS、required CI、exact head、
+  re-entry certificate、accept evidenceをAND条件で要求する。
+- GitHub inboundはremote observationをappendするだけで、domain eventのsequence/payloadを更新しない。
+- E15はescapeをL/type/cause/drive/recurrence identity別learning factへ投影し、上流actionまたは理由付きno-changeを必須にする。

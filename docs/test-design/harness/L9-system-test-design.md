@@ -151,3 +151,17 @@ verification_design: system environment, data reality, measurement method, evalu
 
 G4 pair-freezeは本節とL4-22〜28を双方向traceし、L5/L8、L6/L7へ順に降下する。system greenだけで
 設計判断やsemantic verdictを補完せず、失敗原因が上流contractならReverse、実装ならL7、verification設計ならL9へrouteする。
+
+## §8 Execution Ledger / GitHub system acceptance (PLAN-L4-30、2026-07-15)
+
+| ST-ID | whole-system scenario | acceptance / defect routing |
+| --- | --- | --- |
+| `ST-EPISODE-01` | 通常ForwardをL0からacceptまで通す | Execution Ledgerは連続するがIssue/PR projectionは0。Issue強制ならL4/L6 defect |
+| `ST-EPISODE-02` | block/reject/Reverse/Recovery/Incident/Scrum-PoC/preemptive/deferでForward外へ出る | 全経路が`drive_model`・origin revision・escape reason・reentry target付きIssueへ収束。欠落経路はaccept禁止 |
+| `ST-EPISODE-03` | GitHub停止中にForward外作業を進め、復旧後に再送 | Ledger正本を失わず、復旧後Issue/PRが各1件へ収束。二重作成はadapter defect |
+| `ST-REENTRY-01` | 駆動モデル内検証からForward再合流まで進める | E6→中間test→certificate→合流→合流後testの順を満たし、両testの片方欠落ではPRを作らない |
+| `ST-PRMERGE-01` | 合流後test Greenからdraft PR、cross-provider review、main mergeへ進める | certificate/check/review/PRがexact SHA一致した場合だけmerge。force-push時は再検証 |
+| `ST-CLOSURE-01` | merge後main CI、Issue close、学習fact生成まで進める | E15は全後処理成功時だけ到達し、Forward外遷移数をdrive/origin/reason/reentry別に再現できる |
+
+L4↔L9の量閉じ条件は、通常Forward 1系統とForward外の全列挙経路が上表のどれかへexactly once対応し、
+GitHub可用性がLedgerの正本性を左右しないこと。検出器はこの設計列挙から生成・検査し、未設計経路を自動創作しない。

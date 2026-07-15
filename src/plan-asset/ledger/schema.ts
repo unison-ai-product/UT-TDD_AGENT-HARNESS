@@ -17,8 +17,11 @@ import {
 } from "../../schema/harness-db-table-builders.js";
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
 
-export const LEDGER_SCHEMA_VERSION = 3;
-const PREVIOUS_LEDGER_SCHEMA_VERSION = 2;
+export const LEDGER_SCHEMA_VERSION = 4;
+
+export interface LedgerSchemaMigrationFaultPort {
+  after(boundary: string): void;
+}
 
 function migrationTargetCheck() {
   return {
@@ -44,7 +47,7 @@ function migrationTargetCheck() {
   };
 }
 
-const v2Tables: readonly TableDef[] = [
+const v3Tables: readonly TableDef[] = [
   {
     name: "plan_assets",
     columns: [
@@ -137,13 +140,18 @@ const v2Tables: readonly TableDef[] = [
       requiredCol("namespace"),
       requiredCol("ordinal", "INTEGER"),
       requiredCol("asset_id"),
+      requiredCol("lease_key_version"),
       requiredCol("lease_token_hash"),
       requiredCol("occurred_at"),
       col("expires_at"),
       requiredCol("event_digest"),
     ],
     unique: [["reservation_id", "sequence"], ["command_id"]],
-    checks: [enumCheck("event_kind", ["reserved", "released", "expired"])],
+    checks: [
+      enumCheck("event_kind", ["reserved", "released", "expired"]),
+      { kind: "compare", column: "lease_key_version", operator: "!=", value: "" },
+      { kind: "not-contains", column: "lease_key_version", value: "." },
+    ],
     foreignKeys: [
       foreignKey(["asset_id"], {
         table: "plan_assets",
@@ -159,6 +167,7 @@ const v2Tables: readonly TableDef[] = [
       requiredCol("namespace"),
       requiredCol("ordinal", "INTEGER"),
       requiredCol("asset_id"),
+      requiredCol("lease_key_version"),
       requiredCol("lease_token_hash"),
       requiredCol("status"),
       requiredCol("reserved_at"),
@@ -168,6 +177,8 @@ const v2Tables: readonly TableDef[] = [
     ],
     checks: [
       enumCheck("status", ["active", "released", "expired"]),
+      { kind: "compare", column: "lease_key_version", operator: "!=", value: "" },
+      { kind: "not-contains", column: "lease_key_version", value: "." },
       {
         kind: "or",
         expressions: [
@@ -336,7 +347,7 @@ const v2Tables: readonly TableDef[] = [
   },
 ];
 
-const v3Tables: readonly TableDef[] = [
+const v4Tables: readonly TableDef[] = [
   {
     name: "plan_admission_events",
     columns: [
@@ -475,9 +486,9 @@ const v3Tables: readonly TableDef[] = [
   },
 ];
 
-const tables: readonly TableDef[] = [...v2Tables, ...v3Tables];
+const tables: readonly TableDef[] = [...v3Tables, ...v4Tables];
 
-const v2Indexes: readonly IndexDef[] = [
+const v3Indexes: readonly IndexDef[] = [
   { name: "idx_plan_assets_created_at", table: "plan_assets", columns: ["created_at"] },
   {
     name: "idx_plan_assets_source_commit",
@@ -546,7 +557,7 @@ const v2Indexes: readonly IndexDef[] = [
   },
 ];
 
-const v3Indexes: readonly IndexDef[] = [
+const v4Indexes: readonly IndexDef[] = [
   {
     name: "idx_plan_admission_events_plan_revision",
     table: "plan_admission_events",
@@ -564,9 +575,9 @@ const v3Indexes: readonly IndexDef[] = [
   },
 ];
 
-const indexes: readonly IndexDef[] = [...v2Indexes, ...v3Indexes];
+const indexes: readonly IndexDef[] = [...v3Indexes, ...v4Indexes];
 
-const v2HistoryTables = [
+const v3HistoryTables = [
   "plan_assets",
   "plan_revisions",
   "plan_alias_events",
@@ -574,7 +585,7 @@ const v2HistoryTables = [
   "legacy_plan_migration_events",
   "append_command_receipts",
 ] as const;
-const v3HistoryTables = [
+const v4HistoryTables = [
   "plan_admission_events",
   "plan_admission_receipts",
   "plan_draft_journal_events",
@@ -592,9 +603,9 @@ function appendOnlyTriggers(historyTables: readonly string[]): readonly TriggerD
   );
 }
 
-const v2Triggers = appendOnlyTriggers(v2HistoryTables);
 const v3Triggers = appendOnlyTriggers(v3HistoryTables);
-const triggers: readonly TriggerDef[] = [...v2Triggers, ...v3Triggers];
+const v4Triggers = appendOnlyTriggers(v4HistoryTables);
+const triggers: readonly TriggerDef[] = [...v3Triggers, ...v4Triggers];
 
 export function ledgerSchemaDdl(): readonly string[] {
   return [
@@ -606,14 +617,14 @@ export function ledgerSchemaDdl(): readonly string[] {
 
 export function migratePlanLedger(
   db: HarnessDb,
+  options: { readonly fault?: LedgerSchemaMigrationFaultPort } = {},
 ): { ok: true; version: number } | { ok: false; ruleId: "plan-ledger-unavailable" } {
   const version = db.userVersion();
-  if (
-    version !== 0 &&
-    version !== PREVIOUS_LEDGER_SCHEMA_VERSION &&
-    version !== LEDGER_SCHEMA_VERSION
-  )
+  if (version !== 0 && version !== 2 && version !== 3 && version !== LEDGER_SCHEMA_VERSION)
     return { ok: false, ruleId: "plan-ledger-unavailable" };
+  if (version === 2 && !migrateV2ToV3(db, options.fault)) {
+    return { ok: false, ruleId: "plan-ledger-unavailable" };
+  }
   if (version === 0) {
     if (schemaObjects(db).length > 0) return { ok: false, ruleId: "plan-ledger-unavailable" };
     db.exec("BEGIN IMMEDIATE");
@@ -626,9 +637,9 @@ export function migratePlanLedger(
       throw error;
     }
   }
-  if (version === PREVIOUS_LEDGER_SCHEMA_VERSION) {
+  if (db.userVersion() === 3) {
     if (
-      !schemaMatchesVersion(db, { tables: v2Tables, indexes: v2Indexes, triggers: v2Triggers }) ||
+      !schemaMatchesVersion(db, { tables: v3Tables, indexes: v3Indexes, triggers: v3Triggers }) ||
       !ledgerRowsValid(db)
     )
       return { ok: false, ruleId: "plan-ledger-unavailable" };
@@ -637,15 +648,15 @@ export function migratePlanLedger(
       // Revalidate after acquiring the writer lock so migration never extends a
       // schema or row set that changed between validation and migration.
       if (
-        !schemaMatchesVersion(db, { tables: v2Tables, indexes: v2Indexes, triggers: v2Triggers }) ||
+        !schemaMatchesVersion(db, { tables: v3Tables, indexes: v3Indexes, triggers: v3Triggers }) ||
         !ledgerRowsValid(db)
       ) {
         db.exec("ROLLBACK");
         return { ok: false, ruleId: "plan-ledger-unavailable" };
       }
-      for (const table of v3Tables) db.exec(createTableSql(table));
-      for (const index of v3Indexes) db.exec(createIndexSql(index));
-      for (const trigger of v3Triggers) db.exec(createTriggerSql(trigger));
+      for (const table of v4Tables) db.exec(createTableSql(table));
+      for (const index of v4Indexes) db.exec(createIndexSql(index));
+      for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
       db.setUserVersion(LEDGER_SCHEMA_VERSION);
       db.exec("COMMIT");
     } catch (error) {
@@ -656,6 +667,81 @@ export function migratePlanLedger(
   return schemaMatches(db) && ledgerRowsValid(db)
     ? { ok: true, version: LEDGER_SCHEMA_VERSION }
     : { ok: false, ruleId: "plan-ledger-unavailable" };
+}
+
+function migrateV2ToV3(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): boolean {
+  if (!legacyV2ReservationSchemaValid(db) || reservationRowCount(db) !== 0) return false;
+  const reservationTables = new Set(["plan_id_reservation_events", "plan_id_reservations"]);
+  const reservationIndexes = indexes.filter((index) => reservationTables.has(index.table));
+  const reservationTriggers = triggers.filter((trigger) => reservationTables.has(trigger.table));
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const trigger of reservationTriggers) db.exec(`DROP TRIGGER ${trigger.name}`);
+    for (const index of reservationIndexes) db.exec(`DROP INDEX ${index.name}`);
+    db.exec("ALTER TABLE plan_id_reservation_events RENAME TO plan_id_reservation_events_v2");
+    db.exec("ALTER TABLE plan_id_reservations RENAME TO plan_id_reservations_v2");
+    fault?.after("v2-v3-tables-renamed");
+    for (const table of tables.filter((candidate) => reservationTables.has(candidate.name))) {
+      db.exec(createTableSql(table));
+    }
+    fault?.after("v2-v3-tables-created");
+    db.exec("DROP TABLE plan_id_reservations_v2");
+    db.exec("DROP TABLE plan_id_reservation_events_v2");
+    for (const index of reservationIndexes) db.exec(createIndexSql(index));
+    for (const trigger of reservationTriggers) db.exec(createTriggerSql(trigger));
+    fault?.after("v2-v3-schema-created");
+    db.setUserVersion(3);
+    if (
+      !schemaMatchesVersion(db, { tables: v3Tables, indexes: v3Indexes, triggers: v3Triggers }) ||
+      !ledgerRowsValid(db)
+    )
+      throw new Error("v2-v3-verification-failed");
+    db.exec("COMMIT");
+    return true;
+  } catch {
+    db.exec("ROLLBACK");
+    return false;
+  }
+}
+
+function legacyV2ReservationSchemaValid(db: HarnessDb): boolean {
+  const actual = new Map(
+    schemaObjects(db).map((row) => [`${row.type}:${row.name}`, normalizeDdl(row.sql)]),
+  );
+  for (const name of ["plan_id_reservation_events", "plan_id_reservations"]) {
+    const table = tables.find((candidate) => candidate.name === name);
+    if (!table) return false;
+    const expected = normalizeDdl(createTableSql(withoutLeaseKeyVersion(table)));
+    if (actual.get(`table:${name}`) !== expected) return false;
+  }
+  return true;
+}
+
+function withoutLeaseKeyVersion(table: TableDef): TableDef {
+  return {
+    ...table,
+    columns: table.columns.filter((column) => column.name !== "lease_key_version"),
+    checks: table.checks?.filter((check) => !checkReferencesColumn(check, "lease_key_version")),
+  };
+}
+
+function checkReferencesColumn(
+  check: NonNullable<TableDef["checks"]>[number],
+  column: string,
+): boolean {
+  if (check.kind === "and" || check.kind === "or") {
+    return check.expressions.some((child) => checkReferencesColumn(child, column));
+  }
+  if (check.kind === "not") return checkReferencesColumn(check.expression, column);
+  return check.column === column;
+}
+
+function reservationRowCount(db: HarnessDb): number {
+  return ["plan_id_reservation_events", "plan_id_reservations"].reduce(
+    (total, table) =>
+      total + Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n ?? 0),
+    0,
+  );
 }
 
 export function ledgerRowDigest(
@@ -725,7 +811,7 @@ function ledgerRowsValid(db: HarnessDb): boolean {
     const rows = db.prepare(`SELECT * FROM ${table}`).all();
     if (rows.some((row) => row[digestColumn] !== ledgerRowDigest(row, digestColumn))) return false;
   }
-  if (db.userVersion() >= 3) {
+  if (db.userVersion() >= 4) {
     for (const [table, digestColumn] of [
       ["plan_admission_events", "event_digest"],
       ["plan_draft_journal", "journal_digest"],
@@ -928,6 +1014,7 @@ function reservationReductionsValid(db: HarnessDb): boolean {
           "namespace",
           "ordinal",
           "asset_id",
+          "lease_key_version",
           "lease_token_hash",
         ])
       )
@@ -939,6 +1026,7 @@ function reservationReductionsValid(db: HarnessDb): boolean {
             "namespace",
             "ordinal",
             "asset_id",
+            "lease_key_version",
             "lease_token_hash",
           ]),
         )

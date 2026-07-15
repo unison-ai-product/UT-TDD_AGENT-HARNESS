@@ -1203,7 +1203,7 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-003` | alias/layer変更command | `PlanAsset.revise` | 新revisionでも`asset_id`不変、exit 0 |
 | `U-PA-004` | revision 1+evidence | `PlanAsset.revise` | 旧instance/evidence digest不変、exit 0 |
 | `U-PA-005` | expired/別revision/policy別exit evidence | `EvidenceRecord.isUsableFor` | `evidence-stale-or-subject-mismatch`、Red expected nonzeroだけusable、exit 1/0 |
-| `U-PA-006` | legacy PLAN全field + short alias現HEAD 20衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
+| `U-PA-006` | legacy PLAN全field + short alias現HEAD全衝突群 | canonical adapter / alias resolver | field loss 0、多義は`plan-migration-collision`で自動選択0、exit 1 |
 | `U-PA-007` | 同ordinal同時予約 | `PlanIdReservation.reserve` | 片方だけ成功、他方`plan-id-reservation-conflict` |
 | `U-PA-008` | HEAD tracked `ut-tdd.project.json`、改竄bytes/receipt、schema/identity不正、remote無し | `loadTrackedProjectIdentity` / `loadProjectIdentityFromHead` | exact HEAD blobだけ成功しreceipt digest安定。index/working tree/remote補完0、異常種別を専用findingでfail-close |
 | `U-PA-009` | active alias/ordinal leaseを同時挿入 | typed partial UNIQUE DDL | active rowは1件だけ成功。terminal/closed intervalは履歴として共存可能 |
@@ -1216,8 +1216,8 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-016` | active leaseへrelease/expireを競合実行 | `PlanLedger.release/expire` | token/expiry guardを通った一方だけterminal eventをappendし、敗者は`plan-id-reservation-not-active` |
 | `U-PA-017` | active ordinalへ別reservationをappend | `PlanLedger.reserve` | `plan-id-reservation-conflict`でevent/current/receiptを全rollbackし部分commit 0 |
 | `U-PA-018` | reservation receiptのsubject/result kind/command type/recorded timeを改竄 | `migratePlanLedger` receipt/event bijection verifier | event subject/payload/result/timeとの不一致を`plan-ledger-unavailable`でfail-close |
-| `U-PA-019` | HEAD `docs/plans/PLAN-*.md`全件 | `buildLegacyPlanInventory` | 752 pathをexactly onceで読み、full plan ID/asset IDが全件一意、frontmatter plan_id一致 |
-| `U-PA-020` | numeric coreでgroup化したHEAD PLAN | `buildLegacyPlanInventory` | 27群/55 PLANをstable順で返し自動winner選択0 |
+| `U-PA-019` | HEAD `docs/plans/PLAN-*.md`全件 | `buildLegacyPlanInventory` | HEAD path全件をexactly onceで読み、full plan ID/asset IDが全件一意、frontmatter plan_id一致 |
+| `U-PA-020` | numeric coreでgroup化したHEAD PLAN | `buildLegacyPlanInventory` | reviewed rekey manifestのgroup/item集合とexact一致しstable順、自動winner選択0 |
 | `U-PA-021` | 同一HEADを反復inventory | `buildLegacyPlanInventory` | item/collision順とSHA-256 inventory digestが完全一致 |
 | `U-PA-022` | anchor/alias/merge/custom tag/non-string key/unsafe integerを含むfrontmatter | `parseLegacyPlanSource` | lossless canonical化できないYAMLを全件fail-close |
 | `U-PA-023` | empty state + valid pending observe | `reduceLegacyMigration` / append port | observed event/current/receiptのみatomic append、PlanAsset/revision/alias行0 |
@@ -1232,14 +1232,20 @@ TVMS-015 は VMS-015 の工程 live state / 固定4段 SessionStart digest contr
 | `U-PA-032` | 各append境界fault injection | migration transaction port | event/current/asset/revision/alias/receiptの全table delta 0 |
 | `U-PA-033` | valid ledger close→file reopen/rebuild | migration reconstruct | state/event/payload/provenance digest集合が完全一致 |
 | `U-PA-034` | source commitのHEAD PLAN全件 | `LegacyMigrationDryRun` | inventoryとrecordがexactly-once bijection、total=emitted、legacy ID重複0 |
-| `U-PA-035` | 27群/55件reviewed collision manifest | decision resolver | migrated=697、rekeyed=55、pending=0。manifest欠落・余剰・group不一致はfail-close |
+| `U-PA-035` | reviewed collision manifest | decision resolver | migrated=HEAD全件-rekeyed、pending=0。manifest欠落・余剰・group不一致はfail-close |
 | `U-PA-036` | 別legacy IDを返すdecision port | dry-run record join | `plan-migration-preview-id-mismatch`、finding 1件以上 |
 | `U-PA-037` | 同一HEAD・同一manifestを2回実行 | dry-run report | record順、finding順、inventory/report digest完全一致 |
 | `U-PA-038` | HEAD exact file / directory family / hollow / missing | `HeadTargetRegistry` | 非空fileと非空familyのみ存在判定、hollow/missingを拒否 |
 | `U-PA-039` | record source commit/path/OID/content digest | 独立Git object oracle | `commit:path` OIDと実blob bytes SHA-256がrecordと一致 |
 | `U-PA-040` | 全agent slot + 7 role contract | role contract loader/projection | role全単射、全slot contractRef付与、HEAD contract blob非空。未知role/欠落は拒否 |
 | `U-PA-041` | item ledgerの全`target_slot` edge | HEAD document catalog resolver | 全slot ref解決、存在しないslotはglobal findingでfail-close |
-| `U-PA-042` | `plan migration-dry-run --json` | CLI public surface | exit 0、752/752、697 migrated、55 rekeyed、pending/finding 0のJSON契約 |
+| `U-PA-042` | `plan migration-dry-run --json` | CLI public surface | exit 0、`total=emitted=HEAD PLAN件数`、`migrated=total-rekeyed`、pending/finding 0のJSON契約 |
+| `U-PA-043` | `leaseMs`付きreservation commandを初回/再送 | `ReservationService` + versioned key-ring/clock port | raw tokenを返しDB/event/current/receipt保存0、再送はclock進行後も同一token/expiry、異payloadはconflict |
+| `U-PA-044` | reservation event/current/receipt各append直後にfault注入 | `PlanLedger.reserve` transaction | 各例外後にevent/current/receiptのdelta 0、次の正常commandは成功 |
+| `U-PA-045` | 複数kind/producer/subject/revision/commit/expiry/exit/claims outcomeを組合せたevidence全履歴 | `EvidenceRecord` / `EvidencePolicy` | policy定義と評価contextを分離し、typed claimsRuleに適合するactive frontierだけをmin/max cardinalityへ数え、requirement別missing/rejected IDをstable順で返す |
+| `U-PA-046` | raw/split/env/header/URI secret command、未知kind/producer/exit/claims rule、kind不一致claims、自己/orphan/cycle/fork/逆因果supersede、全record field改変 | `EvidenceRecord.create` / policy frontier / digest | branded redacted argv以外は拒否、claimsを自由文から推測しない、supersession不正とrecord digest不一致を拒否、旧record不変 |
+| `U-PA-047` | v2 ledger（reservation 0件／hash-only reservationあり） | schema v3 migration | 空reservationはtransactionalにexact v3へ移行し、非空hash-onlyは明示manifestなしに変更せずfail-close。key version/event/current/reduction/reopen一致 |
+| `U-PA-048` | unsigned/正規署名/別鍵署名/producer変更/claims・digest変更/attestation replay、key rotation、runtime property列挙 | evidence attestation issuer/verifier + policy | trusted authorityの署名とproducer bindingを満たすrecordだけeligible。未署名・偽署名・改変・replayはfail-closeし、秘密鍵/current versionはruntime propertyへ露出しない |
 | `CANDIDATE-FSM-001` | 正規stateごとの次event | `transition` | 許可表どおりのnext state/event、exit 0 |
 | `CANDIDATE-FSM-002` | proposed→implementing | `transition` | `forward-transition-illegal`, exit 1 |
 | `CANDIDATE-FSM-003` | pair frozen、Red evidenceなし | implement command | `forward-red-evidence-missing`, exit 1 |
@@ -1501,3 +1507,50 @@ source workflow / source template / Pack template / setup builtinのどれか1 a
 property testは全signal×mode×tuple×status×createdの直積で、canonical policyがpermitした時だけ
 書込み可能であることを確認する。mutation testはunknown→Forward fallback、archived/date免除、
 tuple allowlist default、Issue requirement削除、schedule fallback、receipt digest比較除去を全てkillする。
+
+## PLAN-L7-436〜439 Execution Ledger / GitHub連動 oracle (2026-07-15)
+
+設計正本は `PLAN-L4-30` / `PLAN-L5-23` / `PLAN-L6-83〜85` とし、検出器はその契約へ従う。
+GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを要求しない。Forward外遷移だけが
+`drive_model` と再合流情報を持つIssueを必須とする。
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `CANDIDATE-EXEP-001` | 通常Forward | L0→L1の合法遷移 | Episode/eventは記録するがIssue/outbox 0 |
+| `CANDIDATE-EXEP-002` | Forward外Issue必須 | escape理由あり、`drive_model`欠落 | E2以降へ進めず`drive-model-required` |
+| `CANDIDATE-EXEP-003` | E0〜E15順序 | E7をE6前にappend | `episode-transition-invalid`、既存event列不変 |
+| `CANDIDATE-EXEP-004` | replay決定性 | 同一event列を2回reduce | state/digest/next-actions完全一致 |
+| `CANDIDATE-EXEP-005` | command冪等性 | 同一command keyを2回適用 | event/outbox増分は各1件、返却episode同一 |
+| `CANDIDATE-EXEP-006` | 原子的outbox | event append後/outbox insert前へfault injection | event/outboxとも部分commit 0 |
+| `CANDIDATE-EXEP-007` | override監査 | 人間overrideで遷移を進める | 既存event更新0、理由/actor/revision付きeventをappend |
+| `CANDIDATE-EXEP-008` | authored source境界 | DBだけに完了stateを注入 | rebuildで消滅し、完了証拠として不採用 |
+| `CANDIDATE-EXEP-009` | event語彙の正本一致 | event番号を別意味へshift/alias、unknown kindを注入 | requirements E0〜E15表とのexact不一致を拒否 |
+| `CANDIDATE-EXEP-010` | 並行append | 同一expected sequenceへ2 commandを競合 | 片方だけcommitし、他方はwrite 0のsequence conflict |
+| `CANDIDATE-EXEP-011` | sequence正本 | occurred_at逆行・clock skewを注入 | 時刻で順序補完せずsequence/digest chainでfail-close |
+| `CANDIDATE-GHISS-001` | Issue projection冪等 | 同一outboxを再送 | remote Issue 1、mapping 1、E4 1 |
+| `CANDIDATE-GHISS-002` | timeout後reconcile | remote作成成功後に応答timeout | marker検索で既存Issueへbindし重複作成0 |
+| `CANDIDATE-GHISS-003` | inbound重複 | delivery ID同一webhookを2回 | inbox 1、domain event増分1 |
+| `CANDIDATE-GHISS-004` | inbound真正性 | signature不正/許可外repo | domain mutation 0、fail-close finding |
+| `CANDIDATE-GHISS-005` | GitHub停止 | 5xx/rate limit | Ledgerを巻き戻さずretry可能outboxを保持 |
+| `CANDIDATE-GHISS-006` | legacy queue | episode binding無し`issue_queue`行 | 自動昇格せず`legacy-unbound`として可視化 |
+| `CANDIDATE-GHISS-007` | worker競合 | 同じleaseを2 workerが取得試行 | remote create最大1回、loserはwrite 0 |
+| `CANDIDATE-GHISS-008` | stale remote | 古いremote version/webhookを後着 | 新しいprojection/domain stateを巻き戻さない |
+| `CANDIDATE-GHISS-009` | payload custody | secret/signature/raw transcriptをDTOへ注入 | event/outbox/Issue保存を拒否しwrite 0 |
+| `CANDIDATE-REENTRY-001` | 証明書binding | episode/drive/source revision/target L一致 | E9を1回だけappend |
+| `CANDIDATE-REENTRY-002` | 中間・合流後test | E8またはE11の片方だけGreen | draft PR生成不可 |
+| `CANDIDATE-REENTRY-003` | stale target | certificate後にtarget HEAD変更 | certificate失効、E10/E12拒否 |
+| `CANDIDATE-REENTRY-004` | drive不一致 | Issueとcertificateの`drive_model`不一致 | `reentry-drive-mismatch` |
+| `CANDIDATE-REENTRY-005` | PR前置順序 | E11前にPR command | E12/outbox 0、`post-reentry-test-required` |
+| `CANDIDATE-REENTRY-006` | PR送信ambiguity | remote作成後timeout→retry | marker/SHAでreconcile、draft PR 1 |
+| `CANDIDATE-GHMERGE-001` | cross-provider | authorとreviewerが同一provider | E13拒否、代替tierをcross扱いにしない |
+| `CANDIDATE-GHMERGE-002` | tests-before-review | required check未完でreview | approvalをmerge証拠に採用しない |
+| `CANDIDATE-GHMERGE-003` | exact SHA | certificate/check/review/PR head SHA不一致 | merge authorization拒否 |
+| `CANDIDATE-GHMERGE-004` | force-push | approval後にhead更新 | review/certificateをstale化 |
+| `CANDIDATE-GHMERGE-005` | merge応答ambiguity | merge成功後timeout | remote main SHA照合でE14をexactly once化 |
+| `CANDIDATE-GHMERGE-006` | E15 closure | main CI未完またはIssue close失敗 | E15未到達、学習fact未確定。全成功時のみclosure |
+| `CANDIDATE-GHMERGE-007` | snapshot原子性 | 別時点のcertificate/check/reviewを混在 | TOCTOU snapshotを拒否しmerge command 0 |
+| `CANDIDATE-GHMERGE-008` | learning rebuild | projection削除後rebuildを2回 | learning identity/digest一致、retryで件数不増 |
+
+property testは任意の合法event列でreplay同一性・単調append・terminal後遷移禁止を確認する。
+mutation testはIssue判定反転、`drive_model`検査除去、outbox別transaction化、SHA比較除去、
+cross-provider比較除去、E9/E11いずれかのgate除去を全てkillする。

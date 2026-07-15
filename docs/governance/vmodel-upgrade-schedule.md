@@ -2,7 +2,7 @@
 title: "Vモデル upgrade schedule authoring source"
 status: confirmed
 owner: PO / TL
-updated: 2026-07-13
+updated: 2026-07-15
 typed_spec_phase_owner: L6
 ---
 
@@ -82,25 +82,25 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L6-68-memory-telemetry-lifecycle-contract | L6 | function-spec | L7 | PLAN-L5-15-feedback-lifecycle-physical-data | U17c-design: memory昇格nudge、telemetry消化、source解消の設計契約をfreeze | green | confirmed |  |
 | PLAN-L7-392-memory-promotion-handover-digest | L7 |  | L6 | PLAN-L6-68-memory-telemetry-lifecycle-contract | U17c: digest責務移管後、memory昇格nudgeとtelemetry TTL/auto-ackを実装 | green | confirmed |  |
 | PLAN-L5-16-vmodel-source-profile-physical-data | L5 | physical-data | L8 | PLAN-L4-22-vmodel-source-disposition-profile-ssot | U19a: source 109/item 163/category 21/profile 8の物理境界 | yellow | draft | L8 pair、schema/index/rebuild invariant待ち |
-| PLAN-L5-17-plan-asset-workflow-ledger-physical-data | L5 | physical-data | L8 | PLAN-L4-23-forward-fsm-plan-asset-v2 | U19b: PLAN Asset v2 revision/event/evidence ledger物理境界 | green | confirmed | ledger DB・event/current・FK・partial UNIQUE設計freeze済み。L8実検証は後続 |
+| PLAN-L5-17-plan-asset-workflow-ledger-physical-data | L5 | physical-data | L8 | PLAN-L4-23-forward-fsm-plan-asset-v2 | U19b: PLAN Asset v2 revision/event/evidence ledger物理境界 | yellow | draft | lease key version、typed claims、supersession、v2→v3移行を追加Red。L8実検証待ち |
 | PLAN-L5-18-vmodel-contract-right-arm-physical-data | L5 | physical-data | L8 | PLAN-L4-24-declarative-vmodel-contract-right-arm | U19c: contract/right-arm evidence manifest物理境界 | yellow | draft | L5-16/17、L8 pair待ち |
 | PLAN-L5-19-repository-document-disposition-ledger | L5 | physical-data | L8 | PLAN-L4-25-repository-docs-engine-swap-audit | U19d: 全tracked docs disposition shard/snapshot/delta設計 | yellow | draft | 921件materialize、L8 pair待ち |
 | PLAN-L5-20-engine-swap-module-decomposition | L5 | module-decomposition | L8 | PLAN-L4-26-engine-swap-object-method-design | U19e: aggregate/domain/application/port/adapter分解 | yellow | draft | class採否、cycle 0、L8 pair待ち |
 | PLAN-L5-21-semantic-assessment-debt-routing-physical-data | L5 | physical-data | L8 | PLAN-L4-27-vmodel-semantic-self-audit | U19f: 163 item assessment/review/debt route物理境界 | yellow | draft | L5-19/20、pending 0設計待ち |
 | PLAN-L5-22-detector-self-proof-receipt-physical-data | L5 | physical-data | L8 | PLAN-L4-28-design-detection-self-proof | U19g: self-proof receipt/mutation corpus物理境界 | yellow | draft | L5-18/21、mutation oracle待ち |
 | PLAN-L6-70-source-catalog-profile-resolver-contracts | L6 | function-spec | L7 | PLAN-L5-16-vmodel-source-profile-physical-data | U20a: catalog aggregate/profile overlay resolver契約 | yellow | draft | L5-16 pair-freeze待ち |
-| PLAN-L6-71-plan-asset-canonical-migration-contracts | L6 | function-spec | L7 | PLAN-L5-17-plan-asset-workflow-ledger-physical-data | U20b: PlanAsset/Revision/Evidence/migration契約 | green | confirmed | identity/canonical migration/reservation設計freeze済み。U-PA Red待ち |
+| PLAN-L6-71-plan-asset-canonical-migration-contracts | L6 | function-spec | L7 | PLAN-L5-17-plan-asset-workflow-ledger-physical-data | U20b: PlanAsset/Revision/Evidence/migration契約を再freeze済み | green | confirmed |  |
 | PLAN-L6-72-forward-fsm-evidence-policy-contracts | L6 | function-spec | L7 | PLAN-L6-71-plan-asset-canonical-migration-contracts | U20c: Forward FSM/reducer/transition/evidence policy契約 | green | confirmed | FSM/evidence/CLI/property設計freeze済み。418完了後U-FSM Red待ち |
 | PLAN-L6-73-vmodel-contract-compiler-right-arm-contracts | L6 | function-spec | L7 | PLAN-L5-18-vmodel-contract-right-arm-physical-data | U20d: contract compiler/generic right-arm契約 | yellow | draft | L6-70/72、L7 Red設計待ち |
 | PLAN-L6-74-repository-docs-disposition-auditor-contracts | L6 | function-spec | L7 | PLAN-L5-19-repository-document-disposition-ledger | U20e: docs snapshot/disposition/reference closure auditor契約 | yellow | draft | L5-19 pair-freeze待ち |
-| PLAN-L6-75-engine-swap-domain-method-port-contracts | L6 | function-spec | L7 | PLAN-L5-20-engine-swap-module-decomposition | U20f: class/method/CQS/port/依存方向契約 | yellow | draft | L6-70〜73、L7 Red設計待ち |
+| PLAN-L6-75-engine-swap-domain-method-port-contracts | L6 | function-spec | L7 | PLAN-L5-20-engine-swap-module-decomposition | U20f: class/method/CQS/port/依存方向契約をfreeze済み | green | confirmed |  |
 | PLAN-L6-76-semantic-assessment-debt-routing-contracts | L6 | function-spec | L7 | PLAN-L5-21-semantic-assessment-debt-routing-physical-data | U20g: semantic verdict/evidence/debt routing契約 | yellow | draft | L6-74/75、163 item oracle待ち |
 | PLAN-L6-77-detector-compiler-meta-verifier-contracts | L6 | function-spec | L7 | PLAN-L5-22-detector-self-proof-receipt-physical-data | U20h: deterministic compiler/independent meta-verifier契約 | yellow | draft | L6-73/76、mutation survivor 0設計待ち |
 | PLAN-L7-417-source-disposition-profile-projection | L7 | implementation | L6 | PLAN-L6-70-source-catalog-profile-resolver-contracts | U20i-1: catalog/profile domainとprojection | yellow | draft | U-DISP/U-PROFILE Red、REVERSE-417待ち |
 | PLAN-REVERSE-417-source-disposition-profile-backfill | cross | function-spec | L7 | PLAN-L7-417-source-disposition-profile-projection | U20i-1R: catalog/profile実装backfill | yellow | draft | L7-417実装観測待ち |
-| PLAN-L7-418-plan-asset-v2-adapter-migration-ledger | L7 | implementation | L6 | PLAN-L6-71-plan-asset-canonical-migration-contracts | U20i-2: PLAN Asset v2 adapter/migration | yellow | draft | U-PA Red、REVERSE-418待ち |
-| PLAN-REVERSE-418-plan-asset-v2-backfill | cross | function-spec | L7 | PLAN-L7-418-plan-asset-v2-adapter-migration-ledger | U20i-2R: PLAN Asset実装backfill | yellow | draft | L7-418実装観測待ち |
-| PLAN-L7-419-forward-fsm-transition-workflow-cli | L7 | implementation | L7 | PLAN-L7-418-plan-asset-v2-adapter-migration-ledger | U20i-3: Forward FSM/CLI | yellow | draft | 418 identity/evidence port、U/P-FSM Red、REVERSE-419待ち |
+| PLAN-L7-418-plan-asset-v2-adapter-migration-ledger | L7 | implementation | L6 | PLAN-L6-71-plan-asset-canonical-migration-contracts | U20i-2: PLAN Asset v2 adapter/migration、custody/evidence/schema migrationを実装・検証済み | green | confirmed |  |
+| PLAN-REVERSE-418-plan-asset-v2-backfill | cross | function-spec | L7 | PLAN-L7-418-plan-asset-v2-adapter-migration-ledger | U20i-2R: PLAN Asset実装事実をForward設計へ合流済み | green | confirmed |  |
+| PLAN-L7-419-forward-fsm-transition-workflow-cli | L7 | implementation | L7 | PLAN-L7-418-plan-asset-v2-adapter-migration-ledger | U20i-3: Forward FSM/CLI | yellow | draft | 418 token/evidence port、U/P-FSM Red、REVERSE-419待ち |
 | PLAN-REVERSE-419-forward-fsm-backfill | cross | function-spec | L7 | PLAN-L7-419-forward-fsm-transition-workflow-cli | U20i-3R: FSM実装backfill | yellow | draft | L7-419実装観測待ち |
 | PLAN-L7-420-vmodel-contract-compiler-registry | L7 | implementation | L6 | PLAN-L6-73-vmodel-contract-compiler-right-arm-contracts | U20i-4: contract compiler/registry | green | confirmed | independent review、U-VMC Green、REVERSE-420合流済み |
 | PLAN-REVERSE-420-vmodel-contract-compiler-backfill | cross | function-spec | L7 | PLAN-L7-420-vmodel-contract-compiler-registry | U20i-4R: compiler実装backfill | green | confirmed | L4-L7へ実装事実を合流済み |
@@ -108,7 +108,7 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-REVERSE-421-generic-right-arm-backfill | cross | function-spec | L7 | PLAN-L7-421-generic-right-arm-doctor-gate | U20i-5R: right-arm gate backfill | green | confirmed | L6/L7へ実装事実を合流済み |
 | PLAN-L7-422-repository-document-disposition-closure-gate | L7 | implementation | L6 | PLAN-L6-74-repository-docs-disposition-auditor-contracts | U20i-6: docs ledger/closure gate | yellow | draft | U-DOCLEDGER Red、921 materialize待ち |
 | PLAN-REVERSE-422-repository-document-ledger-backfill | cross | function-spec | L7 | PLAN-L7-422-repository-document-disposition-closure-gate | U20i-6R: docs ledger実装backfill | yellow | draft | L7-422実装観測待ち |
-| PLAN-L7-423-engine-swap-domain-objects-ports | L7 | implementation | L7 | PLAN-L7-417-source-disposition-profile-projection,PLAN-L7-418-plan-asset-v2-adapter-migration-ledger,PLAN-L7-419-forward-fsm-transition-workflow-cli,PLAN-L7-420-vmodel-contract-compiler-registry,PLAN-L7-422-repository-document-disposition-closure-gate | U20i-7: shared kernel/module boundary移行 | yellow | draft | source owner完了、U-DOMAIN Red、cycle 0待ち |
+| PLAN-L7-423-engine-swap-domain-objects-ports | L7 | implementation | L7 | PLAN-L7-417-source-disposition-profile-projection,PLAN-L7-418-plan-asset-v2-adapter-migration-ledger,PLAN-L7-419-forward-fsm-transition-workflow-cli,PLAN-L7-420-vmodel-contract-compiler-registry,PLAN-L7-422-repository-document-disposition-closure-gate | U20i-7: shared kernel/module boundary移行済み | green | confirmed |  |
 | PLAN-REVERSE-423-engine-swap-domain-backfill | cross | function-spec | L7 | PLAN-L7-423-engine-swap-domain-objects-ports | U20i-7R: domain実装backfill | yellow | draft | L7-423実装観測待ち |
 | PLAN-L7-424-semantic-assessment-debt-router | L7 | implementation | L7 | PLAN-L7-422-repository-document-disposition-closure-gate,PLAN-L7-423-engine-swap-domain-objects-ports | U20i-8: semantic evaluator/debt router | yellow | draft | normalized schema、U-ASSESS Red、163 review待ち |
 | PLAN-REVERSE-424-semantic-assessment-backfill | cross | function-spec | L7 | PLAN-L7-424-semantic-assessment-debt-router | U20i-8R: assessment実装backfill | yellow | draft | L7-424実装観測待ち |
@@ -121,11 +121,26 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L12-01-engine-swap-acceptance-deploy | L12 | verification | L3 | PLAN-L11-01-engine-swap-uat-review | U21e/G12: acceptance/deploy/rollback readiness | yellow | draft | G11 pass、AT/rollback evidence待ち |
 | PLAN-L13-01-engine-swap-post-deploy-verification | L13 | process-evidence | L12 | PLAN-L12-01-engine-swap-acceptance-deploy | U21f/G13: post-deploy smoke/SLI-SLO verification | yellow | draft | G12 pass、smoke/SLO evidence待ち |
 | PLAN-L14-01-engine-swap-operational-value-verification | L14 | verification | L1 | PLAN-L13-01-engine-swap-post-deploy-verification | U21g/G14: operational/value feedback verification | yellow | draft | G13 pass、operational KPI/PO decision待ち |
-| PLAN-L4-29-security-design-substance | L4 | security | L9 | PLAN-L4-16-security-design-slot | U22a: A-187 §3 のsecurity実体化 (脅威モデル/供給網/鍵/監査ログ + not_applicable明文化) を起票 | yellow | draft | 脅威モデル節、供給網/鍵/監査ログ設計、na判断の catalog 反映待ち |
+| PLAN-L4-29-security-design-substance | L4 | security | L9 | PLAN-L4-16-security-design-slot | U22a: A-187 §3 のsecurity実体化とnot_applicable判断をfreeze済み | green | confirmed |  |
 | PLAN-L6-78-coding-structure-rules-contract | L6 | function-spec | L7 | PLAN-L4-21-domain-vo-coding-constraints | U22b: ZIP-DOC-095 構造規約の analyzer 契約を起票 (A-187 §5) | yellow | draft | rule 語彙の排他分類、analyzer 契約 freeze、L7 add-impl 後続起票待ち |
-| PLAN-L6-83-drive-plan-admission-contract | L6 | function-spec | L7 | PLAN-L0-01-vmodel-harness-upgrade-charter | U23a: 駆動モデル準拠PLAN admission、許可tuple、Forward/escape Issue policy | yellow | draft | L7 Red / cross-record receipt / hook・pre-push・CI fence待ち |
-| PLAN-L7-435-drive-plan-admission-impl | L7 | implementation | L6 | PLAN-L6-83-drive-plan-admission-contract | U23b: Admission policy / plan draft / tamper fence 実装 | yellow | draft | TDD Red、REVERSE-435待ち |
-| PLAN-REVERSE-435-drive-plan-admission-backfill | cross | function-spec | L7 | PLAN-L7-435-drive-plan-admission-impl | U23b-R: Admission実装観測backfill | yellow | draft | L7-435観測待ち |
+| PLAN-L6-86-drive-plan-admission-contract | L6 | function-spec | L7 | PLAN-L0-01-vmodel-harness-upgrade-charter | U23j: 駆動モデル準拠PLAN admission、許可tuple、Forward/escape Issue policy | yellow | draft | L7 Red / cross-record receipt / hook・pre-push・CI fence待ち |
+| PLAN-L7-435-drive-plan-admission-impl | L7 | implementation | L6 | PLAN-L6-86-drive-plan-admission-contract | U23k: Admission policy / plan draft / tamper fence 実装 | yellow | draft | TDD Red、REVERSE-435待ち |
+| PLAN-REVERSE-435-drive-plan-admission-backfill | cross | function-spec | L7 | PLAN-L7-435-drive-plan-admission-impl | U23k-R: Admission実装観測backfill | yellow | draft | L7-435観測待ち |
+| PLAN-L7-440-plan-admission-cutover | L7 | implementation | L6 | PLAN-L7-435-drive-plan-admission-impl,PLAN-L7-441-plan-draft-recovery-v4 | U23l: protected-main epochでAdmission gateを有効化 | yellow | draft | L7-435/441完了、legacy inventory、cutover receipt待ち |
+| PLAN-L7-441-plan-draft-recovery-v4 | L7 | implementation | L6 | PLAN-L7-435-drive-plan-admission-impl | U23m: 強制終了からのdurable recovery / fencing実装 | yellow | draft | kill-point Red、status/list/recover実装待ち |
+| PLAN-L4-30-execution-ledger-github-architecture | L4 | architecture | L9 | PLAN-L4-23-forward-fsm-plan-asset-v2 | U23a: Forward escape / Execution Ledger / GitHub projection全体境界 | yellow | draft | L9 pair reviewとL5-L7 descent待ち |
+| PLAN-L5-23-execution-ledger-github-physical-data | L5 | physical-data | L8 | PLAN-L4-30-execution-ledger-github-architecture | U23b: episode E0-E15、outbox/inbox、certificate、learning fact物理境界 | yellow | draft | L8 pair reviewとschema Red待ち |
+| PLAN-L6-83-forward-escape-issue-contract | L6 | function-spec | L7 | PLAN-L5-23-execution-ledger-github-physical-data | U23c: 通常Forward Issue不要 / escape Issue必須契約 | yellow | draft | U-EXEC Redとdrive enum接続待ち |
+| PLAN-L6-84-drive-model-reentry-verification-contract | L6 | function-spec | L7 | PLAN-L6-83-forward-escape-issue-contract | U23d: drive内検証 / re-entry certificate / 中間・合流後test契約 | yellow | draft | U-REENTRY Red待ち |
+| PLAN-L6-85-automated-pr-cross-review-merge-contract | L6 | function-spec | L7 | PLAN-L6-84-drive-model-reentry-verification-contract | U23e: draft PR / cross-review / exact HEAD merge gate契約 | yellow | draft | U-GHMERGE Red待ち |
+| PLAN-L7-436-execution-ledger-episode-domain | L7 | implementation | L6 | PLAN-L6-83-forward-escape-issue-contract | U23f: ExecutionEpisode aggregate / E0-E15 append実装 | yellow | draft | TDD Red、REVERSE-436待ち |
+| PLAN-REVERSE-436-execution-ledger-episode-backfill | cross | function-spec | L7 | PLAN-L7-436-execution-ledger-episode-domain | U23f-R: episode実装事実backfill | yellow | draft | L7-436観測待ち |
+| PLAN-L7-437-github-issue-projection-inbound | L7 | implementation | L6 | PLAN-L7-436-execution-ledger-episode-domain | U23g: Issue outbox/inbound/idempotency実装 | yellow | draft | TDD Red、REVERSE-437待ち |
+| PLAN-REVERSE-437-github-issue-projection-backfill | cross | function-spec | L7 | PLAN-L7-437-github-issue-projection-inbound | U23g-R: GitHub Issue projection実装backfill | yellow | draft | L7-437観測待ち |
+| PLAN-L7-438-reentry-internal-ci-auto-pr | L7 | implementation | L6 | PLAN-L6-84-drive-model-reentry-verification-contract,PLAN-L7-437-github-issue-projection-inbound | U23h: re-entry / internal CI / draft PR実装 | yellow | draft | TDD Red、REVERSE-438待ち |
+| PLAN-REVERSE-438-reentry-internal-ci-backfill | cross | function-spec | L7 | PLAN-L7-438-reentry-internal-ci-auto-pr | U23h-R: re-entry/CI/PR実装backfill | yellow | draft | L7-438観測待ち |
+| PLAN-L7-439-cross-review-merge-learning-closure | L7 | implementation | L6 | PLAN-L6-85-automated-pr-cross-review-merge-contract,PLAN-L7-438-reentry-internal-ci-auto-pr | U23i: cross-provider review / merge / E15学習閉包 | yellow | draft | TDD Red、REVERSE-439待ち |
+| PLAN-REVERSE-439-cross-review-merge-backfill | cross | function-spec | L7 | PLAN-L7-439-cross-review-merge-learning-closure | U23i-R: review/merge/learning実装backfill | yellow | draft | L7-439観測待ち |
 
 ## 2. 解釈規則
 

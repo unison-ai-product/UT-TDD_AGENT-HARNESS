@@ -172,7 +172,7 @@ PO 問い「リバースは③テスト設計を引く仕組みか / フォワ�
 
 PO 連続指摘「PLAN 起票時の branch/commit/PR/Issue タイミングを決定論化、特に off-Forward、Issue 起票」を受け、**Issue=問題起点スパイン**として requirements に新設:
 
-- **§6.8 PLAN git ライフサイクル**: Issue 起点スパイン (Forward も発注元 Issue 起点) / 1 Issue=1 PLAN/hub=1 branch 粒度 / status×freeze→git アクション対応表 / **右腕 CI 失敗→Issue 自動起票→差し戻し** (TL Critical fix) / **設計 PLAN 完了 PR で vmodel-lint 必須** (G1-G6 を CI 担保、hook bypass 防止、TL Important fix)。
+- **§6.8 PLAN git ライフサイクル (当時の観測、現行仕様でsuperseded)**: 当時はIssue起点スパインを採った。現行正本は requirements §6.8 の通常Forward / Forward escape二経路であり、Issue必須はForward escapeだけ。右腕CI失敗はescape Issueへ差し戻し、設計PLAN完了PRのvmodel-lint必須は維持する。
 - **§6.9 CI 起動単位とコスト方針**: 無料枠 (private 2,000分/月・public 無制限) / **CI アンカー=G7** / 設計=PLAN・hub 完了で 1 回 / 右腕=post-merge / poc=非 CI / **workflow paths フィルタ禁止→job if + dorny/paths-filter + aggregator** (pending 永久ブロック回避、TL Critical fix + 公式 doc 裏取り) / Merge Queue 不採用 (Free private 不可) / harness-check.yml 雛形。
 - **schema**: `github_issue_id` (optional, 正の整数) を frontmatter base に追加 + test (close 漏れ機械検知の足場)。
 - **mode README §6**: mode 別 git ライフサイクル要約表を追記 (正本は §6.8/§6.9)。
