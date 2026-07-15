@@ -1,13 +1,13 @@
 ---
 plan_id: PLAN-L1-08-design-harness-internalization
-title: "PLAN-L1-08 (add-design): Design Harness 内蔵化 program (UX-FE Continuity Contract、charter L0-01 配下)"
-kind: add-design
+title: "PLAN-L1-08 (research): Design Harness 内蔵化 要件差分・program 定義 (UX-FE Continuity Contract、charter L0-01 配下)"
+kind: research
 layer: L1
 sub_doc: function-spec
 drive: fullstack
 status: draft
-route_signal: feature_addition
-route_mode: add-feature
+route_signal: research
+route_mode: research
 created: 2026-07-15
 updated: 2026-07-15
 owner: PO / Claude (Fable orchestrator)
@@ -39,7 +39,7 @@ dependencies:
     - src/lint/screen-impl-pair-freeze.ts
 ---
 
-# PLAN-L1-08 (add-design): Design Harness 内蔵化 program
+# PLAN-L1-08 (research): Design Harness 内蔵化 要件差分・program 定義
 
 ## 目的
 
@@ -99,6 +99,8 @@ findings 増殖防止)。
 | P8 | central UI dogfood 4 画面 (PM-01/PM-03/HM-05/HM-07) | G10 |
 | P9 | Pack 配布 (中央固有物除外、consumer warning 開始) | release |
 
+本 PLAN は L1-06/L1-07 と同じ kind=research (要件差分の調査・凍結)。設計実体は
+L3-L6 の add-design leaf、実装は L7 の add-impl leaf として起票する。
 kind=add-impl の leaf は Required Reverse pairing に従い PLAN-REVERSE-* を
 双方向 pair で同時起票する。leaf は起票前に `ut-tdd plan lint` を通す。
 
