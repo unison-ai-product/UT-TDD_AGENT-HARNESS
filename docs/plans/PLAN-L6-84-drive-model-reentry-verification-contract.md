@@ -56,25 +56,34 @@ certificateは次をimmutable claimとして保持する。
 | origin | `origin_asset_id`, `origin_revision_id`, `origin_layer`, `origin_state` |
 | escape | Issue projection ID、`drive_model`、escape event sequence、実行branch/revision |
 | target | `reentry_target_asset_id`, `reentry_target_revision_id`, `reentry_target_layer`, `reentry_target_state` |
-| intermediate verification | 駆動モデル内test profile、command、runner、exit、digest、tested commit、完了時刻 |
-| impact | dependency graph snapshot/digest、影響artifact、必要なbackprop/reverse route |
-| merge simulation | origin/targetとの3-way apply結果、conflict、migration、schema compatibility |
-| post-reentry verification | Forwardへ仮合流したrevisionに対するtest/doctor/contract/trace結果 |
+| drive verification | E6 駆動モデル検証のoracle判定結果、対象仮説/反証条件、digest、完了時刻 |
+| intermediate verification | E8 中間testのprofile、command、runner、exit、digest、tested commit、完了時刻 |
+| issuance | 発行policy revision、issuer/reviewer、certificate digest |
 | decision | `eligible | rejected | stale | human_required`とrule ID |
+
+certificateのclaimは上記に限る (L4 data.md `ReentryCertificate`束縛、PLAN-L5-23 `reentry_certificates`と同定義)。
+impact (dependency graph snapshot、影響artifact、backprop/reverse route)、merge simulation (3-way apply、
+conflict、migration、schema compatibility)、post-reentry verification (Forward仮合流後のtest/doctor/contract/trace)
+はcertificateのclaimではなく、E10/E11段のLedger evidenceとしてappendし、E12 draft PRの後段条件
+(PLAN-L7-438 §2.4) が certificate とは別に参照する (§1 のとおり E11 は発行条件ではない)。
 
 certificateは`drive_run_id`、`workflow_run_id`、Issue、PLAN revisionへjoinできなければeligibleにならない。
 別revisionで得たgreen、command文字列だけの自己申告、digestなし、時刻逆転はevidenceとして採用しない。
 
-## 3. 二段test契約
+## 3. 三証拠test契約
 
-### 3.1 駆動モデル内の中間test
+### 3.1 駆動モデル検証 (E6)
 
 - drive modelごとの目的に応じたoracleを実行する。PoCなら仮説と反証条件、Recoveryなら再現testと
   guard、Reverseなら観測事実と上流backfill、Refactorなら外部挙動不変と構造指標を固定する。
-- 対象branch/revision、fixture/data、環境、期待exitを固定し、失敗を消さずLedgerへappendする。
-- intermediate greenはForwardへ引き込む資格の一要素であり、merge許可ではない。
 
-### 3.2 Forward仮合流後test
+### 3.2 駆動モデル内の中間test (E8)
+
+- 対象branch/revision、fixture/data、環境、期待exitを固定し、失敗を消さずLedgerへappendする。
+- E6 greenとE8 greenは別evidenceとして記録し、単一の「intermediate green」へ融合しない。
+- 両greenはForwardへ引き込む資格 (E9発行) の要素であり、merge許可ではない。
+
+### 3.3 Forward仮合流後test (E11)
 
 - target revisionを再読込してstaleならcertificateを無効化し、暗黙rebaseでgreenを流用しない。
 - isolated merge candidateを作り、影響graphで展開した設計、test-design、実装、test、DB schema、CLI、

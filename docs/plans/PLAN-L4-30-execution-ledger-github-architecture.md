@@ -114,7 +114,7 @@ Issueは第二の状態機械ではない。許可遷移、現在revision、再�
 
 ## 3. 再合流・PR・mergeゲート
 
-`ReentryCertificate`は少なくともepisode、origin PLAN Asset/revision/state、採択drive model、駆動モデル内検証、再入先、source/head SHA、発行policy revision、証拠digestを結ぶ。別episode・別revision・別HEADのcertificateは利用できない。
+`ReentryCertificate`は少なくともepisode、origin PLAN Asset/revision/state、採択drive model、駆動モデル検証 (E6)、中間test (E8)、再入先、source/head SHA、発行policy revision、証拠digestを結ぶ。別episode・別revision・別HEADのcertificateは利用できない。
 
 draft PR自動生成はE11通過後だけ許可する。main mergeは次をすべて満たす場合に限定する。
 
