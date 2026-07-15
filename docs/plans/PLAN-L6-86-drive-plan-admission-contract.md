@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-L6-83-drive-plan-admission-contract
-title: "PLAN-L6-83 (add-design): 駆動モデル準拠PLAN Admission契約"
+plan_id: PLAN-L6-86-drive-plan-admission-contract
+title: "PLAN-L6-86 (add-design): 駆動モデル準拠PLAN Admission契約"
 kind: add-design
 layer: L6
 sub_doc: function-spec
@@ -21,7 +21,7 @@ agent_slots:
     slot_label: "QA - unknown・backdate・archived・直接編集のfail-close oracle"
 review_evidence: []
 generates:
-  - artifact_path: docs/plans/PLAN-L6-83-drive-plan-admission-contract.md
+  - artifact_path: docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -34,7 +34,7 @@ dependencies:
     - docs/plans/PLAN-L7-435-drive-plan-admission-impl.md
 ---
 
-# PLAN-L6-83: 駆動モデル準拠PLAN Admission契約
+# PLAN-L6-86: 駆動モデル準拠PLAN Admission契約
 
 ## 目的
 
@@ -68,13 +68,18 @@ Reverseは`preserved`、redesignは`discarded`または`none`だけを許可す�
 3. 通常ForwardはIssueなしを許可する。Forward escape（Reverse、redesign、incident等）はIssue、origin、escape reason、drive model、
    reentry targetを全て必須とする。
 4. frontmatter単体検査、prospectiveなcross-record governance、工程表登録を検証する。
-5. 全検証Green後にだけdurable authoring journalへintentを記録し、ID reservation、PlanAsset/ledger append、
-   temp write/fsync/rename、projectionを実行してjournalをcommitする。
+5. 全検証Green後にだけdurable authoring journalへintentを記録する。SQLite Unit of Workを開始して
+   ID reservationとPlanAsset/ledger appendを未commitで行い、そのreceiptからauthoring sourceとtracked
+   projectionを生成する。両成果物のtemp write/fsync/rename完了後にSQLiteをcommitし、最後にjournalを
+   terminalへ進める。利用者入力のdigest・receipt・projection本文を正本にしない。
 
 通常の拒否・失敗時はPLAN file、reservation、ledger、DB projection、GitHub outboxを一件も残さない。
-ファイルシステムとSQLiteは単一transactionにできないため、強制終了時はjournalを未完としてfail-closeし、
-次回起動・hook・CIがrecoveryまたは明示rollbackを完了するまで正本扱いしない。単純なDB先行またはfile先行の
-二段書込みは禁止する。`--force`はname collision解決だけに限定し、Admission拒否を回避できない。
+ファイルシステムとSQLiteは単一transactionにできないため、DB commit前の通常例外はfile restoreとDB
+rollbackの双方を検証し、曖昧なら成功に倒さない。強制終了時はjournalを未完としてfail-closeし、次回起動・
+hook・CIがledger receipt、preimage、postimage、temp/rollback fileを照合してrecoveryまたは明示rollbackを
+完了するまで正本扱いしない。再起動不能なprocess内tokenをrecovery証拠にせず、必要なpathとdigestはjournal
+eventへ永続化する。単純なDB先行またはfile先行の二段書込みは禁止する。`--force`はname collision解決だけに
+限定し、Admission拒否を回避できない。
 
 ## 改ざん防止と多層検証
 

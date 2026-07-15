@@ -18,7 +18,7 @@ function comparison(overrides: Partial<AdmissionComparison> = {}): AdmissionComp
 }
 
 describe("PLAN admission application service", () => {
-  it("U-PADM-014: aggregates projection and comparison completeness failures", () => {
+  it("U-PADM-017: aggregates projection and comparison completeness failures", () => {
     const result = checkPlanAdmission({
       baseRef: "main",
       headRef: "HEAD",
@@ -40,7 +40,7 @@ describe("PLAN admission application service", () => {
     ]);
   });
 
-  it("U-PADM-015: converts adapter exceptions into fail-closed findings", () => {
+  it("U-PADM-018: converts adapter exceptions into fail-closed findings", () => {
     const result = checkPlanAdmission({
       baseRef: "missing",
       headRef: "HEAD",
@@ -74,7 +74,7 @@ describe("PLAN admission application service", () => {
     });
   });
 
-  it("U-PADM-016: runs the pure analyzer only after both boundaries validate", () => {
+  it("U-PADM-019: runs the pure analyzer only after both boundaries validate", () => {
     const result = checkPlanAdmission({
       baseRef: "main",
       headRef: "HEAD",

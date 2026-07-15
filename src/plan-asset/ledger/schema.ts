@@ -452,6 +452,27 @@ const v3Tables: readonly TableDef[] = [
       }),
     ],
   },
+  {
+    name: "plan_draft_journal_events",
+    columns: [
+      pk("journal_event_id"),
+      requiredCol("command_id"),
+      requiredCol("sequence", "INTEGER"),
+      requiredCol("command_payload_digest"),
+      requiredCol("event_kind"),
+      requiredCol("requested_plan_id"),
+      requiredCol("requested_source_path"),
+      col("plan_asset_id"),
+      col("plan_revision", "INTEGER"),
+      col("certificate_id"),
+      requiredCol("occurred_at"),
+      col("failure_reason"),
+      col("previous_event_digest"),
+      requiredCol("event_digest"),
+    ],
+    unique: [["command_id", "sequence"]],
+    checks: [enumCheck("event_kind", ["intent", "committed", "recovery_required", "rolled_back"])],
+  },
 ];
 
 const tables: readonly TableDef[] = [...v2Tables, ...v3Tables];
@@ -553,7 +574,11 @@ const v2HistoryTables = [
   "legacy_plan_migration_events",
   "append_command_receipts",
 ] as const;
-const v3HistoryTables = ["plan_admission_events", "plan_admission_receipts"] as const;
+const v3HistoryTables = [
+  "plan_admission_events",
+  "plan_admission_receipts",
+  "plan_draft_journal_events",
+] as const;
 
 function appendOnlyTriggers(historyTables: readonly string[]): readonly TriggerDef[] {
   return historyTables.flatMap((table) =>
@@ -704,12 +729,13 @@ function ledgerRowsValid(db: HarnessDb): boolean {
     for (const [table, digestColumn] of [
       ["plan_admission_events", "event_digest"],
       ["plan_draft_journal", "journal_digest"],
+      ["plan_draft_journal_events", "event_digest"],
     ] as const) {
       const rows = db.prepare(`SELECT * FROM ${table}`).all();
       if (rows.some((row) => row[digestColumn] !== ledgerRowDigest(row, digestColumn)))
         return false;
     }
-    if (!admissionReductionsValid(db)) return false;
+    if (!admissionReductionsValid(db) || !draftJournalReductionsValid(db)) return false;
   }
   const revisions = db
     .prepare("SELECT canonical_payload_json, canonical_payload_digest FROM plan_revisions")
@@ -729,6 +755,44 @@ function ledgerRowsValid(db: HarnessDb): boolean {
     reservationReceiptsValid(db) &&
     migrationReceiptsValid(db)
   );
+}
+
+function draftJournalReductionsValid(db: HarnessDb): boolean {
+  const currents = db.prepare("SELECT * FROM plan_draft_journal").all();
+  const events = db
+    .prepare("SELECT * FROM plan_draft_journal_events ORDER BY command_id, sequence")
+    .all();
+  const grouped = new Map<string, Record<string, unknown>[]>();
+  for (const event of events) {
+    const commandId = String(event.command_id);
+    const bucket = grouped.get(commandId) ?? [];
+    bucket.push(event);
+    grouped.set(commandId, bucket);
+  }
+  if (currents.length !== grouped.size) return false;
+  for (const current of currents) {
+    const commandEvents = grouped.get(String(current.command_id));
+    if (!commandEvents?.length) return false;
+    let previous: string | null = null;
+    for (const [index, event] of commandEvents.entries()) {
+      if (Number(event.sequence) !== index + 1 || event.previous_event_digest !== previous)
+        return false;
+      previous = String(event.event_digest);
+    }
+    const latest = commandEvents.at(-1);
+    if (!latest) return false;
+    if (
+      latest.event_kind !== current.status ||
+      latest.command_payload_digest !== current.command_payload_digest ||
+      latest.requested_plan_id !== current.requested_plan_id ||
+      latest.requested_source_path !== current.requested_source_path ||
+      latest.plan_asset_id !== current.plan_asset_id ||
+      latest.plan_revision !== current.plan_revision ||
+      latest.certificate_id !== current.certificate_id
+    )
+      return false;
+  }
+  return true;
 }
 
 function admissionReductionsValid(db: HarnessDb): boolean {

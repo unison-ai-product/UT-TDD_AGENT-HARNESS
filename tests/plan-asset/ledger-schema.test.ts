@@ -180,7 +180,7 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PADM-009: creates admission and durable draft journal tables in v3", () => {
+  it("U-PADM-020: creates admission and durable draft journal tables in v3", () => {
     const db = openHarnessDb(":memory:");
     try {
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: 3 });
@@ -193,18 +193,20 @@ describe("PLAN Asset canonical ledger schema", () => {
           "plan_admission_events",
           "plan_admission_receipts",
           "plan_draft_journal",
+          "plan_draft_journal_events",
         ]),
       );
       expect(() =>
         db.exec("UPDATE plan_admission_events SET event_kind = 'admitted'"),
       ).not.toThrow();
       expect(ledgerSchemaDdl().join("\n")).toContain("append-only:plan_admission_events");
+      expect(ledgerSchemaDdl().join("\n")).toContain("append-only:plan_draft_journal_events");
     } finally {
       db.close();
     }
   });
 
-  it("U-PADM-010: fully validates v2 before migrating it atomically to v3", () => {
+  it("U-PADM-021: fully validates v2 before migrating it atomically to v3", () => {
     const db = openHarnessDb(":memory:");
     try {
       createV2Ledger(db);
@@ -215,12 +217,13 @@ describe("PLAN Asset canonical ledger schema", () => {
       expect(db.prepare("SELECT COUNT(*) AS n FROM plan_assets").get()?.n).toBe(1);
       expect(db.prepare("SELECT COUNT(*) AS n FROM append_command_receipts").get()?.n).toBe(1);
       expect(db.prepare("SELECT COUNT(*) AS n FROM plan_draft_journal").get()?.n).toBe(0);
+      expect(db.prepare("SELECT COUNT(*) AS n FROM plan_draft_journal_events").get()?.n).toBe(0);
     } finally {
       db.close();
     }
   });
 
-  it("U-PADM-011: rejects v1, future, partial, and corrupt v2 without mutation", () => {
+  it("U-PADM-022: rejects v1, future, partial, and corrupt v2 without mutation", () => {
     for (const version of [1, LEDGER_SCHEMA_VERSION + 1]) {
       const db = openHarnessDb(":memory:");
       try {

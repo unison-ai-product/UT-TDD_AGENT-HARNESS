@@ -1,29 +1,13 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import {
+  type CanonicalPlanDraftCommand,
+  calculatePlanDraftCommandDigests,
+} from "../../plan-admission/plan-draft-command-digest.js";
 import type { HarnessDb } from "../../state-db/index.js";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
 import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
 
-export interface AppendPlanDraftInput {
-  readonly commandId: string;
-  readonly assetId: string;
-  readonly planId: string;
-  readonly alias: string;
-  readonly sourcePath: string;
-  readonly sourceCommit: string;
-  readonly actor: string;
-  readonly reason: string;
-  readonly canonicalPayloadJson: string;
-  readonly bodyDigest: string;
-  readonly identityAlgorithm: string;
-  readonly reservationId: string;
-  readonly namespace: string;
-  readonly ordinal: number;
-  readonly leaseTokenHash: string;
-  readonly expiresAt: string;
-  readonly routeTupleDigest: string;
-  readonly certificateId: string;
-  readonly occurredAt: string;
-}
+export interface AppendPlanDraftInput extends CanonicalPlanDraftCommand {}
 
 export type AppendPlanDraftResult =
   | {
@@ -53,6 +37,13 @@ export class PlanDraftLedgerTransaction {
   }
 
   append(input: AppendPlanDraftInput): AppendPlanDraftResult {
+    return this.transact(input, () => undefined);
+  }
+
+  transact(
+    input: AppendPlanDraftInput,
+    onPrepared: (receipt: Extract<AppendPlanDraftResult, { ok: true }>) => void,
+  ): AppendPlanDraftResult {
     const validated = validate(input);
     if (!validated.ok) return validated;
     const { canonicalPayloadDigest, commandPayloadDigest, certificateDigest } = validated;
@@ -63,19 +54,21 @@ export class PlanDraftLedgerTransaction {
         .get(input.commandId);
       if (replay) {
         const same = secureEqual(String(replay.command_payload_digest), commandPayloadDigest);
+        const value: AppendPlanDraftResult = same
+          ? {
+              ok: true,
+              replayed: true,
+              assetId: String(replay.plan_asset_id),
+              revision: 1,
+              certificateId: String(replay.certificate_id),
+              certificateDigest: String(replay.certificate_digest),
+              commandPayloadDigest,
+            }
+          : { ok: false, ruleId: "plan-draft-command-conflict" };
+        if (value.ok) onPrepared(value);
         return {
           commit: true,
-          value: same
-            ? {
-                ok: true,
-                replayed: true,
-                assetId: String(replay.plan_asset_id),
-                revision: 1,
-                certificateId: String(replay.certificate_id),
-                certificateDigest: String(replay.certificate_digest),
-                commandPayloadDigest,
-              }
-            : { ok: false, ruleId: "plan-draft-command-conflict" },
+          value,
         };
       }
       if (this.exists({ table: "plan_assets", column: "asset_id", value: input.assetId })) {
@@ -109,19 +102,19 @@ export class PlanDraftLedgerTransaction {
         certificateDigest,
       });
       this.insertCommandReceipt(input, commandPayloadDigest);
-      this.insertCommittedJournal(input, commandPayloadDigest);
-
+      const value = {
+        ok: true as const,
+        replayed: false,
+        assetId: input.assetId,
+        revision: 1 as const,
+        certificateId: input.certificateId,
+        certificateDigest,
+        commandPayloadDigest,
+      };
+      onPrepared(value);
       return {
         commit: true,
-        value: {
-          ok: true,
-          replayed: false,
-          assetId: input.assetId,
-          revision: 1,
-          certificateId: input.certificateId,
-          certificateDigest,
-          commandPayloadDigest,
-        },
+        value,
       };
     });
   }
@@ -303,26 +296,6 @@ export class PlanDraftLedgerTransaction {
       .prepare("INSERT INTO append_command_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .run(...Object.values(row), ledgerRowDigest(row, "receipt_digest"));
   }
-
-  private insertCommittedJournal(input: AppendPlanDraftInput, commandDigest: string): void {
-    const row = {
-      journal_id: `journal:${input.commandId}`,
-      command_id: input.commandId,
-      command_payload_digest: commandDigest,
-      status: "committed",
-      requested_plan_id: input.planId,
-      requested_source_path: input.sourcePath,
-      plan_asset_id: input.assetId,
-      plan_revision: 1,
-      certificate_id: input.certificateId,
-      intent_recorded_at: input.occurredAt,
-      completed_at: input.occurredAt,
-      failure_reason: null,
-    };
-    this.db
-      .prepare("INSERT INTO plan_draft_journal VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(...Object.values(row), ledgerRowDigest(row, "journal_digest"));
-  }
 }
 
 function validate(input: AppendPlanDraftInput):
@@ -339,6 +312,7 @@ function validate(input: AppendPlanDraftInput):
     !input.planId ||
     !input.alias ||
     !input.sourcePath ||
+    !input.projectionPath ||
     !input.certificateId ||
     !Number.isSafeInteger(input.ordinal) ||
     input.ordinal < 1 ||
@@ -355,41 +329,9 @@ function validate(input: AppendPlanDraftInput):
   } catch {
     return { ok: false, ruleId: "plan-draft-payload-invalid" };
   }
-  const canonicalPayloadDigest = sha(input.canonicalPayloadJson);
-  const commandPayloadDigest = sha(
-    stableJson({
-      ...input,
-      canonicalPayloadDigest,
-    }),
-  );
-  const certificateDigest = sha(
-    stableJson({
-      commandPayloadDigest,
-      assetId: input.assetId,
-      revision: 1,
-      planId: input.planId,
-      sourcePath: input.sourcePath,
-      contentDigest: canonicalPayloadDigest,
-      routeTupleDigest: input.routeTupleDigest,
-      certificateId: input.certificateId,
-    }),
-  );
+  const { canonicalPayloadDigest, commandPayloadDigest, certificateDigest } =
+    calculatePlanDraftCommandDigests(input);
   return { ok: true, canonicalPayloadDigest, commandPayloadDigest, certificateDigest };
-}
-
-function stableJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
-  if (value && typeof value === "object") {
-    return `{${Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => Buffer.compare(Buffer.from(left), Buffer.from(right)))
-      .map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(value);
-}
-
-function sha(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
 }
 
 function validSha(value: string): boolean {

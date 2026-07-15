@@ -100,6 +100,7 @@ function draft(overrides: Partial<AppendPlanDraftInput> = {}): AppendPlanDraftIn
     planId: "PLAN-L7-999",
     alias: "PLAN-L7-999",
     sourcePath: "docs/plans/PLAN-L7-999.md",
+    projectionPath: "docs/governance/plan-admission-receipts.json",
     sourceCommit: "a".repeat(40),
     actor: "codex",
     reason: "draft",
