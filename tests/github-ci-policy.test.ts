@@ -7,6 +7,7 @@ import {
   type GithubWorkflowDoc,
   githubCiPolicyMessages,
   loadGithubCiPolicyDocs,
+  resolveGithubCiRuntimeProfile,
 } from "../src/lint/github-ci-policy";
 
 const SOURCE_WORKFLOW = `
@@ -18,7 +19,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: harness-check-test
+  group: harness-check-\${{ github.workflow }}-\${{ github.head_ref || github.ref }}
+  cancel-in-progress: \${{ github.ref != 'refs/heads/main' }}
 jobs:
   harness-check:
     steps:
@@ -43,7 +45,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: harness-check-test
+  group: harness-check-\${{ github.workflow }}-\${{ github.head_ref || github.ref }}
+  cancel-in-progress: \${{ github.ref != 'refs/heads/main' }}
 jobs:
   harness-check:
     steps:
@@ -114,6 +117,7 @@ describe("github-ci-policy lint", () => {
 
       const docs = loadGithubCiPolicyDocs({
         repoRoot: repo,
+        runtimeProfile: "source",
         setupBuiltinWorkflow: SOURCE_WORKFLOW,
       });
       const result = analyzeGithubCiPolicy(docs);
@@ -156,6 +160,7 @@ describe("github-ci-policy lint", () => {
 
       const docs = loadGithubCiPolicyDocs({
         repoRoot: repo,
+        runtimeProfile: "pack",
         setupBuiltinWorkflow: SOURCE_WORKFLOW,
       });
       const result = analyzeGithubCiPolicy(docs);
@@ -352,6 +357,207 @@ describe("github-ci-policy lint", () => {
       reason: "malformed_trigger_shape",
       detail: "pull_request.types must be a string or string array",
     });
+  });
+
+  it("U-CIPOL-010: returns structured violations for malformed workflow containers", () => {
+    for (const content of ["null", "42", "[]"]) {
+      const malformed = docs();
+      malformed[0] = { ...malformed[0], content };
+      expect(analyzeGithubCiPolicy(malformed).violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "malformed_workflow_shape",
+        detail: "workflow root must be a mapping",
+      });
+    }
+
+    const malformedJobs = SOURCE_WORKFLOW.replace(/jobs:[\s\S]*/, "jobs: []");
+    expect(analyzeGithubCiPolicy(docs(malformedJobs)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "malformed_workflow_shape",
+      detail: "jobs must be a mapping",
+    });
+
+    const malformedJob = SOURCE_WORKFLOW.replace(
+      / {2}harness-check:[\s\S]*/,
+      "  harness-check: false",
+    );
+    expect(analyzeGithubCiPolicy(docs(malformedJob)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "malformed_workflow_shape",
+      detail: "jobs.harness-check must be a mapping",
+    });
+
+    for (const replacement of ["steps: {}", "steps: [bogus]"]) {
+      const malformed = SOURCE_WORKFLOW.replace(/ {4}steps:[\s\S]*/, `    ${replacement}`);
+      expect(analyzeGithubCiPolicy(docs(malformed)).violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "malformed_workflow_shape",
+        detail: "jobs.harness-check.steps must be an array of mappings",
+      });
+    }
+
+    const malformedStep = SOURCE_WORKFLOW.replace("- uses: actions/checkout@v5", "- run: {}");
+    expect(analyzeGithubCiPolicy(docs(malformedStep)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "malformed_workflow_shape",
+      detail: "jobs.harness-check.steps must be an array of mappings",
+    });
+  });
+
+  it("U-CIPOL-011: requires permissions.contents to equal read", () => {
+    const malformedPermissions = [
+      SOURCE_WORKFLOW.replace("contents: read", "issues: read"),
+      SOURCE_WORKFLOW.replace("contents: read", "contents: write"),
+      SOURCE_WORKFLOW.replace("permissions:\n  contents: read", "permissions: read-all"),
+    ];
+    for (const malformed of malformedPermissions) {
+      expect(analyzeGithubCiPolicy(docs(malformed)).violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "missing_permission",
+        detail: "permissions must equal {contents: read}",
+      });
+    }
+
+    const overGranted = SOURCE_WORKFLOW.replace(
+      "contents: read",
+      "contents: read\n  issues: write",
+    );
+    expect(analyzeGithubCiPolicy(docs(overGranted)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_permission",
+      detail: "permissions must equal {contents: read}",
+    });
+
+    for (const roleIndex of [0, 1, 2, 3]) {
+      const malformed = docs();
+      malformed[roleIndex] = {
+        ...malformed[roleIndex],
+        content: malformed[roleIndex].content.replace("contents: read", "issues: read"),
+      };
+      expect(
+        analyzeGithubCiPolicy(malformed).violations.map((violation) => violation.file),
+      ).toContain(malformed[roleIndex].file);
+    }
+  });
+
+  it("U-CIPOL-010: rejects invalid on, step, concurrency, and role/profile shapes", () => {
+    const malformedOn = SOURCE_WORKFLOW.replace("on:\n", "on: bogus\n");
+    expect(analyzeGithubCiPolicy(docs(malformedOn)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "malformed_workflow_shape",
+      detail: "on must be a mapping",
+    });
+
+    for (const step of ["{}", "{ name: bogus }"]) {
+      const malformedStep = SOURCE_WORKFLOW.replace("- uses: actions/checkout@v5", `- ${step}`);
+      expect(analyzeGithubCiPolicy(docs(malformedStep)).violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "malformed_workflow_shape",
+        detail: "jobs.harness-check.steps must be an array of mappings",
+      });
+    }
+
+    const emptyConcurrency = SOURCE_WORKFLOW.replace(
+      /concurrency:[\s\S]*?jobs:/,
+      "concurrency: {}\njobs:",
+    );
+    expect(analyzeGithubCiPolicy(docs(emptyConcurrency)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_concurrency",
+      detail: "concurrency must preserve main-safe canonical group/cancellation expressions",
+    });
+
+    const canonicalGroup =
+      "harness-check-$" + "{{ github.workflow }}-$" + "{{ github.head_ref || github.ref }}";
+    const canonicalCancellation = "$" + "{{ github.ref != 'refs/heads/main' }}";
+    for (const roleIndex of [0, 1, 2, 3]) {
+      for (const mutate of [
+        (content: string) =>
+          content.replace(canonicalGroup, "harness-check-$" + "{{ github.ref }}"),
+        (content: string) => content.replace(canonicalCancellation, "true"),
+      ]) {
+        const malformed = docs();
+        malformed[roleIndex] = {
+          ...malformed[roleIndex],
+          content: mutate(malformed[roleIndex].content),
+        };
+        expect(analyzeGithubCiPolicy(malformed).violations).toContainEqual({
+          file: malformed[roleIndex].file,
+          profile: malformed[roleIndex].profile,
+          reason: "missing_concurrency",
+          detail: "concurrency must preserve main-safe canonical group/cancellation expressions",
+        });
+      }
+    }
+
+    const mismatched = docs();
+    mismatched[2] = { ...mismatched[2], content: SOURCE_WORKFLOW, profile: "source" };
+    expect(analyzeGithubCiPolicy(mismatched).violations).toContainEqual({
+      file: "docs/templates/github/common/pack-harness-check.yml",
+      profile: "source",
+      reason: "invalid_workflow_profile",
+      detail: "pack_template must use pack profile",
+    });
+  });
+
+  it("U-CIPOL-012: resolves source and Pack identity from package metadata", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-github-ci-profile-"));
+    try {
+      writeFileSync(
+        join(repo, "package.json"),
+        JSON.stringify({ utTdd: { artifactProfile: "source" } }),
+      );
+      expect(resolveGithubCiRuntimeProfile(repo)).toBe("source");
+      writeFileSync(
+        join(repo, "package.json"),
+        JSON.stringify({ utTdd: { artifactProfile: "pack" } }),
+      );
+      expect(resolveGithubCiRuntimeProfile(repo)).toBe("pack");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
+
+  it("U-CIPOL-012: uses authoritative runtime profile instead of workflow content", () => {
+    const repo = mkdtempSync(join(tmpdir(), "ut-tdd-github-ci-policy-"));
+    try {
+      mkdirSync(join(repo, ".github", "workflows"), { recursive: true });
+      mkdirSync(join(repo, "docs", "templates", "github", "common"), { recursive: true });
+      writeFileSync(join(repo, ".github", "workflows", "harness-check.yml"), PACK_WORKFLOW);
+      writeFileSync(
+        join(repo, "docs", "templates", "github", "common", "harness-check.yml"),
+        SOURCE_WORKFLOW,
+      );
+      writeFileSync(
+        join(repo, "docs", "templates", "github", "common", "pack-harness-check.yml"),
+        PACK_WORKFLOW,
+      );
+
+      const loaded = loadGithubCiPolicyDocs({
+        repoRoot: repo,
+        runtimeProfile: "source",
+        setupBuiltinWorkflow: SOURCE_WORKFLOW,
+      });
+      expect(loaded[0]?.profile).toBe("source");
+      expect(analyzeGithubCiPolicy(loaded).violations).toContainEqual({
+        file: join(".github", "workflows", "harness-check.yml"),
+        profile: "source",
+        reason: "missing_step",
+        detail: "github guard",
+      });
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
   });
 
   it("rejects duplicate workflow roles in direct analyzer inputs", () => {

@@ -1416,7 +1416,11 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 | `U-CIPOL-007` | workflow path filter禁止 | PR=`paths`、push=`paths-ignore`を各mutation | 両方`filtered_trigger`。Required checkをskip/pending化する経路0 |
 | `U-CIPOL-008` | activity types完全性 | `types=[opened]` / `types=[opened,synchronize,reopened,ready_for_review]` | 前者=`incomplete_pull_request_types`、後者Green。bare triggerもGreen |
 | `U-CIPOL-009` | activity vocabulary | 未知`banana` / 重複`opened` / 非文字列を各mutation | 未知・重複=`unsupported_pull_request_type`、非文字列=`malformed_trigger_shape` |
+| `U-CIPOL-010` | workflow構造のtotal fail-close | YAML root/on/job/stepsの不正型、空step、空concurrency、mainもcancelする式、role/profile不整合を各mutation | throwせず`malformed_workflow_shape` / `missing_concurrency` / `invalid_workflow_profile`、`ok=false`。concurrencyは§6.9.3のcanonical式と完全一致 |
+| `U-CIPOL-011` | 権限の完全一致 | 4 artifactそれぞれを`issues: read`へ変異。`contents: write` / scalar `read-all` / `issues: write`追加 | `permissions: {contents: read}`完全一致以外は`missing_permission` |
+| `U-CIPOL-012` | runtime profile独立性 | source profileへPack本文を置換、package artifact profileをsource/packへ変異 | 本文markerで再分類せずsource policyの`missing_step`。`package.json.utTdd.artifactProfile`を正本とする |
 | `U-SETUP-004b2` | setup builtin同期 | built-in `common/harness-check.yml` | `pull_request`あり、直下の`branches` / `branches-ignore`なし。既存guard強度も維持 |
 
 `pull_request`を単に含む文字列検査だけではGreenにしない。YAML構造でbase filter不在を検査し、
 source workflow / source template / Pack template / setup builtinのどれか1 artifactだけの更新を完了扱いにしない。
+検査対象本文をprofile選択に再利用せず、構造異常は例外でdoctor wrapperへ逃がさずanalyzer自身がviolation化する。

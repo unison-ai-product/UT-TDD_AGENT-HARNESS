@@ -22,6 +22,8 @@ export interface GithubCiPolicyViolation {
     | "filtered_trigger"
     | "incomplete_pull_request_types"
     | "unsupported_pull_request_type"
+    | "malformed_workflow_shape"
+    | "invalid_workflow_profile"
     | "duplicate_workflow_role"
     | "main_limited_pr_trigger"
     | "missing_permission"
@@ -46,7 +48,7 @@ interface WorkflowStep {
 }
 
 interface WorkflowJob {
-  steps?: WorkflowStep[];
+  steps?: unknown;
 }
 
 interface WorkflowYaml {
@@ -82,6 +84,10 @@ const REQUIRED_PULL_REQUEST_TYPES = [
   "reopened",
   "ready_for_review",
 ] as const;
+
+const REQUIRED_CONCURRENCY_GROUP =
+  "harness-check-$" + "{{ github.workflow }}-$" + "{{ github.head_ref || github.ref }}";
+const REQUIRED_CANCEL_IN_PROGRESS = "$" + "{{ github.ref != 'refs/heads/main' }}";
 
 const PULL_REQUEST_ACTIVITY_TYPES = new Set([
   "assigned",
@@ -162,30 +168,6 @@ const GITHUB_CI_PROFILE_SPECS: Record<GithubWorkflowDoc["profile"], GithubCiProf
   },
 };
 
-function inferGithubCiProfile(file: string, content: string): GithubWorkflowDoc["profile"] {
-  if (file.endsWith(join("common", "pack-harness-check.yml"))) return "pack";
-  if (file.endsWith(join("common", "harness-check.yml"))) return "source";
-  if (
-    content.includes("bun run test:pack") ||
-    content.includes("setup --solo") ||
-    content.includes("doctor --setup-smoke")
-  ) {
-    return "pack";
-  }
-  return "source";
-}
-
-function valuesContain(value: unknown, needle: string): boolean {
-  if (typeof value === "string") return value.includes(needle);
-  if (Array.isArray(value)) return value.some((entry) => valuesContain(entry, needle));
-  if (value && typeof value === "object") {
-    return Object.values(value as Record<string, unknown>).some((entry) =>
-      valuesContain(entry, needle),
-    );
-  }
-  return false;
-}
-
 function recordValue(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -198,6 +180,19 @@ function stringValues(value: unknown): string[] | null {
     return value;
   }
   return null;
+}
+
+function workflowStep(value: unknown): value is WorkflowStep {
+  const step = recordValue(value);
+  if (
+    !step ||
+    ![step.name, step.uses, step.run].every(
+      (field) => field === undefined || typeof field === "string",
+    )
+  ) {
+    return false;
+  }
+  return (typeof step.uses === "string") !== (typeof step.run === "string");
 }
 
 function stepText(step: WorkflowStep): string {
@@ -351,9 +346,24 @@ function checkHarnessTriggers(input: {
 export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicyResult {
   const violations: GithubCiPolicyViolation[] = [];
   for (const doc of docs) {
-    let workflow: WorkflowYaml;
+    const expectedProfile =
+      doc.role === "pack_template"
+        ? "pack"
+        : doc.role === "source_template" || doc.role === "setup_builtin"
+          ? "source"
+          : doc.profile;
+    if (doc.profile !== expectedProfile) {
+      pushViolation({
+        violations,
+        doc,
+        reason: "invalid_workflow_profile",
+        detail: `${doc.role} must use ${expectedProfile} profile`,
+      });
+      continue;
+    }
+    let parsed: unknown;
     try {
-      workflow = parseYaml(doc.content) as WorkflowYaml;
+      parsed = parseYaml(doc.content);
     } catch {
       pushViolation({
         violations,
@@ -363,26 +373,86 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
       });
       continue;
     }
-    const job = workflow.jobs?.["harness-check"];
+    const workflowRecord = recordValue(parsed);
+    if (!workflowRecord) {
+      pushViolation({
+        violations,
+        doc,
+        reason: "malformed_workflow_shape",
+        detail: "workflow root must be a mapping",
+      });
+      continue;
+    }
+    const workflow = workflowRecord as WorkflowYaml;
+    if (workflowRecord.on !== undefined && !recordValue(workflowRecord.on)) {
+      pushViolation({
+        violations,
+        doc,
+        reason: "malformed_workflow_shape",
+        detail: "on must be a mapping",
+      });
+      continue;
+    }
+    const jobsValue = workflowRecord.jobs;
+    const jobs = recordValue(jobsValue);
+    if (!jobs) {
+      pushViolation({
+        violations,
+        doc,
+        reason: jobsValue === undefined ? "missing_job" : "malformed_workflow_shape",
+        detail: jobsValue === undefined ? "jobs.harness-check" : "jobs must be a mapping",
+      });
+      continue;
+    }
+    const jobValue = jobs?.["harness-check"];
+    const job = recordValue(jobValue) as WorkflowJob | null;
     if (!job) {
-      pushViolation({ violations, doc, reason: "missing_job", detail: "jobs.harness-check" });
+      pushViolation({
+        violations,
+        doc,
+        reason: jobValue === undefined ? "missing_job" : "malformed_workflow_shape",
+        detail:
+          jobValue === undefined ? "jobs.harness-check" : "jobs.harness-check must be a mapping",
+      });
       continue;
     }
     checkHarnessTriggers({ workflow, doc, violations });
-    if (doc.role === "source_template" || doc.role === "setup_builtin") continue;
-    if (!valuesContain(workflow.permissions, "read")) {
-      pushViolation({ violations, doc, reason: "missing_permission", detail: "contents: read" });
+    const permissions = recordValue(workflow.permissions);
+    if (
+      permissions?.contents !== "read" ||
+      Object.keys(permissions).some((key) => key !== "contents")
+    ) {
+      pushViolation({
+        violations,
+        doc,
+        reason: "missing_permission",
+        detail: "permissions must equal {contents: read}",
+      });
     }
-    if (!workflow.concurrency) {
+    const concurrency = recordValue(workflow.concurrency);
+    if (
+      concurrency?.group !== REQUIRED_CONCURRENCY_GROUP ||
+      concurrency["cancel-in-progress"] !== REQUIRED_CANCEL_IN_PROGRESS
+    ) {
       pushViolation({
         violations,
         doc,
         reason: "missing_concurrency",
-        detail: "concurrency group",
+        detail: "concurrency must preserve main-safe canonical group/cancellation expressions",
       });
     }
 
-    const steps = job.steps ?? [];
+    if (!Array.isArray(job.steps) || !job.steps.every(workflowStep)) {
+      pushViolation({
+        violations,
+        doc,
+        reason: "malformed_workflow_shape",
+        detail: "jobs.harness-check.steps must be an array of mappings",
+      });
+      continue;
+    }
+    const steps = job.steps as WorkflowStep[];
+    if (doc.role === "source_template" || doc.role === "setup_builtin") continue;
     const profileSpec = GITHUB_CI_PROFILE_SPECS[doc.profile];
     for (const spec of profileSpec.requiredSteps) {
       if (!hasStep(steps, spec.any)) {
@@ -435,22 +505,31 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
 export interface LoadGithubCiPolicyDocsInput {
   repoRoot?: string;
   setupBuiltinWorkflow?: string;
+  runtimeProfile: GithubWorkflowDoc["profile"];
 }
 
-export function loadGithubCiPolicyDocs(
-  input: LoadGithubCiPolicyDocsInput = {},
-): GithubWorkflowDoc[] {
+export function resolveGithubCiRuntimeProfile(repoRoot: string): GithubWorkflowDoc["profile"] {
+  const parsed = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8")) as {
+    utTdd?: { artifactProfile?: unknown };
+  };
+  const profile = parsed.utTdd?.artifactProfile;
+  if (profile !== "source" && profile !== "pack") {
+    throw new Error("package.json utTdd.artifactProfile must be source or pack");
+  }
+  return profile;
+}
+
+export function loadGithubCiPolicyDocs(input: LoadGithubCiPolicyDocsInput): GithubWorkflowDoc[] {
   const repoRoot = input.repoRoot ?? process.cwd();
   const candidates: GithubWorkflowDoc[] = [];
   const addCandidate = (
     relativeFile: string,
     role: GithubWorkflowDoc["role"],
-    fixedProfile?: GithubWorkflowDoc["profile"],
+    profile: GithubWorkflowDoc["profile"],
   ) => {
     const absoluteFile = join(repoRoot, relativeFile);
     if (!existsSync(absoluteFile)) return;
     const content = readFileSync(absoluteFile, "utf8");
-    const profile = fixedProfile ?? inferGithubCiProfile(relativeFile, content);
     candidates.push({
       file: relativeFile,
       content,
@@ -458,7 +537,7 @@ export function loadGithubCiPolicyDocs(
       role,
     });
   };
-  addCandidate(join(".github", "workflows", "harness-check.yml"), "runtime");
+  addCandidate(join(".github", "workflows", "harness-check.yml"), "runtime", input.runtimeProfile);
   addCandidate(
     join("docs", "templates", "github", "common", "harness-check.yml"),
     "source_template",

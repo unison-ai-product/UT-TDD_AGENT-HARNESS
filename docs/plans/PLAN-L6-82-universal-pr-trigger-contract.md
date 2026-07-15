@@ -9,7 +9,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-14
-updated: 2026-07-14
+updated: 2026-07-15
 owner: PO / Claude (Fable orchestrator)
 parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -49,7 +49,8 @@ concept §7.2 / requirements §7.5-7.6 の「全 PR 共通 aggregate harness-che
    setup builtin が同一trigger契約。detectorはprofile重複でmirrorを捨てず全件読む。
 4. **mutation fail-close**: `github-ci-policy` detector が「main 限定 pull_request trigger」への
    退行、不正trigger型、workflow-level path filter、不完全/未知activity types、push main限定の欠落を
-   violationとして検出する。
+   violationとして検出する。workflow本文からprofileを推論せず、構造異常をthrowせずviolation化し、
+   `permissions.contents: read`を直接検査する。
 5. issue #57 の Codex 設計コメント (branch は隔離のみ、工程正本は PLAN+harness.db /
    Execution Ledger 構想) と整合し、branch 命名契約は本 PLAN の scope 外。
 
@@ -61,4 +62,6 @@ concept §7.2 / requirements §7.5-7.6 の「全 PR 共通 aggregate harness-che
 - [x] source workflow / source template / Pack template / setup builtin の4 artifactを同一契約へ同期する。
 - [x] workflow-level path filterと不完全activity typesを U-CIPOL-007/008 でfail-closeする。
 - [x] 未知・非文字列・重複activity typesを U-CIPOL-009 でfail-closeする。
+- [x] workflow構造異常を U-CIPOL-010 でthrowなしのstructured violationにする。
+- [x] 権限誤指定と本文profile偽装を U-CIPOL-011/012 でfail-closeする。
 - [x] 実装は PLAN-L7-434。確定済み PLAN-L7-197 / L7-221 は上書きせず本ペアで訂正する。

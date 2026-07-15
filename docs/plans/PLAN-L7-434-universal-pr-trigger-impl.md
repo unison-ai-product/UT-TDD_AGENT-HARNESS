@@ -8,7 +8,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-14
-updated: 2026-07-14
+updated: 2026-07-15
 owner: PO / 実装 = Codex lane (hybrid cross-execution)
 parent_design: docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
@@ -31,7 +31,15 @@ generates:
     artifact_type: source_module
   - artifact_path: src/lint/github-ci-policy.ts
     artifact_type: source_module
+  - artifact_path: src/doctor/runtime-surface.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/distribution.ts
+    artifact_type: source_module
+  - artifact_path: package.json
+    artifact_type: config
   - artifact_path: tests/github-ci-policy.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/setup.test.ts
     artifact_type: test_code
   - artifact_path: docs/plans/PLAN-REVERSE-434-universal-pr-trigger-backfill.md
     artifact_type: markdown_doc
@@ -54,7 +62,7 @@ dependencies:
    source templateとともに同一契約へ更新し、4 artifactをdetector入力にする。
 3. `github-ci-policy` detector: 「pull_request trigger が base 限定されている」状態を
    violation としてfail-closeし、不正trigger型、workflow-level path filter、不完全/未知activity
-   types、push main限定欠落も拒否する。
+   types、push main限定欠落、workflow構造異常、権限誤指定、本文によるprofile偽装も拒否する。
 4. add-impl ペア: `PLAN-REVERSE-434-universal-pr-trigger-backfill` を併起票し、
    requirements §7.5-7.6 / L6-82 への backfill を R0-R4 で閉じる。
 5. 確定済み PLAN-L7-197 / L7-221 に claim 矛盾があれば supersedes 宣言で訂正 (上書き禁止)。
@@ -68,5 +76,7 @@ dependencies:
 - [x] source template / setup builtinをprofile重複で捨てないことを U-CIPOL-006 で固定する。
 - [x] workflow-level path filterと不完全activity typesを U-CIPOL-007/008 でredにする。
 - [x] 未知・非文字列・重複activity typesを U-CIPOL-009 でredにする。
+- [x] workflow構造異常を U-CIPOL-010 で例外化せずredにする。
+- [x] 権限誤指定と本文profile偽装を U-CIPOL-011/012 でredにする。
 - [x] source workflow / source template / Pack template / setup builtinがbase無限定triggerへ同期される。
 - [x] job / required context 名 `harness-check` は不変である。

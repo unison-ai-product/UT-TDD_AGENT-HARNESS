@@ -9,6 +9,7 @@ import {
   analyzeGithubCiPolicy,
   githubCiPolicyMessages,
   loadGithubCiPolicyDocs,
+  resolveGithubCiRuntimeProfile,
 } from "../lint/github-ci-policy";
 import {
   analyzeProjectHooks,
@@ -45,6 +46,7 @@ export function checkGithubCiPolicy(repoRoot: string): { messages: string[]; ok:
     const r = analyzeGithubCiPolicy(
       loadGithubCiPolicyDocs({
         repoRoot,
+        runtimeProfile: resolveGithubCiRuntimeProfile(repoRoot),
         setupBuiltinWorkflow: BUILTIN_GITHUB_TEMPLATES["common/harness-check.yml"],
       }),
     );
