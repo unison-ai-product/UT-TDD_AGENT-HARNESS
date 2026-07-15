@@ -83,6 +83,11 @@ route decision digest、origin、Issue bindingを持つ。直接`docs/plans/PLAN
 hook、pre-push、PR CIがreceipt不在またはdigest staleとしてfail-closeする。GitHub Issue webhookも
 signature/dedupe/enum/originを検証し、不正なものはquarantineしてPLANへ進めない。
 
+CIで再現可能な正本はローカルSQLiteだけに置かない。`plan draft`はSQLite journalと同一commandから
+tracked append-only receipt projectionを出力し、receipt v2がpath、plan_id、asset/revision、本文を含む
+canonical content digest、command_id、receipt digestを束縛する。差分fenceはGit base/headのPLANと
+tracked projectionを照合し、手製receipt、別PLANへのコピー、rename、本文だけの改竄を拒否する。
+
 ## Red oracle
 
 - `CANDIDATE-PADM-001`: 正常Forward tupleだけがIssueなしで許可される。

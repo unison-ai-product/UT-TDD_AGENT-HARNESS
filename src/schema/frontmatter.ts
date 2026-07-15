@@ -71,11 +71,22 @@ export const dependenciesSchema = z.object({
 /** 正規authoring経路が発行する自己検証可能なAdmission証明。既存PLANへの遡及強制はdiff fence側で行う。 */
 const admissionReceiptSchema = z
   .object({
-    schema_version: z.literal("v1"),
+    schema_version: z.literal("v2"),
     receipt_id: z.string().min(1),
+    command_id: z.string().min(1),
     admitted_at: z.string().min(1),
     source_digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
     decision_digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
+    receipt_digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
+    binding: z
+      .object({
+        path: z.string().regex(/^docs\/plans\/PLAN-[A-Za-z0-9-]+\.md$/),
+        plan_id: planIdSchema,
+        asset_id: z.string().regex(/^plan:[a-z0-9][a-z0-9:-]{2,127}$/),
+        revision: z.number().int().positive(),
+        content_digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
+      })
+      .strict(),
     route: z.object({ signal: z.string().min(1), mode: z.string().min(1) }).strict(),
     issue: z
       .object({
@@ -245,6 +256,9 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
   const isWorkflowKind = WORKFLOW_KINDS.has(fm.kind);
   const receipt = fm.admission_receipt;
   if (receipt) {
+    if (receipt.binding.plan_id !== fm.plan_id) {
+      ctx.addIssue({ code: custom, path: ["admission_receipt", "binding", "plan_id"], message: "receipt binding plan_idはfrontmatterと一致必須" });
+    }
     if (fm.route_signal !== receipt.route.signal || fm.route_mode !== receipt.route.mode) {
       ctx.addIssue({ code: custom, path: ["admission_receipt", "route"], message: "receipt route はtop-level route宣言と一致必須" });
     }
