@@ -1250,30 +1250,30 @@ escape episodeを持つPR bodyだけ `Closes #<github_issue_id>` を必須にし
 Forward escapeのmergeは、re-entry certificate、駆動モデル内検証、Forward中間テスト、再合流後テスト、
 別provider/modelのcross-review PASS、必須CI、最新HEAD一致を全て満たすまで禁止する。
 
-### 6.8.3A Execution Ledger event lifecycle
+### 6.8.3A 実行台帳イベントライフサイクル
 
 Forward escapeは次のappend-only event系列を持つ。番号を飛ばす、順序を戻す、GitHub stateから
 正本eventを捏造することを禁止する。各eventは`episode_id`, `sequence`, `occurred_at`, `actor`,
 `payload_digest`, `previous_event_digest`を持つ。
 
-| event | 意味 | 必須証拠 |
+| イベント | 意味 | 必須証拠 |
 |---|---|---|
-| E0 | escape observed | origin asset/revision/L/state、reason、recurrence identity |
-| E1 | escape classified | escape_type、assumption/decision under test |
-| E2 | drive selected | drive_model、選択根拠、human override evidence |
-| E3 | Issue projection requested | idempotency key、projection payload digest |
-| E4 | Issue projected | repository、issue number/node id、remote version |
-| E5 | drive plan frozen | PLAN revision、V-pair obligations、schedule branch |
-| E6 | drive verification green | drive固有test profileとgreen evidence |
-| E7 | re-entry proposed | target Forward state、re-entry policy |
-| E8 | re-entry certificate issued | origin/target binding、独立検証digest |
-| E9 | Forward intermediate test green | escapeから合流点までの中間test evidence |
-| E10 | Forward re-entered | accepted PLAN revision / state transition |
-| E11 | post-reentry test green | 合流後Forward test evidence |
-| E12 | draft PR projected | PR number、head/base、exact head SHA |
-| E13 | cross-review accepted | author/reviewer別provider、verdict、review digest |
-| E14 | merge authorized / merged | required CI、HEAD一致、accept、merge commit |
-| E15 | episode closed / learned | Issue close、outcome、L/type/cause集計、upstream action |
+| E0 | 離脱を観測 | origin asset/revision/L/state、reason、recurrence identity |
+| E1 | 離脱を分類 | `escape_type`、検証対象のassumption/decision |
+| E2 | 駆動モデルを選択 | `drive_model`、選択根拠、human override evidence |
+| E3 | Issue投影を要求 | idempotency key、projection payload digest |
+| E4 | Issue投影を確認 | repository、issue number/node id、remote version |
+| E5 | 駆動PLANを凍結 | PLAN revision、V-pair obligations、schedule branch |
+| E6 | 駆動検証がGreen | drive固有test profileとgreen evidence |
+| E7 | 再合流を提案 | target Forward state、re-entry policy |
+| E8 | 再合流証明を発行 | origin/target binding、独立検証digest |
+| E9 | Forward中間テストがGreen | 離脱から合流点までの中間test evidence |
+| E10 | Forwardへ再合流 | accepted PLAN revision / state transition |
+| E11 | 再合流後テストがGreen | 合流後Forward test evidence |
+| E12 | draft PRを投影 | PR number、head/base、exact head SHA |
+| E13 | cross-reviewを受理 | author/reviewer別provider、verdict、review digest |
+| E14 | mergeを許可・確認 | required CI、HEAD一致、accept、merge commit |
+| E15 | episodeを閉じ学習 | Issue close、outcome、L/type/cause集計、upstream action |
 
 E3/E4とE12/E14はoutbox/inboxで冪等にする。remote webhookはinboxへ保存してから既存episodeへ照合し、
 未知episode・署名不正・sequence逆行・payload digest不一致をfindingとして隔離する。GitHubはExecution

@@ -713,12 +713,12 @@ ledger DB不在・schema不一致・digest破損は空ledgerとして補完せ�
 `(event_id,subject_id,subject_revision)`→workflow event、`(evidence_id,subject_id,subject_revision)`→evidenceのcomposite FKで
 cross-subject/revision linkをSQLite実制約として拒否する。
 
-### Execution Ledger / GitHub projection tables
+### 実行台帳 / GitHub投影テーブル
 
-| table | 主な列 | 制約 / index |
+| テーブル | 主な列 | 制約 / 索引 |
 |---|---|---|
 | `execution_episodes` | `episode_id`, origin asset/revision/L/state, `escape_type`, `drive_model`, `reentry_target`, `last_sequence`, `last_event_digest`, `status` | PK episode。origin revision FK。drive/escape閉値域。current reductionのみ |
-| `execution_episode_events` | `event_id`, `episode_id`, `sequence`, `event_kind(E0..E15)`, `payload_json`, `payload_digest`, `previous_event_digest`, `occurred_at`, `actor` | `(episode_id,sequence)` UNIQUE、digest chain、append-only trigger |
+| `execution_episode_events` | `event_id`, `episode_id`, `sequence`, `event_kind(E0..E15)`, `payload_json`, `payload_digest`, `previous_event_digest`, `occurred_at`, `actor` | `(episode_id,sequence)` UNIQUE、digest連鎖、追記専用trigger |
 | `github_projection_outbox` | `projection_id`, `episode_id`, `operation`, `idempotency_key`, `payload_digest`, `attempt_count`, `next_attempt_at`, `status`, `remote_ref` | idempotency UNIQUE。secret-safe payload。retry可能 |
 | `github_inbound_events` | `delivery_id`, `repository`, `event_type`, `signature_verdict`, `remote_version`, `payload_digest`, `received_at`, `episode_id?`, `status` | delivery UNIQUE。未照合/署名不正を隔離 |
 | `github_object_bindings` | `episode_id`, `object_kind`, `repository`, `external_id`, `number`, `url`, `remote_version`, `last_reconciled_head`, `projection_revision` | `(episode_id,object_kind)` UNIQUE。付替えはevent必須 |

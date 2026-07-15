@@ -1284,7 +1284,7 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
   定数dead pathまでであり、任意CFGのpost-dominator、interprocedural dataflow、mutation survivor 0はPLAN-L7-425の
   独立自己証明範囲とする。
 
-## PLAN-L6-83..85 Forward escape / GitHub function contracts
+## PLAN-L6-83..85 Forward離脱 / GitHub関数契約
 
 ```ts
 class ExecutionEpisode {

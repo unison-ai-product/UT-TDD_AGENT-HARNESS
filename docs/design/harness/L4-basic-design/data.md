@@ -247,7 +247,7 @@ AI が生成する TypeScript core は、後でリファクタする前提では
 - **SubDoc enum 実装** (IMP-026): requirements §1.10.G.1 の VALID_SUB_DOCS は `src/schema` の zod enum と frontmatter superRefine へ実装済み
 - **内部資産 (roster/skill) の back-fill 解消** (A-90、L9 ST-ASSET-04 対応): roster/skill は in-memory scan-on-demand で**永続 state なし** (§8、ADR-004) のため data 集約・物理 state schema に**追加なし**と確定。各 subcommand / capability resolver / recommender / drift 判定の**関数仕様**は L6 機能設計で確定済み (`function-spec.md` / `fr-unit-coverage.md` の FR-L1-12, FR-L1-33, FR-L1-34, FR-L1-46〜49)。L5 physical-data で roster/skill の物理 state 追加は不要 (fs 正本)
 
-## §10 Execution Ledger aggregate
+## §10 実行台帳集約
 
 `ExecutionEpisode`はForward escape一件の集約ルートであり、`episode_id`、origin PLAN Asset/revision/L/state、
 escape type/reason/recurrence identity、選択drive、re-entry target、last sequence/event digestを持つ。
