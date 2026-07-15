@@ -4,7 +4,7 @@ title: "PLAN-L7-434 (add-impl): 全 PR 共通 harness-check trigger 実装 + git
 kind: add-impl
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-14
@@ -12,7 +12,25 @@ updated: 2026-07-15
 owner: PO / 実装 = Codex lane (hybrid cross-execution)
 parent_design: docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
-review_evidence: []
+review_evidence:
+  - reviewer: claude-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-15T11:41:00+09:00"
+    tests_green_at: "2026-07-15T11:14:59+09:00"
+    verdict: approve
+    scope: "PR #61 HEAD 9359a5b5 の claim-blind / spec-blind はともに PASS。詳細は A-188。"
+    worker_model: codex-gpt-5
+    reviewer_model: claude-fable-5
+    green_commands:
+      - kind: smoke
+        command: "GitHub Actions harness-check run 29383432438"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-15T11:14:59+09:00"
+        evidence_path: .ut-tdd/audit/A-188-pr-61-universal-trigger-self-proof-2026-07-15.md
+        output_digest: "sha256:89585907699109e2dab08a6499694d887ca338f0d7ff6852e536b0e42626d2e8"
+        anchor_commit: 9359a5b56f2208e7f708ba5d4d5715be70a9f8c8
 agent_slots:
   - role: se
     slot_label: "SE - workflow trigger / Pack template / setup builtin / detector 同時更新"
@@ -42,6 +60,8 @@ generates:
   - artifact_path: tests/setup.test.ts
     artifact_type: test_code
   - artifact_path: docs/plans/PLAN-REVERSE-434-universal-pr-trigger-backfill.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-188-pr-61-universal-trigger-self-proof-2026-07-15.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md

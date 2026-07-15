@@ -5,7 +5,7 @@ kind: add-design
 layer: L6
 sub_doc: function-spec
 drive: agent
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-14
@@ -15,7 +15,25 @@ parent_design: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 next_pair_freeze: L7
-review_evidence: []
+review_evidence:
+  - reviewer: claude-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-15T11:41:00+09:00"
+    tests_green_at: "2026-07-15T11:14:59+09:00"
+    verdict: approve
+    scope: "PR #61 HEAD 9359a5b5 の claim-blind / spec-blind はともに PASS。詳細は A-188。"
+    worker_model: codex-gpt-5
+    reviewer_model: claude-fable-5
+    green_commands:
+      - kind: smoke
+        command: "GitHub Actions harness-check run 29383432438"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-15T11:14:59+09:00"
+        evidence_path: .ut-tdd/audit/A-188-pr-61-universal-trigger-self-proof-2026-07-15.md
+        output_digest: "sha256:89585907699109e2dab08a6499694d887ca338f0d7ff6852e536b0e42626d2e8"
+        anchor_commit: 9359a5b56f2208e7f708ba5d4d5715be70a9f8c8
 agent_slots:
   - role: tl
     slot_label: "TL - trigger contract と branch-protection context 不変の検証"

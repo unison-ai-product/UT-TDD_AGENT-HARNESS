@@ -3,10 +3,10 @@ plan_id: PLAN-REVERSE-434-universal-pr-trigger-backfill
 title: "PLAN-REVERSE-434: universal PR trigger 実装の設計 backfill"
 kind: reverse
 layer: cross
-workflow_phase: R3
+workflow_phase: R4
 confirmed_reverse_type: design
 drive: agent
-status: draft
+status: confirmed
 route_signal: drift
 route_mode: reverse
 forward_routing: gap-only
@@ -35,7 +35,25 @@ agent_slots:
     slot_label: "TL - trigger 契約と検出器負例の L6/L7 backfill"
   - role: po
     slot_label: "PO - R3 backfill判断とForward合流境界の検収"
-review_evidence: []
+review_evidence:
+  - reviewer: claude-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-15T11:41:00+09:00"
+    tests_green_at: "2026-07-15T11:14:59+09:00"
+    verdict: approve
+    scope: "PR #61 HEAD 9359a5b5 の claim-blind / spec-blind はともに PASS。詳細は A-188。"
+    worker_model: codex-gpt-5
+    reviewer_model: claude-fable-5
+    green_commands:
+      - kind: smoke
+        command: "GitHub Actions harness-check run 29383432438"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-15T11:14:59+09:00"
+        evidence_path: .ut-tdd/audit/A-188-pr-61-universal-trigger-self-proof-2026-07-15.md
+        output_digest: "sha256:89585907699109e2dab08a6499694d887ca338f0d7ff6852e536b0e42626d2e8"
+        anchor_commit: 9359a5b56f2208e7f708ba5d4d5715be70a9f8c8
 generates:
   - artifact_path: docs/plans/PLAN-REVERSE-434-universal-pr-trigger-backfill.md
     artifact_type: markdown_doc
@@ -45,6 +63,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/test-design/harness/L7-unit-test-design.md
     artifact_type: test_design
+  - artifact_path: .ut-tdd/audit/A-188-pr-61-universal-trigger-self-proof-2026-07-15.md
+    artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L7-434-universal-pr-trigger-impl.md
   requires: []
