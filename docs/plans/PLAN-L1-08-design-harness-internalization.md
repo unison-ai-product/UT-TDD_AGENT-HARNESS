@@ -1,6 +1,6 @@
 ---
-plan_id: PLAN-M-02-design-harness-internalization
-title: "PLAN-M-02 (add-design): Design Harness 内蔵化 master program (UX-FE Continuity Contract)"
+plan_id: PLAN-L1-08-design-harness-internalization
+title: "PLAN-L1-08 (add-design): Design Harness 内蔵化 program (UX-FE Continuity Contract、charter L0-01 配下)"
 kind: add-design
 layer: L1
 sub_doc: function-spec
@@ -25,7 +25,7 @@ agent_slots:
   - role: qa
     slot_label: "QA - gate/receipt/UX evidence 設計"
 generates:
-  - artifact_path: docs/plans/PLAN-M-02-design-harness-internalization.md
+  - artifact_path: docs/plans/PLAN-L1-08-design-harness-internalization.md
     artifact_type: markdown_doc
 dependencies:
   parent: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -39,7 +39,7 @@ dependencies:
     - src/lint/screen-impl-pair-freeze.ts
 ---
 
-# PLAN-M-02 (add-design): Design Harness 内蔵化 master program
+# PLAN-L1-08 (add-design): Design Harness 内蔵化 program
 
 ## 目的
 
@@ -88,7 +88,7 @@ findings 増殖防止)。
 - no G10 close without real rendering evidence
 - consumer への hard gate は配布先ローカル dogfood 再基準 (AC-16-B)
 
-## Program bands (leaf PLAN 分解の骨格)
+## Program bands (leaf PLAN 分解の骨格、親 = PLAN-L0-01 charter)
 
 | Band | 内容 | Gate |
 |---|---|---|
