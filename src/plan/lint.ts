@@ -229,6 +229,37 @@ function requiredAgentRoleViolations(raw: Record<string, unknown>): string[] {
   return missing;
 }
 
+/**
+ * 規定外起票ブロックゲート (plan_id taxonomy)。
+ *
+ * plan_id の prefix 語彙は閉じた集合であり、無断で新しい系列 (例: 2026-07-15 の
+ * PLAN-M-02 = 「M を master program として外挿」) を発明する起票を fail-close で
+ * 弾く。許可系列: PLAN-L<0..14>-<n>-<slug> / PLAN-REVERSE / PLAN-DISCOVERY /
+ * PLAN-RECOVERY。PLAN-M-* は cutover/migration 専用の凍結 legacy 2 件のみ。
+ * 新系列が必要な場合は governance で語彙を定義してから本 allowlist を更新する。
+ */
+const PLAN_ID_TAXONOMY_PATTERNS: RegExp[] = [
+  /^PLAN-L(?:\d|1[0-4])-\d+(?:-[a-z0-9]+)+$/,
+  /^PLAN-REVERSE-\d+(?:-[a-z0-9]+)+$/,
+  /^PLAN-DISCOVERY-\d+(?:-[a-z0-9]+)+$/,
+  /^PLAN-RECOVERY-\d+(?:-[a-z0-9]+)+$/,
+];
+
+const PLAN_ID_LEGACY_FROZEN = new Set(["PLAN-M-00-verify-cutover", "PLAN-M-01-cutover-backfill"]);
+
+export function planIdTaxonomyViolations(
+  planId: string,
+): { reason: "plan_id_taxonomy"; detail: string }[] {
+  if (PLAN_ID_LEGACY_FROZEN.has(planId)) return [];
+  if (PLAN_ID_TAXONOMY_PATTERNS.some((pattern) => pattern.test(planId))) return [];
+  return [
+    {
+      reason: "plan_id_taxonomy",
+      detail: `${planId}: 未登録のplan_id系列。許可: PLAN-L<0..14>-<n>-<slug> / PLAN-REVERSE / PLAN-DISCOVERY / PLAN-RECOVERY (PLAN-M-*はlegacy凍結)。新系列はgovernanceで語彙定義後にallowlistへ`,
+    },
+  ];
+}
+
 function kindLayerViolations(raw: Record<string, unknown>): string[] {
   const status = stringField(raw.status);
   const updated = stringField(raw.updated) ?? stringField(raw.created) ?? "";
@@ -805,6 +836,11 @@ export function analyzePlanGovernance(
         reason: "missing_required_agent_role",
         detail: missingRoles.join(", "),
       });
+    }
+    if (stringField(raw.plan_id)) {
+      for (const violation of planIdTaxonomyViolations(planId)) {
+        violations.push({ file: entry.file, ...violation });
+      }
     }
     const invalidKindLayers = kindLayerViolations(raw);
     if (invalidKindLayers.length > 0) {
