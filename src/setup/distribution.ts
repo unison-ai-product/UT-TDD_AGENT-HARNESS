@@ -189,7 +189,11 @@ export function transformCleanDistributionArtifact(artifactPath: string, content
   scripts["test:source"] ??= scripts.test ?? "vitest run";
   scripts["test:pack"] = PACK_SAFE_TEST_SCRIPT;
   scripts.test = "bun run test:pack";
-  return `${JSON.stringify({ ...parsed, scripts }, null, 2)}\n`;
+  const utTdd = {
+    ...((parsed.utTdd as Record<string, unknown> | undefined) ?? {}),
+    artifactProfile: "pack",
+  };
+  return `${JSON.stringify({ ...parsed, scripts, utTdd }, null, 2)}\n`;
 }
 
 function shellQuotePath(path: string): string {

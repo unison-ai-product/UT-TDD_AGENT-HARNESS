@@ -1127,9 +1127,12 @@ add-* 完了時、既存 PLAN との双方向 reference を更新:
 
 | 要件 | 仕様 |
 |------|------|
-| event trigger | `harness-check.yml` は `pull_request: branches: [main]` event で実行 |
+| event trigger | `harness-check.yml` は base branchを限定しない全 `pull_request` eventで実行し、`push`は`branches: [main]`だけに限定 |
 | 検出ロジック | PR head が `poc/*` で base が `main` なら subjob `poc-no-merge-guard` が exit 1 |
 | 例外 | なし (poc/* は S4 confirmed 後に Reverse → feature/* で再 PR する) |
+
+`poc/* → main` の拒否はGitHub event filterではなく、全PRで起動したjob内のhead/base guardで行う。
+これによりstacked PR（baseがmain以外）も同じ`harness-check`を必ず通り、base差による未検証経路を作らない。
 
 ## 6.5 CODEOWNERS bootstrap 2 段階
 
@@ -1458,8 +1461,10 @@ runner コスト比 Linux : Windows : macOS ≒ **1 : 1.67 : 10** → **PR は L
 ### 6.9.3 GitHub Actions 構成方針
 
 - **Required check は `harness-check` 1 本**に集約 (1 本集約方針は構想書 §7.2)。**workflow レベル `on.paths` フィルタは使わない** (skip された required check が `pending` で PR を永久ブロックする既知問題 = GitHub 公式 doc「Troubleshooting required status checks」)。
+- `pull_request`はbare trigger（既定の`opened` / `synchronize` / `reopened`）を許可する。`types`を明示する場合は`opened` / `synchronize` / `reopened` / `ready_for_review`を必ず含める。値はGitHub Actions `pull_request` activity typeの有限allowlistに限定し、未知値・非文字列・重複をfail-closeする。
+- `github-ci-policy`のpolicy選択は検査対象workflow本文から推論せず、`package.json.utTdd.artifactProfile`をartifact catalog identityとしてsource/Pack profileを解決する。YAML root/on/job/stepsの構造異常・role/profile不整合・空concurrencyは例外にせずstructured violationを返し、権限は4 artifactすべてで`permissions: {contents: read}`との完全一致だけを受理する。
 - 代わりに **単一 `harness-check` job に集約し、`dorny/paths-filter` + 各 step の `if` 条件**で分岐する (雛形参照)。job 自体は (draft を除き) 常に起動するため required check が `pending` で詰まらず、未該当 step は skip されても job は success/failure を必ず報告する (§6.3 matrix に `docs-only` 判定列を追加)。複数 job に分割する場合のみ、最終 `harness-check` aggregator job に `needs: [...]` + `if: always()` を付け、それだけを Required Status Check に登録する。
-- **concurrency**: group = `harness-check-${{ github.head_ref }}`、`cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}` (main は deploy 中断防止で false。重い vmodel-lint の race を避けるため group に workflow 名を含める)。
+- **concurrency**: group = `harness-check-${{ github.workflow }}-${{ github.head_ref || github.ref }}`、`cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}` (main は deploy 中断防止で false。重い vmodel-lint の race を避けるため group に workflow 名を含める)。
 - **draft PR では重 subjob (vitest / vmodel-lint) を skip** (`if: github.event.pull_request.draft == false`)、ready-for-review で起動。
 - **GitHub Merge Queue は不採用** (Free/Team の private repo では利用不可、Enterprise Cloud 専用)。直列化は concurrency で代替。
 
@@ -1467,7 +1472,7 @@ runner コスト比 Linux : Windows : macOS ≒ **1 : 1.67 : 10** → **PR は L
 # .github/workflows/harness-check.yml (雛形、§6.3 matrix を実装。利用者チーム repo に harness が配布する template)
 name: harness-check
 on:
-  pull_request: { types: [opened, synchronize, ready_for_review] }
+  pull_request: { types: [opened, synchronize, reopened, ready_for_review] }
   push: { branches: [main] }
 concurrency:
   group: harness-check-${{ github.workflow }}-${{ github.head_ref || github.ref }}
@@ -1873,7 +1878,7 @@ output:
 |------|----------|----------|
 | **pre-commit** | gitleaks / commitlint format / 軽量 lint (markdown / yaml) + `ut-tdd self-test --smoke` | < 5s |
 | **pre-push** | §5.3 session 終了前 4 項目 + 軽量 plan lint + 差分対象 self-test | < 15s |
-| **harness-check (CI on PR)** | §6.3 の 8 subjob (重い検証 + 全テスト + 回帰確認) | 数分 |
+| **harness-check (CI on every PR base)** | §6.3 の 8 subjob (重い検証 + 全テスト + 回帰確認)。`pull_request`に`branches` / `branches-ignore`を置かない | 数分 |
 
 `vmodel_lint` の完全検証は **pre-push と CI のみ** で実行。pre-commit には乗せない。
 
@@ -1900,6 +1905,7 @@ output:
 - [ ] pre-commit / pre-push / CI の責任分離 (§7.5) を守る
 - [ ] `ut-tdd self-test --smoke` はネットワーク不要・外部 AI runtime 不要で通る
 - [ ] PR merge gate は GitHub Actions `harness-check` のみを正本とし、ローカル hook 成否だけを merge 条件にしない
+- [x] `harness-check` は全PR base/pathで発火し、`pull_request`の不正な型・base/path filter・不完全/未知activity types・trigger欠落、`push: branches: [main]`の欠落/paths filter、workflow構造異常、権限誤指定、検査対象本文によるprofile偽装を`github-ci-policy`がfail-closeする (PLAN-L6-82 / U-CIPOL-001..012、2026-07-15)
 - [x] **ルール同一性 (MUST、構想書 §2.1.0)**: gate / V-model / checklist / enum / route の正本は `ut-tdd` core + governance docs に単一定義され、`.claude/CLAUDE.md` / `AGENTS.md` がルールを再定義・分岐していない (doctor が両 adapter のルール重複・drift を検出し、検出時 fail)。`src/lint/rule-drift.ts` + doctor `checkRuleDrift` が AGENTS / CLAUDE adapter docs の必須 mode / command marker drift を fail-close 検出 (2026-06-08)。
 - [x] **rule parity test**: 同一 PLAN / diff を claude-only と codex-only で処理した際、`ut-tdd gate` / `ut-tdd plan lint` / `ut-tdd vmodel lint` の **判定結果と exit code が一致**する (runtime 差で結果が変わらない)。`ut-tdd gate` の判断ゲート review-tier は `evaluateGateReview` parity test で codex-only/claude-only 同一結果を機械検証 (2026-06-08)。
 - [x] **hybrid 機能分散 (MUST、構想書 §2.1.0)**: `ut-tdd team run` が `hybrid` で判断系 / 実行系を別 runtime に割り当て、同一 role の同一 runtime 重複・同一作業の二重実行を exit 1 で弾く (§7.1 team run 検証 7)。`validateTeamRun` が worker/reviewer provider 分離・duplicate role/provider を fail-close (2026-06-08)。

@@ -1,0 +1,102 @@
+---
+plan_id: PLAN-L7-434-universal-pr-trigger-impl
+title: "PLAN-L7-434 (add-impl): 全 PR 共通 harness-check trigger 実装 + github-ci-policy fail-close (issue #57)"
+kind: add-impl
+layer: L7
+drive: agent
+status: confirmed
+route_signal: feature_addition
+route_mode: add-feature
+created: 2026-07-14
+updated: 2026-07-15
+owner: PO / 実装 = Codex lane (hybrid cross-execution)
+parent_design: docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md
+pair_artifact: docs/test-design/harness/L7-unit-test-design.md
+review_evidence:
+  - reviewer: claude-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-15T11:41:00+09:00"
+    tests_green_at: "2026-07-15T11:14:59+09:00"
+    verdict: approve
+    scope: "PR #61 HEAD 9359a5b5 の claim-blind / spec-blind はともに PASS。詳細は A-188。"
+    worker_model: codex-gpt-5
+    reviewer_model: claude-fable-5
+    green_commands:
+      - kind: smoke
+        command: "GitHub Actions harness-check run 29383432438"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-15T11:14:59+09:00"
+        evidence_path: .ut-tdd/audit/A-188-pr-61-universal-trigger-self-proof-2026-07-15.md
+        output_digest: "sha256:89585907699109e2dab08a6499694d887ca338f0d7ff6852e536b0e42626d2e8"
+        anchor_commit: 9359a5b56f2208e7f708ba5d4d5715be70a9f8c8
+agent_slots:
+  - role: se
+    slot_label: "SE - workflow trigger / Pack template / setup builtin / detector 同時更新"
+  - role: qa
+    slot_label: "QA - 負例 (main 限定退行) と stacked PR 発火 fixture"
+generates:
+  - artifact_path: docs/plans/PLAN-L7-434-universal-pr-trigger-impl.md
+    artifact_type: markdown_doc
+  - artifact_path: .github/workflows/harness-check.yml
+    artifact_type: config
+  - artifact_path: docs/templates/github/common/pack-harness-check.yml
+    artifact_type: config
+  - artifact_path: docs/templates/github/common/harness-check.yml
+    artifact_type: config
+  - artifact_path: src/setup/templates.ts
+    artifact_type: source_module
+  - artifact_path: src/lint/github-ci-policy.ts
+    artifact_type: source_module
+  - artifact_path: src/doctor/runtime-surface.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/distribution.ts
+    artifact_type: source_module
+  - artifact_path: package.json
+    artifact_type: config
+  - artifact_path: tests/github-ci-policy.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/setup.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/plans/PLAN-REVERSE-434-universal-pr-trigger-backfill.md
+    artifact_type: markdown_doc
+  - artifact_path: .ut-tdd/audit/A-188-pr-61-universal-trigger-self-proof-2026-07-15.md
+    artifact_type: markdown_doc
+dependencies:
+  parent: docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md
+  requires: []
+  references:
+    - docs/plans/PLAN-L6-82-universal-pr-trigger-contract.md
+    - docs/plans/PLAN-REVERSE-434-universal-pr-trigger-backfill.md
+    - .ut-tdd/memory/project-stacked-pr-harness-check-trigger-debt.md
+---
+
+# PLAN-L7-434 (add-impl): 全 PR 共通 harness-check trigger 実装
+
+## 実装範囲 (L6-82 契約の実装、issue #57)
+
+1. `.github/workflows/harness-check.yml`: `pull_request` の `branches: [main]` フィルタを
+   撤去 (全 base で発火)。`push: [main]` は維持。concurrency group は ref 単位のまま。
+2. Pack template `docs/templates/github/common/pack-harness-check.yml` と setup builtin を
+   source templateとともに同一契約へ更新し、4 artifactをdetector入力にする。
+3. `github-ci-policy` detector: 「pull_request trigger が base 限定されている」状態を
+   violation としてfail-closeし、不正trigger型、workflow-level path filter、不完全/未知activity
+   types、push main限定欠落、workflow構造異常、権限誤指定、本文によるprofile偽装も拒否する。
+4. add-impl ペア: `PLAN-REVERSE-434-universal-pr-trigger-backfill` を併起票し、
+   requirements §7.5-7.6 / L6-82 への backfill を R0-R4 で閉じる。
+5. 確定済み PLAN-L7-197 / L7-221 に claim 矛盾があれば supersedes 宣言で訂正 (上書き禁止)。
+
+## AC
+
+- [x] 非 main base PR を除外しない trigger が U-CIPOL-001 の構文 oracle で固定される。
+- [x] main 限定 trigger への mutation が U-CIPOL-002 で red になる。
+- [x] `branches-ignore` / trigger 欠落が U-CIPOL-003 で red になる。
+- [x] 不正`pull_request`型とpush main限定欠落が U-CIPOL-004/005 で red になる。
+- [x] source template / setup builtinをprofile重複で捨てないことを U-CIPOL-006 で固定する。
+- [x] workflow-level path filterと不完全activity typesを U-CIPOL-007/008 でredにする。
+- [x] 未知・非文字列・重複activity typesを U-CIPOL-009 でredにする。
+- [x] workflow構造異常を U-CIPOL-010 で例外化せずredにする。
+- [x] 権限誤指定と本文profile偽装を U-CIPOL-011/012 でredにする。
+- [x] source workflow / source template / Pack template / setup builtinがbase無限定triggerへ同期される。
+- [x] job / required context 名 `harness-check` は不変である。
