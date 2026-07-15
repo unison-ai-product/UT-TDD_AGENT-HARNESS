@@ -22,6 +22,10 @@ review_evidence: []
 generates:
   - artifact_path: docs/plans/PLAN-L7-435-drive-plan-admission-impl.md
     artifact_type: markdown_doc
+  - artifact_path: src/plan-admission/policy.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/diff-fence.ts
+    artifact_type: source_module
 dependencies:
   parent: docs/plans/PLAN-L6-83-drive-plan-admission-contract.md
   requires: []

@@ -14,45 +14,38 @@ import { planIdTaxonomyViolations } from "../src/plan/lint";
  *   PLAN-M-* は凍結 legacy 2 件のみ (新規追加は violation)。
  */
 describe("planIdTaxonomyViolations", () => {
-  const ok = (id: string) => expect(planIdTaxonomyViolations(id)).toEqual([]);
-  const ng = (id: string) => {
-    const v = planIdTaxonomyViolations(id);
-    expect(v.length).toBeGreaterThan(0);
-    expect(v[0].reason).toBe("plan_id_taxonomy");
-  };
+  const validPlanIds = [
+    "PLAN-L0-01-vmodel-harness-upgrade-charter",
+    "PLAN-L1-08-design-harness-internalization",
+    "PLAN-L14-01-engine-swap-operational-value-verification",
+    "PLAN-L2-00-master",
+    "PLAN-REVERSE-434-universal-pr-trigger-backfill",
+    "PLAN-DISCOVERY-01-workflow-metamodel",
+    "PLAN-RECOVERY-09-hub-reference-removal",
+    "PLAN-M-00-verify-cutover",
+    "PLAN-M-01-cutover-backfill",
+  ];
 
-  it("accepts layer plans L0..L14", () => {
-    ok("PLAN-L0-01-vmodel-harness-upgrade-charter");
-    ok("PLAN-L1-08-design-harness-internalization");
-    ok("PLAN-L14-01-engine-swap-operational-value-verification");
-    ok("PLAN-L2-00-master");
+  it.each(validPlanIds)("accepts registered taxonomy: %s", (planId) => {
+    expect(planIdTaxonomyViolations(planId)).toEqual([]);
   });
 
-  it("accepts REVERSE / DISCOVERY / RECOVERY plans", () => {
-    ok("PLAN-REVERSE-434-universal-pr-trigger-backfill");
-    ok("PLAN-DISCOVERY-01-workflow-metamodel");
-    ok("PLAN-RECOVERY-09-hub-reference-removal");
-  });
+  const invalidPlanIds = [
+    "PLAN-M-02-design-harness-internalization",
+    "PLAN-M-03-anything",
+    "PLAN-X-01-something",
+    "PLAN-MASTER-01-program",
+    "PLAN-UPDATE-01-refresh",
+    "PLAN-01-legacy-style",
+    "PLAN-L15-01-beyond-vmodel",
+    "PLAN-L99-01-nope",
+    "PLAN-L6-82",
+    "PLAN-L6-82-UPPER-Case",
+  ];
 
-  it("accepts only the two frozen legacy M plans", () => {
-    ok("PLAN-M-00-verify-cutover");
-    ok("PLAN-M-01-cutover-backfill");
-    // 実事故ケース: M を master 系列として外挿した規定外起票
-    ng("PLAN-M-02-design-harness-internalization");
-    ng("PLAN-M-03-anything");
-  });
-
-  it("rejects unregistered prefixes (fail-close)", () => {
-    ng("PLAN-X-01-something");
-    ng("PLAN-MASTER-01-program");
-    ng("PLAN-UPDATE-01-refresh");
-    ng("PLAN-01-legacy-style");
-  });
-
-  it("rejects out-of-range layers and malformed slugs", () => {
-    ng("PLAN-L15-01-beyond-vmodel");
-    ng("PLAN-L99-01-nope");
-    ng("PLAN-L6-82"); // slug なし
-    ng("PLAN-L6-82-UPPER-Case"); // slug は小文字英数のみ
+  it.each(invalidPlanIds)("rejects unregistered taxonomy: %s", (planId) => {
+    const violations = planIdTaxonomyViolations(planId);
+    expect(violations.length).toBeGreaterThan(0);
+    expect(violations[0]?.reason).toBe("plan_id_taxonomy");
   });
 });

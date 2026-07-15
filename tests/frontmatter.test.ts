@@ -76,6 +76,17 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
         }),
       ).success,
     ).toBe(false);
+    expect(
+      frontmatterSchema.safeParse(
+        implBase({
+          route_signal: "redesign",
+          route_mode: "redesign",
+          github_issue_id: 12,
+          supersedes: ["PLAN-L4-99"],
+          admission_receipt: receipt,
+        }),
+      ).success,
+    ).toBe(false);
   });
 
   it("U-PADM-011: redesign receiptは設計→実装と矛盾しない資産状態を要求する", () => {
@@ -95,8 +106,17 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
         content_digest: "sha256:1111111111111111",
       },
       route: { signal: "redesign", mode: "redesign" },
-      issue: { provider: "github", issue_id: 12, episode_id: "E4-12", projection_digest: "sha256:aaaa" },
-      origin: { plan_id: "PLAN-L4-24", revision: 1, digest: "sha256:bbbb" },
+      issue: {
+        provider: "github",
+        issue_id: 12,
+        episode_id: "E4-12",
+        projection_digest: "sha256:aaaaaaaaaaaaaaaa",
+      },
+      origin: {
+        plan_id: "PLAN-L4-24",
+        revision: 1,
+        digest: "sha256:bbbbbbbbbbbbbbbb",
+      },
       transition: {
         direction: "design_to_implementation",
         implementation_disposition: "none",
@@ -112,6 +132,7 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
           route_signal: "redesign",
           route_mode: "redesign",
           github_issue_id: 12,
+          supersedes: ["PLAN-L4-24"],
           admission_receipt: receipt,
         }),
       ).success,
@@ -122,6 +143,7 @@ describe("frontmatter schema (§1.1 / §1.1.parent_design / §3.3 / §3.4)", () 
           route_signal: "redesign",
           route_mode: "redesign",
           github_issue_id: 12,
+          supersedes: ["PLAN-L4-24"],
           admission_receipt: {
             ...receipt,
             transition: { ...receipt.transition, implementation_disposition: "preserved" },

@@ -8,6 +8,7 @@ status: draft
 route_signal: drift
 route_mode: reverse
 workflow_phase: R0
+confirmed_reverse_type: design
 created: 2026-07-15
 updated: 2026-07-15
 owner: PO / Codex

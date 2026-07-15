@@ -35,6 +35,9 @@ describe("PLAN-L7-243: mode catalog derivation", () => {
     expect(
       workflowModeForPlan({ planId: "PLAN-L9-903-x", routeMode: "verify", kind: "verify" }),
     ).toBe("Verify");
+    expect(
+      workflowModeForPlan({ planId: "PLAN-L4-904-x", routeMode: "redesign", kind: "design" }),
+    ).toBe("Redesign");
   });
 
   it("legacy plans without route_mode fall back to plan_id prefix then kind", () => {

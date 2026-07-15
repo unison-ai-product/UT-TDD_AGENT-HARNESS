@@ -110,7 +110,10 @@ const admissionReceiptSchema = z
         direction: z.enum(["implementation_to_design", "design_to_implementation"]),
         implementation_disposition: z.enum(["preserved", "discarded", "none"]),
         implementation_target: z
-          .object({ target_plan_id: z.string().min(1), target_revision: z.number().int().positive() })
+          .object({
+            target_plan_id: z.string().min(1),
+            target_revision: z.number().int().positive(),
+          })
           .strict()
           .optional(),
       })
@@ -257,22 +260,74 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
   const receipt = fm.admission_receipt;
   if (receipt) {
     if (receipt.binding.plan_id !== fm.plan_id) {
-      ctx.addIssue({ code: custom, path: ["admission_receipt", "binding", "plan_id"], message: "receipt binding plan_idはfrontmatterと一致必須" });
+      ctx.addIssue({
+        code: custom,
+        path: ["admission_receipt", "binding", "plan_id"],
+        message: "receipt binding plan_idはfrontmatterと一致必須",
+      });
     }
     if (fm.route_signal !== receipt.route.signal || fm.route_mode !== receipt.route.mode) {
-      ctx.addIssue({ code: custom, path: ["admission_receipt", "route"], message: "receipt route はtop-level route宣言と一致必須" });
+      ctx.addIssue({
+        code: custom,
+        path: ["admission_receipt", "route"],
+        message: "receipt route はtop-level route宣言と一致必須",
+      });
+    }
+    const declaredSupersedes = fm.supersedes ?? [];
+    const receiptedSupersedes = receipt.supersedes ?? [];
+    if (
+      declaredSupersedes.length !== receiptedSupersedes.length ||
+      declaredSupersedes.some((planId, index) => planId !== receiptedSupersedes[index])
+    ) {
+      ctx.addIssue({
+        code: custom,
+        path: ["supersedes"],
+        message: "top-level supersedesはreceiptと完全一致必須",
+      });
     }
     if (receipt.issue && fm.github_issue_id !== receipt.issue.issue_id) {
-      ctx.addIssue({ code: custom, path: ["github_issue_id"], message: "github_issue_id はreceipt Issueと一致必須" });
+      ctx.addIssue({
+        code: custom,
+        path: ["github_issue_id"],
+        message: "github_issue_id はreceipt Issueと一致必須",
+      });
     }
     const isForward = receipt.route.mode === "forward";
-    if (!isForward && (!receipt.issue || !receipt.origin || !receipt.reentry || !receipt.escape_reason)) {
-      ctx.addIssue({ code: custom, path: ["admission_receipt"], message: "Forward外receiptはIssue/origin/reentry/escape_reason必須" });
+    if (
+      isForward &&
+      (receipt.issue ||
+        receipt.origin ||
+        receipt.reentry ||
+        receipt.escape_reason ||
+        receipt.transition)
+    ) {
+      ctx.addIssue({
+        code: custom,
+        path: ["admission_receipt"],
+        message: "通常Forward receiptにescape専用項目は許可しない",
+      });
+    }
+    if (
+      !isForward &&
+      (!receipt.issue || !receipt.origin || !receipt.reentry || !receipt.escape_reason)
+    ) {
+      ctx.addIssue({
+        code: custom,
+        path: ["admission_receipt"],
+        message: "Forward外receiptはIssue/origin/reentry/escape_reason必須",
+      });
     }
     if (receipt.route.mode === "reverse") {
       const transition = receipt.transition;
-      if (transition?.direction !== "implementation_to_design" || transition.implementation_disposition !== "preserved") {
-        ctx.addIssue({ code: custom, path: ["admission_receipt", "transition"], message: "reverseは実装→設計かつpreserved必須" });
+      if (
+        transition?.direction !== "implementation_to_design" ||
+        transition.implementation_disposition !== "preserved"
+      ) {
+        ctx.addIssue({
+          code: custom,
+          path: ["admission_receipt", "transition"],
+          message: "reverseは実装→設計かつpreserved必須",
+        });
       }
     }
     if (receipt.route.mode === "redesign") {
@@ -283,7 +338,11 @@ export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => 
         !transition.implementation_target ||
         receipt.supersedes?.length !== 1
       ) {
-        ctx.addIssue({ code: custom, path: ["admission_receipt"], message: "redesignは設計→実装、discarded/none、target、supersedes一件必須" });
+        ctx.addIssue({
+          code: custom,
+          path: ["admission_receipt"],
+          message: "redesignは設計→実装、discarded/none、target、supersedes一件必須",
+        });
       }
     }
   }
