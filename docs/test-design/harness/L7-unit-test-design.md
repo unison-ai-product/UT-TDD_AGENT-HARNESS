@@ -1404,3 +1404,29 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 
 実行対応: `tests/git-workspace-fingerprint.test.ts`、`tests/doctor-test-repository-isolation.test.ts`、
 `tests/persistent-db-cleanup-contract.test.ts`、`tests/vitest-snapshot-runner.test.ts`、`tests/global-setup.ts`。
+
+## PLAN-L7-434 全PR共通harness-check trigger oracle (PLAN-REVERSE-434 backfill、2026-07-14)
+
+対象 = `.github/workflows/harness-check.yml` / `docs/templates/github/common/{harness-check,pack-harness-check}.yml` /
+`src/setup/templates.ts` / `src/lint/github-ci-policy.ts`。実テスト =
+`tests/github-ci-policy.test.ts` と `tests/setup.test.ts`。
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `U-CIPOL-001` | universal PR trigger正常系 | source / Packの`pull_request`にbase filterなし、`push.branches=[main]` | `analyzeGithubCiPolicy().ok=true`。非main baseを除外する構文0、job名`harness-check`不変 |
+| `U-CIPOL-002` | stacked PR退行 | `pull_request.branches=[main]` | `main_limited_pr_trigger`、exit 1相当 |
+| `U-CIPOL-003` |別表記のfail-close | `branches-ignore=[work/**]` と `pull_request`欠落を各mutation | 前者=`main_limited_pr_trigger`、後者=`missing_trigger` |
+| `U-CIPOL-004` | trigger型fail-close | `pull_request`へ`false` / string / array / numberを各mutation | 全件`malformed_trigger_shape`。bare/nullまたはbase filterなしmapping以外を拒否 |
+| `U-CIPOL-005` | push main限定の構造検査 | push欠落+無関係fieldの`main`、別branch、`branches-ignore` | 欠落=`missing_trigger`、不正形=`invalid_push_main_trigger` |
+| `U-CIPOL-006` | 4 artifact入力 | source templateとsetup builtinを個別mutation | profile重複でdropせず、変異したartifact path自身のfinding |
+| `U-CIPOL-007` | workflow path filter禁止 | PR=`paths`、push=`paths-ignore`を各mutation | 両方`filtered_trigger`。Required checkをskip/pending化する経路0 |
+| `U-CIPOL-008` | activity types完全性 | `types=[opened]` / `types=[opened,synchronize,reopened,ready_for_review]` | 前者=`incomplete_pull_request_types`、後者Green。bare triggerもGreen |
+| `U-CIPOL-009` | activity vocabulary | 未知`banana` / 重複`opened` / 非文字列を各mutation | 未知・重複=`unsupported_pull_request_type`、非文字列=`malformed_trigger_shape` |
+| `U-CIPOL-010` | workflow構造のtotal fail-close | YAML root/on/job/stepsの不正型、空step、空concurrency、mainもcancelする式、role/profile不整合を各mutation | throwせず`malformed_workflow_shape` / `missing_concurrency` / `invalid_workflow_profile`、`ok=false`。concurrencyは§6.9.3のcanonical式と完全一致 |
+| `U-CIPOL-011` | 権限の完全一致 | 4 artifactそれぞれを`issues: read`へ変異。`contents: write` / scalar `read-all` / `issues: write`追加 | `permissions: {contents: read}`完全一致以外は`missing_permission` |
+| `U-CIPOL-012` | runtime profile独立性 | source profileへPack本文を置換、package artifact profileをsource/packへ変異 | 本文markerで再分類せずsource policyの`missing_step`。`package.json.utTdd.artifactProfile`を正本とする |
+| `U-SETUP-004b2` | setup builtin同期 | built-in `common/harness-check.yml` | `pull_request`あり、直下の`branches` / `branches-ignore`なし。既存guard強度も維持 |
+
+`pull_request`を単に含む文字列検査だけではGreenにしない。YAML構造でbase filter不在を検査し、
+source workflow / source template / Pack template / setup builtinのどれか1 artifactだけの更新を完了扱いにしない。
+検査対象本文をprofile選択に再利用せず、構造異常は例外でdoctor wrapperへ逃がさずanalyzer自身がviolation化する。

@@ -377,6 +377,8 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(workflow).toContain("bun run test");
     expect(workflow).toContain("audit quality --include-tests");
     expect(workflow).toContain("ut-tdd.mjs doctor --setup-smoke");
+    expect(workflow).toMatch(/\n {2}pull_request:\n/);
+    expect(workflow).not.toMatch(/pull_request:\n\s+(?:branches|branches-ignore):/);
   });
 
   it("U-SETUP-004c: built-in adapter templates ship enforced portable guard hooks", () => {
@@ -855,7 +857,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
           },
         }),
       ),
-    ) as { scripts: Record<string, string> };
+    ) as { scripts: Record<string, string>; utTdd: { artifactProfile: string } };
 
     expect(transformed.scripts["test:pack"]).toContain("tests/distribution-acceptance.test.ts");
     expect(transformed.scripts["test:pack"]).toContain("tests/readability.test.ts");
@@ -863,6 +865,7 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(transformed.scripts["test:pack"]).toContain("scripts/run-vitest-snapshot.ts");
     expect(transformed.scripts["test:source"]).toBe("vitest run");
     expect(transformed.scripts.typecheck).toBe("tsc --noEmit");
+    expect(transformed.utTdd.artifactProfile).toBe("pack");
   });
 
   it("U-SETUP-011e: clean Pack workflow reuses the package test:pack script", () => {

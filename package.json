@@ -9,6 +9,9 @@
   "license": "MIT",
   "type": "module",
   "private": true,
+  "utTdd": {
+    "artifactProfile": "source"
+  },
   "bin": {
     "ut-tdd": "./src/cli.ts"
   },
