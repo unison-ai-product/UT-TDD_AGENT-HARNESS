@@ -50,7 +50,7 @@ mode / layer / DB 正本は作らない。
 ## 設計正本 (design source)
 
 設計パッケージ `ut-tdd-design-harness-internalization-v0_2.zip`
-(v0.2-r22、sha256:9bf60a607b21d4cffc3ec2a730b18d04eb17abacbfd2abded6477c5f76990e20、
+(v0.2-r23、sha256:b1c142b4aa7b99f5ac78d50c3f7e873ac108154df369fee38a47790f042b10ce、
 リポジトリ root、未追跡の提案材料)。00-17 章 + ADR 草案 + schemas 8+3 本 +
 skill-pack + templates/patterns + checklists。docs/ への正式材料化は D9 決定後の
 Slice 1 で行う (それまで docs/ に proposal を展開しない — catalog 外 md の
