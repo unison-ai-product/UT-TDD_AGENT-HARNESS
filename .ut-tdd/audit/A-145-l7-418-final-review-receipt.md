@@ -30,3 +30,18 @@ testsのexit 0によって解除した。未反証attackは0。
 
 非ブロッキング所見として、secret scanのallow marker粒度とHMAC対称鍵の脅威モデルを
 後続security debtで追跡する。
+
+## main同期後の最終delta収束 (2026-07-15)
+
+- final implementation delta anchor: `85f78e6cfb97ac2517364795bd764d69a590d97c`
+- final PLAN correction anchor: `7771ee76276b0acb01c2b282fcb14e02aa59c008`
+- detached verification: evidence policy / coding rules / improvement backlog、30/30、exit 0
+  - digest: `sha256:a919420fdbc3e034c56f69e04bc4d55f1c474f86926b16a16ec2843e45bd4ca5`
+- Claude Fable blind review: claim-blind / spec-blindとも未反証FLAG 0
+  - HMAC署名frame、main merge互換、IMP-167 `FR / policy`へ各3攻撃以上
+  - reviewer側test不可のため初期判定PASS-WEAK。上記detached testと最終CIで条件解除しPASS
+  - digest: `sha256:1e6eff7b61ce00f90aa2e982c501a3350e272fb6a2d36f60a7ed5163af181448`
+- GitHub Actions: run [29387855602](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS/actions/runs/29387855602)
+  - `7771ee76276b0acb01c2b282fcb14e02aa59c008`、全回帰 / lint / quality / doctor success
+  - completed_at: `2026-07-15T13:04:36+09:00`
+  - digest: `sha256:87a013f8462172f1a8acdf4bb886b07b6e3e91933d3eb8a2fab0ec656538e161`

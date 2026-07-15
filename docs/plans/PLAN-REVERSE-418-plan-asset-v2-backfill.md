@@ -6,13 +6,13 @@ layer: cross
 workflow_phase: R4
 confirmed_reverse_type: design
 drive: db
-status: draft
+status: confirmed
 route_signal: drift
 route_mode: reverse
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
 created: 2026-07-10
-updated: 2026-07-14
+updated: 2026-07-15
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md
 agent_slots:
