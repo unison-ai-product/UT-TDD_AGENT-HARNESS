@@ -50,8 +50,11 @@ generates:
   - artifact_path: src/plan-asset/domain/evidence-claims.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/domain/evidence-canonical.ts
+    artifact_type: source_module
   - artifact_path: src/plan-asset/ports/evidence-attestation.ts
+    artifact_type: source_module
   - artifact_path: src/plan-asset/adapters/hmac-evidence-attestation-authority.ts
+    artifact_type: source_module
   - artifact_path: src/plan-asset/kernel/hmac-evidence-attestation-verifier.ts
     artifact_type: source_module
   - artifact_path: src/plan-asset/domain/redacted-command-args.ts
