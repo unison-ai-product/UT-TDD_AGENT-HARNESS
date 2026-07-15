@@ -1174,38 +1174,65 @@ PR 内の全 commit が Conventional Commits 形式に従う (`harness-check` �
 - [ ] 全 commit が Conventional Commits 形式 (commitlint subjob で検証)
 - [ ] Phase 0-A → 0-B 2-stage で CODEOWNERS bootstrap
 
-## 6.8 PLAN git ライフサイクル (Issue 起点スパイン、TL review 2026-06-02)
+## 6.8 PLAN git ライフサイクル (Forward / Forward escape 二経路、PO rule 2026-07-14)
 
 > **対象レイヤー**: 本節は **harness の利用者チームに課す製品仕様** (git topology) であり、harness 開発者 (solo / main 直) の手順ではない。Phase 0-A (solo) では本節の branch/PR 強制は緩和され、Phase 0-B (team) で有効化する (§6.5)。
 
-### 6.8.1 Issue = 問題起点スパイン
+### 6.8.1 Issue = Forward escape 境界、Execution Ledger = 実行正本
 
-UT-TDD の全作業は **問題 / ギャップ起点**である。Forward 自体も「発注元 Issue (要件 = 埋めるべきギャップ)」起点 (構想書 §2.5 経路1 entry)。よって **GitHub Issue を作業追跡のスパイン (背骨)** とし、次の一本道で管理する:
+通常 Forward は PLAN Asset / revision と Execution Ledger を正本として
+`plan → pair-freeze → implement → trace-freeze → review → accept` を進む。この正常経路に
+GitHub Issue を必須化してはならない。発注元 Issue が既にある場合は参照してよいが、Issue の有無を
+Forward の状態遷移条件にしない。
+
+作業が通常 Forward を離れる時だけ、**GitHub Issue を typed Forward escape の外部境界として必須化**する。
+対象は11駆動モデル (Discovery / Scrum / Reverse / Recovery / Incident / Refactor / Retrofit /
+Add-feature / Research / design-bottomup / version-up) への退出と、block / reject / reopen / supersede /
+preemptive work / time-bounded defer である。後者はescape typeとして11駆動モデルの一つへ明示routeする。
+Execution Ledger が正本であり、GitHub はその冪等 projection とする。
+旧仕様「全作業を Issue 起点とする」は本節で supersede する。
+
+通常 Forward:
 
 ```
-問題/signal 検出 or 改善 backlog エントリ
-  → Issue 起票 (問題・signal の記録)
-  → signal→mode routing (§7.8.1) で応答 mode 決定
-  → PLAN 起票 (Issue を解決する V-model 作業単位)
+PLAN Asset / revision 起票
   → branch (§6.1 kind↔prefix で隔離)
   → commit (§6.8.3 単位)
   → PR + CI (§6.9 単位で検証)
-  → merge + Issue close
+  → cross-review + merge + accept
 ```
 
-- **起点は「実観測 signal」と「計画的改善 backlog エントリ (§1.10.G.12 improvement-backlog)」の双方**。Refactor / Retrofit のような能動的負債対処も backlog 起点 Issue として合法 (signal が無くても backlog エントリがあれば起票可)。
-- off-Forward (Reverse / Recovery / Incident / Discovery / Scrum / Refactor / Retrofit / Add-feature) は全て「問題への応答」。右腕テスト失敗の差し戻し (§3.1.5) も問題 = Issue 化する。
-- 起票主体は **Phase 0 では手動 default** (harness は `next_action` に起票手順を提示するのみ)。半自動 (issue template URL suggest) / 自動 (webhook) は将来 PLAN で詳細設計。
+Forward escape:
 
-### 6.8.2 Issue / PLAN / branch の粒度 (1:1:1 原則)
+```
+escape signal 観測
+  → Execution Ledger episode E0-E2 append
+  → drive_model を明示選択して Issue を冪等投影
+  → 駆動モデル内 plan / test / verify
+  → re-entry certificate + Forward 中間テスト
+  → Forward 再合流後テスト
+  → draft PR → cross-review → merge gate → main merge
+  → Issue close projection + 設計学習 telemetry
+```
+
+- escape Issue は `drive_model`, `escape_type`, origin PLAN Asset / revision / L / Forward state,
+  escape reason, re-entry target/policy, recurrence identity を必須にする。未知値、originとの不整合、driveと
+  Issue/PLAN/branch kindの不整合はfail-closeする。
+- GitHub障害時もepisodeを失わない。outboxをretryし、同じidempotency keyからIssueを重複作成しない。
+- escape頻度をL/type/cause/drive_model別に集計し、反復原因を上流のForward仮定・設計判断・evidence policyへ戻す。
+
+### 6.8.2 Issue / PLAN / branch の粒度
 
 | 関係 | 規約 |
 |------|------|
-| 基本 | **1 Issue = 1 PLAN (または 1 Master hub) = 1 branch** |
+| 通常 Forward | **1 PLAN Asset revision = 1 schedule branch**。Issue は任意参照であり起票を強制しない |
+| Forward escape | **1 escape episode = 1 Issue = 1駆動モデルentry branch**。複数PLANを束ねる場合はepisode hubを正本にする |
 | sub-doc 分割時 (L1-L6) | 子 sub-doc PLAN は **Master hub branch から派生**し、子 PR は Master hub PR にまとめて (squash) merge。子ごとに別 Issue/別 branch にしない (並行 merge 衝突回避) |
 | 既存バグの顕在化 | **別 Issue + 別 PR** で扱い、進行中 PR に混ぜない (運用ルール書 §2 踏襲) |
 
-PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended) を持たせ、`branch-kind-check` が「feature/* / hotfix/* branch の PLAN に `github_issue_id` 設定」を warn、Issue close 漏れ (merge 済なのに Issue open) を機械検知する (§8.6 失敗変換ループの一部)。PR body は `Closes #<github_issue_id>` を必須フィールドとする。
+PLAN frontmatter の `github_issue_id` は通常 Forward では optional、Forward escape では required とする。
+escape episodeを持つPR bodyだけ `Closes #<github_issue_id>` を必須にし、通常Forwardへ空Issueを捏造しない。
+`drive_model` とorigin/re-entry bindingはfrontmatter単体で二重正本化せず、Execution Ledger episode IDから参照する。
 
 ### 6.8.3 status × kind/mode × freeze → git アクション対応
 
@@ -1218,7 +1245,39 @@ PLAN frontmatter に **`github_issue_id`** (optional、Phase 0-B で recommended
 | L7 trace freeze (G7) | 実装 commit → **impl PR を ready-for-review に昇格** (4 artifact + 8 edge + coverage が揃う点) |
 | G7 通過 (harness-check green) | **feature/* → main merge** (impl の merge gate = G7) |
 | L12 (G12) | deploy gate、po サインオフで本番反映 |
-| PLAN completed / Forward 合流 | Issue を `Closes #NN`。off-Forward は fullback / routing 完了で close |
+| PLAN completed / Forward 合流 | escape episodeを持つ場合だけIssueを `Closes #NN`。通常ForwardはIssueなしで完了可。off-Forwardはfullback / routing完了でclose |
+
+Forward escapeのmergeは、re-entry certificate、駆動モデル内検証、Forward中間テスト、再合流後テスト、
+別provider/modelのcross-review PASS、必須CI、最新HEAD一致を全て満たすまで禁止する。
+
+### 6.8.3A Execution Ledger event lifecycle
+
+Forward escapeは次のappend-only event系列を持つ。番号を飛ばす、順序を戻す、GitHub stateから
+正本eventを捏造することを禁止する。各eventは`episode_id`, `sequence`, `occurred_at`, `actor`,
+`payload_digest`, `previous_event_digest`を持つ。
+
+| event | 意味 | 必須証拠 |
+|---|---|---|
+| E0 | escape observed | origin asset/revision/L/state、reason、recurrence identity |
+| E1 | escape classified | escape_type、assumption/decision under test |
+| E2 | drive selected | drive_model、選択根拠、human override evidence |
+| E3 | Issue projection requested | idempotency key、projection payload digest |
+| E4 | Issue projected | repository、issue number/node id、remote version |
+| E5 | drive plan frozen | PLAN revision、V-pair obligations、schedule branch |
+| E6 | drive verification green | drive固有test profileとgreen evidence |
+| E7 | re-entry proposed | target Forward state、re-entry policy |
+| E8 | re-entry certificate issued | origin/target binding、独立検証digest |
+| E9 | Forward intermediate test green | escapeから合流点までの中間test evidence |
+| E10 | Forward re-entered | accepted PLAN revision / state transition |
+| E11 | post-reentry test green | 合流後Forward test evidence |
+| E12 | draft PR projected | PR number、head/base、exact head SHA |
+| E13 | cross-review accepted | author/reviewer別provider、verdict、review digest |
+| E14 | merge authorized / merged | required CI、HEAD一致、accept、merge commit |
+| E15 | episode closed / learned | Issue close、outcome、L/type/cause集計、upstream action |
+
+E3/E4とE12/E14はoutbox/inboxで冪等にする。remote webhookはinboxへ保存してから既存episodeへ照合し、
+未知episode・署名不正・sequence逆行・payload digest不一致をfindingとして隔離する。GitHubはExecution
+Ledgerを直接上書きせず、remote observation eventだけを追加できる。
 
 ### 6.8.4 右腕 (L8-L14) CI 失敗時の差し戻しスパイン (TL Critical fix)
 

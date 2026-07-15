@@ -246,3 +246,23 @@ AI が生成する TypeScript core は、後でリファクタする前提では
 - **observability 系値オブジェクト候補** (business §10.4、Phase A): `invocation_log` / `detector_result` / `gate_evidence` / `code_catalog` / `command_catalog` の値オブジェクト/state schema を L5 physical-data で確定 (本 doc では entity 追加なし、候補として carry)
 - **SubDoc enum 実装** (IMP-026): requirements §1.10.G.1 の VALID_SUB_DOCS は `src/schema` の zod enum と frontmatter superRefine へ実装済み
 - **内部資産 (roster/skill) の back-fill 解消** (A-90、L9 ST-ASSET-04 対応): roster/skill は in-memory scan-on-demand で**永続 state なし** (§8、ADR-004) のため data 集約・物理 state schema に**追加なし**と確定。各 subcommand / capability resolver / recommender / drift 判定の**関数仕様**は L6 機能設計で確定済み (`function-spec.md` / `fr-unit-coverage.md` の FR-L1-12, FR-L1-33, FR-L1-34, FR-L1-46〜49)。L5 physical-data で roster/skill の物理 state 追加は不要 (fs 正本)
+
+## §10 Execution Ledger aggregate
+
+`ExecutionEpisode`はForward escape一件の集約ルートであり、`episode_id`、origin PLAN Asset/revision/L/state、
+escape type/reason/recurrence identity、選択drive、re-entry target、last sequence/event digestを持つ。
+履歴正本はE0-E15 event、current stateはそのreduction projectionである。
+
+`DriveModel`はL4 function §3.1の駆動モデル11値
+`discovery | scrum | reverse | recovery | incident | refactor | retrofit | add-feature | research | design-bottomup | version-up`
+をcanonical enumとする。PLAN `route_mode`は同じ値を使い、`drive: be|fe|fullstack|db|agent|normal`は
+実装領域を表す別型として混入を拒否する。`blocked | rejected | reopened | superseded | preemptive | defer`は
+escape reason/typeであり、drive選択前に11値のいずれかへrouteする。GitHub labelやbranch prefixを第二enumにせず、
+Issue/PR projection DTOだけがcanonical drive valueを表示する。human overrideは元選択を更新せずoverride eventをappendする。
+
+`ReentryCertificate`はorigin revision、target state、drive verification evidence、intermediate test evidence、
+policy revision、issuer/reviewer、certificate digestを不可分に束縛する。別episode・別revision・期限切れ・superseded
+certificateの流用を拒否する。
+
+`GithubRemoteRef`はprovider/repository/node id/number/remote versionを保持するprojection identityであり、
+domain identityではない。episodeとの対応はidempotency keyで一意にする。
