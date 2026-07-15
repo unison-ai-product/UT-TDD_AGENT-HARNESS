@@ -48,10 +48,8 @@ export class SystemGitCommandPort implements GitCommandPort {
         stdio: ["ignore", "pipe", "pipe"],
       });
     } catch (error) {
-      throw new GitDiffAdapterError(
-        "git-command-failed",
-        `git command failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new GitDiffAdapterError("git-command-failed", `git command failed: ${detail}`);
     }
   }
 }
@@ -212,19 +210,21 @@ function readBlobs(git: GitCommandPort, commit: string, paths: ReadonlySet<strin
     let bytes: Uint8Array;
     try {
       bytes = git.run(["show", `${commit}:${path}`]);
-    } catch {
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
       throw new GitDiffAdapterError(
         "git-blob-missing",
-        `required git blob is missing: ${path}`,
+        `required git blob is missing: ${path} (${detail})`,
         path,
       );
     }
     try {
       return { path, content: decodeUtf8(bytes) };
-    } catch {
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
       throw new GitDiffAdapterError(
         "git-blob-invalid-utf8",
-        `git blob is not valid UTF-8: ${path}`,
+        `git blob is not valid UTF-8: ${path} (${detail})`,
         path,
       );
     }
@@ -241,8 +241,12 @@ function splitNul(bytes: Uint8Array): string[] {
     if (bytes[index] !== 0) continue;
     try {
       fields.push(decodeUtf8(bytes.subarray(start, index)));
-    } catch {
-      throw new GitDiffAdapterError("git-diff-malformed", "diff path/status is not valid UTF-8");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new GitDiffAdapterError(
+        "git-diff-malformed",
+        `diff path/status is not valid UTF-8 (${detail})`,
+      );
     }
     start = index + 1;
   }

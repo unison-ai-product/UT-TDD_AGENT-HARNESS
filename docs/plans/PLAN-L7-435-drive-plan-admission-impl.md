@@ -26,6 +26,18 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/diff-fence.ts
     artifact_type: source_module
+  - artifact_path: src/plan-admission/admission-check.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/git-diff-adapter.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/tracked-receipt-projection.ts
+    artifact_type: source_module
+  - artifact_path: src/cli/plan-admission.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/plan-draft-service.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/plan-draft-ledger.ts
+    artifact_type: source_module
 dependencies:
   parent: docs/plans/PLAN-L6-83-drive-plan-admission-contract.md
   requires: []
