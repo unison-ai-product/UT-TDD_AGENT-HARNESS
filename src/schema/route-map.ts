@@ -25,6 +25,13 @@ export const ROUTE_SIGNAL_MAP: RouteSignalEntry[] = [
     requiresApproval: false,
   },
   {
+    tokens: ["redesign", "design_correction", "design_replacement", "design_revision"],
+    mode: "redesign",
+    command: ROUTE_COMMAND_TASK_CLASSIFY,
+    preflight: true,
+    requiresApproval: true,
+  },
+  {
     tokens: ["agent_runaway", "runaway", "context_exhaustion", "forced_stop", "regression_dev"],
     mode: "recovery",
     command: ROUTE_COMMAND_DOCTOR,

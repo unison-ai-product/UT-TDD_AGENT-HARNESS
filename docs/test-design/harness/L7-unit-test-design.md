@@ -1424,3 +1424,29 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 `pull_request`を単に含む文字列検査だけではGreenにしない。YAML構造でbase filter不在を検査し、
 source workflow / source template / Pack template / setup builtinのどれか1 artifactだけの更新を完了扱いにしない。
 検査対象本文をprofile選択に再利用せず、構造異常は例外でdoctor wrapperへ逃がさずanalyzer自身がviolation化する。
+
+## PLAN-L7-435 駆動モデル準拠PLAN Admission oracle (2026-07-15)
+
+対象 = `PlanAdmissionPolicy` / `ut-tdd plan draft` / admission receipt / PLAN tamper fence。
+候補oracleはL7実装と同時に `U-PADM-*` へ昇格し、tests内citationを必須とする。
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `U-PADM-001` | 通常Forward | 正規signalとForward tuple | Issueなしでpermit |
+| `U-PADM-002` | 未知/曖昧signal | route候補0件または複数同順位 | Forward fallbackなしでdeny |
+| `U-PADM-003` | 許可tuple | kind/layer/phase/branchを各1変異 | exact tuple外はrule ID付きdeny |
+| `U-PADM-004` | escape必須束縛 | Issue/drive/origin/reentryを各1件欠落 | それぞれdeny、番号だけのIssueを証拠にしない |
+| `U-PADM-005` | 回避耐性 | archivedによる新規起票 | statusで新規authoringを免除しない |
+| `U-PADM-006` | redesign再合流 | 任意の起点証拠 + `design_to_implementation` + supersede対象 + Forward合流先 + 後続実装 | 設計先行の差替えだけpermit |
+| `U-PADM-007` | 遷移方向の分岐 | redesignへ`implementation_to_design`を指定 | deny。実装から設計への引戻しはreverseだけ |
+| `U-PADM-008` | reverse追従 | `implementation_to_design` + 実装origin + Forward合流先 | 実装から設計への追従だけpermit |
+| `U-PADM-009` | 方向と資産状態の整合 | redesignへ`preserved`、reverseへ`none` | 方向は主軸、矛盾する資産状態はdeny |
+| `CANDIDATE-PADM-008` | 工程表 | row欠落/stale/target不一致 | reservation前にdeny |
+| `CANDIDATE-PADM-009` | authoring Saga | reserve/append/write/rename/projectionの各fault、強制終了 | 通常失敗は全件0、強制終了は未完journalをfail-closeしrecoveryまで非正本 |
+| `CANDIDATE-PADM-010` | replay/collision | command再送とpayload差替え、並行ordinal | 同payloadは同certificate、差替え/競合はdeny |
+| `CANDIDATE-PADM-011` | 改ざん | receipt後のfrontmatter/body/rename/direct追加 | hook/pre-push/CIがdigest不一致またはreceipt欠落でdeny |
+| `CANDIDATE-PADM-012` | GitHub ingress | signature不正/enum不正/stale delivery | quarantine、PLAN admission 0 |
+
+property testは全signal×mode×tuple×status×createdの直積で、canonical policyがpermitした時だけ
+書込み可能であることを確認する。mutation testはunknown→Forward fallback、archived/date免除、
+tuple allowlist default、Issue requirement削除、schedule fallback、receipt digest比較除去を全てkillする。

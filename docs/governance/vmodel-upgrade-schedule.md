@@ -123,6 +123,9 @@ DB は正本ではない。本書、PLAN、設計 doc、test-design が authorin
 | PLAN-L14-01-engine-swap-operational-value-verification | L14 | verification | L1 | PLAN-L13-01-engine-swap-post-deploy-verification | U21g/G14: operational/value feedback verification | yellow | draft | G13 pass、operational KPI/PO decision待ち |
 | PLAN-L4-29-security-design-substance | L4 | security | L9 | PLAN-L4-16-security-design-slot | U22a: A-187 §3 のsecurity実体化 (脅威モデル/供給網/鍵/監査ログ + not_applicable明文化) を起票 | yellow | draft | 脅威モデル節、供給網/鍵/監査ログ設計、na判断の catalog 反映待ち |
 | PLAN-L6-78-coding-structure-rules-contract | L6 | function-spec | L7 | PLAN-L4-21-domain-vo-coding-constraints | U22b: ZIP-DOC-095 構造規約の analyzer 契約を起票 (A-187 §5) | yellow | draft | rule 語彙の排他分類、analyzer 契約 freeze、L7 add-impl 後続起票待ち |
+| PLAN-L6-83-drive-plan-admission-contract | L6 | function-spec | L7 | PLAN-L0-01-vmodel-harness-upgrade-charter | U23a: 駆動モデル準拠PLAN admission、許可tuple、Forward/escape Issue policy | yellow | draft | L7 Red / cross-record receipt / hook・pre-push・CI fence待ち |
+| PLAN-L7-435-drive-plan-admission-impl | L7 | implementation | L6 | PLAN-L6-83-drive-plan-admission-contract | U23b: Admission policy / plan draft / tamper fence 実装 | yellow | draft | TDD Red、REVERSE-435待ち |
+| PLAN-REVERSE-435-drive-plan-admission-backfill | cross | function-spec | L7 | PLAN-L7-435-drive-plan-admission-impl | U23b-R: Admission実装観測backfill | yellow | draft | L7-435観測待ち |
 
 ## 2. 解釈規則
 

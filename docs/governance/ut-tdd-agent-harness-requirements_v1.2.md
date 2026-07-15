@@ -1174,13 +1174,16 @@ PR 内の全 commit が Conventional Commits 形式に従う (`harness-check` �
 - [ ] 全 commit が Conventional Commits 形式 (commitlint subjob で検証)
 - [ ] Phase 0-A → 0-B 2-stage で CODEOWNERS bootstrap
 
-## 6.8 PLAN git ライフサイクル (Issue 起点スパイン、TL review 2026-06-02)
+## 6.8 PLAN git ライフサイクル (通常Forward / Forward escape二経路、PO rule 2026-07-15)
 
 > **対象レイヤー**: 本節は **harness の利用者チームに課す製品仕様** (git topology) であり、harness 開発者 (solo / main 直) の手順ではない。Phase 0-A (solo) では本節の branch/PR 強制は緩和され、Phase 0-B (team) で有効化する (§6.5)。
 
 ### 6.8.1 Issue = 問題起点スパイン
 
-UT-TDD の全作業は **問題 / ギャップ起点**である。Forward 自体も「発注元 Issue (要件 = 埋めるべきギャップ)」起点 (構想書 §2.5 経路1 entry)。よって **GitHub Issue を作業追跡のスパイン (背骨)** とし、次の一本道で管理する:
+通常ForwardはPLAN Asset / Execution Ledgerを正本として進め、GitHub Issueを必須にしない。
+Forward外へ離脱する時だけ、GitHub Issueをtyped escapeの外部projectionとして必須にする。旧「全作業Issue起点」
+記述はこの二経路規約でsupersedeする。escapeではdrive model、origin、再合流先、Issue投影証跡を束縛し、
+通常Forwardへ空Issueを捏造しない。
 
 ```
 問題/signal 検出 or 改善 backlog エントリ
@@ -2023,6 +2026,12 @@ skill pack は単独の助言文書ではなく、以下の gate に接続する
 - signal が本表に無い場合は `exit 2` (not-available) + 上流委譲手順を stderr に返す (fail ではなく明示フォールバック)。
 - 複数 token が同時に一致する場合は **最長 token 一致を優先**する。例: `regression_prod` は汎用 `regression` より具体的な incident token として解決し、`forced_stop` は汎用 `stop` より具体的な recovery token として解決する。
 - **PLAN 入口 certificate**: 2026-07-01 以降に作成する non-archived PLAN は frontmatter に `route_signal` と `route_mode` を記録する。`route_signal` は本表の token/alias、`route_mode` は `ut-tdd route eval` / `routeSignalCandidates` が返す候補 mode と一致しなければならない。不一致または欠落は `plan-governance` の `route_certificate_missing` / `route_certificate_mismatch` で fail-close する。既存 PLAN は遡及 backfill せず、future authoring の入口適合を強制する。
+- **PLAN Admission**: 新規PLANは `ut-tdd plan draft` だけがauthoringする。Admissionはsignal、drive model、
+  完全な許可tuple `(kind, layer, sub_doc, workflow_phase, branch)`、工程表targetを検証し、未知/曖昧signal、
+  未登録tuple、過去日時、`archived`、`--force`では回避できない。通常ForwardはIssue不要、Forward escapeは
+  origin PLAN/revision/state、escape reason、reentry target、E4投影済みGitHub Issueを必須とする。成功時だけ
+  ID reservation、append-only admission receipt、PlanAsset revision、Markdown、projectionを原子的に作成し、
+  失敗時のfile/ledger/DB/outboxは0件とする。direct edit/rename/addはreceipt digest不一致としてhook、pre-push、CIがfail-closeする。
 
 ## 7.8.2 RecommendedCommandV1 schema 要件
 
