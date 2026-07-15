@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { stringify } from "yaml";
 import {
+  type AdmissionReceiptProjection,
   analyzePlanAdmissionDiff,
   canonicalPlanContentDigest,
-  type AdmissionReceiptProjection,
 } from "../src/plan-admission/diff-fence";
 
 const path = "docs/plans/PLAN-L7-99-admission-fixture.md";
@@ -47,13 +47,20 @@ function plan(receipt = true, body = "# Fixture\n"): string {
 }
 
 function projection(content: string): AdmissionReceiptProjection {
-  const digest = canonicalPlanContentDigest(content)!;
+  const digest = canonicalPlanContentDigest(content);
+  if (!digest) throw new Error("fixture PLAN must produce a canonical digest");
   return {
     commandId: "cmd-fixture",
     receiptId: "pa-fixture",
     receiptDigest: "sha256:9999999999999999",
     decisionDigest: "sha256:fedcba9876543210",
-    binding: { path, planId: "PLAN-L7-99-admission-fixture", assetId: "plan:l7:99", revision: 1, contentDigest: digest },
+    binding: {
+      path,
+      planId: "PLAN-L7-99-admission-fixture",
+      assetId: "plan:l7:99",
+      revision: 1,
+      contentDigest: digest,
+    },
   };
 }
 
@@ -73,14 +80,25 @@ describe("PLAN admission diff fence", () => {
     const old = plan();
     const noReceipt = plan(false);
     const missing = analyzePlanAdmissionDiff({
-      base: [], head: [{ path, content: noReceipt }], changes: [{ kind: "added", path }], receipts: { lookup: () => undefined },
+      base: [],
+      head: [{ path, content: noReceipt }],
+      changes: [{ kind: "added", path }],
+      receipts: { lookup: () => undefined },
     });
     expect(missing.findings[0]?.code).toBe("plan-admission-receipt-missing");
     const stale = analyzePlanAdmissionDiff({
-      base: [{ path, content: old }], head: [{ path, content: `${old}\nchanged` }], changes: [{ kind: "modified", path }], receipts: { lookup: () => projection(old) },
+      base: [{ path, content: old }],
+      head: [{ path, content: `${old}\nchanged` }],
+      changes: [{ kind: "modified", path }],
+      receipts: { lookup: () => projection(old) },
     });
     expect(stale.findings[0]?.code).toBe("plan-admission-receipt-stale");
-    const deleted = analyzePlanAdmissionDiff({ base: [{ path, content: old }], head: [], changes: [{ kind: "deleted", path }], receipts: { lookup: () => undefined } });
+    const deleted = analyzePlanAdmissionDiff({
+      base: [{ path, content: old }],
+      head: [],
+      changes: [{ kind: "deleted", path }],
+      receipts: { lookup: () => undefined },
+    });
     expect(deleted.findings[0]?.code).toBe("plan-admission-direct-delete");
   });
 });

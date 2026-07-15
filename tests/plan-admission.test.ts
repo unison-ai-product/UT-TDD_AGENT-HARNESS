@@ -19,16 +19,28 @@ describe("PLAN admission policy", () => {
   it("U-PADM-002: denies unknown or ambiguous signals instead of falling back to Forward", () => {
     const unknown = evaluatePlanAdmission({ ...forward, routeSignal: "unmapped-special-case" });
     expect(unknown).toMatchObject({ ok: false });
-    expect(unknown.ok ? [] : unknown.violations.map((v) => v.code)).toContain("plan-admission-unknown-signal");
+    expect(unknown.ok ? [] : unknown.violations.map((v) => v.code)).toContain(
+      "plan-admission-unknown-signal",
+    );
 
-    const ambiguous = evaluatePlanAdmission({ ...forward, routeSignal: "reverse feature_addition" });
+    const ambiguous = evaluatePlanAdmission({
+      ...forward,
+      routeSignal: "reverse feature_addition",
+    });
     expect(ambiguous).toMatchObject({ ok: false });
   });
 
   it("U-PADM-003: denies an unlisted correlated tuple and wrong branch", () => {
-    const decision = evaluatePlanAdmission({ ...forward, routeMode: "incident", kind: "recovery", layer: "L7" });
+    const decision = evaluatePlanAdmission({
+      ...forward,
+      routeMode: "incident",
+      kind: "recovery",
+      layer: "L7",
+    });
     expect(decision).toMatchObject({ ok: false });
-    expect(decision.ok ? [] : decision.violations.map((v) => v.code)).toContain("plan-admission-tuple-forbidden");
+    expect(decision.ok ? [] : decision.violations.map((v) => v.code)).toContain(
+      "plan-admission-tuple-forbidden",
+    );
   });
 
   it("U-PADM-004: requires an Issue, origin, reason, and reentry for a Forward escape", () => {
@@ -54,7 +66,9 @@ describe("PLAN admission policy", () => {
   it("U-PADM-005: does not exempt archived authoring", () => {
     const decision = evaluatePlanAdmission({ ...forward, status: "archived" });
     expect(decision.ok).toBe(false);
-    expect(decision.ok ? [] : decision.violations.map((v) => v.code)).toContain("plan-admission-archived-forbidden");
+    expect(decision.ok ? [] : decision.violations.map((v) => v.code)).toContain(
+      "plan-admission-archived-forbidden",
+    );
   });
 
   it("U-PADM-006: admits redesign only for a design-to-implementation transition", () => {
@@ -65,7 +79,12 @@ describe("PLAN admission policy", () => {
       kind: "design",
       layer: "L4",
       branch: "work/redesign-contract",
-      issue: { provider: "github", issueId: 123, episodeId: "E4-123", projectionDigest: "sha256:abc" },
+      issue: {
+        provider: "github",
+        issueId: 123,
+        episodeId: "E4-123",
+        projectionDigest: "sha256:abc",
+      },
       origin: { planId: "PLAN-L4-24", revision: 2, digest: "sha256:def" },
       transitionDirection: "design_to_implementation",
       implementationDisposition: "discarded",
@@ -87,7 +106,12 @@ describe("PLAN admission policy", () => {
       branch: "work/redesign-contract",
       transitionDirection: "implementation_to_design",
       implementationDisposition: "preserved",
-      issue: { provider: "github", issueId: 123, episodeId: "E4-123", projectionDigest: "sha256:abc" },
+      issue: {
+        provider: "github",
+        issueId: 123,
+        episodeId: "E4-123",
+        projectionDigest: "sha256:abc",
+      },
       origin: { planId: "PLAN-L4-24", revision: 2, digest: "sha256:def" },
       reentry: { targetPlanId: "PLAN-L4-24", targetRevision: 3, phase: "forward_merge" },
       implementationTarget: { targetPlanId: "PLAN-L7-435", targetRevision: 1 },
@@ -111,7 +135,12 @@ describe("PLAN admission policy", () => {
       branch: "work/reverse-design-followup",
       transitionDirection: "implementation_to_design",
       implementationDisposition: "preserved",
-      issue: { provider: "github", issueId: 124, episodeId: "E4-124", projectionDigest: "sha256:abc" },
+      issue: {
+        provider: "github",
+        issueId: 124,
+        episodeId: "E4-124",
+        projectionDigest: "sha256:abc",
+      },
       origin: { planId: "PLAN-L7-435", revision: 1, digest: "sha256:def" },
       reentry: { targetPlanId: "PLAN-L6-83", targetRevision: 2, phase: "forward_merge" },
       escapeReason: "implementation evidence must be reflected in design",
@@ -129,7 +158,12 @@ describe("PLAN admission policy", () => {
       branch: "work/redesign-contract",
       transitionDirection: "design_to_implementation",
       implementationDisposition: "preserved",
-      issue: { provider: "github", issueId: 123, episodeId: "E4-123", projectionDigest: "sha256:abc" },
+      issue: {
+        provider: "github",
+        issueId: 123,
+        episodeId: "E4-123",
+        projectionDigest: "sha256:abc",
+      },
       origin: { planId: "PLAN-L4-24", revision: 2, digest: "sha256:def" },
       reentry: { targetPlanId: "PLAN-L4-24", targetRevision: 3, phase: "forward_merge" },
       implementationTarget: { targetPlanId: "PLAN-L7-435", targetRevision: 1 },
@@ -150,7 +184,12 @@ describe("PLAN admission policy", () => {
       branch: "work/reverse-design-followup",
       transitionDirection: "implementation_to_design",
       implementationDisposition: "none",
-      issue: { provider: "github", issueId: 124, episodeId: "E4-124", projectionDigest: "sha256:abc" },
+      issue: {
+        provider: "github",
+        issueId: 124,
+        episodeId: "E4-124",
+        projectionDigest: "sha256:abc",
+      },
       origin: { planId: "PLAN-L7-435", revision: 1, digest: "sha256:def" },
       reentry: { targetPlanId: "PLAN-L6-83", targetRevision: 2, phase: "forward_merge" },
       escapeReason: "implementation evidence must be reflected in design",

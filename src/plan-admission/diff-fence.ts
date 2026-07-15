@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { stringify } from "yaml";
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory";
-import { frontmatterSchema, type Frontmatter } from "../schema/frontmatter";
+import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter";
 
 export interface PlanBlob {
   path: string;
@@ -19,7 +19,13 @@ export interface AdmissionReceiptProjection {
   receiptId: string;
   receiptDigest: string;
   decisionDigest: string;
-  binding: { path: string; planId: string; assetId: string; revision: number; contentDigest: string };
+  binding: {
+    path: string;
+    planId: string;
+    assetId: string;
+    revision: number;
+    contentDigest: string;
+  };
 }
 
 export interface AdmissionReceiptPort {
@@ -43,7 +49,9 @@ export function canonicalPlanContentDigest(content: string): string | undefined 
   if (!parsed) return undefined;
   const frontmatter = { ...parsed.frontmatter };
   delete frontmatter.admission_receipt;
-  return `sha256:${createHash("sha256").update(`${stringify(frontmatter)}---\n${parsed.body}`).digest("hex")}`;
+  return `sha256:${createHash("sha256")
+    .update(`${stringify(frontmatter)}---\n${parsed.body}`)
+    .digest("hex")}`;
 }
 
 export function analyzePlanAdmissionDiff(input: {
@@ -81,7 +89,10 @@ export function analyzePlanAdmissionDiff(input: {
       continue;
     }
     const previous = prior ? parseFrontmatter(prior.content)?.admission_receipt : undefined;
-    if (previous?.receipt_id === receipt.receipt_id && previous?.receipt_digest === receipt.receipt_digest) {
+    if (
+      previous?.receipt_id === receipt.receipt_id &&
+      previous?.receipt_digest === receipt.receipt_digest
+    ) {
       findings.push({ path: change.path, code: "plan-admission-receipt-stale" });
       continue;
     }

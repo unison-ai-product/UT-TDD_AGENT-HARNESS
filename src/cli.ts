@@ -32,6 +32,7 @@ import {
 } from "./cli/delegation";
 import { registerDistributionCommands } from "./cli/distribution";
 import { registerFeedbackCommands } from "./cli/feedback";
+import { registerPlanAdmissionCommands } from "./cli/plan-admission";
 import { registerPlanAssetCommands } from "./cli/plan-asset";
 import { contextSuggest } from "./context/doc-router";
 import { runDoctor } from "./doctor";
@@ -1140,6 +1141,7 @@ guard
 
 const plan = program.command("plan").description("PLAN 操作");
 registerPlanAssetCommands(plan);
+registerPlanAdmissionCommands(plan);
 plan
   .command("lint [path]")
   .description("PLAN lint")

@@ -63,7 +63,8 @@ export const FILING_TARGET_BY_MODE: Record<
     allowed_kinds: ["design", "add-design"],
     layer_band: ["L1-L6"],
     sub_doc_hint: "差替え対象の設計sub_doc、起点証拠、supersede対象を指定",
-    pairing_obligation: "旧設計のsupersede、再降下pair-freezeと再検証。Reverse証拠は存在時のみ参照する",
+    pairing_obligation:
+      "旧設計のsupersede、再降下pair-freezeと再検証。Reverse証拠は存在時のみ参照する",
   },
   recovery: {
     allowed_kinds: ["recovery"],
