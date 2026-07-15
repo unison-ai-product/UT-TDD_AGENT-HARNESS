@@ -56,7 +56,7 @@ reconcileが終わるまではmerge不可とする。
 
 ## 3. Accept / merge gate
 
-`evaluateMergeReadiness(snapshot)`は一つのDB snapshotでcertificate、E9/E11 evidence、PR binding、
+`evaluateMergeReadiness(snapshot)`は一つのDB snapshotでE9 certificate、E8/E11 evidence、PR binding、
 required CI、review receipt、HEAD/base、branch protection、human signoffを再評価する。
 
 次のSHAは完全一致を要求する。

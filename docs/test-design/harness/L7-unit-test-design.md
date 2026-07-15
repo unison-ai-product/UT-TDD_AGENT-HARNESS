@@ -1459,8 +1459,8 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 | `CANDIDATE-GHISS-007` | worker競合 | 同じleaseを2 workerが取得試行 | remote create最大1回、loserはwrite 0 |
 | `CANDIDATE-GHISS-008` | stale remote | 古いremote version/webhookを後着 | 新しいprojection/domain stateを巻き戻さない |
 | `CANDIDATE-GHISS-009` | payload custody | secret/signature/raw transcriptをDTOへ注入 | event/outbox/Issue保存を拒否しwrite 0 |
-| `CANDIDATE-REENTRY-001` | 証明書binding | episode/drive/source revision/target L一致 | E8を1回だけappend |
-| `CANDIDATE-REENTRY-002` | 中間・合流後test | E9またはE11の片方だけGreen | draft PR生成不可 |
+| `CANDIDATE-REENTRY-001` | 証明書binding | episode/drive/source revision/target L一致 | E9を1回だけappend |
+| `CANDIDATE-REENTRY-002` | 中間・合流後test | E8またはE11の片方だけGreen | draft PR生成不可 |
 | `CANDIDATE-REENTRY-003` | stale target | certificate後にtarget HEAD変更 | certificate失効、E10/E12拒否 |
 | `CANDIDATE-REENTRY-004` | drive不一致 | Issueとcertificateの`drive_model`不一致 | `reentry-drive-mismatch` |
 | `CANDIDATE-REENTRY-005` | PR前置順序 | E11前にPR command | E12/outbox 0、`post-reentry-test-required` |
