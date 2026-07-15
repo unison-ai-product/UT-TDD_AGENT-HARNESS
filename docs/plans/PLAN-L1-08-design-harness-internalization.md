@@ -50,7 +50,7 @@ mode / layer / DB 正本は作らない。
 ## 設計正本 (design source)
 
 設計パッケージ `ut-tdd-design-harness-internalization-v0_2.zip`
-(v0.2-r23、sha256:b1c142b4aa7b99f5ac78d50c3f7e873ac108154df369fee38a47790f042b10ce、
+(v0.2-r24、sha256:348fbf649c1f3f5f58aafe5dfdb36e5037ea5c5f8422421b212514280b724b13、
 リポジトリ root、未追跡の提案材料)。00-17 章 + ADR 草案 + schemas 8+3 本 +
 skill-pack + templates/patterns + checklists。docs/ への正式材料化は D9 決定後の
 Slice 1 で行う (それまで docs/ に proposal を展開しない — catalog 外 md の
@@ -78,6 +78,7 @@ findings 増殖防止)。
 | D9 | sub_doc 粒度整合 | 推奨採択: **UI overlay 専用 coarse bucket を 1 つだけ追加** (per-topic slug 増殖はしない、PLAN-L7-245 整合)。bucket 名と catalog schema 変更の詳細は Slice 0/1 の leaf PLAN で確定し、**D8 inject より前に確定する** (決定順序 D9 → D8) |
 | D10 | 将来 120 doc カタログ対応 | inject 時は「カタログ語彙へ収束する方針宣言」まで。対応表 (51 画面検証 / 72 フロントエンド設計) の実体化はカタログ取り込み (engine-swap 管轄) 時 |
 | D11 | 参考収集→PAT-* 昇格 | pmo-tech-docs / pmo-tech-fork 流用のパイプラインを後続設計 (優先度は catalog 稼働後) |
+| D12 | 検証ツールチェーン初期選定 | **採択 (2026-07-15)**: receipt 決定的実行系 = Playwright (+axe-core、Lighthouse で perf/crawl 監査)、agentic 操作系 = chrome-devtools-mcp、VRT = Playwright snapshot + pixelmatch。ランナーはプロセス隔離し結合は receipt 契約のみ、起動は node subprocess 既定 (Bun 直は実測できた場合の最適化)。CI 決定的経路への MCP 介在は禁止。L4 `verification_toolchain` freeze leaf PLAN で正式化、Native Windows 動作確認は P0.5 PoC (パッケージ 16.1/16.7) |
 | 判定権限 | 機械ゲート依存の禁止 | 機械は「劣化経路の遮断と evidence の偽装不能化」まで。G2 合意 / L10 実感評価 / preference 採否 / 意匠多義解釈の確定は必ず人間 (PO/Experience Owner)。L 勾配 (V 字両端=高協調、谷=自律) を team 定義の step 宣言として機械化する |
 
 ## Hard invariants (パッケージ 00/ADR より)
