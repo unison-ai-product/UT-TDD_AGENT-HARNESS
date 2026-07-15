@@ -290,7 +290,7 @@ Minimum G8 close profile for the first L8 ascent:
 | `IT-EXEP-02` | 固定authored source bundle | DB削除後にrebuild | episode/event digestと順序が完全一致し、GitHub由来値でsourceを補完しない | pre/post table diff 0 |
 | `IT-GHISS-01` | retry可能outboxとfake GitHub port | success/timeout/5xxを順に注入 | successはE4、timeoutはreconcile、5xxはpending維持、Issue重複0 | call log、outbox state、remote marker |
 | `IT-GHISS-02` | signed webhook fixture | duplicate/out-of-order deliveryを受信 | delivery IDでdedupeし、許可遷移だけをappend。署名不正はdomain row 0 | inbox/event diff |
-| `IT-REENTRY-01` | drive検証Greenとtarget revision | certificate→中間test→合流→合流後test | E8〜E11が順序通り、revision変更時はcertificate stale | event digest、test receipts |
+| `IT-REENTRY-01` | drive検証Greenとtarget revision | 中間test→certificate→合流→合流後test | E8〜E11が順序通り、revision変更時はcertificate stale | event digest、test receipts |
 | `IT-PR-01` | E11到達episode | draft PR projectionを再送 | exact head SHAを持つdraft PR 1件へ収束 | remote PR ID、mapping、outbox receipt |
 | `IT-MERGE-01` | cross-provider reviewとrequired checks | head SHA変化を各境界で注入 | 同一SHA時だけE14、変化時はcertificate/review失効 | merge authorization receipt |
 | `IT-CLOSE-01` | merged PR | main CI・Issue close・learning projectionを順に実行 | 全成功時だけE15。再実行してclosure/learning fact重複0 | E15 receipt、learning identity |
