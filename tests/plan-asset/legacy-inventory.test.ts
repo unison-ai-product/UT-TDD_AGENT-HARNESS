@@ -4,6 +4,7 @@ import {
   inventoryProjectionDigest,
   parseLegacyPlanSource,
 } from "../../src/plan-asset/adapters/legacy-plan-inventory.js";
+import { REVIEWED_REKEY_DECISIONS } from "../../src/plan-asset/application/legacy-migration-decision-manifest.js";
 import { headPlanDocCount } from "./head-plan-doc-count.js";
 
 describe("legacy PLAN HEAD inventory", () => {
@@ -36,8 +37,13 @@ describe("legacy PLAN HEAD inventory", () => {
   it("U-PA-020: materializes all current numeric-core collisions without auto-selection", () => {
     const result = buildLegacyPlanInventory(process.cwd());
     if (!result.ok) throw new Error(result.error.ruleId);
-    expect(result.value.collisionGroups).toHaveLength(27);
-    expect(result.value.collisionGroups.flatMap((group) => group.planIds)).toHaveLength(55);
+    const reviewedGroups = new Map<string, string[]>();
+    for (const [planId, group] of REVIEWED_REKEY_DECISIONS) {
+      reviewedGroups.set(group, [...(reviewedGroups.get(group) ?? []), planId].sort());
+    }
+    expect(
+      result.value.collisionGroups.map((group) => [group.numericCore, [...group.planIds].sort()]),
+    ).toEqual([...reviewedGroups.entries()].sort(([left], [right]) => left.localeCompare(right)));
     expect(result.value.collisionGroups.every((group) => group.planIds.length > 1)).toBe(true);
   });
 

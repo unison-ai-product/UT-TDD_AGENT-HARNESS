@@ -43,6 +43,7 @@ export type CheckExpression =
       operator: "=" | "!=" | "<" | "<=" | ">" | ">=";
       value: CheckScalar;
     }
+  | { kind: "not-contains"; column: string; value: string }
   | { kind: "is-null"; column: string; negate?: boolean }
   | { kind: "and"; expressions: readonly CheckExpression[] }
   | { kind: "or"; expressions: readonly CheckExpression[] }
@@ -132,12 +133,17 @@ function validateCheck(table: TableDef, expression: CheckExpression): void {
   if (expression.kind === "in" && expression.values.length === 0) {
     throw new Error(`${table.name} CHECK IN の値が空です`);
   }
+  if (expression.kind === "not-contains" && expression.value.length === 0) {
+    throw new Error(`${table.name} CHECK not-contains の値が空です`);
+  }
   const values =
     expression.kind === "in"
       ? expression.values
       : expression.kind === "compare"
         ? [expression.value]
-        : [];
+        : expression.kind === "not-contains"
+          ? [expression.value]
+          : [];
   for (const value of values) {
     if (typeof value === "number" && !Number.isFinite(value)) {
       throw new Error(`${table.name} CHECK に有限でない数値は使えません`);
@@ -238,6 +244,8 @@ function renderCheck(expression: CheckExpression): string {
       return `${expression.column} IN (${expression.values.map(renderScalar).join(", ")})`;
     case "compare":
       return `${expression.column} ${expression.operator} ${renderScalar(expression.value)}`;
+    case "not-contains":
+      return `INSTR(${expression.column}, ${renderScalar(expression.value)}) = 0`;
     case "is-null":
       return `${expression.column} IS ${expression.negate ? "NOT " : ""}NULL`;
     case "and":

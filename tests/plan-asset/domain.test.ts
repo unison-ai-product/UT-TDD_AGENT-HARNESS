@@ -3,7 +3,10 @@ import {
   adaptLegacyPlan,
   resolveLegacyPlanAlias,
 } from "../../src/plan-asset/adapters/legacy-plan-adapter.js";
-import { EvidenceRecord } from "../../src/plan-asset/domain/evidence-record.js";
+import {
+  createRedactedCommandArgs,
+  EvidenceRecord,
+} from "../../src/plan-asset/domain/evidence-record.js";
 import { PlanAsset, PlanRevision } from "../../src/plan-asset/domain/plan-asset.js";
 import { PlanIdReservation } from "../../src/plan-asset/domain/reservation.js";
 
@@ -60,7 +63,9 @@ describe("PLAN Asset v2 domain", () => {
       subjectId: created.value.assetId,
       subjectRevision: 1,
       sourceCommit: commit,
-      commandArgs: ["bun", "test"],
+      evidenceKind: "green-test-run",
+      commandArgs: createRedactedCommandArgs(["bun", "test"]),
+      claims: { runnerId: "vitest", testIds: ["U-PA-004"] },
       outputDigest: digest,
       exitCode: 0,
       producer: "ci",
@@ -89,7 +94,14 @@ describe("PLAN Asset v2 domain", () => {
       subjectId: `plan:legacy:${"3".repeat(64)}`,
       subjectRevision: 1,
       sourceCommit: commit,
-      commandArgs: ["bun", "test"],
+      evidenceKind: "red-test-run",
+      commandArgs: createRedactedCommandArgs(["bun", "test"]),
+      claims: {
+        expectedFindingIds: ["expected:red"],
+        observedFindingIds: ["expected:red"],
+        todoCount: 0,
+        skipCount: 0,
+      },
       outputDigest: digest,
       exitCode: 1,
       producer: "ci",
@@ -99,6 +111,7 @@ describe("PLAN Asset v2 domain", () => {
     if (!record.ok) throw new Error("fixture must be valid");
     expect(
       record.value.isUsableFor({
+        requiredKind: "red-test-run",
         subjectId: record.value.subjectId,
         subjectRevision: 1,
         sourceCommit: commit,
@@ -109,6 +122,7 @@ describe("PLAN Asset v2 domain", () => {
     ).toBe(true);
     expect(
       record.value.isUsableFor({
+        requiredKind: "green-test-run",
         subjectId: record.value.subjectId,
         subjectRevision: 2,
         sourceCommit: commit,
@@ -147,6 +161,7 @@ describe("PLAN Asset v2 domain", () => {
       namespace: "PLAN-L7",
       ordinal: 418,
       assetId: `plan:legacy:${"4".repeat(64)}`,
+      leaseKeyVersion: "v2",
       leaseTokenHash: digest,
       commandId: "command:a",
       occurredAt: "2026-07-10T00:00:00Z",
@@ -159,6 +174,7 @@ describe("PLAN Asset v2 domain", () => {
       namespace: "PLAN-L7",
       ordinal: 418,
       assetId: `plan:legacy:${"5".repeat(64)}`,
+      leaseKeyVersion: "v2",
       leaseTokenHash: "e".repeat(64),
       commandId: "command:b",
       occurredAt: "2026-07-10T00:01:00Z",

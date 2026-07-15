@@ -9,7 +9,7 @@ status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-10
-updated: 2026-07-10
+updated: 2026-07-14
 owner: PO / Codex
 parent_design: docs/design/harness/L6-function-design/function-spec.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md

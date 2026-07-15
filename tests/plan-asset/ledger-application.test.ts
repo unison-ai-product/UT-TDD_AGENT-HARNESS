@@ -146,6 +146,23 @@ describe("PLAN ledger reservation application", () => {
   });
 
   it.each([
+    "reservation-event",
+    "reservation-current",
+    "receipt",
+  ])("U-PA-044: rolls back event/current/receipt when %s boundary faults", (boundary) => {
+    withLedger(({ db }) => {
+      const faulting = new PlanLedger(db, undefined, {
+        after(actual) {
+          if (actual === boundary) throw new Error(`fault:${boundary}`);
+        },
+      });
+      expect(() => faulting.reserve(reserveInput())).toThrow(`fault:${boundary}`);
+      expect(counts(db)).toEqual([0, 0, 0]);
+      expect(new PlanLedger(db).reserve(reserveInput())).toMatchObject({ ok: true });
+    });
+  });
+
+  it.each([
     ["subject kind", "subject_kind = 'legacy_migration'"],
     ["subject key", "subject_key = 'reservation:other'"],
     ["result kind", "result_kind = 'other'"],
@@ -175,6 +192,7 @@ function reserveInput() {
     namespace: "PLAN-L7",
     ordinal: 418,
     assetId: "plan:a",
+    leaseKeyVersion: "v2",
     leaseTokenHash: digest,
     commandId: "command:a",
     occurredAt: now,

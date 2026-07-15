@@ -7,6 +7,7 @@ export interface ReservationEvent {
   readonly namespace: string;
   readonly ordinal: number;
   readonly assetId: string;
+  readonly leaseKeyVersion: string;
   readonly leaseTokenHash: string;
   readonly commandId: string;
   readonly occurredAt: string;
@@ -49,6 +50,7 @@ function samePayload(event: ReservationEvent, input: Omit<ReservationEvent, "kin
     event.namespace === input.namespace &&
     event.ordinal === input.ordinal &&
     event.assetId === input.assetId &&
+    event.leaseKeyVersion === input.leaseKeyVersion &&
     event.leaseTokenHash === input.leaseTokenHash &&
     event.expiresAt === input.expiresAt
   );

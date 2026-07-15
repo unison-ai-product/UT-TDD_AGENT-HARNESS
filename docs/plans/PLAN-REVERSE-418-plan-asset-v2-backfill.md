@@ -6,13 +6,13 @@ layer: cross
 workflow_phase: R4
 confirmed_reverse_type: design
 drive: db
-status: draft
+status: confirmed
 route_signal: drift
 route_mode: reverse
 forward_routing: gap-only
 promotion_strategy: reuse-as-is
 created: 2026-07-10
-updated: 2026-07-13
+updated: 2026-07-15
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md
 agent_slots:
@@ -36,21 +36,21 @@ dependencies:
 
 ## §0 目的
 
-PLAN-L7-418で実装したPlanAsset v2 ledger、legacy migration application、752件dry-runを観測し、Forward設計との差をR0〜R4で逆向きに検証する。既存L5-17/L6-71/ADR-008のidentity・revision・transaction契約を保持し、実装で判明した自己証明境界だけをbackfillする。
+PLAN-L7-418で実装したPlanAsset v2 ledger、legacy migration application、HEAD PLAN全件dry-runを観測し、Forward設計との差をR0〜R4で逆向きに検証する。既存L5-17/L6-71/ADR-008のidentity・revision・transaction契約を保持し、実装で判明した自己証明境界だけをbackfillする。
 
 ## §1 R0-R4観測結果
 
 | phase | 観測・判定 | 結果 |
 |---|---|---|
-| R0 | domain/ledger/CLIとHEAD正本を観測 | 752 PLAN、27 numeric-prefix群/55件、migration/rekey/reject application、global receiptを確認 |
+| R0 | domain/ledger/CLIとHEAD正本を観測 | main `29ce65c1`で760 PLAN、27 numeric-prefix群/55件、migration/rekey/reject application、global receiptを確認 |
 | R1 | L5-17/L6-71/ADR-008との差分比較 | reducer/transaction契約は既設計と一致。全件dry-run、reviewed rekey manifest、HEAD target、snapshot、role delegation、target slot証明が未backfill |
-| R2 | U-PA-001〜042を設計oracleへ照合 | identity、revision、receipt、rollback、reopen、752件bijection、target/provenance、CLI公開契約をGreen化 |
+| R2 | U-PA-001〜042を設計oracleへ照合 | identity、revision、receipt、rollback、reopen、HEAD全件bijection、target/provenance、CLI公開契約をGreen化 |
 | R3 | checked ZIP/A-187のclaim-only gapと照合 | catalog/display claimを成功根拠にせず、HEAD blob・typed slot・role contract実体へ突合。label推測、自動collision選択を禁止 |
 | R4 | 実装事実をForwardへ合流 | L6 function-spec、L7 unit-test-design、role contract正本へU-PA-034〜042と検査境界をbackfill |
 
 ## §2 自己証明境界
 
-- inventoryはworking treeではなくsource commitのtracked PLAN blob 752件をbatch取得し、OID/content digestをrecord/report digestへ拘束する。
+- inventoryはworking treeではなくsource commitのtracked PLAN blob全件をbatch取得し、OID/content digestをrecord/report digestへ拘束する。
 - collision 55件はreview manifestへPLAN IDとnumeric prefixを明示列挙する。欠落・余剰・group不一致はfail-closeし、prefixから暗黙選択しない。
 - `generates`はHEAD上の非空fileまたは非空directory familyへ突合する。file-only detectorのdirectory誤検知を許可しない。
 - delegationは7 roleの上流contractをstrict loadし、既存`role + slot_label`を保持したprojectionへ`contractRef`を追加する。
@@ -80,7 +80,7 @@ bun run src/cli.ts plan migration-dry-run
 bun run src/cli.ts plan lint docs/plans/PLAN-L7-418-plan-asset-v2-adapter-migration-ledger.md
 ```
 
-dry-run受入値は固定実装条件ではなく現HEAD oracleとして`total=752 / emitted=752 / migrated=697 / rekeyed=55 / pending=0 / finding=0`。reportはsource commit、inventory digest、report digestを出力する。
+dry-run受入値は固定実装条件ではなく現HEAD oracleとする。main `29ce65c1`の再検証値は`total=760 / emitted=760 / migrated=705 / rekeyed=55 / pending=0 / finding=0`、`inventoryDigest=cd74837c...a0dc`、`reportDigest=51c8308d...e8b8`。reportはsource commit、inventory digest、report digestを出力し、後続PLAN追加時も`total=emitted=HEAD PLAN件数`と`migrated=total-rekeyed`を維持する。
 
 ## §4 R4合流先
 
@@ -91,4 +91,6 @@ dry-run受入値は固定実装条件ではなく現HEAD oracleとして`total=7
 
 ## §5 収束判定
 
-PlanAsset migration/dry-runのForward設計差はbackfillした。残るPR lifecycle、full doctor dependency cycle、Claude/PO acceptanceはPLAN-L7-418外へ隠さずIMP-160/161と検収packetで扱う。R4のconfirmed判定は独立reviewと全体gate後に行う。
+PlanAsset migration/dry-runのForward設計差はbackfillした。ただし独立監査で、L6 public reservation portに対するraw lease token発行・再送復元・key custody境界（IMP-156）、L7-419 evidence policyが必要とするEvidenceRecordのtyped kind/cardinality/claims/producer/digest/supersession、L5 reservation schemaのversion drift（IMP-167）が実装へ未到達と確認した。これらはL7-418内のgap-only追加Red `U-PA-043〜047`として閉じ、別のForward状態機械や互換型を作らない。
+
+残るPR lifecycle、GitHub設定、Issue inboundはPLAN-L7-418へ混ぜずIMP-160と後続Execution Ledger系列で扱う。R4のconfirmed判定はU-PA-043〜047 Green、独立review、全体gate後に行う。
