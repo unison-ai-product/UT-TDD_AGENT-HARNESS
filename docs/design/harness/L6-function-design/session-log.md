@@ -23,7 +23,7 @@ plan: docs/plans/PLAN-L6-03-session-log.md
 ① 設計 (L6 機能設計) — session-log 機能。
 PLAN: PLAN-L6-03-session-log (add-design)。pair (③) は docs/test-design/harness/L7-unit-test-design.md §1.5 U-SLOG を指す。
 実装 (②): src/runtime/session-log.ts + src/cli.ts session/hook entrypoints + .claude/hooks/session-log.ts backward-compatible shim (PLAN-L7-01-session-log, add-impl)。
-正本機能: 要件定義書 §6.8 (Issue 起点スパイン) / §6.9 のローカル観測側。
+正本機能: 要件定義書 §6.8 (通常Forward / Forward escape二経路、Execution Ledger正本) / §6.9 のローカル観測側。
 -->
 
 # UT-TDD Agent Harness — L6 機能設計: session-log (セッションログ + PLAN 単位圧縮)

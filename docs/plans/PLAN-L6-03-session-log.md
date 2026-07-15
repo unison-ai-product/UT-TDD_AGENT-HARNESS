@@ -42,7 +42,7 @@ review_evidence:
 
 既存 harness (agent-guard hook + `src/runtime/`) に **セッションログ機能**を **Add-feature (経路3)** として足す設計差分。`kind=add-design` (L6 機能設計粒度) で関数 signature + DbC + 圧縮契約 + ③ 単体テスト設計を確定し、`PLAN-L7-01-session-log` (add-impl) が実装する。**bottom-up build → 後段 Reverse (R0-R4) で L3 要件定義側へ設計修正**する方針 (PO 2026-06-02)。
 
-- 正本機能: 要件定義書 §6.8 PLAN git ライフサイクル (Issue 起点スパイン) / §6.9 CI 起動単位。本 PLAN はその **ローカル観測側 (session→PLAN ダイジェスト)** を実装する機能設計。
+- 正本機能: 要件定義書 §6.8 PLAN git ライフサイクル (通常Forward / Forward escape二経路、Execution Ledger正本) / §6.9 CI 起動単位。本 PLAN はその **ローカル観測側 (session→PLAN ダイジェスト)** を実装する機能設計。
 - 親設計: `PLAN-L6-01-function-spec` (§1.2 runtime に agent-guard。session-log はその兄弟 runtime hook)。
 - 駆動モデル: **Add-feature** (`feature_addition` signal)。drive=fullstack (親一致)。
 

@@ -1,7 +1,10 @@
 ## 概要
 
 ## 関連 PLAN / Issue
-Closes #
+PLAN:
+
+Forward escape episodeの場合のみ: `Closes #<issue-number>`
+通常Forwardの場合はIssue不要。空の`Closes #`を残さない。
 
 ## V-model artifact (該当に ✓)
 - [ ] ① 設計 (docs/design/)

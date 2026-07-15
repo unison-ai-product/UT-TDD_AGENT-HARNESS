@@ -1283,3 +1283,32 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
 - `if(false)`、constant-false `&&`、constant-true `else`のcleanupは証拠としない。本PLANの実行可能性判定はこれら
   定数dead pathまでであり、任意CFGのpost-dominator、interprocedural dataflow、mutation survivor 0はPLAN-L7-425の
   独立自己証明範囲とする。
+
+## PLAN-L6-83..85 Forward離脱 / GitHub関数契約
+
+```ts
+class ExecutionEpisode {
+  static observe(input: ObserveEscapeInput): ExecutionEpisode;
+  selectDrive(input: SelectDriveInput): EpisodeEvent;
+  recordProjection(input: GithubProjectionResult): EpisodeEvent;
+  certifyReentry(input: ReentryEvidenceInput): ReentryCertificate;
+  authorizeMerge(input: MergeEvidenceInput): MergeAuthorization;
+}
+
+interface GithubProjectionPort {
+  projectIssue(command: ProjectIssueCommand): Promise<ProjectionReceipt>;
+  projectDraftPullRequest(command: ProjectPullRequestCommand): Promise<ProjectionReceipt>;
+  closeIssue(command: CloseIssueCommand): Promise<ProjectionReceipt>;
+}
+```
+
+契約不変条件:
+
+- `observe`は通常Forward入力をescape episodeへ昇格しない。escape typeがある時だけE0を生成する。
+- `selectDrive`はcanonical drive enumとorigin/escape/PLAN kind/branch kindを同時検証し、未知・不整合を拒否する。
+- Issue projectionはE2より前、drive plan freezeはE4より前に実行できない。同じidempotency keyは同じreceiptを返す。
+- `certifyReentry`はE6のdrive検証とE8のForward中間testをorigin revisionへ束縛してE9 certificateを発行し、片方欠落を拒否する。E9はE10で一度だけconsumeし、E11の合流後testはE12 draft PRの前提として別に検証する。
+- draft PRはE11後だけ生成する。merge authorizationは別provider cross-review PASS、required CI、exact head、
+  re-entry certificate、accept evidenceをAND条件で要求する。
+- GitHub inboundはremote observationをappendするだけで、domain eventのsequence/payloadを更新しない。
+- E15はescapeをL/type/cause/drive/recurrence identity別learning factへ投影し、上流actionまたは理由付きno-changeを必須にする。

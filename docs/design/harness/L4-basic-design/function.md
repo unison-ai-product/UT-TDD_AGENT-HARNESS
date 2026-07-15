@@ -354,3 +354,22 @@ architecture.md §3 の依存方向 (schema 一方向・循環禁止) と整合�
 | FR-L1-23 / FR-L1-24 / FR-L1-25 / FR-L1-26 / FR-L1-27 / FR-L1-29 / FR-L1-30 | Workflow orchestration function blocks を受け取る |
 | FR-L1-36 / FR-L1-38 / FR-L1-43 | BR-21 / business-detail Phase B evaluation hooks を workflow/evaluation blocks 経由で carry |
 | FR-L1-45 / FR-L1-50 / FR-L1-51 | doc-review、DDD/TDD strictness guard、artifact progress projection blocks を受け取る |
+
+## Appendix C: Forward escape / GitHub 再合流アーキテクチャ
+
+通常ForwardはPLAN Asset revisionとForward FSMだけで完結し、Issueを要求しない。通常経路から外れる
+escapeだけを`ExecutionEpisode` aggregateとして起票し、GitHub Issue/PRはaggregate eventの外部projectionにする。
+
+| component | 責務 | 禁止事項 |
+|---|---|---|
+| `ExecutionEpisode` | origin、escape、drive selection、E0-E15、re-entryをappend-only管理 | GitHub状態を正本にすること |
+| `DriveSelectionPolicy` | signal/origin/branch/PLAN kindから合法drive集合を検証 | Issue template文字列からdriveを推測すること |
+| `ReentryCertificatePolicy` | drive内検証とForward中間testから再入可否を判定 | CI greenだけでre-entryを許可すること |
+| `GithubProjectionPort` | Issue/PR/comment/closeをidempotent projection | domainからGitHub clientを直接呼ぶこと |
+| `GithubInboundPort` | webhookを検証してremote observationをinbox append | remote payloadでepisode historyを上書きすること |
+| `MergeAuthorizationPolicy` | review/CI/HEAD/accept/re-entry証拠を集合判定 | author自己承認、stale HEAD merge |
+| `EscapeLearningProjector` | L/type/cause/drive/recurrence別に設計学習を投影 | Issue件数の減少だけを成功指標にすること |
+
+依存方向は`domain → ports ← adapters`とし、domain policyはDB、filesystem、clock、GitHub CLI/APIをimportしない。
+projection失敗はepisodeを失敗扱いにせずoutbox pendingとして保持する一方、Issue必須escapeがE4未到達のまま
+E5以降へ進むことはfail-closeする。
