@@ -1439,40 +1439,40 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
-| `U-EXEP-001` | 通常Forward | L0→L1の合法遷移 | Episode/eventは記録するがIssue/outbox 0 |
-| `U-EXEP-002` | Forward外Issue必須 | escape理由あり、`drive_model`欠落 | E2以降へ進めず`drive-model-required` |
-| `U-EXEP-003` | E0〜E15順序 | E7をE6前にappend | `episode-transition-invalid`、既存event列不変 |
-| `U-EXEP-004` | replay決定性 | 同一event列を2回reduce | state/digest/next-actions完全一致 |
-| `U-EXEP-005` | command冪等性 | 同一command keyを2回適用 | event/outbox増分は各1件、返却episode同一 |
-| `U-EXEP-006` | 原子的outbox | event append後/outbox insert前へfault injection | event/outboxとも部分commit 0 |
-| `U-EXEP-007` | override監査 | 人間overrideで遷移を進める | 既存event更新0、理由/actor/revision付きeventをappend |
-| `U-EXEP-008` | authored source境界 | DBだけに完了stateを注入 | rebuildで消滅し、完了証拠として不採用 |
-| `U-EXEP-009` | event語彙の正本一致 | event番号を別意味へshift/alias、unknown kindを注入 | requirements E0〜E15表とのexact不一致を拒否 |
-| `U-EXEP-010` | 並行append | 同一expected sequenceへ2 commandを競合 | 片方だけcommitし、他方はwrite 0のsequence conflict |
-| `U-EXEP-011` | sequence正本 | occurred_at逆行・clock skewを注入 | 時刻で順序補完せずsequence/digest chainでfail-close |
-| `U-GHISS-001` | Issue projection冪等 | 同一outboxを再送 | remote Issue 1、mapping 1、E4 1 |
-| `U-GHISS-002` | timeout後reconcile | remote作成成功後に応答timeout | marker検索で既存Issueへbindし重複作成0 |
-| `U-GHISS-003` | inbound重複 | delivery ID同一webhookを2回 | inbox 1、domain event増分1 |
-| `U-GHISS-004` | inbound真正性 | signature不正/許可外repo | domain mutation 0、fail-close finding |
-| `U-GHISS-005` | GitHub停止 | 5xx/rate limit | Ledgerを巻き戻さずretry可能outboxを保持 |
-| `U-GHISS-006` | legacy queue | episode binding無し`issue_queue`行 | 自動昇格せず`legacy-unbound`として可視化 |
-| `U-GHISS-007` | worker競合 | 同じleaseを2 workerが取得試行 | remote create最大1回、loserはwrite 0 |
-| `U-GHISS-008` | stale remote | 古いremote version/webhookを後着 | 新しいprojection/domain stateを巻き戻さない |
-| `U-GHISS-009` | payload custody | secret/signature/raw transcriptをDTOへ注入 | event/outbox/Issue保存を拒否しwrite 0 |
-| `U-REENTRY-001` | 証明書binding | episode/drive/source revision/target L一致 | E8を1回だけappend |
-| `U-REENTRY-002` | 中間・合流後test | E9またはE11の片方だけGreen | draft PR生成不可 |
-| `U-REENTRY-003` | stale target | certificate後にtarget HEAD変更 | certificate失効、E10/E12拒否 |
-| `U-REENTRY-004` | drive不一致 | Issueとcertificateの`drive_model`不一致 | `reentry-drive-mismatch` |
-| `U-REENTRY-005` | PR前置順序 | E11前にPR command | E12/outbox 0、`post-reentry-test-required` |
-| `U-REENTRY-006` | PR送信ambiguity | remote作成後timeout→retry | marker/SHAでreconcile、draft PR 1 |
-| `U-GHMERGE-001` | cross-provider | authorとreviewerが同一provider | E13拒否、代替tierをcross扱いにしない |
-| `U-GHMERGE-002` | tests-before-review | required check未完でreview | approvalをmerge証拠に採用しない |
-| `U-GHMERGE-003` | exact SHA | certificate/check/review/PR head SHA不一致 | merge authorization拒否 |
-| `U-GHMERGE-004` | force-push | approval後にhead更新 | review/certificateをstale化 |
-| `U-GHMERGE-005` | merge応答ambiguity | merge成功後timeout | remote main SHA照合でE14をexactly once化 |
-| `U-GHMERGE-006` | E15 closure | main CI未完またはIssue close失敗 | E15未到達、学習fact未確定。全成功時のみclosure |
-| `U-GHMERGE-007` | snapshot原子性 | 別時点のcertificate/check/reviewを混在 | TOCTOU snapshotを拒否しmerge command 0 |
-| `U-GHMERGE-008` | learning rebuild | projection削除後rebuildを2回 | learning identity/digest一致、retryで件数不増 |
+| `CANDIDATE-EXEP-001` | 通常Forward | L0→L1の合法遷移 | Episode/eventは記録するがIssue/outbox 0 |
+| `CANDIDATE-EXEP-002` | Forward外Issue必須 | escape理由あり、`drive_model`欠落 | E2以降へ進めず`drive-model-required` |
+| `CANDIDATE-EXEP-003` | E0〜E15順序 | E7をE6前にappend | `episode-transition-invalid`、既存event列不変 |
+| `CANDIDATE-EXEP-004` | replay決定性 | 同一event列を2回reduce | state/digest/next-actions完全一致 |
+| `CANDIDATE-EXEP-005` | command冪等性 | 同一command keyを2回適用 | event/outbox増分は各1件、返却episode同一 |
+| `CANDIDATE-EXEP-006` | 原子的outbox | event append後/outbox insert前へfault injection | event/outboxとも部分commit 0 |
+| `CANDIDATE-EXEP-007` | override監査 | 人間overrideで遷移を進める | 既存event更新0、理由/actor/revision付きeventをappend |
+| `CANDIDATE-EXEP-008` | authored source境界 | DBだけに完了stateを注入 | rebuildで消滅し、完了証拠として不採用 |
+| `CANDIDATE-EXEP-009` | event語彙の正本一致 | event番号を別意味へshift/alias、unknown kindを注入 | requirements E0〜E15表とのexact不一致を拒否 |
+| `CANDIDATE-EXEP-010` | 並行append | 同一expected sequenceへ2 commandを競合 | 片方だけcommitし、他方はwrite 0のsequence conflict |
+| `CANDIDATE-EXEP-011` | sequence正本 | occurred_at逆行・clock skewを注入 | 時刻で順序補完せずsequence/digest chainでfail-close |
+| `CANDIDATE-GHISS-001` | Issue projection冪等 | 同一outboxを再送 | remote Issue 1、mapping 1、E4 1 |
+| `CANDIDATE-GHISS-002` | timeout後reconcile | remote作成成功後に応答timeout | marker検索で既存Issueへbindし重複作成0 |
+| `CANDIDATE-GHISS-003` | inbound重複 | delivery ID同一webhookを2回 | inbox 1、domain event増分1 |
+| `CANDIDATE-GHISS-004` | inbound真正性 | signature不正/許可外repo | domain mutation 0、fail-close finding |
+| `CANDIDATE-GHISS-005` | GitHub停止 | 5xx/rate limit | Ledgerを巻き戻さずretry可能outboxを保持 |
+| `CANDIDATE-GHISS-006` | legacy queue | episode binding無し`issue_queue`行 | 自動昇格せず`legacy-unbound`として可視化 |
+| `CANDIDATE-GHISS-007` | worker競合 | 同じleaseを2 workerが取得試行 | remote create最大1回、loserはwrite 0 |
+| `CANDIDATE-GHISS-008` | stale remote | 古いremote version/webhookを後着 | 新しいprojection/domain stateを巻き戻さない |
+| `CANDIDATE-GHISS-009` | payload custody | secret/signature/raw transcriptをDTOへ注入 | event/outbox/Issue保存を拒否しwrite 0 |
+| `CANDIDATE-REENTRY-001` | 証明書binding | episode/drive/source revision/target L一致 | E8を1回だけappend |
+| `CANDIDATE-REENTRY-002` | 中間・合流後test | E9またはE11の片方だけGreen | draft PR生成不可 |
+| `CANDIDATE-REENTRY-003` | stale target | certificate後にtarget HEAD変更 | certificate失効、E10/E12拒否 |
+| `CANDIDATE-REENTRY-004` | drive不一致 | Issueとcertificateの`drive_model`不一致 | `reentry-drive-mismatch` |
+| `CANDIDATE-REENTRY-005` | PR前置順序 | E11前にPR command | E12/outbox 0、`post-reentry-test-required` |
+| `CANDIDATE-REENTRY-006` | PR送信ambiguity | remote作成後timeout→retry | marker/SHAでreconcile、draft PR 1 |
+| `CANDIDATE-GHMERGE-001` | cross-provider | authorとreviewerが同一provider | E13拒否、代替tierをcross扱いにしない |
+| `CANDIDATE-GHMERGE-002` | tests-before-review | required check未完でreview | approvalをmerge証拠に採用しない |
+| `CANDIDATE-GHMERGE-003` | exact SHA | certificate/check/review/PR head SHA不一致 | merge authorization拒否 |
+| `CANDIDATE-GHMERGE-004` | force-push | approval後にhead更新 | review/certificateをstale化 |
+| `CANDIDATE-GHMERGE-005` | merge応答ambiguity | merge成功後timeout | remote main SHA照合でE14をexactly once化 |
+| `CANDIDATE-GHMERGE-006` | E15 closure | main CI未完またはIssue close失敗 | E15未到達、学習fact未確定。全成功時のみclosure |
+| `CANDIDATE-GHMERGE-007` | snapshot原子性 | 別時点のcertificate/check/reviewを混在 | TOCTOU snapshotを拒否しmerge command 0 |
+| `CANDIDATE-GHMERGE-008` | learning rebuild | projection削除後rebuildを2回 | learning identity/digest一致、retryで件数不増 |
 
 property testは任意の合法event列でreplay同一性・単調append・terminal後遷移禁止を確認する。
 mutation testはIssue判定反転、`drive_model`検査除去、outbox別transaction化、SHA比較除去、
