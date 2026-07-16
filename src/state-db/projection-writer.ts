@@ -1225,7 +1225,7 @@ function projectRelationGraph(db: HarnessDb, graph: RelationGraphProjection | un
         source: "relation-graph",
         evidence_path: "",
         is_expected: 1,
-        is_actual: 1,
+        is_actual: edge.lifecycle === "planned" ? 0 : 1,
         indexed_at: indexedAt,
       },
     });

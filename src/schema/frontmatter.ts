@@ -68,6 +68,70 @@ export const dependenciesSchema = z.object({
   references: z.array(z.string()).default([]),
 });
 
+/** 正規authoring経路が発行する自己検証可能なAdmission証明。既存PLANへの遡及強制はdiff fence側で行う。 */
+const admissionReceiptSchema = z
+  .object({
+    schema_version: z.literal("v2"),
+    receipt_id: z.string().min(1),
+    command_id: z.string().min(1),
+    admitted_at: z.string().min(1),
+    source_digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
+    decision_digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
+    receipt_digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
+    binding: z
+      .object({
+        path: z.string().regex(/^docs\/plans\/PLAN-[A-Za-z0-9-]+\.md$/),
+        plan_id: planIdSchema,
+        asset_id: z.string().regex(/^plan:[a-z0-9][a-z0-9:-]{2,127}$/),
+        revision: z.number().int().positive(),
+        content_digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
+      })
+      .strict(),
+    route: z.object({ signal: z.string().min(1), mode: z.string().min(1) }).strict(),
+    issue: z
+      .object({
+        provider: z.literal("github"),
+        issue_id: z.number().int().positive(),
+        episode_id: z.string().min(1),
+        projection_digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
+      })
+      .strict()
+      .optional(),
+    origin: z
+      .object({
+        plan_id: z.string().min(1),
+        revision: z.number().int().positive(),
+        digest: z.string().regex(/^sha256:[a-f0-9]{16,64}$/i),
+      })
+      .strict()
+      .optional(),
+    transition: z
+      .object({
+        direction: z.enum(["implementation_to_design", "design_to_implementation"]),
+        implementation_disposition: z.enum(["preserved", "discarded", "none"]),
+        implementation_target: z
+          .object({
+            target_plan_id: z.string().min(1),
+            target_revision: z.number().int().positive(),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict()
+      .optional(),
+    reentry: z
+      .object({
+        target_plan_id: z.string().min(1),
+        target_revision: z.number().int().positive(),
+        phase: z.literal("forward_merge"),
+      })
+      .strict()
+      .optional(),
+    escape_reason: z.string().min(1).optional(),
+    supersedes: z.array(z.string().min(1)).optional(),
+  })
+  .strict();
+
 /** §1.1 全 variant 共通フィールド (variant 固有制約は superRefine で fail-close) */
 const frontmatterBaseSchema = z.object({
   plan_id: planIdSchema,
@@ -99,6 +163,7 @@ const frontmatterBaseSchema = z.object({
   version_target: z.string().optional(),
   route_signal: z.string().optional(),
   route_mode: z.string().optional(),
+  admission_receipt: admissionReceiptSchema.optional(),
   /** 右腕検証 PLAN の gate 結合。kind=verify は layer=L8-L14 と G8-G14 を 1:1 で宣言する。 */
   verification_gate: z.string().optional(),
   /** migration import trace reference (optional migration ledger path) */
@@ -192,6 +257,95 @@ const VERIFICATION_GATE_BY_LAYER: Record<string, string> = {
 export const frontmatterSchema = frontmatterBaseSchema.superRefine((fm, ctx) => {
   const isCrossKind = CROSS_KINDS.has(fm.kind);
   const isWorkflowKind = WORKFLOW_KINDS.has(fm.kind);
+  const receipt = fm.admission_receipt;
+  if (receipt) {
+    if (receipt.binding.plan_id !== fm.plan_id) {
+      ctx.addIssue({
+        code: custom,
+        path: ["admission_receipt", "binding", "plan_id"],
+        message: "receipt binding plan_idはfrontmatterと一致必須",
+      });
+    }
+    if (fm.route_signal !== receipt.route.signal || fm.route_mode !== receipt.route.mode) {
+      ctx.addIssue({
+        code: custom,
+        path: ["admission_receipt", "route"],
+        message: "receipt route はtop-level route宣言と一致必須",
+      });
+    }
+    const declaredSupersedes = fm.supersedes ?? [];
+    const receiptedSupersedes = receipt.supersedes ?? [];
+    if (
+      declaredSupersedes.length !== receiptedSupersedes.length ||
+      declaredSupersedes.some((planId, index) => planId !== receiptedSupersedes[index])
+    ) {
+      ctx.addIssue({
+        code: custom,
+        path: ["supersedes"],
+        message: "top-level supersedesはreceiptと完全一致必須",
+      });
+    }
+    if (receipt.issue && fm.github_issue_id !== receipt.issue.issue_id) {
+      ctx.addIssue({
+        code: custom,
+        path: ["github_issue_id"],
+        message: "github_issue_id はreceipt Issueと一致必須",
+      });
+    }
+    const isForward = receipt.route.mode === "forward";
+    if (
+      isForward &&
+      (receipt.issue ||
+        receipt.origin ||
+        receipt.reentry ||
+        receipt.escape_reason ||
+        receipt.transition)
+    ) {
+      ctx.addIssue({
+        code: custom,
+        path: ["admission_receipt"],
+        message: "通常Forward receiptにescape専用項目は許可しない",
+      });
+    }
+    if (
+      !isForward &&
+      (!receipt.issue || !receipt.origin || !receipt.reentry || !receipt.escape_reason)
+    ) {
+      ctx.addIssue({
+        code: custom,
+        path: ["admission_receipt"],
+        message: "Forward外receiptはIssue/origin/reentry/escape_reason必須",
+      });
+    }
+    if (receipt.route.mode === "reverse") {
+      const transition = receipt.transition;
+      if (
+        transition?.direction !== "implementation_to_design" ||
+        transition.implementation_disposition !== "preserved"
+      ) {
+        ctx.addIssue({
+          code: custom,
+          path: ["admission_receipt", "transition"],
+          message: "reverseは実装→設計かつpreserved必須",
+        });
+      }
+    }
+    if (receipt.route.mode === "redesign") {
+      const transition = receipt.transition;
+      if (
+        transition?.direction !== "design_to_implementation" ||
+        !["discarded", "none"].includes(transition.implementation_disposition) ||
+        !transition.implementation_target ||
+        receipt.supersedes?.length !== 1
+      ) {
+        ctx.addIssue({
+          code: custom,
+          path: ["admission_receipt"],
+          message: "redesignは設計→実装、discarded/none、target、supersedes一件必須",
+        });
+      }
+    }
+  }
 
   if (isCrossKind) {
     // §1.1: 横断駆動 (poc/reverse/recovery) → layer は cross のみ

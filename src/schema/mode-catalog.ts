@@ -15,6 +15,7 @@
 export const ROUTE_MODE_DISPLAY: Record<string, string> = {
   forward: "Forward",
   reverse: "Reverse",
+  redesign: "Redesign",
   recovery: "Recovery",
   retrofit: "Retrofit",
   refactor: "Refactor",
@@ -81,6 +82,7 @@ export const MODE_CATALOG_DOC_FILES: Record<string, string> = {
   "research.md": "Research",
   "retrofit.md": "Retrofit",
   "reverse.md": "Reverse",
+  "redesign.md": "Redesign",
   "scrum.md": "Scrum",
   "version-up.md": "Version-up",
   "verify.md": "Verify",

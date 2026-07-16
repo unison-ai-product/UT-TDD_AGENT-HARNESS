@@ -1284,6 +1284,36 @@ oracle: `tests/elicitation-context.test.ts` (U-ELICIT-001..007)。
   定数dead pathまでであり、任意CFGのpost-dominator、interprocedural dataflow、mutation survivor 0はPLAN-L7-425の
   独立自己証明範囲とする。
 
+## PLAN-L6-83 駆動モデル準拠PLAN Admission契約
+
+### `PlanAdmissionPolicy.evaluate(request)`
+
+`PlanAdmissionRequest` は `command_id`、actor、occurred_at、route signal、route mode、technical drive、
+完全な `(kind, layer, sub_doc?, workflow_phase?, branch_prefix)` tuple、requested PLAN/asset/body digestを持つ。
+Forward escapeではさらにorigin PLAN revision/state、escape reason、reentry target、E4投影済みGitHub
+Issue binding (`episode_id` / projection digestを含む) を必須とする。Issue番号だけはbindingとして不十分である。
+
+postは許可時だけimmutable `PlanAdmissionCertificate`を返す。certificateはpolicy version、request digest、
+tuple digest、route/origin/Issue/reentry binding、issued_at、自己digestを持つ。未知/曖昧signal、未知drive mode、
+未登録tuple、branch不一致、工程表不一致、backdate、archived偽装、`--force`によるpolicy迂回は全て
+structured violationであり、Forward fallbackを返さない。
+
+`routeFiling`は人間向け候補提示に限定する。authoring許可には使わず、許可tuple catalogを唯一の正本とする。
+catalogはmodeごとのkind/layer独立集合ではなく、Incidentの`troubleshoot/L7`と`recovery/cross`のような
+相関を一件ずつ持つ完全tuple集合である。
+
+### `admitPlanDraft(request, ports)`
+
+順序は `evaluate → reserve ID → append admission receipt → PlanAsset.create → temp write/fsync/rename → projection`
+で固定する。全portは同一transaction境界に置き、failure時はsource file、reservation、ledger、DB、outboxを
+rollbackする。同一`command_id + request digest`の再送は同certificateを返し、同じcommand IDでpayloadが違えば
+`plan-admission-command-conflict`として拒否する。成功時だけfrontmatterにcertificate ID/digest/policy versionを
+参照として記録する。
+
+Admission receiptとPLAN本文のdigest、asset/revision、route tupleを`verifyPlanAdmissionReceipt(diff, ledger)`が
+再照合する。新規追加、rename、frontmatter/body直接編集、receiptなし、stale receiptはhook/pre-push/CIでexit 1。
+既存履歴はbaseline前のreceipt欠落だけを遡及改ざんせず、HEAD差分の新規/変更PLANへ強制する。
+
 ## PLAN-L6-83..85 Forward離脱 / GitHub関数契約
 
 ```ts

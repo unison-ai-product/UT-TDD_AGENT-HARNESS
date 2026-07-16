@@ -1763,6 +1763,16 @@ export function evaluateAgentGuard(input: { stage: string; route: string; model:
       expect(result.ok).toBe(true);
       expect(rowCounts(db).graph_nodes).toBeGreaterThan(0);
       expect(rowCounts(db).dependency_edges).toBeGreaterThan(0);
+      const plannedEdge = db
+        .prepare(
+          "SELECT is_actual FROM dependency_edges WHERE from_node_id = ? AND edge_kind = ? AND to_node_id = ?",
+        )
+        .get(
+          "plan:PLAN-L7-441-plan-draft-recovery-v4",
+          "generates",
+          "source:src/plan-admission/draft-recovery.ts",
+        ) as { is_actual: number } | undefined;
+      expect(plannedEdge?.is_actual).toBe(0);
       expect(rowCounts(db).graph_snapshots).toBeGreaterThan(0);
       expect(rowCounts(db).impact_rules).toBeGreaterThan(0);
       expect(rowCounts(db).verification_profiles).toBeGreaterThan(0);

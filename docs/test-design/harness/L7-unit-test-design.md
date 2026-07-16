@@ -1431,6 +1431,83 @@ DB空集合からのauthoring補完、共有repoのvolatile logをfixed-point証
 source workflow / source template / Pack template / setup builtinのどれか1 artifactだけの更新を完了扱いにしない。
 検査対象本文をprofile選択に再利用せず、構造異常は例外でdoctor wrapperへ逃がさずanalyzer自身がviolation化する。
 
+## PLAN-L7-435 駆動モデル準拠PLAN Admission oracle (2026-07-15)
+
+対象 = `PlanAdmissionPolicy` / `ut-tdd plan draft` / admission receipt / PLAN tamper fence。
+候補oracleはL7実装と同時に `U-PADM-*` へ昇格し、tests内citationを必須とする。
+
+| ID | 観点 | fixture / mutation | expected |
+| --- | --- | --- | --- |
+| `U-PADM-001` | 通常Forward | 正規signalとForward tuple | Issueなしでpermit |
+| `U-PADM-002` | 未知/曖昧signal | route候補0件または複数同順位 | Forward fallbackなしでdeny |
+| `U-PADM-003` | 許可tuple | kind/layer/phase/branchを各1変異 | exact tuple外はrule ID付きdeny |
+| `U-PADM-004` | escape必須束縛 | Issue/drive/origin/reentryを各1件欠落 | それぞれdeny、番号だけのIssueを証拠にしない |
+| `U-PADM-005` | 回避耐性 | archivedによる新規起票 | statusで新規authoringを免除しない |
+| `U-PADM-006` | redesign再合流 | 任意の起点証拠 + `design_to_implementation` + supersede対象 + Forward合流先 + 後続実装 | 設計先行の差替えだけpermit |
+| `U-PADM-007` | 遷移方向の分岐 | redesignへ`implementation_to_design`を指定 | deny。実装から設計への引戻しはreverseだけ |
+| `U-PADM-008` | reverse追従 | `implementation_to_design` + 実装origin + Forward合流先 | 実装から設計への追従だけpermit |
+| `U-PADM-009` | 方向と資産状態の整合 | redesignへ`preserved`、reverseへ`none` | 方向は主軸、矛盾する資産状態はdeny |
+| `U-PADM-010` | receipt parse | 厳格frontmatterとroute/Issue二重宣言 | receiptを保持し矛盾をdeny |
+| `U-PADM-011` | redesign receipt | 方向・資産状態・supersedesを一軸変異 | 設計→実装と矛盾するreceiptをdeny |
+| `U-PADM-012` | diff fence permit | 新規PLANと対応tracked projection | binding一致時だけpermit |
+| `U-PADM-013` | diff fence deny | receipt欠落/stale/direct delete | 全経路をfail-close |
+| `U-PADM-014` | projection parse | canonical append-only projection | command lookup可能な厳格projectionだけ受理 |
+| `U-PADM-015` | projection chain | chain改ざん/順序変更/重複binding | 非canonical projectionをdeny |
+| `U-PADM-016` | projection境界 | short hash/PLAN外path/unknown field | schema境界でdeny |
+| `U-PADM-017` | admission-check集約 | projectionと比較の複数欠落 | 全findingを欠落なく集約 |
+| `U-PADM-018` | adapter例外 | Git/projection adapter例外 | 例外をfail-close findingへ変換 |
+| `U-PADM-019` | pure analyzer順序 | 両adapter境界のvalid/invalid | 両境界valid後だけpure analyzerを実行 |
+| `U-PADM-020` | ledger v3 schema | 空DBからv3生成 | receipt/current/event journalを制約付き生成 |
+| `U-PADM-021` | v2→v3 migration | 完全なv2 ledger | 全検証後に原子的migration |
+| `U-PADM-022` | migration fail-close | v1/future/partial/corrupt v2 | mutation 0で拒否 |
+| `U-PADM-023` | draft Saga正常系 | validate→intent→publish→ledger→commit | 二成果物とreceiptを各1回だけ確定 |
+| `U-PADM-024` | committed replay | 同一command再送 | publish/appendなしで既存receiptへ収束 |
+| `U-PADM-025` | command collision | 同一IDでpayload差替え | 副作用なしで拒否 |
+| `U-PADM-026` | ledger failure補償 | publish後にledger失敗 | preimage復元し`recovery_required`を記録 |
+| `U-PADM-027` | restore failure | 補償restoreも失敗 | 自動retryを遮断し曖昧成功にしない |
+| `U-PADM-028` | durable journal | intent→commit | append-only eventとcurrent projectionが一致 |
+| `U-PADM-029` | journal遷移 | command競合/recoveryからの不正遷移 | 状態機械がfail-close |
+| `U-PADM-030` | crash recovery fence | intent残存+ledger receipt | artifact postimageを証明できないため自動commitせず`recovery_required`へ遮断 |
+| `U-PADM-031` | journal tamper | current/event digest・chain改ざん | 読取時に遮断 |
+| `U-PADM-032` | atomic publish | source/projection stage+rename | fsyncを伴うdurable publish |
+| `U-PADM-033` | partial publish補償 | 片側rename後のfault | 両preimageを冪等復元 |
+| `U-PADM-034` | restore retry | restore中fault | 再試行で復元完了 |
+| `U-PADM-035` | filesystem境界 | lexical/symlink root escape | workspace外writeをdeny |
+| `U-PADM-036` | stage cleanup | stage fault | temp/rollback fileを残さない |
+| `U-PADM-037` | new target restore | preimageなしtargetのpartial publish | restoreで新規targetを除去 |
+| `U-PADM-038` | canonical digest | 同一domain commandをjournal/ledgerへ投影 | 同一SHA-256を再現 |
+| `U-PADM-039` | digest非自己申告 | domain command shape検査 | 外部入力digest fieldを持たない |
+| `U-PADM-040` | CLI created | strict manifest+Admission permit | serviceへ渡しcreated/exit 0 |
+| `U-PADM-041` | CLI replay | committed command再送 | replay/exit 0 |
+| `U-PADM-042` | CLI deny | Admission拒否 | factory未生成/exit 1 |
+| `U-PADM-043` | CLI input境界 | unknown field/path traversal | strict parseで副作用前に拒否 |
+| `U-PADM-044` | publish finalize | 公開済みtokenを完了 | 公開内容を保持し補助file/tokenを冪等cleanup |
+| `U-PADM-045` | finalize token境界 | 同一IDの偽造/unknown token | cleanup対象にせずdeny |
+| `U-PADM-046` | finalize retry | cleanup途中fault | 公開内容を戻さず再試行でcleanup完了 |
+| `U-PADM-047` | command assemble | manifest/admission/environment同一入力 | canonical/service commandを決定論生成 |
+| `U-PADM-048` | command identity | plan ID/path/namespace/ordinal各不一致 | 副作用前にdeny |
+| `U-PADM-049` | command digest境界 | manifestへdigest自己申告を混入 | canonical command/digestへ影響0 |
+| `U-PADM-050` | decision binding | admitted requestとdecision tuple不一致 | assemblyをdeny |
+| `U-PADM-051` | receipt render | ledger receipt確定後のsource/projection | 同一bindingとchain recordを生成・再検証 |
+| `U-PADM-052` | escape receipt render | Issue/origin/transition/reentry/escape | 全項目をsource receiptへ欠落なく束縛 |
+| `U-PADM-053` | projection input境界 | caller supplied projection/壊れたchain | render前にdeny |
+| `U-PADM-054` | production runner | 実SQLite+filesystemで同一commandを2回実行 | created後に同一receiptへreplay、record増加0 |
+| `U-PADM-055` | ledger adapter receipt | canonical payload | certificate/command digest付きreceiptへ変換 |
+| `U-PADM-056` | ledger adapter digest | 自己申告digest不一致 | write前にdeny |
+| `U-PADM-057` | ledger adapter deny | ledger rule violation | rule ID付きtyped errorへ変換 |
+| `U-PADM-058` | ledger pending rollback | onPrepared内fault | callbackはCOMMIT前、全9表rollback |
+| `U-PADM-059` | prepared receipt mismatch | journal intentとledger receipt digest不一致 | publish前にdenyしrecovery_required |
+| `U-PADM-060` | restore failure | publish後rollback restore fault | recoveryを記録し自動再実行をdeny |
+| `CANDIDATE-PADM-009` | authoring Saga強制終了 | DB commit直前直後の強制終了と補償fault | 未完journalをfail-closeし明示recoveryまで非正本 |
+| `CANDIDATE-PADM-010` | GitHub ingress | signature不正/enum不正/stale delivery | quarantine、PLAN admission 0 |
+
+工程表/replay/改ざん候補はL6正本の `CANDIDATE-PADM-006`〜`008` を再定義せず、そのIDのまま
+上記 `U-PADM-012`〜`016` / `U-PADM-024`〜`025` へ昇格した。候補IDの別意味への再利用は禁止する。
+
+property testは全signal×mode×tuple×status×createdの直積で、canonical policyがpermitした時だけ
+書込み可能であることを確認する。mutation testはunknown→Forward fallback、archived/date免除、
+tuple allowlist default、Issue requirement削除、schedule fallback、receipt digest比較除去を全てkillする。
+
 ## PLAN-L7-436〜439 Execution Ledger / GitHub連動 oracle (2026-07-15)
 
 設計正本は `PLAN-L4-30` / `PLAN-L5-23` / `PLAN-L6-83〜85` とし、検出器はその契約へ従う。

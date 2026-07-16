@@ -103,6 +103,54 @@ describe("collectRelationGraphProjection (U-RELGRAPH-001..003)", () => {
     expect(orphan?.nodeId).toBe("db-table:orphan_cache");
   });
 
+  it("U-RELGRAPH-002A: draft の未実装sourceをplanned lifecycleで保持し、source 偽装や stale-edge にしない", () => {
+    const projection = collectRelationGraphProjection({
+      plans: [
+        {
+          id: "PLAN-L7-future",
+          status: "draft",
+          generates: ["src/future/recovery.ts"],
+          availability: { "src/future/recovery.ts": "planned" },
+        },
+      ],
+    });
+
+    expect(projection.edges).toEqual(
+      expect.arrayContaining([
+        {
+          from: "plan:PLAN-L7-future",
+          to: "source:src/future/recovery.ts",
+          kind: "generates",
+          lifecycle: "planned",
+        },
+      ]),
+    );
+    expect(analyzeRelationImpact({ changedPaths: [], projection }).findings).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "stale-edge" })]),
+    );
+    expect(exportRelationDiagram({ snapshot: projection, format: "mermaid" }).content).toContain(
+      "generates (planned)",
+    );
+  });
+
+  it("U-RELGRAPH-002B: planned lifecycleはdraft以外でfail-closeし、materializedと同じ扱いにしない", () => {
+    const projection = collectRelationGraphProjection({
+      plans: [
+        {
+          id: "PLAN-L7-confirmed-future",
+          status: "confirmed",
+          generates: ["src/future/recovery.ts"],
+          availability: { "src/future/recovery.ts": "planned" },
+        },
+      ],
+    });
+    const result = analyzeRelationImpact({ changedPaths: [], projection });
+    expect(result.ok).toBe(false);
+    expect(result.findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "invalid-planned-artifact" })]),
+    );
+  });
+
   it("U-RELGRAPH-003: projection sanitization — MCP evidence/browser trace/provider transcript/secret/screenshot blob を projection 行へコピーせず classification/count/evidence path/redacted summary のみ残す", () => {
     const SECRET = ["sk", "live", "DEADBEEF", "must", "not", "leak"].join("-");
     const input: RelationGraphSourceSet = {

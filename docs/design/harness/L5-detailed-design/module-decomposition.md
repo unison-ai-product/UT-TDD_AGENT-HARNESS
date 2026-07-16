@@ -27,6 +27,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 | **schema** | `src/schema/index.ts` + `frontmatter.ts` | 実装済 | enum/契約の単一正本 (安定核) |
 | **lint** | `src/lint/*.ts` (実数は `src/lint/` が正本、拡張継続中) | 実装済 | doc/PLAN/trace 静的検証 |
 | **plan** | `src/plan/lint.ts` | 実装済 (PLAN-L5-02 以降拡張) | PLAN lint |
+| **plan-admission** | `src/plan-admission/policy.ts` + `diff-fence.ts` | 実装中 (PLAN-L7-435) | 駆動モデル許可tuple、Reverse/Redesign遷移、receipt束縛、Git差分fenceをpure coreとして所有する。CLI・Git・SQLite・tracked projectionはport/adapterから接続し、coreへ副作用を持ち込まない |
 | **vmodel** | `src/vmodel/lint.ts` | 実装済 (PLAN-L5-02 以降拡張) | V-model 4 artifact trace lint |
 | **runtime** | `src/runtime/detect.ts` + `agent-guard.ts` | 実装済 | mode 検出 + agent-guard 判定 |
 | **shared** | `src/shared/*.ts` | 実装済 | module 横断の純粋ヘルパー。lint/runtime の逆依存回避 |
@@ -90,6 +91,7 @@ architecture.md §3 の 7 building block を実装単位のモジュール (関�
 - **循環禁止**: import グラフに循環なし (D-03=0)。`ut-tdd vmodel lint` / dependency lint (knip 候補、L3 §7.1) で機械検証 carry
 - **fs 隔離**: lint の `loadX()` が fs 読込端点、`analyzeX(docs?)` は pure (テスト注入可)。fs は依存方向ルール対象外 (architecture §3 注記)
 - **副作用端点**: cli (stdout/exitCode) と hook のみが副作用を持つ。core ロジックは純粋関数
+- **Admission依存方向**: cli/hook/CI adapter → plan-admission application → plan-admission pure core → schema。Git blob、SQLite journal、tracked receipt projection、原子的file publishはport越しに接続し、policy/diff-fenceから直接I/Oしない
 
 ## §5 L7 closure module boundary（閉包境界）
 

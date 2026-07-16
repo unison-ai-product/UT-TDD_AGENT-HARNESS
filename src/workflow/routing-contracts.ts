@@ -113,6 +113,7 @@ export interface RouteEscalationBoundary {
 const D_CONTRACT_MODES = [
   "forward",
   "reverse",
+  "redesign",
   "recovery",
   "retrofit",
   "refactor",

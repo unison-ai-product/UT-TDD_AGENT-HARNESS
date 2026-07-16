@@ -211,23 +211,133 @@ describe("PLAN Asset canonical ledger schema", () => {
     } finally {
       corrupt.close();
     }
+
+    const rowCorrupt = openHarnessDb(":memory:");
+    try {
+      createV3Ledger(rowCorrupt);
+      seedAsset(rowCorrupt, "plan:corrupt");
+      insertReceipt(rowCorrupt, "plan_revision", "plan:corrupt", 1);
+      replaceTrigger(rowCorrupt, "trg_append_command_receipts_no_update");
+      rowCorrupt.exec(`UPDATE append_command_receipts SET receipt_digest = '${"f".repeat(64)}'`);
+      restoreTrigger(rowCorrupt, "trg_append_command_receipts_no_update");
+      expect(migratePlanLedger(rowCorrupt)).toEqual({
+        ok: false,
+        ruleId: "plan-ledger-unavailable",
+      });
+      expect(rowCorrupt.userVersion()).toBe(3);
+      expect(
+        rowCorrupt
+          .prepare("SELECT name FROM sqlite_master WHERE name = 'plan_draft_journal'")
+          .get(),
+      ).toBeUndefined();
+    } finally {
+      rowCorrupt.close();
+    }
   });
 
-  it("U-PA-047: atomically upgrades an empty-reservation v2 ledger to exact v3", () => {
+  it("U-PADM-020: creates admission and durable draft journal tables in v4", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+      const names = db
+        .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+        .all()
+        .map((row) => row.name);
+      expect(names).toEqual(
+        expect.arrayContaining([
+          "plan_admission_events",
+          "plan_admission_receipts",
+          "plan_draft_journal",
+          "plan_draft_journal_events",
+        ]),
+      );
+      expect(() =>
+        db.exec("UPDATE plan_admission_events SET event_kind = 'admitted'"),
+      ).not.toThrow();
+      expect(ledgerSchemaDdl().join("\n")).toContain("append-only:plan_admission_events");
+      expect(ledgerSchemaDdl().join("\n")).toContain("append-only:plan_draft_journal_events");
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PADM-021: fully validates custody v3 before migrating it atomically to v4", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      createV3Ledger(db);
+      seedAsset(db, "plan:a");
+      insertReceipt(db, "plan_revision", "plan:a", 1);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+      expect(db.userVersion()).toBe(4);
+      expect(db.prepare("SELECT COUNT(*) AS n FROM plan_assets").get()?.n).toBe(1);
+      expect(db.prepare("SELECT COUNT(*) AS n FROM append_command_receipts").get()?.n).toBe(1);
+      expect(db.prepare("SELECT COUNT(*) AS n FROM plan_draft_journal").get()?.n).toBe(0);
+      expect(db.prepare("SELECT COUNT(*) AS n FROM plan_draft_journal_events").get()?.n).toBe(0);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PADM-022: rejects v1, future, partial v2, and corrupt v3 without mutation", () => {
+    for (const version of [1, LEDGER_SCHEMA_VERSION + 1]) {
+      const db = openHarnessDb(":memory:");
+      try {
+        db.setUserVersion(version);
+        expect(migratePlanLedger(db)).toEqual({ ok: false, ruleId: "plan-ledger-unavailable" });
+        expect(db.userVersion()).toBe(version);
+      } finally {
+        db.close();
+      }
+    }
+
+    const partial = openHarnessDb(":memory:");
+    try {
+      partial.exec("CREATE TABLE plan_assets (asset_id TEXT PRIMARY KEY)");
+      partial.setUserVersion(2);
+      expect(migratePlanLedger(partial)).toEqual({
+        ok: false,
+        ruleId: "plan-ledger-unavailable",
+      });
+      expect(partial.userVersion()).toBe(2);
+      expect(
+        partial.prepare("SELECT name FROM sqlite_master WHERE name = 'plan_draft_journal'").get(),
+      ).toBeUndefined();
+    } finally {
+      partial.close();
+    }
+
+    const corrupt = openHarnessDb(":memory:");
+    try {
+      createV3Ledger(corrupt);
+      corrupt.exec("DROP TRIGGER trg_plan_assets_no_update");
+      expect(migratePlanLedger(corrupt)).toEqual({
+        ok: false,
+        ruleId: "plan-ledger-unavailable",
+      });
+      expect(corrupt.userVersion()).toBe(3);
+      expect(
+        corrupt.prepare("SELECT name FROM sqlite_master WHERE name = 'plan_draft_journal'").get(),
+      ).toBeUndefined();
+    } finally {
+      corrupt.close();
+    }
+  });
+
+  it("U-PA-047: atomically upgrades an empty-reservation v2 ledger through v3 to v4", () => {
     const db = openHarnessDb(":memory:");
     try {
       for (const ddl of legacyV2Ddl()) db.exec(ddl);
       db.setUserVersion(2);
       seedAsset(db, "plan:a");
-      expect(LEDGER_SCHEMA_VERSION).toBe(3);
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 3 });
+      expect(LEDGER_SCHEMA_VERSION).toBe(4);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
       expect(
         db
           .prepare("PRAGMA table_info(plan_id_reservation_events)")
           .all()
           .map((column) => column.name),
       ).toContain("lease_key_version");
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 3 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
     } finally {
       db.close();
     }
@@ -283,6 +393,29 @@ describe("PLAN Asset canonical ledger schema", () => {
           fault: {
             after(boundary) {
               if (boundary === "v2-v3-tables-created") throw new Error("migration-fault");
+            },
+          },
+        }),
+      ).toEqual({ ok: false, ruleId: "plan-ledger-unavailable" });
+      expect(migrationSnapshot(db)).toBe(before);
+      expect(db.userVersion()).toBe(2);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PA-047: rolls an interrupted admission v4 extension back to the original v2 ledger", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      for (const ddl of legacyV2Ddl()) db.exec(ddl);
+      db.setUserVersion(2);
+      seedAsset(db, "plan:a");
+      const before = migrationSnapshot(db);
+      expect(
+        migratePlanLedger(db, {
+          fault: {
+            after(boundary) {
+              if (boundary === "v2-v4-schema-created") throw new Error("migration-fault");
             },
           },
         }),
@@ -385,6 +518,24 @@ const digest = "a".repeat(64);
 const commit = "b".repeat(40);
 const now = "2026-07-13T00:00:00Z";
 const later = "2026-07-14T00:00:00Z";
+
+function createV3Ledger(db: ReturnType<typeof openHarnessDb>): void {
+  const v3Ddl = ledgerSchemaDdl().filter(
+    (sql) =>
+      !sql.includes("plan_admission_") &&
+      !sql.includes("plan_draft_journal") &&
+      !sql.includes("idx_plan_draft_journal_status"),
+  );
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const sql of v3Ddl) db.exec(sql);
+    db.setUserVersion(3);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
 
 function insertMigrationEvent(
   db: ReturnType<typeof openHarnessDb>,
@@ -541,12 +692,19 @@ function restoreTrigger(db: ReturnType<typeof openHarnessDb>, name: string): voi
 }
 
 function legacyV2Ddl(): readonly string[] {
-  return ledgerSchemaDdl().map((sql) =>
-    sql
-      .replace(/lease_key_version TEXT NOT NULL,\s*/g, "")
-      .replace(/,\s*CHECK \(lease_key_version != ''\)/g, "")
-      .replace(/,\s*CHECK \(INSTR\(lease_key_version, '\.'\) = 0\)/g, ""),
-  );
+  return ledgerSchemaDdl()
+    .filter(
+      (sql) =>
+        !sql.includes("plan_admission_") &&
+        !sql.includes("plan_draft_journal") &&
+        !sql.includes("idx_plan_draft_journal_status"),
+    )
+    .map((sql) =>
+      sql
+        .replace(/lease_key_version TEXT NOT NULL,\s*/g, "")
+        .replace(/,\s*CHECK \(lease_key_version != ''\)/g, "")
+        .replace(/,\s*CHECK \(INSTR\(lease_key_version, '\.'\) = 0\)/g, ""),
+    );
 }
 
 function migrationSnapshot(db: ReturnType<typeof openHarnessDb>): string {

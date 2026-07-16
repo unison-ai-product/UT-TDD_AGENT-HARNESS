@@ -17,7 +17,7 @@ import {
 } from "../../schema/harness-db-table-builders.js";
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
 
-export const LEDGER_SCHEMA_VERSION = 3;
+export const LEDGER_SCHEMA_VERSION = 4;
 
 export interface LedgerSchemaMigrationFaultPort {
   after(boundary: string): void;
@@ -47,7 +47,7 @@ function migrationTargetCheck() {
   };
 }
 
-const tables: readonly TableDef[] = [
+const v3Tables: readonly TableDef[] = [
   {
     name: "plan_assets",
     columns: [
@@ -347,7 +347,148 @@ const tables: readonly TableDef[] = [
   },
 ];
 
-const indexes: readonly IndexDef[] = [
+const v4Tables: readonly TableDef[] = [
+  {
+    name: "plan_admission_events",
+    columns: [
+      pk("admission_event_id"),
+      requiredCol("command_id"),
+      requiredCol("command_payload_digest"),
+      requiredCol("event_kind"),
+      requiredCol("plan_asset_id"),
+      requiredCol("plan_revision", "INTEGER"),
+      requiredCol("plan_id"),
+      requiredCol("source_path"),
+      requiredCol("content_digest"),
+      requiredCol("route_tuple_digest"),
+      requiredCol("certificate_id"),
+      requiredCol("certificate_digest"),
+      requiredCol("occurred_at"),
+      requiredCol("event_digest"),
+    ],
+    unique: [["command_id"], ["certificate_id"]],
+    checks: [enumCheck("event_kind", ["admitted"])],
+    foreignKeys: [
+      foreignKey(["plan_asset_id", "plan_revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "plan_admission_receipts",
+    columns: [
+      pk("certificate_id"),
+      requiredCol("admission_event_id"),
+      requiredCol("command_id"),
+      requiredCol("command_payload_digest"),
+      requiredCol("plan_asset_id"),
+      requiredCol("plan_revision", "INTEGER"),
+      requiredCol("plan_id"),
+      requiredCol("source_path"),
+      requiredCol("content_digest"),
+      requiredCol("route_tuple_digest"),
+      requiredCol("certificate_digest"),
+      requiredCol("recorded_at"),
+    ],
+    unique: [["admission_event_id"], ["command_id"]],
+    foreignKeys: [
+      foreignKey(["admission_event_id"], {
+        table: "plan_admission_events",
+        columns: ["admission_event_id"],
+        onDelete: "RESTRICT",
+      }),
+      foreignKey(["plan_asset_id", "plan_revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "plan_draft_journal",
+    columns: [
+      pk("journal_id"),
+      requiredCol("command_id"),
+      requiredCol("command_payload_digest"),
+      requiredCol("status"),
+      requiredCol("requested_plan_id"),
+      requiredCol("requested_source_path"),
+      col("plan_asset_id"),
+      col("plan_revision", "INTEGER"),
+      col("certificate_id"),
+      requiredCol("intent_recorded_at"),
+      col("completed_at"),
+      col("failure_reason"),
+      requiredCol("journal_digest"),
+    ],
+    unique: [["command_id"]],
+    checks: [
+      enumCheck("status", ["intent", "committed", "recovery_required", "rolled_back"]),
+      {
+        kind: "or",
+        expressions: [
+          {
+            kind: "and",
+            expressions: [
+              { kind: "compare", column: "status", operator: "=", value: "intent" },
+              { kind: "is-null", column: "completed_at" },
+            ],
+          },
+          {
+            kind: "and",
+            expressions: [
+              {
+                kind: "in",
+                column: "status",
+                values: ["committed", "recovery_required", "rolled_back"],
+              },
+              { kind: "is-null", column: "completed_at", negate: true },
+            ],
+          },
+        ],
+      },
+    ],
+    foreignKeys: [
+      foreignKey(["plan_asset_id", "plan_revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
+        onDelete: "RESTRICT",
+      }),
+      foreignKey(["certificate_id"], {
+        table: "plan_admission_receipts",
+        columns: ["certificate_id"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+  {
+    name: "plan_draft_journal_events",
+    columns: [
+      pk("journal_event_id"),
+      requiredCol("command_id"),
+      requiredCol("sequence", "INTEGER"),
+      requiredCol("command_payload_digest"),
+      requiredCol("event_kind"),
+      requiredCol("requested_plan_id"),
+      requiredCol("requested_source_path"),
+      col("plan_asset_id"),
+      col("plan_revision", "INTEGER"),
+      col("certificate_id"),
+      requiredCol("occurred_at"),
+      col("failure_reason"),
+      col("previous_event_digest"),
+      requiredCol("event_digest"),
+    ],
+    unique: [["command_id", "sequence"]],
+    checks: [enumCheck("event_kind", ["intent", "committed", "recovery_required", "rolled_back"])],
+  },
+];
+
+const tables: readonly TableDef[] = [...v3Tables, ...v4Tables];
+
+const v3Indexes: readonly IndexDef[] = [
   { name: "idx_plan_assets_created_at", table: "plan_assets", columns: ["created_at"] },
   {
     name: "idx_plan_assets_source_commit",
@@ -416,7 +557,27 @@ const indexes: readonly IndexDef[] = [
   },
 ];
 
-const historyTables = [
+const v4Indexes: readonly IndexDef[] = [
+  {
+    name: "idx_plan_admission_events_plan_revision",
+    table: "plan_admission_events",
+    columns: ["plan_asset_id", "plan_revision"],
+  },
+  {
+    name: "idx_plan_admission_receipts_plan_id",
+    table: "plan_admission_receipts",
+    columns: ["plan_id", "recorded_at"],
+  },
+  {
+    name: "idx_plan_draft_journal_status",
+    table: "plan_draft_journal",
+    columns: ["status", "intent_recorded_at"],
+  },
+];
+
+const indexes: readonly IndexDef[] = [...v3Indexes, ...v4Indexes];
+
+const v3HistoryTables = [
   "plan_assets",
   "plan_revisions",
   "plan_alias_events",
@@ -424,15 +585,27 @@ const historyTables = [
   "legacy_plan_migration_events",
   "append_command_receipts",
 ] as const;
-const triggers: readonly TriggerDef[] = historyTables.flatMap((table) =>
-  (["UPDATE", "DELETE"] as const).map((event) => ({
-    name: `trg_${table}_no_${event.toLowerCase()}`,
-    table,
-    timing: "BEFORE" as const,
-    event,
-    action: { kind: "raise-abort" as const, message: `append-only:${table}` },
-  })),
-);
+const v4HistoryTables = [
+  "plan_admission_events",
+  "plan_admission_receipts",
+  "plan_draft_journal_events",
+] as const;
+
+function appendOnlyTriggers(historyTables: readonly string[]): readonly TriggerDef[] {
+  return historyTables.flatMap((table) =>
+    (["UPDATE", "DELETE"] as const).map((event) => ({
+      name: `trg_${table}_no_${event.toLowerCase()}`,
+      table,
+      timing: "BEFORE" as const,
+      event,
+      action: { kind: "raise-abort" as const, message: `append-only:${table}` },
+    })),
+  );
+}
+
+const v3Triggers = appendOnlyTriggers(v3HistoryTables);
+const v4Triggers = appendOnlyTriggers(v4HistoryTables);
+const triggers: readonly TriggerDef[] = [...v3Triggers, ...v4Triggers];
 
 export function ledgerSchemaDdl(): readonly string[] {
   return [
@@ -447,9 +620,9 @@ export function migratePlanLedger(
   options: { readonly fault?: LedgerSchemaMigrationFaultPort } = {},
 ): { ok: true; version: number } | { ok: false; ruleId: "plan-ledger-unavailable" } {
   const version = db.userVersion();
-  if (version !== 0 && version !== 2 && version !== LEDGER_SCHEMA_VERSION)
+  if (version !== 0 && version !== 2 && version !== 3 && version !== LEDGER_SCHEMA_VERSION)
     return { ok: false, ruleId: "plan-ledger-unavailable" };
-  if (version === 2 && !migrateV2ToV3(db, options.fault)) {
+  if (version === 2 && !migrateV2ToV4(db, options.fault)) {
     return { ok: false, ruleId: "plan-ledger-unavailable" };
   }
   if (version === 0) {
@@ -464,12 +637,39 @@ export function migratePlanLedger(
       throw error;
     }
   }
+  if (db.userVersion() === 3) {
+    if (
+      !schemaMatchesVersion(db, { tables: v3Tables, indexes: v3Indexes, triggers: v3Triggers }) ||
+      !ledgerRowsValid(db)
+    )
+      return { ok: false, ruleId: "plan-ledger-unavailable" };
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      // Revalidate after acquiring the writer lock so migration never extends a
+      // schema or row set that changed between validation and migration.
+      if (
+        !schemaMatchesVersion(db, { tables: v3Tables, indexes: v3Indexes, triggers: v3Triggers }) ||
+        !ledgerRowsValid(db)
+      ) {
+        db.exec("ROLLBACK");
+        return { ok: false, ruleId: "plan-ledger-unavailable" };
+      }
+      for (const table of v4Tables) db.exec(createTableSql(table));
+      for (const index of v4Indexes) db.exec(createIndexSql(index));
+      for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
+      db.setUserVersion(LEDGER_SCHEMA_VERSION);
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  }
   return schemaMatches(db) && ledgerRowsValid(db)
     ? { ok: true, version: LEDGER_SCHEMA_VERSION }
     : { ok: false, ruleId: "plan-ledger-unavailable" };
 }
 
-function migrateV2ToV3(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): boolean {
+function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): boolean {
   if (!legacyV2ReservationSchemaValid(db) || reservationRowCount(db) !== 0) return false;
   const reservationTables = new Set(["plan_id_reservation_events", "plan_id_reservations"]);
   const reservationIndexes = indexes.filter((index) => reservationTables.has(index.table));
@@ -490,8 +690,21 @@ function migrateV2ToV3(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): b
     for (const index of reservationIndexes) db.exec(createIndexSql(index));
     for (const trigger of reservationTriggers) db.exec(createTriggerSql(trigger));
     fault?.after("v2-v3-schema-created");
+    db.setUserVersion(3);
+    if (
+      !schemaMatchesVersion(db, { tables: v3Tables, indexes: v3Indexes, triggers: v3Triggers }) ||
+      !ledgerRowsValid(db)
+    )
+      throw new Error("v2-v3-verification-failed");
+    // Keep custody v3 as the validated migration boundary, but do not expose it
+    // as a committed intermediate state. Admission v4 is installed in the same
+    // writer transaction so every v2 upgrade is all-or-nothing.
+    for (const table of v4Tables) db.exec(createTableSql(table));
+    for (const index of v4Indexes) db.exec(createIndexSql(index));
+    for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
+    fault?.after("v2-v4-schema-created");
     db.setUserVersion(LEDGER_SCHEMA_VERSION);
-    if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v3-verification-failed");
+    if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v4-verification-failed");
     db.exec("COMMIT");
     return true;
   } catch {
@@ -564,19 +777,32 @@ function schemaObjects(db: HarnessDb): readonly { type: string; name: string; sq
 }
 
 function schemaMatches(db: HarnessDb): boolean {
-  const expected = new Map<string, string>([
-    ...tables.map((table) => [`table:${table.name}`, normalizeDdl(createTableSql(table))] as const),
-    ...indexes.map(
+  return schemaMatchesVersion(db, { tables, indexes, triggers });
+}
+
+function schemaMatchesVersion(
+  db: HarnessDb,
+  expected: {
+    tables: readonly TableDef[];
+    indexes: readonly IndexDef[];
+    triggers: readonly TriggerDef[];
+  },
+): boolean {
+  const expectedObjects = new Map<string, string>([
+    ...expected.tables.map(
+      (table) => [`table:${table.name}`, normalizeDdl(createTableSql(table))] as const,
+    ),
+    ...expected.indexes.map(
       (index) => [`index:${index.name}`, normalizeDdl(createIndexSql(index))] as const,
     ),
-    ...triggers.map(
+    ...expected.triggers.map(
       (trigger) => [`trigger:${trigger.name}`, normalizeDdl(createTriggerSql(trigger))] as const,
     ),
   ]);
   const actual = schemaObjects(db);
   if (
-    actual.length !== expected.size ||
-    actual.some((row) => expected.get(`${row.type}:${row.name}`) !== normalizeDdl(row.sql))
+    actual.length !== expectedObjects.size ||
+    actual.some((row) => expectedObjects.get(`${row.type}:${row.name}`) !== normalizeDdl(row.sql))
   )
     return false;
   const integrity = db.prepare("PRAGMA integrity_check").get();
@@ -593,6 +819,18 @@ function ledgerRowsValid(db: HarnessDb): boolean {
   ] as const) {
     const rows = db.prepare(`SELECT * FROM ${table}`).all();
     if (rows.some((row) => row[digestColumn] !== ledgerRowDigest(row, digestColumn))) return false;
+  }
+  if (db.userVersion() >= 4) {
+    for (const [table, digestColumn] of [
+      ["plan_admission_events", "event_digest"],
+      ["plan_draft_journal", "journal_digest"],
+      ["plan_draft_journal_events", "event_digest"],
+    ] as const) {
+      const rows = db.prepare(`SELECT * FROM ${table}`).all();
+      if (rows.some((row) => row[digestColumn] !== ledgerRowDigest(row, digestColumn)))
+        return false;
+    }
+    if (!admissionReductionsValid(db) || !draftJournalReductionsValid(db)) return false;
   }
   const revisions = db
     .prepare("SELECT canonical_payload_json, canonical_payload_digest FROM plan_revisions")
@@ -612,6 +850,75 @@ function ledgerRowsValid(db: HarnessDb): boolean {
     reservationReceiptsValid(db) &&
     migrationReceiptsValid(db)
   );
+}
+
+function draftJournalReductionsValid(db: HarnessDb): boolean {
+  const currents = db.prepare("SELECT * FROM plan_draft_journal").all();
+  const events = db
+    .prepare("SELECT * FROM plan_draft_journal_events ORDER BY command_id, sequence")
+    .all();
+  const grouped = new Map<string, Record<string, unknown>[]>();
+  for (const event of events) {
+    const commandId = String(event.command_id);
+    const bucket = grouped.get(commandId) ?? [];
+    bucket.push(event);
+    grouped.set(commandId, bucket);
+  }
+  if (currents.length !== grouped.size) return false;
+  for (const current of currents) {
+    const commandEvents = grouped.get(String(current.command_id));
+    if (!commandEvents?.length) return false;
+    let previous: string | null = null;
+    for (const [index, event] of commandEvents.entries()) {
+      if (Number(event.sequence) !== index + 1 || event.previous_event_digest !== previous)
+        return false;
+      previous = String(event.event_digest);
+    }
+    const latest = commandEvents.at(-1);
+    if (!latest) return false;
+    if (
+      latest.event_kind !== current.status ||
+      latest.command_payload_digest !== current.command_payload_digest ||
+      latest.requested_plan_id !== current.requested_plan_id ||
+      latest.requested_source_path !== current.requested_source_path ||
+      latest.plan_asset_id !== current.plan_asset_id ||
+      latest.plan_revision !== current.plan_revision ||
+      latest.certificate_id !== current.certificate_id
+    )
+      return false;
+  }
+  return true;
+}
+
+function admissionReductionsValid(db: HarnessDb): boolean {
+  const eventsWithoutReceipt = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM plan_admission_events event
+       LEFT JOIN plan_admission_receipts receipt
+         ON receipt.admission_event_id = event.admission_event_id
+       WHERE receipt.certificate_id IS NULL
+         OR receipt.command_id != event.command_id
+         OR receipt.command_payload_digest != event.command_payload_digest
+         OR receipt.plan_asset_id != event.plan_asset_id
+         OR receipt.plan_revision != event.plan_revision
+         OR receipt.plan_id != event.plan_id
+         OR receipt.source_path != event.source_path
+         OR receipt.content_digest != event.content_digest
+         OR receipt.route_tuple_digest != event.route_tuple_digest
+         OR receipt.certificate_id != event.certificate_id
+         OR receipt.certificate_digest != event.certificate_digest
+         OR receipt.recorded_at != event.occurred_at`,
+    )
+    .get();
+  const receiptsWithoutEvent = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM plan_admission_receipts receipt
+       LEFT JOIN plan_admission_events event
+         ON event.admission_event_id = receipt.admission_event_id
+       WHERE event.admission_event_id IS NULL`,
+    )
+    .get();
+  return Number(eventsWithoutReceipt?.n ?? 0) === 0 && Number(receiptsWithoutEvent?.n ?? 0) === 0;
 }
 
 function migrationReceiptsValid(db: HarnessDb): boolean {
