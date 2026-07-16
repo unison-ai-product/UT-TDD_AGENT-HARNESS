@@ -511,7 +511,15 @@ describe("L7 CLI surface closure", () => {
       const payload = parseCliJson(run);
       expect(payload.dry_run).toBe(true);
       expect(payload.model).toBe("gpt-5.3-codex-spark");
-      expect(payload.args).toEqual(["exec", "-m", "gpt-5.3-codex-spark", "-"]);
+      // PLAN-L7-255: effort 未指定でも routing が ladder 既定 (spark=high) を解決して注入する
+      expect(payload.args).toEqual([
+        "exec",
+        "-m",
+        "gpt-5.3-codex-spark",
+        "-c",
+        "model_reasoning_effort=high",
+        "-",
+      ]);
     } finally {
       removeTestTree(fake.binDir);
     }
