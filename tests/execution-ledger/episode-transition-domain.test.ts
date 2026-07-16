@@ -107,6 +107,62 @@ describe("Execution Episode E1-E3 domain decisions (PLAN-L7-436)", () => {
       ),
     ).toMatchObject({ ok: true, selections: [{ overrideUsed: true }] });
   });
+
+  it("U-EXEP-003: decisionは入力を凍結せず、出力write-setを深く不変にする", () => {
+    const command = classify();
+    const target = command.verificationTarget;
+    const decision = decideExecutionTransition(initialEvents(), command);
+    expect(decision).toMatchObject({ ok: true });
+    expect(Object.isFrozen(command)).toBe(false);
+    expect(Object.isFrozen(target)).toBe(false);
+    if (!decision.ok) throw new Error("E1 fixture must pass");
+    expect(Object.isFrozen(decision.events)).toBe(true);
+    expect(Object.isFrozen(decision.events[0].payload)).toBe(true);
+    expect(Object.isFrozen(decision.selections)).toBe(true);
+    expect(Object.isFrozen(decision.outbox)).toBe(true);
+  });
+
+  it.each([
+    ["source commit", { sourceCommit: "c".repeat(40) }],
+    ["observed HEAD", { observedHead: "c".repeat(40) }],
+    ["policy revision", { policyRevision: "policy:other" }],
+  ] as const)("U-EXEP-003: %sのcustody driftを拒否する", (_label, override) => {
+    expect(decideExecutionTransition(initialEvents(), classify(override))).toMatchObject({
+      ok: false,
+      violations: [{ ruleId: "episode-custody-continuity-invalid" }],
+    });
+  });
+
+  it("U-EXEP-003: E1検証対象をorigin/re-entry資産へ束縛する", () => {
+    expect(
+      decideExecutionTransition(
+        initialEvents(),
+        classify({
+          verificationTarget: {
+            kind: "decision",
+            assetId: "plan:unrelated",
+            revision: 1,
+            statementDigest: DIGEST,
+          },
+        }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      violations: [{ ruleId: "episode-verification-target-unbound" }],
+    });
+  });
+
+  it.each([[""], [" forward-escape"], ["forward-escape", "forward-escape"]] as const)(
+    "U-EXEP-003: 不正なIssue label集合を拒否する",
+    (...labels) => {
+      expect(
+        decideExecutionTransition(eventsThroughE2(), requestIssue({ labels })),
+      ).toMatchObject({
+        ok: false,
+        violations: [{ ruleId: "episode-issue-projection-invalid" }],
+      });
+    },
+  );
 });
 
 function initialEvents() {
@@ -129,7 +185,7 @@ function eventsThroughE2() {
   return [...e1, ...e2.events];
 }
 
-function envelope(sequence: number) {
+function envelope<const TSequence extends 1 | 2 | 3>(sequence: TSequence) {
   return {
     commandId: `command:recovery-70:e${sequence}`,
     episodeId: "episode:recovery-70",
