@@ -3,7 +3,7 @@ plan_id: PLAN-L7-442-doctor-singleton-guard
 title: "PLAN-L7-442 (add-impl): doctor 多重起動 fail-fast (singleton lock)"
 kind: add-impl
 layer: L7
-drive: be
+drive: agent
 status: draft
 route_signal: feature_addition
 route_mode: add-feature
