@@ -96,7 +96,8 @@ Issue body、Execution Ledger event、PLAN `route_mode`の3面が同じ正規化
 
 ## 5. L6↔L7 pair / oracle
 
-L7 test-designに`U-EXISSUE-*`を追加し、少なくとも次をmutationで固定する。
+L7-436のaggregate / reducer / ledgerは`U/P-EXEP-*`、L7-437のGitHub adapter / inbox / reconcileは
+`U-GHISS-*`として責務を分離し、少なくとも次をmutationで固定する。
 
 1. 通常Forward辺はIssueなしで通り、off-Forward辺だけがIssueを要求する。
 2. `drive_model`空・未知・技術drive混入・Issue/Ledger/PLAN不一致は全てfail-closeする。
@@ -112,4 +113,5 @@ L7 test-designに`U-EXISSUE-*`を追加し、少なくとも次をmutationで固
 - [ ] off-Forward Issueの`drive_model`が必須かつ三面一致でfail-closeする。
 - [ ] origin asset/revision/L/stateとreentry targetがLedger/Issue双方へ保存される。
 - [ ] GitHub障害時のdeferred/retry/reconcileが冪等で、記録消失・重複Issueがない。
-- [ ] `U-EXISSUE-*` Red、独立review、L7-436実装、Reverse backfillを経てconfirmed化する。
+- [ ] `U/P-EXEP-*` Red、独立review、L7-436実装、Reverse backfillを経てconfirmed化する。
+- [ ] `U-GHISS-*` Red、独立review、L7-437実装、Reverse backfillを経てGitHub projectionをconfirmed化する。

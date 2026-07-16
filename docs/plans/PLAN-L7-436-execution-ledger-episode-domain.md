@@ -22,9 +22,26 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-436-execution-ledger-episode-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: src/execution-ledger/domain/execution-episode.ts
+    artifact_type: source_module
+  - artifact_path: src/execution-ledger/domain/transition-table.ts
+    artifact_type: source_module
+  - artifact_path: src/execution-ledger/application/episode-reducer.ts
+    artifact_type: source_module
+  - artifact_path: src/execution-ledger/adapters/sqlite/episode-repository.ts
+    artifact_type: source_module
+  - artifact_path: tests/execution-ledger/episode-domain.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/execution-ledger/episode-reducer.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/execution-ledger/episode-repository.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L6-83-forward-escape-issue-contract.md
-  requires: []
+  requires:
+    - docs/plans/PLAN-L6-83-forward-escape-issue-contract.md
   blocks:
     - docs/plans/PLAN-L7-437-github-issue-projection-inbound.md
   references:
@@ -69,7 +86,9 @@ constructorはparse/validation resultを返すfactory経由とし、空値、未
 
 ## 3. TDD Red oracle
 
-`tests/execution-ledger-episode.test.ts`へ以下をRedで先置きし、実装前に対象failを確認する。
+domain / reducer / repositoryの失敗境界を混ぜないため、
+`tests/execution-ledger/episode-domain.test.ts`、`episode-reducer.test.ts`、
+`episode-repository.test.ts` の順にRedを固定し、各段をGreenにしてから次段へ進む。
 
 - `U-EXEP-001`: 通常Forward辺はepisodeを作らず、escape分類だけがE0を生成する。
 - `U-EXEP-002`: drive model欠落・未知・技術drive・route不一致をE1前に拒否する。
@@ -82,6 +101,10 @@ constructorはparse/validation resultを返すfactory経由とし、空値、未
 - `U-EXEP-009`: projection全削除/rebuild前後でstate、external intent、merge readinessが一致する。
 - `U-EXEP-010`: rationaleなしoverride、stale origin revision、reentry target欠落を拒否する。
 - `P-EXEP-001`: 任意の合法event列への重複/交換/削除mutationで不正昇格しない。
+
+候補だった並行appendは`U-EXEP-008`、clock skew/occurred_at逆行は`U-EXEP-007`へ吸収し、
+oracleを削除しない。E12 `draft_pr_projected` はremote binding確認後だけ到達可能とし、outbox enqueueだけで
+projectedと称さない。PR request intentはE11上の非状態outboxとして保持し、E0〜E15を勝手に拡張しない。
 
 ## 4. AC
 

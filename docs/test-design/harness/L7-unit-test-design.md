@@ -1545,17 +1545,17 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 
 | ID | 観点 | fixture / mutation | expected |
 | --- | --- | --- | --- |
-| `CANDIDATE-EXEP-001` | 通常Forward | L0→L1の合法遷移 | Episode/eventは記録するがIssue/outbox 0 |
-| `CANDIDATE-EXEP-002` | Forward外Issue必須 | escape理由あり、`drive_model`欠落 | E2以降へ進めず`drive-model-required` |
-| `CANDIDATE-EXEP-003` | E0〜E15順序 | E7をE6前にappend | `episode-transition-invalid`、既存event列不変 |
-| `CANDIDATE-EXEP-004` | replay決定性 | 同一event列を2回reduce | state/digest/next-actions完全一致 |
-| `CANDIDATE-EXEP-005` | command冪等性 | 同一command keyを2回適用 | event/outbox増分は各1件、返却episode同一 |
-| `CANDIDATE-EXEP-006` | 原子的outbox | event append後/outbox insert前へfault injection | event/outboxとも部分commit 0 |
-| `CANDIDATE-EXEP-007` | override監査 | 人間overrideで遷移を進める | 既存event更新0、理由/actor/revision付きeventをappend |
-| `CANDIDATE-EXEP-008` | authored source境界 | DBだけに完了stateを注入 | rebuildで消滅し、完了証拠として不採用 |
-| `CANDIDATE-EXEP-009` | event語彙の正本一致 | event番号を別意味へshift/alias、unknown kindを注入 | requirements E0〜E15表とのexact不一致を拒否 |
-| `CANDIDATE-EXEP-010` | 並行append | 同一expected sequenceへ2 commandを競合 | 片方だけcommitし、他方はwrite 0のsequence conflict |
-| `CANDIDATE-EXEP-011` | sequence正本 | occurred_at逆行・clock skewを注入 | 時刻で順序補完せずsequence/digest chainでfail-close |
+| `U-EXEP-001` | Forward境界 | 通常Forward / Forward escape | 通常Forwardはepisode/event/outbox全0、escapeだけE0生成 |
+| `U-EXEP-002` | drive model境界 | 欠落・未知・技術drive・route不一致 | E0生成前にrule ID付きfail-close |
+| `U-EXEP-003` | E0〜E15合法隣接 | 唯一transition tableの全15辺 | payload guard成立時だけ隣接遷移を受理 |
+| `U-EXEP-004` | 不正遷移 | 飛越し・逆行・terminal後追加 | `episode-transition-invalid`、既存event列不変 |
+| `U-EXEP-005` | command冪等性 | 同一ID/同payload replay、同一ID/異payload | event identity同一 / conflict時write 0 |
+| `U-EXEP-006` | replay決定性 | 同一canonical event列を2回reduce・DB再open | state/digest/next-actions完全一致 |
+| `U-EXEP-007` | event chain | 欠番・重複・交換・digest改変・unknown・clock skew | 時刻補完せずsequence/digest chainで拒否 |
+| `U-EXEP-008` | 原子的outbox・並行append | E3 event/outbox各fault、同一expected sequence競合 | event/current/outbox/receipt全rollback、winner 1件 |
+| `U-EXEP-009` | projection rebuild | read model全削除・DBだけの偽完了 | event正本から同値再構築し偽完了を除去、GitHub write 0 |
+| `U-EXEP-010` | origin/reentry/override | stale revision、reentry欠落、override根拠欠落 | E0/E1既存列も変えずrule ID付き拒否 |
+| `P-EXEP-001` | 全合法prefix mutation | 各prefixへduplicate/delete/swap/unknown insert | rejectまたは元prefixより上位state/mergeReadyへ昇格0 |
 | `CANDIDATE-GHISS-001` | Issue projection冪等 | 同一outboxを再送 | remote Issue 1、mapping 1、E4 1 |
 | `CANDIDATE-GHISS-002` | timeout後reconcile | remote作成成功後に応答timeout | marker検索で既存Issueへbindし重複作成0 |
 | `CANDIDATE-GHISS-003` | inbound重複 | delivery ID同一webhookを2回 | inbox 1、domain event増分1 |
