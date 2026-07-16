@@ -414,7 +414,7 @@ describe("L7 CLI surface closure", () => {
 
         expect(run.status).toBe(2);
         expect(payload).toMatchObject({ ok: false });
-        expect(payload.messages.join("\n")).toContain("already running");
+        expect(payload.doctorMessages.join("\n")).toContain("already running");
       } finally {
         removeTestTree(root);
       }
