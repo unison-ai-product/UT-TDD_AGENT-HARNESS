@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
+import { PLAN_ID_PATTERN } from "../schema/plan-id";
 import type { AdmissionProjectionPort } from "./admission-check";
 import type { AdmissionReceiptProjection } from "./diff-fence";
 
 export const TRACKED_RECEIPT_SCHEMA = "ut-tdd.plan-admission-receipts/v1" as const;
 const SHA256 = /^sha256:[a-f0-9]{64}$/;
 const PLAN_PATH = /^docs\/plans\/PLAN-[A-Za-z0-9-]+\.md$/;
-const PLAN_ID = /^PLAN-(?:L(?:[0-9]|1[0-4])|DISCOVERY|REVERSE|RECOVERY|M)-\d{2,}(?:-[a-z0-9-]+)?$/;
+const PLAN_ID = PLAN_ID_PATTERN;
 const ASSET_ID = /^plan:[a-z0-9][a-z0-9:-]{2,127}$/;
 
 /**

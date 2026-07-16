@@ -5,7 +5,11 @@ import {
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.js";
 import { parseReservablePlanIdIdentity, planIdMatchesShape } from "../schema/plan-id.js";
 import type { PlanDraftCommand } from "./plan-draft-service.js";
-import type { AdmissionDecision, PlanAdmissionRequest } from "./policy.js";
+import {
+  type AdmissionDecision,
+  evaluatePlanAdmission,
+  type PlanAdmissionRequest,
+} from "./policy.js";
 
 export interface DraftManifestV2 {
   readonly version: 2;
@@ -60,7 +64,9 @@ export function assemblePlanDraftCommand(input: {
   const identity = parsePlanIdentity(manifest.plan_id);
   const parsed = parseLegacyPlanSource(manifest.source.content);
   if (!parsed || parsed.planId !== manifest.plan_id) fail("plan-draft-source-plan-id-mismatch");
-  if (!sameTuple(admission, decision.tuple)) fail("plan-draft-admission-decision-mismatch");
+  const canonicalDecision = evaluatePlanAdmission(admission);
+  if (!canonicalDecision.ok || !sameDecision(decision, canonicalDecision))
+    fail("plan-draft-admission-decision-mismatch");
   if (
     !planIdMatchesShape(identity, admission) ||
     parsed.frontmatter.kind !== admission.kind ||
@@ -88,7 +94,7 @@ export function assemblePlanDraftCommand(input: {
       projection: manifest.projection,
     },
     admittedRequest: admission,
-    admittedDecision: decision,
+    admittedDecision: canonicalDecision,
     environment,
   });
   const canonical: CanonicalPlanDraftCommand = Object.freeze({
@@ -133,12 +139,13 @@ function parsePlanIdentity(planId: string) {
   return identity;
 }
 
-function sameTuple(request: PlanAdmissionRequest, tuple: AdmittedDecision["tuple"]): boolean {
+function sameDecision(left: AdmittedDecision, right: AdmittedDecision): boolean {
   return (
-    request.routeMode === tuple.routeMode &&
-    request.kind === tuple.kind &&
-    request.layer === tuple.layer &&
-    request.workflowPhase === tuple.workflowPhase
+    left.issueRequired === right.issueRequired &&
+    left.tuple.routeMode === right.tuple.routeMode &&
+    left.tuple.kind === right.tuple.kind &&
+    left.tuple.layer === right.tuple.layer &&
+    left.tuple.workflowPhase === right.tuple.workflowPhase
   );
 }
 
