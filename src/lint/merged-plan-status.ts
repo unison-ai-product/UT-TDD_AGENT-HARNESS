@@ -122,20 +122,15 @@ export function loadMergedPlanStatusInput(repoRoot: string): MergedPlanStatusInp
   const basePaths = baseRef
     ? new Set(gitText(repoRoot, ["ls-tree", "-r", "--name-only", baseRef]).split(/\r?\n/))
     : null;
-  const basePlanContents = baseRef
-    ? gitBatchText(
-        repoRoot,
-        reviewPlans.map((plan) => `docs/plans/${plan.file}`).filter((path) => basePaths?.has(path)),
-        baseRef,
-      )
-    : null;
   for (const rp of reviewPlans) {
     if (rp.status === "archived") continue;
     let content = "";
     try {
-      content = baseRef
-        ? (basePlanContents?.get(`docs/plans/${rp.file}`) ?? "")
-        : readFileSync(join(plansDir, rp.file), "utf8");
+      // PLAN の status/generates は検査対象 PR の現在本文を正本にする。base の本文を
+      // 読むと、PR 自身が draft 放置を confirm 化または generates 修正で是正しても、
+      // doctor が古い定義だけを再検出して自己是正不能になる。一方「成果物が既に
+      // merge 済みか」は base tree で判定し、PR 中に初めて追加した成果物を誤検出しない。
+      content = readFileSync(join(plansDir, rp.file), "utf8");
       if (!content) continue;
     } catch {
       continue;
@@ -201,34 +196,6 @@ function gitObjectExists(repoRoot: string, object: string): boolean {
 
 function gitText(repoRoot: string, args: readonly string[]): string {
   return execFileSync("git", ["-C", repoRoot, ...args], { encoding: "utf8" });
-}
-
-function gitBatchText(
-  repoRoot: string,
-  paths: readonly string[],
-  ref: string,
-): ReadonlyMap<string, string> {
-  if (paths.length === 0) return new Map();
-  const output = execFileSync("git", ["-C", repoRoot, "cat-file", "--batch"], {
-    input: paths.map((path) => `${ref}:${path}\n`).join(""),
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  const contents = new Map<string, string>();
-  let offset = 0;
-  for (const path of paths) {
-    const lineEnd = output.indexOf(10, offset);
-    if (lineEnd < 0) throw new Error("merged-plan-status-base-read-failed");
-    const header = output.subarray(offset, lineEnd).toString("utf8").split(" ");
-    const size = Number(header[2]);
-    if (header.length !== 3 || header[1] !== "blob" || !Number.isSafeInteger(size)) {
-      throw new Error("merged-plan-status-base-read-failed");
-    }
-    const start = lineEnd + 1;
-    const end = start + size;
-    contents.set(path, output.subarray(start, end).toString("utf8"));
-    offset = end + 1;
-  }
-  return contents;
 }
 
 export function mergedPlanStatusMessages(r: MergedPlanStatusResult): string[] {
