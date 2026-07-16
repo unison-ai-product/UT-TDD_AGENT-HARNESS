@@ -102,6 +102,8 @@ function buildEnvironment(
   if (!identity) throw new Error("plan-draft-plan-id-invalid");
   if (!planIdMatchesShape(identity, input.admission))
     throw new Error("plan-draft-source-admission-mismatch");
+  const canonicalDecision = evaluatePlanAdmission(input.admission);
+  if (!canonicalDecision.ok) throw new Error("plan-draft-admission-invalid");
   const sourceCommit = deps.sourceCommit();
   const seed = sha256(
     stableJson({
@@ -123,7 +125,9 @@ function buildEnvironment(
     reason: input.admission.escapeReason ?? `route:${input.admission.routeSignal}`,
     identityAlgorithm: "sha256-v1",
     bodyDigest: sha256(parsed.body),
-    routeTupleDigest: sha256(stableJson({ admission: input.admission, decision: input.decision })),
+    routeTupleDigest: sha256(
+      stableJson({ admission: input.admission, decision: canonicalDecision }),
+    ),
     leaseTokenHash: sha256(`lease:${input.manifest.command_id}:${seed}`),
     expiresAt: new Date(occurredAt + 24 * 60 * 60 * 1000).toISOString(),
   };
