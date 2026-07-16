@@ -149,8 +149,8 @@ describe("NodePlanDraftRunner", () => {
       readFileSync(join(root, ...projectionPath.split("/")), "utf8"),
     );
     expect(projection.ok && projection.value.records[0]).toMatchObject({
-      command_id: manifest.command_id,
-      plan_id: planId,
+      commandId: manifest.command_id,
+      binding: { planId },
     });
   });
 });
