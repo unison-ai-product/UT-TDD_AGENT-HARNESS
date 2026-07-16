@@ -3,6 +3,7 @@ import {
   classifyForwardBoundary,
   ExecutionEpisode,
   type RequestForwardEscape,
+  reduceExecutionEpisode,
   reconstructExecutionEpisode,
 } from "../../src/execution-ledger/domain/execution-episode.js";
 
@@ -150,6 +151,15 @@ describe("ExecutionEpisode domain (PLAN-L7-436)", () => {
         sourceCommit: SHA,
         observedHead: SHA,
         policyRevision: "policy:escape-v1",
+      },
+    });
+    expect(reduceExecutionEpisode(roundTripped)).toMatchObject({
+      ok: true,
+      snapshot: {
+        state: "E0",
+        eventSequence: 0,
+        lastEventDigest: created.events[0].eventDigest,
+        nextLegalCommands: ["classify_escape"],
       },
     });
   });

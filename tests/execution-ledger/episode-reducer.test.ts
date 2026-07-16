@@ -29,11 +29,33 @@ const EXPECTED_TRANSITIONS = [
   ["E15", "episode_closed"],
 ] as const;
 
+const EXPECTED_NEXT_COMMANDS = [
+  "classify_escape",
+  "select_drive_model",
+  "request_issue_projection",
+  "confirm_issue_projection",
+  "freeze_drive_plan",
+  "record_drive_verification",
+  "propose_reentry",
+  "record_forward_intermediate_test",
+  "issue_reentry_certificate",
+  "reenter_forward",
+  "record_post_reentry_test",
+  "confirm_draft_pr_projection",
+  "accept_cross_review",
+  "confirm_merge",
+  "close_episode",
+  null,
+] as const;
+
 describe("ExecutionEpisode reducer (PLAN-L7-436)", () => {
   it("U-EXEP-003: E0-E15の唯一のtransition tableから全合法prefixを受理する", () => {
     expect(EXECUTION_EPISODE_TRANSITIONS.map(({ state, kind }) => [state, kind])).toEqual(
       EXPECTED_TRANSITIONS,
     );
+    expect(
+      EXECUTION_EPISODE_TRANSITIONS.map(({ nextLegalCommands }) => nextLegalCommands[0] ?? null),
+    ).toEqual(EXPECTED_NEXT_COMMANDS);
 
     const events = chain(EXPECTED_TRANSITIONS);
     for (let length = 1; length <= events.length; length += 1) {
@@ -74,6 +96,17 @@ describe("ExecutionEpisode reducer (PLAN-L7-436)", () => {
         lastEventDigest: events[9].eventDigest,
         nextLegalCommands: ["reenter_forward"],
       },
+    });
+  });
+
+  it.each([
+    ["mixed episode", mixedEpisode],
+    ["clock regression", clockRegression],
+    ["valid-looking wrong predecessor", wrongPredecessor],
+  ] as const)("U-EXEP-007: re-sign/rechain済み%s攻撃を意味guardで拒否する", (_label, attack) => {
+    expect(reduceExecutionEpisode(attack(chain(EXPECTED_TRANSITIONS.slice(0, 4))))).toMatchObject({
+      ok: false,
+      violations: [{ ruleId: expect.stringMatching(/^episode-/) }],
     });
   });
 
@@ -185,4 +218,37 @@ function unknownEvent(
 
 function sha(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function resign(event: ExecutionEpisodeEvent): ExecutionEpisodeEvent {
+  return { ...event, eventDigest: calculateExecutionEventDigest(event) };
+}
+
+function rechain(events: readonly ExecutionEpisodeEvent[], start: number): readonly ExecutionEpisodeEvent[] {
+  const result = events.map((event) => ({ ...event }));
+  for (let index = start; index < result.length; index += 1) {
+    result[index] = resign({
+      ...result[index],
+      previousEventDigest: index === 0 ? null : result[index - 1].eventDigest,
+    });
+  }
+  return result;
+}
+
+function mixedEpisode(events: readonly ExecutionEpisodeEvent[]): readonly ExecutionEpisodeEvent[] {
+  const result = events.map((event) => ({ ...event }));
+  result[2] = { ...result[2], episodeId: "episode:other" };
+  return rechain(result, 2);
+}
+
+function clockRegression(events: readonly ExecutionEpisodeEvent[]): readonly ExecutionEpisodeEvent[] {
+  const result = events.map((event) => ({ ...event }));
+  result[2] = { ...result[2], occurredAt: "2026-07-16T09:00:59.999Z" };
+  return rechain(result, 2);
+}
+
+function wrongPredecessor(events: readonly ExecutionEpisodeEvent[]): readonly ExecutionEpisodeEvent[] {
+  const result = events.map((event) => ({ ...event }));
+  result[2] = resign({ ...result[2], previousEventDigest: sha("valid-looking-wrong-predecessor") });
+  return result;
 }
