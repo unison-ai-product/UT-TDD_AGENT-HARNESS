@@ -3,6 +3,7 @@ import {
   calculatePlanDraftCommandDigests,
 } from "../kernel/plan-draft-command-digest.js";
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.js";
+import { parseReservablePlanIdIdentity, planIdMatchesShape } from "../schema/plan-id.js";
 import type { PlanDraftCommand } from "./plan-draft-service.js";
 import type { AdmissionDecision, PlanAdmissionRequest } from "./policy.js";
 
@@ -59,6 +60,16 @@ export function assemblePlanDraftCommand(input: {
   const identity = parsePlanIdentity(manifest.plan_id);
   const parsed = parseLegacyPlanSource(manifest.source.content);
   if (!parsed || parsed.planId !== manifest.plan_id) fail("plan-draft-source-plan-id-mismatch");
+  if (
+    !planIdMatchesShape(identity, admission) ||
+    parsed.frontmatter.kind !== admission.kind ||
+    parsed.frontmatter.layer !== admission.layer ||
+    parsed.frontmatter.drive !== admission.drive ||
+    parsed.frontmatter.route_signal !== admission.routeSignal ||
+    parsed.frontmatter.route_mode !== admission.routeMode ||
+    parsed.frontmatter.workflow_phase !== admission.workflowPhase
+  )
+    fail("plan-draft-source-admission-mismatch");
   if (manifest.source.path !== `docs/plans/${manifest.plan_id}.md`)
     fail("plan-draft-source-path-mismatch");
   if (environment.namespace !== identity.namespace || environment.ordinal !== identity.ordinal)
@@ -116,10 +127,10 @@ export function assemblePlanDraftCommand(input: {
   return Object.freeze({ canonical, command });
 }
 
-function parsePlanIdentity(planId: string): { namespace: string; ordinal: number } {
-  const match = /^PLAN-(L(?:1[0-4]|[0-9]))-([1-9][0-9]*)(?:-|$)/.exec(planId);
-  if (!match) fail("plan-draft-plan-id-invalid");
-  return { namespace: match[1], ordinal: Number(match[2]) };
+function parsePlanIdentity(planId: string) {
+  const identity = parseReservablePlanIdIdentity(planId);
+  if (!identity) fail("plan-draft-plan-id-invalid");
+  return identity;
 }
 
 function sameTuple(request: PlanAdmissionRequest, tuple: AdmittedDecision["tuple"]): boolean {

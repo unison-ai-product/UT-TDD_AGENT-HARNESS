@@ -26,6 +26,7 @@ import {
   subDocSchema,
   workflowPhaseSchema,
 } from "./index";
+import { PLAN_ID_PATTERN } from "./plan-id";
 
 /**
  * §1.10 A plan_id 形式 (phase-aware + 駆動モデル legible): `PLAN-<token>-<NN>-slug`。
@@ -34,12 +35,10 @@ import {
  * NN = token 内 2 桁以上連番 (L7 等で 99 到達後は 100+ も許容、`\d{2,}`)、slug = kebab。**旧 flat `PLAN-001..004` は archived 別名前空間** (衝突しない)。
  * 狙い: ID 単体で 工程/駆動モデル + phase を判別 → state(DB) が phase↔PLAN を拾える。
  */
-export const planIdSchema = z
-  .string()
-  .regex(/^PLAN-(L(?:[0-9]|1[0-4])|DISCOVERY|REVERSE|RECOVERY|M)-\d{2,}(-[a-z0-9-]+)?$/, {
-    message:
-      "plan_id は PLAN-<token>-<NN>-slug 形式 (token = L0〜L14 / DISCOVERY / REVERSE / RECOVERY / M、§1.10 A)",
-  });
+export const planIdSchema = z.string().regex(PLAN_ID_PATTERN, {
+  message:
+    "plan_id は PLAN-<token>-<NN>-slug 形式 (token = L0〜L14 / DISCOVERY / REVERSE / RECOVERY / M、§1.10 A)",
+});
 
 /** §1.10 A 駆動モデルトークン ↔ kind 対応 (横断駆動プランの ID legibility 正本) */
 export const DRIVE_TOKEN_TO_KIND: Record<string, string> = {

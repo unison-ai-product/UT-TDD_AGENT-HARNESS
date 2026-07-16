@@ -1522,6 +1522,11 @@ source workflow / source template / Pack template / setup builtinのどれか1 a
 | `U-PADM-058` | ledger pending rollback | onPrepared内fault | callbackはCOMMIT前、全9表rollback |
 | `U-PADM-059` | prepared receipt mismatch | journal intentとledger receipt digest不一致 | publish前にdenyしrecovery_required |
 | `U-PADM-060` | restore failure | publish後rollback restore fault | recoveryを記録し自動再実行をdeny |
+| `U-PADM-061` | PLAN identity共通解釈 | 全tokenとzero-padding ordinal | token/ordinal/ordinalTextを単一parserで再現 |
+| `U-PADM-062` | 予約可能identity境界 | 凍結`M`系列、ordinal 0、桁不足、不正token/slug、`070`対`70` | canonical parseとdraft予約可否を分離し、zero-paddingを同一予約座標化 |
+| `U-PADM-063` | Recovery command assemble | `PLAN-RECOVERY-*`とRecovery Admission/source | namespace/ordinalとescape bindingを決定論生成 |
+| `U-PADM-064` | Recovery production runner | 実SQLite+filesystemへ同一Recovery commandを2回実行 | created後replayしsource/projection/receiptを各1件に収束 |
+| `U-PADM-065` | identity/source/Admission binding | Recovery ID/sourceへForward Admissionを混在 | ledger openとfilesystem writeより前にdeny |
 | `CANDIDATE-PADM-009` | authoring Saga強制終了 | DB commit直前直後の強制終了と補償fault | 未完journalをfail-closeし明示recoveryまで非正本 |
 | `CANDIDATE-PADM-010` | GitHub ingress | signature不正/enum不正/stale delivery | quarantine、PLAN admission 0 |
 

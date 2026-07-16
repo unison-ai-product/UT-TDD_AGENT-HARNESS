@@ -66,6 +66,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/node-plan-draft-runner.ts
     artifact_type: source_module
+  - artifact_path: src/schema/plan-id.ts
+    artifact_type: source_module
   - artifact_path: src/plan-admission/node-atomic-draft-publisher.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/sqlite-draft-journal.ts
@@ -110,6 +112,8 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/node-plan-draft-runner.test.ts
     artifact_type: test_code
+  - artifact_path: tests/plan-id-identity.test.ts
+    artifact_type: test_code
   - artifact_path: tests/cli-plan-draft.test.ts
     artifact_type: test_code
 dependencies:
@@ -129,6 +133,12 @@ dependencies:
 `PlanAdmissionPolicy`をpure domain/application境界に置き、`ut-tdd plan draft`、PLAN lint、
 branch-kind、hook/pre-push/CIが同じ許可tupleを読む。detectorはこの表を生成せず、許可tuple以外を
 Admission candidateに昇格させない。
+
+PLAN ID は共有identity parserを正本とし、`L0`〜`L14` / `DISCOVERY` / `REVERSE` / `RECOVERY` / `M`
+のtokenと2桁以上のordinalを一度だけ解釈する。draftで予約できるidentityは`M`以外かつordinal 1以上に限定し、
+tokenとAdmissionのkind/layer、source frontmatterとAdmission tupleが一致した場合だけledgerを開く。
+これによりForward外IssueからRecoveryへ入る正規経路をL層限定regexで拒否する実装driftを解消し、
+設計に検出・実行系を追従させる。
 
 `transition_direction`をmode判定の正本とする。`reverse`は`implementation_to_design`だけを許可し、
 `実装 → Reverse → Forward合流`を記録する。`redesign`は`design_to_implementation`だけを許可し、
@@ -173,13 +183,14 @@ failure injection、replay、concurrent reservation、temp rename失敗、DB com
 
 - [x] unknown signalのForward fallbackをauthoring入口で廃止する。(blind cross-review で反例不成立を確認、tests/plan-admission.test.ts green)
 - [x] Incident等の相関tuple、Forward/escapeのIssue policy、origin/reentry、pairingを同一policyで判定する。(同上、policy.ts evaluatePlanAdmission + frontmatter superRefine の二重実装を確認)
+- [ ] PLAN ID token・ordinalを共有parserで解釈し、Recoveryを含むidentity/source/Admissionの不一致をledger・filesystem副作用前に拒否する。(U-PADM-061〜065)
 - [ ] direct PLAN editとreceipt staleをhook/pre-push/CIでfail-closeする。
 - [ ] `U-PADM-*` / property / mutation / CLI実行がGreenとなり、Red oracle候補を実装oracleへ昇格する。
 - [ ] REVERSE-435で実装観測をL4-L6/L7 test-designへgap-only backfillする。
 
 ## テスト証跡
 
-`U-PADM-001`〜`060` の一意なoracle IDを
+`U-PADM-001`〜`065` の一意なoracle IDを
 `docs/test-design/harness/L7-unit-test-design.md` の同一IDへ対応させる。Green判定は上記`generates`の
 test moduleを固定スナップショットで実行し、同一IDの重複が0件であることをtrace gateで確認する。
 未実装の強制終了recoveryとGitHub ingressは `CANDIDATE-PADM-009`〜`010` のまま保持し、Greenと称さない。
