@@ -21,10 +21,10 @@ generates:
   - artifact_path: docs/plans/PLAN-L7-446-model-policy-enforcement.md
     artifact_type: markdown_doc
 dependencies:
-  parent: docs/design/harness/L6-function-design/cross-review-enforcement.md
-  requires:
-    - docs/plans/PLAN-L7-255-delegation-model-effort-injection.md
+  parent: docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
+  requires: []
   references:
+    - docs/plans/PLAN-L7-255-delegation-model-effort-injection.md
     - docs/plans/PLAN-L7-254-judgment-gate-reviewer-tier-matrix.md
     - src/team/model-policy.ts
     - .claude/hooks/agent-guard.ts
