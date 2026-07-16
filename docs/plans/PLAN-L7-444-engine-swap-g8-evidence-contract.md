@@ -10,7 +10,7 @@ route_mode: add-feature
 created: 2026-07-16
 updated: 2026-07-16
 owner: PO / Codex
-parent_design: docs/design/harness/L6-function-design/function-spec.md
+parent_design: docs/plans/PLAN-L6-73-vmodel-contract-compiler-right-arm-contracts.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
 pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
@@ -24,7 +24,7 @@ generates:
   - artifact_path: docs/plans/PLAN-REVERSE-444-engine-swap-g8-evidence-backfill.md
     artifact_type: markdown_doc
 dependencies:
-  parent: docs/design/harness/L6-function-design/function-spec.md
+  parent: docs/plans/PLAN-L6-73-vmodel-contract-compiler-right-arm-contracts.md
   requires: []
   blocks:
     - docs/plans/PLAN-L8-01-engine-swap-integration-verification.md
