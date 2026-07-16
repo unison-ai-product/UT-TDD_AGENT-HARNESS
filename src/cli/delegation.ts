@@ -14,8 +14,8 @@ import {
   isReadOnlyDelegationRole,
   reviewGuardMessages,
 } from "../runtime/review-guard";
+import { resolveDelegationRouting } from "../runtime/delegation-routing";
 import { dispatch, nodeDeps, type SessionHookInput } from "../runtime/session-log";
-import { MODEL_IDS } from "../team/model-policy";
 
 export interface AdapterExecutionDeps {
   gitBranch: () => string | null;
@@ -179,6 +179,25 @@ function runtimeCommand(
           return;
         }
         const mode = detectMode().mode;
+        // role 検証 + role/intent ベースの model/effort routing (PLAN-L7-255)。
+        // 明示 --model/--effort は routing より常に優先される。
+        const routing = resolveDelegationRouting({
+          provider,
+          role: opts.role,
+          task,
+          model: opts.model,
+          effort: opts.effort,
+        });
+        if (!routing.ok) {
+          process.stderr.write(`${routing.message}\n`);
+          process.exitCode = 1;
+          return;
+        }
+        const routingAudit =
+          `delegation-routing: model=${routing.model} (${routing.model_source}) ` +
+          `effort=${routing.effort} (${routing.effort_source})` +
+          (routing.review_lane ? ` lane=${routing.review_lane}` : "") +
+          (routing.task_intent ? ` intent=${routing.task_intent}` : "");
         const contextInjection = deps.resolveSkillContextInjection(opts.plan);
         const plan = buildAdapterPlan(
           {
@@ -186,15 +205,16 @@ function runtimeCommand(
             role: opts.role,
             task,
             planId: opts.plan,
-            // Direct Codex delegation is an implementation worker lane unless a caller
-            // explicitly selects another model; reserve frontier routing for advisor/gates.
-            model: opts.model ?? (provider === "codex" ? MODEL_IDS.codex.worker : undefined),
-            effort: opts.effort,
+            model: routing.model,
+            effort: routing.effort,
             execute: Boolean(opts.execute),
             contextInjection,
           },
           mode,
         );
+        // どの routing が効いたかを plan 出力 (dry-run JSON / execute ログ) へ監査記録する
+        // (PLAN-L7-255 スコープ 4。DB 投影は telemetry 側 follow-up)。
+        plan.messages.push(routingAudit);
         if (!plan.available) {
           process.stderr.write(`${plan.messages.join("\n")}\n`);
           process.exitCode = 1;
