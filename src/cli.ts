@@ -42,6 +42,7 @@ import {
   DOCTOR_RUN_PROFILES,
   type DoctorRunProfileId,
 } from "./doctor/check-registry";
+import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-lock";
 import { renderElicitationContext, selectElicitationContext } from "./elicitation/context";
 import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/record";
 import { computeSkillMetrics } from "./feedback/engine";
@@ -574,14 +575,32 @@ program
         process.exitCode = 1;
         return;
       }
-      const r = runDoctor(undefined, {
-        strictTelemetryProvenance: opts.strictTelemetryProvenance === true,
-        strictGreenCommandDigest: opts.strictGreenCommandDigest === true,
-        setupSmoke: opts.setupSmoke === true,
-        ...(profile ? { profile: profile as DoctorRunProfileId } : {}),
-        scope,
-        timing: opts.timing === true,
-      });
+      // 多重起動 fail-fast (PLAN-L7-442): 再試行嵐で doctor プロセスが積み上がり
+      // メモリ枯渇する実害 (2026-07-16) の再発防止。lock 障害は fail-open。
+      const lock = acquireDoctorLock(process.cwd());
+      if (!lock.acquired) {
+        const message = doctorLockBlockedMessage(lock.holder);
+        if (opts.json) {
+          process.stdout.write(`${JSON.stringify({ ok: false, messages: [message] }, null, 2)}\n`);
+        } else {
+          process.stderr.write(`${message}\n`);
+        }
+        process.exitCode = 2;
+        return;
+      }
+      let r: ReturnType<typeof runDoctor>;
+      try {
+        r = runDoctor(undefined, {
+          strictTelemetryProvenance: opts.strictTelemetryProvenance === true,
+          strictGreenCommandDigest: opts.strictGreenCommandDigest === true,
+          setupSmoke: opts.setupSmoke === true,
+          ...(profile ? { profile: profile as DoctorRunProfileId } : {}),
+          scope,
+          timing: opts.timing === true,
+        });
+      } finally {
+        lock.release();
+      }
       if (opts.json) {
         process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
       } else {
