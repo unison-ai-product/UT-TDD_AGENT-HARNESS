@@ -195,11 +195,17 @@ function receiptsMatchEvents(
 ): boolean {
   if (receipts.length !== eventRows.length) return false;
   const byEventId = new Map(eventRows.map((event) => [String(event.event_id), event]));
+  const commandTypes = new Map([
+    ["escape_observed", "execution_episode.request_escape"],
+    ["escape_classified", "execution_episode.classify_escape"],
+    ["drive_selected", "execution_episode.select_drive_model"],
+    ["issue_requested", "execution_episode.request_issue_projection"],
+  ]);
   return receipts.every((receipt) => {
     const event = byEventId.get(String(receipt.result_ref));
     return (
       event !== undefined &&
-      receipt.command_type === "execution_episode.request_escape" &&
+      receipt.command_type === commandTypes.get(String(event.event_kind)) &&
       receipt.subject_key === event.episode_id &&
       receipt.command_id === event.command_id &&
       receipt.command_payload_digest === event.command_payload_digest &&

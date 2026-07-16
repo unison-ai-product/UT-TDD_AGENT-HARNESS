@@ -450,6 +450,10 @@ export function canonicalizeExecutionPayload(value: unknown): string {
   return canonical(value);
 }
 
+export function executionCommandPayloadDigest(value: unknown): string {
+  return digest(canonical(value));
+}
+
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
   if (value && typeof value === "object") {
@@ -573,7 +577,7 @@ export function decideExecutionTransition(
   if (specific) return specific;
   const payload = transitionPayload(root, command);
   const payloadDigest = digest(canonical(payload));
-  const commandPayloadDigest = digest(canonical(command));
+  const commandPayloadDigest = executionCommandPayloadDigest(command);
   const unsigned = {
     episodeId: command.episodeId,
     sequence: command.expectedSequence,

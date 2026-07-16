@@ -1,6 +1,7 @@
 import {
   canonicalizeExecutionPayload,
   decideExecutionTransition,
+  executionCommandPayloadDigest,
   ExecutionEpisode,
   EXECUTION_EPISODE_TRANSITIONS,
   type EscapeObservedEvent,
@@ -11,6 +12,7 @@ import {
   type ExecutionTransitionEvent,
   type IssueProjectionIntent,
   reconstructExecutionEpisode,
+  reduceExecutionEpisode,
   type RequestForwardEscape,
 } from "../../domain/execution-episode.js";
 import type {
@@ -107,6 +109,22 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
     if (!custody.runtime.trim() || !custody.model.trim())
       return failed("episode-custody-invalid", "custody");
     return this.transaction.run(() => {
+      const receipt = this.db
+        .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
+        .get(command.commandId);
+      if (receipt) {
+        if (receipt.command_payload_digest !== executionCommandPayloadDigest(command))
+          return { commit: false, value: failed("episode-command-payload-conflict", "commandId") };
+        if (!executionLedgerRowsValid(this.db))
+          return {
+            commit: false,
+            value: failed("episode-ledger-integrity-invalid", "ledger"),
+          };
+        return {
+          commit: true,
+          value: this.replayTransition(String(receipt.result_ref), command.episodeId),
+        };
+      }
       const history = this.loadHistory(command.episodeId);
       if (history.length === 0)
         return { commit: false, value: failed("episode-not-found", "episodeId") };
@@ -448,6 +466,39 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
           snapshot: reduction.value,
         }
       : reduction;
+  }
+
+  private replayTransition(eventId: string, episodeId: string): EpisodeRepositoryResult {
+    const history = this.loadHistory(episodeId);
+    const row = this.db
+      .prepare("SELECT event_sequence FROM execution_episode_events WHERE event_id = ?")
+      .get(eventId);
+    if (!row) return failed("episode-ledger-integrity-invalid", "receipt.result_ref");
+    const sequence = Number(row.event_sequence);
+    const event = history[sequence];
+    const reduction = reduceExecutionEpisode(history);
+    if (!event || !reduction.ok)
+      return failed("episode-ledger-integrity-invalid", "receipt.result_ref");
+    const transition = EXECUTION_EPISODE_TRANSITIONS[sequence];
+    const outboxIds = this.db
+      .prepare(
+        "SELECT outbox_id FROM github_projection_outbox WHERE episode_id = ? AND source_event_sequence = ? ORDER BY outbox_id",
+      )
+      .all(episodeId, sequence)
+      .map((intent) => String(intent.outbox_id));
+    return {
+      ok: true,
+      status: "replayed",
+      eventIds: [eventId],
+      outboxIds,
+      snapshot: {
+        episodeId,
+        state: reduction.snapshot.state,
+        eventSequence: reduction.snapshot.eventSequence,
+        lastEventDigest: reduction.snapshot.lastEventDigest,
+        nextLegalCommands: transition.nextLegalCommands,
+      },
+    };
   }
 
 }
