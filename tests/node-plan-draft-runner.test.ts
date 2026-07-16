@@ -139,9 +139,15 @@ describe("NodePlanDraftRunner", () => {
 
     const created = runner.run({ manifest, admission, decision });
     const replayed = runner.run({ manifest, admission, decision });
+    const replayedWithExtraDecisionProperty = runner.run({
+      manifest,
+      admission,
+      decision: { ...decision, nonce: "caller-controlled" } as typeof decision,
+    });
 
     expect(created.status).toBe("created");
     expect(replayed).toEqual({ status: "replayed", receipt: created.receipt });
+    expect(replayedWithExtraDecisionProperty).toEqual(replayed);
     expect(
       parseLegacyPlanSource(readFileSync(join(root, ...sourcePath.split("/")), "utf8"))?.planId,
     ).toBe(planId);
