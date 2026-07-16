@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import type { RequestForwardEscape } from "../../src/execution-ledger/domain/execution-episode.js";
 import { SqliteExecutionEpisodeRepository } from "../../src/execution-ledger/adapters/sqlite/episode-repository.js";
-import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
+import { ledgerSchemaDdl, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { openHarnessDb, type HarnessDb } from "../../src/state-db/index.js";
 
 const SHA = "a".repeat(40);
@@ -76,6 +76,25 @@ describe("SqliteExecutionEpisodeRepository (PLAN-L7-436)", () => {
       });
     },
   );
+
+  it("U-EXEP-006: replay前に保存済みrow全体を検証しDB改変を成功として隠さない", () => {
+    withLedger((db) => {
+      const repository = new SqliteExecutionEpisodeRepository(db);
+      expect(repository.request(request(), CUSTODY)).toMatchObject({ ok: true, status: "created" });
+      db.exec("DROP TRIGGER trg_execution_episode_events_no_update");
+      db.prepare("UPDATE execution_episode_events SET event_state = 'E1'").run();
+      const trigger = ledgerSchemaDdl().find((sql) =>
+        sql.includes("trg_execution_episode_events_no_update"),
+      );
+      if (!trigger) throw new Error("event update trigger DDL missing");
+      db.exec(trigger);
+
+      expect(repository.request(request(), CUSTODY)).toMatchObject({
+        ok: false,
+        violations: [{ ruleId: "episode-ledger-integrity-invalid" }],
+      });
+    });
+  });
 });
 
 function request(overrides: Partial<RequestForwardEscape> = {}): RequestForwardEscape {
