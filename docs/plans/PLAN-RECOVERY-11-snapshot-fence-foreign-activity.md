@@ -25,12 +25,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-11-snapshot-fence-foreign-activity.md
     artifact_type: markdown_doc
-  - artifact_path: tests/support/git-workspace-fingerprint.ts
-    artifact_type: test_code
-  - artifact_path: tests/global-setup.ts
-    artifact_type: test_code
-  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
-    artifact_type: test_design
 dependencies:
   parent: null
   requires: []
@@ -63,6 +57,13 @@ worktree の HEAD / status / worktree diff / index diff / untracked 内容の
 - **運用影響**: author ランタイムのローカル full-suite 検証が相手の活動時間帯に
   常に失敗しうる → 検証が CI 依存になり、ローカル Red の意味が曖昧化する
   (真のテスト残留が foreign 活動ノイズに埋もれる)。
+
+## 実装対象 (実装着手時に generates へ昇格)
+
+draft 段階の generates は本 PLAN doc のみとする (merged-plan-status: 既 merge 済み
+deliverable の宣言は confirm 時)。実装対象は `tests/support/git-workspace-fingerprint.ts`、
+`tests/global-setup.ts`、`docs/test-design/harness/L7-unit-test-design.md` であり、
+実装 slice 着手時に generates へ追加して confirm と対で閉じる。
 
 ## 是正方針 (Step 案)
 
