@@ -74,6 +74,20 @@ profile・adapter・evidence・gate が存在しない。具体的弱点:
    normalized row のみ参照 (IMP-120 `tool_runs` 構想と接続)。
 6. harness.db projection 方針: `nfr_contracts` / `nfr_evidence` の projection table 追加方針を宣言
    (物理設計は L5 carry)。
+7. **AI 固有 NFR の category 拡張判断 (2026-07-16 抜け監査 #5 / IMP-174)**: LLM 判定の非決定性
+   (同一入力の gate 判定再現性)・モデル version drift・プロンプトインジェクション耐性・token 予算を
+   category 追加または理由付き除外で確定する。cost category の測定 adapter 候補 (AWS cost /
+   token 消費) が現ツール一覧に無い宙吊りも本 PLAN で解消する。
+8. **検証基盤の自己負荷上限 (同 #6 / IMP-175)**: NFR profile 実行 (負荷・耐久系は長時間) の並行数・
+   メモリ・実行時間 budget と singleton/queue 制御を方式化する (2026-07-16 doctor 16 並行 /
+   空きRAM 31MB incident と同型の自壊防止、PLAN-L7-442 discipline を NFR runner へ一般化)。
+9. **compliance 系の割当 (同 #7 / IMP-176)**: privacy (PII redaction、NFR-18 候補)・依存 license
+   監査・SBOM/配布物署名を security とは別軸で category / tool 候補へ割当てる (PLAN-L4-29 供給網
+   設計と責務分離)。evidence 自体への secret/PII 混入防止は既存 sensitive-scan gate へ接続する。
+10. **Windows native 実行可能性 (同 #8 / IMP-177)**: k6 / ZAP / Toxiproxy 等 adapter の native
+    Windows 動作可否を profile の前提条件 field として宣言し、OS × 実行環境の evidence matrix
+    (IMP-114) と接続する。manual evidence の承認者記録・家族分離 (`same_model_approval:
+    forbidden` の人間承認版) の方針もここで確定する。
 
 ## 3. 受入条件
 

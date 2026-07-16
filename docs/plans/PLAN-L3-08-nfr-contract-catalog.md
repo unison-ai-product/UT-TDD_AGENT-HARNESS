@@ -60,10 +60,20 @@ L1 NFR (NFR-01〜17) と L3 `nfr-grade.md` は IPA グレード値 + 受入閾�
    environment 未定義は契約 lint で reject。
 3. `nfr-grade.md` へ契約 catalog 節 (§8) を追加し、prose 閾値 (§1〜§6) と契約行の双方向対応を固定する。
 4. manual evidence 必須項目 (L10 ユーザビリティ等、人間承認が必要な contract) の宣言方法を定義する。
+5. **契約対象の二重性 (2026-07-16 抜け監査 #1)**: 契約 schema に `subject` (harness 自身 /
+   downstream-product) の束縛先 field を必須化する。既存 NFR-01〜17 は HARNESS 自身の NFR であり、
+   対象プロダクト契約との混線 (harness evidence によるプロダクト契約の充足) を型で禁止する。
+6. **契約ライフサイクル (同 #3)**: 契約の version と閾値変更の supersession 規律 (PLAN claim
+   discipline と同型: 緩和は successor 契約 + 双方向参照 + 理由必須、silent 上書き禁止) を定義する。
+7. **統計的判定属性 (同 #4)**: 性能系 metrics に percentile に加え測定回数・warmup・分散上限・
+   ベースライン較正の宣言 field を必須化し、単発測定 pass を契約レベルで不可能にする。
 
 ## 3. 受入条件
 
 - 12 category 全てが「契約対象」または「対象外 (理由付き)」へ排他分類され、宙吊り category 0 件。
+  12 category 外の候補 (privacy/compliance / AI 固有品質 / i18n / データ移行 RPO・RTO) も
+  「category 追加」または「理由付き除外」へ分類する (IMP-174/176/177)。
+- 全契約が `subject` を持ち、harness 契約とプロダクト契約が catalog 上で分離されている。
 - 既存 NFR-01〜17 のうち定量閾値を持つ全件が最低 1 contract へ trace される (孤児 0)。
 - 契約 schema の fail-close 条件 5 種 (§2-2) が負系 fixture として列挙されている。
 - `ut-tdd plan lint` / doctor green。

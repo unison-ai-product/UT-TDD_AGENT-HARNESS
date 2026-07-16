@@ -62,10 +62,19 @@ gate 直結」という指示書の禁止事項をすり抜ける実装が Green
    し、閾値判定 (verdict 決定) は gate core が単独所有する (adapter へ NFR ロジックを分散させない)。
 5. **verify recommend 決定論契約**: 変更ファイル・NFR category・対象 stage・実行環境 → 推薦 profile 集合
    の決定論写像。既存 `SIGNAL_TO_PROFILE` への NFR signal 追加契約。
+6. **evidence 信頼アンカー契約 (2026-07-16 抜け監査 #2)**: digest は自己申告であり単独では改竄検知に
+   ならない (IMP-149/158 教訓と同型)。evidence を `anchor_commit` + append-only receipt へ束縛し、
+   contract 側の version/digest も evidence 必須 field に含める (旧契約 pass の新契約への流用を
+   fail-close 条件 (i) contract version/digest 不一致 として追加、計 9 条件)。
+7. **統計的判定契約 (同 #4)**: 測定回数・warmup・分散が契約宣言を満たさない evidence は
+   verdict=pass でも gate reject。単発測定・mean-only を型と parse の両方で不可能にする。
 
 ## 3. 受入条件
 
-- fail-close 8 条件それぞれに負系 fixture 仕様 (入力 → 期待 finding) が宣言され、宙吊り条件 0 件。
+- fail-close 9 条件 (8 条件 + contract version/digest 不一致) それぞれに負系 fixture 仕様
+  (入力 → 期待 finding) が宣言され、宙吊り条件 0 件。
+- gate core 自身の self-proof 方針 (mutation survivor 0、PLAN-L4-28 流儀) が L7 test design へ
+  trace される。
 - サンプル契約で pass / fail 両方を再現する oracle 仕様が L7 unit test design へ trace される
   (指示書 §6: 最低 3 profile pass/fail 両再現の第一歩)。
 - 平均値のみでの性能判定を型で不可能にする (percentile 指標を metrics 語彙に含める)。
