@@ -3,6 +3,7 @@ import {
   classifyForwardBoundary,
   ExecutionEpisode,
   type RequestForwardEscape,
+  reconstructExecutionEpisode,
 } from "../../src/execution-ledger/domain/execution-episode.js";
 
 const SHA = "a".repeat(40);
@@ -130,5 +131,81 @@ describe("ExecutionEpisode domain (PLAN-L7-436)", () => {
   ] as const)("U-EXEP-010: %sを副作用前に拒否する", (_label, patch, ruleId) => {
     const result = ExecutionEpisode.request(request(patch as Partial<RequestForwardEscape>));
     expect(result).toMatchObject({ ok: false, violations: [{ ruleId }] });
+  });
+
+  it("U-EXEP-006: E0 event JSONだけからorigin/drive/reentryを無損失再構築する", () => {
+    const created = ExecutionEpisode.request(request());
+    if (!created.ok || created.status !== "accepted") throw new Error("fixture must create E0");
+    const roundTripped = JSON.parse(JSON.stringify(created.events)) as typeof created.events;
+
+    expect(reconstructExecutionEpisode(roundTripped)).toMatchObject({
+      ok: true,
+      value: {
+        episodeId: "episode:recovery-70",
+        recurrenceId: "recurrence:doctor-slo",
+        state: "E0",
+        requestedDriveModel: "recovery",
+        origin: request().origin,
+        reentry: request().reentry,
+        sourceCommit: SHA,
+        observedHead: SHA,
+        policyRevision: "policy:escape-v1",
+      },
+    });
+  });
+
+  it("U-EXEP-002: canonical redesign signalを受理し未知route/signal不一致を拒否する", () => {
+    expect(
+      ExecutionEpisode.request(
+        request({
+          commandId: "command:redesign-1",
+          episodeId: "episode:redesign-1",
+          routeMode: "redesign",
+          routeSignal: "design_revision",
+          requestedDriveModel: "redesign" as RequestForwardEscape["requestedDriveModel"],
+        }),
+      ),
+    ).toMatchObject({ ok: true, status: "accepted" });
+    expect(classifyForwardBoundary({ routeMode: "invented", escapeType: "reopened" })).toEqual({
+      kind: "invalid",
+      requiresEpisode: false,
+    });
+    expect(ExecutionEpisode.request(request({ routeSignal: "regression_prod" }))).toMatchObject({
+      ok: false,
+      violations: [{ ruleId: "episode-route-signal-mismatch" }],
+    });
+  });
+
+  it.each([
+    ["blank command", { commandId: "" }, "episode-command-id-invalid"],
+    ["blank episode", { episodeId: "" }, "episode-id-invalid"],
+    [
+      "invalid revision",
+      { origin: { ...request().origin, revision: 0, observedRevision: 0 } },
+      "episode-origin-invalid",
+    ],
+    ["short source SHA", { sourceCommit: "a".repeat(39) }, "episode-source-commit-invalid"],
+    [
+      "invalid issue digest",
+      { issue: { ...request().issue, bodyDigest: "b".repeat(63) } },
+      "episode-issue-invalid",
+    ],
+    ["invalid time", { occurredAt: "not-a-time" }, "episode-occurred-at-invalid"],
+  ] as const)("U-EXEP-010: %sをstructured violationへ変換する", (_label, patch, ruleId) => {
+    expect(ExecutionEpisode.request(request(patch as Partial<RequestForwardEscape>))).toMatchObject(
+      {
+        ok: false,
+        violations: [{ ruleId }],
+      },
+    );
+  });
+
+  it("U-EXEP-010: secret-like raw textをevent payloadへ入れず拒否する", () => {
+    expect(
+      ExecutionEpisode.request(request({ escapeReason: `token ghp_${"x".repeat(20)}` })),
+    ).toMatchObject({
+      ok: false,
+      violations: [{ ruleId: "episode-sensitive-input-forbidden" }],
+    });
   });
 });
