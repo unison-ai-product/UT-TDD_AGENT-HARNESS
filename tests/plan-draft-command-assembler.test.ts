@@ -126,6 +126,15 @@ describe("PLAN draft command assembler", () => {
     expect(() =>
       assemblePlanDraftCommand({ manifest, admission: mismatched, decision, environment }),
     ).toThrow("plan-draft-admission-decision-mismatch");
+
+    expect(() =>
+      assemblePlanDraftCommand({
+        manifest,
+        admission,
+        decision: { ...decision, issueRequired: !decision.issueRequired },
+        environment,
+      }),
+    ).toThrow("plan-draft-admission-decision-mismatch");
   });
 
   it("U-PADM-063: Recovery IDをRecovery tupleと予約identityへ束縛する", () => {
@@ -208,6 +217,27 @@ describe("PLAN draft command assembler", () => {
     const recoveryDecision = evaluatePlanAdmission(recoveryAdmission);
     if (!recoveryDecision.ok) throw new Error("recovery fixture must be admitted");
     const canonicalSource = `---\nplan_id: ${recoveryPlanId}\ntitle: Mixed\nkind: recovery\nlayer: cross\ndrive: agent\nroute_signal: regression_dev\nroute_mode: recovery\n---\nbody\n`;
+    const identityOnlyMismatch: DraftManifestV2 = {
+      ...manifest,
+      plan_id: recoveryPlanId,
+      source: {
+        path: `docs/plans/${recoveryPlanId}.md`,
+        content: canonicalSource
+          .replace("kind: recovery", "kind: impl")
+          .replace("layer: cross", "layer: L7")
+          .replace("route_signal: regression_dev", "route_signal: forward")
+          .replace("route_mode: recovery", "route_mode: forward"),
+      },
+    };
+    expect(() =>
+      assemblePlanDraftCommand({
+        manifest: identityOnlyMismatch,
+        admission,
+        decision,
+        environment: { ...environment, namespace: "RECOVERY", ordinal: 70 },
+      }),
+    ).toThrow("plan-draft-source-admission-mismatch");
+
     const sourceContent =
       field === "workflow_phase"
         ? canonicalSource.replace("---\nbody", `${replacement}---\nbody`)
