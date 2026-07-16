@@ -39,7 +39,7 @@ decision_points:
 # dependency map
 
 Cross-module dependency detection, PLAN dependency graph analysis, and the
-`ut-tdd graph` / `ut-tdd doctor` surfaces that expose dependency drift
+`ut-tdd graph impact` / `ut-tdd graph export` / `ut-tdd doctor` surfaces that expose dependency drift
 (FR-L1-18 doctor cross-detection aggregation). Apply when a PLAN touches
 module boundaries, PLAN `requires`/`parent` fields, or when `ut-tdd doctor`
 reports a dependency-governance violation.
@@ -68,12 +68,13 @@ resolve before trace-freeze.
 
 **Source-level module dependencies:**
 TypeScript `import` paths across `src/` sub-modules. Detected by `bun run
-typecheck` and inspectable via `ut-tdd graph` (module dependency view).
+typecheck` and inspectable via `ut-tdd graph export --format mermaid` (relation-graph diagram).
 
 ## Mapping procedure
 
-1. Run `ut-tdd graph` to get the current dependency view for the affected
-   modules. Note any cycles or cross-layer imports.
+1. Run `ut-tdd graph impact --changed <path...>` (or `ut-tdd graph export
+   --format mermaid` for the full diagram) to get the current dependency view
+   for the affected modules. Note any cycles or cross-layer imports.
 2. Run `ut-tdd doctor` and read the full output (never `| tail`). Dependency-
    governance findings name the specific PLAN or artifact that is broken.
 3. For each finding, trace the chain: which upstream PLAN owns the artifact or
@@ -98,7 +99,7 @@ coupling was introduced.
 A Refactor PLAN must prove that no external dependency graph edge changed. Before
 pair-freeze:
 
-- [ ] Run `ut-tdd graph` on HEAD and on the base commit; confirm edges are
+- [ ] Run `ut-tdd graph export --format mermaid` on HEAD and on the base commit; confirm edges are
       identical for external-facing modules.
 - [ ] `bun run typecheck` exits 0 — no new import errors.
 - [ ] `ut-tdd doctor` exits 0 — no new orphans or dependency-drift findings.

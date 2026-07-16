@@ -114,7 +114,7 @@ session-close evidence. Do not rely on the handover narrative alone.
 
 The `SessionStart` and `Stop` hooks write to `src/runtime/session-log.ts`. Each
 session compresses into a PLAN digest in `harness.db`. Digests are queryable via
-`ut-tdd metrics` and `ut-tdd find`. Session log entries store metadata only —
+`ut-tdd metrics skill` and `ut-tdd find <query>`. Session log entries store metadata only —
 never prompt text, credentials, or PII.
 
 ## Staleness and multi-session gaps

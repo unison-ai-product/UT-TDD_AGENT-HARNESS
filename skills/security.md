@@ -36,7 +36,7 @@ decision_points:
     choose: "classify this as a security defect requiring the failure mode to be enumerated in the L5 design doc"
     over: "treating a quiet exit 0 as acceptable graceful degradation"
     because: "the file states a hook that exits 0 on error is a security defect by definition — fail-close is the required behavior for hook execution."
-  - when: "A `ut-tdd guardrail` finding surfaces on a committed file."
+  - when: "A pre-push secret-scan finding (src/lint/secret-scan.ts) surfaces on a committed file."
     choose: "fix the root cause before accept"
     over: "silencing the finding with a comment or suppression"
     because: "the anti-patterns section states silencing with a comment instead of fixing the root cause is prohibited — the fix must land before accept, not be deferred by suppression."
@@ -58,7 +58,7 @@ adjacent state.
 
 - A PLAN modifies `.claude/settings.json` (agent allowlist or hook configuration).
 - A new `ut-tdd` command or MCP endpoint is added.
-- `ut-tdd guardrail` exits non-zero.
+- The pre-push secret scan (`scripts/git-hooks/pre-push` → `src/lint/secret-scan.ts`) exits non-zero.
 - A Recovery or Incident PLAN requires proof that the exploit path is closed.
 - An Add-feature PLAN touches authentication, authorization, session state, or
   external API assumptions.
@@ -95,22 +95,22 @@ five rules is still enforced after the change.
 
 ## Secret and credential hygiene
 
+The actual secret scan runs in the `pre-push` git hook
+(`scripts/git-hooks/pre-push`), which inspects each pushed commit's blobs via
+`src/lint/secret-scan.ts` (`analyzeSecretScan`). `ut-tdd guardrail` is **not** a
+scanner — it is the guardrail decision ledger (`ut-tdd guardrail status` lists
+recorded guardrail decisions from harness.db).
+
 Before any commit that touches `docs/`, `.ut-tdd/`, handover files, or audit
-evidence:
-
-```
-ut-tdd guardrail
-```
-
-Check for:
+evidence, check for:
 - No strings matching API key patterns in any text file under the repo.
 - No `UT_TDD_ALLOW_RAW_AGENT=1` left in committed scripts (should be env-only).
 - No credential or session token in `.ut-tdd/handover/CURRENT.json`.
 - No personal absolute path that encodes a username or machine name in a
   committed config file.
 
-If `ut-tdd guardrail` does not cover a pattern you found, file an improvement
-entry and add a Vitest test fixture for the new pattern.
+If `src/lint/secret-scan.ts` does not cover a pattern you found, file an
+improvement entry and add a Vitest test fixture for the new pattern.
 
 ## Runtime safety constraints
 
@@ -133,7 +133,7 @@ gate: trace-freeze | accept
 security_axis:
   escalation_boundaries: <not crossed | crossed and escalated>
   agent_guard_rules: <all 5 pass | finding>
-  credential_hygiene: <guardrail-pass | finding>
+  credential_hygiene: <secret-scan-pass | finding>
   hook_fail_close: <verified | finding>
 outcome: PASS | FAIL | CONDITIONAL
 timestamp: <ISO-8601>
@@ -142,8 +142,8 @@ timestamp: <ISO-8601>
 ## Anti-patterns
 
 - Modifying `.claude/settings.json` as a "quick config change" without running
-  `ut-tdd guardrail` and recording review evidence.
+  the secret scan and recording review evidence.
 - Treating `UT_TDD_ALLOW_RAW_AGENT=1` as a normal operational flag — it is an
   emergency bypass that must leave an audit trail every time it is used.
-- Silencing a `ut-tdd guardrail` finding with a comment instead of fixing the
+- Silencing a secret-scan finding with a comment instead of fixing the
   root cause — the fix must land before accept.

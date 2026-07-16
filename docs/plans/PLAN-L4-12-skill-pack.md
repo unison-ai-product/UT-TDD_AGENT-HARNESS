@@ -49,7 +49,7 @@ PLAN-L4-10 (Master) §2 triage の child。**FR-L1-47 (skill pack の UT-TDD cur
 ## §1 doc 化スコープ (L4 = L9 総合テスト粒度)
 
 1. **architecture §3 に skills building block 新設**: Level 1 building block 表に `skills` 追加 (catalog / recommender / injector)。依存方向 = schema へ一方向 (安定核維持、循環禁止)
-2. **層1/層2 分離**: skill 本文 = `docs/skills/**/*.md` (markdown 正本、curate 先) / catalog-injector = TS (層2)
+2. **層1/層2 分離**: skill 本文 = `skills/**/*.md` (markdown 正本、curate 先。訂正 2026-07-16: 起票時 `docs/skills/` → 実装移行済み root `skills/` へ同期、PLAN-REVERSE-280) / catalog-injector = TS (層2)
 3. **curate 方針**: vendor 107 skill → UT-TDD 版 SKILL_MAP (core-optional-drop 区分) + ut-tdd CLI trigger + helix 用語除去 (inventory §2)
 4. **依存方向の保証**: skills が schema 安定核に一方向依存、fs は loadX 端点に隔離 (architecture §3 原則踏襲)
 
@@ -66,7 +66,7 @@ PLAN-L4-10 (Master) §2 triage の child。**FR-L1-47 (skill pack の UT-TDD cur
 
 - **粒度段階分解**: skills building block を L4 で束ね → L5 で catalog/recommender/injector module 結合粒度 → L6 で各関数 (catalog 構築 / skill 推挙 / 注入) を単体テスト設計粒度に分解 (L5 を挟む)
 - **未確定 back-fill**: skill recommender のスコアリングアルゴリズム / injector の L 別注入セット定義は L6 機能設計で確定 → L7 単体テスト back-fill。L4 では placeholder + 依存 (`waiting_layer: L6`)
-- **DB 検知**: `docs/skills/` 空 (curate 未着手) / skill ↔ SKILL_MAP 不整合は doctor / FR-L1-49 drift lint (IMP-033 rule) が fail-close
+- **DB 検知**: skill root (`skills/`、訂正 2026-07-16 PLAN-REVERSE-280) 空 (curate 未着手) / skill ↔ SKILL_MAP 不整合は doctor / FR-L1-49 drift lint (IMP-033 rule) が fail-close
 - porting-map W10 (skill curate) を後続実装 PLAN に接続
 - FR-L1-12 (L 単位 skill 注入) / FR-L1-37 (model 推挙) と skills building block の連携を明示
 - **L4 記述範囲 (m-3 是正)**: architecture §3.2 Level 2 skills 内部に core-optional-drop の区分*方針*を 1 文で記述するに留める。区分アルゴリズム / SKILL_MAP 生成手順 / recommender スコアリングは L6 機能設計で確定 (L4 = 方針宣言のみ、curate 作業実体は porting-map W10)。これで「方針 (L4) ↔ 関数仕様 (L6) ↔ 作業 (W10)」の責務分界を明示

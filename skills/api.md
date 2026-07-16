@@ -91,8 +91,8 @@ requires an L4 doc update and a new pair-freeze before merging.
       the L4 doc by path.
 - [ ] `ut-tdd plan lint` exits 0 (PLAN `generates` lists both L4 and L8 docs).
 - [ ] `ut-tdd doctor` exits 0.
-- [ ] No endpoint name conflicts with existing routes (`ut-tdd graph` for
-      dependency view if wiring crosses modules).
+- [ ] No endpoint name conflicts with existing routes (`ut-tdd graph export
+      --format mermaid` for a dependency view if wiring crosses modules).
 - [ ] L0 glossary updated with any new resource or domain term.
 
 ## Reverse pass (extracting an existing API)

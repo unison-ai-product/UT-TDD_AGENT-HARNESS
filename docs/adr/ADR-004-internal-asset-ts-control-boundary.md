@@ -18,7 +18,7 @@ PO 指示 (2026-06-01):「内部資産は作り替える、TS に」。だが「
 
 ## 決定
 
-1. **層1 (資産の中身) = markdown 正本**。subagent prompt (`.claude/agents/*.md`) と skill 本文 (`docs/skills/**/*.md`) は **single source = markdown** とする。TS literal 化 (prompt を TS module 化) はしない。Claude Code native 規約 (`.claude/agents/*.md`) をそのまま正本に使う。
+1. **層1 (資産の中身) = markdown 正本**。subagent prompt (`.claude/agents/*.md`) と skill 本文 (`skills/**/*.md`) は **single source = markdown** とする。TS literal 化 (prompt を TS module 化) はしない。Claude Code native 規約 (`.claude/agents/*.md`) をそのまま正本に使う。
 2. **層2 (管理機構) = TS/Bun** (ADR-001 射程)。roster registry / skill catalog / recommender / injector / capability-class resolver / drift lint / guard を `src/runtime/*` + `src/skill-engine/*` に TS 実装する。
 3. **TS は生成でなく検証/注入/統制**。TS は markdown 正本に対し registry metadata 抽出 / schema validation / drift lint / capability resolve / runtime guard を担う。`.md` を TS が生成する方式 (single source = TS) は採らない。
 4. **drift lint (FR-L1-49)** が境界の番人: 正本 `.md` に legacy source 前提 (絶対パス `~/ai-dev-kit-vscode/` / legacy runtime command 直叩き / 未 curate skill / model family 不整合) が残らないことを **fail-close** で検証する。IMP-033 cross-check rule engine の rule 型インスタンスとして実装 (新規 lint を手書きしない)。
@@ -48,6 +48,10 @@ PO 指示 (2026-06-01):「内部資産は作り替える、TS に」。だが「
 - (+) **data 集約に影響しない (A-90)**: 層1 markdown を唯一正本とし TS (層2) は scan-on-demand で in-memory 構築 (永続 state なし) のため、roster / skill catalog は L4 data.md の **5 集約に新 entity を追加しない**。data.md §1 (非 entity 判断) / §8 (永続化なし) と本 ADR で整合 (cross-sub-doc 沈黙 gap の解消、L4 全体 G4 再 audit 対象)。
 - (−) 層2 (roster registry / catalog / recommender / injector / drift lint) の TS 実装コスト (L4-L7、porting-map W6/W7/W10)。
 - (−) markdown 正本に legacy source 前提が残るリスクは drift lint (FR-L1-49) が継続検証する必要がある (未実装の間は手動 audit)。
+
+## 訂正注記 (2026-07-16、PLAN-REVERSE-280)
+
+- 本 ADR 起票時の skill 正本 root は `docs/skills/` だったが、実装は root を **`skills/`** へ移行済み。決定 1 の記述を `skills/**/*.md` へ訂正した (A-180 S-2 / A-186 再確認、back-fill = PLAN-REVERSE-280)。「判断理由」「後続対応」中の `docs/skills/` 表記は起票当時の歴史的記述としてそのまま残す。層1 markdown 正本 / 層2 TS 統制という決定自体に変更はない。
 
 ## 後続対応
 

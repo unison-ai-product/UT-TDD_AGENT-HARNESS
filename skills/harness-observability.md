@@ -67,7 +67,7 @@ Never write to it directly; never treat it as the source of design truth (that
 lives in `docs/design/`). It is authoritative for: PLAN trace coverage, whether
 a gate ran (`gate_runs`), model/cost per run (`model_runs`), and skill adoption
 (`skill_evaluations`). Rebuild with `ut-tdd db rebuild`; inspect with
-`ut-tdd metrics`, `ut-tdd telemetry`, and `ut-tdd find`.
+`ut-tdd metrics skill`, `ut-tdd telemetry scan`, and `ut-tdd find <query>`.
 
 ## Adding a new projection (L5→L7)
 

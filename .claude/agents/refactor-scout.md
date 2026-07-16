@@ -21,7 +21,7 @@ that a SE/TL can use to decide whether to open or continue a Refactor PLAN.
 - `CLAUDE.md`
 - `.claude/CLAUDE.md`
 - `docs/process/modes/refactor.md`
-- `docs/skills/refactoring.md`
+- `skills/refactoring.md`
 
 ## Candidate Kinds
 

@@ -78,7 +78,7 @@ record an explicit `improvement-backlog.md` entry if deferring.
 ```
 Phase 0  old path live; new path exists behind a UT_TDD_* opt-in flag
 Phase 1  new path default; old path warn-deprecated (logged)
-Phase 2  old path removed; ut-tdd doctor asset-drift is green
+Phase 2  old path removed; the asset-drift finding within `ut-tdd doctor` is green
 Phase 3  deprecation notices / compat shims removed
 ```
 

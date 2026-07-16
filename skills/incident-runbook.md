@@ -73,7 +73,7 @@ incident / regression / hotfix; the target is production; and human approval
 (on-call + TL + PM) is recorded before any production change.
 
 ```
-ut-tdd status        # register the PLAN entry and confirm the Incident drive
+ut-tdd status        # confirm current mode / drive / active PLAN (read-only; registers nothing)
 ```
 
 First response (first ~15 minutes): confirm the symptom and scope; classify
