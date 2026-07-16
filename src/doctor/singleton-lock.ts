@@ -92,7 +92,12 @@ function readLockRecord(path: string, deps: DoctorLockDeps): DoctorLockRecord | 
       (deps.io ?? defaultDoctorLockIo()).readText(path),
     ) as Partial<DoctorLockRecord>;
     if (typeof parsed.pid !== "number" || typeof parsed.started_at !== "string") return null;
-    return { pid: parsed.pid, started_at: parsed.started_at, host: String(parsed.host ?? "") };
+    return {
+      pid: parsed.pid,
+      started_at: parsed.started_at,
+      host: String(parsed.host ?? ""),
+      lock_id: typeof parsed.lock_id === "string" ? parsed.lock_id : undefined,
+    };
   } catch {
     return null; // 読めない/壊れた lock は stale 扱いで回収する
   }

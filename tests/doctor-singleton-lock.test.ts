@@ -82,6 +82,7 @@ describe("doctor singleton lock (PLAN-L7-442)", () => {
       first.release();
       first.release();
     }
+    expect(() => readFileSync(doctorLockPath(repoRoot), "utf8")).toThrow();
     const second = acquireDoctorLock(repoRoot, 2222, deps({ isPidAlive: (pid) => pid === 1111 }));
     expect(second.acquired).toBe(true);
   });
