@@ -38,7 +38,7 @@ draft 起票 (PO /goal 2026-07-02、A-174 F-1 feature-gap [important])。
 
 ## 背景 (A-174 F-1)
 
-`ORACLE_ID = /\b(?:U|IT)-[A-Z0-9]+-[0-9]{3}\b/` (oracle-test-trace.ts:21) が 3 桁採番のみ対象のため、2 桁採番の IT-* (IT-CONTRACT-01〜03 = tests 実装 0 件・defer 宣言なし) と ST-* 全体が citation gate を素通り。「未実装」と「明示 defer」の機械区別も無く、G8/G9 close を宣言ベースで通過し得る (右腕片肺の残存形)。
+`ORACLE_ID = /\b(?:U|IT)-[A-Z0-9]+-[0-9]{3}\b/` (src/lint/oracle-test-trace.ts:21) が 3 桁採番のみ対象のため、2 桁採番の IT-* (IT-CONTRACT-01〜03 = tests 実装 0 件・defer 宣言なし) と ST-* 全体が citation gate を素通り。「未実装」と「明示 defer」の機械区別も無く、G8/G9 close を宣言ベースで通過し得る (右腕片肺の残存形)。
 
 ## スコープ
 
