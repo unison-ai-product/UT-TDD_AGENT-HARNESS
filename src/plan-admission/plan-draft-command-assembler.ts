@@ -60,6 +60,7 @@ export function assemblePlanDraftCommand(input: {
   const identity = parsePlanIdentity(manifest.plan_id);
   const parsed = parseLegacyPlanSource(manifest.source.content);
   if (!parsed || parsed.planId !== manifest.plan_id) fail("plan-draft-source-plan-id-mismatch");
+  if (!sameTuple(admission, decision.tuple)) fail("plan-draft-admission-decision-mismatch");
   if (
     !planIdMatchesShape(identity, admission) ||
     parsed.frontmatter.kind !== admission.kind ||
@@ -74,7 +75,6 @@ export function assemblePlanDraftCommand(input: {
     fail("plan-draft-source-path-mismatch");
   if (environment.namespace !== identity.namespace || environment.ordinal !== identity.ordinal)
     fail("plan-draft-plan-id-reservation-mismatch");
-  if (!sameTuple(admission, decision.tuple)) fail("plan-draft-admission-decision-mismatch");
   validateSnapshot(manifest, environment);
 
   const canonicalPayloadJson = stableJson({

@@ -100,12 +100,12 @@ describe("NodePlanDraftRunner", () => {
         provider: "github",
         issueId: 70,
         episodeId: "episode:70",
-        projectionDigest: "a".repeat(64),
+        projectionDigest: `sha256:${"a".repeat(64)}`,
       },
       origin: {
         planId: "PLAN-L7-442-doctor-singleton-guard",
         revision: 1,
-        digest: "b".repeat(64),
+        digest: `sha256:${"b".repeat(64)}`,
       },
       reentry: {
         targetPlanId: "PLAN-L6-70-source-catalog-profile-resolver-contracts",
