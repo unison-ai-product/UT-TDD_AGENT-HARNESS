@@ -470,21 +470,21 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 ### §1.16.2c U-DOCLOCK (doctor 多重起動 fail-fast、PLAN-L7-442)
 
-> ペア = doctor singleton lock (`src/doctor/singleton-lock.ts`)。agent 再試行嵐による doctor プロセス滞留 (2026-07-16 メモリ枯渇 incident) の再発を、2 本目以降の即時 fail-fast で防ぐ。advisory guard であり lock 障害では doctor を止めない (fail-open)。
+> ペア = doctor singleton lock (`src/doctor/singleton-lock.ts`)。owner固有claim集合を用い、release/reclaimで他者generationを触らず、agent 再試行嵐による doctor プロセス滞留 (2026-07-16 メモリ枯渇 incident) の再発を2本目以降の即時 fail-fastで防ぐ。advisory guardでありlock障害ではdoctorを止めない (fail-open)。
 
 | ID | 対象 | Oracle |
 |---|---|---|
-| U-DOCLOCK-001 | `acquireDoctorLock` | 初回取得が成功し pid/started_at を lock file へ記録する |
+| U-DOCLOCK-001 | `acquireDoctorLock` | 初回取得が成功し pid/started_at/host/lock_id を owner 固有claimへ記録する |
 | U-DOCLOCK-002 | `acquireDoctorLock` / `doctorLockBlockedMessage` | 保持者生存中の 2 本目は acquired=false で保持者情報付きメッセージを返す |
 | U-DOCLOCK-003 | `acquireDoctorLock` | 保持 pid 死亡の lock は自動回収して取得する (再試行嵐残骸の除去) |
 | U-DOCLOCK-004 | `isStaleDoctorLock` / `acquireDoctorLock` | 45 分超過の lock は保持 pid 生存でも stale として回収する |
 | U-DOCLOCK-005 | `acquireDoctorLock` | 破損 lock file は crash せず stale 扱いで回収する |
-| U-DOCLOCK-006 | `release` | pid/host/started_at/lock_id が一致する取得者の lock だけを quarantine 経由で削除し、通常経路で冪等に動作する |
+| U-DOCLOCK-006 | `release` | 取得者自身のowner固有claimだけを削除し、通常経路で冪等に動作する |
 | U-DOCLOCK-007 | `isStaleDoctorLock` / `acquireDoctorLock` | 別 host の fresh lock はローカル pid probe を行わず保持し、TTL 超過までは二重取得しない |
 | U-DOCLOCK-008 | `acquireDoctorLock` | lock create I/O 障害は `degraded: true` で fail-open し、doctor 本体を遮断しない |
 | U-DOCLOCK-009 | CLI `doctor` | 競合する CLI は検証開始前に exit 2、JSON `ok:false` と保持者情報を返す |
-| U-DOCLOCK-010 | `release` generation claim | 所有確認後に canonical が fresh generation へ差し替わっても、他者 lock を削除せず復元する |
-| U-DOCLOCK-011 | stale reclaim generation claim | stale 判定後に canonical が fresh generation へ差し替わったら、quarantine再照合で検出・復元して contender を block する |
+| U-DOCLOCK-010 | owner claim `release` | 他者のfresh owner claimが存在しても、自身のclaimだけを削除して他者claimを保持する |
+| U-DOCLOCK-011 | owner claim arbitration | contenderは他のfresh claimを観測すると自身だけを取り下げ、既存holderを返してblockする |
 
 保証境界: この test pair は同一 repo の再試行嵐を抑止する advisory guard を検証する。
 SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主張せず、

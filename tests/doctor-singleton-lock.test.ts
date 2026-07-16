@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -8,7 +8,8 @@ import {
   type DoctorLockDeps,
   defaultDoctorLockIo,
   doctorLockBlockedMessage,
-  doctorLockPath,
+  doctorLockClaimPath,
+  doctorLockClaimsPath,
   isStaleDoctorLock,
 } from "../src/doctor/singleton-lock";
 
@@ -16,6 +17,11 @@ const NOW = Date.parse("2026-07-16T12:00:00+09:00");
 
 function deps(overrides: Partial<DoctorLockDeps> = {}): DoctorLockDeps {
   return { now: () => NOW, isPidAlive: () => true, ...overrides };
+}
+
+function claimRecords(repoRoot: string): Array<Record<string, unknown>> {
+  const dir = doctorLockClaimsPath(repoRoot);
+  return readdirSync(dir).map((name) => JSON.parse(readFileSync(join(dir, name), "utf8")));
 }
 
 describe("doctor singleton lock (PLAN-L7-442)", () => {
@@ -32,9 +38,11 @@ describe("doctor singleton lock (PLAN-L7-442)", () => {
   it("U-DOCLOCK-001: first acquisition wins and writes pid/started_at record", () => {
     const r = acquireDoctorLock(repoRoot, 1111, deps());
     expect(r.acquired).toBe(true);
-    const record = JSON.parse(readFileSync(doctorLockPath(repoRoot), "utf8"));
+    const record = claimRecords(repoRoot)[0];
     expect(record.pid).toBe(1111);
     expect(record.started_at).toBe(new Date(NOW).toISOString());
+    expect(record.host).toEqual(expect.any(String));
+    expect(record.lock_id).toEqual(expect.any(String));
   });
 
   it("U-DOCLOCK-002: second acquisition fail-fasts while the holder is alive and fresh", () => {
@@ -52,7 +60,7 @@ describe("doctor singleton lock (PLAN-L7-442)", () => {
     acquireDoctorLock(repoRoot, 1111, deps());
     const r = acquireDoctorLock(repoRoot, 2222, deps({ isPidAlive: () => false }));
     expect(r.acquired).toBe(true);
-    const record = JSON.parse(readFileSync(doctorLockPath(repoRoot), "utf8"));
+    const record = claimRecords(repoRoot)[0];
     expect(record.pid).toBe(2222);
   });
 
@@ -69,8 +77,9 @@ describe("doctor singleton lock (PLAN-L7-442)", () => {
   });
 
   it("U-DOCLOCK-005: a corrupt lock file is treated as stale and reclaimed, not a crash", () => {
-    acquireDoctorLock(repoRoot, 1111, deps());
-    writeFileSync(doctorLockPath(repoRoot), "not-json{{{");
+    const claims = doctorLockClaimsPath(repoRoot);
+    defaultDoctorLockIo().mkdirRecursive(claims);
+    writeFileSync(join(claims, "corrupt.json"), "not-json{{{");
     const r = acquireDoctorLock(repoRoot, 2222, deps());
     expect(r.acquired).toBe(true);
   });
@@ -82,7 +91,7 @@ describe("doctor singleton lock (PLAN-L7-442)", () => {
       first.release();
       first.release();
     }
-    expect(() => readFileSync(doctorLockPath(repoRoot), "utf8")).toThrow();
+    expect(claimRecords(repoRoot)).toEqual([]);
     const second = acquireDoctorLock(repoRoot, 2222, deps({ isPidAlive: (pid) => pid === 1111 }));
     expect(second.acquired).toBe(true);
   });
@@ -123,69 +132,28 @@ describe("doctor singleton lock (PLAN-L7-442)", () => {
     if (r.acquired) expect("degraded" in r && r.degraded).toBe(true);
   });
 
-  it("U-DOCLOCK-010: release never removes a fresh lock installed after ownership observation", () => {
-    const baseIo = defaultDoctorLockIo();
-    let injectOnReleaseRead = false;
+  it("U-DOCLOCK-010: release removes only its owner-specific claim", () => {
     const fresh = {
       pid: 2222,
       started_at: new Date(NOW).toISOString(),
       host: "host-a",
       lock_id: "fresh-b",
     };
-    const guardedDeps = deps({
-      hostName: () => "host-a",
-      io: {
-        ...baseIo,
-        readText: (path) => {
-          const observed = baseIo.readText(path);
-          if (injectOnReleaseRead && path === doctorLockPath(repoRoot)) {
-            injectOnReleaseRead = false;
-            writeFileSync(path, `${JSON.stringify(fresh)}\n`);
-          }
-          return observed;
-        },
-      },
-    });
+    const guardedDeps = deps({ hostName: () => "host-a" });
     const first = acquireDoctorLock(repoRoot, 1111, guardedDeps);
     expect(first.acquired).toBe(true);
-    injectOnReleaseRead = true;
+    writeFileSync(doctorLockClaimPath(repoRoot, fresh.lock_id), `${JSON.stringify(fresh)}\n`);
     if (first.acquired) first.release();
 
-    expect(JSON.parse(readFileSync(doctorLockPath(repoRoot), "utf8"))).toEqual(fresh);
+    expect(claimRecords(repoRoot)).toEqual([fresh]);
   });
 
-  it("U-DOCLOCK-011: stale reclaim that observes a replacement fresh lock blocks instead of deleting it", () => {
-    const baseIo = defaultDoctorLockIo();
-    const staleDeps = deps({ hostName: () => "host-a", isPidAlive: () => false });
-    acquireDoctorLock(repoRoot, 1111, staleDeps);
-    const fresh = {
-      pid: 3333,
-      started_at: new Date(NOW).toISOString(),
-      host: "host-a",
-      lock_id: "fresh-c",
-    };
-    let injected = false;
-    const contender = acquireDoctorLock(
-      repoRoot,
-      2222,
-      deps({
-        hostName: () => "host-a",
-        isPidAlive: (pid) => pid === fresh.pid,
-        io: {
-          ...baseIo,
-          rename: (from, to) => {
-            if (!injected && to.includes(".reclaim.")) {
-              injected = true;
-              writeFileSync(from, `${JSON.stringify(fresh)}\n`);
-            }
-            baseIo.rename(from, to);
-          },
-        },
-      }),
-    );
-
+  it("U-DOCLOCK-011: contenders select one deterministic owner claim", () => {
+    const first = acquireDoctorLock(repoRoot, 1111, deps({ hostName: () => "host-a" }));
+    const contender = acquireDoctorLock(repoRoot, 2222, deps({ hostName: () => "host-a" }));
+    expect(first.acquired).toBe(true);
     expect(contender.acquired).toBe(false);
-    if (!contender.acquired) expect(contender.holder).toEqual(fresh);
-    expect(JSON.parse(readFileSync(doctorLockPath(repoRoot), "utf8"))).toEqual(fresh);
+    if (!contender.acquired) expect(contender.holder.pid).toBe(1111);
+    expect(claimRecords(repoRoot)).toHaveLength(1);
   });
 });

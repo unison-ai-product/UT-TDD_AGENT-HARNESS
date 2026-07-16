@@ -374,10 +374,10 @@ describe("L7 CLI surface closure", () => {
   it("U-DOCLOCK-009: blocks a competing doctor CLI before it starts verification", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-doctor-lock-"));
     try {
-      const stateDir = join(root, ".ut-tdd", "state");
+      const stateDir = join(root, ".ut-tdd", "state", "doctor-lock", "claims");
       mkdirSync(stateDir, { recursive: true });
       writeFileSync(
-        join(stateDir, "doctor.lock"),
+        join(stateDir, "fixture-lock.json"),
         `${JSON.stringify({ pid: process.pid, host: hostname(), started_at: new Date().toISOString(), lock_id: "fixture-lock" })}\n`,
         "utf8",
       );

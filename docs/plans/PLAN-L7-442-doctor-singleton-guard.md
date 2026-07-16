@@ -24,6 +24,12 @@ generates:
     artifact_type: source_module
   - artifact_path: tests/doctor-singleton-lock.test.ts
     artifact_type: test_code
+  - artifact_path: src/cli.ts
+    artifact_type: source_module
+  - artifact_path: tests/cli-surface.test.ts
+    artifact_type: test_code
+  - artifact_path: docs/test-design/harness/L7-unit-test-design.md
+    artifact_type: test_design
 dependencies:
   parent: docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
   requires: []
@@ -43,11 +49,13 @@ doctor は read-only 検査であり同時複数実行に価値がないため�
 
 ## スコープ
 
-1. `src/doctor/singleton-lock.ts`: `.ut-tdd/state/doctor.lock` による排他
-   (pid + started_at + host + lock_id、`wx` 排他 create)。stale 判定 = 同一 host の保持 pid 死亡、
+1. `src/doctor/singleton-lock.ts`: `.ut-tdd/state/doctor-lock/claims/<lock_id>.json` の
+   owner 固有claim集合による排他 (pid + started_at + host + lock_id、`wx` 排他 create)。
+   各取得者は他のfresh claimがあれば自分のclaimだけを取り下げてblockする。同時取得者が互いを観測した
+   場合は双方blockし、次回retryで一者へ収束する安全側のlivenessを採る。stale 判定 = 同一 host の保持 pid 死亡、
    45 分超過、または破損 lock。別 host の pid はローカル OS で probe せず、TTL 超過時だけ回収する。
-   stale/release は対象 lock を同一 directory の固有 quarantine 名へ rename してから削除し、
-   後続の fresh lock を単純 unlink しない。**advisory guard であり安全ゲートでも分散 lease でもない**:
+   release/stale回収はgeneration固有pathだけを削除し、他者claimをrename/deleteしない。
+   **advisory guard であり安全ゲートでも分散 lease でもない**:
    lock I/O 自体の障害では doctor を止めない (fail-open、degraded 続行)。SMB/NFS/OneDrive をまたぐ
    strict mutual exclusion、heartbeat、clock-skew 耐性は保証しない。
 2. CLI `doctor` コマンド配線: 取得失敗時は保持者情報付きメッセージで exit 2 (JSON モードは `ok:false`)。
@@ -70,15 +78,14 @@ doctor は read-only 検査であり同時複数実行に価値がないため�
 - [x] 同一 host の pid 死亡 / 45 分超過 / 破損 lock は自動回収され、別 host の fresh lock は保持する
   (U-DOCLOCK-003/004/005/007)
 - [x] lock create I/O 障害で doctor 本体が止まらない (fail-open、degraded 続行、U-DOCLOCK-008)
-- [x] release は pid/host/started_at/lock_id が一致する取得者の lock だけを quarantine 経由で削除し、
-  通常経路で冪等に動作する。所有確認後の fresh generation 差替えも削除せず復元する
+- [x] release は取得者自身の owner 固有claimだけを削除し、他者generationに触れず冪等に動作する
   (U-DOCLOCK-006/010)
-- [x] stale 回収中に fresh generation へ差し替わった場合、quarantine後の再照合で検出して復元し、
-  contender は取得せず block する (U-DOCLOCK-011)
+- [x] contender は他のfresh owner claimを観測したら自分のclaimだけを取り下げてblockし、
+  同時doctorを開始しない (U-DOCLOCK-011)
 
 ## 保証境界と後続
 
 - 本 PLAN の受入対象は、同一 repo で発生した再試行嵐を抑止する advisory guard である。
-- 共有 filesystem 上の strict lease、release/reclaim の adversarial race oracle、quarantine 残骸清掃、
+- 共有 filesystem 上の strict lease、弱整合directory listingの実環境oracle、stale claim清掃、
   fail-open receipt/telemetry は `PLAN-REVERSE-442` の R1〜R4 で L6 doctor 実行モデルへ back-fill する。
 - doctor 一実行の性能 SLO は GitHub Issue #70 の Recovery で扱い、排他保証と混在させない。
