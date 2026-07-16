@@ -25,7 +25,7 @@ generates:
   - artifact_path: tests/doctor-singleton-lock.test.ts
     artifact_type: test_code
 dependencies:
-  parent: null
+  parent: docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
   requires: []
   references:
     - .ut-tdd/memory/project-pr64-verdict-lane-b-pass-weak-lane-a-flag-staged-scope-follow-up-3.md
