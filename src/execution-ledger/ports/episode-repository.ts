@@ -1,6 +1,8 @@
 import type {
   EpisodeViolation,
+  ExecutionEpisodeState,
   ExecutionEpisodeSnapshot,
+  ExecutionTransitionCommand,
   RequestForwardEscape,
 } from "../domain/execution-episode.js";
 
@@ -15,10 +17,22 @@ export type EpisodeRepositoryResult =
       readonly status: "created" | "replayed";
       readonly eventIds: readonly string[];
       readonly outboxIds: readonly string[];
-      readonly snapshot: ExecutionEpisodeSnapshot;
+      readonly snapshot: ExecutionEpisodeSnapshot | EpisodeTransitionSnapshot;
     }
   | { readonly ok: false; readonly violations: readonly EpisodeViolation[] };
 
 export interface EpisodeRepositoryPort {
   request(command: RequestForwardEscape, custody: EpisodeWriteCustody): EpisodeRepositoryResult;
+  transition(
+    command: ExecutionTransitionCommand,
+    custody: EpisodeWriteCustody,
+  ): EpisodeRepositoryResult;
+}
+
+export interface EpisodeTransitionSnapshot {
+  readonly episodeId: string;
+  readonly state: ExecutionEpisodeState;
+  readonly eventSequence: number;
+  readonly lastEventDigest: string;
+  readonly nextLegalCommands: readonly string[];
 }

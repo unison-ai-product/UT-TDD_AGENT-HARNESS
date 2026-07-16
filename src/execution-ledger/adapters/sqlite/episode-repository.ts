@@ -1,8 +1,15 @@
 import {
   canonicalizeExecutionPayload,
+  decideExecutionTransition,
   ExecutionEpisode,
+  EXECUTION_EPISODE_TRANSITIONS,
   type EscapeObservedEvent,
   type EscapeObservedPayload,
+  type DriveSelectionIntent,
+  type ExecutionEpisodeEvent,
+  type ExecutionTransitionCommand,
+  type ExecutionTransitionEvent,
+  type IssueProjectionIntent,
   reconstructExecutionEpisode,
   type RequestForwardEscape,
 } from "../../domain/execution-episode.js";
@@ -20,7 +27,15 @@ import type { HarnessDb } from "../../../state-db/index.js";
 import { executionLedgerRowsValid } from "./row-verifier.js";
 
 export interface EpisodeRepositoryFaultPort {
-  after(boundary: "episode-root" | "episode-event" | "episode-projection" | "receipt"): void;
+  after(
+    boundary:
+      | "episode-root"
+      | "episode-event"
+      | "drive-selection"
+      | "outbox-intent"
+      | "episode-projection"
+      | "receipt",
+  ): void;
 }
 
 export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
@@ -80,6 +95,53 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
           eventIds: [event.eventId],
           outboxIds: [],
           snapshot: decision.episode.snapshot,
+        } satisfies EpisodeRepositoryResult,
+      };
+    });
+  }
+
+  transition(
+    command: ExecutionTransitionCommand,
+    custody: EpisodeWriteCustody,
+  ): EpisodeRepositoryResult {
+    if (!custody.runtime.trim() || !custody.model.trim())
+      return failed("episode-custody-invalid", "custody");
+    return this.transaction.run(() => {
+      const history = this.loadHistory(command.episodeId);
+      if (history.length === 0)
+        return { commit: false, value: failed("episode-not-found", "episodeId") };
+      const decision = decideExecutionTransition(history, command);
+      if (!decision.ok) return { commit: false, value: decision };
+      const event = decision.events[0];
+      this.insertTransitionEvent(event, custody);
+      this.fault?.after("episode-event");
+      for (const selection of decision.selections) {
+        this.insertDriveSelection(selection);
+        this.fault?.after("drive-selection");
+      }
+      for (const outbox of decision.outbox) {
+        this.insertOutbox(outbox);
+        this.fault?.after("outbox-intent");
+      }
+      this.updateProjection(event, history[0]);
+      this.fault?.after("episode-projection");
+      this.insertTransitionReceipt(event, command.type);
+      this.fault?.after("receipt");
+      const transition = EXECUTION_EPISODE_TRANSITIONS[event.sequence];
+      return {
+        commit: true,
+        value: {
+          ok: true,
+          status: "created",
+          eventIds: [event.eventId],
+          outboxIds: decision.outbox.map((row) => row.outboxId),
+          snapshot: {
+            episodeId: event.episodeId,
+            state: transition.state,
+            eventSequence: event.sequence,
+            lastEventDigest: event.eventDigest,
+            nextLegalCommands: transition.nextLegalCommands,
+          },
         } satisfies EpisodeRepositoryResult,
       };
     });
@@ -199,6 +261,157 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
       .run(...Object.values(row), ledgerRowDigest(row, "receipt_digest"));
   }
 
+  private loadHistory(episodeId: string): ExecutionEpisodeEvent[] {
+    return this.db
+      .prepare(
+        "SELECT * FROM execution_episode_events WHERE episode_id = ? ORDER BY event_sequence",
+      )
+      .all(episodeId)
+      .map((row) => ({
+        eventId: String(row.event_id),
+        episodeId: String(row.episode_id),
+        sequence: Number(row.event_sequence),
+        state: String(row.event_state),
+        kind: String(row.event_kind),
+        commandId: String(row.command_id),
+        commandPayloadDigest: String(row.command_payload_digest),
+        payloadDigest: String(row.payload_digest),
+        previousEventDigest:
+          row.previous_event_digest === null ? null : String(row.previous_event_digest),
+        eventDigest: String(row.event_digest),
+        occurredAt: String(row.occurred_at),
+        actor: String(row.actor),
+        payload: JSON.parse(String(row.canonical_payload_json)) as unknown,
+      }));
+  }
+
+  private insertTransitionEvent(
+    event: ExecutionTransitionEvent,
+    custody: EpisodeWriteCustody,
+  ): void {
+    const payload = event.payload;
+    this.db
+      .prepare(
+        `INSERT INTO execution_episode_events (
+          event_id, episode_id, event_sequence, command_id, command_payload_digest, event_state,
+          event_kind, payload_version, canonical_payload_json, payload_digest,
+          previous_event_digest, source_commit, observed_head, policy_revision, actor, runtime,
+          model, occurred_at, event_digest
+        ) VALUES (${placeholders(19)})`,
+      )
+      .run(
+        event.eventId,
+        event.episodeId,
+        event.sequence,
+        event.commandId,
+        event.commandPayloadDigest,
+        event.state,
+        event.kind,
+        1,
+        canonicalizeExecutionPayload(payload),
+        event.payloadDigest,
+        event.previousEventDigest,
+        String(payload.sourceCommit),
+        String(payload.observedHead),
+        String(payload.policyRevision),
+        event.actor,
+        custody.runtime,
+        custody.model,
+        event.occurredAt,
+        event.eventDigest,
+      );
+  }
+
+  private insertDriveSelection(selection: DriveSelectionIntent): void {
+    this.db
+      .prepare(`INSERT INTO drive_model_selections VALUES (${placeholders(12)})`)
+      .run(
+        selection.episodeId,
+        selection.selectionRevision,
+        selection.selectedEventSequence,
+        selection.model,
+        selection.compatibilityResult,
+        selection.rationaleDigest,
+        selection.overrideUsed ? 1 : 0,
+        selection.overrideActor,
+        selection.overrideReason,
+        selection.overrideEvidenceDigest,
+        selection.selectedAt,
+        selection.selectionDigest,
+      );
+  }
+
+  private insertOutbox(outbox: IssueProjectionIntent): void {
+    this.db
+      .prepare(`INSERT INTO github_projection_outbox VALUES (${placeholders(20)})`)
+      .run(
+        outbox.outboxId,
+        outbox.episodeId,
+        outbox.sourceEventSequence,
+        outbox.operationKind,
+        outbox.objectKind,
+        outbox.repository,
+        outbox.targetLogicalKey,
+        outbox.intentRevision,
+        outbox.idempotencyKey,
+        outbox.payloadVersion,
+        outbox.canonicalPayloadJson,
+        outbox.payloadDigest,
+        outbox.status,
+        outbox.attemptCount,
+        outbox.nextAttemptAt,
+        null,
+        null,
+        null,
+        outbox.createdAt,
+        null,
+      );
+  }
+
+  private updateProjection(event: ExecutionTransitionEvent, root: ExecutionEpisodeEvent): void {
+    const transition = EXECUTION_EPISODE_TRANSITIONS[event.sequence];
+    const rootPayload = root.payload as EscapeObservedPayload;
+    this.db
+      .prepare(
+        `UPDATE execution_episode_projection SET
+          current_event_sequence = ?, current_state = ?, current_event_digest = ?, block_reason = ?,
+          next_legal_actions_json = ?, latest_head = ?, merge_readiness = ?, rebuilt_at = ?
+        WHERE episode_id = ?`,
+      )
+      .run(
+        event.sequence,
+        transition.state,
+        event.eventDigest,
+        transitionBlockReason(transition.state),
+        JSON.stringify(transition.nextLegalCommands),
+        String(event.payload.observedHead),
+        "blocked",
+        event.occurredAt,
+        rootPayload.episodeId,
+      );
+  }
+
+  private insertTransitionReceipt(
+    event: ExecutionTransitionEvent,
+    commandType: ExecutionTransitionCommand["type"],
+  ): void {
+    const row = {
+      command_id: event.commandId,
+      command_type: `execution_episode.${commandType}`,
+      subject_kind: "execution_episode",
+      subject_key: event.episodeId,
+      plan_asset_id: null,
+      plan_revision: null,
+      command_payload_digest: event.commandPayloadDigest,
+      result_kind: "episode_event",
+      result_ref: event.eventId,
+      recorded_at: event.occurredAt,
+    };
+    this.db
+      .prepare("INSERT INTO append_command_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(...Object.values(row), ledgerRowDigest(row, "receipt_digest"));
+  }
+
   private replay(eventId: string): EpisodeRepositoryResult {
     const row = this.db
       .prepare("SELECT * FROM execution_episode_events WHERE event_id = ?")
@@ -237,6 +450,12 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
       : reduction;
   }
 
+}
+
+function transitionBlockReason(state: string): string {
+  if (state === "E1") return "drive_not_selected";
+  if (state === "E2") return "issue_not_requested";
+  return "issue_projection_pending";
 }
 
 function failed(ruleId: string, path: string): EpisodeRepositoryResult {
