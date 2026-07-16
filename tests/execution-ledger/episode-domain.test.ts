@@ -99,7 +99,7 @@ describe("ExecutionEpisode domain (PLAN-L7-436)", () => {
 
   it("U-EXEP-005: 同一command/payloadをreplayし、同一commandの異payloadを拒否する", () => {
     const created = ExecutionEpisode.request(request());
-    if (!created.ok) throw new Error("fixture must create E0");
+    if (!created.ok || created.status !== "accepted") throw new Error("fixture must create E0");
 
     expect(created.episode.decide(request())).toMatchObject({
       ok: true,
