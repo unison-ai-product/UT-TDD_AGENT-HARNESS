@@ -19,8 +19,8 @@ agent_slots:
 review_evidence:
   - reviewer: Codex owner-claim blind reviewer
     review_kind: intra_runtime_subagent
-    reviewed_at: "2026-07-16T15:35:00+09:00"
-    tests_green_at: "2026-07-16T15:35:00+09:00"
+    reviewed_at: "2026-07-16T15:44:15+09:00"
+    tests_green_at: "2026-07-16T15:42:29+09:00"
     verdict: pass
     scope: "PASS-WEAK。owner固有claim方式へ、正常競合、release、stale回収、partial publish、cross-host、doctor/review CLIの6攻撃を実施し未反証attack 0。固定canonicalのread→rename擬似CASは廃止済み。弱点は実process barrierと弱整合共有FS oracleが未追加であり、advisory/fail-open・非distributed leaseという明示保証境界を越えて主張しない。"
     worker_model: gpt-5
