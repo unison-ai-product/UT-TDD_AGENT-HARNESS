@@ -468,6 +468,22 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-READ-009 | `analyzeArtifacts` | byte layer が clean な valid UTF-8 double-encode mojibake でも、string-level denylist を統合して violation にする |
 | U-READ-010 | `checkReadability` / `checkRuntimeReadability` | real repo の docs/root instruction docs と `.ut-tdd` audit/handover artifacts が string + byte 統合 guard で green になる |
 
+### §1.16.2b2 U-DELEG (正規委譲経路の role 検証 + model/effort routing、PLAN-L7-255)
+
+> ペア = `src/team/delegation-routing.ts` + `buildAdapterPlan` codex effort argv。A-177 F-4 (role→model マッピング欠落) / A-183 PY-2 (codex effort argv 非注入) の是正を固定する。
+
+| ID | 対象 | Oracle |
+|---|---|---|
+| U-DELEG-001 | `resolveDelegationRouting` | 未登録 role を allowlist 明示付きで fail-close する |
+| U-DELEG-002 | `resolveDelegationRouting` | 判断ゲート role (blind-reviewer/code-reviewer 等) を族内 frontier reviewer tier (sol/opus) + ladder base effort へ固定する |
+| U-DELEG-003 | `resolveDelegationRouting` | worker role (se) は selectTeamModel policy 経由で model+effort を解決する |
+| U-DELEG-004 | `resolveDelegationRouting` | 明示 --model/--effort は routing より常に優先される |
+| U-DELEG-005 | `buildAdapterPlan` (codex) | effort が argv `-c model_reasoning_effort=<effort>` へ実注入され、middle は medium へ正規化される |
+| U-DELEG-006 | `buildAdapterPlan` (claude) | 既存の `--effort` flag + env 契約が routing 導入後も不変 |
+| U-DELEG-007 | `DELEGATION_ROLE_ALLOWLIST` | 実 repo の役割語彙 (qa/blind-reviewer/tl/tl-advisor/se/reviewer/code-reviewer/pmo-*) を全て許容する |
+| U-DELEG-008 | `resolveDelegationRouting` | subagent 名形 gate role (ut-tdd-tl/qa-test/security-audit) も worker tier へ落とさず族内 frontier reviewer tier へ固定する (2026-07-16 クロスレビュー指摘 1 regression) |
+| U-DELEG-009 | `buildAdapterPlan` (codex) | ladder base `xhigh` (mini lane) が `-c model_reasoning_effort=xhigh` として argv へ素通しされる (codex-cli 0.144.1 実機受理 2026-07-16) |
+
 ### §1.16.2c U-DOCLOCK (doctor 多重起動 fail-fast、PLAN-L7-442)
 
 > ペア = doctor singleton lock (`src/doctor/singleton-lock.ts`)。owner固有claim集合を用い、release/reclaimで他者generationを触らず、agent 再試行嵐による doctor プロセス滞留 (2026-07-16 メモリ枯渇 incident) の再発を2本目以降の即時 fail-fastで防ぐ。advisory guardでありlock障害ではdoctorを止めない (fail-open)。
