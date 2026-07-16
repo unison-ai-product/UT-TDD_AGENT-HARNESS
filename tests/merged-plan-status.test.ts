@@ -108,7 +108,7 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
     );
   }
 
-  it("does not treat an unmerged PR-branch PLAN as a main-merged draft", () => {
+  it("reads a PR-branch PLAN without treating its unmerged artifact as main-merged", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-pr-plan-"));
     try {
       mkdirSync(join(root, "docs", "plans"), { recursive: true });
@@ -126,10 +126,37 @@ describe("loadMergedPlanStatusInput + checkMergedPlanStatus", () => {
       git(root, ["commit", "-m", "feature plan"]);
 
       const input = loadMergedPlanStatusInput(root);
-      expect(input.plans.find((plan) => plan.planId === "PLAN-TEST-PR-branch")).toBeUndefined();
+      const plan = input.plans.find((item) => item.planId === "PLAN-TEST-PR-branch");
+      expect(plan?.status).toBe("draft");
+      expect(plan?.mergedArtifacts).toEqual([]);
       expect(analyzeMergedPlanStatus(input).violations.map((item) => item.planId)).not.toContain(
         "PLAN-TEST-PR-branch",
       );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the PR PLAN definition while determining merged artifacts from the base tree", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-merged-plan-self-heal-"));
+    try {
+      mkdirSync(join(root, "docs", "plans"), { recursive: true });
+      mkdirSync(join(root, "src"), { recursive: true });
+      git(root, ["init", "-b", "main"]);
+      git(root, ["config", "user.email", "test@example.invalid"]);
+      git(root, ["config", "user.name", "UT-TDD test"]);
+      writeFileSync(join(root, "src", "merged.ts"), "export const x = 1;\n", "utf8");
+      writePlan(root, "PLAN-TEST-self-heal.md", "draft", "src/merged.ts");
+      git(root, ["add", "."]);
+      git(root, ["commit", "-m", "base draft"]);
+      git(root, ["checkout", "-b", "feature/self-heal"]);
+      writePlan(root, "PLAN-TEST-self-heal.md", "confirmed", "src/merged.ts");
+
+      const input = loadMergedPlanStatusInput(root);
+      const plan = input.plans.find((item) => item.planId === "PLAN-TEST-self-heal");
+      expect(plan?.status).toBe("confirmed");
+      expect(plan?.mergedArtifacts).toEqual(["src/merged.ts"]);
+      expect(analyzeMergedPlanStatus(input).ok).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

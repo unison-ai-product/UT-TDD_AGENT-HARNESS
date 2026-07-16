@@ -28,10 +28,6 @@ generates:
     artifact_type: json_config
   - artifact_path: docs/governance/plan-admission-cutover-receipt.json
     artifact_type: json_config
-  - artifact_path: .github/workflows/harness-check.yml
-    artifact_type: github_config
-  - artifact_path: scripts/git-hooks/pre-push
-    artifact_type: hook
   - artifact_path: tests/plan-admission-cutover.test.ts
     artifact_type: test_code
 dependencies:
@@ -81,6 +77,10 @@ downgrade、削除、ceiling差替えをfail-closeする。
   fail-closeする。API取得不能を「変更なし」と解釈しない。
 - local SQLiteのunfinished journalはfresh CIから観測不能である。CIはtracked tree、receipt projection、
   recovery-clearance projectionを検証し、local journal gateはsession start/pre-pushが担当する。
+
+## 訂正注記 (2026-07-16、PR64 post-merge 是正)
+
+`generates` から既存ファイル (`.github/workflows/harness-check.yml` / `scripts/git-hooks/pre-push`) を除外した。両者は本 PLAN が**着手時に改修する既存資産**であり、本 PLAN が新規生成する artifact ではない。PLAN 未着手のまま既存ファイルを generates に載せると doctor `merged-plan-status` が「draft なのに成果物 merge 済み」と誤検出する (PR #64 merge 後の main CI red の原因)。改修対象としての義務は本文/AC に既に明記されており不変。
 
 ## AC
 
