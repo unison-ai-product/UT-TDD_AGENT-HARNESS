@@ -34,8 +34,6 @@ generates:
     artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
-  requires:
-    - docs/plans/PLAN-L7-435-drive-plan-admission-impl.md
   references:
     - docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
     - docs/plans/PLAN-L7-435-drive-plan-admission-impl.md
