@@ -722,12 +722,15 @@ function transitionPayload(
       override: command.override ? { ...command.override } : undefined,
     };
   const projection = issueProjectionPayload(root, command);
+  const projectionPayloadDigest = digest(canonical(projection));
+  const identity = issueProjectionIdentity(command, projectionPayloadDigest);
   return {
     ...common,
     repository: command.repository,
     intentRevision: command.intentRevision,
     targetLogicalKey: `episode:${command.episodeId}:issue`,
-    projectionPayloadDigest: digest(canonical(projection)),
+    projectionPayloadDigest,
+    idempotencyKey: identity.idempotencyKey,
   };
 }
 
@@ -756,16 +759,7 @@ function issueProjection(
   const payload = issueProjectionPayload(root, command);
   const canonicalPayloadJson = canonical(payload);
   const payloadDigest = digest(canonicalPayloadJson);
-  const targetLogicalKey = `episode:${command.episodeId}:issue`;
-  const identity = canonical({
-    namespace: "github.issue.create.v1",
-    repository: command.repository,
-    episodeId: command.episodeId,
-    targetLogicalKey,
-    intentRevision: command.intentRevision,
-    payloadDigest,
-  });
-  const idempotencyKey = digest(`github-outbox:v1\0${identity}`);
+  const { targetLogicalKey, idempotencyKey } = issueProjectionIdentity(command, payloadDigest);
   return Object.freeze({
     outboxId: `outbox:${digest(`github-outbox-id:v1\0${idempotencyKey}`).slice(0, 32)}`,
     episodeId: command.episodeId,
@@ -783,6 +777,25 @@ function issueProjection(
     attemptCount: 0,
     nextAttemptAt: command.occurredAt,
     createdAt: command.occurredAt,
+  });
+}
+
+function issueProjectionIdentity(
+  command: RequestIssueProjectionCommand,
+  payloadDigest: string,
+): { readonly targetLogicalKey: string; readonly idempotencyKey: string } {
+  const targetLogicalKey = `episode:${command.episodeId}:issue`;
+  const identity = canonical({
+    namespace: "github.issue.create.v1",
+    repository: command.repository,
+    episodeId: command.episodeId,
+    targetLogicalKey,
+    intentRevision: command.intentRevision,
+    payloadDigest,
+  });
+  return Object.freeze({
+    targetLogicalKey,
+    idempotencyKey: digest(`github-outbox:v1\0${identity}`),
   });
 }
 
