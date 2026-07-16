@@ -32,6 +32,18 @@ only. Do not enable hooks that depend on personal legacy runtime paths.
 Historical behavior may be referenced for migration, but implementation must
 live in UT-TDD-owned paths.
 
+## Doctor Invocation Discipline (PLAN-L7-442)
+
+`ut-tdd doctor` is a long-running, read-only, **singleton** inspection. A second
+concurrent run fail-fasts with exit 2 and the holder's pid. Rules:
+
+- exit 2 (already running) means **wait for the running doctor**; do not retry,
+  do not re-launch with a different invocation form (`bun -e`, `--json`, direct
+  `runDoctor`). Retry storms starve the machine (2026-07-16 incident: 16
+  concurrent doctors, 31MB free RAM).
+- Prefer scoped/targeted checks (`--scope toolchain`, direct check functions in
+  tests) when you only need a slice.
+
 ## PLAN Rules
 
 Before creating or updating PLAN files, inspect existing `docs/plans/` entries.

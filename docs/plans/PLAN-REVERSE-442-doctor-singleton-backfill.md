@@ -38,8 +38,11 @@ draft 起票 (PLAN-L7-442 の Reverse pairing、R0 メモ)。incident 由来の�
 - doctor の実行モデル (singleton 前提、lock の advisory 位置づけ、stale 回収境界 45 分) を
   L6 function design (doctor 系 doc) へ 1 節追記する。
 - agent 運用規約 (AGENTS.md / .claude/CLAUDE.md) へ「doctor が blocked (exit 2) の場合は完了を待つ、
-  再試行嵐を起こさない」を追記するかは TL 判断。
+  再試行嵐を起こさない」を追記する — **実施済み (2026-07-16)**: 両ファイルへ
+  「Doctor Invocation Discipline (PLAN-L7-442)」節を追加 (exit 2 = 待つ / 起動形変更の再実行禁止 /
+  scoped 実行優先)。
 
-## 未着手 DoD
+## DoD
 
 - [ ] doctor 実行モデル (singleton + stale 回収) が設計 doc に記録される。
+- [x] agent 運用規約 (AGENTS.md / .claude/CLAUDE.md) に doctor 再試行禁止規律が記録される (2026-07-16)。

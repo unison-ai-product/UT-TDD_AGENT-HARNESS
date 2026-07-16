@@ -287,6 +287,18 @@ calls.
   エピソード状態 (進捗・次の一手) はメモリに書かず、DB/HEAD 由来の digest に任せる
   (stale 化する層を作らない)。
 
+## Doctor Invocation Discipline (PLAN-L7-442)
+
+`ut-tdd doctor` は長時間・read-only の **singleton** 検査。2 本目以降は exit 2
+(保持者 pid 付き) で fail-fast する。規律:
+
+- exit 2 (already running) は **実行中 doctor の完了を待つ**。再試行しない。
+  起動形を変えた再実行 (`bun -e` / `--json` / `runDoctor` 直呼び) もしない。
+  再試行嵐はマシンを飢餓させる (2026-07-16 incident: doctor 16 本並列、
+  物理メモリ残 31MB)。
+- 一部だけ要るなら scoped 実行 (`--scope toolchain`、テスト内の check 関数直呼び)
+  を優先する。
+
 ## Test Rules
 
 - Docs changes: use `rg` to check old assumptions such as WSL2-required wording,
