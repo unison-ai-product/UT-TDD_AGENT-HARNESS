@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 統合検証 doctor (requirements_v1.2 §7 / §7.8.5)。
  * 多数の検出器 (back-fill / review-evidence / asset-drift / cycle-p4-verification / roadmap 等) を集約し、
  * gate 判定群を runDoctor.ok に連動させて fail-close する。handover / agent-slots は warning surface。

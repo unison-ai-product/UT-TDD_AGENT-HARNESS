@@ -32,7 +32,7 @@ const manifest: DraftManifestV2 = {
   },
   source: {
     path: `docs/plans/${planId}.md`,
-    content: `---\nplan_id: ${planId}\ntitle: command assembler\n---\nbody\n`,
+    content: `---\nplan_id: ${planId}\ntitle: command assembler\nkind: impl\nlayer: L7\ndrive: agent\nroute_signal: forward\nroute_mode: forward\n---\nbody\n`,
   },
   projection: { path: "docs/governance/plan-admission-receipts.json" },
 };
@@ -126,5 +126,138 @@ describe("PLAN draft command assembler", () => {
     expect(() =>
       assemblePlanDraftCommand({ manifest, admission: mismatched, decision, environment }),
     ).toThrow("plan-draft-admission-decision-mismatch");
+
+    expect(() =>
+      assemblePlanDraftCommand({
+        manifest,
+        admission,
+        decision: { ...decision, issueRequired: !decision.issueRequired },
+        environment,
+      }),
+    ).toThrow("plan-draft-admission-decision-mismatch");
+  });
+
+  it("U-PADM-063: Recovery IDをRecovery tupleと予約identityへ束縛する", () => {
+    const recoveryPlanId = "PLAN-RECOVERY-70-doctor-slo";
+    const recoveryAdmission: PlanAdmissionRequest = {
+      routeSignal: "regression_dev",
+      routeMode: "recovery",
+      kind: "recovery",
+      layer: "cross",
+      drive: "agent",
+      branch: "work/recovery-doctor-slo",
+      issue: {
+        provider: "github",
+        issueId: 70,
+        episodeId: "episode:70",
+        projectionDigest: "a".repeat(64),
+      },
+      origin: { planId: "PLAN-L7-442-doctor-singleton-guard", revision: 1, digest: "b".repeat(64) },
+      reentry: {
+        targetPlanId: "PLAN-L6-70-source-catalog-profile-resolver-contracts",
+        targetRevision: 1,
+        phase: "forward_merge",
+      },
+      escapeReason: "doctor local SLO regression",
+    };
+    const recoveryDecision = evaluatePlanAdmission(recoveryAdmission);
+    if (!recoveryDecision.ok) throw new Error("recovery fixture must be admitted");
+    const recoveryManifest: DraftManifestV2 = {
+      ...manifest,
+      command_id: "command:recovery-70",
+      plan_id: recoveryPlanId,
+      source: {
+        path: `docs/plans/${recoveryPlanId}.md`,
+        content: `---\nplan_id: ${recoveryPlanId}\ntitle: Recovery 70\nkind: recovery\nlayer: cross\ndrive: agent\nroute_signal: regression_dev\nroute_mode: recovery\n---\nbody\n`,
+      },
+    };
+    const assembled = assemblePlanDraftCommand({
+      manifest: recoveryManifest,
+      admission: recoveryAdmission,
+      decision: recoveryDecision,
+      environment: { ...environment, namespace: "RECOVERY", ordinal: 70 },
+    });
+    expect(assembled.canonical).toMatchObject({
+      planId: recoveryPlanId,
+      namespace: "RECOVERY",
+      ordinal: 70,
+    });
+  });
+
+  it.each([
+    ["kind", "recovery", "impl"],
+    ["layer", "cross", "L7"],
+    ["drive", "agent", "human"],
+    ["route_signal", "regression_dev", "forward"],
+    ["route_mode", "recovery", "forward"],
+    ["workflow_phase", "", "workflow_phase: R3\n"],
+  ])("U-PADM-065: source %sとRecovery Admissionの混用を副作用前にfail-closeする", (field, expected, replacement) => {
+    const recoveryPlanId = "PLAN-RECOVERY-70-doctor-slo";
+    const recoveryAdmission: PlanAdmissionRequest = {
+      routeSignal: "regression_dev",
+      routeMode: "recovery",
+      kind: "recovery",
+      layer: "cross",
+      drive: "agent",
+      branch: "work/recovery-doctor-slo",
+      issue: {
+        provider: "github",
+        issueId: 70,
+        episodeId: "episode:70",
+        projectionDigest: "a".repeat(64),
+      },
+      origin: { planId: "PLAN-L7-442-doctor-singleton-guard", revision: 1, digest: "b".repeat(64) },
+      reentry: {
+        targetPlanId: "PLAN-L6-70-source-catalog-profile-resolver-contracts",
+        targetRevision: 1,
+        phase: "forward_merge",
+      },
+      escapeReason: "doctor local SLO regression",
+    };
+    const recoveryDecision = evaluatePlanAdmission(recoveryAdmission);
+    if (!recoveryDecision.ok) throw new Error("recovery fixture must be admitted");
+    const canonicalSource = `---\nplan_id: ${recoveryPlanId}\ntitle: Mixed\nkind: recovery\nlayer: cross\ndrive: agent\nroute_signal: regression_dev\nroute_mode: recovery\n---\nbody\n`;
+    const identityOnlyMismatch: DraftManifestV2 = {
+      ...manifest,
+      plan_id: recoveryPlanId,
+      source: {
+        path: `docs/plans/${recoveryPlanId}.md`,
+        content: canonicalSource
+          .replace("kind: recovery", "kind: impl")
+          .replace("layer: cross", "layer: L7")
+          .replace("route_signal: regression_dev", "route_signal: forward")
+          .replace("route_mode: recovery", "route_mode: forward"),
+      },
+    };
+    expect(() =>
+      assemblePlanDraftCommand({
+        manifest: identityOnlyMismatch,
+        admission,
+        decision,
+        environment: { ...environment, namespace: "RECOVERY", ordinal: 70 },
+      }),
+    ).toThrow("plan-draft-source-admission-mismatch");
+
+    const sourceContent =
+      field === "workflow_phase"
+        ? canonicalSource.replace("---\nbody", `${replacement}---\nbody`)
+        : canonicalSource.replace(`${field}: ${expected}`, `${field}: ${replacement}`);
+    const mixedManifest: DraftManifestV2 = {
+      ...manifest,
+      plan_id: recoveryPlanId,
+      source: {
+        path: `docs/plans/${recoveryPlanId}.md`,
+        content: sourceContent,
+      },
+    };
+
+    expect(() =>
+      assemblePlanDraftCommand({
+        manifest: mixedManifest,
+        admission: recoveryAdmission,
+        decision: recoveryDecision,
+        environment: { ...environment, namespace: "RECOVERY", ordinal: 70 },
+      }),
+    ).toThrow("plan-draft-source-admission-mismatch");
   });
 });

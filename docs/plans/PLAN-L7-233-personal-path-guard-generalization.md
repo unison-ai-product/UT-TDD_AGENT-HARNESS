@@ -40,7 +40,7 @@ draft 起票 (PO /goal 2026-07-02、A-172 latent-defect)。
 
 ## 背景 (A-172)
 
-維持者個人の Windows ユーザーパスが検出器定数 (`src/lint/project-hook.ts:79` FORBIDDEN_PATH_RE、`asset-drift.ts:42`、legacy repo 名含む) と公開 fixture (`tests/handover.test.ts` ほか) に焼き込まれ MIT 公開されている。guard が特定ユーザー名固定のため、**外部利用者環境では個人パスガードとして機能しない**機能欠陥を兼ねる。同 test 自身が「no username leak」を仕様として assert しており自己矛盾。
+維持者個人の Windows ユーザーパスが検出器定数 (`src/lint/project-hook.ts:79` FORBIDDEN_PATH_RE、`src/lint/asset-drift.ts:42`、legacy repo 名含む) と公開 fixture (`tests/handover.test.ts` ほか) に焼き込まれ MIT 公開されている。guard が特定ユーザー名固定のため、**外部利用者環境では個人パスガードとして機能しない**機能欠陥を兼ねる。同 test 自身が「no username leak」を仕様として assert しており自己矛盾。
 
 ## スコープ
 

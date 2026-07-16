@@ -39,7 +39,7 @@ draft 起票 (PO /goal 2026-07-02、A-173 F-3 feature-gap)。
 
 ## 背景 (A-173 F-3)
 
-`evaluateRetrofitMatrix` (contracts.ts:435) と `evaluateResearchDecision` (contracts.ts:449) は実装+テスト済みだが doctor/gate に未配線で、retrofit-matrix 完了 / research ADR・memo の exit が実質未強制。lint-wiring meta-gate は `src/lint/*` のみ監視するため、workflow/contracts 層の enforcement 資産の死蔵を検出できない (meta 盲点)。
+`evaluateRetrofitMatrix` (src/workflow/contracts.ts:435) と `evaluateResearchDecision` (src/workflow/contracts.ts:449) は実装+テスト済みだが doctor/gate に未配線で、retrofit-matrix 完了 / research ADR・memo の exit が実質未強制。lint-wiring meta-gate は `src/lint/*` のみ監視するため、workflow/contracts 層の enforcement 資産の死蔵を検出できない (meta 盲点)。
 
 ## スコープ
 

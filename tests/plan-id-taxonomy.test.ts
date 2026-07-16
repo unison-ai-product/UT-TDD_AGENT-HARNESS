@@ -39,6 +39,7 @@ describe("planIdTaxonomyViolations", () => {
     "PLAN-01-legacy-style",
     "PLAN-L15-01-beyond-vmodel",
     "PLAN-L99-01-nope",
+    "PLAN-L7-1-one-digit-ordinal",
     "PLAN-L6-82",
     "PLAN-L6-82-UPPER-Case",
   ];

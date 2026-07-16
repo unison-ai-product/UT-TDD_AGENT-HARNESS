@@ -5,6 +5,7 @@ import { calculatePlanDraftCommandDigests } from "../kernel/plan-draft-command-d
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.js";
 import { PlanDraftLedgerTransaction } from "../plan-asset/ledger/plan-draft-ledger.js";
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
+import { parseReservablePlanIdIdentity, planIdMatchesShape } from "../schema/plan-id.js";
 import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.js";
 import {
   assemblePlanDraftCommand,
@@ -97,8 +98,12 @@ function buildEnvironment(
 ): PlanDraftEnvironmentSnapshot {
   const parsed = parseLegacyPlanSource(input.manifest.source.content);
   if (!parsed) throw new Error("plan-draft-source-invalid");
-  const identity = /^PLAN-(L(?:1[0-4]|[0-9]))-([1-9][0-9]*)(?:-|$)/.exec(input.manifest.plan_id);
+  const identity = parseReservablePlanIdIdentity(input.manifest.plan_id);
   if (!identity) throw new Error("plan-draft-plan-id-invalid");
+  if (!planIdMatchesShape(identity, input.admission))
+    throw new Error("plan-draft-source-admission-mismatch");
+  const canonicalDecision = evaluatePlanAdmission(input.admission);
+  if (!canonicalDecision.ok) throw new Error("plan-draft-admission-invalid");
   const sourceCommit = deps.sourceCommit();
   const seed = sha256(
     stableJson({
@@ -113,14 +118,16 @@ function buildEnvironment(
     assetId: `plan:${seed.slice(0, 32)}`,
     reservationId: `reservation:${seed.slice(0, 32)}`,
     certificateId: `certificate:${seed.slice(0, 32)}`,
-    namespace: identity[1],
-    ordinal: Number(identity[2]),
+    namespace: identity.namespace,
+    ordinal: identity.ordinal,
     sourceCommit,
     actor: deps.actor(),
     reason: input.admission.escapeReason ?? `route:${input.admission.routeSignal}`,
     identityAlgorithm: "sha256-v1",
     bodyDigest: sha256(parsed.body),
-    routeTupleDigest: sha256(stableJson({ admission: input.admission, decision: input.decision })),
+    routeTupleDigest: sha256(
+      stableJson({ admission: input.admission, decision: canonicalDecision }),
+    ),
     leaseTokenHash: sha256(`lease:${input.manifest.command_id}:${seed}`),
     expiresAt: new Date(occurredAt + 24 * 60 * 60 * 1000).toISOString(),
   };

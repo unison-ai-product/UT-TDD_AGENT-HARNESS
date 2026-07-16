@@ -48,6 +48,11 @@ gate requires recorded review findings.
 
 ## When to load this skill
 
+Boundary: this skill owns the general five-axis review at trace-freeze / accept.
+W-gate (design <-> test) pair closure and Refactor/Retrofit quality-bar
+judgement are owned by `code-review-and-quality.md` — non-overlapping
+responsibilities; load both when a PLAN needs both.
+
 - Entering the trace-freeze gate of any Forward or Add-feature PLAN.
 - A Recovery or Refactor PLAN requires evidence that the change does not
   introduce new defects.

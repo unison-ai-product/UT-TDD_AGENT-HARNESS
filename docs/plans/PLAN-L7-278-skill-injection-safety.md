@@ -44,7 +44,7 @@ draft 起票 (A-180 S-8)。正規形 = parent: PLAN-L5-06 (skill 設計、drive 
 1. **path 実在再検証**: 注入セット構築時に existsSync 確認、不在は missing_skill_ids へ (silent drop しない)。
 2. **注入予算**: 件数 + 概算バイトの上限を宣言的既定値で導入、超過時は優先度順トリム + トリム事実の surface。CLI `--limit` 調整口。
 3. **注入実績の記録接続**: L7-262 (注入実績/失敗の記録) と整合 — 本 PLAN は安全弁、記録は 262 の担当のまま。
-4. **配信様式の実効化 (A-180 §3b)**: 現状の注入は bare ラベル行 (`- required skill: <path>`) のみで読めという**命令文が無く、本文も埋め込まれない** (`adapter.ts:426-437`)。(a) header を命令形へ (required は着手前読了必須と明示)、(b) 予算内なら小 skill の本文埋込 (path 参照との併用、予算は本 PLAN の上限制御と同居)、(c) worker session の読了証跡 (注入 path への Read 有無) を PLAN-L7-258 の session command scan と接続して評価可能にする。
+4. **配信様式の実効化 (A-180 §3b)**: 現状の注入は bare ラベル行 (`- required skill: <path>`) のみで読めという**命令文が無く、本文も埋め込まれない** (`src/runtime/adapter.ts:426-437`)。(a) header を命令形へ (required は着手前読了必須と明示)、(b) 予算内なら小 skill の本文埋込 (path 参照との併用、予算は本 PLAN の上限制御と同居)、(c) worker session の読了証跡 (注入 path への Read 有無) を PLAN-L7-258 の session command scan と接続して評価可能にする。
 
 ## Steps
 
