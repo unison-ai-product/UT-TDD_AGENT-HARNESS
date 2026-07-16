@@ -58,6 +58,12 @@ describe("Execution Episode E1-E3 domain decisions (PLAN-L7-436)", () => {
         },
       ],
     });
+    if (!e3.ok) throw new Error("E3 fixture must pass");
+    expect(e3.events[0].payload).toMatchObject({
+      targetLogicalKey: "episode:episode:recovery-70:issue",
+      idempotencyKey: e3.outbox[0]?.idempotencyKey,
+      projectionPayloadDigest: e3.outbox[0]?.payloadDigest,
+    });
   });
 
   it.each([
