@@ -2,7 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import {
   type CanonicalPlanDraftCommand,
   calculatePlanDraftCommandDigests,
-} from "../../plan-admission/plan-draft-command-digest.js";
+} from "../../kernel/plan-draft-command-digest.js";
 import type { HarnessDb } from "../../state-db/index.js";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
 import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";

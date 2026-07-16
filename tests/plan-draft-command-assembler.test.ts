@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { calculatePlanDraftCommandDigests } from "../src/kernel/plan-draft-command-digest.js";
 import {
   assemblePlanDraftCommand,
   type DraftManifestV2,
   type PlanDraftEnvironmentSnapshot,
 } from "../src/plan-admission/plan-draft-command-assembler.js";
-import { calculatePlanDraftCommandDigests } from "../src/plan-admission/plan-draft-command-digest.js";
 import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.js";
 
 const planId = "PLAN-L7-999-command-assembler";

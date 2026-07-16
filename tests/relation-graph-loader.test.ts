@@ -186,6 +186,46 @@ function buildRepo(root: string): void {
 }
 
 describe("loadRelationGraphSourceSet", () => {
+  it("keeps draft outputs that are not materialized as pending graph artifacts", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-pending-"));
+    try {
+      buildRepo(root);
+      writeFileSync(
+        join(root, "docs", "plans", "PLAN-TEST-02-future.md"),
+        [
+          "---",
+          "plan_id: PLAN-TEST-02-future",
+          "status: draft",
+          "kind: add-impl",
+          "generates:",
+          "  - artifact_path: src/future/recovery.ts",
+          "    artifact_type: source_module",
+          "---",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const sourceSet = loadRelationGraphSourceSet(root);
+      const plan = sourceSet.plans?.find((item) => item.id === "PLAN-TEST-02-future");
+      expect(plan?.generates).toEqual(["src/future/recovery.ts"]);
+      expect(plan?.status).toBe("draft");
+      expect(plan?.availability).toEqual({ "src/future/recovery.ts": "planned" });
+
+      const projection = collectRelationGraphProjection(sourceSet);
+      expect(projection.edges).toContainEqual({
+        from: "plan:PLAN-TEST-02-future",
+        to: "source:src/future/recovery.ts",
+        kind: "generates",
+        lifecycle: "planned",
+      });
+      const result = analyzeRelationImpact({ changedPaths: [], projection });
+      expect(result.findings.filter((finding) => finding.code === "stale-edge")).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("builds a source set with plan→source, source→test, design→test-design edges", () => {
     const root = mkdtempSync(join(tmpdir(), "ut-tdd-graph-loader-"));
     try {

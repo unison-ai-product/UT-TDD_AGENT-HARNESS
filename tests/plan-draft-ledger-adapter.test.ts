@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { PlanDraftExecutionPayload } from "../src/plan-admission/plan-draft-command-assembler.js";
 import {
   type CanonicalPlanDraftCommand,
   calculatePlanDraftCommandDigests,
-} from "../src/plan-admission/plan-draft-command-digest.js";
+} from "../src/kernel/plan-draft-command-digest.js";
+import type { PlanDraftExecutionPayload } from "../src/plan-admission/plan-draft-command-assembler.js";
 import {
   PlanDraftLedgerAdapter,
   PlanDraftLedgerDigestMismatchError,

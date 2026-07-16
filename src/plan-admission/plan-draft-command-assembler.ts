@@ -1,8 +1,8 @@
-import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.js";
 import {
   type CanonicalPlanDraftCommand,
   calculatePlanDraftCommandDigests,
-} from "./plan-draft-command-digest.js";
+} from "../kernel/plan-draft-command-digest.js";
+import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.js";
 import type { PlanDraftCommand } from "./plan-draft-service.js";
 import type { AdmissionDecision, PlanAdmissionRequest } from "./policy.js";
 

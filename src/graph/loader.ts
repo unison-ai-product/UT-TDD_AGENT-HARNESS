@@ -15,7 +15,7 @@
  * fail-open 原則: 各ディレクトリ不在 / parse 失敗は空集合として扱う (既存 loader と同一方針)。
  * sanitization invariant: raw MCP response / browser trace / secret / credential を行へ複製しない。
  */
-import { type Dirent, readdirSync, readFileSync, statSync } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { loadFrDocs, parseFrRows } from "../lint/fr-registry-audit";
@@ -316,10 +316,18 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
       // archived plan は live graph に edge/node を出さない (historical、generates が削除済 artifact を
       // 指して dangling 化するのを防ぐ)。status は frontmatter から判定 (PLAN-L7-142)。
       if (fm.status === "archived") continue;
-      // generates: src/*.ts artifact のみ抽出 (generates edge = plan→source)
-      const generatesSrc = (fm.generates ?? [])
-        .map((g) => g.artifact_path ?? "")
-        .filter((p) => p.startsWith("src/") && p.endsWith(".ts"));
+      const generatedPaths = (fm.generates ?? []).map((g) => g.artifact_path ?? "").filter(Boolean);
+      // source の宣言は存在有無にかかわらず保持する。draft の未実装 source は availability を
+      // planned とし、relation edgeのlifecycleで正規に追跡する。
+      const generatesSrc = generatedPaths.filter((p) => p.startsWith("src/") && p.endsWith(".ts"));
+      const availability =
+        fm.status === "draft"
+          ? Object.fromEntries(
+              generatesSrc
+                .filter((p) => !existsSync(join(repoRoot, p)))
+                .map((p) => [p, "planned"] as const),
+            )
+          : {};
       // requirements: frontmatter dependencies.requires の FR-L1-NN + 本文 FR refs
       const fmRequires = (fm.dependencies?.requires ?? []).filter((r) => /^FR-L\d+-\d+$/.test(r));
       const bodyRefs = extractFrRefs(content);
@@ -328,7 +336,9 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
       plans.push({
         id: rp.plan_id,
         path: `docs/plans/${rp.file}`,
+        status: fm.status,
         generates: generatesSrc.length > 0 ? generatesSrc : undefined,
+        availability: Object.keys(availability).length > 0 ? availability : undefined,
         requirements: allRefs.length > 0 ? allRefs : undefined,
       });
     }

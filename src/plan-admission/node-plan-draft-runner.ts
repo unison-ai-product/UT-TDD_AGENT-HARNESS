@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { calculatePlanDraftCommandDigests } from "../kernel/plan-draft-command-digest.js";
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.js";
 import { PlanDraftLedgerTransaction } from "../plan-asset/ledger/plan-draft-ledger.js";
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
@@ -11,7 +12,6 @@ import {
   type PlanDraftEnvironmentSnapshot,
   type PlanDraftExecutionPayload,
 } from "./plan-draft-command-assembler.js";
-import { calculatePlanDraftCommandDigests } from "./plan-draft-command-digest.js";
 import {
   PlanDraftLedgerAdapter,
   type PlanDraftLedgerReceipt,

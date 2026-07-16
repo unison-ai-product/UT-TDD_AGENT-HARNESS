@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
+import { calculatePlanDraftCommandDigests } from "../kernel/plan-draft-command-digest.js";
 import type { PlanDraftLedgerTransaction } from "../plan-asset/ledger/plan-draft-ledger.js";
 import type { PlanDraftExecutionPayload } from "./plan-draft-command-assembler.js";
-import { calculatePlanDraftCommandDigests } from "./plan-draft-command-digest.js";
 import type {
   DraftLedgerPort,
   DraftReceiptBinding,

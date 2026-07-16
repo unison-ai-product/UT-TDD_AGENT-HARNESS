@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import type { CanonicalPlanDraftCommand } from "../src/kernel/plan-draft-command-digest";
 import { canonicalPlanContentDigest } from "../src/plan-admission/diff-fence";
-import type { CanonicalPlanDraftCommand } from "../src/plan-admission/plan-draft-command-digest";
 import type { PlanDraftCommand } from "../src/plan-admission/plan-draft-service";
 import type { PlanAdmissionRequest } from "../src/plan-admission/policy";
 import {
