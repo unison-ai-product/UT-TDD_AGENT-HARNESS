@@ -795,16 +795,18 @@ function rebuildAppendCommandReceiptsV5(
   fault: LedgerSchemaMigrationFaultPort | undefined,
   boundaryPrefix: string,
 ): void {
-  const temporary = appendCommandReceiptTable(5, "append_command_receipts_v5");
-  db.exec(createTableSql(temporary));
-  fault?.after(`${boundaryPrefix}-receipts-created`);
-  const columns = appendCommandReceiptsV5Table.columns.map((column) => column.name).join(", ");
-  db.exec(
-    `INSERT INTO append_command_receipts_v5 (${columns}) SELECT ${columns} FROM append_command_receipts ORDER BY command_id`,
-  );
-  fault?.after(`${boundaryPrefix}-receipts-copied`);
+  const columns = appendCommandReceiptsV5Table.columns.map((column) => column.name);
+  const rows = db
+    .prepare(`SELECT ${columns.join(", ")} FROM append_command_receipts ORDER BY command_id`)
+    .all();
   db.exec("DROP TABLE append_command_receipts");
-  db.exec("ALTER TABLE append_command_receipts_v5 RENAME TO append_command_receipts");
+  db.exec(createTableSql(appendCommandReceiptsV5Table));
+  fault?.after(`${boundaryPrefix}-receipts-created`);
+  const insert = db.prepare(
+    `INSERT INTO append_command_receipts (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
+  );
+  for (const row of rows) insert.run(...columns.map((column) => row[column]));
+  fault?.after(`${boundaryPrefix}-receipts-copied`);
   for (const index of v3Indexes.filter((candidate) => candidate.table === "append_command_receipts"))
     db.exec(createIndexSql(index));
   for (const trigger of v3Triggers.filter((candidate) => candidate.table === "append_command_receipts"))
