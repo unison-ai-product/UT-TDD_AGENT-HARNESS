@@ -1812,7 +1812,28 @@ program
       // 意図しない混入を staged 段階で弾く (doctor 失敗 / suspect 検出で fail-close)。
       const staged = loadStagedFiles(process.cwd());
       const summary = summarizeStagedReview(staged);
-      const doctor = runDoctor();
+      const lock = acquireDoctorLock(process.cwd());
+      if (!lock.acquired) {
+        const message = doctorLockBlockedMessage(lock.holder);
+        const blocked = {
+          scope: "staged",
+          ok: false,
+          staged: summary.staged,
+          suspect: summary.suspect,
+          doctorOk: false,
+          doctorMessages: [message],
+        };
+        if (opts.json) process.stdout.write(`${JSON.stringify(blocked, null, 2)}\n`);
+        else process.stderr.write(`${message}\n`);
+        process.exitCode = 2;
+        return;
+      }
+      let doctor: ReturnType<typeof runDoctor>;
+      try {
+        doctor = runDoctor();
+      } finally {
+        lock.release();
+      }
       const ok = doctor.ok && summary.ok;
       const stagedOutput = {
         scope: "staged",
@@ -1841,7 +1862,28 @@ program
       return;
     }
     const changedFiles = loadChangedFiles(process.cwd());
-    const doctor = runDoctor();
+    const lock = acquireDoctorLock(process.cwd());
+    if (!lock.acquired) {
+      const message = doctorLockBlockedMessage(lock.holder);
+      const blocked = {
+        scope: "uncommitted",
+        ok: false,
+        changedFiles,
+        verificationRecommendations: [],
+        missingProfiles: [],
+        doctorMessages: [message],
+      };
+      if (opts.json) process.stdout.write(`${JSON.stringify(blocked, null, 2)}\n`);
+      else process.stderr.write(`${message}\n`);
+      process.exitCode = 2;
+      return;
+    }
+    let doctor: ReturnType<typeof runDoctor>;
+    try {
+      doctor = runDoctor();
+    } finally {
+      lock.release();
+    }
     const verification = recommendVerificationProfiles(changedFiles);
     const output = {
       scope: "uncommitted",
