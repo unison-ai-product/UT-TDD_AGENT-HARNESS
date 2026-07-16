@@ -89,7 +89,7 @@ that `ut-tdd vmodel lint` checks.
 - [ ] Every boundary in the diagram has a named L3 interface point.
 - [ ] Each interface point has a matching `requires` or `placeholder_dep` in the
       PLAN for the L4 doc that will resolve it.
-- [ ] No boundary is owned by two PLANs simultaneously (check `ut-tdd graph`).
+- [ ] No boundary is owned by two PLANs simultaneously (check `ut-tdd graph export --format mermaid`).
 - [ ] `ut-tdd plan lint` and `ut-tdd doctor` exit 0.
 - [ ] Refactor PLANs: confirm via `ut-tdd review --uncommitted` that no externally
       visible boundary name changed without a corresponding contract version bump.

@@ -26,7 +26,7 @@ decision_points:
     choose: "include only items verified against current PLAN status and `git log`"
     over: "copy forward carry items from the previous handover unchanged"
     because: "carrying forward an item already done in the PLAN registry misleads the next session into re-investigating solved work"
-  - when: "`ut-tdd graph` shows a PLAN that directly or transitively depends on itself"
+  - when: "`ut-tdd graph export` output shows a PLAN that directly or transitively depends on itself"
     choose: "extract the shared dependency into a new upstream PLAN"
     over: "reorder dependencies within the existing PLANs to break the cycle informally"
     because: "a dependency cycle is a hard block on advancement; the only structural fix is separating the shared concern into its own upstream PLAN"
@@ -75,7 +75,7 @@ ut-tdd handover             # generate .ut-tdd/handover/CURRENT.json
 ut-tdd metrics              # aggregate progress signals (layer coverage, etc.)
 ```
 
-Run `ut-tdd status` and `ut-tdd graph` together at the start of a program
+Run `ut-tdd status` and `ut-tdd graph export --format mermaid` together at the start of a program
 review. A PLAN that has been `active` for more than one sprint without a
 `trace-freeze` advancement is a stall signal.
 
@@ -93,7 +93,10 @@ rule (FR-L1-01):
 
 ## Dependency sequencing at program level
 
-`ut-tdd graph` renders the full PLAN dependency graph. Before scheduling
+`ut-tdd graph export --format mermaid` renders the cross-artifact relation
+graph (PLANs plus design / test-design / source / test nodes — not a
+PLAN-only view; `ut-tdd graph impact --changed <path...>` computes the impact
+set of changed files). Before scheduling
 parallel work across agents:
 
 1. Identify the critical path (longest chain of `直列` dependencies).
@@ -102,7 +105,7 @@ parallel work across agents:
 3. Record the parallel/serial grouping in the program milestone note in
    `.ut-tdd/handover/` — do not rely on memory alone.
 
-Cycles in `ut-tdd graph` are hard blocks: a PLAN that directly or
+Cycles in the exported graph are hard blocks: a PLAN that directly or
 transitively depends on itself cannot advance; resolve by extracting the
 shared dependency into a new upstream PLAN.
 

@@ -58,7 +58,7 @@ modifies, or removes a table, column, index, or migration.
 
 `.ut-tdd/harness.db` is a SQLite projection DB — it is *written* by
 `src/state-db/projection-writer.ts` and *read* by `ut-tdd doctor`, `ut-tdd
-vmodel lint`, and `ut-tdd metrics`. It is not an application database; it is
+vmodel lint`, and `ut-tdd metrics skill`. It is not an application database; it is
 harness state. Rules:
 
 - Never hand-edit `harness.db`; always regenerate via `ut-tdd db rebuild`.

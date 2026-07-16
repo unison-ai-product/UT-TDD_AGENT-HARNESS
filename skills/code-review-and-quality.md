@@ -102,7 +102,7 @@ Confirm the full V-model sibling set for every changed module:
 
 **Step 4 — Retrograde quality check (Refactor/Retrofit only):**
 
-Run `ut-tdd metrics` (if available) or review the git diff for:
+Run `ut-tdd metrics skill` or review the git diff for:
 - No reduction in Vitest assertion count without PLAN rationale.
 - No removal of an existing test-design doc section.
 - Biome rule suppressions not increased beyond the pre-change count.

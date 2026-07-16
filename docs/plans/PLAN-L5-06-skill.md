@@ -51,7 +51,7 @@ L4-12 (skill-pack、FR-L1-47) の L5 詳細化。**per-requirement PLAN** ([[fee
 
 ## §1 目的
 
-L4 architecture §3.1 skills building block を **module 結合粒度**へ詳細化: ① `skills` module の内部分割 (catalog 構築 / recommender / injector の 3 内部責務)、② `docs/skills/**/*.md` (層1) → 注入セット (層2) の結合 IF、③ skill 注入/推挙の D-API 操作 (internal-processing)。recommender スコア・injector の L 別注入セットは L6 carry。
+L4 architecture §3.1 skills building block を **module 結合粒度**へ詳細化: ① `skills` module の内部分割 (catalog 構築 / recommender / injector の 3 内部責務)、② `skills/**/*.md` (層1、訂正 2026-07-16: 起票時 `docs/skills/` → 現行 root `skills/`、PLAN-REVERSE-280) → 注入セット (層2) の結合 IF、③ skill 注入/推挙の D-API 操作 (internal-processing)。recommender スコア・injector の L 別注入セットは L6 carry。
 
 ## §2 背景
 
@@ -69,7 +69,7 @@ module-decomposition の skill stub (§1/§5) を catalog / recommender / inject
 
 ### Step 2: [直列] 層1/層2 結合境界の確定
 直列理由: downstream_dependency
-Step 1 の責務を前提に、`docs/skills/**/*.md` (層1) と catalog-injector TypeScript (層2) の結合境界を ADR-004 に沿って定義する。
+Step 1 の責務を前提に、`skills/**/*.md` (層1、現行 root) と catalog-injector TypeScript (層2) の結合境界を ADR-004 に沿って定義する。
 
 ### Step 3: [直列] skill 推挙/注入 D-API / DbC の確定
 直列理由: downstream_dependency

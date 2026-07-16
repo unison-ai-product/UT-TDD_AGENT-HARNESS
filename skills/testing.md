@@ -129,7 +129,7 @@ declaring the coverage useful.
 When back-filling tests for existing code under a Retrofit or Reverse PLAN:
 
 1. Run `bun run test` and record the current pass/fail state.
-2. Identify the code paths to be covered using `ut-tdd graph` or manual review.
+2. Identify the code paths to be covered using `ut-tdd graph impact --changed <path...>` or manual review.
 3. Write characterisation tests (describe current behaviour as oracle) before
    any design changes — these become the regression fence.
 4. Back-fill L6 unit-test design docs in `docs/test-design/` to pair with the

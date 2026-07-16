@@ -3,14 +3,14 @@ plan_id: PLAN-REVERSE-280-skill-root-doc-sync
 title: "PLAN-REVERSE-280: skill canonical root 移行の設計 back-fill (docs/skills → skills)"
 kind: reverse
 layer: cross
-workflow_phase: R0
+workflow_phase: R2
 confirmed_reverse_type: design
 drive: fullstack
 status: draft
 route_signal: drift
 route_mode: reverse
 created: 2026-07-02
-updated: 2026-07-09
+updated: 2026-07-16
 owner: PM / PO
 related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 agent_slots:
@@ -51,8 +51,19 @@ draft 起票 (A-180 S-2/S-3/S-4/S-5)。実装が先行して root を `skills/` 
 
 R0 (本 doc) → R1 対象確定 → R2 是正実施 → R3 検証 (asset-drift / SKILL_MAP 突合 green) → R4 fullback (backprop_scope 記録)。
 
-## 未着手 DoD
+## R2 実施記録 (2026-07-16、Claude)
 
-- [ ] 上記 4 系統の是正が landed し、`docs/skills` への stale 参照が tracked docs からゼロになる (domain_tags は着手済み、R3 検証のみ残)
-- [ ] review-checklist.yaml の索引外扱いが明示される (PO 確認済みで)
-- [ ] item 5(d)(e)(f)(g) (A-186 追加分、計 8 ファイル + estimation.md + deprecation-cutover.md) が是正される
+- item 1: ADR-004 決定1 を `skills/**/*.md` へ訂正 + 訂正注記節を追加。PLAN-L4-12 §1-2/§3、PLAN-L5-06 §1/Step2 を訂正 (confirmed doc は訂正注記付きインライン)。SKILL_MAP.md 自己説明を `skills/` へ修正。
+- item 2: `.claude/agents/refactor-scout.md` の dead link を `skills/refactoring.md` へ修正。
+- item 3: SKILL_MAP.md に review-checklist.yaml の索引外マーカーを明示 (data asset / `shouldScoreSkillAsset` 除外 = PLAN-L7-277 N-1 の実装済み結論と同一結論に整合)。**PO 確認は R3 で要取得** (両 PLAN 同一結論の事後承認)。
+- item 4: domain_tags 着手済みを A-186 で確認済み — R3 検証のみ。
+- item 5: (a) security.md の `ut-tdd guardrail` 誤案内を実在防波堤 (pre-push hook + `src/lint/secret-scan.ts`) ベースへ書換え、guardrail = decision ledger (`guardrail status`) と明記。(b) incident-runbook.md の status 副作用表現を read-only 実態へ修正。(c) context-engineering.md `--plan <path>` → `<plan-id>` (SKILL_MAP も同修正)、harness-observability.md / db.md / context-memory.md / code-review-and-quality.md の bare `metrics` → `metrics skill` (+`telemetry scan`/`find <query>`)。(d) graph bare form 6 ファイル (api / api-and-interface-design / dependency-map / project-management / reverse-r0 / testing) を `graph impact --changed` / `graph export --format mermaid` へ実行単位化、project-management の「full PLAN dependency graph」過大表現を cross-artifact relation graph 実態へ修正。(e) N-4 3 ファイル是正。(f) estimation.md の task classify 陳腐化注記を実装済み実態へ更新。(g) deprecation-cutover.md:60 の表記揺れ修正。
+- **DoD 範囲注記**: 「`docs/skills` stale 参照ゼロ」は *誤誘導 4 系統* に限る。残存する `docs/skills` 言及は (a) 歴史的記述 (ADR/L1/governance の起票時文脈・frozen 要求 doc)、(b) L6 skill-index.md が正規に設計する dual-root fallback (`skills/` 優先 / `docs/skills/` fallback) であり、stale ではない。全文書一括置換は confirmed 要求 doc の改変になるため本 PLAN では行わない。
+
+## DoD
+
+- [x] 上記 4 系統の是正が landed (誤誘導系統ゼロ。範囲注記どおり歴史的記述と dual-root fallback 設計は除外)
+- [x] review-checklist.yaml の索引外扱いが明示される (PO 確認は R3/R4 で取得)
+- [x] item 5(d)(e)(f)(g) (A-186 追加分、計 8 ファイル + estimation.md + deprecation-cutover.md) が是正される
+- [ ] R3: PR HEADでasset-drift、SKILL_MAP突合、実在CLI surfaceを独立再検証し、review-checklist.yamlの人間向け索引外判断についてPO確認を記録する。
+- [ ] R4: R3の観測差分だけをADR/PLAN/SKILL_MAP/agent定義へgap-only back-fillし、cross-review verdictとbackprop_scopeを記録する。

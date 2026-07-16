@@ -40,9 +40,10 @@ decision_points:
 # estimation
 
 Complexity and effort scoring for UT-TDD PLANs before schedule commitment
-(FR-L1-39 task complexity / effort). There is no `ut-tdd task classify` or
-`ut-tdd task estimate` CLI yet; scoring is done by the author at PLAN
-authoring time and recorded in the PLAN body.
+(FR-L1-39 task complexity / effort). `ut-tdd task classify --text "..."` is
+implemented and auto-scores `size` / `complexity_score` / `difficulty` /
+`risk_flags` — run it first and record its output in the PLAN body; author
+judgment adjusts the result rather than replacing it with manual scoring.
 
 ## When to load this skill
 

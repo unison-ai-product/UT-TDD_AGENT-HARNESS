@@ -65,7 +65,7 @@ evidence map that gates entry to R1 (or R2 when R1 is skipped).
 4. Inventory all test files relevant to the subject and list their paths.
 5. Note any drift signals observed: schema mismatch, orphaned design docs,
    broken import paths, untraced implementation files.
-6. Run `ut-tdd graph` or `ut-tdd find` to identify dependency edges if the
+6. Run `ut-tdd graph impact --changed <path...>` or `ut-tdd find <query>` to identify dependency edges if the
    subject scope involves inter-module contracts.
 
 ## Output artifact: evidence map
