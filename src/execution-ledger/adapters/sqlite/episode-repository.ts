@@ -17,6 +17,7 @@ import {
   type LedgerTransactionPort,
 } from "../../../plan-asset/ledger/transaction.js";
 import type { HarnessDb } from "../../../state-db/index.js";
+import { executionLedgerRowsValid } from "./row-verifier.js";
 
 export interface EpisodeRepositoryFaultPort {
   after(boundary: "episode-root" | "episode-event" | "episode-projection" | "receipt"): void;
@@ -49,6 +50,11 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
       if (receipt) {
         if (receipt.command_payload_digest !== event.commandPayloadDigest)
           return { commit: false, value: failed("episode-command-payload-conflict", "commandId") };
+        if (!executionLedgerRowsValid(this.db))
+          return {
+            commit: false,
+            value: failed("episode-ledger-integrity-invalid", "ledger"),
+          };
         return { commit: true, value: this.replay(String(receipt.result_ref)) };
       }
       if (
