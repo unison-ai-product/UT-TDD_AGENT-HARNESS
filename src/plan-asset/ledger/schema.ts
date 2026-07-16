@@ -21,6 +21,7 @@ import {
   executionLedgerV5Tables,
   executionLedgerV5Triggers,
 } from "../../execution-ledger/adapters/sqlite/schema-definitions.js";
+import { executionLedgerRowsValid } from "../../execution-ledger/adapters/sqlite/row-verifier.js";
 
 export const LEDGER_SCHEMA_VERSION = 5;
 
@@ -933,6 +934,7 @@ function ledgerRowsValid(db: HarnessDb): boolean {
     }
     if (!admissionReductionsValid(db) || !draftJournalReductionsValid(db)) return false;
   }
+  if (db.userVersion() >= 5 && !executionLedgerRowsValid(db)) return false;
   const revisions = db
     .prepare("SELECT canonical_payload_json, canonical_payload_digest FROM plan_revisions")
     .all();

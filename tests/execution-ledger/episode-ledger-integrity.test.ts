@@ -65,10 +65,13 @@ function tamperReceiptBinding(db: HarnessDb): void {
 function withoutUpdateTrigger(db: HarnessDb, table: string, mutate: () => void): void {
   const triggerName = `trg_${table}_no_update`;
   db.exec(`DROP TRIGGER ${triggerName}`);
-  mutate();
-  const ddl = ledgerSchemaDdl().find((sql) => sql.includes(triggerName));
-  if (!ddl) throw new Error(`trigger DDL missing: ${triggerName}`);
-  db.exec(ddl);
+  try {
+    mutate();
+  } finally {
+    const ddl = ledgerSchemaDdl().find((sql) => sql.includes(triggerName));
+    if (!ddl) throw new Error(`trigger DDL missing: ${triggerName}`);
+    db.exec(ddl);
+  }
 }
 
 function episodeLedger(): HarnessDb {
