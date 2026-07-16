@@ -173,7 +173,7 @@ Model / effort routing defaults (task-kind ベース、PO rule 2026-07-14):
   (`gpt-5.6-sol`) or Claude Opus (`claude-opus-4-8`) or above, behind the
   explicit frontier gate.
 - 正規委譲経路 (`ut-tdd codex/claude --role <role>`) は上記 routing を機械強制する
-  (PLAN-L7-255、`src/runtime/delegation-routing.ts`): 未登録 role は fail-close、
+  (PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close、
   判断ゲート role (reviewer / blind-reviewer / qa / tl 等) は族内 frontier reviewer tier
   へ固定、worker role は intent 推定既定。明示 `--model`/`--effort` が常に優先。
   effort は codex にも argv (`-c model_reasoning_effort=...`) で実注入される。

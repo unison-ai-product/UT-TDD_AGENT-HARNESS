@@ -341,7 +341,8 @@ export function buildAdapterPlan(intent: AdapterIntent, mode: ExecutionMode): Ad
         CODEX_STDIN_ARGS[0],
         ...(intent.model ? [CODEX_MODEL_FLAG, intent.model] : []),
         // effort を argv へ貫通 (A-183 PY-2 是正、実機裏取り 2026-07-16:
-        // `codex exec -c model_reasoning_effort=low` 受理を確認)
+        // codex-cli 0.144.1 で `-c model_reasoning_effort=low` および `=xhigh`
+        // (mini ladder base) の受理を確認)
         ...(providerEffort ? ["-c", `model_reasoning_effort=${providerEffort}`] : []),
         CODEX_STDIN_ARGS[1],
       ]

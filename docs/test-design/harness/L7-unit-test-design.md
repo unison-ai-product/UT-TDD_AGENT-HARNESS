@@ -470,7 +470,7 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 
 ### §1.16.2b2 U-DELEG (正規委譲経路の role 検証 + model/effort routing、PLAN-L7-255)
 
-> ペア = `src/runtime/delegation-routing.ts` + `buildAdapterPlan` codex effort argv。A-177 F-4 (role→model マッピング欠落) / A-183 PY-2 (codex effort argv 非注入) の是正を固定する。
+> ペア = `src/team/delegation-routing.ts` + `buildAdapterPlan` codex effort argv。A-177 F-4 (role→model マッピング欠落) / A-183 PY-2 (codex effort argv 非注入) の是正を固定する。
 
 | ID | 対象 | Oracle |
 |---|---|---|
@@ -481,6 +481,8 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DELEG-005 | `buildAdapterPlan` (codex) | effort が argv `-c model_reasoning_effort=<effort>` へ実注入され、middle は medium へ正規化される |
 | U-DELEG-006 | `buildAdapterPlan` (claude) | 既存の `--effort` flag + env 契約が routing 導入後も不変 |
 | U-DELEG-007 | `DELEGATION_ROLE_ALLOWLIST` | 実 repo の役割語彙 (qa/blind-reviewer/tl/tl-advisor/se/reviewer/code-reviewer/pmo-*) を全て許容する |
+| U-DELEG-008 | `resolveDelegationRouting` | subagent 名形 gate role (ut-tdd-tl/qa-test/security-audit) も worker tier へ落とさず族内 frontier reviewer tier へ固定する (2026-07-16 クロスレビュー指摘 1 regression) |
+| U-DELEG-009 | `buildAdapterPlan` (codex) | ladder base `xhigh` (mini lane) が `-c model_reasoning_effort=xhigh` として argv へ素通しされる (codex-cli 0.144.1 実機受理 2026-07-16) |
 
 ### §1.16.2c U-DOCLOCK (doctor 多重起動 fail-fast、PLAN-L7-442)
 

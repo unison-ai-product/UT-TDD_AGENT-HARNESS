@@ -171,7 +171,7 @@ fallback.
 ## Model / Effort Routing
 
 正規委譲経路 (`ut-tdd codex/claude --role <role>`) は role 検証 + routing を機械強制する
-(PLAN-L7-255、`src/runtime/delegation-routing.ts`): 未登録 role は fail-close。判断ゲート role
+(PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close。判断ゲート role
 (reviewer / blind-reviewer / qa / tl / security 等) は族内 frontier reviewer tier
 (codex=`gpt-5.6-sol` / claude=`claude-opus-4-8`) へ固定し、worker role は intent 推定
 (`selectTeamModel`) で創出=ROI 寄せの既定へ流す。明示 `--model`/`--effort` は常に優先。

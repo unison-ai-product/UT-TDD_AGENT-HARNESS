@@ -14,7 +14,7 @@ import {
   isReadOnlyDelegationRole,
   reviewGuardMessages,
 } from "../runtime/review-guard";
-import { resolveDelegationRouting } from "../runtime/delegation-routing";
+import { resolveDelegationRouting } from "../team/delegation-routing";
 import { dispatch, nodeDeps, type SessionHookInput } from "../runtime/session-log";
 
 export interface AdapterExecutionDeps {

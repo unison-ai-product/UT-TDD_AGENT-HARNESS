@@ -4,9 +4,9 @@ import {
   REVIEW_LANE_MODELS,
   type ReviewLane,
   selectTeamModel,
-} from "../team/model-policy";
-import { SUBAGENT_ALLOWLIST } from "./agent-guard-policy";
-import { READ_ONLY_DELEGATION_ROLES } from "./review-guard";
+} from "./model-policy";
+import { SUBAGENT_ALLOWLIST } from "../runtime/agent-guard-policy";
+import { READ_ONLY_DELEGATION_ROLES } from "../runtime/review-guard";
 
 /**
  * 正規委譲経路 (`ut-tdd codex/claude --role`) の role 検証 + model/effort routing
@@ -18,8 +18,19 @@ import { READ_ONLY_DELEGATION_ROLES } from "./review-guard";
  * worker role は selectTeamModel の intent 推定に委ねる。明示 `--model`/`--effort` は常に優先。
  */
 
+/**
+ * subagent 名形の判断ゲート role (.claude/CLAUDE.md の opus-floor gate subagent 群)。
+ * allowlist 合流 (SUBAGENT_ALLOWLIST) で role として許可されるため、短縮形
+ * (qa/tl/security) と同様に frontier reviewer tier へ固定しないと worker tier へ
+ * 落ちる (2026-07-16 クロスレビュー指摘 1)。
+ */
+const GATE_SUBAGENT_ROLES = ["ut-tdd-tl", "qa-test", "security-audit"] as const;
+
 /** 判断ゲート role (review/verify)。frontier reviewer tier へ固定する (PO 原則 2026-07-08)。 */
-export const REVIEW_GATE_ROLES: ReadonlySet<string> = READ_ONLY_DELEGATION_ROLES;
+export const REVIEW_GATE_ROLES: ReadonlySet<string> = new Set([
+  ...READ_ONLY_DELEGATION_ROLES,
+  ...GATE_SUBAGENT_ROLES,
+]);
 
 /** 実 repo で使用実績のある worker/連絡 role (grep docs/CLAUDE.md/AGENTS.md 2026-07-16)。 */
 const WORKER_DELEGATION_ROLES = ["se", "po", "pm", "docs", "advisor", "tl-advisor"] as const;
@@ -87,6 +98,8 @@ export function resolveDelegationRouting(input: DelegationRoutingInput): Delegat
   if (REVIEW_GATE_ROLES.has(role)) {
     const lane = reviewLaneForRole(role);
     const model = input.model ?? REVIEW_LANE_MODELS[lane][input.provider];
+    // REVIEW_LANE_MODELS は常に ladder に載るが、明示 --model が ladder 外
+    // (例: 新モデル ID) の場合のみこの fallback に到達する。
     const fallbackEffort = input.provider === "codex" ? "middle" : "high";
     const effort = input.effort ?? ladderBaseEffort(model, fallbackEffort);
     return {
@@ -94,7 +107,7 @@ export function resolveDelegationRouting(input: DelegationRoutingInput): Delegat
       model,
       effort,
       model_source: input.model ? "explicit" : "review-lane",
-      effort_source: input.effort ? "explicit" : input.model ? "ladder" : "ladder",
+      effort_source: input.effort ? "explicit" : "ladder",
       review_lane: lane,
     };
   }

@@ -4,7 +4,7 @@ import {
   DELEGATION_ROLE_ALLOWLIST,
   MODEL_IDS,
   resolveDelegationRouting,
-} from "../src/runtime/delegation-routing";
+} from "../src/team/delegation-routing";
 
 describe("delegation routing (PLAN-L7-255)", () => {
   it("U-DELEG-001: unknown role fail-closes with the allowlist named", () => {
@@ -44,6 +44,42 @@ describe("delegation routing (PLAN-L7-255)", () => {
       review_lane: "implementation-review",
       effort: "high", // opus の ladder base
     });
+  });
+
+  it("U-DELEG-008: subagent-form gate roles (ut-tdd-tl/qa-test/security-audit) stay on the frontier reviewer tier", () => {
+    // 2026-07-16 クロスレビュー指摘 1: allowlist 合流で許可される subagent 形 gate role が
+    // worker tier (terra) へ落ちる欠陥の regression。opus/frontier floor を固定する。
+    for (const role of ["ut-tdd-tl", "qa-test", "security-audit"]) {
+      const codex = resolveDelegationRouting({ provider: "codex", role, task: "the module" });
+      expect(codex).toMatchObject({
+        ok: true,
+        model: MODEL_IDS.codex.frontier,
+        model_source: "review-lane",
+      });
+      const claude = resolveDelegationRouting({ provider: "claude", role, task: "the module" });
+      expect(claude).toMatchObject({
+        ok: true,
+        model: MODEL_IDS.claude.opus,
+        model_source: "review-lane",
+      });
+    }
+  });
+
+  it("U-DELEG-009: codex adapter plan passes ladder-base xhigh through to argv (mini lane)", () => {
+    // 実機裏取り 2026-07-16: codex-cli 0.144.1 が `-c model_reasoning_effort=xhigh` を受理・正常応答。
+    const plan = buildAdapterPlan(
+      {
+        provider: "codex",
+        role: "docs",
+        task: "README typo",
+        model: MODEL_IDS.codex.mini,
+        effort: "xhigh",
+        execute: false,
+      },
+      "hybrid",
+    );
+    expect(plan.args).toContain("model_reasoning_effort=xhigh");
+    expect(plan.effort).toBe("xhigh");
   });
 
   it("U-DELEG-003: worker role se flows through selectTeamModel policy with a model+effort", () => {
