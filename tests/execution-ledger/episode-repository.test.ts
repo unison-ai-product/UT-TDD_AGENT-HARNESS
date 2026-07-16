@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import type { RequestForwardEscape } from "../../src/execution-ledger/domain/execution-episode.js";
+import type {
+  ClassifyEscapeCommand,
+  RequestForwardEscape,
+  RequestIssueProjectionCommand,
+  SelectDriveModelCommand,
+} from "../../src/execution-ledger/domain/execution-episode.js";
 import { SqliteExecutionEpisodeRepository } from "../../src/execution-ledger/adapters/sqlite/episode-repository.js";
 import { ledgerSchemaDdl, migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
 import { openHarnessDb, type HarnessDb } from "../../src/state-db/index.js";
@@ -13,6 +18,7 @@ const TABLES = [
   "execution_episode_events",
   "execution_episode_projection",
   "append_command_receipts",
+  "drive_model_selections",
   "github_projection_outbox",
 ] as const;
 
@@ -29,6 +35,7 @@ describe("SqliteExecutionEpisodeRepository (PLAN-L7-436)", () => {
       });
       expect(counts(db)).toEqual({
         append_command_receipts: 1,
+        drive_model_selections: 0,
         execution_episode_events: 1,
         execution_episode_projection: 1,
         execution_episodes: 1,
@@ -68,6 +75,7 @@ describe("SqliteExecutionEpisodeRepository (PLAN-L7-436)", () => {
         expect(() => repository.request(request(), CUSTODY)).toThrow(`fault:${boundary}`);
         expect(counts(db)).toEqual({
           append_command_receipts: 0,
+          drive_model_selections: 0,
           execution_episode_events: 0,
           execution_episode_projection: 0,
           execution_episodes: 0,
@@ -95,7 +103,105 @@ describe("SqliteExecutionEpisodeRepository (PLAN-L7-436)", () => {
       });
     });
   });
+
+  it("U-EXEP-008: E1-E3をevent/selection/outbox/projection/receiptの単一transactionで追記する", () => {
+    withLedger((db) => {
+      const repository = new SqliteExecutionEpisodeRepository(db);
+      expect(repository.request(request(), CUSTODY)).toMatchObject({ ok: true });
+
+      expect(repository.transition(classify(), CUSTODY)).toMatchObject({
+        ok: true,
+        status: "created",
+        snapshot: { state: "E1", nextLegalCommands: ["select_drive_model"] },
+      });
+      expect(counts(db)).toMatchObject({
+        append_command_receipts: 2,
+        drive_model_selections: 0,
+        execution_episode_events: 2,
+        github_projection_outbox: 0,
+      });
+
+      expect(repository.transition(selectDrive(), CUSTODY)).toMatchObject({
+        ok: true,
+        status: "created",
+        snapshot: { state: "E2", nextLegalCommands: ["request_issue_projection"] },
+      });
+      expect(counts(db)).toMatchObject({
+        append_command_receipts: 3,
+        drive_model_selections: 1,
+        execution_episode_events: 3,
+        github_projection_outbox: 0,
+      });
+
+      expect(repository.transition(requestIssue(), CUSTODY)).toMatchObject({
+        ok: true,
+        status: "created",
+        outboxIds: [expect.stringMatching(/^outbox:/)],
+        snapshot: { state: "E3", nextLegalCommands: ["confirm_issue_projection"] },
+      });
+      expect(counts(db)).toEqual({
+        append_command_receipts: 4,
+        drive_model_selections: 1,
+        execution_episode_events: 4,
+        execution_episode_projection: 1,
+        execution_episodes: 1,
+        github_projection_outbox: 1,
+      });
+      expect(
+        db.prepare("SELECT event_sequence FROM execution_episode_events ORDER BY event_sequence").all(),
+      ).toEqual([{ event_sequence: 0 }, { event_sequence: 1 }, { event_sequence: 2 }, { event_sequence: 3 }]);
+    });
+  });
 });
+
+function transitionEnvelope<const TSequence extends 1 | 2 | 3>(sequence: TSequence) {
+  return {
+    commandId: `command:recovery-70:e${sequence}`,
+    episodeId: "episode:recovery-70",
+    expectedSequence: sequence,
+    sourceCommit: SHA,
+    observedHead: SHA,
+    policyRevision: "policy:escape-v1",
+    actor: "codex",
+    occurredAt: `2026-07-16T08:3${sequence}:00.000Z`,
+  };
+}
+
+function classify(): ClassifyEscapeCommand {
+  return {
+    type: "classify_escape",
+    ...transitionEnvelope(1),
+    escapeType: "reopened",
+    classificationRuleRevision: "escape-classification:v1",
+    verificationTarget: {
+      kind: "assumption",
+      assetId: "plan:doctor-singleton",
+      revision: 1,
+      statementDigest: DIGEST,
+    },
+  };
+}
+
+function selectDrive(): SelectDriveModelCommand {
+  return {
+    type: "select_drive_model",
+    ...transitionEnvelope(2),
+    model: "recovery",
+    compatibilityResult: "compatible",
+    rationaleDigest: DIGEST,
+    selectionRevision: 1,
+  };
+}
+
+function requestIssue(): RequestIssueProjectionCommand {
+  return {
+    type: "request_issue_projection",
+    ...transitionEnvelope(3),
+    repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+    intentRevision: 1,
+    labels: ["forward-escape", "drive:recovery"],
+  };
+}
 
 function request(overrides: Partial<RequestForwardEscape> = {}): RequestForwardEscape {
   return {
