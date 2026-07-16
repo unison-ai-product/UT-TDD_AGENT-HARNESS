@@ -9,7 +9,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
+import { hostname, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { defaultHarnessDbPath, openHarnessDb, upsertRow } from "../src/state-db/index";
@@ -366,6 +366,27 @@ describe("L7 CLI surface closure", () => {
         expect.arrayContaining([expect.stringContaining("doctor:")]),
       );
       expect(run.stdout).not.toContain("undefined");
+    } finally {
+      removeTestTree(root);
+    }
+  }, 15_000);
+
+  it("U-DOCLOCK-009: blocks a competing doctor CLI before it starts verification", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-doctor-lock-"));
+    try {
+      const stateDir = join(root, ".ut-tdd", "state");
+      mkdirSync(stateDir, { recursive: true });
+      writeFileSync(
+        join(stateDir, "doctor.lock"),
+        `${JSON.stringify({ pid: process.pid, host: hostname(), started_at: new Date().toISOString() })}\n`,
+        "utf8",
+      );
+      const run = runCliIn(root, ["doctor", "--setup-smoke", "--json"]);
+      const payload = JSON.parse(run.stdout);
+
+      expect(run.status).toBe(2);
+      expect(payload).toMatchObject({ ok: false });
+      expect(payload.messages.join("\n")).toContain("already running");
     } finally {
       removeTestTree(root);
     }

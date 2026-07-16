@@ -6,6 +6,7 @@ import {
   acquireDoctorLock,
   DOCTOR_LOCK_STALE_MS,
   type DoctorLockDeps,
+  defaultDoctorLockIo,
   doctorLockBlockedMessage,
   doctorLockPath,
   isStaleDoctorLock,
@@ -83,5 +84,41 @@ describe("doctor singleton lock (PLAN-L7-442)", () => {
     }
     const second = acquireDoctorLock(repoRoot, 2222, deps({ isPidAlive: (pid) => pid === 1111 }));
     expect(second.acquired).toBe(true);
+  });
+
+  it("U-DOCLOCK-007: a fresh lock from another host stays blocked without probing a local pid", () => {
+    acquireDoctorLock(repoRoot, 1111, deps({ hostName: () => "host-a" }));
+    let probes = 0;
+    const r = acquireDoctorLock(
+      repoRoot,
+      2222,
+      deps({
+        hostName: () => "host-b",
+        isPidAlive: () => {
+          probes += 1;
+          return false;
+        },
+      }),
+    );
+    expect(r.acquired).toBe(false);
+    expect(probes).toBe(0);
+  });
+
+  it("U-DOCLOCK-008: lock create I/O failure degrades open instead of blocking doctor", () => {
+    const baseIo = defaultDoctorLockIo();
+    const r = acquireDoctorLock(
+      repoRoot,
+      1111,
+      deps({
+        io: {
+          ...baseIo,
+          createExclusive: () => {
+            throw new Error("disk unavailable");
+          },
+        },
+      }),
+    );
+    expect(r.acquired).toBe(true);
+    if (r.acquired) expect("degraded" in r && r.degraded).toBe(true);
   });
 });
