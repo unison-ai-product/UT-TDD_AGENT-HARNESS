@@ -22,10 +22,6 @@ review_evidence: []
 generates:
   - artifact_path: docs/plans/PLAN-L7-441-plan-draft-recovery-v4.md
     artifact_type: markdown_doc
-  - artifact_path: src/plan-admission/sqlite-draft-journal.ts
-    artifact_type: source_module
-  - artifact_path: src/plan-admission/node-atomic-draft-publisher.ts
-    artifact_type: source_module
   - artifact_path: src/plan-admission/draft-recovery.ts
     artifact_type: source_module
   - artifact_path: src/cli/plan-draft-recovery.ts
@@ -70,6 +66,10 @@ read-onlyとし、receipt発見だけでcommitへ自動昇格しない。
 
 session startとpre-pushは同じrecovery gateを実行する。fresh CIはgitignored local DBを直接観測できないため、
 tracked aux禁止、receipt整合、必要時のrecovery-clearance projectionだけを担当する。この責務差を隠さない。
+
+## 訂正注記 (2026-07-16、PR64 post-merge 是正)
+
+`generates` から既存ファイル (`src/plan-admission/sqlite-draft-journal.ts` / `node-atomic-draft-publisher.ts`) を除外した。両者は PLAN-L7-435 slice (PR #64) で landed 済みの資産で、本 PLAN (v4) は着手時にこれらを**改修**する。未着手 PLAN の generates に既存ファイルを載せると doctor `merged-plan-status` が誤検出するため、新規生成 artifact のみを残した。改修義務は本文スコープに不変。
 
 ## AC
 
