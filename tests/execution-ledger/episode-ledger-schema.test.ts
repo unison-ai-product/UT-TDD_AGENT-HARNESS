@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   LEDGER_SCHEMA_VERSION,
+  ledgerRowDigest,
   ledgerSchemaDdl,
   migratePlanLedger,
 } from "../../src/plan-asset/ledger/schema.js";
@@ -32,6 +33,24 @@ describe("Execution Episode canonical ledger schema (PLAN-L7-436)", () => {
       expect(ddl).toContain("append-only:drive_model_selections");
       expect(ddl).not.toContain("append-only:execution_episode_projection");
       expect(ddl).not.toContain("append-only:github_projection_outbox");
+
+      const receipt = {
+        command_id: "command:episode:create",
+        command_type: "execution_episode.request_escape",
+        subject_kind: "execution_episode",
+        subject_key: "episode:recovery-70",
+        plan_asset_id: null,
+        plan_revision: null,
+        command_payload_digest: "a".repeat(64),
+        result_kind: "execution_episode_event",
+        result_ref: "event:recovery-70:0",
+        recorded_at: "2026-07-16T00:00:00.000Z",
+      };
+      expect(() =>
+        db
+          .prepare("INSERT INTO append_command_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+          .run(...Object.values(receipt), ledgerRowDigest(receipt, "receipt_digest")),
+      ).not.toThrow();
     } finally {
       db.close();
     }
