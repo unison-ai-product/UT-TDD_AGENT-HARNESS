@@ -4,7 +4,7 @@ title: "PLAN-L4-31 (add-design): 非機能検証基盤の方式設計 — NFR Co
 kind: add-design
 layer: L4
 sub_doc: architecture
-drive: fullstack
+drive: be
 status: draft
 route_signal: feature_addition
 route_mode: add-feature
@@ -30,10 +30,11 @@ generates:
 dependencies:
   parent: docs/plans/PLAN-L3-08-nfr-contract-catalog.md
   requires:
-    - docs/plans/PLAN-L3-08-nfr-contract-catalog.md
+    - docs/plans/PLAN-L3-03-nfr-grade.md
     - docs/plans/PLAN-L7-34-tool-adapter-probes.md
   blocks: []
   references:
+    - docs/plans/PLAN-L3-08-nfr-contract-catalog.md
     - docs/design/harness/L4-basic-design/architecture.md
     - docs/design/harness/L5-detailed-design/physical-data.md
     - src/lint/verification-profile-catalog.ts

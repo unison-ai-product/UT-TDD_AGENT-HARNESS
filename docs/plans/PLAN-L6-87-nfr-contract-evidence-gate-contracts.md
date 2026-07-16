@@ -28,10 +28,11 @@ generates:
 dependencies:
   parent: docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md
   requires:
-    - docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md
-    - docs/plans/PLAN-L3-08-nfr-contract-catalog.md
+    - docs/plans/PLAN-L3-03-nfr-grade.md
   blocks: []
   references:
+    - docs/plans/PLAN-L4-31-nfr-verification-foundation-architecture.md
+    - docs/plans/PLAN-L3-08-nfr-contract-catalog.md
     - src/lint/verification-profile-catalog.ts
     - docs/design/harness/L6-function-design/function-spec.md
     - docs/improvement-backlog.md
