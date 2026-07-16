@@ -378,7 +378,7 @@ describe("L7 CLI surface closure", () => {
       mkdirSync(stateDir, { recursive: true });
       writeFileSync(
         join(stateDir, "doctor.lock"),
-        `${JSON.stringify({ pid: process.pid, host: hostname(), started_at: new Date().toISOString() })}\n`,
+        `${JSON.stringify({ pid: process.pid, host: hostname(), started_at: new Date().toISOString(), lock_id: "fixture-lock" })}\n`,
         "utf8",
       );
       const run = runCliIn(root, ["doctor", "--setup-smoke", "--json"]);

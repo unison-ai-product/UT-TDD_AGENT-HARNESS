@@ -1,4 +1,5 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -40,6 +41,7 @@ export interface DoctorLockIo {
   mkdirRecursive: (path: string) => void;
   createExclusive: (path: string, content: string) => void;
   readText: (path: string) => string;
+  rename: (from: string, to: string) => void;
   remove: (path: string) => void;
 }
 
@@ -72,6 +74,7 @@ export function defaultDoctorLockIo(): DoctorLockIo {
     mkdirRecursive: (path) => mkdirSync(path, { recursive: true }),
     createExclusive: (path, content) => writeFileSync(path, content, { flag: "wx" }),
     readText: (path) => readFileSync(path, "utf8"),
+    rename: (from, to) => renameSync(from, to),
     remove: (path) => rmSync(path, { force: true }),
   };
 }
@@ -91,12 +94,18 @@ function readLockRecord(path: string, deps: DoctorLockDeps): DoctorLockRecord | 
     const parsed = JSON.parse(
       (deps.io ?? defaultDoctorLockIo()).readText(path),
     ) as Partial<DoctorLockRecord>;
-    if (typeof parsed.pid !== "number" || typeof parsed.started_at !== "string") return null;
+    if (
+      typeof parsed.pid !== "number" ||
+      typeof parsed.started_at !== "string" ||
+      typeof parsed.host !== "string" ||
+      typeof parsed.lock_id !== "string"
+    )
+      return null;
     return {
       pid: parsed.pid,
       started_at: parsed.started_at,
-      host: String(parsed.host ?? ""),
-      lock_id: typeof parsed.lock_id === "string" ? parsed.lock_id : undefined,
+      host: parsed.host,
+      lock_id: parsed.lock_id,
     };
   } catch {
     return null; // 読めない/壊れた lock は stale 扱いで回収する
@@ -115,7 +124,7 @@ export function acquireDoctorLock(
     pid,
     started_at: new Date(deps.now()).toISOString(),
     host: localHost,
-    lock_id: `${pid}-${deps.now()}`,
+    lock_id: randomUUID(),
   };
   const release = () => {
     try {
@@ -126,7 +135,9 @@ export function acquireDoctorLock(
         current.started_at === record.started_at &&
         current.lock_id === record.lock_id
       ) {
-        io.remove(path);
+        const released = `${path}.release.${record.lock_id}`;
+        io.rename(path, released);
+        io.remove(released);
       }
     } catch {
       // release 失敗は stale 回収に任せる
@@ -147,7 +158,11 @@ export function acquireDoctorLock(
         return { acquired: false, holder };
       }
       try {
-        io.remove(path); // stale/破損 lock を回収して再取得
+        // 同一dir renameを取得できた一者だけが回収を進める。単なるunlinkでは
+        // 後続のfresh lockを消し得るため、回収対象を固有quarantineへ退避する。
+        const reclaimed = `${path}.reclaim.${holder?.lock_id ?? randomUUID()}`;
+        io.rename(path, reclaimed);
+        io.remove(reclaimed);
       } catch {
         return { acquired: true, release: () => {}, degraded: true };
       }
