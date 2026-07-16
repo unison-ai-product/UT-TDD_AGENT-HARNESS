@@ -37,12 +37,12 @@ import { registerPlanAssetCommands } from "./cli/plan-asset";
 import { registerPlanDraftCommand } from "./cli/plan-draft";
 import { contextSuggest } from "./context/doc-router";
 import { runDoctor } from "./doctor";
-import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-lock";
 import {
   DOCTOR_RUN_PROFILE_IDS,
   DOCTOR_RUN_PROFILES,
   type DoctorRunProfileId,
 } from "./doctor/check-registry";
+import { acquireDoctorLock, doctorLockBlockedMessage } from "./doctor/singleton-lock";
 import { renderElicitationContext, selectElicitationContext } from "./elicitation/context";
 import { appendDesignDecision, DESIGN_DECISION_LOG_PATH } from "./elicitation/record";
 import { computeSkillMetrics } from "./feedback/engine";
