@@ -152,7 +152,17 @@ describe("delegation routing (PLAN-L7-255)", () => {
   });
 
   it("U-DELEG-007: allowlist covers the real repo role vocabulary", () => {
-    for (const role of ["qa", "blind-reviewer", "tl", "tl-advisor", "se", "reviewer", "code-reviewer", "pmo-haiku", "pmo-tech-docs"]) {
+    for (const role of [
+      "qa",
+      "blind-reviewer",
+      "tl",
+      "tl-advisor",
+      "se",
+      "reviewer",
+      "code-reviewer",
+      "pmo-haiku",
+      "pmo-tech-docs",
+    ]) {
       expect(DELEGATION_ROLE_ALLOWLIST.has(role)).toBe(true);
     }
   });

@@ -14,8 +14,8 @@ import {
   isReadOnlyDelegationRole,
   reviewGuardMessages,
 } from "../runtime/review-guard";
-import { resolveDelegationRouting } from "../team/delegation-routing";
 import { dispatch, nodeDeps, type SessionHookInput } from "../runtime/session-log";
+import { resolveDelegationRouting } from "../team/delegation-routing";
 
 export interface AdapterExecutionDeps {
   gitBranch: () => string | null;
