@@ -1,9 +1,13 @@
 import { createHash } from "node:crypto";
+import { ROUTE_MODE_DISPLAY } from "../../schema/mode-catalog.js";
+import { routeSignalCandidates } from "../../schema/route-map.js";
+import { isSecretLike } from "../../secret.js";
 
 export type DriveModel =
   | "discovery"
   | "scrum"
   | "reverse"
+  | "redesign"
   | "recovery"
   | "incident"
   | "refactor"
@@ -73,7 +77,12 @@ export interface EscapeObservedEvent {
   readonly previousEventDigest: null;
   readonly eventDigest: string;
   readonly occurredAt: string;
+  readonly payload: EscapeObservedPayload;
 }
+
+export type EscapeObservedPayload = Readonly<
+  Omit<RequestForwardEscape, "type" | "commandId" | "occurredAt">
+>;
 
 export type EpisodeDecision =
   | {
@@ -97,27 +106,29 @@ export interface ExecutionEpisodeSnapshot {
   readonly eventSequence: 0;
   readonly lastEventDigest: string;
   readonly nextLegalCommands: readonly ["classify_escape"];
+  readonly recurrenceId: string;
+  readonly requestedDriveModel: DriveModel;
+  readonly origin: RequestForwardEscape["origin"];
+  readonly reentry: NonNullable<RequestForwardEscape["reentry"]>;
+  readonly sourceCommit: string;
+  readonly observedHead: string;
+  readonly policyRevision: string;
 }
 
-const DRIVE_MODELS = new Set<string>([
-  "discovery",
-  "scrum",
-  "reverse",
-  "recovery",
-  "incident",
-  "refactor",
-  "retrofit",
-  "add-feature",
-  "research",
-  "design-bottomup",
-  "version-up",
-]);
+const NON_EPISODE_ROUTE_MODES = new Set(["forward", "verify"]);
+const DRIVE_MODELS = new Set(
+  Object.keys(ROUTE_MODE_DISPLAY).filter((mode) => !NON_EPISODE_ROUTE_MODES.has(mode)),
+);
 
 export function classifyForwardBoundary(input: {
   readonly routeMode: string;
   readonly escapeType: string | null;
-}): { readonly kind: "inside_forward" | "forward_escape"; readonly requiresEpisode: boolean } {
-  return input.routeMode === "forward"
+}): {
+  readonly kind: "inside_forward" | "forward_escape" | "invalid";
+  readonly requiresEpisode: boolean;
+} {
+  if (!(input.routeMode in ROUTE_MODE_DISPLAY)) return { kind: "invalid", requiresEpisode: false };
+  return NON_EPISODE_ROUTE_MODES.has(input.routeMode)
     ? { kind: "inside_forward", requiresEpisode: false }
     : { kind: "forward_escape", requiresEpisode: true };
 }
@@ -134,12 +145,15 @@ export class ExecutionEpisode {
     if (violations.length > 0) return { ok: false, violations };
 
     const commandPayloadDigest = digest(canonicalCommand(command));
+    const payload = freezePayload(command);
+    const payloadDigest = digest(canonical(payload));
     const eventSeed = canonical({
       episodeId: command.episodeId,
       sequence: 0,
       commandId: command.commandId,
       commandPayloadDigest,
       kind: "escape_observed",
+      payloadDigest,
     });
     const event: EscapeObservedEvent = Object.freeze({
       eventId: `event:${digest(eventSeed).slice(0, 32)}`,
@@ -149,23 +163,18 @@ export class ExecutionEpisode {
       kind: "escape_observed",
       commandId: command.commandId,
       commandPayloadDigest,
-      payloadDigest: digest(canonicalCommand(command)),
+      payloadDigest,
       previousEventDigest: null,
       eventDigest: digest(eventSeed),
       occurredAt: command.occurredAt,
+      payload,
     });
     const episode = new ExecutionEpisode(event, command.commandId, commandPayloadDigest);
     return { ok: true, status: "accepted", episode, events: [event], outbox: [] };
   }
 
   get snapshot(): ExecutionEpisodeSnapshot {
-    return Object.freeze({
-      episodeId: this.event.episodeId,
-      state: "E0",
-      eventSequence: 0,
-      lastEventDigest: this.event.eventDigest,
-      nextLegalCommands: ["classify_escape"] as const,
-    });
+    return snapshotFromEvent(this.event);
   }
 
   decide(command: RequestForwardEscape): EpisodeDecision {
@@ -190,9 +199,59 @@ function validateRequest(command: RequestForwardEscape): EpisodeViolation[] {
     return [rule("episode-drive-model-invalid", "requestedDriveModel")];
   if (command.routeMode !== command.requestedDriveModel)
     return [rule("episode-route-drive-mismatch", "routeMode")];
+  const signalModes = routeSignalCandidates(command.routeSignal.trim().toLowerCase());
+  if (signalModes.length !== 1 || signalModes[0] !== command.routeMode)
+    return [rule("episode-route-signal-mismatch", "routeSignal")];
+  if (!/^command:[a-z0-9][a-z0-9:-]{2,127}$/.test(command.commandId))
+    return [rule("episode-command-id-invalid", "commandId")];
+  if (!/^episode:[a-z0-9][a-z0-9:-]{2,127}$/.test(command.episodeId))
+    return [rule("episode-id-invalid", "episodeId")];
+  if (!/^recurrence:[a-z0-9][a-z0-9:-]{2,127}$/.test(command.recurrenceId))
+    return [rule("episode-recurrence-id-invalid", "recurrenceId")];
+  if (
+    !command.origin.assetId.trim() ||
+    !Number.isSafeInteger(command.origin.revision) ||
+    command.origin.revision < 1 ||
+    !Number.isSafeInteger(command.origin.observedRevision) ||
+    command.origin.observedRevision < 1 ||
+    !command.origin.state.trim()
+  )
+    return [rule("episode-origin-invalid", "origin")];
   if (command.origin.revision !== command.origin.observedRevision)
     return [rule("episode-origin-stale", "origin.observedRevision")];
   if (!command.reentry) return [rule("episode-reentry-required", "reentry")];
+  if (
+    !command.reentry.assetId.trim() ||
+    !Number.isSafeInteger(command.reentry.revision) ||
+    command.reentry.revision < 1 ||
+    !command.reentry.state.trim() ||
+    !command.reentry.policyRevision.trim()
+  )
+    return [rule("episode-reentry-invalid", "reentry")];
+  if (
+    !command.issue.repository.trim() ||
+    !command.issue.title.trim() ||
+    !validDigest(command.issue.bodyDigest)
+  )
+    return [rule("episode-issue-invalid", "issue")];
+  if (!/^[a-f0-9]{40}$|^[a-f0-9]{64}$/.test(command.sourceCommit))
+    return [rule("episode-source-commit-invalid", "sourceCommit")];
+  if (!/^[a-f0-9]{40}$|^[a-f0-9]{64}$/.test(command.observedHead))
+    return [rule("episode-observed-head-invalid", "observedHead")];
+  if (!Number.isFinite(Date.parse(command.occurredAt)))
+    return [rule("episode-occurred-at-invalid", "occurredAt")];
+  if (!command.policyRevision.trim() || !command.actor.trim())
+    return [rule("episode-custody-invalid", "policyRevision")];
+  if (
+    [
+      command.escapeReason,
+      command.issue.title,
+      command.actor,
+      command.override?.reason ?? "",
+      command.override?.actor ?? "",
+    ].some(isSecretLike)
+  )
+    return [rule("episode-sensitive-input-forbidden", "payload")];
   if (
     command.override &&
     (!command.override.actor.trim() ||
@@ -212,7 +271,7 @@ function canonical(value: unknown): string {
   if (value && typeof value === "object") {
     return `{${Object.entries(value as Record<string, unknown>)
       .filter(([, entry]) => entry !== undefined)
-      .sort(([left], [right]) => left.localeCompare(right))
+      .sort(([left], [right]) => Buffer.compare(Buffer.from(left), Buffer.from(right)))
       .map(([key, entry]) => `${JSON.stringify(key)}:${canonical(entry)}`)
       .join(",")}}`;
   }
@@ -233,4 +292,61 @@ function rule(ruleId: string, path: string): EpisodeViolation {
 
 function violation(ruleId: string, path: string): EpisodeDecision {
   return { ok: false, violations: [rule(ruleId, path)] };
+}
+
+export function reconstructExecutionEpisode(
+  events: readonly EscapeObservedEvent[],
+):
+  | { readonly ok: true; readonly value: ExecutionEpisodeSnapshot }
+  | { readonly ok: false; readonly violations: readonly EpisodeViolation[] } {
+  if (events.length !== 1)
+    return { ok: false, violations: [rule("episode-event-count-invalid", "events")] };
+  const event = events[0];
+  if (
+    event.sequence !== 0 ||
+    event.state !== "E0" ||
+    event.kind !== "escape_observed" ||
+    event.previousEventDigest !== null ||
+    digest(canonical(event.payload)) !== event.payloadDigest
+  )
+    return { ok: false, violations: [rule("episode-event-integrity-invalid", "events[0]")] };
+  return { ok: true, value: snapshotFromEvent(event) };
+}
+
+function freezePayload(command: RequestForwardEscape): EscapeObservedPayload {
+  const payload: EscapeObservedPayload = {
+    episodeId: command.episodeId,
+    recurrenceId: command.recurrenceId,
+    routeMode: command.routeMode,
+    escapeType: command.escapeType,
+    escapeReason: command.escapeReason,
+    routeSignal: command.routeSignal,
+    requestedDriveModel: command.requestedDriveModel,
+    origin: Object.freeze({ ...command.origin }),
+    reentry: command.reentry ? Object.freeze({ ...command.reentry }) : undefined,
+    issue: Object.freeze({ ...command.issue }),
+    ...(command.override ? { override: Object.freeze({ ...command.override }) } : {}),
+    sourceCommit: command.sourceCommit,
+    observedHead: command.observedHead,
+    policyRevision: command.policyRevision,
+    actor: command.actor,
+  };
+  return Object.freeze(payload);
+}
+
+function snapshotFromEvent(event: EscapeObservedEvent): ExecutionEpisodeSnapshot {
+  return Object.freeze({
+    episodeId: event.episodeId,
+    state: "E0",
+    eventSequence: 0,
+    lastEventDigest: event.eventDigest,
+    nextLegalCommands: ["classify_escape"] as const,
+    recurrenceId: event.payload.recurrenceId,
+    requestedDriveModel: event.payload.requestedDriveModel,
+    origin: event.payload.origin,
+    reentry: event.payload.reentry as NonNullable<RequestForwardEscape["reentry"]>,
+    sourceCommit: event.payload.sourceCommit,
+    observedHead: event.payload.observedHead,
+    policyRevision: event.payload.policyRevision,
+  });
 }
