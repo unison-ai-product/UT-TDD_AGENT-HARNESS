@@ -468,6 +468,19 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-READ-009 | `analyzeArtifacts` | byte layer が clean な valid UTF-8 double-encode mojibake でも、string-level denylist を統合して violation にする |
 | U-READ-010 | `checkReadability` / `checkRuntimeReadability` | real repo の docs/root instruction docs と `.ut-tdd` audit/handover artifacts が string + byte 統合 guard で green になる |
 
+### §1.16.2c U-DOCLOCK (doctor 多重起動 fail-fast、PLAN-L7-442)
+
+> ペア = doctor singleton lock (`src/doctor/singleton-lock.ts`)。agent 再試行嵐による doctor プロセス滞留 (2026-07-16 メモリ枯渇 incident) の再発を、2 本目以降の即時 fail-fast で防ぐ。advisory guard であり lock 障害では doctor を止めない (fail-open)。
+
+| ID | 対象 | Oracle |
+|---|---|---|
+| U-DOCLOCK-001 | `acquireDoctorLock` | 初回取得が成功し pid/started_at を lock file へ記録する |
+| U-DOCLOCK-002 | `acquireDoctorLock` / `doctorLockBlockedMessage` | 保持者生存中の 2 本目は acquired=false で保持者情報付きメッセージを返す |
+| U-DOCLOCK-003 | `acquireDoctorLock` | 保持 pid 死亡の lock は自動回収して取得する (再試行嵐残骸の除去) |
+| U-DOCLOCK-004 | `isStaleDoctorLock` / `acquireDoctorLock` | 45 分超過の lock は保持 pid 生存でも stale として回収する |
+| U-DOCLOCK-005 | `acquireDoctorLock` | 破損 lock file は crash せず stale 扱いで回収する |
+| U-DOCLOCK-006 | `release` | 所有 lock のみ削除し冪等。他者 lock は消さない |
+
 ### §1.16.3 U-WENC (write encoding guard、PLAN-L7-317)
 
 > ペア = `governance-enforcement.md` §8。doctor/CI の readability gate を待たず、書き込み直後に UTF-8 no-BOM / mojibake marker 違反を可視化する。
