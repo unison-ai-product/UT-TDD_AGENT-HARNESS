@@ -102,6 +102,107 @@ export interface ExecutionEpisodeTransition {
   readonly nextLegalCommands: readonly string[];
 }
 
+interface ExecutionTransitionEnvelope {
+  readonly commandId: string;
+  readonly episodeId: string;
+  readonly expectedSequence: 1 | 2 | 3;
+  readonly sourceCommit: string;
+  readonly observedHead: string;
+  readonly policyRevision: string;
+  readonly actor: string;
+  readonly occurredAt: string;
+}
+
+export interface ClassifyEscapeCommand extends ExecutionTransitionEnvelope {
+  readonly type: "classify_escape";
+  readonly expectedSequence: 1;
+  readonly escapeType: string;
+  readonly classificationRuleRevision: string;
+  readonly verificationTarget: {
+    readonly kind: "assumption" | "decision";
+    readonly assetId: string;
+    readonly revision: number;
+    readonly statementDigest: string;
+  };
+}
+
+export interface SelectDriveModelCommand extends ExecutionTransitionEnvelope {
+  readonly type: "select_drive_model";
+  readonly expectedSequence: 2;
+  readonly model: DriveModel;
+  readonly compatibilityResult: "compatible" | "override_required";
+  readonly rationaleDigest: string;
+  readonly selectionRevision: number;
+  readonly override?: {
+    readonly actor: string;
+    readonly reason: string;
+    readonly evidenceDigest: string;
+  };
+}
+
+export interface RequestIssueProjectionCommand extends ExecutionTransitionEnvelope {
+  readonly type: "request_issue_projection";
+  readonly expectedSequence: 3;
+  readonly repository: string;
+  readonly intentRevision: number;
+  readonly labels: readonly string[];
+}
+
+export type ExecutionTransitionCommand =
+  | ClassifyEscapeCommand
+  | SelectDriveModelCommand
+  | RequestIssueProjectionCommand;
+
+export interface ExecutionTransitionEvent extends ExecutionEpisodeEvent {
+  readonly eventId: string;
+  readonly commandId: string;
+  readonly commandPayloadDigest: string;
+  readonly payload: Readonly<Record<string, unknown>>;
+}
+
+export interface DriveSelectionIntent {
+  readonly episodeId: string;
+  readonly selectionRevision: number;
+  readonly selectedEventSequence: 2;
+  readonly model: DriveModel;
+  readonly compatibilityResult: "compatible" | "override_required";
+  readonly rationaleDigest: string;
+  readonly overrideUsed: boolean;
+  readonly overrideActor: string | null;
+  readonly overrideReason: string | null;
+  readonly overrideEvidenceDigest: string | null;
+  readonly selectedAt: string;
+  readonly selectionDigest: string;
+}
+
+export interface IssueProjectionIntent {
+  readonly outboxId: string;
+  readonly episodeId: string;
+  readonly sourceEventSequence: 3;
+  readonly operationKind: "create";
+  readonly objectKind: "issue";
+  readonly repository: string;
+  readonly targetLogicalKey: string;
+  readonly intentRevision: number;
+  readonly idempotencyKey: string;
+  readonly payloadVersion: 1;
+  readonly canonicalPayloadJson: string;
+  readonly payloadDigest: string;
+  readonly status: "pending";
+  readonly attemptCount: 0;
+  readonly nextAttemptAt: string;
+  readonly createdAt: string;
+}
+
+export type ExecutionTransitionDecision =
+  | {
+      readonly ok: true;
+      readonly events: readonly [ExecutionTransitionEvent];
+      readonly selections: readonly DriveSelectionIntent[];
+      readonly outbox: readonly IssueProjectionIntent[];
+    }
+  | { readonly ok: false; readonly violations: readonly EpisodeViolation[] };
+
 export const EXECUTION_EPISODE_TRANSITIONS: readonly ExecutionEpisodeTransition[] = Object.freeze([
   transition("E0", "escape_observed", "classify_escape"),
   transition("E1", "escape_classified", "select_drive_model"),
@@ -446,6 +547,304 @@ export function reduceExecutionEpisode(
       lastEventDigest: last.eventDigest,
       nextLegalCommands: current.nextLegalCommands,
     }),
+  });
+}
+
+export function decideExecutionTransition(
+  history: readonly ExecutionEpisodeEvent[],
+  command: ExecutionTransitionCommand,
+): ExecutionTransitionDecision {
+  const reduction = reduceExecutionEpisode(history);
+  if (!reduction.ok) return reduction;
+  const root = history[0]?.payload;
+  if (!isEscapePayload(root)) return transitionFailure("episode-event-integrity-invalid", "events[0]");
+  if (command.episodeId !== root.episodeId)
+    return transitionFailure("episode-identity-mismatch", "episodeId");
+  if (command.expectedSequence !== history.length)
+    return transitionFailure("episode-sequence-conflict", "expectedSequence");
+  if (!reduction.snapshot.nextLegalCommands.includes(command.type))
+    return transitionFailure("episode-transition-invalid", "type");
+  const expected = EXECUTION_EPISODE_TRANSITIONS[command.expectedSequence];
+  if (!expected) return transitionFailure("episode-transition-invalid", "type");
+  const custody = validateTransitionCustody(root, command, history.at(-1));
+  if (custody) return custody;
+
+  const specific = validateSpecificTransition(root, command);
+  if (specific) return specific;
+  const payload = transitionPayload(root, command);
+  const payloadDigest = digest(canonical(payload));
+  const commandPayloadDigest = digest(canonical(command));
+  const unsigned = {
+    episodeId: command.episodeId,
+    sequence: command.expectedSequence,
+    state: expected.state,
+    kind: expected.kind,
+    payloadDigest,
+    previousEventDigest: history.at(-1)?.eventDigest ?? null,
+    occurredAt: command.occurredAt,
+    actor: command.actor,
+  };
+  const eventDigest = calculateExecutionEventDigest(unsigned);
+  const event: ExecutionTransitionEvent = Object.freeze({
+    ...unsigned,
+    eventId: `event:${digest(`execution-event-id:v1\0${eventDigest}`).slice(0, 32)}`,
+    commandId: command.commandId,
+    commandPayloadDigest,
+    eventDigest,
+    payload: deepFreeze(payload),
+  });
+  return Object.freeze({
+    ok: true,
+    events: Object.freeze([event]) as readonly [ExecutionTransitionEvent],
+    selections: Object.freeze(
+      command.type === "select_drive_model" ? [driveSelection(command)] : [],
+    ),
+    outbox:
+      Object.freeze(
+        command.type === "request_issue_projection" ? [issueProjection(root, command, event)] : [],
+      ),
+  });
+}
+
+function validateTransitionCustody(
+  root: EscapeObservedPayload,
+  command: ExecutionTransitionCommand,
+  previous: ExecutionEpisodeEvent | undefined,
+): ExecutionTransitionDecision | undefined {
+  if (!/^command:[a-z0-9][a-z0-9:-]{2,127}$/.test(command.commandId))
+    return transitionFailure("episode-command-id-invalid", "commandId");
+  if (
+    !/^[a-f0-9]{40}$|^[a-f0-9]{64}$/.test(command.sourceCommit) ||
+    !/^[a-f0-9]{40}$|^[a-f0-9]{64}$/.test(command.observedHead) ||
+    !command.policyRevision.trim() ||
+    !command.actor.trim()
+  )
+    return transitionFailure("episode-custody-invalid", "command");
+  const time = Date.parse(command.occurredAt);
+  if (!Number.isFinite(time) || new Date(time).toISOString() !== command.occurredAt)
+    return transitionFailure("episode-time-invalid", "occurredAt");
+  if (previous && time < Date.parse(previous.occurredAt))
+    return transitionFailure("episode-time-regression", "occurredAt");
+  if (
+    command.sourceCommit !== root.sourceCommit ||
+      command.observedHead !== root.observedHead ||
+      command.policyRevision !== root.policyRevision
+  )
+    return transitionFailure("episode-custody-continuity-invalid", "command");
+  return undefined;
+}
+
+function validateSpecificTransition(
+  root: EscapeObservedPayload,
+  command: ExecutionTransitionCommand,
+): ExecutionTransitionDecision | undefined {
+  if (command.type === "classify_escape") {
+    if (command.escapeType !== root.escapeType)
+      return transitionFailure("episode-escape-classification-mismatch", "escapeType");
+    if (
+      !command.classificationRuleRevision.trim() ||
+      !command.verificationTarget.assetId.trim() ||
+      !Number.isSafeInteger(command.verificationTarget.revision) ||
+      command.verificationTarget.revision < 1 ||
+      !validDigest(command.verificationTarget.statementDigest)
+    )
+      return transitionFailure("episode-verification-target-invalid", "verificationTarget");
+    const target = command.verificationTarget;
+    const matchesOrigin =
+      target.assetId === root.origin.assetId && target.revision === root.origin.revision;
+    const matchesReentry = Boolean(
+      root.reentry &&
+        target.assetId === root.reentry.assetId &&
+        target.revision === root.reentry.revision,
+    );
+    if (!matchesOrigin && !matchesReentry)
+      return transitionFailure("episode-verification-target-unbound", "verificationTarget");
+  }
+  if (command.type === "select_drive_model") {
+    if (command.model !== root.requestedDriveModel)
+      return transitionFailure("episode-drive-selection-mismatch", "model");
+    if (!validDigest(command.rationaleDigest) || command.selectionRevision !== 1)
+      return transitionFailure("episode-drive-selection-invalid", "selection");
+    if (command.compatibilityResult === "override_required" && !command.override)
+      return transitionFailure("episode-drive-override-required", "override");
+    if (
+      command.override &&
+      (!command.override.actor.trim() ||
+        !command.override.reason.trim() ||
+        !validDigest(command.override.evidenceDigest))
+    )
+      return transitionFailure("episode-drive-override-invalid", "override");
+    if (command.compatibilityResult === "compatible" && command.override)
+      return transitionFailure("episode-drive-override-unexpected", "override");
+  }
+  if (command.type === "request_issue_projection") {
+    if (command.repository !== root.issue.repository)
+      return transitionFailure("episode-issue-repository-mismatch", "repository");
+    if (
+      command.intentRevision !== 1 ||
+      command.labels.length === 0 ||
+      new Set(command.labels).size !== command.labels.length ||
+      command.labels.some(
+        (label) =>
+          !label.trim() || label !== label.trim() || label.length > 50 || isSecretLike(label),
+      )
+    )
+      return transitionFailure("episode-issue-projection-invalid", "intent");
+  }
+  return undefined;
+}
+
+function transitionPayload(
+  root: EscapeObservedPayload,
+  command: ExecutionTransitionCommand,
+): Readonly<Record<string, unknown>> {
+  const common = {
+    episodeId: command.episodeId,
+    sourceCommit: command.sourceCommit,
+    observedHead: command.observedHead,
+    policyRevision: command.policyRevision,
+    actor: command.actor,
+  };
+  if (command.type === "classify_escape")
+    return {
+      ...common,
+      escapeType: command.escapeType,
+      classificationRuleRevision: command.classificationRuleRevision,
+      verificationTarget: { ...command.verificationTarget },
+    };
+  if (command.type === "select_drive_model")
+    return {
+      ...common,
+      model: command.model,
+      compatibilityResult: command.compatibilityResult,
+      rationaleDigest: command.rationaleDigest,
+      selectionRevision: command.selectionRevision,
+      override: command.override ? { ...command.override } : undefined,
+    };
+  const projection = issueProjectionPayload(root, command);
+  return {
+    ...common,
+    repository: command.repository,
+    intentRevision: command.intentRevision,
+    targetLogicalKey: `episode:${command.episodeId}:issue`,
+    projectionPayloadDigest: digest(canonical(projection)),
+  };
+}
+
+function driveSelection(command: SelectDriveModelCommand): DriveSelectionIntent {
+  const value = {
+    episodeId: command.episodeId,
+    selectionRevision: command.selectionRevision,
+    selectedEventSequence: 2 as const,
+    model: command.model,
+    compatibilityResult: command.compatibilityResult,
+    rationaleDigest: command.rationaleDigest,
+    overrideUsed: Boolean(command.override),
+    overrideActor: command.override?.actor ?? null,
+    overrideReason: command.override?.reason ?? null,
+    overrideEvidenceDigest: command.override?.evidenceDigest ?? null,
+    selectedAt: command.occurredAt,
+  };
+  return Object.freeze({ ...value, selectionDigest: digest(canonical(value)) });
+}
+
+function issueProjection(
+  root: EscapeObservedPayload,
+  command: RequestIssueProjectionCommand,
+  event: ExecutionTransitionEvent,
+): IssueProjectionIntent {
+  const payload = issueProjectionPayload(root, command);
+  const canonicalPayloadJson = canonical(payload);
+  const payloadDigest = digest(canonicalPayloadJson);
+  const targetLogicalKey = `episode:${command.episodeId}:issue`;
+  const identity = canonical({
+    namespace: "github.issue.create.v1",
+    repository: command.repository,
+    episodeId: command.episodeId,
+    targetLogicalKey,
+    intentRevision: command.intentRevision,
+    payloadDigest,
+  });
+  const idempotencyKey = digest(`github-outbox:v1\0${identity}`);
+  return Object.freeze({
+    outboxId: `outbox:${digest(`github-outbox-id:v1\0${idempotencyKey}`).slice(0, 32)}`,
+    episodeId: command.episodeId,
+    sourceEventSequence: event.sequence as 3,
+    operationKind: "create",
+    objectKind: "issue",
+    repository: command.repository,
+    targetLogicalKey,
+    intentRevision: command.intentRevision,
+    idempotencyKey,
+    payloadVersion: 1,
+    canonicalPayloadJson,
+    payloadDigest,
+    status: "pending",
+    attemptCount: 0,
+    nextAttemptAt: command.occurredAt,
+    createdAt: command.occurredAt,
+  });
+}
+
+function issueProjectionPayload(
+  root: EscapeObservedPayload,
+  command: RequestIssueProjectionCommand,
+): Readonly<Record<string, unknown>> {
+  return {
+    schema: "github.issue.intent.v1",
+    episodeId: command.episodeId,
+    recurrenceId: root.recurrenceId,
+    repository: command.repository,
+    origin: root.origin,
+    escape: { type: root.escapeType, reason: root.escapeReason },
+    driveModel: root.requestedDriveModel,
+    reentry: root.reentry,
+    issue: { title: root.issue.title, bodyDigest: root.issue.bodyDigest },
+    labels: [...new Set(command.labels)].sort((left, right) =>
+      Buffer.compare(Buffer.from(left), Buffer.from(right)),
+    ),
+    sourceCommit: command.sourceCommit,
+    observedHead: command.observedHead,
+    policyRevision: command.policyRevision,
+  };
+}
+
+function isEscapePayload(value: unknown): value is EscapeObservedPayload {
+  if (!value || typeof value !== "object") return false;
+  const payload = value as Partial<EscapeObservedPayload>;
+  return Boolean(
+    typeof payload.episodeId === "string" &&
+      typeof payload.recurrenceId === "string" &&
+      typeof payload.escapeType === "string" &&
+      typeof payload.requestedDriveModel === "string" &&
+      typeof payload.sourceCommit === "string" &&
+      typeof payload.observedHead === "string" &&
+      typeof payload.policyRevision === "string" &&
+      payload.origin &&
+      typeof payload.origin.assetId === "string" &&
+      Number.isSafeInteger(payload.origin.revision) &&
+      payload.reentry &&
+      typeof payload.reentry.assetId === "string" &&
+      Number.isSafeInteger(payload.reentry.revision) &&
+      payload.issue &&
+      typeof payload.issue.repository === "string" &&
+      typeof payload.issue.title === "string" &&
+      typeof payload.issue.bodyDigest === "string",
+  );
+}
+
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === "object") {
+    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+function transitionFailure(ruleId: string, path: string): ExecutionTransitionDecision {
+  return Object.freeze({
+    ok: false,
+    violations: Object.freeze([Object.freeze(rule(ruleId, path))]),
   });
 }
 
