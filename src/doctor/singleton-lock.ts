@@ -112,6 +112,63 @@ function readLockRecord(path: string, deps: DoctorLockDeps): DoctorLockRecord | 
   }
 }
 
+function sameLockGeneration(a: DoctorLockRecord | null, b: DoctorLockRecord | null): boolean {
+  if (!a || !b) return a === b;
+  return a.pid === b.pid && a.started_at === b.started_at && a.host === b.host && a.lock_id === b.lock_id;
+}
+
+type DoctorLockClaim =
+  | { status: "claimed" }
+  | { status: "changed"; holder: DoctorLockRecord | null }
+  | { status: "retry" };
+
+/**
+ * canonical path の read→rename を CAS とみなさないための generation claim。
+ * rename 後の quarantine を再読し、観測した generation と一致した場合だけ削除する。
+ * 差し替わっていた場合は canonical へ exclusive create で復元し、他者 lock を失わせない。
+ */
+function claimObservedLock(
+  path: string,
+  observed: DoctorLockRecord | null,
+  purpose: "release" | "reclaim",
+  deps: DoctorLockDeps,
+): DoctorLockClaim {
+  const io = deps.io ?? defaultDoctorLockIo();
+  const quarantine = `${path}.${purpose}.${observed?.lock_id ?? randomUUID()}.${randomUUID()}`;
+  try {
+    io.rename(path, quarantine);
+  } catch {
+    return { status: "retry" };
+  }
+
+  let displacedRaw: string;
+  let displaced: DoctorLockRecord | null;
+  try {
+    displacedRaw = io.readText(quarantine);
+    displaced = readLockRecord(quarantine, deps);
+  } catch {
+    return { status: "retry" };
+  }
+  if (sameLockGeneration(displaced, observed)) {
+    try {
+      io.remove(quarantine);
+    } catch {
+      // canonical ownership has already moved; quarantine cleanup can be retried later.
+    }
+    return { status: "claimed" };
+  }
+
+  // 観測後に fresh generation へ差し替わった。rename-back は POSIX で既存
+  // canonical を上書きし得るため禁止し、exclusive create でだけ復元する。
+  try {
+    io.createExclusive(path, displacedRaw);
+    io.remove(quarantine);
+  } catch {
+    // 別 contender が canonical を作った場合はそれを上書きせず quarantine を保全する。
+  }
+  return { status: "changed", holder: displaced };
+}
+
 export function acquireDoctorLock(
   repoRoot: string,
   pid: number = process.pid,
@@ -135,9 +192,7 @@ export function acquireDoctorLock(
         current.started_at === record.started_at &&
         current.lock_id === record.lock_id
       ) {
-        const released = `${path}.release.${record.lock_id}`;
-        io.rename(path, released);
-        io.remove(released);
+        claimObservedLock(path, record, "release", deps);
       }
     } catch {
       // release 失敗は stale 回収に任せる
@@ -157,14 +212,17 @@ export function acquireDoctorLock(
       if (holder && !isStaleDoctorLock(holder, deps)) {
         return { acquired: false, holder };
       }
-      try {
-        // 同一dir renameを取得できた一者だけが回収を進める。単なるunlinkでは
-        // 後続のfresh lockを消し得るため、回収対象を固有quarantineへ退避する。
-        const reclaimed = `${path}.reclaim.${holder?.lock_id ?? randomUUID()}`;
-        io.rename(path, reclaimed);
-        io.remove(reclaimed);
-      } catch {
-        return { acquired: true, release: () => {}, degraded: true };
+      const claim = claimObservedLock(path, holder, "reclaim", deps);
+      if (claim.status === "changed" && claim.holder) {
+        return { acquired: false, holder: claim.holder };
+      }
+      if (claim.status === "retry") {
+        // rename の競合敗北は I/O 障害とは限らない。fresh winner を再観測して
+        // block するか、canonical が空なら次 attempt の wx create へ進む。
+        const winner = readLockRecord(path, deps);
+        if (winner && !isStaleDoctorLock(winner, deps)) {
+          return { acquired: false, holder: winner };
+        }
       }
     }
   }

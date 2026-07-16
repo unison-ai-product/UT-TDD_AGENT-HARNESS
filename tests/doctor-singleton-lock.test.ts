@@ -122,4 +122,70 @@ describe("doctor singleton lock (PLAN-L7-442)", () => {
     expect(r.acquired).toBe(true);
     if (r.acquired) expect("degraded" in r && r.degraded).toBe(true);
   });
+
+  it("U-DOCLOCK-010: release never removes a fresh lock installed after ownership observation", () => {
+    const baseIo = defaultDoctorLockIo();
+    let injectOnReleaseRead = false;
+    const fresh = {
+      pid: 2222,
+      started_at: new Date(NOW).toISOString(),
+      host: "host-a",
+      lock_id: "fresh-b",
+    };
+    const guardedDeps = deps({
+      hostName: () => "host-a",
+      io: {
+        ...baseIo,
+        readText: (path) => {
+          const observed = baseIo.readText(path);
+          if (injectOnReleaseRead && path === doctorLockPath(repoRoot)) {
+            injectOnReleaseRead = false;
+            writeFileSync(path, `${JSON.stringify(fresh)}\n`);
+          }
+          return observed;
+        },
+      },
+    });
+    const first = acquireDoctorLock(repoRoot, 1111, guardedDeps);
+    expect(first.acquired).toBe(true);
+    injectOnReleaseRead = true;
+    if (first.acquired) first.release();
+
+    expect(JSON.parse(readFileSync(doctorLockPath(repoRoot), "utf8"))).toEqual(fresh);
+  });
+
+  it("U-DOCLOCK-011: stale reclaim that observes a replacement fresh lock blocks instead of deleting it", () => {
+    const baseIo = defaultDoctorLockIo();
+    const staleDeps = deps({ hostName: () => "host-a", isPidAlive: () => false });
+    acquireDoctorLock(repoRoot, 1111, staleDeps);
+    const fresh = {
+      pid: 3333,
+      started_at: new Date(NOW).toISOString(),
+      host: "host-a",
+      lock_id: "fresh-c",
+    };
+    let injected = false;
+    const contender = acquireDoctorLock(
+      repoRoot,
+      2222,
+      deps({
+        hostName: () => "host-a",
+        isPidAlive: (pid) => pid === fresh.pid,
+        io: {
+          ...baseIo,
+          rename: (from, to) => {
+            if (!injected && to.includes(".reclaim.")) {
+              injected = true;
+              writeFileSync(from, `${JSON.stringify(fresh)}\n`);
+            }
+            baseIo.rename(from, to);
+          },
+        },
+      }),
+    );
+
+    expect(contender.acquired).toBe(false);
+    if (!contender.acquired) expect(contender.holder).toEqual(fresh);
+    expect(JSON.parse(readFileSync(doctorLockPath(repoRoot), "utf8"))).toEqual(fresh);
+  });
 });

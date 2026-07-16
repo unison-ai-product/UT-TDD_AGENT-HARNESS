@@ -479,7 +479,16 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DOCLOCK-003 | `acquireDoctorLock` | 保持 pid 死亡の lock は自動回収して取得する (再試行嵐残骸の除去) |
 | U-DOCLOCK-004 | `isStaleDoctorLock` / `acquireDoctorLock` | 45 分超過の lock は保持 pid 生存でも stale として回収する |
 | U-DOCLOCK-005 | `acquireDoctorLock` | 破損 lock file は crash せず stale 扱いで回収する |
-| U-DOCLOCK-006 | `release` | 所有 lock のみ削除し冪等。他者 lock は消さない |
+| U-DOCLOCK-006 | `release` | pid/host/started_at/lock_id が一致する取得者の lock だけを quarantine 経由で削除し、通常経路で冪等に動作する |
+| U-DOCLOCK-007 | `isStaleDoctorLock` / `acquireDoctorLock` | 別 host の fresh lock はローカル pid probe を行わず保持し、TTL 超過までは二重取得しない |
+| U-DOCLOCK-008 | `acquireDoctorLock` | lock create I/O 障害は `degraded: true` で fail-open し、doctor 本体を遮断しない |
+| U-DOCLOCK-009 | CLI `doctor` | 競合する CLI は検証開始前に exit 2、JSON `ok:false` と保持者情報を返す |
+| U-DOCLOCK-010 | `release` generation claim | 所有確認後に canonical が fresh generation へ差し替わっても、他者 lock を削除せず復元する |
+| U-DOCLOCK-011 | stale reclaim generation claim | stale 判定後に canonical が fresh generation へ差し替わったら、quarantine再照合で検出・復元して contender を block する |
+
+保証境界: この test pair は同一 repo の再試行嵐を抑止する advisory guard を検証する。
+SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主張せず、
+`PLAN-REVERSE-442` の設計 back-fill 対象とする。
 
 ### §1.16.3 U-WENC (write encoding guard、PLAN-L7-317)
 
