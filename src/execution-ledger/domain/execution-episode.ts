@@ -65,6 +65,74 @@ export interface EpisodeViolation {
   readonly path: string;
 }
 
+export type ExecutionEpisodeState = `E${
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14
+  | 15}`;
+
+export interface ExecutionEpisodeEvent {
+  readonly episodeId: string;
+  readonly sequence: number;
+  readonly state: string;
+  readonly kind: string;
+  readonly payloadDigest: string;
+  readonly previousEventDigest: string | null;
+  readonly occurredAt: string;
+  readonly actor: string;
+  readonly eventDigest: string;
+  readonly payload?: unknown;
+}
+
+export interface ExecutionEpisodeTransition {
+  readonly state: ExecutionEpisodeState;
+  readonly kind: string;
+  readonly nextLegalCommands: readonly string[];
+}
+
+export const EXECUTION_EPISODE_TRANSITIONS: readonly ExecutionEpisodeTransition[] = Object.freeze([
+  transition("E0", "escape_observed", "classify_escape"),
+  transition("E1", "escape_classified", "select_drive_model"),
+  transition("E2", "drive_selected", "request_issue_projection"),
+  transition("E3", "issue_projection_requested", "confirm_issue_projection"),
+  transition("E4", "issue_projection_confirmed", "freeze_drive_plan"),
+  transition("E5", "drive_plan_frozen", "record_drive_verification"),
+  transition("E6", "drive_verification_green", "propose_reentry"),
+  transition("E7", "reentry_proposed", "record_forward_intermediate_test"),
+  transition("E8", "forward_intermediate_test_green", "issue_reentry_certificate"),
+  transition("E9", "reentry_certificate_issued", "reenter_forward"),
+  transition("E10", "forward_reentered", "record_post_reentry_test"),
+  transition("E11", "post_reentry_test_green", "confirm_draft_pr_projection"),
+  transition("E12", "draft_pr_projected", "accept_cross_review"),
+  transition("E13", "cross_review_accepted", "confirm_merge"),
+  transition("E14", "merge_confirmed", "close_episode"),
+  transition("E15", "episode_closed"),
+]);
+
+export type ExecutionEpisodeReduction =
+  | {
+      readonly ok: true;
+      readonly snapshot: {
+        readonly state: ExecutionEpisodeState;
+        readonly eventSequence: number;
+        readonly lastEventDigest: string;
+        readonly nextLegalCommands: readonly string[];
+      };
+    }
+  | { readonly ok: false; readonly violations: readonly EpisodeViolation[] };
+
 export interface EscapeObservedEvent {
   readonly eventId: string;
   readonly episodeId: string;
@@ -77,6 +145,7 @@ export interface EscapeObservedEvent {
   readonly previousEventDigest: null;
   readonly eventDigest: string;
   readonly occurredAt: string;
+  readonly actor: string;
   readonly payload: EscapeObservedPayload;
 }
 
@@ -167,6 +236,7 @@ export class ExecutionEpisode {
       previousEventDigest: null,
       eventDigest: digest(eventSeed),
       occurredAt: command.occurredAt,
+      actor: command.actor,
       payload,
     });
     const episode = new ExecutionEpisode(event, command.commandId, commandPayloadDigest);
@@ -276,6 +346,98 @@ function canonical(value: unknown): string {
       .join(",")}}`;
   }
   return JSON.stringify(value);
+}
+
+function transition(
+  state: ExecutionEpisodeState,
+  kind: string,
+  nextLegalCommand?: string,
+): ExecutionEpisodeTransition {
+  return Object.freeze({
+    state,
+    kind,
+    nextLegalCommands: Object.freeze(nextLegalCommand ? [nextLegalCommand] : []),
+  });
+}
+
+export function calculateExecutionEventDigest(
+  event: Omit<ExecutionEpisodeEvent, "eventDigest" | "payload">,
+): string {
+  return digest(
+    canonical({
+      actor: event.actor,
+      episodeId: event.episodeId,
+      kind: event.kind,
+      occurredAt: event.occurredAt,
+      payloadDigest: event.payloadDigest,
+      previousEventDigest: event.previousEventDigest,
+      sequence: event.sequence,
+      state: event.state,
+    }),
+  );
+}
+
+export function reduceExecutionEpisode(
+  events: readonly ExecutionEpisodeEvent[],
+): ExecutionEpisodeReduction {
+  if (events.length === 0) return reductionViolation("episode-event-stream-empty", "events");
+
+  let previous: ExecutionEpisodeEvent | undefined;
+  let previousTime = Number.NEGATIVE_INFINITY;
+  const episodeId = events[0].episodeId;
+  if (!/^episode:[a-z0-9][a-z0-9:-]{2,127}$/.test(episodeId))
+    return reductionViolation("episode-id-invalid", "events[0].episodeId");
+
+  for (const [index, event] of events.entries()) {
+    const path = `events[${index}]`;
+    if (event.episodeId !== episodeId)
+      return reductionViolation("episode-identity-mismatch", `${path}.episodeId`);
+    if (!Number.isSafeInteger(event.sequence) || event.sequence !== index)
+      return reductionViolation("episode-sequence-invalid", `${path}.sequence`);
+
+    const expected = EXECUTION_EPISODE_TRANSITIONS[index];
+    if (!expected || event.state !== expected.state || event.kind !== expected.kind)
+      return reductionViolation("episode-transition-invalid", path);
+
+    if (!validDigest(event.payloadDigest))
+      return reductionViolation("episode-payload-digest-invalid", `${path}.payloadDigest`);
+    if (event.payload !== undefined && digest(canonical(event.payload)) !== event.payloadDigest)
+      return reductionViolation("episode-payload-integrity-invalid", `${path}.payload`);
+    if (!event.actor.trim()) return reductionViolation("episode-actor-invalid", `${path}.actor`);
+
+    const occurredAt = Date.parse(event.occurredAt);
+    if (!Number.isFinite(occurredAt) || new Date(occurredAt).toISOString() !== event.occurredAt)
+      return reductionViolation("episode-time-invalid", `${path}.occurredAt`);
+    if (occurredAt < previousTime)
+      return reductionViolation("episode-time-regression", `${path}.occurredAt`);
+
+    const expectedPreviousDigest = previous?.eventDigest ?? null;
+    if (event.previousEventDigest !== expectedPreviousDigest)
+      return reductionViolation("episode-chain-digest-invalid", `${path}.previousEventDigest`);
+    if (!validDigest(event.eventDigest))
+      return reductionViolation("episode-event-digest-invalid", `${path}.eventDigest`);
+    if (calculateExecutionEventDigest(event) !== event.eventDigest)
+      return reductionViolation("episode-event-digest-invalid", `${path}.eventDigest`);
+
+    previous = event;
+    previousTime = occurredAt;
+  }
+
+  const last = events[events.length - 1];
+  const current = EXECUTION_EPISODE_TRANSITIONS[last.sequence];
+  return Object.freeze({
+    ok: true,
+    snapshot: Object.freeze({
+      state: current.state,
+      eventSequence: last.sequence,
+      lastEventDigest: last.eventDigest,
+      nextLegalCommands: current.nextLegalCommands,
+    }),
+  });
+}
+
+function reductionViolation(ruleId: string, path: string): ExecutionEpisodeReduction {
+  return { ok: false, violations: [rule(ruleId, path)] };
 }
 
 function digest(value: string): string {
