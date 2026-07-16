@@ -24,7 +24,7 @@ describe("Execution Episode canonical ledger schema (PLAN-L7-436)", () => {
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
         .all()
         .map((row) => row.name);
-      expect(tableNames).toEqual(expect.arrayContaining(V5_TABLES));
+      expect(tableNames).toEqual(expect.arrayContaining([...V5_TABLES]));
 
       const ddl = ledgerSchemaDdl().join("\n");
       expect(ddl).toContain("append-only:execution_episodes");
@@ -87,7 +87,7 @@ describe("Execution Episode canonical ledger schema (PLAN-L7-436)", () => {
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
         .all()
         .map((row) => row.name);
-      expect(tableNames).not.toEqual(expect.arrayContaining(V5_TABLES));
+      expect(tableNames).not.toEqual(expect.arrayContaining([...V5_TABLES]));
     } finally {
       db.close();
     }

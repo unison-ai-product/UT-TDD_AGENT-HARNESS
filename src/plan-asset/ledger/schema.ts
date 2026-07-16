@@ -16,8 +16,13 @@ import {
   requiredCol,
 } from "../../schema/harness-db-table-builders.js";
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
+import {
+  executionLedgerV5Indexes,
+  executionLedgerV5Tables,
+  executionLedgerV5Triggers,
+} from "../../execution-ledger/adapters/sqlite/schema-definitions.js";
 
-export const LEDGER_SCHEMA_VERSION = 4;
+export const LEDGER_SCHEMA_VERSION = 5;
 
 export interface LedgerSchemaMigrationFaultPort {
   after(boundary: string): void;
@@ -486,7 +491,8 @@ const v4Tables: readonly TableDef[] = [
   },
 ];
 
-const tables: readonly TableDef[] = [...v3Tables, ...v4Tables];
+const v4SchemaTables: readonly TableDef[] = [...v3Tables, ...v4Tables];
+const tables: readonly TableDef[] = [...v4SchemaTables, ...executionLedgerV5Tables];
 
 const v3Indexes: readonly IndexDef[] = [
   { name: "idx_plan_assets_created_at", table: "plan_assets", columns: ["created_at"] },
@@ -575,7 +581,8 @@ const v4Indexes: readonly IndexDef[] = [
   },
 ];
 
-const indexes: readonly IndexDef[] = [...v3Indexes, ...v4Indexes];
+const v4SchemaIndexes: readonly IndexDef[] = [...v3Indexes, ...v4Indexes];
+const indexes: readonly IndexDef[] = [...v4SchemaIndexes, ...executionLedgerV5Indexes];
 
 const v3HistoryTables = [
   "plan_assets",
@@ -605,13 +612,17 @@ function appendOnlyTriggers(historyTables: readonly string[]): readonly TriggerD
 
 const v3Triggers = appendOnlyTriggers(v3HistoryTables);
 const v4Triggers = appendOnlyTriggers(v4HistoryTables);
-const triggers: readonly TriggerDef[] = [...v3Triggers, ...v4Triggers];
+const v4SchemaTriggers: readonly TriggerDef[] = [...v3Triggers, ...v4Triggers];
+const triggers: readonly TriggerDef[] = [...v4SchemaTriggers, ...executionLedgerV5Triggers];
 
-export function ledgerSchemaDdl(): readonly string[] {
+export function ledgerSchemaDdl(version: 3 | 4 | 5 = LEDGER_SCHEMA_VERSION): readonly string[] {
+  const selectedTables = version === 3 ? v3Tables : version === 4 ? v4SchemaTables : tables;
+  const selectedIndexes = version === 3 ? v3Indexes : version === 4 ? v4SchemaIndexes : indexes;
+  const selectedTriggers = version === 3 ? v3Triggers : version === 4 ? v4SchemaTriggers : triggers;
   return [
-    ...tables.map(createTableSql),
-    ...indexes.map(createIndexSql),
-    ...triggers.map(createTriggerSql),
+    ...selectedTables.map(createTableSql),
+    ...selectedIndexes.map(createIndexSql),
+    ...selectedTriggers.map(createTriggerSql),
   ];
 }
 
@@ -620,7 +631,7 @@ export function migratePlanLedger(
   options: { readonly fault?: LedgerSchemaMigrationFaultPort } = {},
 ): { ok: true; version: number } | { ok: false; ruleId: "plan-ledger-unavailable" } {
   const version = db.userVersion();
-  if (version !== 0 && version !== 2 && version !== 3 && version !== LEDGER_SCHEMA_VERSION)
+  if (version !== 0 && version !== 2 && version !== 3 && version !== 4 && version !== 5)
     return { ok: false, ruleId: "plan-ledger-unavailable" };
   if (version === 2 && !migrateV2ToV4(db, options.fault)) {
     return { ok: false, ruleId: "plan-ledger-unavailable" };
@@ -657,11 +668,46 @@ export function migratePlanLedger(
       for (const table of v4Tables) db.exec(createTableSql(table));
       for (const index of v4Indexes) db.exec(createIndexSql(index));
       for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
+      installV5Schema(db);
+      options.fault?.after("v3-v5-schema-created");
       db.setUserVersion(LEDGER_SCHEMA_VERSION);
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
       throw error;
+    }
+  }
+  if (db.userVersion() === 4) {
+    if (
+      !schemaMatchesVersion(db, {
+        tables: v4SchemaTables,
+        indexes: v4SchemaIndexes,
+        triggers: v4SchemaTriggers,
+      }) ||
+      !ledgerRowsValid(db)
+    )
+      return { ok: false, ruleId: "plan-ledger-unavailable" };
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      if (
+        !schemaMatchesVersion(db, {
+          tables: v4SchemaTables,
+          indexes: v4SchemaIndexes,
+          triggers: v4SchemaTriggers,
+        }) ||
+        !ledgerRowsValid(db)
+      ) {
+        db.exec("ROLLBACK");
+        return { ok: false, ruleId: "plan-ledger-unavailable" };
+      }
+      installV5Schema(db);
+      options.fault?.after("v4-v5-schema-created");
+      db.setUserVersion(LEDGER_SCHEMA_VERSION);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v4-v5-verification-failed");
+      db.exec("COMMIT");
+    } catch {
+      db.exec("ROLLBACK");
+      return { ok: false, ruleId: "plan-ledger-unavailable" };
     }
   }
   return schemaMatches(db) && ledgerRowsValid(db)
@@ -703,6 +749,8 @@ function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): b
     for (const index of v4Indexes) db.exec(createIndexSql(index));
     for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
     fault?.after("v2-v4-schema-created");
+    installV5Schema(db);
+    fault?.after("v2-v5-schema-created");
     db.setUserVersion(LEDGER_SCHEMA_VERSION);
     if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v4-verification-failed");
     db.exec("COMMIT");
@@ -711,6 +759,12 @@ function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): b
     db.exec("ROLLBACK");
     return false;
   }
+}
+
+function installV5Schema(db: HarnessDb): void {
+  for (const table of executionLedgerV5Tables) db.exec(createTableSql(table));
+  for (const index of executionLedgerV5Indexes) db.exec(createIndexSql(index));
+  for (const trigger of executionLedgerV5Triggers) db.exec(createTriggerSql(trigger));
 }
 
 function legacyV2ReservationSchemaValid(db: HarnessDb): boolean {

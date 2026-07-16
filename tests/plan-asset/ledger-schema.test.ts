@@ -520,12 +520,7 @@ const now = "2026-07-13T00:00:00Z";
 const later = "2026-07-14T00:00:00Z";
 
 function createV3Ledger(db: ReturnType<typeof openHarnessDb>): void {
-  const v3Ddl = ledgerSchemaDdl().filter(
-    (sql) =>
-      !sql.includes("plan_admission_") &&
-      !sql.includes("plan_draft_journal") &&
-      !sql.includes("idx_plan_draft_journal_status"),
-  );
+  const v3Ddl = ledgerSchemaDdl(3);
   db.exec("BEGIN IMMEDIATE");
   try {
     for (const sql of v3Ddl) db.exec(sql);
@@ -692,13 +687,7 @@ function restoreTrigger(db: ReturnType<typeof openHarnessDb>, name: string): voi
 }
 
 function legacyV2Ddl(): readonly string[] {
-  return ledgerSchemaDdl()
-    .filter(
-      (sql) =>
-        !sql.includes("plan_admission_") &&
-        !sql.includes("plan_draft_journal") &&
-        !sql.includes("idx_plan_draft_journal_status"),
-    )
+  return ledgerSchemaDdl(3)
     .map((sql) =>
       sql
         .replace(/lease_key_version TEXT NOT NULL,\s*/g, "")
