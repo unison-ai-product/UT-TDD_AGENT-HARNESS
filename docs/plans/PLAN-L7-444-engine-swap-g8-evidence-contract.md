@@ -3,7 +3,7 @@ plan_id: PLAN-L7-444-engine-swap-g8-evidence-contract
 title: "PLAN-L7-444 (add-impl): engine-swap G8 evidence契約・検証器・program gate"
 kind: add-impl
 layer: L7
-drive: fullstack
+drive: db
 status: draft
 route_signal: feature_addition
 route_mode: add-feature
