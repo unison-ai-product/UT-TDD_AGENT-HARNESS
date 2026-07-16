@@ -152,6 +152,45 @@ describe("SqliteExecutionEpisodeRepository (PLAN-L7-436)", () => {
       ).toEqual([{ event_sequence: 0 }, { event_sequence: 1 }, { event_sequence: 2 }, { event_sequence: 3 }]);
     });
   });
+
+  it("U-EXEP-005: E1 command再送をwrite 0でreplayし、異payloadを構造化拒否する", () => {
+    withLedger((db) => {
+      const repository = new SqliteExecutionEpisodeRepository(db);
+      expect(repository.request(request(), CUSTODY)).toMatchObject({ ok: true });
+      const created = repository.transition(classify(), CUSTODY);
+      const before = counts(db);
+      expect(repository.transition(classify(), CUSTODY)).toMatchObject({
+        ok: true,
+        status: "replayed",
+        eventIds: created.ok ? created.eventIds : [],
+      });
+      expect(counts(db)).toEqual(before);
+      expect(
+        repository.transition(
+          { ...classify(), classificationRuleRevision: "escape-classification:v2" },
+          CUSTODY,
+        ),
+      ).toMatchObject({
+        ok: false,
+        violations: [{ ruleId: "episode-command-payload-conflict" }],
+      });
+      expect(counts(db)).toEqual(before);
+    });
+  });
+
+  it("U-EXEP-006: E1追記後もE0 receipt replayを正規台帳として受理する", () => {
+    withLedger((db) => {
+      const repository = new SqliteExecutionEpisodeRepository(db);
+      expect(repository.request(request(), CUSTODY)).toMatchObject({ ok: true });
+      expect(repository.transition(classify(), CUSTODY)).toMatchObject({ ok: true });
+      const before = counts(db);
+      expect(repository.request(request(), CUSTODY)).toMatchObject({
+        ok: true,
+        status: "replayed",
+      });
+      expect(counts(db)).toEqual(before);
+    });
+  });
 });
 
 function transitionEnvelope<const TSequence extends 1 | 2 | 3>(sequence: TSequence) {
