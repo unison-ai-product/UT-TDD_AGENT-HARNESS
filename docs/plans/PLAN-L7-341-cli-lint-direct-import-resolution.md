@@ -40,7 +40,7 @@ dependencies:
 
 ## 背景 (実測 2026-07-03、A-182 §2)
 
-- cli.ts:51-54 (HEAD 時点) が `lint/change-impact`、`lint/green-command-digest`、`lint/outstanding`、`lint/review-evidence` を直 import — 正規経路 (cli → doctor → lint) と直呼びが併存 (AQ-3)。
+- src/cli.ts:51-54 (HEAD 時点) が `lint/change-impact`、`lint/green-command-digest`、`lint/outstanding`、`lint/review-evidence` を直 import — 正規経路 (cli → doctor → lint) と直呼びが併存 (AQ-3)。
 - 影響: 後続エージェントが「doctor 経由か直呼びか」を判断できず設計が分岐し続ける。architecture.md §3.1 の依存方向宣言 (cli は runtime/doctor/plan/vmodel/(lint)) の「(lint)」括弧書きが実態の曖昧さをそのまま表している。
 
 ## スコープ (1 要件: cli からの lint 利用経路を 1 つに確定し、architecture.md の宣言を括弧なしへ更新する)
