@@ -4,11 +4,11 @@ title: "PLAN-L7-435 (add-impl): 駆動モデル準拠PLAN Admission実装"
 kind: add-impl
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-15
-updated: 2026-07-15
+updated: 2026-07-16
 owner: PO / Codex
 parent_design: docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
 related_l0: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
@@ -18,7 +18,25 @@ agent_slots:
     slot_label: "SE - Admission policy・draft command・receipt・tamper fence"
   - role: qa
     slot_label: "QA - tuple/property/mutation/atomicity/CLI oracle"
-review_evidence: []
+review_evidence:
+  - reviewer: claude-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-16T11:40:00+09:00"
+    tests_green_at: "2026-07-16T11:30:00+09:00"
+    verdict: approve
+    scope: "PR #64 landed slice の blind cross-review (author 主張遮断 packet、Claude opus-tier blind-reviewer / Fable orchestrator)。Lane B (内部健全性) PASS-WEAK: 原子性/rollback/path-traversal/digest 自己申告排除の攻撃 4 系統すべて不成立を引用確認。Lane A (claim-blind) FLAG 4 件は全て本 PLAN/L7-440 の未チェック AC として宣言済み staged scope と照合し解消 (backdate 回避・工程表検証・hook/pre-push/CI 接続・force 実証は未 landed の残スコープであり本 confirm の claim に含めない)。follow-up 義務: U-PADM-006 の元 schedule oracle を別 ID 再採番で復元し、残 AC 完了まで L6-86 を confirmed にしない。verdict 正本 = .ut-tdd/memory/project-pr64-verdict-lane-b-pass-weak-lane-a-flag-staged-scope-follow-up-3.md"
+    worker_model: gpt-5.6
+    reviewer_model: claude-opus-4-8
+    green_commands:
+      - kind: unit_test
+        command: "harness-check CI @0d439589 (gh pr checks 64 SUCCESS: typecheck / vitest 全回帰 / biome / doctor)"
+        runner: ci
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-16T11:30:00+09:00"
+        evidence_path: tests/plan-admission.test.ts
+        output_digest: "sha256:ebb53045e7e24f85b605fd2313cb86aa27d4bf489346a8de19beb69c0e29d252"
+        anchor_commit: 561054a8f88f15fe73b8e699aff0536f4a56e877
 generates:
   - artifact_path: docs/plans/PLAN-L7-435-drive-plan-admission-impl.md
     artifact_type: markdown_doc
@@ -151,8 +169,10 @@ failure injection、replay、concurrent reservation、temp rename失敗、DB com
 
 ## AC
 
-- [ ] unknown signalのForward fallbackをauthoring入口で廃止する。
-- [ ] Incident等の相関tuple、Forward/escapeのIssue policy、origin/reentry、pairingを同一policyで判定する。
+> 注記 (2026-07-16 confirm 時): 本 confirm は PR #64 で landed した slice (policy/receipt/draft Saga/diff-fence/tamper fence) を対象とする。未チェックの AC は残スコープ (hook/pre-push/CI 接続 = PLAN-L7-440、backdate/工程表/force oracle 復元) であり、完了主張には含めない (claim discipline)。
+
+- [x] unknown signalのForward fallbackをauthoring入口で廃止する。(blind cross-review で反例不成立を確認、tests/plan-admission.test.ts green)
+- [x] Incident等の相関tuple、Forward/escapeのIssue policy、origin/reentry、pairingを同一policyで判定する。(同上、policy.ts evaluatePlanAdmission + frontmatter superRefine の二重実装を確認)
 - [ ] direct PLAN editとreceipt staleをhook/pre-push/CIでfail-closeする。
 - [ ] `U-PADM-*` / property / mutation / CLI実行がGreenとなり、Red oracle候補を実装oracleへ昇格する。
 - [ ] REVERSE-435で実装観測をL4-L6/L7 test-designへgap-only backfillする。
