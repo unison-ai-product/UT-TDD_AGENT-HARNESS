@@ -4,7 +4,7 @@ title: "PLAN-L7-442 (add-impl): doctor 多重起動 fail-fast (singleton lock)"
 kind: add-impl
 layer: L7
 drive: agent
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-16
@@ -16,7 +16,43 @@ pair_artifact: docs/test-design/harness/L7-unit-test-design.md
 agent_slots:
   - role: se
     slot_label: "SE - doctor singleton lock + CLI fail-fast 配線"
-review_evidence: []
+review_evidence:
+  - reviewer: Codex owner-claim blind reviewer
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-16T15:35:00+09:00"
+    tests_green_at: "2026-07-16T15:35:00+09:00"
+    verdict: pass
+    scope: "PASS-WEAK。owner固有claim方式へ、正常競合、release、stale回収、partial publish、cross-host、doctor/review CLIの6攻撃を実施し未反証attack 0。固定canonicalのread→rename擬似CASは廃止済み。弱点は実process barrierと弱整合共有FS oracleが未追加であり、advisory/fail-open・非distributed leaseという明示保証境界を越えて主張しない。"
+    worker_model: gpt-5
+    reviewer_model: gpt-5
+    green_commands:
+      - kind: unit_test
+        command: "bun scripts/run-vitest-snapshot.ts tests/doctor-singleton-lock.test.ts tests/cli-surface.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-16T15:01:00+09:00"
+        evidence_path: tests/doctor-singleton-lock.test.ts
+        output_digest: "sha256:ca259a61e50445b8230c92057880fc6b4e815497030ba3c76de891615ed97599"
+        anchor_commit: 897d3b02
+      - kind: unit_test
+        command: "bun scripts/run-vitest-snapshot.ts tests/cli-surface.test.ts -t U-DOCLOCK-01"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-16T15:35:00+09:00"
+        evidence_path: tests/cli-surface.test.ts
+        output_digest: "sha256:ea45521a9931f94d1da74ee8920319ae4cc52eacc16ed30f137744ee553bda41"
+        anchor_commit: f25a0167
+      - kind: typecheck
+        command: "bunx tsc --noEmit"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-16T15:36:00+09:00"
+        evidence_path: src/doctor/singleton-lock.ts
+        output_digest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        anchor_commit: f25a0167
 generates:
   - artifact_path: docs/plans/PLAN-L7-442-doctor-singleton-guard.md
     artifact_type: markdown_doc
