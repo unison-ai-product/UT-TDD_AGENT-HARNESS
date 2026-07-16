@@ -398,11 +398,11 @@ describe("L7 CLI surface closure", () => {
   ])(
     "%s: blocks a competing review %s before its internal doctor starts",
     (_id, mode) => {
-    const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-review-lock-"));
-    try {
-      const gitInit = spawnSync("git", ["init"], { cwd: root, encoding: "utf8" });
-      expect(gitInit.status).toBe(0);
-      const claimsDir = join(root, ".ut-tdd", "state", "doctor-lock", "claims");
+      const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-review-lock-"));
+      try {
+        const gitInit = spawnSync("git", ["init"], { cwd: root, encoding: "utf8" });
+        expect(gitInit.status).toBe(0);
+        const claimsDir = join(root, ".ut-tdd", "state", "doctor-lock", "claims");
         mkdirSync(claimsDir, { recursive: true });
         writeFileSync(
           join(claimsDir, "fixture-lock.json"),
