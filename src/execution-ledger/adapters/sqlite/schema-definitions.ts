@@ -69,7 +69,6 @@ export const executionLedgerV5Tables: readonly TableDef[] = [
       requiredCol("actor"),
       requiredCol("created_at"),
     ],
-    unique: [["recurrence_id"]],
     checks: [
       enumCheck("origin_layer", LAYERS),
       enumCheck("reentry_layer", LAYERS),
@@ -224,6 +223,11 @@ export const executionLedgerV5Tables: readonly TableDef[] = [
 ];
 
 export const executionLedgerV5Indexes: readonly IndexDef[] = [
+  {
+    name: "idx_execution_episodes_recurrence",
+    table: "execution_episodes",
+    columns: ["recurrence_id", "created_at"],
+  },
   {
     name: "idx_execution_episodes_origin",
     table: "execution_episodes",

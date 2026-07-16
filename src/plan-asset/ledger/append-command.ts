@@ -14,11 +14,11 @@ export interface LedgerFaultPort {
 interface AppendCommand {
   readonly commandId: string;
   readonly commandType: string;
-  readonly subjectKind: "reservation" | "legacy_migration";
+  readonly subjectKind: "reservation" | "legacy_migration" | "execution_episode";
   readonly subjectKey: string;
   readonly payload: Readonly<Record<string, unknown>>;
   readonly recordedAt: string;
-  readonly resultKind: "reservation_event" | "migration_event";
+  readonly resultKind: "reservation_event" | "migration_event" | "episode_event";
   readonly conflictRuleId: string;
 }
 

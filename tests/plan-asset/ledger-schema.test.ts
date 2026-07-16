@@ -618,7 +618,7 @@ function insertReceipt(
     plan_asset_id: assetId,
     plan_revision: revision,
     command_payload_digest: digest,
-    result_kind: "event",
+    result_kind: kind === "plan_revision" ? "admission_certificate" : "reservation_event",
     result_ref: "event:test",
     recorded_at: now,
   };

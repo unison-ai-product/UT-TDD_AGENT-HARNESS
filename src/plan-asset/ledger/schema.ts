@@ -52,6 +52,63 @@ function migrationTargetCheck() {
   };
 }
 
+function appendCommandReceiptTable(version: 4 | 5, name = "append_command_receipts"): TableDef {
+  const taxonomy = [
+    ["plan_revision", "admission_certificate", true],
+    ["reservation", "reservation_event", false],
+    ["legacy_migration", "migration_event", false],
+    ...(version === 5 ? [["execution_episode", "episode_event", false] as const] : []),
+  ] as const;
+  return {
+    name,
+    columns: [
+      pk("command_id"),
+      requiredCol("command_type"),
+      requiredCol("subject_kind"),
+      requiredCol("subject_key"),
+      col("plan_asset_id"),
+      col("plan_revision", "INTEGER"),
+      requiredCol("command_payload_digest"),
+      requiredCol("result_kind"),
+      requiredCol("result_ref"),
+      requiredCol("recorded_at"),
+      requiredCol("receipt_digest"),
+    ],
+    checks: [
+      enumCheck(
+        "subject_kind",
+        taxonomy.map(([subject]) => subject),
+      ),
+      enumCheck(
+        "result_kind",
+        taxonomy.map(([, result]) => result),
+      ),
+      {
+        kind: "or",
+        expressions: taxonomy.map(([subject, result, hasPlanTuple]) => ({
+          kind: "and" as const,
+          expressions: [
+            { kind: "compare" as const, column: "subject_kind", operator: "=" as const, value: subject },
+            { kind: "compare" as const, column: "result_kind", operator: "=" as const, value: result },
+            { kind: "is-null" as const, column: "plan_asset_id", negate: hasPlanTuple },
+            { kind: "is-null" as const, column: "plan_revision", negate: hasPlanTuple },
+          ],
+        })),
+      },
+    ],
+    foreignKeys: [
+      foreignKey(["plan_asset_id", "plan_revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  };
+}
+
+const appendCommandReceiptsV4Table = appendCommandReceiptTable(4);
+const appendCommandReceiptsV5Table = appendCommandReceiptTable(5);
+
 const v3Tables: readonly TableDef[] = [
   {
     name: "plan_assets",
@@ -303,53 +360,7 @@ const v3Tables: readonly TableDef[] = [
       }),
     ],
   },
-  {
-    name: "append_command_receipts",
-    columns: [
-      pk("command_id"),
-      requiredCol("command_type"),
-      requiredCol("subject_kind"),
-      requiredCol("subject_key"),
-      col("plan_asset_id"),
-      col("plan_revision", "INTEGER"),
-      requiredCol("command_payload_digest"),
-      requiredCol("result_kind"),
-      requiredCol("result_ref"),
-      requiredCol("recorded_at"),
-      requiredCol("receipt_digest"),
-    ],
-    checks: [
-      enumCheck("subject_kind", ["plan_revision", "reservation", "legacy_migration"]),
-      {
-        kind: "or",
-        expressions: [
-          {
-            kind: "and",
-            expressions: [
-              { kind: "compare", column: "subject_kind", operator: "=", value: "plan_revision" },
-              { kind: "is-null", column: "plan_asset_id", negate: true },
-              { kind: "is-null", column: "plan_revision", negate: true },
-            ],
-          },
-          {
-            kind: "and",
-            expressions: [
-              { kind: "in", column: "subject_kind", values: ["reservation", "legacy_migration"] },
-              { kind: "is-null", column: "plan_asset_id" },
-              { kind: "is-null", column: "plan_revision" },
-            ],
-          },
-        ],
-      },
-    ],
-    foreignKeys: [
-      foreignKey(["plan_asset_id", "plan_revision"], {
-        table: "plan_revisions",
-        columns: ["asset_id", "revision"],
-        onDelete: "RESTRICT",
-      }),
-    ],
-  },
+  appendCommandReceiptsV4Table,
 ];
 
 const v4Tables: readonly TableDef[] = [
@@ -492,7 +503,12 @@ const v4Tables: readonly TableDef[] = [
 ];
 
 const v4SchemaTables: readonly TableDef[] = [...v3Tables, ...v4Tables];
-const tables: readonly TableDef[] = [...v4SchemaTables, ...executionLedgerV5Tables];
+const tables: readonly TableDef[] = [
+  ...v4SchemaTables.map((table) =>
+    table.name === "append_command_receipts" ? appendCommandReceiptsV5Table : table,
+  ),
+  ...executionLedgerV5Tables,
+];
 
 const v3Indexes: readonly IndexDef[] = [
   { name: "idx_plan_assets_created_at", table: "plan_assets", columns: ["created_at"] },
@@ -642,6 +658,7 @@ export function migratePlanLedger(
     try {
       for (const ddl of ledgerSchemaDdl()) db.exec(ddl);
       db.setUserVersion(LEDGER_SCHEMA_VERSION);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v5-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
@@ -668,9 +685,10 @@ export function migratePlanLedger(
       for (const table of v4Tables) db.exec(createTableSql(table));
       for (const index of v4Indexes) db.exec(createIndexSql(index));
       for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
-      installV5Schema(db);
+      installV5Schema(db, options.fault, "v3-v5");
       options.fault?.after("v3-v5-schema-created");
       db.setUserVersion(LEDGER_SCHEMA_VERSION);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v3-v5-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
@@ -700,7 +718,7 @@ export function migratePlanLedger(
         db.exec("ROLLBACK");
         return { ok: false, ruleId: "plan-ledger-unavailable" };
       }
-      installV5Schema(db);
+      installV5Schema(db, options.fault, "v4-v5");
       options.fault?.after("v4-v5-schema-created");
       db.setUserVersion(LEDGER_SCHEMA_VERSION);
       if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v4-v5-verification-failed");
@@ -749,7 +767,7 @@ function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): b
     for (const index of v4Indexes) db.exec(createIndexSql(index));
     for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
     fault?.after("v2-v4-schema-created");
-    installV5Schema(db);
+    installV5Schema(db, fault, "v2-v5");
     fault?.after("v2-v5-schema-created");
     db.setUserVersion(LEDGER_SCHEMA_VERSION);
     if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v4-verification-failed");
@@ -761,10 +779,37 @@ function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): b
   }
 }
 
-function installV5Schema(db: HarnessDb): void {
+function installV5Schema(
+  db: HarnessDb,
+  fault: LedgerSchemaMigrationFaultPort | undefined,
+  boundaryPrefix: string,
+): void {
+  rebuildAppendCommandReceiptsV5(db, fault, boundaryPrefix);
   for (const table of executionLedgerV5Tables) db.exec(createTableSql(table));
   for (const index of executionLedgerV5Indexes) db.exec(createIndexSql(index));
   for (const trigger of executionLedgerV5Triggers) db.exec(createTriggerSql(trigger));
+}
+
+function rebuildAppendCommandReceiptsV5(
+  db: HarnessDb,
+  fault: LedgerSchemaMigrationFaultPort | undefined,
+  boundaryPrefix: string,
+): void {
+  const temporary = appendCommandReceiptTable(5, "append_command_receipts_v5");
+  db.exec(createTableSql(temporary));
+  fault?.after(`${boundaryPrefix}-receipts-created`);
+  const columns = appendCommandReceiptsV5Table.columns.map((column) => column.name).join(", ");
+  db.exec(
+    `INSERT INTO append_command_receipts_v5 (${columns}) SELECT ${columns} FROM append_command_receipts ORDER BY command_id`,
+  );
+  fault?.after(`${boundaryPrefix}-receipts-copied`);
+  db.exec("DROP TABLE append_command_receipts");
+  db.exec("ALTER TABLE append_command_receipts_v5 RENAME TO append_command_receipts");
+  for (const index of v3Indexes.filter((candidate) => candidate.table === "append_command_receipts"))
+    db.exec(createIndexSql(index));
+  for (const trigger of v3Triggers.filter((candidate) => candidate.table === "append_command_receipts"))
+    db.exec(createTriggerSql(trigger));
+  fault?.after(`${boundaryPrefix}-receipts-swapped`);
 }
 
 function legacyV2ReservationSchemaValid(db: HarnessDb): boolean {

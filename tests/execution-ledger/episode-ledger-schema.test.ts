@@ -42,7 +42,7 @@ describe("Execution Episode canonical ledger schema (PLAN-L7-436)", () => {
         plan_asset_id: null,
         plan_revision: null,
         command_payload_digest: "a".repeat(64),
-        result_kind: "execution_episode_event",
+        result_kind: "episode_event",
         result_ref: "event:recovery-70:0",
         recorded_at: "2026-07-16T00:00:00.000Z",
       };
