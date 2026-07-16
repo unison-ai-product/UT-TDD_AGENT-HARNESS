@@ -4,6 +4,7 @@ import { parse as parseYaml } from "yaml";
 import { analyzeG1Trace, g1TraceMessages, g1TraceOk, loadG1TraceDocs } from "../lint/g1-trace";
 import { analyzeG3Trace, g3TraceMessages, g3TraceOk, loadDocs } from "../lint/g3-trace";
 import { type Frontmatter, frontmatterSchema } from "../schema/frontmatter";
+import { parsePlanIdIdentity } from "../schema/plan-id";
 import { routeSignalCandidates } from "../schema/route-map";
 import {
   DB_PROJECTION_BACKPROP_REQUIRED_GENERATES,
@@ -238,20 +239,17 @@ function requiredAgentRoleViolations(raw: Record<string, unknown>): string[] {
  * PLAN-RECOVERY。PLAN-M-* は cutover/migration 専用の凍結 legacy 2 件のみ。
  * 新系列が必要な場合は governance で語彙を定義してから本 allowlist を更新する。
  */
-const PLAN_ID_TAXONOMY_PATTERNS: RegExp[] = [
-  /^PLAN-L(?:\d|1[0-4])-\d+(?:-[a-z0-9]+)+$/,
-  /^PLAN-REVERSE-\d+(?:-[a-z0-9]+)+$/,
-  /^PLAN-DISCOVERY-\d+(?:-[a-z0-9]+)+$/,
-  /^PLAN-RECOVERY-\d+(?:-[a-z0-9]+)+$/,
-];
-
 const PLAN_ID_LEGACY_FROZEN = new Set(["PLAN-M-00-verify-cutover", "PLAN-M-01-cutover-backfill"]);
 
 export function planIdTaxonomyViolations(
   planId: string,
 ): { reason: "plan_id_taxonomy"; detail: string }[] {
   if (PLAN_ID_LEGACY_FROZEN.has(planId)) return [];
-  if (PLAN_ID_TAXONOMY_PATTERNS.some((pattern) => pattern.test(planId))) return [];
+  const identity = parsePlanIdIdentity(planId);
+  if (identity && identity.token !== "M") {
+    const prefix = `PLAN-${identity.token}-${identity.ordinalText}`;
+    if (/^-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(planId.slice(prefix.length))) return [];
+  }
   return [
     {
       reason: "plan_id_taxonomy",

@@ -37,10 +37,32 @@ review_evidence:
         evidence_path: tests/plan-admission.test.ts
         output_digest: "sha256:ebb53045e7e24f85b605fd2313cb86aa27d4bf489346a8de19beb69c0e29d252"
         anchor_commit: 561054a8f88f15fe73b8e699aff0536f4a56e877
+  - reviewer: Codex recovery identity adversarial reviewers
+    review_kind: intra_runtime_subagent
+    reviewed_at: "2026-07-16T17:11:06+09:00"
+    tests_green_at: "2026-07-16T17:10:02+09:00"
+    verdict: pass
+    scope: "HEAD 975984a3 のRecovery identity fix-forwardを独立2 laneで再レビュー。code lane PASS、test lane PASS-WEAK。M系列新規予約、zero-padding衝突、Recovery ID×Forward Admission、source字段単独変異、issueRequired/余剰decision property改ざん、routeTupleDigest非決定性、replay重複、regex driftを攻撃し、未反駁attack 0。PASS-WEAKはreviewerがGreenを重複実行せず、親が固定snapshotを実行したため。"
+    worker_model: gpt-5
+    reviewer_model: gpt-5
+    green_commands:
+      - kind: unit_test
+        command: "bun scripts/run-vitest-snapshot.ts tests/plan-id-identity.test.ts tests/plan-id-taxonomy.test.ts tests/plan-draft-command-assembler.test.ts tests/node-plan-draft-runner.test.ts tests/plan-admission-tracked-receipt-projection.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-16T17:10:02+09:00"
+        evidence_path: tests/node-plan-draft-runner.test.ts
+        output_digest: "sha256:77965ac5416bad549b6fb69079aacb059544059921139589508ec5baed0d8238"
+        anchor_commit: 975984a3837987f05bb67a28bbfd800e9458d1d4
 generates:
   - artifact_path: docs/plans/PLAN-L7-435-drive-plan-admission-impl.md
     artifact_type: markdown_doc
   - artifact_path: src/plan-admission/policy.ts
+    artifact_type: source_module
+  - artifact_path: src/schema/frontmatter.ts
+    artifact_type: source_module
+  - artifact_path: src/plan/lint.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/diff-fence.ts
     artifact_type: source_module
@@ -66,6 +88,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/node-plan-draft-runner.ts
     artifact_type: source_module
+  - artifact_path: src/schema/plan-id.ts
+    artifact_type: source_module
   - artifact_path: src/plan-admission/node-atomic-draft-publisher.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/sqlite-draft-journal.ts
@@ -83,6 +107,8 @@ generates:
   - artifact_path: tests/plan-admission.test.ts
     artifact_type: test_code
   - artifact_path: tests/frontmatter.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-id-taxonomy.test.ts
     artifact_type: test_code
   - artifact_path: tests/plan-admission-diff-fence.test.ts
     artifact_type: test_code
@@ -110,6 +136,8 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/node-plan-draft-runner.test.ts
     artifact_type: test_code
+  - artifact_path: tests/plan-id-identity.test.ts
+    artifact_type: test_code
   - artifact_path: tests/cli-plan-draft.test.ts
     artifact_type: test_code
 dependencies:
@@ -129,6 +157,12 @@ dependencies:
 `PlanAdmissionPolicy`をpure domain/application境界に置き、`ut-tdd plan draft`、PLAN lint、
 branch-kind、hook/pre-push/CIが同じ許可tupleを読む。detectorはこの表を生成せず、許可tuple以外を
 Admission candidateに昇格させない。
+
+PLAN ID は共有identity parserを正本とし、`L0`〜`L14` / `DISCOVERY` / `REVERSE` / `RECOVERY` / `M`
+のtokenと2桁以上のordinalを一度だけ解釈する。draftで予約できるidentityは`M`以外かつordinal 1以上に限定し、
+tokenとAdmissionのkind/layer、source frontmatterとAdmission tupleが一致した場合だけledgerを開く。
+これによりForward外IssueからRecoveryへ入る正規経路をL層限定regexで拒否する実装driftを解消し、
+設計に検出・実行系を追従させる。
 
 `transition_direction`をmode判定の正本とする。`reverse`は`implementation_to_design`だけを許可し、
 `実装 → Reverse → Forward合流`を記録する。`redesign`は`design_to_implementation`だけを許可し、
@@ -173,13 +207,14 @@ failure injection、replay、concurrent reservation、temp rename失敗、DB com
 
 - [x] unknown signalのForward fallbackをauthoring入口で廃止する。(blind cross-review で反例不成立を確認、tests/plan-admission.test.ts green)
 - [x] Incident等の相関tuple、Forward/escapeのIssue policy、origin/reentry、pairingを同一policyで判定する。(同上、policy.ts evaluatePlanAdmission + frontmatter superRefine の二重実装を確認)
+- [x] PLAN ID token・ordinalを共有parserで解釈し、Recoveryを含むidentity/source/Admissionの不一致をledger・filesystem副作用前に拒否する。(U-PADM-061〜065、HEAD 975984a3 fixed snapshot 47 Green + independent PASS/PASS-WEAK)
 - [ ] direct PLAN editとreceipt staleをhook/pre-push/CIでfail-closeする。
 - [ ] `U-PADM-*` / property / mutation / CLI実行がGreenとなり、Red oracle候補を実装oracleへ昇格する。
 - [ ] REVERSE-435で実装観測をL4-L6/L7 test-designへgap-only backfillする。
 
 ## テスト証跡
 
-`U-PADM-001`〜`060` の一意なoracle IDを
+`U-PADM-001`〜`065` の一意なoracle IDを
 `docs/test-design/harness/L7-unit-test-design.md` の同一IDへ対応させる。Green判定は上記`generates`の
 test moduleを固定スナップショットで実行し、同一IDの重複が0件であることをtrace gateで確認する。
 未実装の強制終了recoveryとGitHub ingressは `CANDIDATE-PADM-009`〜`010` のまま保持し、Greenと称さない。
