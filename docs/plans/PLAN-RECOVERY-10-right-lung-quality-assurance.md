@@ -101,9 +101,9 @@ tl/po 人間サインオフ待ち。
 |---|---|---|---|
 | A | `VALID_KINDS` (`src/schema/index.ts:9`) | 12 種、L8-L14 を取れる kind 無し | verification 実行 kind を 1 種追加 (名称は SE/TL で確定、以後 `verify` と仮称) |
 | B | `ALLOWED_LAYER_BY_KIND` (`src/schema/frontmatter.ts:167`) | design→L1-L6 / impl系→L7 / research→L1-L4。右腕 layer 不在 | `verify: [L8,L9,L10,L11,L12,L13,L14]` を追加 |
-| C | `CROSS_KINDS` (`frontmatter.ts:162`) / `WORKFLOW_KINDS` (`frontmatter.ts:164`) | poc/reverse/recovery=cross、poc/reverse=workflow | `verify` は右腕 Forward 工程 kind = **cross に入れない** (layer=cross 強制を避ける)。除外のまま維持を明示テスト化 |
-| D | plan_id token↔layer 整合 (`frontmatter.ts:32,248`) | driveTok 検査 (248) は DISCOVERY/REVERSE/RECOVERY のみ対象。**L0-L14 layer token は token↔layer 一致を検証する機構が無い** (`planIdSchema` regex は形式のみ、`PLAN-L8-90` に `layer:L12` と書いても現状素通り = pre-existing gap) | 検証 PLAN は `PLAN-L8-NN`..`PLAN-L14-NN` = 既存 layer token を使う (新 token 不要)。ただし verify は L8-L14 の 7 層に及び design(L1-L6/6層)より不一致リスク面が広いため、**L-token↔layer 一致 fail-close チェック新設**を Step 4.1 に含める (`V_MODEL_PAIRS` は現状 dead data、これを活用) |
-| E | `ROUTE_MODE_ALLOWED_KINDS` 定義 (`src/plan/lint-policy.ts:26`) + fail-open 分岐 `if (!allowedKinds) return []` (`src/plan/lint.ts:364`) + 既存債務台帳 (`ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS` / `_DRAFT_DEBT_PLAN_IDS`) | 登録は `add-feature` のみ。**実測: refactor/version-up/reverse/recovery mode の ~180 PLAN は route_mode→kind 整合を一度も検査されず fail-open で素通り中。既存の債務台帳の存在 = 「観測された組合せ=正しい」ではない証拠** | registry を **設計 SSoT (L4 §3.1 / route-map) 由来の正しい mapping で完全化**し、mismatch を正当/債務-ledger/要修正に分類してから未知 mode を fail-close 化 (C.7 criterion(b))。**観測組合せの鵜呑み blessing は禁止**。CI/schema.test はこの新 gate に追従更新する |
+| C | `CROSS_KINDS` (`src/schema/frontmatter.ts:162`) / `WORKFLOW_KINDS` (`src/schema/frontmatter.ts:164`) | poc/reverse/recovery=cross、poc/reverse=workflow | `verify` は右腕 Forward 工程 kind = **cross に入れない** (layer=cross 強制を避ける)。除外のまま維持を明示テスト化 |
+| D | plan_id token↔layer 整合 (`src/schema/frontmatter.ts:32,248`) | driveTok 検査 (248) は DISCOVERY/REVERSE/RECOVERY のみ対象。**L0-L14 layer token は token↔layer 一致を検証する機構が無い** (`planIdSchema` regex は形式のみ、`PLAN-L8-90` に `layer:L12` と書いても現状素通り = pre-existing gap) | 検証 PLAN は `PLAN-L8-NN`..`PLAN-L14-NN` = 既存 layer token を使う (新 token 不要)。ただし verify は L8-L14 の 7 層に及び design(L1-L6/6層)より不一致リスク面が広いため、**L-token↔layer 一致 fail-close チェック新設**を Step 4.1 に含める (`V_MODEL_PAIRS` は現状 dead data、これを活用) |
+| E | `ROUTE_MODE_ALLOWED_KINDS` 定義 (`src/plan/lint-policy.ts:26`) + fail-open 分岐 `if (!allowedKinds) return []` (`src/plan/lint.ts:364` 参照) + 既存債務台帳 (`ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS` / `_DRAFT_DEBT_PLAN_IDS`) | 登録は `add-feature` のみ。**実測: refactor/version-up/reverse/recovery mode の ~180 PLAN は route_mode→kind 整合を一度も検査されず fail-open で素通り中。既存の債務台帳の存在 = 「観測された組合せ=正しい」ではない証拠** | registry を **設計 SSoT (L4 §3.1 / route-map) 由来の正しい mapping で完全化**し、mismatch を正当/債務-ledger/要修正に分類してから未知 mode を fail-close 化 (C.7 criterion(b))。**観測組合せの鵜呑み blessing は禁止**。CI/schema.test はこの新 gate に追従更新する |
 | F | 検証 roadmap 発火 (`docs/design/harness/L3-functional/roadmap.md`) | L layer group Forward freeze 後に動的発火 | verify PLAN 起票条件を roadmap 発火に対応付け (Step 5.2 の再発防止と一体) |
 | G | kind 種数を記す doc/test | requirements §1.3「12 種」、`tests/schema.test.ts:40` (`expect(VALID_KINDS).toHaveLength(12)`) | 「13 種」へ back-fill (test の件数 assert 更新 + Step 5 fullback Reverse で L 正本へ昇華) |
 | H | `REQUIRED_KIND_BY_BRANCH` + `BranchKind` union + `classifyBranchKind` (`src/lint/branch-kind.ts:48-60`、doctor fail-close gate) | branch prefix (feature/design/research/poc/reverse/add/hotfix/refactor) ごとに許可 kind 固定。**verify の枠が無く、verify PLAN を既存 prefix branch で commit すると `kind_mismatch` で doctor が意図せず fail-close、無関係 prefix では検査素通り** (cross-review C-2 新規発見) | `verify` prefix を `BranchKind`/`classifyBranchKind`/`REQUIRED_KIND_BY_BRANCH` (`verify:["verify"]`) に追加 |
@@ -150,7 +150,7 @@ parked (再び後送り)** されている。fail-open な検証 gate は「検�
        等) を分類する。**既定処分は (a) 構造的解消 = PLAN 修正**。台帳登録は **(b) 有限・理由拘束・burn-down
        期限つきの例外** のみ (ゴミ捨て場化禁止)。**(c) 正当と判断するものは SSoT mapping 側に本来含まれるべき
        = mapping を直す**。無言 blessing 禁止、分類内訳を証跡化 (TL 判断)。
-     - (iii) 分類完了後に `lint.ts:364` の `if (!allowedKinds) return []` を fail-close へ変更。
+     - (iii) 分類完了後に `src/plan/lint.ts:364` の `if (!allowedKinds) return []` を fail-close へ変更。
      - (iv) **上流設計を厳格化したのだから、下流の CI (`harness-check`) / `schema.test` / 関連テストは
        新 gate に追従して更新する** (設計を CI に合わせて緩めない、逆向き禁止)。
      この作業は kind taxonomy を 1 種増やす core 変更 + 既存 ~180 PLAN の route_mode→kind 正当性の棚卸しを
@@ -227,7 +227,7 @@ Stage 1 の登録内容 (`version-up→[?]`) を確定させる前提**であり
   2. off-diagonal landed 14件を LEGACY_LANDED 型恒久台帳へ理由付き固定 (台帳同期テストで fail-close)。
      `docs/governance/route-mode-kind-debt-audit-2026-07-02.md` を **拡張** (並行台帳を作らない)。
   3. version-up 47件の処遇を tl/po 裁定 (補遺A 特記の 3 択) で確定し、`version-up→[確定kind]` を登録。
-  4. `lint.ts:364` の fail-open `if (!allowedKinds) return []` を fail-close へ切替 (独立 commit)。
+  4. `src/plan/lint.ts:364` の fail-open `if (!allowedKinds) return []` を fail-close へ切替 (独立 commit)。
   5. CI (`harness-check`) / `schema.test` / 台帳同期テストを新 gate に追従更新。
   6. verify kind/layer envelope (Step 4.1 手順 1-8) を同 Stage に含める (schema=shared_state で直列)。
   - **Stage 1 完了 = 全 184 route_mode PLAN が「正しい mapping での登録 + mismatch 分類完了後」に lint green**
@@ -273,7 +273,7 @@ if (!allowedKinds) {
 version-up 未裁定のまま P2 を適用すると 47件が fail-close する硬依存があるため、**version-up 裁定は P2 の
 ブロッカー**。
 
-**P3 — off-diagonal landed 14件を恒久台帳へ (`lint.ts:369` の LEGACY_LANDED は mode 非依存で免除)**:
+**P3 — off-diagonal landed 14件を恒久台帳へ (`src/plan/lint.ts:369` の LEGACY_LANDED は mode 非依存で免除)**:
 `ROUTE_MODE_KIND_LEGACY_LANDED_PLAN_IDS` へ 14 id 追加 (refactor|impl ×12: L7-216/217/218/220/222/223/
 224/225/226/227/228/256、recovery|{refactor,impl} ×2: L7-359/361) + `route-mode-kind-debt-audit-2026-07-02.md`
 に「refactor/recovery mode の landed off-diagonal」節を**追加**(並行台帳を作らない) + `tests/plan-lint.test.ts`
@@ -361,7 +361,7 @@ version-up 未裁定のまま P2 を適用すると 47件が fail-close する�
 | `c3752e4` | tl/po サインオフ + patch-level 仕様 (補遺C) | plan lint / db rebuild |
 | `9cfabf1` | P1 register-correct (SSoT 5 mode) + P3 台帳 14件 | 567 lint EXIT=0 / 55 tests |
 | `4544b17` | 台帳 doc 日本語化 (design-language gate) | design-language OK |
-| `640973e` | P2 `lint.ts:364` fail-open→fail-close + P4 未知 mode 回帰 | 567 lint / 55 tests / tsc |
+| `640973e` | P2 `src/plan/lint.ts:364` fail-open→fail-close + P4 未知 mode 回帰 | 567 lint / 55 tests / tsc |
 | `113c1e0` | L4 §3.1 に version-up parked kind=impl を back-fill (option1 pairing) | plan lint / design-language |
 
 - **閉じた穴**: refactor/version-up/reverse/recovery mode の ~127 PLAN が route_mode→kind 未検査で
@@ -373,7 +373,7 @@ version-up 未裁定のまま P2 を適用すると 47件が fail-close する�
 
 1. **verify kind/layer envelope (最高リスク core taxonomy、要 full-suite 検証)** — Step 4.1 手順 1-3,5-8。
    触る invariant: `VALID_KINDS` (`src/schema/index.ts:9`) / `ALLOWED_LAYER_BY_KIND` の consumer /
-   cross-kind ロジック (`frontmatter.ts:160-223`、verify は cross に**入れない**) / `branch-kind.ts` verify prefix /
+   cross-kind ロジック (`src/schema/frontmatter.ts:160-223`、verify は cross に**入れない**) / `branch-kind.ts` verify prefix /
    `forward-convergence.ts` `CONVERGENCE_SCOPE_KINDS` / `V_MODEL_PAIRS` L-token↔layer / roadmap 発火 /
    `tests/schema.test.ts:40` (12→13) / requirements §1.3。**L7 を実装上限と仮定する全 invariant を洗い、
    1 変更ごとに `bun test` 全件で blast radius 実測**してから commit (append-only + 独立 commit)。

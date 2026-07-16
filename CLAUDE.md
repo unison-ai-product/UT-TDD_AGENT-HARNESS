@@ -170,6 +170,14 @@ fallback.
 
 ## Model / Effort Routing
 
+正規委譲経路 (`ut-tdd codex/claude --role <role>`) は role 検証 + routing を機械強制する
+(PLAN-L7-255、`src/team/delegation-routing.ts`): 未登録 role は fail-close。判断ゲート role
+(reviewer / blind-reviewer / qa / tl / security 等) は族内 frontier reviewer tier
+(codex=`gpt-5.6-sol` / claude=`claude-opus-4-8`) へ固定し、worker role は intent 推定
+(`selectTeamModel`) で創出=ROI 寄せの既定へ流す。明示 `--model`/`--effort` は常に優先。
+effort は codex にも argv (`-c model_reasoning_effort=...`) で実注入される。
+判断側の族分離 (`same_model_approval: forbidden`) は routing で破らない。
+
 Task-kind ベースの割当 (PO rule 2026-07-14、旧 tier 記述を supersede):
 
 - Codex: テスト実装 = `gpt-5.6-terra`; 実装/ドキュメント修正 = `gpt-5.6-luna`

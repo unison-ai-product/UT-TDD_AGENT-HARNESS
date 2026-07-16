@@ -18,6 +18,10 @@ applies_to:
     - Refactor
     - Retrofit
 decision_points:
+  - when: "Choosing between this skill and the general `code-review` skill for a review task."
+    choose: "Use this skill for W-gate (design <-> test) pair closure and Refactor/Retrofit quality-bar judgement; use `code-review` for the general five-axis review at trace-freeze / accept. They are non-overlapping responsibilities — apply both when a PLAN needs both."
+    over: "Picking one of the two interchangeably because their layers and drive models overlap."
+    because: "The two packs share applies_to layers/drives and rank near-identically in skill recommendation; without this boundary the injector and the reviewer cannot tell which procedure is owed."
   - when: "A W-gate pair (design doc <-> test/verification artifact) is being closed for accept."
     choose: "Read the test-design doc body to confirm the specified scenarios are actually present in the test file."
     over: "Closing the gate because the test-ID count matches the design-doc scenario count."

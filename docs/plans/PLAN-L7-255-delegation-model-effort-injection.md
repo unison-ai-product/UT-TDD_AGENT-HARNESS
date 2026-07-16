@@ -8,7 +8,7 @@ status: draft
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-02
-updated: 2026-07-03
+updated: 2026-07-16
 owner: PM / PO
 backprop_decision: not_required
 backprop_decision_reason: "正規委譲経路への model/effort 注入は既存要求の実装であり上位要求の変更なし。trace: CLAUDE.md L167(effort 既定 routing)、.ut-tdd/audit/A-177-orchestration-layer-audit-2026-07-02.md F-4/F-6/F-7(policy 実装済・正規委譲経路への配線欠落)"
@@ -87,11 +87,52 @@ doc 明文化、注入監査記録) は未着手のため status は draft を�
 | 3 | routing 原則 doc 追記 (rule-drift 突合) | 2 と並列 |
 | 4 | regression test (intent→model/effort 反映 / 明示上書き優先 / T0 block 維持) | 直列 |
 
+## 実装 slice 2 (2026-07-16, Claude / PLAN-L7-255 本体)
+
+**unblock 条件クリア (実機裏取り)**: `codex exec -c model_reasoning_effort=low -` を実機実行し受理を確認
+(codex-cli 0.144.1、`~/.codex/config.toml` の実在キー `model_reasoning_effort` への `-c` 上書き)。
+
+- スコープ 1: `src/team/delegation-routing.ts` 新設 — role allowlist fail-close (READ_ONLY roles +
+  worker roles + SUBAGENT_ALLOWLIST)、判断ゲート role は `REVIEW_LANE_MODELS` の族内 frontier
+  (sol/opus) + effort ladder base へ固定、worker role は `selectTeamModel` へ委譲。`runtimeCommand` へ配線
+  (明示 `--model`/`--effort` 優先は不変)。live 確認: `codex --role blind-reviewer` → `-m gpt-5.6-sol
+  -c model_reasoning_effort=low`、`--role bogus-role` → BLOCK。
+- スコープ 2 + PY-2: `buildAdapterPlan` codex 分岐へ effort argv (`-c model_reasoning_effort=<effort>`) を
+  実注入 (middle→medium 正規化)。`routeToAdapterPlan` は effort を既に渡しており argv 側の穴が塞がって貫通。
+- スコープ 3: CLAUDE.md「Model / Effort Routing」/ AGENTS.md routing defaults 節へ機械強制の明文を追記。
+- スコープ 4 (部分): routing 根拠 (model/effort/source/lane/intent) を plan messages へ監査記録
+  (dry-run JSON / execute ログに残る)。**DB (telemetry) 投影は未実施 — 残スコープ**。
+
 ## DoD
 
-- [ ] `ut-tdd codex --role se` が GPT worker lane の model/effort 付き plan を生成する (test 固定)
-- [ ] `task route --execute` の spawn に effort が乗る (test 固定)
-- [ ] 判断側の族分離が注入で破られない (same_provider fail 維持、test 固定)
+- [x] `ut-tdd codex --role se` が GPT worker lane の model/effort 付き plan を生成する (U-DELEG-003)
+- [x] `task route --execute` の spawn に effort が乗る (codex argv 注入 = U-DELEG-005、claude 既存契約 = U-DELEG-006)
+- [x] 判断側の族分離が注入で破られない (review role は族内 frontier へ固定 = U-DELEG-002。worker tier への
+      review 流出を遮断。same_model_approval fail-close は review_evidence 側 gate 不変)
+- [ ] 注入監査の DB (telemetry/model_runs) 投影 (残スコープ、messages 記録までは実施済み)
+
+## 2026-07-16 クロスレビュー是正 (PR #73 差し戻し対応、非 author runtime = Claude)
+
+PR #73 のクロスレビュー (blind-review 2 レーン FLAG + CI Red) の指摘をレビュー担当側 (Claude) が是正した:
+
+1. **gate subagent role の opus-floor 復旧**: `REVIEW_GATE_ROLES` を READ_ONLY 短縮形 +
+   subagent 名形 (`ut-tdd-tl` / `qa-test` / `security-audit`) の合成 Set へ拡張。allowlist 合流で
+   許可された subagent 形 role が worker tier (terra) へ落ちる欠陥を遮断 (U-DELEG regression で固定)。
+2. **codex `model_reasoning_effort=xhigh` 実機裏取り**: codex-cli 0.144.1 で
+   `codex exec -m gpt-5.4-mini -c model_reasoning_effort=xhigh -` の受理・正常応答を確認 (2026-07-16)。
+   mini ladder base=`xhigh` の自動生成 argv は実行可能。素通し仕様を維持し、`=low` に加え `=xhigh` を
+   裏取り済みとして adapter コメントへ記録。
+3. **module 境界是正 (CI Red 根治)**: `delegation-routing.ts` を `src/runtime/` から `src/team/` へ移設。
+   runtime→team は禁止方向 (ddd-tdd domain boundary) であり、依存循環 3 件 / coding-rules /
+   ddd-tdd real-repo guard 違反はすべてこの逆方向 import が根因だった。移設で U-DEPD-005 / U-CODE /
+   U-DDDTDD green を実測確認。
+4. **設計判断 (uiux role)**: `uiux` は READ_ONLY_DELEGATION_ROLES 由来で判断ゲート扱い (frontier/opus +
+   ladder base effort) とする。CLAUDE.md の「UI デザイン実装 = Sonnet / UI/UX effort xhigh」は
+   **実装系 uiux タスク (worker 経路、`selectTeamModel` の uiux intent)** に適用されるものであり、
+   `--role uiux` の委譲 = デザイン判断・レビュー相談 (gate 側) は上位 tier 固定が正 (PO 原則 2026-07-08
+   「review は orchestrator より下位にしない」)。二読み解消のためここに明記する。
+5. 低 severity: `effort_source` の無意味な三項分岐を除去、review 分岐 fallback effort の到達条件
+   (明示 --model が ladder 外の場合のみ) をコメント化。
 
 ## 2026-07-03 A-183 追補 (PY-2: codex 分岐の effort argv 非注入)
 

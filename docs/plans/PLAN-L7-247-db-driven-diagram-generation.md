@@ -46,7 +46,7 @@ draft 起票 (PO 要望 2026-07-02「遷移図・シーケンス図を DB の依
 - `screens` = 15 行 / `screen_trace` = 85 行 — **画面遷移図の素材が投影済み**
 - `dependency_edges` = 1020 / `trace_edges` = 1020 / `graph_nodes` = 1172 — 依存関係の全量
 - `workflow_runs` (serialize_after 順序) / `hook_events` (session 時系列) / `gate_runs` — **シーケンス図の素材**
-- `diagram_artifacts` = **0 行** — 生成図の受け皿テーブルは schema 設計済み (A-124 図化 DB projection 化、tool-adapter.ts:308 が DiagramArtifactProjectionRow を定義) だが書き手未実装 (tool-adapter は lint-wiring 唯一の DEFERRED、IMP-033/PLAN-L7-50 R8)
+- `diagram_artifacts` = **0 行** — 生成図の受け皿テーブルは schema 設計済み (A-124 図化 DB projection 化、src/lint/tool-adapter.ts:308 が DiagramArtifactProjectionRow を定義) だが書き手未実装 (tool-adapter は lint-wiring 唯一の DEFERRED、IMP-033/PLAN-L7-50 R8)
 - 既存の生成実装は relation graph の flowchart のみ (`ut-tdd graph export --format mermaid|dot`、実走 2086 行出力確認済み)
 
 要件上は新 FR 不要: requirements §7 (A-124 addendum) が「横断 relation graph / 図化」を FR-L1-05/06/07/17-20/24/49/50 の拡張として整理済み。画面系は FR-L1-29 (L2 画面設計ワークフロー) の成果物 (遷移図) に対応。

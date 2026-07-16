@@ -43,7 +43,7 @@ draft 起票 (PO /goal 2026-07-02、A-173 F-6/F-7 feature-gap)。**本 PLAN は�
 | 2 | Recovery: 再発防止 3 要件 (root cause / guard 具体変更 / L14 route) の body lint | recovery.md:100-102 |
 | 3 | Discovery: `verify/*.sh` の存在/実行成功チェック | discovery.md:33 |
 | 4 | Scrum: Reverse fullback 昇華先 (`forward_routing ∈ {L1,L3,L4,L5}`) 検証 | scrum.md:70 (IMP-044) |
-| 5 | Add-feature: add-impl → Reverse 起票の機械確認 (scrum-reverse lint の poc 限定解除) | backfill-pairing.ts:8 |
+| 5 | Add-feature: add-impl → Reverse 起票の機械確認 (scrum-reverse lint の poc 限定解除) | src/lint/backfill-pairing.ts:8 |
 | 6 | version-up: exit 条件節の doc 追補 + activation 時 version_target 除去/requires trace 検証 | version-up.md §4 |
 | 7 | Forward: `accept` ステップの canonical コマンド定義 or 既存コマンドへの明示紐付け | CLAUDE.md:212 |
 | 8 | G1-content 専用 doctor エントリ + G2/G4/G5 pair gate の doctor 配線 + G14 disposition | gates.md:50-63 |

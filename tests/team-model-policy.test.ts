@@ -230,7 +230,15 @@ describe("team model policy", () => {
         dry_run: false,
       },
     });
-    expect(codex.adapterPlan.args).toEqual(["exec", "-m", MODEL_IDS.codex.frontier, "-"]);
+    // effort argv 注入 (PLAN-L7-255): repo 語彙 "middle" は codex config 語彙 "medium" へ正規化される
+    expect(codex.adapterPlan.args).toEqual([
+      "exec",
+      "-m",
+      MODEL_IDS.codex.frontier,
+      "-c",
+      "model_reasoning_effort=medium",
+      "-",
+    ]);
     expect(codex.fallback).toBeUndefined();
   });
 
