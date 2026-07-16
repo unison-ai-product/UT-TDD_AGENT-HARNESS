@@ -435,6 +435,15 @@ export function loadRelationGraphSourceSet(repoRoot: string): RelationGraphSourc
     addDesignDocIfAbsent(designDocs, path);
   }
 
+  // HARNESS memory は durable な統治入力であり、変更影響を無音で落とさない。
+  // 内容は session-start / DB projection の責務であるため、relation graph には
+  // secret-like 本文を複製せず path-only design node としてだけ登録する。
+  const memoryDocs: string[] = [];
+  walkMd(join(repoRoot, ".ut-tdd", "memory"), repoRoot, memoryDocs);
+  for (const path of memoryDocs) {
+    addDesignDocIfAbsent(designDocs, path);
+  }
+
   const evidenceDocs: string[] = [];
   walkJson(join(repoRoot, ".ut-tdd", "evidence"), repoRoot, evidenceDocs);
   for (const path of evidenceDocs) {
