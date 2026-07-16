@@ -38,6 +38,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/plan-draft-command-digest.ts
     artifact_type: source_module
+  - artifact_path: src/kernel/plan-draft-command-digest.ts
+    artifact_type: source_module
   - artifact_path: src/plan-admission/plan-draft-command-assembler.ts
     artifact_type: source_module
   - artifact_path: src/plan-admission/plan-draft-ledger-adapter.ts
