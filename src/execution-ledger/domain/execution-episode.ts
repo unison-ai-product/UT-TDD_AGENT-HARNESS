@@ -234,7 +234,16 @@ export class ExecutionEpisode {
       commandPayloadDigest,
       payloadDigest,
       previousEventDigest: null,
-      eventDigest: digest(eventSeed),
+      eventDigest: calculateExecutionEventDigest({
+        episodeId: command.episodeId,
+        sequence: 0,
+        state: "E0",
+        kind: "escape_observed",
+        payloadDigest,
+        previousEventDigest: null,
+        occurredAt: command.occurredAt,
+        actor: command.actor,
+      }),
       occurredAt: command.occurredAt,
       actor: command.actor,
       payload,
@@ -464,14 +473,8 @@ export function reconstructExecutionEpisode(
   if (events.length !== 1)
     return { ok: false, violations: [rule("episode-event-count-invalid", "events")] };
   const event = events[0];
-  if (
-    event.sequence !== 0 ||
-    event.state !== "E0" ||
-    event.kind !== "escape_observed" ||
-    event.previousEventDigest !== null ||
-    digest(canonical(event.payload)) !== event.payloadDigest
-  )
-    return { ok: false, violations: [rule("episode-event-integrity-invalid", "events[0]")] };
+  const reduction = reduceExecutionEpisode(events);
+  if (!reduction.ok) return reduction;
   return { ok: true, value: snapshotFromEvent(event) };
 }
 
