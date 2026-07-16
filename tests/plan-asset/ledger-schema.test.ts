@@ -238,7 +238,7 @@ describe("PLAN Asset canonical ledger schema", () => {
   it("U-PADM-020: creates admission and durable draft journal tables in v4", () => {
     const db = openHarnessDb(":memory:");
     try {
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
       const names = db
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
         .all()
@@ -267,8 +267,8 @@ describe("PLAN Asset canonical ledger schema", () => {
       createV3Ledger(db);
       seedAsset(db, "plan:a");
       insertReceipt(db, "plan_revision", "plan:a", 1);
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
-      expect(db.userVersion()).toBe(4);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
+      expect(db.userVersion()).toBe(5);
       expect(db.prepare("SELECT COUNT(*) AS n FROM plan_assets").get()?.n).toBe(1);
       expect(db.prepare("SELECT COUNT(*) AS n FROM append_command_receipts").get()?.n).toBe(1);
       expect(db.prepare("SELECT COUNT(*) AS n FROM plan_draft_journal").get()?.n).toBe(0);
@@ -323,21 +323,21 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
-  it("U-PA-047: atomically upgrades an empty-reservation v2 ledger through v3 to v4", () => {
+  it("U-PA-047: atomically upgrades an empty-reservation v2 ledger through v3/v4 to v5", () => {
     const db = openHarnessDb(":memory:");
     try {
       for (const ddl of legacyV2Ddl()) db.exec(ddl);
       db.setUserVersion(2);
       seedAsset(db, "plan:a");
-      expect(LEDGER_SCHEMA_VERSION).toBe(4);
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+      expect(LEDGER_SCHEMA_VERSION).toBe(5);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
       expect(
         db
           .prepare("PRAGMA table_info(plan_id_reservation_events)")
           .all()
           .map((column) => column.name),
       ).toContain("lease_key_version");
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
     } finally {
       db.close();
     }
