@@ -485,6 +485,8 @@ L6 機能設計の各**関数 signature + DbC + edge** が L7 単体テスト (U
 | U-DOCLOCK-009 | CLI `doctor` | 競合する CLI は検証開始前に exit 2、JSON `ok:false` と保持者情報を返す |
 | U-DOCLOCK-010 | owner claim `release` | 他者のfresh owner claimが存在しても、自身のclaimだけを削除して他者claimを保持する |
 | U-DOCLOCK-011 | owner claim arbitration | contenderは他のfresh claimを観測すると自身だけを取り下げ、既存holderを返してblockする |
+| U-DOCLOCK-012 | CLI `review --staged` | 競合時は内部doctor開始前にexit 2、JSON `ok:false` と保持者情報を返す |
+| U-DOCLOCK-013 | CLI `review --uncommitted` | 競合時は内部doctor開始前にexit 2、JSON `ok:false` と保持者情報を返す |
 
 保証境界: この test pair は同一 repo の再試行嵐を抑止する advisory guard を検証する。
 SMB/NFS/OneDrive をまたぐ strict lease、heartbeat、clock-skew 耐性は主張せず、

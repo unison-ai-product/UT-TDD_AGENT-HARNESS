@@ -392,6 +392,34 @@ describe("L7 CLI surface closure", () => {
     }
   }, 15_000);
 
+  it.each([
+    ["U-DOCLOCK-012", "--staged"],
+    ["U-DOCLOCK-013", "--uncommitted"],
+  ])(
+    "%s: blocks a competing review %s before its internal doctor starts",
+    (_id, mode) => {
+      const root = mkdtempSync(join(tmpdir(), "ut-tdd-cli-review-lock-"));
+      try {
+        const claimsDir = join(root, ".ut-tdd", "state", "doctor-lock", "claims");
+        mkdirSync(claimsDir, { recursive: true });
+        writeFileSync(
+          join(claimsDir, "fixture-lock.json"),
+          `${JSON.stringify({ pid: process.pid, host: hostname(), started_at: new Date().toISOString(), lock_id: "fixture-lock" })}\n`,
+          "utf8",
+        );
+        const run = runCliIn(root, ["review", mode, "--json"]);
+        const payload = JSON.parse(run.stdout);
+
+        expect(run.status).toBe(2);
+        expect(payload).toMatchObject({ ok: false });
+        expect(payload.messages.join("\n")).toContain("already running");
+      } finally {
+        removeTestTree(root);
+      }
+    },
+    15_000,
+  );
+
   it("documents guard blocked exit code in hook and manual preflight help", () => {
     const agentGuard = runCli(["hook", "agent-guard", "--help"]);
     const workGuard = runCli(["hook", "work-guard", "--help"]);

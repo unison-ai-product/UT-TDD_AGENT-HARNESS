@@ -62,7 +62,7 @@ doctor は read-only 検査であり同時複数実行に価値がないため�
    実行後 finally で release。通常の `doctor` に加え `review --staged` / `review --uncommitted` が内部で
    full doctor を起動する経路も同じ lock の対象にする。`runDoctor` ライブラリ直呼びは対象外。
 3. regression test (`tests/doctor-singleton-lock.test.ts` と `tests/cli-surface.test.ts`、
-   U-DOCLOCK-001〜011)。
+   U-DOCLOCK-001〜013)。
 
 ## Steps
 
@@ -82,6 +82,8 @@ doctor は read-only 検査であり同時複数実行に価値がないため�
   (U-DOCLOCK-006/010)
 - [x] contender は他のfresh owner claimを観測したら自分のclaimだけを取り下げてblockし、
   同時doctorを開始しない (U-DOCLOCK-011)
+- [x] `review --staged` / `review --uncommitted` も内部doctor開始前に同じ競合lockでexit 2となる
+  (U-DOCLOCK-012/013)
 
 ## 保証境界と後続
 
