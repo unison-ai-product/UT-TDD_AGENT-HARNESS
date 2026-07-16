@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  parsePlanIdIdentity,
-  parseReservablePlanIdIdentity,
-} from "../src/schema/plan-id.js";
+import { parsePlanIdIdentity, parseReservablePlanIdIdentity } from "../src/schema/plan-id.js";
 
 describe("PLAN draft shared identity (PLAN-L7-435)", () => {
   it.each([
@@ -17,12 +14,17 @@ describe("PLAN draft shared identity (PLAN-L7-435)", () => {
     expect(parsePlanIdIdentity(planId)).toEqual({ token, namespace: token, ordinalText, ordinal });
   });
 
-  it("U-PADM-062: reservation可能IDと正本だが予約不能なM-00・不正IDを分離する", () => {
+  it("U-PADM-062: reservation可能IDと凍結M系列・不正IDを分離しzero-paddingを同一座標化する", () => {
     expect(parseReservablePlanIdIdentity("PLAN-RECOVERY-01-repair")).toMatchObject({
       namespace: "RECOVERY",
       ordinal: 1,
     });
     expect(parseReservablePlanIdIdentity("PLAN-M-00-verify-cutover")).toBeNull();
+    expect(parseReservablePlanIdIdentity("PLAN-M-01-cutover-backfill")).toBeNull();
+    expect(parseReservablePlanIdIdentity("PLAN-M-02-invented")).toBeNull();
+    expect(parseReservablePlanIdIdentity("PLAN-RECOVERY-070-repair")?.ordinal).toBe(
+      parseReservablePlanIdIdentity("PLAN-RECOVERY-70-repair")?.ordinal,
+    );
     for (const invalid of [
       "PLAN-RECOVERY-0-repair",
       "PLAN-RECOVER-01-repair",

@@ -76,4 +76,81 @@ describe("NodePlanDraftRunner", () => {
     );
     expect(projection.ok && projection.value.records).toHaveLength(1);
   });
+
+  it("U-PADM-064: Recovery Issueをrunnerからsource/receiptへ原子的に発行する", () => {
+    const root = join(tmpdir(), `ut-tdd-plan-draft-recovery-${process.pid}-${Date.now()}`);
+    roots.push(root);
+    mkdirSync(join(root, "docs", "plans"), { recursive: true });
+    mkdirSync(join(root, "docs", "governance"), { recursive: true });
+    const projectionPath = "docs/governance/plan-admission-receipts.json";
+    writeFileSync(
+      join(root, ...projectionPath.split("/")),
+      `${JSON.stringify({ schema_version: TRACKED_RECEIPT_SCHEMA, records: [] })}\n`,
+      "utf8",
+    );
+    const admission: PlanAdmissionRequest = {
+      routeSignal: "regression_dev",
+      routeMode: "recovery",
+      kind: "recovery",
+      layer: "cross",
+      drive: "agent",
+      branch: "work/recovery-doctor-slo",
+      status: "draft",
+      issue: {
+        provider: "github",
+        issueId: 70,
+        episodeId: "episode:70",
+        projectionDigest: "a".repeat(64),
+      },
+      origin: {
+        planId: "PLAN-L7-442-doctor-singleton-guard",
+        revision: 1,
+        digest: "b".repeat(64),
+      },
+      reentry: {
+        targetPlanId: "PLAN-L6-70-source-catalog-profile-resolver-contracts",
+        targetRevision: 1,
+        phase: "forward_merge",
+      },
+      escapeReason: "doctor local SLO regression",
+    };
+    const decision = evaluatePlanAdmission(admission);
+    if (!decision.ok) throw new Error("recovery fixture must pass");
+    const planId = "PLAN-RECOVERY-70-doctor-slo";
+    const sourcePath = `docs/plans/${planId}.md`;
+    const manifest: DraftManifestV2 = {
+      version: 2,
+      command_id: "command:recovery-70",
+      plan_id: planId,
+      recorded_at: "2026-07-16T00:00:00.000Z",
+      admission: {},
+      source: {
+        path: sourcePath,
+        content: `---\nplan_id: ${planId}\ntitle: Recovery 70\nkind: recovery\ndrive: agent\nstatus: draft\nlayer: cross\nroute_signal: regression_dev\nroute_mode: recovery\nagent_slots:\n  - role: se\n    slot_label: recovery runner\ngenerates: []\ndependencies:\n  parent: docs/plans/PLAN-L7-442-doctor-singleton-guard.md\n  requires: []\n  references: []\n  blocks: []\n---\n\n# Recovery 70\n`,
+      },
+      projection: { path: projectionPath },
+    };
+    const runner = new NodePlanDraftRunner({
+      repoRoot: root,
+      sourceCommit: () => "c".repeat(40),
+      actor: () => "codex",
+      readText: (path) => readFileSync(path, "utf8"),
+    });
+
+    const created = runner.run({ manifest, admission, decision });
+    const replayed = runner.run({ manifest, admission, decision });
+
+    expect(created.status).toBe("created");
+    expect(replayed).toEqual({ status: "replayed", receipt: created.receipt });
+    expect(
+      parseLegacyPlanSource(readFileSync(join(root, ...sourcePath.split("/")), "utf8"))?.planId,
+    ).toBe(planId);
+    const projection = parseTrackedReceiptProjection(
+      readFileSync(join(root, ...projectionPath.split("/")), "utf8"),
+    );
+    expect(projection.ok && projection.value.records[0]).toMatchObject({
+      command_id: manifest.command_id,
+      plan_id: planId,
+    });
+  });
 });
