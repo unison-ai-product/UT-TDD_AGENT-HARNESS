@@ -65,3 +65,5 @@ R0 (本 doc) → R1 対象確定 → R2 是正実施 → R3 検証 (asset-drift 
 - [x] 上記 4 系統の是正が landed (誤誘導系統ゼロ。範囲注記どおり歴史的記述と dual-root fallback 設計は除外)
 - [x] review-checklist.yaml の索引外扱いが明示される (PO 確認は R3/R4 で取得)
 - [x] item 5(d)(e)(f)(g) (A-186 追加分、計 8 ファイル + estimation.md + deprecation-cutover.md) が是正される
+- [ ] R3: PR HEADでasset-drift、SKILL_MAP突合、実在CLI surfaceを独立再検証し、review-checklist.yamlの人間向け索引外判断についてPO確認を記録する。
+- [ ] R4: R3の観測差分だけをADR/PLAN/SKILL_MAP/agent定義へgap-only back-fillし、cross-review verdictとbackprop_scopeを記録する。
