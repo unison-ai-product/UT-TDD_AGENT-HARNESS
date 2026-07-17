@@ -1,10 +1,10 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { analyzeArtifactOwnership } from "./artifact-ownership";
+import { analyzeArtifactOwnership } from "../lint/artifact-ownership";
 import {
   analyzeDeliverablePlanTrace,
   loadDeliverablePlanTraceInput,
-} from "./deliverable-plan-trace";
+} from "../lint/deliverable-plan-trace";
 
 const repoRoot = process.cwd();
 const input = loadDeliverablePlanTraceInput(repoRoot);
@@ -41,7 +41,7 @@ PLAN \`generates\` 未宣言成果物と複数 PLAN 所有を、解析器の実�
 
 ## 再生成
 
-\`bun src/lint/generate-deliverable-trace-debt-audit.ts\` が \`loadDeliverablePlanTraceInput\` と
+\`bun src/trace/generate-deliverable-trace-debt-audit.ts\` が \`loadDeliverablePlanTraceInput\` と
 \`artifact-ownership\` と同じ PLAN \`generates\` 実測集合からこのファイルを機械生成する。台帳は
 orphan と duplicate ownership を別集合として双方向突合し、remediation owner は
 \`${owner}\`、\`promote_by\` は台帳無期限化を防ぐ期限である。

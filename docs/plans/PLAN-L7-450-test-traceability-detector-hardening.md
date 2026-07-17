@@ -26,7 +26,7 @@ generates:
     artifact_type: source_module
   - artifact_path: src/lint/deliverable-plan-trace.ts
     artifact_type: source_module
-  - artifact_path: src/lint/generate-deliverable-trace-debt-audit.ts
+  - artifact_path: src/trace/generate-deliverable-trace-debt-audit.ts
     artifact_type: source_module
   - artifact_path: src/state-db/projection-writer.ts
     artifact_type: source_module
