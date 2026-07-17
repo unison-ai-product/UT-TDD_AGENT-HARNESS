@@ -23,10 +23,10 @@ generates:
   - artifact_path: .github/workflows/harness-check.yml
     artifact_type: config
 dependencies:
-  parent: null
-  requires:
-    - docs/plans/PLAN-REVERSE-448-source-repo-windows-ci-job-backfill.md
+  parent: docs/plans/PLAN-L1-05-nfr.md
+  requires: []
   references:
+    - docs/plans/PLAN-REVERSE-448-source-repo-windows-ci-job-backfill.md
     - .github/workflows/harness-check.yml
     - docs/plans/PLAN-L7-235-pack-windows-ci-job.md
 ---
