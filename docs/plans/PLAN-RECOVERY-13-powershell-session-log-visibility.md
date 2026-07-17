@@ -63,8 +63,8 @@ review_evidence:
     reviewed_at: "2026-07-17T15:13:00+09:00"
     tests_green_at: "2026-07-17T15:09:00+09:00"
     verdict: approve_after_fixes
-    worker_model: claude-sonnet-5
-    reviewer_model: gpt-5.6-sol
+    worker_model: claude-code
+    reviewer_model: gpt-5
     scope: "claim-blind / cross-surface / hook matcher の3レーンで検出した L4 matcher 取り残し、session jsonl→hook_events oracle 欠落、PowerShell test_runs projection 欠落、generates 未昇格を bfda4e0f と ecfa6045 で是正。GitHub Actions run 29558297287 は Windows test:fast/typecheck/db rebuild/toolchain doctor が Green。Linux full suite は対象を含む 2130 tests Green、PLAN draft の merged-plan-status 1件だけが意図どおり Red となったため、本 confirm で状態遷移を閉じる。"
 ---
 
