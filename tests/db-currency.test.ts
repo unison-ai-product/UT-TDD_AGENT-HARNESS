@@ -212,4 +212,19 @@ describe("db-currency lint", () => {
     expect(result.launched).toBe(false);
     expect(result.reason).toContain("spawn EPERM");
   });
+
+  it("U-DBCURRENCY-009: a real async spawn failure (ENOENT) is handled and does not crash the caller", async () => {
+    // spawnImpl 非注入 = real node:child_process.spawn。存在しない executable の起動失敗は
+    // 同期 throw でなく error event で届く。listener 未登録なら process ごと落ちる (real oracle)。
+    const result = spawnDetachedStopRefresh({
+      repoRoot: tmpdir(),
+      execPath: join(tmpdir(), "ut-tdd-no-such-executable-xyz"),
+      scriptPath: "irrelevant.ts",
+    });
+
+    // 非同期失敗は同期には観測できないため launched=true が正しい契約。
+    expect(result.launched).toBe(true);
+    // error event が発火しきるまで待つ。listener が無ければここで unhandled error になり fail する。
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  });
 });

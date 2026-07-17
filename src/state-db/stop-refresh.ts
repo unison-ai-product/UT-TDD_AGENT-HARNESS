@@ -89,6 +89,8 @@ export function refreshHarnessDbOnStop(options: StopRefreshOptions): StopRefresh
 
 export interface DetachedSpawnHandle {
   unref(): void;
+  /** node:child_process の error event (非同期起動失敗、例: ENOENT)。未処理だと process が落ちる。 */
+  on?(event: "error", listener: (error: Error) => void): unknown;
 }
 
 export type DetachedSpawnImpl = (
@@ -131,6 +133,11 @@ export function spawnDetachedStopRefresh(options: SpawnStopRefreshOptions): Spaw
       cwd: options.repoRoot,
       detached: true,
       stdio: "ignore",
+    });
+    // 非同期起動失敗 (ENOENT 等) は error event で届く。未処理のままだと親 process が
+    // 落ちて fail-open 契約を破るため、必ず握りつぶす (blind review 2nd round の FLAG 対応)。
+    child.on?.("error", () => {
+      /* fail-open: refresh は best-effort、hook を落とさない */
     });
     child.unref();
     return { launched: true };

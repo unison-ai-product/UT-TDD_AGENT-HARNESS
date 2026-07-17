@@ -141,6 +141,13 @@ check-registry へ登録 → `tests/` に currency + fail-open regression を追
   ことで受容 (差分投影への最適化は後続 slice)。(3) 実 hook E2E (timeout kill 下の挙動) は
   機構上 unit では固定できず、実運用の db-currency gate green を照合点として PLAN-REVERSE-365
   R2 で観測する。
+- 2026-07-17: **blind review 2nd round FLAG → 是正**。指摘 = real `spawn` の非同期起動失敗
+  (ENOENT 等) は同期 throw でなく child の error event で届き、listener 未登録だと親 process が
+  落ちて fail-open 契約を破る (レビュアー実測で Bun exit 1)。対応 = error listener を必ず登録して
+  握りつぶす + U-DBCURRENCY-009 (spawnImpl 非注入 = real spawn、存在しない executable で
+  process が落ちないこと) を real oracle として追加。残余 (受容): 親 kill 後の detached 子の
+  完走 E2E (marker 生成 subprocess test) は未固定 — 実運用の db-currency gate green を
+  REVERSE-365 R2 の照合点とする判断を維持。
 
 ## DoD / 受入基準
 
