@@ -107,7 +107,7 @@ describe("NodePlanRevisionRunner", () => {
     expect(f.runner.run(f.input)).toEqual({ status: "replayed", receipt: created.receipt });
   });
 
-  it("U-PA-REV-031: committed replay時にrevision canonical digest改変を拒否する", () => {
+  it("U-PA-REV-031: committed replay前にrevision canonical digest改変をledger検証で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
     tamperAppendOnly(f.db, "trg_plan_revisions_no_update", () => {
@@ -118,10 +118,10 @@ describe("NodePlanRevisionRunner", () => {
         .run("0".repeat(64), f.manifest.base.asset_id);
     });
 
-    expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-revision-conflict");
+    expect(() => f.runner.run(f.input)).toThrow("plan-ledger-unavailable");
   });
 
-  it("U-PA-REV-032: committed replay時にadmission content digest改変を拒否する", () => {
+  it("U-PA-REV-032: committed replay前にadmission content digest改変をledger検証で拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
     tamperAppendOnly(f.db, "trg_plan_admission_events_no_update", () => {
@@ -130,7 +130,7 @@ describe("NodePlanRevisionRunner", () => {
         .run("0".repeat(64), f.manifest.command_id);
     });
 
-    expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-admission-conflict");
+    expect(() => f.runner.run(f.input)).toThrow("plan-ledger-unavailable");
   });
 
   it.each([
