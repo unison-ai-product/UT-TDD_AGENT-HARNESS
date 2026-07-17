@@ -37,6 +37,9 @@ export function executionLedgerRowsValid(db: ExecutionLedgerReadDb): boolean {
         "SELECT * FROM append_command_receipts WHERE subject_kind = 'execution_episode' ORDER BY command_id",
       )
       .all();
+    const selections = db
+      .prepare("SELECT * FROM drive_model_selections ORDER BY episode_id, selection_revision")
+      .all();
     const outbox = db
       .prepare("SELECT * FROM github_projection_outbox ORDER BY episode_id, source_event_sequence")
       .all();
@@ -52,18 +55,137 @@ export function executionLedgerRowsValid(db: ExecutionLedgerReadDb): boolean {
     )
       return false;
     if (!receiptsMatchEvents(receipts, eventRows)) return false;
-    if (
-      outbox.some(
-        (intent) =>
-          Number(intent.source_event_sequence) === 0 &&
-          streams.get(String(intent.episode_id))?.sequence === 0,
-      )
-    )
-      return false;
+    if (!selectionsMatchStreams(selections, streams)) return false;
+    if (!outboxMatchesStreams(outbox, streams)) return false;
     return true;
   } catch {
     return false;
   }
+}
+
+function selectionsMatchStreams(
+  rows: readonly Record<string, unknown>[],
+  streams: ReadonlyMap<string, VerifiedStream>,
+): boolean {
+  const expectedEvents = [...streams.values()].flatMap((stream) =>
+    stream.events.filter((event) => event.kind === "drive_selected"),
+  );
+  if (rows.length !== expectedEvents.length) return false;
+  return expectedEvents.every((event) => {
+    const payload = asRecord(event.payload);
+    if (!payload) return false;
+    const revision = Number(payload.selectionRevision);
+    const row = rows.find(
+      (candidate) =>
+        candidate.episode_id === event.episodeId &&
+        Number(candidate.selection_revision) === revision,
+    );
+    if (!row) return false;
+    const override = asRecord(payload.override);
+    const value = {
+      episodeId: event.episodeId,
+      selectionRevision: revision,
+      selectedEventSequence: event.sequence,
+      model: payload.model,
+      compatibilityResult: payload.compatibilityResult,
+      rationaleDigest: payload.rationaleDigest,
+      overrideUsed: Boolean(override),
+      overrideActor: override?.actor ?? null,
+      overrideReason: override?.reason ?? null,
+      overrideEvidenceDigest: override?.evidenceDigest ?? null,
+      selectedAt: event.occurredAt,
+    };
+    return same(row, {
+      episode_id: value.episodeId,
+      selection_revision: value.selectionRevision,
+      selected_event_sequence: value.selectedEventSequence,
+      model: value.model,
+      compatibility_result: value.compatibilityResult,
+      rationale_digest: value.rationaleDigest,
+      override_used: value.overrideUsed ? 1 : 0,
+      override_actor: value.overrideActor,
+      override_reason: value.overrideReason,
+      override_evidence_digest: value.overrideEvidenceDigest,
+      selected_at: value.selectedAt,
+      selection_digest: sha256(canonicalizeExecutionPayload(value)),
+    });
+  });
+}
+
+function outboxMatchesStreams(
+  rows: readonly Record<string, unknown>[],
+  streams: ReadonlyMap<string, VerifiedStream>,
+): boolean {
+  const expectedEvents = [...streams.values()].flatMap((stream) =>
+    stream.events.filter((event) => event.kind === "issue_requested"),
+  );
+  if (rows.length !== expectedEvents.length) return false;
+  return expectedEvents.every((event) => {
+    const payload = asRecord(event.payload);
+    const stream = streams.get(event.episodeId);
+    if (!payload || !stream) return false;
+    const row = rows.find(
+      (candidate) =>
+        candidate.episode_id === event.episodeId &&
+        Number(candidate.source_event_sequence) === event.sequence,
+    );
+    if (!row) return false;
+    const canonicalPayloadJson = String(row.canonical_payload_json);
+    let intentPayload: unknown;
+    try {
+      intentPayload = JSON.parse(canonicalPayloadJson);
+    } catch {
+      return false;
+    }
+    const intent = asRecord(intentPayload);
+    const root = stream.payload;
+    const payloadDigest = sha256(canonicalPayloadJson);
+    const idempotencyKey = String(payload.idempotencyKey);
+    if (
+      !intent ||
+      canonicalizeExecutionPayload(intentPayload) !== canonicalPayloadJson ||
+      payloadDigest !== payload.projectionPayloadDigest ||
+      idempotencyKey !== row.idempotency_key ||
+      !Array.isArray(intent.labels) ||
+      intent.labels.length === 0
+    )
+      return false;
+    return (
+      same(row, {
+        outbox_id: `outbox:${sha256(`github-outbox-id:v1\0${idempotencyKey}`).slice(0, 32)}`,
+        episode_id: event.episodeId,
+        source_event_sequence: event.sequence,
+        operation_kind: "create",
+        object_kind: "issue",
+        repository: root.issue.repository,
+        target_logical_key: payload.targetLogicalKey,
+        intent_revision: payload.intentRevision,
+        idempotency_key: idempotencyKey,
+        payload_version: 1,
+        payload_digest: payloadDigest,
+      }) &&
+      same(intent, {
+        schema: "github.issue.intent.v1",
+        episodeId: event.episodeId,
+        recurrenceId: root.recurrenceId,
+        repository: root.issue.repository,
+        driveModel: root.requestedDriveModel,
+        sourceCommit: payload.sourceCommit,
+        observedHead: payload.observedHead,
+        policyRevision: payload.policyRevision,
+      }) &&
+      canonicalizeExecutionPayload(intent.origin) === canonicalizeExecutionPayload(root.origin) &&
+      canonicalizeExecutionPayload(intent.reentry) === canonicalizeExecutionPayload(root.reentry) &&
+      canonicalizeExecutionPayload(intent.issue) ===
+        canonicalizeExecutionPayload({ title: root.issue.title, bodyDigest: root.issue.bodyDigest })
+    );
+  });
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
 }
 
 function verifyStreams(
