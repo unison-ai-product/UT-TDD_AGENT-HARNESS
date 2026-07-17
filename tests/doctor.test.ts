@@ -35,6 +35,7 @@ import {
   checkDbProjectionCoverage,
   checkDbProjectionIngestion,
   checkDddTddRules,
+  checkDeliverablePlanTrace,
   checkDependencyDrift,
   checkDescentObligation,
   checkDesignDocCrossIntegrity,
@@ -424,7 +425,7 @@ describe("runDoctor", () => {
       (message) => message.includes(" - violation") || message.includes(" — violation"),
     );
 
-    expect(r.ok).toBe(true);
+    expect(r.ok, `non-OK doctor checks:\n${blockers.join("\n")}`).toBe(true);
     expect(blockers).toHaveLength(0);
   });
 
@@ -1417,6 +1418,7 @@ describe("runDoctor", () => {
       ["l7-completion", checkL7Completion(missingRoot)],
       ["verification-groups", checkVerificationGroupsResult(missingRoot)],
       ["roadmap", checkRoadmap(missingRoot)],
+      ["deliverable-plan-trace", checkDeliverablePlanTrace(missingRoot)],
       ["impl-plan-trace", checkImplPlanTrace(missingRoot)],
       ["oracle-test-trace", checkOracleTestTrace(missingRoot)],
       ["tracked-canonical", checkTrackedCanonical(missingRoot)],
@@ -1573,6 +1575,7 @@ describe("runDoctor", () => {
       "l7-completion",
       "verification-groups",
       "roadmap",
+      "deliverable-plan-trace",
       "impl-plan-trace",
       "oracle-test-trace",
       "tracked-canonical",
