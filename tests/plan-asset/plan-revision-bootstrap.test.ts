@@ -205,6 +205,7 @@ function bootstrap(
     baseSourceContent: "---\nplan_id: PLAN-L4-31\ntitle: legacy-v1\n---\nlegacy body\n",
     baseSourceContentDigest: sha("---\nplan_id: PLAN-L4-31\ntitle: legacy-v1\n---\nlegacy body\n"),
     canonicalPayloadJson: '{"title":"redesign-v2"}',
+    contentDigest: sha("canonical issued legacy plan v2"),
     bodyDigest: sha("redesign-body-v2"),
     sourcePath: "docs/plans/PLAN-L4-31.md",
     sourceCommit: "b".repeat(40),

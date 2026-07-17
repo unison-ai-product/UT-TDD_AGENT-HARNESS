@@ -8,6 +8,8 @@ import { NodeAtomicDraftPublisher } from "../src/plan-admission/node-atomic-draf
 import { NodePlanRevisionRunner } from "../src/plan-admission/node-plan-revision-runner.js";
 import { canonicalPlanPayload } from "../src/plan-admission/plan-revision-command-assembler.js";
 import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.js";
+import { deriveLegacyAssetId } from "../src/plan-asset/adapters/legacy-plan-adapter.js";
+import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.js";
 import { migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../src/state-db/index.js";
 
@@ -44,6 +46,44 @@ describe("NodePlanRevisionRunner", () => {
     expect(rows(f.db, "plan_revisions")).toBe(2);
     expect(rows(f.db, "plan_aliases")).toBe(1);
     expect(rows(f.db, "append_command_receipts")).toBe(1);
+    const embedded = (
+      parseLegacyPlanSource(readFileSync(join(f.root, f.manifest.source.path), "utf8"))?.frontmatter
+        .admission_receipt as { binding?: { content_digest?: string } } | undefined
+    )?.binding?.content_digest;
+    const ledger = f.db.prepare("SELECT content_digest FROM plan_admission_receipts").get() as {
+      content_digest: string;
+    };
+    const projection = JSON.parse(readFileSync(join(f.root, f.manifest.projection.path), "utf8"));
+    expect(`sha256:${ledger.content_digest}`).toBe(embedded);
+    expect(projection.records.at(-1).binding.content_digest).toBe(embedded);
+  });
+
+  it.each([
+    "adopted",
+    "legacy",
+  ] as const)("U-PA-REV-027: success後の%s same-commandは公開済みworking source/projectionを再変更せずreplayする", (mode) => {
+    const f = fixture(mode);
+    const created = f.runner.run(f.input);
+    const publishedSource = readFileSync(join(f.root, f.manifest.source.path), "utf8");
+    const publishedProjection = readFileSync(join(f.root, f.manifest.projection.path), "utf8");
+
+    expect(f.runner.run(f.input)).toEqual({ status: "replayed", receipt: created.receipt });
+    expect(readFileSync(join(f.root, f.manifest.source.path), "utf8")).toBe(publishedSource);
+    expect(readFileSync(join(f.root, f.manifest.projection.path), "utf8")).toBe(
+      publishedProjection,
+    );
+  });
+
+  it("U-PA-REV-025: legacy manifestのasset IDがrepository identity由来でなければwrite 0", () => {
+    const f = fixture("legacy", { forgedLegacyAssetId: "plan:legacy:forged" });
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-legacy-asset-id-mismatch");
+    expect(writeSet(f.db)).toEqual(f.before);
+  });
+
+  it("U-PA-REV-026: source frontmatterのplan_idがmanifestと異なればwrite 0", () => {
+    const f = fixture("adopted", { revisedPlanId: "PLAN-L4-32" });
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-source-plan-id-mismatch");
+    expect(writeSet(f.db)).toEqual(f.before);
   });
 
   it.each([
@@ -121,6 +161,8 @@ type Drift = Partial<{
   projectionText: string;
   headSource: string;
   omitRepositoryIdentity: boolean;
+  forgedLegacyAssetId: string;
+  revisedPlanId: string;
 }>;
 
 function fixture(mode: Mode, drift: Drift = {}) {
@@ -137,7 +179,10 @@ function fixture(mode: Mode, drift: Drift = {}) {
   writeFileSync(join(root, projectionPath), drift.projectionText ?? oldProjection, "utf8");
   const sourceCommit = "a".repeat(40);
   const sourceBlobOid = "b".repeat(40);
-  const assetId = "plan:adopted";
+  const assetId =
+    mode === "legacy"
+      ? (drift.forgedLegacyAssetId ?? deriveLegacyAssetId("repo:test", planId))
+      : "plan:adopted";
   const basePayload = canonicalPlanPayload(oldSource).payload;
   const admission: PlanAdmissionRequest = {
     routeSignal: "design_correction",
@@ -199,11 +244,16 @@ function fixture(mode: Mode, drift: Drift = {}) {
       escape_reason: "design replacement",
       supersedes: [planId],
     },
-    source: { path: sourcePath, content: oldSource.replace("title: Base", "title: Revised") },
+    source: {
+      path: sourcePath,
+      content: oldSource
+        .replace(`plan_id: ${planId}`, `plan_id: ${drift.revisedPlanId ?? planId}`)
+        .replace("title: Base", "title: Revised"),
+    },
     projection: { path: projectionPath },
   };
   const db = openHarnessDb(":memory:");
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
   if (mode !== "legacy") seedAdopted(db, assetId, planId, basePayload, mode === "alias-mismatch");
   // close境界の呼出しを観測しつつ、write-set assertionまではin-memory DBを保持する。
   const close = vi.spyOn(db, "close").mockImplementation(() => undefined);

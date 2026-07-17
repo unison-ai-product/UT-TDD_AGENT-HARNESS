@@ -95,6 +95,36 @@ describe("SqliteDraftJournal", () => {
     second.db.exec("UPDATE plan_draft_journal_events SET requested_plan_id = 'PLAN-L7-TAMPER'");
     expect(() => second.journal.find(intent.commandId)).toThrow(DraftJournalIntegrityError);
   });
+
+  it("U-PADM-063: commit後のcleanup-pendingをappend-only eventとcurrentへ永続化する", () => {
+    const { db, journal } = fixture();
+    const result = new PlanDraftLedgerTransaction(db).append(draft());
+    if (!result.ok) throw new Error(result.ruleId);
+    const boundIntent = { ...intent, payloadDigest: result.commandPayloadDigest };
+    const committed = boundReceipt(boundIntent.payloadDigest);
+    journal.recordIntent(boundIntent);
+    journal.commit(boundIntent.commandId, boundIntent.payloadDigest, committed);
+
+    journal.markCleanupPending(
+      boundIntent.commandId,
+      boundIntent.payloadDigest,
+      "artifact cleanup未完了",
+    );
+
+    expect(journal.find(boundIntent.commandId)).toEqual({
+      status: "committed",
+      payloadDigest: boundIntent.payloadDigest,
+      receipt: boundReceipt(boundIntent.payloadDigest, result.certificateDigest),
+      cleanupPending: "artifact cleanup未完了",
+    });
+    expect(
+      db
+        .prepare(
+          "SELECT sequence, event_kind, failure_reason FROM plan_draft_journal_events ORDER BY sequence DESC LIMIT 1",
+        )
+        .get(),
+    ).toEqual({ sequence: 3, event_kind: "committed", failure_reason: "artifact cleanup未完了" });
+  });
 });
 
 function fixture() {

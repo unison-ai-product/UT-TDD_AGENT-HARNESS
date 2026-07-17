@@ -194,7 +194,7 @@ export class LegacyPlanRevisionBootstrapTransaction {
       plan_revision: 2,
       plan_id: input.planId,
       source_path: input.sourcePath,
-      content_digest: value.canonicalPayloadDigest,
+      content_digest: input.contentDigest,
       route_tuple_digest: input.routeTupleDigest,
       certificate_id: input.certificateId,
       certificate_digest: value.certificateDigest,
@@ -217,7 +217,7 @@ export class LegacyPlanRevisionBootstrapTransaction {
         2,
         input.planId,
         input.sourcePath,
-        value.canonicalPayloadDigest,
+        input.contentDigest,
         input.routeTupleDigest,
         value.certificateDigest,
         input.occurredAt,
@@ -342,7 +342,7 @@ function validateBootstrap(
       assetId,
       revision: 2,
       planId: input.planId,
-      canonicalPayloadDigest,
+      contentDigest: input.contentDigest,
       routeTupleDigest: input.routeTupleDigest,
     }),
   );
@@ -355,6 +355,7 @@ function validCommonInput(input: BootstrapLegacyPlanRevisionInput): boolean {
       input.planId &&
       validSha(input.baseCanonicalPayloadDigest) &&
       validSha(input.bodyDigest) &&
+      validSha(input.contentDigest) &&
       input.sourcePath &&
       input.sourceCommit &&
       input.actor &&

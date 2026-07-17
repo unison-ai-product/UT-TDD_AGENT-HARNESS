@@ -738,7 +738,9 @@ function legacyV2Ddl(): readonly string[] {
       (sql) =>
         !sql.includes("plan_admission_") &&
         !sql.includes("plan_draft_journal") &&
-        !sql.includes("idx_plan_draft_journal_status"),
+        !sql.includes("idx_plan_draft_journal_status") &&
+        !sql.includes("legacy_plan_bootstrap_provenance") &&
+        !sql.includes("idx_legacy_bootstrap_source_blob"),
     )
     .map((sql) =>
       sql

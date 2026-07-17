@@ -93,7 +93,7 @@ describe("PLAN revision ledger transaction", () => {
 function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
   const ledger = new PlanRevisionLedgerTransaction(db);
   db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(
     "plan:adopted",
@@ -145,6 +145,7 @@ function revision(overrides: Partial<AppendPlanRevisionInput> = {}): AppendPlanR
     baseRevision: 1,
     basePayloadDigest: sha('{"title":"v1"}'),
     canonicalPayloadJson: '{"title":"v2"}',
+    contentDigest: sha("canonical issued plan v2"),
     bodyDigest: sha("body-v2"),
     sourcePath: "docs/plans/PLAN-L4-31.md",
     sourceCommit: "b".repeat(40),

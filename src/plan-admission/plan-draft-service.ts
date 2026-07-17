@@ -24,13 +24,14 @@ export interface DraftValidationPort<TPayload> {
 
 export type DraftJournalEntry<TReceipt> =
   | { status: "intent" | "recovery_required"; payloadDigest: string }
-  | { status: "committed"; payloadDigest: string; receipt: TReceipt };
+  | { status: "committed"; payloadDigest: string; receipt: TReceipt; cleanupPending?: string };
 
 export interface DraftJournalPort<TReceipt extends DraftReceiptBinding> {
   find(commandId: string): DraftJournalEntry<TReceipt> | undefined;
   recordIntent(command: DraftJournalCommand): void;
   commit(commandId: string, payloadDigest: string, receipt: TReceipt): void;
   markRecoveryRequired(commandId: string, payloadDigest: string, reason: string): void;
+  markCleanupPending(commandId: string, payloadDigest: string, reason: string): void;
 }
 
 export interface DraftJournalCommand {
@@ -97,6 +98,18 @@ export class PlanDraftRecoveryRequiredError extends Error {
   }
 }
 
+/** 論理commit後の一時成果物cleanupだけが未完了であることを表す。 */
+export class PlanDraftCleanupPendingError<TReceipt extends DraftReceiptBinding> extends Error {
+  constructor(
+    message: string,
+    readonly receipt: TReceipt,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = "PlanDraftCleanupPendingError";
+  }
+}
+
 /**
  * Markdown/投影とSQLiteを跨ぐ起票をdurable journalで直列化する。
  * portの実装はstage時点で既存内容を退避し、restoreを冪等にしなければならない。
@@ -134,7 +147,7 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
     } catch (cause) {
       this.markCommittedRecovery(command, cause);
     }
-    if (token) this.ports.publisher.finalize(token);
+    if (token) this.finalizePublished(command, token, receipt);
     return { status: "created", receipt };
   }
 
@@ -147,6 +160,8 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
       throw new PlanDraftConflictError("command_idは異なるpayload_digestで使用済みです");
     }
     if (existing.status === "committed") {
+      if (existing.cleanupPending)
+        throw new PlanDraftCleanupPendingError(existing.cleanupPending, existing.receipt);
       return { status: "replayed", receipt: existing.receipt };
     }
     throw new PlanDraftRecoveryRequiredError(
@@ -205,6 +220,39 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
       );
     }
     throw new PlanDraftRecoveryRequiredError(reason, { cause });
+  }
+
+  private finalizePublished(
+    command: PlanDraftCommand<TPayload>,
+    token: DraftPublishToken,
+    receipt: TReceipt,
+  ): void {
+    try {
+      this.ports.publisher.finalize(token);
+      return;
+    } catch (firstFailure) {
+      try {
+        // finalizeは冪等port契約。通常例外なら同じtokenからcleanupを再開する。
+        this.ports.publisher.finalize(token);
+        return;
+      } catch (cause) {
+        const reason = `ledger/file/journal確定済みだがartifact cleanup未完了: ${errorText(cause)}`;
+        try {
+          this.ports.journal.markCleanupPending(
+            command.commandId,
+            command.commandPayloadDigest,
+            reason,
+          );
+        } catch (journalFailure) {
+          throw new PlanDraftCleanupPendingError(
+            `${reason}; cleanup_pendingの記録にも失敗: ${errorText(journalFailure)}`,
+            receipt,
+            { cause: firstFailure },
+          );
+        }
+        throw new PlanDraftCleanupPendingError(reason, receipt, { cause });
+      }
+    }
   }
 }
 

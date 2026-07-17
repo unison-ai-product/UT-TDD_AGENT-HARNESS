@@ -10,6 +10,7 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
@@ -43,6 +44,7 @@ interface StagedArtifact {
   targetPath: string;
   temporaryPath: string;
   rollbackPath: string;
+  parentIdentity: DirectoryIdentity;
   expectedPreimage: ArtifactPreimage;
   postimageDigest: `sha256:${string}`;
   backupMoved: boolean;
@@ -90,6 +92,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
           targetPath,
           temporaryPath: `${targetPath}${suffix}.tmp`,
           rollbackPath: `${targetPath}${suffix}.rollback`,
+          parentIdentity: DirectoryIdentity.capture(dirname(targetPath), artifact.path),
           expectedPreimage:
             artifact.expectedPreimage ?? this.currentPreimage(targetPath, artifact.path),
           postimageDigest: sha256(artifact.content),
@@ -127,6 +130,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
     if (token.published) return;
     for (const item of token.artifacts) {
       if (item.targetPublished) continue;
+      item.parentIdentity.assertCurrent(item.logicalPath);
       this.assertPublishTarget(item);
       if (item.expectedPreimage.kind === "sha256" && !item.backupMoved) {
         renameSync(item.targetPath, item.rollbackPath);
@@ -137,14 +141,17 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
           !digestEqual(sha256File(item.rollbackPath), item.expectedPreimage.digest)
         ) {
           this.injectFault("publish:before-preimage-restore", item.logicalPath);
+          item.parentIdentity.assertCurrent(item.logicalPath);
           restoreRollbackNoClobber(item);
           throw new Error(`artifact preimage mismatch: ${item.logicalPath}`);
         }
         this.injectFault("publish:after-backup-rename", item.logicalPath);
       }
+      item.parentIdentity.assertCurrent(item.logicalPath);
       linkSync(item.temporaryPath, item.targetPath);
       item.targetPublished = true;
       this.injectFault("publish:after-target-link", item.logicalPath);
+      item.parentIdentity.assertCurrent(item.logicalPath);
       rmSync(item.temporaryPath);
       syncDirectory(dirname(item.targetPath));
       this.injectFault("publish:after-target-rename", item.logicalPath);
@@ -158,6 +165,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
     for (const item of [...token.artifacts].reverse()) {
       if (item.restored) continue;
       this.injectFault("restore:before-artifact", item.logicalPath);
+      item.parentIdentity.assertCurrent(item.logicalPath);
       if (item.targetPublished) {
         if (
           !regularFile(item.targetPath) ||
@@ -168,11 +176,14 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
         rmSync(item.targetPath);
         item.targetPublished = false;
         this.injectFault("restore:after-target-remove", item.logicalPath);
+        item.parentIdentity.assertCurrent(item.logicalPath);
       }
       if (item.backupMoved) {
         restoreRollbackNoClobber(item);
       }
+      item.parentIdentity.assertCurrent(item.logicalPath);
       rmSync(item.temporaryPath, { force: true });
+      item.parentIdentity.assertCurrent(item.logicalPath);
       if (!item.backupMoved) rmSync(item.rollbackPath, { force: true });
       syncDirectory(dirname(item.targetPath));
       item.restored = true;
@@ -188,7 +199,9 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
     for (const item of token.artifacts) {
       if (item.finalized) continue;
       this.injectFault("finalize:before-artifact", item.logicalPath);
+      item.parentIdentity.assertCurrent(item.logicalPath);
       rmSync(item.temporaryPath, { force: true });
+      item.parentIdentity.assertCurrent(item.logicalPath);
       rmSync(item.rollbackPath, { force: true });
       syncDirectory(dirname(item.targetPath));
       item.finalized = true;
@@ -238,6 +251,7 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
   }
 
   private removeStageFiles(item: StagedArtifact): void {
+    item.parentIdentity.assertCurrent(item.logicalPath);
     rmSync(item.temporaryPath, { force: true });
     rmSync(item.rollbackPath, { force: true });
     syncDirectory(dirname(item.targetPath));
@@ -255,6 +269,44 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
       token !== null &&
       this.finalizedTokens.has(token as NodeDraftPublishToken)
     );
+  }
+}
+
+/** Filesystem pathだけでなく、stage時に解決したdirectory objectを固定する。 */
+class DirectoryIdentity {
+  private constructor(
+    private readonly path: string,
+    private readonly canonicalPath: string,
+    private readonly device: bigint,
+    private readonly inode: bigint,
+  ) {}
+
+  static capture(path: string, logicalPath: string): DirectoryIdentity {
+    try {
+      const canonicalPath = realpathSync.native(path);
+      const stat = statSync(canonicalPath, { bigint: true });
+      if (!stat.isDirectory()) throw new Error("not directory");
+      return new DirectoryIdentity(path, canonicalPath, stat.dev, stat.ino);
+    } catch {
+      throw new Error(`artifact parent unavailable: ${logicalPath}`);
+    }
+  }
+
+  assertCurrent(logicalPath: string): void {
+    try {
+      const canonicalPath = realpathSync.native(this.path);
+      const stat = statSync(canonicalPath, { bigint: true });
+      if (
+        canonicalPath !== this.canonicalPath ||
+        !stat.isDirectory() ||
+        stat.dev !== this.device ||
+        stat.ino !== this.inode
+      ) {
+        throw new Error("identity mismatch");
+      }
+    } catch {
+      throw new Error(`artifact parent drift: ${logicalPath}`);
+    }
   }
 }
 
@@ -293,6 +345,7 @@ function digestEqual(left: string, right: string): boolean {
 }
 
 function restoreRollbackNoClobber(item: StagedArtifact): void {
+  item.parentIdentity.assertCurrent(item.logicalPath);
   if (existsSync(item.targetPath)) {
     if (!sameFile(item.targetPath, item.rollbackPath)) {
       throw new Error(`artifact postimage mismatch: ${item.logicalPath}`);
@@ -301,6 +354,7 @@ function restoreRollbackNoClobber(item: StagedArtifact): void {
     linkSync(item.rollbackPath, item.targetPath);
     syncDirectory(dirname(item.targetPath));
   }
+  item.parentIdentity.assertCurrent(item.logicalPath);
   rmSync(item.rollbackPath);
   item.backupMoved = false;
   syncDirectory(dirname(item.targetPath));

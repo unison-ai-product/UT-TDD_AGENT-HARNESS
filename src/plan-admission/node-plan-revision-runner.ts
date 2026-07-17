@@ -1,7 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import type { PlanRevisionManifest } from "../cli/plan-revise.js";
 import { loadProjectIdentityFromHead } from "../plan-asset/adapters/project-identity-loader.js";
 import { LegacyPlanRevisionBootstrapTransaction } from "../plan-asset/ledger/plan-revision-bootstrap.js";
 import { PlanRevisionLedgerTransaction } from "../plan-asset/ledger/plan-revision-ledger.js";
@@ -11,11 +10,13 @@ import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.js";
 import {
   type DraftArtifact,
   type DraftPublisherPort,
+  PlanDraftCleanupPendingError,
   PlanDraftService,
 } from "./plan-draft-service.js";
 import {
   assemblePlanRevisionCommand,
   type PlanRevisionExecutionPayload,
+  type PlanRevisionManifest,
   stableJson,
   validatePlanRevisionCommand,
 } from "./plan-revision-command-assembler.js";
@@ -56,25 +57,40 @@ export class NodePlanRevisionRunner {
     assertAdmission(input);
     const db = this.deps.openDb?.() ?? openPlanLedger({ repoRoot: this.deps.repoRoot });
     try {
-      const snapshot = this.preflight(input.manifest);
+      const base = this.preflightBase(input.manifest);
       const adopted = Boolean(
         db
           .prepare("SELECT 1 FROM plan_assets WHERE asset_id = ?")
           .get(input.manifest.base.asset_id),
       );
-      if (adopted) assertAdoptedBase(db, input.manifest);
+      const legacy = !adopted || hasLegacyBootstrap(db, input.manifest.base.asset_id);
       const command = assemblePlanRevisionCommand({
         manifest: input.manifest,
         admission: input.admission,
         environment: {
-          repositoryIdentity: snapshot.repositoryIdentity,
-          sourceCommit: snapshot.sourceCommit,
-          sourceBlobOid: snapshot.sourceBlobOid,
-          headSource: snapshot.headSource,
+          repositoryIdentity: base.repositoryIdentity,
+          sourceCommit: base.sourceCommit,
+          sourceBlobOid: base.sourceBlobOid,
+          headSource: base.headSource,
           actor: this.deps.actor(),
         },
-        legacy: !adopted,
+        legacy,
       });
+      validatePlanRevisionCommand(command);
+      const journal = new SqliteDraftJournal(db);
+      const prior = journal.find(command.commandId);
+      if (prior?.status === "committed") {
+        if (prior.payloadDigest !== command.commandPayloadDigest)
+          throw new Error("plan-revision-replay-payload-conflict");
+        if (prior.cleanupPending)
+          throw new PlanDraftCleanupPendingError(
+            prior.cleanupPending,
+            prior.receipt as PlanRevisionReceipt,
+          );
+        return { status: "replayed" as const, receipt: prior.receipt as PlanRevisionReceipt };
+      }
+      if (adopted) assertAdoptedBase(db, input.manifest);
+      const snapshot = this.preflightMutable(input.manifest, base);
       const publisher =
         this.deps.publisher?.() ?? new NodeAtomicDraftPublisher({ rootDir: this.deps.repoRoot });
       const renderer = new RevisionRenderer(
@@ -86,7 +102,7 @@ export class NodePlanRevisionRunner {
       );
       const service = new PlanDraftService<PlanRevisionExecutionPayload, PlanRevisionReceipt>({
         validator: { validate: validatePlanRevisionCommand },
-        journal: new SqliteDraftJournal(db),
+        journal,
         publisher,
         renderer,
         ledger: new PlanRevisionLedgerAdapter(
@@ -100,37 +116,57 @@ export class NodePlanRevisionRunner {
     }
   }
 
-  private preflight(manifest: PlanRevisionManifest) {
+  private preflightBase(manifest: PlanRevisionManifest) {
     const sourceCommit = this.deps.sourceCommit();
     if (sourceCommit !== manifest.base.source_commit)
       throw new Error("plan-revision-source-commit-drift");
     const sourceBlobOid = this.deps.sourceBlobOid(manifest.source.path);
     if (sourceBlobOid !== manifest.base.source_blob_oid)
       throw new Error("plan-revision-source-blob-drift");
-    const sourcePath = resolveRepoPath(this.deps.repoRoot, manifest.source.path);
-    const projectionPath = resolveRepoPath(this.deps.repoRoot, manifest.projection.path);
     const headSource = this.deps.headText(manifest.source.path);
     const headDigest = prefixedSha(headSource);
     if (!digestEqual(headDigest, manifest.base.source_content_digest))
       throw new Error("plan-revision-head-content-drift");
-    const sourceText = this.deps.readText(sourcePath);
-    const projectionText = this.deps.readText(projectionPath);
-    const sourceByteDigest = prefixedSha(sourceText);
-    const projectionByteDigest = prefixedSha(projectionText);
-    if (!digestEqual(sourceByteDigest, headDigest))
-      throw new Error("plan-revision-source-content-drift");
-    if (!digestEqual(projectionTailDigest(projectionText), manifest.base.projection_tail_digest))
-      throw new Error("plan-revision-projection-tail-drift");
     return {
       sourceCommit,
       sourceBlobOid,
-      sourceByteDigest,
-      projectionByteDigest,
-      projectionText,
       headSource,
       repositoryIdentity: requireRepositoryIdentity(this.deps.repositoryIdentity),
     };
   }
+
+  private preflightMutable(
+    manifest: PlanRevisionManifest,
+    base: ReturnType<NodePlanRevisionRunner["preflightBase"]>,
+  ) {
+    const sourcePath = resolveRepoPath(this.deps.repoRoot, manifest.source.path);
+    const projectionPath = resolveRepoPath(this.deps.repoRoot, manifest.projection.path);
+    const sourceText = this.deps.readText(sourcePath);
+    const projectionText = this.deps.readText(projectionPath);
+    const sourceByteDigest = prefixedSha(sourceText);
+    const projectionByteDigest = prefixedSha(projectionText);
+    if (!digestEqual(sourceByteDigest, prefixedSha(base.headSource)))
+      throw new Error("plan-revision-source-content-drift");
+    if (!digestEqual(projectionTailDigest(projectionText), manifest.base.projection_tail_digest))
+      throw new Error("plan-revision-projection-tail-drift");
+    return {
+      sourceCommit: base.sourceCommit,
+      sourceBlobOid: base.sourceBlobOid,
+      sourceByteDigest,
+      projectionByteDigest,
+      projectionText,
+      headSource: base.headSource,
+      repositoryIdentity: base.repositoryIdentity,
+    };
+  }
+}
+
+function hasLegacyBootstrap(db: HarnessDb, assetId: string): boolean {
+  return Boolean(
+    db
+      .prepare("SELECT 1 FROM legacy_plan_bootstrap_provenance WHERE asset_id = ? AND revision = 1")
+      .get(assetId),
+  );
 }
 
 class RevisionRenderer {

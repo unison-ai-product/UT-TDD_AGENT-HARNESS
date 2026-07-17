@@ -56,6 +56,9 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
         status: "committed",
         payloadDigest: String(row.command_payload_digest),
         receipt: binding(ledger),
+        ...(typeof row.failure_reason === "string" && row.failure_reason
+          ? { cleanupPending: row.failure_reason }
+          : {}),
       };
     }
     return {
@@ -112,6 +115,49 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
 
   markRecoveryRequired(commandId: string, payloadDigest: string, reason: string): void {
     this.transition({ commandId, payloadDigest, status: "recovery_required", reason });
+  }
+
+  markCleanupPending(commandId: string, payloadDigest: string, reason: string): void {
+    if (!reason) throw new DraftJournalIntegrityError("draft-journal-cleanup-reason-required");
+    this.run(() => {
+      const current = this.current(commandId);
+      if (!current || String(current.status) !== "committed")
+        throw new DraftJournalIntegrityError("draft-journal-cleanup-before-commit");
+      if (!secureEqual(String(current.command_payload_digest), payloadDigest))
+        throw new DraftJournalIntegrityError("draft-journal-command-conflict");
+      const previous = this.latestEvent(commandId);
+      if (!previous) throw new DraftJournalIntegrityError("draft-journal-projection-missing");
+      const command: DraftJournalCommand = {
+        commandId,
+        payloadDigest,
+        planId: String(current.requested_plan_id),
+        sourcePath: String(current.requested_source_path),
+        recordedAt: String(current.intent_recorded_at),
+      };
+      const receipt: DraftReceiptBinding = {
+        assetId: String(current.plan_asset_id),
+        revision: Number(current.plan_revision),
+        certificateId: String(current.certificate_id),
+        commandPayloadDigest: payloadDigest,
+      };
+      this.insertEvent(
+        eventRow({
+          command,
+          sequence: Number(previous.sequence) + 1,
+          eventKind: "committed",
+          occurredAt: this.now(),
+          receipt,
+          reason,
+          previousEventDigest: String(previous.event_digest),
+        }),
+      );
+      const next = { ...current, failure_reason: reason };
+      this.db
+        .prepare(
+          "UPDATE plan_draft_journal SET failure_reason=?, journal_digest=? WHERE command_id=?",
+        )
+        .run(reason, ledgerRowDigest(next, "journal_digest"), commandId);
+    });
   }
 
   private transition(input: {

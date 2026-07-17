@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
-import type { PlanRevisionManifest } from "../cli/plan-revise.js";
 import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-inventory.js";
 import type { BootstrapLegacyPlanRevisionInput } from "../plan-asset/ledger/plan-revision-bootstrap.js";
 import type { AppendPlanRevisionInput } from "../plan-asset/ledger/plan-revision-ledger.js";
+import { bindPlanSourceToAdmission } from "./plan-content-binding.js";
 import type { PlanDraftCommand } from "./plan-draft-service.js";
 import { evaluatePlanAdmission, type PlanAdmissionRequest } from "./policy.js";
 
@@ -12,6 +12,60 @@ export interface PlanRevisionEnvironment {
   sourceBlobOid: string;
   headSource: string;
   actor: string;
+}
+
+/** CLI parserと実行domainを構造で結ぶ。plan-admissionからcliへの逆依存を作らない。 */
+export interface PlanRevisionManifest {
+  readonly version: 1;
+  readonly command_id: string;
+  readonly plan_id: string;
+  readonly recorded_at: string;
+  readonly base: {
+    readonly asset_id: string;
+    readonly revision: number;
+    readonly revision_digest: string;
+    readonly source_commit: string;
+    readonly source_blob_oid: string;
+    readonly source_content_digest: string;
+    readonly projection_tail_digest: string;
+  };
+  readonly admission: {
+    readonly route_signal: string;
+    readonly route_mode: PlanAdmissionRequest["routeMode"];
+    readonly kind: PlanAdmissionRequest["kind"];
+    readonly layer: PlanAdmissionRequest["layer"];
+    readonly workflow_phase?: PlanAdmissionRequest["workflowPhase"];
+    readonly drive: PlanAdmissionRequest["drive"];
+    readonly branch: string;
+    readonly status?: PlanAdmissionRequest["status"];
+    readonly sub_doc?: PlanAdmissionRequest["subDoc"];
+    readonly issue?: {
+      readonly provider: "github";
+      readonly issue_id: number;
+      readonly episode_id: string;
+      readonly projection_digest: string;
+    };
+    readonly origin?: {
+      readonly plan_id: string;
+      readonly revision: number;
+      readonly digest: string;
+    };
+    readonly transition_direction?: PlanAdmissionRequest["transitionDirection"];
+    readonly implementation_disposition?: PlanAdmissionRequest["implementationDisposition"];
+    readonly reentry?: {
+      readonly target_plan_id: string;
+      readonly target_revision: number;
+      readonly phase: "forward_merge";
+    };
+    readonly implementation_target?: {
+      readonly target_plan_id: string;
+      readonly target_revision: number;
+    };
+    readonly escape_reason?: string;
+    readonly supersedes?: readonly string[];
+  };
+  readonly source: { readonly path: string; readonly content: string };
+  readonly projection: { readonly path: "docs/governance/plan-admission-receipts.json" };
 }
 
 export interface PlanRevisionExecutionPayload {
@@ -28,10 +82,20 @@ export function assemblePlanRevisionCommand(input: {
   legacy: boolean;
 }): PlanDraftCommand<PlanRevisionExecutionPayload> {
   const { manifest, admission, environment } = input;
-  const current = canonicalPlanPayload(manifest.source.content);
+  const bound = bindPlanSourceToAdmission({
+    source: manifest.source.content,
+    planId: manifest.plan_id,
+    admission,
+  });
+  const current = canonicalPlanPayload(bound.source);
   const base = canonicalPlanPayload(environment.headSource);
-  if (input.legacy && unprefix(manifest.base.revision_digest) !== sha(base.payload))
-    throw new Error("plan-revision-base-canonical-drift");
+  if (input.legacy) {
+    const derivedAssetId = legacyAssetId(environment.repositoryIdentity, manifest.plan_id);
+    if (manifest.base.asset_id !== derivedAssetId)
+      throw new Error("plan-revision-legacy-asset-id-mismatch");
+    if (unprefix(manifest.base.revision_digest) !== sha(base.payload))
+      throw new Error("plan-revision-base-canonical-drift");
+  }
   const common: AppendPlanRevisionInput = {
     commandId: manifest.command_id,
     assetId: manifest.base.asset_id,
@@ -39,6 +103,7 @@ export function assemblePlanRevisionCommand(input: {
     baseRevision: manifest.base.revision,
     basePayloadDigest: unprefix(manifest.base.revision_digest),
     canonicalPayloadJson: current.payload,
+    contentDigest: unprefix(bound.contentDigest),
     bodyDigest: sha(current.body),
     sourcePath: manifest.source.path,
     sourceCommit: environment.sourceCommit,
@@ -92,12 +157,18 @@ export function validatePlanRevisionCommand(
   const decision = evaluatePlanAdmission(command.payload.admission);
   if (!decision.ok) throw new Error("plan-revision-command-admission-invalid");
   const ledger = command.payload.ledgerInput;
-  const current = canonicalPlanPayload(command.source.content);
+  const bound = bindPlanSourceToAdmission({
+    source: command.source.content,
+    planId: command.planId,
+    admission: command.payload.admission,
+  });
+  const current = canonicalPlanPayload(bound.source);
   if (
     ledger.commandId !== command.commandId ||
     ledger.planId !== command.planId ||
     ledger.sourcePath !== command.source.path ||
     ledger.canonicalPayloadJson !== current.payload ||
+    ledger.contentDigest !== unprefix(bound.contentDigest) ||
     ledger.bodyDigest !== sha(current.body) ||
     ledger.routeTupleDigest !== sha(stableJson(command.payload.admission))
   )

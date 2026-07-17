@@ -6,6 +6,7 @@ import {
   type DraftLedgerPort,
   type DraftPublisherPort,
   type DraftPublishToken,
+  PlanDraftCleanupPendingError,
   type PlanDraftCommand,
   PlanDraftConflictError,
   PlanDraftRecoveryRequiredError,
@@ -63,10 +64,17 @@ class Journal implements DraftJournalPort<Receipt> {
     this.events.push(`journal.recovery:${reason}`);
     this.entry = { status: "recovery_required", payloadDigest: digest };
   }
+
+  markCleanupPending(_id: string, digest: string, reason: string): void {
+    this.events.push(`journal.cleanup:${reason}`);
+    if (!this.entry || this.entry.status !== "committed") throw new Error("not committed");
+    this.entry = { ...this.entry, payloadDigest: digest, cleanupPending: reason };
+  }
 }
 
 class Publisher implements DraftPublisherPort {
   failRestore = false;
+  finalizeFailures = 0;
 
   constructor(private readonly events: string[]) {}
 
@@ -86,6 +94,7 @@ class Publisher implements DraftPublisherPort {
 
   finalize(): void {
     this.events.push("publisher.finalize");
+    if (this.finalizeFailures-- > 0) throw new Error("finalize failed");
   }
 }
 
@@ -228,5 +237,32 @@ describe("PlanDraftService", () => {
     const firstRun = [...f.events];
     expect(() => f.service.execute(command)).toThrow(/自動再実行できません/);
     expect(f.events.slice(firstRun.length)).toEqual(["validator.validate", "journal.find"]);
+  });
+
+  it("U-PADM-061: finalize通常例外は同じtokenから再開して論理成功を返す", () => {
+    const f = fixture();
+    f.publisher.finalizeFailures = 1;
+
+    expect(f.service.execute(command)).toEqual({ status: "created", receipt: receipt() });
+    expect(f.events.slice(-3)).toEqual([
+      "journal.commit",
+      "publisher.finalize",
+      "publisher.finalize",
+    ]);
+    expect(f.service.execute(command)).toEqual({ status: "replayed", receipt: receipt() });
+  });
+
+  it("U-PADM-062: 継続するfinalize障害をdurable cleanup-pendingとして遮断する", () => {
+    const f = fixture();
+    f.publisher.finalizeFailures = 2;
+
+    expect(() => f.service.execute(command)).toThrow(PlanDraftCleanupPendingError);
+    expect(f.journal.entry).toMatchObject({
+      status: "committed",
+      cleanupPending: expect.stringContaining("artifact cleanup未完了"),
+    });
+    const beforeReplay = [...f.events];
+    expect(() => f.service.execute(command)).toThrow(PlanDraftCleanupPendingError);
+    expect(f.events.slice(beforeReplay.length)).toEqual(["validator.validate", "journal.find"]);
   });
 });

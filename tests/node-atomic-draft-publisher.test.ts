@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -269,6 +277,61 @@ describe("NodeAtomicDraftPublisher", () => {
 
     expect(() => f.publisher.restore(token)).toThrow(/postimage/);
     expect(readFileSync(join(f.root, f.projection), "utf8")).toBe("concurrent-restore");
+  });
+
+  it("U-PADM-055: stage後に同じpathへ差し替えられたparent directoryを拒否する", () => {
+    const f = fixture();
+    const token = f.publisher.stage(f.artifacts);
+    const parent = join(f.root, "docs", "plans");
+    renameSync(parent, `${parent}-original`);
+    mkdirSync(parent);
+
+    expect(() => f.publisher.publish(token)).toThrow(/parent drift/);
+    expect(readdirSync(parent)).toEqual([]);
+    expect(readFileSync(join(`${parent}-original`, "PLAN-L7-999.md"), "utf8")).toBe("old-source");
+  });
+
+  it("U-PADM-056: publish途中のjunction/symlink parent差し替えをfail-closeする", () => {
+    let substituted = false;
+    const f = fixture((point, path) => {
+      if (point !== "publish:after-backup-rename" || path !== f.source || substituted) return;
+      substituted = true;
+      const parent = join(f.root, "docs", "plans");
+      const original = `${parent}-original`;
+      renameSync(parent, original);
+      symlinkSync(original, parent, process.platform === "win32" ? "junction" : "dir");
+    });
+    const token = f.publisher.stage(f.artifacts);
+
+    expect(() => f.publisher.publish(token)).toThrow(/parent drift/);
+    expect(() => readFileSync(join(f.root, f.source), "utf8")).toThrow();
+    expect(readdirSync(join(f.root, "docs", "plans-original"))).not.toContain("PLAN-L7-999.md");
+  });
+
+  it("U-PADM-057: restore前のparent rename差し替えを外部directoryへ触れず拒否する", () => {
+    const f = fixture();
+    const token = f.publisher.stage(f.artifacts);
+    f.publisher.publish(token);
+    const parent = join(f.root, "docs", "plans");
+    renameSync(parent, `${parent}-published`);
+    mkdirSync(parent);
+    writeFileSync(join(parent, "external.md"), "external", "utf8");
+
+    expect(() => f.publisher.restore(token)).toThrow(/parent drift/);
+    expect(readFileSync(join(parent, "external.md"), "utf8")).toBe("external");
+  });
+
+  it("U-PADM-058: finalize前のparent rename差し替えを外部directoryへ触れず拒否する", () => {
+    const f = fixture();
+    const token = f.publisher.stage(f.artifacts);
+    f.publisher.publish(token);
+    const parent = join(f.root, "docs", "plans");
+    renameSync(parent, `${parent}-published`);
+    mkdirSync(parent);
+    writeFileSync(join(parent, "external.md"), "external", "utf8");
+
+    expect(() => f.publisher.finalize(token)).toThrow(/parent drift/);
+    expect(readFileSync(join(parent, "external.md"), "utf8")).toBe("external");
   });
 });
 

@@ -10,6 +10,8 @@ export interface AppendPlanRevisionInput {
   readonly baseRevision: number;
   readonly basePayloadDigest: string;
   readonly canonicalPayloadJson: string;
+  /** admission_receiptを除く発行PLAN全体のcanonical digest。 */
+  readonly contentDigest: string;
   readonly bodyDigest: string;
   readonly sourcePath: string;
   readonly sourceCommit: string;
@@ -122,7 +124,7 @@ export class PlanRevisionLedgerTransaction {
         plan_revision: revision,
         plan_id: input.planId,
         source_path: input.sourcePath,
-        content_digest: validated.canonicalPayloadDigest,
+        content_digest: input.contentDigest,
         route_tuple_digest: input.routeTupleDigest,
         certificate_id: input.certificateId,
         certificate_digest: validated.certificateDigest,
@@ -144,7 +146,7 @@ export class PlanRevisionLedgerTransaction {
           revision,
           input.planId,
           input.sourcePath,
-          validated.canonicalPayloadDigest,
+          input.contentDigest,
           input.routeTupleDigest,
           validated.certificateDigest,
           input.occurredAt,
@@ -195,6 +197,7 @@ function validate(input: AppendPlanRevisionInput):
     !Number.isSafeInteger(input.baseRevision) ||
     input.baseRevision < 1 ||
     !validSha(input.basePayloadDigest) ||
+    !validSha(input.contentDigest) ||
     !validSha(input.bodyDigest) ||
     !input.sourcePath ||
     !input.sourceCommit ||
@@ -218,7 +221,7 @@ function validate(input: AppendPlanRevisionInput):
       assetId: input.assetId,
       revision: input.baseRevision + 1,
       planId: input.planId,
-      canonicalPayloadDigest,
+      contentDigest: input.contentDigest,
       routeTupleDigest: input.routeTupleDigest,
     }),
   );
