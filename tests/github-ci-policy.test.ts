@@ -27,6 +27,7 @@ concurrency:
   cancel-in-progress: \${{ github.ref != 'refs/heads/main' }}
 jobs:
   harness-check:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
