@@ -202,6 +202,19 @@ describe("execution episode row mapper", () => {
     expect(decodeExecutionEpisodeRootRow({ ...row, ...mutation })).toBeUndefined();
   });
 
+  it("domainが許可するsha256 prefix付きissue digestをroot rowでも保持する", () => {
+    const payload = rootPayload();
+    const prefixed = {
+      ...payload,
+      issue: { ...payload.issue, bodyDigest: `sha256:${payload.issue.bodyDigest}` },
+    } satisfies EscapeObservedPayload;
+    const row = mapExecutionEpisodeRootToRow(prefixed, "2026-07-17T01:00:00.000Z");
+
+    expect(decodeExecutionEpisodeRootRow(row)?.issueBodyDigest).toBe(
+      `sha256:${payload.issue.bodyDigest}`,
+    );
+  });
+
   it("typed fromRow decoderはcanonical/digest/nullable/identityをfail-closeする", () => {
     const selection = mapDriveSelectionToRow(selectionFixture());
     const outbox = mapIssueProjectionToRow(outboxFixture());

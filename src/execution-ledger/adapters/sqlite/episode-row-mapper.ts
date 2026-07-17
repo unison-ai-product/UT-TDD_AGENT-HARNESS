@@ -251,7 +251,7 @@ export function decodeExecutionEpisodeRootRow(
   const reentryPolicyRevision = requiredText(row, "reentry_policy_revision");
   const issueRepository = requiredText(row, "issue_repository");
   const issueTitle = requiredText(row, "issue_title");
-  const issueBodyDigest = digestText(row, "issue_body_digest");
+  const issueBodyDigest = contentDigestText(row, "issue_body_digest");
   const sourceCommit = commitText(row, "source_commit");
   const observedHead = commitText(row, "observed_head");
   const policyRevision = requiredText(row, "policy_revision");
@@ -869,6 +869,11 @@ function canonicalIso(value: unknown): value is string {
 function digestText(row: ExecutionEpisodeEventRow, key: string): string | undefined {
   const value = requiredText(row, key);
   return value && /^[a-f0-9]{64}$/.test(value) ? value : undefined;
+}
+
+function contentDigestText(row: ExecutionEpisodeEventRow, key: string): string | undefined {
+  const value = requiredText(row, key);
+  return value && /^(?:sha256:)?[a-f0-9]{64}$/.test(value) ? value : undefined;
 }
 
 function commitText(row: ExecutionEpisodeEventRow, key: string): string | undefined {

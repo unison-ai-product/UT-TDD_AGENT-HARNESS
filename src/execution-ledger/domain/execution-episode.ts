@@ -607,7 +607,8 @@ function validateRequest(command: RequestForwardEscape): EpisodeViolation[] {
     return [rule("episode-source-commit-invalid", "sourceCommit")];
   if (!/^[a-f0-9]{40}$|^[a-f0-9]{64}$/.test(command.observedHead))
     return [rule("episode-observed-head-invalid", "observedHead")];
-  if (!Number.isFinite(Date.parse(command.occurredAt)))
+  const occurredAt = Date.parse(command.occurredAt);
+  if (!Number.isFinite(occurredAt) || new Date(occurredAt).toISOString() !== command.occurredAt)
     return [rule("episode-occurred-at-invalid", "occurredAt")];
   if (!command.policyRevision.trim() || !command.actor.trim())
     return [rule("episode-custody-invalid", "policyRevision")];

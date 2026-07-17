@@ -201,6 +201,11 @@ describe("ExecutionEpisode domain (PLAN-L7-436)", () => {
       "episode-issue-invalid",
     ],
     ["invalid time", { occurredAt: "not-a-time" }, "episode-occurred-at-invalid"],
+    [
+      "non-canonical time",
+      { occurredAt: "2026-07-16T08:30:00Z" },
+      "episode-occurred-at-invalid",
+    ],
   ] as const)("U-EXEP-010: %sをstructured violationへ変換する", (_label, patch, ruleId) => {
     expect(ExecutionEpisode.request(request(patch as Partial<RequestForwardEscape>))).toMatchObject(
       {
