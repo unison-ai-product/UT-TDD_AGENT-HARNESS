@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   calculateExecutionEventDigest,
+  canonicalizeExecutionPayload,
   EXECUTION_EPISODE_TRANSITIONS,
   type ExecutionEpisodeEvent,
   reduceExecutionEpisode,
@@ -100,6 +101,20 @@ describe("ExecutionEpisode reducer (PLAN-L7-436)", () => {
   });
 
   it.each([
+    ["missing payload", 6, undefined],
+    ["unbound certificate", 9, { ...payloadFor(9), evidence: { ...(payloadFor(9).evidence as object), driveVerificationDigest: "d".repeat(64) } }],
+    ["unbound review head", 13, { ...payloadFor(13), evidence: { reviewedHead: "d".repeat(40) } }],
+  ] as const)("U-EXEP-007: replay時に%sをfail-closeする", (_label, index, payload) => {
+    const events = chain(EXPECTED_TRANSITIONS);
+    const changed = events.map((event, current) => current === index ? {
+      ...event,
+      payload,
+      payloadDigest: payload === undefined ? event.payloadDigest : sha(canonicalizeExecutionPayload(payload)),
+    } : { ...event });
+    expect(reduceExecutionEpisode(rechain(changed, index))).toMatchObject({ ok: false });
+  });
+
+  it.each([
     ["mixed episode", mixedEpisode],
     ["clock regression", clockRegression],
     ["valid-looking wrong predecessor", wrongPredecessor],
@@ -157,19 +172,48 @@ describe("ExecutionEpisode reducer (PLAN-L7-436)", () => {
 function chain(states: readonly (readonly [string, string])[]): readonly ExecutionEpisodeEvent[] {
   const events: ExecutionEpisodeEvent[] = [];
   for (const [sequence, [state, kind]] of states.entries()) {
+    const payload = payloadFor(sequence);
     const unsigned = {
       episodeId: EPISODE_ID,
       sequence,
       state,
       kind,
-      payloadDigest: sha(`payload:${state}:${kind}`),
+      payloadDigest: sha(canonicalizeExecutionPayload(payload)),
       previousEventDigest: sequence === 0 ? null : events[sequence - 1].eventDigest,
       occurredAt: new Date(Date.UTC(2026, 6, 16, 9, sequence)).toISOString(),
       actor: ACTOR,
     };
-    events.push({ ...unsigned, eventDigest: calculateExecutionEventDigest(unsigned) });
+    events.push({ ...unsigned, payload, eventDigest: calculateExecutionEventDigest(unsigned) });
   }
   return events;
+}
+
+const HEAD = "a".repeat(40);
+const BASE = "b".repeat(40);
+const DIGEST = "c".repeat(64);
+function payloadFor(sequence: number): Record<string, unknown> {
+  if (sequence === 0) return {
+    episodeId: EPISODE_ID, recurrenceId: "recurrence:recovery-70", routeMode: "reverse",
+    escapeType: "drift", escapeReason: "contract drift", routeSignal: "drift",
+    requestedDriveModel: "reverse", origin: { assetId: "PLAN-L7-1", revision: 1, observedRevision: 1, layer: "L7", state: "confirmed" },
+    reentry: { assetId: "PLAN-L6-1", revision: 1, layer: "L6", state: "confirmed", policyRevision: "policy-1" },
+    issue: { repository: "org/repo", title: "escape", bodyDigest: DIGEST }, sourceCommit: HEAD,
+    observedHead: HEAD, policyRevision: "policy-1", actor: ACTOR,
+  };
+  const evidence: Record<number, Record<string, unknown>> = {
+    4: { externalIssueId: "42" },
+    5: { planAssetId: "PLAN-L6-1", planRevision: 1, baseSha: BASE },
+    6: { evidenceDigest: DIGEST },
+    8: { evidenceDigest: DIGEST },
+    9: { certificateId: "cert-1", certificateDigest: DIGEST, driveVerificationDigest: DIGEST, intermediateEvidenceDigest: DIGEST },
+    10: { certificateId: "cert-1", certificateDigest: DIGEST, acceptedPlanAssetId: "PLAN-L6-1", acceptedPlanRevision: 1 },
+    12: { issueNumber: 42, planAssetId: "PLAN-L6-1", planRevision: 1, baseSha: BASE, headSha: HEAD },
+    13: { reviewedHead: HEAD },
+    14: { reconciledHead: HEAD, baseSha: BASE, mergeSha: HEAD },
+    15: { mainCiCommit: HEAD },
+  };
+  return { episodeId: EPISODE_ID, sourceCommit: HEAD, observedHead: HEAD, policyRevision: "policy-1", actor: ACTOR,
+    ...(sequence >= 4 ? { evidence: evidence[sequence] ?? {} } : {}) };
 }
 
 function withSequence(

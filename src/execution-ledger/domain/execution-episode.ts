@@ -709,7 +709,9 @@ export function reduceExecutionEpisode(
 
     if (!validDigest(event.payloadDigest))
       return reductionViolation("episode-payload-digest-invalid", `${path}.payloadDigest`);
-    if (event.payload !== undefined && digest(canonical(event.payload)) !== event.payloadDigest)
+    if (event.payload === undefined)
+      return reductionViolation("episode-event-payload-missing", `${path}.payload`);
+    if (digest(canonical(event.payload)) !== event.payloadDigest)
       return reductionViolation("episode-payload-integrity-invalid", `${path}.payload`);
     if (!event.actor.trim()) return reductionViolation("episode-actor-invalid", `${path}.actor`);
 
@@ -731,6 +733,9 @@ export function reduceExecutionEpisode(
     previousTime = occurredAt;
   }
 
+  const semanticViolation = validateReducedPayloads(events);
+  if (semanticViolation) return semanticViolation;
+
   const last = events[events.length - 1];
   const current = EXECUTION_EPISODE_TRANSITIONS[last.sequence];
   return Object.freeze({
@@ -742,6 +747,49 @@ export function reduceExecutionEpisode(
       nextLegalCommands: current.nextLegalCommands,
     }),
   });
+}
+
+function validateReducedPayloads(events: readonly ExecutionEpisodeEvent[]): ExecutionEpisodeReduction | undefined {
+  const root = events[0]?.payload;
+  if (!isEscapePayload(root)) return reductionViolation("episode-event-integrity-invalid", "events[0].payload");
+  const evidence = (sequence: number): Record<string, unknown> | undefined => {
+    const payload = events[sequence]?.payload;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return undefined;
+    const value = (payload as Record<string, unknown>).evidence;
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : undefined;
+  };
+  for (let sequence = 1; sequence < events.length; sequence += 1) {
+    const payload = events[sequence].payload;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload))
+      return reductionViolation("episode-event-integrity-invalid", `events[${sequence}].payload`);
+    const value = payload as Record<string, unknown>;
+    if (value.episodeId !== root.episodeId || value.sourceCommit !== root.sourceCommit ||
+        typeof value.observedHead !== "string" || !validCommit(value.observedHead as string) ||
+        value.policyRevision !== root.policyRevision || typeof value.actor !== "string" || !value.actor.trim())
+      return reductionViolation("episode-event-integrity-invalid", `events[${sequence}].payload`);
+    if (sequence >= 4 && !evidence(sequence))
+      return reductionViolation("episode-event-evidence-invalid", `events[${sequence}].payload.evidence`);
+  }
+  const e9 = evidence(9), e6 = evidence(6), e8 = evidence(8);
+  if (e9 && (e9.driveVerificationDigest !== e6?.evidenceDigest || e9.intermediateEvidenceDigest !== e8?.evidenceDigest))
+    return reductionViolation("episode-reentry-certificate-invalid", "events[9].payload.evidence");
+  const e10 = evidence(10);
+  if (e10 && (e10.certificateId !== e9?.certificateId || e10.certificateDigest !== e9?.certificateDigest))
+    return reductionViolation("episode-forward-reentry-invalid", "events[10].payload.evidence");
+  const e12 = evidence(12), e13 = evidence(13), e14 = evidence(14), e15 = evidence(15), e5 = evidence(5);
+  if (e12 && (e12.planAssetId !== e5?.planAssetId || e12.planRevision !== e5?.planRevision ||
+      e12.baseSha !== e5?.baseSha || e12.planAssetId !== e10?.acceptedPlanAssetId ||
+      e12.planRevision !== e10?.acceptedPlanRevision || String(e12.issueNumber) !== String(evidence(4)?.externalIssueId)))
+    return reductionViolation("episode-draft-pr-evidence-invalid", "events[12].payload.evidence");
+  if (e13 && e13.reviewedHead !== e12?.headSha)
+    return reductionViolation("episode-cross-review-evidence-invalid", "events[13].payload.evidence");
+  if (e14 && (e14.reconciledHead !== e12?.headSha || e14.reconciledHead !== e13?.reviewedHead || e14.baseSha !== e12?.baseSha))
+    return reductionViolation("episode-merge-evidence-invalid", "events[14].payload.evidence");
+  if (e15 && e15.mainCiCommit !== e14?.mergeSha)
+    return reductionViolation("episode-closure-evidence-invalid", "events[15].payload.evidence");
+  return undefined;
 }
 
 export function decideExecutionTransition(
@@ -763,7 +811,7 @@ export function decideExecutionTransition(
   const custody = validateTransitionCustody(root, command, history.at(-1));
   if (custody) return custody;
 
-  const specific = validateSpecificTransition(root, command);
+  const specific = validateSpecificTransition(root, command, history);
   if (specific) return specific;
   const payload = transitionPayload(root, command);
   const payloadDigest = digest(canonical(payload));
@@ -831,6 +879,7 @@ function validateTransitionCustody(
 function validateSpecificTransition(
   root: EscapeObservedPayload,
   command: ExecutionTransitionCommand,
+  history: readonly ExecutionEpisodeEvent[],
 ): ExecutionTransitionDecision | undefined {
   if (command.type === "classify_escape") {
     if (command.escapeType !== root.escapeType)
@@ -885,13 +934,14 @@ function validateSpecificTransition(
     )
       return transitionFailure("episode-issue-projection-invalid", "intent");
   }
-  if ("evidence" in command) return validateEvidenceTransition(root, command);
+  if ("evidence" in command) return validateEvidenceTransition(root, command, history);
   return undefined;
 }
 
 function validateEvidenceTransition(
   root: EscapeObservedPayload,
   command: ExecutionEvidenceCommand,
+  history: readonly ExecutionEpisodeEvent[],
 ): ExecutionTransitionDecision | undefined {
   const evidence = command.evidence as unknown as Record<string, unknown>;
   const text = (key: string): string =>
@@ -902,6 +952,14 @@ function validateEvidenceTransition(
   const commitValue = (key: string): boolean => validCommit(text(key));
   const requiredText = (keys: readonly string[]): boolean =>
     keys.every((key) => text(key).trim().length > 0);
+  const priorEvidence = (sequence: number): Record<string, unknown> | undefined => {
+    const payload = history[sequence]?.payload;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return undefined;
+    const value = (payload as Record<string, unknown>).evidence;
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : undefined;
+  };
 
   if (command.type === "confirm_issue_projection") {
     if (
@@ -950,6 +1008,8 @@ function validateEvidenceTransition(
       return transitionFailure("episode-test-evidence-invalid", "evidence");
   }
   if (command.type === "issue_reentry_certificate") {
+    const drive = priorEvidence(6);
+    const intermediate = priorEvidence(8);
     if (
       !requiredText(["certificateId", "sourceCommit", "observedHead", "policyRevision"]) ||
       !digestValue("certificateDigest") ||
@@ -962,11 +1022,14 @@ function validateEvidenceTransition(
       text("sourceCommit") !== root.sourceCommit ||
       text("policyRevision") !== root.policyRevision ||
       Number(evidence.originRevision) !== root.origin.revision ||
-      Number(evidence.targetRevision) !== root.reentry?.revision
+      Number(evidence.targetRevision) !== root.reentry?.revision ||
+      text("driveVerificationDigest") !== drive?.evidenceDigest ||
+      text("intermediateEvidenceDigest") !== intermediate?.evidenceDigest
     )
       return transitionFailure("episode-reentry-certificate-invalid", "evidence");
   }
   if (command.type === "reenter_forward") {
+    const certificate = priorEvidence(9);
     if (
       !requiredText(["certificateId", "certificateDigest", "acceptedPlanAssetId", "resumeLayer", "resumeState"]) ||
       !positive("acceptedPlanRevision") ||
@@ -974,11 +1037,16 @@ function validateEvidenceTransition(
       !digestValue("certificateDigest") ||
       !root.reentry ||
       text("acceptedPlanAssetId") !== root.reentry.assetId ||
-      Number(evidence.acceptedPlanRevision) !== root.reentry.revision
+      Number(evidence.acceptedPlanRevision) !== root.reentry.revision ||
+      text("certificateId") !== certificate?.certificateId ||
+      text("certificateDigest") !== certificate?.certificateDigest
     )
       return transitionFailure("episode-forward-reentry-invalid", "evidence");
   }
   if (command.type === "confirm_draft_pr_projection") {
+    const issue = priorEvidence(4);
+    const frozenPlan = priorEvidence(5);
+    const reentry = priorEvidence(10);
     if (
       !positive("prNumber") ||
       !requiredText(["prNodeId", "baseSha", "headSha", "planAssetId"]) ||
@@ -986,11 +1054,19 @@ function validateEvidenceTransition(
       !positive("planRevision") ||
       !commitValue("baseSha") ||
       !commitValue("headSha") ||
-      !digestValue("projectionDigest")
+      !digestValue("projectionDigest") ||
+      String(evidence.issueNumber) !== String(issue?.externalIssueId) ||
+      text("planAssetId") !== frozenPlan?.planAssetId ||
+      Number(evidence.planRevision) !== frozenPlan?.planRevision ||
+      text("planAssetId") !== reentry?.acceptedPlanAssetId ||
+      Number(evidence.planRevision) !== reentry?.acceptedPlanRevision ||
+      text("baseSha") !== frozenPlan?.baseSha ||
+      text("headSha") !== command.observedHead
     )
       return transitionFailure("episode-draft-pr-evidence-invalid", "evidence");
   }
   if (command.type === "accept_cross_review") {
+    const draftPr = priorEvidence(12);
     if (
       !requiredText(["reviewerRuntime", "reviewerModel", "authorRuntime", "authorModel", "reviewedHead"]) ||
       evidence.verdict !== "pass" ||
@@ -998,27 +1074,35 @@ function validateEvidenceTransition(
       !commitValue("reviewedHead") ||
       (text("reviewerRuntime") === text("authorRuntime") &&
         text("reviewerModel") === text("authorModel")) ||
-      text("reviewedHead") !== command.observedHead
+      text("reviewedHead") !== command.observedHead ||
+      text("reviewedHead") !== draftPr?.headSha
     )
       return transitionFailure("episode-cross-review-evidence-invalid", "evidence");
   }
   if (command.type === "confirm_merge") {
+    const draftPr = priorEvidence(12);
+    const review = priorEvidence(13);
     if (
       !requiredText(["mergeSha", "baseSha", "reconciledHead", "remoteObservationId"]) ||
       !commitValue("mergeSha") ||
       !commitValue("baseSha") ||
       !commitValue("reconciledHead") ||
       !digestValue("requiredChecksDigest") ||
-      text("reconciledHead") !== command.observedHead
+      text("reconciledHead") !== command.observedHead ||
+      text("reconciledHead") !== draftPr?.headSha ||
+      text("reconciledHead") !== review?.reviewedHead ||
+      text("baseSha") !== draftPr?.baseSha
     )
       return transitionFailure("episode-merge-evidence-invalid", "evidence");
   }
   if (command.type === "close_episode") {
+    const merge = priorEvidence(14);
     if (
       !requiredText(["mainCiRunId", "mainCiCommit", "issueCloseObservationId", "outcome", "upstreamAction"]) ||
       !commitValue("mainCiCommit") ||
       !digestValue("learningDigest") ||
-      text("mainCiCommit") !== command.observedHead
+      text("mainCiCommit") !== command.observedHead ||
+      text("mainCiCommit") !== merge?.mergeSha
     )
       return transitionFailure("episode-closure-evidence-invalid", "evidence");
   }
