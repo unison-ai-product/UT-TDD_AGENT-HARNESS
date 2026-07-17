@@ -39,8 +39,6 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/design/harness/L4-basic-design/data.md
     artifact_type: design_doc
-  - artifact_path: tests/vmodel-source-assets.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L0-01-vmodel-harness-upgrade-charter.md
   requires:

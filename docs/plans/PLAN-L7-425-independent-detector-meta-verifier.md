@@ -23,8 +23,6 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-425-detector-meta-verifier-backfill.md
     artifact_type: markdown_doc
-  - artifact_path: tests/setup-agent-floor.test.ts
-    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-77-detector-compiler-meta-verifier-contracts.md
   requires: []
