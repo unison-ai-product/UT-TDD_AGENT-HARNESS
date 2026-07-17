@@ -295,7 +295,7 @@ export class LegacyPlanRevisionBootstrapTransaction {
       !matches(asset, {
         asset_id: expected.assetId,
         created_at: input.occurredAt,
-        source_commit: input.baseSourceCommit,
+        created_source_commit: input.baseSourceCommit,
         identity_algorithm: input.identityAlgorithm,
       })
     )

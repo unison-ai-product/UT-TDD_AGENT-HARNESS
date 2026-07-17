@@ -14,7 +14,11 @@ import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-ad
 import { trackedReceiptRecordDigest } from "../src/plan-admission/tracked-receipt-projection.js";
 import { deriveLegacyAssetId } from "../src/plan-asset/adapters/legacy-plan-adapter.js";
 import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.js";
-import { ledgerRowDigest, migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
+import {
+  ledgerRowDigest,
+  ledgerSchemaDdl,
+  migratePlanLedger,
+} from "../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../src/state-db/index.js";
 
 const roots: string[] = [];
@@ -106,11 +110,13 @@ describe("NodePlanRevisionRunner", () => {
   it("U-PA-REV-031: committed replay時にrevision canonical digest改変を拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
-    f.db
-      .prepare(
-        "UPDATE plan_revisions SET canonical_payload_digest = ? WHERE asset_id = ? AND revision = 2",
-      )
-      .run("0".repeat(64), f.manifest.base.asset_id);
+    tamperAppendOnly(f.db, "trg_plan_revisions_no_update", () => {
+      f.db
+        .prepare(
+          "UPDATE plan_revisions SET canonical_payload_digest = ? WHERE asset_id = ? AND revision = 2",
+        )
+        .run("0".repeat(64), f.manifest.base.asset_id);
+    });
 
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-revision-conflict");
   });
@@ -118,9 +124,11 @@ describe("NodePlanRevisionRunner", () => {
   it("U-PA-REV-032: committed replay時にadmission content digest改変を拒否する", () => {
     const f = fixture("adopted");
     f.runner.run(f.input);
-    f.db
-      .prepare("UPDATE plan_admission_events SET content_digest = ? WHERE command_id = ?")
-      .run("0".repeat(64), f.manifest.command_id);
+    tamperAppendOnly(f.db, "trg_plan_admission_events_no_update", () => {
+      f.db
+        .prepare("UPDATE plan_admission_events SET content_digest = ? WHERE command_id = ?")
+        .run("0".repeat(64), f.manifest.command_id);
+    });
 
     expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-admission-conflict");
   });
@@ -215,6 +223,21 @@ describe("NodePlanRevisionRunner", () => {
     expect(f.close).toHaveBeenCalledOnce();
   });
 });
+
+function tamperAppendOnly(
+  db: ReturnType<typeof openHarnessDb>,
+  triggerName: string,
+  tamper: () => void,
+): void {
+  const trigger = ledgerSchemaDdl().find((sql) => sql.includes(triggerName));
+  if (!trigger) throw new Error(`fixture trigger missing: ${triggerName}`);
+  db.exec(`DROP TRIGGER ${triggerName}`);
+  try {
+    tamper();
+  } finally {
+    db.exec(trigger);
+  }
+}
 
 type Mode = "adopted" | "legacy" | "alias-mismatch";
 type Drift = Partial<{
