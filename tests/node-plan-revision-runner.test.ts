@@ -3,11 +3,12 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NodePlanRevisionRunner } from "../src/plan-admission/node-plan-revision-runner.js";
-import { NodeAtomicDraftPublisher } from "../src/plan-admission/node-atomic-draft-publisher.js";
 import type { PlanRevisionManifest } from "../src/cli/plan-revise.js";
-import { migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
+import { NodeAtomicDraftPublisher } from "../src/plan-admission/node-atomic-draft-publisher.js";
+import { NodePlanRevisionRunner } from "../src/plan-admission/node-plan-revision-runner.js";
+import { canonicalPlanPayload } from "../src/plan-admission/plan-revision-command-assembler.js";
 import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.js";
+import { migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../src/state-db/index.js";
 
 const roots: string[] = [];
@@ -49,7 +50,11 @@ describe("NodePlanRevisionRunner", () => {
     ["source commit", { sourceCommit: "e".repeat(40) }, "plan-revision-source-commit-drift"],
     ["source blob", { sourceBlobOid: "e".repeat(40) }, "plan-revision-source-blob-drift"],
     ["source content", { sourceText: "concurrent source" }, "plan-revision-source-content-drift"],
-    ["projection tail", { projectionText: '{"schema_version":"v2","records":[]}\n' }, "plan-revision-projection-tail-drift"],
+    [
+      "projection tail",
+      { projectionText: '{"schema_version":"v2","records":[]}\n' },
+      "plan-revision-projection-tail-drift",
+    ],
   ])("U-PA-REV-018: %s driftはwrite 0でfail-closeする", (_name, drift, ruleId) => {
     const f = fixture("adopted", drift);
     const before = writeSet(f.db);
@@ -101,7 +106,7 @@ function fixture(mode: Mode, drift: Drift = {}) {
   const sourceCommit = "a".repeat(40);
   const sourceBlobOid = "b".repeat(40);
   const assetId = "plan:adopted";
-  const basePayload = '{"title":"Base"}';
+  const basePayload = canonicalPlanPayload(oldSource).payload;
   const admission: PlanAdmissionRequest = {
     routeSignal: "design_correction",
     routeMode: "redesign",
@@ -110,7 +115,12 @@ function fixture(mode: Mode, drift: Drift = {}) {
     drive: "agent",
     branch: "work/redesign-plan-31",
     status: "draft",
-    issue: { provider: "github", issueId: 102, episodeId: "E4-102", projectionDigest: sha("issue") },
+    issue: {
+      provider: "github",
+      issueId: 102,
+      episodeId: "E4-102",
+      projectionDigest: sha("issue"),
+    },
     origin: { planId, revision: 1, digest: sha(basePayload) },
     transitionDirection: "design_to_implementation",
     implementationDisposition: "discarded",
@@ -143,7 +153,12 @@ function fixture(mode: Mode, drift: Drift = {}) {
       drive: admission.drive,
       branch: admission.branch,
       status: admission.status,
-      issue: { provider: "github", issue_id: 102, episode_id: "E4-102", projection_digest: sha("issue") },
+      issue: {
+        provider: "github",
+        issue_id: 102,
+        episode_id: "E4-102",
+        projection_digest: sha("issue"),
+      },
       origin: { plan_id: planId, revision: 1, digest: sha(basePayload) },
       transition_direction: "design_to_implementation",
       implementation_disposition: "discarded",
@@ -173,20 +188,74 @@ function fixture(mode: Mode, drift: Drift = {}) {
   return { root, db, close, publisher, runner, manifest, input: { manifest, admission, decision } };
 }
 
-function seedAdopted(db: ReturnType<typeof openHarnessDb>, assetId: string, planId: string, payload: string, mismatch: boolean) {
+function seedAdopted(
+  db: ReturnType<typeof openHarnessDb>,
+  assetId: string,
+  planId: string,
+  payload: string,
+  mismatch: boolean,
+) {
   const bound = mismatch ? "plan:other" : assetId;
-  db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(assetId, "2026-07-15T00:00:00.000Z", "a".repeat(40), "legacy-adopt-v1");
-  if (mismatch) db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(bound, "2026-07-15T00:00:00.000Z", "a".repeat(40), "legacy-adopt-v1");
-  db.prepare("INSERT INTO plan_revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(assetId, 1, payload, sha(payload).slice(7), sha("body").slice(7), `docs/plans/${planId}.md`, "a".repeat(40), "migration", "adopt", "2026-07-15T00:00:00.000Z");
-  if (mismatch) db.prepare("INSERT INTO plan_revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(bound, 1, payload, sha(payload).slice(7), sha("other-body").slice(7), `docs/plans/${planId}.md`, "a".repeat(40), "migration", "adopt", "2026-07-15T00:00:00.000Z");
-  db.prepare("INSERT INTO plan_aliases VALUES (?, ?, ?, ?, ?, ?)").run(`alias:${bound}`, bound, planId, 1, null, sha("alias").slice(7));
+  db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(
+    assetId,
+    "2026-07-15T00:00:00.000Z",
+    "a".repeat(40),
+    "legacy-adopt-v1",
+  );
+  if (mismatch)
+    db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(
+      bound,
+      "2026-07-15T00:00:00.000Z",
+      "a".repeat(40),
+      "legacy-adopt-v1",
+    );
+  db.prepare("INSERT INTO plan_revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+    assetId,
+    1,
+    payload,
+    sha(payload).slice(7),
+    sha("body").slice(7),
+    `docs/plans/${planId}.md`,
+    "a".repeat(40),
+    "migration",
+    "adopt",
+    "2026-07-15T00:00:00.000Z",
+  );
+  if (mismatch)
+    db.prepare("INSERT INTO plan_revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+      bound,
+      1,
+      payload,
+      sha(payload).slice(7),
+      sha("other-body").slice(7),
+      `docs/plans/${planId}.md`,
+      "a".repeat(40),
+      "migration",
+      "adopt",
+      "2026-07-15T00:00:00.000Z",
+    );
+  db.prepare("INSERT INTO plan_aliases VALUES (?, ?, ?, ?, ?, ?)").run(
+    `alias:${bound}`,
+    bound,
+    planId,
+    1,
+    null,
+    sha("alias").slice(7),
+  );
 }
 
 function rows(db: ReturnType<typeof openHarnessDb>, table: string) {
   return Number(db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get()?.n);
 }
 function writeSet(db: ReturnType<typeof openHarnessDb>) {
-  return ["plan_assets", "plan_revisions", "plan_aliases", "plan_admission_events", "plan_admission_receipts", "append_command_receipts"].map((table) => rows(db, table));
+  return [
+    "plan_assets",
+    "plan_revisions",
+    "plan_aliases",
+    "plan_admission_events",
+    "plan_admission_receipts",
+    "append_command_receipts",
+  ].map((table) => rows(db, table));
 }
 function sha(value: string): `sha256:${string}` {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
