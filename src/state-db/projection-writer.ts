@@ -2000,6 +2000,24 @@ function planGeneratedPathMap(repoRoot: string): Map<string, string> {
   return map;
 }
 
+export function missingTestPlanIdNextAction(status: string | undefined): string {
+  if (status === "draft")
+    return "confirm the owning PLAN and declare this test in generates together (merged-plan-status alignment)";
+  if (status === "confirmed") return "declare this test in the owning PLAN generates";
+  return "declare this test in an owning PLAN generates";
+}
+
+function planStatusById(repoRoot: string): Map<string, string> {
+  const statuses = new Map<string, string>();
+  for (const path of markdownFiles(join(repoRoot, "docs", "plans"))) {
+    const content = readFileSync(path, "utf8");
+    const planId = frontmatterValue(content, "plan_id");
+    const status = frontmatterValue(content, "status");
+    if (planId) statuses.set(planId, status);
+  }
+  return statuses;
+}
+
 function planGeneratedPathMultiMap(repoRoot: string): Map<string, string[]> {
   const map = new Map<string, string[]>();
   for (const path of markdownFiles(join(repoRoot, "docs", "plans"))) {
@@ -2065,6 +2083,7 @@ function importedSourcePaths(content: string): string[] {
 
 function projectTestCaseCatalog(repoRoot: string, db: HarnessDb): void {
   const planByPath = planGeneratedPathMap(repoRoot);
+  const statusesByPlanId = planStatusById(repoRoot);
   const indexedAt = nowIso();
   for (const path of assetFiles(join(repoRoot, "tests"), /\.test\.ts$/i)) {
     const rel = normalizePath(relative(repoRoot, path));
@@ -2096,12 +2115,18 @@ function projectTestCaseCatalog(repoRoot: string, db: HarnessDb): void {
         },
       });
       if (!planId) {
+        const ownershipCandidate = sources
+          .map((source) => planByPath.get(source))
+          .find((candidate): candidate is string => Boolean(candidate));
         recordFinding(db, {
           kind: "missing-test-plan-id",
           severity: "warn",
           subjectId: testCaseId,
           source: "test-case-catalog",
           evidencePath: rel,
+          nextAction: missingTestPlanIdNextAction(
+            ownershipCandidate ? statusesByPlanId.get(ownershipCandidate) : undefined,
+          ),
         });
       }
       if (!oracleId) {

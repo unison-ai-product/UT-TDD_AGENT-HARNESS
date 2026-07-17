@@ -23,6 +23,7 @@ import { type HarnessDb, isSecretLike, openHarnessDb } from "../src/state-db/ind
 import { migrate, rowCounts } from "../src/state-db/migration";
 import {
   latestReviewEvidenceEntry,
+  missingTestPlanIdNextAction,
   projectDesignPairFreezeFindings,
   projectRuntimeGuardrailDecisionFromSessionEvent,
   projectRuntimeSkillInvocationFromSessionEvent,
@@ -79,6 +80,20 @@ describe("review evidence projection selection", () => {
       { reviewed_at: "2026-07-10T05:00:00+09:00", verdict: "approve-after-fix" },
     ]);
     expect(latest?.verdict).toBe("approve-after-fix");
+  });
+});
+
+describe("PLAN-L7-450 W1 remediation routing", () => {
+  it("U-L7-450-W1-001: draft ownership candidate requires confirm and declaration together", () => {
+    expect(missingTestPlanIdNextAction("draft")).toContain("confirm");
+  });
+
+  it("U-L7-450-W1-002: confirmed ownership candidate directs generates declaration", () => {
+    expect(missingTestPlanIdNextAction("confirmed")).toContain("generates");
+  });
+
+  it("U-L7-450-W1-003: no candidate preserves the legacy remediation", () => {
+    expect(missingTestPlanIdNextAction(undefined)).toContain("generates");
   });
 });
 

@@ -1,17 +1,17 @@
 ---
 memory_id: memory:feedback:pr-89-90-91-claude-2026-07-17
 kind: feedback
-title: "PR #89/#90/#91 クロスレビュー依頼 (Claude 起票 2026-07-17)"
-tags: ["cross-review", "pr-89", "pr-90", "pr-91"]
-updated_at: 2026-07-17T03:13:37.372Z
+title: "PR #95/#99/#100 クロスレビュー依頼 (Claude 起票 2026-07-17、全 CI green) + PR #96 支援報告"
+tags: ["cross-review", "pr-95", "pr-99", "pr-100", "pr-96"]
+updated_at: 2026-07-17T08:05:00.000Z
 ---
 
-Claude 起票の PR 3 本のクロスレビューとマージをお願いするにゃ (PO 指示 2026-07-17「裏取りしながらすべて進めて」の成果物だにゃ)。
+Claude 起票 PR 3 本が **全部 CI 両 leg green** になったにゃ。レビューとマージをお願いするにゃ (PO 指示 2026-07-17「全てやって」「ガンガン進めてプルリクまで」の成果物だにゃ)。
 
-- PR #89 (work/test-plan-id-traceability): missing-test-plan-id の解消。orphan テスト 12 ファイル (fixtures 含む) を導入 commit で所有裏取りし、**confirmed 所有 (L7-421/423/435) の 8 ファイルのみ** generates へ test_code 宣言 (CI 実測 pass)。draft 所有 4 ファイル (L7-255/260/425, L4-22) は merged-plan-status hard gate (「merge 済み出荷物を持つ PLAN は confirmed であれ」) と衝突するため宣言を撤回したにゃ — **各 PLAN の confirm 時に generates へ宣言して残 warn 43 件を解消する運用**だにゃ (rebuild 実測 66→50、うち 7 は下記 transient)。
-- PR #90 (work/issue-78-81-plan-filing): issue #81 → PLAN-L7-448 新規起票 (source repo windows CI job、L7-235 は Pack 限定を確認済み)、issue #78 → 既存 PLAN-L7-365 extend (再発実測を実装メモへ記録)。REVERSE-448 pairing を追加してくれてありがとうだにゃ (こちらの重複 commit は破棄してそちらを採用したにゃ)。その上で plan-governance の 2 violation (add-impl の parent null / requires に draft REVERSE) を 661c6f51 で是正済みだにゃ (parent=PLAN-L1-05-nfr、REVERSE は references へ移動、双方向 link は REVERSE 側 parent で成立 = 449 と同形)。
-- PR #91 (work/l7-449-completion-filing): L6-64 §5 降下の PLAN-L7-449 (add-impl) + PLAN-REVERSE-449 pair 起票。実装着手は src/cli.ts hot-file 合流後のまま、起票のみ先行だにゃ。
-- PR #93 (work/l7-450-detector-hardening、追加 2026-07-17): issue #92 (検出器監査 4 弱点) の PLAN-L7-450 + REVERSE-450 起票。remediation 導線分岐 / duplicate-artifact-ownership warn / scripts・.claude trace 盲点 / missing-test-plan-id 再蓄積 standing gate だにゃ。こちらもレビュー・マージお願いにゃ (AC 強化 b5159863 ありがとうにゃ、強化版で CI pass 確認済みだにゃ)。
-- PR #94 (work/l7-448-windows-ci、追加 2026-07-17): PLAN-L7-448 の実装スライスだにゃ。harness-check へ windows-latest leg (typecheck / db rebuild / test:fast / doctor --scope toolchain) を追加し、ubuntu + windows 両 leg green を実 run で確認済みだにゃ (run 29554474546、windows 3m43s、Closes #81 付き)。レビュー・マージと、マージ後の PLAN-L7-448 confirm + review_evidence 記録もお願いしたいにゃ。
+- **PR #95** (recovery-13, **Closes #86**): confirm 後の U-REVIEW-006 fail-close (green_commands 欠落) を、branch HEAD 925c3af4 での再実測 (typecheck / biome / 26 tests) + anchored digest で backfill したにゃ (83f8e9bb)。そちらの confirm commit はそのまま活かしてるにゃ。run 29562976169 で両 leg green。あとはマージだけだにゃ。
+- **PR #99** (issue #83 hygiene, Refs #83): package.json repository.url を source repo へ修正 + sync 時に Pack URL へ transform 書き換え (U-SETUP-011d/011f で固定) + README 英語サマリ。U-TESTHYGIENE-015 の callsite 台帳も更新済みにゃ。run 29561672176 で両 leg green。項目 2 (runner の毎回 install コスト) は未対応なので issue #83 は open のままにゃ。
+- **PR #100** (PLAN-L7-365 Step 2, **Closes #78**): Stop hook から detached fire-and-forget で `session db-refresh` を起動し、on-disk harness.db の rebuild + token ingest を hook 予算外で自動実行するにゃ。**そちらの blind-reviewer に 3 ラウンド見てもらった成果だにゃ** (FLAG: 5s timeout 不両立 → detached 化、FLAG: async error event → listener + real oracle、PASS)。evidence は anchored digest 付きで confirmed 済み、run 29563165215 で両 leg green。マージで issue #78 close、issue #82 (token 実測行) も部分前進するにゃ。
 
-おまけの申し送り (訂正済み): tests/plan-asset-evidence-policy.test.ts の missing-test-plan-id 7 件は stale ではなく、rebuild 時点でそちらの WIP ファイルが live tree に実在した正しい測定だったにゃ (ファイル非存在の tree で再 rebuild したら 0 件を実測確認、detector は tree-current で健全)。commit する際は所有 PLAN の generates へ test_code 宣言してほしいにゃ (draft PLAN なら merged-plan-status gate と衝突するので confirm と同時にだにゃ)。マージ後に PR 88 同様この依頼メモリは片付けてにゃ。
+**PR #96 (そちらの L7-450 レーン) への支援報告**: U-TESTHYGIENE-028 の無情報 red に対しラウンド 4-7 を委譲で回し、scripts/ 配置違反 → gitignored 誤検出 → violation 列挙 (診断強化) → plan-dod DoD 閉じ (5e8fba70) まで到達、CI 最終確認中にゃ。green になったらそのままマージ進めてにゃ (Closes #92)。
+
+マージ後この依頼メモリは PR 88 同様片付けてにゃ。

@@ -3,14 +3,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  aggregateHarnessResultsPass,
   analyzeGithubCiPolicy,
   type GithubWorkflowDoc,
   githubCiPolicyMessages,
   loadGithubCiPolicyDocs,
+  REQUIRED_AGGREGATE_COMMAND,
   resolveGithubCiRuntimeProfile,
 } from "../src/lint/github-ci-policy";
 
-const SOURCE_WORKFLOW = `
+const AGGREGATE_ALWAYS = "$" + "{{ always() }}";
+
+const SOURCE_LEG_WORKFLOW = `
 name: harness-check
 on:
   push:
@@ -23,6 +27,7 @@ concurrency:
   cancel-in-progress: \${{ github.ref != 'refs/heads/main' }}
 jobs:
   harness-check:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
@@ -60,6 +65,25 @@ jobs:
       - run: bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
 `;
 
+const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  harness-check-linux:")}
+  harness-check-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run lint
+  harness-check:
+    needs: [harness-check-linux, harness-check-windows]
+    if: \${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Linux and Windows success
+        run: ${REQUIRED_AGGREGATE_COMMAND}
+`;
+
 function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc[] {
   return [
     {
@@ -70,7 +94,7 @@ function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc
     },
     {
       file: "docs/templates/github/common/harness-check.yml",
-      content: source,
+      content: SOURCE_LEG_WORKFLOW,
       profile: "source",
       role: "source_template",
     },
@@ -82,7 +106,7 @@ function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc
     },
     {
       file: "setup-builtin:common/harness-check.yml",
-      content: source,
+      content: SOURCE_LEG_WORKFLOW,
       profile: "source",
       role: "setup_builtin",
     },
@@ -90,6 +114,156 @@ function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc
 }
 
 describe("github-ci-policy lint", () => {
+  it("U-CIPOL-013: accepts Linux and Windows runtime legs behind one final aggregate gate", () => {
+    const result = analyzeGithubCiPolicy(docs(SOURCE_WORKFLOW));
+
+    expect(result.ok).toBe(true);
+    expect(result.violations).toEqual([]);
+  });
+
+  it("U-CIPOL-014: rejects a runtime workflow without the Windows leg or final aggregate gate", () => {
+    const result = analyzeGithubCiPolicy(docs(SOURCE_LEG_WORKFLOW));
+
+    expect(result.violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_runtime_leg",
+      detail: "jobs.harness-check-windows",
+    });
+    expect(result.violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_aggregate_gate",
+      detail: "jobs.harness-check",
+    });
+  });
+
+  it("U-CIPOL-015: requires the aggregate gate to depend on both runtime legs", () => {
+    for (const missing of ["harness-check-linux", "harness-check-windows"] as const) {
+      const remaining =
+        missing === "harness-check-linux" ? "harness-check-windows" : "harness-check-linux";
+      const workflow = SOURCE_WORKFLOW.replace(
+        "needs: [harness-check-linux, harness-check-windows]",
+        `needs: [${remaining}]`,
+      );
+      const result = analyzeGithubCiPolicy(docs(workflow));
+
+      expect(result.violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "invalid_aggregate_needs",
+        detail: `harness-check.needs must equal harness-check-linux,harness-check-windows (missing=${missing})`,
+      });
+    }
+  });
+
+  it("U-CIPOL-016: requires always() so a failed runtime leg reaches the aggregate verdict", () => {
+    const workflow = SOURCE_WORKFLOW.replace(`    if: ${AGGREGATE_ALWAYS}\n`, "");
+    const result = analyzeGithubCiPolicy(docs(workflow));
+
+    expect(result.violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_aggregate_always",
+      detail: `harness-check.if must equal ${AGGREGATE_ALWAYS}`,
+    });
+  });
+
+  it("U-CIPOL-017: requires explicit success guards for both runtime results", () => {
+    for (const missing of ["harness-check-linux", "harness-check-windows"] as const) {
+      const workflow = SOURCE_WORKFLOW.replace(`\${{ needs.${missing}.result }}`, "success");
+      const result = analyzeGithubCiPolicy(docs(workflow));
+
+      expect(result.violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "missing_aggregate_result_guard",
+        detail: `aggregate verdict must require needs.${missing}.result == success`,
+      });
+    }
+  });
+
+  it("U-CIPOL-018: accepts only the two-leg success result matrix", () => {
+    expect(
+      aggregateHarnessResultsPass({
+        "harness-check-linux": "success",
+        "harness-check-windows": "success",
+      }),
+    ).toBe(true);
+    for (const state of [
+      "failure",
+      "cancelled",
+      "skipped",
+      "neutral",
+      "timed_out",
+      "action_required",
+      "unknown",
+      "",
+    ]) {
+      expect(
+        aggregateHarnessResultsPass({
+          "harness-check-linux": state,
+          "harness-check-windows": "success",
+        }),
+      ).toBe(false);
+      expect(
+        aggregateHarnessResultsPass({
+          "harness-check-linux": "success",
+          "harness-check-windows": state,
+        }),
+      ).toBe(false);
+    }
+  });
+
+  it("U-CIPOL-019: rejects aggregate scripts that observe results without failing closed", () => {
+    const echoOnly = SOURCE_WORKFLOW.replace(
+      `run: ${REQUIRED_AGGREGATE_COMMAND}`,
+      `run: echo "\${{ needs.harness-check-linux.result }} \${{ needs.harness-check-windows.result }}"`,
+    );
+    expect(analyzeGithubCiPolicy(docs(echoOnly)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_aggregate_result_guard",
+      detail: "aggregate verdict must require needs.harness-check-linux.result == success",
+    });
+
+    const continueOnError = SOURCE_WORKFLOW.replace(
+      "      - name: Require Linux and Windows success",
+      "      - name: Require Linux and Windows success\n        continue-on-error: true",
+    );
+    expect(
+      analyzeGithubCiPolicy(docs(continueOnError)).violations.map((violation) => violation.reason),
+    ).toContain("missing_aggregate_result_guard");
+
+    const expressionContinueOnError = SOURCE_WORKFLOW.replace(
+      "    needs: [harness-check-linux, harness-check-windows]",
+      `    continue-on-error: ${"$" + "{{ true }}"}\n    needs: [harness-check-linux, harness-check-windows]`,
+    );
+    expect(
+      analyzeGithubCiPolicy(docs(expressionContinueOnError)).violations.map(
+        (violation) => violation.reason,
+      ),
+    ).toContain("missing_aggregate_result_guard");
+  });
+
+  it("U-CIPOL-020: rejects wrong-platform, empty, or fail-open runtime legs", () => {
+    for (const workflow of [
+      SOURCE_WORKFLOW.replace("runs-on: windows-latest", "runs-on: ubuntu-latest"),
+      SOURCE_WORKFLOW.replace(
+        "  harness-check-windows:\n    runs-on: windows-latest\n    steps:",
+        "  harness-check-windows:\n    runs-on: windows-latest\n    continue-on-error: true\n    steps:",
+      ),
+    ]) {
+      expect(analyzeGithubCiPolicy(docs(workflow)).violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "missing_runtime_leg",
+        detail:
+          "jobs.harness-check-windows must run on windows-latest with non-empty fail-close steps",
+      });
+    }
+  });
+
   it("U-CIPOL-001: accepts universal source and Pack harness-check workflows", () => {
     const result = analyzeGithubCiPolicy(docs());
 
@@ -396,7 +570,7 @@ describe("github-ci-policy lint", () => {
         file: ".github/workflows/harness-check.yml",
         profile: "source",
         reason: "malformed_workflow_shape",
-        detail: "jobs.harness-check.steps must be an array of mappings",
+        detail: "jobs.harness-check-linux.steps must be an array of mappings",
       });
     }
 
@@ -405,7 +579,7 @@ describe("github-ci-policy lint", () => {
       file: ".github/workflows/harness-check.yml",
       profile: "source",
       reason: "malformed_workflow_shape",
-      detail: "jobs.harness-check.steps must be an array of mappings",
+      detail: "jobs.harness-check-linux.steps must be an array of mappings",
     });
   });
 
@@ -465,7 +639,7 @@ describe("github-ci-policy lint", () => {
         file: ".github/workflows/harness-check.yml",
         profile: "source",
         reason: "malformed_workflow_shape",
-        detail: "jobs.harness-check.steps must be an array of mappings",
+        detail: "jobs.harness-check-linux.steps must be an array of mappings",
       });
     }
 
@@ -555,8 +729,8 @@ describe("github-ci-policy lint", () => {
       expect(analyzeGithubCiPolicy(loaded).violations).toContainEqual({
         file: join(".github", "workflows", "harness-check.yml"),
         profile: "source",
-        reason: "missing_step",
-        detail: "github guard",
+        reason: "missing_runtime_leg",
+        detail: "jobs.harness-check-linux",
       });
     } finally {
       rmSync(repo, { recursive: true, force: true });
