@@ -24,14 +24,14 @@ const promoteBy = "2026-08-31";
 const rows = [
   ...orphanPaths.map(
     (path) =>
-      `| \`${path}\` | orphan-deliverable | \`${owner}\` | W3/W4 generated inventory: historical untraced deliverable | ${promoteBy} |`,
+      `| \`${path}\` | orphan-deliverable | \`${owner}\` | W3/W4 機械生成の棚卸し: 過去の未追跡成果物 | ${promoteBy} |`,
   ),
   ...duplicatePaths.map(
     (path) =>
-      `| \`${path}\` | duplicate-artifact-ownership | \`${owner}\` | W2 generated inventory: multiple PLAN generates declarations | ${promoteBy} |`,
+      `| \`${path}\` | duplicate-artifact-ownership | \`${owner}\` | W2 機械生成の棚卸し: 複数 PLAN による generates 宣言 | ${promoteBy} |`,
   ),
 ];
-const content = `# deliverable trace debt audit
+const content = `# deliverable trace debt 監査台帳
 
 ## 目的
 
@@ -46,7 +46,7 @@ PLAN \`generates\` 未宣言成果物と複数 PLAN 所有を、解析器の実�
 orphan と duplicate ownership を別集合として双方向突合し、remediation owner は
 \`${owner}\`、\`promote_by\` は台帳無期限化を防ぐ期限である。
 
-| artifact_path | debt_kind | owner_plan | justification | promote_by |
+| 成果物パス | 負債種別 | 担当 PLAN | 根拠 | 解消期限 |
 | --- | --- | --- | --- | --- |
 ${rows.join("\n")}
 `;

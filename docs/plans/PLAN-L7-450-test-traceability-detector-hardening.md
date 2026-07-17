@@ -4,7 +4,7 @@ title: "PLAN-L7-450 (add-impl): test-traceability 検出器の強化 (remediatio
 kind: add-impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-17
@@ -18,7 +18,32 @@ agent_slots:
     slot_label: "SE - projection detector 改修 + trace gate 拡張"
   - role: qa
     slot_label: "QA - 検出器改修の unit oracle Red 先行 (正例/負例/退化排除)"
-review_evidence: []
+review_evidence:
+  - reviewer: intra_runtime_subagent
+    review_kind: intra_runtime_subagent
+    worker_model: gpt-5.6-luna
+    reviewer_model: gpt-5.6-sol
+    tests_green_at: "2026-07-17T15:58:00+09:00"
+    reviewed_at: "2026-07-17T15:59:00+09:00"
+    verdict: pass
+    scope: "PLAN-L7-450 の W1-W4 実装、deliverable debt 台帳の日本語 prose、U-TESTHYGIENE-028 の診断可能性を確認。"
+    green_commands:
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-17T15:58:00+09:00"
+        evidence_path: .ut-tdd/audit/A-PR96-round6-typecheck.log
+        output_digest: "sha256:5a3973f79ed9becd"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-17T15:58:00+09:00"
+        evidence_path: .ut-tdd/audit/A-PR96-round6-lint.log
+        output_digest: "sha256:882bd8da2b6c657"
 generates:
   - artifact_path: docs/plans/PLAN-L7-450-test-traceability-detector-hardening.md
     artifact_type: markdown_doc
@@ -60,7 +85,7 @@ dependencies:
 
 ## Status
 
-draft 起票 (2026-07-17、issue #92 の PLAN 化。2026-07-17 検出器全数監査 = PR #89 CI Red 起点)。
+confirmed (2026-07-17、issue #92 の PLAN 化。2026-07-17 検出器全数監査 = PR #89 CI Red 起点)。
 Reverse pairing は PLAN-REVERSE-450。
 
 ## 背景 — 機構は健全、ただし構造弱点 4 件

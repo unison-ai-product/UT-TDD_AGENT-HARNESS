@@ -425,7 +425,7 @@ describe("runDoctor", () => {
       (message) => message.includes(" - violation") || message.includes(" — violation"),
     );
 
-    expect(r.ok).toBe(true);
+    expect(r.ok, `non-OK doctor checks:\n${blockers.join("\n")}`).toBe(true);
     expect(blockers).toHaveLength(0);
   });
 
