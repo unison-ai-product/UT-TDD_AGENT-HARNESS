@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateExecutionEventDigest,
   decideExecutionTransition,
+  EXECUTION_EPISODE_TRANSITIONS,
   executionCommandPayloadDigest,
   ExecutionEpisode,
   type ClassifyEscapeCommand,
@@ -16,6 +17,35 @@ const SHA = "a".repeat(40);
 const DIGEST = "b".repeat(64);
 
 describe("Execution Episode pure projector (PLAN-L7-436)", () => {
+  it.each([
+    ["E0", "issue_not_requested", "blocked"],
+    ["E1", "drive_not_selected", "blocked"],
+    ["E2", "issue_not_requested", "blocked"],
+    ["E3", "issue_projection_pending", "blocked"],
+    ["E4", "drive_plan_freeze_pending", "blocked"],
+    ["E5", "drive_verification_pending", "blocked"],
+    ["E6", "reentry_proposal_pending", "blocked"],
+    ["E7", "intermediate_verification_pending", "blocked"],
+    ["E8", "reentry_certificate_pending", "blocked"],
+    ["E9", "forward_reentry_pending", "blocked"],
+    ["E10", "post_reentry_verification_pending", "blocked"],
+    ["E11", "draft_pr_projection_pending", "blocked"],
+    ["E12", "cross_review_pending", "blocked"],
+    ["E13", "none", "eligible"],
+    ["E14", "episode_closure_pending", "merged"],
+    ["E15", "none", "closed"],
+  ] as const)(
+    "U-EXEP-009-FLAG: %sのblock reasonとmerge readinessをevent列から導出する",
+    (state, blockReason, mergeReadiness) => {
+      const result = projectExecutionEpisode(projectionEventsThrough(Number(state.slice(1))));
+
+      expect(result).toMatchObject({
+        ok: true,
+        projection: { state, blockReason, mergeReadiness },
+      });
+    },
+  );
+
   it.each([
     ["E0", initialEvents(), "issue_not_requested", ["classify_escape"]],
     ["E1", eventsThroughE1(), "drive_not_selected", ["select_drive_model"]],
@@ -237,4 +267,27 @@ function replacePayload(
       eventDigest: calculateExecutionEventDigest(unsigned),
     };
   });
+}
+
+function projectionEventsThrough(sequence: number): readonly ExecutionEpisodeEvent[] {
+  const events: ExecutionEpisodeEvent[] = [];
+  for (let index = 0; index <= sequence; index += 1) {
+    const transition = EXECUTION_EPISODE_TRANSITIONS[index];
+    const payload = index === 0
+      ? initialEvents()[0].payload
+      : { episodeId: "episode:recovery-70", observedHead: SHA };
+    const payloadDigest = executionCommandPayloadDigest(payload);
+    const unsigned = {
+      episodeId: "episode:recovery-70",
+      sequence: index,
+      state: transition.state,
+      kind: transition.kind,
+      payloadDigest,
+      previousEventDigest: index === 0 ? null : events[index - 1].eventDigest,
+      occurredAt: `2026-07-16T09:${String(index).padStart(2, "0")}:00.000Z`,
+      actor: "codex",
+    };
+    events.push({ ...unsigned, payload, eventDigest: calculateExecutionEventDigest(unsigned) });
+  }
+  return events;
 }

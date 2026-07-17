@@ -1,5 +1,4 @@
 import {
-  EXECUTION_EPISODE_TRANSITIONS,
   reduceExecutionEpisode,
   type DriveModel,
   type EpisodeViolation,
@@ -47,7 +46,6 @@ export function projectExecutionEpisode(
       ok: false,
       violations: [{ ruleId: "episode-event-integrity-invalid", path: "events.latest.observedHead" }],
     };
-  const transition = EXECUTION_EPISODE_TRANSITIONS[reduction.snapshot.eventSequence];
   return {
     ok: true,
     projection: Object.freeze({
@@ -58,7 +56,7 @@ export function projectExecutionEpisode(
       nextLegalActions: Object.freeze([...reduction.snapshot.nextLegalCommands]),
       blockReason: blockReasonFor(reduction.snapshot.state),
       latestHead: latestPayload.observedHead,
-      mergeReadiness: "blocked",
+      mergeReadiness: mergeReadinessFor(reduction.snapshot.state),
       driveModel: root.requestedDriveModel,
       reentryLayer: reentry.layer,
       rebuiltAt: last.occurredAt,
@@ -67,11 +65,34 @@ export function projectExecutionEpisode(
 }
 
 function blockReasonFor(state: ExecutionEpisodeState): string {
-  if (state === "E0") return "issue_not_requested";
-  if (state === "E1") return "drive_not_selected";
-  if (state === "E2") return "issue_not_requested";
-  return "issue_projection_pending";
+  return BLOCK_REASON_BY_STATE[state];
 }
+
+function mergeReadinessFor(state: ExecutionEpisodeState): EpisodeMergeReadiness {
+  if (state === "E13") return "eligible";
+  if (state === "E14") return "merged";
+  if (state === "E15") return "closed";
+  return "blocked";
+}
+
+const BLOCK_REASON_BY_STATE: Readonly<Record<ExecutionEpisodeState, string>> = Object.freeze({
+  E0: "issue_not_requested",
+  E1: "drive_not_selected",
+  E2: "issue_not_requested",
+  E3: "issue_projection_pending",
+  E4: "drive_plan_freeze_pending",
+  E5: "drive_verification_pending",
+  E6: "reentry_proposal_pending",
+  E7: "intermediate_verification_pending",
+  E8: "reentry_certificate_pending",
+  E9: "forward_reentry_pending",
+  E10: "post_reentry_verification_pending",
+  E11: "draft_pr_projection_pending",
+  E12: "cross_review_pending",
+  E13: "none",
+  E14: "episode_closure_pending",
+  E15: "none",
+});
 
 function isEscapeObservedPayload(value: unknown): value is EscapeObservedPayload {
   const payload = asRecord(value);
