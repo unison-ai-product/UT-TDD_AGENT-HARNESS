@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  aggregateHarnessResultsPass,
   analyzeGithubCiPolicy,
   type GithubWorkflowDoc,
   githubCiPolicyMessages,
@@ -179,6 +180,77 @@ describe("github-ci-policy lint", () => {
         profile: "source",
         reason: "missing_aggregate_result_guard",
         detail: `aggregate verdict must require needs.${missing}.result == success`,
+      });
+    }
+  });
+
+  it("U-CIPOL-018: accepts only the two-leg success result matrix", () => {
+    expect(
+      aggregateHarnessResultsPass({
+        "harness-check-linux": "success",
+        "harness-check-windows": "success",
+      }),
+    ).toBe(true);
+    for (const state of [
+      "failure",
+      "cancelled",
+      "skipped",
+      "neutral",
+      "timed_out",
+      "action_required",
+      "unknown",
+      "",
+    ]) {
+      expect(
+        aggregateHarnessResultsPass({
+          "harness-check-linux": state,
+          "harness-check-windows": "success",
+        }),
+      ).toBe(false);
+      expect(
+        aggregateHarnessResultsPass({
+          "harness-check-linux": "success",
+          "harness-check-windows": state,
+        }),
+      ).toBe(false);
+    }
+  });
+
+  it("U-CIPOL-019: rejects aggregate scripts that observe results without failing closed", () => {
+    const echoOnly = SOURCE_WORKFLOW.replace(
+      /run: \|\n[\s\S]*? {10}fi\n/,
+      `run: echo "\${{ needs.harness-check-linux.result }} \${{ needs.harness-check-windows.result }}"\n`,
+    );
+    expect(analyzeGithubCiPolicy(docs(echoOnly)).violations).toContainEqual({
+      file: ".github/workflows/harness-check.yml",
+      profile: "source",
+      reason: "missing_aggregate_result_guard",
+      detail: "aggregate verdict must require needs.harness-check-linux.result == success",
+    });
+
+    const continueOnError = SOURCE_WORKFLOW.replace(
+      "      - name: Require Linux and Windows success",
+      "      - name: Require Linux and Windows success\n        continue-on-error: true",
+    );
+    expect(
+      analyzeGithubCiPolicy(docs(continueOnError)).violations.map((violation) => violation.reason),
+    ).toContain("missing_aggregate_result_guard");
+  });
+
+  it("U-CIPOL-020: rejects wrong-platform, empty, or fail-open runtime legs", () => {
+    for (const workflow of [
+      SOURCE_WORKFLOW.replace("runs-on: windows-latest", "runs-on: ubuntu-latest"),
+      SOURCE_WORKFLOW.replace(
+        "  harness-check-windows:\n    runs-on: windows-latest\n    steps:",
+        "  harness-check-windows:\n    runs-on: windows-latest\n    continue-on-error: true\n    steps:",
+      ),
+    ]) {
+      expect(analyzeGithubCiPolicy(docs(workflow)).violations).toContainEqual({
+        file: ".github/workflows/harness-check.yml",
+        profile: "source",
+        reason: "missing_runtime_leg",
+        detail:
+          "jobs.harness-check-windows must run on windows-latest with non-empty fail-close steps",
       });
     }
   });

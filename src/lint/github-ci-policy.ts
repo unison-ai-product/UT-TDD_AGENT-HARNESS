@@ -47,12 +47,14 @@ export interface GithubCiPolicyResult {
 }
 
 interface WorkflowStep {
+  "continue-on-error"?: unknown;
   name?: string;
   uses?: string;
   run?: string;
 }
 
 interface WorkflowJob {
+  "continue-on-error"?: unknown;
   needs?: unknown;
   if?: unknown;
   "runs-on"?: unknown;
@@ -197,7 +199,8 @@ function workflowStep(value: unknown): value is WorkflowStep {
     !step ||
     ![step.name, step.uses, step.run].every(
       (field) => field === undefined || typeof field === "string",
-    )
+    ) ||
+    (step["continue-on-error"] !== undefined && typeof step["continue-on-error"] !== "boolean")
   ) {
     return false;
   }
@@ -231,6 +234,10 @@ function pushViolation(input: {
 
 const RUNTIME_LEGS = ["harness-check-linux", "harness-check-windows"] as const;
 
+export function aggregateHarnessResultsPass(results: Record<string, string>): boolean {
+  return RUNTIME_LEGS.every((leg) => results[leg] === "success");
+}
+
 function checkRuntimeAggregate(input: {
   jobs: Record<string, unknown>;
   doc: GithubWorkflowDoc;
@@ -238,12 +245,29 @@ function checkRuntimeAggregate(input: {
 }): WorkflowJob | null {
   const legs = RUNTIME_LEGS.map((name) => recordValue(input.jobs[name]) as WorkflowJob | null);
   for (const [index, leg] of legs.entries()) {
-    if (leg) continue;
+    const name = RUNTIME_LEGS[index];
+    if (!leg) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_runtime_leg",
+        detail: `jobs.${name}`,
+      });
+      continue;
+    }
+    const expectedRunner = name === "harness-check-linux" ? "ubuntu-latest" : "windows-latest";
+    const validSteps =
+      Array.isArray(leg.steps) && leg.steps.length > 0 && leg.steps.every(workflowStep);
+    const continuesOnError =
+      leg["continue-on-error"] === true ||
+      (Array.isArray(leg.steps) &&
+        leg.steps.some((step) => recordValue(step)?.["continue-on-error"] === true));
+    if (leg["runs-on"] === expectedRunner && validSteps && !continuesOnError) continue;
     pushViolation({
       violations: input.violations,
       doc: input.doc,
       reason: "missing_runtime_leg",
-      detail: `jobs.${RUNTIME_LEGS[index]}`,
+      detail: `jobs.${name} must run on ${expectedRunner} with non-empty fail-close steps`,
     });
   }
   const aggregateValue = input.jobs["harness-check"];
@@ -289,12 +313,19 @@ function checkRuntimeAggregate(input: {
         detail: `harness-check.if must equal ${REQUIRED_AGGREGATE_IF}`,
       });
     }
-    const aggregateSteps = Array.isArray(aggregate.steps)
-      ? aggregate.steps.filter(workflowStep)
-      : [];
+    const aggregateSteps =
+      Array.isArray(aggregate.steps) && aggregate.steps.every(workflowStep) ? aggregate.steps : [];
     const aggregateText = aggregateSteps.map(stepText).join("\n");
+    const failCloseDisabled =
+      aggregate["continue-on-error"] === true ||
+      aggregateSteps.some((step) => step["continue-on-error"] === true) ||
+      !/\bexit\s+1\b/.test(aggregateText);
     for (const leg of RUNTIME_LEGS) {
-      if (aggregateText.includes(`needs.${leg}.result`)) continue;
+      const expression = ["$", `{{ needs.${leg}.result }}`].join("");
+      const hasSuccessGuard =
+        aggregateText.includes(`"${expression}" != "success"`) ||
+        aggregateText.includes(`'${expression}' != 'success'`);
+      if (hasSuccessGuard && !failCloseDisabled) continue;
       pushViolation({
         violations: input.violations,
         doc: input.doc,

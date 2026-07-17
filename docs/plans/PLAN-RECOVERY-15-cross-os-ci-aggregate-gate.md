@@ -25,16 +25,6 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-15-cross-os-ci-aggregate-gate.md
     artifact_type: markdown_doc
-  - artifact_path: .github/workflows/harness-check.yml
-    artifact_type: config
-  - artifact_path: docs/design/harness/L6-function-design/function-spec.md
-    artifact_type: design_doc
-  - artifact_path: docs/test-design/harness/L8-integration-test-design.md
-    artifact_type: test_design
-  - artifact_path: src/lint/github-ci-policy.ts
-    artifact_type: source_module
-  - artifact_path: tests/github-ci-policy.test.ts
-    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
