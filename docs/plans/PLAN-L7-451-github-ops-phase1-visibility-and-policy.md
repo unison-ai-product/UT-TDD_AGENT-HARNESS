@@ -4,7 +4,7 @@ title: "PLAN-L7-451 (add-impl): GitHub 運用 Phase-1 — Job Summary / typed PR
 kind: add-impl
 layer: L7
 drive: be
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-17
@@ -18,7 +18,38 @@ agent_slots:
     slot_label: "SE - workflow aggregate 化 + github CLI 面 (summary / pr / policy) 実装"
   - role: qa
     slot_label: "QA - ci-policy DAG 検査 / trace block / policy diff の unit oracle Red 先行"
-review_evidence: []
+review_evidence:
+  - reviewer: intra_runtime_subagent
+    review_kind: intra_runtime_subagent
+    worker_model: claude-fable-5
+    reviewer_model: claude-opus-4-8
+    tests_green_at: "2026-07-17T19:35:00+09:00"
+    reviewed_at: "2026-07-17T19:25:00+09:00"
+    verdict: pass
+    scope: >-
+      blind-reviewer (claim-blind/spec-blind 二レーン) が W3-W6 実装を独立判定。
+      初回 FLAG 2 件 (Issue Forms 4 本の drive_model 等欠落 + 退化 oracle /
+      branchMatches ~DEFAULT_BRANCH fail-open) を d0cec8d2 で解消し、
+      両所見とも機械 oracle (U-L7-451-W5-001 全 form ループ / U-L7-451-W6-005)
+      へ固定して green を実測。他攻撃 (schema 代表性 / exit code 契約 /
+      degrade / YAML injection / trace fail-close) は反駁済み。
+    green_commands:
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-17T19:20:00+09:00"
+        evidence_path: .ut-tdd/audit/A-L7-451-typecheck.log
+        output_digest: "sha256:8366207267355d3e"
+      - kind: lint
+        command: "bun run lint"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-17T19:20:00+09:00"
+        evidence_path: .ut-tdd/audit/A-L7-451-lint.log
+        output_digest: "sha256:86580aae589db1e6"
 generates:
   - artifact_path: docs/plans/PLAN-L7-451-github-ops-phase1-visibility-and-policy.md
     artifact_type: markdown_doc
@@ -157,20 +188,25 @@ surface bindings) は L7-436〜439 の正規実装が土台であり、本 PLAN 
 
 ## DoD
 
-- [ ] W1/W2: PLAN-RECOVERY-15 実装が本ブランチ上で green であることを観測する
-      (typecheck / 対象テスト / doctor github-ci-policy)。本 PLAN は変更を加えない。
-- [ ] W3: `ut-tdd github summary` が gate matrix を含む markdown を出力し、
+- [x] W1/W2: PLAN-RECOVERY-15 実装が本ブランチ上で green であることを観測した
+      (`tests/github-ci-policy.test.ts` 29 tests pass、2026-07-17)。本 PLAN は
+      aggregate 構造へ変更を加えていない (summary step の追加のみ、leg 側)。
+- [x] W3: `ut-tdd github summary` が gate matrix を含む markdown を出力し、
       入力欠落時も exit 0 で degrade する (CI を summary 生成失敗で red にしない)。
-      根拠: `tests/github-job-summary.test.ts` の `U-L7-451-W3-001`〜`003`。
-- [ ] W4: `pr render` が有効な trace block を生成し、`pr validate` が欠落 /
+      根拠: `tests/github-job-summary.test.ts` の `U-L7-451-W3-001`〜`003` (green 実測
+      2026-07-17) と CLI 実走 (live repo で gate matrix 出力を確認)。
+- [x] W4: `pr render` が有効な trace block を生成し、`pr validate` が欠落 /
       壊れた block を fail-close する。根拠: `tests/github-pr-trace.test.ts` の
-      `U-L7-451-W4-001`〜`004`。
-- [ ] W5: ISSUE_TEMPLATE 5 form + config.yml が存在し、必須項目が PLAN-L6-83 の
+      `U-L7-451-W4-001`〜`005` (green 実測 2026-07-17) と CLI 実走 (render→validate
+      往復 exit 0 / block 欠落 exit 1)。
+- [x] W5: ISSUE_TEMPLATE 5 form + config.yml が存在し、必須項目が PLAN-L6-83 の
       規定項目を欠かさない。根拠: `tests/github-repository-policy.test.ts` 内の
-      form 構造検査 `U-L7-451-W5-001`。
-- [ ] W6: `policy diff` が authoring source と現物の乖離を finding として列挙し
+      form 構造検査 `U-L7-451-W5-001` (blind review FLAG を受け全 5 form の
+      required-id ループ検査へ強化、green 実測 2026-07-17)。
+- [x] W6: `policy diff` が authoring source と現物の乖離を finding として列挙し
       乖離あり exit 1 / 一致 exit 0。gh 不通時は exit 3 (外部障害) で判定を
       偽装しない。根拠: `tests/github-repository-policy.test.ts` の
-      `U-L7-451-W6-001`〜`003`。
+      `U-L7-451-W6-001`〜`005` (green 実測 2026-07-17) と CLI 実走 (現物未適用に対し
+      DRIFT 3 findings / exit 1 を実測)。
 - [ ] PLAN-REVERSE-451 R0-R4 の完了は本 slice では claim しない。R2 で実装観測と
       L6-83/L6-85 契約の差分を gap-only で照合する。
