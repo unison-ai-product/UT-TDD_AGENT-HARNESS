@@ -91,7 +91,7 @@ describe("Execution Episode E1-E3 domain decisions (PLAN-L7-436)", () => {
   });
 
   it.each([
-    ["E3 flyover", initialEvents(), requestIssue(), "episode-transition-invalid"],
+    ["E3 flyover", initialEvents(), requestIssue(), "episode-sequence-conflict"],
     [
       "escape mismatch",
       initialEvents(),
