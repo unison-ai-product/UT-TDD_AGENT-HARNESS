@@ -20,6 +20,8 @@ related_l0: docs/governance/ut-tdd-agent-harness-concept_v3.1.md
 generates:
   - artifact_path: docs/plans/PLAN-L7-260-sensitive-scan-boundary.md
     artifact_type: markdown_doc
+  - artifact_path: tests/secret-scan-diff.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-62-design-doc-secret-scan-gate.md
   requires:

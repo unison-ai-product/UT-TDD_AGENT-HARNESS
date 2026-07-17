@@ -27,6 +27,10 @@ generates:
     artifact_type: source_module
   - artifact_path: src/shared/source-text.ts
     artifact_type: source_module
+  - artifact_path: tests/shared-source-text.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/projection-store-contract.test.ts
+    artifact_type: test_code
   - artifact_path: src/state-db/projections/poc-evaluations.ts
     artifact_type: source_module
   - artifact_path: src/projection/contracts/projection-store.ts

@@ -26,6 +26,8 @@ generates:
     artifact_type: markdown_doc
   - artifact_path: docs/plans/PLAN-REVERSE-255-delegation-injection-backfill.md
     artifact_type: markdown_doc
+  - artifact_path: tests/delegation-routing.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L7-215-model-effort-advisor-routing.md
   requires: []
