@@ -88,12 +88,32 @@ describe("PLAN revision ledger transaction", () => {
     );
     expect(Number(db.prepare("SELECT COUNT(*) AS n FROM plan_admission_events").get()?.n)).toBe(0);
   });
+
+  it.each([
+    ["append_command_receipts", "receipt_digest", "0".repeat(64)],
+    ["plan_admission_events", "event_digest", "0".repeat(64)],
+    ["plan_admission_receipts", "content_digest", "0".repeat(64)],
+    ["plan_revisions", "canonical_payload_digest", "0".repeat(64)],
+  ])("U-PA-REV-006: replay時の%s改ざんをfail-closeする", (table, column, value) => {
+    const { db, ledger } = fixture();
+    const input = revision();
+    expect(ledger.append(input)).toMatchObject({ ok: true });
+    const guards = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND sql LIKE ?")
+      .all(`%UPDATE ON ${table}%`) as Array<{ name: string }>;
+    for (const guard of guards) db.exec(`DROP TRIGGER ${guard.name}`);
+    db.prepare(`UPDATE ${table} SET ${column} = ?`).run(value);
+    expect(ledger.append(input)).toEqual({
+      ok: false,
+      ruleId: "plan-revision-receipt-binding-invalid",
+    });
+  });
 });
 
 function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
   const ledger = new PlanRevisionLedgerTransaction(db);
   db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(
     "plan:adopted",

@@ -15,8 +15,10 @@ import {
 } from "./plan-draft-service.js";
 import {
   assemblePlanRevisionCommand,
+  canonicalPlanPayload,
   type PlanRevisionExecutionPayload,
   type PlanRevisionManifest,
+  planRevisionReplayBindingDigest,
   stableJson,
   validatePlanRevisionCommand,
 } from "./plan-revision-command-assembler.js";
@@ -57,13 +59,37 @@ export class NodePlanRevisionRunner {
     assertAdmission(input);
     const db = this.deps.openDb?.() ?? openPlanLedger({ repoRoot: this.deps.repoRoot });
     try {
+      const journal = new SqliteDraftJournal(db);
+      const publisher =
+        this.deps.publisher?.() ?? new NodeAtomicDraftPublisher({ rootDir: this.deps.repoRoot });
+      const prior = journal.find(input.manifest.command_id);
+      if (prior?.status === "committed") {
+        const expectedRequest = planRevisionReplayBindingDigest(input.manifest, input.admission);
+        if (!digestEqual(prior.cleanup.operation.requestDigest, expectedRequest))
+          throw new Error("plan-revision-replay-request-conflict");
+        assertCommittedReplayBinding(db, input.manifest, input.admission, prior.receipt);
+        try {
+          publisher.resumeCleanup(prior.cleanup.operation);
+          if (prior.cleanup.status === "pending")
+            journal.completeCleanup(input.manifest.command_id, prior.payloadDigest);
+        } catch (cause) {
+          throw new PlanDraftCleanupPendingError(
+            "plan-revision-replay-artifact-binding-invalid",
+            prior.receipt as PlanRevisionReceipt,
+            { cause },
+          );
+        }
+        return { status: "replayed" as const, receipt: prior.receipt as PlanRevisionReceipt };
+      }
       const base = this.preflightBase(input.manifest);
       const adopted = Boolean(
         db
           .prepare("SELECT 1 FROM plan_assets WHERE asset_id = ?")
           .get(input.manifest.base.asset_id),
       );
-      const legacy = !adopted || hasLegacyBootstrap(db, input.manifest.base.asset_id);
+      const legacy =
+        !adopted ||
+        revisionUsesLegacyBootstrap(db, input.manifest.base.asset_id, input.manifest.command_id);
       const command = assemblePlanRevisionCommand({
         manifest: input.manifest,
         admission: input.admission,
@@ -77,22 +103,8 @@ export class NodePlanRevisionRunner {
         legacy,
       });
       validatePlanRevisionCommand(command);
-      const journal = new SqliteDraftJournal(db);
-      const prior = journal.find(command.commandId);
-      if (prior?.status === "committed") {
-        if (prior.payloadDigest !== command.commandPayloadDigest)
-          throw new Error("plan-revision-replay-payload-conflict");
-        if (prior.cleanupPending)
-          throw new PlanDraftCleanupPendingError(
-            prior.cleanupPending,
-            prior.receipt as PlanRevisionReceipt,
-          );
-        return { status: "replayed" as const, receipt: prior.receipt as PlanRevisionReceipt };
-      }
       if (adopted) assertAdoptedBase(db, input.manifest);
       const snapshot = this.preflightMutable(input.manifest, base);
-      const publisher =
-        this.deps.publisher?.() ?? new NodeAtomicDraftPublisher({ rootDir: this.deps.repoRoot });
       const renderer = new RevisionRenderer(
         new TrackedReceiptRenderer<PlanRevisionExecutionPayload>({
           read: () => snapshot.projectionText,
@@ -161,11 +173,62 @@ export class NodePlanRevisionRunner {
   }
 }
 
-function hasLegacyBootstrap(db: HarnessDb, assetId: string): boolean {
+function assertCommittedReplayBinding(
+  db: HarnessDb,
+  manifest: PlanRevisionManifest,
+  admission: PlanAdmissionRequest,
+  receipt: import("./plan-draft-service.js").DraftReceiptBinding,
+): void {
+  if (receipt.assetId !== manifest.base.asset_id || receipt.revision !== manifest.base.revision + 1)
+    throw new Error("plan-revision-replay-receipt-conflict");
+  const revision = db
+    .prepare(
+      `SELECT canonical_payload_json, body_digest, source_path
+       FROM plan_revisions WHERE asset_id = ? AND revision = ?`,
+    )
+    .get(receipt.assetId, receipt.revision);
+  const desired = canonicalPlanPayload(manifest.source.content);
+  if (
+    !revision ||
+    String(revision.canonical_payload_json) !== desired.payload ||
+    !digestEqual(String(revision.body_digest), prefixedSha(desired.body)) ||
+    String(revision.source_path) !== manifest.source.path
+  )
+    throw new Error("plan-revision-replay-revision-conflict");
+  const base = db
+    .prepare(
+      `SELECT canonical_payload_digest FROM plan_revisions
+       WHERE asset_id = ? AND revision = ?`,
+    )
+    .get(receipt.assetId, manifest.base.revision);
+  if (!base || !digestEqual(String(base.canonical_payload_digest), manifest.base.revision_digest))
+    throw new Error("plan-revision-replay-base-conflict");
+  const event = db
+    .prepare(
+      `SELECT route_tuple_digest FROM plan_admission_events
+       WHERE command_id = ? AND plan_asset_id = ? AND plan_revision = ?`,
+    )
+    .get(manifest.command_id, receipt.assetId, receipt.revision);
+  if (!event || !digestEqual(String(event.route_tuple_digest), prefixedSha(stableJson(admission))))
+    throw new Error("plan-revision-replay-admission-conflict");
+}
+
+export function revisionUsesLegacyBootstrap(
+  db: HarnessDb,
+  assetId: string,
+  commandId: string,
+): boolean {
   return Boolean(
     db
-      .prepare("SELECT 1 FROM legacy_plan_bootstrap_provenance WHERE asset_id = ? AND revision = 1")
-      .get(assetId),
+      .prepare(
+        `SELECT 1
+         FROM legacy_plan_bootstrap_provenance provenance
+         JOIN append_command_receipts receipt
+           ON receipt.plan_asset_id = provenance.asset_id
+          AND receipt.command_id = ?
+         WHERE provenance.asset_id = ? AND provenance.revision = 1`,
+      )
+      .get(commandId, assetId),
   );
 }
 

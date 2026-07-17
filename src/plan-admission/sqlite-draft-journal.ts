@@ -1,7 +1,8 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { ledgerRowDigest, migratePlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 import type {
+  DraftCleanupOperation,
   DraftJournalCommand,
   DraftJournalEntry,
   DraftJournalPort,
@@ -52,13 +53,12 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
         .prepare("SELECT * FROM plan_admission_receipts WHERE command_id = ?")
         .get(commandId);
       if (!ledger) throw new DraftJournalIntegrityError("draft-journal-ledger-binding-invalid");
+      const cleanup = this.cleanupBinding(commandId, String(row.command_payload_digest));
       return {
         status: "committed",
         payloadDigest: String(row.command_payload_digest),
         receipt: binding(ledger),
-        ...(typeof row.failure_reason === "string" && row.failure_reason
-          ? { cleanupPending: row.failure_reason }
-          : {}),
+        cleanup,
       };
     }
     return {
@@ -109,8 +109,14 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
     });
   }
 
-  commit(commandId: string, payloadDigest: string, receipt: DraftReceiptBinding): void {
-    this.transition({ commandId, payloadDigest, status: "committed", receipt });
+  commit(
+    commandId: string,
+    payloadDigest: string,
+    receipt: DraftReceiptBinding,
+    cleanup: DraftCleanupOperation,
+  ): void {
+    assertCleanupOperation(cleanup);
+    this.transition({ commandId, payloadDigest, status: "committed", receipt, cleanup });
   }
 
   markRecoveryRequired(commandId: string, payloadDigest: string, reason: string): void {
@@ -157,6 +163,26 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
           "UPDATE plan_draft_journal SET failure_reason=?, journal_digest=? WHERE command_id=?",
         )
         .run(reason, ledgerRowDigest(next, "journal_digest"), commandId);
+      this.appendCleanupEvent(commandId, payloadDigest, "pending", reason);
+    });
+  }
+
+  completeCleanup(commandId: string, payloadDigest: string): void {
+    this.run(() => {
+      const current = this.current(commandId);
+      if (!current || String(current.status) !== "committed")
+        throw new DraftJournalIntegrityError("draft-journal-cleanup-before-commit");
+      if (!secureEqual(String(current.command_payload_digest), payloadDigest))
+        throw new DraftJournalIntegrityError("draft-journal-command-conflict");
+      const cleanup = this.cleanupBinding(commandId, payloadDigest);
+      if (cleanup.status === "completed") return;
+      this.appendCleanupEvent(commandId, payloadDigest, "completed");
+      const next = { ...current, failure_reason: null };
+      this.db
+        .prepare(
+          "UPDATE plan_draft_journal SET failure_reason=NULL, journal_digest=? WHERE command_id=?",
+        )
+        .run(ledgerRowDigest(next, "journal_digest"), commandId);
     });
   }
 
@@ -166,8 +192,9 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
     status: "committed" | "recovery_required";
     receipt?: DraftReceiptBinding;
     reason?: string;
+    cleanup?: DraftCleanupOperation;
   }): void {
-    const { commandId, payloadDigest, status, receipt, reason } = input;
+    const { commandId, payloadDigest, status, receipt, reason, cleanup } = input;
     this.run(() => {
       const current = this.current(commandId);
       if (!current) throw new DraftJournalIntegrityError("draft-journal-intent-missing");
@@ -177,7 +204,7 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
       if (String(current.status) !== "intent")
         throw new DraftJournalIntegrityError("draft-journal-transition-invalid");
       if (status === "committed") {
-        if (!receipt || receipt.revision < 1)
+        if (!receipt || receipt.revision < 1 || !cleanup)
           throw new DraftJournalIntegrityError("draft-journal-receipt-invalid");
         this.assertLedgerBinding(commandId, payloadDigest, receipt);
       }
@@ -231,7 +258,88 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
           ledgerRowDigest(next, "journal_digest"),
           commandId,
         );
+      if (status === "committed" && cleanup)
+        this.appendCleanupEvent(commandId, payloadDigest, "pending", undefined, cleanup);
     });
+  }
+
+  private cleanupBinding(
+    commandId: string,
+    payloadDigest: string,
+  ): import("./plan-draft-service.js").DraftCleanupBinding {
+    const rows = this.db
+      .prepare(
+        "SELECT * FROM plan_draft_artifact_operation_events WHERE command_id = ? ORDER BY sequence",
+      )
+      .all(commandId);
+    if (rows.length === 0)
+      throw new DraftJournalIntegrityError("draft-journal-cleanup-binding-missing");
+    let previous: string | null = null;
+    let operationJson: string | undefined;
+    for (const [index, row] of rows.entries()) {
+      if (
+        Number(row.sequence) !== index + 1 ||
+        row.previous_event_digest !== previous ||
+        !secureEqual(String(row.command_payload_digest), payloadDigest) ||
+        row.event_digest !== ledgerRowDigest(row, "event_digest") ||
+        sha(String(row.operation_json)) !== String(row.operation_digest)
+      )
+        throw new DraftJournalIntegrityError("draft-journal-cleanup-binding-invalid");
+      operationJson ??= String(row.operation_json);
+      if (String(row.operation_json) !== operationJson)
+        throw new DraftJournalIntegrityError("draft-journal-cleanup-operation-diverged");
+      previous = String(row.event_digest);
+    }
+    const latest = rows.at(-1);
+    if (!latest || !operationJson)
+      throw new DraftJournalIntegrityError("draft-journal-cleanup-binding-missing");
+    const operation = parseCleanupOperation(operationJson);
+    return {
+      status: latest.event_kind === "completed" ? "completed" : "pending",
+      operation,
+      ...(typeof latest.failure_reason === "string" && latest.failure_reason
+        ? { reason: latest.failure_reason }
+        : {}),
+    };
+  }
+
+  private appendCleanupEvent(
+    commandId: string,
+    payloadDigest: string,
+    eventKind: "pending" | "completed",
+    reason?: string,
+    initial?: DraftCleanupOperation,
+  ): void {
+    const previous = this.db
+      .prepare(
+        "SELECT * FROM plan_draft_artifact_operation_events WHERE command_id = ? ORDER BY sequence DESC LIMIT 1",
+      )
+      .get(commandId);
+    const operationJson = initial
+      ? JSON.stringify(initial)
+      : String(previous?.operation_json ?? "");
+    if (!operationJson)
+      throw new DraftJournalIntegrityError("draft-journal-cleanup-binding-missing");
+    if (previous && !secureEqual(String(previous.command_payload_digest), payloadDigest))
+      throw new DraftJournalIntegrityError("draft-journal-command-conflict");
+    const sequence = Number(previous?.sequence ?? 0) + 1;
+    const row = {
+      operation_event_id: `artifact-operation:${commandId}:${sequence}`,
+      command_id: commandId,
+      sequence,
+      command_payload_digest: payloadDigest,
+      event_kind: eventKind,
+      operation_json: operationJson,
+      operation_digest: sha(operationJson),
+      failure_reason: reason ?? null,
+      occurred_at: this.now(),
+      previous_event_digest: previous?.event_digest ?? null,
+    };
+    this.db
+      .prepare(
+        "INSERT INTO plan_draft_artifact_operation_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      )
+      .run(...Object.values(row), ledgerRowDigest(row, "event_digest"));
   }
 
   private assertIntegrity(commandId: string): void {
@@ -370,4 +478,45 @@ function secureEqual(left: string, right: string): boolean {
 
 function validTime(value: string): boolean {
   return !Number.isNaN(Date.parse(value));
+}
+
+function parseCleanupOperation(value: string): DraftCleanupOperation {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new DraftJournalIntegrityError("draft-journal-cleanup-operation-invalid");
+  }
+  assertCleanupOperation(parsed);
+  return parsed;
+}
+
+function assertCleanupOperation(value: unknown): asserts value is DraftCleanupOperation {
+  const operation = value as Partial<DraftCleanupOperation> | null;
+  if (
+    !operation ||
+    operation.operation !== "finalize" ||
+    typeof operation.tokenId !== "string" ||
+    !operation.tokenId ||
+    !/^sha256:[a-f0-9]{64}$/.test(String(operation.requestDigest)) ||
+    !Array.isArray(operation.artifacts) ||
+    operation.artifacts.length !== 2 ||
+    operation.artifacts.some(
+      (artifact) =>
+        !artifact ||
+        typeof artifact.path !== "string" ||
+        typeof artifact.temporaryPath !== "string" ||
+        typeof artifact.rollbackPath !== "string" ||
+        !artifact.preimage ||
+        !["absent", "sha256"].includes(artifact.preimage.kind) ||
+        (artifact.preimage.kind === "sha256" &&
+          !/^sha256:[a-f0-9]{64}$/.test(artifact.preimage.digest)) ||
+        !/^sha256:[a-f0-9]{64}$/.test(String(artifact.postimage)),
+    )
+  )
+    throw new DraftJournalIntegrityError("draft-journal-cleanup-operation-invalid");
+}
+
+function sha(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }

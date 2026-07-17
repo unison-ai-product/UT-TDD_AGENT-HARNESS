@@ -284,7 +284,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       createV4Ledger(db);
       seedAsset(db, "plan:a");
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
-      expect(db.userVersion()).toBe(5);
+      expect(db.userVersion()).toBe(6);
       expect(
         db
           .prepare(
@@ -351,7 +351,7 @@ describe("PLAN Asset canonical ledger schema", () => {
       for (const ddl of legacyV2Ddl()) db.exec(ddl);
       db.setUserVersion(2);
       seedAsset(db, "plan:a");
-      expect(LEDGER_SCHEMA_VERSION).toBe(5);
+      expect(LEDGER_SCHEMA_VERSION).toBe(6);
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       expect(
         db
@@ -360,6 +360,29 @@ describe("PLAN Asset canonical ledger schema", () => {
           .map((column) => column.name),
       ).toContain("lease_key_version");
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PADM-065: v5 ledgerへappend-only artifact cleanup operation schemaを原子的に追加する", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
+      db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
+      db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");
+      db.exec("DROP TABLE plan_draft_artifact_operation_events");
+      db.setUserVersion(5);
+
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(
+        db
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE name = 'plan_draft_artifact_operation_events'",
+          )
+          .get()?.name,
+      ).toBe("plan_draft_artifact_operation_events");
     } finally {
       db.close();
     }

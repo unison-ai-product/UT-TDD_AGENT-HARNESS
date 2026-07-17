@@ -63,21 +63,23 @@ export class PlanRevisionLedgerTransaction {
         .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
         .get(input.commandId);
       if (replay) {
-        const value: AppendPlanRevisionResult = secureEqual(
+        const value: AppendPlanRevisionResult = !secureEqual(
           String(replay.command_payload_digest),
           validated.commandPayloadDigest,
         )
-          ? {
-              ok: true,
-              replayed: true,
-              assetId: String(replay.plan_asset_id),
-              revision: Number(replay.plan_revision),
-              canonicalPayloadDigest: validated.canonicalPayloadDigest,
-              commandPayloadDigest: validated.commandPayloadDigest,
-              certificateId: String(replay.result_ref),
-              certificateDigest: validated.certificateDigest,
-            }
-          : { ok: false, ruleId: "plan-revision-command-conflict" };
+          ? { ok: false, ruleId: "plan-revision-command-conflict" }
+          : replayBindingValid(this.db, input, validated, replay)
+            ? {
+                ok: true,
+                replayed: true,
+                assetId: String(replay.plan_asset_id),
+                revision: Number(replay.plan_revision),
+                canonicalPayloadDigest: validated.canonicalPayloadDigest,
+                commandPayloadDigest: validated.commandPayloadDigest,
+                certificateId: String(replay.result_ref),
+                certificateDigest: validated.certificateDigest,
+              }
+            : { ok: false, ruleId: "plan-revision-receipt-binding-invalid" };
         if (value.ok) onPrepared(value);
         return { commit: true, value };
       }
@@ -180,6 +182,101 @@ export class PlanRevisionLedgerTransaction {
       return { commit: true, value };
     });
   }
+}
+
+interface ValidRevision {
+  readonly canonicalPayloadDigest: string;
+  readonly commandPayloadDigest: string;
+  readonly certificateDigest: string;
+}
+
+/** Replayはcommand digestだけでなく、永続化した全bindingを再証明する。 */
+export function replayBindingValid(
+  db: HarnessDb,
+  input: AppendPlanRevisionInput,
+  expected: ValidRevision,
+  receipt: Record<string, unknown>,
+): boolean {
+  const revision = input.baseRevision + 1;
+  const eventId = `admission:${input.certificateId}`;
+  const expectedReceipt = {
+    command_id: input.commandId,
+    command_type: "plan.revise",
+    subject_kind: "plan_revision",
+    subject_key: `${input.assetId}:${revision}`,
+    plan_asset_id: input.assetId,
+    plan_revision: revision,
+    command_payload_digest: expected.commandPayloadDigest,
+    result_kind: "admission_certificate",
+    result_ref: input.certificateId,
+    recorded_at: input.occurredAt,
+  };
+  if (!rowEquals(receipt, expectedReceipt)) return false;
+  if (receipt.receipt_digest !== ledgerRowDigest(receipt, "receipt_digest")) return false;
+
+  const expectedAdmission = {
+    admission_event_id: eventId,
+    command_id: input.commandId,
+    command_payload_digest: expected.commandPayloadDigest,
+    event_kind: "admitted",
+    plan_asset_id: input.assetId,
+    plan_revision: revision,
+    plan_id: input.planId,
+    source_path: input.sourcePath,
+    content_digest: input.contentDigest,
+    route_tuple_digest: input.routeTupleDigest,
+    certificate_id: input.certificateId,
+    certificate_digest: expected.certificateDigest,
+    occurred_at: input.occurredAt,
+  };
+  const event = db
+    .prepare("SELECT * FROM plan_admission_events WHERE command_id = ?")
+    .get(input.commandId);
+  if (!event || !rowEquals(event, expectedAdmission)) return false;
+  if (event.event_digest !== ledgerRowDigest(event, "event_digest")) return false;
+  const admission = db
+    .prepare("SELECT * FROM plan_admission_receipts WHERE command_id = ?")
+    .get(input.commandId);
+  if (
+    !admission ||
+    !rowEquals(admission, {
+      certificate_id: input.certificateId,
+      admission_event_id: eventId,
+      command_id: input.commandId,
+      command_payload_digest: expected.commandPayloadDigest,
+      plan_asset_id: input.assetId,
+      plan_revision: revision,
+      plan_id: input.planId,
+      source_path: input.sourcePath,
+      content_digest: input.contentDigest,
+      route_tuple_digest: input.routeTupleDigest,
+      certificate_digest: expected.certificateDigest,
+      occurred_at: input.occurredAt,
+    })
+  )
+    return false;
+  const stored = db
+    .prepare("SELECT * FROM plan_revisions WHERE asset_id = ? AND revision = ?")
+    .get(input.assetId, revision);
+  return Boolean(
+    stored &&
+      rowEquals(stored, {
+        asset_id: input.assetId,
+        revision,
+        canonical_payload_json: input.canonicalPayloadJson,
+        canonical_payload_digest: expected.canonicalPayloadDigest,
+        body_digest: input.bodyDigest,
+        source_path: input.sourcePath,
+        source_commit: input.sourceCommit,
+        actor: input.actor,
+        reason: input.reason,
+        occurred_at: input.occurredAt,
+      }),
+  );
+}
+
+function rowEquals(row: Record<string, unknown>, expected: Record<string, unknown>): boolean {
+  return Object.entries(expected).every(([key, value]) => row[key] === value);
 }
 
 function validate(input: AppendPlanRevisionInput):

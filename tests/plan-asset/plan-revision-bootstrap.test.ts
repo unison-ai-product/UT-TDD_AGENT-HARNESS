@@ -176,12 +176,34 @@ describe("legacy PLAN revision bootstrap transaction", () => {
       ruleId: "plan-ledger-unavailable",
     });
   });
+
+  it.each([
+    ["append_command_receipts", "receipt_digest", "0".repeat(64)],
+    ["plan_admission_events", "event_digest", "0".repeat(64)],
+    ["plan_admission_receipts", "route_tuple_digest", "0".repeat(64)],
+    ["plan_revisions", "body_digest", "0".repeat(64)],
+  ])("U-PA-REV-BOOT-009: same-command replayは%s改ざんをfail-closeする", (table, column, value) => {
+    const { db, ledger } = fixture();
+    const input = bootstrap();
+    expect(ledger.bootstrap(input)).toMatchObject({ ok: true });
+    const guards = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND sql LIKE ?")
+      .all(`%UPDATE ON ${table}%`) as Array<{ name: string }>;
+    for (const guard of guards) db.exec(`DROP TRIGGER ${guard.name}`);
+    db.prepare(
+      `UPDATE ${table} SET ${column} = ? WHERE ${table === "plan_revisions" ? "revision = 2" : "1 = 1"}`,
+    ).run(value);
+    expect(ledger.bootstrap(input)).toEqual({
+      ok: false,
+      ruleId: "plan-revision-receipt-binding-invalid",
+    });
+  });
 });
 
 function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
   return { db, ledger: new LegacyPlanRevisionBootstrapTransaction(db) };
 }
 

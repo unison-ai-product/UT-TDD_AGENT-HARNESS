@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   type DraftArtifact,
+  type DraftCleanupOperation,
   type DraftJournalEntry,
   type DraftJournalPort,
   type DraftLedgerPort,
@@ -37,6 +38,27 @@ const receipt = (digest = command.commandPayloadDigest): Receipt => ({
   certificateId: "certificate-1",
   commandPayloadDigest: digest,
 });
+const cleanup = (): DraftCleanupOperation => ({
+  operation: "finalize",
+  tokenId: "staged",
+  requestDigest: `sha256:${"a".repeat(64)}` as `sha256:${string}`,
+  artifacts: [
+    {
+      path: "source",
+      temporaryPath: "source.tmp",
+      rollbackPath: "source.rollback",
+      preimage: { kind: "absent" },
+      postimage: `sha256:${"b".repeat(64)}`,
+    },
+    {
+      path: "projection",
+      temporaryPath: "projection.tmp",
+      rollbackPath: "projection.rollback",
+      preimage: { kind: "absent" },
+      postimage: `sha256:${"c".repeat(64)}`,
+    },
+  ],
+});
 
 class Journal implements DraftJournalPort<Receipt> {
   entry?: DraftJournalEntry<Receipt>;
@@ -54,10 +76,20 @@ class Journal implements DraftJournalPort<Receipt> {
     this.entry = { status: "intent", payloadDigest: intent.payloadDigest };
   }
 
-  commit(_id: string, digest: string, committedReceipt: Receipt): void {
+  commit(
+    _id: string,
+    digest: string,
+    committedReceipt: Receipt,
+    operation: DraftCleanupOperation,
+  ): void {
     this.events.push("journal.commit");
     if (this.failCommit) throw new Error("journal commit failed");
-    this.entry = { status: "committed", payloadDigest: digest, receipt: committedReceipt };
+    this.entry = {
+      status: "committed",
+      payloadDigest: digest,
+      receipt: committedReceipt,
+      cleanup: { status: "pending", operation },
+    };
   }
 
   markRecoveryRequired(_id: string, digest: string, reason: string): void {
@@ -68,13 +100,28 @@ class Journal implements DraftJournalPort<Receipt> {
   markCleanupPending(_id: string, digest: string, reason: string): void {
     this.events.push(`journal.cleanup:${reason}`);
     if (!this.entry || this.entry.status !== "committed") throw new Error("not committed");
-    this.entry = { ...this.entry, payloadDigest: digest, cleanupPending: reason };
+    this.entry = {
+      ...this.entry,
+      payloadDigest: digest,
+      cleanup: { ...this.entry.cleanup, status: "pending", reason },
+    };
+  }
+
+  completeCleanup(_id: string, digest: string): void {
+    this.events.push("journal.cleanup-complete");
+    if (!this.entry || this.entry.status !== "committed") throw new Error("not committed");
+    this.entry = {
+      ...this.entry,
+      payloadDigest: digest,
+      cleanup: { ...this.entry.cleanup, status: "completed" },
+    };
   }
 }
 
 class Publisher implements DraftPublisherPort {
   failRestore = false;
   finalizeFailures = 0;
+  failResume = false;
 
   constructor(private readonly events: string[]) {}
 
@@ -95,6 +142,18 @@ class Publisher implements DraftPublisherPort {
   finalize(): void {
     this.events.push("publisher.finalize");
     if (this.finalizeFailures-- > 0) throw new Error("finalize failed");
+  }
+
+  describeCleanup(
+    _token: DraftPublishToken,
+    requestDigest: `sha256:${string}`,
+  ): DraftCleanupOperation {
+    return { ...cleanup(), requestDigest };
+  }
+
+  resumeCleanup(): void {
+    this.events.push("publisher.resume-cleanup");
+    if (this.failResume) throw new Error("resume failed");
   }
 }
 
@@ -149,6 +208,7 @@ describe("PlanDraftService", () => {
       "ledger.commit",
       "journal.commit",
       "publisher.finalize",
+      "journal.cleanup-complete",
     ]);
   });
 
@@ -158,10 +218,11 @@ describe("PlanDraftService", () => {
       status: "committed",
       payloadDigest: command.commandPayloadDigest,
       receipt: receipt(),
+      cleanup: { status: "completed", operation: cleanup() },
     };
 
     expect(f.service.execute(command)).toEqual({ status: "replayed", receipt: receipt() });
-    expect(f.events).toEqual(["validator.validate", "journal.find"]);
+    expect(f.events).toEqual(["validator.validate", "journal.find", "publisher.resume-cleanup"]);
   });
 
   it("U-PADM-025: 同じcommand idの異なるdigestを副作用前にfail-closeする", () => {
@@ -170,6 +231,7 @@ describe("PlanDraftService", () => {
       status: "committed",
       payloadDigest: "sha256:other",
       receipt: receipt("sha256:other"),
+      cleanup: { status: "completed", operation: cleanup() },
     };
 
     expect(() => f.service.execute(command)).toThrow(PlanDraftConflictError);
@@ -245,9 +307,9 @@ describe("PlanDraftService", () => {
 
     expect(f.service.execute(command)).toEqual({ status: "created", receipt: receipt() });
     expect(f.events.slice(-3)).toEqual([
-      "journal.commit",
       "publisher.finalize",
       "publisher.finalize",
+      "journal.cleanup-complete",
     ]);
     expect(f.service.execute(command)).toEqual({ status: "replayed", receipt: receipt() });
   });
@@ -259,10 +321,15 @@ describe("PlanDraftService", () => {
     expect(() => f.service.execute(command)).toThrow(PlanDraftCleanupPendingError);
     expect(f.journal.entry).toMatchObject({
       status: "committed",
-      cleanupPending: expect.stringContaining("artifact cleanup未完了"),
+      cleanup: { status: "pending", reason: expect.stringContaining("artifact cleanup未完了") },
     });
     const beforeReplay = [...f.events];
-    expect(() => f.service.execute(command)).toThrow(PlanDraftCleanupPendingError);
-    expect(f.events.slice(beforeReplay.length)).toEqual(["validator.validate", "journal.find"]);
+    expect(f.service.execute(command)).toEqual({ status: "replayed", receipt: receipt() });
+    expect(f.events.slice(beforeReplay.length)).toEqual([
+      "validator.validate",
+      "journal.find",
+      "publisher.resume-cleanup",
+      "journal.cleanup-complete",
+    ]);
   });
 });

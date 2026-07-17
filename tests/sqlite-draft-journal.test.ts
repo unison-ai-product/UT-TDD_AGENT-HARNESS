@@ -25,6 +25,27 @@ const boundReceipt = (commandPayloadDigest: string, certificateDigest?: string) 
   commandPayloadDigest,
   ...(certificateDigest ? { certificateDigest } : {}),
 });
+const cleanup = () => ({
+  operation: "finalize" as const,
+  tokenId: "token-1",
+  requestDigest: `sha256:${"a".repeat(64)}` as const,
+  artifacts: [
+    {
+      path: "docs/plans/a.md",
+      temporaryPath: "docs/plans/a.tmp",
+      rollbackPath: "docs/plans/a.rollback",
+      preimage: { kind: "absent" as const },
+      postimage: `sha256:${"b".repeat(64)}` as const,
+    },
+    {
+      path: "docs/governance/plan-admission-receipts.json",
+      temporaryPath: "docs/governance/p.tmp",
+      rollbackPath: "docs/governance/p.rollback",
+      preimage: { kind: "absent" as const },
+      postimage: `sha256:${"c".repeat(64)}` as const,
+    },
+  ] as const,
+});
 
 describe("SqliteDraftJournal", () => {
   it("U-PADM-028: intentとcommitをappend-only eventへ残しcurrentを投影する", () => {
@@ -37,12 +58,14 @@ describe("SqliteDraftJournal", () => {
       boundIntent.commandId,
       boundIntent.payloadDigest,
       boundReceipt(boundIntent.payloadDigest),
+      cleanup(),
     );
 
     expect(journal.find(intent.commandId)).toEqual({
       status: "committed",
       payloadDigest: boundIntent.payloadDigest,
       receipt: boundReceipt(boundIntent.payloadDigest, result.certificateDigest),
+      cleanup: { status: "pending", operation: cleanup() },
     });
     expect(db.prepare("SELECT COUNT(*) AS n FROM plan_draft_journal_events").get()?.n).toBe(2);
     expect(() =>
@@ -62,7 +85,12 @@ describe("SqliteDraftJournal", () => {
       payloadDigest: intent.payloadDigest,
     });
     expect(() =>
-      journal.commit(intent.commandId, intent.payloadDigest, boundReceipt(intent.payloadDigest)),
+      journal.commit(
+        intent.commandId,
+        intent.payloadDigest,
+        boundReceipt(intent.payloadDigest),
+        cleanup(),
+      ),
     ).toThrow(/transition-invalid/);
   });
 
@@ -103,7 +131,7 @@ describe("SqliteDraftJournal", () => {
     const boundIntent = { ...intent, payloadDigest: result.commandPayloadDigest };
     const committed = boundReceipt(boundIntent.payloadDigest);
     journal.recordIntent(boundIntent);
-    journal.commit(boundIntent.commandId, boundIntent.payloadDigest, committed);
+    journal.commit(boundIntent.commandId, boundIntent.payloadDigest, committed, cleanup());
 
     journal.markCleanupPending(
       boundIntent.commandId,
@@ -115,7 +143,7 @@ describe("SqliteDraftJournal", () => {
       status: "committed",
       payloadDigest: boundIntent.payloadDigest,
       receipt: boundReceipt(boundIntent.payloadDigest, result.certificateDigest),
-      cleanupPending: "artifact cleanup未完了",
+      cleanup: { status: "pending", operation: cleanup(), reason: "artifact cleanup未完了" },
     });
     expect(
       db
@@ -124,6 +152,33 @@ describe("SqliteDraftJournal", () => {
         )
         .get(),
     ).toEqual({ sequence: 3, event_kind: "committed", failure_reason: "artifact cleanup未完了" });
+  });
+
+  it("U-PADM-064: 別process相当のjournal instanceがdurable cleanup operationを再開・完了できる", () => {
+    const { db, journal } = fixture();
+    const result = new PlanDraftLedgerTransaction(db).append(draft());
+    if (!result.ok) throw new Error(result.ruleId);
+    const boundIntent = { ...intent, payloadDigest: result.commandPayloadDigest };
+    journal.recordIntent(boundIntent);
+    journal.commit(
+      boundIntent.commandId,
+      boundIntent.payloadDigest,
+      boundReceipt(boundIntent.payloadDigest),
+      cleanup(),
+    );
+    journal.markCleanupPending(boundIntent.commandId, boundIntent.payloadDigest, "process exit");
+
+    const restarted = new SqliteDraftJournal(db, () => "2026-07-15T00:02:00.000Z");
+    expect(restarted.find(boundIntent.commandId)).toMatchObject({
+      cleanup: { status: "pending", operation: cleanup(), reason: "process exit" },
+    });
+    restarted.completeCleanup(boundIntent.commandId, boundIntent.payloadDigest);
+    expect(restarted.find(boundIntent.commandId)).toMatchObject({
+      cleanup: { status: "completed", operation: cleanup() },
+    });
+    expect(
+      db.prepare("SELECT COUNT(*) AS n FROM plan_draft_artifact_operation_events").get()?.n,
+    ).toBe(3);
   });
 });
 

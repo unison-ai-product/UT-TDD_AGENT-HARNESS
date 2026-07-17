@@ -136,12 +136,21 @@ export function assemblePlanRevisionCommand(input: {
   return {
     commandId: manifest.command_id,
     commandPayloadDigest,
+    replayBindingDigest: planRevisionReplayBindingDigest(manifest, admission),
     planId: manifest.plan_id,
     recordedAt: manifest.recorded_at,
     payload: { admission, ledgerInput, legacy: input.legacy },
     source: { path: manifest.source.path, content: manifest.source.content },
     projectionPath: manifest.projection.path,
   };
+}
+
+/** HEAD advance後もcaller input全体をdurable receiptへ照合できるdigest。 */
+export function planRevisionReplayBindingDigest(
+  manifest: PlanRevisionManifest,
+  admission: PlanAdmissionRequest,
+): `sha256:${string}` {
+  return `sha256:${sha(stableJson({ manifest, admission }))}`;
 }
 
 export function canonicalPlanPayload(source: string): { payload: string; body: string } {

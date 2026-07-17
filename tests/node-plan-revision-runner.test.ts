@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PlanRevisionManifest } from "../src/cli/plan-revise.js";
 import { NodeAtomicDraftPublisher } from "../src/plan-admission/node-atomic-draft-publisher.js";
-import { NodePlanRevisionRunner } from "../src/plan-admission/node-plan-revision-runner.js";
+import {
+  NodePlanRevisionRunner,
+  revisionUsesLegacyBootstrap,
+} from "../src/plan-admission/node-plan-revision-runner.js";
 import { canonicalPlanPayload } from "../src/plan-admission/plan-revision-command-assembler.js";
 import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.js";
 import { deriveLegacyAssetId } from "../src/plan-asset/adapters/legacy-plan-adapter.js";
@@ -56,6 +59,12 @@ describe("NodePlanRevisionRunner", () => {
     const projection = JSON.parse(readFileSync(join(f.root, f.manifest.projection.path), "utf8"));
     expect(`sha256:${ledger.content_digest}`).toBe(embedded);
     expect(projection.records.at(-1).binding.content_digest).toBe(embedded);
+    expect(revisionUsesLegacyBootstrap(f.db, f.manifest.base.asset_id, f.manifest.command_id)).toBe(
+      true,
+    );
+    expect(
+      revisionUsesLegacyBootstrap(f.db, f.manifest.base.asset_id, "command:next-revision"),
+    ).toBe(false);
   });
 
   it.each([
@@ -72,6 +81,37 @@ describe("NodePlanRevisionRunner", () => {
     expect(readFileSync(join(f.root, f.manifest.projection.path), "utf8")).toBe(
       publishedProjection,
     );
+  });
+
+  it("U-PA-REV-030: committed replay時のworking projection欠落を拒否する", () => {
+    const f = fixture("adopted");
+    f.runner.run(f.input);
+    rmSync(join(f.root, f.manifest.projection.path));
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-artifact-binding-invalid");
+  });
+
+  it("U-PA-REV-028: commit後にHEADがadvanceしてもdurable request/receipt/postimageからreplayを再証明する", () => {
+    const drift: Drift = {};
+    const f = fixture("adopted", drift);
+    const created = f.runner.run(f.input);
+    drift.sourceCommit = "e".repeat(40);
+    drift.sourceBlobOid = "f".repeat(40);
+    drift.headSource = "advanced HEAD";
+
+    expect(f.runner.run(f.input)).toEqual({ status: "replayed", receipt: created.receipt });
+  });
+
+  it.each([
+    "source",
+    "projection",
+  ] as const)("U-PA-REV-029: committed replay時のworking %s改変をdurable postimage CASで拒否する", (artifact) => {
+    const f = fixture("adopted");
+    f.runner.run(f.input);
+    const path = artifact === "source" ? f.manifest.source.path : f.manifest.projection.path;
+    writeFileSync(join(f.root, path), "external mutation", "utf8");
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-artifact-binding-invalid");
   });
 
   it("U-PA-REV-025: legacy manifestのasset IDがrepository identity由来でなければwrite 0", () => {
@@ -253,7 +293,7 @@ function fixture(mode: Mode, drift: Drift = {}) {
     projection: { path: projectionPath },
   };
   const db = openHarnessDb(":memory:");
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
   if (mode !== "legacy") seedAdopted(db, assetId, planId, basePayload, mode === "alias-mismatch");
   // close境界の呼出しを観測しつつ、write-set assertionまではin-memory DBを保持する。
   const close = vi.spyOn(db, "close").mockImplementation(() => undefined);

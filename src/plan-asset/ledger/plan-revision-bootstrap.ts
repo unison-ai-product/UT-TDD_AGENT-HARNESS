@@ -3,7 +3,11 @@ import type { HarnessDb } from "../../state-db/index.js";
 import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
 import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.js";
 import { PlanAsset } from "../domain/plan-asset.js";
-import type { AppendPlanRevisionInput, AppendPlanRevisionResult } from "./plan-revision-ledger.js";
+import {
+  type AppendPlanRevisionInput,
+  type AppendPlanRevisionResult,
+  replayBindingValid,
+} from "./plan-revision-ledger.js";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
 import { ImmediateLedgerTransaction, type LedgerTransactionPort } from "./transaction.js";
 
@@ -62,7 +66,7 @@ export class LegacyPlanRevisionBootstrapTransaction {
     const validated = validateBootstrap(input);
     if (!validated.ok) return validated;
     return this.transaction.run(() => {
-      const replay = this.replay(input.commandId, validated.commandPayloadDigest);
+      const replay = this.replay(input, validated);
       if (replay) {
         if (replay.ok) onPrepared(replay);
         return { commit: replay.ok, value: replay };
@@ -241,50 +245,143 @@ export class LegacyPlanRevisionBootstrapTransaction {
     this.fault?.after("receipt");
   }
 
-  private replay(commandId: string, digest: string): AppendPlanRevisionResult | undefined {
+  private replay(
+    input: BootstrapLegacyPlanRevisionInput,
+    expected: ValidBootstrap,
+  ): AppendPlanRevisionResult | undefined {
     const receipt = this.db
       .prepare("SELECT * FROM append_command_receipts WHERE command_id = ?")
-      .get(commandId);
+      .get(input.commandId);
     if (!receipt) return undefined;
-    if (!secureEqual(String(receipt.command_payload_digest), digest)) {
+    if (!secureEqual(String(receipt.command_payload_digest), expected.commandPayloadDigest)) {
       return { ok: false, ruleId: "plan-revision-command-conflict" };
     }
-    const revision = Number(receipt.plan_revision);
-    const assetId = String(receipt.plan_asset_id);
-    const certificateId = String(receipt.result_ref);
-    const admission = this.db
-      .prepare("SELECT * FROM plan_admission_receipts WHERE command_id = ?")
-      .get(commandId);
-    const stored = this.db
-      .prepare(
-        "SELECT canonical_payload_digest FROM plan_revisions WHERE asset_id = ? AND revision = ?",
-      )
-      .get(assetId, revision);
     if (
-      receipt.command_type !== "plan.revise" ||
-      receipt.subject_kind !== "plan_revision" ||
-      receipt.subject_key !== `${assetId}:${revision}` ||
-      receipt.result_kind !== "admission_certificate" ||
-      !admission ||
-      !stored ||
-      String(admission.plan_asset_id) !== assetId ||
-      Number(admission.plan_revision) !== revision ||
-      String(admission.certificate_id) !== certificateId ||
-      !secureEqual(String(admission.command_payload_digest), digest)
+      !replayBindingValid(
+        this.db,
+        {
+          ...input,
+          assetId: expected.assetId,
+          basePayloadDigest: input.baseCanonicalPayloadDigest,
+        },
+        expected,
+        receipt,
+      ) ||
+      !this.bootstrapBindingValid(input, expected)
     ) {
       return { ok: false, ruleId: "plan-revision-receipt-binding-invalid" };
     }
     return {
       ok: true,
       replayed: true,
-      assetId,
-      revision,
-      canonicalPayloadDigest: String(stored.canonical_payload_digest),
-      commandPayloadDigest: digest,
-      certificateId,
-      certificateDigest: String(admission.certificate_digest),
+      assetId: expected.assetId,
+      revision: 2,
+      canonicalPayloadDigest: expected.canonicalPayloadDigest,
+      commandPayloadDigest: expected.commandPayloadDigest,
+      certificateId: input.certificateId,
+      certificateDigest: expected.certificateDigest,
     };
   }
+
+  private bootstrapBindingValid(
+    input: BootstrapLegacyPlanRevisionInput,
+    expected: ValidBootstrap,
+  ): boolean {
+    const asset = this.db
+      .prepare("SELECT * FROM plan_assets WHERE asset_id = ?")
+      .get(expected.assetId);
+    if (
+      !asset ||
+      !matches(asset, {
+        asset_id: expected.assetId,
+        created_at: input.occurredAt,
+        source_commit: input.baseSourceCommit,
+        identity_algorithm: input.identityAlgorithm,
+      })
+    )
+      return false;
+    const base = this.db
+      .prepare("SELECT * FROM plan_revisions WHERE asset_id = ? AND revision = 1")
+      .get(expected.assetId);
+    if (
+      !base ||
+      !matches(base, {
+        asset_id: expected.assetId,
+        revision: 1,
+        canonical_payload_json: input.baseCanonicalPayloadJson,
+        canonical_payload_digest: input.baseCanonicalPayloadDigest,
+        body_digest: input.baseBodyDigest,
+        source_path: input.baseSourcePath,
+        source_commit: input.baseSourceCommit,
+        actor: "legacy-bootstrap",
+        reason: input.reason,
+        occurred_at: input.occurredAt,
+      })
+    )
+      return false;
+    const provenance = this.db
+      .prepare("SELECT * FROM legacy_plan_bootstrap_provenance WHERE asset_id = ? AND revision = 1")
+      .get(expected.assetId);
+    const expectedProvenance = {
+      asset_id: expected.assetId,
+      revision: 1,
+      source_path: input.baseSourcePath,
+      source_commit: input.baseSourceCommit,
+      source_blob_oid: input.baseSourceBlobOid,
+      source_content_digest: input.baseSourceContentDigest,
+      repository_identity: input.repositoryIdentity,
+      identity_algorithm: input.identityAlgorithm,
+      identity_input_json: input.identityInputJson,
+      identity_digest: input.identityDigest,
+      recorded_at: input.occurredAt,
+    };
+    if (
+      !provenance ||
+      !matches(provenance, expectedProvenance) ||
+      provenance.provenance_digest !== ledgerRowDigest(provenance, "provenance_digest")
+    )
+      return false;
+    const aliasEventId = `alias:${input.commandId}:1`;
+    const aliasEvent = this.db
+      .prepare("SELECT * FROM plan_alias_events WHERE alias_event_id = ?")
+      .get(aliasEventId);
+    const expectedAliasEvent = {
+      alias_event_id: aliasEventId,
+      asset_id: expected.assetId,
+      asset_revision: 1,
+      command_id: input.commandId,
+      command_payload_digest: expected.commandPayloadDigest,
+      event_kind: "assigned",
+      alias: input.planId,
+      effective_revision: 1,
+      reason: "legacy bootstrap",
+      occurred_at: input.occurredAt,
+    };
+    if (
+      !aliasEvent ||
+      !matches(aliasEvent, expectedAliasEvent) ||
+      aliasEvent.event_digest !== ledgerRowDigest(aliasEvent, "event_digest")
+    )
+      return false;
+    const alias = this.db
+      .prepare("SELECT * FROM plan_aliases WHERE alias = ? AND valid_to_revision IS NULL")
+      .get(input.planId);
+    return Boolean(
+      alias &&
+        matches(alias, {
+          alias_id: `alias-current:${expected.assetId}`,
+          asset_id: expected.assetId,
+          alias: input.planId,
+          valid_from_revision: 1,
+          valid_to_revision: null,
+          last_event_digest: aliasEvent.event_digest,
+        }),
+    );
+  }
+}
+
+function matches(row: Record<string, unknown>, expected: Record<string, unknown>): boolean {
+  return Object.entries(expected).every(([key, value]) => row[key] === value);
 }
 
 interface ValidBootstrap {

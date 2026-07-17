@@ -1,6 +1,8 @@
 export interface PlanDraftCommand<TPayload> {
   commandId: string;
   commandPayloadDigest: string;
+  /** HEADに依存せず、same-command入力そのものを再証明するdigest。 */
+  replayBindingDigest?: `sha256:${string}`;
   planId: string;
   recordedAt: string;
   payload: TPayload;
@@ -24,14 +26,47 @@ export interface DraftValidationPort<TPayload> {
 
 export type DraftJournalEntry<TReceipt> =
   | { status: "intent" | "recovery_required"; payloadDigest: string }
-  | { status: "committed"; payloadDigest: string; receipt: TReceipt; cleanupPending?: string };
+  | {
+      status: "committed";
+      payloadDigest: string;
+      receipt: TReceipt;
+      cleanup: DraftCleanupBinding;
+    };
+
+export interface DraftCleanupArtifact {
+  readonly path: string;
+  readonly temporaryPath: string;
+  readonly rollbackPath: string;
+  readonly preimage: ArtifactPreimage;
+  readonly postimage: `sha256:${string}`;
+}
+
+/** processを跨いでfinalizeだけを安全に再開するためのdurable capability。 */
+export interface DraftCleanupOperation {
+  readonly operation: "finalize";
+  readonly tokenId: string;
+  readonly requestDigest: `sha256:${string}`;
+  readonly artifacts: readonly [DraftCleanupArtifact, DraftCleanupArtifact];
+}
+
+export interface DraftCleanupBinding {
+  readonly status: "pending" | "completed";
+  readonly operation: DraftCleanupOperation;
+  readonly reason?: string;
+}
 
 export interface DraftJournalPort<TReceipt extends DraftReceiptBinding> {
   find(commandId: string): DraftJournalEntry<TReceipt> | undefined;
   recordIntent(command: DraftJournalCommand): void;
-  commit(commandId: string, payloadDigest: string, receipt: TReceipt): void;
+  commit(
+    commandId: string,
+    payloadDigest: string,
+    receipt: TReceipt,
+    cleanup: DraftCleanupOperation,
+  ): void;
   markRecoveryRequired(commandId: string, payloadDigest: string, reason: string): void;
   markCleanupPending(commandId: string, payloadDigest: string, reason: string): void;
+  completeCleanup(commandId: string, payloadDigest: string): void;
 }
 
 export interface DraftJournalCommand {
@@ -59,6 +94,11 @@ export interface DraftPublisherPort {
   publish(token: DraftPublishToken): void;
   restore(token: DraftPublishToken): void;
   finalize(token: DraftPublishToken): void;
+  describeCleanup(
+    token: DraftPublishToken,
+    requestDigest: `sha256:${string}`,
+  ): DraftCleanupOperation;
+  resumeCleanup(operation: DraftCleanupOperation): void;
 }
 
 export interface DraftArtifactRendererPort<TPayload, TReceipt extends DraftReceiptBinding> {
@@ -130,6 +170,7 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
       recordedAt: command.recordedAt,
     });
     let token: DraftPublishToken | undefined;
+    let cleanup: DraftCleanupOperation | undefined;
     let receipt: TReceipt;
     try {
       receipt = this.ports.ledger.transact(command, (prepared) => {
@@ -138,12 +179,17 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
         }
         token = this.ports.publisher.stage(this.ports.renderer.render(command, prepared));
         this.ports.publisher.publish(token);
+        cleanup = this.ports.publisher.describeCleanup(
+          token,
+          command.replayBindingDigest ?? normalizeDigest(command.commandPayloadDigest),
+        );
       });
     } catch (cause) {
       this.recover(command, token, cause);
     }
     try {
-      this.ports.journal.commit(command.commandId, command.commandPayloadDigest, receipt);
+      if (!cleanup) throw new Error("公開済みartifactのcleanup capabilityがありません");
+      this.ports.journal.commit(command.commandId, command.commandPayloadDigest, receipt, cleanup);
     } catch (cause) {
       this.markCommittedRecovery(command, cause);
     }
@@ -160,8 +206,26 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
       throw new PlanDraftConflictError("command_idは異なるpayload_digestで使用済みです");
     }
     if (existing.status === "committed") {
-      if (existing.cleanupPending)
-        throw new PlanDraftCleanupPendingError(existing.cleanupPending, existing.receipt);
+      try {
+        // completedでもpostimageと補助path不在を再証明する。pendingなら同じ操作でcleanupを再開する。
+        this.ports.publisher.resumeCleanup(existing.cleanup.operation);
+        if (existing.cleanup.status === "pending")
+          this.ports.journal.completeCleanup(command.commandId, command.commandPayloadDigest);
+      } catch (cause) {
+        const reason = `durable artifact cleanup/replay検証失敗: ${errorText(cause)}`;
+        if (existing.cleanup.status === "pending") {
+          try {
+            this.ports.journal.markCleanupPending(
+              command.commandId,
+              command.commandPayloadDigest,
+              reason,
+            );
+          } catch {
+            // 元のartifact不整合を主原因として保持する。
+          }
+        }
+        throw new PlanDraftCleanupPendingError(reason, existing.receipt, { cause });
+      }
       return { status: "replayed", receipt: existing.receipt };
     }
     throw new PlanDraftRecoveryRequiredError(
@@ -229,11 +293,13 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
   ): void {
     try {
       this.ports.publisher.finalize(token);
+      this.ports.journal.completeCleanup(command.commandId, command.commandPayloadDigest);
       return;
     } catch (firstFailure) {
       try {
         // finalizeは冪等port契約。通常例外なら同じtokenからcleanupを再開する。
         this.ports.publisher.finalize(token);
+        this.ports.journal.completeCleanup(command.commandId, command.commandPayloadDigest);
         return;
       } catch (cause) {
         const reason = `ledger/file/journal確定済みだがartifact cleanup未完了: ${errorText(cause)}`;
@@ -258,4 +324,8 @@ export class PlanDraftService<TPayload, TReceipt extends DraftReceiptBinding> {
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeDigest(value: string): `sha256:${string}` {
+  return (value.startsWith("sha256:") ? value : `sha256:${value}`) as `sha256:${string}`;
 }

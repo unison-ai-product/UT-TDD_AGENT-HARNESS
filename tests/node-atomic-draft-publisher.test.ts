@@ -13,6 +13,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   type DraftPublisherFaultPoint,
+  NODE_PATH_MUTATION_SAFETY,
   NodeAtomicDraftPublisher,
 } from "../src/plan-admission/node-atomic-draft-publisher";
 
@@ -262,8 +263,8 @@ describe("NodeAtomicDraftPublisher", () => {
       { ...f.artifacts[1], expectedPreimage: preimage("old-projection") },
     ]);
 
-    expect(() => f.publisher.publish(token)).toThrow(/postimage/);
-    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("concurrent-restore-window");
+    expect(() => f.publisher.publish(token)).toThrow(/preimage/);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("old-source");
   });
 
   it("U-PADM-054: restore窓の外部作成をrollback renameで上書きしない", () => {
@@ -332,6 +333,129 @@ describe("NodeAtomicDraftPublisher", () => {
 
     expect(() => f.publisher.finalize(token)).toThrow(/parent drift/);
     expect(readFileSync(join(parent, "external.md"), "utf8")).toBe("external");
+  });
+
+  it("U-PADM-059: stage後にtemporary fileを同内容の別fileへ交換してもidentity CASで拒否する", () => {
+    const f = fixture();
+    const token = f.publisher.stage(f.artifacts);
+    const temporary = join(f.root, `${f.source}.ut-tdd-draft-fixture.tmp`);
+    rmSync(temporary);
+    writeFileSync(temporary, "new-source", "utf8");
+
+    expect(() => f.publisher.publish(token)).toThrow(/temporary CAS/);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("old-source");
+  });
+
+  it("U-PADM-060: publish直前に作られたrollback補助pathを上書きしない", () => {
+    const f = fixture();
+    const token = f.publisher.stage(f.artifacts);
+    const rollback = join(f.root, `${f.source}.ut-tdd-draft-fixture.rollback`);
+    writeFileSync(rollback, "foreign-rollback", "utf8");
+
+    expect(() => f.publisher.publish(token)).toThrow();
+    expect(readFileSync(rollback, "utf8")).toBe("foreign-rollback");
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("old-source");
+  });
+
+  it("U-PADM-061: target link直後の同一inode改変をpostimage CASで検出して補償する", () => {
+    const f = fixture((point, path) => {
+      if (point === "publish:after-target-link" && path === f.source) {
+        writeFileSync(join(f.root, f.source), "tampered-postimage", "utf8");
+      }
+    });
+    const token = f.publisher.stage(f.artifacts);
+
+    expect(() => f.publisher.publish(token)).toThrow(/postcondition/);
+    expect(() => readFileSync(join(f.root, f.source), "utf8")).toThrow();
+    expect(readFileSync(join(f.root, `${f.source}.ut-tdd-draft-fixture.rollback`), "utf8")).toBe(
+      "old-source",
+    );
+  });
+
+  it("U-PADM-062: finalizeは外部変更されたtargetを削除処理せず拒否する", () => {
+    const f = fixture();
+    const token = f.publisher.stage(f.artifacts);
+    f.publisher.publish(token);
+    writeFileSync(join(f.root, f.source), "foreign-target", "utf8");
+
+    expect(() => f.publisher.finalize(token)).toThrow(/postimage/);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("foreign-target");
+    expect(readFileSync(join(f.root, `${f.source}.ut-tdd-draft-fixture.rollback`), "utf8")).toBe(
+      "old-source",
+    );
+  });
+
+  it("U-PADM-063: finalizeは交換されたrollbackを消さずidentity CASで拒否する", () => {
+    const f = fixture();
+    const token = f.publisher.stage(f.artifacts);
+    f.publisher.publish(token);
+    const rollback = join(f.root, `${f.source}.ut-tdd-draft-fixture.rollback`);
+    rmSync(rollback);
+    writeFileSync(rollback, "old-source", "utf8");
+
+    expect(() => f.publisher.finalize(token)).toThrow(/rollback CAS/);
+    expect(readFileSync(rollback, "utf8")).toBe("old-source");
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("new-source");
+  });
+
+  it("U-PADM-064: stage失敗cleanupは一件目で止まらず全artifactの失敗を集約する", () => {
+    const f = fixture((point, path) => {
+      if (point !== "stage:after-write" || path !== f.projection) return;
+      renameSync(join(f.root, "docs", "plans"), join(f.root, "docs", "plans-moved"));
+      mkdirSync(join(f.root, "docs", "plans"));
+      renameSync(join(f.root, "docs", "governance"), join(f.root, "docs", "governance-moved"));
+      mkdirSync(join(f.root, "docs", "governance"));
+      throw new Error("stage fault");
+    });
+
+    try {
+      f.publisher.stage(f.artifacts);
+      throw new Error("expected AggregateError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(AggregateError);
+      expect((error as AggregateError).errors).toHaveLength(3);
+    }
+  });
+
+  it("U-PADM-065: durable cleanup capabilityを新process相当publisherで再開・再証明できる", () => {
+    const f = fixture();
+    const token = f.publisher.stage(f.artifacts);
+    f.publisher.publish(token);
+    const operation = f.publisher.describeCleanup(token, preimage("request").digest);
+    const restarted = new NodeAtomicDraftPublisher({ rootDir: f.root });
+
+    restarted.resumeCleanup(operation);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("new-source");
+    expect(readdirSync(join(f.root, "docs", "plans"))).toEqual(["PLAN-L7-999.md"]);
+    expect(() => restarted.resumeCleanup(operation)).not.toThrow();
+  });
+
+  it("U-PADM-066: durable cleanup capabilityのroot/token外補助pathを拒否する", () => {
+    const f = fixture();
+    const token = f.publisher.stage(f.artifacts);
+    f.publisher.publish(token);
+    const operation = f.publisher.describeCleanup(token, preimage("request").digest);
+    const malicious = {
+      ...operation,
+      artifacts: [
+        { ...operation.artifacts[0], rollbackPath: join(f.root, "foreign") },
+        operation.artifacts[1],
+      ] as const,
+    };
+
+    expect(() =>
+      new NodeAtomicDraftPublisher({ rootDir: f.root }).resumeCleanup(malicious),
+    ).toThrow(/token\/root/);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("new-source");
+  });
+
+  it("U-PADM-067: Node path syscallの保証限界とfail-close戦略を型付き契約で公開する", () => {
+    expect(NODE_PATH_MUTATION_SAFETY).toEqual({
+      dirfdRelativeMutation: false,
+      strategy: "pre-post-identity-cas-with-verified-compensation",
+      detectedDrift: "fail-close",
+      syscallInstantRaceClosure: "not-provable-with-node-fs",
+    });
   });
 });
 
