@@ -50,11 +50,21 @@ export class LegacyPlanRevisionBootstrapTransaction {
   }
 
   bootstrap(input: BootstrapLegacyPlanRevisionInput): AppendPlanRevisionResult {
+    return this.transact(input, () => undefined);
+  }
+
+  transact(
+    input: BootstrapLegacyPlanRevisionInput,
+    onPrepared: (result: Extract<AppendPlanRevisionResult, { ok: true }>) => void,
+  ): AppendPlanRevisionResult {
     const validated = validateBootstrap(input);
     if (!validated.ok) return validated;
     return this.transaction.run(() => {
       const replay = this.replay(input.commandId, validated.commandPayloadDigest);
-      if (replay) return { commit: replay.ok, value: replay };
+      if (replay) {
+        if (replay.ok) onPrepared(replay);
+        return { commit: replay.ok, value: replay };
+      }
       if (this.hasActiveAlias(input.planId))
         return rejected("plan-revision-bootstrap-alias-conflict");
       if (this.db.prepare("SELECT 1 FROM plan_assets WHERE asset_id = ?").get(validated.assetId)) {
@@ -65,19 +75,18 @@ export class LegacyPlanRevisionBootstrapTransaction {
 
       this.appendAssetAndRevisions(input, validated);
       this.appendAdmissionAndReceipt(input, validated);
-      return {
-        commit: true,
-        value: {
-          ok: true,
-          replayed: false,
-          assetId: validated.assetId,
-          revision: 2,
-          canonicalPayloadDigest: validated.canonicalPayloadDigest,
-          commandPayloadDigest: validated.commandPayloadDigest,
-          certificateId: input.certificateId,
-          certificateDigest: validated.certificateDigest,
-        },
+      const value = {
+        ok: true as const,
+        replayed: false,
+        assetId: validated.assetId,
+        revision: 2,
+        canonicalPayloadDigest: validated.canonicalPayloadDigest,
+        commandPayloadDigest: validated.commandPayloadDigest,
+        certificateId: input.certificateId,
+        certificateDigest: validated.certificateDigest,
       };
+      onPrepared(value);
+      return { commit: true, value };
     });
   }
 

@@ -117,6 +117,17 @@ describe("legacy PLAN revision bootstrap transaction", () => {
     expect(() => ledger.bootstrap(bootstrap())).toThrow(`fault:${boundary}`);
     expect(totalRows(db)).toEqual([0, 0, 0, 0, 0, 0, 0]);
   });
+
+  it("U-PA-REV-BOOT-006: publish callback faultでrev1/rev2と全receiptをcommit前rollbackする", () => {
+    const { db, ledger } = fixture();
+
+    expect(() =>
+      ledger.transact(bootstrap(), () => {
+        throw new Error("publish-failed");
+      }),
+    ).toThrow("publish-failed");
+    expect(totalRows(db)).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
 });
 
 function fixture() {
