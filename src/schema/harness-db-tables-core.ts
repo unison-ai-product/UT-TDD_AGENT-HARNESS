@@ -94,6 +94,7 @@ export const HARNESS_DB_CORE_TABLES: TableDef[] = [
       col("source"),
       col("status"),
       col("evidence_path"),
+      col("next_action"),
     ],
   },
   {
