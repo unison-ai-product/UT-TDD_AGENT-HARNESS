@@ -241,6 +241,33 @@ describe("execution episode row mapper", () => {
     expect(decodeDriveSelectionRow({ ...selection, selection_digest: "0".repeat(64) })).toBeUndefined();
     expect(decodeIssueProjectionRow({ ...outbox, status: "unknown" })).toBeUndefined();
     expect(decodeIssueProjectionRow({ ...outbox, outbox_id: "outbox:wrong" })).toBeUndefined();
+    expect(
+      decodeIssueProjectionRow({
+        ...outbox,
+        status: "acknowledged",
+        attempt_count: 1,
+        ack_observation_id: "observation:github:1",
+        last_attempt_at: "2026-07-17T01:01:00.000Z",
+      }),
+    ).toBeDefined();
+    expect(
+      decodeIssueProjectionRow({
+        ...outbox,
+        status: "leased",
+        attempt_count: 1,
+        lease_owner: "worker:1",
+        lease_expires_at: null,
+      }),
+    ).toBeUndefined();
+    expect(
+      decodeIssueProjectionRow({
+        ...outbox,
+        status: "acknowledged",
+        attempt_count: 1,
+        ack_observation_id: null,
+        last_attempt_at: "2026-07-17T01:01:00.000Z",
+      }),
+    ).toBeUndefined();
     expect(decodeExecutionEpisodeProjectionRow({ ...projection, next_legal_actions_json: "not-json" })).toBeUndefined();
     expect(decodeAppendCommandReceiptRow({ ...receipt, receipt_digest: "0".repeat(64) })).toBeUndefined();
   });

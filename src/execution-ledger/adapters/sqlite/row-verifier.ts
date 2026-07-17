@@ -183,14 +183,7 @@ function outboxMatchesStreams(
         idempotency_key: idempotencyKey,
         payload_version: 1,
         payload_digest: payloadDigest,
-        status: "pending",
-        attempt_count: 0,
-        next_attempt_at: event.occurredAt,
-        lease_owner: null,
-        lease_expires_at: null,
-        ack_observation_id: null,
         created_at: event.occurredAt,
-        last_attempt_at: null,
     };
     expectedKeys.add(key);
     const intentMatches =

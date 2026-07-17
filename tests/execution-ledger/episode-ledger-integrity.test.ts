@@ -59,7 +59,7 @@ describe("Execution Episode v5 row integrity (PLAN-L7-436)", () => {
   it.each([
     ["missing intent", removeIssueIntent],
     ["tampered intent", tamperIssueIntent],
-    ["mutable dispatch fields", tamperIssueDispatchFields],
+    ["invalid dispatch state", tamperIssueDispatchState],
     ["extra intent", addIssueIntent],
   ] as const)("U-EXEP-011: E3 event↔GitHub outbox %sをfail-closeする", (_label, tamper) => {
     const db = transitionedEpisodeLedger("E3");
@@ -69,6 +69,16 @@ describe("Execution Episode v5 row integrity (PLAN-L7-436)", () => {
         ok: false,
         ruleId: "plan-ledger-unavailable",
       });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-EXEP-011: acknowledged dispatch stateをimmutable intent改変として扱わない", () => {
+    const db = transitionedEpisodeLedger("E3");
+    try {
+      acknowledgeIssueIntent(db);
+      expect(executionLedgerRowsValid(db)).toBe(true);
     } finally {
       db.close();
     }
@@ -117,9 +127,17 @@ function tamperIssueIntent(db: HarnessDb): void {
   db.prepare("UPDATE github_projection_outbox SET repository = 'other/repository'").run();
 }
 
-function tamperIssueDispatchFields(db: HarnessDb): void {
+function tamperIssueDispatchState(db: HarnessDb): void {
   db.prepare(
-    "UPDATE github_projection_outbox SET status = 'acknowledged', attempt_count = 7, last_attempt_at = ?",
+    "UPDATE github_projection_outbox SET status = 'acknowledged', attempt_count = 1, last_attempt_at = ?",
+  ).run("2026-07-17T00:00:00.000Z");
+}
+
+function acknowledgeIssueIntent(db: HarnessDb): void {
+  db.prepare(
+    `UPDATE github_projection_outbox
+     SET status = 'acknowledged', attempt_count = 1,
+         ack_observation_id = 'observation:github:1', last_attempt_at = ?`,
   ).run("2026-07-17T00:00:00.000Z");
 }
 

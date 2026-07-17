@@ -503,10 +503,10 @@ export function decodeIssueProjectionRow(
   const attemptCount = safeInteger(row.attempt_count);
   const nextAttemptAt = isoText(row, "next_attempt_at");
   const leaseOwner = nullableText(row, "lease_owner");
-  const leaseExpiresAt = nullableText(row, "lease_expires_at");
+  const leaseExpiresAt = nullableIsoText(row, "lease_expires_at");
   const ackObservationId = nullableText(row, "ack_observation_id");
   const createdAt = isoText(row, "created_at");
-  const lastAttemptAt = nullableText(row, "last_attempt_at");
+  const lastAttemptAt = nullableIsoText(row, "last_attempt_at");
   if (
     !outboxId ||
     !episodeId ||
@@ -531,7 +531,15 @@ export function decodeIssueProjectionRow(
     ackObservationId === undefined ||
     !createdAt ||
     lastAttemptAt === undefined ||
-    outboxId !== deterministicOutboxId(idempotencyKey)
+    outboxId !== deterministicOutboxId(idempotencyKey) ||
+    !validOutboxDispatchState({
+      status,
+      attemptCount,
+      leaseOwner,
+      leaseExpiresAt,
+      ackObservationId,
+      lastAttemptAt,
+    })
   )
     return undefined;
   let payload: unknown;
@@ -855,6 +863,14 @@ function nullableInteger(row: ExecutionEpisodeEventRow, key: string): number | n
   return safeInteger(value);
 }
 
+function nullableIsoText(
+  row: ExecutionEpisodeEventRow,
+  key: string,
+): string | null | undefined {
+  const value = nullableText(row, key);
+  return value === null || value === undefined ? value : canonicalIso(value) ? value : undefined;
+}
+
 function isoText(row: ExecutionEpisodeEventRow, key: string): string | undefined {
   const value = requiredText(row, key);
   return value && canonicalIso(value) ? value : undefined;
@@ -890,6 +906,27 @@ function safeInteger(value: unknown): number | undefined {
 
 function strictInteger(value: unknown): number | undefined {
   return typeof value === "number" && Number.isSafeInteger(value) ? value : undefined;
+}
+
+function validOutboxDispatchState(input: {
+  readonly status: string;
+  readonly attemptCount: number;
+  readonly leaseOwner: string | null;
+  readonly leaseExpiresAt: string | null;
+  readonly ackObservationId: string | null;
+  readonly lastAttemptAt: string | null;
+}): boolean {
+  const hasLease = input.leaseOwner !== null && input.leaseExpiresAt !== null;
+  if ((input.leaseOwner === null) !== (input.leaseExpiresAt === null)) return false;
+  if (input.status === "leased")
+    return hasLease && input.ackObservationId === null && input.attemptCount > 0;
+  if (hasLease) return false;
+  if (input.status === "acknowledged")
+    return input.ackObservationId !== null && input.attemptCount > 0 && input.lastAttemptAt !== null;
+  if (input.ackObservationId !== null) return false;
+  if (input.attemptCount === 0)
+    return input.status === "pending" && input.lastAttemptAt === null;
+  return input.lastAttemptAt !== null;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
