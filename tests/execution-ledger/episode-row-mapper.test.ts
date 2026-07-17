@@ -8,12 +8,14 @@ import {
 import {
   APPEND_COMMAND_RECEIPT_COLUMNS,
   DRIVE_MODEL_SELECTION_COLUMNS,
+  EXECUTION_EPISODE_ROOT_COLUMNS,
   EXECUTION_EPISODE_EVENT_COLUMNS,
   EXECUTION_EPISODE_PROJECTION_COLUMNS,
   GITHUB_PROJECTION_OUTBOX_COLUMNS,
   decodeAppendCommandReceiptRow,
   decodeDriveSelectionRow,
   decodeExecutionEpisodeEventRow,
+  decodeExecutionEpisodeRootRow,
   decodeExecutionEpisodeProjectionRow,
   decodeIssueProjectionRow,
   insertSql,
@@ -21,12 +23,14 @@ import {
   mapDriveSelectionToRow,
   mapExecutionEpisodeProjectionToRow,
   mapExecutionEpisodeEventToRow,
+  mapExecutionEpisodeRootToRow,
   mapIssueProjectionToRow,
   rowValues,
   type PersistedExecutionEpisodeEvent,
 } from "../../src/execution-ledger/adapters/sqlite/episode-row-mapper.js";
 import type {
   DriveSelectionIntent,
+  EscapeObservedPayload,
   IssueProjectionIntent,
 } from "../../src/execution-ledger/domain/execution-episode.js";
 import type { ExecutionEpisodeProjection } from "../../src/execution-ledger/application/episode-projector.js";
@@ -150,6 +154,54 @@ describe("execution episode row mapper", () => {
     );
   });
 
+  it("root rowをschema列順へ写像し、strict decoderで往復する", () => {
+    const payload = rootPayload();
+    const row = mapExecutionEpisodeRootToRow(payload, "2026-07-17T01:00:00.000Z");
+
+    expect(Object.keys(row)).toEqual([...EXECUTION_EPISODE_ROOT_COLUMNS]);
+    expect(rowValues(EXECUTION_EPISODE_ROOT_COLUMNS, row)).toHaveLength(
+      EXECUTION_EPISODE_ROOT_COLUMNS.length,
+    );
+    expect(decodeExecutionEpisodeRootRow(row)).toEqual({
+      episodeId: payload.episodeId,
+      recurrenceId: payload.recurrenceId,
+      originAssetId: payload.origin.assetId,
+      originRevision: payload.origin.revision,
+      originLayer: payload.origin.layer,
+      originState: payload.origin.state,
+      escapeType: payload.escapeType,
+      escapeReason: payload.escapeReason,
+      driveModel: payload.requestedDriveModel,
+      reentryAssetId: payload.reentry?.assetId,
+      reentryRevision: payload.reentry?.revision,
+      reentryLayer: payload.reentry?.layer,
+      reentryState: payload.reentry?.state,
+      reentryPolicyRevision: payload.reentry?.policyRevision,
+      issueRepository: payload.issue.repository,
+      issueTitle: payload.issue.title,
+      issueBodyDigest: payload.issue.bodyDigest,
+      sourceCommit: payload.sourceCommit,
+      observedHead: payload.observedHead,
+      policyRevision: payload.policyRevision,
+      actor: payload.actor,
+      createdAt: "2026-07-17T01:00:00.000Z",
+    });
+  });
+
+  it.each([
+    ["episode id", { episode_id: "wrong" }],
+    ["origin revision", { origin_revision: 0 }],
+    ["layer", { origin_layer: "L15" }],
+    ["escape type", { escape_type: "unknown" }],
+    ["drive model", { drive_model: "forward" }],
+    ["body digest", { issue_body_digest: "not-a-digest" }],
+    ["source commit", { source_commit: "not-a-commit" }],
+    ["created at", { created_at: "2026-07-17T01:00:00Z" }],
+  ] as const)("root rowの%s改変をfail-closeする", (_label, mutation) => {
+    const row = mapExecutionEpisodeRootToRow(rootPayload(), "2026-07-17T01:00:00.000Z");
+    expect(decodeExecutionEpisodeRootRow({ ...row, ...mutation })).toBeUndefined();
+  });
+
   it("typed fromRow decoderはcanonical/digest/nullable/identityをfail-closeする", () => {
     const selection = mapDriveSelectionToRow(selectionFixture());
     const outbox = mapIssueProjectionToRow(outboxFixture());
@@ -196,6 +248,41 @@ function selectionFixture(): DriveSelectionIntent {
     selectedAt: "2026-07-17T01:00:00.000Z",
   };
   return { ...value, selectionDigest: sha256(canonicalizeExecutionPayload(value)) };
+}
+
+function rootPayload(): EscapeObservedPayload {
+  return {
+    episodeId: "episode:row-root",
+    recurrenceId: "recurrence:row-root",
+    routeMode: "recovery",
+    escapeType: "blocked",
+    escapeReason: "fixture",
+    routeSignal: "regression_dev",
+    requestedDriveModel: "recovery",
+    origin: {
+      assetId: "PLAN-L7-436-execution-ledger-episode-domain",
+      revision: 1,
+      observedRevision: 1,
+      layer: "L7",
+      state: "forward",
+    },
+    reentry: {
+      assetId: "PLAN-L7-436-execution-ledger-episode-domain",
+      revision: 1,
+      layer: "L7",
+      state: "forward",
+      policyRevision: "policy:escape-v1",
+    },
+    issue: {
+      repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+      title: "root row fixture",
+      bodyDigest: "c".repeat(64),
+    },
+    sourceCommit: SHA,
+    observedHead: SHA,
+    policyRevision: "policy:escape-v1",
+    actor: "codex",
+  };
 }
 
 function outboxFixture(): IssueProjectionIntent {

@@ -31,6 +31,7 @@ import {
   APPEND_COMMAND_RECEIPT_COLUMNS,
   DRIVE_MODEL_SELECTION_COLUMNS,
   EXECUTION_EPISODE_EVENT_COLUMNS,
+  EXECUTION_EPISODE_ROOT_COLUMNS,
   EXECUTION_EPISODE_PROJECTION_COLUMNS,
   GITHUB_PROJECTION_OUTBOX_COLUMNS,
   decodeExecutionEpisodeEventRow,
@@ -39,6 +40,7 @@ import {
   mapDriveSelectionToRow,
   mapExecutionEpisodeProjectionToRow,
   mapExecutionEpisodeEventToRow,
+  mapExecutionEpisodeRootToRow,
   mapIssueProjectionToRow,
   rowValues,
   type AppendCommandReceiptInput,
@@ -182,41 +184,10 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
   }
 
   private insertRoot(payload: EscapeObservedPayload, occurredAt: string): void {
-    const reentry = payload.reentry;
-    if (!reentry) throw new Error("validated reentry is missing");
+    const row = mapExecutionEpisodeRootToRow(payload, occurredAt);
     this.db
-      .prepare(
-        `INSERT INTO execution_episodes (
-          episode_id, recurrence_id, origin_asset_id, origin_revision, origin_layer, origin_state,
-          escape_type, escape_reason, drive_model, reentry_asset_id, reentry_revision,
-          reentry_layer, reentry_state, reentry_policy_revision, issue_repository, issue_title,
-          issue_body_digest, source_commit, observed_head, policy_revision, actor, created_at
-        ) VALUES (${placeholders(22)})`,
-      )
-      .run(
-        payload.episodeId,
-        payload.recurrenceId,
-        payload.origin.assetId,
-        payload.origin.revision,
-        payload.origin.layer,
-        payload.origin.state,
-        payload.escapeType,
-        payload.escapeReason,
-        payload.requestedDriveModel,
-        reentry.assetId,
-        reentry.revision,
-        reentry.layer,
-        reentry.state,
-        reentry.policyRevision,
-        payload.issue.repository,
-        payload.issue.title,
-        payload.issue.bodyDigest,
-        payload.sourceCommit,
-        payload.observedHead,
-        payload.policyRevision,
-        payload.actor,
-        occurredAt,
-      );
+      .prepare(insertSql("execution_episodes", EXECUTION_EPISODE_ROOT_COLUMNS))
+      .run(...rowValues(EXECUTION_EPISODE_ROOT_COLUMNS, row));
   }
 
   private insertEvent(event: EscapeObservedEvent, custody: EpisodeWriteCustody): void {
@@ -391,9 +362,6 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
 
 }
 
-function placeholders(count: number): string {
-  return Array.from({ length: count }, () => "?").join(", ");
-}
 
 function failed(ruleId: string, path: string): EpisodeRepositoryResult {
   return { ok: false, violations: [{ ruleId, path }] };

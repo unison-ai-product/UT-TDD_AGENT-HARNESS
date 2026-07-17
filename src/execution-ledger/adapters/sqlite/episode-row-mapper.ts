@@ -3,6 +3,7 @@ import {
   calculateExecutionEventDigest,
   canonicalizeExecutionPayload,
   type DriveSelectionIntent,
+  type EscapeObservedPayload,
   type ExecutionEpisodeEvent,
   type IssueProjectionIntent,
 } from "../../domain/execution-episode.js";
@@ -29,6 +30,31 @@ export const EXECUTION_EPISODE_EVENT_COLUMNS = [
   "model",
   "occurred_at",
   "event_digest",
+] as const;
+
+export const EXECUTION_EPISODE_ROOT_COLUMNS = [
+  "episode_id",
+  "recurrence_id",
+  "origin_asset_id",
+  "origin_revision",
+  "origin_layer",
+  "origin_state",
+  "escape_type",
+  "escape_reason",
+  "drive_model",
+  "reentry_asset_id",
+  "reentry_revision",
+  "reentry_layer",
+  "reentry_state",
+  "reentry_policy_revision",
+  "issue_repository",
+  "issue_title",
+  "issue_body_digest",
+  "source_commit",
+  "observed_head",
+  "policy_revision",
+  "actor",
+  "created_at",
 ] as const;
 
 export const DRIVE_MODEL_SELECTION_COLUMNS = [
@@ -146,6 +172,148 @@ export interface DecodedIssueProjectionRow {
   readonly createdAt: string;
   readonly lastAttemptAt: string | null;
   readonly payload: unknown;
+}
+
+export interface DecodedExecutionEpisodeRootRow {
+  readonly episodeId: string;
+  readonly recurrenceId: string;
+  readonly originAssetId: string;
+  readonly originRevision: number;
+  readonly originLayer: string;
+  readonly originState: string;
+  readonly escapeType: string;
+  readonly escapeReason: string;
+  readonly driveModel: string;
+  readonly reentryAssetId: string;
+  readonly reentryRevision: number;
+  readonly reentryLayer: string;
+  readonly reentryState: string;
+  readonly reentryPolicyRevision: string;
+  readonly issueRepository: string;
+  readonly issueTitle: string;
+  readonly issueBodyDigest: string;
+  readonly sourceCommit: string;
+  readonly observedHead: string;
+  readonly policyRevision: string;
+  readonly actor: string;
+  readonly createdAt: string;
+}
+
+export function mapExecutionEpisodeRootToRow(
+  payload: EscapeObservedPayload,
+  occurredAt: string,
+): ExecutionEpisodeEventRow {
+  if (!canonicalIso(occurredAt)) throw new Error("episode-root-occurred-at-invalid");
+  const reentry = payload.reentry;
+  if (!reentry) throw new Error("episode-root-reentry-invalid");
+  return Object.freeze({
+    episode_id: payload.episodeId,
+    recurrence_id: payload.recurrenceId,
+    origin_asset_id: payload.origin.assetId,
+    origin_revision: payload.origin.revision,
+    origin_layer: payload.origin.layer,
+    origin_state: payload.origin.state,
+    escape_type: payload.escapeType,
+    escape_reason: payload.escapeReason,
+    drive_model: payload.requestedDriveModel,
+    reentry_asset_id: reentry.assetId,
+    reentry_revision: reentry.revision,
+    reentry_layer: reentry.layer,
+    reentry_state: reentry.state,
+    reentry_policy_revision: reentry.policyRevision,
+    issue_repository: payload.issue.repository,
+    issue_title: payload.issue.title,
+    issue_body_digest: payload.issue.bodyDigest,
+    source_commit: payload.sourceCommit,
+    observed_head: payload.observedHead,
+    policy_revision: payload.policyRevision,
+    actor: payload.actor,
+    created_at: occurredAt,
+  });
+}
+
+export function decodeExecutionEpisodeRootRow(
+  row: ExecutionEpisodeEventRow,
+): DecodedExecutionEpisodeRootRow | undefined {
+  const episodeId = requiredText(row, "episode_id");
+  const recurrenceId = requiredText(row, "recurrence_id");
+  const originAssetId = requiredText(row, "origin_asset_id");
+  const originRevision = strictInteger(row.origin_revision);
+  const originLayer = requiredText(row, "origin_layer");
+  const originState = requiredText(row, "origin_state");
+  const escapeType = requiredText(row, "escape_type");
+  const escapeReason = requiredText(row, "escape_reason");
+  const driveModel = requiredText(row, "drive_model");
+  const reentryAssetId = requiredText(row, "reentry_asset_id");
+  const reentryRevision = strictInteger(row.reentry_revision);
+  const reentryLayer = requiredText(row, "reentry_layer");
+  const reentryState = requiredText(row, "reentry_state");
+  const reentryPolicyRevision = requiredText(row, "reentry_policy_revision");
+  const issueRepository = requiredText(row, "issue_repository");
+  const issueTitle = requiredText(row, "issue_title");
+  const issueBodyDigest = digestText(row, "issue_body_digest");
+  const sourceCommit = commitText(row, "source_commit");
+  const observedHead = commitText(row, "observed_head");
+  const policyRevision = requiredText(row, "policy_revision");
+  const actor = requiredText(row, "actor");
+  const createdAt = isoText(row, "created_at");
+  if (
+    !episodeId ||
+    !/^episode:[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$/.test(episodeId) ||
+    !recurrenceId ||
+    !/^recurrence:[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$/.test(recurrenceId) ||
+    !originAssetId ||
+    originRevision === undefined ||
+    originRevision < 1 ||
+    !originLayer ||
+    !/^L(?:[0-9]|1[0-4])$/.test(originLayer) ||
+    !originState ||
+    !escapeType ||
+    !ESCAPE_TYPES.has(escapeType) ||
+    !escapeReason ||
+    !driveModel ||
+    !DRIVE_MODELS.has(driveModel) ||
+    !reentryAssetId ||
+    reentryRevision === undefined ||
+    reentryRevision < 1 ||
+    !reentryLayer ||
+    !/^L(?:[0-9]|1[0-4])$/.test(reentryLayer) ||
+    !reentryState ||
+    !reentryPolicyRevision ||
+    !issueRepository ||
+    !issueTitle ||
+    !issueBodyDigest ||
+    !sourceCommit ||
+    !observedHead ||
+    !policyRevision ||
+    !actor ||
+    !createdAt
+  )
+    return undefined;
+  return Object.freeze({
+    episodeId,
+    recurrenceId,
+    originAssetId,
+    originRevision,
+    originLayer,
+    originState,
+    escapeType,
+    escapeReason,
+    driveModel,
+    reentryAssetId,
+    reentryRevision,
+    reentryLayer,
+    reentryState,
+    reentryPolicyRevision,
+    issueRepository,
+    issueTitle,
+    issueBodyDigest,
+    sourceCommit,
+    observedHead,
+    policyRevision,
+    actor,
+    createdAt,
+  });
 }
 
 export interface DecodedAppendCommandReceipt extends AppendCommandReceiptInput {
@@ -641,6 +809,15 @@ const DRIVE_MODELS = new Set([
   "version-up",
 ]);
 
+const ESCAPE_TYPES = new Set([
+  "blocked",
+  "rejected",
+  "reopened",
+  "superseded",
+  "preemptive",
+  "defer",
+]);
+
 const OUTBOX_STATUSES = new Set([
   "pending",
   "leased",
@@ -680,9 +857,13 @@ function nullableInteger(row: ExecutionEpisodeEventRow, key: string): number | n
 
 function isoText(row: ExecutionEpisodeEventRow, key: string): string | undefined {
   const value = requiredText(row, key);
-  if (!value) return undefined;
+  return value && canonicalIso(value) ? value : undefined;
+}
+
+function canonicalIso(value: unknown): value is string {
+  if (typeof value !== "string" || !value.trim()) return false;
   const time = Date.parse(value);
-  return Number.isFinite(time) && new Date(time).toISOString() === value ? value : undefined;
+  return Number.isFinite(time) && new Date(time).toISOString() === value;
 }
 
 function digestText(row: ExecutionEpisodeEventRow, key: string): string | undefined {
@@ -700,6 +881,10 @@ function safeInteger(value: unknown): number | undefined {
     return undefined;
   const number = typeof value === "number" ? value : Number(value);
   return Number.isSafeInteger(number) ? number : undefined;
+}
+
+function strictInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) ? value : undefined;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {

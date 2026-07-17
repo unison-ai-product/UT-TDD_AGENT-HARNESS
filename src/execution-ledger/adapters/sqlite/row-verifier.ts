@@ -10,6 +10,7 @@ import {
   decodeAppendCommandReceiptRow,
   decodeDriveSelectionRow,
   decodeExecutionEpisodeEventRow,
+  decodeExecutionEpisodeRootRow,
   decodeExecutionEpisodeProjectionRow,
   decodeIssueProjectionRow,
 } from "./episode-row-mapper.js";
@@ -255,32 +256,34 @@ function rootMatchesStream(
   stream: VerifiedStream | undefined,
 ): boolean {
   if (!stream) return false;
+  const decoded = decodeExecutionEpisodeRootRow(root);
+  if (!decoded) return false;
   const payload = stream.payload;
   const reentry = payload.reentry;
   if (!reentry) return false;
-  return same(root, {
-    episode_id: payload.episodeId,
-    recurrence_id: payload.recurrenceId,
-    origin_asset_id: payload.origin.assetId,
-    origin_revision: payload.origin.revision,
-    origin_layer: payload.origin.layer,
-    origin_state: payload.origin.state,
-    escape_type: payload.escapeType,
-    escape_reason: payload.escapeReason,
-    drive_model: payload.requestedDriveModel,
-    reentry_asset_id: reentry.assetId,
-    reentry_revision: reentry.revision,
-    reentry_layer: reentry.layer,
-    reentry_state: reentry.state,
-    reentry_policy_revision: reentry.policyRevision,
-    issue_repository: payload.issue.repository,
-    issue_title: payload.issue.title,
-    issue_body_digest: payload.issue.bodyDigest,
-    source_commit: payload.sourceCommit,
-    observed_head: payload.observedHead,
-    policy_revision: payload.policyRevision,
+  return same(decoded as unknown as Readonly<Record<string, unknown>>, {
+    episodeId: payload.episodeId,
+    recurrenceId: payload.recurrenceId,
+    originAssetId: payload.origin.assetId,
+    originRevision: payload.origin.revision,
+    originLayer: payload.origin.layer,
+    originState: payload.origin.state,
+    escapeType: payload.escapeType,
+    escapeReason: payload.escapeReason,
+    driveModel: payload.requestedDriveModel,
+    reentryAssetId: reentry.assetId,
+    reentryRevision: reentry.revision,
+    reentryLayer: reentry.layer,
+    reentryState: reentry.state,
+    reentryPolicyRevision: reentry.policyRevision,
+    issueRepository: payload.issue.repository,
+    issueTitle: payload.issue.title,
+    issueBodyDigest: payload.issue.bodyDigest,
+    sourceCommit: payload.sourceCommit,
+    observedHead: payload.observedHead,
+    policyRevision: payload.policyRevision,
     actor: payload.actor,
-    created_at: stream.events[0].occurredAt,
+    createdAt: stream.events[0].occurredAt,
   });
 }
 
