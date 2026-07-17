@@ -29,6 +29,11 @@ export interface GithubCiPolicyViolation {
     | "missing_permission"
     | "missing_concurrency"
     | "missing_step"
+    | "missing_runtime_leg"
+    | "missing_aggregate_gate"
+    | "invalid_aggregate_needs"
+    | "missing_aggregate_always"
+    | "missing_aggregate_result_guard"
     | "forbidden_full_doctor"
     | "forbidden_raw_vitest"
     | "forbidden_source_full_tests";
@@ -48,6 +53,9 @@ interface WorkflowStep {
 }
 
 interface WorkflowJob {
+  needs?: unknown;
+  if?: unknown;
+  "runs-on"?: unknown;
   steps?: unknown;
 }
 
@@ -218,6 +226,68 @@ function pushViolation(input: {
     reason: input.reason,
     detail: input.detail,
   });
+}
+
+const RUNTIME_LEGS = ["harness-check-linux", "harness-check-windows"] as const;
+
+function checkRuntimeAggregate(input: {
+  jobs: Record<string, unknown>;
+  doc: GithubWorkflowDoc;
+  violations: GithubCiPolicyViolation[];
+}): WorkflowJob | null {
+  const legs = RUNTIME_LEGS.map((name) => recordValue(input.jobs[name]) as WorkflowJob | null);
+  for (const [index, leg] of legs.entries()) {
+    if (leg) continue;
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "missing_runtime_leg",
+      detail: `jobs.${RUNTIME_LEGS[index]}`,
+    });
+  }
+  const aggregate = recordValue(input.jobs["harness-check"]) as WorkflowJob | null;
+  if (!aggregate) {
+    pushViolation({
+      violations: input.violations,
+      doc: input.doc,
+      reason: "missing_aggregate_gate",
+      detail: "jobs.harness-check",
+    });
+  } else {
+    const needs = stringValues(aggregate.needs);
+    const missing = RUNTIME_LEGS.filter((leg) => !needs?.includes(leg));
+    const exact = needs?.length === RUNTIME_LEGS.length && missing.length === 0;
+    if (!exact) {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "invalid_aggregate_needs",
+        detail: `harness-check.needs must equal ${RUNTIME_LEGS.join(",")} (missing=${missing.join(",") || "none"})`,
+      });
+    }
+    if (aggregate.if !== "${{ always() }}") {
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_aggregate_always",
+        detail: "harness-check.if must equal ${{ always() }}",
+      });
+    }
+    const aggregateSteps = Array.isArray(aggregate.steps)
+      ? aggregate.steps.filter(workflowStep)
+      : [];
+    const aggregateText = aggregateSteps.map(stepText).join("\n");
+    for (const leg of RUNTIME_LEGS) {
+      if (aggregateText.includes(`needs.${leg}.result`)) continue;
+      pushViolation({
+        violations: input.violations,
+        doc: input.doc,
+        reason: "missing_aggregate_result_guard",
+        detail: `aggregate verdict must require needs.${leg}.result == success`,
+      });
+    }
+  }
+  return legs[0];
 }
 
 function checkHarnessTriggers(input: {
@@ -404,15 +474,20 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
       });
       continue;
     }
-    const jobValue = jobs?.["harness-check"];
-    const job = recordValue(jobValue) as WorkflowJob | null;
+    const requiresRuntimeAggregate = doc.role === "runtime" && doc.profile === "source";
+    const jobValue = jobs?.[requiresRuntimeAggregate ? "harness-check-linux" : "harness-check"];
+    const job = requiresRuntimeAggregate
+      ? checkRuntimeAggregate({ jobs, doc, violations })
+      : (recordValue(jobValue) as WorkflowJob | null);
     if (!job) {
       pushViolation({
         violations,
         doc,
         reason: jobValue === undefined ? "missing_job" : "malformed_workflow_shape",
         detail:
-          jobValue === undefined ? "jobs.harness-check" : "jobs.harness-check must be a mapping",
+          jobValue === undefined
+            ? `jobs.${requiresRuntimeAggregate ? "harness-check-linux" : "harness-check"}`
+            : `jobs.${requiresRuntimeAggregate ? "harness-check-linux" : "harness-check"} must be a mapping`,
       });
       continue;
     }
@@ -447,7 +522,7 @@ export function analyzeGithubCiPolicy(docs: GithubWorkflowDoc[]): GithubCiPolicy
         violations,
         doc,
         reason: "malformed_workflow_shape",
-        detail: "jobs.harness-check.steps must be an array of mappings",
+        detail: `jobs.${requiresRuntimeAggregate ? "harness-check-linux" : "harness-check"}.steps must be an array of mappings`,
       });
       continue;
     }

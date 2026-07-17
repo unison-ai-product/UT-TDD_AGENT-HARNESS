@@ -60,9 +60,7 @@ jobs:
       - run: bun .ut-tdd/bin/ut-tdd.mjs doctor --setup-smoke
 `;
 
-const SOURCE_WORKFLOW = SOURCE_LEG_WORKFLOW.replace(
-  "jobs:\n  harness-check:",
-  `jobs:
+const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  harness-check-linux:")}
   harness-check-windows:
     runs-on: windows-latest
     steps:
@@ -72,19 +70,17 @@ const SOURCE_WORKFLOW = SOURCE_LEG_WORKFLOW.replace(
       - run: bun run typecheck
       - run: bun run test
       - run: bun run lint
-  harness-check-aggregate:
-    name: harness-check-aggregate
-    needs: [harness-check, harness-check-windows]
+  harness-check:
+    needs: [harness-check-linux, harness-check-windows]
     if: \${{ always() }}
     runs-on: ubuntu-latest
     steps:
       - name: Require Linux and Windows success
         run: |
-          if [ "\${{ needs.harness-check.result }}" != "success" ] || [ "\${{ needs.harness-check-windows.result }}" != "success" ]; then
+          if [ "\${{ needs.harness-check-linux.result }}" != "success" ] || [ "\${{ needs.harness-check-windows.result }}" != "success" ]; then
             exit 1
           fi
-  harness-check:`,
-);
+`;
 
 function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc[] {
   return [
@@ -96,7 +92,7 @@ function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc
     },
     {
       file: "docs/templates/github/common/harness-check.yml",
-      content: source,
+      content: SOURCE_LEG_WORKFLOW,
       profile: "source",
       role: "source_template",
     },
@@ -108,7 +104,7 @@ function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc
     },
     {
       file: "setup-builtin:common/harness-check.yml",
-      content: source,
+      content: SOURCE_LEG_WORKFLOW,
       profile: "source",
       role: "setup_builtin",
     },
@@ -136,15 +132,16 @@ describe("github-ci-policy lint", () => {
       file: ".github/workflows/harness-check.yml",
       profile: "source",
       reason: "missing_aggregate_gate",
-      detail: "jobs.harness-check-aggregate",
+      detail: "jobs.harness-check",
     });
   });
 
   it("U-CIPOL-015: requires the aggregate gate to depend on both runtime legs", () => {
-    for (const missing of ["harness-check", "harness-check-windows"] as const) {
-      const remaining = missing === "harness-check" ? "harness-check-windows" : "harness-check";
+    for (const missing of ["harness-check-linux", "harness-check-windows"] as const) {
+      const remaining =
+        missing === "harness-check-linux" ? "harness-check-windows" : "harness-check-linux";
       const workflow = SOURCE_WORKFLOW.replace(
-        "needs: [harness-check, harness-check-windows]",
+        "needs: [harness-check-linux, harness-check-windows]",
         `needs: [${remaining}]`,
       );
       const result = analyzeGithubCiPolicy(docs(workflow));
@@ -153,7 +150,7 @@ describe("github-ci-policy lint", () => {
         file: ".github/workflows/harness-check.yml",
         profile: "source",
         reason: "invalid_aggregate_needs",
-        detail: `harness-check-aggregate.needs must equal harness-check,harness-check-windows (missing=${missing})`,
+        detail: `harness-check.needs must equal harness-check-linux,harness-check-windows (missing=${missing})`,
       });
     }
   });
@@ -166,12 +163,12 @@ describe("github-ci-policy lint", () => {
       file: ".github/workflows/harness-check.yml",
       profile: "source",
       reason: "missing_aggregate_always",
-      detail: "harness-check-aggregate.if must equal ${{ always() }}",
+      detail: "harness-check.if must equal ${{ always() }}",
     });
   });
 
   it("U-CIPOL-017: requires explicit success guards for both runtime results", () => {
-    for (const missing of ["harness-check", "harness-check-windows"] as const) {
+    for (const missing of ["harness-check-linux", "harness-check-windows"] as const) {
       const workflow = SOURCE_WORKFLOW.replace(
         `\${{ needs.${missing}.result }}`,
         "success",
