@@ -405,6 +405,33 @@ managed なアダプタ呼び出しでは、ハーネスは legacy の raw-provi
 | **GPT-5.4 mini** | ★★★★★ 「UT-TDD Agent Harness を挟むだけで、気分は『思いつきで殴る AI』から『仕様に沿って静かに仕事する AI』へ一変しました。無駄な遠回りが減り、会話の精度も手順も整って、レビュー担当の自分がいちばん驚いています。」 |
 | **GPT spark** | ★★★★★ 「毎日が『事故りやすい実験室』から『再現性の高い工場』に変わりました。タスク分解、証跡、レビューの流れが自然で、バグは完全には消えないけれど、今は気配が分かる。夜の突発修正が激減しました。」 |
 
+## 🌐 English Summary
+
+UT-TDD Agent Harness is a verification and development foundation for running
+AI implementation agents safely in team development. It combines a V-model
+document descent (design → implementation → test design → tests), a drive
+model that routes work to specialised roles, and a deterministic `harness.db`
+projection that makes progress, gaps, and drift machine-visible. Workflow
+rules are enforced by schema, lint, doctor gates, and hooks — not by prose.
+
+- **Runtime**: TypeScript on Bun (Windows-first; macOS/Linux supported). No
+  provider API keys are stored in the repository — agents run through local
+  CLIs (Claude Code / Codex) wrapped by the `ut-tdd` CLI.
+- **Documentation language**: docs are intentionally written in Japanese
+  (internal project rule). Code, identifiers, commands, and commit messages
+  are English. Machine-checked gates keep the two in sync, so contributors
+  can navigate by command surface (`ut-tdd status` / `doctor` / `plan lint`)
+  even without reading Japanese.
+- **Repositories**: this source development repo is
+  [`UT-TDD_AGENT-HARNESS`](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS);
+  the clean distribution artifact is published separately to
+  [`UT-TDD_AGENT-HARNESS-Pack`](https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack)
+  (the `package.json` of the Pack artifact is rewritten to point there at
+  sync time).
+- **Quick start**: `bun install`, then `bun src/cli.ts setup` and
+  `bun src/cli.ts doctor`. Tests run through a detached-HEAD snapshot runner
+  (`bun scripts/run-vitest-snapshot.ts <files>`), so commit before measuring.
+
 ## 📄 License
 
 MIT License.

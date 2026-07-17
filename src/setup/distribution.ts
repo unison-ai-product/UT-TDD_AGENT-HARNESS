@@ -178,6 +178,11 @@ export function cleanDistributionSourcePath(
 export const PACK_SAFE_TEST_SCRIPT =
   "bun scripts/run-vitest-snapshot.ts tests/setup.test.ts tests/distribution-acceptance.test.ts tests/skill-recommend.test.ts tests/skill-scaffold.test.ts tests/dependency-drift.test.ts tests/readability.test.ts tests/toolchain-pin.test.ts --reporter=dot";
 
+// Source repo's package.json points at the source development repo (issue #83);
+// the clean Pack artifact must keep pointing at the public Pack repo instead.
+export const PACK_REPOSITORY_URL =
+  "git+https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git";
+
 export function transformCleanDistributionArtifact(artifactPath: string, content: string): string {
   const artifact = normalizeDistributionPath(artifactPath);
   if (artifact !== "package.json") return content;
@@ -193,7 +198,8 @@ export function transformCleanDistributionArtifact(artifactPath: string, content
     ...((parsed.utTdd as Record<string, unknown> | undefined) ?? {}),
     artifactProfile: "pack",
   };
-  return `${JSON.stringify({ ...parsed, scripts, utTdd }, null, 2)}\n`;
+  const repository = { type: "git", url: PACK_REPOSITORY_URL };
+  return `${JSON.stringify({ ...parsed, scripts, utTdd, repository }, null, 2)}\n`;
 }
 
 function shellQuotePath(path: string): string {

@@ -4,7 +4,7 @@
   "description": "UT-TDD Agent Harness - AI agent workflow, verification, and distribution foundation (TypeScript core, ADR-001)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git"
+    "url": "git+https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS.git"
   },
   "license": "MIT",
   "type": "module",
