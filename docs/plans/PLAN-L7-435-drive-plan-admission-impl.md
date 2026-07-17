@@ -70,6 +70,8 @@ generates:
     artifact_type: source_module
   - artifact_path: src/plan-admission/git-diff-adapter.ts
     artifact_type: source_module
+  - artifact_path: tests/plan-admission-git-diff-adapter.test.ts
+    artifact_type: test_code
   - artifact_path: src/plan-admission/tracked-receipt-projection.ts
     artifact_type: source_module
   - artifact_path: src/cli/plan-admission.ts
