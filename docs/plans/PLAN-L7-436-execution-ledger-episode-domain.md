@@ -100,6 +100,8 @@ domain / reducer / repositoryの失敗境界を混ぜないため、
 - `U-EXEP-008`: event appendとoutbox enqueueの各fault pointが全commitまたは全rollbackになる。
 - `U-EXEP-009`: projection全削除/rebuild前後でstate、external intent、merge readinessが一致する。
 - `U-EXEP-010`: rationaleなしoverride、stale origin revision、reentry target欠落を拒否する。
+- `U-EXEP-011`: root/event/selection/outbox/projection/receiptのmaterialized rowがevent正本と双方向対応し、
+  immutable intent改変は拒否する一方、正規のlease/retry/ack dispatch stateは改変扱いしない。
 - `P-EXEP-001`: 任意の合法event列への重複/交換/削除mutationで不正昇格しない。
 
 候補だった並行appendは`U-EXEP-008`、clock skew/occurred_at逆行は`U-EXEP-007`へ吸収し、

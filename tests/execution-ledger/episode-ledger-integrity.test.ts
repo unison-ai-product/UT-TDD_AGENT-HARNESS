@@ -25,7 +25,7 @@ describe("Execution Episode v5 row integrity (PLAN-L7-436)", () => {
     ["immutable root", tamperRootDrive],
     ["projection", tamperProjection],
     ["receipt bijection", tamperReceiptBinding],
-  ] as const)("U-EXEP-009: %s tamperをschema再検査でfail-closeする", (_label, tamper) => {
+  ] as const)("U-EXEP-011: %s tamperをschema再検査でfail-closeする", (_label, tamper) => {
     const db = episodeLedger();
     try {
       expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
@@ -43,7 +43,7 @@ describe("Execution Episode v5 row integrity (PLAN-L7-436)", () => {
     ["missing selection", removeDriveSelection],
     ["tampered selection", tamperDriveSelection],
     ["extra selection", addDriveSelection],
-  ] as const)("U-EXEP-010: E2 event↔drive selection %sをfail-closeする", (_label, tamper) => {
+  ] as const)("U-EXEP-011: E2 event↔drive selection %sをfail-closeする", (_label, tamper) => {
     const db = transitionedEpisodeLedger("E2");
     try {
       tamper(db);
@@ -84,7 +84,7 @@ describe("Execution Episode v5 row integrity (PLAN-L7-436)", () => {
     }
   });
 
-  it("U-EXEP-009: receipt_digest単独改変をrow verifierがfail-closeする", () => {
+  it("U-EXEP-011: receipt_digest単独改変をrow verifierがfail-closeする", () => {
     const db = episodeLedger();
     try {
       withoutUpdateTrigger(db, "append_command_receipts", () => {

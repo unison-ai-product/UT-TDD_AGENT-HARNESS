@@ -1571,6 +1571,7 @@ GitHubは正本ではなく冪等projectionであり、通常ForwardはIssueを�
 | `U-EXEP-008` | 原子的outbox・並行append | E3 event/outbox各fault、同一expected sequence競合 | event/current/outbox/receipt全rollback、winner 1件 |
 | `U-EXEP-009` | projection rebuild | read model全削除・DBだけの偽完了 | event正本から同値再構築し偽完了を除去、GitHub write 0 |
 | `U-EXEP-010` | origin/reentry/override | stale revision、reentry欠落、override根拠欠落 | E0/E1既存列も変えずrule ID付き拒否 |
+| `U-EXEP-011` | materialized row整合 | root/event/selection/outbox/projection/receiptの欠落・余剰・改変、正常dispatch遷移 | immutable event intentとの双方向対応をfail-closeし、lease/ack等のmutable dispatchは正規stateなら維持 |
 | `P-EXEP-001` | 全合法prefix mutation | 各prefixへduplicate/delete/swap/unknown insert | rejectまたは元prefixより上位state/mergeReadyへ昇格0 |
 | `CANDIDATE-GHISS-001` | Issue projection冪等 | 同一outboxを再送 | remote Issue 1、mapping 1、E4 1 |
 | `CANDIDATE-GHISS-002` | timeout後reconcile | remote作成成功後に応答timeout | marker検索で既存Issueへbindし重複作成0 |
