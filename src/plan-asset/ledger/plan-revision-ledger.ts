@@ -251,7 +251,7 @@ export function replayBindingValid(
       content_digest: input.contentDigest,
       route_tuple_digest: input.routeTupleDigest,
       certificate_digest: expected.certificateDigest,
-      occurred_at: input.occurredAt,
+      recorded_at: input.occurredAt,
     })
   )
     return false;

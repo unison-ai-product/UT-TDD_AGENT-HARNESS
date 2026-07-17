@@ -571,7 +571,9 @@ function createV3Ledger(db: ReturnType<typeof openHarnessDb>): void {
       !sql.includes("plan_draft_journal") &&
       !sql.includes("idx_plan_draft_journal_status") &&
       !sql.includes("legacy_plan_bootstrap_provenance") &&
-      !sql.includes("idx_legacy_bootstrap_source_blob"),
+      !sql.includes("idx_legacy_bootstrap_source_blob") &&
+      !sql.includes("plan_draft_artifact_operation_events") &&
+      !sql.includes("idx_plan_draft_artifact_operations_command"),
   );
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -588,7 +590,9 @@ function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
   const v4Ddl = ledgerSchemaDdl().filter(
     (sql) =>
       !sql.includes("legacy_plan_bootstrap_provenance") &&
-      !sql.includes("idx_legacy_bootstrap_source_blob"),
+      !sql.includes("idx_legacy_bootstrap_source_blob") &&
+      !sql.includes("plan_draft_artifact_operation_events") &&
+      !sql.includes("idx_plan_draft_artifact_operations_command"),
   );
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -763,7 +767,9 @@ function legacyV2Ddl(): readonly string[] {
         !sql.includes("plan_draft_journal") &&
         !sql.includes("idx_plan_draft_journal_status") &&
         !sql.includes("legacy_plan_bootstrap_provenance") &&
-        !sql.includes("idx_legacy_bootstrap_source_blob"),
+        !sql.includes("idx_legacy_bootstrap_source_blob") &&
+        !sql.includes("plan_draft_artifact_operation_events") &&
+        !sql.includes("idx_plan_draft_artifact_operations_command"),
     )
     .map((sql) =>
       sql

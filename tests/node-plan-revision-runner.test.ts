@@ -210,10 +210,10 @@ function fixture(mode: Mode, drift: Drift = {}) {
   roots.push(root);
   mkdirSync(join(root, "docs", "plans"), { recursive: true });
   mkdirSync(join(root, "docs", "governance"), { recursive: true });
-  const planId = "PLAN-L4-31";
+  const planId = "PLAN-L6-31";
   const sourcePath = `docs/plans/${planId}.md`;
   const projectionPath = "docs/governance/plan-admission-receipts.json" as const;
-  const oldSource = `---\nplan_id: ${planId}\ntitle: Base\nkind: design\ndrive: agent\nstatus: confirmed\nlayer: L4\nroute_signal: forward\nroute_mode: forward\nagent_slots: []\ngenerates: []\ndependencies:\n  parent: null\n  requires: []\n  references: []\n  blocks: []\n---\n\n# Base\n`;
+  const oldSource = `---\nplan_id: ${planId}\ntitle: Base\nkind: design\ndrive: agent\nstatus: confirmed\nlayer: L6\nsub_doc: function-spec\nroute_signal: forward\nroute_mode: forward\nsupersedes:\n  - ${planId}\nagent_slots:\n  - role: aim\n    slot_label: AIM - revision fixture\ngenerates: []\ndependencies:\n  parent: null\n  requires: []\n  references: []\n  blocks: []\n---\n\n# Base\n`;
   const oldProjection = '{"schema_version":"ut-tdd.plan-admission-receipts/v1","records":[]}\n';
   writeFileSync(join(root, sourcePath), drift.sourceText ?? oldSource, "utf8");
   writeFileSync(join(root, projectionPath), drift.projectionText ?? oldProjection, "utf8");
@@ -228,7 +228,8 @@ function fixture(mode: Mode, drift: Drift = {}) {
     routeSignal: "design_correction",
     routeMode: "redesign",
     kind: "design",
-    layer: "L4",
+    layer: "L6",
+    subDoc: "function-spec",
     drive: "agent",
     branch: "work/redesign-plan-31",
     status: "draft",
@@ -267,6 +268,7 @@ function fixture(mode: Mode, drift: Drift = {}) {
       route_mode: admission.routeMode,
       kind: admission.kind,
       layer: admission.layer,
+      sub_doc: "function-spec",
       drive: admission.drive,
       branch: admission.branch,
       status: admission.status,
@@ -370,7 +372,7 @@ function seedAdopted(
       "2026-07-15T00:00:00.000Z",
     );
   db.prepare("INSERT INTO plan_aliases VALUES (?, ?, ?, ?, ?, ?)").run(
-    `alias:${bound}`,
+    planId,
     bound,
     planId,
     1,

@@ -66,6 +66,9 @@ describe("PLAN revision ledger transaction", () => {
     const input = revision();
     const first = ledger.append(input);
 
+    expect(db.prepare("SELECT recorded_at FROM plan_admission_receipts").get()).toEqual({
+      recorded_at: input.occurredAt,
+    });
     expect(ledger.append(input)).toEqual(first.ok ? { ...first, replayed: true } : first);
     expect(ledger.append({ ...input, reason: "different" })).toEqual({
       ok: false,

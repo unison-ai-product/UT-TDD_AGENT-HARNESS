@@ -215,7 +215,7 @@ describe("NodeAtomicDraftPublisher", () => {
     f.publisher.publish(token);
     writeFileSync(join(f.root, f.source), "concurrent-after-publish", "utf8");
 
-    expect(() => f.publisher.restore(token)).toThrow(/postimage/);
+    expect(() => f.publisher.restore(token)).toThrow(/published target CAS|postimage/);
     expect(readFileSync(join(f.root, f.source), "utf8")).toBe("concurrent-after-publish");
   });
 
