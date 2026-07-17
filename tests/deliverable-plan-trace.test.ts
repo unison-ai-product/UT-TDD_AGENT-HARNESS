@@ -43,12 +43,39 @@ describe("PLAN-L7-450 W4/W3 deliverable trace", () => {
       tracedPaths: new Set(["scripts/new.ts"]),
       ownersByPath: new Map([["scripts/new.ts", ["PLAN-A", "PLAN-B"]]]),
       baseline: new Map(),
+      ownershipBaseline: new Set(),
     });
     expect(result.ok).toBe(false);
     expect(result.findings).toContainEqual(
       expect.objectContaining({
         kind: "duplicate-artifact-ownership",
         artifactPath: "scripts/new.ts",
+      }),
+    );
+  });
+
+  it("U-L7-450-W2-004: duplicate baseline is bidirectional and independent from orphan debt", () => {
+    const green = analyzeDeliverableTraceGate({
+      artifactFiles: ["scripts/owned.ts"],
+      tracedPaths: new Set(["scripts/owned.ts"]),
+      ownersByPath: new Map([["scripts/owned.ts", ["PLAN-A", "PLAN-B"]]]),
+      baseline: new Map(),
+      ownershipBaseline: new Set(["scripts/owned.ts"]),
+    });
+    expect(green.ok).toBe(true);
+    expect(
+      analyzeDeliverableTraceGate({
+        ...green,
+        artifactFiles: ["scripts/owned.ts"],
+        tracedPaths: new Set(["scripts/owned.ts"]),
+        ownersByPath: new Map([["scripts/owned.ts", ["PLAN-A"]]]),
+        baseline: new Map(),
+        ownershipBaseline: new Set(["scripts/owned.ts"]),
+      }).findings,
+    ).toContainEqual(
+      expect.objectContaining({
+        kind: "stale-deliverable-trace-debt",
+        artifactPath: "scripts/owned.ts",
       }),
     );
   });

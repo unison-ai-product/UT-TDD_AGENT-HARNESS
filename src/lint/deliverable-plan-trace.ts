@@ -44,6 +44,7 @@ export interface DeliverablePlanTraceInput {
   tracedPaths: Set<string>;
   ownersByPath: Map<string, string[]>;
   baseline: Map<string, string>;
+  ownershipBaseline: Set<string>;
 }
 
 function listFiles(dir: string, repoRoot: string, output: string[]): void {
@@ -64,21 +65,30 @@ function frontmatter(content: string): Record<string, unknown> {
     : {};
 }
 
-function loadLedger(content: string): Map<string, string> {
+function loadLedger(content: string): {
+  baseline: Map<string, string>;
+  ownershipBaseline: Set<string>;
+} {
   const rows = content.split(/\r?\n/).filter((line) => line.startsWith("| `"));
   const baseline = new Map<string, string>();
+  const ownershipBaseline = new Set<string>();
   for (const row of rows) {
     const columns = row.split("|").map((column) => column.trim());
     const artifactPath = columns[1]?.replaceAll("`", "");
-    const ownerPlan = columns[2]?.replaceAll("`", "");
-    const justification = columns[3];
-    const promoteBy = columns[4];
+    const legacyRow = columns.length === 6;
+    const debtKind = legacyRow ? "orphan-deliverable" : columns[2];
+    const ownerPlan = (legacyRow ? columns[2] : columns[3])?.replaceAll("`", "");
+    const justification = legacyRow ? columns[3] : columns[4];
+    const promoteBy = legacyRow ? columns[4] : columns[5];
     if (!artifactPath || !ownerPlan || !justification || !promoteBy) {
       throw new Error("invalid deliverable trace debt ledger row");
     }
-    baseline.set(normalizePath(artifactPath), ownerPlan);
+    const normalized = normalizePath(artifactPath);
+    if (debtKind === "orphan-deliverable") baseline.set(normalized, ownerPlan);
+    else if (debtKind === "duplicate-artifact-ownership") ownershipBaseline.add(normalized);
+    else throw new Error("invalid deliverable trace debt ledger kind");
   }
-  return baseline;
+  return { baseline, ownershipBaseline };
 }
 
 export function loadDeliverablePlanTraceInput(repoRoot: string): DeliverablePlanTraceInput {
@@ -114,10 +124,16 @@ export function loadDeliverablePlanTraceInput(repoRoot: string): DeliverablePlan
       if (planId) ownersByPath.set(normalized, [...(ownersByPath.get(normalized) ?? []), planId]);
     }
   }
-  const baseline = loadLedger(
+  const ledger = loadLedger(
     readFileSync(join(repoRoot, "docs", "governance", "deliverable-trace-debt-audit.md"), "utf8"),
   );
-  return { artifactFiles: scopedArtifacts.sort(), tracedPaths, ownersByPath, baseline };
+  return {
+    artifactFiles: scopedArtifacts.sort(),
+    tracedPaths,
+    ownersByPath,
+    baseline: ledger.baseline,
+    ownershipBaseline: ledger.ownershipBaseline,
+  };
 }
 
 export function analyzeDeliverableTraceGate(
@@ -126,9 +142,17 @@ export function analyzeDeliverableTraceGate(
   const trace = analyzeDeliverablePlanTrace(input);
   const ownership = analyzeArtifactOwnership({
     ownersByPath: input.ownersByPath,
-    baseline: new Set(input.baseline.keys()),
+    baseline: input.ownershipBaseline,
   });
-  const findings = [...ownership.findings, ...trace.findings].sort((a, b) =>
+  const duplicatePaths = new Set(
+    [...input.ownersByPath]
+      .filter(([, planIds]) => planIds.length > 1)
+      .map(([artifactPath]) => artifactPath),
+  );
+  const staleOwnership = [...input.ownershipBaseline]
+    .filter((artifactPath) => !duplicatePaths.has(artifactPath))
+    .map((artifactPath) => ({ kind: "stale-deliverable-trace-debt" as const, artifactPath }));
+  const findings = [...ownership.findings, ...trace.findings, ...staleOwnership].sort((a, b) =>
     a.artifactPath.localeCompare(b.artifactPath),
   );
   return { findings, ok: findings.length === 0 };
