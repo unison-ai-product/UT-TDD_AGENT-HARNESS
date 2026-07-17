@@ -1,11 +1,12 @@
 // PLAN-L7-451 W3: Job Summary projection の unit oracle。
 
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { collectJobSummary, renderJobSummary } from "../src/github/job-summary";
 import { openHarnessDb } from "../src/state-db/index";
+import { removeTestTree } from "./support/temp-tree";
 
 const tempDirs: string[] = [];
 
@@ -26,7 +27,7 @@ function makeRepo(rows: Array<[string, string, string, string]>): {
 }
 
 afterEach(() => {
-  for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  for (const dir of tempDirs.splice(0)) removeTestTree(dir);
 });
 
 describe("github job summary (PLAN-L7-451 W3)", () => {

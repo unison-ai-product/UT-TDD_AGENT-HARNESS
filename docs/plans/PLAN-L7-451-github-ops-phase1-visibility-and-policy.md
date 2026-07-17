@@ -50,6 +50,18 @@ review_evidence:
         completed_at: "2026-07-17T19:20:00+09:00"
         evidence_path: .ut-tdd/audit/A-L7-451-lint.log
         output_digest: "sha256:86580aae589db1e6"
+  - reviewer: codex-subagent-post-test-ci-recovery-review
+    review_kind: cross_agent
+    worker_model: claude-fable-5
+    reviewer_model: gpt-5
+    tests_green_at: "2026-07-17T19:35:00+09:00"
+    reviewed_at: "2026-07-17T20:21:00+09:00"
+    verdict: pass
+    scope: >-
+      PR #104 の失敗4系統と修正差分をcross-runtimeで再攻撃した。実repo参照2件の
+      isolation契約、DB close後のretry cleanup、Reverse未完了をclaimしないDoD境界は
+      PASS。元のClaudeレビュー時刻の変更は証拠偽装になるためFLAGとして撤回し、
+      本entryをテストGreen後の独立再レビュー証跡として追加した。
 generates:
   - artifact_path: docs/plans/PLAN-L7-451-github-ops-phase1-visibility-and-policy.md
     artifact_type: markdown_doc
@@ -208,5 +220,5 @@ surface bindings) は L7-436〜439 の正規実装が土台であり、本 PLAN 
       偽装しない。根拠: `tests/github-repository-policy.test.ts` の
       `U-L7-451-W6-001`〜`005` (green 実測 2026-07-17) と CLI 実走 (現物未適用に対し
       DRIFT 3 findings / exit 1 を実測)。
-- [ ] PLAN-REVERSE-451 R0-R4 の完了は本 slice では claim しない。R2 で実装観測と
+- [x] PLAN-REVERSE-451 R0-R4 の完了は本 slice では claim しない。R2 で実装観測と
       L6-83/L6-85 契約の差分を gap-only で照合する。
