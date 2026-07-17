@@ -80,6 +80,18 @@ describe("github repository policy audit (PLAN-L7-451 W6)", () => {
     };
     expect(diffRepositoryPolicy(policy, normalizeRulesets(otherBranch)).ok).toBe(false);
   });
+
+  it("U-L7-451-W6-005: ~DEFAULT_BRANCH は default branch のみにマッチする (fail-open 防止)", () => {
+    const policy = {
+      ...parseRepositoryPolicy(readFileSync(POLICY_PATH, "utf8")),
+      branch: "develop",
+    };
+    const result = diffRepositoryPolicy(policy, normalizeRulesets(compliantRulesets()), {
+      defaultBranch: "main",
+    });
+    expect(result.ok).toBe(false);
+    expect(result.findings.map((f) => f.code)).toContain("github-required-check-missing");
+  });
 });
 
 describe("github issue forms (PLAN-L7-451 W5)", () => {
@@ -103,24 +115,66 @@ describe("github issue forms (PLAN-L7-451 W5)", () => {
     >;
     expect(config.blank_issues_enabled).toBe(false);
 
-    const recovery = parseYaml(readFileSync(join(dir, "recovery.yml"), "utf8")) as {
-      labels: string[];
-      body: Array<{ id?: string; validations?: { required?: boolean } }>;
+    // 全 escape form に共通して L6-83 規定の中核項目を required で要求する
+    // (recovery だけを見る退化 oracle にしない)。
+    const perFormRequired: Record<string, string[]> = {
+      "recovery.yml": [
+        "origin_plan",
+        "observed_state",
+        "reason_code",
+        "observed_head",
+        "evidence",
+        "drive_model",
+        "reentry_target",
+      ],
+      "reverse.yml": [
+        "origin_plan",
+        "observed_state",
+        "observed_head",
+        "reason_code",
+        "evidence",
+        "drive_model",
+        "reentry_target",
+      ],
+      "redesign.yml": [
+        "origin_plan",
+        "observed_state",
+        "reason_code",
+        "observed_head",
+        "evidence",
+        "drive_model",
+        "reentry_target",
+      ],
+      "incident.yml": [
+        "observed_state",
+        "observed_head",
+        "reason_code",
+        "evidence",
+        "drive_model",
+        "reentry_target",
+      ],
+      "nfr-failure.yml": [
+        "nfr_id",
+        "observed_state",
+        "reason_code",
+        "observed_head",
+        "evidence",
+        "drive_model",
+        "reentry_target",
+      ],
     };
-    expect(recovery.labels).toContain("drive:recovery");
-    const requiredIds = recovery.body
-      .filter((item) => item.validations?.required === true)
-      .map((item) => item.id);
-    for (const id of [
-      "origin_plan",
-      "observed_state",
-      "reason_code",
-      "observed_head",
-      "evidence",
-      "drive_model",
-      "reentry_target",
-    ]) {
-      expect(requiredIds).toContain(id);
+    for (const [file, ids] of Object.entries(perFormRequired)) {
+      const form = parseYaml(readFileSync(join(dir, file), "utf8")) as {
+        labels: string[];
+        body: Array<{ id?: string; validations?: { required?: boolean } }>;
+      };
+      expect(form.labels).toContain("ut-tdd");
+      const requiredIds = form.body
+        .filter((item) => item.validations?.required === true)
+        .map((item) => item.id);
+      for (const id of ids) {
+        expect(requiredIds, `${file} requires ${id}`).toContain(id);
+      }
     }
   });
 });

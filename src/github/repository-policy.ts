@@ -66,16 +66,21 @@ export function parseRepositoryPolicy(yamlText: string): RepositoryPolicy {
   };
 }
 
-function branchMatches(target: string, branch: string): boolean {
-  if (target === "~DEFAULT_BRANCH" || target === "~ALL") return true;
+function branchMatches(target: string, branch: string, defaultBranch: string): boolean {
+  // ~DEFAULT_BRANCH は default branch (単一) のみを指す。policy.branch が default で
+  // ない場合にマッチ扱いすると保護を過大評価する fail-open になるため突き合わせる。
+  if (target === "~DEFAULT_BRANCH") return branch === defaultBranch;
+  if (target === "~ALL") return true;
   const normalized = target.replace(/^refs\/heads\//, "");
   return normalized === branch || normalized === "**";
 }
 
-function activeRulesFor(observed: ObservedRuleset[], branch: string) {
+function activeRulesFor(observed: ObservedRuleset[], branch: string, defaultBranch: string) {
   return observed
     .filter(
-      (r) => r.enforcement === "active" && r.targetBranches.some((t) => branchMatches(t, branch)),
+      (r) =>
+        r.enforcement === "active" &&
+        r.targetBranches.some((t) => branchMatches(t, branch, defaultBranch)),
     )
     .flatMap((r) => r.rules);
 }
@@ -84,9 +89,10 @@ function activeRulesFor(observed: ObservedRuleset[], branch: string) {
 export function diffRepositoryPolicy(
   policy: RepositoryPolicy,
   observed: ObservedRuleset[],
+  options: { defaultBranch?: string } = {},
 ): PolicyDiffResult {
   const findings: PolicyFinding[] = [];
-  const rules = activeRulesFor(observed, policy.branch);
+  const rules = activeRulesFor(observed, policy.branch, options.defaultBranch ?? "main");
 
   const observedChecks = new Set(
     rules.filter((r) => r.type === "required_status_checks").flatMap((r) => r.requiredChecks ?? []),

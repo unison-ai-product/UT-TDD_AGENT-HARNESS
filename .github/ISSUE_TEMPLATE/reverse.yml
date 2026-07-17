@@ -30,6 +30,20 @@ body:
     validations:
       required: true
   - type: input
+    id: reason_code
+    attributes:
+      label: Failure / drift reason code
+    validations:
+      required: true
+  - type: dropdown
+    id: drive_model
+    attributes:
+      label: Drive model
+      options:
+        - reverse
+    validations:
+      required: true
+  - type: input
     id: reentry_target
     attributes:
       label: Reentry target (Forward 再合流先 PLAN / layer)

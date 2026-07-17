@@ -29,6 +29,20 @@ body:
     validations:
       required: true
   - type: input
+    id: observed_head
+    attributes:
+      label: Observed HEAD (git SHA)
+    validations:
+      required: true
+  - type: dropdown
+    id: drive_model
+    attributes:
+      label: Drive model
+      options:
+        - redesign
+    validations:
+      required: true
+  - type: input
     id: reentry_target
     attributes:
       label: Reentry target (Forward 再合流先 PLAN / layer)
