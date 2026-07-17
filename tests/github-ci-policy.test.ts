@@ -489,7 +489,7 @@ describe("github-ci-policy lint", () => {
         file: ".github/workflows/harness-check.yml",
         profile: "source",
         reason: "malformed_workflow_shape",
-        detail: "jobs.harness-check.steps must be an array of mappings",
+        detail: "jobs.harness-check-linux.steps must be an array of mappings",
       });
     }
 
