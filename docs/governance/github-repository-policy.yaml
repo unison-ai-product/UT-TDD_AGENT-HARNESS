@@ -1,0 +1,22 @@
+# GitHub repository policy — authoring source (PLAN-L7-451 W6)
+#
+# 正本はこのファイル。GitHub UI (Rulesets / branch protection) は適用先であり、
+# 現物との乖離は `ut-tdd github policy diff` が finding として検出する。
+# 適用操作は PO の gh 認証で行う別手順 (本 CLI は read-only)。
+#
+# 採択: 段階適用 (PO 2026-07-17、選択肢 1)。
+# - required status check = 集約 `harness-check` 1 本 (PLAN-RECOVERY-15 の aggregate gate)
+# - force push 禁止 / branch 削除禁止 (main)
+# - bypass actor = PO (repository admin) のみ
+# - approval 系 (required approvals / stale approval dismissal / conversation resolution)
+#   は solo 自己ブロックになるため適用しない。provider 独立性の証明は GitHub approval
+#   ではなく UT-TDD review receipt が正本 (PLAN-L6-85)。
+repository: unison-ai-product/UT-TDD_AGENT-HARNESS
+branch: main
+required_status_checks:
+  - harness-check
+block_force_pushes: true
+block_deletions: true
+require_approvals: false
+bypass_actors:
+  - repository_admin

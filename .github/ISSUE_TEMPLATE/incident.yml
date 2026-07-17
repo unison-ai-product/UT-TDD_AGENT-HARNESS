@@ -1,0 +1,51 @@
+# PLAN-L7-451 W5: Incident episode の Issue Form (PLAN-L6-83 準拠)。
+name: Incident
+description: 運用中の障害・退行 episode を起票する
+title: "Incident: "
+labels: ["ut-tdd", "drive:incident", "risk:p1"]
+body:
+  - type: textarea
+    id: observed_state
+    attributes:
+      label: Observed state (障害の観測事実・影響範囲)
+    validations:
+      required: true
+  - type: input
+    id: observed_head
+    attributes:
+      label: Observed HEAD (git SHA)
+    validations:
+      required: true
+  - type: input
+    id: origin_plan
+    attributes:
+      label: Origin PLAN ID (関連する場合)
+    validations:
+      required: false
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence path / digest
+    validations:
+      required: true
+  - type: input
+    id: reason_code
+    attributes:
+      label: Failure / drift reason code
+    validations:
+      required: true
+  - type: dropdown
+    id: drive_model
+    attributes:
+      label: Drive model
+      options:
+        - incident
+        - recovery
+    validations:
+      required: true
+  - type: input
+    id: reentry_target
+    attributes:
+      label: Reentry target (Forward 再合流先 PLAN / layer)
+    validations:
+      required: true

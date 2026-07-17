@@ -75,6 +75,12 @@ jobs:
       - name: doctor (governance hard gates)
         run: bun src/cli.ts doctor
 
+      # PLAN-L7-451 W3: 人間向け projection。判定正本は上の gate 実測であり、
+      # summary 生成は常に exit 0 (失敗で CI を red にしない)。
+      - name: job summary (UT-TDD projection)
+        if: ${{ always() }}
+        run: bun src/cli.ts github summary >> "$GITHUB_STEP_SUMMARY"
+
   # PLAN-L7-448 (issue #81): Windows first-class 方針 (.claude/CLAUDE.md Guard Rules) に対する
   # CI 被覆。ubuntu leg では構造的に検証不能な Windows 固有経路 (path separator / SQLite handle
   # 解放遅延 / reference seal) を最小構成で被覆する。full doctor はローカル 10 分超 (issue #70) の
