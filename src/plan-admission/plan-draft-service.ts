@@ -11,7 +11,12 @@ export interface PlanDraftCommand<TPayload> {
 export interface DraftArtifact {
   path: string;
   content: string;
+  expectedPreimage?: ArtifactPreimage;
 }
+
+export type ArtifactPreimage =
+  | { readonly kind: "absent" }
+  | { readonly kind: "sha256"; readonly digest: `sha256:${string}` };
 
 export interface DraftValidationPort<TPayload> {
   validate(command: PlanDraftCommand<TPayload>): void;

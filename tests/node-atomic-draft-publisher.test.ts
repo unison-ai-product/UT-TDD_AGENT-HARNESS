@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -154,4 +155,65 @@ describe("NodeAtomicDraftPublisher", () => {
       "plan-admission-receipts.json",
     ]);
   });
+
+  it("U-PADM-047: publish直前のsource preimage driftを外部内容を保持して拒否する", () => {
+    const f = fixture();
+    const artifacts = [
+      { ...f.artifacts[0], expectedPreimage: preimage("old-source") },
+      { ...f.artifacts[1], expectedPreimage: preimage("old-projection") },
+    ] as const;
+    const token = f.publisher.stage(artifacts);
+    writeFileSync(join(f.root, f.source), "concurrent-source", "utf8");
+
+    expect(() => f.publisher.publish(token)).toThrow(/preimage/);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("concurrent-source");
+    expect(readFileSync(join(f.root, f.projection), "utf8")).toBe("old-projection");
+  });
+
+  it("U-PADM-048: source公開後のprojection driftを検出しreverse restoreできる", () => {
+    const f = fixture((point, path) => {
+      if (point === "publish:after-target-rename" && path === f.source) {
+        writeFileSync(join(f.root, f.projection), "concurrent-projection", "utf8");
+      }
+    });
+    const token = f.publisher.stage([
+      { ...f.artifacts[0], expectedPreimage: preimage("old-source") },
+      { ...f.artifacts[1], expectedPreimage: preimage("old-projection") },
+    ]);
+
+    expect(() => f.publisher.publish(token)).toThrow(/preimage/);
+    f.publisher.restore(token);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("old-source");
+    expect(readFileSync(join(f.root, f.projection), "utf8")).toBe("concurrent-projection");
+  });
+
+  it("U-PADM-049: absent対象のpublish前作成を上書きしない", () => {
+    const f = fixture();
+    rmSync(join(f.root, f.source));
+    const token = f.publisher.stage([
+      { ...f.artifacts[0], expectedPreimage: { kind: "absent" } },
+      { ...f.artifacts[1], expectedPreimage: preimage("old-projection") },
+    ]);
+    writeFileSync(join(f.root, f.source), "concurrent-create", "utf8");
+
+    expect(() => f.publisher.publish(token)).toThrow(/preimage/);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("concurrent-create");
+  });
+
+  it("U-PADM-050: restore中のpostimage driftを削除せずrecoveryへ送る", () => {
+    const f = fixture();
+    const token = f.publisher.stage(f.artifacts);
+    f.publisher.publish(token);
+    writeFileSync(join(f.root, f.source), "concurrent-after-publish", "utf8");
+
+    expect(() => f.publisher.restore(token)).toThrow(/postimage/);
+    expect(readFileSync(join(f.root, f.source), "utf8")).toBe("concurrent-after-publish");
+  });
 });
+
+function preimage(content: string) {
+  return {
+    kind: "sha256" as const,
+    digest: `sha256:${createHash("sha256").update(content).digest("hex")}` as const,
+  };
+}

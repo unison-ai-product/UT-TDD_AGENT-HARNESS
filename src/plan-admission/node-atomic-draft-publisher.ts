@@ -1,18 +1,24 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   closeSync,
-  copyFileSync,
   existsSync,
   fsyncSync,
+  linkSync,
   lstatSync,
   openSync,
+  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import type { DraftArtifact, DraftPublisherPort, DraftPublishToken } from "./plan-draft-service";
+import type {
+  ArtifactPreimage,
+  DraftArtifact,
+  DraftPublisherPort,
+  DraftPublishToken,
+} from "./plan-draft-service";
 
 export type DraftPublisherFaultPoint =
   | "stage:before-write"
@@ -34,7 +40,8 @@ interface StagedArtifact {
   targetPath: string;
   temporaryPath: string;
   rollbackPath: string;
-  existed: boolean;
+  expectedPreimage: ArtifactPreimage;
+  postimageDigest: `sha256:${string}`;
   backupMoved: boolean;
   targetPublished: boolean;
   restored: boolean;
@@ -80,21 +87,20 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
           targetPath,
           temporaryPath: `${targetPath}${suffix}.tmp`,
           rollbackPath: `${targetPath}${suffix}.rollback`,
-          existed: existsSync(targetPath),
+          expectedPreimage:
+            artifact.expectedPreimage ?? this.currentPreimage(targetPath, artifact.path),
+          postimageDigest: sha256(artifact.content),
           backupMoved: false,
           targetPublished: false,
           restored: false,
           finalized: false,
         };
+        validatePreimage(item.expectedPreimage, artifact.path);
         this.assertAuxiliaryPathsAbsent(item);
         staged.push(item);
         this.injectFault("stage:before-write", artifact.path);
         writeFileSync(item.temporaryPath, artifact.content, { encoding: "utf8", flag: "wx" });
         syncFile(item.temporaryPath);
-        if (item.existed) {
-          copyFileSync(item.targetPath, item.rollbackPath);
-          syncFile(item.rollbackPath);
-        }
         syncDirectory(dirname(item.targetPath));
         this.injectFault("stage:after-write", artifact.path);
       }
@@ -118,14 +124,23 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
     if (token.published) return;
     for (const item of token.artifacts) {
       if (item.targetPublished) continue;
-      if (item.existed && !item.backupMoved) {
-        rmSync(item.rollbackPath, { force: true });
+      this.assertPublishTarget(item);
+      if (item.expectedPreimage.kind === "sha256" && !item.backupMoved) {
         renameSync(item.targetPath, item.rollbackPath);
         item.backupMoved = true;
         syncDirectory(dirname(item.targetPath));
+        if (
+          !regularFile(item.rollbackPath) ||
+          !digestEqual(sha256File(item.rollbackPath), item.expectedPreimage.digest)
+        ) {
+          renameSync(item.rollbackPath, item.targetPath);
+          item.backupMoved = false;
+          throw new Error(`artifact preimage mismatch: ${item.logicalPath}`);
+        }
         this.injectFault("publish:after-backup-rename", item.logicalPath);
       }
-      renameSync(item.temporaryPath, item.targetPath);
+      linkSync(item.temporaryPath, item.targetPath);
+      rmSync(item.temporaryPath);
       item.targetPublished = true;
       syncDirectory(dirname(item.targetPath));
       this.injectFault("publish:after-target-rename", item.logicalPath);
@@ -139,11 +154,20 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
     for (const item of [...token.artifacts].reverse()) {
       if (item.restored) continue;
       this.injectFault("restore:before-artifact", item.logicalPath);
+      if (item.targetPublished) {
+        if (
+          !regularFile(item.targetPath) ||
+          !digestEqual(sha256File(item.targetPath), item.postimageDigest)
+        ) {
+          throw new Error(`artifact postimage mismatch: ${item.logicalPath}`);
+        }
+        rmSync(item.targetPath);
+      }
       if (item.backupMoved) {
-        rmSync(item.targetPath, { force: true });
+        if (existsSync(item.targetPath)) {
+          throw new Error(`artifact postimage mismatch: ${item.logicalPath}`);
+        }
         renameSync(item.rollbackPath, item.targetPath);
-      } else if (!item.existed && item.targetPublished) {
-        rmSync(item.targetPath, { force: true });
       }
       rmSync(item.temporaryPath, { force: true });
       if (!item.backupMoved) rmSync(item.rollbackPath, { force: true });
@@ -184,6 +208,26 @@ export class NodeAtomicDraftPublisher implements DraftPublisherPort {
     return targetPath;
   }
 
+  private currentPreimage(targetPath: string, logicalPath: string): ArtifactPreimage {
+    if (!existsSync(targetPath)) return { kind: "absent" };
+    if (!regularFile(targetPath))
+      throw new Error(`regular file以外の成果物は拒否されました: ${logicalPath}`);
+    return { kind: "sha256", digest: sha256File(targetPath) };
+  }
+
+  private assertPublishTarget(item: StagedArtifact): void {
+    const current = this.resolveTarget(item.logicalPath);
+    if (current !== item.targetPath) throw new Error(`artifact parent drift: ${item.logicalPath}`);
+    if (item.expectedPreimage.kind === "absent") {
+      if (existsSync(item.targetPath))
+        throw new Error(`artifact preimage mismatch: ${item.logicalPath}`);
+      return;
+    }
+    if (!existsSync(item.targetPath) || !regularFile(item.targetPath)) {
+      throw new Error(`artifact preimage mismatch: ${item.logicalPath}`);
+    }
+  }
+
   private assertAuxiliaryPathsAbsent(item: StagedArtifact): void {
     if (existsSync(item.temporaryPath) || existsSync(item.rollbackPath)) {
       throw new Error(`stage補助pathが既に存在します: ${item.logicalPath}`);
@@ -215,6 +259,34 @@ function assertWithin(root: string, candidate: string, logicalPath: string): voi
   const rel = relative(root, candidate);
   if (rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))) return;
   throw new Error(`repository root外の成果物pathは拒否されました: ${logicalPath}`);
+}
+
+function validatePreimage(preimage: ArtifactPreimage, logicalPath: string): void {
+  if (
+    preimage.kind !== "absent" &&
+    (preimage.kind !== "sha256" || !/^sha256:[a-f0-9]{64}$/.test(preimage.digest))
+  ) {
+    throw new Error(`artifact preimage invalid: ${logicalPath}`);
+  }
+}
+
+function regularFile(path: string): boolean {
+  const stat = lstatSync(path);
+  return stat.isFile() && !stat.isSymbolicLink();
+}
+
+function sha256File(path: string): `sha256:${string}` {
+  return `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
+}
+
+function sha256(content: string): `sha256:${string}` {
+  return `sha256:${createHash("sha256").update(content).digest("hex")}`;
+}
+
+function digestEqual(left: string, right: string): boolean {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 function syncFile(path: string): void {
