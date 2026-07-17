@@ -4,7 +4,7 @@ title: "PLAN-L7-365 (add-impl): harness.db on-disk currency の自動維持 + st
 kind: add-impl
 layer: L7
 drive: db
-status: draft
+status: confirmed
 route_signal: feature_addition
 route_mode: add-feature
 created: 2026-07-07
@@ -20,6 +20,8 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-L7-365-harness-db-currency-hook.md
     artifact_type: markdown_doc
+  - artifact_path: src/state-db/stop-refresh.ts
+    artifact_type: source_module
 dependencies:
   parent: docs/plans/PLAN-L5-01-physical-data.md
   requires: []
@@ -31,6 +33,43 @@ dependencies:
     - src/doctor/db-projection.ts
     - src/runtime/session-log.ts
     - .claude/settings.json
+review_evidence:
+  - reviewer: codex-blind-reviewer
+    review_kind: cross_agent
+    reviewed_at: "2026-07-17T15:44:00+09:00"
+    tests_green_at: "2026-07-17T15:40:00+09:00"
+    verdict: approve
+    scope: "Stop hook 駆動 on-disk harness.db currency 維持 (Step 2 slice、issue #78)。blind review 3 ラウンド: 1st FLAG (5s hook timeout と同期 full rebuild の不両立) → detached fire-and-forget 化で是正、2nd FLAG (real spawn の非同期 error event 未処理で fail-open 契約破り) → error listener + real-spawn regression で是正、3rd PASS (レビュアー実測: listener 有り exit 0 / 無し exit 1 の real oracle 確認)。残余 (lock 競合 fail-open、Stop 毎 full rebuild コスト、親 kill 後 E2E) は実装メモに受容記録、REVERSE-365 R2 で観測。"
+    worker_model: claude
+    reviewer_model: gpt-5.6-sol
+    green_commands:
+      - kind: unit_test
+        command: "bun scripts/run-vitest-snapshot.ts tests/db-currency.test.ts tests/drive-db-registration.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-17T15:40:00+09:00"
+        evidence_path: tests/db-currency.test.ts
+        output_digest: "sha256:31c73218fd2e6b522f274a5b1c34dd067d171f6611150007bc5a5074407b735a"
+        anchor_commit: 56b93de47e671e18c57822b3fc0c25292ec91fad
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-17T15:39:00+09:00"
+        evidence_path: src/state-db/stop-refresh.ts
+        output_digest: "sha256:56f7c760310c89d63f0ec2b9f0b972c827b28c5945426a576d17d205efa1c702"
+        anchor_commit: 56b93de47e671e18c57822b3fc0c25292ec91fad
+      - kind: lint
+        command: "bun x biome check src/state-db/stop-refresh.ts src/cli.ts tests/db-currency.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-17T15:39:00+09:00"
+        evidence_path: src/cli.ts
+        output_digest: "sha256:fd15ec5a6ff295838b5a4ec9f8505029004875067e5ae26fa95ef8c6b79a5837"
+        anchor_commit: 56b93de47e671e18c57822b3fc0c25292ec91fad
 ---
 
 # PLAN-L7-365 (impl): harness.db on-disk currency の自動維持
