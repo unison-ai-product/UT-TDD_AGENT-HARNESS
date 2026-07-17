@@ -2,9 +2,100 @@ import { createHash } from "node:crypto";
 import {
   calculateExecutionEventDigest,
   canonicalizeExecutionPayload,
+  type DriveSelectionIntent,
   type ExecutionEpisodeEvent,
+  type IssueProjectionIntent,
 } from "../../domain/execution-episode.js";
 import type { EpisodeWriteCustody } from "../../ports/episode-repository.js";
+import type { ExecutionEpisodeProjection } from "../../application/episode-projector.js";
+
+export const EXECUTION_EPISODE_EVENT_COLUMNS = [
+  "event_id",
+  "episode_id",
+  "event_sequence",
+  "command_id",
+  "command_payload_digest",
+  "event_state",
+  "event_kind",
+  "payload_version",
+  "canonical_payload_json",
+  "payload_digest",
+  "previous_event_digest",
+  "source_commit",
+  "observed_head",
+  "policy_revision",
+  "actor",
+  "runtime",
+  "model",
+  "occurred_at",
+  "event_digest",
+] as const;
+
+export const DRIVE_MODEL_SELECTION_COLUMNS = [
+  "episode_id",
+  "selection_revision",
+  "selected_event_sequence",
+  "model",
+  "compatibility_result",
+  "rationale_digest",
+  "override_used",
+  "override_actor",
+  "override_reason",
+  "override_evidence_digest",
+  "selected_at",
+  "selection_digest",
+] as const;
+
+export const GITHUB_PROJECTION_OUTBOX_COLUMNS = [
+  "outbox_id",
+  "episode_id",
+  "source_event_sequence",
+  "operation_kind",
+  "object_kind",
+  "repository",
+  "target_logical_key",
+  "intent_revision",
+  "idempotency_key",
+  "payload_version",
+  "canonical_payload_json",
+  "payload_digest",
+  "status",
+  "attempt_count",
+  "next_attempt_at",
+  "lease_owner",
+  "lease_expires_at",
+  "ack_observation_id",
+  "created_at",
+  "last_attempt_at",
+] as const;
+
+export const EXECUTION_EPISODE_PROJECTION_COLUMNS = [
+  "episode_id",
+  "current_event_sequence",
+  "current_state",
+  "current_event_digest",
+  "block_reason",
+  "next_legal_actions_json",
+  "latest_head",
+  "merge_readiness",
+  "drive_model",
+  "reentry_layer",
+  "rebuilt_at",
+] as const;
+
+export const APPEND_COMMAND_RECEIPT_COLUMNS = [
+  "command_id",
+  "command_type",
+  "subject_kind",
+  "subject_key",
+  "plan_asset_id",
+  "plan_revision",
+  "command_payload_digest",
+  "result_kind",
+  "result_ref",
+  "recorded_at",
+  "receipt_digest",
+] as const;
 
 export interface PersistedExecutionEpisodeEvent extends ExecutionEpisodeEvent {
   readonly eventId: string;
@@ -20,8 +111,21 @@ export interface PersistedExecutionEpisodeEvent extends ExecutionEpisodeEvent {
 
 export type ExecutionEpisodeEventRow = Readonly<Record<string, unknown>>;
 
+export interface AppendCommandReceiptInput {
+  readonly command_id: string;
+  readonly command_type: string;
+  readonly subject_kind: "execution_episode";
+  readonly subject_key: string;
+  readonly plan_asset_id: string | null;
+  readonly plan_revision: number | null;
+  readonly command_payload_digest: string;
+  readonly result_kind: "episode_event";
+  readonly result_ref: string;
+  readonly recorded_at: string;
+}
+
 export function mapExecutionEpisodeEventToRow(
-  event: PersistedExecutionEpisodeEvent,
+  event: PersistedExecutionEpisodeEvent | PersistableExecutionEpisodeEvent,
   custody: EpisodeWriteCustody,
 ): ExecutionEpisodeEventRow {
   if (!custody.runtime.trim() || !custody.model.trim())
@@ -52,6 +156,94 @@ export function mapExecutionEpisodeEventToRow(
     occurred_at: event.occurredAt,
     event_digest: event.eventDigest,
   });
+}
+
+export type PersistableExecutionEpisodeEvent = Pick<
+  PersistedExecutionEpisodeEvent,
+  "eventId" | "episodeId" | "sequence" | "state" | "kind" | "commandId" | "commandPayloadDigest" |
+    "payloadDigest" | "previousEventDigest" | "occurredAt" | "actor" | "eventDigest" | "payload"
+>;
+
+export function mapDriveSelectionToRow(
+  selection: DriveSelectionIntent,
+): ExecutionEpisodeEventRow {
+  return Object.freeze({
+    episode_id: selection.episodeId,
+    selection_revision: selection.selectionRevision,
+    selected_event_sequence: selection.selectedEventSequence,
+    model: selection.model,
+    compatibility_result: selection.compatibilityResult,
+    rationale_digest: selection.rationaleDigest,
+    override_used: selection.overrideUsed ? 1 : 0,
+    override_actor: selection.overrideActor,
+    override_reason: selection.overrideReason,
+    override_evidence_digest: selection.overrideEvidenceDigest,
+    selected_at: selection.selectedAt,
+    selection_digest: selection.selectionDigest,
+  });
+}
+
+export function mapIssueProjectionToRow(
+  outbox: IssueProjectionIntent,
+): ExecutionEpisodeEventRow {
+  return Object.freeze({
+    outbox_id: outbox.outboxId,
+    episode_id: outbox.episodeId,
+    source_event_sequence: outbox.sourceEventSequence,
+    operation_kind: outbox.operationKind,
+    object_kind: outbox.objectKind,
+    repository: outbox.repository,
+    target_logical_key: outbox.targetLogicalKey,
+    intent_revision: outbox.intentRevision,
+    idempotency_key: outbox.idempotencyKey,
+    payload_version: outbox.payloadVersion,
+    canonical_payload_json: outbox.canonicalPayloadJson,
+    payload_digest: outbox.payloadDigest,
+    status: outbox.status,
+    attempt_count: outbox.attemptCount,
+    next_attempt_at: outbox.nextAttemptAt,
+    lease_owner: null,
+    lease_expires_at: null,
+    ack_observation_id: null,
+    created_at: outbox.createdAt,
+    last_attempt_at: null,
+  });
+}
+
+export function mapExecutionEpisodeProjectionToRow(
+  projection: ExecutionEpisodeProjection,
+): ExecutionEpisodeEventRow {
+  return Object.freeze({
+    episode_id: projection.episodeId,
+    current_event_sequence: projection.eventSequence,
+    current_state: projection.state,
+    current_event_digest: projection.lastEventDigest,
+    block_reason: projection.blockReason,
+    next_legal_actions_json: canonicalizeExecutionPayload(projection.nextLegalActions),
+    latest_head: projection.latestHead,
+    merge_readiness: projection.mergeReadiness,
+    drive_model: projection.driveModel,
+    reentry_layer: projection.reentryLayer,
+    rebuilt_at: projection.rebuiltAt,
+  });
+}
+
+export function mapAppendCommandReceiptToRow(
+  receipt: AppendCommandReceiptInput,
+  receiptDigest: string,
+): ExecutionEpisodeEventRow {
+  return Object.freeze({ ...receipt, receipt_digest: receiptDigest });
+}
+
+export function rowValues(
+  columns: readonly string[],
+  row: ExecutionEpisodeEventRow,
+): unknown[] {
+  return columns.map((column) => row[column]);
+}
+
+export function insertSql(table: string, columns: readonly string[]): string {
+  return `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`;
 }
 
 export function decodeExecutionEpisodeEventRow(
@@ -159,7 +351,7 @@ function metadataMatches(
 ): boolean {
   return Object.entries(expected).every(([key, value]) => {
     const actual = payload[key];
-    return actual === undefined || actual === value;
+    return typeof actual === "string" && actual === value;
   });
 }
 

@@ -1,5 +1,4 @@
 import {
-  canonicalizeExecutionPayload,
   decideExecutionTransition,
   executionCommandPayloadDigest,
   ExecutionEpisode,
@@ -28,7 +27,22 @@ import {
 import type { HarnessDb } from "../../../state-db/index.js";
 import { executionLedgerRowsValid } from "./row-verifier.js";
 import { projectExecutionEpisode } from "../../application/episode-projector.js";
-import { decodeExecutionEpisodeEventRow } from "./episode-row-mapper.js";
+import {
+  APPEND_COMMAND_RECEIPT_COLUMNS,
+  DRIVE_MODEL_SELECTION_COLUMNS,
+  EXECUTION_EPISODE_EVENT_COLUMNS,
+  EXECUTION_EPISODE_PROJECTION_COLUMNS,
+  GITHUB_PROJECTION_OUTBOX_COLUMNS,
+  decodeExecutionEpisodeEventRow,
+  insertSql,
+  mapAppendCommandReceiptToRow,
+  mapDriveSelectionToRow,
+  mapExecutionEpisodeProjectionToRow,
+  mapExecutionEpisodeEventToRow,
+  mapIssueProjectionToRow,
+  rowValues,
+  type AppendCommandReceiptInput,
+} from "./episode-row-mapper.js";
 
 export interface EpisodeRepositoryFaultPort {
   after(
@@ -206,66 +220,24 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
   }
 
   private insertEvent(event: EscapeObservedEvent, custody: EpisodeWriteCustody): void {
+    const row = mapExecutionEpisodeEventToRow(event, custody);
     this.db
-      .prepare(
-        `INSERT INTO execution_episode_events (
-          event_id, episode_id, event_sequence, command_id, command_payload_digest, event_state,
-          event_kind, payload_version, canonical_payload_json, payload_digest,
-          previous_event_digest, source_commit, observed_head, policy_revision, actor, runtime,
-          model, occurred_at, event_digest
-        ) VALUES (${placeholders(19)})`,
-      )
-      .run(
-        event.eventId,
-        event.episodeId,
-        event.sequence,
-        event.commandId,
-        event.commandPayloadDigest,
-        event.state,
-        event.kind,
-        1,
-        canonicalizeExecutionPayload(event.payload),
-        event.payloadDigest,
-        event.previousEventDigest,
-        event.payload.sourceCommit,
-        event.payload.observedHead,
-        event.payload.policyRevision,
-        event.actor,
-        custody.runtime,
-        custody.model,
-        event.occurredAt,
-        event.eventDigest,
-      );
+      .prepare(insertSql("execution_episode_events", EXECUTION_EPISODE_EVENT_COLUMNS))
+      .run(...rowValues(EXECUTION_EPISODE_EVENT_COLUMNS, row));
   }
 
   private insertProjection(events: readonly ExecutionEpisodeEvent[]): void {
     const result = projectExecutionEpisode(events);
     if (!result.ok) throw new Error("projection:invalid-event-stream");
     const projection = result.projection;
+    const row = mapExecutionEpisodeProjectionToRow(projection);
     this.db
-      .prepare(
-        `INSERT INTO execution_episode_projection (
-          episode_id, current_event_sequence, current_state, current_event_digest, block_reason,
-          next_legal_actions_json, latest_head, merge_readiness, drive_model, reentry_layer, rebuilt_at
-        ) VALUES (${placeholders(11)})`,
-      )
-      .run(
-        projection.episodeId,
-        projection.eventSequence,
-        projection.state,
-        projection.lastEventDigest,
-        projection.blockReason,
-        JSON.stringify(projection.nextLegalActions),
-        projection.latestHead,
-        projection.mergeReadiness,
-        projection.driveModel,
-        projection.reentryLayer,
-        projection.rebuiltAt,
-      );
+      .prepare(insertSql("execution_episode_projection", EXECUTION_EPISODE_PROJECTION_COLUMNS))
+      .run(...rowValues(EXECUTION_EPISODE_PROJECTION_COLUMNS, row));
   }
 
   private insertReceipt(event: EscapeObservedEvent): void {
-    const row = {
+    const receipt = {
       command_id: event.commandId,
       command_type: "execution_episode.request_escape",
       subject_kind: "execution_episode",
@@ -276,10 +248,14 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
       result_kind: "episode_event",
       result_ref: event.eventId,
       recorded_at: event.occurredAt,
-    };
+    } satisfies AppendCommandReceiptInput;
+    const row = mapAppendCommandReceiptToRow(
+      receipt,
+      ledgerRowDigest(receipt, "receipt_digest"),
+    );
     this.db
-      .prepare("INSERT INTO append_command_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(...Object.values(row), ledgerRowDigest(row, "receipt_digest"));
+      .prepare(insertSql("append_command_receipts", APPEND_COMMAND_RECEIPT_COLUMNS))
+      .run(...rowValues(APPEND_COMMAND_RECEIPT_COLUMNS, row));
   }
 
   private loadHistory(episodeId: string): ExecutionEpisodeEvent[] {
@@ -299,114 +275,46 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
     event: ExecutionTransitionEvent,
     custody: EpisodeWriteCustody,
   ): void {
-    const payload = event.payload;
+    const row = mapExecutionEpisodeEventToRow(event, custody);
     this.db
-      .prepare(
-        `INSERT INTO execution_episode_events (
-          event_id, episode_id, event_sequence, command_id, command_payload_digest, event_state,
-          event_kind, payload_version, canonical_payload_json, payload_digest,
-          previous_event_digest, source_commit, observed_head, policy_revision, actor, runtime,
-          model, occurred_at, event_digest
-        ) VALUES (${placeholders(19)})`,
-      )
-      .run(
-        event.eventId,
-        event.episodeId,
-        event.sequence,
-        event.commandId,
-        event.commandPayloadDigest,
-        event.state,
-        event.kind,
-        1,
-        canonicalizeExecutionPayload(payload),
-        event.payloadDigest,
-        event.previousEventDigest,
-        String(payload.sourceCommit),
-        String(payload.observedHead),
-        String(payload.policyRevision),
-        event.actor,
-        custody.runtime,
-        custody.model,
-        event.occurredAt,
-        event.eventDigest,
-      );
+      .prepare(insertSql("execution_episode_events", EXECUTION_EPISODE_EVENT_COLUMNS))
+      .run(...rowValues(EXECUTION_EPISODE_EVENT_COLUMNS, row));
   }
 
   private insertDriveSelection(selection: DriveSelectionIntent): void {
+    const row = mapDriveSelectionToRow(selection);
     this.db
-      .prepare(`INSERT INTO drive_model_selections VALUES (${placeholders(12)})`)
-      .run(
-        selection.episodeId,
-        selection.selectionRevision,
-        selection.selectedEventSequence,
-        selection.model,
-        selection.compatibilityResult,
-        selection.rationaleDigest,
-        selection.overrideUsed ? 1 : 0,
-        selection.overrideActor,
-        selection.overrideReason,
-        selection.overrideEvidenceDigest,
-        selection.selectedAt,
-        selection.selectionDigest,
-      );
+      .prepare(insertSql("drive_model_selections", DRIVE_MODEL_SELECTION_COLUMNS))
+      .run(...rowValues(DRIVE_MODEL_SELECTION_COLUMNS, row));
   }
 
   private insertOutbox(outbox: IssueProjectionIntent): void {
+    const row = mapIssueProjectionToRow(outbox);
     this.db
-      .prepare(`INSERT INTO github_projection_outbox VALUES (${placeholders(20)})`)
-      .run(
-        outbox.outboxId,
-        outbox.episodeId,
-        outbox.sourceEventSequence,
-        outbox.operationKind,
-        outbox.objectKind,
-        outbox.repository,
-        outbox.targetLogicalKey,
-        outbox.intentRevision,
-        outbox.idempotencyKey,
-        outbox.payloadVersion,
-        outbox.canonicalPayloadJson,
-        outbox.payloadDigest,
-        outbox.status,
-        outbox.attemptCount,
-        outbox.nextAttemptAt,
-        null,
-        null,
-        null,
-        outbox.createdAt,
-        null,
-      );
+      .prepare(insertSql("github_projection_outbox", GITHUB_PROJECTION_OUTBOX_COLUMNS))
+      .run(...rowValues(GITHUB_PROJECTION_OUTBOX_COLUMNS, row));
   }
 
   private updateProjection(events: readonly ExecutionEpisodeEvent[]): void {
     const result = projectExecutionEpisode(events);
     if (!result.ok) throw new Error("projection:invalid-event-stream");
     const projection = result.projection;
+    const row = mapExecutionEpisodeProjectionToRow(projection);
+    const updateColumns = EXECUTION_EPISODE_PROJECTION_COLUMNS.slice(1);
     this.db
       .prepare(
         `UPDATE execution_episode_projection SET
-          current_event_sequence = ?, current_state = ?, current_event_digest = ?, block_reason = ?,
-          next_legal_actions_json = ?, latest_head = ?, merge_readiness = ?, rebuilt_at = ?
+          ${updateColumns.map((column) => `${column} = ?`).join(", ")}
         WHERE episode_id = ?`,
       )
-      .run(
-        projection.eventSequence,
-        projection.state,
-        projection.lastEventDigest,
-        projection.blockReason,
-        JSON.stringify(projection.nextLegalActions),
-        projection.latestHead,
-        projection.mergeReadiness,
-        projection.rebuiltAt,
-        projection.episodeId,
-      );
+      .run(...rowValues(updateColumns, row), projection.episodeId);
   }
 
   private insertTransitionReceipt(
     event: ExecutionTransitionEvent,
     commandType: ExecutionTransitionCommand["type"],
   ): void {
-    const row = {
+    const receipt = {
       command_id: event.commandId,
       command_type: `execution_episode.${commandType}`,
       subject_kind: "execution_episode",
@@ -417,10 +325,14 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
       result_kind: "episode_event",
       result_ref: event.eventId,
       recorded_at: event.occurredAt,
-    };
+    } satisfies AppendCommandReceiptInput;
+    const row = mapAppendCommandReceiptToRow(
+      receipt,
+      ledgerRowDigest(receipt, "receipt_digest"),
+    );
     this.db
-      .prepare("INSERT INTO append_command_receipts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(...Object.values(row), ledgerRowDigest(row, "receipt_digest"));
+      .prepare(insertSql("append_command_receipts", APPEND_COMMAND_RECEIPT_COLUMNS))
+      .run(...rowValues(APPEND_COMMAND_RECEIPT_COLUMNS, row));
   }
 
   private replay(eventId: string): EpisodeRepositoryResult {
@@ -479,10 +391,10 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
 
 }
 
-function failed(ruleId: string, path: string): EpisodeRepositoryResult {
-  return { ok: false, violations: [{ ruleId, path }] };
-}
-
 function placeholders(count: number): string {
   return Array.from({ length: count }, () => "?").join(", ");
+}
+
+function failed(ruleId: string, path: string): EpisodeRepositoryResult {
+  return { ok: false, violations: [{ ruleId, path }] };
 }
