@@ -175,7 +175,7 @@ import {
   rebuildHarnessDb,
 } from "./state-db/projection-writer";
 import { buildScopeDryRunPreview } from "./state-db/scope-preview";
-import { refreshHarnessDbOnStop } from "./state-db/stop-refresh";
+import { refreshHarnessDbOnStop, spawnDetachedStopRefresh } from "./state-db/stop-refresh";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
 import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify";
 import {
@@ -973,12 +973,28 @@ session
     dispatch(input, nodeDeps(repoRoot, gitBranch, gitHead), "Stop");
     writeHandoverWarnings();
     // PLAN-L7-365 Step 2 (issue #78): Stop 境界で on-disk harness.db を自動追従。
-    // fail-open — refresh 失敗は警告のみで session 終了 (exit 0) を妨げない。
-    const refresh = refreshHarnessDbOnStop({ repoRoot });
-    if (!refresh.ok) {
-      process.stderr.write(`session-log: db refresh skipped (${refresh.skippedReason})\n`);
+    // Stop hook の timeout 予算 (5s) を消費しないよう detached で fire-and-forget 起動し、
+    // fail-open — 起動失敗は警告のみで session 終了 (exit 0) を妨げない。
+    const refresh = spawnDetachedStopRefresh({ repoRoot });
+    if (!refresh.launched) {
+      process.stderr.write(`session-log: db refresh not launched (${refresh.reason})\n`);
     }
     process.stdout.write(`session-log: summary ${input.session_id ?? "ut-tdd-cli"}\n`);
+  });
+
+session
+  .command("db-refresh")
+  .description(
+    "Stop 境界の on-disk harness.db refresh (session summary から detached 起動される内部エントリ)",
+  )
+  .action(() => {
+    const r = refreshHarnessDbOnStop({ repoRoot: requireRuntimeRepoRoot() });
+    if (!r.ok) {
+      process.stderr.write(`session-log: db refresh skipped (${r.skippedReason})\n`);
+    }
+    process.stdout.write(
+      `session-log: db refresh ${r.ok ? "ok" : "skipped"} (rebuilt=${r.rebuilt}, tokenRuns=${r.tokenRunsIngested})\n`,
+    );
   });
 
 const hook = program.command("hook").description("package-local hook entrypoints");

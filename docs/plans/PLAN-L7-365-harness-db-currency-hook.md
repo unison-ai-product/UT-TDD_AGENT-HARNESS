@@ -129,6 +129,18 @@ check-registry へ登録 → `tests/` に currency + fail-open regression を追
     onStop は pure な log 圧縮 core であり、DB I/O 統合は CLI 層の責務に置く方が層分離を保つため。
   - regression: `tests/db-currency.test.ts` U-DBCURRENCY-005 (stale registry が Stop refresh で
     手動 rebuild 無しに収束) / U-DBCURRENCY-006 (rebuild 不能時に throw せず理由を返す fail-open)。
+- 2026-07-17: **cross-runtime blind review (codex blind-reviewer) FLAG/FLAG → 是正**。
+  有効指摘 = Stop hook の timeout 予算 (Claude 側 5s) と同期 full rebuild (実測 176,951 行) が
+  両立せず、外部 kill は関数内 try/catch で捕捉できないため「Stop hook 後の収束」が不成立。
+  対応 = refresh を `session db-refresh` 内部コマンドへ分離し、`session summary` からは
+  **detached fire-and-forget** (`spawnDetachedStopRefresh`、stdio ignore + unref) で起動する構造へ
+  変更 (hook は即 return、rebuild は hook 予算外で完走)。U-DBCURRENCY-007 (detached 起動契約) /
+  U-DBCURRENCY-008 (起動失敗 fail-open) で固定。既知の残余 (受容): (1) 複数 session 同時 Stop の
+  SQLite lock 競合は fail-open skip で敗者は次の Stop まで stale が残り得る (rebuild は単一
+  transaction で atomic、破損はしない)。(2) Stop 毎 full rebuild のコストは hook 予算外へ移した
+  ことで受容 (差分投影への最適化は後続 slice)。(3) 実 hook E2E (timeout kill 下の挙動) は
+  機構上 unit では固定できず、実運用の db-currency gate green を照合点として PLAN-REVERSE-365
+  R2 で観測する。
 
 ## DoD / 受入基準
 

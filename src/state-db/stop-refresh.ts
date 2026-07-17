@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { defaultHarnessDbPath, openHarnessDb } from "./index";
@@ -84,4 +85,59 @@ export function refreshHarnessDbOnStop(options: StopRefreshOptions): StopRefresh
   }
 
   return { ok: true, rebuilt, tokenRunsIngested };
+}
+
+export interface DetachedSpawnHandle {
+  unref(): void;
+}
+
+export type DetachedSpawnImpl = (
+  command: string,
+  args: string[],
+  options: { cwd: string; detached: boolean; stdio: "ignore" },
+) => DetachedSpawnHandle;
+
+export interface SpawnStopRefreshOptions {
+  repoRoot: string;
+  /** 再入用エントリ (通常 process.execPath = bun と process.argv[1] = CLI script)。 */
+  execPath?: string;
+  scriptPath?: string;
+  /** test 注入用。未指定は node:child_process.spawn。 */
+  spawnImpl?: DetachedSpawnImpl;
+}
+
+export interface SpawnStopRefreshResult {
+  launched: boolean;
+  reason?: string;
+}
+
+/**
+ * Stop hook の timeout 予算 (Claude 側 5s) から DB refresh を切り離す detached 起動
+ * (blind review 2026-07-17 の FLAG 対応: 同期 full rebuild は hook の外部 kill で
+ * 収束保証が無い)。`ut-tdd session db-refresh` を fire-and-forget で起動し、
+ * hook 自体は即 return する。fail-open: 起動失敗は理由を返すだけで hook を落とさない。
+ */
+export function spawnDetachedStopRefresh(options: SpawnStopRefreshOptions): SpawnStopRefreshResult {
+  try {
+    const execPath = options.execPath ?? process.execPath;
+    const scriptPath = options.scriptPath ?? process.argv[1];
+    if (!execPath || !scriptPath) {
+      return { launched: false, reason: "missing-entrypoint" };
+    }
+    const spawnImpl: DetachedSpawnImpl =
+      options.spawnImpl ??
+      ((command, args, opts) => spawn(command, args, opts) as unknown as DetachedSpawnHandle);
+    const child = spawnImpl(execPath, [scriptPath, "session", "db-refresh"], {
+      cwd: options.repoRoot,
+      detached: true,
+      stdio: "ignore",
+    });
+    child.unref();
+    return { launched: true };
+  } catch (error) {
+    return {
+      launched: false,
+      reason: `spawn-error: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
 }

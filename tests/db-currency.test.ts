@@ -6,7 +6,7 @@ import { analyzeDbCurrency, dbCurrencyMessages } from "../src/lint/db-currency";
 import type { DriveDbRegistrationStats } from "../src/lint/drive-db-registration";
 import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer";
-import { refreshHarnessDbOnStop } from "../src/state-db/stop-refresh";
+import { refreshHarnessDbOnStop, spawnDetachedStopRefresh } from "../src/state-db/stop-refresh";
 import { removeTestTree } from "./support/temp-tree";
 
 const currentStats: DriveDbRegistrationStats = {
@@ -166,5 +166,50 @@ describe("db-currency lint", () => {
     } finally {
       removeTestTree(root);
     }
+  });
+
+  it("U-DBCURRENCY-007: Stop hook launches the refresh detached so the 5s hook budget is not consumed", () => {
+    const calls: Array<{
+      command: string;
+      args: string[];
+      options: { cwd: string; detached: boolean; stdio: "ignore" };
+      unrefCalled: boolean;
+    }> = [];
+
+    const result = spawnDetachedStopRefresh({
+      repoRoot: "/repo",
+      execPath: "/usr/bin/bun",
+      scriptPath: "/repo/src/cli.ts",
+      spawnImpl: (command, args, options) => {
+        const call = { command, args, options, unrefCalled: false };
+        calls.push(call);
+        return {
+          unref: () => {
+            call.unrefCalled = true;
+          },
+        };
+      },
+    });
+
+    expect(result.launched).toBe(true);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.command).toBe("/usr/bin/bun");
+    expect(calls[0]?.args).toEqual(["/repo/src/cli.ts", "session", "db-refresh"]);
+    expect(calls[0]?.options).toEqual({ cwd: "/repo", detached: true, stdio: "ignore" });
+    expect(calls[0]?.unrefCalled).toBe(true);
+  });
+
+  it("U-DBCURRENCY-008: detached launch fails open (returns a reason instead of throwing)", () => {
+    const result = spawnDetachedStopRefresh({
+      repoRoot: "/repo",
+      execPath: "/usr/bin/bun",
+      scriptPath: "/repo/src/cli.ts",
+      spawnImpl: () => {
+        throw new Error("spawn EPERM");
+      },
+    });
+
+    expect(result.launched).toBe(false);
+    expect(result.reason).toContain("spawn EPERM");
   });
 });
