@@ -37,8 +37,7 @@ generates:
     artifact_type: test_code
 dependencies:
   parent: null
-  requires:
-    - PLAN-L7-448-source-repo-windows-ci-job
+  requires: []
   blocks: []
   references:
     - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
