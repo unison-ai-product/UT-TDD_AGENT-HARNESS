@@ -94,6 +94,7 @@ function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
   expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+  const ledger = new PlanRevisionLedgerTransaction(db);
   db.prepare("INSERT INTO plan_assets VALUES (?, ?, ?, ?)").run(
     "plan:adopted",
     "2026-07-15T00:00:00.000Z",
@@ -133,7 +134,7 @@ function fixture() {
     null,
     sha("alias-event"),
   );
-  return { db, ledger: new PlanRevisionLedgerTransaction(db) };
+  return { db, ledger };
 }
 
 function revision(overrides: Partial<AppendPlanRevisionInput> = {}): AppendPlanRevisionInput {
