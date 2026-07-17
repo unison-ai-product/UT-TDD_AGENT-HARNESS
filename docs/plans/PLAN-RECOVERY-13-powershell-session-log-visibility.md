@@ -4,7 +4,7 @@ title: "PLAN-RECOVERY-13 (recovery): Windows PowerShell ツールの session-log
 kind: recovery
 layer: cross
 drive: agent
-status: draft
+status: confirmed
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
@@ -57,7 +57,15 @@ dependencies:
     - docs/plans/PLAN-L7-01-session-log.md
     - docs/plans/PLAN-L6-03-session-log.md
     - docs/plans/PLAN-L7-139-codex-hook-adapter.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-cross-review
+    review_kind: cross_agent
+    reviewed_at: "2026-07-17T15:13:00+09:00"
+    tests_green_at: "2026-07-17T15:09:00+09:00"
+    verdict: approve_after_fixes
+    worker_model: claude-sonnet-5
+    reviewer_model: gpt-5.6-sol
+    scope: "claim-blind / cross-surface / hook matcher の3レーンで検出した L4 matcher 取り残し、session jsonl→hook_events oracle 欠落、PowerShell test_runs projection 欠落、generates 未昇格を bfda4e0f と ecfa6045 で是正。GitHub Actions run 29558297287 は Windows test:fast/typecheck/db rebuild/toolchain doctor が Green。Linux full suite は対象を含む 2130 tests Green、PLAN draft の merged-plan-status 1件だけが意図どおり Red となったため、本 confirm で状態遷移を閉じる。"
 ---
 
 # PLAN-RECOVERY-13 (recovery): PowerShell session-log 監査欠落の収束
@@ -135,10 +143,10 @@ generates へ追加して confirm と対で閉じる。
 
 ## AC
 
-- [ ] 採択された matcher 形が L6 doc / settings template / settings 実体 /
+- [x] 採択された matcher 形が L6 doc / settings template / settings 実体 /
       adapter template / project-hook lint REQUIRED の五点で一致 (drift 0、
       doctor project-hook + rule-drift green で実証)。
-- [ ] PowerShell tool_use → session jsonl → hook_events projection の経路が
+- [x] PowerShell tool_use → session jsonl → hook_events projection の経路が
       regression test で green。
-- [ ] 既存 Bash / Edit / Write 捕捉の真陽性回帰が維持される。
-- [ ] doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
+- [x] 既存 Bash / Edit / Write 捕捉の真陽性回帰が維持される。
+- [x] doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
