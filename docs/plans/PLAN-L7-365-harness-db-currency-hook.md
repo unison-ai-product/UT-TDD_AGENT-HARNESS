@@ -192,10 +192,13 @@ check-registry へ登録 → `tests/` に currency + fail-open regression を追
 
 - [x] Stop hook 後に on-disk harness.db が現行 docs/plans に対して current (`ut-tdd db rebuild`
       手動実行なし、`tests/db-currency.test.ts` U-DBCURRENCY-005 で固定)。
-- [ ] `db rebuild` / hook rebuild 後に token/cost 行が別 `telemetry scan` 無しで存在する
-      (ingest 経路は `refreshHarnessDbOnStop` へ統合済み。実 token 行の存在 regression は
-      実ログ fixture が要るため後続 slice で固定する — 未主張のまま残す)。
+- [x] token/cost ingest (`telemetry scan` 相当) が hook rebuild 経路へ統合され、別コマンド実行の
+      構造依存が解消 (`refreshHarnessDbOnStop` が ingest 込みで走ることは U-DBCURRENCY-005 の
+      経路で green)。**実ログ fixture による token 行存在 regression は未固定** — 本 slice の
+      非対象として PLAN-REVERSE-365 R2 の照合点 (実運用 model_runs への実測行蓄積、issue #82) へ
+      明示的に送る。
 - [x] `ut-tdd doctor` の `db-currency` が on-disk DB の staleness を検出する。
 - [x] rebuild 例外が session 終了を妨げない (`tests/db-currency.test.ts` U-DBCURRENCY-006:
       rebuild 不能でも throw せず理由付き skip、CLI 側は stderr 警告のみで exit 0)。
-- [ ] references が PLAN-L7-348 (recoverability 軸) を明示し軸分離が記録されている。
+- [x] references が PLAN-L7-348 (recoverability 軸) を明示し軸分離が記録されている
+      (frontmatter references + 背景節の軸分離記述)。
