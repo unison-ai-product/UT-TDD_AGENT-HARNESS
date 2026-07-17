@@ -388,6 +388,114 @@ describe("PLAN Asset canonical ledger schema", () => {
     }
   });
 
+  it.each([
+    4, 5,
+  ] as const)("U-PADM-067: committed journalを保持したv%s ledgerへlegacy_unknown証跡をbackfillする", (version) => {
+    const db = openHarnessDb(":memory:");
+    try {
+      createLegacyCommittedLedger(db, version);
+      const before = db.prepare("SELECT * FROM plan_draft_journal").get();
+
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(db.prepare("SELECT * FROM plan_draft_journal").get()).toEqual(before);
+      const operations = db
+        .prepare(
+          `SELECT sequence, event_kind, command_payload_digest, previous_event_digest
+             FROM plan_draft_artifact_operation_events ORDER BY sequence`,
+        )
+        .all();
+      expect(operations).toHaveLength(1);
+      expect(operations[0]).toMatchObject({
+        sequence: 1,
+        event_kind: "legacy_unknown",
+        command_payload_digest: digest,
+        previous_event_digest: null,
+      });
+      const operation = JSON.parse(
+        String(
+          db.prepare("SELECT operation_json FROM plan_draft_artifact_operation_events").get()
+            ?.operation_json,
+        ),
+      );
+      expect(operation).toEqual({
+        operation: "legacy_unknown",
+        sourceSchemaVersion: version,
+        journalDigest: before?.journal_digest,
+        latestJournalEventDigest: db
+          .prepare("SELECT event_digest FROM plan_draft_journal_events ORDER BY sequence DESC")
+          .get()?.event_digest,
+        reason: "旧schemaにはartifact cleanup provenanceが存在せず完了状態を証明できない",
+      });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      expect(
+        db.prepare("SELECT COUNT(*) AS n FROM plan_draft_artifact_operation_events").get()?.n,
+      ).toBe(1);
+    } finally {
+      db.close();
+    }
+  });
+
+  it.each([
+    4, 5,
+  ] as const)("U-PADM-068: digest改竄されたv%s committed journalを移行せず原schemaに留める", (version) => {
+    const db = openHarnessDb(":memory:");
+    try {
+      createLegacyCommittedLedger(db, version);
+      db.exec("UPDATE plan_draft_journal SET requested_source_path = 'tampered.md'");
+      expect(migratePlanLedger(db)).toEqual({
+        ok: false,
+        ruleId: "plan-ledger-unavailable",
+      });
+      expect(db.userVersion()).toBe(version);
+      expect(
+        db
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE name = 'plan_draft_artifact_operation_events'",
+          )
+          .get(),
+      ).toBeUndefined();
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PADM-070: digestを再計算したlegacy_unknown provenance差替えもjournal束縛で拒否する", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      createLegacyCommittedLedger(db, 5);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+      db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
+      const current = db.prepare("SELECT * FROM plan_draft_artifact_operation_events").get();
+      if (!current) throw new Error("legacy_unknown fixture missing");
+      const operation = JSON.parse(String(current.operation_json));
+      operation.journalDigest = "f".repeat(64);
+      const operationJson = JSON.stringify(operation);
+      const changed = {
+        ...current,
+        operation_json: operationJson,
+        operation_digest: createHash("sha256").update(operationJson).digest("hex"),
+      };
+      db.prepare(
+        `UPDATE plan_draft_artifact_operation_events
+         SET operation_json = ?, operation_digest = ?, event_digest = ?
+         WHERE operation_event_id = ?`,
+      ).run(
+        changed.operation_json,
+        changed.operation_digest,
+        ledgerRowDigest(changed, "event_digest"),
+        current.operation_event_id,
+      );
+      restoreTrigger(db, "trg_plan_draft_artifact_operation_events_no_update");
+
+      expect(migratePlanLedger(db)).toEqual({
+        ok: false,
+        ruleId: "plan-ledger-unavailable",
+      });
+    } finally {
+      db.close();
+    }
+  });
+
   it("U-PA-047: leaves a nonempty hash-only v2 ledger untouched without a custody manifest", () => {
     const db = openHarnessDb(":memory:");
     try {
@@ -603,6 +711,57 @@ function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
     db.exec("ROLLBACK");
     throw error;
   }
+}
+
+function createLegacyCommittedLedger(db: ReturnType<typeof openHarnessDb>, version: 4 | 5): void {
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 6 });
+  db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_update");
+  db.exec("DROP TRIGGER trg_plan_draft_artifact_operation_events_no_delete");
+  db.exec("DROP INDEX idx_plan_draft_artifact_operations_command");
+  db.exec("DROP TABLE plan_draft_artifact_operation_events");
+  if (version === 4) {
+    db.exec("DROP TRIGGER trg_legacy_plan_bootstrap_provenance_no_update");
+    db.exec("DROP TRIGGER trg_legacy_plan_bootstrap_provenance_no_delete");
+    db.exec("DROP INDEX idx_legacy_bootstrap_source_blob");
+    db.exec("DROP TABLE legacy_plan_bootstrap_provenance");
+  }
+  const eventBase = {
+    journal_event_id: "journal:legacy:event:1",
+    command_id: "command:legacy-committed",
+    sequence: 1,
+    command_payload_digest: digest,
+    event_kind: "committed",
+    requested_plan_id: "PLAN-L7-legacy",
+    requested_source_path: "docs/plans/PLAN-L7-legacy.md",
+    plan_asset_id: null,
+    plan_revision: null,
+    certificate_id: null,
+    occurred_at: now,
+    failure_reason: null,
+    previous_event_digest: null,
+  };
+  db.prepare(
+    "INSERT INTO plan_draft_journal_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  ).run(...Object.values(eventBase), ledgerRowDigest(eventBase, "event_digest"));
+  const current = {
+    journal_id: "journal:legacy",
+    command_id: eventBase.command_id,
+    command_payload_digest: digest,
+    status: "committed",
+    requested_plan_id: eventBase.requested_plan_id,
+    requested_source_path: eventBase.requested_source_path,
+    plan_asset_id: null,
+    plan_revision: null,
+    certificate_id: null,
+    intent_recorded_at: now,
+    completed_at: now,
+    failure_reason: null,
+  };
+  db.prepare("INSERT INTO plan_draft_journal VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+    ...Object.values(current),
+    ledgerRowDigest(current, "journal_digest"),
+  );
+  db.setUserVersion(version);
 }
 
 function insertMigrationEvent(

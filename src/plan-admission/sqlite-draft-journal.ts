@@ -16,6 +16,18 @@ export class DraftJournalIntegrityError extends Error {
   }
 }
 
+export class DraftJournalRecoveryRequiredError extends DraftJournalIntegrityError {
+  readonly ruleId = "draft-journal-legacy-cleanup-provenance-unknown" as const;
+
+  constructor(
+    readonly commandId: string,
+    readonly reason: string,
+  ) {
+    super("draft-journal-legacy-cleanup-provenance-unknown");
+    this.name = "DraftJournalRecoveryRequiredError";
+  }
+}
+
 /** SQLite v3 journal eventを正本、plan_draft_journalをcurrent projectionとして扱う。 */
 export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding> {
   constructor(
@@ -274,6 +286,19 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
       .all(commandId);
     if (rows.length === 0)
       throw new DraftJournalIntegrityError("draft-journal-cleanup-binding-missing");
+    const legacyUnknown = rows.find((row) => row.event_kind === "legacy_unknown");
+    if (legacyUnknown) {
+      const journal = this.current(commandId);
+      const latestJournalEvent = this.latestEvent(commandId);
+      assertLegacyUnknownOperation(
+        legacyUnknown,
+        commandId,
+        payloadDigest,
+        String(journal?.journal_digest),
+        String(latestJournalEvent?.event_digest),
+      );
+      throw new DraftJournalRecoveryRequiredError(commandId, String(legacyUnknown.failure_reason));
+    }
     let previous: string | null = null;
     let operationJson: string | undefined;
     for (const [index, row] of rows.entries()) {
@@ -421,6 +446,39 @@ export class SqliteDraftJournal implements DraftJournalPort<DraftReceiptBinding>
       throw error;
     }
   }
+}
+
+function assertLegacyUnknownOperation(
+  row: Record<string, unknown>,
+  commandId: string,
+  payloadDigest: string,
+  journalDigest: string,
+  latestJournalEventDigest: string,
+): void {
+  let operation: unknown;
+  try {
+    operation = JSON.parse(String(row.operation_json));
+  } catch {
+    throw new DraftJournalIntegrityError("draft-journal-cleanup-binding-invalid");
+  }
+  const value = operation as Record<string, unknown> | null;
+  if (
+    !value ||
+    Object.keys(value).sort().join(",") !==
+      "journalDigest,latestJournalEventDigest,operation,reason,sourceSchemaVersion" ||
+    value.operation !== "legacy_unknown" ||
+    ![4, 5].includes(Number(value.sourceSchemaVersion)) ||
+    !/^[a-f0-9]{64}$/.test(journalDigest) ||
+    !/^[a-f0-9]{64}$/.test(latestJournalEventDigest) ||
+    value.journalDigest !== journalDigest ||
+    value.latestJournalEventDigest !== latestJournalEventDigest ||
+    typeof value.reason !== "string" ||
+    !value.reason ||
+    row.command_id !== commandId ||
+    !secureEqual(String(row.command_payload_digest), payloadDigest) ||
+    row.failure_reason !== value.reason
+  )
+    throw new DraftJournalIntegrityError("draft-journal-cleanup-binding-invalid");
 }
 
 function eventRow(input: {

@@ -532,7 +532,7 @@ const v6Tables: readonly TableDef[] = [
       requiredCol("event_digest"),
     ],
     unique: [["command_id", "sequence"]],
-    checks: [enumCheck("event_kind", ["pending", "completed"])],
+    checks: [enumCheck("event_kind", ["pending", "completed", "legacy_unknown"])],
   },
 ];
 
@@ -740,7 +740,7 @@ export function migratePlanLedger(
       for (const index of v4Indexes) db.exec(createIndexSql(index));
       for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
       installV5(db);
-      installV6(db);
+      installV6(db, 3);
       if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v3-v6-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
@@ -757,7 +757,7 @@ export function migratePlanLedger(
         return { ok: false, ruleId: "plan-ledger-unavailable" };
       }
       installV5(db);
-      installV6(db);
+      installV6(db, 4);
       if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v4-v6-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
@@ -773,7 +773,7 @@ export function migratePlanLedger(
         db.exec("ROLLBACK");
         return { ok: false, ruleId: "plan-ledger-unavailable" };
       }
-      installV6(db);
+      installV6(db, 5);
       if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v5-v6-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
@@ -841,7 +841,7 @@ function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): b
     for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
     fault?.after("v2-v4-schema-created");
     installV5(db);
-    installV6(db);
+    installV6(db, 2);
     if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v6-verification-failed");
     db.exec("COMMIT");
     return true;
@@ -858,11 +858,63 @@ function installV5(db: HarnessDb): void {
   db.setUserVersion(5);
 }
 
-function installV6(db: HarnessDb): void {
+function installV6(db: HarnessDb, sourceSchemaVersion: 2 | 3 | 4 | 5): void {
   for (const table of v6Tables) db.exec(createTableSql(table));
+  backfillLegacyUnknownDraftCleanup(db, sourceSchemaVersion);
   for (const index of v6Indexes) db.exec(createIndexSql(index));
   for (const trigger of v6Triggers) db.exec(createTriggerSql(trigger));
   db.setUserVersion(LEDGER_SCHEMA_VERSION);
+}
+
+function backfillLegacyUnknownDraftCleanup(
+  db: HarnessDb,
+  sourceSchemaVersion: 2 | 3 | 4 | 5,
+): void {
+  const journals = db
+    .prepare(
+      `SELECT journal.*, event.event_digest AS latest_event_digest
+       FROM plan_draft_journal journal
+       JOIN plan_draft_journal_events event ON event.command_id = journal.command_id
+       WHERE status = 'committed'
+         AND event.sequence = (
+           SELECT MAX(latest.sequence) FROM plan_draft_journal_events latest
+           WHERE latest.command_id = journal.command_id
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM plan_draft_artifact_operation_events operation
+           WHERE operation.command_id = journal.command_id
+         )
+       ORDER BY command_id`,
+    )
+    .all();
+  for (const journal of journals) {
+    const commandId = String(journal.command_id);
+    const payloadDigest = String(journal.command_payload_digest);
+    const reason = "旧schemaにはartifact cleanup provenanceが存在せず完了状態を証明できない";
+    const operationJson = JSON.stringify({
+      operation: "legacy_unknown",
+      sourceSchemaVersion,
+      journalDigest: String(journal.journal_digest),
+      latestJournalEventDigest: String(journal.latest_event_digest),
+      reason,
+    });
+    const operationDigest = createHash("sha256").update(operationJson).digest("hex");
+    const row = {
+      operation_event_id: `artifact-operation:${commandId}:legacy-unknown`,
+      command_id: commandId,
+      sequence: 1,
+      command_payload_digest: payloadDigest,
+      event_kind: "legacy_unknown",
+      operation_json: operationJson,
+      operation_digest: operationDigest,
+      failure_reason: reason,
+      occurred_at: String(journal.completed_at),
+      previous_event_digest: null,
+    };
+    db.prepare(
+      "INSERT INTO plan_draft_artifact_operation_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run(...Object.values(row), ledgerRowDigest(row, "event_digest"));
+  }
 }
 
 function legacyV2ReservationSchemaValid(db: HarnessDb): boolean {
@@ -1018,6 +1070,7 @@ function artifactOperationEventsValid(db: HarnessDb): boolean {
   const previous = new Map<string, string>();
   const sequence = new Map<string, number>();
   const completed = new Set<string>();
+  const legacyUnknown = new Set<string>();
   for (const row of rows) {
     const commandId = String(row.command_id);
     const expectedSequence = (sequence.get(commandId) ?? 0) + 1;
@@ -1029,8 +1082,21 @@ function artifactOperationEventsValid(db: HarnessDb): boolean {
       row.event_digest !== ledgerRowDigest(row, "event_digest")
     )
       return false;
+    if (row.event_kind === "legacy_unknown") {
+      if (
+        expectedSequence !== 1 ||
+        row.previous_event_digest !== null ||
+        !legacyUnknownOperationValid(db, row)
+      )
+        return false;
+      legacyUnknown.add(commandId);
+      sequence.set(commandId, expectedSequence);
+      previous.set(commandId, String(row.event_digest));
+      continue;
+    }
     if (
       (expectedSequence === 1 && row.event_kind !== "pending") ||
+      legacyUnknown.has(commandId) ||
       completed.has(commandId) ||
       !db
         .prepare(
@@ -1048,6 +1114,48 @@ function artifactOperationEventsValid(db: HarnessDb): boolean {
     .prepare("SELECT command_id FROM plan_draft_journal WHERE status = 'committed'")
     .all();
   return committed.every((row) => sequence.has(String(row.command_id)));
+}
+
+function legacyUnknownOperationValid(db: HarnessDb, row: Record<string, unknown>): boolean {
+  let operation: unknown;
+  try {
+    operation = JSON.parse(String(row.operation_json));
+  } catch {
+    return false;
+  }
+  if (
+    !isRecord(operation) ||
+    Object.keys(operation).sort().join(",") !==
+      "journalDigest,latestJournalEventDigest,operation,reason,sourceSchemaVersion"
+  )
+    return false;
+  const journal = db
+    .prepare(
+      `SELECT journal.journal_digest, journal.command_payload_digest,
+        event.event_digest AS latest_event_digest
+       FROM plan_draft_journal journal
+       JOIN plan_draft_journal_events event ON event.command_id = journal.command_id
+       WHERE journal.command_id = ? AND journal.status = 'committed'
+         AND event.sequence = (
+           SELECT MAX(latest.sequence) FROM plan_draft_journal_events latest
+           WHERE latest.command_id = journal.command_id
+         )`,
+    )
+    .get(row.command_id);
+  const reason = "旧schemaにはartifact cleanup provenanceが存在せず完了状態を証明できない";
+  return (
+    operation.operation === "legacy_unknown" &&
+    [4, 5].includes(Number(operation.sourceSchemaVersion)) &&
+    row.command_payload_digest === journal?.command_payload_digest &&
+    operation.journalDigest === journal?.journal_digest &&
+    operation.latestJournalEventDigest === journal?.latest_event_digest &&
+    operation.reason === reason &&
+    row.failure_reason === reason
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function bootstrapProvenanceValid(db: HarnessDb): boolean {
