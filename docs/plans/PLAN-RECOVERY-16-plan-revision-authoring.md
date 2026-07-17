@@ -22,9 +22,33 @@ agent_slots:
     slot_label: SE - ledger transaction / CLI / publisher integration
   - role: qa
     slot_label: QA - stale base / replay / fault injection oracle
+  - role: aim
+    slot_label: AIM - revision asset identity / provenance integrity review
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     artifact_type: markdown_doc
+  - artifact_path: src/cli/plan-revise.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/node-plan-revision-runner.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/plan-content-binding.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/plan-revision-command-assembler.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-admission/plan-revision-ledger-adapter.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/plan-revision-bootstrap.ts
+    artifact_type: source_module
+  - artifact_path: src/plan-asset/ledger/plan-revision-ledger.ts
+    artifact_type: source_module
+  - artifact_path: tests/node-plan-revision-runner.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/plan-revision-bootstrap.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-asset/plan-revision-ledger.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/plan-revise-cli.test.ts
+    artifact_type: test_code
 dependencies:
   parent: docs/plans/PLAN-L6-86-drive-plan-admission-contract.md
   requires: []
@@ -36,18 +60,18 @@ dependencies:
 review_evidence: []
 admission_receipt:
   schema_version: v2
-  receipt_id: certificate:890b18d79d85d8d7cc2591c7146af5e2
-  command_id: plan-recovery-16-20260717-03
-  admitted_at: 2026-07-17T08:01:37.9177199Z
-  source_digest: sha256:cf32dffbf904cd25af919fc49f89a0b5c48474b3beb2b3540a2159a9e27dc261
+  receipt_id: certificate:9a57f2b6ff15815ebbe4df6b7c5adab3
+  command_id: plan-recovery-16-20260717-04
+  admitted_at: 2026-07-17T21:15:00.000+09:00
+  source_digest: sha256:68b0ed0da3300860697f5b0968cfe68c7c9dbfc06275757723e8674436710627
   decision_digest: sha256:0efc93ef88ad7ea536d8e8583cadc60ea7c3fea1415ed2d4c817646e537223f9
-  receipt_digest: sha256:788d4e4a908c402b959ef126680de1ae77d2a5406ce5331f22fe01eaa938dd11
+  receipt_digest: sha256:f2beea69995a8d7f97ccbc3b189e3291a50cfe77f0e592f52fe8769b4bad1384
   binding:
     path: docs/plans/PLAN-RECOVERY-16-plan-revision-authoring.md
     plan_id: PLAN-RECOVERY-16-plan-revision-authoring
     asset_id: plan:890b18d79d85d8d7cc2591c7146af5e2
-    revision: 1
-    content_digest: sha256:cf32dffbf904cd25af919fc49f89a0b5c48474b3beb2b3540a2159a9e27dc261
+    revision: 2
+    content_digest: sha256:68b0ed0da3300860697f5b0968cfe68c7c9dbfc06275757723e8674436710627
   route:
     signal: regression_dev
     mode: recovery
