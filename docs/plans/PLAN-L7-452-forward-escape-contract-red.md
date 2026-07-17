@@ -108,5 +108,6 @@ PLAN-L6-83 (Forward外遷移Issue・駆動モデル選択契約) の AC 入口�
 - [x] 判定関数が throw / 推測補完をせず structured violation を返す (fail-close)。
       根拠: U-EXISSUE-002/003/004 (空 origin_layer 負例含む)。
 - [x] GitHub 障害時に event を失わず冪等再開する。根拠: U-EXISSUE-005。
-- [ ] PLAN-REVERSE-452 R0-R4 の完了は本 slice では claim しない。R2 で L6-83 §2-§4 との
-      語彙差分を gap-only 照合する。
+- [x] PLAN-REVERSE-452 R0-R4 の完了は本 slice では claim しない。`status: draft` /
+      `workflow_phase: R0` の REVERSE-452 が R2 で L6-83 §2-§5 との語彙差分と blind review
+      軽微所見 2 件を gap-only 照合する (R2 照合前に backfill 完了とは扱わない)。
