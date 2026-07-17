@@ -8,6 +8,7 @@ import {
   type GithubWorkflowDoc,
   githubCiPolicyMessages,
   loadGithubCiPolicyDocs,
+  REQUIRED_AGGREGATE_COMMAND,
   resolveGithubCiRuntimeProfile,
 } from "../src/lint/github-ci-policy";
 
@@ -79,10 +80,7 @@ const SOURCE_WORKFLOW = `${SOURCE_LEG_WORKFLOW.replace("  harness-check:", "  ha
     runs-on: ubuntu-latest
     steps:
       - name: Require Linux and Windows success
-        run: |
-          if [ "\${{ needs.harness-check-linux.result }}" != "success" ] || [ "\${{ needs.harness-check-windows.result }}" != "success" ]; then
-            exit 1
-          fi
+        run: ${REQUIRED_AGGREGATE_COMMAND}
 `;
 
 function docs(source = SOURCE_WORKFLOW, pack = PACK_WORKFLOW): GithubWorkflowDoc[] {
@@ -218,8 +216,8 @@ describe("github-ci-policy lint", () => {
 
   it("U-CIPOL-019: rejects aggregate scripts that observe results without failing closed", () => {
     const echoOnly = SOURCE_WORKFLOW.replace(
-      /run: \|\n[\s\S]*? {10}fi\n/,
-      `run: echo "\${{ needs.harness-check-linux.result }} \${{ needs.harness-check-windows.result }}"\n`,
+      `run: ${REQUIRED_AGGREGATE_COMMAND}`,
+      `run: echo "\${{ needs.harness-check-linux.result }} \${{ needs.harness-check-windows.result }}"`,
     );
     expect(analyzeGithubCiPolicy(docs(echoOnly)).violations).toContainEqual({
       file: ".github/workflows/harness-check.yml",
@@ -234,6 +232,16 @@ describe("github-ci-policy lint", () => {
     );
     expect(
       analyzeGithubCiPolicy(docs(continueOnError)).violations.map((violation) => violation.reason),
+    ).toContain("missing_aggregate_result_guard");
+
+    const expressionContinueOnError = SOURCE_WORKFLOW.replace(
+      "    needs: [harness-check-linux, harness-check-windows]",
+      `    continue-on-error: ${"$" + "{{ true }}"}\n    needs: [harness-check-linux, harness-check-windows]`,
+    );
+    expect(
+      analyzeGithubCiPolicy(docs(expressionContinueOnError)).violations.map(
+        (violation) => violation.reason,
+      ),
     ).toContain("missing_aggregate_result_guard");
   });
 

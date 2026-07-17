@@ -234,6 +234,13 @@ function pushViolation(input: {
 
 const RUNTIME_LEGS = ["harness-check-linux", "harness-check-windows"] as const;
 
+const aggregateResultExpression = (leg: (typeof RUNTIME_LEGS)[number]): string =>
+  ["$", `{{ needs.${leg}.result }}`].join("");
+
+export const REQUIRED_AGGREGATE_COMMAND = RUNTIME_LEGS.map(
+  (leg) => `test "${aggregateResultExpression(leg)}" = "success"`,
+).join(" && ");
+
 export function aggregateHarnessResultsPass(results: Record<string, string>): boolean {
   return RUNTIME_LEGS.every((leg) => results[leg] === "success");
 }
@@ -259,9 +266,14 @@ function checkRuntimeAggregate(input: {
     const validSteps =
       Array.isArray(leg.steps) && leg.steps.length > 0 && leg.steps.every(workflowStep);
     const continuesOnError =
-      leg["continue-on-error"] === true ||
+      ![undefined, false].includes(leg["continue-on-error"] as undefined | false) ||
       (Array.isArray(leg.steps) &&
-        leg.steps.some((step) => recordValue(step)?.["continue-on-error"] === true));
+        leg.steps.some(
+          (step) =>
+            ![undefined, false].includes(
+              recordValue(step)?.["continue-on-error"] as undefined | false,
+            ),
+        ));
     if (leg["runs-on"] === expectedRunner && validSteps && !continuesOnError) continue;
     pushViolation({
       violations: input.violations,
@@ -317,15 +329,14 @@ function checkRuntimeAggregate(input: {
       Array.isArray(aggregate.steps) && aggregate.steps.every(workflowStep) ? aggregate.steps : [];
     const aggregateText = aggregateSteps.map(stepText).join("\n");
     const failCloseDisabled =
-      aggregate["continue-on-error"] === true ||
-      aggregateSteps.some((step) => step["continue-on-error"] === true) ||
-      !/\bexit\s+1\b/.test(aggregateText);
+      ![undefined, false].includes(aggregate["continue-on-error"] as undefined | false) ||
+      aggregateSteps.some(
+        (step) => ![undefined, false].includes(step["continue-on-error"] as undefined | false),
+      ) ||
+      aggregateSteps.length !== 1 ||
+      aggregateSteps[0]?.run?.trim() !== REQUIRED_AGGREGATE_COMMAND;
     for (const leg of RUNTIME_LEGS) {
-      const expression = ["$", `{{ needs.${leg}.result }}`].join("");
-      const hasSuccessGuard =
-        aggregateText.includes(`"${expression}" != "success"`) ||
-        aggregateText.includes(`'${expression}' != 'success'`);
-      if (hasSuccessGuard && !failCloseDisabled) continue;
+      if (!failCloseDisabled && aggregateText.includes(aggregateResultExpression(leg))) continue;
       pushViolation({
         violations: input.violations,
         doc: input.doc,

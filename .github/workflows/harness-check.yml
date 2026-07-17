@@ -116,8 +116,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: require Linux and Windows success
-        run: |
-          if [ "${{ needs.harness-check-linux.result }}" != "success" ] || [ "${{ needs.harness-check-windows.result }}" != "success" ]; then
-            echo "aggregate gate rejected: linux=${{ needs.harness-check-linux.result }} windows=${{ needs.harness-check-windows.result }}"
-            exit 1
-          fi
+        run: test "${{ needs.harness-check-linux.result }}" = "success" && test "${{ needs.harness-check-windows.result }}" = "success"
