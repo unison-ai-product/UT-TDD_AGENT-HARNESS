@@ -4,7 +4,7 @@ title: "PLAN-RECOVERY-13 (recovery): Windows PowerShell ツールの session-log
 kind: recovery
 layer: cross
 drive: agent
-status: draft
+status: confirmed
 route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
@@ -25,6 +25,30 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-13-powershell-session-log-visibility.md
     artifact_type: markdown_doc
+  - artifact_path: .claude/CLAUDE.md
+    artifact_type: markdown_doc
+  - artifact_path: .claude/settings.json
+    artifact_type: config
+  - artifact_path: docs/design/harness/L4-basic-design/architecture.md
+    artifact_type: design_doc
+  - artifact_path: docs/design/harness/L6-function-design/session-log.md
+    artifact_type: design_doc
+  - artifact_path: docs/templates/adapter/.claude/settings.json
+    artifact_type: template
+  - artifact_path: src/lint/project-hook.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/session-log.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/templates.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/runtime-projections.ts
+    artifact_type: source_module
+  - artifact_path: tests/project-hook.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/projection-writer.test.ts
+    artifact_type: test_code
+  - artifact_path: tests/session-log.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
@@ -33,7 +57,43 @@ dependencies:
     - docs/plans/PLAN-L7-01-session-log.md
     - docs/plans/PLAN-L6-03-session-log.md
     - docs/plans/PLAN-L7-139-codex-hook-adapter.md
-review_evidence: []
+review_evidence:
+  - reviewer: codex-cross-review
+    review_kind: cross_agent
+    reviewed_at: "2026-07-17T16:20:00+09:00"
+    tests_green_at: "2026-07-17T16:19:00+09:00"
+    verdict: approve_after_fixes
+    worker_model: claude-code
+    reviewer_model: gpt-5
+    scope: "claim-blind / cross-surface / hook matcher の3レーンで検出した L4 matcher 取り残し、session jsonl→hook_events oracle 欠落、PowerShell test_runs projection 欠落、generates 未昇格を bfda4e0f と ecfa6045 で是正。GitHub Actions run 29558297287 は Windows test:fast/typecheck/db rebuild/toolchain doctor が Green。Linux full suite は対象を含む 2130 tests Green、PLAN draft の merged-plan-status 1件だけが意図どおり Red となったため、本 confirm で状態遷移を閉じる。green_commands は confirm 後の U-REVIEW-006 (missing_green_commands) fail-close を受けて Claude が branch HEAD 925c3af4 で再実測し追記 (2026-07-17 16:20 JST)。"
+    green_commands:
+      - kind: unit_test
+        command: "bun scripts/run-vitest-snapshot.ts tests/session-log.test.ts tests/project-hook.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-17T16:19:00+09:00"
+        evidence_path: tests/session-log.test.ts
+        output_digest: "sha256:98a8bfea82a852661e239c7cce0087f6c872cf1c129d7e0975604bedf5374c72"
+        anchor_commit: 925c3af4fcb01bfa0943df8062ac8144d70b5b99
+      - kind: typecheck
+        command: "bun run typecheck"
+        runner: bun
+        scope: full
+        exit_code: 0
+        completed_at: "2026-07-17T16:18:00+09:00"
+        evidence_path: src/runtime/session-log.ts
+        output_digest: "sha256:7788d228c934f9c1a792655960c4d2489ed1050f090ad60b71369c049870616c"
+        anchor_commit: 925c3af4fcb01bfa0943df8062ac8144d70b5b99
+      - kind: lint
+        command: "bun x biome check src/runtime/session-log.ts src/lint/project-hook.ts tests/session-log.test.ts tests/project-hook.test.ts"
+        runner: bun
+        scope: targeted
+        exit_code: 0
+        completed_at: "2026-07-17T16:18:00+09:00"
+        evidence_path: src/lint/project-hook.ts
+        output_digest: "sha256:3ee0c431d526566915c7a3fc15857757077fb82342af5dea07b515d6a9b4e5ae"
+        anchor_commit: 925c3af4fcb01bfa0943df8062ac8144d70b5b99
 ---
 
 # PLAN-RECOVERY-13 (recovery): PowerShell session-log 監査欠落の収束
@@ -63,12 +123,22 @@ Windows セッションのシェル操作だけ監査可視性が構造的に低
   に分散しているため、一点だけ直すと rule-drift / project-hook lint が Red になる。
   三点同時更新が必須。
 
-## 設計判断 (着手時に PO 確認)
+## 設計判断 (採択済み 2026-07-17)
 
-- 推奨: matcher へ `PowerShell` を明示追加 (`Edit|Write|MultiEdit|Bash|PowerShell`)。
+- **採択: 案 A = matcher へ `PowerShell` を明示追加** (`Edit|Write|MultiEdit|Bash|PowerShell`)。
   理由 = 既知 tool 名の明示列挙は fail-close 方針と整合し、wildcard 化より安全。
-- 代替: shell 系 tool の包括 matcher (将来の tool 名追加に強いが、意図しない tool の
+  PO の包括推進指示 (2026-07-17「ガンガン進めてプルリクまで」) に基づき推奨案を先行採択
+  (PR レビューで覆せる可逆判断)。
+- 代替 (不採択): shell 系 tool の包括 matcher (将来の tool 名追加に強いが、意図しない tool の
   捕捉と log ノイズのリスク)。
+
+## 実装時の追加所見 (2026-07-17)
+
+matcher 五点に加え、**runtime 側 `src/runtime/session-log.ts` にも第 2 の除外層**があった:
+`onPostToolUse` の shell 判定 regex (`Bash|exec_command|local_shell`) と `summarize` の
+Bash 特別扱いが PowerShell を除外しており、matcher だけ直しても PowerShell 経由の
+`git commit` が commit event にならず、verb 分類 (引数リーク防止) も効かない。
+同 slice で `PowerShell` を両箇所へ追加した (U-SLOG-013/014 で固定)。
 
 ## 実装対象 (実装着手時に generates へ昇格)
 
@@ -101,10 +171,10 @@ generates へ追加して confirm と対で閉じる。
 
 ## AC
 
-- [ ] 採択された matcher 形が L6 doc / settings template / settings 実体 /
+- [x] 採択された matcher 形が L6 doc / settings template / settings 実体 /
       adapter template / project-hook lint REQUIRED の五点で一致 (drift 0、
       doctor project-hook + rule-drift green で実証)。
-- [ ] PowerShell tool_use → session jsonl → hook_events projection の経路が
+- [x] PowerShell tool_use → session jsonl → hook_events projection の経路が
       regression test で green。
-- [ ] 既存 Bash / Edit / Write 捕捉の真陽性回帰が維持される。
-- [ ] doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
+- [x] 既存 Bash / Edit / Write 捕捉の真陽性回帰が維持される。
+- [x] doctor / lint / vitest / plan lint green。review evidence を confirmed 前に記録。
