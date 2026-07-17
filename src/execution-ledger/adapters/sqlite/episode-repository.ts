@@ -27,6 +27,7 @@ import {
 } from "../../../plan-asset/ledger/transaction.js";
 import type { HarnessDb } from "../../../state-db/index.js";
 import { executionLedgerRowsValid } from "./row-verifier.js";
+import { projectExecutionEpisode } from "../../application/episode-projector.js";
 
 export interface EpisodeRepositoryFaultPort {
   after(
@@ -85,7 +86,7 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
       this.fault?.after("episode-root");
       this.insertEvent(event, custody);
       this.fault?.after("episode-event");
-      this.insertProjection(event);
+      this.insertProjection([event]);
       this.fault?.after("episode-projection");
       this.insertReceipt(event);
       this.fault?.after("receipt");
@@ -141,7 +142,7 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
         this.insertOutbox(outbox);
         this.fault?.after("outbox-intent");
       }
-      this.updateProjection(event, history[0]);
+      this.updateProjection([...history, event]);
       this.fault?.after("episode-projection");
       this.insertTransitionReceipt(event, command.type);
       this.fault?.after("receipt");
@@ -236,9 +237,10 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
       );
   }
 
-  private insertProjection(event: EscapeObservedEvent): void {
-    const reentry = event.payload.reentry;
-    if (!reentry) throw new Error("validated reentry is missing");
+  private insertProjection(events: readonly ExecutionEpisodeEvent[]): void {
+    const result = projectExecutionEpisode(events);
+    if (!result.ok) throw new Error("projection:invalid-event-stream");
+    const projection = result.projection;
     this.db
       .prepare(
         `INSERT INTO execution_episode_projection (
@@ -247,17 +249,17 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
         ) VALUES (${placeholders(11)})`,
       )
       .run(
-        event.episodeId,
-        0,
-        "E0",
-        event.eventDigest,
-        "issue_not_requested",
-        '["classify_escape"]',
-        event.payload.observedHead,
-        "blocked",
-        event.payload.requestedDriveModel,
-        reentry.layer,
-        event.occurredAt,
+        projection.episodeId,
+        projection.eventSequence,
+        projection.state,
+        projection.lastEventDigest,
+        projection.blockReason,
+        JSON.stringify(projection.nextLegalActions),
+        projection.latestHead,
+        projection.mergeReadiness,
+        projection.driveModel,
+        projection.reentryLayer,
+        projection.rebuiltAt,
       );
   }
 
@@ -386,9 +388,10 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
       );
   }
 
-  private updateProjection(event: ExecutionTransitionEvent, root: ExecutionEpisodeEvent): void {
-    const transition = EXECUTION_EPISODE_TRANSITIONS[event.sequence];
-    const rootPayload = root.payload as EscapeObservedPayload;
+  private updateProjection(events: readonly ExecutionEpisodeEvent[]): void {
+    const result = projectExecutionEpisode(events);
+    if (!result.ok) throw new Error("projection:invalid-event-stream");
+    const projection = result.projection;
     this.db
       .prepare(
         `UPDATE execution_episode_projection SET
@@ -397,15 +400,15 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
         WHERE episode_id = ?`,
       )
       .run(
-        event.sequence,
-        transition.state,
-        event.eventDigest,
-        transitionBlockReason(transition.state),
-        JSON.stringify(transition.nextLegalCommands),
-        String(event.payload.observedHead),
-        "blocked",
-        event.occurredAt,
-        rootPayload.episodeId,
+        projection.eventSequence,
+        projection.state,
+        projection.lastEventDigest,
+        projection.blockReason,
+        JSON.stringify(projection.nextLegalActions),
+        projection.latestHead,
+        projection.mergeReadiness,
+        projection.rebuiltAt,
+        projection.episodeId,
       );
   }
 
@@ -501,12 +504,6 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
     };
   }
 
-}
-
-function transitionBlockReason(state: string): string {
-  if (state === "E1") return "drive_not_selected";
-  if (state === "E2") return "issue_not_requested";
-  return "issue_projection_pending";
 }
 
 function failed(ruleId: string, path: string): EpisodeRepositoryResult {

@@ -5,6 +5,7 @@ import {
   type ExecutionEpisodeEvent,
   reduceExecutionEpisode,
 } from "../../domain/execution-episode.js";
+import { projectExecutionEpisode } from "../../application/episode-projector.js";
 
 interface ReadStatement {
   all(...params: unknown[]): Record<string, unknown>[];
@@ -290,25 +291,26 @@ function projectionMatchesStream(
   stream: VerifiedStream | undefined,
 ): boolean {
   if (!stream) return false;
-  const reentry = stream.payload.reentry;
-  if (!reentry) return false;
+  const expected = projectExecutionEpisode(stream.events);
+  if (!expected.ok) return false;
+  const value = expected.projection;
   if (
     !same(projection, {
-      episode_id: stream.payload.episodeId,
-      current_event_sequence: stream.sequence,
-      current_state: stream.state,
-      current_event_digest: stream.digest,
-      next_legal_actions_json: canonicalizeExecutionPayload(stream.nextCommands),
-      latest_head: stream.payload.observedHead,
-      drive_model: stream.payload.requestedDriveModel,
-      reentry_layer: reentry.layer,
+      episode_id: value.episodeId,
+      current_event_sequence: value.eventSequence,
+      current_state: value.state,
+      current_event_digest: value.lastEventDigest,
+      next_legal_actions_json: canonicalizeExecutionPayload(value.nextLegalActions),
+      latest_head: value.latestHead,
+      block_reason: value.blockReason,
+      merge_readiness: value.mergeReadiness,
+      drive_model: value.driveModel,
+      reentry_layer: value.reentryLayer,
+      rebuilt_at: value.rebuiltAt,
     })
   )
     return false;
-  return stream.sequence !== 0 ||
-    (projection.block_reason === "issue_not_requested" &&
-      projection.merge_readiness === "blocked" &&
-      projection.rebuilt_at === stream.events[0].occurredAt);
+  return true;
 }
 
 function receiptsMatchEvents(
