@@ -28,6 +28,7 @@ import {
 import type { HarnessDb } from "../../../state-db/index.js";
 import { executionLedgerRowsValid } from "./row-verifier.js";
 import { projectExecutionEpisode } from "../../application/episode-projector.js";
+import { decodeExecutionEpisodeEventRow } from "./episode-row-mapper.js";
 
 export interface EpisodeRepositoryFaultPort {
   after(
@@ -287,22 +288,11 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
         "SELECT * FROM execution_episode_events WHERE episode_id = ? ORDER BY event_sequence",
       )
       .all(episodeId)
-      .map((row) => ({
-        eventId: String(row.event_id),
-        episodeId: String(row.episode_id),
-        sequence: Number(row.event_sequence),
-        state: String(row.event_state),
-        kind: String(row.event_kind),
-        commandId: String(row.command_id),
-        commandPayloadDigest: String(row.command_payload_digest),
-        payloadDigest: String(row.payload_digest),
-        previousEventDigest:
-          row.previous_event_digest === null ? null : String(row.previous_event_digest),
-        eventDigest: String(row.event_digest),
-        occurredAt: String(row.occurred_at),
-        actor: String(row.actor),
-        payload: JSON.parse(String(row.canonical_payload_json)) as unknown,
-      }));
+      .map((row) => {
+        const event = decodeExecutionEpisodeEventRow(row);
+        if (!event) throw new Error("episode-event-row-invalid");
+        return event;
+      });
   }
 
   private insertTransitionEvent(
@@ -438,27 +428,10 @@ export class SqliteExecutionEpisodeRepository implements EpisodeRepositoryPort {
       .prepare("SELECT * FROM execution_episode_events WHERE event_id = ?")
       .get(eventId);
     if (!row) return failed("episode-ledger-integrity-invalid", "receipt.result_ref");
-    let payload: EscapeObservedPayload;
-    try {
-      payload = JSON.parse(String(row.canonical_payload_json)) as EscapeObservedPayload;
-    } catch {
-      return failed("episode-ledger-integrity-invalid", "event.canonical_payload_json");
-    }
-    const event: EscapeObservedEvent = {
-      eventId: String(row.event_id),
-      episodeId: String(row.episode_id),
-      sequence: 0,
-      state: "E0",
-      kind: "escape_observed",
-      commandId: String(row.command_id),
-      commandPayloadDigest: String(row.command_payload_digest),
-      payloadDigest: String(row.payload_digest),
-      previousEventDigest: null,
-      eventDigest: String(row.event_digest),
-      occurredAt: String(row.occurred_at),
-      actor: String(row.actor),
-      payload,
-    };
+    const decoded = decodeExecutionEpisodeEventRow(row);
+    if (!decoded || decoded.sequence !== 0 || decoded.kind !== "escape_observed")
+      return failed("episode-ledger-integrity-invalid", "receipt.result_ref");
+    const event = decoded as EscapeObservedEvent;
     const reduction = reconstructExecutionEpisode([event]);
     return reduction.ok
       ? {

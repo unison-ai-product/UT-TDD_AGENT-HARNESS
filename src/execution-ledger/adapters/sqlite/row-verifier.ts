@@ -6,6 +6,7 @@ import {
   reduceExecutionEpisode,
 } from "../../domain/execution-episode.js";
 import { projectExecutionEpisode } from "../../application/episode-projector.js";
+import { decodeExecutionEpisodeEventRow } from "./episode-row-mapper.js";
 
 interface ReadStatement {
   all(...params: unknown[]): Record<string, unknown>[];
@@ -201,7 +202,7 @@ function verifyStreams(
   }
   const streams = new Map<string, VerifiedStream>();
   for (const [episodeId, eventRows] of grouped) {
-    const decoded = eventRows.map(decodeEventRow);
+    const decoded = eventRows.map(decodeExecutionEpisodeEventRow);
     if (decoded.some((event) => event === undefined)) return undefined;
     const events = decoded as ExecutionEpisodeEvent[];
     const reduction = reduceExecutionEpisode(events);
@@ -219,37 +220,6 @@ function verifyStreams(
     });
   }
   return streams;
-}
-
-function decodeEventRow(row: Record<string, unknown>): ExecutionEpisodeEvent | undefined {
-  const rawPayload = String(row.canonical_payload_json);
-  let payload: unknown;
-  try {
-    payload = JSON.parse(rawPayload);
-  } catch {
-    return undefined;
-  }
-  if (canonicalizeExecutionPayload(payload) !== rawPayload) return undefined;
-  if (sha256(rawPayload) !== row.payload_digest) return undefined;
-  if (
-    !Number.isSafeInteger(Number(row.event_sequence)) ||
-    !String(row.runtime).trim() ||
-    !String(row.model).trim()
-  )
-    return undefined;
-  return {
-    episodeId: String(row.episode_id),
-    sequence: Number(row.event_sequence),
-    state: String(row.event_state),
-    kind: String(row.event_kind),
-    payloadDigest: String(row.payload_digest),
-    previousEventDigest:
-      row.previous_event_digest == null ? null : String(row.previous_event_digest),
-    occurredAt: String(row.occurred_at),
-    actor: String(row.actor),
-    eventDigest: String(row.event_digest),
-    payload,
-  };
 }
 
 function rootMatchesStream(
