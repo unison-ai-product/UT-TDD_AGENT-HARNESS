@@ -1,0 +1,30 @@
+# PLAN-L7-451 W5: NFR (非機能要件) 未達 episode の Issue Form (PLAN-L6-83 準拠)。
+name: NFR failure
+description: 性能・信頼性などの非機能要件未達 episode を起票する
+title: "NFR: "
+labels: ["ut-tdd", "nfr"]
+body:
+  - type: input
+    id: nfr_id
+    attributes:
+      label: NFR / 要件 ID
+    validations:
+      required: true
+  - type: textarea
+    id: observed_state
+    attributes:
+      label: Observed state (実測値と目標値)
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence path / digest (計測ログ等)
+    validations:
+      required: true
+  - type: input
+    id: reentry_target
+    attributes:
+      label: Reentry target (Forward 再合流先 PLAN / layer)
+    validations:
+      required: true
