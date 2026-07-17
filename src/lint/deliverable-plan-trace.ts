@@ -53,7 +53,11 @@ export interface DeliverablePlanTraceInput {
  * snapshot and a developer worktree observe the same artifact set.
  */
 export function isDeliverableArtifactPath(path: string): boolean {
-  if (path === ".claude/settings.local.json" || path.startsWith(".claude/agent-memory/")) {
+  if (
+    path === ".claude/settings.local.json" ||
+    path === ".claude/scheduled_tasks.lock" ||
+    path.startsWith(".claude/agent-memory/")
+  ) {
     return false;
   }
   return (

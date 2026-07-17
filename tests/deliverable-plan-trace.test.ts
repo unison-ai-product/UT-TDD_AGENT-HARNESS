@@ -41,6 +41,7 @@ describe("PLAN-L7-450 W4/W3 deliverable trace", () => {
   it("U-L7-450-W3-002: ignores gitignored Claude runtime state in every workspace", () => {
     expect(isDeliverableArtifactPath(".claude/agent-memory/reviewer/MEMORY.md")).toBe(false);
     expect(isDeliverableArtifactPath(".claude/settings.local.json")).toBe(false);
+    expect(isDeliverableArtifactPath(".claude/scheduled_tasks.lock")).toBe(false);
     expect(isDeliverableArtifactPath(".claude/agents/code-reviewer.md")).toBe(true);
   });
 
