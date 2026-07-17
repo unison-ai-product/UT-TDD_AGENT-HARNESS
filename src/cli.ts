@@ -3156,6 +3156,7 @@ github
       const repoRoot = process.cwd();
       const data = collectJobSummary({
         dbPath: opts.db ?? defaultHarnessDbPath(repoRoot),
+        repoRoot,
         headSha: gitHead() ?? "",
         branch: gitBranch() ?? "",
       });

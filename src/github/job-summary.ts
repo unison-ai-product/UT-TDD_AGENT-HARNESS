@@ -4,8 +4,8 @@
 // (PLAN-L4-30 の「GitHub 表示状態を workflow の正本にしない」原則)。
 // summary 生成の失敗で CI を red にしない: 入力欠落は degrade して exit 0 を維持する。
 
-import { Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
+import { openHarnessDb } from "../state-db/index";
 
 export interface GateMatrixRow {
   gateId: string;
@@ -25,6 +25,7 @@ export interface JobSummaryData {
 /** harness.db から gate matrix (gate_id ごとの最新観測) を読む。db 欠落は degrade。 */
 export function collectJobSummary(input: {
   dbPath: string;
+  repoRoot: string;
   headSha: string;
   branch: string;
 }): JobSummaryData {
@@ -35,11 +36,11 @@ export function collectJobSummary(input: {
     notes.push(`harness.db unobserved (${input.dbPath}) — gate matrix skipped`);
   } else {
     try {
-      const db = new Database(input.dbPath, { readonly: true });
+      const db = openHarnessDb(input.dbPath, { repoRoot: input.repoRoot });
       try {
         const rows = db
           .prepare("SELECT gate_id, plan_id, status, checked_at FROM gate_runs ORDER BY rowid ASC")
-          .all() as Array<Record<string, unknown>>;
+          .all();
         const latest = new Map<string, GateMatrixRow>();
         for (const row of rows) {
           const gateId = String(row.gate_id ?? "");

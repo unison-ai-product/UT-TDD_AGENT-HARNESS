@@ -1,24 +1,28 @@
 // PLAN-L7-451 W3: Job Summary projection の unit oracle。
 
-import { Database } from "bun:sqlite";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { collectJobSummary, renderJobSummary } from "../src/github/job-summary";
+import { openHarnessDb } from "../src/state-db/index";
 
 const tempDirs: string[] = [];
 
-function makeDb(rows: Array<[string, string, string, string]>): string {
-  const dir = mkdtempSync(join(tmpdir(), "ut-tdd-summary-"));
-  tempDirs.push(dir);
-  const dbPath = join(dir, "harness.db");
-  const db = new Database(dbPath);
-  db.run("CREATE TABLE gate_runs (gate_id TEXT, plan_id TEXT, status TEXT, checked_at TEXT)");
+function makeRepo(rows: Array<[string, string, string, string]>): {
+  repoRoot: string;
+  dbPath: string;
+} {
+  const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-summary-"));
+  tempDirs.push(repoRoot);
+  mkdirSync(join(repoRoot, ".ut-tdd"), { recursive: true });
+  const dbPath = join(repoRoot, ".ut-tdd", "harness.db");
+  const db = openHarnessDb(dbPath, { repoRoot });
+  db.exec("CREATE TABLE gate_runs (gate_id TEXT, plan_id TEXT, status TEXT, checked_at TEXT)");
   const insert = db.prepare("INSERT INTO gate_runs VALUES (?, ?, ?, ?)");
   for (const row of rows) insert.run(...row);
   db.close();
-  return dbPath;
+  return { repoRoot, dbPath };
 }
 
 afterEach(() => {
@@ -27,12 +31,12 @@ afterEach(() => {
 
 describe("github job summary (PLAN-L7-451 W3)", () => {
   it("U-L7-451-W3-001: gate matrix を含む markdown を出力し、gate_id ごとに最新観測を採用する", () => {
-    const dbPath = makeDb([
+    const { repoRoot, dbPath } = makeRepo([
       ["G4", "PLAN-A", "failed", "2026-07-01"],
       ["G4", "PLAN-A", "passed", "2026-07-02"],
       ["G8", "PLAN-B", "failed", "2026-07-03"],
     ]);
-    const data = collectJobSummary({ dbPath, headSha: "abc1234", branch: "work/x" });
+    const data = collectJobSummary({ dbPath, repoRoot, headSha: "abc1234", branch: "work/x" });
     expect(data.dbObserved).toBe(true);
     expect(data.gates).toHaveLength(2);
     expect(data.gates.find((g) => g.gateId === "G4")?.status).toBe("passed");
@@ -44,8 +48,11 @@ describe("github job summary (PLAN-L7-451 W3)", () => {
   });
 
   it("U-L7-451-W3-002: harness.db 欠落時は degrade して note を出す (throw しない)", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "ut-tdd-summary-missing-"));
+    tempDirs.push(repoRoot);
     const data = collectJobSummary({
-      dbPath: join(tmpdir(), "ut-tdd-summary-missing", "harness.db"),
+      dbPath: join(repoRoot, ".ut-tdd", "harness.db"),
+      repoRoot,
       headSha: "abc1234",
       branch: "main",
     });
@@ -56,9 +63,9 @@ describe("github job summary (PLAN-L7-451 W3)", () => {
   });
 
   it("U-L7-451-W3-003: 判定正本ではない旨を常に明記する (projection 原則)", () => {
-    const dbPath = makeDb([]);
+    const { repoRoot, dbPath } = makeRepo([]);
     const markdown = renderJobSummary(
-      collectJobSummary({ dbPath, headSha: "abc1234", branch: "main" }),
+      collectJobSummary({ dbPath, repoRoot, headSha: "abc1234", branch: "main" }),
     );
     expect(markdown).toContain("判定正本ではない");
   });
