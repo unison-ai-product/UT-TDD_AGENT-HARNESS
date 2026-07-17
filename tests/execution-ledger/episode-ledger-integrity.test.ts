@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { SqliteExecutionEpisodeRepository } from "../../src/execution-ledger/adapters/sqlite/episode-repository.js";
+import { executionLedgerRowsValid } from "../../src/execution-ledger/adapters/sqlite/row-verifier.js";
 import type {
   ClassifyEscapeCommand,
   RequestForwardEscape,
@@ -58,6 +59,7 @@ describe("Execution Episode v5 row integrity (PLAN-L7-436)", () => {
   it.each([
     ["missing intent", removeIssueIntent],
     ["tampered intent", tamperIssueIntent],
+    ["mutable dispatch fields", tamperIssueDispatchFields],
     ["extra intent", addIssueIntent],
   ] as const)("U-EXEP-011: E3 event↔GitHub outbox %sをfail-closeする", (_label, tamper) => {
     const db = transitionedEpisodeLedger("E3");
@@ -67,6 +69,20 @@ describe("Execution Episode v5 row integrity (PLAN-L7-436)", () => {
         ok: false,
         ruleId: "plan-ledger-unavailable",
       });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-EXEP-009: receipt_digest単独改変をrow verifierがfail-closeする", () => {
+    const db = episodeLedger();
+    try {
+      withoutUpdateTrigger(db, "append_command_receipts", () => {
+        db.prepare("UPDATE append_command_receipts SET receipt_digest = ?").run(
+          "f".repeat(64),
+        );
+      });
+      expect(executionLedgerRowsValid(db)).toBe(false);
     } finally {
       db.close();
     }
@@ -99,6 +115,12 @@ function removeIssueIntent(db: HarnessDb): void {
 
 function tamperIssueIntent(db: HarnessDb): void {
   db.prepare("UPDATE github_projection_outbox SET repository = 'other/repository'").run();
+}
+
+function tamperIssueDispatchFields(db: HarnessDb): void {
+  db.prepare(
+    "UPDATE github_projection_outbox SET status = 'acknowledged', attempt_count = 7, last_attempt_at = ?",
+  ).run("2026-07-17T00:00:00.000Z");
 }
 
 function addIssueIntent(db: HarnessDb): void {

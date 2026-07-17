@@ -73,16 +73,16 @@ function selectionsMatchStreams(
     stream.events.filter((event) => event.kind === "drive_selected"),
   );
   if (rows.length !== expectedEvents.length) return false;
-  return expectedEvents.every((event) => {
+  const actual = uniqueRowMap(rows, (row) =>
+    selectionKey(row.episode_id, row.selection_revision),
+  );
+  if (!actual) return false;
+  const expected = new Map<string, Readonly<Record<string, unknown>>>();
+  for (const event of expectedEvents) {
     const payload = asRecord(event.payload);
     if (!payload) return false;
     const revision = Number(payload.selectionRevision);
-    const row = rows.find(
-      (candidate) =>
-        candidate.episode_id === event.episodeId &&
-        Number(candidate.selection_revision) === revision,
-    );
-    if (!row) return false;
+    if (!Number.isSafeInteger(revision)) return false;
     const override = asRecord(payload.override);
     const value = {
       episodeId: event.episodeId,
@@ -97,7 +97,9 @@ function selectionsMatchStreams(
       overrideEvidenceDigest: override?.evidenceDigest ?? null,
       selectedAt: event.occurredAt,
     };
-    return same(row, {
+    const key = selectionKey(event.episodeId, revision);
+    if (!key || expected.has(key)) return false;
+    expected.set(key, {
       episode_id: value.episodeId,
       selection_revision: value.selectionRevision,
       selected_event_sequence: value.selectedEventSequence,
@@ -111,7 +113,8 @@ function selectionsMatchStreams(
       selected_at: value.selectedAt,
       selection_digest: sha256(canonicalizeExecutionPayload(value)),
     });
-  });
+  }
+  return keysEqual(actual, expected) && [...expected].every(([key, value]) => same(actual.get(key)!, value));
 }
 
 function outboxMatchesStreams(
@@ -122,15 +125,20 @@ function outboxMatchesStreams(
     stream.events.filter((event) => event.kind === "issue_requested"),
   );
   if (rows.length !== expectedEvents.length) return false;
-  return expectedEvents.every((event) => {
+  const actual = uniqueRowMap(rows, (row) =>
+    outboxKey(row.episode_id, row.source_event_sequence, row.intent_revision),
+  );
+  if (!actual) return false;
+  const expectedKeys = new Set<string>();
+  for (const event of expectedEvents) {
     const payload = asRecord(event.payload);
     const stream = streams.get(event.episodeId);
     if (!payload || !stream) return false;
-    const row = rows.find(
-      (candidate) =>
-        candidate.episode_id === event.episodeId &&
-        Number(candidate.source_event_sequence) === event.sequence,
-    );
+    const intentRevision = Number(payload.intentRevision);
+    if (!Number.isSafeInteger(intentRevision)) return false;
+    const key = outboxKey(event.episodeId, event.sequence, intentRevision);
+    if (!key) return false;
+    const row = actual.get(key);
     if (!row) return false;
     const canonicalPayloadJson = String(row.canonical_payload_json);
     let intentPayload: unknown;
@@ -152,8 +160,7 @@ function outboxMatchesStreams(
       intent.labels.length === 0
     )
       return false;
-    return (
-      same(row, {
+    const expectedRow = {
         outbox_id: `outbox:${sha256(`github-outbox-id:v1\0${idempotencyKey}`).slice(0, 32)}`,
         episode_id: event.episodeId,
         source_event_sequence: event.sequence,
@@ -165,7 +172,17 @@ function outboxMatchesStreams(
         idempotency_key: idempotencyKey,
         payload_version: 1,
         payload_digest: payloadDigest,
-      }) &&
+        status: "pending",
+        attempt_count: 0,
+        next_attempt_at: event.occurredAt,
+        lease_owner: null,
+        lease_expires_at: null,
+        ack_observation_id: null,
+        created_at: event.occurredAt,
+        last_attempt_at: null,
+    };
+    expectedKeys.add(key);
+    const intentMatches =
       same(intent, {
         schema: "github.issue.intent.v1",
         episodeId: event.episodeId,
@@ -179,9 +196,10 @@ function outboxMatchesStreams(
       canonicalizeExecutionPayload(intent.origin) === canonicalizeExecutionPayload(root.origin) &&
       canonicalizeExecutionPayload(intent.reentry) === canonicalizeExecutionPayload(root.reentry) &&
       canonicalizeExecutionPayload(intent.issue) ===
-        canonicalizeExecutionPayload({ title: root.issue.title, bodyDigest: root.issue.bodyDigest })
-    );
-  });
+        canonicalizeExecutionPayload({ title: root.issue.title, bodyDigest: root.issue.bodyDigest });
+    if (!same(row, expectedRow) || !intentMatches) return false;
+  }
+  return keysEqual(actual, new Map([...expectedKeys].map((key) => [key, {}])));
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -288,18 +306,23 @@ function receiptsMatchEvents(
   eventRows: readonly Record<string, unknown>[],
 ): boolean {
   if (receipts.length !== eventRows.length) return false;
-  const byEventId = new Map(eventRows.map((event) => [String(event.event_id), event]));
+  const byEventId = uniqueRowMap(eventRows, (event) => String(event.event_id));
+  const byResultRef = uniqueRowMap(receipts, (receipt) => String(receipt.result_ref));
+  if (!byEventId || !byResultRef) return false;
   const commandTypes = new Map([
     ["escape_observed", "execution_episode.request_escape"],
     ["escape_classified", "execution_episode.classify_escape"],
     ["drive_selected", "execution_episode.select_drive_model"],
     ["issue_requested", "execution_episode.request_issue_projection"],
   ]);
-  return receipts.every((receipt) => {
-    const event = byEventId.get(String(receipt.result_ref));
+  return eventRows.every((event) => {
+    const receipt = byResultRef.get(String(event.event_id));
+    const commandType = commandTypes.get(String(event.event_kind));
+    if (!receipt || !commandType) return false;
     return (
+      receipt.receipt_digest === receiptDigest(receipt) &&
       event !== undefined &&
-      receipt.command_type === commandTypes.get(String(event.event_kind)) &&
+      receipt.command_type === commandType &&
       receipt.subject_key === event.episode_id &&
       receipt.command_id === event.command_id &&
       receipt.command_payload_digest === event.command_payload_digest &&
@@ -309,6 +332,51 @@ function receiptsMatchEvents(
       receipt.plan_revision == null
     );
   });
+}
+
+function uniqueRowMap(
+  rows: readonly Record<string, unknown>[],
+  keyOf: (row: Record<string, unknown>) => string | undefined,
+): Map<string, Record<string, unknown>> | undefined {
+  const map = new Map<string, Record<string, unknown>>();
+  for (const row of rows) {
+    const key = keyOf(row);
+    if (!key || map.has(key)) return undefined;
+    map.set(key, row);
+  }
+  return map;
+}
+
+function keysEqual(
+  actual: ReadonlyMap<string, unknown>,
+  expected: ReadonlyMap<string, unknown>,
+): boolean {
+  return actual.size === expected.size && [...actual.keys()].every((key) => expected.has(key));
+}
+
+function selectionKey(episodeId: unknown, revision: unknown): string | undefined {
+  const value = Number(revision);
+  return typeof episodeId === "string" && episodeId && Number.isSafeInteger(value)
+    ? `${episodeId}\0${value}`
+    : undefined;
+}
+
+function outboxKey(episodeId: unknown, sequence: unknown, revision: unknown): string | undefined {
+  const eventSequence = Number(sequence);
+  const intentRevision = Number(revision);
+  return typeof episodeId === "string" &&
+    episodeId &&
+    Number.isSafeInteger(eventSequence) &&
+    Number.isSafeInteger(intentRevision)
+    ? `${episodeId}\0${eventSequence}\0${intentRevision}`
+    : undefined;
+}
+
+function receiptDigest(row: Readonly<Record<string, unknown>>): string {
+  const frame = Object.entries(row)
+    .filter(([key]) => key !== "receipt_digest")
+    .sort(([left], [right]) => Buffer.from(left).compare(Buffer.from(right)));
+  return sha256(JSON.stringify(frame));
 }
 
 function isEscapeObservedPayload(value: unknown): value is EscapeObservedPayload {
