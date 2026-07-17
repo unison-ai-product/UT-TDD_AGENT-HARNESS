@@ -4,7 +4,7 @@ import { parseLegacyPlanSource } from "../plan-asset/adapters/legacy-plan-invent
 import type { BootstrapLegacyPlanRevisionInput } from "../plan-asset/ledger/plan-revision-bootstrap.js";
 import type { AppendPlanRevisionInput } from "../plan-asset/ledger/plan-revision-ledger.js";
 import type { PlanDraftCommand } from "./plan-draft-service.js";
-import type { PlanAdmissionRequest } from "./policy.js";
+import { evaluatePlanAdmission, type PlanAdmissionRequest } from "./policy.js";
 
 export interface PlanRevisionEnvironment {
   repositoryIdentity: string;
@@ -83,6 +83,30 @@ export function canonicalPlanPayload(source: string): { payload: string; body: s
   const parsed = parseLegacyPlanSource(source);
   if (!parsed) throw new Error("plan-revision-source-invalid");
   return { payload: stableJson(parsed.frontmatter), body: parsed.body };
+}
+
+/** Journalより前にcommandのadmission・source・ledger digest結合を再検証する。 */
+export function validatePlanRevisionCommand(
+  command: PlanDraftCommand<PlanRevisionExecutionPayload>,
+): void {
+  const decision = evaluatePlanAdmission(command.payload.admission);
+  if (!decision.ok) throw new Error("plan-revision-command-admission-invalid");
+  const ledger = command.payload.ledgerInput;
+  const current = canonicalPlanPayload(command.source.content);
+  if (
+    ledger.commandId !== command.commandId ||
+    ledger.planId !== command.planId ||
+    ledger.sourcePath !== command.source.path ||
+    ledger.canonicalPayloadJson !== current.payload ||
+    ledger.bodyDigest !== sha(current.body) ||
+    ledger.routeTupleDigest !== sha(stableJson(command.payload.admission))
+  )
+    throw new Error("plan-revision-command-binding-invalid");
+  const expected = command.payload.legacy
+    ? bootstrapDigest(ledger as BootstrapLegacyPlanRevisionInput)
+    : revisionDigest(ledger as AppendPlanRevisionInput);
+  if (expected !== command.commandPayloadDigest)
+    throw new Error("plan-revision-command-digest-invalid");
 }
 
 function revisionDigest(input: AppendPlanRevisionInput): string {

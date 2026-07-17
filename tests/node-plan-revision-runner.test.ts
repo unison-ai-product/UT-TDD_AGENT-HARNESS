@@ -30,7 +30,7 @@ describe("NodePlanRevisionRunner", () => {
       }),
       expect.objectContaining({
         path: f.manifest.projection.path,
-        expectedPreimage: { kind: "sha256", digest: f.manifest.base.projection_tail_digest },
+        expectedPreimage: { kind: "sha256", digest: sha(f.oldProjection) },
       }),
     ]);
     expect(readFileSync(join(f.root, f.manifest.source.path), "utf8")).toContain("Revised");
@@ -50,6 +50,7 @@ describe("NodePlanRevisionRunner", () => {
     ["source commit", { sourceCommit: "e".repeat(40) }, "plan-revision-source-commit-drift"],
     ["source blob", { sourceBlobOid: "e".repeat(40) }, "plan-revision-source-blob-drift"],
     ["source content", { sourceText: "concurrent source" }, "plan-revision-source-content-drift"],
+    ["HEAD source", { headSource: "different HEAD source" }, "plan-revision-head-content-drift"],
     [
       "projection tail",
       { projectionText: '{"schema_version":"v2","records":[]}\n' },
@@ -61,6 +62,35 @@ describe("NodePlanRevisionRunner", () => {
     expect(() => f.runner.run(f.input)).toThrow(ruleId);
     expect(writeSet(f.db)).toEqual(before);
     expect(f.close).toHaveBeenCalledOnce();
+  });
+
+  it("U-PA-REV-021: invalid projectionはtail fallbackせずwrite 0で拒否する", () => {
+    const f = fixture("adopted", { projectionText: "not-json" });
+    const before = writeSet(f.db);
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-projection-invalid");
+    expect(writeSet(f.db)).toEqual(before);
+  });
+
+  it("U-PA-REV-022: caller decisionと再評価結果の不一致はwrite 0で拒否する", () => {
+    const f = fixture("adopted");
+    const forged = { ...f.input, decision: { ...f.input.decision, issueRequired: false } };
+    expect(() => f.runner.run(forged)).toThrow("plan-revision-admission-decision-mismatch");
+    expect(writeSet(f.db)).toEqual(f.before);
+  });
+
+  it("U-PA-REV-023: manifestとcaller admissionの不一致はwrite 0で拒否する", () => {
+    const f = fixture("adopted");
+    const admission = { ...f.input.admission, escapeReason: "forged" };
+    expect(() => f.runner.run({ ...f.input, admission })).toThrow(
+      "plan-revision-manifest-admission-mismatch",
+    );
+    expect(writeSet(f.db)).toEqual(f.before);
+  });
+
+  it("U-PA-REV-024: repository identity未注入はpath由来へfallbackしない", () => {
+    const f = fixture("legacy", { omitRepositoryIdentity: true });
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-repository-identity-required");
+    expect(writeSet(f.db)).toEqual(f.before);
   });
 
   it("U-PA-REV-019: active aliasの別asset束縛はwrite 0で拒否する", () => {
@@ -89,6 +119,8 @@ type Drift = Partial<{
   sourceBlobOid: string;
   sourceText: string;
   projectionText: string;
+  headSource: string;
+  omitRepositoryIdentity: boolean;
 }>;
 
 function fixture(mode: Mode, drift: Drift = {}) {
@@ -100,7 +132,7 @@ function fixture(mode: Mode, drift: Drift = {}) {
   const sourcePath = `docs/plans/${planId}.md`;
   const projectionPath = "docs/governance/plan-admission-receipts.json" as const;
   const oldSource = `---\nplan_id: ${planId}\ntitle: Base\nkind: design\ndrive: agent\nstatus: confirmed\nlayer: L4\nroute_signal: forward\nroute_mode: forward\nagent_slots: []\ngenerates: []\ndependencies:\n  parent: null\n  requires: []\n  references: []\n  blocks: []\n---\n\n# Base\n`;
-  const oldProjection = '{"schema_version":"v1","records":[]}\n';
+  const oldProjection = '{"schema_version":"ut-tdd.plan-admission-receipts/v1","records":[]}\n';
   writeFileSync(join(root, sourcePath), drift.sourceText ?? oldSource, "utf8");
   writeFileSync(join(root, projectionPath), drift.projectionText ?? oldProjection, "utf8");
   const sourceCommit = "a".repeat(40);
@@ -143,7 +175,7 @@ function fixture(mode: Mode, drift: Drift = {}) {
       source_commit: sourceCommit,
       source_blob_oid: sourceBlobOid,
       source_content_digest: sha(oldSource),
-      projection_tail_digest: sha(oldProjection),
+      projection_tail_digest: sha("null"),
     },
     admission: {
       route_signal: admission.routeSignal,
@@ -182,10 +214,23 @@ function fixture(mode: Mode, drift: Drift = {}) {
     sourceBlobOid: () => drift.sourceBlobOid ?? sourceBlobOid,
     actor: () => "codex",
     readText: (path: string) => readFileSync(path, "utf8"),
+    headText: () => drift.headSource ?? oldSource,
+    ...(drift.omitRepositoryIdentity ? {} : { repositoryIdentity: () => "repo:test" }),
     openDb: () => db,
     publisher: () => publisher,
   });
-  return { root, db, close, publisher, runner, manifest, input: { manifest, admission, decision } };
+  const before = writeSet(db);
+  return {
+    root,
+    db,
+    close,
+    publisher,
+    runner,
+    manifest,
+    oldProjection,
+    before,
+    input: { manifest, admission, decision },
+  };
 }
 
 function seedAdopted(

@@ -5,7 +5,11 @@ import {
   type BootstrapLegacyPlanRevisionInput,
   LegacyPlanRevisionBootstrapTransaction,
 } from "../../src/plan-asset/ledger/plan-revision-bootstrap.js";
-import { migratePlanLedger } from "../../src/plan-asset/ledger/schema.js";
+import {
+  ledgerRowDigest,
+  ledgerSchemaDdl,
+  migratePlanLedger,
+} from "../../src/plan-asset/ledger/schema.js";
 import { openHarnessDb } from "../../src/state-db/index.js";
 
 const opened: ReturnType<typeof openHarnessDb>[] = [];
@@ -25,6 +29,15 @@ describe("legacy PLAN revision bootstrap transaction", () => {
     });
     expect(rows(db, "plan_assets")).toBe(1);
     expect(rows(db, "plan_revisions")).toBe(2);
+    expect(db.prepare("SELECT * FROM legacy_plan_bootstrap_provenance").get()).toMatchObject({
+      asset_id: derivedAssetId(),
+      revision: 1,
+      source_commit: "a".repeat(40),
+      source_blob_oid: "c".repeat(40),
+      source_content_digest: sha("---\nplan_id: PLAN-L4-31\ntitle: legacy-v1\n---\nlegacy body\n"),
+      repository_identity: "owner/repository",
+      identity_input_json: '["owner/repository","PLAN-L4-31"]',
+    });
     expect(
       db
         .prepare(`SELECT revision, canonical_payload_json, canonical_payload_digest, source_commit
@@ -33,8 +46,8 @@ describe("legacy PLAN revision bootstrap transaction", () => {
     ).toEqual([
       {
         revision: 1,
-        canonical_payload_json: '{"title":"legacy-v1"}',
-        canonical_payload_digest: sha('{"title":"legacy-v1"}'),
+        canonical_payload_json: '{"plan_id":"PLAN-L4-31","title":"legacy-v1"}',
+        canonical_payload_digest: sha('{"plan_id":"PLAN-L4-31","title":"legacy-v1"}'),
         source_commit: "a".repeat(40),
       },
       {
@@ -82,7 +95,19 @@ describe("legacy PLAN revision bootstrap transaction", () => {
         }),
       ),
     ).toEqual({ ok: false, ruleId: "plan-revision-bootstrap-source-preimage-mismatch" });
-    expect(totalRows(db)).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(
+      ledger.bootstrap(
+        bootstrap({
+          baseCanonicalPayloadJson: '{"plan_id":"PLAN-L4-31","title":"other"}',
+          baseCanonicalPayloadDigest: sha('{"plan_id":"PLAN-L4-31","title":"other"}'),
+        }),
+      ),
+    ).toEqual({ ok: false, ruleId: "plan-revision-bootstrap-source-payload-mismatch" });
+    expect(ledger.bootstrap(bootstrap({ baseBodyDigest: sha("different-body") }))).toEqual({
+      ok: false,
+      ruleId: "plan-revision-bootstrap-source-payload-mismatch",
+    });
+    expect(totalRows(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
   it("U-PA-REV-BOOT-004: alias衝突またはadopt済みassetをbootstrapせずfail-closeする", () => {
@@ -100,6 +125,7 @@ describe("legacy PLAN revision bootstrap transaction", () => {
   it.each([
     "plan-asset",
     "base-revision",
+    "base-provenance",
     "alias-event",
     "alias-current",
     "next-revision",
@@ -115,7 +141,7 @@ describe("legacy PLAN revision bootstrap transaction", () => {
     });
 
     expect(() => ledger.bootstrap(bootstrap())).toThrow(`fault:${boundary}`);
-    expect(totalRows(db)).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(totalRows(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
   it("U-PA-REV-BOOT-006: publish callback faultでrev1/rev2と全receiptをcommit前rollbackする", () => {
@@ -126,14 +152,36 @@ describe("legacy PLAN revision bootstrap transaction", () => {
         throw new Error("publish-failed");
       }),
     ).toThrow("publish-failed");
-    expect(totalRows(db)).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(totalRows(db)).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it("U-PA-REV-BOOT-008: provenance改ざんをdigest再計算後も意味論検証で拒否する", () => {
+    const { db, ledger } = fixture();
+    expect(ledger.bootstrap(bootstrap())).toMatchObject({ ok: true });
+    db.exec("DROP TRIGGER trg_legacy_plan_bootstrap_provenance_no_update");
+    const tampered = db.prepare("SELECT * FROM legacy_plan_bootstrap_provenance").get();
+    if (!tampered) throw new Error("missing provenance fixture");
+    tampered.source_blob_oid = "not-a-git-oid";
+    tampered.provenance_digest = ledgerRowDigest(tampered, "provenance_digest");
+    db.prepare(
+      "UPDATE legacy_plan_bootstrap_provenance SET source_blob_oid = ?, provenance_digest = ?",
+    ).run(tampered.source_blob_oid, tampered.provenance_digest);
+    const trigger = ledgerSchemaDdl().find((sql) =>
+      sql.includes("trg_legacy_plan_bootstrap_provenance_no_update"),
+    );
+    if (!trigger) throw new Error("missing provenance trigger DDL");
+    db.exec(trigger);
+    expect(migratePlanLedger(db)).toEqual({
+      ok: false,
+      ruleId: "plan-ledger-unavailable",
+    });
   });
 });
 
 function fixture() {
   const db = openHarnessDb(":memory:");
   opened.push(db);
-  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+  expect(migratePlanLedger(db)).toEqual({ ok: true, version: 5 });
   return { db, ledger: new LegacyPlanRevisionBootstrapTransaction(db) };
 }
 
@@ -148,14 +196,14 @@ function bootstrap(
     identityInputJson: '["owner/repository","PLAN-L4-31"]',
     identityDigest: sha('["owner/repository","PLAN-L4-31"]'),
     baseRevision: 1,
-    baseCanonicalPayloadJson: '{"title":"legacy-v1"}',
-    baseCanonicalPayloadDigest: sha('{"title":"legacy-v1"}'),
-    baseBodyDigest: sha("legacy-body-v1"),
+    baseCanonicalPayloadJson: '{"plan_id":"PLAN-L4-31","title":"legacy-v1"}',
+    baseCanonicalPayloadDigest: sha('{"plan_id":"PLAN-L4-31","title":"legacy-v1"}'),
+    baseBodyDigest: sha("legacy body\n"),
     baseSourcePath: "docs/plans/PLAN-L4-31.md",
     baseSourceCommit: "a".repeat(40),
     baseSourceBlobOid: "c".repeat(40),
-    baseSourceContent: "---\nplan_id: PLAN-L4-31\n---\nlegacy body\n",
-    baseSourceContentDigest: sha("---\nplan_id: PLAN-L4-31\n---\nlegacy body\n"),
+    baseSourceContent: "---\nplan_id: PLAN-L4-31\ntitle: legacy-v1\n---\nlegacy body\n",
+    baseSourceContentDigest: sha("---\nplan_id: PLAN-L4-31\ntitle: legacy-v1\n---\nlegacy body\n"),
     canonicalPayloadJson: '{"title":"redesign-v2"}',
     bodyDigest: sha("redesign-body-v2"),
     sourcePath: "docs/plans/PLAN-L4-31.md",
@@ -215,6 +263,7 @@ function totalRows(db: ReturnType<typeof openHarnessDb>): number[] {
   return [
     "plan_assets",
     "plan_revisions",
+    "legacy_plan_bootstrap_provenance",
     "plan_alias_events",
     "plan_aliases",
     "plan_admission_events",

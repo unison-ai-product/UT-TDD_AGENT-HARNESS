@@ -16,8 +16,9 @@ import {
   requiredCol,
 } from "../../schema/harness-db-table-builders.js";
 import { type HarnessDb, openHarnessDb } from "../../state-db/index.js";
+import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
 
-export const LEDGER_SCHEMA_VERSION = 4;
+export const LEDGER_SCHEMA_VERSION = 5;
 
 export interface LedgerSchemaMigrationFaultPort {
   after(boundary: string): void;
@@ -486,7 +487,35 @@ const v4Tables: readonly TableDef[] = [
   },
 ];
 
-const tables: readonly TableDef[] = [...v3Tables, ...v4Tables];
+const v5Tables: readonly TableDef[] = [
+  {
+    name: "legacy_plan_bootstrap_provenance",
+    columns: [
+      requiredCol("asset_id"),
+      requiredCol("revision", "INTEGER"),
+      requiredCol("source_path"),
+      requiredCol("source_commit"),
+      requiredCol("source_blob_oid"),
+      requiredCol("source_content_digest"),
+      requiredCol("repository_identity"),
+      requiredCol("identity_algorithm"),
+      requiredCol("identity_input_json"),
+      requiredCol("identity_digest"),
+      requiredCol("recorded_at"),
+      requiredCol("provenance_digest"),
+    ],
+    primaryKey: ["asset_id", "revision"],
+    foreignKeys: [
+      foreignKey(["asset_id", "revision"], {
+        table: "plan_revisions",
+        columns: ["asset_id", "revision"],
+        onDelete: "RESTRICT",
+      }),
+    ],
+  },
+];
+
+const tables: readonly TableDef[] = [...v3Tables, ...v4Tables, ...v5Tables];
 
 const v3Indexes: readonly IndexDef[] = [
   { name: "idx_plan_assets_created_at", table: "plan_assets", columns: ["created_at"] },
@@ -575,7 +604,15 @@ const v4Indexes: readonly IndexDef[] = [
   },
 ];
 
-const indexes: readonly IndexDef[] = [...v3Indexes, ...v4Indexes];
+const v5Indexes: readonly IndexDef[] = [
+  {
+    name: "idx_legacy_bootstrap_source_blob",
+    table: "legacy_plan_bootstrap_provenance",
+    columns: ["source_commit", "source_blob_oid"],
+  },
+];
+
+const indexes: readonly IndexDef[] = [...v3Indexes, ...v4Indexes, ...v5Indexes];
 
 const v3HistoryTables = [
   "plan_assets",
@@ -590,6 +627,7 @@ const v4HistoryTables = [
   "plan_admission_receipts",
   "plan_draft_journal_events",
 ] as const;
+const v5HistoryTables = ["legacy_plan_bootstrap_provenance"] as const;
 
 function appendOnlyTriggers(historyTables: readonly string[]): readonly TriggerDef[] {
   return historyTables.flatMap((table) =>
@@ -605,7 +643,8 @@ function appendOnlyTriggers(historyTables: readonly string[]): readonly TriggerD
 
 const v3Triggers = appendOnlyTriggers(v3HistoryTables);
 const v4Triggers = appendOnlyTriggers(v4HistoryTables);
-const triggers: readonly TriggerDef[] = [...v3Triggers, ...v4Triggers];
+const v5Triggers = appendOnlyTriggers(v5HistoryTables);
+const triggers: readonly TriggerDef[] = [...v3Triggers, ...v4Triggers, ...v5Triggers];
 
 export function ledgerSchemaDdl(): readonly string[] {
   return [
@@ -620,7 +659,13 @@ export function migratePlanLedger(
   options: { readonly fault?: LedgerSchemaMigrationFaultPort } = {},
 ): { ok: true; version: number } | { ok: false; ruleId: "plan-ledger-unavailable" } {
   const version = db.userVersion();
-  if (version !== 0 && version !== 2 && version !== 3 && version !== LEDGER_SCHEMA_VERSION)
+  if (
+    version !== 0 &&
+    version !== 2 &&
+    version !== 3 &&
+    version !== 4 &&
+    version !== LEDGER_SCHEMA_VERSION
+  )
     return { ok: false, ruleId: "plan-ledger-unavailable" };
   if (version === 2 && !migrateV2ToV4(db, options.fault)) {
     return { ok: false, ruleId: "plan-ledger-unavailable" };
@@ -657,7 +702,24 @@ export function migratePlanLedger(
       for (const table of v4Tables) db.exec(createTableSql(table));
       for (const index of v4Indexes) db.exec(createIndexSql(index));
       for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
-      db.setUserVersion(LEDGER_SCHEMA_VERSION);
+      installV5(db);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v3-v5-verification-failed");
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+  if (db.userVersion() === 4) {
+    if (!v4LedgerValid(db)) return { ok: false, ruleId: "plan-ledger-unavailable" };
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      if (!v4LedgerValid(db)) {
+        db.exec("ROLLBACK");
+        return { ok: false, ruleId: "plan-ledger-unavailable" };
+      }
+      installV5(db);
+      if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v4-v5-verification-failed");
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");
@@ -667,6 +729,16 @@ export function migratePlanLedger(
   return schemaMatches(db) && ledgerRowsValid(db)
     ? { ok: true, version: LEDGER_SCHEMA_VERSION }
     : { ok: false, ruleId: "plan-ledger-unavailable" };
+}
+
+function v4LedgerValid(db: HarnessDb): boolean {
+  return (
+    schemaMatchesVersion(db, {
+      tables: [...v3Tables, ...v4Tables],
+      indexes: [...v3Indexes, ...v4Indexes],
+      triggers: [...v3Triggers, ...v4Triggers],
+    }) && ledgerRowsValid(db)
+  );
 }
 
 function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): boolean {
@@ -703,7 +775,7 @@ function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): b
     for (const index of v4Indexes) db.exec(createIndexSql(index));
     for (const trigger of v4Triggers) db.exec(createTriggerSql(trigger));
     fault?.after("v2-v4-schema-created");
-    db.setUserVersion(LEDGER_SCHEMA_VERSION);
+    installV5(db);
     if (!schemaMatches(db) || !ledgerRowsValid(db)) throw new Error("v2-v4-verification-failed");
     db.exec("COMMIT");
     return true;
@@ -711,6 +783,13 @@ function migrateV2ToV4(db: HarnessDb, fault?: LedgerSchemaMigrationFaultPort): b
     db.exec("ROLLBACK");
     return false;
   }
+}
+
+function installV5(db: HarnessDb): void {
+  for (const table of v5Tables) db.exec(createTableSql(table));
+  for (const index of v5Indexes) db.exec(createIndexSql(index));
+  for (const trigger of v5Triggers) db.exec(createTriggerSql(trigger));
+  db.setUserVersion(LEDGER_SCHEMA_VERSION);
 }
 
 function legacyV2ReservationSchemaValid(db: HarnessDb): boolean {
@@ -832,6 +911,12 @@ function ledgerRowsValid(db: HarnessDb): boolean {
     }
     if (!admissionReductionsValid(db) || !draftJournalReductionsValid(db)) return false;
   }
+  if (db.userVersion() >= 5) {
+    const rows = db.prepare("SELECT * FROM legacy_plan_bootstrap_provenance").all();
+    if (rows.some((row) => row.provenance_digest !== ledgerRowDigest(row, "provenance_digest")))
+      return false;
+    if (!bootstrapProvenanceValid(db)) return false;
+  }
   const revisions = db
     .prepare("SELECT canonical_payload_json, canonical_payload_digest FROM plan_revisions")
     .all();
@@ -850,6 +935,40 @@ function ledgerRowsValid(db: HarnessDb): boolean {
     reservationReceiptsValid(db) &&
     migrationReceiptsValid(db)
   );
+}
+
+function bootstrapProvenanceValid(db: HarnessDb): boolean {
+  const rows = db
+    .prepare(
+      `SELECT provenance.*, revision.source_path AS revision_source_path,
+        revision.source_commit AS revision_source_commit,
+        asset.created_source_commit, asset.identity_algorithm AS asset_identity_algorithm,
+        alias.alias
+       FROM legacy_plan_bootstrap_provenance provenance
+       JOIN plan_revisions revision
+         ON revision.asset_id = provenance.asset_id AND revision.revision = provenance.revision
+       JOIN plan_assets asset ON asset.asset_id = provenance.asset_id
+       LEFT JOIN plan_aliases alias
+         ON alias.asset_id = provenance.asset_id AND alias.valid_from_revision = 1`,
+    )
+    .all();
+  return rows.every((row) => {
+    const identityInput = JSON.stringify([row.repository_identity, row.alias]);
+    return (
+      Number(row.revision) === 1 &&
+      row.identity_algorithm === "ut-tdd-plan-legacy-v1" &&
+      row.asset_identity_algorithm === row.identity_algorithm &&
+      row.source_path === row.revision_source_path &&
+      row.source_commit === row.revision_source_commit &&
+      row.source_commit === row.created_source_commit &&
+      row.identity_input_json === identityInput &&
+      row.identity_digest === createHash("sha256").update(identityInput).digest("hex") &&
+      row.asset_id === deriveLegacyAssetId(String(row.repository_identity), String(row.alias)) &&
+      /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(String(row.source_commit)) &&
+      /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(String(row.source_blob_oid)) &&
+      /^[a-f0-9]{64}$/.test(String(row.source_content_digest))
+    );
+  });
 }
 
 function draftJournalReductionsValid(db: HarnessDb): boolean {

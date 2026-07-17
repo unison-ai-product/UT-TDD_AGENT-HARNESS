@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { HarnessDb } from "../../state-db/index.js";
 import { deriveLegacyAssetId } from "../adapters/legacy-plan-adapter.js";
+import { parseLegacyPlanSource } from "../adapters/legacy-plan-inventory.js";
 import { PlanAsset } from "../domain/plan-asset.js";
 import type { AppendPlanRevisionInput, AppendPlanRevisionResult } from "./plan-revision-ledger.js";
 import { ledgerRowDigest, migratePlanLedger } from "./schema.js";
@@ -25,6 +26,7 @@ export interface BootstrapLegacyPlanRevisionInput
 type BootstrapBoundary =
   | "plan-asset"
   | "base-revision"
+  | "base-provenance"
   | "alias-event"
   | "alias-current"
   | "next-revision"
@@ -121,6 +123,25 @@ export class LegacyPlanRevisionBootstrapTransaction {
         input.occurredAt,
       );
     this.fault?.after("base-revision");
+    const provenance = {
+      asset_id: value.assetId,
+      revision: 1,
+      source_path: input.baseSourcePath,
+      source_commit: input.baseSourceCommit,
+      source_blob_oid: input.baseSourceBlobOid,
+      source_content_digest: input.baseSourceContentDigest,
+      repository_identity: input.repositoryIdentity,
+      identity_algorithm: input.identityAlgorithm,
+      identity_input_json: input.identityInputJson,
+      identity_digest: input.identityDigest,
+      recorded_at: input.occurredAt,
+    };
+    this.db
+      .prepare(
+        "INSERT INTO legacy_plan_bootstrap_provenance VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      )
+      .run(...Object.values(provenance), ledgerRowDigest(provenance, "provenance_digest"));
+    this.fault?.after("base-provenance");
     const aliasEvent = {
       alias_event_id: `alias:${input.commandId}:1`,
       asset_id: value.assetId,
@@ -301,6 +322,15 @@ function validateBootstrap(
   }
   if (!secureEqual(input.baseSourceContentDigest, sha(input.baseSourceContent))) {
     return { ok: false, ruleId: "plan-revision-bootstrap-source-preimage-mismatch" };
+  }
+  const source = parseLegacyPlanSource(input.baseSourceContent);
+  if (
+    !source ||
+    source.planId !== input.planId ||
+    canonical(source.frontmatter) !== input.baseCanonicalPayloadJson ||
+    !secureEqual(sha(source.body), input.baseBodyDigest)
+  ) {
+    return { ok: false, ruleId: "plan-revision-bootstrap-source-payload-mismatch" };
   }
   if (!validCommonInput(input)) return { ok: false, ruleId: "plan-revision-input-invalid" };
   const assetId = deriveLegacyAssetId(input.repositoryIdentity, input.planId);

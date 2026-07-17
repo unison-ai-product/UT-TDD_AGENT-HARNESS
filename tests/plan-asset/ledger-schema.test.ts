@@ -238,7 +238,7 @@ describe("PLAN Asset canonical ledger schema", () => {
   it("U-PADM-020: creates admission and durable draft journal tables in v4", () => {
     const db = openHarnessDb(":memory:");
     try {
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       const names = db
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
         .all()
@@ -267,12 +267,34 @@ describe("PLAN Asset canonical ledger schema", () => {
       createV3Ledger(db);
       seedAsset(db, "plan:a");
       insertReceipt(db, "plan_revision", "plan:a", 1);
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
-      expect(db.userVersion()).toBe(4);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+      expect(db.userVersion()).toBe(LEDGER_SCHEMA_VERSION);
       expect(db.prepare("SELECT COUNT(*) AS n FROM plan_assets").get()?.n).toBe(1);
       expect(db.prepare("SELECT COUNT(*) AS n FROM append_command_receipts").get()?.n).toBe(1);
       expect(db.prepare("SELECT COUNT(*) AS n FROM plan_draft_journal").get()?.n).toBe(0);
       expect(db.prepare("SELECT COUNT(*) AS n FROM plan_draft_journal_events").get()?.n).toBe(0);
+    } finally {
+      db.close();
+    }
+  });
+
+  it("U-PA-REV-BOOT-007: custody v4を検証してbootstrap provenance v5へ原子的に拡張する", () => {
+    const db = openHarnessDb(":memory:");
+    try {
+      createV4Ledger(db);
+      seedAsset(db, "plan:a");
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
+      expect(db.userVersion()).toBe(5);
+      expect(
+        db
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'legacy_plan_bootstrap_provenance'",
+          )
+          .get(),
+      ).toEqual({ name: "legacy_plan_bootstrap_provenance" });
+      expect(ledgerSchemaDdl().join("\n")).toContain(
+        "append-only:legacy_plan_bootstrap_provenance",
+      );
     } finally {
       db.close();
     }
@@ -329,15 +351,15 @@ describe("PLAN Asset canonical ledger schema", () => {
       for (const ddl of legacyV2Ddl()) db.exec(ddl);
       db.setUserVersion(2);
       seedAsset(db, "plan:a");
-      expect(LEDGER_SCHEMA_VERSION).toBe(4);
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+      expect(LEDGER_SCHEMA_VERSION).toBe(5);
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
       expect(
         db
           .prepare("PRAGMA table_info(plan_id_reservation_events)")
           .all()
           .map((column) => column.name),
       ).toContain("lease_key_version");
-      expect(migratePlanLedger(db)).toEqual({ ok: true, version: 4 });
+      expect(migratePlanLedger(db)).toEqual({ ok: true, version: LEDGER_SCHEMA_VERSION });
     } finally {
       db.close();
     }
@@ -524,12 +546,31 @@ function createV3Ledger(db: ReturnType<typeof openHarnessDb>): void {
     (sql) =>
       !sql.includes("plan_admission_") &&
       !sql.includes("plan_draft_journal") &&
-      !sql.includes("idx_plan_draft_journal_status"),
+      !sql.includes("idx_plan_draft_journal_status") &&
+      !sql.includes("legacy_plan_bootstrap_provenance") &&
+      !sql.includes("idx_legacy_bootstrap_source_blob"),
   );
   db.exec("BEGIN IMMEDIATE");
   try {
     for (const sql of v3Ddl) db.exec(sql);
     db.setUserVersion(3);
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+function createV4Ledger(db: ReturnType<typeof openHarnessDb>): void {
+  const v4Ddl = ledgerSchemaDdl().filter(
+    (sql) =>
+      !sql.includes("legacy_plan_bootstrap_provenance") &&
+      !sql.includes("idx_legacy_bootstrap_source_blob"),
+  );
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    for (const sql of v4Ddl) db.exec(sql);
+    db.setUserVersion(4);
     db.exec("COMMIT");
   } catch (error) {
     db.exec("ROLLBACK");

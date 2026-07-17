@@ -16,23 +16,29 @@ import {
 import {
   assemblePlanRevisionCommand,
   type PlanRevisionExecutionPayload,
-  sha,
+  stableJson,
+  validatePlanRevisionCommand,
 } from "./plan-revision-command-assembler.js";
 import {
   PlanRevisionLedgerAdapter,
   type PlanRevisionReceipt,
 } from "./plan-revision-ledger-adapter.js";
-import type { AdmissionDecision, PlanAdmissionRequest } from "./policy.js";
+import {
+  type AdmissionDecision,
+  evaluatePlanAdmission,
+  type PlanAdmissionRequest,
+} from "./policy.js";
 import { SqliteDraftJournal } from "./sqlite-draft-journal.js";
+import { parseTrackedReceiptProjection } from "./tracked-receipt-projection.js";
 import { TrackedReceiptRenderer } from "./tracked-receipt-renderer.js";
 
 export interface NodePlanRevisionRunnerDeps {
   repoRoot: string;
   sourceCommit: () => string;
-  sourceBlobOid: (path?: string) => string;
+  sourceBlobOid: (path: string) => string;
   actor: () => string;
   readText: (path: string) => string;
-  headText?: (path: string) => string;
+  headText: (path: string) => string;
   repositoryIdentity?: () => string;
   openDb?: () => HarnessDb;
   publisher?: () => DraftPublisherPort;
@@ -47,6 +53,7 @@ export class NodePlanRevisionRunner {
     admission: PlanAdmissionRequest;
     decision: Extract<AdmissionDecision, { ok: true }>;
   }) {
+    assertAdmission(input);
     const db = this.deps.openDb?.() ?? openPlanLedger({ repoRoot: this.deps.repoRoot });
     try {
       const snapshot = this.preflight(input.manifest);
@@ -55,6 +62,7 @@ export class NodePlanRevisionRunner {
           .prepare("SELECT 1 FROM plan_assets WHERE asset_id = ?")
           .get(input.manifest.base.asset_id),
       );
+      if (adopted) assertAdoptedBase(db, input.manifest);
       const command = assemblePlanRevisionCommand({
         manifest: input.manifest,
         admission: input.admission,
@@ -75,7 +83,7 @@ export class NodePlanRevisionRunner {
         snapshot.projectionByteDigest,
       );
       const service = new PlanDraftService<PlanRevisionExecutionPayload, PlanRevisionReceipt>({
-        validator: { validate: () => undefined },
+        validator: { validate: validatePlanRevisionCommand },
         journal: new SqliteDraftJournal(db),
         publisher,
         renderer,
@@ -99,11 +107,15 @@ export class NodePlanRevisionRunner {
       throw new Error("plan-revision-source-blob-drift");
     const sourcePath = resolveRepoPath(this.deps.repoRoot, manifest.source.path);
     const projectionPath = resolveRepoPath(this.deps.repoRoot, manifest.projection.path);
+    const headSource = this.deps.headText(manifest.source.path);
+    const headDigest = prefixedSha(headSource);
+    if (!digestEqual(headDigest, manifest.base.source_content_digest))
+      throw new Error("plan-revision-head-content-drift");
     const sourceText = this.deps.readText(sourcePath);
     const projectionText = this.deps.readText(projectionPath);
     const sourceByteDigest = prefixedSha(sourceText);
     const projectionByteDigest = prefixedSha(projectionText);
-    if (!digestEqual(sourceByteDigest, manifest.base.source_content_digest))
+    if (!digestEqual(sourceByteDigest, headDigest))
       throw new Error("plan-revision-source-content-drift");
     if (!digestEqual(projectionTailDigest(projectionText), manifest.base.projection_tail_digest))
       throw new Error("plan-revision-projection-tail-drift");
@@ -113,8 +125,8 @@ export class NodePlanRevisionRunner {
       sourceByteDigest,
       projectionByteDigest,
       projectionText,
-      headSource: this.deps.headText?.(manifest.source.path) ?? sourceText,
-      repositoryIdentity: this.deps.repositoryIdentity?.() ?? `repo:${sha(this.deps.repoRoot)}`,
+      headSource,
+      repositoryIdentity: requireRepositoryIdentity(this.deps.repositoryIdentity),
     };
   }
 }
@@ -170,20 +182,111 @@ export function createNodePlanRevisionRunner(repoRoot: string): NodePlanRevision
 }
 
 function projectionTailDigest(text: string): `sha256:${string}` {
-  try {
-    const value = JSON.parse(text) as { records?: unknown[] };
-    const tail = value.records?.at(-1);
-    if (
-      tail &&
-      typeof tail === "object" &&
-      "record_digest" in tail &&
-      typeof (tail as { record_digest?: unknown }).record_digest === "string"
+  const parsed = parseTrackedReceiptProjection(text);
+  if (!parsed.ok) throw new Error(`plan-revision-projection-invalid:${parsed.errors.join(",")}`);
+  return normalizeDigest(parsed.value.records.at(-1)?.recordDigest ?? prefixedSha("null"));
+}
+
+function assertAdmission(input: {
+  manifest: PlanRevisionManifest;
+  admission: PlanAdmissionRequest;
+  decision: Extract<AdmissionDecision, { ok: true }>;
+}): void {
+  const expectedAdmission = admissionFromManifest(input.manifest);
+  if (stableJson(expectedAdmission) !== stableJson(input.admission))
+    throw new Error("plan-revision-manifest-admission-mismatch");
+  const evaluated = evaluatePlanAdmission(input.admission);
+  if (!evaluated.ok) throw new Error("plan-revision-admission-invalid");
+  if (stableJson(evaluated) !== stableJson(input.decision))
+    throw new Error("plan-revision-admission-decision-mismatch");
+}
+
+function admissionFromManifest(manifest: PlanRevisionManifest): PlanAdmissionRequest {
+  const value = manifest.admission;
+  return {
+    routeSignal: value.route_signal,
+    routeMode: value.route_mode,
+    kind: value.kind,
+    layer: value.layer,
+    drive: value.drive,
+    branch: value.branch,
+    ...(value.workflow_phase ? { workflowPhase: value.workflow_phase } : {}),
+    ...(value.status ? { status: value.status } : {}),
+    ...(value.sub_doc ? { subDoc: value.sub_doc } : {}),
+    ...(value.issue
+      ? {
+          issue: {
+            provider: value.issue.provider,
+            issueId: value.issue.issue_id,
+            episodeId: value.issue.episode_id,
+            projectionDigest: value.issue.projection_digest,
+          },
+        }
+      : {}),
+    ...(value.origin
+      ? {
+          origin: {
+            planId: value.origin.plan_id,
+            revision: value.origin.revision,
+            digest: value.origin.digest,
+          },
+        }
+      : {}),
+    ...(value.transition_direction ? { transitionDirection: value.transition_direction } : {}),
+    ...(value.implementation_disposition
+      ? { implementationDisposition: value.implementation_disposition }
+      : {}),
+    ...(value.reentry
+      ? {
+          reentry: {
+            targetPlanId: value.reentry.target_plan_id,
+            targetRevision: value.reentry.target_revision,
+            phase: value.reentry.phase,
+          },
+        }
+      : {}),
+    ...(value.implementation_target
+      ? {
+          implementationTarget: {
+            targetPlanId: value.implementation_target.target_plan_id,
+            targetRevision: value.implementation_target.target_revision,
+          },
+        }
+      : {}),
+    ...(value.escape_reason ? { escapeReason: value.escape_reason } : {}),
+    ...(value.supersedes ? { supersedes: value.supersedes } : {}),
+  };
+}
+
+function assertAdoptedBase(db: HarnessDb, manifest: PlanRevisionManifest): void {
+  const aliases = db
+    .prepare(
+      `SELECT asset_id FROM plan_aliases
+       WHERE alias = ? AND valid_to_revision IS NULL`,
     )
-      return normalizeDigest((tail as { record_digest: string }).record_digest);
-  } catch {
-    /* invalid projection is rejected by renderer after the drift fence */
-  }
-  return prefixedSha(text);
+    .all(manifest.plan_id) as Array<{ asset_id: string }>;
+  if (aliases.length !== 1 || aliases[0]?.asset_id !== manifest.base.asset_id)
+    throw new Error("plan-revision-alias-binding-invalid");
+  const latest = db
+    .prepare(
+      `SELECT revision, canonical_payload_digest FROM plan_revisions
+       WHERE asset_id = ? ORDER BY revision DESC LIMIT 1`,
+    )
+    .get(manifest.base.asset_id) as
+    | { revision: number; canonical_payload_digest: string }
+    | undefined;
+  if (
+    !latest ||
+    Number(latest.revision) !== manifest.base.revision ||
+    !digestEqual(latest.canonical_payload_digest, manifest.base.revision_digest)
+  )
+    throw new Error("plan-revision-ledger-base-drift");
+}
+
+function requireRepositoryIdentity(provider: (() => string) | undefined): string {
+  const identity = provider?.().trim();
+  if (!identity) throw new Error("plan-revision-repository-identity-required");
+  return identity;
 }
 
 function normalizeDigest(value: string): `sha256:${string}` {
