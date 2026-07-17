@@ -6,6 +6,7 @@ import { analyzeDbCurrency, dbCurrencyMessages } from "../src/lint/db-currency";
 import type { DriveDbRegistrationStats } from "../src/lint/drive-db-registration";
 import { loadDriveDbRegistrationStats } from "../src/state-db/drive-registration";
 import { rebuildHarnessDb } from "../src/state-db/projection-writer";
+import { refreshHarnessDbOnStop } from "../src/state-db/stop-refresh";
 import { removeTestTree } from "./support/temp-tree";
 
 const currentStats: DriveDbRegistrationStats = {
@@ -96,5 +97,68 @@ describe("db-currency lint", () => {
     } finally {
       removeTestTree(root);
     }
+  });
+
+  it("U-DBCURRENCY-005: Stop-hook refresh converges a stale persisted registry without manual rebuild (PLAN-L7-365 Step 2, issue #78)", () => {
+    const root = mkdtempSync(join(tmpdir(), "ut-tdd-stop-refresh-"));
+    const emptySessions = mkdtempSync(join(tmpdir(), "ut-tdd-stop-refresh-sessions-"));
+    try {
+      const planDir = join(root, "docs", "plans");
+      mkdirSync(planDir, { recursive: true });
+      const planDoc = (id: string) =>
+        [
+          "---",
+          `plan_id: ${id}`,
+          "kind: impl",
+          "layer: L7",
+          "drive: db",
+          "status: draft",
+          "updated: 2026-07-07",
+          "---",
+          "",
+          "## Body",
+          "",
+        ].join("\n");
+      writeFileSync(
+        join(planDir, "PLAN-TEST-refresh-a.md"),
+        planDoc("PLAN-TEST-refresh-a"),
+        "utf8",
+      );
+      rebuildHarnessDb({ repoRoot: root });
+
+      // 他ランタイム merge 相当: docs/plans に PLAN が増え persisted registry が stale 化する。
+      writeFileSync(
+        join(planDir, "PLAN-TEST-refresh-b.md"),
+        planDoc("PLAN-TEST-refresh-b"),
+        "utf8",
+      );
+      const staleResult = analyzeDbCurrency(loadDriveDbRegistrationStats(root));
+      expect(staleResult.ok).toBe(false);
+      expect(staleResult.violations.map((v) => v.reason)).toContain("stale_plan_registry");
+
+      const refresh = refreshHarnessDbOnStop({
+        repoRoot: root,
+        claudeSessionsDir: emptySessions,
+        codexSessionsDir: emptySessions,
+      });
+      expect(refresh.ok).toBe(true);
+      expect(refresh.rebuilt).toBe(true);
+
+      const result = analyzeDbCurrency(loadDriveDbRegistrationStats(root));
+      expect(result.ok).toBe(true);
+    } finally {
+      removeTestTree(root);
+      removeTestTree(emptySessions);
+    }
+  });
+
+  it("U-DBCURRENCY-006: Stop-hook refresh fails open (returns a reason instead of throwing) when rebuild is impossible", () => {
+    // repoRoot に .ut-tdd を作れない/触れないケースの代表として、存在しないパスを与える。
+    const bogusRoot = join(tmpdir(), "ut-tdd-stop-refresh-missing", "no-such-dir");
+
+    const refresh = refreshHarnessDbOnStop({ repoRoot: bogusRoot, skipTokenIngest: true });
+
+    expect(refresh.ok).toBe(false);
+    expect(refresh.skippedReason).toBeTruthy();
   });
 });

@@ -175,6 +175,7 @@ import {
   rebuildHarnessDb,
 } from "./state-db/projection-writer";
 import { buildScopeDryRunPreview } from "./state-db/scope-preview";
+import { refreshHarnessDbOnStop } from "./state-db/stop-refresh";
 import { loadRuntimeSessionUsage, summarizeRunUsage } from "./state-db/token-tracker";
 import { classifyProposalDocumentCoverage, classifyTask } from "./task/classify";
 import {
@@ -968,8 +969,15 @@ session
   .option("--session <id>", SESSION_OPTION_DESCRIPTION)
   .action((opts: { session?: string }) => {
     const input = readHookInput("Stop", opts.session);
-    dispatch(input, nodeDeps(requireRuntimeRepoRoot(), gitBranch, gitHead), "Stop");
+    const repoRoot = requireRuntimeRepoRoot();
+    dispatch(input, nodeDeps(repoRoot, gitBranch, gitHead), "Stop");
     writeHandoverWarnings();
+    // PLAN-L7-365 Step 2 (issue #78): Stop 境界で on-disk harness.db を自動追従。
+    // fail-open — refresh 失敗は警告のみで session 終了 (exit 0) を妨げない。
+    const refresh = refreshHarnessDbOnStop({ repoRoot });
+    if (!refresh.ok) {
+      process.stderr.write(`session-log: db refresh skipped (${refresh.skippedReason})\n`);
+    }
     process.stdout.write(`session-log: summary ${input.session_id ?? "ut-tdd-cli"}\n`);
   });
 

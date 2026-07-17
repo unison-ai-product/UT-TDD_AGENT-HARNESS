@@ -1,7 +1,7 @@
 ---
 plan_id: PLAN-L7-365-harness-db-currency-hook
-title: "PLAN-L7-365 (impl): harness.db on-disk currency の自動維持 + staleness gate"
-kind: impl
+title: "PLAN-L7-365 (add-impl): harness.db on-disk currency の自動維持 + staleness gate"
+kind: add-impl
 layer: L7
 drive: db
 status: draft
@@ -21,10 +21,11 @@ generates:
   - artifact_path: docs/plans/PLAN-L7-365-harness-db-currency-hook.md
     artifact_type: markdown_doc
 dependencies:
-  parent: null
+  parent: docs/plans/PLAN-L5-01-physical-data.md
   requires: []
   references:
     - docs/governance/ut-tdd-agent-harness-concept_v3.1.md
+    - docs/plans/PLAN-REVERSE-365-harness-db-currency-backfill.md
     - docs/plans/PLAN-L7-348-runtime-state-recoverability.md
     - src/state-db/projection-writer.ts
     - src/doctor/db-projection.ts
@@ -113,12 +114,30 @@ check-registry へ登録 → `tests/` に currency + fail-open regression を追
   他ランタイムの merge 後に手動 rebuild 依存が残ることの実証。issue #78 の対応案 —
   merge/checkout 境界 or doctor 冒頭での stale 検知時に (a) 自動 re-projection するか
   (b) rebuild remediation 付き fail に留めるか — は Step 1 の設計判断へ取り込む。
+- 2026-07-17: **Step 2 実装 (issue #78 対応 slice)**。着手に伴い kind を add-impl へ昇格し
+  PLAN-REVERSE-365 と pairing (parent=PLAN-L5-01-physical-data、drive=db)。
+  - **設計判断 (採択)**: 自動 re-projection は **Stop hook 境界** に置き、doctor は read-only の
+    remediation 付き fail のまま維持する (issue #78 の案 (a) を Stop 境界に限定して採択、doctor には
+    (b) を維持)。理由 = doctor の read-only 原則 (PLAN-L7-442 の singleton 検査規律) を壊さず、
+    session 境界で決定的 rebuild すれば他ランタイム merge 由来の stale が次 session までに収束する。
+    PO の包括推進指示 (2026-07-17「全てやって」) に基づき推奨案を先行採択 (PR レビューで覆せる可逆判断)。
+  - 実装: `src/state-db/stop-refresh.ts` の `refreshHarnessDbOnStop` — persisted harness.db の
+    full rebuild + token/cost ingest (`telemetry scan` 相当を統合、`loadRuntimeSessionUsage` +
+    `projectTokenUsage` + `projectModelEvaluations`)。fail-open (DB lock 含む全例外を理由付き skip へ
+    落とし exit 0 を維持)。`src/cli.ts` の `session summary` (Stop hook) から呼出。
+  - 配線先は §3.1 想定の `session-log.ts` onStop でなく CLI 層 (`session summary` action) にした。
+    onStop は pure な log 圧縮 core であり、DB I/O 統合は CLI 層の責務に置く方が層分離を保つため。
+  - regression: `tests/db-currency.test.ts` U-DBCURRENCY-005 (stale registry が Stop refresh で
+    手動 rebuild 無しに収束) / U-DBCURRENCY-006 (rebuild 不能時に throw せず理由を返す fail-open)。
 
 ## DoD / 受入基準
 
-- [ ] Stop hook 後に on-disk harness.db が最新 session イベントを含む (`bun run src/cli.ts db rebuild`
-      を手動実行せずとも queryable、test 固定)。
-- [ ] `db rebuild` / hook rebuild 後に token/cost 行が別 `telemetry scan` 無しで存在する。
+- [x] Stop hook 後に on-disk harness.db が現行 docs/plans に対して current (`ut-tdd db rebuild`
+      手動実行なし、`tests/db-currency.test.ts` U-DBCURRENCY-005 で固定)。
+- [ ] `db rebuild` / hook rebuild 後に token/cost 行が別 `telemetry scan` 無しで存在する
+      (ingest 経路は `refreshHarnessDbOnStop` へ統合済み。実 token 行の存在 regression は
+      実ログ fixture が要るため後続 slice で固定する — 未主張のまま残す)。
 - [x] `ut-tdd doctor` の `db-currency` が on-disk DB の staleness を検出する。
-- [ ] rebuild 例外が session 終了を妨げない (fail-open regression test green)。
+- [x] rebuild 例外が session 終了を妨げない (`tests/db-currency.test.ts` U-DBCURRENCY-006:
+      rebuild 不能でも throw せず理由付き skip、CLI 側は stderr 警告のみで exit 0)。
 - [ ] references が PLAN-L7-348 (recoverability 軸) を明示し軸分離が記録されている。
