@@ -5,14 +5,14 @@ kind: recovery
 layer: cross
 drive: agent
 status: draft
-route_signal: regression_ci
+route_signal: regression_dev
 route_mode: recovery
 created: 2026-07-17
 updated: 2026-07-17
 owner: PM / PO
 parent_design: docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
-backprop_decision: required
-backprop_decision_reason: "PLAN-L7-448 で Windows job は追加されたが、requirements §6.9.2/6.9.4 と FR-L1-17 が要求する単一 Required Status Check へ Linux / Windows の結果を束ねる契約が実装へ投影されていない。aggregate の fail-close 条件と branch protection 正本を L6/L7 および Reverse pair へ戻す。"
+backprop_decision: not_required
+backprop_decision_reason: "上流 requirements §6.9.2/6.9.4 と FR-L1-17 は既にaggregateを要求済みで、新規上流要件の追加は不要。同Recovery内でL6契約とL8検証設計を正本へ追補し、既存PLAN-REVERSE-448との整合を照合する。"
 agent_slots:
   - role: aim
     slot_label: "AIM — aggregate gate の成功条件、cancel/skip/failure の fail-close 判定と Required Status Check 境界"
@@ -25,10 +25,20 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-15-cross-os-ci-aggregate-gate.md
     artifact_type: markdown_doc
+  - artifact_path: .github/workflows/harness-check.yml
+    artifact_type: config
+  - artifact_path: docs/design/harness/L6-function-design/function-spec.md
+    artifact_type: design_doc
+  - artifact_path: docs/test-design/harness/L8-integration-test-design.md
+    artifact_type: test_design
+  - artifact_path: src/lint/github-ci-policy.ts
+    artifact_type: source_module
+  - artifact_path: tests/github-ci-policy.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires:
-    - docs/plans/PLAN-L7-448-source-repo-windows-ci-job.md
+    - PLAN-L7-448-source-repo-windows-ci-job
   blocks: []
   references:
     - docs/governance/ut-tdd-agent-harness-requirements_v1.2.md
@@ -116,7 +126,7 @@ PLAN-L7-221 の claim は本文を黙って上書きせず、Recovery/Reverse �
 
 ## AC
 
-- [ ] Linux `harness-check` と `harness-check-windows` を `needs` に持つ最終 aggregate job が
+- [ ] Linux `harness-check-linux` と `harness-check-windows` を `needs` に持つ最終 `harness-check` job が
       `if: always()` で必ず実行され、両方 `success` の場合だけ Green になる。
 - [ ] Linux/Windows の `failure` / `cancelled` / 予期しない `skipped` / 未知状態の各負例で
       aggregate が fail-close する TDD oracle が Green になる。
