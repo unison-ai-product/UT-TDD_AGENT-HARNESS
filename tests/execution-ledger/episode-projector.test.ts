@@ -14,6 +14,7 @@ import {
 import { projectExecutionEpisode } from "../../src/execution-ledger/application/episode-projector.js";
 
 const SHA = "a".repeat(40);
+const BASE = "c".repeat(40);
 const DIGEST = "b".repeat(64);
 
 describe("Execution Episode pure projector (PLAN-L7-436)", () => {
@@ -273,9 +274,7 @@ function projectionEventsThrough(sequence: number): readonly ExecutionEpisodeEve
   const events: ExecutionEpisodeEvent[] = [];
   for (let index = 0; index <= sequence; index += 1) {
     const transition = EXECUTION_EPISODE_TRANSITIONS[index];
-    const payload = index === 0
-      ? initialEvents()[0].payload
-      : { episodeId: "episode:recovery-70", observedHead: SHA };
+    const payload = projectionPayloadFor(index);
     const payloadDigest = executionCommandPayloadDigest(payload);
     const unsigned = {
       episodeId: "episode:recovery-70",
@@ -290,4 +289,54 @@ function projectionEventsThrough(sequence: number): readonly ExecutionEpisodeEve
     events.push({ ...unsigned, payload, eventDigest: calculateExecutionEventDigest(unsigned) });
   }
   return events;
+}
+
+function projectionPayloadFor(sequence: number): Readonly<Record<string, unknown>> {
+  if (sequence === 0) return initialEvents()[0].payload as Readonly<Record<string, unknown>>;
+  const common = {
+    episodeId: "episode:recovery-70",
+    sourceCommit: SHA,
+    observedHead: SHA,
+    policyRevision: "policy:escape-v1",
+    actor: "codex",
+  };
+  if (sequence === 1) return { ...common, escapeType: "reopened",
+    classificationRuleRevision: "escape-classification:v1",
+    verificationTarget: { kind: "assumption", assetId: "plan:doctor-singleton", revision: 1,
+      statementDigest: DIGEST } };
+  if (sequence === 2) return { ...common, model: "recovery", compatibilityResult: "compatible",
+    rationaleDigest: DIGEST, selectionRevision: 1 };
+  if (sequence === 3) return { ...common, repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+    intentRevision: 1, targetLogicalKey: "episode:episode:recovery-70:issue",
+    projectionPayloadDigest: DIGEST, idempotencyKey: DIGEST };
+  const evidence: Readonly<Record<number, Readonly<Record<string, unknown>>>> = {
+    4: { externalIssueId: "42", externalIssueUrl: "https://example.test/issues/42",
+      remoteVersion: "1", projectionDigest: DIGEST },
+    5: { planAssetId: "plan:doctor-scoped-execution", planRevision: 1,
+      vPairObligationsDigest: DIGEST, branch: "work/recovery", baseSha: BASE },
+    6: { profile: "drive", testedCommit: SHA, evidenceDigest: DIGEST, verdict: "green" },
+    7: { targetAssetId: "plan:doctor-scoped-execution", targetRevision: 1, targetLayer: "L7",
+      targetState: "implementing", rationaleDigest: DIGEST },
+    8: { profile: "intermediate", command: "bun test", runner: "vitest", exitCode: 0,
+      evidenceDigest: DIGEST, testedCommit: SHA },
+    9: { certificateId: "cert:1", certificateDigest: DIGEST, driveVerificationDigest: DIGEST,
+      intermediateEvidenceDigest: DIGEST, originRevision: 1, targetRevision: 1,
+      sourceCommit: SHA, observedHead: SHA, policyRevision: "policy:escape-v1" },
+    10: { certificateId: "cert:1", certificateDigest: DIGEST,
+      acceptedPlanAssetId: "plan:doctor-scoped-execution", acceptedPlanRevision: 1,
+      resumeLayer: "L7", resumeState: "implementing" },
+    11: { profile: "post-reentry", command: "bun test", runner: "vitest", exitCode: 0,
+      evidenceDigest: DIGEST, testedCommit: SHA },
+    12: { prNumber: 42, prNodeId: "PR_node", issueNumber: 42,
+      planAssetId: "plan:doctor-scoped-execution", planRevision: 1, baseSha: BASE,
+      headSha: SHA, projectionDigest: DIGEST },
+    13: { reviewerRuntime: "claude", reviewerModel: "reviewer", authorRuntime: "codex",
+      authorModel: "author", verdict: "pass", reviewDigest: DIGEST, reviewedHead: SHA },
+    14: { mergeSha: SHA, baseSha: BASE, reconciledHead: SHA, requiredChecksDigest: DIGEST,
+      remoteObservationId: "observation:merge:1" },
+    15: { mainCiRunId: "run:1", mainCiCommit: SHA,
+      issueCloseObservationId: "observation:close:1", outcome: "merged",
+      learningDigest: DIGEST, upstreamAction: "update-design" },
+  };
+  return { ...common, evidence: evidence[sequence] };
 }
