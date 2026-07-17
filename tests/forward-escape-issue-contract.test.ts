@@ -1,6 +1,7 @@
 // PLAN-L6-83 §5 U-EXISSUE oracle — Forward外遷移Issue・駆動モデル選択契約の Red 固定。
 // 実装 slice は PLAN-L7-436 系列 (本 oracle は契約の可換不変条件のみを固定する)。
 
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   checkDriveModelAlignment,
@@ -85,6 +86,8 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
     expect(stale.violations.map((v) => v.code)).toContain("stale-origin-revision");
     const badLayer = validateForwardEscape(validCommand({ origin_layer: "L99" }), emptyLedger);
     expect(badLayer.violations.map((v) => v.code)).toContain("invalid-origin-layer");
+    const emptyLayer = validateForwardEscape(validCommand({ origin_layer: "" }), emptyLedger);
+    expect(emptyLayer.violations.map((v) => v.code)).toContain("invalid-origin-layer");
     const badState = validateForwardEscape(validCommand({ origin_state: "" }), emptyLedger);
     expect(badState.violations.map((v) => v.code)).toContain("missing-origin-state");
     const badReentry = validateForwardEscape(
@@ -150,7 +153,17 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
   });
 
   it("U-EXISSUE-006: Issue 本文から origin/reentry/drive のいずれかを除く mutation を検出する", () => {
-    const command = validCommand();
+    // 値をすべて相異にし、行除去 mutation が toContain / digest の両方で必ず検出されるようにする
+    // (値重複による退化 oracle の防止)。
+    const command = validCommand({
+      origin_asset_id: "PLAN-L6-64-cli-shell-completion",
+      origin_layer: "L6",
+      origin_state: "pair-freeze",
+      reentry_target_layer: "L7",
+      reentry_target_state: "implement",
+      drive_model: "reverse",
+      plan_id: "PLAN-REVERSE-395-shell-completion-backfill",
+    });
     const body = renderForwardEscapeIssueBody(command);
     for (const required of [
       command.origin_asset_id,
@@ -164,6 +177,42 @@ describe("PLAN-L6-83 forward escape issue contract (U-EXISSUE)", () => {
       command.plan_id,
     ]) {
       expect(body).toContain(required);
+    }
+    // 行単位の除去 mutation: どの必須行を落としても本文が変わり、digest 照合 (reconcile) が
+    // issue-body-tampered として検出する (render→digest→検出の連結を実行する)。
+    const digestOf = (text: string) => createHash("sha256").update(text).digest("hex");
+    const lines = body.split("\n");
+    for (const marker of [
+      "Origin asset:",
+      "Origin revision:",
+      "Drive model:",
+      "Reentry target:",
+      "PLAN:",
+    ]) {
+      const mutated = lines.filter((line) => !line.includes(marker)).join("\n");
+      expect(mutated, marker).not.toBe(body);
+      const mutationFindings = reconcileIssueProjection(
+        [
+          {
+            command_id: command.command_id,
+            repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+            issue_number: 85,
+            body_digest: digestOf(body),
+          },
+        ],
+        [
+          {
+            repository: "unison-ai-product/UT-TDD_AGENT-HARNESS",
+            issue_number: 85,
+            state: "open",
+            body_digest: digestOf(mutated),
+          },
+        ],
+      );
+      expect(
+        mutationFindings.map((f) => f.code),
+        marker,
+      ).toContain("issue-body-tampered");
     }
     const binding = {
       command_id: command.command_id,

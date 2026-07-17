@@ -131,10 +131,11 @@ export function validateForwardEscape(
     });
   }
 
-  if (command.origin_layer && !LAYER_PATTERN.test(command.origin_layer)) {
+  // reentry 側と対称に、空も pattern 不正も fail-close する (§2: L0..L14 の明示値)。
+  if (!LAYER_PATTERN.test(command.origin_layer ?? "")) {
     violations.push({
       code: "invalid-origin-layer",
-      message: `origin_layer は L0..L14: ${command.origin_layer}`,
+      message: `origin_layer は L0..L14 の明示値: ${command.origin_layer || "(空)"}`,
     });
   }
   if (
