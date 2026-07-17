@@ -71,6 +71,8 @@ generates:
     artifact_type: test_code
   - artifact_path: tests/workspace-roots.test.ts
     artifact_type: test_code
+  - artifact_path: tests/fixtures/reference-fence-trip.test.ts
+    artifact_type: test_code
 dependencies:
   parent: null
   requires: []
