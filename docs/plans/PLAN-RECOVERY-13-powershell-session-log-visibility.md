@@ -25,6 +25,30 @@ agent_slots:
 generates:
   - artifact_path: docs/plans/PLAN-RECOVERY-13-powershell-session-log-visibility.md
     artifact_type: markdown_doc
+  - artifact_path: .claude/CLAUDE.md
+    artifact_type: markdown_doc
+  - artifact_path: .claude/settings.json
+    artifact_type: config_file
+  - artifact_path: docs/design/harness/L4-basic-design/architecture.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/design/harness/L6-function-design/session-log.md
+    artifact_type: markdown_doc
+  - artifact_path: docs/templates/adapter/.claude/settings.json
+    artifact_type: config_file
+  - artifact_path: src/lint/project-hook.ts
+    artifact_type: source_module
+  - artifact_path: src/runtime/session-log.ts
+    artifact_type: source_module
+  - artifact_path: src/setup/templates.ts
+    artifact_type: source_module
+  - artifact_path: src/state-db/runtime-projections.ts
+    artifact_type: source_module
+  - artifact_path: tests/project-hook.test.ts
+    artifact_type: test_file
+  - artifact_path: tests/projection-writer.test.ts
+    artifact_type: test_file
+  - artifact_path: tests/session-log.test.ts
+    artifact_type: test_file
 dependencies:
   parent: null
   requires: []
