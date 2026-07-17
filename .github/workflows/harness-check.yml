@@ -25,7 +25,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  harness-check:
+  harness-check-linux:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -107,3 +107,13 @@ jobs:
 
       - name: doctor (toolchain scope)
         run: bun src/cli.ts doctor --scope toolchain
+
+  # PLAN-RECOVERY-15 / issue #97: Branch Protection が参照する唯一の Required
+  # Status Check。片脚が failure / cancelled / skipped の場合も必ず起動して Red にする。
+  harness-check:
+    needs: [harness-check-linux, harness-check-windows]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: require Linux and Windows success
+        run: test "${{ needs.harness-check-linux.result }}" = "success" && test "${{ needs.harness-check-windows.result }}" = "success"

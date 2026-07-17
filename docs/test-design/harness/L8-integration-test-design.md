@@ -293,7 +293,15 @@ Minimum G8 close profile for the first L8 ascent:
 | `IT-REENTRY-01` | drive検証Greenとtarget revision | 中間test→certificate→合流→合流後test | E8〜E11が順序通り、revision変更時はcertificate stale | event digest、test receipts |
 | `IT-PR-01` | E11到達episode | draft PR projectionを再送 | exact head SHAを持つdraft PR 1件へ収束 | remote PR ID、mapping、outbox receipt |
 | `IT-MERGE-01` | cross-provider reviewとrequired checks | head SHA変化を各境界で注入 | 同一SHA時だけE14、変化時はcertificate/review失効 | merge authorization receipt |
+| `IT-CIAGG-01` | runtime workflowにLinux/Windows legと最終`harness-check`があり、三jobが同一run attempt・同一HEAD SHAでsuccess | workflow構造検査とaggregate判定を実行 | 最終jobの`needs`集合が両legと完全一致し、`always()`と明示result guardが成立する場合だけGreen | workflow topology report、三job result、aggregate receipt |
+| `IT-CIAGG-02` | 各legへ`failure`、`cancelled`、`skipped`、`neutral`、`timed_out`、`action_required`、未知値、欠落を一つずつ注入 | aggregate判定を実行 | どの負例も最終`harness-check`をGreenにせず、片leg successやworkflow conclusionから補完しない | result mutation matrix、期待exit、survivor 0 |
+| `IT-CIAGG-03` | validな三job証拠に対しHEAD SHA、run attempt、workflow revision、required check set、protection revisionを各一箇所だけ変更 | E13 receiptを検証してE14 authorizationを試行 | 全変異をstaleとして拒否し、別run・別attempt・別HEADのleg合成を行わずE13/E14 delta 0 | field mutation matrix、ledger/outbox diff 0 |
+| `IT-CIAGG-04` | runtime dual-leg fixture、consumer template single-leg fixture、profile明示値 | `github-ci-policy`を両profileで実行 | runtimeだけ三job topologyを要求し、templateへWindows legを推測追加しない。profile欠落・本文偽装・余剰`needs`はfail-close | profile別violation set、workflow fixture digest |
+| `IT-CIAGG-05` | valid E13 aggregate receiptと、required contextが`harness-check`一件のbranch protection observation | 自動merge/E14 projectionを実行 | E14はaggregate receipt digestだけへ束縛され、個別leg receiptでは進まない。実設定の未適用・乖離・取得不能はclosureをblock | protection revision、required set digest、E13/E14 event receipt |
 | `IT-CLOSE-01` | merged PR | main CI・Issue close・learning projectionを順に実行 | 全成功時だけE15。再実行してclosure/learning fact重複0 | E15 receipt、learning identity |
 
 SQLite FK/UNIQUE/CHECK/複合PKは各1違反fixtureでDDL自身が拒否する。adapterのmock成功だけ、row countだけ、
-GitHub remote stateだけをGreen証拠にしない。
+GitHub remote stateだけをGreen証拠にしない。`IT-CIAGG-01..05` は
+L6 `harness-check` aggregate gate / E13 receipt契約を結合境界で検証するL8 ascentであり、構造検査、結果値の
+全負例、receipt鮮度、runtime/template profile分離、branch protection/E14消費境界の全てがGreenに
+なるまで「両OS CI済み」またはmerge可能を主張しない。
