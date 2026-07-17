@@ -851,13 +851,21 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
         "package.json",
         JSON.stringify({
           name: "ut-tdd-agent-harness",
+          repository: {
+            type: "git",
+            url: "git+https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS.git",
+          },
           scripts: {
             test: "vitest run",
             typecheck: "tsc --noEmit",
           },
         }),
       ),
-    ) as { scripts: Record<string, string>; utTdd: { artifactProfile: string } };
+    ) as {
+      scripts: Record<string, string>;
+      utTdd: { artifactProfile: string };
+      repository: { type: string; url: string };
+    };
 
     expect(transformed.scripts["test:pack"]).toContain("tests/distribution-acceptance.test.ts");
     expect(transformed.scripts["test:pack"]).toContain("tests/readability.test.ts");
@@ -866,6 +874,20 @@ describe("setup solo/team (PLAN-L7-03 add-impl / U-SETUP)", () => {
     expect(transformed.scripts["test:source"]).toBe("vitest run");
     expect(transformed.scripts.typecheck).toBe("tsc --noEmit");
     expect(transformed.utTdd.artifactProfile).toBe("pack");
+    // issue #83: source repo の URL は Pack artifact では Pack repo へ書き換わる。
+    expect(transformed.repository.url).toBe(
+      "git+https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS-Pack.git",
+    );
+  });
+
+  it("U-SETUP-011f: source package.json points repository at the source development repo (issue #83)", () => {
+    const sourcePackage = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+      repository?: { url?: string };
+    };
+
+    expect(sourcePackage.repository?.url).toBe(
+      "git+https://github.com/unison-ai-product/UT-TDD_AGENT-HARNESS.git",
+    );
   });
 
   it("U-SETUP-011e: clean Pack workflow reuses the package test:pack script", () => {
