@@ -411,6 +411,25 @@ export const EXECUTION_EPISODE_TRANSITIONS: readonly ExecutionEpisodeTransition[
   transition("E15", "closed_learned"),
 ]);
 
+const EXECUTION_COMMAND_TYPES = Object.freeze([
+  undefined,
+  "classify_escape",
+  "select_drive_model",
+  "request_issue_projection",
+  "confirm_issue_projection",
+  "freeze_drive_plan",
+  "record_drive_verification",
+  "propose_reentry",
+  "record_forward_intermediate_test",
+  "issue_reentry_certificate",
+  "reenter_forward",
+  "record_post_reentry_test",
+  "confirm_draft_pr_projection",
+  "accept_cross_review",
+  "confirm_merge",
+  "close_episode",
+] as const);
+
 export type ExecutionEpisodeReduction =
   | {
       readonly ok: true;
@@ -752,14 +771,6 @@ export function reduceExecutionEpisode(
 function validateReducedPayloads(events: readonly ExecutionEpisodeEvent[]): ExecutionEpisodeReduction | undefined {
   const root = events[0]?.payload;
   if (!isEscapePayload(root)) return reductionViolation("episode-event-integrity-invalid", "events[0].payload");
-  const evidence = (sequence: number): Record<string, unknown> | undefined => {
-    const payload = events[sequence]?.payload;
-    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return undefined;
-    const value = (payload as Record<string, unknown>).evidence;
-    return value && typeof value === "object" && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : undefined;
-  };
   for (let sequence = 1; sequence < events.length; sequence += 1) {
     const payload = events[sequence].payload;
     if (!payload || typeof payload !== "object" || Array.isArray(payload))
@@ -769,26 +780,25 @@ function validateReducedPayloads(events: readonly ExecutionEpisodeEvent[]): Exec
         typeof value.observedHead !== "string" || !validCommit(value.observedHead as string) ||
         value.policyRevision !== root.policyRevision || typeof value.actor !== "string" || !value.actor.trim())
       return reductionViolation("episode-event-integrity-invalid", `events[${sequence}].payload`);
-    if (sequence >= 4 && !evidence(sequence))
-      return reductionViolation("episode-event-evidence-invalid", `events[${sequence}].payload.evidence`);
+    if (sequence === 3) {
+      if (value.repository !== root.issue.repository || value.intentRevision !== 1 ||
+          value.targetLogicalKey !== `episode:${root.episodeId}:issue` ||
+          typeof value.projectionPayloadDigest !== "string" || !validDigest(value.projectionPayloadDigest) ||
+          typeof value.idempotencyKey !== "string" || !validDigest(value.idempotencyKey))
+        return reductionViolation("episode-issue-projection-invalid", `events[${sequence}].payload`);
+      continue;
+    }
+    const type = EXECUTION_COMMAND_TYPES[sequence];
+    if (!type) return reductionViolation("episode-transition-missing", `events[${sequence}]`);
+    const command = {
+      ...value,
+      type,
+      expectedSequence: sequence,
+      occurredAt: events[sequence].occurredAt,
+    } as unknown as ExecutionTransitionCommand;
+    const specific = validateSpecificTransition(root, command, events.slice(0, sequence));
+    if (specific && !specific.ok) return Object.freeze({ ok: false, violations: specific.violations });
   }
-  const e9 = evidence(9), e6 = evidence(6), e8 = evidence(8);
-  if (e9 && (e9.driveVerificationDigest !== e6?.evidenceDigest || e9.intermediateEvidenceDigest !== e8?.evidenceDigest))
-    return reductionViolation("episode-reentry-certificate-invalid", "events[9].payload.evidence");
-  const e10 = evidence(10);
-  if (e10 && (e10.certificateId !== e9?.certificateId || e10.certificateDigest !== e9?.certificateDigest))
-    return reductionViolation("episode-forward-reentry-invalid", "events[10].payload.evidence");
-  const e12 = evidence(12), e13 = evidence(13), e14 = evidence(14), e15 = evidence(15), e5 = evidence(5);
-  if (e12 && (e12.planAssetId !== e5?.planAssetId || e12.planRevision !== e5?.planRevision ||
-      e12.baseSha !== e5?.baseSha || e12.planAssetId !== e10?.acceptedPlanAssetId ||
-      e12.planRevision !== e10?.acceptedPlanRevision || String(e12.issueNumber) !== String(evidence(4)?.externalIssueId)))
-    return reductionViolation("episode-draft-pr-evidence-invalid", "events[12].payload.evidence");
-  if (e13 && e13.reviewedHead !== e12?.headSha)
-    return reductionViolation("episode-cross-review-evidence-invalid", "events[13].payload.evidence");
-  if (e14 && (e14.reconciledHead !== e12?.headSha || e14.reconciledHead !== e13?.reviewedHead || e14.baseSha !== e12?.baseSha))
-    return reductionViolation("episode-merge-evidence-invalid", "events[14].payload.evidence");
-  if (e15 && e15.mainCiCommit !== e14?.mergeSha)
-    return reductionViolation("episode-closure-evidence-invalid", "events[15].payload.evidence");
   return undefined;
 }
 

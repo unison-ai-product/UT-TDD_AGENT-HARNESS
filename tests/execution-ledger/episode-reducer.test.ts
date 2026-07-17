@@ -103,7 +103,7 @@ describe("ExecutionEpisode reducer (PLAN-L7-436)", () => {
   it.each([
     ["missing payload", 6, undefined],
     ["unbound certificate", 9, { ...payloadFor(9), evidence: { ...(payloadFor(9).evidence as object), driveVerificationDigest: "d".repeat(64) } }],
-    ["unbound review head", 13, { ...payloadFor(13), evidence: { reviewedHead: "d".repeat(40) } }],
+    ["unbound review head", 13, { ...payloadFor(13), evidence: { ...(payloadFor(13).evidence as object), reviewedHead: "d".repeat(40) } }],
   ] as const)("U-EXEP-007: replay時に%sをfail-closeする", (_label, index, payload) => {
     const events = chain(EXPECTED_TRANSITIONS);
     const changed = events.map((event, current) => current === index ? {
@@ -200,20 +200,46 @@ function payloadFor(sequence: number): Record<string, unknown> {
     issue: { repository: "org/repo", title: "escape", bodyDigest: DIGEST }, sourceCommit: HEAD,
     observedHead: HEAD, policyRevision: "policy-1", actor: ACTOR,
   };
-  const evidence: Record<number, Record<string, unknown>> = {
-    4: { externalIssueId: "42" },
-    5: { planAssetId: "PLAN-L6-1", planRevision: 1, baseSha: BASE },
-    6: { evidenceDigest: DIGEST },
-    8: { evidenceDigest: DIGEST },
-    9: { certificateId: "cert-1", certificateDigest: DIGEST, driveVerificationDigest: DIGEST, intermediateEvidenceDigest: DIGEST },
-    10: { certificateId: "cert-1", certificateDigest: DIGEST, acceptedPlanAssetId: "PLAN-L6-1", acceptedPlanRevision: 1 },
-    12: { issueNumber: 42, planAssetId: "PLAN-L6-1", planRevision: 1, baseSha: BASE, headSha: HEAD },
-    13: { reviewedHead: HEAD },
-    14: { reconciledHead: HEAD, baseSha: BASE, mergeSha: HEAD },
-    15: { mainCiCommit: HEAD },
+  const common = {
+    episodeId: EPISODE_ID,
+    sourceCommit: HEAD,
+    observedHead: HEAD,
+    policyRevision: "policy-1",
+    actor: ACTOR,
   };
-  return { episodeId: EPISODE_ID, sourceCommit: HEAD, observedHead: HEAD, policyRevision: "policy-1", actor: ACTOR,
-    ...(sequence >= 4 ? { evidence: evidence[sequence] ?? {} } : {}) };
+  if (sequence === 1) return { ...common, escapeType: "drift", classificationRuleRevision: "rule-1",
+    verificationTarget: { kind: "assumption", assetId: "PLAN-L7-1", revision: 1, statementDigest: DIGEST } };
+  if (sequence === 2) return { ...common, model: "reverse", compatibilityResult: "compatible",
+    rationaleDigest: DIGEST, selectionRevision: 1 };
+  if (sequence === 3) return { ...common, repository: "org/repo", intentRevision: 1,
+    targetLogicalKey: `episode:${EPISODE_ID}:issue`, projectionPayloadDigest: DIGEST, idempotencyKey: DIGEST };
+  const evidence: Record<number, Record<string, unknown>> = {
+    4: { externalIssueId: "42", externalIssueUrl: "https://example.test/issues/42",
+      remoteVersion: "1", projectionDigest: DIGEST },
+    5: { planAssetId: "PLAN-L6-1", planRevision: 1, vPairObligationsDigest: DIGEST,
+      branch: "work/recovery", baseSha: BASE },
+    6: { profile: "drive", testedCommit: HEAD, evidenceDigest: DIGEST, verdict: "green" },
+    7: { targetAssetId: "PLAN-L6-1", targetRevision: 1, targetLayer: "L6",
+      targetState: "confirmed", rationaleDigest: DIGEST },
+    8: { profile: "intermediate", command: "bun test", runner: "vitest", exitCode: 0,
+      evidenceDigest: DIGEST, testedCommit: HEAD },
+    9: { certificateId: "cert-1", certificateDigest: DIGEST, driveVerificationDigest: DIGEST,
+      intermediateEvidenceDigest: DIGEST, originRevision: 1, targetRevision: 1,
+      sourceCommit: HEAD, observedHead: HEAD, policyRevision: "policy-1" },
+    10: { certificateId: "cert-1", certificateDigest: DIGEST, acceptedPlanAssetId: "PLAN-L6-1",
+      acceptedPlanRevision: 1, resumeLayer: "L6", resumeState: "confirmed" },
+    11: { profile: "post-reentry", command: "bun test", runner: "vitest", exitCode: 0,
+      evidenceDigest: DIGEST, testedCommit: HEAD },
+    12: { prNumber: 42, prNodeId: "PR_node", issueNumber: 42, planAssetId: "PLAN-L6-1",
+      planRevision: 1, baseSha: BASE, headSha: HEAD, projectionDigest: DIGEST },
+    13: { reviewerRuntime: "claude", reviewerModel: "reviewer", authorRuntime: "codex",
+      authorModel: "author", verdict: "pass", reviewDigest: DIGEST, reviewedHead: HEAD },
+    14: { reconciledHead: HEAD, baseSha: BASE, mergeSha: HEAD, requiredChecksDigest: DIGEST,
+      remoteObservationId: "observation:merge:1" },
+    15: { mainCiRunId: "run:1", mainCiCommit: HEAD, issueCloseObservationId: "observation:close:1",
+      outcome: "merged", learningDigest: DIGEST, upstreamAction: "update-design" },
+  };
+  return { ...common, evidence: evidence[sequence] ?? {} };
 }
 
 function withSequence(
