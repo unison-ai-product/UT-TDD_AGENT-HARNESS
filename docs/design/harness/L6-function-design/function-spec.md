@@ -1342,3 +1342,31 @@ interface GithubProjectionPort {
   re-entry certificate、accept evidenceをAND条件で要求する。
 - GitHub inboundはremote observationをappendするだけで、domain eventのsequence/payloadを更新しない。
 - E15はescapeをL/type/cause/drive/recurrence identity別learning factへ投影し、上流actionまたは理由付きno-changeを必須にする。
+
+### `harness-check` aggregate gate / E13 receipt契約
+
+runtime source workflowは、Linux実行leg `harness-check-linux` とWindows実行leg
+`harness-check-windows`、および両legを束ねる最終job `harness-check` を別jobとして持つ。
+最終jobは `needs` の集合が二つのlegと完全一致し、`always()` で必ず評価される。判定は両方の
+`needs.<leg>.result === 'success'` の論理積だけをGreenとし、`failure`、`cancelled`、`skipped`、
+`neutral`、`timed_out`、`action_required`、未知値、結果欠落をfail-closeする。個別legの成功や
+workflow全体の曖昧なconclusionを最終Greenへ読み替えない。
+
+`GithubCiPolicy` はruntime dual-leg profileとconsumer template single-leg profileを明示入力で
+区別する。runtime profileには上記三job topologyを要求し、job名、`needs` 完全一致、`always()`、
+明示result guardの欠落・余剰依存・循環・同名job偽装をviolationにする。template profileには
+runtime固有のWindows legを推測追加しない。profileをworkflow本文やjob数から自己推論してはならない。
+
+E13へappendできる `AggregateCiReceipt` は少なくとも `repositoryIdentity`、`workflowIdentity`、
+`workflowRevision`、`runId`、`runAttempt`、`headSha`、`requiredCheckSetDigest`、
+`protectionRevision`、Linux/Windows各legの `jobId`・`name`・`conclusion`、aggregate jobの
+`jobId`・`name`・`conclusion`、receipt digestをlosslessに保持する。三jobは同一workflow run、
+同一run attempt、同一HEAD SHAに属し、job identityは互いに異なり、required contextは最終
+`harness-check`一件でなければならない。両legとaggregateの全てが`success`の場合だけvalidである。
+
+HEAD SHA、run attempt、workflow revision、required check set、protection revisionのいずれかが
+変化したreceiptはstaleであり、後続runの証拠へ合成しない。E13 reducerはremote observationだけでなく
+このvalid receiptを要求する。E14のmerge authorization、自動merge、Execution Ledger projectionは
+個別legや片OSのreceiptを参照せず、E13に束縛されたaggregate receipt digestだけを参照する。
+branch protectionのrequired contextも `harness-check` 一件へ固定し、実GitHub設定が未適用・乖離・
+取得不能なら「設定済み」と推測せずclosureをblockする。
