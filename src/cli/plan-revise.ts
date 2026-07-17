@@ -167,7 +167,9 @@ export function parsePlanRevisionManifest(text: string): PlanRevisionManifest {
   try {
     parsed = JSON.parse(text);
   } catch (error) {
-    throw new Error(`manifest JSONを解析できません: ${errorText(error)}`);
+    // convert: JSON parser detailをrevision manifest境界の安定したErrorへ変換する。
+    const detail = errorText(error);
+    throw new Error(`manifest JSONを解析できません: ${detail}`);
   }
   return revisionManifestSchema.parse(parsed);
 }
