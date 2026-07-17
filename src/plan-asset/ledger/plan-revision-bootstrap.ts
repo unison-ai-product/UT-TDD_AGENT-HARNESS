@@ -315,7 +315,7 @@ export class LegacyPlanRevisionBootstrapTransaction {
         source_commit: input.baseSourceCommit,
         actor: "legacy-bootstrap",
         reason: input.reason,
-        occurred_at: input.occurredAt,
+        created_at: input.occurredAt,
       })
     )
       return false;

@@ -11,6 +11,7 @@ import {
 } from "../src/plan-admission/node-plan-revision-runner.js";
 import { canonicalPlanPayload } from "../src/plan-admission/plan-revision-command-assembler.js";
 import { evaluatePlanAdmission, type PlanAdmissionRequest } from "../src/plan-admission/policy.js";
+import { trackedReceiptRecordDigest } from "../src/plan-admission/tracked-receipt-projection.js";
 import { deriveLegacyAssetId } from "../src/plan-asset/adapters/legacy-plan-adapter.js";
 import { parseLegacyPlanSource } from "../src/plan-asset/adapters/legacy-plan-inventory.js";
 import { ledgerRowDigest, migratePlanLedger } from "../src/plan-asset/ledger/schema.js";
@@ -102,6 +103,28 @@ describe("NodePlanRevisionRunner", () => {
     expect(f.runner.run(f.input)).toEqual({ status: "replayed", receipt: created.receipt });
   });
 
+  it("U-PA-REV-031: committed replay時にrevision canonical digest改変を拒否する", () => {
+    const f = fixture("adopted");
+    f.runner.run(f.input);
+    f.db
+      .prepare(
+        "UPDATE plan_revisions SET canonical_payload_digest = ? WHERE asset_id = ? AND revision = 2",
+      )
+      .run("0".repeat(64), f.manifest.base.asset_id);
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-revision-conflict");
+  });
+
+  it("U-PA-REV-032: committed replay時にadmission content digest改変を拒否する", () => {
+    const f = fixture("adopted");
+    f.runner.run(f.input);
+    f.db
+      .prepare("UPDATE plan_admission_events SET content_digest = ? WHERE command_id = ?")
+      .run("0".repeat(64), f.manifest.command_id);
+
+    expect(() => f.runner.run(f.input)).toThrow("plan-revision-replay-admission-conflict");
+  });
+
   it.each([
     "source",
     "projection",
@@ -133,7 +156,7 @@ describe("NodePlanRevisionRunner", () => {
     ["HEAD source", { headSource: "different HEAD source" }, "plan-revision-head-content-drift"],
     [
       "projection tail",
-      { projectionText: '{"schema_version":"v2","records":[]}\n' },
+      { projectionText: projectionWithDifferentValidTail() },
       "plan-revision-projection-tail-drift",
     ],
   ])("U-PA-REV-018: %s driftはwrite 0でfail-closeする", (_name, drift, ruleId) => {
@@ -323,6 +346,45 @@ function fixture(mode: Mode, drift: Drift = {}) {
     before,
     input: { manifest, admission, decision },
   };
+}
+
+function projectionWithDifferentValidTail(): string {
+  const record = {
+    sequence: 1,
+    previousRecordDigest: null,
+    commandId: "command:concurrent-revision",
+    receiptId: "receipt:concurrent-revision",
+    receiptDigest: sha("concurrent-receipt"),
+    decisionDigest: sha("concurrent-decision"),
+    binding: {
+      path: "docs/plans/PLAN-L6-31.md",
+      planId: "PLAN-L6-31",
+      assetId: "plan:adopted",
+      revision: 2,
+      contentDigest: sha("concurrent-content"),
+    },
+  };
+  return `${JSON.stringify({
+    schema_version: "ut-tdd.plan-admission-receipts/v1",
+    records: [
+      {
+        sequence: record.sequence,
+        previous_record_digest: record.previousRecordDigest,
+        record_digest: trackedReceiptRecordDigest(record),
+        command_id: record.commandId,
+        receipt_id: record.receiptId,
+        receipt_digest: record.receiptDigest,
+        decision_digest: record.decisionDigest,
+        binding: {
+          path: record.binding.path,
+          plan_id: record.binding.planId,
+          asset_id: record.binding.assetId,
+          revision: record.binding.revision,
+          content_digest: record.binding.contentDigest,
+        },
+      },
+    ],
+  })}\n`;
 }
 
 function seedAdopted(

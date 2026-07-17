@@ -7,6 +7,7 @@ import { PlanRevisionLedgerTransaction } from "../plan-asset/ledger/plan-revisio
 import { openPlanLedger } from "../plan-asset/ledger/schema.js";
 import type { HarnessDb } from "../state-db/index.js";
 import { NodeAtomicDraftPublisher } from "./node-atomic-draft-publisher.js";
+import { bindPlanSourceToAdmission } from "./plan-content-binding.js";
 import {
   type DraftArtifact,
   type DraftPublisherPort,
@@ -183,14 +184,20 @@ function assertCommittedReplayBinding(
     throw new Error("plan-revision-replay-receipt-conflict");
   const revision = db
     .prepare(
-      `SELECT canonical_payload_json, body_digest, source_path
+      `SELECT canonical_payload_json, canonical_payload_digest, body_digest, source_path
        FROM plan_revisions WHERE asset_id = ? AND revision = ?`,
     )
     .get(receipt.assetId, receipt.revision);
-  const desired = canonicalPlanPayload(manifest.source.content);
+  const bound = bindPlanSourceToAdmission({
+    source: manifest.source.content,
+    planId: manifest.plan_id,
+    admission,
+  });
+  const desired = canonicalPlanPayload(bound.source);
   if (
     !revision ||
     String(revision.canonical_payload_json) !== desired.payload ||
+    !digestEqual(String(revision.canonical_payload_digest), prefixedSha(desired.payload)) ||
     !digestEqual(String(revision.body_digest), prefixedSha(desired.body)) ||
     String(revision.source_path) !== manifest.source.path
   )
@@ -205,11 +212,15 @@ function assertCommittedReplayBinding(
     throw new Error("plan-revision-replay-base-conflict");
   const event = db
     .prepare(
-      `SELECT route_tuple_digest FROM plan_admission_events
+      `SELECT content_digest, route_tuple_digest FROM plan_admission_events
        WHERE command_id = ? AND plan_asset_id = ? AND plan_revision = ?`,
     )
     .get(manifest.command_id, receipt.assetId, receipt.revision);
-  if (!event || !digestEqual(String(event.route_tuple_digest), prefixedSha(stableJson(admission))))
+  if (
+    !event ||
+    !digestEqual(String(event.content_digest), bound.contentDigest) ||
+    !digestEqual(String(event.route_tuple_digest), prefixedSha(stableJson(admission)))
+  )
     throw new Error("plan-revision-replay-admission-conflict");
 }
 
